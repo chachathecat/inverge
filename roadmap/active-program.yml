@@ -323,7 +323,17 @@ items:
     priority: 34
   - id: S236P
     title: Private Authoring Review Plane Provisioning and Synthetic Receipt Acceptance
-    status: queued
+    status: blocked
+    executionState: provisioning_applied_user_scoped_acceptance_blocked
+    acceptanceCompleted: false
+    blockingReason: temporary_user_scoped_principal_session_unavailable_via_allowed_supabase_connector
+    evidence: docs/qa/s236p-lean-owner-private-acceptance.md
+    provisionedProjectName: inverge-beta
+    provisionedProjectRef: vajcduseyicjhyhrclax
+    provisionedResources: [storage.bucket.s236p-owner-private-v1, public.s236p_owner_private_objects, public.s236p_owner_private_events]
+    realContentAuthorized: false
+    productionAuthorized: false
+    downstreamExecutionStarted: false
     dependencies: [O4V]
     lockGroup: private-plane-provisioning
     risk: high

@@ -1,9907 +1,1959 @@
-import assert from "node:assert/strict";
-import { createHash } from "node:crypto";
-import { readFile } from "node:fs/promises";
-import test from "node:test";
-
-const PRIVATE_CONTRACT_SHA256 =
-  "9cd35cb2e1ed14cf62910618931d2de61d293ff62d6c9a71a7cdf54cd817e469";
-const SCHEDULER_CONTRACT_SHA256 =
-  "d598708aa138bad7f9e97847c0e47485d639926eda3d61b637b48d6dba6b5236";
-const S237O_EVIDENCE_TEMPLATE_SHA256 =
-  "9e965a84944b7610898d953a39743b2e436a39c19ca3eeb7d7ebbb9ff78b523c";
-const S237O_PROPOSAL_SHA256 =
-  "c72b60bb0543589673a26d177e762aca8eccd794c4b4c3bd58062329352a9662";
-const RECEIPT_ASSERTION_POLICY_SHA256 =
-  "d1616bbc8c7681c19b42bdffc86e0d5e34a62710bf9ba727fe5355ca0ad69da8";
-const O4T_PROPOSAL_SHA256 =
-  "60d62b97c50771402f70a88275d58a385ed7ee7bd2a6de28db48066f99b59a63";
-const O4V_PROPOSAL_SHA256 =
-  "59c6762c2dbe6519cefeef864b8d8f5f14402c3256d23ed8708ca18bb6fc4236";
-const O4V_PROVIDER_BINDING_SHA256 =
-  "d161f4f52c1f155e383246edd36dec6f1d56fd89aaf272f5087c2d4ba3105ee3";
-const O3A_PACKET_SHA256 =
-  "8189997e733eb0c8bef62c3ba5fa1cadac39a807c34d925b2e1a291fa30e654c";
-const O3A_DECISION_SHA256 =
-  "8841ff41dc4c9d3eb1e8bb57c2643964d4e9c54ed6825d763ccd7a6641cc987c";
-const O4V_LEAN_DECISION_SHA256 =
-  "5c6df014b55157a1bb5909c484662a2023cb04f40e2ed7c4ada54a57cb515ec5";
-const O3A_MANIFEST_FILE_SHA256 =
-  "e32fda4c8753b167cced7bd6c0247aa6ef6602fd69fc7704b289fc0942858618";
-const O3A_REPORT_FILE_SHA256 =
-  "7493040aec03d9a0c93ac38dbcfa98041729446963d4ad5f6e36c281c338d9c2";
-const JCS_SERIALIZATION = "rfc_8785_json_canonicalization_scheme_utf8";
-const PROJECTED_RESULT_ID_PATHS = [
-  "request_id",
-  "input_snapshot_version",
-  "execution_blocks[].ephemeral_opaque_candidate_id",
-  "execution_blocks[].ephemeral_opaque_window_id",
-  "unassigned_candidates[].ephemeral_opaque_candidate_id",
-  "violations[].ephemeral_opaque_candidate_ids[]",
-];
-const PROJECTED_RESULT_PROCESSING_ORDER = [
-  "establish_solver_response_or_trusted_gateway_classification_origin_without_accepting_gateway_status_from_solver",
-  "enter_optimal_or_feasible_branch_or_solver_or_gateway_failure_branch_with_exactly_one_allowed_success_to_failure_transition_on_canonical_or_native_validator_rejection",
-  "validate_complete_raw_projected_response_exact_correlation_and_required_bijections_before_any_canonical_version_info_construction",
-  "inverse_map_only_the_exact_six_identifier_bearing_paths_when_a_projected_candidate_plan_exists",
-  "construct_exact_canonical_ten_field_version_info_only_inside_trusted_gateway_from_exact_trusted_correlated_configuration",
-  "construct_canonical_fallback_tuple_and_state_only_inside_trusted_gateway_after_raw_projected_validation_or_failure_classification",
-  "validate_complete_canonical_result_contract_replan_cutoff_pairwise_block_non_overlap_prerequisite_ordering_and_every_native_hard_constraint",
-  "destroy_mapping_projected_input_and_projected_response_identifier_material",
-  "verify_no_projected_identifier_in_gateway_output_logs_artifacts_caches_errors_telemetry_or_persisted_temp",
-  "release_only_canonical_result_validated_native_fallback_or_manual_block_from_gateway",
-];
-const PROJECTED_RESULT_CONTROL_KEYS = [
-  "purpose",
-  "identifierDomain",
-  "canonicalResultContractPath",
-  "projectedInvocationContractPath",
-  "statusOriginBoundary",
-  "canonicalGatewayConstructionContract",
-  "requestCorrelationEqualityTargets",
-  "allSolverOwnedNonIdentifierValuesSchemasEnumsRulesCardinalitiesAndOrderingMustEqualCanonicalResultContractExceptExactStatusOriginAndGatewayConstructedFallbackTupleStateAndCanonicalVersionInfo",
-  "canonicalResultContractMayAcceptProjectedIdentifierDomain",
-  "projectedResultContractMayAcceptOriginalIdentifierDomain",
-  "completeProjectedResponseValidationRequiredBeforeInverseMapping",
-  "inverseMappingContract",
-  "processingOrderExactly",
-  "failureRouting",
-  "mappingLifecycleContract",
-];
-const PROJECTED_RESULT_CONTRACT_KEYS = [
-  "purpose",
-  "identifierDomain",
-  "canonicalResultContractPath",
-  "projectedInvocationContractPath",
-  "allowedFieldsExactly",
-  "additionalFieldsAllowed",
-  "nestedAdditionalFieldsAllowed",
-  "freeTextAllowed",
-  "executionBlockFieldsExactly",
-  "unassignedCandidateFieldsExactly",
-  "statusOriginBoundary",
-  "canonicalGatewayConstructionContract",
-  "candidateAccountingRules",
-  "executionBlockDurationRules",
-  "nonDroppableCandidateRules",
-  "candidateWindowFeasibilityRules",
-  "hardDeadlineFeasibilityRules",
-  "replanCutoffFeasibilityRules",
-  "pairwiseBlockNonOverlapRules",
-  "prerequisiteOrderingRules",
-  "objectiveComponentFieldsExactly",
-  "violationFieldsExactly",
-  "forbiddenFields",
-  "identifierSchemas",
-  "closedEnumValues",
-  "scalarSchemas",
-  "cardinalityLimits",
-  "statuses",
-  "candidateStatusesAllowedBeforeNativeValidation",
-  "everyUnassignedCandidateRequiresReason",
-  "unassignedReasons",
-  "requestCorrelationFieldsRequired",
-  "requestIdEchoRequired",
-  "inputSnapshotVersionEchoRequired",
-  "requestCorrelationEqualityTargets",
-  "allSolverOwnedNonIdentifierValuesSchemasEnumsRulesCardinalitiesAndOrderingMustEqualCanonicalResultContractExceptExactStatusOriginAndGatewayConstructedFallbackTupleStateAndCanonicalVersionInfo",
-  "canonicalResultContractMayAcceptProjectedIdentifierDomain",
-  "projectedResultContractMayAcceptOriginalIdentifierDomain",
-  "completeProjectedResponseValidationRequiredBeforeInverseMapping",
-  "inverseMappingContract",
-  "processingOrderExactly",
-  "failureRouting",
-  "mappingLifecycleContract",
-];
-const RESULT_CONTRACT_KEYS = [
-  "allowedFieldsExactly",
-  "additionalFieldsAllowed",
-  "nestedAdditionalFieldsAllowed",
-  "freeTextAllowed",
-  "executionBlockFieldsExactly",
-  "unassignedCandidateFieldsExactly",
-  "fallbackFieldsExactly",
-  "fallbackReasonValues",
-  "fallbackValueRules",
-  "candidateAccountingRules",
-  "executionBlockDurationRules",
-  "nonDroppableCandidateRules",
-  "candidateWindowFeasibilityRules",
-  "hardDeadlineFeasibilityRules",
-  "replanCutoffFeasibilityRules",
-  "pairwiseBlockNonOverlapRules",
-  "prerequisiteOrderingRules",
-  "versionInfoFieldsExactly",
-  "versionInfoFieldSchemas",
-  "versionInfoConstructionRules",
-  "objectiveComponentFieldsExactly",
-  "violationFieldsExactly",
-  "forbiddenFields",
-  "identifierSchemas",
-  "closedEnumValues",
-  "scalarSchemas",
-  "cardinalityLimits",
-  "statuses",
-  "candidateStatusesAllowedBeforeNativeValidation",
-  "fallbackStatuses",
-  "nativeFallbackInvalidResult",
-  "everyUnassignedCandidateRequiresReason",
-  "unassignedReasons",
-  "requestCorrelationFieldsRequired",
-  "requestIdEchoRequired",
-  "inputSnapshotVersionEchoRequired",
-  "versionFieldsRequired",
-];
-const FALLBACK_STATUSES = [
-  "infeasible",
-  "model_invalid",
-  "unknown",
-  "timeout",
-  "dependency_unavailable",
-  "adapter_error",
-  "schema_mismatch",
-  "stale_response",
-  "validator_rejected",
-];
-const SOLVER_STATUSES = [
-  "optimal",
-  "feasible",
-  "infeasible",
-  "model_invalid",
-  "unknown",
-];
-const SOLVER_FAILURE_STATUSES = [
-  "infeasible",
-  "model_invalid",
-  "unknown",
-];
-const GATEWAY_CLASSIFICATION_STATUSES = [
-  "timeout",
-  "dependency_unavailable",
-  "adapter_error",
-  "schema_mismatch",
-  "stale_response",
-  "validator_rejected",
-];
-const C3_RESULT_CONSTRAINT_CODES = [
-  "candidate_accounting_exact_partition",
-  "execution_block_candidate_resolves_exact_current_invocation",
-  "execution_block_duration_equals_end_minus_start",
-  "execution_block_duration_respects_candidate_shortening_bounds",
-  "immutable_prior_placement_incompatibility_fails_closed",
-];
-const C4_RESULT_CONSTRAINT_CODES = [
-  "non_droppable_candidates_placed_exactly_once",
-  "execution_block_window_resolves_exact_current_invocation",
-  "execution_block_window_allowed_for_candidate",
-  "execution_block_window_available",
-  "execution_block_contained_in_single_referenced_window",
-  "immutable_prior_placement_candidate_window_incompatibility_fails_closed",
-  "execution_block_hard_deadline_not_exceeded",
-];
-const SECOND_CORRECTIVE_RESULT_CONSTRAINT_CODES = [
-  "new_or_moved_execution_block_starts_at_or_after_replan_cutoff",
-];
-const NATIVE_FALLBACK_REJECTION_CODES = [
-  "missing_fallback",
-  "fallback_unused",
-  "fallback_reason_mismatch",
-  "fallback_status_mismatch",
-  "native_plan_version_invalid",
-  "native_plan_unresolved_or_mutable",
-  "canonical_result_contract_invalid",
-  "candidate_accounting_invalid",
-  "execution_block_duration_invalid",
-  "non_droppable_candidate_invalid",
-  "candidate_window_relation_invalid",
-  "replan_cutoff_invalid",
-  "block_overlap_invalid",
-  "prerequisite_order_invalid",
-  "hard_constraint_invalid",
-  "immutable_placement_incompatible",
-];
-const RESULT_HARD_CONSTRAINTS = [
-  "core_outcome_maximum_three",
-  "all_blocks_within_available_windows",
-  "fixed_and_pinned_blocks_do_not_move",
-  "prior_accepted_elapsed_and_in_progress_blocks_immutable",
-  "block_overlap_zero",
-  "prerequisite_order_violations_zero",
-  "planned_minutes_do_not_exceed_declared_availability",
-  "candidate_duplicate_placement_zero",
-  ...C3_RESULT_CONSTRAINT_CODES,
-  ...C4_RESULT_CONSTRAINT_CODES,
-  ...SECOND_CORRECTIVE_RESULT_CONSTRAINT_CODES,
-  "law_blocker_never_becomes_verified_completion",
-  "attempt_first_rewrite_after_attempt_and_review_only",
-  "guided_exposure_never_becomes_independent_review",
-  "owner_forbidden_windows_never_used",
-];
-
-const REQUIRED_RECEIPT_FIELDS = [
-  "contract_version",
-  "exact_head_sha",
-  "exact_tree_sha",
-  "opaque_environment_ref",
-  "opaque_vault_ref",
-  "policy_version",
-  "key_class_and_epoch",
-  "provider_config_version",
-  "synthetic_fixture_id",
-  "operation_id",
-  "observed_at",
-  "assertion_result",
-  "cleanup_state",
-  "o4v_proposal_digest_sha256",
-  "o4v_approved_binding_digest_sha256",
-  "provider_binding_digest_sha256",
-  "assertion_policy_digest_sha256",
-  "assertion_count",
-  "assertion_evidence_digest_sha256",
-  "attestation_run_id",
-  "opaque_primary_attestor_id",
-  "attestor_class",
-  "attestor_version",
-  "attestation_provenance_digest_sha256",
-  "receipt_set_digest_sha256",
-  "independent_verifier_attestation_digest_sha256",
-];
-
-const REQUIRED_RECEIPT_IDS = [
-  "synthetic_write_read_after_write",
-  "owner_a_read_write",
-  "owner_b_read_write",
-  "owner_a_to_b_and_b_to_a_uniform_denial",
-  "cross_owner_list_revision_export_delete_receipt_uniform_denial",
-  "approved_access_mode_tamper_replay_expiry_wrong_method_denial",
-  "immutable_original_append_only_revision",
-  "vault_safe_answer_pack_adapter_no_plaintext_hash_externalization",
-  "timeout_and_partial_failure_no_false_success",
-  "orphan_quarantine_and_idempotent_cleanup",
-  "single_vault_export_without_secret_or_commitment",
-  "delete_all_approved_surfaces",
-  "backup_expiry_pending_distinct_from_delete_complete",
-  "rollback_restore_no_deleted_content_resurrection",
-  "synthetic_canary_absent_from_git_ci_logs_telemetry_provider_logs_analytics_and_support_surfaces_outside_authorized_vault",
-];
-
-const OWNED_FILES = [
-  "AGENTS.md",
-  "config/dabangil-unified-program-contract.json",
-  "config/dabangil-private-authoring-review-plane-contract.json",
-  "config/dabangil-full-day-scheduler-contract.json",
-  "docs/dabangil-unified-program-contract.md",
-  "docs/decisions/2026-07-26-owner-dogfood-private-plane-schedule-amendment.md",
-  "docs/dabangil-private-authoring-review-plane-contract.md",
-  "docs/inverge-study-schedule-system.md",
-  "docs/inverge-master-roadmap.md",
-  "docs/inverge-product-constitution.md",
-  "docs/dabangil-second-exam-premium-os.md",
-  "docs/inverge-second-round-final-product-spec.md",
-  "docs/inverge-business-model.md",
-  "docs/inverge-product-brief.md",
-  "docs/inverge-data-boundary.md",
-  "docs/inverge-data-governance.md",
-  "docs/agent-factory-github-actions-button.md",
-  "docs/s235a-owner-private-golden-3-readiness.md",
-  "roadmap/active-program.yml",
-  "lib/review-os/s235a-owner-private-golden-3-readiness.ts",
-  "reference_corpus/readiness/appraiser/second_round_owner_private_golden_3_readiness.json",
-  "reference_corpus/readiness/appraiser/second_round_owner_private_golden_3_readiness_report.json",
-  "scripts/run-node-tests.mjs",
-  "tests/agent-factory-roadmap-runner.test.mjs",
-  "tests/dabangil-premium-alignment.test.mjs",
-  "tests/inverge-product-constitution.test.mjs",
-  "tests/inverge-roadmap-curriculum-docs.test.mjs",
-  "tests/agent-factory-github-actions-button.test.mjs",
-  "tests/s235a-owner-private-golden-3-readiness.test.mjs",
-  "tests/s234r-owner-dogfood-private-plane-schedule-amendment.test.mjs",
-];
-
-async function json(path) {
-  return JSON.parse(await readFile(path, "utf8"));
-}
-
-async function text(path) {
-  return readFile(path, "utf8");
-}
-
-function canonicalJson(value) {
-  if (Array.isArray(value)) {
-    return `[${value.map(canonicalJson).join(",")}]`;
-  }
-  if (value === null || typeof value !== "object") {
-    return JSON.stringify(value);
-  }
-  return `{${Object.entries(value)
-    .sort(([left], [right]) => left < right ? -1 : left > right ? 1 : 0)
-    .map(([key, nested]) => `${JSON.stringify(key)}:${canonicalJson(nested)}`)
-    .join(",")}}`;
-}
-
-function canonicalSha256(value) {
-  return createHash("sha256")
-    .update(canonicalJson(value))
-    .digest("hex");
-}
-
-function fileSha256(value) {
-  return createHash("sha256").update(value).digest("hex");
-}
-
-function clone(value) {
-  return structuredClone(value);
-}
-
-function collectNamedValues(value, names, output = []) {
-  if (Array.isArray(value)) {
-    for (const nested of value) collectNamedValues(nested, names, output);
-    return output;
-  }
-  if (value === null || typeof value !== "object") return output;
-  for (const [key, nested] of Object.entries(value)) {
-    if (names.has(key)) output.push(nested);
-    collectNamedValues(nested, names, output);
-  }
-  return output;
-}
-
-function proposalSha256(packet) {
-  const normalized = clone(packet);
-  normalized.status = null;
-  normalized.ownerApproved = null;
-  normalized.approvalBinding.proposalDigestSha256 = null;
-  normalized.approvalRecord = null;
-  return canonicalSha256(normalized);
-}
-
-function s237oProposalSha256(packet) {
-  const normalized = clone(packet);
-  normalized.status = null;
-  normalized.owner_approved = null;
-  normalized.approval_record = null;
-  return canonicalSha256(normalized);
-}
-
-function projectedResultGatewayContractIsClosed(scheduler) {
-  const projected = scheduler.optimizerProjectedResultContract;
-  const canonical = scheduler.resultContract;
-  const projection =
-    scheduler.inputContract.optimizerInvocationProjectionContract;
-  if (!projected || !canonical || !projection) return false;
-
-  const canonicalSharedKeys = [
-    "executionBlockFieldsExactly",
-    "unassignedCandidateFieldsExactly",
-    "objectiveComponentFieldsExactly",
-    "violationFieldsExactly",
-    "closedEnumValues",
-    "cardinalityLimits",
-    "candidateStatusesAllowedBeforeNativeValidation",
-    "everyUnassignedCandidateRequiresReason",
-    "unassignedReasons",
-    "requestCorrelationFieldsRequired",
-    "requestIdEchoRequired",
-    "inputSnapshotVersionEchoRequired",
-  ];
-  const canonicalKeys = new Set(Object.keys(canonical));
-  const projectedOnlyKeys = Object.keys(projected).filter(
-    (key) => !canonicalKeys.has(key),
-  );
-  const allSolverOwnedSharedContractValuesAreExact =
-    canonicalSharedKeys.every(
-      (key) =>
-        Object.hasOwn(projected, key) &&
-        canonicalJson(projected[key]) === canonicalJson(canonical[key]),
-    );
-  const exactCanonicalIdentifierSchemas = {
-    request_id: "^req_[A-Za-z0-9_-]{16,64}$",
-    input_snapshot_version: "^snp_[A-Za-z0-9_-]{16,64}$",
-    ephemeral_opaque_window_id: "^win_[A-Za-z0-9_-]{16,64}$",
-    ephemeral_opaque_candidate_id: "^cand_[A-Za-z0-9_-]{16,64}$",
-    native_plan_version: "closed_identifier_1_to_80_or_null",
-  };
-  const exactProjectedIdentifierSchemas = {
-    request_id: "^oreq_[A-Za-z0-9_-]{16,64}$",
-    input_snapshot_version: "^osnp_[A-Za-z0-9_-]{16,64}$",
-    ephemeral_opaque_window_id: "^owin_[A-Za-z0-9_-]{16,64}$",
-    ephemeral_opaque_candidate_id: "^ocand_[A-Za-z0-9_-]{16,64}$",
-  };
-  const inverse = projected.inverseMappingContract;
-  const lifecycle = projected.mappingLifecycleContract;
-  const failure = projected.failureRouting;
-  const expectedPathClasses = {
-    request_id: "request_id",
-    input_snapshot_version: "input_snapshot_version",
-    "execution_blocks[].ephemeral_opaque_candidate_id":
-      "ephemeral_opaque_candidate_id",
-    "execution_blocks[].ephemeral_opaque_window_id":
-      "ephemeral_opaque_window_id",
-    "unassigned_candidates[].ephemeral_opaque_candidate_id":
-      "ephemeral_opaque_candidate_id",
-    "violations[].ephemeral_opaque_candidate_ids[]":
-      "ephemeral_opaque_candidate_id",
-  };
-  const replay = projection.identifierRemapContract.benchmarkReplaySessionContract;
-  const replayArtifact =
-    scheduler.s237oBenchmarkAcceptanceContract.benchmarkResultDigestContract
-      .resolvedArtifactMembersContract;
-  const identifierFreeInput =
-    replayArtifact.identifierFreeDeterministicReplayInputArtifactContract;
-  const exactIdentifierFreeInputFields = [
-    "artifact_contract_version",
-    "canonical_projected_input_digest_sha256",
-    "six_process_projected_input_digests_sha256",
-  ];
-  const exactIdentifierFreeInputFieldSchemas = {
-    artifact_contract_version: [
-      "dabangil.s237o.identifier_free_replay_input_digest_receipt.v1",
-    ],
-    canonical_projected_input_digest_sha256: "lowercase_hex_64",
-    six_process_projected_input_digests_sha256:
-      "exact_ordered_array_of_six_lowercase_hex_64",
-  };
-  const exactBenchmarkProcessOrder = [
-    "cold_1",
-    "cold_2",
-    "cold_3",
-    "warm_1",
-    "warm_2",
-    "warm_3",
-  ];
-  const exactFailureRouting = {
-    missingUnknownDanglingDuplicateCrossClassOriginalDomainNonBijectiveOrPreservationFailureStatus:
-      "schema_mismatch",
-    wrongRequestOrSnapshotCorrelationStatus: "stale_response",
-    knownNonDroppableDisallowedUnavailableOrOutOfBoundsRelationStatus:
-      "validator_rejected",
-    knownHardDeadlineBreachStatus: "validator_rejected",
-    replanCutoffStructuralMappingCorrelationOrAmbiguousImmutableMatchingFailureStatus:
-      "schema_mismatch",
-    knownBeforeCutoffPlacementStatus: "validator_rejected",
-    pairwiseNonOverlapStructuralMappingCorrelationOrAmbiguousImmutableSelfMatchingFailureStatus:
-      "schema_mismatch",
-    knownBlockOverlapStatus: "validator_rejected",
-    prerequisiteUnknownDanglingDuplicateCrossDomainOrNonBijectiveRelationStatus:
-      "schema_mismatch",
-    knownMissingUnassignedOrReversedPrerequisitePlacementStatus:
-      "validator_rejected",
-    knownPrerequisitePlacementFailureClassificationPrecedesGenericCandidateAccountingOmissionClassification:
-      true,
-    everyKnownCutoffOverlapOrPrerequisiteFailureMustAttemptExactlyOneIndependentlyPreparedCanonicalNativeFallback:
-      true,
-    rawProjectedVersionInfoOrGatewayOwnedVersionConfigurationInjectionStatus:
-      "schema_mismatch",
-    missingAmbiguousStaleUntrustedOrMismatchedCanonicalVersionMetadataStatus:
-      "validator_rejected",
-    canonicalVersionMetadataFailureMustAttemptExactlyOneIndependentlyPreparedCanonicalNativeFallback:
-      true,
-    optimalOrFeasibleLateCanonicalOrNativeValidationFailureStatus:
-      "validator_rejected",
-    optimalOrFeasibleLateCanonicalOrNativeValidationFailureMustDiscardCandidatePlanAndUsedFalseTupleAndTransitionExactlyOnceToIndependentCanonicalNativeFallback:
-      true,
-    everySolverFailureOrTrustedGatewayClassificationMustAttemptExactlyOneIndependentlyPreparedCanonicalNativeFallback:
-      true,
-    projectedFailureEnvelopeMayContainReferenceAuthorizeOrReleaseCanonicalFallback:
-      false,
-    canonicalFallbackTupleAndStateConstructedOnlyByTrustedGateway: true,
-    canonicalNativeFallbackPreparedAndValidatedOnlyInOriginalIdentifierDomain:
-      true,
-    invalidNativeFallbackResult: "blocked_manual_plan_required",
-    invalidNativeFallbackMayTriggerAnotherFallback: false,
-    invalidProjectedCandidatePlanOrFailureEnvelopeMayReachNativeValidationOrGatewayOutput:
-      false,
-  };
-  const exactStatusOriginBoundary = {
-    solverOwnedStatusesExactly: SOLVER_STATUSES,
-    solverCandidatePlanStatusesExactly: ["optimal", "feasible"],
-    solverFailureStatusesExactly: SOLVER_FAILURE_STATUSES,
-    trustedGatewayClassificationStatusesExactly:
-      GATEWAY_CLASSIFICATION_STATUSES,
-    canonicalGatewayOnlyStatusesExactly: [
-      "fallback",
-      "blocked_manual_plan_required",
-    ],
-    projectedResponseStatusMustBeSolverOwned: true,
-    timeoutDependencyUnavailableAndAdapterErrorAreTrustedGatewayClassificationsNotSolverAuthoredStatuses:
-      true,
-    isolatedSolverMayAuthorTrustedGatewayClassificationOrCanonicalGatewayOnlyStatus:
-      false,
-    projectedCandidatePlanFieldsExactly: [
-      "execution_blocks",
-      "unassigned_candidates",
-    ],
-    projectedCandidatePlanFieldsMayAppearOnlyForOptimalOrFeasible: true,
-    projectedFailureMayContainOrReleaseCandidatePlan: false,
-    projectedResponseMayContainFallback: false,
-    projectedResponseMayContainNativePlanVersion: false,
-    projectedResponseMayContainCanonicalNativeFallbackPlanOrReference: false,
-    projectedResponseMayContainVersionInfoOrGatewayOwnedVersionConfigurationFields:
-      false,
-  };
-  const exactGatewayConstructionContract = {
-    gatewayAloneOwnsCanonicalFallbackTupleAndState: true,
-    gatewayAloneConstructsCanonicalVersionInfoFromExactTrustedCorrelatedConfiguration:
-      true,
-    gatewayConstructedFallbackStateAndCanonicalVersionInfoAreTheOnlyAllowedExceptionsToFormerBlanketProjectedCanonicalNonIdentifierEquality:
-      true,
-    gatewayConstructedProjectedCanonicalNonIdentifierExceptionsExactly: [
-      "canonical_fallback_tuple_and_state",
-      "canonical_version_info",
-    ],
-    canonicalVersionInfoFieldsExactly: [
-      "contract_version",
-      "native_policy_version",
-      "adapter_version",
-      "optimizer_version",
-      "objective_version",
-      "threshold_version",
-      "solver_seed",
-      "solver_workers",
-      "time_limit_ms",
-      "integer_scaling_version",
-    ],
-    canonicalVersionInfoTrustedSourceExact:
-      "exact_trusted_correlated_gateway_configuration_for_the_same_validated_invocation",
-    completeRawResponseExactCorrelationAndRequiredBijectionValidationMustFinishBeforeCanonicalVersionInfoConstruction:
-      true,
-    rawProjectedResponseMayContainAcceptRequireOrAuthorCanonicalVersionInfoOrAnyGatewayOwnedVersionConfigurationField:
-      false,
-    constructedCanonicalVersionInfoMustMatchExactTrustedCorrelatedConfigurationFieldForField:
-      true,
-    missingAmbiguousStaleUntrustedOrMismatchedCanonicalVersionMetadataTrustedGatewayClassification:
-      "validator_rejected",
-    missingAmbiguousStaleUntrustedOrMismatchedCanonicalVersionMetadataMustAttemptExactlyOneIndependentlyPreparedCanonicalNativeFallback:
-      true,
-    missingAmbiguousStaleUntrustedOrMismatchedCanonicalVersionMetadataInvalidFallbackResult:
-      "blocked_manual_plan_required",
-    canonicalVersionInfoConstructionContract: {
-      fieldsExactlySource: "resultContract.versionInfoFieldsExactly",
-      fieldSchemasSource: "resultContract.versionInfoFieldSchemas",
-      requiredFieldsSource: "resultContract.versionFieldsRequired",
-      trustedConfigurationSource:
-        "exact_trusted_correlated_gateway_configuration_for_the_same_validated_invocation",
-      fieldSourceMappingExactly: {
-        contract_version: "trusted_configuration.contract_version",
-        native_policy_version: "trusted_configuration.native_policy_version",
-        adapter_version: "trusted_configuration.adapter_version",
-        optimizer_version: "trusted_configuration.optimizer_version",
-        objective_version: "trusted_configuration.objective_version",
-        threshold_version: "trusted_configuration.threshold_version",
-        solver_seed: "trusted_configuration.solver_seed",
-        solver_workers: "trusted_configuration.solver_workers",
-        time_limit_ms: "trusted_configuration.time_limit_ms",
-        integer_scaling_version:
-          "trusted_configuration.integer_scaling_version",
-      },
-      rawProjectedResponseMaySourceOverrideSelectOrAuthorAnyField: false,
-      trustedConfigurationMustBeCurrentTrustedUnambiguousAndBoundToExactInvocation:
-        true,
-      constructedValuesMustMatchActualInvocationConfigurationFieldForField:
-        true,
-      constructionMayOccurBeforeCompleteRawResponseExactCorrelationAndRequiredBijectionValidation:
-        false,
-      missingAmbiguousStaleUntrustedOrMismatchMayReleasePartialVersionInfoOrCandidatePlan:
-        false,
-      failureMustEnterExistingSingleNativeFallbackBranchExactlyOnce: true,
-      invalidFallbackResult: "blocked_manual_plan_required",
-      fallbackMayBeAttemptedMoreThanOnceOrRecursively: false,
-    },
-    directGatewayFailureWithoutRawSolverResponseMayFabricateAProjectedResponse:
-      false,
-    directGatewayFailureMustValidateRetainedExactInvocationAndTrustedConfigurationBindingBeforeCanonicalVersionInfoConstruction:
-      true,
-    optimalOrFeasibleBranchOrderExactly: [
-      "validate_complete_raw_projected_candidate_plan_response_without_version_info_or_gateway_owned_version_configuration_fields",
-      "validate_exact_request_snapshot_correlation_and_per_class_bijections",
-      "validate_projected_candidate_accounting_duration_non_droppable_candidate_window_hard_deadline_replan_cutoff_pairwise_block_non_overlap_and_prerequisite_ordering_rules_using_trusted_gateway_context",
-      "inverse_map_exactly_the_existing_six_identifier_bearing_paths",
-      "preserve_every_solver_owned_non_id_value_and_array_cardinality_and_order",
-      "trusted_gateway_constructs_exact_canonical_ten_field_version_info_from_exact_trusted_correlated_configuration",
-      "trusted_gateway_constructs_canonical_fallback_used_false_reason_not_used_native_plan_version_null",
-      "validate_complete_canonical_result_contract_replan_cutoff_pairwise_block_non_overlap_prerequisite_ordering_and_every_native_hard_constraint",
-      "on_canonical_or_native_rejection_discard_candidate_plan_and_used_false_tuple_classify_validator_rejected_and_transition_exactly_once_to_failure_branch",
-      "release_only_when_complete_canonical_and_native_validation_succeeds",
-    ],
-    solverOrTrustedGatewayFailureBranchOrderExactly: [
-      "validate_or_classify_raw_projected_attempt_without_accepting_version_info_gateway_owned_version_configuration_or_canonical_fallback_state",
-      "validate_exact_request_snapshot_correlation_and_required_bijections_before_any_canonical_version_info_construction",
-      "independently_resolve_or_prepare_exactly_one_immutable_native_fallback_in_canonical_original_id_domain",
-      "trusted_gateway_constructs_exact_canonical_ten_field_version_info_from_exact_trusted_correlated_configuration",
-      "trusted_gateway_constructs_canonical_fallback_used_true_exact_trigger_reason_and_non_null_closed_native_plan_version",
-      "validate_complete_canonical_result_contract_candidate_accounting_duration_non_droppable_candidate_window_hard_deadline_replan_cutoff_pairwise_block_non_overlap_prerequisite_ordering_and_every_hard_constraint",
-      "return_only_blocked_manual_plan_required_when_canonical_fallback_is_missing_unavailable_or_invalid",
-    ],
-    optimalOrFeasibleCanonicalFallbackTupleExactly: {
-      used: false,
-      reason_enum: "not_used",
-      native_plan_version: null,
-    },
-    failureCanonicalFallbackTupleRules: {
-      used: true,
-      reason_enum: "exact_solver_failure_or_trusted_gateway_classification",
-      native_plan_version:
-        "non_null_closed_identifier_resolving_exact_immutable_canonical_native_fallback",
-    },
-    lateCanonicalOrNativeValidationRejectionTransition: {
-      appliesWhen:
-        "projected_optimal_or_feasible_passes_projected_validation_correlation_and_inverse_mapping_but_complete_canonical_result_or_native_hard_constraint_validation_rejects",
-      trustedGatewayClassification: "validator_rejected",
-      discardCandidatePlanAndUsedFalseTupleWithoutRelease: true,
-      transitionExactlyOnceToSolverOrTrustedGatewayFailureBranch: true,
-      canonicalFallbackMustBePreparedIndependentlyInOriginalIdentifierDomain:
-        true,
-      projectedOrRejectedCandidatePlanMayBeReusedAsCanonicalFallback: false,
-      fallbackMayBeAttemptedMoreThanOnceOrRecursively: false,
-      invalidFallbackResult: "blocked_manual_plan_required",
-    },
-    canonicalVersionInfoConstructionFailureTransition: {
-      trustedGatewayClassification: "validator_rejected",
-      canonicalVersionInfoMayBePartiallyConstructedOrReleased: false,
-      projectedCandidatePlanMayBeReleased: false,
-      transitionExactlyOnceToSolverOrTrustedGatewayFailureBranch: true,
-      canonicalFallbackMustBePreparedIndependentlyInOriginalIdentifierDomain:
-        true,
-      fallbackMayBeAttemptedMoreThanOnceOrRecursively: false,
-      invalidFallbackResult: "blocked_manual_plan_required",
-    },
-    projectedFailureEnvelopeMayReferenceAuthorizeOrReleaseCanonicalFallback:
-      false,
-    projectedFailureEnvelopeMayContainVersionInfoOrGatewayOwnedVersionConfigurationFields:
-      false,
-    canonicalFallbackMustBePreparedIndependentlyOfProjectedResponse: true,
-    canonicalFallbackMayBeAttemptedMoreThanOnceOrRecursively: false,
-    invalidCanonicalFallbackResult: "blocked_manual_plan_required",
-    invalidCanonicalFallbackMayReleaseCandidatePlan: false,
-  };
-
-  return (
-    projected.purpose ===
-      "validate_solver_owned_projected_response_without_canonical_fallback_state_before_trusted_gateway_construction" &&
-    projected.identifierDomain ===
-      "projected_oreq_osnp_owin_ocand_only" &&
-    projected.canonicalResultContractPath === "resultContract" &&
-    projected.projectedInvocationContractPath ===
-      "inputContract.optimizerInvocationProjectionContract" &&
-    projected.additionalFieldsAllowed === false &&
-    projected.nestedAdditionalFieldsAllowed === false &&
-    projected.freeTextAllowed === false &&
-    canonicalJson(Object.keys(projected)) ===
-      canonicalJson(PROJECTED_RESULT_CONTRACT_KEYS) &&
-    canonicalJson(projectedOnlyKeys) ===
-      canonicalJson(PROJECTED_RESULT_CONTROL_KEYS) &&
-    allSolverOwnedSharedContractValuesAreExact &&
-    canonicalJson(projected.allowedFieldsExactly) ===
-      canonicalJson([
-        "request_id",
-        "input_snapshot_version",
-        "status",
-        "execution_blocks",
-        "unassigned_candidates",
-        "objective_components",
-        "violations",
-        "elapsed_ms",
-      ]) &&
-    canonicalJson(projected.statuses) === canonicalJson(SOLVER_STATUSES) &&
-    !Object.hasOwn(projected, "fallbackFieldsExactly") &&
-    !Object.hasOwn(projected, "fallbackReasonValues") &&
-    !Object.hasOwn(projected, "fallbackValueRules") &&
-    !Object.hasOwn(projected, "fallbackStatuses") &&
-    !Object.hasOwn(projected, "nativeFallbackInvalidResult") &&
-    !Object.hasOwn(projected, "versionInfoFieldsExactly") &&
-    !Object.hasOwn(projected, "versionInfoFieldSchemas") &&
-    !Object.hasOwn(projected, "versionFieldsRequired") &&
-    !Object.hasOwn(projected.identifierSchemas, "native_plan_version") &&
-    !Object.hasOwn(projected.scalarSchemas, "fallback_used") &&
-    [
-      "version_info",
-      "contract_version",
-      "native_policy_version",
-      "adapter_version",
-      "optimizer_version",
-      "objective_version",
-      "threshold_version",
-      "solver_seed",
-      "solver_workers",
-      "time_limit_ms",
-      "integer_scaling_version",
-      "fallback",
-      "fallback_reason_enum",
-      "native_plan_version",
-      "canonical_native_fallback_plan",
-      "canonical_native_fallback_plan_ref",
-      "canonical_plan_reference",
-    ].every((field) => projected.forbiddenFields.includes(field)) &&
-    canonicalJson(projected.statusOriginBoundary) ===
-      canonicalJson(exactStatusOriginBoundary) &&
-    canonicalJson(projected.canonicalGatewayConstructionContract) ===
-      canonicalJson(exactGatewayConstructionContract) &&
-    canonicalJson(canonical.identifierSchemas) ===
-      canonicalJson(exactCanonicalIdentifierSchemas) &&
-    canonicalJson(projected.identifierSchemas) ===
-      canonicalJson(exactProjectedIdentifierSchemas) &&
-    projected
-      .allSolverOwnedNonIdentifierValuesSchemasEnumsRulesCardinalitiesAndOrderingMustEqualCanonicalResultContractExceptExactStatusOriginAndGatewayConstructedFallbackTupleStateAndCanonicalVersionInfo ===
-      true &&
-    projected.canonicalResultContractMayAcceptProjectedIdentifierDomain ===
-      false &&
-    projected.projectedResultContractMayAcceptOriginalIdentifierDomain ===
-      false &&
-    projected.completeProjectedResponseValidationRequiredBeforeInverseMapping ===
-      true &&
-    canonicalJson(projected.requestCorrelationEqualityTargets) ===
-      canonicalJson({
-        request_id: "exact_projected_invocation.ephemeral_request_id",
-        input_snapshot_version:
-          "exact_projected_invocation.ephemeral_input_snapshot_version",
-      }) &&
-    canonicalJson(inverse.identifierBearingPathsExactly) ===
-      canonicalJson(PROJECTED_RESULT_ID_PATHS) &&
-    new Set(inverse.identifierBearingPathsExactly).size ===
-      PROJECTED_RESULT_ID_PATHS.length &&
-    canonicalJson(inverse.pathIdentifierClasses) ===
-      canonicalJson(expectedPathClasses) &&
-    inverse.bijectionSource ===
-      "inputContract.optimizerInvocationProjectionContract.identifierRemapContract" &&
-    inverse.samePerInvocationBijectionsUsedForProjectionAndInverseMapping ===
-      true &&
-    inverse.allNonIdentifierValuesPreservedExactly === true &&
-    inverse.allArrayCardinalitiesAndOrderingPreservedExactly === true &&
-    inverse.inverseMappingMayFilterSortDeduplicateInsertOrDropArrayEntries ===
-      false &&
-    inverse
-      .inverseMappedResultMustValidateAgainstCanonicalResultContractBeforeNativeValidation ===
-      true &&
-    inverse.duplicateMappingDefinition ===
-      "duplicate_source_entry_duplicate_projected_entry_one_to_many_or_many_to_one_within_any_identifier_class_not_repeated_valid_reference_use" &&
-    inverse
-      .missingUnknownDanglingDuplicateCrossClassOriginalDomainOrNonBijectiveMappingAllowed ===
-      false &&
-    inverse.partialInverseMappingOrReleaseOfInvalidProjectedResponseAllowed ===
-      false &&
-    canonicalJson(projected.processingOrderExactly) ===
-      canonicalJson(PROJECTED_RESULT_PROCESSING_ORDER) &&
-    canonicalJson(failure) === canonicalJson(exactFailureRouting) &&
-    failure
-      .missingUnknownDanglingDuplicateCrossClassOriginalDomainNonBijectiveOrPreservationFailureStatus ===
-      "schema_mismatch" &&
-    failure.wrongRequestOrSnapshotCorrelationStatus === "stale_response" &&
-    failure
-      .knownNonDroppableDisallowedUnavailableOrOutOfBoundsRelationStatus ===
-      "validator_rejected" &&
-    failure
-      .everySolverFailureOrTrustedGatewayClassificationMustAttemptExactlyOneIndependentlyPreparedCanonicalNativeFallback ===
-      true &&
-    failure
-      .projectedFailureEnvelopeMayContainReferenceAuthorizeOrReleaseCanonicalFallback ===
-      false &&
-    failure.canonicalFallbackTupleAndStateConstructedOnlyByTrustedGateway ===
-      true &&
-    failure
-      .canonicalNativeFallbackPreparedAndValidatedOnlyInOriginalIdentifierDomain ===
-      true &&
-    failure.invalidNativeFallbackResult ===
-      "blocked_manual_plan_required" &&
-    failure.invalidNativeFallbackMayTriggerAnotherFallback === false &&
-    failure
-      .invalidProjectedCandidatePlanOrFailureEnvelopeMayReachNativeValidationOrGatewayOutput ===
-      false &&
-    lifecycle.mappingExistsOnlyInsideTrustedNativeGateway === true &&
-    lifecycle.mappingMustRemainUntilCompleteProjectedResponseValidationAndRequiredInverseMappingFinish ===
-      true &&
-    lifecycle.mappingMayBeDestroyedBeforeCompleteProjectedResponseValidationAndRequiredInverseMappingFinish ===
-      false &&
-    lifecycle.singleInvocationSuccessDestroysMappingAfterCanonicalAndNativeValidationBeforeGatewayOutput ===
-      true &&
-    lifecycle.singleInvocationFailureDestroysMappingAfterFailureClassificationAndValidatedNativeFallbackPreparationBeforeGatewayOutput ===
-      true &&
-    lifecycle.sixProcessBenchmarkRetainsSameMappingThroughAllSixProjectedResponseValidationsInverseMappingsCanonicalValidationsAndNativeValidations ===
-      true &&
-    lifecycle.sixProcessBenchmarkSuccessDestroysMappingOnlyAfterSixthCompleteValidationPathAndBeforeAnyCanonicalResultSetLeavesGateway ===
-      true &&
-    lifecycle.sixProcessBenchmarkFailureDestroysMappingAfterFailureClassificationAndValidatedNativeFallbackPreparationBeforeGatewayExit ===
-      true &&
-    lifecycle.mappingDestroyedOnEverySuccessAndFailurePath === true &&
-    lifecycle.mappingRetainedAfterGatewayExit === false &&
-    lifecycle.projectedIdentifierMayLeaveGatewayOrEnterLogsArtifactsCachesErrorsTelemetryOrPersistedTemp ===
-      false &&
-    replay
-      .mappingAndProjectedInputMustRemainThroughAllSixCompleteProjectedResponseValidationsAndInverseMappingsOnSuccess ===
-      true &&
-    replay
-      .mappingMayBeDestroyedBeforeTheSixthProjectedResponseValidationAndInverseMappingCompletesOnSuccess ===
-      false &&
-    replay
-      .mappingAndProjectedIdentifierMaterialMustBeDestroyedAfterTheSixthCompleteCanonicalAndNativeValidationPathOrAfterAnyFailureIsClassifiedAndValidatedNativeFallbackIsPreparedAndBeforeGatewayExit ===
-      true &&
-    !Object.hasOwn(
-      replay,
-      "mappingAndProjectedInputMustBeDestroyedImmediatelyAfterSixthReplayOrAnyFailure",
-    ) &&
-    projection.projectionRules
-      .ephemeralIdMappingMustRemainInsideTrustedNativeGatewayMemoryUntilProjectedResponseValidationAndRequiredInverseMappingFinish ===
-      true &&
-    projection.projectionRules
-      .ephemeralIdMappingMayBeDestroyedBeforeProjectedResponseValidationAndRequiredInverseMappingFinish ===
-      false &&
-    !Object.hasOwn(
-      projection.projectionRules,
-      "ephemeralIdMappingMustRemainInsideTrustedNativeGatewayMemoryAndBeDestroyedAfterRequest",
-    ) &&
-    projection.projectionRules
-      .optimizerLogsArtifactsCachesErrorsTelemetryAndPersistedTempSurfacesMayContainProjectedIdentifiers ===
-      false &&
-    projection.projectionRules
-      .onlyCanonicalInverseMappedResultsOrIdentifierFreeDigestReceiptsMayLeaveTrustedNativeGateway ===
-      true &&
-    replayArtifact.memberSchemaContracts.deterministic_replay_input_artifact ===
-      "benchmarkResultDigestContract.resolvedArtifactMembersContract.identifierFreeDeterministicReplayInputArtifactContract" &&
-    canonicalJson(identifierFreeInput.fieldsExactly) ===
-      canonicalJson(exactIdentifierFreeInputFields) &&
-    canonicalJson(identifierFreeInput.fieldSchemas) ===
-      canonicalJson(exactIdentifierFreeInputFieldSchemas) &&
-    identifierFreeInput.additionalFieldsAllowed === false &&
-    identifierFreeInput.freeTextAllowed === false &&
-    canonicalJson(identifierFreeInput.processOrderingExactly) ===
-      canonicalJson(exactBenchmarkProcessOrder) &&
-    identifierFreeInput.exactProcessDigestCount === 6 &&
-    identifierFreeInput.allSixProcessDigestsMustEqualCanonicalProjectedInputDigest ===
-      true &&
-    identifierFreeInput.canonicalProjectedInputDigestComputedInsideTrustedNativeGatewayFromExactValidatedProjectedInputBytes ===
-      true &&
-    identifierFreeInput.projectedInputBytesMayLeaveTrustedNativeGateway ===
-      false &&
-    identifierFreeInput.projectedIdentifierValuesMayAppearInArtifact === false &&
-    identifierFreeInput
-      .projectedIdentifierValuesMayAppearInLogsCachesErrorsTelemetryOrPersistedTempSurfaces ===
-      false &&
-    identifierFreeInput.digestReceiptMayMaterializeOnlyAfterMappingAndProjectedIdentifierMaterialAreDestroyed ===
-      true
-  );
-}
-
-function c3ResultValidationContractsAreClosed(scheduler) {
-  const canonical = scheduler.resultContract;
-  const projected = scheduler.optimizerProjectedResultContract;
-  if (!canonical || !projected) return false;
-
-  const exactFallbackValueRules = {
-    usedFalseRequiresReasonNotUsedAndNativePlanVersionNull: true,
-    usedTrueRequiresTriggerReasonAndClosedNativePlanVersion: true,
-    fallbackStatusRequiresUsedTrue: true,
-    optimalOrFeasibleRequiresUsedFalse: true,
-    blockedManualPlanRequiredMayFollowOnlyInvalidNativeFallback: true,
-    everyFallbackStatusesMemberRequiresUsedTrue: true,
-    everyFallbackStatusesMemberRequiresReasonEnumEqualTriggeringStatus: true,
-    everyFallbackStatusesMemberRequiresNonNullClosedNativePlanVersion: true,
-    literalFallbackStatusRequiresUsedTrue: true,
-    literalFallbackStatusRequiresReasonEnumInFallbackStatuses: true,
-    literalFallbackStatusRequiresNonNullClosedNativePlanVersion: true,
-    literalFallbackStatusRequiresReasonInFallbackStatusesAndNonNullClosedNativePlanVersion:
-      true,
-    nativePlanVersionMustResolveOneExactImmutableCanonicalNativeFallbackPlan:
-      true,
-    failureStatusEnvelopeMaySelfAuthorizeReferencedNativeFallbackRelease:
-      false,
-    trustedNativeGatewayMustResolveOrPrepareExactImmutableCanonicalNativeFallbackIndependentlyOfOptimizerResponse:
-      true,
-    canonicalFallbackTupleAndStateMayBeConstructedAndAttachedOnlyByTrustedGateway:
-      true,
-    projectedSolverResponseMaySupplyFallbackNativePlanVersionCanonicalPlanOrCanonicalPlanReference:
-      false,
-    projectedSolverResponseMaySupplyVersionInfoOrGatewayOwnedVersionConfigurationFields:
-      false,
-    canonicalVersionInfoMustBeConstructedByTrustedGatewayFromExactTrustedCorrelatedConfigurationAfterRawResponseCorrelationAndBijectionValidation:
-      true,
-    referencedNativeFallbackMustBeSeparatelyValidatedAgainstCanonicalCandidateAccountingExecutionBlockDurationAndAllHardConstraintsBeforeRelease:
-      true,
-    referencedNativeFallbackMustBeSeparatelyValidatedAgainstCanonicalCandidateAccountingExecutionBlockDurationNonDroppableCandidateWindowAndAllHardConstraintsBeforeRelease:
-      true,
-    referencedNativeFallbackMustBeSeparatelyValidatedAgainstCanonicalTenFieldVersionInfoAndHardDeadlineFeasibilityBeforeRelease:
-      true,
-    referencedNativeFallbackMustBeSeparatelyValidatedAgainstCanonicalReplanCutoffPairwiseBlockNonOverlapAndPrerequisiteOrderingBeforeRelease:
-      true,
-    missingFallbackMismatchedReasonInvalidVersionOrInvalidNativePlanResult:
-      "blocked_manual_plan_required",
-    missingUnavailableNonDroppableInvalidCandidateWindowInvalidHardDeadlineInvalidReplanCutoffOverlappingInvalidPrerequisiteInvalidCanonicalVersionInfoOrHardConstraintInvalidNativePlanResult:
-      "blocked_manual_plan_required",
-    missingFallbackMismatchedReasonInvalidVersionOrInvalidNativePlanMayReleaseCandidatePlan:
-      false,
-    canonicalNativeFallbackMayBeAttemptedMoreThanOnceOrRecursively: false,
-    blockedManualPlanRequiredRequiresUsedFalseReasonNotUsedAndNativePlanVersionNull:
-      true,
-    blockedManualPlanRequiredMayCarryTriggerReasonOrNativePlanVersion:
-      false,
-    blockedManualPlanRequiredMayReleaseExecutionBlocksOrReferencedNativePlan:
-      false,
-  };
-  const exactCandidateAccountingRules = {
-    directCandidatePlanStatusesExactly: ["optimal", "feasible"],
-    validatedNativeFallbackTriggerStatusesExactly: FALLBACK_STATUSES,
-    validatedNativeFallbackEnvelopeStatusesExactly: [
-      ...FALLBACK_STATUSES,
-      "fallback",
-    ],
-    literalFallbackStatusPlanMustBeValidatedNativeFallback: true,
-    allReleasableValidatedNativeFallbackPlansMustSatisfyTheseSameRules: true,
-    exactCorrelatedInvocationCandidateSetSource:
-      "exact_current_correlated_invocation.candidates[].ephemeral_opaque_candidate_id",
-    exactCorrelatedInvocationCandidateIdsUnique: true,
-    candidateIdentifiersMustUseActiveContainingContractDomain: true,
-    executionBlockCandidateIdsMustEachResolveExactlyOnceThroughExactCurrentInvocation:
-      true,
-    unassignedCandidateIdsMustEachResolveExactlyOnceThroughExactCurrentInvocation:
-      true,
-    executionBlockCandidateIdsUnique: true,
-    unassignedCandidateIdsUnique: true,
-    executionBlockAndUnassignedCandidateIdSetsDisjoint: true,
-    executionBlockAndUnassignedCandidateIdSetUnionMustEqualExactCorrelatedInvocationCandidateSet:
-      true,
-    everyInvocationCandidateMustAppearExactlyOnce: true,
-    missingUnknownExtraDuplicateOmittedOrPlacedAndUnassignedCandidateAllowed:
-      false,
-    violationCandidateIdsAreDiagnosticOnlyAndCannotSatisfyAccounting: true,
-    directOrProjectedCandidateAccountingFailureStatus: "schema_mismatch",
-    directOrProjectedCandidateAccountingFailureMustAttemptExactlyOneSeparatelyValidatedNativeFallback:
-      true,
-    validatedNativeFallbackCandidateAccountingFailureResult:
-      "blocked_manual_plan_required",
-    validatedNativeFallbackCandidateAccountingFailureMayTriggerAnotherFallback:
-      false,
-    invalidNativeFallbackResult: "blocked_manual_plan_required",
-  };
-  const exactExecutionBlockDurationRules = {
-    appliesToEveryExecutionBlockInOptimalFeasibleAndEveryReleasableValidatedNativeFallbackPlan:
-      true,
-    candidateResolutionSource:
-      "exact_current_correlated_invocation.candidates",
-    eachExecutionBlockCandidateMustResolveExactlyOnceThroughExactCurrentInvocation:
-      true,
-    durationMinutesMustEqualEndMinuteKstMinusStartMinuteKst: true,
-    canShortenFalseRequiresDurationMinutesEqualEstimatedMinutes: true,
-    canShortenTrueRequiresMinimumMinutesLessThanOrEqualDurationMinutesLessThanOrEqualEstimatedMinutes:
-      true,
-    durationMinutesMayExceedEstimatedMinutes: false,
-    elapsedAndInProgressPriorPlacementFieldsRemainImmutableExactly: [
-      "ephemeral_opaque_candidate_id",
-      "ephemeral_opaque_window_id",
-      "start_minute_kst",
-      "end_minute_kst",
-      "duration_minutes",
-    ],
-    immutableElapsedOrInProgressPlacementMayBeMovedShortenedExtendedOrRewrittenToSatisfyCurrentCandidate:
-      false,
-    preProjectionImmutablePlacementCandidateDurationIncompatibilityMayReachOptimizer:
-      false,
-    preProjectionImmutablePlacementCandidateDurationIncompatibilityFallbackTriggerStatus:
-      "validator_rejected",
-    preProjectionImmutablePlacementCandidateDurationIncompatibilityFallbackReasonEnumMustEqualTriggerStatus:
-      true,
-    preProjectionImmutablePlacementCandidateDurationIncompatibilityMustAttemptExactlyOneSeparatelyValidatedNativeFallback:
-      true,
-    preProjectionImmutablePlacementCandidateDurationIncompatibilityMustEnterSeparatelyValidatedNativeFallbackWithoutRewritingPlacementOrCandidatePolicy:
-      true,
-    preProjectionImmutablePlacementCandidateDurationIncompatibilityInvalidNativeFallbackResult:
-      "blocked_manual_plan_required",
-    preProjectionImmutablePlacementCandidateDurationIncompatibilityInvalidNativeFallbackMayTriggerAnotherFallback:
-      false,
-    optimizerResultDurationOrImmutablePlacementMutationFailureStatus:
-      "validator_rejected",
-    optimizerResultDurationOrImmutablePlacementMutationMustAttemptExactlyOneSeparatelyValidatedNativeFallback:
-      true,
-    optimizerResultDurationOrImmutablePlacementMutationMustUseSeparatelyValidatedNativeFallbackThatPreservesTheOriginalImmutablePlacement:
-      true,
-    optimizerResultDurationOrImmutablePlacementMutationInvalidNativeFallbackMayTriggerAnotherFallback:
-      false,
-    invalidNativeFallbackResult: "blocked_manual_plan_required",
-  };
-  const exactProjectedCandidateAccountingRules = {
-    directCandidatePlanStatusesExactly: ["optimal", "feasible"],
-    exactCorrelatedInvocationCandidateSetSource:
-      "exact_current_correlated_invocation.candidates[].ephemeral_opaque_candidate_id",
-    exactCorrelatedInvocationCandidateIdsUnique: true,
-    candidateIdentifiersMustUseActiveContainingContractDomain: true,
-    executionBlockCandidateIdsMustEachResolveExactlyOnceThroughExactCurrentInvocation:
-      true,
-    unassignedCandidateIdsMustEachResolveExactlyOnceThroughExactCurrentInvocation:
-      true,
-    executionBlockCandidateIdsUnique: true,
-    unassignedCandidateIdsUnique: true,
-    executionBlockAndUnassignedCandidateIdSetsDisjoint: true,
-    executionBlockAndUnassignedCandidateIdSetUnionMustEqualExactCorrelatedInvocationCandidateSet:
-      true,
-    everyInvocationCandidateMustAppearExactlyOnce: true,
-    missingUnknownExtraDuplicateOmittedOrPlacedAndUnassignedCandidateAllowed:
-      false,
-    violationCandidateIdsAreDiagnosticOnlyAndCannotSatisfyAccounting: true,
-    projectedCandidateAccountingFailureTrustedGatewayClassification:
-      "schema_mismatch",
-    projectedCandidateAccountingFailureMayReleaseCandidatePlan: false,
-    projectedResponseMaySelectReferenceAuthorizeOrReleaseCanonicalNativeFallback:
-      false,
-  };
-  const exactProjectedExecutionBlockDurationRules = {
-    appliesToEveryExecutionBlockInOptimalAndFeasibleProjectedCandidatePlans:
-      true,
-    candidateResolutionSource:
-      "exact_current_correlated_invocation.candidates",
-    eachExecutionBlockCandidateMustResolveExactlyOnceThroughExactCurrentInvocation:
-      true,
-    durationMinutesMustEqualEndMinuteKstMinusStartMinuteKst: true,
-    canShortenFalseRequiresDurationMinutesEqualEstimatedMinutes: true,
-    canShortenTrueRequiresMinimumMinutesLessThanOrEqualDurationMinutesLessThanOrEqualEstimatedMinutes:
-      true,
-    durationMinutesMayExceedEstimatedMinutes: false,
-    elapsedAndInProgressPriorPlacementFieldsRemainImmutableExactly: [
-      "ephemeral_opaque_candidate_id",
-      "ephemeral_opaque_window_id",
-      "start_minute_kst",
-      "end_minute_kst",
-      "duration_minutes",
-    ],
-    immutableElapsedOrInProgressPlacementMayBeMovedShortenedExtendedOrRewrittenToSatisfyCurrentCandidate:
-      false,
-    preProjectionImmutablePlacementCandidateDurationIncompatibilityMayReachOptimizer:
-      false,
-    preProjectionImmutablePlacementCandidateDurationIncompatibilityTrustedGatewayClassification:
-      "validator_rejected",
-    preProjectionImmutablePlacementCandidateDurationIncompatibilityMayBeRepairedByOptimizerOrProjectedResponse:
-      false,
-    optimizerResultDurationOrImmutablePlacementMutationTrustedGatewayClassification:
-      "validator_rejected",
-    invalidProjectedCandidatePlanMayReleaseCandidatePlan: false,
-    projectedResponseMaySelectReferenceAuthorizeOrReleaseCanonicalNativeFallback:
-      false,
-  };
-  const exactNonDroppableCoreRules = {
-    nonDroppableDefinitionExact:
-      "candidate.pinned === true || candidate.can_drop === false",
-    pinnedAndCanDropTruthTableExactly: [
-      { pinned: false, can_drop: true, non_droppable: false },
-      { pinned: false, can_drop: false, non_droppable: true },
-      { pinned: true, can_drop: true, non_droppable: true },
-      { pinned: true, can_drop: false, non_droppable: true },
-    ],
-    everyNonDroppableCandidateMustOccurExactlyOnceInExecutionBlocks: true,
-    everyNonDroppableCandidateMustOccurZeroTimesInUnassignedCandidates: true,
-    onlyPinnedFalseAndCanDropTrueCandidateMayBeUnassigned: true,
-    unassignedReasonMayOverrideNonDroppability: false,
-    ownerPinnedConflictReasonMayOverrideNonDroppability: false,
-    lowerValueThanSelectedReasonMayOverrideNonDroppability: false,
-    requirednessEnumMayRedefineNonDroppability: false,
-  };
-  const exactCanonicalNonDroppableRules = {
-    appliesToEveryOptimalFeasibleAndReleasableSeparatelyValidatedCanonicalNativeFallbackPlan:
-      true,
-    ...exactNonDroppableCoreRules,
-    knownNonDroppableViolationStatus: "validator_rejected",
-    knownNonDroppableViolationMustAttemptExactlyOneSeparatelyPreparedCanonicalNativeFallback:
-      true,
-    releasableNativeFallbackMustPlaceEveryNonDroppableCandidateExactlyOnce:
-      true,
-    invalidNativeFallbackResult: "blocked_manual_plan_required",
-    invalidNativeFallbackMayTriggerAnotherFallback: false,
-    invalidNativeFallbackMayReleaseCandidatePlan: false,
-  };
-  const exactProjectedNonDroppableRules = {
-    appliesToEveryOptimalAndFeasibleProjectedCandidatePlan: true,
-    ...exactNonDroppableCoreRules,
-    knownNonDroppableViolationTrustedGatewayClassification:
-      "validator_rejected",
-    invalidProjectedCandidatePlanMayReleaseCandidatePlan: false,
-    projectedResponseMaySelectReferenceAuthorizeOrReleaseCanonicalNativeFallback:
-      false,
-  };
-  const exactCandidateWindowCoreRules = {
-    candidateResolutionSource:
-      "exact_current_correlated_invocation.candidates",
-    windowResolutionSource:
-      "exact_current_correlated_invocation.available_windows",
-    eachExecutionBlockCandidateMustResolveExactlyOnceThroughExactCurrentInvocation:
-      true,
-    eachExecutionBlockWindowMustResolveExactlyOnceThroughSameExactCurrentInvocation:
-      true,
-    executionBlockWindowIdMustBelongToResolvedCandidateAllowedWindowIds:
-      true,
-    resolvedWindowAvailableMustEqualTrue: true,
-    singleReferencedWindowContainmentPredicateExact:
-      "window.start_minute_kst <= block.start_minute_kst < block.end_minute_kst <= window.end_minute_kst",
-    blockMustBeCompletelyContainedInsideSingleReferencedWindow: true,
-    blockMayStitchOrSpanAdjacentWindows: false,
-    preProjectionElapsedAndInProgressPlacementMustSatisfyExactCurrentCandidateWindowRelation:
-      true,
-    preProjectionImmutableCandidateWindowIncompatibilityMayReachOptimizer:
-      false,
-    preProjectionImmutableCandidateWindowIncompatibilityMayBeRepairedByMovingDroppingUnassigningShorteningExtendingOrRewriting:
-      false,
-    futurePriorPlacementRemainsSoftPreferenceOnly: true,
-    everyEmittedFuturePriorPlacementBlockMustSatisfyEveryCandidateWindowPredicate:
-      true,
-  };
-  const exactCanonicalCandidateWindowRules = {
-    appliesToEveryExecutionBlockInOptimalFeasibleAndEveryReleasableSeparatelyValidatedCanonicalNativeFallbackPlan:
-      true,
-    ...exactCandidateWindowCoreRules,
-    unknownDanglingDuplicateCrossDomainOrNonBijectiveCandidateOrWindowRelationStatus:
-      "schema_mismatch",
-    knownDisallowedUnavailableOrOutOfBoundsRelationStatus:
-      "validator_rejected",
-    knownCandidateWindowViolationMustAttemptExactlyOneSeparatelyPreparedCanonicalNativeFallback:
-      true,
-    releasableNativeFallbackMustSatisfyEveryCandidateWindowPredicate: true,
-    preProjectionImmutableCandidateWindowIncompatibilityMustAttemptExactlyOneSeparatelyPreparedCanonicalNativeFallbackPreservingTheImmutablePlacement:
-      true,
-    invalidNativeFallbackResult: "blocked_manual_plan_required",
-    invalidNativeFallbackMayTriggerAnotherFallback: false,
-    invalidNativeFallbackMayReleaseCandidatePlan: false,
-  };
-  const exactProjectedCandidateWindowRules = {
-    appliesToEveryExecutionBlockInOptimalAndFeasibleProjectedCandidatePlans:
-      true,
-    ...exactCandidateWindowCoreRules,
-    unknownDanglingDuplicateCrossDomainOrNonBijectiveCandidateOrWindowRelationTrustedGatewayClassification:
-      "schema_mismatch",
-    knownDisallowedUnavailableOrOutOfBoundsRelationTrustedGatewayClassification:
-      "validator_rejected",
-    preProjectionImmutableCandidateWindowIncompatibilityTrustedGatewayClassification:
-      "validator_rejected",
-    invalidProjectedCandidatePlanMayReleaseCandidatePlan: false,
-    projectedResponseMaySelectReferenceAuthorizeOrReleaseCanonicalNativeFallback:
-      false,
-  };
-  const exactCanonicalHardDeadlineRules = {
-    appliesToEveryExecutionBlockInOptimalFeasibleCompleteCanonicalAndEveryReleasableSeparatelyValidatedCanonicalNativeFallbackPlan:
-      true,
-    candidateResolutionSource:
-      "exact_current_correlated_invocation.candidates",
-    eachExecutionBlockCandidateMustResolveExactlyOnceThroughExactCurrentInvocation:
-      true,
-    trustedCanonicalStudyDateSource:
-      "inputContract.study_date_kst_retained_by_trusted_gateway",
-    studyDateMayEnterOptimizerProjection: false,
-    timeZoneIanaExact: "Asia/Seoul",
-    endMinuteKstOneThrough1439UsesSameStudyDate: true,
-    endMinuteKst1440MeansNextDayMidnightAsiaSeoul: true,
-    blockEndUtcDerivationExact:
-      "trusted_canonical_study_date_kst_plus_execution_block.end_minute_kst_interpreted_in_iana_asia_seoul",
-    nonNullHardDeadlinePredicateExact:
-      "derived_block_end_utc <= candidate.hard_deadline_or_null_exact_iso_8601_utc_instant",
-    nullHardDeadlineMeansNoHardCutoff: true,
-    hardDeadlineEqualityIsFeasible: true,
-    unknownDanglingDuplicateCrossDomainOrNonBijectiveCandidateRelationStatus:
-      "schema_mismatch",
-    knownHardDeadlineBreachStatus: "validator_rejected",
-    knownHardDeadlineBreachMustAttemptExactlyOneSeparatelyPreparedCanonicalNativeFallback:
-      true,
-    releasableNativeFallbackMustSatisfyEveryHardDeadlinePredicate: true,
-    preProjectionElapsedAndInProgressPlacementMustSatisfyExactCurrentCandidateHardDeadlinePredicate:
-      true,
-    preProjectionImmutableHardDeadlineIncompatibilityMayReachOptimizer: false,
-    preProjectionImmutableHardDeadlineIncompatibilityMayBeRepairedByMovingDroppingUnassigningShorteningExtendingOrRewriting:
-      false,
-    preProjectionImmutableHardDeadlineIncompatibilityMustAttemptExactlyOneSeparatelyPreparedCanonicalNativeFallbackPreservingTheImmutablePlacement:
-      true,
-    minimizeDeadlineLatenessAppliesOnlyToSoftDeadlineOrNull: true,
-    softDeadlineObjectiveMayOverrideHardDeadline: false,
-    invalidNativeFallbackResult: "blocked_manual_plan_required",
-    invalidNativeFallbackMayTriggerAnotherFallback: false,
-    invalidNativeFallbackMayReleaseCandidatePlan: false,
-  };
-  const exactProjectedHardDeadlineRules = {
-    appliesToEveryExecutionBlockInOptimalAndFeasibleProjectedCandidatePlans:
-      true,
-    candidateResolutionSource:
-      "exact_current_correlated_invocation.candidates",
-    eachExecutionBlockCandidateMustResolveExactlyOnceThroughExactCurrentInvocation:
-      true,
-    trustedCanonicalStudyDateSource:
-      "inputContract.study_date_kst_retained_by_trusted_gateway",
-    studyDateMayEnterOptimizerProjection: false,
-    timeZoneIanaExact: "Asia/Seoul",
-    endMinuteKstOneThrough1439UsesSameStudyDate: true,
-    endMinuteKst1440MeansNextDayMidnightAsiaSeoul: true,
-    blockEndUtcDerivationExact:
-      "trusted_canonical_study_date_kst_plus_execution_block.end_minute_kst_interpreted_in_iana_asia_seoul",
-    nonNullHardDeadlinePredicateExact:
-      "derived_block_end_utc <= candidate.hard_deadline_or_null_exact_iso_8601_utc_instant",
-    nullHardDeadlineMeansNoHardCutoff: true,
-    hardDeadlineEqualityIsFeasible: true,
-    knownHardDeadlineBreachTrustedGatewayClassification:
-      "validator_rejected",
-    unknownDuplicateCrossDomainOrNonBijectiveCandidateRelationTrustedGatewayClassification:
-      "schema_mismatch",
-    preProjectionElapsedAndInProgressPlacementMustSatisfyExactCurrentCandidateHardDeadlinePredicate:
-      true,
-    preProjectionImmutableHardDeadlineIncompatibilityMayReachOptimizer: false,
-    preProjectionImmutableHardDeadlineIncompatibilityMayBeRepairedByMovingDroppingUnassigningShorteningExtendingOrRewriting:
-      false,
-    preProjectionImmutableHardDeadlineIncompatibilityTrustedGatewayClassification:
-      "validator_rejected",
-    minimizeDeadlineLatenessAppliesOnlyToSoftDeadlineOrNull: true,
-    softDeadlineObjectiveMayOverrideHardDeadline: false,
-    invalidProjectedCandidatePlanMayReleaseCandidatePlan: false,
-    projectedResponseMaySelectReferenceAuthorizeOrReleaseCanonicalNativeFallback:
-      false,
-  };
-  const exactReplanCutoffCoreRules = {
-    replanCutoffSourceExact:
-      "exact_same_trusted_correlated_invocation.replan_cutoff_minute_kst_or_null",
-    replanCutoffMustEqualExactSameTrustedCorrelatedInvocationValue: true,
-    candidateWindowAndImmutableIdentifiersMustUseActiveContainingContractDomain:
-      true,
-    nullReplanCutoffMeansNoReplanLowerBound: true,
-    nullReplanCutoffDoesNotBypassStructuralMappingCorrelationOrImmutableMatchValidation:
-      true,
-    immutableExemptionEligiblePriorPlacementStatesExactly: [
-      "elapsed",
-      "in_progress",
-    ],
-    exactImmutableExemptionFields: [
-      "ephemeral_opaque_candidate_id",
-      "ephemeral_opaque_window_id",
-      "start_minute_kst",
-      "end_minute_kst",
-      "duration_minutes",
-    ],
-    immutableExemptionRequiresExactUnchangedFieldForFieldMatchToExactlyOneEligiblePriorPlacementThroughSameCorrelatedInvocation:
-      true,
-    nonExemptExecutionBlockPredicateExact:
-      "replan_cutoff_minute_kst_or_null === null || block.start_minute_kst >= replan_cutoff_minute_kst_or_null",
-    replanCutoffEqualityIsFeasible: true,
-    executionBlockStartingOneMinuteBeforeNonNullCutoffIsRejected: true,
-    replanCutoff1440AllowsNoNewOrMovedExecutionBlock: true,
-    preProjectionElapsedAndInProgressImmutablePlacementMustResolveExactExemptionOnce:
-      true,
-    immutablePlacementMayBeMovedDroppedUnassignedShortenedExtendedOrRewrittenToRepairCutoffBreach:
-      false,
-  };
-  const exactCanonicalReplanCutoffRules = {
-    appliesToEveryExecutionBlockInOptimalFeasibleCompleteCanonicalAndEveryReleasableSeparatelyValidatedCanonicalNativeFallbackPlan:
-      true,
-    ...exactReplanCutoffCoreRules,
-    unknownDanglingDuplicateCrossDomainNonBijectiveOrAmbiguousImmutableExemptionRelationStatus:
-      "schema_mismatch",
-    knownBeforeCutoffPlacementStatus: "validator_rejected",
-    knownBeforeCutoffPlacementMustAttemptExactlyOneIndependentlyPreparedCanonicalNativeFallback:
-      true,
-    releasableNativeFallbackMustSatisfyEveryReplanCutoffPredicate: true,
-    invalidNativeFallbackResult: "blocked_manual_plan_required",
-    invalidNativeFallbackMayTriggerAnotherFallback: false,
-    invalidNativeFallbackMayReleaseCandidatePlan: false,
-  };
-  const exactProjectedReplanCutoffRules = {
-    appliesToEveryExecutionBlockInOptimalAndFeasibleProjectedCandidatePlans:
-      true,
-    ...exactReplanCutoffCoreRules,
-    unknownDanglingDuplicateCrossDomainNonBijectiveOrAmbiguousImmutableExemptionRelationTrustedGatewayClassification:
-      "schema_mismatch",
-    knownBeforeCutoffPlacementTrustedGatewayClassification:
-      "validator_rejected",
-    invalidProjectedCandidatePlanMayReleaseCandidatePlan: false,
-    projectedResponseMaySelectReferenceAuthorizeOrReleaseCanonicalNativeFallback:
-      false,
-  };
-  const exactPairwiseBlockNonOverlapCoreRules = {
-    intervalSemanticsExact: "[start_minute_kst, end_minute_kst)",
-    distinctPairNonOverlapPredicateExact:
-      "a.end_minute_kst <= b.start_minute_kst || b.end_minute_kst <= a.start_minute_kst",
-    boundaryEqualityIsFeasible: true,
-    validateEveryPairOfDistinctExecutionBlocks: true,
-    validateEveryExecutionBlockAgainstEveryFixedBlockFromSameCorrelatedInvocation:
-      true,
-    validateEveryNewOrMovedExecutionBlockAgainstEveryImmutablePriorPlacementFromSameCorrelatedInvocation:
-      true,
-    newOrMovedDeterminationUsesExactImmutableMatchFields: [
-      "ephemeral_opaque_candidate_id",
-      "ephemeral_opaque_window_id",
-      "start_minute_kst",
-      "end_minute_kst",
-      "duration_minutes",
-    ],
-    exactUnchangedRepresentationOfSameImmutablePriorPlacementIsOneLogicalBlockAndDoesNotConflictWithItself:
-      true,
-    immutableSelfRepresentationMustResolveExactlyOnceThroughSameCorrelatedInvocation:
-      true,
-    preProjectionImmutablePriorPlacementsMustBePairwiseNonOverlappingWithEveryFixedBlock:
-      true,
-    immutablePriorPlacementsMustRemainPairwiseNonOverlappingBeforeProjection:
-      true,
-    fixedOrImmutablePlacementMayBeRewrittenToRepairOverlap: false,
-  };
-  const exactCanonicalPairwiseBlockNonOverlapRules = {
-    appliesBeforeReleaseToEveryOptimalFeasibleCompleteCanonicalAndEveryReleasableSeparatelyValidatedCanonicalNativeFallbackPlan:
-      true,
-    ...exactPairwiseBlockNonOverlapCoreRules,
-    unknownDanglingDuplicateCrossDomainNonBijectiveOrAmbiguousImmutableSelfRelationStatus:
-      "schema_mismatch",
-    knownOverlapStatus: "validator_rejected",
-    knownOverlapMustAttemptExactlyOneIndependentlyPreparedCanonicalNativeFallback:
-      true,
-    releasableNativeFallbackMustSatisfyEveryPairwiseNonOverlapPredicate:
-      true,
-    invalidNativeFallbackResult: "blocked_manual_plan_required",
-    invalidNativeFallbackMayTriggerAnotherFallback: false,
-    invalidNativeFallbackMayReleaseCandidatePlan: false,
-  };
-  const exactProjectedPairwiseBlockNonOverlapRules = {
-    appliesBeforeReleaseToEveryOptimalAndFeasibleProjectedCandidatePlan:
-      true,
-    ...exactPairwiseBlockNonOverlapCoreRules,
-    unknownDanglingDuplicateCrossDomainNonBijectiveOrAmbiguousImmutableSelfRelationTrustedGatewayClassification:
-      "schema_mismatch",
-    knownOverlapTrustedGatewayClassification: "validator_rejected",
-    invalidProjectedCandidatePlanMayReleaseCandidatePlan: false,
-    projectedResponseMaySelectReferenceAuthorizeOrReleaseCanonicalNativeFallback:
-      false,
-  };
-  const exactPrerequisiteOrderingCoreRules = {
-    candidateAndPrerequisiteRelationSourceExact:
-      "exact_same_trusted_correlated_invocation.candidates[].prerequisite_candidate_ids",
-    dependentAndEveryPrerequisiteMustResolveExactlyOnceThroughSameCorrelatedInvocationAndActiveContainingContractDomain:
-      true,
-    emptyPrerequisiteListMeansNoOrderingConstraint: true,
-    multiplePrerequisiteSetRequiresEveryMemberToPass: true,
-    everyPrerequisiteMustBePlacedExactlyOnce: true,
-    placedDependentMayRelyOnUnassignedPrerequisite: false,
-    prerequisiteOrderingPredicateExact:
-      "prerequisite.end_minute_kst <= dependent.start_minute_kst",
-    prerequisiteBoundaryEqualityIsFeasible: true,
-    knownPrerequisitePlacementFailureClassificationPrecedesGenericCandidateAccountingOmissionClassification:
-      true,
-    preProjectionElapsedAndInProgressImmutableDependentMustSatisfyEveryPrerequisiteOrderingPredicate:
-      true,
-    immutablePlacementMayBeMovedDroppedUnassignedShortenedExtendedOrRewrittenToRepairPrerequisiteBreach:
-      false,
-    projectionFieldsOrResultInverseMapPathsMayBeAddedForPrerequisiteValidation:
-      false,
-  };
-  const exactCanonicalPrerequisiteOrderingRules = {
-    appliesToEveryPlacedDependentInOptimalFeasibleCompleteCanonicalAndEveryReleasableSeparatelyValidatedCanonicalNativeFallbackPlan:
-      true,
-    ...exactPrerequisiteOrderingCoreRules,
-    unknownDanglingDuplicateCrossDomainOrNonBijectivePrerequisiteRelationStatus:
-      "schema_mismatch",
-    knownMissingUnassignedOrReversedPrerequisitePlacementStatus:
-      "validator_rejected",
-    knownPrerequisitePlacementFailureMustAttemptExactlyOneIndependentlyPreparedCanonicalNativeFallback:
-      true,
-    releasableNativeFallbackMustSatisfyEveryPrerequisiteOrderingPredicate:
-      true,
-    invalidNativeFallbackResult: "blocked_manual_plan_required",
-    invalidNativeFallbackMayTriggerAnotherFallback: false,
-    invalidNativeFallbackMayReleaseCandidatePlan: false,
-  };
-  const exactProjectedPrerequisiteOrderingRules = {
-    appliesToEveryPlacedDependentInOptimalAndFeasibleProjectedCandidatePlans:
-      true,
-    ...exactPrerequisiteOrderingCoreRules,
-    unknownDanglingDuplicateCrossDomainOrNonBijectivePrerequisiteRelationTrustedGatewayClassification:
-      "schema_mismatch",
-    knownMissingUnassignedOrReversedPrerequisitePlacementTrustedGatewayClassification:
-      "validator_rejected",
-    invalidProjectedCandidatePlanMayReleaseCandidatePlan: false,
-    projectedResponseMaySelectReferenceAuthorizeOrReleaseCanonicalNativeFallback:
-      false,
-  };
-  const exactVersionInfoConstructionRules = {
-    canonicalVersionInfoRequiredForEveryCompleteCanonicalResultAndReleasableCanonicalNativeFallback:
-      true,
-    canonicalVersionInfoFieldsExactlyMustEqualVersionFieldsRequired: true,
-    trustedGatewayAloneMayConstructAndAttachCanonicalVersionInfo: true,
-    sourceExact:
-      "exact_trusted_correlated_gateway_configuration_for_the_same_validated_invocation",
-    completeRawResponseExactCorrelationAndRequiredBijectionValidationMustFinishBeforeConstruction:
-      true,
-    rawProjectedResponseMayContainAcceptRequireOrAuthorVersionInfoOrGatewayOwnedVersionConfigurationFields:
-      false,
-    allTenFieldsMustMatchExactTrustedCorrelatedConfigurationFieldForField:
-      true,
-    missingAmbiguousStaleUntrustedOrMismatchedMetadataStatus:
-      "validator_rejected",
-    metadataFailureMustAttemptExactlyOneIndependentlyPreparedCanonicalNativeFallback:
-      true,
-    releasableNativeFallbackMustCarryExactGatewayConstructedCanonicalTenFieldVersionInfo:
-      true,
-    invalidFallbackVersionInfoResult: "blocked_manual_plan_required",
-    invalidFallbackVersionInfoMayTriggerAnotherFallback: false,
-    invalidFallbackVersionInfoMayReleaseCandidatePlan: false,
-  };
-  const exactNativeValidator = {
-    requiredForOptimalAndFeasible: true,
-    requiredForEveryReleasableValidatedNativeFallback: true,
-    validatedNativeFallbackMustSatisfyCanonicalCandidateAccountingExecutionBlockDurationAndAllHardConstraints:
-      true,
-    validatedNativeFallbackMustSatisfyCanonicalCandidateAccountingExecutionBlockDurationNonDroppableCandidateWindowAndAllHardConstraints:
-      true,
-    validatedNativeFallbackMustSatisfyCanonicalTenFieldVersionInfoAndHardDeadlineFeasibilityAndAllHardConstraints:
-      true,
-    validatedNativeFallbackMustSatisfyCanonicalReplanCutoffPairwiseBlockNonOverlapAndPrerequisiteOrderingAndAllHardConstraints:
-      true,
-    everyOptimalFeasibleAndReleasableValidatedNativeFallbackPlanMustPlaceEveryNonDroppableCandidateExactlyOnceAndNeverUnassignIt:
-      true,
-    everyExecutionBlockMustResolveExactCurrentInvocationCandidateAndWindowAndSatisfyAllowedMembershipAvailabilityAndSingleWindowBounds:
-      true,
-    everyExecutionBlockInOptimalFeasibleAndReleasableValidatedNativeFallbackMustSatisfyCandidateHardDeadlinePredicateUsingTrustedCanonicalStudyDateKst:
-      true,
-    everyNewOrMovedExecutionBlockInOptimalFeasibleAndReleasableValidatedNativeFallbackMustStartAtOrAfterNonNullReplanCutoffUnlessItIsTheUniqueExactImmutableElapsedOrInProgressSelfRepresentation:
-      true,
-    everyOptimalFeasibleAndReleasableValidatedNativeFallbackPlanMustSatisfyHalfOpenPairwiseNonOverlapForExecutionExecutionExecutionFixedAndNewOrMovedExecutionImmutablePairs:
-      true,
-    everyPlacedDependentInOptimalFeasibleAndReleasableValidatedNativeFallbackMustHaveEveryPrerequisitePlacedExactlyOnceAndEndingAtOrBeforeDependentStart:
-      true,
-    canonicalVersionInfoMustBeGatewayConstructedFromExactTrustedCorrelatedConfigurationAfterCompleteRawResponseCorrelationAndRequiredBijectionValidation:
-      true,
-    unknownDanglingDuplicateCrossDomainOrNonBijectiveCandidateOrWindowRelationStatus:
-      "schema_mismatch",
-    knownDisallowedUnavailableOrOutOfBoundsCandidateWindowRelationStatus:
-      "validator_rejected",
-    knownHardDeadlineBreachStatus: "validator_rejected",
-    cutoffOverlapOrPrerequisiteStructuralMappingCorrelationAmbiguityStatus:
-      "schema_mismatch",
-    knownBeforeCutoffOverlapMissingUnassignedOrReversedPrerequisiteStatus:
-      "validator_rejected",
-    knownPrerequisitePlacementFailureClassificationPrecedesGenericCandidateAccountingOmissionClassification:
-      true,
-    canonicalFallbackTupleAndStateMustBeGatewayConstructed: true,
-    nativeFallbackMayBeAttemptedMoreThanOnceOrRecursively: false,
-    invalidOrUnavailableValidatedNativeFallbackResult:
-      "blocked_manual_plan_required",
-    invalidOrUnavailableValidatedNativeFallbackMayReleaseCandidatePlan: false,
-    immutableElapsedOrInProgressPlacementMayBeRewrittenDuringValidationOrFallback:
-      false,
-    immutableElapsedOrInProgressPlacementMustPassHardDeadlineBeforeProjectionAndMayNotBeMovedDroppedUnassignedShortenedExtendedOrRewrittenDuringValidationOrFallback:
-      true,
-    immutableElapsedOrInProgressPlacementMustPassUniqueExactCutoffExemptionPairwiseNonOverlapAndPrerequisiteOrderingPreflightAndMayNotBeMovedDroppedUnassignedShortenedExtendedOrRewrittenDuringValidationOrFallback:
-      true,
-    fixedBlockMayBeRewrittenToRepairOverlap: false,
-    hardConstraintMayBeOverriddenBySoftObjective: false,
-    minimizeDeadlineLatenessMayReadOnlySoftDeadlineOrNullAndMayNotOverrideHardDeadline:
-      true,
-    falseSuccessAllowed: false,
-    canonicalStateMutationBeforeOwnerChoiceAllowed: false,
-  };
-  const exactAllowedFields = [
-    "request_id",
-    "input_snapshot_version",
-    "status",
-    "execution_blocks",
-    "unassigned_candidates",
-    "fallback",
-    "version_info",
-    "objective_components",
-    "violations",
-    "elapsed_ms",
-  ];
-  const exactProjectedAllowedFields = exactAllowedFields.filter(
-    (field) => !["fallback", "version_info"].includes(field),
-  );
-  const exactExecutionBlockFields = [
-    "ephemeral_opaque_candidate_id",
-    "ephemeral_opaque_window_id",
-    "start_minute_kst",
-    "end_minute_kst",
-    "duration_minutes",
-  ];
-  const exactUnassignedCandidateFields = [
-    "ephemeral_opaque_candidate_id",
-    "reason_enum",
-  ];
-  const exactFallbackFields = [
-    "used",
-    "reason_enum",
-    "native_plan_version",
-  ];
-  const exactFallbackReasonValues = ["not_used", ...FALLBACK_STATUSES];
-  const exactObjectiveComponentFields = [
-    "objective_code_enum",
-    "integer_value",
-  ];
-  const exactViolationFields = [
-    "constraint_code_enum",
-    "ephemeral_opaque_candidate_ids",
-    "severity_enum",
-  ];
-  const exactVersionInfoFields = [
-    "contract_version",
-    "native_policy_version",
-    "adapter_version",
-    "optimizer_version",
-    "objective_version",
-    "threshold_version",
-    "solver_seed",
-    "solver_workers",
-    "time_limit_ms",
-    "integer_scaling_version",
-  ];
-  const exactVersionInfoFieldSchemas = {
-    contract_version: {
-      type: "closed_enum",
-      values: ["dabangil.full_day_scheduler.v1"],
-    },
-    native_policy_version: "closed_identifier_1_to_80",
-    adapter_version: "closed_identifier_1_to_80",
-    optimizer_version: "closed_identifier_1_to_80",
-    objective_version: "closed_identifier_1_to_80",
-    threshold_version: "closed_identifier_1_to_80",
-    solver_seed: "finite_integer",
-    solver_workers: "finite_integer_1_to_64",
-    time_limit_ms: "finite_integer_1_to_60000",
-    integer_scaling_version: "closed_identifier_1_to_80",
-  };
-  const exactScalarSchemas = {
-    start_minute_kst: "integer_0_to_1439",
-    end_minute_kst: "integer_1_to_1440",
-    duration_minutes: "integer_1_to_1440",
-    integer_value: "finite_integer",
-    elapsed_ms: "finite_integer_0_to_60000",
-    fallback_used: "boolean",
-  };
-  const exactProjectedScalarSchemas = {
-    start_minute_kst: "integer_0_to_1439",
-    end_minute_kst: "integer_1_to_1440",
-    duration_minutes: "integer_1_to_1440",
-    integer_value: "finite_integer",
-    elapsed_ms: "finite_integer_0_to_60000",
-  };
-  const exactCardinalityLimits = {
-    execution_blocks_maximum: 256,
-    unassigned_candidates_maximum: 256,
-    objective_components_maximum: 11,
-    violations_maximum: 256,
-    candidate_ids_per_violation_maximum: 32,
-    allIdentifierArraysUnique: true,
-  };
-  const priorRules = scheduler.inputContract.priorAcceptedScheduleRules;
-  const projectionRules =
-    scheduler.inputContract.optimizerInvocationProjectionContract
-      .projectionRules;
-  const exactProjectionSecondCorrectivePreflightRules = {
-    immutablePriorPlacementsMustPassExactReplanCutoffExemptionResolutionBeforeProjection:
-      true,
-    exactImmutableReplanCutoffExemptionFields: [
-      "ephemeral_opaque_candidate_id",
-      "ephemeral_opaque_window_id",
-      "start_minute_kst",
-      "end_minute_kst",
-      "duration_minutes",
-    ],
-    exactImmutableReplanCutoffExemptionMustMatchExactlyOneElapsedOrInProgressPriorPlacementThroughSameCorrelatedInvocation:
-      true,
-    ambiguousImmutableReplanCutoffExemptionMatchingStatus:
-      "schema_mismatch",
-    nonExemptPlacementMustStartAtOrAfterNonNullReplanCutoff: true,
-    nullReplanCutoffMeansNoReplanLowerBound: true,
-    replanCutoffEqualityIsFeasible: true,
-    replanCutoff1440AllowsNoNewOrMovedExecutionBlock: true,
-    immutablePriorPlacementsMustBePairwiseNonOverlappingWithEveryCurrentFixedBlockBeforeProjection:
-      true,
-    immutablePriorPlacementsMustRemainPairwiseNonOverlappingBeforeProjection:
-      true,
-    exactUnchangedImmutableSelfRepresentationIsOneLogicalBlockAndDoesNotOverlapItself:
-      true,
-    ambiguousImmutableSelfRepresentationMatchingStatus: "schema_mismatch",
-    placedImmutableDependentMustHaveEveryPrerequisitePlacedExactlyOnceAndEndingAtOrBeforeDependentStartBeforeProjection:
-      true,
-    immutablePrerequisiteUnknownDanglingDuplicateCrossDomainOrNonBijectiveRelationStatus:
-      "schema_mismatch",
-    immutablePrerequisiteKnownMissingUnassignedOrReversedPlacementStatus:
-      "validator_rejected",
-    immutableCutoffOverlapOrPrerequisiteIncompatibilityMayReachOptimizer:
-      false,
-    immutableCutoffOverlapOrPrerequisiteIncompatibilityMustAttemptExactlyOneSeparatelyValidatedNativeFallbackWithoutRewritingImmutableOrFixedPlacements:
-      true,
-    immutableCutoffOverlapOrPrerequisiteIncompatibilityInvalidNativeFallbackResult:
-      "blocked_manual_plan_required",
-    immutableCutoffOverlapOrPrerequisiteIncompatibilityInvalidNativeFallbackMayTriggerAnotherFallback:
-      false,
-  };
-  const exactPriorSecondCorrectivePreflightRules = {
-    elapsedAndInProgressPlacementMustResolveExactlyOneImmutableReplanCutoffExemptionByCandidateWindowStartEndAndDurationBeforeProjection:
-      true,
-    ambiguousImmutableReplanCutoffExemptionMatchingStatus:
-      "schema_mismatch",
-    nonExemptNewOrMovedPlacementMustStartAtOrAfterNonNullReplanCutoff:
-      true,
-    nullReplanCutoffMeansNoReplanLowerBound: true,
-    replanCutoffEqualityIsFeasible: true,
-    replanCutoff1440AllowsNoNewOrMovedExecutionBlock: true,
-    elapsedAndInProgressPlacementMustBePairwiseNonOverlappingWithEveryCurrentFixedBlockBeforeProjection:
-      true,
-    elapsedAndInProgressPlacementsMustRemainPairwiseNonOverlappingBeforeProjection:
-      true,
-    exactUnchangedImmutableSelfRepresentationIsOneLogicalBlockAndDoesNotOverlapItself:
-      true,
-    ambiguousImmutableSelfRepresentationMatchingStatus: "schema_mismatch",
-    placedElapsedOrInProgressDependentMustHaveEveryPrerequisitePlacedExactlyOnceAndEndingAtOrBeforeDependentStartBeforeProjection:
-      true,
-    immutablePrerequisiteUnknownDanglingDuplicateCrossDomainOrNonBijectiveRelationStatus:
-      "schema_mismatch",
-    immutablePrerequisiteKnownMissingUnassignedOrReversedPlacementStatus:
-      "validator_rejected",
-    immutableCutoffOverlapOrPrerequisiteIncompatibilityMayReachOptimizer:
-      false,
-    immutableCutoffOverlapOrPrerequisiteIncompatibilityMustAttemptExactlyOneSeparatelyValidatedNativeFallbackWithoutMovingDroppingUnassigningShorteningExtendingOrRewritingImmutableOrFixedPlacements:
-      true,
-    immutableCutoffOverlapOrPrerequisiteIncompatibilityInvalidNativeFallbackResult:
-      "blocked_manual_plan_required",
-    immutableCutoffOverlapOrPrerequisiteIncompatibilityInvalidNativeFallbackMayTriggerAnotherFallback:
-      false,
-  };
-  const exactHardDeadlineValidationContext = {
-    trustedCanonicalStudyDateSource: "inputContract.study_date_kst",
-    studyDateMayEnterOptimizerProjection: false,
-    trustedGatewayRetainsStudyDateForProjectedResultValidation: true,
-    timeZoneIanaExact: "Asia/Seoul",
-    endMinuteKstOneThrough1439UsesSameStudyDate: true,
-    endMinuteKst1440MeansNextDayMidnightAsiaSeoul: true,
-    blockEndUtcDerivation:
-      "exact_trusted_canonical_study_date_kst_plus_end_minute_kst_interpreted_in_iana_asia_seoul",
-    hardDeadlineComparisonExact:
-      "derived_block_end_utc_less_than_or_equal_exact_iso_8601_utc_hard_deadline",
-    nullHardDeadlineMeansNoHardCutoff: true,
-  };
-  const failureFixture =
-    scheduler.s237oBenchmarkAcceptanceContract.benchmarkResultDigestContract
-      .failureStatusFixtureResultSetDigestContract;
-  const resolvedArtifactMembers =
-    scheduler.s237oBenchmarkAcceptanceContract.benchmarkResultDigestContract
-      .resolvedArtifactMembersContract;
-  const exactCanonicalNativeFallbackProjectionContract = {
-    source: "failure_status_fixture_result_set",
-    projectionFieldsExactly: [
-      "expected_status",
-      "native_fallback_result_digest_sha256",
-      "manual_block_result_digest_sha256_or_null",
-    ],
-    entryOrdering: "ascending_lexicographic_expected_status",
-    exactEntryCountMustEqualFallbackStatusCount: true,
-    projectedSetDigestField:
-      "benchmark_result_artifact.canonical_native_fallback_result_set_digest_sha256",
-    sourceNativeFallbackDigestMustResolveToExactResultContractArtifactInSameAuthorizationStoreWhenManualBlockDigestIsNull:
-      true,
-    sourceNativeFallbackDigestMustResolveToRejectedNativeFallbackAttemptValidationRecordInSameAuthorizationStoreWhenManualBlockDigestIsNonNull:
-      true,
-    manualBlockDigestMustResolveToExactBlockedManualPlanRequiredResultContractArtifactInSameAuthorizationStoreWhenNonNull:
-      true,
-    manualBlockNullabilityMustMatchValidatedNativeFallbackOutcome: true,
-    additionalFieldsAllowed: false,
-  };
-  const exactRejectedNativeFallbackAttemptValidationRecordContract = {
-    purpose:
-      "closed_identifier_free_evidence_for_rejected_native_fallback_attempts",
-    fieldsExactly: [
-      "artifact_contract_version",
-      "exact_head_sha",
-      "exact_tree_sha",
-      "s237o_authorization_digest_sha256",
-      "adapter_config_digest_sha256",
-      "benchmark_run_id",
-      "synthetic_fixture_id",
-      "expected_status",
-      "observed_status",
-      "rejection_code_enum",
-      "validation_result",
-      "candidate_plan_released",
-    ],
-    fieldSchemas: {
-      artifact_contract_version: [
-        "dabangil.s237o.rejected_native_fallback_attempt_validation_record.v1",
-      ],
-      exact_head_sha: "lowercase_hex_40",
-      exact_tree_sha: "lowercase_hex_40",
-      s237o_authorization_digest_sha256: "lowercase_hex_64",
-      adapter_config_digest_sha256: "lowercase_hex_64",
-      benchmark_run_id: "^obr_[A-Za-z0-9_-]{16,64}$",
-      synthetic_fixture_id: "^syn_s237o_[A-Za-z0-9_-]{8,80}$",
-      expected_status:
-        "closed_enum_exact_result_contract_fallback_statuses",
-      observed_status:
-        "closed_enum_exact_result_contract_fallback_statuses",
-      rejection_code_enum: NATIVE_FALLBACK_REJECTION_CODES,
-      validation_result: ["rejected"],
-      candidate_plan_released: [false],
-    },
-    additionalFieldsAllowed: false,
-    freeTextAllowed: false,
-    expectedAndObservedStatusMustEqualExactFailureFixtureExpectedStatus:
-      true,
-    headTreeAuthorizationConfigRunAndFixtureMustMatchParentBenchmarkAndFailureFixtureEntry:
-      true,
-    rejectionValidationOrderExactly: [
-      "result_status",
-      "fallback_presence",
-      "fallback_used",
-      "fallback_reason",
-      "native_plan_version_schema",
-      "native_plan_resolution_and_immutability",
-      "candidate_accounting",
-      "execution_block_duration",
-      "non_droppable_candidate_placement",
-      "candidate_window_membership_availability_and_bounds",
-      "replan_cutoff_feasibility",
-      "pairwise_block_non_overlap",
-      "prerequisite_ordering",
-      "hard_constraints",
-      "immutable_placement_compatibility",
-      "canonical_result_contract_schema_and_correlation_catch_all",
-    ],
-    rejectionCodeMustEqualFirstApplicableFailedValidationInExactOrder:
-      true,
-    canonicalResultContractInvalidCodeMayBeUsedOnlyWhenNoMoreSpecificRejectionCodeMatches:
-      true,
-    rawRejectedNativeFallbackOutputMayAppearInRecordLogsArtifactsCachesErrorsTelemetryOrPersistedTemp:
-      false,
-    projectedOrCanonicalCandidateAndWindowIdentifiersMayAppearInRecord:
-      false,
-    recordMaySubstituteForCanonicalResultOrExactManualBlock: false,
-  };
-  const resolvedVerificationRules =
-    resolvedArtifactMembers.verificationRules;
-  const exactFailureFixtureContractKeys = [
-    "algorithm",
-    "serialization",
-    "expectedStatuses",
-    "entryOrdering",
-    "entryFieldsExactly",
-    "entryFieldSchemas",
-    "entryAdditionalFieldsAllowed",
-    "exactEntryCountMustEqualFallbackStatusCount",
-    "observedStatusMustEqualExpectedStatus",
-    "triggerOriginMustEqualSolverFailureExactlyForInfeasibleModelInvalidOrUnknown",
-    "triggerOriginMustEqualTrustedGatewayClassificationExactlyForTimeoutDependencyUnavailableAdapterErrorSchemaMismatchStaleResponseOrValidatorRejected",
-    "isolatedSolverMayAuthorTrustedGatewayClassification",
-    "assertionResultMustEqualPassed",
-    "validNativeFallbackOrExactManualBlockRequired",
-    "validNativeFallbackResultDigestMustResolveOneExactCanonicalResultWhenManualBlockDigestIsNull",
-    "validNativeFallbackResultStatusMustEqualExpectedStatusOrLiteralFallbackWhenManualBlockDigestIsNull",
-    "validNativeFallbackResultFallbackUsedMustBeTrueWhenManualBlockDigestIsNull",
-    "validNativeFallbackResultFallbackReasonMustEqualExpectedStatusWhenManualBlockDigestIsNull",
-    "validNativeFallbackResultNativePlanVersionMustBeClosedAndNonNullWhenManualBlockDigestIsNull",
-    "validNativeFallbackResultMustSatisfyCanonicalCandidateAccountingExecutionBlockDurationAndAllHardConstraintsWhenManualBlockDigestIsNull",
-    "validNativeFallbackResultMustSatisfyCanonicalNonDroppableCandidateWindowAndAllC4HardConstraintsWhenManualBlockDigestIsNull",
-    "validNativeFallbackResultMustSatisfyCanonicalReplanCutoffPairwiseBlockNonOverlapAndPrerequisiteOrderingWhenManualBlockDigestIsNull",
-    "oneNativeFallbackResultDigestMaySatisfyMultipleExpectedStatuses",
-    "invalidNativeFallbackAttemptDigestMustResolveOneExactClosedRejectionValidationRecordWhenManualBlockDigestIsNonNull",
-    "invalidNativeFallbackAttemptFailureMustBeCrossBoundToExpectedStatus",
-    "invalidNativeFallbackManualBlockDigestMustResolveOneExactCanonicalBlockedManualPlanRequiredResult",
-    "invalidNativeFallbackManualBlockResultMayContainExecutionBlocksOrReferencedNativePlan",
-    "invalidNativeFallbackManualBlockResultFallbackMustEqualUsedFalseNotUsedAndNull",
-    "invalidNativeFallbackResultMayReleaseCandidatePlan",
-    "manualBlockDigestMustBeNullIffNativeFallbackIsValidAndNonNullIffNativeFallbackIsInvalid",
-    "missingUnknownDuplicateOrReorderedEntryAllowed",
-  ];
-
-  return (
-    canonicalJson(Object.keys(canonical)) ===
-      canonicalJson(RESULT_CONTRACT_KEYS) &&
-    canonicalJson(Object.keys(projected)) ===
-      canonicalJson(PROJECTED_RESULT_CONTRACT_KEYS) &&
-    canonicalJson(canonical.allowedFieldsExactly) ===
-      canonicalJson(exactAllowedFields) &&
-    canonicalJson(projected.allowedFieldsExactly) ===
-      canonicalJson(exactProjectedAllowedFields) &&
-    canonicalJson(canonical.executionBlockFieldsExactly) ===
-      canonicalJson(exactExecutionBlockFields) &&
-    canonicalJson(projected.executionBlockFieldsExactly) ===
-      canonicalJson(exactExecutionBlockFields) &&
-    canonicalJson(canonical.unassignedCandidateFieldsExactly) ===
-      canonicalJson(exactUnassignedCandidateFields) &&
-    canonicalJson(projected.unassignedCandidateFieldsExactly) ===
-      canonicalJson(exactUnassignedCandidateFields) &&
-    canonicalJson(canonical.fallbackFieldsExactly) ===
-      canonicalJson(exactFallbackFields) &&
-    canonicalJson(canonical.fallbackReasonValues) ===
-      canonicalJson(exactFallbackReasonValues) &&
-    !Object.hasOwn(projected, "fallbackFieldsExactly") &&
-    !Object.hasOwn(projected, "fallbackReasonValues") &&
-    !Object.hasOwn(projected, "fallbackValueRules") &&
-    !Object.hasOwn(projected, "fallbackStatuses") &&
-    !Object.hasOwn(projected, "nativeFallbackInvalidResult") &&
-    canonicalJson(canonical.objectiveComponentFieldsExactly) ===
-      canonicalJson(exactObjectiveComponentFields) &&
-    canonicalJson(projected.objectiveComponentFieldsExactly) ===
-      canonicalJson(exactObjectiveComponentFields) &&
-    canonicalJson(canonical.violationFieldsExactly) ===
-      canonicalJson(exactViolationFields) &&
-    canonicalJson(projected.violationFieldsExactly) ===
-      canonicalJson(exactViolationFields) &&
-    canonicalJson(canonical.scalarSchemas) ===
-      canonicalJson(exactScalarSchemas) &&
-    canonicalJson(projected.scalarSchemas) ===
-      canonicalJson(exactProjectedScalarSchemas) &&
-    canonicalJson(canonical.cardinalityLimits) ===
-      canonicalJson(exactCardinalityLimits) &&
-    canonicalJson(projected.cardinalityLimits) ===
-      canonicalJson(exactCardinalityLimits) &&
-    canonicalJson(canonical.fallbackStatuses) ===
-      canonicalJson(FALLBACK_STATUSES) &&
-    canonicalJson(canonical.fallbackValueRules) ===
-      canonicalJson(exactFallbackValueRules) &&
-    canonicalJson(canonical.candidateAccountingRules) ===
-      canonicalJson(exactCandidateAccountingRules) &&
-    canonicalJson(projected.candidateAccountingRules) ===
-      canonicalJson(exactProjectedCandidateAccountingRules) &&
-    canonicalJson(canonical.executionBlockDurationRules) ===
-      canonicalJson(exactExecutionBlockDurationRules) &&
-    canonicalJson(projected.executionBlockDurationRules) ===
-      canonicalJson(exactProjectedExecutionBlockDurationRules) &&
-    canonicalJson(canonical.nonDroppableCandidateRules) ===
-      canonicalJson(exactCanonicalNonDroppableRules) &&
-    canonicalJson(projected.nonDroppableCandidateRules) ===
-      canonicalJson(exactProjectedNonDroppableRules) &&
-    canonicalJson(canonical.candidateWindowFeasibilityRules) ===
-      canonicalJson(exactCanonicalCandidateWindowRules) &&
-    canonicalJson(projected.candidateWindowFeasibilityRules) ===
-      canonicalJson(exactProjectedCandidateWindowRules) &&
-    canonicalJson(canonical.hardDeadlineFeasibilityRules) ===
-      canonicalJson(exactCanonicalHardDeadlineRules) &&
-    canonicalJson(projected.hardDeadlineFeasibilityRules) ===
-      canonicalJson(exactProjectedHardDeadlineRules) &&
-    canonicalJson(canonical.replanCutoffFeasibilityRules) ===
-      canonicalJson(exactCanonicalReplanCutoffRules) &&
-    canonicalJson(projected.replanCutoffFeasibilityRules) ===
-      canonicalJson(exactProjectedReplanCutoffRules) &&
-    canonicalJson(canonical.pairwiseBlockNonOverlapRules) ===
-      canonicalJson(exactCanonicalPairwiseBlockNonOverlapRules) &&
-    canonicalJson(projected.pairwiseBlockNonOverlapRules) ===
-      canonicalJson(exactProjectedPairwiseBlockNonOverlapRules) &&
-    canonicalJson(canonical.prerequisiteOrderingRules) ===
-      canonicalJson(exactCanonicalPrerequisiteOrderingRules) &&
-    canonicalJson(projected.prerequisiteOrderingRules) ===
-      canonicalJson(exactProjectedPrerequisiteOrderingRules) &&
-    canonicalJson(canonical.versionInfoFieldsExactly) ===
-      canonicalJson(exactVersionInfoFields) &&
-    canonicalJson(canonical.versionFieldsRequired) ===
-      canonicalJson(exactVersionInfoFields) &&
-    canonicalJson(canonical.versionInfoFieldSchemas) ===
-      canonicalJson(exactVersionInfoFieldSchemas) &&
-    canonicalJson(canonical.versionInfoConstructionRules) ===
-      canonicalJson(exactVersionInfoConstructionRules) &&
-    !Object.hasOwn(projected, "versionInfoFieldsExactly") &&
-    !Object.hasOwn(projected, "versionInfoFieldSchemas") &&
-    !Object.hasOwn(projected, "versionInfoConstructionRules") &&
-    !Object.hasOwn(projected, "versionFieldsRequired") &&
-    canonicalJson(scheduler.inputContract.hardDeadlineValidationContext) ===
-      canonicalJson(exactHardDeadlineValidationContext) &&
-    scheduler.inputContract.optimizerInvocationProjectionContract
-      .fieldsExactly.includes("study_date_kst") ===
-      false &&
-    canonicalJson(scheduler.hardConstraints) ===
-      canonicalJson(RESULT_HARD_CONSTRAINTS) &&
-    canonicalJson(canonical.closedEnumValues.constraint_code_enum) ===
-      canonicalJson(RESULT_HARD_CONSTRAINTS) &&
-    canonicalJson(projected.closedEnumValues.constraint_code_enum) ===
-      canonicalJson(RESULT_HARD_CONSTRAINTS) &&
-    priorRules
-      .elapsedAndInProgressPlacementMustResolveExactlyOneCurrentInvocationCandidateBeforeProjection ===
-      true &&
-    priorRules
-      .elapsedAndInProgressPlacementMustSatisfyResolvedCurrentCandidateDurationAndShorteningRulesBeforeProjection ===
-      true &&
-    priorRules
-      .immutablePlacementCandidateDurationIncompatibilityMayReachOptimizer ===
-      false &&
-    priorRules
-      .immutablePlacementCandidateDurationIncompatibilityFallbackTriggerStatus ===
-      "validator_rejected" &&
-    priorRules
-      .immutablePlacementCandidateDurationIncompatibilityFallbackReasonEnumMustEqualTriggerStatus ===
-      true &&
-    priorRules
-      .immutablePlacementCandidateDurationIncompatibilityMustAttemptExactlyOneSeparatelyValidatedNativeFallback ===
-      true &&
-    priorRules
-      .immutablePlacementCandidateDurationIncompatibilityMustEnterSeparatelyValidatedNativeFallbackWithoutRewritingPlacementOrCandidatePolicy ===
-      true &&
-    priorRules
-      .immutablePlacementCandidateDurationIncompatibilityInvalidNativeFallbackResult ===
-      "blocked_manual_plan_required" &&
-    priorRules
-      .immutablePlacementCandidateDurationIncompatibilityInvalidNativeFallbackMayTriggerAnotherFallback ===
-      false &&
-    priorRules
-      .elapsedAndInProgressPlacementMustResolveExactlyOneCurrentInvocationWindowBeforeProjection ===
-      true &&
-    priorRules
-      .elapsedAndInProgressPlacementWindowMustBelongToResolvedCurrentCandidateAllowedWindowIdsBeforeProjection ===
-      true &&
-    priorRules
-      .elapsedAndInProgressPlacementResolvedCurrentWindowAvailableMustEqualTrueBeforeProjection ===
-      true &&
-    priorRules
-      .elapsedAndInProgressPlacementMustSatisfyCurrentWindowStartLessThanOrEqualBlockStartLessThanBlockEndLessThanOrEqualWindowEndInsideOneReferencedWindowBeforeProjection ===
-      true &&
-    priorRules.elapsedAndInProgressPlacementMaySpanOrStitchAdjacentCurrentWindows ===
-      false &&
-    priorRules
-      .immutablePlacementCandidateWindowIncompatibilityMayReachOptimizer ===
-      false &&
-    priorRules
-      .immutablePlacementCandidateWindowIncompatibilityFallbackTriggerStatus ===
-      "validator_rejected" &&
-    priorRules
-      .immutablePlacementCandidateWindowIncompatibilityFallbackReasonEnumMustEqualTriggerStatus ===
-      true &&
-    priorRules
-      .immutablePlacementCandidateWindowIncompatibilityMustAttemptExactlyOneSeparatelyValidatedNativeFallback ===
-      true &&
-    priorRules
-      .immutablePlacementCandidateWindowIncompatibilityMustEnterSeparatelyValidatedNativeFallbackWithoutMovingDroppingUnassigningShorteningExtendingOrRewritingPlacementOrCandidatePolicy ===
-      true &&
-    priorRules
-      .immutablePlacementCandidateWindowIncompatibilityInvalidNativeFallbackResult ===
-      "blocked_manual_plan_required" &&
-    priorRules
-      .immutablePlacementCandidateWindowIncompatibilityInvalidNativeFallbackMayTriggerAnotherFallback ===
-      false &&
-    priorRules
-      .elapsedAndInProgressPlacementMustSatisfyResolvedCurrentCandidateHardDeadlineBeforeProjection ===
-      true &&
-    priorRules
-      .immutablePlacementHardDeadlineIncompatibilityMayReachOptimizer ===
-      false &&
-    priorRules
-      .immutablePlacementHardDeadlineIncompatibilityFallbackTriggerStatus ===
-      "validator_rejected" &&
-    priorRules
-      .immutablePlacementHardDeadlineIncompatibilityFallbackReasonEnumMustEqualTriggerStatus ===
-      true &&
-    priorRules
-      .immutablePlacementHardDeadlineIncompatibilityMustAttemptExactlyOneSeparatelyValidatedNativeFallback ===
-      true &&
-    priorRules
-      .immutablePlacementHardDeadlineIncompatibilityMustEnterSeparatelyValidatedNativeFallbackWithoutMovingDroppingUnassigningShorteningExtendingOrRewritingPlacementOrCandidatePolicy ===
-      true &&
-    priorRules
-      .immutablePlacementHardDeadlineIncompatibilityInvalidNativeFallbackResult ===
-      "blocked_manual_plan_required" &&
-    priorRules
-      .immutablePlacementHardDeadlineIncompatibilityInvalidNativeFallbackMayTriggerAnotherFallback ===
-      false &&
-    priorRules
-      .immutablePlacementOrCurrentCandidatePolicyMayBeRewrittenToRepairIncompatibility ===
-      false &&
-    projectionRules
-      .immutablePriorPlacementsMustPassExactCurrentCandidateDurationCompatibilityBeforeProjection ===
-      true &&
-    projectionRules
-      .immutablePriorPlacementCandidateDurationIncompatibilityMayReachOptimizer ===
-      false &&
-    projectionRules
-      .immutablePriorPlacementCandidateDurationIncompatibilityFallbackTriggerStatus ===
-      "validator_rejected" &&
-    projectionRules
-      .immutablePriorPlacementCandidateDurationIncompatibilityFallbackReasonEnumMustEqualTriggerStatus ===
-      true &&
-    projectionRules
-      .immutablePriorPlacementCandidateDurationIncompatibilityMustAttemptExactlyOneSeparatelyValidatedNativeFallback ===
-      true &&
-    projectionRules
-      .immutablePriorPlacementCandidateDurationIncompatibilityMustEnterSeparatelyValidatedNativeFallbackWithoutRewritingPlacementOrCandidatePolicy ===
-      true &&
-    projectionRules
-      .immutablePriorPlacementCandidateDurationIncompatibilityInvalidNativeFallbackResult ===
-      "blocked_manual_plan_required" &&
-    projectionRules
-      .immutablePriorPlacementCandidateDurationIncompatibilityInvalidNativeFallbackMayTriggerAnotherFallback ===
-      false &&
-    projectionRules
-      .immutablePriorPlacementsMustPassExactCurrentCandidateWindowMembershipAvailabilityAndBoundsBeforeProjection ===
-      true &&
-    projectionRules
-      .immutablePriorPlacementCandidateAndWindowMustEachResolveExactlyOnceThroughExactCurrentInvocation ===
-      true &&
-    projectionRules
-      .immutablePriorPlacementWindowMustBelongToResolvedCandidateAllowedWindowIds ===
-      true &&
-    projectionRules.immutablePriorPlacementResolvedWindowAvailableMustEqualTrue ===
-      true &&
-    projectionRules
-      .immutablePriorPlacementMustSatisfyWindowStartLessThanOrEqualBlockStartLessThanBlockEndLessThanOrEqualWindowEndInsideOneReferencedWindow ===
-      true &&
-    projectionRules.immutablePriorPlacementMaySpanOrStitchAdjacentWindows ===
-      false &&
-    projectionRules
-      .immutablePriorPlacementCandidateWindowIncompatibilityMayReachOptimizer ===
-      false &&
-    projectionRules
-      .immutablePriorPlacementCandidateWindowIncompatibilityFallbackTriggerStatus ===
-      "validator_rejected" &&
-    projectionRules
-      .immutablePriorPlacementCandidateWindowIncompatibilityFallbackReasonEnumMustEqualTriggerStatus ===
-      true &&
-    projectionRules
-      .immutablePriorPlacementCandidateWindowIncompatibilityMustAttemptExactlyOneSeparatelyValidatedNativeFallback ===
-      true &&
-    projectionRules
-      .immutablePriorPlacementCandidateWindowIncompatibilityMustEnterSeparatelyValidatedNativeFallbackWithoutMovingDroppingUnassigningShorteningExtendingOrRewritingPlacementOrCandidatePolicy ===
-      true &&
-    projectionRules
-      .immutablePriorPlacementCandidateWindowIncompatibilityInvalidNativeFallbackResult ===
-      "blocked_manual_plan_required" &&
-    projectionRules
-      .immutablePriorPlacementCandidateWindowIncompatibilityInvalidNativeFallbackMayTriggerAnotherFallback ===
-      false &&
-    projectionRules
-      .studyDateKstMustRemainInTrustedGatewayAndMustNotEnterOptimizerProjection ===
-      true &&
-    projectionRules
-      .trustedGatewayMustRetainExactCanonicalStudyDateKstForProjectedResultHardDeadlineValidation ===
-      true &&
-    projectionRules
-      .immutablePriorPlacementsMustPassExactCurrentCandidateHardDeadlinePredicateBeforeProjection ===
-      true &&
-    projectionRules
-      .immutablePriorPlacementHardDeadlineIncompatibilityMayReachOptimizer ===
-      false &&
-    projectionRules
-      .immutablePriorPlacementHardDeadlineIncompatibilityFallbackTriggerStatus ===
-      "validator_rejected" &&
-    projectionRules
-      .immutablePriorPlacementHardDeadlineIncompatibilityFallbackReasonEnumMustEqualTriggerStatus ===
-      true &&
-    projectionRules
-      .immutablePriorPlacementHardDeadlineIncompatibilityMustAttemptExactlyOneSeparatelyValidatedNativeFallback ===
-      true &&
-    projectionRules
-      .immutablePriorPlacementHardDeadlineIncompatibilityMustEnterSeparatelyValidatedNativeFallbackWithoutMovingDroppingUnassigningShorteningExtendingOrRewritingPlacementOrCandidatePolicy ===
-      true &&
-    projectionRules
-      .immutablePriorPlacementHardDeadlineIncompatibilityInvalidNativeFallbackResult ===
-      "blocked_manual_plan_required" &&
-    projectionRules
-      .immutablePriorPlacementHardDeadlineIncompatibilityInvalidNativeFallbackMayTriggerAnotherFallback ===
-      false &&
-    Object.entries(exactProjectionSecondCorrectivePreflightRules).every(
-      ([field, expected]) =>
-        canonicalJson(projectionRules[field]) === canonicalJson(expected),
-    ) &&
-    Object.entries(exactPriorSecondCorrectivePreflightRules).every(
-      ([field, expected]) =>
-        canonicalJson(priorRules[field]) === canonicalJson(expected),
-    ) &&
-    failureFixture.expectedStatuses === "resultContract.fallbackStatuses" &&
-    canonicalJson(Object.keys(failureFixture)) ===
-      canonicalJson(exactFailureFixtureContractKeys) &&
-    canonicalJson(failureFixture.entryFieldsExactly) ===
-      canonicalJson([
-        "synthetic_fixture_id",
-        "expected_status",
-        "observed_status",
-        "trigger_origin_enum",
-        "native_fallback_result_digest_sha256",
-        "manual_block_result_digest_sha256_or_null",
-        "assertion_result",
-      ]) &&
-    canonicalJson(
-      failureFixture.entryFieldSchemas.trigger_origin_enum.values,
-    ) ===
-      canonicalJson([
-        "solver_failure",
-        "trusted_gateway_classification",
-      ]) &&
-    failureFixture.entryAdditionalFieldsAllowed === false &&
-    failureFixture
-      .triggerOriginMustEqualSolverFailureExactlyForInfeasibleModelInvalidOrUnknown ===
-      true &&
-    failureFixture
-      .triggerOriginMustEqualTrustedGatewayClassificationExactlyForTimeoutDependencyUnavailableAdapterErrorSchemaMismatchStaleResponseOrValidatorRejected ===
-      true &&
-    failureFixture.isolatedSolverMayAuthorTrustedGatewayClassification ===
-      false &&
-    failureFixture.validNativeFallbackOrExactManualBlockRequired === true &&
-    failureFixture
-      .validNativeFallbackResultDigestMustResolveOneExactCanonicalResultWhenManualBlockDigestIsNull ===
-      true &&
-    failureFixture
-      .validNativeFallbackResultStatusMustEqualExpectedStatusOrLiteralFallbackWhenManualBlockDigestIsNull ===
-      true &&
-    failureFixture
-      .validNativeFallbackResultFallbackUsedMustBeTrueWhenManualBlockDigestIsNull ===
-      true &&
-    failureFixture
-      .validNativeFallbackResultFallbackReasonMustEqualExpectedStatusWhenManualBlockDigestIsNull ===
-      true &&
-    failureFixture
-      .validNativeFallbackResultNativePlanVersionMustBeClosedAndNonNullWhenManualBlockDigestIsNull ===
-      true &&
-    failureFixture
-      .validNativeFallbackResultMustSatisfyCanonicalCandidateAccountingExecutionBlockDurationAndAllHardConstraintsWhenManualBlockDigestIsNull ===
-      true &&
-    failureFixture
-      .validNativeFallbackResultMustSatisfyCanonicalNonDroppableCandidateWindowAndAllC4HardConstraintsWhenManualBlockDigestIsNull ===
-      true &&
-    failureFixture
-      .validNativeFallbackResultMustSatisfyCanonicalReplanCutoffPairwiseBlockNonOverlapAndPrerequisiteOrderingWhenManualBlockDigestIsNull ===
-      true &&
-    failureFixture
-      .oneNativeFallbackResultDigestMaySatisfyMultipleExpectedStatuses ===
-      false &&
-    failureFixture
-      .invalidNativeFallbackAttemptDigestMustResolveOneExactClosedRejectionValidationRecordWhenManualBlockDigestIsNonNull ===
-      true &&
-    failureFixture
-      .invalidNativeFallbackAttemptFailureMustBeCrossBoundToExpectedStatus ===
-      true &&
-    failureFixture
-      .invalidNativeFallbackManualBlockDigestMustResolveOneExactCanonicalBlockedManualPlanRequiredResult ===
-      true &&
-    failureFixture
-      .invalidNativeFallbackManualBlockResultMayContainExecutionBlocksOrReferencedNativePlan ===
-      false &&
-    failureFixture
-      .invalidNativeFallbackManualBlockResultFallbackMustEqualUsedFalseNotUsedAndNull ===
-      true &&
-    failureFixture.invalidNativeFallbackResultMayReleaseCandidatePlan ===
-      false &&
-    failureFixture
-      .manualBlockDigestMustBeNullIffNativeFallbackIsValidAndNonNullIffNativeFallbackIsInvalid ===
-      true &&
-    failureFixture.missingUnknownDuplicateOrReorderedEntryAllowed ===
-      false &&
-    canonicalJson(
-      resolvedArtifactMembers.canonicalNativeFallbackProjectionContract,
-    ) ===
-      canonicalJson(exactCanonicalNativeFallbackProjectionContract) &&
-    canonicalJson(
-      resolvedArtifactMembers
-        .rejectedNativeFallbackAttemptValidationRecordContract,
-    ) ===
-      canonicalJson(
-        exactRejectedNativeFallbackAttemptValidationRecordContract,
-      ) &&
-    resolvedVerificationRules
-      .validFailureFallbackDigestsMustResolveToExactResultContractWhenManualBlockDigestIsNull ===
-      true &&
-    resolvedVerificationRules
-      .failureFixtureTriggerOriginMustDistinguishSolverFailureFromTrustedGatewayClassificationExactly ===
-      true &&
-    resolvedVerificationRules
-      .validFailureFallbackMustSatisfyCanonicalNonDroppableCandidateWindowAndAllC4HardConstraints ===
-      true &&
-    resolvedVerificationRules
-      .validFailureFallbackMustSatisfyCanonicalReplanCutoffPairwiseBlockNonOverlapAndPrerequisiteOrdering ===
-      true &&
-    resolvedVerificationRules
-      .invalidFailureFallbackAttemptDigestsMustResolveToExactRejectedAttemptValidationRecordWhenManualBlockDigestIsNonNull ===
-      true &&
-    resolvedVerificationRules
-      .nonNullManualBlockDigestsMustResolveToExactBlockedManualPlanRequiredResultContract ===
-      true &&
-    !Object.hasOwn(
-      resolvedVerificationRules,
-      "failureFallbackAndManualBlockDigestsMustResolveToExactResultContract",
-    ) &&
-    canonicalJson(scheduler.nativeValidator) ===
-      canonicalJson(exactNativeValidator)
-  );
-}
-
-function candidateAccountingIsExact(
-  invocationCandidateIds,
-  executionBlocks,
-  unassignedCandidates,
-) {
-  const placedIds = executionBlocks.map(
-    (block) => block.ephemeral_opaque_candidate_id,
-  );
-  const unassignedIds = unassignedCandidates.map(
-    (candidate) => candidate.ephemeral_opaque_candidate_id,
-  );
-  const invocationSet = new Set(invocationCandidateIds);
-  const placedSet = new Set(placedIds);
-  const unassignedSet = new Set(unassignedIds);
-  if (invocationSet.size !== invocationCandidateIds.length) return false;
-  if (placedSet.size !== placedIds.length) return false;
-  if (unassignedSet.size !== unassignedIds.length) return false;
-  if ([...placedSet].some((candidateId) => unassignedSet.has(candidateId))) {
-    return false;
-  }
-  const accountedSet = new Set([...placedSet, ...unassignedSet]);
-  return (
-    accountedSet.size === invocationSet.size &&
-    [...accountedSet].every((candidateId) => invocationSet.has(candidateId)) &&
-    [...invocationSet].every((candidateId) => accountedSet.has(candidateId))
-  );
-}
-
-function executionBlockDurationIsValid(candidates, block) {
-  const matchingCandidates = candidates.filter(
-    (candidate) =>
-      candidate.ephemeral_opaque_candidate_id ===
-      block.ephemeral_opaque_candidate_id,
-  );
-  if (matchingCandidates.length !== 1) return false;
-  const [candidate] = matchingCandidates;
-  if (
-    block.duration_minutes !==
-    block.end_minute_kst - block.start_minute_kst
-  ) {
-    return false;
-  }
-  if (block.duration_minutes > candidate.estimated_minutes) return false;
-  if (!candidate.can_shorten) {
-    return block.duration_minutes === candidate.estimated_minutes;
-  }
-  return (
-    block.duration_minutes >= candidate.minimum_minutes &&
-    block.duration_minutes <= candidate.estimated_minutes
-  );
-}
-
-function isPlainRecord(value) {
-  return (
-    value !== null &&
-    typeof value === "object" &&
-    !Array.isArray(value) &&
-    Object.getPrototypeOf(value) === Object.prototype
-  );
-}
-
-function hasExactFields(value, fields) {
-  if (!isPlainRecord(value)) return false;
-  const keys = Object.keys(value);
-  return (
-    keys.length === fields.length &&
-    fields.every((field) => Object.hasOwn(value, field))
-  );
-}
-
-function containsForbiddenFieldRecursively(value, forbiddenFields) {
-  if (Array.isArray(value)) {
-    return value.some((entry) =>
-      containsForbiddenFieldRecursively(entry, forbiddenFields),
-    );
-  }
-  if (!isPlainRecord(value)) return false;
-  return Object.entries(value).some(
-    ([key, nested]) =>
-      forbiddenFields.has(key) ||
-      containsForbiddenFieldRecursively(nested, forbiddenFields),
-  );
-}
-
-function canonicalVersionFieldIsValid(schema, value) {
-  if (isPlainRecord(schema) && schema.type === "closed_enum") {
-    return schema.values.includes(value);
-  }
-  if (schema === "closed_identifier_1_to_80") {
-    return (
-      typeof value === "string" &&
-      /^[A-Za-z0-9._:-]{1,80}$/.test(value)
-    );
-  }
-  if (schema === "finite_integer") return Number.isInteger(value);
-  if (schema === "finite_integer_1_to_64") {
-    return Number.isInteger(value) && value >= 1 && value <= 64;
-  }
-  if (schema === "finite_integer_1_to_60000") {
-    return Number.isInteger(value) && value >= 1 && value <= 60000;
-  }
-  return false;
-}
-
-function canonicalVersionInfoIsExact(contract, versionInfo) {
-  return (
-    hasExactFields(versionInfo, contract.versionInfoFieldsExactly) &&
-    canonicalJson(contract.versionFieldsRequired) ===
-      canonicalJson(contract.versionInfoFieldsExactly) &&
-    contract.versionInfoFieldsExactly.every((field) =>
-      canonicalVersionFieldIsValid(
-        contract.versionInfoFieldSchemas[field],
-        versionInfo[field],
-      ),
-    )
-  );
-}
-
-function gatewayCanonicalVersionOutcome(
-  canonicalContract,
-  trustedConfiguration,
-  {
-    rawResponseValidated,
-    exactCorrelationValidated,
-    requiredBijectionsValidated,
-    trustedConfigurationIsCurrentAndBound,
-    nativeFallbackValid,
-    nativeFallbackTrustedConfiguration = null,
-    actualInvocationConfiguration = trustedConfiguration,
-    nativeFallbackTrustedConfigurationIsCurrentAndBound = true,
-    nativeFallbackActualInvocationConfiguration =
-      nativeFallbackTrustedConfiguration,
-  },
-) {
-  const prerequisiteFailureClassification = !rawResponseValidated
-    ? "schema_mismatch"
-    : !exactCorrelationValidated
-      ? "stale_response"
-      : !requiredBijectionsValidated
-        ? "schema_mismatch"
-        : null;
-  const prerequisiteValidationPassed =
-    prerequisiteFailureClassification === null &&
-    trustedConfigurationIsCurrentAndBound;
-  if (
-    prerequisiteValidationPassed &&
-    canonicalVersionInfoIsExact(
-      canonicalContract,
-      trustedConfiguration,
-    ) &&
-    canonicalVersionInfoIsExact(
-      canonicalContract,
-      actualInvocationConfiguration,
-    ) &&
-    canonicalContract.versionInfoFieldsExactly.every(
-      (field) =>
-        trustedConfiguration[field] === actualInvocationConfiguration[field],
-    )
-  ) {
-    return {
-      status: "constructed",
-      version_info: Object.fromEntries(
-        canonicalContract.versionInfoFieldsExactly.map((field) => [
-          field,
-          trustedConfiguration[field],
-        ]),
-      ),
-      nativeFallbackAttempts: 0,
-      candidatePlanReleased: true,
-      canonicalNativeFallbackReleased: false,
-    };
-  }
-  const validFallbackVersionInfo =
-    nativeFallbackValid &&
-    nativeFallbackTrustedConfigurationIsCurrentAndBound &&
-    canonicalVersionInfoIsExact(
-      canonicalContract,
-      nativeFallbackTrustedConfiguration,
-    ) &&
-    canonicalVersionInfoIsExact(
-      canonicalContract,
-      nativeFallbackActualInvocationConfiguration,
-    ) &&
-    canonicalContract.versionInfoFieldsExactly.every(
-      (field) =>
-        nativeFallbackTrustedConfiguration[field] ===
-        nativeFallbackActualInvocationConfiguration[field],
-    );
-  const triggeringClassification =
-    prerequisiteFailureClassification ?? "validator_rejected";
-  return validFallbackVersionInfo
-    ? {
-        status: "fallback",
-        triggeringClassification,
-        version_info: Object.fromEntries(
-          canonicalContract.versionInfoFieldsExactly.map((field) => [
-            field,
-            nativeFallbackTrustedConfiguration[field],
-          ]),
-        ),
-        nativeFallbackAttempts: 1,
-        candidatePlanReleased: false,
-        canonicalNativeFallbackReleased: true,
-      }
-    : {
-        status: "blocked_manual_plan_required",
-        triggeringClassification,
-        version_info: null,
-        nativeFallbackAttempts: 1,
-        candidatePlanReleased: false,
-        canonicalNativeFallbackReleased: false,
-      };
-}
-
-function projectedScalarIsValid(schema, value) {
-  if (!Number.isInteger(value)) return false;
-  if (schema === "finite_integer") return true;
-  if (schema === "finite_integer_0_to_60000") {
-    return value >= 0 && value <= 60000;
-  }
-  if (schema === "integer_0_to_1439") {
-    return value >= 0 && value <= 1439;
-  }
-  if (schema === "integer_1_to_1440") {
-    return value >= 1 && value <= 1440;
-  }
-  return false;
-}
-
-function projectedIdentifierIsValid(contract, identifierClass, value) {
-  const pattern = contract.identifierSchemas[identifierClass];
-  return (
-    typeof value === "string" &&
-    typeof pattern === "string" &&
-    new RegExp(pattern).test(value)
-  );
-}
-
-function projectedSolverResponseIsClosed(
-  contract,
-  response,
-  expectedCorrelation,
-) {
-  if (!isPlainRecord(response) || !isPlainRecord(expectedCorrelation)) {
-    return false;
-  }
-  if (
-    containsForbiddenFieldRecursively(
-      response,
-      new Set(contract.forbiddenFields),
-    )
-  ) {
-    return false;
-  }
-  if (!contract.statuses.includes(response.status)) return false;
-
-  const candidatePlanFields =
-    contract.statusOriginBoundary.projectedCandidatePlanFieldsExactly;
-  const carriesCandidatePlan = ["optimal", "feasible"].includes(
-    response.status,
-  );
-  const requiredTopLevelFields = contract.allowedFieldsExactly.filter(
-    (field) => carriesCandidatePlan || !candidatePlanFields.includes(field),
-  );
-  if (!hasExactFields(response, requiredTopLevelFields)) return false;
-  if (
-    response.request_id !== expectedCorrelation.request_id ||
-    response.input_snapshot_version !==
-      expectedCorrelation.input_snapshot_version ||
-    !projectedIdentifierIsValid(
-      contract,
-      "request_id",
-      response.request_id,
-    ) ||
-    !projectedIdentifierIsValid(
-      contract,
-      "input_snapshot_version",
-      response.input_snapshot_version,
-    )
-  ) {
-    return false;
-  }
-
-  const limits = contract.cardinalityLimits;
-  if (
-    !Array.isArray(response.objective_components) ||
-    response.objective_components.length >
-      limits.objective_components_maximum ||
-    !response.objective_components.every(
-      (component) =>
-        hasExactFields(
-          component,
-          contract.objectiveComponentFieldsExactly,
-        ) &&
-        contract.closedEnumValues.objective_code_enum.includes(
-          component.objective_code_enum,
-        ) &&
-        projectedScalarIsValid(
-          contract.scalarSchemas.integer_value,
-          component.integer_value,
-        ),
-    ) ||
-    !Array.isArray(response.violations) ||
-    response.violations.length > limits.violations_maximum ||
-    !response.violations.every(
-      (violation) =>
-        hasExactFields(violation, contract.violationFieldsExactly) &&
-        contract.closedEnumValues.constraint_code_enum.includes(
-          violation.constraint_code_enum,
-        ) &&
-        contract.closedEnumValues.severity_enum.includes(
-          violation.severity_enum,
-        ) &&
-        Array.isArray(violation.ephemeral_opaque_candidate_ids) &&
-        violation.ephemeral_opaque_candidate_ids.length <=
-          limits.candidate_ids_per_violation_maximum &&
-        new Set(violation.ephemeral_opaque_candidate_ids).size ===
-          violation.ephemeral_opaque_candidate_ids.length &&
-        violation.ephemeral_opaque_candidate_ids.every((candidateId) =>
-          projectedIdentifierIsValid(
-            contract,
-            "ephemeral_opaque_candidate_id",
-            candidateId,
-          ),
-        ),
-    ) ||
-    !projectedScalarIsValid(
-      contract.scalarSchemas.elapsed_ms,
-      response.elapsed_ms,
-    )
-  ) {
-    return false;
-  }
-
-  if (!carriesCandidatePlan) {
-    return (
-      !Object.hasOwn(response, "execution_blocks") &&
-      !Object.hasOwn(response, "unassigned_candidates")
-    );
-  }
-  if (
-    !Array.isArray(response.execution_blocks) ||
-    response.execution_blocks.length > limits.execution_blocks_maximum ||
-    !Array.isArray(response.unassigned_candidates) ||
-    response.unassigned_candidates.length >
-      limits.unassigned_candidates_maximum
-  ) {
-    return false;
-  }
-  const executionCandidateIds = response.execution_blocks.map(
-    (block) => block.ephemeral_opaque_candidate_id,
-  );
-  const unassignedCandidateIds = response.unassigned_candidates.map(
-    (candidate) => candidate.ephemeral_opaque_candidate_id,
-  );
-  return (
-    new Set(executionCandidateIds).size === executionCandidateIds.length &&
-    new Set(unassignedCandidateIds).size === unassignedCandidateIds.length &&
-    response.execution_blocks.every(
-      (block) =>
-        hasExactFields(block, contract.executionBlockFieldsExactly) &&
-        projectedIdentifierIsValid(
-          contract,
-          "ephemeral_opaque_candidate_id",
-          block.ephemeral_opaque_candidate_id,
-        ) &&
-        projectedIdentifierIsValid(
-          contract,
-          "ephemeral_opaque_window_id",
-          block.ephemeral_opaque_window_id,
-        ) &&
-        projectedScalarIsValid(
-          contract.scalarSchemas.start_minute_kst,
-          block.start_minute_kst,
-        ) &&
-        projectedScalarIsValid(
-          contract.scalarSchemas.end_minute_kst,
-          block.end_minute_kst,
-        ) &&
-        projectedScalarIsValid(
-          contract.scalarSchemas.duration_minutes,
-          block.duration_minutes,
-        ),
-    ) &&
-    response.unassigned_candidates.every(
-      (candidate) =>
-        hasExactFields(
-          candidate,
-          contract.unassignedCandidateFieldsExactly,
-        ) &&
-        projectedIdentifierIsValid(
-          contract,
-          "ephemeral_opaque_candidate_id",
-          candidate.ephemeral_opaque_candidate_id,
-        ) &&
-        contract.unassignedReasons.includes(candidate.reason_enum),
-    )
-  );
-}
-
-function gatewayConstructedCanonicalFallbackTuple(
-  triggerStatus,
-  nativePlanVersion = null,
-) {
-  if (["optimal", "feasible"].includes(triggerStatus)) {
-    return {
-      used: false,
-      reason_enum: "not_used",
-      native_plan_version: null,
-    };
-  }
-  if (
-    ![
-      ...SOLVER_FAILURE_STATUSES,
-      ...GATEWAY_CLASSIFICATION_STATUSES,
-    ].includes(triggerStatus) ||
-    typeof nativePlanVersion !== "string" ||
-    nativePlanVersion.length === 0
-  ) {
-    return null;
-  }
-  return {
-    used: true,
-    reason_enum: triggerStatus,
-    native_plan_version: nativePlanVersion,
-  };
-}
-
-function gatewayOutcomeAfterOptimalOrFeasibleNativeValidation(
-  projectedStatus,
-  {
-    canonicalAndNativeValidationValid,
-    nativeFallbackValid,
-  },
-) {
-  if (!["optimal", "feasible"].includes(projectedStatus)) return null;
-  if (canonicalAndNativeValidationValid) {
-    return {
-      status: projectedStatus,
-      discardedProjectedCandidatePlan: false,
-      nativeFallbackAttempts: 0,
-      fallback: gatewayConstructedCanonicalFallbackTuple(projectedStatus),
-      projectedCandidatePlanReleased: true,
-      canonicalNativeFallbackReleased: false,
-    };
-  }
-  if (nativeFallbackValid) {
-    return {
-      status: "fallback",
-      triggeringClassification: "validator_rejected",
-      discardedProjectedCandidatePlan: true,
-      nativeFallbackAttempts: 1,
-      fallback: gatewayConstructedCanonicalFallbackTuple(
-        "validator_rejected",
-        "native_plan_v1",
-      ),
-      projectedCandidatePlanReleased: false,
-      canonicalNativeFallbackReleased: true,
-    };
-  }
-  return {
-    status: "blocked_manual_plan_required",
-    triggeringClassification: "validator_rejected",
-    discardedProjectedCandidatePlan: true,
-    nativeFallbackAttempts: 1,
-    fallback: {
-      used: false,
-      reason_enum: "not_used",
-      native_plan_version: null,
-    },
-    projectedCandidatePlanReleased: false,
-    canonicalNativeFallbackReleased: false,
-  };
-}
-
-function blockEndUtcFromStudyDateKst(studyDateKst, endMinuteKst) {
-  if (
-    typeof studyDateKst !== "string" ||
-    !/^\d{4}-\d{2}-\d{2}$/.test(studyDateKst) ||
-    !Number.isInteger(endMinuteKst) ||
-    endMinuteKst < 1 ||
-    endMinuteKst > 1440
-  ) {
-    return null;
-  }
-  const [year, month, day] = studyDateKst.split("-").map(Number);
-  const originalDate = new Date(Date.UTC(year, month - 1, day));
-  if (originalDate.toISOString().slice(0, 10) !== studyDateKst) {
-    return null;
-  }
-  const nextDay = endMinuteKst === 1440 ? 1 : 0;
-  const minuteOfDay = endMinuteKst === 1440 ? 0 : endMinuteKst;
-  const hour = Math.floor(minuteOfDay / 60);
-  const minute = minuteOfDay % 60;
-  const targetWallClockMs = Date.UTC(
-    year,
-    month - 1,
-    day + nextDay,
-    hour,
-    minute,
-  );
-  const formatter = new Intl.DateTimeFormat("en-CA", {
-    timeZone: "Asia/Seoul",
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-    second: "2-digit",
-    hourCycle: "h23",
-  });
-  let candidateUtcMs = targetWallClockMs;
-  for (let iteration = 0; iteration < 4; iteration += 1) {
-    const parts = Object.fromEntries(
-      formatter
-        .formatToParts(new Date(candidateUtcMs))
-        .filter((part) => part.type !== "literal")
-        .map((part) => [part.type, Number(part.value)]),
-    );
-    const observedWallClockMs = Date.UTC(
-      parts.year,
-      parts.month - 1,
-      parts.day,
-      parts.hour,
-      parts.minute,
-      parts.second,
-    );
-    const correctionMs = targetWallClockMs - observedWallClockMs;
-    candidateUtcMs += correctionMs;
-    if (correctionMs === 0) return new Date(candidateUtcMs).toISOString();
-  }
-  return null;
-}
-
-function hardDeadlineClassification(candidates, block, studyDateKst) {
-  if (
-    !Array.isArray(candidates) ||
-    !isPlainRecord(block) ||
-    typeof block.ephemeral_opaque_candidate_id !== "string"
-  ) {
-    return "schema_mismatch";
-  }
-  const matches = candidates.filter(
-    (candidate) =>
-      isPlainRecord(candidate) &&
-      typeof candidate.ephemeral_opaque_candidate_id === "string" &&
-      candidate.ephemeral_opaque_candidate_id ===
-        block.ephemeral_opaque_candidate_id,
-  );
-  if (matches.length !== 1) return "schema_mismatch";
-  const hardDeadline = matches[0].hard_deadline_or_null;
-  if (hardDeadline === null) return "feasible";
-  if (
-    typeof hardDeadline !== "string" ||
-    !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,3})?Z$/.test(
-      hardDeadline,
-    ) ||
-    !Number.isFinite(Date.parse(hardDeadline))
-  ) {
-    return "schema_mismatch";
-  }
-  const blockEndUtc = blockEndUtcFromStudyDateKst(
-    studyDateKst,
-    block.end_minute_kst,
-  );
-  if (blockEndUtc === null) return "schema_mismatch";
-  return Date.parse(blockEndUtc) <= Date.parse(hardDeadline)
-    ? "feasible"
-    : "validator_rejected";
-}
-
-function gatewayOutcomeAfterHardDeadlineValidation(
-  triggeringClassification,
-  nativeFallbackClassification,
-) {
-  if (triggeringClassification === "feasible") {
-    return {
-      status: "released",
-      nativeFallbackAttempts: 0,
-      candidatePlanReleased: true,
-      canonicalNativeFallbackReleased: false,
-    };
-  }
-  if (
-    !["schema_mismatch", "validator_rejected"].includes(
-      triggeringClassification,
-    )
-  ) {
-    return null;
-  }
-  if (nativeFallbackClassification === "feasible") {
-    return {
-      status: "fallback",
-      triggeringClassification,
-      nativeFallbackAttempts: 1,
-      candidatePlanReleased: false,
-      canonicalNativeFallbackReleased: true,
-    };
-  }
-  return {
-    status: "blocked_manual_plan_required",
-    triggeringClassification,
-    nativeFallbackAttempts: 1,
-    candidatePlanReleased: false,
-    canonicalNativeFallbackReleased: false,
-  };
-}
-
-const IMMUTABLE_PLACEMENT_IDENTITY_FIELDS = [
-  "ephemeral_opaque_candidate_id",
-  "ephemeral_opaque_window_id",
-  "start_minute_kst",
-  "end_minute_kst",
-  "duration_minutes",
-];
-
-function executionPlacementIsStructurallyValid(contract, placement) {
-  return (
-    hasExactFields(placement, IMMUTABLE_PLACEMENT_IDENTITY_FIELDS) &&
-    projectedIdentifierIsValid(
-      contract,
-      "ephemeral_opaque_candidate_id",
-      placement.ephemeral_opaque_candidate_id,
-    ) &&
-    projectedIdentifierIsValid(
-      contract,
-      "ephemeral_opaque_window_id",
-      placement.ephemeral_opaque_window_id,
-    ) &&
-    projectedScalarIsValid(
-      contract.scalarSchemas.start_minute_kst,
-      placement.start_minute_kst,
-    ) &&
-    projectedScalarIsValid(
-      contract.scalarSchemas.end_minute_kst,
-      placement.end_minute_kst,
-    ) &&
-    projectedScalarIsValid(
-      contract.scalarSchemas.duration_minutes,
-      placement.duration_minutes,
-    ) &&
-    placement.start_minute_kst < placement.end_minute_kst &&
-    placement.duration_minutes ===
-      placement.end_minute_kst - placement.start_minute_kst
-  );
-}
-
-function placementIdentityMatches(left, right) {
-  return IMMUTABLE_PLACEMENT_IDENTITY_FIELDS.every(
-    (field) => left[field] === right[field],
-  );
-}
-
-function replanCutoffClassification(
-  contract,
-  releasePathStatus,
-  block,
-  correlatedInvocation,
-  immutablePriorPlacements,
-  expectedCorrelation,
-) {
-  const invocationFields = [
-    "request_id",
-    "input_snapshot_version",
-    "candidates",
-    "available_windows",
-    "replan_cutoff_minute_kst_or_null",
-  ];
-  const correlationFields = [
-    "request_id",
-    "input_snapshot_version",
-    "replan_cutoff_minute_kst_or_null",
-  ];
-  const replanCutoffMinuteKstOrNull =
-    correlatedInvocation?.replan_cutoff_minute_kst_or_null;
-  if (
-    !isPlainRecord(contract) ||
-    ![
-      "optimal",
-      "feasible",
-      "canonical_native_fallback",
-      "immutable_preflight",
-    ].includes(releasePathStatus) ||
-    !executionPlacementIsStructurallyValid(contract, block) ||
-    !hasExactFields(correlatedInvocation, invocationFields) ||
-    !hasExactFields(expectedCorrelation, correlationFields) ||
-    !projectedIdentifierIsValid(
-      contract,
-      "request_id",
-      correlatedInvocation.request_id,
-    ) ||
-    !projectedIdentifierIsValid(
-      contract,
-      "input_snapshot_version",
-      correlatedInvocation.input_snapshot_version,
-    ) ||
-    correlatedInvocation.request_id !== expectedCorrelation.request_id ||
-    correlatedInvocation.input_snapshot_version !==
-      expectedCorrelation.input_snapshot_version ||
-    correlatedInvocation.replan_cutoff_minute_kst_or_null !==
-      expectedCorrelation.replan_cutoff_minute_kst_or_null ||
-    !Array.isArray(correlatedInvocation.candidates) ||
-    !Array.isArray(correlatedInvocation.available_windows) ||
-    !Array.isArray(immutablePriorPlacements) ||
-    !immutablePriorPlacements.every((placement) =>
-      executionPlacementIsStructurallyValid(contract, placement),
-    ) ||
-    (replanCutoffMinuteKstOrNull !== null &&
-      (!Number.isInteger(replanCutoffMinuteKstOrNull) ||
-        replanCutoffMinuteKstOrNull < 0 ||
-        replanCutoffMinuteKstOrNull > 1440)) ||
-    (expectedCorrelation.replan_cutoff_minute_kst_or_null !== null &&
-      (!Number.isInteger(
-        expectedCorrelation.replan_cutoff_minute_kst_or_null,
-      ) ||
-        expectedCorrelation.replan_cutoff_minute_kst_or_null < 0 ||
-        expectedCorrelation.replan_cutoff_minute_kst_or_null > 1440))
-  ) {
-    return "schema_mismatch";
-  }
-  const candidateIds = correlatedInvocation.candidates.map(
-    (candidate) => candidate?.ephemeral_opaque_candidate_id,
-  );
-  const windowIds = correlatedInvocation.available_windows.map(
-    (window) => window?.ephemeral_opaque_window_id,
-  );
-  if (
-    candidateIds.some(
-      (candidateId) =>
-        !projectedIdentifierIsValid(
-          contract,
-          "ephemeral_opaque_candidate_id",
-          candidateId,
-        ),
-    ) ||
-    windowIds.some(
-      (windowId) =>
-        !projectedIdentifierIsValid(
-          contract,
-          "ephemeral_opaque_window_id",
-          windowId,
-        ),
-    ) ||
-    new Set(candidateIds).size !== candidateIds.length ||
-    new Set(windowIds).size !== windowIds.length
-  ) {
-    return "schema_mismatch";
-  }
-  const candidateResolvesExactlyOnce = (candidateId) =>
-    candidateIds.filter((id) => id === candidateId).length === 1;
-  const windowResolvesExactlyOnce = (windowId) =>
-    windowIds.filter((id) => id === windowId).length === 1;
-  if (
-    !candidateResolvesExactlyOnce(
-      block.ephemeral_opaque_candidate_id,
-    ) ||
-    !windowResolvesExactlyOnce(block.ephemeral_opaque_window_id) ||
-    immutablePriorPlacements.some(
-      (placement) =>
-        !candidateResolvesExactlyOnce(
-          placement.ephemeral_opaque_candidate_id,
-        ) ||
-        !windowResolvesExactlyOnce(
-          placement.ephemeral_opaque_window_id,
-        ),
-    )
-  ) {
-    return "schema_mismatch";
-  }
-  const immutableCandidateIds = immutablePriorPlacements.map(
-    (placement) => placement.ephemeral_opaque_candidate_id,
-  );
-  if (
-    new Set(immutableCandidateIds).size !== immutableCandidateIds.length
-  ) {
-    return "schema_mismatch";
-  }
-  const exactImmutableMatches = immutablePriorPlacements.filter(
-    (placement) => placementIdentityMatches(block, placement),
-  );
-  if (exactImmutableMatches.length > 1) return "schema_mismatch";
-  if (exactImmutableMatches.length === 1) return "feasible";
-  if (replanCutoffMinuteKstOrNull === null) return "feasible";
-  return block.start_minute_kst >= replanCutoffMinuteKstOrNull
-    ? "feasible"
-    : "validator_rejected";
-}
-
-function halfOpenIntervalsDoNotOverlap(left, right) {
-  return (
-    left.end_minute_kst <= right.start_minute_kst ||
-    right.end_minute_kst <= left.start_minute_kst
-  );
-}
-
-function intervalIsStructurallyValid(interval) {
-  return (
-    isPlainRecord(interval) &&
-    Number.isInteger(interval.start_minute_kst) &&
-    Number.isInteger(interval.end_minute_kst) &&
-    interval.start_minute_kst >= 0 &&
-    interval.start_minute_kst <= 1439 &&
-    interval.end_minute_kst >= 1 &&
-    interval.end_minute_kst <= 1440 &&
-    interval.start_minute_kst < interval.end_minute_kst
-  );
-}
-
-function pairwiseBlockNonOverlapClassification(
-  contract,
-  releasePathStatus,
-  executionBlocks,
-  fixedBlocks,
-  immutablePriorPlacements,
-) {
-  if (
-    ![
-      "optimal",
-      "feasible",
-      "canonical_native_fallback",
-      "immutable_preflight",
-    ].includes(releasePathStatus) ||
-    !Array.isArray(executionBlocks) ||
-    !Array.isArray(fixedBlocks) ||
-    !Array.isArray(immutablePriorPlacements) ||
-    !executionBlocks.every((block) =>
-      executionPlacementIsStructurallyValid(contract, block),
-    ) ||
-    !fixedBlocks.every(intervalIsStructurallyValid) ||
-    !immutablePriorPlacements.every((placement) =>
-      executionPlacementIsStructurallyValid(contract, placement),
-    )
-  ) {
-    return "schema_mismatch";
-  }
-  for (const block of executionBlocks) {
-    const exactImmutableMatches = immutablePriorPlacements.filter(
-      (placement) => placementIdentityMatches(block, placement),
-    );
-    if (exactImmutableMatches.length > 1) return "schema_mismatch";
-  }
-  for (
-    let leftIndex = 0;
-    leftIndex < immutablePriorPlacements.length;
-    leftIndex += 1
-  ) {
-    for (
-      let rightIndex = leftIndex + 1;
-      rightIndex < immutablePriorPlacements.length;
-      rightIndex += 1
-    ) {
-      if (
-        placementIdentityMatches(
-          immutablePriorPlacements[leftIndex],
-          immutablePriorPlacements[rightIndex],
-        )
-      ) {
-        return "schema_mismatch";
-      }
-      if (
-        !halfOpenIntervalsDoNotOverlap(
-          immutablePriorPlacements[leftIndex],
-          immutablePriorPlacements[rightIndex],
-        )
-      ) {
-        return "validator_rejected";
-      }
-    }
-  }
-  for (const immutablePlacement of immutablePriorPlacements) {
-    if (
-      fixedBlocks.some(
-        (fixedBlock) =>
-          !halfOpenIntervalsDoNotOverlap(
-            immutablePlacement,
-            fixedBlock,
-          ),
-      )
-    ) {
-      return "validator_rejected";
-    }
-  }
-  for (let leftIndex = 0; leftIndex < executionBlocks.length; leftIndex += 1) {
-    for (
-      let rightIndex = leftIndex + 1;
-      rightIndex < executionBlocks.length;
-      rightIndex += 1
-    ) {
-      if (
-        !halfOpenIntervalsDoNotOverlap(
-          executionBlocks[leftIndex],
-          executionBlocks[rightIndex],
-        )
-      ) {
-        return "validator_rejected";
-      }
-    }
-  }
-  for (const block of executionBlocks) {
-    if (
-      fixedBlocks.some(
-        (fixedBlock) => !halfOpenIntervalsDoNotOverlap(block, fixedBlock),
-      )
-    ) {
-      return "validator_rejected";
-    }
-    for (const immutablePlacement of immutablePriorPlacements) {
-      if (placementIdentityMatches(block, immutablePlacement)) continue;
-      if (!halfOpenIntervalsDoNotOverlap(block, immutablePlacement)) {
-        return "validator_rejected";
-      }
-    }
-  }
-  return "feasible";
-}
-
-function prerequisiteOrderingClassification(
-  contract,
-  releasePathStatus,
-  candidates,
-  executionBlocks,
-  unassignedCandidates = [],
-) {
-  if (
-    ![
-      "optimal",
-      "feasible",
-      "canonical_native_fallback",
-      "immutable_preflight",
-    ].includes(releasePathStatus) ||
-    !Array.isArray(candidates) ||
-    !Array.isArray(executionBlocks) ||
-    !Array.isArray(unassignedCandidates) ||
-    !executionBlocks.every((block) =>
-      executionPlacementIsStructurallyValid(contract, block),
-    )
-  ) {
-    return "schema_mismatch";
-  }
-  const candidateIds = candidates.map(
-    (candidate) => candidate?.ephemeral_opaque_candidate_id,
-  );
-  if (
-    candidates.some(
-      (candidate) =>
-        !isPlainRecord(candidate) ||
-        !projectedIdentifierIsValid(
-          contract,
-          "ephemeral_opaque_candidate_id",
-          candidate.ephemeral_opaque_candidate_id,
-        ) ||
-        !Array.isArray(candidate.prerequisite_candidate_ids) ||
-        new Set(candidate.prerequisite_candidate_ids).size !==
-          candidate.prerequisite_candidate_ids.length,
-    ) ||
-    new Set(candidateIds).size !== candidateIds.length
-  ) {
-    return "schema_mismatch";
-  }
-  const candidateSet = new Set(candidateIds);
-  for (const candidate of candidates) {
-    if (
-      candidate.prerequisite_candidate_ids.some(
-        (prerequisiteId) =>
-          !projectedIdentifierIsValid(
-            contract,
-            "ephemeral_opaque_candidate_id",
-            prerequisiteId,
-          ) || !candidateSet.has(prerequisiteId),
-      )
-    ) {
-      return "schema_mismatch";
-    }
-  }
-  const unassignedIds = unassignedCandidates.map(
-    (candidate) => candidate?.ephemeral_opaque_candidate_id,
-  );
-  if (
-    unassignedIds.some(
-      (candidateId) =>
-        !projectedIdentifierIsValid(
-          contract,
-          "ephemeral_opaque_candidate_id",
-          candidateId,
-        ) || !candidateSet.has(candidateId),
-    ) ||
-    new Set(unassignedIds).size !== unassignedIds.length
-  ) {
-    return "schema_mismatch";
-  }
-  const placedByCandidateId = new Map();
-  for (const block of executionBlocks) {
-    if (!candidateSet.has(block.ephemeral_opaque_candidate_id)) {
-      return "schema_mismatch";
-    }
-    const blocks =
-      placedByCandidateId.get(block.ephemeral_opaque_candidate_id) ?? [];
-    blocks.push(block);
-    placedByCandidateId.set(block.ephemeral_opaque_candidate_id, blocks);
-  }
-  if ([...placedByCandidateId.values()].some((blocks) => blocks.length > 1)) {
-    return "schema_mismatch";
-  }
-  const unassignedSet = new Set(unassignedIds);
-  for (const dependentBlock of executionBlocks) {
-    const dependent = candidates.find(
-      (candidate) =>
-        candidate.ephemeral_opaque_candidate_id ===
-        dependentBlock.ephemeral_opaque_candidate_id,
-    );
-    for (const prerequisiteId of dependent.prerequisite_candidate_ids) {
-      const prerequisiteBlocks =
-        placedByCandidateId.get(prerequisiteId) ?? [];
-      if (
-        unassignedSet.has(prerequisiteId) ||
-        prerequisiteBlocks.length !== 1 ||
-        prerequisiteBlocks[0].end_minute_kst >
-          dependentBlock.start_minute_kst
-      ) {
-        return "validator_rejected";
-      }
-    }
-  }
-  return "feasible";
-}
-
-function nonDroppablePlacementIsValid(
-  candidates,
-  executionBlocks,
-  unassignedCandidates,
-) {
-  const candidateMatches = (candidateId) =>
-    candidates.filter(
-      (candidate) =>
-        candidate.ephemeral_opaque_candidate_id === candidateId,
-    );
-  for (const candidate of candidates) {
-    const candidateId = candidate.ephemeral_opaque_candidate_id;
-    const placedCount = executionBlocks.filter(
-      (block) => block.ephemeral_opaque_candidate_id === candidateId,
-    ).length;
-    const unassignedCount = unassignedCandidates.filter(
-      (entry) => entry.ephemeral_opaque_candidate_id === candidateId,
-    ).length;
-    const nonDroppable =
-      candidate.pinned === true || candidate.can_drop === false;
-    if (nonDroppable && (placedCount !== 1 || unassignedCount !== 0)) {
-      return false;
-    }
-  }
-  return unassignedCandidates.every((entry) => {
-    const matches = candidateMatches(entry.ephemeral_opaque_candidate_id);
-    return (
-      matches.length === 1 &&
-      matches[0].pinned === false &&
-      matches[0].can_drop === true
-    );
-  });
-}
-
-function candidateWindowRelationClassification(candidates, windows, block) {
-  const candidateMatches = candidates.filter(
-    (candidate) =>
-      candidate.ephemeral_opaque_candidate_id ===
-      block.ephemeral_opaque_candidate_id,
-  );
-  const windowMatches = windows.filter(
-    (window) =>
-      window.ephemeral_opaque_window_id ===
-      block.ephemeral_opaque_window_id,
-  );
-  if (candidateMatches.length !== 1 || windowMatches.length !== 1) {
-    return "schema_mismatch";
-  }
-  const [candidate] = candidateMatches;
-  const [window] = windowMatches;
-  if (
-    !Array.isArray(candidate.allowed_window_ids) ||
-    new Set(candidate.allowed_window_ids).size !==
-      candidate.allowed_window_ids.length ||
-    candidate.allowed_window_ids.some(
-      (windowId) =>
-        windows.filter(
-          (candidateWindow) =>
-            candidateWindow.ephemeral_opaque_window_id === windowId,
-        ).length !== 1,
-    )
-  ) {
-    return "schema_mismatch";
-  }
-  const numericFields = [
-    block.start_minute_kst,
-    block.end_minute_kst,
-    window.start_minute_kst,
-    window.end_minute_kst,
-  ];
-  if (
-    numericFields.some((value) => !Number.isInteger(value)) ||
-    typeof window.available !== "boolean"
-  ) {
-    return "schema_mismatch";
-  }
-  if (
-    !candidate.allowed_window_ids.includes(
-      block.ephemeral_opaque_window_id,
-    ) ||
-    window.available !== true ||
-    !(
-      window.start_minute_kst <= block.start_minute_kst &&
-      block.start_minute_kst < block.end_minute_kst &&
-      block.end_minute_kst <= window.end_minute_kst
-    )
-  ) {
-    return "validator_rejected";
-  }
-  return "valid";
-}
-
-function fallbackEnvelopeRequirementsSatisfied(
-  contract,
-  status,
-  fallback,
-  {
-    canonicalResultSchemaValid = true,
-    nativePlanVersionSchemaValid = true,
-    nativePlanValid = true,
-  } = {},
-) {
-  if (["optimal", "feasible"].includes(status)) {
-    return (
-      canonicalResultSchemaValid &&
-      fallback?.used === false &&
-      fallback.reason_enum === "not_used" &&
-      fallback.native_plan_version === null
-    );
-  }
-  if (
-    !contract.fallbackStatuses.includes(status) &&
-    status !== "fallback"
-  ) {
-    return false;
-  }
-  return (
-    canonicalResultSchemaValid &&
-    fallback?.used === true &&
-    (status === "fallback"
-      ? contract.fallbackStatuses.includes(fallback.reason_enum)
-      : fallback.reason_enum === status) &&
-    fallback.native_plan_version !== null &&
-    nativePlanVersionSchemaValid &&
-    nativePlanValid
-  );
-}
-
-function failureFixtureEntryIsValid(
-  contract,
-  entry,
-  nativeFallbackAttempt,
-  {
-    canonicalResultSchemaValid = true,
-    nativePlanVersionSchemaValid = true,
-    nativePlanValid = true,
-    nativePlanFailureCode = null,
-    rejectionCode = null,
-    manualBlockResultStatus = null,
-    manualBlockExecutionBlockCount = 0,
-    manualBlockReferencesNativePlan = false,
-    manualBlockFallback = null,
-    previouslyUsedNativeFallbackDigests = new Set(),
-  } = {},
-) {
-  const exactEntryFields = [
-    "synthetic_fixture_id",
-    "expected_status",
-    "observed_status",
-    "trigger_origin_enum",
-    "native_fallback_result_digest_sha256",
-    "manual_block_result_digest_sha256_or_null",
-    "assertion_result",
-  ];
-  const digestPattern = /^[a-f0-9]{64}$/;
-  const expectedTriggerOrigin = SOLVER_FAILURE_STATUSES.includes(
-    entry.expected_status,
-  )
-    ? "solver_failure"
-    : GATEWAY_CLASSIFICATION_STATUSES.includes(entry.expected_status)
-      ? "trusted_gateway_classification"
-      : null;
-  const entryIsClosedAndCrossBound =
-    canonicalJson(Object.keys(entry)) === canonicalJson(exactEntryFields) &&
-    /^syn_s237o_[A-Za-z0-9_-]{8,80}$/.test(entry.synthetic_fixture_id) &&
-    contract.fallbackStatuses.includes(entry.expected_status) &&
-    entry.observed_status === entry.expected_status &&
-    entry.trigger_origin_enum === expectedTriggerOrigin &&
-    digestPattern.test(entry.native_fallback_result_digest_sha256) &&
-    (entry.manual_block_result_digest_sha256_or_null === null ||
-      digestPattern.test(
-        entry.manual_block_result_digest_sha256_or_null,
-      )) &&
-    entry.assertion_result === "passed" &&
-    !previouslyUsedNativeFallbackDigests.has(
-      entry.native_fallback_result_digest_sha256,
-    );
-  if (!entryIsClosedAndCrossBound) return false;
-
-  let expectedRejectionCode = null;
-  if (
-    ![entry.expected_status, "fallback"].includes(
-      nativeFallbackAttempt?.status,
-    )
-  ) {
-    expectedRejectionCode = "fallback_status_mismatch";
-  } else if (!nativeFallbackAttempt?.fallback) {
-    expectedRejectionCode = "missing_fallback";
-  } else if (nativeFallbackAttempt.fallback.used !== true) {
-    expectedRejectionCode = "fallback_unused";
-  } else if (
-    nativeFallbackAttempt.fallback.reason_enum !== entry.expected_status
-  ) {
-    expectedRejectionCode = "fallback_reason_mismatch";
-  } else if (
-    nativeFallbackAttempt.fallback.native_plan_version === null ||
-    !nativePlanVersionSchemaValid
-  ) {
-    expectedRejectionCode = "native_plan_version_invalid";
-  } else if (!nativePlanValid) {
-    expectedRejectionCode = nativePlanFailureCode;
-  } else if (!canonicalResultSchemaValid) {
-    expectedRejectionCode = "canonical_result_contract_invalid";
-  }
-
-  const fallbackIsValid =
-    expectedRejectionCode === null && nativePlanValid;
-  if (fallbackIsValid) {
-    return (
-      entry.manual_block_result_digest_sha256_or_null === null &&
-      manualBlockResultStatus === null &&
-      manualBlockExecutionBlockCount === 0 &&
-      manualBlockReferencesNativePlan === false &&
-      manualBlockFallback === null &&
-      rejectionCode === null
-    );
-  }
-  return (
-    digestPattern.test(
-      entry.manual_block_result_digest_sha256_or_null ?? "",
-    ) &&
-    manualBlockResultStatus === "blocked_manual_plan_required" &&
-    manualBlockExecutionBlockCount === 0 &&
-    manualBlockReferencesNativePlan === false &&
-    manualBlockFallback?.used === false &&
-    manualBlockFallback.reason_enum === "not_used" &&
-    manualBlockFallback.native_plan_version === null &&
-    NATIVE_FALLBACK_REJECTION_CODES.includes(rejectionCode) &&
-    rejectionCode === expectedRejectionCode
-  );
-}
-
-function o4tApprovedPacketResolutionContractIsClosed(scheduler) {
-  const contract =
-    scheduler.o4tPacketDigestContract.approvedThresholdBindingDigestContract;
-  const resolver = contract.resolverBootstrapContract;
-  const artifactFieldSchemas = resolver.artifactFieldSchemas ?? {};
-  const signedPayloadFieldSchemas = resolver.signedPayloadFieldSchemas ?? {};
-  const trustAnchor = resolver.trustAnchorContract;
-  const requiredArtifactFields = [
-    "authenticated_owner_private_scope_digest_sha256",
-    "audience",
-    "purpose",
-    "stages_exactly",
-    "opaque_o4t_approved_packet_store_ref",
-    "o4t_approved_packet_store_policy_digest_sha256",
-    "o4t_approved_threshold_binding_digest_sha256",
-    "resolver_trust_anchor_registry_ref",
-    "resolver_trust_anchor_registry_digest_sha256",
-    "verification_key_id",
-    "verification_key_version",
-    "trust_root_id",
-    "trust_root_version",
-    "signature_algorithm",
-    "dsse_payload_type",
-    "signed_payload",
-    "signed_payload_digest_sha256",
-    "dsse_envelope_digest_sha256",
-    "resolver_binding_artifact_digest_sha256",
-    "replay_nonce",
-    "resolver_generation",
-    "revocation_policy_version",
-    "opaque_revocation_evidence_ref",
-    "revocation_evidence_digest_sha256",
-    "revocation_checked_at",
-    "signature_verified",
-    "revoked",
-  ];
-  const exactArtifactSchema =
-    JSON.stringify(resolver.artifactFieldsExactly) ===
-      JSON.stringify(Object.keys(artifactFieldSchemas)) &&
-    requiredArtifactFields.every((field) =>
-      resolver.artifactFieldsExactly.includes(field),
-    );
-  const exactSignedPayloadSchema =
-    JSON.stringify(resolver.signedPayloadFieldsExactly) ===
-      JSON.stringify(Object.keys(signedPayloadFieldSchemas)) &&
-    resolver.signedPayloadFieldsExactly.every(
-      (field) =>
-        canonicalJson(signedPayloadFieldSchemas[field]) ===
-        canonicalJson(artifactFieldSchemas[field]),
-    );
-  const exactTrustAnchorSchema =
-    JSON.stringify(trustAnchor.registryEntryFieldsExactly) ===
-    JSON.stringify(Object.keys(trustAnchor.registryEntryFieldSchemas));
-  return (
-    contract.contentAddressedStore ===
-      "exact_private_o4t_approved_threshold_packet_store_bound_by_ownerDecisionBinding" &&
-    contract.contentAddressedStoreRefBootstrapSourcePath ===
-      "verifiedResolverBootstrapArtifact.signed_payload.opaque_o4t_approved_packet_store_ref" &&
-    contract.contentAddressedStorePolicyDigestBootstrapSourcePath ===
-      "verifiedResolverBootstrapArtifact.signed_payload.o4t_approved_packet_store_policy_digest_sha256" &&
-    contract.resolvedPacketStoreRefEqualityTargetPath ===
-      "o4tThresholdDecisionPacket.ownerDecisionBinding.opaqueOwnerDecisionStoreRef" &&
-    contract.resolvedPacketStorePolicyDigestEqualityTargetPath ===
-      "o4tThresholdDecisionPacket.ownerDecisionBinding.ownerDecisionStorePolicyDigestSha256" &&
-    contract.contentAddressLookupKey ===
-      "o4t_approved_threshold_binding_digest_sha256" &&
-    resolver.contractVersion ===
-      "inverge.o4t-approved-packet-resolver-bootstrap.v1" &&
-    resolver.trustedSource ===
-      "externally_anchored_authenticated_signed_o4t_control_plane_authorization_context" &&
-    exactArtifactSchema &&
-    exactSignedPayloadSchema &&
-    exactTrustAnchorSchema &&
-    resolver.artifactAdditionalFieldsAllowed === false &&
-    resolver.signedPayloadAdditionalFieldsAllowed === false &&
-    resolver.signedPayloadSchemasAreExactProjectionOfArtifactFieldSchemas ===
-      true &&
-    resolver.artifactAndSignedPayloadFreeTextAllowed === false &&
-    resolver.signedPayloadDigestContract.serialization === JCS_SERIALIZATION &&
-    resolver.dsseEnvelopeDigestContract.serialization === JCS_SERIALIZATION &&
-    resolver.artifactDigestContract.serialization === JCS_SERIALIZATION &&
-    resolver.artifactDigestContract
-      .authenticatedControlPlaneContextMustBindOpaqueResolverBindingIdAndArtifactDigest ===
-      true &&
-    trustAnchor.externalSource ===
-      "exact_owner_approved_o4t_resolver_trust_anchor_registry_from_authenticated_control_plane_configuration" &&
-    trustAnchor
-      .registryMustResolveBeforeArtifactAndMayNotComeFromThresholdPacketResolverArtifactOrResolvedPacket ===
-      true &&
-    trustAnchor
-      .artifactMayNotSelectIntroduceOrExtendVerificationKeyTrustRootOrAlgorithmAllowlist ===
-      true &&
-    trustAnchor
-      .artifactRegistryKeyRootVersionAlgorithmScopeAudiencePurposeStagesAndRevocationPolicyMustExactlyMatchCurrentExternalEntry ===
-      true &&
-    trustAnchor
-      .registryEntryValidityAndRevocationMustBeCheckedAtEveryStartAndAcceptanceUse ===
-      true &&
-    resolver.verificationRules
-      .artifactAndSignedPayloadMustMatchExactClosedSchemas === true &&
-    resolver.verificationRules
-      .everySignedPayloadFieldMustExactlyEqualArtifactProjection === true &&
-    resolver.verificationRules
-      .signedPayloadAndDsseEnvelopeDigestsMustBeRecomputedAndMatch === true &&
-    resolver.verificationRules
-      .resolverArtifactDigestMustBeRecomputedAndMatchAuthenticatedControlPlaneContext ===
-      true &&
-    resolver.verificationRules
-      .dsseSignatureMustCryptographicallyVerifyAgainstExternallyResolvedCurrentTrustAnchorEntry ===
-      true &&
-    resolver.verificationRules
-      .signatureVerifiedOuterBooleanMayNotSubstituteForCryptographicVerification ===
-      true &&
-    resolver.verificationRules
-      .authenticatedRequestOwnerPrivateScopeDigestMustEqualSignedScopeAndExternalRegistryScope ===
-      true &&
-    resolver.verificationRules
-      .audiencePurposeAndStagesMustEqualExactClosedValues === true &&
-    resolver.verificationRules
-      .replayNonceMustBeAtomicallyConsumedOnceInApprovedOwnerPrivateResolverNonceStore ===
-      true &&
-    resolver.verificationRules
-      .resolverGenerationMustBeStrictlyGreaterThanLastAcceptedGenerationForSameScopeAudiencePurposeAndStagesInAppendOnlyResolverGenerationStore ===
-      true &&
-    resolver.verificationRules
-      .generationAndNonceConsumptionMustBeAtomicWithAuthorizedPacketLookupUse ===
-      true &&
-    resolver.verificationRules
-      .resolverArtifactMustBeReResolvedAndFullyRevalidatedAtEveryO2oAndS238ohStartAndAcceptanceUse ===
-      true &&
-    resolver.verificationRules
-      .unknownKeyWrongKeyVersionUntrustedRootWrongRootVersionDisallowedAlgorithmUnsignedInvalidSignaturePayloadMismatchScopeAudiencePurposeOrStageMismatchExpiredRevokedOrReplayFailsClosed ===
-      true &&
-    resolver
-      .storeCoordinatesMustBeResolvedAndAuthenticatedBeforeApprovedPacketLookup ===
-      true &&
-    resolver
-      .bindingMustBeSignedCurrentUnexpiredUnrevokedReplayProtectedAndScopeBound ===
-      true &&
-    resolver
-      .resolvedPacketOwnerDecisionStoreRefAndPolicyDigestMustExactlyEqualTrustedResolverCoordinates ===
-      true &&
-    resolver
-      .packetInternalStoreCoordinatesMayNotBootstrapTheirOwnLookup === true &&
-    contract.contentAddressedObjectRules
-      .oneImmutableCanonicalApprovedPacketPerFinalDigest === true &&
-    contract.contentAddressedObjectRules.appendOnlyWriteOnce === true &&
-    contract.contentAddressedObjectRules
-      .idempotentRewriteRequiresByteIdenticalCanonicalPacket === true &&
-    contract.contentAddressedObjectRules.aliasAllowed === false &&
-    contract.contentAddressedObjectRules.redirectAllowed === false &&
-    contract.contentAddressedObjectRules.mutableOverwriteAllowed === false &&
-    contract.approvedPacketMustBeWrittenUnderFinalDigestBeforeO2oOrS238ohMayStart ===
-      true &&
-    contract
-      .allO2oAndS238ohStartAndAcceptanceUsesMustResolveExactApprovedPacketByDigestFromExactBoundStoreAndRecomputeCanonicalDigest ===
-      true &&
-    contract
-      .resolvedPacketMustPassExactSchemaApprovalRecordOwnerDecisionReceiptAndCurrentRevocationValidation ===
-      true &&
-    contract.resolvedPacketValidationRules.statusMustEqualApproved === true &&
-    contract.resolvedPacketValidationRules.ownerApprovedMustEqualTrue === true &&
-    contract.resolvedPacketValidationRules
-      .approvalRecordMustBeImmutableAndComplete === true &&
-    contract.resolvedPacketValidationRules
-      .approvalRecordDecisionProposalDigestDecidedAtReceiptRefAndReceiptDigestMustExactlyEqualResolvedReceipt ===
-      true &&
-    contract.resolvedPacketValidationRules
-      .packetMustBeUnexpiredAtEveryO2oAndS238ohStartAndAcceptanceUse === true &&
-    contract.resolvedPacketValidationRules
-      .receiptSignatureTrustPathExpiryAndRevocationMustBeRevalidatedAtEveryO2oAndS238ohStartAndAcceptanceUse ===
-      true &&
-    contract
-      .lookupMissAmbiguityDuplicateStoreOrPolicyMismatchCanonicalDigestMismatchOrInvalidReceiptFailsClosed ===
-      true &&
-    contract
-      .wrongOrInvalidResolverBindingAliasRedirectMutableObjectStaleOrExpiredPacketFailsClosed ===
-      true &&
-    contract.finalDigestIsNotAStandaloneBearerAuthorization === true &&
-    contract.ownerDecisionReceiptMustBeCurrentValidAndRevalidatedAtEveryUse ===
-      true
-  );
-}
-
-function roadmapItem(source, id) {
-  const escaped = id.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-  const match = source.match(
-    new RegExp(
-      `^  - id: ${escaped}\\n([\\s\\S]*?)(?=^  - id: |\\Z)`,
-      "m",
-    ),
-  );
-  assert.ok(match, `missing roadmap item ${id}`);
-  return match[0];
-}
-
-test("S234R stays source-only while the later lean O4V decision keeps activation false", async () => {
-  const unified = await json("config/dabangil-unified-program-contract.json");
-  const decision = await text(
-    "docs/decisions/2026-07-26-owner-dogfood-private-plane-schedule-amendment.md",
-  );
-  const o4vDecision = await text(
-    "docs/decisions/2026-07-30-owner-o4v-lean-owner-private-gate.md",
-  );
-
-  assert.equal(unified.contractVersion, "dabangil.unified_program.v2");
-  assert.equal(
-    unified.decision.id,
-    "owner_o1r_owner_dogfood_private_plane_schedule_2026_07_26",
-  );
-  assert.equal(unified.decision.status, "approved_for_source_amendment_only");
-  assert.equal(unified.decision.runtimeActivationAuthorized, false);
-  assert.equal(unified.decision.productionActivationAuthorized, false);
-  assert.equal(unified.decision.dependencyActivationAuthorized, false);
-  assert.equal(
-    unified.decision.providerModelPromptActivationAuthorized,
-    false,
-  );
-  assert.equal(
-    unified.privateAuthoringReviewPlane
-      .o4vApprovalRequiresExactDsseOwnerDecisionReceiptAndFinalApprovedBindingDigest,
-    false,
-  );
-  assert.equal(
-    unified.privateAuthoringReviewPlane
-      .completedS236PAcceptanceIsExactContentAddressedArtifact,
-    false,
-  );
-  assert.match(decision, /source-only amendment/i);
-  assert.match(
-    decision,
-    /does not approve O3A, O4V, O4A, O4T, O2O, O4P, O4F/i,
-  );
-  assert.match(decision, /PR #660 remains Draft and blocked/i);
-  assert.equal(fileSha256(o4vDecision), O4V_LEAN_DECISION_SHA256);
-  assert.equal(
-    unified.privateAuthoringReviewPlane.status,
-    "o4v_lean_owner_private_gate_approved_s236p_not_started",
-  );
-  assert.equal(
-    unified.privateAuthoringReviewPlane
-      .cryptographicallyVerifiedIndependentSignedAttestationRequired,
-    false,
-  );
-  assert.equal(
-    unified.privateAuthoringReviewPlane
-      .ownerOriginalReuploadIsPilotRecoveryMode,
-    true,
-  );
-  assert.equal(
-    unified.ownerGates.O4V,
-    "approved_exact_lean_owner_private_gate_s236p_only_no_immediate_operation",
-  );
-  assert.match(o4vDecision, /88-field provider-binding proposal/i);
-  assert.match(o4vDecision, /S236P is not started by this decision/i);
-});
-
-test("exact O3A decision binds immutable evidence without authorizing immediate operation", async () => {
-  const unified = await json("config/dabangil-unified-program-contract.json");
-  const decision = await text(
-    "docs/decisions/2026-07-29-owner-o3a-golden-3-approval.md",
-  );
-  const manifest = await text(
-    "reference_corpus/readiness/appraiser/second_round_owner_private_golden_3_readiness.json",
-  );
-  const report = await text(
-    "reference_corpus/readiness/appraiser/second_round_owner_private_golden_3_readiness_report.json",
-  );
-  const scopeDecision = unified.scopeDecisions.O3A;
-
-  assert.equal(fileSha256(decision), O3A_DECISION_SHA256);
-  assert.equal(fileSha256(manifest), O3A_MANIFEST_FILE_SHA256);
-  assert.equal(fileSha256(report), O3A_REPORT_FILE_SHA256);
-  assert.equal(
-    scopeDecision.status,
-    "approved_exact_packet_only_subject_to_expiry_and_revocation",
-  );
-  assert.equal(scopeDecision.decisionRecordSha256, O3A_DECISION_SHA256);
-  assert.equal(scopeDecision.packetCanonicalSha256, O3A_PACKET_SHA256);
-  assert.equal(
-    scopeDecision.manifestCanonicalSha256,
-    "de0e79159d8538d0e658bb9b0693ce27ed2bf7fcea3cf0d19198894cd7905b72",
-  );
-  assert.equal(scopeDecision.packetProposalSelfState, "pending_owner_decision");
-  assert.equal(scopeDecision.packetProposalOwnerApproved, false);
-  assert.deepEqual(scopeDecision.requiredBeforeAllowedOperationRoadmapItemIds, [
-    "S236P",
-  ]);
-  assert.equal(scopeDecision.approvalAuthorizesImmediateOperation, false);
-  assert.equal(scopeDecision.automaticStartAllowed, false);
-  assert.equal(scopeDecision.manualS236AStartRequired, true);
-  assert.equal(scopeDecision.o4vOrS236PSubstitutionAllowed, false);
-  assert.equal(scopeDecision.s236aStarted, false);
-  assert.equal(scopeDecision.golden3Started, false);
-  assert.equal(
-    unified.ownerGates.O3A,
-    "approved_exact_golden_3_rights_source_version_purpose_packet_only_no_immediate_operation",
-  );
-  assert.match(decision, /APPROVE O3A/);
-  assert.match(decision, /S236A remains queued and unstarted/i);
-  assert.match(decision, /PR #660 remains open, Draft, blocked/i);
-});
-
-test("lean O4V decision supersedes the 88-field packet and authorizes only future synthetic S236P", async () => {
-  const unified = await json("config/dabangil-unified-program-contract.json");
-  const privatePlane = await json(
-    "config/dabangil-private-authoring-review-plane-contract.json",
-  );
-  const decision = await text(
-    "docs/decisions/2026-07-30-owner-o4v-lean-owner-private-gate.md",
-  );
-  const scopeDecision = unified.scopeDecisions.O4V;
-  const activeGate = privatePlane.activeO4VGate;
-
-  assert.equal(fileSha256(decision), O4V_LEAN_DECISION_SHA256);
-  assert.equal(
-    scopeDecision.status,
-    "approved_exact_lean_owner_private_gate_only",
-  );
-  assert.equal(scopeDecision.decisionRecordSha256, O4V_LEAN_DECISION_SHA256);
-  assert.equal(
-    scopeDecision.gateContractVersion,
-    activeGate.contractVersion,
-  );
-  assert.equal(scopeDecision.legacyPacketDisposition, "superseded_rejected");
-  assert.equal(scopeDecision.legacyProviderBindingFieldCount, 88);
-  assert.equal(scopeDecision.legacyProviderBindingMaterialized, false);
-  assert.equal(scopeDecision.cloudProjectName, "inverge-beta");
-  assert.equal(scopeDecision.ownerOnlyPrivateBucketRequired, true);
-  assert.equal(scopeDecision.ownerOnlyMetadataRlsRequired, true);
-  assert.equal(scopeDecision.publicAccessAllowed, false);
-  assert.equal(scopeDecision.bidirectionalOtherAccountAccessAllowed, false);
-  assert.equal(scopeDecision.signedUrlTtlSecondsMaximum, 300);
-  assert.equal(scopeDecision.rawContentExternalEmissionAllowed, false);
-  assert.equal(scopeDecision.s236pSyntheticOnly, true);
-  assert.equal(scopeDecision.ocrAiContentProviderMode, "none");
-  assert.equal(scopeDecision.privateContentRetentionDaysMaximum, 365);
-  assert.equal(scopeDecision.metadataLogRetentionDaysMaximum, 7);
-  assert.equal(scopeDecision.temporaryCopyTtlSecondsMaximum, 300);
-  assert.equal(scopeDecision.applicationCacheTtlSecondsExact, 0);
-  assert.equal(scopeDecision.exportDeleteSlaSecondsMaximum, 604800);
-  assert.equal(scopeDecision.automaticObjectVersionRollbackGuaranteed, false);
-  assert.equal(scopeDecision.recoveryMode, "owner_retained_original_reupload");
-  assert.equal(scopeDecision.dedicatedKmsHsmRequiredForCurrentOwnerPilot, false);
-  assert.equal(scopeDecision.separateDsseStoreRequiredForCurrentOwnerPilot, false);
-  assert.equal(
-    scopeDecision.independentInfrastructureVerifierRequiredForCurrentOwnerPilot,
-    false,
-  );
-  assert.equal(
-    scopeDecision.futureS236PSyntheticProvisioningAndAcceptanceAuthorized,
-    true,
-  );
-  assert.equal(scopeDecision.approvalAuthorizesImmediateOperation, false);
-  assert.equal(scopeDecision.automaticProvisioningAllowed, false);
-  assert.equal(scopeDecision.automaticS236PStartAllowed, false);
-  assert.equal(scopeDecision.automaticS236AStartAllowed, false);
-  assert.equal(scopeDecision.s236pStarted, false);
-  assert.equal(scopeDecision.s236aStarted, false);
-  assert.equal(scopeDecision.realContentAuthorized, false);
-  assert.equal(scopeDecision.productionAuthorized, false);
-  assert.equal(scopeDecision.externalUsersAuthorized, false);
-  assert.match(decision, /Owner restores lost source content by re-uploading/i);
-  assert.match(decision, /PR #660 or PR #672/i);
-});
-
-test("all cryptographic JSON preimages use one RFC 8785 serialization", async () => {
-  const contracts = await Promise.all([
-    json("config/dabangil-private-authoring-review-plane-contract.json"),
-    json("config/dabangil-full-day-scheduler-contract.json"),
-  ]);
-  const serializationValues = contracts.flatMap((contract) =>
-    collectNamedValues(
-      contract,
-      new Set(["serialization", "signedPayloadSerialization"]),
-    ),
-  );
-
-  assert.ok(serializationValues.length > 0);
-  assert.ok(
-    serializationValues.every((value) => value === JCS_SERIALIZATION),
-  );
-  assert.equal(
-    canonicalJson({
-      "\ufb33": 1,
-      "\ud83d\ude00": 2,
-      "\u20ac": 3,
-      "\r": 4,
-      1: 5,
-    }),
-    "{\"\\r\":4,\"1\":5,\"â‚¬\":3,\"ðŸ˜€\":2,\"ï¬³\":1}",
-  );
-});
-
-test("private plane records the lean O4V gate and preserves legacy integrity boundaries", async () => {
-  const contract = await json(
-    "config/dabangil-private-authoring-review-plane-contract.json",
-  );
-
-  assert.equal(
-    contract.contractVersion,
-    "dabangil.private_authoring_review_plane.v1",
-  );
-  assert.equal(
-    contract.status,
-    "o4v_lean_owner_private_gate_approved_s236p_not_started",
-  );
-  assert.equal(contract.runtimeAuthorized, false);
-  assert.equal(contract.realContentAuthorized, false);
-  assert.equal(contract.provisioningAuthorized, false);
-  assert.equal(
-    contract.activeO4VGate.contractVersion,
-    "dabangil.o4v.lean_owner_private_gate.v1",
-  );
-  assert.equal(
-    contract.activeO4VGate.decisionRecordSha256,
-    O4V_LEAN_DECISION_SHA256,
-  );
-  assert.equal(contract.activeO4VGate.cloudPlane.projectName, "inverge-beta");
-  assert.equal(
-    contract.activeO4VGate.objectStorage.signedUrlTtlSecondsMaximum,
-    300,
-  );
-  assert.equal(
-    contract.activeO4VGate.metadataStore.metadataLogRetentionDaysMaximum,
-    7,
-  );
-  assert.equal(
-    contract.activeO4VGate.retentionAndLifecycle
-      .privateContentRetentionDaysMaximum,
-    365,
-  );
-  assert.equal(
-    contract.activeO4VGate.retentionAndLifecycle
-      .temporaryCopyTtlSecondsMaximum,
-    300,
-  );
-  assert.equal(
-    contract.activeO4VGate.retentionAndLifecycle
-      .applicationCacheTtlSecondsExact,
-    0,
-  );
-  assert.equal(
-    contract.activeO4VGate.retentionAndLifecycle
-      .exportDeleteSlaSecondsMaximum,
-    604800,
-  );
-  assert.equal(
-    contract.activeO4VGate.contentProcessing.ocrAiContentProviderMode,
-    "none",
-  );
-  assert.equal(
-    contract.activeO4VGate.dataBoundary
-      .rawContentInLogsAnalyticsTelemetryApmExceptionsQueuesOrCiAllowed,
-    false,
-  );
-  assert.equal(
-    contract.activeO4VGate.objectStorage
-      .automaticObjectVersionRollbackGuaranteed,
-    false,
-  );
-  assert.equal(
-    contract.activeO4VGate.objectStorage.recoveryMode,
-    "owner_retained_original_reupload",
-  );
-  assert.equal(
-    contract.activeO4VGate.dedicatedKeyAndVerifierGate
-      .customerManagedOrDedicatedKmsHsmRequiredForCurrentOwnerPilot,
-    false,
-  );
-  assert.equal(
-    contract.activeO4VGate.legacyQualificationApplicability
-      .syntheticReceiptContractAppliesToActiveLeanGate,
-    false,
-  );
-  assert.equal(
-    contract.activeO4VGate.legacyQualificationApplicability
-      .providerBoundaryContractAppliesToActiveLeanGate,
-    false,
-  );
-  assert.equal(
-    contract.activeO4VGate.legacyQualificationApplicability
-      .mayBlockLeanS236P,
-    false,
-  );
-  assert.equal(
-    contract.activeO4VGate.authorization
-      .s236pSyntheticProvisioningAndAcceptanceAuthorized,
-    true,
-  );
-  assert.equal(
-    contract.activeO4VGate.authorization.automaticS236PStartAllowed,
-    false,
-  );
-  assert.equal(contract.activeO4VGate.authorization.s236pStarted, false);
-  assert.deepEqual(contract.approvalSeparation.S236ARequires, [
-    "valid_unexpired_O3A",
-    "completed_exact_S236P",
-  ]);
-  assert.equal(
-    contract.integrityAndCommitments.plaintextSha256.allowedScope,
-    "vault_local_integrity_only",
-  );
-  assert.equal(
-    contract.integrityAndCommitments.plaintextSha256.allowedOutsideVault,
-    false,
-  );
-  assert.equal(
-    contract.integrityAndCommitments.privateDedup.commitmentReturnedToClientOrReceipt,
-    false,
-  );
-  assert.equal(
-    contract.integrityAndCommitments.privateDedup.lookupOrEqualityOracleApiAllowed,
-    false,
-  );
-  assert.equal(contract.revisionModel.originalImmutable, true);
-  assert.equal(contract.revisionModel.editableRevisionsAppendOnly, true);
-  assert.equal(contract.accessControl.ownerAToBDenialRequired, true);
-  assert.equal(contract.accessControl.ownerBToADenialRequired, true);
-  assert.equal(
-    contract.accessControl.leastPrivilegeAccess
-      .revocationClaimWithoutProviderEvidenceAllowed,
-    false,
-  );
-  assert.equal(
-    contract.accessControl.leastPrivilegeAccess
-      .signedAccessLoggingRedactionAndRetentionBindingRequired,
-    true,
-  );
-  for (const binding of [
-    "access_mode",
-    "session_or_capability_ttl_seconds",
-    "method_object_version_audience_content_type_and_content_length_scope",
-    "replay_prevention_and_single_use_behavior",
-    "provider_revocation_expiry_and_deletion_propagation",
-    "signed_access_logging_redaction_and_retention_policy",
-  ]) {
-    assert.ok(contract.providerBoundary.requiredBindings.includes(binding));
-  }
-  assert.equal(
-    contract.accessControl.leastPrivilegeAccess
-      .contentTypeScopeRequiredForWrite,
-    true,
-  );
-  assert.equal(contract.providerBoundary.rawBodyInProviderLogsAllowed, false);
-  assert.equal(
-    contract.providerBoundary.rawBodyInAnalyticsApmCostOrExceptionLogsAllowed,
-    false,
-  );
-  assert.equal(contract.syntheticReceiptContract.syntheticOnly, true);
-  assert.equal(contract.syntheticReceiptContract.realContentAllowed, false);
-  assert.deepEqual(
-    contract.syntheticReceiptContract.requiredReceiptIds,
-    REQUIRED_RECEIPT_IDS,
-  );
-  assert.deepEqual(
-    contract.syntheticReceiptContract.requiredFieldsExactly,
-    REQUIRED_RECEIPT_FIELDS,
-  );
-  assert.deepEqual(
-    Object.keys(contract.syntheticReceiptContract.allowedFieldSchemas),
-    REQUIRED_RECEIPT_FIELDS,
-  );
-  assert.ok(
-    contract.syntheticReceiptContract.requiredFieldsExactly.includes(
-      "o4v_approved_binding_digest_sha256",
-    ),
-  );
-  assert.equal(
-    contract.syntheticReceiptContract.allRequiredReceiptAssertionsMustPass,
-    true,
-  );
-  assert.equal(
-    contract.syntheticReceiptContract.failedOrBlockedMayCompleteS236P,
-    false,
-  );
-  assert.equal(
-    contract.syntheticReceiptContract
-      .receiptO4VProposalDigestMustMatchApprovedDecision,
-    true,
-  );
-  assert.equal(
-    contract.syntheticReceiptContract
-      .receiptProviderBindingDigestMustMatchApprovedO4V,
-    true,
-  );
-  assert.equal(
-    canonicalSha256(
-      contract.syntheticReceiptContract.requiredReceiptOperationRules,
-    ),
-    contract.syntheticReceiptContract.receiptAssertionPolicyDigestContract
-      .digestSha256,
-  );
-  assert.equal(
-    contract.syntheticReceiptContract.receiptSetAcceptanceRules
-      .assertionEvidenceDigestCoversOneClosedResultPerRequiredAssertion,
-    true,
-  );
-  assert.equal(
-    contract.syntheticReceiptContract.receiptSetAcceptanceRules
-      .assertionEvidenceDigestMayBeDerivedFromRawOrBodyBytes,
-    false,
-  );
-  assert.equal(
-    contract.syntheticReceiptContract.receiptSetDigestContract
-      .exactReceiptCount,
-    REQUIRED_RECEIPT_IDS.length,
-  );
-  assert.deepEqual(
-    contract.syntheticReceiptContract.receiptSetDigestContract
-      .normalizedToNullFields,
-    [
-      "receipt_set_digest_sha256",
-      "independent_verifier_attestation_digest_sha256",
-    ],
-  );
-  assert.equal(
-    contract.syntheticReceiptContract.independentSignedAttestationContract
-      .artifactAdditionalFieldsAllowed,
-    false,
-  );
-  assert.equal(
-    contract.syntheticReceiptContract.independentSignedAttestationContract
-      .signedPayloadAdditionalFieldsAllowed,
-    false,
-  );
-  assert.deepEqual(
-    Object.keys(
-      contract.syntheticReceiptContract.independentSignedAttestationContract
-        .artifactFieldSchemas,
-    ),
-    contract.syntheticReceiptContract.independentSignedAttestationContract
-      .artifactFieldsExactly,
-  );
-  assert.deepEqual(
-    Object.keys(
-      contract.syntheticReceiptContract.independentSignedAttestationContract
-        .signedPayloadFieldSchemas,
-    ),
-    contract.syntheticReceiptContract.independentSignedAttestationContract
-      .signedPayloadFieldsExactly,
-  );
-  assert.equal(
-    contract.syntheticReceiptContract.independentSignedAttestationContract
-      .verificationRules.dsseSignatureCryptographicallyVerifiedAgainstExactEnvelope,
-    true,
-  );
-  assert.equal(
-    contract.syntheticReceiptContract.independentSignedAttestationContract
-      .verificationRules.verifierAndPrimaryAttestorMustDifferByClassAndOpaqueIdentity,
-    true,
-  );
-  assert.equal(
-    contract.syntheticReceiptContract.independentSignedAttestationContract
-      .verificationRules
-      .verificationKeyAndTrustRootMustMatchExactO4VProviderBinding,
-    true,
-  );
-  assert.equal(
-    contract.syntheticReceiptContract.independentSignedAttestationContract
-      .verificationRules.signatureVerifiedMustBeTrue,
-    true,
-  );
-  assert.equal(
-    contract.syntheticReceiptContract.independentSignedAttestationContract
-      .verificationRules.revokedMustBeFalse,
-    true,
-  );
-  for (const signedField of [
-    "verifier_class",
-    "verifier_version",
-    "opaque_verifier_id",
-    "verification_key_id",
-    "verification_key_version",
-    "trust_root_id",
-    "trust_root_version",
-    "signature_algorithm",
-    "issued_at",
-    "expires_at",
-    "revocation_policy_version",
-    "revocation_checked_at",
-    "revocation_evidence_digest_sha256",
-    "revoked",
-  ]) {
-    assert.ok(
-      contract.syntheticReceiptContract.independentSignedAttestationContract
-        .signedPayloadFieldsExactly.includes(signedField),
-      `S236P signed payload must bind ${signedField}`,
-    );
-  }
-  assert.equal(
-    contract.syntheticReceiptContract.independentSignedAttestationContract
-      .verificationRules
-      .acceptanceMustRecomputeSignatureTrustPathExpiryAndRevocationWithoutTrustingOuterBooleans,
-    true,
-  );
-  assert.ok(
-    contract.syntheticReceiptContract.independentSignedAttestationContract
-      .signedPayloadFieldsExactly.includes(
-        "o4v_approved_binding_digest_sha256",
-      ),
-  );
-  assert.equal(
-    contract.syntheticReceiptContract.independentSignedAttestationContract
-      .verificationRules
-      .signedPayloadO4vApprovedBindingDigestMustMatchCurrentImmutableApprovedPacket,
-    true,
-  );
-  const assertionEvidenceContract =
-    contract.syntheticReceiptContract.assertionEvidenceDigestContract;
-  assert.deepEqual(
-    assertionEvidenceContract.artifactFieldsExactly,
-    Object.keys(assertionEvidenceContract.artifactFieldSchemas),
-  );
-  assert.ok(
-    assertionEvidenceContract.artifactFieldsExactly.includes(
-      "o4v_approved_binding_digest_sha256",
-    ),
-  );
-  const assertionEvidenceSet =
-    contract.syntheticReceiptContract.assertionEvidenceSetDigestContract;
-  assert.deepEqual(
-    assertionEvidenceSet.entryFieldsExactly,
-    Object.keys(assertionEvidenceSet.sourceReceiptFieldMapping),
-  );
-  assert.ok(
-    assertionEvidenceSet.entryFieldsExactly.includes(
-      "o4v_approved_binding_digest_sha256",
-    ),
-  );
-  const completedS236P =
-    contract.syntheticReceiptContract.completedS236PAcceptanceContract;
-  assert.deepEqual(
-    completedS236P.artifactFieldsExactly,
-    Object.keys(completedS236P.artifactFieldSchemas),
-  );
-  assert.ok(
-    completedS236P.artifactFieldsExactly.includes(
-      "o4v_approved_binding_digest_sha256",
-    ),
-  );
-  assert.equal(
-    completedS236P.digestContract
-      .allDownstreamS236aAndSchedulerUsesMustResolveExactArtifactByDigestAndRecomputeCanonicalDigest,
-    true,
-  );
-  assert.equal(
-    contract.syntheticReceiptContract.receiptSetAcceptanceRules
-      .closedIndependentSignedAttestationRequired,
-    true,
-  );
-  assert.deepEqual(
-    contract.syntheticReceiptContract.requiredReceiptOperationRules
-      .backup_expiry_pending_distinct_from_delete_complete.allowedCleanupStates,
-    ["backup_expiry_pending"],
-  );
-  assert.ok(
-    contract.syntheticReceiptContract.requiredReceiptOperationRules
-      .owner_a_to_b_and_b_to_a_uniform_denial.requiredAssertions.includes(
-        "owner_b_to_a_read_and_write_denied",
-      ),
-  );
-  assert.equal(contract.syntheticReceiptContract.additionalFieldsAllowed, false);
-  assert.equal(contract.syntheticReceiptContract.freeTextAllowed, false);
-  assert.ok(
-    contract.syntheticReceiptContract.forbiddenExternalFields.includes(
-      "plaintext_sha256",
-    ),
-  );
-  assert.equal(contract.o4vDecisionPacket.ownerApproved, false);
-  assert.equal(contract.o4vDecisionPacket.status, "superseded_rejected");
-  assert.equal(
-    contract.activeO4VGate.legacyPacket.providerBindingFieldCount,
-    88,
-  );
-  assert.equal(
-    contract.activeO4VGate.legacyPacket.providerBindingMaterialized,
-    false,
-  );
-  assert.equal(
-    contract.o4vDecisionPacket.approvalRecord.decision,
-    "pending",
-  );
-  assert.equal(
-    contract.o4vDecisionPacket.candidateArchitecture.bindingComplete,
-    false,
-  );
-  assert.equal(
-    contract.o4vDecisionPacket.approvalBinding.proposalDigestSha256,
-    null,
-  );
-  assert.equal(
-    proposalSha256(contract.o4vDecisionPacket),
-    contract.o4vPacketDigestContract.pendingProposalDigestSha256,
-  );
-  assert.equal(
-    contract.o4vPacketDigestContract.pendingProposalDigestSha256,
-    O4V_PROPOSAL_SHA256,
-  );
-  assert.deepEqual(
-    contract.o4vPacketDigestContract.packetFieldsExactly,
-    Object.keys(contract.o4vDecisionPacket),
-  );
-  assert.deepEqual(
-    contract.o4vPacketDigestContract.packetFieldsExactly,
-    Object.keys(contract.o4vPacketDigestContract.packetFieldSchemas),
-  );
-  assert.deepEqual(
-    contract.o4vPacketDigestContract.ownerDecisionBindingContract.fieldsExactly,
-    Object.keys(
-      contract.o4vPacketDigestContract.ownerDecisionBindingContract
-        .fieldSchemas,
-    ),
-  );
-  assert.deepEqual(
-    contract.o4vPacketDigestContract.approvalRecordContract.fieldsExactly,
-    Object.keys(
-      contract.o4vPacketDigestContract.approvalRecordContract.fieldSchemas,
-    ),
-  );
-  assert.deepEqual(
-    contract.o4vPacketDigestContract.ownerDecisionReceiptContract
-      .artifactFieldsExactly,
-    Object.keys(
-      contract.o4vPacketDigestContract.ownerDecisionReceiptContract
-        .artifactFieldSchemas,
-    ),
-  );
-  assert.equal(
-    contract.o4vPacketDigestContract.ownerDecisionReceiptContract
-      .verificationRules
-      .receiptDecisionProposalDigestDecidedAtReferenceAndDigestMustExactlyMatchApprovalRecord,
-    true,
-  );
-  assert.equal(
-    contract.o4vPacketDigestContract.ownerDecisionReceiptContract
-      .verificationRules
-      .receiptMustBeReResolvedAndRevalidatedBeforeProvisioningEverySyntheticReceiptS236pAcceptanceAndS236aStart,
-    true,
-  );
-  assert.equal(
-    contract.o4vPacketDigestContract.approvedBindingDigestContract
-      .finalDigestIsNotAStandaloneBearerAuthorization,
-    true,
-  );
-  assert.equal(
-    canonicalSha256(contract.o4vDecisionPacket.providerBinding),
-    contract.providerBindingDigestContract.pendingTemplateDigestSha256,
-  );
-  assert.equal(
-    contract.providerBindingDigestContract.pendingTemplateDigestSha256,
-    O4V_PROVIDER_BINDING_SHA256,
-  );
-  assert.deepEqual(
-    contract.o4vDecisionPacket.providerBindingFieldsExactly,
-    Object.keys(contract.o4vDecisionPacket.providerBinding),
-  );
-  assert.ok(
-    Object.values(contract.o4vDecisionPacket.providerBinding).every(
-      (value) => value === null,
-    ),
-  );
-  assert.equal(
-    contract.o4vPacketDigestContract.approvalStateInvariant
-      .approvedRecordRequiresAllExactBindingsComplete,
-    true,
-  );
-  assert.equal(
-    contract.o4vPacketDigestContract.approvalStateInvariant
-      .supersededRejectedStatusRequiresOwnerApprovedFalsePendingApprovalRecordAndDatedOwnerDecision,
-    true,
-  );
-  assert.equal(
-    contract.providerBindingDigestContract
-      .allFieldsMustBeNonNullBeforeBindingComplete,
-    true,
-  );
-  assert.equal(
-    contract.o4vDecisionPacket.providerBindingValueRules
-      .providerRawBodyLogRetentionSecondsExact,
-    0,
-  );
-  assert.equal(
-    contract.o4vDecisionPacket.providerBindingValueRules
-      .commitmentCanonicalizationDomainAndMigrationVersionsRequired,
-    true,
-  );
-  assert.equal(
-    contract.providerBoundary
-      .rawBodyProviderTrainingResearchOrSecondaryUseAllowed,
-    false,
-  );
-  assert.equal(
-    contract.integrityAndCommitments.providerContentValidators
-      .unkeyedEtagMd5ChecksumOrDedupValueAllowedOutsideVault,
-    false,
-  );
-  assert.equal(
-    contract.encryptionBoundary
-      .storageEncryptionKeyDistinctFromCommitmentKeyRequired,
-    true,
-  );
-  assert.equal(contract.o4vDecisionPacket.automaticProvisioningAllowed, false);
-  assert.equal(contract.o4vDecisionPacket.automaticS236PStartAllowed, false);
-  assert.equal(contract.o4vDecisionPacket.automaticS236AStartAllowed, false);
-  assert.equal(canonicalSha256(contract), PRIVATE_CONTRACT_SHA256);
-
-  const unknownField = clone(contract);
-  unknownField.syntheticReceiptContract.unreviewed = true;
-  assert.notEqual(canonicalSha256(unknownField), PRIVATE_CONTRACT_SHA256);
-  const unsafeLoggingFlip = clone(contract);
-  unsafeLoggingFlip.providerBoundary.rawBodyInProviderLogsAllowed = true;
-  assert.notEqual(canonicalSha256(unsafeLoggingFlip), PRIVATE_CONTRACT_SHA256);
-  const failedReceiptMayPass = clone(contract);
-  failedReceiptMayPass.syntheticReceiptContract
-    .failedOrBlockedMayCompleteS236P = true;
-  assert.notEqual(canonicalSha256(failedReceiptMayPass), PRIVATE_CONTRACT_SHA256);
-  const proposalScopeChanged = clone(contract.o4vDecisionPacket);
-  proposalScopeChanged.requestedScope = "broader_scope";
-  assert.notEqual(
-    proposalSha256(proposalScopeChanged),
-    contract.o4vPacketDigestContract.pendingProposalDigestSha256,
-  );
-  const proposalOwnerScopeChanged = clone(contract.o4vDecisionPacket);
-  proposalOwnerScopeChanged.ownerDecisionBinding
-    .authenticatedOwnerPrivateScopeDigestSha256 = "a".repeat(64);
-  assert.notEqual(
-    proposalSha256(proposalOwnerScopeChanged),
-    contract.o4vPacketDigestContract.pendingProposalDigestSha256,
-  );
-  const proposalOwnerActorChanged = clone(contract.o4vDecisionPacket);
-  proposalOwnerActorChanged.ownerDecisionBinding.opaqueOwnerDecisionActorId =
-    `oaa_${"a".repeat(16)}`;
-  assert.notEqual(
-    proposalSha256(proposalOwnerActorChanged),
-    contract.o4vPacketDigestContract.pendingProposalDigestSha256,
-  );
-});
-
-test("native acceptance is independent from the optional optimizer branch", async () => {
-  const scheduler = await json(
-    "config/dabangil-full-day-scheduler-contract.json",
-  );
-
-  assert.equal(
-    scheduler.contractVersion,
-    "dabangil.full_day_scheduler.v1",
-  );
-  assert.equal(scheduler.runtimeAuthorized, false);
-  assert.equal(scheduler.dependencyInstallationAuthorized, false);
-  assert.equal(scheduler.nativePath.authoritative, true);
-  assert.equal(scheduler.nativePath.optimizerRequired, false);
-  assert.deepEqual(scheduler.nativePath.roadmap, [
-    "S237P",
-    "O4A",
-    "S238A",
-    "S240A",
-    "S241A",
-  ]);
-  assert.equal(scheduler.optimizerPath.optional, true);
-  assert.equal(scheduler.optimizerPath.mayBlockS241A, false);
-  assert.equal(scheduler.optimizerPath.packageInstalled, false);
-  assert.equal(
-    scheduler.s237oBenchmarkAcceptanceContract
-      .benchmarkExecutionAuthorizedByThisAmendment,
-    false,
-  );
-  assert.deepEqual(
-    scheduler.s237oBenchmarkAcceptanceContract.evidenceFieldsExactly,
-    Object.keys(scheduler.s237oBenchmarkAcceptanceContract.evidence),
-  );
-  assert.ok(
-    Object.values(scheduler.s237oBenchmarkAcceptanceContract.evidence).every(
-      (value) => value === null,
-    ),
-  );
-  assert.equal(
-    canonicalSha256(scheduler.s237oBenchmarkAcceptanceContract.evidence),
-    scheduler.s237oBenchmarkAcceptanceContract.evidenceDigestContract
-      .pendingTemplateDigestSha256,
-  );
-  assert.equal(
-    scheduler.s237oBenchmarkAcceptanceContract.evidenceDigestContract
-      .pendingTemplateDigestSha256,
-    S237O_EVIDENCE_TEMPLATE_SHA256,
-  );
-  assert.equal(
-    scheduler.s237oBenchmarkAcceptanceContract.receiptSetRules
-      .allRequiredReceiptIdsExactlyOnce,
-    true,
-  );
-  assert.equal(
-    scheduler.s237oBenchmarkAcceptanceContract.receiptSetRules
-      .failedOrBlockedMayCompleteS237O,
-    false,
-  );
-  assert.deepEqual(
-    Object.keys(
-      scheduler.s237oBenchmarkAcceptanceContract.requiredReceiptOperationRules,
-    ),
-    scheduler.s237oBenchmarkAcceptanceContract.requiredReceiptIds,
-  );
-  assert.equal(
-    canonicalSha256(
-      scheduler.s237oBenchmarkAcceptanceContract.requiredReceiptOperationRules,
-    ),
-    scheduler.s237oBenchmarkAcceptanceContract
-      .receiptAssertionPolicyDigestContract.digestSha256,
-  );
-  assert.equal(
-    scheduler.s237oBenchmarkAcceptanceContract
-      .receiptAssertionPolicyDigestContract.digestSha256,
-    RECEIPT_ASSERTION_POLICY_SHA256,
-  );
-  const deterministicReplay =
-    scheduler.s237oBenchmarkAcceptanceContract.requiredReceiptOperationRules
-      .deterministic_config_and_replay;
-  assert.equal(deterministicReplay.coldReplayCountExact, 3);
-  assert.equal(deterministicReplay.warmReplayCountExact, 3);
-  assert.equal(deterministicReplay.solverWorkersExact, 1);
-  assert.deepEqual(
-    deterministicReplay.excludedFromReplayEqualityFieldsExactly,
-    ["elapsed_ms"],
-  );
-  assert.equal(
-    scheduler.s237oBenchmarkAcceptanceContract.receiptSetRules
-      .assertionCountMustEqualOperationRuleRequiredAssertionsLength,
-    true,
-  );
-  assert.equal(
-    scheduler.s237oBenchmarkAcceptanceContract.acceptanceRules
-      .allSixReplayResultsMustBeByteIdenticalExceptElapsedMs,
-    true,
-  );
-  assert.equal(
-    scheduler.s237oBenchmarkAcceptanceContract.evidenceFieldSchemas
-      .solver_workers,
-    "finite_integer_exact_1",
-  );
-  assert.deepEqual(
-    scheduler.s237oBenchmarkAcceptanceContract.evidenceFieldSchemas
-      .license_identifier,
-    {
-      type: "spdx_identifier",
-      pattern: "^[A-Za-z0-9.+-]{1,80}$",
-      nullAllowed: false,
-    },
-  );
-  const materializedLicenseIdentifierSchema =
-    scheduler.s237oBenchmarkAcceptanceContract.evidenceFieldSchemas
-      .license_identifier;
-  const materializedLicenseIdentifierPattern = new RegExp(
-    materializedLicenseIdentifierSchema.pattern,
-  );
-  assert.equal(materializedLicenseIdentifierPattern.test("Apache-2.0"), true);
-  for (const malformed of [
-    "",
-    "Apache 2.0",
-    "Apache/2.0",
-    "arbitrary license text",
-    "a".repeat(81),
-  ]) {
-    assert.equal(materializedLicenseIdentifierPattern.test(malformed), false);
-  }
-  assert.equal(materializedLicenseIdentifierSchema.nullAllowed, false);
-  assert.equal(
-    scheduler.s237oBenchmarkAcceptanceContract
-      .s237oAuthorizationDigestContract
-      .evidenceReceiptsAndSignedAttestationMustMatchApprovedPacketDigest,
-    true,
-  );
-  const authorizationDigestContract =
-    scheduler.s237oBenchmarkAcceptanceContract
-      .s237oAuthorizationDigestContract;
-  const authorizationPacket =
-    scheduler.s237oBenchmarkAcceptanceContract.s237oAuthorizationPacket;
-  assert.deepEqual(
-    scheduler.s237oBenchmarkAcceptanceContract.evidenceFieldSchemas
-      .license_identifier.pattern,
-    authorizationDigestContract.packetFieldSchemas.license_identifier.pattern,
-  );
-  assert.ok(
-    authorizationDigestContract
-      .overlappingPacketEvidenceReceiptAndAttestationFieldsMustMatchExactly
-      .includes("license_identifier"),
-  );
-  assert.ok(
-    scheduler.s237oBenchmarkAcceptanceContract.requiredReceiptOperationRules
-      .exact_dependency_license_and_sbom.requiredAssertions.includes(
-        "license_identifier_and_license_text_digest_match_authorized_source",
-      ),
-  );
-  assert.deepEqual(
-    Object.keys(authorizationDigestContract.packetFieldSchemas),
-    authorizationDigestContract.packetFieldsExactly,
-  );
-  assert.deepEqual(
-    Object.keys(authorizationPacket),
-    authorizationDigestContract.packetFieldsExactly,
-  );
-  assert.ok(
-    authorizationDigestContract.packetFieldsExactly.includes(
-      "authenticated_owner_private_scope_digest_sha256",
-    ),
-  );
-  assert.ok(
-    authorizationDigestContract.packetFieldsExactly.includes(
-      "opaque_owner_decision_actor_id",
-    ),
-  );
-  assert.equal(
-    s237oProposalSha256(authorizationPacket),
-    authorizationDigestContract.proposalDigestContract
-      .pendingTemplateProposalDigestSha256,
-  );
-  assert.equal(
-    authorizationDigestContract.proposalDigestContract
-      .pendingTemplateProposalDigestSha256,
-    S237O_PROPOSAL_SHA256,
-  );
-  assert.ok(
-    !authorizationDigestContract.packetFieldsExactly.includes(
-      "owner_decision_receipt_digest_sha256",
-    ),
-  );
-  assert.deepEqual(
-    Object.keys(
-      authorizationDigestContract.ownerDecisionReceiptContract
-        .artifactFieldSchemas,
-    ),
-    authorizationDigestContract.ownerDecisionReceiptContract
-      .artifactFieldsExactly,
-  );
-  assert.deepEqual(
-    authorizationDigestContract.approvalRecordContract.fieldsExactly,
-    Object.keys(
-      authorizationDigestContract.approvalRecordContract.fieldSchemas,
-    ),
-  );
-  assert.equal(
-    authorizationDigestContract.ownerDecisionReceiptContract
-      .verificationRules
-      .proposalDigestMustBeRecomputedFromExactPacketWithNormalizedApprovalState,
-    true,
-  );
-  assert.equal(
-    authorizationDigestContract.ownerDecisionReceiptContract
-      .verificationRules
-      .approvalRecordDecisionProposalDigestDecidedAtReceiptRefAndReceiptDigestMustExactlyMatchResolvedReceipt,
-    true,
-  );
-  assert.equal(
-    authorizationDigestContract.ownerDecisionReceiptContract
-      .verificationRules
-      .authenticatedOwnerPrivateScopeDigestAndOpaqueOwnerActorIdMustMatchExactPacketOwnerDecisionBindings,
-    true,
-  );
-  assert.equal(
-    authorizationDigestContract
-      .exactOpaqueOwnerDecisionActorIdentityAllowedInBenchmarkEvidenceReceiptsResultArtifactsOptimizerProjectionLogsCachesErrorsOrTelemetry,
-    false,
-  );
-  assert.equal(
-    authorizationDigestContract
-      .ownerDecisionReceiptMustNotBindFinalAuthorizationDigest,
-    true,
-  );
-  assert.equal(
-    authorizationDigestContract
-      .ownerDecisionReceiptMustBeReResolvedAndCryptographicallyRevalidatedAtBenchmarkStartAndAcceptance,
-    true,
-  );
-  assert.equal(
-    authorizationDigestContract.packetExpiryMayNotExceedOwnerDecisionReceiptExpiry,
-    true,
-  );
-  assert.equal(
-    authorizationDigestContract.materializationRules
-      .materializedPacketMayNotBeCommittedIntoTheExactHeadOrTreeItBinds,
-    true,
-  );
-  for (const storeField of [
-    "opaque_authorization_store_ref",
-    "opaque_attestation_store_ref",
-    "opaque_revocation_evidence_store_ref",
-    "opaque_owner_decision_store_ref",
-  ]) {
-    assert.ok(
-      authorizationDigestContract.packetFieldsExactly.includes(storeField),
-      `S237O authorization must bind ${storeField}`,
-    );
-  }
-  assert.equal(
-    scheduler.s237oBenchmarkAcceptanceContract.receiptSetDigestContract
-      .exactReceiptCount,
-    scheduler.s237oBenchmarkAcceptanceContract.requiredReceiptIds.length,
-  );
-  const provenanceSetDigestContract =
-    scheduler.s237oBenchmarkAcceptanceContract
-      .primaryAttestationProvenanceSetDigestContract;
-  const assertionSetDigestContract =
-    scheduler.s237oBenchmarkAcceptanceContract
-      .assertionEvidenceSetDigestContract;
-  assert.equal(provenanceSetDigestContract.exactEntryCount, 6);
-  assert.equal(assertionSetDigestContract.exactEntryCount, 6);
-  assert.deepEqual(
-    Object.keys(provenanceSetDigestContract.sourceReceiptFieldMapping),
-    provenanceSetDigestContract.entryFieldsExactly,
-  );
-  assert.deepEqual(
-    Object.keys(assertionSetDigestContract.sourceReceiptFieldMapping),
-    assertionSetDigestContract.entryFieldsExactly,
-  );
-  const benchmarkResultDigestContract =
-    scheduler.s237oBenchmarkAcceptanceContract.benchmarkResultDigestContract;
-  assert.deepEqual(
-    Object.keys(benchmarkResultDigestContract.artifactFieldSchemas),
-    benchmarkResultDigestContract.artifactFieldsExactly,
-  );
-  const resultMembers =
-    benchmarkResultDigestContract.resolvedArtifactMembersContract;
-  assert.deepEqual(resultMembers.bundleFieldsExactly, [
-    "benchmark_result_artifact",
-    "deterministic_replay_input_artifact",
-    "deterministic_replay_config_artifact",
-    "deterministic_replay_result_set",
-    "failure_status_fixture_result_set",
-    "rollback_result_artifact",
-    "metadata_boundary_result_artifact",
-  ]);
-  assert.deepEqual(
-    resultMembers.bundleFieldsExactly,
-    Object.keys(resultMembers.memberDigestFieldMapping),
-  );
-  assert.deepEqual(
-    resultMembers.bundleFieldsExactly,
-    Object.keys(resultMembers.memberSchemaContracts),
-  );
-  assert.deepEqual(
-    resultMembers.deterministicReplayConfigArtifactContract.fieldsExactly,
-    Object.keys(
-      resultMembers.deterministicReplayConfigArtifactContract.fieldSchemas,
-    ),
-  );
-  assert.deepEqual(
-    resultMembers.deterministicReplayConfigArtifactContract.fieldsExactly,
-    Object.keys(
-      resultMembers.deterministicReplayConfigArtifactContract
-        .sourceApprovedPacketFieldMapping,
-    ),
-  );
-  assert.deepEqual(
-    resultMembers.closedOperationAssertionResultArtifactContract.fieldsExactly,
-    Object.keys(
-      resultMembers.closedOperationAssertionResultArtifactContract
-        .fieldSchemas,
-    ),
-  );
-  assert.equal(
-    resultMembers.verificationRules
-      .arbitraryUnresolvedOpaqueChildDigestMaySatisfyAcceptance,
-    false,
-  );
-  assert.equal(
-    resultMembers.verificationRules
-      .canonicalNativeFallbackSetDigestMustBeRecomputedFromExactFailureSetProjection,
-    true,
-  );
-  assert.deepEqual(
-    Object.keys(
-      benchmarkResultDigestContract.deterministicReplayResultSetDigestContract
-        .entryFieldSchemas,
-    ),
-    benchmarkResultDigestContract.deterministicReplayResultSetDigestContract
-      .entryFieldsExactly,
-  );
-  assert.deepEqual(
-    Object.keys(
-      benchmarkResultDigestContract.failureStatusFixtureResultSetDigestContract
-        .entryFieldSchemas,
-    ),
-    benchmarkResultDigestContract.failureStatusFixtureResultSetDigestContract
-      .entryFieldsExactly,
-  );
-  assert.equal(
-    benchmarkResultDigestContract.deterministicReplayResultSetDigestContract
-      .exactEntryCount,
-    6,
-  );
-  for (const evidenceBinding of [
-    "opaque_benchmark_result_artifact_ref",
-    "benchmark_result_digest_sha256",
-    "primary_attestation_provenance_set_digest_sha256",
-    "assertion_evidence_set_digest_sha256",
-  ]) {
-    assert.ok(
-      scheduler.s237oBenchmarkAcceptanceContract.evidenceFieldsExactly.includes(
-        evidenceBinding,
-      ),
-      `S237O evidence must bind ${evidenceBinding}`,
-    );
-  }
-  assert.deepEqual(
-    scheduler.s237oBenchmarkAcceptanceContract.receiptSetDigestContract
-      .normalizedToNullFields,
-    [
-      "benchmark_receipt_set_digest_sha256",
-      "independent_verifier_attestation_digest_sha256",
-    ],
-  );
-  assert.equal(
-    scheduler.s237oBenchmarkAcceptanceContract
-      .independentAttestationEvidencePreimageDigestContract
-      .normalizedToNullFields[0],
-    "independent_benchmark_attestation_digest_sha256",
-  );
-  assert.equal(
-    scheduler.s237oBenchmarkAcceptanceContract
-      .independentSignedAttestationContract.verificationRules
-      .dsseSignatureCryptographicallyVerifiedAgainstExactEnvelope,
-    true,
-  );
-  assert.deepEqual(
-    Object.keys(
-      scheduler.s237oBenchmarkAcceptanceContract
-        .independentSignedAttestationContract.artifactFieldSchemas,
-    ),
-    scheduler.s237oBenchmarkAcceptanceContract
-      .independentSignedAttestationContract.artifactFieldsExactly,
-  );
-  assert.deepEqual(
-    Object.keys(
-      scheduler.s237oBenchmarkAcceptanceContract
-        .independentSignedAttestationContract.signedPayloadFieldSchemas,
-    ),
-    scheduler.s237oBenchmarkAcceptanceContract
-      .independentSignedAttestationContract.signedPayloadFieldsExactly,
-  );
-  assert.equal(
-    scheduler.s237oBenchmarkAcceptanceContract
-      .independentSignedAttestationContract.verificationRules
-      .verifierAndPrimaryAttestorMustDifferByClassAndOpaqueIdentity,
-    true,
-  );
-  assert.equal(
-    scheduler.s237oBenchmarkAcceptanceContract
-      .independentSignedAttestationContract.verificationRules
-      .signatureVerifiedMustBeTrue,
-    true,
-  );
-  assert.equal(
-    scheduler.s237oBenchmarkAcceptanceContract
-      .independentSignedAttestationContract.verificationRules.revokedMustBeFalse,
-    true,
-  );
-  for (const signedField of [
-    "s237o_authorization_digest_sha256",
-    "receipt_assertion_policy_digest_sha256",
-    "verifier_class",
-    "verifier_version",
-    "opaque_verifier_id",
-    "verification_key_id",
-    "verification_key_version",
-    "trust_root_id",
-    "trust_root_version",
-    "signature_algorithm",
-    "issued_at",
-    "expires_at",
-    "revocation_policy_version",
-    "revocation_checked_at",
-    "revocation_evidence_digest_sha256",
-    "revoked",
-    "opaque_benchmark_result_artifact_ref",
-    "benchmark_result_digest_sha256",
-    "primary_attestation_provenance_set_digest_sha256",
-    "assertion_evidence_set_digest_sha256",
-  ]) {
-    assert.ok(
-      scheduler.s237oBenchmarkAcceptanceContract
-        .independentSignedAttestationContract.signedPayloadFieldsExactly.includes(
-          signedField,
-        ),
-      `S237O signed payload must bind ${signedField}`,
-    );
-  }
-  assert.equal(
-    scheduler.s237oBenchmarkAcceptanceContract
-      .independentSignedAttestationContract.verificationRules
-      .acceptanceMustRecomputeSignatureTrustPathExpiryAndRevocationWithoutTrustingOuterBooleans,
-    true,
-  );
-  assert.deepEqual(scheduler.optimizerPath.roadmap, [
-    "S237O",
-    "O4T",
-    "O2O",
-    "S238OH",
-    "S238OV",
-    "O4P",
-    "S239O",
-    "S240O",
-  ]);
-  assert.equal(
-    scheduler.measurementAndActivationBoundary
-      .preO2OPersistedOwnerPrivateMeasurementWriteAllowed,
-    false,
-  );
-  assert.equal(
-    scheduler.measurementAndActivationBoundary
-      .persistedOwnerPrivateMeasurementWriteAllowedAfterO2O,
-    true,
-  );
-  assert.equal(
-    scheduler.measurementAndActivationBoundary.sharedSignalWriteAllowed,
-    false,
-  );
-  assert.equal(
-    scheduler.measurementAndActivationBoundary.telemetryWriteAllowed,
-    false,
-  );
-  assert.equal(
-    scheduler.measurementAndActivationBoundary
-      .exactGenericO2RequiredBeforeAnySharedSignalTelemetryExternalLearnerOrAcademyWrite,
-    true,
-  );
-  assert.equal(
-    scheduler.measurementAndActivationBoundary
-      .o4pRequiresCompletedNativeS240A,
-    true,
-  );
-  assert.equal(scheduler.inputContract.metadataOnly, true);
-  assert.equal(scheduler.inputContract.additionalFieldsAllowed, false);
-  assert.equal(scheduler.inputContract.nestedAdditionalFieldsAllowed, false);
-  assert.equal(
-    scheduler.inputContract.boundaryRole,
-    "trusted_native_gateway_pre_solver_input_only",
-  );
-  assert.equal(
-    scheduler.inputContract.userAccountOrCrossPlaneStableIdentityAllowed,
-    false,
-  );
-  assert.equal(
-    scheduler.inputContract.opaqueOwnerPrivateReferencesAllowedAtTrustedGatewayOnly,
-    true,
-  );
-  assert.equal(scheduler.inputContract.optimizerStableOrLinkableIdentityAllowed, false);
-  assert.equal(scheduler.inputContract.optimizerMayReceiveThisUnprojectedObject, false);
-  assert.deepEqual(
-    scheduler.inputContract.optimizerInvocationProjectionContract.fieldsExactly,
-    [
-      "ephemeral_request_id",
-      "ephemeral_input_snapshot_version",
-      "available_windows",
-      "fixed_blocks",
-      "candidates",
-      "replan_cutoff_minute_kst_or_null",
-      "immutable_prior_placements",
-      "future_prior_placement_preferences",
-    ],
-  );
-  const projection =
-    scheduler.inputContract.optimizerInvocationProjectionContract;
-  assert.deepEqual(
-    projection.fieldsExactly,
-    Object.keys(projection.fieldSchemas),
-  );
-  assert.deepEqual(
-    projection.fieldsExactly,
-    Object.keys(projection.sourceFieldMapping),
-  );
-  assert.deepEqual(
-    projection.availableWindowFieldsExactly,
-    Object.keys(projection.availableWindowFieldSchemas),
-  );
-  assert.deepEqual(
-    projection.fixedBlockFieldsExactly,
-    Object.keys(projection.fixedBlockFieldSchemas),
-  );
-  assert.deepEqual(
-    projection.candidateFieldsExactly,
-    Object.keys(projection.candidateFieldSchemas),
-  );
-  assert.deepEqual(
-    projection.immutablePriorPlacementFieldsExactly,
-    Object.keys(projection.immutablePriorPlacementFieldSchemas),
-  );
-  assert.deepEqual(
-    projection.futurePriorPlacementPreferenceFieldsExactly,
-    Object.keys(projection.futurePriorPlacementPreferenceFieldSchemas),
-  );
-  assert.equal(
-    projection.identifierRemapContract.oneInvocationBijectionRequiredPerIdentifierClass,
-    true,
-  );
-  assert.equal(
-    projection.identifierRemapContract
-      .allPriorPlacementCandidateAndWindowIdsMustResolveThroughExactBijections,
-    true,
-  );
-  assert.equal(
-    projection.identifierRemapContract
-      .unknownDanglingDuplicateOrCrossClassMappingAllowed,
-    false,
-  );
-  assert.equal(
-    scheduler.inputContract.priorAcceptedScheduleRules
-      .candidateOrWindowAbsentFromCurrentInputMayReachOptimizerProjection,
-    false,
-  );
-  assert.equal(
-    scheduler.inputContract.priorAcceptedScheduleRules
-      .candidateOrWindowAbsentFromCurrentInputResult,
-    "blocked_manual_plan_required",
-  );
-  assert.equal(
-    scheduler.inputContract.priorAcceptedScheduleRules
-      .removalChurnMeasuredOnlyForPriorPlacementsWhoseCandidateAndWindowResolveThroughExactCurrentInputBijections,
-    true,
-  );
-  assert.equal(
-    scheduler.inputContract.priorAcceptedScheduleRules
-      .absentPriorPlacementMayCreateCurrentCandidateOrWindow,
-    false,
-  );
-  assert.equal(
-    Object.hasOwn(
-      scheduler.inputContract.priorAcceptedScheduleRules,
-      "candidateOrWindowAbsentFromCurrentInputAllowedOnlyToMeasureRemovalChurn",
-    ),
-    false,
-  );
-  assert.equal(
-    projection.projectionRules.projectionFailureResult,
-    "blocked_manual_plan_required",
-  );
-  assert.equal(
-    projection.identifierRemapContract
-      .projectedIdentifierMayBeReusedAcrossIndependentOptimizerInvocations,
-    false,
-  );
-  assert.equal(
-    projection.identifierRemapContract.benchmarkReplaySessionContract
-      .sameCanonicalProjectedInputBytesAndIdentifierBijectionMustBeReusedForAllSixReplayProcesses,
-    true,
-  );
-  assert.equal(
-    projection.projectionRules
-      .replanCutoffMustBeNullIffVerifiedGenesisNoScheduleDecisionOtherwiseEqualSignedServerCutoff,
-    true,
-  );
-  for (const forbiddenGatewayField of [
-    "opaque_owner_schedule_scope_ref",
-    "opaque_acceptance_lineage_ref",
-    "native_validator_acceptance_receipt_digest_sha256",
-    "owner_acceptance_receipt_digest_sha256",
-    "acceptance_provenance_bundle_digest_sha256",
-    "o4a_approved_runtime_authorization_digest_sha256",
-  ]) {
-    assert.ok(
-      scheduler.inputContract.optimizerInvocationProjectionContract
-        .forbiddenGatewayFieldsExactly.includes(forbiddenGatewayField),
-      `optimizer projection must strip ${forbiddenGatewayField}`,
-    );
-  }
-  assert.equal(
-    scheduler.inputContract.optimizerInvocationProjectionContract
-      .projectionRules.ephemeralIdsMustBeFreshlyRemappedPerOptimizerInvocation,
-    true,
-  );
-  assert.equal(
-    scheduler.inputContract.optimizerInvocationProjectionContract
-      .projectionRules
-      .optimizerMayResolveOrAccessAuthoritativeStoreReceiptBundleAuthorizationOrIdentityPlane,
-    false,
-  );
-  assert.ok(
-    scheduler.inputContract.allowedFieldsExactly.includes(
-      "prior_accepted_schedule_or_null",
-    ),
-  );
-  assert.equal(
-    scheduler.inputContract.priorAcceptedScheduleRequired,
-    "when_authoritative_latest_non_superseded_accepted_schedule_exists",
-  );
-  assert.equal(
-    scheduler.inputContract
-      .priorAcceptedScheduleNullAllowedOnlyWithFreshSignedAuthoritativeNoScheduleLookup,
-    true,
-  );
-  assert.equal(
-    scheduler.inputContract
-      .priorAcceptedScheduleMaySelectCoreOutcomesOrLearningTasks,
-    false,
-  );
-  assert.equal(
-    scheduler.inputContract.priorAcceptedScheduleRules
-      .rawBodyStableIdentityTitleLocationOrFreeTextAllowed,
-    false,
-  );
-  for (const provenanceField of [
-    "accepted_head_sha",
-    "accepted_tree_sha",
-    "accepted_schedule_digest_sha256",
-    "opaque_authoritative_schedule_store_ref",
-    "opaque_owner_schedule_scope_ref",
-    "opaque_acceptance_lineage_ref",
-    "acceptance_sequence",
-    "previous_accepted_schedule_digest_sha256_or_null",
-    "opaque_native_validator_acceptance_receipt_ref",
-    "native_validator_acceptance_receipt_digest_sha256",
-    "opaque_owner_acceptance_receipt_ref",
-    "owner_acceptance_receipt_digest_sha256",
-    "opaque_acceptance_provenance_bundle_ref",
-    "acceptance_provenance_bundle_digest_sha256",
-  ]) {
-    assert.ok(
-      scheduler.inputContract.priorAcceptedScheduleFieldsExactly.includes(
-        provenanceField,
-      ),
-      `prior schedule must bind ${provenanceField}`,
-    );
-  }
-  assert.deepEqual(
-    Object.keys(scheduler.inputContract.serverScheduleContextFieldSchemas),
-    scheduler.inputContract.serverScheduleContextFieldsExactly,
-  );
-  assert.deepEqual(
-    Object.keys(scheduler.inputContract.priorAcceptedScheduleFieldSchemas),
-    scheduler.inputContract.priorAcceptedScheduleFieldsExactly,
-  );
-  assert.deepEqual(
-    Object.keys(scheduler.inputContract.priorAcceptedPlacementFieldSchemas),
-    scheduler.inputContract.priorAcceptedPlacementFieldsExactly,
-  );
-  assert.deepEqual(
-    scheduler.inputContract.priorAcceptedPlacementFieldsExactly,
-    [
-      "ephemeral_opaque_candidate_id",
-      "ephemeral_opaque_window_id",
-      "start_minute_kst",
-      "end_minute_kst",
-      "duration_minutes",
-    ],
-  );
-  assert.deepEqual(
-    scheduler.inputContract.priorAcceptedScheduleDigestContract
-      .placementFieldsExactly,
-    scheduler.inputContract.priorAcceptedPlacementFieldsExactly,
-  );
-  assert.ok(
-    !scheduler.inputContract.priorAcceptedScheduleDigestContract
-      .placementFieldsExactly.includes("placement_state_enum"),
-  );
-  for (const postValidationAcceptanceField of [
-    "accepted_at",
-    "opaque_authoritative_schedule_store_ref",
-    "opaque_owner_schedule_scope_ref",
-    "opaque_acceptance_lineage_ref",
-    "acceptance_sequence",
-    "previous_accepted_schedule_digest_sha256_or_null",
-  ]) {
-    assert.ok(
-      !scheduler.inputContract.priorAcceptedScheduleDigestContract
-        .preimageFieldsExactly.includes(postValidationAcceptanceField),
-      `pre-Owner schedule digest must exclude ${postValidationAcceptanceField}`,
-    );
-  }
-  assert.deepEqual(
-    Object.keys(
-      scheduler.inputContract.priorAcceptedScheduleProvenanceContract
-        .bundleFieldSchemas,
-    ),
-    scheduler.inputContract.priorAcceptedScheduleProvenanceContract
-      .bundleFieldsExactly,
-  );
-  assert.equal(
-    scheduler.inputContract.priorAcceptedScheduleProvenanceContract
-      .verificationRules
-      .bothReceiptSignaturesAndBundleSignatureMustBeCryptographicallyVerified,
-    true,
-  );
-  const provenance =
-    scheduler.inputContract.priorAcceptedScheduleProvenanceContract;
-  assert.ok(
-    scheduler.inputContract.serverScheduleContextFieldsExactly.includes(
-      "opaque_authoritative_state_checkpoint_ref",
-    ),
-  );
-  assert.ok(
-    scheduler.inputContract.serverScheduleContextFieldsExactly.includes(
-      "authoritative_state_checkpoint_digest_sha256",
-    ),
-  );
-  const checkpoint = provenance.authoritativeStateCheckpointContract;
-  assert.deepEqual(
-    checkpoint.artifactFieldsExactly,
-    Object.keys(checkpoint.artifactFieldSchemas),
-  );
-  assert.equal(
-    checkpoint.verificationRules
-      .checkpointStoreMustBeAppendOnlyRollbackResistantAndOutsideLatestPointerRollbackDomain,
-    true,
-  );
-  assert.equal(
-    checkpoint.verificationRules
-      .genesisStateIffMutationGenesisGenerationAndHighWaterZeroAndLineageLatestPreviousAllNull,
-    true,
-  );
-  assert.equal(
-    checkpoint.verificationRules
-      .historicalCheckpointMayNotBeReturnedAsLatestAfterAnyLaterCheckpointExists,
-    true,
-  );
-  for (const receiptContract of [
-    provenance.nativeValidatorAcceptanceReceiptContract,
-    provenance.ownerAcceptanceReceiptContract,
-    provenance.authoritativeLookupVerificationReceiptContract,
-  ]) {
-    assert.deepEqual(
-      Object.keys(receiptContract.artifactFieldSchemas),
-      receiptContract.artifactFieldsExactly,
-    );
-    assert.equal(receiptContract.artifactAdditionalFieldsAllowed, false);
-    assert.equal(receiptContract.signedPayloadAdditionalFieldsAllowed, false);
-  }
-  assert.equal(
-    provenance.nativeValidatorAcceptanceReceiptContract.verificationRules
-      .o4aMustSeparatelyMatchExactApprovedOwnerRuntimeAuthorization,
-    true,
-  );
-  assert.ok(
-    provenance.nativeValidatorAcceptanceReceiptContract
-      .signedPayloadFieldsExactly.includes("validated_at"),
-  );
-  assert.ok(
-    !provenance.nativeValidatorAcceptanceReceiptContract
-      .signedPayloadFieldsExactly.includes("accepted_at"),
-  );
-  assert.equal(
-    provenance.ownerAcceptanceReceiptContract.verificationRules
-      .nativeValidatorAndOwnerActorsKeysAndTrustRootsMustBeDistinct,
-    true,
-  );
-  assert.equal(
-    provenance.authoritativeLookupVerificationReceiptContract.verificationRules
-      .storeLookupMustProveNoHigherNonSupersededAcceptanceSequenceExists,
-    true,
-  );
-  assert.equal(
-    provenance.authoritativeLookupVerificationReceiptContract.verificationRules
-      .revocationCheckedAtMustNotBeAfterAtomicProjectionAndMustBeNoOlderThan300SecondsAtAtomicProjection,
-    true,
-  );
-  assert.equal(
-    provenance.authoritativeLookupVerificationReceiptContract.verificationRules
-      .requestNonceMustBeAtomicallyConsumedInTheSameTransactionAsScopeGenerationCheck,
-    true,
-  );
-  assert.equal(
-    provenance.authoritativeLookupVerificationReceiptContract.verificationRules
-      .atomicCompareMustMatchDecisionGenerationHighWaterMarkLineageLatestSequenceAndLatestDigestAsOneTuple,
-    true,
-  );
-  assert.ok(
-    provenance.authoritativeLookupVerificationReceiptContract
-      .artifactFieldsExactly.includes(
-        "authoritative_state_checkpoint_digest_sha256",
-      ),
-  );
-  assert.ok(
-    provenance.authoritativeLookupVerificationReceiptContract
-      .signedPayloadFieldsExactly.includes(
-        "authoritative_state_checkpoint_digest_sha256",
-      ),
-  );
-  assert.ok(
-    provenance.authoritativeLookupVerificationReceiptContract
-      .atomicCompareFieldsExactly.includes(
-        "authoritative_state_checkpoint_digest_sha256",
-      ),
-  );
-  assert.equal(
-    provenance.authoritativeLookupVerificationReceiptContract.verificationRules
-      .nonceConsumptionFullTupleCompareAndProjectionAuthorizationMustOccurInOneTransaction,
-    true,
-  );
-  assert.equal(
-    provenance.authoritativeLookupVerificationReceiptContract.verificationRules
-      .positiveAcceptanceHighWaterMarkRequiresExactResolvableLatestAndForbidsNoScheduleDecision,
-    true,
-  );
-  assert.equal(
-    scheduler.inputContract.serverScheduleContextRules.cutoffFormula,
-    "clamp_0_1440_of_ceiling_kst_minute_of_day_server_replan_requested_at_exact_minute_unchanged_any_nonzero_second_or_fraction_advances_one_minute",
-  );
-  assert.equal(
-    scheduler.inputContract.serverScheduleContextRules
-      .missingInvalidExpiredRevokedOrStaleReceiptResult,
-    "blocked_manual_plan_required",
-  );
-  assert.equal(
-    scheduler.inputContract.serverScheduleContextRules
-      .allFieldsMustBeServerDerivedAndClientValuesMustBeIgnored,
-    true,
-  );
-  assert.equal(
-    scheduler.inputContract.serverScheduleContextRules
-      .scopeGenerationMayNeverDecreaseWrapOrBeReused,
-    true,
-  );
-  assert.equal(
-    scheduler.inputContract.serverScheduleContextRules
-      .noAcceptedScheduleRequiresAcceptanceHighWaterMarkExactlyZero,
-    true,
-  );
-  assert.equal(
-    scheduler.inputContract.priorAcceptedScheduleRules
-      .elapsedOrInProgressPlacementMayBeDroppedShortenedMovedOrDuplicated,
-    false,
-  );
-  assert.ok(
-    scheduler.hardConstraints.includes(
-      "prior_accepted_elapsed_and_in_progress_blocks_immutable",
-    ),
-  );
-  assert.equal(scheduler.inputContract.freeTextAllowed, false);
-  assert.deepEqual(scheduler.inputContract.allowedFieldsExactly, [
-    "request_id",
-    "input_snapshot_version",
-    "study_date_kst",
-    "available_windows",
-    "fixed_blocks",
-    "candidates",
-    "server_schedule_context",
-    "prior_accepted_schedule_or_null",
-  ]);
-  assert.deepEqual(scheduler.inputContract.availableWindowFieldsExactly, [
-    "ephemeral_opaque_window_id",
-    "start_minute_kst",
-    "end_minute_kst",
-    "energy_band_enum",
-    "available",
-  ]);
-  assert.deepEqual(scheduler.inputContract.fixedBlockFieldsExactly, [
-    "ephemeral_opaque_fixed_block_id",
-    "ephemeral_opaque_window_id",
-    "start_minute_kst",
-    "end_minute_kst",
-    "block_type_enum",
-    "pinned",
-  ]);
-  for (const forbidden of [
-    "user_id",
-    "account_id",
-    "learning_document_id",
-    "question_body",
-    "answer_body",
-    "ocr_body",
-    "reference_answer_body",
-    "law_body",
-    "ai_body",
-    "free_text_reason",
-    "content_hash",
-    "keyed_commitment",
-  ]) {
-    assert.ok(
-      scheduler.inputContract.forbiddenFields.includes(forbidden),
-      `missing optimizer input prohibition ${forbidden}`,
-    );
-  }
-  assert.deepEqual(
-    scheduler.fixtureMatrix.availableMinuteFixtures,
-    [30, 60, 90, 180, 600, 720],
-  );
-  assert.equal(scheduler.resultContract.additionalFieldsAllowed, false);
-  assert.equal(scheduler.resultContract.nestedAdditionalFieldsAllowed, false);
-  assert.equal(
-    new Set(scheduler.resultContract.fallbackReasonValues).size,
-    scheduler.resultContract.fallbackReasonValues.length,
-  );
-  assert.equal(
-    scheduler.resultContract.fallbackValueRules
-      .usedFalseRequiresReasonNotUsedAndNativePlanVersionNull,
-    true,
-  );
-  assert.deepEqual(
-    Object.keys(scheduler.resultContract.versionInfoFieldSchemas),
-    scheduler.resultContract.versionInfoFieldsExactly,
-  );
-  assert.equal(scheduler.resultContract.freeTextAllowed, false);
-  assert.deepEqual(scheduler.resultContract.statuses, [
-    "optimal",
-    "feasible",
-    "infeasible",
-    "model_invalid",
-    "unknown",
-    "timeout",
-    "dependency_unavailable",
-    "adapter_error",
-    "schema_mismatch",
-    "stale_response",
-    "validator_rejected",
-    "fallback",
-    "blocked_manual_plan_required",
-  ]);
-  assert.deepEqual(scheduler.resultContract.fallbackStatuses, [
-    "infeasible",
-    "model_invalid",
-    "unknown",
-    "timeout",
-    "dependency_unavailable",
-    "adapter_error",
-    "schema_mismatch",
-    "stale_response",
-    "validator_rejected",
-  ]);
-  assert.equal(c3ResultValidationContractsAreClosed(scheduler), true);
-  for (const forbidden of [
-    "calendar_title",
-    "calendar_location",
-    "private_locator",
-    "question_body",
-    "reference_answer_body",
-  ]) {
-    assert.ok(scheduler.resultContract.forbiddenFields.includes(forbidden));
-  }
-  assert.equal(scheduler.thresholdPolicy.versioned, true);
-  assert.equal(scheduler.thresholdPolicy.retroactiveChangeAllowed, false);
-  assert.equal(scheduler.thresholdPolicy.silentWeakeningAllowed, false);
-  assert.equal(scheduler.o4tThresholdDecisionPacket.ownerApproved, false);
-  assert.equal(
-    scheduler.o4tThresholdDecisionPacket
-      .approvableWithNullBindingOrThresholdValue,
-    false,
-  );
-  assert.equal(
-    scheduler.o4tThresholdDecisionPacket.thresholdRecordSetRules
-      .missingOrDuplicateThresholdAllowed,
-    false,
-  );
-  assert.equal(
-    scheduler.o4tThresholdDecisionPacket.thresholdValueRules
-      .native_validator_accepted_candidate_schedule_rate
-      .selectionAuthorityGranted,
-    false,
-  );
-  assert.equal(
-    scheduler.o4tThresholdDecisionPacket.temporalRules
-      .evaluationWindowStartsBeforeEnds,
-    true,
-  );
-  assert.equal(
-    proposalSha256(scheduler.o4tThresholdDecisionPacket),
-    scheduler.o4tPacketDigestContract.pendingProposalDigestSha256,
-  );
-  assert.equal(
-    scheduler.o4tPacketDigestContract.pendingProposalDigestSha256,
-    O4T_PROPOSAL_SHA256,
-  );
-  assert.deepEqual(
-    scheduler.o4tPacketDigestContract.packetFieldsExactly,
-    Object.keys(scheduler.o4tThresholdDecisionPacket),
-  );
-  assert.deepEqual(
-    scheduler.o4tPacketDigestContract.packetFieldsExactly,
-    Object.keys(scheduler.o4tPacketDigestContract.packetFieldSchemas),
-  );
-  assert.deepEqual(
-    scheduler.o4tPacketDigestContract.ownerDecisionBindingContract.fieldsExactly,
-    Object.keys(
-      scheduler.o4tPacketDigestContract.ownerDecisionBindingContract
-        .fieldSchemas,
-    ),
-  );
-  assert.deepEqual(
-    scheduler.o4tPacketDigestContract.approvalRecordContract.fieldsExactly,
-    Object.keys(
-      scheduler.o4tPacketDigestContract.approvalRecordContract.fieldSchemas,
-    ),
-  );
-  assert.deepEqual(
-    scheduler.o4tPacketDigestContract.ownerDecisionReceiptContract
-      .artifactFieldsExactly,
-    Object.keys(
-      scheduler.o4tPacketDigestContract.ownerDecisionReceiptContract
-        .artifactFieldSchemas,
-    ),
-  );
-  assert.equal(
-    scheduler.o4tPacketDigestContract.ownerDecisionReceiptContract
-      .verificationRules
-      .receiptMustBeReResolvedAndRevalidatedBeforeO2oAndS238ohStartAndAcceptance,
-    true,
-  );
-  assert.equal(
-    scheduler.o4tPacketDigestContract.approvedThresholdBindingDigestContract
-      .finalDigestIsNotAStandaloneBearerAuthorization,
-    true,
-  );
-  assert.equal(o4tApprovedPacketResolutionContractIsClosed(scheduler), true);
-  assert.equal(
-    scheduler.o4tPacketDigestContract.approvalStateInvariant
-      .approvedRecordRequiresAllExactBindingsAndThresholdsComplete,
-    true,
-  );
-  assert.equal(
-    scheduler.comparisonModes.ownerHiddenShadow.ownerCanSeeComparison,
-    false,
-  );
-  assert.equal(
-    scheduler.comparisonModes.ownerVisibleComparison.ownerCanSeeComparison,
-    true,
-  );
-  assert.equal(
-    scheduler.comparisonModes.ownerVisibleComparison
-      .canonicalScheduleInfluenceAllowed,
-    false,
-  );
-  assert.equal(
-    scheduler.comparisonModes.ownerVisibleComparison
-      .productStateMutationAllowed,
-    false,
-  );
-  assert.equal(
-    scheduler.dogfoodEvidence.evidenceMayBeSharedAcrossAcceptanceTypes,
-    false,
-  );
-  assert.equal(scheduler.d0ToDPlus1Freeze.applies, true);
-  const changedS237oOwnerScope = clone(authorizationPacket);
-  changedS237oOwnerScope.authenticated_owner_private_scope_digest_sha256 =
-    "a".repeat(64);
-  assert.notEqual(
-    s237oProposalSha256(changedS237oOwnerScope),
-    authorizationDigestContract.proposalDigestContract
-      .pendingTemplateProposalDigestSha256,
-  );
-  const changedS237oOwnerActor = clone(authorizationPacket);
-  changedS237oOwnerActor.opaque_owner_decision_actor_id =
-    `oaa_${"a".repeat(16)}`;
-  assert.notEqual(
-    s237oProposalSha256(changedS237oOwnerActor),
-    authorizationDigestContract.proposalDigestContract
-      .pendingTemplateProposalDigestSha256,
-  );
-  const changedO4tOwnerScope = clone(scheduler.o4tThresholdDecisionPacket);
-  changedO4tOwnerScope.ownerDecisionBinding
-    .authenticatedOwnerPrivateScopeDigestSha256 = "a".repeat(64);
-  assert.notEqual(
-    proposalSha256(changedO4tOwnerScope),
-    scheduler.o4tPacketDigestContract.pendingProposalDigestSha256,
-  );
-  assert.equal(canonicalSha256(scheduler), SCHEDULER_CONTRACT_SHA256);
-
-  const unknownField = clone(scheduler);
-  unknownField.optimizerPath.unreviewed = true;
-  assert.notEqual(canonicalSha256(unknownField), SCHEDULER_CONTRACT_SHA256);
-  const rawInputAllowed = clone(scheduler);
-  rawInputAllowed.inputContract.forbiddenFields =
-    rawInputAllowed.inputContract.forbiddenFields.filter(
-      (field) => field !== "question_body",
-    );
-  assert.notEqual(canonicalSha256(rawInputAllowed), SCHEDULER_CONTRACT_SHA256);
-  const canonicalMutation = clone(scheduler);
-  canonicalMutation.comparisonModes.ownerVisibleComparison
-    .productStateMutationAllowed = true;
-  assert.notEqual(canonicalSha256(canonicalMutation), SCHEDULER_CONTRACT_SHA256);
-});
-
-test("projected optimizer results validate and inverse-map fail closed before canonical gateway exit", async () => {
-  const scheduler = await json(
-    "config/dabangil-full-day-scheduler-contract.json",
-  );
-  const agents = await text("AGENTS.md");
-  const scheduleSystem = await text(
-    "docs/inverge-study-schedule-system.md",
-  );
-  const projected = scheduler.optimizerProjectedResultContract;
-  const canonical = scheduler.resultContract;
-
-  assert.equal(projectedResultGatewayContractIsClosed(scheduler), true);
-  assert.deepEqual(
-    projected.inverseMappingContract.identifierBearingPathsExactly,
-    PROJECTED_RESULT_ID_PATHS,
-  );
-  assert.deepEqual(
-    projected.processingOrderExactly,
-    PROJECTED_RESULT_PROCESSING_ORDER,
-  );
-  assert.deepEqual(
-    Object.keys(projected.inverseMappingContract.pathIdentifierClasses),
-    PROJECTED_RESULT_ID_PATHS,
-  );
-
-  const identifierDomainFixtures = [
-    ["request_id", `req_${"a".repeat(16)}`, `oreq_${"a".repeat(16)}`],
-    [
-      "input_snapshot_version",
-      `snp_${"a".repeat(16)}`,
-      `osnp_${"a".repeat(16)}`,
-    ],
-    [
-      "ephemeral_opaque_window_id",
-      `win_${"a".repeat(16)}`,
-      `owin_${"a".repeat(16)}`,
-    ],
-    [
-      "ephemeral_opaque_candidate_id",
-      `cand_${"a".repeat(16)}`,
-      `ocand_${"a".repeat(16)}`,
-    ],
-  ];
-  for (const [identifierClass, originalId, projectedId] of identifierDomainFixtures) {
-    const canonicalPattern = new RegExp(
-      canonical.identifierSchemas[identifierClass],
-    );
-    const projectedPattern = new RegExp(
-      projected.identifierSchemas[identifierClass],
-    );
-    assert.equal(canonicalPattern.test(originalId), true);
-    assert.equal(canonicalPattern.test(projectedId), false);
-    assert.equal(projectedPattern.test(projectedId), true);
-    assert.equal(projectedPattern.test(originalId), false);
-  }
-  assert.equal(
-    canonical.identifierSchemas.request_id.includes("oreq_"),
-    false,
-  );
-  assert.equal(
-    canonical.identifierSchemas.input_snapshot_version.includes("osnp_"),
-    false,
-  );
-  assert.equal(
-    canonical.identifierSchemas.ephemeral_opaque_window_id.includes("owin_"),
-    false,
-  );
-  assert.equal(
-    canonical.identifierSchemas.ephemeral_opaque_candidate_id.includes(
-      "ocand_",
-    ),
-    false,
-  );
-
-  const policy =
-    scheduler.s237oBenchmarkAcceptanceContract
-      .receiptAssertionPolicyDigestContract;
-  assert.equal(
-    canonicalSha256(
-      scheduler.s237oBenchmarkAcceptanceContract.requiredReceiptOperationRules,
-    ),
-    "d1616bbc8c7681c19b42bdffc86e0d5e34a62710bf9ba727fe5355ca0ad69da8",
-  );
-  assert.equal(
-    policy.digestSha256,
-    "d1616bbc8c7681c19b42bdffc86e0d5e34a62710bf9ba727fe5355ca0ad69da8",
-  );
-  assert.match(
-    agents,
-    /solver-originated projected response[\s\S]*may not contain[\s\S]*fallback/,
-  );
-  assert.match(
-    agents,
-    /Only\s+after complete raw-response[\s\S]{0,240}validation does the gateway construct canonical `version_info`/,
-  );
-  assert.match(
-    agents,
-    /gateway\s+then attaches canonical `fallback[\s\S]{0,300}complete canonical[\s\S]{0,120}result[\s\S]{0,180}must\s+validate before release/i,
-  );
-  assert.match(
-    agents,
-    /independently\s+resolves\s+or\s+prepares[\s\S]{0,200}exactly\s+one immutable native fallback[\s\S]{0,700}Missing,\s+unavailable,\s+or\s+invalid fallback[\s\S]{0,220}blocked_manual_plan_required[\s\S]{0,120}recursive fallback is forbidden/,
-  );
-  assert.doesNotMatch(agents, /remap is destroyed after the request/);
-  assert.match(
-    scheduleSystem,
-    /retains it through all[\s\S]*six complete projected-response validations[\s\S]*destroys the mapping[\s\S]*before any canonical result set leaves the gateway/,
-  );
-  assert.match(
-    scheduleSystem,
-    /Projected IDs may not[\s\S]*enter logs or artifacts/,
-  );
-  assert.match(
-    scheduleSystem,
-    /identifier-free[\s\S]*digest receipt/,
-  );
-  assert.doesNotMatch(
-    scheduleSystem,
-    /the in-memory remap is destroyed afterward/,
-  );
-
-  const hostileMutations = [
-    [
-      "missing inverse-map path",
-      (value) => {
-        value.optimizerProjectedResultContract.inverseMappingContract
-          .identifierBearingPathsExactly.pop();
-      },
-    ],
-    [
-      "validation after inverse mapping",
-      (value) => {
-        const order =
-          value.optimizerProjectedResultContract.processingOrderExactly;
-        [order[0], order[3]] = [order[3], order[0]];
-      },
-    ],
-    [
-      "unknown or dangling mapping accepted",
-      (value) => {
-        value.optimizerProjectedResultContract.inverseMappingContract
-          .missingUnknownDanglingDuplicateCrossClassOriginalDomainOrNonBijectiveMappingAllowed =
-          true;
-      },
-    ],
-    [
-      "cross-class mapping",
-      (value) => {
-        value.optimizerProjectedResultContract.inverseMappingContract
-          .pathIdentifierClasses[
-            "execution_blocks[].ephemeral_opaque_window_id"
-          ] = "ephemeral_opaque_candidate_id";
-      },
-    ],
-    [
-      "original domain accepted",
-      (value) => {
-        value.optimizerProjectedResultContract
-          .projectedResultContractMayAcceptOriginalIdentifierDomain = true;
-      },
-    ],
-    [
-      "wrong request may correlate",
-      (value) => {
-        value.optimizerProjectedResultContract.requestCorrelationEqualityTargets
-          .request_id = "any_projected_request_id";
-      },
-    ],
-    [
-      "non-ID value may change",
-      (value) => {
-        value.optimizerProjectedResultContract.inverseMappingContract
-          .allNonIdentifierValuesPreservedExactly = false;
-      },
-    ],
-    [
-      "array may reorder",
-      (value) => {
-        value.optimizerProjectedResultContract.inverseMappingContract
-          .allArrayCardinalitiesAndOrderingPreservedExactly = false;
-      },
-    ],
-    [
-      "mapping destroyed early",
-      (value) => {
-        value.optimizerProjectedResultContract.mappingLifecycleContract
-          .mappingMayBeDestroyedBeforeCompleteProjectedResponseValidationAndRequiredInverseMappingFinish =
-          true;
-      },
-    ],
-    [
-      "benchmark mapping destroyed before sixth native validation",
-      (value) => {
-        value.inputContract.optimizerInvocationProjectionContract
-          .identifierRemapContract.benchmarkReplaySessionContract
-          .mappingAndProjectedIdentifierMaterialMustBeDestroyedAfterTheSixthCompleteCanonicalAndNativeValidationPathOrAfterAnyFailureIsClassifiedAndValidatedNativeFallbackIsPreparedAndBeforeGatewayExit =
-          false;
-      },
-    ],
-    [
-      "mapping retained after exit",
-      (value) => {
-        value.optimizerProjectedResultContract.mappingLifecycleContract
-          .mappingRetainedAfterGatewayExit = true;
-      },
-    ],
-    [
-      "projected ID enters logs or artifacts",
-      (value) => {
-        value.s237oBenchmarkAcceptanceContract.benchmarkResultDigestContract
-          .resolvedArtifactMembersContract
-          .identifierFreeDeterministicReplayInputArtifactContract
-          .projectedIdentifierValuesMayAppearInArtifact = true;
-      },
-    ],
-    [
-      "identifier-free artifact schema widened with projected ID",
-      (value) => {
-        const artifact =
-          value.s237oBenchmarkAcceptanceContract.benchmarkResultDigestContract
-            .resolvedArtifactMembersContract
-            .identifierFreeDeterministicReplayInputArtifactContract;
-        artifact.fieldsExactly.push("projected_request_id");
-        artifact.fieldSchemas.projected_request_id =
-          "^oreq_[A-Za-z0-9_-]{16,64}$";
-      },
-    ],
-    [
-      "canonical schema widened to both ID domains",
-      (value) => {
-        value.resultContract.identifierSchemas.request_id =
-          "^(?:req|oreq)_[A-Za-z0-9_-]{16,64}$";
-      },
-    ],
-    [
-      "projected-only semantic override",
-      (value) => {
-        value.optimizerProjectedResultContract.allowDurationOverflow = true;
-      },
-    ],
-  ];
-  for (const [name, mutate] of hostileMutations) {
-    const hostile = clone(scheduler);
-    mutate(hostile);
-    assert.equal(
-      projectedResultGatewayContractIsClosed(hostile),
-      false,
-      `${name} must fail closed`,
-    );
-  }
-});
-
-test("post-ready projected responses exclude gateway state and only the gateway constructs canonical fallback and version metadata", async () => {
-  const scheduler = await json(
-    "config/dabangil-full-day-scheduler-contract.json",
-  );
-  const projected = scheduler.optimizerProjectedResultContract;
-  const canonical = scheduler.resultContract;
-  const unified = await text("docs/dabangil-unified-program-contract.md");
-  const productSpec = await text(
-    "docs/inverge-second-round-final-product-spec.md",
-  );
-  const scheduleSystem = await text(
-    "docs/inverge-study-schedule-system.md",
-  );
-  const agents = await text("AGENTS.md");
-
-  assert.equal(projectedResultGatewayContractIsClosed(scheduler), true);
-  assert.equal(c3ResultValidationContractsAreClosed(scheduler), true);
-  assert.deepEqual(projected.statuses, SOLVER_STATUSES);
-  assert.deepEqual(
-    projected.statusOriginBoundary.trustedGatewayClassificationStatusesExactly,
-    GATEWAY_CLASSIFICATION_STATUSES,
-  );
-  assert.equal(Object.hasOwn(projected, "fallbackFieldsExactly"), false);
-  assert.equal(Object.hasOwn(projected, "fallbackStatuses"), false);
-  assert.equal(
-    Object.hasOwn(projected.identifierSchemas, "native_plan_version"),
-    false,
-  );
-  assert.equal(
-    canonical.fallbackValueRules
-      .canonicalFallbackTupleAndStateMayBeConstructedAndAttachedOnlyByTrustedGateway,
-    true,
-  );
-
-  const expectedCorrelation = {
-    request_id: `oreq_${"a".repeat(16)}`,
-    input_snapshot_version: `osnp_${"b".repeat(16)}`,
-  };
-  const trustedCanonicalVersionInfo = {
-    contract_version: "dabangil.full_day_scheduler.v1",
-    native_policy_version: "native_policy_v1",
-    adapter_version: "adapter_v1",
-    optimizer_version: "optimizer_v1",
-    objective_version: "objective_v1",
-    threshold_version: "threshold_v1",
-    solver_seed: 1,
-    solver_workers: 1,
-    time_limit_ms: 1000,
-    integer_scaling_version: "integer_scaling_v1",
-  };
-  const projectedExecutionBlock = {
-    ephemeral_opaque_candidate_id: `ocand_${"c".repeat(16)}`,
-    ephemeral_opaque_window_id: `owin_${"d".repeat(16)}`,
-    start_minute_kst: 0,
-    end_minute_kst: 30,
-    duration_minutes: 30,
-  };
-  const projectedOptimal = {
-    ...expectedCorrelation,
-    status: "optimal",
-    execution_blocks: [],
-    unassigned_candidates: [],
-    objective_components: [],
-    violations: [],
-    elapsed_ms: 1,
-  };
-  assert.equal(
-    projectedSolverResponseIsClosed(
-      projected,
-      projectedOptimal,
-      expectedCorrelation,
-    ),
-    true,
-  );
-  for (const forbiddenMutation of [
-    {
-      fallback: {
-        used: false,
-        reason_enum: "not_used",
-        native_plan_version: null,
-      },
-    },
-    { native_plan_version: "native_plan_v1" },
-    { canonical_native_fallback_plan: {} },
-    { canonical_native_fallback_plan_ref: "native_plan_v1" },
-    { canonical_plan_reference: "native_plan_v1" },
-    { version_info: trustedCanonicalVersionInfo },
-  ]) {
-    assert.equal(
-      projectedSolverResponseIsClosed(projected, {
-        ...projectedOptimal,
-        ...forbiddenMutation,
-      }, expectedCorrelation),
-      false,
-      `${Object.keys(forbiddenMutation)[0]} must be rejected from projected output`,
-    );
-  }
-  for (const versionField of canonical.versionInfoFieldsExactly) {
-    const value = trustedCanonicalVersionInfo[versionField];
-    for (const [location, hostileResponse] of [
-      [
-        "top-level",
-        {
-          ...projectedOptimal,
-          [versionField]: value,
-        },
-      ],
-      [
-        "nested",
-        {
-          ...projectedOptimal,
-          objective_components: [
-            {
-              objective_code_enum: "maximize_native_priority_value",
-              integer_value: 1,
-              diagnostics: { [versionField]: value },
-            },
-          ],
-        },
-      ],
-    ]) {
-      assert.equal(
-        projectedSolverResponseIsClosed(
-          projected,
-          hostileResponse,
-          expectedCorrelation,
-        ),
-        false,
-        `${location} ${versionField} injection must be rejected from raw projected output`,
-      );
-    }
-  }
-  const coordinatedVersionEnforcementRemoval = clone(projected);
-  coordinatedVersionEnforcementRemoval.forbiddenFields =
-    coordinatedVersionEnforcementRemoval.forbiddenFields.filter(
-      (field) => field !== "solver_seed",
-    );
-  coordinatedVersionEnforcementRemoval.objectiveComponentFieldsExactly.push(
-    "solver_seed",
-  );
-  assert.equal(
-    projectedSolverResponseIsClosed(
-      coordinatedVersionEnforcementRemoval,
-      {
-        ...projectedOptimal,
-        objective_components: [
-          {
-            objective_code_enum: "maximize_native_priority_value",
-            integer_value: 1,
-            solver_seed: trustedCanonicalVersionInfo.solver_seed,
-          },
-        ],
-      },
-      expectedCorrelation,
-    ),
-    true,
-    "the hostile fixture must prove coordinated schema widening would admit a gateway-owned field without the closed contract",
-  );
-  for (const [name, hostileResponse] of [
-    [
-      "nested version info",
-      {
-        ...projectedOptimal,
-        objective_components: [
-          {
-            objective_code_enum: "maximize_native_priority_value",
-            integer_value: 1,
-            version_info: trustedCanonicalVersionInfo,
-          },
-        ],
-      },
-    ],
-    [
-      "nested canonical plan reference",
-      {
-        ...projectedOptimal,
-        violations: [
-          {
-            constraint_code_enum: "candidate_accounting_exact_partition",
-            ephemeral_opaque_candidate_ids: [],
-            severity_enum: "error",
-            canonical_plan_reference: "native_plan_v1",
-          },
-        ],
-      },
-    ],
-    [
-      "execution block nested fallback",
-      {
-        ...projectedOptimal,
-        execution_blocks: [
-          {
-            ...projectedExecutionBlock,
-            fallback: {
-              used: true,
-              reason_enum: "validator_rejected",
-              native_plan_version: "native_plan_v1",
-            },
-          },
-        ],
-      },
-    ],
-    [
-      "wrong correlated request",
-      {
-        ...projectedOptimal,
-        request_id: `oreq_${"e".repeat(16)}`,
-      },
-    ],
-    [
-      "non-string request identifier",
-      {
-        ...projectedOptimal,
-        request_id: [projectedOptimal.request_id],
-      },
-    ],
-    [
-      "non-string snapshot identifier",
-      {
-        ...projectedOptimal,
-        input_snapshot_version: [
-          projectedOptimal.input_snapshot_version,
-        ],
-      },
-    ],
-    [
-      "non-string execution candidate identifier",
-      {
-        ...projectedOptimal,
-        execution_blocks: [
-          {
-            ...projectedExecutionBlock,
-            ephemeral_opaque_candidate_id: [
-              projectedExecutionBlock.ephemeral_opaque_candidate_id,
-            ],
-          },
-        ],
-      },
-    ],
-    [
-      "non-string execution window identifier",
-      {
-        ...projectedOptimal,
-        execution_blocks: [
-          {
-            ...projectedExecutionBlock,
-            ephemeral_opaque_window_id: [
-              projectedExecutionBlock.ephemeral_opaque_window_id,
-            ],
-          },
-        ],
-      },
-    ],
-    [
-      "non-string unassigned candidate identifier",
-      {
-        ...projectedOptimal,
-        unassigned_candidates: [
-          {
-            ephemeral_opaque_candidate_id: [
-              projectedExecutionBlock.ephemeral_opaque_candidate_id,
-            ],
-            reason_enum: "capacity_exceeded",
-          },
-        ],
-      },
-    ],
-    [
-      "non-string violation candidate identifier",
-      {
-        ...projectedOptimal,
-        violations: [
-          {
-            constraint_code_enum: "candidate_accounting_exact_partition",
-            ephemeral_opaque_candidate_ids: [
-              [projectedExecutionBlock.ephemeral_opaque_candidate_id],
-            ],
-            severity_enum: "error",
-          },
-        ],
-      },
-    ],
-    [
-      "original-domain nested candidate identifier",
-      {
-        ...projectedOptimal,
-        execution_blocks: [
-          {
-            ...projectedExecutionBlock,
-            ephemeral_opaque_candidate_id: `cand_${"c".repeat(16)}`,
-          },
-        ],
-      },
-    ],
-  ]) {
-    assert.equal(
-      projectedSolverResponseIsClosed(
-        projected,
-        hostileResponse,
-        expectedCorrelation,
-      ),
-      false,
-      `${name} must fail the complete projected response schema`,
-    );
-  }
-
-  for (const status of SOLVER_FAILURE_STATUSES) {
-    const projectedFailure = {
-      request_id: projectedOptimal.request_id,
-      input_snapshot_version: projectedOptimal.input_snapshot_version,
-      status,
-      objective_components: [],
-      violations: [],
-      elapsed_ms: 1,
-    };
-    assert.equal(
-      projectedSolverResponseIsClosed(
-        projected,
-        projectedFailure,
-        expectedCorrelation,
-      ),
-      true,
-    );
-    assert.equal(
-      projectedSolverResponseIsClosed(projected, {
-        ...projectedFailure,
-        execution_blocks: [],
-        unassigned_candidates: [],
-      }, expectedCorrelation),
-      false,
-      `${status} projected failure cannot carry or release a candidate plan`,
-    );
-  }
-  for (const status of [
-    ...GATEWAY_CLASSIFICATION_STATUSES,
-    "fallback",
-    "blocked_manual_plan_required",
-  ]) {
-    assert.equal(
-      projectedSolverResponseIsClosed(projected, {
-        ...projectedOptimal,
-        status,
-      }, expectedCorrelation),
-      false,
-      `${status} cannot be authored by the isolated solver`,
-    );
-  }
-
-  const validConstructionOptions = {
-    rawResponseValidated: true,
-    exactCorrelationValidated: true,
-    requiredBijectionsValidated: true,
-    trustedConfigurationIsCurrentAndBound: true,
-    nativeFallbackValid: false,
-  };
-  assert.equal(
-    canonicalVersionInfoIsExact(
-      canonical,
-      trustedCanonicalVersionInfo,
-    ),
-    true,
-  );
-  assert.deepEqual(
-    gatewayCanonicalVersionOutcome(
-      canonical,
-      trustedCanonicalVersionInfo,
-      validConstructionOptions,
-    ),
-    {
-      status: "constructed",
-      version_info: trustedCanonicalVersionInfo,
-      nativeFallbackAttempts: 0,
-      candidatePlanReleased: true,
-      canonicalNativeFallbackReleased: false,
-    },
-  );
-  const missingVersionField = {
-    ...trustedCanonicalVersionInfo,
-  };
-  delete missingVersionField.threshold_version;
-  const extraVersionField = {
-    ...trustedCanonicalVersionInfo,
-    solver_build_host: "forbidden",
-  };
-  const schemaInvalidVersionInfo = {
-    ...trustedCanonicalVersionInfo,
-    solver_workers: 0,
-  };
-  const mismatchedActualInvocationConfiguration = {
-    ...trustedCanonicalVersionInfo,
-    solver_seed: trustedCanonicalVersionInfo.solver_seed + 1,
-  };
-  for (const [
-    name,
-    trustedConfiguration,
-    optionOverrides,
-    expectedClassification,
-  ] of [
-    ["missing field", missingVersionField, {}, "validator_rejected"],
-    ["extra field", extraVersionField, {}, "validator_rejected"],
-    [
-      "schema-invalid field",
-      schemaInvalidVersionInfo,
-      {},
-      "validator_rejected",
-    ],
-    [
-      "stale or untrusted binding",
-      trustedCanonicalVersionInfo,
-      { trustedConfigurationIsCurrentAndBound: false },
-      "validator_rejected",
-    ],
-    [
-      "mismatch with actual invocation",
-      trustedCanonicalVersionInfo,
-      {
-        actualInvocationConfiguration:
-          mismatchedActualInvocationConfiguration,
-      },
-      "validator_rejected",
-    ],
-    [
-      "construction before raw validation",
-      trustedCanonicalVersionInfo,
-      { rawResponseValidated: false },
-      "schema_mismatch",
-    ],
-    [
-      "construction before exact correlation",
-      trustedCanonicalVersionInfo,
-      { exactCorrelationValidated: false },
-      "stale_response",
-    ],
-    [
-      "construction before required bijections",
-      trustedCanonicalVersionInfo,
-      { requiredBijectionsValidated: false },
-      "schema_mismatch",
-    ],
-  ]) {
-    assert.deepEqual(
-      gatewayCanonicalVersionOutcome(canonical, trustedConfiguration, {
-        ...validConstructionOptions,
-        ...optionOverrides,
-        nativeFallbackValid: true,
-        nativeFallbackTrustedConfiguration:
-          trustedCanonicalVersionInfo,
-      }),
-      {
-        status: "fallback",
-        triggeringClassification: expectedClassification,
-        version_info: trustedCanonicalVersionInfo,
-        nativeFallbackAttempts: 1,
-        candidatePlanReleased: false,
-        canonicalNativeFallbackReleased: true,
-      },
-      `${name} must discard the candidate and enter exactly one independently prepared valid canonical fallback`,
-    );
-    assert.deepEqual(
-      gatewayCanonicalVersionOutcome(canonical, trustedConfiguration, {
-        ...validConstructionOptions,
-        ...optionOverrides,
-        nativeFallbackValid: true,
-        nativeFallbackTrustedConfiguration: missingVersionField,
-      }),
-      {
-        status: "blocked_manual_plan_required",
-        triggeringClassification: expectedClassification,
-        version_info: null,
-        nativeFallbackAttempts: 1,
-        candidatePlanReleased: false,
-        canonicalNativeFallbackReleased: false,
-      },
-      `${name} with invalid fallback metadata must release only the manual block`,
-    );
-  }
-  assert.deepEqual(
-    gatewayCanonicalVersionOutcome(canonical, missingVersionField, {
-      ...validConstructionOptions,
-      nativeFallbackValid: true,
-      nativeFallbackTrustedConfiguration: trustedCanonicalVersionInfo,
-      nativeFallbackActualInvocationConfiguration:
-        mismatchedActualInvocationConfiguration,
-    }),
-    {
-      status: "blocked_manual_plan_required",
-      triggeringClassification: "validator_rejected",
-      version_info: null,
-      nativeFallbackAttempts: 1,
-      candidatePlanReleased: false,
-      canonicalNativeFallbackReleased: false,
-    },
-    "a schema-valid but mismatched fallback version configuration cannot be released",
-  );
-  assert.deepEqual(
-    gatewayCanonicalVersionOutcome(canonical, missingVersionField, {
-      ...validConstructionOptions,
-      nativeFallbackValid: true,
-      nativeFallbackTrustedConfiguration: trustedCanonicalVersionInfo,
-      nativeFallbackTrustedConfigurationIsCurrentAndBound: false,
-    }),
-    {
-      status: "blocked_manual_plan_required",
-      triggeringClassification: "validator_rejected",
-      version_info: null,
-      nativeFallbackAttempts: 1,
-      candidatePlanReleased: false,
-      canonicalNativeFallbackReleased: false,
-    },
-    "a stale or untrusted fallback version binding cannot be released",
-  );
-  assert.equal(
-    projected.failureRouting
-      .rawProjectedVersionInfoOrGatewayOwnedVersionConfigurationInjectionStatus,
-    "schema_mismatch",
-  );
-  assert.equal(
-    projected.failureRouting
-      .missingAmbiguousStaleUntrustedOrMismatchedCanonicalVersionMetadataStatus,
-    "validator_rejected",
-  );
-
-  for (const status of ["optimal", "feasible"]) {
-    assert.deepEqual(gatewayConstructedCanonicalFallbackTuple(status), {
-      used: false,
-      reason_enum: "not_used",
-      native_plan_version: null,
-    });
-  }
-  for (const triggerStatus of [
-    ...SOLVER_FAILURE_STATUSES,
-    ...GATEWAY_CLASSIFICATION_STATUSES,
-  ]) {
-    assert.deepEqual(
-      gatewayConstructedCanonicalFallbackTuple(
-        triggerStatus,
-        "native_plan_v1",
-      ),
-      {
-        used: true,
-        reason_enum: triggerStatus,
-        native_plan_version: "native_plan_v1",
-      },
-    );
-    assert.equal(
-      gatewayConstructedCanonicalFallbackTuple(triggerStatus),
-      null,
-      `${triggerStatus} cannot release a missing canonical fallback`,
-    );
-  }
-  const lateRejectionTransition =
-    projected.canonicalGatewayConstructionContract
-      .lateCanonicalOrNativeValidationRejectionTransition;
-  assert.equal(
-    lateRejectionTransition.trustedGatewayClassification,
-    "validator_rejected",
-  );
-  assert.equal(
-    lateRejectionTransition
-      .discardCandidatePlanAndUsedFalseTupleWithoutRelease,
-    true,
-  );
-  assert.equal(
-    lateRejectionTransition
-      .transitionExactlyOnceToSolverOrTrustedGatewayFailureBranch,
-    true,
-  );
-  assert.equal(
-    projected.failureRouting
-      .optimalOrFeasibleLateCanonicalOrNativeValidationFailureStatus,
-    "validator_rejected",
-  );
-  for (const projectedStatus of ["optimal", "feasible"]) {
-    assert.deepEqual(
-      gatewayOutcomeAfterOptimalOrFeasibleNativeValidation(
-        projectedStatus,
-        {
-          canonicalAndNativeValidationValid: true,
-          nativeFallbackValid: false,
-        },
-      ),
-      {
-        status: projectedStatus,
-        discardedProjectedCandidatePlan: false,
-        nativeFallbackAttempts: 0,
-        fallback: {
-          used: false,
-          reason_enum: "not_used",
-          native_plan_version: null,
-        },
-        projectedCandidatePlanReleased: true,
-        canonicalNativeFallbackReleased: false,
-      },
-    );
-    assert.deepEqual(
-      gatewayOutcomeAfterOptimalOrFeasibleNativeValidation(
-        projectedStatus,
-        {
-          canonicalAndNativeValidationValid: false,
-          nativeFallbackValid: true,
-        },
-      ),
-      {
-        status: "fallback",
-        triggeringClassification: "validator_rejected",
-        discardedProjectedCandidatePlan: true,
-        nativeFallbackAttempts: 1,
-        fallback: {
-          used: true,
-          reason_enum: "validator_rejected",
-          native_plan_version: "native_plan_v1",
-        },
-        projectedCandidatePlanReleased: false,
-        canonicalNativeFallbackReleased: true,
-      },
-      `${projectedStatus} rejected by native validation must transition once to the independent gateway fallback`,
-    );
-    assert.deepEqual(
-      gatewayOutcomeAfterOptimalOrFeasibleNativeValidation(
-        projectedStatus,
-        {
-          canonicalAndNativeValidationValid: false,
-          nativeFallbackValid: false,
-        },
-      ),
-      {
-        status: "blocked_manual_plan_required",
-        triggeringClassification: "validator_rejected",
-        discardedProjectedCandidatePlan: true,
-        nativeFallbackAttempts: 1,
-        fallback: {
-          used: false,
-          reason_enum: "not_used",
-          native_plan_version: null,
-        },
-        projectedCandidatePlanReleased: false,
-        canonicalNativeFallbackReleased: false,
-      },
-      `${projectedStatus} rejected by native validation cannot release an invalid fallback or recurse`,
-    );
-  }
-
-  assert.match(
-    unified,
-    /projected response[\s\S]*never contains[\s\S]*`fallback`[\s\S]*only the trusted gateway[\s\S]*constructs canonical `version_info`[\s\S]*constructs canonical fallback state/i,
-  );
-  assert.match(
-    productSpec,
-    /never returns a fallback reason[\s\S]*trusted gateway[\s\S]*constructs canonical fallback state/,
-  );
-  assert.match(
-    scheduleSystem,
-    /solver-originated projected response[\s\S]*cannot contain[\s\S]*fallback state[\s\S]*gateway[\s\S]*constructs canonical/,
-  );
-  for (const authoritativeProse of [agents, scheduleSystem]) {
-    assert.match(
-      authoritativeProse,
-      /before a candidate plan[\s\S]*exists[\s\S]*carries no candidate plan/,
-    );
-    assert.match(
-      authoritativeProse,
-      /classif[\s\S]{0,100}while[\s\S]{0,40}validating[\s\S]{0,100}(?:OPTIMAL|optimal)[\s\S]{0,80}(?:FEASIBLE|feasible)[\s\S]{0,160}discards[\s\S]{0,180}without release/,
-    );
-    assert.match(
-      authoritativeProse,
-      /late\s+canonical\/native[\s\S]{0,80}rejection[\s\S]{0,80}validator_rejected/,
-    );
-    assert.match(
-      authoritativeProse,
-      /same failure branch[\s\S]*exactly once/,
-    );
-  }
-  assert.doesNotMatch(
-    productSpec,
-    /OR-Tools CP-SAT[\s\S]{0,240}returns[\s\S]{0,120}fallback reason\./,
-  );
-  for (const [name, authoritativeProse] of [
-    ["AGENTS", agents],
-    ["unified contract", unified],
-    ["product spec", productSpec],
-    ["schedule system", scheduleSystem],
-  ]) {
-    assert.match(
-      authoritativeProse,
-      /projected response[\s\S]{0,900}`version_info`/,
-      `${name} must forbid raw projected version_info`,
-    );
-    assert.match(
-      authoritativeProse,
-      /complete raw-response[\s\S]{0,240}exact-correlation[\s\S]{0,240}required-bijection[\s\S]{0,300}constructs? canonical `version_info`/,
-      `${name} must delay gateway canonical version construction until all prerequisite validation finishes`,
-    );
-    assert.match(
-      authoritativeProse,
-      /`contract_version`[\s\S]{0,600}`integer_scaling_version`/,
-      `${name} must enumerate the canonical ten-field version_info`,
-    );
-    assert.match(
-      authoritativeProse,
-      /Missing,\s+ambiguous,\s+stale,\s+untrusted,\s+or\s+mismatched[\s\S]{0,220}`validator_rejected`/i,
-      `${name} must classify canonical metadata failures as validator_rejected`,
-    );
-    assert.match(
-      authoritativeProse,
-      /invalid fallback[\s\S]{0,220}`blocked_manual_plan_required`/i,
-      `${name} must keep an invalid fallback on the manual-block path`,
-    );
-  }
-
-  const hostileMutations = [
-    [
-      "projected version info restored",
-      (value) => {
-        value.optimizerProjectedResultContract.allowedFieldsExactly.push(
-          "version_info",
-        );
-        value.optimizerProjectedResultContract.forbiddenFields =
-          value.optimizerProjectedResultContract.forbiddenFields.filter(
-            (field) => field !== "version_info",
-          );
-        value.optimizerProjectedResultContract.versionInfoFieldsExactly = [
-          ...value.resultContract.versionInfoFieldsExactly,
-        ];
-        value.optimizerProjectedResultContract.versionInfoFieldSchemas =
-          clone(value.resultContract.versionInfoFieldSchemas);
-        value.optimizerProjectedResultContract.versionFieldsRequired = [
-          ...value.resultContract.versionFieldsRequired,
-        ];
-      },
-      projectedResultGatewayContractIsClosed,
-    ],
-    [
-      "gateway-owned version field removed from recursive prohibition",
-      (value) => {
-        value.optimizerProjectedResultContract.forbiddenFields =
-          value.optimizerProjectedResultContract.forbiddenFields.filter(
-            (field) => field !== "solver_seed",
-          );
-      },
-      projectedResultGatewayContractIsClosed,
-    ],
-    [
-      "gateway version construction allowed before bijection validation",
-      (value) => {
-        value.optimizerProjectedResultContract
-          .canonicalGatewayConstructionContract
-          .canonicalVersionInfoConstructionContract
-          .constructionMayOccurBeforeCompleteRawResponseExactCorrelationAndRequiredBijectionValidation =
-          true;
-      },
-      projectedResultGatewayContractIsClosed,
-    ],
-    [
-      "canonical ten-field requirement weakened",
-      (value) => {
-        value.resultContract.versionFieldsRequired.pop();
-      },
-      c3ResultValidationContractsAreClosed,
-    ],
-    [
-      "native fallback canonical version validation removed",
-      (value) => {
-        value.nativeValidator
-          .validatedNativeFallbackMustSatisfyCanonicalTenFieldVersionInfoAndHardDeadlineFeasibilityAndAllHardConstraints =
-          false;
-      },
-      c3ResultValidationContractsAreClosed,
-    ],
-    [
-      "projected fallback field restored",
-      (value) => {
-        value.optimizerProjectedResultContract.allowedFieldsExactly.push(
-          "fallback",
-        );
-        value.optimizerProjectedResultContract.forbiddenFields =
-          value.optimizerProjectedResultContract.forbiddenFields.filter(
-            (field) => field !== "fallback",
-          );
-      },
-      projectedResultGatewayContractIsClosed,
-    ],
-    [
-      "gateway classification made solver-owned",
-      (value) => {
-        value.optimizerProjectedResultContract.statuses.push("timeout");
-        value.optimizerProjectedResultContract.statusOriginBoundary
-          .solverOwnedStatusesExactly.push("timeout");
-      },
-      projectedResultGatewayContractIsClosed,
-    ],
-    [
-      "projected failure self-authorizes fallback",
-      (value) => {
-        value.optimizerProjectedResultContract
-          .canonicalGatewayConstructionContract
-          .projectedFailureEnvelopeMayReferenceAuthorizeOrReleaseCanonicalFallback =
-          true;
-      },
-      projectedResultGatewayContractIsClosed,
-    ],
-    [
-      "canonical gateway ownership weakened",
-      (value) => {
-        value.resultContract.fallbackValueRules
-          .canonicalFallbackTupleAndStateMayBeConstructedAndAttachedOnlyByTrustedGateway =
-          false;
-      },
-      c3ResultValidationContractsAreClosed,
-    ],
-    [
-      "native validator accepts solver fallback state",
-      (value) => {
-        value.nativeValidator
-          .canonicalFallbackTupleAndStateMustBeGatewayConstructed = false;
-      },
-      c3ResultValidationContractsAreClosed,
-    ],
-    [
-      "late native rejection remains in the success branch",
-      (value) => {
-        value.optimizerProjectedResultContract
-          .canonicalGatewayConstructionContract
-          .lateCanonicalOrNativeValidationRejectionTransition
-          .transitionExactlyOnceToSolverOrTrustedGatewayFailureBranch =
-          false;
-      },
-      projectedResultGatewayContractIsClosed,
-    ],
-    [
-      "late native rejection reuses the rejected projected plan",
-      (value) => {
-        value.optimizerProjectedResultContract
-          .canonicalGatewayConstructionContract
-          .lateCanonicalOrNativeValidationRejectionTransition
-          .projectedOrRejectedCandidatePlanMayBeReusedAsCanonicalFallback =
-          true;
-      },
-      projectedResultGatewayContractIsClosed,
-    ],
-  ];
-  for (const [name, mutate, validator] of hostileMutations) {
-    const hostile = clone(scheduler);
-    mutate(hostile);
-    assert.equal(validator(hostile), false, `${name} must fail closed`);
-  }
-});
-
-test("post-ready hard deadlines are closed KST-to-UTC feasibility predicates for both ID domains and every release path", async () => {
-  const scheduler = await json(
-    "config/dabangil-full-day-scheduler-contract.json",
-  );
-  assert.equal(c3ResultValidationContractsAreClosed(scheduler), true);
-  assert.equal(projectedResultGatewayContractIsClosed(scheduler), true);
-  const deadlineAuthorityProse = await Promise.all([
-    text("AGENTS.md"),
-    text("docs/dabangil-unified-program-contract.md"),
-    text("docs/inverge-second-round-final-product-spec.md"),
-    text("docs/inverge-study-schedule-system.md"),
-  ]);
-  for (const authoritativeProse of deadlineAuthorityProse) {
-    assert.match(
-      authoritativeProse,
-      /`study_date_kst`[\s\S]{0,220}(?:never projects?|not projected|without projecting|never enters)/i,
-    );
-    assert.match(
-      authoritativeProse,
-      /IANA\s+`Asia\/Seoul`[\s\S]{0,180}`?(?:end_minute_kst=)?1440`?[\s\S]{0,180}next-day/i,
-    );
-    assert.match(
-      authoritativeProse,
-      /block_end_utc/i,
-    );
-    assert.match(
-      authoritativeProse,
-      /(?:<=|less than or equal)[\s\S]{0,300}hard_deadline/i,
-    );
-    assert.match(
-      authoritativeProse,
-      /`null`[\s\S]{0,80}no hard cutoff/i,
-    );
-    assert.match(
-      authoritativeProse,
-      /`minimize_deadline_lateness`[\s\S]{0,180}(?:only|reads only)[\s\S]{0,180}(?:cannot override|hard)/i,
-    );
-    assert.match(
-      authoritativeProse,
-      /Elapsed[\s\S]{0,120}in-progress[\s\S]{0,400}before projection[\s\S]{0,300}(?:moved|moving)[\s\S]{0,300}(?:rewritten|rewriting)/i,
-    );
-  }
-  assert.equal(
-    blockEndUtcFromStudyDateKst("2026-07-26", 60),
-    "2026-07-25T16:00:00.000Z",
-  );
-  assert.equal(
-    blockEndUtcFromStudyDateKst("2026-07-26", 1440),
-    "2026-07-26T15:00:00.000Z",
-  );
-
-  for (const [candidateId, windowId] of [
-    [`cand_${"h".repeat(16)}`, `win_${"w".repeat(16)}`],
-    [`ocand_${"h".repeat(16)}`, `owin_${"w".repeat(16)}`],
-  ]) {
-    const block = {
-      ephemeral_opaque_candidate_id: candidateId,
-      ephemeral_opaque_window_id: windowId,
-      start_minute_kst: 30,
-      end_minute_kst: 60,
-      duration_minutes: 30,
-    };
-    for (const status of ["optimal", "feasible"]) {
-      assert.equal(
-        hardDeadlineClassification(
-          [
-            {
-              ephemeral_opaque_candidate_id: candidateId,
-              hard_deadline_or_null: null,
-              soft_deadline_or_null: "2026-07-25T15:59:59.999Z",
-            },
-          ],
-          block,
-          "2026-07-26",
-        ),
-        "feasible",
-        `${status} ${candidateId} null hard deadline must have no cutoff even when the soft deadline is earlier`,
-      );
-      assert.equal(
-        hardDeadlineClassification(
-          [
-            {
-              ephemeral_opaque_candidate_id: candidateId,
-              hard_deadline_or_null: "2026-07-25T16:00:00Z",
-              soft_deadline_or_null: null,
-            },
-          ],
-          block,
-          "2026-07-26",
-        ),
-        "feasible",
-        `${status} ${candidateId} exact UTC equality must be feasible`,
-      );
-      assert.equal(
-        hardDeadlineClassification(
-          [
-            {
-              ephemeral_opaque_candidate_id: candidateId,
-              hard_deadline_or_null: "2026-07-25T15:59:59.999Z",
-              soft_deadline_or_null: "2026-07-27T00:00:00Z",
-            },
-          ],
-          block,
-          "2026-07-26",
-        ),
-        "validator_rejected",
-        `${status} ${candidateId} one-millisecond hard breach cannot be overridden by a later soft deadline`,
-      );
-    }
-    const midnightBlock = {
-      ...block,
-      start_minute_kst: 1410,
-      end_minute_kst: 1440,
-    };
-    assert.equal(
-      hardDeadlineClassification(
-        [
-          {
-            ephemeral_opaque_candidate_id: candidateId,
-            hard_deadline_or_null: "2026-07-26T15:00:00Z",
-            soft_deadline_or_null: null,
-          },
-        ],
-        midnightBlock,
-        "2026-07-26",
-      ),
-      "feasible",
-      `${candidateId} end_minute_kst=1440 must equal next-day midnight Asia/Seoul`,
-    );
-    assert.equal(
-      hardDeadlineClassification(
-        [
-          {
-            ephemeral_opaque_candidate_id: candidateId,
-            hard_deadline_or_null: "2026-07-26T14:59:59.999Z",
-            soft_deadline_or_null: null,
-          },
-        ],
-        midnightBlock,
-        "2026-07-26",
-      ),
-      "validator_rejected",
-    );
-    assert.equal(
-      hardDeadlineClassification(
-        [
-          {
-            ephemeral_opaque_candidate_id: candidateId,
-            hard_deadline_or_null: null,
-          },
-          {
-            ephemeral_opaque_candidate_id: candidateId,
-            hard_deadline_or_null: null,
-          },
-        ],
-        block,
-        "2026-07-26",
-      ),
-      "schema_mismatch",
-      `${candidateId} must resolve exactly once`,
-    );
-    assert.equal(
-      hardDeadlineClassification(
-        [
-          {
-            ephemeral_opaque_candidate_id: candidateId.startsWith("ocand_")
-              ? `cand_${"h".repeat(16)}`
-              : `ocand_${"h".repeat(16)}`,
-            hard_deadline_or_null: null,
-          },
-        ],
-        block,
-        "2026-07-26",
-      ),
-      "schema_mismatch",
-      `${candidateId} cannot cross identifier domains`,
-    );
-  }
-
-  const canonicalFallbackBlock = {
-    ephemeral_opaque_candidate_id: `cand_${"f".repeat(16)}`,
-    ephemeral_opaque_window_id: `win_${"g".repeat(16)}`,
-    start_minute_kst: 30,
-    end_minute_kst: 60,
-    duration_minutes: 30,
-  };
-  const validNativeFallbackDeadlineClassification =
-    hardDeadlineClassification(
-      [
-        {
-          ephemeral_opaque_candidate_id:
-            canonicalFallbackBlock.ephemeral_opaque_candidate_id,
-          hard_deadline_or_null: "2026-07-25T16:00:00Z",
-        },
-      ],
-      canonicalFallbackBlock,
-      "2026-07-26",
-    );
-  const invalidNativeFallbackDeadlineClassification =
-    hardDeadlineClassification(
-      [
-        {
-          ephemeral_opaque_candidate_id:
-            canonicalFallbackBlock.ephemeral_opaque_candidate_id,
-          hard_deadline_or_null: "2026-07-25T15:59:59.999Z",
-        },
-      ],
-      canonicalFallbackBlock,
-      "2026-07-26",
-    );
-  assert.equal(validNativeFallbackDeadlineClassification, "feasible");
-  assert.equal(
-    invalidNativeFallbackDeadlineClassification,
-    "validator_rejected",
-  );
-  assert.deepEqual(
-    gatewayOutcomeAfterHardDeadlineValidation(
-      "validator_rejected",
-      validNativeFallbackDeadlineClassification,
-    ),
-    {
-      status: "fallback",
-      triggeringClassification: "validator_rejected",
-      nativeFallbackAttempts: 1,
-      candidatePlanReleased: false,
-      canonicalNativeFallbackReleased: true,
-    },
-  );
-  assert.deepEqual(
-    gatewayOutcomeAfterHardDeadlineValidation(
-      "validator_rejected",
-      invalidNativeFallbackDeadlineClassification,
-    ),
-    {
-      status: "blocked_manual_plan_required",
-      triggeringClassification: "validator_rejected",
-      nativeFallbackAttempts: 1,
-      candidatePlanReleased: false,
-      canonicalNativeFallbackReleased: false,
-    },
-  );
-  assert.deepEqual(
-    gatewayOutcomeAfterHardDeadlineValidation(
-      "schema_mismatch",
-      "feasible",
-    ),
-    {
-      status: "fallback",
-      triggeringClassification: "schema_mismatch",
-      nativeFallbackAttempts: 1,
-      candidatePlanReleased: false,
-      canonicalNativeFallbackReleased: true,
-    },
-  );
-
-  const immutableBlock = {
-    ephemeral_opaque_candidate_id: `cand_${"i".repeat(16)}`,
-    ephemeral_opaque_window_id: `win_${"j".repeat(16)}`,
-    start_minute_kst: 30,
-    end_minute_kst: 60,
-    duration_minutes: 30,
-  };
-  const immutableSnapshot = clone(immutableBlock);
-  assert.equal(
-    hardDeadlineClassification(
-      [
-        {
-          ephemeral_opaque_candidate_id:
-            immutableBlock.ephemeral_opaque_candidate_id,
-          hard_deadline_or_null: "2026-07-25T15:59:59.999Z",
-        },
-      ],
-      immutableBlock,
-      "2026-07-26",
-    ),
-    "validator_rejected",
-  );
-  assert.deepEqual(
-    immutableBlock,
-    immutableSnapshot,
-    "immutable preflight cannot move, drop, unassign, shorten, extend, or rewrite the placement",
-  );
-
-  const projection =
-    scheduler.inputContract.optimizerInvocationProjectionContract;
-  assert.equal(projection.fieldsExactly.includes("study_date_kst"), false);
-  assert.equal(
-    scheduler.resultContract.closedEnumValues.constraint_code_enum.includes(
-      "execution_block_hard_deadline_not_exceeded",
-    ),
-    true,
-  );
-  for (const fixtureId of [
-    "hard_deadline_null",
-    "hard_deadline_exact_equality",
-    "hard_deadline_one_millisecond_late",
-    "hard_deadline_end_minute_1440_kst_utc_boundary",
-    "immutable_prior_placement_hard_deadline_incompatible",
-  ]) {
-    assert.equal(
-      scheduler.fixtureMatrix.scenarioFixtureIds.includes(fixtureId),
-      true,
-      `${fixtureId} must remain in the closed fixture matrix`,
-    );
-  }
-  const hostileMutations = [
-    [
-      "projected hard deadline enforcement removed",
-      (value) => {
-        value.optimizerProjectedResultContract
-          .hardDeadlineFeasibilityRules
-          .knownHardDeadlineBreachTrustedGatewayClassification =
-          "feasible";
-      },
-    ],
-    [
-      "canonical hard deadline enforcement removed",
-      (value) => {
-        value.resultContract.hardDeadlineFeasibilityRules
-          .knownHardDeadlineBreachStatus = "optimal";
-      },
-    ],
-    [
-      "hard constraint code removed",
-      (value) => {
-        value.hardConstraints = value.hardConstraints.filter(
-          (code) => code !== "execution_block_hard_deadline_not_exceeded",
-        );
-      },
-    ],
-    [
-      "native fallback deadline enforcement removed",
-      (value) => {
-        value.nativeValidator
-          .everyExecutionBlockInOptimalFeasibleAndReleasableValidatedNativeFallbackMustSatisfyCandidateHardDeadlinePredicateUsingTrustedCanonicalStudyDateKst =
-          false;
-      },
-    ],
-    [
-      "immutable preflight deadline enforcement removed",
-      (value) => {
-        value.inputContract.priorAcceptedScheduleRules
-          .elapsedAndInProgressPlacementMustSatisfyResolvedCurrentCandidateHardDeadlineBeforeProjection =
-          false;
-      },
-    ],
-    [
-      "study date projected to optimizer",
-      (value) => {
-        value.inputContract.optimizerInvocationProjectionContract
-          .fieldsExactly.push("study_date_kst");
-      },
-    ],
-    [
-      "soft objective allowed to override hard deadline",
-      (value) => {
-        value.resultContract.hardDeadlineFeasibilityRules
-          .softDeadlineObjectiveMayOverrideHardDeadline = true;
-      },
-    ],
-    [
-      "coordinated hard-deadline enforcement removal",
-      (value) => {
-        delete value.optimizerProjectedResultContract
-          .hardDeadlineFeasibilityRules;
-        delete value.resultContract.hardDeadlineFeasibilityRules;
-        const withoutHardDeadlineCode = (codes) =>
-          codes.filter(
-            (code) =>
-              code !== "execution_block_hard_deadline_not_exceeded",
-          );
-        value.hardConstraints = withoutHardDeadlineCode(
-          value.hardConstraints,
-        );
-        value.optimizerProjectedResultContract.closedEnumValues.constraint_code_enum =
-          withoutHardDeadlineCode(
-            value.optimizerProjectedResultContract.closedEnumValues
-              .constraint_code_enum,
-          );
-        value.resultContract.closedEnumValues.constraint_code_enum =
-          withoutHardDeadlineCode(
-            value.resultContract.closedEnumValues.constraint_code_enum,
-          );
-        value.nativeValidator
-          .everyExecutionBlockInOptimalFeasibleAndReleasableValidatedNativeFallbackMustSatisfyCandidateHardDeadlinePredicateUsingTrustedCanonicalStudyDateKst =
-          false;
-        value.nativeValidator
-          .validatedNativeFallbackMustSatisfyCanonicalTenFieldVersionInfoAndHardDeadlineFeasibilityAndAllHardConstraints =
-          false;
-        value.nativeValidator
-          .immutableElapsedOrInProgressPlacementMustPassHardDeadlineBeforeProjectionAndMayNotBeMovedDroppedUnassignedShortenedExtendedOrRewrittenDuringValidationOrFallback =
-          false;
-        value.nativeValidator
-          .minimizeDeadlineLatenessMayReadOnlySoftDeadlineOrNullAndMayNotOverrideHardDeadline =
-          false;
-        value.inputContract.priorAcceptedScheduleRules
-          .elapsedAndInProgressPlacementMustSatisfyResolvedCurrentCandidateHardDeadlineBeforeProjection =
-          false;
-        value.inputContract.optimizerInvocationProjectionContract
-          .projectionRules
-          .immutablePriorPlacementsMustPassExactCurrentCandidateHardDeadlinePredicateBeforeProjection =
-          false;
-        value.inputContract.optimizerInvocationProjectionContract
-          .projectionRules
-          .studyDateKstMustRemainInTrustedGatewayAndMustNotEnterOptimizerProjection =
-          false;
-        value.inputContract.optimizerInvocationProjectionContract
-          .fieldsExactly.push("study_date_kst");
-      },
-    ],
-  ];
-  for (const [name, mutate] of hostileMutations) {
-    const hostile = clone(scheduler);
-    mutate(hostile);
-    assert.equal(
-      c3ResultValidationContractsAreClosed(hostile),
-      false,
-      `${name} must fail coordinated contract validation`,
-    );
-  }
-});
-
-test("second post-ready corrective closes cutoff, half-open overlap, and prerequisite ordering on every release path", async () => {
-  const scheduler = await json(
-    "config/dabangil-full-day-scheduler-contract.json",
-  );
-  assert.equal(c3ResultValidationContractsAreClosed(scheduler), true);
-  assert.equal(projectedResultGatewayContractIsClosed(scheduler), true);
-
-  for (const prose of await Promise.all([
-    text("AGENTS.md"),
-    text("docs/dabangil-unified-program-contract.md"),
-    text("docs/inverge-second-round-final-product-spec.md"),
-    text("docs/inverge-study-schedule-system.md"),
-  ])) {
-    assert.match(
-      prose,
-      /`replan_cutoff_minute_kst_or_null`[\s\S]{0,1000}(?:start_minute_kst\s*>=|at or after)[\s\S]{0,600}(?:1440|1,440)/i,
-    );
-    assert.match(
-      prose,
-      /exact[\s\S]{0,250}immutable[\s\S]{0,500}(?:candidate|window)[\s\S]{0,500}(?:exactly once|unique)/i,
-    );
-    assert.match(
-      prose,
-      /\[start_minute_kst,\s*end_minute_kst\)[\s\S]{0,800}a\.end_minute_kst\s*<=\s*b\.start_minute_kst[\s\S]{0,250}b\.end_minute_kst\s*<=\s*a\.start_minute_kst/i,
-    );
-    assert.match(
-      prose,
-      /prerequisite_candidate_ids[\s\S]{0,900}prerequisite\.end_minute_kst\s*<=\s*dependent\.start_minute_kst/i,
-    );
-    assert.match(
-      prose,
-      /(?:mapping|correlation|ambiguous|cross-domain)[\s\S]{0,600}`schema_mismatch`[\s\S]{0,900}known[\s\S]{0,500}`validator_rejected`/i,
-    );
-  }
-
-  const placement = (candidateId, windowId, start, end) => ({
-    ephemeral_opaque_candidate_id: candidateId,
-    ephemeral_opaque_window_id: windowId,
-    start_minute_kst: start,
-    end_minute_kst: end,
-    duration_minutes: end - start,
-  });
-  const domains = [
-    {
-      name: "canonical",
-      contract: scheduler.resultContract,
-      candidate: (token) => `cand_${token.repeat(16)}`,
-      window: (token) => `win_${token.repeat(16)}`,
-    },
-    {
-      name: "projected",
-      contract: scheduler.optimizerProjectedResultContract,
-      candidate: (token) => `ocand_${token.repeat(16)}`,
-      window: (token) => `owin_${token.repeat(16)}`,
-    },
-  ];
-  const correlationFor = (domain, cutoff) => ({
-    request_id:
-      domain.name === "canonical"
-        ? `req_${"r".repeat(16)}`
-        : `oreq_${"r".repeat(16)}`,
-    input_snapshot_version:
-      domain.name === "canonical"
-        ? `snp_${"s".repeat(16)}`
-        : `osnp_${"s".repeat(16)}`,
-    replan_cutoff_minute_kst_or_null: cutoff,
-  });
-  const invocationFor = (
-    domain,
-    candidateIds,
-    windowIds,
-    cutoff,
-  ) => ({
-    ...correlationFor(domain, cutoff),
-    candidates: candidateIds.map((candidateId) => ({
-      ephemeral_opaque_candidate_id: candidateId,
-    })),
-    available_windows: windowIds.map((windowId) => ({
-      ephemeral_opaque_window_id: windowId,
-    })),
-  });
-
-  for (const domain of domains) {
-    const ids = ["a", "b", "c", "d"].map(domain.candidate);
-    const windowId = domain.window("w");
-    const first = placement(ids[0], windowId, 60, 90);
-    const adjacent = placement(ids[1], windowId, 90, 120);
-    const overlapping = placement(ids[1], windowId, 89, 119);
-    for (const status of ["optimal", "feasible"]) {
-      for (const [cutoff, immutables, block, expected, label] of [
-        [null, [], first, "feasible", "null"],
-        [
-          null,
-          [clone(first), clone(first)],
-          first,
-          "schema_mismatch",
-          "null-still-validates-ambiguous-match",
-        ],
-        [0, [], first, "feasible", "zero"],
-        [60, [], first, "feasible", "equality"],
-        [61, [], first, "validator_rejected", "one-minute-early"],
-        [1440, [], first, "validator_rejected", "1440-new"],
-        [1440, [clone(first)], first, "feasible", "immutable-exempt"],
-        [
-          1440,
-          [clone(first), clone(first)],
-          first,
-          "schema_mismatch",
-          "immutable-ambiguous",
-        ],
-        [
-          60,
-          [clone(first)],
-          { ...first, start_minute_kst: 59, duration_minutes: 31 },
-          "validator_rejected",
-          "immutable-moved",
-        ],
-      ]) {
-        assert.equal(
-          replanCutoffClassification(
-            domain.contract,
-            status,
-            block,
-            invocationFor(domain, ids, [windowId], cutoff),
-            immutables,
-            correlationFor(domain, cutoff),
-          ),
-          expected,
-          `${domain.name} ${status} cutoff ${label}`,
-        );
-      }
-      const correlatedAt60 = invocationFor(
-        domain,
-        ids,
-        [windowId],
-        60,
-      );
-      const otherDomainCandidate =
-        domain.name === "canonical"
-          ? `ocand_${"z".repeat(16)}`
-          : `cand_${"z".repeat(16)}`;
-      const duplicateCandidateInvocation = clone(correlatedAt60);
-      duplicateCandidateInvocation.candidates.push(
-        clone(duplicateCandidateInvocation.candidates[0]),
-      );
-      const duplicateWindowInvocation = clone(correlatedAt60);
-      duplicateWindowInvocation.available_windows.push(
-        clone(duplicateWindowInvocation.available_windows[0]),
-      );
-      for (const [block, invocation, immutables, expectedBinding, label] of [
-        [
-          placement(domain.candidate("z"), windowId, 60, 90),
-          correlatedAt60,
-          [],
-          correlationFor(domain, 60),
-          "unknown-candidate",
-        ],
-        [
-          placement(ids[0], domain.window("z"), 60, 90),
-          correlatedAt60,
-          [],
-          correlationFor(domain, 60),
-          "unknown-window",
-        ],
-        [
-          placement(otherDomainCandidate, windowId, 60, 90),
-          correlatedAt60,
-          [],
-          correlationFor(domain, 60),
-          "cross-domain",
-        ],
-        [
-          first,
-          duplicateCandidateInvocation,
-          [],
-          correlationFor(domain, 60),
-          "duplicate-candidate-map",
-        ],
-        [
-          first,
-          duplicateWindowInvocation,
-          [],
-          correlationFor(domain, 60),
-          "duplicate-window-map",
-        ],
-        [
-          first,
-          invocationFor(domain, ids, [windowId], 61),
-          [],
-          correlationFor(domain, 60),
-          "wrong-cutoff-correlation",
-        ],
-        [
-          first,
-          correlatedAt60,
-          [
-            clone(first),
-            placement(ids[0], windowId, 30, 60),
-          ],
-          correlationFor(domain, 60),
-          "conflicting-immutable-relation",
-        ],
-        [
-          first,
-          correlatedAt60,
-          [
-            placement(
-              domain.candidate("z"),
-              windowId,
-              30,
-              60,
-            ),
-          ],
-          correlationFor(domain, 60),
-          "dangling-immutable-candidate",
-        ],
-      ]) {
-        assert.equal(
-          replanCutoffClassification(
-            domain.contract,
-            status,
-            block,
-            invocation,
-            immutables,
-            expectedBinding,
-          ),
-          "schema_mismatch",
-          `${domain.name} ${status} cutoff ${label}`,
-        );
-      }
-
-      for (const [blocks, fixed, immutables, expected, label] of [
-        [[first, adjacent], [], [], "feasible", "adjacent"],
-        [
-          [first, overlapping],
-          [],
-          [],
-          "validator_rejected",
-          "execution-execution",
-        ],
-        [
-          [first],
-          [{ start_minute_kst: 89, end_minute_kst: 100 }],
-          [],
-          "validator_rejected",
-          "execution-fixed",
-        ],
-        [
-          [first],
-          [],
-          [placement(ids[1], windowId, 80, 100)],
-          "validator_rejected",
-          "execution-immutable",
-        ],
-        [[first], [], [clone(first)], "feasible", "immutable-self"],
-        [
-          [first],
-          [],
-          [clone(first), clone(first)],
-          "schema_mismatch",
-          "immutable-self-ambiguous",
-        ],
-        [
-          [],
-          [],
-          [first, placement(ids[1], windowId, 80, 100)],
-          "validator_rejected",
-          "immutable-immutable-preflight",
-        ],
-        [
-          [],
-          [{ start_minute_kst: 89, end_minute_kst: 100 }],
-          [first],
-          "validator_rejected",
-          "immutable-fixed-preflight",
-        ],
-      ]) {
-        assert.equal(
-          pairwiseBlockNonOverlapClassification(
-            domain.contract,
-            status,
-            blocks,
-            fixed,
-            immutables,
-          ),
-          expected,
-          `${domain.name} ${status} overlap ${label}`,
-        );
-      }
-
-      const prerequisiteCandidates = [
-        {
-          ephemeral_opaque_candidate_id: ids[0],
-          prerequisite_candidate_ids: [],
-        },
-        {
-          ephemeral_opaque_candidate_id: ids[1],
-          prerequisite_candidate_ids: [],
-        },
-        {
-          ephemeral_opaque_candidate_id: ids[3],
-          prerequisite_candidate_ids: [ids[0], ids[1]],
-        },
-      ];
-      const prerequisiteOne = placement(ids[0], windowId, 30, 60);
-      const prerequisiteTwo = placement(ids[1], windowId, 60, 90);
-      const dependent = placement(ids[3], windowId, 90, 120);
-      assert.equal(
-        prerequisiteOrderingClassification(
-          domain.contract,
-          status,
-          [prerequisiteCandidates[0]],
-          [prerequisiteOne],
-        ),
-        "feasible",
-        `${domain.name} ${status} empty prerequisite`,
-      );
-      assert.equal(
-        prerequisiteOrderingClassification(
-          domain.contract,
-          status,
-          prerequisiteCandidates,
-          [prerequisiteOne, prerequisiteTwo, dependent],
-        ),
-        "feasible",
-        `${domain.name} ${status} multiple prerequisites and equality`,
-      );
-      assert.equal(
-        prerequisiteOrderingClassification(
-          domain.contract,
-          status,
-          prerequisiteCandidates,
-          [
-            prerequisiteOne,
-            placement(ids[1], windowId, 61, 91),
-            dependent,
-          ],
-        ),
-        "validator_rejected",
-        `${domain.name} ${status} reversed prerequisite`,
-      );
-      assert.equal(
-        prerequisiteOrderingClassification(
-          domain.contract,
-          status,
-          prerequisiteCandidates,
-          [prerequisiteOne, dependent],
-          [{ ephemeral_opaque_candidate_id: ids[1] }],
-        ),
-        "validator_rejected",
-        `${domain.name} ${status} unassigned prerequisite`,
-      );
-      assert.equal(
-        prerequisiteOrderingClassification(
-          domain.contract,
-          status,
-          prerequisiteCandidates,
-          [dependent],
-        ),
-        "validator_rejected",
-        `${domain.name} ${status} known missing prerequisite`,
-      );
-      const crossDomainId =
-        domain.name === "canonical"
-          ? `ocand_${"x".repeat(16)}`
-          : `cand_${"x".repeat(16)}`;
-      assert.equal(
-        prerequisiteOrderingClassification(
-          domain.contract,
-          status,
-          [
-            {
-              ephemeral_opaque_candidate_id: ids[2],
-              prerequisite_candidate_ids: [crossDomainId],
-            },
-          ],
-          [placement(ids[2], windowId, 120, 150)],
-        ),
-        "schema_mismatch",
-        `${domain.name} ${status} cross-domain prerequisite`,
-      );
-      assert.equal(
-        prerequisiteOrderingClassification(
-          domain.contract,
-          status,
-          [
-            {
-              ephemeral_opaque_candidate_id: ids[2],
-              prerequisite_candidate_ids: [domain.candidate("z")],
-            },
-          ],
-          [placement(ids[2], windowId, 120, 150)],
-        ),
-        "schema_mismatch",
-        `${domain.name} ${status} dangling prerequisite`,
-      );
-      assert.equal(
-        prerequisiteOrderingClassification(
-          domain.contract,
-          status,
-          [
-            prerequisiteCandidates[0],
-            {
-              ephemeral_opaque_candidate_id: ids[2],
-              prerequisite_candidate_ids: [ids[0], ids[0]],
-            },
-          ],
-          [prerequisiteOne, placement(ids[2], windowId, 60, 90)],
-        ),
-        "schema_mismatch",
-        `${domain.name} ${status} duplicate prerequisite relation`,
-      );
-      assert.equal(
-        prerequisiteOrderingClassification(
-          domain.contract,
-          status,
-          [
-            prerequisiteCandidates[0],
-            clone(prerequisiteCandidates[0]),
-          ],
-          [prerequisiteOne],
-        ),
-        "schema_mismatch",
-        `${domain.name} ${status} non-bijective dependent resolution`,
-      );
-
-      const immutablePrerequisitePlacements = [
-        clone(prerequisiteOne),
-        clone(prerequisiteTwo),
-        clone(dependent),
-      ];
-      const immutablePrerequisiteSnapshot = clone(
-        immutablePrerequisitePlacements,
-      );
-      assert.equal(
-        prerequisiteOrderingClassification(
-          domain.contract,
-          "immutable_preflight",
-          prerequisiteCandidates,
-          immutablePrerequisitePlacements,
-        ),
-        "feasible",
-        `${domain.name} immutable preflight equality`,
-      );
-      assert.equal(
-        prerequisiteOrderingClassification(
-          domain.contract,
-          "immutable_preflight",
-          prerequisiteCandidates,
-          [
-            prerequisiteOne,
-            placement(ids[1], windowId, 61, 91),
-            dependent,
-          ],
-        ),
-        "validator_rejected",
-        `${domain.name} immutable preflight reversed prerequisite`,
-      );
-      assert.equal(
-        prerequisiteOrderingClassification(
-          domain.contract,
-          "immutable_preflight",
-          prerequisiteCandidates,
-          [dependent],
-        ),
-        "validator_rejected",
-        `${domain.name} immutable preflight missing prerequisite`,
-      );
-      assert.equal(
-        prerequisiteOrderingClassification(
-          domain.contract,
-          "immutable_preflight",
-          prerequisiteCandidates,
-          [prerequisiteOne, dependent],
-          [{ ephemeral_opaque_candidate_id: ids[1] }],
-        ),
-        "validator_rejected",
-        `${domain.name} immutable preflight unassigned prerequisite`,
-      );
-      assert.equal(
-        prerequisiteOrderingClassification(
-          domain.contract,
-          "immutable_preflight",
-          [
-            {
-              ephemeral_opaque_candidate_id: ids[2],
-              prerequisite_candidate_ids: [domain.candidate("z")],
-            },
-          ],
-          [placement(ids[2], windowId, 120, 150)],
-        ),
-        "schema_mismatch",
-        `${domain.name} immutable preflight dangling relation`,
-      );
-      assert.deepEqual(
-        immutablePrerequisitePlacements,
-        immutablePrerequisiteSnapshot,
-        `${domain.name} immutable prerequisite preflight cannot mutate placements`,
-      );
-    }
-  }
-
-  const canonical = domains[0];
-  const fallbackWindow = canonical.window("f");
-  const earlyBlock = placement(
-    canonical.candidate("p"),
-    fallbackWindow,
-    59,
-    89,
-  );
-  const validFallback = placement(
-    canonical.candidate("q"),
-    fallbackWindow,
-    60,
-    90,
-  );
-  assert.deepEqual(
-    gatewayOutcomeAfterHardDeadlineValidation(
-      replanCutoffClassification(
-        canonical.contract,
-        "optimal",
-        earlyBlock,
-        invocationFor(
-          canonical,
-          [
-            earlyBlock.ephemeral_opaque_candidate_id,
-            validFallback.ephemeral_opaque_candidate_id,
-          ],
-          [fallbackWindow],
-          60,
-        ),
-        [],
-        correlationFor(canonical, 60),
-      ),
-      replanCutoffClassification(
-        canonical.contract,
-        "canonical_native_fallback",
-        validFallback,
-        invocationFor(
-          canonical,
-          [
-            earlyBlock.ephemeral_opaque_candidate_id,
-            validFallback.ephemeral_opaque_candidate_id,
-          ],
-          [fallbackWindow],
-          60,
-        ),
-        [],
-        correlationFor(canonical, 60),
-      ),
-    ),
-    {
-      status: "fallback",
-      triggeringClassification: "validator_rejected",
-      nativeFallbackAttempts: 1,
-      candidatePlanReleased: false,
-      canonicalNativeFallbackReleased: true,
-    },
-  );
-  assert.deepEqual(
-    gatewayOutcomeAfterHardDeadlineValidation(
-      "validator_rejected",
-      pairwiseBlockNonOverlapClassification(
-        canonical.contract,
-        "canonical_native_fallback",
-        [validFallback],
-        [{ start_minute_kst: 89, end_minute_kst: 100 }],
-        [],
-      ),
-    ),
-    {
-      status: "blocked_manual_plan_required",
-      triggeringClassification: "validator_rejected",
-      nativeFallbackAttempts: 1,
-      candidatePlanReleased: false,
-      canonicalNativeFallbackReleased: false,
-    },
-  );
-  assert.deepEqual(
-    gatewayOutcomeAfterHardDeadlineValidation(
-      "validator_rejected",
-      replanCutoffClassification(
-        canonical.contract,
-        "canonical_native_fallback",
-        earlyBlock,
-        invocationFor(
-          canonical,
-          [earlyBlock.ephemeral_opaque_candidate_id],
-          [fallbackWindow],
-          60,
-        ),
-        [],
-        correlationFor(canonical, 60),
-      ),
-    ),
-    {
-      status: "blocked_manual_plan_required",
-      triggeringClassification: "validator_rejected",
-      nativeFallbackAttempts: 1,
-      candidatePlanReleased: false,
-      canonicalNativeFallbackReleased: false,
-    },
-    "a before-cutoff fallback releases no plan",
-  );
-  const prerequisiteId = canonical.candidate("r");
-  const dependentId = canonical.candidate("s");
-  const fallbackPrerequisiteCandidates = [
-    {
-      ephemeral_opaque_candidate_id: prerequisiteId,
-      prerequisite_candidate_ids: [],
-    },
-    {
-      ephemeral_opaque_candidate_id: dependentId,
-      prerequisite_candidate_ids: [prerequisiteId],
-    },
-  ];
-  const fallbackPrerequisite = placement(
-    prerequisiteId,
-    fallbackWindow,
-    30,
-    60,
-  );
-  const fallbackDependent = placement(
-    dependentId,
-    fallbackWindow,
-    60,
-    90,
-  );
-  assert.deepEqual(
-    gatewayOutcomeAfterHardDeadlineValidation(
-      "validator_rejected",
-      prerequisiteOrderingClassification(
-        canonical.contract,
-        "canonical_native_fallback",
-        fallbackPrerequisiteCandidates,
-        [fallbackPrerequisite, fallbackDependent],
-      ),
-    ),
-    {
-      status: "fallback",
-      triggeringClassification: "validator_rejected",
-      nativeFallbackAttempts: 1,
-      candidatePlanReleased: false,
-      canonicalNativeFallbackReleased: true,
-    },
-  );
-  assert.deepEqual(
-    gatewayOutcomeAfterHardDeadlineValidation(
-      "validator_rejected",
-      prerequisiteOrderingClassification(
-        canonical.contract,
-        "canonical_native_fallback",
-        fallbackPrerequisiteCandidates,
-        [fallbackDependent],
-      ),
-    ),
-    {
-      status: "blocked_manual_plan_required",
-      triggeringClassification: "validator_rejected",
-      nativeFallbackAttempts: 1,
-      candidatePlanReleased: false,
-      canonicalNativeFallbackReleased: false,
-    },
-    "a prerequisite-invalid fallback releases no plan",
-  );
-  const immutableSnapshot = clone(validFallback);
-  replanCutoffClassification(
-    canonical.contract,
-    "canonical_native_fallback",
-    validFallback,
-    invocationFor(
-      canonical,
-      [validFallback.ephemeral_opaque_candidate_id],
-      [fallbackWindow],
-      1440,
-    ),
-    [clone(validFallback)],
-    correlationFor(canonical, 1440),
-  );
-  assert.deepEqual(validFallback, immutableSnapshot);
-
-  const requiredFixtureIds = [
-    "replan_cutoff_null",
-    "replan_cutoff_zero",
-    "replan_cutoff_exact_equality",
-    "replan_cutoff_one_minute_early",
-    "replan_cutoff_1440_no_new_or_moved_block",
-    "replan_cutoff_exact_immutable_exemption",
-    "replan_cutoff_ambiguous_immutable_matching",
-    "half_open_adjacent_intervals",
-    "execution_execution_overlap",
-    "execution_fixed_overlap",
-    "execution_immutable_overlap",
-    "exact_immutable_self_representation",
-    "prerequisite_empty",
-    "prerequisite_exact_equality",
-    "prerequisite_reversed",
-    "prerequisite_unassigned",
-    "prerequisite_multiple_all_required",
-    "relational_projected_identifier_domain_optimal",
-    "relational_projected_identifier_domain_feasible",
-    "relational_canonical_identifier_domain_optimal",
-    "relational_canonical_identifier_domain_feasible",
-    "relational_canonical_native_fallback_valid",
-    "relational_canonical_native_fallback_invalid",
-    "relational_immutable_preflight",
-    "relational_coordinated_enforcement_removal",
-  ];
-  const secondCorrectiveContractIsClosed = (value) =>
-    c3ResultValidationContractsAreClosed(value) &&
-    projectedResultGatewayContractIsClosed(value) &&
-    requiredFixtureIds.every((fixtureId) =>
-      value.fixtureMatrix.scenarioFixtureIds.includes(fixtureId),
-    );
-  assert.equal(secondCorrectiveContractIsClosed(scheduler), true);
-  assert.deepEqual(
-    scheduler.optimizerProjectedResultContract.inverseMappingContract
-      .identifierBearingPathsExactly,
-    PROJECTED_RESULT_ID_PATHS,
-  );
-
-  const hostileMutations = [
-    (value) => {
-      delete value.optimizerProjectedResultContract
-        .replanCutoffFeasibilityRules;
-    },
-    (value) => {
-      delete value.resultContract.pairwiseBlockNonOverlapRules;
-    },
-    (value) => {
-      delete value.optimizerProjectedResultContract
-        .prerequisiteOrderingRules;
-    },
-    (value) => {
-      value.hardConstraints = value.hardConstraints.filter(
-        (code) =>
-          code !==
-          "new_or_moved_execution_block_starts_at_or_after_replan_cutoff",
-      );
-    },
-    (value) => {
-      value.nativeValidator
-        .validatedNativeFallbackMustSatisfyCanonicalReplanCutoffPairwiseBlockNonOverlapAndPrerequisiteOrderingAndAllHardConstraints =
-        false;
-    },
-    (value) => {
-      value.inputContract.optimizerInvocationProjectionContract
-        .projectionRules
-        .immutableCutoffOverlapOrPrerequisiteIncompatibilityMayReachOptimizer =
-        true;
-    },
-    (value) => {
-      value.s237oBenchmarkAcceptanceContract.benchmarkResultDigestContract
-        .failureStatusFixtureResultSetDigestContract
-        .validNativeFallbackResultMustSatisfyCanonicalReplanCutoffPairwiseBlockNonOverlapAndPrerequisiteOrderingWhenManualBlockDigestIsNull =
-        false;
-    },
-    (value) => {
-      value.fixtureMatrix.scenarioFixtureIds =
-        value.fixtureMatrix.scenarioFixtureIds.filter(
-          (fixtureId) =>
-            fixtureId !== "relational_coordinated_enforcement_removal",
-        );
-    },
-    (value) => {
-      delete value.optimizerProjectedResultContract
-        .replanCutoffFeasibilityRules;
-      delete value.optimizerProjectedResultContract
-        .pairwiseBlockNonOverlapRules;
-      delete value.optimizerProjectedResultContract
-        .prerequisiteOrderingRules;
-      delete value.resultContract.replanCutoffFeasibilityRules;
-      delete value.resultContract.pairwiseBlockNonOverlapRules;
-      delete value.resultContract.prerequisiteOrderingRules;
-      const removedCodes = new Set([
-        "new_or_moved_execution_block_starts_at_or_after_replan_cutoff",
-        "block_overlap_zero",
-        "prerequisite_order_violations_zero",
-      ]);
-      const retained = (code) => !removedCodes.has(code);
-      value.hardConstraints = value.hardConstraints.filter(retained);
-      value.optimizerProjectedResultContract.closedEnumValues.constraint_code_enum =
-        value.optimizerProjectedResultContract.closedEnumValues.constraint_code_enum.filter(
-          retained,
-        );
-      value.resultContract.closedEnumValues.constraint_code_enum =
-        value.resultContract.closedEnumValues.constraint_code_enum.filter(
-          retained,
-        );
-      const projectionRules =
-        value.inputContract.optimizerInvocationProjectionContract
-          .projectionRules;
-      for (const field of [
-        "immutablePriorPlacementsMustPassExactReplanCutoffExemptionResolutionBeforeProjection",
-        "exactImmutableReplanCutoffExemptionFields",
-        "exactImmutableReplanCutoffExemptionMustMatchExactlyOneElapsedOrInProgressPriorPlacementThroughSameCorrelatedInvocation",
-        "ambiguousImmutableReplanCutoffExemptionMatchingStatus",
-        "nonExemptPlacementMustStartAtOrAfterNonNullReplanCutoff",
-        "nullReplanCutoffMeansNoReplanLowerBound",
-        "replanCutoffEqualityIsFeasible",
-        "replanCutoff1440AllowsNoNewOrMovedExecutionBlock",
-        "immutablePriorPlacementsMustBePairwiseNonOverlappingWithEveryCurrentFixedBlockBeforeProjection",
-        "immutablePriorPlacementsMustRemainPairwiseNonOverlappingBeforeProjection",
-        "exactUnchangedImmutableSelfRepresentationIsOneLogicalBlockAndDoesNotOverlapItself",
-        "ambiguousImmutableSelfRepresentationMatchingStatus",
-        "placedImmutableDependentMustHaveEveryPrerequisitePlacedExactlyOnceAndEndingAtOrBeforeDependentStartBeforeProjection",
-        "immutablePrerequisiteUnknownDanglingDuplicateCrossDomainOrNonBijectiveRelationStatus",
-        "immutablePrerequisiteKnownMissingUnassignedOrReversedPlacementStatus",
-        "immutableCutoffOverlapOrPrerequisiteIncompatibilityMayReachOptimizer",
-        "immutableCutoffOverlapOrPrerequisiteIncompatibilityMustAttemptExactlyOneSeparatelyValidatedNativeFallbackWithoutRewritingImmutableOrFixedPlacements",
-        "immutableCutoffOverlapOrPrerequisiteIncompatibilityInvalidNativeFallbackResult",
-        "immutableCutoffOverlapOrPrerequisiteIncompatibilityInvalidNativeFallbackMayTriggerAnotherFallback",
-      ]) {
-        delete projectionRules[field];
-      }
-      projectionRules.elapsedAndInProgressPlacementsBecomeImmutablePriorPlacements =
-        false;
-
-      const priorRules =
-        value.inputContract.priorAcceptedScheduleRules;
-      for (const field of [
-        "elapsedAndInProgressPlacementMustResolveExactlyOneImmutableReplanCutoffExemptionByCandidateWindowStartEndAndDurationBeforeProjection",
-        "ambiguousImmutableReplanCutoffExemptionMatchingStatus",
-        "nonExemptNewOrMovedPlacementMustStartAtOrAfterNonNullReplanCutoff",
-        "nullReplanCutoffMeansNoReplanLowerBound",
-        "replanCutoffEqualityIsFeasible",
-        "replanCutoff1440AllowsNoNewOrMovedExecutionBlock",
-        "elapsedAndInProgressPlacementMustBePairwiseNonOverlappingWithEveryCurrentFixedBlockBeforeProjection",
-        "elapsedAndInProgressPlacementsMustRemainPairwiseNonOverlappingBeforeProjection",
-        "exactUnchangedImmutableSelfRepresentationIsOneLogicalBlockAndDoesNotOverlapItself",
-        "ambiguousImmutableSelfRepresentationMatchingStatus",
-        "placedElapsedOrInProgressDependentMustHaveEveryPrerequisitePlacedExactlyOnceAndEndingAtOrBeforeDependentStartBeforeProjection",
-        "immutablePrerequisiteUnknownDanglingDuplicateCrossDomainOrNonBijectiveRelationStatus",
-        "immutablePrerequisiteKnownMissingUnassignedOrReversedPlacementStatus",
-        "immutableCutoffOverlapOrPrerequisiteIncompatibilityMayReachOptimizer",
-        "immutableCutoffOverlapOrPrerequisiteIncompatibilityMustAttemptExactlyOneSeparatelyValidatedNativeFallbackWithoutMovingDroppingUnassigningShorteningExtendingOrRewritingImmutableOrFixedPlacements",
-        "immutableCutoffOverlapOrPrerequisiteIncompatibilityInvalidNativeFallbackResult",
-        "immutableCutoffOverlapOrPrerequisiteIncompatibilityInvalidNativeFallbackMayTriggerAnotherFallback",
-      ]) {
-        delete priorRules[field];
-      }
-      priorRules.newOrMovedPlacementMayStartBeforeCutoff = true;
-      priorRules.placementsMustBeNonOverlappingAndWithinPriorDayBounds =
-        false;
-      priorRules.elapsedOrInProgressPlacementMayBeDroppedShortenedMovedOrDuplicated =
-        true;
-      priorRules.immutablePlacementOrCurrentCandidatePolicyMayBeRewrittenToRepairIncompatibility =
-        true;
-
-      const gateway =
-        value.optimizerProjectedResultContract
-          .canonicalGatewayConstructionContract;
-      gateway.optimalOrFeasibleBranchOrderExactly[2] =
-        "validate_projected_candidate_accounting_duration_non_droppable_candidate_window_and_hard_deadline_rules_using_trusted_gateway_context";
-      gateway.optimalOrFeasibleBranchOrderExactly[7] =
-        "validate_complete_canonical_result_contract_and_every_native_hard_constraint";
-      gateway.solverOrTrustedGatewayFailureBranchOrderExactly[5] =
-        "validate_complete_canonical_result_contract_candidate_accounting_duration_non_droppable_candidate_window_hard_deadline_and_every_hard_constraint";
-      value.optimizerProjectedResultContract.processingOrderExactly[6] =
-        "validate_complete_canonical_result_contract_and_every_native_hard_constraint";
-      for (const field of [
-        "replanCutoffStructuralMappingCorrelationOrAmbiguousImmutableMatchingFailureStatus",
-        "knownBeforeCutoffPlacementStatus",
-        "pairwiseNonOverlapStructuralMappingCorrelationOrAmbiguousImmutableSelfMatchingFailureStatus",
-        "knownBlockOverlapStatus",
-        "prerequisiteUnknownDanglingDuplicateCrossDomainOrNonBijectiveRelationStatus",
-        "knownMissingUnassignedOrReversedPrerequisitePlacementStatus",
-        "knownPrerequisitePlacementFailureClassificationPrecedesGenericCandidateAccountingOmissionClassification",
-        "everyKnownCutoffOverlapOrPrerequisiteFailureMustAttemptExactlyOneIndependentlyPreparedCanonicalNativeFallback",
-      ]) {
-        delete value.optimizerProjectedResultContract.failureRouting[field];
-      }
-
-      delete value.resultContract.fallbackValueRules
-        .referencedNativeFallbackMustBeSeparatelyValidatedAgainstCanonicalReplanCutoffPairwiseBlockNonOverlapAndPrerequisiteOrderingBeforeRelease;
-      delete value.resultContract.fallbackValueRules
-        .missingUnavailableNonDroppableInvalidCandidateWindowInvalidHardDeadlineInvalidReplanCutoffOverlappingInvalidPrerequisiteInvalidCanonicalVersionInfoOrHardConstraintInvalidNativePlanResult;
-      for (const field of [
-        "validatedNativeFallbackMustSatisfyCanonicalReplanCutoffPairwiseBlockNonOverlapAndPrerequisiteOrderingAndAllHardConstraints",
-        "everyNewOrMovedExecutionBlockInOptimalFeasibleAndReleasableValidatedNativeFallbackMustStartAtOrAfterNonNullReplanCutoffUnlessItIsTheUniqueExactImmutableElapsedOrInProgressSelfRepresentation",
-        "everyOptimalFeasibleAndReleasableValidatedNativeFallbackPlanMustSatisfyHalfOpenPairwiseNonOverlapForExecutionExecutionExecutionFixedAndNewOrMovedExecutionImmutablePairs",
-        "everyPlacedDependentInOptimalFeasibleAndReleasableValidatedNativeFallbackMustHaveEveryPrerequisitePlacedExactlyOnceAndEndingAtOrBeforeDependentStart",
-        "cutoffOverlapOrPrerequisiteStructuralMappingCorrelationAmbiguityStatus",
-        "knownBeforeCutoffOverlapMissingUnassignedOrReversedPrerequisiteStatus",
-        "knownPrerequisitePlacementFailureClassificationPrecedesGenericCandidateAccountingOmissionClassification",
-        "immutableElapsedOrInProgressPlacementMustPassUniqueExactCutoffExemptionPairwiseNonOverlapAndPrerequisiteOrderingPreflightAndMayNotBeMovedDroppedUnassignedShortenedExtendedOrRewrittenDuringValidationOrFallback",
-        "fixedBlockMayBeRewrittenToRepairOverlap",
-      ]) {
-        delete value.nativeValidator[field];
-      }
-
-      const resolvedMembers =
-        value.s237oBenchmarkAcceptanceContract
-          .benchmarkResultDigestContract.resolvedArtifactMembersContract;
-      const rejectedAttempt =
-        resolvedMembers.rejectedNativeFallbackAttemptValidationRecordContract;
-      rejectedAttempt.fieldSchemas.rejection_code_enum =
-        rejectedAttempt.fieldSchemas.rejection_code_enum.filter(
-          (code) =>
-            ![
-              "replan_cutoff_invalid",
-              "block_overlap_invalid",
-              "prerequisite_order_invalid",
-            ].includes(code),
-        );
-      rejectedAttempt.rejectionValidationOrderExactly =
-        rejectedAttempt.rejectionValidationOrderExactly.filter(
-          (step) =>
-            ![
-              "replan_cutoff_feasibility",
-              "pairwise_block_non_overlap",
-              "prerequisite_ordering",
-            ].includes(step),
-        );
-      delete resolvedMembers.verificationRules
-        .validFailureFallbackMustSatisfyCanonicalReplanCutoffPairwiseBlockNonOverlapAndPrerequisiteOrdering;
-      delete value.s237oBenchmarkAcceptanceContract
-        .benchmarkResultDigestContract
-        .failureStatusFixtureResultSetDigestContract
-        .validNativeFallbackResultMustSatisfyCanonicalReplanCutoffPairwiseBlockNonOverlapAndPrerequisiteOrderingWhenManualBlockDigestIsNull;
-
-      const allSecondCorrectiveFixtureIds = new Set(requiredFixtureIds);
-      value.fixtureMatrix.scenarioFixtureIds =
-        value.fixtureMatrix.scenarioFixtureIds.filter(
-          (fixtureId) => !allSecondCorrectiveFixtureIds.has(fixtureId),
-        );
-    },
-  ];
-  for (const mutate of hostileMutations) {
-    const hostile = clone(scheduler);
-    mutate(hostile);
-    assert.equal(secondCorrectiveContractIsClosed(hostile), false);
-  }
-});
-
-test("C3 result accounting is an exact invocation partition and hostile candidate sets fail closed", async () => {
-  const scheduler = await json(
-    "config/dabangil-full-day-scheduler-contract.json",
-  );
-  assert.equal(c3ResultValidationContractsAreClosed(scheduler), true);
-  assert.equal(projectedResultGatewayContractIsClosed(scheduler), true);
-
-  const canonicalCandidateIds = [
-    `cand_${"a".repeat(16)}`,
-    `cand_${"b".repeat(16)}`,
-    `cand_${"c".repeat(16)}`,
-  ];
-  const projectedCandidateIds = [
-    `ocand_${"a".repeat(16)}`,
-    `ocand_${"b".repeat(16)}`,
-    `ocand_${"c".repeat(16)}`,
-  ];
-  const blocksFor = (candidateIds) => [
-    { ephemeral_opaque_candidate_id: candidateIds[0] },
-    { ephemeral_opaque_candidate_id: candidateIds[1] },
-  ];
-  const unassignedFor = (candidateIds) => [
-    { ephemeral_opaque_candidate_id: candidateIds[2] },
-  ];
-
-  for (const candidateIds of [canonicalCandidateIds, projectedCandidateIds]) {
-    assert.equal(
-      candidateAccountingIsExact(
-        candidateIds,
-        blocksFor(candidateIds),
-        unassignedFor(candidateIds),
-      ),
-      true,
-    );
-    assert.equal(
-      candidateAccountingIsExact(
-        [candidateIds[0], candidateIds[1], candidateIds[1]],
-        blocksFor(candidateIds),
-        unassignedFor(candidateIds),
-      ),
-      false,
-      "duplicate invocation candidate rows must fail before set accounting",
-    );
-
-    const hostilePartitions = [
-      [
-        "omitted candidate",
-        blocksFor(candidateIds).slice(0, 1),
-        unassignedFor(candidateIds),
-      ],
-      [
-        "unknown extra candidate",
-        [
-          ...blocksFor(candidateIds),
-          {
-            ephemeral_opaque_candidate_id: candidateIds[0].startsWith("ocand_")
-              ? `ocand_${"z".repeat(16)}`
-              : `cand_${"z".repeat(16)}`,
-          },
-        ],
-        unassignedFor(candidateIds),
-      ],
-      [
-        "equal counts but one omitted and one unknown",
-        blocksFor(candidateIds),
-        [
-          {
-            ephemeral_opaque_candidate_id: candidateIds[0].startsWith("ocand_")
-              ? `ocand_${"z".repeat(16)}`
-              : `cand_${"z".repeat(16)}`,
-          },
-        ],
-      ],
-      [
-        "duplicate execution candidate",
-        [...blocksFor(candidateIds), blocksFor(candidateIds)[0]],
-        unassignedFor(candidateIds),
-      ],
-      [
-        "duplicate unassigned candidate",
-        blocksFor(candidateIds),
-        [...unassignedFor(candidateIds), unassignedFor(candidateIds)[0]],
-      ],
-      [
-        "placed and unassigned overlap",
-        blocksFor(candidateIds),
-        [
-          ...unassignedFor(candidateIds),
-          { ephemeral_opaque_candidate_id: candidateIds[0] },
-        ],
-      ],
-    ];
-    for (const [name, blocks, unassigned] of hostilePartitions) {
-      assert.equal(
-        candidateAccountingIsExact(candidateIds, blocks, unassigned),
-        false,
-        `${name} must fail exact accounting`,
-      );
-    }
-
-    const diagnosticViolationCandidateIds = [candidateIds[1]];
-    assert.equal(diagnosticViolationCandidateIds.length, 1);
-    assert.equal(
-      candidateAccountingIsExact(
-        candidateIds,
-        [{ ephemeral_opaque_candidate_id: candidateIds[0] }],
-        [{ ephemeral_opaque_candidate_id: candidateIds[2] }],
-      ),
-      false,
-      "a candidate appearing only in violations remains omitted",
-    );
-  }
-
-  const jointlyWeakenedMutations = [
-    [
-      "union may omit candidates",
-      (contract) => {
-        contract.candidateAccountingRules
-          .executionBlockAndUnassignedCandidateIdSetUnionMustEqualExactCorrelatedInvocationCandidateSet =
-          false;
-      },
-    ],
-    [
-      "placed and unassigned overlap allowed",
-      (contract) => {
-        contract.candidateAccountingRules
-          .executionBlockAndUnassignedCandidateIdSetsDisjoint = false;
-      },
-    ],
-    [
-      "violation IDs satisfy accounting",
-      (contract) => {
-        contract.candidateAccountingRules
-          .violationCandidateIdsAreDiagnosticOnlyAndCannotSatisfyAccounting =
-          false;
-      },
-    ],
-  ];
-  for (const [name, mutate] of jointlyWeakenedMutations) {
-    const hostile = clone(scheduler);
-    mutate(hostile.resultContract);
-    mutate(hostile.optimizerProjectedResultContract);
-    assert.equal(
-      c3ResultValidationContractsAreClosed(hostile),
-      false,
-      `${name} must fail even when both result contracts are weakened equally`,
-    );
-  }
-  for (const ruleKey of Object.keys(
-    scheduler.resultContract.candidateAccountingRules,
-  )) {
-    const missingAccountingRule = clone(scheduler);
-    delete missingAccountingRule.resultContract.candidateAccountingRules[
-      ruleKey
-    ];
-    delete missingAccountingRule.optimizerProjectedResultContract
-      .candidateAccountingRules[ruleKey];
-    assert.equal(
-      c3ResultValidationContractsAreClosed(missingAccountingRule),
-      false,
-      `coordinated removal of accounting rule ${ruleKey} must fail closed`,
-    );
-  }
-  const jointTopLevelOverride = clone(scheduler);
-  jointTopLevelOverride.resultContract.allowDurationOverflow = true;
-  jointTopLevelOverride.optimizerProjectedResultContract.allowDurationOverflow =
-    true;
-  assert.equal(
-    c3ResultValidationContractsAreClosed(jointTopLevelOverride),
-    false,
-  );
-  const jointExecutionBlockSurfaceWidening = clone(scheduler);
-  for (const contract of [
-    jointExecutionBlockSurfaceWidening.resultContract,
-    jointExecutionBlockSurfaceWidening.optimizerProjectedResultContract,
-  ]) {
-    contract.executionBlockFieldsExactly.push("estimated_minutes");
-    contract.scalarSchemas.estimated_minutes = "integer_1_to_1440";
-  }
-  assert.equal(
-    c3ResultValidationContractsAreClosed(
-      jointExecutionBlockSurfaceWidening,
-    ),
-    false,
-  );
-
-  for (const constraintCode of C3_RESULT_CONSTRAINT_CODES) {
-    const missingConstraint = clone(scheduler);
-    for (const constraints of [
-      missingConstraint.hardConstraints,
-      missingConstraint.resultContract.closedEnumValues.constraint_code_enum,
-      missingConstraint.optimizerProjectedResultContract.closedEnumValues
-        .constraint_code_enum,
-    ]) {
-      constraints.splice(constraints.indexOf(constraintCode), 1);
-    }
-    assert.equal(
-      c3ResultValidationContractsAreClosed(missingConstraint),
-      false,
-      `${constraintCode} must stay in both closed violation enums and hard constraints`,
-    );
-  }
-});
-
-test("C4 non-droppable candidates obey the exact pinned and can-drop truth table", async () => {
-  const scheduler = await json(
-    "config/dabangil-full-day-scheduler-contract.json",
-  );
-  assert.equal(c3ResultValidationContractsAreClosed(scheduler), true);
-
-  const buildCandidates = (prefix) => [
-    {
-      ephemeral_opaque_candidate_id: `${prefix}_${"a".repeat(16)}`,
-      pinned: false,
-      can_drop: true,
-      requiredness_enum: "core",
-    },
-    {
-      ephemeral_opaque_candidate_id: `${prefix}_${"b".repeat(16)}`,
-      pinned: false,
-      can_drop: false,
-      requiredness_enum: "optional",
-    },
-    {
-      ephemeral_opaque_candidate_id: `${prefix}_${"c".repeat(16)}`,
-      pinned: true,
-      can_drop: true,
-      requiredness_enum: "optional",
-    },
-    {
-      ephemeral_opaque_candidate_id: `${prefix}_${"d".repeat(16)}`,
-      pinned: true,
-      can_drop: false,
-      requiredness_enum: "optional",
-    },
-  ];
-  for (const prefix of ["cand", "ocand"]) {
-    const candidates = buildCandidates(prefix);
-    const executionBlocks = candidates.slice(1).map((candidate) => ({
-      ephemeral_opaque_candidate_id:
-        candidate.ephemeral_opaque_candidate_id,
-    }));
-    for (const reason_enum of scheduler.resultContract.unassignedReasons) {
-      const unassigned = [
-        {
-          ephemeral_opaque_candidate_id:
-            candidates[0].ephemeral_opaque_candidate_id,
-          reason_enum,
-        },
-      ];
-      assert.equal(
-        nonDroppablePlacementIsValid(
-          candidates,
-          executionBlocks,
-          unassigned,
-        ),
-        true,
-        `${prefix}: pinned=false/can_drop=true may be unassigned for ${reason_enum}`,
-      );
-      assert.equal(
-        candidateAccountingIsExact(
-          candidates.map(
-            (candidate) => candidate.ephemeral_opaque_candidate_id,
-          ),
-          executionBlocks,
-          unassigned,
-        ),
-        true,
-      );
-    }
-
-    for (const nonDroppable of candidates.slice(1)) {
-      const remainingBlocks = executionBlocks.filter(
-        (block) =>
-          block.ephemeral_opaque_candidate_id !==
-          nonDroppable.ephemeral_opaque_candidate_id,
-      );
-      for (const reason_enum of scheduler.resultContract.unassignedReasons) {
-        assert.equal(
-          nonDroppablePlacementIsValid(candidates, remainingBlocks, [
-            {
-              ephemeral_opaque_candidate_id:
-                candidates[0].ephemeral_opaque_candidate_id,
-              reason_enum: "capacity_exceeded",
-            },
-            {
-              ephemeral_opaque_candidate_id:
-                nonDroppable.ephemeral_opaque_candidate_id,
-              reason_enum,
-            },
-          ]),
-          false,
-          `${prefix}: ${reason_enum} cannot override non-droppability`,
-        );
-      }
-    }
-
-    assert.equal(
-      nonDroppablePlacementIsValid(
-        candidates,
-        [...executionBlocks, executionBlocks[0]],
-        [
-          {
-            ephemeral_opaque_candidate_id:
-              candidates[0].ephemeral_opaque_candidate_id,
-            reason_enum: "capacity_exceeded",
-          },
-        ],
-      ),
-      false,
-      `${prefix}: a non-droppable candidate cannot be placed twice`,
-    );
-    assert.equal(
-      nonDroppablePlacementIsValid(candidates, executionBlocks, [
-        {
-          ephemeral_opaque_candidate_id:
-            candidates[0].ephemeral_opaque_candidate_id,
-          reason_enum: "capacity_exceeded",
-        },
-        {
-          ephemeral_opaque_candidate_id:
-            candidates[1].ephemeral_opaque_candidate_id,
-          reason_enum: "owner_pinned_conflict",
-        },
-      ]),
-      false,
-      `${prefix}: placed-and-unassigned non-droppable candidate must fail`,
-    );
-  }
-
-  const sharedRuleKeys = [
-    "nonDroppableDefinitionExact",
-    "pinnedAndCanDropTruthTableExactly",
-    "everyNonDroppableCandidateMustOccurExactlyOnceInExecutionBlocks",
-    "everyNonDroppableCandidateMustOccurZeroTimesInUnassignedCandidates",
-    "onlyPinnedFalseAndCanDropTrueCandidateMayBeUnassigned",
-    "unassignedReasonMayOverrideNonDroppability",
-    "ownerPinnedConflictReasonMayOverrideNonDroppability",
-    "lowerValueThanSelectedReasonMayOverrideNonDroppability",
-    "requirednessEnumMayRedefineNonDroppability",
-  ];
-  for (const ruleKey of sharedRuleKeys) {
-    assert.deepEqual(
-      scheduler.resultContract.nonDroppableCandidateRules[ruleKey],
-      scheduler.optimizerProjectedResultContract
-        .nonDroppableCandidateRules[ruleKey],
-    );
-    const coordinatedRemoval = clone(scheduler);
-    delete coordinatedRemoval.resultContract.nonDroppableCandidateRules[
-      ruleKey
-    ];
-    delete coordinatedRemoval.optimizerProjectedResultContract
-      .nonDroppableCandidateRules[ruleKey];
-    assert.equal(
-      c3ResultValidationContractsAreClosed(coordinatedRemoval),
-      false,
-      `coordinated removal of ${ruleKey} must fail closed`,
-    );
-  }
-  assert.equal(
-    scheduler.resultContract.nonDroppableCandidateRules
-      .knownNonDroppableViolationStatus,
-    "validator_rejected",
-  );
-  assert.equal(
-    scheduler.resultContract.nonDroppableCandidateRules
-      .releasableNativeFallbackMustPlaceEveryNonDroppableCandidateExactlyOnce,
-    true,
-  );
-  assert.equal(
-    scheduler.optimizerProjectedResultContract.nonDroppableCandidateRules
-      .projectedResponseMaySelectReferenceAuthorizeOrReleaseCanonicalNativeFallback,
-    false,
-  );
-
-  const missingHardConstraint = clone(scheduler);
-  for (const constraints of [
-    missingHardConstraint.hardConstraints,
-    missingHardConstraint.resultContract.closedEnumValues.constraint_code_enum,
-    missingHardConstraint.optimizerProjectedResultContract.closedEnumValues
-      .constraint_code_enum,
-  ]) {
-    constraints.splice(
-      constraints.indexOf("non_droppable_candidates_placed_exactly_once"),
-      1,
-    );
-  }
-  assert.equal(
-    c3ResultValidationContractsAreClosed(missingHardConstraint),
-    false,
-  );
-  const weakenedNativeValidator = clone(scheduler);
-  weakenedNativeValidator.nativeValidator
-    .everyOptimalFeasibleAndReleasableValidatedNativeFallbackPlanMustPlaceEveryNonDroppableCandidateExactlyOnceAndNeverUnassignIt =
-    false;
-  assert.equal(
-    c3ResultValidationContractsAreClosed(weakenedNativeValidator),
-    false,
-  );
-  const weakenedFallbackFixture = clone(scheduler);
-  weakenedFallbackFixture.s237oBenchmarkAcceptanceContract
-    .benchmarkResultDigestContract.failureStatusFixtureResultSetDigestContract
-    .validNativeFallbackResultMustSatisfyCanonicalNonDroppableCandidateWindowAndAllC4HardConstraintsWhenManualBlockDigestIsNull =
-    false;
-  assert.equal(
-    c3ResultValidationContractsAreClosed(weakenedFallbackFixture),
-    false,
-  );
-});
-
-test("C3 execution-block duration and shortening bounds reject incompatible immutable placements", async () => {
-  const scheduler = await json(
-    "config/dabangil-full-day-scheduler-contract.json",
-  );
-  assert.equal(c3ResultValidationContractsAreClosed(scheduler), true);
-
-  const block = (candidateId, start, end, duration) => ({
-    ephemeral_opaque_candidate_id: candidateId,
-    start_minute_kst: start,
-    end_minute_kst: end,
-    duration_minutes: duration,
-  });
-
-  for (const prefix of ["cand_", "ocand_"]) {
-    const fixedCandidateId = `${prefix}${"d".repeat(16)}`;
-    const shortenableCandidateId = `${prefix}${"e".repeat(16)}`;
-    const candidates = [
-      {
-        ephemeral_opaque_candidate_id: fixedCandidateId,
-        estimated_minutes: 60,
-        minimum_minutes: 30,
-        can_shorten: false,
-      },
-      {
-        ephemeral_opaque_candidate_id: shortenableCandidateId,
-        estimated_minutes: 120,
-        minimum_minutes: 60,
-        can_shorten: true,
-      },
-    ];
-    for (const valid of [
-      block(fixedCandidateId, 60, 120, 60),
-      block(shortenableCandidateId, 120, 180, 60),
-      block(shortenableCandidateId, 180, 270, 90),
-      block(shortenableCandidateId, 300, 420, 120),
-    ]) {
-      assert.equal(executionBlockDurationIsValid(candidates, valid), true);
-    }
-
-    const hostileDurations = [
-      [
-        "duration differs from end minus start",
-        block(fixedCandidateId, 60, 120, 59),
-      ],
-      [
-        "non-shortenable candidate is shortened",
-        block(fixedCandidateId, 60, 105, 45),
-      ],
-      [
-        "non-shortenable candidate exceeds estimate",
-        block(fixedCandidateId, 60, 121, 61),
-      ],
-      [
-        "shortenable candidate falls below minimum",
-        block(shortenableCandidateId, 120, 179, 59),
-      ],
-      [
-        "shortenable candidate exceeds estimate",
-        block(shortenableCandidateId, 120, 241, 121),
-      ],
-      [
-        "execution block uses an unknown current-invocation candidate",
-        block(`${prefix}${"z".repeat(16)}`, 60, 120, 60),
-      ],
-    ];
-    for (const [name, hostile] of hostileDurations) {
-      assert.equal(
-        executionBlockDurationIsValid(candidates, hostile),
-        false,
-        `${prefix}: ${name} must fail duration validation`,
-      );
-    }
-
-    const duplicateCandidateRows = [...candidates, clone(candidates[0])];
-    assert.equal(
-      executionBlockDurationIsValid(
-        duplicateCandidateRows,
-        block(fixedCandidateId, 60, 120, 60),
-      ),
-      false,
-      `${prefix}: duplicate current-invocation candidates must not collapse`,
-    );
-
-    const immutableIncompatiblePlacement = block(
-      fixedCandidateId,
-      60,
-      105,
-      45,
-    );
-    assert.equal(
-      executionBlockDurationIsValid(
-        candidates,
-        immutableIncompatiblePlacement,
-      ),
-      false,
-    );
-  }
-  assert.equal(
-    scheduler.resultContract.executionBlockDurationRules
-      .immutableElapsedOrInProgressPlacementMayBeMovedShortenedExtendedOrRewrittenToSatisfyCurrentCandidate,
-    false,
-  );
-  assert.equal(
-    scheduler.resultContract.executionBlockDurationRules
-      .preProjectionImmutablePlacementCandidateDurationIncompatibilityInvalidNativeFallbackResult,
-    "blocked_manual_plan_required",
-  );
-  assert.equal(
-    scheduler.resultContract.executionBlockDurationRules
-      .preProjectionImmutablePlacementCandidateDurationIncompatibilityFallbackTriggerStatus,
-    "validator_rejected",
-  );
-  assert.equal(
-    scheduler.resultContract.executionBlockDurationRules
-      .preProjectionImmutablePlacementCandidateDurationIncompatibilityFallbackReasonEnumMustEqualTriggerStatus,
-    true,
-  );
-  assert.equal(
-    scheduler.inputContract.priorAcceptedScheduleRules
-      .immutablePlacementCandidateDurationIncompatibilityInvalidNativeFallbackResult,
-    "blocked_manual_plan_required",
-  );
-  assert.equal(
-    scheduler.inputContract.optimizerInvocationProjectionContract
-      .projectionRules
-      .immutablePriorPlacementCandidateDurationIncompatibilityMayReachOptimizer,
-    false,
-  );
-  assert.equal(
-    scheduler.inputContract.optimizerInvocationProjectionContract
-      .projectionRules
-      .immutablePriorPlacementCandidateDurationIncompatibilityMustEnterSeparatelyValidatedNativeFallbackWithoutRewritingPlacementOrCandidatePolicy,
-    true,
-  );
-  assert.equal(
-    scheduler.inputContract.optimizerInvocationProjectionContract
-      .projectionRules
-      .immutablePriorPlacementCandidateDurationIncompatibilityInvalidNativeFallbackResult,
-    "blocked_manual_plan_required",
-  );
-
-  const jointlyWeakenedDuration = clone(scheduler);
-  for (const contract of [
-    jointlyWeakenedDuration.resultContract,
-    jointlyWeakenedDuration.optimizerProjectedResultContract,
-  ]) {
-    contract.executionBlockDurationRules
-      .canShortenTrueRequiresMinimumMinutesLessThanOrEqualDurationMinutesLessThanOrEqualEstimatedMinutes =
-      false;
-  }
-  assert.equal(
-    c3ResultValidationContractsAreClosed(jointlyWeakenedDuration),
-    false,
-  );
-
-  for (const ruleKey of Object.keys(
-    scheduler.resultContract.executionBlockDurationRules,
-  )) {
-    const missingDurationRule = clone(scheduler);
-    delete missingDurationRule.resultContract.executionBlockDurationRules[
-      ruleKey
-    ];
-    delete missingDurationRule.optimizerProjectedResultContract
-      .executionBlockDurationRules[ruleKey];
-    assert.equal(
-      c3ResultValidationContractsAreClosed(missingDurationRule),
-      false,
-      `coordinated removal of duration rule ${ruleKey} must fail closed`,
-    );
-  }
-
-  const hostileInputPreflightMutations = [
-    (value) => {
-      value.inputContract.priorAcceptedScheduleRules
-        .elapsedAndInProgressPlacementMustResolveExactlyOneCurrentInvocationCandidateBeforeProjection =
-        false;
-    },
-    (value) => {
-      value.inputContract.priorAcceptedScheduleRules
-        .elapsedAndInProgressPlacementMustSatisfyResolvedCurrentCandidateDurationAndShorteningRulesBeforeProjection =
-        false;
-    },
-    (value) => {
-      value.inputContract.priorAcceptedScheduleRules
-        .immutablePlacementCandidateDurationIncompatibilityMayReachOptimizer =
-        true;
-    },
-    (value) => {
-      value.inputContract.priorAcceptedScheduleRules
-        .immutablePlacementCandidateDurationIncompatibilityFallbackTriggerStatus =
-        "schema_mismatch";
-    },
-    (value) => {
-      value.inputContract.priorAcceptedScheduleRules
-        .immutablePlacementCandidateDurationIncompatibilityFallbackReasonEnumMustEqualTriggerStatus =
-        false;
-    },
-    (value) => {
-      value.inputContract.priorAcceptedScheduleRules
-        .immutablePlacementCandidateDurationIncompatibilityMustAttemptExactlyOneSeparatelyValidatedNativeFallback =
-        false;
-    },
-    (value) => {
-      value.inputContract.priorAcceptedScheduleRules
-        .immutablePlacementCandidateDurationIncompatibilityMustEnterSeparatelyValidatedNativeFallbackWithoutRewritingPlacementOrCandidatePolicy =
-        false;
-    },
-    (value) => {
-      value.inputContract.priorAcceptedScheduleRules
-        .immutablePlacementCandidateDurationIncompatibilityInvalidNativeFallbackResult =
-        "validator_rejected";
-    },
-    (value) => {
-      value.inputContract.priorAcceptedScheduleRules
-        .immutablePlacementCandidateDurationIncompatibilityInvalidNativeFallbackMayTriggerAnotherFallback =
-        true;
-    },
-    (value) => {
-      value.inputContract.priorAcceptedScheduleRules
-        .immutablePlacementOrCurrentCandidatePolicyMayBeRewrittenToRepairIncompatibility =
-        true;
-    },
-    (value) => {
-      value.inputContract.optimizerInvocationProjectionContract.projectionRules
-        .immutablePriorPlacementsMustPassExactCurrentCandidateDurationCompatibilityBeforeProjection =
-        false;
-    },
-    (value) => {
-      value.inputContract.optimizerInvocationProjectionContract.projectionRules
-        .immutablePriorPlacementCandidateDurationIncompatibilityMayReachOptimizer =
-        true;
-    },
-    (value) => {
-      value.inputContract.optimizerInvocationProjectionContract.projectionRules
-        .immutablePriorPlacementCandidateDurationIncompatibilityFallbackTriggerStatus =
-        "schema_mismatch";
-    },
-    (value) => {
-      value.inputContract.optimizerInvocationProjectionContract.projectionRules
-        .immutablePriorPlacementCandidateDurationIncompatibilityFallbackReasonEnumMustEqualTriggerStatus =
-        false;
-    },
-    (value) => {
-      value.inputContract.optimizerInvocationProjectionContract.projectionRules
-        .immutablePriorPlacementCandidateDurationIncompatibilityMustAttemptExactlyOneSeparatelyValidatedNativeFallback =
-        false;
-    },
-    (value) => {
-      value.inputContract.optimizerInvocationProjectionContract.projectionRules
-        .immutablePriorPlacementCandidateDurationIncompatibilityMustEnterSeparatelyValidatedNativeFallbackWithoutRewritingPlacementOrCandidatePolicy =
-        false;
-    },
-    (value) => {
-      value.inputContract.optimizerInvocationProjectionContract.projectionRules
-        .immutablePriorPlacementCandidateDurationIncompatibilityInvalidNativeFallbackResult =
-        "validator_rejected";
-    },
-    (value) => {
-      value.inputContract.optimizerInvocationProjectionContract.projectionRules
-        .immutablePriorPlacementCandidateDurationIncompatibilityInvalidNativeFallbackMayTriggerAnotherFallback =
-        true;
-    },
-  ];
-  for (const mutate of hostileInputPreflightMutations) {
-    const hostilePreflight = clone(scheduler);
-    mutate(hostilePreflight);
-    assert.equal(
-      c3ResultValidationContractsAreClosed(hostilePreflight),
-      false,
-      "immutable placement preflight weakening must fail closed",
-    );
-  }
-
-  const immutableRewriteAllowed = clone(scheduler);
-  for (const contract of [
-    immutableRewriteAllowed.resultContract,
-    immutableRewriteAllowed.optimizerProjectedResultContract,
-  ]) {
-    contract.executionBlockDurationRules
-      .immutableElapsedOrInProgressPlacementMayBeMovedShortenedExtendedOrRewrittenToSatisfyCurrentCandidate =
-      true;
-  }
-  immutableRewriteAllowed.nativeValidator
-    .immutableElapsedOrInProgressPlacementMayBeRewrittenDuringValidationOrFallback =
-    true;
-  assert.equal(
-    c3ResultValidationContractsAreClosed(immutableRewriteAllowed),
-    false,
-  );
-});
-
-test("C4 candidate-window membership availability bounds and immutable preflight fail closed", async () => {
-  const scheduler = await json(
-    "config/dabangil-full-day-scheduler-contract.json",
-  );
-  const agents = await text("AGENTS.md");
-  assert.equal(c3ResultValidationContractsAreClosed(scheduler), true);
-
-  const fixtureFor = (candidatePrefix, windowPrefix) => {
-    const windowIds = ["a", "b", "c", "d"].map(
-      (suffix) => `${windowPrefix}_${suffix.repeat(16)}`,
-    );
-    const candidate = {
-      ephemeral_opaque_candidate_id:
-        `${candidatePrefix}_${"a".repeat(16)}`,
-      allowed_window_ids: windowIds.slice(0, 3),
-    };
-    const windows = [
-      {
-        ephemeral_opaque_window_id: windowIds[0],
-        start_minute_kst: 100,
-        end_minute_kst: 160,
-        available: true,
-      },
-      {
-        ephemeral_opaque_window_id: windowIds[1],
-        start_minute_kst: 160,
-        end_minute_kst: 220,
-        available: true,
-      },
-      {
-        ephemeral_opaque_window_id: windowIds[2],
-        start_minute_kst: 300,
-        end_minute_kst: 360,
-        available: false,
-      },
-      {
-        ephemeral_opaque_window_id: windowIds[3],
-        start_minute_kst: 400,
-        end_minute_kst: 460,
-        available: true,
-      },
-    ];
-    const block = (windowId, start, end, candidateId = null) => ({
-      ephemeral_opaque_candidate_id:
-        candidateId ?? candidate.ephemeral_opaque_candidate_id,
-      ephemeral_opaque_window_id: windowId,
-      start_minute_kst: start,
-      end_minute_kst: end,
-    });
-    return { candidate, windows, windowIds, block };
-  };
-
-  for (const [candidatePrefix, windowPrefix] of [
-    ["cand", "win"],
-    ["ocand", "owin"],
-  ]) {
-    const { candidate, windows, windowIds, block } = fixtureFor(
-      candidatePrefix,
-      windowPrefix,
-    );
-    assert.equal(
-      candidateWindowRelationClassification(
-        [candidate],
-        windows,
-        block(windowIds[0], 100, 160),
-      ),
-      "valid",
-      `${candidatePrefix}: exact outer-boundary containment must pass`,
-    );
-    for (const [name, hostileBlock] of [
-      ["known disallowed window", block(windowIds[3], 400, 430)],
-      ["unavailable allowed window", block(windowIds[2], 300, 330)],
-      ["start before window", block(windowIds[0], 99, 120)],
-      ["end after window", block(windowIds[0], 140, 161)],
-      ["adjacent-window spanning", block(windowIds[0], 130, 190)],
-      ["non-positive block", block(windowIds[0], 120, 120)],
-    ]) {
-      assert.equal(
-        candidateWindowRelationClassification(
-          [candidate],
-          windows,
-          hostileBlock,
-        ),
-        "validator_rejected",
-        `${candidatePrefix}: ${name} is a known invalid relation`,
-      );
-    }
-    assert.equal(
-      candidateWindowRelationClassification(
-        [candidate],
-        windows,
-        block(
-          windowIds[0],
-          100,
-          130,
-          `${candidatePrefix}_${"z".repeat(16)}`,
-        ),
-      ),
-      "schema_mismatch",
-      `${candidatePrefix}: unknown candidate must fail structurally`,
-    );
-    assert.equal(
-      candidateWindowRelationClassification(
-        [candidate],
-        windows,
-        block(`${windowPrefix}_${"z".repeat(16)}`, 100, 130),
-      ),
-      "schema_mismatch",
-      `${candidatePrefix}: unknown window must fail structurally`,
-    );
-    assert.equal(
-      candidateWindowRelationClassification(
-        [candidate, clone(candidate)],
-        windows,
-        block(windowIds[0], 100, 130),
-      ),
-      "schema_mismatch",
-      `${candidatePrefix}: duplicate candidate relation must fail structurally`,
-    );
-    assert.equal(
-      candidateWindowRelationClassification(
-        [candidate],
-        [...windows, clone(windows[0])],
-        block(windowIds[0], 100, 130),
-      ),
-      "schema_mismatch",
-      `${candidatePrefix}: duplicate window relation must fail structurally`,
-    );
-    const duplicateAllowedRelation = clone(candidate);
-    duplicateAllowedRelation.allowed_window_ids.push(windowIds[0]);
-    assert.equal(
-      candidateWindowRelationClassification(
-        [duplicateAllowedRelation],
-        windows,
-        block(windowIds[0], 100, 130),
-      ),
-      "schema_mismatch",
-      `${candidatePrefix}: duplicate allowed-window relation must fail structurally`,
-    );
-    const danglingAllowedRelation = clone(candidate);
-    danglingAllowedRelation.allowed_window_ids.push(
-      `${windowPrefix}_${"z".repeat(16)}`,
-    );
-    assert.equal(
-      candidateWindowRelationClassification(
-        [danglingAllowedRelation],
-        windows,
-        block(windowIds[0], 100, 130),
-      ),
-      "schema_mismatch",
-      `${candidatePrefix}: dangling allowed-window relation must fail structurally`,
-    );
-    const crossDomainCandidate =
-      candidatePrefix === "cand"
-        ? `ocand_${"a".repeat(16)}`
-        : `cand_${"a".repeat(16)}`;
-    const crossDomainWindow =
-      windowPrefix === "win"
-        ? `owin_${"a".repeat(16)}`
-        : `win_${"a".repeat(16)}`;
-    assert.equal(
-      candidateWindowRelationClassification(
-        [candidate],
-        windows,
-        block(crossDomainWindow, 100, 130, crossDomainCandidate),
-      ),
-      "schema_mismatch",
-      `${candidatePrefix}: cross-domain candidate/window IDs must fail structurally`,
-    );
-  }
-
-  const sharedRuleKeys = [
-    "candidateResolutionSource",
-    "windowResolutionSource",
-    "eachExecutionBlockCandidateMustResolveExactlyOnceThroughExactCurrentInvocation",
-    "eachExecutionBlockWindowMustResolveExactlyOnceThroughSameExactCurrentInvocation",
-    "executionBlockWindowIdMustBelongToResolvedCandidateAllowedWindowIds",
-    "resolvedWindowAvailableMustEqualTrue",
-    "singleReferencedWindowContainmentPredicateExact",
-    "blockMustBeCompletelyContainedInsideSingleReferencedWindow",
-    "blockMayStitchOrSpanAdjacentWindows",
-    "preProjectionElapsedAndInProgressPlacementMustSatisfyExactCurrentCandidateWindowRelation",
-    "preProjectionImmutableCandidateWindowIncompatibilityMayReachOptimizer",
-    "preProjectionImmutableCandidateWindowIncompatibilityMayBeRepairedByMovingDroppingUnassigningShorteningExtendingOrRewriting",
-    "futurePriorPlacementRemainsSoftPreferenceOnly",
-    "everyEmittedFuturePriorPlacementBlockMustSatisfyEveryCandidateWindowPredicate",
-  ];
-  for (const ruleKey of sharedRuleKeys) {
-    assert.deepEqual(
-      scheduler.resultContract.candidateWindowFeasibilityRules[ruleKey],
-      scheduler.optimizerProjectedResultContract
-        .candidateWindowFeasibilityRules[ruleKey],
-    );
-    const coordinatedRemoval = clone(scheduler);
-    delete coordinatedRemoval.resultContract.candidateWindowFeasibilityRules[
-      ruleKey
-    ];
-    delete coordinatedRemoval.optimizerProjectedResultContract
-      .candidateWindowFeasibilityRules[ruleKey];
-    assert.equal(
-      c3ResultValidationContractsAreClosed(coordinatedRemoval),
-      false,
-      `coordinated removal of ${ruleKey} must fail closed`,
-    );
-  }
-  assert.equal(
-    scheduler.resultContract.candidateWindowFeasibilityRules
-      .unknownDanglingDuplicateCrossDomainOrNonBijectiveCandidateOrWindowRelationStatus,
-    "schema_mismatch",
-  );
-  assert.equal(
-    scheduler.resultContract.candidateWindowFeasibilityRules
-      .knownDisallowedUnavailableOrOutOfBoundsRelationStatus,
-    "validator_rejected",
-  );
-  assert.equal(
-    scheduler.resultContract.candidateWindowFeasibilityRules
-      .releasableNativeFallbackMustSatisfyEveryCandidateWindowPredicate,
-    true,
-  );
-  assert.match(
-    agents,
-    /Every emitted[\s\S]*block resolves one candidate and one window[\s\S]*allowed available window[\s\S]*inside that single[\s\S]*window/,
-  );
-  assert.match(
-    agents,
-    /Elapsed\/in-progress placements[\s\S]*before projection[\s\S]*may not be moved, dropped, unassigned,[\s\S]*shortened, extended, or rewritten/,
-  );
-
-  for (const constraintCode of C4_RESULT_CONSTRAINT_CODES) {
-    const missingConstraint = clone(scheduler);
-    for (const constraints of [
-      missingConstraint.hardConstraints,
-      missingConstraint.resultContract.closedEnumValues.constraint_code_enum,
-      missingConstraint.optimizerProjectedResultContract.closedEnumValues
-        .constraint_code_enum,
-    ]) {
-      constraints.splice(constraints.indexOf(constraintCode), 1);
-    }
-    assert.equal(
-      c3ResultValidationContractsAreClosed(missingConstraint),
-      false,
-      `${constraintCode} must stay in hard constraints and both closed enums`,
-    );
-  }
-
-  const hostileMutations = [
-    [
-      "native validator skips candidate-window rules",
-      (value) => {
-        value.nativeValidator
-          .everyExecutionBlockMustResolveExactCurrentInvocationCandidateAndWindowAndSatisfyAllowedMembershipAvailabilityAndSingleWindowBounds =
-          false;
-      },
-    ],
-    [
-      "canonical fallback skips candidate-window rules",
-      (value) => {
-        value.resultContract.candidateWindowFeasibilityRules
-          .releasableNativeFallbackMustSatisfyEveryCandidateWindowPredicate =
-          false;
-      },
-    ],
-    [
-      "immutable preflight may reach optimizer",
-      (value) => {
-        value.inputContract.priorAcceptedScheduleRules
-          .immutablePlacementCandidateWindowIncompatibilityMayReachOptimizer =
-          true;
-        value.inputContract.optimizerInvocationProjectionContract
-          .projectionRules
-          .immutablePriorPlacementCandidateWindowIncompatibilityMayReachOptimizer =
-          true;
-      },
-    ],
-    [
-      "immutable placement may be rewritten",
-      (value) => {
-        value.resultContract.candidateWindowFeasibilityRules
-          .preProjectionImmutableCandidateWindowIncompatibilityMayBeRepairedByMovingDroppingUnassigningShorteningExtendingOrRewriting =
-          true;
-        value.optimizerProjectedResultContract
-          .candidateWindowFeasibilityRules
-          .preProjectionImmutableCandidateWindowIncompatibilityMayBeRepairedByMovingDroppingUnassigningShorteningExtendingOrRewriting =
-          true;
-      },
-    ],
-    [
-      "fallback fixture skips C4 validation",
-      (value) => {
-        value.s237oBenchmarkAcceptanceContract.benchmarkResultDigestContract
-          .failureStatusFixtureResultSetDigestContract
-          .validNativeFallbackResultMustSatisfyCanonicalNonDroppableCandidateWindowAndAllC4HardConstraintsWhenManualBlockDigestIsNull =
-          false;
-      },
-    ],
-    [
-      "candidate-window rejection code removed",
-      (value) => {
-        const codes =
-          value.s237oBenchmarkAcceptanceContract
-            .benchmarkResultDigestContract.resolvedArtifactMembersContract
-            .rejectedNativeFallbackAttemptValidationRecordContract
-            .fieldSchemas.rejection_code_enum;
-        codes.splice(codes.indexOf("candidate_window_relation_invalid"), 1);
-      },
-    ],
-    [
-      "gateway failure branch skips C4 canonical validation",
-      (value) => {
-        value.optimizerProjectedResultContract
-          .canonicalGatewayConstructionContract
-          .solverOrTrustedGatewayFailureBranchOrderExactly[3] =
-          "validate_partial_canonical_result";
-      },
-    ],
-  ];
-  for (const [name, mutate] of hostileMutations) {
-    const hostile = clone(scheduler);
-    mutate(hostile);
-    assert.equal(
-      c3ResultValidationContractsAreClosed(hostile) &&
-        projectedResultGatewayContractIsClosed(hostile),
-      false,
-      `${name} must fail closed`,
-    );
-  }
-});
-
-test("C3 every failure status requires one matching separately validated native fallback", async () => {
-  const scheduler = await json(
-    "config/dabangil-full-day-scheduler-contract.json",
-  );
-  assert.equal(c3ResultValidationContractsAreClosed(scheduler), true);
-  assert.equal(
-    scheduler.optimizerProjectedResultContract.failureRouting
-      .everySolverFailureOrTrustedGatewayClassificationMustAttemptExactlyOneIndependentlyPreparedCanonicalNativeFallback,
-    true,
-  );
-  assert.equal(
-    scheduler.optimizerProjectedResultContract.failureRouting
-      .projectedFailureEnvelopeMayContainReferenceAuthorizeOrReleaseCanonicalFallback,
-    false,
-  );
-  assert.equal(
-    scheduler.optimizerProjectedResultContract.failureRouting
-      .canonicalNativeFallbackPreparedAndValidatedOnlyInOriginalIdentifierDomain,
-    true,
-  );
-
-  for (const contract of [scheduler.resultContract]) {
-    const usedFixtureDigests = new Set();
-    for (const status of FALLBACK_STATUSES) {
-      const validFallback = {
-        used: true,
-        reason_enum: status,
-        native_plan_version: "native_plan_v1",
-      };
-      assert.equal(
-        fallbackEnvelopeRequirementsSatisfied(contract, status, validFallback, {
-          nativePlanVersionSchemaValid: true,
-          nativePlanValid: true,
-        }),
-        true,
-      );
-      assert.equal(
-        contract.fallbackValueRules
-          .failureStatusEnvelopeMaySelfAuthorizeReferencedNativeFallbackRelease,
-        false,
-        "a valid-looking failure envelope remains only a trigger claim",
-      );
-      assert.equal(
-        contract.fallbackValueRules
-          .trustedNativeGatewayMustResolveOrPrepareExactImmutableCanonicalNativeFallbackIndependentlyOfOptimizerResponse,
-        true,
-      );
-      assert.equal(
-        fallbackEnvelopeRequirementsSatisfied(
-          contract,
-          "fallback",
-          validFallback,
-          {
-            nativePlanVersionSchemaValid: true,
-            nativePlanValid: true,
-          },
-        ),
-        true,
-        `literal fallback status must use the validated ${status} trigger envelope`,
-      );
-      const nativeFallbackDigest = createHash("sha256")
-        .update(`valid-native-fallback:${status}`)
-        .digest("hex");
-      const fixtureEntry = {
-        synthetic_fixture_id: `syn_s237o_${status}_fixture`,
-        expected_status: status,
-        observed_status: status,
-        trigger_origin_enum: SOLVER_FAILURE_STATUSES.includes(status)
-          ? "solver_failure"
-          : "trusted_gateway_classification",
-        native_fallback_result_digest_sha256: nativeFallbackDigest,
-        manual_block_result_digest_sha256_or_null: null,
-        assertion_result: "passed",
-      };
-      assert.equal(
-        failureFixtureEntryIsValid(
-          contract,
-          fixtureEntry,
-          { status, fallback: validFallback },
-          { previouslyUsedNativeFallbackDigests: usedFixtureDigests },
-        ),
-        true,
-      );
-      assert.equal(
-        failureFixtureEntryIsValid(
-          contract,
-          fixtureEntry,
-          { status: "fallback", fallback: validFallback },
-          { previouslyUsedNativeFallbackDigests: usedFixtureDigests },
-        ),
-        true,
-      );
-      usedFixtureDigests.add(nativeFallbackDigest);
-
-      const otherStatus =
-        FALLBACK_STATUSES.find((candidate) => candidate !== status);
-      const exactManualBlockFallback = {
-        used: false,
-        reason_enum: "not_used",
-        native_plan_version: null,
-      };
-      const hostileFallbacks = [
-        [
-          "missing fallback",
-          undefined,
-          { rejectionCode: "missing_fallback" },
-        ],
-        [
-          "unused fallback",
-          { used: false, reason_enum: "not_used", native_plan_version: null },
-          { rejectionCode: "fallback_unused" },
-        ],
-        [
-          "mismatched reason",
-          { ...validFallback, reason_enum: otherStatus },
-          { rejectionCode: "fallback_reason_mismatch" },
-        ],
-        [
-          "mismatched result status",
-          validFallback,
-          {
-            attemptStatus: otherStatus,
-            rejectionCode: "fallback_status_mismatch",
-          },
-        ],
-        [
-          "null native version",
-          { ...validFallback, native_plan_version: null },
-          { rejectionCode: "native_plan_version_invalid" },
-        ],
-        [
-          "invalid native version schema",
-          validFallback,
-          {
-            nativePlanVersionSchemaValid: false,
-            rejectionCode: "native_plan_version_invalid",
-          },
-        ],
-        [
-          "invalid native plan",
-          validFallback,
-          {
-            nativePlanValid: false,
-            rejectionCode: "native_plan_unresolved_or_mutable",
-            nativePlanFailureCode:
-              "native_plan_unresolved_or_mutable",
-          },
-        ],
-        [
-          "invalid candidate accounting",
-          validFallback,
-          {
-            nativePlanValid: false,
-            rejectionCode: "candidate_accounting_invalid",
-            nativePlanFailureCode: "candidate_accounting_invalid",
-          },
-        ],
-        [
-          "invalid execution-block duration",
-          validFallback,
-          {
-            nativePlanValid: false,
-            rejectionCode: "execution_block_duration_invalid",
-            nativePlanFailureCode:
-              "execution_block_duration_invalid",
-          },
-        ],
-        [
-          "invalid non-droppable placement",
-          validFallback,
-          {
-            nativePlanValid: false,
-            rejectionCode: "non_droppable_candidate_invalid",
-            nativePlanFailureCode:
-              "non_droppable_candidate_invalid",
-          },
-        ],
-        [
-          "invalid candidate-window relation",
-          validFallback,
-          {
-            nativePlanValid: false,
-            rejectionCode: "candidate_window_relation_invalid",
-            nativePlanFailureCode:
-              "candidate_window_relation_invalid",
-          },
-        ],
-        [
-          "invalid replan cutoff",
-          validFallback,
-          {
-            nativePlanValid: false,
-            rejectionCode: "replan_cutoff_invalid",
-            nativePlanFailureCode: "replan_cutoff_invalid",
-          },
-        ],
-        [
-          "invalid block overlap",
-          validFallback,
-          {
-            nativePlanValid: false,
-            rejectionCode: "block_overlap_invalid",
-            nativePlanFailureCode: "block_overlap_invalid",
-          },
-        ],
-        [
-          "invalid prerequisite ordering",
-          validFallback,
-          {
-            nativePlanValid: false,
-            rejectionCode: "prerequisite_order_invalid",
-            nativePlanFailureCode: "prerequisite_order_invalid",
-          },
-        ],
-        [
-          "invalid hard constraint",
-          validFallback,
-          {
-            nativePlanValid: false,
-            rejectionCode: "hard_constraint_invalid",
-            nativePlanFailureCode: "hard_constraint_invalid",
-          },
-        ],
-        [
-          "canonical result has an extra field",
-          validFallback,
-          {
-            canonicalResultSchemaValid: false,
-            rejectionCode: "canonical_result_contract_invalid",
-          },
-        ],
-        [
-          "canonical result has wrong request correlation",
-          validFallback,
-          {
-            canonicalResultSchemaValid: false,
-            rejectionCode: "canonical_result_contract_invalid",
-          },
-        ],
-        [
-          "canonical result has an extra field and incomplete accounting",
-          validFallback,
-          {
-            canonicalResultSchemaValid: false,
-            nativePlanValid: false,
-            rejectionCode: "candidate_accounting_invalid",
-            nativePlanFailureCode: "candidate_accounting_invalid",
-          },
-        ],
-        [
-          "immutable placement is incompatible",
-          validFallback,
-          {
-            nativePlanValid: false,
-            rejectionCode: "immutable_placement_incompatible",
-            nativePlanFailureCode:
-              "immutable_placement_incompatible",
-          },
-        ],
-      ];
-      for (const [
-        hostileIndex,
-        [name, fallback, validation],
-      ] of hostileFallbacks.entries()) {
-        assert.equal(
-          fallbackEnvelopeRequirementsSatisfied(
-            contract,
-            validation.attemptStatus ?? status,
-            fallback,
-            validation,
-          ),
-          false,
-          `${status}: ${name} must not release a candidate plan`,
-        );
-        assert.equal(
-          contract.fallbackValueRules
-            .missingFallbackMismatchedReasonInvalidVersionOrInvalidNativePlanResult,
-          "blocked_manual_plan_required",
-        );
-        assert.equal(
-          contract.fallbackValueRules
-            .missingFallbackMismatchedReasonInvalidVersionOrInvalidNativePlanMayReleaseCandidatePlan,
-          false,
-        );
-        const invalidFixtureEntry = {
-          synthetic_fixture_id: `syn_s237o_${status}_${hostileIndex}_invalid`,
-          expected_status: status,
-          observed_status: status,
-          trigger_origin_enum: SOLVER_FAILURE_STATUSES.includes(status)
-            ? "solver_failure"
-            : "trusted_gateway_classification",
-          native_fallback_result_digest_sha256: createHash("sha256")
-            .update(`invalid-native-fallback:${status}:${name}`)
-            .digest("hex"),
-          manual_block_result_digest_sha256_or_null: createHash("sha256")
-            .update(`manual-block:${status}:${name}`)
-            .digest("hex"),
-          assertion_result: "passed",
-        };
-        const invalidAttempt = {
-          status: validation.attemptStatus ?? status,
-          fallback,
-        };
-        assert.equal(
-          failureFixtureEntryIsValid(
-            contract,
-            invalidFixtureEntry,
-            invalidAttempt,
-            {
-              ...validation,
-              manualBlockResultStatus:
-                "blocked_manual_plan_required",
-              manualBlockExecutionBlockCount: 0,
-              manualBlockReferencesNativePlan: false,
-              manualBlockFallback: exactManualBlockFallback,
-            },
-          ),
-          true,
-          `${status}: ${name} must resolve only through the exact manual block branch`,
-        );
-        const swappedRejectionCode = NATIVE_FALLBACK_REJECTION_CODES.find(
-          (code) => code !== validation.rejectionCode,
-        );
-        assert.equal(
-          failureFixtureEntryIsValid(
-            contract,
-            invalidFixtureEntry,
-            invalidAttempt,
-            {
-              ...validation,
-              rejectionCode: swappedRejectionCode,
-              manualBlockResultStatus:
-                "blocked_manual_plan_required",
-              manualBlockFallback: exactManualBlockFallback,
-            },
-          ),
-          false,
-          `${status}: ${name} cannot be mislabeled with another valid rejection code`,
-        );
-        assert.equal(
-          failureFixtureEntryIsValid(
-            contract,
-            {
-              ...invalidFixtureEntry,
-              manual_block_result_digest_sha256_or_null: null,
-            },
-            invalidAttempt,
-            validation,
-          ),
-          false,
-          `${status}: ${name} cannot pass without a manual block digest`,
-        );
-        assert.equal(
-          failureFixtureEntryIsValid(
-            contract,
-            invalidFixtureEntry,
-            invalidAttempt,
-            {
-              ...validation,
-              manualBlockResultStatus:
-                "blocked_manual_plan_required",
-              manualBlockExecutionBlockCount: 1,
-              manualBlockFallback: exactManualBlockFallback,
-            },
-          ),
-          false,
-          `${status}: ${name} manual block cannot contain execution blocks`,
-        );
-        assert.equal(
-          failureFixtureEntryIsValid(
-            contract,
-            invalidFixtureEntry,
-            invalidAttempt,
-            {
-              ...validation,
-              manualBlockResultStatus:
-                "blocked_manual_plan_required",
-              manualBlockReferencesNativePlan: true,
-              manualBlockFallback: exactManualBlockFallback,
-            },
-          ),
-          false,
-          `${status}: ${name} manual block cannot release a referenced native plan`,
-        );
-        for (const hostileManualBlockFallback of [
-          {
-            used: true,
-            reason_enum: status,
-            native_plan_version: "native_plan_v1",
-          },
-          {
-            used: false,
-            reason_enum: status,
-            native_plan_version: null,
-          },
-          {
-            used: false,
-            reason_enum: "not_used",
-            native_plan_version: "native_plan_v1",
-          },
-        ]) {
-          assert.equal(
-            failureFixtureEntryIsValid(
-              contract,
-              invalidFixtureEntry,
-              invalidAttempt,
-              {
-                ...validation,
-                manualBlockResultStatus:
-                  "blocked_manual_plan_required",
-                manualBlockFallback: hostileManualBlockFallback,
-              },
-            ),
-            false,
-            `${status}: ${name} manual block fallback tuple must be used=false/not_used/null`,
-          );
-        }
-      }
-
-      const incompleteNativeFallbackCandidateIds = [
-        `cand_${"f".repeat(16)}`,
-        `cand_${"g".repeat(16)}`,
-      ];
-      assert.equal(
-        fallbackEnvelopeRequirementsSatisfied(
-          contract,
-          status,
-          validFallback,
-          {
-            nativePlanVersionSchemaValid: true,
-            nativePlanValid: true,
-          },
-        ) &&
-          candidateAccountingIsExact(
-            incompleteNativeFallbackCandidateIds,
-            [
-              {
-                ephemeral_opaque_candidate_id:
-                  incompleteNativeFallbackCandidateIds[0],
-              },
-            ],
-            [],
-          ),
-        false,
-        `${status}: valid-looking fallback metadata cannot release incomplete accounting`,
-      );
-    }
-
-    assert.equal(
-      fallbackEnvelopeRequirementsSatisfied(contract, "fallback", {
-        used: true,
-        reason_enum: "fallback",
-        native_plan_version: "native_plan_v1",
-      }),
-      false,
-      "literal fallback is not itself an allowed trigger reason",
-    );
-    const reusedDigest = "b".repeat(64);
-    const firstStatus = FALLBACK_STATUSES[0];
-    const secondStatus = FALLBACK_STATUSES[1];
-    const firstEntry = {
-      synthetic_fixture_id: `syn_s237o_${firstStatus}_reuse`,
-      expected_status: firstStatus,
-      observed_status: firstStatus,
-      trigger_origin_enum: SOLVER_FAILURE_STATUSES.includes(firstStatus)
-        ? "solver_failure"
-        : "trusted_gateway_classification",
-      native_fallback_result_digest_sha256: reusedDigest,
-      manual_block_result_digest_sha256_or_null: null,
-      assertion_result: "passed",
-    };
-    const secondEntry = {
-      synthetic_fixture_id: `syn_s237o_${secondStatus}_reuse`,
-      expected_status: secondStatus,
-      observed_status: secondStatus,
-      trigger_origin_enum: SOLVER_FAILURE_STATUSES.includes(secondStatus)
-        ? "solver_failure"
-        : "trusted_gateway_classification",
-      native_fallback_result_digest_sha256: reusedDigest,
-      manual_block_result_digest_sha256_or_null: null,
-      assertion_result: "passed",
-    };
-    assert.equal(
-      failureFixtureEntryIsValid(
-        contract,
-        firstEntry,
-        {
-          status: "fallback",
-          fallback: {
-            used: true,
-            reason_enum: firstStatus,
-            native_plan_version: "native_plan_v1",
-          },
-        },
-      ),
-      true,
-    );
-    assert.equal(
-      failureFixtureEntryIsValid(
-        contract,
-        secondEntry,
-        {
-          status: "fallback",
-          fallback: {
-            used: true,
-            reason_enum: secondStatus,
-            native_plan_version: "native_plan_v1",
-          },
-        },
-        { previouslyUsedNativeFallbackDigests: new Set([reusedDigest]) },
-      ),
-      false,
-      "one native fallback result digest cannot satisfy two triggers",
-    );
-
-    for (const status of ["optimal", "feasible"]) {
-      assert.equal(
-        fallbackEnvelopeRequirementsSatisfied(contract, status, {
-          used: false,
-          reason_enum: "not_used",
-          native_plan_version: null,
-        }),
-        true,
-      );
-      assert.equal(
-        fallbackEnvelopeRequirementsSatisfied(contract, status, {
-          used: true,
-          reason_enum: "timeout",
-          native_plan_version: "native_plan_v1",
-        }),
-        false,
-      );
-      assert.equal(
-        fallbackEnvelopeRequirementsSatisfied(contract, status, {
-          used: false,
-          reason_enum: "timeout",
-          native_plan_version: null,
-        }),
-        false,
-      );
-      assert.equal(
-        fallbackEnvelopeRequirementsSatisfied(contract, status, {
-          used: false,
-          reason_enum: "not_used",
-          native_plan_version: "native_plan_v1",
-        }),
-        false,
-      );
-      assert.equal(
-        fallbackEnvelopeRequirementsSatisfied(
-          contract,
-          status,
-          undefined,
-        ),
-        false,
-      );
-    }
-  }
-
-  const jointlyOptionalFailureFallback = clone(scheduler);
-  jointlyOptionalFailureFallback.resultContract.fallbackValueRules
-    .everyFallbackStatusesMemberRequiresUsedTrue = false;
-  assert.equal(
-    c3ResultValidationContractsAreClosed(jointlyOptionalFailureFallback),
-    false,
-  );
-
-  for (const ruleKey of Object.keys(
-    scheduler.resultContract.fallbackValueRules,
-  )) {
-    const missingFallbackRule = clone(scheduler);
-    delete missingFallbackRule.resultContract.fallbackValueRules[ruleKey];
-    assert.equal(
-      c3ResultValidationContractsAreClosed(missingFallbackRule),
-      false,
-      `coordinated removal of fallback rule ${ruleKey} must fail closed`,
-    );
-  }
-
-  const projectedSelfAuthorization = clone(scheduler);
-  projectedSelfAuthorization.optimizerProjectedResultContract.failureRouting
-    .projectedFailureEnvelopeMayContainReferenceAuthorizeOrReleaseCanonicalFallback =
-    true;
-  assert.equal(
-    projectedResultGatewayContractIsClosed(projectedSelfAuthorization),
-    false,
-  );
-
-  const invalidAttemptResolverBypass = clone(scheduler);
-  invalidAttemptResolverBypass.s237oBenchmarkAcceptanceContract
-    .benchmarkResultDigestContract.resolvedArtifactMembersContract
-    .canonicalNativeFallbackProjectionContract
-    .sourceNativeFallbackDigestMustResolveToRejectedNativeFallbackAttemptValidationRecordInSameAuthorizationStoreWhenManualBlockDigestIsNonNull =
-    false;
-  assert.equal(
-    c3ResultValidationContractsAreClosed(invalidAttemptResolverBypass),
-    false,
-  );
-
-  const rejectedAttemptRecordMayLeak = clone(scheduler);
-  rejectedAttemptRecordMayLeak.s237oBenchmarkAcceptanceContract
-    .benchmarkResultDigestContract.resolvedArtifactMembersContract
-    .rejectedNativeFallbackAttemptValidationRecordContract
-    .rawRejectedNativeFallbackOutputMayAppearInRecordLogsArtifactsCachesErrorsTelemetryOrPersistedTemp =
-    true;
-  assert.equal(
-    c3ResultValidationContractsAreClosed(rejectedAttemptRecordMayLeak),
-    false,
-  );
-
-  const rejectionCodeWidened = clone(scheduler);
-  rejectionCodeWidened.s237oBenchmarkAcceptanceContract
-    .benchmarkResultDigestContract.resolvedArtifactMembersContract
-    .rejectedNativeFallbackAttemptValidationRecordContract.fieldSchemas
-    .rejection_code_enum.push("unreviewed_rejection");
-  assert.equal(
-    c3ResultValidationContractsAreClosed(rejectionCodeWidened),
-    false,
-  );
-
-  const fallbackValidationSkipped = clone(scheduler);
-  fallbackValidationSkipped.nativeValidator
-    .validatedNativeFallbackMustSatisfyCanonicalCandidateAccountingExecutionBlockDurationAndAllHardConstraints =
-    false;
-  assert.equal(
-    c3ResultValidationContractsAreClosed(fallbackValidationSkipped),
-    false,
-  );
-});
-
-test("O4T approved packets resolve by final digest and hostile locator mutations fail closed", async () => {
-  const scheduler = await json(
-    "config/dabangil-full-day-scheduler-contract.json",
-  );
-  assert.equal(o4tApprovedPacketResolutionContractIsClosed(scheduler), true);
-
-  const missingStore = clone(scheduler);
-  delete missingStore.o4tPacketDigestContract
-    .approvedThresholdBindingDigestContract.contentAddressedStore;
-  assert.equal(
-    o4tApprovedPacketResolutionContractIsClosed(missingStore),
-    false,
-  );
-
-  const wrongLookupKey = clone(scheduler);
-  wrongLookupKey.o4tPacketDigestContract
-    .approvedThresholdBindingDigestContract.contentAddressLookupKey =
-    "proposal_digest_sha256";
-  assert.equal(
-    o4tApprovedPacketResolutionContractIsClosed(wrongLookupKey),
-    false,
-  );
-
-  const noCanonicalResolution = clone(scheduler);
-  noCanonicalResolution.o4tPacketDigestContract
-    .approvedThresholdBindingDigestContract
-    .allO2oAndS238ohStartAndAcceptanceUsesMustResolveExactApprovedPacketByDigestFromExactBoundStoreAndRecomputeCanonicalDigest =
-    false;
-  assert.equal(
-    o4tApprovedPacketResolutionContractIsClosed(noCanonicalResolution),
-    false,
-  );
-
-  const lookupFailureMayProceed = clone(scheduler);
-  lookupFailureMayProceed.o4tPacketDigestContract
-    .approvedThresholdBindingDigestContract
-    .lookupMissAmbiguityDuplicateStoreOrPolicyMismatchCanonicalDigestMismatchOrInvalidReceiptFailsClosed =
-    false;
-  assert.equal(
-    o4tApprovedPacketResolutionContractIsClosed(lookupFailureMayProceed),
-    false,
-  );
-
-  const selfBootstrappingLookup = clone(scheduler);
-  selfBootstrappingLookup.o4tPacketDigestContract
-    .approvedThresholdBindingDigestContract.resolverBootstrapContract
-    .packetInternalStoreCoordinatesMayNotBootstrapTheirOwnLookup = false;
-  assert.equal(
-    o4tApprovedPacketResolutionContractIsClosed(selfBootstrappingLookup),
-    false,
-  );
-
-  const wrongResolverMayProceed = clone(scheduler);
-  wrongResolverMayProceed.o4tPacketDigestContract
-    .approvedThresholdBindingDigestContract.resolverBootstrapContract
-    .resolvedPacketOwnerDecisionStoreRefAndPolicyDigestMustExactlyEqualTrustedResolverCoordinates =
-    false;
-  assert.equal(
-    o4tApprovedPacketResolutionContractIsClosed(wrongResolverMayProceed),
-    false,
-  );
-
-  const packetInternalBootstrapSource = clone(scheduler);
-  packetInternalBootstrapSource.o4tPacketDigestContract
-    .approvedThresholdBindingDigestContract
-    .contentAddressedStoreRefBootstrapSourcePath =
-    "o4tThresholdDecisionPacket.ownerDecisionBinding.opaqueOwnerDecisionStoreRef";
-  assert.equal(
-    o4tApprovedPacketResolutionContractIsClosed(packetInternalBootstrapSource),
-    false,
-  );
-
-  const missingVerifierSchema = clone(scheduler);
-  delete missingVerifierSchema.o4tPacketDigestContract
-    .approvedThresholdBindingDigestContract.resolverBootstrapContract
-    .artifactFieldSchemas.verification_key_version;
-  assert.equal(
-    o4tApprovedPacketResolutionContractIsClosed(missingVerifierSchema),
-    false,
-  );
-
-  const unsignedResolverMayProceed = clone(scheduler);
-  unsignedResolverMayProceed.o4tPacketDigestContract
-    .approvedThresholdBindingDigestContract.resolverBootstrapContract
-    .verificationRules
-    .dsseSignatureMustCryptographicallyVerifyAgainstExternallyResolvedCurrentTrustAnchorEntry =
-    false;
-  assert.equal(
-    o4tApprovedPacketResolutionContractIsClosed(unsignedResolverMayProceed),
-    false,
-  );
-
-  const attackerSelectedTrustMayProceed = clone(scheduler);
-  attackerSelectedTrustMayProceed.o4tPacketDigestContract
-    .approvedThresholdBindingDigestContract.resolverBootstrapContract
-    .trustAnchorContract
-    .artifactMayNotSelectIntroduceOrExtendVerificationKeyTrustRootOrAlgorithmAllowlist =
-    false;
-  assert.equal(
-    o4tApprovedPacketResolutionContractIsClosed(
-      attackerSelectedTrustMayProceed,
-    ),
-    false,
-  );
-
-  const payloadMismatchMayProceed = clone(scheduler);
-  payloadMismatchMayProceed.o4tPacketDigestContract
-    .approvedThresholdBindingDigestContract.resolverBootstrapContract
-    .verificationRules
-    .everySignedPayloadFieldMustExactlyEqualArtifactProjection = false;
-  assert.equal(
-    o4tApprovedPacketResolutionContractIsClosed(payloadMismatchMayProceed),
-    false,
-  );
-
-  const crossScopeResolverMayProceed = clone(scheduler);
-  crossScopeResolverMayProceed.o4tPacketDigestContract
-    .approvedThresholdBindingDigestContract.resolverBootstrapContract
-    .verificationRules
-    .authenticatedRequestOwnerPrivateScopeDigestMustEqualSignedScopeAndExternalRegistryScope =
-    false;
-  assert.equal(
-    o4tApprovedPacketResolutionContractIsClosed(crossScopeResolverMayProceed),
-    false,
-  );
-
-  const replayedResolverMayProceed = clone(scheduler);
-  replayedResolverMayProceed.o4tPacketDigestContract
-    .approvedThresholdBindingDigestContract.resolverBootstrapContract
-    .verificationRules
-    .resolverGenerationMustBeStrictlyGreaterThanLastAcceptedGenerationForSameScopeAudiencePurposeAndStagesInAppendOnlyResolverGenerationStore =
-    false;
-  assert.equal(
-    o4tApprovedPacketResolutionContractIsClosed(replayedResolverMayProceed),
-    false,
-  );
-
-  const unknownKeyMayProceed = clone(scheduler);
-  unknownKeyMayProceed.o4tPacketDigestContract
-    .approvedThresholdBindingDigestContract.resolverBootstrapContract
-    .verificationRules
-    .unknownKeyWrongKeyVersionUntrustedRootWrongRootVersionDisallowedAlgorithmUnsignedInvalidSignaturePayloadMismatchScopeAudiencePurposeOrStageMismatchExpiredRevokedOrReplayFailsClosed =
-    false;
-  assert.equal(
-    o4tApprovedPacketResolutionContractIsClosed(unknownKeyMayProceed),
-    false,
-  );
-
-  for (const field of [
-    "aliasAllowed",
-    "redirectAllowed",
-    "mutableOverwriteAllowed",
-  ]) {
-    const mutableOrRedirected = clone(scheduler);
-    mutableOrRedirected.o4tPacketDigestContract
-      .approvedThresholdBindingDigestContract.contentAddressedObjectRules[
-      field
-    ] = true;
-    assert.equal(
-      o4tApprovedPacketResolutionContractIsClosed(mutableOrRedirected),
-      false,
-      `${field} must fail closed`,
-    );
-  }
-
-  const stalePacketMayProceed = clone(scheduler);
-  stalePacketMayProceed.o4tPacketDigestContract
-    .approvedThresholdBindingDigestContract.resolvedPacketValidationRules
-    .packetMustBeUnexpiredAtEveryO2oAndS238ohStartAndAcceptanceUse = false;
-  assert.equal(
-    o4tApprovedPacketResolutionContractIsClosed(stalePacketMayProceed),
-    false,
-  );
-
-  const staleReceiptMayProceed = clone(scheduler);
-  staleReceiptMayProceed.o4tPacketDigestContract
-    .approvedThresholdBindingDigestContract.resolvedPacketValidationRules
-    .receiptSignatureTrustPathExpiryAndRevocationMustBeRevalidatedAtEveryO2oAndS238ohStartAndAcceptanceUse =
-    false;
-  assert.equal(
-    o4tApprovedPacketResolutionContractIsClosed(staleReceiptMayProceed),
-    false,
-  );
-});
-
-test("roadmap has the native fork, optional fork, and deferred commercial fork", async () => {
-  const roadmap = await text("roadmap/active-program.yml");
-
-  assert.match(roadmapItem(roadmap, "S234R"), /status: completed/);
-  assert.match(
-    roadmapItem(roadmap, "O3A"),
-    /status: completed[\s\S]*approvalAuthorizesImmediateOperation: false[\s\S]*automaticStartAllowed: false[\s\S]*manualS236AStartRequired: true[\s\S]*dependencies: \[S235A, S234R\]/,
-  );
-  assert.match(
-    roadmapItem(roadmap, "O4V"),
-    /status: completed[\s\S]*legacyPacketDisposition: superseded_rejected[\s\S]*futureS236PSyntheticProvisioningAndAcceptanceAuthorized: true[\s\S]*approvalAuthorizesImmediateOperation: false[\s\S]*automaticStartAllowed: false[\s\S]*dependencies: \[S234R\]/,
-  );
-  assert.match(
-    roadmapItem(roadmap, "S236P"),
-    /status: queued[\s\S]*dependencies: \[O4V\]/,
-  );
-  assert.match(
-    roadmapItem(roadmap, "S236A"),
-    /dependencies: \[O3A, S236P\]/,
-  );
-  assert.match(roadmapItem(roadmap, "O4A"), /dependencies: \[S237P\]/);
-  assert.match(roadmapItem(roadmap, "S240A"), /dependencies: \[S238A\]/);
-  assert.match(roadmapItem(roadmap, "S241A"), /dependencies: \[S240A\]/);
-  assert.doesNotMatch(
-    roadmapItem(roadmap, "S241A"),
-    /S237O|O4T|O2O|S238OH|S238OV|O4P|S239O|S240O/,
-  );
-  assert.match(roadmapItem(roadmap, "S237O"), /dependencies: \[S237P\]/);
-  assert.match(roadmapItem(roadmap, "O2O"), /dependencies: \[O4T\]/);
-  assert.match(roadmapItem(roadmap, "S238OH"), /dependencies: \[S238A, O2O\]/);
-  assert.match(
-    roadmapItem(roadmap, "O4P"),
-    /dependencies: \[S238OV, S240A\]/,
-  );
-  assert.match(roadmapItem(roadmap, "S240O"), /dependencies: \[S239O\]/);
-  assert.match(roadmapItem(roadmap, "S243C"), /dependencies: \[O4F\]/);
-  assert.match(roadmapItem(roadmap, "S244C"), /dependencies: \[S243C\]/);
-  assert.match(roadmapItem(roadmap, "O4D"), /dependencies: \[S245C, S242V\]/);
-  assert.match(roadmapItem(roadmap, "S225"), /status: queued/);
-});
-
-test("approved O3A proposal preimage remains pending and cannot bypass S236P", async () => {
-  const manifest = await json(
-    "reference_corpus/readiness/appraiser/second_round_owner_private_golden_3_readiness.json",
-  );
-  const report = await json(
-    "reference_corpus/readiness/appraiser/second_round_owner_private_golden_3_readiness_report.json",
-  );
-
-  assert.equal(
-    manifest.o3aApprovalPacket.packetId,
-    "o3a-s234r-appraiser-second-2026-q1-owner-private-golden-3-v2",
-  );
-  assert.equal(manifest.o3aApprovalPacket.ownerApproved, false);
-  assert.deepEqual(
-    manifest.o3aApprovalPacket.requiredBeforeAllowedOperationRoadmapItemIds,
-    ["S236P"],
-  );
-  assert.equal(
-    manifest.o3aApprovalPacket.approvalAuthorizesImmediateOperation,
-    false,
-  );
-  assert.equal(
-    manifest.o3aApprovalPacket.o4vOrS236PSubstitutionAllowed,
-    false,
-  );
-  assert.deepEqual(manifest.controlPlaneState.s236aMissingDependencies, [
-    "O3A",
-    "S236P",
-  ]);
-  assert.equal(report.o3aPacketDigestSha256, O3A_PACKET_SHA256);
-  assert.equal(report.executionStatus, "blocked_pending_o3a_and_s236p");
-});
-
-test("the declared 30-file amendment manifest is unique and materialized", async () => {
-  const unified = await json("config/dabangil-unified-program-contract.json");
-
-  assert.deepEqual(unified.amendmentOwnedFiles, OWNED_FILES);
-  assert.equal(new Set(OWNED_FILES).size, 30);
-  for (const path of OWNED_FILES) {
-    assert.ok((await text(path)).length > 0, `owned file is empty: ${path}`);
-  }
-});
+YªçŠx-®éÜj×¢ëiºÚ+Š§j[h‘éÜ¢éí×mtïDèµ©hºÚn¶X§zÍZ[\Ü\ÜÙ\œ›ÛH››ÙN˜\ÜÙ\ÜÝšXÝŽÂš[\ÜÈÜ™X]R\ÚHœ›ÛH››ÙN˜Üž\ÈŽÂš[\ÜÈ™XYš[HHœ›ÛH››ÙN™œËÜ›ÛZ\Ù\ÈŽÂš[\Ü\Ýœ›ÛH››ÙN\ÝŽÂ‚˜ÛÛœÝ’UUWÐÓÓ•PÕÔÒLMˆBˆŽXÙÍXØŒ™LYYMÙŒŽLLŒNLÌY™MŒYŽLÙ™Œ™˜ÎXMÌXMØÙMÙMÙMŽHŽÂ˜ÛÛœÝÐÒQST—ÐÓÓ•PÕÔÒLMˆBˆ™NNÌXLLÎ˜YÙŽYNMÎØÌMÍYŒÎNL™YLÙŒXŒÍØ™˜M˜LŒÍˆŽÂ˜ÛÛœÝÌŒÍÓ×ÑU’QSÑWÕSTUWÔÒLMˆBˆŽYNMXNMÍŒLNMLØLÎMÍØŒ™MÍ˜LÎXÌNXØLÙYXÙÙX˜˜ŽY™ÎLŒØÈŽÂ˜ÛÛœÝÌŒÍÓ×Ô“ÔÔÐSÔÒLMˆBˆ˜ÍÌ˜Œ˜ŒMÍNMÌØL™MÍÙMÍŒ˜XØNXØÙÎMÍÌØ™NŒŒÌŽLÍL˜NMŒˆŽÂ˜ÛÛœÝ‘PÑRTÐTÔÑT•SÓ—ÔÓPÖWÔÒLMˆBˆ™MŒM˜˜˜ÎÍÍŽXÌNX˜™™˜Î™LYLÍMŒÌL™ŽX˜MÌÙ™MLÍMXØLYŽYNŽÂ˜ÛÛœÝÍÔ“ÔÔÐSÔÒLMˆBˆŒŒ˜ŽMØÍLÍÌM™ÌNÍYNLÎYYÙYMØ™˜M™LŽ™ŽNXNXMŒÈŽÂ˜ÛÛœÝÍ—Ô“ÔÔÐSÔÒLMˆBˆNXÍÍŒ˜Ì™™MLNXÙY™YYŽŽYŒM˜ÌÌM™ŒÙYÌØLN˜™˜ÍŒÍˆŽÂ˜ÛÛœÝÍ—Ô“Õ’QT—Ð’S‘S‘×ÔÒLMˆBˆ™MŒYL˜ÌYŒMMYLÎÌ™YÍ™XÍ™ŒYM™™XXYŒÌ™LØÌ™˜LÌLYYLÈŽÂ˜ÛÛœÝÌÐWÔPÒÑUÔÒLMˆBˆŽNNNMÙMÌÌÙXŒÎ™YŒ˜ÌØ˜MY˜LXØYXÌÎXNØÌÍLXŒ™LXLŽLY˜LÌMMÈŽÂ˜ÛÛœÝÌÐWÑPÒTÒSÓ—ÔÒLMˆBˆŽY™YÍÎYÙXŒYN˜MØÌÎMNXÍMYŽYÍŒØØÙØMXØÎNØÈŽÂ˜ÛÛœÝÍ—ÓPS—ÑPÒTÒSÓ—ÔÒLMˆBˆXÍ™ŒMMLMMØLX˜NLXÍŒ˜LŒŒØØŒL™YØÍYMMMMØØLMYXÍHŽÂ˜ÛÛœÝÌÐWÓPS’Q‘TÕÑ’SWÔÒLMˆBˆ™LÌ™™MÎÍLØŒMØØÙYØ™˜ÌØXM™YŒ™™ŽY˜ÍÍÌŒŽY˜ÌMŽNŒNŽÂ˜ÛÛœÝÌÐWÔ‘TÔ•Ñ’SWÔÒLMˆBˆÍLÌYXÌÙXLÎLØXÌÎ˜Ù˜NNMÌŽMŽMŒÙYY™LÍ˜ÌŽXÌÌÎXÌˆŽÂ˜ÛÛœÝÔ×ÔÑT’PSVUSÓˆHœ™˜×ÎÎWÚœÛÛ—ØØ[›ÛšXØ[^˜][Û—ÜØÚ[YWÝ]ŽŽÂ˜ÛÛœÝ“Ò‘PÕQÔ‘TÕSÒQÔUÈHÂˆœ™\]Y\ÝÚY‹ˆš[œ]ÜÛ˜\ÚÝÝ™\œÚ[Ûˆ‹ˆ™^XÝ][Û—Ø›ØÚÜÖ×K™\[Y\˜[ÛÜ\]YWØØ[™Y]WÚY‹ˆ™^XÝ][Û—Ø›ØÚÜÖ×K™\[Y\˜[ÛÜ\]YWÝÚ[™Ý×ÚY‹ˆ[˜\ÜÚYÛ™YØØ[™Y]\Ö×K™\[Y\˜[ÛÜ\]YWØØ[™Y]WÚY‹ˆš[Û][ÛœÖ×K™\[Y\˜[ÛÜ\]YWØØ[™Y]WÚYÖ×H‹—NÂ˜ÛÛœÝ“Ò‘PÕQÔ‘TÕSÔ“ÐÑTÔÒS‘×ÓÔ‘TˆHÂˆ™\ÝX›\ÚÜÛÛ™\—Ü™\ÜÛœÙWÛÜ—Ý\ÝYÙØ]]Ø^WØÛ\ÜÚYšXØ][Û—ÛÜšYÚ[—ÝÚ]Ý]ØXØÙ\[™×ÙØ]]Ø^WÜÝ]\×Ùœ›ÛWÜÛÛ™\ˆ‹ˆ™[\—ÛÜ[X[ÛÜ—Ù™X\ÚX›WØœ˜[˜ÚÛÜ—ÜÛÛ™\—ÛÜ—ÙØ]]Ø^WÙ˜Z[\™WØœ˜[˜ÚÝÚ]Ù^XÝWÛÛ™WØ[ÝÙYÜÝXØÙ\Ü×Ý×Ù˜Z[\™WÝ˜[œÚ][Û—ÛÛ—ØØ[›ÛšXØ[ÛÜ—Û˜]]™WÝ˜[Y]Ü—Ü™Z™XÝ[Ûˆ‹ˆ˜[Y]WØÛÛ\]WÜ˜]×Ü›Ú™XÝYÜ™\ÜÛœÙWÙ^XÝØÛÜœ™[][Û—Ø[™Ü™\]Z\™YØšZ™XÝ[Ûœ×Ø™Y›Ü™WØ[žWØØ[›ÛšXØ[Ý™\œÚ[Û—Ú[™›×ØÛÛœÝXÝ[Ûˆ‹ˆš[™\œÙWÛX\ÛÛ›WÝWÙ^XÝÜÚ^ÚY[YšY\—Ø™X\š[™×Ü]×ÝÚ[—ØWÜ›Ú™XÝYØØ[™Y]WÜ[—Ù^\ÝÈ‹ˆ˜ÛÛœÝXÝÙ^XÝØØ[›ÛšXØ[Ý[—ÙšY[Ý™\œÚ[Û—Ú[™›×ÛÛ›WÚ[œÚYWÝ\ÝYÙØ]]Ø^WÙœ›ÛWÙ^XÝÝ\ÝYØÛÜœ™[]YØÛÛ™šYÝ\˜][Ûˆ‹ˆ˜ÛÛœÝXÝØØ[›ÛšXØ[Ù˜[˜XÚ×Ý\WØ[™ÜÝ]WÛÛ›WÚ[œÚYWÝ\ÝYÙØ]]Ø^WØY\—Ü˜]×Ü›Ú™XÝYÝ˜[Y][Û—ÛÜ—Ù˜Z[\™WØÛ\ÜÚYšXØ][Ûˆ‹ˆ˜[Y]WØÛÛ\]WØØ[›ÛšXØ[Ü™\Ý[ØÛÛ˜XÝÜ™\[—ØÝ]Ù™—ÜZ\Ú\ÙWØ›ØÚ×Û›Û—ÛÝ™\›\Ü™\™\]Z\Ú]WÛÜ™\š[™×Ø[™Ù]™\žWÛ˜]]™WÚ\™ØÛÛœÝ˜Z[‹ˆ™\Ý›ÞWÛX\[™×Ü›Ú™XÝYÚ[œ]Ø[™Ü›Ú™XÝYÜ™\ÜÛœÙWÚY[YšY\—ÛX]\šX[‹ˆ™\šYžWÛ›×Ü›Ú™XÝYÚY[YšY\—Ú[—ÙØ]]Ø^WÛÝ]]ÛÙÜ×Ø\Y˜XÝ×ØØXÚ\×Ù\œ›Üœ×Ý[[Y]žWÛÜ—Ü\œÚ\ÝYÝ[\‹ˆœ™[X\ÙWÛÛ›WØØ[›ÛšXØ[Ü™\Ý[Ý˜[Y]YÛ˜]]™WÙ˜[˜XÚ×ÛÜ—ÛX[X[Ø›ØÚ×Ùœ›ÛWÙØ]]Ø^H‹—NÂ˜ÛÛœÝ“Ò‘PÕQÔ‘TÕSÐÓÓ•“ÓÒÑVTÈHÂˆœ\œÜÙH‹ˆšY[YšY\‘ÛXZ[ˆ‹ˆ˜Ø[›ÛšXØ[™\Ý[ÛÛ˜XÝ]‹ˆœ›Ú™XÝY[›ØØ][ÛÛÛ˜XÝ]‹ˆœÝ]\ÓÜšYÚ[›Ý[™\žH‹ˆ˜Ø[›ÛšXØ[Ø]]Ø^PÛÛœÝXÝ[ÛÛÛ˜XÝ‹ˆœ™\]Y\ÝÛÜœ™[][Û‘\]X[]U\™Ù]È‹ˆ˜[ÛÛ™\“ÝÛ™Y›Û’Y[YšY\•˜[Y\ÔØÚ[X\Ñ[[\Ô[\ÐØ\™[˜[]Y\Ð[™Ü™\š[™Ó]\Ý\]X[Ø[›ÛšXØ[™\Ý[ÛÛ˜XÝ^Ù\^XÝÝ]\ÓÜšYÚ[[™Ø]]Ø^PÛÛœÝXÝY˜[˜XÚÕ\TÝ]P[™Ø[›ÛšXØ[™\œÚ[Û’[™›È‹ˆ˜Ø[›ÛšXØ[™\Ý[ÛÛ˜XÝX^PXØÙ\›Ú™XÝYY[YšY\‘ÛXZ[ˆ‹ˆœ›Ú™XÝY™\Ý[ÛÛ˜XÝX^PXØÙ\ÜšYÚ[˜[Y[YšY\‘ÛXZ[ˆ‹ˆ˜ÛÛ\]T›Ú™XÝY™\ÜÛœÙU˜[Y][Û”™\]Z\™Y™Y›Ü™R[™\œÙSX\[™È‹ˆš[™\œÙSX\[™ÐÛÛ˜XÝ‹ˆœ›ØÙ\ÜÚ[™ÓÜ™\‘^XÝH‹ˆ™˜Z[\™T›Ý][™È‹ˆ›X\[™ÓY™XÞXÛPÛÛ˜XÝ‹—NÂ˜ÛÛœÝ“Ò‘PÕQÔ‘TÕSÐÓÓ•PÕÒÑVTÈHÂˆœ\œÜÙH‹ˆšY[YšY\‘ÛXZ[ˆ‹ˆ˜Ø[›ÛšXØ[™\Ý[ÛÛ˜XÝ]‹ˆœ›Ú™XÝY[›ØØ][ÛÛÛ˜XÝ]‹ˆ˜[ÝÙYšY[Ñ^XÝH‹ˆ˜Y][Û˜[šY[Ð[ÝÙY‹ˆ›™\ÝYY][Û˜[šY[Ð[ÝÙY‹ˆ™œ™YU^[ÝÙY‹ˆ™^XÝ][Û›ØÚÑšY[Ñ^XÝH‹ˆ[˜\ÜÚYÛ™YØ[™Y]QšY[Ñ^XÝH‹ˆœÝ]\ÓÜšYÚ[›Ý[™\žH‹ˆ˜Ø[›ÛšXØ[Ø]]Ø^PÛÛœÝXÝ[ÛÛÛ˜XÝ‹ˆ˜Ø[™Y]PXØÛÝ[[™Ô[\È‹ˆ™^XÝ][Û›ØÚÑ\˜][Û”[\È‹ˆ››Û‘›ÜX›PØ[™Y]T[\È‹ˆ˜Ø[™Y]UÚ[™ÝÑ™X\ÚXš[]T[\È‹ˆš\™XY[™Q™X\ÚXš[]T[\È‹ˆœ™\[Ý]Ù™‘™X\ÚXš[]T[\È‹ˆœZ\Ú\ÙP›ØÚÓ›Û“Ý™\›\[\È‹ˆœ™\™\]Z\Ú]SÜ™\š[™Ô[\È‹ˆ›Øš™XÝ]™PÛÛ\Û™[šY[Ñ^XÝH‹ˆš[Û][Û‘šY[Ñ^XÝH‹ˆ™›Ü˜šY[‘šY[È‹ˆšY[YšY\”ØÚ[X\È‹ˆ˜ÛÜÙY[[U˜[Y\È‹ˆœØØ[\”ØÚ[X\È‹ˆ˜Ø\™[˜[]S[Z]È‹ˆœÝ]\Ù\È‹ˆ˜Ø[™Y]TÝ]\Ù\Ð[ÝÙY™Y›Ü™S˜]]™U˜[Y][Ûˆ‹ˆ™]™\žU[˜\ÜÚYÛ™YØ[™Y]T™\]Z\™\Ô™X\ÛÛˆ‹ˆ[˜\ÜÚYÛ™Y™X\ÛÛœÈ‹ˆœ™\]Y\ÝÛÜœ™[][Û‘šY[Ô™\]Z\™Y‹ˆœ™\]Y\ÝYXÚÔ™\]Z\™Y‹ˆš[œ]Û˜\ÚÝ™\œÚ[Û‘XÚÔ™\]Z\™Y‹ˆœ™\]Y\ÝÛÜœ™[][Û‘\]X[]U\™Ù]È‹ˆ˜[ÛÛ™\“ÝÛ™Y›Û’Y[YšY\•˜[Y\ÔØÚ[X\Ñ[[\Ô[\ÐØ\™[˜[]Y\Ð[™Ü™\š[™Ó]\Ý\]X[Ø[›ÛšXØ[™\Ý[ÛÛ˜XÝ^Ù\^XÝÝ]\ÓÜšYÚ[[™Ø]]Ø^PÛÛœÝXÝY˜[˜XÚÕ\TÝ]P[™Ø[›ÛšXØ[™\œÚ[Û’[™›È‹ˆ˜Ø[›ÛšXØ[™\Ý[ÛÛ˜XÝX^PXØÙ\›Ú™XÝYY[YšY\‘ÛXZ[ˆ‹ˆœ›Ú™XÝY™\Ý[ÛÛ˜XÝX^PXØÙ\ÜšYÚ[˜[Y[YšY\‘ÛXZ[ˆ‹ˆ˜ÛÛ\]T›Ú™XÝY™\ÜÛœÙU˜[Y][Û”™\]Z\™Y™Y›Ü™R[™\œÙSX\[™È‹ˆš[™\œÙSX\[™ÐÛÛ˜XÝ‹ˆœ›ØÙ\ÜÚ[™ÓÜ™\‘^XÝH‹ˆ™˜Z[\™T›Ý][™È‹ˆ›X\[™ÓY™XÞXÛPÛÛ˜XÝ‹—NÂ˜ÛÛœÝ‘TÕSÐÓÓ•PÕÒÑVTÈHÂˆ˜[ÝÙYšY[Ñ^XÝH‹ˆ˜Y][Û˜[šY[Ð[ÝÙY‹ˆ›™\ÝYY][Û˜[šY[Ð[ÝÙY‹ˆ™œ™YU^[ÝÙY‹ˆ™^XÝ][Û›ØÚÑšY[Ñ^XÝH‹ˆ[˜\ÜÚYÛ™YØ[™Y]QšY[Ñ^XÝH‹ˆ™˜[˜XÚÑšY[Ñ^XÝH‹ˆ™˜[˜XÚÔ™X\ÛÛ•˜[Y\È‹ˆ™˜[˜XÚÕ˜[YT[\È‹ˆ˜Ø[™Y]PXØÛÝ[[™Ô[\È‹ˆ™^XÝ][Û›ØÚÑ\˜][Û”[\È‹ˆ››Û‘›ÜX›PØ[™Y]T[\È‹ˆ˜Ø[™Y]UÚ[™ÝÑ™X\ÚXš[]T[\È‹ˆš\™XY[™Q™X\ÚXš[]T[\È‹ˆœ™\[Ý]Ù™‘™X\ÚXš[]T[\È‹ˆœZ\Ú\ÙP›ØÚÓ›Û“Ý™\›\[\È‹ˆœ™\™\]Z\Ú]SÜ™\š[™Ô[\È‹ˆ™\œÚ[Û’[™›ÑšY[Ñ^XÝH‹ˆ™\œÚ[Û’[™›ÑšY[ØÚ[X\È‹ˆ™\œÚ[Û’[™›ÐÛÛœÝXÝ[Û”[\È‹ˆ›Øš™XÝ]™PÛÛ\Û™[šY[Ñ^XÝH‹ˆš[Û][Û‘šY[Ñ^XÝH‹ˆ™›Ü˜šY[‘šY[È‹ˆšY[YšY\”ØÚ[X\È‹ˆ˜ÛÜÙY[[U˜[Y\È‹ˆœØØ[\”ØÚ[X\È‹ˆ˜Ø\™[˜[]S[Z]È‹ˆœÝ]\Ù\È‹ˆ˜Ø[™Y]TÝ]\Ù\Ð[ÝÙY™Y›Ü™S˜]]™U˜[Y][Ûˆ‹ˆ™˜[˜XÚÔÝ]\Ù\È‹ˆ›˜]]™Q˜[˜XÚÒ[˜[Y™\Ý[‹ˆ™]™\žU[˜\ÜÚYÛ™YØ[™Y]T™\]Z\™\Ô™X\ÛÛˆ‹ˆ[˜\ÜÚYÛ™Y™X\ÛÛœÈ‹ˆœ™\]Y\ÝÛÜœ™[][Û‘šY[Ô™\]Z\™Y‹ˆœ™\]Y\ÝYXÚÔ™\]Z\™Y‹ˆš[œ]Û˜\ÚÝ™\œÚ[Û‘XÚÔ™\]Z\™Y‹ˆ™\œÚ[Û‘šY[Ô™\]Z\™Y‹—NÂ˜ÛÛœÝSPÒ×ÔÕUTÑTÈHÂˆš[™™X\ÚX›H‹ˆ›[Ù[Ú[˜[Y‹ˆ[šÛ›ÝÛˆ‹ˆ[Y[Ý]‹ˆ™\[™[˜ÞWÝ[˜]˜Z[X›H‹ˆ˜Y\\—Ù\œ›Üˆ‹ˆœØÚ[XWÛZ\ÛX]Ú‹ˆœÝ[WÜ™\ÜÛœÙH‹ˆ˜[Y]Ü—Ü™Z™XÝY‹—NÂ˜ÛÛœÝÓÓ‘T—ÔÕUTÑTÈHÂˆ›Ü[X[‹ˆ™™X\ÚX›H‹ˆš[™™X\ÚX›H‹ˆ›[Ù[Ú[˜[Y‹ˆ[šÛ›ÝÛˆ‹—NÂ˜ÛÛœÝÓÓ‘T—ÑRST‘WÔÕUTÑTÈHÂˆš[™™X\ÚX›H‹ˆ›[Ù[Ú[˜[Y‹ˆ[šÛ›ÝÛˆ‹—NÂ˜ÛÛœÝÐUUÐVWÐÓTÔÒQ’PÐUSÓ—ÔÕUTÑTÈHÂˆ[Y[Ý]‹ˆ™\[™[˜ÞWÝ[˜]˜Z[X›H‹ˆ˜Y\\—Ù\œ›Üˆ‹ˆœØÚ[XWÛZ\ÛX]Ú‹ˆœÝ[WÜ™\ÜÛœÙH‹ˆ˜[Y]Ü—Ü™Z™XÝY‹—NÂ˜ÛÛœÝÌ×Ô‘TÕSÐÓÓ”ÕRS•ÐÓÑTÈHÂˆ˜Ø[™Y]WØXØÛÝ[[™×Ù^XÝÜ\][Ûˆ‹ˆ™^XÝ][Û—Ø›ØÚ×ØØ[™Y]WÜ™\ÛÛ™\×Ù^XÝØÝ\œ™[Ú[›ØØ][Ûˆ‹ˆ™^XÝ][Û—Ø›ØÚ×Ù\˜][Û—Ù\]X[×Ù[™ÛZ[\×ÜÝ\‹ˆ™^XÝ][Û—Ø›ØÚ×Ù\˜][Û—Ü™\ÜXÝ×ØØ[™Y]WÜÚÜ[š[™×Ø›Ý[™È‹ˆš[[]]X›WÜš[Ü—ÜXÙ[Y[Ú[˜ÛÛ\]Xš[]WÙ˜Z[×ØÛÜÙY‹—NÂ˜ÛÛœÝÍÔ‘TÕSÐÓÓ”ÕRS•ÐÓÑTÈHÂˆ››Û—Ù›ÜX›WØØ[™Y]\×ÜXÙYÙ^XÝWÛÛ˜ÙH‹ˆ™^XÝ][Û—Ø›ØÚ×ÝÚ[™Ý×Ü™\ÛÛ™\×Ù^XÝØÝ\œ™[Ú[›ØØ][Ûˆ‹ˆ™^XÝ][Û—Ø›ØÚ×ÝÚ[™Ý×Ø[ÝÙYÙ›Ü—ØØ[™Y]H‹ˆ™^XÝ][Û—Ø›ØÚ×ÝÚ[™Ý×Ø]˜Z[X›H‹ˆ™^XÝ][Û—Ø›ØÚ×ØÛÛZ[™YÚ[—ÜÚ[™ÛWÜ™Y™\™[˜ÙYÝÚ[™ÝÈ‹ˆš[[]]X›WÜš[Ü—ÜXÙ[Y[ØØ[™Y]WÝÚ[™Ý×Ú[˜ÛÛ\]Xš[]WÙ˜Z[×ØÛÜÙY‹ˆ™^XÝ][Û—Ø›ØÚ×Ú\™ÙXY[™WÛ›ÝÙ^ÙYYY‹—NÂ˜ÛÛœÝÑPÓÓ‘ÐÓÔ”‘PÕU‘WÔ‘TÕSÐÓÓ”ÕRS•ÐÓÑTÈHÂˆ›™]×ÛÜ—Û[Ý™YÙ^XÝ][Û—Ø›ØÚ×ÜÝ\×Ø]ÛÜ—ØY\—Ü™\[—ØÝ]Ù™ˆ‹—NÂ˜ÛÛœÝUU‘WÑSPÒ×Ô‘R‘PÕSÓ—ÐÓÑTÈHÂˆ›Z\ÜÚ[™×Ù˜[˜XÚÈ‹ˆ™˜[˜XÚ×Ý[\ÙY‹ˆ™˜[˜XÚ×Ü™X\ÛÛ—ÛZ\ÛX]Ú‹ˆ™˜[˜XÚ×ÜÝ]\×ÛZ\ÛX]Ú‹ˆ›˜]]™WÜ[—Ý™\œÚ[Û—Ú[˜[Y‹ˆ›˜]]™WÜ[—Ý[œ™\ÛÛ™YÛÜ—Û]]X›H‹ˆ˜Ø[›ÛšXØ[Ü™\Ý[ØÛÛ˜XÝÚ[˜[Y‹ˆ˜Ø[™Y]WØXØÛÝ[[™×Ú[˜[Y‹ˆ™^XÝ][Û—Ø›ØÚ×Ù\˜][Û—Ú[˜[Y‹ˆ››Û—Ù›ÜX›WØØ[™Y]WÚ[˜[Y‹ˆ˜Ø[™Y]WÝÚ[™Ý×Ü™[][Û—Ú[˜[Y‹ˆœ™\[—ØÝ]Ù™—Ú[˜[Y‹ˆ˜›ØÚ×ÛÝ™\›\Ú[˜[Y‹ˆœ™\™\]Z\Ú]WÛÜ™\—Ú[˜[Y‹ˆš\™ØÛÛœÝ˜Z[Ú[˜[Y‹ˆš[[]]X›WÜXÙ[Y[Ú[˜ÛÛ\]X›H‹—NÂ˜ÛÛœÝ‘TÕSÒT‘ÐÓÓ”ÕRS•ÈHÂˆ˜ÛÜ™WÛÝ]ÛÛYWÛX^[][WÝ™YH‹ˆ˜[Ø›ØÚÜ×ÝÚ][—Ø]˜Z[X›WÝÚ[™ÝÜÈ‹ˆ™š^YØ[™Ü[›™YØ›ØÚÜ×Ù×Û›ÝÛ[Ý™H‹ˆœš[Ü—ØXØÙ\YÙ[\ÙYØ[™Ú[—Ü›ÙÜ™\Ü×Ø›ØÚÜ×Ú[[]]X›H‹ˆ˜›ØÚ×ÛÝ™\›\Þ™\›È‹ˆœ™\™\]Z\Ú]WÛÜ™\—Ýš[Û][Ûœ×Þ™\›È‹ˆœ[›™YÛZ[]\×Ù×Û›ÝÙ^ÙYYÙXÛ\™YØ]˜Z[Xš[]H‹ˆ˜Ø[™Y]WÙ\XØ]WÜXÙ[Y[Þ™\›È‹ˆ‹‹Ì×Ô‘TÕSÐÓÓ”ÕRS•ÐÓÑTËˆ‹‹ÍÔ‘TÕSÐÓÓ”ÕRS•ÐÓÑTËˆ‹‹”ÑPÓÓ‘ÐÓÔ”‘PÕU‘WÔ‘TÕSÐÓÓ”ÕRS•ÐÓÑTËˆ›]×Ø›ØÚÙ\—Û™]™\—Ø™XÛÛY\×Ý™\šYšYYØÛÛ\][Ûˆ‹ˆ˜][\Ùš\œÝÜ™]Üš]WØY\—Ø][\Ø[™Ü™]šY]×ÛÛ›H‹ˆ™ÝZYYÙ^ÜÝ\™WÛ™]™\—Ø™XÛÛY\×Ú[™\[™[Ü™]šY]È‹ˆ›ÝÛ™\—Ù›Ü˜šY[—ÝÚ[™ÝÜ×Û™]™\—Ý\ÙY‹—NÂ‚˜ÛÛœÝ‘TURT‘QÔ‘PÑRTÑ’QSÈHÂˆ˜ÛÛ˜XÝÝ™\œÚ[Ûˆ‹ˆ™^XÝÚXYÜÚH‹ˆ™^XÝÝ™YWÜÚH‹ˆ›Ü\]YWÙ[š\›Û›Y[Ü™Yˆ‹ˆ›Ü\]YWÝ˜][Ü™Yˆ‹ˆœÛXÞWÝ™\œÚ[Ûˆ‹ˆšÙ^WØÛ\Ü×Ø[™Ù\ØÚ‹ˆœ›ÝšY\—ØÛÛ™šY×Ý™\œÚ[Ûˆ‹ˆœÞ[]X×Ùš^\™WÚY‹ˆ›Ü\˜][Û—ÚY‹ˆ›ØœÙ\™YØ]‹ˆ˜\ÜÙ\[Û—Ü™\Ý[‹ˆ˜ÛX[\ÜÝ]H‹ˆ›Í—Ü›ÜÜØ[ÙYÙ\ÝÜÚLMˆ‹ˆ›Í—Ø\›Ý™YØš[™[™×ÙYÙ\ÝÜÚLMˆ‹ˆœ›ÝšY\—Øš[™[™×ÙYÙ\ÝÜÚLMˆ‹ˆ˜\ÜÙ\[Û—ÜÛXÞWÙYÙ\ÝÜÚLMˆ‹ˆ˜\ÜÙ\[Û—ØÛÝ[‹ˆ˜\ÜÙ\[Û—Ù]šY[˜ÙWÙYÙ\ÝÜÚLMˆ‹ˆ˜]\Ý][Û—Ü[—ÚY‹ˆ›Ü\]YWÜš[X\žWØ]\ÝÜ—ÚY‹ˆ˜]\ÝÜ—ØÛ\ÜÈ‹ˆ˜]\ÝÜ—Ý™\œÚ[Ûˆ‹ˆ˜]\Ý][Û—Ü›Ý™[˜[˜ÙWÙYÙ\ÝÜÚLMˆ‹ˆœ™XÙZ\ÜÙ]ÙYÙ\ÝÜÚLMˆ‹ˆš[™\[™[Ý™\šYšY\—Ø]\Ý][Û—ÙYÙ\ÝÜÚLMˆ‹—NÂ‚˜ÛÛœÝ‘TURT‘QÔ‘PÑRTÒQÈHÂˆœÞ[]X×ÝÜš]WÜ™XYØY\—ÝÜš]H‹ˆ›ÝÛ™\—ØWÜ™XYÝÜš]H‹ˆ›ÝÛ™\—Ø—Ü™XYÝÜš]H‹ˆ›ÝÛ™\—ØWÝ×Ø—Ø[™Ø—Ý×ØWÝ[šY›Ü›WÙ[šX[‹ˆ˜Ü›ÜÜ×ÛÝÛ™\—Û\ÝÜ™]š\Ú[Û—Ù^ÜÙ[]WÜ™XÙZ\Ý[šY›Ü›WÙ[šX[‹ˆ˜\›Ý™YØXØÙ\Ü×Û[ÙWÝ[\\—Ü™\^WÙ^\žWÝÜ›Û™×ÛY]ÙÙ[šX[‹ˆš[[]]X›WÛÜšYÚ[˜[Ø\[™ÛÛ›WÜ™]š\Ú[Ûˆ‹ˆ˜][ÜØY™WØ[œÝÙ\—ÜXÚ×ØY\\—Û›×ÜZ[^Ú\ÚÙ^\›˜[^˜][Ûˆ‹ˆ[Y[Ý]Ø[™Ü\X[Ù˜Z[\™WÛ›×Ù˜[ÙWÜÝXØÙ\ÜÈ‹ˆ›Üœ[—Ü]X\˜[[™WØ[™ÚY[\Ý[ØÛX[\‹ˆœÚ[™ÛWÝ˜][Ù^ÜÝÚ]Ý]ÜÙXÜ™]ÛÜ—ØÛÛ[Z]Y[‹ˆ™[]WØ[Ø\›Ý™YÜÝ\™˜XÙ\È‹ˆ˜˜XÚÝ\Ù^\žWÜ[™[™×Ù\Ý[˜ÝÙœ›ÛWÙ[]WØÛÛ\]H‹ˆœ›Û˜XÚ×Ü™\ÝÜ™WÛ›×Ù[]YØÛÛ[Ü™\Ý\œ™XÝ[Ûˆ‹ˆœÞ[]X×ØØ[˜\žWØXœÙ[Ùœ›ÛWÙÚ]ØÚWÛÙÜ×Ý[[Y]žWÜ›ÝšY\—ÛÙÜ×Ø[˜[]XÜ×Ø[™ÜÝ\ÜÜÝ\™˜XÙ\×ÛÝ]ÚYWØ]]Üš^™YÝ˜][‹—NÂ‚˜ÛÛœÝÕÓ‘QÑ’STÈHÂˆQÑS•Ë›Y‹ˆ˜ÛÛ™šYËÙX˜[™Ú[][šYšYY\›ÙÜ˜[KXÛÛ˜XÝšœÛÛˆ‹ˆ˜ÛÛ™šYËÙX˜[™Ú[\š]˜]KX]]Üš[™Ë\™]šY]Ë\[™KXÛÛ˜XÝšœÛÛˆ‹ˆ˜ÛÛ™šYËÙX˜[™Ú[Y[Y^K\ØÚY[\‹XÛÛ˜XÝšœÛÛˆ‹ˆ™ØÜËÙX˜[™Ú[][šYšYY\›ÙÜ˜[KXÛÛ˜XÝ›Y‹ˆ™ØÜËÙXÚ\Ú[ÛœËÌŒ‹LËL‹[ÝÛ™\‹YÙÙ›ÛÙ\š]˜]K\[™K\ØÚY[KX[Y[™Y[›Y‹ˆ™ØÜËÙX˜[™Ú[\š]˜]KX]]Üš[™Ë\™]šY]Ë\[™KXÛÛ˜XÝ›Y‹ˆ™ØÜËÚ[™\™ÙK\ÝYK\ØÚY[K\Þ\Ý[K›Y‹ˆ™ØÜËÚ[™\™ÙK[X\Ý\‹\›ØYX\›Y‹ˆ™ØÜËÚ[™\™ÙK\›ÙXÝXÛÛœÝ]][Û‹›Y‹ˆ™ØÜËÙX˜[™Ú[\ÙXÛÛ™Y^[K\™[Z][K[ÜË›Y‹ˆ™ØÜËÚ[™\™ÙK\ÙXÛÛ™\›Ý[™Yš[˜[\›ÙXÝ\ÜXË›Y‹ˆ™ØÜËÚ[™\™ÙKX\Ú[™\ÜË[[Ù[›Y‹ˆ™ØÜËÚ[™\™ÙK\›ÙXÝXœšYY‹›Y‹ˆ™ØÜËÚ[™\™ÙKY]KX›Ý[™\žK›Y‹ˆ™ØÜËÚ[™\™ÙKY]KYÛÝ™\›˜[˜ÙK›Y‹ˆ™ØÜËØYÙ[Y˜XÝÜžKYÚ]X‹XXÝ[ÛœËX]Û‹›Y‹ˆ™ØÜËÜÌŒÍXK[ÝÛ™\‹\š]˜]KYÛÛ[‹LË\™XY[™\ÜË›Y‹ˆœ›ØYX\ØXÝ]™K\›ÙÜ˜[Kž[[‹ˆ›X‹Ü™]šY]Ë[ÜËÜÌŒÍXK[ÝÛ™\‹\š]˜]KYÛÛ[‹LË\™XY[™\ÜËÈ‹ˆœ™Y™\™[˜ÙWØÛÜœ\ËÜ™XY[™\ÜËØ\˜Z\Ù\‹ÜÙXÛÛ™Ü›Ý[™ÛÝÛ™\—Üš]˜]WÙÛÛ[—Ì×Ü™XY[™\ÜËšœÛÛˆ‹ˆœ™Y™\™[˜ÙWØÛÜœ\ËÜ™XY[™\ÜËØ\˜Z\Ù\‹ÜÙXÛÛ™Ü›Ý[™ÛÝÛ™\—Üš]˜]WÙÛÛ[—Ì×Ü™XY[™\Ü×Ü™\ÜšœÛÛˆ‹ˆœØÜš\ËÜ[‹[›ÙK]\ÝË›ZœÈ‹ˆ\ÝËØYÙ[Y˜XÝÜžK\›ØYX\\[›™\‹\Ý›ZœÈ‹ˆ\ÝËÙX˜[™Ú[\™[Z][KX[YÛ›Y[\Ý›ZœÈ‹ˆ\ÝËÚ[™\™ÙK\›ÙXÝXÛÛœÝ]][Û‹\Ý›ZœÈ‹ˆ\ÝËÚ[™\™ÙK\›ØYX\XÝ\œšXÝ[[KYØÜË\Ý›ZœÈ‹ˆ\ÝËØYÙ[Y˜XÝÜžKYÚ]X‹XXÝ[ÛœËX]Û‹\Ý›ZœÈ‹ˆ\ÝËÜÌŒÍXK[ÝÛ™\‹\š]˜]KYÛÛ[‹LË\™XY[™\ÜË\Ý›ZœÈ‹ˆ\ÝËÜÌŒÍ‹[ÝÛ™\‹YÙÙ›ÛÙ\š]˜]K\[™K\ØÚY[KX[Y[™Y[\Ý›ZœÈ‹—NÂ‚˜\Þ[˜È[˜Ý[ÛˆœÛÛŠ]
+HÂˆ™]\›ˆ”ÓÓ‹œ\œÙJ]ØZ]™XYš[J]]ŽŠJNÂŸB‚˜\Þ[˜È[˜Ý[Ûˆ^
+]
+HÂˆ™]\›ˆ™XYš[J]]ŽŠNÂŸB‚™[˜Ý[ÛˆØ[›ÛšXØ[œÛÛŠ˜[YJHÂˆYˆ
+\œ˜^Kš\Ð\œ˜^J˜[YJJHÂˆ™]\›ˆÉÝ˜[YK›X\
+Ø[›ÛšXØ[œÛÛŠKš›Ú[Š‹Š_WXÂˆBˆYˆ
+˜[YHOOH[\[Ùˆ˜[YHOOH›Øš™XÝŠHÂˆ™]\›ˆ”ÓÓ‹œÝš[™ÚYžJ˜[YJNÂˆBˆ™]\›ˆÉÓØš™XÝ™[šY\Ê˜[YJBˆœÛÜ
+
+ÛYKÜšYÚJHOˆYšYÚÈLHˆYˆšYÚÈHˆ
+Bˆ›X\
+
+ÚÙ^K™\ÝYJHOˆ	Ò”ÓÓ‹œÝš[™ÚYžJÙ^J_N‰ØØ[›ÛšXØ[œÛÛŠ™\ÝY
+_X
+Bˆš›Ú[Š‹Š__XÂŸB‚™[˜Ý[ÛˆØ[›ÛšXØ[ÚLMŠ˜[YJHÂˆ™]\›ˆÜ™X]R\Ú
+œÚLMˆŠBˆ\]JØ[›ÛšXØ[œÛÛŠ˜[YJJBˆ™YÙ\Ý
+š^ŠNÂŸB‚™[˜Ý[Ûˆš[TÚLMŠ˜[YJHÂˆ™]\›ˆÜ™X]R\Ú
+œÚLMˆŠK\]J˜[YJK™YÙ\Ý
+š^ŠNÂŸB‚™[˜Ý[ÛˆÛÛ™J˜[YJHÂˆ™]\›ˆÝXÝ\™YÛÛ™J˜[YJNÂŸB‚™[˜Ý[ÛˆÛÛXÝ˜[YY˜[Y\Ê˜[YK˜[Y\ËÝ]]H×JHÂˆYˆ
+\œ˜^Kš\Ð\œ˜^J˜[YJJHÂˆ›Üˆ
+ÛÛœÝ™\ÝYÙˆ˜[YJHÛÛXÝ˜[YY˜[Y\Ê™\ÝY˜[Y\ËÝ]]
+NÂˆ™]\›ˆÝ]]ÂˆBˆYˆ
+˜[YHOOH[\[Ùˆ˜[YHOOH›Øš™XÝŠH™]\›ˆÝ]]Âˆ›Üˆ
+ÛÛœÝÚÙ^K™\ÝYHÙˆØš™XÝ™[šY\Ê˜[YJJHÂˆYˆ
+˜[Y\Ëš\ÊÙ^JJHÝ]]œ\Ú
+™\ÝY
+NÂˆÛÛXÝ˜[YY˜[Y\Ê™\ÝY˜[Y\ËÝ]]
+NÂˆBˆ™]\›ˆÝ]]ÂŸB‚™[˜Ý[Ûˆ›ÜÜØ[ÚLMŠXÚÙ]
+HÂˆÛÛœÝ›Ü›X[^™YHÛÛ™JXÚÙ]
+NÂˆ›Ü›X[^™YœÝ]\ÈH[Âˆ›Ü›X[^™Y›ÝÛ™\\›Ý™YH[Âˆ›Ü›X[^™Y˜\›Ý˜[š[™[™Ëœ›ÜÜØ[YÙ\ÝÚLMˆH[Âˆ›Ü›X[^™Y˜\›Ý˜[™XÛÜ™H[Âˆ™]\›ˆØ[›ÛšXØ[ÚLMŠ›Ü›X[^™Y
+NÂŸB‚™[˜Ý[ÛˆÌŒÍÛÔ›ÜÜØ[ÚLMŠXÚÙ]
+HÂˆÛÛœÝ›Ü›X[^™YHÛÛ™JXÚÙ]
+NÂˆ›Ü›X[^™YœÝ]\ÈH[Âˆ›Ü›X[^™Y›ÝÛ™\—Ø\›Ý™YH[Âˆ›Ü›X[^™Y˜\›Ý˜[Ü™XÛÜ™H[Âˆ™]\›ˆØ[›ÛšXØ[ÚLMŠ›Ü›X[^™Y
+NÂŸB‚™[˜Ý[Ûˆ›Ú™XÝY™\Ý[Ø]]Ø^PÛÛ˜XÝ\ÐÛÜÙY
+ØÚY[\ŠHÂˆÛÛœÝ›Ú™XÝYHØÚY[\‹›Ü[Z^™\”›Ú™XÝY™\Ý[ÛÛ˜XÝÂˆÛÛœÝØ[›ÛšXØ[HØÚY[\‹œ™\Ý[ÛÛ˜XÝÂˆÛÛœÝ›Ú™XÝ[ÛˆBˆØÚY[\‹š[œ]ÛÛ˜XÝ›Ü[Z^™\’[›ØØ][Û”›Ú™XÝ[ÛÛÛ˜XÝÂˆYˆ
+\›Ú™XÝYXØ[›ÛšXØ[\›Ú™XÝ[ÛŠH™]\›ˆ˜[ÙNÂ‚ˆÛÛœÝØ[›ÛšXØ[Ú\™YÙ^\ÈHÂˆ™^XÝ][Û›ØÚÑšY[Ñ^XÝH‹ˆ[˜\ÜÚYÛ™YØ[™Y]QšY[Ñ^XÝH‹ˆ›Øš™XÝ]™PÛÛ\Û™[šY[Ñ^XÝH‹ˆš[Û][Û‘šY[Ñ^XÝH‹ˆ˜ÛÜÙY[[U˜[Y\È‹ˆ˜Ø\™[˜[]S[Z]È‹ˆ˜Ø[™Y]TÝ]\Ù\Ð[ÝÙY™Y›Ü™S˜]]™U˜[Y][Ûˆ‹ˆ™]™\žU[˜\ÜÚYÛ™YØ[™Y]T™\]Z\™\Ô™X\ÛÛˆ‹ˆ[˜\ÜÚYÛ™Y™X\ÛÛœÈ‹ˆœ™\]Y\ÝÛÜœ™[][Û‘šY[Ô™\]Z\™Y‹ˆœ™\]Y\ÝYXÚÔ™\]Z\™Y‹ˆš[œ]Û˜\ÚÝ™\œÚ[Û‘XÚÔ™\]Z\™Y‹ˆNÂˆÛÛœÝØ[›ÛšXØ[Ù^\ÈH™]ÈÙ]
+Øš™XÝšÙ^\ÊØ[›ÛšXØ[
+JNÂˆÛÛœÝ›Ú™XÝYÛ›RÙ^\ÈHØš™XÝšÙ^\Ê›Ú™XÝY
+K™š[\Šˆ
+Ù^JHOˆXØ[›ÛšXØ[Ù^\Ëš\ÊÙ^JKˆ
+NÂˆÛÛœÝ[ÛÛ™\“ÝÛ™YÚ\™YÛÛ˜XÝ˜[Y\Ð\™Q^XÝBˆØ[›ÛšXØ[Ú\™YÙ^\Ë™]™\žJˆ
+Ù^JHO‚ˆØš™XÝš\ÓÝÛŠ›Ú™XÝYÙ^JH	‰‚ˆØ[›ÛšXØ[œÛÛŠ›Ú™XÝYÚÙ^WJHOOHØ[›ÛšXØ[œÛÛŠØ[›ÛšXØ[ÚÙ^WJKˆ
+NÂˆÛÛœÝ^XÝØ[›ÛšXØ[Y[YšY\”ØÚ[X\ÈHÂˆ™\]Y\ÝÚYˆ—œ™\WÖÐKV˜K^ŒNWËW^ÌM‹I‹ˆ[œ]ÜÛ˜\ÚÝÝ™\œÚ[ÛŽˆ—œÛœÖÐKV˜K^ŒNWËW^ÌM‹I‹ˆ\[Y\˜[ÛÜ\]YWÝÚ[™Ý×ÚYˆ—Ú[—ÖÐKV˜K^ŒNWËW^ÌM‹I‹ˆ\[Y\˜[ÛÜ\]YWØØ[™Y]WÚYˆ—˜Ø[™ÖÐKV˜K^ŒNWËW^ÌM‹I‹ˆ˜]]™WÜ[—Ý™\œÚ[ÛŽˆ˜ÛÜÙYÚY[YšY\—ÌWÝ×ÎÛÜ—Û[‹ˆNÂˆÛÛœÝ^XÝ›Ú™XÝYY[YšY\”ØÚ[X\ÈHÂˆ™\]Y\ÝÚYˆ—›Ü™\WÖÐKV˜K^ŒNWËW^ÌM‹I‹ˆ[œ]ÜÛ˜\ÚÝÝ™\œÚ[ÛŽˆ—›ÜÛœÖÐKV˜K^ŒNWËW^ÌM‹I‹ˆ\[Y\˜[ÛÜ\]YWÝÚ[™Ý×ÚYˆ—›ÝÚ[—ÖÐKV˜K^ŒNWËW^ÌM‹I‹ˆ\[Y\˜[ÛÜ\]YWØØ[™Y]WÚYˆ—›ØØ[™ÖÐKV˜K^ŒNWËW^ÌM‹I‹ˆNÂˆÛÛœÝ[™\œÙHH›Ú™XÝYš[™\œÙSX\[™ÐÛÛ˜XÝÂˆÛÛœÝY™XÞXÛHH›Ú™XÝY›X\[™ÓY™XÞXÛPÛÛ˜XÝÂˆÛÛœÝ˜Z[\™HH›Ú™XÝY™˜Z[\™T›Ý][™ÎÂˆÛÛœÝ^XÝY]Û\ÜÙ\ÈHÂˆ™\]Y\ÝÚYˆœ™\]Y\ÝÚY‹ˆ[œ]ÜÛ˜\ÚÝÝ™\œÚ[ÛŽˆš[œ]ÜÛ˜\ÚÝÝ™\œÚ[Ûˆ‹ˆ™^XÝ][Û—Ø›ØÚÜÖ×K™\[Y\˜[ÛÜ\]YWØØ[™Y]WÚYŽ‚ˆ™\[Y\˜[ÛÜ\]YWØØ[™Y]WÚY‹ˆ™^XÝ][Û—Ø›ØÚÜÖ×K™\[Y\˜[ÛÜ\]YWÝÚ[™Ý×ÚYŽ‚ˆ™\[Y\˜[ÛÜ\]YWÝÚ[™Ý×ÚY‹ˆ[˜\ÜÚYÛ™YØØ[™Y]\Ö×K™\[Y\˜[ÛÜ\]YWØØ[™Y]WÚYŽ‚ˆ™\[Y\˜[ÛÜ\]YWØØ[™Y]WÚY‹ˆš[Û][ÛœÖ×K™\[Y\˜[ÛÜ\]YWØØ[™Y]WÚYÖ×HŽ‚ˆ™\[Y\˜[ÛÜ\]YWØØ[™Y]WÚY‹ˆNÂˆÛÛœÝ™\^HH›Ú™XÝ[Û‹šY[YšY\”™[X\ÛÛ˜XÝ˜™[˜ÚX\šÔ™\^TÙ\ÜÚ[ÛÛÛ˜XÝÂˆÛÛœÝ™\^P\Y˜XÝBˆØÚY[\‹œÌŒÍÛÐ™[˜ÚX\šÐXØÙ\[˜ÙPÛÛ˜XÝ˜™[˜ÚX\šÔ™\Ý[YÙ\ÝÛÛ˜XÝˆœ™\ÛÛ™Y\Y˜XÝY[X™\œÐÛÛ˜XÝÂˆÛÛœÝY[YšY\‘œ™YR[œ]Bˆ™\^P\Y˜XÝšY[YšY\‘œ™YQ]\›Z[š\ÝXÔ™\^R[œ]\Y˜XÝÛÛ˜XÝÂˆÛÛœÝ^XÝY[YšY\‘œ™YR[œ]šY[ÈHÂˆ˜\Y˜XÝØÛÛ˜XÝÝ™\œÚ[Ûˆ‹ˆ˜Ø[›ÛšXØ[Ü›Ú™XÝYÚ[œ]ÙYÙ\ÝÜÚLMˆ‹ˆœÚ^Ü›ØÙ\Ü×Ü›Ú™XÝYÚ[œ]ÙYÙ\Ý×ÜÚLMˆ‹ˆNÂˆÛÛœÝ^XÝY[YšY\‘œ™YR[œ]šY[ØÚ[X\ÈHÂˆ\Y˜XÝØÛÛ˜XÝÝ™\œÚ[ÛŽˆÂˆ™X˜[™Ú[œÌŒÍÛËšY[YšY\—Ùœ™YWÜ™\^WÚ[œ]ÙYÙ\ÝÜ™XÙZ\ŒH‹ˆKˆØ[›ÛšXØ[Ü›Ú™XÝYÚ[œ]ÙYÙ\ÝÜÚLMŽˆ›ÝÙ\˜Ø\ÙWÚ^Í‹ˆÚ^Ü›ØÙ\Ü×Ü›Ú™XÝYÚ[œ]ÙYÙ\Ý×ÜÚLMŽ‚ˆ™^XÝÛÜ™\™YØ\œ˜^WÛÙ—ÜÚ^ÛÝÙ\˜Ø\ÙWÚ^Í‹ˆNÂˆÛÛœÝ^XÝ™[˜ÚX\šÔ›ØÙ\ÜÓÜ™\ˆHÂˆ˜ÛÛÌH‹ˆ˜ÛÛÌˆ‹ˆ˜ÛÛÌÈ‹ˆØ\›WÌH‹ˆØ\›WÌˆ‹ˆØ\›WÌÈ‹ˆNÂˆÛÛœÝ^XÝ˜Z[\™T›Ý][™ÈHÂˆZ\ÜÚ[™Õ[šÛ›ÝÛ‘[™Û[™Ñ\XØ]PÜ›ÜÜÐÛ\ÜÓÜšYÚ[˜[ÛXZ[“›ÛšZ™XÝ]™SÜ”™\Ù\˜][Û‘˜Z[\™TÝ]\Î‚ˆœØÚ[XWÛZ\ÛX]Ú‹ˆÜ›Û™Ô™\]Y\ÝÜ”Û˜\ÚÝÛÜœ™[][Û”Ý]\ÎˆœÝ[WÜ™\ÜÛœÙH‹ˆÛ›ÝÛ“›Û‘›ÜX›Q\Ø[ÝÙY[˜]˜Z[X›SÜ“Ý]Ù›Ý[™Ô™[][Û”Ý]\Î‚ˆ˜[Y]Ü—Ü™Z™XÝY‹ˆÛ›ÝÛ’\™XY[™Pœ™XXÚÝ]\Îˆ˜[Y]Ü—Ü™Z™XÝY‹ˆ™\[Ý]Ù™”ÝXÝ\˜[X\[™ÐÛÜœ™[][Û“Ü[XšYÝ[Ý\Ò[[]]X›SX]Ú[™Ñ˜Z[\™TÝ]\Î‚ˆœØÚ[XWÛZ\ÛX]Ú‹ˆÛ›ÝÛ™Y›Ü™PÝ]Ù™”XÙ[Y[Ý]\Îˆ˜[Y]Ü—Ü™Z™XÝY‹ˆZ\Ú\ÙS›Û“Ý™\›\ÝXÝ\˜[X\[™ÐÛÜœ™[][Û“Ü[XšYÝ[Ý\Ò[[]]X›TÙ[“X]Ú[™Ñ˜Z[\™TÝ]\Î‚ˆœØÚ[XWÛZ\ÛX]Ú‹ˆÛ›ÝÛ›ØÚÓÝ™\›\Ý]\Îˆ˜[Y]Ü—Ü™Z™XÝY‹ˆ™\™\]Z\Ú]U[šÛ›ÝÛ‘[™Û[™Ñ\XØ]PÜ›ÜÜÑÛXZ[“Ü“›ÛšZ™XÝ]™T™[][Û”Ý]\Î‚ˆœØÚ[XWÛZ\ÛX]Ú‹ˆÛ›ÝÛ“Z\ÜÚ[™Õ[˜\ÜÚYÛ™YÜ”™]™\œÙY™\™\]Z\Ú]TXÙ[Y[Ý]\Î‚ˆ˜[Y]Ü—Ü™Z™XÝY‹ˆÛ›ÝÛ”™\™\]Z\Ú]TXÙ[Y[˜Z[\™PÛ\ÜÚYšXØ][Û”™XÙY\ÑÙ[™\šXÐØ[™Y]PXØÛÝ[[™ÓÛZ\ÜÚ[ÛÛ\ÜÚYšXØ][ÛŽ‚ˆYKˆ]™\žRÛ›ÝÛÝ]Ù™“Ý™\›\Ü”™\™\]Z\Ú]Q˜Z[\™S]\Ý][\^XÝSÛ™R[™\[™[T™\\™YØ[›ÛšXØ[˜]]™Q˜[˜XÚÎ‚ˆYKˆ˜]Ô›Ú™XÝY™\œÚ[Û’[™›ÓÜ‘Ø]]Ø^SÝÛ™Y™\œÚ[ÛÛÛ™šYÝ\˜][Û’[š™XÝ[Û”Ý]\Î‚ˆœØÚ[XWÛZ\ÛX]Ú‹ˆZ\ÜÚ[™Ð[XšYÝ[Ý\ÔÝ[U[\ÝYÜ“Z\ÛX]ÚYØ[›ÛšXØ[™\œÚ[Û“Y]Y]TÝ]\Î‚ˆ˜[Y]Ü—Ü™Z™XÝY‹ˆØ[›ÛšXØ[™\œÚ[Û“Y]Y]Q˜Z[\™S]\Ý][\^XÝSÛ™R[™\[™[T™\\™YØ[›ÛšXØ[˜]]™Q˜[˜XÚÎ‚ˆYKˆÜ[X[Ü‘™X\ÚX›S]PØ[›ÛšXØ[Ü“˜]]™U˜[Y][Û‘˜Z[\™TÝ]\Î‚ˆ˜[Y]Ü—Ü™Z™XÝY‹ˆÜ[X[Ü‘™X\ÚX›S]PØ[›ÛšXØ[Ü“˜]]™U˜[Y][Û‘˜Z[\™S]\Ý\ØØ\™Ø[™Y]T[[™\ÙY˜[ÙU\P[™˜[œÚ][Û‘^XÝSÛ˜ÙUÒ[™\[™[Ø[›ÛšXØ[˜]]™Q˜[˜XÚÎ‚ˆYKˆ]™\žTÛÛ™\‘˜Z[\™SÜ•\ÝYØ]]Ø^PÛ\ÜÚYšXØ][Û“]\Ý][\^XÝSÛ™R[™\[™[T™\\™YØ[›ÛšXØ[˜]]™Q˜[˜XÚÎ‚ˆYKˆ›Ú™XÝY˜Z[\™Q[™[ÜSX^PÛÛZ[”™Y™\™[˜ÙP]]Üš^™SÜ”™[X\ÙPØ[›ÛšXØ[˜[˜XÚÎ‚ˆ˜[ÙKˆØ[›ÛšXØ[˜[˜XÚÕ\P[™Ý]PÛÛœÝXÝYÛ›PžU\ÝYØ]]Ø^NˆYKˆØ[›ÛšXØ[˜]]™Q˜[˜XÚÔ™\\™Y[™˜[Y]YÛ›R[“ÜšYÚ[˜[Y[YšY\‘ÛXZ[Ž‚ˆYKˆ[˜[Y˜]]™Q˜[˜XÚÔ™\Ý[ˆ˜›ØÚÙYÛX[X[Ü[—Ü™\]Z\™Y‹ˆ[˜[Y˜]]™Q˜[˜XÚÓX^UšYÙÙ\[›Ý\‘˜[˜XÚÎˆ˜[ÙKˆ[˜[Y›Ú™XÝYØ[™Y]T[“Ü‘˜Z[\™Q[™[ÜSX^T™XXÚ˜]]™U˜[Y][Û“Ü‘Ø]]Ø^SÝ]]‚ˆ˜[ÙKˆNÂˆÛÛœÝ^XÝÝ]\ÓÜšYÚ[›Ý[™\žHHÂˆÛÛ™\“ÝÛ™YÝ]\Ù\Ñ^XÝNˆÓÓ‘T—ÔÕUTÑTËˆÛÛ™\Ø[™Y]T[”Ý]\Ù\Ñ^XÝNˆÈ›Ü[X[‹™™X\ÚX›H—KˆÛÛ™\‘˜Z[\™TÝ]\Ù\Ñ^XÝNˆÓÓ‘T—ÑRST‘WÔÕUTÑTËˆ\ÝYØ]]Ø^PÛ\ÜÚYšXØ][Û”Ý]\Ù\Ñ^XÝN‚ˆÐUUÐVWÐÓTÔÒQ’PÐUSÓ—ÔÕUTÑTËˆØ[›ÛšXØ[Ø]]Ø^SÛ›TÝ]\Ù\Ñ^XÝNˆÂˆ™˜[˜XÚÈ‹ˆ˜›ØÚÙYÛX[X[Ü[—Ü™\]Z\™Y‹ˆKˆ›Ú™XÝY™\ÜÛœÙTÝ]\Ó]\Ý™TÛÛ™\“ÝÛ™YˆYKˆ[Y[Ý]\[™[˜ÞU[˜]˜Z[X›P[™Y\\‘\œ›Ü\™U\ÝYØ]]Ø^PÛ\ÜÚYšXØ][ÛœÓ›ÝÛÛ™\]]Ü™YÝ]\Ù\Î‚ˆYKˆ\ÛÛ]YÛÛ™\“X^P]]Ü•\ÝYØ]]Ø^PÛ\ÜÚYšXØ][Û“ÜØ[›ÛšXØ[Ø]]Ø^SÛ›TÝ]\Î‚ˆ˜[ÙKˆ›Ú™XÝYØ[™Y]T[‘šY[Ñ^XÝNˆÂˆ™^XÝ][Û—Ø›ØÚÜÈ‹ˆ[˜\ÜÚYÛ™YØØ[™Y]\È‹ˆKˆ›Ú™XÝYØ[™Y]T[‘šY[ÓX^P\X\“Û›Q›Ü“Ü[X[Ü‘™X\ÚX›NˆYKˆ›Ú™XÝY˜Z[\™SX^PÛÛZ[“Ü”™[X\ÙPØ[™Y]T[Žˆ˜[ÙKˆ›Ú™XÝY™\ÜÛœÙSX^PÛÛZ[‘˜[˜XÚÎˆ˜[ÙKˆ›Ú™XÝY™\ÜÛœÙSX^PÛÛZ[“˜]]™T[•™\œÚ[ÛŽˆ˜[ÙKˆ›Ú™XÝY™\ÜÛœÙSX^PÛÛZ[Ø[›ÛšXØ[˜]]™Q˜[˜XÚÔ[“Ü”™Y™\™[˜ÙNˆ˜[ÙKˆ›Ú™XÝY™\ÜÛœÙSX^PÛÛZ[•™\œÚ[Û’[™›ÓÜ‘Ø]]Ø^SÝÛ™Y™\œÚ[ÛÛÛ™šYÝ\˜][Û‘šY[Î‚ˆ˜[ÙKˆNÂˆÛÛœÝ^XÝØ]]Ø^PÛÛœÝXÝ[ÛÛÛ˜XÝHÂˆØ]]Ø^P[Û™SÝÛœÐØ[›ÛšXØ[˜[˜XÚÕ\P[™Ý]NˆYKˆØ]]Ø^P[Û™PÛÛœÝXÝÐØ[›ÛšXØ[™\œÚ[Û’[™›Ñœ›ÛQ^XÝ\ÝYÛÜœ™[]YÛÛ™šYÝ\˜][ÛŽ‚ˆYKˆØ]]Ø^PÛÛœÝXÝY˜[˜XÚÔÝ]P[™Ø[›ÛšXØ[™\œÚ[Û’[™›Ð\™USÛ›P[ÝÙY^Ù\[ÛœÕÑ›Ü›Y\›[šÙ]›Ú™XÝYØ[›ÛšXØ[›Û’Y[YšY\‘\]X[]N‚ˆYKˆØ]]Ø^PÛÛœÝXÝY›Ú™XÝYØ[›ÛšXØ[›Û’Y[YšY\‘^Ù\[ÛœÑ^XÝNˆÂˆ˜Ø[›ÛšXØ[Ù˜[˜XÚ×Ý\WØ[™ÜÝ]H‹ˆ˜Ø[›ÛšXØ[Ý™\œÚ[Û—Ú[™›È‹ˆKˆØ[›ÛšXØ[™\œÚ[Û’[™›ÑšY[Ñ^XÝNˆÂˆ˜ÛÛ˜XÝÝ™\œÚ[Ûˆ‹ˆ›˜]]™WÜÛXÞWÝ™\œÚ[Ûˆ‹ˆ˜Y\\—Ý™\œÚ[Ûˆ‹ˆ›Ü[Z^™\—Ý™\œÚ[Ûˆ‹ˆ›Øš™XÝ]™WÝ™\œÚ[Ûˆ‹ˆ™\ÚÛÝ™\œÚ[Ûˆ‹ˆœÛÛ™\—ÜÙYY‹ˆœÛÛ™\—ÝÛÜšÙ\œÈ‹ˆ[YWÛ[Z]Û\È‹ˆš[YÙ\—ÜØØ[[™×Ý™\œÚ[Ûˆ‹ˆKˆØ[›ÛšXØ[™\œÚ[Û’[™›Õ\ÝYÛÝ\˜ÙQ^XÝ‚ˆ™^XÝÝ\ÝYØÛÜœ™[]YÙØ]]Ø^WØÛÛ™šYÝ\˜][Û—Ù›Ü—ÝWÜØ[YWÝ˜[Y]YÚ[›ØØ][Ûˆ‹ˆÛÛ\]T˜]Ô™\ÜÛœÙQ^XÝÛÜœ™[][Û[™™\]Z\™YšZ™XÝ[Û•˜[Y][Û“]\Ýš[š\Ú™Y›Ü™PØ[›ÛšXØ[™\œÚ[Û’[™›ÐÛÛœÝXÝ[ÛŽ‚ˆYKˆ˜]Ô›Ú™XÝY™\ÜÛœÙSX^PÛÛZ[XØÙ\™\]Z\™SÜ]]ÜØ[›ÛšXØ[™\œÚ[Û’[™›ÓÜ[žQØ]]Ø^SÝÛ™Y™\œÚ[ÛÛÛ™šYÝ\˜][Û‘šY[‚ˆ˜[ÙKˆÛÛœÝXÝYØ[›ÛšXØ[™\œÚ[Û’[™›Ó]\ÝX]Ú^XÝ\ÝYÛÜœ™[]YÛÛ™šYÝ\˜][Û‘šY[›Ü‘šY[‚ˆYKˆZ\ÜÚ[™Ð[XšYÝ[Ý\ÔÝ[U[\ÝYÜ“Z\ÛX]ÚYØ[›ÛšXØ[™\œÚ[Û“Y]Y]U\ÝYØ]]Ø^PÛ\ÜÚYšXØ][ÛŽ‚ˆ˜[Y]Ü—Ü™Z™XÝY‹ˆZ\ÜÚ[™Ð[XšYÝ[Ý\ÔÝ[U[\ÝYÜ“Z\ÛX]ÚYØ[›ÛšXØ[™\œÚ[Û“Y]Y]S]\Ý][\^XÝSÛ™R[™\[™[T™\\™YØ[›ÛšXØ[˜]]™Q˜[˜XÚÎ‚ˆYKˆZ\ÜÚ[™Ð[XšYÝ[Ý\ÔÝ[U[\ÝYÜ“Z\ÛX]ÚYØ[›ÛšXØ[™\œÚ[Û“Y]Y]R[˜[Y˜[˜XÚÔ™\Ý[‚ˆ˜›ØÚÙYÛX[X[Ü[—Ü™\]Z\™Y‹ˆØ[›ÛšXØ[™\œÚ[Û’[™›ÐÛÛœÝXÝ[ÛÛÛ˜XÝˆÂˆšY[Ñ^XÝTÛÝ\˜ÙNˆœ™\Ý[ÛÛ˜XÝ™\œÚ[Û’[™›ÑšY[Ñ^XÝH‹ˆšY[ØÚ[X\ÔÛÝ\˜ÙNˆœ™\Ý[ÛÛ˜XÝ™\œÚ[Û’[™›ÑšY[ØÚ[X\È‹ˆ™\]Z\™YšY[ÔÛÝ\˜ÙNˆœ™\Ý[ÛÛ˜XÝ™\œÚ[Û‘šY[Ô™\]Z\™Y‹ˆ\ÝYÛÛ™šYÝ\˜][Û”ÛÝ\˜ÙN‚ˆ™^XÝÝ\ÝYØÛÜœ™[]YÙØ]]Ø^WØÛÛ™šYÝ\˜][Û—Ù›Ü—ÝWÜØ[YWÝ˜[Y]YÚ[›ØØ][Ûˆ‹ˆšY[ÛÝ\˜ÙSX\[™Ñ^XÝNˆÂˆÛÛ˜XÝÝ™\œÚ[ÛŽˆ\ÝYØÛÛ™šYÝ\˜][Û‹˜ÛÛ˜XÝÝ™\œÚ[Ûˆ‹ˆ˜]]™WÜÛXÞWÝ™\œÚ[ÛŽˆ\ÝYØÛÛ™šYÝ\˜][Û‹›˜]]™WÜÛXÞWÝ™\œÚ[Ûˆ‹ˆY\\—Ý™\œÚ[ÛŽˆ\ÝYØÛÛ™šYÝ\˜][Û‹˜Y\\—Ý™\œÚ[Ûˆ‹ˆÜ[Z^™\—Ý™\œÚ[ÛŽˆ\ÝYØÛÛ™šYÝ\˜][Û‹›Ü[Z^™\—Ý™\œÚ[Ûˆ‹ˆØš™XÝ]™WÝ™\œÚ[ÛŽˆ\ÝYØÛÛ™šYÝ\˜][Û‹›Øš™XÝ]™WÝ™\œÚ[Ûˆ‹ˆ™\ÚÛÝ™\œÚ[ÛŽˆ\ÝYØÛÛ™šYÝ\˜][Û‹™\ÚÛÝ™\œÚ[Ûˆ‹ˆÛÛ™\—ÜÙYYˆ\ÝYØÛÛ™šYÝ\˜][Û‹œÛÛ™\—ÜÙYY‹ˆÛÛ™\—ÝÛÜšÙ\œÎˆ\ÝYØÛÛ™šYÝ\˜][Û‹œÛÛ™\—ÝÛÜšÙ\œÈ‹ˆ[YWÛ[Z]Û\Îˆ\ÝYØÛÛ™šYÝ\˜][Û‹[YWÛ[Z]Û\È‹ˆ[YÙ\—ÜØØ[[™×Ý™\œÚ[ÛŽ‚ˆ\ÝYØÛÛ™šYÝ\˜][Û‹š[YÙ\—ÜØØ[[™×Ý™\œÚ[Ûˆ‹ˆKˆ˜]Ô›Ú™XÝY™\ÜÛœÙSX^TÛÝ\˜ÙSÝ™\œšYTÙ[XÝÜ]]Ü[žQšY[ˆ˜[ÙKˆ\ÝYÛÛ™šYÝ\˜][Û“]\Ý™PÝ\œ™[\ÝY[˜[XšYÝ[Ý\Ð[™›Ý[™Ñ^XÝ[›ØØ][ÛŽ‚ˆYKˆÛÛœÝXÝY˜[Y\Ó]\ÝX]ÚXÝX[[›ØØ][ÛÛÛ™šYÝ\˜][Û‘šY[›Ü‘šY[‚ˆYKˆÛÛœÝXÝ[Û“X^SØØÝ\™Y›Ü™PÛÛ\]T˜]Ô™\ÜÛœÙQ^XÝÛÜœ™[][Û[™™\]Z\™YšZ™XÝ[Û•˜[Y][ÛŽ‚ˆ˜[ÙKˆZ\ÜÚ[™Ð[XšYÝ[Ý\ÔÝ[U[\ÝYÜ“Z\ÛX]ÚX^T™[X\ÙT\X[™\œÚ[Û’[™›ÓÜØ[™Y]T[Ž‚ˆ˜[ÙKˆ˜Z[\™S]\Ý[\‘^\Ý[™ÔÚ[™ÛS˜]]™Q˜[˜XÚÐœ˜[˜Ú^XÝSÛ˜ÙNˆYKˆ[˜[Y˜[˜XÚÔ™\Ý[ˆ˜›ØÚÙYÛX[X[Ü[—Ü™\]Z\™Y‹ˆ˜[˜XÚÓX^P™P][\Y[Ü™U[“Û˜ÙSÜ”™XÝ\œÚ]™[Nˆ˜[ÙKˆKˆ\™XÝØ]]Ø^Q˜Z[\™UÚ]Ý]˜]ÔÛÛ™\”™\ÜÛœÙSX^Q˜XœšXØ]PT›Ú™XÝY™\ÜÛœÙN‚ˆ˜[ÙKˆ\™XÝØ]]Ø^Q˜Z[\™S]\Ý˜[Y]T™]Z[™Y^XÝ[›ØØ][Û[™\ÝYÛÛ™šYÝ\˜][Ûš[™[™Ð™Y›Ü™PØ[›ÛšXØ[™\œÚ[Û’[™›ÐÛÛœÝXÝ[ÛŽ‚ˆYKˆÜ[X[Ü‘™X\ÚX›Pœ˜[˜ÚÜ™\‘^XÝNˆÂˆ˜[Y]WØÛÛ\]WÜ˜]×Ü›Ú™XÝYØØ[™Y]WÜ[—Ü™\ÜÛœÙWÝÚ]Ý]Ý™\œÚ[Û—Ú[™›×ÛÜ—ÙØ]]Ø^WÛÝÛ™YÝ™\œÚ[Û—ØÛÛ™šYÝ\˜][Û—ÙšY[È‹ˆ˜[Y]WÙ^XÝÜ™\]Y\ÝÜÛ˜\ÚÝØÛÜœ™[][Û—Ø[™Ü\—ØÛ\Ü×ØšZ™XÝ[ÛœÈ‹ˆ˜[Y]WÜ›Ú™XÝYØØ[™Y]WØXØÛÝ[[™×Ù\˜][Û—Û›Û—Ù›ÜX›WØØ[™Y]WÝÚ[™Ý×Ú\™ÙXY[™WÜ™\[—ØÝ]Ù™—ÜZ\Ú\ÙWØ›ØÚ×Û›Û—ÛÝ™\›\Ø[™Ü™\™\]Z\Ú]WÛÜ™\š[™×Ü[\×Ý\Ú[™×Ý\ÝYÙØ]]Ø^WØÛÛ^‹ˆš[™\œÙWÛX\Ù^XÝWÝWÙ^\Ý[™×ÜÚ^ÚY[YšY\—Ø™X\š[™×Ü]È‹ˆœ™\Ù\™WÙ]™\žWÜÛÛ™\—ÛÝÛ™YÛ›Û—ÚYÝ˜[YWØ[™Ø\œ˜^WØØ\™[˜[]WØ[™ÛÜ™\ˆ‹ˆ\ÝYÙØ]]Ø^WØÛÛœÝXÝ×Ù^XÝØØ[›ÛšXØ[Ý[—ÙšY[Ý™\œÚ[Û—Ú[™›×Ùœ›ÛWÙ^XÝÝ\ÝYØÛÜœ™[]YØÛÛ™šYÝ\˜][Ûˆ‹ˆ\ÝYÙØ]]Ø^WØÛÛœÝXÝ×ØØ[›ÛšXØ[Ù˜[˜XÚ×Ý\ÙYÙ˜[ÙWÜ™X\ÛÛ—Û›ÝÝ\ÙYÛ˜]]™WÜ[—Ý™\œÚ[Û—Û[‹ˆ˜[Y]WØÛÛ\]WØØ[›ÛšXØ[Ü™\Ý[ØÛÛ˜XÝÜ™\[—ØÝ]Ù™—ÜZ\Ú\ÙWØ›ØÚ×Û›Û—ÛÝ™\›\Ü™\™\]Z\Ú]WÛÜ™\š[™×Ø[™Ù]™\žWÛ˜]]™WÚ\™ØÛÛœÝ˜Z[‹ˆ›Û—ØØ[›ÛšXØ[ÛÜ—Û˜]]™WÜ™Z™XÝ[Û—Ù\ØØ\™ØØ[™Y]WÜ[—Ø[™Ý\ÙYÙ˜[ÙWÝ\WØÛ\ÜÚYžWÝ˜[Y]Ü—Ü™Z™XÝYØ[™Ý˜[œÚ][Û—Ù^XÝWÛÛ˜ÙWÝ×Ù˜Z[\™WØœ˜[˜Ú‹ˆœ™[X\ÙWÛÛ›WÝÚ[—ØÛÛ\]WØØ[›ÛšXØ[Ø[™Û˜]]™WÝ˜[Y][Û—ÜÝXØÙYYÈ‹ˆKˆÛÛ™\“Ü•\ÝYØ]]Ø^Q˜Z[\™Pœ˜[˜ÚÜ™\‘^XÝNˆÂˆ˜[Y]WÛÜ—ØÛ\ÜÚYžWÜ˜]×Ü›Ú™XÝYØ][\ÝÚ]Ý]ØXØÙ\[™×Ý™\œÚ[Û—Ú[™›×ÙØ]]Ø^WÛÝÛ™YÝ™\œÚ[Û—ØÛÛ™šYÝ\˜][Û—ÛÜ—ØØ[›ÛšXØ[Ù˜[˜XÚ×ÜÝ]H‹ˆ˜[Y]WÙ^XÝÜ™\]Y\ÝÜÛ˜\ÚÝØÛÜœ™[][Û—Ø[™Ü™\]Z\™YØšZ™XÝ[Ûœ×Ø™Y›Ü™WØ[žWØØ[›ÛšXØ[Ý™\œÚ[Û—Ú[™›×ØÛÛœÝXÝ[Ûˆ‹ˆš[™\[™[WÜ™\ÛÛ™WÛÜ—Ü™\\™WÙ^XÝWÛÛ™WÚ[[]]X›WÛ˜]]™WÙ˜[˜XÚ×Ú[—ØØ[›ÛšXØ[ÛÜšYÚ[˜[ÚYÙÛXZ[ˆ‹ˆ\ÝYÙØ]]Ø^WØÛÛœÝXÝ×Ù^XÝØØ[›ÛšXØ[Ý[—ÙšY[Ý™\œÚ[Û—Ú[™›×Ùœ›ÛWÙ^XÝÝ\ÝYØÛÜœ™[]YØÛÛ™šYÝ\˜][Ûˆ‹ˆ\ÝYÙØ]]Ø^WØÛÛœÝXÝ×ØØ[›ÛšXØ[Ù˜[˜XÚ×Ý\ÙYÝYWÙ^XÝÝšYÙÙ\—Ü™X\ÛÛ—Ø[™Û›Û—Û[ØÛÜÙYÛ˜]]™WÜ[—Ý™\œÚ[Ûˆ‹ˆ˜[Y]WØÛÛ\]WØØ[›ÛšXØ[Ü™\Ý[ØÛÛ˜XÝØØ[™Y]WØXØÛÝ[[™×Ù\˜][Û—Û›Û—Ù›ÜX›WØØ[™Y]WÝÚ[™Ý×Ú\™ÙXY[™WÜ™\[—ØÝ]Ù™—ÜZ\Ú\ÙWØ›ØÚ×Û›Û—ÛÝ™\›\Ü™\™\]Z\Ú]WÛÜ™\š[™×Ø[™Ù]™\žWÚ\™ØÛÛœÝ˜Z[‹ˆœ™]\›—ÛÛ›WØ›ØÚÙYÛX[X[Ü[—Ü™\]Z\™YÝÚ[—ØØ[›ÛšXØ[Ù˜[˜XÚ×Ú\×ÛZ\ÜÚ[™×Ý[˜]˜Z[X›WÛÜ—Ú[˜[Y‹ˆKˆÜ[X[Ü‘™X\ÚX›PØ[›ÛšXØ[˜[˜XÚÕ\Q^XÝNˆÂˆ\ÙYˆ˜[ÙKˆ™X\ÛÛ—Ù[[Nˆ››ÝÝ\ÙY‹ˆ˜]]™WÜ[—Ý™\œÚ[ÛŽˆ[ˆKˆ˜Z[\™PØ[›ÛšXØ[˜[˜XÚÕ\T[\ÎˆÂˆ\ÙYˆYKˆ™X\ÛÛ—Ù[[Nˆ™^XÝÜÛÛ™\—Ù˜Z[\™WÛÜ—Ý\ÝYÙØ]]Ø^WØÛ\ÜÚYšXØ][Ûˆ‹ˆ˜]]™WÜ[—Ý™\œÚ[ÛŽ‚ˆ››Û—Û[ØÛÜÙYÚY[YšY\—Ü™\ÛÛš[™×Ù^XÝÚ[[]]X›WØØ[›ÛšXØ[Û˜]]™WÙ˜[˜XÚÈ‹ˆKˆ]PØ[›ÛšXØ[Ü“˜]]™U˜[Y][Û”™Z™XÝ[Û•˜[œÚ][ÛŽˆÂˆ\Y\ÕÚ[Ž‚ˆœ›Ú™XÝYÛÜ[X[ÛÜ—Ù™X\ÚX›WÜ\ÜÙ\×Ü›Ú™XÝYÝ˜[Y][Û—ØÛÜœ™[][Û—Ø[™Ú[™\œÙWÛX\[™×Ø]ØÛÛ\]WØØ[›ÛšXØ[Ü™\Ý[ÛÜ—Û˜]]™WÚ\™ØÛÛœÝ˜Z[Ý˜[Y][Û—Ü™Z™XÝÈ‹ˆ\ÝYØ]]Ø^PÛ\ÜÚYšXØ][ÛŽˆ˜[Y]Ü—Ü™Z™XÝY‹ˆ\ØØ\™Ø[™Y]T[[™\ÙY˜[ÙU\UÚ]Ý]™[X\ÙNˆYKˆ˜[œÚ][Û‘^XÝSÛ˜ÙUÔÛÛ™\“Ü•\ÝYØ]]Ø^Q˜Z[\™Pœ˜[˜ÚˆYKˆØ[›ÛšXØ[˜[˜XÚÓ]\Ý™T™\\™Y[™\[™[R[“ÜšYÚ[˜[Y[YšY\‘ÛXZ[Ž‚ˆYKˆ›Ú™XÝYÜ”™Z™XÝYØ[™Y]T[“X^P™T™]\ÙY\ÐØ[›ÛšXØ[˜[˜XÚÎˆ˜[ÙKˆ˜[˜XÚÓX^P™P][\Y[Ü™U[“Û˜ÙSÜ”™XÝ\œÚ]™[Nˆ˜[ÙKˆ[˜[Y˜[˜XÚÔ™\Ý[ˆ˜›ØÚÙYÛX[X[Ü[—Ü™\]Z\™Y‹ˆKˆØ[›ÛšXØ[™\œÚ[Û’[™›ÐÛÛœÝXÝ[Û‘˜Z[\™U˜[œÚ][ÛŽˆÂˆ\ÝYØ]]Ø^PÛ\ÜÚYšXØ][ÛŽˆ˜[Y]Ü—Ü™Z™XÝY‹ˆØ[›ÛšXØ[™\œÚ[Û’[™›ÓX^P™T\X[PÛÛœÝXÝYÜ”™[X\ÙYˆ˜[ÙKˆ›Ú™XÝYØ[™Y]T[“X^P™T™[X\ÙYˆ˜[ÙKˆ˜[œÚ][Û‘^XÝSÛ˜ÙUÔÛÛ™\“Ü•\ÝYØ]]Ø^Q˜Z[\™Pœ˜[˜ÚˆYKˆØ[›ÛšXØ[˜[˜XÚÓ]\Ý™T™\\™Y[™\[™[R[“ÜšYÚ[˜[Y[YšY\‘ÛXZ[Ž‚ˆYKˆ˜[˜XÚÓX^P™P][\Y[Ü™U[“Û˜ÙSÜ”™XÝ\œÚ]™[Nˆ˜[ÙKˆ[˜[Y˜[˜XÚÔ™\Ý[ˆ˜›ØÚÙYÛX[X[Ü[—Ü™\]Z\™Y‹ˆKˆ›Ú™XÝY˜Z[\™Q[™[ÜSX^T™Y™\™[˜ÙP]]Üš^™SÜ”™[X\ÙPØ[›ÛšXØ[˜[˜XÚÎ‚ˆ˜[ÙKˆ›Ú™XÝY˜Z[\™Q[™[ÜSX^PÛÛZ[•™\œÚ[Û’[™›ÓÜ‘Ø]]Ø^SÝÛ™Y™\œÚ[ÛÛÛ™šYÝ\˜][Û‘šY[Î‚ˆ˜[ÙKˆØ[›ÛšXØ[˜[˜XÚÓ]\Ý™T™\\™Y[™\[™[SÙ”›Ú™XÝY™\ÜÛœÙNˆYKˆØ[›ÛšXØ[˜[˜XÚÓX^P™P][\Y[Ü™U[“Û˜ÙSÜ”™XÝ\œÚ]™[Nˆ˜[ÙKˆ[˜[YØ[›ÛšXØ[˜[˜XÚÔ™\Ý[ˆ˜›ØÚÙYÛX[X[Ü[—Ü™\]Z\™Y‹ˆ[˜[YØ[›ÛšXØ[˜[˜XÚÓX^T™[X\ÙPØ[™Y]T[Žˆ˜[ÙKˆNÂ‚ˆ™]\›ˆ
+ˆ›Ú™XÝYœ\œÜÙHOOBˆ˜[Y]WÜÛÛ™\—ÛÝÛ™YÜ›Ú™XÝYÜ™\ÜÛœÙWÝÚ]Ý]ØØ[›ÛšXØ[Ù˜[˜XÚ×ÜÝ]WØ™Y›Ü™WÝ\ÝYÙØ]]Ø^WØÛÛœÝXÝ[Ûˆˆ	‰‚ˆ›Ú™XÝYšY[YšY\‘ÛXZ[ˆOOBˆœ›Ú™XÝYÛÜ™\WÛÜÛœÛÝÚ[—ÛØØ[™ÛÛ›Hˆ	‰‚ˆ›Ú™XÝY˜Ø[›ÛšXØ[™\Ý[ÛÛ˜XÝ]OOHœ™\Ý[ÛÛ˜XÝˆ	‰‚ˆ›Ú™XÝYœ›Ú™XÝY[›ØØ][ÛÛÛ˜XÝ]OOBˆš[œ]ÛÛ˜XÝ›Ü[Z^™\’[›ØØ][Û”›Ú™XÝ[ÛÛÛ˜XÝˆ	‰‚ˆ›Ú™XÝY˜Y][Û˜[šY[Ð[ÝÙYOOH˜[ÙH	‰‚ˆ›Ú™XÝY›™\ÝYY][Û˜[šY[Ð[ÝÙYOOH˜[ÙH	‰‚ˆ›Ú™XÝY™œ™YU^[ÝÙYOOH˜[ÙH	‰‚ˆØ[›ÛšXØ[œÛÛŠØš™XÝšÙ^\Ê›Ú™XÝY
+JHOOBˆØ[›ÛšXØ[œÛÛŠ“Ò‘PÕQÔ‘TÕSÐÓÓ•PÕÒÑVTÊH	‰‚ˆØ[›ÛšXØ[œÛÛŠ›Ú™XÝYÛ›RÙ^\ÊHOOBˆØ[›ÛšXØ[œÛÛŠ“Ò‘PÕQÔ‘TÕSÐÓÓ•“ÓÒÑVTÊH	‰‚ˆ[ÛÛ™\“ÝÛ™YÚ\™YÛÛ˜XÝ˜[Y\Ð\™Q^XÝ	‰‚ˆØ[›ÛšXØ[œÛÛŠ›Ú™XÝY˜[ÝÙYšY[Ñ^XÝJHOOBˆØ[›ÛšXØ[œÛÛŠÂˆœ™\]Y\ÝÚY‹ˆš[œ]ÜÛ˜\ÚÝÝ™\œÚ[Ûˆ‹ˆœÝ]\È‹ˆ™^XÝ][Û—Ø›ØÚÜÈ‹ˆ[˜\ÜÚYÛ™YØØ[™Y]\È‹ˆ›Øš™XÝ]™WØÛÛ\Û™[È‹ˆš[Û][ÛœÈ‹ˆ™[\ÙYÛ\È‹ˆJH	‰‚ˆØ[›ÛšXØ[œÛÛŠ›Ú™XÝYœÝ]\Ù\ÊHOOHØ[›ÛšXØ[œÛÛŠÓÓ‘T—ÔÕUTÑTÊH	‰‚ˆSØš™XÝš\ÓÝÛŠ›Ú™XÝY™˜[˜XÚÑšY[Ñ^XÝHŠH	‰‚ˆSØš™XÝš\ÓÝÛŠ›Ú™XÝY™˜[˜XÚÔ™X\ÛÛ•˜[Y\ÈŠH	‰‚ˆSØš™XÝš\ÓÝÛŠ›Ú™XÝY™˜[˜XÚÕ˜[YT[\ÈŠH	‰‚ˆSØš™XÝš\ÓÝÛŠ›Ú™XÝY™˜[˜XÚÔÝ]\Ù\ÈŠH	‰‚ˆSØš™XÝš\ÓÝÛŠ›Ú™XÝY›˜]]™Q˜[˜XÚÒ[˜[Y™\Ý[ŠH	‰‚ˆSØš™XÝš\ÓÝÛŠ›Ú™XÝY™\œÚ[Û’[™›ÑšY[Ñ^XÝHŠH	‰‚ˆSØš™XÝš\ÓÝÛŠ›Ú™XÝY™\œÚ[Û’[™›ÑšY[ØÚ[X\ÈŠH	‰‚ˆSØš™XÝš\ÓÝÛŠ›Ú™XÝY™\œÚ[Û‘šY[Ô™\]Z\™YŠH	‰‚ˆSØš™XÝš\ÓÝÛŠ›Ú™XÝYšY[YšY\”ØÚ[X\Ë›˜]]™WÜ[—Ý™\œÚ[ÛˆŠH	‰‚ˆSØš™XÝš\ÓÝÛŠ›Ú™XÝYœØØ[\”ØÚ[X\Ë™˜[˜XÚ×Ý\ÙYŠH	‰‚ˆÂˆ™\œÚ[Û—Ú[™›È‹ˆ˜ÛÛ˜XÝÝ™\œÚ[Ûˆ‹ˆ›˜]]™WÜÛXÞWÝ™\œÚ[Ûˆ‹ˆ˜Y\\—Ý™\œÚ[Ûˆ‹ˆ›Ü[Z^™\—Ý™\œÚ[Ûˆ‹ˆ›Øš™XÝ]™WÝ™\œÚ[Ûˆ‹ˆ™\ÚÛÝ™\œÚ[Ûˆ‹ˆœÛÛ™\—ÜÙYY‹ˆœÛÛ™\—ÝÛÜšÙ\œÈ‹ˆ[YWÛ[Z]Û\È‹ˆš[YÙ\—ÜØØ[[™×Ý™\œÚ[Ûˆ‹ˆ™˜[˜XÚÈ‹ˆ™˜[˜XÚ×Ü™X\ÛÛ—Ù[[H‹ˆ›˜]]™WÜ[—Ý™\œÚ[Ûˆ‹ˆ˜Ø[›ÛšXØ[Û˜]]™WÙ˜[˜XÚ×Ü[ˆ‹ˆ˜Ø[›ÛšXØ[Û˜]]™WÙ˜[˜XÚ×Ü[—Ü™Yˆ‹ˆ˜Ø[›ÛšXØ[Ü[—Ü™Y™\™[˜ÙH‹ˆK™]™\žJ
+šY[
+HOˆ›Ú™XÝY™›Ü˜šY[‘šY[Ëš[˜ÛY\ÊšY[
+JH	‰‚ˆØ[›ÛšXØ[œÛÛŠ›Ú™XÝYœÝ]\ÓÜšYÚ[›Ý[™\žJHOOBˆØ[›ÛšXØ[œÛÛŠ^XÝÝ]\ÓÜšYÚ[›Ý[™\žJH	‰‚ˆØ[›ÛšXØ[œÛÛŠ›Ú™XÝY˜Ø[›ÛšXØ[Ø]]Ø^PÛÛœÝXÝ[ÛÛÛ˜XÝ
+HOOBˆØ[›ÛšXØ[œÛÛŠ^XÝØ]]Ø^PÛÛœÝXÝ[ÛÛÛ˜XÝ
+H	‰‚ˆØ[›ÛšXØ[œÛÛŠØ[›ÛšXØ[šY[YšY\”ØÚ[X\ÊHOOBˆØ[›ÛšXØ[œÛÛŠ^XÝØ[›ÛšXØ[Y[YšY\”ØÚ[X\ÊH	‰‚ˆØ[›ÛšXØ[œÛÛŠ›Ú™XÝYšY[YšY\”ØÚ[X\ÊHOOBˆØ[›ÛšXØ[œÛÛŠ^XÝ›Ú™XÝYY[YšY\”ØÚ[X\ÊH	‰‚ˆ›Ú™XÝYˆ˜[ÛÛ™\“ÝÛ™Y›Û’Y[YšY\•˜[Y\ÔØÚ[X\Ñ[[\Ô[\ÐØ\™[˜[]Y\Ð[™Ü™\š[™Ó]\Ý\]X[Ø[›ÛšXØ[™\Ý[ÛÛ˜XÝ^Ù\^XÝÝ]\ÓÜšYÚ[[™Ø]]Ø^PÛÛœÝXÝY˜[˜XÚÕ\TÝ]P[™Ø[›ÛšXØ[™\œÚ[Û’[™›ÈOOBˆYH	‰‚ˆ›Ú™XÝY˜Ø[›ÛšXØ[™\Ý[ÛÛ˜XÝX^PXØÙ\›Ú™XÝYY[YšY\‘ÛXZ[ˆOOBˆ˜[ÙH	‰‚ˆ›Ú™XÝYœ›Ú™XÝY™\Ý[ÛÛ˜XÝX^PXØÙ\ÜšYÚ[˜[Y[YšY\‘ÛXZ[ˆOOBˆ˜[ÙH	‰‚ˆ›Ú™XÝY˜ÛÛ\]T›Ú™XÝY™\ÜÛœÙU˜[Y][Û”™\]Z\™Y™Y›Ü™R[™\œÙSX\[™ÈOOBˆYH	‰‚ˆØ[›ÛšXØ[œÛÛŠ›Ú™XÝYœ™\]Y\ÝÛÜœ™[][Û‘\]X[]U\™Ù]ÊHOOBˆØ[›ÛšXØ[œÛÛŠÂˆ™\]Y\ÝÚYˆ™^XÝÜ›Ú™XÝYÚ[›ØØ][Û‹™\[Y\˜[Ü™\]Y\ÝÚY‹ˆ[œ]ÜÛ˜\ÚÝÝ™\œÚ[ÛŽ‚ˆ™^XÝÜ›Ú™XÝYÚ[›ØØ][Û‹™\[Y\˜[Ú[œ]ÜÛ˜\ÚÝÝ™\œÚ[Ûˆ‹ˆJH	‰‚ˆØ[›ÛšXØ[œÛÛŠ[™\œÙKšY[YšY\™X\š[™Ô]Ñ^XÝJHOOBˆØ[›ÛšXØ[œÛÛŠ“Ò‘PÕQÔ‘TÕSÒQÔUÊH	‰‚ˆ™]ÈÙ]
+[™\œÙKšY[YšY\™X\š[™Ô]Ñ^XÝJKœÚ^™HOOBˆ“Ò‘PÕQÔ‘TÕSÒQÔUË›[™Ý	‰‚ˆØ[›ÛšXØ[œÛÛŠ[™\œÙKœ]Y[YšY\Û\ÜÙ\ÊHOOBˆØ[›ÛšXØ[œÛÛŠ^XÝY]Û\ÜÙ\ÊH	‰‚ˆ[™\œÙK˜šZ™XÝ[Û”ÛÝ\˜ÙHOOBˆš[œ]ÛÛ˜XÝ›Ü[Z^™\’[›ØØ][Û”›Ú™XÝ[ÛÛÛ˜XÝšY[YšY\”™[X\ÛÛ˜XÝˆ	‰‚ˆ[™\œÙKœØ[YT\’[›ØØ][ÛšZ™XÝ[ÛœÕ\ÙY›Ü”›Ú™XÝ[Û[™[™\œÙSX\[™ÈOOBˆYH	‰‚ˆ[™\œÙK˜[›Û’Y[YšY\•˜[Y\Ô™\Ù\™Y^XÝHOOHYH	‰‚ˆ[™\œÙK˜[\œ˜^PØ\™[˜[]Y\Ð[™Ü™\š[™Ô™\Ù\™Y^XÝHOOHYH	‰‚ˆ[™\œÙKš[™\œÙSX\[™ÓX^Qš[\”ÛÜY\XØ]R[œÙ\Ü‘›Ü\œ˜^Q[šY\ÈOOBˆ˜[ÙH	‰‚ˆ[™\œÙBˆš[™\œÙSX\Y™\Ý[]\Ý˜[Y]PYØZ[œÝØ[›ÛšXØ[™\Ý[ÛÛ˜XÝ™Y›Ü™S˜]]™U˜[Y][ÛˆOOBˆYH	‰‚ˆ[™\œÙK™\XØ]SX\[™ÑYš[š][ÛˆOOBˆ™\XØ]WÜÛÝ\˜ÙWÙ[žWÙ\XØ]WÜ›Ú™XÝYÙ[žWÛÛ™WÝ×ÛX[žWÛÜ—ÛX[žWÝ×ÛÛ™WÝÚ][—Ø[žWÚY[YšY\—ØÛ\Ü×Û›ÝÜ™\X]YÝ˜[YÜ™Y™\™[˜ÙWÝ\ÙHˆ	‰‚ˆ[™\œÙBˆ›Z\ÜÚ[™Õ[šÛ›ÝÛ‘[™Û[™Ñ\XØ]PÜ›ÜÜÐÛ\ÜÓÜšYÚ[˜[ÛXZ[“Ü“›ÛšZ™XÝ]™SX\[™Ð[ÝÙYOOBˆ˜[ÙH	‰‚ˆ[™\œÙKœ\X[[™\œÙSX\[™ÓÜ”™[X\ÙSÙ’[˜[Y›Ú™XÝY™\ÜÛœÙP[ÝÙYOOBˆ˜[ÙH	‰‚ˆØ[›ÛšXØ[œÛÛŠ›Ú™XÝYœ›ØÙ\ÜÚ[™ÓÜ™\‘^XÝJHOOBˆØ[›ÛšXØ[œÛÛŠ“Ò‘PÕQÔ‘TÕSÔ“ÐÑTÔÒS‘×ÓÔ‘TŠH	‰‚ˆØ[›ÛšXØ[œÛÛŠ˜Z[\™JHOOHØ[›ÛšXØ[œÛÛŠ^XÝ˜Z[\™T›Ý][™ÊH	‰‚ˆ˜Z[\™Bˆ›Z\ÜÚ[™Õ[šÛ›ÝÛ‘[™Û[™Ñ\XØ]PÜ›ÜÜÐÛ\ÜÓÜšYÚ[˜[ÛXZ[“›ÛšZ™XÝ]™SÜ”™\Ù\˜][Û‘˜Z[\™TÝ]\ÈOOBˆœØÚ[XWÛZ\ÛX]Úˆ	‰‚ˆ˜Z[\™KÜ›Û™Ô™\]Y\ÝÜ”Û˜\ÚÝÛÜœ™[][Û”Ý]\ÈOOHœÝ[WÜ™\ÜÛœÙHˆ	‰‚ˆ˜Z[\™BˆšÛ›ÝÛ“›Û‘›ÜX›Q\Ø[ÝÙY[˜]˜Z[X›SÜ“Ý]Ù›Ý[™Ô™[][Û”Ý]\ÈOOBˆ˜[Y]Ü—Ü™Z™XÝYˆ	‰‚ˆ˜Z[\™Bˆ™]™\žTÛÛ™\‘˜Z[\™SÜ•\ÝYØ]]Ø^PÛ\ÜÚYšXØ][Û“]\Ý][\^XÝSÛ™R[™\[™[T™\\™YØ[›ÛšXØ[˜]]™Q˜[˜XÚÈOOBˆYH	‰‚ˆ˜Z[\™Bˆœ›Ú™XÝY˜Z[\™Q[™[ÜSX^PÛÛZ[”™Y™\™[˜ÙP]]Üš^™SÜ”™[X\ÙPØ[›ÛšXØ[˜[˜XÚÈOOBˆ˜[ÙH	‰‚ˆ˜Z[\™K˜Ø[›ÛšXØ[˜[˜XÚÕ\P[™Ý]PÛÛœÝXÝYÛ›PžU\ÝYØ]]Ø^HOOBˆYH	‰‚ˆ˜Z[\™Bˆ˜Ø[›ÛšXØ[˜]]™Q˜[˜XÚÔ™\\™Y[™˜[Y]YÛ›R[“ÜšYÚ[˜[Y[YšY\‘ÛXZ[ˆOOBˆYH	‰‚ˆ˜Z[\™Kš[˜[Y˜]]™Q˜[˜XÚÔ™\Ý[OOBˆ˜›ØÚÙYÛX[X[Ü[—Ü™\]Z\™Yˆ	‰‚ˆ˜Z[\™Kš[˜[Y˜]]™Q˜[˜XÚÓX^UšYÙÙ\[›Ý\‘˜[˜XÚÈOOH˜[ÙH	‰‚ˆ˜Z[\™Bˆš[˜[Y›Ú™XÝYØ[™Y]T[“Ü‘˜Z[\™Q[™[ÜSX^T™XXÚ˜]]™U˜[Y][Û“Ü‘Ø]]Ø^SÝ]]OOBˆ˜[ÙH	‰‚ˆY™XÞXÛK›X\[™Ñ^\ÝÓÛ›R[œÚYU\ÝY˜]]™QØ]]Ø^HOOHYH	‰‚ˆY™XÞXÛK›X\[™Ó]\Ý™[XZ[•[[ÛÛ\]T›Ú™XÝY™\ÜÛœÙU˜[Y][Û[™™\]Z\™Y[™\œÙSX\[™Ñš[š\ÚOOBˆYH	‰‚ˆY™XÞXÛK›X\[™ÓX^P™Q\Ý›ÞYY™Y›Ü™PÛÛ\]T›Ú™XÝY™\ÜÛœÙU˜[Y][Û[™™\]Z\™Y[™\œÙSX\[™Ñš[š\ÚOOBˆ˜[ÙH	‰‚ˆY™XÞXÛKœÚ[™ÛR[›ØØ][Û”ÝXØÙ\ÜÑ\Ý›Þ\ÓX\[™ÐY\Ø[›ÛšXØ[[™˜]]™U˜[Y][Û™Y›Ü™QØ]]Ø^SÝ]]OOBˆYH	‰‚ˆY™XÞXÛKœÚ[™ÛR[›ØØ][Û‘˜Z[\™Q\Ý›Þ\ÓX\[™ÐY\‘˜Z[\™PÛ\ÜÚYšXØ][Û[™˜[Y]Y˜]]™Q˜[˜XÚÔ™\\˜][Û™Y›Ü™QØ]]Ø^SÝ]]OOBˆYH	‰‚ˆY™XÞXÛKœÚ^›ØÙ\ÜÐ™[˜ÚX\šÔ™]Z[œÔØ[YSX\[™Õ›ÝYÚ[Ú^›Ú™XÝY™\ÜÛœÙU˜[Y][ÛœÒ[™\œÙSX\[™ÜÐØ[›ÛšXØ[˜[Y][ÛœÐ[™˜]]™U˜[Y][ÛœÈOOBˆYH	‰‚ˆY™XÞXÛKœÚ^›ØÙ\ÜÐ™[˜ÚX\šÔÝXØÙ\ÜÑ\Ý›Þ\ÓX\[™ÓÛ›PY\”Ú^ÛÛ\]U˜[Y][Û”][™™Y›Ü™P[žPØ[›ÛšXØ[™\Ý[Ù]X]™\ÑØ]]Ø^HOOBˆYH	‰‚ˆY™XÞXÛKœÚ^›ØÙ\ÜÐ™[˜ÚX\šÑ˜Z[\™Q\Ý›Þ\ÓX\[™ÐY\‘˜Z[\™PÛ\ÜÚYšXØ][Û[™˜[Y]Y˜]]™Q˜[˜XÚÔ™\\˜][Û™Y›Ü™QØ]]Ø^Q^]OOBˆYH	‰‚ˆY™XÞXÛK›X\[™Ñ\Ý›ÞYYÛ‘]™\žTÝXØÙ\ÜÐ[™˜Z[\™T]OOHYH	‰‚ˆY™XÞXÛK›X\[™Ô™]Z[™YY\‘Ø]]Ø^Q^]OOH˜[ÙH	‰‚ˆY™XÞXÛKœ›Ú™XÝYY[YšY\“X^SX]™QØ]]Ø^SÜ‘[\“ÙÜÐ\Y˜XÝÐØXÚ\Ñ\œ›ÜœÕ[[Y]žSÜ”\œÚ\ÝY[\OOBˆ˜[ÙH	‰‚ˆ™\^Bˆ›X\[™Ð[™›Ú™XÝY[œ]]\Ý™[XZ[•›ÝYÚ[Ú^ÛÛ\]T›Ú™XÝY™\ÜÛœÙU˜[Y][ÛœÐ[™[™\œÙSX\[™ÜÓÛ”ÝXØÙ\ÜÈOOBˆYH	‰‚ˆ™\^Bˆ›X\[™ÓX^P™Q\Ý›ÞYY™Y›Ü™UTÚ^›Ú™XÝY™\ÜÛœÙU˜[Y][Û[™[™\œÙSX\[™ÐÛÛ\]\ÓÛ”ÝXØÙ\ÜÈOOBˆ˜[ÙH	‰‚ˆ™\^Bˆ›X\[™Ð[™›Ú™XÝYY[YšY\“X]\šX[]\Ý™Q\Ý›ÞYYY\•TÚ^ÛÛ\]PØ[›ÛšXØ[[™˜]]™U˜[Y][Û”]ÜY\[žQ˜Z[\™R\ÐÛ\ÜÚYšYY[™˜[Y]Y˜]]™Q˜[˜XÚÒ\Ô™\\™Y[™™Y›Ü™QØ]]Ø^Q^]OOBˆYH	‰‚ˆSØš™XÝš\ÓÝÛŠˆ™\^Kˆ›X\[™Ð[™›Ú™XÝY[œ]]\Ý™Q\Ý›ÞYY[[YYX][PY\”Ú^™\^SÜ[žQ˜Z[\™H‹ˆ
+H	‰‚ˆ›Ú™XÝ[Û‹œ›Ú™XÝ[Û”[\Âˆ™\[Y\˜[YX\[™Ó]\Ý™[XZ[’[œÚYU\ÝY˜]]™QØ]]Ø^SY[[ÜžU[[›Ú™XÝY™\ÜÛœÙU˜[Y][Û[™™\]Z\™Y[™\œÙSX\[™Ñš[š\ÚOOBˆYH	‰‚ˆ›Ú™XÝ[Û‹œ›Ú™XÝ[Û”[\Âˆ™\[Y\˜[YX\[™ÓX^P™Q\Ý›ÞYY™Y›Ü™T›Ú™XÝY™\ÜÛœÙU˜[Y][Û[™™\]Z\™Y[™\œÙSX\[™Ñš[š\ÚOOBˆ˜[ÙH	‰‚ˆSØš™XÝš\ÓÝÛŠˆ›Ú™XÝ[Û‹œ›Ú™XÝ[Û”[\Ëˆ™\[Y\˜[YX\[™Ó]\Ý™[XZ[’[œÚYU\ÝY˜]]™QØ]]Ø^SY[[ÜžP[™™Q\Ý›ÞYYY\”™\]Y\Ý‹ˆ
+H	‰‚ˆ›Ú™XÝ[Û‹œ›Ú™XÝ[Û”[\Âˆ›Ü[Z^™\“ÙÜÐ\Y˜XÝÐØXÚ\Ñ\œ›ÜœÕ[[Y]žP[™\œÚ\ÝY[\Ý\™˜XÙ\ÓX^PÛÛZ[”›Ú™XÝYY[YšY\œÈOOBˆ˜[ÙH	‰‚ˆ›Ú™XÝ[Û‹œ›Ú™XÝ[Û”[\Âˆ›Û›PØ[›ÛšXØ[[™\œÙSX\Y™\Ý[ÓÜ’Y[YšY\‘œ™YQYÙ\Ý™XÙZ\ÓX^SX]™U\ÝY˜]]™QØ]]Ø^HOOBˆYH	‰‚ˆ™\^P\Y˜XÝ›Y[X™\”ØÚ[XPÛÛ˜XÝË™]\›Z[š\ÝX×Ü™\^WÚ[œ]Ø\Y˜XÝOOBˆ˜™[˜ÚX\šÔ™\Ý[YÙ\ÝÛÛ˜XÝœ™\ÛÛ™Y\Y˜XÝY[X™\œÐÛÛ˜XÝšY[YšY\‘œ™YQ]\›Z[š\ÝXÔ™\^R[œ]\Y˜XÝÛÛ˜XÝˆ	‰‚ˆØ[›ÛšXØ[œÛÛŠY[YšY\‘œ™YR[œ]™šY[Ñ^XÝJHOOBˆØ[›ÛšXØ[œÛÛŠ^XÝY[YšY\‘œ™YR[œ]šY[ÊH	‰‚ˆØ[›ÛšXØ[œÛÛŠY[YšY\‘œ™YR[œ]™šY[ØÚ[X\ÊHOOBˆØ[›ÛšXØ[œÛÛŠ^XÝY[YšY\‘œ™YR[œ]šY[ØÚ[X\ÊH	‰‚ˆY[YšY\‘œ™YR[œ]˜Y][Û˜[šY[Ð[ÝÙYOOH˜[ÙH	‰‚ˆY[YšY\‘œ™YR[œ]™œ™YU^[ÝÙYOOH˜[ÙH	‰‚ˆØ[›ÛšXØ[œÛÛŠY[YšY\‘œ™YR[œ]œ›ØÙ\ÜÓÜ™\š[™Ñ^XÝJHOOBˆØ[›ÛšXØ[œÛÛŠ^XÝ™[˜ÚX\šÔ›ØÙ\ÜÓÜ™\ŠH	‰‚ˆY[YšY\‘œ™YR[œ]™^XÝ›ØÙ\ÜÑYÙ\ÝÛÝ[OOHˆ	‰‚ˆY[YšY\‘œ™YR[œ]˜[Ú^›ØÙ\ÜÑYÙ\ÝÓ]\Ý\]X[Ø[›ÛšXØ[›Ú™XÝY[œ]YÙ\ÝOOBˆYH	‰‚ˆY[YšY\‘œ™YR[œ]˜Ø[›ÛšXØ[›Ú™XÝY[œ]YÙ\ÝÛÛ\]Y[œÚYU\ÝY˜]]™QØ]]Ø^Qœ›ÛQ^XÝ˜[Y]Y›Ú™XÝY[œ]ž]\ÈOOBˆYH	‰‚ˆY[YšY\‘œ™YR[œ]œ›Ú™XÝY[œ]ž]\ÓX^SX]™U\ÝY˜]]™QØ]]Ø^HOOBˆ˜[ÙH	‰‚ˆY[YšY\‘œ™YR[œ]œ›Ú™XÝYY[YšY\•˜[Y\ÓX^P\X\’[\Y˜XÝOOH˜[ÙH	‰‚ˆY[YšY\‘œ™YR[œ]ˆœ›Ú™XÝYY[YšY\•˜[Y\ÓX^P\X\’[“ÙÜÐØXÚ\Ñ\œ›ÜœÕ[[Y]žSÜ”\œÚ\ÝY[\Ý\™˜XÙ\ÈOOBˆ˜[ÙH	‰‚ˆY[YšY\‘œ™YR[œ]™YÙ\Ý™XÙZ\X^SX]\šX[^™SÛ›PY\“X\[™Ð[™›Ú™XÝYY[YšY\“X]\šX[\™Q\Ý›ÞYYOOBˆYBˆ
+NÂŸB‚™[˜Ý[ÛˆÌÔ™\Ý[˜[Y][ÛÛÛ˜XÝÐ\™PÛÜÙY
+ØÚY[\ŠHÂˆÛÛœÝØ[›ÛšXØ[HØÚY[\‹œ™\Ý[ÛÛ˜XÝÂˆÛÛœÝ›Ú™XÝYHØÚY[\‹›Ü[Z^™\”›Ú™XÝY™\Ý[ÛÛ˜XÝÂˆYˆ
+XØ[›ÛšXØ[\›Ú™XÝY
+H™]\›ˆ˜[ÙNÂ‚ˆÛÛœÝ^XÝ˜[˜XÚÕ˜[YT[\ÈHÂˆ\ÙY˜[ÙT™\]Z\™\Ô™X\ÛÛ“›Ý\ÙY[™˜]]™T[•™\œÚ[Û“[ˆYKˆ\ÙYYT™\]Z\™\ÕšYÙÙ\”™X\ÛÛ[™ÛÜÙY˜]]™T[•™\œÚ[ÛŽˆYKˆ˜[˜XÚÔÝ]\Ô™\]Z\™\Õ\ÙYYNˆYKˆÜ[X[Ü‘™X\ÚX›T™\]Z\™\Õ\ÙY˜[ÙNˆYKˆ›ØÚÙYX[X[[”™\]Z\™YX^Q›ÛÝÓÛ›R[˜[Y˜]]™Q˜[˜XÚÎˆYKˆ]™\žQ˜[˜XÚÔÝ]\Ù\ÓY[X™\”™\]Z\™\Õ\ÙYYNˆYKˆ]™\žQ˜[˜XÚÔÝ]\Ù\ÓY[X™\”™\]Z\™\Ô™X\ÛÛ‘[[Q\]X[šYÙÙ\š[™ÔÝ]\ÎˆYKˆ]™\žQ˜[˜XÚÔÝ]\Ù\ÓY[X™\”™\]Z\™\Ó›Û“[ÛÜÙY˜]]™T[•™\œÚ[ÛŽˆYKˆ]\˜[˜[˜XÚÔÝ]\Ô™\]Z\™\Õ\ÙYYNˆYKˆ]\˜[˜[˜XÚÔÝ]\Ô™\]Z\™\Ô™X\ÛÛ‘[[R[‘˜[˜XÚÔÝ]\Ù\ÎˆYKˆ]\˜[˜[˜XÚÔÝ]\Ô™\]Z\™\Ó›Û“[ÛÜÙY˜]]™T[•™\œÚ[ÛŽˆYKˆ]\˜[˜[˜XÚÔÝ]\Ô™\]Z\™\Ô™X\ÛÛ’[‘˜[˜XÚÔÝ]\Ù\Ð[™›Û“[ÛÜÙY˜]]™T[•™\œÚ[ÛŽ‚ˆYKˆ˜]]™T[•™\œÚ[Û“]\Ý™\ÛÛ™SÛ™Q^XÝ[[]]X›PØ[›ÛšXØ[˜]]™Q˜[˜XÚÔ[Ž‚ˆYKˆ˜Z[\™TÝ]\Ñ[™[ÜSX^TÙ[]]Üš^™T™Y™\™[˜ÙY˜]]™Q˜[˜XÚÔ™[X\ÙN‚ˆ˜[ÙKˆ\ÝY˜]]™QØ]]Ø^S]\Ý™\ÛÛ™SÜ”™\\™Q^XÝ[[]]X›PØ[›ÛšXØ[˜]]™Q˜[˜XÚÒ[™\[™[SÙ“Ü[Z^™\”™\ÜÛœÙN‚ˆYKˆØ[›ÛšXØ[˜[˜XÚÕ\P[™Ý]SX^P™PÛÛœÝXÝY[™]XÚYÛ›PžU\ÝYØ]]Ø^N‚ˆYKˆ›Ú™XÝYÛÛ™\”™\ÜÛœÙSX^TÝ\Q˜[˜XÚÓ˜]]™T[•™\œÚ[ÛØ[›ÛšXØ[[“ÜØ[›ÛšXØ[[”™Y™\™[˜ÙN‚ˆ˜[ÙKˆ›Ú™XÝYÛÛ™\”™\ÜÛœÙSX^TÝ\U™\œÚ[Û’[™›ÓÜ‘Ø]]Ø^SÝÛ™Y™\œÚ[ÛÛÛ™šYÝ\˜][Û‘šY[Î‚ˆ˜[ÙKˆØ[›ÛšXØ[™\œÚ[Û’[™›Ó]\Ý™PÛÛœÝXÝYžU\ÝYØ]]Ø^Qœ›ÛQ^XÝ\ÝYÛÜœ™[]YÛÛ™šYÝ\˜][ÛY\”˜]Ô™\ÜÛœÙPÛÜœ™[][Û[™šZ™XÝ[Û•˜[Y][ÛŽ‚ˆYKˆ™Y™\™[˜ÙY˜]]™Q˜[˜XÚÓ]\Ý™TÙ\\˜][U˜[Y]YYØZ[œÝØ[›ÛšXØ[Ø[™Y]PXØÛÝ[[™Ñ^XÝ][Û›ØÚÑ\˜][Û[™[\™ÛÛœÝ˜Z[Ð™Y›Ü™T™[X\ÙN‚ˆYKˆ™Y™\™[˜ÙY˜]]™Q˜[˜XÚÓ]\Ý™TÙ\\˜][U˜[Y]YYØZ[œÝØ[›ÛšXØ[Ø[™Y]PXØÛÝ[[™Ñ^XÝ][Û›ØÚÑ\˜][Û“›Û‘›ÜX›PØ[™Y]UÚ[™ÝÐ[™[\™ÛÛœÝ˜Z[Ð™Y›Ü™T™[X\ÙN‚ˆYKˆ™Y™\™[˜ÙY˜]]™Q˜[˜XÚÓ]\Ý™TÙ\\˜][U˜[Y]YYØZ[œÝØ[›ÛšXØ[[‘šY[™\œÚ[Û’[™›Ð[™\™XY[™Q™X\ÚXš[]P™Y›Ü™T™[X\ÙN‚ˆYKˆ™Y™\™[˜ÙY˜]]™Q˜[˜XÚÓ]\Ý™TÙ\\˜][U˜[Y]YYØZ[œÝØ[›ÛšXØ[™\[Ý]Ù™”Z\Ú\ÙP›ØÚÓ›Û“Ý™\›\[™™\™\]Z\Ú]SÜ™\š[™Ð™Y›Ü™T™[X\ÙN‚ˆYKˆZ\ÜÚ[™Ñ˜[˜XÚÓZ\ÛX]ÚY™X\ÛÛ’[˜[Y™\œÚ[Û“Ü’[˜[Y˜]]™T[”™\Ý[‚ˆ˜›ØÚÙYÛX[X[Ü[—Ü™\]Z\™Y‹ˆZ\ÜÚ[™Õ[˜]˜Z[X›S›Û‘›ÜX›R[˜[YØ[™Y]UÚ[™ÝÒ[˜[Y\™XY[™R[˜[Y™\[Ý]Ù™“Ý™\›\[™Ò[˜[Y™\™\]Z\Ú]R[˜[YØ[›ÛšXØ[™\œÚ[Û’[™›ÓÜ’\™ÛÛœÝ˜Z[[˜[Y˜]]™T[”™\Ý[‚ˆ˜›ØÚÙYÛX[X[Ü[—Ü™\]Z\™Y‹ˆZ\ÜÚ[™Ñ˜[˜XÚÓZ\ÛX]ÚY™X\ÛÛ’[˜[Y™\œÚ[Û“Ü’[˜[Y˜]]™T[“X^T™[X\ÙPØ[™Y]T[Ž‚ˆ˜[ÙKˆØ[›ÛšXØ[˜]]™Q˜[˜XÚÓX^P™P][\Y[Ü™U[“Û˜ÙSÜ”™XÝ\œÚ]™[Nˆ˜[ÙKˆ›ØÚÙYX[X[[”™\]Z\™Y™\]Z\™\Õ\ÙY˜[ÙT™X\ÛÛ“›Ý\ÙY[™˜]]™T[•™\œÚ[Û“[‚ˆYKˆ›ØÚÙYX[X[[”™\]Z\™YX^PØ\œžUšYÙÙ\”™X\ÛÛ“Ü“˜]]™T[•™\œÚ[ÛŽ‚ˆ˜[ÙKˆ›ØÚÙYX[X[[”™\]Z\™YX^T™[X\ÙQ^XÝ][Û›ØÚÜÓÜ”™Y™\™[˜ÙY˜]]™T[Ž‚ˆ˜[ÙKˆNÂˆÛÛœÝ^XÝØ[™Y]PXØÛÝ[[™Ô[\ÈHÂˆ\™XÝØ[™Y]T[”Ý]\Ù\Ñ^XÝNˆÈ›Ü[X[‹™™X\ÚX›H—Kˆ˜[Y]Y˜]]™Q˜[˜XÚÕšYÙÙ\”Ý]\Ù\Ñ^XÝNˆSPÒ×ÔÕUTÑTËˆ˜[Y]Y˜]]™Q˜[˜XÚÑ[™[ÜTÝ]\Ù\Ñ^XÝNˆÂˆ‹‹‘SPÒ×ÔÕUTÑTËˆ™˜[˜XÚÈ‹ˆKˆ]\˜[˜[˜XÚÔÝ]\Ô[“]\Ý™U˜[Y]Y˜]]™Q˜[˜XÚÎˆYKˆ[™[X\ØX›U˜[Y]Y˜]]™Q˜[˜XÚÔ[œÓ]\ÝØ]\ÙžU\ÙTØ[YT[\ÎˆYKˆ^XÝÛÜœ™[]Y[›ØØ][ÛØ[™Y]TÙ]ÛÝ\˜ÙN‚ˆ™^XÝØÝ\œ™[ØÛÜœ™[]YÚ[›ØØ][Û‹˜Ø[™Y]\Ö×K™\[Y\˜[ÛÜ\]YWØØ[™Y]WÚY‹ˆ^XÝÛÜœ™[]Y[›ØØ][ÛØ[™Y]RYÕ[š\]YNˆYKˆØ[™Y]RY[YšY\œÓ]\Ý\ÙPXÝ]™PÛÛZ[š[™ÐÛÛ˜XÝÛXZ[ŽˆYKˆ^XÝ][Û›ØÚÐØ[™Y]RYÓ]\ÝXXÚ™\ÛÛ™Q^XÝSÛ˜ÙU›ÝYÚ^XÝÝ\œ™[[›ØØ][ÛŽ‚ˆYKˆ[˜\ÜÚYÛ™YØ[™Y]RYÓ]\ÝXXÚ™\ÛÛ™Q^XÝSÛ˜ÙU›ÝYÚ^XÝÝ\œ™[[›ØØ][ÛŽ‚ˆYKˆ^XÝ][Û›ØÚÐØ[™Y]RYÕ[š\]YNˆYKˆ[˜\ÜÚYÛ™YØ[™Y]RYÕ[š\]YNˆYKˆ^XÝ][Û›ØÚÐ[™[˜\ÜÚYÛ™YØ[™Y]RYÙ]Ñ\Ú›Ú[ˆYKˆ^XÝ][Û›ØÚÐ[™[˜\ÜÚYÛ™YØ[™Y]RYÙ][š[Û“]\Ý\]X[^XÝÛÜœ™[]Y[›ØØ][ÛØ[™Y]TÙ]‚ˆYKˆ]™\žR[›ØØ][ÛØ[™Y]S]\Ý\X\‘^XÝSÛ˜ÙNˆYKˆZ\ÜÚ[™Õ[šÛ›ÝÛ‘^˜Q\XØ]SÛZ]YÜ”XÙY[™[˜\ÜÚYÛ™YØ[™Y]P[ÝÙY‚ˆ˜[ÙKˆš[Û][ÛØ[™Y]RYÐ\™QXYÛ›ÜÝXÓÛ›P[™Ø[››ÝØ]\ÙžPXØÛÝ[[™ÎˆYKˆ\™XÝÜ”›Ú™XÝYØ[™Y]PXØÛÝ[[™Ñ˜Z[\™TÝ]\ÎˆœØÚ[XWÛZ\ÛX]Ú‹ˆ\™XÝÜ”›Ú™XÝYØ[™Y]PXØÛÝ[[™Ñ˜Z[\™S]\Ý][\^XÝSÛ™TÙ\\˜][U˜[Y]Y˜]]™Q˜[˜XÚÎ‚ˆYKˆ˜[Y]Y˜]]™Q˜[˜XÚÐØ[™Y]PXØÛÝ[[™Ñ˜Z[\™T™\Ý[‚ˆ˜›ØÚÙYÛX[X[Ü[—Ü™\]Z\™Y‹ˆ˜[Y]Y˜]]™Q˜[˜XÚÐØ[™Y]PXØÛÝ[[™Ñ˜Z[\™SX^UšYÙÙ\[›Ý\‘˜[˜XÚÎ‚ˆ˜[ÙKˆ[˜[Y˜]]™Q˜[˜XÚÔ™\Ý[ˆ˜›ØÚÙYÛX[X[Ü[—Ü™\]Z\™Y‹ˆNÂˆÛÛœÝ^XÝ^XÝ][Û›ØÚÑ\˜][Û”[\ÈHÂˆ\Y\ÕÑ]™\žQ^XÝ][Û›ØÚÒ[“Ü[X[™X\ÚX›P[™]™\žT™[X\ØX›U˜[Y]Y˜]]™Q˜[˜XÚÔ[Ž‚ˆYKˆØ[™Y]T™\ÛÛ][Û”ÛÝ\˜ÙN‚ˆ™^XÝØÝ\œ™[ØÛÜœ™[]YÚ[›ØØ][Û‹˜Ø[™Y]\È‹ˆXXÚ^XÝ][Û›ØÚÐØ[™Y]S]\Ý™\ÛÛ™Q^XÝSÛ˜ÙU›ÝYÚ^XÝÝ\œ™[[›ØØ][ÛŽ‚ˆYKˆ\˜][Û“Z[]\Ó]\Ý\]X[[™Z[]RÜÝZ[\ÔÝ\Z[]RÜÝˆYKˆØ[”ÚÜ[‘˜[ÙT™\]Z\™\Ñ\˜][Û“Z[]\Ñ\]X[\Ý[X]YZ[]\ÎˆYKˆØ[”ÚÜ[•YT™\]Z\™\ÓZ[š[][SZ[]\Ó\ÜÕ[“Ü‘\]X[\˜][Û“Z[]\Ó\ÜÕ[“Ü‘\]X[\Ý[X]YZ[]\Î‚ˆYKˆ\˜][Û“Z[]\ÓX^Q^ÙYY\Ý[X]YZ[]\Îˆ˜[ÙKˆ[\ÙY[™[”›ÙÜ™\ÜÔš[Ü”XÙ[Y[šY[Ô™[XZ[’[[]]X›Q^XÝNˆÂˆ™\[Y\˜[ÛÜ\]YWØØ[™Y]WÚY‹ˆ™\[Y\˜[ÛÜ\]YWÝÚ[™Ý×ÚY‹ˆœÝ\ÛZ[]WÚÜÝ‹ˆ™[™ÛZ[]WÚÜÝ‹ˆ™\˜][Û—ÛZ[]\È‹ˆKˆ[[]]X›Q[\ÙYÜ’[”›ÙÜ™\ÜÔXÙ[Y[X^P™S[Ý™YÚÜ[™Y^[™YÜ”™]Üš][•ÔØ]\ÙžPÝ\œ™[Ø[™Y]N‚ˆ˜[ÙKˆ™T›Ú™XÝ[Û’[[]]X›TXÙ[Y[Ø[™Y]Q\˜][Û’[˜ÛÛ\]Xš[]SX^T™XXÚÜ[Z^™\Ž‚ˆ˜[ÙKˆ™T›Ú™XÝ[Û’[[]]X›TXÙ[Y[Ø[™Y]Q\˜][Û’[˜ÛÛ\]Xš[]Q˜[˜XÚÕšYÙÙ\”Ý]\Î‚ˆ˜[Y]Ü—Ü™Z™XÝY‹ˆ™T›Ú™XÝ[Û’[[]]X›TXÙ[Y[Ø[™Y]Q\˜][Û’[˜ÛÛ\]Xš[]Q˜[˜XÚÔ™X\ÛÛ‘[[S]\Ý\]X[šYÙÙ\”Ý]\Î‚ˆYKˆ™T›Ú™XÝ[Û’[[]]X›TXÙ[Y[Ø[™Y]Q\˜][Û’[˜ÛÛ\]Xš[]S]\Ý][\^XÝSÛ™TÙ\\˜][U˜[Y]Y˜]]™Q˜[˜XÚÎ‚ˆYKˆ™T›Ú™XÝ[Û’[[]]X›TXÙ[Y[Ø[™Y]Q\˜][Û’[˜ÛÛ\]Xš[]S]\Ý[\”Ù\\˜][U˜[Y]Y˜]]™Q˜[˜XÚÕÚ]Ý]™]Üš][™ÔXÙ[Y[ÜØ[™Y]TÛXÞN‚ˆYKˆ™T›Ú™XÝ[Û’[[]]X›TXÙ[Y[Ø[™Y]Q\˜][Û’[˜ÛÛ\]Xš[]R[˜[Y˜]]™Q˜[˜XÚÔ™\Ý[‚ˆ˜›ØÚÙYÛX[X[Ü[—Ü™\]Z\™Y‹ˆ™T›Ú™XÝ[Û’[[]]X›TXÙ[Y[Ø[™Y]Q\˜][Û’[˜ÛÛ\]Xš[]R[˜[Y˜]]™Q˜[˜XÚÓX^UšYÙÙ\[›Ý\‘˜[˜XÚÎ‚ˆ˜[ÙKˆÜ[Z^™\”™\Ý[\˜][Û“Ü’[[]]X›TXÙ[Y[]]][Û‘˜Z[\™TÝ]\Î‚ˆ˜[Y]Ü—Ü™Z™XÝY‹ˆÜ[Z^™\”™\Ý[\˜][Û“Ü’[[]]X›TXÙ[Y[]]][Û“]\Ý][\^XÝSÛ™TÙ\\˜][U˜[Y]Y˜]]™Q˜[˜XÚÎ‚ˆYKˆÜ[Z^™\”™\Ý[\˜][Û“Ü’[[]]X›TXÙ[Y[]]][Û“]\Ý\ÙTÙ\\˜][U˜[Y]Y˜]]™Q˜[˜XÚÕ]™\Ù\™\ÕSÜšYÚ[˜[[[]]X›TXÙ[Y[‚ˆYKˆÜ[Z^™\”™\Ý[\˜][Û“Ü’[[]]X›TXÙ[Y[]]][Û’[˜[Y˜]]™Q˜[˜XÚÓX^UšYÙÙ\[›Ý\‘˜[˜XÚÎ‚ˆ˜[ÙKˆ[˜[Y˜]]™Q˜[˜XÚÔ™\Ý[ˆ˜›ØÚÙYÛX[X[Ü[—Ü™\]Z\™Y‹ˆNÂˆÛÛœÝ^XÝ›Ú™XÝYØ[™Y]PXØÛÝ[[™Ô[\ÈHÂˆ\™XÝØ[™Y]T[”Ý]\Ù\Ñ^XÝNˆÈ›Ü[X[‹™™X\ÚX›H—Kˆ^XÝÛÜœ™[]Y[›ØØ][ÛØ[™Y]TÙ]ÛÝ\˜ÙN‚ˆ™^XÝØÝ\œ™[ØÛÜœ™[]YÚ[›ØØ][Û‹˜Ø[™Y]\Ö×K™\[Y\˜[ÛÜ\]YWØØ[™Y]WÚY‹ˆ^XÝÛÜœ™[]Y[›ØØ][ÛØ[™Y]RYÕ[š\]YNˆYKˆØ[™Y]RY[YšY\œÓ]\Ý\ÙPXÝ]™PÛÛZ[š[™ÐÛÛ˜XÝÛXZ[ŽˆYKˆ^XÝ][Û›ØÚÐØ[™Y]RYÓ]\ÝXXÚ™\ÛÛ™Q^XÝSÛ˜ÙU›ÝYÚ^XÝÝ\œ™[[›ØØ][ÛŽ‚ˆYKˆ[˜\ÜÚYÛ™YØ[™Y]RYÓ]\ÝXXÚ™\ÛÛ™Q^XÝSÛ˜ÙU›ÝYÚ^XÝÝ\œ™[[›ØØ][ÛŽ‚ˆYKˆ^XÝ][Û›ØÚÐØ[™Y]RYÕ[š\]YNˆYKˆ[˜\ÜÚYÛ™YØ[™Y]RYÕ[š\]YNˆYKˆ^XÝ][Û›ØÚÐ[™[˜\ÜÚYÛ™YØ[™Y]RYÙ]Ñ\Ú›Ú[ˆYKˆ^XÝ][Û›ØÚÐ[™[˜\ÜÚYÛ™YØ[™Y]RYÙ][š[Û“]\Ý\]X[^XÝÛÜœ™[]Y[›ØØ][ÛØ[™Y]TÙ]‚ˆYKˆ]™\žR[›ØØ][ÛØ[™Y]S]\Ý\X\‘^XÝSÛ˜ÙNˆYKˆZ\ÜÚ[™Õ[šÛ›ÝÛ‘^˜Q\XØ]SÛZ]YÜ”XÙY[™[˜\ÜÚYÛ™YØ[™Y]P[ÝÙY‚ˆ˜[ÙKˆš[Û][ÛØ[™Y]RYÐ\™QXYÛ›ÜÝXÓÛ›P[™Ø[››ÝØ]\ÙžPXØÛÝ[[™ÎˆYKˆ›Ú™XÝYØ[™Y]PXØÛÝ[[™Ñ˜Z[\™U\ÝYØ]]Ø^PÛ\ÜÚYšXØ][ÛŽ‚ˆœØÚ[XWÛZ\ÛX]Ú‹ˆ›Ú™XÝYØ[™Y]PXØÛÝ[[™Ñ˜Z[\™SX^T™[X\ÙPØ[™Y]T[Žˆ˜[ÙKˆ›Ú™XÝY™\ÜÛœÙSX^TÙ[XÝ™Y™\™[˜ÙP]]Üš^™SÜ”™[X\ÙPØ[›ÛšXØ[˜]]™Q˜[˜XÚÎ‚ˆ˜[ÙKˆNÂˆÛÛœÝ^XÝ›Ú™XÝY^XÝ][Û›ØÚÑ\˜][Û”[\ÈHÂˆ\Y\ÕÑ]™\žQ^XÝ][Û›ØÚÒ[“Ü[X[[™™X\ÚX›T›Ú™XÝYØ[™Y]T[œÎ‚ˆYKˆØ[™Y]T™\ÛÛ][Û”ÛÝ\˜ÙN‚ˆ™^XÝØÝ\œ™[ØÛÜœ™[]YÚ[›ØØ][Û‹˜Ø[™Y]\È‹ˆXXÚ^XÝ][Û›ØÚÐØ[™Y]S]\Ý™\ÛÛ™Q^XÝSÛ˜ÙU›ÝYÚ^XÝÝ\œ™[[›ØØ][ÛŽ‚ˆYKˆ\˜][Û“Z[]\Ó]\Ý\]X[[™Z[]RÜÝZ[\ÔÝ\Z[]RÜÝˆYKˆØ[”ÚÜ[‘˜[ÙT™\]Z\™\Ñ\˜][Û“Z[]\Ñ\]X[\Ý[X]YZ[]\ÎˆYKˆØ[”ÚÜ[•YT™\]Z\™\ÓZ[š[][SZ[]\Ó\ÜÕ[“Ü‘\]X[\˜][Û“Z[]\Ó\ÜÕ[“Ü‘\]X[\Ý[X]YZ[]\Î‚ˆYKˆ\˜][Û“Z[]\ÓX^Q^ÙYY\Ý[X]YZ[]\Îˆ˜[ÙKˆ[\ÙY[™[”›ÙÜ™\ÜÔš[Ü”XÙ[Y[šY[Ô™[XZ[’[[]]X›Q^XÝNˆÂˆ™\[Y\˜[ÛÜ\]YWØØ[™Y]WÚY‹ˆ™\[Y\˜[ÛÜ\]YWÝÚ[™Ý×ÚY‹ˆœÝ\ÛZ[]WÚÜÝ‹ˆ™[™ÛZ[]WÚÜÝ‹ˆ™\˜][Û—ÛZ[]\È‹ˆKˆ[[]]X›Q[\ÙYÜ’[”›ÙÜ™\ÜÔXÙ[Y[X^P™S[Ý™YÚÜ[™Y^[™YÜ”™]Üš][•ÔØ]\ÙžPÝ\œ™[Ø[™Y]N‚ˆ˜[ÙKˆ™T›Ú™XÝ[Û’[[]]X›TXÙ[Y[Ø[™Y]Q\˜][Û’[˜ÛÛ\]Xš[]SX^T™XXÚÜ[Z^™\Ž‚ˆ˜[ÙKˆ™T›Ú™XÝ[Û’[[]]X›TXÙ[Y[Ø[™Y]Q\˜][Û’[˜ÛÛ\]Xš[]U\ÝYØ]]Ø^PÛ\ÜÚYšXØ][ÛŽ‚ˆ˜[Y]Ü—Ü™Z™XÝY‹ˆ™T›Ú™XÝ[Û’[[]]X›TXÙ[Y[Ø[™Y]Q\˜][Û’[˜ÛÛ\]Xš[]SX^P™T™\Z\™YžSÜ[Z^™\“Ü”›Ú™XÝY™\ÜÛœÙN‚ˆ˜[ÙKˆÜ[Z^™\”™\Ý[\˜][Û“Ü’[[]]X›TXÙ[Y[]]][Û•\ÝYØ]]Ø^PÛ\ÜÚYšXØ][ÛŽ‚ˆ˜[Y]Ü—Ü™Z™XÝY‹ˆ[˜[Y›Ú™XÝYØ[™Y]T[“X^T™[X\ÙPØ[™Y]T[Žˆ˜[ÙKˆ›Ú™XÝY™\ÜÛœÙSX^TÙ[XÝ™Y™\™[˜ÙP]]Üš^™SÜ”™[X\ÙPØ[›ÛšXØ[˜]]™Q˜[˜XÚÎ‚ˆ˜[ÙKˆNÂˆÛÛœÝ^XÝ›Û‘›ÜX›PÛÜ™T[\ÈHÂˆ›Û‘›ÜX›QYš[š][Û‘^XÝ‚ˆ˜Ø[™Y]Kœ[›™YOOHYHØ[™Y]K˜Ø[—Ù›ÜOOH˜[ÙH‹ˆ[›™Y[™Ø[‘›Ü]X›Q^XÝNˆÂˆÈ[›™Yˆ˜[ÙKØ[—Ù›ÜˆYK›Û—Ù›ÜX›Nˆ˜[ÙHKˆÈ[›™Yˆ˜[ÙKØ[—Ù›Üˆ˜[ÙK›Û—Ù›ÜX›NˆYHKˆÈ[›™YˆYKØ[—Ù›ÜˆYK›Û—Ù›ÜX›NˆYHKˆÈ[›™YˆYKØ[—Ù›Üˆ˜[ÙK›Û—Ù›ÜX›NˆYHKˆKˆ]™\žS›Û‘›ÜX›PØ[™Y]S]\ÝØØÝ\‘^XÝSÛ˜ÙR[‘^XÝ][Û›ØÚÜÎˆYKˆ]™\žS›Û‘›ÜX›PØ[™Y]S]\ÝØØÝ\–™\›Õ[Y\Ò[•[˜\ÜÚYÛ™YØ[™Y]\ÎˆYKˆÛ›T[›™Y˜[ÙP[™Ø[‘›ÜYPØ[™Y]SX^P™U[˜\ÜÚYÛ™YˆYKˆ[˜\ÜÚYÛ™Y™X\ÛÛ“X^SÝ™\œšYS›Û‘›ÜXš[]Nˆ˜[ÙKˆÝÛ™\”[›™YÛÛ™›XÝ™X\ÛÛ“X^SÝ™\œšYS›Û‘›ÜXš[]Nˆ˜[ÙKˆÝÙ\•˜[YU[”Ù[XÝY™X\ÛÛ“X^SÝ™\œšYS›Û‘›ÜXš[]Nˆ˜[ÙKˆ™\]Z\™Y™\ÜÑ[[SX^T™YYš[™S›Û‘›ÜXš[]Nˆ˜[ÙKˆNÂˆÛÛœÝ^XÝØ[›ÛšXØ[›Û‘›ÜX›T[\ÈHÂˆ\Y\ÕÑ]™\žSÜ[X[™X\ÚX›P[™™[X\ØX›TÙ\\˜][U˜[Y]YØ[›ÛšXØ[˜]]™Q˜[˜XÚÔ[Ž‚ˆYKˆ‹‹™^XÝ›Û‘›ÜX›PÛÜ™T[\ËˆÛ›ÝÛ“›Û‘›ÜX›Uš[Û][Û”Ý]\Îˆ˜[Y]Ü—Ü™Z™XÝY‹ˆÛ›ÝÛ“›Û‘›ÜX›Uš[Û][Û“]\Ý][\^XÝSÛ™TÙ\\˜][T™\\™YØ[›ÛšXØ[˜]]™Q˜[˜XÚÎ‚ˆYKˆ™[X\ØX›S˜]]™Q˜[˜XÚÓ]\ÝXÙQ]™\žS›Û‘›ÜX›PØ[™Y]Q^XÝSÛ˜ÙN‚ˆYKˆ[˜[Y˜]]™Q˜[˜XÚÔ™\Ý[ˆ˜›ØÚÙYÛX[X[Ü[—Ü™\]Z\™Y‹ˆ[˜[Y˜]]™Q˜[˜XÚÓX^UšYÙÙ\[›Ý\‘˜[˜XÚÎˆ˜[ÙKˆ[˜[Y˜]]™Q˜[˜XÚÓX^T™[X\ÙPØ[™Y]T[Žˆ˜[ÙKˆNÂˆÛÛœÝ^XÝ›Ú™XÝY›Û‘›ÜX›T[\ÈHÂˆ\Y\ÕÑ]™\žSÜ[X[[™™X\ÚX›T›Ú™XÝYØ[™Y]T[ŽˆYKˆ‹‹™^XÝ›Û‘›ÜX›PÛÜ™T[\ËˆÛ›ÝÛ“›Û‘›ÜX›Uš[Û][Û•\ÝYØ]]Ø^PÛ\ÜÚYšXØ][ÛŽ‚ˆ˜[Y]Ü—Ü™Z™XÝY‹ˆ[˜[Y›Ú™XÝYØ[™Y]T[“X^T™[X\ÙPØ[™Y]T[Žˆ˜[ÙKˆ›Ú™XÝY™\ÜÛœÙSX^TÙ[XÝ™Y™\™[˜ÙP]]Üš^™SÜ”™[X\ÙPØ[›ÛšXØ[˜]]™Q˜[˜XÚÎ‚ˆ˜[ÙKˆNÂˆÛÛœÝ^XÝØ[™Y]UÚ[™ÝÐÛÜ™T[\ÈHÂˆØ[™Y]T™\ÛÛ][Û”ÛÝ\˜ÙN‚ˆ™^XÝØÝ\œ™[ØÛÜœ™[]YÚ[›ØØ][Û‹˜Ø[™Y]\È‹ˆÚ[™ÝÔ™\ÛÛ][Û”ÛÝ\˜ÙN‚ˆ™^XÝØÝ\œ™[ØÛÜœ™[]YÚ[›ØØ][Û‹˜]˜Z[X›WÝÚ[™ÝÜÈ‹ˆXXÚ^XÝ][Û›ØÚÐØ[™Y]S]\Ý™\ÛÛ™Q^XÝSÛ˜ÙU›ÝYÚ^XÝÝ\œ™[[›ØØ][ÛŽ‚ˆYKˆXXÚ^XÝ][Û›ØÚÕÚ[™ÝÓ]\Ý™\ÛÛ™Q^XÝSÛ˜ÙU›ÝYÚØ[YQ^XÝÝ\œ™[[›ØØ][ÛŽ‚ˆYKˆ^XÝ][Û›ØÚÕÚ[™ÝÒY]\Ý™[Û™ÕÔ™\ÛÛ™YØ[™Y]P[ÝÙYÚ[™ÝÒYÎ‚ˆYKˆ™\ÛÛ™YÚ[™ÝÐ]˜Z[X›S]\Ý\]X[YNˆYKˆÚ[™ÛT™Y™\™[˜ÙYÚ[™ÝÐÛÛZ[›Y[™YXØ]Q^XÝ‚ˆÚ[™ÝËœÝ\ÛZ[]WÚÜÝH›ØÚËœÝ\ÛZ[]WÚÜÝ›ØÚË™[™ÛZ[]WÚÜÝHÚ[™ÝË™[™ÛZ[]WÚÜÝ‹ˆ›ØÚÓ]\Ý™PÛÛ\][PÛÛZ[™Y[œÚYTÚ[™ÛT™Y™\™[˜ÙYÚ[™ÝÎˆYKˆ›ØÚÓX^TÝ]ÚÜ”Ü[Y˜XÙ[Ú[™ÝÜÎˆ˜[ÙKˆ™T›Ú™XÝ[Û‘[\ÙY[™[”›ÙÜ™\ÜÔXÙ[Y[]\ÝØ]\ÙžQ^XÝÝ\œ™[Ø[™Y]UÚ[™ÝÔ™[][ÛŽ‚ˆYKˆ™T›Ú™XÝ[Û’[[]]X›PØ[™Y]UÚ[™ÝÒ[˜ÛÛ\]Xš[]SX^T™XXÚÜ[Z^™\Ž‚ˆ˜[ÙKˆ™T›Ú™XÝ[Û’[[]]X›PØ[™Y]UÚ[™ÝÒ[˜ÛÛ\]Xš[]SX^P™T™\Z\™YžS[Ýš[™Ñ›Ü[™Õ[˜\ÜÚYÛš[™ÔÚÜ[š[™Ñ^[™[™ÓÜ”™]Üš][™Î‚ˆ˜[ÙKˆ]\™Tš[Ü”XÙ[Y[™[XZ[œÔÛÙ™Y™\™[˜ÙSÛ›NˆYKˆ]™\žQ[Z]Y]\™Tš[Ü”XÙ[Y[›ØÚÓ]\ÝØ]\ÙžQ]™\žPØ[™Y]UÚ[™ÝÔ™YXØ]N‚ˆYKˆNÂˆÛÛœÝ^XÝØ[›ÛšXØ[Ø[™Y]UÚ[™ÝÔ[\ÈHÂˆ\Y\ÕÑ]™\žQ^XÝ][Û›ØÚÒ[“Ü[X[™X\ÚX›P[™]™\žT™[X\ØX›TÙ\\˜][U˜[Y]YØ[›ÛšXØ[˜]]™Q˜[˜XÚÔ[Ž‚ˆYKˆ‹‹™^XÝØ[™Y]UÚ[™ÝÐÛÜ™T[\Ëˆ[šÛ›ÝÛ‘[™Û[™Ñ\XØ]PÜ›ÜÜÑÛXZ[“Ü“›ÛšZ™XÝ]™PØ[™Y]SÜ•Ú[™ÝÔ™[][Û”Ý]\Î‚ˆœØÚ[XWÛZ\ÛX]Ú‹ˆÛ›ÝÛ‘\Ø[ÝÙY[˜]˜Z[X›SÜ“Ý]Ù›Ý[™Ô™[][Û”Ý]\Î‚ˆ˜[Y]Ü—Ü™Z™XÝY‹ˆÛ›ÝÛØ[™Y]UÚ[™ÝÕš[Û][Û“]\Ý][\^XÝSÛ™TÙ\\˜][T™\\™YØ[›ÛšXØ[˜]]™Q˜[˜XÚÎ‚ˆYKˆ™[X\ØX›S˜]]™Q˜[˜XÚÓ]\ÝØ]\ÙžQ]™\žPØ[™Y]UÚ[™ÝÔ™YXØ]NˆYKˆ™T›Ú™XÝ[Û’[[]]X›PØ[™Y]UÚ[™ÝÒ[˜ÛÛ\]Xš[]S]\Ý][\^XÝSÛ™TÙ\\˜][T™\\™YØ[›ÛšXØ[˜]]™Q˜[˜XÚÔ™\Ù\š[™ÕR[[]]X›TXÙ[Y[‚ˆYKˆ[˜[Y˜]]™Q˜[˜XÚÔ™\Ý[ˆ˜›ØÚÙYÛX[X[Ü[—Ü™\]Z\™Y‹ˆ[˜[Y˜]]™Q˜[˜XÚÓX^UšYÙÙ\[›Ý\‘˜[˜XÚÎˆ˜[ÙKˆ[˜[Y˜]]™Q˜[˜XÚÓX^T™[X\ÙPØ[™Y]T[Žˆ˜[ÙKˆNÂˆÛÛœÝ^XÝ›Ú™XÝYØ[™Y]UÚ[™ÝÔ[\ÈHÂˆ\Y\ÕÑ]™\žQ^XÝ][Û›ØÚÒ[“Ü[X[[™™X\ÚX›T›Ú™XÝYØ[™Y]T[œÎ‚ˆYKˆ‹‹™^XÝØ[™Y]UÚ[™ÝÐÛÜ™T[\Ëˆ[šÛ›ÝÛ‘[™Û[™Ñ\XØ]PÜ›ÜÜÑÛXZ[“Ü“›ÛšZ™XÝ]™PØ[™Y]SÜ•Ú[™ÝÔ™[][Û•\ÝYØ]]Ø^PÛ\ÜÚYšXØ][ÛŽ‚ˆœØÚ[XWÛZ\ÛX]Ú‹ˆÛ›ÝÛ‘\Ø[ÝÙY[˜]˜Z[X›SÜ“Ý]Ù›Ý[™Ô™[][Û•\ÝYØ]]Ø^PÛ\ÜÚYšXØ][ÛŽ‚ˆ˜[Y]Ü—Ü™Z™XÝY‹ˆ™T›Ú™XÝ[Û’[[]]X›PØ[™Y]UÚ[™ÝÒ[˜ÛÛ\]Xš[]U\ÝYØ]]Ø^PÛ\ÜÚYšXØ][ÛŽ‚ˆ˜[Y]Ü—Ü™Z™XÝY‹ˆ[˜[Y›Ú™XÝYØ[™Y]T[“X^T™[X\ÙPØ[™Y]T[Žˆ˜[ÙKˆ›Ú™XÝY™\ÜÛœÙSX^TÙ[XÝ™Y™\™[˜ÙP]]Üš^™SÜ”™[X\ÙPØ[›ÛšXØ[˜]]™Q˜[˜XÚÎ‚ˆ˜[ÙKˆNÂˆÛÛœÝ^XÝØ[›ÛšXØ[\™XY[™T[\ÈHÂˆ\Y\ÕÑ]™\žQ^XÝ][Û›ØÚÒ[“Ü[X[™X\ÚX›PÛÛ\]PØ[›ÛšXØ[[™]™\žT™[X\ØX›TÙ\\˜][U˜[Y]YØ[›ÛšXØ[˜]]™Q˜[˜XÚÔ[Ž‚ˆYKˆØ[™Y]T™\ÛÛ][Û”ÛÝ\˜ÙN‚ˆ™^XÝØÝ\œ™[ØÛÜœ™[]YÚ[›ØØ][Û‹˜Ø[™Y]\È‹ˆXXÚ^XÝ][Û›ØÚÐØ[™Y]S]\Ý™\ÛÛ™Q^XÝSÛ˜ÙU›ÝYÚ^XÝÝ\œ™[[›ØØ][ÛŽ‚ˆYKˆ\ÝYØ[›ÛšXØ[ÝYQ]TÛÝ\˜ÙN‚ˆš[œ]ÛÛ˜XÝœÝYWÙ]WÚÜÝÜ™]Z[™YØžWÝ\ÝYÙØ]]Ø^H‹ˆÝYQ]SX^Q[\“Ü[Z^™\”›Ú™XÝ[ÛŽˆ˜[ÙKˆ[YV›Û™RX[˜Q^XÝˆ\ÚXKÔÙ[Ý[‹ˆ[™Z[]RÜÝÛ™U›ÝYÚMÎU\Ù\ÔØ[YTÝYQ]NˆYKˆ[™Z[]RÜÝMYX[œÓ™^^SZYšYÚ\ÚXTÙ[Ý[ˆYKˆ›ØÚÑ[™]Ñ\š]˜][Û‘^XÝ‚ˆ\ÝYØØ[›ÛšXØ[ÜÝYWÙ]WÚÜÝÜ\×Ù^XÝ][Û—Ø›ØÚË™[™ÛZ[]WÚÜÝÚ[\œ™]YÚ[—ÚX[˜WØ\ÚXWÜÙ[Ý[‹ˆ›Û“[\™XY[™T™YXØ]Q^XÝ‚ˆ™\š]™YØ›ØÚ×Ù[™Ý]ÈHØ[™Y]Kš\™ÙXY[™WÛÜ—Û[Ù^XÝÚ\Û×ÎŒWÝ]×Ú[œÝ[‹ˆ[\™XY[™SYX[œÓ›Ò\™Ý]Ù™ŽˆYKˆ\™XY[™Q\]X[]R\Ñ™X\ÚX›NˆYKˆ[šÛ›ÝÛ‘[™Û[™Ñ\XØ]PÜ›ÜÜÑÛXZ[“Ü“›ÛšZ™XÝ]™PØ[™Y]T™[][Û”Ý]\Î‚ˆœØÚ[XWÛZ\ÛX]Ú‹ˆÛ›ÝÛ’\™XY[™Pœ™XXÚÝ]\Îˆ˜[Y]Ü—Ü™Z™XÝY‹ˆÛ›ÝÛ’\™XY[™Pœ™XXÚ]\Ý][\^XÝSÛ™TÙ\\˜][T™\\™YØ[›ÛšXØ[˜]]™Q˜[˜XÚÎ‚ˆYKˆ™[X\ØX›S˜]]™Q˜[˜XÚÓ]\ÝØ]\ÙžQ]™\žR\™XY[™T™YXØ]NˆYKˆ™T›Ú™XÝ[Û‘[\ÙY[™[”›ÙÜ™\ÜÔXÙ[Y[]\ÝØ]\ÙžQ^XÝÝ\œ™[Ø[™Y]R\™XY[™T™YXØ]N‚ˆYKˆ™T›Ú™XÝ[Û’[[]]X›R\™XY[™R[˜ÛÛ\]Xš[]SX^T™XXÚÜ[Z^™\Žˆ˜[ÙKˆ™T›Ú™XÝ[Û’[[]]X›R\™XY[™R[˜ÛÛ\]Xš[]SX^P™T™\Z\™YžS[Ýš[™Ñ›Ü[™Õ[˜\ÜÚYÛš[™ÔÚÜ[š[™Ñ^[™[™ÓÜ”™]Üš][™Î‚ˆ˜[ÙKˆ™T›Ú™XÝ[Û’[[]]X›R\™XY[™R[˜ÛÛ\]Xš[]S]\Ý][\^XÝSÛ™TÙ\\˜][T™\\™YØ[›ÛšXØ[˜]]™Q˜[˜XÚÔ™\Ù\š[™ÕR[[]]X›TXÙ[Y[‚ˆYKˆZ[š[Z^™QXY[™S][™\ÜÐ\Y\ÓÛ›UÔÛÙXY[™SÜ“[ˆYKˆÛÙXY[™SØš™XÝ]™SX^SÝ™\œšYR\™XY[™Nˆ˜[ÙKˆ[˜[Y˜]]™Q˜[˜XÚÔ™\Ý[ˆ˜›ØÚÙYÛX[X[Ü[—Ü™\]Z\™Y‹ˆ[˜[Y˜]]™Q˜[˜XÚÓX^UšYÙÙ\[›Ý\‘˜[˜XÚÎˆ˜[ÙKˆ[˜[Y˜]]™Q˜[˜XÚÓX^T™[X\ÙPØ[™Y]T[Žˆ˜[ÙKˆNÂˆÛÛœÝ^XÝ›Ú™XÝY\™XY[™T[\ÈHÂˆ\Y\ÕÑ]™\žQ^XÝ][Û›ØÚÒ[“Ü[X[[™™X\ÚX›T›Ú™XÝYØ[™Y]T[œÎ‚ˆYKˆØ[™Y]T™\ÛÛ][Û”ÛÝ\˜ÙN‚ˆ™^XÝØÝ\œ™[ØÛÜœ™[]YÚ[›ØØ][Û‹˜Ø[™Y]\È‹ˆXXÚ^XÝ][Û›ØÚÐØ[™Y]S]\Ý™\ÛÛ™Q^XÝSÛ˜ÙU›ÝYÚ^XÝÝ\œ™[[›ØØ][ÛŽ‚ˆYKˆ\ÝYØ[›ÛšXØ[ÝYQ]TÛÝ\˜ÙN‚ˆš[œ]ÛÛ˜XÝœÝYWÙ]WÚÜÝÜ™]Z[™YØžWÝ\ÝYÙØ]]Ø^H‹ˆÝYQ]SX^Q[\“Ü[Z^™\”›Ú™XÝ[ÛŽˆ˜[ÙKˆ[YV›Û™RX[˜Q^XÝˆ\ÚXKÔÙ[Ý[‹ˆ[™Z[]RÜÝÛ™U›ÝYÚMÎU\Ù\ÔØ[YTÝYQ]NˆYKˆ[™Z[]RÜÝMYX[œÓ™^^SZYšYÚ\ÚXTÙ[Ý[ˆYKˆ›ØÚÑ[™]Ñ\š]˜][Û‘^XÝ‚ˆ\ÝYØØ[›ÛšXØ[ÜÝYWÙ]WÚÜÝÜ\×Ù^XÝ][Û—Ø›ØÚË™[™ÛZ[]WÚÜÝÚ[\œ™]YÚ[—ÚX[˜WØ\ÚXWÜÙ[Ý[‹ˆ›Û“[\™XY[™T™YXØ]Q^XÝ‚ˆ™\š]™YØ›ØÚ×Ù[™Ý]ÈHØ[™Y]Kš\™ÙXY[™WÛÜ—Û[Ù^XÝÚ\Û×ÎŒWÝ]×Ú[œÝ[‹ˆ[\™XY[™SYX[œÓ›Ò\™Ý]Ù™ŽˆYKˆ\™XY[™Q\]X[]R\Ñ™X\ÚX›NˆYKˆÛ›ÝÛ’\™XY[™Pœ™XXÚ\ÝYØ]]Ø^PÛ\ÜÚYšXØ][ÛŽ‚ˆ˜[Y]Ü—Ü™Z™XÝY‹ˆ[šÛ›ÝÛ‘\XØ]PÜ›ÜÜÑÛXZ[“Ü“›ÛšZ™XÝ]™PØ[™Y]T™[][Û•\ÝYØ]]Ø^PÛ\ÜÚYšXØ][ÛŽ‚ˆœØÚ[XWÛZ\ÛX]Ú‹ˆ™T›Ú™XÝ[Û‘[\ÙY[™[”›ÙÜ™\ÜÔXÙ[Y[]\ÝØ]\ÙžQ^XÝÝ\œ™[Ø[™Y]R\™XY[™T™YXØ]N‚ˆYKˆ™T›Ú™XÝ[Û’[[]]X›R\™XY[™R[˜ÛÛ\]Xš[]SX^T™XXÚÜ[Z^™\Žˆ˜[ÙKˆ™T›Ú™XÝ[Û’[[]]X›R\™XY[™R[˜ÛÛ\]Xš[]SX^P™T™\Z\™YžS[Ýš[™Ñ›Ü[™Õ[˜\ÜÚYÛš[™ÔÚÜ[š[™Ñ^[™[™ÓÜ”™]Üš][™Î‚ˆ˜[ÙKˆ™T›Ú™XÝ[Û’[[]]X›R\™XY[™R[˜ÛÛ\]Xš[]U\ÝYØ]]Ø^PÛ\ÜÚYšXØ][ÛŽ‚ˆ˜[Y]Ü—Ü™Z™XÝY‹ˆZ[š[Z^™QXY[™S][™\ÜÐ\Y\ÓÛ›UÔÛÙXY[™SÜ“[ˆYKˆÛÙXY[™SØš™XÝ]™SX^SÝ™\œšYR\™XY[™Nˆ˜[ÙKˆ[˜[Y›Ú™XÝYØ[™Y]T[“X^T™[X\ÙPØ[™Y]T[Žˆ˜[ÙKˆ›Ú™XÝY™\ÜÛœÙSX^TÙ[XÝ™Y™\™[˜ÙP]]Üš^™SÜ”™[X\ÙPØ[›ÛšXØ[˜]]™Q˜[˜XÚÎ‚ˆ˜[ÙKˆNÂˆÛÛœÝ^XÝ™\[Ý]Ù™ÛÜ™T[\ÈHÂˆ™\[Ý]Ù™”ÛÝ\˜ÙQ^XÝ‚ˆ™^XÝÜØ[YWÝ\ÝYØÛÜœ™[]YÚ[›ØØ][Û‹œ™\[—ØÝ]Ù™—ÛZ[]WÚÜÝÛÜ—Û[‹ˆ™\[Ý]Ù™“]\Ý\]X[^XÝØ[YU\ÝYÛÜœ™[]Y[›ØØ][Û•˜[YNˆYKˆØ[™Y]UÚ[™ÝÐ[™[[]]X›RY[YšY\œÓ]\Ý\ÙPXÝ]™PÛÛZ[š[™ÐÛÛ˜XÝÛXZ[Ž‚ˆYKˆ[™\[Ý]Ù™“YX[œÓ›Ô™\[“ÝÙ\›Ý[™ˆYKˆ[™\[Ý]Ù™‘Ù\Ó›Ýž\\ÜÔÝXÝ\˜[X\[™ÐÛÜœ™[][Û“Ü’[[]]X›SX]Ú˜[Y][ÛŽ‚ˆYKˆ[[]]X›Q^[\[Û‘[YÚX›Tš[Ü”XÙ[Y[Ý]\Ñ^XÝNˆÂˆ™[\ÙY‹ˆš[—Ü›ÙÜ™\ÜÈ‹ˆKˆ^XÝ[[]]X›Q^[\[Û‘šY[ÎˆÂˆ™\[Y\˜[ÛÜ\]YWØØ[™Y]WÚY‹ˆ™\[Y\˜[ÛÜ\]YWÝÚ[™Ý×ÚY‹ˆœÝ\ÛZ[]WÚÜÝ‹ˆ™[™ÛZ[]WÚÜÝ‹ˆ™\˜][Û—ÛZ[]\È‹ˆKˆ[[]]X›Q^[\[Û”™\]Z\™\Ñ^XÝ[˜Ú[™ÙYšY[›Ü‘šY[X]ÚÑ^XÝSÛ™Q[YÚX›Tš[Ü”XÙ[Y[›ÝYÚØ[YPÛÜœ™[]Y[›ØØ][ÛŽ‚ˆYKˆ›Û‘^[\^XÝ][Û›ØÚÔ™YXØ]Q^XÝ‚ˆœ™\[—ØÝ]Ù™—ÛZ[]WÚÜÝÛÜ—Û[OOH[›ØÚËœÝ\ÛZ[]WÚÜÝH™\[—ØÝ]Ù™—ÛZ[]WÚÜÝÛÜ—Û[‹ˆ™\[Ý]Ù™‘\]X[]R\Ñ™X\ÚX›NˆYKˆ^XÝ][Û›ØÚÔÝ\[™ÓÛ™SZ[]P™Y›Ü™S›Û“[Ý]Ù™’\Ô™Z™XÝYˆYKˆ™\[Ý]Ù™ŒM[ÝÜÓ›Ó™]ÓÜ“[Ý™Y^XÝ][Û›ØÚÎˆYKˆ™T›Ú™XÝ[Û‘[\ÙY[™[”›ÙÜ™\ÜÒ[[]]X›TXÙ[Y[]\Ý™\ÛÛ™Q^XÝ^[\[Û“Û˜ÙN‚ˆYKˆ[[]]X›TXÙ[Y[X^P™S[Ý™Y›ÜY[˜\ÜÚYÛ™YÚÜ[™Y^[™YÜ”™]Üš][•Ô™\Z\Ý]Ù™œ™XXÚ‚ˆ˜[ÙKˆNÂˆÛÛœÝ^XÝØ[›ÛšXØ[™\[Ý]Ù™”[\ÈHÂˆ\Y\ÕÑ]™\žQ^XÝ][Û›ØÚÒ[“Ü[X[™X\ÚX›PÛÛ\]PØ[›ÛšXØ[[™]™\žT™[X\ØX›TÙ\\˜][U˜[Y]YØ[›ÛšXØ[˜]]™Q˜[˜XÚÔ[Ž‚ˆYKˆ‹‹™^XÝ™\[Ý]Ù™ÛÜ™T[\Ëˆ[šÛ›ÝÛ‘[™Û[™Ñ\XØ]PÜ›ÜÜÑÛXZ[“›ÛšZ™XÝ]™SÜ[XšYÝ[Ý\Ò[[]]X›Q^[\[Û”™[][Û”Ý]\Î‚ˆœØÚ[XWÛZ\ÛX]Ú‹ˆÛ›ÝÛ™Y›Ü™PÝ]Ù™”XÙ[Y[Ý]\Îˆ˜[Y]Ü—Ü™Z™XÝY‹ˆÛ›ÝÛ™Y›Ü™PÝ]Ù™”XÙ[Y[]\Ý][\^XÝSÛ™R[™\[™[T™\\™YØ[›ÛšXØ[˜]]™Q˜[˜XÚÎ‚ˆYKˆ™[X\ØX›S˜]]™Q˜[˜XÚÓ]\ÝØ]\ÙžQ]™\žT™\[Ý]Ù™”™YXØ]NˆYKˆ[˜[Y˜]]™Q˜[˜XÚÔ™\Ý[ˆ˜›ØÚÙYÛX[X[Ü[—Ü™\]Z\™Y‹ˆ[˜[Y˜]]™Q˜[˜XÚÓX^UšYÙÙ\[›Ý\‘˜[˜XÚÎˆ˜[ÙKˆ[˜[Y˜]]™Q˜[˜XÚÓX^T™[X\ÙPØ[™Y]T[Žˆ˜[ÙKˆNÂˆÛÛœÝ^XÝ›Ú™XÝY™\[Ý]Ù™”[\ÈHÂˆ\Y\ÕÑ]™\žQ^XÝ][Û›ØÚÒ[“Ü[X[[™™X\ÚX›T›Ú™XÝYØ[™Y]T[œÎ‚ˆYKˆ‹‹™^XÝ™\[Ý]Ù™ÛÜ™T[\Ëˆ[šÛ›ÝÛ‘[™Û[™Ñ\XØ]PÜ›ÜÜÑÛXZ[“›ÛšZ™XÝ]™SÜ[XšYÝ[Ý\Ò[[]]X›Q^[\[Û”™[][Û•\ÝYØ]]Ø^PÛ\ÜÚYšXØ][ÛŽ‚ˆœØÚ[XWÛZ\ÛX]Ú‹ˆÛ›ÝÛ™Y›Ü™PÝ]Ù™”XÙ[Y[\ÝYØ]]Ø^PÛ\ÜÚYšXØ][ÛŽ‚ˆ˜[Y]Ü—Ü™Z™XÝY‹ˆ[˜[Y›Ú™XÝYØ[™Y]T[“X^T™[X\ÙPØ[™Y]T[Žˆ˜[ÙKˆ›Ú™XÝY™\ÜÛœÙSX^TÙ[XÝ™Y™\™[˜ÙP]]Üš^™SÜ”™[X\ÙPØ[›ÛšXØ[˜]]™Q˜[˜XÚÎ‚ˆ˜[ÙKˆNÂˆÛÛœÝ^XÝZ\Ú\ÙP›ØÚÓ›Û“Ý™\›\ÛÜ™T[\ÈHÂˆ[\˜[Ù[X[XÜÑ^XÝˆ–ÜÝ\ÛZ[]WÚÜÝ[™ÛZ[]WÚÜÝ
+H‹ˆ\Ý[˜ÝZ\“›Û“Ý™\›\™YXØ]Q^XÝ‚ˆ˜K™[™ÛZ[]WÚÜÝH‹œÝ\ÛZ[]WÚÜÝ‹™[™ÛZ[]WÚÜÝHKœÝ\ÛZ[]WÚÜÝ‹ˆ›Ý[™\žQ\]X[]R\Ñ™X\ÚX›NˆYKˆ˜[Y]Q]™\žTZ\“Ù‘\Ý[˜Ý^XÝ][Û›ØÚÜÎˆYKˆ˜[Y]Q]™\žQ^XÝ][Û›ØÚÐYØZ[œÝ]™\žQš^Y›ØÚÑœ›ÛTØ[YPÛÜœ™[]Y[›ØØ][ÛŽ‚ˆYKˆ˜[Y]Q]™\žS™]ÓÜ“[Ý™Y^XÝ][Û›ØÚÐYØZ[œÝ]™\žR[[]]X›Tš[Ü”XÙ[Y[œ›ÛTØ[YPÛÜœ™[]Y[›ØØ][ÛŽ‚ˆYKˆ™]ÓÜ“[Ý™Y]\›Z[˜][Û•\Ù\Ñ^XÝ[[]]X›SX]ÚšY[ÎˆÂˆ™\[Y\˜[ÛÜ\]YWØØ[™Y]WÚY‹ˆ™\[Y\˜[ÛÜ\]YWÝÚ[™Ý×ÚY‹ˆœÝ\ÛZ[]WÚÜÝ‹ˆ™[™ÛZ[]WÚÜÝ‹ˆ™\˜][Û—ÛZ[]\È‹ˆKˆ^XÝ[˜Ú[™ÙY™\™\Ù[][Û“Ù”Ø[YR[[]]X›Tš[Ü”XÙ[Y[\ÓÛ™SÙÚXØ[›ØÚÐ[™Ù\Ó›ÝÛÛ™›XÝÚ]]Ù[Ž‚ˆYKˆ[[]]X›TÙ[”™\™\Ù[][Û“]\Ý™\ÛÛ™Q^XÝSÛ˜ÙU›ÝYÚØ[YPÛÜœ™[]Y[›ØØ][ÛŽ‚ˆYKˆ™T›Ú™XÝ[Û’[[]]X›Tš[Ü”XÙ[Y[Ó]\Ý™TZ\Ú\ÙS›Û“Ý™\›\[™ÕÚ]]™\žQš^Y›ØÚÎ‚ˆYKˆ[[]]X›Tš[Ü”XÙ[Y[Ó]\Ý™[XZ[”Z\Ú\ÙS›Û“Ý™\›\[™Ð™Y›Ü™T›Ú™XÝ[ÛŽ‚ˆYKˆš^YÜ’[[]]X›TXÙ[Y[X^P™T™]Üš][•Ô™\Z\“Ý™\›\ˆ˜[ÙKˆNÂˆÛÛœÝ^XÝØ[›ÛšXØ[Z\Ú\ÙP›ØÚÓ›Û“Ý™\›\[\ÈHÂˆ\Y\Ð™Y›Ü™T™[X\ÙUÑ]™\žSÜ[X[™X\ÚX›PÛÛ\]PØ[›ÛšXØ[[™]™\žT™[X\ØX›TÙ\\˜][U˜[Y]YØ[›ÛšXØ[˜]]™Q˜[˜XÚÔ[Ž‚ˆYKˆ‹‹™^XÝZ\Ú\ÙP›ØÚÓ›Û“Ý™\›\ÛÜ™T[\Ëˆ[šÛ›ÝÛ‘[™Û[™Ñ\XØ]PÜ›ÜÜÑÛXZ[“›ÛšZ™XÝ]™SÜ[XšYÝ[Ý\Ò[[]]X›TÙ[”™[][Û”Ý]\Î‚ˆœØÚ[XWÛZ\ÛX]Ú‹ˆÛ›ÝÛ“Ý™\›\Ý]\Îˆ˜[Y]Ü—Ü™Z™XÝY‹ˆÛ›ÝÛ“Ý™\›\]\Ý][\^XÝSÛ™R[™\[™[T™\\™YØ[›ÛšXØ[˜]]™Q˜[˜XÚÎ‚ˆYKˆ™[X\ØX›S˜]]™Q˜[˜XÚÓ]\ÝØ]\ÙžQ]™\žTZ\Ú\ÙS›Û“Ý™\›\™YXØ]N‚ˆYKˆ[˜[Y˜]]™Q˜[˜XÚÔ™\Ý[ˆ˜›ØÚÙYÛX[X[Ü[—Ü™\]Z\™Y‹ˆ[˜[Y˜]]™Q˜[˜XÚÓX^UšYÙÙ\[›Ý\‘˜[˜XÚÎˆ˜[ÙKˆ[˜[Y˜]]™Q˜[˜XÚÓX^T™[X\ÙPØ[™Y]T[Žˆ˜[ÙKˆNÂˆÛÛœÝ^XÝ›Ú™XÝYZ\Ú\ÙP›ØÚÓ›Û“Ý™\›\[\ÈHÂˆ\Y\Ð™Y›Ü™T™[X\ÙUÑ]™\žSÜ[X[[™™X\ÚX›T›Ú™XÝYØ[™Y]T[Ž‚ˆYKˆ‹‹™^XÝZ\Ú\ÙP›ØÚÓ›Û“Ý™\›\ÛÜ™T[\Ëˆ[šÛ›ÝÛ‘[™Û[™Ñ\XØ]PÜ›ÜÜÑÛXZ[“›ÛšZ™XÝ]™SÜ[XšYÝ[Ý\Ò[[]]X›TÙ[”™[][Û•\ÝYØ]]Ø^PÛ\ÜÚYšXØ][ÛŽ‚ˆœØÚ[XWÛZ\ÛX]Ú‹ˆÛ›ÝÛ“Ý™\›\\ÝYØ]]Ø^PÛ\ÜÚYšXØ][ÛŽˆ˜[Y]Ü—Ü™Z™XÝY‹ˆ[˜[Y›Ú™XÝYØ[™Y]T[“X^T™[X\ÙPØ[™Y]T[Žˆ˜[ÙKˆ›Ú™XÝY™\ÜÛœÙSX^TÙ[XÝ™Y™\™[˜ÙP]]Üš^™SÜ”™[X\ÙPØ[›ÛšXØ[˜]]™Q˜[˜XÚÎ‚ˆ˜[ÙKˆNÂˆÛÛœÝ^XÝ™\™\]Z\Ú]SÜ™\š[™ÐÛÜ™T[\ÈHÂˆØ[™Y]P[™™\™\]Z\Ú]T™[][Û”ÛÝ\˜ÙQ^XÝ‚ˆ™^XÝÜØ[YWÝ\ÝYØÛÜœ™[]YÚ[›ØØ][Û‹˜Ø[™Y]\Ö×Kœ™\™\]Z\Ú]WØØ[™Y]WÚYÈ‹ˆ\[™[[™]™\žT™\™\]Z\Ú]S]\Ý™\ÛÛ™Q^XÝSÛ˜ÙU›ÝYÚØ[YPÛÜœ™[]Y[›ØØ][Û[™XÝ]™PÛÛZ[š[™ÐÛÛ˜XÝÛXZ[Ž‚ˆYKˆ[\T™\™\]Z\Ú]S\ÝYX[œÓ›ÓÜ™\š[™ÐÛÛœÝ˜Z[ˆYKˆ][\T™\™\]Z\Ú]TÙ]™\]Z\™\Ñ]™\žSY[X™\•Ô\ÜÎˆYKˆ]™\žT™\™\]Z\Ú]S]\Ý™TXÙY^XÝSÛ˜ÙNˆYKˆXÙY\[™[X^T™[SÛ•[˜\ÜÚYÛ™Y™\™\]Z\Ú]Nˆ˜[ÙKˆ™\™\]Z\Ú]SÜ™\š[™Ô™YXØ]Q^XÝ‚ˆœ™\™\]Z\Ú]K™[™ÛZ[]WÚÜÝH\[™[œÝ\ÛZ[]WÚÜÝ‹ˆ™\™\]Z\Ú]P›Ý[™\žQ\]X[]R\Ñ™X\ÚX›NˆYKˆÛ›ÝÛ”™\™\]Z\Ú]TXÙ[Y[˜Z[\™PÛ\ÜÚYšXØ][Û”™XÙY\ÑÙ[™\šXÐØ[™Y]PXØÛÝ[[™ÓÛZ\ÜÚ[ÛÛ\ÜÚYšXØ][ÛŽ‚ˆYKˆ™T›Ú™XÝ[Û‘[\ÙY[™[”›ÙÜ™\ÜÒ[[]]X›Q\[™[]\ÝØ]\ÙžQ]™\žT™\™\]Z\Ú]SÜ™\š[™Ô™YXØ]N‚ˆYKˆ[[]]X›TXÙ[Y[X^P™S[Ý™Y›ÜY[˜\ÜÚYÛ™YÚÜ[™Y^[™YÜ”™]Üš][•Ô™\Z\”™\™\]Z\Ú]Pœ™XXÚ‚ˆ˜[ÙKˆ›Ú™XÝ[Û‘šY[ÓÜ”™\Ý[[™\œÙSX\]ÓX^P™PYY›Ü”™\™\]Z\Ú]U˜[Y][ÛŽ‚ˆ˜[ÙKˆNÂˆÛÛœÝ^XÝØ[›ÛšXØ[™\™\]Z\Ú]SÜ™\š[™Ô[\ÈHÂˆ\Y\ÕÑ]™\žTXÙY\[™[[“Ü[X[™X\ÚX›PÛÛ\]PØ[›ÛšXØ[[™]™\žT™[X\ØX›TÙ\\˜][U˜[Y]YØ[›ÛšXØ[˜]]™Q˜[˜XÚÔ[Ž‚ˆYKˆ‹‹™^XÝ™\™\]Z\Ú]SÜ™\š[™ÐÛÜ™T[\Ëˆ[šÛ›ÝÛ‘[™Û[™Ñ\XØ]PÜ›ÜÜÑÛXZ[“Ü“›ÛšZ™XÝ]™T™\™\]Z\Ú]T™[][Û”Ý]\Î‚ˆœØÚ[XWÛZ\ÛX]Ú‹ˆÛ›ÝÛ“Z\ÜÚ[™Õ[˜\ÜÚYÛ™YÜ”™]™\œÙY™\™\]Z\Ú]TXÙ[Y[Ý]\Î‚ˆ˜[Y]Ü—Ü™Z™XÝY‹ˆÛ›ÝÛ”™\™\]Z\Ú]TXÙ[Y[˜Z[\™S]\Ý][\^XÝSÛ™R[™\[™[T™\\™YØ[›ÛšXØ[˜]]™Q˜[˜XÚÎ‚ˆYKˆ™[X\ØX›S˜]]™Q˜[˜XÚÓ]\ÝØ]\ÙžQ]™\žT™\™\]Z\Ú]SÜ™\š[™Ô™YXØ]N‚ˆYKˆ[˜[Y˜]]™Q˜[˜XÚÔ™\Ý[ˆ˜›ØÚÙYÛX[X[Ü[—Ü™\]Z\™Y‹ˆ[˜[Y˜]]™Q˜[˜XÚÓX^UšYÙÙ\[›Ý\‘˜[˜XÚÎˆ˜[ÙKˆ[˜[Y˜]]™Q˜[˜XÚÓX^T™[X\ÙPØ[™Y]T[Žˆ˜[ÙKˆNÂˆÛÛœÝ^XÝ›Ú™XÝY™\™\]Z\Ú]SÜ™\š[™Ô[\ÈHÂˆ\Y\ÕÑ]™\žTXÙY\[™[[“Ü[X[[™™X\ÚX›T›Ú™XÝYØ[™Y]T[œÎ‚ˆYKˆ‹‹™^XÝ™\™\]Z\Ú]SÜ™\š[™ÐÛÜ™T[\Ëˆ[šÛ›ÝÛ‘[™Û[™Ñ\XØ]PÜ›ÜÜÑÛXZ[“Ü“›ÛšZ™XÝ]™T™\™\]Z\Ú]T™[][Û•\ÝYØ]]Ø^PÛ\ÜÚYšXØ][ÛŽ‚ˆœØÚ[XWÛZ\ÛX]Ú‹ˆÛ›ÝÛ“Z\ÜÚ[™Õ[˜\ÜÚYÛ™YÜ”™]™\œÙY™\™\]Z\Ú]TXÙ[Y[\ÝYØ]]Ø^PÛ\ÜÚYšXØ][ÛŽ‚ˆ˜[Y]Ü—Ü™Z™XÝY‹ˆ[˜[Y›Ú™XÝYØ[™Y]T[“X^T™[X\ÙPØ[™Y]T[Žˆ˜[ÙKˆ›Ú™XÝY™\ÜÛœÙSX^TÙ[XÝ™Y™\™[˜ÙP]]Üš^™SÜ”™[X\ÙPØ[›ÛšXØ[˜]]™Q˜[˜XÚÎ‚ˆ˜[ÙKˆNÂˆÛÛœÝ^XÝ™\œÚ[Û’[™›ÐÛÛœÝXÝ[Û”[\ÈHÂˆØ[›ÛšXØ[™\œÚ[Û’[™›Ô™\]Z\™Y›Ü‘]™\žPÛÛ\]PØ[›ÛšXØ[™\Ý[[™™[X\ØX›PØ[›ÛšXØ[˜]]™Q˜[˜XÚÎ‚ˆYKˆØ[›ÛšXØ[™\œÚ[Û’[™›ÑšY[Ñ^XÝS]\Ý\]X[™\œÚ[Û‘šY[Ô™\]Z\™YˆYKˆ\ÝYØ]]Ø^P[Û™SX^PÛÛœÝXÝ[™]XÚØ[›ÛšXØ[™\œÚ[Û’[™›ÎˆYKˆÛÝ\˜ÙQ^XÝ‚ˆ™^XÝÝ\ÝYØÛÜœ™[]YÙØ]]Ø^WØÛÛ™šYÝ\˜][Û—Ù›Ü—ÝWÜØ[YWÝ˜[Y]YÚ[›ØØ][Ûˆ‹ˆÛÛ\]T˜]Ô™\ÜÛœÙQ^XÝÛÜœ™[][Û[™™\]Z\™YšZ™XÝ[Û•˜[Y][Û“]\Ýš[š\Ú™Y›Ü™PÛÛœÝXÝ[ÛŽ‚ˆYKˆ˜]Ô›Ú™XÝY™\ÜÛœÙSX^PÛÛZ[XØÙ\™\]Z\™SÜ]]Ü•™\œÚ[Û’[™›ÓÜ‘Ø]]Ø^SÝÛ™Y™\œÚ[ÛÛÛ™šYÝ\˜][Û‘šY[Î‚ˆ˜[ÙKˆ[[‘šY[Ó]\ÝX]Ú^XÝ\ÝYÛÜœ™[]YÛÛ™šYÝ\˜][Û‘šY[›Ü‘šY[‚ˆYKˆZ\ÜÚ[™Ð[XšYÝ[Ý\ÔÝ[U[\ÝYÜ“Z\ÛX]ÚYY]Y]TÝ]\Î‚ˆ˜[Y]Ü—Ü™Z™XÝY‹ˆY]Y]Q˜Z[\™S]\Ý][\^XÝSÛ™R[™\[™[T™\\™YØ[›ÛšXØ[˜]]™Q˜[˜XÚÎ‚ˆYKˆ™[X\ØX›S˜]]™Q˜[˜XÚÓ]\ÝØ\œžQ^XÝØ]]Ø^PÛÛœÝXÝYØ[›ÛšXØ[[‘šY[™\œÚ[Û’[™›Î‚ˆYKˆ[˜[Y˜[˜XÚÕ™\œÚ[Û’[™›Ô™\Ý[ˆ˜›ØÚÙYÛX[X[Ü[—Ü™\]Z\™Y‹ˆ[˜[Y˜[˜XÚÕ™\œÚ[Û’[™›ÓX^UšYÙÙ\[›Ý\‘˜[˜XÚÎˆ˜[ÙKˆ[˜[Y˜[˜XÚÕ™\œÚ[Û’[™›ÓX^T™[X\ÙPØ[™Y]T[Žˆ˜[ÙKˆNÂˆÛÛœÝ^XÝ˜]]™U˜[Y]ÜˆHÂˆ™\]Z\™Y›Ü“Ü[X[[™™X\ÚX›NˆYKˆ™\]Z\™Y›Ü‘]™\žT™[X\ØX›U˜[Y]Y˜]]™Q˜[˜XÚÎˆYKˆ˜[Y]Y˜]]™Q˜[˜XÚÓ]\ÝØ]\ÙžPØ[›ÛšXØ[Ø[™Y]PXØÛÝ[[™Ñ^XÝ][Û›ØÚÑ\˜][Û[™[\™ÛÛœÝ˜Z[Î‚ˆYKˆ˜[Y]Y˜]]™Q˜[˜XÚÓ]\ÝØ]\ÙžPØ[›ÛšXØ[Ø[™Y]PXØÛÝ[[™Ñ^XÝ][Û›ØÚÑ\˜][Û“›Û‘›ÜX›PØ[™Y]UÚ[™ÝÐ[™[\™ÛÛœÝ˜Z[Î‚ˆYKˆ˜[Y]Y˜]]™Q˜[˜XÚÓ]\ÝØ]\ÙžPØ[›ÛšXØ[[‘šY[™\œÚ[Û’[™›Ð[™\™XY[™Q™X\ÚXš[]P[™[\™ÛÛœÝ˜Z[Î‚ˆYKˆ˜[Y]Y˜]]™Q˜[˜XÚÓ]\ÝØ]\ÙžPØ[›ÛšXØ[™\[Ý]Ù™”Z\Ú\ÙP›ØÚÓ›Û“Ý™\›\[™™\™\]Z\Ú]SÜ™\š[™Ð[™[\™ÛÛœÝ˜Z[Î‚ˆYKˆ]™\žSÜ[X[™X\ÚX›P[™™[X\ØX›U˜[Y]Y˜]]™Q˜[˜XÚÔ[“]\ÝXÙQ]™\žS›Û‘›ÜX›PØ[™Y]Q^XÝSÛ˜ÙP[™™]™\•[˜\ÜÚYÛ’]‚ˆYKˆ]™\žQ^XÝ][Û›ØÚÓ]\Ý™\ÛÛ™Q^XÝÝ\œ™[[›ØØ][ÛØ[™Y]P[™Ú[™ÝÐ[™Ø]\ÙžP[ÝÙYY[X™\œÚ\]˜Z[Xš[]P[™Ú[™ÛUÚ[™ÝÐ›Ý[™Î‚ˆYKˆ]™\žQ^XÝ][Û›ØÚÒ[“Ü[X[™X\ÚX›P[™™[X\ØX›U˜[Y]Y˜]]™Q˜[˜XÚÓ]\ÝØ]\ÙžPØ[™Y]R\™XY[™T™YXØ]U\Ú[™Õ\ÝYØ[›ÛšXØ[ÝYQ]RÜÝ‚ˆYKˆ]™\žS™]ÓÜ“[Ý™Y^XÝ][Û›ØÚÒ[“Ü[X[™X\ÚX›P[™™[X\ØX›U˜[Y]Y˜]]™Q˜[˜XÚÓ]\ÝÝ\]ÜY\“›Û“[™\[Ý]Ù™•[›\ÜÒ]\ÕU[š\]YQ^XÝ[[]]X›Q[\ÙYÜ’[”›ÙÜ™\ÜÔÙ[”™\™\Ù[][ÛŽ‚ˆYKˆ]™\žSÜ[X[™X\ÚX›P[™™[X\ØX›U˜[Y]Y˜]]™Q˜[˜XÚÔ[“]\ÝØ]\ÙžR[“Ü[”Z\Ú\ÙS›Û“Ý™\›\›Ü‘^XÝ][Û‘^XÝ][Û‘^XÝ][Û‘š^Y[™™]ÓÜ“[Ý™Y^XÝ][Û’[[]]X›TZ\œÎ‚ˆYKˆ]™\žTXÙY\[™[[“Ü[X[™X\ÚX›P[™™[X\ØX›U˜[Y]Y˜]]™Q˜[˜XÚÓ]\Ý]™Q]™\žT™\™\]Z\Ú]TXÙY^XÝSÛ˜ÙP[™[™[™Ð]Ü™Y›Ü™Q\[™[Ý\‚ˆYKˆØ[›ÛšXØ[™\œÚ[Û’[™›Ó]\Ý™QØ]]Ø^PÛÛœÝXÝYœ›ÛQ^XÝ\ÝYÛÜœ™[]YÛÛ™šYÝ\˜][ÛY\ÛÛ\]T˜]Ô™\ÜÛœÙPÛÜœ™[][Û[™™\]Z\™YšZ™XÝ[Û•˜[Y][ÛŽ‚ˆYKˆ[šÛ›ÝÛ‘[™Û[™Ñ\XØ]PÜ›ÜÜÑÛXZ[“Ü“›ÛšZ™XÝ]™PØ[™Y]SÜ•Ú[™ÝÔ™[][Û”Ý]\Î‚ˆœØÚ[XWÛZ\ÛX]Ú‹ˆÛ›ÝÛ‘\Ø[ÝÙY[˜]˜Z[X›SÜ“Ý]Ù›Ý[™ÐØ[™Y]UÚ[™ÝÔ™[][Û”Ý]\Î‚ˆ˜[Y]Ü—Ü™Z™XÝY‹ˆÛ›ÝÛ’\™XY[™Pœ™XXÚÝ]\Îˆ˜[Y]Ü—Ü™Z™XÝY‹ˆÝ]Ù™“Ý™\›\Ü”™\™\]Z\Ú]TÝXÝ\˜[X\[™ÐÛÜœ™[][Û[XšYÝZ]TÝ]\Î‚ˆœØÚ[XWÛZ\ÛX]Ú‹ˆÛ›ÝÛ™Y›Ü™PÝ]Ù™“Ý™\›\Z\ÜÚ[™Õ[˜\ÜÚYÛ™YÜ”™]™\œÙY™\™\]Z\Ú]TÝ]\Î‚ˆ˜[Y]Ü—Ü™Z™XÝY‹ˆÛ›ÝÛ”™\™\]Z\Ú]TXÙ[Y[˜Z[\™PÛ\ÜÚYšXØ][Û”™XÙY\ÑÙ[™\šXÐØ[™Y]PXØÛÝ[[™ÓÛZ\ÜÚ[ÛÛ\ÜÚYšXØ][ÛŽ‚ˆYKˆØ[›ÛšXØ[˜[˜XÚÕ\P[™Ý]S]\Ý™QØ]]Ø^PÛÛœÝXÝYˆYKˆ˜]]™Q˜[˜XÚÓX^P™P][\Y[Ü™U[“Û˜ÙSÜ”™XÝ\œÚ]™[Nˆ˜[ÙKˆ[˜[YÜ•[˜]˜Z[X›U˜[Y]Y˜]]™Q˜[˜XÚÔ™\Ý[‚ˆ˜›ØÚÙYÛX[X[Ü[—Ü™\]Z\™Y‹ˆ[˜[YÜ•[˜]˜Z[X›U˜[Y]Y˜]]™Q˜[˜XÚÓX^T™[X\ÙPØ[™Y]T[Žˆ˜[ÙKˆ[[]]X›Q[\ÙYÜ’[”›ÙÜ™\ÜÔXÙ[Y[X^P™T™]Üš][‘\š[™Õ˜[Y][Û“Ü‘˜[˜XÚÎ‚ˆ˜[ÙKˆ[[]]X›Q[\ÙYÜ’[”›ÙÜ™\ÜÔXÙ[Y[]\Ý\ÜÒ\™XY[™P™Y›Ü™T›Ú™XÝ[Û[™X^S›Ý™S[Ý™Y›ÜY[˜\ÜÚYÛ™YÚÜ[™Y^[™YÜ”™]Üš][‘\š[™Õ˜[Y][Û“Ü‘˜[˜XÚÎ‚ˆYKˆ[[]]X›Q[\ÙYÜ’[”›ÙÜ™\ÜÔXÙ[Y[]\Ý\ÜÕ[š\]YQ^XÝÝ]Ù™‘^[\[Û”Z\Ú\ÙS›Û“Ý™\›\[™™\™\]Z\Ú]SÜ™\š[™Ô™Y›YÚ[™X^S›Ý™S[Ý™Y›ÜY[˜\ÜÚYÛ™YÚÜ[™Y^[™YÜ”™]Üš][‘\š[™Õ˜[Y][Û“Ü‘˜[˜XÚÎ‚ˆYKˆš^Y›ØÚÓX^P™T™]Üš][•Ô™\Z\“Ý™\›\ˆ˜[ÙKˆ\™ÛÛœÝ˜Z[X^P™SÝ™\œšY[žTÛÙØš™XÝ]™Nˆ˜[ÙKˆZ[š[Z^™QXY[™S][™\ÜÓX^T™XYÛ›TÛÙXY[™SÜ“[[™X^S›ÝÝ™\œšYR\™XY[™N‚ˆYKˆ˜[ÙTÝXØÙ\ÜÐ[ÝÙYˆ˜[ÙKˆØ[›ÛšXØ[Ý]S]]][Û™Y›Ü™SÝÛ™\ÚÚXÙP[ÝÙYˆ˜[ÙKˆNÂˆÛÛœÝ^XÝ[ÝÙYšY[ÈHÂˆœ™\]Y\ÝÚY‹ˆš[œ]ÜÛ˜\ÚÝÝ™\œÚ[Ûˆ‹ˆœÝ]\È‹ˆ™^XÝ][Û—Ø›ØÚÜÈ‹ˆ[˜\ÜÚYÛ™YØØ[™Y]\È‹ˆ™˜[˜XÚÈ‹ˆ™\œÚ[Û—Ú[™›È‹ˆ›Øš™XÝ]™WØÛÛ\Û™[È‹ˆš[Û][ÛœÈ‹ˆ™[\ÙYÛ\È‹ˆNÂˆÛÛœÝ^XÝ›Ú™XÝY[ÝÙYšY[ÈH^XÝ[ÝÙYšY[Ë™š[\Šˆ
+šY[
+HOˆVÈ™˜[˜XÚÈ‹™\œÚ[Û—Ú[™›È—Kš[˜ÛY\ÊšY[
+Kˆ
+NÂˆÛÛœÝ^XÝ^XÝ][Û›ØÚÑšY[ÈHÂˆ™\[Y\˜[ÛÜ\]YWØØ[™Y]WÚY‹ˆ™\[Y\˜[ÛÜ\]YWÝÚ[™Ý×ÚY‹ˆœÝ\ÛZ[]WÚÜÝ‹ˆ™[™ÛZ[]WÚÜÝ‹ˆ™\˜][Û—ÛZ[]\È‹ˆNÂˆÛÛœÝ^XÝ[˜\ÜÚYÛ™YØ[™Y]QšY[ÈHÂˆ™\[Y\˜[ÛÜ\]YWØØ[™Y]WÚY‹ˆœ™X\ÛÛ—Ù[[H‹ˆNÂˆÛÛœÝ^XÝ˜[˜XÚÑšY[ÈHÂˆ\ÙY‹ˆœ™X\ÛÛ—Ù[[H‹ˆ›˜]]™WÜ[—Ý™\œÚ[Ûˆ‹ˆNÂˆÛÛœÝ^XÝ˜[˜XÚÔ™X\ÛÛ•˜[Y\ÈHÈ››ÝÝ\ÙY‹‹‹‘SPÒ×ÔÕUTÑT×NÂˆÛÛœÝ^XÝØš™XÝ]™PÛÛ\Û™[šY[ÈHÂˆ›Øš™XÝ]™WØÛÙWÙ[[H‹ˆš[YÙ\—Ý˜[YH‹ˆNÂˆÛÛœÝ^XÝš[Û][Û‘šY[ÈHÂˆ˜ÛÛœÝ˜Z[ØÛÙWÙ[[H‹ˆ™\[Y\˜[ÛÜ\]YWØØ[™Y]WÚYÈ‹ˆœÙ]™\š]WÙ[[H‹ˆNÂˆÛÛœÝ^XÝ™\œÚ[Û’[™›ÑšY[ÈHÂˆ˜ÛÛ˜XÝÝ™\œÚ[Ûˆ‹ˆ›˜]]™WÜÛXÞWÝ™\œÚ[Ûˆ‹ˆ˜Y\\—Ý™\œÚ[Ûˆ‹ˆ›Ü[Z^™\—Ý™\œÚ[Ûˆ‹ˆ›Øš™XÝ]™WÝ™\œÚ[Ûˆ‹ˆ™\ÚÛÝ™\œÚ[Ûˆ‹ˆœÛÛ™\—ÜÙYY‹ˆœÛÛ™\—ÝÛÜšÙ\œÈ‹ˆ[YWÛ[Z]Û\È‹ˆš[YÙ\—ÜØØ[[™×Ý™\œÚ[Ûˆ‹ˆNÂˆÛÛœÝ^XÝ™\œÚ[Û’[™›ÑšY[ØÚ[X\ÈHÂˆÛÛ˜XÝÝ™\œÚ[ÛŽˆÂˆ\Nˆ˜ÛÜÙYÙ[[H‹ˆ˜[Y\ÎˆÈ™X˜[™Ú[™[Ù^WÜØÚY[\‹ŒH—KˆKˆ˜]]™WÜÛXÞWÝ™\œÚ[ÛŽˆ˜ÛÜÙYÚY[YšY\—ÌWÝ×Î‹ˆY\\—Ý™\œÚ[ÛŽˆ˜ÛÜÙYÚY[YšY\—ÌWÝ×Î‹ˆÜ[Z^™\—Ý™\œÚ[ÛŽˆ˜ÛÜÙYÚY[YšY\—ÌWÝ×Î‹ˆØš™XÝ]™WÝ™\œÚ[ÛŽˆ˜ÛÜÙYÚY[YšY\—ÌWÝ×Î‹ˆ™\ÚÛÝ™\œÚ[ÛŽˆ˜ÛÜÙYÚY[YšY\—ÌWÝ×Î‹ˆÛÛ™\—ÜÙYYˆ™š[š]WÚ[YÙ\ˆ‹ˆÛÛ™\—ÝÛÜšÙ\œÎˆ™š[š]WÚ[YÙ\—ÌWÝ×Í‹ˆ[YWÛ[Z]Û\Îˆ™š[š]WÚ[YÙ\—ÌWÝ×ÍŒ‹ˆ[YÙ\—ÜØØ[[™×Ý™\œÚ[ÛŽˆ˜ÛÜÙYÚY[YšY\—ÌWÝ×Î‹ˆNÂˆÛÛœÝ^XÝØØ[\”ØÚ[X\ÈHÂˆÝ\ÛZ[]WÚÜÝˆš[YÙ\—ÌÝ×ÌMÎH‹ˆ[™ÛZ[]WÚÜÝˆš[YÙ\—ÌWÝ×ÌM‹ˆ\˜][Û—ÛZ[]\Îˆš[YÙ\—ÌWÝ×ÌM‹ˆ[YÙ\—Ý˜[YNˆ™š[š]WÚ[YÙ\ˆ‹ˆ[\ÙYÛ\Îˆ™š[š]WÚ[YÙ\—ÌÝ×ÍŒ‹ˆ˜[˜XÚ×Ý\ÙYˆ˜›ÛÛX[ˆ‹ˆNÂˆÛÛœÝ^XÝ›Ú™XÝYØØ[\”ØÚ[X\ÈHÂˆÝ\ÛZ[]WÚÜÝˆš[YÙ\—ÌÝ×ÌMÎH‹ˆ[™ÛZ[]WÚÜÝˆš[YÙ\—ÌWÝ×ÌM‹ˆ\˜][Û—ÛZ[]\Îˆš[YÙ\—ÌWÝ×ÌM‹ˆ[YÙ\—Ý˜[YNˆ™š[š]WÚ[YÙ\ˆ‹ˆ[\ÙYÛ\Îˆ™š[š]WÚ[YÙ\—ÌÝ×ÍŒ‹ˆNÂˆÛÛœÝ^XÝØ\™[˜[]S[Z]ÈHÂˆ^XÝ][Û—Ø›ØÚÜ×ÛX^[][NˆM‹ˆ[˜\ÜÚYÛ™YØØ[™Y]\×ÛX^[][NˆM‹ˆØš™XÝ]™WØÛÛ\Û™[×ÛX^[][NˆLKˆš[Û][Ûœ×ÛX^[][NˆM‹ˆØ[™Y]WÚY×Ü\—Ýš[Û][Û—ÛX^[][NˆÌ‹ˆ[Y[YšY\\œ˜^\Õ[š\]YNˆYKˆNÂˆÛÛœÝš[Ü”[\ÈHØÚY[\‹š[œ]ÛÛ˜XÝœš[ÜXØÙ\YØÚY[T[\ÎÂˆÛÛœÝ›Ú™XÝ[Û”[\ÈBˆØÚY[\‹š[œ]ÛÛ˜XÝ›Ü[Z^™\’[›ØØ][Û”›Ú™XÝ[ÛÛÛ˜XÝˆœ›Ú™XÝ[Û”[\ÎÂˆÛÛœÝ^XÝ›Ú™XÝ[Û”ÙXÛÛ™ÛÜœ™XÝ]™T™Y›YÚ[\ÈHÂˆ[[]]X›Tš[Ü”XÙ[Y[Ó]\Ý\ÜÑ^XÝ™\[Ý]Ù™‘^[\[Û”™\ÛÛ][Û™Y›Ü™T›Ú™XÝ[ÛŽ‚ˆYKˆ^XÝ[[]]X›T™\[Ý]Ù™‘^[\[Û‘šY[ÎˆÂˆ™\[Y\˜[ÛÜ\]YWØØ[™Y]WÚY‹ˆ™\[Y\˜[ÛÜ\]YWÝÚ[™Ý×ÚY‹ˆœÝ\ÛZ[]WÚÜÝ‹ˆ™[™ÛZ[]WÚÜÝ‹ˆ™\˜][Û—ÛZ[]\È‹ˆKˆ^XÝ[[]]X›T™\[Ý]Ù™‘^[\[Û“]\ÝX]Ú^XÝSÛ™Q[\ÙYÜ’[”›ÙÜ™\ÜÔš[Ü”XÙ[Y[›ÝYÚØ[YPÛÜœ™[]Y[›ØØ][ÛŽ‚ˆYKˆ[XšYÝ[Ý\Ò[[]]X›T™\[Ý]Ù™‘^[\[Û“X]Ú[™ÔÝ]\Î‚ˆœØÚ[XWÛZ\ÛX]Ú‹ˆ›Û‘^[\XÙ[Y[]\ÝÝ\]ÜY\“›Û“[™\[Ý]Ù™ŽˆYKˆ[™\[Ý]Ù™“YX[œÓ›Ô™\[“ÝÙ\›Ý[™ˆYKˆ™\[Ý]Ù™‘\]X[]R\Ñ™X\ÚX›NˆYKˆ™\[Ý]Ù™ŒM[ÝÜÓ›Ó™]ÓÜ“[Ý™Y^XÝ][Û›ØÚÎˆYKˆ[[]]X›Tš[Ü”XÙ[Y[Ó]\Ý™TZ\Ú\ÙS›Û“Ý™\›\[™ÕÚ]]™\žPÝ\œ™[š^Y›ØÚÐ™Y›Ü™T›Ú™XÝ[ÛŽ‚ˆYKˆ[[]]X›Tš[Ü”XÙ[Y[Ó]\Ý™[XZ[”Z\Ú\ÙS›Û“Ý™\›\[™Ð™Y›Ü™T›Ú™XÝ[ÛŽ‚ˆYKˆ^XÝ[˜Ú[™ÙY[[]]X›TÙ[”™\™\Ù[][Û’\ÓÛ™SÙÚXØ[›ØÚÐ[™Ù\Ó›ÝÝ™\›\]Ù[Ž‚ˆYKˆ[XšYÝ[Ý\Ò[[]]X›TÙ[”™\™\Ù[][Û“X]Ú[™ÔÝ]\ÎˆœØÚ[XWÛZ\ÛX]Ú‹ˆXÙY[[]]X›Q\[™[]\Ý]™Q]™\žT™\™\]Z\Ú]TXÙY^XÝSÛ˜ÙP[™[™[™Ð]Ü™Y›Ü™Q\[™[Ý\™Y›Ü™T›Ú™XÝ[ÛŽ‚ˆYKˆ[[]]X›T™\™\]Z\Ú]U[šÛ›ÝÛ‘[™Û[™Ñ\XØ]PÜ›ÜÜÑÛXZ[“Ü“›ÛšZ™XÝ]™T™[][Û”Ý]\Î‚ˆœØÚ[XWÛZ\ÛX]Ú‹ˆ[[]]X›T™\™\]Z\Ú]RÛ›ÝÛ“Z\ÜÚ[™Õ[˜\ÜÚYÛ™YÜ”™]™\œÙYXÙ[Y[Ý]\Î‚ˆ˜[Y]Ü—Ü™Z™XÝY‹ˆ[[]]X›PÝ]Ù™“Ý™\›\Ü”™\™\]Z\Ú]R[˜ÛÛ\]Xš[]SX^T™XXÚÜ[Z^™\Ž‚ˆ˜[ÙKˆ[[]]X›PÝ]Ù™“Ý™\›\Ü”™\™\]Z\Ú]R[˜ÛÛ\]Xš[]S]\Ý][\^XÝSÛ™TÙ\\˜][U˜[Y]Y˜]]™Q˜[˜XÚÕÚ]Ý]™]Üš][™Ò[[]]X›SÜ‘š^YXÙ[Y[Î‚ˆYKˆ[[]]X›PÝ]Ù™“Ý™\›\Ü”™\™\]Z\Ú]R[˜ÛÛ\]Xš[]R[˜[Y˜]]™Q˜[˜XÚÔ™\Ý[‚ˆ˜›ØÚÙYÛX[X[Ü[—Ü™\]Z\™Y‹ˆ[[]]X›PÝ]Ù™“Ý™\›\Ü”™\™\]Z\Ú]R[˜ÛÛ\]Xš[]R[˜[Y˜]]™Q˜[˜XÚÓX^UšYÙÙ\[›Ý\‘˜[˜XÚÎ‚ˆ˜[ÙKˆNÂˆÛÛœÝ^XÝš[Ü”ÙXÛÛ™ÛÜœ™XÝ]™T™Y›YÚ[\ÈHÂˆ[\ÙY[™[”›ÙÜ™\ÜÔXÙ[Y[]\Ý™\ÛÛ™Q^XÝSÛ™R[[]]X›T™\[Ý]Ù™‘^[\[ÛžPØ[™Y]UÚ[™ÝÔÝ\[™[™\˜][Û™Y›Ü™T›Ú™XÝ[ÛŽ‚ˆYKˆ[XšYÝ[Ý\Ò[[]]X›T™\[Ý]Ù™‘^[\[Û“X]Ú[™ÔÝ]\Î‚ˆœØÚ[XWÛZ\ÛX]Ú‹ˆ›Û‘^[\™]ÓÜ“[Ý™YXÙ[Y[]\ÝÝ\]ÜY\“›Û“[™\[Ý]Ù™Ž‚ˆYKˆ[™\[Ý]Ù™“YX[œÓ›Ô™\[“ÝÙ\›Ý[™ˆYKˆ™\[Ý]Ù™‘\]X[]R\Ñ™X\ÚX›NˆYKˆ™\[Ý]Ù™ŒM[ÝÜÓ›Ó™]ÓÜ“[Ý™Y^XÝ][Û›ØÚÎˆYKˆ[\ÙY[™[”›ÙÜ™\ÜÔXÙ[Y[]\Ý™TZ\Ú\ÙS›Û“Ý™\›\[™ÕÚ]]™\žPÝ\œ™[š^Y›ØÚÐ™Y›Ü™T›Ú™XÝ[ÛŽ‚ˆYKˆ[\ÙY[™[”›ÙÜ™\ÜÔXÙ[Y[Ó]\Ý™[XZ[”Z\Ú\ÙS›Û“Ý™\›\[™Ð™Y›Ü™T›Ú™XÝ[ÛŽ‚ˆYKˆ^XÝ[˜Ú[™ÙY[[]]X›TÙ[”™\™\Ù[][Û’\ÓÛ™SÙÚXØ[›ØÚÐ[™Ù\Ó›ÝÝ™\›\]Ù[Ž‚ˆYKˆ[XšYÝ[Ý\Ò[[]]X›TÙ[”™\™\Ù[][Û“X]Ú[™ÔÝ]\ÎˆœØÚ[XWÛZ\ÛX]Ú‹ˆXÙY[\ÙYÜ’[”›ÙÜ™\ÜÑ\[™[]\Ý]™Q]™\žT™\™\]Z\Ú]TXÙY^XÝSÛ˜ÙP[™[™[™Ð]Ü™Y›Ü™Q\[™[Ý\™Y›Ü™T›Ú™XÝ[ÛŽ‚ˆYKˆ[[]]X›T™\™\]Z\Ú]U[šÛ›ÝÛ‘[™Û[™Ñ\XØ]PÜ›ÜÜÑÛXZ[“Ü“›ÛšZ™XÝ]™T™[][Û”Ý]\Î‚ˆœØÚ[XWÛZ\ÛX]Ú‹ˆ[[]]X›T™\™\]Z\Ú]RÛ›ÝÛ“Z\ÜÚ[™Õ[˜\ÜÚYÛ™YÜ”™]™\œÙYXÙ[Y[Ý]\Î‚ˆ˜[Y]Ü—Ü™Z™XÝY‹ˆ[[]]X›PÝ]Ù™“Ý™\›\Ü”™\™\]Z\Ú]R[˜ÛÛ\]Xš[]SX^T™XXÚÜ[Z^™\Ž‚ˆ˜[ÙKˆ[[]]X›PÝ]Ù™“Ý™\›\Ü”™\™\]Z\Ú]R[˜ÛÛ\]Xš[]S]\Ý][\^XÝSÛ™TÙ\\˜][U˜[Y]Y˜]]™Q˜[˜XÚÕÚ]Ý][Ýš[™Ñ›Ü[™Õ[˜\ÜÚYÛš[™ÔÚÜ[š[™Ñ^[™[™ÓÜ”™]Üš][™Ò[[]]X›SÜ‘š^YXÙ[Y[Î‚ˆYKˆ[[]]X›PÝ]Ù™“Ý™\›\Ü”™\™\]Z\Ú]R[˜ÛÛ\]Xš[]R[˜[Y˜]]™Q˜[˜XÚÔ™\Ý[‚ˆ˜›ØÚÙYÛX[X[Ü[—Ü™\]Z\™Y‹ˆ[[]]X›PÝ]Ù™“Ý™\›\Ü”™\™\]Z\Ú]R[˜ÛÛ\]Xš[]R[˜[Y˜]]™Q˜[˜XÚÓX^UšYÙÙ\[›Ý\‘˜[˜XÚÎ‚ˆ˜[ÙKˆNÂˆÛÛœÝ^XÝ\™XY[™U˜[Y][ÛÛÛ^HÂˆ\ÝYØ[›ÛšXØ[ÝYQ]TÛÝ\˜ÙNˆš[œ]ÛÛ˜XÝœÝYWÙ]WÚÜÝ‹ˆÝYQ]SX^Q[\“Ü[Z^™\”›Ú™XÝ[ÛŽˆ˜[ÙKˆ\ÝYØ]]Ø^T™]Z[œÔÝYQ]Q›Ü”›Ú™XÝY™\Ý[˜[Y][ÛŽˆYKˆ[YV›Û™RX[˜Q^XÝˆ\ÚXKÔÙ[Ý[‹ˆ[™Z[]RÜÝÛ™U›ÝYÚMÎU\Ù\ÔØ[YTÝYQ]NˆYKˆ[™Z[]RÜÝMYX[œÓ™^^SZYšYÚ\ÚXTÙ[Ý[ˆYKˆ›ØÚÑ[™]Ñ\š]˜][ÛŽ‚ˆ™^XÝÝ\ÝYØØ[›ÛšXØ[ÜÝYWÙ]WÚÜÝÜ\×Ù[™ÛZ[]WÚÜÝÚ[\œ™]YÚ[—ÚX[˜WØ\ÚXWÜÙ[Ý[‹ˆ\™XY[™PÛÛ\\š\ÛÛ‘^XÝ‚ˆ™\š]™YØ›ØÚ×Ù[™Ý]×Û\Ü×Ý[—ÛÜ—Ù\]X[Ù^XÝÚ\Û×ÎŒWÝ]×Ú\™ÙXY[™H‹ˆ[\™XY[™SYX[œÓ›Ò\™Ý]Ù™ŽˆYKˆNÂˆÛÛœÝ˜Z[\™Qš^\™HBˆØÚY[\‹œÌŒÍÛÐ™[˜ÚX\šÐXØÙ\[˜ÙPÛÛ˜XÝ˜™[˜ÚX\šÔ™\Ý[YÙ\ÝÛÛ˜XÝˆ™˜Z[\™TÝ]\Ñš^\™T™\Ý[Ù]YÙ\ÝÛÛ˜XÝÂˆÛÛœÝ™\ÛÛ™Y\Y˜XÝY[X™\œÈBˆØÚY[\‹œÌŒÍÛÐ™[˜ÚX\šÐXØÙ\[˜ÙPÛÛ˜XÝ˜™[˜ÚX\šÔ™\Ý[YÙ\ÝÛÛ˜XÝˆœ™\ÛÛ™Y\Y˜XÝY[X™\œÐÛÛ˜XÝÂˆÛÛœÝ^XÝØ[›ÛšXØ[˜]]™Q˜[˜XÚÔ›Ú™XÝ[ÛÛÛ˜XÝHÂˆÛÝ\˜ÙNˆ™˜Z[\™WÜÝ]\×Ùš^\™WÜ™\Ý[ÜÙ]‹ˆ›Ú™XÝ[Û‘šY[Ñ^XÝNˆÂˆ™^XÝYÜÝ]\È‹ˆ›˜]]™WÙ˜[˜XÚ×Ü™\Ý[ÙYÙ\ÝÜÚLMˆ‹ˆ›X[X[Ø›ØÚ×Ü™\Ý[ÙYÙ\ÝÜÚLM—ÛÜ—Û[‹ˆKˆ[žSÜ™\š[™Îˆ˜\ØÙ[™[™×Û^XÛÙÜ˜\X×Ù^XÝYÜÝ]\È‹ˆ^XÝ[žPÛÝ[]\Ý\]X[˜[˜XÚÔÝ]\ÐÛÝ[ˆYKˆ›Ú™XÝYÙ]YÙ\ÝšY[‚ˆ˜™[˜ÚX\š×Ü™\Ý[Ø\Y˜XÝ˜Ø[›ÛšXØ[Û˜]]™WÙ˜[˜XÚ×Ü™\Ý[ÜÙ]ÙYÙ\ÝÜÚLMˆ‹ˆÛÝ\˜ÙS˜]]™Q˜[˜XÚÑYÙ\Ý]\Ý™\ÛÛ™UÑ^XÝ™\Ý[ÛÛ˜XÝ\Y˜XÝ[”Ø[YP]]Üš^˜][Û”ÝÜ™UÚ[“X[X[›ØÚÑYÙ\Ý\Ó[‚ˆYKˆÛÝ\˜ÙS˜]]™Q˜[˜XÚÑYÙ\Ý]\Ý™\ÛÛ™UÔ™Z™XÝY˜]]™Q˜[˜XÚÐ][\˜[Y][Û”™XÛÜ™[”Ø[YP]]Üš^˜][Û”ÝÜ™UÚ[“X[X[›ØÚÑYÙ\Ý\Ó›Û“[‚ˆYKˆX[X[›ØÚÑYÙ\Ý]\Ý™\ÛÛ™UÑ^XÝ›ØÚÙYX[X[[”™\]Z\™Y™\Ý[ÛÛ˜XÝ\Y˜XÝ[”Ø[YP]]Üš^˜][Û”ÝÜ™UÚ[“›Û“[‚ˆYKˆX[X[›ØÚÓ[Xš[]S]\ÝX]Ú˜[Y]Y˜]]™Q˜[˜XÚÓÝ]ÛÛYNˆYKˆY][Û˜[šY[Ð[ÝÙYˆ˜[ÙKˆNÂˆÛÛœÝ^XÝ™Z™XÝY˜]]™Q˜[˜XÚÐ][\˜[Y][Û”™XÛÜ™ÛÛ˜XÝHÂˆ\œÜÙN‚ˆ˜ÛÜÙYÚY[YšY\—Ùœ™YWÙ]šY[˜ÙWÙ›Ü—Ü™Z™XÝYÛ˜]]™WÙ˜[˜XÚ×Ø][\È‹ˆšY[Ñ^XÝNˆÂˆ˜\Y˜XÝØÛÛ˜XÝÝ™\œÚ[Ûˆ‹ˆ™^XÝÚXYÜÚH‹ˆ™^XÝÝ™YWÜÚH‹ˆœÌŒÍÛ×Ø]]Üš^˜][Û—ÙYÙ\ÝÜÚLMˆ‹ˆ˜Y\\—ØÛÛ™šY×ÙYÙ\ÝÜÚLMˆ‹ˆ˜™[˜ÚX\š×Ü[—ÚY‹ˆœÞ[]X×Ùš^\™WÚY‹ˆ™^XÝYÜÝ]\È‹ˆ›ØœÙ\™YÜÝ]\È‹ˆœ™Z™XÝ[Û—ØÛÙWÙ[[H‹ˆ˜[Y][Û—Ü™\Ý[‹ˆ˜Ø[™Y]WÜ[—Ü™[X\ÙY‹ˆKˆšY[ØÚ[X\ÎˆÂˆ\Y˜XÝØÛÛ˜XÝÝ™\œÚ[ÛŽˆÂˆ™X˜[™Ú[œÌŒÍÛËœ™Z™XÝYÛ˜]]™WÙ˜[˜XÚ×Ø][\Ý˜[Y][Û—Ü™XÛÜ™ŒH‹ˆKˆ^XÝÚXYÜÚNˆ›ÝÙ\˜Ø\ÙWÚ^Í‹ˆ^XÝÝ™YWÜÚNˆ›ÝÙ\˜Ø\ÙWÚ^Í‹ˆÌŒÍÛ×Ø]]Üš^˜][Û—ÙYÙ\ÝÜÚLMŽˆ›ÝÙ\˜Ø\ÙWÚ^Í‹ˆY\\—ØÛÛ™šY×ÙYÙ\ÝÜÚLMŽˆ›ÝÙ\˜Ø\ÙWÚ^Í‹ˆ™[˜ÚX\š×Ü[—ÚYˆ—›Øœ—ÖÐKV˜K^ŒNWËW^ÌM‹I‹ˆÞ[]X×Ùš^\™WÚYˆ—œÞ[—ÜÌŒÍÛ×ÖÐKV˜K^ŒNWËW^ÎI‹ˆ^XÝYÜÝ]\Î‚ˆ˜ÛÜÙYÙ[[WÙ^XÝÜ™\Ý[ØÛÛ˜XÝÙ˜[˜XÚ×ÜÝ]\Ù\È‹ˆØœÙ\™YÜÝ]\Î‚ˆ˜ÛÜÙYÙ[[WÙ^XÝÜ™\Ý[ØÛÛ˜XÝÙ˜[˜XÚ×ÜÝ]\Ù\È‹ˆ™Z™XÝ[Û—ØÛÙWÙ[[NˆUU‘WÑSPÒ×Ô‘R‘PÕSÓ—ÐÓÑTËˆ˜[Y][Û—Ü™\Ý[ˆÈœ™Z™XÝY—KˆØ[™Y]WÜ[—Ü™[X\ÙYˆÙ˜[ÙWKˆKˆY][Û˜[šY[Ð[ÝÙYˆ˜[ÙKˆœ™YU^[ÝÙYˆ˜[ÙKˆ^XÝY[™ØœÙ\™YÝ]\Ó]\Ý\]X[^XÝ˜Z[\™Qš^\™Q^XÝYÝ]\Î‚ˆYKˆXY™YP]]Üš^˜][ÛÛÛ™šYÔ[[™š^\™S]\ÝX]Ú\™[™[˜ÚX\šÐ[™˜Z[\™Qš^\™Q[žN‚ˆYKˆ™Z™XÝ[Û•˜[Y][Û“Ü™\‘^XÝNˆÂˆœ™\Ý[ÜÝ]\È‹ˆ™˜[˜XÚ×Ü™\Ù[˜ÙH‹ˆ™˜[˜XÚ×Ý\ÙY‹ˆ™˜[˜XÚ×Ü™X\ÛÛˆ‹ˆ›˜]]™WÜ[—Ý™\œÚ[Û—ÜØÚ[XH‹ˆ›˜]]™WÜ[—Ü™\ÛÛ][Û—Ø[™Ú[[]]Xš[]H‹ˆ˜Ø[™Y]WØXØÛÝ[[™È‹ˆ™^XÝ][Û—Ø›ØÚ×Ù\˜][Ûˆ‹ˆ››Û—Ù›ÜX›WØØ[™Y]WÜXÙ[Y[‹ˆ˜Ø[™Y]WÝÚ[™Ý×ÛY[X™\œÚ\Ø]˜Z[Xš[]WØ[™Ø›Ý[™È‹ˆœ™\[—ØÝ]Ù™—Ù™X\ÚXš[]H‹ˆœZ\Ú\ÙWØ›ØÚ×Û›Û—ÛÝ™\›\‹ˆœ™\™\]Z\Ú]WÛÜ™\š[™È‹ˆš\™ØÛÛœÝ˜Z[È‹ˆš[[]]X›WÜXÙ[Y[ØÛÛ\]Xš[]H‹ˆ˜Ø[›ÛšXØ[Ü™\Ý[ØÛÛ˜XÝÜØÚ[XWØ[™ØÛÜœ™[][Û—ØØ]ÚØ[‹ˆKˆ™Z™XÝ[ÛÛÙS]\Ý\]X[š\œÝ\XØX›Q˜Z[Y˜[Y][Û’[‘^XÝÜ™\Ž‚ˆYKˆØ[›ÛšXØ[™\Ý[ÛÛ˜XÝ[˜[YÛÙSX^P™U\ÙYÛ›UÚ[“›Ó[Ü™TÜXÚYšXÔ™Z™XÝ[ÛÛÙSX]Ú\Î‚ˆYKˆ˜]Ô™Z™XÝY˜]]™Q˜[˜XÚÓÝ]]X^P\X\’[”™XÛÜ™ÙÜÐ\Y˜XÝÐØXÚ\Ñ\œ›ÜœÕ[[Y]žSÜ”\œÚ\ÝY[\‚ˆ˜[ÙKˆ›Ú™XÝYÜØ[›ÛšXØ[Ø[™Y]P[™Ú[™ÝÒY[YšY\œÓX^P\X\’[”™XÛÜ™‚ˆ˜[ÙKˆ™XÛÜ™X^TÝXœÝ]]Q›ÜØ[›ÛšXØ[™\Ý[Ü‘^XÝX[X[›ØÚÎˆ˜[ÙKˆNÂˆÛÛœÝ™\ÛÛ™Y™\šYšXØ][Û”[\ÈBˆ™\ÛÛ™Y\Y˜XÝY[X™\œË™\šYšXØ][Û”[\ÎÂˆÛÛœÝ^XÝ˜Z[\™Qš^\™PÛÛ˜XÝÙ^\ÈHÂˆ˜[ÛÜš]H‹ˆœÙ\šX[^˜][Ûˆ‹ˆ™^XÝYÝ]\Ù\È‹ˆ™[žSÜ™\š[™È‹ˆ™[žQšY[Ñ^XÝH‹ˆ™[žQšY[ØÚ[X\È‹ˆ™[žPY][Û˜[šY[Ð[ÝÙY‹ˆ™^XÝ[žPÛÝ[]\Ý\]X[˜[˜XÚÔÝ]\ÐÛÝ[‹ˆ›ØœÙ\™YÝ]\Ó]\Ý\]X[^XÝYÝ]\È‹ˆšYÙÙ\“ÜšYÚ[“]\Ý\]X[ÛÛ™\‘˜Z[\™Q^XÝQ›Ü’[™™X\ÚX›S[Ù[[˜[YÜ•[šÛ›ÝÛˆ‹ˆšYÙÙ\“ÜšYÚ[“]\Ý\]X[\ÝYØ]]Ø^PÛ\ÜÚYšXØ][Û‘^XÝQ›Ü•[Y[Ý]\[™[˜ÞU[˜]˜Z[X›PY\\‘\œ›Ü”ØÚ[XSZ\ÛX]ÚÝ[T™\ÜÛœÙSÜ•˜[Y]Ü”™Z™XÝY‹ˆš\ÛÛ]YÛÛ™\“X^P]]Ü•\ÝYØ]]Ø^PÛ\ÜÚYšXØ][Ûˆ‹ˆ˜\ÜÙ\[Û”™\Ý[]\Ý\]X[\ÜÙY‹ˆ˜[Y˜]]™Q˜[˜XÚÓÜ‘^XÝX[X[›ØÚÔ™\]Z\™Y‹ˆ˜[Y˜]]™Q˜[˜XÚÔ™\Ý[YÙ\Ý]\Ý™\ÛÛ™SÛ™Q^XÝØ[›ÛšXØ[™\Ý[Ú[“X[X[›ØÚÑYÙ\Ý\Ó[‹ˆ˜[Y˜]]™Q˜[˜XÚÔ™\Ý[Ý]\Ó]\Ý\]X[^XÝYÝ]\ÓÜ“]\˜[˜[˜XÚÕÚ[“X[X[›ØÚÑYÙ\Ý\Ó[‹ˆ˜[Y˜]]™Q˜[˜XÚÔ™\Ý[˜[˜XÚÕ\ÙY]\Ý™UYUÚ[“X[X[›ØÚÑYÙ\Ý\Ó[‹ˆ˜[Y˜]]™Q˜[˜XÚÔ™\Ý[˜[˜XÚÔ™X\ÛÛ“]\Ý\]X[^XÝYÝ]\ÕÚ[“X[X[›ØÚÑYÙ\Ý\Ó[‹ˆ˜[Y˜]]™Q˜[˜XÚÔ™\Ý[˜]]™T[•™\œÚ[Û“]\Ý™PÛÜÙY[™›Û“[Ú[“X[X[›ØÚÑYÙ\Ý\Ó[‹ˆ˜[Y˜]]™Q˜[˜XÚÔ™\Ý[]\ÝØ]\ÙžPØ[›ÛšXØ[Ø[™Y]PXØÛÝ[[™Ñ^XÝ][Û›ØÚÑ\˜][Û[™[\™ÛÛœÝ˜Z[ÕÚ[“X[X[›ØÚÑYÙ\Ý\Ó[‹ˆ˜[Y˜]]™Q˜[˜XÚÔ™\Ý[]\ÝØ]\ÙžPØ[›ÛšXØ[›Û‘›ÜX›PØ[™Y]UÚ[™ÝÐ[™[Í\™ÛÛœÝ˜Z[ÕÚ[“X[X[›ØÚÑYÙ\Ý\Ó[‹ˆ˜[Y˜]]™Q˜[˜XÚÔ™\Ý[]\ÝØ]\ÙžPØ[›ÛšXØ[™\[Ý]Ù™”Z\Ú\ÙP›ØÚÓ›Û“Ý™\›\[™™\™\]Z\Ú]SÜ™\š[™ÕÚ[“X[X[›ØÚÑYÙ\Ý\Ó[‹ˆ›Û™S˜]]™Q˜[˜XÚÔ™\Ý[YÙ\ÝX^TØ]\ÙžS][\Q^XÝYÝ]\Ù\È‹ˆš[˜[Y˜]]™Q˜[˜XÚÐ][\YÙ\Ý]\Ý™\ÛÛ™SÛ™Q^XÝÛÜÙY™Z™XÝ[Û•˜[Y][Û”™XÛÜ™Ú[“X[X[›ØÚÑYÙ\Ý\Ó›Û“[‹ˆš[˜[Y˜]]™Q˜[˜XÚÐ][\˜Z[\™S]\Ý™PÜ›ÜÜÐ›Ý[™Ñ^XÝYÝ]\È‹ˆš[˜[Y˜]]™Q˜[˜XÚÓX[X[›ØÚÑYÙ\Ý]\Ý™\ÛÛ™SÛ™Q^XÝØ[›ÛšXØ[›ØÚÙYX[X[[”™\]Z\™Y™\Ý[‹ˆš[˜[Y˜]]™Q˜[˜XÚÓX[X[›ØÚÔ™\Ý[X^PÛÛZ[‘^XÝ][Û›ØÚÜÓÜ”™Y™\™[˜ÙY˜]]™T[ˆ‹ˆš[˜[Y˜]]™Q˜[˜XÚÓX[X[›ØÚÔ™\Ý[˜[˜XÚÓ]\Ý\]X[\ÙY˜[ÙS›Ý\ÙY[™[‹ˆš[˜[Y˜]]™Q˜[˜XÚÔ™\Ý[X^T™[X\ÙPØ[™Y]T[ˆ‹ˆ›X[X[›ØÚÑYÙ\Ý]\Ý™S[Y™“˜]]™Q˜[˜XÚÒ\Õ˜[Y[™›Û“[Y™“˜]]™Q˜[˜XÚÒ\Ò[˜[Y‹ˆ›Z\ÜÚ[™Õ[šÛ›ÝÛ‘\XØ]SÜ”™[Ü™\™Y[žP[ÝÙY‹ˆNÂ‚ˆ™]\›ˆ
+ˆØ[›ÛšXØ[œÛÛŠØš™XÝšÙ^\ÊØ[›ÛšXØ[
+JHOOBˆØ[›ÛšXØ[œÛÛŠ‘TÕSÐÓÓ•PÕÒÑVTÊH	‰‚ˆØ[›ÛšXØ[œÛÛŠØš™XÝšÙ^\Ê›Ú™XÝY
+JHOOBˆØ[›ÛšXØ[œÛÛŠ“Ò‘PÕQÔ‘TÕSÐÓÓ•PÕÒÑVTÊH	‰‚ˆØ[›ÛšXØ[œÛÛŠØ[›ÛšXØ[˜[ÝÙYšY[Ñ^XÝJHOOBˆØ[›ÛšXØ[œÛÛŠ^XÝ[ÝÙYšY[ÊH	‰‚ˆØ[›ÛšXØ[œÛÛŠ›Ú™XÝY˜[ÝÙYšY[Ñ^XÝJHOOBˆØ[›ÛšXØ[œÛÛŠ^XÝ›Ú™XÝY[ÝÙYšY[ÊH	‰‚ˆØ[›ÛšXØ[œÛÛŠØ[›ÛšXØ[™^XÝ][Û›ØÚÑšY[Ñ^XÝJHOOBˆØ[›ÛšXØ[œÛÛŠ^XÝ^XÝ][Û›ØÚÑšY[ÊH	‰‚ˆØ[›ÛšXØ[œÛÛŠ›Ú™XÝY™^XÝ][Û›ØÚÑšY[Ñ^XÝJHOOBˆØ[›ÛšXØ[œÛÛŠ^XÝ^XÝ][Û›ØÚÑšY[ÊH	‰‚ˆØ[›ÛšXØ[œÛÛŠØ[›ÛšXØ[[˜\ÜÚYÛ™YØ[™Y]QšY[Ñ^XÝJHOOBˆØ[›ÛšXØ[œÛÛŠ^XÝ[˜\ÜÚYÛ™YØ[™Y]QšY[ÊH	‰‚ˆØ[›ÛšXØ[œÛÛŠ›Ú™XÝY[˜\ÜÚYÛ™YØ[™Y]QšY[Ñ^XÝJHOOBˆØ[›ÛšXØ[œÛÛŠ^XÝ[˜\ÜÚYÛ™YØ[™Y]QšY[ÊH	‰‚ˆØ[›ÛšXØ[œÛÛŠØ[›ÛšXØ[™˜[˜XÚÑšY[Ñ^XÝJHOOBˆØ[›ÛšXØ[œÛÛŠ^XÝ˜[˜XÚÑšY[ÊH	‰‚ˆØ[›ÛšXØ[œÛÛŠØ[›ÛšXØ[™˜[˜XÚÔ™X\ÛÛ•˜[Y\ÊHOOBˆØ[›ÛšXØ[œÛÛŠ^XÝ˜[˜XÚÔ™X\ÛÛ•˜[Y\ÊH	‰‚ˆSØš™XÝš\ÓÝÛŠ›Ú™XÝY™˜[˜XÚÑšY[Ñ^XÝHŠH	‰‚ˆSØš™XÝš\ÓÝÛŠ›Ú™XÝY™˜[˜XÚÔ™X\ÛÛ•˜[Y\ÈŠH	‰‚ˆSØš™XÝš\ÓÝÛŠ›Ú™XÝY™˜[˜XÚÕ˜[YT[\ÈŠH	‰‚ˆSØš™XÝš\ÓÝÛŠ›Ú™XÝY™˜[˜XÚÔÝ]\Ù\ÈŠH	‰‚ˆSØš™XÝš\ÓÝÛŠ›Ú™XÝY›˜]]™Q˜[˜XÚÒ[˜[Y™\Ý[ŠH	‰‚ˆØ[›ÛšXØ[œÛÛŠØ[›ÛšXØ[›Øš™XÝ]™PÛÛ\Û™[šY[Ñ^XÝJHOOBˆØ[›ÛšXØ[œÛÛŠ^XÝØš™XÝ]™PÛÛ\Û™[šY[ÊH	‰‚ˆØ[›ÛšXØ[œÛÛŠ›Ú™XÝY›Øš™XÝ]™PÛÛ\Û™[šY[Ñ^XÝJHOOBˆØ[›ÛšXØ[œÛÛŠ^XÝØš™XÝ]™PÛÛ\Û™[šY[ÊH	‰‚ˆØ[›ÛšXØ[œÛÛŠØ[›ÛšXØ[š[Û][Û‘šY[Ñ^XÝJHOOBˆØ[›ÛšXØ[œÛÛŠ^XÝš[Û][Û‘šY[ÊH	‰‚ˆØ[›ÛšXØ[œÛÛŠ›Ú™XÝYš[Û][Û‘šY[Ñ^XÝJHOOBˆØ[›ÛšXØ[œÛÛŠ^XÝš[Û][Û‘šY[ÊH	‰‚ˆØ[›ÛšXØ[œÛÛŠØ[›ÛšXØ[œØØ[\”ØÚ[X\ÊHOOBˆØ[›ÛšXØ[œÛÛŠ^XÝØØ[\”ØÚ[X\ÊH	‰‚ˆØ[›ÛšXØ[œÛÛŠ›Ú™XÝYœØØ[\”ØÚ[X\ÊHOOBˆØ[›ÛšXØ[œÛÛŠ^XÝ›Ú™XÝYØØ[\”ØÚ[X\ÊH	‰‚ˆØ[›ÛšXØ[œÛÛŠØ[›ÛšXØ[˜Ø\™[˜[]S[Z]ÊHOOBˆØ[›ÛšXØ[œÛÛŠ^XÝØ\™[˜[]S[Z]ÊH	‰‚ˆØ[›ÛšXØ[œÛÛŠ›Ú™XÝY˜Ø\™[˜[]S[Z]ÊHOOBˆØ[›ÛšXØ[œÛÛŠ^XÝØ\™[˜[]S[Z]ÊH	‰‚ˆØ[›ÛšXØ[œÛÛŠØ[›ÛšXØ[™˜[˜XÚÔÝ]\Ù\ÊHOOBˆØ[›ÛšXØ[œÛÛŠSPÒ×ÔÕUTÑTÊH	‰‚ˆØ[›ÛšXØ[œÛÛŠØ[›ÛšXØ[™˜[˜XÚÕ˜[YT[\ÊHOOBˆØ[›ÛšXØ[œÛÛŠ^XÝ˜[˜XÚÕ˜[YT[\ÊH	‰‚ˆØ[›ÛšXØ[œÛÛŠØ[›ÛšXØ[˜Ø[™Y]PXØÛÝ[[™Ô[\ÊHOOBˆØ[›ÛšXØ[œÛÛŠ^XÝØ[™Y]PXØÛÝ[[™Ô[\ÊH	‰‚ˆØ[›ÛšXØ[œÛÛŠ›Ú™XÝY˜Ø[™Y]PXØÛÝ[[™Ô[\ÊHOOBˆØ[›ÛšXØ[œÛÛŠ^XÝ›Ú™XÝYØ[™Y]PXØÛÝ[[™Ô[\ÊH	‰‚ˆØ[›ÛšXØ[œÛÛŠØ[›ÛšXØ[™^XÝ][Û›ØÚÑ\˜][Û”[\ÊHOOBˆØ[›ÛšXØ[œÛÛŠ^XÝ^XÝ][Û›ØÚÑ\˜][Û”[\ÊH	‰‚ˆØ[›ÛšXØ[œÛÛŠ›Ú™XÝY™^XÝ][Û›ØÚÑ\˜][Û”[\ÊHOOBˆØ[›ÛšXØ[œÛÛŠ^XÝ›Ú™XÝY^XÝ][Û›ØÚÑ\˜][Û”[\ÊH	‰‚ˆØ[›ÛšXØ[œÛÛŠØ[›ÛšXØ[››Û‘›ÜX›PØ[™Y]T[\ÊHOOBˆØ[›ÛšXØ[œÛÛŠ^XÝØ[›ÛšXØ[›Û‘›ÜX›T[\ÊH	‰‚ˆØ[›ÛšXØ[œÛÛŠ›Ú™XÝY››Û‘›ÜX›PØ[™Y]T[\ÊHOOBˆØ[›ÛšXØ[œÛÛŠ^XÝ›Ú™XÝY›Û‘›ÜX›T[\ÊH	‰‚ˆØ[›ÛšXØ[œÛÛŠØ[›ÛšXØ[˜Ø[™Y]UÚ[™ÝÑ™X\ÚXš[]T[\ÊHOOBˆØ[›ÛšXØ[œÛÛŠ^XÝØ[›ÛšXØ[Ø[™Y]UÚ[™ÝÔ[\ÊH	‰‚ˆØ[›ÛšXØ[œÛÛŠ›Ú™XÝY˜Ø[™Y]UÚ[™ÝÑ™X\ÚXš[]T[\ÊHOOBˆØ[›ÛšXØ[œÛÛŠ^XÝ›Ú™XÝYØ[™Y]UÚ[™ÝÔ[\ÊH	‰‚ˆØ[›ÛšXØ[œÛÛŠØ[›ÛšXØ[š\™XY[™Q™X\ÚXš[]T[\ÊHOOBˆØ[›ÛšXØ[œÛÛŠ^XÝØ[›ÛšXØ[\™XY[™T[\ÊH	‰‚ˆØ[›ÛšXØ[œÛÛŠ›Ú™XÝYš\™XY[™Q™X\ÚXš[]T[\ÊHOOBˆØ[›ÛšXØ[œÛÛŠ^XÝ›Ú™XÝY\™XY[™T[\ÊH	‰‚ˆØ[›ÛšXØ[œÛÛŠØ[›ÛšXØ[œ™\[Ý]Ù™‘™X\ÚXš[]T[\ÊHOOBˆØ[›ÛšXØ[œÛÛŠ^XÝØ[›ÛšXØ[™\[Ý]Ù™”[\ÊH	‰‚ˆØ[›ÛšXØ[œÛÛŠ›Ú™XÝYœ™\[Ý]Ù™‘™X\ÚXš[]T[\ÊHOOBˆØ[›ÛšXØ[œÛÛŠ^XÝ›Ú™XÝY™\[Ý]Ù™”[\ÊH	‰‚ˆØ[›ÛšXØ[œÛÛŠØ[›ÛšXØ[œZ\Ú\ÙP›ØÚÓ›Û“Ý™\›\[\ÊHOOBˆØ[›ÛšXØ[œÛÛŠ^XÝØ[›ÛšXØ[Z\Ú\ÙP›ØÚÓ›Û“Ý™\›\[\ÊH	‰‚ˆØ[›ÛšXØ[œÛÛŠ›Ú™XÝYœZ\Ú\ÙP›ØÚÓ›Û“Ý™\›\[\ÊHOOBˆØ[›ÛšXØ[œÛÛŠ^XÝ›Ú™XÝYZ\Ú\ÙP›ØÚÓ›Û“Ý™\›\[\ÊH	‰‚ˆØ[›ÛšXØ[œÛÛŠØ[›ÛšXØ[œ™\™\]Z\Ú]SÜ™\š[™Ô[\ÊHOOBˆØ[›ÛšXØ[œÛÛŠ^XÝØ[›ÛšXØ[™\™\]Z\Ú]SÜ™\š[™Ô[\ÊH	‰‚ˆØ[›ÛšXØ[œÛÛŠ›Ú™XÝYœ™\™\]Z\Ú]SÜ™\š[™Ô[\ÊHOOBˆØ[›ÛšXØ[œÛÛŠ^XÝ›Ú™XÝY™\™\]Z\Ú]SÜ™\š[™Ô[\ÊH	‰‚ˆØ[›ÛšXØ[œÛÛŠØ[›ÛšXØ[™\œÚ[Û’[™›ÑšY[Ñ^XÝJHOOBˆØ[›ÛšXØ[œÛÛŠ^XÝ™\œÚ[Û’[™›ÑšY[ÊH	‰‚ˆØ[›ÛšXØ[œÛÛŠØ[›ÛšXØ[™\œÚ[Û‘šY[Ô™\]Z\™Y
+HOOBˆØ[›ÛšXØ[œÛÛŠ^XÝ™\œÚ[Û’[™›ÑšY[ÊH	‰‚ˆØ[›ÛšXØ[œÛÛŠØ[›ÛšXØ[™\œÚ[Û’[™›ÑšY[ØÚ[X\ÊHOOBˆØ[›ÛšXØ[œÛÛŠ^XÝ™\œÚ[Û’[™›ÑšY[ØÚ[X\ÊH	‰‚ˆØ[›ÛšXØ[œÛÛŠØ[›ÛšXØ[™\œÚ[Û’[™›ÐÛÛœÝXÝ[Û”[\ÊHOOBˆØ[›ÛšXØ[œÛÛŠ^XÝ™\œÚ[Û’[™›ÐÛÛœÝXÝ[Û”[\ÊH	‰‚ˆSØš™XÝš\ÓÝÛŠ›Ú™XÝY™\œÚ[Û’[™›ÑšY[Ñ^XÝHŠH	‰‚ˆSØš™XÝš\ÓÝÛŠ›Ú™XÝY™\œÚ[Û’[™›ÑšY[ØÚ[X\ÈŠH	‰‚ˆSØš™XÝš\ÓÝÛŠ›Ú™XÝY™\œÚ[Û’[™›ÐÛÛœÝXÝ[Û”[\ÈŠH	‰‚ˆSØš™XÝš\ÓÝÛŠ›Ú™XÝY™\œÚ[Û‘šY[Ô™\]Z\™YŠH	‰‚ˆØ[›ÛšXØ[œÛÛŠØÚY[\‹š[œ]ÛÛ˜XÝš\™XY[™U˜[Y][ÛÛÛ^
+HOOBˆØ[›ÛšXØ[œÛÛŠ^XÝ\™XY[™U˜[Y][ÛÛÛ^
+H	‰‚ˆØÚY[\‹š[œ]ÛÛ˜XÝ›Ü[Z^™\’[›ØØ][Û”›Ú™XÝ[ÛÛÛ˜XÝˆ™šY[Ñ^XÝKš[˜ÛY\ÊœÝYWÙ]WÚÜÝŠHOOBˆ˜[ÙH	‰‚ˆØ[›ÛšXØ[œÛÛŠØÚY[\‹š\™ÛÛœÝ˜Z[ÊHOOBˆØ[›ÛšXØ[œÛÛŠ‘TÕSÒT‘ÐÓÓ”ÕRS•ÊH	‰‚ˆØ[›ÛšXØ[œÛÛŠØ[›ÛšXØ[˜ÛÜÙY[[U˜[Y\Ë˜ÛÛœÝ˜Z[ØÛÙWÙ[[JHOOBˆØ[›ÛšXØ[œÛÛŠ‘TÕSÒT‘ÐÓÓ”ÕRS•ÊH	‰‚ˆØ[›ÛšXØ[œÛÛŠ›Ú™XÝY˜ÛÜÙY[[U˜[Y\Ë˜ÛÛœÝ˜Z[ØÛÙWÙ[[JHOOBˆØ[›ÛšXØ[œÛÛŠ‘TÕSÒT‘ÐÓÓ”ÕRS•ÊH	‰‚ˆš[Ü”[\Âˆ™[\ÙY[™[”›ÙÜ™\ÜÔXÙ[Y[]\Ý™\ÛÛ™Q^XÝSÛ™PÝ\œ™[[›ØØ][ÛØ[™Y]P™Y›Ü™T›Ú™XÝ[ÛˆOOBˆYH	‰‚ˆš[Ü”[\Âˆ™[\ÙY[™[”›ÙÜ™\ÜÔXÙ[Y[]\ÝØ]\ÙžT™\ÛÛ™YÝ\œ™[Ø[™Y]Q\˜][Û[™ÚÜ[š[™Ô[\Ð™Y›Ü™T›Ú™XÝ[ÛˆOOBˆYH	‰‚ˆš[Ü”[\Âˆš[[]]X›TXÙ[Y[Ø[™Y]Q\˜][Û’[˜ÛÛ\]Xš[]SX^T™XXÚÜ[Z^™\ˆOOBˆ˜[ÙH	‰‚ˆš[Ü”[\Âˆš[[]]X›TXÙ[Y[Ø[™Y]Q\˜][Û’[˜ÛÛ\]Xš[]Q˜[˜XÚÕšYÙÙ\”Ý]\ÈOOBˆ˜[Y]Ü—Ü™Z™XÝYˆ	‰‚ˆš[Ü”[\Âˆš[[]]X›TXÙ[Y[Ø[™Y]Q\˜][Û’[˜ÛÛ\]Xš[]Q˜[˜XÚÔ™X\ÛÛ‘[[S]\Ý\]X[šYÙÙ\”Ý]\ÈOOBˆYH	‰‚ˆš[Ü”[\Âˆš[[]]X›TXÙ[Y[Ø[™Y]Q\˜][Û’[˜ÛÛ\]Xš[]S]\Ý][\^XÝSÛ™TÙ\\˜][U˜[Y]Y˜]]™Q˜[˜XÚÈOOBˆYH	‰‚ˆš[Ü”[\Âˆš[[]]X›TXÙ[Y[Ø[™Y]Q\˜][Û’[˜ÛÛ\]Xš[]S]\Ý[\”Ù\\˜][U˜[Y]Y˜]]™Q˜[˜XÚÕÚ]Ý]™]Üš][™ÔXÙ[Y[ÜØ[™Y]TÛXÞHOOBˆYH	‰‚ˆš[Ü”[\Âˆš[[]]X›TXÙ[Y[Ø[™Y]Q\˜][Û’[˜ÛÛ\]Xš[]R[˜[Y˜]]™Q˜[˜XÚÔ™\Ý[OOBˆ˜›ØÚÙYÛX[X[Ü[—Ü™\]Z\™Yˆ	‰‚ˆš[Ü”[\Âˆš[[]]X›TXÙ[Y[Ø[™Y]Q\˜][Û’[˜ÛÛ\]Xš[]R[˜[Y˜]]™Q˜[˜XÚÓX^UšYÙÙ\[›Ý\‘˜[˜XÚÈOOBˆ˜[ÙH	‰‚ˆš[Ü”[\Âˆ™[\ÙY[™[”›ÙÜ™\ÜÔXÙ[Y[]\Ý™\ÛÛ™Q^XÝSÛ™PÝ\œ™[[›ØØ][Û•Ú[™ÝÐ™Y›Ü™T›Ú™XÝ[ÛˆOOBˆYH	‰‚ˆš[Ü”[\Âˆ™[\ÙY[™[”›ÙÜ™\ÜÔXÙ[Y[Ú[™ÝÓ]\Ý™[Û™ÕÔ™\ÛÛ™YÝ\œ™[Ø[™Y]P[ÝÙYÚ[™ÝÒYÐ™Y›Ü™T›Ú™XÝ[ÛˆOOBˆYH	‰‚ˆš[Ü”[\Âˆ™[\ÙY[™[”›ÙÜ™\ÜÔXÙ[Y[™\ÛÛ™YÝ\œ™[Ú[™ÝÐ]˜Z[X›S]\Ý\]X[YP™Y›Ü™T›Ú™XÝ[ÛˆOOBˆYH	‰‚ˆš[Ü”[\Âˆ™[\ÙY[™[”›ÙÜ™\ÜÔXÙ[Y[]\ÝØ]\ÙžPÝ\œ™[Ú[™ÝÔÝ\\ÜÕ[“Ü‘\]X[›ØÚÔÝ\\ÜÕ[›ØÚÑ[™\ÜÕ[“Ü‘\]X[Ú[™ÝÑ[™[œÚYSÛ™T™Y™\™[˜ÙYÚ[™ÝÐ™Y›Ü™T›Ú™XÝ[ÛˆOOBˆYH	‰‚ˆš[Ü”[\Ë™[\ÙY[™[”›ÙÜ™\ÜÔXÙ[Y[X^TÜ[“Ü”Ý]ÚY˜XÙ[Ý\œ™[Ú[™ÝÜÈOOBˆ˜[ÙH	‰‚ˆš[Ü”[\Âˆš[[]]X›TXÙ[Y[Ø[™Y]UÚ[™ÝÒ[˜ÛÛ\]Xš[]SX^T™XXÚÜ[Z^™\ˆOOBˆ˜[ÙH	‰‚ˆš[Ü”[\Âˆš[[]]X›TXÙ[Y[Ø[™Y]UÚ[™ÝÒ[˜ÛÛ\]Xš[]Q˜[˜XÚÕšYÙÙ\”Ý]\ÈOOBˆ˜[Y]Ü—Ü™Z™XÝYˆ	‰‚ˆš[Ü”[\Âˆš[[]]X›TXÙ[Y[Ø[™Y]UÚ[™ÝÒ[˜ÛÛ\]Xš[]Q˜[˜XÚÔ™X\ÛÛ‘[[S]\Ý\]X[šYÙÙ\”Ý]\ÈOOBˆYH	‰‚ˆš[Ü”[\Âˆš[[]]X›TXÙ[Y[Ø[™Y]UÚ[™ÝÒ[˜ÛÛ\]Xš[]S]\Ý][\^XÝSÛ™TÙ\\˜][U˜[Y]Y˜]]™Q˜[˜XÚÈOOBˆYH	‰‚ˆš[Ü”[\Âˆš[[]]X›TXÙ[Y[Ø[™Y]UÚ[™ÝÒ[˜ÛÛ\]Xš[]S]\Ý[\”Ù\\˜][U˜[Y]Y˜]]™Q˜[˜XÚÕÚ]Ý][Ýš[™Ñ›Ü[™Õ[˜\ÜÚYÛš[™ÔÚÜ[š[™Ñ^[™[™ÓÜ”™]Üš][™ÔXÙ[Y[ÜØ[™Y]TÛXÞHOOBˆYH	‰‚ˆš[Ü”[\Âˆš[[]]X›TXÙ[Y[Ø[™Y]UÚ[™ÝÒ[˜ÛÛ\]Xš[]R[˜[Y˜]]™Q˜[˜XÚÔ™\Ý[OOBˆ˜›ØÚÙYÛX[X[Ü[—Ü™\]Z\™Yˆ	‰‚ˆš[Ü”[\Âˆš[[]]X›TXÙ[Y[Ø[™Y]UÚ[™ÝÒ[˜ÛÛ\]Xš[]R[˜[Y˜]]™Q˜[˜XÚÓX^UšYÙÙ\[›Ý\‘˜[˜XÚÈOOBˆ˜[ÙH	‰‚ˆš[Ü”[\Âˆ™[\ÙY[™[”›ÙÜ™\ÜÔXÙ[Y[]\ÝØ]\ÙžT™\ÛÛ™YÝ\œ™[Ø[™Y]R\™XY[™P™Y›Ü™T›Ú™XÝ[ÛˆOOBˆYH	‰‚ˆš[Ü”[\Âˆš[[]]X›TXÙ[Y[\™XY[™R[˜ÛÛ\]Xš[]SX^T™XXÚÜ[Z^™\ˆOOBˆ˜[ÙH	‰‚ˆš[Ü”[\Âˆš[[]]X›TXÙ[Y[\™XY[™R[˜ÛÛ\]Xš[]Q˜[˜XÚÕšYÙÙ\”Ý]\ÈOOBˆ˜[Y]Ü—Ü™Z™XÝYˆ	‰‚ˆš[Ü”[\Âˆš[[]]X›TXÙ[Y[\™XY[™R[˜ÛÛ\]Xš[]Q˜[˜XÚÔ™X\ÛÛ‘[[S]\Ý\]X[šYÙÙ\”Ý]\ÈOOBˆYH	‰‚ˆš[Ü”[\Âˆš[[]]X›TXÙ[Y[\™XY[™R[˜ÛÛ\]Xš[]S]\Ý][\^XÝSÛ™TÙ\\˜][U˜[Y]Y˜]]™Q˜[˜XÚÈOOBˆYH	‰‚ˆš[Ü”[\Âˆš[[]]X›TXÙ[Y[\™XY[™R[˜ÛÛ\]Xš[]S]\Ý[\”Ù\\˜][U˜[Y]Y˜]]™Q˜[˜XÚÕÚ]Ý][Ýš[™Ñ›Ü[™Õ[˜\ÜÚYÛš[™ÔÚÜ[š[™Ñ^[™[™ÓÜ”™]Üš][™ÔXÙ[Y[ÜØ[™Y]TÛXÞHOOBˆYH	‰‚ˆš[Ü”[\Âˆš[[]]X›TXÙ[Y[\™XY[™R[˜ÛÛ\]Xš[]R[˜[Y˜]]™Q˜[˜XÚÔ™\Ý[OOBˆ˜›ØÚÙYÛX[X[Ü[—Ü™\]Z\™Yˆ	‰‚ˆš[Ü”[\Âˆš[[]]X›TXÙ[Y[\™XY[™R[˜ÛÛ\]Xš[]R[˜[Y˜]]™Q˜[˜XÚÓX^UšYÙÙ\[›Ý\‘˜[˜XÚÈOOBˆ˜[ÙH	‰‚ˆš[Ü”[\Âˆš[[]]X›TXÙ[Y[ÜÝ\œ™[Ø[™Y]TÛXÞSX^P™T™]Üš][•Ô™\Z\’[˜ÛÛ\]Xš[]HOOBˆ˜[ÙH	‰‚ˆ›Ú™XÝ[Û”[\Âˆš[[]]X›Tš[Ü”XÙ[Y[Ó]\Ý\ÜÑ^XÝÝ\œ™[Ø[™Y]Q\˜][ÛÛÛ\]Xš[]P™Y›Ü™T›Ú™XÝ[ÛˆOOBˆYH	‰‚ˆ›Ú™XÝ[Û”[\Âˆš[[]]X›Tš[Ü”XÙ[Y[Ø[™Y]Q\˜][Û’[˜ÛÛ\]Xš[]SX^T™XXÚÜ[Z^™\ˆOOBˆ˜[ÙH	‰‚ˆ›Ú™XÝ[Û”[\Âˆš[[]]X›Tš[Ü”XÙ[Y[Ø[™Y]Q\˜][Û’[˜ÛÛ\]Xš[]Q˜[˜XÚÕšYÙÙ\”Ý]\ÈOOBˆ˜[Y]Ü—Ü™Z™XÝYˆ	‰‚ˆ›Ú™XÝ[Û”[\Âˆš[[]]X›Tš[Ü”XÙ[Y[Ø[™Y]Q\˜][Û’[˜ÛÛ\]Xš[]Q˜[˜XÚÔ™X\ÛÛ‘[[S]\Ý\]X[šYÙÙ\”Ý]\ÈOOBˆYH	‰‚ˆ›Ú™XÝ[Û”[\Âˆš[[]]X›Tš[Ü”XÙ[Y[Ø[™Y]Q\˜][Û’[˜ÛÛ\]Xš[]S]\Ý][\^XÝSÛ™TÙ\\˜][U˜[Y]Y˜]]™Q˜[˜XÚÈOOBˆYH	‰‚ˆ›Ú™XÝ[Û”[\Âˆš[[]]X›Tš[Ü”XÙ[Y[Ø[™Y]Q\˜][Û’[˜ÛÛ\]Xš[]S]\Ý[\”Ù\\˜][U˜[Y]Y˜]]™Q˜[˜XÚÕÚ]Ý]™]Üš][™ÔXÙ[Y[ÜØ[™Y]TÛXÞHOOBˆYH	‰‚ˆ›Ú™XÝ[Û”[\Âˆš[[]]X›Tš[Ü”XÙ[Y[Ø[™Y]Q\˜][Û’[˜ÛÛ\]Xš[]R[˜[Y˜]]™Q˜[˜XÚÔ™\Ý[OOBˆ˜›ØÚÙYÛX[X[Ü[—Ü™\]Z\™Yˆ	‰‚ˆ›Ú™XÝ[Û”[\Âˆš[[]]X›Tš[Ü”XÙ[Y[Ø[™Y]Q\˜][Û’[˜ÛÛ\]Xš[]R[˜[Y˜]]™Q˜[˜XÚÓX^UšYÙÙ\[›Ý\‘˜[˜XÚÈOOBˆ˜[ÙH	‰‚ˆ›Ú™XÝ[Û”[\Âˆš[[]]X›Tš[Ü”XÙ[Y[Ó]\Ý\ÜÑ^XÝÝ\œ™[Ø[™Y]UÚ[™ÝÓY[X™\œÚ\]˜Z[Xš[]P[™›Ý[™Ð™Y›Ü™T›Ú™XÝ[ÛˆOOBˆYH	‰‚ˆ›Ú™XÝ[Û”[\Âˆš[[]]X›Tš[Ü”XÙ[Y[Ø[™Y]P[™Ú[™ÝÓ]\ÝXXÚ™\ÛÛ™Q^XÝSÛ˜ÙU›ÝYÚ^XÝÝ\œ™[[›ØØ][ÛˆOOBˆYH	‰‚ˆ›Ú™XÝ[Û”[\Âˆš[[]]X›Tš[Ü”XÙ[Y[Ú[™ÝÓ]\Ý™[Û™ÕÔ™\ÛÛ™YØ[™Y]P[ÝÙYÚ[™ÝÒYÈOOBˆYH	‰‚ˆ›Ú™XÝ[Û”[\Ëš[[]]X›Tš[Ü”XÙ[Y[™\ÛÛ™YÚ[™ÝÐ]˜Z[X›S]\Ý\]X[YHOOBˆYH	‰‚ˆ›Ú™XÝ[Û”[\Âˆš[[]]X›Tš[Ü”XÙ[Y[]\ÝØ]\ÙžUÚ[™ÝÔÝ\\ÜÕ[“Ü‘\]X[›ØÚÔÝ\\ÜÕ[›ØÚÑ[™\ÜÕ[“Ü‘\]X[Ú[™ÝÑ[™[œÚYSÛ™T™Y™\™[˜ÙYÚ[™ÝÈOOBˆYH	‰‚ˆ›Ú™XÝ[Û”[\Ëš[[]]X›Tš[Ü”XÙ[Y[X^TÜ[“Ü”Ý]ÚY˜XÙ[Ú[™ÝÜÈOOBˆ˜[ÙH	‰‚ˆ›Ú™XÝ[Û”[\Âˆš[[]]X›Tš[Ü”XÙ[Y[Ø[™Y]UÚ[™ÝÒ[˜ÛÛ\]Xš[]SX^T™XXÚÜ[Z^™\ˆOOBˆ˜[ÙH	‰‚ˆ›Ú™XÝ[Û”[\Âˆš[[]]X›Tš[Ü”XÙ[Y[Ø[™Y]UÚ[™ÝÒ[˜ÛÛ\]Xš[]Q˜[˜XÚÕšYÙÙ\”Ý]\ÈOOBˆ˜[Y]Ü—Ü™Z™XÝYˆ	‰‚ˆ›Ú™XÝ[Û”[\Âˆš[[]]X›Tš[Ü”XÙ[Y[Ø[™Y]UÚ[™ÝÒ[˜ÛÛ\]Xš[]Q˜[˜XÚÔ™X\ÛÛ‘[[S]\Ý\]X[šYÙÙ\”Ý]\ÈOOBˆYH	‰‚ˆ›Ú™XÝ[Û”[\Âˆš[[]]X›Tš[Ü”XÙ[Y[Ø[™Y]UÚ[™ÝÒ[˜ÛÛ\]Xš[]S]\Ý][\^XÝSÛ™TÙ\\˜][U˜[Y]Y˜]]™Q˜[˜XÚÈOOBˆYH	‰‚ˆ›Ú™XÝ[Û”[\Âˆš[[]]X›Tš[Ü”XÙ[Y[Ø[™Y]UÚ[™ÝÒ[˜ÛÛ\]Xš[]S]\Ý[\”Ù\\˜][U˜[Y]Y˜]]™Q˜[˜XÚÕÚ]Ý][Ýš[™Ñ›Ü[™Õ[˜\ÜÚYÛš[™ÔÚÜ[š[™Ñ^[™[™ÓÜ”™]Üš][™ÔXÙ[Y[ÜØ[™Y]TÛXÞHOOBˆYH	‰‚ˆ›Ú™XÝ[Û”[\Âˆš[[]]X›Tš[Ü”XÙ[Y[Ø[™Y]UÚ[™ÝÒ[˜ÛÛ\]Xš[]R[˜[Y˜]]™Q˜[˜XÚÔ™\Ý[OOBˆ˜›ØÚÙYÛX[X[Ü[—Ü™\]Z\™Yˆ	‰‚ˆ›Ú™XÝ[Û”[\Âˆš[[]]X›Tš[Ü”XÙ[Y[Ø[™Y]UÚ[™ÝÒ[˜ÛÛ\]Xš[]R[˜[Y˜]]™Q˜[˜XÚÓX^UšYÙÙ\[›Ý\‘˜[˜XÚÈOOBˆ˜[ÙH	‰‚ˆ›Ú™XÝ[Û”[\ÂˆœÝYQ]RÜÝ]\Ý™[XZ[’[•\ÝYØ]]Ø^P[™]\Ý›Ý[\“Ü[Z^™\”›Ú™XÝ[ÛˆOOBˆYH	‰‚ˆ›Ú™XÝ[Û”[\Âˆ\ÝYØ]]Ø^S]\Ý™]Z[‘^XÝØ[›ÛšXØ[ÝYQ]RÜÝ›Ü”›Ú™XÝY™\Ý[\™XY[™U˜[Y][ÛˆOOBˆYH	‰‚ˆ›Ú™XÝ[Û”[\Âˆš[[]]X›Tš[Ü”XÙ[Y[Ó]\Ý\ÜÑ^XÝÝ\œ™[Ø[™Y]R\™XY[™T™YXØ]P™Y›Ü™T›Ú™XÝ[ÛˆOOBˆYH	‰‚ˆ›Ú™XÝ[Û”[\Âˆš[[]]X›Tš[Ü”XÙ[Y[\™XY[™R[˜ÛÛ\]Xš[]SX^T™XXÚÜ[Z^™\ˆOOBˆ˜[ÙH	‰‚ˆ›Ú™XÝ[Û”[\Âˆš[[]]X›Tš[Ü”XÙ[Y[\™XY[™R[˜ÛÛ\]Xš[]Q˜[˜XÚÕšYÙÙ\”Ý]\ÈOOBˆ˜[Y]Ü—Ü™Z™XÝYˆ	‰‚ˆ›Ú™XÝ[Û”[\Âˆš[[]]X›Tš[Ü”XÙ[Y[\™XY[™R[˜ÛÛ\]Xš[]Q˜[˜XÚÔ™X\ÛÛ‘[[S]\Ý\]X[šYÙÙ\”Ý]\ÈOOBˆYH	‰‚ˆ›Ú™XÝ[Û”[\Âˆš[[]]X›Tš[Ü”XÙ[Y[\™XY[™R[˜ÛÛ\]Xš[]S]\Ý][\^XÝSÛ™TÙ\\˜][U˜[Y]Y˜]]™Q˜[˜XÚÈOOBˆYH	‰‚ˆ›Ú™XÝ[Û”[\Âˆš[[]]X›Tš[Ü”XÙ[Y[\™XY[™R[˜ÛÛ\]Xš[]S]\Ý[\”Ù\\˜][U˜[Y]Y˜]]™Q˜[˜XÚÕÚ]Ý][Ýš[™Ñ›Ü[™Õ[˜\ÜÚYÛš[™ÔÚÜ[š[™Ñ^[™[™ÓÜ”™]Üš][™ÔXÙ[Y[ÜØ[™Y]TÛXÞHOOBˆYH	‰‚ˆ›Ú™XÝ[Û”[\Âˆš[[]]X›Tš[Ü”XÙ[Y[\™XY[™R[˜ÛÛ\]Xš[]R[˜[Y˜]]™Q˜[˜XÚÔ™\Ý[OOBˆ˜›ØÚÙYÛX[X[Ü[—Ü™\]Z\™Yˆ	‰‚ˆ›Ú™XÝ[Û”[\Âˆš[[]]X›Tš[Ü”XÙ[Y[\™XY[™R[˜ÛÛ\]Xš[]R[˜[Y˜]]™Q˜[˜XÚÓX^UšYÙÙ\[›Ý\‘˜[˜XÚÈOOBˆ˜[ÙH	‰‚ˆØš™XÝ™[šY\Ê^XÝ›Ú™XÝ[Û”ÙXÛÛ™ÛÜœ™XÝ]™T™Y›YÚ[\ÊK™]™\žJˆ
+ÙšY[^XÝYJHO‚ˆØ[›ÛšXØ[œÛÛŠ›Ú™XÝ[Û”[\ÖÙšY[JHOOHØ[›ÛšXØ[œÛÛŠ^XÝY
+Kˆ
+H	‰‚ˆØš™XÝ™[šY\Ê^XÝš[Ü”ÙXÛÛ™ÛÜœ™XÝ]™T™Y›YÚ[\ÊK™]™\žJˆ
+ÙšY[^XÝYJHO‚ˆØ[›ÛšXØ[œÛÛŠš[Ü”[\ÖÙšY[JHOOHØ[›ÛšXØ[œÛÛŠ^XÝY
+Kˆ
+H	‰‚ˆ˜Z[\™Qš^\™K™^XÝYÝ]\Ù\ÈOOHœ™\Ý[ÛÛ˜XÝ™˜[˜XÚÔÝ]\Ù\Èˆ	‰‚ˆØ[›ÛšXØ[œÛÛŠØš™XÝšÙ^\Ê˜Z[\™Qš^\™JJHOOBˆØ[›ÛšXØ[œÛÛŠ^XÝ˜Z[\™Qš^\™PÛÛ˜XÝÙ^\ÊH	‰‚ˆØ[›ÛšXØ[œÛÛŠ˜Z[\™Qš^\™K™[žQšY[Ñ^XÝJHOOBˆØ[›ÛšXØ[œÛÛŠÂˆœÞ[]X×Ùš^\™WÚY‹ˆ™^XÝYÜÝ]\È‹ˆ›ØœÙ\™YÜÝ]\È‹ˆšYÙÙ\—ÛÜšYÚ[—Ù[[H‹ˆ›˜]]™WÙ˜[˜XÚ×Ü™\Ý[ÙYÙ\ÝÜÚLMˆ‹ˆ›X[X[Ø›ØÚ×Ü™\Ý[ÙYÙ\ÝÜÚLM—ÛÜ—Û[‹ˆ˜\ÜÙ\[Û—Ü™\Ý[‹ˆJH	‰‚ˆØ[›ÛšXØ[œÛÛŠˆ˜Z[\™Qš^\™K™[žQšY[ØÚ[X\ËšYÙÙ\—ÛÜšYÚ[—Ù[[K˜[Y\Ëˆ
+HOOBˆØ[›ÛšXØ[œÛÛŠÂˆœÛÛ™\—Ù˜Z[\™H‹ˆ\ÝYÙØ]]Ø^WØÛ\ÜÚYšXØ][Ûˆ‹ˆJH	‰‚ˆ˜Z[\™Qš^\™K™[žPY][Û˜[šY[Ð[ÝÙYOOH˜[ÙH	‰‚ˆ˜Z[\™Qš^\™BˆšYÙÙ\“ÜšYÚ[“]\Ý\]X[ÛÛ™\‘˜Z[\™Q^XÝQ›Ü’[™™X\ÚX›S[Ù[[˜[YÜ•[šÛ›ÝÛˆOOBˆYH	‰‚ˆ˜Z[\™Qš^\™BˆšYÙÙ\“ÜšYÚ[“]\Ý\]X[\ÝYØ]]Ø^PÛ\ÜÚYšXØ][Û‘^XÝQ›Ü•[Y[Ý]\[™[˜ÞU[˜]˜Z[X›PY\\‘\œ›Ü”ØÚ[XSZ\ÛX]ÚÝ[T™\ÜÛœÙSÜ•˜[Y]Ü”™Z™XÝYOOBˆYH	‰‚ˆ˜Z[\™Qš^\™Kš\ÛÛ]YÛÛ™\“X^P]]Ü•\ÝYØ]]Ø^PÛ\ÜÚYšXØ][ÛˆOOBˆ˜[ÙH	‰‚ˆ˜Z[\™Qš^\™K˜[Y˜]]™Q˜[˜XÚÓÜ‘^XÝX[X[›ØÚÔ™\]Z\™YOOHYH	‰‚ˆ˜Z[\™Qš^\™Bˆ˜[Y˜]]™Q˜[˜XÚÔ™\Ý[YÙ\Ý]\Ý™\ÛÛ™SÛ™Q^XÝØ[›ÛšXØ[™\Ý[Ú[“X[X[›ØÚÑYÙ\Ý\Ó[OOBˆYH	‰‚ˆ˜Z[\™Qš^\™Bˆ˜[Y˜]]™Q˜[˜XÚÔ™\Ý[Ý]\Ó]\Ý\]X[^XÝYÝ]\ÓÜ“]\˜[˜[˜XÚÕÚ[“X[X[›ØÚÑYÙ\Ý\Ó[OOBˆYH	‰‚ˆ˜Z[\™Qš^\™Bˆ˜[Y˜]]™Q˜[˜XÚÔ™\Ý[˜[˜XÚÕ\ÙY]\Ý™UYUÚ[“X[X[›ØÚÑYÙ\Ý\Ó[OOBˆYH	‰‚ˆ˜Z[\™Qš^\™Bˆ˜[Y˜]]™Q˜[˜XÚÔ™\Ý[˜[˜XÚÔ™X\ÛÛ“]\Ý\]X[^XÝYÝ]\ÕÚ[“X[X[›ØÚÑYÙ\Ý\Ó[OOBˆYH	‰‚ˆ˜Z[\™Qš^\™Bˆ˜[Y˜]]™Q˜[˜XÚÔ™\Ý[˜]]™T[•™\œÚ[Û“]\Ý™PÛÜÙY[™›Û“[Ú[“X[X[›ØÚÑYÙ\Ý\Ó[OOBˆYH	‰‚ˆ˜Z[\™Qš^\™Bˆ˜[Y˜]]™Q˜[˜XÚÔ™\Ý[]\ÝØ]\ÙžPØ[›ÛšXØ[Ø[™Y]PXØÛÝ[[™Ñ^XÝ][Û›ØÚÑ\˜][Û[™[\™ÛÛœÝ˜Z[ÕÚ[“X[X[›ØÚÑYÙ\Ý\Ó[OOBˆYH	‰‚ˆ˜Z[\™Qš^\™Bˆ˜[Y˜]]™Q˜[˜XÚÔ™\Ý[]\ÝØ]\ÙžPØ[›ÛšXØ[›Û‘›ÜX›PØ[™Y]UÚ[™ÝÐ[™[Í\™ÛÛœÝ˜Z[ÕÚ[“X[X[›ØÚÑYÙ\Ý\Ó[OOBˆYH	‰‚ˆ˜Z[\™Qš^\™Bˆ˜[Y˜]]™Q˜[˜XÚÔ™\Ý[]\ÝØ]\ÙžPØ[›ÛšXØ[™\[Ý]Ù™”Z\Ú\ÙP›ØÚÓ›Û“Ý™\›\[™™\™\]Z\Ú]SÜ™\š[™ÕÚ[“X[X[›ØÚÑYÙ\Ý\Ó[OOBˆYH	‰‚ˆ˜Z[\™Qš^\™Bˆ›Û™S˜]]™Q˜[˜XÚÔ™\Ý[YÙ\ÝX^TØ]\ÙžS][\Q^XÝYÝ]\Ù\ÈOOBˆ˜[ÙH	‰‚ˆ˜Z[\™Qš^\™Bˆš[˜[Y˜]]™Q˜[˜XÚÐ][\YÙ\Ý]\Ý™\ÛÛ™SÛ™Q^XÝÛÜÙY™Z™XÝ[Û•˜[Y][Û”™XÛÜ™Ú[“X[X[›ØÚÑYÙ\Ý\Ó›Û“[OOBˆYH	‰‚ˆ˜Z[\™Qš^\™Bˆš[˜[Y˜]]™Q˜[˜XÚÐ][\˜Z[\™S]\Ý™PÜ›ÜÜÐ›Ý[™Ñ^XÝYÝ]\ÈOOBˆYH	‰‚ˆ˜Z[\™Qš^\™Bˆš[˜[Y˜]]™Q˜[˜XÚÓX[X[›ØÚÑYÙ\Ý]\Ý™\ÛÛ™SÛ™Q^XÝØ[›ÛšXØ[›ØÚÙYX[X[[”™\]Z\™Y™\Ý[OOBˆYH	‰‚ˆ˜Z[\™Qš^\™Bˆš[˜[Y˜]]™Q˜[˜XÚÓX[X[›ØÚÔ™\Ý[X^PÛÛZ[‘^XÝ][Û›ØÚÜÓÜ”™Y™\™[˜ÙY˜]]™T[ˆOOBˆ˜[ÙH	‰‚ˆ˜Z[\™Qš^\™Bˆš[˜[Y˜]]™Q˜[˜XÚÓX[X[›ØÚÔ™\Ý[˜[˜XÚÓ]\Ý\]X[\ÙY˜[ÙS›Ý\ÙY[™[OOBˆYH	‰‚ˆ˜Z[\™Qš^\™Kš[˜[Y˜]]™Q˜[˜XÚÔ™\Ý[X^T™[X\ÙPØ[™Y]T[ˆOOBˆ˜[ÙH	‰‚ˆ˜Z[\™Qš^\™Bˆ›X[X[›ØÚÑYÙ\Ý]\Ý™S[Y™“˜]]™Q˜[˜XÚÒ\Õ˜[Y[™›Û“[Y™“˜]]™Q˜[˜XÚÒ\Ò[˜[YOOBˆYH	‰‚ˆ˜Z[\™Qš^\™K›Z\ÜÚ[™Õ[šÛ›ÝÛ‘\XØ]SÜ”™[Ü™\™Y[žP[ÝÙYOOBˆ˜[ÙH	‰‚ˆØ[›ÛšXØ[œÛÛŠˆ™\ÛÛ™Y\Y˜XÝY[X™\œË˜Ø[›ÛšXØ[˜]]™Q˜[˜XÚÔ›Ú™XÝ[ÛÛÛ˜XÝˆ
+HOOBˆØ[›ÛšXØ[œÛÛŠ^XÝØ[›ÛšXØ[˜]]™Q˜[˜XÚÔ›Ú™XÝ[ÛÛÛ˜XÝ
+H	‰‚ˆØ[›ÛšXØ[œÛÛŠˆ™\ÛÛ™Y\Y˜XÝY[X™\œÂˆœ™Z™XÝY˜]]™Q˜[˜XÚÐ][\˜[Y][Û”™XÛÜ™ÛÛ˜XÝˆ
+HOOBˆØ[›ÛšXØ[œÛÛŠˆ^XÝ™Z™XÝY˜]]™Q˜[˜XÚÐ][\˜[Y][Û”™XÛÜ™ÛÛ˜XÝˆ
+H	‰‚ˆ™\ÛÛ™Y™\šYšXØ][Û”[\Âˆ˜[Y˜Z[\™Q˜[˜XÚÑYÙ\ÝÓ]\Ý™\ÛÛ™UÑ^XÝ™\Ý[ÛÛ˜XÝÚ[“X[X[›ØÚÑYÙ\Ý\Ó[OOBˆYH	‰‚ˆ™\ÛÛ™Y™\šYšXØ][Û”[\Âˆ™˜Z[\™Qš^\™UšYÙÙ\“ÜšYÚ[“]\Ý\Ý[™ÝZ\ÚÛÛ™\‘˜Z[\™Qœ›ÛU\ÝYØ]]Ø^PÛ\ÜÚYšXØ][Û‘^XÝHOOBˆYH	‰‚ˆ™\ÛÛ™Y™\šYšXØ][Û”[\Âˆ˜[Y˜Z[\™Q˜[˜XÚÓ]\ÝØ]\ÙžPØ[›ÛšXØ[›Û‘›ÜX›PØ[™Y]UÚ[™ÝÐ[™[Í\™ÛÛœÝ˜Z[ÈOOBˆYH	‰‚ˆ™\ÛÛ™Y™\šYšXØ][Û”[\Âˆ˜[Y˜Z[\™Q˜[˜XÚÓ]\ÝØ]\ÙžPØ[›ÛšXØ[™\[Ý]Ù™”Z\Ú\ÙP›ØÚÓ›Û“Ý™\›\[™™\™\]Z\Ú]SÜ™\š[™ÈOOBˆYH	‰‚ˆ™\ÛÛ™Y™\šYšXØ][Û”[\Âˆš[˜[Y˜Z[\™Q˜[˜XÚÐ][\YÙ\ÝÓ]\Ý™\ÛÛ™UÑ^XÝ™Z™XÝY][\˜[Y][Û”™XÛÜ™Ú[“X[X[›ØÚÑYÙ\Ý\Ó›Û“[OOBˆYH	‰‚ˆ™\ÛÛ™Y™\šYšXØ][Û”[\Âˆ››Û“[X[X[›ØÚÑYÙ\ÝÓ]\Ý™\ÛÛ™UÑ^XÝ›ØÚÙYX[X[[”™\]Z\™Y™\Ý[ÛÛ˜XÝOOBˆYH	‰‚ˆSØš™XÝš\ÓÝÛŠˆ™\ÛÛ™Y™\šYšXØ][Û”[\Ëˆ™˜Z[\™Q˜[˜XÚÐ[™X[X[›ØÚÑYÙ\ÝÓ]\Ý™\ÛÛ™UÑ^XÝ™\Ý[ÛÛ˜XÝ‹ˆ
+H	‰‚ˆØ[›ÛšXØ[œÛÛŠØÚY[\‹›˜]]™U˜[Y]ÜŠHOOBˆØ[›ÛšXØ[œÛÛŠ^XÝ˜]]™U˜[Y]ÜŠBˆ
+NÂŸB‚™[˜Ý[ÛˆØ[™Y]PXØÛÝ[[™Ò\Ñ^XÝ
+ˆ[›ØØ][ÛØ[™Y]RYËˆ^XÝ][Û›ØÚÜËˆ[˜\ÜÚYÛ™YØ[™Y]\ËŠHÂˆÛÛœÝXÙYYÈH^XÝ][Û›ØÚÜË›X\
+ˆ
+›ØÚÊHOˆ›ØÚË™\[Y\˜[ÛÜ\]YWØØ[™Y]WÚYˆ
+NÂˆÛÛœÝ[˜\ÜÚYÛ™YYÈH[˜\ÜÚYÛ™YØ[™Y]\Ë›X\
+ˆ
+Ø[™Y]JHOˆØ[™Y]K™\[Y\˜[ÛÜ\]YWØØ[™Y]WÚYˆ
+NÂˆÛÛœÝ[›ØØ][Û”Ù]H™]ÈÙ]
+[›ØØ][ÛØ[™Y]RYÊNÂˆÛÛœÝXÙYÙ]H™]ÈÙ]
+XÙYYÊNÂˆÛÛœÝ[˜\ÜÚYÛ™YÙ]H™]ÈÙ]
+[˜\ÜÚYÛ™YYÊNÂˆYˆ
+[›ØØ][Û”Ù]œÚ^™HOOH[›ØØ][ÛØ[™Y]RYË›[™Ý
+H™]\›ˆ˜[ÙNÂˆYˆ
+XÙYÙ]œÚ^™HOOHXÙYYË›[™Ý
+H™]\›ˆ˜[ÙNÂˆYˆ
+[˜\ÜÚYÛ™YÙ]œÚ^™HOOH[˜\ÜÚYÛ™YYË›[™Ý
+H™]\›ˆ˜[ÙNÂˆYˆ
+Ë‹‹œXÙYÙ]KœÛÛYJ
+Ø[™Y]RY
+HOˆ[˜\ÜÚYÛ™YÙ]š\ÊØ[™Y]RY
+JJHÂˆ™]\›ˆ˜[ÙNÂˆBˆÛÛœÝXØÛÝ[YÙ]H™]ÈÙ]
+Ë‹‹œXÙYÙ]‹‹[˜\ÜÚYÛ™YÙ]JNÂˆ™]\›ˆ
+ˆXØÛÝ[YÙ]œÚ^™HOOH[›ØØ][Û”Ù]œÚ^™H	‰‚ˆË‹‹˜XØÛÝ[YÙ]K™]™\žJ
+Ø[™Y]RY
+HOˆ[›ØØ][Û”Ù]š\ÊØ[™Y]RY
+JH	‰‚ˆË‹‹š[›ØØ][Û”Ù]K™]™\žJ
+Ø[™Y]RY
+HOˆXØÛÝ[YÙ]š\ÊØ[™Y]RY
+JBˆ
+NÂŸB‚™[˜Ý[Ûˆ^XÝ][Û›ØÚÑ\˜][Û’\Õ˜[Y
+Ø[™Y]\Ë›ØÚÊHÂˆÛÛœÝX]Ú[™ÐØ[™Y]\ÈHØ[™Y]\Ë™š[\Šˆ
+Ø[™Y]JHO‚ˆØ[™Y]K™\[Y\˜[ÛÜ\]YWØØ[™Y]WÚYOOBˆ›ØÚË™\[Y\˜[ÛÜ\]YWØØ[™Y]WÚYˆ
+NÂˆYˆ
+X]Ú[™ÐØ[™Y]\Ë›[™ÝOOHJH™]\›ˆ˜[ÙNÂˆÛÛœÝØØ[™Y]WHHX]Ú[™ÐØ[™Y]\ÎÂˆYˆ
+ˆ›ØÚË™\˜][Û—ÛZ[]\ÈOOBˆ›ØÚË™[™ÛZ[]WÚÜÝH›ØÚËœÝ\ÛZ[]WÚÜÝˆ
+HÂˆ™]\›ˆ˜[ÙNÂˆBˆYˆ
+›ØÚË™\˜][Û—ÛZ[]\ÈˆØ[™Y]K™\Ý[X]YÛZ[]\ÊH™]\›ˆ˜[ÙNÂˆYˆ
+XØ[™Y]K˜Ø[—ÜÚÜ[ŠHÂˆ™]\›ˆ›ØÚË™\˜][Û—ÛZ[]\ÈOOHØ[™Y]K™\Ý[X]YÛZ[]\ÎÂˆBˆ™]\›ˆ
+ˆ›ØÚË™\˜][Û—ÛZ[]\ÈHØ[™Y]K›Z[š[][WÛZ[]\È	‰‚ˆ›ØÚË™\˜][Û—ÛZ[]\ÈHØ[™Y]K™\Ý[X]YÛZ[]\Âˆ
+NÂŸB‚™[˜Ý[Ûˆ\ÔZ[”™XÛÜ™
+˜[YJHÂˆ™]\›ˆ
+ˆ˜[YHOOH[	‰‚ˆ\[Ùˆ˜[YHOOH›Øš™XÝˆ	‰‚ˆP\œ˜^Kš\Ð\œ˜^J˜[YJH	‰‚ˆØš™XÝ™Ù]›ÝÝ\SÙŠ˜[YJHOOHØš™XÝœ›ÝÝ\Bˆ
+NÂŸB‚™[˜Ý[Ûˆ\Ñ^XÝšY[Ê˜[YKšY[ÊHÂˆYˆ
+Z\ÔZ[”™XÛÜ™
+˜[YJJH™]\›ˆ˜[ÙNÂˆÛÛœÝÙ^\ÈHØš™XÝšÙ^\Ê˜[YJNÂˆ™]\›ˆ
+ˆÙ^\Ë›[™ÝOOHšY[Ë›[™Ý	‰‚ˆšY[Ë™]™\žJ
+šY[
+HOˆØš™XÝš\ÓÝÛŠ˜[YKšY[
+JBˆ
+NÂŸB‚™[˜Ý[ÛˆÛÛZ[œÑ›Ü˜šY[‘šY[™XÝ\œÚ]™[J˜[YK›Ü˜šY[‘šY[ÊHÂˆYˆ
+\œ˜^Kš\Ð\œ˜^J˜[YJJHÂˆ™]\›ˆ˜[YKœÛÛYJ
+[žJHO‚ˆÛÛZ[œÑ›Ü˜šY[‘šY[™XÝ\œÚ]™[J[žK›Ü˜šY[‘šY[ÊKˆ
+NÂˆBˆYˆ
+Z\ÔZ[”™XÛÜ™
+˜[YJJH™]\›ˆ˜[ÙNÂˆ™]\›ˆØš™XÝ™[šY\Ê˜[YJKœÛÛYJˆ
+ÚÙ^K™\ÝYJHO‚ˆ›Ü˜šY[‘šY[Ëš\ÊÙ^JHˆÛÛZ[œÑ›Ü˜šY[‘šY[™XÝ\œÚ]™[J™\ÝY›Ü˜šY[‘šY[ÊKˆ
+NÂŸB‚™[˜Ý[ÛˆØ[›ÛšXØ[™\œÚ[Û‘šY[\Õ˜[Y
+ØÚ[XK˜[YJHÂˆYˆ
+\ÔZ[”™XÛÜ™
+ØÚ[XJH	‰ˆØÚ[XK\HOOH˜ÛÜÙYÙ[[HŠHÂˆ™]\›ˆØÚ[XK˜[Y\Ëš[˜ÛY\Ê˜[YJNÂˆBˆYˆ
+ØÚ[XHOOH˜ÛÜÙYÚY[YšY\—ÌWÝ×ÎŠHÂˆ™]\›ˆ
+ˆ\[Ùˆ˜[YHOOHœÝš[™Èˆ	‰‚ˆ×–ÐKV˜K^ŒNK—Î‹W^ÌKIË\Ý
+˜[YJBˆ
+NÂˆBˆYˆ
+ØÚ[XHOOH™š[š]WÚ[YÙ\ˆŠH™]\›ˆ[X™\‹š\Ò[YÙ\Š˜[YJNÂˆYˆ
+ØÚ[XHOOH™š[š]WÚ[YÙ\—ÌWÝ×ÍŠHÂˆ™]\›ˆ[X™\‹š\Ò[YÙ\Š˜[YJH	‰ˆ˜[YHHH	‰ˆ˜[YHHÂˆBˆYˆ
+ØÚ[XHOOH™š[š]WÚ[YÙ\—ÌWÝ×ÍŒŠHÂˆ™]\›ˆ[X™\‹š\Ò[YÙ\Š˜[YJH	‰ˆ˜[YHHH	‰ˆ˜[YHHŒÂˆBˆ™]\›ˆ˜[ÙNÂŸB‚™[˜Ý[ÛˆØ[›ÛšXØ[™\œÚ[Û’[™›Ò\Ñ^XÝ
+ÛÛ˜XÝ™\œÚ[Û’[™›ÊHÂˆ™]\›ˆ
+ˆ\Ñ^XÝšY[Ê™\œÚ[Û’[™›ËÛÛ˜XÝ™\œÚ[Û’[™›ÑšY[Ñ^XÝJH	‰‚ˆØ[›ÛšXØ[œÛÛŠÛÛ˜XÝ™\œÚ[Û‘šY[Ô™\]Z\™Y
+HOOBˆØ[›ÛšXØ[œÛÛŠÛÛ˜XÝ™\œÚ[Û’[™›ÑšY[Ñ^XÝJH	‰‚ˆÛÛ˜XÝ™\œÚ[Û’[™›ÑšY[Ñ^XÝK™]™\žJ
+šY[
+HO‚ˆØ[›ÛšXØ[™\œÚ[Û‘šY[\Õ˜[Y
+ˆÛÛ˜XÝ™\œÚ[Û’[™›ÑšY[ØÚ[X\ÖÙšY[Kˆ™\œÚ[Û’[™›ÖÙšY[Kˆ
+Kˆ
+Bˆ
+NÂŸB‚™[˜Ý[ÛˆØ]]Ø^PØ[›ÛšXØ[™\œÚ[Û“Ý]ÛÛYJˆØ[›ÛšXØ[ÛÛ˜XÝˆ\ÝYÛÛ™šYÝ\˜][Û‹ˆÂˆ˜]Ô™\ÜÛœÙU˜[Y]Yˆ^XÝÛÜœ™[][Û•˜[Y]Yˆ™\]Z\™YšZ™XÝ[ÛœÕ˜[Y]Yˆ\ÝYÛÛ™šYÝ\˜][Û’\ÐÝ\œ™[[™›Ý[™ˆ˜]]™Q˜[˜XÚÕ˜[Yˆ˜]]™Q˜[˜XÚÕ\ÝYÛÛ™šYÝ\˜][ÛˆH[ˆXÝX[[›ØØ][ÛÛÛ™šYÝ\˜][ÛˆH\ÝYÛÛ™šYÝ\˜][Û‹ˆ˜]]™Q˜[˜XÚÕ\ÝYÛÛ™šYÝ\˜][Û’\ÐÝ\œ™[[™›Ý[™HYKˆ˜]]™Q˜[˜XÚÐXÝX[[›ØØ][ÛÛÛ™šYÝ\˜][ÛˆBˆ˜]]™Q˜[˜XÚÕ\ÝYÛÛ™šYÝ\˜][Û‹ˆKŠHÂˆÛÛœÝ™\™\]Z\Ú]Q˜Z[\™PÛ\ÜÚYšXØ][ÛˆH\˜]Ô™\ÜÛœÙU˜[Y]YˆÈœØÚ[XWÛZ\ÛX]Ú‚ˆˆY^XÝÛÜœ™[][Û•˜[Y]YˆÈœÝ[WÜ™\ÜÛœÙH‚ˆˆ\™\]Z\™YšZ™XÝ[ÛœÕ˜[Y]YˆÈœØÚ[XWÛZ\ÛX]Ú‚ˆˆ[ÂˆÛÛœÝ™\™\]Z\Ú]U˜[Y][Û”\ÜÙYBˆ™\™\]Z\Ú]Q˜Z[\™PÛ\ÜÚYšXØ][ÛˆOOH[	‰‚ˆ\ÝYÛÛ™šYÝ\˜][Û’\ÐÝ\œ™[[™›Ý[™ÂˆYˆ
+ˆ™\™\]Z\Ú]U˜[Y][Û”\ÜÙY	‰‚ˆØ[›ÛšXØ[™\œÚ[Û’[™›Ò\Ñ^XÝ
+ˆØ[›ÛšXØ[ÛÛ˜XÝˆ\ÝYÛÛ™šYÝ\˜][Û‹ˆ
+H	‰‚ˆØ[›ÛšXØ[™\œÚ[Û’[™›Ò\Ñ^XÝ
+ˆØ[›ÛšXØ[ÛÛ˜XÝˆXÝX[[›ØØ][ÛÛÛ™šYÝ\˜][Û‹ˆ
+H	‰‚ˆØ[›ÛšXØ[ÛÛ˜XÝ™\œÚ[Û’[™›ÑšY[Ñ^XÝK™]™\žJˆ
+šY[
+HO‚ˆ\ÝYÛÛ™šYÝ\˜][Û–ÙšY[HOOHXÝX[[›ØØ][ÛÛÛ™šYÝ\˜][Û–ÙšY[Kˆ
+Bˆ
+HÂˆ™]\›ˆÂˆÝ]\Îˆ˜ÛÛœÝXÝY‹ˆ™\œÚ[Û—Ú[™›ÎˆØš™XÝ™œ›ÛQ[šY\ÊˆØ[›ÛšXØ[ÛÛ˜XÝ™\œÚ[Û’[™›ÑšY[Ñ^XÝK›X\
+
+šY[
+HOˆÂˆšY[ˆ\ÝYÛÛ™šYÝ\˜][Û–ÙšY[KˆJKˆ
+Kˆ˜]]™Q˜[˜XÚÐ][\ÎˆˆØ[™Y]T[”™[X\ÙYˆYKˆØ[›ÛšXØ[˜]]™Q˜[˜XÚÔ™[X\ÙYˆ˜[ÙKˆNÂˆBˆÛÛœÝ˜[Y˜[˜XÚÕ™\œÚ[Û’[™›ÈBˆ˜]]™Q˜[˜XÚÕ˜[Y	‰‚ˆ˜]]™Q˜[˜XÚÕ\ÝYÛÛ™šYÝ\˜][Û’\ÐÝ\œ™[[™›Ý[™	‰‚ˆØ[›ÛšXØ[™\œÚ[Û’[™›Ò\Ñ^XÝ
+ˆØ[›ÛšXØ[ÛÛ˜XÝˆ˜]]™Q˜[˜XÚÕ\ÝYÛÛ™šYÝ\˜][Û‹ˆ
+H	‰‚ˆØ[›ÛšXØ[™\œÚ[Û’[™›Ò\Ñ^XÝ
+ˆØ[›ÛšXØ[ÛÛ˜XÝˆ˜]]™Q˜[˜XÚÐXÝX[[›ØØ][ÛÛÛ™šYÝ\˜][Û‹ˆ
+H	‰‚ˆØ[›ÛšXØ[ÛÛ˜XÝ™\œÚ[Û’[™›ÑšY[Ñ^XÝK™]™\žJˆ
+šY[
+HO‚ˆ˜]]™Q˜[˜XÚÕ\ÝYÛÛ™šYÝ\˜][Û–ÙšY[HOOBˆ˜]]™Q˜[˜XÚÐXÝX[[›ØØ][ÛÛÛ™šYÝ\˜][Û–ÙšY[Kˆ
+NÂˆÛÛœÝšYÙÙ\š[™ÐÛ\ÜÚYšXØ][ÛˆBˆ™\™\]Z\Ú]Q˜Z[\™PÛ\ÜÚYšXØ][ÛˆÏÈ˜[Y]Ü—Ü™Z™XÝYŽÂˆ™]\›ˆ˜[Y˜[˜XÚÕ™\œÚ[Û’[™›ÂˆÈÂˆÝ]\Îˆ™˜[˜XÚÈ‹ˆšYÙÙ\š[™ÐÛ\ÜÚYšXØ][Û‹ˆ™\œÚ[Û—Ú[™›ÎˆØš™XÝ™œ›ÛQ[šY\ÊˆØ[›ÛšXØ[ÛÛ˜XÝ™\œÚ[Û’[™›ÑšY[Ñ^XÝK›X\
+
+šY[
+HOˆÂˆšY[ˆ˜]]™Q˜[˜XÚÕ\ÝYÛÛ™šYÝ\˜][Û–ÙšY[KˆJKˆ
+Kˆ˜]]™Q˜[˜XÚÐ][\ÎˆKˆØ[™Y]T[”™[X\ÙYˆ˜[ÙKˆØ[›ÛšXØ[˜]]™Q˜[˜XÚÔ™[X\ÙYˆYKˆBˆˆÂˆÝ]\Îˆ˜›ØÚÙYÛX[X[Ü[—Ü™\]Z\™Y‹ˆšYÙÙ\š[™ÐÛ\ÜÚYšXØ][Û‹ˆ™\œÚ[Û—Ú[™›Îˆ[ˆ˜]]™Q˜[˜XÚÐ][\ÎˆKˆØ[™Y]T[”™[X\ÙYˆ˜[ÙKˆØ[›ÛšXØ[˜]]™Q˜[˜XÚÔ™[X\ÙYˆ˜[ÙKˆNÂŸB‚™[˜Ý[Ûˆ›Ú™XÝYØØ[\’\Õ˜[Y
+ØÚ[XK˜[YJHÂˆYˆ
+S[X™\‹š\Ò[YÙ\Š˜[YJJH™]\›ˆ˜[ÙNÂˆYˆ
+ØÚ[XHOOH™š[š]WÚ[YÙ\ˆŠH™]\›ˆYNÂˆYˆ
+ØÚ[XHOOH™š[š]WÚ[YÙ\—ÌÝ×ÍŒŠHÂˆ™]\›ˆ˜[YHH	‰ˆ˜[YHHŒÂˆBˆYˆ
+ØÚ[XHOOHš[YÙ\—ÌÝ×ÌMÎHŠHÂˆ™]\›ˆ˜[YHH	‰ˆ˜[YHHMÎNÂˆBˆYˆ
+ØÚ[XHOOHš[YÙ\—ÌWÝ×ÌMŠHÂˆ™]\›ˆ˜[YHHH	‰ˆ˜[YHHMÂˆBˆ™]\›ˆ˜[ÙNÂŸB‚™[˜Ý[Ûˆ›Ú™XÝYY[YšY\’\Õ˜[Y
+ÛÛ˜XÝY[YšY\Û\ÜË˜[YJHÂˆÛÛœÝ]\›ˆHÛÛ˜XÝšY[YšY\”ØÚ[X\ÖÚY[YšY\Û\Ü×NÂˆ™]\›ˆ
+ˆ\[Ùˆ˜[YHOOHœÝš[™Èˆ	‰‚ˆ\[Ùˆ]\›ˆOOHœÝš[™Èˆ	‰‚ˆ™]È™YÑ^
+]\›ŠK\Ý
+˜[YJBˆ
+NÂŸB‚™[˜Ý[Ûˆ›Ú™XÝYÛÛ™\”™\ÜÛœÙR\ÐÛÜÙY
+ˆÛÛ˜XÝˆ™\ÜÛœÙKˆ^XÝYÛÜœ™[][Û‹ŠHÂˆYˆ
+Z\ÔZ[”™XÛÜ™
+™\ÜÛœÙJHZ\ÔZ[”™XÛÜ™
+^XÝYÛÜœ™[][ÛŠJHÂˆ™]\›ˆ˜[ÙNÂˆBˆYˆ
+ˆÛÛZ[œÑ›Ü˜šY[‘šY[™XÝ\œÚ]™[Jˆ™\ÜÛœÙKˆ™]ÈÙ]
+ÛÛ˜XÝ™›Ü˜šY[‘šY[ÊKˆ
+Bˆ
+HÂˆ™]\›ˆ˜[ÙNÂˆBˆYˆ
+XÛÛ˜XÝœÝ]\Ù\Ëš[˜ÛY\Ê™\ÜÛœÙKœÝ]\ÊJH™]\›ˆ˜[ÙNÂ‚ˆÛÛœÝØ[™Y]T[‘šY[ÈBˆÛÛ˜XÝœÝ]\ÓÜšYÚ[›Ý[™\žKœ›Ú™XÝYØ[™Y]T[‘šY[Ñ^XÝNÂˆÛÛœÝØ\œšY\ÐØ[™Y]T[ˆHÈ›Ü[X[‹™™X\ÚX›H—Kš[˜ÛY\Êˆ™\ÜÛœÙKœÝ]\Ëˆ
+NÂˆÛÛœÝ™\]Z\™YÜ]™[šY[ÈHÛÛ˜XÝ˜[ÝÙYšY[Ñ^XÝK™š[\Šˆ
+šY[
+HOˆØ\œšY\ÐØ[™Y]T[ˆXØ[™Y]T[‘šY[Ëš[˜ÛY\ÊšY[
+Kˆ
+NÂˆYˆ
+Z\Ñ^XÝšY[Ê™\ÜÛœÙK™\]Z\™YÜ]™[šY[ÊJH™]\›ˆ˜[ÙNÂˆYˆ
+ˆ™\ÜÛœÙKœ™\]Y\ÝÚYOOH^XÝYÛÜœ™[][Û‹œ™\]Y\ÝÚYˆ™\ÜÛœÙKš[œ]ÜÛ˜\ÚÝÝ™\œÚ[ÛˆOOBˆ^XÝYÛÜœ™[][Û‹š[œ]ÜÛ˜\ÚÝÝ™\œÚ[Ûˆˆ\›Ú™XÝYY[YšY\’\Õ˜[Y
+ˆÛÛ˜XÝˆœ™\]Y\ÝÚY‹ˆ™\ÜÛœÙKœ™\]Y\ÝÚYˆ
+Hˆ\›Ú™XÝYY[YšY\’\Õ˜[Y
+ˆÛÛ˜XÝˆš[œ]ÜÛ˜\ÚÝÝ™\œÚ[Ûˆ‹ˆ™\ÜÛœÙKš[œ]ÜÛ˜\ÚÝÝ™\œÚ[Û‹ˆ
+Bˆ
+HÂˆ™]\›ˆ˜[ÙNÂˆB‚ˆÛÛœÝ[Z]ÈHÛÛ˜XÝ˜Ø\™[˜[]S[Z]ÎÂˆYˆ
+ˆP\œ˜^Kš\Ð\œ˜^J™\ÜÛœÙK›Øš™XÝ]™WØÛÛ\Û™[ÊHˆ™\ÜÛœÙK›Øš™XÝ]™WØÛÛ\Û™[Ë›[™Ý‚ˆ[Z]Ë›Øš™XÝ]™WØÛÛ\Û™[×ÛX^[][Hˆ\™\ÜÛœÙK›Øš™XÝ]™WØÛÛ\Û™[Ë™]™\žJˆ
+ÛÛ\Û™[
+HO‚ˆ\Ñ^XÝšY[ÊˆÛÛ\Û™[ˆÛÛ˜XÝ›Øš™XÝ]™PÛÛ\Û™[šY[Ñ^XÝKˆ
+H	‰‚ˆÛÛ˜XÝ˜ÛÜÙY[[U˜[Y\Ë›Øš™XÝ]™WØÛÙWÙ[[Kš[˜ÛY\ÊˆÛÛ\Û™[›Øš™XÝ]™WØÛÙWÙ[[Kˆ
+H	‰‚ˆ›Ú™XÝYØØ[\’\Õ˜[Y
+ˆÛÛ˜XÝœØØ[\”ØÚ[X\Ëš[YÙ\—Ý˜[YKˆÛÛ\Û™[š[YÙ\—Ý˜[YKˆ
+Kˆ
+HˆP\œ˜^Kš\Ð\œ˜^J™\ÜÛœÙKš[Û][ÛœÊHˆ™\ÜÛœÙKš[Û][ÛœË›[™Ýˆ[Z]Ëš[Û][Ûœ×ÛX^[][Hˆ\™\ÜÛœÙKš[Û][ÛœË™]™\žJˆ
+š[Û][ÛŠHO‚ˆ\Ñ^XÝšY[Êš[Û][Û‹ÛÛ˜XÝš[Û][Û‘šY[Ñ^XÝJH	‰‚ˆÛÛ˜XÝ˜ÛÜÙY[[U˜[Y\Ë˜ÛÛœÝ˜Z[ØÛÙWÙ[[Kš[˜ÛY\Êˆš[Û][Û‹˜ÛÛœÝ˜Z[ØÛÙWÙ[[Kˆ
+H	‰‚ˆÛÛ˜XÝ˜ÛÜÙY[[U˜[Y\ËœÙ]™\š]WÙ[[Kš[˜ÛY\Êˆš[Û][Û‹œÙ]™\š]WÙ[[Kˆ
+H	‰‚ˆ\œ˜^Kš\Ð\œ˜^Jš[Û][Û‹™\[Y\˜[ÛÜ\]YWØØ[™Y]WÚYÊH	‰‚ˆš[Û][Û‹™\[Y\˜[ÛÜ\]YWØØ[™Y]WÚYË›[™ÝBˆ[Z]Ë˜Ø[™Y]WÚY×Ü\—Ýš[Û][Û—ÛX^[][H	‰‚ˆ™]ÈÙ]
+š[Û][Û‹™\[Y\˜[ÛÜ\]YWØØ[™Y]WÚYÊKœÚ^™HOOBˆš[Û][Û‹™\[Y\˜[ÛÜ\]YWØØ[™Y]WÚYË›[™Ý	‰‚ˆš[Û][Û‹™\[Y\˜[ÛÜ\]YWØØ[™Y]WÚYË™]™\žJ
+Ø[™Y]RY
+HO‚ˆ›Ú™XÝYY[YšY\’\Õ˜[Y
+ˆÛÛ˜XÝˆ™\[Y\˜[ÛÜ\]YWØØ[™Y]WÚY‹ˆØ[™Y]RYˆ
+Kˆ
+Kˆ
+Hˆ\›Ú™XÝYØØ[\’\Õ˜[Y
+ˆÛÛ˜XÝœØØ[\”ØÚ[X\Ë™[\ÙYÛ\Ëˆ™\ÜÛœÙK™[\ÙYÛ\Ëˆ
+Bˆ
+HÂˆ™]\›ˆ˜[ÙNÂˆB‚ˆYˆ
+XØ\œšY\ÐØ[™Y]T[ŠHÂˆ™]\›ˆ
+ˆSØš™XÝš\ÓÝÛŠ™\ÜÛœÙK™^XÝ][Û—Ø›ØÚÜÈŠH	‰‚ˆSØš™XÝš\ÓÝÛŠ™\ÜÛœÙK[˜\ÜÚYÛ™YØØ[™Y]\ÈŠBˆ
+NÂˆBˆYˆ
+ˆP\œ˜^Kš\Ð\œ˜^J™\ÜÛœÙK™^XÝ][Û—Ø›ØÚÜÊHˆ™\ÜÛœÙK™^XÝ][Û—Ø›ØÚÜË›[™Ýˆ[Z]Ë™^XÝ][Û—Ø›ØÚÜ×ÛX^[][HˆP\œ˜^Kš\Ð\œ˜^J™\ÜÛœÙK[˜\ÜÚYÛ™YØØ[™Y]\ÊHˆ™\ÜÛœÙK[˜\ÜÚYÛ™YØØ[™Y]\Ë›[™Ý‚ˆ[Z]Ë[˜\ÜÚYÛ™YØØ[™Y]\×ÛX^[][Bˆ
+HÂˆ™]\›ˆ˜[ÙNÂˆBˆÛÛœÝ^XÝ][ÛØ[™Y]RYÈH™\ÜÛœÙK™^XÝ][Û—Ø›ØÚÜË›X\
+ˆ
+›ØÚÊHOˆ›ØÚË™\[Y\˜[ÛÜ\]YWØØ[™Y]WÚYˆ
+NÂˆÛÛœÝ[˜\ÜÚYÛ™YØ[™Y]RYÈH™\ÜÛœÙK[˜\ÜÚYÛ™YØØ[™Y]\Ë›X\
+ˆ
+Ø[™Y]JHOˆØ[™Y]K™\[Y\˜[ÛÜ\]YWØØ[™Y]WÚYˆ
+NÂˆ™]\›ˆ
+ˆ™]ÈÙ]
+^XÝ][ÛØ[™Y]RYÊKœÚ^™HOOH^XÝ][ÛØ[™Y]RYË›[™Ý	‰‚ˆ™]ÈÙ]
+[˜\ÜÚYÛ™YØ[™Y]RYÊKœÚ^™HOOH[˜\ÜÚYÛ™YØ[™Y]RYË›[™Ý	‰‚ˆ™\ÜÛœÙK™^XÝ][Û—Ø›ØÚÜË™]™\žJˆ
+›ØÚÊHO‚ˆ\Ñ^XÝšY[Ê›ØÚËÛÛ˜XÝ™^XÝ][Û›ØÚÑšY[Ñ^XÝJH	‰‚ˆ›Ú™XÝYY[YšY\’\Õ˜[Y
+ˆÛÛ˜XÝˆ™\[Y\˜[ÛÜ\]YWØØ[™Y]WÚY‹ˆ›ØÚË™\[Y\˜[ÛÜ\]YWØØ[™Y]WÚYˆ
+H	‰‚ˆ›Ú™XÝYY[YšY\’\Õ˜[Y
+ˆÛÛ˜XÝˆ™\[Y\˜[ÛÜ\]YWÝÚ[™Ý×ÚY‹ˆ›ØÚË™\[Y\˜[ÛÜ\]YWÝÚ[™Ý×ÚYˆ
+H	‰‚ˆ›Ú™XÝYØØ[\’\Õ˜[Y
+ˆÛÛ˜XÝœØØ[\”ØÚ[X\ËœÝ\ÛZ[]WÚÜÝˆ›ØÚËœÝ\ÛZ[]WÚÜÝˆ
+H	‰‚ˆ›Ú™XÝYØØ[\’\Õ˜[Y
+ˆÛÛ˜XÝœØØ[\”ØÚ[X\Ë™[™ÛZ[]WÚÜÝˆ›ØÚË™[™ÛZ[]WÚÜÝˆ
+H	‰‚ˆ›Ú™XÝYØØ[\’\Õ˜[Y
+ˆÛÛ˜XÝœØØ[\”ØÚ[X\Ë™\˜][Û—ÛZ[]\Ëˆ›ØÚË™\˜][Û—ÛZ[]\Ëˆ
+Kˆ
+H	‰‚ˆ™\ÜÛœÙK[˜\ÜÚYÛ™YØØ[™Y]\Ë™]™\žJˆ
+Ø[™Y]JHO‚ˆ\Ñ^XÝšY[ÊˆØ[™Y]KˆÛÛ˜XÝ[˜\ÜÚYÛ™YØ[™Y]QšY[Ñ^XÝKˆ
+H	‰‚ˆ›Ú™XÝYY[YšY\’\Õ˜[Y
+ˆÛÛ˜XÝˆ™\[Y\˜[ÛÜ\]YWØØ[™Y]WÚY‹ˆØ[™Y]K™\[Y\˜[ÛÜ\]YWØØ[™Y]WÚYˆ
+H	‰‚ˆÛÛ˜XÝ[˜\ÜÚYÛ™Y™X\ÛÛœËš[˜ÛY\ÊØ[™Y]Kœ™X\ÛÛ—Ù[[JKˆ
+Bˆ
+NÂŸB‚™[˜Ý[ÛˆØ]]Ø^PÛÛœÝXÝYØ[›ÛšXØ[˜[˜XÚÕ\JˆšYÙÙ\”Ý]\Ëˆ˜]]™T[•™\œÚ[ÛˆH[ŠHÂˆYˆ
+È›Ü[X[‹™™X\ÚX›H—Kš[˜ÛY\ÊšYÙÙ\”Ý]\ÊJHÂˆ™]\›ˆÂˆ\ÙYˆ˜[ÙKˆ™X\ÛÛ—Ù[[Nˆ››ÝÝ\ÙY‹ˆ˜]]™WÜ[—Ý™\œÚ[ÛŽˆ[ˆNÂˆBˆYˆ
+ˆVÂˆ‹‹”ÓÓ‘T—ÑRST‘WÔÕUTÑTËˆ‹‹‘ÐUUÐVWÐÓTÔÒQ’PÐUSÓ—ÔÕUTÑTËˆKš[˜ÛY\ÊšYÙÙ\”Ý]\ÊHˆ\[Ùˆ˜]]™T[•™\œÚ[ÛˆOOHœÝš[™Èˆˆ˜]]™T[•™\œÚ[Û‹›[™ÝOOHˆ
+HÂˆ™]\›ˆ[ÂˆBˆ™]\›ˆÂˆ\ÙYˆYKˆ™X\ÛÛ—Ù[[NˆšYÙÙ\”Ý]\Ëˆ˜]]™WÜ[—Ý™\œÚ[ÛŽˆ˜]]™T[•™\œÚ[Û‹ˆNÂŸB‚™[˜Ý[ÛˆØ]]Ø^SÝ]ÛÛYPY\“Ü[X[Ü‘™X\ÚX›S˜]]™U˜[Y][ÛŠˆ›Ú™XÝYÝ]\ËˆÂˆØ[›ÛšXØ[[™˜]]™U˜[Y][Û•˜[Yˆ˜]]™Q˜[˜XÚÕ˜[YˆKŠHÂˆYˆ
+VÈ›Ü[X[‹™™X\ÚX›H—Kš[˜ÛY\Ê›Ú™XÝYÝ]\ÊJH™]\›ˆ[ÂˆYˆ
+Ø[›ÛšXØ[[™˜]]™U˜[Y][Û•˜[Y
+HÂˆ™]\›ˆÂˆÝ]\Îˆ›Ú™XÝYÝ]\Ëˆ\ØØ\™Y›Ú™XÝYØ[™Y]T[Žˆ˜[ÙKˆ˜]]™Q˜[˜XÚÐ][\Îˆˆ˜[˜XÚÎˆØ]]Ø^PÛÛœÝXÝYØ[›ÛšXØ[˜[˜XÚÕ\J›Ú™XÝYÝ]\ÊKˆ›Ú™XÝYØ[™Y]T[”™[X\ÙYˆYKˆØ[›ÛšXØ[˜]]™Q˜[˜XÚÔ™[X\ÙYˆ˜[ÙKˆNÂˆBˆYˆ
+˜]]™Q˜[˜XÚÕ˜[Y
+HÂˆ™]\›ˆÂˆÝ]\Îˆ™˜[˜XÚÈ‹ˆšYÙÙ\š[™ÐÛ\ÜÚYšXØ][ÛŽˆ˜[Y]Ü—Ü™Z™XÝY‹ˆ\ØØ\™Y›Ú™XÝYØ[™Y]T[ŽˆYKˆ˜]]™Q˜[˜XÚÐ][\ÎˆKˆ˜[˜XÚÎˆØ]]Ø^PÛÛœÝXÝYØ[›ÛšXØ[˜[˜XÚÕ\Jˆ˜[Y]Ü—Ü™Z™XÝY‹ˆ›˜]]™WÜ[—ÝŒH‹ˆ
+Kˆ›Ú™XÝYØ[™Y]T[”™[X\ÙYˆ˜[ÙKˆØ[›ÛšXØ[˜]]™Q˜[˜XÚÔ™[X\ÙYˆYKˆNÂˆBˆ™]\›ˆÂˆÝ]\Îˆ˜›ØÚÙYÛX[X[Ü[—Ü™\]Z\™Y‹ˆšYÙÙ\š[™ÐÛ\ÜÚYšXØ][ÛŽˆ˜[Y]Ü—Ü™Z™XÝY‹ˆ\ØØ\™Y›Ú™XÝYØ[™Y]T[ŽˆYKˆ˜]]™Q˜[˜XÚÐ][\ÎˆKˆ˜[˜XÚÎˆÂˆ\ÙYˆ˜[ÙKˆ™X\ÛÛ—Ù[[Nˆ››ÝÝ\ÙY‹ˆ˜]]™WÜ[—Ý™\œÚ[ÛŽˆ[ˆKˆ›Ú™XÝYØ[™Y]T[”™[X\ÙYˆ˜[ÙKˆØ[›ÛšXØ[˜]]™Q˜[˜XÚÔ™[X\ÙYˆ˜[ÙKˆNÂŸB‚™[˜Ý[Ûˆ›ØÚÑ[™]Ñœ›ÛTÝYQ]RÜÝ
+ÝYQ]RÜÝ[™Z[]RÜÝ
+HÂˆYˆ
+ˆ\[ÙˆÝYQ]RÜÝOOHœÝš[™ÈˆˆK×—ÍKWÌŸKWÌŸIË\Ý
+ÝYQ]RÜÝ
+HˆS[X™\‹š\Ò[YÙ\Š[™Z[]RÜÝ
+Hˆ[™Z[]RÜÝHˆ[™Z[]RÜÝˆMˆ
+HÂˆ™]\›ˆ[ÂˆBˆÛÛœÝÞYX\‹[Û^WHHÝYQ]RÜÝœÜ]
+‹HŠK›X\
+[X™\ŠNÂˆÛÛœÝÜšYÚ[˜[]HH™]È]J]K•UÊYX\‹[ÛHK^JJNÂˆYˆ
+ÜšYÚ[˜[]KÒTÓÔÝš[™Ê
+KœÛXÙJL
+HOOHÝYQ]RÜÝ
+HÂˆ™]\›ˆ[ÂˆBˆÛÛœÝ™^^HH[™Z[]RÜÝOOHMÈHˆÂˆÛÛœÝZ[]SÙ‘^HH[™Z[]RÜÝOOHMÈˆ[™Z[]RÜÝÂˆÛÛœÝÝ\ˆHX]™›ÛÜŠZ[]SÙ‘^HÈŒ
+NÂˆÛÛœÝZ[]HHZ[]SÙ‘^H	HŒÂˆÛÛœÝ\™Ù]Ø[ÛØÚÓ\ÈH]K•UÊˆYX\‹ˆ[ÛHKˆ^H
+È™^^KˆÝ\‹ˆZ[]Kˆ
+NÂˆÛÛœÝ›Ü›X]\ˆH™]È[‘]U[YQ›Ü›X]
+™[‹PÐH‹Âˆ[YV›Û™Nˆ\ÚXKÔÙ[Ý[‹ˆYX\Žˆ›[Y\šXÈ‹ˆ[ÛˆŒ‹YYÚ]‹ˆ^NˆŒ‹YYÚ]‹ˆÝ\ŽˆŒ‹YYÚ]‹ˆZ[]NˆŒ‹YYÚ]‹ˆÙXÛÛ™ˆŒ‹YYÚ]‹ˆÝ\ÞXÛNˆšŒÈ‹ˆJNÂˆ]Ø[™Y]U]Ó\ÈH\™Ù]Ø[ÛØÚÓ\ÎÂˆ›Üˆ
+]]\˜][ÛˆHÈ]\˜][ÛˆÈ]\˜][Ûˆ
+ÏHJHÂˆÛÛœÝ\ÈHØš™XÝ™œ›ÛQ[šY\Êˆ›Ü›X]\‚ˆ™›Ü›X]Ô\Ê™]È]JØ[™Y]U]Ó\ÊJBˆ™š[\Š
+\
+HOˆ\\HOOH›]\˜[ŠBˆ›X\
+
+\
+HOˆÜ\\K[X™\Š\˜[YJWJKˆ
+NÂˆÛÛœÝØœÙ\™YØ[ÛØÚÓ\ÈH]K•UÊˆ\ËžYX\‹ˆ\Ë›[ÛHKˆ\Ë™^Kˆ\ËšÝ\‹ˆ\Ë›Z[]Kˆ\ËœÙXÛÛ™ˆ
+NÂˆÛÛœÝÛÜœ™XÝ[Û“\ÈH\™Ù]Ø[ÛØÚÓ\ÈHØœÙ\™YØ[ÛØÚÓ\ÎÂˆØ[™Y]U]Ó\È
+ÏHÛÜœ™XÝ[Û“\ÎÂˆYˆ
+ÛÜœ™XÝ[Û“\ÈOOH
+H™]\›ˆ™]È]JØ[™Y]U]Ó\ÊKÒTÓÔÝš[™Ê
+NÂˆBˆ™]\›ˆ[ÂŸB‚™[˜Ý[Ûˆ\™XY[™PÛ\ÜÚYšXØ][ÛŠØ[™Y]\Ë›ØÚËÝYQ]RÜÝ
+HÂˆYˆ
+ˆP\œ˜^Kš\Ð\œ˜^JØ[™Y]\ÊHˆZ\ÔZ[”™XÛÜ™
+›ØÚÊHˆ\[Ùˆ›ØÚË™\[Y\˜[ÛÜ\]YWØØ[™Y]WÚYOOHœÝš[™È‚ˆ
+HÂˆ™]\›ˆœØÚ[XWÛZ\ÛX]ÚŽÂˆBˆÛÛœÝX]Ú\ÈHØ[™Y]\Ë™š[\Šˆ
+Ø[™Y]JHO‚ˆ\ÔZ[”™XÛÜ™
+Ø[™Y]JH	‰‚ˆ\[ÙˆØ[™Y]K™\[Y\˜[ÛÜ\]YWØØ[™Y]WÚYOOHœÝš[™Èˆ	‰‚ˆØ[™Y]K™\[Y\˜[ÛÜ\]YWØØ[™Y]WÚYOOBˆ›ØÚË™\[Y\˜[ÛÜ\]YWØØ[™Y]WÚYˆ
+NÂˆYˆ
+X]Ú\Ë›[™ÝOOHJH™]\›ˆœØÚ[XWÛZ\ÛX]ÚŽÂˆÛÛœÝ\™XY[™HHX]Ú\ÖÌKš\™ÙXY[™WÛÜ—Û[ÂˆYˆ
+\™XY[™HOOH[
+H™]\›ˆ™™X\ÚX›HŽÂˆYˆ
+ˆ\[Ùˆ\™XY[™HOOHœÝš[™ÈˆˆK×—ÍKWÌŸKWÌŸUÌŸN—ÌŸN—ÌŸJÎ——ÌKßJOÖ‰Ë\Ý
+ˆ\™XY[™Kˆ
+HˆS[X™\‹š\Ñš[š]J]Kœ\œÙJ\™XY[™JJBˆ
+HÂˆ™]\›ˆœØÚ[XWÛZ\ÛX]ÚŽÂˆBˆÛÛœÝ›ØÚÑ[™]ÈH›ØÚÑ[™]Ñœ›ÛTÝYQ]RÜÝ
+ˆÝYQ]RÜÝˆ›ØÚË™[™ÛZ[]WÚÜÝˆ
+NÂˆYˆ
+›ØÚÑ[™]ÈOOH[
+H™]\›ˆœØÚ[XWÛZ\ÛX]ÚŽÂˆ™]\›ˆ]Kœ\œÙJ›ØÚÑ[™]ÊHH]Kœ\œÙJ\™XY[™JBˆÈ™™X\ÚX›H‚ˆˆ˜[Y]Ü—Ü™Z™XÝYŽÂŸB‚™[˜Ý[ÛˆØ]]Ø^SÝ]ÛÛYPY\’\™XY[™U˜[Y][ÛŠˆšYÙÙ\š[™ÐÛ\ÜÚYšXØ][Û‹ˆ˜]]™Q˜[˜XÚÐÛ\ÜÚYšXØ][Û‹ŠHÂˆYˆ
+šYÙÙ\š[™ÐÛ\ÜÚYšXØ][ÛˆOOH™™X\ÚX›HŠHÂˆ™]\›ˆÂˆÝ]\Îˆœ™[X\ÙY‹ˆ˜]]™Q˜[˜XÚÐ][\ÎˆˆØ[™Y]T[”™[X\ÙYˆYKˆØ[›ÛšXØ[˜]]™Q˜[˜XÚÔ™[X\ÙYˆ˜[ÙKˆNÂˆBˆYˆ
+ˆVÈœØÚ[XWÛZ\ÛX]Ú‹˜[Y]Ü—Ü™Z™XÝY—Kš[˜ÛY\ÊˆšYÙÙ\š[™ÐÛ\ÜÚYšXØ][Û‹ˆ
+Bˆ
+HÂˆ™]\›ˆ[ÂˆBˆYˆ
+˜]]™Q˜[˜XÚÐÛ\ÜÚYšXØ][ÛˆOOH™™X\ÚX›HŠHÂˆ™]\›ˆÂˆÝ]\Îˆ™˜[˜XÚÈ‹ˆšYÙÙ\š[™ÐÛ\ÜÚYšXØ][Û‹ˆ˜]]™Q˜[˜XÚÐ][\ÎˆKˆØ[™Y]T[”™[X\ÙYˆ˜[ÙKˆØ[›ÛšXØ[˜]]™Q˜[˜XÚÔ™[X\ÙYˆYKˆNÂˆBˆ™]\›ˆÂˆÝ]\Îˆ˜›ØÚÙYÛX[X[Ü[—Ü™\]Z\™Y‹ˆšYÙÙ\š[™ÐÛ\ÜÚYšXØ][Û‹ˆ˜]]™Q˜[˜XÚÐ][\ÎˆKˆØ[™Y]T[”™[X\ÙYˆ˜[ÙKˆØ[›ÛšXØ[˜]]™Q˜[˜XÚÔ™[X\ÙYˆ˜[ÙKˆNÂŸB‚˜ÛÛœÝSSUUP“WÔPÑSQS•ÒQS•UWÑ’QSÈHÂˆ™\[Y\˜[ÛÜ\]YWØØ[™Y]WÚY‹ˆ™\[Y\˜[ÛÜ\]YWÝÚ[™Ý×ÚY‹ˆœÝ\ÛZ[]WÚÜÝ‹ˆ™[™ÛZ[]WÚÜÝ‹ˆ™\˜][Û—ÛZ[]\È‹—NÂ‚™[˜Ý[Ûˆ^XÝ][Û”XÙ[Y[\ÔÝXÝ\˜[U˜[Y
+ÛÛ˜XÝXÙ[Y[
+HÂˆ™]\›ˆ
+ˆ\Ñ^XÝšY[ÊXÙ[Y[SSUUP“WÔPÑSQS•ÒQS•UWÑ’QSÊH	‰‚ˆ›Ú™XÝYY[YšY\’\Õ˜[Y
+ˆÛÛ˜XÝˆ™\[Y\˜[ÛÜ\]YWØØ[™Y]WÚY‹ˆXÙ[Y[™\[Y\˜[ÛÜ\]YWØØ[™Y]WÚYˆ
+H	‰‚ˆ›Ú™XÝYY[YšY\’\Õ˜[Y
+ˆÛÛ˜XÝˆ™\[Y\˜[ÛÜ\]YWÝÚ[™Ý×ÚY‹ˆXÙ[Y[™\[Y\˜[ÛÜ\]YWÝÚ[™Ý×ÚYˆ
+H	‰‚ˆ›Ú™XÝYØØ[\’\Õ˜[Y
+ˆÛÛ˜XÝœØØ[\”ØÚ[X\ËœÝ\ÛZ[]WÚÜÝˆXÙ[Y[œÝ\ÛZ[]WÚÜÝˆ
+H	‰‚ˆ›Ú™XÝYØØ[\’\Õ˜[Y
+ˆÛÛ˜XÝœØØ[\”ØÚ[X\Ë™[™ÛZ[]WÚÜÝˆXÙ[Y[™[™ÛZ[]WÚÜÝˆ
+H	‰‚ˆ›Ú™XÝYØØ[\’\Õ˜[Y
+ˆÛÛ˜XÝœØØ[\”ØÚ[X\Ë™\˜][Û—ÛZ[]\ËˆXÙ[Y[™\˜][Û—ÛZ[]\Ëˆ
+H	‰‚ˆXÙ[Y[œÝ\ÛZ[]WÚÜÝXÙ[Y[™[™ÛZ[]WÚÜÝ	‰‚ˆXÙ[Y[™\˜][Û—ÛZ[]\ÈOOBˆXÙ[Y[™[™ÛZ[]WÚÜÝHXÙ[Y[œÝ\ÛZ[]WÚÜÝˆ
+NÂŸB‚™[˜Ý[ÛˆXÙ[Y[Y[]SX]Ú\ÊYšYÚ
+HÂˆ™]\›ˆSSUUP“WÔPÑSQS•ÒQS•UWÑ’QSË™]™\žJˆ
+šY[
+HOˆYÙšY[HOOHšYÚÙšY[Kˆ
+NÂŸB‚™[˜Ý[Ûˆ™\[Ý]Ù™Û\ÜÚYšXØ][ÛŠˆÛÛ˜XÝˆ™[X\ÙT]Ý]\Ëˆ›ØÚËˆÛÜœ™[]Y[›ØØ][Û‹ˆ[[]]X›Tš[Ü”XÙ[Y[Ëˆ^XÝYÛÜœ™[][Û‹ŠHÂˆÛÛœÝ[›ØØ][Û‘šY[ÈHÂˆœ™\]Y\ÝÚY‹ˆš[œ]ÜÛ˜\ÚÝÝ™\œÚ[Ûˆ‹ˆ˜Ø[™Y]\È‹ˆ˜]˜Z[X›WÝÚ[™ÝÜÈ‹ˆœ™\[—ØÝ]Ù™—ÛZ[]WÚÜÝÛÜ—Û[‹ˆNÂˆÛÛœÝÛÜœ™[][Û‘šY[ÈHÂˆœ™\]Y\ÝÚY‹ˆš[œ]ÜÛ˜\ÚÝÝ™\œÚ[Ûˆ‹ˆœ™\[—ØÝ]Ù™—ÛZ[]WÚÜÝÛÜ—Û[‹ˆNÂˆÛÛœÝ™\[Ý]Ù™“Z[]RÜÝÜ“[BˆÛÜœ™[]Y[›ØØ][ÛËœ™\[—ØÝ]Ù™—ÛZ[]WÚÜÝÛÜ—Û[ÂˆYˆ
+ˆZ\ÔZ[”™XÛÜ™
+ÛÛ˜XÝ
+HˆVÂˆ›Ü[X[‹ˆ™™X\ÚX›H‹ˆ˜Ø[›ÛšXØ[Û˜]]™WÙ˜[˜XÚÈ‹ˆš[[]]X›WÜ™Y›YÚ‹ˆKš[˜ÛY\Ê™[X\ÙT]Ý]\ÊHˆY^XÝ][Û”XÙ[Y[\ÔÝXÝ\˜[U˜[Y
+ÛÛ˜XÝ›ØÚÊHˆZ\Ñ^XÝšY[ÊÛÜœ™[]Y[›ØØ][Û‹[›ØØ][Û‘šY[ÊHˆZ\Ñ^XÝšY[Ê^XÝYÛÜœ™[][Û‹ÛÜœ™[][Û‘šY[ÊHˆ\›Ú™XÝYY[YšY\’\Õ˜[Y
+ˆÛÛ˜XÝˆœ™\]Y\ÝÚY‹ˆÛÜœ™[]Y[›ØØ][Û‹œ™\]Y\ÝÚYˆ
+Hˆ\›Ú™XÝYY[YšY\’\Õ˜[Y
+ˆÛÛ˜XÝˆš[œ]ÜÛ˜\ÚÝÝ™\œÚ[Ûˆ‹ˆÛÜœ™[]Y[›ØØ][Û‹š[œ]ÜÛ˜\ÚÝÝ™\œÚ[Û‹ˆ
+HˆÛÜœ™[]Y[›ØØ][Û‹œ™\]Y\ÝÚYOOH^XÝYÛÜœ™[][Û‹œ™\]Y\ÝÚYˆÛÜœ™[]Y[›ØØ][Û‹š[œ]ÜÛ˜\ÚÝÝ™\œÚ[ÛˆOOBˆ^XÝYÛÜœ™[][Û‹š[œ]ÜÛ˜\ÚÝÝ™\œÚ[ÛˆˆÛÜœ™[]Y[›ØØ][Û‹œ™\[—ØÝ]Ù™—ÛZ[]WÚÜÝÛÜ—Û[OOBˆ^XÝYÛÜœ™[][Û‹œ™\[—ØÝ]Ù™—ÛZ[]WÚÜÝÛÜ—Û[ˆP\œ˜^Kš\Ð\œ˜^JÛÜœ™[]Y[›ØØ][Û‹˜Ø[™Y]\ÊHˆP\œ˜^Kš\Ð\œ˜^JÛÜœ™[]Y[›ØØ][Û‹˜]˜Z[X›WÝÚ[™ÝÜÊHˆP\œ˜^Kš\Ð\œ˜^J[[]]X›Tš[Ü”XÙ[Y[ÊHˆZ[[]]X›Tš[Ü”XÙ[Y[Ë™]™\žJ
+XÙ[Y[
+HO‚ˆ^XÝ][Û”XÙ[Y[\ÔÝXÝ\˜[U˜[Y
+ÛÛ˜XÝXÙ[Y[
+Kˆ
+Hˆ
+™\[Ý]Ù™“Z[]RÜÝÜ“[OOH[	‰‚ˆ
+S[X™\‹š\Ò[YÙ\Š™\[Ý]Ù™“Z[]RÜÝÜ“[
+Hˆ™\[Ý]Ù™“Z[]RÜÝÜ“[ˆ™\[Ý]Ù™“Z[]RÜÝÜ“[ˆM
+JHˆ
+^XÝYÛÜœ™[][Û‹œ™\[—ØÝ]Ù™—ÛZ[]WÚÜÝÛÜ—Û[OOH[	‰‚ˆ
+S[X™\‹š\Ò[YÙ\Šˆ^XÝYÛÜœ™[][Û‹œ™\[—ØÝ]Ù™—ÛZ[]WÚÜÝÛÜ—Û[ˆ
+Hˆ^XÝYÛÜœ™[][Û‹œ™\[—ØÝ]Ù™—ÛZ[]WÚÜÝÛÜ—Û[ˆ^XÝYÛÜœ™[][Û‹œ™\[—ØÝ]Ù™—ÛZ[]WÚÜÝÛÜ—Û[ˆM
+JBˆ
+HÂˆ™]\›ˆœØÚ[XWÛZ\ÛX]ÚŽÂˆBˆÛÛœÝØ[™Y]RYÈHÛÜœ™[]Y[›ØØ][Û‹˜Ø[™Y]\Ë›X\
+ˆ
+Ø[™Y]JHOˆØ[™Y]OË™\[Y\˜[ÛÜ\]YWØØ[™Y]WÚYˆ
+NÂˆÛÛœÝÚ[™ÝÒYÈHÛÜœ™[]Y[›ØØ][Û‹˜]˜Z[X›WÝÚ[™ÝÜË›X\
+ˆ
+Ú[™ÝÊHOˆÚ[™ÝÏË™\[Y\˜[ÛÜ\]YWÝÚ[™Ý×ÚYˆ
+NÂˆYˆ
+ˆØ[™Y]RYËœÛÛYJˆ
+Ø[™Y]RY
+HO‚ˆ\›Ú™XÝYY[YšY\’\Õ˜[Y
+ˆÛÛ˜XÝˆ™\[Y\˜[ÛÜ\]YWØØ[™Y]WÚY‹ˆØ[™Y]RYˆ
+Kˆ
+HˆÚ[™ÝÒYËœÛÛYJˆ
+Ú[™ÝÒY
+HO‚ˆ\›Ú™XÝYY[YšY\’\Õ˜[Y
+ˆÛÛ˜XÝˆ™\[Y\˜[ÛÜ\]YWÝÚ[™Ý×ÚY‹ˆÚ[™ÝÒYˆ
+Kˆ
+Hˆ™]ÈÙ]
+Ø[™Y]RYÊKœÚ^™HOOHØ[™Y]RYË›[™Ýˆ™]ÈÙ]
+Ú[™ÝÒYÊKœÚ^™HOOHÚ[™ÝÒYË›[™Ýˆ
+HÂˆ™]\›ˆœØÚ[XWÛZ\ÛX]ÚŽÂˆBˆÛÛœÝØ[™Y]T™\ÛÛ™\Ñ^XÝSÛ˜ÙHH
+Ø[™Y]RY
+HO‚ˆØ[™Y]RYË™š[\Š
+Y
+HOˆYOOHØ[™Y]RY
+K›[™ÝOOHNÂˆÛÛœÝÚ[™ÝÔ™\ÛÛ™\Ñ^XÝSÛ˜ÙHH
+Ú[™ÝÒY
+HO‚ˆÚ[™ÝÒYË™š[\Š
+Y
+HOˆYOOHÚ[™ÝÒY
+K›[™ÝOOHNÂˆYˆ
+ˆXØ[™Y]T™\ÛÛ™\Ñ^XÝSÛ˜ÙJˆ›ØÚË™\[Y\˜[ÛÜ\]YWØØ[™Y]WÚYˆ
+Hˆ]Ú[™ÝÔ™\ÛÛ™\Ñ^XÝSÛ˜ÙJ›ØÚË™\[Y\˜[ÛÜ\]YWÝÚ[™Ý×ÚY
+Hˆ[[]]X›Tš[Ü”XÙ[Y[ËœÛÛYJˆ
+XÙ[Y[
+HO‚ˆXØ[™Y]T™\ÛÛ™\Ñ^XÝSÛ˜ÙJˆXÙ[Y[™\[Y\˜[ÛÜ\]YWØØ[™Y]WÚYˆ
+Hˆ]Ú[™ÝÔ™\ÛÛ™\Ñ^XÝSÛ˜ÙJˆXÙ[Y[™\[Y\˜[ÛÜ\]YWÝÚ[™Ý×ÚYˆ
+Kˆ
+Bˆ
+HÂˆ™]\›ˆœØÚ[XWÛZ\ÛX]ÚŽÂˆBˆÛÛœÝ[[]]X›PØ[™Y]RYÈH[[]]X›Tš[Ü”XÙ[Y[Ë›X\
+ˆ
+XÙ[Y[
+HOˆXÙ[Y[™\[Y\˜[ÛÜ\]YWØØ[™Y]WÚYˆ
+NÂˆYˆ
+ˆ™]ÈÙ]
+[[]]X›PØ[™Y]RYÊKœÚ^™HOOH[[]]X›PØ[™Y]RYË›[™Ýˆ
+HÂˆ™]\›ˆœØÚ[XWÛZ\ÛX]ÚŽÂˆBˆÛÛœÝ^XÝ[[]]X›SX]Ú\ÈH[[]]X›Tš[Ü”XÙ[Y[Ë™š[\Šˆ
+XÙ[Y[
+HOˆXÙ[Y[Y[]SX]Ú\Ê›ØÚËXÙ[Y[
+Kˆ
+NÂˆYˆ
+^XÝ[[]]X›SX]Ú\Ë›[™ÝˆJH™]\›ˆœØÚ[XWÛZ\ÛX]ÚŽÂˆYˆ
+^XÝ[[]]X›SX]Ú\Ë›[™ÝOOHJH™]\›ˆ™™X\ÚX›HŽÂˆYˆ
+™\[Ý]Ù™“Z[]RÜÝÜ“[OOH[
+H™]\›ˆ™™X\ÚX›HŽÂˆ™]\›ˆ›ØÚËœÝ\ÛZ[]WÚÜÝH™\[Ý]Ù™“Z[]RÜÝÜ“[ˆÈ™™X\ÚX›H‚ˆˆ˜[Y]Ü—Ü™Z™XÝYŽÂŸB‚™[˜Ý[Ûˆ[“Ü[’[\˜[ÑÓ›ÝÝ™\›\
+YšYÚ
+HÂˆ™]\›ˆ
+ˆY™[™ÛZ[]WÚÜÝHšYÚœÝ\ÛZ[]WÚÜÝˆšYÚ™[™ÛZ[]WÚÜÝHYœÝ\ÛZ[]WÚÜÝˆ
+NÂŸB‚™[˜Ý[Ûˆ[\˜[\ÔÝXÝ\˜[U˜[Y
+[\˜[
+HÂˆ™]\›ˆ
+ˆ\ÔZ[”™XÛÜ™
+[\˜[
+H	‰‚ˆ[X™\‹š\Ò[YÙ\Š[\˜[œÝ\ÛZ[]WÚÜÝ
+H	‰‚ˆ[X™\‹š\Ò[YÙ\Š[\˜[™[™ÛZ[]WÚÜÝ
+H	‰‚ˆ[\˜[œÝ\ÛZ[]WÚÜÝH	‰‚ˆ[\˜[œÝ\ÛZ[]WÚÜÝHMÎH	‰‚ˆ[\˜[™[™ÛZ[]WÚÜÝHH	‰‚ˆ[\˜[™[™ÛZ[]WÚÜÝHM	‰‚ˆ[\˜[œÝ\ÛZ[]WÚÜÝ[\˜[™[™ÛZ[]WÚÜÝˆ
+NÂŸB‚™[˜Ý[ÛˆZ\Ú\ÙP›ØÚÓ›Û“Ý™\›\Û\ÜÚYšXØ][ÛŠˆÛÛ˜XÝˆ™[X\ÙT]Ý]\Ëˆ^XÝ][Û›ØÚÜËˆš^Y›ØÚÜËˆ[[]]X›Tš[Ü”XÙ[Y[ËŠHÂˆYˆ
+ˆVÂˆ›Ü[X[‹ˆ™™X\ÚX›H‹ˆ˜Ø[›ÛšXØ[Û˜]]™WÙ˜[˜XÚÈ‹ˆš[[]]X›WÜ™Y›YÚ‹ˆKš[˜ÛY\Ê™[X\ÙT]Ý]\ÊHˆP\œ˜^Kš\Ð\œ˜^J^XÝ][Û›ØÚÜÊHˆP\œ˜^Kš\Ð\œ˜^Jš^Y›ØÚÜÊHˆP\œ˜^Kš\Ð\œ˜^J[[]]X›Tš[Ü”XÙ[Y[ÊHˆY^XÝ][Û›ØÚÜË™]™\žJ
+›ØÚÊHO‚ˆ^XÝ][Û”XÙ[Y[\ÔÝXÝ\˜[U˜[Y
+ÛÛ˜XÝ›ØÚÊKˆ
+HˆYš^Y›ØÚÜË™]™\žJ[\˜[\ÔÝXÝ\˜[U˜[Y
+HˆZ[[]]X›Tš[Ü”XÙ[Y[Ë™]™\žJ
+XÙ[Y[
+HO‚ˆ^XÝ][Û”XÙ[Y[\ÔÝXÝ\˜[U˜[Y
+ÛÛ˜XÝXÙ[Y[
+Kˆ
+Bˆ
+HÂˆ™]\›ˆœØÚ[XWÛZ\ÛX]ÚŽÂˆBˆ›Üˆ
+ÛÛœÝ›ØÚÈÙˆ^XÝ][Û›ØÚÜÊHÂˆÛÛœÝ^XÝ[[]]X›SX]Ú\ÈH[[]]X›Tš[Ü”XÙ[Y[Ë™š[\Šˆ
+XÙ[Y[
+HOˆXÙ[Y[Y[]SX]Ú\Ê›ØÚËXÙ[Y[
+Kˆ
+NÂˆYˆ
+^XÝ[[]]X›SX]Ú\Ë›[™ÝˆJH™]\›ˆœØÚ[XWÛZ\ÛX]ÚŽÂˆBˆ›Üˆ
+ˆ]Y[™^HÂˆY[™^[[]]X›Tš[Ü”XÙ[Y[Ë›[™ÝÂˆY[™^
+ÏHBˆ
+HÂˆ›Üˆ
+ˆ]šYÚ[™^HY[™^
+ÈNÂˆšYÚ[™^[[]]X›Tš[Ü”XÙ[Y[Ë›[™ÝÂˆšYÚ[™^
+ÏHBˆ
+HÂˆYˆ
+ˆXÙ[Y[Y[]SX]Ú\Êˆ[[]]X›Tš[Ü”XÙ[Y[ÖÛY[™^Kˆ[[]]X›Tš[Ü”XÙ[Y[ÖÜšYÚ[™^Kˆ
+Bˆ
+HÂˆ™]\›ˆœØÚ[XWÛZ\ÛX]ÚŽÂˆBˆYˆ
+ˆZ[“Ü[’[\˜[ÑÓ›ÝÝ™\›\
+ˆ[[]]X›Tš[Ü”XÙ[Y[ÖÛY[™^Kˆ[[]]X›Tš[Ü”XÙ[Y[ÖÜšYÚ[™^Kˆ
+Bˆ
+HÂˆ™]\›ˆ˜[Y]Ü—Ü™Z™XÝYŽÂˆBˆBˆBˆ›Üˆ
+ÛÛœÝ[[]]X›TXÙ[Y[Ùˆ[[]]X›Tš[Ü”XÙ[Y[ÊHÂˆYˆ
+ˆš^Y›ØÚÜËœÛÛYJˆ
+š^Y›ØÚÊHO‚ˆZ[“Ü[’[\˜[ÑÓ›ÝÝ™\›\
+ˆ[[]]X›TXÙ[Y[ˆš^Y›ØÚËˆ
+Kˆ
+Bˆ
+HÂˆ™]\›ˆ˜[Y]Ü—Ü™Z™XÝYŽÂˆBˆBˆ›Üˆ
+]Y[™^HÈY[™^^XÝ][Û›ØÚÜË›[™ÝÈY[™^
+ÏHJHÂˆ›Üˆ
+ˆ]šYÚ[™^HY[™^
+ÈNÂˆšYÚ[™^^XÝ][Û›ØÚÜË›[™ÝÂˆšYÚ[™^
+ÏHBˆ
+HÂˆYˆ
+ˆZ[“Ü[’[\˜[ÑÓ›ÝÝ™\›\
+ˆ^XÝ][Û›ØÚÜÖÛY[™^Kˆ^XÝ][Û›ØÚÜÖÜšYÚ[™^Kˆ
+Bˆ
+HÂˆ™]\›ˆ˜[Y]Ü—Ü™Z™XÝYŽÂˆBˆBˆBˆ›Üˆ
+ÛÛœÝ›ØÚÈÙˆ^XÝ][Û›ØÚÜÊHÂˆYˆ
+ˆš^Y›ØÚÜËœÛÛYJˆ
+š^Y›ØÚÊHOˆZ[“Ü[’[\˜[ÑÓ›ÝÝ™\›\
+›ØÚËš^Y›ØÚÊKˆ
+Bˆ
+HÂˆ™]\›ˆ˜[Y]Ü—Ü™Z™XÝYŽÂˆBˆ›Üˆ
+ÛÛœÝ[[]]X›TXÙ[Y[Ùˆ[[]]X›Tš[Ü”XÙ[Y[ÊHÂˆYˆ
+XÙ[Y[Y[]SX]Ú\Ê›ØÚË[[]]X›TXÙ[Y[
+JHÛÛ[YNÂˆYˆ
+Z[“Ü[’[\˜[ÑÓ›ÝÝ™\›\
+›ØÚË[[]]X›TXÙ[Y[
+JHÂˆ™]\›ˆ˜[Y]Ü—Ü™Z™XÝYŽÂˆBˆBˆBˆ™]\›ˆ™™X\ÚX›HŽÂŸB‚™[˜Ý[Ûˆ™\™\]Z\Ú]SÜ™\š[™ÐÛ\ÜÚYšXØ][ÛŠˆÛÛ˜XÝˆ™[X\ÙT]Ý]\ËˆØ[™Y]\Ëˆ^XÝ][Û›ØÚÜËˆ[˜\ÜÚYÛ™YØ[™Y]\ÈH×KŠHÂˆYˆ
+ˆVÂˆ›Ü[X[‹ˆ™™X\ÚX›H‹ˆ˜Ø[›ÛšXØ[Û˜]]™WÙ˜[˜XÚÈ‹ˆš[[]]X›WÜ™Y›YÚ‹ˆKš[˜ÛY\Ê™[X\ÙT]Ý]\ÊHˆP\œ˜^Kš\Ð\œ˜^JØ[™Y]\ÊHˆP\œ˜^Kš\Ð\œ˜^J^XÝ][Û›ØÚÜÊHˆP\œ˜^Kš\Ð\œ˜^J[˜\ÜÚYÛ™YØ[™Y]\ÊHˆY^XÝ][Û›ØÚÜË™]™\žJ
+›ØÚÊHO‚ˆ^XÝ][Û”XÙ[Y[\ÔÝXÝ\˜[U˜[Y
+ÛÛ˜XÝ›ØÚÊKˆ
+Bˆ
+HÂˆ™]\›ˆœØÚ[XWÛZ\ÛX]ÚŽÂˆBˆÛÛœÝØ[™Y]RYÈHØ[™Y]\Ë›X\
+ˆ
+Ø[™Y]JHOˆØ[™Y]OË™\[Y\˜[ÛÜ\]YWØØ[™Y]WÚYˆ
+NÂˆYˆ
+ˆØ[™Y]\ËœÛÛYJˆ
+Ø[™Y]JHO‚ˆZ\ÔZ[”™XÛÜ™
+Ø[™Y]JHˆ\›Ú™XÝYY[YšY\’\Õ˜[Y
+ˆÛÛ˜XÝˆ™\[Y\˜[ÛÜ\]YWØØ[™Y]WÚY‹ˆØ[™Y]K™\[Y\˜[ÛÜ\]YWØØ[™Y]WÚYˆ
+HˆP\œ˜^Kš\Ð\œ˜^JØ[™Y]Kœ™\™\]Z\Ú]WØØ[™Y]WÚYÊHˆ™]ÈÙ]
+Ø[™Y]Kœ™\™\]Z\Ú]WØØ[™Y]WÚYÊKœÚ^™HOOBˆØ[™Y]Kœ™\™\]Z\Ú]WØØ[™Y]WÚYË›[™Ýˆ
+Hˆ™]ÈÙ]
+Ø[™Y]RYÊKœÚ^™HOOHØ[™Y]RYË›[™Ýˆ
+HÂˆ™]\›ˆœØÚ[XWÛZ\ÛX]ÚŽÂˆBˆÛÛœÝØ[™Y]TÙ]H™]ÈÙ]
+Ø[™Y]RYÊNÂˆ›Üˆ
+ÛÛœÝØ[™Y]HÙˆØ[™Y]\ÊHÂˆYˆ
+ˆØ[™Y]Kœ™\™\]Z\Ú]WØØ[™Y]WÚYËœÛÛYJˆ
+™\™\]Z\Ú]RY
+HO‚ˆ\›Ú™XÝYY[YšY\’\Õ˜[Y
+ˆÛÛ˜XÝˆ™\[Y\˜[ÛÜ\]YWØØ[™Y]WÚY‹ˆ™\™\]Z\Ú]RYˆ
+HXØ[™Y]TÙ]š\Ê™\™\]Z\Ú]RY
+Kˆ
+Bˆ
+HÂˆ™]\›ˆœØÚ[XWÛZ\ÛX]ÚŽÂˆBˆBˆÛÛœÝ[˜\ÜÚYÛ™YYÈH[˜\ÜÚYÛ™YØ[™Y]\Ë›X\
+ˆ
+Ø[™Y]JHOˆØ[™Y]OË™\[Y\˜[ÛÜ\]YWØØ[™Y]WÚYˆ
+NÂˆYˆ
+ˆ[˜\ÜÚYÛ™YYËœÛÛYJˆ
+Ø[™Y]RY
+HO‚ˆ\›Ú™XÝYY[YšY\’\Õ˜[Y
+ˆÛÛ˜XÝˆ™\[Y\˜[ÛÜ\]YWØØ[™Y]WÚY‹ˆØ[™Y]RYˆ
+HXØ[™Y]TÙ]š\ÊØ[™Y]RY
+Kˆ
+Hˆ™]ÈÙ]
+[˜\ÜÚYÛ™YYÊKœÚ^™HOOH[˜\ÜÚYÛ™YYË›[™Ýˆ
+HÂˆ™]\›ˆœØÚ[XWÛZ\ÛX]ÚŽÂˆBˆÛÛœÝXÙYžPØ[™Y]RYH™]ÈX\
+
+NÂˆ›Üˆ
+ÛÛœÝ›ØÚÈÙˆ^XÝ][Û›ØÚÜÊHÂˆYˆ
+XØ[™Y]TÙ]š\Ê›ØÚË™\[Y\˜[ÛÜ\]YWØØ[™Y]WÚY
+JHÂˆ™]\›ˆœØÚ[XWÛZ\ÛX]ÚŽÂˆBˆÛÛœÝ›ØÚÜÈBˆXÙYžPØ[™Y]RY™Ù]
+›ØÚË™\[Y\˜[ÛÜ\]YWØØ[™Y]WÚY
+HÏÈ×NÂˆ›ØÚÜËœ\Ú
+›ØÚÊNÂˆXÙYžPØ[™Y]RYœÙ]
+›ØÚË™\[Y\˜[ÛÜ\]YWØØ[™Y]WÚY›ØÚÜÊNÂˆBˆYˆ
+Ë‹‹œXÙYžPØ[™Y]RY˜[Y\Ê
+WKœÛÛYJ
+›ØÚÜÊHOˆ›ØÚÜË›[™ÝˆJJHÂˆ™]\›ˆœØÚ[XWÛZ\ÛX]ÚŽÂˆBˆÛÛœÝ[˜\ÜÚYÛ™YÙ]H™]ÈÙ]
+[˜\ÜÚYÛ™YYÊNÂˆ›Üˆ
+ÛÛœÝ\[™[›ØÚÈÙˆ^XÝ][Û›ØÚÜÊHÂˆÛÛœÝ\[™[HØ[™Y]\Ë™š[™
+ˆ
+Ø[™Y]JHO‚ˆØ[™Y]K™\[Y\˜[ÛÜ\]YWØØ[™Y]WÚYOOBˆ\[™[›ØÚË™\[Y\˜[ÛÜ\]YWØØ[™Y]WÚYˆ
+NÂˆ›Üˆ
+ÛÛœÝ™\™\]Z\Ú]RYÙˆ\[™[œ™\™\]Z\Ú]WØØ[™Y]WÚYÊHÂˆÛÛœÝ™\™\]Z\Ú]P›ØÚÜÈBˆXÙYžPØ[™Y]RY™Ù]
+™\™\]Z\Ú]RY
+HÏÈ×NÂˆYˆ
+ˆ[˜\ÜÚYÛ™YÙ]š\Ê™\™\]Z\Ú]RY
+Hˆ™\™\]Z\Ú]P›ØÚÜË›[™ÝOOHHˆ™\™\]Z\Ú]P›ØÚÜÖÌK™[™ÛZ[]WÚÜÝ‚ˆ\[™[›ØÚËœÝ\ÛZ[]WÚÜÝˆ
+HÂˆ™]\›ˆ˜[Y]Ü—Ü™Z™XÝYŽÂˆBˆBˆBˆ™]\›ˆ™™X\ÚX›HŽÂŸB‚™[˜Ý[Ûˆ›Û‘›ÜX›TXÙ[Y[\Õ˜[Y
+ˆØ[™Y]\Ëˆ^XÝ][Û›ØÚÜËˆ[˜\ÜÚYÛ™YØ[™Y]\ËŠHÂˆÛÛœÝØ[™Y]SX]Ú\ÈH
+Ø[™Y]RY
+HO‚ˆØ[™Y]\Ë™š[\Šˆ
+Ø[™Y]JHO‚ˆØ[™Y]K™\[Y\˜[ÛÜ\]YWØØ[™Y]WÚYOOHØ[™Y]RYˆ
+NÂˆ›Üˆ
+ÛÛœÝØ[™Y]HÙˆØ[™Y]\ÊHÂˆÛÛœÝØ[™Y]RYHØ[™Y]K™\[Y\˜[ÛÜ\]YWØØ[™Y]WÚYÂˆÛÛœÝXÙYÛÝ[H^XÝ][Û›ØÚÜË™š[\Šˆ
+›ØÚÊHOˆ›ØÚË™\[Y\˜[ÛÜ\]YWØØ[™Y]WÚYOOHØ[™Y]RYˆ
+K›[™ÝÂˆÛÛœÝ[˜\ÜÚYÛ™YÛÝ[H[˜\ÜÚYÛ™YØ[™Y]\Ë™š[\Šˆ
+[žJHOˆ[žK™\[Y\˜[ÛÜ\]YWØØ[™Y]WÚYOOHØ[™Y]RYˆ
+K›[™ÝÂˆÛÛœÝ›Û‘›ÜX›HBˆØ[™Y]Kœ[›™YOOHYHØ[™Y]K˜Ø[—Ù›ÜOOH˜[ÙNÂˆYˆ
+›Û‘›ÜX›H	‰ˆ
+XÙYÛÝ[OOHH[˜\ÜÚYÛ™YÛÝ[OOH
+JHÂˆ™]\›ˆ˜[ÙNÂˆBˆBˆ™]\›ˆ[˜\ÜÚYÛ™YØ[™Y]\Ë™]™\žJ
+[žJHOˆÂˆÛÛœÝX]Ú\ÈHØ[™Y]SX]Ú\Ê[žK™\[Y\˜[ÛÜ\]YWØØ[™Y]WÚY
+NÂˆ™]\›ˆ
+ˆX]Ú\Ë›[™ÝOOHH	‰‚ˆX]Ú\ÖÌKœ[›™YOOH˜[ÙH	‰‚ˆX]Ú\ÖÌK˜Ø[—Ù›ÜOOHYBˆ
+NÂˆJNÂŸB‚™[˜Ý[ÛˆØ[™Y]UÚ[™ÝÔ™[][ÛÛ\ÜÚYšXØ][ÛŠØ[™Y]\ËÚ[™ÝÜË›ØÚÊHÂˆÛÛœÝØ[™Y]SX]Ú\ÈHØ[™Y]\Ë™š[\Šˆ
+Ø[™Y]JHO‚ˆØ[™Y]K™\[Y\˜[ÛÜ\]YWØØ[™Y]WÚYOOBˆ›ØÚË™\[Y\˜[ÛÜ\]YWØØ[™Y]WÚYˆ
+NÂˆÛÛœÝÚ[™ÝÓX]Ú\ÈHÚ[™ÝÜË™š[\Šˆ
+Ú[™ÝÊHO‚ˆÚ[™ÝË™\[Y\˜[ÛÜ\]YWÝÚ[™Ý×ÚYOOBˆ›ØÚË™\[Y\˜[ÛÜ\]YWÝÚ[™Ý×ÚYˆ
+NÂˆYˆ
+Ø[™Y]SX]Ú\Ë›[™ÝOOHHÚ[™ÝÓX]Ú\Ë›[™ÝOOHJHÂˆ™]\›ˆœØÚ[XWÛZ\ÛX]ÚŽÂˆBˆÛÛœÝØØ[™Y]WHHØ[™Y]SX]Ú\ÎÂˆÛÛœÝÝÚ[™Ý×HHÚ[™ÝÓX]Ú\ÎÂˆYˆ
+ˆP\œ˜^Kš\Ð\œ˜^JØ[™Y]K˜[ÝÙYÝÚ[™Ý×ÚYÊHˆ™]ÈÙ]
+Ø[™Y]K˜[ÝÙYÝÚ[™Ý×ÚYÊKœÚ^™HOOBˆØ[™Y]K˜[ÝÙYÝÚ[™Ý×ÚYË›[™ÝˆØ[™Y]K˜[ÝÙYÝÚ[™Ý×ÚYËœÛÛYJˆ
+Ú[™ÝÒY
+HO‚ˆÚ[™ÝÜË™š[\Šˆ
+Ø[™Y]UÚ[™ÝÊHO‚ˆØ[™Y]UÚ[™ÝË™\[Y\˜[ÛÜ\]YWÝÚ[™Ý×ÚYOOHÚ[™ÝÒYˆ
+K›[™ÝOOHKˆ
+Bˆ
+HÂˆ™]\›ˆœØÚ[XWÛZ\ÛX]ÚŽÂˆBˆÛÛœÝ[Y\šXÑšY[ÈHÂˆ›ØÚËœÝ\ÛZ[]WÚÜÝˆ›ØÚË™[™ÛZ[]WÚÜÝˆÚ[™ÝËœÝ\ÛZ[]WÚÜÝˆÚ[™ÝË™[™ÛZ[]WÚÜÝˆNÂˆYˆ
+ˆ[Y\šXÑšY[ËœÛÛYJ
+˜[YJHOˆS[X™\‹š\Ò[YÙ\Š˜[YJJHˆ\[ÙˆÚ[™ÝË˜]˜Z[X›HOOH˜›ÛÛX[ˆ‚ˆ
+HÂˆ™]\›ˆœØÚ[XWÛZ\ÛX]ÚŽÂˆBˆYˆ
+ˆXØ[™Y]K˜[ÝÙYÝÚ[™Ý×ÚYËš[˜ÛY\Êˆ›ØÚË™\[Y\˜[ÛÜ\]YWÝÚ[™Ý×ÚYˆ
+HˆÚ[™ÝË˜]˜Z[X›HOOHYHˆJˆÚ[™ÝËœÝ\ÛZ[]WÚÜÝH›ØÚËœÝ\ÛZ[]WÚÜÝ	‰‚ˆ›ØÚËœÝ\ÛZ[]WÚÜÝ›ØÚË™[™ÛZ[]WÚÜÝ	‰‚ˆ›ØÚË™[™ÛZ[]WÚÜÝHÚ[™ÝË™[™ÛZ[]WÚÜÝˆ
+Bˆ
+HÂˆ™]\›ˆ˜[Y]Ü—Ü™Z™XÝYŽÂˆBˆ™]\›ˆ˜[YŽÂŸB‚™[˜Ý[Ûˆ˜[˜XÚÑ[™[ÜT™\]Z\™[Y[ÔØ]\ÙšYY
+ˆÛÛ˜XÝˆÝ]\Ëˆ˜[˜XÚËˆÂˆØ[›ÛšXØ[™\Ý[ØÚ[XU˜[YHYKˆ˜]]™T[•™\œÚ[Û”ØÚ[XU˜[YHYKˆ˜]]™T[•˜[YHYKˆHHßKŠHÂˆYˆ
+È›Ü[X[‹™™X\ÚX›H—Kš[˜ÛY\ÊÝ]\ÊJHÂˆ™]\›ˆ
+ˆØ[›ÛšXØ[™\Ý[ØÚ[XU˜[Y	‰‚ˆ˜[˜XÚÏË\ÙYOOH˜[ÙH	‰‚ˆ˜[˜XÚËœ™X\ÛÛ—Ù[[HOOH››ÝÝ\ÙYˆ	‰‚ˆ˜[˜XÚË›˜]]™WÜ[—Ý™\œÚ[ÛˆOOH[ˆ
+NÂˆBˆYˆ
+ˆXÛÛ˜XÝ™˜[˜XÚÔÝ]\Ù\Ëš[˜ÛY\ÊÝ]\ÊH	‰‚ˆÝ]\ÈOOH™˜[˜XÚÈ‚ˆ
+HÂˆ™]\›ˆ˜[ÙNÂˆBˆ™]\›ˆ
+ˆØ[›ÛšXØ[™\Ý[ØÚ[XU˜[Y	‰‚ˆ˜[˜XÚÏË\ÙYOOHYH	‰‚ˆ
+Ý]\ÈOOH™˜[˜XÚÈ‚ˆÈÛÛ˜XÝ™˜[˜XÚÔÝ]\Ù\Ëš[˜ÛY\Ê˜[˜XÚËœ™X\ÛÛ—Ù[[JBˆˆ˜[˜XÚËœ™X\ÛÛ—Ù[[HOOHÝ]\ÊH	‰‚ˆ˜[˜XÚË›˜]]™WÜ[—Ý™\œÚ[ÛˆOOH[	‰‚ˆ˜]]™T[•™\œÚ[Û”ØÚ[XU˜[Y	‰‚ˆ˜]]™T[•˜[Yˆ
+NÂŸB‚™[˜Ý[Ûˆ˜Z[\™Qš^\™Q[žR\Õ˜[Y
+ˆÛÛ˜XÝˆ[žKˆ˜]]™Q˜[˜XÚÐ][\ˆÂˆØ[›ÛšXØ[™\Ý[ØÚ[XU˜[YHYKˆ˜]]™T[•™\œÚ[Û”ØÚ[XU˜[YHYKˆ˜]]™T[•˜[YHYKˆ˜]]™T[‘˜Z[\™PÛÙHH[ˆ™Z™XÝ[ÛÛÙHH[ˆX[X[›ØÚÔ™\Ý[Ý]\ÈH[ˆX[X[›ØÚÑ^XÝ][Û›ØÚÐÛÝ[HˆX[X[›ØÚÔ™Y™\™[˜Ù\Ó˜]]™T[ˆH˜[ÙKˆX[X[›ØÚÑ˜[˜XÚÈH[ˆ™]š[Ý\ÛU\ÙY˜]]™Q˜[˜XÚÑYÙ\ÝÈH™]ÈÙ]
+
+KˆHHßKŠHÂˆÛÛœÝ^XÝ[žQšY[ÈHÂˆœÞ[]X×Ùš^\™WÚY‹ˆ™^XÝYÜÝ]\È‹ˆ›ØœÙ\™YÜÝ]\È‹ˆšYÙÙ\—ÛÜšYÚ[—Ù[[H‹ˆ›˜]]™WÙ˜[˜XÚ×Ü™\Ý[ÙYÙ\ÝÜÚLMˆ‹ˆ›X[X[Ø›ØÚ×Ü™\Ý[ÙYÙ\ÝÜÚLM—ÛÜ—Û[‹ˆ˜\ÜÙ\[Û—Ü™\Ý[‹ˆNÂˆÛÛœÝYÙ\Ý]\›ˆH×–ØKYŒNW^ÍIÎÂˆÛÛœÝ^XÝYšYÙÙ\“ÜšYÚ[ˆHÓÓ‘T—ÑRST‘WÔÕUTÑTËš[˜ÛY\Êˆ[žK™^XÝYÜÝ]\Ëˆ
+BˆÈœÛÛ™\—Ù˜Z[\™H‚ˆˆÐUUÐVWÐÓTÔÒQ’PÐUSÓ—ÔÕUTÑTËš[˜ÛY\Ê[žK™^XÝYÜÝ]\ÊBˆÈ\ÝYÙØ]]Ø^WØÛ\ÜÚYšXØ][Ûˆ‚ˆˆ[ÂˆÛÛœÝ[žR\ÐÛÜÙY[™Ü›ÜÜÐ›Ý[™BˆØ[›ÛšXØ[œÛÛŠØš™XÝšÙ^\Ê[žJJHOOHØ[›ÛšXØ[œÛÛŠ^XÝ[žQšY[ÊH	‰‚ˆ×œÞ[—ÜÌŒÍÛ×ÖÐKV˜K^ŒNWËW^ÎIË\Ý
+[žKœÞ[]X×Ùš^\™WÚY
+H	‰‚ˆÛÛ˜XÝ™˜[˜XÚÔÝ]\Ù\Ëš[˜ÛY\Ê[žK™^XÝYÜÝ]\ÊH	‰‚ˆ[žK›ØœÙ\™YÜÝ]\ÈOOH[žK™^XÝYÜÝ]\È	‰‚ˆ[žKšYÙÙ\—ÛÜšYÚ[—Ù[[HOOH^XÝYšYÙÙ\“ÜšYÚ[ˆ	‰‚ˆYÙ\Ý]\›‹\Ý
+[žK›˜]]™WÙ˜[˜XÚ×Ü™\Ý[ÙYÙ\ÝÜÚLMŠH	‰‚ˆ
+[žK›X[X[Ø›ØÚ×Ü™\Ý[ÙYÙ\ÝÜÚLM—ÛÜ—Û[OOH[ˆYÙ\Ý]\›‹\Ý
+ˆ[žK›X[X[Ø›ØÚ×Ü™\Ý[ÙYÙ\ÝÜÚLM—ÛÜ—Û[ˆ
+JH	‰‚ˆ[žK˜\ÜÙ\[Û—Ü™\Ý[OOHœ\ÜÙYˆ	‰‚ˆ\™]š[Ý\ÛU\ÙY˜]]™Q˜[˜XÚÑYÙ\ÝËš\Êˆ[žK›˜]]™WÙ˜[˜XÚ×Ü™\Ý[ÙYÙ\ÝÜÚLM‹ˆ
+NÂˆYˆ
+Y[žR\ÐÛÜÙY[™Ü›ÜÜÐ›Ý[™
+H™]\›ˆ˜[ÙNÂ‚ˆ]^XÝY™Z™XÝ[ÛÛÙHH[ÂˆYˆ
+ˆVÙ[žK™^XÝYÜÝ]\Ë™˜[˜XÚÈ—Kš[˜ÛY\Êˆ˜]]™Q˜[˜XÚÐ][\ËœÝ]\Ëˆ
+Bˆ
+HÂˆ^XÝY™Z™XÝ[ÛÛÙHH™˜[˜XÚ×ÜÝ]\×ÛZ\ÛX]ÚŽÂˆH[ÙHYˆ
+[˜]]™Q˜[˜XÚÐ][\Ë™˜[˜XÚÊHÂˆ^XÝY™Z™XÝ[ÛÛÙHH›Z\ÜÚ[™×Ù˜[˜XÚÈŽÂˆH[ÙHYˆ
+˜]]™Q˜[˜XÚÐ][\™˜[˜XÚË\ÙYOOHYJHÂˆ^XÝY™Z™XÝ[ÛÛÙHH™˜[˜XÚ×Ý[\ÙYŽÂˆH[ÙHYˆ
+ˆ˜]]™Q˜[˜XÚÐ][\™˜[˜XÚËœ™X\ÛÛ—Ù[[HOOH[žK™^XÝYÜÝ]\Âˆ
+HÂˆ^XÝY™Z™XÝ[ÛÛÙHH™˜[˜XÚ×Ü™X\ÛÛ—ÛZ\ÛX]ÚŽÂˆH[ÙHYˆ
+ˆ˜]]™Q˜[˜XÚÐ][\™˜[˜XÚË›˜]]™WÜ[—Ý™\œÚ[ÛˆOOH[ˆ[˜]]™T[•™\œÚ[Û”ØÚ[XU˜[Yˆ
+HÂˆ^XÝY™Z™XÝ[ÛÛÙHH›˜]]™WÜ[—Ý™\œÚ[Û—Ú[˜[YŽÂˆH[ÙHYˆ
+[˜]]™T[•˜[Y
+HÂˆ^XÝY™Z™XÝ[ÛÛÙHH˜]]™T[‘˜Z[\™PÛÙNÂˆH[ÙHYˆ
+XØ[›ÛšXØ[™\Ý[ØÚ[XU˜[Y
+HÂˆ^XÝY™Z™XÝ[ÛÛÙHH˜Ø[›ÛšXØ[Ü™\Ý[ØÛÛ˜XÝÚ[˜[YŽÂˆB‚ˆÛÛœÝ˜[˜XÚÒ\Õ˜[YBˆ^XÝY™Z™XÝ[ÛÛÙHOOH[	‰ˆ˜]]™T[•˜[YÂˆYˆ
+˜[˜XÚÒ\Õ˜[Y
+HÂˆ™]\›ˆ
+ˆ[žK›X[X[Ø›ØÚ×Ü™\Ý[ÙYÙ\ÝÜÚLM—ÛÜ—Û[OOH[	‰‚ˆX[X[›ØÚÔ™\Ý[Ý]\ÈOOH[	‰‚ˆX[X[›ØÚÑ^XÝ][Û›ØÚÐÛÝ[OOH	‰‚ˆX[X[›ØÚÔ™Y™\™[˜Ù\Ó˜]]™T[ˆOOH˜[ÙH	‰‚ˆX[X[›ØÚÑ˜[˜XÚÈOOH[	‰‚ˆ™Z™XÝ[ÛÛÙHOOH[ˆ
+NÂˆBˆ™]\›ˆ
+ˆYÙ\Ý]\›‹\Ý
+ˆ[žK›X[X[Ø›ØÚ×Ü™\Ý[ÙYÙ\ÝÜÚLM—ÛÜ—Û[ÏÈˆ‹ˆ
+H	‰‚ˆX[X[›ØÚÔ™\Ý[Ý]\ÈOOH˜›ØÚÙYÛX[X[Ü[—Ü™\]Z\™Yˆ	‰‚ˆX[X[›ØÚÑ^XÝ][Û›ØÚÐÛÝ[OOH	‰‚ˆX[X[›ØÚÔ™Y™\™[˜Ù\Ó˜]]™T[ˆOOH˜[ÙH	‰‚ˆX[X[›ØÚÑ˜[˜XÚÏË\ÙYOOH˜[ÙH	‰‚ˆX[X[›ØÚÑ˜[˜XÚËœ™X\ÛÛ—Ù[[HOOH››ÝÝ\ÙYˆ	‰‚ˆX[X[›ØÚÑ˜[˜XÚË›˜]]™WÜ[—Ý™\œÚ[ÛˆOOH[	‰‚ˆUU‘WÑSPÒ×Ô‘R‘PÕSÓ—ÐÓÑTËš[˜ÛY\Ê™Z™XÝ[ÛÛÙJH	‰‚ˆ™Z™XÝ[ÛÛÙHOOH^XÝY™Z™XÝ[ÛÛÙBˆ
+NÂŸB‚™[˜Ý[ÛˆÍ\›Ý™YXÚÙ]™\ÛÛ][ÛÛÛ˜XÝ\ÐÛÜÙY
+ØÚY[\ŠHÂˆÛÛœÝÛÛ˜XÝBˆØÚY[\‹›ÍXÚÙ]YÙ\ÝÛÛ˜XÝ˜\›Ý™Y™\ÚÛš[™[™ÑYÙ\ÝÛÛ˜XÝÂˆÛÛœÝ™\ÛÛ™\ˆHÛÛ˜XÝœ™\ÛÛ™\›ÛÝÝ˜\ÛÛ˜XÝÂˆÛÛœÝ\Y˜XÝšY[ØÚ[X\ÈH™\ÛÛ™\‹˜\Y˜XÝšY[ØÚ[X\ÈÏÈßNÂˆÛÛœÝÚYÛ™Y^[ØYšY[ØÚ[X\ÈH™\ÛÛ™\‹œÚYÛ™Y^[ØYšY[ØÚ[X\ÈÏÈßNÂˆÛÛœÝ\Ý[˜ÚÜˆH™\ÛÛ™\‹\Ý[˜ÚÜÛÛ˜XÝÂˆÛÛœÝ™\]Z\™Y\Y˜XÝšY[ÈHÂˆ˜]][XØ]YÛÝÛ™\—Üš]˜]WÜØÛÜWÙYÙ\ÝÜÚLMˆ‹ˆ˜]YY[˜ÙH‹ˆœ\œÜÙH‹ˆœÝYÙ\×Ù^XÝH‹ˆ›Ü\]YWÛÍØ\›Ý™YÜXÚÙ]ÜÝÜ™WÜ™Yˆ‹ˆ›ÍØ\›Ý™YÜXÚÙ]ÜÝÜ™WÜÛXÞWÙYÙ\ÝÜÚLMˆ‹ˆ›ÍØ\›Ý™YÝ™\ÚÛØš[™[™×ÙYÙ\ÝÜÚLMˆ‹ˆœ™\ÛÛ™\—Ý\ÝØ[˜ÚÜ—Ü™YÚ\ÝžWÜ™Yˆ‹ˆœ™\ÛÛ™\—Ý\ÝØ[˜ÚÜ—Ü™YÚ\ÝžWÙYÙ\ÝÜÚLMˆ‹ˆ™\šYšXØ][Û—ÚÙ^WÚY‹ˆ™\šYšXØ][Û—ÚÙ^WÝ™\œÚ[Ûˆ‹ˆ\ÝÜ›ÛÝÚY‹ˆ\ÝÜ›ÛÝÝ™\œÚ[Ûˆ‹ˆœÚYÛ˜]\™WØ[ÛÜš]H‹ˆ™ÜÙWÜ^[ØYÝ\H‹ˆœÚYÛ™YÜ^[ØY‹ˆœÚYÛ™YÜ^[ØYÙYÙ\ÝÜÚLMˆ‹ˆ™ÜÙWÙ[™[ÜWÙYÙ\ÝÜÚLMˆ‹ˆœ™\ÛÛ™\—Øš[™[™×Ø\Y˜XÝÙYÙ\ÝÜÚLMˆ‹ˆœ™\^WÛ›Û˜ÙH‹ˆœ™\ÛÛ™\—ÙÙ[™\˜][Ûˆ‹ˆœ™]›ØØ][Û—ÜÛXÞWÝ™\œÚ[Ûˆ‹ˆ›Ü\]YWÜ™]›ØØ][Û—Ù]šY[˜ÙWÜ™Yˆ‹ˆœ™]›ØØ][Û—Ù]šY[˜ÙWÙYÙ\ÝÜÚLMˆ‹ˆœ™]›ØØ][Û—ØÚXÚÙYØ]‹ˆœÚYÛ˜]\™WÝ™\šYšYY‹ˆœ™]›ÚÙY‹ˆNÂˆÛÛœÝ^XÝ\Y˜XÝØÚ[XHBˆ”ÓÓ‹œÝš[™ÚYžJ™\ÛÛ™\‹˜\Y˜XÝšY[Ñ^XÝJHOOBˆ”ÓÓ‹œÝš[™ÚYžJØš™XÝšÙ^\Ê\Y˜XÝšY[ØÚ[X\ÊJH	‰‚ˆ™\]Z\™Y\Y˜XÝšY[Ë™]™\žJ
+šY[
+HO‚ˆ™\ÛÛ™\‹˜\Y˜XÝšY[Ñ^XÝKš[˜ÛY\ÊšY[
+Kˆ
+NÂˆÛÛœÝ^XÝÚYÛ™Y^[ØYØÚ[XHBˆ”ÓÓ‹œÝš[™ÚYžJ™\ÛÛ™\‹œÚYÛ™Y^[ØYšY[Ñ^XÝJHOOBˆ”ÓÓ‹œÝš[™ÚYžJØš™XÝšÙ^\ÊÚYÛ™Y^[ØYšY[ØÚ[X\ÊJH	‰‚ˆ™\ÛÛ™\‹œÚYÛ™Y^[ØYšY[Ñ^XÝK™]™\žJˆ
+šY[
+HO‚ˆØ[›ÛšXØ[œÛÛŠÚYÛ™Y^[ØYšY[ØÚ[X\ÖÙšY[JHOOBˆØ[›ÛšXØ[œÛÛŠ\Y˜XÝšY[ØÚ[X\ÖÙšY[JKˆ
+NÂˆÛÛœÝ^XÝ\Ý[˜ÚÜ”ØÚ[XHBˆ”ÓÓ‹œÝš[™ÚYžJ\Ý[˜ÚÜ‹œ™YÚ\ÝžQ[žQšY[Ñ^XÝJHOOBˆ”ÓÓ‹œÝš[™ÚYžJØš™XÝšÙ^\Ê\Ý[˜ÚÜ‹œ™YÚ\ÝžQ[žQšY[ØÚ[X\ÊJNÂˆ™]\›ˆ
+ˆÛÛ˜XÝ˜ÛÛ[Y™\ÜÙYÝÜ™HOOBˆ™^XÝÜš]˜]WÛÍØ\›Ý™YÝ™\ÚÛÜXÚÙ]ÜÝÜ™WØ›Ý[™ØžWÛÝÛ™\‘XÚ\Ú[Ûš[™[™Èˆ	‰‚ˆÛÛ˜XÝ˜ÛÛ[Y™\ÜÙYÝÜ™T™Y›ÛÝÝ˜\ÛÝ\˜ÙT]OOBˆ™\šYšYY™\ÛÛ™\›ÛÝÝ˜\\Y˜XÝœÚYÛ™YÜ^[ØY›Ü\]YWÛÍØ\›Ý™YÜXÚÙ]ÜÝÜ™WÜ™Yˆˆ	‰‚ˆÛÛ˜XÝ˜ÛÛ[Y™\ÜÙYÝÜ™TÛXÞQYÙ\Ý›ÛÝÝ˜\ÛÝ\˜ÙT]OOBˆ™\šYšYY™\ÛÛ™\›ÛÝÝ˜\\Y˜XÝœÚYÛ™YÜ^[ØY›ÍØ\›Ý™YÜXÚÙ]ÜÝÜ™WÜÛXÞWÙYÙ\ÝÜÚLMˆˆ	‰‚ˆÛÛ˜XÝœ™\ÛÛ™YXÚÙ]ÝÜ™T™Y‘\]X[]U\™Ù]]OOBˆ›Í™\ÚÛXÚ\Ú[Û”XÚÙ]›ÝÛ™\‘XÚ\Ú[Ûš[™[™Ë›Ü\]YSÝÛ™\‘XÚ\Ú[Û”ÝÜ™T™Yˆˆ	‰‚ˆÛÛ˜XÝœ™\ÛÛ™YXÚÙ]ÝÜ™TÛXÞQYÙ\Ý\]X[]U\™Ù]]OOBˆ›Í™\ÚÛXÚ\Ú[Û”XÚÙ]›ÝÛ™\‘XÚ\Ú[Ûš[™[™Ë›ÝÛ™\‘XÚ\Ú[Û”ÝÜ™TÛXÞQYÙ\ÝÚLMˆˆ	‰‚ˆÛÛ˜XÝ˜ÛÛ[Y™\ÜÓÛÚÝ\Ù^HOOBˆ›ÍØ\›Ý™YÝ™\ÚÛØš[™[™×ÙYÙ\ÝÜÚLMˆˆ	‰‚ˆ™\ÛÛ™\‹˜ÛÛ˜XÝ™\œÚ[ÛˆOOBˆš[™\™ÙK›ÍX\›Ý™Y\XÚÙ]\™\ÛÛ™\‹X›ÛÝÝ˜\ŒHˆ	‰‚ˆ™\ÛÛ™\‹\ÝYÛÝ\˜ÙHOOBˆ™^\›˜[WØ[˜ÚÜ™YØ]][XØ]YÜÚYÛ™YÛÍØÛÛ›ÛÜ[™WØ]]Üš^˜][Û—ØÛÛ^ˆ	‰‚ˆ^XÝ\Y˜XÝØÚ[XH	‰‚ˆ^XÝÚYÛ™Y^[ØYØÚ[XH	‰‚ˆ^XÝ\Ý[˜ÚÜ”ØÚ[XH	‰‚ˆ™\ÛÛ™\‹˜\Y˜XÝY][Û˜[šY[Ð[ÝÙYOOH˜[ÙH	‰‚ˆ™\ÛÛ™\‹œÚYÛ™Y^[ØYY][Û˜[šY[Ð[ÝÙYOOH˜[ÙH	‰‚ˆ™\ÛÛ™\‹œÚYÛ™Y^[ØYØÚ[X\Ð\™Q^XÝ›Ú™XÝ[Û“Ù\Y˜XÝšY[ØÚ[X\ÈOOBˆYH	‰‚ˆ™\ÛÛ™\‹˜\Y˜XÝ[™ÚYÛ™Y^[ØYœ™YU^[ÝÙYOOH˜[ÙH	‰‚ˆ™\ÛÛ™\‹œÚYÛ™Y^[ØYYÙ\ÝÛÛ˜XÝœÙ\šX[^˜][ÛˆOOHÔ×ÔÑT’PSVUSÓˆ	‰‚ˆ™\ÛÛ™\‹™ÜÙQ[™[ÜQYÙ\ÝÛÛ˜XÝœÙ\šX[^˜][ÛˆOOHÔ×ÔÑT’PSVUSÓˆ	‰‚ˆ™\ÛÛ™\‹˜\Y˜XÝYÙ\ÝÛÛ˜XÝœÙ\šX[^˜][ÛˆOOHÔ×ÔÑT’PSVUSÓˆ	‰‚ˆ™\ÛÛ™\‹˜\Y˜XÝYÙ\ÝÛÛ˜XÝˆ˜]][XØ]YÛÛ›Û[™PÛÛ^]\Ýš[™Ü\]YT™\ÛÛ™\š[™[™ÒY[™\Y˜XÝYÙ\ÝOOBˆYH	‰‚ˆ\Ý[˜ÚÜ‹™^\›˜[ÛÝ\˜ÙHOOBˆ™^XÝÛÝÛ™\—Ø\›Ý™YÛÍÜ™\ÛÛ™\—Ý\ÝØ[˜ÚÜ—Ü™YÚ\ÝžWÙœ›ÛWØ]][XØ]YØÛÛ›ÛÜ[™WØÛÛ™šYÝ\˜][Ûˆˆ	‰‚ˆ\Ý[˜ÚÜ‚ˆœ™YÚ\ÝžS]\Ý™\ÛÛ™P™Y›Ü™P\Y˜XÝ[™X^S›ÝÛÛYQœ›ÛU™\ÚÛXÚÙ]™\ÛÛ™\\Y˜XÝÜ”™\ÛÛ™YXÚÙ]OOBˆYH	‰‚ˆ\Ý[˜ÚÜ‚ˆ˜\Y˜XÝX^S›ÝÙ[XÝ[›ÙXÙSÜ‘^[™™\šYšXØ][Û’Ù^U\Ý›ÛÝÜ[ÛÜš]P[ÝÛ\ÝOOBˆYH	‰‚ˆ\Ý[˜ÚÜ‚ˆ˜\Y˜XÝ™YÚ\ÝžRÙ^T›ÛÝ™\œÚ[Û[ÛÜš]TØÛÜP]YY[˜ÙT\œÜÙTÝYÙ\Ð[™™]›ØØ][Û”ÛXÞS]\Ý^XÝSX]ÚÝ\œ™[^\›˜[[žHOOBˆYH	‰‚ˆ\Ý[˜ÚÜ‚ˆœ™YÚ\ÝžQ[žU˜[Y]P[™™]›ØØ][Û“]\Ý™PÚXÚÙY]]™\žTÝ\[™XØÙ\[˜ÙU\ÙHOOBˆYH	‰‚ˆ™\ÛÛ™\‹™\šYšXØ][Û”[\Âˆ˜\Y˜XÝ[™ÚYÛ™Y^[ØY]\ÝX]Ú^XÝÛÜÙYØÚ[X\ÈOOHYH	‰‚ˆ™\ÛÛ™\‹™\šYšXØ][Û”[\Âˆ™]™\žTÚYÛ™Y^[ØYšY[]\Ý^XÝQ\]X[\Y˜XÝ›Ú™XÝ[ÛˆOOHYH	‰‚ˆ™\ÛÛ™\‹™\šYšXØ][Û”[\ÂˆœÚYÛ™Y^[ØY[™ÜÙQ[™[ÜQYÙ\ÝÓ]\Ý™T™XÛÛ\]Y[™X]ÚOOHYH	‰‚ˆ™\ÛÛ™\‹™\šYšXØ][Û”[\Âˆœ™\ÛÛ™\\Y˜XÝYÙ\Ý]\Ý™T™XÛÛ\]Y[™X]Ú]][XØ]YÛÛ›Û[™PÛÛ^OOBˆYH	‰‚ˆ™\ÛÛ™\‹™\šYšXØ][Û”[\Âˆ™ÜÙTÚYÛ˜]\™S]\ÝÜž\ÙÜ˜\XØ[U™\šYžPYØZ[œÝ^\›˜[T™\ÛÛ™YÝ\œ™[\Ý[˜ÚÜ‘[žHOOBˆYH	‰‚ˆ™\ÛÛ™\‹™\šYšXØ][Û”[\ÂˆœÚYÛ˜]\™U™\šYšYYÝ]\›ÛÛX[“X^S›ÝÝXœÝ]]Q›ÜÜž\ÙÜ˜\XÕ™\šYšXØ][ÛˆOOBˆYH	‰‚ˆ™\ÛÛ™\‹™\šYšXØ][Û”[\Âˆ˜]][XØ]Y™\]Y\ÝÝÛ™\”š]˜]TØÛÜQYÙ\Ý]\Ý\]X[ÚYÛ™YØÛÜP[™^\›˜[™YÚ\ÝžTØÛÜHOOBˆYH	‰‚ˆ™\ÛÛ™\‹™\šYšXØ][Û”[\Âˆ˜]YY[˜ÙT\œÜÙP[™ÝYÙ\Ó]\Ý\]X[^XÝÛÜÙY˜[Y\ÈOOHYH	‰‚ˆ™\ÛÛ™\‹™\šYšXØ][Û”[\Âˆœ™\^S›Û˜ÙS]\Ý™P]ÛZXØ[PÛÛœÝ[YYÛ˜ÙR[\›Ý™YÝÛ™\”š]˜]T™\ÛÛ™\“›Û˜ÙTÝÜ™HOOBˆYH	‰‚ˆ™\ÛÛ™\‹™\šYšXØ][Û”[\Âˆœ™\ÛÛ™\‘Ù[™\˜][Û“]\Ý™TÝšXÝQÜ™X]\•[“\ÝXØÙ\YÙ[™\˜][Û‘›Ü”Ø[YTØÛÜP]YY[˜ÙT\œÜÙP[™ÝYÙ\Ò[\[™Û›T™\ÛÛ™\‘Ù[™\˜][Û”ÝÜ™HOOBˆYH	‰‚ˆ™\ÛÛ™\‹™\šYšXØ][Û”[\Âˆ™Ù[™\˜][Û[™›Û˜ÙPÛÛœÝ[\[Û“]\Ý™P]ÛZXÕÚ]]]Üš^™YXÚÙ]ÛÚÝ\\ÙHOOBˆYH	‰‚ˆ™\ÛÛ™\‹™\šYšXØ][Û”[\Âˆœ™\ÛÛ™\\Y˜XÝ]\Ý™T™T™\ÛÛ™Y[™[T™]˜[Y]Y]]™\žSÌ›Ð[™ÌŒÎÚÝ\[™XØÙ\[˜ÙU\ÙHOOBˆYH	‰‚ˆ™\ÛÛ™\‹™\šYšXØ][Û”[\Âˆ[šÛ›ÝÛ’Ù^UÜ›Û™ÒÙ^U™\œÚ[Û•[\ÝY›ÛÝÜ›Û™Ô›ÛÝ™\œÚ[Û‘\Ø[ÝÙY[ÛÜš]U[œÚYÛ™Y[˜[YÚYÛ˜]\™T^[ØYZ\ÛX]ÚØÛÜP]YY[˜ÙT\œÜÙSÜ”ÝYÙSZ\ÛX]Ú^\™Y™]›ÚÙYÜ”™\^Q˜Z[ÐÛÜÙYOOBˆYH	‰‚ˆ™\ÛÛ™\‚ˆœÝÜ™PÛÛÜ™[˜]\Ó]\Ý™T™\ÛÛ™Y[™]][XØ]Y™Y›Ü™P\›Ý™YXÚÙ]ÛÚÝ\OOBˆYH	‰‚ˆ™\ÛÛ™\‚ˆ˜š[™[™Ó]\Ý™TÚYÛ™YÝ\œ™[[™^\™Y[œ™]›ÚÙY™\^T›ÝXÝY[™ØÛÜP›Ý[™OOBˆ6×Nô¶‰žËkºwµçXÝˆ˜\Y˜XÝšY[Ñ^XÝKˆØš™XÝšÙ^\ÊˆØÚY[\‹›ÍXÚÙ]YÙ\ÝÛÛ˜XÝ›ÝÛ™\‘XÚ\Ú[Û”™XÙZ\ÛÛ˜XÝˆ˜\Y˜XÝšY[ØÚ[X\Ëˆ
+Kˆ
+NÂˆ\ÜÙ\™\]X[
+ˆØÚY[\‹›ÍXÚÙ]YÙ\ÝÛÛ˜XÝ›ÝÛ™\‘XÚ\Ú[Û”™XÙZ\ÛÛ˜XÝˆ™\šYšXØ][Û”[\Âˆœ™XÙZ\]\Ý™T™T™\ÛÛ™Y[™™]˜[Y]Y™Y›Ü™SÌ›Ð[™ÌŒÎÚÝ\[™XØÙ\[˜ÙKˆYKˆ
+NÂˆ\ÜÙ\™\]X[
+ˆØÚY[\‹›ÍXÚÙ]YÙ\ÝÛÛ˜XÝ˜\›Ý™Y™\ÚÛš[™[™ÑYÙ\ÝÛÛ˜XÝˆ™š[˜[YÙ\Ý\Ó›ÝTÝ[™[Û™P™X\™\]]Üš^˜][Û‹ˆYKˆ
+NÂˆ\ÜÙ\™\]X[
+Í\›Ý™YXÚÙ]™\ÛÛ][ÛÛÛ˜XÝ\ÐÛÜÙY
+ØÚY[\ŠKYJNÂˆ\ÜÙ\™\]X[
+ˆØÚY[\‹›ÍXÚÙ]YÙ\ÝÛÛ˜XÝ˜\›Ý˜[Ý]R[˜\šX[ˆ˜\›Ý™Y™XÛÜ™™\]Z\™\Ð[^XÝš[™[™ÜÐ[™™\ÚÛÐÛÛ\]KˆYKˆ
+NÂˆ\ÜÙ\™\]X[
+ˆØÚY[\‹˜ÛÛ\\š\ÛÛ“[Ù\Ë›ÝÛ™\’Y[”ÚYÝË›ÝÛ™\Ø[”ÙYPÛÛ\\š\ÛÛ‹ˆ˜[ÙKˆ
+NÂˆ\ÜÙ\™\]X[
+ˆØÚY[\‹˜ÛÛ\\š\ÛÛ“[Ù\Ë›ÝÛ™\•š\ÚX›PÛÛ\\š\ÛÛ‹›ÝÛ™\Ø[”ÙYPÛÛ\\š\ÛÛ‹ˆYKˆ
+NÂˆ\ÜÙ\™\]X[
+ˆØÚY[\‹˜ÛÛ\\š\ÛÛ“[Ù\Ë›ÝÛ™\•š\ÚX›PÛÛ\\š\ÛÛ‚ˆ˜Ø[›ÛšXØ[ØÚY[R[™›Y[˜ÙP[ÝÙYˆ˜[ÙKˆ
+NÂˆ\ÜÙ\™\]X[
+ˆØÚY[\‹˜ÛÛ\\š\ÛÛ“[Ù\Ë›ÝÛ™\•š\ÚX›PÛÛ\\š\ÛÛ‚ˆœ›ÙXÝÝ]S]]][Û[ÝÙYˆ˜[ÙKˆ
+NÂˆ\ÜÙ\™\]X[
+ˆØÚY[\‹™ÙÙ›ÛÙ]šY[˜ÙK™]šY[˜ÙSX^P™TÚ\™YXÜ›ÜÜÐXØÙ\[˜ÙU\\Ëˆ˜[ÙKˆ
+NÂˆ\ÜÙ\™\]X[
+ØÚY[\‹™Ñ\ÌQœ™Y^™K˜\Y\ËYJNÂˆÛÛœÝÚ[™ÙYÌŒÍÛÓÝÛ™\”ØÛÜHHÛÛ™J]]Üš^˜][Û”XÚÙ]
+NÂˆÚ[™ÙYÌŒÍÛÓÝÛ™\”ØÛÜK˜]][XØ]YÛÝÛ™\—Üš]˜]WÜØÛÜWÙYÙ\ÝÜÚLMˆBˆ˜H‹œ™\X]
+
+NÂˆ\ÜÙ\››Ý\]X[
+ˆÌŒÍÛÔ›ÜÜØ[ÚLMŠÚ[™ÙYÌŒÍÛÓÝÛ™\”ØÛÜJKˆ]]Üš^˜][Û‘YÙ\ÝÛÛ˜XÝœ›ÜÜØ[YÙ\ÝÛÛ˜XÝˆœ[™[™Õ[\]T›ÜÜØ[YÙ\ÝÚLM‹ˆ
+NÂˆÛÛœÝÚ[™ÙYÌŒÍÛÓÝÛ™\XÝÜˆHÛÛ™J]]Üš^˜][Û”XÚÙ]
+NÂˆÚ[™ÙYÌŒÍÛÓÝÛ™\XÝÜ‹›Ü\]YWÛÝÛ™\—ÙXÚ\Ú[Û—ØXÝÜ—ÚYBˆØXWÉÈ˜H‹œ™\X]
+MŠ_XÂˆ\ÜÙ\››Ý\]X[
+ˆÌŒÍÛÔ›ÜÜØ[ÚLMŠÚ[™ÙYÌŒÍÛÓÝÛ™\XÝÜŠKˆ]]Üš^˜][Û‘YÙ\ÝÛÛ˜XÝœ›ÜÜØ[YÙ\ÝÛÛ˜XÝˆœ[™[™Õ[\]T›ÜÜØ[YÙ\ÝÚLM‹ˆ
+NÂˆÛÛœÝÚ[™ÙYÍÝÛ™\”ØÛÜHHÛÛ™JØÚY[\‹›Í™\ÚÛXÚ\Ú[Û”XÚÙ]
+NÂˆÚ[™ÙYÍÝÛ™\”ØÛÜK›ÝÛ™\‘XÚ\Ú[Ûš[™[™Âˆ˜]][XØ]YÝÛ™\”š]˜]TØÛÜQYÙ\ÝÚLMˆH˜H‹œ™\X]
+
+NÂˆ\ÜÙ\››Ý\]X[
+ˆ›ÜÜØ[ÚLMŠÚ[™ÙYÍÝÛ™\”ØÛÜJKˆØÚY[\‹›ÍXÚÙ]YÙ\ÝÛÛ˜XÝœ[™[™Ô›ÜÜØ[YÙ\ÝÚLM‹ˆ
+NÂˆ\ÜÙ\™\]X[
+Ø[›ÛšXØ[ÚLMŠØÚY[\ŠKÐÒQST—ÐÓÓ•PÕÔÒLMŠNÂ‚ˆÛÛœÝ[šÛ›ÝÛ‘šY[HÛÛ™JØÚY[\ŠNÂˆ[šÛ›ÝÛ‘šY[›Ü[Z^™\”][œ™]šY]ÙYHYNÂˆ\ÜÙ\››Ý\]X[
+Ø[›ÛšXØ[ÚLMŠ[šÛ›ÝÛ‘šY[
+KÐÒQST—ÐÓÓ•PÕÔÒLMŠNÂˆÛÛœÝ˜]Ò[œ][ÝÙYHÛÛ™JØÚY[\ŠNÂˆ˜]Ò[œ][ÝÙYš[œ]ÛÛ˜XÝ™›Ü˜šY[‘šY[ÈBˆ˜]Ò[œ][ÝÙYš[œ]ÛÛ˜XÝ™›Ü˜šY[‘šY[Ë™š[\Šˆ
+šY[
+HOˆšY[OOHœ]Y\Ý[Û—Ø›ÙH‹ˆ
+NÂˆ\ÜÙ\››Ý\]X[
+Ø[›ÛšXØ[ÚLMŠ˜]Ò[œ][ÝÙY
+KÐÒQST—ÐÓÓ•PÕÔÒLMŠNÂˆÛÛœÝØ[›ÛšXØ[]]][ÛˆHÛÛ™JØÚY[\ŠNÂˆØ[›ÛšXØ[]]][Û‹˜ÛÛ\\š\ÛÛ“[Ù\Ë›ÝÛ™\•š\ÚX›PÛÛ\\š\ÛÛ‚ˆœ›ÙXÝÝ]S]]][Û[ÝÙYHYNÂˆ\ÜÙ\››Ý\]X[
+Ø[›ÛšXØ[ÚLMŠØ[›ÛšXØ[]]][ÛŠKÐÒQST—ÐÓÓ•PÕÔÒLMŠNÂŸJNÂ‚\Ý
+œ›Ú™XÝYÜ[Z^™\ˆ™\Ý[È˜[Y]H[™[™\œÙK[X\˜Z[ÛÜÙY™Y›Ü™HØ[›ÛšXØ[Ø]]Ø^H^]‹\Þ[˜È
+
+HOˆÂˆÛÛœÝØÚY[\ˆH]ØZ]œÛÛŠˆ˜ÛÛ™šYËÙX˜[™Ú[Y[Y^K\ØÚY[\‹XÛÛ˜XÝšœÛÛˆ‹ˆ
+NÂˆÛÛœÝYÙ[ÈH]ØZ]^
+QÑS•Ë›YŠNÂˆÛÛœÝØÚY[TÞ\Ý[HH]ØZ]^
+ˆ™ØÜËÚ[™\™ÙK\ÝYK\ØÚY[K\Þ\Ý[K›Y‹ˆ
+NÂˆÛÛœÝ›Ú™XÝYHØÚY[\‹›Ü[Z^™\”›Ú™XÝY™\Ý[ÛÛ˜XÝÂˆÛÛœÝØ[›ÛšXØ[HØÚY[\‹œ™\Ý[ÛÛ˜XÝÂ‚ˆ\ÜÙ\™\]X[
+›Ú™XÝY™\Ý[Ø]]Ø^PÛÛ˜XÝ\ÐÛÜÙY
+ØÚY[\ŠKYJNÂˆ\ÜÙ\™Y\\]X[
+ˆ›Ú™XÝYš[™\œÙSX\[™ÐÛÛ˜XÝšY[YšY\™X\š[™Ô]Ñ^XÝKˆ“Ò‘PÕQÔ‘TÕSÒQÔUËˆ
+NÂˆ\ÜÙ\™Y\\]X[
+ˆ›Ú™XÝYœ›ØÙ\ÜÚ[™ÓÜ™\‘^XÝKˆ“Ò‘PÕQÔ‘TÕSÔ“ÐÑTÔÒS‘×ÓÔ‘T‹ˆ
+NÂˆ\ÜÙ\™Y\\]X[
+ˆØš™XÝšÙ^\Ê›Ú™XÝYš[™\œÙSX\[™ÐÛÛ˜XÝœ]Y[YšY\Û\ÜÙ\ÊKˆ“Ò‘PÕQÔ‘TÕSÒQÔUËˆ
+NÂ‚ˆÛÛœÝY[YšY\‘ÛXZ[‘š^\™\ÈHÂˆÈœ™\]Y\ÝÚY‹™\WÉÈ˜H‹œ™\X]
+MŠ_XÜ™\WÉÈ˜H‹œ™\X]
+MŠ_XKˆÂˆš[œ]ÜÛ˜\ÚÝÝ™\œÚ[Ûˆ‹ˆÛœÉÈ˜H‹œ™\X]
+MŠ_XˆÜÛœÉÈ˜H‹œ™\X]
+MŠ_XˆKˆÂˆ™\[Y\˜[ÛÜ\]YWÝÚ[™Ý×ÚY‹ˆÚ[—ÉÈ˜H‹œ™\X]
+MŠ_XˆÝÚ[—ÉÈ˜H‹œ™\X]
+MŠ_XˆKˆÂˆ™\[Y\˜[ÛÜ\]YWØØ[™Y]WÚY‹ˆØ[™ÉÈ˜H‹œ™\X]
+MŠ_XˆØØ[™ÉÈ˜H‹œ™\X]
+MŠ_XˆKˆNÂˆ›Üˆ
+ÛÛœÝÚY[YšY\Û\ÜËÜšYÚ[˜[Y›Ú™XÝYYHÙˆY[YšY\‘ÛXZ[‘š^\™\ÊHÂˆÛÛœÝØ[›ÛšXØ[]\›ˆH™]È™YÑ^
+ˆØ[›ÛšXØ[šY[YšY\”ØÚ[X\ÖÚY[YšY\Û\Ü×Kˆ
+NÂˆÛÛœÝ›Ú™XÝY]\›ˆH™]È™YÑ^
+ˆ›Ú™XÝYšY[YšY\”ØÚ[X\ÖÚY[YšY\Û\Ü×Kˆ
+NÂˆ\ÜÙ\™\]X[
+Ø[›ÛšXØ[]\›‹\Ý
+ÜšYÚ[˜[Y
+KYJNÂˆ\ÜÙ\™\]X[
+Ø[›ÛšXØ[]\›‹\Ý
+›Ú™XÝYY
+K˜[ÙJNÂˆ\ÜÙ\™\]X[
+›Ú™XÝY]\›‹\Ý
+›Ú™XÝYY
+KYJNÂˆ\ÜÙ\™\]X[
+›Ú™XÝY]\›‹\Ý
+ÜšYÚ[˜[Y
+K˜[ÙJNÂˆBˆ\ÜÙ\™\]X[
+ˆØ[›ÛšXØ[šY[YšY\”ØÚ[X\Ëœ™\]Y\ÝÚYš[˜ÛY\Ê›Ü™\WÈŠKˆ˜[ÙKˆ
+NÂˆ\ÜÙ\™\]X[
+ˆØ[›ÛšXØ[šY[YšY\”ØÚ[X\Ëš[œ]ÜÛ˜\ÚÝÝ™\œÚ[Û‹š[˜ÛY\Ê›ÜÛœÈŠKˆ˜[ÙKˆ
+NÂˆ\ÜÙ\™\]X[
+ˆØ[›ÛšXØ[šY[YšY\”ØÚ[X\Ë™\[Y\˜[ÛÜ\]YWÝÚ[™Ý×ÚYš[˜ÛY\Ê›ÝÚ[—ÈŠKˆ˜[ÙKˆ
+NÂˆ\ÜÙ\™\]X[
+ˆØ[›ÛšXØ[šY[YšY\”ØÚ[X\Ë™\[Y\˜[ÛÜ\]YWØØ[™Y]WÚYš[˜ÛY\Êˆ›ØØ[™È‹ˆ
+Kˆ˜[ÙKˆ
+NÂ‚ˆÛÛœÝÛXÞHBˆØÚY[\‹œÌŒÍÛÐ™[˜ÚX\šÐXØÙ\[˜ÙPÛÛ˜XÝˆœ™XÙZ\\ÜÙ\[Û”ÛXÞQYÙ\ÝÛÛ˜XÝÂˆ\ÜÙ\™\]X[
+ˆØ[›ÛšXØ[ÚLMŠˆØÚY[\‹œÌŒÍÛÐ™[˜ÚX\šÐXØÙ\[˜ÙPÛÛ˜XÝœ™\]Z\™Y™XÙZ\Ü\˜][Û”[\Ëˆ
+Kˆ™MŒM˜˜˜ÎÍÍŽXÌNX˜™™˜Î™LYLÍMŒÌL™ŽX˜MÌÙ™MLÍMXØLYŽYN‹ˆ
+NÂˆ\ÜÙ\™\]X[
+ˆÛXÞK™YÙ\ÝÚLM‹ˆ™MŒM˜˜˜ÎÍÍŽXÌNX˜™™˜Î™LYLÍMŒÌL™ŽX˜MÌÙ™MLÍMXØLYŽYN‹ˆ
+NÂˆ\ÜÙ\›X]Ú
+ˆYÙ[ËˆÜÛÛ™\‹[ÜšYÚ[˜]Y›Ú™XÝY™\ÜÛœÙV×××J›X^H›ÝÛÛZ[–×××J™˜[˜XÚËËˆ
+NÂˆ\ÜÙ\›X]Ú
+ˆYÙ[ËˆÓÛ›WÊØY\ˆÛÛ\]H˜]Ë\™\ÜÛœÙV×××^Ì]˜[Y][ÛˆÙ\ÈHØ]]Ø^HÛÛœÝXÝØ[›ÛšXØ[™\œÚ[Û—Ú[™›ØËˆ
+NÂˆ\ÜÙ\›X]Ú
+ˆYÙ[ËˆÙØ]]Ø^WÊÝ[ˆ]XÚ\ÈØ[›ÛšXØ[˜[˜XÚÖ×××^ÌÌXÛÛ\]HØ[›ÛšXØ[×××^ÌLŒ\™\Ý[×××^ÌN[]\ÝÊÝ˜[Y]H™Y›Ü™H™[X\ÙKÚKˆ
+NÂˆ\ÜÙ\›X]Ú
+ˆYÙ[ËˆÚ[™\[™[WÊÜ™\ÛÛ™\×ÊÛÜ—ÊÜ™\\™\Ö×××^ÌŒY^XÝWÊÛÛ™H[[]]X›H˜]]™H˜[˜XÚÖ×××^ÌÌSZ\ÜÚ[™ËÊÝ[˜]˜Z[X›KÊÛÜ—ÊÚ[˜[Y˜[˜XÚÖ×××^ÌŒŒX›ØÚÙYÛX[X[Ü[—Ü™\]Z\™Y×××^ÌLŒ\™XÝ\œÚ]™H˜[˜XÚÈ\È›Ü˜šY[‹Ëˆ
+NÂˆ\ÜÙ\™Ù\Ó›ÝX]Ú
+YÙ[ËÜ™[X\\È\Ý›ÞYYY\ˆH™\]Y\ÝÊNÂˆ\ÜÙ\›X]Ú
+ˆØÚY[TÞ\Ý[KˆÜ™]Z[œÈ]›ÝYÚ[×××JœÚ^ÛÛ\]H›Ú™XÝY\™\ÜÛœÙH˜[Y][ÛœÖ×××J™\Ý›Þ\ÈHX\[™Ö×××J˜™Y›Ü™H[žHØ[›ÛšXØ[™\Ý[Ù]X]™\ÈHØ]]Ø^KËˆ
+NÂˆ\ÜÙ\›X]Ú
+ˆØÚY[TÞ\Ý[KˆÔ›Ú™XÝYQÈX^H›Ý×××J™[\ˆÙÜÈÜˆ\Y˜XÝËËˆ
+NÂˆ\ÜÙ\›X]Ú
+ˆØÚY[TÞ\Ý[KˆÚY[YšY\‹Yœ™YV×××J™YÙ\Ý™XÙZ\Ëˆ
+NÂˆ\ÜÙ\™Ù\Ó›ÝX]Ú
+ˆØÚY[TÞ\Ý[KˆÝH[‹[Y[[ÜžH™[X\\È\Ý›ÞYYY\Ø\™Ëˆ
+NÂ‚ˆÛÛœÝÜÝ[S]]][ÛœÈHÂˆÂˆ›Z\ÜÚ[™È[™\œÙK[X\]‹ˆ
+˜[YJHOˆÂˆ˜[YK›Ü[Z^™\”›Ú™XÝY™\Ý[ÛÛ˜XÝš[™\œÙSX\[™ÐÛÛ˜XÝˆšY[YšY\™X\š[™Ô]Ñ^XÝKœÜ
+
+NÂˆKˆKˆÂˆ˜[Y][ÛˆY\ˆ[™\œÙHX\[™È‹ˆ
+˜[YJHOˆÂˆÛÛœÝÜ™\ˆBˆ˜[YK›Ü[Z^™\”›Ú™XÝY™\Ý[ÛÛ˜XÝœ›ØÙ\ÜÚ[™ÓÜ™\‘^XÝNÂˆÛÜ™\–ÌKÜ™\–Ì×WHHÛÜ™\–Ì×KÜ™\–ÌWNÂˆKˆKˆÂˆ[šÛ›ÝÛˆÜˆ[™Û[™ÈX\[™ÈXØÙ\Y‹ˆ
+˜[YJHOˆÂˆ˜[YK›Ü[Z^™\”›Ú™XÝY™\Ý[ÛÛ˜XÝš[™\œÙSX\[™ÐÛÛ˜XÝˆ›Z\ÜÚ[™Õ[šÛ›ÝÛ‘[™Û[™Ñ\XØ]PÜ›ÜÜÐÛ\ÜÓÜšYÚ[˜[ÛXZ[“Ü“›ÛšZ™XÝ]™SX\[™Ð[ÝÙYBˆYNÂˆKˆKˆÂˆ˜Ü›ÜÜËXÛ\ÜÈX\[™È‹ˆ
+˜[YJHOˆÂˆ˜[YK›Ü[Z^™\”›Ú™XÝY™\Ý[ÛÛ˜XÝš[™\œÙSX\[™ÐÛÛ˜XÝˆœ]Y[YšY\Û\ÜÙ\ÖÂˆ™^XÝ][Û—Ø›ØÚÜÖ×K™\[Y\˜[ÛÜ\]YWÝÚ[™Ý×ÚY‚ˆHH™\[Y\˜[ÛÜ\]YWØØ[™Y]WÚYŽÂˆKˆKˆÂˆ›ÜšYÚ[˜[ÛXZ[ˆXØÙ\Y‹ˆ
+˜[YJHOˆÂˆ˜[YK›Ü[Z^™\”›Ú™XÝY™\Ý[ÛÛ˜XÝˆœ›Ú™XÝY™\Ý[ÛÛ˜XÝX^PXØÙ\ÜšYÚ[˜[Y[YšY\‘ÛXZ[ˆHYNÂˆKˆKˆÂˆÜ›Û™È™\]Y\ÝX^HÛÜœ™[]H‹ˆ
+˜[YJHOˆÂˆ˜[YK›Ü[Z^™\”›Ú™XÝY™\Ý[ÛÛ˜XÝœ™\]Y\ÝÛÜœ™[][Û‘\]X[]U\™Ù]Âˆœ™\]Y\ÝÚYH˜[žWÜ›Ú™XÝYÜ™\]Y\ÝÚYŽÂˆKˆKˆÂˆ››Û‹RQ˜[YHX^HÚ[™ÙH‹ˆ
+˜[YJHOˆÂˆ˜[YK›Ü[Z^™\”›Ú™XÝY™\Ý[ÛÛ˜XÝš[™\œÙSX\[™ÐÛÛ˜XÝˆ˜[›Û’Y[YšY\•˜[Y\Ô™\Ù\™Y^XÝHH˜[ÙNÂˆKˆKˆÂˆ˜\œ˜^HX^H™[Ü™\ˆ‹ˆ
+˜[YJHOˆÂˆ˜[YK›Ü[Z^™\”›Ú™XÝY™\Ý[ÛÛ˜XÝš[™\œÙSX\[™ÐÛÛ˜XÝˆ˜[\œ˜^PØ\™[˜[]Y\Ð[™Ü™\š[™Ô™\Ù\™Y^XÝHH˜[ÙNÂˆKˆKˆÂˆ›X\[™È\Ý›ÞYYX\›H‹ˆ
+˜[YJHOˆÂˆ˜[YK›Ü[Z^™\”›Ú™XÝY™\Ý[ÛÛ˜XÝ›X\[™ÓY™XÞXÛPÛÛ˜XÝˆ›X\[™ÓX^P™Q\Ý›ÞYY™Y›Ü™PÛÛ\]T›Ú™XÝY™\ÜÛœÙU˜[Y][Û[™™\]Z\™Y[™\œÙSX\[™Ñš[š\ÚBˆYNÂˆKˆKˆÂˆ˜™[˜ÚX\šÈX\[™È\Ý›ÞYY™Y›Ü™HÚ^˜]]™H˜[Y][Ûˆ‹ˆ
+˜[YJHOˆÂˆ˜[YKš[œ]ÛÛ˜XÝ›Ü[Z^™\’[›ØØ][Û”›Ú™XÝ[ÛÛÛ˜XÝˆšY[YšY\”™[X\ÛÛ˜XÝ˜™[˜ÚX\šÔ™\^TÙ\ÜÚ[ÛÛÛ˜XÝˆ›X\[™Ð[™›Ú™XÝYY[YšY\“X]\šX[]\Ý™Q\Ý›ÞYYY\•TÚ^ÛÛ\]PØ[›ÛšXØ[[™˜]]™U˜[Y][Û”]ÜY\[žQ˜Z[\™R\ÐÛ\ÜÚYšYY[™˜[Y]Y˜]]™Q˜[˜XÚÒ\Ô™\\™Y[™™Y›Ü™QØ]]Ø^Q^]Bˆ˜[ÙNÂˆKˆKˆÂˆ›X\[™È™]Z[™YY\ˆ^]‹ˆ
+˜[YJHOˆÂˆ˜[YK›Ü[Z^™\”›Ú™XÝY™\Ý[ÛÛ˜XÝ›X\[™ÓY™XÞXÛPÛÛ˜XÝˆ›X\[™Ô™]Z[™YY\‘Ø]]Ø^Q^]HYNÂˆKˆKˆÂˆœ›Ú™XÝYQ[\œÈÙÜÈÜˆ\Y˜XÝÈ‹ˆ
+˜[YJHOˆÂˆ˜[YKœÌŒÍÛÐ™[˜ÚX\šÐXØÙ\[˜ÙPÛÛ˜XÝ˜™[˜ÚX\šÔ™\Ý[YÙ\ÝÛÛ˜XÝˆœ™\ÛÛ™Y\Y˜XÝY[X™\œÐÛÛ˜XÝˆšY[YšY\‘œ™YQ]\›Z[š\ÝXÔ™\^R[œ]\Y˜XÝÛÛ˜XÝˆœ›Ú™XÝYY[YšY\•˜[Y\ÓX^P\X\’[\Y˜XÝHYNÂˆKˆKˆÂˆšY[YšY\‹Yœ™YH\Y˜XÝØÚ[XHÚY[™YÚ]›Ú™XÝYQ‹ˆ
+˜[YJHOˆÂˆÛÛœÝ\Y˜XÝBˆ˜[YKœÌŒÍÛÐ™[˜ÚX\šÐXØÙ\[˜ÙPÛÛ˜XÝ˜™[˜ÚX\šÔ™\Ý[YÙ\ÝÛÛ˜XÝˆœ™\ÛÛ™Y\Y˜XÝY[X™\œÐÛÛ˜XÝˆšY[YšY\‘œ™YQ]\›Z[š\ÝXÔ™\^R[œ]\Y˜XÝÛÛ˜XÝÂˆ\Y˜XÝ™šY[Ñ^XÝKœ\Ú
+œ›Ú™XÝYÜ™\]Y\ÝÚYŠNÂˆ\Y˜XÝ™šY[ØÚ[X\Ëœ›Ú™XÝYÜ™\]Y\ÝÚYBˆ—›Ü™\WÖÐKV˜K^ŒNWËW^ÌM‹IŽÂˆKˆKˆÂˆ˜Ø[›ÛšXØ[ØÚ[XHÚY[™YÈ›ÝQÛXZ[œÈ‹ˆ
+˜[YJHOˆÂˆ˜[YKœ™\Ý[ÛÛ˜XÝšY[YšY\”ØÚ[X\Ëœ™\]Y\ÝÚYBˆ—ŠÎœ™\_Ü™\JWÖÐKV˜K^ŒNWËW^ÌM‹IŽÂˆKˆKˆÂˆœ›Ú™XÝY[Û›HÙ[X[XÈÝ™\œšYH‹ˆ
+˜[YJHOˆÂˆ˜[YK›Ü[Z^™\”›Ú™XÝY™\Ý[ÛÛ˜XÝ˜[ÝÑ\˜][Û“Ý™\™›ÝÈHYNÂˆKˆKˆNÂˆ›Üˆ
+ÛÛœÝÛ˜[YK]]]WHÙˆÜÝ[S]]][ÛœÊHÂˆÛÛœÝÜÝ[HHÛÛ™JØÚY[\ŠNÂˆ]]]JÜÝ[JNÂˆ\ÜÙ\™\]X[
+ˆ›Ú™XÝY™\Ý[Ø]]Ø^PÛÛ˜XÝ\ÐÛÜÙY
+ÜÝ[JKˆ˜[ÙKˆ	Û˜[Y_H]\Ý˜Z[ÛÜÙYˆ
+NÂˆBŸJNÂ‚\Ý
+œÜÝ\™XYH›Ú™XÝY™\ÜÛœÙ\È^ÛYHØ]]Ø^HÝ]H[™Û›HHØ]]Ø^HÛÛœÝXÝÈØ[›ÛšXØ[˜[˜XÚÈ[™™\œÚ[ÛˆY]Y]H‹\Þ[˜È
+
+HOˆÂˆÛÛœÝØÚY[\ˆH]ØZ]œÛÛŠˆ˜ÛÛ™šYËÙX˜[™Ú[Y[Y^K\ØÚY[\‹XÛÛ˜XÝšœÛÛˆ‹ˆ
+NÂˆÛÛœÝ›Ú™XÝYHØÚY[\‹›Ü[Z^™\”›Ú™XÝY™\Ý[ÛÛ˜XÝÂˆÛÛœÝØ[›ÛšXØ[HØÚY[\‹œ™\Ý[ÛÛ˜XÝÂˆÛÛœÝ[šYšYYH]ØZ]^
+™ØÜËÙX˜[™Ú[][šYšYY\›ÙÜ˜[KXÛÛ˜XÝ›YŠNÂˆÛÛœÝ›ÙXÝÜXÈH]ØZ]^
+ˆ™ØÜËÚ[™\™ÙK\ÙXÛÛ™\›Ý[™Yš[˜[\›ÙXÝ\ÜXË›Y‹ˆ
+NÂˆÛÛœÝØÚY[TÞ\Ý[HH]ØZ]^
+ˆ™ØÜËÚ[™\™ÙK\ÝYK\ØÚY[K\Þ\Ý[K›Y‹ˆ
+NÂˆÛÛœÝYÙ[ÈH]ØZ]^
+QÑS•Ë›YŠNÂ‚ˆ\ÜÙ\™\]X[
+›Ú™XÝY™\Ý[Ø]]Ø^PÛÛ˜XÝ\ÐÛÜÙY
+ØÚY[\ŠKYJNÂˆ\ÜÙ\™\]X[
+ÌÔ™\Ý[˜[Y][ÛÛÛ˜XÝÐ\™PÛÜÙY
+ØÚY[\ŠKYJNÂˆ\ÜÙ\™Y\\]X[
+›Ú™XÝYœÝ]\Ù\ËÓÓ‘T—ÔÕUTÑTÊNÂˆ\ÜÙ\™Y\\]X[
+ˆ›Ú™XÝYœÝ]\ÓÜšYÚ[›Ý[™\žK\ÝYØ]]Ø^PÛ\ÜÚYšXØ][Û”Ý]\Ù\Ñ^XÝKˆÐUUÐVWÐÓTÔÒQ’PÐUSÓ—ÔÕUTÑTËˆ
+NÂˆ\ÜÙ\™\]X[
+Øš™XÝš\ÓÝÛŠ›Ú™XÝY™˜[˜XÚÑšY[Ñ^XÝHŠK˜[ÙJNÂˆ\ÜÙ\™\]X[
+Øš™XÝš\ÓÝÛŠ›Ú™XÝY™˜[˜XÚÔÝ]\Ù\ÈŠK˜[ÙJNÂˆ\ÜÙ\™\]X[
+ˆØš™XÝš\ÓÝÛŠ›Ú™XÝYšY[YšY\”ØÚ[X\Ë›˜]]™WÜ[—Ý™\œÚ[ÛˆŠKˆ˜[ÙKˆ
+NÂˆ\ÜÙ\™\]X[
+ˆØ[›ÛšXØ[™˜[˜XÚÕ˜[YT[\Âˆ˜Ø[›ÛšXØ[˜[˜XÚÕ\P[™Ý]SX^P™PÛÛœÝXÝY[™]XÚYÛ›PžU\ÝYØ]]Ø^KˆYKˆ
+NÂ‚ˆÛÛœÝ^XÝYÛÜœ™[][ÛˆHÂˆ™\]Y\ÝÚYˆÜ™\WÉÈ˜H‹œ™\X]
+MŠ_Xˆ[œ]ÜÛ˜\ÚÝÝ™\œÚ[ÛŽˆÜÛœÉÈ˜ˆ‹œ™\X]
+MŠ_XˆNÂˆÛÛœÝ\ÝYØ[›ÛšXØ[™\œÚ[Û’[™›ÈHÂˆÛÛ˜XÝÝ™\œÚ[ÛŽˆ™X˜[™Ú[™[Ù^WÜØÚY[\‹ŒH‹ˆ˜]]™WÜÛXÞWÝ™\œÚ[ÛŽˆ›˜]]™WÜÛXÞWÝŒH‹ˆY\\—Ý™\œÚ[ÛŽˆ˜Y\\—ÝŒH‹ˆÜ[Z^™\—Ý™\œÚ[ÛŽˆ›Ü[Z^™\—ÝŒH‹ˆØš™XÝ]™WÝ™\œÚ[ÛŽˆ›Øš™XÝ]™WÝŒH‹ˆ™\ÚÛÝ™\œÚ[ÛŽˆ™\ÚÛÝŒH‹ˆÛÛ™\—ÜÙYYˆKˆÛÛ™\—ÝÛÜšÙ\œÎˆKˆ[YWÛ[Z]Û\ÎˆLˆ[YÙ\—ÜØØ[[™×Ý™\œÚ[ÛŽˆš[YÙ\—ÜØØ[[™×ÝŒH‹ˆNÂˆÛÛœÝ›Ú™XÝY^XÝ][Û›ØÚÈHÂˆ\[Y\˜[ÛÜ\]YWØØ[™Y]WÚYˆØØ[™ÉÈ˜È‹œ™\X]
+MŠ_Xˆ\[Y\˜[ÛÜ\]YWÝÚ[™Ý×ÚYˆÝÚ[—ÉÈ™‹œ™\X]
+MŠ_XˆÝ\ÛZ[]WÚÜÝˆˆ[™ÛZ[]WÚÜÝˆÌˆ\˜][Û—ÛZ[]\ÎˆÌˆNÂˆÛÛœÝ›Ú™XÝYÜ[X[HÂˆ‹‹™^XÝYÛÜœ™[][Û‹ˆÝ]\Îˆ›Ü[X[‹ˆ^XÝ][Û—Ø›ØÚÜÎˆ×Kˆ[˜\ÜÚYÛ™YØØ[™Y]\Îˆ×KˆØš™XÝ]™WØÛÛ\Û™[Îˆ×Kˆš[Û][ÛœÎˆ×Kˆ[\ÙYÛ\ÎˆKˆNÂˆ\ÜÙ\™\]X[
+ˆ›Ú™XÝYÛÛ™\”™\ÜÛœÙR\ÐÛÜÙY
+ˆ›Ú™XÝYˆ›Ú™XÝYÜ[X[ˆ^XÝYÛÜœ™[][Û‹ˆ
+KˆYKˆ
+NÂˆ›Üˆ
+ÛÛœÝ›Ü˜šY[“]]][ÛˆÙˆÂˆÂˆ˜[˜XÚÎˆÂˆ\ÙYˆ˜[ÙKˆ™X\ÛÛ—Ù[[Nˆ››ÝÝ\ÙY‹ˆ˜]]™WÜ[—Ý™\œÚ[ÛŽˆ[ˆKˆKˆÈ˜]]™WÜ[—Ý™\œÚ[ÛŽˆ›˜]]™WÜ[—ÝŒHˆKˆÈØ[›ÛšXØ[Û˜]]™WÙ˜[˜XÚ×Ü[ŽˆßHKˆÈØ[›ÛšXØ[Û˜]]™WÙ˜[˜XÚ×Ü[—Ü™YŽˆ›˜]]™WÜ[—ÝŒHˆKˆÈØ[›ÛšXØ[Ü[—Ü™Y™\™[˜ÙNˆ›˜]]™WÜ[—ÝŒHˆKˆÈ™\œÚ[Û—Ú[™›Îˆ\ÝYØ[›ÛšXØ[™\œÚ[Û’[™›ÈKˆJHÂˆ\ÜÙ\™\]X[
+ˆ›Ú™XÝYÛÛ™\”™\ÜÛœÙR\ÐÛÜÙY
+›Ú™XÝYÂˆ‹‹œ›Ú™XÝYÜ[X[ˆ‹‹™›Ü˜šY[“]]][Û‹ˆK^XÝYÛÜœ™[][ÛŠKˆ˜[ÙKˆ	ÓØš™XÝšÙ^\Ê›Ü˜šY[“]]][ÛŠVÌ_H]\Ý™H™Z™XÝYœ›ÛH›Ú™XÝYÝ]]ˆ
+NÂˆBˆ›Üˆ
+ÛÛœÝ™\œÚ[Û‘šY[ÙˆØ[›ÛšXØ[™\œÚ[Û’[™›ÑšY[Ñ^XÝJHÂˆÛÛœÝ˜[YHH\ÝYØ[›ÛšXØ[™\œÚ[Û’[™›ÖÝ™\œÚ[Û‘šY[NÂˆ›Üˆ
+ÛÛœÝÛØØ][Û‹ÜÝ[T™\ÜÛœÙWHÙˆÂˆÂˆÜ[]™[‹ˆÂˆ‹‹œ›Ú™XÝYÜ[X[ˆÝ™\œÚ[Û‘šY[Nˆ˜[YKˆKˆKˆÂˆ›™\ÝY‹ˆÂˆ‹‹œ›Ú™XÝYÜ[X[ˆØš™XÝ]™WØÛÛ\Û™[ÎˆÂˆÂˆØš™XÝ]™WØÛÙWÙ[[Nˆ›X^[Z^™WÛ˜]]™WÜš[Üš]WÝ˜[YH‹ˆ[YÙ\—Ý˜[YNˆKˆXYÛ›ÜÝXÜÎˆÈÝ™\œÚ[Û‘šY[Nˆ˜[YHKˆKˆKˆKˆKˆJHÂˆ\ÜÙ\™\]X[
+ˆ›Ú™XÝYÛÛ™\”™\ÜÛœÙR\ÐÛÜÙY
+ˆ›Ú™XÝYˆÜÝ[T™\ÜÛœÙKˆ^XÝYÛÜœ™[][Û‹ˆ
+Kˆ˜[ÙKˆ	ÛØØ][ÛŸH	Ý™\œÚ[Û‘šY[H[š™XÝ[Ûˆ]\Ý™H™Z™XÝYœ›ÛH˜]È›Ú™XÝYÝ]]ˆ
+NÂˆBˆBˆÛÛœÝÛÛÜ™[˜]Y™\œÚ[Û‘[™›Ü˜Ù[Y[™[[Ý˜[HÛÛ™J›Ú™XÝY
+NÂˆÛÛÜ™[˜]Y™\œÚ[Û‘[™›Ü˜Ù[Y[™[[Ý˜[™›Ü˜šY[‘šY[ÈBˆÛÛÜ™[˜]Y™\œÚ[Û‘[™›Ü˜Ù[Y[™[[Ý˜[™›Ü˜šY[‘šY[Ë™š[\Šˆ
+šY[
+HOˆšY[OOHœÛÛ™\—ÜÙYY‹ˆ
+NÂˆÛÛÜ™[˜]Y™\œÚ[Û‘[™›Ü˜Ù[Y[™[[Ý˜[›Øš™XÝ]™PÛÛ\Û™[šY[Ñ^XÝKœ\Ú
+ˆœÛÛ™\—ÜÙYY‹ˆ
+NÂˆ\ÜÙ\™\]X[
+ˆ›Ú™XÝYÛÛ™\”™\ÜÛœÙR\ÐÛÜÙY
+ˆÛÛÜ™[˜]Y™\œÚ[Û‘[™›Ü˜Ù[Y[™[[Ý˜[ˆÂˆ‹‹œ›Ú™XÝYÜ[X[ˆØš™XÝ]™WØÛÛ\Û™[ÎˆÂˆÂˆØš™XÝ]™WØÛÙWÙ[[Nˆ›X^[Z^™WÛ˜]]™WÜš[Üš]WÝ˜[YH‹ˆ[YÙ\—Ý˜[YNˆKˆÛÛ™\—ÜÙYYˆ\ÝYØ[›ÛšXØ[™\œÚ[Û’[™›ËœÛÛ™\—ÜÙYYˆKˆKˆKˆ^XÝYÛÜœ™[][Û‹ˆ
+KˆYKˆHÜÝ[Hš^\™H]\Ý›Ý™HÛÛÜ™[˜]YØÚ[XHÚY[š[™ÈÛÝ[YZ]HØ]]Ø^K[ÝÛ™YšY[Ú]Ý]HÛÜÙYÛÛ˜XÝ‹ˆ
+NÂˆ›Üˆ
+ÛÛœÝÛ˜[YKÜÝ[T™\ÜÛœÙWHÙˆÂˆÂˆ›™\ÝY™\œÚ[Ûˆ[™›È‹ˆÂˆ‹‹œ›Ú™XÝYÜ[X[ˆØš™XÝ]™WØÛÛ\Û™[ÎˆÂˆÂˆØš™XÝ]™WØÛÙWÙ[[Nˆ›X^[Z^™WÛ˜]]™WÜš[Üš]WÝ˜[YH‹ˆ[YÙ\—Ý˜[YNˆKˆ™\œÚ[Û—Ú[™›Îˆ\ÝYØ[›ÛšXØ[™\œÚ[Û’[™›ËˆKˆKˆKˆKˆÂˆ›™\ÝYØ[›ÛšXØ[[ˆ™Y™\™[˜ÙH‹ˆÂˆ‹‹œ›Ú™XÝYÜ[X[ˆš[Û][ÛœÎˆÂˆÂˆÛÛœÝ˜Z[ØÛÙWÙ[[Nˆ˜Ø[™Y]WØXØÛÝ[[™×Ù^XÝÜ\][Ûˆ‹ˆ\[Y\˜[ÛÜ\]YWØØ[™Y]WÚYÎˆ×KˆÙ]™\š]WÙ[[Nˆ™\œ›Üˆ‹ˆØ[›ÛšXØ[Ü[—Ü™Y™\™[˜ÙNˆ›˜]]™WÜ[—ÝŒH‹ˆKˆKˆKˆKˆÂˆ™^XÝ][Ûˆ›ØÚÈ™\ÝY˜[˜XÚÈ‹ˆÂˆ‹‹œ›Ú™XÝYÜ[X[ˆ^XÝ][Û—Ø›ØÚÜÎˆÂˆÂˆ‹‹œ›Ú™XÝY^XÝ][Û›ØÚËˆ˜[˜XÚÎˆÂˆ\ÙYˆYKˆ™X\ÛÛ—Ù[[Nˆ˜[Y]Ü—Ü™Z™XÝY‹ˆ˜]]™WÜ[—Ý™\œÚ[ÛŽˆ›˜]]™WÜ[—ÝŒH‹ˆKˆKˆKˆKˆKˆÂˆÜ›Û™ÈÛÜœ™[]Y™\]Y\Ý‹ˆÂˆ‹‹œ›Ú™XÝYÜ[X[ˆ™\]Y\ÝÚYˆÜ™\WÉÈ™H‹œ™\X]
+MŠ_XˆKˆKˆÂˆ››Û‹\Ýš[™È™\]Y\ÝY[YšY\ˆ‹ˆÂˆ‹‹œ›Ú™XÝYÜ[X[ˆ™\]Y\ÝÚYˆÜ›Ú™XÝYÜ[X[œ™\]Y\ÝÚYKˆKˆKˆÂˆ››Û‹\Ýš[™ÈÛ˜\ÚÝY[YšY\ˆ‹ˆÂˆ‹‹œ›Ú™XÝYÜ[X[ˆ[œ]ÜÛ˜\ÚÝÝ™\œÚ[ÛŽˆÂˆ›Ú™XÝYÜ[X[š[œ]ÜÛ˜\ÚÝÝ™\œÚ[Û‹ˆKˆKˆKˆÂˆ››Û‹\Ýš[™È^XÝ][ÛˆØ[™Y]HY[YšY\ˆ‹ˆÂˆ‹‹œ›Ú™XÝYÜ[X[ˆ^XÝ][Û—Ø›ØÚÜÎˆÂˆÂˆ‹‹œ›Ú™XÝY^XÝ][Û›ØÚËˆ\[Y\˜[ÛÜ\]YWØØ[™Y]WÚYˆÂˆ›Ú™XÝY^XÝ][Û›ØÚË™\[Y\˜[ÛÜ\]YWØØ[™Y]WÚYˆKˆKˆKˆKˆKˆÂˆ››Û‹\Ýš[™È^XÝ][ÛˆÚ[™ÝÈY[YšY\ˆ‹ˆÂˆ‹‹œ›Ú™XÝYÜ[X[ˆ^XÝ][Û—Ø›ØÚÜÎˆÂˆÂˆ‹‹œ›Ú™XÝY^XÝ][Û›ØÚËˆ\[Y\˜[ÛÜ\]YWÝÚ[™Ý×ÚYˆÂˆ›Ú™XÝY^XÝ][Û›ØÚË™\[Y\˜[ÛÜ\]YWÝÚ[™Ý×ÚYˆKˆKˆKˆKˆKˆÂˆ››Û‹\Ýš[™È[˜\ÜÚYÛ™YØ[™Y]HY[YšY\ˆ‹ˆÂˆ‹‹œ›Ú™XÝYÜ[X[ˆ[˜\ÜÚYÛ™YØØ[™Y]\ÎˆÂˆÂˆ\[Y\˜[ÛÜ\]YWØØ[™Y]WÚYˆÂˆ›Ú™XÝY^XÝ][Û›ØÚË™\[Y\˜[ÛÜ\]YWØØ[™Y]WÚYˆKˆ™X\ÛÛ—Ù[[Nˆ˜Ø\XÚ]WÙ^ÙYYY‹ˆKˆKˆKˆKˆÂˆ››Û‹\Ýš[™Èš[Û][ÛˆØ[™Y]HY[YšY\ˆ‹ˆÂˆ‹‹œ›Ú™XÝYÜ[X[ˆš[Û][ÛœÎˆÂˆÂˆÛÛœÝ˜Z[ØÛÙWÙ[[Nˆ˜Ø[™Y]WØXØÛÝ[[™×Ù^XÝÜ\][Ûˆ‹ˆ\[Y\˜[ÛÜ\]YWØØ[™Y]WÚYÎˆÂˆÜ›Ú™XÝY^XÝ][Û›ØÚË™\[Y\˜[ÛÜ\]YWØØ[™Y]WÚYKˆKˆÙ]™\š]WÙ[[Nˆ™\œ›Üˆ‹ˆKˆKˆKˆKˆÂˆ›ÜšYÚ[˜[YÛXZ[ˆ™\ÝYØ[™Y]HY[YšY\ˆ‹ˆÂˆ‹‹œ›Ú™XÝYÜ[X[ˆ^XÝ][Û—Ø›ØÚÜÎˆÂˆÂˆ‹‹œ›Ú™XÝY^XÝ][Û›ØÚËˆ\[Y\˜[ÛÜ\]YWØØ[™Y]WÚYˆØ[™ÉÈ˜È‹œ™\X]
+MŠ_XˆKˆKˆKˆKˆJHÂˆ\ÜÙ\™\]X[
+ˆ›Ú™XÝYÛÛ™\”™\ÜÛœÙR\ÐÛÜÙY
+ˆ›Ú™XÝYˆÜÝ[T™\ÜÛœÙKˆ^XÝYÛÜœ™[][Û‹ˆ
+Kˆ˜[ÙKˆ	Û˜[Y_H]\Ý˜Z[HÛÛ\]H›Ú™XÝY™\ÜÛœÙHØÚ[XXˆ
+NÂˆB‚ˆ›Üˆ
+ÛÛœÝÝ]\ÈÙˆÓÓ‘T—ÑRST‘WÔÕUTÑTÊHÂˆÛÛœÝ›Ú™XÝY˜Z[\™HHÂˆ™\]Y\ÝÚYˆ›Ú™XÝYÜ[X[œ™\]Y\ÝÚYˆ[œ]ÜÛ˜\ÚÝÝ™\œÚ[ÛŽˆ›Ú™XÝYÜ[X[š[œ]ÜÛ˜\ÚÝÝ™\œÚ[Û‹ˆÝ]\ËˆØš™XÝ]™WØÛÛ\Û™[Îˆ×Kˆš[Û][ÛœÎˆ×Kˆ[\ÙYÛ\ÎˆKˆNÂˆ\ÜÙ\™\]X[
+ˆ›Ú™XÝYÛÛ™\”™\ÜÛœÙR\ÐÛÜÙY
+ˆ›Ú™XÝYˆ›Ú™XÝY˜Z[\™Kˆ^XÝYÛÜœ™[][Û‹ˆ
+KˆYKˆ
+NÂˆ\ÜÙ\™\]X[
+ˆ›Ú™XÝYÛÛ™\”™\ÜÛœÙR\ÐÛÜÙY
+›Ú™XÝYÂˆ‹‹œ›Ú™XÝY˜Z[\™Kˆ^XÝ][Û—Ø›ØÚÜÎˆ×Kˆ[˜\ÜÚYÛ™YØØ[™Y]\Îˆ×KˆK^XÝYÛÜœ™[][ÛŠKˆ˜[ÙKˆ	ÜÝ]\ßH›Ú™XÝY˜Z[\™HØ[››ÝØ\œžHÜˆ™[X\ÙHHØ[™Y]H[˜ˆ
+NÂˆBˆ›Üˆ
+ÛÛœÝÝ]\ÈÙˆÂˆ‹‹‘ÐUUÐVWÐÓTÔÒQ’PÐUSÓ—ÔÕUTÑTËˆ™˜[˜XÚÈ‹ˆ˜›ØÚÙYÛX[X[Ü[—Ü™\]Z\™Y‹ˆJHÂˆ\ÜÙ\™\]X[
+ˆ›Ú™XÝYÛÛ™\”™\ÜÛœÙR\ÐÛÜÙY
+›Ú™XÝYÂˆ‹‹œ›Ú™XÝYÜ[X[ˆÝ]\ËˆK^XÝYÛÜœ™[][ÛŠKˆ˜[ÙKˆ	ÜÝ]\ßHØ[››Ý™H]]Ü™YžHH\ÛÛ]YÛÛ™\˜ˆ
+NÂˆB‚ˆÛÛœÝ˜[YÛÛœÝXÝ[Û“Ü[ÛœÈHÂˆ˜]Ô™\ÜÛœÙU˜[Y]YˆYKˆ^XÝÛÜœ™[][Û•˜[Y]YˆYKˆ™\]Z\™YšZ™XÝ[ÛœÕ˜[Y]YˆYKˆ\ÝYÛÛ™šYÝ\˜][Û’\ÐÝ\œ™[[™›Ý[™ˆYKˆ˜]]™Q˜[˜XÚÕ˜[Yˆ˜[ÙKˆNÂˆ\ÜÙ\™\]X[
+ˆØ[›ÛšXØ[™\œÚ[Û’[™›Ò\Ñ^XÝ
+ˆØ[›ÛšXØ[ˆ\ÝYØ[›ÛšXØ[™\œÚ[Û’[™›Ëˆ
+KˆYKˆ
+NÂˆ\ÜÙ\™Y\\]X[
+ˆØ]]Ø^PØ[›ÛšXØ[™\œÚ[Û“Ý]ÛÛYJˆØ[›ÛšXØ[ˆ\ÝYØ[›ÛšXØ[™\œÚ[Û’[™›Ëˆ˜[YÛÛœÝXÝ[Û“Ü[ÛœËˆ
+KˆÂˆÝ]\Îˆ˜ÛÛœÝXÝY‹ˆ™\œÚ[Û—Ú[™›Îˆ\ÝYØ[›ÛšXØ[™\œÚ[Û’[™›Ëˆ˜]]™Q˜[˜XÚÐ][\ÎˆˆØ[™Y]T[”™[X\ÙYˆYKˆØ[›ÛšXØ[˜]]™Q˜[˜XÚÔ™[X\ÙYˆ˜[ÙKˆKˆ
+NÂˆÛÛœÝZ\ÜÚ[™Õ™\œÚ[Û‘šY[HÂˆ‹‹\ÝYØ[›ÛšXØ[™\œÚ[Û’[™›ËˆNÂˆ[]HZ\ÜÚ[™Õ™\œÚ[Û‘šY[™\ÚÛÝ™\œÚ[ÛŽÂˆÛÛœÝ^˜U™\œÚ[Û‘šY[HÂˆ‹‹\ÝYØ[›ÛšXØ[™\œÚ[Û’[™›ËˆÛÛ™\—ØZ[ÚÜÝˆ™›Ü˜šY[ˆ‹ˆNÂˆÛÛœÝØÚ[XR[˜[Y™\œÚ[Û’[™›ÈHÂˆ‹‹\ÝYØ[›ÛšXØ[™\œÚ[Û’[™›ËˆÛÛ™\—ÝÛÜšÙ\œÎˆˆNÂˆÛÛœÝZ\ÛX]ÚYXÝX[[›ØØ][ÛÛÛ™šYÝ\˜][ÛˆHÂˆ‹‹\ÝYØ[›ÛšXØ[™\œÚ[Û’[™›ËˆÛÛ™\—ÜÙYYˆ\ÝYØ[›ÛšXØ[™\œÚ[Û’[™›ËœÛÛ™\—ÜÙYY
+ÈKˆNÂˆ›Üˆ
+ÛÛœÝÂˆ˜[YKˆ\ÝYÛÛ™šYÝ\˜][Û‹ˆÜ[Û“Ý™\œšY\Ëˆ^XÝYÛ\ÜÚYšXØ][Û‹ˆHÙˆÂˆÈ›Z\ÜÚ[™ÈšY[‹Z\ÜÚ[™Õ™\œÚ[Û‘šY[ßK˜[Y]Ü—Ü™Z™XÝY—KˆÈ™^˜HšY[‹^˜U™\œÚ[Û‘šY[ßK˜[Y]Ü—Ü™Z™XÝY—KˆÂˆœØÚ[XKZ[˜[YšY[‹ˆØÚ[XR[˜[Y™\œÚ[Û’[™›ËˆßKˆ˜[Y]Ü—Ü™Z™XÝY‹ˆKˆÂˆœÝ[HÜˆ[\ÝYš[™[™È‹ˆ\ÝYØ[›ÛšXØ[™\œÚ[Û’[™›ËˆÈ\ÝYÛÛ™šYÝ\˜][Û’\ÐÝ\œ™[[™›Ý[™ˆ˜[ÙHKˆ˜[Y]Ü—Ü™Z™XÝY‹ˆKˆÂˆ›Z\ÛX]ÚÚ]XÝX[[›ØØ][Ûˆ‹ˆ\ÝYØ[›ÛšXØ[™\œÚ[Û’[™›ËˆÂˆXÝX[[›ØØ][ÛÛÛ™šYÝ\˜][ÛŽ‚ˆZ\ÛX]ÚYXÝX[[›ØØ][ÛÛÛ™šYÝ\˜][Û‹ˆKˆ˜[Y]Ü—Ü™Z™XÝY‹ˆKˆÂˆ˜ÛÛœÝXÝ[Ûˆ™Y›Ü™H˜]È˜[Y][Ûˆ‹ˆ\ÝYØ[›ÛšXØ[™\œÚ[Û’[™›ËˆÈ˜]Ô™\ÜÛœÙU˜[Y]Yˆ˜[ÙHKˆœØÚ[XWÛZ\ÛX]Ú‹ˆKˆÂˆ˜ÛÛœÝXÝ[Ûˆ™Y›Ü™H^XÝÛÜœ™[][Ûˆ‹ˆ\ÝYØ[›ÛšXØ[™\œÚ[Û’[™›ËˆÈ^XÝÛÜœ™[][Û•˜[Y]Yˆ˜[ÙHKˆœÝ[WÜ™\ÜÛœÙH‹ˆKˆÂˆ˜ÛÛœÝXÝ[Ûˆ™Y›Ü™H™\]Z\™YšZ™XÝ[ÛœÈ‹ˆ\ÝYØ[›ÛšXØ[™\œÚ[Û’[™›ËˆÈ™\]Z\™YšZ™XÝ[ÛœÕ˜[Y]Yˆ˜[ÙHKˆœØÚ[XWÛZ\ÛX]Ú‹ˆKˆJHÂˆ\ÜÙ\™Y\\]X[
+ˆØ]]Ø^PØ[›ÛšXØ[™\œÚ[Û“Ý]ÛÛYJØ[›ÛšXØ[\ÝYÛÛ™šYÝ\˜][Û‹Âˆ‹‹˜[YÛÛœÝXÝ[Û“Ü[ÛœËˆ‹‹›Ü[Û“Ý™\œšY\Ëˆ˜]]™Q˜[˜XÚÕ˜[YˆYKˆ˜]]™Q˜[˜XÚÕ\ÝYÛÛ™šYÝ\˜][ÛŽ‚ˆ\ÝYØ[›ÛšXØ[™\œÚ[Û’[™›ËˆJKˆÂˆÝ]\Îˆ™˜[˜XÚÈ‹ˆšYÙÙ\š[™ÐÛ\ÜÚYšXØ][ÛŽˆ^XÝYÛ\ÜÚYšXØ][Û‹ˆ™\œÚ[Û—Ú[™›Îˆ\ÝYØ[›ÛšXØ[™\œÚ[Û’[™›Ëˆ˜]]™Q˜[˜XÚÐ][\ÎˆKˆØ[™Y]T[”™[X\ÙYˆ˜[ÙKˆØ[›ÛšXØ[˜]]™Q˜[˜XÚÔ™[X\ÙYˆYKˆKˆ	Û˜[Y_H]\Ý\ØØ\™HØ[™Y]H[™[\ˆ^XÝHÛ™H[™\[™[H™\\™Y˜[YØ[›ÛšXØ[˜[˜XÚØˆ
+NÂˆ\ÜÙ\™Y\\]X[
+ˆØ]]Ø^PØ[›ÛšXØ[™\œÚ[Û“Ý]ÛÛYJØ[›ÛšXØ[\ÝYÛÛ™šYÝ\˜][Û‹Âˆ‹‹˜[YÛÛœÝXÝ[Û“Ü[ÛœËˆ‹‹›Ü[Û“Ý™\œšY\Ëˆ˜]]™Q˜[˜XÚÕ˜[YˆYKˆ˜]]™Q˜[˜XÚÕ\ÝYÛÛ™šYÝ\˜][ÛŽˆZ\ÜÚ[™Õ™\œÚ[Û‘šY[ˆJKˆÂˆÝ]\Îˆ˜›ØÚÙYÛX[X[Ü[—Ü™\]Z\™Y‹ˆšYÙÙ\š[™ÐÛ\ÜÚYšXØ][ÛŽˆ^XÝYÛ\ÜÚYšXØ][Û‹ˆ™\œÚ[Û—Ú[™›Îˆ[ˆ˜]]™Q˜[˜XÚÐ][\ÎˆKˆØ[™Y]T[”™[X\ÙYˆ˜[ÙKˆØ[›ÛšXØ[˜]]™Q˜[˜XÚÔ™[X\ÙYˆ˜[ÙKˆKˆ	Û˜[Y_HÚ][˜[Y˜[˜XÚÈY]Y]H]\Ý™[X\ÙHÛ›HHX[X[›ØÚØˆ
+NÂˆBˆ\ÜÙ\™Y\\]X[
+ˆØ]]Ø^PØ[›ÛšXØ[™\œÚ[Û“Ý]ÛÛYJØ[›ÛšXØ[Z\ÜÚ[™Õ™\œÚ[Û‘šY[Âˆ‹‹˜[YÛÛœÝXÝ[Û“Ü[ÛœËˆ˜]]™Q˜[˜XÚÕ˜[YˆYKˆ˜]]™Q˜[˜XÚÕ\ÝYÛÛ™šYÝ\˜][ÛŽˆ\ÝYØ[›ÛšXØ[™\œÚ[Û’[™›Ëˆ˜]]™Q˜[˜XÚÐXÝX[[›ØØ][ÛÛÛ™šYÝ\˜][ÛŽ‚ˆZ\ÛX]ÚYXÝX[[›ØØ][ÛÛÛ™šYÝ\˜][Û‹ˆJKˆÂˆÝ]\Îˆ˜›ØÚÙYÛX[X[Ü[—Ü™\]Z\™Y‹ˆšYÙÙ\š[™ÐÛ\ÜÚYšXØ][ÛŽˆ˜[Y]Ü—Ü™Z™XÝY‹ˆ™\œÚ[Û—Ú[™›Îˆ[ˆ˜]]™Q˜[˜XÚÐ][\ÎˆKˆØ[™Y]T[”™[X\ÙYˆ˜[ÙKˆØ[›ÛšXØ[˜]]™Q˜[˜XÚÔ™[X\ÙYˆ˜[ÙKˆKˆ˜HØÚ[XK]˜[Y]Z\ÛX]ÚY˜[˜XÚÈ™\œÚ[ÛˆÛÛ™šYÝ\˜][ÛˆØ[››Ý™H™[X\ÙY‹ˆ
+NÂˆ\ÜÙ\™Y\\]X[
+ˆØ]]Ø^PØ[›ÛšXØ[™\œÚ[Û“Ý]ÛÛYJØ[›ÛšXØ[Z\ÜÚ[™Õ™\œÚ[Û‘šY[Âˆ‹‹˜[YÛÛœÝXÝ[Û“Ü[ÛœËˆ˜]]™Q˜[˜XÚÕ˜[YˆYKˆ˜]]™Q˜[˜XÚÕ\ÝYÛÛ™šYÝ\˜][ÛŽˆ\ÝYØ[›ÛšXØ[™\œÚ[Û’[™›Ëˆ˜]]™Q˜[˜XÚÕ\ÝYÛÛ™šYÝ\˜][Û’\ÐÝ\œ™[[™›Ý[™ˆ˜[ÙKˆJKˆÂˆÝ]\Îˆ˜›ØÚÙYÛX[X[Ü[—Ü™\]Z\™Y‹ˆšYÙÙ\š[™ÐÛ\ÜÚYšXØ][ÛŽˆ˜[Y]Ü—Ü™Z™XÝY‹ˆ™\œÚ[Û—Ú[™›Îˆ[ˆ˜]]™Q˜[˜XÚÐ][\ÎˆKˆØ[™Y]T[”™[X\ÙYˆ˜[ÙKˆØ[›ÛšXØ[˜]]™Q˜[˜XÚÔ™[X\ÙYˆ˜[ÙKˆKˆ˜HÝ[HÜˆ[\ÝY˜[˜XÚÈ™\œÚ[Ûˆš[™[™ÈØ[››Ý™H™[X\ÙY‹ˆ
+NÂˆ\ÜÙ\™\]X[
+ˆ›Ú™XÝY™˜Z[\™T›Ý][™Âˆœ˜]Ô›Ú™XÝY™\œÚ[Û’[™›ÓÜ‘Ø]]Ø^SÝÛ™Y™\œÚ[ÛÛÛ™šYÝ\˜][Û’[š™XÝ[Û”Ý]\ËˆœØÚ[XWÛZ\ÛX]Ú‹ˆ
+NÂˆ\ÜÙ\™\]X[
+ˆ›Ú™XÝY™˜Z[\™T›Ý][™Âˆ›Z\ÜÚ[™Ð[XšYÝ[Ý\ÔÝ[U[\ÝYÜ“Z\ÛX]ÚYØ[›ÛšXØ[™\œÚ[Û“Y]Y]TÝ]\Ëˆ˜[Y]Ü—Ü™Z™XÝY‹ˆ
+NÂ‚ˆ›Üˆ
+ÛÛœÝÝ]\ÈÙˆÈ›Ü[X[‹™™X\ÚX›H—JHÂˆ\ÜÙ\™Y\\]X[
+Ø]]Ø^PÛÛœÝXÝYØ[›ÛšXØ[˜[˜XÚÕ\JÝ]\ÊKÂˆ\ÙYˆ˜[ÙKˆ™X\ÛÛ—Ù[[Nˆ››ÝÝ\ÙY‹ˆ˜]]™WÜ[—Ý™\œÚ[ÛŽˆ[ˆJNÂˆBˆ›Üˆ
+ÛÛœÝšYÙÙ\”Ý]\ÈÙˆÂˆ‹‹”ÓÓ‘T—ÑRST‘WÔÕUTÑTËˆ‹‹‘ÐUUÐVWÐÓTÔÒQ’PÐUSÓ—ÔÕUTÑTËˆJHÂˆ\ÜÙ\™Y\\]X[
+ˆØ]]Ø^PÛÛœÝXÝYØ[›ÛšXØ[˜[˜XÚÕ\JˆšYÙÙ\”Ý]\Ëˆ›˜]]™WÜ[—ÝŒH‹ˆ
+KˆÂˆ\ÙYˆYKˆ™X\ÛÛ—Ù[[NˆšYÙÙ\”Ý]\Ëˆ˜]]™WÜ[—Ý™\œÚ[ÛŽˆ›˜]]™WÜ[—ÝŒH‹ˆKˆ
+NÂˆ\ÜÙ\™\]X[
+ˆØ]]Ø^PÛÛœÝXÝYØ[›ÛšXØ[˜[˜XÚÕ\JšYÙÙ\”Ý]\ÊKˆ[ˆ	ÝšYÙÙ\”Ý]\ßHØ[››Ý™[X\ÙHHZ\ÜÚ[™ÈØ[›ÛšXØ[˜[˜XÚØˆ
+NÂˆBˆÛÛœÝ]T™Z™XÝ[Û•˜[œÚ][ÛˆBˆ›Ú™XÝY˜Ø[›ÛšXØ[Ø]]Ø^PÛÛœÝXÝ[ÛÛÛ˜XÝˆ›]PØ[›ÛšXØ[Ü“˜]]™U˜[Y][Û”™Z™XÝ[Û•˜[œÚ][ÛŽÂˆ\ÜÙ\™\]X[
+ˆ]T™Z™XÝ[Û•˜[œÚ][Û‹\ÝYØ]]Ø^PÛ\ÜÚYšXØ][Û‹ˆ˜[Y]Ü—Ü™Z™XÝY‹ˆ
+NÂˆ\ÜÙ\™\]X[
+ˆ]T™Z™XÝ[Û•˜[œÚ][Û‚ˆ™\ØØ\™Ø[™Y]T[[™\ÙY˜[ÙU\UÚ]Ý]™[X\ÙKˆYKˆ
+NÂˆ\ÜÙ\™\]X[
+ˆ]T™Z™XÝ[Û•˜[œÚ][Û‚ˆ˜[œÚ][Û‘^XÝSÛ˜ÙUÔÛÛ™\“Ü•\ÝYØ]]Ø^Q˜Z[\™Pœ˜[˜ÚˆYKˆ
+NÂˆ\ÜÙ\™\]X[
+ˆ›Ú™XÝY™˜Z[\™T›Ý][™Âˆ›Ü[X[Ü‘™X\ÚX›S]PØ[›ÛšXØ[Ü“˜]]™U˜[Y][Û‘˜Z[\™TÝ]\Ëˆ˜[Y]Ü—Ü™Z™XÝY‹ˆ
+NÂˆ›Üˆ
+ÛÛœÝ›Ú™XÝYÝ]\ÈÙˆÈ›Ü[X[‹™™X\ÚX›H—JHÂˆ\ÜÙ\™Y\\]X[
+ˆØ]]Ø^SÝ]ÛÛYPY\“Ü[X[Ü‘™X\ÚX›S˜]]™U˜[Y][ÛŠˆ›Ú™XÝYÝ]\ËˆÂˆØ[›ÛšXØ[[™˜]]™U˜[Y][Û•˜[YˆYKˆ˜]]™Q˜[˜XÚÕ˜[Yˆ˜[ÙKˆKˆ
+KˆÂˆÝ]\Îˆ›Ú™XÝYÝ]\Ëˆ\ØØ\™Y›Ú™XÝYØ[™Y]T[Žˆ˜[ÙKˆ˜]]™Q˜[˜XÚÐ][\Îˆˆ˜[˜XÚÎˆÂˆ\ÙYˆ˜[ÙKˆ™X\ÛÛ—Ù[[Nˆ››ÝÝ\ÙY‹ˆ˜]]™WÜ[—Ý™\œÚ[ÛŽˆ[ˆKˆ›Ú™XÝYØ[™Y]T[”™[X\ÙYˆYKˆØ[›ÛšXØ[˜]]™Q˜[˜XÚÔ™[X\ÙYˆ˜[ÙKˆKˆ
+NÂˆ\ÜÙ\™Y\\]X[
+ˆØ]]Ø^SÝ]ÛÛYPY\“Ü[X[Ü‘™X\ÚX›S˜]]™U˜[Y][ÛŠˆ›Ú™XÝYÝ]\ËˆÂˆØ[›ÛšXØ[[™˜]]™U˜[Y][Û•˜[Yˆ˜[ÙKˆ˜]]™Q˜[˜XÚÕ˜[YˆYKˆKˆ
+KˆÂˆÝ]\Îˆ™˜[˜XÚÈ‹ˆšYÙÙ\š[™ÐÛ\ÜÚYšXØ][ÛŽˆ˜[Y]Ü—Ü™Z™XÝY‹ˆ\ØØ\™Y›Ú™XÝYØ[™Y]T[ŽˆYKˆ˜]]™Q˜[˜XÚÐ][\ÎˆKˆ˜[˜XÚÎˆÂˆ\ÙYˆYKˆ™X\ÛÛ—Ù[[Nˆ˜[Y]Ü—Ü™Z™XÝY‹ˆ˜]]™WÜ[—Ý™\œÚ[ÛŽˆ›˜]]™WÜ[—ÝŒH‹ˆKˆ›Ú™XÝYØ[™Y]T[”™[X\ÙYˆ˜[ÙKˆØ[›ÛšXØ[˜]]™Q˜[˜XÚÔ™[X\ÙYˆYKˆKˆ	Ü›Ú™XÝYÝ]\ßH™Z™XÝYžH˜]]™H˜[Y][Ûˆ]\Ý˜[œÚ][ÛˆÛ˜ÙHÈH[™\[™[Ø]]Ø^H˜[˜XÚØˆ
+NÂˆ\ÜÙ\™Y\\]X[
+ˆØ]]Ø^SÝ]ÛÛYPY\“Ü[X[Ü‘™X\ÚX›S˜]]™U˜[Y][ÛŠˆ›Ú™XÝYÝ]\ËˆÂˆØ[›ÛšXØ[[™˜]]™U˜[Y][Û•˜[Yˆ˜[ÙKˆ˜]]™Q˜[˜XÚÕ˜[Yˆ˜[ÙKˆKˆ
+KˆÂˆÝ]\Îˆ˜›ØÚÙYÛX[X[Ü[—Ü™\]Z\™Y‹ˆšYÙÙ\š[™ÐÛ\ÜÚYšXØ][ÛŽˆ˜[Y]Ü—Ü™Z™XÝY‹ˆ\ØØ\™Y›Ú™XÝYØ[™Y]T[ŽˆYKˆ˜]]™Q˜[˜XÚÐ][\ÎˆKˆ˜[˜XÚÎˆÂˆ\ÙYˆ˜[ÙKˆ™X\ÛÛ—Ù[[Nˆ››ÝÝ\ÙY‹ˆ˜]]™WÜ[—Ý™\œÚ[ÛŽˆ[ˆKˆ›Ú™XÝYØ[™Y]T[”™[X\ÙYˆ˜[ÙKˆØ[›ÛšXØ[˜]]™Q˜[˜XÚÔ™[X\ÙYˆ˜[ÙKˆKˆ	Ü›Ú™XÝYÝ]\ßH™Z™XÝYžH˜]]™H˜[Y][ÛˆØ[››Ý™[X\ÙH[ˆ[˜[Y˜[˜XÚÈÜˆ™XÝ\œÙXˆ
+NÂˆB‚ˆ\ÜÙ\›X]Ú
+ˆ[šYšYYˆÜ›Ú™XÝY™\ÜÛœÙV×××J›™]™\ˆÛÛZ[œÖ×××J˜˜[˜XÚØ×××J›Û›HH\ÝYØ]]Ø^V×××J˜ÛÛœÝXÝÈØ[›ÛšXØ[™\œÚ[Û—Ú[™›Ø×××J˜ÛÛœÝXÝÈØ[›ÛšXØ[˜[˜XÚÈÝ]KÚKˆ
+NÂˆ\ÜÙ\›X]Ú
+ˆ›ÙXÝÜXËˆÛ™]™\ˆ™]\›œÈH˜[˜XÚÈ™X\ÛÛ–×××J\ÝYØ]]Ø^V×××J˜ÛÛœÝXÝÈØ[›ÛšXØ[˜[˜XÚÈÝ]KËˆ
+NÂˆ\ÜÙ\›X]Ú
+ˆØÚY[TÞ\Ý[KˆÜÛÛ™\‹[ÜšYÚ[˜]Y›Ú™XÝY™\ÜÛœÙV×××J˜Ø[››ÝÛÛZ[–×××J™˜[˜XÚÈÝ]V×××J™Ø]]Ø^V×××J˜ÛÛœÝXÝÈØ[›ÛšXØ[Ëˆ
+NÂˆ›Üˆ
+ÛÛœÝ]]Üš]]]™T›ÜÙHÙˆØYÙ[ËØÚY[TÞ\Ý[WJHÂˆ\ÜÙ\›X]Ú
+ˆ]]Üš]]]™T›ÜÙKˆØ™Y›Ü™HHØ[™Y]H[–×××J™^\ÝÖ×××J˜Ø\œšY\È›ÈØ[™Y]H[‹Ëˆ
+NÂˆ\ÜÙ\›X]Ú
+ˆ]]Üš]]]™T›ÜÙKˆØÛ\ÜÚY–×××^ÌL]Ú[V×××^Ì]˜[Y][™Ö×××^ÌLJÎ“ÔSPSÜ[X[
+V×××^ÌJÎ‘‘PTÒP“_™X\ÚX›JV×××^ÌMŒY\ØØ\™Ö×××^ÌN]Ú]Ý]™[X\ÙKËˆ
+NÂˆ\ÜÙ\›X]Ú
+ˆ]]Üš]]]™T›ÜÙKˆÛ]WÊØØ[›ÛšXØ[Û˜]]™V×××^Ì\™Z™XÝ[Û–×××^Ì]˜[Y]Ü—Ü™Z™XÝYËˆ
+NÂˆ\ÜÙ\›X]Ú
+ˆ]]Üš]]]™T›ÜÙKˆÜØ[YH˜Z[\™Hœ˜[˜Ú×××J™^XÝHÛ˜ÙKËˆ
+NÂˆBˆ\ÜÙ\™Ù\Ó›ÝX]Ú
+ˆ›ÙXÝÜXËˆÓÔ‹UÛÛÈÔTÐU×××^Ì\™]\›œÖ×××^ÌLŒY˜[˜XÚÈ™X\ÛÛ—‹Ëˆ
+NÂˆ›Üˆ
+ÛÛœÝÛ˜[YK]]Üš]]]™T›ÜÙWHÙˆÂˆÈQÑS•È‹YÙ[×KˆÈ[šYšYYÛÛ˜XÝ‹[šYšYYKˆÈœ›ÙXÝÜXÈ‹›ÙXÝÜX×KˆÈœØÚY[HÞ\Ý[H‹ØÚY[TÞ\Ý[WKˆJHÂˆ\ÜÙ\›X]Ú
+ˆ]]Üš]]]™T›ÜÙKˆÜ›Ú™XÝY™\ÜÛœÙV×××^ÌLX™\œÚ[Û—Ú[™›ØËˆ	Û˜[Y_H]\Ý›Ü˜šY˜]È›Ú™XÝY™\œÚ[Û—Ú[™›Øˆ
+NÂˆ\ÜÙ\›X]Ú
+ˆ]]Üš]]]™T›ÜÙKˆØÛÛ\]H˜]Ë\™\ÜÛœÙV×××^ÌY^XÝXÛÜœ™[][Û–×××^Ì\™\]Z\™YXšZ™XÝ[Û–×××^ÌÌXÛÛœÝXÝÏÈØ[›ÛšXØ[™\œÚ[Û—Ú[™›ØËˆ	Û˜[Y_H]\Ý[^HØ]]Ø^HØ[›ÛšXØ[™\œÚ[ÛˆÛÛœÝXÝ[Ûˆ[[[™\™\]Z\Ú]H˜[Y][Ûˆš[š\Ú\Øˆ
+NÂˆ\ÜÙ\›X]Ú
+ˆ]]Üš]]]™T›ÜÙKˆØÛÛ˜XÝÝ™\œÚ[Û˜×××^ÌŒX[YÙ\—ÜØØ[[™×Ý™\œÚ[Û˜Ëˆ	Û˜[Y_H]\Ý[[Y\˜]HHØ[›ÛšXØ[[‹YšY[™\œÚ[Û—Ú[™›Øˆ
+NÂˆ\ÜÙ\›X]Ú
+ˆ]]Üš]]]™T›ÜÙKˆÓZ\ÜÚ[™ËÊØ[XšYÝ[Ý\ËÊÜÝ[KÊÝ[\ÝYÊÛÜ—ÊÛZ\ÛX]ÚY×××^ÌŒŒX˜[Y]Ü—Ü™Z™XÝYÚKˆ	Û˜[Y_H]\ÝÛ\ÜÚYžHØ[›ÛšXØ[Y]Y]H˜Z[\™\È\È˜[Y]Ü—Ü™Z™XÝYˆ
+NÂˆ\ÜÙ\›X]Ú
+ˆ]]Üš]]]™T›ÜÙKˆÚ[˜[Y˜[˜XÚÖ×××^ÌŒŒX›ØÚÙYÛX[X[Ü[—Ü™\]Z\™YÚKˆ	Û˜[Y_H]\ÝÙY\[ˆ[˜[Y˜[˜XÚÈÛˆHX[X[X›ØÚÈ]ˆ
+NÂˆB‚ˆÛÛœÝÜÝ[S]]][ÛœÈHÂˆÂˆœ›Ú™XÝY™\œÚ[Ûˆ[™›È™\ÝÜ™Y‹ˆ
+˜[YJHOˆÂˆ˜[YK›Ü[Z^™\”›Ú™XÝY™\Ý[ÛÛ˜XÝ˜[ÝÙYšY[Ñ^XÝKœ\Ú
+ˆ™\œÚ[Û—Ú[™›È‹ˆ
+NÂˆ˜[YK›Ü[Z^™\”›Ú™XÝY™\Ý[ÛÛ˜XÝ™›Ü˜šY[‘šY[ÈBˆ˜[YK›Ü[Z^™\”›Ú™XÝY™\Ý[ÛÛ˜XÝ™›Ü˜šY[‘šY[Ë™š[\Šˆ
+šY[
+HOˆšY[OOH™\œÚ[Û—Ú[™›È‹ˆ
+NÂˆ˜[YK›Ü[Z^™\”›Ú™XÝY™\Ý[ÛÛ˜XÝ™\œÚ[Û’[™›ÑšY[Ñ^XÝHHÂˆ‹‹˜[YKœ™\Ý[ÛÛ˜XÝ™\œÚ[Û’[™›ÑšY[Ñ^XÝKˆNÂˆ˜[YK›Ü[Z^™\”›Ú™XÝY™\Ý[ÛÛ˜XÝ™\œÚ[Û’[™›ÑšY[ØÚ[X\ÈBˆÛÛ™J˜[YKœ™\Ý[ÛÛ˜XÝ™\œÚ[Û’[™›ÑšY[ØÚ[X\ÊNÂˆ˜[YK›Ü[Z^™\”›Ú™XÝY™\Ý[ÛÛ˜XÝ™\œÚ[Û‘šY[Ô™\]Z\™YHÂˆ‹‹˜[YKœ™\Ý[ÛÛ˜XÝ™\œÚ[Û‘šY[Ô™\]Z\™YˆNÂˆKˆ›Ú™XÝY™\Ý[Ø]]Ø^PÛÛ˜XÝ\ÐÛÜÙYˆKˆÂˆ™Ø]]Ø^K[ÝÛ™Y™\œÚ[ÛˆšY[™[[Ý™Yœ›ÛH™XÝ\œÚ]™H›ÚXš][Ûˆ‹ˆ
+˜[YJHOˆÂˆ˜[YK›Ü[Z^™\”›Ú™XÝY™\Ý[ÛÛ˜XÝ™›Ü˜šY[‘šY[ÈBˆ˜[YK›Ü[Z^™\”›Ú™XÝY™\Ý[ÛÛ˜XÝ™›Ü˜šY[‘šY[Ë™š[\Šˆ
+šY[
+HOˆšY[OOHœÛÛ™\—ÜÙYY‹ˆ
+NÂˆKˆ›Ú™XÝY™\Ý[Ø]]Ø^PÛÛ˜XÝ\ÐÛÜÙYˆKˆÂˆ™Ø]]Ø^H™\œÚ[ÛˆÛÛœÝXÝ[Ûˆ[ÝÙY™Y›Ü™HšZ™XÝ[Ûˆ˜[Y][Ûˆ‹ˆ
+˜[YJHOˆÂˆ˜[YK›Ü[Z^™\”›Ú™XÝY™\Ý[ÛÛ˜XÝˆ˜Ø[›ÛšXØ[Ø]]Ø^PÛÛœÝXÝ[ÛÛÛ˜XÝˆ˜Ø[›ÛšXØ[™\œÚ[Û’[™›ÐÛÛœÝXÝ[ÛÛÛ˜XÝˆ˜ÛÛœÝXÝ[Û“X^SØØÝ\™Y›Ü™PÛÛ\]T˜]Ô™\ÜÛœÙQ^XÝÛÜœ™[][Û[™™\]Z\™YšZ™XÝ[Û•˜[Y][ÛˆBˆYNÂˆKˆ›Ú™XÝY™\Ý[Ø]]Ø^PÛÛ˜XÝ\ÐÛÜÙYˆKˆÂˆ˜Ø[›ÛšXØ[[‹YšY[™\]Z\™[Y[ÙXZÙ[™Y‹ˆ
+˜[YJHOˆÂˆ˜[YKœ™\Ý[ÛÛ˜XÝ™\œÚ[Û‘šY[Ô™\]Z\™YœÜ
+
+NÂˆKˆÌÔ™\Ý[˜[Y][ÛÛÛ˜XÝÐ\™PÛÜÙYˆKˆÂˆ›˜]]™H˜[˜XÚÈØ[›ÛšXØ[™\œÚ[Ûˆ˜[Y][Ûˆ™[[Ý™Y‹ˆ
+˜[YJHOˆÂˆ˜[YK›˜]]™U˜[Y]Ü‚ˆ˜[Y]Y˜]]™Q˜[˜XÚÓ]\ÝØ]\ÙžPØ[›ÛšXØ[[‘šY[™\œÚ[Û’[™›Ð[™\™XY[™Q™X\ÚXš[]P[™[\™ÛÛœÝ˜Z[ÈBˆ˜[ÙNÂˆKˆÌÔ™\Ý[˜[Y][ÛÛÛ˜XÝÐ\™PÛÜÙYˆKˆÂˆœ›Ú™XÝY˜[˜XÚÈšY[™\ÝÜ™Y‹ˆ
+˜[YJHOˆÂˆ˜[YK›Ü[Z^™\”›Ú™XÝY™\Ý[ÛÛ˜XÝ˜[ÝÙYšY[Ñ^XÝKœ\Ú
+ˆ™˜[˜XÚÈ‹ˆ
+NÂˆ˜[YK›Ü[Z^™\”›Ú™XÝY™\Ý[ÛÛ˜XÝ™›Ü˜šY[‘šY[ÈBˆ˜[YK›Ü[Z^™\”›Ú™XÝY™\Ý[ÛÛ˜XÝ™›Ü˜šY[‘šY[Ë™š[\Šˆ
+šY[
+HOˆšY[OOH™˜[˜XÚÈ‹ˆ
+NÂˆKˆ›Ú™XÝY™\Ý[Ø]]Ø^PÛÛ˜XÝ\ÐÛÜÙYˆKˆÂˆ™Ø]]Ø^HÛ\ÜÚYšXØ][ÛˆXYHÛÛ™\‹[ÝÛ™Y‹ˆ
+˜[YJHOˆÂˆ˜[YK›Ü[Z^™\”›Ú™XÝY™\Ý[ÛÛ˜XÝœÝ]\Ù\Ëœ\Ú
+[Y[Ý]ŠNÂˆ˜[YK›Ü[Z^™\”›Ú™XÝY™\Ý[ÛÛ˜XÝœÝ]\ÓÜšYÚ[›Ý[™\žBˆœÛÛ™\“ÝÛ™YÝ]\Ù\Ñ^XÝKœ\Ú
+[Y[Ý]ŠNÂˆKˆ›Ú™XÝY™\Ý[Ø]]Ø^PÛÛ˜XÝ\ÐÛÜÙYˆKˆÂˆœ›Ú™XÝY˜Z[\™HÙ[‹X]]Üš^™\È˜[˜XÚÈ‹ˆ
+˜[YJHOˆÂˆ˜[YK›Ü[Z^™\”›Ú™XÝY™\Ý[ÛÛ˜XÝˆ˜Ø[›ÛšXØ[Ø]]Ø^PÛÛœÝXÝ[ÛÛÛ˜XÝˆœ›Ú™XÝY˜Z[\™Q[™[ÜSX^T™Y™\™[˜ÙP]]Üš^™SÜ”™[X\ÙPØ[›ÛšXØ[˜[˜XÚÈBˆYNÂˆKˆ›Ú™XÝY™\Ý[Ø]]Ø^PÛÛ˜XÝ\ÐÛÜÙYˆKˆÂˆ˜Ø[›ÛšXØ[Ø]]Ø^HÝÛ™\œÚ\ÙXZÙ[™Y‹ˆ
+˜[YJHOˆÂˆ˜[YKœ™\Ý[ÛÛ˜XÝ™˜[˜XÚÕ˜[YT[\Âˆ˜Ø[›ÛšXØ[˜[˜XÚÕ\P[™Ý]SX^P™PÛÛœÝXÝY[™]XÚYÛ›PžU\ÝYØ]]Ø^HBˆ˜[ÙNÂˆKˆÌÔ™\Ý[˜[Y][ÛÛÛ˜XÝÐ\™PÛÜÙYˆKˆÂˆ›˜]]™H˜[Y]ÜˆXØÙ\ÈÛÛ™\ˆ˜[˜XÚÈÝ]H‹ˆ
+˜[YJHOˆÂˆ˜[YK›˜]]™U˜[Y]Ü‚ˆ˜Ø[›ÛšXØ[˜[˜XÚÕ\P[™Ý]S]\Ý™QØ]]Ø^PÛÛœÝXÝYH˜[ÙNÂˆKˆÌÔ™\Ý[˜[Y][ÛÛÛ˜XÝÐ\™PÛÜÙYˆKˆÂˆ›]H˜]]™H™Z™XÝ[Ûˆ™[XZ[œÈ[ˆHÝXØÙ\ÜÈœ˜[˜Ú‹ˆ
+˜[YJHOˆÂˆ˜[YK›Ü[Z^™\”›Ú™XÝY™\Ý[ÛÛ˜XÝˆ˜Ø[›ÛšXØ[Ø]]Ø^PÛÛœÝXÝ[ÛÛÛ˜XÝˆ›]PØ[›ÛšXØ[Ü“˜]]™U˜[Y][Û”™Z™XÝ[Û•˜[œÚ][Û‚ˆ˜[œÚ][Û‘^XÝSÛ˜ÙUÔÛÛ™\“Ü•\ÝYØ]]Ø^Q˜Z[\™Pœ˜[˜ÚBˆ˜[ÙNÂˆKˆ›Ú™XÝY™\Ý[Ø]]Ø^PÛÛ˜XÝ\ÐÛÜÙYˆKˆÂˆ›]H˜]]™H™Z™XÝ[Ûˆ™]\Ù\ÈH™Z™XÝY›Ú™XÝY[ˆ‹ˆ
+˜[YJHOˆÂˆ˜[YK›Ü[Z^™\”›Ú™XÝY™\Ý[ÛÛ˜XÝˆ˜Ø[›ÛšXØ[Ø]]Ø^PÛÛœÝXÝ[ÛÛÛ˜XÝˆ›]PØ[›ÛšXØ[Ü“˜]]™U˜[Y][Û”™Z™XÝ[Û•˜[œÚ][Û‚ˆœ›Ú™XÝYÜ”™Z™XÝYØ[™Y]T[“X^P™T™]\ÙY\ÐØ[›ÛšXØ[˜[˜XÚÈBˆYNÂˆKˆ›Ú™XÝY™\Ý[Ø]]Ø^PÛÛ˜XÝ\ÐÛÜÙYˆKˆNÂˆ›Üˆ
+ÛÛœÝÛ˜[YK]]]K˜[Y]Ü—HÙˆÜÝ[S]]][ÛœÊHÂˆÛÛœÝÜÝ[HHÛÛ™JØÚY[\ŠNÂˆ]]]JÜÝ[JNÂˆ\ÜÙ\™\]X[
+˜[Y]ÜŠÜÝ[JK˜[ÙK	Û˜[Y_H]\Ý˜Z[ÛÜÙY
+NÂˆBŸJNÂ‚\Ý
+œÜÝ\™XYH\™XY[™\È\™HÛÜÙYÔÕ]ËUUÈ™X\ÚXš[]H™YXØ]\È›Üˆ›ÝQÛXZ[œÈ[™]™\žH™[X\ÙH]‹\Þ[˜È
+
+HOˆÂˆÛÛœÝØÚY[\ˆH]ØZ]œÛÛŠˆ˜ÛÛ™šYËÙX˜[™Ú[Y[Y^K\ØÚY[\‹XÛÛ˜XÝšœÛÛˆ‹ˆ
+NÂˆ\ÜÙ\™\]X[
+ÌÔ™\Ý[˜[Y][ÛÛÛ˜XÝÐ\™PÛÜÙY
+ØÚY[\ŠKYJNÂˆ\ÜÙ\™\]X[
+›Ú™XÝY™\Ý[Ø]]Ø^PÛÛ˜XÝ\ÐÛÜÙY
+ØÚY[\ŠKYJNÂˆÛÛœÝXY[™P]]Üš]T›ÜÙHH]ØZ]›ÛZ\ÙK˜[
+Âˆ^
+QÑS•Ë›YŠKˆ^
+™ØÜËÙX˜[™Ú[][šYšYY\›ÙÜ˜[KXÛÛ˜XÝ›YŠKˆ^
+™ØÜËÚ[™\™ÙK\ÙXÛÛ™\›Ý[™Yš[˜[\›ÙXÝ\ÜXË›YŠKˆ^
+™ØÜËÚ[™\™ÙK\ÝYK\ØÚY[K\Þ\Ý[K›YŠKˆJNÂˆ›Üˆ
+ÛÛœÝ]]Üš]]]™T›ÜÙHÙˆXY[™P]]Üš]T›ÜÙJHÂˆ\ÜÙ\›X]Ú
+ˆ]]Üš]]]™T›ÜÙKˆØÝYWÙ]WÚÜÝ×××^ÌŒŒJÎ›™]™\ˆ›Ú™XÝÏß›Ý›Ú™XÝYÚ]Ý]›Ú™XÝ[™ß™]™\ˆ[\œÊKÚKˆ
+NÂˆ\ÜÙ\›X]Ú
+ˆ]]Üš]]]™T›ÜÙKˆÒPSWÊØ\ÚXWÔÙ[Ý[×××^ÌNXÊÎ™[™ÛZ[]WÚÜÝJOÌMÖ×××^ÌN[™^Y^KÚKˆ
+NÂˆ\ÜÙ\›X]Ú
+ˆ]]Üš]]]™T›ÜÙKˆØ›ØÚ×Ù[™Ý]ËÚKˆ
+NÂˆ\ÜÙ\›X]Ú
+ˆ]]Üš]]]™T›ÜÙKˆÊÎ_\ÜÈ[ˆÜˆ\]X[
+V×××^ÌÌZ\™ÙXY[™KÚKˆ
+NÂˆ\ÜÙ\›X]Ú
+ˆ]]Üš]]]™T›ÜÙKˆØ[×××^Ì[›È\™Ý]Ù™‹ÚKˆ
+NÂˆ\ÜÙ\›X]Ú
+ˆ]]Üš]]]™T›ÜÙKˆØZ[š[Z^™WÙXY[™WÛ][™\ÜØ×××^ÌNJÎ›Û›_™XYÈÛ›JV×××^ÌNJÎ˜Ø[››ÝÝ™\œšY_\™
+KÚKˆ
+NÂˆ\ÜÙ\›X]Ú
+ˆ]]Üš]]]™T›ÜÙKˆÑ[\ÙY×××^ÌLŒZ[‹\›ÙÜ™\ÜÖ×××^ÌX™Y›Ü™H›Ú™XÝ[Û–×××^ÌÌJÎ›[Ý™Y[Ýš[™ÊV×××^ÌÌJÎœ™]Üš][Ÿ™]Üš][™ÊKÚKˆ
+NÂˆBˆ\ÜÙ\™\]X[
+ˆ›ØÚÑ[™]Ñœ›ÛTÝYQ]RÜÝ
+ŒŒ‹LËLˆ‹Œ
+KˆŒŒ‹LËLUMŽŒŒŒˆ‹ˆ
+NÂˆ\ÜÙ\™\]X[
+ˆ›ØÚÑ[™]Ñœ›ÛTÝYQ]RÜÝ
+ŒŒ‹LËLˆ‹M
+KˆŒŒ‹LËL•MNŒŒŒˆ‹ˆ
+NÂ‚ˆ›Üˆ
+ÛÛœÝØØ[™Y]RYÚ[™ÝÒYHÙˆÂˆØØ[™ÉÈš‹œ™\X]
+MŠ_XÚ[—ÉÈÈ‹œ™\X]
+MŠ_XKˆØØØ[™ÉÈš‹œ™\X]
+MŠ_XÝÚ[—ÉÈÈ‹œ™\X]
+MŠ_XKˆJHÂˆÛÛœÝ›ØÚÈHÂˆ\[Y\˜[ÛÜ\]YWØØ[™Y]WÚYˆØ[™Y]RYˆ\[Y\˜[ÛÜ\]YWÝÚ[™Ý×ÚYˆÚ[™ÝÒYˆÝ\ÛZ[]WÚÜÝˆÌˆ[™ÛZ[]WÚÜÝˆŒˆ\˜][Û—ÛZ[]\ÎˆÌˆNÂˆ›Üˆ
+ÛÛœÝÝ]\ÈÙˆÈ›Ü[X[‹™™X\ÚX›H—JHÂˆ\ÜÙ\™\]X[
+ˆ\™XY[™PÛ\ÜÚYšXØ][ÛŠˆÂˆÂˆ\[Y\˜[ÛÜ\]YWØØ[™Y]WÚYˆØ[™Y]RYˆ\™ÙXY[™WÛÜ—Û[ˆ[ˆÛÙÙXY[™WÛÜ—Û[ˆŒŒ‹LËLUMNNNNKŽNNVˆ‹ˆKˆKˆ›ØÚËˆŒŒ‹LËLˆ‹ˆ
+Kˆ™™X\ÚX›H‹ˆ	ÜÝ]\ßH	ØØ[™Y]RYH[\™XY[™H]\Ý]™H›ÈÝ]Ù™ˆ]™[ˆÚ[ˆHÛÙXY[™H\ÈX\›Y\˜ˆ
+NÂˆ\ÜÙ\™\]X[
+ˆ\™XY[™PÛ\ÜÚYšXØ][ÛŠˆÂˆÂˆ\[Y\˜[ÛÜ\]YWØØ[™Y]WÚYˆØ[™Y]RYˆ\™ÙXY[™WÛÜ—Û[ˆŒŒ‹LËLUMŽŒŒˆ‹ˆÛÙÙXY[™WÛÜ—Û[ˆ[ˆKˆKˆ›ØÚËˆŒŒ‹LËLˆ‹ˆ
+Kˆ™™X\ÚX›H‹ˆ	ÜÝ]\ßH	ØØ[™Y]RYH^XÝUÈ\]X[]H]\Ý™H™X\ÚX›Xˆ
+NÂˆ\ÜÙ\™\]X[
+ˆ\™XY[™PÛ\ÜÚYšXØ][ÛŠˆÂˆÂˆ\[Y\˜[ÛÜ\]YWØØ[™Y]WÚYˆØ[™Y]RYˆ\™ÙXY[™WÛÜ—Û[ˆŒŒ‹LËLUMNNNNKŽNNVˆ‹ˆÛÙÙXY[™WÛÜ—Û[ˆŒŒ‹LËLÕŒŒˆ‹ˆKˆKˆ›ØÚËˆŒŒ‹LËLˆ‹ˆ
+Kˆ˜[Y]Ü—Ü™Z™XÝY‹ˆ	ÜÝ]\ßH	ØØ[™Y]RYHÛ™K[Z[\ÙXÛÛ™\™œ™XXÚØ[››Ý™HÝ™\œšY[ˆžHH]\ˆÛÙXY[™Xˆ
+NÂˆBˆÛÛœÝZYšYÚ›ØÚÈHÂˆ‹‹˜›ØÚËˆÝ\ÛZ[]WÚÜÝˆMLˆ[™ÛZ[]WÚÜÝˆMˆNÂˆ\ÜÙ\™\]X[
+ˆ\™XY[™PÛ\ÜÚYšXØ][ÛŠˆÂˆÂˆ\[Y\˜[ÛÜ\]YWØØ[™Y]WÚYˆØ[™Y]RYˆ\™ÙXY[™WÛÜ—Û[ˆŒŒ‹LËL•MNŒŒˆ‹ˆÛÙÙXY[™WÛÜ—Û[ˆ[ˆKˆKˆZYšYÚ›ØÚËˆŒŒ‹LËLˆ‹ˆ
+Kˆ™™X\ÚX›H‹ˆ	ØØ[™Y]RYH[™ÛZ[]WÚÜÝLM]\Ý\]X[™^Y^HZYšYÚ\ÚXKÔÙ[Ý[ˆ
+NÂˆ\ÜÙ\™\]X[
+ˆ\™XY[™PÛ\ÜÚYšXØ][ÛŠˆÂˆÂˆ\[Y\˜[ÛÜ\]YWØØ[™Y]WÚYˆØ[™Y]RYˆ\™ÙXY[™WÛÜ—Û[ˆŒŒ‹LËL•MNNNKŽNNVˆ‹ˆÛÙÙXY[™WÛÜ—Û[ˆ[ˆKˆKˆZYšYÚ›ØÚËˆŒŒ‹LËLˆ‹ˆ
+Kˆ˜[Y]Ü—Ü™Z™XÝY‹ˆ
+NÂˆ\ÜÙ\™\]X[
+ˆ\™XY[™PÛ\ÜÚYšXØ][ÛŠˆÂˆÂˆ\[Y\˜[ÛÜ\]YWØØ[™Y]WÚYˆØ[™Y]RYˆ\™ÙXY[™WÛÜ—Û[ˆ[ˆKˆÂˆ\[Y\˜[ÛÜ\]YWØØ[™Y]WÚYˆØ[™Y]RYˆ\™ÙXY[™WÛÜ—Û[ˆ[ˆKˆKˆ›ØÚËˆŒŒ‹LËLˆ‹ˆ
+KˆœØÚ[XWÛZ\ÛX]Ú‹ˆ	ØØ[™Y]RYH]\Ý™\ÛÛ™H^XÝHÛ˜ÙXˆ
+NÂˆ\ÜÙ\™\]X[
+ˆ\™XY[™PÛ\ÜÚYšXØ][ÛŠˆÂˆÂˆ\[Y\˜[ÛÜ\]YWØØ[™Y]WÚYˆØ[™Y]RYœÝ\ÕÚ]
+›ØØ[™ÈŠBˆÈØ[™ÉÈš‹œ™\X]
+MŠ_XˆˆØØ[™ÉÈš‹œ™\X]
+MŠ_Xˆ\™ÙXY[™WÛÜ—Û[ˆ[ˆKˆKˆ›ØÚËˆŒŒ‹LËLˆ‹ˆ
+KˆœØÚ[XWÛZ\ÛX]Ú‹ˆ	ØØ[™Y]RYHØ[››ÝÜ›ÜÜÈY[YšY\ˆÛXZ[œØˆ
+NÂˆB‚ˆÛÛœÝØ[›ÛšXØ[˜[˜XÚÐ›ØÚÈHÂˆ\[Y\˜[ÛÜ\]YWØØ[™Y]WÚYˆØ[™ÉÈ™ˆ‹œ™\X]
+MŠ_Xˆ\[Y\˜[ÛÜ\]YWÝÚ[™Ý×ÚYˆÚ[—ÉÈ™È‹œ™\X]
+MŠ_XˆÝ\ÛZ[]WÚÜÝˆÌˆ[™ÛZ[]WÚÜÝˆŒˆ\˜][Û—ÛZ[]\ÎˆÌˆNÂˆÛÛœÝ˜[Y˜]]™Q˜[˜XÚÑXY[™PÛ\ÜÚYšXØ][ÛˆBˆ\™XY[™PÛ\ÜÚYšXØ][ÛŠˆÂˆÂˆ\[Y\˜[ÛÜ\]YWØØ[™Y]WÚY‚ˆØ[›ÛšXØ[˜[˜XÚÐ›ØÚË™\[Y\˜[ÛÜ\]YWØØ[™Y]WÚYˆ\™ÙXY[™WÛÜ—Û[ˆŒŒ‹LËLUMŽŒŒˆ‹ˆKˆKˆØ[›ÛšXØ[˜[˜XÚÐ›ØÚËˆŒŒ‹LËLˆ‹ˆ
+NÂˆÛÛœÝ[˜[Y˜]]™Q˜[˜XÚÑXY[™PÛ\ÜÚYšXØ][ÛˆBˆ\™XY[™PÛ\ÜÚYšXØ][ÛŠˆÂˆÂˆ\[Y\˜[ÛÜ\]YWØØ[™Y]WÚY‚ˆØ[›ÛšXØ[˜[˜XÚÐ›ØÚË™\[Y\˜[ÛÜ\]YWØØ[™Y]WÚYˆ\™ÙXY[™WÛÜ—Û[ˆŒŒ‹LËLUMNNNNKŽNNVˆ‹ˆKˆKˆØ[›ÛšXØ[˜[˜XÚÐ›ØÚËˆŒŒ‹LËLˆ‹ˆ
+NÂˆ\ÜÙ\™\]X[
+˜[Y˜]]™Q˜[˜XÚÑXY[™PÛ\ÜÚYšXØ][Û‹™™X\ÚX›HŠNÂˆ\ÜÙ\™\]X[
+ˆ[˜[Y˜]]™Q˜[˜XÚÑXY[™PÛ\ÜÚYšXØ][Û‹ˆ˜[Y]Ü—Ü™Z™XÝY‹ˆ
+NÂˆ\ÜÙ\™Y\\]X[
+ˆØ]]Ø^SÝ]ÛÛYPY\’\™XY[™U˜[Y][ÛŠˆ˜[Y]Ü—Ü™Z™XÝY‹ˆ˜[Y˜]]™Q˜[˜XÚÑXY[™PÛ\ÜÚYšXØ][Û‹ˆ
+KˆÂˆÝ]\Îˆ™˜[˜XÚÈ‹ˆšYÙÙ\š[™ÐÛ\ÜÚYšXØ][ÛŽˆ˜[Y]Ü—Ü™Z™XÝY‹ˆ˜]]™Q˜[˜XÚÐ][\ÎˆKˆØ[™Y]T[”™[X\ÙYˆ˜[ÙKˆØ[›ÛšXØ[˜]]™Q˜[˜XÚÔ™[X\ÙYˆYKˆKˆ
+NÂˆ\ÜÙ\™Y\\]X[
+ˆØ]]Ø^SÝ]ÛÛYPY\’\™XY[™U˜[Y][ÛŠˆ˜[Y]Ü—Ü™Z™XÝY‹ˆ[˜[Y˜]]™Q˜[˜XÚÑXY[™PÛ\ÜÚYšXØ][Û‹ˆ
+KˆÂˆÝ]\Îˆ˜›ØÚÙYÛX[X[Ü[—Ü™\]Z\™Y‹ˆšYÙÙ\š[™ÐÛ\ÜÚYšXØ][ÛŽˆ˜[Y]Ü—Ü™Z™XÝY‹ˆ˜]]™Q˜[˜XÚÐ][\ÎˆKˆØ[™Y]T[”™[X\ÙYˆ˜[ÙKˆØ[›ÛšXØ[˜]]™Q˜[˜XÚÔ™[X\ÙYˆ˜[ÙKˆKˆ
+NÂˆ\ÜÙ\™Y\\]X[
+ˆØ]]Ø^SÝ]ÛÛYPY\’\™XY[™U˜[Y][ÛŠˆœØÚ[XWÛZ\ÛX]Ú‹ˆ™™X\ÚX›H‹ˆ
+KˆÂˆÝ]\Îˆ™˜[˜XÚÈ‹ˆšYÙÙ\š[™ÐÛ\ÜÚYšXØ][ÛŽˆœØÚ[XWÛZ\ÛX]Ú‹ˆ˜]]™Q˜[˜XÚÐ][\ÎˆKˆØ[™Y]T[”™[X\ÙYˆ˜[ÙKˆØ[›ÛšXØ[˜]]™Q˜[˜XÚÔ™[X\ÙYˆYKˆKˆ
+NÂ‚ˆÛÛœÝ[[]]X›P›ØÚÈHÂˆ\[Y\˜[ÛÜ\]YWØØ[™Y]WÚYˆØ[™ÉÈšH‹œ™\X]
+MŠ_Xˆ\[Y\˜[ÛÜ\]YWÝÚ[™Ý×ÚYˆÚ[—ÉÈšˆ‹œ™\X]
+MŠ_XˆÝ\ÛZ[]WÚÜÝˆÌˆ[™ÛZ[]WÚÜÝˆŒˆ\˜][Û—ÛZ[]\ÎˆÌˆNÂˆÛÛœÝ[[]]X›TÛ˜\ÚÝHÛÛ™J[[]]X›P›ØÚÊNÂˆ\ÜÙ\™\]X[
+ˆ\™XY[™PÛ\ÜÚYšXØ][ÛŠˆÂˆÂˆ\[Y\˜[ÛÜ\]YWØØ[™Y]WÚY‚ˆ[[]]X›P›ØÚË™\[Y\˜[ÛÜ\]YWØØ[™Y]WÚYˆ\™ÙXY[™WÛÜ—Û[ˆŒŒ‹LËLUMNNNNKŽNNVˆ‹ˆKˆKˆ[[]]X›P›ØÚËˆŒŒ‹LËLˆ‹ˆ
+Kˆ˜[Y]Ü—Ü™Z™XÝY‹ˆ
+NÂˆ\ÜÙ\™Y\\]X[
+ˆ[[]]X›P›ØÚËˆ[[]]X›TÛ˜\ÚÝˆš[[]]X›H™Y›YÚØ[››Ý[Ý™K›Ü[˜\ÜÚYÛ‹ÚÜ[‹^[™Üˆ™]Üš]HHXÙ[Y[‹ˆ
+NÂ‚ˆÛÛœÝ›Ú™XÝ[ÛˆBˆØÚY[\‹š[œ]ÛÛ˜XÝ›Ü[Z^™\’[›ØØ][Û”›Ú™XÝ[ÛÛÛ˜XÝÂˆ\ÜÙ\™\]X[
+›Ú™XÝ[Û‹™šY[Ñ^XÝKš[˜ÛY\ÊœÝYWÙ]WÚÜÝŠK˜[ÙJNÂˆ\ÜÙ\™\]X[
+ˆØÚY[\‹œ™\Ý[ÛÛ˜XÝ˜ÛÜÙY[[U˜[Y\Ë˜ÛÛœÝ˜Z[ØÛÙWÙ[[Kš[˜ÛY\Êˆ™^XÝ][Û—Ø›ØÚ×Ú\™ÙXY[™WÛ›ÝÙ^ÙYYY‹ˆ
+KˆYKˆ
+NÂˆ›Üˆ
+ÛÛœÝš^\™RYÙˆÂˆš\™ÙXY[™WÛ[‹ˆš\™ÙXY[™WÙ^XÝÙ\]X[]H‹ˆš\™ÙXY[™WÛÛ™WÛZ[\ÙXÛÛ™Û]H‹ˆš\™ÙXY[™WÙ[™ÛZ[]WÌMÚÜÝÝ]×Ø›Ý[™\žH‹ˆš[[]]X›WÜš[Ü—ÜXÙ[Y[Ú\™ÙXY[™WÚ[˜ÛÛ\]X›H‹ˆJHÂˆ\ÜÙ\™\]X[
+ˆØÚY[\‹™š^\™SX]š^œØÙ[˜\š[Ñš^\™RYËš[˜ÛY\Êš^\™RY
+KˆYKˆ	Ùš^\™RYH]\Ý™[XZ[ˆ[ˆHÛÜÙYš^\™HX]š^ˆ
+NÂˆBˆÛÛœÝÜÝ[S]]][ÛœÈHÂˆÂˆœ›Ú™XÝY\™XY[™H[™›Ü˜Ù[Y[™[[Ý™Y‹ˆ
+˜[YJHOˆÂˆ˜[YK›Ü[Z^™\”›Ú™XÝY™\Ý[ÛÛ˜XÝˆš\™XY[™Q™X\ÚXš[]T[\ÂˆšÛ›ÝÛ’\™XY[™Pœ™XXÚ\ÝYØ]]Ø^PÛ\ÜÚYšXØ][ÛˆBˆ™™X\ÚX›HŽÂˆKˆKˆÂˆ˜Ø[›ÛšXØ[\™XY[™H[™›Ü˜Ù[Y[™[[Ý™Y‹ˆ
+˜[YJHOˆÂˆ˜[YKœ™\Ý[ÛÛ˜XÝš\™XY[™Q™X\ÚXš[]T[\ÂˆšÛ›ÝÛ’\™XY[™Pœ™XXÚÝ]\ÈH›Ü[X[ŽÂˆKˆKˆÂˆš\™ÛÛœÝ˜Z[ÛÙH™[[Ý™Y‹ˆ
+˜[YJHOˆÂˆ˜[YKš\™ÛÛœÝ˜Z[ÈH˜[YKš\™ÛÛœÝ˜Z[Ë™š[\Šˆ
+ÛÙJHOˆÛÙHOOH™^XÝ][Û—Ø›ØÚ×Ú\™ÙXY[™WÛ›ÝÙ^ÙYYY‹ˆ
+NÂˆKˆKˆÂˆ›˜]]™H˜[˜XÚÈXY[™H[™›Ü˜Ù[Y[™[[Ý™Y‹ˆ
+˜[YJHOˆÂˆ˜[YK›˜]]™U˜[Y]Ü‚ˆ™]™\žQ^XÝ][Û›ØÚÒ[“Ü[X[™X\ÚX›P[™™[X\ØX›U˜[Y]Y˜]]™Q˜[˜XÚÓ]\ÝØ]\ÙžPØ[™Y]R\™XY[™T™YXØ]U\Ú[™Õ\ÝYØ[›ÛšXØ[ÝYQ]RÜÝBˆ˜[ÙNÂˆKˆKˆÂˆš[[]]X›H™Y›YÚXY[™H[™›Ü˜Ù[Y[™[[Ý™Y‹ˆ
+˜[YJHOˆÂˆ˜[YKš[œ]ÛÛ˜XÝœš[ÜXØÙ\YØÚY[T[\Âˆ™[\ÙY[™[”›ÙÜ™\ÜÔXÙ[Y[]\ÝØ]\ÙžT™\ÛÛ™YÝ\œ™[Ø[™Y]R\™XY[™P™Y›Ü™T›Ú™XÝ[ÛˆBˆ˜[ÙNÂˆKˆKˆÂˆœÝYH]H›Ú™XÝYÈÜ[Z^™\ˆ‹ˆ
+˜[YJHOˆÂˆ˜[YKš[œ]ÛÛ˜XÝ›Ü[Z^™\’[›ØØ][Û”›Ú™XÝ[ÛÛÛ˜XÝˆ™šY[Ñ^XÝKœ\Ú
+œÝYWÙ]WÚÜÝŠNÂˆKˆKˆÂˆœÛÙØš™XÝ]™H[ÝÙYÈÝ™\œšYH\™XY[™H‹ˆ
+˜[YJHOˆÂˆ˜[YKœ™\Ý[ÛÛ˜XÝš\™XY[™Q™X\ÚXš[]T[\ÂˆœÛÙXY[™SØš™XÝ]™SX^SÝ™\œšYR\™XY[™HHYNÂˆKˆKˆÂˆ˜ÛÛÜ™[˜]Y\™YXY[™H[™›Ü˜Ù[Y[™[[Ý˜[‹ˆ
+˜[YJHOˆÂˆ[]H˜[YK›Ü[Z^™\”›Ú™XÝY™\Ý[ÛÛ˜XÝˆš\™XY[™Q™X\ÚXš[]T[\ÎÂˆ[]H˜[YKœ™\Ý[ÛÛ˜XÝš\™XY[™Q™X\ÚXš[]T[\ÎÂˆÛÛœÝÚ]Ý]\™XY[™PÛÙHH
+ÛÙ\ÊHO‚ˆÛÙ\Ë™š[\Šˆ
+ÛÙJHO‚ˆÛÙHOOH™^XÝ][Û—Ø›ØÚ×Ú\™ÙXY[™WÛ›ÝÙ^ÙYYY‹ˆ
+NÂˆ˜[YKš\™ÛÛœÝ˜Z[ÈHÚ]Ý]\™XY[™PÛÙJˆ˜[YKš\™ÛÛœÝ˜Z[Ëˆ
+NÂˆ˜[YK›Ü[Z^™\”›Ú™XÝY™\Ý[ÛÛ˜XÝ˜ÛÜÙY[[U˜[Y\Ë˜ÛÛœÝ˜Z[ØÛÙWÙ[[HBˆÚ]Ý]\™XY[™PÛÙJˆ˜[YK›Ü[Z^™\”›Ú™XÝY™\Ý[ÛÛ˜XÝ˜ÛÜÙY[[U˜[Y\Âˆ˜ÛÛœÝ˜Z[ØÛÙWÙ[[Kˆ
+NÂˆ˜[YKœ™\Ý[ÛÛ˜XÝ˜ÛÜÙY[[U˜[Y\Ë˜ÛÛœÝ˜Z[ØÛÙWÙ[[HBˆÚ]Ý]\™XY[™PÛÙJˆ˜[YKœ™\Ý[ÛÛ˜XÝ˜ÛÜÙY[[U˜[Y\Ë˜ÛÛœÝ˜Z[ØÛÙWÙ[[Kˆ
+NÂˆ˜[YK›˜]]™U˜[Y]Ü‚ˆ™]™\žQ^XÝ][Û›ØÚÒ[“Ü[X[™X\ÚX›P[™™[X\ØX›U˜[Y]Y˜]]™Q˜[˜XÚÓ]\ÝØ]\ÙžPØ[™Y]R\™XY[™T™YXØ]U\Ú[™Õ\ÝYØ[›ÛšXØ[ÝYQ]RÜÝBˆ˜[ÙNÂˆ˜[YK›˜]]™U˜[Y]Ü‚ˆ˜[Y]Y˜]]™Q˜[˜XÚÓ]\ÝØ]\ÙžPØ[›ÛšXØ[[‘šY[™\œÚ[Û’[™›Ð[™\™XY[™Q™X\ÚXš[]P[™[\™ÛÛœÝ˜Z[ÈBˆ˜[ÙNÂˆ˜[YK›˜]]™U˜[Y]Ü‚ˆš[[]]X›Q[\ÙYÜ’[”›ÙÜ™\ÜÔXÙ[Y[]\Ý\ÜÒ\™XY[™P™Y›Ü™T›Ú™XÝ[Û[™X^S›Ý™S[Ý™Y›ÜY[˜\ÜÚYÛ™YÚÜ[™Y^[™YÜ”™]Üš][‘\š[™Õ˜[Y][Û“Ü‘˜[˜XÚÈBˆ˜[ÙNÂˆ˜[YK›˜]]™U˜[Y]Ü‚ˆ›Z[š[Z^™QXY[™S][™\ÜÓX^T™XYÛ›TÛÙXY[™SÜ“[[™X^S›ÝÝ™\œšYR\™XY[™HBˆ˜[ÙNÂˆ˜[YKš[œ]ÛÛ˜XÝœš[ÜXØÙ\YØÚY[T[\Âˆ™[\ÙY[™[”›ÙÜ™\ÜÔXÙ[Y[]\ÝØ]\ÙžT™\ÛÛ™YÝ\œ™[Ø[™Y]R\™XY[™P™Y›Ü™T›Ú™XÝ[ÛˆBˆ˜[ÙNÂˆ˜[YKš[œ]ÛÛ˜XÝ›Ü[Z^™\’[›ØØ][Û”›Ú™XÝ[ÛÛÛ˜XÝˆœ›Ú™XÝ[Û”[\Âˆš[[]]X›Tš[Ü”XÙ[Y[Ó]\Ý\ÜÑ^XÝÝ\œ™[Ø[™Y]R\™XY[™T™YXØ]P™Y›Ü™T›Ú™XÝ[ÛˆBˆ˜[ÙNÂˆ˜[YKš[œ]ÛÛ˜XÝ›Ü[Z^™\’[›ØØ][Û”›Ú™XÝ[ÛÛÛ˜XÝˆœ›Ú™XÝ[Û”[\ÂˆœÝYQ]RÜÝ]\Ý™[XZ[’[•\ÝYØ]]Ø^P[™]\Ý›Ý[\“Ü[Z^™\”›Ú™XÝ[ÛˆBˆ˜[ÙNÂˆ˜[YKš[œ]ÛÛ˜XÝ›Ü[Z^™\’[›ØØ][Û”›Ú™XÝ[ÛÛÛ˜XÝˆ™šY[Ñ^XÝKœ\Ú
+œÝYWÙ]WÚÜÝŠNÂˆKˆKˆNÂˆ›Üˆ
+ÛÛœÝÛ˜[YK]]]WHÙˆÜÝ[S]]][ÛœÊHÂˆÛÛœÝÜÝ[HHÛÛ™JØÚY[\ŠNÂˆ]]]JÜÝ[JNÂˆ\ÜÙ\™\]X[
+ˆÌÔ™\Ý[˜[Y][ÛÛÛ˜XÝÐ\™PÛÜÙY
+ÜÝ[JKˆ˜[ÙKˆ	Û˜[Y_H]\Ý˜Z[ÛÛÜ™[˜]YÛÛ˜XÝ˜[Y][Û˜ˆ
+NÂˆBŸJNÂ‚\Ý
+œÙXÛÛ™ÜÝ\™XYHÛÜœ™XÝ]™HÛÜÙ\ÈÝ]Ù™‹[‹[Ü[ˆÝ™\›\[™™\™\]Z\Ú]HÜ™\š[™ÈÛˆ]™\žH™[X\ÙH]‹\Þ[˜È
+
+HOˆÂˆÛÛœÝØÚY[\ˆH]ØZ]œÛÛŠˆ˜ÛÛ™šYËÙX˜[™Ú[Y[Y^K\ØÚY[\‹XÛÛ˜XÝšœÛÛˆ‹ˆ
+NÂˆ\ÜÙ\™\]X[
+ÌÔ™\Ý[˜[Y][ÛÛÛ˜XÝÐ\™PÛÜÙY
+ØÚY[\ŠKYJNÂˆ\ÜÙ\™\]X[
+›Ú™XÝY™\Ý[Ø]]Ø^PÛÛ˜XÝ\ÐÛÜÙY
+ØÚY[\ŠKYJNÂ‚ˆ›Üˆ
+ÛÛœÝ›ÜÙHÙˆ]ØZ]›ÛZ\ÙK˜[
+Âˆ^
+QÑS•Ë›YŠKˆ^
+™ØÜËÙX˜[™Ú[][šYšYY\›ÙÜ˜[KXÛÛ˜XÝ›YŠKˆ^
+™ØÜËÚ[™\™ÙK\ÙXÛÛ™\›Ý[™Yš[˜[\›ÙXÝ\ÜXË›YŠKˆ^
+™ØÜËÚ[™\™ÙK\ÝYK\ØÚY[K\Þ\Ý[K›YŠKˆJJHÂˆ\ÜÙ\›X]Ú
+ˆ›ÜÙKˆØ™\[—ØÝ]Ù™—ÛZ[]WÚÜÝÛÜ—Û[×××^ÌLJÎœÝ\ÛZ[]WÚÜÝÊ_]ÜˆY\ŠV×××^ÌŒJÎŒMK
+KÚKˆ
+NÂˆ\ÜÙ\›X]Ú
+ˆ›ÜÙKˆÙ^XÝ×××^ÌLZ[[]]X›V×××^ÌLJÎ˜Ø[™Y]_Ú[™ÝÊV×××^ÌLJÎ™^XÝHÛ˜Ù_[š\]YJKÚKˆ
+NÂˆ\ÜÙ\›X]Ú
+ˆ›ÜÙKˆ×ÜÝ\ÛZ[]WÚÜÝÊ™[™ÛZ[]WÚÜÝ
+V×××^ÌXW™[™ÛZ[]WÚÜÝÊWÊ˜—œÝ\ÛZ[]WÚÜÝ×××^ÌLX—™[™ÛZ[]WÚÜÝÊWÊ˜WœÝ\ÛZ[]WÚÜÝÚKˆ
+NÂˆ\ÜÙ\›X]Ú
+ˆ›ÜÙKˆÜ™\™\]Z\Ú]WØØ[™Y]WÚYÖ×××^ÌL\™\™\]Z\Ú]W™[™ÛZ[]WÚÜÝÊWÊ™\[™[œÝ\ÛZ[]WÚÜÝÚKˆ
+NÂˆ\ÜÙ\›X]Ú
+ˆ›ÜÙKˆÊÎ›X\[™ßÛÜœ™[][ÛŸ[XšYÝ[Ý\ßÜ›ÜÜËYÛXZ[ŠV×××^ÌŒXØÚ[XWÛZ\ÛX]Ú×××^ÌLZÛ›ÝÛ–×××^ÌLX˜[Y]Ü—Ü™Z™XÝYÚKˆ
+NÂˆB‚ˆÛÛœÝXÙ[Y[H
+Ø[™Y]RYÚ[™ÝÒYÝ\[™
+HOˆ
+Âˆ\[Y\˜[ÛÜ\]YWØØ[™Y]WÚYˆØ[™Y]RYˆ\[Y\˜[ÛÜ\]YWÝÚ[™Ý×ÚYˆÚ[™ÝÒYˆÝ\ÛZ[]WÚÜÝˆÝ\ˆ[™ÛZ[]WÚÜÝˆ[™ˆ\˜][Û—ÛZ[]\Îˆ[™HÝ\ˆJNÂˆÛÛœÝÛXZ[œÈHÂˆÂˆ˜[YNˆ˜Ø[›ÛšXØ[‹ˆÛÛ˜XÝˆØÚY[\‹œ™\Ý[ÛÛ˜XÝˆØ[™Y]Nˆ
+ÚÙ[ŠHOˆØ[™ÉÝÚÙ[‹œ™\X]
+MŠ_XˆÚ[™ÝÎˆ
+ÚÙ[ŠHOˆÚ[—ÉÝÚÙ[‹œ™\X]
+MŠ_XˆKˆÂˆ˜[YNˆœ›Ú™XÝY‹ˆÛÛ˜XÝˆØÚY[\‹›Ü[Z^™\”›Ú™XÝY™\Ý[ÛÛ˜XÝˆØ[™Y]Nˆ
+ÚÙ[ŠHOˆØØ[™ÉÝÚÙ[‹œ™\X]
+MŠ_XˆÚ[™ÝÎˆ
+ÚÙ[ŠHOˆÝÚ[—ÉÝÚÙ[‹œ™\X]
+MŠ_XˆKˆNÂˆÛÛœÝÛÜœ™[][Û‘›ÜˆH
+ÛXZ[‹Ý]Ù™ŠHOˆ
+Âˆ™\]Y\ÝÚY‚ˆÛXZ[‹›˜[YHOOH˜Ø[›ÛšXØ[‚ˆÈ™\WÉÈœˆ‹œ™\X]
+MŠ_XˆˆÜ™\WÉÈœˆ‹œ™\X]
+MŠ_Xˆ[œ]ÜÛ˜\ÚÝÝ™\œÚ[ÛŽ‚ˆÛXZ[‹›˜[YHOOH˜Ø[›ÛšXØ[‚ˆÈÛœÉÈœÈ‹œ™\X]
+MŠ_XˆˆÜÛœÉÈœÈ‹œ™\X]
+MŠ_Xˆ™\[—ØÝ]Ù™—ÛZ[]WÚÜÝÛÜ—Û[ˆÝ]Ù™‹ˆJNÂˆÛÛœÝ[›ØØ][Û‘›ÜˆH
+ˆÛXZ[‹ˆØ[™Y]RYËˆÚ[™ÝÒYËˆÝ]Ù™‹ˆ
+HOˆ
+Âˆ‹‹˜ÛÜœ™[][Û‘›ÜŠÛXZ[‹Ý]Ù™ŠKˆØ[™Y]\ÎˆØ[™Y]RYË›X\
+
+Ø[™Y]RY
+HOˆ
+Âˆ\[Y\˜[ÛÜ\]YWØØ[™Y]WÚYˆØ[™Y]RYˆJJKˆ]˜Z[X›WÝÚ[™ÝÜÎˆÚ[™ÝÒYË›X\
+
+Ú[™ÝÒY
+HOˆ
+Âˆ\[Y\˜[ÛÜ\]YWÝÚ[™Ý×ÚYˆÚ[™ÝÒYˆJJKˆJNÂ‚ˆ›Üˆ
+ÛÛœÝÛXZ[ˆÙˆÛXZ[œÊHÂˆÛÛœÝYÈHÈ˜H‹˜ˆ‹˜È‹™—K›X\
+ÛXZ[‹˜Ø[™Y]JNÂˆÛÛœÝÚ[™ÝÒYHÛXZ[‹Ú[™ÝÊÈŠNÂˆÛÛœÝš\œÝHXÙ[Y[
+YÖÌKÚ[™ÝÒYŒL
+NÂˆÛÛœÝY˜XÙ[HXÙ[Y[
+YÖÌWKÚ[™ÝÒYLLŒ
+NÂˆÛÛœÝÝ™\›\[™ÈHXÙ[Y[
+YÖÌWKÚ[™ÝÒYKLNJNÂˆ›Üˆ
+ÛÛœÝÝ]\ÈÙˆÈ›Ü[X[‹™™X\ÚX›H—JHÂˆ›Üˆ
+ÛÛœÝØÝ]Ù™‹[[]]X›\Ë›ØÚË^XÝYX™[HÙˆÂˆÛ[×Kš\œÝ™™X\ÚX›H‹›[—KˆÂˆ[ˆØÛÛ™Jš\œÝ
+KÛÛ™Jš\œÝ
+WKˆš\œÝˆœØÚ[XWÛZ\ÛX]Ú‹ˆ›[\Ý[]˜[Y]\ËX[XšYÝ[Ý\Ë[X]Ú‹ˆKˆÌ×Kš\œÝ™™X\ÚX›H‹ž™\›È—KˆÍŒ×Kš\œÝ™™X\ÚX›H‹™\]X[]H—KˆÍŒK×Kš\œÝ˜[Y]Ü—Ü™Z™XÝY‹›Û™K[Z[]KYX\›H—KˆÌM×Kš\œÝ˜[Y]Ü—Ü™Z™XÝY‹ŒM[™]È—KˆÌMØÛÛ™Jš\œÝ
+WKš\œÝ™™X\ÚX›H‹š[[]]X›KY^[\—KˆÂˆMˆØÛÛ™Jš\œÝ
+KÛÛ™Jš\œÝ
+WKˆš\œÝˆœØÚ[XWÛZ\ÛX]Ú‹ˆš[[]]X›KX[XšYÝ[Ý\È‹ˆKˆÂˆŒˆØÛÛ™Jš\œÝ
+WKˆÈ‹‹™š\œÝÝ\ÛZ[]WÚÜÝˆNK\˜][Û—ÛZ[]\ÎˆÌHKˆ˜[Y]Ü—Ü™Z™XÝY‹ˆš[[]]X›K[[Ý™Y‹ˆKˆJHÂˆ\ÜÙ\™\]X[
+ˆ™\[Ý]Ù™Û\ÜÚYšXØ][ÛŠˆÛXZ[‹˜ÛÛ˜XÝˆÝ]\Ëˆ›ØÚËˆ[›ØØ][Û‘›ÜŠÛXZ[‹YËÝÚ[™ÝÒYKÝ]Ù™ŠKˆ[[]]X›\ËˆÛÜœ™[][Û‘›ÜŠÛXZ[‹Ý]Ù™ŠKˆ
+Kˆ^XÝYˆ	ÙÛXZ[‹›˜[Y_H	ÜÝ]\ßHÝ]Ù™ˆ	ÛX™[Xˆ
+NÂˆBˆÛÛœÝÛÜœ™[]Y]ŒH[›ØØ][Û‘›ÜŠˆÛXZ[‹ˆYËˆÝÚ[™ÝÒYKˆŒˆ
+NÂˆÛÛœÝÝ\‘ÛXZ[Ø[™Y]HBˆÛXZ[‹›˜[YHOOH˜Ø[›ÛšXØ[‚ˆÈØØ[™ÉÈžˆ‹œ™\X]
+MŠ_XˆˆØ[™ÉÈžˆ‹œ™\X]
+MŠ_XÂˆÛÛœÝ\XØ]PØ[™Y]R[›ØØ][ÛˆHÛÛ™JÛÜœ™[]Y]Œ
+NÂˆ\XØ]PØ[™Y]R[›ØØ][Û‹˜Ø[™Y]\Ëœ\Ú
+ˆÛÛ™J\XØ]PØ[™Y]R[›ØØ][Û‹˜Ø[™Y]\ÖÌJKˆ
+NÂˆÛÛœÝ\XØ]UÚ[™ÝÒ[›ØØ][ÛˆHÛÛ™JÛÜœ™[]Y]Œ
+NÂˆ\XØ]UÚ[™ÝÒ[›ØØ][Û‹˜]˜Z[X›WÝÚ[™ÝÜËœ\Ú
+ˆÛÛ™J\XØ]UÚ[™ÝÒ[›ØØ][Û‹˜]˜Z[X›WÝÚ[™ÝÜÖÌJKˆ
+NÂˆ›Üˆ
+ÛÛœÝØ›ØÚË[›ØØ][Û‹[[]]X›\Ë^XÝYš[™[™ËX™[HÙˆÂˆÂˆXÙ[Y[
+ÛXZ[‹˜Ø[™Y]JžˆŠKÚ[™ÝÒYŒL
+KˆÛÜœ™[]Y]Œˆ×KˆÛÜœ™[][Û‘›ÜŠÛXZ[‹Œ
+Kˆ[šÛ›ÝÛ‹XØ[™Y]H‹ˆKˆÂˆXÙ[Y[
+YÖÌKÛXZ[‹Ú[™ÝÊžˆŠKŒL
+KˆÛÜœ™[]Y]Œˆ×KˆÛÜœ™[][Û‘›ÜŠÛXZ[‹Œ
+Kˆ[šÛ›ÝÛ‹]Ú[™ÝÈ‹ˆKˆÂˆXÙ[Y[
+Ý\‘ÛXZ[Ø[™Y]KÚ[™ÝÒYŒL
+KˆÛÜœ™[]Y]Œˆ×KˆÛÜœ™[][Û‘›ÜŠÛXZ[‹Œ
+Kˆ˜Ü›ÜÜËYÛXZ[ˆ‹ˆKˆÂˆš\œÝˆ\XØ]PØ[™Y]R[›ØØ][Û‹ˆ×KˆÛÜœ™[][Û‘›ÜŠÛXZ[‹Œ
+Kˆ™\XØ]KXØ[™Y]K[X\‹ˆKˆÂˆš\œÝˆ\XØ]UÚ[™ÝÒ[›ØØ][Û‹ˆ×KˆÛÜœ™[][Û‘›ÜŠÛXZ[‹Œ
+Kˆ™\XØ]K]Ú[™ÝË[X\‹ˆKˆÂˆš\œÝˆ[›ØØ][Û‘›ÜŠÛXZ[‹YËÝÚ[™ÝÒYKŒJKˆ×KˆÛÜœ™[][Û‘›ÜŠÛXZ[‹Œ
+KˆÜ›Û™ËXÝ]Ù™‹XÛÜœ™[][Ûˆ‹ˆKˆÂˆš\œÝˆÛÜœ™[]Y]ŒˆÂˆÛÛ™Jš\œÝ
+KˆXÙ[Y[
+YÖÌKÚ[™ÝÒYÌŒ
+KˆKˆÛÜœ™[][Û‘›ÜŠÛXZ[‹Œ
+Kˆ˜ÛÛ™›XÝ[™ËZ[[]]X›K\™[][Ûˆ‹ˆKˆÂˆš\œÝˆÛÜœ™[]Y]ŒˆÂˆXÙ[Y[
+ˆÛXZ[‹˜Ø[™Y]JžˆŠKˆÚ[™ÝÒYˆÌˆŒˆ
+KˆKˆÛÜœ™[][Û‘›ÜŠÛXZ[‹Œ
+Kˆ™[™Û[™ËZ[[]]X›KXØ[™Y]H‹ˆKˆJHÂˆ\ÜÙ\™\]X[
+ˆ™\[Ý]Ù™Û\ÜÚYšXØ][ÛŠˆÛXZ[‹˜ÛÛ˜XÝˆÝ]\Ëˆ›ØÚËˆ[›ØØ][Û‹ˆ[[]]X›\Ëˆ^XÝYš[™[™Ëˆ
+KˆœØÚ[XWÛZ\ÛX]Ú‹ˆ	ÙÛXZ[‹›˜[Y_H	ÜÝ]\ßHÝ]Ù™ˆ	ÛX™[Xˆ
+NÂˆB‚ˆ›Üˆ
+ÛÛœÝØ›ØÚÜËš^Y[[]]X›\Ë^XÝYX™[HÙˆÂˆÖÙš\œÝY˜XÙ[K×K×K™™X\ÚX›H‹˜Y˜XÙ[—KˆÂˆÙš\œÝÝ™\›\[™×Kˆ×Kˆ×Kˆ˜[Y]Ü—Ü™Z™XÝY‹ˆ™^XÝ][Û‹Y^XÝ][Ûˆ‹ˆKˆÂˆÙš\œÝKˆÞÈÝ\ÛZ[]WÚÜÝˆK[™ÛZ[]WÚÜÝˆLWKˆ×Kˆ˜[Y]Ü—Ü™Z™XÝY‹ˆ™^XÝ][Û‹Yš^Y‹ˆKˆÂˆÙš\œÝKˆ×KˆÜXÙ[Y[
+YÖÌWKÚ[™ÝÒYL
+WKˆ˜[Y]Ü—Ü™Z™XÝY‹ˆ™^XÝ][Û‹Z[[]]X›H‹ˆKˆÖÙš\œÝK×KØÛÛ™Jš\œÝ
+WK™™X\ÚX›H‹š[[]]X›K\Ù[ˆ—KˆÂˆÙš\œÝKˆ×KˆØÛÛ™Jš\œÝ
+KÛÛ™Jš\œÝ
+WKˆœØÚ[XWÛZ\ÛX]Ú‹ˆš[[]]X›K\Ù[‹X[XšYÝ[Ý\È‹ˆKˆÂˆ×Kˆ×KˆÙš\œÝXÙ[Y[
+YÖÌWKÚ[™ÝÒYL
+WKˆ˜[Y]Ü—Ü™Z™XÝY‹ˆš[[]]X›KZ[[]]X›K\™Y›YÚ‹ˆKˆÂˆ×KˆÞÈÝ\ÛZ[]WÚÜÝˆK[™ÛZ[]WÚÜÝˆLWKˆÙš\œÝKˆ˜[Y]Ü—Ü™Z™XÝY‹ˆš[[]]X›KYš^Y\™Y›YÚ‹ˆKˆJHÂˆ\ÜÙ\™\]X[
+ˆZ\Ú\ÙP›ØÚÓ›Û“Ý™\›\Û\ÜÚYšXØ][ÛŠˆÛXZ[‹˜ÛÛ˜XÝˆÝ]\Ëˆ›ØÚÜËˆš^Yˆ[[]]X›\Ëˆ
+Kˆ^XÝYˆ	ÙÛXZ[‹›˜[Y_H	ÜÝ]\ßHÝ™\›\	ÛX™[Xˆ
+NÂˆB‚ˆÛÛœÝ™\™\]Z\Ú]PØ[™Y]\ÈHÂˆÂˆ\[Y\˜[ÛÜ\]YWØØ[™Y]WÚYˆYÖÌKˆ™\™\]Z\Ú]WØØ[™Y]WÚYÎˆ×KˆKˆÂˆ\[Y\˜[ÛÜ\]YWØØ[™Y]WÚYˆYÖÌWKˆ™\™\]Z\Ú]WØØ[™Y]WÚYÎˆ×KˆKˆÂˆ\[Y\˜[ÛÜ\]YWØØ[™Y]WÚYˆYÖÌ×Kˆ™\™\]Z\Ú]WØØ[™Y]WÚYÎˆÚYÖÌKYÖÌWWKˆKˆNÂˆÛÛœÝ™\™\]Z\Ú]SÛ™HHXÙ[Y[
+YÖÌKÚ[™ÝÒYÌŒ
+NÂˆÛÛœÝ™\™\]Z\Ú]UÛÈHXÙ[Y[
+YÖÌWKÚ[™ÝÒYŒL
+NÂˆÛÛœÝ\[™[HXÙ[Y[
+YÖÌ×KÚ[™ÝÒYLLŒ
+NÂˆ\ÜÙ\™\]X[
+ˆ™\™\]Z\Ú]SÜ™\š[™ÐÛ\ÜÚYšXØ][ÛŠˆÛXZ[‹˜ÛÛ˜XÝˆÝ]\ËˆÜ™\™\]Z\Ú]PØ[™Y]\ÖÌWKˆÜ™\™\]Z\Ú]SÛ™WKˆ
+Kˆ™™X\ÚX›H‹ˆ	ÙÛXZ[‹›˜[Y_H	ÜÝ]\ßH[\H™\™\]Z\Ú]Xˆ
+NÂˆ\ÜÙ\™\]X[
+ˆ™\™\]Z\Ú]SÜ™\š[™ÐÛ\ÜÚYšXØ][ÛŠˆÛXZ[‹˜ÛÛ˜XÝˆÝ]\Ëˆ™\™\]Z\Ú]PØ[™Y]\ËˆÜ™\™\]Z\Ú]SÛ™K™\™\]Z\Ú]UÛË\[™[Kˆ
+Kˆ™™X\ÚX›H‹ˆ	ÙÛXZ[‹›˜[Y_H	ÜÝ]\ßH][\H™\™\]Z\Ú]\È[™\]X[]Xˆ
+NÂˆ\ÜÙ\™\]X[
+ˆ™\™\]Z\Ú]SÜ™\š[™ÐÛ\ÜÚYšXØ][ÛŠˆÛXZ[‹˜ÛÛ˜XÝˆÝ]\Ëˆ™\™\]Z\Ú]PØ[™Y]\ËˆÂˆ™\™\]Z\Ú]SÛ™KˆXÙ[Y[
+YÖÌWKÚ[™ÝÒYŒKLJKˆ\[™[ˆKˆ
+Kˆ˜[Y]Ü—Ü™Z™XÝY‹ˆ	ÙÛXZ[‹›˜[Y_H	ÜÝ]\ßH™]™\œÙY™\™\]Z\Ú]Xˆ
+NÂˆ\ÜÙ\™\]X[
+ˆ™\™\]Z\Ú]SÜ™\š[™ÐÛ\ÜÚYšXØ][ÛŠˆÛXZ[‹˜ÛÛ˜XÝˆÝ]\Ëˆ™\™\]Z\Ú]PØ[™Y]\ËˆÜ™\™\]Z\Ú]SÛ™K\[™[KˆÞÈ\[Y\˜[ÛÜ\]YWØØ[™Y]WÚYˆYÖÌWHWKˆ
+Kˆ˜[Y]Ü—Ü™Z™XÝY‹ˆ	ÙÛXZ[‹›˜[Y_H	ÜÝ]\ßH[˜\ÜÚYÛ™Y™\™\]Z\Ú]Xˆ
+NÂˆ\ÜÙ\™\]X[
+ˆ™\™\]Z\Ú]SÜ™\š[™ÐÛ\ÜÚYšXØ][ÛŠˆÛXZ[‹˜ÛÛ˜XÝˆÝ]\Ëˆ™\™\]Z\Ú]PØ[™Y]\ËˆÙ\[™[Kˆ
+Kˆ˜[Y]Ü—Ü™Z™XÝY‹ˆ	ÙÛXZ[‹›˜[Y_H	ÜÝ]\ßHÛ›ÝÛˆZ\ÜÚ[™È™\™\]Z\Ú]Xˆ
+NÂˆÛÛœÝÜ›ÜÜÑÛXZ[’YBˆÛXZ[‹›˜[YHOOH˜Ø[›ÛšXØ[‚ˆÈØØ[™ÉÈž‹œ™\X]
+MŠ_XˆˆØ[™ÉÈž‹œ™\X]
+MŠ_XÂˆ\ÜÙ\™\]X[
+ˆ™\™\]Z\Ú]SÜ™\š[™ÐÛ\ÜÚYšXØ][ÛŠˆÛXZ[‹˜ÛÛ˜XÝˆÝ]\ËˆÂˆÂˆ\[Y\˜[ÛÜ\]YWØØ[™Y]WÚYˆYÖÌ—Kˆ™\™\]Z\Ú]WØØ[™Y]WÚYÎˆØÜ›ÜÜÑÛXZ[’YKˆKˆKˆÜXÙ[Y[
+YÖÌ—KÚ[™ÝÒYLŒML
+WKˆ
+KˆœØÚ[XWÛZ\ÛX]Ú‹ˆ	ÙÛXZ[‹›˜[Y_H	ÜÝ]\ßHÜ›ÜÜËYÛXZ[ˆ™\™\]Z\Ú]Xˆ
+NÂˆ\ÜÙ\™\]X[
+ˆ™\™\]Z\Ú]SÜ™\š[™ÐÛ\ÜÚYšXØ][ÛŠˆÛXZ[‹˜ÛÛ˜XÝˆÝ]\ËˆÂˆÂˆ\[Y\˜[ÛÜ\]YWØØ[™Y]WÚYˆYÖÌ—Kˆ™\™\]Z\Ú]WØØ[™Y]WÚYÎˆÙÛXZ[‹˜Ø[™Y]JžˆŠWKˆKˆKˆÜXÙ[Y[
+YÖÌ—KÚ[™ÝÒYLŒML
+WKˆ
+KˆœØÚ[XWÛZ\ÛX]Ú‹ˆ	ÙÛXZ[‹›˜[Y_H	ÜÝ]\ßH[™Û[™È™\™\]Z\Ú]Xˆ
+NÂˆ\ÜÙ\™\]X[
+ˆ™\™\]Z\Ú]SÜ™\š[™ÐÛ\ÜÚYšXØ][ÛŠˆÛXZ[‹˜ÛÛ˜XÝˆÝ]\ËˆÂˆ™\™\]Z\Ú]PØ[™Y]\ÖÌKˆÂˆ\[Y\˜[ÛÜ\]YWØØ[™Y]WÚYˆYÖÌ—Kˆ™\™\]Z\Ú]WØØ[™Y]WÚYÎˆÚYÖÌKYÖÌWKˆKˆKˆÜ™\™\]Z\Ú]SÛ™KXÙ[Y[
+YÖÌ—KÚ[™ÝÒYŒL
+WKˆ
+KˆœØÚ[XWÛZ\ÛX]Ú‹ˆ	ÙÛXZ[‹›˜[Y_H	ÜÝ]\ßH\XØ]H™\™\]Z\Ú]H™[][Û˜ˆ
+NÂˆ\ÜÙ\™\]X[
+ˆ™\™\]Z\Ú]SÜ™\š[™ÐÛ\ÜÚYšXØ][ÛŠˆÛXZ[‹˜ÛÛ˜XÝˆÝ]\ËˆÂˆ™\™\]Z\Ú]PØ[™Y]\ÖÌKˆÛÛ™J™\™\]Z\Ú]PØ[™Y]\ÖÌJKˆKˆÜ™\™\]Z\Ú]SÛ™WKˆ
+KˆœØÚ[XWÛZ\ÛX]Ú‹ˆ	ÙÛXZ[‹›˜[Y_H	ÜÝ]\ßH›Û‹XšZ™XÝ]™H\[™[™\ÛÛ][Û˜ˆ
+NÂ‚ˆÛÛœÝ[[]]X›T™\™\]Z\Ú]TXÙ[Y[ÈHÂˆÛÛ™J™\™\]Z\Ú]SÛ™JKˆÛÛ™J™\™\]Z\Ú]UÛÊKˆÛÛ™J\[™[
+KˆNÂˆÛÛœÝ[[]]X›T™\™\]Z\Ú]TÛ˜\ÚÝHÛÛ™Jˆ[[]]X›T™\™\]Z\Ú]TXÙ[Y[Ëˆ
+NÂˆ\ÜÙ\™\]X[
+ˆ™\™\]Z\Ú]SÜ™\š[™ÐÛ\ÜÚYšXØ][ÛŠˆÛXZ[‹˜ÛÛ˜XÝˆš[[]]X›WÜ™Y›YÚ‹ˆ™\™\]Z\Ú]PØ[™Y]\Ëˆ[[]]X›T™\™\]Z\Ú]TXÙ[Y[Ëˆ
+Kˆ™™X\ÚX›H‹ˆ	ÙÛXZ[‹›˜[Y_H[[]]X›H™Y›YÚ\]X[]Xˆ
+NÂˆ\ÜÙ\™\]X[
+ˆ™\™\]Z\Ú]SÜ™\š[™ÐÛ\ÜÚYšXØ][ÛŠˆÛXZ[‹˜ÛÛ˜XÝˆš[[]]X›WÜ™Y›YÚ‹ˆ™\™\]Z\Ú]PØ[™Y]\ËˆÂˆ™\™\]Z\Ú]SÛ™KˆXÙ[Y[
+YÖÌWKÚ[™ÝÒYŒKLJKˆ\[™[ˆKˆ
+Kˆ˜[Y]Ü—Ü™Z™XÝY‹ˆ	ÙÛXZ[‹›˜[Y_H[[]]X›H™Y›YÚ™]™\œÙY™\™\]Z\Ú]Xˆ
+NÂˆ\ÜÙ\™\]X[
+ˆ™\™\]Z\Ú]SÜ™\š[™ÐÛ\ÜÚYšXØ][ÛŠˆÛXZ[‹˜ÛÛ˜XÝˆš[[]]X›WÜ™Y›YÚ‹ˆ™\™\]Z\Ú]PØ[™Y]\ËˆÙ\[™[Kˆ
+Kˆ˜[Y]Ü—Ü™Z™XÝY‹ˆ	ÙÛXZ[‹›˜[Y_H[[]]X›H™Y›YÚZ\ÜÚ[™È™\™\]Z\Ú]Xˆ
+NÂˆ\ÜÙ\™\]X[
+ˆ™\™\]Z\Ú]SÜ™\š[™ÐÛ\ÜÚYšXØ][ÛŠˆÛXZ[‹˜ÛÛ˜XÝˆš[[]]X›WÜ™Y›YÚ‹ˆ™\™\]Z\Ú]PØ[™Y]\ËˆÜ™\™\]Z\Ú]SÛ™K\[™[KˆÞÈ\[Y\˜[ÛÜ\]YWØØ[™Y]WÚYˆYÖÌWHWKˆ
+Kˆ˜[Y]Ü—Ü™Z™XÝY‹ˆ	ÙÛXZ[‹›˜[Y_H[[]]X›H™Y›YÚ[˜\ÜÚYÛ™Y™\™\]Z\Ú]Xˆ
+NÂˆ\ÜÙ\™\]X[
+ˆ™\™\]Z\Ú]SÜ™\š[™ÐÛ\ÜÚYšXØ][ÛŠˆÛXZ[‹˜ÛÛ˜XÝˆš[[]]X›WÜ™Y›YÚ‹ˆÂˆÂˆ\[Y\˜[ÛÜ\]YWØØ[™Y]WÚYˆYÖÌ—Kˆ™\™\]Z\Ú]WØØ[™Y]WÚYÎˆÙÛXZ[‹˜Ø[™Y]JžˆŠWKˆKˆKˆÜXÙ[Y[
+YÖÌ—KÚ[™ÝÒYLŒML
+WKˆ
+KˆœØÚ[XWÛZ\ÛX]Ú‹ˆ	ÙÛXZ[‹›˜[Y_H[[]]X›H™Y›YÚ[™Û[™È™[][Û˜ˆ
+NÂˆ\ÜÙ\™Y\\]X[
+ˆ[[]]X›T™\™\]Z\Ú]TXÙ[Y[Ëˆ[[]]X›T™\™\]Z\Ú]TÛ˜\ÚÝˆ	ÙÛXZ[‹›˜[Y_H[[]]X›H™\™\]Z\Ú]H™Y›YÚØ[››Ý]]]HXÙ[Y[Øˆ
+NÂˆBˆB‚ˆÛÛœÝØ[›ÛšXØ[HÛXZ[œÖÌNÂˆÛÛœÝ˜[˜XÚÕÚ[™ÝÈHØ[›ÛšXØ[Ú[™ÝÊ™ˆŠNÂˆÛÛœÝX\›P›ØÚÈHXÙ[Y[
+ˆØ[›ÛšXØ[˜Ø[™Y]JœŠKˆ˜[˜XÚÕÚ[™ÝËˆNKˆKˆ
+NÂˆÛÛœÝ˜[Y˜[˜XÚÈHXÙ[Y[
+ˆØ[›ÛšXØ[˜Ø[™Y]JœHŠKˆ˜[˜XÚÕÚ[™ÝËˆŒˆLˆ
+NÂˆ\ÜÙ\™Y\\]X[
+ˆØ]]Ø^SÝ]ÛÛYPY\’\™XY[™U˜[Y][ÛŠˆ™\[Ý]Ù™Û\ÜÚYšXØ][ÛŠˆØ[›ÛšXØ[˜ÛÛ˜XÝˆ›Ü[X[‹ˆX\›P›ØÚËˆ[›ØØ][Û‘›ÜŠˆØ[›ÛšXØ[ˆÂˆX\›P›ØÚË™\[Y\˜[ÛÜ\]YWØØ[™Y]WÚYˆ˜[Y˜[˜XÚË™\[Y\˜[ÛÜ\]YWØØ[™Y]WÚYˆKˆÙ˜[˜XÚÕÚ[™Ý×KˆŒˆ
+Kˆ×KˆÛÜœ™[][Û‘›ÜŠØ[›ÛšXØ[Œ
+Kˆ
+Kˆ™\[Ý]Ù™Û\ÜÚYšXØ][ÛŠˆØ[›ÛšXØ[˜ÛÛ˜XÝˆ˜Ø[›ÛšXØ[Û˜]]™WÙ˜[˜XÚÈ‹ˆ˜[Y˜[˜XÚËˆ[›ØØ][Û‘›ÜŠˆØ[›ÛšXØ[ˆÂˆX\›P›ØÚË™\[Y\˜[ÛÜ\]YWØØ[™Y]WÚYˆ˜[Y˜[˜XÚË™\[Y\˜[ÛÜ\]YWØØ[™Y]WÚYˆKˆÙ˜[˜XÚÕÚ[™Ý×KˆŒˆ
+Kˆ×KˆÛÜœ™[][Û‘›ÜŠØ[›ÛšXØ[Œ
+Kˆ
+Kˆ
+KˆÂˆÝ]\Îˆ™˜[˜XÚÈ‹ˆšYÙÙ\š[™ÐÛ\ÜÚYšXØ][ÛŽˆ˜[Y]Ü—Ü™Z™XÝY‹ˆ˜]]™Q˜[˜XÚÐ][\ÎˆKˆØ[™Y]T[”™[X\ÙYˆ˜[ÙKˆØ[›ÛšXØ[˜]]™Q˜[˜XÚÔ™[X\ÙYˆYKˆKˆ
+NÂˆ\ÜÙ\™Y\\]X[
+ˆØ]]Ø^SÝ]ÛÛYPY\’\™XY[™U˜[Y][ÛŠˆ˜[Y]Ü—Ü™Z™XÝY‹ˆZ\Ú\ÙP›ØÚÓ›Û“Ý™\›\Û\ÜÚYšXØ][ÛŠˆØ[›ÛšXØ[˜ÛÛ˜XÝˆ˜Ø[›ÛšXØ[Û˜]]™WÙ˜[˜XÚÈ‹ˆÝ˜[Y˜[˜XÚ×KˆÞÈÝ\ÛZ[]WÚÜÝˆK[™ÛZ[]WÚÜÝˆLWKˆ×Kˆ
+Kˆ
+KˆÂˆÝ]\Îˆ˜›ØÚÙYÛX[X[Ü[—Ü™\]Z\™Y‹ˆšYÙÙ\š[™ÐÛ\ÜÚYšXØ][ÛŽˆ˜[Y]Ü—Ü™Z™XÝY‹ˆ˜]]™Q˜[˜XÚÐ][\ÎˆKˆØ[™Y]T[”™[X\ÙYˆ˜[ÙKˆØ[›ÛšXØ[˜]]™Q˜[˜XÚÔ™[X\ÙYˆ˜[ÙKˆKˆ
+NÂˆ\ÜÙ\™Y\\]X[
+ˆØ]]Ø^SÝ]ÛÛYPY\’\™XY[™U˜[Y][ÛŠˆ˜[Y]Ü—Ü™Z™XÝY‹ˆ™\[Ý]Ù™Û\ÜÚYšXØ][ÛŠˆØ[›ÛšXØ[˜ÛÛ˜XÝˆ˜Ø[›ÛšXØ[Û˜]]™WÙ˜[˜XÚÈ‹ˆX\›P›ØÚËˆ[›ØØ][Û‘›ÜŠˆØ[›ÛšXØ[ˆÙX\›P›ØÚË™\[Y\˜[ÛÜ\]YWØØ[™Y]WÚYKˆÙ˜[˜XÚÕÚ[™Ý×KˆŒˆ
+Kˆ×KˆÛÜœ™[][Û‘›ÜŠØ[›ÛšXØ[Œ
+Kˆ
+Kˆ
+KˆÂˆÝ]\Îˆ˜›ØÚÙYÛX[X[Ü[—Ü™\]Z\™Y‹ˆšYÙÙ\š[™ÐÛ\ÜÚYšXØ][ÛŽˆ˜[Y]Ü—Ü™Z™XÝY‹ˆ˜]]™Q˜[˜XÚÐ][\ÎˆKˆØ[™Y]T[”™[X\ÙYˆ˜[ÙKˆØ[›ÛšXØ[˜]]™Q˜[˜XÚÔ™[X\ÙYˆ˜[ÙKˆKˆ˜H™Y›Ü™KXÝ]Ù™ˆ˜[˜XÚÈ™[X\Ù\È›È[ˆ‹ˆ
+NÂˆÛÛœÝ™\™\]Z\Ú]RYHØ[›ÛšXØ[˜Ø[™Y]JœˆŠNÂˆÛÛœÝ\[™[YHØ[›ÛšXØ[˜Ø[™Y]JœÈŠNÂˆÛÛœÝ˜[˜XÚÔ™\™\]Z\Ú]PØ[™Y]\ÈHÂˆÂˆ\[Y\˜[ÛÜ\]YWØØ[™Y]WÚYˆ™\™\]Z\Ú]RYˆ™\™\]Z\Ú]WØØ[™Y]WÚYÎˆ×KˆKˆÂˆ\[Y\˜[ÛÜ\]YWØØ[™Y]WÚYˆ\[™[Yˆ™\™\]Z\Ú]WØØ[™Y]WÚYÎˆÜ™\™\]Z\Ú]RYKˆKˆNÂˆÛÛœÝ˜[˜XÚÔ™\™\]Z\Ú]HHXÙ[Y[
+ˆ™\™\]Z\Ú]RYˆ˜[˜XÚÕÚ[™ÝËˆÌˆŒˆ
+NÂˆÛÛœÝ˜[˜XÚÑ\[™[HXÙ[Y[
+ˆ\[™[Yˆ˜[˜XÚÕÚ[™ÝËˆŒˆLˆ
+NÂˆ\ÜÙ\™Y\\]X[
+ˆØ]]Ø^SÝ]ÛÛYPY\’\™XY[™U˜[Y][ÛŠˆ˜[Y]Ü—Ü™Z™XÝY‹ˆ™\™\]Z\Ú]SÜ™\š[™ÐÛ\ÜÚYšXØ][ÛŠˆØ[›ÛšXØ[˜ÛÛ˜XÝˆ˜Ø[›ÛšXØ[Û˜]]™WÙ˜[˜XÚÈ‹ˆ˜[˜XÚÔ™\™\]Z\Ú]PØ[™Y]\ËˆÙ˜[˜XÚÔ™\™\]Z\Ú]K˜[˜XÚÑ\[™[Kˆ
+Kˆ
+KˆÂˆÝ]\Îˆ™˜[˜XÚÈ‹ˆšYÙÙ\š[™ÐÛ\ÜÚYšXØ][ÛŽˆ˜[Y]Ü—Ü™Z™XÝY‹ˆ˜]]™Q˜[˜XÚÐ][\ÎˆKˆØ[™Y]T[”™[X\ÙYˆ˜[ÙKˆØ[›ÛšXØ[˜]]™Q˜[˜XÚÔ™[X\ÙYˆYKˆKˆ
+NÂˆ\ÜÙ\™Y\\]X[
+ˆØ]]Ø^SÝ]ÛÛYPY\’\™XY[™U˜[Y][ÛŠˆ˜[Y]Ü—Ü™Z™XÝY‹ˆ™\™\]Z\Ú]SÜ™\š[™ÐÛ\ÜÚYšXØ][ÛŠˆØ[›ÛšXØ[˜ÛÛ˜XÝˆ˜Ø[›ÛšXØ[Û˜]]™WÙ˜[˜XÚÈ‹ˆ˜[˜XÚÔ™\™\]Z\Ú]PØ[™Y]\ËˆÙ˜[˜XÚÑ\[™[Kˆ
+Kˆ
+KˆÂˆÝ]\Îˆ˜›ØÚÙYÛX[X[Ü[—Ü™\]Z\™Y‹ˆšYÙÙ\š[™ÐÛ\ÜÚYšXØ][ÛŽˆ˜[Y]Ü—Ü™Z™XÝY‹ˆ˜]]™Q˜[˜XÚÐ][\ÎˆKˆØ[™Y]T[”™[X\ÙYˆ˜[ÙKˆØ[›ÛšXØ[˜]]™Q˜[˜XÚÔ™[X\ÙYˆ˜[ÙKˆKˆ˜H™\™\]Z\Ú]KZ[˜[Y˜[˜XÚÈ™[X\Ù\È›È[ˆ‹ˆ
+NÂˆÛÛœÝ[[]]X›TÛ˜\ÚÝHÛÛ™J˜[Y˜[˜XÚÊNÂˆ™\[Ý]Ù™Û\ÜÚYšXØ][ÛŠˆØ[›ÛšXØ[˜ÛÛ˜XÝˆ˜Ø[›ÛšXØ[Û˜]]™WÙ˜[˜XÚÈ‹ˆ˜[Y˜[˜XÚËˆ[›ØØ][Û‘›ÜŠˆØ[›ÛšXØ[ˆÝ˜[Y˜[˜XÚË™\[Y\˜[ÛÜ\]YWØØ[™Y]WÚYKˆÙ˜[˜XÚÕÚ[™Ý×KˆMˆ
+KˆØÛÛ™J˜[Y˜[˜XÚÊWKˆÛÜœ™[][Û‘›ÜŠØ[›ÛšXØ[M
+Kˆ
+NÂˆ\ÜÙ\™Y\\]X[
+˜[Y˜[˜XÚË[[]]X›TÛ˜\ÚÝ
+NÂ‚ˆÛÛœÝ™\]Z\™Yš^\™RYÈHÂˆœ™\[—ØÝ]Ù™—Û[‹ˆœ™\[—ØÝ]Ù™—Þ™\›È‹ˆœ™\[—ØÝ]Ù™—Ù^XÝÙ\]X[]H‹ˆœ™\[—ØÝ]Ù™—ÛÛ™WÛZ[]WÙX\›H‹ˆœ™\[—ØÝ]Ù™—ÌMÛ›×Û™]×ÛÜ—Û[Ý™YØ›ØÚÈ‹ˆœ™\[—ØÝ]Ù™—Ù^XÝÚ[[]]X›WÙ^[\[Ûˆ‹ˆœ™\[—ØÝ]Ù™—Ø[XšYÝ[Ý\×Ú[[]]X›WÛX]Ú[™È‹ˆš[—ÛÜ[—ØY˜XÙ[Ú[\˜[È‹ˆ™^XÝ][Û—Ù^XÝ][Û—ÛÝ™\›\‹ˆ™^XÝ][Û—Ùš^YÛÝ™\›\‹ˆ™^XÝ][Û—Ú[[]]X›WÛÝ™\›\‹ˆ™^XÝÚ[[]]X›WÜÙ[—Ü™\™\Ù[][Ûˆ‹ˆœ™\™\]Z\Ú]WÙ[\H‹ˆœ™\™\]Z\Ú]WÙ^XÝÙ\]X[]H‹ˆœ™\™\]Z\Ú]WÜ™]™\œÙY‹ˆœ™\™\]Z\Ú]WÝ[˜\ÜÚYÛ™Y‹ˆœ™\™\]Z\Ú]WÛ][\WØ[Ü™\]Z\™Y‹ˆœ™[][Û˜[Ü›Ú™XÝYÚY[YšY\—ÙÛXZ[—ÛÜ[X[‹ˆœ™[][Û˜[Ü›Ú™XÝYÚY[YšY\—ÙÛXZ[—Ù™X\ÚX›H‹ˆœ™[][Û˜[ØØ[›ÛšXØ[ÚY[YšY\—ÙÛXZ[—ÛÜ[X[‹ˆœ™[][Û˜[ØØ[›ÛšXØ[ÚY[YšY\—ÙÛXZ[—Ù™X\ÚX›H‹ˆœ™[][Û˜[ØØ[›ÛšXØ[Û˜]]™WÙ˜[˜XÚ×Ý˜[Y‹ˆœ™[][Û˜[ØØ[›ÛšXØ[Û˜]]™WÙ˜[˜XÚ×Ú[˜[Y‹ˆœ™[][Û˜[Ú[[]]X›WÜ™Y›YÚ‹ˆœ™[][Û˜[ØÛÛÜ™[˜]YÙ[™›Ü˜Ù[Y[Ü™[[Ý˜[‹ˆNÂˆÛÛœÝÙXÛÛ™ÛÜœ™XÝ]™PÛÛ˜XÝ\ÐÛÜÙYH
+˜[YJHO‚ˆÌÔ™\Ý[˜[Y][ÛÛÛ˜XÝÐ\™PÛÜÙY
+˜[YJH	‰‚ˆ›Ú™XÝY™\Ý[Ø]]Ø^PÛÛ˜XÝ\ÐÛÜÙY
+˜[YJH	‰‚ˆ™\]Z\™Yš^\™RYË™]™\žJ
+š^\™RY
+HO‚ˆ˜[YK™š^\™SX]š^œØÙ[˜\š[Ñš^\™RYËš[˜ÛY\Êš^\™RY
+Kˆ
+NÂˆ\ÜÙ\™\]X[
+ÙXÛÛ™ÛÜœ™XÝ]™PÛÛ˜XÝ\ÐÛÜÙY
+ØÚY[\ŠKYJNÂˆ\ÜÙ\™Y\\]X[
+ˆØÚY[\‹›Ü[Z^™\”›Ú™XÝY™\Ý[ÛÛ˜XÝš[™\œÙSX\[™ÐÛÛ˜XÝˆšY[YšY\™X\š[™Ô]Ñ^XÝKˆ“Ò‘PÕQÔ‘TÕSÒQÔUËˆ
+NÂ‚ˆÛÛœÝÜÝ[S]]][ÛœÈHÂˆ
+˜[YJHOˆÂˆ[]H˜[YK›Ü[Z^™\”›Ú™XÝY™\Ý[ÛÛ˜XÝˆœ™\[Ý]Ù™‘™X\ÚXš[]T[\ÎÂˆKˆ
+˜[YJHOˆÂˆ[]H˜[YKœ™\Ý[ÛÛ˜XÝœZ\Ú\ÙP›ØÚÓ›Û“Ý™\›\[\ÎÂˆKˆ
+˜[YJHOˆÂˆ[]H˜[YK›Ü[Z^™\”›Ú™XÝY™\Ý[ÛÛ˜XÝˆœ™\™\]Z\Ú]SÜ™\š[™Ô[\ÎÂˆKˆ
+˜[YJHOˆÂˆ˜[YKš\™ÛÛœÝ˜Z[ÈH˜[YKš\™ÛÛœÝ˜Z[Ë™š[\Šˆ
+ÛÙJHO‚ˆÛÙHOOBˆ›™]×ÛÜ—Û[Ý™YÙ^XÝ][Û—Ø›ØÚ×ÜÝ\×Ø]ÛÜ—ØY\—Ü™\[—ØÝ]Ù™ˆ‹ˆ
+NÂˆKˆ
+˜[YJHOˆÂˆ˜[YK›˜]]™U˜[Y]Ü‚ˆ˜[Y]Y˜]]™Q˜[˜XÚÓ]\ÝØ]\ÙžPØ[›ÛšXØ[™\[Ý]Ù™”Z\Ú\ÙP›ØÚÓ›Û“Ý™\›\[™™\™\]Z\Ú]SÜ™\š[™Ð[™[\™ÛÛœÝ˜Z[ÈBˆ˜[ÙNÂˆKˆ
+˜[YJHOˆÂˆ˜[YKš[œ]ÛÛ˜XÝ›Ü[Z^™\’[›ØØ][Û”›Ú™XÝ[ÛÛÛ˜XÝˆœ›Ú™XÝ[Û”[\Âˆš[[]]X›PÝ]Ù™“Ý™\›\Ü”™\™\]Z\Ú]R[˜ÛÛ\]Xš[]SX^T™XXÚÜ[Z^™\ˆBˆYNÂˆKˆ
+˜[YJHOˆÂˆ˜[YKœÌŒÍÛÐ™[˜ÚX\šÐXØÙ\[˜ÙPÛÛ˜XÝ˜™[˜ÚX\šÔ™\Ý[YÙ\ÝÛÛ˜XÝˆ™˜Z[\™TÝ]\Ñš^\™T™\Ý[Ù]YÙ\ÝÛÛ˜XÝˆ˜[Y˜]]™Q˜[˜XÚÔ™\Ý[]\ÝØ]\ÙžPØ[›ÛšXØ[™\[Ý]Ù™”Z\Ú\ÙP›ØÚÓ›Û“Ý™\›\[™™\™\]Z\Ú]SÜ™\š[™ÕÚ[“X[X[›ØÚÑYÙ\Ý\Ó[Bˆ˜[ÙNÂˆKˆ
+˜[YJHOˆÂˆ˜[YK™š^\™SX]š^œØÙ[˜\š[Ñš^\™RYÈBˆ˜[YK™š^\™SX]š^œØÙ[˜\š[Ñš^\™RYË™š[\Šˆ
+š^\™RY
+HO‚ˆš^\™RYOOHœ™[][Û˜[ØÛÛÜ™[˜]YÙ[™›Ü˜Ù[Y[Ü™[[Ý˜[‹ˆ
+NÂˆKˆ
+˜[YJHOˆÂˆ[]H˜[YK›Ü[Z^™\”›Ú™XÝY™\Ý[ÛÛ˜XÝˆœ™\[Ý]Ù™‘™X\ÚXš[]T[\ÎÂˆ[]H˜[YK›Ü[Z^™\”›Ú™XÝY™\Ý[ÛÛ˜XÝˆœZ\Ú\ÙP›ØÚÓ›Û“Ý™\›\[\ÎÂˆ[]H˜[YK›Ü[Z^™\”›Ú™XÝY™\Ý[ÛÛ˜XÝˆœ™\™\]Z\Ú]SÜ™\š[™Ô[\ÎÂˆ[]H˜[YKœ™\Ý[ÛÛ˜XÝœ™\[Ý]Ù™‘™X\ÚXš[]T[\ÎÂˆ[]H˜[YKœ™\Ý[ÛÛ˜XÝœZ\Ú\ÙP›ØÚÓ›Û“Ý™\›\[\ÎÂˆ[]H˜[YKœ™\Ý[ÛÛ˜XÝœ™\™\]Z\Ú]SÜ™\š[™Ô[\ÎÂˆÛÛœÝ™[[Ý™YÛÙ\ÈH™]ÈÙ]
+Âˆ›™]×ÛÜ—Û[Ý™YÙ^XÝ][Û—Ø›ØÚ×ÜÝ\×Ø]ÛÜ—ØY\—Ü™\[—ØÝ]Ù™ˆ‹ˆ˜›ØÚ×ÛÝ™\›\Þ™\›È‹ˆœ™\™\]Z\Ú]WÛÜ™\—Ýš[Û][Ûœ×Þ™\›È‹ˆJNÂˆÛÛœÝ™]Z[™YH
+ÛÙJHOˆ\™[[Ý™YÛÙ\Ëš\ÊÛÙJNÂˆ˜[YKš\™ÛÛœÝ˜Z[ÈH˜[YKš\™ÛÛœÝ˜Z[Ë™š[\Š™]Z[™Y
+NÂˆ˜[YK›Ü[Z^™\”›Ú™XÝY™\Ý[ÛÛ˜XÝ˜ÛÜÙY[[U˜[Y\Ë˜ÛÛœÝ˜Z[ØÛÙWÙ[[HBˆ˜[YK›Ü[Z^™\”›Ú™XÝY™\Ý[ÛÛ˜XÝ˜ÛÜÙY[[U˜[Y\Ë˜ÛÛœÝ˜Z[ØÛÙWÙ[[K™š[\Šˆ™]Z[™Yˆ
+NÂˆ˜[YKœ™\Ý[ÛÛ˜XÝ˜ÛÜÙY[[U˜[Y\Ë˜ÛÛœÝ˜Z[ØÛÙWÙ[[HBˆ˜[YKœ™\Ý[ÛÛ˜XÝ˜ÛÜÙY[[U˜[Y\Ë˜ÛÛœÝ˜Z[ØÛÙWÙ[[K™š[\Šˆ™]Z[™Yˆ
+NÂˆÛÛœÝ›Ú™XÝ[Û”[\ÈBˆ˜[YKš[œ]ÛÛ˜XÝ›Ü[Z^™\’[›ØØ][Û”›Ú™XÝ[ÛÛÛ˜XÝˆœ›Ú™XÝ[Û”[\ÎÂˆ›Üˆ
+ÛÛœÝšY[ÙˆÂˆš[[]]X›Tš[Ü”XÙ[Y[Ó]\Ý\ÜÑ^XÝ™\[Ý]Ù™‘^[\[Û”™\ÛÛ][Û™Y›Ü™T›Ú™XÝ[Ûˆ‹ˆ™^XÝ[[]]X›T™\[Ý]Ù™‘^[\[Û‘šY[È‹ˆ™^XÝ[[]]X›T™\[Ý]Ù™‘^[\[Û“]\ÝX]Ú^XÝSÛ™Q[\ÙYÜ’[”›ÙÜ™\ÜÔš[Ü”XÙ[Y[›ÝYÚØ[YPÛÜœ™[]Y[›ØØ][Ûˆ‹ˆ˜[XšYÝ[Ý\Ò[[]]X›T™\[Ý]Ù™‘^[\[Û“X]Ú[™ÔÝ]\È‹ˆ››Û‘^[\XÙ[Y[]\ÝÝ\]ÜY\“›Û“[™\[Ý]Ù™ˆ‹ˆ›[™\[Ý]Ù™“YX[œÓ›Ô™\[“ÝÙ\›Ý[™‹ˆœ™\[Ý]Ù™‘\]X[]R\Ñ™X\ÚX›H‹ˆœ™\[Ý]Ù™ŒM[ÝÜÓ›Ó™]ÓÜ“[Ý™Y^XÝ][Û›ØÚÈ‹ˆš[[]]X›Tš[Ü”XÙ[Y[Ó]\Ý™TZ\Ú\ÙS›Û“Ý™\›\[™ÕÚ]]™\žPÝ\œ™[š^Y›ØÚÐ™Y›Ü™T›Ú™XÝ[Ûˆ‹ˆš[[]]X›Tš[Ü”XÙ[Y[Ó]\Ý™[XZ[”Z\Ú\ÙS›Û“Ý™\›\[™Ð™Y›Ü™T›Ú™XÝ[Ûˆ‹ˆ™^XÝ[˜Ú[™ÙY[[]]X›TÙ[”™\™\Ù[][Û’\ÓÛ™SÙÚXØ[›ØÚÐ[™Ù\Ó›ÝÝ™\›\]Ù[ˆ‹ˆ˜[XšYÝ[Ý\Ò[[]]X›TÙ[”™\™\Ù[][Û“X]Ú[™ÔÝ]\È‹ˆœXÙY[[]]X›Q\[™[]\Ý]™Q]™\žT™\™\]Z\Ú]TXÙY^XÝSÛ˜ÙP[™[™[™Ð]Ü™Y›Ü™Q\[™[Ý\™Y›Ü™T›Ú™XÝ[Ûˆ‹ˆš[[]]X›T™\™\]Z\Ú]U[šÛ›ÝÛ‘[™Û[™Ñ\XØ]PÜ›ÜÜÑÛXZ[“Ü“›ÛšZ™XÝ]™T™[][Û”Ý]\È‹ˆš[[]]X›T™\™\]Z\Ú]RÛ›ÝÛ“Z\ÜÚ[™Õ[˜\ÜÚYÛ™YÜ”™]™\œÙYXÙ[Y[Ý]\È‹ˆš[[]]X›PÝ]Ù™“Ý™\›\Ü”™\™\]Z\Ú]R[˜ÛÛ\]Xš[]SX^T™XXÚÜ[Z^™\ˆ‹ˆš[[]]X›PÝ]Ù™“Ý™\›\Ü”™\™\]Z\Ú]R[˜ÛÛ\]Xš[]S]\Ý][\^XÝSÛ™TÙ\\˜][U˜[Y]Y˜]]™Q˜[˜XÚÕÚ]Ý]™]Üš][™Ò[[]]X›SÜ‘š^YXÙ[Y[È‹ˆš[[]]X›PÝ]Ù™“Ý™\›\Ü”™\™\]Z\Ú]R[˜ÛÛ\]Xš[]R[˜[Y˜]]™Q˜[˜XÚÔ™\Ý[‹ˆš[[]]X›PÝ]Ù™“Ý™\›\Ü”™\™\]Z\Ú]R[˜ÛÛ\]Xš[]R[˜[Y˜]]™Q˜[˜XÚÓX^UšYÙÙ\[›Ý\‘˜[˜XÚÈ‹ˆJHÂˆ[]H›Ú™XÝ[Û”[\ÖÙšY[NÂˆBˆ›Ú™XÝ[Û”[\Ë™[\ÙY[™[”›ÙÜ™\ÜÔXÙ[Y[Ð™XÛÛYR[[]]X›Tš[Ü”XÙ[Y[ÈBˆ˜[ÙNÂ‚ˆÛÛœÝš[Ü”[\ÈBˆ˜[YKš[œ]ÛÛ˜XÝœš[ÜXØÙ\YØÚY[T[\ÎÂˆ›Üˆ
+ÛÛœÝšY[ÙˆÂˆ™[\ÙY[™[”›ÙÜ™\ÜÔXÙ[Y[]\Ý™\ÛÛ™Q^XÝSÛ™R[[]]X›T™\[Ý]Ù™‘^[\[ÛžPØ[™Y]UÚ[™ÝÔÝ\[™[™\˜][Û™Y›Ü™T›Ú™XÝ[Ûˆ‹ˆ˜[XšYÝ[Ý\Ò[[]]X›T™\[Ý]Ù™‘^[\[Û“X]Ú[™ÔÝ]\È‹ˆ››Û‘^[\™]ÓÜ“[Ý™YXÙ[Y[]\ÝÝ\]ÜY\“›Û“[™\[Ý]Ù™ˆ‹ˆ›[™\[Ý]Ù™“YX[œÓ›Ô™\[“ÝÙ\›Ý[™‹ˆœ™\[Ý]Ù™‘\]X[]R\Ñ™X\ÚX›H‹ˆœ™\[Ý]Ù™ŒM[ÝÜÓ›Ó™]ÓÜ“[Ý™Y^XÝ][Û›ØÚÈ‹ˆ™[\ÙY[™[”›ÙÜ™\ÜÔXÙ[Y[]\Ý™TZ\Ú\ÙS›Û“Ý™\›\[™ÕÚ]]™\žPÝ\œ™[š^Y›ØÚÐ™Y›Ü™T›Ú™XÝ[Ûˆ‹ˆ™[\ÙY[™[”›ÙÜ™\ÜÔXÙ[Y[Ó]\Ý™[XZ[”Z\Ú\ÙS›Û“Ý™\›\[™Ð™Y›Ü™T›Ú™XÝ[Ûˆ‹ˆ™^XÝ[˜Ú[™ÙY[[]]X›TÙ[”™\™\Ù[][Û’\ÓÛ™SÙÚXØ[›ØÚÐ[™Ù\Ó›ÝÝ™\›\]Ù[ˆ‹ˆ˜[XšYÝ[Ý\Ò[[]]X›TÙ[”™\™\Ù[][Û“X]Ú[™ÔÝ]\È‹ˆœXÙY[\ÙYÜ’[”›ÙÜ™\ÜÑ\[™[]\Ý]™Q]™\žT™\™\]Z\Ú]TXÙY^XÝSÛ˜ÙP[™[™[™Ð]Ü™Y›Ü™Q\[™[Ý\™Y›Ü™T›Ú™XÝ[Ûˆ‹ˆš[[]]X›T™\™\]Z\Ú]U[šÛ›ÝÛ‘[™Û[™Ñ\XØ]PÜ›ÜÜÑÛXZ[“Ü“›ÛšZ™XÝ]™T™[][Û”Ý]\È‹ˆš[[]]X›T™\™\]Z\Ú]RÛ›ÝÛ“Z\ÜÚ[™Õ[˜\ÜÚYÛ™YÜ”™]™\œÙYXÙ[Y[Ý]\È‹ˆš[[]]X›PÝ]Ù™“Ý™\›\Ü”™\™\]Z\Ú]R[˜ÛÛ\]Xš[]SX^T™XXÚÜ[Z^™\ˆ‹ˆš[[]]X›PÝ]Ù™“Ý™\›\Ü”™\™\]Z\Ú]R[˜ÛÛ\]Xš[]S]\Ý][\^XÝSÛ™TÙ\\˜][U˜[Y]Y˜]]™Q˜[˜XÚÕÚ]Ý][Ýš[™Ñ›Ü[™Õ[˜\ÜÚYÛš[™ÔÚÜ[š[™Ñ^[™[™ÓÜ”™]Üš][™Ò[[]]X›SÜ‘š^YXÙ[Y[È‹ˆš[[]]X›PÝ]Ù™“Ý™\›\Ü”™\™\]Z\Ú]R[˜ÛÛ\]Xš[]R[˜[Y˜]]™Q˜[˜XÚÔ™\Ý[‹ˆš[[]]X›PÝ]Ù™“Ý™\›\Ü”™\™\]Z\Ú]R[˜ÛÛ\]Xš[]R[˜[Y˜]]™Q˜[˜XÚÓX^UšYÙÙ\[›Ý\‘˜[˜XÚÈ‹ˆJHÂˆ[]Hš[Ü”[\ÖÙšY[NÂˆBˆš[Ü”[\Ë›™]ÓÜ“[Ý™YXÙ[Y[X^TÝ\™Y›Ü™PÝ]Ù™ˆHYNÂˆš[Ü”[\ËœXÙ[Y[Ó]\Ý™S›Û“Ý™\›\[™Ð[™Ú][”š[Ü‘^P›Ý[™ÈBˆ˜[ÙNÂˆš[Ü”[\Ë™[\ÙYÜ’[”›ÙÜ™\ÜÔXÙ[Y[X^P™Q›ÜYÚÜ[™Y[Ý™YÜ‘\XØ]YBˆYNÂˆš[Ü”[\Ëš[[]]X›TXÙ[Y[ÜÝ\œ™[Ø[™Y]TÛXÞSX^P™T™]Üš][•Ô™\Z\’[˜ÛÛ\]Xš[]HBˆYNÂ‚ˆÛÛœÝØ]]Ø^HBˆ˜[YK›Ü[Z^™\”›Ú™XÝY™\Ý[ÛÛ˜XÝˆ˜Ø[›ÛšXØ[Ø]]Ø^PÛÛœÝXÝ[ÛÛÛ˜XÝÂˆØ]]Ø^K›Ü[X[Ü‘™X\ÚX›Pœ˜[˜ÚÜ™\‘^XÝVÌ—HBˆ˜[Y]WÜ›Ú™XÝYØØ[™Y]WØXØÛÝ[[™×Ù\˜][Û—Û›Û—Ù›ÜX›WØØ[™Y]WÝÚ[™Ý×Ø[™Ú\™ÙXY[™WÜ[\×Ý\Ú[™×Ý\ÝYÙØ]]Ø^WØÛÛ^ŽÂˆØ]]Ø^K›Ü[X[Ü‘™X\ÚX›Pœ˜[˜ÚÜ™\‘^XÝVÍ×HBˆ˜[Y]WØÛÛ\]WØØ[›ÛšXØ[Ü™\Ý[ØÛÛ˜XÝØ[™Ù]™\žWÛ˜]]™WÚ\™ØÛÛœÝ˜Z[ŽÂˆØ]]Ø^KœÛÛ™\“Ü•\ÝYØ]]Ø^Q˜Z[\™Pœ˜[˜ÚÜ™\‘^XÝVÍWHBˆ˜[Y]WØÛÛ\]WØØ[›ÛšXØ[Ü™\Ý[ØÛÛ˜XÝØØ[™Y]WØXØÛÝ[[™×Ù\˜][Û—Û›Û—Ù›ÜX›WØØ[™Y]WÝÚ[™Ý×Ú\™ÙXY[™WØ[™Ù]™\žWÚ\™ØÛÛœÝ˜Z[ŽÂˆ˜[YK›Ü[Z^™\”›Ú™XÝY™\Ý[ÛÛ˜XÝœ›ØÙ\ÜÚ[™ÓÜ™\‘^XÝVÍ—HBˆ˜[Y]WØÛÛ\]WØØ[›ÛšXØ[Ü™\Ý[ØÛÛ˜XÝØ[™Ù]™\žWÛ˜]]™WÚ\™ØÛÛœÝ˜Z[ŽÂˆ›Üˆ
+ÛÛœÝšY[ÙˆÂˆœ™\[Ý]Ù™”ÝXÝ\˜[X\[™ÐÛÜœ™[][Û“Ü[XšYÝ[Ý\Ò[[]]X›SX]Ú[™Ñ˜Z[\™TÝ]\È‹ˆšÛ›ÝÛ™Y›Ü™PÝ]Ù™”XÙ[Y[Ý]\È‹ˆœZ\Ú\ÙS›Û“Ý™\›\ÝXÝ\˜[X\[™ÐÛÜœ™[][Û“Ü[XšYÝ[Ý\Ò[[]]X›TÙ[“X]Ú[™Ñ˜Z[\™TÝ]\È‹ˆšÛ›ÝÛ›ØÚÓÝ™\›\Ý]\È‹ˆœ™\™\]Z\Ú]U[šÛ›ÝÛ‘[™Û[™Ñ\XØ]PÜ›ÜÜÑÛXZ[“Ü“›ÛšZ™XÝ]™T™[][Û”Ý]\È‹ˆšÛ›ÝÛ“Z\ÜÚ[™Õ[˜\ÜÚYÛ™YÜ”™]™\œÙY™\™\]Z\Ú]TXÙ[Y[Ý]\È‹ˆšÛ›ÝÛ”™\™\]Z\Ú]TXÙ[Y[˜Z[\™PÛ\ÜÚYšXØ][Û”™XÙY\ÑÙ[™\šXÐØ[™Y]PXØÛÝ[[™ÓÛZ\ÜÚ[ÛÛ\ÜÚYšXØ][Ûˆ‹ˆ™]™\žRÛ›ÝÛÝ]Ù™“Ý™\›\Ü”™\™\]Z\Ú]Q˜Z[\™S]\Ý][\^XÝSÛ™R[™\[™[T™\\™YØ[›ÛšXØ[˜]]™Q˜[˜XÚÈ‹ˆJHÂˆ[]H˜[YK›Ü[Z^™\”›Ú™XÝY™\Ý[ÛÛ˜XÝ™˜Z[\™T›Ý][™ÖÙšY[NÂˆB‚ˆ[]H˜[YKœ™\Ý[ÛÛ˜XÝ™˜[˜XÚÕ˜[YT[\Âˆœ™Y™\™[˜ÙY˜]]™Q˜[˜XÚÓ]\Ý™TÙ\\˜][U˜[Y]YYØZ[œÝØ[›ÛšXØ[™\[Ý]Ù™”Z\Ú\ÙP›ØÚÓ›Û“Ý™\›\[™™\™\]Z\Ú]SÜ™\š[™Ð™Y›Ü™T™[X\ÙNÂˆ[]H˜[YKœ™\Ý[ÛÛ˜XÝ™˜[˜XÚÕ˜[YT[\Âˆ›Z\ÜÚ[™Õ[˜]˜Z[X›S›Û‘›ÜX›R[˜[YØ[™Y]UÚ[™ÝÒ[˜[Y\™XY[™R[˜[Y™\[Ý]Ù™“Ý™\›\[™Ò[˜[Y™\™\]Z\Ú]R[˜[YØ[›ÛšXØ[™\œÚ[Û’[™›ÓÜ’\™ÛÛœÝ˜Z[[˜[Y˜]]™T[”™\Ý[Âˆ›Üˆ
+ÛÛœÝšY[ÙˆÂˆ˜[Y]Y˜]]™Q˜[˜XÚÓ]\ÝØ]\ÙžPØ[›ÛšXØ[™\[Ý]Ù™”Z\Ú\ÙP›ØÚÓ›Û“Ý™\›\[™™\™\]Z\Ú]SÜ™\š[™Ð[™[\™ÛÛœÝ˜Z[È‹ˆ™]™\žS™]ÓÜ“[Ý™Y^XÝ][Û›ØÚÒ[“Ü[X[™X\ÚX›P[™™[X\ØX›U˜[Y]Y˜]]™Q˜[˜XÚÓ]\ÝÝ\]ÜY\“›Û“[™\[Ý]Ù™•[›\ÜÒ]\ÕU[š\]YQ^XÝ[[]]X›Q[\ÙYÜ’[”›ÙÜ™\ÜÔÙ[”™\™\Ù[][Ûˆ‹ˆ™]™\žSÜ[X[™X\ÚX›P[™™[X\ØX›U˜[Y]Y˜]]™Q˜[˜XÚÔ[“]\ÝØ]\ÙžR[“Ü[”Z\Ú\ÙS›Û“Ý™\›\›Ü‘^XÝ][Û‘^XÝ][Û‘^XÝ][Û‘š^Y[™™]ÓÜ“[Ý™Y^XÝ][Û’[[]]X›TZ\œÈ‹ˆ™]™\žTXÙY\[™[[“Ü[X[™X\ÚX›P[™™[X\ØX›U˜[Y]Y˜]]™Q˜[˜XÚÓ]\Ý]™Q]™\žT™\™\]Z\Ú]TXÙY^XÝSÛ˜ÙP[™[™[™Ð]Ü™Y›Ü™Q\[™[Ý\‹ˆ˜Ý]Ù™“Ý™\›\Ü”™\™\]Z\Ú]TÝXÝ\˜[X\[™ÐÛÜœ™[][Û[XšYÝZ]TÝ]\È‹ˆšÛ›ÝÛ™Y›Ü™PÝ]Ù™“Ý™\›\Z\ÜÚ[™Õ[˜\ÜÚYÛ™YÜ”™]™\œÙY™\™\]Z\Ú]TÝ]\È‹ˆšÛ›ÝÛ”™\™\]Z\Ú]TXÙ[Y[˜Z[\™PÛ\ÜÚYšXØ][Û”™XÙY\ÑÙ[™\šXÐØ[™Y]PXØÛÝ[[™ÓÛZ\ÜÚ[ÛÛ\ÜÚYšXØ][Ûˆ‹ˆš[[]]X›Q[\ÙYÜ’[”›ÙÜ™\ÜÔXÙ[Y[]\Ý\ÜÕ[š\]YQ^XÝÝ]Ù™‘^[\[Û”Z\Ú\ÙS›Û“Ý™\›\[™™\™\]Z\Ú]SÜ™\š[™Ô™Y›YÚ[™X^S›Ý™S[Ý™Y›ÜY[˜\ÜÚYÛ™YÚÜ[™Y^[™YÜ”™]Üš][‘\š[™Õ˜[Y][Û“Ü‘˜[˜XÚÈ‹ˆ™š^Y›ØÚÓX^P™T™]Üš][•Ô™\Z\“Ý™\›\‹ˆJHÂˆ[]H˜[YK›˜]]™U˜[Y]Ü–ÙšY[NÂˆB‚ˆÛÛœÝ™\ÛÛ™YY[X™\œÈBˆ˜[YKœÌŒÍÛÐ™[˜ÚX\šÐXØÙ\[˜ÙPÛÛ˜XÝˆ˜™[˜ÚX\šÔ™\Ý[YÙ\ÝÛÛ˜XÝœ™\ÛÛ™Y\Y˜XÝY[X™\œÐÛÛ˜XÝÂˆÛÛœÝ™Z™XÝY][\Bˆ™\ÛÛ™YY[X™\œËœ™Z™XÝY˜]]™Q˜[˜XÚÐ][\˜[Y][Û”™XÛÜ™ÛÛ˜XÝÂˆ™Z™XÝY][\™šY[ØÚ[X\Ëœ™Z™XÝ[Û—ØÛÙWÙ[[HBˆ™Z™XÝY][\™šY[ØÚ[X\Ëœ™Z™XÝ[Û—ØÛÙWÙ[[K™š[\Šˆ
+ÛÙJHO‚ˆVÂˆœ™\[—ØÝ]Ù™—Ú[˜[Y‹ˆ˜›ØÚ×ÛÝ™\›\Ú[˜[Y‹ˆœ™\™\]Z\Ú]WÛÜ™\—Ú[˜[Y‹ˆKš[˜ÛY\ÊÛÙJKˆ
+NÂˆ™Z™XÝY][\œ™Z™XÝ[Û•˜[Y][Û“Ü™\‘^XÝHBˆ™Z™XÝY][\œ™Z™XÝ[Û•˜[Y][Û“Ü™\‘^XÝK™š[\Šˆ
+Ý\
+HO‚ˆVÂˆœ™\[—ØÝ]Ù™—Ù™X\ÚXš[]H‹ˆœZ\Ú\ÙWØ›ØÚ×Û›Û—ÛÝ™\›\‹ˆœ™\™\]Z\Ú]WÛÜ™\š[™È‹ˆKš[˜ÛY\ÊÝ\
+Kˆ
+NÂˆ[]H™\ÛÛ™YY[X™\œË™\šYšXØ][Û”[\Âˆ˜[Y˜Z[\™Q˜[˜XÚÓ]\ÝØ]\ÙžPØ[›ÛšXØ[™\[Ý]Ù™”Z\Ú\ÙP›ØÚÓ›Û“Ý™\›\[™™\™\]Z\Ú]SÜ™\š[™ÎÂˆ[]H˜[YKœÌŒÍÛÐ™[˜ÚX\šÐXØÙ\[˜ÙPÛÛ˜XÝˆ˜™[˜ÚX\šÔ™\Ý[YÙ\ÝÛÛ˜XÝˆ™˜Z[\™TÝ]\Ñš^\™T™\Ý[Ù]YÙ\ÝÛÛ˜XÝˆ˜[Y˜]]™Q˜[˜XÚÔ™\Ý[]\ÝØ]\ÙžPØ[›ÛšXØ[™\[Ý]Ù™”Z\Ú\ÙP›ØÚÓ›Û“Ý™\›\[™™\™\]Z\Ú]SÜ™\š[™ÕÚ[“X[X[›ØÚÑYÙ\Ý\Ó[Â‚ˆÛÛœÝ[ÙXÛÛ™ÛÜœ™XÝ]™Qš^\™RYÈH™]ÈÙ]
+™\]Z\™Yš^\™RYÊNÂˆ˜[YK™š^\™SX]š^œØÙ[˜\š[Ñš^\™RYÈBˆ˜[YK™š^\™SX]š^œØÙ[˜\š[Ñš^\™RYË™š[\Šˆ
+š^\™RY
+HOˆX[ÙXÛÛ™ÛÜœ™XÝ]™Qš^\™RYËš\Êš^\™RY
+Kˆ
+NÂˆKˆNÂˆ›Üˆ
+ÛÛœÝ]]]HÙˆÜÝ[S]]][ÛœÊHÂˆÛÛœÝÜÝ[HHÛÛ™JØÚY[\ŠNÂˆ]]]JÜÝ[JNÂˆ\ÜÙ\™\]X[
+ÙXÛÛ™ÛÜœ™XÝ]™PÛÛ˜XÝ\ÐÛÜÙY
+ÜÝ[JK˜[ÙJNÂˆBŸJNÂ‚\Ý
+ÌÈ™\Ý[XØÛÝ[[™È\È[ˆ^XÝ[›ØØ][Ûˆ\][Ûˆ[™ÜÝ[HØ[™Y]HÙ]È˜Z[ÛÜÙY‹\Þ[˜È
+
+HOˆÂˆÛÛœÝØÚY[\ˆH]ØZ]œÛÛŠˆ˜ÛÛ™šYËÙX˜[™Ú[Y[Y^K\ØÚY[\‹XÛÛ˜XÝšœÛÛˆ‹ˆ
+NÂˆ\ÜÙ\™\]X[
+ÌÔ™\Ý[˜[Y][ÛÛÛ˜XÝÐ\™PÛÜÙY
+ØÚY[\ŠKYJNÂˆ\ÜÙ\™\]X[
+›Ú™XÝY™\Ý[Ø]]Ø^PÛÛ˜XÝ\ÐÛÜÙY
+ØÚY[\ŠKYJNÂ‚ˆÛÛœÝØ[›ÛšXØ[Ø[™Y]RYÈHÂˆØ[™ÉÈ˜H‹œ™\X]
+MŠ_XˆØ[™ÉÈ˜ˆ‹œ™\X]
+MŠ_XˆØ[™ÉÈ˜È‹œ™\X]
+MŠ_XˆNÂˆÛÛœÝ›Ú™XÝYØ[™Y]RYÈHÂˆØØ[™ÉÈ˜H‹œ™\X]
+MŠ_XˆØØ[™ÉÈ˜ˆ‹œ™\X]
+MŠ_XˆØØ[™ÉÈ˜È‹œ™\X]
+MŠ_XˆNÂˆÛÛœÝ›ØÚÜÑ›ÜˆH
+Ø[™Y]RYÊHOˆÂˆÈ\[Y\˜[ÛÜ\]YWØØ[™Y]WÚYˆØ[™Y]RYÖÌHKˆÈ\[Y\˜[ÛÜ\]YWØØ[™Y]WÚYˆØ[™Y]RYÖÌWHKˆNÂˆÛÛœÝ[˜\ÜÚYÛ™Y›ÜˆH
+Ø[™Y]RYÊHOˆÂˆÈ\[Y\˜[ÛÜ\]YWØØ[™Y]WÚYˆØ[™Y]RYÖÌ—HKˆNÂ‚ˆ›Üˆ
+ÛÛœÝØ[™Y]RYÈÙˆØØ[›ÛšXØ[Ø[™Y]RYË›Ú™XÝYØ[™Y]RY×JHÂˆ\ÜÙ\™\]X[
+ˆØ[™Y]PXØÛÝ[[™Ò\Ñ^XÝ
+ˆØ[™Y]RYËˆ›ØÚÜÑ›ÜŠØ[™Y]RYÊKˆ[˜\ÜÚYÛ™Y›ÜŠØ[™Y]RYÊKˆ
+KˆYKˆ
+NÂˆ\ÜÙ\™\]X[
+ˆØ[™Y]PXØÛÝ[[™Ò\Ñ^XÝ
+ˆØØ[™Y]RYÖÌKØ[™Y]RYÖÌWKØ[™Y]RYÖÌWWKˆ›ØÚÜÑ›ÜŠØ[™Y]RYÊKˆ[˜\ÜÚYÛ™Y›ÜŠØ[™Y]RYÊKˆ
+Kˆ˜[ÙKˆ™\XØ]H[›ØØ][ÛˆØ[™Y]H›ÝÜÈ]\Ý˜Z[™Y›Ü™HÙ]XØÛÝ[[™È‹ˆ
+NÂ‚ˆÛÛœÝÜÝ[T\][ÛœÈHÂˆÂˆ›ÛZ]YØ[™Y]H‹ˆ›ØÚÜÑ›ÜŠØ[™Y]RYÊKœÛXÙJJKˆ[˜\ÜÚYÛ™Y›ÜŠØ[™Y]RYÊKˆKˆÂˆ[šÛ›ÝÛˆ^˜HØ[™Y]H‹ˆÂˆ‹‹˜›ØÚÜÑ›ÜŠØ[™Y]RYÊKˆÂˆ\[Y\˜[ÛÜ\]YWØØ[™Y]WÚYˆØ[™Y]RYÖÌKœÝ\ÕÚ]
+›ØØ[™ÈŠBˆÈØØ[™ÉÈžˆ‹œ™\X]
+MŠ_XˆˆØ[™ÉÈžˆ‹œ™\X]
+MŠ_XˆKˆKˆ[˜\ÜÚYÛ™Y›ÜŠØ[™Y]RYÊKˆKˆÂˆ™\]X[ÛÝ[È]Û™HÛZ]Y[™Û™H[šÛ›ÝÛˆ‹ˆ›ØÚÜÑ›ÜŠØ[™Y]RYÊKˆÂˆÂˆ\[Y\˜[ÛÜ\]YWØØ[™Y]WÚYˆØ[™Y]RYÖÌKœÝ\ÕÚ]
+›ØØ[™ÈŠBˆÈØØ[™ÉÈžˆ‹œ™\X]
+MŠ_XˆˆØ[™ÉÈžˆ‹œ™\X]
+MŠ_XˆKˆKˆKˆÂˆ™\XØ]H^XÝ][ÛˆØ[™Y]H‹ˆË‹‹˜›ØÚÜÑ›ÜŠØ[™Y]RYÊK›ØÚÜÑ›ÜŠØ[™Y]RYÊVÌWKˆ[˜\ÜÚYÛ™Y›ÜŠØ[™Y]RYÊKˆKˆÂˆ™\XØ]H[˜\ÜÚYÛ™YØ[™Y]H‹ˆ›ØÚÜÑ›ÜŠØ[™Y]RYÊKˆË‹‹[˜\ÜÚYÛ™Y›ÜŠØ[™Y]RYÊK[˜\ÜÚYÛ™Y›ÜŠØ[™Y]RYÊVÌWKˆKˆÂˆœXÙY[™[˜\ÜÚYÛ™YÝ™\›\‹ˆ›ØÚÜÑ›ÜŠØ[™Y]RYÊKˆÂˆ‹‹[˜\ÜÚYÛ™Y›ÜŠØ[™Y]RYÊKˆÈ\[Y\˜[ÛÜ\]YWØØ[™Y]WÚYˆØ[™Y]RYÖÌHKˆKˆKˆNÂˆ›Üˆ
+ÛÛœÝÛ˜[YK›ØÚÜË[˜\ÜÚYÛ™YHÙˆÜÝ[T\][ÛœÊHÂˆ\ÜÙ\™\]X[
+ˆØ[™Y]PXØÛÝ[[™Ò\Ñ^XÝ
+Ø[™Y]RYË›ØÚÜË[˜\ÜÚYÛ™Y
+Kˆ˜[ÙKˆ	Û˜[Y_H]\Ý˜Z[^XÝXØÛÝ[[™Øˆ
+NÂˆB‚ˆÛÛœÝXYÛ›ÜÝXÕš[Û][ÛØ[™Y]RYÈHØØ[™Y]RYÖÌWWNÂˆ\ÜÙ\™\]X[
+XYÛ›ÜÝXÕš[Û][ÛØ[™Y]RYË›[™ÝJNÂˆ\ÜÙ\™\]X[
+ˆØ[™Y]PXØÛÝ[[™Ò\Ñ^XÝ
+ˆØ[™Y]RYËˆÞÈ\[Y\˜[ÛÜ\]YWØØ[™Y]WÚYˆØ[™Y]RYÖÌHWKˆÞÈ\[Y\˜[ÛÜ\]YWØØ[™Y]WÚYˆØ[™Y]RYÖÌ—HWKˆ
+Kˆ˜[ÙKˆ˜HØ[™Y]H\X\š[™ÈÛ›H[ˆš[Û][ÛœÈ™[XZ[œÈÛZ]Y‹ˆ
+NÂˆB‚ˆÛÛœÝ›Ú[UÙXZÙ[™Y]]][ÛœÈHÂˆÂˆ[š[ÛˆX^HÛZ]Ø[™Y]\È‹ˆ
+ÛÛ˜XÝ
+HOˆÂˆÛÛ˜XÝ˜Ø[™Y]PXØÛÝ[[™Ô[\Âˆ™^XÝ][Û›ØÚÐ[™[˜\ÜÚYÛ™YØ[™Y]RYÙ][š[Û“]\Ý\]X[^XÝÛÜœ™[]Y[›ØØ][ÛØ[™Y]TÙ]Bˆ˜[ÙNÂˆKˆKˆÂˆœXÙY[™[˜\ÜÚYÛ™YÝ™\›\[ÝÙY‹ˆ
+ÛÛ˜XÝ
+HOˆÂˆÛÛ˜XÝ˜Ø[™Y]PXØÛÝ[[™Ô[\Âˆ™^XÝ][Û›ØÚÐ[™[˜\ÜÚYÛ™YØ[™Y]RYÙ]Ñ\Ú›Ú[H˜[ÙNÂˆKˆKˆÂˆš[Û][ÛˆQÈØ]\ÙžHXØÛÝ[[™È‹ˆ
+ÛÛ˜XÝ
+HOˆÂˆÛÛ˜XÝ˜Ø[™Y]PXØÛÝ[[™Ô[\Âˆš[Û][ÛØ[™Y]RYÐ\™QXYÛ›ÜÝXÓÛ›P[™Ø[››ÝØ]\ÙžPXØÛÝ[[™ÈBˆ˜[ÙNÂˆKˆKˆNÂˆ›Üˆ
+ÛÛœÝÛ˜[YK]]]WHÙˆ›Ú[UÙXZÙ[™Y]]][ÛœÊHÂˆÛÛœÝÜÝ[HHÛÛ™JØÚY[\ŠNÂˆ]]]JÜÝ[Kœ™\Ý[ÛÛ˜XÝ
+NÂˆ]]]JÜÝ[K›Ü[Z^™\”›Ú™XÝY™\Ý[ÛÛ˜XÝ
+NÂˆ\ÜÙ\™\]X[
+ˆÌÔ™\Ý[˜[Y][ÛÛÛ˜XÝÐ\™PÛÜÙY
+ÜÝ[JKˆ˜[ÙKˆ	Û˜[Y_H]\Ý˜Z[]™[ˆÚ[ˆ›Ý™\Ý[ÛÛ˜XÝÈ\™HÙXZÙ[™Y\]X[Xˆ
+NÂˆBˆ›Üˆ
+ÛÛœÝ[RÙ^HÙˆØš™XÝšÙ^\ÊˆØÚY[\‹œ™\Ý[ÛÛ˜XÝ˜Ø[™Y]PXØÛÝ[[™Ô[\Ëˆ
+JHÂˆÛÛœÝZ\ÜÚ[™ÐXØÛÝ[[™Ô[HHÛÛ™JØÚY[\ŠNÂˆ[]HZ\ÜÚ[™ÐXØÛÝ[[™Ô[Kœ™\Ý[ÛÛ˜XÝ˜Ø[™Y]PXØÛÝ[[™Ô[\ÖÂˆ[RÙ^BˆNÂˆ[]HZ\ÜÚ[™ÐXØÛÝ[[™Ô[K›Ü[Z^™\”›Ú™XÝY™\Ý[ÛÛ˜XÝˆ˜Ø[™Y]PXØÛÝ[[™Ô[\ÖÜ[RÙ^WNÂˆ\ÜÙ\™\]X[
+ˆÌÔ™\Ý[˜[Y][ÛÛÛ˜XÝÐ\™PÛÜÙY
+Z\ÜÚ[™ÐXØÛÝ[[™Ô[JKˆ˜[ÙKˆÛÛÜ™[˜]Y™[[Ý˜[ÙˆXØÛÝ[[™È[H	Ü[RÙ^_H]\Ý˜Z[ÛÜÙYˆ
+NÂˆBˆÛÛœÝ›Ú[Ü]™[Ý™\œšYHHÛÛ™JØÚY[\ŠNÂˆ›Ú[Ü]™[Ý™\œšYKœ™\Ý[ÛÛ˜XÝ˜[ÝÑ\˜][Û“Ý™\™›ÝÈHYNÂˆ›Ú[Ü]™[Ý™\œšYK›Ü[Z^™\”›Ú™XÝY™\Ý[ÛÛ˜XÝ˜[ÝÑ\˜][Û“Ý™\™›ÝÈBˆYNÂˆ\ÜÙ\™\]X[
+ˆÌÔ™\Ý[˜[Y][ÛÛÛ˜XÝÐ\™PÛÜÙY
+›Ú[Ü]™[Ý™\œšYJKˆ˜[ÙKˆ
+NÂˆÛÛœÝ›Ú[^XÝ][Û›ØÚÔÝ\™˜XÙUÚY[š[™ÈHÛÛ™JØÚY[\ŠNÂˆ›Üˆ
+ÛÛœÝÛÛ˜XÝÙˆÂˆ›Ú[^XÝ][Û›ØÚÔÝ\™˜XÙUÚY[š[™Ëœ™\Ý[ÛÛ˜XÝˆ›Ú[^XÝ][Û›ØÚÔÝ\™˜XÙUÚY[š[™Ë›Ü[Z^™\”›Ú™XÝY™\Ý[ÛÛ˜XÝˆJHÂˆÛÛ˜XÝ™^XÝ][Û›ØÚÑšY[Ñ^XÝKœ\Ú
+™\Ý[X]YÛZ[]\ÈŠNÂˆÛÛ˜XÝœØØ[\”ØÚ[X\Ë™\Ý[X]YÛZ[]\ÈHš[YÙ\—ÌWÝ×ÌMŽÂˆBˆ\ÜÙ\™\]X[
+ˆÌÔ™\Ý[˜[Y][ÛÛÛ˜XÝÐ\™PÛÜÙY
+ˆ›Ú[^XÝ][Û›ØÚÔÝ\™˜XÙUÚY[š[™Ëˆ
+Kˆ˜[ÙKˆ
+NÂ‚ˆ›Üˆ
+ÛÛœÝÛÛœÝ˜Z[ÛÙHÙˆÌ×Ô‘TÕSÐÓÓ”ÕRS•ÐÓÑTÊHÂˆÛÛœÝZ\ÜÚ[™ÐÛÛœÝ˜Z[HÛÛ™JØÚY[\ŠNÂˆ›Üˆ
+ÛÛœÝÛÛœÝ˜Z[ÈÙˆÂˆZ\ÜÚ[™ÐÛÛœÝ˜Z[š\™ÛÛœÝ˜Z[ËˆZ\ÜÚ[™ÐÛÛœÝ˜Z[œ™\Ý[ÛÛ˜XÝ˜ÛÜÙY[[U˜[Y\Ë˜ÛÛœÝ˜Z[ØÛÙWÙ[[KˆZ\ÜÚ[™ÐÛÛœÝ˜Z[›Ü[Z^™\”›Ú™XÝY™\Ý[ÛÛ˜XÝ˜ÛÜÙY[[U˜[Y\Âˆ˜ÛÛœÝ˜Z[ØÛÙWÙ[[KˆJHÂˆÛÛœÝ˜Z[ËœÜXÙJÛÛœÝ˜Z[Ëš[™^ÙŠÛÛœÝ˜Z[ÛÙJKJNÂˆBˆ\ÜÙ\™\]X[
+ˆÌÔ™\Ý[˜[Y][ÛÛÛ˜XÝÐ\™PÛÜÙY
+Z\ÜÚ[™ÐÛÛœÝ˜Z[
+Kˆ˜[ÙKˆ	ØÛÛœÝ˜Z[ÛÙ_H]\ÝÝ^H[ˆ›ÝÛÜÙYš[Û][Ûˆ[[\È[™\™ÛÛœÝ˜Z[Øˆ
+NÂˆBŸJNÂ‚\Ý
+Í›Û‹Y›ÜX›HØ[™Y]\ÈØ™^HH^XÝ[›™Y[™Ø[‹Y›Ü]X›H‹\Þ[˜È
+
+HOˆÂˆÛÛœÝØÚY[\ˆH]ØZ]œÛÛŠˆ˜ÛÛ™šYËÙX˜[™Ú[Y[Y^K\ØÚY[\‹XÛÛ˜XÝšœÛÛˆ‹ˆ
+NÂˆ\ÜÙ\™\]X[
+ÌÔ™\Ý[˜[Y][ÛÛÛ˜XÝÐ\™PÛÜÙY
+ØÚY[\ŠKYJNÂ‚ˆÛÛœÝZ[Ø[™Y]\ÈH
+™Yš^
+HOˆÂˆÂˆ\[Y\˜[ÛÜ\]YWØØ[™Y]WÚYˆ	Ü™Yš^WÉÈ˜H‹œ™\X]
+MŠ_Xˆ[›™Yˆ˜[ÙKˆØ[—Ù›ÜˆYKˆ™\]Z\™Y™\Ü×Ù[[Nˆ˜ÛÜ™H‹ˆKˆÂˆ\[Y\˜[ÛÜ\]YWØØ[™Y]WÚYˆ	Ü™Yš^WÉÈ˜ˆ‹œ™\X]
+MŠ_Xˆ[›™Yˆ˜[ÙKˆØ[—Ù›Üˆ˜[ÙKˆ™\]Z\™Y™\Ü×Ù[[Nˆ›Ü[Û˜[‹ˆKˆÂˆ\[Y\˜[ÛÜ\]YWØØ[™Y]WÚYˆ	Ü™Yš^WÉÈ˜È‹œ™\X]
+MŠ_Xˆ[›™YˆYKˆØ[—Ù›ÜˆYKˆ™\]Z\™Y™\Ü×Ù[[Nˆ›Ü[Û˜[‹ˆKˆÂˆ\[Y\˜[ÛÜ\]YWØØ[™Y]WÚYˆ	Ü™Yš^WÉÈ™‹œ™\X]
+MŠ_Xˆ[›™YˆYKˆØ[—Ù›Üˆ˜[ÙKˆ™\]Z\™Y™\Ü×Ù[[Nˆ›Ü[Û˜[‹ˆKˆNÂˆ›Üˆ
+ÛÛœÝ™Yš^ÙˆÈ˜Ø[™‹›ØØ[™—JHÂˆÛÛœÝØ[™Y]\ÈHZ[Ø[™Y]\Ê™Yš^
+NÂˆÛÛœÝ^XÝ][Û›ØÚÜÈHØ[™Y]\ËœÛXÙJJK›X\
+
+Ø[™Y]JHOˆ
+Âˆ\[Y\˜[ÛÜ\]YWØØ[™Y]WÚY‚ˆØ[™Y]K™\[Y\˜[ÛÜ\]YWØØ[™Y]WÚYˆJJNÂˆ›Üˆ
+ÛÛœÝ™X\ÛÛ—Ù[[HÙˆØÚY[\‹œ™\Ý[ÛÛ˜XÝ[˜\ÜÚYÛ™Y™X\ÛÛœÊHÂˆÛÛœÝ[˜\ÜÚYÛ™YHÂˆÂˆ\[Y\˜[ÛÜ\]YWØØ[™Y]WÚY‚ˆØ[™Y]\ÖÌK™\[Y\˜[ÛÜ\]YWØØ[™Y]WÚYˆ™X\ÛÛ—Ù[[KˆKˆNÂˆ\ÜÙ\™\]X[
+ˆ›Û‘›ÜX›TXÙ[Y[\Õ˜[Y
+ˆØ[™Y]\Ëˆ^XÝ][Û›ØÚÜËˆ[˜\ÜÚYÛ™Yˆ
+KˆYKˆ	Ü™Yš^Nˆ[›™YY˜[ÙKØØ[—Ù›Ü]YHX^H™H[˜\ÜÚYÛ™Y›Üˆ	Ü™X\ÛÛ—Ù[[_Xˆ
+NÂˆ\ÜÙ\™\]X[
+ˆØ[™Y]PXØÛÝ[[™Ò\Ñ^XÝ
+ˆØ[™Y]\Ë›X\
+ˆ
+Ø[™Y]JHOˆØ[™Y]K™\[Y\˜[ÛÜ\]YWØØ[™Y]WÚYˆ
+Kˆ^XÝ][Û›ØÚÜËˆ[˜\ÜÚYÛ™Yˆ
+KˆYKˆ
+NÂˆB‚ˆ›Üˆ
+ÛÛœÝ›Û‘›ÜX›HÙˆØ[™Y]\ËœÛXÙJJJHÂˆÛÛœÝ™[XZ[š[™Ð›ØÚÜÈH^XÝ][Û›ØÚÜË™š[\Šˆ
+›ØÚÊHO‚ˆ›ØÚË™\[Y\˜[ÛÜ\]YWØØ[™Y]WÚYOOBˆ›Û‘›ÜX›K™\[Y\˜[ÛÜ\]YWØØ[™Y]WÚYˆ
+NÂˆ›Üˆ
+ÛÛœÝ™X\ÛÛ—Ù[[HÙˆØÚY[\‹œ™\Ý[ÛÛ˜XÝ[˜\ÜÚYÛ™Y™X\ÛÛœÊHÂˆ\ÜÙ\™\]X[
+ˆ›Û‘›ÜX›TXÙ[Y[\Õ˜[Y
+Ø[™Y]\Ë™[XZ[š[™Ð›ØÚÜËÂˆÂˆ\[Y\˜[ÛÜ\]YWØØ[™Y]WÚY‚ˆØ[™Y]\ÖÌK™\[Y\˜[ÛÜ\]YWØØ[™Y]WÚYˆ™X\ÛÛ—Ù[[Nˆ˜Ø\XÚ]WÙ^ÙYYY‹ˆKˆÂˆ\[Y\˜[ÛÜ\]YWØØ[™Y]WÚY‚ˆ›Û‘›ÜX›K™\[Y\˜[ÛÜ\]YWØØ[™Y]WÚYˆ™X\ÛÛ—Ù[[KˆKˆJKˆ˜[ÙKˆ	Ü™Yš^Nˆ	Ü™X\ÛÛ—Ù[[_HØ[››ÝÝ™\œšYH›Û‹Y›ÜXš[]Xˆ
+NÂˆBˆB‚ˆ\ÜÙ\™\]X[
+ˆ›Û‘›ÜX›TXÙ[Y[\Õ˜[Y
+ˆØ[™Y]\ËˆË‹‹™^XÝ][Û›ØÚÜË^XÝ][Û›ØÚÜÖÌWKˆÂˆÂˆ\[Y\˜[ÛÜ\]YWØØ[™Y]WÚY‚ˆØ[™Y]\ÖÌK™\[Y\˜[ÛÜ\]YWØØ[™Y]WÚYˆ™X\ÛÛ—Ù[[Nˆ˜Ø\XÚ]WÙ^ÙYYY‹ˆKˆKˆ
+Kˆ˜[ÙKˆ	Ü™Yš^NˆH›Û‹Y›ÜX›HØ[™Y]HØ[››Ý™HXÙYÚXÙXˆ
+NÂˆ\ÜÙ\™\]X[
+ˆ›Û‘›ÜX›TXÙ[Y[\Õ˜[Y
+Ø[™Y]\Ë^XÝ][Û›ØÚÜËÂˆÂˆ\[Y\˜[ÛÜ\]YWØØ[™Y]WÚY‚ˆØ[™Y]\ÖÌK™\[Y\˜[ÛÜ\]YWØØ[™Y]WÚYˆ™X\ÛÛ—Ù[[Nˆ˜Ø\XÚ]WÙ^ÙYYY‹ˆKˆÂˆ\[Y\˜[ÛÜ\]YWØØ[™Y]WÚY‚ˆØ[™Y]\ÖÌWK™\[Y\˜[ÛÜ\]YWØØ[™Y]WÚYˆ™X\ÛÛ—Ù[[Nˆ›ÝÛ™\—Ü[›™YØÛÛ™›XÝ‹ˆKˆJKˆ˜[ÙKˆ	Ü™Yš^NˆXÙYX[™][˜\ÜÚYÛ™Y›Û‹Y›ÜX›HØ[™Y]H]\Ý˜Z[ˆ
+NÂˆB‚ˆÛÛœÝÚ\™Y[RÙ^\ÈHÂˆ››Û‘›ÜX›QYš[š][Û‘^XÝ‹ˆœ[›™Y[™Ø[‘›Ü]X›Q^XÝH‹ˆ™]™\žS›Û‘›ÜX›PØ[™Y]S]\ÝØØÝ\‘^XÝSÛ˜ÙR[‘^XÝ][Û›ØÚÜÈ‹ˆ™]™\žS›Û‘›ÜX›PØ[™Y]S]\ÝØØÝ\–™\›Õ[Y\Ò[•[˜\ÜÚYÛ™YØ[™Y]\È‹ˆ›Û›T[›™Y˜[ÙP[™Ø[‘›ÜYPØ[™Y]SX^P™U[˜\ÜÚYÛ™Y‹ˆ[˜\ÜÚYÛ™Y™X\ÛÛ“X^SÝ™\œšYS›Û‘›ÜXš[]H‹ˆ›ÝÛ™\”[›™YÛÛ™›XÝ™X\ÛÛ“X^SÝ™\œšYS›Û‘›ÜXš[]H‹ˆ›ÝÙ\•˜[YU[”Ù[XÝY™X\ÛÛ“X^SÝ™\œšYS›Û‘›ÜXš[]H‹ˆœ™\]Z\™Y™\ÜÑ[[SX^T™YYš[™S›Û‘›ÜXš[]H‹ˆNÂˆ›Üˆ
+ÛÛœÝ[RÙ^HÙˆÚ\™Y[RÙ^\ÊHÂˆ\ÜÙ\™Y\\]X[
+ˆØÚY[\‹œ™\Ý[ÛÛ˜XÝ››Û‘›ÜX›PØ[™Y]T[\ÖÜ[RÙ^WKˆØÚY[\‹›Ü[Z^™\”›Ú™XÝY™\Ý[ÛÛ˜XÝˆ››Û‘›ÜX›PØ[™Y]T[\ÖÜ[RÙ^WKˆ
+NÂˆÛÛœÝÛÛÜ™[˜]Y™[[Ý˜[HÛÛ™JØÚY[\ŠNÂˆ[]HÛÛÜ™[˜]Y™[[Ý˜[œ™\Ý[ÛÛ˜XÝ››Û‘›ÜX›PØ[™Y]T[\ÖÂˆ[RÙ^BˆNÂˆ[]HÛÛÜ™[˜]Y™[[Ý˜[›Ü[Z^™\”›Ú™XÝY™\Ý[ÛÛ˜XÝˆ››Û‘›ÜX›PØ[™Y]T[\ÖÜ[RÙ^WNÂˆ\ÜÙ\™\]X[
+ˆÌÔ™\Ý[˜[Y][ÛÛÛ˜XÝÐ\™PÛÜÙY
+ÛÛÜ™[˜]Y™[[Ý˜[
+Kˆ˜[ÙKˆÛÛÜ™[˜]Y™[[Ý˜[Ùˆ	Ü[RÙ^_H]\Ý˜Z[ÛÜÙYˆ
+NÂˆBˆ\ÜÙ\™\]X[
+ˆØÚY[\‹œ™\Ý[ÛÛ˜XÝ››Û‘›ÜX›PØ[™Y]T[\ÂˆšÛ›ÝÛ“›Û‘›ÜX›Uš[Û][Û”Ý]\Ëˆ˜[Y]Ü—Ü™Z™XÝY‹ˆ
+NÂˆ\ÜÙ\™\]X[
+ˆØÚY[\‹œ™\Ý[ÛÛ˜XÝ››Û‘›ÜX›PØ[™Y]T[\Âˆœ™[X\ØX›S˜]]™Q˜[˜XÚÓ]\ÝXÙQ]™\žS›Û‘›ÜX›PØ[™Y]Q^XÝSÛ˜ÙKˆYKˆ
+NÂˆ\ÜÙ\™\]X[
+ˆØÚY[\‹›Ü[Z^™\”›Ú™XÝY™\Ý[ÛÛ˜XÝ››Û‘›ÜX›PØ[™Y]T[\Âˆœ›Ú™XÝY™\ÜÛœÙSX^TÙ[XÝ™Y™\™[˜ÙP]]Üš^™SÜ”™[X\ÙPØ[›ÛšXØ[˜]]™Q˜[˜XÚËˆ˜[ÙKˆ
+NÂ‚ˆÛÛœÝZ\ÜÚ[™Ò\™ÛÛœÝ˜Z[HÛÛ™JØÚY[\ŠNÂˆ›Üˆ
+ÛÛœÝÛÛœÝ˜Z[ÈÙˆÂˆZ\ÜÚ[™Ò\™ÛÛœÝ˜Z[š\™ÛÛœÝ˜Z[ËˆZ\ÜÚ[™Ò\™ÛÛœÝ˜Z[œ™\Ý[ÛÛ˜XÝ˜ÛÜÙY[[U˜[Y\Ë˜ÛÛœÝ˜Z[ØÛÙWÙ[[KˆZ\ÜÚ[™Ò\™ÛÛœÝ˜Z[›Ü[Z^™\”›Ú™XÝY™\Ý[ÛÛ˜XÝ˜ÛÜÙY[[U˜[Y\Âˆ˜ÛÛœÝ˜Z[ØÛÙWÙ[[KˆJHÂˆÛÛœÝ˜Z[ËœÜXÙJˆÛÛœÝ˜Z[Ëš[™^ÙŠ››Û—Ù›ÜX›WØØ[™Y]\×ÜXÙYÙ^XÝWÛÛ˜ÙHŠKˆKˆ
+NÂˆBˆ\ÜÙ\™\]X[
+ˆÌÔ™\Ý[˜[Y][ÛÛÛ˜XÝÐ\™PÛÜÙY
+Z\ÜÚ[™Ò\™ÛÛœÝ˜Z[
+Kˆ˜[ÙKˆ
+NÂˆÛÛœÝÙXZÙ[™Y˜]]™U˜[Y]ÜˆHÛÛ™JØÚY[\ŠNÂˆÙXZÙ[™Y˜]]™U˜[Y]Ü‹›˜]]™U˜[Y]Ü‚ˆ™]™\žSÜ[X[™X\ÚX›P[™™[X\ØX›U˜[Y]Y˜]]™Q˜[˜XÚÔ[“]\ÝXÙQ]™\žS›Û‘›ÜX›PØ[™Y]Q^XÝSÛ˜ÙP[™™]™\•[˜\ÜÚYÛ’]Bˆ˜[ÙNÂˆ\ÜÙ\™\]X[
+ˆÌÔ™\Ý[˜[Y][ÛÛÛ˜XÝÐ\™PÛÜÙY
+ÙXZÙ[™Y˜]]™U˜[Y]ÜŠKˆ˜[ÙKˆ
+NÂˆÛÛœÝÙXZÙ[™Y˜[˜XÚÑš^\™HHÛÛ™JØÚY[\ŠNÂˆÙXZÙ[™Y˜[˜XÚÑš^\™KœÌŒÍÛÐ™[˜ÚX\šÐXØÙ\[˜ÙPÛÛ˜XÝˆ˜™[˜ÚX\šÔ™\Ý[YÙ\ÝÛÛ˜XÝ™˜Z[\™TÝ]\Ñš^\™T™\Ý[Ù]YÙ\ÝÛÛ˜XÝˆ˜[Y˜]]™Q˜[˜XÚÔ™\Ý[]\ÝØ]\ÙžPØ[›ÛšXØ[›Û‘›ÜX›PØ[™Y]UÚ[™ÝÐ[™[Í\™ÛÛœÝ˜Z[ÕÚ[“X[X[›ØÚÑYÙ\Ý\Ó[Bˆ˜[ÙNÂˆ\ÜÙ\™\]X[
+ˆÌÔ™\Ý[˜[Y][ÛÛÛ˜XÝÐ\™PÛÜÙY
+ÙXZÙ[™Y˜[˜XÚÑš^\™JKˆ˜[ÙKˆ
+NÂŸJNÂ‚\Ý
+ÌÈ^XÝ][Û‹X›ØÚÈ\˜][Ûˆ[™ÚÜ[š[™È›Ý[™È™Z™XÝ[˜ÛÛ\]X›H[[]]X›HXÙ[Y[È‹\Þ[˜È
+
+HOˆÂˆÛÛœÝØÚY[\ˆH]ØZ]œÛÛŠˆ˜ÛÛ™šYËÙX˜[™Ú[Y[Y^K\ØÚY[\‹XÛÛ˜XÝšœÛÛˆ‹ˆ
+NÂˆ\ÜÙ\™\]X[
+ÌÔ™\Ý[˜[Y][ÛÛÛ˜XÝÐ\™PÛÜÙY
+ØÚY[\ŠKYJNÂ‚ˆÛÛœÝ›ØÚÈH
+Ø[™Y]RYÝ\[™\˜][ÛŠHOˆ
+Âˆ\[Y\˜[ÛÜ\]YWØØ[™Y]WÚYˆØ[™Y]RYˆÝ\ÛZ[]WÚÜÝˆÝ\ˆ[™ÛZ[]WÚÜÝˆ[™ˆ\˜][Û—ÛZ[]\Îˆ\˜][Û‹ˆJNÂ‚ˆ›Üˆ
+ÛÛœÝ™Yš^ÙˆÈ˜Ø[™È‹›ØØ[™È—JHÂˆÛÛœÝš^YØ[™Y]RYH	Ü™Yš^IÈ™‹œ™\X]
+MŠ_XÂˆÛÛœÝÚÜ[˜X›PØ[™Y]RYH	Ü™Yš^IÈ™H‹œ™\X]
+MŠ_XÂˆÛÛœÝØ[™Y]\ÈHÂˆÂˆ\[Y\˜[ÛÜ\]YWØØ[™Y]WÚYˆš^YØ[™Y]RYˆ\Ý[X]YÛZ[]\ÎˆŒˆZ[š[][WÛZ[]\ÎˆÌˆØ[—ÜÚÜ[Žˆ˜[ÙKˆKˆÂˆ\[Y\˜[ÛÜ\]YWØØ[™Y]WÚYˆÚÜ[˜X›PØ[™Y]RYˆ\Ý[X]YÛZ[]\ÎˆLŒˆZ[š[][WÛZ[]\ÎˆŒˆØ[—ÜÚÜ[ŽˆYKˆKˆNÂˆ›Üˆ
+ÛÛœÝ˜[YÙˆÂˆ›ØÚÊš^YØ[™Y]RYŒLŒŒ
+Kˆ›ØÚÊÚÜ[˜X›PØ[™Y]RYLŒNŒ
+Kˆ›ØÚÊÚÜ[˜X›PØ[™Y]RYNÌL
+Kˆ›ØÚÊÚÜ[˜X›PØ[™Y]RYÌŒLŒ
+KˆJHÂˆ\ÜÙ\™\]X[
+^XÝ][Û›ØÚÑ\˜][Û’\Õ˜[Y
+Ø[™Y]\Ë˜[Y
+KYJNÂˆB‚ˆÛÛœÝÜÝ[Q\˜][ÛœÈHÂˆÂˆ™\˜][ÛˆY™™\œÈœ›ÛH[™Z[\ÈÝ\‹ˆ›ØÚÊš^YØ[™Y]RYŒLŒNJKˆKˆÂˆ››Û‹\ÚÜ[˜X›HØ[™Y]H\ÈÚÜ[™Y‹ˆ›ØÚÊš^YØ[™Y]RYŒLKJKˆKˆÂˆ››Û‹\ÚÜ[˜X›HØ[™Y]H^ÙYYÈ\Ý[X]H‹ˆ›ØÚÊš^YØ[™Y]RYŒLŒKŒJKˆKˆÂˆœÚÜ[˜X›HØ[™Y]H˜[È™[ÝÈZ[š[][H‹ˆ›ØÚÊÚÜ[˜X›PØ[™Y]RYLŒMÎKNJKˆKˆÂˆœÚÜ[˜X›HØ[™Y]H^ÙYYÈ\Ý[X]H‹ˆ›ØÚÊÚÜ[˜X›PØ[™Y]RYLŒKLŒJKˆKˆÂˆ™^XÝ][Ûˆ›ØÚÈ\Ù\È[ˆ[šÛ›ÝÛˆÝ\œ™[Z[›ØØ][ÛˆØ[™Y]H‹ˆ›ØÚÊ	Ü™Yš^IÈžˆ‹œ™\X]
+MŠ_XŒLŒŒ
+KˆKˆNÂˆ›Üˆ
+ÛÛœÝÛ˜[YKÜÝ[WHÙˆÜÝ[Q\˜][ÛœÊHÂˆ\ÜÙ\™\]X[
+ˆ^XÝ][Û›ØÚÑ\˜][Û’\Õ˜[Y
+Ø[™Y]\ËÜÝ[JKˆ˜[ÙKˆ	Ü™Yš^Nˆ	Û˜[Y_H]\Ý˜Z[\˜][Ûˆ˜[Y][Û˜ˆ
+NÂˆB‚ˆÛÛœÝ\XØ]PØ[™Y]T›ÝÜÈHË‹‹˜Ø[™Y]\ËÛÛ™JØ[™Y]\ÖÌJWNÂˆ\ÜÙ\™\]X[
+ˆ^XÝ][Û›ØÚÑ\˜][Û’\Õ˜[Y
+ˆ\XØ]PØ[™Y]T›ÝÜËˆ›ØÚÊš^YØ[™Y]RYŒLŒŒ
+Kˆ
+Kˆ˜[ÙKˆ	Ü™Yš^Nˆ\XØ]HÝ\œ™[Z[›ØØ][ÛˆØ[™Y]\È]\Ý›ÝÛÛ\ÙXˆ
+NÂ‚ˆÛÛœÝ[[]]X›R[˜ÛÛ\]X›TXÙ[Y[H›ØÚÊˆš^YØ[™Y]RYˆŒˆLKˆKˆ
+NÂˆ\ÜÙ\™\]X[
+ˆ^XÝ][Û›ØÚÑ\˜][Û’\Õ˜[Y
+ˆØ[™Y]\Ëˆ[[]]X›R[˜ÛÛ\]X›TXÙ[Y[ˆ
+Kˆ˜[ÙKˆ
+NÂˆBˆ\ÜÙ\™\]X[
+ˆØÚY[\‹œ™\Ý[ÛÛ˜XÝ™^XÝ][Û›ØÚÑ\˜][Û”[\Âˆš[[]]X›Q[\ÙYÜ’[”›ÙÜ™\ÜÔXÙ[Y[X^P™S[Ý™YÚÜ[™Y^[™YÜ”™]Üš][•ÔØ]\ÙžPÝ\œ™[Ø[™Y]Kˆ˜[ÙKˆ
+NÂˆ\ÜÙ\™\]X[
+ˆØÚY[\‹œ™\Ý[ÛÛ˜XÝ™^XÝ][Û›ØÚÑ\˜][Û”[\Âˆœ™T›Ú™XÝ[Û’[[]]X›TXÙ[Y[Ø[™Y]Q\˜][Û’[˜ÛÛ\]Xš[]R[˜[Y˜]]™Q˜[˜XÚÔ™\Ý[ˆ˜›ØÚÙYÛX[X[Ü[—Ü™\]Z\™Y‹ˆ
+NÂˆ\ÜÙ\™\]X[
+ˆØÚY[\‹œ™\Ý[ÛÛ˜XÝ™^XÝ][Û›ØÚÑ\˜][Û”[\Âˆœ™T›Ú™XÝ[Û’[[]]X›TXÙ[Y[Ø[™Y]Q\˜][Û’[˜ÛÛ\]Xš[]Q˜[˜XÚÕšYÙÙ\”Ý]\Ëˆ˜[Y]Ü—Ü™Z™XÝY‹ˆ
+NÂˆ\ÜÙ\™\]X[
+ˆØÚY[\‹œ™\Ý[ÛÛ˜XÝ™^XÝ][Û›ØÚÑ\˜][Û”[\Âˆœ™T›Ú™XÝ[Û’[[]]X›TXÙ[Y[Ø[™Y]Q\˜][Û’[˜ÛÛ\]Xš[]Q˜[˜XÚÔ™X\ÛÛ‘[[S]\Ý\]X[šYÙÙ\”Ý]\ËˆYKˆ
+NÂˆ\ÜÙ\™\]X[
+ˆØÚY[\‹š[œ]ÛÛ˜XÝœš[ÜXØÙ\YØÚY[T[\Âˆš[[]]X›TXÙ[Y[Ø[™Y]Q\˜][Û’[˜ÛÛ\]Xš[]R[˜[Y˜]]™Q˜[˜XÚÔ™\Ý[ˆ˜›ØÚÙYÛX[X[Ü[—Ü™\]Z\™Y‹ˆ
+NÂˆ\ÜÙ\™\]X[
+ˆØÚY[\‹š[œ]ÛÛ˜XÝ›Ü[Z^™\’[›ØØ][Û”›Ú™XÝ[ÛÛÛ˜XÝˆœ›Ú™XÝ[Û”[\Âˆš[[]]X›Tš[Ü”XÙ[Y[Ø[™Y]Q\˜][Û’[˜ÛÛ\]Xš[]SX^T™XXÚÜ[Z^™\‹ˆ˜[ÙKˆ
+NÂˆ\ÜÙ\™\]X[
+ˆØÚY[\‹š[œ]ÛÛ˜XÝ›Ü[Z^™\’[›ØØ][Û”›Ú™XÝ[ÛÛÛ˜XÝˆœ›Ú™XÝ[Û”[\Âˆš[[]]X›Tš[Ü”XÙ[Y[Ø[™Y]Q\˜][Û’[˜ÛÛ\]Xš[]S]\Ý[\”Ù\\˜][U˜[Y]Y˜]]™Q˜[˜XÚÕÚ]Ý]™]Üš][™ÔXÙ[Y[ÜØ[™Y]TÛXÞKˆYKˆ
+NÂˆ\ÜÙ\™\]X[
+ˆØÚY[\‹š[œ]ÛÛ˜XÝ›Ü[Z^™\’[›ØØ][Û”›Ú™XÝ[ÛÛÛ˜XÝˆœ›Ú™XÝ[Û”[\Âˆš[[]]X›Tš[Ü”XÙ[Y[Ø[™Y]Q\˜][Û’[˜ÛÛ\]Xš[]R[˜[Y˜]]™Q˜[˜XÚÔ™\Ý[ˆ˜›ØÚÙYÛX[X[Ü[—Ü™\]Z\™Y‹ˆ
+NÂ‚ˆÛÛœÝ›Ú[UÙXZÙ[™Y\˜][ÛˆHÛÛ™JØÚY[\ŠNÂˆ›Üˆ
+ÛÛœÝÛÛ˜XÝÙˆÂˆ›Ú[UÙXZÙ[™Y\˜][Û‹œ™\Ý[ÛÛ˜XÝˆ›Ú[UÙXZÙ[™Y\˜][Û‹›Ü[Z^™\”›Ú™XÝY™\Ý[ÛÛ˜XÝˆJHÂˆÛÛ˜XÝ™^XÝ][Û›ØÚÑ\˜][Û”[\Âˆ˜Ø[”ÚÜ[•YT™\]Z\™\ÓZ[š[][SZ[]\Ó\ÜÕ[“Ü‘\]X[\˜][Û“Z[]\Ó\ÜÕ[“Ü‘\]X[\Ý[X]YZ[]\ÈBˆ˜[ÙNÂˆBˆ\ÜÙ\™\]X[
+ˆÌÔ™\Ý[˜[Y][ÛÛÛ˜XÝÐ\™PÛÜÙY
+›Ú[UÙXZÙ[™Y\˜][ÛŠKˆ˜[ÙKˆ
+NÂ‚ˆ›Üˆ
+ÛÛœÝ[RÙ^HÙˆØš™XÝšÙ^\ÊˆØÚY[\‹œ™\Ý[ÛÛ˜XÝ™^XÝ][Û›ØÚÑ\˜][Û”[\Ëˆ
+JHÂˆÛÛœÝZ\ÜÚ[™Ñ\˜][Û”[HHÛÛ™JØÚY[\ŠNÂˆ[]HZ\ÜÚ[™Ñ\˜][Û”[Kœ™\Ý[ÛÛ˜XÝ™^XÝ][Û›ØÚÑ\˜][Û”[\ÖÂˆ[RÙ^BˆNÂˆ[]HZ\ÜÚ[™Ñ\˜][Û”[K›Ü[Z^™\”›Ú™XÝY™\Ý[ÛÛ˜XÝˆ™^XÝ][Û›ØÚÑ\˜][Û”[\ÖÜ[RÙ^WNÂˆ\ÜÙ\™\]X[
+ˆÌÔ™\Ý[˜[Y][ÛÛÛ˜XÝÐ\™PÛÜÙY
+Z\ÜÚ[™Ñ\˜][Û”[JKˆ˜[ÙKˆÛÛÜ™[˜]Y™[[Ý˜[Ùˆ\˜][Ûˆ[H	Ü[RÙ^_H]\Ý˜Z[ÛÜÙYˆ
+NÂˆB‚ˆÛÛœÝÜÝ[R[œ]™Y›YÚ]]][ÛœÈHÂˆ
+˜[YJHOˆÂˆ˜[YKš[œ]ÛÛ˜XÝœš[ÜXØÙ\YØÚY[T[\Âˆ™[\ÙY[™[”›ÙÜ™\ÜÔXÙ[Y[]\Ý™\ÛÛ™Q^XÝSÛ™PÝ\œ™[[›ØØ][ÛØ[™Y]P™Y›Ü™T›Ú™XÝ[ÛˆBˆ˜[ÙNÂˆKˆ
+˜[YJHOˆÂˆ˜[YKš[œ]ÛÛ˜XÝœš[ÜXØÙ\YØÚY[T[\Âˆ™[\ÙY[™[”›ÙÜ™\ÜÔXÙ[Y[]\ÝØ]\ÙžT™\ÛÛ™YÝ\œ™[Ø[™Y]Q\˜][Û[™ÚÜ[š[™Ô[\Ð™Y›Ü™T›Ú™XÝ[ÛˆBˆ˜[ÙNÂˆKˆ
+˜[YJHOˆÂˆ˜[YKš[œ]ÛÛ˜XÝœš[ÜXØÙ\YØÚY[T[\Âˆš[[]]X›TXÙ[Y[Ø[™Y]Q\˜][Û’[˜ÛÛ\]Xš[]SX^T™XXÚÜ[Z^™\ˆBˆYNÂˆKˆ
+˜[YJHOˆÂˆ˜[YKš[œ]ÛÛ˜XÝœš[ÜXØÙ\YØÚY[T[\Âˆš[[]]X›TXÙ[Y[Ø[™Y]Q\˜][Û’[˜ÛÛ\]Xš[]Q˜[˜XÚÕšYÙÙ\”Ý]\ÈBˆœØÚ[XWÛZ\ÛX]ÚŽÂˆKˆ
+˜[YJHOˆÂˆ˜[YKš[œ]ÛÛ˜XÝœš[ÜXØÙ\YØÚY[T[\Âˆš[[]]X›TXÙ[Y[Ø[™Y]Q\˜][Û’[˜ÛÛ\]Xš[]Q˜[˜XÚÔ™X\ÛÛ‘[[S]\Ý\]X[šYÙÙ\”Ý]\ÈBˆ˜[ÙNÂˆKˆ
+˜[YJHOˆÂˆ˜[YKš[œ]ÛÛ˜XÝœš[ÜXØÙ\YØÚY[T[\Âˆš[[]]X›TXÙ[Y[Ø[™Y]Q\˜][Û’[˜ÛÛ\]Xš[]S]\Ý][\^XÝSÛ™TÙ\\˜][U˜[Y]Y˜]]™Q˜[˜XÚÈBˆ˜[ÙNÂˆKˆ
+˜[YJHOˆÂˆ˜[YKš[œ]ÛÛ˜XÝœš[ÜXØÙ\YØÚY[T[\Âˆš[[]]X›TXÙ[Y[Ø[™Y]Q\˜][Û’[˜ÛÛ\]Xš[]S]\Ý[\”Ù\\˜][U˜[Y]Y˜]]™Q˜[˜XÚÕÚ]Ý]™]Üš][™ÔXÙ[Y[ÜØ[™Y]TÛXÞHBˆ˜[ÙNÂˆKˆ
+˜[YJHOˆÂˆ˜[YKš[œ]ÛÛ˜XÝœš[ÜXØÙ\YØÚY[T[\Âˆš[[]]X›TXÙ[Y[Ø[™Y]Q\˜][Û’[˜ÛÛ\]Xš[]R[˜[Y˜]]™Q˜[˜XÚÔ™\Ý[Bˆ˜[Y]Ü—Ü™Z™XÝYŽÂˆKˆ
+˜[YJHOˆÂˆ˜[YKš[œ]ÛÛ˜XÝœš[ÜXØÙ\YØÚY[T[\Âˆš[[]]X›TXÙ[Y[Ø[™Y]Q\˜][Û’[˜ÛÛ\]Xš[]R[˜[Y˜]]™Q˜[˜XÚÓX^UšYÙÙ\[›Ý\‘˜[˜XÚÈBˆYNÂˆKˆ
+˜[YJHOˆÂˆ˜[YKš[œ]ÛÛ˜XÝœš[ÜXØÙ\YØÚY[T[\Âˆš[[]]X›TXÙ[Y[ÜÝ\œ™[Ø[™Y]TÛXÞSX^P™T™]Üš][•Ô™\Z\’[˜ÛÛ\]Xš[]HBˆYNÂˆKˆ
+˜[YJHOˆÂˆ˜[YKš[œ]ÛÛ˜XÝ›Ü[Z^™\’[›ØØ][Û”›Ú™XÝ[ÛÛÛ˜XÝœ›Ú™XÝ[Û”[\Âˆš[[]]X›Tš[Ü”XÙ[Y[Ó]\Ý\ÜÑ^XÝÝ\œ™[Ø[™Y]Q\˜][ÛÛÛ\]Xš[]P™Y›Ü™T›Ú™XÝ[ÛˆBˆ˜[ÙNÂˆKˆ
+˜[YJHOˆÂˆ˜[YKš[œ]ÛÛ˜XÝ›Ü[Z^™\’[›ØØ][Û”›Ú™XÝ[ÛÛÛ˜XÝœ›Ú™XÝ[Û”[\Âˆš[[]]X›Tš[Ü”XÙ[Y[Ø[™Y]Q\˜][Û’[˜ÛÛ\]Xš[]SX^T™XXÚÜ[Z^™\ˆBˆYNÂˆKˆ
+˜[YJHOˆÂˆ˜[YKš[œ]ÛÛ˜XÝ›Ü[Z^™\’[›ØØ][Û”›Ú™XÝ[ÛÛÛ˜XÝœ›Ú™XÝ[Û”[\Âˆš[[]]X›Tš[Ü”XÙ[Y[Ø[™Y]Q\˜][Û’[˜ÛÛ\]Xš[]Q˜[˜XÚÕšYÙÙ\”Ý]\ÈBˆœØÚ[XWÛZ\ÛX]ÚŽÂˆKˆ
+˜[YJHOˆÂˆ˜[YKš[œ]ÛÛ˜XÝ›Ü[Z^™\’[›ØØ][Û”›Ú™XÝ[ÛÛÛ˜XÝœ›Ú™XÝ[Û”[\Âˆš[[]]X›Tš[Ü”XÙ[Y[Ø[™Y]Q\˜][Û’[˜ÛÛ\]Xš[]Q˜[˜XÚÔ™X\ÛÛ‘[[S]\Ý\]X[šYÙÙ\”Ý]\ÈBˆ˜[ÙNÂˆKˆ
+˜[YJHOˆÂˆ˜[YKš[œ]ÛÛ˜XÝ›Ü[Z^™\’[›ØØ][Û”›Ú™XÝ[ÛÛÛ˜XÝœ›Ú™XÝ[Û”[\Âˆš[[]]X›Tš[Ü”XÙ[Y[Ø[™Y]Q\˜][Û’[˜ÛÛ\]Xš[]S]\Ý][\^XÝSÛ™TÙ\\˜][U˜[Y]Y˜]]™Q˜[˜XÚÈBˆ˜[ÙNÂˆKˆ
+˜[YJHOˆÂˆ˜[YKš[œ]ÛÛ˜XÝ›Ü[Z^™\’[›ØØ][Û”›Ú™XÝ[ÛÛÛ˜XÝœ›Ú™XÝ[Û”[\Âˆš[[]]X›Tš[Ü”XÙ[Y[Ø[™Y]Q\˜][Û’[˜ÛÛ\]Xš[]S]\Ý[\”Ù\\˜][U˜[Y]Y˜]]™Q˜[˜XÚÕÚ]Ý]™]Üš][™ÔXÙ[Y[ÜØ[™Y]TÛXÞHBˆ˜[ÙNÂˆKˆ
+˜[YJHOˆÂˆ˜[YKš[œ]ÛÛ˜XÝ›Ü[Z^™\’[›ØØ][Û”›Ú™XÝ[ÛÛÛ˜XÝœ›Ú™XÝ[Û”[\Âˆš[[]]X›Tš[Ü”XÙ[Y[Ø[™Y]Q\˜][Û’[˜ÛÛ\]Xš[]R[˜[Y˜]]™Q˜[˜XÚÔ™\Ý[Bˆ˜[Y]Ü—Ü™Z™XÝYŽÂˆKˆ
+˜[YJHOˆÂˆ˜[YKš[œ]ÛÛ˜XÝ›Ü[Z^™\’[›ØØ][Û”›Ú™XÝ[ÛÛÛ˜XÝœ›Ú™XÝ[Û”[\Âˆš[[]]X›Tš[Ü”XÙ[Y[Ø[™Y]Q\˜][Û’[˜ÛÛ\]Xš[]R[˜[Y˜]]™Q˜[˜XÚÓX^UšYÙÙ\[›Ý\‘˜[˜XÚÈBˆYNÂˆKˆNÂˆ›Üˆ
+ÛÛœÝ]]]HÙˆÜÝ[R[œ]™Y›YÚ]]][ÛœÊHÂˆÛÛœÝÜÝ[T™Y›YÚHÛÛ™JØÚY[\ŠNÂˆ]]]JÜÝ[T™Y›YÚ
+NÂˆ\ÜÙ\™\]X[
+ˆÌÔ™\Ý[˜[Y][ÛÛÛ˜XÝÐ\™PÛÜÙY
+ÜÝ[T™Y›YÚ
+Kˆ˜[ÙKˆš[[]]X›HXÙ[Y[™Y›YÚÙXZÙ[š[™È]\Ý˜Z[ÛÜÙY‹ˆ
+NÂˆB‚ˆÛÛœÝ[[]]X›T™]Üš]P[ÝÙYHÛÛ™JØÚY[\ŠNÂˆ›Üˆ
+ÛÛœÝÛÛ˜XÝÙˆÂˆ[[]]X›T™]Üš]P[ÝÙYœ™\Ý[ÛÛ˜XÝˆ[[]]X›T™]Üš]P[ÝÙY›Ü[Z^™\”›Ú™XÝY™\Ý[ÛÛ˜XÝˆJHÂˆÛÛ˜XÝ™^XÝ][Û›ØÚÑ\˜][Û”[\Âˆš[[]]X›Q[\ÙYÜ’[”›ÙÜ™\ÜÔXÙ[Y[X^P™S[Ý™YÚÜ[™Y^[™YÜ”™]Üš][•ÔØ]\ÙžPÝ\œ™[Ø[™Y]HBˆYNÂˆBˆ[[]]X›T™]Üš]P[ÝÙY›˜]]™U˜[Y]Ü‚ˆš[[]]X›Q[\ÙYÜ’[”›ÙÜ™\ÜÔXÙ[Y[X^P™T™]Üš][‘\š[™Õ˜[Y][Û“Ü‘˜[˜XÚÈBˆYNÂˆ\ÜÙ\™\]X[
+ˆÌÔ™\Ý[˜[Y][ÛÛÛ˜XÝÐ\™PÛÜÙY
+[[]]X›T™]Üš]P[ÝÙY
+Kˆ˜[ÙKˆ
+NÂŸJNÂ‚\Ý
+ÍØ[™Y]K]Ú[™ÝÈY[X™\œÚ\]˜Z[Xš[]H›Ý[™È[™[[]]X›H™Y›YÚ˜Z[ÛÜÙY‹\Þ[˜È
+
+HOˆÂˆÛÛœÝØÚY[\ˆH]ØZ]œÛÛŠˆ˜ÛÛ™šYËÙX˜[™Ú[Y[Y^K\ØÚY[\‹XÛÛ˜XÝšœÛÛˆ‹ˆ
+NÂˆÛÛœÝYÙ[ÈH]ØZ]^
+QÑS•Ë›YŠNÂˆ\ÜÙ\™\]X[
+ÌÔ™\Ý[˜[Y][ÛÛÛ˜XÝÐ\™PÛÜÙY
+ØÚY[\ŠKYJNÂ‚ˆÛÛœÝš^\™Q›ÜˆH
+Ø[™Y]T™Yš^Ú[™ÝÔ™Yš^
+HOˆÂˆÛÛœÝÚ[™ÝÒYÈHÈ˜H‹˜ˆ‹˜È‹™—K›X\
+ˆ
+ÝY™š^
+HOˆ	ÝÚ[™ÝÔ™Yš^WÉÜÝY™š^œ™\X]
+MŠ_Xˆ
+NÂˆÛÛœÝØ[™Y]HHÂˆ\[Y\˜[ÛÜ\]YWØØ[™Y]WÚY‚ˆ	ØØ[™Y]T™Yš^WÉÈ˜H‹œ™\X]
+MŠ_Xˆ[ÝÙYÝÚ[™Ý×ÚYÎˆÚ[™ÝÒYËœÛXÙJÊKˆNÂˆÛÛœÝÚ[™ÝÜÈHÂˆÂˆ\[Y\˜[ÛÜ\]YWÝÚ[™Ý×ÚYˆÚ[™ÝÒYÖÌKˆÝ\ÛZ[]WÚÜÝˆLˆ[™ÛZ[]WÚÜÝˆMŒˆ]˜Z[X›NˆYKˆKˆÂˆ\[Y\˜[ÛÜ\]YWÝÚ[™Ý×ÚYˆÚ[™ÝÒYÖÌWKˆÝ\ÛZ[]WÚÜÝˆMŒˆ[™ÛZ[]WÚÜÝˆŒŒˆ]˜Z[X›NˆYKˆKˆÂˆ\[Y\˜[ÛÜ\]YWÝÚ[™Ý×ÚYˆÚ[™ÝÒYÖÌ—KˆÝ\ÛZ[]WÚÜÝˆÌˆ[™ÛZ[]WÚÜÝˆÍŒˆ]˜Z[X›Nˆ˜[ÙKˆKˆÂˆ\[Y\˜[ÛÜ\]YWÝÚ[™Ý×ÚYˆÚ[™ÝÒYÖÌ×KˆÝ\ÛZ[]WÚÜÝˆˆ[™ÛZ[]WÚÜÝˆŒˆ]˜Z[X›NˆYKˆKˆNÂˆÛÛœÝ›ØÚÈH
+Ú[™ÝÒYÝ\[™Ø[™Y]RYH[
+HOˆ
+Âˆ\[Y\˜[ÛÜ\]YWØØ[™Y]WÚY‚ˆØ[™Y]RYÏÈØ[™Y]K™\[Y\˜[ÛÜ\]YWØØ[™Y]WÚYˆ\[Y\˜[ÛÜ\]YWÝÚ[™Ý×ÚYˆÚ[™ÝÒYˆÝ\ÛZ[]WÚÜÝˆÝ\ˆ[™ÛZ[]WÚÜÝˆ[™ˆJNÂˆ™]\›ˆÈØ[™Y]KÚ[™ÝÜËÚ[™ÝÒYË›ØÚÈNÂˆNÂ‚ˆ›Üˆ
+ÛÛœÝØØ[™Y]T™Yš^Ú[™ÝÔ™Yš^HÙˆÂˆÈ˜Ø[™‹Ú[ˆ—KˆÈ›ØØ[™‹›ÝÚ[ˆ—KˆJHÂˆÛÛœÝÈØ[™Y]KÚ[™ÝÜËÚ[™ÝÒYË›ØÚÈHHš^\™Q›ÜŠˆØ[™Y]T™Yš^ˆÚ[™ÝÔ™Yš^ˆ
+NÂˆ\ÜÙ\™\]X[
+ˆØ[™Y]UÚ[™ÝÔ™[][ÛÛ\ÜÚYšXØ][ÛŠˆØØ[™Y]WKˆÚ[™ÝÜËˆ›ØÚÊÚ[™ÝÒYÖÌKLMŒ
+Kˆ
+Kˆ˜[Y‹ˆ	ØØ[™Y]T™Yš^Nˆ^XÝÝ]\‹X›Ý[™\žHÛÛZ[›Y[]\Ý\ÜØˆ
+NÂˆ›Üˆ
+ÛÛœÝÛ˜[YKÜÝ[P›ØÚ×HÙˆÂˆÈšÛ›ÝÛˆ\Ø[ÝÙYÚ[™ÝÈ‹›ØÚÊÚ[™ÝÒYÖÌ×KÌ
+WKˆÈ[˜]˜Z[X›H[ÝÙYÚ[™ÝÈ‹›ØÚÊÚ[™ÝÒYÖÌ—KÌÌÌ
+WKˆÈœÝ\™Y›Ü™HÚ[™ÝÈ‹›ØÚÊÚ[™ÝÒYÖÌKNKLŒ
+WKˆÈ™[™Y\ˆÚ[™ÝÈ‹›ØÚÊÚ[™ÝÒYÖÌKMMŒJWKˆÈ˜Y˜XÙ[]Ú[™ÝÈÜ[›š[™È‹›ØÚÊÚ[™ÝÒYÖÌKLÌNL
+WKˆÈ››Û‹\ÜÚ]]™H›ØÚÈ‹›ØÚÊÚ[™ÝÒYÖÌKLŒLŒ
+WKˆJHÂˆ\ÜÙ\™\]X[
+ˆØ[™Y]UÚ[™ÝÔ™[][ÛÛ\ÜÚYšXØ][ÛŠˆØØ[™Y]WKˆÚ[™ÝÜËˆÜÝ[P›ØÚËˆ
+Kˆ˜[Y]Ü—Ü™Z™XÝY‹ˆ	ØØ[™Y]T™Yš^Nˆ	Û˜[Y_H\ÈHÛ›ÝÛˆ[˜[Y™[][Û˜ˆ
+NÂˆBˆ\ÜÙ\™\]X[
+ˆØ[™Y]UÚ[™ÝÔ™[][ÛÛ\ÜÚYšXØ][ÛŠˆØØ[™Y]WKˆÚ[™ÝÜËˆ›ØÚÊˆÚ[™ÝÒYÖÌKˆLˆLÌˆ	ØØ[™Y]T™Yš^WÉÈžˆ‹œ™\X]
+MŠ_Xˆ
+Kˆ
+KˆœØÚ[XWÛZ\ÛX]Ú‹ˆ	ØØ[™Y]T™Yš^Nˆ[šÛ›ÝÛˆØ[™Y]H]\Ý˜Z[ÝXÝ\˜[Xˆ
+NÂˆ\ÜÙ\™\]X[
+ˆØ[™Y]UÚ[™ÝÔ™[][ÛÛ\ÜÚYšXØ][ÛŠˆØØ[™Y]WKˆÚ[™ÝÜËˆ›ØÚÊ	ÝÚ[™ÝÔ™Yš^WÉÈžˆ‹œ™\X]
+MŠ_XLLÌ
+Kˆ
+KˆœØÚ[XWÛZ\ÛX]Ú‹ˆ	ØØ[™Y]T™Yš^Nˆ[šÛ›ÝÛˆÚ[™ÝÈ]\Ý˜Z[ÝXÝ\˜[Xˆ
+NÂˆ\ÜÙ\™\]X[
+ˆØ[™Y]UÚ[™ÝÔ™[][ÛÛ\ÜÚYšXØ][ÛŠˆØØ[™Y]KÛÛ™JØ[™Y]JWKˆÚ[™ÝÜËˆ›ØÚÊÚ[™ÝÒYÖÌKLLÌ
+Kˆ
+KˆœØÚ[XWÛZ\ÛX]Ú‹ˆ	ØØ[™Y]T™Yš^Nˆ\XØ]HØ[™Y]H™[][Ûˆ]\Ý˜Z[ÝXÝ\˜[Xˆ
+NÂˆ\ÜÙ\™\]X[
+ˆØ[™Y]UÚ[™ÝÔ™[][ÛÛ\ÜÚYšXØ][ÛŠˆØØ[™Y]WKˆË‹‹Ú[™ÝÜËÛÛ™JÚ[™ÝÜÖÌJWKˆ›ØÚÊÚ[™ÝÒYÖÌKLLÌ
+Kˆ
+KˆœØÚ[XWÛZ\ÛX]Ú‹ˆ	ØØ[™Y]T™Yš^Nˆ\XØ]HÚ[™ÝÈ™[][Ûˆ]\Ý˜Z[ÝXÝ\˜[Xˆ
+NÂˆÛÛœÝ\XØ]P[ÝÙY™[][ÛˆHÛÛ™JØ[™Y]JNÂˆ\XØ]P[ÝÙY™[][Û‹˜[ÝÙYÝÚ[™Ý×ÚYËœ\Ú
+Ú[™ÝÒYÖÌJNÂˆ\ÜÙ\™\]X[
+ˆØ[™Y]UÚ[™ÝÔ™[][ÛÛ\ÜÚYšXØ][ÛŠˆÙ\XØ]P[ÝÙY™[][Û—KˆÚ[™ÝÜËˆ›ØÚÊÚ[™ÝÒYÖÌKLLÌ
+Kˆ
+KˆœØÚ[XWÛZ\ÛX]Ú‹ˆ	ØØ[™Y]T™Yš^Nˆ\XØ]H[ÝÙY]Ú[™ÝÈ™[][Ûˆ]\Ý˜Z[ÝXÝ\˜[Xˆ
+NÂˆÛÛœÝ[™Û[™Ð[ÝÙY™[][ÛˆHÛÛ™JØ[™Y]JNÂˆ[™Û[™Ð[ÝÙY™[][Û‹˜[ÝÙYÝÚ[™Ý×ÚYËœ\Ú
+ˆ	ÝÚ[™ÝÔ™Yš^WÉÈžˆ‹œ™\X]
+MŠ_Xˆ
+NÂˆ\ÜÙ\™\]X[
+ˆØ[™Y]UÚ[™ÝÔ™[][ÛÛ\ÜÚYšXØ][ÛŠˆÙ[™Û[™Ð[ÝÙY™[][Û—KˆÚ[™ÝÜËˆ›ØÚÊÚ[™ÝÒYÖÌKLLÌ
+Kˆ
+KˆœØÚ[XWÛZ\ÛX]Ú‹ˆ	ØØ[™Y]T™Yš^Nˆ[™Û[™È[ÝÙY]Ú[™ÝÈ™[][Ûˆ]\Ý˜Z[ÝXÝ\˜[Xˆ
+NÂˆÛÛœÝÜ›ÜÜÑÛXZ[Ø[™Y]HBˆØ[™Y]T™Yš^OOH˜Ø[™‚ˆÈØØ[™ÉÈ˜H‹œ™\X]
+MŠ_XˆˆØ[™ÉÈ˜H‹œ™\X]
+MŠ_XÂˆÛÛœÝÜ›ÜÜÑÛXZ[•Ú[™ÝÈBˆÚ[™ÝÔ™Yš^OOHÚ[ˆ‚ˆÈÝÚ[—ÉÈ˜H‹œ™\X]
+MŠ_XˆˆÚ[—ÉÈ˜H‹œ™\X]
+MŠ_XÂˆ\ÜÙ\™\]X[
+ˆØ[™Y]UÚ[™ÝÔ™[][ÛÛ\ÜÚYšXØ][ÛŠˆØØ[™Y]WKˆÚ[™ÝÜËˆ›ØÚÊÜ›ÜÜÑÛXZ[•Ú[™ÝËLLÌÜ›ÜÜÑÛXZ[Ø[™Y]JKˆ
+KˆœØÚ[XWÛZ\ÛX]Ú‹ˆ	ØØ[™Y]T™Yš^NˆÜ›ÜÜËYÛXZ[ˆØ[™Y]KÝÚ[™ÝÈQÈ]\Ý˜Z[ÝXÝ\˜[Xˆ
+NÂˆB‚ˆÛÛœÝÚ\™Y[RÙ^\ÈHÂˆ˜Ø[™Y]T™\ÛÛ][Û”ÛÝ\˜ÙH‹ˆÚ[™ÝÔ™\ÛÛ][Û”ÛÝ\˜ÙH‹ˆ™XXÚ^XÝ][Û›ØÚÐØ[™Y]S]\Ý™\ÛÛ™Q^XÝSÛ˜ÙU›ÝYÚ^XÝÝ\œ™[[›ØØ][Ûˆ‹ˆ™XXÚ^XÝ][Û›ØÚÕÚ[™ÝÓ]\Ý™\ÛÛ™Q^XÝSÛ˜ÙU›ÝYÚØ[YQ^XÝÝ\œ™[[›ØØ][Ûˆ‹ˆ™^XÝ][Û›ØÚÕÚ[™ÝÒY]\Ý™[Û™ÕÔ™\ÛÛ™YØ[™Y]P[ÝÙYÚ[™ÝÒYÈ‹ˆœ™\ÛÛ™YÚ[™ÝÐ]˜Z[X›S]\Ý\]X[YH‹ˆœÚ[™ÛT™Y™\™[˜ÙYÚ[™ÝÐÛÛZ[›Y[™YXØ]Q^XÝ‹ˆ˜›ØÚÓ]\Ý™PÛÛ\][PÛÛZ[™Y[œÚYTÚ[™ÛT™Y™\™[˜ÙYÚ[™ÝÈ‹ˆ˜›ØÚÓX^TÝ]ÚÜ”Ü[Y˜XÙ[Ú[™ÝÜÈ‹ˆœ™T›Ú™XÝ[Û‘[\ÙY[™[”›ÙÜ™\ÜÔXÙ[Y[]\ÝØ]\ÙžQ^XÝÝ\œ™[Ø[™Y]UÚ[™ÝÔ™[][Ûˆ‹ˆœ™T›Ú™XÝ[Û’[[]]X›PØ[™Y]UÚ[™ÝÒ[˜ÛÛ\]Xš[]SX^T™XXÚÜ[Z^™\ˆ‹ˆœ™T›Ú™XÝ[Û’[[]]X›PØ[™Y]UÚ[™ÝÒ[˜ÛÛ\]Xš[]SX^P™T™\Z\™YžS[Ýš[™Ñ›Ü[™Õ[˜\ÜÚYÛš[™ÔÚÜ[š[™Ñ^[™[™ÓÜ”™]Üš][™È‹ˆ™]\™Tš[Ü”XÙ[Y[™[XZ[œÔÛÙ™Y™\™[˜ÙSÛ›H‹ˆ™]™\žQ[Z]Y]\™Tš[Ü”XÙ[Y[›ØÚÓ]\ÝØ]\ÙžQ]™\žPØ[™Y]UÚ[™ÝÔ™YXØ]H‹ˆNÂˆ›Üˆ
+ÛÛœÝ[RÙ^HÙˆÚ\™Y[RÙ^\ÊHÂˆ\ÜÙ\™Y\\]X[
+ˆØÚY[\‹œ™\Ý[ÛÛ˜XÝ˜Ø[™Y]UÚ[™ÝÑ™X\ÚXš[]T[\ÖÜ[RÙ^WKˆØÚY[\‹›Ü[Z^™\”›Ú™XÝY™\Ý[ÛÛ˜XÝˆ˜Ø[™Y]UÚ[™ÝÑ™X\ÚXš[]T[\ÖÜ[RÙ^WKˆ
+NÂˆÛÛœÝÛÛÜ™[˜]Y™[[Ý˜[HÛÛ™JØÚY[\ŠNÂˆ[]HÛÛÜ™[˜]Y™[[Ý˜[œ™\Ý[ÛÛ˜XÝ˜Ø[™Y]UÚ[™ÝÑ™X\ÚXš[]T[\ÖÂˆ[RÙ^BˆNÂˆ[]HÛÛÜ™[˜]Y™[[Ý˜[›Ü[Z^™\”›Ú™XÝY™\Ý[ÛÛ˜XÝˆ˜Ø[™Y]UÚ[™ÝÑ™X\ÚXš[]T[\ÖÜ[RÙ^WNÂˆ\ÜÙ\™\]X[
+ˆÌÔ™\Ý[˜[Y][ÛÛÛ˜XÝÐ\™PÛÜÙY
+ÛÛÜ™[˜]Y™[[Ý˜[
+Kˆ˜[ÙKˆÛÛÜ™[˜]Y™[[Ý˜[Ùˆ	Ü[RÙ^_H]\Ý˜Z[ÛÜÙYˆ
+NÂˆBˆ\ÜÙ\™\]X[
+ˆØÚY[\‹œ™\Ý[ÛÛ˜XÝ˜Ø[™Y]UÚ[™ÝÑ™X\ÚXš[]T[\Âˆ[šÛ›ÝÛ‘[™Û[™Ñ\XØ]PÜ›ÜÜÑÛXZ[“Ü“›ÛšZ™XÝ]™PØ[™Y]SÜ•Ú[™ÝÔ™[][Û”Ý]\ËˆœØÚ[XWÛZ\ÛX]Ú‹ˆ
+NÂˆ\ÜÙ\™\]X[
+ˆØÚY[\‹œ™\Ý[ÛÛ˜XÝ˜Ø[™Y]UÚ[™ÝÑ™X\ÚXš[]T[\ÂˆšÛ›ÝÛ‘\Ø[ÝÙY[˜]˜Z[X›SÜ“Ý]Ù›Ý[™Ô™[][Û”Ý]\Ëˆ˜[Y]Ü—Ü™Z™XÝY‹ˆ
+NÂˆ\ÜÙ\™\]X[
+ˆØÚY[\‹œ™\Ý[ÛÛ˜XÝ˜Ø[™Y]UÚ[™ÝÑ™X\ÚXš[]T[\Âˆœ™[X\ØX›S˜]]™Q˜[˜XÚÓ]\ÝØ]\ÙžQ]™\žPØ[™Y]UÚ[™ÝÔ™YXØ]KˆYKˆ
+NÂˆ\ÜÙ\›X]Ú
+ˆYÙ[ËˆÑ]™\žH[Z]Y×××J˜›ØÚÈ™\ÛÛ™\ÈÛ™HØ[™Y]H[™Û™HÚ[™ÝÖ×××J˜[ÝÙY]˜Z[X›HÚ[™ÝÖ×××Jš[œÚYH]Ú[™ÛV×××JÚ[™ÝËËˆ
+NÂˆ\ÜÙ\›X]Ú
+ˆYÙ[ËˆÑ[\ÙYÚ[‹\›ÙÜ™\ÜÈXÙ[Y[Ö×××J˜™Y›Ü™H›Ú™XÝ[Û–×××J›X^H›Ý™H[Ý™Y›ÜY[˜\ÜÚYÛ™Y×××JœÚÜ[™Y^[™YÜˆ™]Üš][‹Ëˆ
+NÂ‚ˆ›Üˆ
+ÛÛœÝÛÛœÝ˜Z[ÛÙHÙˆÍÔ‘TÕSÐÓÓ”ÕRS•ÐÓÑTÊHÂˆÛÛœÝZ\ÜÚ[™ÐÛÛœÝ˜Z[HÛÛ™JØÚY[\ŠNÂˆ›Üˆ
+ÛÛœÝÛÛœÝ˜Z[ÈÙˆÂˆZ\ÜÚ[™ÐÛÛœÝ˜Z[š\™ÛÛœÝ˜Z[ËˆZ\ÜÚ[™ÐÛÛœÝ˜Z[œ™\Ý[ÛÛ˜XÝ˜ÛÜÙY[[U˜[Y\Ë˜ÛÛœÝ˜Z[ØÛÙWÙ[[KˆZ\ÜÚ[™ÐÛÛœÝ˜Z[›Ü[Z^™\”›Ú™XÝY™\Ý[ÛÛ˜XÝ˜ÛÜÙY[[U˜[Y\Âˆ˜ÛÛœÝ˜Z[ØÛÙWÙ[[KˆJHÂˆÛÛœÝ˜Z[ËœÜXÙJÛÛœÝ˜Z[Ëš[™^ÙŠÛÛœÝ˜Z[ÛÙJKJNÂˆBˆ\ÜÙ\™\]X[
+ˆÌÔ™\Ý[˜[Y][ÛÛÛ˜XÝÐ\™PÛÜÙY
+Z\ÜÚ[™ÐÛÛœÝ˜Z[
+Kˆ˜[ÙKˆ	ØÛÛœÝ˜Z[ÛÙ_H]\ÝÝ^H[ˆ\™ÛÛœÝ˜Z[È[™›ÝÛÜÙY[[\Øˆ
+NÂˆB‚ˆÛÛœÝÜÝ[S]]][ÛœÈHÂˆÂˆ›˜]]™H˜[Y]ÜˆÚÚ\ÈØ[™Y]K]Ú[™ÝÈ[\È‹ˆ
+˜[YJHOˆÂˆ˜[YK›˜]]™U˜[Y]Ü‚ˆ™]™\žQ^XÝ][Û›ØÚÓ]\Ý™\ÛÛ™Q^XÝÝ\œ™[[›ØØ][ÛØ[™Y]P[™Ú[™ÝÐ[™Ø]\ÙžP[ÝÙYY[X™\œÚ\]˜Z[Xš[]P[™Ú[™ÛUÚ[™ÝÐ›Ý[™ÈBˆ˜[ÙNÂˆKˆKˆÂˆ˜Ø[›ÛšXØ[˜[˜XÚÈÚÚ\ÈØ[™Y]K]Ú[™ÝÈ[\È‹ˆ
+˜[YJHOˆÂˆ˜[YKœ™\Ý[ÛÛ˜XÝ˜Ø[™Y]UÚ[™ÝÑ™X\ÚXš[]T[\Âˆœ™[X\ØX›S˜]]™Q˜[˜XÚÓ]\ÝØ]\ÙžQ]™\žPØ[™Y]UÚ[™ÝÔ™YXØ]HBˆ˜[ÙNÂˆKˆKˆÂˆš[[]]X›H™Y›YÚX^H™XXÚÜ[Z^™\ˆ‹ˆ
+˜[YJHOˆÂˆ˜[YKš[œ]ÛÛ˜XÝœš[ÜXØÙ\YØÚY[T[\Âˆš[[]]X›TXÙ[Y[Ø[™Y]UÚ[™ÝÒ[˜ÛÛ\]Xš[]SX^T™XXÚÜ[Z^™\ˆBˆYNÂˆ˜[YKš[œ]ÛÛ˜XÝ›Ü[Z^™\’[›ØØ][Û”›Ú™XÝ[ÛÛÛ˜XÝˆœ›Ú™XÝ[Û”[\Âˆš[[]]X›Tš[Ü”XÙ[Y[Ø[™Y]UÚ[™ÝÒ[˜ÛÛ\]Xš[]SX^T™XXÚÜ[Z^™\ˆBˆYNÂˆKˆKˆÂˆš[[]]X›HXÙ[Y[X^H™H™]Üš][ˆ‹ˆ
+˜[YJHOˆÂˆ˜[YKœ™\Ý[ÛÛ˜XÝ˜Ø[™Y]UÚ[™ÝÑ™X\ÚXš[]T[\Âˆœ™T›Ú™XÝ[Û’[[]]X›PØ[™Y]UÚ[™ÝÒ[˜ÛÛ\]Xš[]SX^P™T™\Z\™YžS[Ýš[™Ñ›Ü[™Õ[˜\ÜÚYÛš[™ÔÚÜ[š[™Ñ^[™[™ÓÜ”™]Üš][™ÈBˆYNÂˆ˜[YK›Ü[Z^™\”›Ú™XÝY™\Ý[ÛÛ˜XÝˆ˜Ø[™Y]UÚ[™ÝÑ™X\ÚXš[]T[\Âˆœ™T›Ú™XÝ[Û’[[]]X›PØ[™Y]UÚ[™ÝÒ[˜ÛÛ\]Xš[]SX^P™T™\Z\™YžS[Ýš[™Ñ›Ü[™Õ[˜\ÜÚYÛš[™ÔÚÜ[š[™Ñ^[™[™ÓÜ”™]Üš][™ÈBˆYNÂˆKˆKˆÂˆ™˜[˜XÚÈš^\™HÚÚ\ÈÍ˜[Y][Ûˆ‹ˆ
+˜[YJHOˆÂˆ˜[YKœÌŒÍÛÐ™[˜ÚX\šÐXØÙ\[˜ÙPÛÛ˜XÝ˜™[˜ÚX\šÔ™\Ý[YÙ\ÝÛÛ˜XÝˆ™˜Z[\™TÝ]\Ñš^\™T™\Ý[Ù]YÙ\ÝÛÛ˜XÝˆ˜[Y˜]]™Q˜[˜XÚÔ™\Ý[]\ÝØ]\ÙžPØ[›ÛšXØ[›Û‘›ÜX›PØ[™Y]UÚ[™ÝÐ[™[Í\™ÛÛœÝ˜Z[ÕÚ[“X[X[›ØÚÑYÙ\Ý\Ó[Bˆ˜[ÙNÂˆKˆKˆÂˆ˜Ø[™Y]K]Ú[™ÝÈ™Z™XÝ[ÛˆÛÙH™[[Ý™Y‹ˆ
+˜[YJHOˆÂˆÛÛœÝÛÙ\ÈBˆ˜[YKœÌŒÍÛÐ™[˜ÚX\šÐXØÙ\[˜ÙPÛÛ˜XÝˆ˜™[˜ÚX\šÔ™\Ý[YÙ\ÝÛÛ˜XÝœ™\ÛÛ™Y\Y˜XÝY[X™\œÐÛÛ˜XÝˆœ™Z™XÝY˜]]™Q˜[˜XÚÐ][\˜[Y][Û”™XÛÜ™ÛÛ˜XÝˆ™šY[ØÚ[X\Ëœ™Z™XÝ[Û—ØÛÙWÙ[[NÂˆÛÙ\ËœÜXÙJÛÙ\Ëš[™^ÙŠ˜Ø[™Y]WÝÚ[™Ý×Ü™[][Û—Ú[˜[YŠKJNÂˆKˆKˆÂˆ™Ø]]Ø^H˜Z[\™Hœ˜[˜ÚÚÚ\ÈÍØ[›ÛšXØ[˜[Y][Ûˆ‹ˆ
+˜[YJHOˆÂˆ˜[YK›Ü[Z^™\”›Ú™XÝY™\Ý[ÛÛ˜XÝˆ˜Ø[›ÛšXØ[Ø]]Ø^PÛÛœÝXÝ[ÛÛÛ˜XÝˆœÛÛ™\“Ü•\ÝYØ]]Ø^Q˜Z[\™Pœ˜[˜ÚÜ™\‘^XÝVÌ×HBˆ˜[Y]WÜ\X[ØØ[›ÛšXØ[Ü™\Ý[ŽÂˆKˆKˆNÂˆ›Üˆ
+ÛÛœÝÛ˜[YK]]]WHÙˆÜÝ[S]]][ÛœÊHÂˆÛÛœÝÜÝ[HHÛÛ™JØÚY[\ŠNÂˆ]]]JÜÝ[JNÂˆ\ÜÙ\™\]X[
+ˆÌÔ™\Ý[˜[Y][ÛÛÛ˜XÝÐ\™PÛÜÙY
+ÜÝ[JH	‰‚ˆ›Ú™XÝY™\Ý[Ø]]Ø^PÛÛ˜XÝ\ÐÛÜÙY
+ÜÝ[JKˆ˜[ÙKˆ	Û˜[Y_H]\Ý˜Z[ÛÜÙYˆ
+NÂˆBŸJNÂ‚\Ý
+ÌÈ]™\žH˜Z[\™HÝ]\È™\]Z\™\ÈÛ™HX]Ú[™ÈÙ\\˜][H˜[Y]Y˜]]™H˜[˜XÚÈ‹\Þ[˜È
+
+HOˆÂˆÛÛœÝØÚY[\ˆH]ØZ]œÛÛŠˆ˜ÛÛ™šYËÙX˜[™Ú[Y[Y^K\ØÚY[\‹XÛÛ˜XÝšœÛÛˆ‹ˆ
+NÂˆ\ÜÙ\™\]X[
+ÌÔ™\Ý[˜[Y][ÛÛÛ˜XÝÐ\™PÛÜÙY
+ØÚY[\ŠKYJNÂˆ\ÜÙ\™\]X[
+ˆØÚY[\‹›Ü[Z^™\”›Ú™XÝY™\Ý[ÛÛ˜XÝ™˜Z[\™T›Ý][™Âˆ™]™\žTÛÛ™\‘˜Z[\™SÜ•\ÝYØ]]Ø^PÛ\ÜÚYšXØ][Û“]\Ý][\^XÝSÛ™R[™\[™[T™\\™YØ[›ÛšXØ[˜]]™Q˜[˜XÚËˆYKˆ
+NÂˆ\ÜÙ\™\]X[
+ˆØÚY[\‹›Ü[Z^™\”›Ú™XÝY™\Ý[ÛÛ˜XÝ™˜Z[\™T›Ý][™Âˆœ›Ú™XÝY˜Z[\™Q[™[ÜSX^PÛÛZ[”™Y™\™[˜ÙP]]Üš^™SÜ”™[X\ÙPØ[›ÛšXØ[˜[˜XÚËˆ˜[ÙKˆ
+NÂˆ\ÜÙ\™\]X[
+ˆØÚY[\‹›Ü[Z^™\”›Ú™XÝY™\Ý[ÛÛ˜XÝ™˜Z[\™T›Ý][™Âˆ˜Ø[›ÛšXØ[˜]]™Q˜[˜XÚÔ™\\™Y[™˜[Y]YÛ›R[“ÜšYÚ[˜[Y[YšY\‘ÛXZ[‹ˆYKˆ
+NÂ‚ˆ›Üˆ
+ÛÛœÝÛÛ˜XÝÙˆÜØÚY[\‹œ™\Ý[ÛÛ˜XÝJHÂˆÛÛœÝ\ÙYš^\™QYÙ\ÝÈH™]ÈÙ]
+
+NÂˆ›Üˆ
+ÛÛœÝÝ]\ÈÙˆSPÒ×ÔÕUTÑTÊHÂˆÛÛœÝ˜[Y˜[˜XÚÈHÂˆ\ÙYˆYKˆ™X\ÛÛ—Ù[[NˆÝ]\Ëˆ˜]]™WÜ[—Ý™\œÚ[ÛŽˆ›˜]]™WÜ[—ÝŒH‹ˆNÂˆ\ÜÙ\™\]X[
+ˆ˜[˜XÚÑ[™[ÜT™\]Z\™[Y[ÔØ]\ÙšYY
+ÛÛ˜XÝÝ]\Ë˜[Y˜[˜XÚËÂˆ˜]]™T[•™\œÚ[Û”ØÚ[XU˜[YˆYKˆ˜]]™T[•˜[YˆYKˆJKˆYKˆ
+NÂˆ\ÜÙ\™\]X[
+ˆÛÛ˜XÝ™˜[˜XÚÕ˜[YT[\Âˆ™˜Z[\™TÝ]\Ñ[™[ÜSX^TÙ[]]Üš^™T™Y™\™[˜ÙY˜]]™Q˜[˜XÚÔ™[X\ÙKˆ˜[ÙKˆ˜H˜[Y[ÛÚÚ[™È˜Z[\™H[™[ÜH™[XZ[œÈÛ›HHšYÙÙ\ˆÛZ[H‹ˆ
+NÂˆ\ÜÙ\™\]X[
+ˆÛÛ˜XÝ™˜[˜XÚÕ˜[YT[\Âˆ\ÝY˜]]™QØ]]Ø^S]\Ý™\ÛÛ™SÜ”™\\™Q^XÝ[[]]X›PØ[›ÛšXØ[˜]]™Q˜[˜XÚÒ[™\[™[SÙ“Ü[Z^™\”™\ÜÛœÙKˆYKˆ
+NÂˆ\ÜÙ\™\]X[
+ˆ˜[˜XÚÑ[™[ÜT™\]Z\™[Y[ÔØ]\ÙšYY
+ˆÛÛ˜XÝˆ™˜[˜XÚÈ‹ˆ˜[Y˜[˜XÚËˆÂˆ˜]]™T[•™\œÚ[Û”ØÚ[XU˜[YˆYKˆ˜]]™T[•˜[YˆYKˆKˆ
+KˆYKˆ]\˜[˜[˜XÚÈÝ]\È]\Ý\ÙHH˜[Y]Y	ÜÝ]\ßHšYÙÙ\ˆ[™[ÜXˆ
+NÂˆÛÛœÝ˜]]™Q˜[˜XÚÑYÙ\ÝHÜ™X]R\Ú
+œÚLMˆŠBˆ\]J˜[Y[˜]]™KY˜[˜XÚÎ‰ÜÝ]\ßX
+Bˆ™YÙ\Ý
+š^ŠNÂˆÛÛœÝš^\™Q[žHHÂˆÞ[]X×Ùš^\™WÚYˆÞ[—ÜÌŒÍÛ×ÉÜÝ]\ßWÙš^\™Xˆ^XÝYÜÝ]\ÎˆÝ]\ËˆØœÙ\™YÜÝ]\ÎˆÝ]\ËˆšYÙÙ\—ÛÜšYÚ[—Ù[[NˆÓÓ‘T—ÑRST‘WÔÕUTÑTËš[˜ÛY\ÊÝ]\ÊBˆÈœÛÛ™\—Ù˜Z[\™H‚ˆˆ\ÝYÙØ]]Ø^WØÛ\ÜÚYšXØ][Ûˆ‹ˆ˜]]™WÙ˜[˜XÚ×Ü™\Ý[ÙYÙ\ÝÜÚLMŽˆ˜]]™Q˜[˜XÚÑYÙ\ÝˆX[X[Ø›ØÚ×Ü™\Ý[ÙYÙ\ÝÜÚLM—ÛÜ—Û[ˆ[ˆ\ÜÙ\[Û—Ü™\Ý[ˆœ\ÜÙY‹ˆNÂˆ\ÜÙ\™\]X[
+ˆ˜Z[\™Qš^\™Q[žR\Õ˜[Y
+ˆÛÛ˜XÝˆš^\™Q[žKˆÈÝ]\Ë˜[˜XÚÎˆ˜[Y˜[˜XÚÈKˆÈ™]š[Ý\ÛU\ÙY˜]]™Q˜[˜XÚÑYÙ\ÝÎˆ\ÙYš^\™QYÙ\ÝÈKˆ
+KˆYKˆ
+NÂˆ\ÜÙ\™\]X[
+ˆ˜Z[\™Qš^\™Q[žR\Õ˜[Y
+ˆÛÛ˜XÝˆš^\™Q[žKˆÈÝ]\Îˆ™˜[˜XÚÈ‹˜[˜XÚÎˆ˜[Y˜[˜XÚÈKˆÈ™]š[Ý\ÛU\ÙY˜]]™Q˜[˜XÚÑYÙ\ÝÎˆ\ÙYš^\™QYÙ\ÝÈKˆ
+KˆYKˆ
+NÂˆ\ÙYš^\™QYÙ\ÝË˜Y
+˜]]™Q˜[˜XÚÑYÙ\Ý
+NÂ‚ˆÛÛœÝÝ\”Ý]\ÈBˆSPÒ×ÔÕUTÑTË™š[™
+
+Ø[™Y]JHOˆØ[™Y]HOOHÝ]\ÊNÂˆÛÛœÝ^XÝX[X[›ØÚÑ˜[˜XÚÈHÂˆ\ÙYˆ˜[ÙKˆ™X\ÛÛ—Ù[[Nˆ››ÝÝ\ÙY‹ˆ˜]]™WÜ[—Ý™\œÚ[ÛŽˆ[ˆNÂˆÛÛœÝÜÝ[Q˜[˜XÚÜÈHÂˆÂˆ›Z\ÜÚ[™È˜[˜XÚÈ‹ˆ[™Yš[™YˆÈ™Z™XÝ[ÛÛÙNˆ›Z\ÜÚ[™×Ù˜[˜XÚÈˆKˆKˆÂˆ[\ÙY˜[˜XÚÈ‹ˆÈ\ÙYˆ˜[ÙK™X\ÛÛ—Ù[[Nˆ››ÝÝ\ÙY‹˜]]™WÜ[—Ý™\œÚ[ÛŽˆ[KˆÈ™Z™XÝ[ÛÛÙNˆ™˜[˜XÚ×Ý[\ÙYˆKˆKˆÂˆ›Z\ÛX]ÚY™X\ÛÛˆ‹ˆÈ‹‹˜[Y˜[˜XÚË™X\ÛÛ—Ù[[NˆÝ\”Ý]\ÈKˆÈ™Z™XÝ[ÛÛÙNˆ™˜[˜XÚ×Ü™X\ÛÛ—ÛZ\ÛX]ÚˆKˆKˆÂˆ›Z\ÛX]ÚY™\Ý[Ý]\È‹ˆ˜[Y˜[˜XÚËˆÂˆ][\Ý]\ÎˆÝ\”Ý]\Ëˆ™Z™XÝ[ÛÛÙNˆ™˜[˜XÚ×ÜÝ]\×ÛZ\ÛX]Ú‹ˆKˆKˆÂˆ›[˜]]™H™\œÚ[Ûˆ‹ˆÈ‹‹˜[Y˜[˜XÚË˜]]™WÜ[—Ý™\œÚ[ÛŽˆ[KˆÈ™Z™XÝ[ÛÛÙNˆ›˜]]™WÜ[—Ý™\œÚ[Û—Ú[˜[YˆKˆKˆÂˆš[˜[Y˜]]™H™\œÚ[ÛˆØÚ[XH‹ˆ˜[Y˜[˜XÚËˆÂˆ˜]]™T[•™\œÚ[Û”ØÚ[XU˜[Yˆ˜[ÙKˆ™Z™XÝ[ÛÛÙNˆ›˜]]™WÜ[—Ý™\œÚ[Û—Ú[˜[Y‹ˆKˆKˆÂˆš[˜[Y˜]]™H[ˆ‹ˆ˜[Y˜[˜XÚËˆÂˆ˜]]™T[•˜[Yˆ˜[ÙKˆ™Z™XÝ[ÛÛÙNˆ›˜]]™WÜ[—Ý[œ™\ÛÛ™YÛÜ—Û]]X›H‹ˆ˜]]™T[‘˜Z[\™PÛÙN‚ˆ›˜]]™WÜ[—Ý[œ™\ÛÛ™YÛÜ—Û]]X›H‹ˆKˆKˆÂˆš[˜[YØ[™Y]HXØÛÝ[[™È‹ˆ˜[Y˜[˜XÚËˆÂˆ˜]]™T[•˜[Yˆ˜[ÙKˆ™Z™XÝ[ÛÛÙNˆ˜Ø[™Y]WØXØÛÝ[[™×Ú[˜[Y‹ˆ˜]]™T[‘˜Z[\™PÛÙNˆ˜Ø[™Y]WØXØÛÝ[[™×Ú[˜[Y‹ˆKˆKˆÂˆš[˜[Y^XÝ][Û‹X›ØÚÈ\˜][Ûˆ‹ˆ˜[Y˜[˜XÚËˆÂˆ˜]]™T[•˜[Yˆ˜[ÙKˆ™Z™XÝ[ÛÛÙNˆ™^XÝ][Û—Ø›ØÚ×Ù\˜][Û—Ú[˜[Y‹ˆ˜]]™T[‘˜Z[\™PÛÙN‚ˆ™^XÝ][Û—Ø›ØÚ×Ù\˜][Û—Ú[˜[Y‹ˆKˆKˆÂˆš[˜[Y›Û‹Y›ÜX›HXÙ[Y[‹ˆ˜[Y˜[˜XÚËˆÂˆ˜]]™T[•˜[Yˆ˜[ÙKˆ™Z™XÝ[ÛÛÙNˆ››Û—Ù›ÜX›WØØ[™Y]WÚ[˜[Y‹ˆ˜]]™T[‘˜Z[\™PÛÙN‚ˆ››Û—Ù›ÜX›WØØ[™Y]WÚ[˜[Y‹ˆKˆKˆÂˆš[˜[YØ[™Y]K]Ú[™ÝÈ™[][Ûˆ‹ˆ˜[Y˜[˜XÚËˆÂˆ˜]]™T[•˜[Yˆ˜[ÙKˆ™Z™XÝ[ÛÛÙNˆ˜Ø[™Y]WÝÚ[™Ý×Ü™[][Û—Ú[˜[Y‹ˆ˜]]™T[‘˜Z[\™PÛÙN‚ˆ˜Ø[™Y]WÝÚ[™Ý×Ü™[][Û—Ú[˜[Y‹ˆKˆKˆÂˆš[˜[Y™\[ˆÝ]Ù™ˆ‹ˆ˜[Y˜[˜XÚËˆÂˆ˜]]™T[•˜[Yˆ˜[ÙKˆ™Z™XÝ[ÛÛÙNˆœ™\[—ØÝ]Ù™—Ú[˜[Y‹ˆ˜]]™T[‘˜Z[\™PÛÙNˆœ™\[—ØÝ]Ù™—Ú[˜[Y‹ˆKˆKˆÂˆš[˜[Y›ØÚÈÝ™\›\‹ˆ˜[Y˜[˜XÚËˆÂˆ˜]]™T[•˜[Yˆ˜[ÙKˆ™Z™XÝ[ÛÛÙNˆ˜›ØÚ×ÛÝ™\›\Ú[˜[Y‹ˆ˜]]™T[‘˜Z[\™PÛÙNˆ˜›ØÚ×ÛÝ™\›\Ú[˜[Y‹ˆKˆKˆÂˆš[˜[Y™\™\]Z\Ú]HÜ™\š[™È‹ˆ˜[Y˜[˜XÚËˆÂˆ˜]]™T[•˜[Yˆ˜[ÙKˆ™Z™XÝ[ÛÛÙNˆœ™\™\]Z\Ú]WÛÜ™\—Ú[˜[Y‹ˆ˜]]™T[‘˜Z[\™PÛÙNˆœ™\™\]Z\Ú]WÛÜ™\—Ú[˜[Y‹ˆKˆKˆÂˆš[˜[Y\™ÛÛœÝ˜Z[‹ˆ˜[Y˜[˜XÚËˆÂˆ˜]]™T[•˜[Yˆ˜[ÙKˆ™Z™XÝ[ÛÛÙNˆš\™ØÛÛœÝ˜Z[Ú[˜[Y‹ˆ˜]]™T[‘˜Z[\™PÛÙNˆš\™ØÛÛœÝ˜Z[Ú[˜[Y‹ˆKˆKˆÂˆ˜Ø[›ÛšXØ[™\Ý[\È[ˆ^˜HšY[‹ˆ˜[Y˜[˜XÚËˆÂˆØ[›ÛšXØ[™\Ý[ØÚ[XU˜[Yˆ˜[ÙKˆ™Z™XÝ[ÛÛÙNˆ˜Ø[›ÛšXØ[Ü™\Ý[ØÛÛ˜XÝÚ[˜[Y‹ˆKˆKˆÂˆ˜Ø[›ÛšXØ[™\Ý[\ÈÜ›Û™È™\]Y\ÝÛÜœ™[][Ûˆ‹ˆ˜[Y˜[˜XÚËˆÂˆØ[›ÛšXØ[™\Ý[ØÚ[XU˜[Yˆ˜[ÙKˆ™Z™XÝ[ÛÛÙNˆ˜Ø[›ÛšXØ[Ü™\Ý[ØÛÛ˜XÝÚ[˜[Y‹ˆKˆKˆÂˆ˜Ø[›ÛšXØ[™\Ý[\È[ˆ^˜HšY[[™[˜ÛÛ\]HXØÛÝ[[™È‹ˆ˜[Y˜[˜XÚËˆÂˆØ[›ÛšXØ[™\Ý[ØÚ[XU˜[Yˆ˜[ÙKˆ˜]]™T[•˜[Yˆ˜[ÙKˆ™Z™XÝ[ÛÛÙNˆ˜Ø[™Y]WØXØÛÝ[[™×Ú[˜[Y‹ˆ˜]]™T[‘˜Z[\™PÛÙNˆ˜Ø[™Y]WØXØÛÝ[[™×Ú[˜[Y‹ˆKˆKˆÂˆš[[]]X›HXÙ[Y[\È[˜ÛÛ\]X›H‹ˆ˜[Y˜[˜XÚËˆÂˆ˜]]™T[•˜[Yˆ˜[ÙKˆ™Z™XÝ[ÛÛÙNˆš[[]]X›WÜXÙ[Y[Ú[˜ÛÛ\]X›H‹ˆ˜]]™T[‘˜Z[\™PÛÙN‚ˆš[[]]X›WÜXÙ[Y[Ú[˜ÛÛ\]X›H‹ˆKˆKˆNÂˆ›Üˆ
+ÛÛœÝÂˆÜÝ[R[™^ˆÛ˜[YK˜[˜XÚË˜[Y][Û—KˆHÙˆÜÝ[Q˜[˜XÚÜË™[šY\Ê
+JHÂˆ\ÜÙ\™\]X[
+ˆ˜[˜XÚÑ[™[ÜT™\]Z\™[Y[ÔØ]\ÙšYY
+ˆÛÛ˜XÝˆ˜[Y][Û‹˜][\Ý]\ÈÏÈÝ]\Ëˆ˜[˜XÚËˆ˜[Y][Û‹ˆ
+Kˆ˜[ÙKˆ	ÜÝ]\ßNˆ	Û˜[Y_H]\Ý›Ý™[X\ÙHHØ[™Y]H[˜ˆ
+NÂˆ\ÜÙ\™\]X[
+ˆÛÛ˜XÝ™˜[˜XÚÕ˜[YT[\Âˆ›Z\ÜÚ[™Ñ˜[˜XÚÓZ\ÛX]ÚY™X\ÛÛ’[˜[Y™\œÚ[Û“Ü’[˜[Y˜]]™T[”™\Ý[ˆ˜›ØÚÙYÛX[X[Ü[—Ü™\]Z\™Y‹ˆ
+NÂˆ\ÜÙ\™\]X[
+ˆÛÛ˜XÝ™˜[˜XÚÕ˜[YT[\Âˆ›Z\ÜÚ[™Ñ˜[˜XÚÓZ\ÛX]ÚY™X\ÛÛ’[˜[Y™\œÚ[Û“Ü’[˜[Y˜]]™T[“X^T™[X\ÙPØ[™Y]T[‹ˆ˜[ÙKˆ
+NÂˆÛÛœÝ[˜[Yš^\™Q[žHHÂˆÞ[]X×Ùš^\™WÚYˆÞ[—ÜÌŒÍÛ×ÉÜÝ]\ßWÉÚÜÝ[R[™^WÚ[˜[Yˆ^XÝYÜÝ]\ÎˆÝ]\ËˆØœÙ\™YÜÝ]\ÎˆÝ]\ËˆšYÙÙ\—ÛÜšYÚ[—Ù[[NˆÓÓ‘T—ÑRST‘WÔÕUTÑTËš[˜ÛY\ÊÝ]\ÊBˆÈœÛÛ™\—Ù˜Z[\™H‚ˆˆ\ÝYÙØ]]Ø^WØÛ\ÜÚYšXØ][Ûˆ‹ˆ˜]]™WÙ˜[˜XÚ×Ü™\Ý[ÙYÙ\ÝÜÚLMŽˆÜ™X]R\Ú
+œÚLMˆŠBˆ\]J[˜[Y[˜]]™KY˜[˜XÚÎ‰ÜÝ]\ßN‰Û˜[Y_X
+Bˆ™YÙ\Ý
+š^ŠKˆX[X[Ø›ØÚ×Ü™\Ý[ÙYÙ\ÝÜÚLM—ÛÜ—Û[ˆÜ™X]R\Ú
+œÚLMˆŠBˆ\]JX[X[X›ØÚÎ‰ÜÝ]\ßN‰Û˜[Y_X
+Bˆ™YÙ\Ý
+š^ŠKˆ\ÜÙ\[Û—Ü™\Ý[ˆœ\ÜÙY‹ˆNÂˆÛÛœÝ[˜[Y][\HÂˆÝ]\Îˆ˜[Y][Û‹˜][\Ý]\ÈÏÈÝ]\Ëˆ˜[˜XÚËˆNÂˆ\ÜÙ\™\]X[
+ˆ˜Z[\™Qš^\™Q[žR\Õ˜[Y
+ˆÛÛ˜XÝˆ[˜[Yš^\™Q[žKˆ[˜[Y][\ˆÂˆ‹‹˜[Y][Û‹ˆX[X[›ØÚÔ™\Ý[Ý]\Î‚ˆ˜›ØÚÙYÛX[X[Ü[—Ü™\]Z\™Y‹ˆX[X[›ØÚÑ^XÝ][Û›ØÚÐÛÝ[ˆˆX[X[›ØÚÔ™Y™\™[˜Ù\Ó˜]]™T[Žˆ˜[ÙKˆX[X[›ØÚÑ˜[˜XÚÎˆ^XÝX[X[›ØÚÑ˜[˜XÚËˆKˆ
+KˆYKˆ	ÜÝ]\ßNˆ	Û˜[Y_H]\Ý™\ÛÛ™HÛ›H›ÝYÚH^XÝX[X[›ØÚÈœ˜[˜Úˆ
+NÂˆÛÛœÝÝØ\Y™Z™XÝ[ÛÛÙHHUU‘WÑSPÒ×Ô‘R‘PÕSÓ—ÐÓÑTË™š[™
+ˆ
+ÛÙJHOˆÛÙHOOH˜[Y][Û‹œ™Z™XÝ[ÛÛÙKˆ
+NÂˆ\ÜÙ\™\]X[
+ˆ˜Z[\™Qš^\™Q[žR\Õ˜[Y
+ˆÛÛ˜XÝˆ[˜[Yš^\™Q[žKˆ[˜[Y][\ˆÂˆ‹‹˜[Y][Û‹ˆ™Z™XÝ[ÛÛÙNˆÝØ\Y™Z™XÝ[ÛÛÙKˆX[X[›ØÚÔ™\Ý[Ý]\Î‚ˆ˜›ØÚÙYÛX[X[Ü[—Ü™\]Z\™Y‹ˆX[X[›ØÚÑ˜[˜XÚÎˆ^XÝX[X[›ØÚÑ˜[˜XÚËˆKˆ
+Kˆ˜[ÙKˆ	ÜÝ]\ßNˆ	Û˜[Y_HØ[››Ý™HZ\ÛX™[YÚ][›Ý\ˆ˜[Y™Z™XÝ[ÛˆÛÙXˆ
+NÂˆ\ÜÙ\™\]X[
+ˆ˜Z[\™Qš^\™Q[žR\Õ˜[Y
+ˆÛÛ˜XÝˆÂˆ‹‹š[˜[Yš^\™Q[žKˆX[X[Ø›ØÚ×Ü™\Ý[ÙYÙ\ÝÜÚLM—ÛÜ—Û[ˆ[ˆKˆ[˜[Y][\ˆ˜[Y][Û‹ˆ
+Kˆ˜[ÙKˆ	ÜÝ]\ßNˆ	Û˜[Y_HØ[››Ý\ÜÈÚ]Ý]HX[X[›ØÚÈYÙ\Ýˆ
+NÂˆ\ÜÙ\™\]X[
+ˆ˜Z[\™Qš^\™Q[žR\Õ˜[Y
+ˆÛÛ˜XÝˆ[˜[Yš^\™Q[žKˆ[˜[Y][\ˆÂˆ‹‹˜[Y][Û‹ˆX[X[›ØÚÔ™\Ý[Ý]\Î‚ˆ˜›ØÚÙYÛX[X[Ü[—Ü™\]Z\™Y‹ˆX[X[›ØÚÑ^XÝ][Û›ØÚÐÛÝ[ˆKˆX[X[›ØÚÑ˜[˜XÚÎˆ^XÝX[X[›ØÚÑ˜[˜XÚËˆKˆ
+Kˆ˜[ÙKˆ	ÜÝ]\ßNˆ	Û˜[Y_HX[X[›ØÚÈØ[››ÝÛÛZ[ˆ^XÝ][Ûˆ›ØÚÜØˆ
+NÂˆ\ÜÙ\™\]X[
+ˆ˜Z[\™Qš^\™Q[žR\Õ˜[Y
+ˆÛÛ˜XÝˆ[˜[Yš^\™Q[žKˆ[˜[Y][\ˆÂˆ‹‹˜[Y][Û‹ˆX[X[›ØÚÔ™\Ý[Ý]\Î‚ˆ˜›ØÚÙYÛX[X[Ü[—Ü™\]Z\™Y‹ˆX[X[›ØÚÔ™Y™\™[˜Ù\Ó˜]]™T[ŽˆYKˆX[X[›ØÚÑ˜[˜XÚÎˆ^XÝX[X[›ØÚÑ˜[˜XÚËˆKˆ
+Kˆ˜[ÙKˆ	ÜÝ]\ßNˆ	Û˜[Y_HX[X[›ØÚÈØ[››Ý™[X\ÙHH™Y™\™[˜ÙY˜]]™H[˜ˆ
+NÂˆ›Üˆ
+ÛÛœÝÜÝ[SX[X[›ØÚÑ˜[˜XÚÈÙˆÂˆÂˆ\ÙYˆYKˆ™X\ÛÛ—Ù[[NˆÝ]\Ëˆ˜]]™WÜ[—Ý™\œÚ[ÛŽˆ›˜]]™WÜ[—ÝŒH‹ˆKˆÂˆ\ÙYˆ˜[ÙKˆ™X\ÛÛ—Ù[[NˆÝ]\Ëˆ˜]]™WÜ[—Ý™\œÚ[ÛŽˆ[ˆKˆÂˆ\ÙYˆ˜[ÙKˆ™X\ÛÛ—Ù[[Nˆ››ÝÝ\ÙY‹ˆ˜]]™WÜ[—Ý™\œÚ[ÛŽˆ›˜]]™WÜ[—ÝŒH‹ˆKˆJHÂˆ\ÜÙ\™\]X[
+ˆ˜Z[\™Qš^\™Q[žR\Õ˜[Y
+ˆÛÛ˜XÝˆ[˜[Yš^\™Q[žKˆ[˜[Y][\ˆÂˆ‹‹˜[Y][Û‹ˆX[X[›ØÚÔ™\Ý[Ý]\Î‚ˆ˜›ØÚÙYÛX[X[Ü[—Ü™\]Z\™Y‹ˆX[X[›ØÚÑ˜[˜XÚÎˆÜÝ[SX[X[›ØÚÑ˜[˜XÚËˆKˆ
+Kˆ˜[ÙKˆ	ÜÝ]\ßNˆ	Û˜[Y_HX[X[›ØÚÈ˜[˜XÚÈ\H]\Ý™H\ÙYY˜[ÙKÛ›ÝÝ\ÙYÛ[ˆ
+NÂˆBˆB‚ˆÛÛœÝ[˜ÛÛ\]S˜]]™Q˜[˜XÚÐØ[™Y]RYÈHÂˆØ[™ÉÈ™ˆ‹œ™\X]
+MŠ_XˆØ[™ÉÈ™È‹œ™\X]
+MŠ_XˆNÂˆ\ÜÙ\™\]X[
+ˆ˜[˜XÚÑ[™[ÜT™\]Z\™[Y[ÔØ]\ÙšYY
+ˆÛÛ˜XÝˆÝ]\Ëˆ˜[Y˜[˜XÚËˆÂˆ˜]]™T[•™\œÚ[Û”ØÚ[XU˜[YˆYKˆ˜]]™T[•˜[YˆYKˆKˆ
+H	‰‚ˆØ[™Y]PXØÛÝ[[™Ò\Ñ^XÝ
+ˆ[˜ÛÛ\]S˜]]™Q˜[˜XÚÐØ[™Y]RYËˆÂˆÂˆ\[Y\˜[ÛÜ\]YWØØ[™Y]WÚY‚ˆ[˜ÛÛ\]S˜]]™Q˜[˜XÚÐØ[™Y]RYÖÌKˆKˆKˆ×Kˆ
+Kˆ˜[ÙKˆ	ÜÝ]\ßNˆ˜[Y[ÛÚÚ[™È˜[˜XÚÈY]Y]HØ[››Ý™[X\ÙH[˜ÛÛ\]HXØÛÝ[[™Øˆ
+NÂˆB‚ˆ\ÜÙ\™\]X[
+ˆ˜[˜XÚÑ[™[ÜT™\]Z\™[Y[ÔØ]\ÙšYY
+ÛÛ˜XÝ™˜[˜XÚÈ‹Âˆ\ÙYˆYKˆ™X\ÛÛ—Ù[[Nˆ™˜[˜XÚÈ‹ˆ˜]]™WÜ[—Ý™\œÚ[ÛŽˆ›˜]]™WÜ[—ÝŒH‹ˆJKˆ˜[ÙKˆ›]\˜[˜[˜XÚÈ\È›Ý]Ù[ˆ[ˆ[ÝÙYšYÙÙ\ˆ™X\ÛÛˆ‹ˆ
+NÂˆÛÛœÝ™]\ÙYYÙ\ÝH˜ˆ‹œ™\X]
+
+NÂˆÛÛœÝš\œÝÝ]\ÈHSPÒ×ÔÕUTÑTÖÌNÂˆÛÛœÝÙXÛÛ™Ý]\ÈHSPÒ×ÔÕUTÑTÖÌWNÂˆÛÛœÝš\œÝ[žHHÂˆÞ[]X×Ùš^\™WÚYˆÞ[—ÜÌŒÍÛ×ÉÙš\œÝÝ]\ßWÜ™]\ÙXˆ^XÝYÜÝ]\Îˆš\œÝÝ]\ËˆØœÙ\™YÜÝ]\Îˆš\œÝÝ]\ËˆšYÙÙ\—ÛÜšYÚ[—Ù[[NˆÓÓ‘T—ÑRST‘WÔÕUTÑTËš[˜ÛY\Êš\œÝÝ]\ÊBˆÈœÛÛ™\—Ù˜Z[\™H‚ˆˆ\ÝYÙØ]]Ø^WØÛ\ÜÚYšXØ][Ûˆ‹ˆ˜]]™WÙ˜[˜XÚ×Ü™\Ý[ÙYÙ\ÝÜÚLMŽˆ™]\ÙYYÙ\ÝˆX[X[Ø›ØÚ×Ü™\Ý[ÙYÙ\ÝÜÚLM—ÛÜ—Û[ˆ[ˆ\ÜÙ\[Û—Ü™\Ý[ˆœ\ÜÙY‹ˆNÂˆÛÛœÝÙXÛÛ™[žHHÂˆÞ[]X×Ùš^\™WÚYˆÞ[—ÜÌŒÍÛ×ÉÜÙXÛÛ™Ý]\ßWÜ™]\ÙXˆ^XÝYÜÝ]\ÎˆÙXÛÛ™Ý]\ËˆØœÙ\™YÜÝ]\ÎˆÙXÛÛ™Ý]\ËˆšYÙÙ\—ÛÜšYÚ[—Ù[[NˆÓÓ‘T—ÑRST‘WÔÕUTÑTËš[˜ÛY\ÊÙXÛÛ™Ý]\ÊBˆÈœÛÛ™\—Ù˜Z[\™H‚ˆˆ\ÝYÙØ]]Ø^WØÛ\ÜÚYšXØ][Ûˆ‹ˆ˜]]™WÙ˜[˜XÚ×Ü™\Ý[ÙYÙ\ÝÜÚLMŽˆ™]\ÙYYÙ\ÝˆX[X[Ø›ØÚ×Ü™\Ý[ÙYÙ\ÝÜÚLM—ÛÜ—Û[ˆ[ˆ\ÜÙ\[Û—Ü™\Ý[ˆœ\ÜÙY‹ˆNÂˆ\ÜÙ\™\]X[
+ˆ˜Z[\™Qš^\™Q[žR\Õ˜[Y
+ˆÛÛ˜XÝˆš\œÝ[žKˆÂˆÝ]\Îˆ™˜[˜XÚÈ‹ˆ˜[˜XÚÎˆÂˆ\ÙYˆYKˆ™X\ÛÛ—Ù[[Nˆš\œÝÝ]\Ëˆ˜]]™WÜ[—Ý™\œÚ[ÛŽˆ›˜]]™WÜ[—ÝŒH‹ˆKˆKˆ
+KˆYKˆ
+NÂˆ\ÜÙ\™\]X[
+ˆ˜Z[\™Qš^\™Q[žR\Õ˜[Y
+ˆÛÛ˜XÝˆÙXÛÛ™[žKˆÂˆÝ]\Îˆ™˜[˜XÚÈ‹ˆ˜[˜XÚÎˆÂˆ\ÙYˆYKˆ™X\ÛÛ—Ù[[NˆÙXÛÛ™Ý]\Ëˆ˜]]™WÜ[—Ý™\œÚ[ÛŽˆ›˜]]™WÜ[—ÝŒH‹ˆKˆKˆÈ™]š[Ý\ÛU\ÙY˜]]™Q˜[˜XÚÑYÙ\ÝÎˆ™]ÈÙ]
+Ü™]\ÙYYÙ\ÝJHKˆ
+Kˆ˜[ÙKˆ›Û™H˜]]™H˜[˜XÚÈ™\Ý[YÙ\ÝØ[››ÝØ]\ÙžHÛÈšYÙÙ\œÈ‹ˆ
+NÂ‚ˆ›Üˆ
+ÛÛœÝÝ]\ÈÙˆÈ›Ü[X[‹™™X\ÚX›H—JHÂˆ\ÜÙ\™\]X[
+ˆ˜[˜XÚÑ[™[ÜT™\]Z\™[Y[ÔØ]\ÙšYY
+ÛÛ˜XÝÝ]\ËÂˆ\ÙYˆ˜[ÙKˆ™X\ÛÛ—Ù[[Nˆ››ÝÝ\ÙY‹ˆ˜]]™WÜ[—Ý™\œÚ[ÛŽˆ[ˆJKˆYKˆ
+NÂˆ\ÜÙ\™\]X[
+ˆ˜[˜XÚÑ[™[ÜT™\]Z\™[Y[ÔØ]\ÙšYY
+ÛÛ˜XÝÝ]\ËÂˆ\ÙYˆYKˆ™X\ÛÛ—Ù[[Nˆ[Y[Ý]‹ˆ˜]]™WÜ[—Ý™\œÚ[ÛŽˆ›˜]]™WÜ[—ÝŒH‹ˆJKˆ˜[ÙKˆ
+NÂˆ\ÜÙ\™\]X[
+ˆ˜[˜XÚÑ[™[ÜT™\]Z\™[Y[ÔØ]\ÙšYY
+ÛÛ˜XÝÝ]\ËÂˆ\ÙYˆ˜[ÙKˆ™X\ÛÛ—Ù[[Nˆ[Y[Ý]‹ˆ˜]]™WÜ[—Ý™\œÚ[ÛŽˆ[ˆJKˆ˜[ÙKˆ
+NÂˆ\ÜÙ\™\]X[
+ˆ˜[˜XÚÑ[™[ÜT™\]Z\™[Y[ÔØ]\ÙšYY
+ÛÛ˜XÝÝ]\ËÂˆ\ÙYˆ˜[ÙKˆ™X\ÛÛ—Ù[[Nˆ››ÝÝ\ÙY‹ˆ˜]]™WÜ[—Ý™\œÚ[ÛŽˆ›˜]]™WÜ[—ÝŒH‹ˆJKˆ˜[ÙKˆ
+NÂˆ\ÜÙ\™\]X[
+ˆ˜[˜XÚÑ[™[ÜT™\]Z\™[Y[ÔØ]\ÙšYY
+ˆÛÛ˜XÝˆÝ]\Ëˆ[™Yš[™Yˆ
+Kˆ˜[ÙKˆ
+NÂˆBˆB‚ˆÛÛœÝ›Ú[SÜ[Û˜[˜Z[\™Q˜[˜XÚÈHÛÛ™JØÚY[\ŠNÂˆ›Ú[SÜ[Û˜[˜Z[\™Q˜[˜XÚËœ™\Ý[ÛÛ˜XÝ™˜[˜XÚÕ˜[YT[\Âˆ™]™\žQ˜[˜XÚÔÝ]\Ù\ÓY[X™\”™\]Z\™\Õ\ÙYYHH˜[ÙNÂˆ\ÜÙ\™\]X[
+ˆÌÔ™\Ý[˜[Y][ÛÛÛ˜XÝÐ\™PÛÜÙY
+›Ú[SÜ[Û˜[˜Z[\™Q˜[˜XÚÊKˆ˜[ÙKˆ
+NÂ‚ˆ›Üˆ
+ÛÛœÝ[RÙ^HÙˆØš™XÝšÙ^\ÊˆØÚY[\‹œ™\Ý[ÛÛ˜XÝ™˜[˜XÚÕ˜[YT[\Ëˆ
+JHÂˆÛÛœÝZ\ÜÚ[™Ñ˜[˜XÚÔ[HHÛÛ™JØÚY[\ŠNÂˆ[]HZ\ÜÚ[™Ñ˜[˜XÚÔ[Kœ™\Ý[ÛÛ˜XÝ™˜[˜XÚÕ˜[YT[\ÖÜ[RÙ^WNÂˆ\ÜÙ\™\]X[
+ˆÌÔ™\Ý[˜[Y][ÛÛÛ˜XÝÐ\™PÛÜÙY
+Z\ÜÚ[™Ñ˜[˜XÚÔ[JKˆ˜[ÙKˆÛÛÜ™[˜]Y™[[Ý˜[Ùˆ˜[˜XÚÈ[H	Ü[RÙ^_H]\Ý˜Z[ÛÜÙYˆ
+NÂˆB‚ˆÛÛœÝ›Ú™XÝYÙ[]]Üš^˜][ÛˆHÛÛ™JØÚY[\ŠNÂˆ›Ú™XÝYÙ[]]Üš^˜][Û‹›Ü[Z^™\”›Ú™XÝY™\Ý[ÛÛ˜XÝ™˜Z[\™T›Ý][™Âˆœ›Ú™XÝY˜Z[\™Q[™[ÜSX^PÛÛZ[”™Y™\™[˜ÙP]]Üš^™SÜ”™[X\ÙPØ[›ÛšXØ[˜[˜XÚÈBˆYNÂˆ\ÜÙ\™\]X[
+ˆ›Ú™XÝY™\Ý[Ø]]Ø^PÛÛ˜XÝ\ÐÛÜÙY
+›Ú™XÝYÙ[]]Üš^˜][ÛŠKˆ˜[ÙKˆ
+NÂ‚ˆÛÛœÝ[˜[Y][\™\ÛÛ™\ž\\ÜÈHÛÛ™JØÚY[\ŠNÂˆ[˜[Y][\™\ÛÛ™\ž\\ÜËœÌŒÍÛÐ™[˜ÚX\šÐXØÙ\[˜ÙPÛÛ˜XÝˆ˜™[˜ÚX\šÔ™\Ý[YÙ\ÝÛÛ˜XÝœ™\ÛÛ™Y\Y˜XÝY[X™\œÐÛÛ˜XÝˆ˜Ø[›ÛšXØ[˜]]™Q˜[˜XÚÔ›Ú™XÝ[ÛÛÛ˜XÝˆœÛÝ\˜ÙS˜]]™Q˜[˜XÚÑYÙ\Ý]\Ý™\ÛÛ™UÔ™Z™XÝY˜]]™Q˜[˜XÚÐ][\˜[Y][Û”™XÛÜ™[”Ø[YP]]Üš^˜][Û”ÝÜ™UÚ[“X[X[›ØÚÑYÙ\Ý\Ó›Û“[Bˆ˜[ÙNÂˆ\ÜÙ\™\]X[
+ˆÌÔ™\Ý[˜[Y][ÛÛÛ˜XÝÐ\™PÛÜÙY
+[˜[Y][\™\ÛÛ™\ž\\ÜÊKˆ˜[ÙKˆ
+NÂ‚ˆÛÛœÝ™Z™XÝY][\™XÛÜ™X^SXZÈHÛÛ™JØÚY[\ŠNÂˆ™Z™XÝY][\™XÛÜ™X^SXZËœÌŒÍÛÐ™[˜ÚX\šÐXØÙ\[˜ÙPÛÛ˜XÝˆ˜™[˜ÚX\šÔ™\Ý[YÙ\ÝÛÛ˜XÝœ™\ÛÛ™Y\Y˜XÝY[X™\œÐÛÛ˜XÝˆœ™Z™XÝY˜]]™Q˜[˜XÚÐ][\˜[Y][Û”™XÛÜ™ÛÛ˜XÝˆœ˜]Ô™Z™XÝY˜]]™Q˜[˜XÚÓÝ]]X^P\X\’[”™XÛÜ™ÙÜÐ\Y˜XÝÐØXÚ\Ñ\œ›ÜœÕ[[Y]žSÜ”\œÚ\ÝY[\BˆYNÂˆ\ÜÙ\™\]X[
+ˆÌÔ™\Ý[˜[Y][ÛÛÛ˜XÝÐ\™PÛÜÙY
+™Z™XÝY][\™XÛÜ™X^SXZÊKˆ˜[ÙKˆ
+NÂ‚ˆÛÛœÝ™Z™XÝ[ÛÛÙUÚY[™YHÛÛ™JØÚY[\ŠNÂˆ™Z™XÝ[ÛÛÙUÚY[™YœÌŒÍÛÐ™[˜ÚX\šÐXØÙ\[˜ÙPÛÛ˜XÝˆ˜™[˜ÚX\šÔ™\Ý[YÙ\ÝÛÛ˜XÝœ™\ÛÛ™Y\Y˜XÝY[X™\œÐÛÛ˜XÝˆœ™Z™XÝY˜]]™Q˜[˜XÚÐ][\˜[Y][Û”™XÛÜ™ÛÛ˜XÝ™šY[ØÚ[X\Âˆœ™Z™XÝ[Û—ØÛÙWÙ[[Kœ\Ú
+[œ™]šY]ÙYÜ™Z™XÝ[ÛˆŠNÂˆ\ÜÙ\™\]X[
+ˆÌÔ™\Ý[˜[Y][ÛÛÛ˜XÝÐ\™PÛÜÙY
+™Z™XÝ[ÛÛÙUÚY[™Y
+Kˆ˜[ÙKˆ
+NÂ‚ˆÛÛœÝ˜[˜XÚÕ˜[Y][Û”ÚÚ\YHÛÛ™JØÚY[\ŠNÂˆ˜[˜XÚÕ˜[Y][Û”ÚÚ\Y›˜]]™U˜[Y]Ü‚ˆ˜[Y]Y˜]]™Q˜[˜XÚÓ]\ÝØ]\ÙžPØ[›ÛšXØ[Ø[™Y]PXØÛÝ[[™Ñ^XÝ][Û›ØÚÑ\˜][Û[™[\™ÛÛœÝ˜Z[ÈBˆ˜[ÙNÂˆ\ÜÙ\™\]X[
+ˆÌÔ™\Ý[˜[Y][ÛÛÛ˜XÝÐ\™PÛÜÙY
+˜[˜XÚÕ˜[Y][Û”ÚÚ\Y
+Kˆ˜[ÙKˆ
+NÂŸJNÂ‚\Ý
+“Í\›Ý™YXÚÙ]È™\ÛÛ™HžHš[˜[YÙ\Ý[™ÜÝ[HØØ]Üˆ]]][ÛœÈ˜Z[ÛÜÙY‹\Þ[˜È
+
+HOˆÂˆÛÛœÝØÚY[\ˆH]ØZ]œÛÛŠˆ˜ÛÛ™šYËÙX˜[™Ú[Y[Y^K\ØÚY[\‹XÛÛ˜XÝšœÛÛˆ‹ˆ
+NÂˆ\ÜÙ\™\]X[
+Í\›Ý™YXÚÙ]™\ÛÛ][ÛÛÛ˜XÝ\ÐÛÜÙY
+ØÚY[\ŠKYJNÂ‚ˆÛÛœÝZ\ÜÚ[™ÔÝÜ™HHÛÛ™JØÚY[\ŠNÂˆ[]HZ\ÜÚ[™ÔÝÜ™K›ÍXÚÙ]YÙ\ÝÛÛ˜XÝˆ˜\›Ý™Y™\ÚÛš[™[™ÑYÙ\ÝÛÛ˜XÝ˜ÛÛ[Y™\ÜÙYÝÜ™NÂˆ\ÜÙ\™\]X[
+ˆÍ\›Ý™YXÚÙ]™\ÛÛ][ÛÛÛ˜XÝ\ÐÛÜÙY
+Z\ÜÚ[™ÔÝÜ™JKˆ˜[ÙKˆ
+NÂ‚ˆÛÛœÝÜ›Û™ÓÛÚÝ\Ù^HHÛÛ™JØÚY[\ŠNÂˆÜ›Û™ÓÛÚÝ\Ù^K›ÍXÚÙ]YÙ\ÝÛÛ˜XÝˆ˜\›Ý™Y™\ÚÛš[™[™ÑYÙ\ÝÛÛ˜XÝ˜ÛÛ[Y™\ÜÓÛÚÝ\Ù^HBˆœ›ÜÜØ[ÙYÙ\ÝÜÚLMˆŽÂˆ\ÜÙ\™\]X[
+ˆÍ\›Ý™YXÚÙ]™\ÛÛ][ÛÛÛ˜XÝ\ÐÛÜÙY
+Ü›Û™ÓÛÚÝ\Ù^JKˆ˜[ÙKˆ
+NÂ‚ˆÛÛœÝ›ÐØ[›ÛšXØ[™\ÛÛ][ÛˆHÛÛ™JØÚY[\ŠNÂˆ›ÐØ[›ÛšXØ[™\ÛÛ][Û‹›ÍXÚÙ]YÙ\ÝÛÛ˜XÝˆ˜\›Ý™Y™\ÚÛš[™[™ÑYÙ\ÝÛÛ˜XÝˆ˜[Ì›Ð[™ÌŒÎÚÝ\[™XØÙ\[˜ÙU\Ù\Ó]\Ý™\ÛÛ™Q^XÝ\›Ý™YXÚÙ]žQYÙ\Ýœ›ÛQ^XÝ›Ý[™ÝÜ™P[™™XÛÛ\]PØ[›ÛšXØ[YÙ\ÝBˆ˜[ÙNÂˆ\ÜÙ\™\]X[
+ˆÍ\›Ý™YXÚÙ]™\ÛÛ][ÛÛÛ˜XÝ\ÐÛÜÙY
+›ÐØ[›ÛšXØ[™\ÛÛ][ÛŠKˆ˜[ÙKˆ
+NÂ‚ˆÛÛœÝÛÚÝ\˜Z[\™SX^T›ØÙYYHÛÛ™JØÚY[\ŠNÂˆÛÚÝ\˜Z[\™SX^T›ØÙYY›ÍXÚÙ]YÙ\ÝÛÛ˜XÝˆ˜\›Ý™Y™\ÚÛš[™[™ÑYÙ\ÝÛÛ˜XÝˆ›ÛÚÝ\Z\ÜÐ[XšYÝZ]Q\XØ]TÝÜ™SÜ”ÛXÞSZ\ÛX]ÚØ[›ÛšXØ[YÙ\ÝZ\ÛX]ÚÜ’[˜[Y™XÙZ\˜Z[ÐÛÜÙYBˆ˜[ÙNÂˆ\ÜÙ\™\]X[
+ˆÍ\›Ý™YXÚÙ]™\ÛÛ][ÛÛÛ˜XÝ\ÐÛÜÙY
+ÛÚÝ\˜Z[\™SX^T›ØÙYY
+Kˆ˜[ÙKˆ
+NÂ‚ˆÛÛœÝÙ[›ÛÝÝ˜\[™ÓÛÚÝ\HÛÛ™JØÚY[\ŠNÂˆÙ[›ÛÝÝ˜\[™ÓÛÚÝ\›ÍXÚÙ]YÙ\ÝÛÛ˜XÝˆ˜\›Ý™Y™\ÚÛš[™[™ÑYÙ\ÝÛÛ˜XÝœ™\ÛÛ™\›ÛÝÝ˜\ÛÛ˜XÝˆœXÚÙ][\›˜[ÝÜ™PÛÛÜ™[˜]\ÓX^S›Ý›ÛÝÝ˜\Z\“ÝÛ“ÛÚÝ\H˜[ÙNÂˆ\ÜÙ\™\]X[
+ˆÍ\›Ý™YXÚÙ]™\ÛÛ][ÛÛÛ˜XÝ\ÐÛÜÙY
+Ù[›ÛÝÝ˜\[™ÓÛÚÝ\
+Kˆ˜[ÙKˆ
+NÂ‚ˆÛÛœÝÜ›Û™Ô™\ÛÛ™\“X^T›ØÙYYHÛÛ™JØÚY[\ŠNÂˆÜ›Û™Ô™\ÛÛ™\“X^T›ØÙYY›ÍXÚÙ]YÙ\ÝÛÛ˜XÝˆ˜\›Ý™Y™\ÚÛš[™[™ÑYÙ\ÝÛÛ˜XÝœ™\ÛÛ™\›ÛÝÝ˜\ÛÛ˜XÝˆœ™\ÛÛ™YXÚÙ]ÝÛ™\‘XÚ\Ú[Û”ÝÜ™T™Y[™ÛXÞQYÙ\Ý]\Ý^XÝQ\]X[\ÝY™\ÛÛ™\ÛÛÜ™[˜]\ÈBˆ˜[ÙNÂˆ\ÜÙ\™\]X[
+ˆÍ\›Ý™YXÚÙ]™\ÛÛ][ÛÛÛ˜XÝ\ÐÛÜÙY
+Ü›Û™Ô™\ÛÛ™\“X^T›ØÙYY
+Kˆ˜[ÙKˆ
+NÂ‚ˆÛÛœÝXÚÙ][\›˜[›ÛÝÝ˜\ÛÝ\˜ÙHHÛÛ™JØÚY[\ŠNÂˆXÚÙ][\›˜[›ÛÝÝ˜\ÛÝ\˜ÙK›ÍXÚÙ]YÙ\ÝÛÛ˜XÝˆ˜\›Ý™Y™\ÚÛš[™[™ÑYÙ\ÝÛÛ˜XÝˆ˜ÛÛ[Y™\ÜÙYÝÜ™T™Y›ÛÝÝ˜\ÛÝ\˜ÙT]Bˆ›Í™\ÚÛXÚ\Ú[Û”XÚÙ]›ÝÛ™\‘XÚ\Ú[Ûš[™[™Ë›Ü\]YSÝÛ™\‘XÚ\Ú[Û”ÝÜ™T™YˆŽÂˆ\ÜÙ\™\]X[
+ˆÍ\›Ý™YXÚÙ]™\ÛÛ][ÛÛÛ˜XÝ\ÐÛÜÙY
+XÚÙ][\›˜[›ÛÝÝ˜\ÛÝ\˜ÙJKˆ˜[ÙKˆ
+NÂ‚ˆÛÛœÝZ\ÜÚ[™Õ™\šYšY\”ØÚ[XHHÛÛ™JØÚY[\ŠNÂˆ[]HZ\ÜÚ[™Õ™\šYšY\”ØÚ[XK›ÍXÚÙ]YÙ\ÝÛÛ˜XÝˆ˜\›Ý™Y™\ÚÛš[™[™ÑYÙ\ÝÛÛ˜XÝœ™\ÛÛ™\›ÛÝÝ˜\ÛÛ˜XÝˆ˜\Y˜XÝšY[ØÚ[X\Ë™\šYšXØ][Û—ÚÙ^WÝ™\œÚ[ÛŽÂˆ\ÜÙ\™\]X[
+ˆÍ\›Ý™YXÚÙ]™\ÛÛ][ÛÛÛ˜XÝ\ÐÛÜÙY
+Z\ÜÚ[™Õ™\šYšY\”ØÚ[XJKˆ˜[ÙKˆ
+NÂ‚ˆÛÛœÝ[œÚYÛ™Y™\ÛÛ™\“X^T›ØÙYYHÛÛ™JØÚY[\ŠNÂˆ[œÚYÛ™Y™\ÛÛ™\“X^T›ØÙYY›ÍXÚÙ]YÙ\ÝÛÛ˜XÝˆ˜\›Ý™Y™\ÚÛš[™[™ÑYÙ\ÝÛÛ˜XÝœ™\ÛÛ™\›ÛÝÝ˜\ÛÛ˜XÝˆ™\šYšXØ][Û”[\Âˆ™ÜÙTÚYÛ˜]\™S]\ÝÜž\ÙÜ˜\XØ[U™\šYžPYØZ[œÝ^\›˜[T™\ÛÛ™YÝ\œ™[\Ý[˜ÚÜ‘[žHBˆ˜[ÙNÂˆ\ÜÙ\™\]X[
+ˆÍ\›Ý™YXÚÙ]™\ÛÛ][ÛÛÛ˜XÝ\ÐÛÜÙY
+[œÚYÛ™Y™\ÛÛ™\“X^T›ØÙYY
+Kˆ˜[ÙKˆ
+NÂ‚ˆÛÛœÝ]XÚÙ\”Ù[XÝY\ÝX^T›ØÙYYHÛÛ™JØÚY[\ŠNÂˆ]XÚÙ\”Ù[XÝY\ÝX^T›ØÙYY›ÍXÚÙ]YÙ\ÝÛÛ˜XÝˆ˜\›Ý™Y™\ÚÛš[™[™ÑYÙ\ÝÛÛ˜XÝœ™\ÛÛ™\›ÛÝÝ˜\ÛÛ˜XÝˆ\Ý[˜ÚÜÛÛ˜XÝˆ˜\Y˜XÝX^S›ÝÙ[XÝ[›ÙXÙSÜ‘^[™™\šYšXØ][Û’Ù^U\Ý›ÛÝÜ[ÛÜš]P[ÝÛ\ÝBˆ˜[ÙNÂˆ\ÜÙ\™\]X[
+ˆÍ\›Ý™YXÚÙ]™\ÛÛ][ÛÛÛ˜XÝ\ÐÛÜÙY
+ˆ]XÚÙ\”Ù[XÝY\ÝX^T›ØÙYYˆ
+Kˆ˜[ÙKˆ
+NÂ‚ˆÛÛœÝ^[ØYZ\ÛX]ÚX^T›ØÙYYHÛÛ™JØÚY[\ŠNÂˆ^[ØYZ\ÛX]ÚX^T›ØÙYY›ÍXÚÙ]YÙ\ÝÛÛ˜XÝˆ˜\›Ý™Y™\ÚÛš[™[™ÑYÙ\ÝÛÛ˜XÝœ™\ÛÛ™\›ÛÝÝ˜\ÛÛ˜XÝˆ™\šYšXØ][Û”[\Âˆ™]™\žTÚYÛ™Y^[ØYšY[]\Ý^XÝQ\]X[\Y˜XÝ›Ú™XÝ[ÛˆH˜[ÙNÂˆ\ÜÙ\™\]X[
+ˆÍ\›Ý™YXÚÙ]™\ÛÛ][ÛÛÛ˜XÝ\ÐÛÜÙY
+^[ØYZ\ÛX]ÚX^T›ØÙYY
+Kˆ˜[ÙKˆ
+NÂ‚ˆÛÛœÝÜ›ÜÜÔØÛÜT™\ÛÛ™\“X^T›ØÙYYHÛÛ™JØÚY[\ŠNÂˆÜ›ÜÜÔØÛÜT™\ÛÛ™\“X^T›ØÙYY›ÍXÚÙ]YÙ\ÝÛÛ˜XÝˆ˜\›Ý™Y™\ÚÛš[™[™ÑYÙ\ÝÛÛ˜XÝœ™\ÛÛ™\›ÛÝÝ˜\ÛÛ˜XÝˆ™\šYšXØ][Û”[\Âˆ˜]][XØ]Y™\]Y\ÝÝÛ™\”š]˜]TØÛÜQYÙ\Ý]\Ý\]X[ÚYÛ™YØÛÜP[™^\›˜[™YÚ\ÝžTØÛÜHBˆ˜[ÙNÂˆ\ÜÙ\™\]X[
+ˆÍ\›Ý™YXÚÙ]™\ÛÛ][ÛÛÛ˜XÝ\ÐÛÜÙY
+Ü›ÜÜÔØÛÜT™\ÛÛ™\“X^T›ØÙYY
+Kˆ˜[ÙKˆ
+NÂ‚ˆÛÛœÝ™\^YY™\ÛÛ™\“X^T›ØÙYYHÛÛ™JØÚY[\ŠNÂˆ™\^YY™\ÛÛ™\“X^T›ØÙYY›ÍXÚÙ]YÙ\ÝÛÛ˜XÝˆ˜\›Ý™Y™\ÚÛš[™[™ÑYÙ\ÝÛÛ˜XÝœ™\ÛÛ™\›ÛÝÝ˜\ÛÛ˜XÝˆ™\šYšXØ][Û”[\Âˆœ™\ÛÛ™\‘Ù[™\˜][Û“]\Ý™TÝšXÝQÜ™X]\•[“\ÝXØÙ\YÙ[™\˜][Û‘›Ü”Ø[YTØÛÜP]YY[˜ÙT\œÜÙP[™ÝYÙ\Ò[\[™Û›T™\ÛÛ™\‘Ù[™\˜][Û”ÝÜ™HBˆ˜[ÙNÂˆ\ÜÙ\™\]X[
+ˆÍ\›Ý™YXÚÙ]™\ÛÛ][ÛÛÛ˜XÝ\ÐÛÜÙY
+™\^YY™\ÛÛ™\“X^T›ØÙYY
+Kˆ˜[ÙKˆ
+NÂ‚ˆÛÛœÝ[šÛ›ÝÛ’Ù^SX^T›ØÙYYHÛÛ™JØÚY[\ŠNÂˆ[šÛ›ÝÛ’Ù^SX^T›ØÙYY›ÍXÚÙ]YÙ\ÝÛÛ˜XÝˆ˜\›Ý™Y™\ÚÛš[™[™ÑYÙ\ÝÛÛ˜XÝœ™\ÛÛ™\›ÛÝÝ˜\ÛÛ˜XÝˆ™\šYšXØ][Û”[\Âˆ[šÛ›ÝÛ’Ù^UÜ›Û™ÒÙ^U™\œÚ[Û•[\ÝY›ÛÝÜ›Û™Ô›ÛÝ™\œÚ[Û‘\Ø[ÝÙY[ÛÜš]U[œÚYÛ™Y[˜[YÚYÛ˜]\™T^[ØYZ\ÛX]ÚØÛÜP]YY[˜ÙT\œÜÙSÜ”ÝYÙSZ\ÛX]Ú^\™Y™]›ÚÙYÜ”™\^Q˜Z[ÐÛÜÙYBˆ˜[ÙNÂˆ\ÜÙ\™\]X[
+ˆÍ\›Ý™YXÚÙ]™\ÛÛ][ÛÛÛ˜XÝ\ÐÛÜÙY
+[šÛ›ÝÛ’Ù^SX^T›ØÙYY
+Kˆ˜[ÙKˆ
+NÂ‚ˆ›Üˆ
+ÛÛœÝšY[ÙˆÂˆ˜[X\Ð[ÝÙY‹ˆœ™Y\™XÝ[ÝÙY‹ˆ›]]X›SÝ™\Üš]P[ÝÙY‹ˆJHÂˆÛÛœÝ]]X›SÜ”™Y\™XÝYHÛÛ™JØÚY[\ŠNÂˆ]]X›SÜ”™Y\™XÝY›ÍXÚÙ]YÙ\ÝÛÛ˜XÝˆ˜\›Ý™Y™\ÚÛš[™[™ÑYÙ\ÝÛÛ˜XÝ˜ÛÛ[Y™\ÜÙYØš™XÝ[\ÖÂˆšY[ˆHHYNÂˆ\ÜÙ\™\]X[
+ˆÍ\›Ý™YXÚÙ]™\ÛÛ][ÛÛÛ˜XÝ\ÐÛÜÙY
+]]X›SÜ”™Y\™XÝY
+Kˆ˜[ÙKˆ	ÙšY[H]\Ý˜Z[ÛÜÙYˆ
+NÂˆB‚ˆÛÛœÝÝ[TXÚÙ]X^T›ØÙYYHÛÛ™JØÚY[\ŠNÂˆÝ[TXÚÙ]X^T›ØÙYY›ÍXÚÙ]YÙ\ÝÛÛ˜XÝˆ˜\›Ý™Y™\ÚÛš[™[™ÑYÙ\ÝÛÛ˜XÝœ™\ÛÛ™YXÚÙ]˜[Y][Û”[\ÂˆœXÚÙ]]\Ý™U[™^\™Y]]™\žSÌ›Ð[™ÌŒÎÚÝ\[™XØÙ\[˜ÙU\ÙHH˜[ÙNÂˆ\ÜÙ\™\]X[
+ˆÍ\›Ý™YXÚÙ]™\ÛÛ][ÛÛÛ˜XÝ\ÐÛÜÙY
+Ý[TXÚÙ]X^T›ØÙYY
+Kˆ˜[ÙKˆ
+NÂ‚ˆÛÛœÝÝ[T™XÙZ\X^T›ØÙYYHÛÛ™JØÚY[\ŠNÂˆÝ[T™XÙZ\X^T›ØÙYY›ÍXÚÙ]YÙ\ÝÛÛ˜XÝˆ˜\›Ý™Y™\ÚÛš[™[™ÑYÙ\ÝÛÛ˜XÝœ™\ÛÛ™YXÚÙ]˜[Y][Û”[\Âˆœ™XÙZ\ÚYÛ˜]\™U\Ý]^\žP[™™]›ØØ][Û“]\Ý™T™]˜[Y]Y]]™\žSÌ›Ð[™ÌŒÎÚÝ\[™XØÙ\[˜ÙU\ÙHBˆ˜[ÙNÂˆ\ÜÙ\™\]X[
+ˆÍ\›Ý™YXÚÙ]™\ÛÛ][ÛÛÛ˜XÝ\ÐÛÜÙY
+Ý[T™XÙZ\X^T›ØÙYY
+Kˆ˜[ÙKˆ
+NÂŸJNÂ‚\Ý
+œ›ØYX\\ÈH˜]]™H›ÜšËÜ[Û˜[›ÜšË[™Y™\œ™YÛÛ[Y\˜ÚX[›ÜšÈ‹\Þ[˜È
+
+HOˆÂˆÛÛœÝ›ØYX\H]ØZ]^
+œ›ØYX\ØXÝ]™K\›ÙÜ˜[Kž[[ŠNÂ‚ˆ\ÜÙ\›X]Ú
+›ØYX\][J›ØYX\”ÌŒÍˆŠKÜÝ]\ÎˆÛÛ\]YÊNÂˆ\ÜÙ\›X]Ú
+ˆ›ØYX\][J›ØYX\“ÌÐHŠKˆÜÝ]\ÎˆÛÛ\]Y×××J˜\›Ý˜[]]Üš^™\Ò[[YYX]SÜ\˜][ÛŽˆ˜[ÙV×××J˜]]ÛX]XÔÝ\[ÝÙYˆ˜[ÙV×××J›X[X[ÌŒÍTÝ\™\]Z\™YˆYV×××J™\[™[˜ÚY\ÎˆÔÌŒÍPKÌŒÍ—KËˆ
+NÂˆ\ÜÙ\›X]Ú
+ˆ›ØYX\][J›ØYX\“ÍˆŠKˆÜÝ]\ÎˆÛÛ\]Y×××J›YØXÞTXÚÙ]\ÜÜÚ][ÛŽˆÝ\\œÙYYÜ™Z™XÝY×××J™]\™TÌŒÍ”Þ[]XÔ›Ýš\Ú[Ûš[™Ð[™XØÙ\[˜ÙP]]Üš^™YˆYV×××J˜\›Ý˜[]]Üš^™\Ò[[YYX]SÜ\˜][ÛŽˆ˜[ÙV×××J˜]]ÛX]XÔÝ\[ÝÙYˆ˜[ÙV×××J™\[™[˜ÚY\ÎˆÔÌŒÍ—KËˆ
+NÂˆ\ÜÙ\›X]Ú
+ˆ›ØYX\][J›ØYX\”ÌŒÍ”ŠKˆÜÝ]\Îˆ›ØÚÙY×××J™^XÝ][Û”Ý]Nˆ›Ýš\Ú[Ûš[™×Ø\YYÝ\Ù\—ÜØÛÜYØXØÙ\[˜ÙWØ›ØÚÙY×××J™\[™[˜ÚY\ÎˆÓÍ—KËˆ
+NÂˆ\ÜÙ\›X]Ú
+ˆ›ØYX\][J›ØYX\”ÌŒÍHŠKˆÙ\[™[˜ÚY\ÎˆÓÌÐKÌŒÍ”KËˆ
+NÂˆ\ÜÙ\›X]Ú
+›ØYX\][J›ØYX\“ÍHŠKÙ\[™[˜ÚY\ÎˆÔÌŒÍÔKÊNÂˆ\ÜÙ\›X]Ú
+›ØYX\][J›ØYX\”ÌHŠKÙ\[™[˜ÚY\ÎˆÔÌŒÎWKÊNÂˆ\ÜÙ\›X]Ú
+›ØYX\][J›ØYX\”ÌPHŠKÙ\[™[˜ÚY\ÎˆÔÌWKÊNÂˆ\ÜÙ\™Ù\Ó›ÝX]Ú
+ˆ›ØYX\][J›ØYX\”ÌPHŠKˆÔÌŒÍÓßÍÌ“ßÌŒÎÒÌŒÎÕŸÍÌŒÎSßÌËËˆ
+NÂˆ\ÜÙ\›X]Ú
+›ØYX\][J›ØYX\”ÌŒÍÓÈŠKÙ\[™[˜ÚY\ÎˆÔÌŒÍÔKÊNÂˆ\ÜÙ\›X]Ú
+›ØYX\][J›ØYX\“Ì“ÈŠKÙ\[™[˜ÚY\ÎˆÓÍKÊNÂˆ\ÜÙ\›X]Ú
+›ØYX\][J›ØYX\”ÌŒÎÒŠKÙ\[™[˜ÚY\ÎˆÔÌŒÎKÌ“×KÊNÂˆ\ÜÙ\›X]Ú
+ˆ›ØYX\][J›ØYX\“ÍŠKˆÙ\[™[˜ÚY\ÎˆÔÌŒÎÕ‹ÌWKËˆ
+NÂˆ\ÜÙ\›X]Ú
+›ØYX\][J›ØYX\”ÌÈŠKÙ\[™[˜ÚY\ÎˆÔÌŒÎS×KÊNÂˆ\ÜÙ\›X]Ú
+›ØYX\][J›ØYX\”ÌÐÈŠKÙ\[™[˜ÚY\ÎˆÓÍ—KÊNÂˆ\ÜÙ\›X]Ú
+›ØYX\][J›ØYX\”ÌÈŠKÙ\[™[˜ÚY\ÎˆÔÌÐ×KÊNÂˆ\ÜÙ\›X]Ú
+›ØYX\][J›ØYX\“ÍŠKÙ\[™[˜ÚY\ÎˆÔÌPËÌ•—KÊNÂˆ\ÜÙ\›X]Ú
+›ØYX\][J›ØYX\”ÌŒHŠKÜÝ]\Îˆ]Y]YYÊNÂŸJNÂ‚\Ý
+˜\›Ý™YÌÐH›ÜÜØ[™Z[XYÙH™[XZ[œÈ[™[™È[™Ø[››Ýž\\ÜÈÌŒÍ”‹\Þ[˜È
+
+HOˆÂˆÛÛœÝX[šY™\ÝH]ØZ]œÛÛŠˆœ™Y™\™[˜ÙWØÛÜœ\ËÜ™XY[™\ÜËØ\˜Z\Ù\‹ÜÙXÛÛ™Ü›Ý[™ÛÝÛ™\—Üš]˜]WÙÛÛ[—Ì×Ü™XY[™\ÜËšœÛÛˆ‹ˆ
+NÂˆÛÛœÝ™\ÜH]ØZ]œÛÛŠˆœ™Y™\™[˜ÙWØÛÜœ\ËÜ™XY[™\ÜËØ\˜Z\Ù\‹ÜÙXÛÛ™Ü›Ý[™ÛÝÛ™\—Üš]˜]WÙÛÛ[—Ì×Ü™XY[™\Ü×Ü™\ÜšœÛÛˆ‹ˆ
+NÂ‚ˆ\ÜÙ\™\]X[
+ˆX[šY™\Ý›ÌØP\›Ý˜[XÚÙ]œXÚÙ]Yˆ›ÌØK\ÌŒÍ‹X\˜Z\Ù\‹\ÙXÛÛ™LŒ‹\LK[ÝÛ™\‹\š]˜]KYÛÛ[‹LË]Œˆ‹ˆ
+NÂˆ\ÜÙ\™\]X[
+X[šY™\Ý›ÌØP\›Ý˜[XÚÙ]›ÝÛ™\\›Ý™Y˜[ÙJNÂˆ\ÜÙ\™Y\\]X[
+ˆX[šY™\Ý›ÌØP\›Ý˜[XÚÙ]œ™\]Z\™Y™Y›Ü™P[ÝÙYÜ\˜][Û”›ØYX\][RYËˆÈ”ÌŒÍ”—Kˆ
+NÂˆ\ÜÙ\™\]X[
+ˆX[šY™\Ý›ÌØP\›Ý˜[XÚÙ]˜\›Ý˜[]]Üš^™\Ò[[YYX]SÜ\˜][Û‹ˆ˜[ÙKˆ
+NÂˆ\ÜÙ\™\]X[
+ˆX[šY™\Ý›ÌØP\›Ý˜[XÚÙ]›Í“Ü”ÌŒÍ”ÝXœÝ]][Û[ÝÙYˆ˜[ÙKˆ
+NÂˆ\ÜÙ\™Y\\]X[
+X[šY™\Ý˜ÛÛ›Û[™TÝ]KœÌŒÍ˜SZ\ÜÚ[™Ñ\[™[˜ÚY\ËÂˆ“ÌÐH‹ˆ”ÌŒÍ”‹ˆJNÂˆ\ÜÙ\™\]X[
+™\Ü›ÌØTXÚÙ]YÙ\ÝÚLM‹ÌÐWÔPÒÑUÔÒLMŠNÂˆ\ÜÙ\™\]X[
+™\Ü™^XÝ][Û”Ý]\Ë˜›ØÚÙYÜ[™[™×ÛÌØWØ[™ÜÌŒÍœŠNÂŸJNÂ‚\Ý
+HXÛ\™YÌYš[H[Y[™Y[X[šY™\Ý\È[š\]YH[™X]\šX[^™Y‹\Þ[˜È
+
+HOˆÂˆÛÛœÝ[šYšYYH]ØZ]œÛÛŠ˜ÛÛ™šYËÙX˜[™Ú[][šYšYY\›ÙÜ˜[KXÛÛ˜XÝšœÛÛˆŠNÂ‚ˆ\ÜÙ\™Y\\]X[
+[šYšYY˜[Y[™Y[ÝÛ™Yš[\ËÕÓ‘QÑ’STÊNÂˆ\ÜÙ\™\]X[
+™]ÈÙ]
+ÕÓ‘QÑ’STÊKœÚ^™KÌ
+NÂˆ›Üˆ
+ÛÛœÝ]ÙˆÕÓ‘QÑ’STÊHÂˆ\ÜÙ\›ÚÊ
+]ØZ]^
+]
+JK›[™ÝˆÝÛ™Yš[H\È[\Nˆ	Ü]X
+NÂˆBŸJNÂ
