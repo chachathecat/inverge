@@ -330,7 +330,10 @@ items:
     evidence: docs/qa/s236p-lean-owner-private-acceptance.md
     provisionedProjectName: inverge-beta
     provisionedProjectRef: vajcduseyicjhyhrclax
-    provisionedResources: [storage.bucket.s236p-owner-private-v1, public.s236p_owner_private_objects, public.s236p_owner_private_events]
+    provisionedResources: [storage.bucket.s236p-owner-private-v1, public.s236p_owner_private_objects]
+    persistentEventLogMode: none
+    signedAccessEnabled: false
+    migrationContract: ordered_exact_triple
     realContentAuthorized: false
     productionAuthorized: false
     downstreamExecutionStarted: false

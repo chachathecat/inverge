@@ -10,9 +10,10 @@ export const S236P_BUCKET_ID = "s236p-owner-private-v1";
 export const S236P_OBJECTS_TABLE = "s236p_owner_private_objects";
 export const S236P_EVENTS_TABLE = "s236p_owner_private_events";
 export const S236P_PROVIDER_MODE = "none";
+export const S236P_EVENT_LOG_MODE = "none";
+export const S236P_EVENT_LOG_RETENTION_DAYS = 0;
 export const S236P_MAX_SIGNED_URL_TTL_SECONDS = 300;
 export const S236P_MAX_CONTENT_RETENTION_DAYS = 365;
-export const S236P_MAX_METADATA_LOG_RETENTION_DAYS = 7;
 export const S236P_MAX_TEMPORARY_TTL_SECONDS = 300;
 export const S236P_APPLICATION_CACHE_TTL_SECONDS = 0;
 export const S236P_MAX_EXPORT_DELETE_SLA_SECONDS = 604800;
@@ -30,17 +31,20 @@ const REQUIRED_ENV = [
   "S236P_OWNER_B_PASSWORD",
 ];
 const DENIAL_PROBE_BODY = Buffer.from("s236p-synthetic-denial-probe", "utf8");
+const BULK_SIGN_TTLS = Object.freeze([1, 300, 301]);
+const SINGLE_SIGN_TTLS = Object.freeze([1, 300, 301]);
 
 class AcceptanceError extends Error {
-  constructor(code) {
+  constructor(code, details = undefined) {
     super(code);
     this.name = "AcceptanceError";
     this.code = code;
+    this.details = details;
   }
 }
 
-function fail(code) {
-  throw new AcceptanceError(code);
+function fail(code, details) {
+  throw new AcceptanceError(code, details);
 }
 
 function requireLiveGate() {
@@ -100,12 +104,7 @@ async function signInTemporaryPrincipal({
   email,
   password,
 }) {
-  const bootstrap = clientFor(
-    projectUrl,
-    publishableKey,
-    guardedFetch,
-    null,
-  );
+  const bootstrap = clientFor(projectUrl, publishableKey, guardedFetch, null);
   const { data, error } = await bootstrap.auth.signInWithPassword({
     email,
     password,
@@ -135,11 +134,15 @@ function privateObjectRow({
   objectRef,
   storagePath,
   storageClass = "private",
+  parentObjectRef = null,
+  revisionNumber = parentObjectRef ? 2 : 1,
   overrides = {},
 }) {
   return {
     object_ref: objectRef,
     owner_id: ownerId,
+    parent_object_ref: parentObjectRef,
+    revision_number: revisionNumber,
     bucket_id: S236P_BUCKET_ID,
     storage_path: storagePath,
     storage_class: storageClass,
@@ -150,11 +153,8 @@ function privateObjectRow({
       storageClass === "temporary"
         ? S236P_MAX_TEMPORARY_TTL_SECONDS
         : 0,
-    signed_url_ttl_seconds: S236P_MAX_SIGNED_URL_TTL_SECONDS,
-    application_cache_ttl_seconds:
-      S236P_APPLICATION_CACHE_TTL_SECONDS,
+    application_cache_ttl_seconds: S236P_APPLICATION_CACHE_TTL_SECONDS,
     export_delete_sla_seconds: S236P_MAX_EXPORT_DELETE_SLA_SECONDS,
-    delete_requested_at: null,
     ocr_ai_provider_mode: S236P_PROVIDER_MODE,
     external_ocr_ai_provider_call_count: 0,
     raw_external_emission_count: 0,
@@ -169,37 +169,24 @@ function opaquePath(vaultRef, objectRef, storageClass = "private") {
     : `${vaultRef}/${objectRef}`;
 }
 
+function encodedStoragePath(path) {
+  return path.split("/").map(encodeURIComponent).join("/");
+}
+
 async function insertObjectMetadata(client, row) {
   const result = await client
     .from(S236P_OBJECTS_TABLE)
     .insert(row)
     .select(
-      "object_ref,owner_id,bucket_id,storage_path,storage_class,object_state,object_version,content_retention_days,content_expires_at,temporary_ttl_seconds,temporary_expires_at,signed_url_ttl_seconds,application_cache_ttl_seconds,export_delete_sla_seconds,ocr_ai_provider_mode,external_ocr_ai_provider_call_count,raw_external_emission_count,contains_real_content",
+      "object_ref,owner_id,parent_object_ref,revision_number,bucket_id,storage_path,storage_class,object_state,object_version,content_retention_days,content_expires_at,temporary_ttl_seconds,temporary_expires_at,application_cache_ttl_seconds,export_delete_sla_seconds,ocr_ai_provider_mode,external_ocr_ai_provider_call_count,raw_external_emission_count,contains_real_content",
     )
     .single();
   if (result.error) fail("owner_metadata_insert_failed");
   return result.data;
 }
 
-async function insertEvent(client, ownerId, objectRef, eventType) {
-  const { error } = await client.from(S236P_EVENTS_TABLE).insert({
-    event_ref: crypto.randomUUID(),
-    owner_id: ownerId,
-    object_ref: objectRef,
-    event_type: eventType,
-    retention_days: S236P_MAX_METADATA_LOG_RETENTION_DAYS,
-    contains_raw_content: false,
-  });
-  if (error) fail(`owner_metadata_event_${eventType}_failed`);
-}
-
 async function expectInsertRejected(client, row, code) {
   const { error } = await client.from(S236P_OBJECTS_TABLE).insert(row);
-  if (!error) fail(code);
-}
-
-async function expectEventInsertRejected(client, row, code) {
-  const { error } = await client.from(S236P_EVENTS_TABLE).insert(row);
   if (!error) fail(code);
 }
 
@@ -226,43 +213,137 @@ async function expectStorageDeleteDenied(promise, path, code) {
   if ((result.data ?? []).some((item) => item.name === path)) fail(code);
 }
 
-function decodeSignedUrlExpiry(signedUrl) {
-  const token = new URL(signedUrl).searchParams.get("token");
-  if (!token) fail("signed_url_missing_token");
-  const parts = token.split(".");
-  if (parts.length !== 3) fail("signed_url_token_not_jwt");
-  let payload;
-  try {
-    payload = JSON.parse(
-      Buffer.from(parts[1], "base64url").toString("utf8"),
-    );
-  } catch {
-    fail("signed_url_token_payload_invalid");
-  }
-  if (!Number.isInteger(payload?.exp)) fail("signed_url_token_missing_expiry");
-  return payload.exp;
+async function expectStorageListHidden(client, prefix, code) {
+  const result = await client.storage
+    .from(S236P_BUCKET_ID)
+    .list(prefix, { limit: 20 });
+  if (!result.error && (result.data ?? []).length !== 0) fail(code);
 }
 
-async function authorizeAndCreateSignedUrl(client, objectRef, ttlSeconds) {
-  const authorization = await client.rpc("s236p_authorize_signed_url_v1", {
-    p_object_ref: objectRef,
-    p_ttl_seconds: ttlSeconds,
-  });
-  if (authorization.error) return { error: authorization.error };
-  if (!Array.isArray(authorization.data) || authorization.data.length !== 1) {
-    fail("signed_url_authorization_shape_invalid");
+async function expectStorageInfoDenied(client, path, code) {
+  const result = await client.storage.from(S236P_BUCKET_ID).info(path);
+  if (!result.error && result.data) fail(code);
+}
+
+function nonEmptyString(value) {
+  return typeof value === "string" && value.length > 0;
+}
+
+export function classifyBulkSignedUrlResponse(result) {
+  const classification = {
+    status: "inconclusive",
+    itemCount: 0,
+    deniedItemCount: 0,
+    itemErrorPresent: false,
+    signedUrlPresent: false,
+  };
+  if (!result || typeof result !== "object" || result.error) {
+    return classification;
   }
-  const grant = authorization.data[0];
-  if (
-    grant.bucket_id !== S236P_BUCKET_ID ||
-    grant.ttl_seconds !== ttlSeconds ||
-    typeof grant.storage_path !== "string"
-  ) {
-    fail("signed_url_authorization_binding_invalid");
+  if (!Array.isArray(result.data) || result.data.length === 0) {
+    return classification;
   }
-  return client.storage
-    .from(grant.bucket_id)
-    .createSignedUrl(grant.storage_path, grant.ttl_seconds);
+
+  classification.itemCount = result.data.length;
+  for (const item of result.data) {
+    if (!item || typeof item !== "object" || Array.isArray(item)) {
+      return classification;
+    }
+    const itemErrorPresent = nonEmptyString(item.error);
+    const signedUrlPresent =
+      nonEmptyString(item.signedUrl) || nonEmptyString(item.signedURL);
+    classification.itemErrorPresent ||= itemErrorPresent;
+    classification.signedUrlPresent ||= signedUrlPresent;
+
+    if (signedUrlPresent) {
+      classification.status = "allowed";
+      return classification;
+    }
+    if (
+      !itemErrorPresent ||
+      item.signedUrl !== null ||
+      item.signedURL !== null
+    ) {
+      return classification;
+    }
+    classification.deniedItemCount += 1;
+  }
+
+  if (classification.deniedItemCount === classification.itemCount) {
+    classification.status = "denied";
+  }
+  return classification;
+}
+
+async function expectSingleSignedUrlDenied(client, path, ttlSeconds, role) {
+  const result = await client.storage
+    .from(S236P_BUCKET_ID)
+    .createSignedUrl(path, ttlSeconds);
+  const signedUrlPresent =
+    nonEmptyString(result.data?.signedUrl) ||
+    nonEmptyString(result.data?.signedURL);
+  if (signedUrlPresent) {
+    fail("direct_signed_url_allowed", {
+      clientRole: role,
+      ttlSeconds,
+      signedUrlPresent: true,
+    });
+  }
+  if (!result.error) {
+    fail("direct_signed_url_inconclusive", {
+      clientRole: role,
+      ttlSeconds,
+      signedUrlPresent: false,
+    });
+  }
+}
+
+async function expectBulkSignedUrlDenied(client, path, ttlSeconds, role) {
+  const result = await client.storage
+    .from(S236P_BUCKET_ID)
+    .createSignedUrls([path], ttlSeconds);
+  const classification = classifyBulkSignedUrlResponse(result);
+  const safeDetails = {
+    clientRole: role,
+    ttlSeconds,
+    itemCount: classification.itemCount,
+    deniedItemCount: classification.deniedItemCount,
+    itemErrorPresent: classification.itemErrorPresent,
+    signedUrlPresent: classification.signedUrlPresent,
+  };
+  if (classification.status === "allowed") {
+    fail("bulk_signed_url_allowed", safeDetails);
+  }
+  if (classification.status !== "denied") {
+    fail("bulk_signed_url_inconclusive", safeDetails);
+  }
+  return safeDetails;
+}
+
+async function directAuthenticatedGet({
+  accessToken,
+  guardedFetch,
+  path,
+  projectUrl,
+  publishableKey,
+}) {
+  return guardedFetch(
+    `${projectUrl}/storage/v1/object/authenticated/${S236P_BUCKET_ID}/${encodedStoragePath(path)}`,
+    {
+      method: "GET",
+      headers: {
+        apikey: publishableKey,
+        Authorization: `Bearer ${accessToken}`,
+      },
+    },
+  );
+}
+
+async function assertDownloadBytes(client, path, expected, code) {
+  const result = await client.storage.from(S236P_BUCKET_ID).download(path);
+  if (result.error || !result.data) fail(`${code}_failed`);
+  const actual = Buffer.from(await result.data.arrayBuffer());
+  if (!actual.equals(expected)) fail(`${code}_mismatch`);
 }
 
 async function testInvalidPolicyValues(client, ownerId, vaultRef) {
@@ -272,7 +353,6 @@ async function testInvalidPolicyValues(client, ownerId, vaultRef) {
       "temporary_ttl_above_300_rejected",
       { storage_class: "temporary", temporary_ttl_seconds: 301 },
     ],
-    ["signed_url_ttl_above_300_rejected", { signed_url_ttl_seconds: 301 }],
     ["application_cache_nonzero_rejected", { application_cache_ttl_seconds: 1 }],
     ["export_delete_sla_above_7d_rejected", { export_delete_sla_seconds: 604801 }],
     ["external_provider_mode_rejected", { ocr_ai_provider_mode: "external" }],
@@ -282,19 +362,24 @@ async function testInvalidPolicyValues(client, ownerId, vaultRef) {
     ],
     ["raw_external_emission_nonzero_rejected", { raw_external_emission_count: 1 }],
     ["real_content_flag_rejected", { contains_real_content: true }],
+    ["object_version_above_one_rejected", { object_version: 2 }],
+    ["orphan_revision_rejected", { revision_number: 2 }],
   ];
 
   for (const [code, overrides] of cases) {
     const objectRef = crypto.randomUUID();
     const storageClass = overrides.storage_class ?? "private";
-    const row = privateObjectRow({
-      ownerId,
-      objectRef,
-      storagePath: opaquePath(vaultRef, objectRef, storageClass),
-      storageClass,
-      overrides,
-    });
-    await expectInsertRejected(client, row, code);
+    await expectInsertRejected(
+      client,
+      privateObjectRow({
+        ownerId,
+        objectRef,
+        storagePath: opaquePath(vaultRef, objectRef, storageClass),
+        storageClass,
+        overrides,
+      }),
+      code,
+    );
   }
 }
 
@@ -331,6 +416,7 @@ export async function runS236PLiveAcceptance() {
   const vaultB = crypto.randomUUID();
   const { guardedFetch, counters } = createNetworkGuard(projectUrl);
   const assertions = [];
+  const bulkSignedUrlChecks = [];
   const tempPrincipalIds = [
     process.env.S236P_OWNER_A_ID,
     process.env.S236P_OWNER_B_ID,
@@ -364,17 +450,12 @@ export async function runS236PLiveAcceptance() {
     if (principalA.id === principalB.id) fail("temporary_principals_not_distinct");
     record("temporary_principals_user_scoped");
 
-    const anonymous = clientFor(
-      projectUrl,
-      publishableKey,
-      guardedFetch,
-      null,
-    );
-
+    const anonymous = clientFor(projectUrl, publishableKey, guardedFetch, null);
     const objectARef = crypto.randomUUID();
     const pathA = opaquePath(vaultA, objectARef);
     cleanupA.paths.add(pathA);
     cleanupA.objectRefs.add(objectARef);
+
     const metadataA = await insertObjectMetadata(
       principalA.client,
       privateObjectRow({
@@ -384,8 +465,9 @@ export async function runS236PLiveAcceptance() {
       }),
     );
     assert.equal(metadataA.owner_id, principalA.id);
+    assert.equal(metadataA.parent_object_ref, null);
+    assert.equal(metadataA.revision_number, 1);
     assert.equal(metadataA.content_retention_days, 365);
-    assert.equal(metadataA.signed_url_ttl_seconds, 300);
     assert.equal(metadataA.application_cache_ttl_seconds, 0);
     assert.equal(metadataA.ocr_ai_provider_mode, "none");
     assert.equal(metadataA.external_ocr_ai_provider_call_count, 0);
@@ -394,7 +476,7 @@ export async function runS236PLiveAcceptance() {
     record("owner_a_metadata_insert_allowed");
 
     const bodyA1 = Buffer.from(
-      `${canaryMarker}:owner-a:version-1:${crypto.randomUUID()}`,
+      `${canaryMarker}:owner-a:original:${crypto.randomUUID()}`,
       "utf8",
     );
     const uploadA = await principalA.client.storage
@@ -405,250 +487,220 @@ export async function runS236PLiveAcceptance() {
         upsert: false,
       });
     if (uploadA.error) fail("owner_a_upload_failed");
-    await insertEvent(principalA.client, principalA.id, objectARef, "upload");
     record("owner_a_upload_allowed");
 
     const listA = await principalA.client.storage
       .from(S236P_BUCKET_ID)
-      .list(vaultA, { limit: 10 });
+      .list(vaultA, { limit: 20 });
     if (listA.error) fail("owner_a_list_failed");
     const listedA = (listA.data ?? []).find((item) => item.name === objectARef);
     if (!listedA) fail("owner_a_list_missing_canary");
     const cacheControl = String(listedA.metadata?.cacheControl ?? "");
     if (!/(?:^|=)0$/.test(cacheControl)) fail("owner_a_cache_control_not_zero");
-    await insertEvent(principalA.client, principalA.id, objectARef, "list");
     record("owner_a_list_allowed");
     record("storage_cache_control_zero");
 
-    const downloadA = await principalA.client.storage
+    const infoA = await principalA.client.storage
       .from(S236P_BUCKET_ID)
-      .download(pathA);
-    if (downloadA.error || !downloadA.data) fail("owner_a_read_failed");
-    const downloadedA = Buffer.from(await downloadA.data.arrayBuffer());
-    if (!downloadedA.equals(bodyA1)) fail("owner_a_read_mismatch");
-    await insertEvent(principalA.client, principalA.id, objectARef, "read");
-    record("owner_a_read_allowed");
+      .info(pathA);
+    if (infoA.error || !infoA.data) fail("owner_a_info_failed");
+    record("owner_a_info_allowed");
 
-    const bodyA2 = Buffer.from(
-      `${canaryMarker}:owner-a:version-2:${crypto.randomUUID()}`,
-      "utf8",
+    await assertDownloadBytes(
+      principalA.client,
+      pathA,
+      bodyA1,
+      "owner_a_download",
     );
-    const updateA = await principalA.client.storage
-      .from(S236P_BUCKET_ID)
-      .update(pathA, bodyA2, {
-        contentType: "application/octet-stream",
-        cacheControl: "0",
-      });
-    if (updateA.error) fail("owner_a_update_failed");
-    const metadataUpdateA = await principalA.client
-      .from(S236P_OBJECTS_TABLE)
-      .update({ object_state: "active", object_version: 2 })
-      .eq("object_ref", objectARef)
-      .select("object_ref,object_version");
-    if (
-      metadataUpdateA.error ||
-      metadataUpdateA.data?.length !== 1 ||
-      metadataUpdateA.data[0].object_version !== 2
-    ) {
-      fail("owner_a_metadata_update_failed");
-    }
-    await insertEvent(principalA.client, principalA.id, objectARef, "update");
-    record("owner_a_update_allowed");
+    record("owner_a_download_allowed");
 
+    const directA = await directAuthenticatedGet({
+      accessToken: principalA.accessToken,
+      guardedFetch,
+      path: pathA,
+      projectUrl,
+      publishableKey,
+    });
+    if (!directA.ok) fail("owner_a_direct_authenticated_get_failed");
+    const directBytes = Buffer.from(await directA.arrayBuffer());
+    if (!directBytes.equals(bodyA1)) {
+      fail("owner_a_direct_authenticated_get_mismatch");
+    }
+    record("owner_a_direct_authenticated_get_allowed");
+
+    await expectStorageInfoDenied(
+      principalB.client,
+      pathA,
+      "account_b_info_owner_a_allowed",
+    );
     await expectStorageError(
-      principalB.client.storage
+      principalB.client.storage.from(S236P_BUCKET_ID).download(pathA),
+      "account_b_download_owner_a_allowed",
+    );
+    await expectStorageListHidden(
+      principalB.client,
+      vaultA,
+      "account_b_list_owner_a_allowed",
+    );
+    await expectStorageInfoDenied(
+      anonymous,
+      pathA,
+      "anonymous_info_allowed",
+    );
+    await expectStorageError(
+      anonymous.storage.from(S236P_BUCKET_ID).download(pathA),
+      "anonymous_download_allowed",
+    );
+    await expectStorageListHidden(
+      anonymous,
+      vaultA,
+      "anonymous_list_allowed",
+    );
+    record("account_b_and_anonymous_info_download_list_denied");
+
+    for (const ttlSeconds of SINGLE_SIGN_TTLS) {
+      await expectSingleSignedUrlDenied(
+        principalA.client,
+        pathA,
+        ttlSeconds,
+        "owner_a",
+      );
+    }
+    record("single_signed_urls_denied");
+
+    for (const ttlSeconds of BULK_SIGN_TTLS) {
+      bulkSignedUrlChecks.push(
+        await expectBulkSignedUrlDenied(
+          principalA.client,
+          pathA,
+          ttlSeconds,
+          "owner_a",
+        ),
+      );
+    }
+    record("bulk_signed_urls_item_level_denied");
+
+    await expectSingleSignedUrlDenied(
+      principalB.client,
+      pathA,
+      300,
+      "owner_b",
+    );
+    await expectSingleSignedUrlDenied(anonymous, pathA, 300, "anonymous");
+    await expectStorageError(
+      principalA.client.storage
+        .from(S236P_BUCKET_ID)
+        .createSignedUploadUrl(pathA),
+      "signed_upload_url_allowed",
+    );
+    record("signed_access_disabled");
+
+    const movePath = `${vaultA}/${crypto.randomUUID()}`;
+    const copyPath = `${vaultA}/${crypto.randomUUID()}`;
+    cleanupA.paths.add(movePath);
+    cleanupA.paths.add(copyPath);
+    await expectStorageError(
+      principalA.client.storage
         .from(S236P_BUCKET_ID)
         .upload(pathA, DENIAL_PROBE_BODY, {
           contentType: "application/octet-stream",
           cacheControl: "0",
           upsert: true,
         }),
-      "account_b_upload_owner_a_allowed",
-    );
-    const listBOfA = await principalB.client.storage
-      .from(S236P_BUCKET_ID)
-      .list(vaultA, { limit: 10 });
-    if (!listBOfA.error && (listBOfA.data ?? []).length !== 0) {
-      fail("account_b_list_owner_a_allowed");
-    }
-    await expectStorageError(
-      principalB.client.storage.from(S236P_BUCKET_ID).download(pathA),
-      "account_b_read_owner_a_allowed",
+      "owner_a_upsert_allowed",
     );
     await expectStorageError(
-      principalB.client.storage
+      principalA.client.storage
         .from(S236P_BUCKET_ID)
         .update(pathA, DENIAL_PROBE_BODY, {
           contentType: "application/octet-stream",
           cacheControl: "0",
         }),
-      "account_b_update_owner_a_allowed",
+      "owner_a_overwrite_allowed",
     );
-    await expectStorageDeleteDenied(
-      principalB.client.storage.from(S236P_BUCKET_ID).remove([pathA]),
+    await expectStorageError(
+      principalA.client.storage.from(S236P_BUCKET_ID).move(pathA, movePath),
+      "owner_a_move_allowed",
+    );
+    await expectStorageError(
+      principalA.client.storage.from(S236P_BUCKET_ID).copy(pathA, copyPath),
+      "owner_a_copy_allowed",
+    );
+    record("overwrite_upsert_move_copy_denied");
+
+    const revisionRef = crypto.randomUUID();
+    const revisionPath = opaquePath(vaultA, revisionRef);
+    cleanupA.paths.add(revisionPath);
+    cleanupA.objectRefs.add(revisionRef);
+    const revisionMetadata = await insertObjectMetadata(
+      principalA.client,
+      privateObjectRow({
+        ownerId: principalA.id,
+        objectRef: revisionRef,
+        storagePath: revisionPath,
+        parentObjectRef: objectARef,
+        revisionNumber: 2,
+      }),
+    );
+    assert.equal(revisionMetadata.parent_object_ref, objectARef);
+    assert.equal(revisionMetadata.revision_number, 2);
+    const bodyA2 = Buffer.from(
+      `${canaryMarker}:owner-a:revision-2:${crypto.randomUUID()}`,
+      "utf8",
+    );
+    const revisionUpload = await principalA.client.storage
+      .from(S236P_BUCKET_ID)
+      .upload(revisionPath, bodyA2, {
+        contentType: "application/octet-stream",
+        cacheControl: "0",
+        upsert: false,
+      });
+    if (revisionUpload.error) fail("owner_a_revision_upload_failed");
+    await assertDownloadBytes(
+      principalA.client,
       pathA,
-      "account_b_delete_owner_a_allowed",
+      bodyA1,
+      "owner_a_original_after_revision",
     );
-    await expectNoRows(
-      principalB.client
-        .from(S236P_OBJECTS_TABLE)
-        .select("object_ref")
-        .eq("object_ref", objectARef),
-      "account_b_metadata_select_owner_a_allowed",
+    await assertDownloadBytes(
+      principalA.client,
+      revisionPath,
+      bodyA2,
+      "owner_a_revision_download",
     );
     await expectInsertRejected(
-      principalB.client,
+      principalA.client,
       privateObjectRow({
         ownerId: principalA.id,
         objectRef: crypto.randomUUID(),
         storagePath: opaquePath(vaultA, crypto.randomUUID()),
+        parentObjectRef: objectARef,
+        revisionNumber: 4,
       }),
-      "account_b_metadata_insert_owner_a_allowed",
+      "nonsequential_revision_allowed",
     );
-    await expectNoRows(
-      principalB.client
-        .from(S236P_OBJECTS_TABLE)
-        .update({ object_state: "active", object_version: 3 })
-        .eq("object_ref", objectARef)
-        .select("object_ref"),
-      "account_b_metadata_update_owner_a_allowed",
-    );
-    await expectNoRows(
-      principalB.client
-        .from(S236P_OBJECTS_TABLE)
-        .delete()
-        .eq("object_ref", objectARef)
-        .select("object_ref"),
-      "account_b_metadata_delete_owner_a_allowed",
-    );
-    record("account_b_owner_a_operations_denied");
-
-    await expectStorageError(
-      anonymous.storage
-        .from(S236P_BUCKET_ID)
-        .upload(pathA, DENIAL_PROBE_BODY, {
-          contentType: "application/octet-stream",
-          cacheControl: "0",
-          upsert: true,
-        }),
-      "anonymous_upload_allowed",
-    );
-    const anonymousList = await anonymous.storage
-      .from(S236P_BUCKET_ID)
-      .list(vaultA, { limit: 10 });
-    if (!anonymousList.error && (anonymousList.data ?? []).length !== 0) {
-      fail("anonymous_list_allowed");
-    }
-    await expectStorageError(
-      anonymous.storage.from(S236P_BUCKET_ID).download(pathA),
-      "anonymous_read_allowed",
-    );
-    await expectStorageError(
-      anonymous.storage
-        .from(S236P_BUCKET_ID)
-        .update(pathA, DENIAL_PROBE_BODY, {
-          contentType: "application/octet-stream",
-          cacheControl: "0",
-        }),
-      "anonymous_update_allowed",
-    );
-    await expectStorageDeleteDenied(
-      anonymous.storage.from(S236P_BUCKET_ID).remove([pathA]),
-      pathA,
-      "anonymous_delete_allowed",
-    );
-    await expectNoRowsOrDenied(
-      anonymous
-        .from(S236P_OBJECTS_TABLE)
-        .select("object_ref")
-        .eq("object_ref", objectARef),
-      "anonymous_metadata_select_allowed",
-    );
-    const anonymousInsert = await anonymous
+    const immutableUpdate = await principalA.client
       .from(S236P_OBJECTS_TABLE)
-      .insert(
-        privateObjectRow({
-          ownerId: principalA.id,
-          objectRef: crypto.randomUUID(),
-          storagePath: opaquePath(vaultA, crypto.randomUUID()),
-        }),
-      );
-    if (!anonymousInsert.error) fail("anonymous_metadata_insert_allowed");
-    const anonymousUpdate = await anonymous
-      .from(S236P_OBJECTS_TABLE)
-      .update({ object_state: "active", object_version: 3 })
-      .eq("object_ref", objectARef)
+      .update({ revision_number: 3 })
+      .eq("object_ref", revisionRef)
       .select("object_ref");
-    if (!anonymousUpdate.error && (anonymousUpdate.data ?? []).length !== 0) {
-      fail("anonymous_metadata_update_allowed");
+    if (
+      !immutableUpdate.error &&
+      (immutableUpdate.data ?? []).length !== 0
+    ) {
+      fail("immutable_revision_metadata_update_allowed");
     }
-    const anonymousDelete = await anonymous
-      .from(S236P_OBJECTS_TABLE)
-      .delete()
-      .eq("object_ref", objectARef)
-      .select("object_ref");
-    if (!anonymousDelete.error && (anonymousDelete.data ?? []).length !== 0) {
-      fail("anonymous_metadata_delete_allowed");
-    }
-    record("anonymous_operations_denied");
-
-    const signed300 = await authorizeAndCreateSignedUrl(
-      principalA.client,
-      objectARef,
-      300,
-    );
-    if (signed300.error || !signed300.data?.signedUrl) {
-      fail("signed_url_300_issuance_failed");
-    }
-    const nowSeconds = Math.floor(Date.now() / 1000);
-    const expiresAt = decodeSignedUrlExpiry(signed300.data.signedUrl);
-    if (expiresAt <= nowSeconds || expiresAt - nowSeconds > 300) {
-      fail("signed_url_expiry_exceeds_300");
-    }
-    await insertEvent(principalA.client, principalA.id, objectARef, "signed_url");
-    record("signed_url_ttl_300_allowed");
-    record("signed_url_expiry_at_most_300");
-
-    const signed301 = await authorizeAndCreateSignedUrl(
-      principalA.client,
-      objectARef,
-      301,
-    );
-    if (!signed301.error) fail("signed_url_ttl_301_allowed");
-    record("signed_url_ttl_above_300_denied");
-
-    const signedByB = await authorizeAndCreateSignedUrl(
-      principalB.client,
-      objectARef,
-      300,
-    );
-    if (!signedByB.error) fail("account_b_signed_url_owner_a_allowed");
-    const signedByAnonymous = await anonymous.rpc(
-      "s236p_authorize_signed_url_v1",
-      {
-        p_object_ref: objectARef,
-        p_ttl_seconds: 300,
-      },
-    );
-    if (!signedByAnonymous.error) fail("anonymous_signed_url_allowed");
-    record("signed_url_owner_and_auth_boundary_enforced");
+    record("immutable_original_append_only_revision_verified");
 
     await testInvalidPolicyValues(principalA.client, principalA.id, vaultA);
-    record("retention_ttl_sla_policy_limits_enforced");
+    record("retention_ttl_sla_provider_raw_limits_enforced");
 
-    await expectEventInsertRejected(
-      principalA.client,
-      {
-        event_ref: crypto.randomUUID(),
-        owner_id: principalA.id,
-        object_ref: objectARef,
-        event_type: "read",
-        retention_days: 8,
-        contains_raw_content: false,
-      },
-      "metadata_log_retention_above_7d_allowed",
-    );
-    record("metadata_log_retention_at_most_7d");
+    const eventLogProbe = await principalA.client
+      .from(S236P_EVENTS_TABLE)
+      .select("*")
+      .limit(1);
+    if (!eventLogProbe.error) fail("persistent_event_log_present");
+    record("persistent_event_log_disabled");
 
     const tempRef = crypto.randomUUID();
     const tempPath = opaquePath(vaultA, tempRef, "temporary");
@@ -705,24 +757,60 @@ export async function runS236PLiveAcceptance() {
     }
     cleanupA.paths.delete(tempPath);
     cleanupA.objectRefs.delete(tempRef);
-    const tempListAfterCleanup = await principalA.client.storage
-      .from(S236P_BUCKET_ID)
-      .list(`${vaultA}/temporary`, { limit: 10 });
-    if (
-      tempListAfterCleanup.error ||
-      (tempListAfterCleanup.data ?? []).some((item) => item.name === tempRef)
-    ) {
-      fail("temporary_object_cleanup_not_observed");
-    }
-    await expectNoRows(
-      principalA.client
-        .from(S236P_OBJECTS_TABLE)
-        .select("object_ref")
-        .eq("object_ref", tempRef),
-      "temporary_metadata_cleanup_not_observed",
+    record("deterministic_temporary_expiry_and_cleanup_verified");
+
+    const orphanRef = crypto.randomUUID();
+    const orphanPath = opaquePath(vaultA, orphanRef);
+    cleanupA.paths.add(orphanPath);
+    cleanupA.objectRefs.add(orphanRef);
+    await insertObjectMetadata(
+      principalA.client,
+      privateObjectRow({
+        ownerId: principalA.id,
+        objectRef: orphanRef,
+        storagePath: orphanPath,
+      }),
     );
-    record("expired_temporary_object_and_metadata_cleaned");
-    record("deterministic_clock_cleanup_verified");
+    const orphanUpload = await principalA.client.storage
+      .from(S236P_BUCKET_ID)
+      .upload(
+        orphanPath,
+        Buffer.from(
+          `${canaryMarker}:metadata-first:${crypto.randomUUID()}`,
+          "utf8",
+        ),
+        {
+          contentType: "application/octet-stream",
+          cacheControl: "0",
+          upsert: false,
+        },
+      );
+    if (orphanUpload.error) fail("metadata_first_fixture_upload_failed");
+    const metadataFirstDelete = await principalA.client
+      .from(S236P_OBJECTS_TABLE)
+      .delete()
+      .eq("object_ref", orphanRef)
+      .select("object_ref");
+    if (
+      metadataFirstDelete.error ||
+      metadataFirstDelete.data?.length !== 1
+    ) {
+      fail("metadata_first_delete_failed");
+    }
+    cleanupA.objectRefs.delete(orphanRef);
+    const orphanStorageDelete = await principalA.client.storage
+      .from(S236P_BUCKET_ID)
+      .remove([orphanPath]);
+    if (orphanStorageDelete.error) {
+      fail("orphan_safe_storage_delete_failed");
+    }
+    cleanupA.paths.delete(orphanPath);
+    await expectStorageInfoDenied(
+      principalA.client,
+      orphanPath,
+      "orphan_storage_remaining",
+    );
+    record("metadata_first_recovery_orphan_safe_delete_verified");
 
     const objectBRef = crypto.randomUUID();
     const pathB = opaquePath(vaultB, objectBRef);
@@ -736,35 +824,34 @@ export async function runS236PLiveAcceptance() {
         storagePath: pathB,
       }),
     );
-    const bodyB = Buffer.from(
-      `${canaryMarker}:owner-b:${crypto.randomUUID()}`,
-      "utf8",
-    );
     const uploadB = await principalB.client.storage
       .from(S236P_BUCKET_ID)
-      .upload(pathB, bodyB, {
-        contentType: "application/octet-stream",
-        cacheControl: "0",
-        upsert: false,
-      });
-    if (uploadB.error) fail("owner_b_setup_upload_failed");
-    await expectStorageError(
-      principalA.client.storage.from(S236P_BUCKET_ID).download(pathB),
-      "owner_a_read_owner_b_allowed",
-    );
-    await expectStorageError(
-      principalA.client.storage
-        .from(S236P_BUCKET_ID)
-        .update(pathB, DENIAL_PROBE_BODY, {
+      .upload(
+        pathB,
+        Buffer.from(
+          `${canaryMarker}:owner-b:${crypto.randomUUID()}`,
+          "utf8",
+        ),
+        {
           contentType: "application/octet-stream",
           cacheControl: "0",
-        }),
-      "owner_a_update_owner_b_allowed",
-    );
-    await expectStorageDeleteDenied(
-      principalA.client.storage.from(S236P_BUCKET_ID).remove([pathB]),
+          upsert: false,
+        },
+      );
+    if (uploadB.error) fail("owner_b_setup_upload_failed");
+    await expectStorageInfoDenied(
+      principalA.client,
       pathB,
-      "owner_a_delete_owner_b_allowed",
+      "owner_a_info_owner_b_allowed",
+    );
+    await expectStorageError(
+      principalA.client.storage.from(S236P_BUCKET_ID).download(pathB),
+      "owner_a_download_owner_b_allowed",
+    );
+    await expectStorageListHidden(
+      principalA.client,
+      vaultB,
+      "owner_a_list_owner_b_allowed",
     );
     await expectNoRows(
       principalA.client
@@ -773,8 +860,56 @@ export async function runS236PLiveAcceptance() {
         .eq("object_ref", objectBRef),
       "owner_a_metadata_read_owner_b_allowed",
     );
-    record("owner_a_to_owner_b_operations_denied");
-    record("bidirectional_owner_isolation");
+    await expectNoRows(
+      principalB.client
+        .from(S236P_OBJECTS_TABLE)
+        .select("object_ref")
+        .eq("object_ref", objectARef),
+      "owner_b_metadata_read_owner_a_allowed",
+    );
+    record("bidirectional_owner_isolation_verified");
+
+    await expectStorageError(
+      principalB.client.storage
+        .from(S236P_BUCKET_ID)
+        .upload(pathA, DENIAL_PROBE_BODY, {
+          contentType: "application/octet-stream",
+          cacheControl: "0",
+          upsert: true,
+        }),
+      "account_b_upload_owner_a_allowed",
+    );
+    await expectStorageDeleteDenied(
+      principalB.client.storage.from(S236P_BUCKET_ID).remove([pathA]),
+      pathA,
+      "account_b_delete_owner_a_allowed",
+    );
+    await expectNoRowsOrDenied(
+      anonymous
+        .from(S236P_OBJECTS_TABLE)
+        .select("object_ref")
+        .eq("object_ref", objectARef),
+      "anonymous_metadata_select_allowed",
+    );
+    record("cross_owner_and_anonymous_mutations_denied");
+
+    const deleteRevision = await principalA.client.storage
+      .from(S236P_BUCKET_ID)
+      .remove([revisionPath]);
+    if (deleteRevision.error) fail("owner_a_revision_storage_delete_failed");
+    const deleteRevisionMetadata = await principalA.client
+      .from(S236P_OBJECTS_TABLE)
+      .delete()
+      .eq("object_ref", revisionRef)
+      .select("object_ref");
+    if (
+      deleteRevisionMetadata.error ||
+      deleteRevisionMetadata.data?.length !== 1
+    ) {
+      fail("owner_a_revision_metadata_delete_failed");
+    }
+    cleanupA.paths.delete(revisionPath);
+    cleanupA.objectRefs.delete(revisionRef);
 
     const deleteA = await principalA.client.storage
       .from(S236P_BUCKET_ID)
@@ -785,16 +920,13 @@ export async function runS236PLiveAcceptance() {
       .delete()
       .eq("object_ref", objectARef)
       .select("object_ref");
-    if (
-      deleteMetadataA.error ||
-      deleteMetadataA.data?.length !== 1
-    ) {
+    if (deleteMetadataA.error || deleteMetadataA.data?.length !== 1) {
       fail("owner_a_metadata_delete_failed");
     }
     cleanupA.paths.delete(pathA);
     cleanupA.objectRefs.delete(objectARef);
-    record("owner_a_delete_allowed");
-    record("owner_a_metadata_delete_allowed");
+    cleanupA.paths.delete(movePath);
+    cleanupA.paths.delete(copyPath);
 
     const deleteB = await principalB.client.storage
       .from(S236P_BUCKET_ID)
@@ -805,25 +937,24 @@ export async function runS236PLiveAcceptance() {
       .delete()
       .eq("object_ref", objectBRef)
       .select("object_ref");
-    if (
-      deleteMetadataB.error ||
-      deleteMetadataB.data?.length !== 1
-    ) {
+    if (deleteMetadataB.error || deleteMetadataB.data?.length !== 1) {
       fail("owner_b_cleanup_metadata_failed");
     }
     cleanupB.paths.delete(pathB);
     cleanupB.objectRefs.delete(objectBRef);
+    record("owner_scoped_cleanup_complete");
 
     if (counters.externalOcrAiProviderCalls !== 0) {
       fail("external_ocr_ai_provider_call_observed");
     }
     record("ocr_ai_provider_mode_none");
     record("external_ocr_ai_provider_calls_zero");
-    record("raw_canary_not_written_to_application_output");
+    record("real_content_and_raw_emission_counters_zero");
 
     return {
       status: "passed",
       assertions,
+      bulkSignedUrlChecks,
       tempPrincipalIds,
       counters,
     };
@@ -854,13 +985,15 @@ async function main() {
     const result = await runS236PLiveAcceptance();
     process.stdout.write(
       `${JSON.stringify({
-        kind: "s236p_operator_result_v1",
+        kind: "s236p_operator_result_v2",
         status: result.status,
         assertionCount: result.assertions.length,
         assertions: result.assertions,
         providerMode: S236P_PROVIDER_MODE,
+        eventLogMode: S236P_EVENT_LOG_MODE,
         externalOcrAiProviderCalls:
           result.counters.externalOcrAiProviderCalls,
+        bulkSignedUrlChecks: result.bulkSignedUrlChecks,
         temporaryPrincipalIdsForCleanup: result.tempPrincipalIds,
       })}\n`,
     );
@@ -871,9 +1004,11 @@ async function main() {
         : "unexpected_acceptance_failure";
     process.stdout.write(
       `${JSON.stringify({
-        kind: "s236p_operator_result_v1",
+        kind: "s236p_operator_result_v2",
         status: "failed",
         failureCode: code,
+        failureDetails:
+          error instanceof AcceptanceError ? error.details : undefined,
         temporaryPrincipalIdsForCleanup: tempPrincipalIds,
       })}\n`,
     );

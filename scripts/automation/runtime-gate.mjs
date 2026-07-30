@@ -11,7 +11,7 @@ import { runtimeRequiredPathRecords } from "./runtime-risk-contract.mjs";
 export const RUNTIME_EVIDENCE_SCHEMA_VERSION = "inverge.runtime_evidence.v2";
 export const RUNTIME_EVIDENCE_PRODUCER_VERSION = "s233r.postgres.s233a.v1";
 export const S236P_RUNTIME_EVIDENCE_PRODUCER_VERSION =
-  "s236p.postgres.owner-private.v1";
+  "s236p.postgres.owner-private.v2";
 export const RUNTIME_EVIDENCE_ASSERTION_IDS = Object.freeze([
   "migration_prerequisites_and_target_applied",
   "learner_rls_two_user_isolation",
@@ -27,20 +27,26 @@ export const RUNTIME_EVIDENCE_ASSERTION_IDS = Object.freeze([
   "cleanup_complete",
 ]);
 export const S236P_RUNTIME_EVIDENCE_ASSERTION_IDS = Object.freeze([
-  "migration_prerequisites_and_target_applied",
-  "owner_a_metadata_storage_crud_allowed",
+  "ordered_migration_triple_applied",
+  "owner_a_metadata_storage_create_read_delete_allowed",
   "bidirectional_owner_rls_isolation",
   "anonymous_access_denied",
-  "signed_url_ttl_boundary_enforced",
+  "authenticated_download_info_operation_scoped",
+  "signed_access_disabled",
+  "immutable_original_append_only_revision_enforced",
+  "metadata_first_orphan_safe_delete_verified",
   "retention_temporary_ttl_cache_delete_sla_enforced",
   "deterministic_expiry_verified",
   "provider_mode_none_and_external_calls_zero",
   "raw_emission_and_real_content_zero",
-  "metadata_event_retention_enforced",
+  "persistent_event_log_disabled",
   "cleanup_complete",
 ]);
-const S236P_MIGRATION_PATH =
-  "supabase/migrations/20260730023248_s236p_lean_owner_private.sql";
+const S236P_MIGRATION_PATHS = Object.freeze([
+  "supabase/migrations/20260730023248_s236p_lean_owner_private.sql",
+  "supabase/migrations/20260730053324_s236p_owner_private_lifecycle_hardening.sql",
+  "supabase/migrations/20260730065040_s236p_owner_private_authenticated_download_info.sql",
+]);
 
 const TOP_LEVEL_KEYS = [
   "schemaVersion",
@@ -151,9 +157,8 @@ function expectedRuntimeContract(riskResult, headSha) {
     .sort();
   const runtimeRequiredPaths = runtimeRequiredPathRecords(changedFiles).map(({ path: file }) => file).sort();
   if (
-    migrationPaths.length !== 1 ||
-    runtimeRequiredPaths.length !== 1 ||
-    runtimeRequiredPaths[0] !== migrationPaths[0]
+    runtimeRequiredPaths.length !== migrationPaths.length ||
+    runtimeRequiredPaths.some((file, index) => file !== migrationPaths[index])
   ) {
     throw new Error("no closed runtime-evidence adapter supports this runtime-sensitive change set.");
   }
@@ -174,49 +179,71 @@ function expectedRuntimeContract(riskResult, headSha) {
       sha256: sha256(content),
     };
   });
-  const migration = migrations[0];
-  const text = migration.content.toString("utf8");
   let assertionIds;
+  let markerSets;
   let producerVersion;
-  let requiredMarkers;
   let markerError;
   if (
+    migrations.length === 1 &&
     /^supabase\/migrations\/\d+_s233a_answer_review_persistence\.sql$/.test(
-      migration.path,
+      migrations[0].path,
     )
   ) {
     assertionIds = RUNTIME_EVIDENCE_ASSERTION_IDS;
     producerVersion = RUNTIME_EVIDENCE_PRODUCER_VERSION;
-    requiredMarkers = [
-      "claim_s233a_answer_review_v1",
-      "transition_s233a_answer_review_v1",
-      "s233a review queue rpc insert namespace",
-      "s233a today seed rpc insert namespace",
-    ];
+    markerSets = [[
+        "claim_s233a_answer_review_v1",
+        "transition_s233a_answer_review_v1",
+        "s233a review queue rpc insert namespace",
+        "s233a today seed rpc insert namespace",
+    ]];
     markerError =
       "S233A migration does not match the supported adapter contract.";
-  } else if (migration.path === S236P_MIGRATION_PATH) {
+  } else if (
+    migrations.length === S236P_MIGRATION_PATHS.length &&
+    migrations.every(
+      (migration, index) => migration.path === S236P_MIGRATION_PATHS[index],
+    )
+  ) {
     assertionIds = S236P_RUNTIME_EVIDENCE_ASSERTION_IDS;
     producerVersion = S236P_RUNTIME_EVIDENCE_PRODUCER_VERSION;
-    requiredMarkers = [
-      "s236p-owner-private-v1",
-      "public.s236p_owner_private_objects",
-      "public.s236p_owner_private_events",
-      "public.s236p_authorize_signed_url_v1",
-      "public.s236p_expired_object_paths_v1",
-      "s236p owner private select",
-      "contains_real_content",
+    markerSets = [
+      [
+        "s236p-owner-private-v1",
+        "public.s236p_owner_private_objects",
+        "public.s236p_owner_private_events",
+        "public.s236p_authorize_signed_url_v1",
+        "public.s236p_expired_object_paths_v1",
+        "contains_real_content",
+      ],
+      [
+        "s236p_owner_private_lifecycle_hardening",
+        "parent_object_ref",
+        "revision_number",
+        "signed URL and signed-upload issuance disabled",
+        "drop table if exists public.s236p_owner_private_events",
+        "storage.allow_only_operation('storage.object.upload')",
+      ],
+      [
+        "s236p_owner_private_authenticated_download_info",
+        "object.get_authenticated_info",
+        "storage.object.get_authenticated",
+        "s236p owner private select",
+      ],
     ];
     markerError =
-      "S236P migration does not match the supported adapter contract.";
+      "S236P ordered migration triple does not match the supported adapter contract.";
   } else {
     throw new Error(
       "no closed runtime-evidence adapter supports this runtime-sensitive change set.",
     );
   }
-  for (const marker of requiredMarkers) {
-    if (!text.includes(marker)) throw new Error(markerError);
-  }
+  migrations.forEach((migration, index) => {
+    const text = migration.content.toString("utf8");
+    for (const marker of markerSets[index]) {
+      if (!text.includes(marker)) throw new Error(markerError);
+    }
+  });
   return {
     assertionIds,
     migrations: migrations.map(({ path: migrationPath, sha256: digest }) => ({

@@ -1,109 +1,131 @@
-# S236P lean Owner-private acceptance
+# S236P narrowed Owner-private acceptance
 
-- Evaluated at: `2026-07-30T04:40:55Z`
+- Evaluated at: `2026-07-30T10:42:12Z`
 - Status: `accepted`
-- Live base: `main@5d00cd84ec8ab44918ce47a49a0d71e9734cbea0`
-- Acceptance code head: `36c71514dcc0db24b87b6b7bf98f08fe786fe146`
+- Reconstruction parent: `66454a4b2f138e074a0cdd37a309dfb8a46f526e`
+- Live base verified before publication: `main@5d00cd84ec8ab44918ce47a49a0d71e9734cbea0`
 - Supabase project: `inverge-beta` (`vajcduseyicjhyhrclax`)
 - Real content: off
 - Production: off
 - S236A: queued and unstarted
 
-## Provisioned private inventory
+## Exact ordered migration triple
 
-The existing idempotent `s236p_lean_owner_private` provisioning was reused;
-no bucket, schema, provider, or Edge Function was added during closeout. The
-closed CI adapter accepts only
-`supabase/migrations/20260730023248_s236p_lean_owner_private.sql` with its
-required markers.
+The repository files were restored byte-for-byte from the live
+`supabase_migrations.schema_migrations.statements` ledger. The local
+timestamps intentionally remain the CLI-generated filenames; no migration
+history repair, ledger mutation, replay, fourth migration, or untracked DDL
+was used.
 
-| Resource | Live state |
+| Order | Repository migration | Live version | SHA-256 |
+| --- | --- | --- | --- |
+| 1 | `20260730023248_s236p_lean_owner_private.sql` | `20260730025332` | `476ef1b0d6a100fb6e4803b812b049b44252ca5f25301d3f781cee8827b1545b` |
+| 2 | `20260730053324_s236p_owner_private_lifecycle_hardening.sql` | `20260730060233` | `e20440dfa0d880ad591b8c9fdff287cd66fcdbbe4f96f07a549a730fd8920de1` |
+| 3 | `20260730065040_s236p_owner_private_authenticated_download_info.sql` | `20260730065744` | `632cc7ee563aa29a573425e396f6f539e35a3c8834955ba66ccd01723bb3cbcb` |
+
+Runtime evidence production and verification accept only these three paths,
+in this order, with these digests. Missing, reordered, additional, or
+arbitrary migrations fail closed.
+
+## Final live configuration
+
+| Surface | Accepted state |
 | --- | --- |
-| `storage.bucket.s236p-owner-private-v1` | private; 1 MiB; `application/octet-stream` |
-| `public.s236p_owner_private_objects` | RLS and FORCE RLS; four Owner CRUD policies |
-| `public.s236p_owner_private_events` | RLS and FORCE RLS; four Owner CRUD policies |
-| `storage.objects` S236P policies | four Owner CRUD policies |
-| Anonymous table grants | 0 |
-| Anonymous lifecycle/signed-URL RPC grants | 0 |
+| Storage bucket | `s236p-owner-private-v1`; private; 1 MiB; `application/octet-stream` |
+| Metadata | `public.s236p_owner_private_objects`; RLS and FORCE RLS |
+| Persistent S236P event log | absent; mode `none`; retention `0` |
+| Signed-access RPC | absent |
+| Storage UPDATE policy | absent |
+| Edge Functions | `0` |
+| `pg_cron` | not installed |
+| OCR/AI provider | `none`; external calls `0` |
+| Real content / Production | off / off |
 
 Authorization is the authenticated JWT subject via `auth.uid()`. No policy
 uses email, `raw_user_meta_data`, or another user-editable identity claim.
+Originals are immutable, revisions are append-only and same-owner, and
+Owner cleanup remains possible after metadata-first deletion.
 
-## Live user-scoped acceptance
+The final `storage.objects` SELECT policy preserves the private bucket and
+Owner predicates and permits exactly:
 
-Exactly two unique synthetic principals were created with Dashboard Auto
-Confirm. Random credentials remained in private execution memory and were
-not written to chat, Git, artifacts, or the PR body. Every acceptance
-assertion used publishable-key A, B, or anonymous clients; administrative
-access was used only to create and hard-delete the temporary principals.
+- `storage.object.list`
+- `storage.object.list_v2`
+- `storage.object.get_authenticated`
+- `object.get_authenticated_info`
+- `storage.object.delete`
+- `storage.object.delete_many`
 
-The live harness recorded 24 passing assertions:
+Signed URL and signed-upload operations, overwrite/upsert/update,
+copy/move, S3/TUS operations, and `object.head_authenticated_info` remain
+outside the allowlist.
 
-| Boundary | Result |
-| --- | --- |
-| Owner A Storage and metadata CRUD | pass |
-| A-to-B and B-to-A Storage and metadata isolation | denied in both directions |
-| Anonymous Storage, metadata, and signed-URL access | denied |
-| Signed URL TTL | 300 seconds allowed; 301 seconds denied; expiry at most 300 seconds |
-| Content retention | at most 365 days |
-| Metadata event retention | at most 7 days |
-| Temporary-copy TTL | at most 300 seconds |
-| Application cache TTL | exactly 0 |
-| Export/delete SLA | at most 604800 seconds |
-| Deterministic expiry and cleanup | pass |
-| OCR/AI provider mode | `none` |
-| External OCR/AI calls | 0 |
-| Raw external emissions | 0 |
-| Real content | 0 |
+## Publishable-key live acceptance
 
-## Closed runtime evidence
+Exactly two unique synthetic Auto Confirm principals, Owner A and Owner B,
+plus an anonymous client were used. The 24 live assertions passed:
 
-Runtime Gate run `30513905115`, attempt `1`, completed successfully at exact
-head `36c71514dcc0db24b87b6b7bf98f08fe786fe146`. Its metadata-only artifact is
-`runtime-evidence-30513905115-1`.
+- Owner A metadata creation, new upload, list, `info()`, SDK `download()`,
+  and direct authenticated GET succeeded; downloaded bytes matched in
+  memory.
+- Owner B and anonymous metadata, info, download, list, and cross-Owner
+  access were denied in both directions.
+- Single `createSignedUrl(path, 1|300|301)` calls were denied.
+- Bulk `createSignedUrls([path], 1|300|301)` calls were denied at item
+  level: each item had a non-empty error and both `signedUrl` and raw
+  `signedURL` were null.
+- A top-level error, an empty array, or a malformed item is classified as
+  inconclusive failure rather than a passing security denial.
+- Signed upload, overwrite/upsert, move, and copy were denied.
+- Immutable originals, append-only sequential revisions, deterministic
+  temporary expiry, metadata-first recovery, and orphan-safe Storage
+  deletion passed.
+- Application cache TTL remained `0`, content retention remained at most
+  `365` days, temporary TTL at most `300` seconds, and export/delete SLA at
+  most `604800` seconds.
+- External OCR/AI calls, raw external emissions, and real-content writes
+  remained `0`.
 
-The adapter ran isolated Postgres with network disabled and two synthetic
-subjects, applied the exact migration, asserted Owner RLS, cross-owner and
-anonymous denial, TTL/retention/provider/raw/expiry/cleanup contracts, and
-verified isolated cleanup. Evidence was generated by CI and bound to the PR
-head, run ID and attempt, risk digest, and migration digest. No evidence JSON
-was hand-authored or committed. The existing S233A adapter remains intact.
+No signed URL or full Storage response was printed, stored, or used.
+Credentials, JWTs, canary values, and content bytes were not persisted to
+the repository, artifacts, or PR text.
 
-## Repository checks
+## Validation
 
-- focused runtime-gate and S236P checks: 38 passed, 0 failed;
-- full node suite: 1224 passed, 0 failed;
+- focused S236P/runtime-gate suite: `48` passed, `0` failed;
+- full node suite: `1234` passed, `0` failed;
 - TypeScript: pass;
-- lint: 0 errors; 9 pre-existing warnings;
-- production build: pass;
-- PR Contract, Risk Gate, Runtime Gate, Learner Loop, Fast CI, Full CI: pass;
-- Vercel preview status: success;
+- lint: `0` errors; `9` pre-existing warnings;
+- production build: pass (`54/54` static pages);
 - `git diff --check`: pass.
 
-The first local build invocation stopped before compilation because this
-workspace's Node runtime returned `ENOENT` from `uv_resident_set_memory`.
-The same temporary, uncommitted host-only RSS fallback used by the earlier
-acceptance run allowed the production build to complete. It affected memory
-telemetry only, was removed immediately, and is not part of the branch.
-GitHub Full CI also passed without that workspace limitation.
+The host initially lacked `/proc`, causing Node 24 RSS telemetry to raise
+`ENOENT` before compilation. A temporary uncommitted shim handled only that
+host telemetry error; the normal Turbopack build then completed, and the
+shim and temporary directory were removed. It is not part of the branch.
+Required PR checks and the closed Runtime Gate remain mandatory on the
+corrected GitHub head before merge.
 
-## Cleanup and advisors
+## Cleanup, canary, and advisors
 
-Cleanup ran in the required order: synthetic Storage objects, metadata and
-events, global session sign-out, then hard deletion of both Auth users.
-Read-only post-cleanup queries and the Auth dashboard confirmed:
+The live harness cleaned Storage and metadata in `finally`; both synthetic
+principals and their sessions were then hard-deleted. Post-cleanup live
+queries confirmed:
 
-- Storage objects: 0
-- S236P metadata object rows: 0
-- S236P metadata event rows: 0
-- Auth sessions for the temporary principals: 0
-- temporary Auth principals: 0
+- Storage objects: `0`
+- S236P metadata rows: `0`
+- S236P event rows/table: `0` / absent
+- synthetic Auth sessions: `0`
+- synthetic Auth principals: `0`
 
-Supabase Security Advisor reported no S236P finding and no `ERROR`-level
-finding. Performance Advisor reported one S236P unused-index `INFO` notice
-and no `ERROR`-level finding. Existing non-S236P advisor notices were not
-changed in this Work.
+The in-memory raw canary matched `0` entries across Supabase Storage, API,
+Postgres, Auth, Edge Function, and Realtime logs. A recursive workspace
+scan checked `1494` source/temp files and also found `0` matches.
 
-S236P is accepted and complete. S236A remains queued and unstarted; this
-closeout does not authorize or perform reference-package authoring, real
-content work, Production activation, or external-provider processing.
+Supabase Security Advisor reported S236P findings `0` and ERROR findings
+`0`; Performance Advisor reported S236P findings `0` and ERROR findings
+`0`. Existing non-S236P INFO/WARN notices were not changed in this Work.
+
+S236P remains accepted and complete. S236A remains queued and unstarted;
+this acceptance does not authorize reference-package authoring, real
+content, Production activation, or external-provider processing.

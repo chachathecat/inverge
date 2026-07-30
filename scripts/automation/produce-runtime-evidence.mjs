@@ -10,7 +10,7 @@ import { runtimeRequiredPathRecords } from "./runtime-risk-contract.mjs";
 
 export const SCHEMA_VERSION = "inverge.runtime_evidence.v2";
 export const PRODUCER_VERSION = "s233r.postgres.s233a.v1";
-export const S236P_PRODUCER_VERSION = "s236p.postgres.owner-private.v1";
+export const S236P_PRODUCER_VERSION = "s236p.postgres.owner-private.v2";
 export const POSTGRES_IMAGE = "postgres:15.8-bookworm";
 export const ASSERTION_IDS = Object.freeze([
   "migration_prerequisites_and_target_applied",
@@ -27,20 +27,27 @@ export const ASSERTION_IDS = Object.freeze([
   "cleanup_complete",
 ]);
 export const S236P_ASSERTION_IDS = Object.freeze([
-  "migration_prerequisites_and_target_applied",
-  "owner_a_metadata_storage_crud_allowed",
+  "ordered_migration_triple_applied",
+  "owner_a_metadata_storage_create_read_delete_allowed",
   "bidirectional_owner_rls_isolation",
   "anonymous_access_denied",
-  "signed_url_ttl_boundary_enforced",
+  "authenticated_download_info_operation_scoped",
+  "signed_access_disabled",
+  "immutable_original_append_only_revision_enforced",
+  "metadata_first_orphan_safe_delete_verified",
   "retention_temporary_ttl_cache_delete_sla_enforced",
   "deterministic_expiry_verified",
   "provider_mode_none_and_external_calls_zero",
   "raw_emission_and_real_content_zero",
-  "metadata_event_retention_enforced",
+  "persistent_event_log_disabled",
   "cleanup_complete",
 ]);
-export const S236P_MIGRATION_PATH =
-  "supabase/migrations/20260730023248_s236p_lean_owner_private.sql";
+export const S236P_MIGRATION_PATHS = Object.freeze([
+  "supabase/migrations/20260730023248_s236p_lean_owner_private.sql",
+  "supabase/migrations/20260730053324_s236p_owner_private_lifecycle_hardening.sql",
+  "supabase/migrations/20260730065040_s236p_owner_private_authenticated_download_info.sql",
+]);
+export const S236P_MIGRATION_PATH = S236P_MIGRATION_PATHS[0];
 export const PREREQUISITE_MIGRATIONS = Object.freeze([
   "supabase/migrations/20260422_inverge_service_core.sql",
   "supabase/migrations/20260423_inverge_service_role_grants.sql",
@@ -70,6 +77,8 @@ const S236P_VAULT_B = "88888888-8888-4888-8888-888888888888";
 const S236P_OBJECT_A = "99999999-9999-4999-8999-999999999999";
 const S236P_OBJECT_B = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
 const S236P_TEMP_OBJECT = "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb";
+const S236P_REVISION_A = "cccccccc-cccc-4ccc-8ccc-cccccccccccc";
+const S236P_ORPHAN_A = "dddddddd-dddd-4ddd-8ddd-dddddddddddd";
 
 function sha256(value) {
   return crypto.createHash("sha256").update(value).digest("hex");
@@ -288,18 +297,27 @@ function transitionSql({
   `;
 }
 
-function authenticatedContext(userId, statement) {
+function storageOperationHeader(operation) {
+  return operation
+    ? `set local "request.headers" to ${sqlLiteral(JSON.stringify({
+        "x-supabase-storage-operation": operation,
+      }))};`
+    : "";
+}
+
+function authenticatedContext(userId, statement, operation = null) {
   return `
     begin;
     set local role authenticated;
     set local "request.jwt.claim.sub" to ${sqlLiteral(userId)};
+    ${storageOperationHeader(operation)}
     ${statement}
     rollback;
   `;
 }
 
-function anonymousContext(statement) {
-  return `begin; set local role anon; ${statement} rollback;`;
+function anonymousContext(statement, operation = null) {
+  return `begin; set local role anon; ${storageOperationHeader(operation)} ${statement} rollback;`;
 }
 
 function gitBlob(headSha, filePath) {
@@ -317,52 +335,90 @@ export function resolveTargetMigration(riskResult, headSha) {
   if (riskResult.changedFilesTruncated === true || !Array.isArray(riskResult.changedFiles)) {
     throw new Error("risk classification cannot bind the complete changed-file set.");
   }
-  const migrations = riskResult.changedFiles
+  const migrationPaths = riskResult.changedFiles
     .filter((file) => /^supabase\/migrations\/[^/]+\.sql$/.test(file))
     .sort();
   const runtimeRequiredPaths = runtimeRequiredPathRecords(riskResult.changedFiles)
     .map(({ path: file }) => file)
     .sort();
   if (
-    migrations.length !== 1 ||
-    runtimeRequiredPaths.length !== 1 ||
-    runtimeRequiredPaths[0] !== migrations[0]
+    runtimeRequiredPaths.length !== migrationPaths.length ||
+    runtimeRequiredPaths.some((file, index) => file !== migrationPaths[index])
   ) {
     throw new Error("no closed runtime-evidence adapter supports this runtime-sensitive change set.");
   }
+
   let adapter;
-  let requiredMarkers;
+  let markerSets;
   let markerError;
-  if (/^supabase\/migrations\/\d+_s233a_answer_review_persistence\.sql$/.test(migrations[0])) {
+  if (
+    migrationPaths.length === 1 &&
+    /^supabase\/migrations\/\d+_s233a_answer_review_persistence\.sql$/.test(
+      migrationPaths[0],
+    )
+  ) {
     adapter = "s233a";
-    requiredMarkers = [
-      "claim_s233a_answer_review_v1",
-      "transition_s233a_answer_review_v1",
-      "s233a review queue rpc insert namespace",
-      "s233a today seed rpc insert namespace",
-    ];
+    markerSets = [[
+        "claim_s233a_answer_review_v1",
+        "transition_s233a_answer_review_v1",
+        "s233a review queue rpc insert namespace",
+        "s233a today seed rpc insert namespace",
+    ]];
     markerError = "S233A migration does not match the supported adapter contract.";
-  } else if (migrations[0] === S236P_MIGRATION_PATH) {
+  } else if (
+    migrationPaths.length === S236P_MIGRATION_PATHS.length &&
+    migrationPaths.every(
+      (migrationPath, index) =>
+        migrationPath === S236P_MIGRATION_PATHS[index],
+    )
+  ) {
     adapter = "s236p";
-    requiredMarkers = [
-      "s236p-owner-private-v1",
-      "public.s236p_owner_private_objects",
-      "public.s236p_owner_private_events",
-      "public.s236p_authorize_signed_url_v1",
-      "public.s236p_expired_object_paths_v1",
-      "s236p owner private select",
-      "contains_real_content",
+    markerSets = [
+      [
+        "s236p-owner-private-v1",
+        "public.s236p_owner_private_objects",
+        "public.s236p_owner_private_events",
+        "public.s236p_authorize_signed_url_v1",
+        "public.s236p_expired_object_paths_v1",
+        "contains_real_content",
+      ],
+      [
+        "s236p_owner_private_lifecycle_hardening",
+        "parent_object_ref",
+        "revision_number",
+        "signed URL and signed-upload issuance disabled",
+        "drop table if exists public.s236p_owner_private_events",
+        "storage.allow_only_operation('storage.object.upload')",
+      ],
+      [
+        "s236p_owner_private_authenticated_download_info",
+        "object.get_authenticated_info",
+        "storage.object.get_authenticated",
+        "s236p owner private select",
+      ],
     ];
-    markerError = "S236P migration does not match the supported adapter contract.";
+    markerError =
+      "S236P ordered migration triple does not match the supported adapter contract.";
   } else {
     throw new Error("no closed runtime-evidence adapter supports this runtime-sensitive change set.");
   }
-  const content = gitBlob(headSha, migrations[0]);
-  const text = content.toString("utf8");
-  for (const requiredMarker of requiredMarkers) {
-    if (!text.includes(requiredMarker)) throw new Error(markerError);
+
+  const migrations = migrationPaths.map((migrationPath, index) => {
+    const content = gitBlob(headSha, migrationPath);
+    const text = content.toString("utf8");
+    for (const requiredMarker of markerSets[index]) {
+      if (!text.includes(requiredMarker)) throw new Error(markerError);
+    }
+    return {
+      content,
+      path: migrationPath,
+      sha256: sha256(content),
+    };
+  });
+  if (adapter === "s233a") {
+    return { adapter, ...migrations[0], migrations };
   }
-  return { adapter, content, path: migrations[0], sha256: sha256(content) };
+  return { adapter, migrations };
 }
 
 function evidenceContract(targetMigration) {
@@ -734,11 +790,12 @@ function runS233ADatabaseAssertions(containerName, targetMigration) {
   return passedAssertions;
 }
 
-function authenticatedCommitContext(userId, statement) {
+function authenticatedCommitContext(userId, statement, operation = null) {
   return `
     begin;
     set local role authenticated;
     set local "request.jwt.claim.sub" to ${sqlLiteral(userId)};
+    ${storageOperationHeader(operation)}
     ${statement}
     commit;
   `;
@@ -767,6 +824,33 @@ function s236pBootstrapSql() {
       $$;
     grant usage on schema auth to anon, authenticated, service_role;
     grant execute on function auth.uid() to anon, authenticated, service_role;
+
+    create function storage.allow_only_operation(expected text)
+    returns boolean
+    language sql stable
+    set search_path = ''
+    as $$
+      select coalesce(
+        nullif(pg_catalog.current_setting('request.headers', true), ''),
+        '{}'
+      )::jsonb ->> 'x-supabase-storage-operation' = expected
+    $$;
+    create function storage.allow_any_operation(expected text[])
+    returns boolean
+    language sql stable
+    set search_path = ''
+    as $$
+      select (
+        coalesce(
+          nullif(pg_catalog.current_setting('request.headers', true), ''),
+          '{}'
+        )::jsonb ->> 'x-supabase-storage-operation'
+      ) = any(expected)
+    $$;
+    grant execute on function storage.allow_only_operation(text)
+      to anon, authenticated, service_role;
+    grant execute on function storage.allow_any_operation(text[])
+      to anon, authenticated, service_role;
 
     create table storage.buckets (
       id text primary key,
@@ -806,9 +890,10 @@ function s236pObjectInsertStatement({
   ownerId,
   vaultId,
   storageClass = "private",
+  parentObjectId = null,
+  revisionNumber = parentObjectId === null ? 1 : 2,
   contentRetentionDays = 365,
   temporaryTtlSeconds = storageClass === "temporary" ? 300 : 0,
-  signedUrlTtlSeconds = 300,
   applicationCacheTtlSeconds = 0,
   exportDeleteSlaSeconds = 604800,
   providerMode = "none",
@@ -820,6 +905,8 @@ function s236pObjectInsertStatement({
     insert into public.s236p_owner_private_objects (
       object_ref,
       owner_id,
+      parent_object_ref,
+      revision_number,
       bucket_id,
       storage_path,
       storage_class,
@@ -827,7 +914,6 @@ function s236pObjectInsertStatement({
       object_version,
       content_retention_days,
       temporary_ttl_seconds,
-      signed_url_ttl_seconds,
       application_cache_ttl_seconds,
       export_delete_sla_seconds,
       ocr_ai_provider_mode,
@@ -837,6 +923,8 @@ function s236pObjectInsertStatement({
     ) values (
       ${sqlLiteral(objectId)}::uuid,
       ${sqlLiteral(ownerId)}::uuid,
+      ${parentObjectId === null ? "null" : `${sqlLiteral(parentObjectId)}::uuid`},
+      ${revisionNumber},
       's236p-owner-private-v1',
       ${sqlLiteral(s236pStoragePath(vaultId, objectId, storageClass))},
       ${sqlLiteral(storageClass)},
@@ -844,7 +932,6 @@ function s236pObjectInsertStatement({
       1,
       ${contentRetentionDays},
       ${temporaryTtlSeconds},
-      ${signedUrlTtlSeconds},
       ${applicationCacheTtlSeconds},
       ${exportDeleteSlaSeconds},
       ${sqlLiteral(providerMode)},
@@ -872,32 +959,6 @@ function s236pStorageInsertStatement({
   `;
 }
 
-function s236pEventInsertStatement({
-  eventId,
-  objectId,
-  ownerId,
-  retentionDays = 7,
-  containsRawContent = false,
-}) {
-  return `
-    insert into public.s236p_owner_private_events (
-      event_ref,
-      owner_id,
-      object_ref,
-      event_type,
-      retention_days,
-      contains_raw_content
-    ) values (
-      ${sqlLiteral(eventId)}::uuid,
-      ${sqlLiteral(ownerId)}::uuid,
-      ${sqlLiteral(objectId)}::uuid,
-      'upload',
-      ${retentionDays},
-      ${containsRawContent ? "true" : "false"}
-    );
-  `;
-}
-
 function runS236PDatabaseAssertions(containerName, targetMigration) {
   const passedAssertions = new Set();
   applySql(
@@ -905,30 +966,41 @@ function runS236PDatabaseAssertions(containerName, targetMigration) {
     s236pBootstrapSql(),
     "isolated Supabase Storage and Auth role bootstrap",
   );
-  applySql(containerName, targetMigration.content, "pull-request migration");
-  applySql(
-    containerName,
-    targetMigration.content,
-    "idempotent pull-request migration replay",
-  );
+  for (const [index, migration] of targetMigration.migrations.entries()) {
+    applySql(
+      containerName,
+      migration.content,
+      `ordered S236P migration ${index + 1}`,
+    );
+  }
+  for (const [index, migration] of targetMigration.migrations.entries()) {
+    applySql(
+      containerName,
+      migration.content,
+      `idempotent ordered S236P migration replay ${index + 1}`,
+    );
+  }
   assertScalar(
     containerName,
     `select concat_ws(':',
       (select count(*) from storage.buckets where id = 's236p-owner-private-v1' and public = false),
-      (select count(*) from pg_class where oid in (
-        'public.s236p_owner_private_objects'::regclass,
-        'public.s236p_owner_private_events'::regclass
-      ) and relrowsecurity and relforcerowsecurity),
-      (select count(*) from pg_proc where proname in (
-        's236p_authorize_signed_url_v1',
-        's236p_expired_object_paths_v1'
-      )),
-      (select count(*) from pg_policies where policyname like 's236p owner private%')
+      (select count(*) from pg_class where oid =
+        'public.s236p_owner_private_objects'::regclass
+        and relrowsecurity and relforcerowsecurity),
+      (to_regclass('public.s236p_owner_private_events') is null)::text,
+      (to_regprocedure('public.s236p_authorize_signed_url_v1(uuid,integer)') is null)::text,
+      (select count(*) from pg_proc where proname = 's236p_expired_object_paths_v1'),
+      (select count(*) from pg_policies where policyname like 's236p owner private%'),
+      (select count(*) from pg_policies
+        where schemaname = 'storage'
+          and tablename = 'objects'
+          and cmd = 'UPDATE'
+          and policyname like 's236p owner private%')
     );`,
-    "1:2:2:12",
-    "S236P migration application assertion",
+    "1:1:true:true:1:7:0",
+    "S236P ordered migration application assertion",
   );
-  passedAssertions.add("migration_prerequisites_and_target_applied");
+  passedAssertions.add("ordered_migration_triple_applied");
 
   applySql(
     containerName,
@@ -945,12 +1017,8 @@ function runS236PDatabaseAssertions(containerName, targetMigration) {
           ownerId: S236P_USER_A,
           vaultId: S236P_VAULT_A,
         }),
-        s236pEventInsertStatement({
-          eventId: "c0000000-0000-4000-8000-000000000001",
-          objectId: S236P_OBJECT_A,
-          ownerId: S236P_USER_A,
-        }),
       ].join("\n"),
+      "storage.object.upload",
     ),
     "Owner A synthetic fixture",
   );
@@ -960,39 +1028,114 @@ function runS236PDatabaseAssertions(containerName, targetMigration) {
       S236P_USER_A,
       `select concat_ws(':',
         (select count(*) from public.s236p_owner_private_objects where object_ref = ${sqlLiteral(S236P_OBJECT_A)}::uuid),
-        (select count(*) from public.s236p_owner_private_events where object_ref = ${sqlLiteral(S236P_OBJECT_A)}::uuid),
         (select count(*) from storage.objects where name = ${sqlLiteral(s236pStoragePath(S236P_VAULT_A, S236P_OBJECT_A))})
       );`,
+      "storage.object.list",
     ),
-    "1:1:1",
+    "1:1",
     "Owner A read-after-write assertion",
   );
+  assertScalar(
+    containerName,
+    authenticatedContext(
+      S236P_USER_A,
+      `select count(*)::text from storage.objects
+        where name = ${sqlLiteral(s236pStoragePath(S236P_VAULT_A, S236P_OBJECT_A))};`,
+      "object.get_authenticated_info",
+    ),
+    "1",
+    "Owner A authenticated download-info assertion",
+  );
+  passedAssertions.add("authenticated_download_info_operation_scoped");
+
   applySql(
     containerName,
     authenticatedCommitContext(
       S236P_USER_A,
-      `update public.s236p_owner_private_objects
-         set object_state = 'active', object_version = 2
-       where object_ref = ${sqlLiteral(S236P_OBJECT_A)}::uuid;
-       update storage.objects
-         set metadata = '{"cacheControl":"0","synthetic":true,"version":2}'::jsonb
-       where name = ${sqlLiteral(s236pStoragePath(S236P_VAULT_A, S236P_OBJECT_A))};`,
+      [
+        s236pObjectInsertStatement({
+          objectId: S236P_REVISION_A,
+          ownerId: S236P_USER_A,
+          vaultId: S236P_VAULT_A,
+          parentObjectId: S236P_OBJECT_A,
+          revisionNumber: 2,
+        }),
+        s236pStorageInsertStatement({
+          objectId: S236P_REVISION_A,
+          ownerId: S236P_USER_A,
+          vaultId: S236P_VAULT_A,
+        }),
+      ].join("\n"),
+      "storage.object.upload",
     ),
-    "Owner A update assertion",
+    "Owner A append-only revision fixture",
   );
   assertScalar(
     containerName,
     authenticatedContext(
       S236P_USER_A,
       `select concat_ws(':',
-        (select object_version::text from public.s236p_owner_private_objects where object_ref = ${sqlLiteral(S236P_OBJECT_A)}::uuid),
-        (select metadata ->> 'version' from storage.objects where name = ${sqlLiteral(s236pStoragePath(S236P_VAULT_A, S236P_OBJECT_A))})
+        (select count(*) from public.s236p_owner_private_objects
+          where object_ref in (
+            ${sqlLiteral(S236P_OBJECT_A)}::uuid,
+            ${sqlLiteral(S236P_REVISION_A)}::uuid
+          )
+          and object_version = 1),
+        (select revision_number::text from public.s236p_owner_private_objects
+          where object_ref = ${sqlLiteral(S236P_REVISION_A)}::uuid),
+        (select count(*) from storage.objects
+          where name in (
+            ${sqlLiteral(s236pStoragePath(S236P_VAULT_A, S236P_OBJECT_A))},
+            ${sqlLiteral(s236pStoragePath(S236P_VAULT_A, S236P_REVISION_A))}
+          ))
       );`,
+      "storage.object.list",
     ),
-    "2:2",
-    "Owner A metadata and Storage update assertion",
+    "2:2:2",
+    "Owner A immutable original and append-only revision assertion",
   );
-  passedAssertions.add("owner_a_metadata_storage_crud_allowed");
+  assertScalar(
+    containerName,
+    authenticatedContext(
+      S236P_USER_A,
+      `with mutated as (
+        update storage.objects
+           set metadata = '{"cacheControl":"0","synthetic":true,"overwrite":true}'::jsonb
+         where name = ${sqlLiteral(s236pStoragePath(S236P_VAULT_A, S236P_OBJECT_A))}
+         returning 1
+       ) select count(*)::text from mutated;`,
+      "storage.object.upload_update",
+    ),
+    "0",
+    "Owner A same-path Storage overwrite assertion",
+  );
+  assertSqlDenied(
+    containerName,
+    authenticatedContext(
+      S236P_USER_A,
+      `update public.s236p_owner_private_objects
+         set revision_number = 3
+       where object_ref = ${sqlLiteral(S236P_REVISION_A)}::uuid;`,
+    ),
+    /permission denied|s236p_immutable_object_field/,
+    "Owner A immutable revision metadata assertion",
+  );
+  assertSqlDenied(
+    containerName,
+    authenticatedContext(
+      S236P_USER_A,
+      s236pObjectInsertStatement({
+        objectId: "eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee",
+        ownerId: S236P_USER_A,
+        vaultId: S236P_VAULT_A,
+        parentObjectId: S236P_OBJECT_A,
+        revisionNumber: 4,
+      }),
+    ),
+    /s236p_revision_sequence_invalid/,
+    "Owner A nonsequential revision assertion",
+  );
+  passedAssertions.add("immutable_original_append_only_revision_enforced");
 
   applySql(
     containerName,
@@ -1010,6 +1153,7 @@ function runS236PDatabaseAssertions(containerName, targetMigration) {
           vaultId: S236P_VAULT_B,
         }),
       ].join("\n"),
+      "storage.object.upload",
     ),
     "Owner B synthetic fixture",
   );
@@ -1019,11 +1163,11 @@ function runS236PDatabaseAssertions(containerName, targetMigration) {
       S236P_USER_B,
       `select concat_ws(':',
         (select count(*) from public.s236p_owner_private_objects where object_ref = ${sqlLiteral(S236P_OBJECT_A)}::uuid),
-        (select count(*) from public.s236p_owner_private_events where object_ref = ${sqlLiteral(S236P_OBJECT_A)}::uuid),
         (select count(*) from storage.objects where name = ${sqlLiteral(s236pStoragePath(S236P_VAULT_A, S236P_OBJECT_A))})
       );`,
+      "storage.object.list",
     ),
-    "0:0:0",
+    "0:0",
     "Owner B cannot read Owner A assertion",
   );
   assertScalar(
@@ -1034,6 +1178,7 @@ function runS236PDatabaseAssertions(containerName, targetMigration) {
         (select count(*) from public.s236p_owner_private_objects where object_ref = ${sqlLiteral(S236P_OBJECT_B)}::uuid),
         (select count(*) from storage.objects where name = ${sqlLiteral(s236pStoragePath(S236P_VAULT_B, S236P_OBJECT_B))})
       );`,
+      "storage.object.list",
     ),
     "0:0",
     "Owner A cannot read Owner B assertion",
@@ -1057,7 +1202,7 @@ function runS236PDatabaseAssertions(containerName, targetMigration) {
       S236P_USER_B,
       `with mutated as (
         update public.s236p_owner_private_objects
-           set object_state = 'active', object_version = 3
+           set object_state = 'delete_requested'
          where object_ref = ${sqlLiteral(S236P_OBJECT_A)}::uuid
          returning 1
        ) select count(*)::text from mutated;`,
@@ -1074,6 +1219,7 @@ function runS236PDatabaseAssertions(containerName, targetMigration) {
          where name = ${sqlLiteral(s236pStoragePath(S236P_VAULT_A, S236P_OBJECT_A))}
          returning 1
        ) select count(*)::text from removed;`,
+      "storage.object.delete",
     ),
     "0",
     "cross-owner Storage delete assertion",
@@ -1092,6 +1238,7 @@ function runS236PDatabaseAssertions(containerName, targetMigration) {
     containerName,
     anonymousContext(
       "select count(*)::text from storage.objects where bucket_id = 's236p-owner-private-v1';",
+      "storage.object.list",
     ),
     "0",
     "anonymous Storage read assertion",
@@ -1105,6 +1252,7 @@ function runS236PDatabaseAssertions(containerName, targetMigration) {
          ${sqlLiteral("c0000000-0000-4000-8000-000000000003/c0000000-0000-4000-8000-000000000004")},
          ${sqlLiteral(S236P_USER_A)}
        );`,
+      "storage.object.upload",
     ),
     /row-level security/,
     "anonymous Storage insert assertion",
@@ -1117,7 +1265,7 @@ function runS236PDatabaseAssertions(containerName, targetMigration) {
         300
       );`,
     ),
-    /permission denied/,
+    /does not exist|permission denied/,
     "anonymous signed URL authorization assertion",
   );
   passedAssertions.add("anonymous_access_denied");
@@ -1126,40 +1274,36 @@ function runS236PDatabaseAssertions(containerName, targetMigration) {
     containerName,
     authenticatedContext(
       S236P_USER_A,
-      `select concat_ws(':', bucket_id, storage_path, ttl_seconds::text)
-       from public.s236p_authorize_signed_url_v1(
-         ${sqlLiteral(S236P_OBJECT_A)}::uuid,
-         300
-       );`,
+      `select count(*)::text from storage.objects
+        where name = ${sqlLiteral(s236pStoragePath(S236P_VAULT_A, S236P_OBJECT_A))};`,
+      "storage.object.sign",
     ),
-    `s236p-owner-private-v1:${s236pStoragePath(S236P_VAULT_A, S236P_OBJECT_A)}:300`,
-    "signed URL TTL 300 assertion",
+    "0",
+    "single signed URL operation assertion",
   );
-  assertSqlDenied(
+  assertScalar(
     containerName,
     authenticatedContext(
       S236P_USER_A,
-      `select * from public.s236p_authorize_signed_url_v1(
-        ${sqlLiteral(S236P_OBJECT_A)}::uuid,
-        301
-      );`,
+      `select count(*)::text from storage.objects
+        where name = ${sqlLiteral(s236pStoragePath(S236P_VAULT_A, S236P_OBJECT_A))};`,
+      "storage.object.sign_many",
     ),
-    /s236p_signed_url_ttl_out_of_range/,
-    "signed URL TTL 301 assertion",
+    "0",
+    "bulk signed URL operation assertion",
   );
-  assertSqlDenied(
+  assertScalar(
     containerName,
     authenticatedContext(
-      S236P_USER_B,
-      `select * from public.s236p_authorize_signed_url_v1(
-        ${sqlLiteral(S236P_OBJECT_A)}::uuid,
-        300
-      );`,
+      S236P_USER_A,
+      `select count(*)::text from storage.objects
+        where name = ${sqlLiteral(s236pStoragePath(S236P_VAULT_A, S236P_OBJECT_A))};`,
+      "object.head_authenticated_info",
     ),
-    /s236p_signed_url_not_authorized/,
-    "cross-owner signed URL assertion",
+    "0",
+    "unnecessary authenticated head-info operation assertion",
   );
-  passedAssertions.add("signed_url_ttl_boundary_enforced");
+  passedAssertions.add("signed_access_disabled");
 
   const invalidObjectCases = [
     [
@@ -1225,6 +1369,7 @@ function runS236PDatabaseAssertions(containerName, targetMigration) {
           storageClass: "temporary",
         }),
       ].join("\n"),
+      "storage.object.upload",
     ),
     "temporary expiry fixture",
   );
@@ -1289,7 +1434,7 @@ function runS236PDatabaseAssertions(containerName, targetMigration) {
         where ocr_ai_provider_mode = 'none'
           and external_ocr_ai_provider_call_count = 0;`,
     ),
-    "2",
+    "4",
     "provider-none and call-zero assertion",
   );
   passedAssertions.add("provider_mode_none_and_external_calls_zero");
@@ -1333,53 +1478,74 @@ function runS236PDatabaseAssertions(containerName, targetMigration) {
         where raw_external_emission_count = 0
           and contains_real_content = false;`,
     ),
-    "2",
+    "4",
     "raw-zero and synthetic-only assertion",
   );
   passedAssertions.add("raw_emission_and_real_content_zero");
 
   assertScalar(
     containerName,
-    authenticatedContext(
+    "select (to_regclass('public.s236p_owner_private_events') is null)::text;",
+    "true",
+    "persistent event log absence assertion",
+  );
+  passedAssertions.add("persistent_event_log_disabled");
+
+  applySql(
+    containerName,
+    authenticatedCommitContext(
       S236P_USER_A,
-      `select count(*)::text
-         from public.s236p_owner_private_events
-        where retention_days <= 7
-          and expires_at = occurred_at + make_interval(days => retention_days)
-          and contains_raw_content = false;`,
+      [
+        s236pObjectInsertStatement({
+          objectId: S236P_ORPHAN_A,
+          ownerId: S236P_USER_A,
+          vaultId: S236P_VAULT_A,
+        }),
+        s236pStorageInsertStatement({
+          objectId: S236P_ORPHAN_A,
+          ownerId: S236P_USER_A,
+          vaultId: S236P_VAULT_A,
+        }),
+      ].join("\n"),
+      "storage.object.upload",
+    ),
+    "metadata-first recovery fixture",
+  );
+  applySql(
+    containerName,
+    authenticatedCommitContext(
+      S236P_USER_A,
+      `delete from public.s236p_owner_private_objects
+        where object_ref = ${sqlLiteral(S236P_ORPHAN_A)}::uuid;`,
+    ),
+    "metadata-first recovery metadata delete",
+  );
+  assertScalar(
+    containerName,
+    authenticatedCommitContext(
+      S236P_USER_A,
+      `with removed as (
+        delete from storage.objects
+         where name = ${sqlLiteral(s236pStoragePath(S236P_VAULT_A, S236P_ORPHAN_A))}
+         returning 1
+       ) select count(*)::text from removed;`,
+      "storage.object.delete",
     ),
     "1",
-    "metadata event retention assertion",
+    "metadata-first orphan-safe Storage delete assertion",
   );
-  assertSqlDenied(
+  assertScalar(
     containerName,
     authenticatedContext(
       S236P_USER_A,
-      s236pEventInsertStatement({
-        eventId: "c0000000-0000-4000-8000-000000000030",
-        objectId: S236P_OBJECT_A,
-        ownerId: S236P_USER_A,
-        retentionDays: 8,
-      }),
+      `select count(*)::text from storage.objects
+        where name = ${sqlLiteral(s236pStoragePath(S236P_VAULT_A, S236P_ORPHAN_A))};`,
+      "storage.object.list",
     ),
-    /retention_max_7d/,
-    "metadata event retention 8-day assertion",
+    "0",
+    "metadata-first orphan cleanup assertion",
   );
-  assertSqlDenied(
-    containerName,
-    authenticatedContext(
-      S236P_USER_A,
-      s236pEventInsertStatement({
-        eventId: "c0000000-0000-4000-8000-000000000031",
-        objectId: S236P_OBJECT_A,
-        ownerId: S236P_USER_A,
-        containsRawContent: true,
-      }),
-    ),
-    /metadata_only/,
-    "metadata event raw-content assertion",
-  );
-  passedAssertions.add("metadata_event_retention_enforced");
+  passedAssertions.add("metadata_first_orphan_safe_delete_verified");
 
   applySql(
     containerName,
@@ -1388,7 +1554,11 @@ function runS236PDatabaseAssertions(containerName, targetMigration) {
       `delete from storage.objects
         where owner_id = ${sqlLiteral(S236P_USER_A)};
        delete from public.s236p_owner_private_objects
+        where owner_id = ${sqlLiteral(S236P_USER_A)}::uuid
+          and parent_object_ref is not null;
+       delete from public.s236p_owner_private_objects
         where owner_id = ${sqlLiteral(S236P_USER_A)}::uuid;`,
+      "storage.object.delete",
     ),
     "Owner A synthetic cleanup",
   );
@@ -1400,6 +1570,7 @@ function runS236PDatabaseAssertions(containerName, targetMigration) {
         where owner_id = ${sqlLiteral(S236P_USER_B)};
        delete from public.s236p_owner_private_objects
         where owner_id = ${sqlLiteral(S236P_USER_B)}::uuid;`,
+      "storage.object.delete",
     ),
     "Owner B synthetic cleanup",
   );
@@ -1408,11 +1579,15 @@ function runS236PDatabaseAssertions(containerName, targetMigration) {
     `select concat_ws(':',
       (select count(*) from storage.objects where bucket_id = 's236p-owner-private-v1'),
       (select count(*) from public.s236p_owner_private_objects),
-      (select count(*) from public.s236p_owner_private_events)
+      (to_regclass('public.s236p_owner_private_events') is null)::text
     );`,
-    "0:0:0",
+    "0:0:true",
     "S236P synthetic row cleanup assertion",
   );
+  passedAssertions.add(
+    "owner_a_metadata_storage_create_read_delete_allowed",
+  );
+  passedAssertions.add("cleanup_complete");
 
   return passedAssertions;
 }
@@ -1438,7 +1613,10 @@ function writeEvidence({ context, migration, passedAssertions, riskBytes }) {
     githubRunId: context.runId,
     githubRunAttempt: context.runAttempt,
     riskFileSha256: sha256(riskBytes),
-    migrations: [{ path: migration.path, sha256: migration.sha256 }],
+    migrations: migration.migrations.map(({ path: migrationPath, sha256: digest }) => ({
+      path: migrationPath,
+      sha256: digest,
+    })),
     isolatedEnvironment: {
       kind: "disposable_local_postgres",
       engine: "postgresql_15",
