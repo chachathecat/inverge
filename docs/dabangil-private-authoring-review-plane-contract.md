@@ -5,8 +5,11 @@
 - Machine-readable mirror:
   `config/dabangil-private-authoring-review-plane-contract.json`
 - Owner decision:
+  `docs/decisions/2026-07-30-owner-o4v-lean-owner-private-gate.md`
+- Prior program amendment:
   `docs/decisions/2026-07-26-owner-dogfood-private-plane-schedule-amendment.md`
-- Status: contract only; O4V, provisioning, and real content are not approved
+- Status: lean O4V approved; S236P is queued and unstarted; real content is
+  not approved
 
 ## Purpose
 
@@ -19,14 +22,45 @@ The approval scopes do not substitute for one another:
 
 - O3A owns the exact Golden selections, rights, sources, effective versions,
   and Owner-private purpose;
-- O4V owns the exact vault, key, provider, environment, logging, retention,
-  backup, cache, and rollback bindings;
-- S236P proves the O4V-approved stack with synthetic data only; and
+- O4V owns the exact lean Owner-private boundary in the 2026-07-30 decision;
+- S236P proves that O4V-approved lean stack with synthetic data only; and
 - S236A requires both a valid, unexpired O3A decision and the exact completed
-  S236P receipt set.
+  S236P acceptance.
 
 O3A does not provision storage. O4V does not approve content rights. S236P
 does not authorize real content.
+
+## Active lean O4V supersession
+
+The active gate is `dabangil.o4v.lean_owner_private_gate.v1`.
+
+It reuses the existing Supabase Pro project `inverge-beta` and requires one
+Owner-only private bucket, Owner-only metadata RLS, no public access, and
+bidirectional Owner A/B denial. Signed URL TTL, when used, is at most 300
+seconds. OCR/AI content-provider mode is exactly `none`.
+
+Raw content may enter no log, analytics, telemetry, APM, exception, queue, or
+CI surface. S236P is synthetic-only and real content remains off. Private
+content retention is at most 365 days, metadata-log retention at most 7 days,
+temporary-copy TTL at most 300 seconds, application-cache TTL exactly zero,
+and export/delete SLA at most 7 days.
+
+Automatic object-version rollback is not guaranteed. Owner-pilot recovery is
+re-upload of the original retained by the Owner. Customer-managed or
+dedicated KMS/HSM, a separate DSSE store, and an independent infrastructure
+verifier are not required before external users, payment, or regulated
+customers.
+
+The prior 88-field enterprise packet, its distinct commitment-key/storage-key
+design, 15-receipt qualification system, DSSE decision/attestation stores,
+and independent verifier requirements are rejected and superseded for the
+current Owner pilot. They remain historical expansion input only. Where the
+legacy material below conflicts with this section, the dated 2026-07-30 Owner
+decision and this section control.
+
+This decision authorizes only a later manually started S236P synthetic
+provisioning and acceptance Work. Automatic provisioning, automatic S236P or
+S236A start, Production, external users, and real content remain false.
 
 ## Private identity and equality-oracle boundary
 
@@ -230,20 +264,21 @@ O4V-approved metadata-only attestation store. S236A and scheduler consumers
 must resolve that artifact, recompute its RFC 8785 digest, and revalidate the
 O4V Owner decision and independent-attestation signatures at use time.
 
-## Pending O4V packet
+## Rejected and superseded enterprise O4V packet
 
-The pending packet is
+The rejected packet is
 `o4v-s234r-owner-private-plane-binding-v1`. It proposes the existing Supabase
 private Storage/Postgres architecture as the default vault and metadata
 candidate, plus a managed KMS/HSM vault-scoped MAC key whose material is not
 readable outside its cryptographic boundary. A server secret is not eligible.
-It is deliberately
-`pending_exact_binding_and_owner_decision`: provider identifiers, region,
+It was
+`pending_exact_binding_and_owner_decision` and is now
+`superseded_rejected`: provider identifiers, region,
 retention, backup, logging, cache, key lifecycle, rollback, exact signed-access
 lifecycle, independent-attestation store/verifier/key/trust-root/signature/
 revocation policy and opaque evidence-store bindings, canonical proposal
-digest, exact head/tree, and provider-binding digest must be materialized
-before the Owner can approve it.
+digest, exact head/tree, and provider-binding digest were never materialized.
+Its 88 provider-binding values remain all `null`.
 
 The proposal, provider-binding, and final approved-binding digests are
 distinct. The proposal digest binds every proposal and exact-binding field
@@ -287,5 +322,7 @@ vault/environment domain separation, opaque domain reference, encoding,
 truncation, key epoch, and rotation/migration policy version and document
 digest. Those fields cannot be inferred from key class alone.
 
-The packet expires at `2026-08-09T14:59:59.000Z`. It authorizes no automatic
-provisioning, S236P start, S236A start, or real content.
+The packet expires at `2026-08-09T14:59:59.000Z`. It is rejected, cannot be
+approved under the lean decision, and authorizes no provisioning, S236P,
+S236A, or real content. Its normalized proposal and all-null provider-template
+digests remain historical integrity values only.

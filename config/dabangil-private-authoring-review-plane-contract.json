@@ -1,10 +1,98 @@
 {
   "contractVersion": "dabangil.private_authoring_review_plane.v1",
-  "decision": "docs/decisions/2026-07-26-owner-dogfood-private-plane-schedule-amendment.md",
-  "status": "contract_only_pending_o4v",
+  "decision": "docs/decisions/2026-07-30-owner-o4v-lean-owner-private-gate.md",
+  "status": "o4v_lean_owner_private_gate_approved_s236p_not_started",
   "runtimeAuthorized": false,
   "realContentAuthorized": false,
   "provisioningAuthorized": false,
+  "activeO4VGate": {
+    "contractVersion": "dabangil.o4v.lean_owner_private_gate.v1",
+    "decisionStatus": "approved_exact_lean_owner_private_gate_only",
+    "decisionDateKst": "2026-07-30",
+    "decisionRecordedAt": "2026-07-30T10:41:24+09:00",
+    "decisionRecord": "docs/decisions/2026-07-30-owner-o4v-lean-owner-private-gate.md",
+    "decisionRecordSha256": "5c6df014b55157a1bb5909c484662a2023cb04f40e2ed7c4ada54a57cb515ec5",
+    "baseCommit": "a49b51acef38a9901789b9e2037c5cbbb31605fe",
+    "baseTree": "59aa044b3975165e3e612bd9e1d2bb128cd3b7bb",
+    "roadmapMilestone": "O4V",
+    "roadmapStatus": "completed",
+    "legacyPacket": {
+      "packetId": "o4v-s234r-owner-private-plane-binding-v1",
+      "disposition": "superseded_rejected",
+      "providerBindingFieldCount": 88,
+      "providerBindingMaterialized": false,
+      "proposalDigestSha256": "59c6762c2dbe6519cefeef864b8d8f5f14402c3256d23ed8708ca18bb6fc4236",
+      "providerTemplateDigestSha256": "d161f4f52c1f155e383246edd36dec6f1d56fd89aaf272f5087c2d4ba3105ee3",
+      "dsseDecisionReceiptMaterialized": false,
+      "finalApprovedBindingDigestMaterialized": false,
+      "mayAuthorizeAnyOperation": false
+    },
+    "legacyQualificationApplicability": {
+      "providerBoundaryContractAppliesToActiveLeanGate": false,
+      "integrityAndCommitmentsKmsHsmRequirementAppliesToActiveLeanGate": false,
+      "encryptionBoundaryDedicatedKeyRequirementAppliesToActiveLeanGate": false,
+      "syntheticReceiptContractAppliesToActiveLeanGate": false,
+      "legacySyntheticReceiptCount": 15,
+      "mayBlockLeanS236P": false,
+      "futureExternalExpansionInputOnly": true
+    },
+    "cloudPlane": {
+      "providerClass": "existing_supabase_pro",
+      "projectName": "inverge-beta",
+      "reuseRequired": true,
+      "newCloudProviderAccountAllowed": false,
+      "dedicatedPrivatePlaneRequiredForCurrentOwnerPilot": false
+    },
+    "objectStorage": {
+      "ownerOnlyPrivateBucketRequired": true,
+      "publicAccessAllowed": false,
+      "signedUrlTtlSecondsMaximum": 300,
+      "automaticObjectVersionRollbackGuaranteed": false,
+      "recoveryMode": "owner_retained_original_reupload"
+    },
+    "metadataStore": {
+      "providerClass": "existing_supabase_postgres",
+      "ownerOnlyRlsRequired": true,
+      "metadataLogRetentionDaysMaximum": 7
+    },
+    "isolation": {
+      "ownerAToBObjectAndMetadataAccessAllowed": false,
+      "ownerBToAObjectAndMetadataAccessAllowed": false
+    },
+    "contentProcessing": {
+      "ocrAiContentProviderMode": "none",
+      "providerCount": 0
+    },
+    "dataBoundary": {
+      "s236pSyntheticOnly": true,
+      "realContentAuthorized": false,
+      "rawContentInLogsAnalyticsTelemetryApmExceptionsQueuesOrCiAllowed": false
+    },
+    "retentionAndLifecycle": {
+      "privateContentRetentionDaysMaximum": 365,
+      "metadataLogRetentionDaysMaximum": 7,
+      "temporaryCopyTtlSecondsMaximum": 300,
+      "applicationCacheTtlSecondsExact": 0,
+      "exportDeleteSlaSecondsMaximum": 604800
+    },
+    "dedicatedKeyAndVerifierGate": {
+      "customerManagedOrDedicatedKmsHsmRequiredForCurrentOwnerPilot": false,
+      "separateDsseStoreRequiredForCurrentOwnerPilot": false,
+      "independentInfrastructureVerifierRequiredForCurrentOwnerPilot": false,
+      "requiredBeforeExternalUsersPaymentOrRegulatedCustomers": true
+    },
+    "authorization": {
+      "authorizedNextRoadmapItem": "S236P",
+      "s236pSyntheticProvisioningAndAcceptanceAuthorized": true,
+      "automaticProvisioningAllowed": false,
+      "automaticS236PStartAllowed": false,
+      "automaticS236AStartAllowed": false,
+      "s236pStarted": false,
+      "s236aStarted": false,
+      "productionAuthorized": false,
+      "externalUsersAuthorized": false
+    }
+  },
   "scope": {
     "exam": "appraiser_second_round",
     "actorClass": "owner_private_only",
@@ -20,8 +108,8 @@
   },
   "approvalSeparation": {
     "O3A": "exact_golden_rights_source_effective_version_and_purpose_only",
-    "O4V": "exact_vault_key_provider_environment_logging_retention_and_rollback_only",
-    "S236P": "synthetic_only_provisioning_and_receipt_acceptance",
+    "O4V": "approved_lean_owner_private_supabase_gate_only",
+    "S236P": "synthetic_only_lean_provisioning_and_acceptance",
     "O3AMaySubstituteForO4V": false,
     "O4VMaySubstituteForO3A": false,
     "S236ARequires": [
@@ -1251,7 +1339,8 @@
       "status": [
         "pending_exact_binding_and_owner_decision",
         "approved",
-        "rejected"
+        "rejected",
+        "superseded_rejected"
       ],
       "ownerApproved": "boolean",
       "requestedScope": "exact_closed_o4v_requested_scope",
@@ -1500,7 +1589,8 @@
       "approvedRecordRequiresUnexpiredPacketAtDecision": true,
       "approvedRecordRequiresAllExactBindingsComplete": true,
       "approvedRecordRequiresAllOwnerDecisionBindingsComplete": true,
-      "approvalRecordImmutableAfterDecision": true
+      "approvalRecordImmutableAfterDecision": true,
+      "supersededRejectedStatusRequiresOwnerApprovedFalsePendingApprovalRecordAndDatedOwnerDecision": true
     },
   "pendingProposalDigestSha256": "59c6762c2dbe6519cefeef864b8d8f5f14402c3256d23ed8708ca18bb6fc4236"
   },
@@ -1516,7 +1606,7 @@
   },
   "o4vDecisionPacket": {
     "packetId": "o4v-s234r-owner-private-plane-binding-v1",
-    "status": "pending_exact_binding_and_owner_decision",
+    "status": "superseded_rejected",
     "ownerApproved": false,
     "requestedScope": "approve_exact_owner_private_vault_key_provider_environment_retention_rollback_independent_signed_attestation_and_s236p_synthetic_provisioning_only",
     "candidateArchitecture": {

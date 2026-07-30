@@ -1,7 +1,9 @@
 # 답안길 Post-#650 Unified Program Contract
 
 - Contract version: `dabangil.unified_program.v2`
-- Current exact-scope Owner decision:
+- Current exact-scope Owner decisions:
+  `docs/decisions/2026-07-30-owner-o4v-lean-owner-private-gate.md` for lean
+  O4V, and
   `docs/decisions/2026-07-29-owner-o3a-golden-3-approval.md`
 - Current Owner amendment:
   `docs/decisions/2026-07-26-owner-dogfood-private-plane-schedule-amendment.md`
@@ -45,6 +47,7 @@ Attachments, handoffs, issue prose, and old prompts are inputs, not live state.
 | `docs/inverge-business-model.md` | Target catalog history; activation still gated |
 | S222 completion | Academy source-contract history, not live Academy service readiness |
 | S223/S224 completion | Historical source/runtime contract acceptance, not current content, commercial, or efficacy readiness |
+| `o4v-s234r-owner-private-plane-binding-v1` | Rejected and superseded 88-field enterprise packet; never materialized and cannot authorize work |
 
 The scoped supersession does not weaken existing second-round public-launch,
 rights, source, legal-version, calculation, privacy, or authority safeguards.
@@ -56,7 +59,7 @@ The current Owner-private path is:
 ```text
 S234R program amendment
 ├─ O3A exact Golden rights/source/version/purpose decision
-└─ O4V exact vault/key/provider/environment/retention decision
+└─ O4V lean Owner-private Supabase boundary decision
    └─ S236P synthetic-only private-plane acceptance
 
 O3A + S236P
@@ -733,69 +736,37 @@ The exact contract is
 `docs/dabangil-private-authoring-review-plane-contract.md` and
 `config/dabangil-private-authoring-review-plane-contract.json`.
 
-O4V must bind the exact environment, vault/metadata providers, region,
-bucket/schema equivalents, commitment-key provider/class, logging/training/
-retention behavior, backup window, cache/index behavior, and rollback/restore
-behavior, plus the independent-attestation store, verifier, verification key,
-trust root, signature algorithm, and revocation policy. Until those bindings
-and the Owner decision exist, provisioning and real content fail closed.
+The 2026-07-30 Owner decision rejects and supersedes the unmaterialized
+`o4v-s234r-owner-private-plane-binding-v1` 88-field enterprise packet. Its
+proposal and all-null provider-template digests remain historical integrity
+values only. No DSSE rejection receipt, final approved-binding digest,
+customer-managed KMS/HSM, separate attestation store, or independent
+infrastructure verifier was materialized or claimed.
 
-Provider processing must be service-only. Training, research, or secondary
-use of raw private bodies is false, retention cannot exceed the exact O4V
-window, and evidence is required. An unresolved or noncompliant provider
-policy makes O4V unapprovable.
+The active gate is `dabangil.o4v.lean_owner_private_gate.v1`. It reuses the
+existing Supabase Pro project `inverge-beta` and requires one Owner-only
+private bucket, Owner-only metadata RLS, no public access, and bidirectional
+Owner A/B denial. Signed URL TTL, when used, is at most 300 seconds. OCR/AI
+content-provider mode is exactly `none`.
 
-Provider ETag/MD5/checksum/content-digest values are suppressed externally;
-opaque object versions are the only external cache validators. O4V separately
-binds minimum TLS, private ACL, raw-object/metadata/backup encryption, and a
-non-exportable storage-encryption key distinct from the commitment key.
-Content processing binds either canonical `none` or an exact immutable
-OCR/AI/model provider/config/model/prompt/policy set. S236P may exercise no
-other processor.
+Raw content in logs, analytics, telemetry, APM, exceptions, queues, and CI is
+zero. S236P uses synthetic data only and real content remains off. Private
+content retention is at most 365 days, metadata-log retention at most 7 days,
+temporary-copy TTL at most 300 seconds, application-cache TTL exactly zero,
+and export/delete SLA at most 7 days.
 
-The O4V access binding includes exact signed mode, TTL,
-method/object-version/audience/content-length scope, replay/single-use
-behavior, provider revocation/expiry/deletion propagation, and signed-access
-log redaction/retention. Its canonical proposal digest normalizes only
-`status`, `ownerApproved`, the proposal-digest slot, and the separate approval
-record to `null`. The approval record must reference that proposal digest.
-The distinct provider-binding digest covers the exact closed, non-secret
-provider/policy object. A closed DSSE Owner decision receipt then binds the
-proposal/provider, exact head/tree, authenticated Owner scope/actor, decision
-store, key/trust root, expiry, and revocation evidence. The final approved
-packet digest includes that immutable record. Every S236P receipt must match
-the proposal, final approved binding, and provider digests; neither earlier
-digest can substitute for final approval.
+Automatic object-version rollback is not guaranteed. Owner-pilot recovery is
+re-upload of the original retained by the Owner. Dedicated KMS/HSM, a
+separate DSSE store, and an independent infrastructure verifier are not
+required before external users, payment, or regulated customers. A future
+expanded gate must decide those requirements before that boundary is crossed.
 
-S236P is synthetic-only. Its metadata receipts prove read-after-write,
-bidirectional Owner isolation, immutable original and append-only revisions,
-signed-access failure cases when applicable, false-success zero, orphan
-cleanup, one-vault export, full-surface delete, backup-pending semantics,
-rollback without resurrection, and canary absence from Git/CI/logs/telemetry/
-provider surfaces. Every required receipt has the exact closed binding field
-set and must assert `passed`; failed, blocked, incomplete, free-text, or
-unknown-field receipts cannot complete S236P. Any provider, environment,
-region, key, schema, policy, retention, or deployed-head change makes the
-receipts stale.
-
-The exact operation policy fixes each fixture, required subassertions, and
-cleanup state. Fresh exact-head receipts carry its digest, the approved O4V
-proposal/final-binding/provider digests, and non-content-derived assertion-evidence,
-attestor/run/provenance, and independent-verifier attestation digests. Each
-operation appears exactly once and receipts are not reusable across bindings.
-The exact 15 receipts form a canonical receipt-set digest carried by every
-receipt. A verifier distinct from the primary attestor must
-cryptographically verify a fresh, unrevoked DSSE artifact over that set and
-all exact O4V/provider/policy/head/tree/run bindings; an unchecked digest
-cannot complete S236P.
-Verifier/key/trust-root/signature/issue/expiry/revocation fields are themselves
-inside the signed payload and must match the outer artifact; acceptance
-recomputes the trust path and fresh authenticated revocation status.
-S236P completion is itself a closed content-addressed artifact binding the
-receipt set, assertion/provenance sets, independent attestation, final O4V
-binding, exact environment/vault, and completion time. Downstream S236A and
-scheduler use must resolve and recompute that exact artifact rather than
-trusting a 64-character claim.
+O4V authorizes only a later manually started S236P Work to provision and
+verify this lean stack with synthetic fixtures. O4V does not itself create a
+resource or start S236P. Public access, cross-account success, signed URL TTL
+over 300 seconds, forbidden raw-content emission, a non-`none` content
+provider, exceeded retention/TTL/SLA limits, or real-content enablement fails
+S236P closed.
 
 The regenerated O3A packet was approved by the exact-scope 2026-07-29 dated
 Owner decision. That decision binds canonical manifest SHA-256
@@ -832,7 +803,7 @@ acceptance for both tracks.
 Scoped O3A and O4-family gates are not interchangeable:
 
 - O3A: exact Golden 3 rights/source/version/Owner-private purpose only;
-- O4V: exact private vault/key/provider/environment/retention/rollback;
+- O4V: exact lean Owner-private Supabase/storage/RLS/retention boundary only;
 - O4A: Owner-private runtime and native dogfood activation;
 - O4T: exact post-benchmark optimizer threshold decision;
 - O2O: exact Owner-private comparison measurement/retention only;
@@ -843,7 +814,9 @@ Scoped O3A and O4-family gates are not interchangeable:
 An approval packet states exact scope, non-goals, owner action, evidence,
 unapproved safe state, and expiry. O1R is approved only for this source
 amendment. O3A is approved only for the exact immutable packet named by the
-2026-07-29 decision and authorizes no immediate operation. Every O4-family
+2026-07-29 decision and authorizes no immediate operation. O4V is approved
+only for the lean Owner-private gate in the 2026-07-30 decision and authorizes
+no immediate operation; S236P remains unstarted. Every other O4-family
 runtime/content/commercial gate above remains a future gate.
 
 ## 13. Roadmap, locks, and WIP
@@ -879,11 +852,10 @@ The S234 reset snapshot contained exactly:
 
 S234R, S235A, and S235B are completed as source/contract evidence. The current
 authority is `roadmap/active-program.yml`; this contract deliberately does
-not mirror its dynamic ready-item list. O3A is completed as an exact Owner
-decision; O4V and S236B remain queued. S236P is blocked by O4V, and S236A
-remains queued with S236P as its sole unmet dependency. Selection is
-metadata-only: it does not start, reserve, provision, author, or execute
-work.
+not mirror its dynamic ready-item list. O3A and lean O4V are completed as
+exact Owner decisions; S236B and S236P remain queued. S236A remains queued
+with S236P as its sole unmet dependency. Selection is metadata-only: it does
+not start, reserve, provision, author, or execute work.
 
 PR #660 remains Draft and blocked. Its current exploratory OCR evidence does
 not establish S236B. Any continuation must reconcile onto amended main and

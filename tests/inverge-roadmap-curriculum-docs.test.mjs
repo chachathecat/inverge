@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import { readdir, readFile } from "node:fs/promises";
 
 const requiredDocs = [
+  "docs/decisions/2026-07-30-owner-o4v-lean-owner-private-gate.md",
   "docs/decisions/2026-07-29-owner-o3a-golden-3-approval.md",
   "docs/decisions/2026-07-26-owner-dogfood-private-plane-schedule-amendment.md",
   "docs/dabangil-unified-program-contract.md",
@@ -186,7 +187,7 @@ test("legacy first-round templates stay frozen while Foundation contracts are se
   assert.match(unified, /timed\/OMR readiness contracts/i);
 });
 
-test("roadmap docs distinguish the S234 snapshot from current O3A-reconciled state", async () => {
+test("roadmap docs distinguish the S234 snapshot from current lean O4V-reconciled state", async () => {
   const roadmap = await read("docs/inverge-master-roadmap.md");
   const unified = await read("docs/dabangil-unified-program-contract.md");
 
@@ -194,14 +195,6 @@ test("roadmap docs distinguish the S234 snapshot from current O3A-reconciled sta
   assert.match(
     roadmap,
     /S235A[\s\S]{0,100}(?:is now\s+complete|are\s+complete|completed)/i,
-  );
-  assert.match(
-    roadmap,
-    /exact O3A Owner decision are complete[\s\S]{0,100}S236B and O4V[\s\S]{0,80}(?:ready|metadata-ready)/i,
-  );
-  assert.match(
-    roadmap,
-    /S236A remains queued with S236P as its sole unmet dependency/i,
   );
   assert.match(unified, /S234 reset snapshot/i);
   assert.match(
@@ -212,7 +205,9 @@ test("roadmap docs distinguish the S234 snapshot from current O3A-reconciled sta
     unified,
     /S236A requires both a valid O3A decision and the exact completed S236P/i,
   );
-  assert.match(unified, /does not\s+(?:approve|start|authorize)/i);
+  assert.match(unified, /O3A and lean O4V are completed as\s+exact Owner decisions/i);
+  assert.match(unified, /S236B and S236P remain queued/i);
+  assert.match(unified, /O4V does not itself create a\s+resource or start S236P/i);
 });
 
 test("docs mention Today Plan max 3 and official verification requirements", async () => {
