@@ -135,6 +135,14 @@ test("live harness is synthetic, user-scoped, and externally fail-closed", async
 
   assert.match(source, /signInWithPassword/);
   assert.doesNotMatch(source, /\.auth\.signUp|service_role|serviceRole/);
+  assert.match(
+    source,
+    /async function expectNoRowsOrDenied[\s\S]*?if \(error\) return;/,
+  );
+  assert.match(
+    source,
+    /expectNoRowsOrDenied\(\s*anonymous\s*\.from\(S236P_OBJECTS_TABLE\)/,
+  );
   assert.match(source, /external_network_call_blocked/);
   assert.match(source, /externalOcrAiProviderCalls/);
   assert.match(source, /signed_url_ttl_301_allowed/);

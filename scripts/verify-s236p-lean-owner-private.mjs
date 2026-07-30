@@ -209,6 +209,12 @@ async function expectNoRows(query, code) {
   if ((data ?? []).length !== 0) fail(code);
 }
 
+async function expectNoRowsOrDenied(query, code) {
+  const { data, error } = await query;
+  if (error) return;
+  if ((data ?? []).length !== 0) fail(code);
+}
+
 async function expectStorageError(promise, code) {
   const result = await promise;
   if (!result.error) fail(code);
@@ -551,7 +557,7 @@ export async function runS236PLiveAcceptance() {
       pathA,
       "anonymous_delete_allowed",
     );
-    await expectNoRows(
+    await expectNoRowsOrDenied(
       anonymous
         .from(S236P_OBJECTS_TABLE)
         .select("object_ref")

@@ -10,6 +10,7 @@ import { runtimeRequiredPathRecords } from "./runtime-risk-contract.mjs";
 
 export const SCHEMA_VERSION = "inverge.runtime_evidence.v2";
 export const PRODUCER_VERSION = "s233r.postgres.s233a.v1";
+export const S236P_PRODUCER_VERSION = "s236p.postgres.owner-private.v1";
 export const POSTGRES_IMAGE = "postgres:15.8-bookworm";
 export const ASSERTION_IDS = Object.freeze([
   "migration_prerequisites_and_target_applied",
@@ -25,6 +26,21 @@ export const ASSERTION_IDS = Object.freeze([
   "queue_today_atomic_namespace_restricted",
   "cleanup_complete",
 ]);
+export const S236P_ASSERTION_IDS = Object.freeze([
+  "migration_prerequisites_and_target_applied",
+  "owner_a_metadata_storage_crud_allowed",
+  "bidirectional_owner_rls_isolation",
+  "anonymous_access_denied",
+  "signed_url_ttl_boundary_enforced",
+  "retention_temporary_ttl_cache_delete_sla_enforced",
+  "deterministic_expiry_verified",
+  "provider_mode_none_and_external_calls_zero",
+  "raw_emission_and_real_content_zero",
+  "metadata_event_retention_enforced",
+  "cleanup_complete",
+]);
+export const S236P_MIGRATION_PATH =
+  "supabase/migrations/20260730023248_s236p_lean_owner_private.sql";
 export const PREREQUISITE_MIGRATIONS = Object.freeze([
   "supabase/migrations/20260422_inverge_service_core.sql",
   "supabase/migrations/20260423_inverge_service_role_grants.sql",
@@ -47,6 +63,13 @@ const QUEUE_ID = "s233r-queue-a";
 const FAILED_QUEUE_ID = "s233r-queue-atomic-failure";
 const TODAY_ID = "33333333-3333-4333-8333-333333333333";
 const CONFLICT_TODAY_ID = "44444444-4444-4444-8444-444444444444";
+const S236P_USER_A = "55555555-5555-4555-8555-555555555555";
+const S236P_USER_B = "66666666-6666-4666-8666-666666666666";
+const S236P_VAULT_A = "77777777-7777-4777-8777-777777777777";
+const S236P_VAULT_B = "88888888-8888-4888-8888-888888888888";
+const S236P_OBJECT_A = "99999999-9999-4999-8999-999999999999";
+const S236P_OBJECT_B = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
+const S236P_TEMP_OBJECT = "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb";
 
 function sha256(value) {
   return crypto.createHash("sha256").update(value).digest("hex");
@@ -302,23 +325,57 @@ export function resolveTargetMigration(riskResult, headSha) {
     .sort();
   if (
     migrations.length !== 1 ||
-    !/^supabase\/migrations\/\d+_s233a_answer_review_persistence\.sql$/.test(migrations[0]) ||
     runtimeRequiredPaths.length !== 1 ||
     runtimeRequiredPaths[0] !== migrations[0]
   ) {
     throw new Error("no closed runtime-evidence adapter supports this runtime-sensitive change set.");
   }
+  let adapter;
+  let requiredMarkers;
+  let markerError;
+  if (/^supabase\/migrations\/\d+_s233a_answer_review_persistence\.sql$/.test(migrations[0])) {
+    adapter = "s233a";
+    requiredMarkers = [
+      "claim_s233a_answer_review_v1",
+      "transition_s233a_answer_review_v1",
+      "s233a review queue rpc insert namespace",
+      "s233a today seed rpc insert namespace",
+    ];
+    markerError = "S233A migration does not match the supported adapter contract.";
+  } else if (migrations[0] === S236P_MIGRATION_PATH) {
+    adapter = "s236p";
+    requiredMarkers = [
+      "s236p-owner-private-v1",
+      "public.s236p_owner_private_objects",
+      "public.s236p_owner_private_events",
+      "public.s236p_authorize_signed_url_v1",
+      "public.s236p_expired_object_paths_v1",
+      "s236p owner private select",
+      "contains_real_content",
+    ];
+    markerError = "S236P migration does not match the supported adapter contract.";
+  } else {
+    throw new Error("no closed runtime-evidence adapter supports this runtime-sensitive change set.");
+  }
   const content = gitBlob(headSha, migrations[0]);
   const text = content.toString("utf8");
-  for (const requiredMarker of [
-    "claim_s233a_answer_review_v1",
-    "transition_s233a_answer_review_v1",
-    "s233a review queue rpc insert namespace",
-    "s233a today seed rpc insert namespace",
-  ]) {
-    if (!text.includes(requiredMarker)) throw new Error("S233A migration does not match the supported adapter contract.");
+  for (const requiredMarker of requiredMarkers) {
+    if (!text.includes(requiredMarker)) throw new Error(markerError);
   }
-  return { content, path: migrations[0], sha256: sha256(content) };
+  return { adapter, content, path: migrations[0], sha256: sha256(content) };
+}
+
+function evidenceContract(targetMigration) {
+  if (targetMigration.adapter === "s236p") {
+    return {
+      assertionIds: S236P_ASSERTION_IDS,
+      producerVersion: S236P_PRODUCER_VERSION,
+    };
+  }
+  return {
+    assertionIds: ASSERTION_IDS,
+    producerVersion: PRODUCER_VERSION,
+  };
 }
 
 function bootstrapSql() {
@@ -346,7 +403,7 @@ function bootstrapSql() {
   `;
 }
 
-function runDatabaseAssertions(containerName, targetMigration) {
+function runS233ADatabaseAssertions(containerName, targetMigration) {
   const passedAssertions = new Set();
   applySql(containerName, bootstrapSql(), "isolated Supabase role bootstrap");
   for (const migrationPath of PREREQUISITE_MIGRATIONS) {
@@ -677,13 +734,703 @@ function runDatabaseAssertions(containerName, targetMigration) {
   return passedAssertions;
 }
 
+function authenticatedCommitContext(userId, statement) {
+  return `
+    begin;
+    set local role authenticated;
+    set local "request.jwt.claim.sub" to ${sqlLiteral(userId)};
+    ${statement}
+    commit;
+  `;
+}
+
+function s236pBootstrapSql() {
+  return `
+    create role anon nologin;
+    create role authenticated nologin;
+    create role service_role nologin bypassrls;
+    create schema auth;
+    create schema extensions;
+    create schema storage;
+    create extension pgcrypto with schema extensions;
+    alter database postgres set search_path = public, extensions;
+
+    create table auth.users (id uuid primary key);
+    create function auth.uid() returns uuid
+      language sql stable
+      set search_path = ''
+      as $$
+        select coalesce(
+          nullif(pg_catalog.current_setting('request.jwt.claim.sub', true), ''),
+          nullif(pg_catalog.current_setting('request.jwt.claims', true), '')::jsonb ->> 'sub'
+        )::uuid
+      $$;
+    grant usage on schema auth to anon, authenticated, service_role;
+    grant execute on function auth.uid() to anon, authenticated, service_role;
+
+    create table storage.buckets (
+      id text primary key,
+      name text not null,
+      public boolean not null default false,
+      file_size_limit bigint,
+      allowed_mime_types text[]
+    );
+    create table storage.objects (
+      id uuid primary key default extensions.gen_random_uuid(),
+      bucket_id text not null references storage.buckets(id),
+      name text not null,
+      owner_id text,
+      metadata jsonb not null default '{}'::jsonb,
+      unique (bucket_id, name)
+    );
+    alter table storage.objects enable row level security;
+    grant usage on schema storage to anon, authenticated, service_role;
+    grant select, insert, update, delete on table storage.objects
+      to anon, authenticated, service_role;
+    grant select, insert, update, delete on table storage.buckets
+      to service_role;
+
+    insert into auth.users (id)
+    values (${sqlLiteral(S236P_USER_A)}), (${sqlLiteral(S236P_USER_B)});
+  `;
+}
+
+function s236pStoragePath(vaultId, objectId, storageClass = "private") {
+  return storageClass === "temporary"
+    ? `${vaultId}/temporary/${objectId}`
+    : `${vaultId}/${objectId}`;
+}
+
+function s236pObjectInsertStatement({
+  objectId,
+  ownerId,
+  vaultId,
+  storageClass = "private",
+  contentRetentionDays = 365,
+  temporaryTtlSeconds = storageClass === "temporary" ? 300 : 0,
+  signedUrlTtlSeconds = 300,
+  applicationCacheTtlSeconds = 0,
+  exportDeleteSlaSeconds = 604800,
+  providerMode = "none",
+  providerCalls = 0,
+  rawEmissions = 0,
+  containsRealContent = false,
+}) {
+  return `
+    insert into public.s236p_owner_private_objects (
+      object_ref,
+      owner_id,
+      bucket_id,
+      storage_path,
+      storage_class,
+      object_state,
+      object_version,
+      content_retention_days,
+      temporary_ttl_seconds,
+      signed_url_ttl_seconds,
+      application_cache_ttl_seconds,
+      export_delete_sla_seconds,
+      ocr_ai_provider_mode,
+      external_ocr_ai_provider_call_count,
+      raw_external_emission_count,
+      contains_real_content
+    ) values (
+      ${sqlLiteral(objectId)}::uuid,
+      ${sqlLiteral(ownerId)}::uuid,
+      's236p-owner-private-v1',
+      ${sqlLiteral(s236pStoragePath(vaultId, objectId, storageClass))},
+      ${sqlLiteral(storageClass)},
+      'active',
+      1,
+      ${contentRetentionDays},
+      ${temporaryTtlSeconds},
+      ${signedUrlTtlSeconds},
+      ${applicationCacheTtlSeconds},
+      ${exportDeleteSlaSeconds},
+      ${sqlLiteral(providerMode)},
+      ${providerCalls},
+      ${rawEmissions},
+      ${containsRealContent ? "true" : "false"}
+    );
+  `;
+}
+
+function s236pStorageInsertStatement({
+  objectId,
+  ownerId,
+  vaultId,
+  storageClass = "private",
+}) {
+  return `
+    insert into storage.objects (bucket_id, name, owner_id, metadata)
+    values (
+      's236p-owner-private-v1',
+      ${sqlLiteral(s236pStoragePath(vaultId, objectId, storageClass))},
+      ${sqlLiteral(ownerId)},
+      '{"cacheControl":"0","synthetic":true}'::jsonb
+    );
+  `;
+}
+
+function s236pEventInsertStatement({
+  eventId,
+  objectId,
+  ownerId,
+  retentionDays = 7,
+  containsRawContent = false,
+}) {
+  return `
+    insert into public.s236p_owner_private_events (
+      event_ref,
+      owner_id,
+      object_ref,
+      event_type,
+      retention_days,
+      contains_raw_content
+    ) values (
+      ${sqlLiteral(eventId)}::uuid,
+      ${sqlLiteral(ownerId)}::uuid,
+      ${sqlLiteral(objectId)}::uuid,
+      'upload',
+      ${retentionDays},
+      ${containsRawContent ? "true" : "false"}
+    );
+  `;
+}
+
+function runS236PDatabaseAssertions(containerName, targetMigration) {
+  const passedAssertions = new Set();
+  applySql(
+    containerName,
+    s236pBootstrapSql(),
+    "isolated Supabase Storage and Auth role bootstrap",
+  );
+  applySql(containerName, targetMigration.content, "pull-request migration");
+  applySql(
+    containerName,
+    targetMigration.content,
+    "idempotent pull-request migration replay",
+  );
+  assertScalar(
+    containerName,
+    `select concat_ws(':',
+      (select count(*) from storage.buckets where id = 's236p-owner-private-v1' and public = false),
+      (select count(*) from pg_class where oid in (
+        'public.s236p_owner_private_objects'::regclass,
+        'public.s236p_owner_private_events'::regclass
+      ) and relrowsecurity and relforcerowsecurity),
+      (select count(*) from pg_proc where proname in (
+        's236p_authorize_signed_url_v1',
+        's236p_expired_object_paths_v1'
+      )),
+      (select count(*) from pg_policies where policyname like 's236p owner private%')
+    );`,
+    "1:2:2:12",
+    "S236P migration application assertion",
+  );
+  passedAssertions.add("migration_prerequisites_and_target_applied");
+
+  applySql(
+    containerName,
+    authenticatedCommitContext(
+      S236P_USER_A,
+      [
+        s236pObjectInsertStatement({
+          objectId: S236P_OBJECT_A,
+          ownerId: S236P_USER_A,
+          vaultId: S236P_VAULT_A,
+        }),
+        s236pStorageInsertStatement({
+          objectId: S236P_OBJECT_A,
+          ownerId: S236P_USER_A,
+          vaultId: S236P_VAULT_A,
+        }),
+        s236pEventInsertStatement({
+          eventId: "c0000000-0000-4000-8000-000000000001",
+          objectId: S236P_OBJECT_A,
+          ownerId: S236P_USER_A,
+        }),
+      ].join("\n"),
+    ),
+    "Owner A synthetic fixture",
+  );
+  assertScalar(
+    containerName,
+    authenticatedContext(
+      S236P_USER_A,
+      `select concat_ws(':',
+        (select count(*) from public.s236p_owner_private_objects where object_ref = ${sqlLiteral(S236P_OBJECT_A)}::uuid),
+        (select count(*) from public.s236p_owner_private_events where object_ref = ${sqlLiteral(S236P_OBJECT_A)}::uuid),
+        (select count(*) from storage.objects where name = ${sqlLiteral(s236pStoragePath(S236P_VAULT_A, S236P_OBJECT_A))})
+      );`,
+    ),
+    "1:1:1",
+    "Owner A read-after-write assertion",
+  );
+  applySql(
+    containerName,
+    authenticatedCommitContext(
+      S236P_USER_A,
+      `update public.s236p_owner_private_objects
+         set object_state = 'active', object_version = 2
+       where object_ref = ${sqlLiteral(S236P_OBJECT_A)}::uuid;
+       update storage.objects
+         set metadata = '{"cacheControl":"0","synthetic":true,"version":2}'::jsonb
+       where name = ${sqlLiteral(s236pStoragePath(S236P_VAULT_A, S236P_OBJECT_A))};`,
+    ),
+    "Owner A update assertion",
+  );
+  assertScalar(
+    containerName,
+    authenticatedContext(
+      S236P_USER_A,
+      `select concat_ws(':',
+        (select object_version::text from public.s236p_owner_private_objects where object_ref = ${sqlLiteral(S236P_OBJECT_A)}::uuid),
+        (select metadata ->> 'version' from storage.objects where name = ${sqlLiteral(s236pStoragePath(S236P_VAULT_A, S236P_OBJECT_A))})
+      );`,
+    ),
+    "2:2",
+    "Owner A metadata and Storage update assertion",
+  );
+  passedAssertions.add("owner_a_metadata_storage_crud_allowed");
+
+  applySql(
+    containerName,
+    authenticatedCommitContext(
+      S236P_USER_B,
+      [
+        s236pObjectInsertStatement({
+          objectId: S236P_OBJECT_B,
+          ownerId: S236P_USER_B,
+          vaultId: S236P_VAULT_B,
+        }),
+        s236pStorageInsertStatement({
+          objectId: S236P_OBJECT_B,
+          ownerId: S236P_USER_B,
+          vaultId: S236P_VAULT_B,
+        }),
+      ].join("\n"),
+    ),
+    "Owner B synthetic fixture",
+  );
+  assertScalar(
+    containerName,
+    authenticatedContext(
+      S236P_USER_B,
+      `select concat_ws(':',
+        (select count(*) from public.s236p_owner_private_objects where object_ref = ${sqlLiteral(S236P_OBJECT_A)}::uuid),
+        (select count(*) from public.s236p_owner_private_events where object_ref = ${sqlLiteral(S236P_OBJECT_A)}::uuid),
+        (select count(*) from storage.objects where name = ${sqlLiteral(s236pStoragePath(S236P_VAULT_A, S236P_OBJECT_A))})
+      );`,
+    ),
+    "0:0:0",
+    "Owner B cannot read Owner A assertion",
+  );
+  assertScalar(
+    containerName,
+    authenticatedContext(
+      S236P_USER_A,
+      `select concat_ws(':',
+        (select count(*) from public.s236p_owner_private_objects where object_ref = ${sqlLiteral(S236P_OBJECT_B)}::uuid),
+        (select count(*) from storage.objects where name = ${sqlLiteral(s236pStoragePath(S236P_VAULT_B, S236P_OBJECT_B))})
+      );`,
+    ),
+    "0:0",
+    "Owner A cannot read Owner B assertion",
+  );
+  assertSqlDenied(
+    containerName,
+    authenticatedContext(
+      S236P_USER_B,
+      s236pObjectInsertStatement({
+        objectId: "c0000000-0000-4000-8000-000000000002",
+        ownerId: S236P_USER_A,
+        vaultId: S236P_VAULT_A,
+      }),
+    ),
+    /row-level security/,
+    "cross-owner metadata insert assertion",
+  );
+  assertScalar(
+    containerName,
+    authenticatedContext(
+      S236P_USER_B,
+      `with mutated as (
+        update public.s236p_owner_private_objects
+           set object_state = 'active', object_version = 3
+         where object_ref = ${sqlLiteral(S236P_OBJECT_A)}::uuid
+         returning 1
+       ) select count(*)::text from mutated;`,
+    ),
+    "0",
+    "cross-owner metadata update assertion",
+  );
+  assertScalar(
+    containerName,
+    authenticatedContext(
+      S236P_USER_B,
+      `with removed as (
+        delete from storage.objects
+         where name = ${sqlLiteral(s236pStoragePath(S236P_VAULT_A, S236P_OBJECT_A))}
+         returning 1
+       ) select count(*)::text from removed;`,
+    ),
+    "0",
+    "cross-owner Storage delete assertion",
+  );
+  passedAssertions.add("bidirectional_owner_rls_isolation");
+
+  assertSqlDenied(
+    containerName,
+    anonymousContext(
+      "select count(*) from public.s236p_owner_private_objects;",
+    ),
+    /permission denied/,
+    "anonymous metadata read assertion",
+  );
+  assertScalar(
+    containerName,
+    anonymousContext(
+      "select count(*)::text from storage.objects where bucket_id = 's236p-owner-private-v1';",
+    ),
+    "0",
+    "anonymous Storage read assertion",
+  );
+  assertSqlDenied(
+    containerName,
+    anonymousContext(
+      `insert into storage.objects (bucket_id, name, owner_id)
+       values (
+         's236p-owner-private-v1',
+         ${sqlLiteral("c0000000-0000-4000-8000-000000000003/c0000000-0000-4000-8000-000000000004")},
+         ${sqlLiteral(S236P_USER_A)}
+       );`,
+    ),
+    /row-level security/,
+    "anonymous Storage insert assertion",
+  );
+  assertSqlDenied(
+    containerName,
+    anonymousContext(
+      `select * from public.s236p_authorize_signed_url_v1(
+        ${sqlLiteral(S236P_OBJECT_A)}::uuid,
+        300
+      );`,
+    ),
+    /permission denied/,
+    "anonymous signed URL authorization assertion",
+  );
+  passedAssertions.add("anonymous_access_denied");
+
+  assertScalar(
+    containerName,
+    authenticatedContext(
+      S236P_USER_A,
+      `select concat_ws(':', bucket_id, storage_path, ttl_seconds::text)
+       from public.s236p_authorize_signed_url_v1(
+         ${sqlLiteral(S236P_OBJECT_A)}::uuid,
+         300
+       );`,
+    ),
+    `s236p-owner-private-v1:${s236pStoragePath(S236P_VAULT_A, S236P_OBJECT_A)}:300`,
+    "signed URL TTL 300 assertion",
+  );
+  assertSqlDenied(
+    containerName,
+    authenticatedContext(
+      S236P_USER_A,
+      `select * from public.s236p_authorize_signed_url_v1(
+        ${sqlLiteral(S236P_OBJECT_A)}::uuid,
+        301
+      );`,
+    ),
+    /s236p_signed_url_ttl_out_of_range/,
+    "signed URL TTL 301 assertion",
+  );
+  assertSqlDenied(
+    containerName,
+    authenticatedContext(
+      S236P_USER_B,
+      `select * from public.s236p_authorize_signed_url_v1(
+        ${sqlLiteral(S236P_OBJECT_A)}::uuid,
+        300
+      );`,
+    ),
+    /s236p_signed_url_not_authorized/,
+    "cross-owner signed URL assertion",
+  );
+  passedAssertions.add("signed_url_ttl_boundary_enforced");
+
+  const invalidObjectCases = [
+    [
+      "content retention",
+      "c0000000-0000-4000-8000-000000000010",
+      { contentRetentionDays: 366 },
+      /retention_max_365/,
+    ],
+    [
+      "temporary TTL",
+      "c0000000-0000-4000-8000-000000000011",
+      { storageClass: "temporary", temporaryTtlSeconds: 301 },
+      /temporary_ttl_max_300/,
+    ],
+    [
+      "application cache TTL",
+      "c0000000-0000-4000-8000-000000000012",
+      { applicationCacheTtlSeconds: 1 },
+      /application_cache_ttl_zero/,
+    ],
+    [
+      "export delete SLA",
+      "c0000000-0000-4000-8000-000000000013",
+      { exportDeleteSlaSeconds: 604801 },
+      /export_delete_sla_max_7d/,
+    ],
+  ];
+  for (const [label, objectId, overrides, pattern] of invalidObjectCases) {
+    assertSqlDenied(
+      containerName,
+      authenticatedContext(
+        S236P_USER_A,
+        s236pObjectInsertStatement({
+          objectId,
+          ownerId: S236P_USER_A,
+          vaultId: S236P_VAULT_A,
+          ...overrides,
+        }),
+      ),
+      pattern,
+      `${label} constraint assertion`,
+    );
+  }
+  passedAssertions.add(
+    "retention_temporary_ttl_cache_delete_sla_enforced",
+  );
+
+  applySql(
+    containerName,
+    authenticatedCommitContext(
+      S236P_USER_A,
+      [
+        s236pObjectInsertStatement({
+          objectId: S236P_TEMP_OBJECT,
+          ownerId: S236P_USER_A,
+          vaultId: S236P_VAULT_A,
+          storageClass: "temporary",
+        }),
+        s236pStorageInsertStatement({
+          objectId: S236P_TEMP_OBJECT,
+          ownerId: S236P_USER_A,
+          vaultId: S236P_VAULT_A,
+          storageClass: "temporary",
+        }),
+      ].join("\n"),
+    ),
+    "temporary expiry fixture",
+  );
+  assertScalar(
+    containerName,
+    authenticatedContext(
+      S236P_USER_A,
+      `select concat_ws(':',
+        (select count(*) from public.s236p_expired_object_paths_v1(
+          (select temporary_expires_at - interval '1 millisecond'
+             from public.s236p_owner_private_objects
+            where object_ref = ${sqlLiteral(S236P_TEMP_OBJECT)}::uuid)
+        ) where object_ref = ${sqlLiteral(S236P_TEMP_OBJECT)}::uuid),
+        (select count(*) from public.s236p_expired_object_paths_v1(
+          (select temporary_expires_at + interval '1 millisecond'
+             from public.s236p_owner_private_objects
+            where object_ref = ${sqlLiteral(S236P_TEMP_OBJECT)}::uuid)
+        ) where object_ref = ${sqlLiteral(S236P_TEMP_OBJECT)}::uuid)
+      );`,
+    ),
+    "0:1",
+    "deterministic temporary expiry assertion",
+  );
+  passedAssertions.add("deterministic_expiry_verified");
+
+  const providerBoundaryCases = [
+    [
+      "provider mode",
+      "c0000000-0000-4000-8000-000000000020",
+      { providerMode: "external" },
+      /provider_mode_none/,
+    ],
+    [
+      "provider calls",
+      "c0000000-0000-4000-8000-000000000021",
+      { providerCalls: 1 },
+      /provider_calls_zero/,
+    ],
+  ];
+  for (const [label, objectId, overrides, pattern] of providerBoundaryCases) {
+    assertSqlDenied(
+      containerName,
+      authenticatedContext(
+        S236P_USER_A,
+        s236pObjectInsertStatement({
+          objectId,
+          ownerId: S236P_USER_A,
+          vaultId: S236P_VAULT_A,
+          ...overrides,
+        }),
+      ),
+      pattern,
+      `${label} constraint assertion`,
+    );
+  }
+  assertScalar(
+    containerName,
+    authenticatedContext(
+      S236P_USER_A,
+      `select count(*)::text
+         from public.s236p_owner_private_objects
+        where ocr_ai_provider_mode = 'none'
+          and external_ocr_ai_provider_call_count = 0;`,
+    ),
+    "2",
+    "provider-none and call-zero assertion",
+  );
+  passedAssertions.add("provider_mode_none_and_external_calls_zero");
+
+  const rawBoundaryCases = [
+    [
+      "raw emission",
+      "c0000000-0000-4000-8000-000000000022",
+      { rawEmissions: 1 },
+      /raw_emissions_zero/,
+    ],
+    [
+      "real content",
+      "c0000000-0000-4000-8000-000000000023",
+      { containsRealContent: true },
+      /synthetic_only/,
+    ],
+  ];
+  for (const [label, objectId, overrides, pattern] of rawBoundaryCases) {
+    assertSqlDenied(
+      containerName,
+      authenticatedContext(
+        S236P_USER_A,
+        s236pObjectInsertStatement({
+          objectId,
+          ownerId: S236P_USER_A,
+          vaultId: S236P_VAULT_A,
+          ...overrides,
+        }),
+      ),
+      pattern,
+      `${label} constraint assertion`,
+    );
+  }
+  assertScalar(
+    containerName,
+    authenticatedContext(
+      S236P_USER_A,
+      `select count(*)::text
+         from public.s236p_owner_private_objects
+        where raw_external_emission_count = 0
+          and contains_real_content = false;`,
+    ),
+    "2",
+    "raw-zero and synthetic-only assertion",
+  );
+  passedAssertions.add("raw_emission_and_real_content_zero");
+
+  assertScalar(
+    containerName,
+    authenticatedContext(
+      S236P_USER_A,
+      `select count(*)::text
+         from public.s236p_owner_private_events
+        where retention_days <= 7
+          and expires_at = occurred_at + make_interval(days => retention_days)
+          and contains_raw_content = false;`,
+    ),
+    "1",
+    "metadata event retention assertion",
+  );
+  assertSqlDenied(
+    containerName,
+    authenticatedContext(
+      S236P_USER_A,
+      s236pEventInsertStatement({
+        eventId: "c0000000-0000-4000-8000-000000000030",
+        objectId: S236P_OBJECT_A,
+        ownerId: S236P_USER_A,
+        retentionDays: 8,
+      }),
+    ),
+    /retention_max_7d/,
+    "metadata event retention 8-day assertion",
+  );
+  assertSqlDenied(
+    containerName,
+    authenticatedContext(
+      S236P_USER_A,
+      s236pEventInsertStatement({
+        eventId: "c0000000-0000-4000-8000-000000000031",
+        objectId: S236P_OBJECT_A,
+        ownerId: S236P_USER_A,
+        containsRawContent: true,
+      }),
+    ),
+    /metadata_only/,
+    "metadata event raw-content assertion",
+  );
+  passedAssertions.add("metadata_event_retention_enforced");
+
+  applySql(
+    containerName,
+    authenticatedCommitContext(
+      S236P_USER_A,
+      `delete from storage.objects
+        where owner_id = ${sqlLiteral(S236P_USER_A)};
+       delete from public.s236p_owner_private_objects
+        where owner_id = ${sqlLiteral(S236P_USER_A)}::uuid;`,
+    ),
+    "Owner A synthetic cleanup",
+  );
+  applySql(
+    containerName,
+    authenticatedCommitContext(
+      S236P_USER_B,
+      `delete from storage.objects
+        where owner_id = ${sqlLiteral(S236P_USER_B)};
+       delete from public.s236p_owner_private_objects
+        where owner_id = ${sqlLiteral(S236P_USER_B)}::uuid;`,
+    ),
+    "Owner B synthetic cleanup",
+  );
+  assertScalar(
+    containerName,
+    `select concat_ws(':',
+      (select count(*) from storage.objects where bucket_id = 's236p-owner-private-v1'),
+      (select count(*) from public.s236p_owner_private_objects),
+      (select count(*) from public.s236p_owner_private_events)
+    );`,
+    "0:0:0",
+    "S236P synthetic row cleanup assertion",
+  );
+
+  return passedAssertions;
+}
+
+function runDatabaseAssertions(containerName, targetMigration) {
+  return targetMigration.adapter === "s236p"
+    ? runS236PDatabaseAssertions(containerName, targetMigration)
+    : runS233ADatabaseAssertions(containerName, targetMigration);
+}
+
 function writeEvidence({ context, migration, passedAssertions, riskBytes }) {
   const evidencePath = process.env.RUNTIME_EVIDENCE_PATH;
   if (!evidencePath) throw new Error("RUNTIME_EVIDENCE_PATH is not set.");
   const resolvedPath = path.resolve(evidencePath);
+  const contract = evidenceContract(migration);
   const evidence = {
     schemaVersion: SCHEMA_VERSION,
-    producerVersion: PRODUCER_VERSION,
+    producerVersion: contract.producerVersion,
     status: "verified",
     sourceLevelOnly: false,
     verifiedAt: new Date().toISOString(),
@@ -698,7 +1445,10 @@ function writeEvidence({ context, migration, passedAssertions, riskBytes }) {
       networkExposure: "none",
       syntheticUserCount: 2,
     },
-    assertions: ASSERTION_IDS.map((id) => ({ id, passed: passedAssertions.has(id) })),
+    assertions: contract.assertionIds.map((id) => ({
+      id,
+      passed: passedAssertions.has(id),
+    })),
     cleanup: { status: "complete" },
     dataBoundary: {
       metadataOnly: true,
@@ -714,7 +1464,13 @@ function writeEvidence({ context, migration, passedAssertions, riskBytes }) {
   const temporaryPath = `${resolvedPath}.tmp`;
   fs.writeFileSync(temporaryPath, `${JSON.stringify(evidence, null, 2)}\n`, { encoding: "utf8", mode: 0o600 });
   fs.renameSync(temporaryPath, resolvedPath);
-  console.log(JSON.stringify({ status: "verified", assertionsPassed: ASSERTION_IDS.length, cleanup: "complete" }));
+  console.log(
+    JSON.stringify({
+      status: "verified",
+      assertionsPassed: contract.assertionIds.length,
+      cleanup: "complete",
+    }),
+  );
 }
 
 function produce(riskFile) {
@@ -732,9 +1488,10 @@ function produce(riskFile) {
   }
   if (!cleanupComplete) throw new Error("isolated Postgres cleanup is incomplete.");
   passedAssertions.add("cleanup_complete");
+  const contract = evidenceContract(migration);
   if (
-    passedAssertions.size !== ASSERTION_IDS.length ||
-    ASSERTION_IDS.some((id) => !passedAssertions.has(id))
+    passedAssertions.size !== contract.assertionIds.length ||
+    contract.assertionIds.some((id) => !passedAssertions.has(id))
   ) {
     throw new Error("required runtime assertion set is incomplete.");
   }
