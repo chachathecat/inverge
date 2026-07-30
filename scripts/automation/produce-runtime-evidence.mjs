@@ -1015,21 +1015,33 @@ function s236pBoundaryReadStatement(operation, offsetExpression) {
     grant update (content_expires_at)
       on public.s236p_owner_private_objects to authenticated;
     set local session_replication_role = replica;
+    create or replace function
+      pg_temp.s236p_boundary_visible_v1(p_offset interval)
+    returns text
+    language plpgsql
+    volatile
+    set search_path = ''
+    as $boundary$
+    declare
+      v_visible_count text;
+    begin
+      update public.s236p_owner_private_objects
+         set content_expires_at = statement_timestamp() + p_offset
+       where object_ref =
+         ${sqlLiteral(S236P_EXPIRY_BOUNDARY_OBJECT)}::uuid;
+      select count(*)::text
+        into v_visible_count
+        from storage.objects
+       where name = ${sqlLiteral(boundaryPath)};
+      return v_visible_count;
+    end;
+    $boundary$;
+    grant execute on function
+      pg_temp.s236p_boundary_visible_v1(interval) to authenticated;
     set local role authenticated;
     set local "request.jwt.claim.sub" to ${sqlLiteral(S236P_USER_A)};
     ${storageOperationHeader(operation)}
-    with aligned as (
-      update public.s236p_owner_private_objects
-         set content_expires_at =
-           statement_timestamp() + (${offsetExpression})
-       where object_ref =
-         ${sqlLiteral(S236P_EXPIRY_BOUNDARY_OBJECT)}::uuid
-       returning object_ref
-    )
-    select count(*)::text
-      from storage.objects
-     where name = ${sqlLiteral(boundaryPath)}
-       and exists (select 1 from aligned);
+    select pg_temp.s236p_boundary_visible_v1(${offsetExpression});
     rollback;
   `;
 }

@@ -478,6 +478,7 @@ test("S236P expiry matrix covers exact boundaries, missing metadata, cleanup, an
     "expiry plus-one-millisecond assertion",
     "expiry equality assertion",
     "expiry minus-one-millisecond assertion",
+    "pg_temp.s236p_boundary_visible_v1",
     "metadata-missing expiry fixture transition",
     'const deleteOperations = [\n    "storage.object.delete",\n    "storage.object.delete_many",',
     '["metadata missing", metadataMissingPath]',
@@ -489,6 +490,7 @@ test("S236P expiry matrix covers exact boundaries, missing metadata, cleanup, an
   ]) {
     assert.match(producer, new RegExp(marker.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
   }
+  assert.doesNotMatch(producer, /with aligned as \(\s*update public\.s236p_owner_private_objects/);
 });
 
 test("closed S233A and S236P adapters bind exact migrations and reject unsupported sets", () => {
