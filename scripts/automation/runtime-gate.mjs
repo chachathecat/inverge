@@ -11,7 +11,7 @@ import { runtimeRequiredPathRecords } from "./runtime-risk-contract.mjs";
 export const RUNTIME_EVIDENCE_SCHEMA_VERSION = "inverge.runtime_evidence.v2";
 export const RUNTIME_EVIDENCE_PRODUCER_VERSION = "s233r.postgres.s233a.v1";
 export const S236P_RUNTIME_EVIDENCE_PRODUCER_VERSION =
-  "s236p.postgres.owner-private.v3";
+  "s236p.postgres.owner-private.v4";
 export const RUNTIME_EVIDENCE_ASSERTION_IDS = Object.freeze([
   "migration_prerequisites_and_target_applied",
   "learner_rls_two_user_isolation",
@@ -27,16 +27,19 @@ export const RUNTIME_EVIDENCE_ASSERTION_IDS = Object.freeze([
   "cleanup_complete",
 ]);
 export const S236P_RUNTIME_EVIDENCE_ASSERTION_IDS = Object.freeze([
-  "ordered_migration_triple_applied",
+  "ordered_migration_quadruple_applied",
   "owner_a_metadata_storage_create_read_delete_allowed",
   "bidirectional_owner_rls_isolation",
   "anonymous_access_denied",
   "authenticated_download_info_operation_scoped",
+  "expiry_read_gate_enforced",
+  "expiry_cleanup_delete_operations_preserved",
   "signed_access_disabled",
   "immutable_original_append_only_revision_enforced",
   "metadata_first_orphan_safe_delete_verified",
   "retention_temporary_ttl_cache_delete_sla_enforced",
   "deterministic_expiry_verified",
+  "reviewed_forward_disable_recipe_verified",
   "provider_mode_none_and_external_calls_zero",
   "raw_emission_and_real_content_zero",
   "persistent_event_log_disabled",
@@ -46,6 +49,7 @@ const S236P_MIGRATION_PATHS = Object.freeze([
   "supabase/migrations/20260730023248_s236p_lean_owner_private.sql",
   "supabase/migrations/20260730053324_s236p_owner_private_lifecycle_hardening.sql",
   "supabase/migrations/20260730065040_s236p_owner_private_authenticated_download_info.sql",
+  "supabase/migrations/20260730113505_s236p_owner_private_expiry_read_gate.sql",
 ]);
 
 const TOP_LEVEL_KEYS = [
@@ -230,9 +234,17 @@ function expectedRuntimeContract(riskResult, headSha) {
         "storage.object.get_authenticated",
         "s236p owner private select",
       ],
+      [
+        "s236p_owner_private_expiry_read_gate",
+        'alter policy "s236p owner private select"',
+        "metadata.content_expires_at > statement_timestamp()",
+        "metadata.temporary_expires_at > statement_timestamp()",
+        "storage.object.delete_many",
+        "Reviewed forward-disable procedure",
+      ],
     ];
     markerError =
-      "S236P ordered migration triple does not match the supported adapter contract.";
+      "S236P ordered migration quadruple does not match the supported adapter contract.";
   } else {
     throw new Error(
       "no closed runtime-evidence adapter supports this runtime-sensitive change set.",

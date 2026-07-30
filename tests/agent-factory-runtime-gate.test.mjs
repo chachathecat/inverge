@@ -65,6 +65,15 @@ const S236P_FIXTURE_SQLS = [
     "select 's236p owner private select';",
     "",
   ].join("\n"),
+  [
+    "select 's236p_owner_private_expiry_read_gate';",
+    "select $$alter policy \"s236p owner private select\"$$;",
+    "select 'metadata.content_expires_at > statement_timestamp()';",
+    "select 'metadata.temporary_expires_at > statement_timestamp()';",
+    "select 'storage.object.delete_many';",
+    "select 'Reviewed forward-disable procedure';",
+    "",
+  ].join("\n"),
 ];
 fs.writeFileSync(path.join(FIXTURE_REPO, MIGRATION_PATH), S233A_FIXTURE_SQL, "utf8");
 S236P_MIGRATION_PATHS.forEach((migrationPath, index) => {
@@ -254,7 +263,7 @@ test("exact S236P migration selects its closed runtime adapter and evidence cont
   assert.equal(JSON.parse(result.stdout).status, "verified");
 });
 
-test("S236P runtime gate rejects missing, reordered, and arbitrary migrations", async (t) => {
+test("S236P runtime gate rejects missing, reordered, extra, and arbitrary migrations", async (t) => {
   const risk = requiredRisk();
   risk.runtimeReasons = S236P_MIGRATION_PATHS.map((migrationPath) => ({
     path: migrationPath,
@@ -269,17 +278,28 @@ test("S236P runtime gate rejects missing, reordered, and arbitrary migrations", 
   );
 
   const cases = [
-    ["missing", exactMigrations.slice(0, 2)],
+    ["missing", exactMigrations.slice(0, -1)],
     ["reordered", [...exactMigrations].reverse()],
     [
-      "arbitrary",
+      "extra",
       [
-        ...exactMigrations.slice(0, 2),
+        ...exactMigrations,
         {
           path: UNSUPPORTED_MIGRATION_PATH,
           sha256: UNSUPPORTED_MIGRATION_SHA256,
         },
       ],
+    ],
+    [
+      "arbitrary",
+      exactMigrations.map((migration, index) =>
+        index === exactMigrations.length - 1
+          ? {
+              path: UNSUPPORTED_MIGRATION_PATH,
+              sha256: UNSUPPORTED_MIGRATION_SHA256,
+            }
+          : migration,
+      ),
     ],
   ];
   for (const [name, migrations] of cases) {
@@ -415,8 +435,60 @@ test("S236P replays each migration before applying its successor", () => {
   );
   assert.throws(
     () => s236pMigrationExecutionSteps(migrations.slice(0, 2)),
-    /exact migration triple/,
+    /exact migration quadruple/,
   );
+});
+
+test("S236P provider and raw checkpoints bind the named Owner A fixture set", () => {
+  const producer = fs.readFileSync(
+    path.resolve(
+      WORKSPACE_ROOT,
+      "scripts/automation/produce-runtime-evidence.mjs",
+    ),
+    "utf8",
+  );
+  assert.match(
+    producer,
+    /S236P_OWNER_A_EXPECTED_VISIBLE_OBJECT_IDS = Object\.freeze\(\[/,
+  );
+  assert.match(producer, /Owner A exact visible fixture-set assertion/);
+  assert.match(
+    producer,
+    /String\(S236P_OWNER_A_EXPECTED_VISIBLE_OBJECT_IDS\.length\)/g,
+  );
+  assert.doesNotMatch(
+    producer,
+    /"4",\s*"provider-none and call-zero assertion"/,
+  );
+  assert.doesNotMatch(
+    producer,
+    /"4",\s*"raw-zero and synthetic-only assertion"/,
+  );
+});
+
+test("S236P expiry matrix covers exact boundaries, missing metadata, cleanup, and disable shapes", () => {
+  const producer = fs.readFileSync(
+    path.resolve(
+      WORKSPACE_ROOT,
+      "scripts/automation/produce-runtime-evidence.mjs",
+    ),
+    "utf8",
+  );
+  for (const marker of [
+    "expiry plus-one-millisecond assertion",
+    "expiry equality assertion",
+    "expiry minus-one-millisecond assertion",
+    "metadata-missing expiry fixture transition",
+    'const deleteOperations = [\n    "storage.object.delete",\n    "storage.object.delete_many",',
+    '["metadata missing", metadataMissingPath]',
+    "`${operation} Owner A ${caseName} cleanup assertion`",
+    "targeted authenticated-info forward-disable assertion",
+    "targeted forward-disable cleanup preservation assertion",
+    "delete-only forward-disable read assertion",
+    "delete-only forward-disable cleanup preservation assertion",
+  ]) {
+    assert.match(producer, new RegExp(marker.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
+  }
 });
 
 test("closed S233A and S236P adapters bind exact migrations and reject unsupported sets", () => {

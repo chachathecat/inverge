@@ -333,7 +333,9 @@ items:
     provisionedResources: [storage.bucket.s236p-owner-private-v1, public.s236p_owner_private_objects]
     persistentEventLogMode: none
     signedAccessEnabled: false
-    migrationContract: ordered_exact_triple
+    migrationContract: ordered_exact_quadruple
+    expiryReadGateCorrectionState: pre_live_checkpoint_pending
+    forwardDisableRunbook: docs/qa/s236p-lean-owner-private-acceptance.md
     realContentAuthorized: false
     productionAuthorized: false
     downstreamExecutionStarted: false

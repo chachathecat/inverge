@@ -323,20 +323,88 @@ async function expectBulkSignedUrlDenied(client, path, ttlSeconds, role) {
 async function directAuthenticatedGet({
   accessToken,
   guardedFetch,
+  method = "GET",
+  path,
+  projectUrl,
+  publishableKey,
+}) {
+  const headers = {
+    apikey: publishableKey,
+  };
+  if (accessToken) {
+    headers.Authorization = `Bearer ${accessToken}`;
+  }
+  return guardedFetch(
+    `${projectUrl}/storage/v1/object/authenticated/${S236P_BUCKET_ID}/${encodedStoragePath(path)}`,
+    {
+      method,
+      headers,
+    },
+  );
+}
+
+async function directAuthenticatedDelete({
+  accessToken,
+  guardedFetch,
   path,
   projectUrl,
   publishableKey,
 }) {
   return guardedFetch(
-    `${projectUrl}/storage/v1/object/authenticated/${S236P_BUCKET_ID}/${encodedStoragePath(path)}`,
+    `${projectUrl}/storage/v1/object/${S236P_BUCKET_ID}/${encodedStoragePath(path)}`,
     {
-      method: "GET",
+      method: "DELETE",
       headers: {
         apikey: publishableKey,
         Authorization: `Bearer ${accessToken}`,
       },
     },
   );
+}
+
+async function expectDirectGetDenied(options, code) {
+  const response = await directAuthenticatedGet(options);
+  if (response.ok) fail(code);
+}
+
+async function waitUntilAfterServerTimestamp(timestamp, code) {
+  const expiresAtMs = Date.parse(timestamp);
+  if (!Number.isFinite(expiresAtMs)) fail(`${code}_invalid_timestamp`);
+  const startedAtMs = Date.now();
+  while (Date.now() <= expiresAtMs) {
+    if (Date.now() - startedAtMs > 5_000) {
+      fail(`${code}_wait_timeout`);
+    }
+    const remainingMs = expiresAtMs - Date.now();
+    await new Promise((resolve) =>
+      setTimeout(resolve, Math.min(Math.max(remainingMs + 25, 25), 250)),
+    );
+  }
+}
+
+async function expectRawStorageRequestDenied(
+  {
+    accessToken,
+    body,
+    endpoint,
+    guardedFetch,
+    headers = {},
+    method,
+    projectUrl,
+    publishableKey,
+  },
+  code,
+) {
+  const response = await guardedFetch(`${projectUrl}/storage/v1/${endpoint}`, {
+    method,
+    headers: {
+      apikey: publishableKey,
+      Authorization: `Bearer ${accessToken}`,
+      ...headers,
+    },
+    body,
+  });
+  if (response.ok) fail(code);
 }
 
 async function assertDownloadBytes(client, path, expected, code) {
@@ -556,6 +624,26 @@ export async function runS236PLiveAcceptance() {
       vaultA,
       "anonymous_list_allowed",
     );
+    await expectDirectGetDenied(
+      {
+        accessToken: principalB.accessToken,
+        guardedFetch,
+        path: pathA,
+        projectUrl,
+        publishableKey,
+      },
+      "account_b_direct_authenticated_get_owner_a_allowed",
+    );
+    await expectDirectGetDenied(
+      {
+        accessToken: null,
+        guardedFetch,
+        path: pathA,
+        projectUrl,
+        publishableKey,
+      },
+      "anonymous_direct_get_allowed",
+    );
     record("account_b_and_anonymous_info_download_list_denied");
 
     for (const ttlSeconds of SINGLE_SIGN_TTLS) {
@@ -594,6 +682,50 @@ export async function runS236PLiveAcceptance() {
       "signed_upload_url_allowed",
     );
     record("signed_access_disabled");
+
+    const headA = await directAuthenticatedGet({
+      accessToken: principalA.accessToken,
+      guardedFetch,
+      method: "HEAD",
+      path: pathA,
+      projectUrl,
+      publishableKey,
+    });
+    if (headA.ok) fail("authenticated_head_allowed");
+    await expectRawStorageRequestDenied(
+      {
+        accessToken: principalA.accessToken,
+        endpoint: `s3/${S236P_BUCKET_ID}/${encodedStoragePath(pathA)}`,
+        guardedFetch,
+        method: "GET",
+        projectUrl,
+        publishableKey,
+      },
+      "s3_access_allowed",
+    );
+    const tusPath = `${vaultA}/temporary/${crypto.randomUUID()}`;
+    cleanupA.paths.add(tusPath);
+    await expectRawStorageRequestDenied(
+      {
+        accessToken: principalA.accessToken,
+        endpoint: "upload/resumable",
+        guardedFetch,
+        headers: {
+          "Tus-Resumable": "1.0.0",
+          "Upload-Length": "0",
+          "Upload-Metadata": [
+            `bucketName ${Buffer.from(S236P_BUCKET_ID).toString("base64")}`,
+            `objectName ${Buffer.from(tusPath).toString("base64")}`,
+          ].join(","),
+        },
+        method: "POST",
+        projectUrl,
+        publishableKey,
+      },
+      "tus_access_allowed",
+    );
+    cleanupA.paths.delete(tusPath);
+    record("head_s3_tus_access_denied");
 
     const movePath = `${vaultA}/${crypto.randomUUID()}`;
     const copyPath = `${vaultA}/${crypto.randomUUID()}`;
@@ -704,60 +836,294 @@ export async function runS236PLiveAcceptance() {
 
     const tempRef = crypto.randomUUID();
     const tempPath = opaquePath(vaultA, tempRef, "temporary");
+    const tempBulkRef = crypto.randomUUID();
+    const tempBulkPath = opaquePath(vaultA, tempBulkRef, "temporary");
     cleanupA.paths.add(tempPath);
+    cleanupA.paths.add(tempBulkPath);
     cleanupA.objectRefs.add(tempRef);
-    const tempMetadata = await insertObjectMetadata(
-      principalA.client,
-      privateObjectRow({
-        ownerId: principalA.id,
-        objectRef: tempRef,
-        storagePath: tempPath,
-        storageClass: "temporary",
-      }),
+    cleanupA.objectRefs.add(tempBulkRef);
+    const tempMetadataInsert = await principalA.client
+      .from(S236P_OBJECTS_TABLE)
+      .insert([
+        privateObjectRow({
+          ownerId: principalA.id,
+          objectRef: tempRef,
+          storagePath: tempPath,
+          storageClass: "temporary",
+          overrides: { temporary_ttl_seconds: 1 },
+        }),
+        privateObjectRow({
+          ownerId: principalA.id,
+          objectRef: tempBulkRef,
+          storagePath: tempBulkPath,
+          storageClass: "temporary",
+          overrides: { temporary_ttl_seconds: 1 },
+        }),
+      ])
+      .select("object_ref,temporary_ttl_seconds,temporary_expires_at");
+    if (
+      tempMetadataInsert.error ||
+      tempMetadataInsert.data?.length !== 2
+    ) {
+      fail("temporary_metadata_insert_failed");
+    }
+    const tempMetadata = tempMetadataInsert.data.find(
+      (item) => item.object_ref === tempRef,
     );
+    const tempBulkMetadata = tempMetadataInsert.data.find(
+      (item) => item.object_ref === tempBulkRef,
+    );
+    if (
+      tempMetadata?.temporary_ttl_seconds !== 1 ||
+      tempBulkMetadata?.temporary_ttl_seconds !== 1
+    ) {
+      fail("temporary_metadata_ttl_not_one_second");
+    }
     const tempBody = Buffer.from(
       `${canaryMarker}:temporary:${crypto.randomUUID()}`,
       "utf8",
     );
-    const tempUpload = await principalA.client.storage
-      .from(S236P_BUCKET_ID)
-      .upload(tempPath, tempBody, {
-        contentType: "application/octet-stream",
-        cacheControl: "0",
-        upsert: false,
-      });
-    if (tempUpload.error) fail("temporary_object_upload_failed");
-    const deterministicAsOf = new Date(
-      new Date(tempMetadata.temporary_expires_at).getTime() + 1,
+    const tempBulkBody = Buffer.from(
+      `${canaryMarker}:temporary-bulk:${crypto.randomUUID()}`,
+      "utf8",
+    );
+    const [tempUpload, tempBulkUpload] = await Promise.all([
+      principalA.client.storage
+        .from(S236P_BUCKET_ID)
+        .upload(tempPath, tempBody, {
+          contentType: "application/octet-stream",
+          cacheControl: "0",
+          upsert: false,
+        }),
+      principalA.client.storage
+        .from(S236P_BUCKET_ID)
+        .upload(tempBulkPath, tempBulkBody, {
+          contentType: "application/octet-stream",
+          cacheControl: "0",
+          upsert: false,
+        }),
+    ]);
+    if (tempUpload.error || tempBulkUpload.error) {
+      fail("temporary_object_upload_failed");
+    }
+
+    const [tempListBefore, tempInfoBefore, tempDownloadBefore, tempDirectBefore] =
+      await Promise.all([
+        principalA.client.storage
+          .from(S236P_BUCKET_ID)
+          .list(`${vaultA}/temporary`, { limit: 20 }),
+        principalA.client.storage.from(S236P_BUCKET_ID).info(tempPath),
+        principalA.client.storage.from(S236P_BUCKET_ID).download(tempPath),
+        directAuthenticatedGet({
+          accessToken: principalA.accessToken,
+          guardedFetch,
+          path: tempPath,
+          projectUrl,
+          publishableKey,
+        }),
+      ]);
+    if (
+      tempListBefore.error ||
+      !(tempListBefore.data ?? []).some((item) => item.name === tempRef)
+    ) {
+      fail("temporary_pre_expiry_list_failed");
+    }
+    if (tempInfoBefore.error || !tempInfoBefore.data) {
+      fail("temporary_pre_expiry_info_failed");
+    }
+    if (tempDownloadBefore.error || !tempDownloadBefore.data) {
+      fail("temporary_pre_expiry_download_failed");
+    }
+    if (!tempDirectBefore.ok) {
+      fail("temporary_pre_expiry_direct_get_failed");
+    }
+    const [tempDownloadBytes, tempDirectBytes] = await Promise.all([
+      tempDownloadBefore.data.arrayBuffer(),
+      tempDirectBefore.arrayBuffer(),
+    ]);
+    if (
+      !Buffer.from(tempDownloadBytes).equals(tempBody) ||
+      !Buffer.from(tempDirectBytes).equals(tempBody)
+    ) {
+      fail("temporary_pre_expiry_download_mismatch");
+    }
+    record("temporary_ttl_one_pre_expiry_reads_allowed");
+
+    const latestTemporaryExpiry = new Date(
+      Math.max(
+        Date.parse(tempMetadata.temporary_expires_at),
+        Date.parse(tempBulkMetadata.temporary_expires_at),
+      ),
     ).toISOString();
+    await waitUntilAfterServerTimestamp(
+      latestTemporaryExpiry,
+      "temporary_expiry",
+    );
     const expired = await principalA.client.rpc(
       "s236p_expired_object_paths_v1",
-      { p_as_of: deterministicAsOf },
+      { p_as_of: tempMetadata.temporary_expires_at },
     );
     if (
       expired.error ||
       !expired.data?.some((item) => item.object_ref === tempRef)
     ) {
-      fail("deterministic_expiry_not_detected");
+      fail("exact_boundary_expiry_not_detected");
     }
-    const tempDelete = await principalA.client.storage
+    await expectStorageListHidden(
+      principalA.client,
+      `${vaultA}/temporary`,
+      "temporary_post_expiry_list_allowed",
+    );
+    await expectStorageInfoDenied(
+      principalA.client,
+      tempPath,
+      "temporary_post_expiry_info_allowed",
+    );
+    await expectStorageError(
+      principalA.client.storage.from(S236P_BUCKET_ID).download(tempPath),
+      "temporary_post_expiry_download_allowed",
+    );
+    await expectDirectGetDenied(
+      {
+        accessToken: principalA.accessToken,
+        guardedFetch,
+        path: tempPath,
+        projectUrl,
+        publishableKey,
+      },
+      "temporary_post_expiry_direct_get_allowed",
+    );
+    record("temporary_exact_boundary_and_post_expiry_reads_denied");
+
+    const retainedTemporaryMetadata = await principalA.client
+      .from(S236P_OBJECTS_TABLE)
+      .select("object_ref")
+      .in("object_ref", [tempRef, tempBulkRef]);
+    if (
+      retainedTemporaryMetadata.error ||
+      retainedTemporaryMetadata.data?.length !== 2
+    ) {
+      fail("temporary_metadata_not_retained_for_cleanup");
+    }
+    const tempDelete = await directAuthenticatedDelete({
+      accessToken: principalA.accessToken,
+      guardedFetch,
+      path: tempPath,
+      projectUrl,
+      publishableKey,
+    });
+    if (!tempDelete.ok) fail("temporary_expired_single_delete_failed");
+    const tempBulkDelete = await principalA.client.storage
       .from(S236P_BUCKET_ID)
-      .remove([tempPath]);
-    if (tempDelete.error) fail("temporary_object_cleanup_failed");
+      .remove([tempBulkPath]);
+    if (tempBulkDelete.error) {
+      fail("temporary_expired_bulk_delete_failed");
+    }
     const tempMetadataDelete = await principalA.client
       .from(S236P_OBJECTS_TABLE)
       .delete()
-      .eq("object_ref", tempRef)
+      .in("object_ref", [tempRef, tempBulkRef])
       .select("object_ref");
     if (
       tempMetadataDelete.error ||
-      tempMetadataDelete.data?.length !== 1
+      tempMetadataDelete.data?.length !== 2
     ) {
       fail("temporary_metadata_cleanup_failed");
     }
     cleanupA.paths.delete(tempPath);
+    cleanupA.paths.delete(tempBulkPath);
     cleanupA.objectRefs.delete(tempRef);
-    record("deterministic_temporary_expiry_and_cleanup_verified");
+    cleanupA.objectRefs.delete(tempBulkRef);
+    record("expired_single_and_bulk_cleanup_with_metadata_retained");
+
+    const deleteRequestedRef = crypto.randomUUID();
+    const deleteRequestedPath =
+      `${vaultA}/delete-requested/${deleteRequestedRef}`;
+    cleanupA.paths.add(deleteRequestedPath);
+    cleanupA.objectRefs.add(deleteRequestedRef);
+    await insertObjectMetadata(
+      principalA.client,
+      privateObjectRow({
+        ownerId: principalA.id,
+        objectRef: deleteRequestedRef,
+        storagePath: deleteRequestedPath,
+      }),
+    );
+    const deleteRequestedUpload = await principalA.client.storage
+      .from(S236P_BUCKET_ID)
+      .upload(
+        deleteRequestedPath,
+        Buffer.from(
+          `${canaryMarker}:delete-requested:${crypto.randomUUID()}`,
+          "utf8",
+        ),
+        {
+          contentType: "application/octet-stream",
+          cacheControl: "0",
+          upsert: false,
+        },
+      );
+    if (deleteRequestedUpload.error) {
+      fail("delete_requested_fixture_upload_failed");
+    }
+    const deleteRequestedTransition = await principalA.client
+      .from(S236P_OBJECTS_TABLE)
+      .update({ object_state: "delete_requested" })
+      .eq("object_ref", deleteRequestedRef)
+      .select("object_ref,object_state");
+    if (
+      deleteRequestedTransition.error ||
+      deleteRequestedTransition.data?.length !== 1 ||
+      deleteRequestedTransition.data[0]?.object_state !== "delete_requested"
+    ) {
+      fail("delete_requested_transition_failed");
+    }
+    await expectStorageListHidden(
+      principalA.client,
+      `${vaultA}/delete-requested`,
+      "delete_requested_list_allowed",
+    );
+    await expectStorageInfoDenied(
+      principalA.client,
+      deleteRequestedPath,
+      "delete_requested_info_allowed",
+    );
+    await expectStorageError(
+      principalA.client.storage
+        .from(S236P_BUCKET_ID)
+        .download(deleteRequestedPath),
+      "delete_requested_download_allowed",
+    );
+    await expectDirectGetDenied(
+      {
+        accessToken: principalA.accessToken,
+        guardedFetch,
+        path: deleteRequestedPath,
+        projectUrl,
+        publishableKey,
+      },
+      "delete_requested_direct_get_allowed",
+    );
+    const deleteRequestedStorageCleanup = await principalA.client.storage
+      .from(S236P_BUCKET_ID)
+      .remove([deleteRequestedPath]);
+    if (deleteRequestedStorageCleanup.error) {
+      fail("delete_requested_storage_cleanup_failed");
+    }
+    const deleteRequestedMetadataCleanup = await principalA.client
+      .from(S236P_OBJECTS_TABLE)
+      .delete()
+      .eq("object_ref", deleteRequestedRef)
+      .select("object_ref");
+    if (
+      deleteRequestedMetadataCleanup.error ||
+      deleteRequestedMetadataCleanup.data?.length !== 1
+    ) {
+      fail("delete_requested_metadata_cleanup_failed");
+    }
+    cleanupA.paths.delete(deleteRequestedPath);
+    cleanupA.objectRefs.delete(deleteRequestedRef);
+    record("delete_requested_reads_denied_cleanup_preserved");
 
     const orphanRef = crypto.randomUUID();
     const orphanPath = opaquePath(vaultA, orphanRef);
@@ -883,6 +1249,11 @@ export async function runS236PLiveAcceptance() {
       principalB.client.storage.from(S236P_BUCKET_ID).remove([pathA]),
       pathA,
       "account_b_delete_owner_a_allowed",
+    );
+    await expectStorageDeleteDenied(
+      anonymous.storage.from(S236P_BUCKET_ID).remove([pathA]),
+      pathA,
+      "anonymous_delete_owner_a_allowed",
     );
     await expectNoRowsOrDenied(
       anonymous

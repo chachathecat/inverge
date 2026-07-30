@@ -10,7 +10,7 @@ import { runtimeRequiredPathRecords } from "./runtime-risk-contract.mjs";
 
 export const SCHEMA_VERSION = "inverge.runtime_evidence.v2";
 export const PRODUCER_VERSION = "s233r.postgres.s233a.v1";
-export const S236P_PRODUCER_VERSION = "s236p.postgres.owner-private.v3";
+export const S236P_PRODUCER_VERSION = "s236p.postgres.owner-private.v4";
 export const POSTGRES_IMAGE = "postgres:15.8-bookworm";
 export const ASSERTION_IDS = Object.freeze([
   "migration_prerequisites_and_target_applied",
@@ -27,16 +27,19 @@ export const ASSERTION_IDS = Object.freeze([
   "cleanup_complete",
 ]);
 export const S236P_ASSERTION_IDS = Object.freeze([
-  "ordered_migration_triple_applied",
+  "ordered_migration_quadruple_applied",
   "owner_a_metadata_storage_create_read_delete_allowed",
   "bidirectional_owner_rls_isolation",
   "anonymous_access_denied",
   "authenticated_download_info_operation_scoped",
+  "expiry_read_gate_enforced",
+  "expiry_cleanup_delete_operations_preserved",
   "signed_access_disabled",
   "immutable_original_append_only_revision_enforced",
   "metadata_first_orphan_safe_delete_verified",
   "retention_temporary_ttl_cache_delete_sla_enforced",
   "deterministic_expiry_verified",
+  "reviewed_forward_disable_recipe_verified",
   "provider_mode_none_and_external_calls_zero",
   "raw_emission_and_real_content_zero",
   "persistent_event_log_disabled",
@@ -46,6 +49,7 @@ export const S236P_MIGRATION_PATHS = Object.freeze([
   "supabase/migrations/20260730023248_s236p_lean_owner_private.sql",
   "supabase/migrations/20260730053324_s236p_owner_private_lifecycle_hardening.sql",
   "supabase/migrations/20260730065040_s236p_owner_private_authenticated_download_info.sql",
+  "supabase/migrations/20260730113505_s236p_owner_private_expiry_read_gate.sql",
 ]);
 export const S236P_MIGRATION_PATH = S236P_MIGRATION_PATHS[0];
 export const PREREQUISITE_MIGRATIONS = Object.freeze([
@@ -66,7 +70,7 @@ export function s236pMigrationExecutionSteps(migrations) {
     !Array.isArray(migrations) ||
     migrations.length !== S236P_MIGRATION_PATHS.length
   ) {
-    throw new Error("S236P execution requires the exact migration triple.");
+    throw new Error("S236P execution requires the exact migration quadruple.");
   }
   return migrations.flatMap((migration, index) => [
     {
@@ -98,6 +102,21 @@ const S236P_OBJECT_B = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
 const S236P_TEMP_OBJECT = "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb";
 const S236P_REVISION_A = "cccccccc-cccc-4ccc-8ccc-cccccccccccc";
 const S236P_ORPHAN_A = "dddddddd-dddd-4ddd-8ddd-dddddddddddd";
+const S236P_EXPIRY_CONTENT_OBJECT =
+  "e1111111-1111-4111-8111-111111111111";
+const S236P_EXPIRY_TEMPORARY_OBJECT =
+  "e2222222-2222-4222-8222-222222222222";
+const S236P_DELETE_REQUESTED_OBJECT =
+  "e3333333-3333-4333-8333-333333333333";
+const S236P_EXPIRY_BOUNDARY_OBJECT =
+  "e4444444-4444-4444-8444-444444444444";
+const S236P_METADATA_MISSING_OBJECT =
+  "e5555555-5555-4555-8555-555555555555";
+const S236P_OWNER_A_EXPECTED_VISIBLE_OBJECT_IDS = Object.freeze([
+  S236P_OBJECT_A,
+  S236P_REVISION_A,
+  S236P_TEMP_OBJECT,
+]);
 
 function sha256(value) {
   return crypto.createHash("sha256").update(value).digest("hex");
@@ -415,9 +434,17 @@ export function resolveTargetMigration(riskResult, headSha) {
         "storage.object.get_authenticated",
         "s236p owner private select",
       ],
+      [
+        "s236p_owner_private_expiry_read_gate",
+        'alter policy "s236p owner private select"',
+        "metadata.content_expires_at > statement_timestamp()",
+        "metadata.temporary_expires_at > statement_timestamp()",
+        "storage.object.delete_many",
+        "Reviewed forward-disable procedure",
+      ],
     ];
     markerError =
-      "S236P ordered migration triple does not match the supported adapter contract.";
+      "S236P ordered migration quadruple does not match the supported adapter contract.";
   } else {
     throw new Error("no closed runtime-evidence adapter supports this runtime-sensitive change set.");
   }
@@ -978,6 +1005,505 @@ function s236pStorageInsertStatement({
   `;
 }
 
+function s236pBoundaryReadStatement(operation, offsetExpression) {
+  const boundaryPath = s236pStoragePath(
+    S236P_VAULT_A,
+    S236P_EXPIRY_BOUNDARY_OBJECT,
+  );
+  return `
+    begin;
+    grant update (content_expires_at)
+      on public.s236p_owner_private_objects to authenticated;
+    set local session_replication_role = replica;
+    set local role authenticated;
+    set local "request.jwt.claim.sub" to ${sqlLiteral(S236P_USER_A)};
+    ${storageOperationHeader(operation)}
+    with aligned as (
+      update public.s236p_owner_private_objects
+         set content_expires_at =
+           statement_timestamp() + (${offsetExpression})
+       where object_ref =
+         ${sqlLiteral(S236P_EXPIRY_BOUNDARY_OBJECT)}::uuid
+       returning object_ref
+    )
+    select count(*)::text
+      from storage.objects
+     where name = ${sqlLiteral(boundaryPath)}
+       and exists (select 1 from aligned);
+    rollback;
+  `;
+}
+
+function s236pExpectedOwnerASetValues() {
+  return S236P_OWNER_A_EXPECTED_VISIBLE_OBJECT_IDS.map(
+    (objectId) => `(${sqlLiteral(objectId)}::uuid)`,
+  ).join(",\n");
+}
+
+function s236pFutureSelectPolicySql(readOperations) {
+  const deleteBranch = `storage.allow_any_operation(array[
+      'storage.object.delete',
+      'storage.object.delete_many'
+    ])`;
+  if (readOperations.length === 0) {
+    return `
+      alter policy "s236p owner private select"
+      on storage.objects
+      to authenticated
+      using (
+        bucket_id = 's236p-owner-private-v1'
+        and owner_id = (select auth.uid()::text)
+        and ${deleteBranch}
+      );
+    `;
+  }
+  return `
+    alter policy "s236p owner private select"
+    on storage.objects
+    to authenticated
+    using (
+      bucket_id = 's236p-owner-private-v1'
+      and owner_id = (select auth.uid()::text)
+      and (
+        (
+          storage.allow_any_operation(array[
+            ${readOperations.map(sqlLiteral).join(",\n            ")}
+          ])
+          and exists (
+            select 1
+            from public.s236p_owner_private_objects as metadata
+            where metadata.owner_id = (select auth.uid())
+              and metadata.bucket_id = storage.objects.bucket_id
+              and metadata.storage_path = storage.objects.name
+              and metadata.object_state = 'active'
+              and metadata.content_expires_at > statement_timestamp()
+              and (
+                metadata.temporary_expires_at is null
+                or metadata.temporary_expires_at > statement_timestamp()
+              )
+          )
+        )
+        or ${deleteBranch}
+      )
+    );
+  `;
+}
+
+function runS236PExpiryReadGateAssertions(containerName) {
+  const readOperations = [
+    "storage.object.list",
+    "storage.object.list_v2",
+    "storage.object.get_authenticated",
+    "object.get_authenticated_info",
+  ];
+  const deleteOperations = [
+    "storage.object.delete",
+    "storage.object.delete_many",
+  ];
+  const activePath = s236pStoragePath(
+    S236P_VAULT_A,
+    S236P_OBJECT_A,
+  );
+  const contentExpiredPath = s236pStoragePath(
+    S236P_VAULT_A,
+    S236P_EXPIRY_CONTENT_OBJECT,
+  );
+  const temporaryExpiredPath = s236pStoragePath(
+    S236P_VAULT_A,
+    S236P_EXPIRY_TEMPORARY_OBJECT,
+    "temporary",
+  );
+  const deleteRequestedPath = s236pStoragePath(
+    S236P_VAULT_A,
+    S236P_DELETE_REQUESTED_OBJECT,
+  );
+  const metadataMissingPath = s236pStoragePath(
+    S236P_VAULT_A,
+    S236P_METADATA_MISSING_OBJECT,
+  );
+
+  applySql(
+    containerName,
+    authenticatedCommitContext(
+      S236P_USER_A,
+      [
+        s236pObjectInsertStatement({
+          objectId: S236P_EXPIRY_CONTENT_OBJECT,
+          ownerId: S236P_USER_A,
+          vaultId: S236P_VAULT_A,
+        }),
+        s236pObjectInsertStatement({
+          objectId: S236P_EXPIRY_TEMPORARY_OBJECT,
+          ownerId: S236P_USER_A,
+          vaultId: S236P_VAULT_A,
+          storageClass: "temporary",
+        }),
+        s236pObjectInsertStatement({
+          objectId: S236P_DELETE_REQUESTED_OBJECT,
+          ownerId: S236P_USER_A,
+          vaultId: S236P_VAULT_A,
+        }),
+        s236pObjectInsertStatement({
+          objectId: S236P_EXPIRY_BOUNDARY_OBJECT,
+          ownerId: S236P_USER_A,
+          vaultId: S236P_VAULT_A,
+        }),
+        s236pObjectInsertStatement({
+          objectId: S236P_METADATA_MISSING_OBJECT,
+          ownerId: S236P_USER_A,
+          vaultId: S236P_VAULT_A,
+        }),
+        s236pStorageInsertStatement({
+          objectId: S236P_EXPIRY_CONTENT_OBJECT,
+          ownerId: S236P_USER_A,
+          vaultId: S236P_VAULT_A,
+        }),
+        s236pStorageInsertStatement({
+          objectId: S236P_EXPIRY_TEMPORARY_OBJECT,
+          ownerId: S236P_USER_A,
+          vaultId: S236P_VAULT_A,
+          storageClass: "temporary",
+        }),
+        s236pStorageInsertStatement({
+          objectId: S236P_DELETE_REQUESTED_OBJECT,
+          ownerId: S236P_USER_A,
+          vaultId: S236P_VAULT_A,
+        }),
+        s236pStorageInsertStatement({
+          objectId: S236P_EXPIRY_BOUNDARY_OBJECT,
+          ownerId: S236P_USER_A,
+          vaultId: S236P_VAULT_A,
+        }),
+        s236pStorageInsertStatement({
+          objectId: S236P_METADATA_MISSING_OBJECT,
+          ownerId: S236P_USER_A,
+          vaultId: S236P_VAULT_A,
+        }),
+      ].join("\n"),
+      "storage.object.upload",
+    ),
+    "expiry read-gate fixtures",
+  );
+  applySql(
+    containerName,
+    authenticatedCommitContext(
+      S236P_USER_A,
+      `delete from public.s236p_owner_private_objects
+        where object_ref =
+          ${sqlLiteral(S236P_METADATA_MISSING_OBJECT)}::uuid;`,
+    ),
+    "metadata-missing expiry fixture transition",
+  );
+  applySql(
+    containerName,
+    authenticatedCommitContext(
+      S236P_USER_A,
+      `update public.s236p_owner_private_objects
+          set object_state = 'delete_requested'
+        where object_ref =
+          ${sqlLiteral(S236P_DELETE_REQUESTED_OBJECT)}::uuid;`,
+    ),
+    "delete-requested expiry fixture transition",
+  );
+  applySql(
+    containerName,
+    `
+      begin;
+      set local session_replication_role = replica;
+      update public.s236p_owner_private_objects
+         set content_expires_at = statement_timestamp() - interval '1 second'
+       where object_ref =
+         ${sqlLiteral(S236P_EXPIRY_CONTENT_OBJECT)}::uuid;
+      update public.s236p_owner_private_objects
+         set temporary_expires_at =
+           statement_timestamp() - interval '1 second'
+       where object_ref =
+         ${sqlLiteral(S236P_EXPIRY_TEMPORARY_OBJECT)}::uuid;
+      commit;
+    `,
+    "isolated privileged expiry fixture setup",
+  );
+
+  for (const operation of readOperations) {
+    assertScalar(
+      containerName,
+      authenticatedContext(
+        S236P_USER_A,
+        `select count(*)::text from storage.objects
+          where name = ${sqlLiteral(activePath)};`,
+        operation,
+      ),
+      "1",
+      `${operation} active unexpired Owner A assertion`,
+    );
+    assertScalar(
+      containerName,
+      authenticatedContext(
+        S236P_USER_B,
+        `select count(*)::text from storage.objects
+          where name = ${sqlLiteral(activePath)};`,
+        operation,
+      ),
+      "0",
+      `${operation} cross-Owner assertion`,
+    );
+    assertScalar(
+      containerName,
+      anonymousContext(
+        `select count(*)::text from storage.objects
+          where name = ${sqlLiteral(activePath)};`,
+        operation,
+      ),
+      "0",
+      `${operation} anonymous assertion`,
+    );
+    for (const [caseName, storagePath] of [
+      ["delete requested", deleteRequestedPath],
+      ["content expired", contentExpiredPath],
+      ["temporary expired", temporaryExpiredPath],
+      ["metadata missing", metadataMissingPath],
+    ]) {
+      assertScalar(
+        containerName,
+        authenticatedContext(
+          S236P_USER_A,
+          `select count(*)::text from storage.objects
+            where name = ${sqlLiteral(storagePath)};`,
+          operation,
+        ),
+        "0",
+        `${operation} ${caseName} assertion`,
+      );
+    }
+    assertScalar(
+      containerName,
+      s236pBoundaryReadStatement(operation, "interval '1 millisecond'"),
+      "1",
+      `${operation} expiry plus-one-millisecond assertion`,
+    );
+    assertScalar(
+      containerName,
+      s236pBoundaryReadStatement(operation, "interval '0 milliseconds'"),
+      "0",
+      `${operation} expiry equality assertion`,
+    );
+    assertScalar(
+      containerName,
+      s236pBoundaryReadStatement(operation, "interval '-1 millisecond'"),
+      "0",
+      `${operation} expiry minus-one-millisecond assertion`,
+    );
+  }
+
+  for (const operation of deleteOperations) {
+    for (const [caseName, storagePath] of [
+      ["active", activePath],
+      ["content expired", contentExpiredPath],
+      ["delete requested", deleteRequestedPath],
+      ["metadata missing", metadataMissingPath],
+    ]) {
+      assertScalar(
+        containerName,
+        authenticatedContext(
+          S236P_USER_A,
+          `with removed as (
+            delete from storage.objects
+             where name = ${sqlLiteral(storagePath)}
+             returning 1
+          ) select count(*)::text from removed;`,
+          operation,
+        ),
+        "1",
+        `${operation} Owner A ${caseName} cleanup assertion`,
+      );
+    }
+    assertScalar(
+      containerName,
+      authenticatedContext(
+        S236P_USER_B,
+        `with removed as (
+          delete from storage.objects
+           where name = ${sqlLiteral(activePath)}
+           returning 1
+        ) select count(*)::text from removed;`,
+        operation,
+      ),
+      "0",
+      `${operation} cross-Owner cleanup assertion`,
+    );
+    assertScalar(
+      containerName,
+      anonymousContext(
+        `with removed as (
+          delete from storage.objects
+           where name = ${sqlLiteral(activePath)}
+           returning 1
+        ) select count(*)::text from removed;`,
+        operation,
+      ),
+      "0",
+      `${operation} anonymous cleanup assertion`,
+    );
+  }
+
+  for (const operation of [
+    "storage.object.sign",
+    "storage.object.sign_many",
+    "storage.object.sign_upload_url",
+    "storage.object.upload_signed",
+    "storage.object.upload_update",
+    "storage.object.copy",
+    "storage.object.move",
+    "object.head_authenticated_info",
+    "storage.s3.get_object",
+    "storage.object.upload_resumable",
+    "unknown.operation",
+    null,
+  ]) {
+    assertScalar(
+      containerName,
+      authenticatedContext(
+        S236P_USER_A,
+        `select count(*)::text from storage.objects
+          where name = ${sqlLiteral(activePath)};`,
+        operation,
+      ),
+      "0",
+      `${operation ?? "missing operation"} denial assertion`,
+    );
+  }
+
+  const targetedDisableReadOperations = [
+    "storage.object.list",
+    "storage.object.list_v2",
+    "storage.object.get_authenticated",
+  ];
+  assertScalar(
+    containerName,
+    `
+      begin;
+      ${s236pFutureSelectPolicySql(targetedDisableReadOperations)}
+      set local role authenticated;
+      set local "request.jwt.claim.sub" to ${sqlLiteral(S236P_USER_A)};
+      ${storageOperationHeader("object.get_authenticated_info")}
+      select count(*)::text from storage.objects
+       where name = ${sqlLiteral(activePath)};
+      rollback;
+    `,
+    "0",
+    "targeted authenticated-info forward-disable assertion",
+  );
+  assertScalar(
+    containerName,
+    `
+      begin;
+      ${s236pFutureSelectPolicySql(targetedDisableReadOperations)}
+      set local role authenticated;
+      set local "request.jwt.claim.sub" to ${sqlLiteral(S236P_USER_A)};
+      ${storageOperationHeader("storage.object.delete_many")}
+      with removed as (
+        delete from storage.objects
+         where name = ${sqlLiteral(metadataMissingPath)}
+         returning 1
+      ) select count(*)::text from removed;
+      rollback;
+    `,
+    "1",
+    "targeted forward-disable cleanup preservation assertion",
+  );
+  assertScalar(
+    containerName,
+    `
+      begin;
+      ${s236pFutureSelectPolicySql([])}
+      set local role authenticated;
+      set local "request.jwt.claim.sub" to ${sqlLiteral(S236P_USER_A)};
+      ${storageOperationHeader("storage.object.get_authenticated")}
+      select count(*)::text from storage.objects
+       where name = ${sqlLiteral(activePath)};
+      rollback;
+    `,
+    "0",
+    "delete-only forward-disable read assertion",
+  );
+  assertScalar(
+    containerName,
+    `
+      begin;
+      ${s236pFutureSelectPolicySql([])}
+      set local role authenticated;
+      set local "request.jwt.claim.sub" to ${sqlLiteral(S236P_USER_A)};
+      ${storageOperationHeader("storage.object.delete")}
+      with removed as (
+        delete from storage.objects
+         where name = ${sqlLiteral(metadataMissingPath)}
+         returning 1
+      ) select count(*)::text from removed;
+      rollback;
+    `,
+    "1",
+    "delete-only forward-disable cleanup preservation assertion",
+  );
+
+  applySql(
+    containerName,
+    `
+      delete from storage.objects
+       where name in (
+         ${[
+           contentExpiredPath,
+           temporaryExpiredPath,
+           deleteRequestedPath,
+           s236pStoragePath(
+             S236P_VAULT_A,
+             S236P_EXPIRY_BOUNDARY_OBJECT,
+           ),
+           metadataMissingPath,
+         ].map(sqlLiteral).join(",\n         ")}
+       );
+      delete from public.s236p_owner_private_objects
+       where object_ref in (
+         ${[
+           S236P_EXPIRY_CONTENT_OBJECT,
+           S236P_EXPIRY_TEMPORARY_OBJECT,
+           S236P_DELETE_REQUESTED_OBJECT,
+           S236P_EXPIRY_BOUNDARY_OBJECT,
+         ].map((objectId) => `${sqlLiteral(objectId)}::uuid`).join(",\n         ")}
+       );
+    `,
+    "isolated expiry fixture cleanup",
+  );
+  assertScalar(
+    containerName,
+    `select concat_ws(':',
+      (select count(*) from storage.objects
+        where name in (
+          ${[
+            contentExpiredPath,
+            temporaryExpiredPath,
+            deleteRequestedPath,
+            s236pStoragePath(
+              S236P_VAULT_A,
+              S236P_EXPIRY_BOUNDARY_OBJECT,
+            ),
+            metadataMissingPath,
+          ].map(sqlLiteral).join(",\n          ")}
+        )),
+      (select count(*) from public.s236p_owner_private_objects
+        where object_ref in (
+          ${[
+            S236P_EXPIRY_CONTENT_OBJECT,
+            S236P_EXPIRY_TEMPORARY_OBJECT,
+            S236P_DELETE_REQUESTED_OBJECT,
+            S236P_EXPIRY_BOUNDARY_OBJECT,
+          ].map((objectId) => `${sqlLiteral(objectId)}::uuid`).join(",\n          ")}
+        ))
+    );`,
+    "0:0",
+    "isolated expiry fixture cleanup assertion",
+  );
+}
+
 function runS236PDatabaseAssertions(containerName, targetMigration) {
   const passedAssertions = new Set();
   applySql(
@@ -1009,12 +1535,23 @@ function runS236PDatabaseAssertions(containerName, targetMigration) {
         where schemaname = 'storage'
           and tablename = 'objects'
           and cmd = 'UPDATE'
-          and policyname like 's236p owner private%')
+          and policyname like 's236p owner private%'),
+      (select count(*) from pg_policies
+        where schemaname = 'storage'
+          and tablename = 'objects'
+          and cmd = 'SELECT'
+          and policyname = 's236p owner private select'),
+      (select count(*) from pg_policies
+        where schemaname = 'storage'
+          and tablename = 'objects'
+          and cmd = 'SELECT'
+          and policyname like 's236p owner private%'
+          and policyname <> 's236p owner private select')
     );`,
-    "1:1:true:true:1:7:0",
+    "1:1:true:true:1:7:0:1:0",
     "S236P ordered migration application assertion",
   );
-  passedAssertions.add("ordered_migration_triple_applied");
+  passedAssertions.add("ordered_migration_quadruple_applied");
 
   applySql(
     containerName,
@@ -1409,6 +1946,39 @@ function runS236PDatabaseAssertions(containerName, targetMigration) {
   );
   passedAssertions.add("deterministic_expiry_verified");
 
+  runS236PExpiryReadGateAssertions(containerName);
+  passedAssertions.add("expiry_read_gate_enforced");
+  passedAssertions.add("expiry_cleanup_delete_operations_preserved");
+  passedAssertions.add("reviewed_forward_disable_recipe_verified");
+
+  assertScalar(
+    containerName,
+    authenticatedContext(
+      S236P_USER_A,
+      `with expected(object_ref) as (
+         values ${s236pExpectedOwnerASetValues()}
+       ),
+       visible as (
+         select object_ref
+           from public.s236p_owner_private_objects
+       )
+       select concat_ws(':',
+         (select count(*) from visible),
+         (select count(*) from expected),
+         (select count(*)
+            from visible
+            left join expected using (object_ref)
+           where expected.object_ref is null),
+         (select count(*)
+            from expected
+            left join visible using (object_ref)
+           where visible.object_ref is null)
+       );`,
+    ),
+    `${S236P_OWNER_A_EXPECTED_VISIBLE_OBJECT_IDS.length}:${S236P_OWNER_A_EXPECTED_VISIBLE_OBJECT_IDS.length}:0:0`,
+    "Owner A exact visible fixture-set assertion",
+  );
+
   const providerBoundaryCases = [
     [
       "provider mode",
@@ -1443,12 +2013,16 @@ function runS236PDatabaseAssertions(containerName, targetMigration) {
     containerName,
     authenticatedContext(
       S236P_USER_A,
-      `select count(*)::text
-         from public.s236p_owner_private_objects
-        where ocr_ai_provider_mode = 'none'
-          and external_ocr_ai_provider_call_count = 0;`,
+      `with expected(object_ref) as (
+         values ${s236pExpectedOwnerASetValues()}
+       )
+       select count(*)::text
+         from public.s236p_owner_private_objects as visible
+         join expected using (object_ref)
+        where visible.ocr_ai_provider_mode = 'none'
+          and visible.external_ocr_ai_provider_call_count = 0;`,
     ),
-    "4",
+    String(S236P_OWNER_A_EXPECTED_VISIBLE_OBJECT_IDS.length),
     "provider-none and call-zero assertion",
   );
   passedAssertions.add("provider_mode_none_and_external_calls_zero");
@@ -1487,12 +2061,16 @@ function runS236PDatabaseAssertions(containerName, targetMigration) {
     containerName,
     authenticatedContext(
       S236P_USER_A,
-      `select count(*)::text
-         from public.s236p_owner_private_objects
-        where raw_external_emission_count = 0
-          and contains_real_content = false;`,
+      `with expected(object_ref) as (
+         values ${s236pExpectedOwnerASetValues()}
+       )
+       select count(*)::text
+         from public.s236p_owner_private_objects as visible
+         join expected using (object_ref)
+        where visible.raw_external_emission_count = 0
+          and visible.contains_real_content = false;`,
     ),
-    "4",
+    String(S236P_OWNER_A_EXPECTED_VISIBLE_OBJECT_IDS.length),
     "raw-zero and synthetic-only assertion",
   );
   passedAssertions.add("raw_emission_and_real_content_zero");

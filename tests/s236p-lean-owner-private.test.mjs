@@ -22,11 +22,13 @@ const migrationPaths = [
   "supabase/migrations/20260730023248_s236p_lean_owner_private.sql",
   "supabase/migrations/20260730053324_s236p_owner_private_lifecycle_hardening.sql",
   "supabase/migrations/20260730065040_s236p_owner_private_authenticated_download_info.sql",
+  "supabase/migrations/20260730113505_s236p_owner_private_expiry_read_gate.sql",
 ];
 const expectedMigrationDigests = [
   "476ef1b0d6a100fb6e4803b812b049b44252ca5f25301d3f781cee8827b1545b",
   "e20440dfa0d880ad591b8c9fdff287cd66fcdbbe4f96f07a549a730fd8920de1",
   "632cc7ee563aa29a573425e396f6f539e35a3c8834955ba66ccd01723bb3cbcb",
+  "416fa80acea48bf4d170661a4f5259632b4d9e3fd740007bd65cbf1ded6103f1",
 ];
 const harnessPath = "scripts/verify-s236p-lean-owner-private.mjs";
 
@@ -52,7 +54,7 @@ test("S236P constants match the narrowed Owner-private configuration", () => {
   assert.equal(S236P_MAX_EXPORT_DELETE_SLA_SECONDS, 604800);
 });
 
-test("ordered migration triple is byte-bound to the live ledger digests", async () => {
+test("ordered migration quadruple preserves the live triple and binds the pre-live fourth digest", async () => {
   const digests = await Promise.all(
     migrationPaths.map(async (migrationPath) =>
       crypto
@@ -112,7 +114,7 @@ test("lifecycle hardening disables signed access and persistent events", async (
 });
 
 test("final SELECT policy has exactly the six authorized operations", async () => {
-  const rawSql = await readFile(migrationPaths[2], "utf8");
+  const rawSql = await readFile(migrationPaths[3], "utf8");
   const sql = normalize(withoutSqlComments(rawSql));
   const operations = [
     ...rawSql.matchAll(/^\s*'([^']+)'\s*,?\s*$/gm),
@@ -130,14 +132,36 @@ test("final SELECT policy has exactly the six authorized operations", async () =
     sql,
     /bucket_id = 's236p-owner-private-v1' and owner_id = \(select auth\.uid\(\)::text\)/,
   );
+  assert.match(
+    sql,
+    /metadata\.object_state = 'active' and metadata\.content_expires_at > statement_timestamp\(\) and \( metadata\.temporary_expires_at is null or metadata\.temporary_expires_at > statement_timestamp\(\) \)/,
+  );
+  assert.match(
+    sql,
+    /\(\s*\(\s*storage\.allow_any_operation\(array\[[^\]]+'object\.get_authenticated_info'[^\]]+\]\)\s*and exists \([^)]+from public\.s236p_owner_private_objects as metadata[\s\S]+?\)\s*\)\s*or storage\.allow_any_operation\(array\[[^\]]+'storage\.object\.delete_many'[^\]]+\]\)\s*\)/,
+  );
   assert.doesNotMatch(
     sql,
     /storage\.object\.sign|storage\.object\.sign_many|object\.head_authenticated_info/,
   );
   assert.doesNotMatch(
     sql,
-    /create (?:table|function)|alter table|grant |create bucket/,
+    /create (?:table|function|policy)|drop policy|alter table|grant |create bucket/,
   );
+  assert.match(
+    sql,
+    /^alter policy "s236p owner private select" on storage\.objects to authenticated using /,
+  );
+});
+
+test("fourth migration records the forward-only targeted and delete-only disable runbook", async () => {
+  const sql = await readFile(migrationPaths[3], "utf8");
+  assert.match(sql, /Never edit, delete, replay, revert/);
+  assert.match(sql, /removes only that operation from the read/);
+  assert.match(sql, /preserves only delete\/delete_many/);
+  assert.match(sql, /Never restore migration 3's expiry-blind broad SELECT policy/);
+  assert.match(sql, /SDK and direct authenticated/);
+  assert.match(sql, /does not execute either disable procedure/);
 });
 
 test("HTTP 200 with item error and both URL fields null is denied", () => {
@@ -196,6 +220,13 @@ test("live harness is synthetic, user-scoped, and fail-closed", async () => {
   assert.match(source, /bulk_signed_url_allowed/);
   assert.match(source, /bulk_signed_url_inconclusive/);
   assert.match(source, /owner_a_direct_authenticated_get_allowed/);
+  assert.match(source, /temporary_ttl_seconds: 1/);
+  assert.match(source, /temporary_ttl_one_pre_expiry_reads_allowed/);
+  assert.match(source, /temporary_exact_boundary_and_post_expiry_reads_denied/);
+  assert.match(source, /expired_single_and_bulk_cleanup_with_metadata_retained/);
+  assert.match(source, /delete_requested_reads_denied_cleanup_preserved/);
+  assert.match(source, /head_s3_tus_access_denied/);
+  assert.match(source, /anonymous_delete_owner_a_allowed/);
   assert.match(source, /overwrite_upsert_move_copy_denied/);
   assert.match(source, /immutable_original_append_only_revision_verified/);
   assert.match(source, /metadata_first_recovery_orphan_safe_delete_verified/);
