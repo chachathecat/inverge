@@ -21,6 +21,7 @@ import {
   S236P_MIGRATION_PATHS,
   S236P_PRODUCER_VERSION,
   resolveTargetMigration,
+  s236pMigrationExecutionSteps,
   shouldRunFakeGrader,
 } from "../scripts/automation/produce-runtime-evidence.mjs";
 
@@ -394,6 +395,28 @@ test("fake grader runs only for a newly owned or atomically reclaimed request", 
   assert.equal(shouldRunFakeGrader("retry_claimed"), true);
   assert.equal(shouldRunFakeGrader("in_progress"), false);
   assert.equal(shouldRunFakeGrader("replayed"), false);
+});
+
+test("S236P replays each migration before applying its successor", () => {
+  const migrations = S236P_MIGRATION_PATHS.map((migrationPath) => ({
+    path: migrationPath,
+  }));
+  assert.deepEqual(
+    s236pMigrationExecutionSteps(migrations).map(
+      ({ label, migration }) => [label, migration.path],
+    ),
+    migrations.flatMap((migration, index) => [
+      [`ordered S236P migration ${index + 1}`, migration.path],
+      [
+        `idempotent ordered S236P migration replay ${index + 1}`,
+        migration.path,
+      ],
+    ]),
+  );
+  assert.throws(
+    () => s236pMigrationExecutionSteps(migrations.slice(0, 2)),
+    /exact migration triple/,
+  );
 });
 
 test("closed S233A and S236P adapters bind exact migrations and reject unsupported sets", () => {

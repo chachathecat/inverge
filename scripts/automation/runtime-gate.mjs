@@ -11,7 +11,7 @@ import { runtimeRequiredPathRecords } from "./runtime-risk-contract.mjs";
 export const RUNTIME_EVIDENCE_SCHEMA_VERSION = "inverge.runtime_evidence.v2";
 export const RUNTIME_EVIDENCE_PRODUCER_VERSION = "s233r.postgres.s233a.v1";
 export const S236P_RUNTIME_EVIDENCE_PRODUCER_VERSION =
-  "s236p.postgres.owner-private.v2";
+  "s236p.postgres.owner-private.v3";
 export const RUNTIME_EVIDENCE_ASSERTION_IDS = Object.freeze([
   "migration_prerequisites_and_target_applied",
   "learner_rls_two_user_isolation",

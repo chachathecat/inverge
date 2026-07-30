@@ -10,7 +10,7 @@ import { runtimeRequiredPathRecords } from "./runtime-risk-contract.mjs";
 
 export const SCHEMA_VERSION = "inverge.runtime_evidence.v2";
 export const PRODUCER_VERSION = "s233r.postgres.s233a.v1";
-export const S236P_PRODUCER_VERSION = "s236p.postgres.owner-private.v2";
+export const S236P_PRODUCER_VERSION = "s236p.postgres.owner-private.v3";
 export const POSTGRES_IMAGE = "postgres:15.8-bookworm";
 export const ASSERTION_IDS = Object.freeze([
   "migration_prerequisites_and_target_applied",
@@ -59,6 +59,25 @@ export const PREREQUISITE_MIGRATIONS = Object.freeze([
 
 export function shouldRunFakeGrader(claimStatus) {
   return claimStatus === "claimed" || claimStatus === "retry_claimed";
+}
+
+export function s236pMigrationExecutionSteps(migrations) {
+  if (
+    !Array.isArray(migrations) ||
+    migrations.length !== S236P_MIGRATION_PATHS.length
+  ) {
+    throw new Error("S236P execution requires the exact migration triple.");
+  }
+  return migrations.flatMap((migration, index) => [
+    {
+      label: `ordered S236P migration ${index + 1}`,
+      migration,
+    },
+    {
+      label: `idempotent ordered S236P migration replay ${index + 1}`,
+      migration,
+    },
+  ]);
 }
 
 const USER_A = "11111111-1111-4111-8111-111111111111";
@@ -966,18 +985,13 @@ function runS236PDatabaseAssertions(containerName, targetMigration) {
     s236pBootstrapSql(),
     "isolated Supabase Storage and Auth role bootstrap",
   );
-  for (const [index, migration] of targetMigration.migrations.entries()) {
+  for (const step of s236pMigrationExecutionSteps(
+    targetMigration.migrations,
+  )) {
     applySql(
       containerName,
-      migration.content,
-      `ordered S236P migration ${index + 1}`,
-    );
-  }
-  for (const [index, migration] of targetMigration.migrations.entries()) {
-    applySql(
-      containerName,
-      migration.content,
-      `idempotent ordered S236P migration replay ${index + 1}`,
+      step.migration.content,
+      step.label,
     );
   }
   assertScalar(

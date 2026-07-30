@@ -25,7 +25,9 @@ was used.
 
 Runtime evidence production and verification accept only these three paths,
 in this order, with these digests. Missing, reordered, additional, or
-arbitrary migrations fail closed.
+arbitrary migrations fail closed. In isolated CI, each migration is applied
+and replayed immediately before its successor so a predecessor is never
+re-applied against a schema already narrowed by later forward migrations.
 
 ## Final live configuration
 
@@ -92,8 +94,8 @@ the repository, artifacts, or PR text.
 
 ## Validation
 
-- focused S236P/runtime-gate suite: `48` passed, `0` failed;
-- full node suite: `1234` passed, `0` failed;
+- focused S236P/runtime-gate suite: `49` passed, `0` failed;
+- full node suite: `1235` passed, `0` failed;
 - TypeScript: pass;
 - lint: `0` errors; `9` pre-existing warnings;
 - production build: pass (`54/54` static pages);
