@@ -16,7 +16,7 @@ AF009 metadata mutation is intentionally separate in `Agent Factory Mutate` and 
 
 - `mode`: `plan_only`, `watch_snapshot`, `watch_live`, `doctor_pr_body`, `doctor_pr_body_live`, `repair_plan`, `repair_plan_live`, `merge_plan`, or `merge_plan_live`.
 - `target`: `auto`, a roadmap item id such as `S225` (a currently blocked
-  example) or `S236P` (a currently ready example), a PR number such as `461`,
+  example) or `S236B` (a currently ready example), a PR number such as `461`,
   or a sanitized fixture path.
 - `pr_number`: required for `watch_live`, `doctor_pr_body_live`, `repair_plan_live`, and `merge_plan_live`; leave empty for non-live modes.
 - `max_tasks`: `1` or `2`; applies to `plan_only`.
@@ -25,12 +25,12 @@ AF009 metadata mutation is intentionally separate in `Agent Factory Mutate` and 
 
 Historical note: S224 once made S225 the next queued/ready example. The active
 roadmap has advanced; S225 now waits for the deferred external commercial
-track and visual/home dependencies. After the exact 2026-07-29 O3A and
-2026-07-30 lean O4V decisions plus the blocked S236P live acceptance, the
-ready set is S236B; automatic selection is S236B only. Use `auto` or `S236B`
-for current plan-only inspection. Completed O3A/O4V targets and blocked
-S225/S236P targets must fail closed. Selection does not start S236B or S236A,
-resume S236P, or mutate blocked Draft PR #660.
+track and visual/home dependencies. After the exact 2026-07-29 O3A,
+2026-07-30 lean O4V, and accepted S236P live acceptance, the ready set is
+S236B and S236A; automatic plan-only selection reports both. Use `auto`,
+`S236B`, or `S236A` for current plan-only inspection. Completed O3A/O4V/S236P
+targets and blocked S225 targets must fail closed. Selection does not start
+S236B or S236A, reopen S236P, or mutate blocked Draft PR #660.
 
 ## Modes
 

@@ -323,10 +323,10 @@ items:
     priority: 34
   - id: S236P
     title: Private Authoring Review Plane Provisioning and Synthetic Receipt Acceptance
-    status: blocked
-    executionState: provisioning_applied_user_scoped_acceptance_blocked
-    acceptanceCompleted: false
-    blockingReason: temporary_user_scoped_principal_session_unavailable_via_allowed_supabase_connector
+    status: completed
+    executionState: accepted
+    acceptanceCompleted: true
+    completionScope: live_synthetic_owner_private_acceptance
     evidence: docs/qa/s236p-lean-owner-private-acceptance.md
     provisionedProjectName: inverge-beta
     provisionedProjectRef: vajcduseyicjhyhrclax
@@ -341,6 +341,7 @@ items:
   - id: S236A
     title: Second-Round Owner-Private Golden 3
     status: queued
+    executionState: unstarted
     dependencies: [O3A, S236P]
     lockGroup: second-golden-private
     risk: high

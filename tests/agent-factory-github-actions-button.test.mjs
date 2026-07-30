@@ -277,7 +277,7 @@ test("watch_snapshot writes safe generated artifacts even when ignored input has
   assertNoUnsafeArtifactText(outputDir);
 });
 
-test("dispatcher rejects blocked targets and documents the blocked-S236P ready set", () => {
+test("dispatcher rejects blocked and completed targets and documents the accepted-S236P ready set", () => {
   const blockedOutputDir = tempDir("af006-blocked-s225");
   const blocked = runDispatcher([
     "--mode",
@@ -286,6 +286,17 @@ test("dispatcher rejects blocked targets and documents the blocked-S236P ready s
     "S225",
     "--output-dir",
     blockedOutputDir,
+    "--stdout",
+    "json",
+  ]);
+  const completedOutputDir = tempDir("af006-completed-s236p");
+  const completed = runDispatcher([
+    "--mode",
+    "plan_only",
+    "--target",
+    "S236P",
+    "--output-dir",
+    completedOutputDir,
     "--stdout",
     "json",
   ]);
@@ -305,15 +316,17 @@ test("dispatcher rejects blocked targets and documents the blocked-S236P ready s
 
   assert.notEqual(blocked.status, 0);
   assert.match(`${blocked.stdout}\n${blocked.stderr}`, /S225[\s\S]*(?:ready|blocked|dependency)/i);
+  assert.notEqual(completed.status, 0);
+  assert.match(`${completed.stdout}\n${completed.stderr}`, /S236P[\s\S]*(?:ready|completed)/i);
   assert.equal(result.status, 0, result.stderr);
   assert.match(result.stdout, /"reportOnly": true/);
   assert.match(summary, /AF006 v1: read-only\/report-only/);
   assert.match(summary, /No branches, commits, pushes, PR updates/);
   assert.match(docs, /read-only\/report-only/);
-  assert.match(docs, /blocked\s+S225\/S236P targets must fail closed/i);
-  assert.match(docs, /ready set is S236B/i);
-  assert.match(docs, /Completed O3A\/O4V targets/i);
-  assert.match(docs, /does not start S236B or S236A,\s+resume S236P/i);
+  assert.match(docs, /blocked S225 targets must fail closed/i);
+  assert.match(docs, /ready set is\s+S236B and S236A/i);
+  assert.match(docs, /Completed O3A\/O4V\/S236P\s+targets/i);
+  assert.match(docs, /does not start\s+S236B or S236A,\s+reopen S236P/i);
   assert.match(docs, /blocked Draft\s+PR #660/i);
   assert.match(docs, /never recommends auto-merge/);
 });

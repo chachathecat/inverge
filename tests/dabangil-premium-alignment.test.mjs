@@ -235,9 +235,12 @@ test("O3A and lean O4V decisions are completed while downstream execution stays 
   );
   assert.equal(roadmap.byId.get("O4V").automaticStartAllowed, false);
   assert.deepEqual(roadmap.byId.get("O4V").dependencies, ["S234R"]);
-  assert.equal(roadmap.byId.get("S236P").status, "blocked");
+  assert.equal(roadmap.byId.get("S236P").status, "completed");
+  assert.equal(roadmap.byId.get("S236P").executionState, "accepted");
+  assert.equal(roadmap.byId.get("S236P").acceptanceCompleted, true);
   assert.deepEqual(roadmap.byId.get("S236P").dependencies, ["O4V"]);
   assert.equal(roadmap.byId.get("S236A").status, "queued");
+  assert.equal(roadmap.byId.get("S236A").executionState, "unstarted");
   assert.deepEqual(roadmap.byId.get("S236A").dependencies, ["O3A", "S236P"]);
   assert.equal(roadmap.byId.get("S236B").status, "queued");
   assert.deepEqual(roadmap.byId.get("S236B").dependencies, ["S235B", "S234R"]);
