@@ -4,7 +4,7 @@ import { readFile } from "node:fs/promises";
 import test from "node:test";
 
 const PRIVATE_CONTRACT_SHA256 =
-  "ef017344b184b33f8e30dcde8f25089c3e814b2aa279645bbedbd326662dacb5";
+  "9cd35cb2e1ed14cf62910618931d2de61d293ff62d6c9a71a7cdf54cd817e469";
 const SCHEDULER_CONTRACT_SHA256 =
   "d598708aa138bad7f9e97847c0e47485d639926eda3d61b637b48d6dba6b5236";
 const S237O_EVIDENCE_TEMPLATE_SHA256 =
@@ -23,6 +23,8 @@ const O3A_PACKET_SHA256 =
   "8189997e733eb0c8bef62c3ba5fa1cadac39a807c34d925b2e1a291fa30e654c";
 const O3A_DECISION_SHA256 =
   "8841ff41dc4c9d3eb1e8bb57c2643964d4e9c54ed6825d763ccd7a6641cc987c";
+const O4V_LEAN_DECISION_SHA256 =
+  "5c6df014b55157a1bb5909c484662a2023cb04f40e2ed7c4ada54a57cb515ec5";
 const O3A_MANIFEST_FILE_SHA256 =
   "e32fda4c8753b167cced7bd6c0247aa6ef6602fd69fc7704b289fc0942858618";
 const O3A_REPORT_FILE_SHA256 =
@@ -3648,10 +3650,13 @@ function roadmapItem(source, id) {
   return match[0];
 }
 
-test("S234R authority is source-only and keeps every activation false", async () => {
+test("S234R stays source-only while the later lean O4V decision keeps activation false", async () => {
   const unified = await json("config/dabangil-unified-program-contract.json");
   const decision = await text(
     "docs/decisions/2026-07-26-owner-dogfood-private-plane-schedule-amendment.md",
+  );
+  const o4vDecision = await text(
+    "docs/decisions/2026-07-30-owner-o4v-lean-owner-private-gate.md",
   );
 
   assert.equal(unified.contractVersion, "dabangil.unified_program.v2");
@@ -3670,12 +3675,12 @@ test("S234R authority is source-only and keeps every activation false", async ()
   assert.equal(
     unified.privateAuthoringReviewPlane
       .o4vApprovalRequiresExactDsseOwnerDecisionReceiptAndFinalApprovedBindingDigest,
-    true,
+    false,
   );
   assert.equal(
     unified.privateAuthoringReviewPlane
       .completedS236PAcceptanceIsExactContentAddressedArtifact,
-    true,
+    false,
   );
   assert.match(decision, /source-only amendment/i);
   assert.match(
@@ -3683,6 +3688,27 @@ test("S234R authority is source-only and keeps every activation false", async ()
     /does not approve O3A, O4V, O4A, O4T, O2O, O4P, O4F/i,
   );
   assert.match(decision, /PR #660 remains Draft and blocked/i);
+  assert.equal(fileSha256(o4vDecision), O4V_LEAN_DECISION_SHA256);
+  assert.equal(
+    unified.privateAuthoringReviewPlane.status,
+    "o4v_lean_owner_private_gate_approved_s236p_not_started",
+  );
+  assert.equal(
+    unified.privateAuthoringReviewPlane
+      .cryptographicallyVerifiedIndependentSignedAttestationRequired,
+    false,
+  );
+  assert.equal(
+    unified.privateAuthoringReviewPlane
+      .ownerOriginalReuploadIsPilotRecoveryMode,
+    true,
+  );
+  assert.equal(
+    unified.ownerGates.O4V,
+    "approved_exact_lean_owner_private_gate_s236p_only_no_immediate_operation",
+  );
+  assert.match(o4vDecision, /88-field provider-binding proposal/i);
+  assert.match(o4vDecision, /S236P is not started by this decision/i);
 });
 
 test("exact O3A decision binds immutable evidence without authorizing immediate operation", async () => {
@@ -3731,6 +3757,69 @@ test("exact O3A decision binds immutable evidence without authorizing immediate 
   assert.match(decision, /PR #660 remains open, Draft, blocked/i);
 });
 
+test("lean O4V decision supersedes the 88-field packet and authorizes only future synthetic S236P", async () => {
+  const unified = await json("config/dabangil-unified-program-contract.json");
+  const privatePlane = await json(
+    "config/dabangil-private-authoring-review-plane-contract.json",
+  );
+  const decision = await text(
+    "docs/decisions/2026-07-30-owner-o4v-lean-owner-private-gate.md",
+  );
+  const scopeDecision = unified.scopeDecisions.O4V;
+  const activeGate = privatePlane.activeO4VGate;
+
+  assert.equal(fileSha256(decision), O4V_LEAN_DECISION_SHA256);
+  assert.equal(
+    scopeDecision.status,
+    "approved_exact_lean_owner_private_gate_only",
+  );
+  assert.equal(scopeDecision.decisionRecordSha256, O4V_LEAN_DECISION_SHA256);
+  assert.equal(
+    scopeDecision.gateContractVersion,
+    activeGate.contractVersion,
+  );
+  assert.equal(scopeDecision.legacyPacketDisposition, "superseded_rejected");
+  assert.equal(scopeDecision.legacyProviderBindingFieldCount, 88);
+  assert.equal(scopeDecision.legacyProviderBindingMaterialized, false);
+  assert.equal(scopeDecision.cloudProjectName, "inverge-beta");
+  assert.equal(scopeDecision.ownerOnlyPrivateBucketRequired, true);
+  assert.equal(scopeDecision.ownerOnlyMetadataRlsRequired, true);
+  assert.equal(scopeDecision.publicAccessAllowed, false);
+  assert.equal(scopeDecision.bidirectionalOtherAccountAccessAllowed, false);
+  assert.equal(scopeDecision.signedUrlTtlSecondsMaximum, 300);
+  assert.equal(scopeDecision.rawContentExternalEmissionAllowed, false);
+  assert.equal(scopeDecision.s236pSyntheticOnly, true);
+  assert.equal(scopeDecision.ocrAiContentProviderMode, "none");
+  assert.equal(scopeDecision.privateContentRetentionDaysMaximum, 365);
+  assert.equal(scopeDecision.metadataLogRetentionDaysMaximum, 7);
+  assert.equal(scopeDecision.temporaryCopyTtlSecondsMaximum, 300);
+  assert.equal(scopeDecision.applicationCacheTtlSecondsExact, 0);
+  assert.equal(scopeDecision.exportDeleteSlaSecondsMaximum, 604800);
+  assert.equal(scopeDecision.automaticObjectVersionRollbackGuaranteed, false);
+  assert.equal(scopeDecision.recoveryMode, "owner_retained_original_reupload");
+  assert.equal(scopeDecision.dedicatedKmsHsmRequiredForCurrentOwnerPilot, false);
+  assert.equal(scopeDecision.separateDsseStoreRequiredForCurrentOwnerPilot, false);
+  assert.equal(
+    scopeDecision.independentInfrastructureVerifierRequiredForCurrentOwnerPilot,
+    false,
+  );
+  assert.equal(
+    scopeDecision.futureS236PSyntheticProvisioningAndAcceptanceAuthorized,
+    true,
+  );
+  assert.equal(scopeDecision.approvalAuthorizesImmediateOperation, false);
+  assert.equal(scopeDecision.automaticProvisioningAllowed, false);
+  assert.equal(scopeDecision.automaticS236PStartAllowed, false);
+  assert.equal(scopeDecision.automaticS236AStartAllowed, false);
+  assert.equal(scopeDecision.s236pStarted, false);
+  assert.equal(scopeDecision.s236aStarted, false);
+  assert.equal(scopeDecision.realContentAuthorized, false);
+  assert.equal(scopeDecision.productionAuthorized, false);
+  assert.equal(scopeDecision.externalUsersAuthorized, false);
+  assert.match(decision, /Owner restores lost source content by re-uploading/i);
+  assert.match(decision, /PR #660 or PR #672/i);
+});
+
 test("all cryptographic JSON preimages use one RFC 8785 serialization", async () => {
   const contracts = await Promise.all([
     json("config/dabangil-private-authoring-review-plane-contract.json"),
@@ -3759,7 +3848,7 @@ test("all cryptographic JSON preimages use one RFC 8785 serialization", async ()
   );
 });
 
-test("private plane forbids a plaintext equality oracle and requires synthetic acceptance", async () => {
+test("private plane records the lean O4V gate and preserves legacy integrity boundaries", async () => {
   const contract = await json(
     "config/dabangil-private-authoring-review-plane-contract.json",
   );
@@ -3768,10 +3857,98 @@ test("private plane forbids a plaintext equality oracle and requires synthetic a
     contract.contractVersion,
     "dabangil.private_authoring_review_plane.v1",
   );
-  assert.equal(contract.status, "contract_only_pending_o4v");
+  assert.equal(
+    contract.status,
+    "o4v_lean_owner_private_gate_approved_s236p_not_started",
+  );
   assert.equal(contract.runtimeAuthorized, false);
   assert.equal(contract.realContentAuthorized, false);
   assert.equal(contract.provisioningAuthorized, false);
+  assert.equal(
+    contract.activeO4VGate.contractVersion,
+    "dabangil.o4v.lean_owner_private_gate.v1",
+  );
+  assert.equal(
+    contract.activeO4VGate.decisionRecordSha256,
+    O4V_LEAN_DECISION_SHA256,
+  );
+  assert.equal(contract.activeO4VGate.cloudPlane.projectName, "inverge-beta");
+  assert.equal(
+    contract.activeO4VGate.objectStorage.signedUrlTtlSecondsMaximum,
+    300,
+  );
+  assert.equal(
+    contract.activeO4VGate.metadataStore.metadataLogRetentionDaysMaximum,
+    7,
+  );
+  assert.equal(
+    contract.activeO4VGate.retentionAndLifecycle
+      .privateContentRetentionDaysMaximum,
+    365,
+  );
+  assert.equal(
+    contract.activeO4VGate.retentionAndLifecycle
+      .temporaryCopyTtlSecondsMaximum,
+    300,
+  );
+  assert.equal(
+    contract.activeO4VGate.retentionAndLifecycle
+      .applicationCacheTtlSecondsExact,
+    0,
+  );
+  assert.equal(
+    contract.activeO4VGate.retentionAndLifecycle
+      .exportDeleteSlaSecondsMaximum,
+    604800,
+  );
+  assert.equal(
+    contract.activeO4VGate.contentProcessing.ocrAiContentProviderMode,
+    "none",
+  );
+  assert.equal(
+    contract.activeO4VGate.dataBoundary
+      .rawContentInLogsAnalyticsTelemetryApmExceptionsQueuesOrCiAllowed,
+    false,
+  );
+  assert.equal(
+    contract.activeO4VGate.objectStorage
+      .automaticObjectVersionRollbackGuaranteed,
+    false,
+  );
+  assert.equal(
+    contract.activeO4VGate.objectStorage.recoveryMode,
+    "owner_retained_original_reupload",
+  );
+  assert.equal(
+    contract.activeO4VGate.dedicatedKeyAndVerifierGate
+      .customerManagedOrDedicatedKmsHsmRequiredForCurrentOwnerPilot,
+    false,
+  );
+  assert.equal(
+    contract.activeO4VGate.legacyQualificationApplicability
+      .syntheticReceiptContractAppliesToActiveLeanGate,
+    false,
+  );
+  assert.equal(
+    contract.activeO4VGate.legacyQualificationApplicability
+      .providerBoundaryContractAppliesToActiveLeanGate,
+    false,
+  );
+  assert.equal(
+    contract.activeO4VGate.legacyQualificationApplicability
+      .mayBlockLeanS236P,
+    false,
+  );
+  assert.equal(
+    contract.activeO4VGate.authorization
+      .s236pSyntheticProvisioningAndAcceptanceAuthorized,
+    true,
+  );
+  assert.equal(
+    contract.activeO4VGate.authorization.automaticS236PStartAllowed,
+    false,
+  );
+  assert.equal(contract.activeO4VGate.authorization.s236pStarted, false);
   assert.deepEqual(contract.approvalSeparation.S236ARequires, [
     "valid_unexpired_O3A",
     "completed_exact_S236P",
@@ -4047,6 +4224,19 @@ test("private plane forbids a plaintext equality oracle and requires synthetic a
     ),
   );
   assert.equal(contract.o4vDecisionPacket.ownerApproved, false);
+  assert.equal(contract.o4vDecisionPacket.status, "superseded_rejected");
+  assert.equal(
+    contract.activeO4VGate.legacyPacket.providerBindingFieldCount,
+    88,
+  );
+  assert.equal(
+    contract.activeO4VGate.legacyPacket.providerBindingMaterialized,
+    false,
+  );
+  assert.equal(
+    contract.o4vDecisionPacket.approvalRecord.decision,
+    "pending",
+  );
   assert.equal(
     contract.o4vDecisionPacket.candidateArchitecture.bindingComplete,
     false,
@@ -4129,6 +4319,11 @@ test("private plane forbids a plaintext equality oracle and requires synthetic a
   assert.equal(
     contract.o4vPacketDigestContract.approvalStateInvariant
       .approvedRecordRequiresAllExactBindingsComplete,
+    true,
+  );
+  assert.equal(
+    contract.o4vPacketDigestContract.approvalStateInvariant
+      .supersededRejectedStatusRequiresOwnerApprovedFalsePendingApprovalRecordAndDatedOwnerDecision,
     true,
   );
   assert.equal(
@@ -9634,6 +9829,10 @@ test("roadmap has the native fork, optional fork, and deferred commercial fork",
   assert.match(
     roadmapItem(roadmap, "O3A"),
     /status: completed[\s\S]*approvalAuthorizesImmediateOperation: false[\s\S]*automaticStartAllowed: false[\s\S]*manualS236AStartRequired: true[\s\S]*dependencies: \[S235A, S234R\]/,
+  );
+  assert.match(
+    roadmapItem(roadmap, "O4V"),
+    /status: completed[\s\S]*legacyPacketDisposition: superseded_rejected[\s\S]*futureS236PSyntheticProvisioningAndAcceptanceAuthorized: true[\s\S]*approvalAuthorizesImmediateOperation: false[\s\S]*automaticStartAllowed: false[\s\S]*dependencies: \[S234R\]/,
   );
   assert.match(
     roadmapItem(roadmap, "S236P"),

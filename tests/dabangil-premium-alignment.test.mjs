@@ -4,6 +4,7 @@ import { readFile } from "node:fs/promises";
 
 const sourceOfTruthDocs = [
   "AGENTS.md",
+  "docs/decisions/2026-07-30-owner-o4v-lean-owner-private-gate.md",
   "docs/decisions/2026-07-29-owner-o3a-golden-3-approval.md",
   "docs/decisions/2026-07-26-owner-dogfood-private-plane-schedule-amendment.md",
   "docs/decisions/2026-07-23-post-650-unified-program-reset.md",
@@ -196,7 +197,7 @@ test("historical S200-S224 completion does not assert current readiness", async 
   assert.equal(roadmap.byId.get("S224").status, "completed");
 });
 
-test("O3A decision is completed while O4V and downstream execution stay queued", async () => {
+test("O3A and lean O4V decisions are completed while downstream execution stays queued", async () => {
   const roadmap = parseActiveProgram(await read("roadmap/active-program.yml"));
 
   assert.equal(roadmap.byId.get("S235A").status, "completed");
@@ -214,7 +215,25 @@ test("O3A decision is completed while O4V and downstream execution stay queued",
   assert.equal(roadmap.byId.get("O3A").automaticStartAllowed, false);
   assert.equal(roadmap.byId.get("O3A").manualS236AStartRequired, true);
   assert.deepEqual(roadmap.byId.get("O3A").dependencies, ["S235A", "S234R"]);
-  assert.equal(roadmap.byId.get("O4V").status, "queued");
+  assert.equal(roadmap.byId.get("O4V").status, "completed");
+  assert.equal(
+    roadmap.byId.get("O4V").decisionRecord,
+    "docs/decisions/2026-07-30-owner-o4v-lean-owner-private-gate.md",
+  );
+  assert.equal(
+    roadmap.byId.get("O4V").legacyPacketDisposition,
+    "superseded_rejected",
+  );
+  assert.equal(
+    roadmap.byId.get("O4V")
+      .futureS236PSyntheticProvisioningAndAcceptanceAuthorized,
+    true,
+  );
+  assert.equal(
+    roadmap.byId.get("O4V").approvalAuthorizesImmediateOperation,
+    false,
+  );
+  assert.equal(roadmap.byId.get("O4V").automaticStartAllowed, false);
   assert.deepEqual(roadmap.byId.get("O4V").dependencies, ["S234R"]);
   assert.equal(roadmap.byId.get("S236P").status, "queued");
   assert.deepEqual(roadmap.byId.get("S236P").dependencies, ["O4V"]);
@@ -257,6 +276,25 @@ test("S234R contract fixes authority, native Owner path, and learning glossary",
   assert.equal(policy.scopeDecisions.O3A.approvalAuthorizesImmediateOperation, false);
   assert.equal(policy.scopeDecisions.O3A.automaticStartAllowed, false);
   assert.equal(policy.scopeDecisions.O3A.s236aStarted, false);
+  assert.equal(
+    policy.scopeDecisions.O4V.status,
+    "approved_exact_lean_owner_private_gate_only",
+  );
+  assert.equal(
+    policy.scopeDecisions.O4V.legacyPacketDisposition,
+    "superseded_rejected",
+  );
+  assert.equal(policy.scopeDecisions.O4V.cloudProjectName, "inverge-beta");
+  assert.equal(
+    policy.scopeDecisions.O4V.futureS236PSyntheticProvisioningAndAcceptanceAuthorized,
+    true,
+  );
+  assert.equal(
+    policy.scopeDecisions.O4V.approvalAuthorizesImmediateOperation,
+    false,
+  );
+  assert.equal(policy.scopeDecisions.O4V.s236pStarted, false);
+  assert.equal(policy.scopeDecisions.O4V.realContentAuthorized, false);
   assert.equal(policy.decision.runtimeActivationAuthorized, false);
   assert.equal(policy.decision.dependencyActivationAuthorized, false);
   assert.equal(policy.decision.providerModelPromptActivationAuthorized, false);

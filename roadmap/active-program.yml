@@ -305,7 +305,18 @@ items:
     priority: 33
   - id: O4V
     title: Owner Private Vault Key Provider Environment and Retention Approval
-    status: queued
+    status: completed
+    completionScope: exact_lean_owner_private_gate_decision
+    decisionScope: lean_owner_private_supabase_gate_for_future_s236p_synthetic_only
+    decisionRecord: docs/decisions/2026-07-30-owner-o4v-lean-owner-private-gate.md
+    decisionRecordSha256: 5c6df014b55157a1bb5909c484662a2023cb04f40e2ed7c4ada54a57cb515ec5
+    gateContractVersion: dabangil.o4v.lean_owner_private_gate.v1
+    legacyPacketId: o4v-s234r-owner-private-plane-binding-v1
+    legacyPacketDisposition: superseded_rejected
+    futureS236PSyntheticProvisioningAndAcceptanceAuthorized: true
+    approvalAuthorizesImmediateOperation: false
+    automaticStartAllowed: false
+    downstreamExecutionStarted: false
     dependencies: [S234R]
     lockGroup: owner-private-plane
     risk: high
