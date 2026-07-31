@@ -38,10 +38,10 @@ Supabase advisors. The fourth migration changes only the named
 `storage.objects` SELECT policy. Its read and cleanup branches are explicitly
 parenthesized:
 
-- list/list-v2, authenticated GET, and authenticated info require matching
-  Owner metadata with `object_state = 'active'`, content expiry strictly
-  after `statement_timestamp()`, and temporary expiry either null or strictly
-  after `statement_timestamp()`;
+- list/list-v2, authenticated GET/HEAD, and authenticated info require
+  matching Owner metadata with `object_state = 'active'`, content expiry
+  strictly after `statement_timestamp()`, and temporary expiry either null or
+  strictly after `statement_timestamp()`;
 - `storage.object.delete` and `storage.object.delete_many` remain
   metadata-independent Owner cleanup operations;
 - equality at either expiry boundary is denied.
@@ -82,6 +82,13 @@ Signed URL and signed-upload operations, overwrite/upsert/update,
 copy/move, S3/TUS operations, and `object.head_authenticated_info` remain
 outside the allowlist.
 
+Supabase Storage was directly observed routing both `GET` and `HEAD` on the
+authenticated object endpoint through `storage.object.get_authenticated`.
+HTTP `HEAD` is therefore the same protected read, not a seventh allowlisted
+operation and not `object.head_authenticated_info`. A same-Owner request is
+allowed only while matching metadata is active and unexpired; cross-Owner,
+anonymous, metadata-missing, non-active, and expired requests remain denied.
+
 ## Publishable-key live acceptance required after apply
 
 No new principal or canary has been created at this checkpoint. After the
@@ -99,8 +106,11 @@ anonymous-client run must prove:
   `signedURL` are null.
 - A top-level error, an empty array, or a malformed item is classified as
   inconclusive failure rather than a passing security denial.
-- Signed upload, overwrite/upsert, move, copy, authenticated HEAD, S3, TUS,
-  unknown, and missing operations are denied.
+- Authenticated HEAD follows the protected-read matrix: Owner A succeeds only
+  for active, unexpired metadata, while Owner B, anonymous, non-active,
+  metadata-missing, and expired requests are denied.
+- Signed upload, overwrite/upsert, move, copy, S3, TUS, unknown, and missing
+  operations are denied.
 - A TTL `1` temporary object is list/info/download/direct-GET readable before
   server-recorded expiry, hidden at equality and after expiry, and still
   removable through both single and bulk cleanup while metadata remains.

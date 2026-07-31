@@ -31,6 +31,7 @@ const expectedMigrationDigests = [
   "416fa80acea48bf4d170661a4f5259632b4d9e3fd740007bd65cbf1ded6103f1",
 ];
 const harnessPath = "scripts/verify-s236p-lean-owner-private.mjs";
+const acceptancePath = "docs/qa/s236p-lean-owner-private-acceptance.md";
 
 function normalize(value) {
   return value.replace(/\s+/g, " ").trim().toLowerCase();
@@ -164,6 +165,23 @@ test("fourth migration records the forward-only targeted and delete-only disable
   assert.match(sql, /does not execute either disable procedure/);
 });
 
+test("authenticated HEAD shares the protected GET operation contract", async () => {
+  const contract = await readFile(acceptancePath, "utf8");
+
+  assert.match(
+    contract,
+    /routing both `GET` and `HEAD`[\s\S]+through `storage\.object\.get_authenticated`/,
+  );
+  assert.match(
+    contract,
+    /same-Owner request is[\s\S]+active and unexpired[\s\S]+cross-Owner,[\s\S]+anonymous,[\s\S]+expired requests remain denied/,
+  );
+  assert.doesNotMatch(
+    contract,
+    /authenticated HEAD, S3, TUS,[\s\S]+operations are denied/,
+  );
+});
+
 test("HTTP 200 with item error and both URL fields null is denied", () => {
   assert.deepEqual(
     classifyBulkSignedUrlResponse({
@@ -220,12 +238,30 @@ test("live harness is synthetic, user-scoped, and fail-closed", async () => {
   assert.match(source, /bulk_signed_url_allowed/);
   assert.match(source, /bulk_signed_url_inconclusive/);
   assert.match(source, /owner_a_direct_authenticated_get_allowed/);
+  assert.match(source, /owner_a_authenticated_head_allowed/);
+  assert.match(
+    source,
+    /if \(!headA\.ok\) fail\("owner_a_authenticated_head_failed"\)/,
+  );
+  assert.match(
+    source,
+    /async function expectDirectHeadDenied[\s\S]+method: "HEAD"[\s\S]+if \(response\.ok\) fail\(code\)/,
+  );
+  assert.match(
+    source,
+    /account_b_and_anonymous_info_download_list_and_head_denied/,
+  );
+  assert.match(source, /account_b_authenticated_head_owner_a_allowed/);
+  assert.match(source, /anonymous_authenticated_head_allowed/);
   assert.match(source, /temporary_ttl_seconds: 1/);
   assert.match(source, /temporary_ttl_one_pre_expiry_reads_allowed/);
   assert.match(source, /temporary_exact_boundary_and_post_expiry_reads_denied/);
+  assert.match(source, /temporary_post_expiry_authenticated_head_allowed/);
+  assert.match(source, /delete_requested_authenticated_head_allowed/);
   assert.match(source, /expired_single_and_bulk_cleanup_with_metadata_retained/);
   assert.match(source, /delete_requested_reads_denied_cleanup_preserved/);
-  assert.match(source, /head_s3_tus_access_denied/);
+  assert.match(source, /s3_tus_access_denied/);
+  assert.doesNotMatch(source, /if \(headA\.ok\) fail\("authenticated_head_allowed"\)/);
   assert.match(source, /anonymous_delete_owner_a_allowed/);
   assert.match(source, /overwrite_upsert_move_copy_denied/);
   assert.match(source, /immutable_original_append_only_revision_verified/);

@@ -367,6 +367,14 @@ async function expectDirectGetDenied(options, code) {
   if (response.ok) fail(code);
 }
 
+async function expectDirectHeadDenied(options, code) {
+  const response = await directAuthenticatedGet({
+    ...options,
+    method: "HEAD",
+  });
+  if (response.ok) fail(code);
+}
+
 async function waitUntilAfterServerTimestamp(timestamp, code) {
   const expiresAtMs = Date.parse(timestamp);
   if (!Number.isFinite(expiresAtMs)) fail(`${code}_invalid_timestamp`);
@@ -596,6 +604,17 @@ export async function runS236PLiveAcceptance() {
     }
     record("owner_a_direct_authenticated_get_allowed");
 
+    const headA = await directAuthenticatedGet({
+      accessToken: principalA.accessToken,
+      guardedFetch,
+      method: "HEAD",
+      path: pathA,
+      projectUrl,
+      publishableKey,
+    });
+    if (!headA.ok) fail("owner_a_authenticated_head_failed");
+    record("owner_a_authenticated_head_allowed");
+
     await expectStorageInfoDenied(
       principalB.client,
       pathA,
@@ -644,7 +663,27 @@ export async function runS236PLiveAcceptance() {
       },
       "anonymous_direct_get_allowed",
     );
-    record("account_b_and_anonymous_info_download_list_denied");
+    await expectDirectHeadDenied(
+      {
+        accessToken: principalB.accessToken,
+        guardedFetch,
+        path: pathA,
+        projectUrl,
+        publishableKey,
+      },
+      "account_b_authenticated_head_owner_a_allowed",
+    );
+    await expectDirectHeadDenied(
+      {
+        accessToken: null,
+        guardedFetch,
+        path: pathA,
+        projectUrl,
+        publishableKey,
+      },
+      "anonymous_authenticated_head_allowed",
+    );
+    record("account_b_and_anonymous_info_download_list_and_head_denied");
 
     for (const ttlSeconds of SINGLE_SIGN_TTLS) {
       await expectSingleSignedUrlDenied(
@@ -683,15 +722,6 @@ export async function runS236PLiveAcceptance() {
     );
     record("signed_access_disabled");
 
-    const headA = await directAuthenticatedGet({
-      accessToken: principalA.accessToken,
-      guardedFetch,
-      method: "HEAD",
-      path: pathA,
-      projectUrl,
-      publishableKey,
-    });
-    if (headA.ok) fail("authenticated_head_allowed");
     await expectRawStorageRequestDenied(
       {
         accessToken: principalA.accessToken,
@@ -725,7 +755,7 @@ export async function runS236PLiveAcceptance() {
       "tus_access_allowed",
     );
     cleanupA.paths.delete(tusPath);
-    record("head_s3_tus_access_denied");
+    record("s3_tus_access_denied");
 
     const movePath = `${vaultA}/${crypto.randomUUID()}`;
     const copyPath = `${vaultA}/${crypto.randomUUID()}`;
@@ -907,8 +937,13 @@ export async function runS236PLiveAcceptance() {
       fail("temporary_object_upload_failed");
     }
 
-    const [tempListBefore, tempInfoBefore, tempDownloadBefore, tempDirectBefore] =
-      await Promise.all([
+    const [
+      tempListBefore,
+      tempInfoBefore,
+      tempDownloadBefore,
+      tempDirectBefore,
+      tempHeadBefore,
+    ] = await Promise.all([
         principalA.client.storage
           .from(S236P_BUCKET_ID)
           .list(`${vaultA}/temporary`, { limit: 20 }),
@@ -917,6 +952,14 @@ export async function runS236PLiveAcceptance() {
         directAuthenticatedGet({
           accessToken: principalA.accessToken,
           guardedFetch,
+          path: tempPath,
+          projectUrl,
+          publishableKey,
+        }),
+        directAuthenticatedGet({
+          accessToken: principalA.accessToken,
+          guardedFetch,
+          method: "HEAD",
           path: tempPath,
           projectUrl,
           publishableKey,
@@ -936,6 +979,9 @@ export async function runS236PLiveAcceptance() {
     }
     if (!tempDirectBefore.ok) {
       fail("temporary_pre_expiry_direct_get_failed");
+    }
+    if (!tempHeadBefore.ok) {
+      fail("temporary_pre_expiry_authenticated_head_failed");
     }
     const [tempDownloadBytes, tempDirectBytes] = await Promise.all([
       tempDownloadBefore.data.arrayBuffer(),
@@ -992,6 +1038,16 @@ export async function runS236PLiveAcceptance() {
         publishableKey,
       },
       "temporary_post_expiry_direct_get_allowed",
+    );
+    await expectDirectHeadDenied(
+      {
+        accessToken: principalA.accessToken,
+        guardedFetch,
+        path: tempPath,
+        projectUrl,
+        publishableKey,
+      },
+      "temporary_post_expiry_authenticated_head_allowed",
     );
     record("temporary_exact_boundary_and_post_expiry_reads_denied");
 
@@ -1103,6 +1159,16 @@ export async function runS236PLiveAcceptance() {
         publishableKey,
       },
       "delete_requested_direct_get_allowed",
+    );
+    await expectDirectHeadDenied(
+      {
+        accessToken: principalA.accessToken,
+        guardedFetch,
+        path: deleteRequestedPath,
+        projectUrl,
+        publishableKey,
+      },
+      "delete_requested_authenticated_head_allowed",
     );
     const deleteRequestedStorageCleanup = await principalA.client.storage
       .from(S236P_BUCKET_ID)
