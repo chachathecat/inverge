@@ -15,6 +15,8 @@ export const S236P_EVENT_LOG_RETENTION_DAYS = 0;
 export const S236P_MAX_SIGNED_URL_TTL_SECONDS = 300;
 export const S236P_MAX_CONTENT_RETENTION_DAYS = 365;
 export const S236P_MAX_TEMPORARY_TTL_SECONDS = 300;
+export const TEMPORARY_ACCEPTANCE_TTL_SECONDS = 30;
+export const TEMPORARY_EXPIRY_SAFETY_MARGIN_MS = 250;
 export const S236P_APPLICATION_CACHE_TTL_SECONDS = 0;
 export const S236P_MAX_EXPORT_DELETE_SLA_SECONDS = 604800;
 
@@ -33,6 +35,8 @@ const REQUIRED_ENV = [
 const DENIAL_PROBE_BODY = Buffer.from("s236p-synthetic-denial-probe", "utf8");
 const BULK_SIGN_TTLS = Object.freeze([1, 300, 301]);
 const SINGLE_SIGN_TTLS = Object.freeze([1, 300, 301]);
+const TEMPORARY_EXPIRY_WAIT_MAX_MS =
+  (TEMPORARY_ACCEPTANCE_TTL_SECONDS + 5) * 1_000;
 
 class AcceptanceError extends Error {
   constructor(code, details = undefined) {
@@ -161,6 +165,22 @@ function privateObjectRow({
     contains_real_content: false,
     ...overrides,
   };
+}
+
+export function temporaryAcceptanceObjectRow({
+  ownerId,
+  objectRef,
+  storagePath,
+}) {
+  return privateObjectRow({
+    ownerId,
+    objectRef,
+    storagePath,
+    storageClass: "temporary",
+    overrides: {
+      temporary_ttl_seconds: TEMPORARY_ACCEPTANCE_TTL_SECONDS,
+    },
+  });
 }
 
 function opaquePath(vaultRef, objectRef, storageClass = "private") {
@@ -375,18 +395,52 @@ async function expectDirectHeadDenied(options, code) {
   if (response.ok) fail(code);
 }
 
-async function waitUntilAfterServerTimestamp(timestamp, code) {
+export function assertTemporaryAcceptanceMetadata(metadata) {
+  if (
+    metadata?.temporary_ttl_seconds !== TEMPORARY_ACCEPTANCE_TTL_SECONDS
+  ) {
+    fail("temporary_metadata_ttl_not_acceptance_window");
+  }
+  const createdAtMs = Date.parse(metadata.created_at);
+  if (!Number.isFinite(createdAtMs)) {
+    fail("temporary_metadata_created_at_invalid");
+  }
+  const expiresAtMs = Date.parse(metadata.temporary_expires_at);
+  if (!Number.isFinite(expiresAtMs)) {
+    fail("temporary_metadata_expiry_invalid");
+  }
+  if (
+    expiresAtMs - createdAtMs !==
+    TEMPORARY_ACCEPTANCE_TTL_SECONDS * 1_000
+  ) {
+    fail("temporary_metadata_expiry_interval_mismatch");
+  }
+  return { createdAtMs, expiresAtMs };
+}
+
+export async function waitUntilAfterServerTimestamp(
+  timestamp,
+  code,
+  dependencies = {},
+) {
   const expiresAtMs = Date.parse(timestamp);
   if (!Number.isFinite(expiresAtMs)) fail(`${code}_invalid_timestamp`);
-  const startedAtMs = Date.now();
-  while (Date.now() <= expiresAtMs) {
-    if (Date.now() - startedAtMs > 5_000) {
+  const now = dependencies.now ?? Date.now;
+  const sleep =
+    dependencies.sleep ??
+    ((milliseconds) =>
+      new Promise((resolve) => setTimeout(resolve, milliseconds)));
+  const targetMs = expiresAtMs + TEMPORARY_EXPIRY_SAFETY_MARGIN_MS;
+  const startedAtMs = now();
+  if (targetMs - startedAtMs > TEMPORARY_EXPIRY_WAIT_MAX_MS) {
+    fail(`${code}_wait_timeout`);
+  }
+  while (now() < targetMs) {
+    if (now() - startedAtMs > TEMPORARY_EXPIRY_WAIT_MAX_MS) {
       fail(`${code}_wait_timeout`);
     }
-    const remainingMs = expiresAtMs - Date.now();
-    await new Promise((resolve) =>
-      setTimeout(resolve, Math.min(Math.max(remainingMs + 25, 25), 250)),
-    );
+    const remainingMs = targetMs - now();
+    await sleep(Math.min(Math.max(remainingMs, 25), 250));
   }
 }
 
@@ -875,22 +929,20 @@ export async function runS236PLiveAcceptance() {
     const tempMetadataInsert = await principalA.client
       .from(S236P_OBJECTS_TABLE)
       .insert([
-        privateObjectRow({
+        temporaryAcceptanceObjectRow({
           ownerId: principalA.id,
           objectRef: tempRef,
           storagePath: tempPath,
-          storageClass: "temporary",
-          overrides: { temporary_ttl_seconds: 1 },
         }),
-        privateObjectRow({
+        temporaryAcceptanceObjectRow({
           ownerId: principalA.id,
           objectRef: tempBulkRef,
           storagePath: tempBulkPath,
-          storageClass: "temporary",
-          overrides: { temporary_ttl_seconds: 1 },
         }),
       ])
-      .select("object_ref,temporary_ttl_seconds,temporary_expires_at");
+      .select(
+        "object_ref,created_at,temporary_ttl_seconds,temporary_expires_at",
+      );
     if (
       tempMetadataInsert.error ||
       tempMetadataInsert.data?.length !== 2
@@ -903,12 +955,9 @@ export async function runS236PLiveAcceptance() {
     const tempBulkMetadata = tempMetadataInsert.data.find(
       (item) => item.object_ref === tempBulkRef,
     );
-    if (
-      tempMetadata?.temporary_ttl_seconds !== 1 ||
-      tempBulkMetadata?.temporary_ttl_seconds !== 1
-    ) {
-      fail("temporary_metadata_ttl_not_one_second");
-    }
+    const tempTiming = assertTemporaryAcceptanceMetadata(tempMetadata);
+    const tempBulkTiming =
+      assertTemporaryAcceptanceMetadata(tempBulkMetadata);
     const tempBody = Buffer.from(
       `${canaryMarker}:temporary:${crypto.randomUUID()}`,
       "utf8",
@@ -993,13 +1042,10 @@ export async function runS236PLiveAcceptance() {
     ) {
       fail("temporary_pre_expiry_download_mismatch");
     }
-    record("temporary_ttl_one_pre_expiry_reads_allowed");
+    record("temporary_stable_ttl_pre_expiry_reads_allowed");
 
     const latestTemporaryExpiry = new Date(
-      Math.max(
-        Date.parse(tempMetadata.temporary_expires_at),
-        Date.parse(tempBulkMetadata.temporary_expires_at),
-      ),
+      Math.max(tempTiming.expiresAtMs, tempBulkTiming.expiresAtMs),
     ).toISOString();
     await waitUntilAfterServerTimestamp(
       latestTemporaryExpiry,

@@ -15,7 +15,12 @@ import {
   S236P_MAX_TEMPORARY_TTL_SECONDS,
   S236P_OBJECTS_TABLE,
   S236P_PROVIDER_MODE,
+  TEMPORARY_ACCEPTANCE_TTL_SECONDS,
+  TEMPORARY_EXPIRY_SAFETY_MARGIN_MS,
+  assertTemporaryAcceptanceMetadata,
   classifyBulkSignedUrlResponse,
+  temporaryAcceptanceObjectRow,
+  waitUntilAfterServerTimestamp,
 } from "../scripts/verify-s236p-lean-owner-private.mjs";
 
 const migrationPaths = [
@@ -51,8 +56,70 @@ test("S236P constants match the narrowed Owner-private configuration", () => {
   assert.equal(S236P_MAX_SIGNED_URL_TTL_SECONDS, 300);
   assert.equal(S236P_MAX_CONTENT_RETENTION_DAYS, 365);
   assert.equal(S236P_MAX_TEMPORARY_TTL_SECONDS, 300);
+  assert.equal(TEMPORARY_ACCEPTANCE_TTL_SECONDS, 30);
+  assert.equal(TEMPORARY_EXPIRY_SAFETY_MARGIN_MS, 250);
   assert.equal(S236P_APPLICATION_CACHE_TTL_SECONDS, 0);
   assert.equal(S236P_MAX_EXPORT_DELETE_SLA_SECONDS, 604800);
+});
+
+test("temporary acceptance timing survives transport delay and rejects one-second coupling", async () => {
+  const createdAtMs = Date.parse("2026-08-03T01:36:44.000Z");
+  const row = temporaryAcceptanceObjectRow({
+    ownerId: "00000000-0000-4000-8000-000000000001",
+    objectRef: "00000000-0000-4000-8000-000000000002",
+    storagePath:
+      "00000000-0000-4000-8000-000000000003/temporary/00000000-0000-4000-8000-000000000002",
+  });
+  assert.equal(row.temporary_ttl_seconds, 30);
+
+  const metadata = {
+    ...row,
+    created_at: new Date(createdAtMs).toISOString(),
+    temporary_expires_at: new Date(
+      createdAtMs + TEMPORARY_ACCEPTANCE_TTL_SECONDS * 1_000,
+    ).toISOString(),
+  };
+  const timing = assertTemporaryAcceptanceMetadata(metadata);
+  assert.equal(timing.expiresAtMs - timing.createdAtMs, 30_000);
+
+  let nowMs = createdAtMs + 1_250;
+  const fiveReadTransportDelaysMs = [125, 150, 175, 200, 225];
+  for (const transportDelayMs of fiveReadTransportDelaysMs) {
+    await Promise.resolve();
+    nowMs += transportDelayMs;
+    assert.ok(nowMs < timing.expiresAtMs);
+  }
+  assert.ok(nowMs > createdAtMs + 1_000);
+
+  const sleeps = [];
+  await waitUntilAfterServerTimestamp(
+    metadata.temporary_expires_at,
+    "temporary_expiry",
+    {
+      now: () => nowMs,
+      sleep: async (milliseconds) => {
+        sleeps.push(milliseconds);
+        nowMs += milliseconds;
+      },
+    },
+  );
+  assert.equal(
+    nowMs,
+    timing.expiresAtMs + TEMPORARY_EXPIRY_SAFETY_MARGIN_MS,
+  );
+  assert.ok(sleeps.length > 0);
+  assert.ok(sleeps.every((milliseconds) => milliseconds <= 250));
+
+  assert.throws(
+    () =>
+      assertTemporaryAcceptanceMetadata({
+        ...metadata,
+        temporary_ttl_seconds: 1,
+        temporary_expires_at: new Date(createdAtMs + 1_000).toISOString(),
+      }),
+    (error) =>
+      error?.code === "temporary_metadata_ttl_not_acceptance_window",
+  );
 });
 
 test("ordered migration quadruple preserves the live triple and binds the pre-live fourth digest", async () => {
@@ -253,8 +320,13 @@ test("live harness is synthetic, user-scoped, and fail-closed", async () => {
   );
   assert.match(source, /account_b_authenticated_head_owner_a_allowed/);
   assert.match(source, /anonymous_authenticated_head_allowed/);
-  assert.match(source, /temporary_ttl_seconds: 1/);
-  assert.match(source, /temporary_ttl_one_pre_expiry_reads_allowed/);
+  assert.match(
+    source,
+    /TEMPORARY_ACCEPTANCE_TTL_SECONDS = 30/,
+  );
+  assert.match(source, /temporaryAcceptanceObjectRow/);
+  assert.match(source, /created_at,temporary_ttl_seconds,temporary_expires_at/);
+  assert.match(source, /temporary_stable_ttl_pre_expiry_reads_allowed/);
   assert.match(source, /temporary_exact_boundary_and_post_expiry_reads_denied/);
   assert.match(source, /temporary_post_expiry_authenticated_head_allowed/);
   assert.match(source, /delete_requested_authenticated_head_allowed/);
