@@ -3,8 +3,11 @@ import assert from "node:assert/strict";
 import crypto from "node:crypto";
 import { readFile } from "node:fs/promises";
 
+import { createClient } from "@supabase/supabase-js";
+
 import {
   S236P_APPLICATION_CACHE_TTL_SECONDS,
+  S236P_AUTHENTICATED_OBJECT_REQUEST_CACHE_MODE,
   S236P_BUCKET_ID,
   S236P_EVENT_LOG_MODE,
   S236P_EVENT_LOG_RETENTION_DAYS,
@@ -19,6 +22,11 @@ import {
   TEMPORARY_EXPIRY_SAFETY_MARGIN_MS,
   assertTemporaryAcceptanceMetadata,
   classifyBulkSignedUrlResponse,
+  classifyTemporaryPostExpiryReadResults,
+  createAuthenticatedObjectRequestFreshness,
+  directAuthenticatedGet,
+  freshAuthenticatedDownload,
+  settleReadProbe,
   temporaryAcceptanceObjectRow,
   waitUntilAfterServerTimestamp,
 } from "../scripts/verify-s236p-lean-owner-private.mjs";
@@ -59,7 +67,292 @@ test("S236P constants match the narrowed Owner-private configuration", () => {
   assert.equal(TEMPORARY_ACCEPTANCE_TTL_SECONDS, 30);
   assert.equal(TEMPORARY_EXPIRY_SAFETY_MARGIN_MS, 250);
   assert.equal(S236P_APPLICATION_CACHE_TTL_SECONDS, 0);
+  assert.equal(
+    S236P_AUTHENTICATED_OBJECT_REQUEST_CACHE_MODE,
+    "unique-cache-nonce-and-no-store",
+  );
   assert.equal(S236P_MAX_EXPORT_DELETE_SLA_SECONDS, 604800);
+});
+
+test("authenticated object reads use unique CDN cache nonces and no-store", async () => {
+  const uuidA = "00000000-0000-4000-8000-000000000011";
+  const uuidB = "00000000-0000-4000-8000-000000000012";
+  const first = createAuthenticatedObjectRequestFreshness(() => uuidA);
+  const second = createAuthenticatedObjectRequestFreshness(() => uuidB);
+  assert.deepEqual(first, {
+    cacheNonce: uuidA,
+    fetchOptions: { cache: "no-store" },
+  });
+  assert.deepEqual(second, {
+    cacheNonce: uuidB,
+    fetchOptions: { cache: "no-store" },
+  });
+  assert.notEqual(first.cacheNonce, second.cacheNonce);
+
+  const downloadCalls = [];
+  const fakeClient = {
+    storage: {
+      from(bucket) {
+        assert.equal(bucket, S236P_BUCKET_ID);
+        return {
+          download(...args) {
+            downloadCalls.push(args);
+            return Promise.resolve({ data: null, error: { status: 404 } });
+          },
+        };
+      },
+    },
+  };
+  await freshAuthenticatedDownload(fakeClient, "vault/object", () => uuidA);
+  assert.deepEqual(downloadCalls, [
+    ["vault/object", { cacheNonce: uuidA }, { cache: "no-store" }],
+  ]);
+
+  const directCalls = [];
+  const uuids = [uuidA, uuidB];
+  const guardedFetch = async (input, init) => {
+    directCalls.push({ init, url: String(input) });
+    return { ok: false, status: 404 };
+  };
+  for (let index = 0; index < uuids.length; index += 1) {
+    await directAuthenticatedGet({
+      accessToken: "synthetic-access-token",
+      guardedFetch,
+      path: "vault/object",
+      projectUrl: "https://project.example.invalid/",
+      publishableKey: "synthetic-publishable-key",
+      randomUUID: () => uuids[index],
+    });
+  }
+  assert.deepEqual(
+    directCalls.map(({ init, url }) => ({
+      cache: init.cache,
+      cacheNonce: new URL(url).searchParams.get("cacheNonce"),
+    })),
+    [
+      { cache: "no-store", cacheNonce: uuidA },
+      { cache: "no-store", cacheNonce: uuidB },
+    ],
+  );
+  assert.ok(
+    directCalls.every(({ url }) =>
+      url.startsWith("https://project.example.invalid/storage/v1/"),
+    ),
+  );
+  assert.ok(directCalls.every(({ url }) => !url.includes("invalid//storage")));
+});
+
+test("storage-js materializes the fresh nonce and no-store fetch parameters", async () => {
+  const calls = [];
+  const client = createClient(
+    "https://project.example.invalid",
+    "synthetic-publishable-key",
+    {
+      auth: {
+        autoRefreshToken: false,
+        detectSessionInUrl: false,
+        persistSession: false,
+      },
+      global: {
+        fetch: async (input, init) => {
+          calls.push({ init, url: String(input) });
+          return new Response(new Uint8Array([1, 2, 3]), { status: 200 });
+        },
+      },
+    },
+  );
+  const cacheNonce = "00000000-0000-4000-8000-000000000014";
+
+  const result = await freshAuthenticatedDownload(
+    client,
+    "vault/object",
+    () => cacheNonce,
+  );
+
+  assert.equal(result.error, null);
+  assert.ok(result.data);
+  assert.equal(calls.length, 1);
+  assert.equal(calls[0].init.cache, "no-store");
+  assert.equal(new URL(calls[0].url).searchParams.get("cacheNonce"), cacheNonce);
+});
+
+test("freshness rejects non-v4 or unbounded cache nonces", () => {
+  for (const invalidNonce of [
+    "short",
+    "00000000-0000-1000-8000-000000000000",
+    "00000000-0000-4000-7000-000000000000",
+    `00000000-0000-4000-8000-${"0".repeat(80)}`,
+  ]) {
+    assert.throws(
+      () =>
+        createAuthenticatedObjectRequestFreshness(() => invalidNonce),
+      (error) => error?.code === "authenticated_read_cache_nonce_invalid",
+    );
+  }
+});
+
+test("fresh download reaches the expired origin instead of a warmed object URL", async () => {
+  const path = "vault/temporary/object";
+  const warmedBody = { arrayBuffer: async () => new ArrayBuffer(0) };
+  const edgeCache = new Map();
+  const originCalls = [];
+  let expired = false;
+
+  const fakeClient = {
+    storage: {
+      from(bucket) {
+        assert.equal(bucket, S236P_BUCKET_ID);
+        return {
+          async download(downloadPath, options = {}, parameters = {}) {
+            const cacheNonce = options.cacheNonce ?? "shared-url";
+            const cacheKey = `${downloadPath}?cacheNonce=${cacheNonce}`;
+            if (edgeCache.has(cacheKey)) return edgeCache.get(cacheKey);
+
+            originCalls.push({
+              cache: parameters.cache ?? "default",
+              cacheKey,
+              expired,
+            });
+            const result = expired
+              ? { data: null, error: { status: 404 } }
+              : { data: warmedBody, error: null };
+            if (!expired) edgeCache.set(cacheKey, result);
+            return result;
+          },
+        };
+      },
+    },
+  };
+
+  const warmed = await fakeClient.storage.from(S236P_BUCKET_ID).download(path);
+  assert.equal(warmed.data, warmedBody);
+  expired = true;
+
+  const staleReplay = await fakeClient.storage
+    .from(S236P_BUCKET_ID)
+    .download(path);
+  assert.equal(staleReplay.data, warmedBody);
+
+  const fresh = await freshAuthenticatedDownload(
+    fakeClient,
+    path,
+    () => "00000000-0000-4000-8000-000000000013",
+  );
+  assert.equal(fresh.data, null);
+  assert.equal(fresh.error.status, 404);
+  assert.deepEqual(originCalls, [
+    {
+      cache: "default",
+      cacheKey: `${path}?cacheNonce=shared-url`,
+      expired: false,
+    },
+    {
+      cache: "no-store",
+      cacheKey:
+        `${path}?cacheNonce=00000000-0000-4000-8000-000000000013`,
+      expired: true,
+    },
+  ]);
+});
+
+test("post-expiry read classification reports every allowed or inconclusive surface", () => {
+  assert.deepEqual(
+    classifyTemporaryPostExpiryReadResults({
+      directGetResponse: { ok: false, status: 404 },
+      downloadResult: { data: null, error: { status: 403 } },
+      headResponse: { ok: false, status: 400 },
+      infoResult: { data: null, error: { statusCode: "404" } },
+      listResult: { data: [], error: null },
+    }),
+    [],
+  );
+
+  assert.deepEqual(
+    classifyTemporaryPostExpiryReadResults({
+      directGetResponse: { ok: true, status: 200 },
+      downloadResult: { data: {}, error: null },
+      headResponse: { ok: true, status: 200 },
+      infoResult: { data: {}, error: null },
+      listResult: { data: [{ name: "synthetic" }], error: null },
+    }),
+    [
+      "LIST_ALLOWED",
+      "INFO_ALLOWED",
+      "SDK_DOWNLOAD_ALLOWED",
+      "DIRECT_GET_ALLOWED",
+      "HEAD_ALLOWED",
+    ],
+  );
+
+  assert.deepEqual(
+    classifyTemporaryPostExpiryReadResults({
+      directGetResponse: { ok: false, status: 500 },
+      downloadResult: { data: null, error: { status: 500 } },
+      headResponse: null,
+      infoResult: { data: null, error: { message: "unknown" } },
+      listResult: { data: null, error: { message: "unknown" } },
+    }),
+    [
+      "LIST_INCONCLUSIVE",
+      "INFO_INCONCLUSIVE",
+      "SDK_DOWNLOAD_INCONCLUSIVE",
+      "DIRECT_GET_INCONCLUSIVE",
+      "HEAD_INCONCLUSIVE",
+    ],
+  );
+
+  assert.deepEqual(
+    classifyTemporaryPostExpiryReadResults({
+      directGetResponse: { ok: false, status: 404 },
+      downloadResult: { data: {}, error: { status: 403 } },
+      headResponse: { ok: false, status: 404 },
+      infoResult: { data: {}, error: { status: 404 } },
+      listResult: { data: null, error: null },
+    }),
+    ["LIST_INCONCLUSIVE", "INFO_ALLOWED", "SDK_DOWNLOAD_ALLOWED"],
+  );
+
+  const strictStatusFailures = classifyTemporaryPostExpiryReadResults({
+    directGetResponse: { ok: false, status: 404 },
+    downloadResult: { data: null, error: { status: "403junk" } },
+    headResponse: { ok: false, status: 404 },
+    infoResult: { data: null, error: { statusCode: "404junk" } },
+    listResult: { data: [], error: null },
+  });
+  assert.deepEqual(strictStatusFailures, [
+    "INFO_INCONCLUSIVE",
+    "SDK_DOWNLOAD_INCONCLUSIVE",
+  ]);
+
+  const allInconclusive = classifyTemporaryPostExpiryReadResults({
+    directGetResponse: null,
+    downloadResult: null,
+    headResponse: null,
+    infoResult: null,
+    listResult: null,
+  });
+  const failureCode =
+    `temporary_post_expiry_read_gate_failed:${allInconclusive.join(",")}`;
+  assert.ok(failureCode.length <= 160);
+  assert.match(failureCode, /^[a-z0-9_]+(?::[A-Z0-9_,]+)?$/);
+});
+
+test("read probe settlement waits for all probes and redacts rejection details", async () => {
+  let completed = false;
+  const rejected = settleReadProbe(() => {
+    throw new Error("sensitive URL and token must not escape");
+  });
+  const completedProbe = settleReadProbe(() =>
+    Promise.resolve().then(() => {
+      completed = true;
+      return { ok: false, status: 404 };
+    }),
+  );
+
+  const results = await Promise.all([rejected, completedProbe]);
+  assert.equal(completed, true);
+  assert.deepEqual(results, [null, { ok: false, status: 404 }]);
+  assert.doesNotMatch(JSON.stringify(results), /sensitive|token|URL/);
 });
 
 test("temporary acceptance timing survives transport delay and rejects one-second coupling", async () => {
@@ -328,7 +621,11 @@ test("live harness is synthetic, user-scoped, and fail-closed", async () => {
   assert.match(source, /created_at,temporary_ttl_seconds,temporary_expires_at/);
   assert.match(source, /temporary_stable_ttl_pre_expiry_reads_allowed/);
   assert.match(source, /temporary_exact_boundary_and_post_expiry_reads_denied/);
-  assert.match(source, /temporary_post_expiry_authenticated_head_allowed/);
+  assert.match(source, /temporary_post_expiry_read_gate_failed/);
+  assert.match(source, /unique-cache-nonce-and-no-store/);
+  assert.match(source, /cacheNonce: freshness\.cacheNonce/);
+  assert.match(source, /fetchOptions: \{ cache: "no-store" \}/);
+  assert.equal((source.match(/\.download\(/g) ?? []).length, 1);
   assert.match(source, /delete_requested_authenticated_head_allowed/);
   assert.match(source, /expired_single_and_bulk_cleanup_with_metadata_retained/);
   assert.match(source, /delete_requested_reads_denied_cleanup_preserved/);

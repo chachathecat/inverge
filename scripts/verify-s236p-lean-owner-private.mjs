@@ -18,6 +18,8 @@ export const S236P_MAX_TEMPORARY_TTL_SECONDS = 300;
 export const TEMPORARY_ACCEPTANCE_TTL_SECONDS = 30;
 export const TEMPORARY_EXPIRY_SAFETY_MARGIN_MS = 250;
 export const S236P_APPLICATION_CACHE_TTL_SECONDS = 0;
+export const S236P_AUTHENTICATED_OBJECT_REQUEST_CACHE_MODE =
+  "unique-cache-nonce-and-no-store";
 export const S236P_MAX_EXPORT_DELETE_SLA_SECONDS = 604800;
 
 const LIVE_FLAG = "S236P_LIVE_ACCEPTANCE";
@@ -35,6 +37,9 @@ const REQUIRED_ENV = [
 const DENIAL_PROBE_BODY = Buffer.from("s236p-synthetic-denial-probe", "utf8");
 const BULK_SIGN_TTLS = Object.freeze([1, 300, 301]);
 const SINGLE_SIGN_TTLS = Object.freeze([1, 300, 301]);
+const EXPECTED_AUTHENTICATED_DENIAL_STATUSES = Object.freeze([400, 403, 404]);
+const UUID_V4_PATTERN =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const TEMPORARY_EXPIRY_WAIT_MAX_MS =
   (TEMPORARY_ACCEPTANCE_TTL_SECONDS + 5) * 1_000;
 
@@ -193,6 +198,106 @@ function encodedStoragePath(path) {
   return path.split("/").map(encodeURIComponent).join("/");
 }
 
+export function createAuthenticatedObjectRequestFreshness(
+  randomUUID = crypto.randomUUID,
+) {
+  const cacheNonce = randomUUID();
+  if (typeof cacheNonce !== "string" || !UUID_V4_PATTERN.test(cacheNonce)) {
+    fail("authenticated_read_cache_nonce_invalid");
+  }
+  return {
+    cacheNonce,
+    fetchOptions: { cache: "no-store" },
+  };
+}
+
+export function freshAuthenticatedDownload(
+  client,
+  path,
+  randomUUID = crypto.randomUUID,
+) {
+  const freshness = createAuthenticatedObjectRequestFreshness(randomUUID);
+  return client.storage.from(S236P_BUCKET_ID).download(
+    path,
+    { cacheNonce: freshness.cacheNonce },
+    freshness.fetchOptions,
+  );
+}
+
+function storageErrorStatus(error) {
+  const candidates = [error?.status, error?.statusCode];
+  for (const candidate of candidates) {
+    if (candidate === null || candidate === undefined || candidate === "") {
+      continue;
+    }
+    const parsed = Number(candidate);
+    if (Number.isInteger(parsed) && parsed >= 100 && parsed <= 599) {
+      return parsed;
+    }
+  }
+  return null;
+}
+
+function isExpectedAuthenticatedDenial(error) {
+  return EXPECTED_AUTHENTICATED_DENIAL_STATUSES.includes(
+    storageErrorStatus(error),
+  );
+}
+
+export function classifyTemporaryPostExpiryReadResults({
+  directGetResponse,
+  downloadResult,
+  headResponse,
+  infoResult,
+  listResult,
+}) {
+  const failures = [];
+
+  if (Array.isArray(listResult?.data) && listResult.data.length > 0) {
+    failures.push("LIST_ALLOWED");
+  } else if (listResult?.error || !Array.isArray(listResult?.data)) {
+    failures.push("LIST_INCONCLUSIVE");
+  }
+
+  if (infoResult?.data) {
+    failures.push("INFO_ALLOWED");
+  } else if (!isExpectedAuthenticatedDenial(infoResult?.error)) {
+    failures.push("INFO_INCONCLUSIVE");
+  }
+
+  if (downloadResult?.data) {
+    failures.push("SDK_DOWNLOAD_ALLOWED");
+  } else if (!isExpectedAuthenticatedDenial(downloadResult?.error)) {
+    failures.push("SDK_DOWNLOAD_INCONCLUSIVE");
+  }
+
+  if (directGetResponse?.ok) {
+    failures.push("DIRECT_GET_ALLOWED");
+  } else if (
+    !EXPECTED_AUTHENTICATED_DENIAL_STATUSES.includes(directGetResponse?.status)
+  ) {
+    failures.push("DIRECT_GET_INCONCLUSIVE");
+  }
+
+  if (headResponse?.ok) {
+    failures.push("HEAD_ALLOWED");
+  } else if (
+    !EXPECTED_AUTHENTICATED_DENIAL_STATUSES.includes(headResponse?.status)
+  ) {
+    failures.push("HEAD_INCONCLUSIVE");
+  }
+
+  return failures;
+}
+
+export async function settleReadProbe(runProbe) {
+  try {
+    return await runProbe();
+  } catch {
+    return null;
+  }
+}
+
 async function insertObjectMetadata(client, row) {
   const result = await client
     .from(S236P_OBJECTS_TABLE)
@@ -340,27 +445,32 @@ async function expectBulkSignedUrlDenied(client, path, ttlSeconds, role) {
   return safeDetails;
 }
 
-async function directAuthenticatedGet({
+export async function directAuthenticatedGet({
   accessToken,
   guardedFetch,
   method = "GET",
   path,
   projectUrl,
   publishableKey,
+  randomUUID = crypto.randomUUID,
 }) {
+  const freshness = createAuthenticatedObjectRequestFreshness(randomUUID);
   const headers = {
     apikey: publishableKey,
   };
   if (accessToken) {
     headers.Authorization = `Bearer ${accessToken}`;
   }
-  return guardedFetch(
-    `${projectUrl}/storage/v1/object/authenticated/${S236P_BUCKET_ID}/${encodedStoragePath(path)}`,
-    {
-      method,
-      headers,
-    },
+  const requestUrl = new URL(
+    `/storage/v1/object/authenticated/${S236P_BUCKET_ID}/${encodedStoragePath(path)}`,
+    projectUrl,
   );
+  requestUrl.searchParams.set("cacheNonce", freshness.cacheNonce);
+  return guardedFetch(requestUrl, {
+    ...freshness.fetchOptions,
+    method,
+    headers,
+  });
 }
 
 async function directAuthenticatedDelete({
@@ -370,16 +480,17 @@ async function directAuthenticatedDelete({
   projectUrl,
   publishableKey,
 }) {
-  return guardedFetch(
-    `${projectUrl}/storage/v1/object/${S236P_BUCKET_ID}/${encodedStoragePath(path)}`,
-    {
-      method: "DELETE",
-      headers: {
-        apikey: publishableKey,
-        Authorization: `Bearer ${accessToken}`,
-      },
-    },
+  const requestUrl = new URL(
+    `/storage/v1/object/${S236P_BUCKET_ID}/${encodedStoragePath(path)}`,
+    projectUrl,
   );
+  return guardedFetch(requestUrl, {
+    method: "DELETE",
+    headers: {
+      apikey: publishableKey,
+      Authorization: `Bearer ${accessToken}`,
+    },
+  });
 }
 
 async function expectDirectGetDenied(options, code) {
@@ -470,7 +581,7 @@ async function expectRawStorageRequestDenied(
 }
 
 async function assertDownloadBytes(client, path, expected, code) {
-  const result = await client.storage.from(S236P_BUCKET_ID).download(path);
+  const result = await freshAuthenticatedDownload(client, path);
   if (result.error || !result.data) fail(`${code}_failed`);
   const actual = Buffer.from(await result.data.arrayBuffer());
   if (!actual.equals(expected)) fail(`${code}_mismatch`);
@@ -675,7 +786,7 @@ export async function runS236PLiveAcceptance() {
       "account_b_info_owner_a_allowed",
     );
     await expectStorageError(
-      principalB.client.storage.from(S236P_BUCKET_ID).download(pathA),
+      freshAuthenticatedDownload(principalB.client, pathA),
       "account_b_download_owner_a_allowed",
     );
     await expectStorageListHidden(
@@ -689,7 +800,7 @@ export async function runS236PLiveAcceptance() {
       "anonymous_info_allowed",
     );
     await expectStorageError(
-      anonymous.storage.from(S236P_BUCKET_ID).download(pathA),
+      freshAuthenticatedDownload(anonymous, pathA),
       "anonymous_download_allowed",
     );
     await expectStorageListHidden(
@@ -993,11 +1104,18 @@ export async function runS236PLiveAcceptance() {
       tempDirectBefore,
       tempHeadBefore,
     ] = await Promise.all([
+      settleReadProbe(() =>
         principalA.client.storage
           .from(S236P_BUCKET_ID)
           .list(`${vaultA}/temporary`, { limit: 20 }),
+      ),
+      settleReadProbe(() =>
         principalA.client.storage.from(S236P_BUCKET_ID).info(tempPath),
-        principalA.client.storage.from(S236P_BUCKET_ID).download(tempPath),
+      ),
+      settleReadProbe(() =>
+        freshAuthenticatedDownload(principalA.client, tempPath),
+      ),
+      settleReadProbe(() =>
         directAuthenticatedGet({
           accessToken: principalA.accessToken,
           guardedFetch,
@@ -1005,6 +1123,8 @@ export async function runS236PLiveAcceptance() {
           projectUrl,
           publishableKey,
         }),
+      ),
+      settleReadProbe(() =>
         directAuthenticatedGet({
           accessToken: principalA.accessToken,
           guardedFetch,
@@ -1013,30 +1133,34 @@ export async function runS236PLiveAcceptance() {
           projectUrl,
           publishableKey,
         }),
-      ]);
+      ),
+    ]);
     if (
-      tempListBefore.error ||
-      !(tempListBefore.data ?? []).some((item) => item.name === tempRef)
+      tempListBefore?.error ||
+      !Array.isArray(tempListBefore?.data) ||
+      !tempListBefore.data.some((item) => item.name === tempRef)
     ) {
       fail("temporary_pre_expiry_list_failed");
     }
-    if (tempInfoBefore.error || !tempInfoBefore.data) {
+    if (tempInfoBefore?.error || !tempInfoBefore?.data) {
       fail("temporary_pre_expiry_info_failed");
     }
-    if (tempDownloadBefore.error || !tempDownloadBefore.data) {
+    if (tempDownloadBefore?.error || !tempDownloadBefore?.data) {
       fail("temporary_pre_expiry_download_failed");
     }
-    if (!tempDirectBefore.ok) {
+    if (!tempDirectBefore?.ok) {
       fail("temporary_pre_expiry_direct_get_failed");
     }
-    if (!tempHeadBefore.ok) {
+    if (!tempHeadBefore?.ok) {
       fail("temporary_pre_expiry_authenticated_head_failed");
     }
     const [tempDownloadBytes, tempDirectBytes] = await Promise.all([
-      tempDownloadBefore.data.arrayBuffer(),
-      tempDirectBefore.arrayBuffer(),
+      settleReadProbe(() => tempDownloadBefore.data.arrayBuffer()),
+      settleReadProbe(() => tempDirectBefore.arrayBuffer()),
     ]);
     if (
+      !tempDownloadBytes ||
+      !tempDirectBytes ||
       !Buffer.from(tempDownloadBytes).equals(tempBody) ||
       !Buffer.from(tempDirectBytes).equals(tempBody)
     ) {
@@ -1061,40 +1185,65 @@ export async function runS236PLiveAcceptance() {
     ) {
       fail("exact_boundary_expiry_not_detected");
     }
-    await expectStorageListHidden(
-      principalA.client,
-      `${vaultA}/temporary`,
-      "temporary_post_expiry_list_allowed",
-    );
-    await expectStorageInfoDenied(
-      principalA.client,
-      tempPath,
-      "temporary_post_expiry_info_allowed",
-    );
-    await expectStorageError(
-      principalA.client.storage.from(S236P_BUCKET_ID).download(tempPath),
-      "temporary_post_expiry_download_allowed",
-    );
-    await expectDirectGetDenied(
-      {
-        accessToken: principalA.accessToken,
-        guardedFetch,
-        path: tempPath,
-        projectUrl,
-        publishableKey,
-      },
-      "temporary_post_expiry_direct_get_allowed",
-    );
-    await expectDirectHeadDenied(
-      {
-        accessToken: principalA.accessToken,
-        guardedFetch,
-        path: tempPath,
-        projectUrl,
-        publishableKey,
-      },
-      "temporary_post_expiry_authenticated_head_allowed",
-    );
+    const [
+      tempListAfter,
+      tempInfoAfter,
+      tempDownloadAfter,
+      tempDirectAfter,
+      tempHeadAfter,
+    ] = await Promise.all([
+      settleReadProbe(() =>
+        principalA.client.storage
+          .from(S236P_BUCKET_ID)
+          .list(`${vaultA}/temporary`, { limit: 20 }),
+      ),
+      settleReadProbe(() =>
+        principalA.client.storage.from(S236P_BUCKET_ID).info(tempPath),
+      ),
+      settleReadProbe(() =>
+        freshAuthenticatedDownload(principalA.client, tempPath),
+      ),
+      settleReadProbe(() =>
+        directAuthenticatedGet({
+          accessToken: principalA.accessToken,
+          guardedFetch,
+          path: tempPath,
+          projectUrl,
+          publishableKey,
+        }),
+      ),
+      settleReadProbe(() =>
+        directAuthenticatedGet({
+          accessToken: principalA.accessToken,
+          guardedFetch,
+          method: "HEAD",
+          path: tempPath,
+          projectUrl,
+          publishableKey,
+        }),
+      ),
+    ]);
+    const postExpiryReadFailures = classifyTemporaryPostExpiryReadResults({
+      directGetResponse: tempDirectAfter,
+      downloadResult: tempDownloadAfter,
+      headResponse: tempHeadAfter,
+      infoResult: tempInfoAfter,
+      listResult: tempListAfter,
+    });
+    if (postExpiryReadFailures.length > 0) {
+      fail(
+        `temporary_post_expiry_read_gate_failed:${postExpiryReadFailures.join(",")}`,
+        {
+          directGetCacheStatus:
+            tempDirectAfter?.headers?.get("cf-cache-status") ?? null,
+          directGetStatus: tempDirectAfter?.status ?? null,
+          headCacheStatus:
+            tempHeadAfter?.headers?.get("cf-cache-status") ?? null,
+          headStatus: tempHeadAfter?.status ?? null,
+          sdkDownloadStatus: storageErrorStatus(tempDownloadAfter?.error),
+        },
+      );
+    }
     record("temporary_exact_boundary_and_post_expiry_reads_denied");
 
     const retainedTemporaryMetadata = await principalA.client
@@ -1191,9 +1340,7 @@ export async function runS236PLiveAcceptance() {
       "delete_requested_info_allowed",
     );
     await expectStorageError(
-      principalA.client.storage
-        .from(S236P_BUCKET_ID)
-        .download(deleteRequestedPath),
+      freshAuthenticatedDownload(principalA.client, deleteRequestedPath),
       "delete_requested_download_allowed",
     );
     await expectDirectGetDenied(
@@ -1323,7 +1470,7 @@ export async function runS236PLiveAcceptance() {
       "owner_a_info_owner_b_allowed",
     );
     await expectStorageError(
-      principalA.client.storage.from(S236P_BUCKET_ID).download(pathB),
+      freshAuthenticatedDownload(principalA.client, pathB),
       "owner_a_download_owner_b_allowed",
     );
     await expectStorageListHidden(

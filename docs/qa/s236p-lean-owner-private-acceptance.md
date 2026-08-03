@@ -1,8 +1,8 @@
 # S236P narrowed Owner-private acceptance
 
-- Evaluated at: `2026-08-03T02:11:08Z`
-- Status: `retry #3 failed; stable-TTL corrective source offline-green, pending CI`
-- Corrective source parent: `9c97b2cd50c4e3a71ba333f11528860811fb61be`
+- Evaluated at: `2026-08-03T04:25:18Z`
+- Status: `retry #4 consumed and failed; authenticated-object request freshness correction offline-green`
+- Corrective source parent: `e0526e3586724eed5f95005b1c26c538a8c46ad2`
 - Live base verified before publication: `main@5d00cd84ec8ab44918ce47a49a0d71e9734cbea0`
 - Supabase project: `inverge-beta` (`vajcduseyicjhyhrclax`)
 - Real content: off
@@ -87,7 +87,7 @@ operation and not `object.head_authenticated_info`. A same-Owner request is
 allowed only while matching metadata is active and unexpired; cross-Owner,
 anonymous, metadata-missing, non-active, and expired requests remain denied.
 
-## Retry #3 failure and stable-TTL correction
+## Retry history and authenticated-object request freshness correction
 
 Owner-local retry #3 was consumed exactly once and failed at
 `temporary_pre_expiry_download_failed`. Its exact cleanup completed, and the
@@ -117,10 +117,60 @@ artificial transport delay across all five pre-expiry reads, proves the
 30-second window remains open, exercises the bounded post-expiry wait, and
 rejects a reintroduced one-second acceptance coupling.
 
+Owner-local retry #4 preflight then passed and the live matrix was consumed
+exactly once from source head
+`e0526e3586724eed5f95005b1c26c538a8c46ad2`. The sanitized result has
+SHA-256
+`4306df0429c5349f57d55474c536635ef50abee30d3568bbc02733d8af57cf6e`
+and failed at `temporary_post_expiry_download_allowed`. The exact-boundary
+RPC passed, post-expiry list was hidden, and post-expiry `info()` was denied.
+The immediately following SDK `download()` nevertheless returned data, so
+the fail-fast harness never reached its direct GET or HEAD probes.
+
+The pre-expiry and post-expiry SDK probes used the same cacheable object URL.
+Supabase Smart CDN can retain an object response independently of the SQL
+read gate, while the upload `cacheControl` value controls browser caching and
+does not disable Smart CDN. The result is therefore consistent with a
+pre-expiry `200` object body being replayed after origin RLS had already begun
+denying list and info. The sanitized result intentionally contains no cache
+headers, so this is the strongest evidence-backed diagnosis rather than a
+claim of direct cache-header observation.
+
+The corrective harness keeps the 30-second live-probe TTL, strict
+`statement_timestamp()` comparison, and all four migrations unchanged. It
+instead:
+
+- routes every SDK object download through a single adapter that supplies a
+  fresh `cacheNonce` and `cache: "no-store"`;
+- supplies a fresh `cacheNonce` and `cache: "no-store"` to every direct
+  authenticated GET and HEAD;
+- collects list, info, SDK download, direct GET, and HEAD results before
+  producing one aggregate fail-closed classification; and
+- includes a deterministic warmed-URL regression proving that an unchanged
+  URL can replay its pre-expiry response while a fresh nonce reaches the
+  expired origin and is denied.
+
+This proves fresh-origin enforcement for the SDK download and direct
+authenticated GET/HEAD probes. List and info use distinct metadata endpoints
+and remain separately fail-closed. This does not claim that an arbitrary
+previously warmed raw Storage URL becomes immediately replay-proof at the
+exact expiry instant. A literal immediate replay-denial contract would
+require a separately Owner-approved non-cached application or Edge gateway
+and removal of direct client Storage reads; it cannot be produced by another
+TTL or RLS predicate adjustment.
+
+Retry #4 cleanup completed after the matrix failure. Both synthetic sessions
+were revoked, both synthetic principals were hard-deleted, tracked sensitive
+references were cleared, and the output-sink scan found no sensitive bytes or
+files. `residueVerificationReadiness: true` means a separate residue query is
+safe to run; it is not itself an observed zero count. No retry #4 residue
+query has been authorized or executed in this correction.
+
 ## Publishable-key live acceptance remains blocked
 
-Migration 4 is live exactly once. A future separately authorized fresh Owner
-A, Owner B, and anonymous-client run must prove:
+Migration 4 is live exactly once. Retry #4 is consumed and cannot be rerun.
+No retry #5 is authorized. A future separately authorized fresh Owner A,
+Owner B, and anonymous-client run must prove:
 
 - Owner A metadata creation, new upload, list, `info()`, SDK `download()`,
   and direct authenticated GET succeed; downloaded bytes match in
@@ -139,9 +189,11 @@ A, Owner B, and anonymous-client run must prove:
 - Signed upload, overwrite/upsert, move, copy, S3, TUS, unknown, and missing
   operations are denied.
 - A live-probe TTL `30` temporary object is list/info/download/direct-GET and
-  authenticated-HEAD readable before server-recorded expiry, hidden at
-  equality and after expiry, and still removable through both single and bulk
-  cleanup while metadata remains. The product range remains `1..300`.
+  authenticated-HEAD readable before server-recorded expiry. All object
+  endpoint requests use a unique cache nonce plus `no-store`; list, info,
+  fresh SDK download, fresh direct GET, and fresh HEAD are all denied at
+  equality and after expiry. Single and bulk cleanup remain available while
+  metadata is retained. The product range remains `1..300`.
 - `delete_requested`, content-expired, temporary-expired, and
   metadata-missing rows are unreadable while Owner cleanup remains possible.
 - Immutable originals, append-only sequential revisions, metadata-first
@@ -176,35 +228,36 @@ rolled-back transactions.
 
 ## Corrective source offline validation
 
-- focused S236P/runtime-gate suite: `55` passed, `0` failed;
-- full node suite: `1241` passed, `0` failed;
+- focused S236P/runtime-gate suite: `61` passed, `0` failed;
+- full node suite: `1247` passed, `0` failed;
 - touched-source lint: pass;
 - full lint: `0` errors; `9` pre-existing warnings;
 - TypeScript: pass;
 - production Turbopack build: pass (`54/54` static pages);
 - JavaScript syntax and `git diff --check`: pass;
-- exact migration digest assertions: pass;
-- Supabase Security Advisor: S236P `0`, ERROR `0`;
-- Supabase Performance Advisor: S236P `0`, ERROR `0`.
+- exact migration digest assertions: pass.
 
 This sandbox lacks `/proc`, so unmodified Node RSS telemetry raised
 `uv_resident_set_memory ENOENT` before compilation. A temporary repository-
 external preload shim returned zero only for that missing-host-telemetry
 error; the normal Turbopack build then completed, and the shim was deleted.
 The isolated PostgreSQL/RLS matrix and all required GitHub checks remain
-mandatory on the published checkpoint head before live apply.
+mandatory on a future published checkpoint head. No offline result authorizes
+another live attempt.
 
 ## Current live safety state
 
 Migration 4 remains live exactly once; no migration, schema, RLS, policy,
-bucket, Auth setting, or project setting changed in this correction. After
-retry #3 failed and its exact cleanup completed, one bounded count-only job
-confirmed
+bucket, Auth setting, project setting, or Supabase data changed in this
+correction. Retry #3 has its separately observed final
 `object/metadata/event/synthetic-session/synthetic-principal = 0/0/0/0/0`.
-No Supabase mutation or cleanup was performed by the corrective Work.
+Retry #4 has successful cleanup telemetry but no separately observed residue
+counts.
 
-PR #676 remains Draft/Blocked. Retry #4 and canary retry #2 remain unconsumed
-and not authorized, and the standalone HEAD diagnostic remains forbidden.
-S236A remains queued and unstarted; this work does not authorize
-reference-package authoring, real content, Production activation, or
-external-provider processing.
+PR #676 remains open, Draft, and blocked. This three-file corrective source
+publication performs no Supabase invocation or mutation. Retry #4 is consumed
+and failed; retry #5 is not authorized. Canary retry #2 remains unconsumed and
+not authorized. Agent-side live execution and the standalone HEAD diagnostic
+remain forbidden. S236A remains queued and unstarted; this work does not
+authorize reference-package authoring, real content, Production activation,
+or external-provider processing.
