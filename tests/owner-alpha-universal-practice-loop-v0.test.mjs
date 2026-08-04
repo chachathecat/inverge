@@ -641,7 +641,7 @@ test("critical AI/deterministic disagreement fails closed without reference prom
   assert.equal(repository.evidence.referenceUsage.length, 0);
 });
 
-test("provider timeout persists no AI evidence or usage and the native rewrite/D+1 loop remains available", async () => {
+test("provider timeout persists the rewrite but blocks D+1 until deterministic repair verification exists", async () => {
   const { runtime, repository } = harness({
     referenceError: new OwnerAlphaProviderError("timeout"),
   });
@@ -673,19 +673,19 @@ test("provider timeout persists no AI evidence or usage and the native rewrite/D
     successCriteria: "환원이율을 소수로 바꾸어 직접 재계산합니다.",
     ...practicalRewriteVerification(view),
   });
-  assert.equal(completed.status, "completed");
+  assert.equal(completed.status, "rewrite_saved");
   assert.equal(
     completed.practicalDecisionPath.repairVerification.status,
     "not_available",
   );
-  assert.ok(completed.fixedD1DueAt);
-  assert.ok(completed.links.reviewQueueItemId);
-  assert.ok(completed.links.todayActionSeedId);
-  assert.ok(completed.links.learningRecordId);
-  assert.equal(repository.evidence.completions.length, 1);
+  assert.equal(completed.fixedD1DueAt, null);
+  assert.equal(completed.links.reviewQueueItemId, null);
+  assert.equal(completed.links.todayActionSeedId, null);
+  assert.equal(completed.links.learningRecordId, null);
+  assert.equal(repository.evidence.completions.length, 0);
 });
 
-test("entitlement quota fails closed into the same native rewrite and D+1 fallback without a provider call", async () => {
+test("entitlement quota preserves the native rewrite but creates no D+1 projection without verification", async () => {
   const { runtime, repository, provider: fakeProvider } = harness({
     entitlementError: new OwnerAlphaProviderError("quota"),
   });
@@ -715,16 +715,16 @@ test("entitlement quota fails closed into the same native rewrite and D+1 fallba
     successCriteria: "전체 가격과 배분비율을 사용해 직접 재현합니다.",
     ...practicalRewriteVerification(view),
   });
-  assert.equal(completed.status, "completed");
+  assert.equal(completed.status, "rewrite_saved");
   assert.equal(
     completed.practicalDecisionPath.repairVerification.status,
     "not_available",
   );
-  assert.ok(completed.fixedD1DueAt);
-  assert.ok(completed.links.reviewQueueItemId);
-  assert.ok(completed.links.todayActionSeedId);
-  assert.ok(completed.links.learningRecordId);
-  assert.equal(repository.evidence.completions.length, 1);
+  assert.equal(completed.fixedD1DueAt, null);
+  assert.equal(completed.links.reviewQueueItemId, null);
+  assert.equal(completed.links.todayActionSeedId, null);
+  assert.equal(completed.links.learningRecordId, null);
+  assert.equal(repository.evidence.completions.length, 0);
 });
 
 test("mixed method stays unresolved instead of receiving fabricated certainty", async () => {

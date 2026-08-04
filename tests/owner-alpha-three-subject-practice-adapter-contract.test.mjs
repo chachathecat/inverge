@@ -274,7 +274,64 @@ function harness(options = {}) {
   return { runtime, repository, provider, now };
 }
 
-async function prepareAttempt(runtime, fixture, text = fixture.text) {
+function theoryCommitmentInput() {
+  return {
+    demandVerb: "비교하고 평가하라",
+    thesis: "정의와 전제를 연결한 뒤 두 관점을 비교·평가한다.",
+    orderedOutlineItems: [
+      { outlineItemId: "outline-1", label: "정의와 전제" },
+      { outlineItemId: "outline-2", label: "비교와 평가" },
+      { outlineItemId: "outline-3", label: "실무 연결과 결론" },
+    ],
+    selectedConcepts: [
+      { conceptId: "concept-1", label: "가치 형성 원리" },
+      { conceptId: "concept-2", label: "시장 참여자 판단" },
+    ],
+  };
+}
+
+function lawCommitmentInput() {
+  return {
+    issueFraming: "절차상 요건 충족 여부가 쟁점이다.",
+    legalBasisPlan: "적용 법령과 조문을 공식 원문·유효일에 묶어 확인한다.",
+    requirementEffectPlan: "요건과 불충족 시 법적 효과를 나누어 쓴다.",
+    factApplicationDirection: "제시 사실을 각 요건에 대응한 뒤 포섭한다.",
+    tentativeConclusion: "요건 충족 여부에 따라 결론을 나눈다.",
+  };
+}
+
+function sourceBindLawAdapter(adapter) {
+  adapter.applicableLawCandidates = [
+    {
+      label: "공익사업법",
+      state: "official_source_grounded",
+      officialSourceRefId: "official-law-ref-1",
+    },
+  ];
+  adapter.articleAndParagraphReferences = [
+    {
+      citation: "공익사업법 제10조 제1항",
+      state: "official_source_grounded",
+      officialSourceRefId: "official-article-ref-1",
+      effectiveAt: "2026.07.04",
+    },
+  ];
+  adapter.effectiveDateRequirement = {
+    required: true,
+    effectiveAt: "2026.07.04",
+    state: "official_source_grounded",
+    officialSourceRefId: "official-law-version-ref-1",
+  };
+  adapter.unresolvedSourceOrVersionIssue = [];
+}
+
+async function prepareAttempt(
+  runtime,
+  fixture,
+  text = fixture.text,
+  repository = null,
+  sourceBoundLaw = false,
+) {
   let view = await runtime.create({
     problemText: text,
     files: [],
@@ -286,6 +343,12 @@ async function prepareAttempt(runtime, fixture, text = fixture.text) {
     recordVersion: view.recordVersion,
     confirmedProblemText: view.confirmedProblemText,
   });
+  if (sourceBoundLaw && fixture.subject === "appraisal_compensation_law") {
+    const stored = await repository.load(view.sessionId);
+    sourceBindLawAdapter(stored.problemModel.subjectAdapter);
+    repository.rows.set(view.sessionId, stored);
+    view = await runtime.get(view.sessionId);
+  }
   view = await runtime.saveIndependentAttempt({
     sessionId: view.sessionId,
     recordVersion: view.recordVersion,
@@ -300,13 +363,79 @@ async function prepareAttempt(runtime, fixture, text = fixture.text) {
           firstCalculationDirection:
             "사례가격에 토지 배분비율을 먼저 곱해 토지 배분가액을 구합니다.",
         }
-      : {}),
+      : fixture.subject === "appraisal_theory"
+        ? { theoryCommitment: theoryCommitmentInput() }
+        : { lawCommitment: lawCommitmentInput() }),
   });
   return view;
 }
 
-function practicalRepairInput(view, fixture) {
-  if (fixture.subject !== "appraisal_practical") return {};
+function subjectRepairInput(view, fixture) {
+  if (fixture.subject === "appraisal_theory") {
+    const commitment = theoryCommitmentInput();
+    return {
+      theoryRepairSubmission: {
+        ...commitment,
+        conceptArgumentLinks: [
+          {
+            conceptId: "concept-1",
+            outlineItemId: "outline-1",
+            argument: "가치 형성 원리가 정의와 전제의 연결을 설명한다.",
+          },
+          {
+            conceptId: "concept-2",
+            outlineItemId: "outline-2",
+            argument: "시장 참여자 판단을 두 관점 비교에 연결한다.",
+          },
+        ],
+        comparisonOrEvaluation: "두 관점의 전제와 설명 범위를 비교·평가한다.",
+        counterPosition: "단일 원리만으로 설명할 수 있다는 반대 입장을 검토한다.",
+        conclusion: "상호작용 관점이 더 넓은 설명 구조를 제공한다.",
+        compression: "정의-전제-비교-평가-결론을 연결한다.",
+      },
+    };
+  }
+  if (fixture.subject === "appraisal_compensation_law") {
+    return {
+      lawRepairSubmission: {
+        issue: "제10조 제1항의 절차상 요건 충족 여부",
+        authorityBindings: view.lawReasoningPath.postCommitStoredAuthorities.map(
+          ({ authorityKind, label, officialSourceRefId }) => ({
+            authorityKind,
+            label,
+            officialSourceRefId,
+          }),
+        ),
+        effectiveDate: "2026.07.04",
+        requirements: [
+          {
+            requirementId: "req-1",
+            requirement: "법정 절차를 순서에 따라 이행할 것",
+            legalEffect: "미이행 시 위법 사유가 될 수 있음",
+          },
+        ],
+        requirementFactMappings: [
+          {
+            requirementId: "req-1",
+            factApplication: "통지와 신청 순서를 절차 요건에 대응한다.",
+          },
+        ],
+        application: "제시 사실의 통지 시점과 신청 순서를 요건에 포섭한다.",
+        conclusion: "요건 충족 여부에 따라 절차상 위법 여부를 구분한다.",
+        procedure: view.lawReasoningPath.procedureRequired
+          ? "통지-신청-결정의 절차 순서를 확인한다."
+          : null,
+        precedentOrAdjudication: view.lawReasoningPath
+          .precedentOrAdjudicationRequired
+          ? "저장된 판례·재결 바인딩의 적용 범위를 검토한다."
+          : null,
+        opposingInterpretation: view.lawReasoningPath
+          .opposingInterpretationRequired
+          ? "반대 해석의 요건 적용을 함께 검토한다."
+          : null,
+      },
+    };
+  }
   const allNodes = view.problemModel.calculationGraph.nodes;
   const criticalNodes = allNodes.filter((node) => node.critical);
   const requiredNodes = criticalNodes.length > 0 ? criticalNodes : allNodes;
@@ -425,7 +554,13 @@ test("Theory and Law inferred scaffolds stay server-redacted until an independen
 for (const fixture of fixtures) {
   test(`${fixture.adapter} uses the shared kernel through D+1 Queue, Today, and Learning Record`, async () => {
     const { runtime, repository, now } = harness();
-    let prior = await prepareAttempt(runtime, fixture);
+    let prior = await prepareAttempt(
+      runtime,
+      fixture,
+      fixture.text,
+      repository,
+      true,
+    );
     prior = (
       await runtime.requestAssistance({
         sessionId: prior.sessionId,
@@ -434,7 +569,13 @@ for (const fixture of fixtures) {
         revealFull: true,
       })
     ).view;
-    let view = await prepareAttempt(runtime, fixture);
+    let view = await prepareAttempt(
+      runtime,
+      fixture,
+      fixture.text,
+      repository,
+      true,
+    );
     const adapter = view.problemModel.subjectAdapter;
     assert.equal(adapter.contractVersion, OWNER_ALPHA_SUBJECT_ADAPTER_CONTRACT_VERSION);
     assert.equal(adapter.subject, fixture.subject);
@@ -465,8 +606,20 @@ for (const fixture of fixtures) {
         "사례가격에 토지 배분비율을 먼저 곱해 토지 배분가액을 구합니다.",
       );
       assert.equal(view.practicalDecisionPath.repairVerification.status, "not_started");
+    } else if (fixture.subject === "appraisal_theory") {
+      assert.equal(view.practicalDecisionPath, undefined);
+      assert.equal(
+        view.theoryReasoningPath.repairVerification.status,
+        "not_started",
+      );
+      assert.equal(view.lawReasoningPath, undefined);
     } else {
       assert.equal(view.practicalDecisionPath, undefined);
+      assert.equal(view.theoryReasoningPath, undefined);
+      assert.equal(
+        view.lawReasoningPath.repairVerification.status,
+        "not_started",
+      );
     }
 
     let result = await runtime.requestAssistance({
@@ -516,7 +669,7 @@ for (const fixture of fixtures) {
       rewriteText: "가장 큰 간극 하나를 기준으로 요구와 근거의 연결을 직접 다시 작성했습니다.",
       inferredMisunderstanding: "요구와 근거를 연결하는 순서를 놓쳤습니다.",
       successCriteria: "같은 구조를 도움 없이 다시 재현합니다.",
-      ...practicalRepairInput(view, fixture),
+      ...subjectRepairInput(view, fixture),
     });
     assert.equal(completed.status, "completed");
     assert.equal(completed.rewrite.subjectMode, fixture.rewriteMode);
@@ -553,8 +706,17 @@ for (const fixture of fixtures) {
             status: "validated",
           })),
       );
-    } else {
+    } else if (fixture.subject === "appraisal_theory") {
       assert.equal(completed.practicalDecisionPath, undefined);
+      assert.equal(
+        completed.theoryReasoningPath.repairVerification.status,
+        "structurally_supported",
+      );
+    } else {
+      assert.equal(
+        completed.lawReasoningPath.repairVerification.status,
+        "source_version_structurally_supported",
+      );
     }
 
     const shared = projectOwnerAlphaSubjectPracticeContract(completed);
@@ -572,6 +734,125 @@ for (const fixture of fixtures) {
     assert.equal(repository.evidence.rewrites.length, 1);
     assert.equal(repository.evidence.completions.length, 1);
     assert.equal(repository.evidence.referenceUsage.size, 2);
+  });
+}
+
+for (const fixture of fixtures.slice(1)) {
+  test(`${fixture.adapter} persists a blocked repair, preserves the first commitment, and projects one corrected retry`, async () => {
+    const { runtime, repository } = harness();
+    let view = await prepareAttempt(
+      runtime,
+      fixture,
+      fixture.text,
+      repository,
+      true,
+    );
+    view = (
+      await runtime.requestAssistance({
+        sessionId: view.sessionId,
+        recordVersion: view.recordVersion,
+        questionText: "구조 연결을 다시 확인합니다.",
+        revealFull: true,
+      })
+    ).view;
+    const originalCommitment = clone(
+      fixture.subject === "appraisal_theory"
+        ? view.theoryReasoningPath.initialCommitment
+        : view.lawReasoningPath.initialCommitment,
+    );
+    const blockedRepair = clone(subjectRepairInput(view, fixture));
+    if (fixture.subject === "appraisal_theory") {
+      blockedRepair.theoryRepairSubmission.conceptArgumentLinks = [];
+    } else {
+      blockedRepair.lawRepairSubmission.effectiveDate = "2026.07.03";
+    }
+    const blocked = await runtime.completeRewrite({
+      sessionId: view.sessionId,
+      recordVersion: view.recordVersion,
+      mode: "rewrite",
+      subjectMode: fixture.rewriteMode,
+      rewriteText: "첫 수정안을 저장하지만 아직 구조 확인이 남아 있습니다.",
+      inferredMisunderstanding: "근거와 결론 사이의 연결을 빠뜨렸습니다.",
+      successCriteria: "빠진 연결을 보완해 같은 구조를 다시 설명합니다.",
+      ...blockedRepair,
+    });
+    assert.equal(blocked.status, "rewrite_saved");
+    assert.equal(blocked.fixedD1DueAt, null);
+    assert.equal(blocked.links.reviewQueueItemId, null);
+    assert.equal(blocked.links.todayActionSeedId, null);
+    assert.equal(blocked.links.learningRecordId, null);
+    assert.equal(blocked.assistance.independentRecoveryAfterHelp, false);
+    assert.equal(repository.evidence.completions.length, 0);
+    if (fixture.subject === "appraisal_theory") {
+      assert.deepEqual(
+        blocked.theoryReasoningPath.initialCommitment,
+        originalCommitment,
+      );
+      assert.deepEqual(
+        blocked.theoryReasoningPath.repairSubmission.conceptArgumentLinks,
+        [],
+      );
+      assert.equal(
+        blocked.theoryReasoningPath.repairVerification.status,
+        "blocked",
+      );
+    } else {
+      assert.deepEqual(
+        blocked.lawReasoningPath.initialCommitment,
+        originalCommitment,
+      );
+      assert.equal(
+        blocked.lawReasoningPath.repairSubmission.effectiveDate,
+        "2026.07.03",
+      );
+      assert.equal(blocked.lawReasoningPath.repairVerification.status, "blocked");
+    }
+
+    const completed = await runtime.completeRewrite({
+      sessionId: blocked.sessionId,
+      recordVersion: blocked.recordVersion,
+      mode: "rewrite",
+      subjectMode: fixture.rewriteMode,
+      rewriteText: "차단 사유를 보완해 구조와 근거 연결을 다시 작성했습니다.",
+      inferredMisunderstanding: "근거와 결론 사이의 연결을 빠뜨렸습니다.",
+      successCriteria: "빠진 연결을 보완해 같은 구조를 다시 설명합니다.",
+      ...subjectRepairInput(blocked, fixture),
+    });
+    assert.equal(completed.status, "completed");
+    assert.deepEqual(
+      fixture.subject === "appraisal_theory"
+        ? completed.theoryReasoningPath.initialCommitment
+        : completed.lawReasoningPath.initialCommitment,
+      originalCommitment,
+    );
+    assert.equal(repository.evidence.completions.length, 1);
+
+    const replay = await runtime.completeRewrite({
+      sessionId: completed.sessionId,
+      recordVersion: completed.recordVersion,
+      mode: "rewrite",
+      subjectMode: fixture.rewriteMode,
+      rewriteText: "완료된 요청을 다시 보내도 새 투영을 만들지 않습니다.",
+      inferredMisunderstanding: "근거와 결론 사이의 연결을 빠뜨렸습니다.",
+      successCriteria: "빠진 연결을 보완해 같은 구조를 다시 설명합니다.",
+      ...subjectRepairInput(completed, fixture),
+    });
+    assert.equal(replay.recordVersion, completed.recordVersion);
+    assert.equal(repository.evidence.completions.length, 1);
+    await assert.rejects(
+      runtime.completeRewrite({
+        sessionId: completed.sessionId,
+        recordVersion: blocked.recordVersion,
+        mode: "rewrite",
+        subjectMode: fixture.rewriteMode,
+        rewriteText: "오래된 버전으로는 완료 투영을 다시 만들 수 없습니다.",
+        inferredMisunderstanding: "근거와 결론 사이의 연결을 빠뜨렸습니다.",
+        successCriteria: "빠진 연결을 보완해 같은 구조를 다시 설명합니다.",
+        ...subjectRepairInput(completed, fixture),
+      }),
+      /stale_record/,
+    );
+    assert.equal(repository.evidence.completions.length, 1);
   });
 }
 
@@ -867,6 +1148,7 @@ test("provider timeout preserves the native TheoryAdapter rewrite and D+1 fallba
     rewriteText: "AI 기준안 없이 정의와 전제 사이의 논증 연결을 직접 다시 작성했습니다.",
     inferredMisunderstanding: "전제에서 결론으로 넘어가는 연결이 비었습니다.",
     successCriteria: "전제와 결론 사이 논증을 한 문단으로 재현합니다.",
+    ...subjectRepairInput(view, fixtures[1]),
   });
   assert.equal(completed.status, "completed");
   assert.equal(completed.rewrite.subjectMode, "argument_bridge");
@@ -1036,15 +1318,43 @@ test("metadata and exact-head RLS evidence contain no raw learner or provider bo
   assert.match(verifier, /credentialMaterialPersisted:\s*false/);
 });
 
-test("the private UI preserves the v0 practical rewrite and recalculation choice", async () => {
-  const component = await readFile(
-    "components/review-os/owner-alpha-practice-loop.tsx",
-    "utf8",
-  );
+test("the private UI and exact API boundary expose three separate accessible commitment-repair forms", async () => {
+  const [component, route] = await Promise.all([
+    readFile("components/review-os/owner-alpha-practice-loop.tsx", "utf8"),
+    readFile("app/api/problem-snap/owner-alpha/route.ts", "utf8"),
+  ]);
   assert.match(
     component,
     /!activeAdapter \|\| activeAdapter\.subject === "appraisal_practical"/,
   );
+  for (const payloadKey of [
+    "theoryCommitment",
+    "lawCommitment",
+    "theoryRepairSubmission",
+    "lawRepairSubmission",
+  ]) {
+    assert.match(component, new RegExp(payloadKey));
+    assert.match(route, new RegExp(`"${payloadKey}"`));
+  }
+  for (const accessibleFieldId of [
+    "owner-alpha-theory-demand",
+    "owner-alpha-theory-outline",
+    "owner-alpha-law-effective-date",
+    "owner-alpha-law-application",
+  ]) {
+    assert.match(component, new RegExp(`htmlFor="${accessibleFieldId}"`));
+    assert.match(component, new RegExp(`id="${accessibleFieldId}"`));
+  }
+  assert.match(component, /id: "owner-alpha-law-issue"/);
+  assert.match(component, /htmlFor=\{field\.id\}/);
+  assert.match(component, /id=\{field\.id\}/);
+  assert.match(component, /예상 목차나 개념 목록은 제공하지 않습니다/);
+  assert.match(component, /공식 오답 판정이 아닙니다/);
+  assert.match(component, /자동 법적 정확성 판정이 아닙니다/);
+  assert.match(component, /평가·거래·업무 날짜로 대신할 수 없습니다/);
+  assert.match(route, /value\.length > 24/);
+  assert.match(route, /candidate\.authorityBindings/);
+  assert.match(route, /exactKeys\(record\(item\)/);
 });
 
 test("the versioned contract exposes every required theory and law mode without automated correctness scoring", () => {

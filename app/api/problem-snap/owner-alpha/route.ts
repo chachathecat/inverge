@@ -18,6 +18,17 @@ import {
   type OwnerAlphaMethodFamily,
 } from "@/lib/review-os/owner-alpha-practice-contract";
 import type { OwnerAlphaPracticalRecalculationSubmission } from "@/lib/review-os/owner-alpha-practical-decision-path";
+import type {
+  OwnerAlphaTheoryConceptSelection,
+  OwnerAlphaTheoryOutlineItem,
+  OwnerAlphaTheoryRepairSubmission,
+} from "@/lib/review-os/owner-alpha-theory-reasoning-path";
+import type {
+  OwnerAlphaLawAuthorityBinding,
+  OwnerAlphaLawRepairSubmission,
+  OwnerAlphaLawRequirement,
+  OwnerAlphaLawRequirementFactMapping,
+} from "@/lib/review-os/owner-alpha-law-reasoning-path";
 import { EntitlementBlockedError } from "@/lib/review-os/entitlement-enforcement";
 import {
   parseOwnerAlphaPracticeSubject,
@@ -49,6 +60,311 @@ function requiredString(value: unknown) {
     throw new OwnerAlphaPracticeRuntimeError("invalid_input");
   }
   return value;
+}
+
+function boundedString(value: unknown, maximum: number, minimum = 1) {
+  const text = requiredString(value).trim();
+  if (text.length < minimum || text.length > maximum) {
+    throw new OwnerAlphaPracticeRuntimeError("invalid_input");
+  }
+  return text;
+}
+
+function boundedElapsedTime(value: unknown) {
+  if (
+    typeof value !== "number" ||
+    !Number.isFinite(value) ||
+    value < 0 ||
+    value > 8 * 60 * 60 * 1_000
+  ) {
+    throw new OwnerAlphaPracticeRuntimeError("invalid_input");
+  }
+  return Math.round(value);
+}
+
+function exactKeys(
+  value: Record<string, unknown>,
+  allowed: readonly string[],
+) {
+  const actual = Object.keys(value).sort();
+  const expected = [...allowed].sort();
+  if (
+    actual.length !== expected.length ||
+    actual.some((key, index) => key !== expected[index])
+  ) {
+    throw new OwnerAlphaPracticeRuntimeError("invalid_input");
+  }
+  return value;
+}
+
+function commandKeys(
+  value: Record<string, unknown>,
+  allowed: readonly string[],
+  required: readonly string[],
+) {
+  const allowedSet = new Set(allowed);
+  if (
+    Object.keys(value).some((key) => !allowedSet.has(key)) ||
+    required.some((key) => !(key in value))
+  ) {
+    throw new OwnerAlphaPracticeRuntimeError("invalid_input");
+  }
+}
+
+function optionalExactRecord(
+  value: unknown,
+  allowed: readonly string[],
+) {
+  if (value === undefined || value === null) return null;
+  return exactKeys(record(value), allowed);
+}
+
+function uniqueIds(values: readonly string[]) {
+  if (new Set(values).size !== values.length) {
+    throw new OwnerAlphaPracticeRuntimeError("invalid_input");
+  }
+}
+
+function optionalBoundedText(value: unknown, maximum: number) {
+  if (value === undefined || value === null || value === "") return null;
+  return boundedString(value, maximum, 3);
+}
+
+function theoryOutlineItems(
+  value: unknown,
+  allowEmpty = false,
+): OwnerAlphaTheoryOutlineItem[] {
+  if (
+    !Array.isArray(value) ||
+    (!allowEmpty && value.length === 0) ||
+    value.length > 24
+  ) {
+    throw new OwnerAlphaPracticeRuntimeError("invalid_input");
+  }
+  const items = value.map((item) => {
+    const candidate = exactKeys(record(item), ["outlineItemId", "label"]);
+    return {
+      outlineItemId: boundedString(candidate.outlineItemId, 120),
+      label: boundedString(candidate.label, 600, 2),
+    };
+  });
+  uniqueIds(items.map((item) => item.outlineItemId));
+  return items;
+}
+
+function theoryConcepts(
+  value: unknown,
+  allowEmpty = false,
+): OwnerAlphaTheoryConceptSelection[] {
+  if (
+    !Array.isArray(value) ||
+    (!allowEmpty && value.length === 0) ||
+    value.length > 24
+  ) {
+    throw new OwnerAlphaPracticeRuntimeError("invalid_input");
+  }
+  const items = value.map((item) => {
+    const candidate = exactKeys(record(item), ["conceptId", "label"]);
+    return {
+      conceptId: boundedString(candidate.conceptId, 120),
+      label: boundedString(candidate.label, 600, 2),
+    };
+  });
+  uniqueIds(items.map((item) => item.conceptId));
+  return items;
+}
+
+function theoryCommitment(value: unknown) {
+  const candidate = optionalExactRecord(value, [
+    "demandVerb",
+    "thesis",
+    "orderedOutlineItems",
+    "selectedConcepts",
+  ]);
+  if (!candidate) return null;
+  return {
+    demandVerb: boundedString(candidate.demandVerb, 240),
+    thesis: boundedString(candidate.thesis, 2_000, 3),
+    orderedOutlineItems: theoryOutlineItems(candidate.orderedOutlineItems),
+    selectedConcepts: theoryConcepts(candidate.selectedConcepts),
+  };
+}
+
+function lawCommitment(value: unknown) {
+  const candidate = optionalExactRecord(value, [
+    "issueFraming",
+    "legalBasisPlan",
+    "requirementEffectPlan",
+    "factApplicationDirection",
+    "tentativeConclusion",
+  ]);
+  if (!candidate) return null;
+  return {
+    issueFraming: boundedString(candidate.issueFraming, 2_000, 3),
+    legalBasisPlan: boundedString(candidate.legalBasisPlan, 2_000, 3),
+    requirementEffectPlan: boundedString(
+      candidate.requirementEffectPlan,
+      2_000,
+      3,
+    ),
+    factApplicationDirection: boundedString(
+      candidate.factApplicationDirection,
+      2_000,
+      3,
+    ),
+    tentativeConclusion: boundedString(candidate.tentativeConclusion, 2_000, 3),
+  };
+}
+
+function theoryRepair(value: unknown): OwnerAlphaTheoryRepairSubmission | null {
+  const candidate = optionalExactRecord(value, [
+    "demandVerb",
+    "thesis",
+    "orderedOutlineItems",
+    "selectedConcepts",
+    "conceptArgumentLinks",
+    "comparisonOrEvaluation",
+    "counterPosition",
+    "conclusion",
+    "compression",
+  ]);
+  if (!candidate) return null;
+  if (
+    !Array.isArray(candidate.conceptArgumentLinks) ||
+    candidate.conceptArgumentLinks.length > 64
+  ) {
+    throw new OwnerAlphaPracticeRuntimeError("invalid_input");
+  }
+  const conceptArgumentLinks = candidate.conceptArgumentLinks.map((item) => {
+    const link = exactKeys(record(item), [
+      "conceptId",
+      "outlineItemId",
+      "argument",
+    ]);
+    return {
+      conceptId: boundedString(link.conceptId, 120),
+      outlineItemId: boundedString(link.outlineItemId, 120),
+      argument: boundedString(link.argument, 2_000, 3),
+    };
+  });
+  uniqueIds(
+    conceptArgumentLinks.map(
+      (link) => `${link.conceptId}\u0000${link.outlineItemId}`,
+    ),
+  );
+  return {
+    demandVerb: boundedString(candidate.demandVerb, 240),
+    thesis: boundedString(candidate.thesis, 2_000, 3),
+    orderedOutlineItems: theoryOutlineItems(candidate.orderedOutlineItems, true),
+    selectedConcepts: theoryConcepts(candidate.selectedConcepts, true),
+    conceptArgumentLinks,
+    comparisonOrEvaluation: optionalBoundedText(
+      candidate.comparisonOrEvaluation,
+      4_000,
+    ),
+    counterPosition: optionalBoundedText(candidate.counterPosition, 4_000),
+    conclusion: boundedString(candidate.conclusion, 4_000, 3),
+    compression: boundedString(candidate.compression, 1_000, 3),
+  };
+}
+
+function lawAuthorities(value: unknown): OwnerAlphaLawAuthorityBinding[] {
+  if (!Array.isArray(value) || value.length > 32) {
+    throw new OwnerAlphaPracticeRuntimeError("invalid_input");
+  }
+  const items = value.map((item) => {
+    const candidate = exactKeys(record(item), [
+      "authorityKind",
+      "label",
+      "officialSourceRefId",
+    ]);
+    if (
+      !["law", "article", "precedent_or_adjudication"].includes(
+        String(candidate.authorityKind),
+      )
+    ) {
+      throw new OwnerAlphaPracticeRuntimeError("invalid_input");
+    }
+    return {
+      authorityKind: candidate.authorityKind as OwnerAlphaLawAuthorityBinding["authorityKind"],
+      label: boundedString(candidate.label, 1_000),
+      officialSourceRefId: boundedString(candidate.officialSourceRefId, 240),
+    };
+  });
+  uniqueIds(items.map((item) => item.officialSourceRefId));
+  return items;
+}
+
+function lawRequirements(value: unknown): OwnerAlphaLawRequirement[] {
+  if (!Array.isArray(value) || value.length > 32) {
+    throw new OwnerAlphaPracticeRuntimeError("invalid_input");
+  }
+  const items = value.map((item) => {
+    const candidate = exactKeys(record(item), [
+      "requirementId",
+      "requirement",
+      "legalEffect",
+    ]);
+    return {
+      requirementId: boundedString(candidate.requirementId, 120),
+      requirement: boundedString(candidate.requirement, 2_000, 3),
+      legalEffect: boundedString(candidate.legalEffect, 2_000, 3),
+    };
+  });
+  uniqueIds(items.map((item) => item.requirementId));
+  return items;
+}
+
+function lawMappings(value: unknown): OwnerAlphaLawRequirementFactMapping[] {
+  if (!Array.isArray(value) || value.length > 64) {
+    throw new OwnerAlphaPracticeRuntimeError("invalid_input");
+  }
+  const items = value.map((item) => {
+    const candidate = exactKeys(record(item), [
+      "requirementId",
+      "factApplication",
+    ]);
+    return {
+      requirementId: boundedString(candidate.requirementId, 120),
+      factApplication: boundedString(candidate.factApplication, 3_000, 3),
+    };
+  });
+  uniqueIds(items.map((item) => item.requirementId));
+  return items;
+}
+
+function lawRepair(value: unknown): OwnerAlphaLawRepairSubmission | null {
+  const candidate = optionalExactRecord(value, [
+    "issue",
+    "authorityBindings",
+    "effectiveDate",
+    "requirements",
+    "requirementFactMappings",
+    "application",
+    "conclusion",
+    "procedure",
+    "precedentOrAdjudication",
+    "opposingInterpretation",
+  ]);
+  if (!candidate) return null;
+  return {
+    issue: boundedString(candidate.issue, 3_000, 3),
+    authorityBindings: lawAuthorities(candidate.authorityBindings),
+    effectiveDate: boundedString(candidate.effectiveDate, 80),
+    requirements: lawRequirements(candidate.requirements),
+    requirementFactMappings: lawMappings(candidate.requirementFactMappings),
+    application: boundedString(candidate.application, 6_000, 3),
+    conclusion: boundedString(candidate.conclusion, 3_000, 3),
+    procedure: optionalBoundedText(candidate.procedure, 3_000),
+    precedentOrAdjudication: optionalBoundedText(
+      candidate.precedentOrAdjudication,
+      3_000,
+    ),
+    opposingInterpretation: optionalBoundedText(
+      candidate.opposingInterpretation,
+      3_000,
+    ),
+  };
 }
 
 function recordVersion(value: unknown) {
@@ -234,6 +550,11 @@ async function runCommand(request: Request) {
   const version = recordVersion(body.recordVersion);
 
   if (action === "confirm_problem") {
+    commandKeys(
+      body,
+      ["action", "sessionId", "recordVersion", "confirmedProblemText"],
+      ["action", "sessionId", "recordVersion", "confirmedProblemText"],
+    );
     return NextResponse.json({
       ok: true,
       session: await runtime.confirmProblem({
@@ -244,16 +565,41 @@ async function runCommand(request: Request) {
     });
   }
   if (action === "save_attempt") {
-    const confidence = ["low", "medium", "high"].includes(String(body.confidence))
-      ? (String(body.confidence) as "low" | "medium" | "high")
-      : "medium";
+    commandKeys(
+      body,
+      [
+        "action",
+        "sessionId",
+        "recordVersion",
+        "attemptText",
+        "elapsedTimeMs",
+        "confidence",
+        "methodFamily",
+        "methodReason",
+        "firstCalculationDirection",
+        "theoryCommitment",
+        "lawCommitment",
+      ],
+      [
+        "action",
+        "sessionId",
+        "recordVersion",
+        "attemptText",
+        "elapsedTimeMs",
+        "confidence",
+      ],
+    );
+    if (!["low", "medium", "high"].includes(String(body.confidence))) {
+      throw new OwnerAlphaPracticeRuntimeError("invalid_input");
+    }
+    const confidence = String(body.confidence) as "low" | "medium" | "high";
     return NextResponse.json({
       ok: true,
       session: await runtime.saveIndependentAttempt({
         sessionId,
         recordVersion: version,
         attemptText: requiredString(body.attemptText),
-        elapsedTimeMs: Number(body.elapsedTimeMs ?? 0),
+        elapsedTimeMs: boundedElapsedTime(body.elapsedTimeMs),
         confidence,
         methodFamily: optionalMethodFamily(body.methodFamily),
         methodReason:
@@ -262,10 +608,17 @@ async function runCommand(request: Request) {
           typeof body.firstCalculationDirection === "string"
             ? body.firstCalculationDirection
             : null,
+        theoryCommitment: theoryCommitment(body.theoryCommitment),
+        lawCommitment: lawCommitment(body.lawCommitment),
       }),
     });
   }
   if (action === "request_assistance" || action === "reveal_reference") {
+    commandKeys(
+      body,
+      ["action", "sessionId", "recordVersion", "questionText"],
+      ["action", "sessionId", "recordVersion"],
+    );
     const result = await runtime.requestAssistance({
       sessionId,
       recordVersion: version,
@@ -284,6 +637,40 @@ async function runCommand(request: Request) {
     );
   }
   if (action === "complete_rewrite") {
+    commandKeys(
+      body,
+      [
+        "action",
+        "sessionId",
+        "recordVersion",
+        "mode",
+        "subjectMode",
+        "rewriteText",
+        "inferredMisunderstanding",
+        "successCriteria",
+        "revisedMethodFamily",
+        "revisedMethodReason",
+        "revisedFirstCalculationDirection",
+        "recalculationSubmissions",
+        "theoryRepairSubmission",
+        "lawRepairSubmission",
+      ],
+      [
+        "action",
+        "sessionId",
+        "recordVersion",
+        "rewriteText",
+        "inferredMisunderstanding",
+        "successCriteria",
+      ],
+    );
+    if (
+      body.mode !== undefined &&
+      body.mode !== "rewrite" &&
+      body.mode !== "recalculate"
+    ) {
+      throw new OwnerAlphaPracticeRuntimeError("invalid_input");
+    }
     const mode = body.mode === "recalculate" ? "recalculate" : "rewrite";
     return NextResponse.json({
       ok: true,
@@ -308,6 +695,8 @@ async function runCommand(request: Request) {
         recalculationSubmissions: recalculationSubmissions(
           body.recalculationSubmissions,
         ),
+        theoryRepairSubmission: theoryRepair(body.theoryRepairSubmission),
+        lawRepairSubmission: lawRepair(body.lawRepairSubmission),
       }),
     });
   }

@@ -6,8 +6,8 @@ export const OWNER_ALPHA_THEORY_REASONING_PATH_VERSION =
 export const OWNER_ALPHA_THEORY_REASONING_DIMENSIONS = [
   "demand_verb",
   "thesis",
-  "ordered_outline_roles",
-  "selected_concept_refs",
+  "ordered_outline_items",
+  "selected_concepts",
   "concept_argument_links",
   "comparison_or_evaluation",
   "counter_position",
@@ -17,26 +17,36 @@ export const OWNER_ALPHA_THEORY_REASONING_DIMENSIONS = [
 export type OwnerAlphaTheoryReasoningDimension =
   (typeof OWNER_ALPHA_THEORY_REASONING_DIMENSIONS)[number];
 
+export type OwnerAlphaTheoryOutlineItem = {
+  outlineItemId: string;
+  label: string;
+};
+
+export type OwnerAlphaTheoryConceptSelection = {
+  conceptId: string;
+  label: string;
+};
+
 export type OwnerAlphaTheoryReasoningCommitment = {
   demandVerb: string;
   thesis: string;
-  orderedOutlineRoleRefs: string[];
-  selectedConceptRefs: string[];
+  orderedOutlineItems: OwnerAlphaTheoryOutlineItem[];
+  selectedConcepts: OwnerAlphaTheoryConceptSelection[];
   confidence: "low" | "medium" | "high";
   committedAt: string;
 };
 
 export type OwnerAlphaTheoryConceptArgumentLink = {
-  conceptRef: string;
-  outlineRoleRef: string;
+  conceptId: string;
+  outlineItemId: string;
   argument: string;
 };
 
 export type OwnerAlphaTheoryRepairSubmission = {
   demandVerb: string;
   thesis: string;
-  orderedOutlineRoleRefs: string[];
-  selectedConceptRefs: string[];
+  orderedOutlineItems: OwnerAlphaTheoryOutlineItem[];
+  selectedConcepts: OwnerAlphaTheoryConceptSelection[];
   conceptArgumentLinks: OwnerAlphaTheoryConceptArgumentLink[];
   comparisonOrEvaluation: string | null;
   counterPosition: string | null;
@@ -61,13 +71,15 @@ export type OwnerAlphaTheoryReasoningPathV1 = {
   contractVersion: typeof OWNER_ALPHA_THEORY_REASONING_PATH_VERSION;
   pathId: string;
   problemRevisionChecksum: string;
-  availableOutlineRoleRefs: string[];
-  availableConceptRefs: string[];
+  adapterBasisChecksum: string;
+  postCommitCanonicalOutlineRoleRefs: string[];
+  postCommitCanonicalConceptRefs: string[];
   requiredDimensions: OwnerAlphaTheoryReasoningDimension[];
   comparisonOrEvaluationRequired: boolean;
   counterPositionRequired: boolean;
   initialCommitment: OwnerAlphaTheoryReasoningCommitment;
   revisedCommitment: OwnerAlphaTheoryReasoningCommitment | null;
+  repairSubmission: OwnerAlphaTheoryRepairSubmission | null;
   repairVerification: {
     scope: "deterministic_structure_only";
     status: "not_started" | "blocked" | "structurally_supported";
@@ -82,26 +94,28 @@ const PATH_KEYS = [
   "contractVersion",
   "pathId",
   "problemRevisionChecksum",
-  "availableOutlineRoleRefs",
-  "availableConceptRefs",
+  "adapterBasisChecksum",
+  "postCommitCanonicalOutlineRoleRefs",
+  "postCommitCanonicalConceptRefs",
   "requiredDimensions",
   "comparisonOrEvaluationRequired",
   "counterPositionRequired",
   "initialCommitment",
   "revisedCommitment",
+  "repairSubmission",
   "repairVerification",
   "basisChecksum",
 ] as const;
-
 const COMMITMENT_KEYS = [
   "demandVerb",
   "thesis",
-  "orderedOutlineRoleRefs",
-  "selectedConceptRefs",
+  "orderedOutlineItems",
+  "selectedConcepts",
   "confidence",
   "committedAt",
 ] as const;
-
+const OUTLINE_KEYS = ["outlineItemId", "label"] as const;
+const CONCEPT_KEYS = ["conceptId", "label"] as const;
 const VERIFICATION_KEYS = [
   "scope",
   "status",
@@ -109,24 +123,28 @@ const VERIFICATION_KEYS = [
   "blockerCodes",
   "supportedAt",
 ] as const;
-
 const CHECK_KEYS = ["dimension", "status", "reasonCodes"] as const;
-const LINK_KEYS = ["conceptRef", "outlineRoleRef", "argument"] as const;
+const LINK_KEYS = ["conceptId", "outlineItemId", "argument"] as const;
+const REPAIR_KEYS = [
+  "demandVerb",
+  "thesis",
+  "orderedOutlineItems",
+  "selectedConcepts",
+  "conceptArgumentLinks",
+  "comparisonOrEvaluation",
+  "counterPosition",
+  "conclusion",
+  "compression",
+] as const;
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
-function hasExactKeys(
-  value: Record<string, unknown>,
-  expected: readonly string[],
-) {
+function hasExactKeys(value: Record<string, unknown>, expected: readonly string[]) {
   const actual = Object.keys(value).sort();
   const wanted = [...expected].sort();
-  return (
-    actual.length === wanted.length &&
-    actual.every((key, index) => key === wanted[index])
-  );
+  return actual.length === wanted.length && actual.every((key, index) => key === wanted[index]);
 }
 
 function isNonEmptyString(value: unknown, minimum = 1): value is string {
@@ -141,14 +159,8 @@ function hasDuplicates(values: readonly string[]) {
   return new Set(values).size !== values.length;
 }
 
-function exactOrderedMembers(
-  actual: readonly string[],
-  expected: readonly string[],
-) {
-  return (
-    actual.length === expected.length &&
-    actual.every((item, index) => item === expected[index])
-  );
+function exactOrderedMembers(actual: readonly string[], expected: readonly string[]) {
+  return actual.length === expected.length && actual.every((item, index) => item === expected[index]);
 }
 
 function normalizeText(value: unknown) {
@@ -161,39 +173,47 @@ function validIsoTime(value: unknown) {
   return typeof value === "string" && Number.isFinite(Date.parse(value));
 }
 
-function isCommitmentShape(
-  value: unknown,
-): value is OwnerAlphaTheoryReasoningCommitment {
+function validOutlineItem(value: unknown): value is OwnerAlphaTheoryOutlineItem {
+  return (
+    isRecord(value) &&
+    hasExactKeys(value, OUTLINE_KEYS) &&
+    isNonEmptyString(value.outlineItemId) &&
+    isNonEmptyString(value.label, 2)
+  );
+}
+
+function validConcept(value: unknown): value is OwnerAlphaTheoryConceptSelection {
+  return (
+    isRecord(value) &&
+    hasExactKeys(value, CONCEPT_KEYS) &&
+    isNonEmptyString(value.conceptId) &&
+    isNonEmptyString(value.label, 2)
+  );
+}
+
+function isCommitmentShape(value: unknown): value is OwnerAlphaTheoryReasoningCommitment {
   if (!isRecord(value) || !hasExactKeys(value, COMMITMENT_KEYS)) return false;
+  if (
+    !isNonEmptyString(value.demandVerb) ||
+    !isNonEmptyString(value.thesis, 3) ||
+    !Array.isArray(value.orderedOutlineItems) ||
+    value.orderedOutlineItems.length === 0 ||
+    !value.orderedOutlineItems.every(validOutlineItem) ||
+    !Array.isArray(value.selectedConcepts) ||
+    value.selectedConcepts.length === 0 ||
+    !value.selectedConcepts.every(validConcept) ||
+    !["low", "medium", "high"].includes(String(value.confidence)) ||
+    !validIsoTime(value.committedAt)
+  ) {
+    return false;
+  }
   return (
-    typeof value.demandVerb === "string" &&
-    typeof value.thesis === "string" &&
-    isStringArray(value.orderedOutlineRoleRefs) &&
-    isStringArray(value.selectedConceptRefs) &&
-    ["low", "medium", "high"].includes(String(value.confidence)) &&
-    validIsoTime(value.committedAt)
+    !hasDuplicates(value.orderedOutlineItems.map((item) => item.outlineItemId)) &&
+    !hasDuplicates(value.selectedConcepts.map((item) => item.conceptId))
   );
 }
 
-function commitmentMatchesAvailableRefs(
-  commitment: OwnerAlphaTheoryReasoningCommitment,
-  outlineRefs: readonly string[],
-  conceptRefs: readonly string[],
-) {
-  return (
-    isNonEmptyString(commitment.demandVerb) &&
-    isNonEmptyString(commitment.thesis, 3) &&
-    !hasDuplicates(commitment.orderedOutlineRoleRefs) &&
-    exactOrderedMembers(commitment.orderedOutlineRoleRefs, outlineRefs) &&
-    commitment.selectedConceptRefs.length > 0 &&
-    !hasDuplicates(commitment.selectedConceptRefs) &&
-    commitment.selectedConceptRefs.every((ref) => conceptRefs.includes(ref))
-  );
-}
-
-function isStructuralCheck(
-  value: unknown,
-): value is OwnerAlphaTheoryStructuralCheck {
+function isStructuralCheck(value: unknown): value is OwnerAlphaTheoryStructuralCheck {
   if (!isRecord(value) || !hasExactKeys(value, CHECK_KEYS)) return false;
   return (
     OWNER_ALPHA_THEORY_REASONING_DIMENSIONS.includes(
@@ -213,6 +233,33 @@ function isStructuralCheck(
   );
 }
 
+function isRepairSubmission(value: unknown): value is OwnerAlphaTheoryRepairSubmission {
+  if (!isRecord(value) || !hasExactKeys(value, REPAIR_KEYS)) return false;
+  return (
+    typeof value.demandVerb === "string" &&
+    typeof value.thesis === "string" &&
+    Array.isArray(value.orderedOutlineItems) &&
+    value.orderedOutlineItems.every(validOutlineItem) &&
+    Array.isArray(value.selectedConcepts) &&
+    value.selectedConcepts.every(validConcept) &&
+    Array.isArray(value.conceptArgumentLinks) &&
+    value.conceptArgumentLinks.every(
+      (link) =>
+        isRecord(link) &&
+        hasExactKeys(link, LINK_KEYS) &&
+        typeof link.conceptId === "string" &&
+        typeof link.outlineItemId === "string" &&
+        typeof link.argument === "string",
+    ) &&
+    (value.comparisonOrEvaluation === null ||
+      typeof value.comparisonOrEvaluation === "string") &&
+    (value.counterPosition === null ||
+      typeof value.counterPosition === "string") &&
+    typeof value.conclusion === "string" &&
+    typeof value.compression === "string"
+  );
+}
+
 export function isOwnerAlphaTheoryReasoningPath(
   value: unknown,
 ): value is OwnerAlphaTheoryReasoningPathV1 {
@@ -221,27 +268,21 @@ export function isOwnerAlphaTheoryReasoningPath(
     value.contractVersion !== OWNER_ALPHA_THEORY_REASONING_PATH_VERSION ||
     !isNonEmptyString(value.pathId) ||
     !isNonEmptyString(value.problemRevisionChecksum) ||
-    !isStringArray(value.availableOutlineRoleRefs) ||
-    value.availableOutlineRoleRefs.length === 0 ||
-    hasDuplicates(value.availableOutlineRoleRefs) ||
-    !isStringArray(value.availableConceptRefs) ||
-    value.availableConceptRefs.length === 0 ||
-    hasDuplicates(value.availableConceptRefs) ||
+    !isNonEmptyString(value.adapterBasisChecksum) ||
+    !isStringArray(value.postCommitCanonicalOutlineRoleRefs) ||
+    value.postCommitCanonicalOutlineRoleRefs.length === 0 ||
+    hasDuplicates(value.postCommitCanonicalOutlineRoleRefs) ||
+    !isStringArray(value.postCommitCanonicalConceptRefs) ||
+    value.postCommitCanonicalConceptRefs.length === 0 ||
+    hasDuplicates(value.postCommitCanonicalConceptRefs) ||
     !isStringArray(value.requiredDimensions) ||
-    !exactOrderedMembers(
-      value.requiredDimensions,
-      OWNER_ALPHA_THEORY_REASONING_DIMENSIONS,
-    ) ||
+    !exactOrderedMembers(value.requiredDimensions, OWNER_ALPHA_THEORY_REASONING_DIMENSIONS) ||
     typeof value.comparisonOrEvaluationRequired !== "boolean" ||
     typeof value.counterPositionRequired !== "boolean" ||
     !isCommitmentShape(value.initialCommitment) ||
-    !commitmentMatchesAvailableRefs(
-      value.initialCommitment,
-      value.availableOutlineRoleRefs,
-      value.availableConceptRefs,
-    ) ||
-    (value.revisedCommitment !== null &&
-      !isCommitmentShape(value.revisedCommitment)) ||
+    (value.revisedCommitment !== null && !isCommitmentShape(value.revisedCommitment)) ||
+    (value.repairSubmission !== null &&
+      !isRepairSubmission(value.repairSubmission)) ||
     !isRecord(value.repairVerification) ||
     !hasExactKeys(value.repairVerification, VERIFICATION_KEYS) ||
     !isNonEmptyString(value.basisChecksum)
@@ -251,21 +292,19 @@ export function isOwnerAlphaTheoryReasoningPath(
   const verification = value.repairVerification;
   if (
     verification.scope !== "deterministic_structure_only" ||
-    !["not_started", "blocked", "structurally_supported"].includes(
-      String(verification.status),
-    ) ||
+    !["not_started", "blocked", "structurally_supported"].includes(String(verification.status)) ||
     !Array.isArray(verification.checks) ||
     !verification.checks.every(isStructuralCheck) ||
     !isStringArray(verification.blockerCodes) ||
     hasDuplicates(verification.blockerCodes) ||
-    (verification.supportedAt !== null &&
-      !validIsoTime(verification.supportedAt))
+    (verification.supportedAt !== null && !validIsoTime(verification.supportedAt))
   ) {
     return false;
   }
   if (verification.status === "not_started") {
     return (
       value.revisedCommitment === null &&
+      value.repairSubmission === null &&
       verification.checks.length === 0 &&
       verification.blockerCodes.length === 0 &&
       verification.supportedAt === null
@@ -273,8 +312,8 @@ export function isOwnerAlphaTheoryReasoningPath(
   }
   if (
     value.revisedCommitment === null ||
-    verification.checks.length !==
-      OWNER_ALPHA_THEORY_REASONING_DIMENSIONS.length ||
+    value.repairSubmission === null ||
+    verification.checks.length !== OWNER_ALPHA_THEORY_REASONING_DIMENSIONS.length ||
     !exactOrderedMembers(
       verification.checks.map((check) => check.dimension),
       OWNER_ALPHA_THEORY_REASONING_DIMENSIONS,
@@ -284,11 +323,6 @@ export function isOwnerAlphaTheoryReasoningPath(
   }
   if (verification.status === "structurally_supported") {
     return (
-      commitmentMatchesAvailableRefs(
-        value.revisedCommitment,
-        value.availableOutlineRoleRefs,
-        value.availableConceptRefs,
-      ) &&
       verification.checks.every((check) => check.status === "supported") &&
       verification.blockerCodes.length === 0 &&
       verification.supportedAt !== null
@@ -317,50 +351,36 @@ function validAdapterRefs(adapter: OwnerAlphaTheoryAdapterModel) {
 export function ownerAlphaTheoryReasoningPathProjection(input: {
   pathId: string;
   problemRevisionChecksum: string;
+  adapterBasisChecksum: string;
   adapter: OwnerAlphaTheoryAdapterModel;
   initialCommitment: OwnerAlphaTheoryReasoningCommitment;
   basisChecksum: string;
 }): OwnerAlphaTheoryReasoningPathV1 {
-  if (
-    input.adapter.adapter !== "TheoryAdapter" ||
-    input.adapter.subject !== "appraisal_theory"
-  ) {
+  if (input.adapter.adapter !== "TheoryAdapter" || input.adapter.subject !== "appraisal_theory") {
     throw new Error("owner-alpha-theory-reasoning-path:adapter_required");
   }
   if (!validAdapterRefs(input.adapter)) {
     throw new Error("owner-alpha-theory-reasoning-path:invalid_adapter_refs");
   }
-  const availableOutlineRoleRefs = [...input.adapter.paragraphRoles];
-  const availableConceptRefs = input.adapter.keyConceptCoverage.map(
-    (item) => item.concept,
-  );
-  if (
-    !isCommitmentShape(input.initialCommitment) ||
-    !commitmentMatchesAvailableRefs(
-      input.initialCommitment,
-      availableOutlineRoleRefs,
-      availableConceptRefs,
-    )
-  ) {
-    throw new Error(
-      "owner-alpha-theory-reasoning-path:invalid_initial_commitment",
-    );
+  if (!isCommitmentShape(input.initialCommitment)) {
+    throw new Error("owner-alpha-theory-reasoning-path:invalid_initial_commitment");
   }
   return {
     contractVersion: OWNER_ALPHA_THEORY_REASONING_PATH_VERSION,
     pathId: input.pathId,
     problemRevisionChecksum: input.problemRevisionChecksum,
-    availableOutlineRoleRefs,
-    availableConceptRefs,
+    adapterBasisChecksum: input.adapterBasisChecksum,
+    postCommitCanonicalOutlineRoleRefs: [...input.adapter.paragraphRoles],
+    postCommitCanonicalConceptRefs: input.adapter.keyConceptCoverage.map((item) => item.concept),
     requiredDimensions: [...OWNER_ALPHA_THEORY_REASONING_DIMENSIONS],
     comparisonOrEvaluationRequired:
-      input.adapter.comparisonTargets.length > 0 ||
-      input.adapter.evaluation.length > 0,
+      input.adapter.comparisonTargets.length > 0 || input.adapter.evaluation.length > 0,
     counterPositionRequired:
       input.adapter.supportingAndOpposingConsiderations.length > 0 ||
       input.adapter.unresolvedTheoreticalDispute.length > 0,
     initialCommitment: input.initialCommitment,
     revisedCommitment: null,
+    repairSubmission: null,
     repairVerification: {
       scope: "deterministic_structure_only",
       status: "not_started",
@@ -374,21 +394,11 @@ export function ownerAlphaTheoryReasoningPathProjection(input: {
 
 function checkStatus(reasonCodes: readonly string[]) {
   if (reasonCodes.length === 0) return "supported" as const;
-  if (reasonCodes.some((code) => code.endsWith(":missing"))) {
-    return "missing" as const;
-  }
-  if (reasonCodes.some((code) => code.endsWith(":duplicate_ref"))) {
-    return "duplicate_ref" as const;
-  }
-  if (reasonCodes.some((code) => code.endsWith(":unknown_ref"))) {
-    return "unknown_ref" as const;
-  }
-  if (reasonCodes.some((code) => code.endsWith(":out_of_order"))) {
-    return "out_of_order" as const;
-  }
-  if (reasonCodes.some((code) => code.endsWith(":unlinked"))) {
-    return "unlinked" as const;
-  }
+  if (reasonCodes.some((code) => code.endsWith(":missing"))) return "missing" as const;
+  if (reasonCodes.some((code) => code.endsWith(":duplicate_ref"))) return "duplicate_ref" as const;
+  if (reasonCodes.some((code) => code.endsWith(":unknown_ref"))) return "unknown_ref" as const;
+  if (reasonCodes.some((code) => code.endsWith(":out_of_order"))) return "out_of_order" as const;
+  if (reasonCodes.some((code) => code.endsWith(":unlinked"))) return "unlinked" as const;
   return "mismatch" as const;
 }
 
@@ -397,11 +407,7 @@ function structuralCheck(
   reasonCodes: string[],
 ): OwnerAlphaTheoryStructuralCheck {
   const uniqueReasonCodes = [...new Set(reasonCodes)];
-  return {
-    dimension,
-    status: checkStatus(uniqueReasonCodes),
-    reasonCodes: uniqueReasonCodes,
-  };
+  return { dimension, status: checkStatus(uniqueReasonCodes), reasonCodes: uniqueReasonCodes };
 }
 
 function textCheck(
@@ -411,79 +417,51 @@ function textCheck(
   minimum: number,
 ) {
   const reasons: string[] = [];
-  if (!isNonEmptyString(revisedValue, minimum)) {
+  if (!isNonEmptyString(revisedValue, minimum) || !isNonEmptyString(submittedValue, minimum)) {
     reasons.push(`theory_repair:${dimension}:missing`);
-  }
-  if (!isNonEmptyString(submittedValue, minimum)) {
-    reasons.push(`theory_repair:${dimension}:missing`);
-  }
-  if (
-    isNonEmptyString(revisedValue, minimum) &&
-    isNonEmptyString(submittedValue, minimum) &&
-    normalizeText(revisedValue) !== normalizeText(submittedValue)
-  ) {
+  } else if (normalizeText(revisedValue) !== normalizeText(submittedValue)) {
     reasons.push(`theory_repair:${dimension}:commitment_mismatch`);
   }
   return structuralCheck(dimension, reasons);
 }
 
-function referenceListReasons(input: {
-  dimension: "ordered_outline_roles" | "selected_concept_refs";
-  revisedRefs: unknown;
-  submittedRefs: unknown;
-  availableRefs: readonly string[];
-  requireExactAvailableOrder: boolean;
+function itemListReasons(input: {
+  dimension: "ordered_outline_items" | "selected_concepts";
+  revised: unknown;
+  submitted: unknown;
+  idKey: "outlineItemId" | "conceptId";
 }) {
   const reasons: string[] = [];
-  const revised = isStringArray(input.revisedRefs) ? input.revisedRefs : [];
-  const submitted = isStringArray(input.submittedRefs)
-    ? input.submittedRefs
-    : [];
-  if (revised.length === 0 || submitted.length === 0) {
-    reasons.push(`theory_repair:${input.dimension}:missing`);
-  }
-  if (hasDuplicates(revised) || hasDuplicates(submitted)) {
+  const revised = Array.isArray(input.revised) ? input.revised : [];
+  const submitted = Array.isArray(input.submitted) ? input.submitted : [];
+  if (revised.length === 0 || submitted.length === 0) reasons.push(`theory_repair:${input.dimension}:missing`);
+  const ids = [...revised, ...submitted].flatMap((item) =>
+    isRecord(item) && typeof item[input.idKey] === "string" ? [String(item[input.idKey])] : [],
+  );
+  if (hasDuplicates(revised.flatMap((item) => isRecord(item) && typeof item[input.idKey] === "string" ? [String(item[input.idKey])] : [])) ||
+      hasDuplicates(submitted.flatMap((item) => isRecord(item) && typeof item[input.idKey] === "string" ? [String(item[input.idKey])] : []))) {
     reasons.push(`theory_repair:${input.dimension}:duplicate_ref`);
   }
-  if (
-    [...revised, ...submitted].some(
-      (ref) => !input.availableRefs.includes(ref),
-    )
-  ) {
-    reasons.push(`theory_repair:${input.dimension}:unknown_ref`);
-  }
-  if (!exactOrderedMembers(revised, submitted)) {
-    reasons.push(`theory_repair:${input.dimension}:commitment_mismatch`);
-  }
-  if (
-    input.requireExactAvailableOrder &&
-    (!exactOrderedMembers(revised, input.availableRefs) ||
-      !exactOrderedMembers(submitted, input.availableRefs))
-  ) {
-    const sameMembers =
-      revised.length === input.availableRefs.length &&
-      submitted.length === input.availableRefs.length &&
-      revised.every((ref) => input.availableRefs.includes(ref)) &&
-      submitted.every((ref) => input.availableRefs.includes(ref));
-    reasons.push(
-      `theory_repair:${input.dimension}:${
-        sameMembers ? "out_of_order" : "missing"
-      }`,
-    );
+  if (ids.length !== revised.length + submitted.length) reasons.push(`theory_repair:${input.dimension}:unknown_ref`);
+  const revisedIdentity = revised.map((item) => JSON.stringify(item));
+  const submittedIdentity = submitted.map((item) => JSON.stringify(item));
+  if (!exactOrderedMembers(revisedIdentity, submittedIdentity)) {
+    const sameMembers = revisedIdentity.length === submittedIdentity.length && revisedIdentity.every((item) => submittedIdentity.includes(item));
+    reasons.push(`theory_repair:${input.dimension}:${sameMembers ? "out_of_order" : "commitment_mismatch"}`);
   }
   return reasons;
 }
 
 function conceptArgumentLinkCheck(input: {
   links: unknown;
-  selectedConceptRefs: readonly string[];
-  orderedOutlineRoleRefs: readonly string[];
+  selectedConcepts: OwnerAlphaTheoryConceptSelection[];
+  orderedOutlineItems: OwnerAlphaTheoryOutlineItem[];
 }) {
   const reasons: string[] = [];
   const links = Array.isArray(input.links) ? input.links : [];
-  if (links.length === 0) {
-    reasons.push("theory_repair:concept_argument_links:missing");
-  }
+  if (links.length === 0) reasons.push("theory_repair:concept_argument_links:missing");
+  const conceptIds = new Set(input.selectedConcepts.map((item) => item.conceptId));
+  const outlineIds = new Set(input.orderedOutlineItems.map((item) => item.outlineItemId));
   const seen = new Set<string>();
   const linkedConcepts = new Set<string>();
   for (const rawLink of links) {
@@ -491,30 +469,19 @@ function conceptArgumentLinkCheck(input: {
       reasons.push("theory_repair:concept_argument_links:unknown_ref");
       continue;
     }
-    const conceptRef = rawLink.conceptRef;
-    const outlineRoleRef = rawLink.outlineRoleRef;
-    if (
-      typeof conceptRef !== "string" ||
-      typeof outlineRoleRef !== "string" ||
-      !input.selectedConceptRefs.includes(conceptRef) ||
-      !input.orderedOutlineRoleRefs.includes(outlineRoleRef)
-    ) {
+    const conceptId = rawLink.conceptId;
+    const outlineItemId = rawLink.outlineItemId;
+    if (typeof conceptId !== "string" || typeof outlineItemId !== "string" || !conceptIds.has(conceptId) || !outlineIds.has(outlineItemId)) {
       reasons.push("theory_repair:concept_argument_links:unknown_ref");
       continue;
     }
-    const identity = `${conceptRef}\u0000${outlineRoleRef}`;
-    if (seen.has(identity)) {
-      reasons.push("theory_repair:concept_argument_links:duplicate_ref");
-    }
+    const identity = `${conceptId}\u0000${outlineItemId}`;
+    if (seen.has(identity)) reasons.push("theory_repair:concept_argument_links:duplicate_ref");
     seen.add(identity);
-    linkedConcepts.add(conceptRef);
-    if (!isNonEmptyString(rawLink.argument, 3)) {
-      reasons.push("theory_repair:concept_argument_links:missing");
-    }
+    linkedConcepts.add(conceptId);
+    if (!isNonEmptyString(rawLink.argument, 3)) reasons.push("theory_repair:concept_argument_links:missing");
   }
-  if (
-    input.selectedConceptRefs.some((conceptRef) => !linkedConcepts.has(conceptRef))
-  ) {
+  if ([...conceptIds].some((conceptId) => !linkedConcepts.has(conceptId))) {
     reasons.push("theory_repair:concept_argument_links:unlinked");
   }
   return structuralCheck("concept_argument_links", reasons);
@@ -526,22 +493,8 @@ function optionalRequiredTextCheck(input: {
   value: unknown;
 }) {
   const reasons: string[] = [];
-  if (input.required && !isNonEmptyString(input.value, 3)) {
-    reasons.push(`theory_repair:${input.dimension}:missing`);
-  }
+  if (input.required && !isNonEmptyString(input.value, 3)) reasons.push(`theory_repair:${input.dimension}:missing`);
   return structuralCheck(input.dimension, reasons);
-}
-
-function conclusionAndCompressionCheck(submission: unknown) {
-  const reasons: string[] = [];
-  if (
-    !isRecord(submission) ||
-    !isNonEmptyString(submission.conclusion, 3) ||
-    !isNonEmptyString(submission.compression, 3)
-  ) {
-    reasons.push("theory_repair:conclusion_and_compression:missing");
-  }
-  return structuralCheck("conclusion_and_compression", reasons);
 }
 
 export function verifyOwnerAlphaTheoryRepair(input: {
@@ -550,50 +503,36 @@ export function verifyOwnerAlphaTheoryRepair(input: {
   revisedCommitment: OwnerAlphaTheoryReasoningCommitment;
   submission: OwnerAlphaTheoryRepairSubmission;
   supportedAt: string;
+  problemRevisionChecksum: string;
+  adapterBasisChecksum: string;
   basisChecksum: string;
 }): OwnerAlphaTheoryReasoningPathV1 {
-  const submission: Record<string, unknown> = isRecord(input.submission)
-    ? input.submission
-    : {};
-  const outlineReasons = referenceListReasons({
-    dimension: "ordered_outline_roles",
-    revisedRefs: input.revisedCommitment?.orderedOutlineRoleRefs,
-    submittedRefs: submission.orderedOutlineRoleRefs,
-    availableRefs: input.path.availableOutlineRoleRefs,
-    requireExactAvailableOrder: true,
-  });
-  const conceptReasons = referenceListReasons({
-    dimension: "selected_concept_refs",
-    revisedRefs: input.revisedCommitment?.selectedConceptRefs,
-    submittedRefs: submission.selectedConceptRefs,
-    availableRefs: input.path.availableConceptRefs,
-    requireExactAvailableOrder: false,
-  });
-  const submittedConceptRefs = isStringArray(submission.selectedConceptRefs)
-    ? submission.selectedConceptRefs
+  const submission: Record<string, unknown> = isRecord(input.submission) ? input.submission : {};
+  const submittedOutline = Array.isArray(submission.orderedOutlineItems)
+    ? submission.orderedOutlineItems.filter(validOutlineItem)
     : [];
-  const submittedOutlineRefs = isStringArray(submission.orderedOutlineRoleRefs)
-    ? submission.orderedOutlineRoleRefs
+  const submittedConcepts = Array.isArray(submission.selectedConcepts)
+    ? submission.selectedConcepts.filter(validConcept)
     : [];
   const checks: OwnerAlphaTheoryStructuralCheck[] = [
-    textCheck(
-      "demand_verb",
-      input.revisedCommitment?.demandVerb,
-      submission.demandVerb,
-      1,
-    ),
-    textCheck(
-      "thesis",
-      input.revisedCommitment?.thesis,
-      submission.thesis,
-      3,
-    ),
-    structuralCheck("ordered_outline_roles", outlineReasons),
-    structuralCheck("selected_concept_refs", conceptReasons),
+    textCheck("demand_verb", input.revisedCommitment?.demandVerb, submission.demandVerb, 1),
+    textCheck("thesis", input.revisedCommitment?.thesis, submission.thesis, 3),
+    structuralCheck("ordered_outline_items", itemListReasons({
+      dimension: "ordered_outline_items",
+      revised: input.revisedCommitment?.orderedOutlineItems,
+      submitted: submission.orderedOutlineItems,
+      idKey: "outlineItemId",
+    })),
+    structuralCheck("selected_concepts", itemListReasons({
+      dimension: "selected_concepts",
+      revised: input.revisedCommitment?.selectedConcepts,
+      submitted: submission.selectedConcepts,
+      idKey: "conceptId",
+    })),
     conceptArgumentLinkCheck({
       links: submission.conceptArgumentLinks,
-      selectedConceptRefs: submittedConceptRefs,
-      orderedOutlineRoleRefs: submittedOutlineRefs,
+      selectedConcepts: submittedConcepts,
+      orderedOutlineItems: submittedOutline,
     }),
     optionalRequiredTextCheck({
       dimension: "comparison_or_evaluation",
@@ -605,37 +544,34 @@ export function verifyOwnerAlphaTheoryRepair(input: {
       required: input.path.counterPositionRequired,
       value: submission.counterPosition,
     }),
-    conclusionAndCompressionCheck(submission),
+    structuralCheck(
+      "conclusion_and_compression",
+      !isNonEmptyString(submission.conclusion, 3) || !isNonEmptyString(submission.compression, 3)
+        ? ["theory_repair:conclusion_and_compression:missing"]
+        : [],
+    ),
   ];
   const adapterOutlineRefs = input.adapter.paragraphRoles;
-  const adapterConceptRefs = input.adapter.keyConceptCoverage.map(
-    (item) => item.concept,
-  );
+  const adapterConceptRefs = input.adapter.keyConceptCoverage.map((item) => item.concept);
   const adapterBasisMismatch =
     input.adapter.adapter !== "TheoryAdapter" ||
     input.adapter.subject !== "appraisal_theory" ||
-    !exactOrderedMembers(
-      adapterOutlineRefs,
-      input.path.availableOutlineRoleRefs,
-    ) ||
-    !exactOrderedMembers(adapterConceptRefs, input.path.availableConceptRefs) ||
-    (input.adapter.comparisonTargets.length > 0 ||
-      input.adapter.evaluation.length > 0) !==
-      input.path.comparisonOrEvaluationRequired ||
-    (input.adapter.supportingAndOpposingConsiderations.length > 0 ||
-      input.adapter.unresolvedTheoreticalDispute.length > 0) !==
-      input.path.counterPositionRequired;
+    input.problemRevisionChecksum !== input.path.problemRevisionChecksum ||
+    input.adapterBasisChecksum !== input.path.adapterBasisChecksum ||
+    !exactOrderedMembers(adapterOutlineRefs, input.path.postCommitCanonicalOutlineRoleRefs) ||
+    !exactOrderedMembers(adapterConceptRefs, input.path.postCommitCanonicalConceptRefs) ||
+    (input.adapter.comparisonTargets.length > 0 || input.adapter.evaluation.length > 0) !== input.path.comparisonOrEvaluationRequired ||
+    (input.adapter.supportingAndOpposingConsiderations.length > 0 || input.adapter.unresolvedTheoreticalDispute.length > 0) !== input.path.counterPositionRequired;
   const blockerCodes = [
     ...checks.flatMap((check) => check.reasonCodes),
-    ...(adapterBasisMismatch
-      ? ["theory_repair:adapter_basis_mismatch"]
-      : []),
+    ...(adapterBasisMismatch ? ["theory_repair:adapter_or_problem_basis_mismatch"] : []),
   ];
   const uniqueBlockerCodes = [...new Set(blockerCodes)];
   const structurallySupported = uniqueBlockerCodes.length === 0;
   return {
     ...input.path,
     revisedCommitment: input.revisedCommitment,
+    repairSubmission: input.submission,
     repairVerification: {
       scope: "deterministic_structure_only",
       status: structurallySupported ? "structurally_supported" : "blocked",

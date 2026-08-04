@@ -13,6 +13,14 @@ import {
   isOwnerAlphaPracticalDecisionPath,
   type OwnerAlphaPracticalDecisionPathV1,
 } from "./owner-alpha-practical-decision-path";
+import {
+  isOwnerAlphaTheoryReasoningPath,
+  type OwnerAlphaTheoryReasoningPathV1,
+} from "./owner-alpha-theory-reasoning-path";
+import {
+  isOwnerAlphaLawReasoningPath,
+  type OwnerAlphaLawReasoningPathV1,
+} from "./owner-alpha-law-reasoning-path";
 
 export const OWNER_ALPHA_PRACTICE_CONTRACT_VERSION =
   "owner_alpha_universal_appraisal_practice.v0" as const;
@@ -485,6 +493,10 @@ export type OwnerAlphaPracticeSession = {
    * Its absence preserves pre-v1 and adapter-less v0 session compatibility.
    */
   practicalDecisionPath?: OwnerAlphaPracticalDecisionPathV1;
+  /** New TheoryAdapter sessions create this only with the independent commitment. */
+  theoryReasoningPath?: OwnerAlphaTheoryReasoningPathV1;
+  /** New LawAdapter sessions create this only with the independent commitment. */
+  lawReasoningPath?: OwnerAlphaLawReasoningPathV1;
   providerState: OwnerAlphaProviderState;
   links: OwnerAlphaPracticeLinks;
 };
@@ -570,6 +582,39 @@ export function isOwnerAlphaPracticeSession(
       !isOwnerAlphaPracticalDecisionPath(value.practicalDecisionPath))
   ) {
     return false;
+  }
+  if (
+    value.theoryReasoningPath !== undefined &&
+    (!value.problemModel.subjectAdapter ||
+      value.problemModel.subjectAdapter.adapter !== "TheoryAdapter" ||
+      !isOwnerAlphaTheoryReasoningPath(value.theoryReasoningPath))
+  ) {
+    return false;
+  }
+  if (
+    value.lawReasoningPath !== undefined &&
+    (!value.problemModel.subjectAdapter ||
+      value.problemModel.subjectAdapter.adapter !== "LawAdapter" ||
+      !isOwnerAlphaLawReasoningPath(value.lawReasoningPath))
+  ) {
+    return false;
+  }
+  const pathCount = [
+    value.practicalDecisionPath,
+    value.theoryReasoningPath,
+    value.lawReasoningPath,
+  ].filter((path) => path !== undefined).length;
+  if (!value.independentAttempt && pathCount !== 0) return false;
+  if (value.independentAttempt && value.problemModel.subjectAdapter) {
+    const adapter = value.problemModel.subjectAdapter.adapter;
+    if (
+      pathCount !== 1 ||
+      (adapter === "PracticalAdapter" && !value.practicalDecisionPath) ||
+      (adapter === "TheoryAdapter" && !value.theoryReasoningPath) ||
+      (adapter === "LawAdapter" && !value.lawReasoningPath)
+    ) {
+      return false;
+    }
   }
   if (!isRecord(value.providerState) || !isRecord(value.links)) return false;
   if (

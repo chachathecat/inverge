@@ -110,6 +110,7 @@ const defaultTestFiles = [
   "tests/owner-alpha-universal-practice-loop-v0.test.mjs",
   "tests/owner-alpha-practical-decision-path.test.mjs",
   "tests/owner-alpha-theory-reasoning-path.test.mjs",
+  "tests/owner-alpha-law-reasoning-path.test.mjs",
   "tests/owner-alpha-three-subject-practice-adapter-contract.test.mjs",
   "tests/owner-alpha-explanation-ladder-v1.test.mjs",
   "tests/rewrite-regrade-history-contract.test.mjs",
