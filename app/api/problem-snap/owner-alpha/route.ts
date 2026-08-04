@@ -13,6 +13,11 @@ import {
   OwnerAlphaPracticePersistenceError,
 } from "@/lib/review-os/owner-alpha-practice-repository";
 import type { OwnerAlphaProviderFile } from "@/lib/review-os/owner-alpha-practice-provider-contract";
+import {
+  OWNER_ALPHA_METHOD_FAMILIES,
+  type OwnerAlphaMethodFamily,
+} from "@/lib/review-os/owner-alpha-practice-contract";
+import type { OwnerAlphaPracticalRecalculationSubmission } from "@/lib/review-os/owner-alpha-practical-decision-path";
 import { EntitlementBlockedError } from "@/lib/review-os/entitlement-enforcement";
 import {
   parseOwnerAlphaPracticeSubject,
@@ -51,6 +56,54 @@ function recordVersion(value: unknown) {
     throw new OwnerAlphaPracticeRuntimeError("invalid_input");
   }
   return Number(value);
+}
+
+function optionalMethodFamily(value: unknown): OwnerAlphaMethodFamily | null {
+  return OWNER_ALPHA_METHOD_FAMILIES.includes(value as OwnerAlphaMethodFamily)
+    ? (value as OwnerAlphaMethodFamily)
+    : null;
+}
+
+function recalculationSubmissions(
+  value: unknown,
+): OwnerAlphaPracticalRecalculationSubmission[] {
+  if (value === undefined || value === null) return [];
+  if (!Array.isArray(value) || value.length > 64) {
+    throw new OwnerAlphaPracticeRuntimeError("invalid_input");
+  }
+  return value.map((item) => {
+    const candidate = record(item);
+    const nodeId = requiredString(candidate.nodeId);
+    if (nodeId.length > 240) {
+      throw new OwnerAlphaPracticeRuntimeError("invalid_input");
+    }
+    if (
+      (typeof candidate.value !== "number" &&
+        typeof candidate.value !== "string") ||
+      (typeof candidate.value === "string" && !candidate.value.trim())
+    ) {
+      throw new OwnerAlphaPracticeRuntimeError("invalid_input");
+    }
+    const numericValue = Number(candidate.value);
+    if (!Number.isFinite(numericValue)) {
+      throw new OwnerAlphaPracticeRuntimeError("invalid_input");
+    }
+    if (
+      candidate.unit !== null &&
+      candidate.unit !== undefined &&
+      typeof candidate.unit !== "string"
+    ) {
+      throw new OwnerAlphaPracticeRuntimeError("invalid_input");
+    }
+    return {
+      nodeId,
+      value: numericValue,
+      unit:
+        typeof candidate.unit === "string" && candidate.unit.trim()
+          ? candidate.unit.trim()
+          : null,
+    };
+  });
 }
 
 function safeErrorResponse(error: unknown) {
@@ -202,6 +255,13 @@ async function runCommand(request: Request) {
         attemptText: requiredString(body.attemptText),
         elapsedTimeMs: Number(body.elapsedTimeMs ?? 0),
         confidence,
+        methodFamily: optionalMethodFamily(body.methodFamily),
+        methodReason:
+          typeof body.methodReason === "string" ? body.methodReason : null,
+        firstCalculationDirection:
+          typeof body.firstCalculationDirection === "string"
+            ? body.firstCalculationDirection
+            : null,
       }),
     });
   }
@@ -236,6 +296,18 @@ async function runCommand(request: Request) {
         rewriteText: requiredString(body.rewriteText),
         inferredMisunderstanding: requiredString(body.inferredMisunderstanding),
         successCriteria: requiredString(body.successCriteria),
+        revisedMethodFamily: optionalMethodFamily(body.revisedMethodFamily),
+        revisedMethodReason:
+          typeof body.revisedMethodReason === "string"
+            ? body.revisedMethodReason
+            : null,
+        revisedFirstCalculationDirection:
+          typeof body.revisedFirstCalculationDirection === "string"
+            ? body.revisedFirstCalculationDirection
+            : null,
+        recalculationSubmissions: recalculationSubmissions(
+          body.recalculationSubmissions,
+        ),
       }),
     });
   }

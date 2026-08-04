@@ -362,6 +362,14 @@ async function prepareAttempt(runtime, fixture) {
     attemptText: "가상 기준안을 보기 전에 구조와 근거를 먼저 작성했습니다.",
     elapsedTimeMs: 120_000,
     confidence: "medium",
+    ...(view.problemModel.subjectAdapter?.adapter === "PracticalAdapter"
+      ? {
+          methodFamily: view.problemModel.methodFamily,
+          methodReason: "비교사례의 배분과 보정 조건이 주어져 비교방식을 선택합니다.",
+          firstCalculationDirection:
+            "사례가격에 토지 배분비율을 적용해 토지가격을 먼저 계산합니다.",
+        }
+      : {}),
   });
   return view;
 }
@@ -484,6 +492,22 @@ for (const fixture of SYNTHETIC_FIXTURES) {
       rewriteText: "가상 간극 하나를 기준으로 구조를 직접 다시 작성했습니다.",
       inferredMisunderstanding: "가상 구조의 연결 순서를 놓쳤습니다.",
       successCriteria: "같은 구조를 도움 없이 다시 재현합니다.",
+      ...(view.problemModel.subjectAdapter?.adapter === "PracticalAdapter"
+        ? {
+            revisedMethodFamily: view.problemModel.methodFamily,
+            revisedMethodReason:
+              "비교사례의 배분과 보정 조건을 다시 확인해 비교방식을 유지합니다.",
+            revisedFirstCalculationDirection:
+              "사례가격 10억원에 토지 배분비율 60%를 먼저 적용합니다.",
+            recalculationSubmissions: [
+              {
+                nodeId: "synthetic-allocation-node",
+                value: 600_000_000,
+                unit: "원",
+              },
+            ],
+          }
+        : {}),
     });
     assert.equal(completed.status, "completed");
     assert.equal(completed.rewrite.subjectMode, fixture.rewriteMode);
@@ -2755,6 +2779,10 @@ test("attempt-before-explanation, stale CAS, and replay-safe one-call behavior r
     attemptText: "가상 독립 시도를 먼저 저장합니다.",
     elapsedTimeMs: 60_000,
     confidence: "low",
+    methodFamily: view.problemModel.methodFamily,
+    methodReason: "비교사례 배분 조건을 사용하므로 비교방식을 선택합니다.",
+    firstCalculationDirection:
+      "사례가격에 토지 배분비율을 적용해 토지가격부터 계산합니다.",
   });
   await assert.rejects(
     runtime.requestAssistance({
@@ -2814,6 +2842,10 @@ test("metadata projection exposes only bounded ladder counts and no learner, pro
     attemptText: "LEARNER_BODY_SENTINEL 가상 독립 시도입니다.",
     elapsedTimeMs: 60_000,
     confidence: "medium",
+    methodFamily: view.problemModel.methodFamily,
+    methodReason: "비교사례 배분 조건을 사용하므로 비교방식을 선택합니다.",
+    firstCalculationDirection:
+      "사례가격에 토지 배분비율을 적용해 토지가격부터 계산합니다.",
   });
   view = (
     await runtime.requestAssistance({

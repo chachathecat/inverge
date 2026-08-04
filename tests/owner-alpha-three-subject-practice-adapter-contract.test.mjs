@@ -7,6 +7,7 @@ import {
   OWNER_ALPHA_AI_REFERENCE_LABEL,
   isOwnerAlphaPracticeSession,
 } from "../lib/review-os/owner-alpha-practice-contract.ts";
+import { validateOwnerAlphaCalculationGraph } from "../lib/review-os/owner-alpha-calculation-validator.ts";
 import { compileOwnerAlphaPracticeProblem } from "../lib/review-os/owner-alpha-practice-compiler.ts";
 import { ownerAlphaPracticeMetadataProjection } from "../lib/review-os/owner-alpha-practice-metadata.ts";
 import { OwnerAlphaProviderError } from "../lib/review-os/owner-alpha-practice-provider-contract.ts";
@@ -35,6 +36,7 @@ const fixtures = Object.freeze([
     gapType: "data_role_gap",
     rewriteMode: "recalculation",
     canonicalRewriteMode: "recalculate",
+    methodFamily: "comparison_approach",
   },
   {
     id: "theory-definition-comparison-evaluation",
@@ -290,8 +292,49 @@ async function prepareAttempt(runtime, fixture, text = fixture.text) {
     attemptText: "기준안을 보기 전에 요구 구조와 근거를 제 말로 먼저 작성했습니다.",
     elapsedTimeMs: 180_000,
     confidence: "medium",
+    ...(fixture.subject === "appraisal_practical"
+      ? {
+          methodFamily: fixture.methodFamily,
+          methodReason:
+            "비교사례 가격에 토지 배분비율과 사정보정률을 적용해야 합니다.",
+          firstCalculationDirection:
+            "사례가격에 토지 배분비율을 먼저 곱해 토지 배분가액을 구합니다.",
+        }
+      : {}),
   });
   return view;
+}
+
+function practicalRepairInput(view, fixture) {
+  if (fixture.subject !== "appraisal_practical") return {};
+  const allNodes = view.problemModel.calculationGraph.nodes;
+  const criticalNodes = allNodes.filter((node) => node.critical);
+  const requiredNodes = criticalNodes.length > 0 ? criticalNodes : allNodes;
+  const checksByNodeId = new Map(
+    validateOwnerAlphaCalculationGraph({ nodes: requiredNodes }).map((check) => [
+      check.nodeId,
+      check,
+    ]),
+  );
+  const recalculationSubmissions = requiredNodes.map((node) => {
+    const check = checksByNodeId.get(node.nodeId);
+    assert.equal(check?.status, "validated");
+    assert.equal(typeof check?.deterministicResult, "number");
+    return {
+      nodeId: node.nodeId,
+      value: check.deterministicResult,
+      unit: node.resultUnit,
+    };
+  });
+  assert.ok(recalculationSubmissions.length > 0);
+  return {
+    revisedMethodFamily: fixture.methodFamily,
+    revisedMethodReason:
+      "비교사례의 토지 배분가액을 먼저 구한 뒤 필요한 보정을 적용합니다.",
+    revisedFirstCalculationDirection:
+      "사례가격과 토지 배분비율로 첫 계산 노드를 독립적으로 재현합니다.",
+    recalculationSubmissions,
+  };
 }
 
 test("contract fixtures are exactly the three required copyright-safe subject cases", () => {
@@ -301,6 +344,82 @@ test("contract fixtures are exactly the three required copyright-safe subject ca
     OWNER_ALPHA_PRACTICE_SUBJECTS,
   );
   assert.equal(new Set(fixtures.map((fixture) => fixture.id)).size, 3);
+});
+
+test("Theory and Law inferred scaffolds stay server-redacted until an independent attempt exists", async () => {
+  for (const fixture of fixtures.slice(1)) {
+    const { runtime, repository } = harness();
+    let view = await runtime.create({
+      problemText: fixture.text,
+      files: [],
+      inputModality: "typed",
+      subject: fixture.subject,
+    });
+    const stored = await repository.load(view.sessionId);
+    assert.ok(stored);
+    assert.equal(view.independentAttempt, null);
+    assert.deepEqual(view.problemModel.sourceStates, []);
+
+    if (fixture.subject === "appraisal_theory") {
+      assert.equal(view.problemModel.subjectAdapter.adapter, "TheoryAdapter");
+      assert.deepEqual(view.problemModel.subjectAdapter.issueCandidates, []);
+      assert.deepEqual(
+        view.problemModel.subjectAdapter.expectedOutlineHierarchy,
+        [],
+      );
+      assert.deepEqual(view.problemModel.subjectAdapter.keyConceptCoverage, []);
+      assert.equal(
+        stored.problemModel.subjectAdapter.expectedOutlineHierarchy.length > 0,
+        true,
+      );
+      assert.equal(
+        stored.problemModel.subjectAdapter.keyConceptCoverage.length > 0,
+        true,
+      );
+    } else {
+      assert.equal(view.problemModel.subjectAdapter.adapter, "LawAdapter");
+      assert.deepEqual(view.problemModel.subjectAdapter.legalIssueCandidates, []);
+      assert.deepEqual(
+        view.problemModel.subjectAdapter.applicableLawCandidates,
+        [],
+      );
+      assert.deepEqual(
+        view.problemModel.subjectAdapter.articleAndParagraphReferences,
+        [],
+      );
+      assert.equal(
+        view.problemModel.subjectAdapter.effectiveDateRequirement.effectiveAt,
+        null,
+      );
+      assert.equal(
+        stored.problemModel.subjectAdapter.articleAndParagraphReferences.length >
+          0,
+        true,
+      );
+      assert.equal(
+        stored.problemModel.subjectAdapter.effectiveDateRequirement.effectiveAt,
+        "2026.07.04",
+      );
+    }
+
+    view = await runtime.confirmProblem({
+      sessionId: view.sessionId,
+      recordVersion: view.recordVersion,
+      confirmedProblemText: view.confirmedProblemText,
+    });
+    assert.equal(view.independentAttempt, null);
+    if (fixture.subject === "appraisal_theory") {
+      assert.deepEqual(
+        view.problemModel.subjectAdapter.expectedOutlineHierarchy,
+        [],
+      );
+    } else {
+      assert.deepEqual(
+        view.problemModel.subjectAdapter.articleAndParagraphReferences,
+        [],
+      );
+    }
+  }
 });
 
 for (const fixture of fixtures) {
@@ -328,6 +447,27 @@ for (const fixture of fixtures) {
       subject: fixture.subject,
       answerExposure: "none",
     });
+    if (fixture.subject === "appraisal_practical") {
+      assert.equal(
+        view.practicalDecisionPath.contractVersion,
+        "owner_alpha_practical_decision_path.v1",
+      );
+      assert.equal(
+        view.practicalDecisionPath.initialCommitment.methodFamily,
+        fixture.methodFamily,
+      );
+      assert.equal(
+        view.practicalDecisionPath.initialCommitment.reason,
+        "비교사례 가격에 토지 배분비율과 사정보정률을 적용해야 합니다.",
+      );
+      assert.equal(
+        view.practicalDecisionPath.initialCommitment.firstCalculationDirection,
+        "사례가격에 토지 배분비율을 먼저 곱해 토지 배분가액을 구합니다.",
+      );
+      assert.equal(view.practicalDecisionPath.repairVerification.status, "not_started");
+    } else {
+      assert.equal(view.practicalDecisionPath, undefined);
+    }
 
     let result = await runtime.requestAssistance({
       sessionId: view.sessionId,
@@ -376,6 +516,7 @@ for (const fixture of fixtures) {
       rewriteText: "가장 큰 간극 하나를 기준으로 요구와 근거의 연결을 직접 다시 작성했습니다.",
       inferredMisunderstanding: "요구와 근거를 연결하는 순서를 놓쳤습니다.",
       successCriteria: "같은 구조를 도움 없이 다시 재현합니다.",
+      ...practicalRepairInput(view, fixture),
     });
     assert.equal(completed.status, "completed");
     assert.equal(completed.rewrite.subjectMode, fixture.rewriteMode);
@@ -385,6 +526,36 @@ for (const fixture of fixtures) {
     assert.ok(completed.links.todayActionSeedId);
     assert.ok(completed.links.learningRecordId);
     assert.equal(completed.questionChain.entries.at(-1).kind, "variant");
+    if (fixture.subject === "appraisal_practical") {
+      assert.equal(
+        completed.practicalDecisionPath.revisedCommitment.methodFamily,
+        fixture.methodFamily,
+      );
+      assert.equal(
+        completed.practicalDecisionPath.repairVerification.status,
+        "verified",
+      );
+      assert.deepEqual(
+        completed.practicalDecisionPath.repairVerification.checks.map(
+          (check) => ({
+            nodeId: check.nodeId,
+            submittedValue: check.submittedValue,
+            submittedUnit: check.submittedUnit,
+            status: check.status,
+          }),
+        ),
+        view.problemModel.calculationGraph.nodes
+          .filter((node) => node.critical)
+          .map((node) => ({
+            nodeId: node.nodeId,
+            submittedValue: 600_000_000,
+            submittedUnit: node.resultUnit,
+            status: "validated",
+          })),
+      );
+    } else {
+      assert.equal(completed.practicalDecisionPath, undefined);
+    }
 
     const shared = projectOwnerAlphaSubjectPracticeContract(completed);
     assert.equal(shared.subject, fixture.subject);
@@ -412,7 +583,13 @@ test("existing v0 practical sessions remain readable, resumable, and completable
     inputModality: "typed",
     subject: "appraisal_practical",
   });
-  const legacy = clone(current);
+  assert.equal(current.problemModel.methodFamily, "mixed_or_uncertain");
+  assert.deepEqual(current.problemModel.methodCandidates, []);
+  assert.deepEqual(current.problemModel.calculationGraph.nodes, []);
+  const storedCurrent = await repository.load(current.sessionId);
+  assert.equal(storedCurrent.problemModel.methodFamily, "comparison_approach");
+  assert.ok(storedCurrent.problemModel.methodCandidates.length > 0);
+  const legacy = clone(storedCurrent);
   delete legacy.visibleHints;
   delete legacy.problemModel.subjectAdapter;
   legacy.subject = "감정평가실무";

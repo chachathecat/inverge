@@ -24,9 +24,11 @@ import {
 } from "@/lib/review-os/owner-alpha-explanation-ladder-contract";
 import {
   OWNER_ALPHA_AI_REFERENCE_LABEL,
+  OWNER_ALPHA_METHOD_FAMILIES,
   OWNER_ALPHA_PRACTICE_ROUTE_KEY,
   ownerAlphaMethodFamilyLabel,
   ownerAlphaVerificationLabel,
+  type OwnerAlphaMethodFamily,
   type OwnerAlphaPracticeView,
 } from "@/lib/review-os/owner-alpha-practice-contract";
 import {
@@ -59,6 +61,7 @@ function statusLabel(session: OwnerAlphaPracticeView | null) {
       : "힌트";
   }
   if (session.status === "reference_withheld") return "계산·근거 확인";
+  if (session.status === "rewrite_saved") return "재계산 다시 확인";
   if (session.status === "completion_pending") return "연결 저장 복구";
   if (session.status === "completed") return "다음 복습";
   return "다시 풀기";
@@ -102,6 +105,14 @@ function currentGuidance(session: OwnerAlphaPracticeView | null) {
     };
   }
   if (session.status !== "completed") {
+    if (session.status === "rewrite_saved") {
+      return {
+        now: "틀린 계산 노드의 값·단위를 고쳐 다시 제출하세요.",
+        why: "검증되지 않은 재계산으로 D+1·Queue·Today·Record를 만들지 않습니다.",
+        misunderstanding: session.biggestGap?.inferredMisunderstanding ?? "직접 확인 필요",
+        success: "필수 계산 노드의 숫자와 단위가 모두 결정론 결과와 일치합니다.",
+      };
+    }
     return {
       now: "가장 큰 간극 하나를 확인하고 직접 재작성 또는 재계산하세요.",
       why: session.biggestGap.reasonSelected,
@@ -132,6 +143,21 @@ function errorMessage(code: string | null | undefined) {
   return "요청을 완료하지 못했습니다. 입력과 연결 상태를 확인해 주세요.";
 }
 
+function recalculationStatusLabel(
+  status:
+    | "validated"
+    | "missing"
+    | "value_mismatch"
+    | "unit_mismatch"
+    | "deterministic_unavailable",
+) {
+  if (status === "validated") return "값·단위 일치";
+  if (status === "missing") return "필수 결과 누락";
+  if (status === "value_mismatch") return "숫자 불일치";
+  if (status === "unit_mismatch") return "단위 불일치";
+  return "결정론 검증 불가";
+}
+
 export function OwnerAlphaPracticeLoop({
   initialSession,
 }: {
@@ -149,6 +175,17 @@ export function OwnerAlphaPracticeLoop({
   );
   const [attemptText, setAttemptText] = useState("");
   const [confidence, setConfidence] = useState<"low" | "medium" | "high">("medium");
+  const [methodFamily, setMethodFamily] = useState<OwnerAlphaMethodFamily>(
+    initialSession?.practicalDecisionPath?.initialCommitment.methodFamily ??
+      "mixed_or_uncertain",
+  );
+  const [methodReason, setMethodReason] = useState(
+    initialSession?.practicalDecisionPath?.initialCommitment.reason ?? "",
+  );
+  const [firstCalculationDirection, setFirstCalculationDirection] = useState(
+    initialSession?.practicalDecisionPath?.initialCommitment
+      .firstCalculationDirection ?? "",
+  );
   const [attemptStartedAt, setAttemptStartedAt] = useState(() => {
     const persistedStart =
       initialSession?.status === "problem_confirmed"
@@ -173,6 +210,38 @@ export function OwnerAlphaPracticeLoop({
   );
   const [successCriteria, setSuccessCriteria] = useState(
     initialSession?.biggestGap?.successCriteria ?? "",
+  );
+  const [revisedMethodFamily, setRevisedMethodFamily] =
+    useState<OwnerAlphaMethodFamily>(
+      initialSession?.practicalDecisionPath?.revisedCommitment?.methodFamily ??
+        initialSession?.practicalDecisionPath?.initialCommitment.methodFamily ??
+        "mixed_or_uncertain",
+    );
+  const [revisedMethodReason, setRevisedMethodReason] = useState(
+    initialSession?.practicalDecisionPath?.revisedCommitment?.reason ?? "",
+  );
+  const [revisedFirstCalculationDirection, setRevisedFirstCalculationDirection] =
+    useState(
+      initialSession?.practicalDecisionPath?.revisedCommitment
+        ?.firstCalculationDirection ?? "",
+    );
+  const [recalculationInputs, setRecalculationInputs] = useState<
+    Record<string, { value: string; unit: string }>
+  >(() =>
+    Object.fromEntries(
+      (initialSession?.practicalDecisionPath?.repairVerification.checks ?? []).map(
+        (check) => [
+          check.nodeId,
+          {
+            value:
+              check.submittedValue === null
+                ? ""
+                : String(check.submittedValue),
+            unit: check.submittedUnit ?? "",
+          },
+        ],
+      ),
+    ),
   );
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
@@ -203,6 +272,38 @@ export function OwnerAlphaPracticeLoop({
     if (next.rewrite) {
       setRewriteMode(next.rewrite.mode);
       setRewriteText((current) => current || next.rewrite?.text || "");
+    }
+    if (next.practicalDecisionPath) {
+      const path = next.practicalDecisionPath;
+      setMethodFamily(path.initialCommitment.methodFamily);
+      setMethodReason(path.initialCommitment.reason);
+      setFirstCalculationDirection(
+        path.initialCommitment.firstCalculationDirection,
+      );
+      setRevisedMethodFamily(
+        path.revisedCommitment?.methodFamily ??
+          path.initialCommitment.methodFamily,
+      );
+      setRevisedMethodReason(path.revisedCommitment?.reason ?? "");
+      setRevisedFirstCalculationDirection(
+        path.revisedCommitment?.firstCalculationDirection ?? "",
+      );
+      if (path.repairVerification.checks.length > 0) {
+        setRecalculationInputs(
+          Object.fromEntries(
+            path.repairVerification.checks.map((check) => [
+              check.nodeId,
+              {
+                value:
+                  check.submittedValue === null
+                    ? ""
+                    : String(check.submittedValue),
+                unit: check.submittedUnit ?? "",
+              },
+            ]),
+          ),
+        );
+      }
     }
   }
 
@@ -294,6 +395,9 @@ export function OwnerAlphaPracticeLoop({
     const saved = await sendCommand("save_attempt", {
       attemptText,
       confidence,
+      methodFamily,
+      methodReason,
+      firstCalculationDirection,
       elapsedTimeMs: Date.now() - attemptStartedAt,
     });
     if (saved) setAttemptText("");
@@ -309,12 +413,23 @@ export function OwnerAlphaPracticeLoop({
 
   async function completeRewrite(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    const recalculationSubmissions = Object.entries(recalculationInputs)
+      .filter(([, input]) => input.value.trim().length > 0)
+      .map(([nodeId, input]) => ({
+        nodeId,
+        value: Number(input.value),
+        unit: input.unit.trim() || null,
+      }));
     await sendCommand("complete_rewrite", {
       mode: rewriteMode,
       subjectMode: subjectRewriteMode,
       rewriteText,
       inferredMisunderstanding,
       successCriteria,
+      revisedMethodFamily,
+      revisedMethodReason,
+      revisedFirstCalculationDirection,
+      recalculationSubmissions,
     });
   }
 
@@ -331,6 +446,24 @@ export function OwnerAlphaPracticeLoop({
     : 1;
   const activeAdapter = session?.problemModel.subjectAdapter ?? null;
   const activeSubject = activeAdapter?.subject ?? subject;
+  const practicalActive = activeSubject === "appraisal_practical";
+  const calculationNodes = session?.problemModel.calculationGraph.nodes ?? [];
+  const hasCriticalCalculation = calculationNodes.some(
+    (node) => node.critical,
+  );
+  const practicalCalculationNodes = session?.practicalDecisionPath
+    ? calculationNodes.filter(
+        (node) => !hasCriticalCalculation || node.critical,
+      )
+    : [];
+  const practicalInputsComplete = practicalCalculationNodes.every((node) => {
+    const input = recalculationInputs[node.nodeId];
+    return Boolean(
+      input?.value.trim() &&
+        Number.isFinite(Number(input.value)) &&
+        (node.resultUnit === null || input.unit.trim()),
+    );
+  });
 
   return (
     <main id="main-content">
@@ -466,6 +599,73 @@ export function OwnerAlphaPracticeLoop({
             </CardHeader>
             <CardContent>
               <form onSubmit={saveAttempt} className="space-y-5">
+                {practicalActive ? (
+                  <fieldset className="space-y-4 rounded-[var(--radius-md)] border border-[var(--border)] p-4">
+                    <legend className="px-1 text-sm font-medium">
+                      피드백 전 방법 판단
+                    </legend>
+                    <div>
+                      <label
+                        htmlFor="owner-alpha-method-family"
+                        className="text-sm font-medium"
+                      >
+                        먼저 선택한 방법
+                      </label>
+                      <select
+                        id="owner-alpha-method-family"
+                        value={methodFamily}
+                        onChange={(event) =>
+                          setMethodFamily(
+                            event.target.value as OwnerAlphaMethodFamily,
+                          )
+                        }
+                        className="mt-2 min-h-11 w-full rounded-[var(--radius-input)] border border-[var(--border)] bg-[color:var(--surface)] px-3 text-sm"
+                      >
+                        {OWNER_ALPHA_METHOD_FAMILIES.map((value) => (
+                          <option key={value} value={value}>
+                            {ownerAlphaMethodFamilyLabel(value)}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    <div>
+                      <label
+                        htmlFor="owner-alpha-method-reason"
+                        className="text-sm font-medium"
+                      >
+                        이 방법을 선택한 이유
+                      </label>
+                      <Textarea
+                        id="owner-alpha-method-reason"
+                        value={methodReason}
+                        onChange={(event) => setMethodReason(event.target.value)}
+                        className="min-h-24"
+                        maxLength={1_200}
+                        placeholder="문제 사실과 자료 역할을 근거로 적으세요."
+                        required
+                      />
+                    </div>
+                    <div>
+                      <label
+                        htmlFor="owner-alpha-first-calculation-direction"
+                        className="text-sm font-medium"
+                      >
+                        첫 계산 방향
+                      </label>
+                      <Textarea
+                        id="owner-alpha-first-calculation-direction"
+                        value={firstCalculationDirection}
+                        onChange={(event) =>
+                          setFirstCalculationDirection(event.target.value)
+                        }
+                        className="min-h-24"
+                        maxLength={1_200}
+                        placeholder="첫 산식·분자/분모·증감 방향을 적으세요."
+                        required
+                      />
+                    </div>
+                  </fieldset>
+                ) : null}
                 <div>
                   <label htmlFor="owner-alpha-attempt" className="text-sm font-medium">내 독립 시도</label>
                   <Textarea
@@ -488,7 +688,18 @@ export function OwnerAlphaPracticeLoop({
                     ))}
                   </div>
                 </fieldset>
-                <Button type="submit" size="lg" className="w-full sm:w-auto" disabled={busy || attemptText.trim().length < 10}>
+                <Button
+                  type="submit"
+                  size="lg"
+                  className="w-full sm:w-auto"
+                  disabled={
+                    busy ||
+                    attemptText.trim().length < 10 ||
+                    (practicalActive &&
+                      (methodReason.trim().length < 3 ||
+                        firstCalculationDirection.trim().length < 3))
+                  }
+                >
                   {busy ? "독립 시도 저장 중…" : "독립 시도 저장"}
                 </Button>
               </form>
@@ -607,16 +818,199 @@ export function OwnerAlphaPracticeLoop({
                     </select>
                   </div>
                 ) : null}
+                {session.practicalDecisionPath ? (
+                  <section
+                    aria-labelledby="owner-alpha-revised-method-heading"
+                    className="space-y-4 rounded-[var(--radius-md)] border border-[var(--border)] p-4"
+                  >
+                    <h3
+                      id="owner-alpha-revised-method-heading"
+                      className="text-sm font-medium"
+                    >
+                      피드백 뒤 수정한 방법 판단
+                    </h3>
+                    <p className="text-xs leading-5 text-[color:var(--muted)]">
+                      최초 선택은 그대로 보존됩니다. 바뀌지 않았다면 같은 방법을 다시 선택하고 이유를 새로 적으세요.
+                    </p>
+                    <div>
+                      <label
+                        htmlFor="owner-alpha-revised-method-family"
+                        className="text-sm font-medium"
+                      >
+                        수정한 방법
+                      </label>
+                      <select
+                        id="owner-alpha-revised-method-family"
+                        value={revisedMethodFamily}
+                        onChange={(event) =>
+                          setRevisedMethodFamily(
+                            event.target.value as OwnerAlphaMethodFamily,
+                          )
+                        }
+                        className="mt-2 min-h-11 w-full rounded-[var(--radius-input)] border border-[var(--border)] bg-[color:var(--surface)] px-3 text-sm"
+                      >
+                        {OWNER_ALPHA_METHOD_FAMILIES.map((value) => (
+                          <option key={value} value={value}>
+                            {ownerAlphaMethodFamilyLabel(value)}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    <div>
+                      <label
+                        htmlFor="owner-alpha-revised-method-reason"
+                        className="text-sm font-medium"
+                      >
+                        수정한 선택 이유
+                      </label>
+                      <Textarea
+                        id="owner-alpha-revised-method-reason"
+                        value={revisedMethodReason}
+                        onChange={(event) =>
+                          setRevisedMethodReason(event.target.value)
+                        }
+                        className="min-h-24"
+                        maxLength={1_200}
+                        required
+                      />
+                    </div>
+                    <div>
+                      <label
+                        htmlFor="owner-alpha-revised-calculation-direction"
+                        className="text-sm font-medium"
+                      >
+                        수정한 첫 계산 방향
+                      </label>
+                      <Textarea
+                        id="owner-alpha-revised-calculation-direction"
+                        value={revisedFirstCalculationDirection}
+                        onChange={(event) =>
+                          setRevisedFirstCalculationDirection(
+                            event.target.value,
+                          )
+                        }
+                        className="min-h-24"
+                        maxLength={1_200}
+                        required
+                      />
+                    </div>
+                  </section>
+                ) : null}
                 <div>
                   <label htmlFor="owner-alpha-rewrite" className="text-sm font-medium">내 재작성·재계산</label>
                   <Textarea id="owner-alpha-rewrite" value={rewriteText} onChange={(event) => setRewriteText(event.target.value)} maxLength={16_000} required />
                 </div>
+                {session.practicalDecisionPath &&
+                practicalCalculationNodes.length > 0 ? (
+                  <fieldset className="space-y-4 rounded-[var(--radius-md)] border border-[var(--border)] p-4">
+                    <legend className="px-1 text-sm font-medium">
+                      필수 계산 결과 검증
+                    </legend>
+                    <p className="text-xs leading-5 text-[color:var(--muted)]">
+                      기준 숫자는 표시하지 않습니다. 직접 재계산한 값과 단위를 입력하면 서버가 결정론 결과와 대조합니다.
+                    </p>
+                    {practicalCalculationNodes.map((node) => {
+                      const input = recalculationInputs[node.nodeId] ?? {
+                        value: "",
+                        unit: "",
+                      };
+                      const check =
+                        session.practicalDecisionPath?.repairVerification.checks.find(
+                          (item) => item.nodeId === node.nodeId,
+                        );
+                      return (
+                        <div
+                          key={node.nodeId}
+                          className="grid gap-3 rounded-[var(--radius-md)] bg-[color:var(--surface-soft)] p-4 sm:grid-cols-[minmax(0,1fr)_minmax(0,0.55fr)]"
+                        >
+                          <div className="sm:col-span-2">
+                            <p className="text-sm font-medium">{node.label}</p>
+                            {check ? (
+                              <p
+                                className={`mt-1 text-xs ${
+                                  check.status === "validated"
+                                    ? "text-[color:var(--status-green)]"
+                                    : "text-[color:var(--status-red)]"
+                                }`}
+                              >
+                                {recalculationStatusLabel(check.status)}
+                              </p>
+                            ) : null}
+                          </div>
+                          <div>
+                            <label
+                              htmlFor={`owner-alpha-node-value-${node.nodeId}`}
+                              className="text-xs font-medium"
+                            >
+                              계산값
+                            </label>
+                            <input
+                              id={`owner-alpha-node-value-${node.nodeId}`}
+                              type="number"
+                              step="any"
+                              value={input.value}
+                              onChange={(event) =>
+                                setRecalculationInputs((current) => ({
+                                  ...current,
+                                  [node.nodeId]: {
+                                    ...input,
+                                    value: event.target.value,
+                                  },
+                                }))
+                              }
+                              className="mt-2 min-h-11 w-full rounded-[var(--radius-input)] border border-[var(--border)] bg-[color:var(--surface)] px-3 text-sm"
+                              required
+                            />
+                          </div>
+                          <div>
+                            <label
+                              htmlFor={`owner-alpha-node-unit-${node.nodeId}`}
+                              className="text-xs font-medium"
+                            >
+                              단위{node.resultUnit ? ` · ${node.resultUnit}` : ""}
+                            </label>
+                            <input
+                              id={`owner-alpha-node-unit-${node.nodeId}`}
+                              type="text"
+                              value={input.unit}
+                              onChange={(event) =>
+                                setRecalculationInputs((current) => ({
+                                  ...current,
+                                  [node.nodeId]: {
+                                    ...input,
+                                    unit: event.target.value,
+                                  },
+                                }))
+                              }
+                              className="mt-2 min-h-11 w-full rounded-[var(--radius-input)] border border-[var(--border)] bg-[color:var(--surface)] px-3 text-sm"
+                              required={node.resultUnit !== null}
+                            />
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </fieldset>
+                ) : null}
                 <QuietSection className="p-4">
                   <p className="text-xs font-medium text-[color:var(--muted)]">조건 변형 1개</p>
                   <p className="mt-2 text-sm font-medium">{session.variant?.changedOneThing}</p>
                   <p className="mt-1 text-sm leading-6">{session.variant?.prompt}</p>
                 </QuietSection>
-                <Button type="submit" size="lg" className="w-full sm:w-auto" disabled={busy || rewriteText.trim().length < 10 || inferredMisunderstanding.trim().length < 3 || successCriteria.trim().length < 3}>
+                <Button
+                  type="submit"
+                  size="lg"
+                  className="w-full sm:w-auto"
+                  disabled={
+                    busy ||
+                    rewriteText.trim().length < 10 ||
+                    inferredMisunderstanding.trim().length < 3 ||
+                    successCriteria.trim().length < 3 ||
+                    (Boolean(session.practicalDecisionPath) &&
+                      (revisedMethodReason.trim().length < 3 ||
+                        revisedFirstCalculationDirection.trim().length < 3 ||
+                        !practicalInputsComplete))
+                  }
+                >
                   {busy
                     ? "연결 저장 중…"
                     : session.status === "completion_pending"
@@ -660,7 +1054,8 @@ function ProblemStructure({ session }: { session: OwnerAlphaPracticeView }) {
     <QuietSection className="p-4 sm:p-5">
       <div className="flex flex-wrap items-center gap-2">
         {adapter ? <RefinedBadge tone="amber">{ownerAlphaSubjectLabel(adapter.subject)}</RefinedBadge> : null}
-        {!adapter || adapter.adapter === "PracticalAdapter" ? (
+        {session.independentAttempt &&
+        (!adapter || adapter.adapter === "PracticalAdapter") ? (
           <RefinedBadge>{ownerAlphaMethodFamilyLabel(session.problemModel.methodFamily)}</RefinedBadge>
         ) : null}
         {session.problemModel.topicCandidates.map((topic) => <RefinedBadge key={topic}>{topic}</RefinedBadge>)}
@@ -673,13 +1068,13 @@ function ProblemStructure({ session }: { session: OwnerAlphaPracticeView }) {
         </div>
       ) : adapter.adapter === "TheoryAdapter" ? (
         <div className="mt-4 grid gap-5 md:grid-cols-3">
-          <div><h3 className="text-sm font-medium">쟁점 후보</h3><ul className="mt-2 space-y-1 text-sm">{adapter.issueCandidates.map((item) => <li key={item}>• {item}</li>)}</ul></div>
-          <div><h3 className="text-sm font-medium">예상 목차</h3><ol className="mt-2 space-y-1 text-sm">{adapter.expectedOutlineHierarchy.map((item, index) => <li key={item}>{index + 1}. {item}</li>)}</ol></div>
+          <div><h3 className="text-sm font-medium">쟁점 후보</h3><ul className="mt-2 space-y-1 text-sm">{adapter.issueCandidates.length > 0 ? adapter.issueCandidates.map((item) => <li key={item}>• {item}</li>) : <li>• 독립 시도 뒤 확인</li>}</ul></div>
+          <div><h3 className="text-sm font-medium">예상 목차</h3><ol className="mt-2 space-y-1 text-sm">{adapter.expectedOutlineHierarchy.length > 0 ? adapter.expectedOutlineHierarchy.map((item, index) => <li key={item}>{index + 1}. {item}</li>) : <li>독립 시도 뒤 확인</li>}</ol></div>
           <div><h3 className="text-sm font-medium">검증 범위</h3><p className="mt-2 text-sm leading-6">구조·관계·모순·포괄성·근거 상태만 확인합니다. 이론 내용을 결정론적으로 채점하지 않습니다.</p></div>
         </div>
       ) : (
         <div className="mt-4 grid gap-5 md:grid-cols-3">
-          <div><h3 className="text-sm font-medium">법적 쟁점 후보</h3><ul className="mt-2 space-y-1 text-sm">{adapter.legalIssueCandidates.map((item) => <li key={item}>• {item}</li>)}</ul></div>
+          <div><h3 className="text-sm font-medium">법적 쟁점 후보</h3><ul className="mt-2 space-y-1 text-sm">{adapter.legalIssueCandidates.length > 0 ? adapter.legalIssueCandidates.map((item) => <li key={item}>• {item}</li>) : <li>• 독립 시도 뒤 확인</li>}</ul></div>
           <div><h3 className="text-sm font-medium">법적 근거·유효일</h3><ul className="mt-2 space-y-1 text-sm">{adapter.articleAndParagraphReferences.length > 0 ? adapter.articleAndParagraphReferences.map((item) => <li key={item.citation}>• {item.citation} · {ownerAlphaVerificationLabel(item.state)}</li>) : <li>• 조문·항 공식 원문 확인 필요</li>}<li>• 유효일: {adapter.effectiveDateRequirement.effectiveAt ?? "검토 필요"}</li></ul></div>
           <div><h3 className="text-sm font-medium">검증 원칙</h3><p className="mt-2 text-sm leading-6">공식 원문 참조 없이 AI 법적 진술을 공식 근거로 승격하지 않으며, 유효일 미상은 검토 필요로 닫습니다.</p></div>
         </div>

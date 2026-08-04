@@ -9,6 +9,10 @@ import {
   ownerAlphaExplanationLadderReleaseBlockers,
   type OwnerAlphaExplanationLadderV1,
 } from "./owner-alpha-explanation-ladder-contract";
+import {
+  isOwnerAlphaPracticalDecisionPath,
+  type OwnerAlphaPracticalDecisionPathV1,
+} from "./owner-alpha-practical-decision-path";
 
 export const OWNER_ALPHA_PRACTICE_CONTRACT_VERSION =
   "owner_alpha_universal_appraisal_practice.v0" as const;
@@ -476,6 +480,11 @@ export type OwnerAlphaPracticeSession = {
   misconceptionGraph: OwnerAlphaMisconceptionGraph;
   rootCauseCandidates: OwnerAlphaRootCauseCandidate[];
   questionReplayLinks: OwnerAlphaQuestionReplayLink[];
+  /**
+   * Optional learner-owned projection for new PracticalAdapter sessions.
+   * Its absence preserves pre-v1 and adapter-less v0 session compatibility.
+   */
+  practicalDecisionPath?: OwnerAlphaPracticalDecisionPathV1;
   providerState: OwnerAlphaProviderState;
   links: OwnerAlphaPracticeLinks;
 };
@@ -554,6 +563,14 @@ export function isOwnerAlphaPracticeSession(
   if (!isRecord(value.misconceptionGraph)) return false;
   if (!Array.isArray(value.rootCauseCandidates)) return false;
   if (!Array.isArray(value.questionReplayLinks)) return false;
+  if (
+    value.practicalDecisionPath !== undefined &&
+    (!value.problemModel.subjectAdapter ||
+      value.problemModel.subjectAdapter.adapter !== "PracticalAdapter" ||
+      !isOwnerAlphaPracticalDecisionPath(value.practicalDecisionPath))
+  ) {
+    return false;
+  }
   if (!isRecord(value.providerState) || !isRecord(value.links)) return false;
   if (
     ![
@@ -642,8 +659,103 @@ export function toOwnerAlphaPracticeView(
     session.assistance.assistanceLevel === 5 &&
     session.assistance.answerExposure === "full" &&
     reference?.releaseStatus === "released";
+  let problemModel: OwnerAlphaPracticeProblemModel = session.problemModel;
+  if (!session.independentAttempt && session.problemModel.subjectAdapter) {
+    const adapter = session.problemModel.subjectAdapter;
+    if (adapter.adapter === "PracticalAdapter") {
+      problemModel = {
+        ...session.problemModel,
+        methodFamily: "mixed_or_uncertain",
+        subMethodCandidates: [],
+        methodCandidates: [],
+        rejectionReasons: [],
+        calculationGraph: { nodes: [] },
+        claimVerificationStates:
+          session.problemModel.claimVerificationStates.filter(
+            (claim) =>
+              claim.claimType !== "method" && claim.calculationNodeId === null,
+          ),
+        subjectAdapter: {
+          ...adapter,
+          methodCandidates: [],
+          methodRejectionReasons: [],
+          calculationGraphNodeIds: [],
+        },
+      };
+    } else if (adapter.adapter === "TheoryAdapter") {
+      problemModel = {
+        ...session.problemModel,
+        topicCandidates: [],
+        sourceStates: [],
+        claimVerificationStates:
+          session.problemModel.claimVerificationStates.filter(
+            (claim) => claim.claimType === "number" && !claim.critical,
+          ),
+        subjectAdapter: {
+          ...adapter,
+          answerPlan: { ...adapter.answerPlan, hierarchy: [] },
+          issueCandidates: [],
+          definitionOrProposition: [],
+          governingPrinciples: [],
+          logicalPremises: [],
+          argumentSteps: [],
+          comparisonTargets: [],
+          supportingAndOpposingConsiderations: [],
+          practicalOrCaseConnection: [],
+          evaluation: [],
+          conclusion: [],
+          expectedOutlineHierarchy: [],
+          paragraphRoles: [],
+          pointWeightedDepth: [],
+          keyConceptCoverage: [],
+          unresolvedTheoreticalDispute: [],
+          transferTask: {
+            ...adapter.transferTask,
+            prompt: "독립 시도 뒤 복습 과제를 제공합니다.",
+          },
+        },
+      };
+    } else {
+      problemModel = {
+        ...session.problemModel,
+        topicCandidates: [],
+        sourceStates: [],
+        claimVerificationStates:
+          session.problemModel.claimVerificationStates.filter(
+            (claim) => claim.claimType === "number" && !claim.critical,
+          ),
+        subjectAdapter: {
+          ...adapter,
+          answerPlan: { ...adapter.answerPlan, hierarchy: [] },
+          legalIssueCandidates: [],
+          applicableLawCandidates: [],
+          articleAndParagraphReferences: [],
+          effectiveDateRequirement: {
+            required: true,
+            effectiveAt: null,
+            state: "unresolved_needs_review",
+            officialSourceRefId: null,
+          },
+          legalRequirements: [],
+          factsMappedToEachRequirement: [],
+          applicationOrSubsumption: [],
+          legalEffect: [],
+          procedure: [],
+          precedentOrAdjudicationReference: [],
+          opposingInterpretation: [],
+          conclusion: [],
+          unresolvedSourceOrVersionIssue: [],
+          transferTask: {
+            ...adapter.transferTask,
+            prompt: "독립 시도 뒤 복습 과제를 제공합니다.",
+          },
+        },
+      };
+    }
+  }
   return {
     ...session,
+    problemModel,
     visibleHints,
     aiReference: mayRevealReference ? reference : null,
   };
