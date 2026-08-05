@@ -31,8 +31,8 @@ and its HTTP acceptance, observed residue-zero, and independent canary gates
 are incomplete. The only ready item is S236B; automatic plan-only selection
 reports S236B. Use `auto` or `S236B` for current plan-only inspection.
 Completed O3A/O4V targets and blocked S225/S236P targets must fail closed.
-Selection does not start S236B, resume S236P, or start S236A. It never
-mutates blocked Draft PR #660.
+Selection does not start S236B, resume S236P, start S236A, or
+mutate blocked Draft PR #660.
 
 ## Modes
 
