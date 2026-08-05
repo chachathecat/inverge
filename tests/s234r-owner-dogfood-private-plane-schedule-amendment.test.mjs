@@ -9836,7 +9836,7 @@ test("roadmap has the native fork, optional fork, and deferred commercial fork",
   );
   assert.match(
     roadmapItem(roadmap, "S236P"),
-    /status: completed[\s\S]*executionState: accepted[\s\S]*acceptanceCompleted: true[\s\S]*dependencies: \[O4V\]/,
+    /status: blocked[\s\S]*executionState: acceptance_blocked[\s\S]*acceptanceCompleted: false[\s\S]*publishableKeyHttpAcceptanceCompleted: false[\s\S]*postRetryResidueZeroObserved: false[\s\S]*independentCrossSurfaceCanaryCompleted: false[\s\S]*dependencies: \[O4V\]/,
   );
   assert.match(
     roadmapItem(roadmap, "S236A"),

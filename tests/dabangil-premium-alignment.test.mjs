@@ -197,7 +197,7 @@ test("historical S200-S224 completion does not assert current readiness", async 
   assert.equal(roadmap.byId.get("S224").status, "completed");
 });
 
-test("O3A and lean O4V decisions are completed while downstream execution stays queued", async () => {
+test("O3A and lean O4V stay completed while blocked S236P keeps S236A unstarted", async () => {
   const roadmap = parseActiveProgram(await read("roadmap/active-program.yml"));
 
   assert.equal(roadmap.byId.get("S235A").status, "completed");
@@ -235,9 +235,36 @@ test("O3A and lean O4V decisions are completed while downstream execution stays 
   );
   assert.equal(roadmap.byId.get("O4V").automaticStartAllowed, false);
   assert.deepEqual(roadmap.byId.get("O4V").dependencies, ["S234R"]);
-  assert.equal(roadmap.byId.get("S236P").status, "completed");
-  assert.equal(roadmap.byId.get("S236P").executionState, "accepted");
-  assert.equal(roadmap.byId.get("S236P").acceptanceCompleted, true);
+  assert.equal(roadmap.byId.get("S236P").status, "blocked");
+  assert.equal(
+    roadmap.byId.get("S236P").executionState,
+    "acceptance_blocked",
+  );
+  assert.equal(roadmap.byId.get("S236P").acceptanceCompleted, false);
+  assert.equal(
+    roadmap.byId.get("S236P").targetCompletionScope,
+    "live_synthetic_owner_private_acceptance",
+  );
+  assert.equal(
+    roadmap.byId.get("S236P").latestLiveAttemptState,
+    "retry_4_consumed_failed",
+  );
+  assert.equal(
+    roadmap.byId.get("S236P").nextLiveAttemptAuthorized,
+    false,
+  );
+  assert.equal(
+    roadmap.byId.get("S236P").publishableKeyHttpAcceptanceCompleted,
+    false,
+  );
+  assert.equal(
+    roadmap.byId.get("S236P").postRetryResidueZeroObserved,
+    false,
+  );
+  assert.equal(
+    roadmap.byId.get("S236P").independentCrossSurfaceCanaryCompleted,
+    false,
+  );
   assert.deepEqual(roadmap.byId.get("S236P").dependencies, ["O4V"]);
   assert.equal(roadmap.byId.get("S236A").status, "queued");
   assert.equal(roadmap.byId.get("S236A").executionState, "unstarted");

@@ -323,10 +323,10 @@ items:
     priority: 34
   - id: S236P
     title: Private Authoring Review Plane Provisioning and Synthetic Receipt Acceptance
-    status: completed
-    executionState: accepted
-    acceptanceCompleted: true
-    completionScope: live_synthetic_owner_private_acceptance
+    status: blocked
+    executionState: acceptance_blocked
+    acceptanceCompleted: false
+    targetCompletionScope: live_synthetic_owner_private_acceptance
     evidence: docs/qa/s236p-lean-owner-private-acceptance.md
     provisionedProjectName: inverge-beta
     provisionedProjectRef: vajcduseyicjhyhrclax
@@ -334,7 +334,12 @@ items:
     persistentEventLogMode: none
     signedAccessEnabled: false
     migrationContract: ordered_exact_quadruple
-    expiryReadGateCorrectionState: pre_live_checkpoint_pending
+    expiryReadGateCorrectionState: source_offline_green_live_acceptance_blocked
+    latestLiveAttemptState: retry_4_consumed_failed
+    nextLiveAttemptAuthorized: false
+    publishableKeyHttpAcceptanceCompleted: false
+    postRetryResidueZeroObserved: false
+    independentCrossSurfaceCanaryCompleted: false
     forwardDisableRunbook: docs/qa/s236p-lean-owner-private-acceptance.md
     realContentAuthorized: false
     productionAuthorized: false

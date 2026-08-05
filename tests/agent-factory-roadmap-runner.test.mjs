@@ -1980,7 +1980,7 @@ test("unsupported pseudo-statuses stay unknown and cannot encode future gates", 
   assert.equal(byId(plan, "S101").readinessStatus, "unknown");
 });
 
-test("live completed-S236P roadmap keeps S236A queued and unstarted", () => {
+test("live blocked-S236P roadmap prevents S236A promotion", () => {
   const source = readFileSync("roadmap/active-program.yml", "utf8");
   const evaluatedAt = new Date(
     LIVE_PRE_EXPIRY_EVALUATED_AT,
@@ -2006,10 +2006,10 @@ test("live completed-S236P roadmap keeps S236A queued and unstarted", () => {
   assert.equal(plan.programId, "post-650-unified-program-v1");
   assert.equal(plan.completionItem, "S299");
   assert.equal(plan.wipLimit, 2);
-  assert.equal(plan.wipOccupiedCount, 0);
-  assert.equal(plan.availableSlots, 2);
-  assert.deepEqual(plan.readyItemIds, ["S236B", "S236A"]);
-  assert.deepEqual(plan.selectedItemIds, ["S236B", "S236A"]);
+  assert.equal(plan.wipOccupiedCount, 1);
+  assert.equal(plan.availableSlots, 1);
+  assert.deepEqual(plan.readyItemIds, ["S236B"]);
+  assert.deepEqual(plan.selectedItemIds, ["S236B"]);
   assert.deepEqual(
     postMerge.selected.map((entry) => entry.id),
     plan.selectedItemIds,
@@ -2017,6 +2017,7 @@ test("live completed-S236P roadmap keeps S236A queued and unstarted", () => {
   assert.deepEqual([...new Set(plan.analyses.map((analysis) => analysis.status))], [
     "completed",
     "queued",
+    "blocked",
   ]);
   assert.ok(plan.analyses.every((analysis) => supported.has(analysis.statusCategory)));
 
@@ -2044,14 +2045,18 @@ test("live completed-S236P roadmap keeps S236A queued and unstarted", () => {
   assert.deepEqual(o4v.dependencies, ["S234R"]);
 
   const s236p = byId(plan, "S236P");
-  assert.equal(s236p.status, "completed");
-  assert.equal(s236p.readinessStatus, "completed");
+  assert.equal(s236p.status, "blocked");
+  assert.equal(s236p.readinessStatus, "blocked");
   assert.deepEqual(s236p.missingDependencies, []);
+  assert.equal(
+    s236p.blockedReasons.some((reason) => reason.code === "blocked_status"),
+    true,
+  );
 
   const s236a = byId(plan, "S236A");
   assert.equal(s236a.status, "queued");
-  assert.equal(s236a.readinessStatus, "ready");
-  assert.deepEqual(s236a.missingDependencies, []);
+  assert.equal(s236a.readinessStatus, "blocked");
+  assert.deepEqual(s236a.missingDependencies, ["S236P"]);
 
   const s225 = byId(plan, "S225");
   assert.equal(s225.status, "queued");
@@ -2059,6 +2064,7 @@ test("live completed-S236P roadmap keeps S236A queued and unstarted", () => {
   assert.deepEqual(s225.missingDependencies, ["O4D"]);
 
   for (const id of [
+    "S236A",
     "O3C",
     "O4D",
     "S250",
@@ -2113,7 +2119,7 @@ test("live TypeScript runner and post-merge selector agree without starting work
       plan.selectedItemIds,
     );
     assertRunnerSelectorParity(plan, postMerge);
-    assert.deepEqual(plan.selectedItemIds, ["S236B", "S236A"]);
+    assert.deepEqual(plan.selectedItemIds, ["S236B"]);
     assert.deepEqual(postMerge.active, []);
   } finally {
     rmSync(directory, { recursive: true, force: true });
