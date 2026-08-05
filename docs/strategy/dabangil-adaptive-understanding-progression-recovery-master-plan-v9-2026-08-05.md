@@ -1,19 +1,20 @@
 ---
-document_title: "답안길 Adaptive Understanding & Evidence-Gated Progression 통합 마스터플랜 v9"
-document_subtitle: "집요한 이해 유도·대화 하단 맞춤 버튼·증거 기반 공략·복구 알림·오픈소스 이식 계약"
+document_title: "답안길 Adaptive Understanding & Evidence-Gated Progression 전략 Addendum v9"
+document_subtitle: "통합 v8 위의 집요한 이해 유도·대화 하단 맞춤 버튼·능동 확인 계약"
+document_role: "full integrated v8을 대체하지 않는 additive strategy amendment"
 status: "owner-strategy/non-authoritative"
 dated: "2026-08-05 KST"
 repository: "chachathecat/inverge"
 integrates_with:
   - "docs/strategy/dabangil-professional-exam-reasoning-os-master-plan-v7-2026-07-28.md"
-supersedes_for_strategy_only:
-  - "docs/strategy/dabangil-evidence-gated-progression-recovery-nudge-master-plan-v8-2026-08-05.md"
+  - "docs/strategy/dabangil-professional-exam-reasoning-os-master-plan-v8-2026-08-05.md"
 amends_for_strategy_only:
   - "persistent why-chain tutoring"
   - "adaptive understanding checks"
   - "learner-specific bottom action rail"
   - "evidence-gated progression, quests, recovery, nudges and OSS adoption"
 does_not_supersede:
+  - "docs/strategy/dabangil-professional-exam-reasoning-os-master-plan-v8-2026-08-05.md"
   - "live GitHub state and runtime"
   - "dated Owner decisions"
   - "AGENTS.md"
@@ -28,15 +29,28 @@ schema_authorization: "none"
 dependency_authorization: "none"
 notification_delivery_authorization: "none"
 measurement_authorization: "none"
+owner_private_profile: "lean/synthetic-first"
+persistent_event_log_authorization: "none"
+private_retention_ceiling_days: 365
+export_delete_sla_ceiling_days: 7
 execution_rule: "Reconcile live authority before every Work; this document proposes contracts and dependency order only."
 ---
 
-# 답안길 Adaptive Understanding & Evidence-Gated Progression 통합 마스터플랜 v9
+# 답안길 Adaptive Understanding & Evidence-Gated Progression 전략 Addendum v9
 
 ## 감정평가사 2차 학습 커널 위에 얹는 집요한 이해·공략·복귀 레이어
 
 이 문서는 답안길을 일반 챗봇, RPG, 출석 앱, streak 앱, 포인트 앱 또는
 generic motivation product로 바꾸자는 계획이 아니다.
+
+이 문서는 별도 최종 OS가 아니다. 같은 변경에 포함되는
+`dabangil-professional-exam-reasoning-os-master-plan-v8-2026-08-05.md`가
+범용 kernel, Exam Compiler, Full-Day, Learning Momentum, Lean Owner-private,
+상용화 금지선과 실행 control plane을 담는 **전체 통합본**이다. 이 v9
+addendum은 그 위에 why-chain, understanding hypothesis, bottom action rail과
+active check를 더한다. 충돌 시 live authority가 항상 우선하고, 그 다음에는
+v8의 더 엄격한 privacy·evidence·nudge·celebration·measurement 계약을
+약화하지 않는 해석만 허용한다.
 
 > **사용자가 좋은 후속 질문을 스스로 만들어야만 깊이 이해할 수 있는 구조를
 > 끝내고, AI가 대화에서 아직 닫히지 않은 개념을 추적해 다음에 물어볼 가장
@@ -183,7 +197,7 @@ AI의 실질적인 설명이 끝난 뒤 화면 맨 아래에 다음과 같은 ra
 “내일 6분 동안 도움 없이 같은 연결을 다시 쓰면 확인됩니다.”
 
 복구 모드
-“3일 쉬었습니다. 밀린 과제를 쌓지 않고 8분 복구 퀘스트 하나로
+“3일 쉬었습니다. 밀린 과제를 쌓지 않고 8분 복구 단계 하나로
 다시 시작합니다.”
 ```
 
@@ -254,6 +268,29 @@ AUP9  approved external evaluation
 dated Owner decision, `AGENTS.md`, canonical contracts,
 `roadmap/active-program.yml`, open PR, locks, reviews와 CI를 다시 읽는다.
 
+### 1.1A Lean Owner-private와 PR #676 hold overlay
+
+2026-08-05 read-only reconciliation에서 PR #676은
+`agent/s236p-lean-owner-private@1cd68c5bc23f19ad6332351bb40f757d249c1f1a`
+로 open/Draft/Blocked 상태다. retry #4는 소비됐고
+`temporary_post_expiry_download_allowed`에서 실패했다. retry #5는
+승인되지 않았고, P1 thread 2개는 unresolved이며, 별도 retry #4 residue
+zero count는 관측되지 않았다. S236A는 unstarted이고 Real content와
+Production은 OFF다.
+
+이 addendum과 통합 v8의 문서 작업은 그 hold를 해소하거나 retry, canary,
+Supabase, launcher, merge 또는 Production authority를 만들지 않는다. 현재
+Lean profile의 persistent raw event log도 `none`이다.
+
+O4V enterprise proposal은 rejected/superseded이고 현재 controlling profile은
+`owner_only/private/minimum_owner_scoped_RLS/managed_key/raw_logging_off/
+synthetic_only/real_content_off/Production_off/billing_off`인 Lean
+Owner-private뿐이다. PR #676 acceptance와 residue gate가 닫히기 전에는
+S236A, S237A, AUP runtime 또는 cross-session persistence를 시작할 수 없다.
+기존 object-acquisition 두 명령은 소비됐으며 `DO_NOT_RERUN=1`이다. 이후
+별도 승인된 교정 object-acquisition은 retry #5나 live acceptance 권한이
+아니다.
+
 ### 1.2 authority order
 
 이 문서는 기존 권위를 바꾸지 않는다.
@@ -292,6 +329,18 @@ current implementation/source amendment가 understanding과 progression을
 
 존재하지 않거나 승인되지 않은 state를 채우기 위해 fallback, 임의 추정,
 client spoof 또는 LLM self-declaration을 사용하지 않는다.
+
+위 후보는 물리적으로 두 등급으로 분리한다.
+
+- **context-only**: learner question/message, rail interaction, self-report,
+  explanation view, session reconstruction. tutor 다음 행동에는 쓸 수 있으나
+  progression qualification ref가 될 수 없다.
+- **qualification-bearing**: canonical resolver가 source/version,
+  assistance/exposure, validator와 idempotency를 닫은 attempt, repair, D+1,
+  D+7 verified variant와 timed evidence.
+
+context-only ref를 qualification-bearing 배열에 넣거나 이름만
+`independent`로 바꾸어 승격하는 fallback은 없다.
 
 ### 1.4 future-only vocabulary
 
@@ -640,7 +689,7 @@ type ConfusionThreadStateV1 =
   | "partially_resolved"
   | "restatement_due"
   | "contrast_due"
-  | "independently_explained"
+  | "session_reconstructed"
   | "transfer_due"
   | "transfer_confirmed"
   | "deferred"
@@ -719,7 +768,7 @@ type ExplanationRepresentationV1 =
 - repair verification
 - 이후 D+1/D+7 evidence
 
-session에서는 `independently_explained`까지 표시할 수 있으나, durable
+session에서는 `session_reconstructed`까지 표시할 수 있으나, durable
 independent recovery는 existing evidence policy를 따른다.
 
 ---
@@ -892,7 +941,7 @@ type SuggestedProbeActionKindV1 =
   | "find_contradiction"
   | "recalculate_variant"
   | "calculator_routine"
-  | "independent_micro_check"
+  | "session_micro_check"
   | "schedule_delayed_check"
   | "defer_thread";
 ```
@@ -996,7 +1045,7 @@ B. 효용적수는 위치·조망 등 토지 이용효용 차이를 배분한다
 
 ```ts
 type UnderstandingCheckResultV1 =
-  | "qualifying_session_success"
+  | "session_success"
   | "partial"
   | "incorrect"
   | "abstained"
@@ -1119,9 +1168,39 @@ learner가 선호하는 설명 방식은 bounded preference로 사용할 수 있
 
 정확한 수치는 Owner dogfood 뒤 versioned policy로 고정한다.
 
+`여기서 마치기`는 현재 rail과 proactive probing만 닫는다. 이미 존재하는
+due ReviewUnit, LearningGapRecord, evidence requirement 또는 source gate를
+완료·삭제·취소하지 않는다.
+
 ---
 
 ## 10. 핵심 데이터 계약
+
+현재 AUP1은 session-only projection이다. 아래 lifecycle은 future
+cross-session persistence가 별도 승인될 때 반드시 붙는 closed shape다.
+
+```ts
+type PrivateAUPLifecycleV1 = {
+  dataClass: "learner_private";
+  createdAt: string;
+  retentionPolicyRef: string;
+  retentionCeilingDays: 365;
+  expiresAt: string; // createdAt + approved duration, never over 365 days
+  deletionState: "active" | "delete_requested" | "deleted";
+  exportEligibility: "none" | "owner_authorized_private";
+  lifecyclePolicyVersion: string;
+};
+
+type PrivateAUPPersistenceV1 =
+  | {
+      persistenceMode: "session_only";
+      lifecycle?: never;
+    }
+  | {
+      persistenceMode: "owner_private_persisted";
+      lifecycle: PrivateAUPLifecycleV1;
+    };
+```
 
 ### 10.1 ConfusionThreadV1
 
@@ -1145,6 +1224,7 @@ type ConfusionThreadV1 = {
   threadPolicyVersion: string;
   threadChecksum: string;
   updatedAt: string;
+  persistence: PrivateAUPPersistenceV1;
   derivationAuthority: "trusted_server";
 };
 ```
@@ -1156,7 +1236,7 @@ type UnderstandingHypothesisV1 = {
   id: string;
   learnerScopeRef: string;
   confusionThreadRef: string;
-  candidateGapLabel: string;
+  candidateGapPrivateRenderRef?: string;
   candidateGapCode: string;
   supportingEvidenceRefs: string[];
   counterEvidenceRefs: string[];
@@ -1170,6 +1250,7 @@ type UnderstandingHypothesisV1 = {
   disconfirmationActionKinds: SuggestedProbeActionKindV1[];
   policyVersion: string;
   basisChecksum: string;
+  persistence: PrivateAUPPersistenceV1;
 };
 ```
 
@@ -1182,8 +1263,8 @@ type SuggestedProbeActionV1 = {
   confusionThreadRef: string;
   understandingHypothesisRef: string;
   kind: SuggestedProbeActionKindV1;
-  learnerFacingLabel: string;
-  accessibleLabel: string;
+  learnerFacingLabelPrivateRenderRef: string;
+  accessibleLabelPrivateRenderRef: string;
   targetConceptRefs: string[];
   targetRelationCode: string;
   estimatedSeconds: number;
@@ -1196,6 +1277,7 @@ type SuggestedProbeActionV1 = {
   reasonCodes: string[];
   actionPolicyVersion: string;
   actionChecksum: string;
+  persistence: PrivateAUPPersistenceV1;
 };
 ```
 
@@ -1213,7 +1295,7 @@ type UnderstandingClosureRailV1 = {
     | "high_confidence_candidate"
     | "medium_confidence_candidate"
     | "learner_choice_needed";
-  candidateGapLabel: string;
+  candidateGapPrivateRenderRef?: string;
   primaryActionRef?: string;
   secondaryActionRefs: string[]; // 0..3
   controlActionRefs: string[];
@@ -1222,6 +1304,7 @@ type UnderstandingClosureRailV1 = {
   renderPolicyVersion: string;
   basisChecksum: string;
   generatedAt: string;
+  persistence: PrivateAUPPersistenceV1;
   derivationAuthority: "trusted_server";
 };
 ```
@@ -1248,11 +1331,21 @@ type UnderstandingCheckV1 = {
   exposureSnapshotRef: string;
   verificationRefs: string[];
   result: UnderstandingCheckResultV1;
-  evidenceEffectRef: string;
+  qualificationStatus: "context_only";
+  qualificationAuthority: "trusted_server";
+  qualificationReasonCodes: string[];
+  durableProgressionEffect: "none";
   checkPolicyVersion: string;
   idempotencyKey: string;
+  persistence: PrivateAUPPersistenceV1;
 };
 ```
+
+`result="session_success"`는 곧바로 evidence effect가 아니다. 이 shape는 끝까지
+context-only이며 durable progression effect는 항상 `none`이다. 별도의
+canonical attempt·repair·D+1·D+7·timed task가 closed validator,
+source/effective-version, assistance/exposure와 idempotent qualification을
+통과해야만 해당 canonical evidence object가 생긴다.
 
 ### 10.6 interaction event
 
@@ -1270,10 +1363,16 @@ type UnderstandingRailInteractionV1 = {
     | "ai_target_rejected";
   occurredAt: string;
   idempotencyKey: string;
+  persistenceMode: "session_only";
 };
 ```
 
 이 event 자체는 mastery, recovery 또는 queue completion을 만들지 않는다.
+현재 persistent event log가 `none`이므로 DB/analytics row로 저장하지
+않는다. future persistence는 `PrivateAUPLifecycleV1`, RLS와 exact
+measurement authority를 함께 승인해야 한다. custom learner label은 closed
+metadata row에 복제하지 않고 learner-private vault ref 또는 ephemeral render로
+분리한다.
 
 ---
 
@@ -1361,6 +1460,23 @@ type ProgressionStateV1 =
   | "revalidation_required";
 ```
 
+```ts
+type ProgressionProjectionV1 = {
+  learnerScopeRef: string;
+  targetRef: string;
+  state: ProgressionStateV1;
+  qualifyingEvidenceRefs: string[];
+  evidenceThroughRef: string;
+  qualificationPolicyVersion: string;
+  projectionChecksum: string;
+  derivationAuthority: "trusted_server";
+};
+```
+
+이 projection은 기존 canonical qualification resolver의 출력만 읽는다.
+session question, self-report, rail interaction, explanation view와
+post-exposure reconstruction을 `qualifyingEvidenceRefs`에 넣을 수 없다.
+
 ### 12.2 understanding action과 progression
 
 | 사건 | progression 최대 효과 |
@@ -1369,7 +1485,7 @@ type ProgressionStateV1 =
 | button click | 없음 |
 | AI 설명 열람 | 없음 |
 | self-report `이해됨` | 없음 |
-| session micro-check success | attempt/learning evidence 후보 |
+| session micro-check success 단독 | 없음 |
 | verified repair | `repair_qualified` 후보 |
 | D+1 independent success | `d1_independent_confirmed` 후보 |
 | D+7 verified non-same-surface success | `d7_transfer_cleared` 후보 |
@@ -1427,7 +1543,7 @@ boss 실패는 과거 achievement를 삭제하지 않고 새 repair 후보를 �
 
 ```text
 연속 출석 37일                       ❌
-최근 14일 중 의미 있는 학습 흐름 10일   ✅
+rolling 7일의 의미 있는 evidence action 3회   ✅
 ```
 
 쉬었다고 과거 성취를 삭제하지 않는다.
@@ -1459,6 +1575,33 @@ type NudgeReasonV1 =
   | "revalidation_required";
 ```
 
+```ts
+type NudgeCandidateV1 = {
+  id: string;
+  learnerScopeRef: string;
+  reason: NudgeReasonV1;
+  recommendedReviewUnitRef: string;
+  directActionRef: string;
+  templateCode: string;
+  preferenceVersion: string;
+  policyVersion: string;
+  completionSnapshotRef: string;
+  createdAt: string;
+  eligibleAt: string;
+  expiresAt: string;
+  channelState: "in_app_only" | "blocked";
+  externalDeliveryAuthorizationRef?: string;
+  payloadClass: "metadata_only";
+  status: "candidate" | "suppressed" | "consumed" | "expired";
+  derivationAuthority: "trusted_server";
+  idempotencyKey: string;
+};
+```
+
+`expiresAt`은 필수다. server time이 `expiresAt` 이상이거나 source,
+ReviewUnit, thread, preference 또는 policy version이 stale이면 render,
+enqueue와 send 후보가 모두 `expired`/suppressed로 끝나야 한다.
+
 ### 13.4 nudge 규칙
 
 - proactive external nudge 하루 최대 1개 가설
@@ -1467,6 +1610,9 @@ type NudgeReasonV1 =
 - 두 번 연속 무시하면 빈도 축소
 - quiet hours
 - user preference와 opt-out
+- PWA push는 explicit opt-in 전 default OFF
+- timezone 기반 quiet hours와 snooze/skip/disable-kind/disable-all
+- opt-out effectiveAt 이후 아직 enqueue되지 않은 외부 delivery attempt 0
 - direct action route 필수
 - 죄책감·공포 copy 금지
 
@@ -1483,6 +1629,11 @@ type NudgeReasonV1 =
 ```
 
 실제 external delivery는 별도 authority 전 OFF다.
+
+통합 v8의 `NotificationPreferenceV1`, `NudgeDecisionV1`,
+`NudgeDeliveryEventV1`과 하루 0..1 PWA hard cap이 이 addendum보다
+우선한다. 이미 provider에 넘어간 알림의 화면 표시까지 회수한다고
+과장하지 않고 enqueue/cancel evidence를 분리한다.
 
 ---
 
@@ -1675,6 +1826,13 @@ AI 설명 뒤:
 rail에서 `전략 카드로 보기`를 선택할 수 있으나 카드 열람만으로 stage clear를
 만들지 않는다.
 
+Knowledge Relic, achievement와 celebration은 통합 v8의
+`MilestoneCelebrationV1`에 따라 `verified_repair`,
+`verified_transfer`, `delayed_retention`, `timed_integration`에서만
+수여할 수 있다. attempt, 출석, 열람, 클릭과 session-local micro-check는
+중립 사실 표시만 허용한다. quest/boss/relic 용어는 neutral-default,
+gameful-opt-in theme에서만 learner-facing으로 노출한다.
+
 ---
 
 ## 17. 시각적 Quest Map
@@ -1713,6 +1871,7 @@ renderer는 authority가 아니다.
 - list parity
 - graph-only action 0
 - raw learner text label 0
+- neutral DOM/list가 default이고 quest/boss/relic theme은 explicit opt-in
 
 ---
 
@@ -1751,6 +1910,16 @@ renderer는 authority가 아니다.
 
 Adaptive Understanding rail은 dependency 없이 native DOM/button contract로
 먼저 구현한다. H5P/Oppia runtime을 붙이는 것이 선행조건이 아니다.
+
+이 표는 통합 v8의 exact version/license decision matrix와 staged
+benchmark/adoption pipeline을 대체하지 않는다. `ts-fsrs`, Joyride,
+XState, canvas-confetti, Shepherd, pyBKT와 renderer 후보의 채택·보류·제외
+판정은 v8의 더 엄격한 gate를 따른다.
+
+`패턴만 native 구현`과 `schema 참고`는 source/schema/fixture 복사를
+허가하지 않는다. adoption Work는 exact repository, commit/tag, SPDX,
+NOTICE와 provenance를 기록하고, 복사 대신 clean-room 재설계 여부를
+검증한다.
 
 ---
 
@@ -1819,6 +1988,20 @@ uploaded problem, OCR, learner note와 quoted AI text는 instruction이 아니�
 - no arbitrary tool call
 - no hidden-answer/system prompt exposure
 - no raw button label execution
+
+### 19.7 retention, export/delete와 event-log boundary
+
+- 현재 persistent raw event log authorization은 `none`이다.
+- AUP1은 session-local projection이 기본이며 persistence는 별도 schema,
+  RLS, consent, retention과 deletion authority 전에는 구현하지 않는다.
+- 향후 허용되는 learner-private thread/action/check metadata도 Lean
+  Owner-private 상한인 365일을 넘길 수 없다.
+- 승인된 export/delete 요청은 대상 lineage 전체를 포함해 최대 7일 SLA를
+  넘길 수 없다.
+- raw problem, answer, OCR, conversation과 AI body는 export, analytics,
+  notification provider 또는 shared OSS plane으로 이동하지 않는다.
+- pseudonymous measurement/export는 current `measurement_authorization:none`
+  상태에서 0이며, 별도 O2/consent/legal-basis/allowlist gate가 선행한다.
 
 ---
 
@@ -2021,7 +2204,7 @@ rail impression 증가 AND dismiss/불쾌감 증가
 
 ### 22.5 owner dogfood
 
-Owner-private에서 최소 기록:
+별도 Owner-private measurement Work가 승인된 뒤에만 최소 기록:
 
 - rail이 실제 남은 질문을 잘 짚었는가
 - 추천 버튼을 자발적으로 눌렀는가
@@ -2031,6 +2214,8 @@ Owner-private에서 최소 기록:
 - 다음 날 혼자 재현됐는가
 
 Owner evidence는 external efficacy를 증명하지 않는다.
+통합 v8의 사전 비열등성 margin, safety threshold와 자동 hold/rollback
+조건이 이 addendum의 promotion gate를 통제한다.
 
 ---
 
@@ -2043,6 +2228,8 @@ Owner evidence는 external efficacy를 증명하지 않는다.
 - ambiguous merge는 candidate로 유지
 - source/answer revision 변경 시 stale
 - raw chain-of-thought 수집 0
+- current mode는 session-only; authority 없이 cross-session row 0
+- blocked PR #676을 completed dependency로 간주 0
 
 ### 23.2 hypothesis
 
@@ -2070,6 +2257,8 @@ Owner evidence는 external efficacy를 증명하지 않는다.
 - practical deterministic check 우선
 - law source fail-closed
 - session success와 durable recovery 분리
+- UnderstandingCheck success의 durable evidence/progression effect 항상 0
+- canonical attempt·repair·D+1·D+7·timed resolver 외 stage 전이 0
 - failed check 뒤 same prompt loop 0
 
 ### 23.5 progression
@@ -2078,6 +2267,7 @@ Owner evidence는 external efficacy를 증명하지 않는다.
 - repair/D+1/D+7/timed exact evidence
 - same-surface/assisted transfer 0
 - current authority에서 mastery ref dependency 0
+- context-only question/self-report/session reconstruction을 qualifying ref로 사용 0
 
 ### 23.6 privacy/security
 
@@ -2088,6 +2278,10 @@ Owner evidence는 external efficacy를 증명하지 않는다.
 - duplicate selection side effect 0
 - multi-tab race false success 0
 - uploaded prompt injection 0
+- persistent event log가 `none`인데 row 생성 0
+- private retention 365일 초과 0
+- export/delete SLA 7일 초과와 lineage 누락 0
+- expired nudge candidate render/enqueue/send 0
 
 ### 23.7 UX/accessibility
 
@@ -2127,7 +2321,7 @@ Owner evidence는 external efficacy를 증명하지 않는다.
 12. 다른 problem revision의 thread attach
 13. stale source의 law deep-dive release
 14. Measurement Lane에서 answer-bearing button
-15. direct API가 `qualifying_session_success` 제출
+15. direct API가 `session_success`를 durable qualification으로 제출
 16. client가 action kind를 arbitrary string으로 주입
 17. model이 source eligibility를 self-declare
 18. click replay가 episode/event를 두 번 생성
@@ -2163,6 +2357,10 @@ Owner evidence는 external efficacy를 증명하지 않는다.
 48. two ignored nudges 뒤 frequency 유지
 49. stale thread가 next day resume에서 current로 표시
 50. delete/export에서 thread/action/check 누락
+51. `expiresAt`이 지났거나 preference가 바뀐 nudge candidate를 render/enqueue
+52. blocked PR #676을 완료로 간주하고 S236A/S237A/AUP persistence 시작
+53. `session_reconstructed`를 D+1/D+7 독립 evidence로 승격
+54. custom learner gap/button label을 closed analytics metadata에 복제
 
 모든 actionable P0/P1/P2는 0/0/0이어야 한다.
 
@@ -2199,6 +2397,8 @@ Owner evidence는 external efficacy를 증명하지 않는다.
 - open thread resume
 - completion suppression
 - quiet hours/preferences/cooldown
+- required expiry와 stale-version suppression
+- explicit opt-in 전 PWA delivery 0
 - external delivery separately gated
 - no shame copy
 
@@ -2211,11 +2411,15 @@ Owner evidence는 external efficacy를 증명하지 않는다.
 
 ### 25.5 Measurement
 
+아래는 O2 또는 exact-purpose Owner consent/retention authority 이후의 future
+DoD다. 현재 product analytics/event instrumentation은 0이다.
+
 - relevance, false-gap, dismiss and burden measured
 - independent recovery and transfer primary
 - click/session metrics secondary
 - Owner and external evidence separated
 - efficacy claim before evidence 0
+- current measurement authority가 none일 때 Owner event row/export 0
 
 ---
 
