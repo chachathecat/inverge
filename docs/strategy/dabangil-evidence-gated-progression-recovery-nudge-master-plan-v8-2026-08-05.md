@@ -4,23 +4,19 @@ document_subtitle: "증거 기반 공략·퀘스트·복구 알림·성취 표�
 status: "owner-strategy/non-authoritative"
 dated: "2026-08-05 KST"
 repository: "chachathecat/inverge"
-strategy_scope:
-  - "evidence-gated progression"
-  - "quest and boss presentation"
-  - "recovery-first nudges"
-  - "functional achievements and knowledge relics"
-  - "branching micro-cases"
-  - "open-source adoption boundaries"
 integrates_with:
   - "docs/strategy/dabangil-professional-exam-reasoning-os-master-plan-v7-2026-07-28.md"
 amends_for_strategy_only:
-  - "engagement, progression, nudge, achievement, quest-map and OSS-adoption guidance"
+  - "progression, quest, recovery, nudge, achievement, map and OSS-adoption strategy"
 does_not_supersede:
   - "live GitHub state and runtime"
   - "dated Owner decisions"
   - "AGENTS.md"
   - "canonical Markdown and machine-readable contracts"
   - "roadmap/active-program.yml"
+current_learner_facing_scope: "Dabangil Appraiser Second three subjects only"
+current_mastery_runtime_authorization: "none"
+guided_study_runtime_authorization: "none"
 production_authorization: "none"
 runtime_authorization: "none"
 schema_authorization: "none"
@@ -34,41 +30,44 @@ execution_rule: "Reconcile live authority before every Work; this document propo
 
 ## 감정평가사 2차 학습 커널 위에 얹는 공략·성취·복귀 레이어
 
-이 문서는 답안길을 RPG, 출석 앱, streak 앱 또는 포인트 앱으로 바꾸자는
-계획이 아니다.
+이 문서는 답안길을 RPG, 출석 앱, streak 앱, 포인트 앱 또는 generic
+motivation product로 바꾸자는 계획이 아니다.
 
-> **기존 독립 시도·간극·repair·D+1·D+7·timed evidence를 그대로 권위로
-> 유지하면서, 그 학습 과정을 “어디까지 왔고, 무엇을 고치면 다음 관문이
-> 열리는지” 이해하기 쉬운 공략·퀘스트·복구 경험으로 투영하는 계획**이다.
+> **기존 독립 시도·간극·repair·D+1·D+7·timed evidence를 권위로
+> 유지하면서, 그 학습 과정을 “어디까지 왔고 무엇을 고치면 다음 관문이
+> 열리는지” 이해하기 쉬운 공략·퀘스트·복구 경험으로 투영하는 전략**이다.
 
-이 문서가 제안하는 핵심 이름은 다음과 같다.
+내부 전략 이름:
 
 ```text
 Evidence-Gated Progression & Recovery Layer
 한국어 제품 표현: 증거 기반 공략·회복 레이어
 ```
 
-이 레이어는 학습효과를 새로 판정하지 않는다. 기존 trusted evidence를
-읽고 다음 네 가지로 표현한다.
+이 레이어는 새로운 mastery, readiness, pass probability 또는 score를 만들지
+않는다. 기존 trusted evidence와 현재 허용된 learner-private projection을
+읽어 다음 네 가지로 표현한다.
 
-1. 지금 열린 **공략 단계**
-2. 지금 해야 할 **퀘스트 한 가지**
-3. 다음에 검증할 **관문**
+1. 현재 확인된 **공략 단계**
+2. 지금 실행할 **퀘스트 한 가지**
+3. 다음 독립 검증 **관문**
 4. 쉬었다 돌아올 때의 **복구 루트**
 
 이 문서만으로 다음을 승인하지 않는다.
 
-- runtime, schema, migration, RLS, dependency 또는 provider 변경
+- runtime, schema, migration, RLS, API, UI, navigation 또는 provider 변경
 - `roadmap/active-program.yml` 변경
 - 실제 PWA push, 이메일, SMS 또는 외부 notification provider 사용
-- React Flow, H5P, Oppia, Novu, Moodle plugin 또는 다른 OSS 설치
-- production telemetry, experiment, randomization 또는 model fitting
-- learner-facing XP, leaderboard, streak, badge 또는 public social feature
+- React Flow, H5P, Oppia, Moodle plugin, Novu, Habitica 또는 다른 OSS 설치
+- production telemetry, experiment, randomization, export 또는 model fitting
+- learner-facing XP, leaderboard, streak, badge, social 또는 public feature
+- `MasteryStateV1` persistence, transition 또는 learner-facing activation
+- `guided_study` selector, route, API, event, scheduling 또는 runtime
 - 외부 학습자, 결제, entitlement, 가격, 공개 navigation 또는 Production
-- canonical mastery, readiness, source, rights 또는 release gate 변경
+- canonical source, rights, release, evidence 또는 commercial gate 변경
 
-실제 구현은 live authority가 허용하는 별도 Work, 별도 contract amendment,
-focused test, exact-head review와 필요한 Owner 승인으로 수행한다.
+실제 구현은 live authority가 허용하는 별도 Work, exact scope, focused test,
+exact-head review와 필요한 Owner 승인으로 수행한다.
 
 ---
 
@@ -76,7 +75,7 @@ focused test, exact-head review와 필요한 Owner 승인으로 수행한다.
 
 ### 0.1 최종 제품 결정
 
-답안길에서 성취감은 다음 순서로 만들어야 한다.
+답안길의 성취감은 다음 방식으로 만들어야 한다.
 
 ```text
 앱을 열었다
@@ -87,10 +86,10 @@ focused test, exact-head review와 필요한 Owner 승인으로 수행한다.
 → 그 간극을 직접 수리했다
 → 다음 날 무도움으로 재현했다
 → 다른 verified variant에서도 해냈다
-→ 실전 통합 관문을 통과했다              ✅
+→ 실전형 전체 수행에서 재발을 막았다     ✅
 ```
 
-즉, **보상은 사용량이 아니라 독립 학습 증거의 가시화**여야 한다.
+**보상은 사용량이 아니라 독립 학습 증거의 가시화**여야 한다.
 
 ### 0.2 사용자에게 보이는 핵심 경험
 
@@ -111,37 +110,28 @@ focused test, exact-head review와 필요한 Owner 승인으로 수행한다.
 다시 시작합니다.”
 ```
 
-### 0.3 가장 중요한 설계 원칙
+### 0.3 절대 설계 원칙
 
-1. `MasteryStateV1`은 계속 유일한 canonical mastery다.
-2. progression, quest, achievement, streak-like display는 모두 derived
-   projection이다.
-3. AI 설명 열람, 저장, 앱 접속, 반복 클릭으로 stage clear를 만들지 않는다.
-4. `guided_study`와 assisted success는 독립 클리어가 아니다.
-5. D+1은 최대 회복 중, D+7 verified variant는 stable 후보라는 기존 계약을
-   그대로 유지한다.
-6. nudge는 사용자를 겁주거나 죄책감을 주지 않고 **다음 작은 행동으로 바로
-   연결**한다.
-7. 알림 후보와 실제 외부 발송은 분리한다.
-8. 모바일 canonical UI는 세로형 리스트다. 그래프는 보조 표현일 뿐이다.
-9. 공개 leaderboard, HP 감소, loot box, streak 초기화는 사용하지 않는다.
-10. 성공 지표는 체류시간이 아니라 독립 회복과 전이다.
+1. 현재 authority에는 canonical mastery runtime이 없다.
+2. progression은 현재 허용된 attempt·qualification·LearningGapRecord·S216·
+   repair·D+1·D+7·timed evidence의 read-only projection이다.
+3. future `MasteryStateV1`은 별도 dated Owner decision과 canonical/runtime
+   gate 전에는 dependency, input, output 또는 consistency authority가 아니다.
+4. AI 설명 열람, 저장, 로그인, 클릭, 반복 사용으로 stage clear를 만들지
+   않는다.
+5. full reveal, assisted success와 same-surface retry는 독립 클리어가 아니다.
+6. `guided_study`는 현재 contract-only vocabulary이며 runtime으로 구현하지
+   않는다.
+7. nudge는 겁주거나 죄책감을 주지 않고 **다음 작은 행동으로 바로 연결**한다.
+8. 알림 후보와 실제 외부 발송을 물리적으로 분리한다.
+9. 모바일 canonical UI는 접근 가능한 세로형 리스트다. 그래프는 보조 표현이다.
+10. 공개 leaderboard, HP 감소, loot box, streak 초기화는 사용하지 않는다.
+11. 성공 지표는 체류시간이 아니라 독립 회복과 전이다.
+12. Today/CoreOutcome 최대 3을 그대로 유지한다.
 
-### 0.4 제품 이름과 언어
+### 0.4 learner-facing 언어
 
-내부 계약:
-
-```text
-ProgressionProjection
-QuestCandidate
-BossGate
-RecoveryNudge
-LearningContinuity
-KnowledgeRelic
-BranchingMicroCase
-```
-
-권장 learner-facing 표현:
+권장:
 
 ```text
 공략 단계
@@ -155,7 +145,7 @@ BranchingMicroCase
 재검증 필요
 ```
 
-피해야 할 표현:
+금지 또는 별도 evidence 전 비허용:
 
 ```text
 숙달률 87%
@@ -164,11 +154,15 @@ BranchingMicroCase
 연속 기록이 깨집니다
 HP 감소
 다른 수험생보다 뒤처졌습니다
+합격확률
+예상점수
 ```
 
 ---
 
-## 1. 작성 시점 live checkpoint와 권위
+## 1. live authority reconciliation
+
+### 1.1 작성 시점 관측
 
 2026-08-05 KST 작성 시 read-only 관측값:
 
@@ -176,64 +170,96 @@ HP 감소
 | --- | --- |
 | default branch | `main` |
 | observed main | `5d00cd84ec8ab44918ce47a49a0d71e9734cbea0` |
-| observed strategy base | `docs/strategy/dabangil-professional-exam-reasoning-os-master-plan-v7-2026-07-28.md` |
-| observed open high-risk path | PR #676, S236P Owner-private acceptance blocked |
-| observed open runtime path | PR #678, Owner Alpha three-subject commit-repair parity |
+| current strategy base | `docs/strategy/dabangil-professional-exam-reasoning-os-master-plan-v7-2026-07-28.md` |
+| current learner scope | 감정평가사 2차 실무·이론·법규 |
+| current mastery runtime | 미승인 |
+| current guided-study runtime | 미승인 |
 | public learner/billing/Production | OFF |
 
 위 값은 역사적 관측일 뿐 실행 입력이 아니다. 모든 Work는 live GitHub,
 dated Owner decision, `AGENTS.md`, canonical contracts,
 `roadmap/active-program.yml`, open PR, locks, reviews와 CI를 다시 읽는다.
 
-### 1.1 현재 authority와의 관계
+### 1.2 authority order
 
-현재 `AGENTS.md`는 답안길이 다음이 아니라고 규정한다.
-
-- motivation/streak app
-- generic dashboard SaaS
-- broad multi-exam platform
-
-따라서 이 문서의 progression은 그 금지선을 우회하는 “게임화”가 아니다.
-오히려 다음을 더 엄격하게 만든다.
+이 문서는 기존 권위를 바꾸지 않는다.
 
 ```text
-보이는 진행 상태
-= canonical evidence의 read-only projection
+dated Owner decisions
+→ canonical Markdown and machine-readable contracts
+→ product specifications
+→ executable contract code/tests
+→ roadmap/active-program.yml
+→ AGENTS.md and risk policy
+→ this non-authoritative strategy document
 ```
 
-새로운 점수 원장, 새로운 mastery, 새로운 readiness 또는 행동량 기반 rank를
-만들지 않는다.
+충돌 시 상위 authority를 따른다.
 
-### 1.2 roadmap 배치 원칙
+### 1.3 현재 evidence source
 
-현재 queued critical path는 대략 다음이다.
+current implementation/source amendment가 progression을 계산할 때 사용할 수
+있는 후보는 live audit를 통해 실제 존재와 contract version을 다시 확인한
+다음 범위다.
+
+- immutable attempt identity와 answer revision
+- assistance/exposure qualification
+- accepted feedback release state
+- `LearningGapRecord`
+- `s216.error_notebook_gap_taxonomy.v1` metadata projection
+- repair/recalculate/rewrite verification
+- canonical `ReviewUnit`
+- D+1 independent evidence
+- D+7 verified non-same-surface variant evidence
+- timed set/full-solution qualification
+- current rule-based `PersonalWeaknessMapV1`, authority가 허용하는 경우
+- source/right/effective-version/validator/release state
+
+존재하지 않거나 current authority가 승인하지 않은 state를 채우기 위해
+추정·fallback·LLM self-declaration을 사용하지 않는다.
+
+### 1.4 future-only vocabulary
+
+다음은 별도 activation 전 현재 progression의 입력 또는 출력이 아니다.
+
+- `MasteryStateV1`
+- learner-facing mastery percentage
+- pyBKT probability
+- IRT/CAT readiness
+- `guided_study` runtime evidence
+- external Open Badges credential
+- cross-exam progression
+
+문서 안에 future compatibility를 언급하더라도 current runtime acceptance에
+포함하지 않는다.
+
+### 1.5 roadmap placement
+
+작성 시점 critical path의 전략 projection:
 
 ```text
 S236P
 → S236A Golden 3
 → S237A Owner-Private Study OS Core
-→ S237P Full-Day
+→ S237P Native Full-Day
 → O4A
 → S238A/S240A dogfood
 → S241A authenticated acceptance
 ```
 
-이 문서가 제안하는 progression contract는 `S237A`의 evidence contract가
-존재한 뒤에만 runtime 후보가 된다.
+progression contract/runtime 후보는 필요한 closed evidence contract가
+S237A에서 실제로 만들어진 뒤에만 시작한다.
 
-실제 external notification, measurement, OSS shadow 또는 shared signal은
-현재 `O2 → S270 → O4E → S271` 경계를 우회하지 않는다.
-
-이 문서는 active roadmap을 수정하지 않는다. 정확한 Work ID와 dependency는
-별도 canonical roadmap amendment가 정한다.
+external notification, pseudonymous product measurement, OSS-derived shared
+signal 또는 external experiment는 current `O2 → S270 → O4E → S271` 계열의
+controlling gates를 우회하지 않는다. 정확한 Work ID와 edge는 별도 canonical
+roadmap amendment가 live state에서 정한다.
 
 ---
 
-## 2. 왜 일반 gamification이 아니라 evidence-gated progression인가
+## 2. 왜 일반 gamification이 아닌가
 
-### 2.1 일반 gamification의 구조적 문제
-
-다음 행동은 측정하기 쉽지만 시험 실력과 동일하지 않다.
+### 2.1 쉽게 측정되지만 실력이 아닌 것
 
 - 로그인
 - 페이지 열람
@@ -244,89 +270,85 @@ S236P
 - 앱 체류시간
 
 이 행동에 XP를 주면 사용자는 시스템이 보상하는 일을 최적화한다.
-그 결과:
 
 - 쉬운 행동 farming
 - 수동적 해설 소비
 - 독립 시도 회피
 - leaderboard 불안
 - streak가 끊긴 뒤 이탈
-- 실제 실력과 UI level의 불일치
+- 실제 evidence와 UI level 불일치
 
 가 생길 수 있다.
 
-### 2.2 답안길에 맞는 성취의 단위
+### 2.2 답안길 성취의 최소 단위
 
-답안길에서 성취의 최소 단위는 다음 중 하나다.
+답안길에서 성취로 표현할 수 있는 사건은 다음처럼 closed evidence에
+결합되어야 한다.
 
 ```text
-독립적으로 요구를 정확히 파악함
-독립적으로 방법·목차를 commit함
+독립적으로 요구를 파악함
+독립적으로 방법·목차·답 방향을 commit함
 가장 큰 간극을 직접 repair함
 D+1 무도움으로 재현함
 D+7 verified variant에서 전이함
-timed full solution에서 동일 간극의 재발을 막음
+timed 수행에서 동일 간극의 재발을 막음
+공백 뒤 qualifying recovery action을 완료함
 ```
-
-모든 성취는 immutable evidence reference를 가져야 한다.
 
 ### 2.3 연구를 제품에 번역하는 방식
 
-gamification 연구는 평균적으로 긍정적 효과를 보고하지만 효과 크기와
-맥락 차이가 크다. 따라서 “게임 요소를 넣으면 성적이 오른다”가 아니라:
+gamification 연구는 평균적인 긍정 효과를 보고하지만 맥락과 요소 조합에
+따른 이질성이 크다. nudge 연구도 일부 personalized reminder에서 의미 있는
+효과를 보였지만 다른 실험에서는 평균 효과가 없거나 subgroup 차이가 컸다.
+
+따라서 답안길은 다음 순서를 따른다.
 
 ```text
-성과 측정 + 개인 진행 + 맥락 있는 과제
+연구 근거
 → bounded product hypothesis
+→ deterministic contract
 → owner-private dogfood
-→ controlled external evaluation
+→ approved external evaluation
+→ learning metric 우선 판정
 ```
 
-순서로 다룬다.
-
-nudge 연구도 평균 효과가 항상 양수가 아니다. 일반 reminder보다
-개인화된 현재 위치·다음 행동이 더 유용할 수 있지만, 일부 실험은 평균
-효과가 없거나 subgroup에만 효과가 있었다. 따라서 답안길은 알림 수를
-늘리지 않고 **정확한 due evidence와 즉시 가능한 작은 행동**을 우선한다.
+“게임 요소를 넣었으니 성적이 오른다”는 claim을 하지 않는다.
 
 ---
 
 ## 3. 전체 아키텍처
 
 ```text
-기존 trusted evidence
-- AttemptEvidence
-- Exposure / Assistance
-- GapFinding
+Existing trusted evidence
+- Attempt / answer revision
+- Assistance / exposure
+- LearningGapRecord + S216 metadata
 - RepairVerification
 - D+1 / D+7
-- TimedFullSolution
-- MasteryState
-- PersonalWeaknessMap
-- ReviewUnit
-- CoreOutcome / ExecutionBlock
+- Timed evidence
+- PersonalWeaknessMap, where authorized
+- ReviewUnit / CoreOutcome / ExecutionBlock
 
         ↓ read-only
 
 Progression Projector
-- stage state
+- evidence lifecycle state
 - gate eligibility
-- revalidation state
+- stale/revalidation
 - evidence explanation
 
         ↓
 
 Quest Composer
-- 오늘의 핵심 3에 붙는 quest 표현
+- Today/CoreOutcome learner-facing framing
 - 5~15분 micro quest
-- boss candidate
+- timed boss candidate
 - recovery route
 
         ↓
 
 Nudge Candidate Engine
 - trigger
-- reason
 - direct action
 - suppression
 - cooldown
@@ -337,22 +359,22 @@ Nudge Candidate Engine
 
 Presentation / Delivery
 - Today card
-- vertical quest map
+- vertical quest list
 - optional desktop graph
 - in-app brief
-- future PWA push / email adapter
+- future PWA/email adapter
 ```
 
 ### 3.1 권위 경계
 
-| 계층 | 할 수 있는 것 | 할 수 없는 것 |
+| 계층 | 허용 | 금지 |
 | --- | --- | --- |
-| Mastery/evidence | 실제 학습 상태 판정 | 게임 표현 결정 |
-| Progression projector | evidence를 단계로 표시 | mastery 쓰기 |
-| Quest composer | 작은 행동으로 표현 | task eligibility 창작 |
-| Nudge engine | 발송 후보·억제 계산 | due evidence 창작 |
-| UI | 상태와 행동 표시 | client-side clear 판정 |
-| Notification adapter | 승인된 후보 전달 | 임의 메시지·임의 빈도 |
+| evidence | 실제 사건·qualification 기록 | 게임 표현 계산 |
+| progression projector | evidence lifecycle 표시 | evidence·mastery 쓰기 |
+| quest composer | approved action을 작은 행동으로 표현 | action eligibility 창작 |
+| nudge engine | 후보·억제·빈도 계산 | due evidence 창작 |
+| UI | 상태·근거·행동 표시 | client-side clear 판정 |
+| delivery adapter | approved candidate 전달 | 임의 메시지·임의 발송 |
 
 ### 3.2 fail-closed
 
@@ -365,7 +387,7 @@ Presentation / Delivery
 - assistance qualification 불명
 - replay/idempotency conflict
 - cross-account scope mismatch
-- mastery/progression contradiction
+- projection/evidence contradiction
 - policy version unknown
 - notification preference unknown
 - quiet-hours 계산 불가
@@ -373,53 +395,67 @@ Presentation / Delivery
 
 ---
 
-## 4. Progression Projection 계약
+## 4. Evidence Lifecycle Progression
 
-### 4.1 stage state
+### 4.1 progression state
 
 ```ts
 type ProgressionStateV1 =
   | "locked"
   | "available"
-  | "attempted"
-  | "repair_required"
-  | "repaired"
-  | "d1_confirmed"
-  | "transfer_cleared"
-  | "integrated_cleared"
+  | "attempt_recorded"
+  | "repair_due"
+  | "repair_qualified"
+  | "d1_independent_confirmed"
+  | "d7_transfer_cleared"
+  | "timed_integration_cleared"
   | "revalidation_required";
 ```
 
-의미:
-
 | 상태 | 최소 근거 | learner-facing 표현 |
 | --- | --- | --- |
-| `locked` | prerequisite 부족 | 잠김 |
-| `available` | 시작 eligibility | 시작 가능 |
-| `attempted` | qualifying attempt | 첫 시도 완료 |
-| `repair_required` | primary gap | 간극 수리 필요 |
-| `repaired` | verified repair | 간극 수리 완료 |
-| `d1_confirmed` | D+1 무도움 success | 무도움 확인 |
-| `transfer_cleared` | D+7 verified variant success | 변형 클리어 |
-| `integrated_cleared` | qualifying timed integration | 실전 관문 통과 |
+| `locked` | prerequisite/action eligibility 부족 | 잠김 |
+| `available` | current action eligibility | 시작 가능 |
+| `attempt_recorded` | qualifying attempt | 첫 시도 완료 |
+| `repair_due` | accepted primary gap | 간극 수리 필요 |
+| `repair_qualified` | independent-required repair verification | 간극 수리 완료 |
+| `d1_independent_confirmed` | qualifying D+1 | 무도움 확인 |
+| `d7_transfer_cleared` | verified non-same-surface D+7 transfer | 변형 클리어 |
+| `timed_integration_cleared` | qualifying timed integration | 실전 관문 통과 |
 | `revalidation_required` | source/policy/evidence stale | 재검증 필요 |
+
+이 state는 mastery가 아니라 **증거 lifecycle UI projection**이다.
 
 ### 4.2 projection object
 
 ```ts
+type FutureMasteryConsistencyStateV1 =
+  | "not_authorized"
+  | "not_applicable"
+  | "consistent"
+  | "conflict";
+
 type ProgressionProjectionV1 = {
   projectionKey: string;
   learnerScopeRef: string;
-  conceptNodeRef: string;
-  stageRef: string;
+  conceptNodeRef?: string;
+  taskOrStageRef: string;
   state: ProgressionStateV1;
-  canonicalMasteryStateRef: string;
   evidenceThroughRef: string;
+  attemptEvidenceRefs: string[];
+  learningGapRecordRefs: string[];
+  s216ProjectionRefs: string[];
+  repairEvidenceRefs: string[];
+  d1EvidenceRefs: string[];
+  d7EvidenceRefs: string[];
+  timedEvidenceRefs: string[];
   qualifyingEvidenceRefs: string[];
   disqualifyingEvidenceRefs: string[];
   prerequisiteStateRefs: string[];
   nextGateRef?: string;
   revalidationReasonCodes: string[];
+  futureMasteryConsistency: FutureMasteryConsistencyStateV1;
+  futureMasteryStateRef?: string;
   policyVersion: string;
   basisChecksum: string;
   contentChecksum: string;
@@ -427,30 +463,61 @@ type ProgressionProjectionV1 = {
 };
 ```
 
-### 4.3 허용 조합
+current authority에서는:
 
-| canonical mastery | progression에서 허용되는 대표 상태 |
-| --- | --- |
-| `unknown` | locked, available, attempted |
-| `confused` | attempted, repair_required |
-| `wrong` | repair_required, repaired |
-| `confident_wrong` | repair_required, repaired |
-| `recovering` | repaired, d1_confirmed, transfer_cleared |
-| `stable` | transfer_cleared, integrated_cleared, revalidation_required |
+```text
+futureMasteryConsistency = "not_authorized"
+futureMasteryStateRef = absent
+```
 
-정확한 조합은 versioned policy로 닫는다. 표에 없는 조합을 UI에서 임의
-보정하지 않는다.
+가 필수다. client, model 또는 early implementation이 mastery ref를 공급하거나
+required lookup으로 만들면 projection을 reject한다.
+
+별도 future activation 뒤에도 mastery는 progression clear를 authorize하지
+않고 same-cutoff contradiction을 검출하는 consistency input 후보일 뿐이다.
+그 extension은 새 versioned contract를 요구한다.
+
+### 4.3 state derivation
+
+초기 deterministic rule 예:
+
+```text
+current eligible action, attempt 없음
+→ available
+
+qualifying attempt, accepted primary gap 없음
+→ attempt_recorded
+
+accepted primary gap, qualifying repair 없음
+→ repair_due
+
+qualifying repair verification
+→ repair_qualified
+
+qualifying D+1 independent evidence
+→ d1_independent_confirmed
+
+qualifying D+7 verified non-same-surface variant
+→ d7_transfer_cleared
+
+qualifying timed integration with required coverage
+→ timed_integration_cleared
+```
+
+정확한 precedence, demotion과 reopening은 versioned policy와 current source
+contract가 정한다.
 
 ### 4.4 절대 금지
 
-- `viewed_explanation → repaired`
-- `saved_note → d1_confirmed`
-- `same_item_retry → transfer_cleared`
-- `assisted_timed_attempt → integrated_cleared`
-- `streak_count → any stage`
-- `XP threshold → any stage`
-- client payload로 state 제출
-- LLM이 stage 선언
+- `viewed_explanation → repair_qualified`
+- `saved_note → d1_independent_confirmed`
+- `login_or_streak → any clear`
+- `same_item_retry → d7_transfer_cleared`
+- `assisted_timed_attempt → timed_integration_cleared`
+- unverified generated item을 D+7/timed evidence로 사용
+- client payload로 progression state 제출
+- LLM이 state 또는 achievement 선언
+- current runtime에서 mastery ref required
 
 ### 4.5 stale와 재검증
 
@@ -460,13 +527,13 @@ type ProgressionProjectionV1 = {
 - source bundle
 - law effective version
 - answer/rubric/validator
+- release artifact
 - curriculum mapping
-- mastery policy
-- progression policy
 - evidence qualification
+- progression policy
 - verified variant family
 
-사용자에게 과거 성취를 몰래 삭제하지 않는다.
+사용자에게 과거 학습 기록을 몰래 삭제하지 않는다.
 
 ```text
 과거 기록: 유지
@@ -479,10 +546,10 @@ type ProgressionProjectionV1 = {
 
 ## 5. Quest System
 
-### 5.1 quest는 task의 새 권위가 아니다
+### 5.1 quest는 새 task authority가 아니다
 
-`QuestCandidate`는 기존 `CoreOutcome`, `ReviewUnit`, `RepairAction`,
-`InterventionDecision`을 learner-facing 행동으로 번역한 projection이다.
+`QuestCandidateV1`은 기존 `CoreOutcome`, `ReviewUnit`, repair 또는 approved
+intervention을 learner-facing 행동으로 번역한 projection이다.
 
 ```ts
 type QuestKindV1 =
@@ -507,7 +574,7 @@ type QuestCandidateV1 = {
     | "core_outcome"
     | "review_unit"
     | "repair_action"
-    | "intervention_decision";
+    | "approved_intervention";
   questKind: QuestKindV1;
   title: string;
   oneLineReason: string;
@@ -526,7 +593,7 @@ type QuestCandidateV1 = {
 
 ### 5.3 quest taxonomy
 
-| 유형 | 실제 학습 행동 | 대표 시간 |
+| 유형 | 실제 행동 | 대표 시간 |
 | --- | --- | ---: |
 | 정찰 퀘스트 | 요구 동사·자료 역할·쟁점 식별 | 2~5분 |
 | 선택 퀘스트 | 방법·목차·답 방향 commit | 3~8분 |
@@ -537,21 +604,19 @@ type QuestCandidateV1 = {
 | 실전 관문 | timed set/full solution | assignment 기준 |
 | 복구 퀘스트 | 공백 뒤 가장 작은 재시작 | 5~15분 |
 
-### 5.4 Today와의 결합
+### 5.4 Today 결합
 
 Today의 top-level `CoreOutcome` 최대 3 규칙을 보존한다.
 
 ```text
 CoreOutcome 1개
-→ 1개의 주 quest
-→ 필요 시 subordinate execution steps 0..N
+→ 주 quest 1개
+→ subordinate execution steps 0..N
 ```
 
-quest를 추가해 Today의 primary choice를 3개보다 늘리지 않는다.
+quest를 추가해 primary choice를 3개보다 늘리지 않는다.
 
-### 5.5 quest 완료
-
-quest completion은 두 층으로 나눈다.
+### 5.5 완료 상태
 
 ```ts
 type QuestCompletionStateV1 =
@@ -561,10 +626,10 @@ type QuestCompletionStateV1 =
   | "evidence_uncertain";
 ```
 
-- 버튼을 눌렀거나 답안을 저장하면 `activity_completed`
-- validator/evidence gate를 통과해야 `evidence_qualified`
-- progression clear는 `evidence_qualified`만 읽는다
-- 실패·불확실성을 성공 animation으로 덮지 않는다
+- 저장·제출은 `activity_completed`
+- validator/evidence gate 통과 후 `evidence_qualified`
+- progression clear는 `evidence_qualified`만 읽음
+- 실패·불확실성을 성공 animation으로 덮지 않음
 
 ---
 
@@ -577,7 +642,7 @@ type QuestCompletionStateV1 =
 > 여러 component repair가 실제 시험형 전체 수행으로 통합됐는지 확인하는
 > **timed integration gate**다.
 
-### 6.2 unlock 기준
+### 6.2 eligibility
 
 ```ts
 type BossGateEligibilityV1 = {
@@ -601,13 +666,13 @@ unlock에 사용할 수 없는 것:
 
 - explanation view
 - note save
-- guided-only completion
+- full-reveal-only activity
 - same-surface 반복
 - unverified generated item
-- source/right 불명
+- source/right/version 불명
 - client local progress
 
-### 6.3 learner-facing 결과
+### 6.3 결과 표현
 
 ```text
 실전 관문 통과
@@ -620,17 +685,12 @@ unlock에 사용할 수 없는 것:
 - 답안지 전사
 ```
 
-단일 점수보다 **유지된 능력과 재발한 간극**을 우선한다.
+단일 점수보다 유지된 능력과 재발한 간극을 우선한다.
 
-### 6.4 실패 표현
+### 6.4 실패
 
-```text
-관문 실패 ❌
-다음 공략 정보 확보 ✅
-```
-
-실패는 stage reset, HP 감소 또는 과거 성취 삭제를 만들지 않는다.
-새 evidence로 canonical state와 progression을 재계산할 뿐이다.
+실패는 과거 성취 삭제, stage reset, HP 감소를 만들지 않는다. 새 evidence로
+projection을 재계산하고 다음 repair action을 제안한다.
 
 ---
 
@@ -673,7 +733,7 @@ type LearningContinuityProjectionV1 = {
 };
 ```
 
-### 7.3 권장 UI
+### 7.3 UI
 
 ```text
 최근 14일 학습 흐름: 안정
@@ -689,16 +749,15 @@ type LearningContinuityProjectionV1 = {
 8분 복구 퀘스트 하나로 다시 시작합니다.
 ```
 
-### 7.4 recovery plan
-
-공백 발생 시:
+### 7.4 recovery planning
 
 ```text
 overdue 전체 복사                       ❌
+
 due evidence 재평가
 → expired/stale 제거
 → 가장 영향 큰 recovery 1개
-→ today budget 안에서 최대 3 outcome
+→ Today budget 안의 CoreOutcome 최대 3
 → 나머지는 defer/drop 이유 표시         ✅
 ```
 
@@ -713,9 +772,9 @@ Nudge Candidate 생성
 ≠ 실제 push/email 발송
 ```
 
-초기 owner-private 단계에서는 in-app candidate만 만든다.
-외부 delivery는 별도 승인, preference, consent, retention, provider,
-cost와 kill switch가 필요하다.
+초기 owner-private 단계에서는 in-app candidate만 만든다. 외부 delivery는
+별도 approval, preference, consent/notice, retention, provider, cost와 kill
+switch가 필요하다.
 
 ### 8.2 trigger
 
@@ -766,38 +825,38 @@ type NudgeCandidateV1 = {
 };
 ```
 
-### 8.4 억제 규칙
+### 8.4 suppression
 
 다음이면 발송하지 않는다.
 
 - 이미 완료
 - 같은 action의 더 최신 candidate 존재
 - action stale/blocked
-- learner가 snooze/dismiss
+- learner snooze/dismiss
 - channel opt-out
 - quiet hours
 - 하루 proactive cap 초과
 - 같은 reason cooldown
-- 앱을 열어 해당 action을 이미 보고 있음
+- action 화면을 현재 보고 있음
 - source route unavailable
-- two consecutive ignores에 따른 frequency reduction
+- 반복 무반응에 따른 frequency reduction
 - session/identity uncertainty
 
-### 8.5 기본 빈도 가설
-
-초기 product hypothesis:
+### 8.5 초기 빈도 가설
 
 ```text
 proactive nudge: 하루 최대 1개
 동일 source action: 24시간 이내 중복 0
-동일 reason: cooldown 적용
-두 번 연속 무반응: 빈도 자동 축소
+동일 reason: cooldown
+두 번 연속 무반응: 빈도 축소
 quiet hours: learner 설정 우선
 ```
 
-정확한 값은 canonical policy와 owner-private evaluation이 정한다.
+정확한 값은 canonical policy와 evaluation이 정한다.
 
-### 8.6 좋은 copy
+### 8.6 copy
+
+좋은 예:
 
 | trigger | copy |
 | --- | --- |
@@ -808,7 +867,7 @@ quiet hours: learner 설정 우선
 | inactive recovery | `밀린 과제는 쌓지 않았어요. 8분 복구 퀘스트 하나로 다시 시작합니다.` |
 | revalidation | `법령 버전이 바뀌어 이 논점은 7분 재검증이 필요합니다.` |
 
-### 8.7 금지 copy
+금지:
 
 ```text
 3일째 공부하지 않았습니다.
@@ -818,9 +877,7 @@ quiet hours: learner 설정 우선
 오늘 반드시 완료하세요.
 ```
 
-### 8.8 direct action
-
-알림은 dashboard로만 보내지 않는다.
+### 8.7 direct action
 
 ```text
 알림
@@ -836,15 +893,13 @@ route가 없으면 candidate를 만들지 않는다.
 
 ## 9. Achievement와 Knowledge Relic
 
-### 9.1 achievement의 역할
+### 9.1 achievement
 
-achievement는 외부 자격증이나 mastery 권위가 아니다.
+achievement는 외부 자격증이나 mastery authority가 아니다.
 
 ```text
 검증된 학습 사건을 알아보기 쉽게 요약한 개인 기록
 ```
-
-### 9.2 achievement object
 
 ```ts
 type AchievementArtifactV1 = {
@@ -866,14 +921,12 @@ type AchievementArtifactV1 = {
 };
 ```
 
-### 9.3 초기에는 숫자 XP를 쓰지 않는다
+### 9.2 숫자 XP를 초기에는 사용하지 않는다
 
-이유:
-
-- 단위 간 가치 비교가 어렵고
-- 쉬운 행동 farming을 만들며
-- 실제 evidence와 별도 경제가 생기고
-- 사용자에게 숫자 숙달 환상을 줄 수 있다.
+- 행동 가치 비교가 어렵다.
+- 쉬운 행동 farming을 만든다.
+- 실제 evidence와 별도 경제가 생긴다.
+- 숫자 숙달 환상을 줄 수 있다.
 
 필요한 것은:
 
@@ -885,7 +938,7 @@ type AchievementArtifactV1 = {
 
 이다.
 
-### 9.4 Knowledge Relic
+### 9.3 Knowledge Relic
 
 Moodle Stash의 수집 개념을 답안길에서는 **재사용 가능한 전략 카드**로
 번역한다.
@@ -934,13 +987,8 @@ type KnowledgeRelicV1 = {
 - 최고최선이용 검토 카드
 ```
 
-카드는 장식이 아니다. 누르면 다음이 열린다.
-
-- 관련 개념
-- 최근 qualifying error
-- 10초 확인
-- 다음 review
-- 적용 가능한 답안/계산 문서
+카드는 장식이 아니다. 누르면 관련 evidence, 10초 확인, 다음 review와
+적용 가능한 학습 문서가 열린다.
 
 ---
 
@@ -948,7 +996,7 @@ type KnowledgeRelicV1 = {
 
 ### 10.1 목적
 
-Oppia와 H5P Branching Scenario의 가치 있는 부분은 “플랫폼 전체”가 아니라:
+Oppia와 H5P Branching Scenario에서 가져올 핵심은 전체 LMS가 아니라:
 
 ```text
 learner response
@@ -957,7 +1005,7 @@ learner response
 → 다시 commit
 ```
 
-이라는 분기 패턴이다.
+이라는 패턴이다.
 
 ### 10.2 native schema
 
@@ -998,13 +1046,12 @@ type BranchingMicroCaseV1 = {
 };
 ```
 
-### 10.3 과목별 예
+### 10.3 과목 예
 
 법규:
 
 ```text
 왜 처분성이 없다고 판단했나요?
-
 A. 수용재결 전이기 때문에
 B. 고시는 사실행위라고 생각해서
 C. 권리변동이 즉시 발생하지 않아서
@@ -1039,10 +1086,11 @@ D. 판단 근거를 모르겠다
 ### 10.4 boundary
 
 - branch는 free-form AI improvisation이 아니다.
-- node와 transition은 versioned closed contract다.
-- unverified generated branch는 Learning Lane에만 사용한다.
-- Measurement Lane과 stable evidence에는 verified item만 사용한다.
-- branch completion 자체가 mastery를 올리지 않는다.
+- node와 transition은 closed, versioned contract다.
+- unverified generated branch는 Learning Lane 참고에만 사용한다.
+- current authority가 승인하지 않은 guided runtime을 만들지 않는다.
+- Measurement Lane과 D+7/timed에는 verified item만 사용한다.
+- branch completion 자체가 progression clear가 아니다.
 
 ---
 
@@ -1050,7 +1098,7 @@ D. 판단 근거를 모르겠다
 
 ### 11.1 canonical mobile representation
 
-모바일의 canonical UI는 세로형 리스트다.
+모바일 canonical UI는 세로형 리스트다.
 
 ```text
 3방식 기본            변형 클리어
@@ -1063,14 +1111,14 @@ D. 판단 근거를 모르겠다
 
 ### 11.2 desktop graph
 
-React Flow 또는 동등 renderer는 선택적 desktop projection이다.
+graph renderer는 optional projection이다.
 
 규칙:
 
 - server-produced bounded view model만 표시
 - graph가 없어도 canonical DOM list가 완전함
 - graph-only action 없음
-- client가 unlock/mastery 계산 금지
+- client가 unlock, evidence, weakness 또는 ranking 계산 금지
 - node/edge cap
 - progressive disclosure
 - keyboard navigation
@@ -1080,7 +1128,7 @@ React Flow 또는 동등 renderer는 선택적 desktop projection이다.
 - 200% reflow
 - raw learner text를 node label로 사용 금지
 
-### 11.3 map object
+### 11.3 view object
 
 ```ts
 type QuestMapViewV1 = {
@@ -1094,9 +1142,7 @@ type QuestMapViewV1 = {
 };
 ```
 
-### 11.4 map의 역할
-
-map은 다음 질문에 답한다.
+### 11.4 map이 답하는 질문
 
 ```text
 지금 어디인가?
@@ -1105,7 +1151,7 @@ map은 다음 질문에 답한다.
 근거는 무엇인가?
 ```
 
-map은 다음 질문에 답하지 않는다.
+map이 답하지 않는 질문:
 
 ```text
 합격확률은 몇 %인가?
@@ -1115,123 +1161,82 @@ AI가 보기에 나는 얼마나 똑똑한가?
 
 ---
 
-## 12. 오픈소스 채택 원칙
+## 12. 오픈소스 채택 계획
 
-### 12.1 기본 규칙
+### 12.1 기본 gate
 
-오픈소스는 제품 권위가 아니다.
+오픈소스는 제품 권위가 아니다. 도입 전 요구:
 
-도입 전 요구:
-
-- exact repository와 version
-- license와 NOTICE
-- transitive dependency
-- SBOM
+- exact repository, commit/tag와 version
+- license, NOTICE와 asset/content license
+- transitive dependency와 SBOM
 - maintenance/release cadence
-- vulnerability review
+- vulnerability와 supply-chain review
 - bundle/runtime cost
 - accessibility
-- data egress
-- self-hosting/hosted boundary
-- rollback
-- uninstallability
+- data egress와 hosting region
+- self-hosted/hosted boundary
+- rollback과 uninstallability
 - native fallback
-- no raw learner body leakage
+- raw learner body leakage 0
 
-### 12.2 채택 매트릭스
+### 12.2 matrix
 
 | 후보 | 가져올 것 | 방식 | 초기 결정 |
 | --- | --- | --- | --- |
-| React Flow / xyflow | desktop node map renderer | direct dependency candidate | 조건부 추천 |
-| Oppia | response-based tutor branching | pattern/schema only | 강력 추천 |
-| H5P Branching Scenario | answer-dependent scenario graph | pattern/native schema; runtime 격리 검토 | 선별 추천 |
-| Moodle Reengagement | due reminder + completed suppression | pattern only | 즉시 설계 반영 |
-| Moodle Level Up XP | level/unlock/anti-farming 아이디어 | pattern only | XP·leaderboard 제외 |
+| React Flow / xyflow | node map renderer | optional renderer candidate | 비교 검토 |
+| Cytoscape.js | 기존 v7 graph renderer candidate | optional renderer candidate | 기존 후보 보존 |
+| Oppia | response-based branching | pattern/schema only | 추천 |
+| H5P Branching Scenario | answer-dependent scenario | pattern/native schema; runtime 격리 검토 | 선별 추천 |
+| Moodle Reengagement | due reminder + completion suppression | pattern only | 즉시 설계 반영 |
+| Moodle Level Up XP | unlock/anti-farming 아이디어 | pattern only | XP·leaderboard 제외 |
 | Moodle Stash | collectable inventory | functional relic pattern | 추천 |
-| Novu | multi-channel workflow, preference, digest | later adapter/open-core review | 외부 규모 이후 |
+| Novu | multi-channel workflow/preferences/digest | later build-vs-buy | 규모 이후 |
 | Habitica | quest/boss framing | idea only | 코드·asset·HP 제외 |
-| Open Badges 3.0 | evidence-bearing portable credential | distant future | 현재 제외 |
+| Open Badges 3.0 | portable evidence credential | distant future | 현재 제외 |
 
-### 12.2a 조사 시점 license snapshot
+### 12.3 renderer 결정
 
-| 후보 | 조사된 license/구조 | 본 계획의 사용 판단 |
-| --- | --- | --- |
-| React Flow / xyflow | MIT | renderer 후보 |
-| Oppia | Apache-2.0 | 패턴과 schema 참고 |
-| H5P Branching Scenario | MIT | component 범위 참고, runtime은 별도 검토 |
-| Moodle Level Up XP | Moodle plugin/GPL 계열 | 코드 이식 없이 패턴만 |
-| Moodle Reengagement/Stash | Moodle plugin 경계 별도 확인 | 코드 이식 없이 패턴만 |
-| Novu | core MIT, 일부 enterprise 경로 별도 상용 license | multi-channel 필요가 증명된 뒤 검토 |
-| Habitica | 코드·이미지·콘텐츠 경계가 분리될 수 있음 | 아이디어만, 코드·asset 0 |
-| Open Badges | 1EdTech 표준 | 장기 credential interoperability 참고 |
-
-license 표는 도입 시점의 exact commit/tag와 LICENSE/NOTICE를 다시
-검증해야 하며, 이 문서의 snapshot만으로 dependency를 승인하지 않는다.
-
-### 12.3 React Flow
-
-허용:
-
-- desktop quest map
-- node/edge layout
-- zoom/pan
-- selected node details
-
-금지:
-
-- canonical state calculation
-- client unlock write
-- mobile-only interaction
-- graph가 유일한 접근 경로
-
-도입 순서:
+현재 v7에는 Cytoscape.js가 후보로 이미 기록돼 있다. 이 문서는 React Flow를
+자동 대체 후보로 승격하지 않는다.
 
 ```text
-canonical vertical list
+canonical accessible list
 → owner-private usability
-→ dependency/license/SBOM review
-→ desktop graph flag
-→ parity/a11y acceptance
+→ renderer requirements freeze
+→ Cytoscape.js vs React Flow vs native 비교
+→ license/SBOM/performance/a11y review
+→ exact Owner dependency decision
+→ one optional flag
 ```
+
+renderer 선택은 projection authority를 바꾸지 않는다.
 
 ### 12.4 Oppia
 
-Oppia 전체 플랫폼을 fork하지 않는다.
-
-가져올 패턴:
+Oppia 전체 플랫폼을 fork하지 않는다. 가져올 패턴:
 
 - learner answer에 따른 feedback
-- common error에 따른 추가 분기
-- 다른 step으로 이동
-- deeper question
+- common error에 따른 분기
+- 다른 step 또는 deeper question
+- creator-defined exploration flow
 
-답안길의 `TutorEpisodeStateMachineV1`, `DiagnosticCauseTaxonomyV1`,
-`ScaffoldLadderV1` 안에 native schema로 구현한다.
+답안길의 native tutor FSM, diagnosis, scaffold와 branching schema 안에
+재구현한다.
 
 ### 12.5 H5P
-
-H5P Branching Scenario는 다른 H5P content를 연결하는 runtime이므로
-현재 답안길 커널과 중복 권위가 생길 수 있다.
 
 기본 결정:
 
 ```text
 H5P runtime 직접 결합: 보류
-H5P branching schema/authoring UX 참고: 허용
-격리된 authoring/import adapter: 향후 검토
+Branching Scenario schema/authoring UX 참고: 허용
+격리된 import/authoring adapter: 향후 검토
 ```
 
-H5P package를 도입하려면:
-
-- MIT component 범위 확인
-- surrounding runtime/license 경계 확인
-- content import sanitation
-- source/right mapping
-- learner-private body boundary
-- tutor evidence mapping
-- uninstall fallback
-
-을 별도 검토한다.
+도입 시 component license뿐 아니라 surrounding runtime, content sanitation,
+source/right mapping, learner-private body, evidence mapping과 uninstall
+fallback을 검증한다.
 
 ### 12.6 Moodle Reengagement
 
@@ -1239,12 +1244,12 @@ H5P package를 도입하려면:
 
 ```text
 activity 완료
-→ 일정 시간 뒤 target 예약
+→ 일정 뒤 target 예약
 → target 이미 완료했으면 reminder 억제
 ```
 
-Moodle plugin 코드를 이식하지 않고 nudge eligibility/suppression pattern을
-native하게 구현한다.
+plugin 코드는 이식하지 않고 native eligibility/suppression contract로
+구현한다.
 
 ### 12.7 Level Up XP
 
@@ -1261,27 +1266,23 @@ native하게 구현한다.
 - 공개 leaderboard
 - 경쟁 rank
 - 쉬운 행동 farming
-- 숫자 level이 mastery처럼 보이는 UX
+- 숫자 level을 mastery처럼 보이는 UX
 
 ### 12.8 Stash
 
-아이템을 장식으로 수집하지 않고 `KnowledgeRelicV1`로 변환한다.
-수집 조건은 evidence-gated이며 실제 review/action으로 연결된다.
+아이템을 장식으로 수집하지 않고 `KnowledgeRelicV1`로 변환한다. 수집 조건은
+evidence-gated이며 실제 review/action으로 연결된다.
 
 ### 12.9 Novu
 
-Novu는 Inbox, push, email, SMS/chat workflow와 preference를 통합할 수
-있지만 초기 답안길에는 과할 수 있다. 또한 repository가 open-core 구조이므로
-MIT core와 enterprise 범위를 정확히 구분해야 한다.
-
-도입 순서:
+초기에는 과하다.
 
 ```text
-native candidate/suppression engine
+native candidate/suppression
 → in-app brief
-→ PWA Web Push bounded adapter
+→ bounded PWA push
 → multi-channel 필요성 증명
-→ Novu build-vs-buy/license/data-boundary review
+→ Novu core/enterprise license와 data-boundary review
 ```
 
 ### 12.10 Habitica
@@ -1294,7 +1295,7 @@ native candidate/suppression engine
 
 버릴 것:
 
-- 실패 시 HP 감소
+- HP 감소
 - 연속 실패 벌점
 - 장비/골드 경제
 - random loot
@@ -1303,25 +1304,14 @@ native candidate/suppression engine
 
 ### 12.11 Open Badges
 
-Open Badges는 issuer, criteria와 evidence를 포함하는 portable credential에
-적합하다. 하지만 개인 수험 진행을 외부 자격처럼 표현하면 오해가 크다.
-
-현재:
-
-```text
-internal AchievementArtifactV1 only
-```
-
-향후 Academy/B2B에서 실제 issuer·criteria·evidence governance가 생긴 뒤
-별도 검토한다.
+현재는 internal `AchievementArtifactV1`만 사용한다. Academy/B2B에서 실제
+issuer, criteria, evidence governance가 생긴 뒤 별도 검토한다.
 
 ---
 
 ## 13. UX 원칙
 
 ### 13.1 한 화면 하나의 주 행동
-
-예:
 
 ```text
 사업인정의 처분성
@@ -1358,20 +1348,13 @@ secondary:
 - 결과 불확실한데 성공 animation
 - dark pattern
 
-### 13.3 상태는 색만으로 구분하지 않는다
+### 13.3 상태 표현
+
+색만으로 구분하지 않는다.
 
 ```text
 아이콘 + 문구 + 구조
 ```
-
-상태 예:
-
-- 시작 가능
-- 간극 수리 필요
-- 무도움 확인
-- 변형 클리어
-- 실전 관문 통과
-- 재검증 필요
 
 ### 13.4 모바일
 
@@ -1380,24 +1363,25 @@ secondary:
 - 44px 이상 target
 - 세로형 단계
 - 한 카드 2~3줄
-- graph는 optional
+- graph optional
 - offline/conflict/session expiry 명시
-- progress skeleton이 성공처럼 보이지 않음
+- loading skeleton이 성공처럼 보이지 않음
 
 ---
 
-## 14. 데이터·privacy·보안
+## 14. 데이터·privacy·security
 
-### 14.1 analytics에 허용되는 metadata
+### 14.1 analytics 후보 metadata
 
-- opaque learner pseudonym, 승인 시에만
-- concept ID
+exact O2와 별도 approval 전 production 수집은 OFF다.
+
+- approved rotating pseudonym
+- concept ID, 허용되는 경우
 - quest kind
 - progression state
-- nudge reason
-- suppression reason
+- nudge reason/suppression reason
 - action duration bucket
-- delivered/acted/dismissed
+- delivered/acted/dismissed closed state
 - policy/version
 - assistance qualification
 - evidence outcome closed enum
@@ -1432,25 +1416,28 @@ Account A/B 차단:
 
 ### 14.4 idempotency
 
-다음은 중복 생성·중복 clear·중복 발송이 0이어야 한다.
+다음 중복은 0이어야 한다.
 
 - multi-tab completion
 - retry
 - offline replay
 - provider retry
-- background job redelivery
+- background redelivery
 - route refresh
 - duplicate evidence event
+- duplicate nudge delivery
 
-### 14.5 deletion
+### 14.5 delete/revocation
 
-raw learner data 삭제 시:
+raw learner data 삭제 또는 authority stale 시:
 
 - related projection stale/revoked
 - nudge suppressed
-- achievement evidence inaccessible 상태 처리
-- external delivery payload 삭제 가능 범위 기록
-- shared signal이 있으면 approved lineage에 따라 propagation
+- achievement evidence inaccessible/revalidation state
+- downstream delivery payload 삭제 가능 범위 기록
+- approved shared signal이 있으면 current canonical lineage로 propagation
+
+이 문서가 새로운 shared-signal export 권한을 만들지 않는다.
 
 ---
 
@@ -1463,8 +1450,9 @@ D+1 무도움 회복률
 D+7 verified transfer 성공률
 같은 gap 재발률
 time-to-independent-correct
-timed full solution에서의 재발 감소
+timed 수행에서의 재발 감소
 independently recovered gaps per effective learner hour
+assistance dependence 감소
 ```
 
 ### 15.2 product metrics
@@ -1490,44 +1478,32 @@ completed-action nudge: 0
 raw-body leak: 0
 cross-account access: 0
 shame/fear copy: 0
-app interaction + provider wait: effective study time의 5% 이하 가설
 notification opt-out 증가
 dismiss/ignore 반복
 anxiety complaint
+app interaction + provider wait: effective study time의 5% 이하 가설
 ```
 
 ### 15.4 실험 후보
 
-O2와 별도 approval 전 production experiment를 하지 않는다.
-
-후보:
+exact O2와 별도 experiment approval 전 production experiment를 하지 않는다.
 
 1. plain task vs evidence-gated quest framing
-2. generic reminder vs exact evidence + estimated minutes reminder
+2. generic reminder vs exact evidence + estimated minutes
 3. streak copy vs recovery continuity copy
 4. vertical list vs optional map
 5. boss gate preview vs no preview
-6. knowledge relic review entry vs normal review entry
+6. knowledge relic entry vs normal review entry
 
 ### 15.5 성공 판정
 
-다음이면 출시 성공이 아니다.
+다음이면 채택하지 않는다.
 
 ```text
-클릭률 증가
-AND
-D+7 transfer 감소
+클릭률 증가 AND D+7 transfer 감소
+체류시간 증가 AND 독립 수행 감소
+알림 반응 증가 AND 불안/opt-out 증가
 ```
-
-또는:
-
-```text
-체류시간 증가
-AND
-독립 수행 감소
-```
-
-primary learning metric이 나빠지면 engagement improvement를 채택하지 않는다.
 
 ---
 
@@ -1537,86 +1513,75 @@ primary learning metric이 나빠지면 engagement improvement를 채택하지 �
 
 ### PGR0 — Source Contract
 
-범위:
-
-- 이 전략 문서
-- glossary
-- evidence/projection boundary
-- prohibited-pattern tests 제안
-
-runtime 0.
+- canonical source가 허용하는 evidence vocabulary 확정
+- progression/quest/nudge projection boundary
+- no-mastery/no-guided-runtime overlay
+- prohibited-pattern tests
+- runtime 0
 
 ### PGR1 — Deterministic Progression Projector
 
 선행:
 
-- S237A가 필요한 evidence contract를 제공
-- canonical mastery와 gap/repair/D+1/D+7 state usable
+- S237A의 closed evidence contract
+- current LearningGapRecord/S216/repair/D+1/D+7/timed path usable
 
 산출물:
 
 - `ProgressionProjectionV1`
+- future mastery ref absent gate
 - stale/revalidation
-- replay deterministic fixtures
-- no new mastery store
+- deterministic replay fixtures
+- new authority store 0
 
-### PGR2 — Quest Composer + Today Integration
-
-산출물:
+### PGR2 — Quest Composer + Today
 
 - existing CoreOutcome/ReviewUnit projection
 - one primary quest per CoreOutcome
-- max 3 preserved
+- Today max 3
 - estimated minutes
 - success criteria
 - evidence pending/failure UX
 
-### PGR3 — Recovery Continuity + In-App Nudge Candidate
-
-산출물:
+### PGR3 — Recovery Continuity + In-App Candidate
 
 - `LearningContinuityProjectionV1`
 - `NudgeCandidateV1`
-- suppression/cooldown/quiet-hours contract
+- suppression/cooldown/quiet hours
 - in-app only
 - external delivery OFF
 
-### PGR4 — Vertical Quest Map
+### PGR4 — Canonical Vertical Quest List
 
-산출물:
+- mobile and desktop list
+- dependency 0
+- accessibility/reflow acceptance
 
-- mobile canonical list
-- desktop structured list
-- no dependency required
-- a11y and reflow acceptance
-
-### PGR5 — Optional React Flow Renderer
+### PGR5 — Optional Renderer Decision
 
 선행:
 
 - PGR4 accepted
+- Cytoscape.js/React Flow/native comparison
 - dependency/license/SBOM approval
-- renderer parity tests
+- graph/list parity
 
 feature flag OFF by default.
 
 ### PGR6 — Boss Gate + Branching Micro-Case
 
-산출물:
-
 - timed boss eligibility
-- 3-subject micro-case fixtures
+- three-subject micro-case fixtures
 - native branching schema
-- measurement lane isolation
+- Measurement Lane isolation
+- guided runtime 0
 
 ### PGR7 — Knowledge Relics
 
-산출물:
-
 - functional cards
-- exact evidence provenance
+- evidence provenance
 - review/action deep-link
-- no random collection
+- random collection 0
 
 ### PGR8 — External Delivery Adapter
 
@@ -1634,7 +1599,7 @@ feature flag OFF by default.
 in-app
 → bounded PWA push
 → need-based email
-→ Novu review only if multi-channel complexity is proven
+→ multi-channel complexity 증명 후 Novu 검토
 ```
 
 ### PGR9 — External Evaluation
@@ -1644,7 +1609,7 @@ in-app
 - owner-private dogfood
 - quality gate
 - external cohort authorization
-- pre-registered metrics
+- preregistered metrics
 
 평가:
 
@@ -1657,33 +1622,27 @@ in-app
 
 ---
 
-## 17. PR 분할 원칙
-
-한 PR에 모두 넣지 않는다.
-
-권장:
+## 17. PR 분할
 
 1. docs/contracts only
 2. projector + unit tests
 3. Today quest UI
 4. recovery/nudge candidate
-5. vertical map
+5. canonical list
 6. optional renderer dependency
 7. boss/branching
 8. relics
 9. delivery adapter
 10. measurement/evaluation
 
-동시에 쓰면 안 되는 lock:
+같은 lock의 동시 writer 금지:
 
-- canonical mastery/evidence
+- evidence/qualification
 - Today/Review Queue
 - notification outbox/preferences
 - shared telemetry
 - app shell/navigation
 - dependency/lockfile
-
-dependency PR과 feature PR을 가능하면 분리한다.
 
 ---
 
@@ -1691,22 +1650,25 @@ dependency PR과 feature PR을 가능하면 분리한다.
 
 ### 18.1 semantics
 
-- `MasteryStateV1` 유일
-- progression은 projection
+- current mastery runtime dependency 0
+- `futureMasteryStateRef` absent
+- progression은 evidence lifecycle projection
 - quest는 source action projection
 - achievement는 evidence summary
 - continuity는 streak가 아님
 - map은 rank가 아님
+- guided runtime activation 0
 
 ### 18.2 evidence
 
 - view/save/login clear 0
 - same-item transfer 0
 - assisted independent clear 0
-- D+7 verified variant 전 stable 후보
+- verified non-same-surface D+7만 transfer clear
 - timed qualification server-derived
 - stale propagation 100%
 - replay duplicate contribution 0
+- unverified generated branch의 Measurement 사용 0
 
 ### 18.3 nudge
 
@@ -1715,23 +1677,22 @@ dependency PR과 feature PR을 가능하면 분리한다.
 - quiet hours
 - preference/opt-out
 - daily cap
-- two-ignore frequency reduction
+- repeated-ignore frequency reduction
 - direct action
 - duplicate delivery 0
 - shame copy 0
 
 ### 18.4 boss/branch
 
-- boss item source/right/version current
-- timer and exposure bound
+- source/right/version current
+- timer/exposure bound
 - branching node/transition closed
-- unverified branch measurement 사용 0
-- full solution reveal 기록
+- full reveal 기록
 - failure false success 0
 
 ### 18.5 OSS
 
-- exact license
+- exact license/NOTICE
 - SBOM
 - vulnerability
 - version pin
@@ -1748,7 +1709,6 @@ dependency PR과 feature PR을 가능하면 분리한다.
 - raw body analytics 0
 - event idempotency
 - export/delete
-- signed URL boundary
 - preference scope
 - provider secret log 0
 
@@ -1772,23 +1732,24 @@ dependency PR과 feature PR을 가능하면 분리한다.
 - timed integration
 - time-to-independent
 - assistance dependence
-- no engagement-only launch claim
+- engagement-only launch claim 0
 
 ---
 
 ## 19. 필수 테스트
 
-### 19.1 projection
+### 19.1 projector
 
 - same input → same canonical content/checksum
-- mastery/progression valid matrix
-- stale source → revalidation
-- qualifying repair → repaired
-- D+1 → d1_confirmed
-- verified D+7 → transfer_cleared
+- current mastery ref supplied → reject
+- qualifying repair → repair_qualified
+- D+1 → d1_independent_confirmed
+- verified D+7 → d7_transfer_cleared
 - assisted D+7 → no clear
-- timed eligible → integrated_cleared
-- client spoof rejection
+- same-surface D+7 → no clear
+- timed eligible → timed_integration_cleared
+- stale source → revalidation
+- client spoof → reject
 
 ### 19.2 quest
 
@@ -1808,14 +1769,14 @@ dependency PR과 feature PR을 가능하면 분리한다.
 - snooze
 - expiry
 - stale action
-- two ignores
+- repeated ignore
 - exact direct route
 - channel eligibility
 - replay redelivery
 
 ### 19.4 continuity
 
-- one missed day reset 없음
+- missed day reset 없음
 - long absence recovery
 - illness/backlog bounded
 - overdue minute budget
@@ -1830,34 +1791,37 @@ dependency PR과 feature PR을 가능하면 분리한다.
 - keyboard traversal
 - focus restoration
 - reduced motion
-- large graph cap
+- node cap
 - raw label canary
 
-### 19.6 privacy
+### 19.6 authority/privacy
 
+- guided symbol runtime acceptance reject
+- mastery persistence/transition reject
 - Account A/B
 - raw body leak canary
 - notification payload canary
 - export/delete
-- delivery provider metadata
-- log/telemetry screenshot artifact
+- provider metadata boundary
+- log/telemetry/screenshot artifact boundary
 
 ---
 
-## 20. Owner Gate
+## 20. Owner Gates
 
 ### Source/roadmap gate
 
 Owner가 승인할 것:
 
-- 이 전략을 canonical learning contract에 반영할지
+- 이 전략을 canonical contract에 반영할지
 - exact roadmap 위치
-- runtime scope
+- exact runtime scope
 - learner-facing naming
+- future mastery compatibility를 계속 제외할지
 
 ### Dependency gate
 
-- React Flow exact package/version
+- renderer exact package/version
 - H5P runtime 여부
 - Novu build-vs-buy
 - license/SBOM
@@ -1887,13 +1851,13 @@ Owner가 승인할 것:
 
 ### External claim gate
 
-다음 claim은 독립 evidence 전 금지:
+독립 evidence 전 금지:
 
 - 성적 향상
 - 공부시간 단축
 - retention 향상 수치
 - 합격 가능성
-- “게임화로 더 잘 배운다”
+- 게임화로 더 잘 배운다는 claim
 
 ---
 
@@ -1917,34 +1881,37 @@ clickbait push
 mastery percentage
 client unlock
 LLM achievement self-declaration
+current mastery state 조기 구현
+guided-study runtime 우회 활성화
 ```
 
 ---
 
 ## 22. Definition of Done
 
-### Owner-private v1
+### Owner-private progression v1
 
-- progression projector deterministic
+- deterministic evidence lifecycle projector
+- current mastery dependency 0
 - Today quest max 3
 - repair/D+1/D+7/timed mapping
 - recovery continuity
 - in-app candidate/suppression
-- mobile list
+- mobile canonical list
 - false unlock 0
 - raw leak 0
 - A/B denial
-- a11y acceptance
-- owner dogfood에서 실제 다음 행동 이해 가능
+- accessibility acceptance
+- owner가 “지금 어디고 무엇을 하면 다음이 열리는지” 이해 가능
 
 ### Advanced v1
 
-- optional graph
+- optional renderer
 - boss gate
-- 3-subject branching micro-case
+- three-subject branching micro-case
 - knowledge relic
 - stale/revalidation
-- no dependency authority inversion
+- dependency authority inversion 0
 
 ### External delivery v1
 
@@ -1970,17 +1937,18 @@ LLM achievement self-declaration
 
 아래는 설계 참고이며 답안길의 효능을 대신 입증하지 않는다.
 
-### Learning and gamification
+### Learning, gamification and nudges
 
-- [The impact of different combinations of game elements for gamified learning in higher education on student learning outcomes (2024)](https://doi.org/10.1080/03075079.2024.2416498)
-- [Gamification enhances student intrinsic motivation, perceptions of autonomy and relatedness, but minimal impact on competency (2024)](https://doi.org/10.1007/s11423-023-10337-7)
-- [Microcommitments: The Effect of Small Commitments on Student Success (2021)](https://doi.org/10.1257/pandp.20211043)
-- [A Test of Enhancing Learning in Economics through Nudges (2020)](https://doi.org/10.1257/pandp.20201050)
-- [Effect of Personalized Email-Based Reminders on Participants' Timeliness in an Online Education Program (2023)](https://doi.org/10.2196/43977)
+- [The impact of different combinations of game elements for gamified learning in higher education on student learning outcomes](https://doi.org/10.1080/03075079.2024.2416498)
+- [Gamification enhances student intrinsic motivation, perceptions of autonomy and relatedness, but minimal impact on competency](https://doi.org/10.1007/s11423-023-10337-7)
+- [Microcommitments: The Effect of Small Commitments on Student Success](https://doi.org/10.1257/pandp.20211043)
+- [A Test of Enhancing Learning in Economics through Nudges](https://doi.org/10.1257/pandp.20201050)
+- [Effect of Personalized Email-Based Reminders on Participants' Timeliness in an Online Education Program](https://doi.org/10.2196/43977)
 
 ### Open-source patterns
 
 - [React Flow / xyflow](https://github.com/xyflow/xyflow)
+- [Cytoscape.js](https://github.com/cytoscape/cytoscape.js)
 - [Oppia](https://github.com/oppia/oppia)
 - [H5P Branching Scenario](https://github.com/h5p/h5p-branching-scenario)
 - [Moodle Reengagement](https://moodle.org/plugins/mod_reengagement)
@@ -2005,3 +1973,7 @@ LLM achievement self-declaration
 
 > **사용자가 쉬어도 과거 성취를 벌하지 않는다. 밀린 일을 쌓지 않고,
 > 다시 시작할 수 있는 복구 루트를 제공한다.**
+
+> **현재 존재하지 않는 mastery나 guided runtime을 progression을 위해
+> 조기 구현하지 않는다. 현재 trusted evidence에서 직접 투영하고,
+> authority가 바뀌면 새 versioned contract로 다시 검증한다.**
