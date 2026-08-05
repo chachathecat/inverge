@@ -3642,7 +3642,7 @@ function roadmapItem(source, id) {
   const escaped = id.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
   const match = source.match(
     new RegExp(
-      `^  - id: ${escaped}\\n([\\s\\S]*?)(?=^  - id: |\\Z)`,
+      `^  - id: ${escaped}\\n([\\s\\S]*?)(?=^  - id: |(?![\\s\\S]))`,
       "m",
     ),
   );
