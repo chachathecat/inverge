@@ -1,0 +1,392 @@
+{
+  "contractId": "dabangil_ephemeral_source_safety_v1",
+  "version": "1.0.0",
+  "status": "proposed_final_for_merge",
+  "datedKst": "2026-08-05",
+  "activeMasterPlan": "docs/strategy/dabangil-professional-exam-reasoning-os-final-master-plan-v11-2026-08-05.md",
+  "ownerDecision": "docs/decisions/2026-08-05-owner-safe-ephemeral-study-finalization.md",
+  "scope": {
+    "currentLearnerFacingVertical": "dabangil_appraiser_second",
+    "subjects": [
+      "practical",
+      "theory",
+      "law"
+    ],
+    "runtimeAuthorized": false,
+    "realThirdPartyContentAuthorized": false,
+    "externalLearnerAuthorized": false,
+    "productionAuthorized": false,
+    "commercialAuthorized": false
+  },
+  "rightsModes": [
+    "owned_full",
+    "licensed_full",
+    "open_or_public_domain",
+    "official_link_only",
+    "transient_personal_study",
+    "blocked"
+  ],
+  "defaultRightsDecision": {
+    "commercialBook": "transient_personal_study",
+    "commercialAnswerKey": "blocked",
+    "publisherSolution": "blocked",
+    "unknownSource": "transient_personal_study_or_blocked",
+    "illegalScan": "blocked",
+    "userPurchaseDeclarationGrantsPersistentRights": false,
+    "automaticRightsPromotion": false
+  },
+  "capturePolicy": {
+    "defaultMaxProblemPages": 1,
+    "twoPageException": {
+      "allowed": true,
+      "sameExactItemOnly": true,
+      "explicitUserConfirmationRequired": true,
+      "clientCropRequired": true,
+      "fullSpreadPersistenceAllowed": false,
+      "repeatedExceptionTriggersReview": true
+    },
+    "wholePdf": "blocked",
+    "zipEpubDocumentBatch": "blocked",
+    "continuousPages": "blocked",
+    "answerKeyPages": "blocked",
+    "publisherSolutionPages": "blocked",
+    "watermarkRemoval": "blocked",
+    "publicShare": "blocked",
+    "bookTitleProblemNumberAnswerLookup": "blocked"
+  },
+  "clientPolicy": {
+    "onDeviceCropPreferred": true,
+    "onDevicePiiRedactionRequiredWhenAvailable": true,
+    "onDeviceOcrPreferred": true,
+    "sourceExpressionMinimizationPreferred": true,
+    "userConfirmationRequired": true,
+    "localEncryptedVaultOptional": true,
+    "localBackupSyncLimitationsMustBeDisclosed": true,
+    "serviceWorkerSourceCache": "blocked",
+    "serviceWorkerFullOutputCache": "blocked"
+  },
+  "dataClasses": {
+    "D0_RAW_SOURCE": {
+      "examples": [
+        "original_image",
+        "crop",
+        "thumbnail",
+        "page_snapshot"
+      ],
+      "transientServerPersistence": "blocked"
+    },
+    "D1_OCR_SOURCE_EXPRESSION": {
+      "examples": [
+        "ocr_full_text",
+        "question_text",
+        "choices",
+        "source_table_text"
+      ],
+      "transientServerPersistence": "blocked"
+    },
+    "D2_RECONSTRUCTABLE_DERIVATIVE": {
+      "examples": [
+        "detailed_source_json",
+        "source_fingerprint",
+        "complete_fact_sequence"
+      ],
+      "transientServerPersistence": "blocked"
+    },
+    "D3_SOURCE_BOUND_FULL_OUTPUT": {
+      "examples": [
+        "problem_specific_full_explanation",
+        "provider_full_response",
+        "source_reproducing_output"
+      ],
+      "transientServerPersistence": "blocked"
+    },
+    "D4_LEARNER_AUTHORED_BODY": {
+      "examples": [
+        "learner_answer",
+        "learner_revision"
+      ],
+      "transientServerPersistence": "scrub_required"
+    },
+    "D5_CLOSED_LEARNING_EVIDENCE": {
+      "examples": [
+        "concept_codes",
+        "error_codes",
+        "rubric_codes",
+        "assistance_exposure",
+        "next_action"
+      ],
+      "transientServerPersistence": "allowed_learner_private"
+    },
+    "D6_BODYLESS_OPERATIONAL_METADATA": {
+      "examples": [
+        "route_id",
+        "policy_version",
+        "status_code",
+        "latency_bucket",
+        "zero_write_receipt"
+      ],
+      "transientServerPersistence": "allowed"
+    }
+  },
+  "persistentSinks": [
+    "postgresql",
+    "supabase_storage",
+    "vercel_blob",
+    "object_storage",
+    "redis_or_kv",
+    "cdn_cache",
+    "queue",
+    "dead_letter_queue",
+    "scheduler_payload",
+    "webhook_payload",
+    "logs",
+    "traces",
+    "apm",
+    "crash_reports",
+    "session_replay",
+    "analytics",
+    "data_warehouse",
+    "backup",
+    "snapshot",
+    "replica",
+    "ci_artifact",
+    "support_attachment",
+    "admin_console_payload",
+    "training_corpus",
+    "evaluation_corpus",
+    "embedding",
+    "vector_store",
+    "rag",
+    "shared_cache"
+  ],
+  "transientModePersistence": {
+    "rawSourcePersistentRetentionSeconds": 0,
+    "ocrPersistentRetentionSeconds": 0,
+    "reconstructableDerivativeRetentionSeconds": 0,
+    "sourceBoundFullOutputRetentionSeconds": 0,
+    "ephemeralMemoryHardCeilingSeconds": 600,
+    "durableFailureRecovery": false,
+    "backgroundRetry": false,
+    "automaticCrossProviderFallback": false,
+    "crossUserReuse": false,
+    "sourceEmbedding": false,
+    "rag": false,
+    "training": false,
+    "evaluation": false,
+    "promptOptimization": false,
+    "problemSpecificAnswerCache": false
+  },
+  "ephemeralProcessor": {
+    "synchronousOnly": true,
+    "backgroundMode": false,
+    "batchMode": false,
+    "webhooks": false,
+    "pollingObjects": false,
+    "durableQueue": false,
+    "writableObjectStore": false,
+    "generalDatabaseCredential": false,
+    "storageCredential": false,
+    "durableCacheCredential": false,
+    "analyticsWriteCredential": false,
+    "sessionReplaySdk": false,
+    "supportAttachmentCredential": false,
+    "trainingEvaluationExportCredential": false,
+    "requestBodyLogging": false,
+    "responseBodyLogging": false,
+    "diskSpill": false,
+    "readOnlyFilesystemPreferred": true,
+    "egressAllowlistRequired": true,
+    "cacheControl": "no-store, private, max-age=0"
+  },
+  "providerPolicy": {
+    "allowedRetentionClasses": [
+      "on_device",
+      "contractually_verified_zero_content_retention_with_disclosed_exceptions"
+    ],
+    "blockedRetentionClasses": [
+      "limited_security_retention",
+      "training_or_product_improvement_possible",
+      "human_review_possible",
+      "unknown",
+      "stale",
+      "revoked"
+    ],
+    "consumerAccountAutomation": false,
+    "freeTierRawSourceRoute": false,
+    "exactOrganizationProjectEndpointModelBindingRequired": true,
+    "storeFalseRequired": true,
+    "promptCachingDisabled": true,
+    "backgroundModeDisabled": true,
+    "persistentThreadsDisabled": true,
+    "assistantsVectorStoresDisabled": true,
+    "thirdPartyToolsReceiveRawSource": false,
+    "dpaRequired": true,
+    "subprocessorReviewRequired": true,
+    "processingRegionReviewRequired": true,
+    "counselApprovalRequired": true,
+    "deploymentRecheckRequired": true,
+    "policyDriftKillSwitchRequired": true
+  },
+  "sourceMinimization": {
+    "preferredRemoteFields": [
+      "task_type_code",
+      "demand_code",
+      "output_form_code",
+      "user_confirmed_variables",
+      "numeric_values",
+      "unit_codes",
+      "relation_codes",
+      "source_identifier_candidates",
+      "learner_attempt",
+      "learner_question_intent"
+    ],
+    "blockedRemoteFieldsByDefault": [
+      "original_image",
+      "full_ocr",
+      "arbitrary_source_prose",
+      "source_table",
+      "publisher_answer",
+      "publisher_commentary"
+    ]
+  },
+  "outputFirewall": {
+    "clientOnlyFullOutput": true,
+    "serverFullOutputHistory": false,
+    "questionRestatement": "blocked",
+    "sourceTableReconstruction": "blocked",
+    "publisherOutlineImitation": "blocked",
+    "answerKeyStyleImitation": "blocked",
+    "uniqueLongPhraseOrTypoReproduction": "blocked",
+    "crossSessionBookReconstruction": "blocked",
+    "marketSubstitutionPattern": "blocked",
+    "allowedActions": [
+      "release_client_only",
+      "regenerate_concept_only",
+      "remove_specific_numbers",
+      "remove_table_or_direct_quote",
+      "block"
+    ],
+    "thresholdIsNotLegalSafeHarbor": true,
+    "rightsHolderDirectTestRequired": true
+  },
+  "persistableLearningProjection": {
+    "allowed": [
+      "scrubbed_learner_answer",
+      "scrubbed_learner_revision",
+      "subject_task_concept_codes",
+      "diagnostic_cause_codes",
+      "rubric_state_codes",
+      "biggest_gap_code",
+      "repair_kind",
+      "assistance_exposure",
+      "qualification",
+      "d1_d7_due_dates",
+      "next_action_code",
+      "bodyless_rights_provider_deletion_receipts"
+    ],
+    "sourceExpressionPresent": false,
+    "publisherAnswerExpressionPresent": false,
+    "arbitraryFreeTextPresent": false,
+    "learnerBodyScrubRequired": true
+  },
+  "abusePolicy": {
+    "sequentialExtractionBlocked": true,
+    "multiAccountReconstructionBlocked": true,
+    "answerKeyAlternatingUploadBlocked": true,
+    "permanentUserSourceEqualityOracle": false,
+    "shortLivedRotatingKeyedHmacAllowed": true,
+    "hmacMayBeUsedForContentRetrieval": false,
+    "rightsHolderSuppliedBlockFingerprintRegistryAllowed": true,
+    "publisherBlocklistRequired": true,
+    "repeatInfringerPolicyRequired": true,
+    "appealRequired": true
+  },
+  "takedownPolicy": {
+    "designatedRecipientRequired": true,
+    "emailAndWebFormRequired": true,
+    "validSpecificNoticeImmediateAutomatedHold": true,
+    "uploaderNotificationRequired": true,
+    "counterNoticeRequired": true,
+    "controlledResumeOnly": true,
+    "repeatInfringerSuspensionTermination": true,
+    "globalSourceAiKillSwitchRequired": true,
+    "bodylessAuditRequired": true
+  },
+  "governance": {
+    "namedCopyrightRightsOwnerRequired": true,
+    "namedPrivacyOwnerRequired": true,
+    "namedProviderDataControlOwnerRequired": true,
+    "namedTakedownOperatorRequired": true,
+    "independentHighRiskReviewerRequired": true,
+    "staffAndContractorTrainingRequired": true,
+    "rawSourceInIssuePrSupportChat": false,
+    "marketingMustMatchActualFlow": true,
+    "termsCannotShiftAllPlatformResponsibilityToUser": true,
+    "writtenKoreanCopyrightPrivacyReviewRequired": true
+  },
+  "legalEvidencePack": {
+    "required": true,
+    "items": [
+      "actual_ui",
+      "actual_end_to_end_data_flow",
+      "persistent_sink_inventory",
+      "provider_contract_dpa_subprocessors_settings",
+      "twenty_to_thirty_output_samples",
+      "source_output_comparison_report",
+      "synthetic_canary_residue_scan",
+      "zero_write_deletion_receipts",
+      "notice_counter_notice_repeat_infringer_runbook",
+      "staff_training_record",
+      "kill_switch_rehearsal",
+      "current_korean_copyright_privacy_counsel_memo",
+      "terms_privacy_ai_notice_marketing_copy"
+    ]
+  },
+  "hardAcceptance": {
+    "rawPersistentWrites": 0,
+    "rawCacheQueueDlqWrites": 0,
+    "rawLogTraceReplayAnalyticsSupportCopies": 0,
+    "rawBackupSnapshotCiCopies": 0,
+    "sourceEmbeddingRagTrainingEvalWrites": 0,
+    "crossUserSourceOrOutputReuse": 0,
+    "sourceBoundFullOutputServerRecords": 0,
+    "fullProblemRestatementReleases": 0,
+    "sourceTableReconstructionReleases": 0,
+    "publisherAnswerImitationReleases": 0,
+    "transientItemVerifiedHeldOutQualifications": 0,
+    "validNoticeAfterHoldProcessingAttempts": 0,
+    "unknownOrStaleProviderFullSourceCalls": 0
+  },
+  "automaticHoldConditions": [
+    "raw_or_ocr_or_prompt_or_provider_output_persistent_residue",
+    "source_bound_full_output_cloud_history",
+    "provider_retention_unknown_or_stale",
+    "cross_user_reuse_rag_embedding_training_eval",
+    "severe_source_or_answer_reproduction",
+    "valid_notice_processing_continues",
+    "pdf_answer_key_sequential_multi_account_defense_bypass",
+    "privacy_or_marketing_copy_mismatch",
+    "legal_review_blocker"
+  ],
+  "launchRule": {
+    "realThirdPartyTransientPilotBeforeWrittenReview": false,
+    "firstOwnerPrivateSources": [
+      "synthetic",
+      "user_authored",
+      "rights_cleared",
+      "verified_open_or_public_domain"
+    ],
+    "transientThirdPartyPilotRequiresSeparateOwnerAuthority": true,
+    "externalCommercialGatesRemainRequired": true
+  },
+  "interpretation": {
+    "nonStorageEqualsAutomaticLegality": false,
+    "noTrainingEqualsNoRetention": false,
+    "ttlEqualsNoPersistence": false,
+    "privateEqualsLawfulToPersist": false,
+    "similarityThresholdIsLegalSafeHarbor": false,
+    "deletionReceiptClaimsPhysicalBitErasure": false,
+    "rightsHolderDirectTestingAssumed": true,
+    "currentLawAndProviderTermsMustBeRechecked": true
+  }
+}
