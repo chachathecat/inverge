@@ -58,6 +58,16 @@ test("released VESG projection is the only exact-definition authority", () => {
   assert.equal(contract.definitionAuthority.releasedConceptRequired, true);
   assert.equal(contract.definitionAuthority.versionBindingRequired, true);
   assert.equal(contract.definitionAuthority.evidenceProjectionBindingRequired, true);
+  assert.deepEqual(contract.definitionAuthority.requiredBindings, [
+    "profileId",
+    "conceptId",
+    "graphSnapshotId",
+    "normSnapshotId",
+    "evidenceProjectionRevision",
+    "releaseRef",
+    "targetDigest",
+  ]);
+  assert.equal(contract.definitionAuthority.unresolvedOrHeldDefinitionMayRelease, false);
   assert.equal(contract.definitionAuthority.mcalMayCreateDefinitionAuthority, false);
   assert.equal(contract.definitionAuthority.mcalMayOverrideDefinition, false);
   assert.equal(contract.role.mayBecomeSecondDefinitionAuthority, false);
