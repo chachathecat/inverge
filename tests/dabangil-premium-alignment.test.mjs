@@ -197,7 +197,7 @@ test("historical S200-S224 completion does not assert current readiness", async 
   assert.equal(roadmap.byId.get("S224").status, "completed");
 });
 
-test("O3A and lean O4V decisions are completed while downstream execution stays queued", async () => {
+test("O3A and lean O4V stay completed while blocked S236P keeps S236A unstarted", async () => {
   const roadmap = parseActiveProgram(await read("roadmap/active-program.yml"));
 
   assert.equal(roadmap.byId.get("S235A").status, "completed");
@@ -235,14 +235,82 @@ test("O3A and lean O4V decisions are completed while downstream execution stays 
   );
   assert.equal(roadmap.byId.get("O4V").automaticStartAllowed, false);
   assert.deepEqual(roadmap.byId.get("O4V").dependencies, ["S234R"]);
-  assert.equal(roadmap.byId.get("S236P").status, "queued");
+  assert.equal(roadmap.byId.get("S236P").status, "blocked");
+  assert.equal(
+    roadmap.byId.get("S236P").executionState,
+    "acceptance_blocked",
+  );
+  assert.equal(roadmap.byId.get("S236P").acceptanceCompleted, false);
+  assert.equal(
+    roadmap.byId.get("S236P").targetCompletionScope,
+    "live_synthetic_owner_private_acceptance",
+  );
+  assert.equal(
+    roadmap.byId.get("S236P").latestLiveAttemptState,
+    "failed_no_rerun_pending_independent_closure",
+  );
+  assert.equal(roadmap.byId.get("S236P").latestLiveAuthorityConsumed, true);
+  assert.equal(
+    roadmap.byId.get("S236P").nextLiveAttemptAuthorized,
+    false,
+  );
+  assert.equal(
+    roadmap.byId.get("S236P").publishableKeyHttpAcceptanceCompleted,
+    false,
+  );
+  assert.equal(roadmap.byId.get("S236P").fullResidueVectorObserved, false);
+  assert.equal(
+    roadmap.byId.get("S236P").failureClosureCountState,
+    "unavailable_fail_closed",
+  );
+  assert.equal(
+    roadmap.byId.get("S236P").failureClosureCanaryPrefixScanCompleted,
+    true,
+  );
+  assert.equal(
+    roadmap.byId.get("S236P").failureClosureCanarySurfaceCount,
+    8,
+  );
+  assert.equal(
+    roadmap.byId.get("S236P").failureClosureCanaryPrefixMatchCount,
+    0,
+  );
+  assert.equal(
+    roadmap.byId.get("S236P").independentCrossSurfaceCanaryCompleted,
+    false,
+  );
+  assert.equal(
+    roadmap.byId.get("S236P").independentFailureClosureCompleted,
+    false,
+  );
+  assert.equal(roadmap.byId.get("S236P").terminalPass, false);
   assert.deepEqual(roadmap.byId.get("S236P").dependencies, ["O4V"]);
   assert.equal(roadmap.byId.get("S236A").status, "queued");
+  assert.equal(roadmap.byId.get("S236A").executionState, "unstarted");
   assert.deepEqual(roadmap.byId.get("S236A").dependencies, ["O3A", "S236P"]);
   assert.equal(roadmap.byId.get("S236B").status, "queued");
   assert.deepEqual(roadmap.byId.get("S236B").dependencies, ["S235B", "S234R"]);
   assert.equal(roadmap.byId.get("O3B").status, "queued");
   assert.deepEqual(roadmap.byId.get("O3B").dependencies, ["S236B"]);
+
+  const acceptance = await read(
+    "docs/qa/s236p-lean-owner-private-acceptance.md",
+  );
+  for (const marker of [
+    "5ae4a46e-b254-4b04-8181-35f3a720c148",
+    "LIVE_NODE_RESULT_NOT_PASS",
+    "`ownerLocalResult` | `null`",
+    "exact metadata rows observed: `0`",
+    "synthetic-principal absence: verified",
+    "`unavailable` and the closure verdict is fail-closed",
+    "zero canary-prefix matches on eight inspected",
+    "canonical independent canary acceptance",
+    "terminal pass: false",
+  ]) {
+    assert.match(acceptance, new RegExp(marker.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
+  }
+  assert.doesNotMatch(acceptance, /current live residue is 0\/0\/0\/0\/0/i);
+  assert.doesNotMatch(acceptance, /independent closure passed/i);
 });
 
 test("active program dependency graph has no missing dependencies or self-dependencies", async () => {
