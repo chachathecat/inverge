@@ -1,0 +1,333 @@
+{
+  "schema": "dabangil_versioned_exam_scope_evidence_graph_v1",
+  "version": "1.0.0",
+  "dated": "2026-08-06 KST",
+  "status": "proposed_non_authoritative",
+  "repository": "chachathecat/inverge",
+  "activeMasterPlan": "docs/strategy/dabangil-professional-exam-reasoning-os-final-master-plan-v12-2026-08-06.md",
+  "mandatoryAnnex": "docs/strategy/dabangil-versioned-exam-scope-evidence-graph-v1-2026-08-06.md",
+  "ownerDecision": "docs/decisions/2026-08-06-owner-versioned-exam-scope-evidence-graph.md",
+  "commonInfrastructure": {
+    "name": "Versioned Exam Scope & Evidence Graph",
+    "shortName": "VESG",
+    "role": "shared_scope_norm_question_version_and_priority_evidence_plane",
+    "replacesV12": false,
+    "mandatoryFor": [
+      "official_coverage_compiler",
+      "original_concept_curriculum",
+      "synthetic_question_engine",
+      "question_reference_adapter",
+      "evidence_review_provenance",
+      "today_plan_corpus_features",
+      "adaptive_understanding_lookup",
+      "private_book_tutor_concept_resolution"
+    ]
+  },
+  "authorizationBoundary": {
+    "runtime": false,
+    "api": false,
+    "ui": false,
+    "schemaMigration": false,
+    "storage": false,
+    "provider": false,
+    "production": false,
+    "realHistoricalQuestionIngestion": false,
+    "realThirdPartySource": false,
+    "firstStageLearnerActivation": false,
+    "readyTransition": false,
+    "merge": false
+  },
+  "scopeViews": [
+    "official_scope",
+    "target_date_norm",
+    "observed_exam",
+    "adjacent_and_official_unobserved",
+    "learning_priority"
+  ],
+  "sourceAuthorityAxes": [
+    "scope_authority",
+    "answer_authority",
+    "exam_evidence"
+  ],
+  "provenanceStates": [
+    "SOURCE_EXPLICIT",
+    "SOURCE_DERIVED",
+    "EXAM_OBSERVED",
+    "REVIEWED_INFERENCE",
+    "MODEL_CANDIDATE"
+  ],
+  "scopeStatuses": [
+    "OFFICIAL_EXPLICIT",
+    "OFFICIAL_DERIVED",
+    "OFFICIAL_UNOBSERVED",
+    "PRIVATE_CANDIDATE",
+    "OUTSIDE_CURRENT_SCOPE"
+  ],
+  "observationStatuses": [
+    "OBSERVED_DIRECT",
+    "OBSERVED_COMPONENT",
+    "ADJACENT_ONE_HOP",
+    "NOT_OBSERVED"
+  ],
+  "currentValidityStatuses": [
+    "TARGET_CURRENT",
+    "FUTURE_WATCH",
+    "HISTORICAL_ONLY",
+    "ANSWER_CHANGED",
+    "REPEALED",
+    "REVIEW_REQUIRED"
+  ],
+  "normChangeTypes": [
+    "UNCHANGED",
+    "RENUMBERED",
+    "RENAMED",
+    "AMENDED_SAME_RESULT",
+    "ANSWER_CHANGED",
+    "SPLIT",
+    "MERGED",
+    "REPEALED",
+    "HISTORICAL_ONLY",
+    "OUTSIDE_CURRENT_SCOPE",
+    "REVIEW_REQUIRED"
+  ],
+  "nodeTypes": [
+    "EXAM",
+    "STAGE",
+    "SUBJECT",
+    "OFFICIAL_DOMAIN",
+    "CURRICULUM_FAMILY",
+    "ATOMIC_CONCEPT",
+    "ISSUE",
+    "FORMULA",
+    "PROCEDURE_STEP",
+    "MISCONCEPTION",
+    "QUESTION_ARCHETYPE",
+    "STATUTE",
+    "ARTICLE",
+    "STANDARD",
+    "CASE",
+    "NORM_VERSION",
+    "EXAM_REGIME",
+    "QUESTION",
+    "QUESTION_UNIT",
+    "OPTION_PROPOSITION",
+    "EVIDENCE_GATE"
+  ],
+  "edgeTypes": [
+    "IS_PART_OF",
+    "REQUIRES",
+    "APPLIES_TO",
+    "GOVERNED_BY",
+    "INTERPRETED_BY",
+    "CONTRASTS_WITH",
+    "EXCEPTION_TO",
+    "TESTED_BY",
+    "REQUIRED_TO_SOLVE",
+    "CO_OCCURS_WITH",
+    "CHANGED_TO",
+    "RENAMED_TO",
+    "SPLIT_INTO",
+    "MERGED_INTO",
+    "TRANSFORMS_TO",
+    "SUPPORTED_BY",
+    "RELATED_REFERENCE"
+  ],
+  "logicalRecords": [
+    "source_document",
+    "source_locator",
+    "rights_manifest",
+    "norm_version",
+    "exam_regime",
+    "scope_node",
+    "scope_edge",
+    "scope_label",
+    "exam_question",
+    "question_unit",
+    "option_proposition",
+    "historical_answer_binding",
+    "version_crosswalk",
+    "priority_snapshot",
+    "review_log",
+    "graph_build_snapshot"
+  ],
+  "historicalAnswerContract": {
+    "preserveAnswerAsExamined": true,
+    "preserveAnswerAsOfTargetDate": true,
+    "overwriteHistoricalAnswer": false,
+    "effectiveIntervalRequired": true,
+    "promulgationAndEffectiveDateSeparated": true
+  },
+  "firstBuildOrder": [
+    {
+      "workId": "VESG-0",
+      "alias": "ACC-0A",
+      "name": "authority_source_rights_and_root_taxonomy",
+      "window": null,
+      "minimumUnit": "source_and_scope_leaf"
+    },
+    {
+      "workId": "VESG-1",
+      "alias": "ACC-1P",
+      "name": "second_stage_appraisal_practice",
+      "window": "2013-2026",
+      "minimumUnit": "question_subquestion_points_procedure_step"
+    },
+    {
+      "workId": "VESG-2",
+      "alias": "ACC-1TL",
+      "name": "second_stage_theory_and_compensation_law",
+      "window": "2013-2026",
+      "minimumUnit": "question_subquestion_points_command_issue_application"
+    },
+    {
+      "workId": "VESG-3",
+      "alias": "ACC-1F",
+      "name": "first_stage_all_subjects",
+      "window": "2016-2026",
+      "minimumUnit": "question_option_proposition_exact_error_point"
+    },
+    {
+      "workId": "VESG-4",
+      "alias": "ACC-2",
+      "name": "current_norm_closure_and_version_crosswalk",
+      "window": "target_exam_date",
+      "minimumUnit": "norm_version"
+    },
+    {
+      "workId": "VESG-5",
+      "alias": "ACC-5P",
+      "name": "unobserved_one_hop_priority_and_backtest",
+      "window": "walk_forward",
+      "minimumUnit": "scope_node_priority_snapshot"
+    },
+    {
+      "workId": "VESG-6",
+      "name": "read_adapters",
+      "window": null,
+      "minimumUnit": "validated_snapshot"
+    },
+    {
+      "workId": "VESG-7",
+      "name": "owner_private_evaluation",
+      "window": null,
+      "minimumUnit": "rights_cleared_fixture"
+    }
+  ],
+  "questionDecomposition": {
+    "secondStagePractice": [
+      "exam",
+      "question",
+      "subquestion",
+      "points",
+      "required_judgment_or_calculation",
+      "procedure_step",
+      "object",
+      "purpose",
+      "method",
+      "condition",
+      "norm_snapshot"
+    ],
+    "secondStageTheory": [
+      "exam",
+      "question",
+      "subquestion",
+      "points",
+      "concept",
+      "command_verb",
+      "comparison_target",
+      "practical_linkage",
+      "critique_or_improvement"
+    ],
+    "secondStageLaw": [
+      "exam",
+      "question",
+      "subquestion",
+      "points",
+      "statute_article",
+      "issue",
+      "doctrine",
+      "decisive_case_facts",
+      "application",
+      "conclusion",
+      "remedy"
+    ],
+    "firstStage": [
+      "exam",
+      "question",
+      "option",
+      "independent_proposition",
+      "truth_as_examined",
+      "exact_error_point",
+      "governing_norm_or_formula",
+      "truth_as_target_date",
+      "trap_type"
+    ]
+  },
+  "adjacencyPolicy": {
+    "defaultMaximumHops": 1,
+    "twoOrMoreHopsRequiresOneOf": [
+      "verified_co_occurrence",
+      "same_official_rule_direct_link",
+      "required_prerequisite",
+      "authoritative_case_or_standard_link"
+    ],
+    "modelCandidateLearnerVisible": false
+  },
+  "priorityModel": {
+    "meaning": "learning_time_allocation_not_exam_probability",
+    "initialWeights": {
+      "regimeAdjustedFrequency": 0.25,
+      "markOrOptionExposure": 0.2,
+      "recency": 0.15,
+      "graphCentrality": 0.15,
+      "officialAnswerOrGradingEmphasis": 0.1,
+      "changeRisk": 0.1,
+      "reviewedTransformability": 0.05
+    },
+    "initialHalfLifeYears": {
+      "firstStage": 5,
+      "secondStage": 8
+    },
+    "initialRegimeWeights": {
+      "current": 1.0,
+      "transition": 0.65,
+      "historical": 0.25
+    },
+    "officialNodeMinimumTier": "C",
+    "learnerFacingProbabilityClaimsAllowed": false,
+    "walkForwardBacktestRequired": true,
+    "futureDataLeakageAllowed": false
+  },
+  "hardGates": {
+    "orphanExamQuestion": 0,
+    "unallocatedSecondStagePoints": 0,
+    "unsegmentedFirstStageOption": 0,
+    "officialNodeWithoutSource": 0,
+    "currentAnswerWithoutNormVersion": 0,
+    "changedAnswerNotFlagged": 0,
+    "futureNormAppliedEarly": 0,
+    "crossRegimeLinkWithoutCrosswalk": 0,
+    "officialNodeBelowMinimumTier": 0,
+    "unreviewedModelCandidateVisible": 0,
+    "futureDataLeakageInBacktest": 0,
+    "unclearedRawTextInSharedGraph": 0,
+    "priorityPresentedAsProbability": 0
+  },
+  "releaseStates": [
+    "DRAFT",
+    "SOURCE_VERIFIED",
+    "SUBJECT_REVIEWED",
+    "NORM_BOUND",
+    "BACKTESTED",
+    "OWNER_PRIVATE_READY",
+    "BLOCKED"
+  ],
+  "compatibility": {
+    "preserveQuestionReference": true,
+    "freeTextTagsRemainSearchOnly": true,
+    "preserveV11SourceSafety": true,
+    "preserveV12CoverageCompiler": true,
+    "firstStageCorpusDoesNotAuthorizeRuntime": true,
+    "bookTutorTransientSourceAutoPromotion": false
+  }
+}
