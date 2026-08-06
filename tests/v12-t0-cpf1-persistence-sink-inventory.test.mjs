@@ -5,14 +5,22 @@ import test from "node:test";
 const read = (path) => fs.readFileSync(path, "utf8");
 const inventory = JSON.parse(read("config/dabangil-cpf1-persistence-sink-inventory-v1.json"));
 const safety = JSON.parse(read("config/dabangil-ephemeral-source-safety-contract-v1.json"));
+const v13 = JSON.parse(read("config/dabangil-exam-digital-twin-portable-core-v1.json"));
 const activePlan = read("docs/strategy/ACTIVE-MASTER-PLAN.md");
 const roadmap = read("roadmap/active-program.yml");
 const evidence = read("docs/qa/v12-t0-cpf1-persistence-sink-inventory-2026-08-06.md");
+const validationRecord = read(
+  "docs/qa/master-plan-v13-exam-digital-twin-portability-validation.md",
+);
+const v12MasterPlan =
+  "docs/strategy/dabangil-professional-exam-reasoning-os-final-master-plan-v12-2026-08-06.md";
+const v13MasterPlan =
+  "docs/strategy/dabangil-professional-exam-reasoning-os-final-master-plan-v13-2026-08-06.md";
 
 test("V13 inherits V12-T0 and keeps CPF-1 fail-closed", () => {
   assert.equal(
     safety.activeMasterPlan,
-    "docs/strategy/dabangil-professional-exam-reasoning-os-final-master-plan-v13-2026-08-06.md",
+    v13MasterPlan,
   );
   assert.equal(
     safety.sourceSafetyAnnex,
@@ -20,7 +28,7 @@ test("V13 inherits V12-T0 and keeps CPF-1 fail-closed", () => {
   );
   assert.equal(
     inventory.authority.activeMasterPlan,
-    "docs/strategy/dabangil-professional-exam-reasoning-os-final-master-plan-v12-2026-08-06.md",
+    v12MasterPlan,
   );
   assert.equal(safety.cpf1Inventory.complete, false);
   assert.match(
@@ -39,6 +47,58 @@ test("V13 inherits V12-T0 and keeps CPF-1 fail-closed", () => {
   assert.equal(inventory.verdict.cpf1Complete, false);
   assert.equal(inventory.verdict.status, "blocked_unknown_reachable_sinks");
   assert.ok(inventory.unresolvedUnknowns.length > 0);
+});
+
+test("V13 validation records the authorized roadmap pointer transition", () => {
+  assert.match(validationRecord, /### Core V13 artifacts \(seven\)/);
+  assert.match(
+    validationRecord,
+    /### Inherited CPF\/control-plane reconciliation artifacts \(four\)/,
+  );
+  assert.match(validationRecord, /`roadmap\/active-program\.yml`/);
+  assert.ok(
+    validationRecord.includes("V12 activeMasterPlan → V13 activeMasterPlan"),
+  );
+  assert.ok(validationRecord.includes(`from \`${v12MasterPlan}\`;`));
+  assert.ok(validationRecord.includes(`to \`${v13MasterPlan}\`.`));
+  assert.doesNotMatch(
+    validationRecord,
+    /no changed artifact mutates roadmap/i,
+  );
+  assert.match(
+    validationRecord,
+    /All non-pointer roadmap status, dependency,[\s\S]*WIP and CPF fields remain unchanged/,
+  );
+  assert.match(
+    validationRecord,
+    /No implementation, application, runtime,[\s\S]*Production change is included or authorized\./,
+  );
+  assert.match(
+    roadmap,
+    /activeMasterPlan: docs\/strategy\/dabangil-professional-exam-reasoning-os-final-master-plan-v13-2026-08-06\.md/,
+  );
+  const cpf1Roadmap = roadmap.match(
+    /  - id: CPF-1[\s\S]*?(?=\n  - id: |\s*$)/,
+  );
+  assert.ok(cpf1Roadmap);
+  assert.match(cpf1Roadmap[0], /status: blocked/);
+  assert.match(cpf1Roadmap[0], /executionState: blocked_unknown_reachable_sinks/);
+  assert.match(cpf1Roadmap[0], /cpf1Complete: false/);
+  assert.match(cpf1Roadmap[0], /confirmedViolationCount: 16/);
+  assert.match(cpf1Roadmap[0], /unresolvedUnknownCount: 7/);
+  assert.equal(inventory.verdict.cpf1Complete, false);
+  assert.equal(inventory.verdict.status, "blocked_unknown_reachable_sinks");
+  assert.equal(inventory.verdict.confirmedViolationCount, 16);
+  assert.equal(inventory.verdict.unresolvedUnknownCount, 7);
+  assert.equal(inventory.confirmedViolations.length, 16);
+  assert.equal(inventory.unresolvedUnknowns.length, 7);
+  for (const [flag, value] of Object.entries(v13.authorizationBoundary)) {
+    assert.equal(value, false, `authorizationBoundary.${flag}`);
+  }
+  assert.equal(inventory.scope.persistenceBehaviorChanged, false);
+  assert.equal(inventory.scope.migrationsApplied, false);
+  assert.equal(inventory.scope.liveServicesCalled, false);
+  assert.equal(inventory.scope.production, false);
 });
 
 test("every sink carries the mandatory trace and behavior fields", () => {
