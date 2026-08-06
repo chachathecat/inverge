@@ -1,0 +1,741 @@
+{
+  "schema": "dabangil_appraiser_coverage_engine_v1",
+  "version": "1.0.0",
+  "dated": "2026-08-06 KST",
+  "status": "proposed_non_authoritative",
+  "strategyCoverageScope": {
+    "exam": "Korean Certified Appraiser",
+    "stages": ["first", "second"],
+    "subjects": [
+      "civil_law",
+      "economics",
+      "real_estate_studies",
+      "appraisal_related_law",
+      "accounting",
+      "appraisal_practice",
+      "appraisal_theory",
+      "appraisal_compensation_law"
+    ]
+  },
+  "runtimeBoundary": {
+    "currentLearnerFacingScope": [
+      "appraisal_practice",
+      "appraisal_theory",
+      "appraisal_compensation_law"
+    ],
+    "firstStageRuntimeAuthorized": false,
+    "schemaAuthorized": false,
+    "providerAuthorized": false,
+    "deploymentAuthorized": false,
+    "productionAuthorized": false,
+    "realThirdPartySourceAuthorized": false
+  },
+  "activeDocuments": {
+    "masterPlan": "docs/strategy/dabangil-professional-exam-reasoning-os-final-master-plan-v12-2026-08-06.md",
+    "coverageSpec": "docs/strategy/dabangil-appraiser-coverage-compiler-and-original-question-engine-v1-2026-08-06.md",
+    "ownerDecision": "docs/decisions/2026-08-06-owner-appraiser-coverage-and-original-question-engine.md",
+    "sourceSafetyContract": "config/dabangil-ephemeral-source-safety-contract-v1.json"
+  },
+  "coverageDefinition": {
+    "futureExamPredictionGuarantee": false,
+    "boundedCompletenessAxes": [
+      "official_scope",
+      "official_past_questions",
+      "current_law_accounting_and_standards",
+      "prerequisite_and_transfer",
+      "question_family_and_evidence"
+    ],
+    "completeRequiresEveryAxis": true,
+    "marketingClaimsBlocked": [
+      "guaranteed_question",
+      "one_hundred_percent_hit_rate",
+      "study_only_this",
+      "official_model_answer",
+      "official_grading_criteria",
+      "guaranteed_pass"
+    ]
+  },
+  "sourcePrecedence": [
+    "exam_date_current_statute_regulation_accounting_standard",
+    "current_exam_subject_annex",
+    "current_qnet_exam_plan_and_corrections",
+    "official_detailed_scope",
+    "official_past_question_and_final_answer_at_historical_effective_date",
+    "current_official_appraisal_rules_and_practice_standard",
+    "owned_prerequisite_and_transfer_curriculum"
+  ],
+  "sourceClasses": [
+    "current_statute_or_regulation",
+    "current_accounting_standard",
+    "current_official_exam_plan",
+    "current_exam_subject_annex",
+    "official_scope_document",
+    "official_past_question",
+    "official_final_answer",
+    "official_practice_standard",
+    "binding_case_or_authoritative_interpretation",
+    "owned_curriculum",
+    "licensed_curriculum",
+    "inferred_prerequisite",
+    "watch_material"
+  ],
+  "conceptPriorityValues": [
+    "foundation",
+    "recurrent",
+    "rotation",
+    "bridge",
+    "watch",
+    "retired"
+  ],
+  "conceptNodeRequiredFields": [
+    "conceptId",
+    "stage",
+    "subjectId",
+    "officialDomainId",
+    "familyId",
+    "labelKo",
+    "parentConceptIds",
+    "prerequisiteConceptIds",
+    "transferTargetConceptIds",
+    "priority",
+    "officialScopeRefs",
+    "authorityRefs",
+    "pastQuestionRefs",
+    "mustKnowClaims",
+    "mustDoSkills",
+    "misconceptionCodes",
+    "questionFamilyIds",
+    "verifierIds",
+    "masteryGateId",
+    "rightsClass",
+    "releaseStatus"
+  ],
+  "atomicExpansionDimensions": [
+    "definition",
+    "classification",
+    "conditions",
+    "basis",
+    "procedure",
+    "exception",
+    "comparison",
+    "calculation_or_application",
+    "common_trap",
+    "reverse_reasoning",
+    "transfer",
+    "exam_compression"
+  ],
+  "subjectRegistry": {
+    "civil_law": {
+      "stage": "first",
+      "officialDomains": ["general_part", "real_rights"],
+      "coverageFamilies": [
+        "civil_basic_structure",
+        "natural_person",
+        "juridical_person_and_unincorporated_association",
+        "object_of_rights",
+        "juridical_act_general",
+        "purpose_and_validity",
+        "declaration_of_intent",
+        "agency",
+        "invalidity_cancellation_ratification",
+        "condition_term_period",
+        "extinctive_prescription",
+        "real_rights_general",
+        "change_and_publicity_of_real_rights",
+        "possession",
+        "ownership_and_neighbor_relations",
+        "acquisitive_prescription",
+        "co_ownership",
+        "accession_mixture_processing",
+        "superficies",
+        "easement",
+        "chonsegwon",
+        "right_of_retention",
+        "pledge",
+        "mortgage",
+        "floating_and_joint_mortgage"
+      ],
+      "verifiers": ["civil_relation_solver", "single_correct_answer_validator"]
+    },
+    "economics": {
+      "stage": "first",
+      "officialDomains": ["microeconomics", "macroeconomics", "international_economics"],
+      "coverageFamilies": [
+        "demand_supply",
+        "elasticity",
+        "consumer_choice",
+        "production",
+        "cost",
+        "perfect_competition",
+        "monopoly",
+        "monopolistic_competition_oligopoly",
+        "game_theory",
+        "factor_market_distribution",
+        "general_equilibrium_welfare",
+        "market_failure_public_information",
+        "national_income_accounting",
+        "income_determination",
+        "consumption_saving",
+        "investment",
+        "money_banking",
+        "is_lm",
+        "ad_as",
+        "unemployment_inflation",
+        "macroeconomic_policy",
+        "business_cycle",
+        "growth_development",
+        "international_trade",
+        "international_finance_open_economy"
+      ],
+      "verifiers": [
+        "micro_equilibrium_solver",
+        "macro_identity_solver",
+        "graph_statement_consistency_validator",
+        "single_correct_answer_validator"
+      ]
+    },
+    "real_estate_studies": {
+      "stage": "first",
+      "officialDomains": [
+        "general",
+        "economy",
+        "market",
+        "policy",
+        "investment",
+        "finance",
+        "development_and_management",
+        "brokerage",
+        "taxation",
+        "rights_analysis",
+        "appraisal"
+      ],
+      "coverageFamilies": [
+        "real_estate_concept_classification",
+        "real_estate_characteristics",
+        "real_estate_economy",
+        "real_estate_market",
+        "real_estate_policy",
+        "time_value_of_money",
+        "investment_analysis",
+        "mortgage_finance",
+        "securitization_indirect_investment",
+        "development",
+        "management",
+        "brokerage",
+        "taxation",
+        "rights_analysis",
+        "appraisal_foundations"
+      ],
+      "verifiers": [
+        "real_estate_finance_solver",
+        "policy_direction_validator",
+        "single_correct_answer_validator"
+      ]
+    },
+    "appraisal_related_law": {
+      "stage": "first",
+      "officialDomains": [
+        "national_land_planning_act",
+        "appraisal_act",
+        "real_estate_price_public_notice_act",
+        "state_property_act",
+        "building_act",
+        "spatial_information_act_cadastral",
+        "real_estate_registration_act",
+        "movable_and_receivables_security_act",
+        "urban_redevelopment_act"
+      ],
+      "coverageFamilies": [
+        "planning_system",
+        "zoning_and_districts",
+        "urban_planning_facilities",
+        "district_unit_plan",
+        "development_permission",
+        "land_transaction_permission",
+        "appraisal_definition_duties",
+        "appraisal_request_recommendation_report",
+        "appraiser_registration_and_entities",
+        "appraisal_ethics_discipline_liability",
+        "standard_land_and_individual_land_price",
+        "housing_price_public_notice",
+        "public_notice_objection_correction",
+        "state_property_classification",
+        "state_property_use_lease_disposal",
+        "building_permission_site_road",
+        "building_ratio_height_use_change",
+        "building_enforcement",
+        "cadastral_registration_records",
+        "land_movement_and_survey",
+        "registration_general_and_application",
+        "ownership_and_limited_right_registration",
+        "provisional_correction_cancellation_registration",
+        "sectional_building_registration",
+        "movable_receivable_security_creation_priority_enforcement",
+        "redevelopment_plan_zone_association",
+        "redevelopment_implementation_management_disposition"
+      ],
+      "effectiveDateRequired": true,
+      "verifiers": [
+        "current_statute_assertion_solver",
+        "effective_date_validator",
+        "single_correct_answer_validator"
+      ]
+    },
+    "accounting": {
+      "stage": "first",
+      "officialDomains": [
+        "intermediate_financial_accounting",
+        "advanced_financial_accounting",
+        "cost_accounting",
+        "management_accounting"
+      ],
+      "coverageFamilies": [
+        "conceptual_framework",
+        "financial_statement_presentation",
+        "cash_receivables",
+        "inventory",
+        "property_plant_equipment",
+        "borrowing_costs",
+        "investment_property",
+        "intangible_assets",
+        "impairment",
+        "financial_instruments",
+        "bonds_and_effective_interest",
+        "provisions_contingencies",
+        "employee_benefits_basic",
+        "equity",
+        "revenue",
+        "leases",
+        "income_taxes",
+        "earnings_per_share",
+        "cash_flow_statement",
+        "accounting_changes_errors",
+        "events_after_reporting_period",
+        "foreign_currency",
+        "business_combinations",
+        "consolidation",
+        "internal_transaction_elimination",
+        "non_controlling_interests",
+        "equity_method",
+        "joint_arrangements",
+        "derivatives_hedging_basic",
+        "cost_concepts_flow",
+        "job_order_costing",
+        "process_costing",
+        "joint_cost_byproducts",
+        "normal_costing",
+        "activity_based_costing",
+        "variable_absorption_costing",
+        "standard_cost_variance",
+        "cvp",
+        "relevant_cost_decisions",
+        "product_mix_constraints",
+        "capital_budgeting",
+        "budgets",
+        "responsibility_performance",
+        "transfer_pricing"
+      ],
+      "effectiveDateRequired": true,
+      "verifiers": [
+        "kifrs_rollforward_solver",
+        "journal_balance_validator",
+        "financial_statement_linkage_validator",
+        "cost_flow_validator",
+        "single_correct_answer_validator"
+      ]
+    },
+    "appraisal_practice": {
+      "stage": "second",
+      "officialDomains": [
+        "foundation",
+        "property_specific_land",
+        "property_specific_building",
+        "property_specific_rights",
+        "purpose_collateral",
+        "purpose_compensation",
+        "purpose_auction_litigation",
+        "purpose_public_notice",
+        "application_advisory_review"
+      ],
+      "coverageFamilies": [
+        "common_valuation_frame",
+        "comparison_approach",
+        "cost_approach",
+        "income_approach",
+        "land_valuation",
+        "building_valuation",
+        "complex_property",
+        "sectional_property",
+        "rights_valuation",
+        "rent_valuation",
+        "compensation_valuation",
+        "purpose_specific_valuation",
+        "exam_execution"
+      ],
+      "verifiers": [
+        "practice_valuation_solver",
+        "unit_rounding_validator",
+        "table_total_validator",
+        "method_selection_validator",
+        "rubric_coverage_validator"
+      ]
+    },
+    "appraisal_theory": {
+      "stage": "second",
+      "officialDomains": [
+        "valuation_principles",
+        "comparison_approach",
+        "cost_approach",
+        "income_approach",
+        "other_approaches",
+        "property_application",
+        "purpose_application"
+      ],
+      "coverageFamilies": [
+        "value_price_cost",
+        "real_estate_market_characteristics",
+        "value_principles",
+        "valuation_process",
+        "comparison_theory",
+        "cost_theory",
+        "income_theory",
+        "highest_and_best_use",
+        "reconciliation",
+        "property_purpose_application",
+        "public_notice_mass_appraisal",
+        "profession_ethics_quality_ai"
+      ],
+      "verifiers": [
+        "theory_rubric_coverage_validator",
+        "requirement_verb_validator",
+        "comparison_balance_validator",
+        "reference_answer_disclaimer_validator"
+      ]
+    },
+    "appraisal_compensation_law": {
+      "stage": "second",
+      "officialDomains": [
+        "real_estate_price_public_notice_act",
+        "appraisal_act",
+        "land_compensation_act",
+        "administrative_law_prerequisite"
+      ],
+      "coverageFamilies": [
+        "administrative_law_principles",
+        "administrative_act_discretion_condition",
+        "defect_invalidity_revocation",
+        "administrative_procedure",
+        "disposition_standing_interest_period",
+        "revocation_invalidity_party_litigation",
+        "suspension_administrative_appeal",
+        "state_compensation_loss_compensation",
+        "public_notice_land_housing_procedure",
+        "public_notice_objection_litigation",
+        "appraisal_act_duties_entities_report",
+        "appraisal_act_review_discipline_liability",
+        "public_project_project_approval",
+        "agreement_expropriation_adjudication",
+        "compensation_principles",
+        "land_building_fixture_compensation",
+        "business_agriculture_residence_loss",
+        "relocation_measures",
+        "remaining_land_and_outside_loss",
+        "development_benefit_and_public_restrictions",
+        "repurchase_right",
+        "adjudication_revocation_and_compensation_increase_litigation"
+      ],
+      "effectiveDateRequired": true,
+      "verifiers": [
+        "admin_law_issue_action_validator",
+        "current_statute_assertion_solver",
+        "case_status_validator",
+        "rubric_coverage_validator",
+        "reference_answer_disclaimer_validator"
+      ]
+    }
+  },
+  "bridgeRegistry": [
+    {
+      "bridgeId": "BRIDGE.CIVIL.RIGHTS_TO_PRACTICE",
+      "from": ["civil_law", "appraisal_related_law"],
+      "to": ["appraisal_practice", "appraisal_compensation_law"],
+      "topics": ["real_rights", "registration", "security_rights", "rights_valuation"]
+    },
+    {
+      "bridgeId": "BRIDGE.ECONOMICS_TO_MARKET_THEORY",
+      "from": ["economics", "real_estate_studies"],
+      "to": ["appraisal_theory", "appraisal_practice"],
+      "topics": ["demand_supply", "rent", "welfare", "market_analysis"]
+    },
+    {
+      "bridgeId": "BRIDGE.FINANCE_TO_INCOME_APPROACH",
+      "from": ["economics", "real_estate_studies", "accounting"],
+      "to": ["appraisal_practice", "appraisal_theory"],
+      "topics": ["present_value", "cash_flow", "risk", "capitalization"]
+    },
+    {
+      "bridgeId": "BRIDGE.APPRAISAL_FOUNDATION_TO_SECOND_STAGE",
+      "from": ["real_estate_studies"],
+      "to": ["appraisal_practice", "appraisal_theory"],
+      "topics": ["value_principles", "highest_and_best_use", "three_approaches"]
+    },
+    {
+      "bridgeId": "BRIDGE.LAW_TO_COMPENSATION",
+      "from": ["appraisal_related_law"],
+      "to": ["appraisal_compensation_law", "appraisal_practice"],
+      "topics": ["appraisal_act", "public_notice", "planning_building_cadastral"]
+    }
+  ],
+  "questionFamilyRegistry": {
+    "first": [
+      "definition_discrimination",
+      "exact_rule_true_false",
+      "single_calculation",
+      "graph_statement_matching",
+      "condition_exception",
+      "multi_party_relation",
+      "two_concept_integration",
+      "misconception_distractor",
+      "reverse_question",
+      "timed_mixed_set",
+      "currentness_delta",
+      "confidence_calibration"
+    ],
+    "practice": [
+      "formula_recall",
+      "single_calculation",
+      "table_completion",
+      "missing_data_inference",
+      "wrong_solution_diagnosis",
+      "reverse_calculation",
+      "method_selection",
+      "twenty_five_point_case",
+      "fifty_point_mixed_case",
+      "one_hundred_point_full_case",
+      "changed_assumption_transfer",
+      "time_compression"
+    ],
+    "theory": [
+      "definition",
+      "why_chain",
+      "principle_to_method",
+      "compare_contrast",
+      "limitation_critique",
+      "property_application",
+      "purpose_application",
+      "bounded_current_issue",
+      "twenty_five_point_outline",
+      "fifty_point_answer",
+      "one_hundred_point_integration",
+      "repair_rewrite"
+    ],
+    "law": [
+      "single_issue_spotting",
+      "provision_case_distinction",
+      "procedure_timeline",
+      "standing_action_form",
+      "outline_only",
+      "application_paragraph_only",
+      "wrong_answer_correction",
+      "multi_party_multi_issue",
+      "twenty_five_point_case",
+      "fifty_point_case",
+      "one_hundred_point_integration",
+      "law_amendment_delta"
+    ]
+  },
+  "difficultyVectorFields": [
+    "prerequisiteDepth",
+    "operationCount",
+    "distractorSimilarity",
+    "dataNoise",
+    "representationShift",
+    "integrationBreadth",
+    "timePressureClass"
+  ],
+  "generationPipeline": [
+    "planner",
+    "candidate_generator",
+    "deterministic_solver_or_rubric_validator",
+    "adversarial_critic",
+    "rights_non_reconstruction_scan",
+    "release_gateway"
+  ],
+  "generatorInputsAllowed": [
+    "validated_concept_graph",
+    "owned_curriculum",
+    "official_permitted_calibration_metadata",
+    "current_authority_snapshot",
+    "difficulty_policy",
+    "misconception_policy",
+    "learner_private_closed_mastery_state"
+  ],
+  "generatorInputsBlocked": [
+    "unlicensed_commercial_textbook_raw_source",
+    "user_transient_raw_source",
+    "publisher_answer_key_expression",
+    "cross_user_source_cache",
+    "unknown_rights_corpus"
+  ],
+  "masteryStates": [
+    "unseen",
+    "exposed",
+    "recognized",
+    "explained",
+    "applied_assisted",
+    "applied_independent",
+    "transferred_near",
+    "transferred_far",
+    "recovered_d7",
+    "integrated_timed",
+    "stale"
+  ],
+  "masteryRules": {
+    "answerExposureCountsAsMastery": false,
+    "guidedSuccessCountsAsIndependent": false,
+    "stableCandidateRequiresD7UnseenVerifiedTransfer": true,
+    "sameTemplateVariantCountsAsFarTransfer": false,
+    "timedIntegrationRequiresPrerequisiteClearance": true
+  },
+  "bookTutorBridge": {
+    "processingUnit": "one_problem_per_ephemeral_job",
+    "sameLearnerMayStudyEntireBookSequentially": true,
+    "wholeBookOrPdfIngest": false,
+    "sharedCorpusPromotion": false,
+    "sourceBoundAnswerCache": false,
+    "persistentOutputsAllowed": [
+      "source_scrubbed_learner_answer",
+      "closed_concept_ids",
+      "closed_misconception_codes",
+      "assistance_exposure",
+      "repair_kind",
+      "next_action",
+      "bodyless_receipt"
+    ],
+    "persistentOutputsBlocked": [
+      "raw_image",
+      "ocr_text",
+      "publisher_expression",
+      "reconstructable_problem_data",
+      "source_bound_full_solution",
+      "source_embedding",
+      "rag_record",
+      "training_or_eval_record"
+    ],
+    "unknownConceptPromotionPath": [
+      "private_candidate",
+      "independent_official_or_owned_research",
+      "independent_definition",
+      "rights_scan",
+      "validator",
+      "separate_release"
+    ]
+  },
+  "pastQuestionCalibration": {
+    "purpose": [
+      "question_verb",
+      "item_and_score_structure",
+      "data_volume",
+      "distractor_difficulty",
+      "concept_combination",
+      "answer_length",
+      "time_pressure",
+      "historical_effective_date"
+    ],
+    "verbatimGenerationSeed": false,
+    "itemLevelRightsManifestRequired": true,
+    "historicalAndCurrentAnswerSeparated": true,
+    "selectedWindowMappingRequired": true
+  },
+  "driftTriggers": [
+    "exam_subject_annex_change",
+    "qnet_exam_plan_or_correction",
+    "statute_regulation_rule_change",
+    "appraisal_practice_standard_change",
+    "kifrs_effective_standard_change",
+    "binding_case_status_change",
+    "official_final_answer_change"
+  ],
+  "driftActions": {
+    "metadata": "record_only",
+    "answer_may_change": "hold_questions",
+    "answer_changed": "hold_domain",
+    "scope_changed": "block_subject_release"
+  },
+  "coverageHardGates": {
+    "officialDomainUnmapped": 0,
+    "selectedWindowPastQuestionUnmapped": 0,
+    "activeLawAccountingCurrentnessUnknown": 0,
+    "releasedConceptWithoutAuthority": 0,
+    "releasedConceptWithoutQuestionFamily": 0,
+    "releasedQuestionWithoutVerifier": 0,
+    "multipleCorrectAnswerDefects": 0,
+    "noCorrectAnswerDefects": 0,
+    "calculationOrUnitInconsistencies": 0,
+    "rubricCriticalIssueOmissions": 0,
+    "sourceExpressionReconstructionFindings": 0,
+    "userTransientSourceSharedCorpusEntries": 0,
+    "generatedAnswerLabelledOfficial": 0,
+    "heldOutTransferContamination": 0
+  },
+  "schedulerRules": {
+    "maxPrimaryTasksPerDay": 3,
+    "priorityInputs": [
+      "prerequisite_blockage",
+      "official_priority",
+      "exam_proximity",
+      "forgetting_risk",
+      "error_severity",
+      "transfer_deficit",
+      "time_cost",
+      "subject_balance"
+    ],
+    "initialMix": {
+      "foundationRepair": 0.4,
+      "currentWeakConcept": 0.25,
+      "mixedCumulative": 0.15,
+      "farTransfer": 0.1,
+      "confidenceOrDrift": 0.1
+    },
+    "learnerDataModelFittingAuthorized": false
+  },
+  "releaseEvidenceRequired": [
+    "source_manifest",
+    "coverage_report",
+    "concept_inventory_and_gaps",
+    "past_question_mapping_report",
+    "currentness_report",
+    "question_family_inventory",
+    "solver_and_verifier_results",
+    "rights_scan",
+    "held_out_transfer_evidence",
+    "known_limitations",
+    "rollback_or_hold_procedure"
+  ],
+  "executionSequence": [
+    "ACC_0_authority_source_rights_freeze",
+    "ACC_1_official_scope_normalizer",
+    "ACC_2_current_law_kifrs_practice_standard_registry",
+    "ACC_3_first_stage_concept_seed",
+    "ACC_4_second_stage_concept_seed_and_bridges",
+    "ACC_5_official_past_question_mapper",
+    "ACC_6_question_family_templates",
+    "ACC_7_solvers_and_rubric_validators",
+    "ACC_8_rights_non_reconstruction_scanner",
+    "ACC_9_mastery_and_scheduler_adapter",
+    "ACC_10_private_book_tutor_concept_resolver",
+    "ACC_11_hostile_synthetic_acceptance",
+    "ACC_12_owner_private_rights_cleared_dogfood",
+    "ACC_13_separate_activation_decision"
+  ],
+  "interpretation": {
+    "completeCoverageEqualsFuturePrediction": false,
+    "recentFrequencyCanDeleteOfficialRotationArea": false,
+    "officialPastQuestionMayBeCopiedWithoutRightsReview": false,
+    "generatedReferenceIsOfficialAnswer": false,
+    "answerExposureIsMastery": false,
+    "bookTutorSourceMayEnterSharedGeneratorCorpus": false,
+    "runtimeImplementationAuthorizedByThisFile": false,
+    "currentSourcesMustBeRecheckedBeforeRelease": true
+  }
+}
