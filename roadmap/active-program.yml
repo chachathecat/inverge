@@ -323,7 +323,37 @@ items:
     priority: 34
   - id: S236P
     title: Private Authoring Review Plane Provisioning and Synthetic Receipt Acceptance
-    status: queued
+    status: blocked
+    executionState: acceptance_blocked
+    acceptanceCompleted: false
+    targetCompletionScope: live_synthetic_owner_private_acceptance
+    evidence: docs/qa/s236p-lean-owner-private-acceptance.md
+    provisionedProjectName: inverge-beta
+    provisionedProjectRef: vajcduseyicjhyhrclax
+    provisionedResources: [storage.bucket.s236p-owner-private-v1, public.s236p_owner_private_objects]
+    persistentEventLogMode: none
+    signedAccessEnabled: false
+    migrationContract: live_ledger_aligned_exact_quadruple
+    migrationSourceReconciliationState: live_applied_source_reconciled
+    latestLiveRunId: 5ae4a46e-b254-4b04-8181-35f3a720c148
+    latestLiveAttemptState: failed_no_rerun_pending_independent_closure
+    latestLiveFailureCode: LIVE_NODE_RESULT_NOT_PASS
+    latestLiveAuthorityConsumed: true
+    nextLiveAttemptAuthorized: false
+    cleanupOnlyCompleted: true
+    fullResidueVectorObserved: false
+    failureClosureCountState: unavailable_fail_closed
+    failureClosureCanaryPrefixScanCompleted: true
+    failureClosureCanarySurfaceCount: 8
+    failureClosureCanaryPrefixMatchCount: 0
+    independentCrossSurfaceCanaryCompleted: false
+    independentFailureClosureCompleted: false
+    terminalPass: false
+    publishableKeyHttpAcceptanceCompleted: false
+    forwardDisableRunbook: docs/qa/s236p-lean-owner-private-acceptance.md
+    realContentAuthorized: false
+    productionAuthorized: false
+    downstreamExecutionStarted: false
     dependencies: [O4V]
     lockGroup: private-plane-provisioning
     risk: high
@@ -331,6 +361,7 @@ items:
   - id: S236A
     title: Second-Round Owner-Private Golden 3
     status: queued
+    executionState: unstarted
     dependencies: [O3A, S236P]
     lockGroup: second-golden-private
     risk: high

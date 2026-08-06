@@ -10,6 +10,8 @@ import { runtimeRequiredPathRecords } from "./runtime-risk-contract.mjs";
 
 export const RUNTIME_EVIDENCE_SCHEMA_VERSION = "inverge.runtime_evidence.v2";
 export const RUNTIME_EVIDENCE_PRODUCER_VERSION = "s233r.postgres.s233a.v1";
+export const S236P_RUNTIME_EVIDENCE_PRODUCER_VERSION =
+  "s236p.postgres.owner-private.v5";
 export const RUNTIME_EVIDENCE_ASSERTION_IDS = Object.freeze([
   "migration_prerequisites_and_target_applied",
   "learner_rls_two_user_isolation",
@@ -23,6 +25,31 @@ export const RUNTIME_EVIDENCE_ASSERTION_IDS = Object.freeze([
   "terminal_review_mutation_rejected",
   "queue_today_atomic_namespace_restricted",
   "cleanup_complete",
+]);
+export const S236P_RUNTIME_EVIDENCE_ASSERTION_IDS = Object.freeze([
+  "ordered_migration_quadruple_applied",
+  "owner_a_metadata_storage_create_read_delete_allowed",
+  "bidirectional_owner_rls_isolation",
+  "anonymous_access_denied",
+  "authenticated_download_info_operation_scoped",
+  "expiry_read_gate_enforced",
+  "expiry_cleanup_delete_operations_preserved",
+  "signed_access_disabled",
+  "immutable_original_append_only_revision_enforced",
+  "metadata_first_orphan_safe_delete_verified",
+  "retention_temporary_ttl_cache_delete_sla_enforced",
+  "deterministic_expiry_verified",
+  "reviewed_forward_disable_recipe_verified",
+  "provider_mode_none_and_external_calls_zero",
+  "raw_emission_and_real_content_zero",
+  "persistent_event_log_disabled",
+  "cleanup_complete",
+]);
+const S236P_MIGRATION_PATHS = Object.freeze([
+  "supabase/migrations/20260730025332_s236p_lean_owner_private.sql",
+  "supabase/migrations/20260730060233_s236p_owner_private_lifecycle_hardening.sql",
+  "supabase/migrations/20260730065744_s236p_owner_private_authenticated_download_info.sql",
+  "supabase/migrations/20260730151052_s236p_owner_private_expiry_read_gate.sql",
 ]);
 
 const TOP_LEVEL_KEYS = [
@@ -124,7 +151,7 @@ function sha256(bytes) {
   return crypto.createHash("sha256").update(bytes).digest("hex");
 }
 
-function expectedMigrationRecords(riskResult, headSha) {
+function expectedRuntimeContract(riskResult, headSha) {
   if (riskResult.changedFilesTruncated === true) {
     throw new Error("risk classification changed-files list is truncated.");
   }
@@ -134,15 +161,13 @@ function expectedMigrationRecords(riskResult, headSha) {
     .sort();
   const runtimeRequiredPaths = runtimeRequiredPathRecords(changedFiles).map(({ path: file }) => file).sort();
   if (
-    migrationPaths.length !== 1 ||
-    !/^supabase\/migrations\/\d+_s233a_answer_review_persistence\.sql$/.test(migrationPaths[0]) ||
-    runtimeRequiredPaths.length !== 1 ||
-    runtimeRequiredPaths[0] !== migrationPaths[0]
+    runtimeRequiredPaths.length !== migrationPaths.length ||
+    runtimeRequiredPaths.some((file, index) => file !== migrationPaths[index])
   ) {
     throw new Error("no closed runtime-evidence adapter supports this runtime-sensitive change set.");
   }
 
-  return migrationPaths.map((migrationPath) => {
+  const migrations = migrationPaths.map((migrationPath) => {
     let content;
     try {
       content = execFileSync("git", ["show", `${headSha}:${migrationPath}`], {
@@ -152,8 +177,93 @@ function expectedMigrationRecords(riskResult, headSha) {
     } catch {
       throw new Error(`changed migration is missing from the pull-request head: ${migrationPath}`);
     }
-    return { path: migrationPath, sha256: sha256(content) };
+    return {
+      content,
+      path: migrationPath,
+      sha256: sha256(content),
+    };
   });
+  let assertionIds;
+  let markerSets;
+  let producerVersion;
+  let markerError;
+  if (
+    migrations.length === 1 &&
+    /^supabase\/migrations\/\d+_s233a_answer_review_persistence\.sql$/.test(
+      migrations[0].path,
+    )
+  ) {
+    assertionIds = RUNTIME_EVIDENCE_ASSERTION_IDS;
+    producerVersion = RUNTIME_EVIDENCE_PRODUCER_VERSION;
+    markerSets = [[
+        "claim_s233a_answer_review_v1",
+        "transition_s233a_answer_review_v1",
+        "s233a review queue rpc insert namespace",
+        "s233a today seed rpc insert namespace",
+    ]];
+    markerError =
+      "S233A migration does not match the supported adapter contract.";
+  } else if (
+    migrations.length === S236P_MIGRATION_PATHS.length &&
+    migrations.every(
+      (migration, index) => migration.path === S236P_MIGRATION_PATHS[index],
+    )
+  ) {
+    assertionIds = S236P_RUNTIME_EVIDENCE_ASSERTION_IDS;
+    producerVersion = S236P_RUNTIME_EVIDENCE_PRODUCER_VERSION;
+    markerSets = [
+      [
+        "s236p-owner-private-v1",
+        "public.s236p_owner_private_objects",
+        "public.s236p_owner_private_events",
+        "public.s236p_authorize_signed_url_v1",
+        "public.s236p_expired_object_paths_v1",
+        "contains_real_content",
+      ],
+      [
+        "s236p_owner_private_lifecycle_hardening",
+        "parent_object_ref",
+        "revision_number",
+        "signed URL and signed-upload issuance disabled",
+        "drop table if exists public.s236p_owner_private_events",
+        "storage.allow_only_operation('storage.object.upload')",
+      ],
+      [
+        "s236p_owner_private_authenticated_download_info",
+        "object.get_authenticated_info",
+        "storage.object.get_authenticated",
+        "s236p owner private select",
+      ],
+      [
+        "s236p_owner_private_expiry_read_gate",
+        'alter policy "s236p owner private select"',
+        "metadata.content_expires_at > statement_timestamp()",
+        "metadata.temporary_expires_at > statement_timestamp()",
+        "storage.object.delete_many",
+        "Reviewed forward-disable procedure",
+      ],
+    ];
+    markerError =
+      "S236P ordered migration quadruple does not match the supported adapter contract.";
+  } else {
+    throw new Error(
+      "no closed runtime-evidence adapter supports this runtime-sensitive change set.",
+    );
+  }
+  migrations.forEach((migration, index) => {
+    const text = migration.content.toString("utf8");
+    for (const marker of markerSets[index]) {
+      if (!text.includes(marker)) throw new Error(markerError);
+    }
+  });
+  return {
+    assertionIds,
+    migrations: migrations.map(({ path: migrationPath, sha256: digest }) => ({
+      path: migrationPath,
+      sha256: digest,
+    })),
+    producerVersion,
+  };
 }
 
 export function validateRuntimeEvidence(evidence, { riskResult, riskBytes }) {
@@ -161,9 +271,6 @@ export function validateRuntimeEvidence(evidence, { riskResult, riskBytes }) {
 
   if (evidence.schemaVersion !== RUNTIME_EVIDENCE_SCHEMA_VERSION) {
     throw new Error(`runtime evidence schema must be ${RUNTIME_EVIDENCE_SCHEMA_VERSION}.`);
-  }
-  if (evidence.producerVersion !== RUNTIME_EVIDENCE_PRODUCER_VERSION) {
-    throw new Error(`runtime evidence producer must be ${RUNTIME_EVIDENCE_PRODUCER_VERSION}.`);
   }
   if (evidence.status !== "verified") throw new Error("runtime evidence status must be `verified`.");
   if (evidence.sourceLevelOnly !== false) {
@@ -201,7 +308,13 @@ export function validateRuntimeEvidence(evidence, { riskResult, riskBytes }) {
   }
 
   if (!Array.isArray(evidence.migrations)) throw new Error("runtime evidence migrations must be an array.");
-  const expectedMigrations = expectedMigrationRecords(riskResult, expectedHeadSha);
+  const expectedContract = expectedRuntimeContract(riskResult, expectedHeadSha);
+  if (evidence.producerVersion !== expectedContract.producerVersion) {
+    throw new Error(
+      `runtime evidence producer must be ${expectedContract.producerVersion}.`,
+    );
+  }
+  const expectedMigrations = expectedContract.migrations;
   if (evidence.migrations.length !== expectedMigrations.length) {
     throw new Error("runtime evidence migration set does not match the risk classification.");
   }
@@ -229,8 +342,10 @@ export function validateRuntimeEvidence(evidence, { riskResult, riskBytes }) {
     return requireString(assertion.id, `runtime evidence assertion ${index} id`);
   });
   if (
-    assertionIds.length !== RUNTIME_EVIDENCE_ASSERTION_IDS.length ||
-    assertionIds.some((id, index) => id !== RUNTIME_EVIDENCE_ASSERTION_IDS[index])
+    assertionIds.length !== expectedContract.assertionIds.length ||
+    assertionIds.some(
+      (id, index) => id !== expectedContract.assertionIds[index],
+    )
   ) {
     throw new Error("runtime evidence required assertion set is missing, duplicated, or reordered.");
   }

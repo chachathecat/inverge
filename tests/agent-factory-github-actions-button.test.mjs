@@ -277,15 +277,26 @@ test("watch_snapshot writes safe generated artifacts even when ignored input has
   assertNoUnsafeArtifactText(outputDir);
 });
 
-test("dispatcher rejects blocked S225 and documents the lean-O4V-reconciled ready set without starting work", () => {
-  const blockedOutputDir = tempDir("af006-blocked-s225");
-  const blocked = runDispatcher([
+test("dispatcher rejects blocked roadmap targets and keeps S236A unavailable", () => {
+  const blockedS225OutputDir = tempDir("af006-blocked-s225");
+  const blockedS225 = runDispatcher([
     "--mode",
     "plan_only",
     "--target",
     "S225",
     "--output-dir",
-    blockedOutputDir,
+    blockedS225OutputDir,
+    "--stdout",
+    "json",
+  ]);
+  const blockedS236POutputDir = tempDir("af006-blocked-s236p");
+  const blockedS236P = runDispatcher([
+    "--mode",
+    "plan_only",
+    "--target",
+    "S236P",
+    "--output-dir",
+    blockedS236POutputDir,
     "--stdout",
     "json",
   ]);
@@ -303,17 +314,31 @@ test("dispatcher rejects blocked S225 and documents the lean-O4V-reconciled read
   const docs = fs.readFileSync(DOC_PATH, "utf8");
   const summary = readSummary(outputDir);
 
-  assert.notEqual(blocked.status, 0);
-  assert.match(`${blocked.stdout}\n${blocked.stderr}`, /S225[\s\S]*(?:ready|blocked|dependency)/i);
+  assert.notEqual(blockedS225.status, 0);
+  assert.match(
+    `${blockedS225.stdout}\n${blockedS225.stderr}`,
+    /S225[\s\S]*(?:ready|blocked|dependency)/i,
+  );
+  assert.notEqual(blockedS236P.status, 0);
+  assert.match(
+    `${blockedS236P.stdout}\n${blockedS236P.stderr}`,
+    /S236P[\s\S]*(?:ready|blocked|dependency)/i,
+  );
   assert.equal(result.status, 0, result.stderr);
   assert.match(result.stdout, /"reportOnly": true/);
   assert.match(summary, /AF006 v1: read-only\/report-only/);
   assert.match(summary, /No branches, commits, pushes, PR updates/);
   assert.match(docs, /read-only\/report-only/);
-  assert.match(docs, /blocked S225 target must\s+fail closed/i);
-  assert.match(docs, /ready set is S236B and S236P/i);
+  assert.match(docs, /blocked S225\/S236P targets must fail closed/i);
+  assert.match(docs, /only ready item is S236B/i);
+  assert.match(docs, /one-shot\s+atomic closeout failed and is non-rerunnable/i);
+  assert.match(docs, /independent five-count closure is unavailable/i);
+  assert.match(docs, /canonical\s+cross-surface canary is incomplete/i);
   assert.match(docs, /Completed O3A\/O4V targets/i);
-  assert.match(docs, /does not start S236B, S236P,\s+or S236A/i);
+  assert.match(
+    docs,
+    /does not start S236B, resume S236P, start S236A/i,
+  );
   assert.match(docs, /blocked Draft\s+PR #660/i);
   assert.match(docs, /never recommends auto-merge/);
 });
