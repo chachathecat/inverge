@@ -9,13 +9,19 @@ import {
   RUNTIME_EVIDENCE_ASSERTION_IDS,
   RUNTIME_EVIDENCE_PRODUCER_VERSION,
   RUNTIME_EVIDENCE_SCHEMA_VERSION,
+  S236P_RUNTIME_EVIDENCE_ASSERTION_IDS,
+  S236P_RUNTIME_EVIDENCE_PRODUCER_VERSION,
 } from "../scripts/automation/runtime-gate.mjs";
 import {
   ASSERTION_IDS,
   PREREQUISITE_MIGRATIONS,
   PRODUCER_VERSION,
   SCHEMA_VERSION,
+  S236P_ASSERTION_IDS,
+  S236P_MIGRATION_PATHS,
+  S236P_PRODUCER_VERSION,
   resolveTargetMigration,
+  s236pMigrationExecutionSteps,
   shouldRunFakeGrader,
 } from "../scripts/automation/produce-runtime-evidence.mjs";
 
@@ -26,7 +32,57 @@ const MIGRATION_PATH = "supabase/migrations/20260721060237_s233a_answer_review_p
 const UNSUPPORTED_MIGRATION_PATH = "supabase/migrations/20260721060238_unrelated.sql";
 const FIXTURE_REPO = fs.mkdtempSync(path.join(WORKSPACE_ROOT, "runtime-gate-git-test-"));
 fs.mkdirSync(path.join(FIXTURE_REPO, "supabase/migrations"), { recursive: true });
-fs.writeFileSync(path.join(FIXTURE_REPO, MIGRATION_PATH), "select 's233a-runtime-fixture';\n", "utf8");
+const S233A_FIXTURE_SQL = [
+  "select 'claim_s233a_answer_review_v1';",
+  "select 'transition_s233a_answer_review_v1';",
+  "-- s233a review queue rpc insert namespace",
+  "-- s233a today seed rpc insert namespace",
+  "",
+].join("\n");
+const S236P_FIXTURE_SQLS = [
+  [
+    "select 's236p-owner-private-v1';",
+    "select 'public.s236p_owner_private_objects';",
+    "select 'public.s236p_owner_private_events';",
+    "select 'public.s236p_authorize_signed_url_v1';",
+    "select 'public.s236p_expired_object_paths_v1';",
+    "select 'contains_real_content';",
+    "",
+  ].join("\n"),
+  [
+    "select 's236p_owner_private_lifecycle_hardening';",
+    "select 'parent_object_ref';",
+    "select 'revision_number';",
+    "select 'signed URL and signed-upload issuance disabled';",
+    "select 'drop table if exists public.s236p_owner_private_events';",
+    "select $$storage.allow_only_operation('storage.object.upload')$$;",
+    "",
+  ].join("\n"),
+  [
+    "select 's236p_owner_private_authenticated_download_info';",
+    "select 'object.get_authenticated_info';",
+    "select 'storage.object.get_authenticated';",
+    "select 's236p owner private select';",
+    "",
+  ].join("\n"),
+  [
+    "select 's236p_owner_private_expiry_read_gate';",
+    "select $$alter policy \"s236p owner private select\"$$;",
+    "select 'metadata.content_expires_at > statement_timestamp()';",
+    "select 'metadata.temporary_expires_at > statement_timestamp()';",
+    "select 'storage.object.delete_many';",
+    "select 'Reviewed forward-disable procedure';",
+    "",
+  ].join("\n"),
+];
+fs.writeFileSync(path.join(FIXTURE_REPO, MIGRATION_PATH), S233A_FIXTURE_SQL, "utf8");
+S236P_MIGRATION_PATHS.forEach((migrationPath, index) => {
+  fs.writeFileSync(
+    path.join(FIXTURE_REPO, migrationPath),
+    S236P_FIXTURE_SQLS[index],
+    "utf8",
+  );
+});
 fs.writeFileSync(path.join(FIXTURE_REPO, UNSUPPORTED_MIGRATION_PATH), "select 'unsupported-runtime-fixture';\n", "utf8");
 execFileSync("git", ["init", "--quiet"], { cwd: FIXTURE_REPO });
 execFileSync("git", ["config", "user.name", "Runtime Evidence Test"], { cwd: FIXTURE_REPO });
@@ -42,6 +98,48 @@ const UNSUPPORTED_MIGRATION_SHA256 = crypto
   .createHash("sha256")
   .update(execFileSync("git", ["show", `${HEAD_SHA}:${UNSUPPORTED_MIGRATION_PATH}`], { cwd: FIXTURE_REPO }))
   .digest("hex");
+const S236P_MIGRATION_SHA256S = S236P_MIGRATION_PATHS.map((migrationPath) =>
+  crypto
+    .createHash("sha256")
+    .update(
+      execFileSync("git", ["show", `${HEAD_SHA}:${migrationPath}`], {
+        cwd: FIXTURE_REPO,
+      }),
+    )
+    .digest("hex"),
+);
+const S236P_RECONCILED_MIGRATIONS = Object.freeze([
+  {
+    path: "supabase/migrations/20260730025332_s236p_lean_owner_private.sql",
+    lengthBytes: 21073,
+    sha256:
+      "476ef1b0d6a100fb6e4803b812b049b44252ca5f25301d3f781cee8827b1545b",
+  },
+  {
+    path: "supabase/migrations/20260730060233_s236p_owner_private_lifecycle_hardening.sql",
+    lengthBytes: 13691,
+    sha256:
+      "e20440dfa0d880ad591b8c9fdff287cd66fcdbbe4f96f07a549a730fd8920de1",
+  },
+  {
+    path: "supabase/migrations/20260730065744_s236p_owner_private_authenticated_download_info.sql",
+    lengthBytes: 1068,
+    sha256:
+      "632cc7ee563aa29a573425e396f6f539e35a3c8834955ba66ccd01723bb3cbcb",
+  },
+  {
+    path: "supabase/migrations/20260730151052_s236p_owner_private_expiry_read_gate.sql",
+    lengthBytes: 2705,
+    sha256:
+      "416fa80acea48bf4d170661a4f5259632b4d9e3fd740007bd65cbf1ded6103f1",
+  },
+]);
+const S236P_OBSOLETE_LOCAL_TIMESTAMP_PATHS = Object.freeze([
+  "supabase/migrations/20260730023248_s236p_lean_owner_private.sql",
+  "supabase/migrations/20260730053324_s236p_owner_private_lifecycle_hardening.sql",
+  "supabase/migrations/20260730065040_s236p_owner_private_authenticated_download_info.sql",
+  "supabase/migrations/20260730113505_s236p_owner_private_expiry_read_gate.sql",
+]);
 const RUN_ID = "900100200";
 const RUN_ATTEMPT = 1;
 
@@ -57,10 +155,13 @@ function writeJson(directory, name, value) {
   return filePath;
 }
 
-function validEvidence(riskBytes) {
+function validEvidence(riskBytes, options = {}) {
+  const assertionIds =
+    options.assertionIds ?? RUNTIME_EVIDENCE_ASSERTION_IDS;
   return {
     schemaVersion: RUNTIME_EVIDENCE_SCHEMA_VERSION,
-    producerVersion: RUNTIME_EVIDENCE_PRODUCER_VERSION,
+    producerVersion:
+      options.producerVersion ?? RUNTIME_EVIDENCE_PRODUCER_VERSION,
     status: "verified",
     sourceLevelOnly: false,
     verifiedAt: new Date().toISOString(),
@@ -68,14 +169,20 @@ function validEvidence(riskBytes) {
     githubRunId: RUN_ID,
     githubRunAttempt: RUN_ATTEMPT,
     riskFileSha256: sha256(riskBytes),
-    migrations: [{ path: MIGRATION_PATH, sha256: MIGRATION_SHA256 }],
+    migrations:
+      options.migrations ?? [
+        {
+          path: options.migrationPath ?? MIGRATION_PATH,
+          sha256: options.migrationSha256 ?? MIGRATION_SHA256,
+        },
+      ],
     isolatedEnvironment: {
       kind: "disposable_local_postgres",
       engine: "postgresql_15",
       networkExposure: "none",
       syntheticUserCount: 2,
     },
-    assertions: RUNTIME_EVIDENCE_ASSERTION_IDS.map((id) => ({ id, passed: true })),
+    assertions: assertionIds.map((id) => ({ id, passed: true })),
     cleanup: { status: "complete" },
     dataBoundary: {
       metadataOnly: true,
@@ -164,6 +271,88 @@ test("exact, metadata-only, head-bound runtime evidence passes", () => {
   assert.equal(JSON.parse(result.stdout).status, "verified");
 });
 
+test("exact S236P migration selects its closed runtime adapter and evidence contract", () => {
+  const risk = requiredRisk();
+  risk.runtimeReasons = S236P_MIGRATION_PATHS.map((migrationPath) => ({
+    path: migrationPath,
+    pattern: "supabase/migrations/**",
+  }));
+  risk.changedFiles = [...S236P_MIGRATION_PATHS];
+  const result = run(risk, (evidence) => {
+    evidence.producerVersion = S236P_RUNTIME_EVIDENCE_PRODUCER_VERSION;
+    evidence.migrations = S236P_MIGRATION_PATHS.map(
+      (migrationPath, index) => ({
+        path: migrationPath,
+        sha256: S236P_MIGRATION_SHA256S[index],
+      }),
+    );
+    evidence.assertions = S236P_RUNTIME_EVIDENCE_ASSERTION_IDS.map((id) => ({
+      id,
+      passed: true,
+    }));
+  });
+  assert.equal(result.status, 0, result.stderr);
+  assert.equal(JSON.parse(result.stdout).status, "verified");
+});
+
+test("S236P runtime gate rejects missing, reordered, extra, and arbitrary migrations", async (t) => {
+  const risk = requiredRisk();
+  risk.runtimeReasons = S236P_MIGRATION_PATHS.map((migrationPath) => ({
+    path: migrationPath,
+    pattern: "supabase/migrations/**",
+  }));
+  risk.changedFiles = [...S236P_MIGRATION_PATHS];
+  const exactMigrations = S236P_MIGRATION_PATHS.map(
+    (migrationPath, index) => ({
+      path: migrationPath,
+      sha256: S236P_MIGRATION_SHA256S[index],
+    }),
+  );
+
+  const cases = [
+    ["missing", exactMigrations.slice(0, -1)],
+    ["reordered", [...exactMigrations].reverse()],
+    [
+      "extra",
+      [
+        ...exactMigrations,
+        {
+          path: UNSUPPORTED_MIGRATION_PATH,
+          sha256: UNSUPPORTED_MIGRATION_SHA256,
+        },
+      ],
+    ],
+    [
+      "arbitrary",
+      exactMigrations.map((migration, index) =>
+        index === exactMigrations.length - 1
+          ? {
+              path: UNSUPPORTED_MIGRATION_PATH,
+              sha256: UNSUPPORTED_MIGRATION_SHA256,
+            }
+          : migration,
+      ),
+    ],
+  ];
+  for (const [name, migrations] of cases) {
+    await t.test(name, () => {
+      const result = run(risk, (evidence) => {
+        evidence.producerVersion =
+          S236P_RUNTIME_EVIDENCE_PRODUCER_VERSION;
+        evidence.migrations = migrations;
+        evidence.assertions = S236P_RUNTIME_EVIDENCE_ASSERTION_IDS.map(
+          (id) => ({ id, passed: true }),
+        );
+      });
+      assert.notEqual(result.status, 0);
+      assert.match(
+        result.stderr,
+        /migration (?:set|path or digest) does not match/,
+      );
+    });
+  }
+});
+
 test("runtime evidence rejects weak status, source-only, invalid time, and stale time", async (t) => {
   const cases = [
     ["non-verified status", (evidence) => { evidence.status = "pending"; }, /status must be/],
@@ -240,8 +429,38 @@ test("runtime evidence contract and producer versions stay locked together", () 
   assert.equal(SCHEMA_VERSION, RUNTIME_EVIDENCE_SCHEMA_VERSION);
   assert.equal(PRODUCER_VERSION, RUNTIME_EVIDENCE_PRODUCER_VERSION);
   assert.deepEqual(ASSERTION_IDS, RUNTIME_EVIDENCE_ASSERTION_IDS);
+  assert.equal(
+    S236P_PRODUCER_VERSION,
+    S236P_RUNTIME_EVIDENCE_PRODUCER_VERSION,
+  );
+  assert.deepEqual(
+    S236P_ASSERTION_IDS,
+    S236P_RUNTIME_EVIDENCE_ASSERTION_IDS,
+  );
   for (const migrationPath of PREREQUISITE_MIGRATIONS) {
     assert.equal(fs.existsSync(path.join(WORKSPACE_ROOT, migrationPath)), true, migrationPath);
+  }
+});
+
+test("S236P source uses exact live-ledger versions and unchanged SQL bytes", () => {
+  assert.deepEqual(
+    S236P_MIGRATION_PATHS,
+    S236P_RECONCILED_MIGRATIONS.map(({ path: migrationPath }) => migrationPath),
+  );
+
+  for (const migration of S236P_RECONCILED_MIGRATIONS) {
+    const absolutePath = path.join(WORKSPACE_ROOT, migration.path);
+    const bytes = fs.readFileSync(absolutePath);
+    assert.equal(bytes.byteLength, migration.lengthBytes, migration.path);
+    assert.equal(sha256(bytes), migration.sha256, migration.path);
+  }
+
+  for (const obsoletePath of S236P_OBSOLETE_LOCAL_TIMESTAMP_PATHS) {
+    assert.equal(
+      fs.existsSync(path.join(WORKSPACE_ROOT, obsoletePath)),
+      false,
+      obsoletePath,
+    );
   }
 });
 
@@ -252,7 +471,83 @@ test("fake grader runs only for a newly owned or atomically reclaimed request", 
   assert.equal(shouldRunFakeGrader("replayed"), false);
 });
 
-test("S233A adapter binds the exact pull-request migration blob and rejects unsupported migration sets", () => {
+test("S236P replays each migration before applying its successor", () => {
+  const migrations = S236P_MIGRATION_PATHS.map((migrationPath) => ({
+    path: migrationPath,
+  }));
+  assert.deepEqual(
+    s236pMigrationExecutionSteps(migrations).map(
+      ({ label, migration }) => [label, migration.path],
+    ),
+    migrations.flatMap((migration, index) => [
+      [`ordered S236P migration ${index + 1}`, migration.path],
+      [
+        `idempotent ordered S236P migration replay ${index + 1}`,
+        migration.path,
+      ],
+    ]),
+  );
+  assert.throws(
+    () => s236pMigrationExecutionSteps(migrations.slice(0, 2)),
+    /exact migration quadruple/,
+  );
+});
+
+test("S236P provider and raw checkpoints bind the named Owner A fixture set", () => {
+  const producer = fs.readFileSync(
+    path.resolve(
+      WORKSPACE_ROOT,
+      "scripts/automation/produce-runtime-evidence.mjs",
+    ),
+    "utf8",
+  );
+  assert.match(
+    producer,
+    /S236P_OWNER_A_EXPECTED_VISIBLE_OBJECT_IDS = Object\.freeze\(\[/,
+  );
+  assert.match(producer, /Owner A exact visible fixture-set assertion/);
+  assert.match(
+    producer,
+    /String\(S236P_OWNER_A_EXPECTED_VISIBLE_OBJECT_IDS\.length\)/g,
+  );
+  assert.doesNotMatch(
+    producer,
+    /"4",\s*"provider-none and call-zero assertion"/,
+  );
+  assert.doesNotMatch(
+    producer,
+    /"4",\s*"raw-zero and synthetic-only assertion"/,
+  );
+});
+
+test("S236P expiry matrix covers exact boundaries, missing metadata, cleanup, and disable shapes", () => {
+  const producer = fs.readFileSync(
+    path.resolve(
+      WORKSPACE_ROOT,
+      "scripts/automation/produce-runtime-evidence.mjs",
+    ),
+    "utf8",
+  );
+  for (const marker of [
+    "expiry plus-one-millisecond assertion",
+    "expiry equality assertion",
+    "expiry minus-one-millisecond assertion",
+    "pg_temp.s236p_boundary_visible_v1",
+    "metadata-missing expiry fixture transition",
+    'const deleteOperations = [\n    "storage.object.delete",\n    "storage.object.delete_many",',
+    '["metadata missing", metadataMissingPath]',
+    "`${operation} Owner A ${caseName} cleanup assertion`",
+    "targeted authenticated-info forward-disable assertion",
+    "targeted forward-disable cleanup preservation assertion",
+    "delete-only forward-disable read assertion",
+    "delete-only forward-disable cleanup preservation assertion",
+  ]) {
+    assert.match(producer, new RegExp(marker.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
+  }
+  assert.doesNotMatch(producer, /with aligned as \(\s*update public\.s236p_owner_private_objects/);
+});
+
+test("closed S233A and S236P adapters bind exact migrations and reject unsupported sets", () => {
   const directory = fs.mkdtempSync(path.join(WORKSPACE_ROOT, "runtime-producer-git-test-"));
   execFileSync("git", ["init", "--quiet"], { cwd: directory });
   execFileSync("git", ["config", "user.name", "Runtime Evidence Test"], { cwd: directory });
@@ -266,7 +561,16 @@ test("S233A adapter binds the exact pull-request migration blob and rejects unsu
     "-- s233a today seed rpc insert namespace",
   ].join("\n");
   fs.writeFileSync(path.join(directory, migrationPath), sql, "utf8");
-  execFileSync("git", ["add", migrationPath], { cwd: directory });
+  S236P_MIGRATION_PATHS.forEach((s236pMigrationPath, index) => {
+    fs.writeFileSync(
+      path.join(directory, s236pMigrationPath),
+      S236P_FIXTURE_SQLS[index],
+      "utf8",
+    );
+  });
+  execFileSync("git", ["add", migrationPath, ...S236P_MIGRATION_PATHS], {
+    cwd: directory,
+  });
   execFileSync("git", ["commit", "--quiet", "-m", "fixture"], { cwd: directory });
   const headSha = execFileSync("git", ["rev-parse", "HEAD"], { cwd: directory, encoding: "utf8" }).trim();
   const originalCwd = process.cwd();
@@ -276,8 +580,38 @@ test("S233A adapter binds the exact pull-request migration blob and rejects unsu
       { changedFiles: [migrationPath], changedFilesTruncated: false },
       headSha,
     );
+    assert.equal(target.adapter, "s233a");
     assert.equal(target.path, migrationPath);
     assert.equal(target.sha256, sha256(Buffer.from(sql)));
+    const s236pTarget = resolveTargetMigration(
+      {
+        changedFiles: [...S236P_MIGRATION_PATHS],
+        changedFilesTruncated: false,
+      },
+      headSha,
+    );
+    assert.equal(s236pTarget.adapter, "s236p");
+    assert.deepEqual(
+      s236pTarget.migrations.map(({ path: migrationPathValue, sha256 }) => ({
+        path: migrationPathValue,
+        sha256,
+      })),
+      S236P_MIGRATION_PATHS.map((s236pMigrationPath, index) => ({
+        path: s236pMigrationPath,
+        sha256: sha256(Buffer.from(S236P_FIXTURE_SQLS[index])),
+      })),
+    );
+    assert.throws(
+      () =>
+        resolveTargetMigration(
+          {
+            changedFiles: S236P_MIGRATION_PATHS.slice(0, 2),
+            changedFilesTruncated: false,
+          },
+          headSha,
+        ),
+      /no closed runtime-evidence adapter/,
+    );
     assert.throws(
       () => resolveTargetMigration(
         { changedFiles: ["supabase/migrations/20260721060238_unrelated.sql"], changedFilesTruncated: false },
