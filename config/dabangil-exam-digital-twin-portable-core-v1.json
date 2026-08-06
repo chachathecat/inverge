@@ -1,0 +1,814 @@
+{
+  "schema": "dabangil_exam_digital_twin_portable_core_v1",
+  "version": "1.0.0",
+  "dated": "2026-08-06 KST",
+  "status": "proposed_non_authoritative",
+  "repository": "chachathecat/inverge",
+  "activeMasterPlan": "docs/strategy/dabangil-professional-exam-reasoning-os-final-master-plan-v13-2026-08-06.md",
+  "ownerDecision": "docs/decisions/2026-08-06-owner-v13-exam-digital-twin-and-portable-professional-exam-core.md",
+  "examDigitalTwinSpec": "docs/strategy/dabangil-exam-digital-twin-and-robust-curriculum-control-v1-2026-08-06.md",
+  "portableCoreSpec": "docs/strategy/dabangil-portable-professional-exam-core-and-profile-contract-v1-2026-08-06.md",
+  "validationRecord": "docs/qa/master-plan-v13-exam-digital-twin-portability-validation.md",
+  "mandatoryBaseline": [
+    "docs/strategy/dabangil-professional-exam-reasoning-os-final-master-plan-v12-2026-08-06.md",
+    "docs/strategy/dabangil-versioned-exam-scope-evidence-graph-v1-2026-08-06.md",
+    "docs/strategy/dabangil-appraiser-coverage-compiler-and-original-question-engine-v1-2026-08-06.md",
+    "docs/strategy/dabangil-professional-exam-reasoning-os-final-master-plan-v11-2026-08-05.md",
+    "docs/strategy/dabangil-professional-exam-reasoning-os-master-plan-v8-2026-08-05.md",
+    "docs/strategy/dabangil-adaptive-understanding-progression-recovery-master-plan-v9-2026-08-05.md"
+  ],
+  "authorizationBoundary": {
+    "runtime": false,
+    "api": false,
+    "ui": false,
+    "schema": false,
+    "migration": false,
+    "rls": false,
+    "storage": false,
+    "provider": false,
+    "dependency": false,
+    "packageLock": false,
+    "environment": false,
+    "deployment": false,
+    "production": false,
+    "realHistoricalQuestionIngestion": false,
+    "realThirdPartySource": false,
+    "learnerModelFitting": false,
+    "optimizerActivation": false,
+    "scoringRuntime": false,
+    "firstStageLearnerActivation": false,
+    "otherExamProfile": false,
+    "genericMultiExamLearnerSurface": false,
+    "externalLearner": false,
+    "commercial": false,
+    "readyTransition": false,
+    "merge": false,
+    "autoMerge": false
+  },
+  "currentScope": {
+    "strategyProfile": "appraiser_kr",
+    "strategyStages": [
+      "first",
+      "second"
+    ],
+    "strategySubjects": [
+      "civil_law",
+      "economics",
+      "real_estate_studies",
+      "appraisal_related_law",
+      "accounting",
+      "appraisal_practice",
+      "appraisal_theory",
+      "appraisal_compensation_law"
+    ],
+    "currentLearnerFacingProfile": "appraiser_kr",
+    "currentLearnerFacingStages": [
+      "second"
+    ],
+    "currentLearnerFacingSubjects": [
+      "appraisal_practice",
+      "appraisal_theory",
+      "appraisal_compensation_law"
+    ],
+    "otherRealProfiles": [],
+    "portableCoreInternalOnly": true
+  },
+  "architectureLayers": [
+    "VESG_TRUTH_KERNEL",
+    "EXAM_WORLD_TWIN",
+    "LEARNER_CAPABILITY_TWIN",
+    "ROBUST_CURRICULUM_CONTROLLER",
+    "PROOF_CARRYING_ASSESSMENT_FOUNDRY",
+    "CALIBRATED_SCORING_COUNCIL",
+    "PRE_REGISTERED_AUDIT",
+    "PORTABLE_PROFESSIONAL_EXAM_CORE"
+  ],
+  "decisionAxes": {
+    "separate": [
+      "CORPUS_PRIORITY",
+      "BLUEPRINT_DEMAND",
+      "LEARNER_NEED",
+      "ALLOCATION_UTILITY"
+    ],
+    "forbiddenEquivalences": [
+      "official_scope_equals_historical_frequency",
+      "frequency_equals_future_probability",
+      "expert_signal_equals_answer_authority",
+      "blueprint_demand_equals_learner_need",
+      "allocation_rank_equals_pass_probability"
+    ],
+    "learnerFacingProbabilityClaimsAllowed": false
+  },
+  "examIntelligenceSignals": {
+    "kinds": [
+      "OFFICIAL_OBSERVATION",
+      "REVIEWED_CORPUS_INFERENCE",
+      "REVIEWED_EXPERT_PRIOR",
+      "PUBLIC_ACADEMY_METADATA",
+      "PRIVATE_UNVERIFIED",
+      "SUSPICIOUS_NONPUBLIC_CURRENT_EXAM"
+    ],
+    "requiredFields": [
+      "signalId",
+      "kind",
+      "profileId",
+      "targetExamId",
+      "scopeNodeIds",
+      "archetypeIds",
+      "independentOriginId",
+      "observedOrSubmittedAt",
+      "confidence",
+      "rationale",
+      "supportingEvidenceRefs",
+      "disconfirmingEvidenceRefs",
+      "answerAuthority",
+      "officialScopeAuthority",
+      "learnerVisibility",
+      "reviewStatus"
+    ],
+    "expertAndAcademyAnswerAuthority": 0,
+    "sameOriginDedupRequired": true,
+    "preExamFreezeRequired": true,
+    "postExamCalibrationRequired": true,
+    "quarantinedSignalAllowedUses": []
+  },
+  "examWorldTwin": {
+    "scenarioClasses": [
+      "RECURRENT_CENTRAL",
+      "OFFICIAL_UNOBSERVED_ROTATION",
+      "CURRENT_CHANGE_WATCH",
+      "INTEGRATED_MULTI_ISSUE",
+      "REPRESENTATION_COMMAND_SHIFT",
+      "DATA_VOLUME_TIME_PRESSURE",
+      "LEARNER_HOSTILE_PLAUSIBLE"
+    ],
+    "scenarioRequiredBindings": [
+      "profileId",
+      "targetExamId",
+      "subjectId",
+      "graphSnapshotId",
+      "normSnapshotId",
+      "rightsSnapshotId",
+      "blueprintId"
+    ],
+    "blueprintRequiredFields": [
+      "totalMarks",
+      "timeLimitMinutes",
+      "questionSlots",
+      "minimumOfficialCoverage",
+      "integrationPolicy",
+      "noveltyPolicy",
+      "timePressurePolicy",
+      "sourceRefs",
+      "reviewRefs"
+    ],
+    "responseModalities": [
+      "selected_response",
+      "numeric_or_table",
+      "constructed_short",
+      "constructed_extended",
+      "case_analysis"
+    ],
+    "validityRules": [
+      "slot_marks_sum_to_total",
+      "slot_time_feasible",
+      "all_nodes_resolve_in_exact_graph",
+      "all_current_answers_resolve_in_exact_norm",
+      "official_unobserved_stays_inside_official_scope",
+      "rights_allow_intended_use",
+      "no_quarantined_signal",
+      "subject_review_passes"
+    ],
+    "singleCanonicalPredictedPaperAllowed": false,
+    "scenarioWeightsMayBeShownAsProbability": false
+  },
+  "learnerCapabilityTwin": {
+    "axes": [
+      "knowledgeAccuracy",
+      "retrievalStrength",
+      "methodSelection",
+      "executionAccuracy",
+      "explanationCompleteness",
+      "verificationDiscipline",
+      "speedAdequacy",
+      "transferDistance",
+      "delayedRecovery",
+      "confidenceCalibration"
+    ],
+    "errorCodes": [
+      "KNOWLEDGE_GAP",
+      "RETRIEVAL_FAILURE",
+      "METHOD_SELECTION_ERROR",
+      "PROCEDURE_ORDER_ERROR",
+      "CALCULATION_ERROR",
+      "NORM_VERSION_ERROR",
+      "REPRESENTATION_ERROR",
+      "ANSWER_EXPRESSION_ERROR",
+      "TIME_ALLOCATION_FAILURE",
+      "VERIFICATION_FAILURE",
+      "TRANSFER_FAILURE"
+    ],
+    "evidenceLadder": [
+      "exposed",
+      "recognized",
+      "explained",
+      "applied_assisted",
+      "applied_independent",
+      "transferred_near",
+      "transferred_far",
+      "recovered_d1",
+      "recovered_d7",
+      "integrated_timed"
+    ],
+    "unknownAxisIsZero": false,
+    "singleScalarMasteryAllowed": false,
+    "assistedEvidenceMayBecomeIndependent": false,
+    "stableCandidateRequiresD7UnseenTransfer": true,
+    "unresolvedScoringMayAdvanceMastery": false
+  },
+  "robustCurriculumController": {
+    "levels": [
+      "MACRO_CURRICULUM_ASSEMBLY",
+      "WEEKLY_BUDGET_CONTROLLER",
+      "DAILY_NATIVE_SCHEDULER"
+    ],
+    "phases": [
+      "P0_DIAGNOSIS",
+      "P1_OFFICIAL_FOUNDATION",
+      "P2_FAMILY_UNIT_PRACTICE",
+      "P3_MIXED_TRANSFER",
+      "P4_FULL_PAPER_GS",
+      "P5_FINAL_COMPRESSION"
+    ],
+    "hardConstraints": [
+      "official_scope_floor",
+      "prerequisite_order",
+      "target_date_currentness",
+      "rights",
+      "available_minutes",
+      "fixed_blocks",
+      "d1_d7_due",
+      "subject_balance",
+      "maximum_three_primary_outcomes",
+      "time_windows",
+      "hard_deadline",
+      "non_overlap",
+      "profile_isolation"
+    ],
+    "softObjectives": [
+      "reduce_prerequisite_blockage",
+      "reduce_severe_learner_deficit",
+      "reduce_forgetting_risk",
+      "increase_far_transfer",
+      "increase_reviewed_world_coverage",
+      "reduce_time_deficit",
+      "reduce_schedule_churn",
+      "preserve_subject_balance",
+      "reduce_maximum_scenario_regret"
+    ],
+    "internalComparisonObjectives": [
+      "MAXIMIN_WORST_WORLD_COVERAGE",
+      "MINIMAX_REGRET"
+    ],
+    "nativePolicySelectsCoreOutcome": true,
+    "nativePolicySelectsLearningValue": true,
+    "todayMaximumPrimaryTasks": 3,
+    "optimizerMaySelectCoreOutcome": false,
+    "optimizerMayChangeOfficialAnswer": false,
+    "optimizerMayPromoteMastery": false,
+    "optimizerMayDecideLawStatus": false,
+    "optimizerMayChangeLearnerVisiblePriority": false,
+    "shadowDirectProductMutationAllowed": false,
+    "nativeFallbackRequired": true,
+    "silentConstraintRelaxationAllowed": false
+  },
+  "proofCarryingAssessment": {
+    "proofPolicyKinds": [
+      "EXACT_NUMERIC",
+      "RELATIONAL_SELECTED_RESPONSE",
+      "STRUCTURED_RUBRIC",
+      "CURRENT_NORM_CASE_ANALYSIS",
+      "MIXED"
+    ],
+    "proofBundleRequiredFields": [
+      "proofBundleId",
+      "profileId",
+      "questionId",
+      "graphSnapshotId",
+      "normSnapshotId",
+      "rightsManifestId",
+      "targetNodeIds",
+      "prerequisiteNodeIds",
+      "misconceptionCodes",
+      "proofPolicyId",
+      "acceptedAnswerVariantRefs",
+      "intermediateInvariantRefs",
+      "metamorphicRelationRefs",
+      "counterexampleRefs",
+      "adversarialMutationRefs",
+      "sourceSimilarityFingerprintRef",
+      "generatorVersion",
+      "validatorVersions",
+      "reviewerDecisionRefs",
+      "releaseStatus"
+    ],
+    "releaseStates": [
+      "candidate",
+      "solver_checked",
+      "subject_reviewed",
+      "proved",
+      "held",
+      "released"
+    ],
+    "profileSpecificSolverOrRubricRequired": true,
+    "rightsManifestRequired": true,
+    "generatedReferenceMayBeOfficial": false,
+    "midAttemptMutationAllowed": false
+  },
+  "appraiserProofPolicies": {
+    "appraisal_practice": [
+      "unit_consistency",
+      "subtotal_total_reconciliation",
+      "declared_rounding_stage",
+      "data_use_and_exclusion",
+      "method_selection",
+      "procedure_order",
+      "irrelevant_fact_invariance",
+      "decisive_condition_mutation",
+      "fx9860giii_reset_safe_when_relevant"
+    ],
+    "appraisal_theory": [
+      "command_coverage",
+      "comparison_balance",
+      "criticism_limitation_improvement_separation",
+      "practical_linkage",
+      "mark_band_structure",
+      "alternative_outline",
+      "non_official_reference_label"
+    ],
+    "appraisal_compensation_law": [
+      "target_date_norm",
+      "issue_article_doctrine_decisive_fact",
+      "application_conclusion_remedy",
+      "historical_current_answer_separation",
+      "party_stage_action_form_mutation",
+      "unresolved_conflict_hold"
+    ],
+    "first_stage": [
+      "single_correct_answer",
+      "independent_option_proposition",
+      "exact_error_point",
+      "distractor_provenance",
+      "calculation_graph_consistency",
+      "target_date_truth"
+    ]
+  },
+  "fullGSDigitalTwin": {
+    "assemblyOrder": [
+      "frozen_blueprint",
+      "question_slot_allocation",
+      "proof_carrying_assessment_assembly",
+      "cross_question_conflict_check",
+      "mark_time_validation",
+      "frozen_packet",
+      "timed_attempt",
+      "scoring_council",
+      "capability_postmortem"
+    ],
+    "samePacketRetryIsUnseenTransfer": false,
+    "packetMutationAfterStartAllowed": false,
+    "assistanceMustBeRecorded": true
+  },
+  "calibratedScoringCouncil": {
+    "components": [
+      "DETERMINISTIC_CHECKER",
+      "RUBRIC_SCORER",
+      "ADVERSARIAL_REVIEWER",
+      "ALTERNATIVE_ANSWER_REVIEWER",
+      "HUMAN_ANCHOR"
+    ],
+    "decisionFields": [
+      "scoreInterval",
+      "deterministicFindings",
+      "rubricFindings",
+      "agreementScore",
+      "unresolvedDisagreements",
+      "confidence",
+      "humanReviewRequired",
+      "masteryEligible",
+      "status"
+    ],
+    "singleModelFinalAuthorityAllowed": false,
+    "disagreementMustBeVisible": true,
+    "heldScoreMayAdvanceMastery": false,
+    "officialGradingClaimAllowed": false
+  },
+  "preRegisteredAudit": {
+    "freezeRequired": [
+      "graph_snapshot",
+      "norm_snapshot",
+      "corpus_priority_snapshot",
+      "world_ensemble",
+      "signal_snapshots",
+      "curriculum_policy",
+      "gs_packets",
+      "scoring_policy",
+      "denominator"
+    ],
+    "matchLevels": [
+      "DOMAIN",
+      "ISSUE",
+      "TASK",
+      "COMBINATION",
+      "MARK_ROLE",
+      "TRANSFER_DEFENSE"
+    ],
+    "metrics": [
+      "actual_mark_coverage",
+      "missed_actual_marks",
+      "false_positive_study_hours",
+      "official_unobserved_defense_yield",
+      "scenario_coverage",
+      "expert_signal_lift",
+      "public_academy_signal_lift",
+      "baseline_lift",
+      "learner_gain_per_hour",
+      "timed_completion",
+      "false_mastery"
+    ],
+    "examYearGroupedWalkForwardRequired": true,
+    "randomQuestionUnitSplitAllowed": false,
+    "futureDataLeakageAllowed": false,
+    "postExamBackfillAllowed": false,
+    "hitClaimWithoutDenominatorAllowed": false
+  },
+  "integrity": {
+    "quarantineClass": "SUSPICIOUS_NONPUBLIC_CURRENT_EXAM",
+    "quarantineOperationsAllowed": [
+      "manual_incident_metadata"
+    ],
+    "currentExamNonpublicSignalMayEnterGraph": false,
+    "currentExamNonpublicSignalMayEnterGenerator": false,
+    "currentExamNonpublicSignalMayReachLearner": false
+  },
+  "artifactProvenance": {
+    "concepts": [
+      "ENTITY",
+      "ACTIVITY",
+      "AGENT"
+    ],
+    "requiredFields": [
+      "artifactId",
+      "artifactType",
+      "contentDigest",
+      "generatedByActivityId",
+      "derivedFromArtifactIds",
+      "associatedAgentIds",
+      "profileId",
+      "createdAt",
+      "status"
+    ],
+    "driftPropagation": [
+      "norm",
+      "vesg_node",
+      "world",
+      "assessment",
+      "proof_bundle",
+      "gs_packet",
+      "scoring_reference",
+      "learner_evidence_eligibility"
+    ]
+  },
+  "portableProfessionalExamCore": {
+    "internalOnly": true,
+    "realProfiles": [
+      "appraiser_kr"
+    ],
+    "otherRealProfileAuthorized": false,
+    "genericLearnerSurfaceAuthorized": false,
+    "reusableKernelCapabilities": [
+      "SOURCE_REGISTRY",
+      "RIGHTS_MANIFEST",
+      "EFFECTIVE_INTERVAL",
+      "VERSION_CROSSWALK",
+      "GRAPH_SNAPSHOT",
+      "QUESTION_UNIT",
+      "EVIDENCE_EVENT",
+      "CAPABILITY_STATE",
+      "PAPER_BLUEPRINT",
+      "EXAM_WORLD",
+      "PROOF_BUNDLE",
+      "SCORING_DECISION",
+      "CURRICULUM_CONSTRAINT",
+      "PRE_EXAM_FREEZE",
+      "POST_EXAM_AUDIT",
+      "DRIFT_HOLD",
+      "ROLLBACK"
+    ],
+    "profileOwnedAuthorities": [
+      "OFFICIAL_ISSUER",
+      "SOURCE_PRECEDENCE",
+      "SUBJECT_LIST",
+      "DETAILED_SCOPE",
+      "NORM_UNIVERSE",
+      "HISTORICAL_QUESTION_CORPUS",
+      "QUESTION_GRAMMAR",
+      "PAPER_BLUEPRINT_RULE",
+      "SUBJECT_SOLVER",
+      "RUBRIC",
+      "RIGHTS_DECISION",
+      "CALIBRATION",
+      "ACTIVATION_EVIDENCE"
+    ],
+    "examProfileRequiredFields": [
+      "profileId",
+      "displayNameInternal",
+      "jurisdiction",
+      "credentialIssuerIds",
+      "targetExamCalendarPolicyId",
+      "stages",
+      "subjects",
+      "sourcePrecedenceIds",
+      "officialScopeRootIds",
+      "normUniverseIds",
+      "historicalCorpusPolicyId",
+      "rightsPolicyId",
+      "driftPolicyId",
+      "questionUnitGrammarIds",
+      "paperBlueprintPolicyIds",
+      "proofPolicyIds",
+      "solverRegistryIds",
+      "rubricRegistryIds",
+      "evidenceProjectionPolicyId",
+      "capabilityAxisPolicyId",
+      "curriculumPolicyId",
+      "scoringPolicyId",
+      "auditPolicyId",
+      "runtimeScope",
+      "status",
+      "ownerDecisionRef",
+      "profileSnapshotId"
+    ],
+    "profileStatuses": [
+      "PROFILE_CANDIDATE",
+      "AUTHORITY_VERIFIED",
+      "CORPUS_VALIDATED",
+      "SYNTHETIC_BENCHMARKED",
+      "OWNER_PRIVATE_READY",
+      "LIMITED_ACTIVATION",
+      "ACTIVE",
+      "HELD",
+      "RETIRED"
+    ],
+    "admissionStages": [
+      "PROFILE_0_OWNER_AND_PRODUCT_BOUNDARY",
+      "PROFILE_1_AUTHORITY_AND_RIGHTS",
+      "PROFILE_2_NORM_UNIVERSE",
+      "PROFILE_3_SCOPE_AND_QUESTION_GRAMMAR",
+      "PROFILE_4_HISTORICAL_CORPUS",
+      "PROFILE_5_PROOF_AND_SCORING",
+      "PROFILE_6_SYNTHETIC_HOSTILE_BENCHMARK",
+      "PROFILE_7_OWNER_PRIVATE_EXACT_PROFILE_EVALUATION",
+      "PROFILE_8_SEPARATE_LEARNER_ACTIVATION"
+    ],
+    "crossProfileTransfer": {
+      "officialSourceAuthority": false,
+      "scopeNode": false,
+      "questionBody": false,
+      "answer": false,
+      "normBinding": false,
+      "blueprint": false,
+      "solverOrRubric": false,
+      "calibrationWeight": false,
+      "learnerCapabilityOrMastery": false,
+      "activationEvidence": false
+    },
+    "firstPortabilityProof": {
+      "realExamAllowed": false,
+      "authorCreatedFictionalProfileRequired": true,
+      "mayClaimRealExamSupport": false,
+      "mayEnterRealProfileRegistry": false
+    }
+  },
+  "appraiserProfileBinding": {
+    "profileId": "appraiser_kr",
+    "strategyStages": [
+      "first",
+      "second"
+    ],
+    "learnerFacingStages": [
+      "second"
+    ],
+    "learnerFacingSubjects": [
+      "appraisal_practice",
+      "appraisal_theory",
+      "appraisal_compensation_law"
+    ],
+    "firstStageLearnerFacing": false,
+    "otherProfileLearnerFacing": false,
+    "mandatoryAssets": [
+      "current_exam_subject_annex",
+      "current_qnet_plan_and_corrections",
+      "historical_official_scope",
+      "target_date_law_rules_kifrs_practice_standards",
+      "vesg",
+      "second_stage_2013_2026_corpus",
+      "first_stage_2016_2026_corpus",
+      "appraiser_subject_verifiers",
+      "fx9860giii_practice_policy",
+      "appraiser_rights_currentness_decisions",
+      "exact_owner_private_gates"
+    ]
+  },
+  "ossAdapterCandidates": [
+    {
+      "adapterId": "ajv",
+      "role": "strict_schema_and_closed_contract_validation",
+      "researchLicense": "MIT",
+      "initialLifecycle": "proposed",
+      "tier": "build_time_candidate",
+      "rawUserSourceAllowed": false,
+      "productDecisionAuthority": false
+    },
+    {
+      "adapterId": "graphology",
+      "role": "graph_orphan_cycle_reachability_and_gap_validation",
+      "researchLicense": "MIT",
+      "initialLifecycle": "proposed",
+      "tier": "build_time_candidate",
+      "rawUserSourceAllowed": false,
+      "productDecisionAuthority": false
+    },
+    {
+      "adapterId": "decimal_js",
+      "role": "exact_decimal_precision_and_rounding_reference",
+      "researchLicense": "MIT",
+      "initialLifecycle": "proposed",
+      "tier": "build_time_candidate",
+      "rawUserSourceAllowed": false,
+      "productDecisionAuthority": false
+    },
+    {
+      "adapterId": "fast_check",
+      "role": "property_metamorphic_and_model_based_hostile_generation",
+      "researchLicense": "MIT",
+      "initialLifecycle": "proposed",
+      "tier": "build_time_candidate",
+      "rawUserSourceAllowed": false,
+      "productDecisionAuthority": false
+    },
+    {
+      "adapterId": "duckdb",
+      "role": "immutable_metadata_snapshot_and_grouped_analytical_audit",
+      "researchLicense": "MIT",
+      "initialLifecycle": "proposed",
+      "tier": "isolated_benchmark_candidate",
+      "rawUserSourceAllowed": false,
+      "productDecisionAuthority": false
+    },
+    {
+      "adapterId": "z3",
+      "role": "constraint_satisfiability_and_infeasibility_explanation",
+      "researchLicense": "MIT",
+      "initialLifecycle": "proposed",
+      "tier": "isolated_benchmark_candidate",
+      "rawUserSourceAllowed": false,
+      "productDecisionAuthority": false
+    },
+    {
+      "adapterId": "inspect_ai",
+      "role": "synthetic_generator_and_grader_evaluation",
+      "researchLicense": "MIT",
+      "initialLifecycle": "proposed",
+      "tier": "isolated_benchmark_candidate",
+      "rawUserSourceAllowed": false,
+      "productDecisionAuthority": false
+    }
+  ],
+  "ossLifecycle": {
+    "states": [
+      "proposed",
+      "benchmark_only",
+      "shadow",
+      "limited_activation",
+      "active",
+      "rollback"
+    ],
+    "activeUnscheduled": true,
+    "benchmarkEntryRequires": [
+      "exact_version_pin",
+      "license_review",
+      "transitive_dependency_review",
+      "sbom",
+      "isolation_policy",
+      "closed_input_schema",
+      "closed_output_schema",
+      "logging_and_persistence_inventory",
+      "native_fallback",
+      "rollback_test",
+      "named_owner",
+      "synthetic_fixture"
+    ],
+    "automaticTransitionAllowed": false
+  },
+  "interoperabilityTargets": [
+    {
+      "id": "QTI",
+      "role": "assessment_item_test_and_result_compatibility_target",
+      "certificationClaim": false,
+      "runtimeAuthorized": false
+    },
+    {
+      "id": "W3C_PROV",
+      "role": "entity_activity_agent_lineage_reference",
+      "certificationClaim": false,
+      "runtimeAuthorized": false
+    },
+    {
+      "id": "CALIPER",
+      "role": "closed_metadata_learning_event_compatibility_target",
+      "certificationClaim": false,
+      "runtimeAuthorized": false
+    },
+    {
+      "id": "XAPI",
+      "role": "closed_metadata_activity_event_compatibility_target",
+      "certificationClaim": false,
+      "runtimeAuthorized": false
+    }
+  ],
+  "programOrder": [
+    "PRESERVE_CURRENT_LIVE_AUTHORITY_AND_BLOCKERS",
+    "V13_STRATEGY_CLOSEOUT",
+    "CPF_SOURCE_SAFETY",
+    "VESG_APPRAISER_PROFILE",
+    "EDT_0_CONTRACTS_AND_SYNTHETIC_FIXTURES",
+    "EDT_1_GRAPH_COMPILER",
+    "EDT_2_PRACTICE_PROOF_CARRYING_ENGINE",
+    "EDT_3_HISTORICAL_PAPER_TWIN",
+    "EDT_4_ROBUST_CONTROLLER_SHADOW",
+    "EDT_5_FULL_GS_DIGITAL_TWIN",
+    "EDT_6_ISOLATED_SYNTHETIC_EVAL_LAB",
+    "EDT_7_SEPARATELY_AUTHORIZED_READ_ADAPTERS",
+    "PEXK_0_INTERNAL_PROFILE_INTERFACES",
+    "PEXK_1_FICTIONAL_PROFILE_PORTABILITY_PROOF",
+    "SEPARATELY_AUTHORIZED_ACTIVATION"
+  ],
+  "hardGates": {
+    "officialScopeModifiedByInference": 0,
+    "currentAnswerModifiedByExpertOrAcademySignal": 0,
+    "sameOriginSignalDoubleCount": 0,
+    "nonpublicCurrentExamSignalUsed": 0,
+    "scenarioPresentedAsProbability": 0,
+    "worldWithoutBlueprint": 0,
+    "worldMarksOrTimeInvalid": 0,
+    "worldOutsideOfficialScope": 0,
+    "worldWithoutTargetNorm": 0,
+    "singleScalarMasteryUsed": 0,
+    "assistedEvidenceMislabeledIndependent": 0,
+    "sameRepresentationCountedFarTransfer": 0,
+    "unresolvedScoreUsedAsMastery": 0,
+    "graderDisagreementHidden": 0,
+    "releasedQuestionWithoutProfileProofBundle": 0,
+    "releasedQuestionWithoutSolverOrRubric": 0,
+    "unitOrRoundingAmbiguity": 0,
+    "rightsUnknownSharedGeneration": 0,
+    "optimizerDirectCoreOutcomeMutation": 0,
+    "planWithoutOfficialScopeFloor": 0,
+    "todayPrimaryTasksOverThree": 0,
+    "infeasiblePlanSilentlyRelaxed": 0,
+    "sameExamYearTrainTestLeakage": 0,
+    "futureExamDataLeakage": 0,
+    "postExamPredictionBackfill": 0,
+    "hitClaimWithoutDenominator": 0,
+    "portableCoreLearnerVisible": 0,
+    "otherExamProfileActivated": 0,
+    "crossExamAnswerOrMasteryTransfer": 0,
+    "profileWithoutAuthorityOwner": 0,
+    "profileWithoutOfficialIssuer": 0,
+    "profileWithoutRightsManifest": 0,
+    "profileWithoutTargetNorm": 0,
+    "profileWithoutQuestionGrammar": 0,
+    "profileWithoutBlueprint": 0,
+    "profileWithoutSubjectVerifier": 0,
+    "profileWithoutGroupedAudit": 0,
+    "standardImportBypassesRights": 0,
+    "standardEventContainsRawBody": 0,
+    "ossRawUserSourceSeen": 0,
+    "ossPersistentRawEvalLog": 0,
+    "ossComponentWithProductDecisionAuthority": 0,
+    "unpinnedOssBenchmark": 0
+  },
+  "compatibility": {
+    "preserveV11SourceSafety": true,
+    "preserveV12Coverage": true,
+    "preserveVESGFirstBuildOrder": true,
+    "preserveCurrentFullDayNativeAuthority": true,
+    "preserveTodayMaximumThree": true,
+    "preserveAppraiserSecondRuntimeOnly": true,
+    "firstStageCorpusDoesNotAuthorizeRuntime": true,
+    "portableCoreDoesNotAuthorizeAnotherExam": true,
+    "bookTutorTransientSourceAutoPromotion": false,
+    "generatedReferenceOfficialLabel": false
+  }
+}
