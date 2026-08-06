@@ -362,8 +362,115 @@ async function prepareAttempt(runtime, fixture) {
     attemptText: "가상 기준안을 보기 전에 구조와 근거를 먼저 작성했습니다.",
     elapsedTimeMs: 120_000,
     confidence: "medium",
+    ...(view.problemModel.subjectAdapter?.adapter === "PracticalAdapter"
+      ? {
+          methodFamily: view.problemModel.methodFamily,
+          methodReason: "비교사례의 배분과 보정 조건이 주어져 비교방식을 선택합니다.",
+          firstCalculationDirection:
+            "사례가격에 토지 배분비율을 적용해 토지가격을 먼저 계산합니다.",
+        }
+      : view.problemModel.subjectAdapter?.adapter === "TheoryAdapter"
+        ? {
+            theoryCommitment: {
+              demandVerb: "비교하고 평가하라",
+              thesis: "정의와 전제를 연결한 뒤 두 관점을 비교·평가한다.",
+              orderedOutlineItems: [
+                { outlineItemId: "outline-1", label: "정의와 전제" },
+                { outlineItemId: "outline-2", label: "비교와 결론" },
+              ],
+              selectedConcepts: [
+                { conceptId: "concept-1", label: "가치 형성 원리" },
+              ],
+            },
+          }
+        : {
+            lawCommitment: {
+              issueFraming: "절차상 요건 충족 여부가 쟁점이다.",
+              legalBasisPlan: "적용 법령과 조문을 유효일에 묶어 확인한다.",
+              requirementEffectPlan: "요건과 법적 효과를 나누어 쓴다.",
+              factApplicationDirection: "사실을 각 요건에 대응해 포섭한다.",
+              tentativeConclusion: "요건 충족 여부에 따라 결론을 나눈다.",
+            },
+          }),
   });
   return view;
+}
+
+function reasoningRepairInput(view) {
+  if (view.theoryReasoningPath) {
+    const commitment = view.theoryReasoningPath.initialCommitment;
+    return {
+      theoryRepairSubmission: {
+        demandVerb: commitment.demandVerb,
+        thesis: commitment.thesis,
+        orderedOutlineItems: structuredClone(commitment.orderedOutlineItems),
+        selectedConcepts: structuredClone(commitment.selectedConcepts),
+        conceptArgumentLinks: commitment.selectedConcepts.map(
+          (concept, index) => ({
+            conceptId: concept.conceptId,
+            outlineItemId:
+              commitment.orderedOutlineItems[
+                Math.min(index, commitment.orderedOutlineItems.length - 1)
+              ].outlineItemId,
+            argument: "선택한 개념을 해당 목차의 논증 역할에 연결합니다.",
+          }),
+        ),
+        comparisonOrEvaluation: view.theoryReasoningPath
+          .comparisonOrEvaluationRequired
+          ? "두 관점의 전제와 설명 범위를 비교하고 평가합니다."
+          : null,
+        counterPosition: view.theoryReasoningPath.counterPositionRequired
+          ? "반대 입장의 전제와 한계를 함께 검토합니다."
+          : null,
+        conclusion: "논증 관계를 바탕으로 제한된 결론을 제시합니다.",
+        compression: "정의-전제-논증-결론을 한 줄로 연결합니다.",
+      },
+    };
+  }
+  if (view.lawReasoningPath) {
+    return {
+      lawRepairSubmission: {
+        issue: "절차상 요건 충족 여부",
+        authorityBindings: view.lawReasoningPath.postCommitStoredAuthorities.map(
+          ({ authorityKind, label, officialSourceRefId }) => ({
+            authorityKind,
+            label,
+            officialSourceRefId,
+          }),
+        ),
+        effectiveDate:
+          view.lawReasoningPath.postCommitEffectiveDate.effectiveAt ??
+          "유효일 미확인",
+        requirements: [
+          {
+            requirementId: "req-1",
+            requirement: "절차 요건을 순서대로 이행할 것",
+            legalEffect: "미이행 시 위법 사유가 될 수 있음",
+          },
+        ],
+        requirementFactMappings: [
+          {
+            requirementId: "req-1",
+            factApplication: "가상 사실을 절차 요건에 대응합니다.",
+          },
+        ],
+        application: "가상 사실의 순서를 각 절차 요건에 포섭합니다.",
+        conclusion: "요건 충족 여부에 따라 결론을 나눕니다.",
+        procedure: view.lawReasoningPath.procedureRequired
+          ? "통지-신청-결정의 절차 순서를 확인합니다."
+          : null,
+        precedentOrAdjudication: view.lawReasoningPath
+          .precedentOrAdjudicationRequired
+          ? "저장된 판례·재결 바인딩의 적용 범위를 검토합니다."
+          : null,
+        opposingInterpretation: view.lawReasoningPath
+          .opposingInterpretationRequired
+          ? "반대 해석의 요건 적용을 함께 검토합니다."
+          : null,
+      },
+    };
+  }
+  return {};
 }
 
 test("fixtures are exactly one explicitly synthetic structure case per subject and never Golden dogfood", () => {
@@ -484,7 +591,36 @@ for (const fixture of SYNTHETIC_FIXTURES) {
       rewriteText: "가상 간극 하나를 기준으로 구조를 직접 다시 작성했습니다.",
       inferredMisunderstanding: "가상 구조의 연결 순서를 놓쳤습니다.",
       successCriteria: "같은 구조를 도움 없이 다시 재현합니다.",
+      ...(view.problemModel.subjectAdapter?.adapter === "PracticalAdapter"
+        ? {
+            revisedMethodFamily: view.problemModel.methodFamily,
+            revisedMethodReason:
+              "비교사례의 배분과 보정 조건을 다시 확인해 비교방식을 유지합니다.",
+            revisedFirstCalculationDirection:
+              "사례가격 10억원에 토지 배분비율 60%를 먼저 적용합니다.",
+            recalculationSubmissions: [
+              {
+                nodeId: "synthetic-allocation-node",
+                value: 600_000_000,
+                unit: "원",
+              },
+            ],
+          }
+        : reasoningRepairInput(view)),
     });
+    if (fixture.subject === "appraisal_compensation_law") {
+      assert.equal(completed.status, "rewrite_saved");
+      assert.equal(completed.fixedD1DueAt, null);
+      assert.equal(completed.links.reviewQueueItemId, null);
+      assert.equal(completed.links.todayActionSeedId, null);
+      assert.equal(completed.links.learningRecordId, null);
+      assert.equal(
+        completed.lawReasoningPath.repairVerification.status,
+        "blocked",
+      );
+      assert.equal(repository.evidence.completions, 0);
+      return;
+    }
     assert.equal(completed.status, "completed");
     assert.equal(completed.rewrite.subjectMode, fixture.rewriteMode);
     assert.equal(Date.parse(completed.fixedD1DueAt) - now.getTime(), 86_400_000);
@@ -2755,6 +2891,10 @@ test("attempt-before-explanation, stale CAS, and replay-safe one-call behavior r
     attemptText: "가상 독립 시도를 먼저 저장합니다.",
     elapsedTimeMs: 60_000,
     confidence: "low",
+    methodFamily: view.problemModel.methodFamily,
+    methodReason: "비교사례 배분 조건을 사용하므로 비교방식을 선택합니다.",
+    firstCalculationDirection:
+      "사례가격에 토지 배분비율을 적용해 토지가격부터 계산합니다.",
   });
   await assert.rejects(
     runtime.requestAssistance({
@@ -2814,6 +2954,10 @@ test("metadata projection exposes only bounded ladder counts and no learner, pro
     attemptText: "LEARNER_BODY_SENTINEL 가상 독립 시도입니다.",
     elapsedTimeMs: 60_000,
     confidence: "medium",
+    methodFamily: view.problemModel.methodFamily,
+    methodReason: "비교사례 배분 조건을 사용하므로 비교방식을 선택합니다.",
+    firstCalculationDirection:
+      "사례가격에 토지 배분비율을 적용해 토지가격부터 계산합니다.",
   });
   view = (
     await runtime.requestAssistance({

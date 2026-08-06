@@ -4,9 +4,11 @@ import { expect, test, type Page } from "@playwright/test";
 import {
   OWNER_ALPHA_AI_REFERENCE_DISCLAIMER,
   OWNER_ALPHA_AI_REFERENCE_LABEL,
+  type OwnerAlphaMethodFamily,
   type OwnerAlphaPracticeSession,
   type OwnerAlphaPracticeView,
 } from "../../lib/review-os/owner-alpha-practice-contract";
+import type { OwnerAlphaPracticalRecalculationSubmission } from "../../lib/review-os/owner-alpha-practical-decision-path";
 import type {
   OwnerAlphaPracticeProviderPort,
   OwnerAlphaReferenceDraft,
@@ -196,11 +198,18 @@ type RuntimeCommand = {
   attemptText: string;
   elapsedTimeMs: number;
   confidence: "low" | "medium" | "high";
+  methodFamily: OwnerAlphaMethodFamily;
+  methodReason: string;
+  firstCalculationDirection: string;
   questionText: string | null;
   mode: "rewrite" | "recalculate";
   rewriteText: string;
   inferredMisunderstanding: string;
   successCriteria: string;
+  revisedMethodFamily: OwnerAlphaMethodFamily;
+  revisedMethodReason: string;
+  revisedFirstCalculationDirection: string;
+  recalculationSubmissions: OwnerAlphaPracticalRecalculationSubmission[];
 };
 
 function createRuntime() {
@@ -288,6 +297,9 @@ test.describe("owner alpha universal practice exact-head runtime", () => {
             attemptText: body.attemptText,
             elapsedTimeMs: body.elapsedTimeMs,
             confidence: body.confidence,
+            methodFamily: body.methodFamily,
+            methodReason: body.methodReason,
+            firstCalculationDirection: body.firstCalculationDirection,
           });
         } else if (body.action === "request_assistance" || body.action === "reveal_reference") {
           session = (await runtime.requestAssistance({
@@ -304,6 +316,11 @@ test.describe("owner alpha universal practice exact-head runtime", () => {
             rewriteText: body.rewriteText,
             inferredMisunderstanding: body.inferredMisunderstanding,
             successCriteria: body.successCriteria,
+            revisedMethodFamily: body.revisedMethodFamily,
+            revisedMethodReason: body.revisedMethodReason,
+            revisedFirstCalculationDirection:
+              body.revisedFirstCalculationDirection,
+            recalculationSubmissions: body.recalculationSubmissions,
           });
         } else {
           throw new Error("unsupported synthetic action");
@@ -331,13 +348,17 @@ test.describe("owner alpha universal practice exact-head runtime", () => {
     await page.getByLabel("문제 텍스트").fill("원가방식 문제를 입력합니다.");
     await page.getByRole("button", { name: "문제 구조화 시작" }).click();
     await expect(page.getByRole("heading", { name: "2. 문제·자료 역할 확인" })).toBeVisible();
-    await expect(page.getByText("원가방식·감가수정", { exact: true }).first()).toBeVisible();
+    await expect(page.getByText("원가방식·감가수정", { exact: true })).toHaveCount(0);
 
     await page.getByRole("button", { name: "핵심 OCR 확인 완료" }).click();
     await expect(page.getByRole("heading", { name: "3. 먼저 풀기" })).toBeVisible();
     await expect(page.getByText("아직 AI 기준안은 생성·노출되지 않았습니다.", { exact: false })).toBeVisible();
+    await page.getByLabel("먼저 선택한 방법").selectOption("cost_approach");
+    await page.getByLabel("이 방법을 선택한 이유").fill("대상 건물의 면적과 재조달원가 단가가 제시되어 원가방식을 선택했습니다.");
+    await page.getByLabel("첫 계산 방향").fill("면적과 단가를 먼저 곱한 뒤 감가수정 순서를 확인합니다.");
     await page.getByLabel("내 독립 시도").fill("면적과 단가를 곱한 뒤 감가수정 순서를 적용하겠습니다.");
     await page.getByRole("button", { name: "독립 시도 저장" }).click();
+    await expect(page.getByText("원가방식·감가수정", { exact: true }).first()).toBeVisible();
     await expect(page.getByRole("region", { name: "과목별 설명 사다리" })).toHaveCount(0);
 
     for (let level = 1; level <= 4; level += 1) {
@@ -365,6 +386,11 @@ test.describe("owner alpha universal practice exact-head runtime", () => {
     await assertAccessible(page, "reference and rewrite");
 
     await page.getByLabel("내 재작성·재계산").fill("자료 역할을 구분하고 면적과 단가를 다시 곱해 단위까지 검산했습니다.");
+    await page.getByLabel("수정한 방법").selectOption("cost_approach");
+    await page.getByLabel("수정한 선택 이유").fill("피드백 뒤에도 면적과 재조달원가 단가의 역할을 근거로 원가방식을 유지했습니다.");
+    await page.getByLabel("수정한 첫 계산 방향").fill("면적 100㎡와 단가 2,000,000원을 곱해 재조달원가를 다시 계산합니다.");
+    await page.getByLabel("계산값").fill("200000000");
+    await page.getByLabel(/단위/).fill("원");
     await page.getByRole("button", { name: "재학습 완료 및 D+1 예약" }).click();
     await expect(page.getByRole("heading", { name: "7. 다음 복습 연결 완료" })).toBeVisible();
     await expect(page.getByRole("link", { name: "Queue" })).toBeVisible();

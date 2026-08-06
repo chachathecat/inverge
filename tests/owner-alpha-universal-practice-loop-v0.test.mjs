@@ -248,7 +248,53 @@ function harness(options = {}) {
   return { runtime, repository, provider: fakeProvider, now };
 }
 
-async function prepareAttempt(runtime, problemText) {
+function practicalAttemptCommitment(problemText, overrides = {}) {
+  const problemModel = compileOwnerAlphaPracticeProblem({
+    problemId: "test-practical-method-commitment",
+    problemText,
+  });
+  return {
+    methodFamily: overrides.methodFamily ?? problemModel.methodFamily,
+    methodReason:
+      overrides.methodReason ??
+      "문제에서 요구한 자료 역할과 평가 목적을 기준으로 이 방법을 선택했습니다.",
+    firstCalculationDirection:
+      overrides.firstCalculationDirection ??
+      "주어진 기초값을 확인한 뒤 핵심 비율과 단위를 유지해 계산합니다.",
+  };
+}
+
+function correctPracticalRecalculationSubmissions(view) {
+  const nodes = view.problemModel.calculationGraph.nodes;
+  const criticalNodes = nodes.filter((node) => node.critical);
+  const requiredNodes = criticalNodes.length > 0 ? criticalNodes : nodes;
+  return requiredNodes.flatMap((node) => {
+    const value = evaluateOwnerAlphaCalculationNode(node);
+    return Number.isFinite(value)
+      ? [{ nodeId: node.nodeId, value, unit: node.resultUnit }]
+      : [];
+  });
+}
+
+function practicalRewriteVerification(view, overrides = {}) {
+  if (!view.practicalDecisionPath) return {};
+  return {
+    revisedMethodFamily:
+      overrides.methodFamily ??
+      view.practicalDecisionPath.initialCommitment.methodFamily,
+    revisedMethodReason:
+      overrides.methodReason ??
+      "피드백 뒤 자료 역할과 방법의 적용 조건을 다시 확인했습니다.",
+    revisedFirstCalculationDirection:
+      overrides.firstCalculationDirection ??
+      "결정론 계산 노드를 처음부터 다시 계산하고 값과 단위를 대조합니다.",
+    recalculationSubmissions:
+      overrides.recalculationSubmissions ??
+      correctPracticalRecalculationSubmissions(view),
+  };
+}
+
+async function prepareAttempt(runtime, problemText, commitmentOverrides = {}) {
   let view = await runtime.create({ problemText, files: [], inputModality: "typed" });
   view = await runtime.confirmProblem({
     sessionId: view.sessionId,
@@ -261,6 +307,7 @@ async function prepareAttempt(runtime, problemText) {
     attemptText: "방법을 선택하고 문제의 숫자를 산식에 대입해 계산했습니다.",
     elapsedTimeMs: 120_000,
     confidence: "medium",
+    ...practicalAttemptCommitment(problemText, commitmentOverrides),
   });
   return view;
 }
@@ -306,6 +353,80 @@ const smokeFamilies = [
   },
 ];
 
+test("PracticalAdapter hides inferred methods and calculations until the learner commits a method", async () => {
+  const { runtime, repository } = harness();
+  const problemText =
+    "원가방식으로 대상건물 100㎡에 단가 200만원을 적용하여 재조달원가를 산정하시오.";
+  let view = await runtime.create({
+    problemText,
+    files: [],
+    inputModality: "typed",
+  });
+  assert.equal(view.problemModel.methodFamily, "mixed_or_uncertain");
+  assert.deepEqual(view.problemModel.methodCandidates, []);
+  assert.deepEqual(view.problemModel.calculationGraph.nodes, []);
+  assert.deepEqual(view.problemModel.subjectAdapter.methodCandidates, []);
+  assert.equal(
+    (await repository.load(view.sessionId)).problemModel.methodFamily,
+    "cost_approach",
+    "redaction is view-only and does not rewrite the canonical problem model",
+  );
+
+  view = await runtime.confirmProblem({
+    sessionId: view.sessionId,
+    recordVersion: view.recordVersion,
+    confirmedProblemText: view.confirmedProblemText,
+  });
+  assert.equal(view.problemModel.methodFamily, "mixed_or_uncertain");
+  assert.deepEqual(view.problemModel.methodCandidates, []);
+  assert.deepEqual(view.problemModel.calculationGraph.nodes, []);
+
+  view = await runtime.saveIndependentAttempt({
+    sessionId: view.sessionId,
+    recordVersion: view.recordVersion,
+    attemptText: "원가방식을 선택하고 면적과 단가를 곱하는 계산 방향을 적었습니다.",
+    elapsedTimeMs: 120_000,
+    confidence: "medium",
+    ...practicalAttemptCommitment(problemText),
+  });
+  assert.equal(view.problemModel.methodFamily, "cost_approach");
+  assert.equal(view.problemModel.methodCandidates.length > 0, true);
+  assert.equal(
+    view.practicalDecisionPath.initialCommitment.methodFamily,
+    "cost_approach",
+  );
+  assert.equal(view.practicalDecisionPath.repairVerification.status, "not_started");
+});
+
+test("adapter-less legacy sessions still save an independent attempt without a practical commitment", async () => {
+  const { runtime, repository } = harness();
+  let view = await runtime.create({
+    problemText:
+      "원가방식으로 대상건물 100㎡에 단가 200만원을 적용하여 재조달원가를 산정하시오.",
+    files: [],
+    inputModality: "typed",
+  });
+  const legacySession = await repository.load(view.sessionId);
+  delete legacySession.problemModel.subjectAdapter;
+  repository.rows.set(view.sessionId, legacySession);
+
+  view = await runtime.confirmProblem({
+    sessionId: view.sessionId,
+    recordVersion: view.recordVersion,
+    confirmedProblemText: view.confirmedProblemText,
+  });
+  assert.equal(view.problemModel.subjectAdapter, undefined);
+  view = await runtime.saveIndependentAttempt({
+    sessionId: view.sessionId,
+    recordVersion: view.recordVersion,
+    attemptText: "기존 세션 형식에서 방법을 선택하고 직접 계산했습니다.",
+    elapsedTimeMs: 120_000,
+    confidence: "medium",
+  });
+  assert.equal(view.status, "attempt_saved");
+  assert.equal(view.practicalDecisionPath, undefined);
+});
+
 for (const fixture of smokeFamilies) {
   test(`${fixture.family} uses the same generic independent-attempt, verification, rewrite, and D+1 loop`, async () => {
     const { runtime, repository, provider: fakeProvider, now } = harness();
@@ -330,6 +451,11 @@ for (const fixture of smokeFamilies) {
     );
     assert.equal(view.assistance.independentAttemptBeforeHelp, true);
     assert.equal(view.assistance.answerExposure, "none");
+    assert.equal(
+      view.practicalDecisionPath.initialCommitment.methodFamily,
+      fixture.family,
+    );
+    assert.equal(view.practicalDecisionPath.repairVerification.status, "not_started");
     assert.deepEqual(repository.evidence.attempts[0], {
       sessionId: view.sessionId,
       exposure: "none",
@@ -362,8 +488,14 @@ for (const fixture of smokeFamilies) {
       rewriteText: "자료 역할을 먼저 구분하고, 선택 이유를 쓴 뒤 단위가 유지되도록 직접 다시 계산했습니다.",
       inferredMisunderstanding: "자료 역할과 산식 입력 순서를 혼동했습니다.",
       successCriteria: "같은 방법을 이유·단위와 함께 독립적으로 재현합니다.",
+      ...practicalRewriteVerification(view),
     });
     assert.equal(completed.status, "completed");
+    assert.equal(completed.practicalDecisionPath.repairVerification.status, "verified");
+    assert.equal(
+      completed.practicalDecisionPath.revisedCommitment.methodFamily,
+      fixture.family,
+    );
     assert.equal(
       Date.parse(completed.fixedD1DueAt) - now.getTime(),
       86_400_000,
@@ -378,6 +510,109 @@ for (const fixture of smokeFamilies) {
     assert.equal(repository.evidence.completions.length, 1);
   });
 }
+
+test("wrong practical values or units remain rewrite_saved until a corrected resubmit verifies the repair", async () => {
+  const { runtime, repository } = harness();
+  let view = await prepareAttempt(
+    runtime,
+    "원가방식으로 대상건물 100㎡에 단가 200만원을 적용하여 재조달원가를 산정하시오.",
+    {
+      methodFamily: "mixed_or_uncertain",
+      methodReason: "처음에는 적용 방법을 확정하지 못해 혼합 가능성을 남겼습니다.",
+    },
+  );
+  view = (await runtime.requestAssistance({
+    sessionId: view.sessionId,
+    recordVersion: view.recordVersion,
+    questionText: null,
+    revealFull: true,
+  })).view;
+  const correctSubmissions = correctPracticalRecalculationSubmissions(view);
+  assert.equal(correctSubmissions.length, 1);
+  const rewriteFields = {
+    methodFamily: "cost_approach",
+    methodReason: "면적과 재조달원가 단가를 직접 연결하는 원가방식으로 수정했습니다.",
+  };
+  const baseCommand = {
+    mode: "recalculate",
+    rewriteText: "면적과 단가를 원 단위로 맞춘 뒤 같은 산식을 처음부터 다시 계산했습니다.",
+    inferredMisunderstanding: "처음에는 평가방법과 계산 단위의 연결을 확정하지 못했습니다.",
+    successCriteria: "원가방식의 면적과 단가를 원 단위로 독립 재현합니다.",
+  };
+
+  let blocked = await runtime.completeRewrite({
+    sessionId: view.sessionId,
+    recordVersion: view.recordVersion,
+    ...baseCommand,
+    ...practicalRewriteVerification(view, {
+      ...rewriteFields,
+      recalculationSubmissions: correctSubmissions.map((submission) => ({
+        ...submission,
+        value:
+          submission.value +
+          Math.max(1_000, Math.abs(submission.value) * 0.1),
+      })),
+    }),
+  });
+  assert.equal(blocked.status, "rewrite_saved");
+  assert.equal(
+    blocked.practicalDecisionPath.repairVerification.checks[0].status,
+    "value_mismatch",
+  );
+  assert.equal(blocked.fixedD1DueAt, null);
+  assert.equal(blocked.links.reviewQueueItemId, null);
+  assert.equal(blocked.links.todayActionSeedId, null);
+  assert.equal(blocked.links.learningRecordId, null);
+  assert.equal(repository.evidence.completions.length, 0);
+
+  blocked = await runtime.completeRewrite({
+    sessionId: blocked.sessionId,
+    recordVersion: blocked.recordVersion,
+    ...baseCommand,
+    ...practicalRewriteVerification(blocked, {
+      ...rewriteFields,
+      recalculationSubmissions: correctSubmissions.map((submission) => ({
+        ...submission,
+        unit: "만원",
+      })),
+    }),
+  });
+  assert.equal(blocked.status, "rewrite_saved");
+  assert.equal(
+    blocked.practicalDecisionPath.repairVerification.checks[0].status,
+    "unit_mismatch",
+  );
+  assert.equal(blocked.fixedD1DueAt, null);
+  assert.equal(blocked.links.reviewQueueItemId, null);
+  assert.equal(blocked.links.todayActionSeedId, null);
+  assert.equal(blocked.links.learningRecordId, null);
+  assert.equal(repository.evidence.completions.length, 0);
+
+  const completed = await runtime.completeRewrite({
+    sessionId: blocked.sessionId,
+    recordVersion: blocked.recordVersion,
+    ...baseCommand,
+    ...practicalRewriteVerification(blocked, {
+      ...rewriteFields,
+      recalculationSubmissions: correctSubmissions,
+    }),
+  });
+  assert.equal(completed.status, "completed");
+  assert.equal(completed.practicalDecisionPath.repairVerification.status, "verified");
+  assert.equal(
+    completed.practicalDecisionPath.initialCommitment.methodFamily,
+    "mixed_or_uncertain",
+  );
+  assert.equal(
+    completed.practicalDecisionPath.revisedCommitment.methodFamily,
+    "cost_approach",
+  );
+  assert.ok(completed.fixedD1DueAt);
+  assert.ok(completed.links.reviewQueueItemId);
+  assert.ok(completed.links.todayActionSeedId);
+  assert.ok(completed.links.learningRecordId);
+  assert.equal(repository.evidence.completions.length, 1);
+});
 
 test("critical AI/deterministic disagreement fails closed without reference promotion or success usage", async () => {
   const { runtime, repository } = harness({ conflict: true });
@@ -406,7 +641,7 @@ test("critical AI/deterministic disagreement fails closed without reference prom
   assert.equal(repository.evidence.referenceUsage.length, 0);
 });
 
-test("provider timeout persists no AI evidence or usage and the native rewrite/D+1 loop remains available", async () => {
+test("provider timeout persists the rewrite but blocks D+1 until deterministic repair verification exists", async () => {
   const { runtime, repository } = harness({
     referenceError: new OwnerAlphaProviderError("timeout"),
   });
@@ -436,12 +671,21 @@ test("provider timeout persists no AI evidence or usage and the native rewrite/D
     rewriteText: "AI 없이 순수익을 환원이율로 나누고 단위와 결과를 직접 검산했습니다.",
     inferredMisunderstanding: "환원이율의 백분율 방향을 다시 확인해야 합니다.",
     successCriteria: "환원이율을 소수로 바꾸어 직접 재계산합니다.",
+    ...practicalRewriteVerification(view),
   });
-  assert.equal(completed.status, "completed");
-  assert.equal(repository.evidence.completions.length, 1);
+  assert.equal(completed.status, "rewrite_saved");
+  assert.equal(
+    completed.practicalDecisionPath.repairVerification.status,
+    "not_available",
+  );
+  assert.equal(completed.fixedD1DueAt, null);
+  assert.equal(completed.links.reviewQueueItemId, null);
+  assert.equal(completed.links.todayActionSeedId, null);
+  assert.equal(completed.links.learningRecordId, null);
+  assert.equal(repository.evidence.completions.length, 0);
 });
 
-test("entitlement quota fails closed into the same native rewrite and D+1 fallback without a provider call", async () => {
+test("entitlement quota preserves the native rewrite but creates no D+1 projection without verification", async () => {
   const { runtime, repository, provider: fakeProvider } = harness({
     entitlementError: new OwnerAlphaProviderError("quota"),
   });
@@ -469,9 +713,18 @@ test("entitlement quota fails closed into the same native rewrite and D+1 fallba
     rewriteText: "사례가격과 배분비율의 방향을 직접 확인하고 AI 없이 다시 계산했습니다.",
     inferredMisunderstanding: "배분비율 적용 방향을 다시 확인해야 합니다.",
     successCriteria: "전체 가격과 배분비율을 사용해 직접 재현합니다.",
+    ...practicalRewriteVerification(view),
   });
-  assert.equal(completed.status, "completed");
-  assert.equal(repository.evidence.completions.length, 1);
+  assert.equal(completed.status, "rewrite_saved");
+  assert.equal(
+    completed.practicalDecisionPath.repairVerification.status,
+    "not_available",
+  );
+  assert.equal(completed.fixedD1DueAt, null);
+  assert.equal(completed.links.reviewQueueItemId, null);
+  assert.equal(completed.links.todayActionSeedId, null);
+  assert.equal(completed.links.learningRecordId, null);
+  assert.equal(repository.evidence.completions.length, 0);
 });
 
 test("mixed method stays unresolved instead of receiving fabricated certainty", async () => {
@@ -669,6 +922,7 @@ test("completion CAS is claimed before Queue, Today, Record, or rewrite projecti
     rewriteText: "자료 역할과 단위를 구분하고 같은 산식을 직접 다시 계산했습니다.",
     inferredMisunderstanding: "단가 입력 순서를 혼동했습니다.",
     successCriteria: "면적과 단가를 단위와 함께 재현합니다.",
+    ...practicalRewriteVerification(view),
   };
   const settled = await Promise.allSettled([
     runtime.completeRewrite(command),

@@ -24,9 +24,11 @@ import {
 } from "@/lib/review-os/owner-alpha-explanation-ladder-contract";
 import {
   OWNER_ALPHA_AI_REFERENCE_LABEL,
+  OWNER_ALPHA_METHOD_FAMILIES,
   OWNER_ALPHA_PRACTICE_ROUTE_KEY,
   ownerAlphaMethodFamilyLabel,
   ownerAlphaVerificationLabel,
+  type OwnerAlphaMethodFamily,
   type OwnerAlphaPracticeView,
 } from "@/lib/review-os/owner-alpha-practice-contract";
 import {
@@ -59,6 +61,7 @@ function statusLabel(session: OwnerAlphaPracticeView | null) {
       : "힌트";
   }
   if (session.status === "reference_withheld") return "계산·근거 확인";
+  if (session.status === "rewrite_saved") return "구조 다시 확인";
   if (session.status === "completion_pending") return "연결 저장 복구";
   if (session.status === "completed") return "다음 복습";
   return "다시 풀기";
@@ -102,6 +105,30 @@ function currentGuidance(session: OwnerAlphaPracticeView | null) {
     };
   }
   if (session.status !== "completed") {
+    if (session.status === "rewrite_saved") {
+      if (session.theoryReasoningPath) {
+        return {
+          now: "빠진 구조와 연결을 보완해 다시 제출하세요.",
+          why: "구조 확인이 남은 답안을 공식 오답으로 단정하거나 다음 복습에 연결하지 않습니다.",
+          misunderstanding: session.biggestGap?.inferredMisunderstanding ?? "직접 확인 필요",
+          success: "요구 동사·목차·개념·논증 연결이 빠짐없이 이어집니다.",
+        };
+      }
+      if (session.lawReasoningPath) {
+        return {
+          now: "저장된 출처와 문제 기준 유효일을 확인하고 법규 구조를 보완하세요.",
+          why: "출처·유효일 확인 전에는 법적 정확성이나 완료 상태를 만들지 않습니다.",
+          misunderstanding: session.biggestGap?.inferredMisunderstanding ?? "직접 확인 필요",
+          success: "쟁점부터 결론까지의 구조가 저장 출처와 정확한 유효일에 연결됩니다.",
+        };
+      }
+      return {
+        now: "틀린 계산 노드의 값·단위를 고쳐 다시 제출하세요.",
+        why: "검증되지 않은 재계산으로 D+1·Queue·Today·Record를 만들지 않습니다.",
+        misunderstanding: session.biggestGap?.inferredMisunderstanding ?? "직접 확인 필요",
+        success: "필수 계산 노드의 숫자와 단위가 모두 결정론 결과와 일치합니다.",
+      };
+    }
     return {
       now: "가장 큰 간극 하나를 확인하고 직접 재작성 또는 재계산하세요.",
       why: session.biggestGap.reasonSelected,
@@ -132,6 +159,53 @@ function errorMessage(code: string | null | undefined) {
   return "요청을 완료하지 못했습니다. 입력과 연결 상태를 확인해 주세요.";
 }
 
+function recalculationStatusLabel(
+  status:
+    | "validated"
+    | "missing"
+    | "value_mismatch"
+    | "unit_mismatch"
+    | "deterministic_unavailable",
+) {
+  if (status === "validated") return "값·단위 일치";
+  if (status === "missing") return "필수 결과 누락";
+  if (status === "value_mismatch") return "숫자 불일치";
+  if (status === "unit_mismatch") return "단위 불일치";
+  return "결정론 검증 불가";
+}
+
+function nonEmptyLines(value: string) {
+  return value
+    .split("\n")
+    .map((line) => line.trim())
+    .filter(Boolean);
+}
+
+function theoryOutlineItemsFromText(value: string) {
+  return nonEmptyLines(value).map((label, index) => ({
+    outlineItemId: `outline-${index + 1}`,
+    label,
+  }));
+}
+
+function theoryConceptsFromText(value: string) {
+  return nonEmptyLines(value).map((label, index) => ({
+    conceptId: `concept-${index + 1}`,
+    label,
+  }));
+}
+
+function lawRequirementsFromText(value: string) {
+  return nonEmptyLines(value).map((line, index) => {
+    const [requirement, ...effectParts] = line.split("|");
+    return {
+      requirementId: `requirement-${index + 1}`,
+      requirement: requirement.trim(),
+      legalEffect: effectParts.join("|").trim(),
+    };
+  });
+}
+
 export function OwnerAlphaPracticeLoop({
   initialSession,
 }: {
@@ -149,6 +223,17 @@ export function OwnerAlphaPracticeLoop({
   );
   const [attemptText, setAttemptText] = useState("");
   const [confidence, setConfidence] = useState<"low" | "medium" | "high">("medium");
+  const [methodFamily, setMethodFamily] = useState<OwnerAlphaMethodFamily>(
+    initialSession?.practicalDecisionPath?.initialCommitment.methodFamily ??
+      "mixed_or_uncertain",
+  );
+  const [methodReason, setMethodReason] = useState(
+    initialSession?.practicalDecisionPath?.initialCommitment.reason ?? "",
+  );
+  const [firstCalculationDirection, setFirstCalculationDirection] = useState(
+    initialSession?.practicalDecisionPath?.initialCommitment
+      .firstCalculationDirection ?? "",
+  );
   const [attemptStartedAt, setAttemptStartedAt] = useState(() => {
     const persistedStart =
       initialSession?.status === "problem_confirmed"
@@ -173,6 +258,151 @@ export function OwnerAlphaPracticeLoop({
   );
   const [successCriteria, setSuccessCriteria] = useState(
     initialSession?.biggestGap?.successCriteria ?? "",
+  );
+  const [revisedMethodFamily, setRevisedMethodFamily] =
+    useState<OwnerAlphaMethodFamily>(
+      initialSession?.practicalDecisionPath?.revisedCommitment?.methodFamily ??
+        initialSession?.practicalDecisionPath?.initialCommitment.methodFamily ??
+        "mixed_or_uncertain",
+    );
+  const [revisedMethodReason, setRevisedMethodReason] = useState(
+    initialSession?.practicalDecisionPath?.revisedCommitment?.reason ?? "",
+  );
+  const [revisedFirstCalculationDirection, setRevisedFirstCalculationDirection] =
+    useState(
+      initialSession?.practicalDecisionPath?.revisedCommitment
+        ?.firstCalculationDirection ?? "",
+    );
+  const [recalculationInputs, setRecalculationInputs] = useState<
+    Record<string, { value: string; unit: string }>
+  >(() =>
+    Object.fromEntries(
+      (initialSession?.practicalDecisionPath?.repairVerification.checks ?? []).map(
+        (check) => [
+          check.nodeId,
+          {
+            value:
+              check.submittedValue === null
+                ? ""
+                : String(check.submittedValue),
+            unit: check.submittedUnit ?? "",
+          },
+        ],
+      ),
+    ),
+  );
+  const initialTheorySubmission =
+    initialSession?.theoryReasoningPath?.repairSubmission;
+  const initialTheoryCommitment =
+    initialSession?.theoryReasoningPath?.initialCommitment;
+  const [theoryDemandVerb, setTheoryDemandVerb] = useState(
+    initialTheorySubmission?.demandVerb ??
+      initialTheoryCommitment?.demandVerb ??
+      "",
+  );
+  const [theoryThesis, setTheoryThesis] = useState(
+    initialTheorySubmission?.thesis ?? initialTheoryCommitment?.thesis ?? "",
+  );
+  const [theoryOutlineText, setTheoryOutlineText] = useState(
+    (initialTheorySubmission?.orderedOutlineItems ??
+      initialTheoryCommitment?.orderedOutlineItems ?? [])
+      .map((item) => item.label)
+      .join("\n"),
+  );
+  const [theoryConceptText, setTheoryConceptText] = useState(
+    (initialTheorySubmission?.selectedConcepts ??
+      initialTheoryCommitment?.selectedConcepts ?? [])
+      .map((item) => item.label)
+      .join("\n"),
+  );
+  const [theoryConnections, setTheoryConnections] = useState<
+    Record<string, { outlineItemId: string; argument: string }>
+  >(() =>
+    Object.fromEntries(
+      (initialTheorySubmission?.conceptArgumentLinks ?? []).map((link) => [
+        link.conceptId,
+        { outlineItemId: link.outlineItemId, argument: link.argument },
+      ]),
+    ),
+  );
+  const [theoryComparison, setTheoryComparison] = useState(
+    initialTheorySubmission?.comparisonOrEvaluation ?? "",
+  );
+  const [theoryCounterPosition, setTheoryCounterPosition] = useState(
+    initialTheorySubmission?.counterPosition ?? "",
+  );
+  const [theoryConclusion, setTheoryConclusion] = useState(
+    initialTheorySubmission?.conclusion ?? "",
+  );
+  const [theoryCompression, setTheoryCompression] = useState(
+    initialTheorySubmission?.compression ?? "",
+  );
+  const initialLawSubmission = initialSession?.lawReasoningPath?.repairSubmission;
+  const initialLawCommitment = initialSession?.lawReasoningPath?.initialCommitment;
+  const [lawIssueFraming, setLawIssueFraming] = useState(
+    initialLawSubmission?.issue ?? initialLawCommitment?.issueFraming ?? "",
+  );
+  const [lawLegalBasisPlan, setLawLegalBasisPlan] = useState(
+    initialLawCommitment?.legalBasisPlan ?? "",
+  );
+  const [lawRequirementEffectPlan, setLawRequirementEffectPlan] = useState(
+    initialLawCommitment?.requirementEffectPlan ?? "",
+  );
+  const [lawFactApplicationDirection, setLawFactApplicationDirection] = useState(
+    initialLawSubmission?.application ??
+      initialLawCommitment?.factApplicationDirection ??
+      "",
+  );
+  const [lawTentativeConclusion, setLawTentativeConclusion] = useState(
+    initialLawSubmission?.conclusion ??
+      initialLawCommitment?.tentativeConclusion ??
+      "",
+  );
+  const [lawSelectedAuthorityRefs, setLawSelectedAuthorityRefs] = useState<
+    string[]
+  >(
+    initialLawSubmission?.authorityBindings.map(
+      (item) => item.officialSourceRefId,
+    ) ?? [],
+  );
+  const [lawEffectiveDate, setLawEffectiveDate] = useState(
+    initialLawSubmission?.effectiveDate ??
+      initialSession?.lawReasoningPath?.postCommitEffectiveDate.effectiveAt ??
+      "",
+  );
+  const [lawRequirementsText, setLawRequirementsText] = useState(
+    (initialLawSubmission?.requirements ?? [])
+      .map((item) => `${item.requirement} | ${item.legalEffect}`)
+      .join("\n"),
+  );
+  const [lawFactApplications, setLawFactApplications] = useState<
+    Record<string, string>
+  >(() =>
+    Object.fromEntries(
+      (initialLawSubmission?.requirementFactMappings ?? []).map((item) => [
+        item.requirementId,
+        item.factApplication,
+      ]),
+    ),
+  );
+  const [lawApplication, setLawApplication] = useState(
+    initialLawSubmission?.application ??
+      initialLawCommitment?.factApplicationDirection ??
+      "",
+  );
+  const [lawConclusion, setLawConclusion] = useState(
+    initialLawSubmission?.conclusion ??
+      initialLawCommitment?.tentativeConclusion ??
+      "",
+  );
+  const [lawProcedure, setLawProcedure] = useState(
+    initialLawSubmission?.procedure ?? "",
+  );
+  const [lawPrecedent, setLawPrecedent] = useState(
+    initialLawSubmission?.precedentOrAdjudication ?? "",
+  );
+  const [lawOpposingInterpretation, setLawOpposingInterpretation] = useState(
+    initialLawSubmission?.opposingInterpretation ?? "",
   );
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
@@ -203,6 +433,111 @@ export function OwnerAlphaPracticeLoop({
     if (next.rewrite) {
       setRewriteMode(next.rewrite.mode);
       setRewriteText((current) => current || next.rewrite?.text || "");
+    }
+    if (next.practicalDecisionPath) {
+      const path = next.practicalDecisionPath;
+      setMethodFamily(path.initialCommitment.methodFamily);
+      setMethodReason(path.initialCommitment.reason);
+      setFirstCalculationDirection(
+        path.initialCommitment.firstCalculationDirection,
+      );
+      setRevisedMethodFamily(
+        path.revisedCommitment?.methodFamily ??
+          path.initialCommitment.methodFamily,
+      );
+      setRevisedMethodReason(path.revisedCommitment?.reason ?? "");
+      setRevisedFirstCalculationDirection(
+        path.revisedCommitment?.firstCalculationDirection ?? "",
+      );
+      if (path.repairVerification.checks.length > 0) {
+        setRecalculationInputs(
+          Object.fromEntries(
+            path.repairVerification.checks.map((check) => [
+              check.nodeId,
+              {
+                value:
+                  check.submittedValue === null
+                    ? ""
+                    : String(check.submittedValue),
+                unit: check.submittedUnit ?? "",
+              },
+            ]),
+          ),
+        );
+      }
+    }
+    if (next.theoryReasoningPath) {
+      const path = next.theoryReasoningPath;
+      const submission = path.repairSubmission;
+      const commitment = submission ?? path.initialCommitment;
+      setTheoryDemandVerb(commitment.demandVerb);
+      setTheoryThesis(commitment.thesis);
+      setTheoryOutlineText(
+        commitment.orderedOutlineItems.map((item) => item.label).join("\n"),
+      );
+      setTheoryConceptText(
+        commitment.selectedConcepts.map((item) => item.label).join("\n"),
+      );
+      setTheoryConnections(
+        Object.fromEntries(
+          (submission?.conceptArgumentLinks ?? []).map((link) => [
+            link.conceptId,
+            { outlineItemId: link.outlineItemId, argument: link.argument },
+          ]),
+        ),
+      );
+      setTheoryComparison(submission?.comparisonOrEvaluation ?? "");
+      setTheoryCounterPosition(submission?.counterPosition ?? "");
+      setTheoryConclusion(submission?.conclusion ?? "");
+      setTheoryCompression(submission?.compression ?? "");
+    }
+    if (next.lawReasoningPath) {
+      const path = next.lawReasoningPath;
+      const submission = path.repairSubmission;
+      setLawIssueFraming(
+        submission?.issue ?? path.initialCommitment.issueFraming,
+      );
+      setLawLegalBasisPlan(path.initialCommitment.legalBasisPlan);
+      setLawRequirementEffectPlan(
+        path.initialCommitment.requirementEffectPlan,
+      );
+      setLawFactApplicationDirection(
+        submission?.application ??
+          path.initialCommitment.factApplicationDirection,
+      );
+      setLawTentativeConclusion(
+        submission?.conclusion ?? path.initialCommitment.tentativeConclusion,
+      );
+      setLawSelectedAuthorityRefs(
+        submission?.authorityBindings.map(
+          (item) => item.officialSourceRefId,
+        ) ?? [],
+      );
+      setLawEffectiveDate(
+        submission?.effectiveDate ?? path.postCommitEffectiveDate.effectiveAt ?? "",
+      );
+      setLawRequirementsText(
+        (submission?.requirements ?? [])
+          .map((item) => `${item.requirement} | ${item.legalEffect}`)
+          .join("\n"),
+      );
+      setLawFactApplications(
+        Object.fromEntries(
+          (submission?.requirementFactMappings ?? []).map((item) => [
+            item.requirementId,
+            item.factApplication,
+          ]),
+        ),
+      );
+      setLawApplication(
+        submission?.application ?? path.initialCommitment.factApplicationDirection,
+      );
+      setLawConclusion(
+        submission?.conclusion ?? path.initialCommitment.tentativeConclusion,
+      );
+      setLawProcedure(submission?.procedure ?? "");
+      setLawPrecedent(submission?.precedentOrAdjudication ?? "");
+      setLawOpposingInterpretation(submission?.opposingInterpretation ?? "");
     }
   }
 
@@ -291,11 +626,39 @@ export function OwnerAlphaPracticeLoop({
 
   async function saveAttempt(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    const saved = await sendCommand("save_attempt", {
+    const body: Record<string, unknown> = {
       attemptText,
       confidence,
       elapsedTimeMs: Date.now() - attemptStartedAt,
-    });
+    };
+    const adapter = session?.problemModel.subjectAdapter;
+    if (!adapter || adapter.adapter === "PracticalAdapter") {
+      Object.assign(body, {
+        methodFamily,
+        methodReason,
+        firstCalculationDirection,
+      });
+    } else if (adapter.adapter === "TheoryAdapter") {
+      Object.assign(body, {
+        theoryCommitment: {
+          demandVerb: theoryDemandVerb,
+          thesis: theoryThesis,
+          orderedOutlineItems: theoryOutlineItemsFromText(theoryOutlineText),
+          selectedConcepts: theoryConceptsFromText(theoryConceptText),
+        },
+      });
+    } else {
+      Object.assign(body, {
+        lawCommitment: {
+          issueFraming: lawIssueFraming,
+          legalBasisPlan: lawLegalBasisPlan,
+          requirementEffectPlan: lawRequirementEffectPlan,
+          factApplicationDirection: lawFactApplicationDirection,
+          tentativeConclusion: lawTentativeConclusion,
+        },
+      });
+    }
+    const saved = await sendCommand("save_attempt", body);
     if (saved) setAttemptText("");
   }
 
@@ -309,13 +672,91 @@ export function OwnerAlphaPracticeLoop({
 
   async function completeRewrite(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    await sendCommand("complete_rewrite", {
+    const recalculationSubmissions = Object.entries(recalculationInputs)
+      .filter(([, input]) => input.value.trim().length > 0)
+      .map(([nodeId, input]) => ({
+        nodeId,
+        value: Number(input.value),
+        unit: input.unit.trim() || null,
+      }));
+    const body: Record<string, unknown> = {
       mode: rewriteMode,
       subjectMode: subjectRewriteMode,
       rewriteText,
       inferredMisunderstanding,
       successCriteria,
-    });
+    };
+    if (session?.practicalDecisionPath) {
+      Object.assign(body, {
+        revisedMethodFamily,
+        revisedMethodReason,
+        revisedFirstCalculationDirection,
+        recalculationSubmissions,
+      });
+    } else if (session?.theoryReasoningPath) {
+      const orderedOutlineItems = theoryOutlineItemsFromText(theoryOutlineText);
+      const selectedConcepts = theoryConceptsFromText(theoryConceptText);
+      const conceptArgumentLinks = selectedConcepts.flatMap((concept) => {
+        const connection = theoryConnections[concept.conceptId];
+        return connection?.outlineItemId && connection.argument.trim().length >= 3
+          ? [
+              {
+                conceptId: concept.conceptId,
+                outlineItemId: connection.outlineItemId,
+                argument: connection.argument,
+              },
+            ]
+          : [];
+      });
+      Object.assign(body, {
+        theoryRepairSubmission: {
+          demandVerb: theoryDemandVerb,
+          thesis: theoryThesis,
+          orderedOutlineItems,
+          selectedConcepts,
+          conceptArgumentLinks,
+          comparisonOrEvaluation:
+            theoryComparison.trim() || null,
+          counterPosition: theoryCounterPosition.trim() || null,
+          conclusion: theoryConclusion,
+          compression: theoryCompression,
+        },
+      });
+    } else if (session?.lawReasoningPath) {
+      const requirements = lawRequirementsFromText(lawRequirementsText);
+      const authorityBindings =
+        session.lawReasoningPath.postCommitStoredAuthorities.filter((item) =>
+          lawSelectedAuthorityRefs.includes(item.officialSourceRefId),
+        );
+      Object.assign(body, {
+        lawRepairSubmission: {
+          issue: lawIssueFraming,
+          authorityBindings: authorityBindings.map(
+            ({ authorityKind, label, officialSourceRefId }) => ({
+              authorityKind,
+              label,
+              officialSourceRefId,
+            }),
+          ),
+          effectiveDate: lawEffectiveDate,
+          requirements,
+          requirementFactMappings: requirements.flatMap((requirement) => {
+            const factApplication =
+              lawFactApplications[requirement.requirementId]?.trim() ?? "";
+            return factApplication.length >= 3
+              ? [{ requirementId: requirement.requirementId, factApplication }]
+              : [];
+          }),
+          application: lawApplication,
+          conclusion: lawConclusion,
+          procedure: lawProcedure.trim() || null,
+          precedentOrAdjudication: lawPrecedent.trim() || null,
+          opposingInterpretation:
+            lawOpposingInterpretation.trim() || null,
+        },
+      });
+    }
+    await sendCommand("complete_rewrite", body);
   }
 
   const showRewrite = Boolean(
@@ -331,6 +772,65 @@ export function OwnerAlphaPracticeLoop({
     : 1;
   const activeAdapter = session?.problemModel.subjectAdapter ?? null;
   const activeSubject = activeAdapter?.subject ?? subject;
+  const practicalActive = activeSubject === "appraisal_practical";
+  const theoryActive = activeSubject === "appraisal_theory";
+  const lawActive = activeSubject === "appraisal_compensation_law";
+  const calculationNodes = session?.problemModel.calculationGraph.nodes ?? [];
+  const hasCriticalCalculation = calculationNodes.some(
+    (node) => node.critical,
+  );
+  const practicalCalculationNodes = session?.practicalDecisionPath
+    ? calculationNodes.filter(
+        (node) => !hasCriticalCalculation || node.critical,
+      )
+    : [];
+  const practicalInputsComplete = practicalCalculationNodes.every((node) => {
+    const input = recalculationInputs[node.nodeId];
+    return Boolean(
+      input?.value.trim() &&
+        Number.isFinite(Number(input.value)) &&
+        (node.resultUnit === null || input.unit.trim()),
+    );
+  });
+  const theoryOutlineItems = theoryOutlineItemsFromText(theoryOutlineText);
+  const theoryConcepts = theoryConceptsFromText(theoryConceptText);
+  const theoryCommitmentComplete =
+    theoryDemandVerb.trim().length > 0 &&
+    theoryThesis.trim().length >= 3 &&
+    theoryOutlineItems.length > 0 &&
+    theoryConcepts.length > 0;
+  const theoryRepairComplete =
+    theoryCommitmentComplete &&
+    theoryConclusion.trim().length >= 3 &&
+    theoryCompression.trim().length >= 3 &&
+    (!session?.theoryReasoningPath?.comparisonOrEvaluationRequired ||
+      theoryComparison.trim().length >= 3) &&
+    (!session?.theoryReasoningPath?.counterPositionRequired ||
+      theoryCounterPosition.trim().length >= 3);
+  const lawRequirements = lawRequirementsFromText(lawRequirementsText);
+  const lawCommitmentComplete = [
+    lawIssueFraming,
+    lawLegalBasisPlan,
+    lawRequirementEffectPlan,
+    lawFactApplicationDirection,
+    lawTentativeConclusion,
+  ].every((value) => value.trim().length >= 3);
+  const lawRequirementLinesValid = lawRequirements.every(
+    (item) =>
+      item.requirement.trim().length >= 3 && item.legalEffect.trim().length >= 3,
+  );
+  const lawRepairComplete =
+    lawIssueFraming.trim().length >= 3 &&
+    lawEffectiveDate.trim().length > 0 &&
+    lawApplication.trim().length >= 3 &&
+    lawConclusion.trim().length >= 3 &&
+    lawRequirementLinesValid &&
+    (!session?.lawReasoningPath?.procedureRequired ||
+      lawProcedure.trim().length >= 3) &&
+    (!session?.lawReasoningPath?.precedentOrAdjudicationRequired ||
+      lawPrecedent.trim().length >= 3) &&
+    (!session?.lawReasoningPath?.opposingInterpretationRequired ||
+      lawOpposingInterpretation.trim().length >= 3);
 
   return (
     <main id="main-content">
@@ -466,6 +966,194 @@ export function OwnerAlphaPracticeLoop({
             </CardHeader>
             <CardContent>
               <form onSubmit={saveAttempt} className="space-y-5">
+                {practicalActive ? (
+                  <fieldset className="space-y-4 rounded-[var(--radius-md)] border border-[var(--border)] p-4">
+                    <legend className="px-1 text-sm font-medium">
+                      피드백 전 방법 판단
+                    </legend>
+                    <div>
+                      <label
+                        htmlFor="owner-alpha-method-family"
+                        className="text-sm font-medium"
+                      >
+                        먼저 선택한 방법
+                      </label>
+                      <select
+                        id="owner-alpha-method-family"
+                        value={methodFamily}
+                        onChange={(event) =>
+                          setMethodFamily(
+                            event.target.value as OwnerAlphaMethodFamily,
+                          )
+                        }
+                        className="mt-2 min-h-11 w-full rounded-[var(--radius-input)] border border-[var(--border)] bg-[color:var(--surface)] px-3 text-sm"
+                      >
+                        {OWNER_ALPHA_METHOD_FAMILIES.map((value) => (
+                          <option key={value} value={value}>
+                            {ownerAlphaMethodFamilyLabel(value)}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    <div>
+                      <label
+                        htmlFor="owner-alpha-method-reason"
+                        className="text-sm font-medium"
+                      >
+                        이 방법을 선택한 이유
+                      </label>
+                      <Textarea
+                        id="owner-alpha-method-reason"
+                        value={methodReason}
+                        onChange={(event) => setMethodReason(event.target.value)}
+                        className="min-h-24"
+                        maxLength={1_200}
+                        placeholder="문제 사실과 자료 역할을 근거로 적으세요."
+                        required
+                      />
+                    </div>
+                    <div>
+                      <label
+                        htmlFor="owner-alpha-first-calculation-direction"
+                        className="text-sm font-medium"
+                      >
+                        첫 계산 방향
+                      </label>
+                      <Textarea
+                        id="owner-alpha-first-calculation-direction"
+                        value={firstCalculationDirection}
+                        onChange={(event) =>
+                          setFirstCalculationDirection(event.target.value)
+                        }
+                        className="min-h-24"
+                        maxLength={1_200}
+                        placeholder="첫 산식·분자/분모·증감 방향을 적으세요."
+                        required
+                      />
+                    </div>
+                  </fieldset>
+                ) : null}
+                {theoryActive ? (
+                  <fieldset className="space-y-4 rounded-[var(--radius-md)] border border-[var(--border)] p-4">
+                    <legend className="px-1 text-sm font-medium">
+                      피드백 전 이론 구조 판단
+                    </legend>
+                    <p className="text-xs leading-5 text-[color:var(--muted)]">
+                      예상 목차나 개념 목록은 제공하지 않습니다. 문제를 읽고 만든 구조를 자신의 말로 남기세요.
+                    </p>
+                    <div>
+                      <label htmlFor="owner-alpha-theory-demand" className="text-sm font-medium">
+                        요구 동사
+                      </label>
+                      <input
+                        id="owner-alpha-theory-demand"
+                        type="text"
+                        value={theoryDemandVerb}
+                        onChange={(event) => setTheoryDemandVerb(event.target.value)}
+                        maxLength={240}
+                        placeholder="예: 설명하라, 비교하라, 논하라"
+                        className="mt-2 min-h-11 w-full rounded-[var(--radius-input)] border border-[var(--border)] bg-[color:var(--surface)] px-3 text-sm"
+                        required
+                      />
+                    </div>
+                    <div>
+                      <label htmlFor="owner-alpha-theory-thesis" className="text-sm font-medium">
+                        내 중심 명제
+                      </label>
+                      <Textarea
+                        id="owner-alpha-theory-thesis"
+                        value={theoryThesis}
+                        onChange={(event) => setTheoryThesis(event.target.value)}
+                        maxLength={2_000}
+                        className="min-h-24"
+                        required
+                      />
+                    </div>
+                    <div>
+                      <label htmlFor="owner-alpha-theory-outline" className="text-sm font-medium">
+                        내 목차 순서 · 한 줄에 하나
+                      </label>
+                      <Textarea
+                        id="owner-alpha-theory-outline"
+                        value={theoryOutlineText}
+                        onChange={(event) => setTheoryOutlineText(event.target.value)}
+                        maxLength={8_000}
+                        className="min-h-32"
+                        placeholder={"서론의 역할\n본론의 첫 논점\n결론의 역할"}
+                        required
+                      />
+                    </div>
+                    <div>
+                      <label htmlFor="owner-alpha-theory-concepts" className="text-sm font-medium">
+                        내가 선택한 핵심 개념 · 한 줄에 하나
+                      </label>
+                      <Textarea
+                        id="owner-alpha-theory-concepts"
+                        value={theoryConceptText}
+                        onChange={(event) => setTheoryConceptText(event.target.value)}
+                        maxLength={8_000}
+                        className="min-h-28"
+                        required
+                      />
+                    </div>
+                  </fieldset>
+                ) : null}
+                {lawActive ? (
+                  <fieldset className="space-y-4 rounded-[var(--radius-md)] border border-[var(--border)] p-4">
+                    <legend className="px-1 text-sm font-medium">
+                      피드백 전 법규 판단
+                    </legend>
+                    <p className="text-xs leading-5 text-[color:var(--muted)]">
+                      저장된 조문·출처·유효일은 독립 시도 뒤에 확인합니다. 지금은 잠정 계획만 자신의 말로 적으세요.
+                    </p>
+                    {[
+                      {
+                        id: "owner-alpha-law-issue",
+                        label: "쟁점 구성",
+                        value: lawIssueFraming,
+                        setter: setLawIssueFraming,
+                      },
+                      {
+                        id: "owner-alpha-law-basis-plan",
+                        label: "잠정 법적 근거 계획",
+                        value: lawLegalBasisPlan,
+                        setter: setLawLegalBasisPlan,
+                      },
+                      {
+                        id: "owner-alpha-law-requirement-plan",
+                        label: "요건·효과 계획",
+                        value: lawRequirementEffectPlan,
+                        setter: setLawRequirementEffectPlan,
+                      },
+                      {
+                        id: "owner-alpha-law-fact-direction",
+                        label: "사실 적용 방향",
+                        value: lawFactApplicationDirection,
+                        setter: setLawFactApplicationDirection,
+                      },
+                      {
+                        id: "owner-alpha-law-tentative-conclusion",
+                        label: "잠정 결론",
+                        value: lawTentativeConclusion,
+                        setter: setLawTentativeConclusion,
+                      },
+                    ].map((field) => (
+                      <div key={field.id}>
+                        <label htmlFor={field.id} className="text-sm font-medium">
+                          {field.label}
+                        </label>
+                        <Textarea
+                          id={field.id}
+                          value={field.value}
+                          onChange={(event) => field.setter(event.target.value)}
+                          maxLength={2_000}
+                          className="min-h-24"
+                          required
+                        />
+                      </div>
+                    ))}
+                  </fieldset>
+                ) : null}
                 <div>
                   <label htmlFor="owner-alpha-attempt" className="text-sm font-medium">내 독립 시도</label>
                   <Textarea
@@ -488,7 +1176,20 @@ export function OwnerAlphaPracticeLoop({
                     ))}
                   </div>
                 </fieldset>
-                <Button type="submit" size="lg" className="w-full sm:w-auto" disabled={busy || attemptText.trim().length < 10}>
+                <Button
+                  type="submit"
+                  size="lg"
+                  className="w-full sm:w-auto"
+                  disabled={
+                    busy ||
+                    attemptText.trim().length < 10 ||
+                    (practicalActive &&
+                      (methodReason.trim().length < 3 ||
+                        firstCalculationDirection.trim().length < 3)) ||
+                    (theoryActive && !theoryCommitmentComplete) ||
+                    (lawActive && !lawCommitmentComplete)
+                  }
+                >
                   {busy ? "독립 시도 저장 중…" : "독립 시도 저장"}
                 </Button>
               </form>
@@ -607,21 +1308,602 @@ export function OwnerAlphaPracticeLoop({
                     </select>
                   </div>
                 ) : null}
+                {session.practicalDecisionPath ? (
+                  <section
+                    aria-labelledby="owner-alpha-revised-method-heading"
+                    className="space-y-4 rounded-[var(--radius-md)] border border-[var(--border)] p-4"
+                  >
+                    <h3
+                      id="owner-alpha-revised-method-heading"
+                      className="text-sm font-medium"
+                    >
+                      피드백 뒤 수정한 방법 판단
+                    </h3>
+                    <p className="text-xs leading-5 text-[color:var(--muted)]">
+                      최초 선택은 그대로 보존됩니다. 바뀌지 않았다면 같은 방법을 다시 선택하고 이유를 새로 적으세요.
+                    </p>
+                    <div>
+                      <label
+                        htmlFor="owner-alpha-revised-method-family"
+                        className="text-sm font-medium"
+                      >
+                        수정한 방법
+                      </label>
+                      <select
+                        id="owner-alpha-revised-method-family"
+                        value={revisedMethodFamily}
+                        onChange={(event) =>
+                          setRevisedMethodFamily(
+                            event.target.value as OwnerAlphaMethodFamily,
+                          )
+                        }
+                        className="mt-2 min-h-11 w-full rounded-[var(--radius-input)] border border-[var(--border)] bg-[color:var(--surface)] px-3 text-sm"
+                      >
+                        {OWNER_ALPHA_METHOD_FAMILIES.map((value) => (
+                          <option key={value} value={value}>
+                            {ownerAlphaMethodFamilyLabel(value)}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    <div>
+                      <label
+                        htmlFor="owner-alpha-revised-method-reason"
+                        className="text-sm font-medium"
+                      >
+                        수정한 선택 이유
+                      </label>
+                      <Textarea
+                        id="owner-alpha-revised-method-reason"
+                        value={revisedMethodReason}
+                        onChange={(event) =>
+                          setRevisedMethodReason(event.target.value)
+                        }
+                        className="min-h-24"
+                        maxLength={1_200}
+                        required
+                      />
+                    </div>
+                    <div>
+                      <label
+                        htmlFor="owner-alpha-revised-calculation-direction"
+                        className="text-sm font-medium"
+                      >
+                        수정한 첫 계산 방향
+                      </label>
+                      <Textarea
+                        id="owner-alpha-revised-calculation-direction"
+                        value={revisedFirstCalculationDirection}
+                        onChange={(event) =>
+                          setRevisedFirstCalculationDirection(
+                            event.target.value,
+                          )
+                        }
+                        className="min-h-24"
+                        maxLength={1_200}
+                        required
+                      />
+                    </div>
+                  </section>
+                ) : null}
+                {session.theoryReasoningPath ? (
+                  <section
+                    aria-labelledby="owner-alpha-theory-repair-heading"
+                    className="space-y-4 rounded-[var(--radius-md)] border border-[var(--border)] p-4"
+                  >
+                    <h3
+                      id="owner-alpha-theory-repair-heading"
+                      className="text-sm font-medium"
+                    >
+                      이론 구조 재작성
+                    </h3>
+                    <p className="text-xs leading-5 text-[color:var(--muted)]">
+                      최초 구조는 그대로 보존됩니다. 이 확인은 구조와 관계만 지원하며 점수·공식 정답·이론적 진위를 판정하지 않습니다.
+                    </p>
+                    {session.theoryReasoningPath.repairVerification.status ===
+                    "blocked" ? (
+                      <p className="rounded-[var(--radius-md)] bg-[color:var(--status-red-soft)] p-3 text-sm leading-6">
+                        구조 확인이 남아 있습니다. 공식 오답 판정이 아닙니다. 빠진 목차·개념·논증 연결을 보완하세요.
+                      </p>
+                    ) : null}
+                    <div>
+                      <label htmlFor="owner-alpha-theory-revised-demand" className="text-sm font-medium">
+                        수정한 요구 동사
+                      </label>
+                      <input
+                        id="owner-alpha-theory-revised-demand"
+                        type="text"
+                        value={theoryDemandVerb}
+                        onChange={(event) => setTheoryDemandVerb(event.target.value)}
+                        maxLength={240}
+                        className="mt-2 min-h-11 w-full rounded-[var(--radius-input)] border border-[var(--border)] bg-[color:var(--surface)] px-3 text-sm"
+                        required
+                      />
+                    </div>
+                    <div>
+                      <label htmlFor="owner-alpha-theory-revised-thesis" className="text-sm font-medium">
+                        수정한 중심 명제
+                      </label>
+                      <Textarea
+                        id="owner-alpha-theory-revised-thesis"
+                        value={theoryThesis}
+                        onChange={(event) => setTheoryThesis(event.target.value)}
+                        maxLength={2_000}
+                        className="min-h-24"
+                        required
+                      />
+                    </div>
+                    <div>
+                      <label htmlFor="owner-alpha-theory-revised-outline" className="text-sm font-medium">
+                        수정한 목차 순서 · 한 줄에 하나
+                      </label>
+                      <Textarea
+                        id="owner-alpha-theory-revised-outline"
+                        value={theoryOutlineText}
+                        onChange={(event) => setTheoryOutlineText(event.target.value)}
+                        maxLength={8_000}
+                        className="min-h-32"
+                        required
+                      />
+                    </div>
+                    <div>
+                      <label htmlFor="owner-alpha-theory-revised-concepts" className="text-sm font-medium">
+                        수정한 핵심 개념 · 한 줄에 하나
+                      </label>
+                      <Textarea
+                        id="owner-alpha-theory-revised-concepts"
+                        value={theoryConceptText}
+                        onChange={(event) => setTheoryConceptText(event.target.value)}
+                        maxLength={8_000}
+                        className="min-h-28"
+                        required
+                      />
+                    </div>
+                    {theoryConcepts.length > 0 ? (
+                      <fieldset className="space-y-3">
+                        <legend className="text-sm font-medium">
+                          개념을 목차와 논증에 연결
+                        </legend>
+                        {theoryConcepts.map((concept) => {
+                          const connection = theoryConnections[concept.conceptId] ?? {
+                            outlineItemId: "",
+                            argument: "",
+                          };
+                          return (
+                            <div
+                              key={concept.conceptId}
+                              className="grid gap-3 rounded-[var(--radius-md)] bg-[color:var(--surface-soft)] p-4 sm:grid-cols-2"
+                            >
+                              <div>
+                                <label
+                                  htmlFor={`owner-alpha-theory-outline-link-${concept.conceptId}`}
+                                  className="text-xs font-medium"
+                                >
+                                  {concept.label}의 목차 위치
+                                </label>
+                                <select
+                                  id={`owner-alpha-theory-outline-link-${concept.conceptId}`}
+                                  value={connection.outlineItemId}
+                                  onChange={(event) =>
+                                    setTheoryConnections((current) => ({
+                                      ...current,
+                                      [concept.conceptId]: {
+                                        ...connection,
+                                        outlineItemId: event.target.value,
+                                      },
+                                    }))
+                                  }
+                                  className="mt-2 min-h-11 w-full rounded-[var(--radius-input)] border border-[var(--border)] bg-[color:var(--surface)] px-3 text-sm"
+                                >
+                                  <option value="">연결할 목차 선택</option>
+                                  {theoryOutlineItems.map((item) => (
+                                    <option key={item.outlineItemId} value={item.outlineItemId}>
+                                      {item.label}
+                                    </option>
+                                  ))}
+                                </select>
+                              </div>
+                              <div>
+                                <label
+                                  htmlFor={`owner-alpha-theory-argument-${concept.conceptId}`}
+                                  className="text-xs font-medium"
+                                >
+                                  연결 논증
+                                </label>
+                                <Textarea
+                                  id={`owner-alpha-theory-argument-${concept.conceptId}`}
+                                  value={connection.argument}
+                                  onChange={(event) =>
+                                    setTheoryConnections((current) => ({
+                                      ...current,
+                                      [concept.conceptId]: {
+                                        ...connection,
+                                        argument: event.target.value,
+                                      },
+                                    }))
+                                  }
+                                  maxLength={2_000}
+                                  className="min-h-24"
+                                />
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </fieldset>
+                    ) : null}
+                    {session.theoryReasoningPath.comparisonOrEvaluationRequired ? (
+                      <div>
+                        <label htmlFor="owner-alpha-theory-comparison" className="text-sm font-medium">
+                          비교 또는 평가
+                        </label>
+                        <Textarea
+                          id="owner-alpha-theory-comparison"
+                          value={theoryComparison}
+                          onChange={(event) => setTheoryComparison(event.target.value)}
+                          maxLength={4_000}
+                          required
+                        />
+                      </div>
+                    ) : null}
+                    {session.theoryReasoningPath.counterPositionRequired ? (
+                      <div>
+                        <label htmlFor="owner-alpha-theory-counter" className="text-sm font-medium">
+                          반대 견해 또는 한계
+                        </label>
+                        <Textarea
+                          id="owner-alpha-theory-counter"
+                          value={theoryCounterPosition}
+                          onChange={(event) => setTheoryCounterPosition(event.target.value)}
+                          maxLength={4_000}
+                          required
+                        />
+                      </div>
+                    ) : null}
+                    <div>
+                      <label htmlFor="owner-alpha-theory-conclusion" className="text-sm font-medium">
+                        결론
+                      </label>
+                      <Textarea
+                        id="owner-alpha-theory-conclusion"
+                        value={theoryConclusion}
+                        onChange={(event) => setTheoryConclusion(event.target.value)}
+                        maxLength={4_000}
+                        required
+                      />
+                    </div>
+                    <div>
+                      <label htmlFor="owner-alpha-theory-compression" className="text-sm font-medium">
+                        한 줄 압축
+                      </label>
+                      <Textarea
+                        id="owner-alpha-theory-compression"
+                        value={theoryCompression}
+                        onChange={(event) => setTheoryCompression(event.target.value)}
+                        maxLength={1_000}
+                        className="min-h-20"
+                        required
+                      />
+                    </div>
+                  </section>
+                ) : null}
+                {session.lawReasoningPath ? (
+                  <section
+                    aria-labelledby="owner-alpha-law-repair-heading"
+                    className="space-y-4 rounded-[var(--radius-md)] border border-[var(--border)] p-4"
+                  >
+                    <h3
+                      id="owner-alpha-law-repair-heading"
+                      className="text-sm font-medium"
+                    >
+                      법규 출처·유효일·구조 재작성
+                    </h3>
+                    <p className="text-xs leading-5 text-[color:var(--muted)]">
+                      이 확인은 저장된 출처·버전과 답안 구조만 지원합니다. 자동 법적 정확성 판정이 아닙니다.
+                    </p>
+                    {session.lawReasoningPath.repairVerification.status ===
+                    "blocked" ? (
+                      <p className="rounded-[var(--radius-md)] bg-[color:var(--status-red-soft)] p-3 text-sm leading-6">
+                        출처·유효일 확인 또는 구조 보완이 필요합니다. 법적 정확성을 판정한 상태가 아닙니다.
+                      </p>
+                    ) : null}
+                    <div>
+                      <label htmlFor="owner-alpha-law-revised-issue" className="text-sm font-medium">
+                        수정한 쟁점
+                      </label>
+                      <Textarea
+                        id="owner-alpha-law-revised-issue"
+                        value={lawIssueFraming}
+                        onChange={(event) => setLawIssueFraming(event.target.value)}
+                        maxLength={3_000}
+                        required
+                      />
+                    </div>
+                    <fieldset className="space-y-2">
+                      <legend className="text-sm font-medium">저장된 공식 출처 바인딩</legend>
+                      {session.lawReasoningPath.postCommitStoredAuthorities.length > 0 ? (
+                        session.lawReasoningPath.postCommitStoredAuthorities.map((authority) => (
+                          <label
+                            key={authority.officialSourceRefId}
+                            className="flex min-h-11 items-start gap-3 rounded-[var(--radius-input)] border border-[var(--border)] px-3 py-2 text-sm"
+                          >
+                            <input
+                              type="checkbox"
+                              checked={lawSelectedAuthorityRefs.includes(
+                                authority.officialSourceRefId,
+                              )}
+                              onChange={(event) =>
+                                setLawSelectedAuthorityRefs((current) =>
+                                  event.target.checked
+                                    ? [...current, authority.officialSourceRefId]
+                                    : current.filter(
+                                        (ref) => ref !== authority.officialSourceRefId,
+                                      ),
+                                )
+                              }
+                              className="mt-1"
+                            />
+                            <span>
+                              {authority.label}
+                              <span className="mt-1 block break-all text-xs text-[color:var(--muted)]">
+                                {authority.officialSourceRefId}
+                              </span>
+                            </span>
+                          </label>
+                        ))
+                      ) : (
+                        <p className="rounded-[var(--radius-md)] bg-[color:var(--status-red-soft)] p-3 text-sm leading-6">
+                          저장된 공식 출처 바인딩이 없어 이 경로는 완료할 수 없습니다. 출처를 만들어 내지 말고 검토 필요 상태로 두세요.
+                        </p>
+                      )}
+                    </fieldset>
+                    <div>
+                      <label htmlFor="owner-alpha-law-effective-date" className="text-sm font-medium">
+                        문제·시험 기준 유효일
+                      </label>
+                      <input
+                        id="owner-alpha-law-effective-date"
+                        type="text"
+                        value={lawEffectiveDate}
+                        onChange={(event) => setLawEffectiveDate(event.target.value)}
+                        maxLength={80}
+                        placeholder="YYYY-MM-DD"
+                        className="mt-2 min-h-11 w-full rounded-[var(--radius-input)] border border-[var(--border)] bg-[color:var(--surface)] px-3 text-sm sm:max-w-sm"
+                        required
+                      />
+                      <p className="mt-2 text-xs leading-5 text-[color:var(--muted)]">
+                        저장된 기준: {session.lawReasoningPath.postCommitEffectiveDate.effectiveAt ?? "확인되지 않음"}. 평가·거래·업무 날짜로 대신할 수 없습니다.
+                      </p>
+                    </div>
+                    <div>
+                      <label htmlFor="owner-alpha-law-requirements" className="text-sm font-medium">
+                        법적 요건과 효과 · 한 줄에 `요건 | 효과`
+                      </label>
+                      <Textarea
+                        id="owner-alpha-law-requirements"
+                        value={lawRequirementsText}
+                        onChange={(event) => setLawRequirementsText(event.target.value)}
+                        maxLength={12_000}
+                        className="min-h-32"
+                        placeholder="요건 내용 | 그 요건의 법적 효과"
+                      />
+                    </div>
+                    {lawRequirements.map((requirement) => (
+                      <div key={requirement.requirementId}>
+                        <label
+                          htmlFor={`owner-alpha-law-fact-${requirement.requirementId}`}
+                          className="text-sm font-medium"
+                        >
+                          `{requirement.requirement || "입력한 요건"}`에 대응하는 사실
+                        </label>
+                        <Textarea
+                          id={`owner-alpha-law-fact-${requirement.requirementId}`}
+                          value={lawFactApplications[requirement.requirementId] ?? ""}
+                          onChange={(event) =>
+                            setLawFactApplications((current) => ({
+                              ...current,
+                              [requirement.requirementId]: event.target.value,
+                            }))
+                          }
+                          maxLength={3_000}
+                          className="min-h-24"
+                        />
+                      </div>
+                    ))}
+                    <div>
+                      <label htmlFor="owner-alpha-law-application" className="text-sm font-medium">
+                        포섭·적용
+                      </label>
+                      <Textarea
+                        id="owner-alpha-law-application"
+                        value={lawApplication}
+                        onChange={(event) => setLawApplication(event.target.value)}
+                        maxLength={6_000}
+                        required
+                      />
+                    </div>
+                    {session.lawReasoningPath.procedureRequired ? (
+                      <div>
+                        <label htmlFor="owner-alpha-law-procedure" className="text-sm font-medium">
+                          절차
+                        </label>
+                        <Textarea
+                          id="owner-alpha-law-procedure"
+                          value={lawProcedure}
+                          onChange={(event) => setLawProcedure(event.target.value)}
+                          maxLength={3_000}
+                          required
+                        />
+                      </div>
+                    ) : null}
+                    {session.lawReasoningPath.precedentOrAdjudicationRequired ? (
+                      <div>
+                        <label htmlFor="owner-alpha-law-precedent" className="text-sm font-medium">
+                          판례·재결 연결
+                        </label>
+                        <Textarea
+                          id="owner-alpha-law-precedent"
+                          value={lawPrecedent}
+                          onChange={(event) => setLawPrecedent(event.target.value)}
+                          maxLength={3_000}
+                          required
+                        />
+                      </div>
+                    ) : null}
+                    {session.lawReasoningPath.opposingInterpretationRequired ? (
+                      <div>
+                        <label htmlFor="owner-alpha-law-opposing" className="text-sm font-medium">
+                          반대 해석
+                        </label>
+                        <Textarea
+                          id="owner-alpha-law-opposing"
+                          value={lawOpposingInterpretation}
+                          onChange={(event) => setLawOpposingInterpretation(event.target.value)}
+                          maxLength={3_000}
+                          required
+                        />
+                      </div>
+                    ) : null}
+                    <div>
+                      <label htmlFor="owner-alpha-law-conclusion" className="text-sm font-medium">
+                        결론
+                      </label>
+                      <Textarea
+                        id="owner-alpha-law-conclusion"
+                        value={lawConclusion}
+                        onChange={(event) => setLawConclusion(event.target.value)}
+                        maxLength={3_000}
+                        required
+                      />
+                    </div>
+                  </section>
+                ) : null}
                 <div>
                   <label htmlFor="owner-alpha-rewrite" className="text-sm font-medium">내 재작성·재계산</label>
                   <Textarea id="owner-alpha-rewrite" value={rewriteText} onChange={(event) => setRewriteText(event.target.value)} maxLength={16_000} required />
                 </div>
+                {session.practicalDecisionPath &&
+                practicalCalculationNodes.length > 0 ? (
+                  <fieldset className="space-y-4 rounded-[var(--radius-md)] border border-[var(--border)] p-4">
+                    <legend className="px-1 text-sm font-medium">
+                      필수 계산 결과 검증
+                    </legend>
+                    <p className="text-xs leading-5 text-[color:var(--muted)]">
+                      기준 숫자는 표시하지 않습니다. 직접 재계산한 값과 단위를 입력하면 서버가 결정론 결과와 대조합니다.
+                    </p>
+                    {practicalCalculationNodes.map((node) => {
+                      const input = recalculationInputs[node.nodeId] ?? {
+                        value: "",
+                        unit: "",
+                      };
+                      const check =
+                        session.practicalDecisionPath?.repairVerification.checks.find(
+                          (item) => item.nodeId === node.nodeId,
+                        );
+                      return (
+                        <div
+                          key={node.nodeId}
+                          className="grid gap-3 rounded-[var(--radius-md)] bg-[color:var(--surface-soft)] p-4 sm:grid-cols-[minmax(0,1fr)_minmax(0,0.55fr)]"
+                        >
+                          <div className="sm:col-span-2">
+                            <p className="text-sm font-medium">{node.label}</p>
+                            {check ? (
+                              <p
+                                className={`mt-1 text-xs ${
+                                  check.status === "validated"
+                                    ? "text-[color:var(--status-green)]"
+                                    : "text-[color:var(--status-red)]"
+                                }`}
+                              >
+                                {recalculationStatusLabel(check.status)}
+                              </p>
+                            ) : null}
+                          </div>
+                          <div>
+                            <label
+                              htmlFor={`owner-alpha-node-value-${node.nodeId}`}
+                              className="text-xs font-medium"
+                            >
+                              계산값
+                            </label>
+                            <input
+                              id={`owner-alpha-node-value-${node.nodeId}`}
+                              type="number"
+                              step="any"
+                              value={input.value}
+                              onChange={(event) =>
+                                setRecalculationInputs((current) => ({
+                                  ...current,
+                                  [node.nodeId]: {
+                                    ...input,
+                                    value: event.target.value,
+                                  },
+                                }))
+                              }
+                              className="mt-2 min-h-11 w-full rounded-[var(--radius-input)] border border-[var(--border)] bg-[color:var(--surface)] px-3 text-sm"
+                              required
+                            />
+                          </div>
+                          <div>
+                            <label
+                              htmlFor={`owner-alpha-node-unit-${node.nodeId}`}
+                              className="text-xs font-medium"
+                            >
+                              단위{node.resultUnit ? ` · ${node.resultUnit}` : ""}
+                            </label>
+                            <input
+                              id={`owner-alpha-node-unit-${node.nodeId}`}
+                              type="text"
+                              value={input.unit}
+                              onChange={(event) =>
+                                setRecalculationInputs((current) => ({
+                                  ...current,
+                                  [node.nodeId]: {
+                                    ...input,
+                                    unit: event.target.value,
+                                  },
+                                }))
+                              }
+                              className="mt-2 min-h-11 w-full rounded-[var(--radius-input)] border border-[var(--border)] bg-[color:var(--surface)] px-3 text-sm"
+                              required={node.resultUnit !== null}
+                            />
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </fieldset>
+                ) : null}
                 <QuietSection className="p-4">
                   <p className="text-xs font-medium text-[color:var(--muted)]">조건 변형 1개</p>
                   <p className="mt-2 text-sm font-medium">{session.variant?.changedOneThing}</p>
                   <p className="mt-1 text-sm leading-6">{session.variant?.prompt}</p>
                 </QuietSection>
-                <Button type="submit" size="lg" className="w-full sm:w-auto" disabled={busy || rewriteText.trim().length < 10 || inferredMisunderstanding.trim().length < 3 || successCriteria.trim().length < 3}>
+                <Button
+                  type="submit"
+                  size="lg"
+                  className="w-full sm:w-auto"
+                  disabled={
+                    busy ||
+                    rewriteText.trim().length < 10 ||
+                    inferredMisunderstanding.trim().length < 3 ||
+                    successCriteria.trim().length < 3 ||
+                    (Boolean(session.practicalDecisionPath) &&
+                      (revisedMethodReason.trim().length < 3 ||
+                        revisedFirstCalculationDirection.trim().length < 3 ||
+                        !practicalInputsComplete)) ||
+                    (Boolean(session.theoryReasoningPath) &&
+                      !theoryRepairComplete) ||
+                    (Boolean(session.lawReasoningPath) && !lawRepairComplete)
+                  }
+                >
                   {busy
                     ? "연결 저장 중…"
                     : session.status === "completion_pending"
                       ? "Queue·Today·Records 연결 다시 완료"
-                      : "재학습 완료 및 D+1 예약"}
+                      : session.status === "rewrite_saved"
+                        ? "수정 저장 및 다시 확인"
+                        : session.theoryReasoningPath || session.lawReasoningPath
+                          ? "재작성 저장 및 구조 확인"
+                          : "재학습 완료 및 D+1 예약"}
                 </Button>
               </form>
             </CardContent>
@@ -660,7 +1942,8 @@ function ProblemStructure({ session }: { session: OwnerAlphaPracticeView }) {
     <QuietSection className="p-4 sm:p-5">
       <div className="flex flex-wrap items-center gap-2">
         {adapter ? <RefinedBadge tone="amber">{ownerAlphaSubjectLabel(adapter.subject)}</RefinedBadge> : null}
-        {!adapter || adapter.adapter === "PracticalAdapter" ? (
+        {session.independentAttempt &&
+        (!adapter || adapter.adapter === "PracticalAdapter") ? (
           <RefinedBadge>{ownerAlphaMethodFamilyLabel(session.problemModel.methodFamily)}</RefinedBadge>
         ) : null}
         {session.problemModel.topicCandidates.map((topic) => <RefinedBadge key={topic}>{topic}</RefinedBadge>)}
@@ -673,13 +1956,13 @@ function ProblemStructure({ session }: { session: OwnerAlphaPracticeView }) {
         </div>
       ) : adapter.adapter === "TheoryAdapter" ? (
         <div className="mt-4 grid gap-5 md:grid-cols-3">
-          <div><h3 className="text-sm font-medium">쟁점 후보</h3><ul className="mt-2 space-y-1 text-sm">{adapter.issueCandidates.map((item) => <li key={item}>• {item}</li>)}</ul></div>
-          <div><h3 className="text-sm font-medium">예상 목차</h3><ol className="mt-2 space-y-1 text-sm">{adapter.expectedOutlineHierarchy.map((item, index) => <li key={item}>{index + 1}. {item}</li>)}</ol></div>
+          <div><h3 className="text-sm font-medium">쟁점 후보</h3><ul className="mt-2 space-y-1 text-sm">{adapter.issueCandidates.length > 0 ? adapter.issueCandidates.map((item) => <li key={item}>• {item}</li>) : <li>• 독립 시도 뒤 확인</li>}</ul></div>
+          <div><h3 className="text-sm font-medium">예상 목차</h3><ol className="mt-2 space-y-1 text-sm">{adapter.expectedOutlineHierarchy.length > 0 ? adapter.expectedOutlineHierarchy.map((item, index) => <li key={item}>{index + 1}. {item}</li>) : <li>독립 시도 뒤 확인</li>}</ol></div>
           <div><h3 className="text-sm font-medium">검증 범위</h3><p className="mt-2 text-sm leading-6">구조·관계·모순·포괄성·근거 상태만 확인합니다. 이론 내용을 결정론적으로 채점하지 않습니다.</p></div>
         </div>
       ) : (
         <div className="mt-4 grid gap-5 md:grid-cols-3">
-          <div><h3 className="text-sm font-medium">법적 쟁점 후보</h3><ul className="mt-2 space-y-1 text-sm">{adapter.legalIssueCandidates.map((item) => <li key={item}>• {item}</li>)}</ul></div>
+          <div><h3 className="text-sm font-medium">법적 쟁점 후보</h3><ul className="mt-2 space-y-1 text-sm">{adapter.legalIssueCandidates.length > 0 ? adapter.legalIssueCandidates.map((item) => <li key={item}>• {item}</li>) : <li>• 독립 시도 뒤 확인</li>}</ul></div>
           <div><h3 className="text-sm font-medium">법적 근거·유효일</h3><ul className="mt-2 space-y-1 text-sm">{adapter.articleAndParagraphReferences.length > 0 ? adapter.articleAndParagraphReferences.map((item) => <li key={item.citation}>• {item.citation} · {ownerAlphaVerificationLabel(item.state)}</li>) : <li>• 조문·항 공식 원문 확인 필요</li>}<li>• 유효일: {adapter.effectiveDateRequirement.effectiveAt ?? "검토 필요"}</li></ul></div>
           <div><h3 className="text-sm font-medium">검증 원칙</h3><p className="mt-2 text-sm leading-6">공식 원문 참조 없이 AI 법적 진술을 공식 근거로 승격하지 않으며, 유효일 미상은 검토 필요로 닫습니다.</p></div>
         </div>

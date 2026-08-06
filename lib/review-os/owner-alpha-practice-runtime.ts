@@ -10,18 +10,39 @@ import {
 } from "./owner-alpha-explanation-ladder-contract";
 import { compileOwnerAlphaPracticeProblem } from "./owner-alpha-practice-compiler";
 import {
+  OWNER_ALPHA_METHOD_FAMILIES,
   OWNER_ALPHA_PRACTICE_CONTRACT_VERSION,
   toOwnerAlphaPracticeView,
   type OwnerAlphaAssistanceLevel,
   type OwnerAlphaBiggestGap,
   type OwnerAlphaClaimState,
   type OwnerAlphaMisconceptionGraph,
+  type OwnerAlphaMethodFamily,
   type OwnerAlphaPracticeSession,
   type OwnerAlphaPracticeVariant,
   type OwnerAlphaPracticeView,
   type OwnerAlphaQuestionReplayLink,
   type OwnerAlphaRootCauseCandidate,
 } from "./owner-alpha-practice-contract";
+import {
+  ownerAlphaPracticalDecisionPathProjection,
+  refreshOwnerAlphaPracticalDecisionPath,
+  verifyOwnerAlphaPracticalRepair,
+  type OwnerAlphaPracticalMethodCommitment,
+  type OwnerAlphaPracticalRecalculationSubmission,
+} from "./owner-alpha-practical-decision-path";
+import {
+  ownerAlphaTheoryReasoningPathProjection,
+  verifyOwnerAlphaTheoryRepair,
+  type OwnerAlphaTheoryReasoningCommitment,
+  type OwnerAlphaTheoryRepairSubmission,
+} from "./owner-alpha-theory-reasoning-path";
+import {
+  ownerAlphaLawReasoningPathProjection,
+  verifyOwnerAlphaLawRepair,
+  type OwnerAlphaLawReasoningCommitment,
+  type OwnerAlphaLawRepairSubmission,
+} from "./owner-alpha-law-reasoning-path";
 import {
   OwnerAlphaProviderError,
   type OwnerAlphaPracticeProviderPort,
@@ -48,6 +69,20 @@ const MAX_ATTEMPT_TEXT = 16_000;
 const MAX_QUESTION_TEXT = 2_000;
 const MAX_REWRITE_TEXT = 16_000;
 const REFERENCE_LEASE_MS = 60_000;
+
+function sha256(value: string) {
+  return crypto.createHash("sha256").update(value).digest("hex");
+}
+
+function isMethodFamily(value: unknown): value is OwnerAlphaMethodFamily {
+  return OWNER_ALPHA_METHOD_FAMILIES.includes(value as OwnerAlphaMethodFamily);
+}
+
+function subjectAdapterBasisChecksum(
+  adapter: NonNullable<OwnerAlphaPracticeSession["problemModel"]["subjectAdapter"]>,
+) {
+  return sha256(JSON.stringify(adapter));
+}
 
 export type OwnerAlphaPracticeRuntimeDependencies = {
   repository: OwnerAlphaPracticeRepositoryPort;
@@ -637,12 +672,146 @@ export class OwnerAlphaPracticeRuntime {
     attemptText: string;
     elapsedTimeMs: number;
     confidence: "low" | "medium" | "high";
+    methodFamily?: OwnerAlphaMethodFamily | null;
+    methodReason?: string | null;
+    firstCalculationDirection?: string | null;
+    theoryCommitment?: Omit<
+      OwnerAlphaTheoryReasoningCommitment,
+      "confidence" | "committedAt"
+    > | null;
+    lawCommitment?: Omit<
+      OwnerAlphaLawReasoningCommitment,
+      "confidence" | "committedAt"
+    > | null;
   }) {
     const session = await this.requireSession(input.sessionId, input.recordVersion);
     if (session.status !== "problem_confirmed" || !session.criticalOcrConfirmed) {
       throw new OwnerAlphaPracticeRuntimeError("invalid_transition");
     }
     const savedAt = this.deps.now().toISOString();
+    const practicalAdapter =
+      session.problemModel.subjectAdapter?.adapter === "PracticalAdapter";
+    let practicalDecisionPath = session.practicalDecisionPath;
+    let theoryReasoningPath = session.theoryReasoningPath;
+    let lawReasoningPath = session.lawReasoningPath;
+    const adapter = session.problemModel.subjectAdapter;
+    if (
+      (practicalAdapter && (input.theoryCommitment || input.lawCommitment)) ||
+      (adapter?.adapter === "TheoryAdapter" &&
+        (input.lawCommitment || input.methodFamily != null)) ||
+      (adapter?.adapter === "LawAdapter" &&
+        (input.theoryCommitment || input.methodFamily != null))
+    ) {
+      throw new OwnerAlphaPracticeRuntimeError("invalid_input");
+    }
+    if (practicalAdapter) {
+      if (!isMethodFamily(input.methodFamily)) {
+        throw new OwnerAlphaPracticeRuntimeError("invalid_input");
+      }
+      const initialCommitment: OwnerAlphaPracticalMethodCommitment = {
+        methodFamily: input.methodFamily,
+        reason: boundedText(input.methodReason ?? "", 1_200, 3),
+        firstCalculationDirection: boundedText(
+          input.firstCalculationDirection ?? "",
+          1_200,
+          3,
+        ),
+        confidence: input.confidence,
+        committedAt: savedAt,
+      };
+      const problemRevisionChecksum = sha256(session.confirmedProblemText);
+      practicalDecisionPath = ownerAlphaPracticalDecisionPathProjection({
+        pathId: `${session.sessionId}:practical-decision-path`,
+        problemRevisionChecksum,
+        problemModel: session.problemModel,
+        initialCommitment,
+        basisChecksum: sha256(
+          JSON.stringify({
+            problemRevisionChecksum,
+            initialCommitment,
+            methodCandidateRefs:
+              session.problemModel.subjectAdapter?.adapter === "PracticalAdapter"
+                ? session.problemModel.subjectAdapter.methodCandidates.map(
+                    (item) => item.methodId,
+                  )
+                : [],
+          }),
+        ),
+      });
+    }
+    if (adapter?.adapter === "TheoryAdapter") {
+      const commitment = input.theoryCommitment;
+      if (!commitment) {
+        throw new OwnerAlphaPracticeRuntimeError("invalid_input");
+      }
+      const initialCommitment: OwnerAlphaTheoryReasoningCommitment = {
+        demandVerb: boundedText(commitment.demandVerb, 240),
+        thesis: boundedText(commitment.thesis, 2_000, 3),
+        orderedOutlineItems: commitment.orderedOutlineItems,
+        selectedConcepts: commitment.selectedConcepts,
+        confidence: input.confidence,
+        committedAt: savedAt,
+      };
+      const problemRevisionChecksum = sha256(session.confirmedProblemText);
+      const adapterBasisChecksum = subjectAdapterBasisChecksum(adapter);
+      theoryReasoningPath = ownerAlphaTheoryReasoningPathProjection({
+        pathId: `${session.sessionId}:theory-reasoning-path`,
+        problemRevisionChecksum,
+        adapterBasisChecksum,
+        adapter,
+        initialCommitment,
+        basisChecksum: sha256(
+          JSON.stringify({
+            problemRevisionChecksum,
+            adapterBasisChecksum,
+            initialCommitment,
+          }),
+        ),
+      });
+    }
+    if (adapter?.adapter === "LawAdapter") {
+      const commitment = input.lawCommitment;
+      if (!commitment) {
+        throw new OwnerAlphaPracticeRuntimeError("invalid_input");
+      }
+      const initialCommitment: OwnerAlphaLawReasoningCommitment = {
+        issueFraming: boundedText(commitment.issueFraming, 2_000, 3),
+        legalBasisPlan: boundedText(commitment.legalBasisPlan, 2_000, 3),
+        requirementEffectPlan: boundedText(
+          commitment.requirementEffectPlan,
+          2_000,
+          3,
+        ),
+        factApplicationDirection: boundedText(
+          commitment.factApplicationDirection,
+          2_000,
+          3,
+        ),
+        tentativeConclusion: boundedText(
+          commitment.tentativeConclusion,
+          2_000,
+          3,
+        ),
+        confidence: input.confidence,
+        committedAt: savedAt,
+      };
+      const problemRevisionChecksum = sha256(session.confirmedProblemText);
+      const adapterBasisChecksum = subjectAdapterBasisChecksum(adapter);
+      lawReasoningPath = ownerAlphaLawReasoningPathProjection({
+        pathId: `${session.sessionId}:law-reasoning-path`,
+        problemRevisionChecksum,
+        adapterBasisChecksum,
+        adapter,
+        initialCommitment,
+        basisChecksum: sha256(
+          JSON.stringify({
+            problemRevisionChecksum,
+            adapterBasisChecksum,
+            initialCommitment,
+          }),
+        ),
+      });
+    }
     const next: OwnerAlphaPracticeSession = {
       ...session,
       status: "attempt_saved",
@@ -659,6 +828,9 @@ export class OwnerAlphaPracticeRuntime {
         elapsedTimeMs: boundedElapsed(input.elapsedTimeMs),
         confidence: input.confidence,
       },
+      ...(practicalDecisionPath ? { practicalDecisionPath } : {}),
+      ...(theoryReasoningPath ? { theoryReasoningPath } : {}),
+      ...(lawReasoningPath ? { lawReasoningPath } : {}),
       links: {
         ...session.links,
         answerSubmissionId: `${session.sessionId}:independent-attempt`,
@@ -856,6 +1028,34 @@ export class OwnerAlphaPracticeRuntime {
             ),
           }
         : subjectAdapter;
+    const preparedProblemModel: OwnerAlphaPracticeSession["problemModel"] = {
+      ...claimed.problemModel,
+      calculationGraph: checked.reference.calculationGraph,
+      subjectAdapter: synchronizedSubjectAdapter,
+      claimVerificationStates: [
+        ...claimed.problemModel.claimVerificationStates,
+        ...isolatedClaims,
+      ],
+    };
+    const preparedDecisionPath = claimed.practicalDecisionPath
+      ? refreshOwnerAlphaPracticalDecisionPath(
+          claimed.practicalDecisionPath,
+          preparedProblemModel,
+          sha256(
+            JSON.stringify({
+              problemRevisionChecksum:
+                claimed.practicalDecisionPath.problemRevisionChecksum,
+              initialCommitment:
+                claimed.practicalDecisionPath.initialCommitment,
+              calculationGraphNodeIds:
+                checked.reference.calculationGraph.nodes.map(
+                  (node) => node.nodeId,
+                ),
+              claimRefs: isolatedClaims.map((claim) => claim.claimId),
+            }),
+          ),
+        )
+      : undefined;
     const prepared: OwnerAlphaPracticeSession = {
       ...claimed,
       status: referenceReleased ? "reference_ready" : "reference_withheld",
@@ -871,15 +1071,10 @@ export class OwnerAlphaPracticeRuntime {
           : fallbackLearningEvidence(claimed).misconceptionGraph,
       rootCauseCandidates: checked.rootCauseCandidates,
       variant: checked.variant,
-      problemModel: {
-        ...claimed.problemModel,
-        calculationGraph: checked.reference.calculationGraph,
-        subjectAdapter: synchronizedSubjectAdapter,
-        claimVerificationStates: [
-          ...claimed.problemModel.claimVerificationStates,
-          ...isolatedClaims,
-        ],
-      },
+      problemModel: preparedProblemModel,
+      ...(preparedDecisionPath
+        ? { practicalDecisionPath: preparedDecisionPath }
+        : {}),
       providerState: {
         ...claimed.providerState,
         reference: referenceReleased ? "succeeded" : "withheld",
@@ -911,6 +1106,12 @@ export class OwnerAlphaPracticeRuntime {
     rewriteText: string;
     inferredMisunderstanding: string;
     successCriteria: string;
+    revisedMethodFamily?: OwnerAlphaMethodFamily | null;
+    revisedMethodReason?: string | null;
+    revisedFirstCalculationDirection?: string | null;
+    recalculationSubmissions?: OwnerAlphaPracticalRecalculationSubmission[];
+    theoryRepairSubmission?: OwnerAlphaTheoryRepairSubmission | null;
+    lawRepairSubmission?: OwnerAlphaLawRepairSubmission | null;
   }) {
     const session = await this.requireSession(input.sessionId, input.recordVersion);
     if (!session.independentAttempt || !session.biggestGap || !session.variant) {
@@ -919,19 +1120,11 @@ export class OwnerAlphaPracticeRuntime {
     if (session.status === "completed") {
       return toOwnerAlphaPracticeView(session);
     }
-    const projection = ownerAlphaCompletionProjection(
-      this.deps.userId,
-      session.sessionId,
-    );
+    let projection: ReturnType<typeof ownerAlphaCompletionProjection> | null = null;
     let pending = session;
     if (session.status !== "completion_pending") {
       const nowDate = this.deps.now();
       const savedAt = nowDate.toISOString();
-      const fixedD1DueAt = new Date(nowDate.getTime() + 86_400_000).toISOString();
-      const variantQuestionId = `${session.sessionId}-variant-question`;
-      const withoutDuplicateVariant = session.questionChain.entries.filter(
-        (entry) => entry.questionId !== variantQuestionId,
-      );
       const adapter = session.problemModel.subjectAdapter;
       const canonicalMode =
         adapter && adapter.subject !== "appraisal_practical"
@@ -944,26 +1137,226 @@ export class OwnerAlphaPracticeRuntime {
             canonicalMode,
           )
         : undefined;
-      const claimed: OwnerAlphaPracticeSession = {
-        ...session,
-        status: "completion_pending",
-        biggestGap: {
-          ...session.biggestGap,
-          inferredMisunderstanding: boundedText(
-            input.inferredMisunderstanding,
+      const confirmedGap = {
+        ...session.biggestGap,
+        inferredMisunderstanding: boundedText(
+          input.inferredMisunderstanding,
+          1_200,
+          3,
+        ),
+        successCriteria: boundedText(input.successCriteria, 1_200, 3),
+        state: "learner_confirmed" as const,
+      };
+      const rewrite = {
+        rewriteId: `${session.sessionId}:rewrite`,
+        mode: canonicalMode,
+        subjectMode,
+        text: boundedText(input.rewriteText, MAX_REWRITE_TEXT, 10),
+        savedAt,
+      };
+      let practicalDecisionPath = session.practicalDecisionPath;
+      let theoryReasoningPath = session.theoryReasoningPath;
+      let lawReasoningPath = session.lawReasoningPath;
+      if (
+        (practicalDecisionPath &&
+          (input.theoryRepairSubmission || input.lawRepairSubmission)) ||
+        (theoryReasoningPath &&
+          (input.lawRepairSubmission || input.revisedMethodFamily != null)) ||
+        (lawReasoningPath &&
+          (input.theoryRepairSubmission || input.revisedMethodFamily != null))
+      ) {
+        throw new OwnerAlphaPracticeRuntimeError("invalid_input");
+      }
+      if (practicalDecisionPath) {
+        if (!isMethodFamily(input.revisedMethodFamily)) {
+          throw new OwnerAlphaPracticeRuntimeError("invalid_input");
+        }
+        const revisedCommitment: OwnerAlphaPracticalMethodCommitment = {
+          methodFamily: input.revisedMethodFamily,
+          reason: boundedText(input.revisedMethodReason ?? "", 1_200, 3),
+          firstCalculationDirection: boundedText(
+            input.revisedFirstCalculationDirection ?? "",
             1_200,
             3,
           ),
-          successCriteria: boundedText(input.successCriteria, 1_200, 3),
-          state: "learner_confirmed",
-        },
-        rewrite: {
-          rewriteId: `${session.sessionId}:rewrite`,
-          mode: canonicalMode,
-          subjectMode,
-          text: boundedText(input.rewriteText, MAX_REWRITE_TEXT, 10),
-          savedAt,
-        },
+          confidence: practicalDecisionPath.initialCommitment.confidence,
+          committedAt: savedAt,
+        };
+        const submissions = input.recalculationSubmissions ?? [];
+        practicalDecisionPath = verifyOwnerAlphaPracticalRepair({
+          path: practicalDecisionPath,
+          problemModel: session.problemModel,
+          revisedCommitment,
+          submissions,
+          verifiedAt: savedAt,
+          basisChecksum: sha256(
+            JSON.stringify({
+              previousBasisChecksum: practicalDecisionPath.basisChecksum,
+              revisedCommitment,
+              submissions,
+            }),
+          ),
+        });
+      }
+      if (theoryReasoningPath) {
+        const submission = input.theoryRepairSubmission;
+        const adapter = session.problemModel.subjectAdapter;
+        if (!submission || adapter?.adapter !== "TheoryAdapter") {
+          throw new OwnerAlphaPracticeRuntimeError("invalid_input");
+        }
+        const revisedCommitment: OwnerAlphaTheoryReasoningCommitment = {
+          demandVerb: boundedText(submission.demandVerb, 240),
+          thesis: boundedText(submission.thesis, 2_000, 3),
+          orderedOutlineItems: submission.orderedOutlineItems,
+          selectedConcepts: submission.selectedConcepts,
+          confidence: theoryReasoningPath.initialCommitment.confidence,
+          committedAt: savedAt,
+        };
+        const problemRevisionChecksum = sha256(session.confirmedProblemText);
+        const adapterBasisChecksum = subjectAdapterBasisChecksum(adapter);
+        theoryReasoningPath = verifyOwnerAlphaTheoryRepair({
+          path: theoryReasoningPath,
+          adapter,
+          revisedCommitment,
+          submission,
+          supportedAt: savedAt,
+          problemRevisionChecksum,
+          adapterBasisChecksum,
+          basisChecksum: sha256(
+            JSON.stringify({
+              previousBasisChecksum: theoryReasoningPath.basisChecksum,
+              revisedCommitment,
+              submission,
+              problemRevisionChecksum,
+              adapterBasisChecksum,
+            }),
+          ),
+        });
+      }
+      if (lawReasoningPath) {
+        const submission = input.lawRepairSubmission;
+        const adapter = session.problemModel.subjectAdapter;
+        if (!submission || adapter?.adapter !== "LawAdapter") {
+          throw new OwnerAlphaPracticeRuntimeError("invalid_input");
+        }
+        const revisedCommitment: OwnerAlphaLawReasoningCommitment = {
+          issueFraming: boundedText(submission.issue, 2_000, 3),
+          legalBasisPlan: boundedText(
+            submission.authorityBindings.length > 0
+              ? submission.authorityBindings
+                  .map((item) => `${item.label}:${item.officialSourceRefId}`)
+                  .join("\n")
+              : lawReasoningPath.initialCommitment.legalBasisPlan,
+            4_000,
+            3,
+          ),
+          requirementEffectPlan: boundedText(
+            submission.requirements.length > 0
+              ? submission.requirements
+                  .map((item) => `${item.requirement}:${item.legalEffect}`)
+                  .join("\n")
+              : lawReasoningPath.initialCommitment.requirementEffectPlan,
+            4_000,
+            3,
+          ),
+          factApplicationDirection: boundedText(
+            submission.application,
+            4_000,
+            3,
+          ),
+          tentativeConclusion: boundedText(submission.conclusion, 2_000, 3),
+          confidence: lawReasoningPath.initialCommitment.confidence,
+          committedAt: savedAt,
+        };
+        const problemRevisionChecksum = sha256(session.confirmedProblemText);
+        const adapterBasisChecksum = subjectAdapterBasisChecksum(adapter);
+        lawReasoningPath = verifyOwnerAlphaLawRepair({
+          path: lawReasoningPath,
+          adapter,
+          revisedCommitment,
+          submission,
+          supportedAt: savedAt,
+          problemRevisionChecksum,
+          adapterBasisChecksum,
+          basisChecksum: sha256(
+            JSON.stringify({
+              previousBasisChecksum: lawReasoningPath.basisChecksum,
+              revisedCommitment,
+              submission,
+              problemRevisionChecksum,
+              adapterBasisChecksum,
+            }),
+          ),
+        });
+      }
+
+      const repairSupported = practicalDecisionPath
+        ? practicalDecisionPath.repairVerification.status === "verified"
+        : theoryReasoningPath
+          ? theoryReasoningPath.repairVerification.status ===
+            "structurally_supported"
+          : lawReasoningPath
+            ? lawReasoningPath.repairVerification.status ===
+              "source_version_structurally_supported"
+            : true;
+      if (!repairSupported) {
+        const blocked: OwnerAlphaPracticeSession = {
+          ...session,
+          status: "rewrite_saved",
+          biggestGap: confirmedGap,
+          rewrite,
+          ...(practicalDecisionPath ? { practicalDecisionPath } : {}),
+          ...(theoryReasoningPath ? { theoryReasoningPath } : {}),
+          ...(lawReasoningPath ? { lawReasoningPath } : {}),
+          fixedD1DueAt: null,
+          questionChain: {
+            ...session.questionChain,
+            entries: session.questionChain.entries.filter(
+              (entry) =>
+                entry.questionId !== `${session.sessionId}-variant-question`,
+            ),
+          },
+          assistance: {
+            ...session.assistance,
+            independentRecoveryAfterHelp: false,
+            variantFamilyId: null,
+            variantDistance: null,
+          },
+          links: {
+            ...session.links,
+            rewriteSubmissionId: `${session.sessionId}:rewrite`,
+            reviewQueueItemId: null,
+            todayActionSeedId: null,
+            learningRecordId: null,
+          },
+        };
+        const savedBlocked = await this.deps.repository.save(
+          blocked,
+          input.recordVersion,
+        );
+        await this.deps.repository.saveRewrite(savedBlocked);
+        return toOwnerAlphaPracticeView(savedBlocked);
+      }
+
+      const fixedD1DueAt = new Date(
+        nowDate.getTime() + 86_400_000,
+      ).toISOString();
+      const variantQuestionId = `${session.sessionId}-variant-question`;
+      const withoutDuplicateVariant = session.questionChain.entries.filter(
+        (entry) => entry.questionId !== variantQuestionId,
+      );
+      projection = ownerAlphaCompletionProjection(
+        this.deps.userId,
+        session.sessionId,
+      );
+      const claimed: OwnerAlphaPracticeSession = {
+        ...session,
+        status: "completion_pending",
+        biggestGap: confirmedGap,
+        rewrite,
+        ...(practicalDecisionPath ? { practicalDecisionPath } : {}),
+        ...(theoryReasoningPath ? { theoryReasoningPath } : {}),
+        ...(lawReasoningPath ? { lawReasoningPath } : {}),
         fixedD1DueAt,
         questionChain: {
           ...session.questionChain,
@@ -998,6 +1391,10 @@ export class OwnerAlphaPracticeRuntime {
     if (!pending.rewrite || !pending.fixedD1DueAt) {
       throw new OwnerAlphaPracticeRuntimeError("invalid_transition");
     }
+    projection ??= ownerAlphaCompletionProjection(
+      this.deps.userId,
+      session.sessionId,
+    );
     await this.deps.repository.saveRewrite(pending);
     await this.deps.repository.projectCompletion(pending, projection);
     return toOwnerAlphaPracticeView(
