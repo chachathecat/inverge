@@ -1,0 +1,1058 @@
+{
+  "schema": "dabangil_cpf1_persistence_sink_inventory_v1",
+  "version": "1.0.0",
+  "datedKst": "2026-08-06",
+  "baselineMain": "59b65cc20f64803151723b4df13348979fc0b391",
+  "scope": {
+    "work": "V12-T0 control-plane alignment plus CPF-1 source-only persistence-sink inventory",
+    "currentLearnerFacingRuntime": "dabangil_appraiser_second_three_subjects_only",
+    "realContent": false,
+    "production": false,
+    "liveServicesCalled": false,
+    "migrationsApplied": false,
+    "persistenceBehaviorChanged": false
+  },
+  "authority": {
+    "activeMasterPlan": "docs/strategy/dabangil-professional-exam-reasoning-os-final-master-plan-v12-2026-08-06.md",
+    "sourceSafetyAnnex": "docs/strategy/dabangil-professional-exam-reasoning-os-final-master-plan-v11-2026-08-05.md",
+    "sourceSafetyContract": "config/dabangil-ephemeral-source-safety-contract-v1.json"
+  },
+  "verdict": {
+    "repositorySourceInventoryCoverage": "complete_at_baseline_for_reachable_source_paths_and_no-adapter-searches",
+    "cpf1Complete": false,
+    "status": "blocked_unknown_reachable_sinks",
+    "confirmedViolationCount": 16,
+    "unresolvedUnknownCount": 7,
+    "rule": "Any reachable unknown sink keeps CPF-1 incomplete and fail-closed."
+  },
+  "traceContract": [
+    "entry",
+    "service",
+    "serialization",
+    "adapter",
+    "sink"
+  ],
+  "requiredBehaviorFields": [
+    "retention",
+    "redaction",
+    "retry",
+    "failure",
+    "verdict"
+  ],
+  "dataClasses": [
+    "D0_RAW_SOURCE",
+    "D1_OCR_SOURCE_EXPRESSION",
+    "D2_RECONSTRUCTABLE_DERIVATIVE",
+    "D3_SOURCE_BOUND_FULL_OUTPUT",
+    "D4_LEARNER_AUTHORED_BODY",
+    "D5_CLOSED_LEARNING_EVIDENCE",
+    "D6_BODYLESS_OPERATIONAL_METADATA"
+  ],
+  "sinks": [
+    {
+      "id": "DB-01",
+      "category": "database",
+      "state": "confirmed_violation",
+      "dataClasses": [
+        "D1_OCR_SOURCE_EXPRESSION",
+        "D2_RECONSTRUCTABLE_DERIVATIVE",
+        "D3_SOURCE_BOUND_FULL_OUTPUT",
+        "D4_LEARNER_AUTHORED_BODY",
+        "D5_CLOSED_LEARNING_EVIDENCE",
+        "D6_BODYLESS_OPERATIONAL_METADATA"
+      ],
+      "entry": "POST /api/problem-snap/owner-alpha (confirm/save/reveal/rewrite)",
+      "service": "OwnerAlphaPracticeRepository.sessionRow",
+      "serialization": "JSON nativeContract containing the complete OwnerAlphaPracticeSession",
+      "adapter": "authenticated Supabase client .from(\"exam_sessions\").insert/update",
+      "sink": "PostgreSQL exam_sessions.raw_payload",
+      "retention": "Durable; no TTL or deletion path is established in the repository source.",
+      "redaction": "None before raw_payload serialization.",
+      "retry": "User commands re-save the complete session; provider timeout state is itself persisted.",
+      "failure": "Repository errors surface to the route; a failed provider attempt may leave a durable failed session state.",
+      "verdict": "D1-D3 persistence violates the zero-retention contract; D4 also lacks the required scrub.",
+      "evidence": [
+        "lib/review-os/owner-alpha-practice-repository.ts",
+        "app/api/problem-snap/owner-alpha/route.ts"
+      ]
+    },
+    {
+      "id": "DB-02",
+      "category": "database",
+      "state": "confirmed_violation",
+      "dataClasses": [
+        "D4_LEARNER_AUTHORED_BODY",
+        "D6_BODYLESS_OPERATIONAL_METADATA"
+      ],
+      "entry": "POST /api/problem-snap/owner-alpha (save_independent_attempt/save_rewrite)",
+      "service": "OwnerAlphaPracticeRepository.saveIndependentAttempt/saveRewrite",
+      "serialization": "answerText or rewriteText in raw_payload; derived_payload also sets containsRawContent=false",
+      "adapter": "authenticated Supabase insert",
+      "sink": "PostgreSQL answer_submissions.raw_payload and rewrite_submissions.raw_payload",
+      "retention": "Durable; no TTL is specified.",
+      "redaction": "No learner-body scrub is applied.",
+      "retry": "Repeated user save can create or update durable records.",
+      "failure": "Database errors are returned as generic route failures; raw-content attestation remains declarative.",
+      "verdict": "D4 is persisted without the mandatory scrub and containsRawContent=false is not evidence of absence.",
+      "evidence": [
+        "lib/review-os/owner-alpha-practice-repository.ts",
+        "lib/review-os/data-boundary.ts"
+      ]
+    },
+    {
+      "id": "DB-03",
+      "category": "database",
+      "state": "confirmed_violation",
+      "dataClasses": [
+        "D1_OCR_SOURCE_EXPRESSION",
+        "D3_SOURCE_BOUND_FULL_OUTPUT",
+        "D4_LEARNER_AUTHORED_BODY",
+        "D5_CLOSED_LEARNING_EVIDENCE",
+        "D6_BODYLESS_OPERATIONAL_METADATA"
+      ],
+      "entry": "POST /api/problem-snap/owner-alpha (complete)",
+      "service": "OwnerAlphaPracticeRepository.projectCompletion",
+      "serialization": "raw_question_text, raw_answer_text, correct_answer, user_answer and raw_payload; derived_payload says containsRawContent=false",
+      "adapter": "Review OS Supabase repository",
+      "sink": "PostgreSQL wrong_answer_items, review_queue_items, action_seeds and usage_events",
+      "retention": "Durable; no source-class TTL.",
+      "redaction": "sanitizeDerivedMetadata is key-name based and does not scrub the raw columns or arbitrary allowed-key values.",
+      "retry": "Completion can be invoked again; repository-level writes are not an atomic source-safety projection.",
+      "failure": "Partial multi-table persistence is possible; errors can leave an incomplete projection.",
+      "verdict": "D1 and D3 are stored directly and the boolean attestation contradicts the serialized bodies.",
+      "evidence": [
+        "lib/review-os/owner-alpha-practice-repository.ts",
+        "lib/review-os/repository.ts",
+        "lib/review-os/data-boundary.ts"
+      ]
+    },
+    {
+      "id": "DB-04",
+      "category": "database",
+      "state": "confirmed_violation",
+      "dataClasses": [
+        "D1_OCR_SOURCE_EXPRESSION",
+        "D2_RECONSTRUCTABLE_DERIVATIVE",
+        "D3_SOURCE_BOUND_FULL_OUTPUT",
+        "D5_CLOSED_LEARNING_EVIDENCE"
+      ],
+      "entry": "POST /api/problem-snap/save",
+      "service": "buildProblemSnapLearningSignalInput -> ReviewOsService.saveLearningSignal",
+      "serialization": "Free strings from problemSummary, concepts, formulas, commonMistakes and nextPracticeAction become derived_tags/related_formulas/next_task",
+      "adapter": "Review OS Supabase repository .from(\"learning_signal_events\").insert",
+      "sink": "PostgreSQL learning_signal_events",
+      "retention": "Durable; no TTL.",
+      "redaction": "Key-based metadata sanitizer only; no value classifier or closed-code allowlist covers these free strings.",
+      "retry": "Client local outbox retains the full generated result after a failed save and the user can retry.",
+      "failure": "A failed save diverts D1-D3 to browser localStorage; a successful save can durably retain the same classes.",
+      "verdict": "The route labels arbitrary source-bound text as a durable learning signal.",
+      "evidence": [
+        "app/api/problem-snap/save/route.ts",
+        "lib/review-os/repository.ts",
+        "lib/review-os/data-boundary.ts"
+      ]
+    },
+    {
+      "id": "DB-05",
+      "category": "database",
+      "state": "confirmed_risk",
+      "dataClasses": [
+        "D2_RECONSTRUCTABLE_DERIVATIVE",
+        "D3_SOURCE_BOUND_FULL_OUTPUT",
+        "D5_CLOSED_LEARNING_EVIDENCE",
+        "D6_BODYLESS_OPERATIONAL_METADATA"
+      ],
+      "entry": "POST /api/answer-review/structure",
+      "service": "buildAnswerReviewLearningSignalInput -> saveLearningSignal/logUsageEvent",
+      "serialization": "Heuristically filtered provider-derived strings plus bodyless usage metadata",
+      "adapter": "Review OS Supabase repository",
+      "sink": "PostgreSQL learning_signal_events and usage_events",
+      "retention": "Durable; no TTL.",
+      "redaction": "String heuristics and key-name filtering, not a D0-D6 value-level classifier.",
+      "retry": "A manual retry re-sends source and may persist another signal/usage event.",
+      "failure": "Usage failure is logged separately; derived free text can still cross the boundary.",
+      "verdict": "D5/D6 are intended, but D2/D3 exclusion is not proven.",
+      "evidence": [
+        "app/api/answer-review/structure/route.ts",
+        "lib/review-os/repository.ts",
+        "lib/review-os/data-boundary.ts"
+      ]
+    },
+    {
+      "id": "DB-06",
+      "category": "database",
+      "state": "confirmed_violation",
+      "dataClasses": [
+        "D1_OCR_SOURCE_EXPRESSION",
+        "D3_SOURCE_BOUND_FULL_OUTPUT",
+        "D4_LEARNER_AUTHORED_BODY",
+        "D5_CLOSED_LEARNING_EVIDENCE"
+      ],
+      "entry": "POST /api/evaluate",
+      "service": "evaluateSubmission -> evaluationRepository.save",
+      "serialization": "answer, transcription, provider scores, weaknesses and next_action",
+      "adapter": "Supabase admin client insert/RPC",
+      "sink": "PostgreSQL evaluations, daily_missions and analytics summary",
+      "retention": "Durable; no TTL or source-class deletion behavior.",
+      "redaction": "None for answer/transcription; UUID validation only controls whether the write runs.",
+      "retry": "Manual request retry repeats provider processing and database write.",
+      "failure": "Repository catches and suppresses all save errors, so the response cannot prove whether persistence occurred.",
+      "verdict": "D1/D3/D4 are durably stored; D4 is not scrubbed.",
+      "evidence": [
+        "app/api/evaluate/route.ts",
+        "lib/evaluate/service.ts",
+        "lib/evaluate/repository.ts"
+      ]
+    },
+    {
+      "id": "DB-07",
+      "category": "database",
+      "state": "confirmed_violation",
+      "dataClasses": [
+        "D2_RECONSTRUCTABLE_DERIVATIVE",
+        "D5_CLOSED_LEARNING_EVIDENCE",
+        "D6_BODYLESS_OPERATIONAL_METADATA"
+      ],
+      "entry": "POST /api/answer-review/s233a",
+      "service": "S233A runtime and Supabase repository",
+      "serialization": "Plain SHA-256 learner-input fingerprint, review identity, revisions, findings, evidence and transitions",
+      "adapter": "Supabase admin client tables/RPC",
+      "sink": "PostgreSQL s233a review records, concept transitions, review queue and action seeds",
+      "retention": "Durable immutable/revision records; no fingerprint rotation window.",
+      "redaction": "Bodies are mostly excluded, but the content-derived SHA-256 is stable and unkeyed.",
+      "retry": "Retryable failures and retry claims are persisted against the same fingerprint.",
+      "failure": "failed_retryable is durable failure recovery metadata.",
+      "verdict": "Durable closed evidence is intended, but an unkeyed raw-content fingerprint is forbidden D2.",
+      "evidence": [
+        "app/api/answer-review/s233a/route.ts",
+        "lib/review-os/s233a-review-runtime.ts",
+        "lib/review-os/s233a-supabase-repository.ts",
+        "lib/review-os/s233a-fingerprint.ts"
+      ]
+    },
+    {
+      "id": "DB-08",
+      "category": "database",
+      "state": "confirmed_risk",
+      "dataClasses": [
+        "D4_LEARNER_AUTHORED_BODY",
+        "D5_CLOSED_LEARNING_EVIDENCE",
+        "D6_BODYLESS_OPERATIONAL_METADATA"
+      ],
+      "entry": "Review OS notes, feedback, study logs, review queue, action seeds and wrong-answer APIs",
+      "service": "ReviewOsService",
+      "serialization": "Free-text route/page/message, source labels, note text, rendered text and raw_payload",
+      "adapter": "Review OS Supabase repository",
+      "sink": "PostgreSQL feedback_items, study_logs, review_queue_items, action_seeds, wrong_answer_items and related tables",
+      "retention": "Durable; table-specific TTL is not present in source.",
+      "redaction": "Derived metadata is key-filtered; learner free text is not scrubbed by class.",
+      "retry": "Route or client retries can duplicate or overwrite records depending on adapter.",
+      "failure": "Several service methods console.warn error objects and return fallback states.",
+      "verdict": "D4/D5/D6 share broad adapters; the closed-projection boundary is not enforced.",
+      "evidence": [
+        "lib/review-os/repository.ts",
+        "lib/review-os/service.ts",
+        "lib/review-os/data-boundary.ts"
+      ]
+    },
+    {
+      "id": "DB-09",
+      "category": "database",
+      "state": "confirmed_violation",
+      "dataClasses": [
+        "D4_LEARNER_AUTHORED_BODY",
+        "D5_CLOSED_LEARNING_EVIDENCE",
+        "D6_BODYLESS_OPERATIONAL_METADATA"
+      ],
+      "entry": "Second-exam submission and rewrite API routes",
+      "service": "SecondExamRepository",
+      "serialization": "Learner answer/rewrite bodies and workflow metadata",
+      "adapter": "Supabase admin client when configured",
+      "sink": "PostgreSQL answer_submissions and rewrite_submissions",
+      "retention": "Durable; no scrub/TTL contract in the adapter.",
+      "redaction": "No D4 scrub before raw_payload.",
+      "retry": "Manual retries may repeat inserts/updates.",
+      "failure": "When Supabase is unavailable or unconfigured, the implementation can use the local JSON fallback.",
+      "verdict": "D4 is persisted without the contractually required scrub.",
+      "evidence": [
+        "lib/inverge/second-exam-repository.ts",
+        "app/api/inverge/second-exam/submissions/route.ts"
+      ]
+    },
+    {
+      "id": "FS-01",
+      "category": "generated_artifact",
+      "state": "confirmed_violation",
+      "dataClasses": [
+        "D4_LEARNER_AUTHORED_BODY",
+        "D5_CLOSED_LEARNING_EVIDENCE",
+        "D6_BODYLESS_OPERATIONAL_METADATA"
+      ],
+      "entry": "Second-exam submission/rewrite APIs when the database adapter is unavailable",
+      "service": "SecondExamRepository file fallback",
+      "serialization": "Pretty-printed JSON",
+      "adapter": "createJsonFileRepository",
+      "sink": ".data/inverge/second-exam.json",
+      "retention": "Process/filesystem lifetime; no TTL, encryption or cleanup.",
+      "redaction": "None.",
+      "retry": "Synchronous file lock retries 200 times at 10 ms.",
+      "failure": "Parse failure silently replaces the store with a seed; stale lock directories can survive a crash.",
+      "verdict": "D4 is stored in an unscoped local artifact and fallback tenant isolation is not proven.",
+      "evidence": [
+        "lib/inverge/second-exam-repository.ts",
+        "lib/inverge/file-persistence.ts"
+      ]
+    },
+    {
+      "id": "FS-02",
+      "category": "logs_analytics",
+      "state": "confirmed_risk",
+      "dataClasses": [
+        "D2_RECONSTRUCTABLE_DERIVATIVE",
+        "D5_CLOSED_LEARNING_EVIDENCE",
+        "D6_BODYLESS_OPERATIONAL_METADATA"
+      ],
+      "entry": "Client sendBeacon/fetch POST /api/inverge/events",
+      "service": "normalizeInvergeEventInput -> appendInvergeEvent",
+      "serialization": "JSON event envelope with arbitrary properties values after key-based sanitization",
+      "adapter": "createJsonFileRepository",
+      "sink": ".data/inverge/events.json",
+      "retention": "Latest 1000 records; count cap only, no time TTL.",
+      "redaction": "sanitizeDerivedMetadata removes suspicious keys but not source text placed under allowed keys.",
+      "retry": "sendBeacon falls back to keepalive fetch; browser may retry only through caller behavior.",
+      "failure": "Client failures are swallowed or debug-logged; server failure returns event-persistence-error.",
+      "verdict": "Intended D5/D6 telemetry can carry D2/D3 because value-level enforcement is absent.",
+      "evidence": [
+        "lib/inverge/event-client.ts",
+        "lib/inverge/events.ts",
+        "app/api/inverge/events/route.ts",
+        "lib/inverge/event-repository.ts"
+      ]
+    },
+    {
+      "id": "FS-03",
+      "category": "support_admin",
+      "state": "confirmed_violation",
+      "dataClasses": [
+        "D4_LEARNER_AUTHORED_BODY",
+        "D5_CLOSED_LEARNING_EVIDENCE",
+        "D6_BODYLESS_OPERATIONAL_METADATA"
+      ],
+      "entry": "POST /api/inverge/feedback",
+      "service": "appendFeedbackResponse",
+      "serialization": "FeedbackResponse including freeText and learner context",
+      "adapter": "createJsonFileRepository",
+      "sink": ".data/inverge/feedback-responses.json and unauthenticated GET response",
+      "retention": "Latest 500 records; no time TTL.",
+      "redaction": "No free-text scrub.",
+      "retry": "Client retry can append another response.",
+      "failure": "Persistence errors return a generic code; GET exposes the accumulated records without an auth check in this route.",
+      "verdict": "Learner-authored D4 is durably stored and exposed through a broad admin-like surface.",
+      "evidence": [
+        "app/api/inverge/feedback/route.ts",
+        "lib/inverge/feedback-repository.ts",
+        "lib/inverge/feedback.ts"
+      ]
+    },
+    {
+      "id": "FS-04",
+      "category": "support_admin",
+      "state": "confirmed_violation",
+      "dataClasses": [
+        "D2_RECONSTRUCTABLE_DERIVATIVE",
+        "D3_SOURCE_BOUND_FULL_OUTPUT",
+        "D4_LEARNER_AUTHORED_BODY",
+        "D6_BODYLESS_OPERATIONAL_METADATA"
+      ],
+      "entry": "POST /api/inverge/second-exam/ai-assist",
+      "service": "provider adapter -> recordAdminAiReviewItem",
+      "serialization": "Full AI input/output/meta JSON",
+      "adapter": "createJsonFileRepository",
+      "sink": ".data/inverge/admin-ai-review-items.json",
+      "retention": "Latest 500 records; no time TTL or encryption.",
+      "redaction": "No D-class projection before the admin record.",
+      "retry": "Manual retry can generate and store another full item.",
+      "failure": "Provider failure falls back or returns generic handling; persisted review data is not covered by a zero-write receipt.",
+      "verdict": "Full provider/learner-derived bodies are retained in an admin artifact.",
+      "evidence": [
+        "app/api/inverge/second-exam/ai-assist/route.ts",
+        "lib/inverge/admin-ai-review-repository.ts",
+        "lib/inverge/file-persistence.ts"
+      ]
+    },
+    {
+      "id": "TMP-01",
+      "category": "temporary_files",
+      "state": "confirmed_violation",
+      "dataClasses": [
+        "D2_RECONSTRUCTABLE_DERIVATIVE",
+        "D3_SOURCE_BOUND_FULL_OUTPUT",
+        "D4_LEARNER_AUTHORED_BODY"
+      ],
+      "entry": "Any createJsonFileRepository write carrying source-bound or learner bodies",
+      "service": "writeJsonAtomic/withFileLock",
+      "serialization": "Complete JSON snapshot",
+      "adapter": "fs.writeFileSync then fs.renameSync",
+      "sink": ".data/inverge/*.tmp and *.lock",
+      "retention": "Normally milliseconds until rename/removal; crash residue has no cleanup ceiling.",
+      "redaction": "None.",
+      "retry": "Lock acquisition retries for up to about 2 seconds.",
+      "failure": "A process crash can leave a complete .tmp file or lock directory.",
+      "verdict": "The temporary path is still a filesystem persistence sink and violates zero disk-spill for D1-D3.",
+      "evidence": [
+        "lib/inverge/file-persistence.ts"
+      ]
+    },
+    {
+      "id": "PROVIDER-01",
+      "category": "provider",
+      "state": "confirmed_unknown_boundary",
+      "dataClasses": [
+        "D0_RAW_SOURCE",
+        "D1_OCR_SOURCE_EXPRESSION",
+        "D2_RECONSTRUCTABLE_DERIVATIVE",
+        "D3_SOURCE_BOUND_FULL_OUTPUT",
+        "D4_LEARNER_AUTHORED_BODY"
+      ],
+      "entry": "POST /api/problem-snap/owner-alpha",
+      "service": "OwnerAlphaPracticeProvider",
+      "serialization": "Gemini generateContent prompt plus inline base64 file bytes; full response JSON/text",
+      "adapter": "@google/generative-ai",
+      "sink": "Gemini request handling, provider logs/cache/abuse review and response systems",
+      "retention": "Repository supplies no verified zero-content-retention binding; live account settings were not called.",
+      "redaction": "No on-device OCR/minimization; original bytes and confirmed text are sent.",
+      "retry": "User can retry; 25 s Promise.race timeout does not abort the underlying provider request.",
+      "failure": "Timed-out provider work can continue after the application returns and its retention outcome is unknown.",
+      "verdict": "Reachable D0-D4 provider sink is fail-closed unknown and currently lacks the required exact route controls.",
+      "evidence": [
+        "lib/review-os/owner-alpha-practice-provider.ts",
+        "app/api/problem-snap/owner-alpha/route.ts"
+      ]
+    },
+    {
+      "id": "PROVIDER-02",
+      "category": "provider",
+      "state": "confirmed_unknown_boundary",
+      "dataClasses": [
+        "D0_RAW_SOURCE",
+        "D1_OCR_SOURCE_EXPRESSION",
+        "D2_RECONSTRUCTABLE_DERIVATIVE",
+        "D3_SOURCE_BOUND_FULL_OUTPUT"
+      ],
+      "entry": "POST /api/problem-snap/solve",
+      "service": "Gemini problem-snap solver",
+      "serialization": "Multipart text/file bytes converted to provider prompt/inline data",
+      "adapter": "@google/generative-ai",
+      "sink": "Gemini request/response systems",
+      "retention": "Unknown from repository source and live settings were forbidden.",
+      "redaction": "No source-class minimization contract.",
+      "retry": "Manual retry; no explicit abort deadline.",
+      "failure": "No zero-write receipt and no explicit provider deletion behavior.",
+      "verdict": "Full source travels to a provider route whose retention/caching state is unknown.",
+      "evidence": [
+        "app/api/problem-snap/solve/route.ts"
+      ]
+    },
+    {
+      "id": "PROVIDER-03",
+      "category": "provider",
+      "state": "confirmed_unknown_boundary",
+      "dataClasses": [
+        "D0_RAW_SOURCE",
+        "D1_OCR_SOURCE_EXPRESSION",
+        "D3_SOURCE_BOUND_FULL_OUTPUT",
+        "D4_LEARNER_AUTHORED_BODY"
+      ],
+      "entry": "POST /api/inverge/ocr, /api/answer-review/structure, /api/answer-review/grade-second and image evaluate",
+      "service": "lib/evaluate/gemini adapters",
+      "serialization": "Text prompts and inline image/file bytes; one or two provider calls per request",
+      "adapter": "@google/generative-ai",
+      "sink": "Gemini request/response systems",
+      "retention": "No repository proof of zero retention, prompt-cache disablement, region or human-review controls.",
+      "redaction": "No on-device OCR or value-level minimization is enforced.",
+      "retry": "Manual retry; some flows make a second provider call by design and have no abort control.",
+      "failure": "Provider errors become generic responses or sanitized codes, but provider-side residue is unverified.",
+      "verdict": "D0/D1/D4 provider egress is reachable and fail-closed unknown.",
+      "evidence": [
+        "lib/evaluate/gemini.ts",
+        "app/api/inverge/ocr/route.ts",
+        "app/api/answer-review/structure/route.ts",
+        "app/api/answer-review/grade-second/route.ts"
+      ]
+    },
+    {
+      "id": "PROVIDER-04",
+      "category": "provider",
+      "state": "confirmed_unknown_boundary",
+      "dataClasses": [
+        "D3_SOURCE_BOUND_FULL_OUTPUT",
+        "D4_LEARNER_AUTHORED_BODY"
+      ],
+      "entry": "Text-only /api/evaluate and /api/inverge/second-exam/ai-assist",
+      "service": "OpenAI evaluation/AI-assist adapters",
+      "serialization": "Chat/completion request and response bodies",
+      "adapter": "openai SDK",
+      "sink": "OpenAI request/response systems",
+      "retention": "No exact organization/project/endpoint/store=false evidence in repository; live settings were not called.",
+      "redaction": "No D4 scrub before provider egress.",
+      "retry": "Manual retry; AI-assist has an application timeout but provider storage controls are not explicit.",
+      "failure": "Fallback/mock paths do not prove deletion of an already accepted provider request.",
+      "verdict": "Reachable provider boundary remains unknown and blocks CPF-1 completion.",
+      "evidence": [
+        "lib/evaluate/openai.ts",
+        "lib/evaluate/service.ts",
+        "app/api/inverge/second-exam/ai-assist/route.ts"
+      ]
+    },
+    {
+      "id": "BROWSER-01",
+      "category": "browser_storage",
+      "state": "confirmed_violation",
+      "dataClasses": [
+        "D1_OCR_SOURCE_EXPRESSION",
+        "D2_RECONSTRUCTABLE_DERIVATIVE",
+        "D3_SOURCE_BOUND_FULL_OUTPUT"
+      ],
+      "entry": "Problem Snap save failure",
+      "service": "ProblemSnapClient retry queue",
+      "serialization": "JSON.stringify of the complete result",
+      "adapter": "window.localStorage",
+      "sink": "inverge.problemSnap.localQueue",
+      "retention": "Indefinite until explicit browser/user removal; no TTL, encryption or item cap is established.",
+      "redaction": "None.",
+      "retry": "The retained result is intended for later retry.",
+      "failure": "The failure path itself creates persistent D1-D3 residue.",
+      "verdict": "A durable browser retry sink stores the full source-bound output.",
+      "evidence": [
+        "app/problem-snap/problem-snap-client.tsx"
+      ]
+    },
+    {
+      "id": "BROWSER-02",
+      "category": "browser_storage",
+      "state": "confirmed_violation",
+      "dataClasses": [
+        "D1_OCR_SOURCE_EXPRESSION",
+        "D2_RECONSTRUCTABLE_DERIVATIVE",
+        "D3_SOURCE_BOUND_FULL_OUTPUT"
+      ],
+      "entry": "Problem Snap bridge to Answer Review",
+      "service": "ProblemSnapClient handoff",
+      "serialization": "JSON result/handoff object",
+      "adapter": "window.sessionStorage",
+      "sink": "inverge.problemSnap.answerReviewHandoff",
+      "retention": "Tab/session lifetime until the consumer removes it; crash/navigation residue is browser-defined.",
+      "redaction": "None.",
+      "retry": "Not a retry queue, but it survives navigation in the same tab.",
+      "failure": "If the consumer never runs, the full handoff remains for the session.",
+      "verdict": "Transient browser persistence still carries prohibited D1-D3.",
+      "evidence": [
+        "app/problem-snap/problem-snap-client.tsx",
+        "app/answer-review/answer-review-client.tsx"
+      ]
+    },
+    {
+      "id": "BROWSER-03",
+      "category": "browser_storage",
+      "state": "confirmed_violation",
+      "dataClasses": [
+        "D1_OCR_SOURCE_EXPRESSION",
+        "D2_RECONSTRUCTABLE_DERIVATIVE",
+        "D3_SOURCE_BOUND_FULL_OUTPUT",
+        "D4_LEARNER_AUTHORED_BODY",
+        "D5_CLOSED_LEARNING_EVIDENCE"
+      ],
+      "entry": "Review OS draft and local-beta note UI",
+      "service": "saveReviewOsDraft/saveReviewOsLocalBetaNote",
+      "serialization": "Generic JSON or free problemTitle/biggestGap/nextAction strings",
+      "adapter": "window.localStorage",
+      "sink": "inverge:review-os:*",
+      "retention": "Indefinite until clear action; local notes capped at 20 but have no TTL.",
+      "redaction": "Generic drafts have none; local-note key allowlist does not classify string values.",
+      "retry": "Storage errors are swallowed.",
+      "failure": "metadataOnly=true is declarative and does not prevent source expression in allowed fields.",
+      "verdict": "Generic and free-text browser persistence has no D0-D6 enforcement.",
+      "evidence": [
+        "lib/review-os/browser-storage.ts"
+      ]
+    },
+    {
+      "id": "BROWSER-04",
+      "category": "browser_storage",
+      "state": "confirmed_violation",
+      "dataClasses": [
+        "D1_OCR_SOURCE_EXPRESSION",
+        "D4_LEARNER_AUTHORED_BODY"
+      ],
+      "entry": "Learner autosave and subject drafting surfaces",
+      "service": "useLearnerAutosaveDraft/useSubjectDraft",
+      "serialization": "Generic draft JSON and SubjectDraft JSON",
+      "adapter": "window.localStorage",
+      "sink": "inverge:learner-draft:* and subject draft keys",
+      "retention": "Indefinite until explicit clear; savedAt is informational only.",
+      "redaction": "None; generic type parameters accept arbitrary bodies.",
+      "retry": "700 ms autosave retries only on subsequent state changes; errors become UI status.",
+      "failure": "Quota/storage failure does not erase prior source-bearing drafts.",
+      "verdict": "Learner/source bodies can persist without TTL, encryption or class validation.",
+      "evidence": [
+        "hooks/use-learner-autosave-draft.ts",
+        "hooks/use-subject-draft.ts"
+      ]
+    },
+    {
+      "id": "BROWSER-05",
+      "category": "browser_storage",
+      "state": "confirmed_risk",
+      "dataClasses": [
+        "D2_RECONSTRUCTABLE_DERIVATIVE",
+        "D4_LEARNER_AUTHORED_BODY",
+        "D5_CLOSED_LEARNING_EVIDENCE",
+        "D6_BODYLESS_OPERATIONAL_METADATA"
+      ],
+      "entry": "Client event, feedback and calculator outbox flows",
+      "service": "event-client/feedback client/outbox helpers",
+      "serialization": "Event envelopes, anonymous ID, prompt state, feedback responses and queued actions",
+      "adapter": "window.localStorage plus sendBeacon/keepalive fetch",
+      "sink": "inverge:events:*, inverge:feedback:* and local outbox keys",
+      "retention": "Events/counts are capped in some paths; no common TTL or encryption.",
+      "redaction": "Event sanitizer is key-based; calculator outbox is closed-key validated; feedback freeText is unredacted.",
+      "retry": "sendBeacon falls back to fetch and outboxes retry later.",
+      "failure": "Failure can extend browser retention and error details may be debug-logged outside production.",
+      "verdict": "D5/D6 paths are mixed with unvalidated D2/D4 values.",
+      "evidence": [
+        "lib/inverge/event-client.ts",
+        "lib/inverge/events.ts",
+        "lib/inverge/feedback.ts",
+        "tests/s232f5-calculator-outbox.test.mjs"
+      ]
+    },
+    {
+      "id": "MEMORY-01",
+      "category": "memory",
+      "state": "confirmed_transient",
+      "dataClasses": [
+        "D0_RAW_SOURCE",
+        "D1_OCR_SOURCE_EXPRESSION",
+        "D3_SOURCE_BOUND_FULL_OUTPUT",
+        "D4_LEARNER_AUTHORED_BODY"
+      ],
+      "entry": "Multipart/JSON request routes and React client state",
+      "service": "Next Request.formData/json, File.arrayBuffer and provider adapters",
+      "serialization": "File/Uint8Array/base64/string/JSON objects",
+      "adapter": "Browser and Node process memory",
+      "sink": "Request buffers, React state, provider SDK objects and response buffers",
+      "retention": "Request/process/GC lifetime; no enforceable 600 s hard ceiling is implemented.",
+      "redaction": "Generally none before provider serialization.",
+      "retry": "Manual retry recreates buffers; provider timeouts may leave in-flight SDK objects.",
+      "failure": "Unhandled/runtime/platform behavior can copy memory into crash or diagnostic systems.",
+      "verdict": "Transient by application design, but the hard ceiling and downstream crash boundary are unproven.",
+      "evidence": [
+        "app/api/problem-snap/owner-alpha/route.ts",
+        "app/api/problem-snap/solve/route.ts",
+        "lib/evaluate/gemini.ts"
+      ]
+    },
+    {
+      "id": "CACHE-01",
+      "category": "cache",
+      "state": "confirmed_transient",
+      "dataClasses": [
+        "D5_CLOSED_LEARNING_EVIDENCE",
+        "D6_BODYLESS_OPERATIONAL_METADATA"
+      ],
+      "entry": "Rate limit, client event dedupe and development learning metrics",
+      "service": "In-memory Map/sink implementations",
+      "serialization": "Keys, timestamps and closed counters",
+      "adapter": "Process memory",
+      "sink": "In-process maps only",
+      "retention": "Process lifetime with implementation-specific pruning.",
+      "redaction": "Designed as bodyless/closed metadata; source value injection was not found in these adapters.",
+      "retry": "No durable retry.",
+      "failure": "Restart loses state; no disk or shared-cache adapter was found.",
+      "verdict": "No current D0-D4 content cache adapter found; platform/shared-cache settings remain unknown.",
+      "evidence": [
+        "lib/rate-limit.ts",
+        "lib/inverge/event-client.ts",
+        "lib/review-os/learning-metrics-sink.ts"
+      ]
+    },
+    {
+      "id": "LOG-01",
+      "category": "logs_telemetry",
+      "state": "confirmed_allowed_shape",
+      "dataClasses": [
+        "D6_BODYLESS_OPERATIONAL_METADATA"
+      ],
+      "entry": "OCR, answer-review and Problem Snap route completion/failure",
+      "service": "buildServerEventLog/logServerEvent",
+      "serialization": "event name, hashed user ID, route, mode, subject, cost category, duration, status and sanitized error code",
+      "adapter": "console.info",
+      "sink": "Runtime stdout and hosting log pipeline",
+      "retention": "Application source does not control log retention.",
+      "redaction": "Bodyless fixed fields; user ID is truncated SHA-256 and error code is character/length constrained.",
+      "retry": "Each route execution logs once; hosting delivery retries are unknown.",
+      "failure": "The application shape is bodyless, but downstream log copies/backups are platform-controlled.",
+      "verdict": "Application payload is D6; actual log retention and downstream copies remain unknown.",
+      "evidence": [
+        "lib/review-os/observability.ts"
+      ]
+    },
+    {
+      "id": "LOG-02",
+      "category": "logs_telemetry",
+      "state": "confirmed_risk",
+      "dataClasses": [
+        "D3_SOURCE_BOUND_FULL_OUTPUT",
+        "D4_LEARNER_AUTHORED_BODY",
+        "D6_BODYLESS_OPERATIONAL_METADATA"
+      ],
+      "entry": "Review OS and client persistence/provider error paths",
+      "service": "console.warn/debug call sites",
+      "serialization": "JavaScript Error or provider/database error objects",
+      "adapter": "console.warn/console.debug",
+      "sink": "Browser developer console and runtime/hosting logs",
+      "retention": "Browser and platform defined.",
+      "redaction": "No central error-object redactor is applied; some route errors use safe codes, others pass objects.",
+      "retry": "Repeated failures repeat logging.",
+      "failure": "SDK errors may embed request/provider context even when source code does not intentionally log bodies.",
+      "verdict": "Reachable error-reporting sink has unproven value-level redaction.",
+      "evidence": [
+        "lib/review-os/service.ts",
+        "lib/inverge/event-client.ts"
+      ]
+    },
+    {
+      "id": "PLATFORM-01",
+      "category": "framework_platform",
+      "state": "unresolved_unknown",
+      "dataClasses": [
+        "D0_RAW_SOURCE",
+        "D1_OCR_SOURCE_EXPRESSION",
+        "D3_SOURCE_BOUND_FULL_OUTPUT",
+        "D4_LEARNER_AUTHORED_BODY"
+      ],
+      "entry": "Every source-bearing HTTP route",
+      "service": "Next.js route runtime, proxy/edge and hosting platform",
+      "serialization": "HTTP multipart/JSON request and JSON response bodies",
+      "adapter": "Framework/serverless ingress-egress stack",
+      "sink": "Request buffering, temporary disk, CDN/response cache, logs, traces, APM, crash reports, session replay, snapshots and support systems",
+      "retention": "Not established by repository source; dynamic routes do not prove no-store for every response and no live platform query was allowed.",
+      "redaction": "No end-to-end platform configuration evidence.",
+      "retry": "Client, proxy and platform retry behavior is unverified.",
+      "failure": "Timeout/crash paths may retain diagnostic copies.",
+      "verdict": "Reachable unknown sink family; CPF-1 cannot complete.",
+      "evidence": [
+        "next.config.ts",
+        "proxy.ts",
+        "app/api/problem-snap/owner-alpha/route.ts"
+      ]
+    },
+    {
+      "id": "BACKUP-01",
+      "category": "backup_replica",
+      "state": "unresolved_unknown",
+      "dataClasses": [
+        "D1_OCR_SOURCE_EXPRESSION",
+        "D2_RECONSTRUCTABLE_DERIVATIVE",
+        "D3_SOURCE_BOUND_FULL_OUTPUT",
+        "D4_LEARNER_AUTHORED_BODY",
+        "D5_CLOSED_LEARNING_EVIDENCE",
+        "D6_BODYLESS_OPERATIONAL_METADATA"
+      ],
+      "entry": "Every confirmed Supabase/PostgreSQL durable write above",
+      "service": "Supabase/PostgreSQL managed persistence",
+      "serialization": "Database rows, WAL and service logs",
+      "adapter": "Managed database replication/backup/admin plane",
+      "sink": "WAL, replicas, PITR, backups, snapshots, admin/support exports and logs",
+      "retention": "Live project retention/deletion settings were not queried and are absent from source.",
+      "redaction": "Copies inherit persisted row contents.",
+      "retry": "Managed replication/recovery behavior is unknown.",
+      "failure": "Deleting a primary row may not immediately remove backups or support exports.",
+      "verdict": "Reachable downstream copies are unknown and block CPF-1.",
+      "evidence": [
+        "lib/review-os/repository.ts",
+        "lib/evaluate/repository.ts",
+        "lib/review-os/s233a-supabase-repository.ts"
+      ]
+    },
+    {
+      "id": "STORAGE-01",
+      "category": "object_storage",
+      "state": "no_current_app_adapter_found",
+      "dataClasses": [],
+      "entry": "Repository-wide application source search",
+      "service": "No current source-bound upload adapter found",
+      "serialization": "None found",
+      "adapter": "No Supabase Storage/Vercel Blob/object-store write from current learner source routes found",
+      "sink": "No current application object sink; S236P synthetic private-plane resources remain separately blocked and real content is OFF",
+      "retention": "Live bucket, backup and provider settings not inspected.",
+      "redaction": "Not applicable to a missing app adapter.",
+      "retry": "Not applicable.",
+      "failure": "Future or externally configured adapters could change this conclusion.",
+      "verdict": "No application write path found at the baseline; this is not proof that managed storage/support copies do not exist.",
+      "evidence": [
+        "roadmap/active-program.yml",
+        "docs/qa/s236p-lean-owner-private-acceptance.md"
+      ]
+    },
+    {
+      "id": "QUEUE-01",
+      "category": "queue_retry",
+      "state": "no_current_app_adapter_found",
+      "dataClasses": [],
+      "entry": "Repository-wide application source search",
+      "service": "No durable server queue/DLQ/scheduler/webhook raw-content path found",
+      "serialization": "None found",
+      "adapter": "None found; browser retry outboxes are separately inventoried",
+      "sink": "No current application queue sink",
+      "retention": "Provider/platform retries remain unknown.",
+      "redaction": "Not applicable to a missing app adapter.",
+      "retry": "Manual route retries and browser outboxes exist; no background raw-content worker found.",
+      "failure": "Provider/framework retry semantics are unresolved.",
+      "verdict": "No app queue adapter found; external retry systems remain an unknown.",
+      "evidence": [
+        "config/dabangil-ephemeral-source-safety-contract-v1.json",
+        "lib/inverge/event-client.ts"
+      ]
+    },
+    {
+      "id": "ARTIFACT-01",
+      "category": "artifact_support_training",
+      "state": "unresolved_unknown",
+      "dataClasses": [
+        "D0_RAW_SOURCE",
+        "D1_OCR_SOURCE_EXPRESSION",
+        "D3_SOURCE_BOUND_FULL_OUTPUT",
+        "D4_LEARNER_AUTHORED_BODY"
+      ],
+      "entry": "CI/e2e failures, operator debugging and provider processing",
+      "service": "GitHub Actions/Playwright/hosting/provider operational planes",
+      "serialization": "Potential screenshots, traces, logs, crash dumps, exports or evaluation samples",
+      "adapter": "External operational tooling",
+      "sink": "CI artifacts, support attachments, admin consoles, training/evaluation corpora, embeddings, vector stores and RAG",
+      "retention": "No current application adapter to embedding/vector/RAG was found; external retention/settings were not inspected.",
+      "redaction": "No repository-wide proof for externally generated artifacts.",
+      "retry": "Workflow/provider retry behavior is external.",
+      "failure": "A failing test or support incident can create artifacts outside normal route adapters.",
+      "verdict": "No current application RAG/vector/training write was found, but operational artifact settings remain unresolved.",
+      "evidence": [
+        ".github/workflows",
+        "playwright.config.ts",
+        "config/dabangil-ephemeral-source-safety-contract-v1.json"
+      ]
+    }
+  ],
+  "confirmedViolations": [
+    {
+      "id": "V-01",
+      "finding": "exam_sessions.raw_payload stores the complete OwnerAlphaPracticeSession, including D1-D4 and full provider output.",
+      "evidence": [
+        "lib/review-os/owner-alpha-practice-repository.ts"
+      ]
+    },
+    {
+      "id": "V-02",
+      "finding": "containsRawContent=false coexists with raw_question_text/raw_answer_text/correct_answer/raw_payload; it is a declaration, not proof.",
+      "evidence": [
+        "lib/review-os/owner-alpha-practice-repository.ts",
+        "lib/review-os/data-boundary.ts"
+      ]
+    },
+    {
+      "id": "V-03",
+      "finding": "/problem-snap/save persists arbitrary provider/source-derived strings as learning_signal_events without a value classifier.",
+      "evidence": [
+        "app/api/problem-snap/save/route.ts",
+        "lib/review-os/repository.ts"
+      ]
+    },
+    {
+      "id": "V-04",
+      "finding": "Problem Snap save failure and handoff persist D1-D3 in localStorage/sessionStorage.",
+      "evidence": [
+        "app/problem-snap/problem-snap-client.tsx"
+      ]
+    },
+    {
+      "id": "V-05",
+      "finding": "Generic Review OS, learner autosave and subject draft helpers persist arbitrary bodies without TTL/encryption/class enforcement.",
+      "evidence": [
+        "lib/review-os/browser-storage.ts",
+        "hooks/use-learner-autosave-draft.ts",
+        "hooks/use-subject-draft.ts"
+      ]
+    },
+    {
+      "id": "V-06",
+      "finding": "The evaluate flow persists learner answer, transcription and provider output in Supabase and silently suppresses write failures.",
+      "evidence": [
+        "lib/evaluate/service.ts",
+        "lib/evaluate/repository.ts"
+      ]
+    },
+    {
+      "id": "V-07",
+      "finding": "Second-exam database and JSON fallback paths persist unscreened D4; the fallback also creates .tmp residue.",
+      "evidence": [
+        "lib/inverge/second-exam-repository.ts",
+        "lib/inverge/file-persistence.ts"
+      ]
+    },
+    {
+      "id": "V-08",
+      "finding": "Gemini routes send original bytes/text without repository proof of exact zero-retention, no-cache and account bindings.",
+      "evidence": [
+        "lib/review-os/owner-alpha-practice-provider.ts",
+        "lib/evaluate/gemini.ts"
+      ]
+    },
+    {
+      "id": "V-09",
+      "finding": "OpenAI routes do not establish exact organization/project/endpoint/store=false retention controls in source.",
+      "evidence": [
+        "lib/evaluate/openai.ts",
+        "app/api/inverge/second-exam/ai-assist/route.ts"
+      ]
+    },
+    {
+      "id": "V-10",
+      "finding": "Second-exam AI assist persists full provider input/output to an admin JSON file.",
+      "evidence": [
+        "lib/inverge/admin-ai-review-repository.ts"
+      ]
+    },
+    {
+      "id": "V-11",
+      "finding": "S233A uses a stable unkeyed SHA-256 of private learner input as durable retry/identity material.",
+      "evidence": [
+        "lib/review-os/s233a-review-runtime.ts",
+        "lib/review-os/s233a-fingerprint.ts"
+      ]
+    },
+    {
+      "id": "V-12",
+      "finding": "Telemetry sanitization is key-name based and permits source text under allowed property keys.",
+      "evidence": [
+        "lib/inverge/events.ts",
+        "lib/review-os/data-boundary.ts"
+      ]
+    },
+    {
+      "id": "V-13",
+      "finding": "Feedback free text is persisted to a JSON artifact and the same route exposes aggregate GET without an auth gate.",
+      "evidence": [
+        "app/api/inverge/feedback/route.ts"
+      ]
+    },
+    {
+      "id": "V-14",
+      "finding": "The JSON fallback has no TTL/encryption, can leave crash residue, and resets to seed on parse failure.",
+      "evidence": [
+        "lib/inverge/file-persistence.ts"
+      ]
+    },
+    {
+      "id": "V-15",
+      "finding": "Owner-alpha provider timeout uses Promise.race without aborting the underlying provider call.",
+      "evidence": [
+        "lib/review-os/owner-alpha-practice-provider.ts"
+      ]
+    },
+    {
+      "id": "V-16",
+      "finding": "D4 scrub_required is not implemented consistently before database, file, browser or provider persistence.",
+      "evidence": [
+        "config/dabangil-ephemeral-source-safety-contract-v1.json",
+        "lib/review-os/repository.ts"
+      ]
+    }
+  ],
+  "unresolvedUnknowns": [
+    {
+      "id": "U-01",
+      "sink": "Gemini",
+      "question": "Exact organization/project/endpoint/model binding; content retention, abuse monitoring, prompt cache, training/human review, region, DPA and subprocessors.",
+      "blocker": "Live provider/account inspection and current contractual evidence were forbidden in this Work."
+    },
+    {
+      "id": "U-02",
+      "sink": "OpenAI",
+      "question": "Exact project/endpoint/store=false, zero-data-retention eligibility/exceptions, abuse monitoring, region, DPA and subprocessors.",
+      "blocker": "Live provider/account inspection was forbidden."
+    },
+    {
+      "id": "U-03",
+      "sink": "Next.js/hosting platform",
+      "question": "Ingress buffering, temporary disk, request/response body logs, CDN cache, traces/APM/crash/session replay, snapshots, support access and retry behavior.",
+      "blocker": "No live hosting/deployment call was authorized."
+    },
+    {
+      "id": "U-04",
+      "sink": "Supabase/PostgreSQL",
+      "question": "WAL, replicas, PITR, backups, logs, admin/support exports, deletion propagation and project retention settings.",
+      "blocker": "Supabase live access was explicitly forbidden."
+    },
+    {
+      "id": "U-05",
+      "sink": "Browser/device",
+      "question": "Browser sync, OS/cloud backups, extensions, managed policies and the effective deletion lifecycle for local/session storage.",
+      "blocker": "Not determinable from repository source."
+    },
+    {
+      "id": "U-06",
+      "sink": "CI/support",
+      "question": "Workflow artifact/log retention, screenshots/traces on failure, support attachment handling and organization settings.",
+      "blocker": "External organization settings were outside source-only scope."
+    },
+    {
+      "id": "U-07",
+      "sink": "Deployed configuration",
+      "question": "Which provider flags, fallback adapters and routes are actually enabled at the deployed exact head.",
+      "blocker": "Production and live service inspection were forbidden."
+    }
+  ],
+  "noCurrentApplicationAdapterFound": [
+    "Supabase Storage/Vercel Blob/object-store writes from current learner source routes",
+    "durable server queue, DLQ, scheduler or webhook payload for raw/source-bound bodies",
+    "Redis/KV/shared application cache for raw/source-bound bodies",
+    "application embedding, vector-store, RAG, training-corpus or evaluation-corpus writes",
+    "application session-replay SDK"
+  ],
+  "cpf2aProposedChangeSurface": [
+    "Introduce value-level D0-D6 ingress classification and typed closed projections; remove reliance on containsRawContent booleans.",
+    "Create a no-database/no-storage/no-disk/no-analytics ephemeral processor and deny source routes all durable credentials.",
+    "Move OCR/minimization on-device where possible and transmit only the minimum confirmed fields.",
+    "Bind provider adapters to exact organization/project/endpoint/model with verified zero-content retention, store=false, cache disabled, abortable deadlines and a drift kill switch.",
+    "Add no-store/private response headers and tests across every source-bearing route.",
+    "Stop D0-D3 writes to exam_sessions, wrong_answer_items, learning_signal_events, evaluations, JSON fallbacks, admin artifacts and browser storage.",
+    "Implement a documented D4 scrub plus closed D5/D6 allowlists before any database, telemetry, queue, log or browser sink.",
+    "Replace stable raw-content SHA-256 identifiers with short-lived rotating keyed HMAC used only for abuse protection, never retrieval.",
+    "Centralize error-object redaction and prove request/response bodies are absent from logging, tracing, crash, replay and support systems.",
+    "Add zero-write receipts, hostile canaries and failure/timeout/retry residue tests before any real-content authorization."
+  ],
+  "migrationImplications": [
+    "Existing rows/artifacts may already contain D1-D4 and require a separately authorized inventory, quarantine, deletion/backfill and backup-propagation plan.",
+    "Disabling future writes can be done before schema removal, but column removal, constraints, RLS changes and data cleanup require explicit migration authority.",
+    "Browser keys need a versioned purge/migration path; silent retention is not acceptable.",
+    "File fallback data and crash residue require an exact deployment-filesystem cleanup plan.",
+    "Provider and managed-service deletion evidence must account for backups, abuse-monitoring exceptions and contractual retention.",
+    "No migration, cleanup or live read is authorized by this inventory PR."
+  ],
+  "nextAuthorizationRequired": {
+    "work": "CPF-2A design and implementation only",
+    "exactScope": [
+      "source-bearing route allowlist and fail-closed D0-D6 classifier",
+      "typed persistence projections and write denial",
+      "browser/file fallback removal or safe replacement",
+      "provider/firewall/no-store/abort/log-redaction controls",
+      "synthetic-only focused and hostile residue tests"
+    ],
+    "separatelyRequiredLater": [
+      "live provider/account/hosting/Supabase configuration inspection",
+      "schema migration or existing-data cleanup",
+      "real third-party content",
+      "Production or external learners",
+      "merge of this Draft PR"
+    ]
+  }
+}

@@ -1,9 +1,16 @@
 {
   "contractId": "dabangil_ephemeral_source_safety_v1",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "status": "proposed_final_for_merge",
-  "datedKst": "2026-08-05",
-  "activeMasterPlan": "docs/strategy/dabangil-professional-exam-reasoning-os-final-master-plan-v11-2026-08-05.md",
+  "datedKst": "2026-08-06",
+  "activeMasterPlan": "docs/strategy/dabangil-professional-exam-reasoning-os-final-master-plan-v12-2026-08-06.md",
+  "sourceSafetyAnnex": "docs/strategy/dabangil-professional-exam-reasoning-os-final-master-plan-v11-2026-08-05.md",
+  "cpf1Inventory": {
+    "evidence": "docs/qa/v12-t0-cpf1-persistence-sink-inventory-2026-08-06.md",
+    "contract": "config/dabangil-cpf1-persistence-sink-inventory-v1.json",
+    "complete": false,
+    "status": "blocked_unknown_reachable_sinks"
+  },
   "ownerDecision": "docs/decisions/2026-08-05-owner-safe-ephemeral-study-finalization.md",
   "scope": {
     "currentLearnerFacingVertical": "dabangil_appraiser_second",

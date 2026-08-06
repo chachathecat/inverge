@@ -129,6 +129,23 @@ VESG-7  hostile synthetic and Owner-private rights-cleared evaluation
 This exact order amends the earlier generic ACC ordering only for the first VESG corpus
 build. It does not authorize the implementation or activation of any step.
 
+
+## V12-T0 / CPF-1 control-plane checkpoint
+
+At baseline `59b65cc20f64803151723b4df13348979fc0b391`, V12-T0 source-only alignment is recorded as complete.
+The repository-source persistence inventory is:
+
+- `docs/qa/v12-t0-cpf1-persistence-sink-inventory-2026-08-06.md`
+- `config/dabangil-cpf1-persistence-sink-inventory-v1.json`
+
+CPF-1: `blocked_unknown_reachable_sinks`; `cpf1Complete: false`.
+
+Confirmed D0-D4 persistence and provider-boundary violations require a separate
+CPF-2A implementation Work. Provider, hosting, Supabase backup and deployed
+configuration settings also remain unknown because this Work authorizes no live
+service access. These records grant no runtime, migration, real-content,
+Production, merge or CPF-2A authority.
+
 ## Execution boundary
 
 These documents are strategy and proposed policy artifacts. They do not by themselves

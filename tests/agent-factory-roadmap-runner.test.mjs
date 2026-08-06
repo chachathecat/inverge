@@ -1980,7 +1980,7 @@ test("unsupported pseudo-statuses stay unknown and cannot encode future gates", 
   assert.equal(byId(plan, "S101").readinessStatus, "unknown");
 });
 
-test("live blocked-S236P roadmap prevents S236A promotion", () => {
+test("live S236P and CPF-1 blocked WIP fill capacity and prevent S236A promotion", () => {
   const source = readFileSync("roadmap/active-program.yml", "utf8");
   const evaluatedAt = new Date(
     LIVE_PRE_EXPIRY_EVALUATED_AT,
@@ -2006,18 +2006,18 @@ test("live blocked-S236P roadmap prevents S236A promotion", () => {
   assert.equal(plan.programId, "post-650-unified-program-v1");
   assert.equal(plan.completionItem, "S299");
   assert.equal(plan.wipLimit, 2);
-  assert.equal(plan.wipOccupiedCount, 1);
-  assert.equal(plan.availableSlots, 1);
+  assert.equal(plan.wipOccupiedCount, 2);
+  assert.equal(plan.availableSlots, 0);
   assert.deepEqual(plan.readyItemIds, ["S236B"]);
-  assert.deepEqual(plan.selectedItemIds, ["S236B"]);
+  assert.deepEqual(plan.selectedItemIds, []);
   assert.deepEqual(
     postMerge.selected.map((entry) => entry.id),
     plan.selectedItemIds,
   );
   assert.deepEqual([...new Set(plan.analyses.map((analysis) => analysis.status))], [
     "completed",
-    "queued",
     "blocked",
+    "queued",
   ]);
   assert.ok(plan.analyses.every((analysis) => supported.has(analysis.statusCategory)));
 
@@ -2050,6 +2050,15 @@ test("live blocked-S236P roadmap prevents S236A promotion", () => {
   assert.deepEqual(s236p.missingDependencies, []);
   assert.equal(
     s236p.blockedReasons.some((reason) => reason.code === "blocked_status"),
+    true,
+  );
+
+  const cpf1 = byId(plan, "CPF-1");
+  assert.equal(cpf1.status, "blocked");
+  assert.equal(cpf1.readinessStatus, "blocked");
+  assert.deepEqual(cpf1.missingDependencies, []);
+  assert.equal(
+    cpf1.blockedReasons.some((reason) => reason.code === "blocked_status"),
     true,
   );
 
@@ -2119,7 +2128,10 @@ test("live TypeScript runner and post-merge selector agree without starting work
       plan.selectedItemIds,
     );
     assertRunnerSelectorParity(plan, postMerge);
-    assert.deepEqual(plan.selectedItemIds, ["S236B"]);
+    assert.equal(plan.wipOccupiedCount, 2);
+    assert.equal(plan.availableSlots, 0);
+    assert.deepEqual(plan.readyItemIds, ["S236B"]);
+    assert.deepEqual(plan.selectedItemIds, []);
     assert.deepEqual(postMerge.active, []);
   } finally {
     rmSync(directory, { recursive: true, force: true });

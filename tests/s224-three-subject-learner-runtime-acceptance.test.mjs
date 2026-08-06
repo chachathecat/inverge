@@ -349,5 +349,8 @@ test("S224 safe keys, docs, runner, roadmap, and Agent Factory example target ar
   assert.equal(s224?.statusCategory, "completed");
   assert.equal(s225?.readinessStatus, "blocked");
   assert.deepEqual(s225?.missingDependencies, ["O4D"]);
-  assert.deepEqual(plan.selectedItemIds, ["S236B"]);
+  assert.equal(plan.wipOccupiedCount, 2);
+  assert.equal(plan.availableSlots, 0);
+  assert.deepEqual(plan.readyItemIds, ["S236B"]);
+  assert.deepEqual(plan.selectedItemIds, []);
 });

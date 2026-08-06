@@ -5,6 +5,11 @@ program:
   completionItem: S299
   wipLimit: 2
   maxRepairAttempts: 3
+  activeMasterPlan: docs/strategy/dabangil-professional-exam-reasoning-os-final-master-plan-v12-2026-08-06.md
+  v12T0Status: completed_source_only_alignment
+  cpf1Status: blocked_unknown_reachable_sinks
+  cpf1Evidence: docs/qa/v12-t0-cpf1-persistence-sink-inventory-2026-08-06.md
+  cpf1Complete: false
 
 items:
   - id: S200
@@ -278,6 +283,43 @@ items:
     lockGroup: unified-control-plane
     risk: high
     priority: 31
+  - id: V12-T0
+    title: V12 Control-Plane Source-Only Alignment
+    status: completed
+    completionScope: source_only_control_plane_alignment
+    currentReadinessEstablished: false
+    evidence: docs/qa/v12-t0-cpf1-persistence-sink-inventory-2026-08-06.md
+    runtimePersistenceChanged: false
+    migrationsApplied: false
+    liveServicesCalled: false
+    realContentAuthorized: false
+    productionAuthorized: false
+    dependencies: [S234R]
+    lockGroup: source-safety-control-plane
+    risk: high
+    priority: 31.1
+  - id: CPF-1
+    title: Persistence-Sink Inventory
+    status: blocked
+    executionState: blocked_unknown_reachable_sinks
+    cpf1Complete: false
+    completionScope: source_inventory_evidence_only
+    currentReadinessEstablished: false
+    evidence: docs/qa/v12-t0-cpf1-persistence-sink-inventory-2026-08-06.md
+    inventoryContract: config/dabangil-cpf1-persistence-sink-inventory-v1.json
+    confirmedViolationCount: 16
+    unresolvedUnknownCount: 7
+    automaticStartAllowed: false
+    nextWorkAuthorized: false
+    runtimePersistenceChanged: false
+    migrationsApplied: false
+    liveServicesCalled: false
+    realContentAuthorized: false
+    productionAuthorized: false
+    dependencies: [V12-T0]
+    lockGroup: source-safety-inventory
+    risk: high
+    priority: 31.2
   - id: O3A
     title: Owner Second-Round Golden 3 Rights Source Version and Purpose Approval
     status: completed
