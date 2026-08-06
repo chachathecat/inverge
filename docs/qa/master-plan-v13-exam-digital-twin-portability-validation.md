@@ -13,7 +13,9 @@ This record validates the source-only V13 strategy aggregate that adds:
 - internal-only Portable Professional Exam Core;
 - proposed open-source validation adapters.
 
-Files under validation:
+The #690 change set under validation contains exactly two groups.
+
+### Core V13 artifacts (seven)
 
 - `docs/strategy/ACTIVE-MASTER-PLAN.md`
 - `docs/strategy/dabangil-professional-exam-reasoning-os-final-master-plan-v13-2026-08-06.md`
@@ -23,10 +25,28 @@ Files under validation:
 - `config/dabangil-exam-digital-twin-portable-core-v1.json`
 - this validation record.
 
-No runtime, API, UI, schema, migration, RLS, Storage, provider, dependency,
-package-lock, environment, deployment, historical-question ingest, real source,
-learner model fitting, other exam profile, external learner, payment or Production
-change is included.
+### Inherited CPF/control-plane reconciliation artifacts (four)
+
+- `config/dabangil-ephemeral-source-safety-contract-v1.json`
+- `docs/qa/v12-t0-cpf1-persistence-sink-inventory-2026-08-06.md`
+- `roadmap/active-program.yml`
+- `tests/v12-t0-cpf1-persistence-sink-inventory.test.mjs`
+
+The exact authorized roadmap pointer transition is **V12 activeMasterPlan → V13 activeMasterPlan**:
+
+- from `docs/strategy/dabangil-professional-exam-reasoning-os-final-master-plan-v12-2026-08-06.md`;
+- to `docs/strategy/dabangil-professional-exam-reasoning-os-final-master-plan-v13-2026-08-06.md`.
+
+No other roadmap change is authorized. All non-pointer roadmap status, dependency,
+priority, lock-group, WIP and CPF fields remain unchanged from #690's base.
+CPF-1 remains `cpf1Complete=false`, `confirmedViolationCount=16`,
+`unresolvedUnknownCount=7` and `blocked_unknown_reachable_sinks`. Every V13
+authorization-boundary flag remains `false`.
+
+No implementation, application, runtime, API, UI, live-service, schema, migration,
+RLS, Storage, provider, dependency, package-lock, environment, deployment,
+historical-question ingest, real source, learner model fitting, other exam profile,
+external learner, payment or Production change is included or authorized.
 
 ## Baseline preservation
 
@@ -278,7 +298,15 @@ The aggregate must preserve all assertions below.
    `productDecisionAuthority=false`.
 8. Confirm every hard-gate value is zero.
 9. Confirm Markdown code fences are balanced.
-10. Confirm no changed artifact mutates roadmap, runtime, dependency or package files.
+10. Confirm the #690 change set contains the seven core V13 artifacts and the four
+    inherited CPF/control-plane reconciliation artifacts named above.
+11. Confirm `roadmap/active-program.yml` contains only the exact authorized V12
+    `activeMasterPlan` → V13 `activeMasterPlan` pointer transition.
+12. Confirm every non-pointer roadmap status, dependency, priority, lock-group, WIP
+    and CPF field remains unchanged from #690's base.
+13. Confirm no implementation, application, runtime, API, UI, live-service, schema,
+    migration, RLS, Storage, provider, dependency, package-lock, environment,
+    deployment or Production path changed or became authorized.
 
 ## Runtime evidence
 
