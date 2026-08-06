@@ -26,26 +26,40 @@ PR #692 mutation is included.
 8. Hanja/root decomposition has profile-scoped evidence and a fail-closed held state.
 9. `DISPUTED` and `UNKNOWN` decomposition are not learner-visible.
 10. Every cue binds profile, VESG node, graph, norm, rights and review state.
-11. `CueExposureEvent` reuses the canonical Assistance/Exposure ledger; no parallel cue ledger is allowed.
-12. Any decomposition displayed before a response is assistance/exposure.
-13. Exposure is atomically recorded before cue bytes render; failure renders no cue bytes.
-14. The default collapsed surface exposes only `formalTerm` unless rule 13 has passed.
-15. `HIDDEN` forbids cue bytes in DOM, SSR, accessibility text, prefetch, cache and direct API output.
-16. D+7 stable and timed evidence require cue `HIDDEN` and a non-same representation.
-17. Same-cue repetition is not far transfer.
-18. Memory Post-it expanded-card maximum is one.
-19. Semantic highlights have closed roles, text labels, accessible names and maximum three primary highlights.
-20. Every semantic highlight binds a revision-bound typed anchor and target digest.
-21. Color alone never carries meaning.
-22. Shared cues attach only to owned, licensed or item-permitted official material.
-23. Private source selectors remain vault-local and cannot enter shared graph, analytics or another learner response.
-24. Personal note body remains Personal Raw Vault and is not shared, trained or analyzed by default.
-25. MCAL-2 requires CPF-2A closure and an approved bodyless exposure path.
-26. Personal editor is blocked pending CPF, privacy, retention, export/delete, schema/RLS/Storage and hostile runtime gates.
-27. Portable Core reuses interfaces only; terminology, definitions, rights and reviews stay profile-owned.
-28. MCAL cannot create a fourth Today primary task.
-29. MCAL-1 through MCAL-4 remain unauthorized.
-30. Every authorization flag is false and every hard-gate ceiling is zero.
+11. The closed per-kind anchor-policy key set exactly equals the eight declared anchor kinds; no default,
+    fallback or caller domain/locator override exists.
+12. `LEARNER_ATTEMPT_RANGE` and `PRIVATE_SOURCE_RANGE` are owner-bound `LEARNER_PRIVATE` with
+    `VAULT_LOCAL_ONLY`; unknown, missing or conflicting mappings reject or hold rather than fall back shared.
+13. A private target digest is vault-local integrity metadata only. Its non-vault projection is a bodyless
+    receipt without excerpt, offset, locator, attempt reference, digest or identifier and cannot enter shared
+    graph, analytics, logs, cache index, cross-user or Portable Core content-bearing projection.
+14. `CueExposureEvent` reuses the canonical Assistance/Exposure ledger; no parallel cue ledger is allowed.
+15. The closed timing/classification map permits only `LOW` or `MATERIAL` for `BEFORE_RESPONSE`;
+    `BEFORE_RESPONSE + NONE` is invalid.
+16. `NONE` means the attempt has no pre-response cue. Any pre-response event makes independent retrieval,
+    far transfer and stable D+7 ineligible for the whole attempt; later events cannot restore independence.
+17. Timing and classification derive from the canonical ledger. Untrusted client values, ambiguous ordering,
+    record failure and render/submit races fail closed.
+18. Any decomposition displayed before a response is assistance/exposure.
+19. Exposure is atomically recorded before cue bytes render; failure renders no cue bytes.
+20. The default collapsed surface exposes only `formalTerm` unless rule 19 has passed.
+21. `HIDDEN` forbids cue bytes in DOM, SSR, accessibility text, prefetch, cache and direct API output.
+22. D+7 stable and timed evidence require cue `HIDDEN` and a non-same representation.
+23. Same-cue repetition is not far transfer.
+24. Memory Post-it expanded-card maximum is one.
+25. Semantic highlights require `ALL_OF`: a non-empty visible text label and a valid computed accessible
+    name. Visible text may supply that name, so a redundant `aria-label` is not required.
+26. Semantic highlights have closed roles and maximum three primary highlights.
+27. Every semantic highlight binds a revision-bound typed anchor and target digest.
+28. Color alone never carries meaning.
+29. Shared cues attach only to owned, licensed or item-permitted official material.
+30. Personal note body remains Personal Raw Vault and is not shared, trained or analyzed by default.
+31. MCAL-2 requires CPF-2A closure and an approved bodyless exposure path.
+32. Personal editor is blocked pending CPF, privacy, retention, export/delete, schema/RLS/Storage and hostile runtime gates.
+33. Portable Core reuses interfaces only; terminology, definitions, rights and reviews stay profile-owned.
+34. MCAL cannot create a fourth Today primary task.
+35. MCAL-1 through MCAL-4 remain unauthorized.
+36. Every authorization flag is false and every hard-gate ceiling is zero.
 
 ## Hostile review
 
@@ -63,6 +77,10 @@ All fail closed or hold.
 
 - learner receives a decomposition in a collapsed card before answering but no exposure is recorded;
 - a cue ledger is created separately from the canonical Assistance/Exposure ledger;
+- `BEFORE_RESPONSE` is paired with `NONE`;
+- a later event restores independent evidence after any pre-response event;
+- timing/classification comes from untrusted client input;
+- ambiguous ordering or a render/submit race receives independent credit;
 - exposure is recorded after render or record failure still reveals cue bytes;
 - `HIDDEN` cue bytes remain in DOM, SSR, accessibility text, prefetch, cache or direct API output;
 - assisted repair relabeled independent;
@@ -75,6 +93,8 @@ All are rejected.
 ### Source and privacy
 
 - private textbook range exported as a shared selector;
+- learner-attempt range paired with a shared domain or non-vault locator;
+- private excerpt, offset, locator, attempt reference, digest or identifier in a bodyless receipt;
 - personal free text in logs, analytics, issue artifacts or training;
 - cross-user note reuse;
 - editor activation before export/delete and access evidence.
@@ -84,6 +104,8 @@ All are blocking defects.
 ### UX and accessibility
 
 - color-only highlight;
+- visible text label without a valid computed accessible name;
+- computed accessible name without a non-empty visible text label;
 - semantic highlight with an untyped or unversioned anchor;
 - more than three primary highlights;
 - multiple expanded cards;
@@ -105,6 +127,17 @@ npm run lint
 npm test
 npm run build
 ```
+
+Current correction-source evidence:
+
+- JavaScript syntax check: passed.
+- Focused behavioral contract suite: 12/12 passed.
+- Strict JSON parse, balanced Markdown fences, cross-artifact assertions and `git diff --check`: passed.
+- Typecheck: passed.
+- Lint: passed with 0 errors and 9 pre-existing warnings outside the MCAL diff.
+- Full Node test suite: 1,232/1,232 passed.
+- Production build: passed. The local sandbox's missing `uv_resident_set_memory` metric was supplied by
+  an untracked process-memory shim outside the repository; no tracked source or dependency byte changed.
 
 The repository PR Contract, Fast CI, Full CI, Learner Loop Health, Risk Gate and Runtime
 Gate must also pass on the same exact head.

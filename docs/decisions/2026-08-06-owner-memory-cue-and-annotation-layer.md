@@ -72,6 +72,11 @@ FULL → DECOMPOSITION_ONLY → PROMPT_ONLY → HIDDEN
 
 답변 전에 decomposition·memory gloss·prompt 중 어떤 단서든 표시하면 assistance/exposure다.
 `CueExposureEvent`는 별도 ledger를 만들지 않고 canonical Assistance/Exposure ledger를 재사용한다.
+`BEFORE_RESPONSE`는 `LOW` 또는 `MATERIAL`만 허용하며 `NONE`은 invalid다. `NONE`은 해당
+attempt에 pre-response cue exposure가 없었다는 뜻이다. timing과 classification은 canonical
+ledger에서 파생하고 client 입력을 신뢰하지 않는다. sequence에 pre-response event가 하나라도
+있으면 independent retrieval·far transfer·stable D+7은 부적격이며 뒤의 event가 복구하지 못한다.
+ordering ambiguity와 render/submit race도 fail closed다.
 단서 바이트는 렌더 전에 원자적으로 기록되어야 하며 기록 실패 시 표시하지 않는다.
 `HIDDEN`은 DOM·SSR·접근성 text·prefetch·cache·direct API output 어디에도 cue byte가 없음을 뜻한다.
 D+7 stable과 timed integration은 cue hidden, non-same representation,
@@ -95,6 +100,11 @@ cross-user 검증을 별도 승인하기 전 구현하지 않는다.
 
 개인 메모·제3자 원문 anchor는 shared VESG, Exam World, generator, analytics,
 training 또는 다른 사용자 응답으로 승격하지 않는다.
+
+`LEARNER_ATTEMPT_RANGE`와 `PRIVATE_SOURCE_RANGE`는 owner-bound `LEARNER_PRIVATE` 및
+`VAULT_LOCAL_ONLY`로 강제한다. private target digest는 vault-local integrity metadata일 뿐이며,
+non-vault에는 excerpt·offset·locator·attempt reference·digest·identifier가 없는 bodyless receipt만
+허용한다. shared graph·analytics·logs·cache index·cross-user·Portable Core content projection은 금지한다.
 
 ## 8. Portable Core
 

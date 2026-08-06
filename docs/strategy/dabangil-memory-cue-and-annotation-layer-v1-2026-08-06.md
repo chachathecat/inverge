@@ -254,28 +254,136 @@ type AnnotationDomainV1 =
   | "SHARED_OFFICIAL_PERMITTED"
   | "LEARNER_PRIVATE";
 
-type AnnotationAnchorV1 = {
+type BodyLocatorPolicyV1 =
+  | "NONE"
+  | "SHARED_STABLE_SELECTOR"
+  | "VAULT_LOCAL_ONLY";
+
+const ANNOTATION_ANCHOR_KIND_POLICY_V1 = {
+  CONCEPT_NODE: {
+    domains: ["SHARED_OWNED"],
+    bodyLocatorPolicies: ["NONE"],
+  },
+  FORMULA_NODE: {
+    domains: ["SHARED_OWNED"],
+    bodyLocatorPolicies: ["NONE"],
+  },
+  PROCEDURE_STEP: {
+    domains: ["SHARED_OWNED"],
+    bodyLocatorPolicies: ["NONE"],
+  },
+  QUESTION_UNIT: {
+    domains: ["SHARED_OWNED", "SHARED_OFFICIAL_PERMITTED"],
+    bodyLocatorPolicies: ["NONE"],
+    domainSelection: "EXPLICIT_ALLOWLIST_VALUE_REQUIRED",
+    rightsStateRequired: true,
+  },
+  OWNED_CONTENT_RANGE: {
+    domains: ["SHARED_OWNED"],
+    bodyLocatorPolicies: ["SHARED_STABLE_SELECTOR"],
+  },
+  OFFICIAL_PERMITTED_RANGE: {
+    domains: ["SHARED_OFFICIAL_PERMITTED"],
+    bodyLocatorPolicies: ["SHARED_STABLE_SELECTOR"],
+    itemLevelRightsRequired: true,
+  },
+  LEARNER_ATTEMPT_RANGE: {
+    domains: ["LEARNER_PRIVATE"],
+    bodyLocatorPolicies: ["VAULT_LOCAL_ONLY"],
+    ownerBound: true,
+    targetDigestPolicy: "VAULT_LOCAL_INTEGRITY_METADATA_ONLY",
+    nonVaultProjection: "BODYLESS_RECEIPT_ONLY",
+  },
+  PRIVATE_SOURCE_RANGE: {
+    domains: ["LEARNER_PRIVATE"],
+    bodyLocatorPolicies: ["VAULT_LOCAL_ONLY"],
+    ownerBound: true,
+    targetDigestPolicy: "VAULT_LOCAL_INTEGRITY_METADATA_ONLY",
+    nonVaultProjection: "BODYLESS_RECEIPT_ONLY",
+  },
+} as const satisfies Record<AnnotationAnchorKindV1, object>;
+
+type AnnotationAnchorBaseV1<
+  K extends AnnotationAnchorKindV1,
+  D extends AnnotationDomainV1,
+  L extends BodyLocatorPolicyV1,
+> = {
   anchorId: string;
   profileId: string;
-  kind: AnnotationAnchorKindV1;
-  domain: AnnotationDomainV1;
+  kind: K;
+  domain: D;
   conceptOrQuestionRef?: string;
   targetType: "CONCEPT" | "FORMULA" | "PROCEDURE_STEP" | "QUESTION_UNIT" | "CONTENT_RANGE";
   targetRevisionId: string;
   targetDigest: string;
-  bodyLocatorPolicy:
-    | "NONE"
-    | "SHARED_STABLE_SELECTOR"
-    | "VAULT_LOCAL_ONLY";
+  bodyLocatorPolicy: L;
   rightsManifestId: string;
   createdAt: string;
   status: "ACTIVE" | "HELD" | "SUPERSEDED";
 };
+
+type AnnotationAnchorV1 =
+  | AnnotationAnchorBaseV1<"CONCEPT_NODE", "SHARED_OWNED", "NONE">
+  | AnnotationAnchorBaseV1<"FORMULA_NODE", "SHARED_OWNED", "NONE">
+  | AnnotationAnchorBaseV1<"PROCEDURE_STEP", "SHARED_OWNED", "NONE">
+  | (AnnotationAnchorBaseV1<"QUESTION_UNIT", "SHARED_OWNED", "NONE"> & {
+      rightsState: "SHARED_OWNED";
+    })
+  | (AnnotationAnchorBaseV1<
+      "QUESTION_UNIT",
+      "SHARED_OFFICIAL_PERMITTED",
+      "NONE"
+    > & { rightsState: "SHARED_OFFICIAL_PERMITTED" })
+  | AnnotationAnchorBaseV1<
+      "OWNED_CONTENT_RANGE",
+      "SHARED_OWNED",
+      "SHARED_STABLE_SELECTOR"
+    >
+  | (AnnotationAnchorBaseV1<
+      "OFFICIAL_PERMITTED_RANGE",
+      "SHARED_OFFICIAL_PERMITTED",
+      "SHARED_STABLE_SELECTOR"
+    > & { itemRightsManifestId: string })
+  | (AnnotationAnchorBaseV1<
+      "LEARNER_ATTEMPT_RANGE",
+      "LEARNER_PRIVATE",
+      "VAULT_LOCAL_ONLY"
+    > & {
+      ownerBindingRef: string;
+      targetDigestScope: "VAULT_LOCAL_INTEGRITY_METADATA_ONLY";
+      nonVaultProjection: "BODYLESS_RECEIPT_ONLY";
+    })
+  | (AnnotationAnchorBaseV1<
+      "PRIVATE_SOURCE_RANGE",
+      "LEARNER_PRIVATE",
+      "VAULT_LOCAL_ONLY"
+    > & {
+      ownerBindingRef: string;
+      targetDigestScope: "VAULT_LOCAL_INTEGRITY_METADATA_ONLY";
+      nonVaultProjection: "BODYLESS_RECEIPT_ONLY";
+    });
+
+type PrivateAnchorBodylessReceiptV1 = {
+  projectionType: "BODYLESS_RECEIPT_ONLY";
+  anchorKind: "LEARNER_ATTEMPT_RANGE" | "PRIVATE_SOURCE_RANGE";
+  privateBodyPresent: false;
+  contentBearing: false;
+};
 ```
 
+- kind policy key 집합은 위 8개 kind와 정확히 같아야 한다. default·fallback은 없고,
+  caller가 domain 또는 locator를 덮어쓸 수 없다. unknown kind, 누락 mapping 또는
+  충돌 값은 reject하거나 `HELD`로 닫고 shared domain으로 대체하지 않는다.
 - shared cue는 답안길 소유·라이선스·item-permitted official content에만 연결한다.
+- `QUESTION_UNIT`은 두 shared domain 중 하나를 명시적으로 선택하고 rights state를 반드시 가진다.
+- `OFFICIAL_PERMITTED_RANGE`는 item-level rights를 반드시 가진다.
 - 제3자 교재의 exact text range, OCR, 문제문장, 해설표현은 개인 vault 밖으로 나가지 않는다.
-- private source selector는 `VAULT_LOCAL_ONLY`; shared graph·analytics·receipt·로그에 넣지 않는다.
+- `LEARNER_ATTEMPT_RANGE`와 `PRIVATE_SOURCE_RANGE`는 owner-bound `LEARNER_PRIVATE` 및
+  `VAULT_LOCAL_ONLY`만 허용한다. target digest는 vault-local integrity metadata일 뿐이다.
+- 두 private kind의 non-vault projection은 위 네 필드만 가진 bodyless receipt다. excerpt,
+  offset, body/attempt locator, attempt reference, private target digest, anchor/receipt identifier를
+  포함하지 않으며 shared graph·analytics·logs·cache index·cross-user 또는 Portable Core의
+  content-bearing projection으로 들어가지 않는다.
 - source가 삭제·변경되면 개인 anchor는 orphan-safe 상태로 전환하고 원문을 복원하지 않는다.
 
 ---
@@ -312,18 +420,49 @@ D+7 stable / timed: HIDDEN
 - cue 버튼 클릭만으로 capability axis를 올리지 않는다.
 
 ```ts
-type CueExposureEventV1 = CanonicalAssistanceExposureEventV1 & {
+type CueExposureEventBaseV1 = CanonicalAssistanceExposureEventV1 & {
   eventKind: "CUE_EXPOSURE";
   exposureId: string;
   learnerPrivateScopeId: string;
   cueId: string;
-  attemptId?: string;
   stateShown: CuePresentationStateV1;
   shownAt: string;
-  timing: "BEFORE_RESPONSE" | "AFTER_RESPONSE" | "REVIEW_ONLY";
-  assistanceClassification: "NONE" | "LOW" | "MATERIAL";
+  derivedFrom: "CANONICAL_ASSISTANCE_EXPOSURE_LEDGER";
 };
+
+type CueExposureEventV1 = CueExposureEventBaseV1 & (
+  | {
+      timing: "BEFORE_RESPONSE";
+      assistanceClassification: "LOW" | "MATERIAL";
+      attemptId: string;
+      independentEvidenceEligible: false;
+    }
+  | {
+      timing: "AFTER_RESPONSE";
+      assistanceClassification: "NONE" | "LOW" | "MATERIAL";
+      attemptId?: string;
+    }
+  | {
+      timing: "REVIEW_ONLY";
+      assistanceClassification: "NONE" | "LOW" | "MATERIAL";
+      attemptId?: string;
+    }
+);
+
+const CUE_TIMING_CLASSIFICATION_V1 = {
+  BEFORE_RESPONSE: ["LOW", "MATERIAL"],
+  AFTER_RESPONSE: ["NONE", "LOW", "MATERIAL"],
+  REVIEW_ONLY: ["NONE", "LOW", "MATERIAL"],
+} as const;
 ```
+
+- timing과 assistance classification은 canonical ledger가 파생하며 untrusted client 값을 받지 않는다.
+- `BEFORE_RESPONSE + NONE`은 invalid다. `NONE`은 해당 attempt에 pre-response cue exposure가
+  하나도 없었음을 뜻한다.
+- attempt sequence에 pre-response event가 하나라도 있으면 independent retrieval, far transfer,
+  stable D+7 evidence는 모두 부적격이며 뒤의 event가 이를 independent로 복구할 수 없다.
+- ordering ambiguity, ledger record failure 또는 render/submit race는 fail closed다. canonical
+  exposure record commit 전에는 cue byte를 렌더하지 않고 independent credit도 부여하지 않는다.
 
 `HIDDEN`은 CSS로 가리거나 접어 둔 상태가 아니다. cue·decomposition·prompt·memory gloss
 바이트가 DOM, SSR payload, accessibility text, prefetch response, cache entry 또는 direct
@@ -399,7 +538,9 @@ type SemanticHighlightRoleV1 =
 강제 규칙:
 
 - 색만으로 의미를 전달하지 않는다.
-- 항상 text label 또는 accessible name을 함께 제공한다.
+- 비어 있지 않은 visible text label과 valid computed accessible name을 항상 둘 다 제공한다
+  (`ALL_OF`). visible text가 올바른 computed accessible name을 만들면 중복 `aria-label`은
+  요구하지 않는다.
 - concept/question surface의 primary highlight 기본 최대 3개.
 - 모든 문장을 칠하는 기능을 기본값으로 제공하지 않는다.
 - highlight click/view는 mastery가 아니다.

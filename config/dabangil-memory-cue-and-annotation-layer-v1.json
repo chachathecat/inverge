@@ -177,10 +177,160 @@
       "SHARED_STABLE_SELECTOR",
       "VAULT_LOCAL_ONLY"
     ],
-    "privateSourceRangeDomain": "LEARNER_PRIVATE",
-    "privateSourceRangeBodyLocatorPolicy": "VAULT_LOCAL_ONLY",
-    "privateSelectorMayEnterSharedPlane": false,
-    "officialRangeRequiresItemRights": true,
+    "kindPolicy": {
+      "CONCEPT_NODE": {
+        "allowedDomains": [
+          "SHARED_OWNED"
+        ],
+        "allowedBodyLocatorPolicies": [
+          "NONE"
+        ],
+        "domainResolution": "DERIVED_EXACT"
+      },
+      "FORMULA_NODE": {
+        "allowedDomains": [
+          "SHARED_OWNED"
+        ],
+        "allowedBodyLocatorPolicies": [
+          "NONE"
+        ],
+        "domainResolution": "DERIVED_EXACT"
+      },
+      "PROCEDURE_STEP": {
+        "allowedDomains": [
+          "SHARED_OWNED"
+        ],
+        "allowedBodyLocatorPolicies": [
+          "NONE"
+        ],
+        "domainResolution": "DERIVED_EXACT"
+      },
+      "QUESTION_UNIT": {
+        "allowedDomains": [
+          "SHARED_OWNED",
+          "SHARED_OFFICIAL_PERMITTED"
+        ],
+        "allowedBodyLocatorPolicies": [
+          "NONE"
+        ],
+        "domainResolution": "EXPLICIT_ALLOWLIST_VALUE_REQUIRED",
+        "rightsStateRequired": true,
+        "domainRightsConsistencyRequired": true
+      },
+      "OWNED_CONTENT_RANGE": {
+        "allowedDomains": [
+          "SHARED_OWNED"
+        ],
+        "allowedBodyLocatorPolicies": [
+          "SHARED_STABLE_SELECTOR"
+        ],
+        "domainResolution": "DERIVED_EXACT"
+      },
+      "OFFICIAL_PERMITTED_RANGE": {
+        "allowedDomains": [
+          "SHARED_OFFICIAL_PERMITTED"
+        ],
+        "allowedBodyLocatorPolicies": [
+          "SHARED_STABLE_SELECTOR"
+        ],
+        "domainResolution": "DERIVED_EXACT",
+        "itemLevelRightsRequired": true
+      },
+      "LEARNER_ATTEMPT_RANGE": {
+        "allowedDomains": [
+          "LEARNER_PRIVATE"
+        ],
+        "allowedBodyLocatorPolicies": [
+          "VAULT_LOCAL_ONLY"
+        ],
+        "domainResolution": "DERIVED_EXACT",
+        "ownerBound": true,
+        "targetDigestPolicy": "VAULT_LOCAL_INTEGRITY_METADATA_ONLY",
+        "nonVaultProjection": {
+          "mode": "BODYLESS_RECEIPT_ONLY",
+          "allowedFields": [
+            "projectionType",
+            "anchorKind",
+            "privateBodyPresent",
+            "contentBearing"
+          ],
+          "forbiddenFields": [
+            "anchorId",
+            "receiptId",
+            "excerpt",
+            "startOffset",
+            "endOffset",
+            "offsets",
+            "bodyLocator",
+            "bodyLocatorPolicy",
+            "attemptLocator",
+            "attemptRef",
+            "attemptId",
+            "targetDigest",
+            "privateTargetDigest"
+          ],
+          "forbiddenDestinations": [
+            "SHARED_GRAPH",
+            "ANALYTICS",
+            "LOGS",
+            "CACHE_INDEX",
+            "CROSS_USER",
+            "PORTABLE_CORE_CONTENT_BEARING_PROJECTION"
+          ]
+        }
+      },
+      "PRIVATE_SOURCE_RANGE": {
+        "allowedDomains": [
+          "LEARNER_PRIVATE"
+        ],
+        "allowedBodyLocatorPolicies": [
+          "VAULT_LOCAL_ONLY"
+        ],
+        "domainResolution": "DERIVED_EXACT",
+        "ownerBound": true,
+        "targetDigestPolicy": "VAULT_LOCAL_INTEGRITY_METADATA_ONLY",
+        "nonVaultProjection": {
+          "mode": "BODYLESS_RECEIPT_ONLY",
+          "allowedFields": [
+            "projectionType",
+            "anchorKind",
+            "privateBodyPresent",
+            "contentBearing"
+          ],
+          "forbiddenFields": [
+            "anchorId",
+            "receiptId",
+            "excerpt",
+            "startOffset",
+            "endOffset",
+            "offsets",
+            "bodyLocator",
+            "bodyLocatorPolicy",
+            "attemptLocator",
+            "attemptRef",
+            "attemptId",
+            "targetDigest",
+            "privateTargetDigest"
+          ],
+          "forbiddenDestinations": [
+            "SHARED_GRAPH",
+            "ANALYTICS",
+            "LOGS",
+            "CACHE_INDEX",
+            "CROSS_USER",
+            "PORTABLE_CORE_CONTENT_BEARING_PROJECTION"
+          ]
+        }
+      }
+    },
+    "kindPolicyKeySetMustExactlyEqualKinds": true,
+    "defaultKindPolicyAllowed": false,
+    "fallbackKindPolicyAllowed": false,
+    "callerSuppliedDomainOverrideAllowed": false,
+    "callerSuppliedBodyLocatorOverrideAllowed": false,
+    "unknownKindBehavior": "REJECT",
+    "missingKindPolicyBehavior": "HELD",
+    "conflictingCallerValueBehavior": "REJECT",
     "typed": true,
     "revisionBound": true,
     "requiredBindings": [
@@ -191,6 +341,7 @@
       "targetType",
       "targetRevisionId",
       "targetDigest",
+      "bodyLocatorPolicy",
       "rightsManifestId",
       "status"
     ],
@@ -267,6 +418,21 @@
     "colorOnlyMeaningAllowed": false,
     "textLabelRequired": true,
     "accessibleNameRequired": true,
+    "accessibilityRequirement": {
+      "requirementMode": "ALL_OF",
+      "conditions": [
+        {
+          "field": "visibleTextLabel",
+          "predicate": "NON_EMPTY_TRIMMED_STRING"
+        },
+        {
+          "field": "computedAccessibleName",
+          "predicate": "VALID_NON_EMPTY_COMPUTED_ACCESSIBLE_NAME"
+        }
+      ],
+      "redundantAriaLabelRequired": false,
+      "visibleTextMaySupplyComputedAccessibleName": true
+    },
     "timedAttemptDefaultHidden": true,
     "interactionPromotesMastery": false,
     "revisionBoundTypedAnchorRequired": true,
@@ -409,7 +575,14 @@
     "preResponseDecompositionWithoutExposure": 0,
     "collapsedCueBytesBeforeAtomicExposure": 0,
     "hiddenCueBytesInForbiddenSurface": 0,
-    "semanticHighlightWithoutRevisionBoundTypedAnchor": 0
+    "semanticHighlightWithoutRevisionBoundTypedAnchor": 0,
+    "anchorKindPolicyFallbackUsed": 0,
+    "learnerAttemptRangeOutsideVaultLocal": 0,
+    "privateTargetDigestInSharedProjection": 0,
+    "preResponseCueClassifiedNone": 0,
+    "preResponseAttemptCountedIndependent": 0,
+    "semanticHighlightMissingVisibleTextLabel": 0,
+    "semanticHighlightMissingComputedAccessibleName": 0
   },
   "compatibility": {
     "v13RemainsSoleActiveMasterPlan": true,
@@ -449,9 +622,70 @@
     "eventName": "CueExposureEvent",
     "canonicalLedger": "ASSISTANCE_EXPOSURE_LEDGER",
     "canonicalEventKind": "CUE_EXPOSURE",
+    "discriminator": "timing",
+    "eventVariants": [
+      {
+        "timing": "BEFORE_RESPONSE",
+        "allowedAssistanceClassifications": [
+          "LOW",
+          "MATERIAL"
+        ],
+        "preResponseExposure": true,
+        "independentEvidenceEligible": false
+      },
+      {
+        "timing": "AFTER_RESPONSE",
+        "allowedAssistanceClassifications": [
+          "NONE",
+          "LOW",
+          "MATERIAL"
+        ],
+        "preResponseExposure": false,
+        "independentEvidenceEligibility": "DERIVE_FROM_FULL_ATTEMPT_SEQUENCE"
+      },
+      {
+        "timing": "REVIEW_ONLY",
+        "allowedAssistanceClassifications": [
+          "NONE",
+          "LOW",
+          "MATERIAL"
+        ],
+        "preResponseExposure": false,
+        "independentEvidenceEligibility": "DERIVE_FROM_FULL_ATTEMPT_SEQUENCE"
+      }
+    ],
+    "closedTimingClassificationMap": {
+      "BEFORE_RESPONSE": [
+        "LOW",
+        "MATERIAL"
+      ],
+      "AFTER_RESPONSE": [
+        "NONE",
+        "LOW",
+        "MATERIAL"
+      ],
+      "REVIEW_ONLY": [
+        "NONE",
+        "LOW",
+        "MATERIAL"
+      ]
+    },
     "separateLedgerAllowed": false,
+    "timingAndClassificationSource": "CANONICAL_ASSISTANCE_EXPOSURE_LEDGER",
+    "untrustedClientTimingOrClassificationAccepted": false,
+    "noneRequiresNoPreResponseCueInAttempt": true,
+    "preResponseIneligibleEvidence": [
+      "INDEPENDENT_RETRIEVAL",
+      "FAR_TRANSFER",
+      "STABLE_D7"
+    ],
+    "preResponseIneligibilityStickyForAttempt": true,
+    "laterEventsMayRestoreIndependentClassification": false,
+    "ambiguousOrderingBehavior": "FAIL_CLOSED",
+    "renderSubmitRaceBehavior": "FAIL_CLOSED_NO_CUE_BYTES_NO_INDEPENDENT_CREDIT",
     "atomicRecordBeforeRender": true,
     "preResponseDecompositionCountsAsExposure": true,
-    "recordFailureBehavior": "DO_NOT_RENDER_CUE_BYTES"
+    "recordFailureBehavior": "DO_NOT_RENDER_CUE_BYTES",
+    "recordFailureAttemptEvidenceBehavior": "FAIL_CLOSED_NO_INDEPENDENT_CREDIT"
   }
 }
