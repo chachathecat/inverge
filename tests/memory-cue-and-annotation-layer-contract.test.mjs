@@ -78,6 +78,8 @@ test("mnemonic, exact definition, cue exposure and D+7 stay separate", () => {
   assert.equal(contract.cueExposure.separateLedgerAllowed, false);
   assert.equal(contract.cueExposure.atomicRecordBeforeRender, true);
   assert.equal(contract.cueExposure.recordFailureBehavior, "DO_NOT_RENDER_CUE_BYTES");
+  assert.equal(contract.cueFading.renderOnExposureRecordFailure, false);
+  assert.equal(contract.memoryPostItMvp.exposureRecordFailureBehavior, "DO_NOT_RENDER_CUE_BYTES");
   assert.equal(contract.cueFading.d7StableState, "HIDDEN");
   assert.equal(contract.cueFading.stableRequiresNonSameRepresentation, true);
   assert.deepEqual(contract.cueFading.hiddenCueBytesForbiddenIn, [
@@ -104,6 +106,7 @@ test("highlights and personal annotations remain bounded and private", () => {
   assert.equal(contract.semanticHighlight.colorOnlyMeaningAllowed, false);
   assert.equal(contract.semanticHighlight.accessibleNameRequired, true);
   assert.equal(contract.semanticHighlight.revisionBoundTypedAnchorRequired, true);
+  assert.equal(contract.semanticHighlight.anchorTargetDigestRequired, true);
   assert.equal(contract.anchors.typed, true);
   assert.equal(contract.anchors.revisionBound, true);
   for (const key of ["targetType", "targetRevisionId", "targetDigest"]) {
