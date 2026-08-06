@@ -1,0 +1,457 @@
+{
+  "schema": "dabangil_memory_cue_and_annotation_layer_v1",
+  "version": "1.0.1",
+  "dated": "2026-08-06 KST",
+  "status": "proposed_non_authoritative",
+  "repository": "chachathecat/inverge",
+  "activeMasterPlan": "docs/strategy/dabangil-professional-exam-reasoning-os-final-master-plan-v13-2026-08-06.md",
+  "activePointer": "docs/strategy/ACTIVE-MASTER-PLAN.md",
+  "mandatoryAnnex": "docs/strategy/dabangil-memory-cue-and-annotation-layer-v1-2026-08-06.md",
+  "ownerDecision": "docs/decisions/2026-08-06-owner-memory-cue-and-annotation-layer.md",
+  "validationRecord": "docs/qa/memory-cue-and-annotation-layer-v1-validation.md",
+  "focusedTest": "tests/memory-cue-and-annotation-layer-contract.test.mjs",
+  "authorizationBoundary": {
+    "runtime": false,
+    "api": false,
+    "ui": false,
+    "schema": false,
+    "migration": false,
+    "rls": false,
+    "storage": false,
+    "persistence": false,
+    "provider": false,
+    "dependency": false,
+    "packageLock": false,
+    "environment": false,
+    "deployment": false,
+    "production": false,
+    "terminologyCorpusBuild": false,
+    "hanjaDictionaryImport": false,
+    "realHistoricalQuestionIngestion": false,
+    "realThirdPartySource": false,
+    "personalAnnotationBody": false,
+    "personalAnnotationSync": false,
+    "analytics": false,
+    "modelTraining": false,
+    "firstStageLearnerActivation": false,
+    "otherExamProfile": false,
+    "externalLearner": false,
+    "commercial": false,
+    "roadmapMutation": false,
+    "pr692Mutation": false,
+    "readyTransition": false,
+    "merge": false,
+    "autoMerge": false,
+    "mcal1TerminologyConstruction": false,
+    "mcal2MemoryPostItRuntime": false,
+    "mcal3SemanticHighlightRuntime": false,
+    "mcal4PersonalAnnotationRuntime": false
+  },
+  "role": {
+    "name": "Memory Cue & Annotation Layer",
+    "shortName": "MCAL",
+    "relationshipToV13": "mandatory_follow_up_annex_not_new_master_plan",
+    "directOfficialDefinitionAuthority": false,
+    "directAnswerAuthority": false,
+    "directScoringAuthority": false,
+    "directMasteryAuthority": false,
+    "exactDefinitionAuthority": "VESG_RELEASED_VERSIONED_CONCEPT_EVIDENCE_PROJECTION",
+    "mayBecomeSecondDefinitionAuthority": false
+  },
+  "exactDevelopmentPriority": [
+    "CORE_AUTHORITY_CONCEPT_QUESTION_VERIFICATION_ENGINES",
+    "ATTEMPT_REPAIR_TRANSFER_D7_LOOP",
+    "TERMINOLOGY_DECOMPOSITION_MEMORY_POSTIT_MVP",
+    "SEMANTIC_HIGHLIGHTING",
+    "PERSONAL_ANNOTATION_EDITOR"
+  ],
+  "separation": {
+    "requiredDistinctFields": [
+      "formalTerm",
+      "literalGloss",
+      "memoryGloss",
+      "exactDefinitionRef",
+      "independentRetrievalEvidence"
+    ],
+    "memoryGlossMayEqualExactDefinition": false,
+    "literalGlossMayBePresentedAsProfessionalDefinition": false,
+    "cueViewMayPromoteIndependentMastery": false,
+    "highlightInteractionMayPromoteMastery": false,
+    "exactDefinitionRefMayResolveOutsideReleasedVesgProjection": false,
+    "mcalMayActAsSecondDefinitionAuthority": false
+  },
+  "decomposition": {
+    "kinds": [
+      "VERIFIED_HANJA",
+      "KOREAN_MORPHEME",
+      "ENGLISH_ROOT",
+      "LATIN_GREEK_ROOT",
+      "FORMULA_SEMANTICS",
+      "PLAIN_LANGUAGE_ONLY",
+      "NO_SAFE_DECOMPOSITION"
+    ],
+    "evidenceStatuses": [
+      "SOURCE_VERIFIED",
+      "CONVENTIONAL_MEANING_VERIFIED",
+      "PEDAGOGIC_ONLY",
+      "DISPUTED",
+      "UNKNOWN",
+      "HELD"
+    ],
+    "learnerVisibleStatuses": [
+      "SOURCE_VERIFIED",
+      "CONVENTIONAL_MEANING_VERIFIED",
+      "PEDAGOGIC_ONLY"
+    ],
+    "inventedHanjaAllowed": false,
+    "disputedOrUnknownLearnerVisible": false,
+    "pedagogicOnlyMayBeShownAsEtymology": false,
+    "noSafeDecompositionAllowed": true
+  },
+  "memoryCue": {
+    "requiredFields": [
+      "cueId",
+      "profileId",
+      "scopeNodeId",
+      "graphSnapshotId",
+      "normSnapshotId",
+      "rightsManifestId",
+      "terminologySnapshotId",
+      "formalTerm",
+      "decompositionKind",
+      "componentIds",
+      "memoryGloss",
+      "exactDefinitionRef",
+      "meaningBoundaryNote",
+      "contrastScopeNodeIds",
+      "recallPromptIds",
+      "applicationPromptIds",
+      "sourceRefs",
+      "authorAgentId",
+      "subjectReviewRef",
+      "rightsReviewRef",
+      "releaseStatus"
+    ],
+    "optionalFields": [
+      "literalGloss",
+      "trapWarning",
+      "linguisticReviewRef"
+    ],
+    "releaseStates": [
+      "CANDIDATE",
+      "DECOMPOSITION_VERIFIED",
+      "SUBJECT_REVIEWED",
+      "RELEASED",
+      "HELD",
+      "SUPERSEDED"
+    ],
+    "targetNormBindingRequired": true,
+    "rightsBindingRequired": true,
+    "subjectReviewRequired": true,
+    "driftCausesHold": true,
+    "exactDefinitionRefContract": {
+      "type": "RELEASED_VERSIONED_VESG_CONCEPT_EVIDENCE_PROJECTION",
+      "releasedConceptRequired": true,
+      "targetDigestRequired": true,
+      "driftOrResolutionFailure": "HOLD"
+    }
+  },
+  "anchors": {
+    "kinds": [
+      "CONCEPT_NODE",
+      "FORMULA_NODE",
+      "PROCEDURE_STEP",
+      "QUESTION_UNIT",
+      "OWNED_CONTENT_RANGE",
+      "OFFICIAL_PERMITTED_RANGE",
+      "LEARNER_ATTEMPT_RANGE",
+      "PRIVATE_SOURCE_RANGE"
+    ],
+    "domains": [
+      "SHARED_OWNED",
+      "SHARED_OFFICIAL_PERMITTED",
+      "LEARNER_PRIVATE"
+    ],
+    "bodyLocatorPolicies": [
+      "NONE",
+      "SHARED_STABLE_SELECTOR",
+      "VAULT_LOCAL_ONLY"
+    ],
+    "privateSourceRangeDomain": "LEARNER_PRIVATE",
+    "privateSourceRangeBodyLocatorPolicy": "VAULT_LOCAL_ONLY",
+    "privateSelectorMayEnterSharedPlane": false,
+    "officialRangeRequiresItemRights": true,
+    "typed": true,
+    "revisionBound": true,
+    "requiredBindings": [
+      "anchorId",
+      "profileId",
+      "kind",
+      "domain",
+      "targetType",
+      "targetRevisionId",
+      "targetDigest",
+      "rightsManifestId",
+      "status"
+    ],
+    "semanticHighlightRequiresRevisionBoundTypedAnchor": true
+  },
+  "cueFading": {
+    "states": [
+      "FULL",
+      "DECOMPOSITION_ONLY",
+      "PROMPT_ONLY",
+      "HIDDEN"
+    ],
+    "initialState": "FULL",
+    "d7StableState": "HIDDEN",
+    "timedIntegrationState": "HIDDEN",
+    "revealCreatesExposureEvent": true,
+    "beforeResponseRevealIsAssisted": true,
+    "sameCueRepeatIsFarTransfer": false,
+    "stableRequiresNonSameRepresentation": true,
+    "anyPreResponseDecompositionDisplayCreatesExposure": true,
+    "canonicalLedger": "ASSISTANCE_EXPOSURE_LEDGER",
+    "separateCueExposureLedgerAllowed": false,
+    "atomicExposureRecordBeforeRenderRequired": true,
+    "renderOnExposureRecordFailure": false,
+    "hiddenCueBytesForbiddenIn": [
+      "DOM",
+      "SSR",
+      "ACCESSIBILITY_TEXT",
+      "PREFETCH",
+      "CACHE",
+      "DIRECT_API_OUTPUT"
+    ]
+  },
+  "memoryPostItMvp": {
+    "defaultCollapsed": true,
+    "maximumExpandedCardsPerSurface": 1,
+    "mayObscurePrimaryResponse": false,
+    "createsFourthTodayPrimaryTask": false,
+    "timedAttemptDefaultHidden": true,
+    "includes": [
+      "REVIEWED_SYSTEM_CUE",
+      "DECOMPOSITION",
+      "MEMORY_GLOSS",
+      "EXACT_DEFINITION_LINK",
+      "CONTRAST_TRAP",
+      "RECALL_PROMPT",
+      "CUE_FADING"
+    ],
+    "excludes": [
+      "PERSONAL_FREE_TEXT",
+      "DRAGGABLE_NOTE",
+      "THIRD_PARTY_SOURCE_PERSISTENCE",
+      "SHARING",
+      "BATCH_IMPORT",
+      "BACKGROUND_SYNC",
+      "RAW_TEXT_ANALYTICS"
+    ],
+    "collapsedDefaultVisibleFields": [
+      "formalTerm"
+    ],
+    "collapsedDecompositionRequiresAtomicExposureBeforeRender": true,
+    "exposureRecordFailureBehavior": "DO_NOT_RENDER_CUE_BYTES"
+  },
+  "semanticHighlight": {
+    "roles": [
+      "EXACT_DEFINITION",
+      "CONDITION_TRIGGER",
+      "PROCEDURE_SEQUENCE",
+      "EXCEPTION_TRAP",
+      "FORMULA_UNIT_VERIFICATION",
+      "DECISIVE_FACT"
+    ],
+    "maximumPrimaryHighlightsPerSurface": 3,
+    "colorOnlyMeaningAllowed": false,
+    "textLabelRequired": true,
+    "accessibleNameRequired": true,
+    "timedAttemptDefaultHidden": true,
+    "interactionPromotesMastery": false,
+    "revisionBoundTypedAnchorRequired": true,
+    "anchorTargetDigestRequired": true
+  },
+  "personalAnnotation": {
+    "kinds": [
+      "USER_MNEMONIC",
+      "OWN_WORDS_EXPLANATION",
+      "CONFUSION_NOTE",
+      "FORMULA_CUE",
+      "SELF_QUESTION",
+      "EXAM_COMPRESSION",
+      "PRIVATE_SOURCE_NOTE"
+    ],
+    "bodyPlane": "PERSONAL_RAW_VAULT",
+    "sharedReuse": false,
+    "crossUserReuse": false,
+    "trainingByDefault": false,
+    "freeTextAnalytics": false,
+    "activationPrerequisites": [
+      "CPF_SOURCE_SAFETY_CLOSURE",
+      "SEPARATE_SCHEMA_RLS_STORAGE_PROVIDER_WORK",
+      "RETENTION_EXPORT_DELETE",
+      "PRIVATE_ANCHOR_ORPHAN_POLICY",
+      "NO_BODY_LOG_TRACE",
+      "SYNC_CONFLICT_POLICY",
+      "ACCESSIBILITY",
+      "HOSTILE_CROSS_USER_TEST",
+      "OWNER_PRIVATE_RUNTIME_EVIDENCE"
+    ]
+  },
+  "portableCore": {
+    "reusableInterfaces": [
+      "MEMORY_CUE",
+      "TERM_COMPONENT",
+      "ANNOTATION_ANCHOR",
+      "CUE_PRESENTATION_STATE",
+      "CUE_EXPOSURE_EVENT",
+      "SEMANTIC_HIGHLIGHT_ROLE",
+      "BODYLESS_ANNOTATION_RECEIPT"
+    ],
+    "profileOwned": [
+      "FORMAL_TERMINOLOGY",
+      "EXACT_DEFINITION",
+      "DECOMPOSITION",
+      "MEMORY_GLOSS",
+      "CONTRAST_TRAP",
+      "CURRENTNESS",
+      "RIGHTS",
+      "REVIEWER_REGISTRY",
+      "RELEASE_POLICY"
+    ],
+    "crossProfileCueInheritanceAllowed": false,
+    "crossProfileDefinitionInheritanceAllowed": false,
+    "crossProfileMasteryTransferAllowed": false
+  },
+  "implementationProgram": [
+    {
+      "workId": "MCAL-0",
+      "name": "source_only_contracts_and_validation",
+      "authorizedByThisContract": true,
+      "runtime": false,
+      "realContent": false
+    },
+    {
+      "workId": "MCAL-1",
+      "name": "reviewed_appraiser_second_terminology_registry",
+      "authorizedByThisContract": false,
+      "learnerUi": false,
+      "seedTotal": "45-60",
+      "requires": [
+        "RELEASED_VERSIONED_VESG_CONCEPTS"
+      ]
+    },
+    {
+      "workId": "MCAL-2",
+      "name": "memory_postit_mvp",
+      "authorizedByThisContract": false,
+      "requires": [
+        "CORE_ENGINE_ACCEPTED",
+        "ATTEMPT_REPAIR_TRANSFER_D7_ACCEPTED",
+        "MCAL_1_REVIEWED",
+        "CPF_2A_CLOSED",
+        "APPROVED_BODYLESS_EXPOSURE_PATH",
+        "CANONICAL_ASSISTANCE_EXPOSURE_LEDGER_REUSE",
+        "OWNER_PRIVATE_ACTIVATION"
+      ]
+    },
+    {
+      "workId": "MCAL-3",
+      "name": "semantic_highlighting",
+      "authorizedByThisContract": false,
+      "requires": [
+        "MCAL_2_USABILITY_ACCESSIBILITY_PASS",
+        "REVISION_BOUND_TYPED_ANCHORS",
+        "STABLE_OWNED_OR_PERMITTED_ANCHORS"
+      ]
+    },
+    {
+      "workId": "MCAL-4",
+      "name": "personal_annotation_editor",
+      "authorizedByThisContract": false,
+      "requires": [
+        "CPF_PRIVACY_EXPORT_DELETE_GATES",
+        "SEPARATE_PERSISTENCE_SCHEMA_WORK",
+        "OWNER_PRIVATE_HOSTILE_RUNTIME_EVIDENCE"
+      ]
+    }
+  ],
+  "hardGates": {
+    "memoryGlossUsedAsExactDefinition": 0,
+    "literalGlossPresentedAsProfessionalDefinition": 0,
+    "inventedOrUnverifiedHanjaReleased": 0,
+    "cueWithoutProfileOrScopeNode": 0,
+    "cueWithoutExactDefinitionOrNormOrRights": 0,
+    "staleCueAfterDefinitionDrift": 0,
+    "cueRevealWithoutExposureEvent": 0,
+    "cueViewPromotesIndependentMastery": 0,
+    "d7StableWithVisibleCue": 0,
+    "sameRepresentationCountedAsFarTransfer": 0,
+    "colorOnlySemanticHighlight": 0,
+    "primaryHighlightsOverThree": 0,
+    "expandedMemoryCardsOverOne": 0,
+    "memoryCardObscuresPrimaryResponse": 0,
+    "privateSourceRangeInSharedPlane": 0,
+    "personalAnnotationBodyOutsidePersonalRawVault": 0,
+    "personalFreeTextInLogsOrAnalytics": 0,
+    "crossUserPersonalCueReuse": 0,
+    "personalEditorBeforeCpfPrivacyExportDeleteGates": 0,
+    "mcalRuntimeBeforeCoreLoopAcceptance": 0,
+    "otherProfileTermAutoInheritance": 0,
+    "mcalCreatesFourthTodayPrimaryTask": 0,
+    "exactDefinitionRefOutsideReleasedVersionedVesgProjection": 0,
+    "mcalSecondDefinitionAuthority": 0,
+    "mcal1TermWithoutReleasedVesgConcept": 0,
+    "mcal2BeforeCpf2aClosure": 0,
+    "mcal2WithoutApprovedBodylessExposurePath": 0,
+    "separateCueExposureLedger": 0,
+    "preResponseDecompositionWithoutExposure": 0,
+    "collapsedCueBytesBeforeAtomicExposure": 0,
+    "hiddenCueBytesInForbiddenSurface": 0,
+    "semanticHighlightWithoutRevisionBoundTypedAnchor": 0
+  },
+  "compatibility": {
+    "v13RemainsSoleActiveMasterPlan": true,
+    "newMasterPlanVersionCreated": false,
+    "preserveV11SourceSafety": true,
+    "preserveAttemptFirst": true,
+    "preserveAssistanceExposureMasterySeparation": true,
+    "preserveTodayMaximumThree": true,
+    "preservePortableProfileIsolation": true,
+    "preserveCurrentAppraiserSecondRuntimeScope": true,
+    "cpf1CompleteClaimed": false,
+    "pr692Mutated": false,
+    "mcal1Through4Authorized": false,
+    "cpf2aCompleteClaimed": false,
+    "pr692LateP2Resolved": false
+  },
+  "definitionAuthority": {
+    "canonicalAuthority": "VESG",
+    "exactDefinitionRefTarget": "RELEASED_VERSIONED_VESG_CONCEPT_EVIDENCE_PROJECTION",
+    "requiredBindings": [
+      "profileId",
+      "conceptId",
+      "graphSnapshotId",
+      "normSnapshotId",
+      "evidenceProjectionRevision",
+      "releaseRef",
+      "targetDigest"
+    ],
+    "releasedConceptRequired": true,
+    "versionBindingRequired": true,
+    "evidenceProjectionBindingRequired": true,
+    "mcalMayCreateDefinitionAuthority": false,
+    "mcalMayOverrideDefinition": false,
+    "unresolvedOrHeldDefinitionMayRelease": false
+  },
+  "cueExposure": {
+    "eventName": "CueExposureEvent",
+    "canonicalLedger": "ASSISTANCE_EXPOSURE_LEDGER",
+    "canonicalEventKind": "CUE_EXPOSURE",
+    "separateLedgerAllowed": false,
+    "atomicRecordBeforeRender": true,
+    "preResponseDecompositionCountsAsExposure": true,
+    "recordFailureBehavior": "DO_NOT_RENDER_CUE_BYTES"
+  }
+}
