@@ -1,9 +1,9 @@
 {
   "contractId": "dabangil_ephemeral_source_safety_v1",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "status": "proposed_final_for_merge",
   "datedKst": "2026-08-06",
-  "activeMasterPlan": "docs/strategy/dabangil-professional-exam-reasoning-os-final-master-plan-v12-2026-08-06.md",
+  "activeMasterPlan": "docs/strategy/dabangil-professional-exam-reasoning-os-final-master-plan-v13-2026-08-06.md",
   "sourceSafetyAnnex": "docs/strategy/dabangil-professional-exam-reasoning-os-final-master-plan-v11-2026-08-05.md",
   "cpf1Inventory": {
     "evidence": "docs/qa/v12-t0-cpf1-persistence-sink-inventory-2026-08-06.md",

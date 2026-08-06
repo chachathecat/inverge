@@ -5,7 +5,7 @@ program:
   completionItem: S299
   wipLimit: 2
   maxRepairAttempts: 3
-  activeMasterPlan: docs/strategy/dabangil-professional-exam-reasoning-os-final-master-plan-v12-2026-08-06.md
+  activeMasterPlan: docs/strategy/dabangil-professional-exam-reasoning-os-final-master-plan-v13-2026-08-06.md
   v12T0Status: completed_source_only_alignment
   cpf1Status: blocked_unknown_reachable_sinks
   cpf1Evidence: docs/qa/v12-t0-cpf1-persistence-sink-inventory-2026-08-06.md

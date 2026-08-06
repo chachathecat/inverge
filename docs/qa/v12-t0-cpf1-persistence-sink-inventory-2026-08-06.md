@@ -157,7 +157,7 @@ That authority must still exclude live configuration inspection, migration/clean
 
 The focused test `tests/v12-t0-cpf1-persistence-sink-inventory.test.mjs` verifies:
 
-- V12 is the active strategy pointer and V11 remains the source-safety annex;
+- V13 is the active strategy pointer while V12/V11 and this CPF-1 checkpoint remain mandatory inherited baselines;
 - roadmap entries preserve V12-T0 as source-only completed alignment and CPF-1 as blocked/incomplete;
 - every sink has the required trace and retention/redaction/retry/failure fields;
 - D0-D6, the explicitly required paths, confirmed violations and unresolved unknowns remain present;
