@@ -38,28 +38,39 @@ PR #692 mutation is included.
     `BEFORE_RESPONSE + NONE` is invalid.
 16. `NONE` means the attempt has no pre-response cue. Any pre-response event makes independent retrieval,
     far transfer and stable D+7 ineligible for the whole attempt; later events cannot restore independence.
-17. Timing and classification derive from the canonical ledger. Untrusted client values, ambiguous ordering,
-    record failure and render/submit races fail closed.
-18. Any decomposition displayed before a response is assistance/exposure.
-19. Exposure is atomically recorded before cue bytes render; failure renders no cue bytes.
-20. The default collapsed surface exposes only `formalTerm` unless rule 19 has passed.
-21. `HIDDEN` forbids cue bytes in DOM, SSR, accessibility text, prefetch, cache and direct API output.
-22. D+7 stable and timed evidence require cue `HIDDEN` and a non-same representation.
-23. Same-cue repetition is not far transfer.
-24. Memory Post-it expanded-card maximum is one.
-25. Semantic highlights require `ALL_OF`: a non-empty visible text label and a valid computed accessible
+17. Timing and classification derive from the canonical Assistance/Exposure ledger, while attempt state
+    derives only from the canonical server attempt ledger; untrusted client state is rejected.
+18. `BEFORE_RESPONSE` requires canonical `INDEPENDENT_ATTEMPT_OPEN` and one deliberate server-recorded
+    confirmation bound exactly to attempt, cue, cue revision and one request.
+19. Client booleans and preselected consent are insufficient. Missing, cancelled, stale, replayed,
+    mismatched or ambiguous confirmations fail closed with no cue bytes.
+20. Confirmation record, exposure record, `ASSISTED` transition and independent-evidence invalidation
+    commit in that exact all-or-nothing order before any cue byte renders.
+21. Partial commit, record failure and render/submit race roll back and render no cue bytes. A canonical
+    submitted response permits `AFTER_RESPONSE` only.
+22. Any decomposition displayed before a response is assistance/exposure.
+23. The default collapsed surface exposes only `formalTerm` unless rules 18–21 have passed.
+24. `HIDDEN` forbids cue bytes in DOM, SSR, accessibility text, prefetch, cache and direct API output.
+25. D+7 stable and timed evidence require cue `HIDDEN` and a non-same representation.
+26. Same-cue repetition is not far transfer.
+27. Memory Post-it expanded-card maximum is one.
+28. Semantic highlights require `ALL_OF`: a non-empty visible text label and a valid computed accessible
     name. Visible text may supply that name, so a redundant `aria-label` is not required.
-26. Semantic highlights have closed roles and maximum three primary highlights.
-27. Every semantic highlight binds a revision-bound typed anchor and target digest.
-28. Color alone never carries meaning.
-29. Shared cues attach only to owned, licensed or item-permitted official material.
-30. Personal note body remains Personal Raw Vault and is not shared, trained or analyzed by default.
-31. MCAL-2 requires CPF-2A closure and an approved bodyless exposure path.
-32. Personal editor is blocked pending CPF, privacy, retention, export/delete, schema/RLS/Storage and hostile runtime gates.
-33. Portable Core reuses interfaces only; terminology, definitions, rights and reviews stay profile-owned.
-34. MCAL cannot create a fourth Today primary task.
-35. MCAL-1 through MCAL-4 remain unauthorized.
-36. Every authorization flag is false and every hard-gate ceiling is zero.
+29. Semantic highlights have closed roles and maximum three primary highlights.
+30. Every semantic highlight binds a revision-bound typed anchor and target digest.
+31. Color alone never carries meaning.
+32. Shared cues attach only to owned, licensed or item-permitted official material.
+33. Personal raw annotation bodies remain in Personal Raw Vault and are unconditionally ineligible for
+    direct training; consent, opt-in, contract, administrator choice and future O5 cannot override this.
+34. Rename, alias or relabel cannot erase raw-body origin or directly promote that body to Cleared Content.
+35. Only a separate non-reconstructive signal or separately authored, rights-reviewed Cleared Content Bank
+    object may be a future candidate; contribution, promotion and O5 remain three distinct gates.
+36. MCAL-2 requires CPF-2A closure and an approved bodyless exposure path.
+37. Personal editor is blocked pending CPF, privacy, retention, export/delete, schema/RLS/Storage and hostile runtime gates.
+38. Portable Core reuses interfaces only; terminology, definitions, rights and reviews stay profile-owned.
+39. MCAL cannot create a fourth Today primary task.
+40. MCAL-1 through MCAL-4 remain unauthorized.
+41. Every authorization flag is false and every hard-gate ceiling is zero.
 
 ## Hostile review
 
@@ -80,6 +91,12 @@ All fail closed or hold.
 - `BEFORE_RESPONSE` is paired with `NONE`;
 - a later event restores independent evidence after any pre-response event;
 - timing/classification comes from untrusted client input;
+- attempt state comes from client input instead of the canonical server attempt ledger;
+- `BEFORE_RESPONSE` is requested without canonical `INDEPENDENT_ATTEMPT_OPEN`;
+- confirmation is missing, cancelled, stale, replayed, mismatched, ambiguous, a client boolean or preselected;
+- cue bytes render before confirmation, exposure, `ASSISTED` and evidence-invalidation commits all succeed;
+- partial commit, record failure or render/submit race still renders cue bytes;
+- an already submitted attempt is treated as `BEFORE_RESPONSE`;
 - ambiguous ordering or a render/submit race receives independent credit;
 - exposure is recorded after render or record failure still reveals cue bytes;
 - `HIDDEN` cue bytes remain in DOM, SSR, accessibility text, prefetch, cache or direct API output;
@@ -96,6 +113,10 @@ All are rejected.
 - learner-attempt range paired with a shared domain or non-vault locator;
 - private excerpt, offset, locator, attempt reference, digest or identifier in a bodyless receipt;
 - personal free text in logs, analytics, issue artifacts or training;
+- learner opt-in, consent, contract, administrator choice or O5 used to train a raw annotation body;
+- a raw annotation body renamed, aliased or directly promoted as Cleared Content;
+- a reconstructive signal admitted as non-reconstructive;
+- contribution, promotion or O5 treated as interchangeable gates;
 - cross-user note reuse;
 - editor activation before export/delete and access evidence.
 
@@ -131,13 +152,12 @@ npm run build
 Current correction-source evidence:
 
 - JavaScript syntax check: passed.
-- Focused behavioral contract suite: 12/12 passed.
+- Focused behavioral contract suite: 16/16 passed.
 - Strict JSON parse, balanced Markdown fences, cross-artifact assertions and `git diff --check`: passed.
-- Typecheck: passed.
-- Lint: passed with 0 errors and 9 pre-existing warnings outside the MCAL diff.
-- Full Node test suite: 1,232/1,232 passed.
-- Production build: passed. The local sandbox's missing `uv_resident_set_memory` metric was supplied by
-  an untracked process-memory shim outside the repository; no tracked source or dependency byte changed.
+- Typecheck on the correction head: required; exact-head CI evidence is not inherited.
+- Lint on the correction head: required; exact-head CI evidence is not inherited.
+- Full Node test suite on the correction head: required; exact-head CI evidence is not inherited.
+- Production build on the correction head: required; exact-head CI evidence is not inherited.
 
 The repository PR Contract, Fast CI, Full CI, Learner Loop Health, Risk Gate and Runtime
 Gate must also pass on the same exact head.
