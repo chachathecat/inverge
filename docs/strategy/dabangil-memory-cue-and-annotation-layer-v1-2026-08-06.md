@@ -419,7 +419,22 @@ D+7 stable / timed: HIDDEN
   하나의 all-or-nothing transaction으로 cue byte 렌더 전에 순서대로 commit되어야 한다.
 - missing·cancelled·stale·replayed·mismatched·ambiguous confirmation, partial commit, record failure,
   render/submit race는 모두 fail closed하며 cue byte를 전혀 렌더하지 않는다.
-- 이미 response가 제출된 canonical attempt는 `AFTER_RESPONSE`만 허용한다.
+- 이미 response가 제출된 canonical attempt는 `AFTER_RESPONSE`만 허용한다. 이 variant는 non-null
+  exact `attemptId`와 `learnerPrivateScopeId`가 canonical server attempt ledger의 바로 그
+  `SUBMITTED` attempt 한 건에 일치한 뒤에만 렌더한다. client 입력이나 latest-attempt 추론은 금지한다.
+- missing·empty·unknown·cross-learner·cross-attempt·mismatched·replayed·pre-submission attempt
+  reference는 fail closed하며 cue byte를 전혀 렌더하지 않는다.
+- 별도 `REVIEW_ONLY` variant만 attempt에 묶이지 않을 수 있고, 이 variant는 항상 evidence-neutral이다.
+- pre-response cue가 없다는 사실은 independent-evidence **eligibility만 보존**한다. empty sequence나
+  `AFTER_RESPONSE` event 자체는 independent retrieval·far transfer·stable D+7 증거를 만들지 않는다.
+- independent retrieval은 actual submitted response와 completed evaluation이 exact learner/attempt에
+  묶인 canonical response-evaluation record를 별도로 요구한다.
+- far transfer는 그 독립 회상 외에도 distinct eligible task, non-same representation, actual submitted
+  independent transfer attempt와 evaluated result의 canonical record를 별도로 요구한다.
+- stable D+7은 실제 완료된 D+7 independent evaluation, cue `HIDDEN`, 모든 surface의 cue byte 부재,
+  non-same representation 및 unresolved scoring conflict 0의 canonical record를 별도로 요구한다.
+- missing exposure history/record, failed render, partial commit 또는 ambiguous record는 positive learning
+  evidence 0으로 fail closed한다. `ASSISTED` attempt는 어떤 affirmative record가 있어도 부적격이다.
 - cue를 보고 맞힌 것은 independent mastery가 아니다.
 - cue를 본 뒤의 수정은 assisted repair로 분리한다.
 - same cue card 반복은 far transfer가 아니다.
@@ -448,14 +463,26 @@ type CueExposureEventV1 = CueExposureEventBaseV1 & (
   | {
       timing: "AFTER_RESPONSE";
       assistanceClassification: "NONE" | "LOW" | "MATERIAL";
-      attemptId?: string;
+      attemptId: string;
+      attemptBinding: ExactCanonicalSubmittedAttemptBindingV1;
     }
   | {
       timing: "REVIEW_ONLY";
       assistanceClassification: "NONE" | "LOW" | "MATERIAL";
       attemptId?: string;
+      attemptBinding?: ExactCanonicalSubmittedAttemptBindingV1;
+      independentEvidenceEligible: false;
     }
 );
+
+type ExactCanonicalSubmittedAttemptBindingV1 = {
+  source: "CANONICAL_SERVER_ATTEMPT_LEDGER";
+  attemptId: string;
+  learnerPrivateScopeId: string;
+  canonicalAttemptState: "SUBMITTED";
+  matchingRecordCount: 1;
+  submittedBeforeExposure: true;
+};
 
 const CUE_TIMING_CLASSIFICATION_V1 = {
   BEFORE_RESPONSE: ["LOW", "MATERIAL"],
@@ -491,10 +518,21 @@ const PRE_RESPONSE_RENDER_TRANSACTION_V1 = [
   하나도 없었음을 뜻한다.
 - attempt sequence에 pre-response event가 하나라도 있으면 independent retrieval, far transfer,
   stable D+7 evidence는 모두 부적격이며 뒤의 event가 이를 independent로 복구할 수 없다.
+- pre-response cue가 없다는 record는 eligibility만 보존한다. empty event list, cue-free record 또는
+  `AFTER_RESPONSE` event만으로는 positive learning evidence가 생기지 않는다.
+- positive independent retrieval은 별도의 canonical submitted-and-evaluated response record,
+  far transfer는 distinct eligible non-same-representation task와 submitted/evaluated result,
+  stable D+7은 completed D+7·`HIDDEN`·all-surface byte absence·non-same representation·scoring conflict 0
+  record를 각각 요구한다. exposure event는 이 affirmative evidence를 대체하지 않는다.
 - confirmation → exposure → `ASSISTED` → independent-evidence invalidation의 exact transaction이
   모두 commit된 다음에만 cue byte를 렌더한다. partial commit, ordering ambiguity, ledger record
   failure 또는 render/submit race는 rollback 후 fail closed하며 cue byte와 independent credit 모두 0이다.
 - canonical state가 `SUBMITTED`이면 `BEFORE_RESPONSE`는 거부하고 `AFTER_RESPONSE`만 허용한다.
+  `AFTER_RESPONSE`는 non-null exact `attemptId`를 canonical server ledger의 exact submitted attempt에
+  resolve해야 한다. missing/empty/unknown/cross-learner/cross-attempt/mismatch/replay/pre-submission,
+  client attempt ID 또는 latest-attempt 추론은 모두 cue byte 0으로 fail closed한다.
+- `REVIEW_ONLY`만 attempt-unbound일 수 있다. optional binding이 있으면 동일 exact validation을
+  통과해야 하며, bound/unbound 모두 independent retrieval·far transfer·stable D+7에는 중립이다.
 
 `HIDDEN`은 CSS로 가리거나 접어 둔 상태가 아니다. cue·decomposition·prompt·memory gloss
 바이트가 DOM, SSR payload, accessibility text, prefetch response, cache entry 또는 direct
@@ -622,13 +660,26 @@ input이나 training candidate로 만들 수 없다. raw body의 이름·별칭�
 미래 training candidate가 될 수 있는 것은 다음 두 종류뿐이다.
 
 - raw body·excerpt·free text를 포함하거나 복원할 수 없는 별도 identity의 closed-schema
-  non-reconstructive signal;
+  non-reconstructive signal. raw body pointer나 reconstructive derivative를 rename·alias·relabel한
+  객체도 signal이 될 수 없다;
 - raw annotation body의 rename·alias·직접 promotion이 아닌, 별도로 작성되고 실제 권리를
   소유하며 provenance와 rights review를 통과한 별도 Cleared Content Bank object.
 
 contribution gate, Cleared Content Bank promotion gate와 exact-purpose O5 gate는 서로 다른
 승인이다. contribution은 promotion을, promotion은 O5를, O5는 contribution/promotion을 대신하지
 않는다. 이 문서는 그 세 gate 중 어느 것도 승인하지 않으며 모든 authorization은 false다.
+
+`SEPARATE_NON_RECONSTRUCTIVE_SIGNAL`에는 위 세 gate와 별도로 다음 두 record가 모두 필요하다.
+
+- `CANONICAL_VERSIONED_CONSENT_OPT_OUT_LEDGER`의 active exact-purpose consent. consent는 exact
+  `signalId`·`signalRevisionId`·`purposeId`·`o5ScopeId`에 묶여야 한다.
+- `CANONICAL_PURPOSE_SCOPED_RETENTION_LEDGER`의 active finite purpose-bound retention. 동일 네 binding과 non-empty
+  `expiresAt`을 가지며 indefinite retention은 허용하지 않는다.
+
+generic opt-in, contract, administrator choice 또는 O5 자체는 consent나 retention을 대신하지 않는다.
+missing·mismatched·expired·revoked·indefinite·cross-purpose consent/retention은 candidate 단계에서
+fail closed한다. raw body, raw pointer 또는 reconstructive derivative는 이름을 signal로 바꾸어도
+계속 부적격이다.
 
 별도 활성화 전 요구:
 

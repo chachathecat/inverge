@@ -38,6 +38,10 @@ PR #692 mutation is included.
     `BEFORE_RESPONSE + NONE` is invalid.
 16. `NONE` means the attempt has no pre-response cue. Any pre-response event makes independent retrieval,
     far transfer and stable D+7 ineligible for the whole attempt; later events cannot restore independence.
+    Cue absence preserves eligibility only and never creates positive evidence. Independent retrieval requires
+    an actual submitted-and-evaluated canonical response; far transfer additionally requires a distinct eligible
+    non-same-representation task and evaluated result; stable D+7 requires an actually completed D+7 evaluation,
+    cue `HIDDEN` with all-surface byte absence, non-same representation and zero unresolved scoring conflicts.
 17. Timing and classification derive from the canonical Assistance/Exposure ledger, while attempt state
     derives only from the canonical server attempt ledger; untrusted client state is rejected.
 18. `BEFORE_RESPONSE` requires canonical `INDEPENDENT_ATTEMPT_OPEN` and one deliberate server-recorded
@@ -47,7 +51,10 @@ PR #692 mutation is included.
 20. Confirmation record, exposure record, `ASSISTED` transition and independent-evidence invalidation
     commit in that exact all-or-nothing order before any cue byte renders.
 21. Partial commit, record failure and render/submit race roll back and render no cue bytes. A canonical
-    submitted response permits `AFTER_RESPONSE` only.
+    submitted response permits `AFTER_RESPONSE` only. `AFTER_RESPONSE` requires a non-null exact `attemptId`
+    resolving through the canonical server ledger to that exact submitted learner attempt. Missing, empty,
+    unknown, cross-learner, cross-attempt, mismatched, replayed, pre-submission, client-supplied or latest-inferred
+    references fail closed with no cue bytes. Only evidence-neutral `REVIEW_ONLY` may remain attempt-unbound.
 22. Any decomposition displayed before a response is assistance/exposure.
 23. The default collapsed surface exposes only `formalTerm` unless rules 18–21 have passed.
 24. `HIDDEN` forbids cue bytes in DOM, SSR, accessibility text, prefetch, cache and direct API output.
@@ -64,7 +71,11 @@ PR #692 mutation is included.
     direct training; consent, opt-in, contract, administrator choice and future O5 cannot override this.
 34. Rename, alias or relabel cannot erase raw-body origin or directly promote that body to Cleared Content.
 35. Only a separate non-reconstructive signal or separately authored, rights-reviewed Cleared Content Bank
-    object may be a future candidate; contribution, promotion and O5 remain three distinct gates.
+    object may be a future candidate; contribution, promotion and O5 remain three distinct gates. A signal also
+    requires active exact-purpose consent and active finite purpose-scoped retention bound to exact signal,
+    revision, purpose and O5 scope. Generic opt-in, contract, administrator choice or O5 cannot substitute;
+    missing, mismatched, expired, revoked, indefinite or cross-purpose records fail closed. Raw bodies, raw
+    pointers and reconstructive derivatives cannot be renamed, aliased or relabeled into signals.
 36. MCAL-2 requires CPF-2A closure and an approved bodyless exposure path.
 37. Personal editor is blocked pending CPF, privacy, retention, export/delete, schema/RLS/Storage and hostile runtime gates.
 38. Portable Core reuses interfaces only; terminology, definitions, rights and reviews stay profile-owned.
@@ -90,6 +101,12 @@ All fail closed or hold.
 - a cue ledger is created separately from the canonical Assistance/Exposure ledger;
 - `BEFORE_RESPONSE` is paired with `NONE`;
 - a later event restores independent evidence after any pre-response event;
+- an empty event list, cue absence or an `AFTER_RESPONSE`-only sequence creates positive learning evidence;
+- an independent response lacks an actual canonical submission or completed evaluation;
+- far transfer lacks a distinct eligible non-same-representation task, independent submission or evaluated result;
+- D+7 evidence lacks a completed canonical D+7 evaluation, hidden all-surface cue bytes or conflict-free score;
+- missing exposure history/record, failed render, partial commit or ambiguity still creates positive evidence;
+- an `ASSISTED` attempt receives independent retrieval, far-transfer or stable-D+7 evidence;
 - timing/classification comes from untrusted client input;
 - attempt state comes from client input instead of the canonical server attempt ledger;
 - `BEFORE_RESPONSE` is requested without canonical `INDEPENDENT_ATTEMPT_OPEN`;
@@ -97,6 +114,9 @@ All fail closed or hold.
 - cue bytes render before confirmation, exposure, `ASSISTED` and evidence-invalidation commits all succeed;
 - partial commit, record failure or render/submit race still renders cue bytes;
 - an already submitted attempt is treated as `BEFORE_RESPONSE`;
+- `AFTER_RESPONSE` omits `attemptId`, uses client/latest inference, or resolves an unknown, cross-learner,
+  cross-attempt, mismatched, replayed or pre-submission attempt reference;
+- an attempt-unbound variant other than evidence-neutral `REVIEW_ONLY` renders cue bytes;
 - ambiguous ordering or a render/submit race receives independent credit;
 - exposure is recorded after render or record failure still reveals cue bytes;
 - `HIDDEN` cue bytes remain in DOM, SSR, accessibility text, prefetch, cache or direct API output;
@@ -116,6 +136,9 @@ All are rejected.
 - learner opt-in, consent, contract, administrator choice or O5 used to train a raw annotation body;
 - a raw annotation body renamed, aliased or directly promoted as Cleared Content;
 - a reconstructive signal admitted as non-reconstructive;
+- a raw pointer or reconstructive derivative renamed, aliased or relabeled as a signal;
+- signal consent or retention is missing, generic, mismatched, expired, revoked, indefinite or cross-purpose;
+- O5, contract, administrator choice or generic opt-in substitutes for exact-purpose consent or finite retention;
 - contribution, promotion or O5 treated as interchangeable gates;
 - cross-user note reuse;
 - editor activation before export/delete and access evidence.
@@ -152,7 +175,7 @@ npm run build
 Current correction-source evidence:
 
 - JavaScript syntax check: passed.
-- Focused behavioral contract suite: 16/16 passed.
+- Focused behavioral contract suite: 23/23 passed.
 - Strict JSON parse, balanced Markdown fences, cross-artifact assertions and `git diff --check`: passed.
 - Typecheck: passed.
 - Lint: passed with 0 errors and 9 pre-existing warnings outside the MCAL diff.

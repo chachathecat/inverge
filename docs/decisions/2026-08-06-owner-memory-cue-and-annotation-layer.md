@@ -83,7 +83,19 @@ deliberate learner confirmation을 모두 요구한다. client boolean과 presel
 confirmation record → cue exposure record → `ASSISTED` 전환 → independent-evidence invalidation은
 all-or-nothing으로 cue byte 렌더 전에 commit한다. missing·cancelled·stale·replayed·mismatched·
 ambiguous confirmation, partial commit, record failure 또는 render/submit race는 cue byte 0으로
-fail closed한다. 이미 submitted인 canonical attempt는 `AFTER_RESPONSE`만 허용한다.
+fail closed한다. 이미 submitted인 canonical attempt는 `AFTER_RESPONSE`만 허용한다. 이 variant는
+non-null exact `attemptId`와 learner scope가 canonical server attempt ledger의 exact `SUBMITTED`
+attempt 한 건에 resolve되어야 한다. client/latest-attempt 추론과 missing·empty·unknown·cross-learner·
+cross-attempt·mismatched·replayed·pre-submission reference는 cue byte 0으로 fail closed한다.
+오직 별도 `REVIEW_ONLY` variant만 attempt-unbound일 수 있고 항상 evidence-neutral이다.
+
+cue absence는 independent-evidence eligibility만 보존한다. empty event, cue-free sequence 또는
+`AFTER_RESPONSE` event만으로 independent retrieval·far transfer·stable D+7이 positive가 될 수 없다.
+positive independent retrieval은 exact submitted-and-evaluated response record, far transfer는 distinct
+eligible non-same-representation task와 submitted/evaluated independent result, stable D+7은 completed
+D+7 evaluation·cue `HIDDEN`·all-surface byte absence·non-same representation·unresolved scoring conflict 0의
+별도 canonical evidence를 각각 요구한다. missing exposure record/history, failed render, partial commit,
+ambiguous record 또는 `ASSISTED` attempt는 positive learning evidence 0으로 fail closed한다.
 `HIDDEN`은 DOM·SSR·접근성 text·prefetch·cache·direct API output 어디에도 cue byte가 없음을 뜻한다.
 D+7 stable과 timed integration은 cue hidden, non-same representation,
 unresolved scoring conflict 0을 요구한다.
@@ -116,6 +128,12 @@ promotion할 수도 없다.
 재명명·직접승격이 아닌 별도 authored·rights-owned·provenance/rights-reviewed Cleared Content
 Bank object뿐이다. contribution, Cleared Content Bank promotion과 exact-purpose O5는 서로
 구별된 gate이며 어느 것도 다른 gate를 대신하지 않는다. 현재 세 authorization은 모두 false다.
+
+signal은 raw body·raw pointer·reconstructive derivative를 rename·alias·relabel한 객체일 수 없다.
+또한 exact `signalId`·`signalRevisionId`·`purposeId`·`o5ScopeId`에 묶인 active exact-purpose consent와
+동일 binding·finite `expiresAt`을 가진 active purpose-scoped retention을 각각 canonical consent/opt-out
+ledger와 purpose-retention ledger에서 요구한다. generic opt-in, contract, administrator choice 또는 O5는
+이를 대체하지 못한다. missing·mismatched·expired·revoked·indefinite·cross-purpose record는 fail closed다.
 
 `LEARNER_ATTEMPT_RANGE`와 `PRIVATE_SOURCE_RANGE`는 owner-bound `LEARNER_PRIVATE` 및
 `VAULT_LOCAL_ONLY`로 강제한다. private target digest는 vault-local integrity metadata일 뿐이며,
@@ -152,7 +170,11 @@ cross-profile cue·정답·mastery 상속은 금지한다.
 - canonical Assistance/Exposure ledger 재사용과 render-before-record 금지.
 - canonical independent-attempt-open + exact single-use learner confirmation + atomic
   `ASSISTED`/independent-evidence invalidation before any pre-response cue byte.
+- cue absence preserves eligibility only; independent response, distinct non-same-representation transfer
+  and completed hidden/no-conflict D+7 each require separate affirmative canonical evidence.
+- `AFTER_RESPONSE` exact canonical submitted-attempt binding; only evidence-neutral `REVIEW_ONLY` may be unbound.
 - raw personal annotation body direct training·rename/alias 우회·direct Cleared Content promotion 0;
+  raw pointer/reconstructive-derivative relabel 우회 0; exact-purpose consent와 finite purpose retention;
   contribution/promotion/O5 gate 분리와 현재 authorization false.
 - HIDDEN byte absence와 revision-bound typed anchor.
 - MCAL-1~MCAL-4 authorization false.
