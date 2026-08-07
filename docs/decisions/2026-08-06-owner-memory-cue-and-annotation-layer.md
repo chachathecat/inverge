@@ -92,7 +92,14 @@ canonical attempt는 `AFTER_RESPONSE`만 허용한다. 이 variant는
 non-null exact `attemptId`와 learner scope가 canonical server attempt ledger의 exact `SUBMITTED`
 attempt 한 건에 resolve되어야 한다. client/latest-attempt 추론과 missing·empty·unknown·cross-learner·
 cross-attempt·mismatched·replayed·pre-submission reference는 cue byte 0으로 fail closed한다.
-오직 별도 `REVIEW_ONLY` variant만 attempt-unbound일 수 있고 항상 evidence-neutral이다.
+오직 별도 `REVIEW_ONLY` variant만 attempt-unbound일 수 있고 항상 evidence-neutral이다. 그러나
+caller가 붙인 `REVIEW_ONLY` label, `canonicalExposureRecordCommitted` boolean, client event 또는 inferred
+timing은 authorization evidence가 아니다. cue request와 exposure-event 두 render path 모두
+`CANONICAL_REVIEW_ONLY_RENDER_GATE_V1`에 위임하고, trusted server resolver가 exact learner·attempt
+scope·cue·cue revision·request에 묶인 canonical timing/classification 및 committed exposure를 한 건으로
+resolve해야 한다. canonical server attempt ledger에서 같은 learner/attempt scope의 open independent
+attempt가 0건임도 별도로 증명한다. missing·ambiguous·conflicting·cross-learner·stale·client-inferred
+state 또는 matching open attempt는 cue byte 0으로 fail closed한다.
 
 cue absence는 independent-evidence eligibility만 보존한다. empty event, cue-free sequence 또는
 `AFTER_RESPONSE` event만으로 independent retrieval·far transfer·stable D+7이 positive가 될 수 없다.
@@ -111,6 +118,9 @@ unresolved scoring conflict 0을 요구한다.
 - decomposition을 접힘 상태에 미리 표시하려면 exposure를 렌더 전에 원자적으로 기록한다.
 - expanded 최대 1개.
 - primary semantic highlight 최대 3개이며 revision-bound typed anchor가 필수다.
+- anchor의 열 `requiredBindings`는 각 필드의 exact type·closed enum·pattern과 kind별 domain·locator·
+  target-type consistency를 모두 검증한다. missing·null·empty·malformed·wrong-type·ambiguous·inconsistent
+  binding은 reject하고 truthiness-only validation은 금지한다.
 - color-only 의미 금지; text label과 accessible name 필수.
 - primary response를 가리지 않는다.
 - Today에 네 번째 primary task를 만들지 않는다.
@@ -132,7 +142,11 @@ promotion할 수도 없다.
 미래 candidate는 raw body와 별개의 closed-schema non-reconstructive signal, 또는 raw body의
 재명명·직접승격이 아닌 별도 authored·rights-owned·provenance/rights-reviewed Cleared Content
 Bank object뿐이다. contribution, Cleared Content Bank promotion과 exact-purpose O5는 서로
-구별된 gate이며 어느 것도 다른 gate를 대신하지 않는다. 현재 세 authorization은 모두 false다.
+구별된 gate이며 어느 것도 다른 gate를 대신하지 않는다. 각 미래 승인은 global boolean이 아니라
+independently resolved contribution·promotion·O5 receipt여야 하고, 세 receipt가 exact `signalId`·
+`signalRevisionId`·`purposeId`·`o5ScopeId`에 모두 일치해야 한다. cross-candidate/revision/purpose/scope,
+missing, ambiguous, replayed, stale, revoked 또는 independently unresolved receipt는 fail closed한다.
+현재 세 canonical authorization은 모두 false이며 테스트의 미래 receipt 모의는 이를 변경하지 않는다.
 
 signal은 raw body·raw pointer·reconstructive derivative를 rename·alias·relabel한 객체일 수 없다.
 `SEPARATE_NON_RECONSTRUCTIVE_SIGNAL`의 같은 validated candidate object에는 다음 다섯 property가
@@ -143,8 +157,11 @@ unvalidated 값은 안전의 증거가 아니며 candidate 단계에서 fail clo
 signal-schema validator가 exact signal/revision에 묶어 검증해야 하며 client assertion은 받지 않는다.
 또한 exact `signalId`·`signalRevisionId`·`purposeId`·`o5ScopeId`에 묶인 active exact-purpose consent와
 동일 binding·finite `expiresAt`을 가진 active purpose-scoped retention을 각각 canonical consent/opt-out
-ledger와 purpose-retention ledger에서 요구한다. generic opt-in, contract, administrator choice 또는 O5는
-이를 대체하지 못한다. missing·mismatched·expired·revoked·indefinite·cross-purpose record는 fail closed다.
+ledger와 purpose-retention ledger에서 요구한다. consent와 retention의 두 expiry는 매 decision 때
+`TRUSTED_SERVER_CLOCK_BOUNDARY`의 exact ISO-8601 UTC time과 비교하며 둘 다 evaluation time보다 엄격히
+뒤여야 한다. caller/candidate/client time, 고정 날짜, missing/invalid/untrusted/ambiguous time, at-expiry 또는
+post-expiry는 fail closed한다. generic opt-in, contract, administrator choice 또는 O5는 이를 대체하지 못한다.
+missing·mismatched·expired·revoked·indefinite·cross-purpose record도 fail closed다.
 
 `LEARNER_ATTEMPT_RANGE`와 `PRIVATE_SOURCE_RANGE`는 owner-bound `LEARNER_PRIVATE` 및
 `VAULT_LOCAL_ONLY`로 강제한다. private target digest는 vault-local integrity metadata일 뿐이며,
@@ -184,11 +201,14 @@ cross-profile cue·정답·mastery 상속은 금지한다.
   atomic confirmation consumption/`ASSISTED`/independent-evidence invalidation before any cue byte.
 - cue absence preserves eligibility only; independent response, distinct non-same-representation transfer
   and completed hidden/no-conflict D+7 each require separate affirmative canonical evidence.
-- `AFTER_RESPONSE` exact canonical submitted-attempt binding; only evidence-neutral `REVIEW_ONLY` may be unbound.
+- `AFTER_RESPONSE` exact canonical submitted-attempt binding; `REVIEW_ONLY` may be unbound only after trusted
+  canonical timing/classification derivation and proof of zero matching open independent attempts.
+- every anchor required binding exact schema and kind-policy consistency; truthiness-only validation 0.
 - raw personal annotation body direct training·rename/alias 우회·direct Cleared Content promotion 0;
   raw pointer/reconstructive-derivative relabel 우회 0; 다섯 content-safety property의 같은-object
-  validated explicit boolean false proof; exact-purpose consent와 finite purpose retention;
-  contribution/promotion/O5 gate 분리와 현재 authorization false.
+  validated explicit boolean false proof; trusted-time exact-purpose consent와 finite purpose retention;
+  exact-candidate-bound independently resolved contribution/promotion/O5 receipts와 현재 canonical
+  authorization false.
 - HIDDEN byte absence와 revision-bound typed anchor.
 - MCAL-1~MCAL-4 authorization false.
 - cue fading/evidence/source safety/portable profile gates.

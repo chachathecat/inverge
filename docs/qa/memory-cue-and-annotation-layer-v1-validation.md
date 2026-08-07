@@ -27,7 +27,9 @@ PR #692 mutation is included.
 9. `DISPUTED` and `UNKNOWN` decomposition are not learner-visible.
 10. Every cue binds profile, VESG node, graph, norm, rights and review state.
 11. The closed per-kind anchor-policy key set exactly equals the eight declared anchor kinds; no default,
-    fallback or caller domain/locator override exists.
+    fallback or caller domain/locator override exists. Every declared required binding has an exact closed
+    schema for type, enum or pattern, and target type must agree with kind policy. Individual missing, null,
+    empty, malformed, wrong-type, ambiguous or inconsistent bindings reject; truthiness-only validation is forbidden.
 12. `LEARNER_ATTEMPT_RANGE` and `PRIVATE_SOURCE_RANGE` are owner-bound `LEARNER_PRIVATE` with
     `VAULT_LOCAL_ONLY`; unknown, missing or conflicting mappings reject or hold rather than fall back shared.
 13. A private target digest is vault-local integrity metadata only. Its non-vault projection is a bodyless
@@ -60,7 +62,13 @@ PR #692 mutation is included.
     submitted response permits `AFTER_RESPONSE` only. `AFTER_RESPONSE` requires a non-null exact `attemptId`
     resolving through the canonical server ledger to that exact submitted learner attempt. Missing, empty,
     unknown, cross-learner, cross-attempt, mismatched, replayed, pre-submission, client-supplied or latest-inferred
-    references fail closed with no cue bytes. Only evidence-neutral `REVIEW_ONLY` may remain attempt-unbound.
+    references fail closed with no cue bytes. Only evidence-neutral `REVIEW_ONLY` may remain attempt-unbound,
+    and both render paths delegate to `CANONICAL_REVIEW_ONLY_RENDER_GATE_V1`. Caller labels,
+    `canonicalExposureRecordCommitted` booleans, client events and inferred timing do not authorize it. A trusted
+    server resolver must prove one exact canonical timing/classification plus committed exposure bound to learner,
+    attempt scope, cue, cue revision and request, while the canonical attempt ledger independently proves zero
+    matching open independent attempts. Missing, ambiguous, conflicting, cross-learner, stale, client-inferred
+    resolution or any matching open attempt fails closed with no cue bytes.
 23. Any decomposition displayed before a response is assistance/exposure.
 24. The default collapsed surface exposes only `formalTerm` unless rules 18–22 have passed.
 25. `HIDDEN` forbids cue bytes in DOM, SSR, accessibility text, prefetch, cache and direct API output.
@@ -77,14 +85,19 @@ PR #692 mutation is included.
     direct training; consent, opt-in, contract, administrator choice and future O5 cannot override this.
 35. Rename, alias or relabel cannot erase raw-body origin or directly promote that body to Cleared Content.
 36. Only a separate non-reconstructive signal or separately authored, rights-reviewed Cleared Content Bank
-    object may be a future candidate; contribution, promotion and O5 remain three distinct gates. A signal also
+    object may be a future candidate; contribution, promotion and O5 remain three distinct gates. Each future
+    approval requires its own independently resolved receipt bound to exact signal, revision, purpose and O5 scope;
+    global booleans, cross-candidate/revision/purpose/scope, missing, ambiguous, replayed, stale, revoked or unresolved
+    receipts cannot authorize a candidate, and all canonical authorization flags remain false. A signal also
     requires `containsRawAnnotationBody`, `containsRawBodyPointer`, `containsExcerptOrFreeText`, `reconstructive`
     and `reconstructiveDerivativeOfRawBody` to be explicitly present on the same validated candidate object,
     primitive boolean and exactly false. Missing, undefined, null, non-boolean, true, ambiguous, cross-object or
     unvalidated values fail closed; the canonical closed signal-schema validator must bind proof to the exact
     signal/revision and client assertions are rejected. Absence of evidence is not content-safety evidence. A signal further
     requires active exact-purpose consent and active finite purpose-scoped retention bound to exact signal,
-    revision, purpose and O5 scope. Generic opt-in, contract, administrator choice or O5 cannot substitute;
+    revision, purpose and O5 scope. Both expiries are compared at each decision with an exact trusted server-clock
+    instant and must be strictly later; caller/candidate/client time, a fixed date, missing or invalid time, and the
+    at/after-expiry boundary fail closed. Generic opt-in, contract, administrator choice or O5 cannot substitute;
     missing, mismatched, expired, revoked, indefinite or cross-purpose records fail closed. Raw bodies, raw
     pointers and reconstructive derivatives cannot be renamed, aliased or relabeled into signals.
 37. MCAL-2 requires CPF-2A closure and an approved bodyless exposure path.
@@ -119,6 +132,10 @@ All fail closed or hold.
 - missing exposure history/record, failed render, partial commit or ambiguity still creates positive evidence;
 - an `ASSISTED` attempt receives independent retrieval, far-transfer or stable-D+7 evidence;
 - timing/classification comes from untrusted client input;
+- a caller label, `canonicalExposureRecordCommitted` boolean, client event or inferred timing selects
+  `REVIEW_ONLY` without trusted canonical resolution;
+- the request or alternate exposure-event path renders `REVIEW_ONLY` while a matching canonical open independent
+  attempt exists;
 - attempt state comes from client input instead of the canonical server attempt ledger;
 - `BEFORE_RESPONSE` is requested without canonical `INDEPENDENT_ATTEMPT_OPEN`;
 - the separate event validator or an alternate render route authorizes `BEFORE_RESPONSE` without the exact
@@ -147,6 +164,7 @@ All are rejected.
 
 - private textbook range exported as a shared selector;
 - learner-attempt range paired with a shared domain or non-vault locator;
+- any declared anchor required binding is omitted, null, empty, malformed, wrong-type, ambiguous or inconsistent;
 - private excerpt, offset, locator, attempt reference, digest or identifier in a bodyless receipt;
 - personal free text in logs, analytics, issue artifacts or training;
 - learner opt-in, consent, contract, administrator choice or O5 used to train a raw annotation body;
@@ -156,8 +174,12 @@ All are rejected.
 - signal safety proof is ambiguous, taken from another object, or not closed-schema validated;
 - a raw pointer or reconstructive derivative renamed, aliased or relabeled as a signal;
 - signal consent or retention is missing, generic, mismatched, expired, revoked, indefinite or cross-purpose;
+- consent or retention expiry is checked against a fixed/caller time, or is at/before trusted decision time;
+- trusted decision time is caller-controlled, missing, invalid, ambiguous or outside the server clock boundary;
 - O5, contract, administrator choice or generic opt-in substitutes for exact-purpose consent or finite retention;
 - contribution, promotion or O5 treated as interchangeable gates;
+- contribution, promotion or O5 uses a global boolean or a missing, mismatched, cross-bound, ambiguous, replayed,
+  stale, revoked or independently unresolved approval receipt;
 - cross-user note reuse;
 - editor activation before export/delete and access evidence.
 
@@ -193,12 +215,13 @@ npm run build
 Current correction-source evidence:
 
 - JavaScript syntax check: passed.
-- Focused behavioral contract suite: 25/25 passed.
+- Focused behavioral contract suite: 28/28 passed.
 - Strict JSON parse, balanced Markdown fences, cross-artifact assertions and `git diff --check`: passed.
 - Typecheck: passed.
 - Lint: passed with 0 errors and 9 pre-existing warnings outside the MCAL diff.
 - Full Node test suite: 1,232/1,232 passed.
-- Production build: passed.
+- Production build: passed on repository-standard Node 22 with a workspace-only shim for the unavailable
+  host memory-metrics syscall; exact-head GitHub and Vercel builds remain required without that shim.
 
 The repository PR Contract, Fast CI, Full CI, Learner Loop Health, Risk Gate and Runtime
 Gate must also pass on the same exact head.

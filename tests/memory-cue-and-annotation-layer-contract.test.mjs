@@ -16,6 +16,45 @@ const read = (p) => fs.readFileSync(path.join(ROOT, p), "utf8");
 const contract = JSON.parse(read(P.contract));
 
 const sorted = (values) => [...values].sort();
+const VALID_SHA256 = `sha256:${"a".repeat(64)}`;
+
+function validAnchor(overrides = {}) {
+  const kind = overrides.kind ?? "LEARNER_ATTEMPT_RANGE";
+  const defaultsByKind = {
+    CONCEPT_NODE: ["SHARED_OWNED", "NONE", "VESG_CONCEPT_NODE"],
+    FORMULA_NODE: ["SHARED_OWNED", "NONE", "VESG_FORMULA_NODE"],
+    PROCEDURE_STEP: ["SHARED_OWNED", "NONE", "VESG_PROCEDURE_STEP"],
+    QUESTION_UNIT: ["SHARED_OWNED", "NONE", "VERSIONED_QUESTION_UNIT"],
+    OWNED_CONTENT_RANGE: ["SHARED_OWNED", "SHARED_STABLE_SELECTOR", "OWNED_CONTENT_REVISION_RANGE"],
+    OFFICIAL_PERMITTED_RANGE: ["SHARED_OFFICIAL_PERMITTED", "SHARED_STABLE_SELECTOR", "OFFICIAL_PERMITTED_CONTENT_REVISION_RANGE"],
+    LEARNER_ATTEMPT_RANGE: ["LEARNER_PRIVATE", "VAULT_LOCAL_ONLY", "LEARNER_ATTEMPT_REVISION_RANGE"],
+    PRIVATE_SOURCE_RANGE: ["LEARNER_PRIVATE", "VAULT_LOCAL_ONLY", "PRIVATE_SOURCE_REVISION_RANGE"],
+  };
+  const [domain, bodyLocatorPolicy, targetType] = defaultsByKind[kind]
+    ?? defaultsByKind.CONCEPT_NODE;
+  const candidate = {
+    anchorId: "anchor-1",
+    profileId: "profile-appraiser-second",
+    kind,
+    domain,
+    targetType,
+    targetRevisionId: "revision-1",
+    targetDigest: VALID_SHA256,
+    bodyLocatorPolicy,
+    rightsManifestId: "rights-manifest-1",
+    status: "ACTIVE",
+    ...overrides,
+  };
+  if (["LEARNER_ATTEMPT_RANGE", "PRIVATE_SOURCE_RANGE"].includes(kind)) {
+    candidate.ownerBindingRef ??= "owner-scope-local";
+    candidate.targetDigestScope ??= "VAULT_LOCAL_INTEGRITY_METADATA_ONLY";
+  }
+  if (kind === "QUESTION_UNIT") candidate.rightsState ??= candidate.domain;
+  if (kind === "OFFICIAL_PERMITTED_RANGE") {
+    candidate.itemRightsManifestId ??= "item-rights-manifest-1";
+  }
+  return candidate;
+}
 
 function anchorPolicyIntegrity(anchorContract = contract.anchors) {
   const declaredKinds = sorted(anchorContract.kinds);
@@ -45,11 +84,50 @@ function validateAnchor(candidate, anchorContract = contract.anchors) {
       reason: "UNKNOWN_KIND",
     };
   }
+  if (
+    JSON.stringify(sorted(Object.keys(anchorContract.requiredBindingSchema ?? {})))
+    !== JSON.stringify(sorted(anchorContract.requiredBindings))
+  ) {
+    return {
+      accepted: false,
+      disposition: "REJECT",
+      reason: "REQUIRED_BINDING_SCHEMA_KEY_SET_MISMATCH",
+    };
+  }
+  if (candidate.requiredBindingsAmbiguous === true) {
+    return { accepted: false, disposition: "REJECT", reason: "REQUIRED_BINDING_AMBIGUOUS" };
+  }
+  if (Array.isArray(candidate.conflictingRequiredBindings) && candidate.conflictingRequiredBindings.length > 0) {
+    return { accepted: false, disposition: "REJECT", reason: "REQUIRED_BINDING_INCONSISTENT" };
+  }
+  for (const field of anchorContract.requiredBindings) {
+    if (!Object.hasOwn(candidate, field)) {
+      return { accepted: false, disposition: "REJECT", reason: `REQUIRED_BINDING_${field}_MISSING` };
+    }
+    const schema = anchorContract.requiredBindingSchema[field];
+    const value = candidate[field];
+    let valid = false;
+    if (schema.type === "string") {
+      valid = typeof value === "string"
+        && value.trim() === value
+        && value.length >= (schema.minLength ?? 0)
+        && (schema.pattern == null || new RegExp(schema.pattern).test(value));
+    } else if (schema.type === "enum") {
+      const sourceKey = schema.valuesSource.split(".").at(-1);
+      valid = typeof value === "string" && anchorContract[sourceKey]?.includes(value) === true;
+    }
+    if (!valid) {
+      return { accepted: false, disposition: "REJECT", reason: `REQUIRED_BINDING_${field}_INVALID` };
+    }
+  }
   if (!policy.allowedDomains.includes(candidate.domain)) {
     return { accepted: false, disposition: "REJECT", reason: "DOMAIN_CONFLICT" };
   }
   if (!policy.allowedBodyLocatorPolicies.includes(candidate.bodyLocatorPolicy)) {
     return { accepted: false, disposition: "REJECT", reason: "LOCATOR_CONFLICT" };
+  }
+  if (!policy.allowedTargetTypes.includes(candidate.targetType)) {
+    return { accepted: false, disposition: "REJECT", reason: "TARGET_TYPE_CONFLICT" };
   }
   if (policy.rightsStateRequired && !candidate.rightsState) {
     return { accepted: false, disposition: "REJECT", reason: "RIGHTS_STATE_REQUIRED" };
@@ -121,6 +199,61 @@ function canonicalOpenAttemptResolution(overrides = {}) {
   });
 }
 
+function canonicalReviewOnlyResolution(overrides = {}) {
+  const base = {
+    source: "CANONICAL_SERVER_CUE_TIMING_CLASSIFICATION_RESOLVER",
+    known: true,
+    matchingResolutionCount: 1,
+    ambiguous: false,
+    conflicting: false,
+    crossLearner: false,
+    stale: false,
+    clientInferred: false,
+    canonicalTiming: "REVIEW_ONLY",
+    canonicalAssistanceClassification: "NONE",
+    canonicalExposureRecordState: "COMMITTED",
+    learnerPrivateScopeId: "learner-1",
+    attemptScopeId: "question-scope-1",
+    cueId: "cue-1",
+    cueRevisionId: "cue-revision-1",
+    requestId: "request-1",
+    openIndependentAttemptResolution: {
+      source: "CANONICAL_SERVER_ATTEMPT_LEDGER",
+      queriedCanonicalAttemptState: "INDEPENDENT_ATTEMPT_OPEN",
+      learnerPrivateScopeId: "learner-1",
+      attemptScopeId: "question-scope-1",
+      matchingRecordCount: 0,
+      known: true,
+      ambiguous: false,
+      crossLearner: false,
+      stale: false,
+    },
+  };
+  const resolution = { ...base, ...overrides };
+  if (Object.hasOwn(overrides, "openIndependentAttemptResolution")) {
+    resolution.openIndependentAttemptResolution = overrides.openIndependentAttemptResolution == null
+      ? overrides.openIndependentAttemptResolution
+      : { ...base.openIndependentAttemptResolution, ...overrides.openIndependentAttemptResolution };
+  }
+  return resolution;
+}
+
+function reviewOnlyRequest(overrides = {}) {
+  return {
+    timing: "REVIEW_ONLY",
+    assistanceClassification: "NONE",
+    learnerPrivateScopeId: "learner-1",
+    attemptScopeId: "question-scope-1",
+    cueId: "cue-1",
+    cueRevisionId: "cue-revision-1",
+    requestId: "request-1",
+    reviewOnlyResolution: canonicalReviewOnlyResolution(),
+    recordFailure: false,
+    renderSubmitRaceDetected: false,
+    ...overrides,
+  };
+}
+
 function cueEvent(overrides = {}) {
   const event = {
     timing: "AFTER_RESPONSE",
@@ -144,6 +277,13 @@ function cueEvent(overrides = {}) {
   ) {
     delete event.attemptId;
     delete event.attemptResolution;
+    event.attemptScopeId = overrides.attemptScopeId ?? "question-scope-1";
+    event.cueId = overrides.cueId ?? "cue-1";
+    event.cueRevisionId = overrides.cueRevisionId ?? "cue-revision-1";
+    event.requestId = overrides.requestId ?? "request-1";
+    event.reviewOnlyResolution = Object.hasOwn(overrides, "reviewOnlyResolution")
+      ? overrides.reviewOnlyResolution
+      : canonicalReviewOnlyResolution();
   }
   return event;
 }
@@ -181,6 +321,100 @@ function validateCanonicalAttemptBinding(subject) {
     return { accepted: false, reason: "ATTEMPT_NOT_SUBMITTED" };
   }
   return { accepted: true };
+}
+
+function authorizeCanonicalReviewOnlyCueRender(subject) {
+  const gate = contract.cueExposure.reviewOnlyGate;
+  const fail = (reason) => ({
+    accepted: false,
+    mayRenderCueBytes: false,
+    independentEvidenceEligible: false,
+    gateId: gate.gateId,
+    reason,
+  });
+  if (subject.renderSubmitRaceDetected === true) {
+    return fail(contract.cueExposure.renderSubmitRaceBehavior);
+  }
+  if (subject.recordFailure === true) return fail(contract.cueExposure.recordFailureBehavior);
+  if (subject.ordering !== undefined && subject.ordering !== "ORDERED") {
+    return fail(contract.cueExposure.ambiguousOrderingBehavior);
+  }
+  if (subject.canonicalRecordCommitted !== undefined && subject.canonicalRecordCommitted !== true) {
+    return fail("REVIEW_ONLY_CALLER_CANONICAL_CONFLICT");
+  }
+  if (
+    Object.hasOwn(subject, "canonicalExposureRecordCommitted")
+    || subject.clientEvent !== undefined
+    || subject.clientTiming !== undefined
+    || subject.clientAssistanceClassification !== undefined
+    || subject.inferTiming === true
+  ) return fail("UNTRUSTED_REVIEW_ONLY_INPUT");
+  if (
+    subject.derivedFrom !== undefined
+    && subject.derivedFrom !== contract.cueExposure.timingAndClassificationSource
+  ) return fail("UNTRUSTED_REVIEW_ONLY_EVENT_DERIVATION");
+
+  const resolution = subject.reviewOnlyResolution;
+  if (!resolution) return fail("CANONICAL_REVIEW_ONLY_RESOLUTION_MISSING");
+  if (
+    resolution.source !== gate.canonicalResolutionSource
+    || resolution.known !== true
+    || resolution.matchingResolutionCount !== gate.exactMatchingResolutionCount
+    || resolution.ambiguous !== false
+    || resolution.conflicting !== false
+    || resolution.crossLearner !== false
+    || resolution.stale !== false
+    || resolution.clientInferred !== false
+  ) return fail("CANONICAL_REVIEW_ONLY_RESOLUTION_INVALID");
+  if (
+    resolution.canonicalTiming !== gate.requiredCanonicalTiming
+    || !gate.allowedCanonicalAssistanceClassifications.includes(
+      resolution.canonicalAssistanceClassification,
+    )
+  ) return fail("CANONICAL_REVIEW_ONLY_TIMING_CLASSIFICATION_INVALID");
+  if (
+    (subject.timing !== undefined && subject.timing !== resolution.canonicalTiming)
+    || (
+      subject.assistanceClassification !== undefined
+      && subject.assistanceClassification !== resolution.canonicalAssistanceClassification
+    )
+  ) return fail("REVIEW_ONLY_CALLER_CANONICAL_CONFLICT");
+  for (const field of gate.exactBindingFields) {
+    if (
+      typeof subject[field] !== "string"
+      || subject[field].trim().length === 0
+      || resolution[field] !== subject[field]
+    ) return fail(`REVIEW_ONLY_${field.toUpperCase()}_MISMATCH`);
+  }
+  if (resolution.canonicalExposureRecordState !== gate.canonicalExposureRecordStateRequired) {
+    return fail("CANONICAL_REVIEW_ONLY_EXPOSURE_RECORD_NOT_COMMITTED");
+  }
+  const openAttempt = resolution.openIndependentAttemptResolution;
+  if (
+    !openAttempt
+    || openAttempt.source !== gate.canonicalAttemptAbsenceSource
+    || openAttempt.queriedCanonicalAttemptState !== gate.openAttemptStateFilter
+    || openAttempt.known !== true
+    || openAttempt.matchingRecordCount !== gate.matchingCanonicalOpenIndependentAttemptCount
+    || openAttempt.ambiguous !== false
+    || openAttempt.crossLearner !== false
+    || openAttempt.stale !== false
+    || openAttempt.learnerPrivateScopeId !== subject.learnerPrivateScopeId
+    || openAttempt.attemptScopeId !== subject.attemptScopeId
+  ) return fail("MATCHING_CANONICAL_OPEN_ATTEMPT_NOT_PROVEN_ABSENT");
+  if (subject.attemptId !== undefined || subject.attemptResolution !== undefined) {
+    const binding = validateCanonicalAttemptBinding(subject);
+    if (!binding.accepted) return fail(binding.reason);
+  }
+  return {
+    accepted: true,
+    mayRenderCueBytes: true,
+    independentEvidenceEligible: false,
+    evidenceNeutral: true,
+    timing: gate.requiredCanonicalTiming,
+    assistanceClassification: resolution.canonicalAssistanceClassification,
+    gateId: gate.gateId,
+  };
 }
 
 function authorizeExactPreResponseCueRender(subject) {
@@ -294,6 +528,10 @@ function authorizeExactPreResponseCueRender(subject) {
 
 function validateCueExposureEvent(event) {
   const cue = contract.cueExposure;
+  if (
+    event.timing === "REVIEW_ONLY"
+    || event.reviewOnlyResolution?.canonicalTiming === "REVIEW_ONLY"
+  ) return authorizeCanonicalReviewOnlyCueRender(event);
   if (event.derivedFrom !== cue.timingAndClassificationSource) {
     return { accepted: false, mayRenderCueBytes: false, reason: "UNTRUSTED_DERIVATION" };
   }
@@ -558,7 +796,138 @@ function validateSignalContentSafetyProof(candidate) {
   return { accepted: true };
 }
 
-function evaluateTrainingCandidate(candidate, authorizations = contract.authorizationBoundary) {
+function parseExactUtcInstant(value) {
+  if (
+    typeof value !== "string"
+    || !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/.test(value)
+  ) return null;
+  const milliseconds = Date.parse(value);
+  if (!Number.isFinite(milliseconds) || new Date(milliseconds).toISOString() !== value) return null;
+  return milliseconds;
+}
+
+function trustedEvaluationTime(overrides = {}) {
+  return {
+    source: "TRUSTED_SERVER_CLOCK_BOUNDARY",
+    evaluatedAt: "2026-09-01T00:00:00.000Z",
+    serverSide: true,
+    trusted: true,
+    ambiguous: false,
+    ...overrides,
+  };
+}
+
+function approvalReceipt(kind, overrides = {}) {
+  const sources = contract.personalAnnotation.trainingApprovalReceiptGate.resolutionSourcesByKind;
+  return {
+    receiptId: `${kind.toLowerCase().replaceAll("_", "-")}-receipt-1`,
+    approvalKind: kind,
+    source: sources[kind],
+    independentlyResolved: true,
+    matchingRecordCount: 1,
+    active: true,
+    ambiguous: false,
+    replayed: false,
+    stale: false,
+    revoked: false,
+    signalId: "signal-1",
+    signalRevisionId: "signal-revision-1",
+    purposeId: "offline-training-purpose-1",
+    o5ScopeId: "o5-scope-1",
+    ...overrides,
+  };
+}
+
+function futureApprovalReceipts(overrides = {}) {
+  const receipts = {
+    contribution: approvalReceipt("CONTRIBUTION_APPROVAL"),
+    promotion: approvalReceipt("PROMOTION_APPROVAL"),
+    o5: approvalReceipt("O5_APPROVAL"),
+  };
+  for (const field of Object.keys(receipts)) {
+    if (Object.hasOwn(overrides, field)) {
+      receipts[field] = overrides[field] == null
+        ? overrides[field]
+        : { ...receipts[field], ...overrides[field] };
+    }
+  }
+  return receipts;
+}
+
+function trainingDecisionContext(overrides = {}) {
+  return {
+    trustedEvaluationTime: trustedEvaluationTime(),
+    ...overrides,
+  };
+}
+
+function fullyApprovedTrainingDecisionContext(overrides = {}) {
+  return trainingDecisionContext({
+    approvalReceipts: futureApprovalReceipts(),
+    ...overrides,
+  });
+}
+
+function validateTrustedEvaluationTime(candidate, decisionContext) {
+  const gate = contract.personalAnnotation.signalPurposeGate.trustedEvaluationTimeGate;
+  if (
+    Object.hasOwn(candidate, "evaluationTime")
+    || decisionContext.callerEvaluationTime !== undefined
+    || decisionContext.clientEvaluationTime !== undefined
+  ) return { accepted: false, reason: "CALLER_CONTROLLED_EVALUATION_TIME" };
+  const record = decisionContext.trustedEvaluationTime;
+  const milliseconds = parseExactUtcInstant(record?.evaluatedAt);
+  if (
+    !record
+    || record.source !== gate.source
+    || record.serverSide !== true
+    || record.trusted !== true
+    || record.ambiguous !== false
+    || milliseconds === null
+  ) return { accepted: false, reason: "TRUSTED_EVALUATION_TIME_INVALID" };
+  return { accepted: true, milliseconds };
+}
+
+function validateTrainingApprovalReceipts(candidate, decisionContext) {
+  const gate = contract.personalAnnotation.trainingApprovalReceiptGate;
+  const receipts = decisionContext.approvalReceipts;
+  if (!receipts || typeof receipts !== "object" || Array.isArray(receipts)) {
+    return { authorized: false, reason: "CANDIDATE_BOUND_APPROVAL_RECEIPTS_MISSING" };
+  }
+  const receiptIds = [];
+  for (const kind of gate.receiptKinds) {
+    const field = gate.receiptFieldsByKind[kind];
+    const receipt = receipts[field];
+    if (
+      !receipt
+      || receipt.approvalKind !== kind
+      || receipt.source !== gate.resolutionSourcesByKind[kind]
+      || receipt.independentlyResolved !== true
+      || receipt.matchingRecordCount !== gate.exactMatchingRecordCount
+      || receipt.active !== true
+      || receipt.ambiguous !== false
+      || receipt.replayed !== false
+      || receipt.stale !== false
+      || receipt.revoked !== false
+      || typeof receipt.receiptId !== "string"
+      || receipt.receiptId.trim().length === 0
+    ) return { authorized: false, reason: `APPROVAL_RECEIPT_${kind}_INVALID` };
+    for (const bindingField of gate.exactBindingFields) {
+      if (
+        typeof candidate[bindingField] !== "string"
+        || candidate[bindingField].trim().length === 0
+        || receipt[bindingField] !== candidate[bindingField]
+      ) return { authorized: false, reason: `APPROVAL_RECEIPT_${kind}_${bindingField}_MISMATCH` };
+    }
+    receiptIds.push(receipt.receiptId);
+  }
+  if (new Set(receiptIds).size !== receiptIds.length) {
+    return { authorized: false, reason: "APPROVAL_RECEIPT_REUSE_FORBIDDEN" };
+  }
+  return { authorized: true };
+}
+
+function evaluateTrainingCandidate(candidate, decisionContext = {}) {
   const annotation = contract.personalAnnotation;
   const rawOrigin = candidate.originKind === "PERSONAL_ANNOTATION_RAW_BODY"
     || candidate.originKind === "PERSONAL_ANNOTATION_RAW_POINTER"
@@ -601,9 +970,12 @@ function evaluateTrainingCandidate(candidate, authorizations = contract.authoriz
     const purposeGate = annotation.signalPurposeGate;
     const consent = candidate.consent;
     const retention = candidate.retention;
-    const validationTime = Date.parse("2026-08-07T00:00:00.000Z");
-    const retentionExpiry = Date.parse(retention?.expiresAt ?? "");
-    const consentExpiry = consent?.expiresAt == null ? null : Date.parse(consent.expiresAt);
+    const trustedTime = validateTrustedEvaluationTime(candidate, decisionContext);
+    if (!trustedTime.accepted) {
+      return { candidateEligible: false, currentlyAuthorized: false, reason: trustedTime.reason };
+    }
+    const retentionExpiry = parseExactUtcInstant(retention?.expiresAt);
+    const consentExpiry = parseExactUtcInstant(consent?.expiresAt);
     if (
       candidate.genericOptIn === true
       || candidate.contractAsConsent === true
@@ -621,11 +993,14 @@ function evaluateTrainingCandidate(candidate, authorizations = contract.authoriz
       || retention.expired === true
       || retention.revoked === true
       || retention.finite !== true
+      || typeof consent.expiresAt !== "string"
+      || consent.expiresAt.trim().length === 0
       || typeof retention.expiresAt !== "string"
       || retention.expiresAt.trim().length === 0
-      || !Number.isFinite(retentionExpiry)
-      || retentionExpiry <= validationTime
-      || (consentExpiry !== null && (!Number.isFinite(consentExpiry) || consentExpiry <= validationTime))
+      || retentionExpiry === null
+      || consentExpiry === null
+      || retentionExpiry <= trustedTime.milliseconds
+      || consentExpiry <= trustedTime.milliseconds
     ) {
       return { candidateEligible: false, currentlyAuthorized: false, reason: "SIGNAL_PURPOSE_CONSENT_OR_RETENTION_INVALID" };
     }
@@ -646,13 +1021,13 @@ function evaluateTrainingCandidate(candidate, authorizations = contract.authoriz
       return { candidateEligible: false, currentlyAuthorized: false, reason: "CLEARED_OBJECT_REQUIREMENTS_MISSING" };
     }
   }
-  const distinctGatesAuthorized = authorizations.trainingSignalContribution === true
-    && authorizations.clearedContentBankPromotion === true
-    && authorizations.o5OfflineTraining === true;
+  const approval = validateTrainingApprovalReceipts(candidate, decisionContext);
   return {
     candidateEligible: true,
-    currentlyAuthorized: distinctGatesAuthorized,
-    reason: distinctGatesAuthorized ? "AUTHORIZED_BY_DISTINCT_FUTURE_GATES" : "DISTINCT_GATES_NOT_ALL_AUTHORIZED",
+    currentlyAuthorized: approval.authorized,
+    reason: approval.authorized
+      ? "AUTHORIZED_BY_EXACT_CANDIDATE_BOUND_APPROVAL_RECEIPTS"
+      : approval.reason,
   };
 }
 
@@ -773,20 +1148,10 @@ function evaluateCueRender(request) {
   if (request.renderSubmitRaceDetected) return fail(cue.preResponseAtomicCommit.renderSubmitRaceBehavior);
   if (request.recordFailure) return fail(cue.preResponseAtomicCommit.recordFailureBehavior);
 
-  if (request.timing === "REVIEW_ONLY") {
-    if (request.canonicalExposureRecordCommitted !== true) return fail(cue.recordFailureBehavior);
-    if (request.attemptId !== undefined || request.attemptResolution !== undefined) {
-      const binding = validateCanonicalAttemptBinding(request);
-      if (!binding.accepted) return fail(binding.reason);
-    }
-    return {
-      accepted: true,
-      mayRenderCueBytes: true,
-      independentEvidenceEligible: false,
-      evidenceNeutral: true,
-      timing: "REVIEW_ONLY",
-    };
-  }
+  if (
+    request.timing === "REVIEW_ONLY"
+    || request.reviewOnlyResolution?.canonicalTiming === "REVIEW_ONLY"
+  ) return authorizeCanonicalReviewOnlyCueRender(request);
 
   if (request.canonicalAttemptState === "SUBMITTED") {
     if (request.timing !== cue.afterResponseGate.onlyAllowedTimingForSubmittedAttempt) {
@@ -984,9 +1349,15 @@ test("Markdown fences and exact boundary language are present", () => {
   assert.match(annex, /EXACT_PRE_RESPONSE_RENDER_GATE_V1/);
   assert.match(annex, /containsRawAnnotationBody = false/);
   assert.match(annex, /property 부재는\s+content safety의 증거가 아니다/);
+  assert.match(annex, /CANONICAL_REVIEW_ONLY_RENDER_GATE_V1/);
+  assert.match(annex, /matching open independent\s+attempt 0건/);
+  assert.match(annex, /TRUSTED_SERVER_CLOCK_BOUNDARY/);
+  assert.match(annex, /independently\s+resolved receipt/);
+  assert.match(annex, /truthiness-only 검사는 금지/);
   const qa = read(P.qa);
   assert.match(qa, /PR #692 is merged at `512bfdb9232a86bf4f7d4cfbc076a9df1c8a7da2`/);
-  assert.match(qa, /Focused behavioral contract suite: 25\/25 passed/);
+  assert.match(qa, /Focused behavioral contract suite: 28\/28 passed/);
+  assert.doesNotMatch(qa, /Focused behavioral contract suite: 25\/25 passed/);
   assert.doesNotMatch(qa, /Focused behavioral contract suite: 23\/23 passed/);
   assert.doesNotMatch(qa, /Focused behavioral contract suite: 16\/16 passed/);
   assert.doesNotMatch(qa, /Focused behavioral contract suite: 12\/12 passed/);
@@ -1000,7 +1371,7 @@ test("anchor kind policy is exact and rejects unknown or fallback mappings", () 
   );
   assert.deepEqual(anchorPolicyIntegrity(), { valid: true });
   assert.deepEqual(
-    validateAnchor({ kind: "UNKNOWN_KIND", domain: "SHARED_OWNED", bodyLocatorPolicy: "NONE" }),
+    validateAnchor(validAnchor({ kind: "UNKNOWN_KIND" })),
     { accepted: false, disposition: "REJECT", reason: "UNKNOWN_KIND" },
   );
 
@@ -1009,7 +1380,7 @@ test("anchor kind policy is exact and rejects unknown or fallback mappings", () 
     allowedDomains: ["SHARED_OWNED"],
     allowedBodyLocatorPolicies: ["NONE"],
   };
-  assert.equal(validateAnchor({ kind: "UNKNOWN_KIND" }, withFallback).accepted, false);
+  assert.equal(validateAnchor(validAnchor({ kind: "UNKNOWN_KIND" }), withFallback).accepted, false);
   assert.equal(anchorPolicyIntegrity(withFallback).reason, "KIND_POLICY_KEY_SET_MISMATCH");
 
   const missingMapping = structuredClone(contract.anchors);
@@ -1017,14 +1388,47 @@ test("anchor kind policy is exact and rejects unknown or fallback mappings", () 
   assert.equal(anchorPolicyIntegrity(missingMapping).valid, false);
 });
 
-test("learner-attempt anchors reject shared domains and non-vault locators", () => {
-  const base = {
-    kind: "LEARNER_ATTEMPT_RANGE",
-    domain: "LEARNER_PRIVATE",
-    bodyLocatorPolicy: "VAULT_LOCAL_ONLY",
-    ownerBindingRef: "owner_scope_local",
-    targetDigestScope: "VAULT_LOCAL_INTEGRITY_METADATA_ONLY",
+test("every declared anchor required binding uses exact closed validation", () => {
+  assert.deepEqual(
+    sorted(Object.keys(contract.anchors.requiredBindingSchema)),
+    sorted(contract.anchors.requiredBindings),
+  );
+  assert.equal(contract.anchors.requiredBindingSchemaKeySetMustExactlyEqualRequiredBindings, true);
+  assert.equal(contract.anchors.truthinessOnlyValidationAllowed, false);
+  const valid = validAnchor();
+  assert.equal(validateAnchor(valid).accepted, true);
+
+  const invalidValues = {
+    anchorId: [null, "", " anchor-1", 1, [], "?"],
+    profileId: [null, "", " profile-1", 1, [], "?"],
+    kind: [null, "", 1, [], "UNKNOWN_KIND"],
+    domain: [null, "", 1, [], "UNKNOWN_DOMAIN"],
+    targetType: [null, "", 1, [], "UNKNOWN_TARGET"],
+    targetRevisionId: [null, "", " revision-1", 1, [], "?"],
+    targetDigest: [null, "", 1, [], "sha256:not-a-digest"],
+    bodyLocatorPolicy: [null, "", 1, [], "UNKNOWN_LOCATOR"],
+    rightsManifestId: [null, "", " rights-1", 1, [], "?"],
+    status: [null, "", 1, [], "UNKNOWN_STATUS"],
   };
+  for (const field of contract.anchors.requiredBindings) {
+    const omitted = validAnchor();
+    delete omitted[field];
+    assert.equal(validateAnchor(omitted).accepted, false, `${field}: omitted`);
+    for (const invalid of invalidValues[field]) {
+      assert.equal(
+        validateAnchor(validAnchor({ [field]: invalid })).accepted,
+        false,
+        `${field}: ${JSON.stringify(invalid)}`,
+      );
+    }
+  }
+  assert.equal(validateAnchor(validAnchor({ requiredBindingsAmbiguous: true })).accepted, false);
+  assert.equal(validateAnchor(validAnchor({ conflictingRequiredBindings: ["profileId"] })).accepted, false);
+  assert.equal(validateAnchor(validAnchor({ targetType: "VESG_CONCEPT_NODE" })).accepted, false);
+});
+
+test("learner-attempt anchors reject shared domains and non-vault locators", () => {
+  const base = validAnchor();
   assert.equal(validateAnchor(base).accepted, true);
   for (const domain of ["SHARED_OWNED", "SHARED_OFFICIAL_PERMITTED"]) {
     const result = validateAnchor({ ...base, domain });
@@ -1039,15 +1443,17 @@ test("learner-attempt anchors reject shared domains and non-vault locators", () 
 test("private non-vault projection is a content-free bodyless receipt", () => {
   const learnerPolicy = contract.anchors.kindPolicy.LEARNER_ATTEMPT_RANGE;
   const sourcePolicy = contract.anchors.kindPolicy.PRIVATE_SOURCE_RANGE;
-  assert.deepEqual(sourcePolicy, learnerPolicy);
+  assert.deepEqual(sourcePolicy.allowedDomains, learnerPolicy.allowedDomains);
+  assert.deepEqual(
+    sourcePolicy.allowedBodyLocatorPolicies,
+    learnerPolicy.allowedBodyLocatorPolicies,
+  );
+  assert.deepEqual(sourcePolicy.nonVaultProjection, learnerPolicy.nonVaultProjection);
+  assert.notDeepEqual(sourcePolicy.allowedTargetTypes, learnerPolicy.allowedTargetTypes);
 
   for (const kind of ["LEARNER_ATTEMPT_RANGE", "PRIVATE_SOURCE_RANGE"]) {
-    const anchor = {
+    const anchor = validAnchor({
       kind,
-      domain: "LEARNER_PRIVATE",
-      bodyLocatorPolicy: "VAULT_LOCAL_ONLY",
-      ownerBindingRef: "owner_scope_local",
-      targetDigestScope: "VAULT_LOCAL_INTEGRITY_METADATA_ONLY",
       anchorId: "private_anchor",
       receiptId: "private_receipt",
       excerpt: "private answer",
@@ -1056,8 +1462,7 @@ test("private non-vault projection is a content-free bodyless receipt", () => {
       bodyLocator: "vault-only",
       attemptLocator: "attempt-only",
       attemptRef: "attempt_ref",
-      targetDigest: "private_digest",
-    };
+    });
     const projected = projectPrivateAnchorOutsideVault(anchor);
     assert.equal(projected.accepted, true, kind);
     const policy = contract.anchors.kindPolicy[kind].nonVaultProjection;
@@ -1430,12 +1835,14 @@ test("only separate safe candidates remain behind distinct contribution, promoti
     promotionImpliesO5: false,
     o5MayBypassContributionOrPromotion: false,
     allPresentAuthorizations: false,
+    globalAuthorizationFlagsMayAuthorizeCandidate: false,
+    independentlyResolvedCandidateBoundReceiptsRequired: true,
   });
-  const safeSignal = evaluateTrainingCandidate(signalCandidate());
+  const safeSignal = evaluateTrainingCandidate(signalCandidate(), trainingDecisionContext());
   assert.deepEqual(safeSignal, {
     candidateEligible: true,
     currentlyAuthorized: false,
-    reason: "DISTINCT_GATES_NOT_ALL_AUTHORIZED",
+    reason: "CANDIDATE_BOUND_APPROVAL_RECEIPTS_MISSING",
   });
   assert.equal(evaluateTrainingCandidate({
     kind: "SEPARATE_NON_RECONSTRUCTIVE_SIGNAL",
@@ -1475,12 +1882,7 @@ test("signals require affirmative same-object validated boolean-false content-sa
   assert.equal(gate.ambiguousProofAllowed, false);
   assert.equal(gate.crossObjectProofAllowed, false);
 
-  const allHypotheticalGates = {
-    ...contract.authorizationBoundary,
-    trainingSignalContribution: true,
-    clearedContentBankPromotion: true,
-    o5OfflineTraining: true,
-  };
+  const allHypotheticalGates = fullyApprovedTrainingDecisionContext();
   const validCandidate = signalCandidate();
   for (const field of gate.requiredBooleanFalseFields) {
     assert.equal(Object.hasOwn(validCandidate, field), true, field);
@@ -1516,7 +1918,7 @@ test("signals require affirmative same-object validated boolean-false content-sa
   assert.deepEqual(evaluateTrainingCandidate(validCandidate, allHypotheticalGates), {
     candidateEligible: true,
     currentlyAuthorized: true,
-    reason: "AUTHORIZED_BY_DISTINCT_FUTURE_GATES",
+    reason: "AUTHORIZED_BY_EXACT_CANDIDATE_BOUND_APPROVAL_RECEIPTS",
   });
   for (const key of ["trainingSignalContribution", "clearedContentBankPromotion", "o5OfflineTraining"]) {
     assert.equal(contract.authorizationBoundary[key], false, key);
@@ -1533,16 +1935,11 @@ test("signals require exact-purpose consent and finite purpose-bound retention",
   assert.equal(gate.o5AcceptedAsConsentOrRetention, false);
   assert.equal(gate.indefiniteRetentionAccepted, false);
 
-  const allHypotheticalGates = {
-    ...contract.authorizationBoundary,
-    trainingSignalContribution: true,
-    clearedContentBankPromotion: true,
-    o5OfflineTraining: true,
-  };
+  const allHypotheticalGates = fullyApprovedTrainingDecisionContext();
   assert.deepEqual(evaluateTrainingCandidate(signalCandidate(), allHypotheticalGates), {
     candidateEligible: true,
     currentlyAuthorized: true,
-    reason: "AUTHORIZED_BY_DISTINCT_FUTURE_GATES",
+    reason: "AUTHORIZED_BY_EXACT_CANDIDATE_BOUND_APPROVAL_RECEIPTS",
   });
 
   const invalidCandidates = [
@@ -1580,6 +1977,118 @@ test("signals require exact-purpose consent and finite purpose-bound retention",
   for (const key of ["trainingSignalContribution", "clearedContentBankPromotion", "o5OfflineTraining"]) {
     assert.equal(contract.authorizationBoundary[key], false, key);
   }
+});
+
+test("future training approvals are independently resolved and exact-candidate bound", () => {
+  const gate = contract.personalAnnotation.trainingApprovalReceiptGate;
+  assert.equal(gate.appliesToEveryFutureTrainingCandidate, true);
+  assert.deepEqual(gate.exactBindingFields, [
+    "signalId",
+    "signalRevisionId",
+    "purposeId",
+    "o5ScopeId",
+  ]);
+  assert.equal(gate.globalAuthorizationBooleanSubstitutionAllowed, false);
+  assert.equal(gate.independentResolutionRequired, true);
+  assert.equal(gate.replayedAllowed, false);
+  assert.equal(gate.ambiguousAllowed, false);
+
+  const validCandidate = signalCandidate();
+  const valid = evaluateTrainingCandidate(validCandidate, fullyApprovedTrainingDecisionContext());
+  assert.deepEqual(valid, {
+    candidateEligible: true,
+    currentlyAuthorized: true,
+    reason: "AUTHORIZED_BY_EXACT_CANDIDATE_BOUND_APPROVAL_RECEIPTS",
+  });
+
+  const globalBooleanSubstitution = evaluateTrainingCandidate(validCandidate, trainingDecisionContext({
+    trainingSignalContribution: true,
+    clearedContentBankPromotion: true,
+    o5OfflineTraining: true,
+  }));
+  assert.equal(globalBooleanSubstitution.candidateEligible, true);
+  assert.equal(globalBooleanSubstitution.currentlyAuthorized, false);
+
+  const invalidReceiptSets = [];
+  for (const field of ["contribution", "promotion", "o5"]) {
+    invalidReceiptSets.push(futureApprovalReceipts({ [field]: undefined }));
+    invalidReceiptSets.push(futureApprovalReceipts({ [field]: { ambiguous: true } }));
+    invalidReceiptSets.push(futureApprovalReceipts({ [field]: { replayed: true } }));
+    invalidReceiptSets.push(futureApprovalReceipts({ [field]: { independentlyResolved: false } }));
+    invalidReceiptSets.push(futureApprovalReceipts({ [field]: { matchingRecordCount: 0 } }));
+    for (const bindingField of gate.exactBindingFields) {
+      invalidReceiptSets.push(futureApprovalReceipts({
+        [field]: { [bindingField]: `cross-${bindingField}` },
+      }));
+    }
+  }
+  const reused = futureApprovalReceipts();
+  reused.promotion.receiptId = reused.contribution.receiptId;
+  invalidReceiptSets.push(reused);
+
+  for (const approvalReceipts of invalidReceiptSets) {
+    const result = evaluateTrainingCandidate(validCandidate, fullyApprovedTrainingDecisionContext({
+      approvalReceipts,
+    }));
+    assert.equal(result.candidateEligible, true, result.reason);
+    assert.equal(result.currentlyAuthorized, false, result.reason);
+  }
+  for (const key of ["trainingSignalContribution", "clearedContentBankPromotion", "o5OfflineTraining"]) {
+    assert.equal(contract.authorizationBoundary[key], false, key);
+  }
+});
+
+test("consent and retention expiry use only trusted server decision time", () => {
+  const gate = contract.personalAnnotation.signalPurposeGate.trustedEvaluationTimeGate;
+  assert.equal(gate.source, "TRUSTED_SERVER_CLOCK_BOUNDARY");
+  assert.equal(gate.callerProvidedTimeAccepted, false);
+  assert.equal(gate.candidateProvidedTimeAccepted, false);
+  assert.equal(gate.expiryBoundaryPolicy, "EXPIRY_MUST_BE_STRICTLY_AFTER_EVALUATION_TIME");
+
+  const decisionAtBoundary = fullyApprovedTrainingDecisionContext({
+    trustedEvaluationTime: trustedEvaluationTime({ evaluatedAt: "2026-09-01T00:00:00.000Z" }),
+  });
+  assert.equal(evaluateTrainingCandidate(signalCandidate({
+    consent: { expiresAt: "2026-09-02T00:00:00.000Z" },
+    retention: { expiresAt: "2026-09-02T00:00:00.000Z" },
+  }), decisionAtBoundary).currentlyAuthorized, true);
+
+  for (const field of ["consent", "retention"]) {
+    for (const expiresAt of [
+      "2026-09-01T00:00:00.000Z",
+      "2026-08-31T23:59:59.999Z",
+    ]) {
+      const result = evaluateTrainingCandidate(signalCandidate({
+        [field]: { expiresAt },
+      }), decisionAtBoundary);
+      assert.equal(result.candidateEligible, false, `${field}: ${expiresAt}`);
+      assert.equal(result.currentlyAuthorized, false, `${field}: ${expiresAt}`);
+    }
+  }
+
+  const invalidContexts = [
+    {},
+    trainingDecisionContext({ trustedEvaluationTime: undefined }),
+    trainingDecisionContext({ trustedEvaluationTime: trustedEvaluationTime({ source: "CLIENT_CLOCK" }) }),
+    trainingDecisionContext({ trustedEvaluationTime: trustedEvaluationTime({ evaluatedAt: "not-a-time" }) }),
+    trainingDecisionContext({ trustedEvaluationTime: trustedEvaluationTime({ evaluatedAt: "2026-9-1" }) }),
+    trainingDecisionContext({ trustedEvaluationTime: trustedEvaluationTime({ serverSide: false }) }),
+    trainingDecisionContext({ trustedEvaluationTime: trustedEvaluationTime({ trusted: false }) }),
+    trainingDecisionContext({ trustedEvaluationTime: trustedEvaluationTime({ ambiguous: true }) }),
+    trainingDecisionContext({ callerEvaluationTime: "2026-08-01T00:00:00.000Z" }),
+    trainingDecisionContext({ clientEvaluationTime: "2026-08-01T00:00:00.000Z" }),
+  ];
+  for (const context of invalidContexts) {
+    const result = evaluateTrainingCandidate(signalCandidate(), context);
+    assert.equal(result.candidateEligible, false, result.reason);
+    assert.equal(result.currentlyAuthorized, false, result.reason);
+  }
+  const candidateControlled = evaluateTrainingCandidate(
+    signalCandidate({ evaluationTime: "2026-08-01T00:00:00.000Z" }),
+    fullyApprovedTrainingDecisionContext(),
+  );
+  assert.equal(candidateControlled.candidateEligible, false);
+  assert.equal(candidateControlled.currentlyAuthorized, false);
 });
 
 test("pre-response confirmation rejects missing, stale, replayed, mismatched and ambiguous records", () => {
@@ -1691,33 +2200,111 @@ test("after-response rejects every non-exact canonical submitted-attempt referen
   }
 });
 
-test("review-only may remain unbound and is always evidence-neutral", () => {
-  const event = validateCueExposureEvent(cueEvent({ timing: "REVIEW_ONLY" }));
-  assert.equal(event.accepted, true);
-  assert.equal(event.evidenceNeutral, true);
-  assert.equal(event.positiveLearningEvidence, false);
+test("review-only requires canonical server derivation and no matching open attempt", () => {
+  const gate = contract.cueExposure.reviewOnlyGate;
+  assert.equal(gate.gateId, "CANONICAL_REVIEW_ONLY_RENDER_GATE_V1");
+  assert.equal(gate.sharedAcrossEveryRenderCapableValidator, true);
+  assert.equal(gate.callerSuppliedReviewOnlyLabelSufficient, false);
+  assert.equal(gate.callerSuppliedCanonicalExposureRecordCommittedAccepted, false);
+  assert.equal(gate.clientEventAccepted, false);
+  assert.equal(gate.inferredTimingAccepted, false);
+  assert.equal(gate.matchingCanonicalOpenIndependentAttemptCount, 0);
 
-  assert.deepEqual(evaluateCueRender({
+  for (const request of [
+    reviewOnlyRequest({ reviewOnlyResolution: undefined }),
+    reviewOnlyRequest({ canonicalExposureRecordCommitted: true }),
+    reviewOnlyRequest({ clientEvent: { timing: "REVIEW_ONLY" } }),
+    reviewOnlyRequest({ inferTiming: true }),
+    reviewOnlyRequest({ timing: "BEFORE_RESPONSE" }),
+    reviewOnlyRequest({ assistanceClassification: "LOW" }),
+    reviewOnlyRequest({ reviewOnlyResolution: canonicalReviewOnlyResolution({ known: false }) }),
+    reviewOnlyRequest({ reviewOnlyResolution: canonicalReviewOnlyResolution({ matchingResolutionCount: 2 }) }),
+    reviewOnlyRequest({ reviewOnlyResolution: canonicalReviewOnlyResolution({ ambiguous: true }) }),
+    reviewOnlyRequest({ reviewOnlyResolution: canonicalReviewOnlyResolution({ conflicting: true }) }),
+    reviewOnlyRequest({ reviewOnlyResolution: canonicalReviewOnlyResolution({ crossLearner: true }) }),
+    reviewOnlyRequest({ reviewOnlyResolution: canonicalReviewOnlyResolution({ stale: true }) }),
+    reviewOnlyRequest({ reviewOnlyResolution: canonicalReviewOnlyResolution({ clientInferred: true }) }),
+    reviewOnlyRequest({ reviewOnlyResolution: canonicalReviewOnlyResolution({
+      canonicalExposureRecordState: "MISSING",
+    }) }),
+    reviewOnlyRequest({ reviewOnlyResolution: canonicalReviewOnlyResolution({
+      openIndependentAttemptResolution: null,
+    }) }),
+    reviewOnlyRequest({ recordFailure: true }),
+    reviewOnlyRequest({ renderSubmitRaceDetected: true }),
+  ]) {
+    const result = evaluateCueRender(request);
+    assert.equal(result.accepted, false, result.reason);
+    assert.equal(result.mayRenderCueBytes, false, result.reason);
+  }
+
+  const openAttemptResolution = canonicalReviewOnlyResolution({
+    openIndependentAttemptResolution: { matchingRecordCount: 1 },
+  });
+  for (const validate of [
+    (subject) => evaluateCueRender(subject),
+    (subject) => validateCueExposureEvent(cueEvent(subject)),
+  ]) {
+    const result = validate(reviewOnlyRequest({ reviewOnlyResolution: openAttemptResolution }));
+    assert.equal(result.accepted, false, result.reason);
+    assert.equal(result.mayRenderCueBytes, false, result.reason);
+  }
+
+  const alternatePathCallerLabel = validateCueExposureEvent(cueEvent({
     timing: "REVIEW_ONLY",
-    canonicalExposureRecordCommitted: true,
-    recordFailure: false,
-    renderSubmitRaceDetected: false,
-  }), {
+    reviewOnlyResolution: undefined,
+  }));
+  assert.equal(alternatePathCallerLabel.accepted, false);
+  assert.equal(alternatePathCallerLabel.mayRenderCueBytes, false);
+  const alternatePathClientEvent = validateCueExposureEvent(cueEvent({
+    timing: "REVIEW_ONLY",
+    derivedFrom: "CLIENT_EVENT",
+  }));
+  assert.equal(alternatePathClientEvent.accepted, false);
+  assert.equal(alternatePathClientEvent.mayRenderCueBytes, false);
+
+  for (const openIndependentAttemptResolution of [
+    { source: "CLIENT" },
+    { queriedCanonicalAttemptState: "SUBMITTED" },
+    { known: false },
+    { ambiguous: true },
+    { crossLearner: true },
+    { stale: true },
+    { learnerPrivateScopeId: "other-learner" },
+    { attemptScopeId: "other-scope" },
+  ]) {
+    const result = evaluateCueRender(reviewOnlyRequest({
+      reviewOnlyResolution: canonicalReviewOnlyResolution({ openIndependentAttemptResolution }),
+    }));
+    assert.equal(result.accepted, false, result.reason);
+    assert.equal(result.mayRenderCueBytes, false, result.reason);
+  }
+  for (const field of gate.exactBindingFields) {
+    const missing = reviewOnlyRequest();
+    delete missing[field];
+    assert.equal(evaluateCueRender(missing).accepted, false, `${field}: missing`);
+    const mismatch = reviewOnlyRequest({
+      reviewOnlyResolution: canonicalReviewOnlyResolution({ [field]: `other-${field}` }),
+    });
+    assert.equal(evaluateCueRender(mismatch).accepted, false, `${field}: mismatch`);
+  }
+
+  const event = validateCueExposureEvent(cueEvent({ timing: "REVIEW_ONLY" }));
+  assert.deepEqual(event, {
     accepted: true,
     mayRenderCueBytes: true,
     independentEvidenceEligible: false,
     evidenceNeutral: true,
     timing: "REVIEW_ONLY",
+    assistanceClassification: "NONE",
+    gateId: "CANONICAL_REVIEW_ONLY_RENDER_GATE_V1",
   });
-  const invalidBoundReview = evaluateCueRender({
-    timing: "REVIEW_ONLY",
+  assert.deepEqual(evaluateCueRender(reviewOnlyRequest()), event);
+
+  const invalidBoundReview = evaluateCueRender(reviewOnlyRequest({
     attemptId: "attempt-1",
-    learnerPrivateScopeId: "learner-1",
     attemptResolution: canonicalAttemptResolution({ attemptId: "other-attempt" }),
-    canonicalExposureRecordCommitted: true,
-    recordFailure: false,
-    renderSubmitRaceDetected: false,
-  });
+  }));
   assert.equal(invalidBoundReview.accepted, false);
   assert.equal(invalidBoundReview.mayRenderCueBytes, false);
 });

@@ -263,33 +263,40 @@ const ANNOTATION_ANCHOR_KIND_POLICY_V1 = {
   CONCEPT_NODE: {
     domains: ["SHARED_OWNED"],
     bodyLocatorPolicies: ["NONE"],
+    targetTypes: ["VESG_CONCEPT_NODE"],
   },
   FORMULA_NODE: {
     domains: ["SHARED_OWNED"],
     bodyLocatorPolicies: ["NONE"],
+    targetTypes: ["VESG_FORMULA_NODE"],
   },
   PROCEDURE_STEP: {
     domains: ["SHARED_OWNED"],
     bodyLocatorPolicies: ["NONE"],
+    targetTypes: ["VESG_PROCEDURE_STEP"],
   },
   QUESTION_UNIT: {
     domains: ["SHARED_OWNED", "SHARED_OFFICIAL_PERMITTED"],
     bodyLocatorPolicies: ["NONE"],
+    targetTypes: ["VERSIONED_QUESTION_UNIT"],
     domainSelection: "EXPLICIT_ALLOWLIST_VALUE_REQUIRED",
     rightsStateRequired: true,
   },
   OWNED_CONTENT_RANGE: {
     domains: ["SHARED_OWNED"],
     bodyLocatorPolicies: ["SHARED_STABLE_SELECTOR"],
+    targetTypes: ["OWNED_CONTENT_REVISION_RANGE"],
   },
   OFFICIAL_PERMITTED_RANGE: {
     domains: ["SHARED_OFFICIAL_PERMITTED"],
     bodyLocatorPolicies: ["SHARED_STABLE_SELECTOR"],
+    targetTypes: ["OFFICIAL_PERMITTED_CONTENT_REVISION_RANGE"],
     itemLevelRightsRequired: true,
   },
   LEARNER_ATTEMPT_RANGE: {
     domains: ["LEARNER_PRIVATE"],
     bodyLocatorPolicies: ["VAULT_LOCAL_ONLY"],
+    targetTypes: ["LEARNER_ATTEMPT_REVISION_RANGE"],
     ownerBound: true,
     targetDigestPolicy: "VAULT_LOCAL_INTEGRITY_METADATA_ONLY",
     nonVaultProjection: "BODYLESS_RECEIPT_ONLY",
@@ -297,6 +304,7 @@ const ANNOTATION_ANCHOR_KIND_POLICY_V1 = {
   PRIVATE_SOURCE_RANGE: {
     domains: ["LEARNER_PRIVATE"],
     bodyLocatorPolicies: ["VAULT_LOCAL_ONLY"],
+    targetTypes: ["PRIVATE_SOURCE_REVISION_RANGE"],
     ownerBound: true,
     targetDigestPolicy: "VAULT_LOCAL_INTEGRITY_METADATA_ONLY",
     nonVaultProjection: "BODYLESS_RECEIPT_ONLY",
@@ -307,13 +315,14 @@ type AnnotationAnchorBaseV1<
   K extends AnnotationAnchorKindV1,
   D extends AnnotationDomainV1,
   L extends BodyLocatorPolicyV1,
+  T extends (typeof ANNOTATION_ANCHOR_KIND_POLICY_V1)[K]["targetTypes"][number],
 > = {
   anchorId: string;
   profileId: string;
   kind: K;
   domain: D;
   conceptOrQuestionRef?: string;
-  targetType: "CONCEPT" | "FORMULA" | "PROCEDURE_STEP" | "QUESTION_UNIT" | "CONTENT_RANGE";
+  targetType: T;
   targetRevisionId: string;
   targetDigest: string;
   bodyLocatorPolicy: L;
@@ -323,31 +332,35 @@ type AnnotationAnchorBaseV1<
 };
 
 type AnnotationAnchorV1 =
-  | AnnotationAnchorBaseV1<"CONCEPT_NODE", "SHARED_OWNED", "NONE">
-  | AnnotationAnchorBaseV1<"FORMULA_NODE", "SHARED_OWNED", "NONE">
-  | AnnotationAnchorBaseV1<"PROCEDURE_STEP", "SHARED_OWNED", "NONE">
-  | (AnnotationAnchorBaseV1<"QUESTION_UNIT", "SHARED_OWNED", "NONE"> & {
+  | AnnotationAnchorBaseV1<"CONCEPT_NODE", "SHARED_OWNED", "NONE", "VESG_CONCEPT_NODE">
+  | AnnotationAnchorBaseV1<"FORMULA_NODE", "SHARED_OWNED", "NONE", "VESG_FORMULA_NODE">
+  | AnnotationAnchorBaseV1<"PROCEDURE_STEP", "SHARED_OWNED", "NONE", "VESG_PROCEDURE_STEP">
+  | (AnnotationAnchorBaseV1<"QUESTION_UNIT", "SHARED_OWNED", "NONE", "VERSIONED_QUESTION_UNIT"> & {
       rightsState: "SHARED_OWNED";
     })
   | (AnnotationAnchorBaseV1<
       "QUESTION_UNIT",
       "SHARED_OFFICIAL_PERMITTED",
-      "NONE"
+      "NONE",
+      "VERSIONED_QUESTION_UNIT"
     > & { rightsState: "SHARED_OFFICIAL_PERMITTED" })
   | AnnotationAnchorBaseV1<
       "OWNED_CONTENT_RANGE",
       "SHARED_OWNED",
-      "SHARED_STABLE_SELECTOR"
+      "SHARED_STABLE_SELECTOR",
+      "OWNED_CONTENT_REVISION_RANGE"
     >
   | (AnnotationAnchorBaseV1<
       "OFFICIAL_PERMITTED_RANGE",
       "SHARED_OFFICIAL_PERMITTED",
-      "SHARED_STABLE_SELECTOR"
+      "SHARED_STABLE_SELECTOR",
+      "OFFICIAL_PERMITTED_CONTENT_REVISION_RANGE"
     > & { itemRightsManifestId: string })
   | (AnnotationAnchorBaseV1<
       "LEARNER_ATTEMPT_RANGE",
       "LEARNER_PRIVATE",
-      "VAULT_LOCAL_ONLY"
+      "VAULT_LOCAL_ONLY",
+      "LEARNER_ATTEMPT_REVISION_RANGE"
     > & {
       ownerBindingRef: string;
       targetDigestScope: "VAULT_LOCAL_INTEGRITY_METADATA_ONLY";
@@ -356,7 +369,8 @@ type AnnotationAnchorV1 =
   | (AnnotationAnchorBaseV1<
       "PRIVATE_SOURCE_RANGE",
       "LEARNER_PRIVATE",
-      "VAULT_LOCAL_ONLY"
+      "VAULT_LOCAL_ONLY",
+      "PRIVATE_SOURCE_REVISION_RANGE"
     > & {
       ownerBindingRef: string;
       targetDigestScope: "VAULT_LOCAL_INTEGRITY_METADATA_ONLY";
@@ -374,6 +388,11 @@ type PrivateAnchorBodylessReceiptV1 = {
 - kind policy key 집합은 위 8개 kind와 정확히 같아야 한다. default·fallback은 없고,
   caller가 domain 또는 locator를 덮어쓸 수 없다. unknown kind, 누락 mapping 또는
   충돌 값은 reject하거나 `HELD`로 닫고 shared domain으로 대체하지 않는다.
+- `requiredBindings`의 열 필드(`anchorId`, `profileId`, `kind`, `domain`, `targetType`,
+  `targetRevisionId`, `targetDigest`, `bodyLocatorPolicy`, `rightsManifestId`, `status`)는 선언된
+  closed schema로 각각 exact type·enum·pattern을 검증한다. `targetDigest`는 exact `sha256:` digest이고
+  `targetType`은 kind policy와 일치해야 한다. missing·null·empty·malformed·wrong-type·ambiguous·
+  inconsistent binding은 모두 reject하며 truthiness-only 검사는 금지한다.
 - shared cue는 답안길 소유·라이선스·item-permitted official content에만 연결한다.
 - `QUESTION_UNIT`은 두 shared domain 중 하나를 명시적으로 선택하고 rights state를 반드시 가진다.
 - `OFFICIAL_PERMITTED_RANGE`는 item-level rights를 반드시 가진다.
@@ -430,7 +449,14 @@ D+7 stable / timed: HIDDEN
   `SUBMITTED` attempt 한 건에 일치한 뒤에만 렌더한다. client 입력이나 latest-attempt 추론은 금지한다.
 - missing·empty·unknown·cross-learner·cross-attempt·mismatched·replayed·pre-submission attempt
   reference는 fail closed하며 cue byte를 전혀 렌더하지 않는다.
-- 별도 `REVIEW_ONLY` variant만 attempt에 묶이지 않을 수 있고, 이 variant는 항상 evidence-neutral이다.
+- 별도 `REVIEW_ONLY` variant만 attempt에 묶이지 않을 수 있고 항상 evidence-neutral이지만,
+  caller label·`canonicalExposureRecordCommitted` boolean·client event·inferred timing으로 선택할 수 없다.
+  cue render request validator와 exposure-event validator 모두
+  `CANONICAL_REVIEW_ONLY_RENDER_GATE_V1`에 위임한다. 이 gate는 trusted server resolver에서 exact
+  learner·attempt scope·cue·cue revision·request에 묶인 canonical `REVIEW_ONLY` timing/classification과
+  committed exposure record를 한 건으로 resolve하고, canonical server attempt ledger에서 같은 learner와
+  attempt scope의 open independent attempt가 0건임을 별도로 증명해야 한다. missing·ambiguous·conflicting·
+  cross-learner·stale·client-inferred resolution 또는 matching open attempt는 cue byte 0으로 fail closed한다.
 - pre-response cue가 없다는 사실은 independent-evidence **eligibility만 보존**한다. empty sequence나
   `AFTER_RESPONSE` event 자체는 independent retrieval·far transfer·stable D+7 증거를 만들지 않는다.
 - independent retrieval은 actual submitted response와 completed evaluation이 exact learner/attempt에
@@ -478,6 +504,8 @@ type CueExposureEventV1 = CueExposureEventBaseV1 & (
   | {
       timing: "REVIEW_ONLY";
       assistanceClassification: "NONE" | "LOW" | "MATERIAL";
+      attemptScopeId: string;
+      reviewOnlyResolution: CanonicalReviewOnlyResolutionV1;
       attemptId?: string;
       attemptBinding?: ExactCanonicalSubmittedAttemptBindingV1;
       independentEvidenceEligible: false;
@@ -506,6 +534,36 @@ type ExactCanonicalSubmittedAttemptBindingV1 = {
   canonicalAttemptState: "SUBMITTED";
   matchingRecordCount: 1;
   submittedBeforeExposure: true;
+};
+
+type CanonicalReviewOnlyResolutionV1 = {
+  source: "CANONICAL_SERVER_CUE_TIMING_CLASSIFICATION_RESOLVER";
+  known: true;
+  matchingResolutionCount: 1;
+  ambiguous: false;
+  conflicting: false;
+  crossLearner: false;
+  stale: false;
+  clientInferred: false;
+  canonicalTiming: "REVIEW_ONLY";
+  canonicalAssistanceClassification: "NONE" | "LOW" | "MATERIAL";
+  canonicalExposureRecordState: "COMMITTED";
+  learnerPrivateScopeId: string;
+  attemptScopeId: string;
+  cueId: string;
+  cueRevisionId: string;
+  requestId: string;
+  openIndependentAttemptResolution: {
+    source: "CANONICAL_SERVER_ATTEMPT_LEDGER";
+    queriedCanonicalAttemptState: "INDEPENDENT_ATTEMPT_OPEN";
+    learnerPrivateScopeId: string;
+    attemptScopeId: string;
+    matchingRecordCount: 0;
+    known: true;
+    ambiguous: false;
+    crossLearner: false;
+    stale: false;
+  };
 };
 
 const CUE_TIMING_CLASSIFICATION_V1 = {
@@ -548,6 +606,18 @@ const PRE_RESPONSE_RENDER_GATE_V1 = {
   ],
   alternateValidatorBypassAllowed: false,
 } as const;
+
+const CANONICAL_REVIEW_ONLY_RENDER_GATE_V1 = {
+  timingClassificationSource: "CANONICAL_SERVER_CUE_TIMING_CLASSIFICATION_RESOLVER",
+  openAttemptAbsenceSource: "CANONICAL_SERVER_ATTEMPT_LEDGER",
+  openAttemptStateFilter: "INDEPENDENT_ATTEMPT_OPEN",
+  matchingCanonicalOpenIndependentAttemptCount: 0,
+  renderCapableValidators: [
+    "CUE_RENDER_REQUEST_VALIDATOR",
+    "CUE_EXPOSURE_EVENT_VALIDATOR",
+  ],
+  callerLabelOrBooleanSufficient: false,
+} as const;
 ```
 
 - timing과 assistance classification은 canonical ledger가 파생하며 untrusted client 값을 받지 않는다.
@@ -574,8 +644,11 @@ const PRE_RESPONSE_RENDER_GATE_V1 = {
   `AFTER_RESPONSE`는 non-null exact `attemptId`를 canonical server ledger의 exact submitted attempt에
   resolve해야 한다. missing/empty/unknown/cross-learner/cross-attempt/mismatch/replay/pre-submission,
   client attempt ID 또는 latest-attempt 추론은 모두 cue byte 0으로 fail closed한다.
-- `REVIEW_ONLY`만 attempt-unbound일 수 있다. optional binding이 있으면 동일 exact validation을
-  통과해야 하며, bound/unbound 모두 independent retrieval·far transfer·stable D+7에는 중립이다.
+- `REVIEW_ONLY`만 attempt-unbound일 수 있다. optional binding이 있으면 동일 exact submitted-attempt
+  validation을 통과해야 하며, bound/unbound 모두 independent retrieval·far transfer·stable D+7에는
+  중립이다. 단, 두 render-capable path에서 trusted server resolution과 matching open independent
+  attempt 0건이 먼저 증명되어야 하며 caller label, boolean, client event 또는 timing inference는
+  authorization evidence가 아니다.
 
 `HIDDEN`은 CSS로 가리거나 접어 둔 상태가 아니다. cue·decomposition·prompt·memory gloss
 바이트가 DOM, SSR payload, accessibility text, prefetch response, cache entry 또는 direct
@@ -710,7 +783,13 @@ input이나 training candidate로 만들 수 없다. raw body의 이름·별칭�
 
 contribution gate, Cleared Content Bank promotion gate와 exact-purpose O5 gate는 서로 다른
 승인이다. contribution은 promotion을, promotion은 O5를, O5는 contribution/promotion을 대신하지
-않는다. 이 문서는 그 세 gate 중 어느 것도 승인하지 않으며 모든 authorization은 false다.
+않는다. 미래 승인도 global boolean이 아니라 contribution·promotion·O5 각각의 independently
+resolved receipt여야 한다. 세 receipt는 서로 다른 `receiptId`를 가지며 exact `signalId`·
+`signalRevisionId`·`purposeId`·`o5ScopeId`에 모두 일치해야 한다. missing·cross-candidate·
+cross-revision·cross-purpose·cross-scope·ambiguous·replayed·stale·revoked·independently unresolved
+receipt는 authorization false로 fail closed한다. 이 문서는 그 세 gate 중 어느 것도 승인하지 않으며
+canonical authorization flag는 모두 false다. 테스트의 future receipt는 모의 상태일 뿐 canonical
+authorization을 변경하지 않는다.
 
 `SEPARATE_NON_RECONSTRUCTIVE_SIGNAL`에는 위 세 gate와 별도로 다음 두 record가 모두 필요하다.
 
@@ -734,6 +813,42 @@ content safety의 증거가 아니다.
   `signalId`·`signalRevisionId`·`purposeId`·`o5ScopeId`에 묶여야 한다.
 - `CANONICAL_PURPOSE_SCOPED_RETENTION_LEDGER`의 active finite purpose-bound retention. 동일 네 binding과 non-empty
   `expiresAt`을 가지며 indefinite retention은 허용하지 않는다.
+
+consent와 retention의 두 `expiresAt`은 decision 시점마다 `TRUSTED_SERVER_CLOCK_BOUNDARY`에서 얻거나
+trusted server boundary를 통해 주입된 exact ISO-8601 UTC `evaluatedAt`과 비교한다. 두 expiry 모두
+evaluation time보다 엄격히 뒤여야 한다. candidate·caller·client time, missing·invalid·ambiguous·untrusted
+clock, expiry와 같은 시각 또는 그 이전은 candidate eligibility false로 fail closed한다. 고정 날짜 비교는
+금지한다.
+
+```ts
+type CandidateBoundTrainingApprovalReceiptV1 = {
+  receiptId: string;
+  approvalKind: "CONTRIBUTION_APPROVAL" | "PROMOTION_APPROVAL" | "O5_APPROVAL";
+  source:
+    | "CANONICAL_CONTRIBUTION_APPROVAL_RESOLVER"
+    | "CANONICAL_PROMOTION_APPROVAL_RESOLVER"
+    | "CANONICAL_O5_APPROVAL_RESOLVER";
+  independentlyResolved: true;
+  matchingRecordCount: 1;
+  active: true;
+  ambiguous: false;
+  replayed: false;
+  stale: false;
+  revoked: false;
+  signalId: string;
+  signalRevisionId: string;
+  purposeId: string;
+  o5ScopeId: string;
+};
+
+type TrustedTrainingDecisionTimeV1 = {
+  source: "TRUSTED_SERVER_CLOCK_BOUNDARY";
+  evaluatedAt: string;
+  serverSide: true;
+  trusted: true;
+  ambiguous: false;
+};
+```
 
 generic opt-in, contract, administrator choice 또는 O5 자체는 consent나 retention을 대신하지 않는다.
 missing·mismatched·expired·revoked·indefinite·cross-purpose consent/retention은 candidate 단계에서
@@ -929,6 +1044,7 @@ pre_response_decomposition_without_exposure = 0
 collapsed_cue_bytes_before_atomic_exposure = 0
 hidden_cue_bytes_in_dom_ssr_accessibility_prefetch_cache_or_api = 0
 semantic_highlight_without_revision_bound_typed_anchor = 0
+anchor_missing_or_invalid_required_binding = 0
 cue_reveal_without_exposure_event = 0
 cue_view_promotes_independent_mastery = 0
 d7_stable_with_visible_cue = 0
@@ -946,6 +1062,8 @@ raw_personal_annotation_body_renamed_or_aliased_for_training = 0
 raw_personal_annotation_body_directly_promoted_to_cleared_content_bank = 0
 reconstructive_annotation_signal_used_as_training_candidate = 0
 training_candidate_without_distinct_contribution_promotion_o5_gates = 0
+training_candidate_without_exact_candidate_bound_approval_receipts = 0
+training_decision_without_trusted_server_evaluation_time = 0
 personal_editor_before_cpf_privacy_export_delete_gates = 0
 mcal_runtime_before_core_loop_acceptance = 0
 other_profile_term_auto_inheritance = 0
@@ -955,6 +1073,8 @@ pre_response_cue_without_exact_single_use_confirmation = 0
 pre_response_cue_before_atomic_assisted_transition = 0
 pre_response_cue_after_partial_commit_or_race = 0
 submitted_attempt_rendered_as_before_response = 0
+review_only_without_canonical_server_resolution = 0
+review_only_with_matching_open_independent_attempt = 0
 ```
 
 ---
@@ -970,10 +1090,16 @@ submitted_attempt_rendered_as_before_response = 0
 - canonical Assistance/Exposure ledger reuse, atomic pre-render recording and HIDDEN byte absence exist.
 - every render-capable `BEFORE_RESPONSE` validator delegates to one exact gate, and its exact
   learner/attempt resolution, confirmation consumption and `ASSISTED` transition finish before render.
+- every `REVIEW_ONLY` render-capable path requires canonical server timing/classification derivation,
+  committed exposure proof and matching open independent attempt count zero.
 - semantic highlight role/budget/accessibility and revision-bound typed anchors exist.
+- every declared anchor required binding passes exact type, closed enum, pattern and kind-policy consistency;
+  truthiness-only validation is forbidden.
 - personal annotation remains last and private.
 - every signal content-safety field is present on the same validated object as boolean `false`; missing,
   undefined, null, non-boolean, true, ambiguous, cross-object and unvalidated proofs fail closed.
+- consent and retention expiry use trusted server decision time, and contribution/promotion/O5 each require
+  an independently resolved exact-candidate-bound receipt while canonical authorization flags remain false.
 - Portable Core owns interfaces only.
 - MCAL-1 through MCAL-4 remain unauthorized.
 - all authorization values remain false.

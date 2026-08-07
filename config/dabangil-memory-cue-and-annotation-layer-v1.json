@@ -1,6 +1,6 @@
 {
   "schema": "dabangil_memory_cue_and_annotation_layer_v1",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "dated": "2026-08-06 KST",
   "status": "proposed_non_authoritative",
   "repository": "chachathecat/inverge",
@@ -182,6 +182,21 @@
       "SHARED_STABLE_SELECTOR",
       "VAULT_LOCAL_ONLY"
     ],
+    "targetTypes": [
+      "VESG_CONCEPT_NODE",
+      "VESG_FORMULA_NODE",
+      "VESG_PROCEDURE_STEP",
+      "VERSIONED_QUESTION_UNIT",
+      "OWNED_CONTENT_REVISION_RANGE",
+      "OFFICIAL_PERMITTED_CONTENT_REVISION_RANGE",
+      "LEARNER_ATTEMPT_REVISION_RANGE",
+      "PRIVATE_SOURCE_REVISION_RANGE"
+    ],
+    "statuses": [
+      "ACTIVE",
+      "HELD",
+      "SUPERSEDED"
+    ],
     "kindPolicy": {
       "CONCEPT_NODE": {
         "allowedDomains": [
@@ -189,6 +204,9 @@
         ],
         "allowedBodyLocatorPolicies": [
           "NONE"
+        ],
+        "allowedTargetTypes": [
+          "VESG_CONCEPT_NODE"
         ],
         "domainResolution": "DERIVED_EXACT"
       },
@@ -199,6 +217,9 @@
         "allowedBodyLocatorPolicies": [
           "NONE"
         ],
+        "allowedTargetTypes": [
+          "VESG_FORMULA_NODE"
+        ],
         "domainResolution": "DERIVED_EXACT"
       },
       "PROCEDURE_STEP": {
@@ -207,6 +228,9 @@
         ],
         "allowedBodyLocatorPolicies": [
           "NONE"
+        ],
+        "allowedTargetTypes": [
+          "VESG_PROCEDURE_STEP"
         ],
         "domainResolution": "DERIVED_EXACT"
       },
@@ -217,6 +241,9 @@
         ],
         "allowedBodyLocatorPolicies": [
           "NONE"
+        ],
+        "allowedTargetTypes": [
+          "VERSIONED_QUESTION_UNIT"
         ],
         "domainResolution": "EXPLICIT_ALLOWLIST_VALUE_REQUIRED",
         "rightsStateRequired": true,
@@ -229,6 +256,9 @@
         "allowedBodyLocatorPolicies": [
           "SHARED_STABLE_SELECTOR"
         ],
+        "allowedTargetTypes": [
+          "OWNED_CONTENT_REVISION_RANGE"
+        ],
         "domainResolution": "DERIVED_EXACT"
       },
       "OFFICIAL_PERMITTED_RANGE": {
@@ -237,6 +267,9 @@
         ],
         "allowedBodyLocatorPolicies": [
           "SHARED_STABLE_SELECTOR"
+        ],
+        "allowedTargetTypes": [
+          "OFFICIAL_PERMITTED_CONTENT_REVISION_RANGE"
         ],
         "domainResolution": "DERIVED_EXACT",
         "itemLevelRightsRequired": true
@@ -247,6 +280,9 @@
         ],
         "allowedBodyLocatorPolicies": [
           "VAULT_LOCAL_ONLY"
+        ],
+        "allowedTargetTypes": [
+          "LEARNER_ATTEMPT_REVISION_RANGE"
         ],
         "domainResolution": "DERIVED_EXACT",
         "ownerBound": true,
@@ -290,6 +326,9 @@
         ],
         "allowedBodyLocatorPolicies": [
           "VAULT_LOCAL_ONLY"
+        ],
+        "allowedTargetTypes": [
+          "PRIVATE_SOURCE_REVISION_RANGE"
         ],
         "domainResolution": "DERIVED_EXACT",
         "ownerBound": true,
@@ -350,6 +389,57 @@
       "rightsManifestId",
       "status"
     ],
+    "requiredBindingSchema": {
+      "anchorId": {
+        "type": "string",
+        "minLength": 3,
+        "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{2,127}$"
+      },
+      "profileId": {
+        "type": "string",
+        "minLength": 3,
+        "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{2,127}$"
+      },
+      "kind": {
+        "type": "enum",
+        "valuesSource": "anchors.kinds"
+      },
+      "domain": {
+        "type": "enum",
+        "valuesSource": "anchors.domains"
+      },
+      "targetType": {
+        "type": "enum",
+        "valuesSource": "anchors.targetTypes"
+      },
+      "targetRevisionId": {
+        "type": "string",
+        "minLength": 3,
+        "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{2,127}$"
+      },
+      "targetDigest": {
+        "type": "string",
+        "pattern": "^sha256:[0-9a-f]{64}$"
+      },
+      "bodyLocatorPolicy": {
+        "type": "enum",
+        "valuesSource": "anchors.bodyLocatorPolicies"
+      },
+      "rightsManifestId": {
+        "type": "string",
+        "minLength": 3,
+        "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{2,127}$"
+      },
+      "status": {
+        "type": "enum",
+        "valuesSource": "anchors.statuses"
+      }
+    },
+    "requiredBindingSchemaKeySetMustExactlyEqualRequiredBindings": true,
+    "requiredBindingValidationMode": "EXACT_TYPE_CLOSED_ENUM_PATTERN_AND_KIND_POLICY_CONSISTENCY",
+    "missingNullEmptyMalformedWrongTypeAmbiguousOrInconsistentBindingBehavior": "FAIL_CLOSED_REJECT",
+    "targetTypeMustMatchKindPolicy": true,
+    "truthinessOnlyValidationAllowed": false,
     "semanticHighlightRequiresRevisionBoundTypedAnchor": true
   },
   "cueFading": {
@@ -531,8 +621,21 @@
       "exactPurposeConsentRequired": true,
       "finitePurposeBoundRetentionRequired": true,
       "retentionExpiresAtRequired": true,
+      "consentExpiresAtRequired": true,
       "retentionExpiryMustBeFutureAtEvaluation": true,
-      "consentExpiryIfPresentMustBeFutureAtEvaluation": true,
+      "consentExpiryMustBeFutureAtEvaluation": true,
+      "trustedEvaluationTimeGate": {
+        "source": "TRUSTED_SERVER_CLOCK_BOUNDARY",
+        "field": "evaluatedAt",
+        "format": "EXACT_ISO_8601_UTC_INSTANT",
+        "serverSideRequired": true,
+        "trustedRequired": true,
+        "ambiguousAllowed": false,
+        "callerProvidedTimeAccepted": false,
+        "candidateProvidedTimeAccepted": false,
+        "missingOrInvalidBehavior": "FAIL_CLOSED_CANDIDATE_INELIGIBLE",
+        "expiryBoundaryPolicy": "EXPIRY_MUST_BE_STRICTLY_AFTER_EVALUATION_TIME"
+      },
       "genericOptInAccepted": false,
       "contractAcceptedAsConsent": false,
       "administratorChoiceAcceptedAsConsent": false,
@@ -547,7 +650,44 @@
       "contributionImpliesPromotion": false,
       "promotionImpliesO5": false,
       "o5MayBypassContributionOrPromotion": false,
-      "allPresentAuthorizations": false
+      "allPresentAuthorizations": false,
+      "globalAuthorizationFlagsMayAuthorizeCandidate": false,
+      "independentlyResolvedCandidateBoundReceiptsRequired": true
+    },
+    "trainingApprovalReceiptGate": {
+      "appliesToEveryFutureTrainingCandidate": true,
+      "receiptKinds": [
+        "CONTRIBUTION_APPROVAL",
+        "PROMOTION_APPROVAL",
+        "O5_APPROVAL"
+      ],
+      "receiptFieldsByKind": {
+        "CONTRIBUTION_APPROVAL": "contribution",
+        "PROMOTION_APPROVAL": "promotion",
+        "O5_APPROVAL": "o5"
+      },
+      "resolutionSourcesByKind": {
+        "CONTRIBUTION_APPROVAL": "CANONICAL_CONTRIBUTION_APPROVAL_RESOLVER",
+        "PROMOTION_APPROVAL": "CANONICAL_PROMOTION_APPROVAL_RESOLVER",
+        "O5_APPROVAL": "CANONICAL_O5_APPROVAL_RESOLVER"
+      },
+      "exactBindingFields": [
+        "signalId",
+        "signalRevisionId",
+        "purposeId",
+        "o5ScopeId"
+      ],
+      "exactMatchingRecordCount": 1,
+      "independentResolutionRequired": true,
+      "activeRequired": true,
+      "distinctReceiptIdsRequired": true,
+      "replayedAllowed": false,
+      "ambiguousAllowed": false,
+      "staleAllowed": false,
+      "revokedAllowed": false,
+      "crossCandidateCrossRevisionCrossPurposeCrossScopeAllowed": false,
+      "globalAuthorizationBooleanSubstitutionAllowed": false,
+      "missingMismatchedAmbiguousReplayedStaleRevokedOrUnresolvedBehavior": "FAIL_CLOSED_NOT_AUTHORIZED"
     },
     "freeTextAnalytics": false,
     "activationPrerequisites": [
@@ -664,6 +804,8 @@
     "rawPersonalAnnotationBodyDirectlyPromotedToClearedContentBank": 0,
     "reconstructiveAnnotationSignalUsedAsTrainingCandidate": 0,
     "trainingCandidateWithoutDistinctContributionPromotionO5Gates": 0,
+    "trainingCandidateWithoutExactCandidateBoundApprovalReceipts": 0,
+    "trainingDecisionWithoutTrustedServerEvaluationTime": 0,
     "personalEditorBeforeCpfPrivacyExportDeleteGates": 0,
     "mcalRuntimeBeforeCoreLoopAcceptance": 0,
     "otherProfileTermAutoInheritance": 0,
@@ -678,6 +820,7 @@
     "collapsedCueBytesBeforeAtomicExposure": 0,
     "hiddenCueBytesInForbiddenSurface": 0,
     "semanticHighlightWithoutRevisionBoundTypedAnchor": 0,
+    "anchorMissingOrInvalidRequiredBinding": 0,
     "anchorKindPolicyFallbackUsed": 0,
     "learnerAttemptRangeOutsideVaultLocal": 0,
     "privateTargetDigestInSharedProjection": 0,
@@ -688,6 +831,8 @@
     "preResponseCueBeforeAtomicAssistedTransition": 0,
     "preResponseCueAfterPartialCommitOrRace": 0,
     "submittedAttemptRenderedAsBeforeResponse": 0,
+    "reviewOnlyWithoutCanonicalServerResolution": 0,
+    "reviewOnlyWithMatchingOpenIndependentAttempt": 0,
     "semanticHighlightMissingVisibleTextLabel": 0,
     "semanticHighlightMissingComputedAccessibleName": 0
   },
@@ -768,6 +913,8 @@
         "preResponseExposure": false,
         "independentEvidenceEligibility": "EVIDENCE_NEUTRAL",
         "attemptIdPolicy": "OPTIONAL_IF_PRESENT_MUST_RESOLVE_EXACTLY",
+        "requiredCanonicalTimingClassificationGate": "CANONICAL_REVIEW_ONLY_RENDER_GATE_V1",
+        "matchingCanonicalOpenIndependentAttemptAllowed": false,
         "positiveLearningEvidenceCreatedByEvent": false
       }
     ],
@@ -792,6 +939,38 @@
     "untrustedClientTimingOrClassificationAccepted": false,
     "attemptStateSource": "CANONICAL_SERVER_ATTEMPT_LEDGER",
     "untrustedClientAttemptStateAccepted": false,
+    "reviewOnlyGate": {
+      "gateId": "CANONICAL_REVIEW_ONLY_RENDER_GATE_V1",
+      "sharedAcrossEveryRenderCapableValidator": true,
+      "renderCapableValidators": [
+        "CUE_RENDER_REQUEST_VALIDATOR",
+        "CUE_EXPOSURE_EVENT_VALIDATOR"
+      ],
+      "canonicalResolutionSource": "CANONICAL_SERVER_CUE_TIMING_CLASSIFICATION_RESOLVER",
+      "canonicalAttemptAbsenceSource": "CANONICAL_SERVER_ATTEMPT_LEDGER",
+      "openAttemptStateFilter": "INDEPENDENT_ATTEMPT_OPEN",
+      "requiredCanonicalTiming": "REVIEW_ONLY",
+      "allowedCanonicalAssistanceClassifications": [
+        "NONE",
+        "LOW",
+        "MATERIAL"
+      ],
+      "exactBindingFields": [
+        "learnerPrivateScopeId",
+        "attemptScopeId",
+        "cueId",
+        "cueRevisionId",
+        "requestId"
+      ],
+      "exactMatchingResolutionCount": 1,
+      "matchingCanonicalOpenIndependentAttemptCount": 0,
+      "canonicalExposureRecordStateRequired": "COMMITTED",
+      "callerSuppliedReviewOnlyLabelSufficient": false,
+      "callerSuppliedCanonicalExposureRecordCommittedAccepted": false,
+      "clientEventAccepted": false,
+      "inferredTimingAccepted": false,
+      "missingAmbiguousConflictingCrossLearnerStaleClientInferredOrOpenAttemptBehavior": "FAIL_CLOSED_NO_CUE_BYTES"
+    },
     "canonicalAttemptStates": [
       "INDEPENDENT_ATTEMPT_OPEN",
       "ASSISTED",
