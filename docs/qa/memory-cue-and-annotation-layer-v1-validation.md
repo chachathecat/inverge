@@ -69,15 +69,19 @@ PR #692 mutation is included.
 18. Every render-capable `BEFORE_RESPONSE` validator, including the separate exposure-event validator,
     delegates to the same `EXACT_PRE_RESPONSE_RENDER_GATE_V1`; alternate routing and weaker duplicate
     policies cannot authorize bytes. That gate requires one non-null exact attempt and learner scope resolving
-    through the canonical server attempt ledger to exactly one `INDEPENDENT_ATTEMPT_OPEN` record.
+    through the canonical server attempt ledger to exactly one `INDEPENDENT_ATTEMPT_OPEN` record. Its resolution,
+    every submitted-attempt resolution and the `REVIEW_ONLY` nested open-attempt absence resolution each pass the
+    same canonical-attempt-resolution state gate independently: `known === true`, `resolved === true`,
+    `ambiguous === false`, `conflicting === false`, `stale === false` and `clientInferred === false` by exact
+    primitive equality. Missing, defaulted, coerced or merely truthy state cannot satisfy that gate.
 19. The shared gate requires one active deliberate server-recorded single-use confirmation bound exactly to
     learner, attempt, cue, cue revision and one request.
 20. Client booleans and preselected consent are insufficient. Missing, cancelled, stale, replayed,
     mismatched or ambiguous confirmations fail closed with no cue bytes.
 21. Confirmation consumption, exposure record, `ASSISTED` transition and independent-evidence invalidation
     commit in that exact all-or-nothing order before any cue byte renders.
-22. Missing, empty, unknown, ambiguous, cross-learner, cross-attempt, submitted, closed, stale, cancelled,
-    replayed, mismatched or client-inferred pre-response references, partial commit, inconsistent ledger state,
+22. Missing, empty, unknown, unresolved, ambiguous, conflicting, cross-learner, cross-attempt, submitted, closed,
+    stale, cancelled, replayed, mismatched or client-inferred pre-response references, partial commit, inconsistent ledger state,
     record failure and render/submit race roll back and render no cue bytes. A canonical
     submitted response permits `AFTER_RESPONSE` only. `AFTER_RESPONSE` requires both its request/event and its
     independent canonical resolution to carry a non-null exact `attemptId` plus an exact primitive-string,
@@ -90,8 +94,9 @@ PR #692 mutation is included.
     `canonicalExposureRecordCommitted` booleans, client events and inferred timing do not authorize it. A trusted
     server resolver must prove one exact canonical timing/classification plus committed exposure bound to learner,
     attempt scope, cue, cue revision and request, while the canonical attempt ledger independently proves zero
-    matching open independent attempts. Missing, ambiguous, conflicting, cross-learner, stale, client-inferred
-    resolution or any matching open attempt fails closed with no cue bytes.
+    matching open independent attempts. The nested zero-count absence result is itself validated as a complete
+    canonical resolution; missing, unresolved, ambiguous, conflicting, cross-learner, stale or client-inferred
+    state, or any matching open attempt, fails closed with no cue bytes.
     Independently, every render-capable exposure-event timing and the request-side submitted-attempt path require
     `canonicalRecordCommitted === true`; truthy strings/numbers and every missing, null, false, object, array,
     ambiguous or inferred value fail closed, including on `AFTER_RESPONSE` and `REVIEW_ONLY`.
@@ -188,6 +193,8 @@ All fail closed or hold.
 - a non-empty attempt ID, canonical-record boolean or client/latest-attempt inference authorizes cue bytes;
 - a pre-response reference is missing, empty, unknown, ambiguous, cross-learner, cross-attempt, submitted,
   closed, stale, cancelled, replayed or mismatched;
+- a pre-response attempt resolution has `resolved !== true`, `conflicting !== false` or
+  `clientInferred !== false` but either render validator still authorizes cue bytes;
 - confirmation is missing, cancelled, stale, replayed, mismatched, ambiguous, a client boolean or preselected;
 - cue bytes render before confirmation consumption, exposure, `ASSISTED` and evidence-invalidation commits all succeed;
 - partial commit, record failure or render/submit race still renders cue bytes;
@@ -199,6 +206,8 @@ All fail closed or hold.
 - request-side `AFTER_RESPONSE` accepts `canonicalExposureRecordCommitted: true` while
   `canonicalRecordCommitted` is missing, false or malformed;
 - an attempt-unbound variant other than evidence-neutral `REVIEW_ONLY` renders cue bytes;
+- a `REVIEW_ONLY` nested zero-count open-attempt absence resolution has `resolved !== true`,
+  `conflicting !== false` or `clientInferred !== false` but is accepted as canonical proof;
 - ambiguous ordering or a render/submit race receives independent credit;
 - exposure is recorded after render or record failure still reveals cue bytes;
 - `HIDDEN` cue bytes remain in DOM, SSR, accessibility text, prefetch, cache or direct API output;
@@ -273,7 +282,7 @@ npm run build
 Current correction-source evidence:
 
 - JavaScript syntax check: passed.
-- Focused behavioral contract suite: 34/34 passed.
+- Focused behavioral contract suite: 36/36 passed.
 - Strict JSON parse, balanced Markdown fences, cross-artifact assertions and `git diff --check`: passed.
 - Typecheck: passed.
 - Lint: passed with 0 errors and 9 pre-existing warnings outside the MCAL diff.

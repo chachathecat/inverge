@@ -514,9 +514,14 @@ D+7 stable / timed: HIDDEN
   약한 두 번째 policy는 금지한다.
 - confirmation consumption, cue exposure record, `ASSISTED` 전환, independent-evidence invalidation은
   하나의 all-or-nothing transaction으로 cue byte 렌더 전에 순서대로 commit되어야 한다.
-- missing·empty·unknown·ambiguous·cross-learner·cross-attempt·submitted·closed·stale·cancelled·replayed·
-  mismatched·client-inferred attempt reference, invalid confirmation, partial commit, record failure,
+- missing·empty·unknown·unresolved·ambiguous·conflicting·cross-learner·cross-attempt·submitted·closed·stale·
+  cancelled·replayed·mismatched·client-inferred attempt reference, invalid confirmation, partial commit, record failure,
   inconsistent ledger state 또는 render/submit race는 모두 fail closed하며 cue byte를 전혀 렌더하지 않는다.
+- submitted binding, `BEFORE_RESPONSE` open-attempt binding, `REVIEW_ONLY` nested zero-count absence proof의
+  canonical attempt resolution은 하나의 shared `canonical attempt resolution state gate`를 각각 독립적으로
+  통과해야 한다. 이 gate는 `known === true`, `resolved === true`, `ambiguous === false`,
+  `conflicting === false`, `stale === false`, `clientInferred === false`를 exact primitive equality로 요구하며
+  missing·default·coercion·truthiness로 대체하지 않는다.
 - 이미 response가 제출된 canonical attempt는 `AFTER_RESPONSE`만 허용한다. 이 variant의 request/event와
   canonical server attempt resolution은 각각 non-null exact `attemptId`와 exact primitive string인
   trimmed·non-empty `learnerPrivateScopeId`를 독립적으로 가져야 한다. 두 필드는 바로 그 authenticated
@@ -531,8 +536,10 @@ D+7 stable / timed: HIDDEN
   `CANONICAL_REVIEW_ONLY_RENDER_GATE_V1`에 위임한다. 이 gate는 trusted server resolver에서 exact
   learner·attempt scope·cue·cue revision·request에 묶인 canonical `REVIEW_ONLY` timing/classification과
   committed exposure record를 한 건으로 resolve하고, canonical server attempt ledger에서 같은 learner와
-  attempt scope의 open independent attempt가 0건임을 별도로 증명해야 한다. missing·ambiguous·conflicting·
-  cross-learner·stale·client-inferred resolution 또는 matching open attempt는 cue byte 0으로 fail closed한다.
+  attempt scope의 open independent attempt가 0건임을 별도로 증명해야 한다. nested absence resolution 자체도
+  shared canonical attempt resolution state gate를 독립적으로 통과해야 하며, missing·unresolved·ambiguous·
+  conflicting·cross-learner·stale·client-inferred resolution 또는 matching open attempt는 cue byte 0으로
+  fail closed한다.
 - pre-response cue가 없다는 사실은 independent-evidence **eligibility만 보존**한다. empty sequence나
   `AFTER_RESPONSE` event 자체는 independent retrieval·far transfer·stable D+7 증거를 만들지 않는다.
 - independent retrieval은 actual submitted response와 completed evaluation이 exact learner/attempt에
@@ -596,12 +603,15 @@ type ExactCanonicalIndependentOpenAttemptBindingV1 = {
   canonicalAttemptState: "INDEPENDENT_ATTEMPT_OPEN";
   matchingRecordCount: 1;
   known: true;
+  resolved: true;
   submitted: false;
   closed: false;
   stale: false;
   cancelled: false;
   replayed: false;
   ambiguous: false;
+  conflicting: false;
+  clientInferred: false;
 };
 
 type ExactCanonicalSubmittedAttemptBindingV1 = {
@@ -651,9 +661,12 @@ type CanonicalReviewOnlyResolutionV1 = {
     attemptScopeId: string;
     matchingRecordCount: 0;
     known: true;
+    resolved: true;
     ambiguous: false;
+    conflicting: false;
     crossLearner: false;
     stale: false;
+    clientInferred: false;
   };
 };
 
@@ -689,12 +702,26 @@ const PRE_RESPONSE_RENDER_TRANSACTION_V1 = [
   "CUE_BYTES_RENDERED",
 ] as const;
 
+const EXACT_CANONICAL_ATTEMPT_RESOLUTION_STATE_GATE_V1 = {
+  requiredExactPrimitiveBooleanStates: {
+    known: true,
+    resolved: true,
+    ambiguous: false,
+    conflicting: false,
+    stale: false,
+    clientInferred: false,
+  },
+  eachResolutionValidatedIndependently: true,
+  truthinessDefaultingCoercionOrAbsenceAccepted: false,
+} as const;
+
 const PRE_RESPONSE_RENDER_GATE_V1 = {
   gateId: "EXACT_PRE_RESPONSE_RENDER_GATE_V1",
   renderCapableValidators: [
     "CUE_RENDER_REQUEST_VALIDATOR",
     "CUE_EXPOSURE_EVENT_VALIDATOR",
   ],
+  attemptResolutionStateGate: "EXACT_CANONICAL_ATTEMPT_RESOLUTION_STATE_GATE_V1",
   alternateValidatorBypassAllowed: false,
 } as const;
 
@@ -702,6 +729,7 @@ const CANONICAL_REVIEW_ONLY_RENDER_GATE_V1 = {
   timingClassificationSource: "CANONICAL_SERVER_CUE_TIMING_CLASSIFICATION_RESOLVER",
   openAttemptAbsenceSource: "CANONICAL_SERVER_ATTEMPT_LEDGER",
   openAttemptStateFilter: "INDEPENDENT_ATTEMPT_OPEN",
+  openAttemptAbsenceResolutionStateGate: "EXACT_CANONICAL_ATTEMPT_RESOLUTION_STATE_GATE_V1",
   matchingCanonicalOpenIndependentAttemptCount: 0,
   renderCapableValidators: [
     "CUE_RENDER_REQUEST_VALIDATOR",

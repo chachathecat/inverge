@@ -90,8 +90,8 @@ single-use confirmation을 모두 요구한다. client boolean과 preselected co
 `EXACT_PRE_RESPONSE_RENDER_GATE_V1`에 위임해야 하며 별도 event validator, alternate route 또는
 약한 두 번째 policy로 우회할 수 없다. confirmation consumption → cue exposure record → `ASSISTED`
 전환 → independent-evidence invalidation은 all-or-nothing으로 cue byte 렌더 전에 commit한다.
-missing·empty·unknown·ambiguous·cross-learner·cross-attempt·submitted·closed·stale·cancelled·replayed·
-mismatched·client-inferred attempt reference, invalid confirmation, partial commit, record failure,
+missing·empty·unknown·unresolved·ambiguous·conflicting·cross-learner·cross-attempt·submitted·closed·stale·
+cancelled·replayed·mismatched·client-inferred attempt reference, invalid confirmation, partial commit, record failure,
 inconsistent ledger state 또는 render/submit race는 cue byte 0으로 fail closed한다. 이미 submitted인
 canonical attempt는 `AFTER_RESPONSE`만 허용한다. 이 variant는
 non-null exact `attemptId`와 exact primitive string인 trimmed·non-empty `learnerPrivateScopeId`를 request/event와
@@ -106,8 +106,13 @@ timing은 authorization evidence가 아니다. cue request와 exposure-event 두
 `CANONICAL_REVIEW_ONLY_RENDER_GATE_V1`에 위임하고, trusted server resolver가 exact learner·attempt
 scope·cue·cue revision·request에 묶인 canonical timing/classification 및 committed exposure를 한 건으로
 resolve해야 한다. canonical server attempt ledger에서 같은 learner/attempt scope의 open independent
-attempt가 0건임도 별도로 증명한다. missing·ambiguous·conflicting·cross-learner·stale·client-inferred
+attempt가 0건임도 별도로 증명한다. missing·unresolved·ambiguous·conflicting·cross-learner·stale·client-inferred
 state 또는 matching open attempt는 cue byte 0으로 fail closed한다.
+submitted binding, `BEFORE_RESPONSE` open-attempt binding 및 `REVIEW_ONLY`의 nested zero-count absence proof는
+각자의 canonical server attempt resolution에 같은 exact state gate를 독립적으로 적용한다. `known === true`,
+`resolved === true`, `ambiguous === false`, `conflicting === false`, `stale === false`,
+`clientInferred === false`가 exact primitive equality로 모두 성립해야 하며 누락·default·coercion·truthiness는
+canonical resolution 증거가 아니다.
 
 cue absence는 independent-evidence eligibility만 보존한다. empty event, cue-free sequence 또는
 `AFTER_RESPONSE` event만으로 independent retrieval·far transfer·stable D+7이 positive가 될 수 없다.

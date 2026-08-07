@@ -1,6 +1,6 @@
 {
   "schema": "dabangil_memory_cue_and_annotation_layer_v1",
-  "version": "1.0.5",
+  "version": "1.0.6",
   "dated": "2026-08-06 KST",
   "status": "proposed_non_authoritative",
   "repository": "chachathecat/inverge",
@@ -1155,6 +1155,25 @@
     "untrustedClientTimingOrClassificationAccepted": false,
     "attemptStateSource": "CANONICAL_SERVER_ATTEMPT_LEDGER",
     "untrustedClientAttemptStateAccepted": false,
+    "canonicalAttemptResolutionStateGate": {
+      "gateId": "EXACT_CANONICAL_ATTEMPT_RESOLUTION_STATE_GATE_V1",
+      "appliesToEveryCanonicalAttemptResolutionIn": [
+        "EXACT_CANONICAL_SUBMITTED_ATTEMPT_BINDING",
+        "EXACT_PRE_RESPONSE_RENDER_GATE_V1",
+        "CANONICAL_REVIEW_ONLY_OPEN_ATTEMPT_ABSENCE_PROOF"
+      ],
+      "requiredExactPrimitiveBooleanStates": {
+        "known": true,
+        "resolved": true,
+        "ambiguous": false,
+        "conflicting": false,
+        "stale": false,
+        "clientInferred": false
+      },
+      "eachResolutionValidatedIndependently": true,
+      "truthinessDefaultingCoercionOrAbsenceAccepted": false,
+      "missingUndefinedNullStringNumberObjectArrayOrWrongStateBehavior": "FAIL_CLOSED_NO_CUE_BYTES"
+    },
     "reviewOnlyGate": {
       "gateId": "CANONICAL_REVIEW_ONLY_RENDER_GATE_V1",
       "sharedAcrossEveryRenderCapableValidator": true,
@@ -1164,6 +1183,7 @@
       ],
       "canonicalResolutionSource": "CANONICAL_SERVER_CUE_TIMING_CLASSIFICATION_RESOLVER",
       "canonicalAttemptAbsenceSource": "CANONICAL_SERVER_ATTEMPT_LEDGER",
+      "canonicalAttemptAbsenceResolutionStateGateRef": "cueExposure.canonicalAttemptResolutionStateGate",
       "openAttemptStateFilter": "INDEPENDENT_ATTEMPT_OPEN",
       "requiredCanonicalTiming": "REVIEW_ONLY",
       "allowedCanonicalAssistanceClassifications": [
@@ -1185,7 +1205,7 @@
       "callerSuppliedCanonicalExposureRecordCommittedAccepted": false,
       "clientEventAccepted": false,
       "inferredTimingAccepted": false,
-      "missingAmbiguousConflictingCrossLearnerStaleClientInferredOrOpenAttemptBehavior": "FAIL_CLOSED_NO_CUE_BYTES"
+      "missingAmbiguousConflictingCrossLearnerStaleClientInferredUnresolvedOrOpenAttemptBehavior": "FAIL_CLOSED_NO_CUE_BYTES"
     },
     "canonicalAttemptStates": [
       "INDEPENDENT_ATTEMPT_OPEN",
@@ -1205,6 +1225,7 @@
       "nonNullExactAttemptIdRequired": true,
       "nonNullExactLearnerPrivateScopeIdRequired": true,
       "attemptResolutionSource": "CANONICAL_SERVER_ATTEMPT_LEDGER",
+      "attemptResolutionStateGateRef": "cueExposure.canonicalAttemptResolutionStateGate",
       "attemptBindingFields": [
         "attemptId",
         "learnerPrivateScopeId"
@@ -1213,7 +1234,9 @@
         "MISSING",
         "EMPTY",
         "UNKNOWN",
+        "UNRESOLVED",
         "AMBIGUOUS",
+        "CONFLICTING",
         "CROSS_LEARNER",
         "CROSS_ATTEMPT",
         "SUBMITTED",
@@ -1280,6 +1303,7 @@
       "nonNullExactAttemptIdRequired": true,
       "nonNullExactLearnerPrivateScopeIdRequired": true,
       "attemptResolutionSource": "CANONICAL_SERVER_ATTEMPT_LEDGER",
+      "attemptResolutionStateGateRef": "cueExposure.canonicalAttemptResolutionStateGate",
       "exactBindingFields": [
         "attemptId",
         "learnerPrivateScopeId"

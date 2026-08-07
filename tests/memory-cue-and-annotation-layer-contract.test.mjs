@@ -418,9 +418,12 @@ function canonicalReviewOnlyResolution(overrides = {}) {
       attemptScopeId: "question-scope-1",
       matchingRecordCount: 0,
       known: true,
+      resolved: true,
       ambiguous: false,
+      conflicting: false,
       crossLearner: false,
       stale: false,
+      clientInferred: false,
     },
   };
   const resolution = { ...base, ...overrides };
@@ -482,6 +485,16 @@ function cueEvent(overrides = {}) {
   return event;
 }
 
+function hasExactCanonicalAttemptResolutionStates(resolution) {
+  const stateGate = contract.cueExposure.canonicalAttemptResolutionStateGate;
+  return resolution !== null
+    && typeof resolution === "object"
+    && !Array.isArray(resolution)
+    && Object.entries(stateGate.requiredExactPrimitiveBooleanStates).every(
+      ([field, expected]) => resolution[field] === expected,
+    );
+}
+
 function validateCanonicalAttemptBinding(subject) {
   const gate = contract.cueExposure.afterResponseGate;
   if (
@@ -507,6 +520,9 @@ function validateCanonicalAttemptBinding(subject) {
   if (!resolution) return { accepted: false, reason: "ATTEMPT_RESOLUTION_MISSING" };
   if (resolution.source !== gate.attemptResolutionSource) {
     return { accepted: false, reason: "ATTEMPT_RESOLUTION_SOURCE_INVALID" };
+  }
+  if (!hasExactCanonicalAttemptResolutionStates(resolution)) {
+    return { accepted: false, reason: "ATTEMPT_RESOLUTION_STATE_INVALID" };
   }
   const resolvedLearnerScope = resolution[learnerScopeRule.field];
   if (
@@ -607,6 +623,7 @@ function authorizeCanonicalReviewOnlyCueRender(subject) {
   if (
     !openAttempt
     || openAttempt.source !== gate.canonicalAttemptAbsenceSource
+    || !hasExactCanonicalAttemptResolutionStates(openAttempt)
     || openAttempt.queriedCanonicalAttemptState !== gate.openAttemptStateFilter
     || openAttempt.known !== true
     || openAttempt.matchingRecordCount !== gate.matchingCanonicalOpenIndependentAttemptCount
@@ -671,7 +688,8 @@ function authorizeExactPreResponseCueRender(subject) {
     return fail("ATTEMPT_RESOLUTION_SOURCE_INVALID");
   }
   if (
-    resolution.known !== true
+    !hasExactCanonicalAttemptResolutionStates(resolution)
+    || resolution.known !== true
     || resolution.matchingRecordCount !== gate.exactMatchingRecordCount
     || resolution.ambiguous !== false
     || resolution.crossLearner !== false
@@ -1479,6 +1497,7 @@ test("MCAL paths resolve and V13 remains sole active master plan", () => {
   assert.match(active, /dabangil-professional-exam-reasoning-os-final-master-plan-v13-2026-08-06\.md/);
   assert.match(active, /Memory Cue & Annotation Layer/);
   assert.doesNotMatch(active, /final-master-plan-v14/);
+  assert.equal(contract.version, "1.0.6");
   assert.equal(contract.compatibility.v13RemainsSoleActiveMasterPlan, true);
   assert.equal(contract.compatibility.newMasterPlanVersionCreated, false);
 });
@@ -1645,6 +1664,7 @@ test("Markdown fences and exact boundary language are present", () => {
   assert.match(annex, /matching `undefined` values/);
   assert.match(annex, /`consent\.expired === false`/);
   assert.match(annex, /`canonicalExposureRecordCommitted`[^\n]*대체/);
+  assert.match(annex, /canonical attempt resolution state gate/);
   assert.match(annex, /preResponseCueExposureCount/);
   assert.match(annex, /CANONICAL_SERVER_ITEM_RIGHTS_MANIFEST_BOUNDARY/);
   assert.match(annex, /transferAttemptId/);
@@ -1653,7 +1673,8 @@ test("Markdown fences and exact boundary language are present", () => {
   assert.match(annex, /`currentlyAuthorized`는 정확히 `false`/);
   const qa = read(P.qa);
   assert.match(qa, /PR #692 is merged at `512bfdb9232a86bf4f7d4cfbc076a9df1c8a7da2`/);
-  assert.match(qa, /Focused behavioral contract suite: 34\/34 passed/);
+  assert.match(qa, /Focused behavioral contract suite: 36\/36 passed/);
+  assert.doesNotMatch(qa, /Focused behavioral contract suite: 34\/34 passed/);
   assert.doesNotMatch(qa, /Focused behavioral contract suite: 31\/31 passed/);
   assert.doesNotMatch(qa, /Focused behavioral contract suite: 28\/28 passed/);
   assert.doesNotMatch(qa, /Focused behavioral contract suite: 25\/25 passed/);
@@ -2151,6 +2172,41 @@ test("every BEFORE_RESPONSE render path delegates to one exact gate and rejects 
     assert.equal(result.canonicalAttemptState, "ASSISTED", validate.name);
     assert.equal(result.independentEvidenceEligible, false, validate.name);
     assert.equal(result.orderedSteps.at(-1), "CUE_BYTES_RENDERED", validate.name);
+  }
+});
+
+test("pre-response rejects noncanonical attempt resolution states across both render validators", () => {
+  const stateGate = contract.cueExposure.canonicalAttemptResolutionStateGate;
+  const beforeResponseGate = contract.cueExposure.beforeResponseGate;
+  assert.equal(stateGate.gateId, "EXACT_CANONICAL_ATTEMPT_RESOLUTION_STATE_GATE_V1");
+  assert.equal(
+    beforeResponseGate.attemptResolutionStateGateRef,
+    "cueExposure.canonicalAttemptResolutionStateGate",
+  );
+  assert.deepEqual(stateGate.requiredExactPrimitiveBooleanStates, {
+    known: true,
+    resolved: true,
+    ambiguous: false,
+    conflicting: false,
+    stale: false,
+    clientInferred: false,
+  });
+
+  for (const [field, invalidValue] of [
+    ["resolved", false],
+    ["conflicting", true],
+    ["clientInferred", true],
+  ]) {
+    const subject = cueEvent({
+      timing: "BEFORE_RESPONSE",
+      assistanceClassification: "LOW",
+      attemptResolution: canonicalOpenAttemptResolution({ [field]: invalidValue }),
+    });
+    for (const validate of [evaluateCueRender, validateCueExposureEvent]) {
+      const result = validate(subject);
+      assert.equal(result.accepted, false, `${validate.name}: ${field}`);
+      assert.equal(result.mayRenderCueBytes, false, `${validate.name}: ${field}`);
+    }
   }
 });
 
@@ -3368,6 +3424,37 @@ test("review-only requires canonical server derivation and no matching open atte
   }));
   assert.equal(invalidBoundReview.accepted, false);
   assert.equal(invalidBoundReview.mayRenderCueBytes, false);
+});
+
+test("review-only independently validates the nested canonical absence-resolution state", () => {
+  const stateGate = contract.cueExposure.canonicalAttemptResolutionStateGate;
+  const reviewOnlyGate = contract.cueExposure.reviewOnlyGate;
+  assert.equal(
+    reviewOnlyGate.canonicalAttemptAbsenceResolutionStateGateRef,
+    "cueExposure.canonicalAttemptResolutionStateGate",
+  );
+  assert.equal(stateGate.eachResolutionValidatedIndependently, true);
+  assert.equal(stateGate.truthinessDefaultingCoercionOrAbsenceAccepted, false);
+
+  for (const [field, invalidValue] of [
+    ["resolved", false],
+    ["conflicting", true],
+    ["clientInferred", true],
+  ]) {
+    const subject = reviewOnlyRequest({
+      reviewOnlyResolution: canonicalReviewOnlyResolution({
+        openIndependentAttemptResolution: { [field]: invalidValue },
+      }),
+    });
+    for (const validate of [
+      evaluateCueRender,
+      (request) => validateCueExposureEvent(cueEvent(request)),
+    ]) {
+      const result = validate(subject);
+      assert.equal(result.accepted, false, field);
+      assert.equal(result.mayRenderCueBytes, false, field);
+    }
+  }
 });
 
 test("semantic-highlight accessibility requires visible label and computed name together", () => {
