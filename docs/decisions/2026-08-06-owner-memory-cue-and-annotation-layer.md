@@ -78,12 +78,17 @@ ledger에서 파생하고 client 입력을 신뢰하지 않는다. sequence에 p
 있으면 independent retrieval·far transfer·stable D+7은 부적격이며 뒤의 event가 복구하지 못한다.
 ordering ambiguity와 render/submit race도 fail closed다.
 `BEFORE_RESPONSE` attempt state는 client가 아니라 canonical server attempt ledger에서 파생하며,
-exact `INDEPENDENT_ATTEMPT_OPEN` 상태와 exact attempt·cue·cue revision·단일 request에 묶인
-deliberate learner confirmation을 모두 요구한다. client boolean과 preselected consent는 부족하다.
-confirmation record → cue exposure record → `ASSISTED` 전환 → independent-evidence invalidation은
-all-or-nothing으로 cue byte 렌더 전에 commit한다. missing·cancelled·stale·replayed·mismatched·
-ambiguous confirmation, partial commit, record failure 또는 render/submit race는 cue byte 0으로
-fail closed한다. 이미 submitted인 canonical attempt는 `AFTER_RESPONSE`만 허용한다. 이 variant는
+non-null exact `attemptId`와 learner scope가 exact `INDEPENDENT_ATTEMPT_OPEN` 한 건에 resolve되어야
+하고, exact learner·attempt·cue·cue revision·단일 request에 묶인 active deliberate server-recorded
+single-use confirmation을 모두 요구한다. client boolean과 preselected consent는 부족하다.
+모든 `BEFORE_RESPONSE` render-capable validator는 하나의
+`EXACT_PRE_RESPONSE_RENDER_GATE_V1`에 위임해야 하며 별도 event validator, alternate route 또는
+약한 두 번째 policy로 우회할 수 없다. confirmation consumption → cue exposure record → `ASSISTED`
+전환 → independent-evidence invalidation은 all-or-nothing으로 cue byte 렌더 전에 commit한다.
+missing·empty·unknown·ambiguous·cross-learner·cross-attempt·submitted·closed·stale·cancelled·replayed·
+mismatched·client-inferred attempt reference, invalid confirmation, partial commit, record failure,
+inconsistent ledger state 또는 render/submit race는 cue byte 0으로 fail closed한다. 이미 submitted인
+canonical attempt는 `AFTER_RESPONSE`만 허용한다. 이 variant는
 non-null exact `attemptId`와 learner scope가 canonical server attempt ledger의 exact `SUBMITTED`
 attempt 한 건에 resolve되어야 한다. client/latest-attempt 추론과 missing·empty·unknown·cross-learner·
 cross-attempt·mismatched·replayed·pre-submission reference는 cue byte 0으로 fail closed한다.
@@ -130,6 +135,12 @@ Bank object뿐이다. contribution, Cleared Content Bank promotion과 exact-purp
 구별된 gate이며 어느 것도 다른 gate를 대신하지 않는다. 현재 세 authorization은 모두 false다.
 
 signal은 raw body·raw pointer·reconstructive derivative를 rename·alias·relabel한 객체일 수 없다.
+`SEPARATE_NON_RECONSTRUCTIVE_SIGNAL`의 같은 validated candidate object에는 다음 다섯 property가
+각각 명시적으로 존재하고 primitive boolean이며 정확히 `false`여야 한다:
+`containsRawAnnotationBody`, `containsRawBodyPointer`, `containsExcerptOrFreeText`, `reconstructive`,
+`reconstructiveDerivativeOfRawBody`. missing·undefined·null·non-boolean·`true`·ambiguous·cross-object·
+unvalidated 값은 안전의 증거가 아니며 candidate 단계에서 fail closed한다. proof는 canonical closed
+signal-schema validator가 exact signal/revision에 묶어 검증해야 하며 client assertion은 받지 않는다.
 또한 exact `signalId`·`signalRevisionId`·`purposeId`·`o5ScopeId`에 묶인 active exact-purpose consent와
 동일 binding·finite `expiresAt`을 가진 active purpose-scoped retention을 각각 canonical consent/opt-out
 ledger와 purpose-retention ledger에서 요구한다. generic opt-in, contract, administrator choice 또는 O5는
@@ -168,13 +179,15 @@ cross-profile cue·정답·mastery 상속은 금지한다.
 - strict JSON, path, fence, focused tests 통과.
 - released·versioned VESG definition projection과 mnemonic separation.
 - canonical Assistance/Exposure ledger 재사용과 render-before-record 금지.
-- canonical independent-attempt-open + exact single-use learner confirmation + atomic
-  `ASSISTED`/independent-evidence invalidation before any pre-response cue byte.
+- 모든 render-capable validator가 공유하는 exact pre-response gate + canonical
+  independent-attempt-open + exact learner/attempt/cue/revision/request-bound single-use confirmation +
+  atomic confirmation consumption/`ASSISTED`/independent-evidence invalidation before any cue byte.
 - cue absence preserves eligibility only; independent response, distinct non-same-representation transfer
   and completed hidden/no-conflict D+7 each require separate affirmative canonical evidence.
 - `AFTER_RESPONSE` exact canonical submitted-attempt binding; only evidence-neutral `REVIEW_ONLY` may be unbound.
 - raw personal annotation body direct training·rename/alias 우회·direct Cleared Content promotion 0;
-  raw pointer/reconstructive-derivative relabel 우회 0; exact-purpose consent와 finite purpose retention;
+  raw pointer/reconstructive-derivative relabel 우회 0; 다섯 content-safety property의 같은-object
+  validated explicit boolean false proof; exact-purpose consent와 finite purpose retention;
   contribution/promotion/O5 gate 분리와 현재 authorization false.
 - HIDDEN byte absence와 revision-bound typed anchor.
 - MCAL-1~MCAL-4 authorization false.

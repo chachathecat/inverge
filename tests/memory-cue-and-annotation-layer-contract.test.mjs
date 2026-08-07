@@ -103,8 +103,22 @@ function canonicalAttemptResolution(overrides = {}) {
     mismatched: false,
     replayed: false,
     preSubmission: false,
+    closed: false,
+    stale: false,
+    cancelled: false,
+    ambiguous: false,
     ...overrides,
   };
+}
+
+function canonicalOpenAttemptResolution(overrides = {}) {
+  return canonicalAttemptResolution({
+    canonicalAttemptState: "INDEPENDENT_ATTEMPT_OPEN",
+    submitted: false,
+    submittedBeforeExposure: false,
+    preSubmission: true,
+    ...overrides,
+  });
 }
 
 function cueEvent(overrides = {}) {
@@ -120,6 +134,9 @@ function cueEvent(overrides = {}) {
     attemptResolution: canonicalAttemptResolution(),
     ...overrides,
   };
+  if (event.timing === "BEFORE_RESPONSE") {
+    return { ...event, ...cueRenderRequest(), ...overrides };
+  }
   if (
     event.timing === "REVIEW_ONLY"
     && !Object.hasOwn(overrides, "attemptId")
@@ -166,6 +183,115 @@ function validateCanonicalAttemptBinding(subject) {
   return { accepted: true };
 }
 
+function authorizeExactPreResponseCueRender(subject) {
+  const cue = contract.cueExposure;
+  const gate = cue.beforeResponseGate;
+  const fail = (reason) => ({
+    accepted: false,
+    mayRenderCueBytes: false,
+    independentEvidenceEligible: false,
+    gateId: gate.gateId,
+    reason,
+  });
+
+  if (subject.timing !== "BEFORE_RESPONSE") return fail("PRE_RESPONSE_GATE_TIMING_INVALID");
+  if (subject.renderSubmitRaceDetected === true) {
+    return fail(cue.preResponseAtomicCommit.renderSubmitRaceBehavior);
+  }
+  if (subject.recordFailure === true) return fail(cue.preResponseAtomicCommit.recordFailureBehavior);
+  if (subject.canonicalRecordCommitted !== true) {
+    return fail(cue.preResponseAtomicCommit.recordFailureBehavior);
+  }
+  if (subject.clientAttemptId !== undefined || subject.inferLatestAttempt === true) {
+    return fail("UNTRUSTED_OR_INFERRED_ATTEMPT_ID");
+  }
+  if (
+    subject.canonicalAttemptStateSource !== gate.attemptResolutionSource
+    || subject.clientAttemptState !== undefined
+  ) return fail("UNTRUSTED_ATTEMPT_STATE");
+  if (typeof subject.attemptId !== "string" || subject.attemptId.trim().length === 0) {
+    return fail("EXACT_ATTEMPT_ID_REQUIRED");
+  }
+  if (
+    typeof subject.learnerPrivateScopeId !== "string"
+    || subject.learnerPrivateScopeId.trim().length === 0
+  ) return fail("EXACT_LEARNER_PRIVATE_SCOPE_ID_REQUIRED");
+
+  const resolution = subject.attemptResolution;
+  if (!resolution) return fail("ATTEMPT_RESOLUTION_MISSING");
+  if (resolution.source !== gate.attemptResolutionSource) {
+    return fail("ATTEMPT_RESOLUTION_SOURCE_INVALID");
+  }
+  if (
+    resolution.known !== true
+    || resolution.matchingRecordCount !== gate.exactMatchingRecordCount
+    || resolution.ambiguous !== false
+    || resolution.crossLearner !== false
+    || resolution.crossAttempt !== false
+    || resolution.mismatched !== false
+    || resolution.stale !== false
+    || resolution.cancelled !== false
+    || resolution.replayed !== false
+    || resolution.closed !== false
+    || resolution.submitted !== false
+  ) return fail("ATTEMPT_RESOLUTION_INVALID");
+  for (const field of gate.attemptBindingFields) {
+    if (resolution[field] !== subject[field]) {
+      return fail(`ATTEMPT_${field.toUpperCase()}_MISMATCH`);
+    }
+  }
+  if (
+    resolution.canonicalAttemptState !== gate.eligibleCanonicalAttemptState
+    || subject.canonicalAttemptState !== resolution.canonicalAttemptState
+  ) return fail("INDEPENDENT_ATTEMPT_NOT_OPEN");
+
+  const confirmation = subject.confirmation;
+  if (!confirmation) {
+    if (subject.clientConfirmationBoolean === true) return fail("CLIENT_BOOLEAN_INSUFFICIENT");
+    if (subject.preselectedConsent === true) return fail("PRESELECTED_CONSENT_INSUFFICIENT");
+    return fail("CONFIRMATION_MISSING");
+  }
+  if (confirmation.source !== gate.confirmationRecordSource) {
+    return fail("CONFIRMATION_SOURCE_INVALID");
+  }
+  if (confirmation.serverRecorded !== true || confirmation.deliberate !== true) {
+    return fail("CONFIRMATION_NOT_DELIBERATE_SERVER_RECORD");
+  }
+  if (confirmation.active !== true) return fail("CONFIRMATION_NOT_ACTIVE");
+  if (confirmation.status === "CANCELLED" || confirmation.cancelled === true) {
+    return fail("CONFIRMATION_CANCELLED");
+  }
+  if (confirmation.status !== gate.acceptedConfirmationState) {
+    return fail("CONFIRMATION_STATE_INVALID");
+  }
+  if (confirmation.stale !== false) return fail("CONFIRMATION_STALE");
+  if (confirmation.consumed !== false || confirmation.singleUse !== true) {
+    return fail("CONFIRMATION_REPLAYED");
+  }
+  if (
+    confirmation.ambiguous !== false
+    || confirmation.matchingRecordCount !== gate.exactMatchingRecordCount
+  ) return fail("CONFIRMATION_AMBIGUOUS");
+  for (const field of gate.confirmationBindingFields) {
+    if (confirmation[field] !== subject[field]) {
+      return fail(`CONFIRMATION_${field.toUpperCase()}_MISMATCH`);
+    }
+  }
+  if (JSON.stringify(subject.commitSteps) !== JSON.stringify(cue.preResponseAtomicCommit.orderedSteps)) {
+    return fail(cue.preResponseAtomicCommit.partialCommitBehavior);
+  }
+  return {
+    accepted: true,
+    mayRenderCueBytes: true,
+    canonicalAttemptState: cue.preResponseAtomicCommit.postCommitAttemptState,
+    independentEvidenceEligible: cue.preResponseAtomicCommit.postCommitIndependentEvidenceEligible,
+    positiveLearningEvidence: false,
+    atomicCommitCompletedBeforeRender: true,
+    gateId: gate.gateId,
+    orderedSteps: [...subject.commitSteps, cue.preResponseAtomicCommit.renderStep],
+  };
+}
+
 function validateCueExposureEvent(event) {
   const cue = contract.cueExposure;
   if (event.derivedFrom !== cue.timingAndClassificationSource) {
@@ -185,9 +311,7 @@ function validateCueExposureEvent(event) {
     return { accepted: false, mayRenderCueBytes: false, reason: "TIMING_CLASSIFICATION_INVALID" };
   }
   if (event.timing === "BEFORE_RESPONSE") {
-    if (typeof event.attemptId !== "string" || event.attemptId.trim().length === 0) {
-      return { accepted: false, mayRenderCueBytes: false, reason: "EXACT_ATTEMPT_ID_REQUIRED" };
-    }
+    return authorizeExactPreResponseCueRender(event);
   }
   if (event.timing === "AFTER_RESPONSE") {
     const binding = validateCanonicalAttemptBinding(event);
@@ -407,6 +531,33 @@ function evaluateAttemptEvidence(events, evidence = {}) {
   };
 }
 
+function validateSignalContentSafetyProof(candidate) {
+  const gate = contract.personalAnnotation.signalContentSafetyProofGate;
+  if (
+    candidate.contentSafetyProofValidated !== true
+    || candidate.contentSafetyProofValidationSource !== gate.validationSource
+    || candidate.contentSafetyProofAmbiguous !== false
+    || typeof candidate.signalId !== "string"
+    || candidate.signalId.trim().length === 0
+    || typeof candidate.signalRevisionId !== "string"
+    || candidate.signalRevisionId.trim().length === 0
+    || candidate.contentSafetyProofSignalId !== candidate.signalId
+    || candidate.contentSafetyProofSignalRevisionId !== candidate.signalRevisionId
+  ) {
+    return { accepted: false, reason: "SIGNAL_CONTENT_SAFETY_PROOF_UNVALIDATED_OR_CROSS_OBJECT" };
+  }
+  for (const field of gate.requiredBooleanFalseFields) {
+    if (
+      !Object.hasOwn(candidate, field)
+      || typeof candidate[field] !== "boolean"
+      || candidate[field] !== false
+    ) {
+      return { accepted: false, reason: `SIGNAL_CONTENT_SAFETY_${field}_NOT_EXPLICIT_FALSE` };
+    }
+  }
+  return { accepted: true };
+}
+
 function evaluateTrainingCandidate(candidate, authorizations = contract.authorizationBoundary) {
   const annotation = contract.personalAnnotation;
   const rawOrigin = candidate.originKind === "PERSONAL_ANNOTATION_RAW_BODY"
@@ -437,14 +588,13 @@ function evaluateTrainingCandidate(candidate, authorizations = contract.authoriz
     return { candidateEligible: false, currentlyAuthorized: false, reason: "UNKNOWN_CANDIDATE_KIND" };
   }
   if (candidate.kind === "SEPARATE_NON_RECONSTRUCTIVE_SIGNAL") {
+    const contentSafety = validateSignalContentSafetyProof(candidate);
+    if (!contentSafety.accepted) {
+      return { candidateEligible: false, currentlyAuthorized: false, reason: contentSafety.reason };
+    }
     if (
       candidate.separateObjectIdentity !== true
       || candidate.closedValueSchema !== true
-      || candidate.containsRawAnnotationBody === true
-      || candidate.containsRawBodyPointer === true
-      || candidate.containsExcerptOrFreeText === true
-      || candidate.reconstructive === true
-      || candidate.reconstructiveDerivativeOfRawBody === true
     ) {
       return { candidateEligible: false, currentlyAuthorized: false, reason: "SIGNAL_RECONSTRUCTIVE_OR_NOT_SEPARATE" };
     }
@@ -520,6 +670,11 @@ function signalCandidate(overrides = {}) {
     containsExcerptOrFreeText: false,
     reconstructive: false,
     reconstructiveDerivativeOfRawBody: false,
+    contentSafetyProofValidated: true,
+    contentSafetyProofValidationSource: "CANONICAL_CLOSED_SIGNAL_SCHEMA_VALIDATOR",
+    contentSafetyProofAmbiguous: false,
+    contentSafetyProofSignalId: "signal-1",
+    contentSafetyProofSignalRevisionId: "signal-revision-1",
     consent: {
       source: "CANONICAL_VERSIONED_CONSENT_OPT_OUT_LEDGER",
       state: "ACTIVE",
@@ -562,31 +717,45 @@ function cueConfirmation(overrides = {}) {
     source: "CANONICAL_SERVER_CONFIRMATION_LEDGER",
     status: "CONFIRMED",
     attemptId: "attempt-1",
+    learnerPrivateScopeId: "learner-1",
     cueId: "cue-1",
     cueRevisionId: "cue-revision-1",
     requestId: "request-1",
+    serverRecorded: true,
+    deliberate: true,
+    active: true,
     singleUse: true,
     matchingRecordCount: 1,
     stale: false,
     consumed: false,
+    cancelled: false,
     ambiguous: false,
     ...overrides,
   };
 }
 
 function cueRenderRequest(overrides = {}) {
+  const timing = overrides.timing ?? "BEFORE_RESPONSE";
+  const canonicalAttemptState = overrides.canonicalAttemptState
+    ?? (timing === "AFTER_RESPONSE" ? "SUBMITTED" : "INDEPENDENT_ATTEMPT_OPEN");
+  const attemptResolution = Object.hasOwn(overrides, "attemptResolution")
+    ? overrides.attemptResolution
+    : timing === "AFTER_RESPONSE"
+      ? canonicalAttemptResolution()
+      : canonicalOpenAttemptResolution();
   return {
-    timing: "BEFORE_RESPONSE",
+    timing,
     attemptId: "attempt-1",
     learnerPrivateScopeId: "learner-1",
     cueId: "cue-1",
     cueRevisionId: "cue-revision-1",
     requestId: "request-1",
     canonicalAttemptStateSource: "CANONICAL_SERVER_ATTEMPT_LEDGER",
-    canonicalAttemptState: "INDEPENDENT_ATTEMPT_OPEN",
-    attemptResolution: canonicalAttemptResolution(),
+    canonicalAttemptState,
+    attemptResolution,
     confirmation: cueConfirmation(),
     commitSteps: [...contract.cueExposure.preResponseAtomicCommit.orderedSteps],
+    canonicalRecordCommitted: true,
     recordFailure: false,
     renderSubmitRaceDetected: false,
     ...overrides,
@@ -619,11 +788,6 @@ function evaluateCueRender(request) {
     };
   }
 
-  if (
-    request.canonicalAttemptStateSource !== cue.attemptStateSource
-    || request.clientAttemptState !== undefined
-  ) return fail("UNTRUSTED_ATTEMPT_STATE");
-
   if (request.canonicalAttemptState === "SUBMITTED") {
     if (request.timing !== cue.afterResponseGate.onlyAllowedTimingForSubmittedAttempt) {
       return fail("SUBMITTED_ATTEMPT_AFTER_RESPONSE_ONLY");
@@ -642,41 +806,7 @@ function evaluateCueRender(request) {
   }
 
   if (request.timing !== "BEFORE_RESPONSE") return fail("NON_SUBMITTED_AFTER_RESPONSE_INVALID");
-  if (request.canonicalAttemptState !== cue.beforeResponseGate.eligibleCanonicalAttemptState) {
-    return fail("INDEPENDENT_ATTEMPT_NOT_OPEN");
-  }
-  const confirmation = request.confirmation;
-  if (!confirmation) {
-    if (request.clientConfirmationBoolean === true) return fail("CLIENT_BOOLEAN_INSUFFICIENT");
-    if (request.preselectedConsent === true) return fail("PRESELECTED_CONSENT_INSUFFICIENT");
-    return fail("CONFIRMATION_MISSING");
-  }
-  if (confirmation.source !== cue.beforeResponseGate.confirmationRecordSource) {
-    return fail("CONFIRMATION_SOURCE_INVALID");
-  }
-  if (confirmation.status === "CANCELLED") return fail("CONFIRMATION_CANCELLED");
-  if (confirmation.status !== cue.beforeResponseGate.acceptedConfirmationState) {
-    return fail("CONFIRMATION_STATE_INVALID");
-  }
-  if (confirmation.stale) return fail("CONFIRMATION_STALE");
-  if (confirmation.consumed || confirmation.singleUse !== true) return fail("CONFIRMATION_REPLAYED");
-  if (
-    confirmation.ambiguous
-    || confirmation.matchingRecordCount !== cue.beforeResponseGate.exactMatchingRecordCount
-  ) return fail("CONFIRMATION_AMBIGUOUS");
-  for (const field of cue.beforeResponseGate.confirmationBindingFields) {
-    if (confirmation[field] !== request[field]) return fail(`CONFIRMATION_${field.toUpperCase()}_MISMATCH`);
-  }
-  if (JSON.stringify(request.commitSteps) !== JSON.stringify(cue.preResponseAtomicCommit.orderedSteps)) {
-    return fail(cue.preResponseAtomicCommit.partialCommitBehavior);
-  }
-  return {
-    accepted: true,
-    mayRenderCueBytes: true,
-    canonicalAttemptState: cue.preResponseAtomicCommit.postCommitAttemptState,
-    independentEvidenceEligible: cue.preResponseAtomicCommit.postCommitIndependentEvidenceEligible,
-    orderedSteps: [...request.commitSteps, cue.preResponseAtomicCommit.renderStep],
-  };
+  return authorizeExactPreResponseCueRender(request);
 }
 
 function validateSemanticHighlightAccessibility(candidate) {
@@ -851,9 +981,13 @@ test("Markdown fences and exact boundary language are present", () => {
   assert.match(annex, /non-null exact `attemptId`/);
   assert.match(annex, /CANONICAL_VERSIONED_CONSENT_OPT_OUT_LEDGER/);
   assert.match(annex, /finite purpose-bound retention/);
+  assert.match(annex, /EXACT_PRE_RESPONSE_RENDER_GATE_V1/);
+  assert.match(annex, /containsRawAnnotationBody = false/);
+  assert.match(annex, /property 부재는\s+content safety의 증거가 아니다/);
   const qa = read(P.qa);
   assert.match(qa, /PR #692 is merged at `512bfdb9232a86bf4f7d4cfbc076a9df1c8a7da2`/);
-  assert.match(qa, /Focused behavioral contract suite: 23\/23 passed/);
+  assert.match(qa, /Focused behavioral contract suite: 25\/25 passed/);
+  assert.doesNotMatch(qa, /Focused behavioral contract suite: 23\/23 passed/);
   assert.doesNotMatch(qa, /Focused behavioral contract suite: 16\/16 passed/);
   assert.doesNotMatch(qa, /Focused behavioral contract suite: 12\/12 passed/);
   assert.doesNotMatch(qa, /PR #692 remains open|Repository CI is pending/);
@@ -1004,6 +1138,100 @@ test("cue timing mapping rejects pre-response NONE and preserves sticky ineligib
     farTransfer: false,
     stableD7: false,
   });
+});
+
+test("every BEFORE_RESPONSE render path delegates to one exact gate and rejects all bypasses", () => {
+  const gate = contract.cueExposure.beforeResponseGate;
+  assert.equal(gate.gateId, "EXACT_PRE_RESPONSE_RENDER_GATE_V1");
+  assert.equal(gate.sharedAcrossEveryRenderCapableValidator, true);
+  assert.equal(gate.alternateValidatorBypassAllowed, false);
+  assert.deepEqual(gate.renderCapableValidators, [
+    "CUE_RENDER_REQUEST_VALIDATOR",
+    "CUE_EXPOSURE_EVENT_VALIDATOR",
+  ]);
+
+  const invalidOverrides = [
+    { attemptId: undefined },
+    { attemptId: "" },
+    { learnerPrivateScopeId: undefined },
+    { learnerPrivateScopeId: "" },
+    { attemptResolution: undefined },
+    { attemptResolution: canonicalOpenAttemptResolution({ source: "CLIENT" }) },
+    { attemptResolution: canonicalOpenAttemptResolution({ known: false }) },
+    { attemptResolution: canonicalOpenAttemptResolution({ matchingRecordCount: 0 }) },
+    { attemptResolution: canonicalOpenAttemptResolution({ matchingRecordCount: 2, ambiguous: true }) },
+    { attemptResolution: canonicalOpenAttemptResolution({ crossLearner: true }) },
+    { attemptResolution: canonicalOpenAttemptResolution({ crossAttempt: true }) },
+    { attemptResolution: canonicalOpenAttemptResolution({ mismatched: true }) },
+    { attemptResolution: canonicalOpenAttemptResolution({ stale: true }) },
+    { attemptResolution: canonicalOpenAttemptResolution({ cancelled: true }) },
+    { attemptResolution: canonicalOpenAttemptResolution({ replayed: true }) },
+    { attemptResolution: canonicalOpenAttemptResolution({ closed: true }) },
+    { attemptResolution: canonicalAttemptResolution() },
+    { attemptResolution: canonicalOpenAttemptResolution({ attemptId: "other-attempt" }) },
+    { attemptResolution: canonicalOpenAttemptResolution({ learnerPrivateScopeId: "other-learner" }) },
+    { clientAttemptId: "attempt-1" },
+    { inferLatestAttempt: true },
+    { clientAttemptState: "INDEPENDENT_ATTEMPT_OPEN" },
+    { canonicalAttemptStateSource: "CLIENT" },
+    { confirmation: undefined },
+    { confirmation: cueConfirmation({ source: "CLIENT" }) },
+    { confirmation: cueConfirmation({ serverRecorded: false }) },
+    { confirmation: cueConfirmation({ deliberate: false }) },
+    { confirmation: cueConfirmation({ active: false }) },
+    { confirmation: cueConfirmation({ status: "CANCELLED", cancelled: true }) },
+    { confirmation: cueConfirmation({ stale: true }) },
+    { confirmation: cueConfirmation({ consumed: true }) },
+    { confirmation: cueConfirmation({ singleUse: false }) },
+    { confirmation: cueConfirmation({ matchingRecordCount: 2, ambiguous: true }) },
+    { confirmation: undefined, clientConfirmationBoolean: true },
+    { confirmation: undefined, preselectedConsent: true },
+    { commitSteps: ["CONFIRMATION_CONSUMPTION_COMMITTED"] },
+    { commitSteps: [...contract.cueExposure.preResponseAtomicCommit.orderedSteps].reverse() },
+    { canonicalRecordCommitted: false },
+    { recordFailure: true },
+    { renderSubmitRaceDetected: true },
+  ];
+  for (const field of gate.confirmationBindingFields) {
+    invalidOverrides.push({ confirmation: cueConfirmation({ [field]: `wrong-${field}` }) });
+  }
+
+  for (const overrides of invalidOverrides) {
+    const event = cueEvent({
+      timing: "BEFORE_RESPONSE",
+      assistanceClassification: "LOW",
+      ...overrides,
+    });
+    for (const validate of [validateCueExposureEvent, evaluateCueRender]) {
+      const result = validate(event);
+      assert.equal(result.accepted, false, `${validate.name}: ${result.reason}`);
+      assert.equal(result.mayRenderCueBytes, false, `${validate.name}: ${result.reason}`);
+    }
+  }
+
+  const insufficientFlagOnly = validateCueExposureEvent({
+    timing: "BEFORE_RESPONSE",
+    assistanceClassification: "LOW",
+    derivedFrom: "CANONICAL_ASSISTANCE_EXPOSURE_LEDGER",
+    ordering: "ORDERED",
+    canonicalRecordCommitted: true,
+    renderSubmitRaceDetected: false,
+    attemptId: "attempt-1",
+  });
+  assert.equal(insufficientFlagOnly.accepted, false);
+  assert.equal(insufficientFlagOnly.mayRenderCueBytes, false);
+
+  const validEvent = cueEvent({ timing: "BEFORE_RESPONSE", assistanceClassification: "MATERIAL" });
+  for (const validate of [validateCueExposureEvent, evaluateCueRender]) {
+    const result = validate(validEvent);
+    assert.equal(result.accepted, true, validate.name);
+    assert.equal(result.mayRenderCueBytes, true, validate.name);
+    assert.equal(result.gateId, gate.gateId, validate.name);
+    assert.equal(result.atomicCommitCompletedBeforeRender, true, validate.name);
+    assert.equal(result.canonicalAttemptState, "ASSISTED", validate.name);
+    assert.equal(result.independentEvidenceEligible, false, validate.name);
+    assert.equal(result.orderedSteps.at(-1), "CUE_BYTES_RENDERED", validate.name);
+  }
 });
 
 test("cue absence and after-response-only exposure preserve eligibility but create no evidence", () => {
@@ -1228,6 +1456,73 @@ test("only separate safe candidates remain behind distinct contribution, promoti
   }
 });
 
+test("signals require affirmative same-object validated boolean-false content-safety proofs", () => {
+  const gate = contract.personalAnnotation.signalContentSafetyProofGate;
+  assert.deepEqual(gate.requiredBooleanFalseFields, [
+    "containsRawAnnotationBody",
+    "containsRawBodyPointer",
+    "containsExcerptOrFreeText",
+    "reconstructive",
+    "reconstructiveDerivativeOfRawBody",
+  ]);
+  assert.equal(gate.eachFieldMustBeExplicitlyPresent, true);
+  assert.equal(gate.requiredPrimitiveType, "boolean");
+  assert.equal(gate.requiredValue, false);
+  assert.equal(gate.closedSchemaValidationRequired, true);
+  assert.equal(gate.validationSource, "CANONICAL_CLOSED_SIGNAL_SCHEMA_VALIDATOR");
+  assert.equal(gate.clientValidationAssertionAccepted, false);
+  assert.equal(gate.exactSignalAndRevisionBindingRequired, true);
+  assert.equal(gate.ambiguousProofAllowed, false);
+  assert.equal(gate.crossObjectProofAllowed, false);
+
+  const allHypotheticalGates = {
+    ...contract.authorizationBoundary,
+    trainingSignalContribution: true,
+    clearedContentBankPromotion: true,
+    o5OfflineTraining: true,
+  };
+  const validCandidate = signalCandidate();
+  for (const field of gate.requiredBooleanFalseFields) {
+    assert.equal(Object.hasOwn(validCandidate, field), true, field);
+    assert.equal(typeof validCandidate[field], "boolean", field);
+    assert.equal(validCandidate[field], false, field);
+
+    const omitted = signalCandidate();
+    delete omitted[field];
+    assert.equal(evaluateTrainingCandidate(omitted, allHypotheticalGates).candidateEligible, false, `${field}: omitted`);
+
+    for (const invalidValue of [undefined, null, "false", 0, {}, true]) {
+      const result = evaluateTrainingCandidate(
+        signalCandidate({ [field]: invalidValue }),
+        allHypotheticalGates,
+      );
+      assert.equal(result.candidateEligible, false, `${field}: ${String(invalidValue)}`);
+      assert.equal(result.currentlyAuthorized, false, `${field}: ${String(invalidValue)}`);
+    }
+  }
+  for (const invalidCandidate of [
+    signalCandidate({ contentSafetyProofValidated: false }),
+    signalCandidate({ contentSafetyProofValidated: undefined }),
+    signalCandidate({ contentSafetyProofValidationSource: "CLIENT" }),
+    signalCandidate({ contentSafetyProofAmbiguous: true }),
+    signalCandidate({ contentSafetyProofSignalId: "other-signal" }),
+    signalCandidate({ contentSafetyProofSignalRevisionId: "other-revision" }),
+  ]) {
+    const result = evaluateTrainingCandidate(invalidCandidate, allHypotheticalGates);
+    assert.equal(result.candidateEligible, false, result.reason);
+    assert.equal(result.currentlyAuthorized, false, result.reason);
+  }
+
+  assert.deepEqual(evaluateTrainingCandidate(validCandidate, allHypotheticalGates), {
+    candidateEligible: true,
+    currentlyAuthorized: true,
+    reason: "AUTHORIZED_BY_DISTINCT_FUTURE_GATES",
+  });
+  for (const key of ["trainingSignalContribution", "clearedContentBankPromotion", "o5OfflineTraining"]) {
+    assert.equal(contract.authorizationBoundary[key], false, key);
+  }
+});
+
 test("signals require exact-purpose consent and finite purpose-bound retention", () => {
   const gate = contract.personalAnnotation.signalPurposeGate;
   assert.equal(gate.exactPurposeConsentRequired, true);
@@ -1318,8 +1613,11 @@ test("valid confirmation commits exact assisted transition before render and rac
     mayRenderCueBytes: true,
     canonicalAttemptState: "ASSISTED",
     independentEvidenceEligible: false,
+    positiveLearningEvidence: false,
+    atomicCommitCompletedBeforeRender: true,
+    gateId: "EXACT_PRE_RESPONSE_RENDER_GATE_V1",
     orderedSteps: [
-      "CONFIRMATION_RECORD_COMMITTED",
+      "CONFIRMATION_CONSUMPTION_COMMITTED",
       "CUE_EXPOSURE_RECORD_COMMITTED",
       "ATTEMPT_STATE_TRANSITIONED_TO_ASSISTED",
       "INDEPENDENT_EVIDENCE_INVALIDATED",

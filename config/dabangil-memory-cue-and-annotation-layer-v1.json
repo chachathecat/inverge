@@ -477,6 +477,7 @@
       "SEPARATE_NON_RECONSTRUCTIVE_SIGNAL": [
         "SEPARATE_OBJECT_IDENTITY",
         "CLOSED_NON_RECONSTRUCTIVE_VALUE_SCHEMA",
+        "AFFIRMATIVE_SAME_OBJECT_BOOLEAN_FALSE_CONTENT_SAFETY_PROOF",
         "NO_RAW_BODY",
         "NO_RAW_BODY_POINTER",
         "NO_EXCERPT_OR_FREE_TEXT",
@@ -493,6 +494,27 @@
         "PROVENANCE_REVIEWED",
         "NOT_RENAMED_ALIASED_OR_DIRECTLY_PROMOTED_RAW_ANNOTATION_BODY"
       ]
+    },
+    "signalContentSafetyProofGate": {
+      "appliesTo": "SEPARATE_NON_RECONSTRUCTIVE_SIGNAL",
+      "proofLocation": "SAME_VALIDATED_SIGNAL_CANDIDATE_OBJECT",
+      "requiredBooleanFalseFields": [
+        "containsRawAnnotationBody",
+        "containsRawBodyPointer",
+        "containsExcerptOrFreeText",
+        "reconstructive",
+        "reconstructiveDerivativeOfRawBody"
+      ],
+      "eachFieldMustBeExplicitlyPresent": true,
+      "requiredPrimitiveType": "boolean",
+      "requiredValue": false,
+      "closedSchemaValidationRequired": true,
+      "validationSource": "CANONICAL_CLOSED_SIGNAL_SCHEMA_VALIDATOR",
+      "clientValidationAssertionAccepted": false,
+      "exactSignalAndRevisionBindingRequired": true,
+      "ambiguousProofAllowed": false,
+      "crossObjectProofAllowed": false,
+      "missingUndefinedNullNonBooleanTrueAmbiguousCrossObjectOrUnvalidatedBehavior": "FAIL_CLOSED_CANDIDATE_INELIGIBLE"
     },
     "signalPurposeGate": {
       "appliesTo": "SEPARATE_NON_RECONSTRUCTIVE_SIGNAL",
@@ -776,11 +798,44 @@
       "SUBMITTED"
     ],
     "beforeResponseGate": {
+      "gateId": "EXACT_PRE_RESPONSE_RENDER_GATE_V1",
+      "sharedAcrossEveryRenderCapableValidator": true,
+      "renderCapableValidators": [
+        "CUE_RENDER_REQUEST_VALIDATOR",
+        "CUE_EXPOSURE_EVENT_VALIDATOR"
+      ],
+      "everyBeforeResponseAuthorizationMustDelegateToGateId": "EXACT_PRE_RESPONSE_RENDER_GATE_V1",
+      "alternateValidatorBypassAllowed": false,
+      "alternateValidatorBypassBehavior": "FAIL_CLOSED_NO_CUE_BYTES",
+      "nonNullExactAttemptIdRequired": true,
+      "nonNullExactLearnerPrivateScopeIdRequired": true,
+      "attemptResolutionSource": "CANONICAL_SERVER_ATTEMPT_LEDGER",
+      "attemptBindingFields": [
+        "attemptId",
+        "learnerPrivateScopeId"
+      ],
+      "invalidAttemptReferenceStates": [
+        "MISSING",
+        "EMPTY",
+        "UNKNOWN",
+        "AMBIGUOUS",
+        "CROSS_LEARNER",
+        "CROSS_ATTEMPT",
+        "SUBMITTED",
+        "CLOSED",
+        "STALE",
+        "CANCELLED",
+        "REPLAYED",
+        "MISMATCHED",
+        "CLIENT_INFERRED"
+      ],
+      "invalidAttemptReferenceBehavior": "FAIL_CLOSED_NO_CUE_BYTES",
       "eligibleCanonicalAttemptState": "INDEPENDENT_ATTEMPT_OPEN",
       "explicitDeliberateLearnerConfirmationRequired": true,
       "confirmationRecordSource": "CANONICAL_SERVER_CONFIRMATION_LEDGER",
       "confirmationBindingFields": [
         "attemptId",
+        "learnerPrivateScopeId",
         "cueId",
         "cueRevisionId",
         "requestId"
@@ -789,6 +844,9 @@
       "singleUse": true,
       "exactMatchingRecordCount": 1,
       "acceptedConfirmationState": "CONFIRMED",
+      "confirmationMustBeServerRecorded": true,
+      "confirmationMustBeDeliberate": true,
+      "confirmationMustBeActive": true,
       "clientBooleanSufficient": false,
       "preselectedConsentSufficient": false,
       "missingCancelledStaleReplayedMismatchedOrAmbiguousBehavior": "FAIL_CLOSED_NO_CUE_BYTES",
@@ -797,7 +855,7 @@
     "preResponseAtomicCommit": {
       "mode": "ATOMIC_ALL_OR_NOTHING",
       "orderedSteps": [
-        "CONFIRMATION_RECORD_COMMITTED",
+        "CONFIRMATION_CONSUMPTION_COMMITTED",
         "CUE_EXPOSURE_RECORD_COMMITTED",
         "ATTEMPT_STATE_TRANSITIONED_TO_ASSISTED",
         "INDEPENDENT_EVIDENCE_INVALIDATED"

@@ -412,13 +412,19 @@ D+7 stable / timed: HIDDEN
 - 답변 전에 decomposition·memory gloss·prompt 중 어떤 단서든 표시하면 exposure다.
 - `CueExposureEvent`는 별도 저장소가 아니라 canonical Assistance/Exposure ledger event를 재사용한다.
 - `BEFORE_RESPONSE`는 canonical server attempt ledger가 `INDEPENDENT_ATTEMPT_OPEN`으로
-  판정한 exact attempt에만 허용하며, client가 보낸 attempt state는 신뢰하지 않는다.
-- learner가 해당 attempt·cue·cue revision·단일 request에 정확히 묶인 deliberate confirmation을
-  명시적으로 완료해야 한다. client boolean이나 미리 선택된 consent는 confirmation이 아니다.
-- confirmation record, cue exposure record, `ASSISTED` 전환, independent-evidence invalidation은
+  판정한 non-null exact attempt와 learner scope 한 건에만 허용하며, client가 보낸 attempt state나
+  latest-attempt 추론은 신뢰하지 않는다.
+- learner가 해당 learner·attempt·cue·cue revision·단일 request에 정확히 묶인 active deliberate
+  server-recorded single-use confirmation을 명시적으로 완료해야 한다. client boolean이나 미리 선택된
+  consent는 confirmation이 아니다.
+- cue render request validator와 별도 cue exposure event validator를 포함해 `BEFORE_RESPONSE` byte를
+  허용할 수 있는 모든 path는 동일 `EXACT_PRE_RESPONSE_RENDER_GATE_V1`에 위임한다. alternate route나
+  약한 두 번째 policy는 금지한다.
+- confirmation consumption, cue exposure record, `ASSISTED` 전환, independent-evidence invalidation은
   하나의 all-or-nothing transaction으로 cue byte 렌더 전에 순서대로 commit되어야 한다.
-- missing·cancelled·stale·replayed·mismatched·ambiguous confirmation, partial commit, record failure,
-  render/submit race는 모두 fail closed하며 cue byte를 전혀 렌더하지 않는다.
+- missing·empty·unknown·ambiguous·cross-learner·cross-attempt·submitted·closed·stale·cancelled·replayed·
+  mismatched·client-inferred attempt reference, invalid confirmation, partial commit, record failure,
+  inconsistent ledger state 또는 render/submit race는 모두 fail closed하며 cue byte를 전혀 렌더하지 않는다.
 - 이미 response가 제출된 canonical attempt는 `AFTER_RESPONSE`만 허용한다. 이 variant는 non-null
   exact `attemptId`와 `learnerPrivateScopeId`가 canonical server attempt ledger의 바로 그
   `SUBMITTED` attempt 한 건에 일치한 뒤에만 렌더한다. client 입력이나 latest-attempt 추론은 금지한다.
@@ -458,6 +464,9 @@ type CueExposureEventV1 = CueExposureEventBaseV1 & (
       timing: "BEFORE_RESPONSE";
       assistanceClassification: "LOW" | "MATERIAL";
       attemptId: string;
+      attemptBinding: ExactCanonicalIndependentOpenAttemptBindingV1;
+      confirmation: PreResponseCueConfirmationV1;
+      preResponseRenderGateId: "EXACT_PRE_RESPONSE_RENDER_GATE_V1";
       independentEvidenceEligible: false;
     }
   | {
@@ -474,6 +483,21 @@ type CueExposureEventV1 = CueExposureEventBaseV1 & (
       independentEvidenceEligible: false;
     }
 );
+
+type ExactCanonicalIndependentOpenAttemptBindingV1 = {
+  source: "CANONICAL_SERVER_ATTEMPT_LEDGER";
+  attemptId: string;
+  learnerPrivateScopeId: string;
+  canonicalAttemptState: "INDEPENDENT_ATTEMPT_OPEN";
+  matchingRecordCount: 1;
+  known: true;
+  submitted: false;
+  closed: false;
+  stale: false;
+  cancelled: false;
+  replayed: false;
+  ambiguous: false;
+};
 
 type ExactCanonicalSubmittedAttemptBindingV1 = {
   source: "CANONICAL_SERVER_ATTEMPT_LEDGER";
@@ -494,26 +518,45 @@ type PreResponseCueConfirmationV1 = {
   source: "CANONICAL_SERVER_CONFIRMATION_LEDGER";
   status: "CONFIRMED";
   attemptId: string;
+  learnerPrivateScopeId: string;
   cueId: string;
   cueRevisionId: string;
   requestId: string;
+  serverRecorded: true;
+  deliberate: true;
+  active: true;
   singleUse: true;
+  matchingRecordCount: 1;
+  stale: false;
+  consumed: false;
+  ambiguous: false;
 };
 
 const PRE_RESPONSE_RENDER_TRANSACTION_V1 = [
-  "CONFIRMATION_RECORD_COMMITTED",
+  "CONFIRMATION_CONSUMPTION_COMMITTED",
   "CUE_EXPOSURE_RECORD_COMMITTED",
   "ATTEMPT_STATE_TRANSITIONED_TO_ASSISTED",
   "INDEPENDENT_EVIDENCE_INVALIDATED",
   "CUE_BYTES_RENDERED",
 ] as const;
+
+const PRE_RESPONSE_RENDER_GATE_V1 = {
+  gateId: "EXACT_PRE_RESPONSE_RENDER_GATE_V1",
+  renderCapableValidators: [
+    "CUE_RENDER_REQUEST_VALIDATOR",
+    "CUE_EXPOSURE_EVENT_VALIDATOR",
+  ],
+  alternateValidatorBypassAllowed: false,
+} as const;
 ```
 
 - timing과 assistance classification은 canonical ledger가 파생하며 untrusted client 값을 받지 않는다.
 - attempt state는 `CANONICAL_SERVER_ATTEMPT_LEDGER`에서 파생한다. `BEFORE_RESPONSE`는 exact
-  `INDEPENDENT_ATTEMPT_OPEN`과 exact single-use confirmation이 모두 없으면 허용하지 않는다.
-- confirmation은 attempt·cue·cue revision·request 네 필드가 모두 정확히 일치하는 단 하나의
-  non-cancelled, fresh, unused server record여야 한다. 단순 client boolean·preselected consent는 부족하다.
+  learner/attempt resolution의 `INDEPENDENT_ATTEMPT_OPEN`과 exact single-use confirmation이 모두 없으면
+  허용하지 않으며, 모든 render-capable validator가 위 shared gate에 위임해야 한다.
+- confirmation은 learner·attempt·cue·cue revision·request 다섯 필드가 모두 정확히 일치하는 단 하나의
+  active, deliberate, server-recorded, non-cancelled, fresh, unused record여야 한다. 단순 client
+  boolean·preselected consent는 부족하다.
 - `BEFORE_RESPONSE + NONE`은 invalid다. `NONE`은 해당 attempt에 pre-response cue exposure가
   하나도 없었음을 뜻한다.
 - attempt sequence에 pre-response event가 하나라도 있으면 independent retrieval, far transfer,
@@ -524,7 +567,7 @@ const PRE_RESPONSE_RENDER_TRANSACTION_V1 = [
   far transfer는 distinct eligible non-same-representation task와 submitted/evaluated result,
   stable D+7은 completed D+7·`HIDDEN`·all-surface byte absence·non-same representation·scoring conflict 0
   record를 각각 요구한다. exposure event는 이 affirmative evidence를 대체하지 않는다.
-- confirmation → exposure → `ASSISTED` → independent-evidence invalidation의 exact transaction이
+- confirmation consumption → exposure → `ASSISTED` → independent-evidence invalidation의 exact transaction이
   모두 commit된 다음에만 cue byte를 렌더한다. partial commit, ordering ambiguity, ledger record
   failure 또는 render/submit race는 rollback 후 fail closed하며 cue byte와 independent credit 모두 0이다.
 - canonical state가 `SUBMITTED`이면 `BEFORE_RESPONSE`는 거부하고 `AFTER_RESPONSE`만 허용한다.
@@ -670,6 +713,22 @@ contribution gate, Cleared Content Bank promotion gate와 exact-purpose O5 gate�
 않는다. 이 문서는 그 세 gate 중 어느 것도 승인하지 않으며 모든 authorization은 false다.
 
 `SEPARATE_NON_RECONSTRUCTIVE_SIGNAL`에는 위 세 gate와 별도로 다음 두 record가 모두 필요하다.
+
+그보다 먼저, 같은 validated signal candidate object에 아래 다섯 property가 각각 명시적으로 존재하고
+primitive boolean이며 정확히 `false`여야 한다.
+
+```text
+containsRawAnnotationBody = false
+containsRawBodyPointer = false
+containsExcerptOrFreeText = false
+reconstructive = false
+reconstructiveDerivativeOfRawBody = false
+```
+
+어느 하나라도 missing·undefined·null·non-boolean·`true`이거나 proof가 ambiguous·cross-object·
+unvalidated이면 candidate eligibility는 fail closed다. validation source는
+`CANONICAL_CLOSED_SIGNAL_SCHEMA_VALIDATOR`여야 하며 client assertion은 받지 않는다. property 부재는
+content safety의 증거가 아니다.
 
 - `CANONICAL_VERSIONED_CONSENT_OPT_OUT_LEDGER`의 active exact-purpose consent. consent는 exact
   `signalId`·`signalRevisionId`·`purposeId`·`o5ScopeId`에 묶여야 한다.
@@ -909,8 +968,12 @@ submitted_attempt_rendered_as_before_response = 0
 - MCAL never becomes a second definition authority.
 - Hanja/root provenance and fail-closed statuses exist.
 - canonical Assistance/Exposure ledger reuse, atomic pre-render recording and HIDDEN byte absence exist.
+- every render-capable `BEFORE_RESPONSE` validator delegates to one exact gate, and its exact
+  learner/attempt resolution, confirmation consumption and `ASSISTED` transition finish before render.
 - semantic highlight role/budget/accessibility and revision-bound typed anchors exist.
 - personal annotation remains last and private.
+- every signal content-safety field is present on the same validated object as boolean `false`; missing,
+  undefined, null, non-boolean, true, ambiguous, cross-object and unvalidated proofs fail closed.
 - Portable Core owns interfaces only.
 - MCAL-1 through MCAL-4 remain unauthorized.
 - all authorization values remain false.
