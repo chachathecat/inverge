@@ -331,6 +331,38 @@ type AnnotationAnchorBaseV1<
   status: "ACTIVE" | "HELD" | "SUPERSEDED";
 };
 
+type PrivateAnchorOwnerBindingRefV1 = `pob_${string}`;
+type VaultLocalTargetRefV1 = `vault_${string}`;
+
+type AuthoritativePrivateAnchorOwnerBoundaryV1 = {
+  authenticatedLearnerId: string;
+  tenantScopeId: string;
+  resolution: {
+    source: "CANONICAL_SERVER_PRIVATE_ANCHOR_OWNER_BOUNDARY";
+    serverSide: true;
+    authoritative: true;
+    resolved: true;
+    matchingRecordCount: 1;
+    ambiguous: false;
+    conflicting: false;
+    stale: false;
+    replayed: false;
+    clientInferred: false;
+    crossLearner: false;
+    crossTenant: false;
+    ownerBindingRef: PrivateAnchorOwnerBindingRefV1;
+    authenticatedLearnerId: string;
+    tenantScopeId: string;
+    anchorId: string;
+    kind: "LEARNER_ATTEMPT_RANGE" | "PRIVATE_SOURCE_RANGE";
+    vaultLocalTargetRef: VaultLocalTargetRefV1;
+    targetRevisionId: string;
+    targetDigest: string;
+    targetDigestScope: "VAULT_LOCAL_INTEGRITY_METADATA_ONLY";
+    bodyLocatorPolicy: "VAULT_LOCAL_ONLY";
+  };
+};
+
 type AnnotationAnchorV1 =
   | AnnotationAnchorBaseV1<"CONCEPT_NODE", "SHARED_OWNED", "NONE", "VESG_CONCEPT_NODE">
   | AnnotationAnchorBaseV1<"FORMULA_NODE", "SHARED_OWNED", "NONE", "VESG_FORMULA_NODE">
@@ -362,7 +394,8 @@ type AnnotationAnchorV1 =
       "VAULT_LOCAL_ONLY",
       "LEARNER_ATTEMPT_REVISION_RANGE"
     > & {
-      ownerBindingRef: string;
+      ownerBindingRef: PrivateAnchorOwnerBindingRefV1;
+      vaultLocalTargetRef: VaultLocalTargetRefV1;
       targetDigestScope: "VAULT_LOCAL_INTEGRITY_METADATA_ONLY";
       nonVaultProjection: "BODYLESS_RECEIPT_ONLY";
     })
@@ -372,7 +405,8 @@ type AnnotationAnchorV1 =
       "VAULT_LOCAL_ONLY",
       "PRIVATE_SOURCE_REVISION_RANGE"
     > & {
-      ownerBindingRef: string;
+      ownerBindingRef: PrivateAnchorOwnerBindingRefV1;
+      vaultLocalTargetRef: VaultLocalTargetRefV1;
       targetDigestScope: "VAULT_LOCAL_INTEGRITY_METADATA_ONLY";
       nonVaultProjection: "BODYLESS_RECEIPT_ONLY";
     });
@@ -399,6 +433,16 @@ type PrivateAnchorBodylessReceiptV1 = {
 - 제3자 교재의 exact text range, OCR, 문제문장, 해설표현은 개인 vault 밖으로 나가지 않는다.
 - `LEARNER_ATTEMPT_RANGE`와 `PRIVATE_SOURCE_RANGE`는 owner-bound `LEARNER_PRIVATE` 및
   `VAULT_LOCAL_ONLY`만 허용한다. target digest는 vault-local integrity metadata일 뿐이다.
+- 두 private kind의 `ownerBindingRef`와 `vaultLocalTargetRef`는 각각 exact primitive string이며
+  `^pob_[A-Za-z0-9][A-Za-z0-9._:-]{2,123}$`,
+  `^vault_[A-Za-z0-9][A-Za-z0-9._:-]{2,121}$` 형식이어야 한다. validation은 candidate가 보낸
+  owner boolean·equality·resolution assertion을 받지 않고, 별도 trusted parameter인
+  `CANONICAL_SERVER_PRIVATE_ANCHOR_OWNER_BOUNDARY`에서 server-side authoritative resolution 한 건을
+  요구한다. 이 closed resolution은 authenticated learner와 tenant scope가 정확히 일치하고,
+  `ownerBindingRef`·anchor ID/kind·vault-local target·target revision/digest/scope·locator를 field-for-field
+  bind해야 한다. missing·null·empty·whitespace·malformed·wrong-type·foreign-owner·cross-learner·
+  cross-tenant·ambiguous·conflicting·stale·replayed·unresolved·client-inferred 또는 extra-field resolution은
+  모두 fail closed한다.
 - 두 private kind의 non-vault projection은 위 네 필드만 가진 bodyless receipt다. excerpt,
   offset, body/attempt locator, attempt reference, private target digest, anchor/receipt identifier를
   포함하지 않으며 shared graph·analytics·logs·cache index·cross-user 또는 Portable Core의
@@ -483,6 +527,7 @@ type CueExposureEventBaseV1 = CanonicalAssistanceExposureEventV1 & {
   stateShown: CuePresentationStateV1;
   shownAt: string;
   derivedFrom: "CANONICAL_ASSISTANCE_EXPOSURE_LEDGER";
+  canonicalRecordCommitted: true;
 };
 
 type CueExposureEventV1 = CueExposureEventBaseV1 & (
@@ -618,8 +663,23 @@ const CANONICAL_REVIEW_ONLY_RENDER_GATE_V1 = {
   ],
   callerLabelOrBooleanSufficient: false,
 } as const;
+
+type CanonicalExposureHistoryV1 = {
+  source: "CANONICAL_ASSISTANCE_EXPOSURE_LEDGER";
+  complete: true;
+  preResponseCueExposureCount: number; // exact nonnegative safe integer
+  preResponseCueExposureCountAuthoritative: true;
+  preResponseCueExposureCountAmbiguous: false;
+  preResponseCueExposureCountConflicting: false;
+  preResponseCueExposureCountStale: false;
+  preResponseCueExposureCountClientInferred: false;
+};
 ```
 
+- 모든 render-capable exposure-event variant(`BEFORE_RESPONSE`, `AFTER_RESPONSE`, `REVIEW_ONLY`)는
+  `canonicalRecordCommitted === true`를 요구한다. truthiness는 금지하며 missing·undefined·null·false·
+  string(`"true"`, `"false"` 포함)·number·object·array·ambiguous 또는 caller-inferred commit state는
+  cue byte 0으로 fail closed한다.
 - timing과 assistance classification은 canonical ledger가 파생하며 untrusted client 값을 받지 않는다.
 - attempt state는 `CANONICAL_SERVER_ATTEMPT_LEDGER`에서 파생한다. `BEFORE_RESPONSE`는 exact
   learner/attempt resolution의 `INDEPENDENT_ATTEMPT_OPEN`과 exact single-use confirmation이 모두 없으면
@@ -633,6 +693,15 @@ const CANONICAL_REVIEW_ONLY_RENDER_GATE_V1 = {
   stable D+7 evidence는 모두 부적격이며 뒤의 event가 이를 independent로 복구할 수 없다.
 - pre-response cue가 없다는 record는 eligibility만 보존한다. empty event list, cue-free record 또는
   `AFTER_RESPONSE` event만으로는 positive learning evidence가 생기지 않는다.
+- independent retrieval·far transfer·stable D+7 credit 전에 canonical exposure history의
+  `preResponseCueExposureCount`가 exact primitive number, nonnegative safe integer이고 authoritative·
+  non-ambiguous·non-conflicting·fresh·non-client-inferred여야 한다. 정확히 0일 때에만 다른 affirmative
+  evidence가 독립적으로 통과할 자격을 보존한다. 0보다 크면 세 credit 모두 거부하고, missing·null·
+  boolean·string·fractional·negative·NaN·infinite·unsafe integer·object·array·stale·ambiguous·conflicting·
+  client/caller-inferred count는 positive evidence 0으로 fail closed한다. exact 0 자체는 response,
+  retrieval, transfer 또는 D+7 evidence를 만들지 않는다. far-transfer와 stable-D+7 record가 count copy를
+  가지면 authoritative history와 exact match해야 하며 누락·invalid·불일치 copy도 conflicting history로
+  fail closed한다.
 - positive independent retrieval은 별도의 canonical submitted-and-evaluated response record,
   far transfer는 distinct eligible non-same-representation task와 submitted/evaluated result,
   stable D+7은 completed D+7·`HIDDEN`·all-surface byte absence·non-same representation·scoring conflict 0
@@ -789,7 +858,11 @@ resolved receipt여야 한다. 세 receipt는 서로 다른 `receiptId`를 가�
 cross-revision·cross-purpose·cross-scope·ambiguous·replayed·stale·revoked·independently unresolved
 receipt는 authorization false로 fail closed한다. 이 문서는 그 세 gate 중 어느 것도 승인하지 않으며
 canonical authorization flag는 모두 false다. 테스트의 future receipt는 모의 상태일 뿐 canonical
-authorization을 변경하지 않는다.
+authorization을 변경하지 않는다. structurally valid하고 candidate-bound인 receipt set도 미래 binding
+contract를 만족할 수 있음을 증명할 뿐, 현재 training·offline training 또는 다른 사용을 승인하지 않는다.
+이 계약 아래 모든 canonical authorization flag와 `currentlyAuthorized`는 정확히 `false`이며,
+mock·fixture·hypothetical/future context가 이를 override할 수 없다. 현재 사용 activation은 canonical
+authorization boundary를 바꾸는 별도 Owner 승인 변경을 요구한다.
 
 `SEPARATE_NON_RECONSTRUCTIVE_SIGNAL`에는 위 세 gate와 별도로 다음 두 record가 모두 필요하다.
 
@@ -1045,6 +1118,7 @@ collapsed_cue_bytes_before_atomic_exposure = 0
 hidden_cue_bytes_in_dom_ssr_accessibility_prefetch_cache_or_api = 0
 semantic_highlight_without_revision_bound_typed_anchor = 0
 anchor_missing_or_invalid_required_binding = 0
+private_anchor_without_exact_authoritative_owner_binding = 0
 cue_reveal_without_exposure_event = 0
 cue_view_promotes_independent_mastery = 0
 d7_stable_with_visible_cue = 0
@@ -1063,6 +1137,7 @@ raw_personal_annotation_body_directly_promoted_to_cleared_content_bank = 0
 reconstructive_annotation_signal_used_as_training_candidate = 0
 training_candidate_without_distinct_contribution_promotion_o5_gates = 0
 training_candidate_without_exact_candidate_bound_approval_receipts = 0
+mock_or_hypothetical_receipt_authorizes_current_training = 0
 training_decision_without_trusted_server_evaluation_time = 0
 personal_editor_before_cpf_privacy_export_delete_gates = 0
 mcal_runtime_before_core_loop_acceptance = 0
@@ -1072,6 +1147,8 @@ pre_response_cue_without_canonical_independent_attempt_open = 0
 pre_response_cue_without_exact_single_use_confirmation = 0
 pre_response_cue_before_atomic_assisted_transition = 0
 pre_response_cue_after_partial_commit_or_race = 0
+render_capable_exposure_event_without_exact_boolean_committed_record = 0
+independent_credit_without_exact_canonical_pre_response_exposure_count = 0
 submitted_attempt_rendered_as_before_response = 0
 review_only_without_canonical_server_resolution = 0
 review_only_with_matching_open_independent_attempt = 0

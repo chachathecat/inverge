@@ -46,7 +46,8 @@ function validAnchor(overrides = {}) {
     ...overrides,
   };
   if (["LEARNER_ATTEMPT_RANGE", "PRIVATE_SOURCE_RANGE"].includes(kind)) {
-    candidate.ownerBindingRef ??= "owner-scope-local";
+    candidate.ownerBindingRef ??= "pob_owner_scope_local_1";
+    candidate.vaultLocalTargetRef ??= "vault_target_1";
     candidate.targetDigestScope ??= "VAULT_LOCAL_INTEGRITY_METADATA_ONLY";
   }
   if (kind === "QUESTION_UNIT") candidate.rightsState ??= candidate.domain;
@@ -54,6 +55,115 @@ function validAnchor(overrides = {}) {
     candidate.itemRightsManifestId ??= "item-rights-manifest-1";
   }
   return candidate;
+}
+
+function canonicalPrivateOwnerBoundary(candidate, overrides = {}) {
+  const authenticatedLearnerId = overrides.authenticatedLearnerId ?? "learner-1";
+  const tenantScopeId = overrides.tenantScopeId ?? "tenant-1";
+  const baseResolution = {
+    source: "CANONICAL_SERVER_PRIVATE_ANCHOR_OWNER_BOUNDARY",
+    serverSide: true,
+    authoritative: true,
+    resolved: true,
+    matchingRecordCount: 1,
+    ambiguous: false,
+    conflicting: false,
+    stale: false,
+    replayed: false,
+    clientInferred: false,
+    crossLearner: false,
+    crossTenant: false,
+    ownerBindingRef: candidate.ownerBindingRef,
+    authenticatedLearnerId,
+    tenantScopeId,
+    anchorId: candidate.anchorId,
+    kind: candidate.kind,
+    vaultLocalTargetRef: candidate.vaultLocalTargetRef,
+    targetRevisionId: candidate.targetRevisionId,
+    targetDigest: candidate.targetDigest,
+    targetDigestScope: candidate.targetDigestScope,
+    bodyLocatorPolicy: candidate.bodyLocatorPolicy,
+  };
+  const resolution = Object.hasOwn(overrides, "resolution")
+    ? overrides.resolution == null
+      ? overrides.resolution
+      : { ...baseResolution, ...overrides.resolution }
+    : baseResolution;
+  return {
+    authenticatedLearnerId,
+    tenantScopeId,
+    resolution,
+    ...Object.fromEntries(
+      Object.entries(overrides).filter(([key]) => ![
+        "authenticatedLearnerId",
+        "tenantScopeId",
+        "resolution",
+      ].includes(key)),
+    ),
+  };
+}
+
+function validatePrivateAnchorOwnerBinding(candidate, ownerBoundary, anchorContract) {
+  const gate = anchorContract.privateOwnerBindingGate;
+  const fail = (reason) => ({ accepted: false, disposition: "REJECT", reason });
+  for (const field of gate.callerAssertionFieldsForbidden) {
+    if (Object.hasOwn(candidate, field)) return fail(`CALLER_OWNER_ASSERTION_${field}_FORBIDDEN`);
+  }
+  for (const field of gate.candidateConditionalRequiredFields) {
+    if (!Object.hasOwn(candidate, field)) return fail(`PRIVATE_OWNER_BINDING_${field}_MISSING`);
+    const schema = gate.candidateFieldSchemas[field];
+    const value = candidate[field];
+    const valid = schema.type === "string"
+      ? typeof value === "string"
+        && value.trim() === value
+        && new RegExp(schema.pattern).test(value)
+      : schema.type === "literal" && value === schema.value;
+    if (!valid) return fail(`PRIVATE_OWNER_BINDING_${field}_INVALID`);
+  }
+  const contextSchema = gate.authenticatedContextSchema;
+  if (
+    !ownerBoundary
+    || typeof ownerBoundary !== "object"
+    || Array.isArray(ownerBoundary)
+    || JSON.stringify(sorted(Object.keys(ownerBoundary)))
+      !== JSON.stringify(sorted(contextSchema.requiredFields))
+  ) return fail("AUTHORITATIVE_OWNER_BOUNDARY_INVALID");
+  const idPattern = new RegExp(contextSchema.idPattern);
+  for (const field of gate.authenticatedScopeFields) {
+    const value = ownerBoundary[field];
+    if (typeof value !== "string" || value.trim() !== value || !idPattern.test(value)) {
+      return fail(`AUTHENTICATED_OWNER_SCOPE_${field}_INVALID`);
+    }
+  }
+  const resolution = ownerBoundary.resolution;
+  const resolutionSchema = gate.resolutionSchema;
+  if (
+    !resolution
+    || typeof resolution !== "object"
+    || Array.isArray(resolution)
+    || JSON.stringify(sorted(Object.keys(resolution)))
+      !== JSON.stringify(sorted(resolutionSchema.requiredFields))
+  ) return fail("PRIVATE_OWNER_RESOLUTION_SCHEMA_INVALID");
+  if (
+    resolution.source !== gate.resolutionSource
+    || resolution.matchingRecordCount !== gate.exactMatchingRecordCount
+  ) return fail("PRIVATE_OWNER_RESOLUTION_SOURCE_OR_COUNT_INVALID");
+  for (const [field, requiredValue] of Object.entries(gate.requiredBooleanStates)) {
+    if (resolution[field] !== requiredValue) {
+      return fail(`PRIVATE_OWNER_RESOLUTION_${field}_INVALID`);
+    }
+  }
+  for (const field of gate.authenticatedScopeFields) {
+    if (resolution[field] !== ownerBoundary[field]) {
+      return fail(`PRIVATE_OWNER_RESOLUTION_${field}_MISMATCH`);
+    }
+  }
+  for (const field of gate.exactPrivateAnchorAndVaultBindingFields) {
+    if (resolution[field] !== candidate[field]) {
+      return fail(`PRIVATE_OWNER_RESOLUTION_${field}_MISMATCH`);
+    }
+  }
+  return { accepted: true };
 }
 
 function anchorPolicyIntegrity(anchorContract = contract.anchors) {
@@ -72,7 +182,7 @@ function anchorPolicyIntegrity(anchorContract = contract.anchors) {
   return { valid: true };
 }
 
-function validateAnchor(candidate, anchorContract = contract.anchors) {
+function validateAnchor(candidate, anchorContract = contract.anchors, ownerBoundary) {
   const integrity = anchorPolicyIntegrity(anchorContract);
   if (!integrity.valid) return { accepted: false, disposition: "REJECT", reason: integrity.reason };
 
@@ -138,17 +248,26 @@ function validateAnchor(candidate, anchorContract = contract.anchors) {
   if (policy.itemLevelRightsRequired && !candidate.itemRightsManifestId) {
     return { accepted: false, disposition: "REJECT", reason: "ITEM_RIGHTS_REQUIRED" };
   }
-  if (policy.ownerBound && !candidate.ownerBindingRef) {
-    return { accepted: false, disposition: "REJECT", reason: "OWNER_BINDING_REQUIRED" };
-  }
   if (policy.targetDigestPolicy && candidate.targetDigestScope !== policy.targetDigestPolicy) {
     return { accepted: false, disposition: "REJECT", reason: "PRIVATE_DIGEST_SCOPE_CONFLICT" };
+  }
+  if (policy.ownerBound) {
+    const ownerValidation = validatePrivateAnchorOwnerBinding(
+      candidate,
+      ownerBoundary,
+      anchorContract,
+    );
+    if (!ownerValidation.accepted) return ownerValidation;
   }
   return { accepted: true, policy };
 }
 
-function projectPrivateAnchorOutsideVault(candidate, destination = "PRIVATE_METADATA_RECEIPT") {
-  const validation = validateAnchor(candidate);
+function projectPrivateAnchorOutsideVault(
+  candidate,
+  destination = "PRIVATE_METADATA_RECEIPT",
+  ownerBoundary,
+) {
+  const validation = validateAnchor(candidate, contract.anchors, ownerBoundary);
   if (!validation.accepted) return validation;
   const projection = validation.policy.nonVaultProjection;
   if (!projection) return { accepted: false, reason: "NON_PRIVATE_ANCHOR" };
@@ -528,6 +647,9 @@ function authorizeExactPreResponseCueRender(subject) {
 
 function validateCueExposureEvent(event) {
   const cue = contract.cueExposure;
+  if (event.canonicalRecordCommitted !== true) {
+    return { accepted: false, mayRenderCueBytes: false, reason: cue.recordFailureBehavior };
+  }
   if (
     event.timing === "REVIEW_ONLY"
     || event.reviewOnlyResolution?.canonicalTiming === "REVIEW_ONLY"
@@ -540,9 +662,6 @@ function validateCueExposureEvent(event) {
   }
   if (event.renderSubmitRaceDetected) {
     return { accepted: false, mayRenderCueBytes: false, reason: cue.renderSubmitRaceBehavior };
-  }
-  if (!event.canonicalRecordCommitted) {
-    return { accepted: false, mayRenderCueBytes: false, reason: cue.recordFailureBehavior };
   }
   const allowed = cue.closedTimingClassificationMap[event.timing];
   if (!allowed || !allowed.includes(event.assistanceClassification)) {
@@ -579,6 +698,11 @@ function canonicalExposureHistory(overrides = {}) {
     partialCommit: false,
     ambiguousRecord: false,
     preResponseCueExposureCount: 0,
+    preResponseCueExposureCountAuthoritative: true,
+    preResponseCueExposureCountAmbiguous: false,
+    preResponseCueExposureCountConflicting: false,
+    preResponseCueExposureCountStale: false,
+    preResponseCueExposureCountClientInferred: false,
     ...overrides,
   };
 }
@@ -681,8 +805,31 @@ function evaluateAttemptEvidence(events, evidence = {}) {
   ) {
     return noPositiveEvidence({ failClosed: true, eligibilityPreserved: false });
   }
+  const countGate = contract.cueExposure.learningEvidenceGate.preResponseCueExposureCountGate;
+  const count = history.preResponseCueExposureCount;
+  if (
+    typeof count !== countGate.requiredPrimitiveType
+    || !Number.isSafeInteger(count)
+    || count < countGate.minimum
+    || Object.entries(countGate.authoritativeStateFields).some(
+      ([field, expected]) => history[field] !== expected,
+    )
+  ) {
+    return noPositiveEvidence({ failClosed: true, eligibilityPreserved: false });
+  }
+  for (const downstreamEvidence of [evidence.farTransfer, evidence.stableD7]) {
+    if (
+      downstreamEvidence
+      && (
+        !Object.hasOwn(downstreamEvidence, "preResponseCueExposureCount")
+        || !Number.isSafeInteger(downstreamEvidence.preResponseCueExposureCount)
+        || downstreamEvidence.preResponseCueExposureCount < countGate.minimum
+        || downstreamEvidence.preResponseCueExposureCount !== count
+      )
+    ) return noPositiveEvidence({ failClosed: true, eligibilityPreserved: false });
+  }
   const preResponse = events.some((event) => event.timing === "BEFORE_RESPONSE")
-    || history.preResponseCueExposureCount > 0;
+    || count > countGate.independentCreditRequiredValue;
   const assisted = evidence.attempt?.assistanceState === "ASSISTED";
   if (preResponse || assisted) {
     return noPositiveEvidence({ failClosed: false, eligibilityPreserved: false });
@@ -861,7 +1008,7 @@ function trainingDecisionContext(overrides = {}) {
   };
 }
 
-function fullyApprovedTrainingDecisionContext(overrides = {}) {
+function hypotheticalReceiptValidTrainingDecisionContext(overrides = {}) {
   return trainingDecisionContext({
     approvalReceipts: futureApprovalReceipts(),
     ...overrides,
@@ -1024,9 +1171,10 @@ function evaluateTrainingCandidate(candidate, decisionContext = {}) {
   const approval = validateTrainingApprovalReceipts(candidate, decisionContext);
   return {
     candidateEligible: true,
-    currentlyAuthorized: approval.authorized,
+    hypotheticalReceiptsValid: approval.authorized,
+    currentlyAuthorized: false,
     reason: approval.authorized
-      ? "AUTHORIZED_BY_EXACT_CANDIDATE_BOUND_APPROVAL_RECEIPTS"
+      ? "HYPOTHETICAL_RECEIPTS_VALID_CURRENT_USE_UNAUTHORIZED"
       : approval.reason,
   };
 }
@@ -1354,6 +1502,10 @@ test("Markdown fences and exact boundary language are present", () => {
   assert.match(annex, /TRUSTED_SERVER_CLOCK_BOUNDARY/);
   assert.match(annex, /independently\s+resolved receipt/);
   assert.match(annex, /truthiness-only 검사는 금지/);
+  assert.match(annex, /CANONICAL_SERVER_PRIVATE_ANCHOR_OWNER_BOUNDARY/);
+  assert.match(annex, /canonicalRecordCommitted === true/);
+  assert.match(annex, /preResponseCueExposureCount/);
+  assert.match(annex, /`currentlyAuthorized`는 정확히 `false`/);
   const qa = read(P.qa);
   assert.match(qa, /PR #692 is merged at `512bfdb9232a86bf4f7d4cfbc076a9df1c8a7da2`/);
   assert.match(qa, /Focused behavioral contract suite: 28\/28 passed/);
@@ -1396,7 +1548,10 @@ test("every declared anchor required binding uses exact closed validation", () =
   assert.equal(contract.anchors.requiredBindingSchemaKeySetMustExactlyEqualRequiredBindings, true);
   assert.equal(contract.anchors.truthinessOnlyValidationAllowed, false);
   const valid = validAnchor();
-  assert.equal(validateAnchor(valid).accepted, true);
+  assert.equal(
+    validateAnchor(valid, contract.anchors, canonicalPrivateOwnerBoundary(valid)).accepted,
+    true,
+  );
 
   const invalidValues = {
     anchorId: [null, "", " anchor-1", 1, [], "?"],
@@ -1427,17 +1582,110 @@ test("every declared anchor required binding uses exact closed validation", () =
   assert.equal(validateAnchor(validAnchor({ targetType: "VESG_CONCEPT_NODE" })).accepted, false);
 });
 
-test("learner-attempt anchors reject shared domains and non-vault locators", () => {
+test("private anchors require an exact authoritative owner binding and remain vault-local", () => {
+  const gate = contract.anchors.privateOwnerBindingGate;
+  assert.deepEqual(gate.appliesToKinds, ["LEARNER_ATTEMPT_RANGE", "PRIVATE_SOURCE_RANGE"]);
+  assert.equal(gate.callerAssertionTruthinessOrClientEqualityAccepted, false);
+  assert.equal(gate.resolutionSource, "CANONICAL_SERVER_PRIVATE_ANCHOR_OWNER_BOUNDARY");
+  assert.equal(gate.resolutionSchema.additionalFieldsAllowed, false);
   const base = validAnchor();
-  assert.equal(validateAnchor(base).accepted, true);
+  const boundary = canonicalPrivateOwnerBoundary(base);
+  assert.equal(validateAnchor(base).accepted, false);
+  assert.equal(validateAnchor(base, contract.anchors, boundary).accepted, true);
   for (const domain of ["SHARED_OWNED", "SHARED_OFFICIAL_PERMITTED"]) {
-    const result = validateAnchor({ ...base, domain });
+    const result = validateAnchor({ ...base, domain }, contract.anchors, boundary);
     assert.equal(result.accepted, false, domain);
     assert.equal(result.reason, "DOMAIN_CONFLICT", domain);
   }
-  const locatorResult = validateAnchor({ ...base, bodyLocatorPolicy: "SHARED_STABLE_SELECTOR" });
+  const locatorResult = validateAnchor(
+    { ...base, bodyLocatorPolicy: "SHARED_STABLE_SELECTOR" },
+    contract.anchors,
+    boundary,
+  );
   assert.equal(locatorResult.accepted, false);
   assert.equal(locatorResult.reason, "LOCATOR_CONFLICT");
+
+  for (const kind of gate.appliesToKinds) {
+    const anchor = validAnchor({ kind });
+    assert.equal(
+      validateAnchor(anchor, contract.anchors, canonicalPrivateOwnerBoundary(anchor)).accepted,
+      true,
+      kind,
+    );
+  }
+
+  for (const [field, invalidValues] of Object.entries({
+    ownerBindingRef: [undefined, null, "", "   ", 1, {}, [], "owner-scope-local"],
+    vaultLocalTargetRef: [undefined, null, "", "   ", 1, {}, [], "target-1"],
+    targetDigestScope: [undefined, null, "", "VAULT_LOCAL", 1, {}, []],
+  })) {
+    for (const invalidValue of invalidValues) {
+      const candidate = validAnchor();
+      if (invalidValue === undefined) delete candidate[field];
+      else candidate[field] = invalidValue;
+      const result = validateAnchor(
+        candidate,
+        contract.anchors,
+        canonicalPrivateOwnerBoundary(candidate),
+      );
+      assert.equal(result.accepted, false, `${field}: ${String(invalidValue)}`);
+    }
+  }
+
+  const invalidBoundaries = [
+    undefined,
+    null,
+    {},
+    canonicalPrivateOwnerBoundary(base, { authenticatedLearnerId: 1 }),
+    canonicalPrivateOwnerBoundary(base, { tenantScopeId: [] }),
+    canonicalPrivateOwnerBoundary(base, { resolution: undefined }),
+    canonicalPrivateOwnerBoundary(base, { resolution: { source: "CLIENT" } }),
+    canonicalPrivateOwnerBoundary(base, { resolution: { serverSide: false } }),
+    canonicalPrivateOwnerBoundary(base, { resolution: { authoritative: false } }),
+    canonicalPrivateOwnerBoundary(base, { resolution: { resolved: false } }),
+    canonicalPrivateOwnerBoundary(base, { resolution: { matchingRecordCount: 0 } }),
+    canonicalPrivateOwnerBoundary(base, { resolution: { matchingRecordCount: 2 } }),
+    canonicalPrivateOwnerBoundary(base, { resolution: { ambiguous: true } }),
+    canonicalPrivateOwnerBoundary(base, { resolution: { conflicting: true } }),
+    canonicalPrivateOwnerBoundary(base, { resolution: { stale: true } }),
+    canonicalPrivateOwnerBoundary(base, { resolution: { replayed: true } }),
+    canonicalPrivateOwnerBoundary(base, { resolution: { clientInferred: true } }),
+    canonicalPrivateOwnerBoundary(base, { resolution: { crossLearner: true } }),
+    canonicalPrivateOwnerBoundary(base, { resolution: { crossTenant: true } }),
+    canonicalPrivateOwnerBoundary(base, { resolution: { authenticatedLearnerId: "other-learner" } }),
+    canonicalPrivateOwnerBoundary(base, { resolution: { tenantScopeId: "other-tenant" } }),
+    canonicalPrivateOwnerBoundary(base, { resolution: { ownerBindingRef: "pob_other_owner_1" } }),
+    canonicalPrivateOwnerBoundary(base, { resolution: { anchorId: "other-anchor" } }),
+    canonicalPrivateOwnerBoundary(base, { resolution: { kind: "PRIVATE_SOURCE_RANGE" } }),
+    canonicalPrivateOwnerBoundary(base, { resolution: { vaultLocalTargetRef: "vault_other_target_1" } }),
+    canonicalPrivateOwnerBoundary(base, { resolution: { targetRevisionId: "other-revision" } }),
+    canonicalPrivateOwnerBoundary(base, { resolution: { targetDigest: `sha256:${"b".repeat(64)}` } }),
+    canonicalPrivateOwnerBoundary(base, { resolution: { bodyLocatorPolicy: "SHARED_STABLE_SELECTOR" } }),
+    canonicalPrivateOwnerBoundary(base, { resolution: { unexpected: true } }),
+  ];
+  const missingScope = canonicalPrivateOwnerBoundary(base);
+  delete missingScope.tenantScopeId;
+  invalidBoundaries.push(missingScope);
+  for (const ownerBoundary of invalidBoundaries) {
+    assert.equal(
+      validateAnchor(base, contract.anchors, ownerBoundary).accepted,
+      false,
+      JSON.stringify(ownerBoundary),
+    );
+  }
+
+  for (const assertion of gate.callerAssertionFieldsForbidden) {
+    const candidate = validAnchor({ [assertion]: true });
+    assert.equal(
+      validateAnchor(
+        candidate,
+        contract.anchors,
+        canonicalPrivateOwnerBoundary(candidate),
+      ).accepted,
+      false,
+      assertion,
+    );
+  }
 });
 
 test("private non-vault projection is a content-free bodyless receipt", () => {
@@ -1463,7 +1711,12 @@ test("private non-vault projection is a content-free bodyless receipt", () => {
       attemptLocator: "attempt-only",
       attemptRef: "attempt_ref",
     });
-    const projected = projectPrivateAnchorOutsideVault(anchor);
+    const ownerBoundary = canonicalPrivateOwnerBoundary(anchor);
+    const projected = projectPrivateAnchorOutsideVault(
+      anchor,
+      "PRIVATE_METADATA_RECEIPT",
+      ownerBoundary,
+    );
     assert.equal(projected.accepted, true, kind);
     const policy = contract.anchors.kindPolicy[kind].nonVaultProjection;
     assert.deepEqual(sorted(Object.keys(projected.receipt)), sorted(policy.allowedFields), kind);
@@ -1472,7 +1725,7 @@ test("private non-vault projection is a content-free bodyless receipt", () => {
     }
     for (const destination of policy.forbiddenDestinations) {
       assert.equal(
-        projectPrivateAnchorOutsideVault(anchor, destination).accepted,
+        projectPrivateAnchorOutsideVault(anchor, destination, ownerBoundary).accepted,
         false,
         `${kind}.${destination}`,
       );
@@ -1481,10 +1734,44 @@ test("private non-vault projection is a content-free bodyless receipt", () => {
 });
 
 test("cue timing mapping rejects pre-response NONE and preserves sticky ineligibility", () => {
+  const commitGate = contract.cueExposure.canonicalRecordCommittedGate;
   assert.deepEqual(
     sorted(Object.keys(contract.cueExposure.closedTimingClassificationMap)),
     sorted(contract.cueExposure.eventVariants.map(({ timing }) => timing)),
   );
+  assert.deepEqual(
+    sorted(commitGate.appliesToEveryRenderCapableExposureEventTiming),
+    sorted(contract.cueExposure.eventVariants.map(({ timing }) => timing)),
+  );
+  assert.equal(commitGate.requiredPrimitiveType, "boolean");
+  assert.equal(commitGate.requiredValue, true);
+  assert.equal(commitGate.truthinessAllowed, false);
+  for (const timing of ["BEFORE_RESPONSE", "AFTER_RESPONSE", "REVIEW_ONLY"]) {
+    for (const canonicalRecordCommitted of [
+      undefined,
+      null,
+      false,
+      "true",
+      "false",
+      0,
+      1,
+      {},
+      [],
+    ]) {
+      const result = validateCueExposureEvent(cueEvent({ timing, canonicalRecordCommitted }));
+      assert.equal(result.accepted, false, `${timing}: ${String(canonicalRecordCommitted)}`);
+      assert.equal(result.mayRenderCueBytes, false, `${timing}: ${String(canonicalRecordCommitted)}`);
+    }
+  }
+  assert.deepEqual(validateCueExposureEvent(cueEvent({
+    timing: "AFTER_RESPONSE",
+    canonicalRecordCommitted: true,
+  })), {
+    accepted: true,
+    mayRenderCueBytes: true,
+    positiveLearningEvidence: false,
+    evidenceNeutral: false,
+  });
   assert.equal(validateCueExposureEvent(cueEvent({
     timing: "BEFORE_RESPONSE",
     assistanceClassification: "NONE",
@@ -1507,8 +1794,8 @@ test("cue timing mapping rejects pre-response NONE and preserves sticky ineligib
     exposureHistory: canonicalExposureHistory({ preResponseCueExposureCount: 1 }),
     attempt: canonicalIndependentAttempt(),
     independentResponse: independentResponseEvidence(),
-    farTransfer: farTransferEvidence(),
-    stableD7: stableD7Evidence(),
+    farTransfer: farTransferEvidence({ preResponseCueExposureCount: 1 }),
+    stableD7: stableD7Evidence({ preResponseCueExposureCount: 1 }),
   });
   assert.deepEqual(sequence, {
     failClosed: false,
@@ -1664,6 +1951,14 @@ test("cue absence and after-response-only exposure preserve eligibility but crea
 });
 
 test("independent retrieval requires affirmative canonical submitted and evaluated response evidence", () => {
+  const countGate = contract.cueExposure.learningEvidenceGate.preResponseCueExposureCountGate;
+  assert.equal(countGate.requiredPrimitiveType, "number");
+  assert.equal(countGate.integerRequired, true);
+  assert.equal(countGate.safeIntegerRequired, true);
+  assert.equal(countGate.minimum, 0);
+  assert.equal(countGate.independentCreditRequiredValue, 0);
+  assert.equal(countGate.downstreamEvidenceCountMustExactlyMatchAuthoritativeHistory, true);
+  assert.equal(countGate.exactZeroEffect, "PRESERVE_ELIGIBILITY_ONLY");
   const base = {
     exposureHistory: canonicalExposureHistory(),
     attempt: canonicalIndependentAttempt(),
@@ -1712,6 +2007,57 @@ test("independent retrieval requires affirmative canonical submitted and evaluat
     assert.equal(result.failClosed, true);
     assert.equal(result.independentRetrieval, false);
   }
+
+  const missingCount = canonicalExposureHistory();
+  delete missingCount.preResponseCueExposureCount;
+  const invalidCountHistories = [
+    missingCount,
+    canonicalExposureHistory({ preResponseCueExposureCount: undefined }),
+    canonicalExposureHistory({ preResponseCueExposureCount: null }),
+    canonicalExposureHistory({ preResponseCueExposureCount: false }),
+    canonicalExposureHistory({ preResponseCueExposureCount: true }),
+    canonicalExposureHistory({ preResponseCueExposureCount: "0" }),
+    canonicalExposureHistory({ preResponseCueExposureCount: 0.5 }),
+    canonicalExposureHistory({ preResponseCueExposureCount: -1 }),
+    canonicalExposureHistory({ preResponseCueExposureCount: Number.NaN }),
+    canonicalExposureHistory({ preResponseCueExposureCount: Number.POSITIVE_INFINITY }),
+    canonicalExposureHistory({ preResponseCueExposureCount: Number.MAX_SAFE_INTEGER + 1 }),
+    canonicalExposureHistory({ preResponseCueExposureCount: {} }),
+    canonicalExposureHistory({ preResponseCueExposureCount: [] }),
+    canonicalExposureHistory({ preResponseCueExposureCountAuthoritative: false }),
+    canonicalExposureHistory({ preResponseCueExposureCountAmbiguous: true }),
+    canonicalExposureHistory({ preResponseCueExposureCountConflicting: true }),
+    canonicalExposureHistory({ preResponseCueExposureCountStale: true }),
+    canonicalExposureHistory({ preResponseCueExposureCountClientInferred: true }),
+  ];
+  for (const exposureHistory of invalidCountHistories) {
+    const result = evaluateAttemptEvidence([], {
+      ...base,
+      exposureHistory,
+      farTransfer: farTransferEvidence(),
+      stableD7: stableD7Evidence(),
+    });
+    assert.deepEqual(result, noPositiveEvidence({ failClosed: true, eligibilityPreserved: false }));
+  }
+
+  for (const conflictingEvidence of [
+    { farTransfer: farTransferEvidence({ preResponseCueExposureCount: 1 }) },
+    { stableD7: stableD7Evidence({ preResponseCueExposureCount: 1 }) },
+  ]) {
+    const result = evaluateAttemptEvidence([], { ...base, ...conflictingEvidence });
+    assert.deepEqual(result, noPositiveEvidence({ failClosed: true, eligibilityPreserved: false }));
+  }
+
+  const priorCueExposure = evaluateAttemptEvidence([], {
+    ...base,
+    exposureHistory: canonicalExposureHistory({ preResponseCueExposureCount: 1 }),
+    farTransfer: farTransferEvidence({ preResponseCueExposureCount: 1 }),
+    stableD7: stableD7Evidence({ preResponseCueExposureCount: 1 }),
+  });
+  assert.deepEqual(
+    priorCueExposure,
+    noPositiveEvidence({ failClosed: false, eligibilityPreserved: false }),
+  );
 });
 
 test("far transfer requires a distinct eligible non-same-representation submitted result", () => {
@@ -1835,12 +2181,26 @@ test("only separate safe candidates remain behind distinct contribution, promoti
     promotionImpliesO5: false,
     o5MayBypassContributionOrPromotion: false,
     allPresentAuthorizations: false,
+    currentlyAuthorized: false,
+    canonicalAuthorizationBoundaryPath: "authorizationBoundary",
+    canonicalAuthorizationFields: [
+      "modelTraining",
+      "personalRawBodyTraining",
+      "trainingSignalContribution",
+      "clearedContentBankPromotion",
+      "o5OfflineTraining",
+    ],
+    requiredCurrentCanonicalValue: false,
     globalAuthorizationFlagsMayAuthorizeCandidate: false,
     independentlyResolvedCandidateBoundReceiptsRequired: true,
+    receiptValidityImpliesCurrentAuthorization: false,
+    hypotheticalOrMockReceiptsMayAuthorizeCurrentUse: false,
+    futureActivationRequiresSeparatelyAuthorizedCanonicalBoundaryChange: true,
   });
   const safeSignal = evaluateTrainingCandidate(signalCandidate(), trainingDecisionContext());
   assert.deepEqual(safeSignal, {
     candidateEligible: true,
+    hypotheticalReceiptsValid: false,
     currentlyAuthorized: false,
     reason: "CANDIDATE_BOUND_APPROVAL_RECEIPTS_MISSING",
   });
@@ -1882,7 +2242,7 @@ test("signals require affirmative same-object validated boolean-false content-sa
   assert.equal(gate.ambiguousProofAllowed, false);
   assert.equal(gate.crossObjectProofAllowed, false);
 
-  const allHypotheticalGates = fullyApprovedTrainingDecisionContext();
+  const allHypotheticalGates = hypotheticalReceiptValidTrainingDecisionContext();
   const validCandidate = signalCandidate();
   for (const field of gate.requiredBooleanFalseFields) {
     assert.equal(Object.hasOwn(validCandidate, field), true, field);
@@ -1917,8 +2277,9 @@ test("signals require affirmative same-object validated boolean-false content-sa
 
   assert.deepEqual(evaluateTrainingCandidate(validCandidate, allHypotheticalGates), {
     candidateEligible: true,
-    currentlyAuthorized: true,
-    reason: "AUTHORIZED_BY_EXACT_CANDIDATE_BOUND_APPROVAL_RECEIPTS",
+    hypotheticalReceiptsValid: true,
+    currentlyAuthorized: false,
+    reason: "HYPOTHETICAL_RECEIPTS_VALID_CURRENT_USE_UNAUTHORIZED",
   });
   for (const key of ["trainingSignalContribution", "clearedContentBankPromotion", "o5OfflineTraining"]) {
     assert.equal(contract.authorizationBoundary[key], false, key);
@@ -1935,11 +2296,12 @@ test("signals require exact-purpose consent and finite purpose-bound retention",
   assert.equal(gate.o5AcceptedAsConsentOrRetention, false);
   assert.equal(gate.indefiniteRetentionAccepted, false);
 
-  const allHypotheticalGates = fullyApprovedTrainingDecisionContext();
+  const allHypotheticalGates = hypotheticalReceiptValidTrainingDecisionContext();
   assert.deepEqual(evaluateTrainingCandidate(signalCandidate(), allHypotheticalGates), {
     candidateEligible: true,
-    currentlyAuthorized: true,
-    reason: "AUTHORIZED_BY_EXACT_CANDIDATE_BOUND_APPROVAL_RECEIPTS",
+    hypotheticalReceiptsValid: true,
+    currentlyAuthorized: false,
+    reason: "HYPOTHETICAL_RECEIPTS_VALID_CURRENT_USE_UNAUTHORIZED",
   });
 
   const invalidCandidates = [
@@ -1992,13 +2354,20 @@ test("future training approvals are independently resolved and exact-candidate b
   assert.equal(gate.independentResolutionRequired, true);
   assert.equal(gate.replayedAllowed, false);
   assert.equal(gate.ambiguousAllowed, false);
+  assert.equal(gate.validReceiptSetEffectUnderThisContract, "HYPOTHETICAL_FUTURE_BINDING_PROOF_ONLY");
+  assert.equal(gate.currentTrainingAuthorizationEffectUnderThisContract, false);
+  assert.equal(gate.mockFixtureHypotheticalOrFutureReceiptOverrideAllowed, false);
 
   const validCandidate = signalCandidate();
-  const valid = evaluateTrainingCandidate(validCandidate, fullyApprovedTrainingDecisionContext());
+  const valid = evaluateTrainingCandidate(
+    validCandidate,
+    hypotheticalReceiptValidTrainingDecisionContext(),
+  );
   assert.deepEqual(valid, {
     candidateEligible: true,
-    currentlyAuthorized: true,
-    reason: "AUTHORIZED_BY_EXACT_CANDIDATE_BOUND_APPROVAL_RECEIPTS",
+    hypotheticalReceiptsValid: true,
+    currentlyAuthorized: false,
+    reason: "HYPOTHETICAL_RECEIPTS_VALID_CURRENT_USE_UNAUTHORIZED",
   });
 
   const globalBooleanSubstitution = evaluateTrainingCandidate(validCandidate, trainingDecisionContext({
@@ -2007,7 +2376,26 @@ test("future training approvals are independently resolved and exact-candidate b
     o5OfflineTraining: true,
   }));
   assert.equal(globalBooleanSubstitution.candidateEligible, true);
+  assert.equal(globalBooleanSubstitution.hypotheticalReceiptsValid, false);
   assert.equal(globalBooleanSubstitution.currentlyAuthorized, false);
+
+  const receiptFields = ["contribution", "promotion", "o5"];
+  for (let mask = 0; mask < 2 ** receiptFields.length; mask += 1) {
+    const approvalReceipts = futureApprovalReceipts();
+    for (const [index, field] of receiptFields.entries()) {
+      if ((mask & (1 << index)) === 0) approvalReceipts[field] = undefined;
+    }
+    const result = evaluateTrainingCandidate(validCandidate, hypotheticalReceiptValidTrainingDecisionContext({
+      approvalReceipts,
+      trainingSignalContribution: true,
+      clearedContentBankPromotion: true,
+      o5OfflineTraining: true,
+      mockFixture: true,
+      hypotheticalFutureContext: true,
+    }));
+    assert.equal(result.currentlyAuthorized, false, `receipt mask ${mask}`);
+    assert.equal(result.hypotheticalReceiptsValid, mask === 7, `receipt mask ${mask}`);
+  }
 
   const invalidReceiptSets = [];
   for (const field of ["contribution", "promotion", "o5"]) {
@@ -2027,7 +2415,7 @@ test("future training approvals are independently resolved and exact-candidate b
   invalidReceiptSets.push(reused);
 
   for (const approvalReceipts of invalidReceiptSets) {
-    const result = evaluateTrainingCandidate(validCandidate, fullyApprovedTrainingDecisionContext({
+    const result = evaluateTrainingCandidate(validCandidate, hypotheticalReceiptValidTrainingDecisionContext({
       approvalReceipts,
     }));
     assert.equal(result.candidateEligible, true, result.reason);
@@ -2035,6 +2423,12 @@ test("future training approvals are independently resolved and exact-candidate b
   }
   for (const key of ["trainingSignalContribution", "clearedContentBankPromotion", "o5OfflineTraining"]) {
     assert.equal(contract.authorizationBoundary[key], false, key);
+  }
+  assert.equal(contract.personalAnnotation.trainingGateSeparation.currentlyAuthorized, false);
+  assert.equal(contract.personalAnnotation.trainingGateSeparation.receiptValidityImpliesCurrentAuthorization, false);
+  for (const key of contract.personalAnnotation.trainingGateSeparation.canonicalAuthorizationFields) {
+    assert.equal(contract.authorizationBoundary[key], false, key);
+    assert.equal(typeof contract.authorizationBoundary[key], "boolean", key);
   }
 });
 
@@ -2045,13 +2439,16 @@ test("consent and retention expiry use only trusted server decision time", () =>
   assert.equal(gate.candidateProvidedTimeAccepted, false);
   assert.equal(gate.expiryBoundaryPolicy, "EXPIRY_MUST_BE_STRICTLY_AFTER_EVALUATION_TIME");
 
-  const decisionAtBoundary = fullyApprovedTrainingDecisionContext({
+  const decisionAtBoundary = hypotheticalReceiptValidTrainingDecisionContext({
     trustedEvaluationTime: trustedEvaluationTime({ evaluatedAt: "2026-09-01T00:00:00.000Z" }),
   });
-  assert.equal(evaluateTrainingCandidate(signalCandidate({
+  const beforeExpiry = evaluateTrainingCandidate(signalCandidate({
     consent: { expiresAt: "2026-09-02T00:00:00.000Z" },
     retention: { expiresAt: "2026-09-02T00:00:00.000Z" },
-  }), decisionAtBoundary).currentlyAuthorized, true);
+  }), decisionAtBoundary);
+  assert.equal(beforeExpiry.candidateEligible, true);
+  assert.equal(beforeExpiry.hypotheticalReceiptsValid, true);
+  assert.equal(beforeExpiry.currentlyAuthorized, false);
 
   for (const field of ["consent", "retention"]) {
     for (const expiresAt of [
@@ -2085,7 +2482,7 @@ test("consent and retention expiry use only trusted server decision time", () =>
   }
   const candidateControlled = evaluateTrainingCandidate(
     signalCandidate({ evaluationTime: "2026-08-01T00:00:00.000Z" }),
-    fullyApprovedTrainingDecisionContext(),
+    hypotheticalReceiptValidTrainingDecisionContext(),
   );
   assert.equal(candidateControlled.candidateEligible, false);
   assert.equal(candidateControlled.currentlyAuthorized, false);

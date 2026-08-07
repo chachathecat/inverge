@@ -32,6 +32,11 @@ PR #692 mutation is included.
     empty, malformed, wrong-type, ambiguous or inconsistent bindings reject; truthiness-only validation is forbidden.
 12. `LEARNER_ATTEMPT_RANGE` and `PRIVATE_SOURCE_RANGE` are owner-bound `LEARNER_PRIVATE` with
     `VAULT_LOCAL_ONLY`; unknown, missing or conflicting mappings reject or hold rather than fall back shared.
+    Their owner and vault-target references use exact primitive-string formats and must resolve through one
+    closed, server-side authoritative owner boundary. That resolution must match the authenticated learner and
+    tenant and bind the exact owner ref, anchor, kind, vault-local target, revision, digest, digest scope and
+    locator. Caller truthiness/equality is not evidence; missing, malformed, wrong-type, foreign-owner,
+    cross-learner, cross-tenant, ambiguous, conflicting, stale, replayed, unresolved or client-inferred bindings reject.
 13. A private target digest is vault-local integrity metadata only. Its non-vault projection is a bodyless
     receipt without excerpt, offset, locator, attempt reference, digest or identifier and cannot enter shared
     graph, analytics, logs, cache index, cross-user or Portable Core content-bearing projection.
@@ -44,6 +49,11 @@ PR #692 mutation is included.
     an actual submitted-and-evaluated canonical response; far transfer additionally requires a distinct eligible
     non-same-representation task and evaluated result; stable D+7 requires an actually completed D+7 evaluation,
     cue `HIDDEN` with all-surface byte absence, non-same representation and zero unresolved scoring conflicts.
+    Before any of those credits, canonical history must supply `preResponseCueExposureCount` as an exact
+    nonnegative safe integer with authoritative, non-ambiguous, non-conflicting, fresh, non-client-inferred state.
+    Exactly zero preserves eligibility only; a positive count denies all three credits, while missing or invalid
+    counts fail closed. Any far-transfer or D+7 count copy must match that history exactly. Zero alone creates no
+    affirmative evidence.
 17. Timing and classification derive from the canonical Assistance/Exposure ledger, while attempt state
     derives only from the canonical server attempt ledger; untrusted client state is rejected.
 18. Every render-capable `BEFORE_RESPONSE` validator, including the separate exposure-event validator,
@@ -69,6 +79,9 @@ PR #692 mutation is included.
     attempt scope, cue, cue revision and request, while the canonical attempt ledger independently proves zero
     matching open independent attempts. Missing, ambiguous, conflicting, cross-learner, stale, client-inferred
     resolution or any matching open attempt fails closed with no cue bytes.
+    Independently, every render-capable exposure-event timing requires
+    `canonicalRecordCommitted === true`; truthy strings/numbers and every missing, null, false, object, array,
+    ambiguous or inferred value fail closed, including on `AFTER_RESPONSE` and `REVIEW_ONLY`.
 23. Any decomposition displayed before a response is assistance/exposure.
 24. The default collapsed surface exposes only `formalTerm` unless rules 18–22 have passed.
 25. `HIDDEN` forbids cue bytes in DOM, SSR, accessibility text, prefetch, cache and direct API output.
@@ -88,7 +101,10 @@ PR #692 mutation is included.
     object may be a future candidate; contribution, promotion and O5 remain three distinct gates. Each future
     approval requires its own independently resolved receipt bound to exact signal, revision, purpose and O5 scope;
     global booleans, cross-candidate/revision/purpose/scope, missing, ambiguous, replayed, stale, revoked or unresolved
-    receipts cannot authorize a candidate, and all canonical authorization flags remain false. A signal also
+    receipts cannot authorize a candidate, and all canonical authorization flags remain false. Even a structurally
+    valid candidate-bound mock/future receipt set proves only the future binding contract: it cannot authorize
+    current training, offline training or any other current use; `currentlyAuthorized` remains exactly false and
+    future activation requires a separately authorized canonical-boundary change. A signal also
     requires `containsRawAnnotationBody`, `containsRawBodyPointer`, `containsExcerptOrFreeText`, `reconstructive`
     and `reconstructiveDerivativeOfRawBody` to be explicitly present on the same validated candidate object,
     primitive boolean and exactly false. Missing, undefined, null, non-boolean, true, ambiguous, cross-object or
@@ -105,7 +121,8 @@ PR #692 mutation is included.
 39. Portable Core reuses interfaces only; terminology, definitions, rights and reviews stay profile-owned.
 40. MCAL cannot create a fourth Today primary task.
 41. MCAL-1 through MCAL-4 remain unauthorized.
-42. Every authorization flag is false and every hard-gate ceiling is zero.
+42. Every authorization flag and current-use training authorization is exactly boolean false; no fixture,
+    hypothetical context or mock receipt can override it, and every hard-gate ceiling is zero.
 
 ## Hostile review
 
@@ -122,6 +139,8 @@ All fail closed or hold.
 ### Evidence
 
 - learner receives a decomposition in a collapsed card before answering but no exposure is recorded;
+- an exposure event renders when `canonicalRecordCommitted` is missing, null, false, a string such as
+  `"true"`/`"false"`, a number, object, array, ambiguous or inferred value;
 - a cue ledger is created separately from the canonical Assistance/Exposure ledger;
 - `BEFORE_RESPONSE` is paired with `NONE`;
 - a later event restores independent evidence after any pre-response event;
@@ -130,6 +149,10 @@ All fail closed or hold.
 - far transfer lacks a distinct eligible non-same-representation task, independent submission or evaluated result;
 - D+7 evidence lacks a completed canonical D+7 evaluation, hidden all-surface cue bytes or conflict-free score;
 - missing exposure history/record, failed render, partial commit or ambiguity still creates positive evidence;
+- canonical history omits `preResponseCueExposureCount` or supplies a boolean, string, fraction, negative,
+  NaN, infinite, unsafe, object, array, ambiguous, conflicting, stale or client-inferred count;
+- a positive pre-response count receives independent retrieval, far-transfer or stable-D+7 credit, or exact
+  zero creates affirmative evidence without the separate response/transfer/D+7 records;
 - an `ASSISTED` attempt receives independent retrieval, far-transfer or stable-D+7 evidence;
 - timing/classification comes from untrusted client input;
 - a caller label, `canonicalExposureRecordCommitted` boolean, client event or inferred timing selects
@@ -164,6 +187,9 @@ All are rejected.
 
 - private textbook range exported as a shared selector;
 - learner-attempt range paired with a shared domain or non-vault locator;
+- a private anchor uses a missing, whitespace, malformed or wrong-type owner/vault reference, caller equality,
+  or an unresolved, foreign-owner, cross-learner, cross-tenant, ambiguous, conflicting, stale, replayed,
+  client-inferred or non-authoritative owner-boundary result;
 - any declared anchor required binding is omitted, null, empty, malformed, wrong-type, ambiguous or inconsistent;
 - private excerpt, offset, locator, attempt reference, digest or identifier in a bodyless receipt;
 - personal free text in logs, analytics, issue artifacts or training;
@@ -180,6 +206,8 @@ All are rejected.
 - contribution, promotion or O5 treated as interchangeable gates;
 - contribution, promotion or O5 uses a global boolean or a missing, mismatched, cross-bound, ambiguous, replayed,
   stale, revoked or independently unresolved approval receipt;
+- a structurally valid mock/future receipt set changes any canonical authorization flag or makes
+  `currentlyAuthorized` true;
 - cross-user note reuse;
 - editor activation before export/delete and access evidence.
 

@@ -72,6 +72,9 @@ FULL → DECOMPOSITION_ONLY → PROMPT_ONLY → HIDDEN
 
 답변 전에 decomposition·memory gloss·prompt 중 어떤 단서든 표시하면 assistance/exposure다.
 `CueExposureEvent`는 별도 ledger를 만들지 않고 canonical Assistance/Exposure ledger를 재사용한다.
+모든 render-capable exposure-event timing(`BEFORE_RESPONSE`, `AFTER_RESPONSE`, `REVIEW_ONLY`)은
+`canonicalRecordCommitted === true`를 요구한다. truthiness는 금지하며 missing·null·false·string·number·
+object·array·ambiguous 또는 caller-inferred commit state는 cue byte 0으로 fail closed한다.
 `BEFORE_RESPONSE`는 `LOW` 또는 `MATERIAL`만 허용하며 `NONE`은 invalid다. `NONE`은 해당
 attempt에 pre-response cue exposure가 없었다는 뜻이다. timing과 classification은 canonical
 ledger에서 파생하고 client 입력을 신뢰하지 않는다. sequence에 pre-response event가 하나라도
@@ -103,6 +106,13 @@ state 또는 matching open attempt는 cue byte 0으로 fail closed한다.
 
 cue absence는 independent-evidence eligibility만 보존한다. empty event, cue-free sequence 또는
 `AFTER_RESPONSE` event만으로 independent retrieval·far transfer·stable D+7이 positive가 될 수 없다.
+세 credit을 판단하기 전에 canonical exposure history는 `preResponseCueExposureCount`를 exact
+nonnegative safe integer로 제공해야 하며 authoritative·non-ambiguous·non-conflicting·fresh·
+non-client-inferred여야 한다. 정확히 0만 다른 affirmative evidence의 자격을 보존하고, 0보다 크면
+세 credit을 모두 거부한다. missing·undefined·null·boolean·string·fractional·negative·NaN·infinite·
+unsafe·object·array·ambiguous·conflicting·stale·client/caller-inferred count는 positive evidence 0으로
+fail closed한다. far-transfer/D+7 record의 count copy도 authoritative history와 exact match해야 한다.
+exact 0 자체는 어떤 affirmative learning evidence도 만들지 않는다.
 positive independent retrieval은 exact submitted-and-evaluated response record, far transfer는 distinct
 eligible non-same-representation task와 submitted/evaluated independent result, stable D+7은 completed
 D+7 evaluation·cue `HIDDEN`·all-surface byte absence·non-same representation·unresolved scoring conflict 0의
@@ -121,6 +131,12 @@ unresolved scoring conflict 0을 요구한다.
 - anchor의 열 `requiredBindings`는 각 필드의 exact type·closed enum·pattern과 kind별 domain·locator·
   target-type consistency를 모두 검증한다. missing·null·empty·malformed·wrong-type·ambiguous·inconsistent
   binding은 reject하고 truthiness-only validation은 금지한다.
+- private anchor의 `ownerBindingRef`와 `vaultLocalTargetRef`는 closed primitive-string schema와 exact
+  format을 통과해야 한다. `CANONICAL_SERVER_PRIVATE_ANCHOR_OWNER_BOUNDARY`의 server-side authoritative
+  resolution 한 건이 authenticated learner·tenant와 정확히 일치하고 owner ref·anchor·kind·vault-local
+  target·revision·digest·scope·locator를 field-for-field bind해야 한다. caller/client equality·truthiness는
+  증거가 아니며 missing·malformed·wrong-type·foreign/cross-owner·cross-tenant·ambiguous·conflicting·stale·
+  replayed·unresolved·client-inferred resolution은 reject한다.
 - color-only 의미 금지; text label과 accessible name 필수.
 - primary response를 가리지 않는다.
 - Today에 네 번째 primary task를 만들지 않는다.
@@ -146,7 +162,11 @@ Bank object뿐이다. contribution, Cleared Content Bank promotion과 exact-purp
 independently resolved contribution·promotion·O5 receipt여야 하고, 세 receipt가 exact `signalId`·
 `signalRevisionId`·`purposeId`·`o5ScopeId`에 모두 일치해야 한다. cross-candidate/revision/purpose/scope,
 missing, ambiguous, replayed, stale, revoked 또는 independently unresolved receipt는 fail closed한다.
-현재 세 canonical authorization은 모두 false이며 테스트의 미래 receipt 모의는 이를 변경하지 않는다.
+현재 세 canonical authorization은 모두 정확히 false이며 테스트의 미래 receipt 모의는 이를 변경하지
+않는다. structurally valid·candidate-bound receipt set은 미래 binding contract의 유효성만 증명하고 현재
+training·offline training·다른 사용을 승인하지 않는다. `currentlyAuthorized`도 항상 false이고,
+mock·fixture·hypothetical/future context는 canonical false를 override할 수 없다. 활성화에는 canonical
+authorization boundary를 바꾸는 별도 승인 변경이 필요하다.
 
 signal은 raw body·raw pointer·reconstructive derivative를 rename·alias·relabel한 객체일 수 없다.
 `SEPARATE_NON_RECONSTRUCTIVE_SIGNAL`의 같은 validated candidate object에는 다음 다섯 property가

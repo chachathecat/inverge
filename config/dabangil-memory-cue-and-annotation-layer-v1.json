@@ -1,6 +1,6 @@
 {
   "schema": "dabangil_memory_cue_and_annotation_layer_v1",
-  "version": "1.0.4",
+  "version": "1.0.5",
   "dated": "2026-08-06 KST",
   "status": "proposed_non_authoritative",
   "repository": "chachathecat/inverge",
@@ -440,6 +440,106 @@
     "missingNullEmptyMalformedWrongTypeAmbiguousOrInconsistentBindingBehavior": "FAIL_CLOSED_REJECT",
     "targetTypeMustMatchKindPolicy": true,
     "truthinessOnlyValidationAllowed": false,
+    "privateOwnerBindingGate": {
+      "appliesToKinds": [
+        "LEARNER_ATTEMPT_RANGE",
+        "PRIVATE_SOURCE_RANGE"
+      ],
+      "candidateConditionalRequiredFields": [
+        "ownerBindingRef",
+        "vaultLocalTargetRef",
+        "targetDigestScope"
+      ],
+      "candidateFieldSchemas": {
+        "ownerBindingRef": {
+          "type": "string",
+          "pattern": "^pob_[A-Za-z0-9][A-Za-z0-9._:-]{2,123}$"
+        },
+        "vaultLocalTargetRef": {
+          "type": "string",
+          "pattern": "^vault_[A-Za-z0-9][A-Za-z0-9._:-]{2,121}$"
+        },
+        "targetDigestScope": {
+          "type": "literal",
+          "value": "VAULT_LOCAL_INTEGRITY_METADATA_ONLY"
+        }
+      },
+      "authenticatedContextSchema": {
+        "additionalFieldsAllowed": false,
+        "requiredFields": [
+          "authenticatedLearnerId",
+          "tenantScopeId",
+          "resolution"
+        ],
+        "idPattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{2,127}$"
+      },
+      "resolutionSource": "CANONICAL_SERVER_PRIVATE_ANCHOR_OWNER_BOUNDARY",
+      "resolutionSchema": {
+        "additionalFieldsAllowed": false,
+        "requiredFields": [
+          "source",
+          "serverSide",
+          "authoritative",
+          "resolved",
+          "matchingRecordCount",
+          "ambiguous",
+          "conflicting",
+          "stale",
+          "replayed",
+          "clientInferred",
+          "crossLearner",
+          "crossTenant",
+          "ownerBindingRef",
+          "authenticatedLearnerId",
+          "tenantScopeId",
+          "anchorId",
+          "kind",
+          "vaultLocalTargetRef",
+          "targetRevisionId",
+          "targetDigest",
+          "targetDigestScope",
+          "bodyLocatorPolicy"
+        ]
+      },
+      "exactMatchingRecordCount": 1,
+      "requiredBooleanStates": {
+        "serverSide": true,
+        "authoritative": true,
+        "resolved": true,
+        "ambiguous": false,
+        "conflicting": false,
+        "stale": false,
+        "replayed": false,
+        "clientInferred": false,
+        "crossLearner": false,
+        "crossTenant": false
+      },
+      "authenticatedScopeFields": [
+        "authenticatedLearnerId",
+        "tenantScopeId"
+      ],
+      "exactPrivateAnchorAndVaultBindingFields": [
+        "ownerBindingRef",
+        "anchorId",
+        "kind",
+        "vaultLocalTargetRef",
+        "targetRevisionId",
+        "targetDigest",
+        "targetDigestScope",
+        "bodyLocatorPolicy"
+      ],
+      "callerAssertionFieldsForbidden": [
+        "authenticatedLearnerId",
+        "tenantScopeId",
+        "ownerBindingResolved",
+        "ownerMatchesAuthenticatedLearner",
+        "ownerMatchesTenant",
+        "ownerBoundaryResolution",
+        "clientOwnerBinding"
+      ],
+      "callerAssertionTruthinessOrClientEqualityAccepted": false,
+      "missingNullEmptyWhitespaceMalformedWrongTypeForeignOwnerCrossLearnerCrossTenantAmbiguousConflictingStaleReplayedUnresolvedOrClientInferredBehavior": "FAIL_CLOSED_REJECT"
+    },
     "semanticHighlightRequiresRevisionBoundTypedAnchor": true
   },
   "cueFading": {
@@ -651,8 +751,21 @@
       "promotionImpliesO5": false,
       "o5MayBypassContributionOrPromotion": false,
       "allPresentAuthorizations": false,
+      "currentlyAuthorized": false,
+      "canonicalAuthorizationBoundaryPath": "authorizationBoundary",
+      "canonicalAuthorizationFields": [
+        "modelTraining",
+        "personalRawBodyTraining",
+        "trainingSignalContribution",
+        "clearedContentBankPromotion",
+        "o5OfflineTraining"
+      ],
+      "requiredCurrentCanonicalValue": false,
       "globalAuthorizationFlagsMayAuthorizeCandidate": false,
-      "independentlyResolvedCandidateBoundReceiptsRequired": true
+      "independentlyResolvedCandidateBoundReceiptsRequired": true,
+      "receiptValidityImpliesCurrentAuthorization": false,
+      "hypotheticalOrMockReceiptsMayAuthorizeCurrentUse": false,
+      "futureActivationRequiresSeparatelyAuthorizedCanonicalBoundaryChange": true
     },
     "trainingApprovalReceiptGate": {
       "appliesToEveryFutureTrainingCandidate": true,
@@ -687,6 +800,9 @@
       "revokedAllowed": false,
       "crossCandidateCrossRevisionCrossPurposeCrossScopeAllowed": false,
       "globalAuthorizationBooleanSubstitutionAllowed": false,
+      "validReceiptSetEffectUnderThisContract": "HYPOTHETICAL_FUTURE_BINDING_PROOF_ONLY",
+      "currentTrainingAuthorizationEffectUnderThisContract": false,
+      "mockFixtureHypotheticalOrFutureReceiptOverrideAllowed": false,
       "missingMismatchedAmbiguousReplayedStaleRevokedOrUnresolvedBehavior": "FAIL_CLOSED_NOT_AUTHORIZED"
     },
     "freeTextAnalytics": false,
@@ -805,6 +921,7 @@
     "reconstructiveAnnotationSignalUsedAsTrainingCandidate": 0,
     "trainingCandidateWithoutDistinctContributionPromotionO5Gates": 0,
     "trainingCandidateWithoutExactCandidateBoundApprovalReceipts": 0,
+    "mockOrHypotheticalReceiptAuthorizesCurrentTraining": 0,
     "trainingDecisionWithoutTrustedServerEvaluationTime": 0,
     "personalEditorBeforeCpfPrivacyExportDeleteGates": 0,
     "mcalRuntimeBeforeCoreLoopAcceptance": 0,
@@ -821,6 +938,7 @@
     "hiddenCueBytesInForbiddenSurface": 0,
     "semanticHighlightWithoutRevisionBoundTypedAnchor": 0,
     "anchorMissingOrInvalidRequiredBinding": 0,
+    "privateAnchorWithoutExactAuthoritativeOwnerBinding": 0,
     "anchorKindPolicyFallbackUsed": 0,
     "learnerAttemptRangeOutsideVaultLocal": 0,
     "privateTargetDigestInSharedProjection": 0,
@@ -830,6 +948,8 @@
     "preResponseCueWithoutExactSingleUseConfirmation": 0,
     "preResponseCueBeforeAtomicAssistedTransition": 0,
     "preResponseCueAfterPartialCommitOrRace": 0,
+    "renderCapableExposureEventWithoutExactBooleanCommittedRecord": 0,
+    "independentCreditWithoutExactCanonicalPreResponseExposureCount": 0,
     "submittedAttemptRenderedAsBeforeResponse": 0,
     "reviewOnlyWithoutCanonicalServerResolution": 0,
     "reviewOnlyWithMatchingOpenIndependentAttempt": 0,
@@ -933,6 +1053,19 @@
         "LOW",
         "MATERIAL"
       ]
+    },
+    "canonicalRecordCommittedGate": {
+      "appliesToEveryRenderCapableExposureEventTiming": [
+        "BEFORE_RESPONSE",
+        "AFTER_RESPONSE",
+        "REVIEW_ONLY"
+      ],
+      "field": "canonicalRecordCommitted",
+      "requiredPrimitiveType": "boolean",
+      "requiredValue": true,
+      "truthinessAllowed": false,
+      "callerInferredCommitStateAllowed": false,
+      "missingUndefinedNullFalseStringNumberObjectArrayOrAmbiguousBehavior": "FAIL_CLOSED_NO_CUE_BYTES"
     },
     "separateLedgerAllowed": false,
     "timingAndClassificationSource": "CANONICAL_ASSISTANCE_EXPOSURE_LEDGER",
@@ -1074,6 +1207,30 @@
       "afterResponseOnlySequenceCreatesPositiveEvidence": false,
       "completeExposureHistoryRequired": true,
       "exposureHistorySource": "CANONICAL_ASSISTANCE_EXPOSURE_LEDGER",
+      "preResponseCueExposureCountGate": {
+        "field": "preResponseCueExposureCount",
+        "sourceMustEqualExposureHistorySource": true,
+        "authoritativeStateFields": {
+          "preResponseCueExposureCountAuthoritative": true,
+          "preResponseCueExposureCountAmbiguous": false,
+          "preResponseCueExposureCountConflicting": false,
+          "preResponseCueExposureCountStale": false,
+          "preResponseCueExposureCountClientInferred": false
+        },
+        "requiredPrimitiveType": "number",
+        "integerRequired": true,
+        "safeIntegerRequired": true,
+        "minimum": 0,
+        "independentCreditRequiredValue": 0,
+        "downstreamEvidenceCountCopies": [
+          "farTransfer.preResponseCueExposureCount",
+          "stableD7.preResponseCueExposureCount"
+        ],
+        "downstreamEvidenceCountMustExactlyMatchAuthoritativeHistory": true,
+        "exactZeroEffect": "PRESERVE_ELIGIBILITY_ONLY",
+        "countAboveZeroEffect": "DENY_INDEPENDENT_RETRIEVAL_FAR_TRANSFER_AND_STABLE_D7",
+        "missingUndefinedNullBooleanStringFractionalNegativeNaNInfiniteObjectArrayAmbiguousConflictingStaleClientInferredOrCallerInferredBehavior": "FAIL_CLOSED_NO_POSITIVE_LEARNING_EVIDENCE"
+      },
       "assistedAttemptEligible": false,
       "invalidHistoryConditions": [
         "MISSING_EXPOSURE_RECORD",
