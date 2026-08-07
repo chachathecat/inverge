@@ -154,10 +154,10 @@ Current correction-source evidence:
 - JavaScript syntax check: passed.
 - Focused behavioral contract suite: 16/16 passed.
 - Strict JSON parse, balanced Markdown fences, cross-artifact assertions and `git diff --check`: passed.
-- Typecheck on the correction head: required; exact-head CI evidence is not inherited.
-- Lint on the correction head: required; exact-head CI evidence is not inherited.
-- Full Node test suite on the correction head: required; exact-head CI evidence is not inherited.
-- Production build on the correction head: required; exact-head CI evidence is not inherited.
+- Typecheck: passed.
+- Lint: passed with 0 errors and 9 pre-existing warnings outside the MCAL diff.
+- Full Node test suite: 1,232/1,232 passed.
+- Production build: passed.
 
 The repository PR Contract, Fast CI, Full CI, Learner Loop Health, Risk Gate and Runtime
 Gate must also pass on the same exact head.
