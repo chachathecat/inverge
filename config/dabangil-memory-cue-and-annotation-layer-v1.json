@@ -1,6 +1,6 @@
 {
   "schema": "dabangil_memory_cue_and_annotation_layer_v1",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "dated": "2026-08-06 KST",
   "status": "proposed_non_authoritative",
   "repository": "chachathecat/inverge",
@@ -33,6 +33,10 @@
     "personalAnnotationSync": false,
     "analytics": false,
     "modelTraining": false,
+    "personalRawBodyTraining": false,
+    "trainingSignalContribution": false,
+    "clearedContentBankPromotion": false,
+    "o5OfflineTraining": false,
     "firstStageLearnerActivation": false,
     "otherExamProfile": false,
     "externalLearner": false,
@@ -451,7 +455,48 @@
     "bodyPlane": "PERSONAL_RAW_VAULT",
     "sharedReuse": false,
     "crossUserReuse": false,
-    "trainingByDefault": false,
+    "directRawBodyTrainingAllowed": false,
+    "directRawBodyTrainingProhibition": "UNCONDITIONAL_NON_OVERRIDABLE",
+    "rawBodyRenameAliasOrDirectPromotionAllowed": false,
+    "rawBodyOriginClassificationSurvivesRenameOrAlias": true,
+    "possibleOverrideAuthorities": {
+      "learnerConsent": false,
+      "learnerOptIn": false,
+      "contract": false,
+      "administratorChoice": false,
+      "futureO5": false
+    },
+    "futureTrainingCandidateKinds": [
+      "SEPARATE_NON_RECONSTRUCTIVE_SIGNAL",
+      "SEPARATELY_AUTHORED_RIGHTS_REVIEWED_CLEARED_CONTENT_BANK_OBJECT"
+    ],
+    "futureTrainingCandidateRequirements": {
+      "SEPARATE_NON_RECONSTRUCTIVE_SIGNAL": [
+        "SEPARATE_OBJECT_IDENTITY",
+        "CLOSED_NON_RECONSTRUCTIVE_VALUE_SCHEMA",
+        "NO_RAW_BODY",
+        "NO_EXCERPT_OR_FREE_TEXT",
+        "NO_REVERSIBLE_BODY_DERIVATION",
+        "PURPOSE_SCOPED_CONSENT_AND_RETENTION"
+      ],
+      "SEPARATELY_AUTHORED_RIGHTS_REVIEWED_CLEARED_CONTENT_BANK_OBJECT": [
+        "SEPARATE_OBJECT_IDENTITY",
+        "SEPARATELY_AUTHORED",
+        "ACTUALLY_RIGHTS_OWNED",
+        "RIGHTS_REVIEWED",
+        "PROVENANCE_REVIEWED",
+        "NOT_RENAMED_ALIASED_OR_DIRECTLY_PROMOTED_RAW_ANNOTATION_BODY"
+      ]
+    },
+    "trainingGateSeparation": {
+      "contributionGate": "DISTINCT_REQUIRED",
+      "promotionGate": "DISTINCT_REQUIRED",
+      "o5Gate": "DISTINCT_REQUIRED",
+      "contributionImpliesPromotion": false,
+      "promotionImpliesO5": false,
+      "o5MayBypassContributionOrPromotion": false,
+      "allPresentAuthorizations": false
+    },
     "freeTextAnalytics": false,
     "activationPrerequisites": [
       "CPF_SOURCE_SAFETY_CLOSURE",
@@ -562,6 +607,11 @@
     "personalAnnotationBodyOutsidePersonalRawVault": 0,
     "personalFreeTextInLogsOrAnalytics": 0,
     "crossUserPersonalCueReuse": 0,
+    "directRawPersonalAnnotationBodyTraining": 0,
+    "rawPersonalAnnotationBodyRenamedOrAliasedForTraining": 0,
+    "rawPersonalAnnotationBodyDirectlyPromotedToClearedContentBank": 0,
+    "reconstructiveAnnotationSignalUsedAsTrainingCandidate": 0,
+    "trainingCandidateWithoutDistinctContributionPromotionO5Gates": 0,
     "personalEditorBeforeCpfPrivacyExportDeleteGates": 0,
     "mcalRuntimeBeforeCoreLoopAcceptance": 0,
     "otherProfileTermAutoInheritance": 0,
@@ -581,6 +631,11 @@
     "privateTargetDigestInSharedProjection": 0,
     "preResponseCueClassifiedNone": 0,
     "preResponseAttemptCountedIndependent": 0,
+    "preResponseCueWithoutCanonicalIndependentAttemptOpen": 0,
+    "preResponseCueWithoutExactSingleUseConfirmation": 0,
+    "preResponseCueBeforeAtomicAssistedTransition": 0,
+    "preResponseCueAfterPartialCommitOrRace": 0,
+    "submittedAttemptRenderedAsBeforeResponse": 0,
     "semanticHighlightMissingVisibleTextLabel": 0,
     "semanticHighlightMissingComputedAccessibleName": 0
   },
@@ -631,7 +686,10 @@
           "MATERIAL"
         ],
         "preResponseExposure": true,
-        "independentEvidenceEligible": false
+        "independentEvidenceEligible": false,
+        "requiredCanonicalAttemptState": "INDEPENDENT_ATTEMPT_OPEN",
+        "requiredConfirmationGate": "EXACT_SINGLE_USE_DELIBERATE_CONFIRMATION",
+        "requiredPreRenderTransaction": "PRE_RESPONSE_ATOMIC_COMMIT"
       },
       {
         "timing": "AFTER_RESPONSE",
@@ -641,7 +699,8 @@
           "MATERIAL"
         ],
         "preResponseExposure": false,
-        "independentEvidenceEligibility": "DERIVE_FROM_FULL_ATTEMPT_SEQUENCE"
+        "independentEvidenceEligibility": "DERIVE_FROM_FULL_ATTEMPT_SEQUENCE",
+        "submittedAttemptEligible": true
       },
       {
         "timing": "REVIEW_ONLY",
@@ -673,6 +732,54 @@
     "separateLedgerAllowed": false,
     "timingAndClassificationSource": "CANONICAL_ASSISTANCE_EXPOSURE_LEDGER",
     "untrustedClientTimingOrClassificationAccepted": false,
+    "attemptStateSource": "CANONICAL_SERVER_ATTEMPT_LEDGER",
+    "untrustedClientAttemptStateAccepted": false,
+    "canonicalAttemptStates": [
+      "INDEPENDENT_ATTEMPT_OPEN",
+      "ASSISTED",
+      "SUBMITTED"
+    ],
+    "beforeResponseGate": {
+      "eligibleCanonicalAttemptState": "INDEPENDENT_ATTEMPT_OPEN",
+      "explicitDeliberateLearnerConfirmationRequired": true,
+      "confirmationRecordSource": "CANONICAL_SERVER_CONFIRMATION_LEDGER",
+      "confirmationBindingFields": [
+        "attemptId",
+        "cueId",
+        "cueRevisionId",
+        "requestId"
+      ],
+      "exactBindingRequired": true,
+      "singleUse": true,
+      "exactMatchingRecordCount": 1,
+      "acceptedConfirmationState": "CONFIRMED",
+      "clientBooleanSufficient": false,
+      "preselectedConsentSufficient": false,
+      "missingCancelledStaleReplayedMismatchedOrAmbiguousBehavior": "FAIL_CLOSED_NO_CUE_BYTES",
+      "submittedAttemptBehavior": "AFTER_RESPONSE_ONLY"
+    },
+    "preResponseAtomicCommit": {
+      "mode": "ATOMIC_ALL_OR_NOTHING",
+      "orderedSteps": [
+        "CONFIRMATION_RECORD_COMMITTED",
+        "CUE_EXPOSURE_RECORD_COMMITTED",
+        "ATTEMPT_STATE_TRANSITIONED_TO_ASSISTED",
+        "INDEPENDENT_EVIDENCE_INVALIDATED"
+      ],
+      "renderBarrier": "ALL_ORDERED_STEPS_COMMITTED",
+      "renderStep": "CUE_BYTES_RENDERED",
+      "postCommitAttemptState": "ASSISTED",
+      "postCommitIndependentEvidenceEligible": false,
+      "partialCommitBehavior": "ROLLBACK_FAIL_CLOSED_NO_CUE_BYTES",
+      "recordFailureBehavior": "ROLLBACK_FAIL_CLOSED_NO_CUE_BYTES",
+      "renderSubmitRaceBehavior": "ROLLBACK_FAIL_CLOSED_NO_CUE_BYTES"
+    },
+    "afterResponseGate": {
+      "requiredCanonicalAttemptState": "SUBMITTED",
+      "onlyAllowedTimingForSubmittedAttempt": "AFTER_RESPONSE",
+      "deliberatePreResponseConfirmationRequired": false,
+      "exposureRecordCommittedBeforeRender": true
+    },
     "noneRequiresNoPreResponseCueInAttempt": true,
     "preResponseIneligibleEvidence": [
       "INDEPENDENT_RETRIEVAL",
