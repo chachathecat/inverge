@@ -77,7 +77,13 @@ attempt에 pre-response cue exposure가 없었다는 뜻이다. timing과 classi
 ledger에서 파생하고 client 입력을 신뢰하지 않는다. sequence에 pre-response event가 하나라도
 있으면 independent retrieval·far transfer·stable D+7은 부적격이며 뒤의 event가 복구하지 못한다.
 ordering ambiguity와 render/submit race도 fail closed다.
-단서 바이트는 렌더 전에 원자적으로 기록되어야 하며 기록 실패 시 표시하지 않는다.
+`BEFORE_RESPONSE` attempt state는 client가 아니라 canonical server attempt ledger에서 파생하며,
+exact `INDEPENDENT_ATTEMPT_OPEN` 상태와 exact attempt·cue·cue revision·단일 request에 묶인
+deliberate learner confirmation을 모두 요구한다. client boolean과 preselected consent는 부족하다.
+confirmation record → cue exposure record → `ASSISTED` 전환 → independent-evidence invalidation은
+all-or-nothing으로 cue byte 렌더 전에 commit한다. missing·cancelled·stale·replayed·mismatched·
+ambiguous confirmation, partial commit, record failure 또는 render/submit race는 cue byte 0으로
+fail closed한다. 이미 submitted인 canonical attempt는 `AFTER_RESPONSE`만 허용한다.
 `HIDDEN`은 DOM·SSR·접근성 text·prefetch·cache·direct API output 어디에도 cue byte가 없음을 뜻한다.
 D+7 stable과 timed integration은 cue hidden, non-same representation,
 unresolved scoring conflict 0을 요구한다.
@@ -100,6 +106,16 @@ cross-user 검증을 별도 승인하기 전 구현하지 않는다.
 
 개인 메모·제3자 원문 anchor는 shared VESG, Exam World, generator, analytics,
 training 또는 다른 사용자 응답으로 승격하지 않는다.
+
+Personal Raw Vault의 raw annotation body를 직접 training하는 것은 default-off가 아니라
+무조건적·비우회 금지다. learner consent·opt-in, 계약, 관리자 선택 또는 미래 O5도 이를 허용할
+수 없다. rename·alias·relabel로 원본 분류를 지우거나 raw body를 Cleared Content Bank로 직접
+promotion할 수도 없다.
+
+미래 candidate는 raw body와 별개의 closed-schema non-reconstructive signal, 또는 raw body의
+재명명·직접승격이 아닌 별도 authored·rights-owned·provenance/rights-reviewed Cleared Content
+Bank object뿐이다. contribution, Cleared Content Bank promotion과 exact-purpose O5는 서로
+구별된 gate이며 어느 것도 다른 gate를 대신하지 않는다. 현재 세 authorization은 모두 false다.
 
 `LEARNER_ATTEMPT_RANGE`와 `PRIVATE_SOURCE_RANGE`는 owner-bound `LEARNER_PRIVATE` 및
 `VAULT_LOCAL_ONLY`로 강제한다. private target digest는 vault-local integrity metadata일 뿐이며,
@@ -134,6 +150,10 @@ cross-profile cue·정답·mastery 상속은 금지한다.
 - strict JSON, path, fence, focused tests 통과.
 - released·versioned VESG definition projection과 mnemonic separation.
 - canonical Assistance/Exposure ledger 재사용과 render-before-record 금지.
+- canonical independent-attempt-open + exact single-use learner confirmation + atomic
+  `ASSISTED`/independent-evidence invalidation before any pre-response cue byte.
+- raw personal annotation body direct training·rename/alias 우회·direct Cleared Content promotion 0;
+  contribution/promotion/O5 gate 분리와 현재 authorization false.
 - HIDDEN byte absence와 revision-bound typed anchor.
 - MCAL-1~MCAL-4 authorization false.
 - cue fading/evidence/source safety/portable profile gates.
