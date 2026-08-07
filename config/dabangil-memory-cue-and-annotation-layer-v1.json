@@ -787,6 +787,20 @@
       ],
       "requiredConsentState": "ACTIVE",
       "requiredRetentionState": "ACTIVE",
+      "requiredExactPrimitiveBooleanStates": {
+        "consent": {
+          "expired": false,
+          "revoked": false
+        },
+        "retention": {
+          "expired": false,
+          "revoked": false
+        }
+      },
+      "exactFalseOnlyPreservesEligibility": true,
+      "exactFalseCreatesConsentReceiptOrAuthorization": false,
+      "truthinessDefaultingCoercionOrAbsenceAccepted": false,
+      "missingUndefinedNullTrueStringNumberObjectArrayOrOtherNonFalseBehavior": "FAIL_CLOSED_CANDIDATE_INELIGIBLE_NO_HYPOTHETICAL_RECEIPTS",
       "exactPurposeConsentRequired": true,
       "finitePurposeBoundRetentionRequired": true,
       "retentionExpiresAtRequired": true,
@@ -1254,16 +1268,55 @@
       "onlyAllowedTimingForSubmittedAttempt": "AFTER_RESPONSE",
       "deliberatePreResponseConfirmationRequired": false,
       "exposureRecordCommittedBeforeRender": true,
+      "canonicalRecordCommittedGateRef": "cueExposure.canonicalRecordCommittedGate",
+      "canonicalRecordCommittedField": "canonicalRecordCommitted",
+      "canonicalExposureRecordCommittedAliasAccepted": false,
+      "alternateCommitFieldFallbackAllowed": false,
+      "sharedAcrossEveryApplicableRenderCapableValidator": true,
+      "renderCapableValidators": [
+        "CUE_RENDER_REQUEST_VALIDATOR",
+        "CUE_EXPOSURE_EVENT_VALIDATOR"
+      ],
       "nonNullExactAttemptIdRequired": true,
+      "nonNullExactLearnerPrivateScopeIdRequired": true,
       "attemptResolutionSource": "CANONICAL_SERVER_ATTEMPT_LEDGER",
       "exactBindingFields": [
         "attemptId",
         "learnerPrivateScopeId"
       ],
+      "learnerPrivateScopeBindingRule": {
+        "field": "learnerPrivateScopeId",
+        "subjectAndCanonicalResolutionIndependentlyRequired": true,
+        "requiredPrimitiveType": "string",
+        "trimmedRequired": true,
+        "minimumLength": 1,
+        "exactMatchRequired": true,
+        "authenticatedLearnerScopeBindingRequired": true,
+        "matchingMissingOrUndefinedAccepted": false
+      },
+      "requiredResolutionBooleanStates": {
+        "known": true,
+        "resolved": true,
+        "submitted": true,
+        "submittedBeforeExposure": true,
+        "ambiguous": false,
+        "conflicting": false,
+        "crossLearner": false,
+        "crossAttempt": false,
+        "mismatched": false,
+        "replayed": false,
+        "preSubmission": false,
+        "closed": false,
+        "stale": false,
+        "cancelled": false,
+        "clientInferred": false
+      },
       "exactMatchingRecordCount": 1,
       "clientAttemptIdAccepted": false,
       "latestAttemptInferenceAllowed": false,
-      "missingEmptyUnknownCrossLearnerCrossAttemptMismatchedReplayedOrPreSubmissionBehavior": "FAIL_CLOSED_NO_CUE_BYTES",
+      "clientOrCallerLearnerPrivateScopeAssertionAccepted": false,
+      "learnerPrivateScopeInferenceAllowed": false,
+      "missingEmptyWrongTypeMalformedUnknownAmbiguousConflictingCrossLearnerCrossAttemptMismatchedStaleReplayedClientInferredCallerAssertedUnresolvedOrPreSubmissionBehavior": "FAIL_CLOSED_NO_CUE_BYTES",
       "reviewOnlyMayRemainUnbound": true,
       "reviewOnlyEvidenceNeutral": true
     },

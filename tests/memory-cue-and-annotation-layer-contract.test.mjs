@@ -365,6 +365,7 @@ function canonicalAttemptResolution(overrides = {}) {
     canonicalAttemptState: "SUBMITTED",
     matchingRecordCount: 1,
     known: true,
+    resolved: true,
     submitted: true,
     submittedBeforeExposure: true,
     crossLearner: false,
@@ -376,6 +377,8 @@ function canonicalAttemptResolution(overrides = {}) {
     stale: false,
     cancelled: false,
     ambiguous: false,
+    conflicting: false,
+    clientInferred: false,
     ...overrides,
   };
 }
@@ -481,27 +484,41 @@ function cueEvent(overrides = {}) {
 
 function validateCanonicalAttemptBinding(subject) {
   const gate = contract.cueExposure.afterResponseGate;
-  if (subject.clientAttemptId !== undefined || subject.inferLatestAttempt === true) {
-    return { accepted: false, reason: "UNTRUSTED_OR_INFERRED_ATTEMPT_ID" };
+  if (
+    subject.clientAttemptId !== undefined
+    || subject.inferLatestAttempt === true
+    || subject.clientLearnerPrivateScopeId !== undefined
+    || subject.callerLearnerPrivateScopeId !== undefined
+    || subject.inferLearnerPrivateScopeId === true
+  ) {
+    return { accepted: false, reason: "UNTRUSTED_OR_INFERRED_ATTEMPT_OR_LEARNER_SCOPE" };
   }
   if (typeof subject.attemptId !== "string" || subject.attemptId.trim().length === 0) {
     return { accepted: false, reason: "EXACT_ATTEMPT_ID_REQUIRED" };
   }
+  const learnerScopeRule = gate.learnerPrivateScopeBindingRule;
+  const learnerScope = subject[learnerScopeRule.field];
+  if (
+    typeof learnerScope !== learnerScopeRule.requiredPrimitiveType
+    || learnerScope.trim() !== learnerScope
+    || learnerScope.length < learnerScopeRule.minimumLength
+  ) return { accepted: false, reason: "EXACT_LEARNER_PRIVATE_SCOPE_ID_REQUIRED" };
   const resolution = subject.attemptResolution;
   if (!resolution) return { accepted: false, reason: "ATTEMPT_RESOLUTION_MISSING" };
   if (resolution.source !== gate.attemptResolutionSource) {
     return { accepted: false, reason: "ATTEMPT_RESOLUTION_SOURCE_INVALID" };
   }
+  const resolvedLearnerScope = resolution[learnerScopeRule.field];
   if (
-    resolution.known !== true
-    || resolution.matchingRecordCount !== gate.exactMatchingRecordCount
-    || resolution.crossLearner === true
-    || resolution.crossAttempt === true
-    || resolution.mismatched === true
-    || resolution.replayed === true
-    || resolution.preSubmission === true
-    || resolution.submitted !== true
-    || resolution.submittedBeforeExposure !== true
+    typeof resolvedLearnerScope !== learnerScopeRule.requiredPrimitiveType
+    || resolvedLearnerScope.trim() !== resolvedLearnerScope
+    || resolvedLearnerScope.length < learnerScopeRule.minimumLength
+  ) return { accepted: false, reason: "CANONICAL_LEARNER_PRIVATE_SCOPE_ID_REQUIRED" };
+  if (
+    resolution.matchingRecordCount !== gate.exactMatchingRecordCount
+    || Object.entries(gate.requiredResolutionBooleanStates).some(
+      ([field, expected]) => resolution[field] !== expected,
+    )
   ) return { accepted: false, reason: "ATTEMPT_RESOLUTION_INVALID" };
   for (const field of gate.exactBindingFields) {
     if (resolution[field] !== subject[field]) {
@@ -512,6 +529,12 @@ function validateCanonicalAttemptBinding(subject) {
     return { accepted: false, reason: "ATTEMPT_NOT_SUBMITTED" };
   }
   return { accepted: true };
+}
+
+function hasExactCanonicalRecordCommit(subject) {
+  const gate = contract.cueExposure.canonicalRecordCommittedGate;
+  const value = subject[gate.field];
+  return typeof value === gate.requiredPrimitiveType && value === gate.requiredValue;
 }
 
 function authorizeCanonicalReviewOnlyCueRender(subject) {
@@ -624,7 +647,7 @@ function authorizeExactPreResponseCueRender(subject) {
     return fail(cue.preResponseAtomicCommit.renderSubmitRaceBehavior);
   }
   if (subject.recordFailure === true) return fail(cue.preResponseAtomicCommit.recordFailureBehavior);
-  if (subject.canonicalRecordCommitted !== true) {
+  if (!hasExactCanonicalRecordCommit(subject)) {
     return fail(cue.preResponseAtomicCommit.recordFailureBehavior);
   }
   if (subject.clientAttemptId !== undefined || subject.inferLatestAttempt === true) {
@@ -719,7 +742,7 @@ function authorizeExactPreResponseCueRender(subject) {
 
 function validateCueExposureEvent(event) {
   const cue = contract.cueExposure;
-  if (event.canonicalRecordCommitted !== true) {
+  if (!hasExactCanonicalRecordCommit(event)) {
     return { accepted: false, mayRenderCueBytes: false, reason: cue.recordFailureBehavior };
   }
   if (
@@ -1236,6 +1259,11 @@ function evaluateTrainingCandidate(candidate, decisionContext = {}) {
     }
     const retentionExpiry = parseExactUtcInstant(retention?.expiresAt);
     const consentExpiry = parseExactUtcInstant(consent?.expiresAt);
+    const exactPurposeStatesValid = Object.entries(
+      purposeGate.requiredExactPrimitiveBooleanStates,
+    ).every(([recordName, requiredStates]) => Object.entries(requiredStates).every(
+      ([field, expected]) => candidate[recordName]?.[field] === expected,
+    ));
     if (
       candidate.genericOptIn === true
       || candidate.contractAsConsent === true
@@ -1248,10 +1276,7 @@ function evaluateTrainingCandidate(candidate, decisionContext = {}) {
       || consent.state !== purposeGate.requiredConsentState
       || retention.state !== purposeGate.requiredRetentionState
       || consent.exactPurpose !== true
-      || consent.expired === true
-      || consent.revoked === true
-      || retention.expired === true
-      || retention.revoked === true
+      || !exactPurposeStatesValid
       || retention.finite !== true
       || typeof consent.expiresAt !== "string"
       || consent.expiresAt.trim().length === 0
@@ -1420,7 +1445,7 @@ function evaluateCueRender(request) {
     }
     const binding = validateCanonicalAttemptBinding(request);
     if (!binding.accepted) return fail(binding.reason);
-    if (request.canonicalExposureRecordCommitted !== true) return fail(cue.recordFailureBehavior);
+    if (!hasExactCanonicalRecordCommit(request)) return fail(cue.recordFailureBehavior);
     return {
       accepted: true,
       mayRenderCueBytes: true,
@@ -1617,6 +1642,9 @@ test("Markdown fences and exact boundary language are present", () => {
   assert.match(annex, /truthiness-only 검사는 금지/);
   assert.match(annex, /CANONICAL_SERVER_PRIVATE_ANCHOR_OWNER_BOUNDARY/);
   assert.match(annex, /canonicalRecordCommitted === true/);
+  assert.match(annex, /matching `undefined` values/);
+  assert.match(annex, /`consent\.expired === false`/);
+  assert.match(annex, /`canonicalExposureRecordCommitted`[^\n]*대체/);
   assert.match(annex, /preResponseCueExposureCount/);
   assert.match(annex, /CANONICAL_SERVER_ITEM_RIGHTS_MANIFEST_BOUNDARY/);
   assert.match(annex, /transferAttemptId/);
@@ -1625,7 +1653,8 @@ test("Markdown fences and exact boundary language are present", () => {
   assert.match(annex, /`currentlyAuthorized`는 정확히 `false`/);
   const qa = read(P.qa);
   assert.match(qa, /PR #692 is merged at `512bfdb9232a86bf4f7d4cfbc076a9df1c8a7da2`/);
-  assert.match(qa, /Focused behavioral contract suite: 31\/31 passed/);
+  assert.match(qa, /Focused behavioral contract suite: 34\/34 passed/);
+  assert.doesNotMatch(qa, /Focused behavioral contract suite: 31\/31 passed/);
   assert.doesNotMatch(qa, /Focused behavioral contract suite: 28\/28 passed/);
   assert.doesNotMatch(qa, /Focused behavioral contract suite: 25\/25 passed/);
   assert.doesNotMatch(qa, /Focused behavioral contract suite: 23\/23 passed/);
@@ -2770,6 +2799,73 @@ test("signals require exact-purpose consent and finite purpose-bound retention",
   }
 });
 
+test("consent and retention expiry and revocation states require exact primitive false", () => {
+  const gate = contract.personalAnnotation.signalPurposeGate;
+  assert.deepEqual(gate.requiredExactPrimitiveBooleanStates, {
+    consent: { expired: false, revoked: false },
+    retention: { expired: false, revoked: false },
+  });
+  assert.equal(gate.exactFalseOnlyPreservesEligibility, true);
+  assert.equal(gate.exactFalseCreatesConsentReceiptOrAuthorization, false);
+  assert.equal(gate.truthinessDefaultingCoercionOrAbsenceAccepted, false);
+
+  const allHypotheticalGates = hypotheticalReceiptValidTrainingDecisionContext();
+  const invalidValues = [undefined, null, true, "true", "false", 0, 1, {}, []];
+  for (const [recordName, states] of Object.entries(gate.requiredExactPrimitiveBooleanStates)) {
+    for (const stateName of Object.keys(states)) {
+      const omitted = signalCandidate();
+      delete omitted[recordName][stateName];
+      const omittedResult = evaluateTrainingCandidate(omitted, allHypotheticalGates);
+      assert.equal(omittedResult.candidateEligible, false, `${recordName}.${stateName}: omitted`);
+      assert.equal(omittedResult.hypotheticalReceiptsValid === true, false);
+      assert.equal(omittedResult.currentlyAuthorized, false);
+
+      for (const invalidValue of invalidValues) {
+        const result = evaluateTrainingCandidate(signalCandidate({
+          [recordName]: { [stateName]: invalidValue },
+        }), allHypotheticalGates);
+        assert.equal(
+          result.candidateEligible,
+          false,
+          `${recordName}.${stateName}: ${String(invalidValue)}`,
+        );
+        assert.equal(result.hypotheticalReceiptsValid === true, false);
+        assert.equal(result.currentlyAuthorized, false);
+      }
+    }
+  }
+
+  const valid = evaluateTrainingCandidate(signalCandidate(), allHypotheticalGates);
+  assert.equal(valid.candidateEligible, true);
+  assert.equal(valid.hypotheticalReceiptsValid, true);
+  assert.equal(valid.currentlyAuthorized, false);
+
+  for (const candidate of [
+    signalCandidate({ consent: { state: "INACTIVE" } }),
+    signalCandidate({ consent: { exactPurpose: false } }),
+    signalCandidate({ retention: { finite: false } }),
+    signalCandidate({ retention: { purposeId: "purpose-other" } }),
+  ]) {
+    const result = evaluateTrainingCandidate(candidate, allHypotheticalGates);
+    assert.equal(result.candidateEligible, false, result.reason);
+    assert.equal(result.hypotheticalReceiptsValid === true, false);
+    assert.equal(result.currentlyAuthorized, false);
+  }
+
+  const falseOnly = signalCandidate();
+  falseOnly.consent = { expired: false, revoked: false };
+  falseOnly.retention = { expired: false, revoked: false };
+  const falseOnlyResult = evaluateTrainingCandidate(falseOnly, allHypotheticalGates);
+  assert.equal(falseOnlyResult.candidateEligible, false);
+  assert.equal(falseOnlyResult.hypotheticalReceiptsValid === true, false);
+  assert.equal(falseOnlyResult.currentlyAuthorized, false);
+
+  const noApprovalReceipts = evaluateTrainingCandidate(signalCandidate(), trainingDecisionContext());
+  assert.equal(noApprovalReceipts.candidateEligible, true);
+  assert.equal(noApprovalReceipts.hypotheticalReceiptsValid, false);
+  assert.equal(noApprovalReceipts.currentlyAuthorized, false);
+});
+
 test("future training approvals are independently resolved and exact-candidate bound", () => {
   const gate = contract.personalAnnotation.trainingApprovalReceiptGate;
   assert.equal(gate.appliesToEveryFutureTrainingCandidate, true);
@@ -2980,7 +3076,7 @@ test("valid confirmation commits exact assisted transition before render and rac
     canonicalAttemptState: "SUBMITTED",
     timing: "AFTER_RESPONSE",
     confirmation: undefined,
-    canonicalExposureRecordCommitted: true,
+    canonicalRecordCommitted: true,
   })), {
     accepted: true,
     mayRenderCueBytes: true,
@@ -2991,12 +3087,90 @@ test("valid confirmation commits exact assisted transition before render and rac
   });
 });
 
+test("submitted-attempt bindings require exact learner scope across request and event validators", () => {
+  const gate = contract.cueExposure.afterResponseGate;
+  assert.equal(gate.sharedAcrossEveryApplicableRenderCapableValidator, true);
+  assert.deepEqual(gate.renderCapableValidators, [
+    "CUE_RENDER_REQUEST_VALIDATOR",
+    "CUE_EXPOSURE_EVENT_VALIDATOR",
+  ]);
+  assert.equal(gate.nonNullExactLearnerPrivateScopeIdRequired, true);
+  assert.equal(gate.learnerPrivateScopeBindingRule.requiredPrimitiveType, "string");
+  assert.equal(gate.learnerPrivateScopeBindingRule.trimmedRequired, true);
+  assert.equal(gate.learnerPrivateScopeBindingRule.matchingMissingOrUndefinedAccepted, false);
+
+  const validators = [
+    ["request", (overrides = {}) => evaluateCueRender(cueRenderRequest({
+      canonicalAttemptState: "SUBMITTED",
+      timing: "AFTER_RESPONSE",
+      confirmation: undefined,
+      ...overrides,
+    }))],
+    ["event", (overrides = {}) => validateCueExposureEvent(cueEvent({
+      timing: "AFTER_RESPONSE",
+      ...overrides,
+    }))],
+  ];
+  const invalidBindings = [
+    {
+      learnerPrivateScopeId: undefined,
+      attemptResolution: canonicalAttemptResolution({ learnerPrivateScopeId: undefined }),
+    },
+    { learnerPrivateScopeId: undefined },
+    { attemptResolution: canonicalAttemptResolution({ learnerPrivateScopeId: undefined }) },
+    {
+      learnerPrivateScopeId: "learner-foreign",
+      attemptResolution: canonicalAttemptResolution({
+        learnerPrivateScopeId: "learner-foreign",
+        crossLearner: true,
+      }),
+    },
+    { attemptResolution: canonicalAttemptResolution({ learnerPrivateScopeId: "learner-other" }) },
+    { attemptResolution: canonicalAttemptResolution({ resolved: false }) },
+    { attemptResolution: canonicalAttemptResolution({ ambiguous: true }) },
+    { attemptResolution: canonicalAttemptResolution({ conflicting: true }) },
+    { attemptResolution: canonicalAttemptResolution({ stale: true }) },
+    { attemptResolution: canonicalAttemptResolution({ replayed: true }) },
+    { attemptResolution: canonicalAttemptResolution({ clientInferred: true }) },
+    { clientLearnerPrivateScopeId: "learner-1" },
+    { callerLearnerPrivateScopeId: "learner-1" },
+    { inferLearnerPrivateScopeId: true },
+    {
+      attemptId: undefined,
+      attemptResolution: canonicalAttemptResolution({ attemptId: undefined }),
+    },
+    { attemptId: null },
+    { attemptId: "   " },
+    { attemptResolution: canonicalAttemptResolution({ attemptId: "attempt-other" }) },
+    { attemptResolution: canonicalAttemptResolution({ crossAttempt: true }) },
+    { clientAttemptId: "attempt-1" },
+    { inferLatestAttempt: true },
+  ];
+  for (const invalidScope of [null, "", "   ", " learner-1", "learner-1 ", 0, true, {}, []]) {
+    invalidBindings.push({ learnerPrivateScopeId: invalidScope });
+    invalidBindings.push({
+      attemptResolution: canonicalAttemptResolution({ learnerPrivateScopeId: invalidScope }),
+    });
+  }
+
+  for (const [name, validate] of validators) {
+    for (const invalidBinding of invalidBindings) {
+      const result = validate(invalidBinding);
+      assert.equal(result.accepted, false, `${name}: ${result.reason}`);
+      assert.equal(result.mayRenderCueBytes, false, `${name}: ${result.reason}`);
+    }
+    const valid = validate();
+    assert.equal(valid.accepted, true, name);
+    assert.equal(valid.mayRenderCueBytes, true, name);
+  }
+});
+
 test("after-response rejects every non-exact canonical submitted-attempt reference", () => {
   const base = {
     canonicalAttemptState: "SUBMITTED",
     timing: "AFTER_RESPONSE",
     confirmation: undefined,
-    canonicalExposureRecordCommitted: true,
+    canonicalRecordCommitted: true,
   };
   const invalidRequests = [
     cueRenderRequest({ ...base, attemptId: undefined }),
@@ -3024,6 +3198,67 @@ test("after-response rejects every non-exact canonical submitted-attempt referen
     assert.equal(result.mayRenderCueBytes, false, result.reason);
     assert.equal(result.independentEvidenceEligible, false, result.reason);
   }
+});
+
+test("after-response requests require canonicalRecordCommitted and ignore aliases", () => {
+  const gate = contract.cueExposure.afterResponseGate;
+  assert.equal(gate.canonicalRecordCommittedGateRef, "cueExposure.canonicalRecordCommittedGate");
+  assert.equal(gate.canonicalRecordCommittedField, "canonicalRecordCommitted");
+  assert.equal(gate.canonicalExposureRecordCommittedAliasAccepted, false);
+  assert.equal(gate.alternateCommitFieldFallbackAllowed, false);
+
+  for (const canonicalRecordCommitted of [
+    undefined,
+    null,
+    false,
+    "true",
+    "false",
+    0,
+    1,
+    {},
+    [],
+  ]) {
+    const request = cueRenderRequest({
+      canonicalAttemptState: "SUBMITTED",
+      timing: "AFTER_RESPONSE",
+      confirmation: undefined,
+      canonicalRecordCommitted,
+      canonicalExposureRecordCommitted: true,
+    });
+    const result = evaluateCueRender(request);
+    assert.equal(result.accepted, false, String(canonicalRecordCommitted));
+    assert.equal(result.mayRenderCueBytes, false, String(canonicalRecordCommitted));
+  }
+
+  const valid = evaluateCueRender(cueRenderRequest({
+    canonicalAttemptState: "SUBMITTED",
+    timing: "AFTER_RESPONSE",
+    confirmation: undefined,
+    canonicalRecordCommitted: true,
+    canonicalExposureRecordCommitted: false,
+  }));
+  assert.equal(valid.accepted, true);
+  assert.equal(valid.mayRenderCueBytes, true);
+
+  const trueAlone = evaluateCueRender(cueRenderRequest({
+    canonicalAttemptState: "SUBMITTED",
+    timing: "AFTER_RESPONSE",
+    confirmation: undefined,
+    canonicalRecordCommitted: true,
+    attemptId: undefined,
+  }));
+  assert.equal(trueAlone.accepted, false);
+  assert.equal(trueAlone.mayRenderCueBytes, false);
+
+  assert.equal(validateCueExposureEvent(cueEvent({
+    timing: "AFTER_RESPONSE",
+    canonicalRecordCommitted: false,
+    canonicalExposureRecordCommitted: true,
+  })).accepted, false);
+  assert.equal(validateCueExposureEvent(cueEvent({
+    timing: "AFTER_RESPONSE",
+    canonicalRecordCommitted: true,
+  })).accepted, true);
 });
 
 test("review-only requires canonical server derivation and no matching open attempt", () => {

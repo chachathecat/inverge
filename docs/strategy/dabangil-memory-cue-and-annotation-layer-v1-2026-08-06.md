@@ -517,11 +517,14 @@ D+7 stable / timed: HIDDEN
 - missing·empty·unknown·ambiguous·cross-learner·cross-attempt·submitted·closed·stale·cancelled·replayed·
   mismatched·client-inferred attempt reference, invalid confirmation, partial commit, record failure,
   inconsistent ledger state 또는 render/submit race는 모두 fail closed하며 cue byte를 전혀 렌더하지 않는다.
-- 이미 response가 제출된 canonical attempt는 `AFTER_RESPONSE`만 허용한다. 이 variant는 non-null
-  exact `attemptId`와 `learnerPrivateScopeId`가 canonical server attempt ledger의 바로 그
-  `SUBMITTED` attempt 한 건에 일치한 뒤에만 렌더한다. client 입력이나 latest-attempt 추론은 금지한다.
-- missing·empty·unknown·cross-learner·cross-attempt·mismatched·replayed·pre-submission attempt
-  reference는 fail closed하며 cue byte를 전혀 렌더하지 않는다.
+- 이미 response가 제출된 canonical attempt는 `AFTER_RESPONSE`만 허용한다. 이 variant의 request/event와
+  canonical server attempt resolution은 각각 non-null exact `attemptId`와 exact primitive string인
+  trimmed·non-empty `learnerPrivateScopeId`를 독립적으로 가져야 한다. 두 필드는 바로 그 authenticated
+  learner scope의 `SUBMITTED` attempt 한 건과 정확히 일치한 뒤에만 렌더한다. 두 쪽이 모두 필드를
+  생략해 matching `undefined` values가 된 경우도 binding이 아니며, client/latest/caller 추론은 금지한다.
+- missing·undefined·null·empty·whitespace·wrong-type·malformed·unknown·ambiguous·conflicting·cross-learner·
+  cross-attempt·mismatched·stale·replayed·client-inferred·caller-asserted·unresolved·pre-submission attempt 또는
+  learner-scope reference는 fail closed하며 cue byte를 전혀 렌더하지 않는다.
 - 별도 `REVIEW_ONLY` variant만 attempt에 묶이지 않을 수 있고 항상 evidence-neutral이지만,
   caller label·`canonicalExposureRecordCommitted` boolean·client event·inferred timing으로 선택할 수 없다.
   cue render request validator와 exposure-event validator 모두
@@ -607,7 +610,21 @@ type ExactCanonicalSubmittedAttemptBindingV1 = {
   learnerPrivateScopeId: string;
   canonicalAttemptState: "SUBMITTED";
   matchingRecordCount: 1;
+  known: true;
+  resolved: true;
+  submitted: true;
   submittedBeforeExposure: true;
+  ambiguous: false;
+  conflicting: false;
+  crossLearner: false;
+  crossAttempt: false;
+  mismatched: false;
+  replayed: false;
+  preSubmission: false;
+  closed: false;
+  stale: false;
+  cancelled: false;
+  clientInferred: false;
 };
 
 type CanonicalReviewOnlyResolutionV1 = {
@@ -722,7 +739,9 @@ type CanonicalExposureHistoryV1 = {
 - 모든 render-capable exposure-event variant(`BEFORE_RESPONSE`, `AFTER_RESPONSE`, `REVIEW_ONLY`)는
   `canonicalRecordCommitted === true`를 요구한다. truthiness는 금지하며 missing·undefined·null·false·
   string(`"true"`, `"false"` 포함)·number·object·array·ambiguous 또는 caller-inferred commit state는
-  cue byte 0으로 fail closed한다.
+  cue byte 0으로 fail closed한다. request-side와 event-side `AFTER_RESPONSE`는 같은 exact-boolean gate를
+  사용하며 `canonicalExposureRecordCommitted` 또는 다른 alias는 canonical field를 대체하지 못한다.
+  exact true는 이 prerequisite 하나만 충족하며 attempt·learner·ordering·race gate를 우회하지 못한다.
 - timing과 assistance classification은 canonical ledger가 파생하며 untrusted client 값을 받지 않는다.
 - attempt state는 `CANONICAL_SERVER_ATTEMPT_LEDGER`에서 파생한다. `BEFORE_RESPONSE`는 exact
   learner/attempt resolution의 `INDEPENDENT_ATTEMPT_OPEN`과 exact single-use confirmation이 모두 없으면
@@ -937,6 +956,14 @@ content safety의 증거가 아니다.
   `signalId`·`signalRevisionId`·`purposeId`·`o5ScopeId`에 묶여야 한다.
 - `CANONICAL_PURPOSE_SCOPED_RETENTION_LEDGER`의 active finite purpose-bound retention. 동일 네 binding과 non-empty
   `expiresAt`을 가지며 indefinite retention은 허용하지 않는다.
+
+두 canonical record는 각각 `consent.expired === false`, `consent.revoked === false`,
+`retention.expired === false`, `retention.revoked === false`를 exact primitive boolean으로 요구한다.
+`!== true`, truthiness, defaulting, coercion 또는 true의 부재로 대체할 수 없다. 어느 필드든 missing·
+undefined·null·true·string(`"true"`, `"false"`)·number·object·array 또는 다른 non-false 값이면 candidate는
+부적격이고 hypothetical receipt도 valid가 될 수 없다. exact false는 다른 모든 source·ACTIVE·purpose·
+binding·finite-retention·trusted-time·strict-future-expiry gate가 통과할 때 eligibility만 보존하며 consent,
+receipt, current use, training, promotion 또는 O5 authorization을 만들지 않는다.
 
 consent와 retention의 두 `expiresAt`은 decision 시점마다 `TRUSTED_SERVER_CLOCK_BOUNDARY`에서 얻거나
 trusted server boundary를 통해 주입된 exact ISO-8601 UTC `evaluatedAt`과 비교한다. 두 expiry 모두

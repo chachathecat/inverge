@@ -79,19 +79,24 @@ PR #692 mutation is included.
 22. Missing, empty, unknown, ambiguous, cross-learner, cross-attempt, submitted, closed, stale, cancelled,
     replayed, mismatched or client-inferred pre-response references, partial commit, inconsistent ledger state,
     record failure and render/submit race roll back and render no cue bytes. A canonical
-    submitted response permits `AFTER_RESPONSE` only. `AFTER_RESPONSE` requires a non-null exact `attemptId`
-    resolving through the canonical server ledger to that exact submitted learner attempt. Missing, empty,
-    unknown, cross-learner, cross-attempt, mismatched, replayed, pre-submission, client-supplied or latest-inferred
-    references fail closed with no cue bytes. Only evidence-neutral `REVIEW_ONLY` may remain attempt-unbound,
+    submitted response permits `AFTER_RESPONSE` only. `AFTER_RESPONSE` requires both its request/event and its
+    independent canonical resolution to carry a non-null exact `attemptId` plus an exact primitive-string,
+    trimmed, non-empty `learnerPrivateScopeId`, bound to that authenticated learner and exact submitted attempt.
+    Two missing values cannot bind through `undefined === undefined`. Missing, undefined, null, empty, whitespace,
+    wrong-type, malformed, unknown, ambiguous, conflicting, cross-learner, cross-attempt, mismatched, stale,
+    replayed, client-inferred, caller-asserted, unresolved, pre-submission or latest-inferred references fail closed
+    with no cue bytes. Only evidence-neutral `REVIEW_ONLY` may remain attempt-unbound,
     and both render paths delegate to `CANONICAL_REVIEW_ONLY_RENDER_GATE_V1`. Caller labels,
     `canonicalExposureRecordCommitted` booleans, client events and inferred timing do not authorize it. A trusted
     server resolver must prove one exact canonical timing/classification plus committed exposure bound to learner,
     attempt scope, cue, cue revision and request, while the canonical attempt ledger independently proves zero
     matching open independent attempts. Missing, ambiguous, conflicting, cross-learner, stale, client-inferred
     resolution or any matching open attempt fails closed with no cue bytes.
-    Independently, every render-capable exposure-event timing requires
+    Independently, every render-capable exposure-event timing and the request-side submitted-attempt path require
     `canonicalRecordCommitted === true`; truthy strings/numbers and every missing, null, false, object, array,
     ambiguous or inferred value fail closed, including on `AFTER_RESPONSE` and `REVIEW_ONLY`.
+    `canonicalExposureRecordCommitted` and every alternate alias are ignored as commit evidence. Exact true
+    satisfies only this prerequisite and bypasses no other gate.
 23. Any decomposition displayed before a response is assistance/exposure.
 24. The default collapsed surface exposes only `formalTerm` unless rules 18–22 have passed.
 25. `HIDDEN` forbids cue bytes in DOM, SSR, accessibility text, prefetch, cache and direct API output.
@@ -124,7 +129,10 @@ PR #692 mutation is included.
     revision, purpose and O5 scope. Both expiries are compared at each decision with an exact trusted server-clock
     instant and must be strictly later; caller/candidate/client time, a fixed date, missing or invalid time, and the
     at/after-expiry boundary fail closed. Generic opt-in, contract, administrator choice or O5 cannot substitute;
-    missing, mismatched, expired, revoked, indefinite or cross-purpose records fail closed. Raw bodies, raw
+    `consent.expired`, `consent.revoked`, `retention.expired` and `retention.revoked` must each be exact primitive
+    boolean false. Missing, undefined, null, true, strings, numbers, objects, arrays, mismatched, indefinite or
+    cross-purpose records fail closed before candidate eligibility or hypothetical receipts. Exact false preserves
+    eligibility only after every other gate passes and creates no consent, receipt or authorization. Raw bodies, raw
     pointers and reconstructive derivatives cannot be renamed, aliased or relabeled into signals.
 37. MCAL-2 requires CPF-2A closure and an approved bodyless exposure path.
 38. Personal editor is blocked pending CPF, privacy, retention, export/delete, schema/RLS/Storage and hostile runtime gates.
@@ -184,8 +192,12 @@ All fail closed or hold.
 - cue bytes render before confirmation consumption, exposure, `ASSISTED` and evidence-invalidation commits all succeed;
 - partial commit, record failure or render/submit race still renders cue bytes;
 - an already submitted attempt is treated as `BEFORE_RESPONSE`;
-- `AFTER_RESPONSE` omits `attemptId`, uses client/latest inference, or resolves an unknown, cross-learner,
-  cross-attempt, mismatched, replayed or pre-submission attempt reference;
+- `AFTER_RESPONSE` omits either `attemptId` or `learnerPrivateScopeId`, accepts matching undefined learner scopes,
+  accepts whitespace/wrong-type scope, borrows another learner's binding, uses client/latest/caller inference, or
+  resolves an unknown, ambiguous, conflicting, cross-learner, cross-attempt, mismatched, stale, replayed,
+  unresolved or pre-submission attempt reference;
+- request-side `AFTER_RESPONSE` accepts `canonicalExposureRecordCommitted: true` while
+  `canonicalRecordCommitted` is missing, false or malformed;
 - an attempt-unbound variant other than evidence-neutral `REVIEW_ONLY` renders cue bytes;
 - ambiguous ordering or a render/submit race receives independent credit;
 - exposure is recorded after render or record failure still reveals cue bytes;
@@ -216,7 +228,8 @@ All are rejected.
 - any one of the five signal content-safety fields is omitted, undefined, null, non-boolean or true;
 - signal safety proof is ambiguous, taken from another object, or not closed-schema validated;
 - a raw pointer or reconstructive derivative renamed, aliased or relabeled as a signal;
-- signal consent or retention is missing, generic, mismatched, expired, revoked, indefinite or cross-purpose;
+- signal consent or retention is missing, generic, mismatched, indefinite or cross-purpose, or any consent/retention
+  `expired`/`revoked` field is missing, undefined, null, true, a string, number, object or array instead of exact false;
 - consent or retention expiry is checked against a fixed/caller time, or is at/before trusted decision time;
 - trusted decision time is caller-controlled, missing, invalid, ambiguous or outside the server clock boundary;
 - O5, contract, administrator choice or generic opt-in substitutes for exact-purpose consent or finite retention;
@@ -260,7 +273,7 @@ npm run build
 Current correction-source evidence:
 
 - JavaScript syntax check: passed.
-- Focused behavioral contract suite: 31/31 passed.
+- Focused behavioral contract suite: 34/34 passed.
 - Strict JSON parse, balanced Markdown fences, cross-artifact assertions and `git diff --check`: passed.
 - Typecheck: passed.
 - Lint: passed with 0 errors and 9 pre-existing warnings outside the MCAL diff.

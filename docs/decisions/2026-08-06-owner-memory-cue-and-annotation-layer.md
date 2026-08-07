@@ -74,7 +74,9 @@ FULL → DECOMPOSITION_ONLY → PROMPT_ONLY → HIDDEN
 `CueExposureEvent`는 별도 ledger를 만들지 않고 canonical Assistance/Exposure ledger를 재사용한다.
 모든 render-capable exposure-event timing(`BEFORE_RESPONSE`, `AFTER_RESPONSE`, `REVIEW_ONLY`)은
 `canonicalRecordCommitted === true`를 요구한다. truthiness는 금지하며 missing·null·false·string·number·
-object·array·ambiguous 또는 caller-inferred commit state는 cue byte 0으로 fail closed한다.
+object·array·ambiguous 또는 caller-inferred commit state는 cue byte 0으로 fail closed한다. request와 event의
+`AFTER_RESPONSE`는 동일 exact-boolean gate를 사용하며 `canonicalExposureRecordCommitted` 같은 alias는
+canonical field를 대체하지 못한다. exact true 하나만으로 다른 binding·ordering·race gate를 우회하지 못한다.
 `BEFORE_RESPONSE`는 `LOW` 또는 `MATERIAL`만 허용하며 `NONE`은 invalid다. `NONE`은 해당
 attempt에 pre-response cue exposure가 없었다는 뜻이다. timing과 classification은 canonical
 ledger에서 파생하고 client 입력을 신뢰하지 않는다. sequence에 pre-response event가 하나라도
@@ -92,9 +94,12 @@ missing·empty·unknown·ambiguous·cross-learner·cross-attempt·submitted·clo
 mismatched·client-inferred attempt reference, invalid confirmation, partial commit, record failure,
 inconsistent ledger state 또는 render/submit race는 cue byte 0으로 fail closed한다. 이미 submitted인
 canonical attempt는 `AFTER_RESPONSE`만 허용한다. 이 variant는
-non-null exact `attemptId`와 learner scope가 canonical server attempt ledger의 exact `SUBMITTED`
-attempt 한 건에 resolve되어야 한다. client/latest-attempt 추론과 missing·empty·unknown·cross-learner·
-cross-attempt·mismatched·replayed·pre-submission reference는 cue byte 0으로 fail closed한다.
+non-null exact `attemptId`와 exact primitive string인 trimmed·non-empty `learnerPrivateScopeId`를 request/event와
+canonical resolution이 각각 독립적으로 가져야 하고, authenticated learner scope의 exact `SUBMITTED`
+attempt 한 건에 일치해야 한다. 양쪽 모두 missing이라 `undefined === undefined`인 경우도 binding이 아니다.
+client/latest/caller 추론과 missing·undefined·null·empty·whitespace·wrong-type·malformed·unknown·ambiguous·
+conflicting·cross-learner·cross-attempt·mismatched·stale·replayed·client-inferred·caller-asserted·unresolved·
+pre-submission reference는 cue byte 0으로 fail closed한다.
 오직 별도 `REVIEW_ONLY` variant만 attempt-unbound일 수 있고 항상 evidence-neutral이다. 그러나
 caller가 붙인 `REVIEW_ONLY` label, `canonicalExposureRecordCommitted` boolean, client event 또는 inferred
 timing은 authorization evidence가 아니다. cue request와 exposure-event 두 render path 모두
@@ -195,7 +200,13 @@ ledger와 purpose-retention ledger에서 요구한다. consent와 retention의 �
 `TRUSTED_SERVER_CLOCK_BOUNDARY`의 exact ISO-8601 UTC time과 비교하며 둘 다 evaluation time보다 엄격히
 뒤여야 한다. caller/candidate/client time, 고정 날짜, missing/invalid/untrusted/ambiguous time, at-expiry 또는
 post-expiry는 fail closed한다. generic opt-in, contract, administrator choice 또는 O5는 이를 대체하지 못한다.
-missing·mismatched·expired·revoked·indefinite·cross-purpose record도 fail closed다.
+각 canonical record는 `consent.expired === false`, `consent.revoked === false`,
+`retention.expired === false`, `retention.revoked === false`를 exact primitive boolean으로 요구한다.
+`!== true`, truthiness, defaulting, coercion 또는 true의 부재는 금지한다. missing·undefined·null·true·string·
+number·object·array 또는 다른 non-false 값 하나라도 있으면 candidate eligibility와 hypothetical receipt는
+fail closed한다. exact false는 다른 source·ACTIVE·purpose·binding·finite-retention·trusted-time·strict-future
+expiry gate가 모두 통과할 때 eligibility만 보존하며 consent·receipt·current authorization·training·promotion·
+O5 authorization을 만들지 않는다. mismatched·indefinite·cross-purpose record도 fail closed다.
 
 `LEARNER_ATTEMPT_RANGE`와 `PRIVATE_SOURCE_RANGE`는 owner-bound `LEARNER_PRIVATE` 및
 `VAULT_LOCAL_ONLY`로 강제한다. private target digest는 vault-local integrity metadata일 뿐이며,
