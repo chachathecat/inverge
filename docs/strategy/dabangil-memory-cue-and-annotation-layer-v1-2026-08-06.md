@@ -411,7 +411,15 @@ D+7 stable / timed: HIDDEN
 
 - 답변 전에 decomposition·memory gloss·prompt 중 어떤 단서든 표시하면 exposure다.
 - `CueExposureEvent`는 별도 저장소가 아니라 canonical Assistance/Exposure ledger event를 재사용한다.
-- ledger 기록은 cue byte 렌더보다 먼저 원자적으로 성공해야 하며, 실패하면 cue를 표시하지 않는다.
+- `BEFORE_RESPONSE`는 canonical server attempt ledger가 `INDEPENDENT_ATTEMPT_OPEN`으로
+  판정한 exact attempt에만 허용하며, client가 보낸 attempt state는 신뢰하지 않는다.
+- learner가 해당 attempt·cue·cue revision·단일 request에 정확히 묶인 deliberate confirmation을
+  명시적으로 완료해야 한다. client boolean이나 미리 선택된 consent는 confirmation이 아니다.
+- confirmation record, cue exposure record, `ASSISTED` 전환, independent-evidence invalidation은
+  하나의 all-or-nothing transaction으로 cue byte 렌더 전에 순서대로 commit되어야 한다.
+- missing·cancelled·stale·replayed·mismatched·ambiguous confirmation, partial commit, record failure,
+  render/submit race는 모두 fail closed하며 cue byte를 전혀 렌더하지 않는다.
+- 이미 response가 제출된 canonical attempt는 `AFTER_RESPONSE`만 허용한다.
 - cue를 보고 맞힌 것은 independent mastery가 아니다.
 - cue를 본 뒤의 수정은 assisted repair로 분리한다.
 - same cue card 반복은 far transfer가 아니다.
@@ -454,15 +462,39 @@ const CUE_TIMING_CLASSIFICATION_V1 = {
   AFTER_RESPONSE: ["NONE", "LOW", "MATERIAL"],
   REVIEW_ONLY: ["NONE", "LOW", "MATERIAL"],
 } as const;
+
+type PreResponseCueConfirmationV1 = {
+  source: "CANONICAL_SERVER_CONFIRMATION_LEDGER";
+  status: "CONFIRMED";
+  attemptId: string;
+  cueId: string;
+  cueRevisionId: string;
+  requestId: string;
+  singleUse: true;
+};
+
+const PRE_RESPONSE_RENDER_TRANSACTION_V1 = [
+  "CONFIRMATION_RECORD_COMMITTED",
+  "CUE_EXPOSURE_RECORD_COMMITTED",
+  "ATTEMPT_STATE_TRANSITIONED_TO_ASSISTED",
+  "INDEPENDENT_EVIDENCE_INVALIDATED",
+  "CUE_BYTES_RENDERED",
+] as const;
 ```
 
 - timing과 assistance classification은 canonical ledger가 파생하며 untrusted client 값을 받지 않는다.
+- attempt state는 `CANONICAL_SERVER_ATTEMPT_LEDGER`에서 파생한다. `BEFORE_RESPONSE`는 exact
+  `INDEPENDENT_ATTEMPT_OPEN`과 exact single-use confirmation이 모두 없으면 허용하지 않는다.
+- confirmation은 attempt·cue·cue revision·request 네 필드가 모두 정확히 일치하는 단 하나의
+  non-cancelled, fresh, unused server record여야 한다. 단순 client boolean·preselected consent는 부족하다.
 - `BEFORE_RESPONSE + NONE`은 invalid다. `NONE`은 해당 attempt에 pre-response cue exposure가
   하나도 없었음을 뜻한다.
 - attempt sequence에 pre-response event가 하나라도 있으면 independent retrieval, far transfer,
   stable D+7 evidence는 모두 부적격이며 뒤의 event가 이를 independent로 복구할 수 없다.
-- ordering ambiguity, ledger record failure 또는 render/submit race는 fail closed다. canonical
-  exposure record commit 전에는 cue byte를 렌더하지 않고 independent credit도 부여하지 않는다.
+- confirmation → exposure → `ASSISTED` → independent-evidence invalidation의 exact transaction이
+  모두 commit된 다음에만 cue byte를 렌더한다. partial commit, ordering ambiguity, ledger record
+  failure 또는 render/submit race는 rollback 후 fail closed하며 cue byte와 independent credit 모두 0이다.
+- canonical state가 `SUBMITTED`이면 `BEFORE_RESPONSE`는 거부하고 `AFTER_RESPONSE`만 허용한다.
 
 `HIDDEN`은 CSS로 가리거나 접어 둔 상태가 아니다. cue·decomposition·prompt·memory gloss
 바이트가 DOM, SSR payload, accessibility text, prefetch response, cache entry 또는 direct
@@ -572,12 +604,31 @@ plane = PERSONAL_RAW_VAULT
 owner isolation = mandatory
 shared reuse = 0
 cross-user reuse = 0
-model training = 0 by default
+direct raw-body model training = 0 unconditionally
+consent / opt-in / contract / administrator / future O5 override = 0
+raw-body rename / alias / direct Cleared Content Bank promotion = 0
 free-text analytics = 0
 export/delete = required before activation
 purpose retention = required
 append-only exposure/history where learning evidence depends on it
 ```
+
+이 금지는 default가 아니라 변경 불가능한 입력 적격성 경계다. learner consent·opt-in, 계약,
+관리자 선택 또는 미래 O5 승인도 Personal Raw Vault의 annotation body 자체를 직접 training
+input이나 training candidate로 만들 수 없다. raw body의 이름·별칭·label·container를 바꾸어도
+원래의 `PERSONAL_ANNOTATION_RAW_BODY` 분류가 유지되며, 그것을 Cleared Content Bank object로
+직접 승격할 수 없다.
+
+미래 training candidate가 될 수 있는 것은 다음 두 종류뿐이다.
+
+- raw body·excerpt·free text를 포함하거나 복원할 수 없는 별도 identity의 closed-schema
+  non-reconstructive signal;
+- raw annotation body의 rename·alias·직접 promotion이 아닌, 별도로 작성되고 실제 권리를
+  소유하며 provenance와 rights review를 통과한 별도 Cleared Content Bank object.
+
+contribution gate, Cleared Content Bank promotion gate와 exact-purpose O5 gate는 서로 다른
+승인이다. contribution은 promotion을, promotion은 O5를, O5는 contribution/promotion을 대신하지
+않는다. 이 문서는 그 세 gate 중 어느 것도 승인하지 않으며 모든 authorization은 false다.
 
 별도 활성화 전 요구:
 
@@ -780,10 +831,20 @@ private_source_range_in_shared_plane = 0
 personal_annotation_body_outside_personal_raw_vault = 0
 personal_free_text_in_logs_or_analytics = 0
 cross_user_personal_cue_reuse = 0
+direct_raw_personal_annotation_body_training = 0
+raw_personal_annotation_body_renamed_or_aliased_for_training = 0
+raw_personal_annotation_body_directly_promoted_to_cleared_content_bank = 0
+reconstructive_annotation_signal_used_as_training_candidate = 0
+training_candidate_without_distinct_contribution_promotion_o5_gates = 0
 personal_editor_before_cpf_privacy_export_delete_gates = 0
 mcal_runtime_before_core_loop_acceptance = 0
 other_profile_term_auto_inheritance = 0
 mcal_creates_fourth_today_primary_task = 0
+pre_response_cue_without_canonical_independent_attempt_open = 0
+pre_response_cue_without_exact_single_use_confirmation = 0
+pre_response_cue_before_atomic_assisted_transition = 0
+pre_response_cue_after_partial_commit_or_race = 0
+submitted_attempt_rendered_as_before_response = 0
 ```
 
 ---
