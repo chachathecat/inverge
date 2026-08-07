@@ -106,18 +106,26 @@ state 또는 matching open attempt는 cue byte 0으로 fail closed한다.
 
 cue absence는 independent-evidence eligibility만 보존한다. empty event, cue-free sequence 또는
 `AFTER_RESPONSE` event만으로 independent retrieval·far transfer·stable D+7이 positive가 될 수 없다.
-세 credit을 판단하기 전에 canonical exposure history는 `preResponseCueExposureCount`를 exact
-nonnegative safe integer로 제공해야 하며 authoritative·non-ambiguous·non-conflicting·fresh·
-non-client-inferred여야 한다. 정확히 0만 다른 affirmative evidence의 자격을 보존하고, 0보다 크면
-세 credit을 모두 거부한다. missing·undefined·null·boolean·string·fractional·negative·NaN·infinite·
-unsafe·object·array·ambiguous·conflicting·stale·client/caller-inferred count는 positive evidence 0으로
-fail closed한다. far-transfer/D+7 record의 count copy도 authoritative history와 exact match해야 한다.
-exact 0 자체는 어떤 affirmative learning evidence도 만들지 않는다.
+세 credit을 판단하기 전에 base canonical exposure history는 exact valid non-null `attemptId` 및
+`learnerPrivateScopeId`를 포함하고 evaluated attempt의 두 값과 정확히 같아야 한다. far-transfer는
+source history나 copied count가 아니라 별도의 authoritative canonical history를 요구하며 그 history는
+`transferAttemptId`와 authenticated learner scope에 exact-bind한다. stable D+7도 별도 history를
+`d7AttemptId`와 같은 learner scope에 exact-bind한다. 각 history는 authoritative·complete·single-record·
+non-ambiguous·non-conflicting·fresh·non-replayed·non-client-inferred·non-caller-paired여야 하고,
+자체 `preResponseCueExposureCount`를 exact nonnegative safe integer로 제공해야 한다. 정확히 0만 해당
+affirmative evidence의 자격을 보존한다. missing·undefined·null·boolean·string·fractional·negative·NaN·
+infinite·unsafe·object·array·cross-attempt·cross-learner·ambiguous·conflicting·stale·replayed·
+client/caller-inferred history 또는 count는 affected credit을 fail closed한다. exact 0이나 unbound count
+copy 자체는 어떤 affirmative learning evidence도 만들지 않는다.
 positive independent retrieval은 exact submitted-and-evaluated response record, far transfer는 distinct
 eligible non-same-representation task와 submitted/evaluated independent result, stable D+7은 completed
 D+7 evaluation·cue `HIDDEN`·all-surface byte absence·non-same representation·unresolved scoring conflict 0의
-별도 canonical evidence를 각각 요구한다. missing exposure record/history, failed render, partial commit,
-ambiguous record 또는 `ASSISTED` attempt는 positive learning evidence 0으로 fail closed한다.
+별도 canonical evidence를 각각 요구한다. 세 affirmative record의 `ambiguous`는 exact primitive
+`false`여야 한다. missing·undefined·null·`true`·string(`"true"`, `"false"` 포함)·number·object·array는
+해당 record의 credit을 만들지 못한다. invalid independent response는 dependent far-transfer와 D+7을
+함께 막고 invalid transfer/D+7 ambiguity는 각 credit만 막는다. exact false만으로는 증거가 생기지 않는다.
+missing exposure record/history, failed render, partial commit, ambiguous record 또는 `ASSISTED` attempt는
+positive learning evidence 0으로 fail closed한다.
 `HIDDEN`은 DOM·SSR·접근성 text·prefetch·cache·direct API output 어디에도 cue byte가 없음을 뜻한다.
 D+7 stable과 timed integration은 cue hidden, non-same representation,
 unresolved scoring conflict 0을 요구한다.
@@ -131,6 +139,12 @@ unresolved scoring conflict 0을 요구한다.
 - anchor의 열 `requiredBindings`는 각 필드의 exact type·closed enum·pattern과 kind별 domain·locator·
   target-type consistency를 모두 검증한다. missing·null·empty·malformed·wrong-type·ambiguous·inconsistent
   binding은 reject하고 truthiness-only validation은 금지한다.
+- `OFFICIAL_PERMITTED_RANGE`의 `itemRightsManifestId`는 exact trimmed primitive string과
+  `^irm_[A-Za-z0-9][A-Za-z0-9._:-]{2,123}$` closed format을 통과해야 한다. 별도
+  `CANONICAL_SERVER_ITEM_RIGHTS_MANIFEST_BOUNDARY`의 authoritative item record 한 건이 manifest ID와
+  anchor ID/kind/domain/target type/`rightsManifestId`, 특히 exact `targetRevisionId`를 field-for-field
+  bind해야 한다. bare truthy ID, caller assertion/equality, fallback, missing·empty·whitespace·malformed·
+  wrong-type·unresolved·ambiguous·conflicting·stale·replayed·cross-revision·client-inferred binding은 reject한다.
 - private anchor의 `ownerBindingRef`와 `vaultLocalTargetRef`는 closed primitive-string schema와 exact
   format을 통과해야 한다. `CANONICAL_SERVER_PRIVATE_ANCHOR_OWNER_BOUNDARY`의 server-side authoritative
   resolution 한 건이 authenticated learner·tenant와 정확히 일치하고 owner ref·anchor·kind·vault-local

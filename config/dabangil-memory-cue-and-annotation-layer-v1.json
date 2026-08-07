@@ -272,7 +272,8 @@
           "OFFICIAL_PERMITTED_CONTENT_REVISION_RANGE"
         ],
         "domainResolution": "DERIVED_EXACT",
-        "itemLevelRightsRequired": true
+        "itemLevelRightsRequired": true,
+        "itemLevelRightsBindingGateRequired": true
       },
       "LEARNER_ATTEMPT_RANGE": {
         "allowedDomains": [
@@ -440,6 +441,74 @@
     "missingNullEmptyMalformedWrongTypeAmbiguousOrInconsistentBindingBehavior": "FAIL_CLOSED_REJECT",
     "targetTypeMustMatchKindPolicy": true,
     "truthinessOnlyValidationAllowed": false,
+    "itemRightsManifestBindingGate": {
+      "appliesToKinds": [
+        "OFFICIAL_PERMITTED_RANGE"
+      ],
+      "candidateField": "itemRightsManifestId",
+      "candidateFieldSchema": {
+        "type": "string",
+        "trimmed": true,
+        "minLength": 7,
+        "pattern": "^irm_[A-Za-z0-9][A-Za-z0-9._:-]{2,123}$"
+      },
+      "resolutionSource": "CANONICAL_SERVER_ITEM_RIGHTS_MANIFEST_BOUNDARY",
+      "resolutionSchema": {
+        "additionalFieldsAllowed": false,
+        "requiredFields": [
+          "source",
+          "serverSide",
+          "authoritative",
+          "resolved",
+          "matchingRecordCount",
+          "ambiguous",
+          "conflicting",
+          "stale",
+          "replayed",
+          "clientInferred",
+          "crossRevision",
+          "itemRightsManifestId",
+          "anchorId",
+          "kind",
+          "domain",
+          "targetType",
+          "targetRevisionId",
+          "rightsManifestId"
+        ]
+      },
+      "exactMatchingRecordCount": 1,
+      "requiredBooleanStates": {
+        "serverSide": true,
+        "authoritative": true,
+        "resolved": true,
+        "ambiguous": false,
+        "conflicting": false,
+        "stale": false,
+        "replayed": false,
+        "clientInferred": false,
+        "crossRevision": false
+      },
+      "exactAnchorBindingFields": [
+        "itemRightsManifestId",
+        "anchorId",
+        "kind",
+        "domain",
+        "targetType",
+        "targetRevisionId",
+        "rightsManifestId"
+      ],
+      "callerAssertionFieldsForbidden": [
+        "itemRightsManifestResolved",
+        "itemRightsManifestAuthoritative",
+        "itemRightsManifestMatchesTargetRevision",
+        "itemRightsTargetRevisionId",
+        "itemRightsBinding",
+        "clientItemRightsBinding"
+      ],
+      "callerAssertionTruthinessClientEqualityFallbackOrInferenceAccepted": false,
+      "bareIdentifierEstablishesBinding": false,
+      "missingUndefinedNullEmptyWhitespaceMalformedWrongTypeAmbiguousConflictingUnresolvedStaleCrossRevisionOrClientInferredBehavior": "FAIL_CLOSED_REJECT"
+    },
     "privateOwnerBindingGate": {
       "appliesToKinds": [
         "LEARNER_ATTEMPT_RANGE",
@@ -1207,6 +1276,73 @@
       "afterResponseOnlySequenceCreatesPositiveEvidence": false,
       "completeExposureHistoryRequired": true,
       "exposureHistorySource": "CANONICAL_ASSISTANCE_EXPOSURE_LEDGER",
+      "exposureHistoryBindingGate": {
+        "additionalFieldsAllowed": false,
+        "requiredFields": [
+          "source",
+          "authoritative",
+          "complete",
+          "matchingRecordCount",
+          "attemptId",
+          "learnerPrivateScopeId",
+          "missingExposureRecord",
+          "failedRender",
+          "partialCommit",
+          "ambiguousRecord",
+          "ambiguous",
+          "conflicting",
+          "stale",
+          "replayed",
+          "clientInferred",
+          "callerPaired",
+          "preResponseCueExposureCount",
+          "preResponseCueExposureCountAuthoritative",
+          "preResponseCueExposureCountAmbiguous",
+          "preResponseCueExposureCountConflicting",
+          "preResponseCueExposureCountStale",
+          "preResponseCueExposureCountClientInferred"
+        ],
+        "identityFields": [
+          "attemptId",
+          "learnerPrivateScopeId"
+        ],
+        "identityFieldPattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{2,127}$",
+        "exactMatchingRecordCount": 1,
+        "requiredBooleanStates": {
+          "authoritative": true,
+          "complete": true,
+          "missingExposureRecord": false,
+          "failedRender": false,
+          "partialCommit": false,
+          "ambiguousRecord": false,
+          "ambiguous": false,
+          "conflicting": false,
+          "stale": false,
+          "replayed": false,
+          "clientInferred": false,
+          "callerPaired": false
+        },
+        "baseHistoryExpectedBindings": {
+          "attemptId": "attempt.attemptId",
+          "learnerPrivateScopeId": "attempt.learnerPrivateScopeId"
+        },
+        "downstreamHistories": {
+          "farTransfer": {
+            "historyField": "exposureHistory",
+            "attemptIdField": "transferAttemptId",
+            "learnerPrivateScopeIdField": "learnerPrivateScopeId"
+          },
+          "stableD7": {
+            "historyField": "exposureHistory",
+            "attemptIdField": "d7AttemptId",
+            "learnerPrivateScopeIdField": "learnerPrivateScopeId"
+          }
+        },
+        "eachApplicableHistoryValidatedIndependently": true,
+        "bareDownstreamCountCopyEstablishesAttemptBinding": false,
+        "sourceAttemptHistoryMaySubstituteForDownstreamHistory": false,
+        "missingMalformedWrongTypeEmptyCrossAttemptCrossLearnerAmbiguousConflictingStaleReplayedUnresolvedClientInferredOrCallerPairedBehavior": "FAIL_CLOSED_FOR_AFFECTED_CREDIT"
+      },
       "preResponseCueExposureCountGate": {
         "field": "preResponseCueExposureCount",
         "sourceMustEqualExposureHistorySource": true,
@@ -1222,14 +1358,13 @@
         "safeIntegerRequired": true,
         "minimum": 0,
         "independentCreditRequiredValue": 0,
-        "downstreamEvidenceCountCopies": [
-          "farTransfer.preResponseCueExposureCount",
-          "stableD7.preResponseCueExposureCount"
-        ],
-        "downstreamEvidenceCountMustExactlyMatchAuthoritativeHistory": true,
+        "eachApplicableCanonicalHistoryMustCarryItsOwnCount": true,
+        "downstreamEvidenceCountCopiesAcceptedAsHistory": false,
         "exactZeroEffect": "PRESERVE_ELIGIBILITY_ONLY",
-        "countAboveZeroEffect": "DENY_INDEPENDENT_RETRIEVAL_FAR_TRANSFER_AND_STABLE_D7",
-        "missingUndefinedNullBooleanStringFractionalNegativeNaNInfiniteObjectArrayAmbiguousConflictingStaleClientInferredOrCallerInferredBehavior": "FAIL_CLOSED_NO_POSITIVE_LEARNING_EVIDENCE"
+        "baseHistoryCountAboveZeroEffect": "DENY_INDEPENDENT_RETRIEVAL_FAR_TRANSFER_AND_STABLE_D7",
+        "downstreamHistoryCountAboveZeroEffect": "DENY_AFFECTED_CREDIT",
+        "invalidBaseCountBehavior": "FAIL_CLOSED_NO_POSITIVE_LEARNING_EVIDENCE",
+        "invalidDownstreamCountBehavior": "FAIL_CLOSED_FOR_AFFECTED_CREDIT"
       },
       "assistedAttemptEligible": false,
       "invalidHistoryConditions": [
@@ -1238,7 +1373,8 @@
         "PARTIAL_COMMIT",
         "AMBIGUOUS_RECORD"
       ],
-      "invalidHistoryBehavior": "FAIL_CLOSED_NO_POSITIVE_LEARNING_EVIDENCE",
+      "invalidBaseHistoryBehavior": "FAIL_CLOSED_NO_POSITIVE_LEARNING_EVIDENCE",
+      "invalidDownstreamHistoryBehavior": "FAIL_CLOSED_FOR_AFFECTED_CREDIT",
       "requiredAffirmativeEvidence": {
         "independentRetrieval": {
           "source": "CANONICAL_SERVER_RESPONSE_EVALUATION_LEDGER",
@@ -1246,7 +1382,8 @@
           "requiredAssistanceState": "INDEPENDENT",
           "actualSubmissionRequired": true,
           "completedEvaluationRequired": true,
-          "exactAttemptAndLearnerBindingRequired": true
+          "exactAttemptAndLearnerBindingRequired": true,
+          "ambiguousMustExactlyEqual": false
         },
         "farTransfer": {
           "source": "CANONICAL_TRANSFER_EVALUATION_LEDGER",
@@ -1258,7 +1395,9 @@
           "independentTransferAttemptRequired": true,
           "requiredCanonicalAttemptState": "SUBMITTED",
           "exactSourceAttemptAndLearnerBindingRequired": true,
-          "completeCanonicalExposureHistoryRequired": true
+          "completeCanonicalExposureHistoryRequired": true,
+          "canonicalExposureHistoryMustBindToTransferAttemptId": true,
+          "ambiguousMustExactlyEqual": false
         },
         "stableD7": {
           "source": "CANONICAL_D7_EVALUATION_LEDGER",
@@ -1272,7 +1411,9 @@
           "independentD7AttemptRequired": true,
           "requiredCanonicalAttemptState": "SUBMITTED",
           "exactSourceAttemptAndLearnerBindingRequired": true,
-          "completeCanonicalExposureHistoryRequired": true
+          "completeCanonicalExposureHistoryRequired": true,
+          "canonicalExposureHistoryMustBindToD7AttemptId": true,
+          "ambiguousMustExactlyEqual": false
         }
       }
     },

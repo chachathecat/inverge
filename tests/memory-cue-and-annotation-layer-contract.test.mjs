@@ -52,9 +52,33 @@ function validAnchor(overrides = {}) {
   }
   if (kind === "QUESTION_UNIT") candidate.rightsState ??= candidate.domain;
   if (kind === "OFFICIAL_PERMITTED_RANGE") {
-    candidate.itemRightsManifestId ??= "item-rights-manifest-1";
+    candidate.itemRightsManifestId ??= "irm_item_rights_manifest_1";
   }
   return candidate;
+}
+
+function canonicalItemRightsBoundary(candidate, overrides = {}) {
+  return {
+    source: "CANONICAL_SERVER_ITEM_RIGHTS_MANIFEST_BOUNDARY",
+    serverSide: true,
+    authoritative: true,
+    resolved: true,
+    matchingRecordCount: 1,
+    ambiguous: false,
+    conflicting: false,
+    stale: false,
+    replayed: false,
+    clientInferred: false,
+    crossRevision: false,
+    itemRightsManifestId: candidate.itemRightsManifestId,
+    anchorId: candidate.anchorId,
+    kind: candidate.kind,
+    domain: candidate.domain,
+    targetType: candidate.targetType,
+    targetRevisionId: candidate.targetRevisionId,
+    rightsManifestId: candidate.rightsManifestId,
+    ...overrides,
+  };
 }
 
 function canonicalPrivateOwnerBoundary(candidate, overrides = {}) {
@@ -166,6 +190,44 @@ function validatePrivateAnchorOwnerBinding(candidate, ownerBoundary, anchorContr
   return { accepted: true };
 }
 
+function validateItemRightsManifestBinding(candidate, itemRightsBoundary, anchorContract) {
+  const gate = anchorContract.itemRightsManifestBindingGate;
+  const fail = (reason) => ({ accepted: false, disposition: "REJECT", reason });
+  for (const field of gate.callerAssertionFieldsForbidden) {
+    if (Object.hasOwn(candidate, field)) return fail(`CALLER_ITEM_RIGHTS_ASSERTION_${field}_FORBIDDEN`);
+  }
+  const value = candidate[gate.candidateField];
+  const schema = gate.candidateFieldSchema;
+  if (
+    typeof value !== "string"
+    || value.trim() !== value
+    || value.length < schema.minLength
+    || !new RegExp(schema.pattern).test(value)
+  ) return fail("ITEM_RIGHTS_MANIFEST_ID_INVALID");
+  if (
+    !itemRightsBoundary
+    || typeof itemRightsBoundary !== "object"
+    || Array.isArray(itemRightsBoundary)
+    || JSON.stringify(sorted(Object.keys(itemRightsBoundary)))
+      !== JSON.stringify(sorted(gate.resolutionSchema.requiredFields))
+  ) return fail("ITEM_RIGHTS_RESOLUTION_SCHEMA_INVALID");
+  if (
+    itemRightsBoundary.source !== gate.resolutionSource
+    || itemRightsBoundary.matchingRecordCount !== gate.exactMatchingRecordCount
+  ) return fail("ITEM_RIGHTS_RESOLUTION_SOURCE_OR_COUNT_INVALID");
+  for (const [field, requiredValue] of Object.entries(gate.requiredBooleanStates)) {
+    if (itemRightsBoundary[field] !== requiredValue) {
+      return fail(`ITEM_RIGHTS_RESOLUTION_${field}_INVALID`);
+    }
+  }
+  for (const field of gate.exactAnchorBindingFields) {
+    if (itemRightsBoundary[field] !== candidate[field]) {
+      return fail(`ITEM_RIGHTS_RESOLUTION_${field}_MISMATCH`);
+    }
+  }
+  return { accepted: true };
+}
+
 function anchorPolicyIntegrity(anchorContract = contract.anchors) {
   const declaredKinds = sorted(anchorContract.kinds);
   const mappedKinds = sorted(Object.keys(anchorContract.kindPolicy ?? {}));
@@ -182,7 +244,12 @@ function anchorPolicyIntegrity(anchorContract = contract.anchors) {
   return { valid: true };
 }
 
-function validateAnchor(candidate, anchorContract = contract.anchors, ownerBoundary) {
+function validateAnchor(
+  candidate,
+  anchorContract = contract.anchors,
+  ownerBoundary,
+  itemRightsBoundary,
+) {
   const integrity = anchorPolicyIntegrity(anchorContract);
   if (!integrity.valid) return { accepted: false, disposition: "REJECT", reason: integrity.reason };
 
@@ -245,8 +312,13 @@ function validateAnchor(candidate, anchorContract = contract.anchors, ownerBound
   if (policy.domainRightsConsistencyRequired && candidate.rightsState !== candidate.domain) {
     return { accepted: false, disposition: "REJECT", reason: "RIGHTS_DOMAIN_CONFLICT" };
   }
-  if (policy.itemLevelRightsRequired && !candidate.itemRightsManifestId) {
-    return { accepted: false, disposition: "REJECT", reason: "ITEM_RIGHTS_REQUIRED" };
+  if (policy.itemLevelRightsRequired) {
+    const itemRightsValidation = validateItemRightsManifestBinding(
+      candidate,
+      itemRightsBoundary,
+      anchorContract,
+    );
+    if (!itemRightsValidation.accepted) return itemRightsValidation;
   }
   if (policy.targetDigestPolicy && candidate.targetDigestScope !== policy.targetDigestPolicy) {
     return { accepted: false, disposition: "REJECT", reason: "PRIVATE_DIGEST_SCOPE_CONFLICT" };
@@ -692,11 +764,21 @@ function validateCueExposureEvent(event) {
 function canonicalExposureHistory(overrides = {}) {
   return {
     source: "CANONICAL_ASSISTANCE_EXPOSURE_LEDGER",
+    authoritative: true,
     complete: true,
+    matchingRecordCount: 1,
+    attemptId: "attempt-1",
+    learnerPrivateScopeId: "learner-1",
     missingExposureRecord: false,
     failedRender: false,
     partialCommit: false,
     ambiguousRecord: false,
+    ambiguous: false,
+    conflicting: false,
+    stale: false,
+    replayed: false,
+    clientInferred: false,
+    callerPaired: false,
     preResponseCueExposureCount: 0,
     preResponseCueExposureCountAuthoritative: true,
     preResponseCueExposureCountAmbiguous: false,
@@ -733,12 +815,14 @@ function independentResponseEvidence(overrides = {}) {
 }
 
 function farTransferEvidence(overrides = {}) {
+  const transferAttemptId = overrides.transferAttemptId ?? "attempt-transfer-1";
+  const learnerPrivateScopeId = overrides.learnerPrivateScopeId ?? "learner-1";
   return {
     source: "CANONICAL_TRANSFER_EVALUATION_LEDGER",
     canonicalAttemptSource: "CANONICAL_SERVER_ATTEMPT_LEDGER",
     sourceAttemptId: "attempt-1",
-    transferAttemptId: "attempt-transfer-1",
-    learnerPrivateScopeId: "learner-1",
+    transferAttemptId,
+    learnerPrivateScopeId,
     canonicalAttemptState: "SUBMITTED",
     originTaskId: "task-origin-1",
     transferTaskId: "task-transfer-1",
@@ -748,20 +832,24 @@ function farTransferEvidence(overrides = {}) {
     evaluationCompleted: true,
     resultId: "transfer-result-1",
     assistanceState: "INDEPENDENT",
-    exposureHistoryComplete: true,
-    preResponseCueExposureCount: 0,
+    exposureHistory: canonicalExposureHistory({
+      attemptId: transferAttemptId,
+      learnerPrivateScopeId,
+    }),
     ambiguous: false,
     ...overrides,
   };
 }
 
 function stableD7Evidence(overrides = {}) {
+  const d7AttemptId = overrides.d7AttemptId ?? "attempt-d7-1";
+  const learnerPrivateScopeId = overrides.learnerPrivateScopeId ?? "learner-1";
   return {
     source: "CANONICAL_D7_EVALUATION_LEDGER",
     canonicalAttemptSource: "CANONICAL_SERVER_ATTEMPT_LEDGER",
     sourceAttemptId: "attempt-1",
-    d7AttemptId: "attempt-d7-1",
-    learnerPrivateScopeId: "learner-1",
+    d7AttemptId,
+    learnerPrivateScopeId,
     canonicalAttemptState: "SUBMITTED",
     timing: "D_PLUS_7",
     actualSubmission: true,
@@ -771,8 +859,10 @@ function stableD7Evidence(overrides = {}) {
     representationRelation: "NON_SAME_REPRESENTATION",
     unresolvedScoringConflictCount: 0,
     assistanceState: "INDEPENDENT",
-    exposureHistoryComplete: true,
-    preResponseCueExposureCount: 0,
+    exposureHistory: canonicalExposureHistory({
+      attemptId: d7AttemptId,
+      learnerPrivateScopeId,
+    }),
     ambiguous: false,
     ...overrides,
   };
@@ -788,24 +878,32 @@ function noPositiveEvidence({ failClosed, eligibilityPreserved }) {
   };
 }
 
-function evaluateAttemptEvidence(events, evidence = {}) {
-  const validated = events.map(validateCueExposureEvent);
-  if (validated.some((result) => !result.accepted)) {
-    return noPositiveEvidence({ failClosed: true, eligibilityPreserved: false });
-  }
-  const history = evidence.exposureHistory;
+function validateCanonicalExposureHistory(history, expectedAttemptId, expectedLearnerScopeId) {
+  const gate = contract.cueExposure.learningEvidenceGate.exposureHistoryBindingGate;
+  const countGate = contract.cueExposure.learningEvidenceGate.preResponseCueExposureCountGate;
   if (
     !history
+    || typeof history !== "object"
+    || Array.isArray(history)
+    || JSON.stringify(sorted(Object.keys(history)))
+      !== JSON.stringify(sorted(gate.requiredFields))
     || history.source !== contract.cueExposure.learningEvidenceGate.exposureHistorySource
-    || history.complete !== true
-    || history.missingExposureRecord === true
-    || history.failedRender === true
-    || history.partialCommit === true
-    || history.ambiguousRecord === true
-  ) {
-    return noPositiveEvidence({ failClosed: true, eligibilityPreserved: false });
+    || history.matchingRecordCount !== gate.exactMatchingRecordCount
+  ) return { accepted: false };
+  const identityPattern = new RegExp(gate.identityFieldPattern);
+  for (const field of gate.identityFields) {
+    const value = history[field];
+    if (typeof value !== "string" || value.trim() !== value || !identityPattern.test(value)) {
+      return { accepted: false };
+    }
   }
-  const countGate = contract.cueExposure.learningEvidenceGate.preResponseCueExposureCountGate;
+  if (
+    history.attemptId !== expectedAttemptId
+    || history.learnerPrivateScopeId !== expectedLearnerScopeId
+  ) return { accepted: false };
+  for (const [field, expected] of Object.entries(gate.requiredBooleanStates)) {
+    if (history[field] !== expected) return { accepted: false };
+  }
   const count = history.preResponseCueExposureCount;
   if (
     typeof count !== countGate.requiredPrimitiveType
@@ -814,20 +912,26 @@ function evaluateAttemptEvidence(events, evidence = {}) {
     || Object.entries(countGate.authoritativeStateFields).some(
       ([field, expected]) => history[field] !== expected,
     )
-  ) {
+  ) return { accepted: false };
+  return { accepted: true, count };
+}
+
+function evaluateAttemptEvidence(events, evidence = {}) {
+  const validated = events.map(validateCueExposureEvent);
+  if (validated.some((result) => !result.accepted)) {
     return noPositiveEvidence({ failClosed: true, eligibilityPreserved: false });
   }
-  for (const downstreamEvidence of [evidence.farTransfer, evidence.stableD7]) {
-    if (
-      downstreamEvidence
-      && (
-        !Object.hasOwn(downstreamEvidence, "preResponseCueExposureCount")
-        || !Number.isSafeInteger(downstreamEvidence.preResponseCueExposureCount)
-        || downstreamEvidence.preResponseCueExposureCount < countGate.minimum
-        || downstreamEvidence.preResponseCueExposureCount !== count
-      )
-    ) return noPositiveEvidence({ failClosed: true, eligibilityPreserved: false });
+  const attempt = evidence.attempt;
+  const historyValidation = validateCanonicalExposureHistory(
+    evidence.exposureHistory,
+    attempt?.attemptId,
+    attempt?.learnerPrivateScopeId,
+  );
+  if (!historyValidation.accepted) {
+    return noPositiveEvidence({ failClosed: true, eligibilityPreserved: false });
   }
+  const countGate = contract.cueExposure.learningEvidenceGate.preResponseCueExposureCountGate;
+  const count = historyValidation.count;
   const preResponse = events.some((event) => event.timing === "BEFORE_RESPONSE")
     || count > countGate.independentCreditRequiredValue;
   const assisted = evidence.attempt?.assistanceState === "ASSISTED";
@@ -835,7 +939,6 @@ function evaluateAttemptEvidence(events, evidence = {}) {
     return noPositiveEvidence({ failClosed: false, eligibilityPreserved: false });
   }
 
-  const attempt = evidence.attempt;
   const response = evidence.independentResponse;
   const independentRetrieval = Boolean(
     attempt
@@ -852,10 +955,15 @@ function evaluateAttemptEvidence(events, evidence = {}) {
     && response.evaluationId.length > 0
     && response.actualSubmission === true
     && response.evaluationCompleted === true
-    && response.ambiguous !== true
+    && response.ambiguous === false
   );
 
   const transfer = evidence.farTransfer;
+  const transferHistory = validateCanonicalExposureHistory(
+    transfer?.exposureHistory,
+    transfer?.transferAttemptId,
+    transfer?.learnerPrivateScopeId,
+  );
   const farTransfer = Boolean(
     independentRetrieval
     && transfer
@@ -877,12 +985,17 @@ function evaluateAttemptEvidence(events, evidence = {}) {
     && typeof transfer.resultId === "string"
     && transfer.resultId.length > 0
     && transfer.assistanceState === "INDEPENDENT"
-    && transfer.exposureHistoryComplete === true
-    && transfer.preResponseCueExposureCount === 0
-    && transfer.ambiguous !== true
+    && transferHistory.accepted
+    && transferHistory.count === countGate.independentCreditRequiredValue
+    && transfer.ambiguous === false
   );
 
   const d7 = evidence.stableD7;
+  const d7History = validateCanonicalExposureHistory(
+    d7?.exposureHistory,
+    d7?.d7AttemptId,
+    d7?.learnerPrivateScopeId,
+  );
   const stableD7 = Boolean(
     independentRetrieval
     && d7
@@ -902,9 +1015,9 @@ function evaluateAttemptEvidence(events, evidence = {}) {
     && d7.representationRelation === "NON_SAME_REPRESENTATION"
     && d7.unresolvedScoringConflictCount === 0
     && d7.assistanceState === "INDEPENDENT"
-    && d7.exposureHistoryComplete === true
-    && d7.preResponseCueExposureCount === 0
-    && d7.ambiguous !== true
+    && d7History.accepted
+    && d7History.count === countGate.independentCreditRequiredValue
+    && d7.ambiguous === false
   );
 
   return {
@@ -1505,10 +1618,15 @@ test("Markdown fences and exact boundary language are present", () => {
   assert.match(annex, /CANONICAL_SERVER_PRIVATE_ANCHOR_OWNER_BOUNDARY/);
   assert.match(annex, /canonicalRecordCommitted === true/);
   assert.match(annex, /preResponseCueExposureCount/);
+  assert.match(annex, /CANONICAL_SERVER_ITEM_RIGHTS_MANIFEST_BOUNDARY/);
+  assert.match(annex, /transferAttemptId/);
+  assert.match(annex, /d7AttemptId/);
+  assert.match(annex, /`ambiguous`는 exact primitive `false`/);
   assert.match(annex, /`currentlyAuthorized`는 정확히 `false`/);
   const qa = read(P.qa);
   assert.match(qa, /PR #692 is merged at `512bfdb9232a86bf4f7d4cfbc076a9df1c8a7da2`/);
-  assert.match(qa, /Focused behavioral contract suite: 28\/28 passed/);
+  assert.match(qa, /Focused behavioral contract suite: 31\/31 passed/);
+  assert.doesNotMatch(qa, /Focused behavioral contract suite: 28\/28 passed/);
   assert.doesNotMatch(qa, /Focused behavioral contract suite: 25\/25 passed/);
   assert.doesNotMatch(qa, /Focused behavioral contract suite: 23\/23 passed/);
   assert.doesNotMatch(qa, /Focused behavioral contract suite: 16\/16 passed/);
@@ -1580,6 +1698,77 @@ test("every declared anchor required binding uses exact closed validation", () =
   assert.equal(validateAnchor(validAnchor({ requiredBindingsAmbiguous: true })).accepted, false);
   assert.equal(validateAnchor(validAnchor({ conflictingRequiredBindings: ["profileId"] })).accepted, false);
   assert.equal(validateAnchor(validAnchor({ targetType: "VESG_CONCEPT_NODE" })).accepted, false);
+});
+
+test("official-permitted anchors require a closed item-rights ID bound to the exact revision", () => {
+  const gate = contract.anchors.itemRightsManifestBindingGate;
+  const anchor = validAnchor({ kind: "OFFICIAL_PERMITTED_RANGE" });
+  const boundary = canonicalItemRightsBoundary(anchor);
+  assert.deepEqual(gate.appliesToKinds, ["OFFICIAL_PERMITTED_RANGE"]);
+  assert.equal(gate.bareIdentifierEstablishesBinding, false);
+  assert.equal(gate.callerAssertionTruthinessClientEqualityFallbackOrInferenceAccepted, false);
+  assert.equal(gate.resolutionSchema.additionalFieldsAllowed, false);
+  assert.equal(validateAnchor(anchor).accepted, false);
+  assert.equal(validateAnchor(anchor, contract.anchors, undefined, boundary).accepted, true);
+
+  for (const invalid of [undefined, null, "", "   ", " irm_item_rights_1", "item-rights-1", 1, true, {}, []]) {
+    const candidate = validAnchor({ kind: "OFFICIAL_PERMITTED_RANGE" });
+    if (invalid === undefined) delete candidate.itemRightsManifestId;
+    else candidate.itemRightsManifestId = invalid;
+    assert.equal(
+      validateAnchor(
+        candidate,
+        contract.anchors,
+        undefined,
+        canonicalItemRightsBoundary(candidate),
+      ).accepted,
+      false,
+      `itemRightsManifestId: ${String(invalid)}`,
+    );
+  }
+
+  for (const invalidBoundary of [
+    undefined,
+    null,
+    {},
+    canonicalItemRightsBoundary(anchor, { source: "CLIENT" }),
+    canonicalItemRightsBoundary(anchor, { serverSide: false }),
+    canonicalItemRightsBoundary(anchor, { authoritative: false }),
+    canonicalItemRightsBoundary(anchor, { resolved: false }),
+    canonicalItemRightsBoundary(anchor, { matchingRecordCount: 0 }),
+    canonicalItemRightsBoundary(anchor, { matchingRecordCount: 2 }),
+    canonicalItemRightsBoundary(anchor, { ambiguous: true }),
+    canonicalItemRightsBoundary(anchor, { conflicting: true }),
+    canonicalItemRightsBoundary(anchor, { stale: true }),
+    canonicalItemRightsBoundary(anchor, { replayed: true }),
+    canonicalItemRightsBoundary(anchor, { clientInferred: true }),
+    canonicalItemRightsBoundary(anchor, { crossRevision: true }),
+    canonicalItemRightsBoundary(anchor, { itemRightsManifestId: "irm_other_manifest_1" }),
+    canonicalItemRightsBoundary(anchor, { anchorId: "other-anchor" }),
+    canonicalItemRightsBoundary(anchor, { targetRevisionId: "other-revision" }),
+    canonicalItemRightsBoundary(anchor, { rightsManifestId: "other-rights-manifest" }),
+    canonicalItemRightsBoundary(anchor, { unexpected: true }),
+  ]) {
+    assert.equal(
+      validateAnchor(anchor, contract.anchors, undefined, invalidBoundary).accepted,
+      false,
+      JSON.stringify(invalidBoundary),
+    );
+  }
+
+  for (const assertion of gate.callerAssertionFieldsForbidden) {
+    const candidate = validAnchor({ kind: "OFFICIAL_PERMITTED_RANGE", [assertion]: true });
+    assert.equal(
+      validateAnchor(
+        candidate,
+        contract.anchors,
+        undefined,
+        canonicalItemRightsBoundary(candidate),
+      ).accepted,
+      false,
+      assertion,
+    );
+  }
 });
 
 test("private anchors require an exact authoritative owner binding and remain vault-local", () => {
@@ -1794,8 +1983,18 @@ test("cue timing mapping rejects pre-response NONE and preserves sticky ineligib
     exposureHistory: canonicalExposureHistory({ preResponseCueExposureCount: 1 }),
     attempt: canonicalIndependentAttempt(),
     independentResponse: independentResponseEvidence(),
-    farTransfer: farTransferEvidence({ preResponseCueExposureCount: 1 }),
-    stableD7: stableD7Evidence({ preResponseCueExposureCount: 1 }),
+    farTransfer: farTransferEvidence({
+      exposureHistory: canonicalExposureHistory({
+        attemptId: "attempt-transfer-1",
+        preResponseCueExposureCount: 1,
+      }),
+    }),
+    stableD7: stableD7Evidence({
+      exposureHistory: canonicalExposureHistory({
+        attemptId: "attempt-d7-1",
+        preResponseCueExposureCount: 1,
+      }),
+    }),
   });
   assert.deepEqual(sequence, {
     failClosed: false,
@@ -1940,6 +2139,7 @@ test("cue absence and after-response-only exposure preserve eligibility but crea
   ]) {
     assert.deepEqual(evaluateAttemptEvidence(events, {
       exposureHistory: canonicalExposureHistory(),
+      attempt: canonicalIndependentAttempt(),
     }), {
       failClosed: false,
       independentEvidenceEligibilityPreserved: true,
@@ -1957,8 +2157,14 @@ test("independent retrieval requires affirmative canonical submitted and evaluat
   assert.equal(countGate.safeIntegerRequired, true);
   assert.equal(countGate.minimum, 0);
   assert.equal(countGate.independentCreditRequiredValue, 0);
-  assert.equal(countGate.downstreamEvidenceCountMustExactlyMatchAuthoritativeHistory, true);
+  assert.equal(countGate.eachApplicableCanonicalHistoryMustCarryItsOwnCount, true);
+  assert.equal(countGate.downstreamEvidenceCountCopiesAcceptedAsHistory, false);
   assert.equal(countGate.exactZeroEffect, "PRESERVE_ELIGIBILITY_ONLY");
+  assert.equal(
+    countGate.baseHistoryCountAboveZeroEffect,
+    "DENY_INDEPENDENT_RETRIEVAL_FAR_TRANSFER_AND_STABLE_D7",
+  );
+  assert.equal(countGate.downstreamHistoryCountAboveZeroEffect, "DENY_AFFECTED_CREDIT");
   const base = {
     exposureHistory: canonicalExposureHistory(),
     attempt: canonicalIndependentAttempt(),
@@ -2040,24 +2246,225 @@ test("independent retrieval requires affirmative canonical submitted and evaluat
     assert.deepEqual(result, noPositiveEvidence({ failClosed: true, eligibilityPreserved: false }));
   }
 
-  for (const conflictingEvidence of [
-    { farTransfer: farTransferEvidence({ preResponseCueExposureCount: 1 }) },
-    { stableD7: stableD7Evidence({ preResponseCueExposureCount: 1 }) },
-  ]) {
-    const result = evaluateAttemptEvidence([], { ...base, ...conflictingEvidence });
-    assert.deepEqual(result, noPositiveEvidence({ failClosed: true, eligibilityPreserved: false }));
-  }
+  const transferExposed = evaluateAttemptEvidence([], {
+    ...base,
+    farTransfer: farTransferEvidence({
+      exposureHistory: canonicalExposureHistory({
+        attemptId: "attempt-transfer-1",
+        preResponseCueExposureCount: 1,
+      }),
+    }),
+  });
+  assert.equal(transferExposed.independentRetrieval, true);
+  assert.equal(transferExposed.farTransfer, false);
+  const d7Exposed = evaluateAttemptEvidence([], {
+    ...base,
+    stableD7: stableD7Evidence({
+      exposureHistory: canonicalExposureHistory({
+        attemptId: "attempt-d7-1",
+        preResponseCueExposureCount: 1,
+      }),
+    }),
+  });
+  assert.equal(d7Exposed.independentRetrieval, true);
+  assert.equal(d7Exposed.stableD7, false);
 
   const priorCueExposure = evaluateAttemptEvidence([], {
     ...base,
     exposureHistory: canonicalExposureHistory({ preResponseCueExposureCount: 1 }),
-    farTransfer: farTransferEvidence({ preResponseCueExposureCount: 1 }),
-    stableD7: stableD7Evidence({ preResponseCueExposureCount: 1 }),
   });
   assert.deepEqual(
     priorCueExposure,
     noPositiveEvidence({ failClosed: false, eligibilityPreserved: false }),
   );
+});
+
+test("base, far-transfer and D+7 exposure histories bind to their own evaluated attempts", () => {
+  const gate = contract.cueExposure.learningEvidenceGate.exposureHistoryBindingGate;
+  assert.equal(gate.additionalFieldsAllowed, false);
+  assert.equal(gate.eachApplicableHistoryValidatedIndependently, true);
+  assert.equal(gate.bareDownstreamCountCopyEstablishesAttemptBinding, false);
+  assert.equal(gate.sourceAttemptHistoryMaySubstituteForDownstreamHistory, false);
+  const base = {
+    exposureHistory: canonicalExposureHistory(),
+    attempt: canonicalIndependentAttempt(),
+    independentResponse: independentResponseEvidence(),
+  };
+  assert.equal(evaluateAttemptEvidence([], base).independentRetrieval, true);
+
+  const missingAttempt = canonicalExposureHistory();
+  delete missingAttempt.attemptId;
+  const missingLearner = canonicalExposureHistory();
+  delete missingLearner.learnerPrivateScopeId;
+  for (const exposureHistory of [
+    missingAttempt,
+    missingLearner,
+    canonicalExposureHistory({ attemptId: "other-attempt" }),
+    canonicalExposureHistory({ learnerPrivateScopeId: "other-learner" }),
+  ]) {
+    const result = evaluateAttemptEvidence([], { ...base, exposureHistory });
+    assert.equal(result.failClosed, true);
+    assert.equal(result.independentRetrieval, false);
+  }
+
+  const validTransfer = farTransferEvidence();
+  const transferResult = evaluateAttemptEvidence([], { ...base, farTransfer: validTransfer });
+  assert.equal(transferResult.independentRetrieval, true);
+  assert.equal(transferResult.farTransfer, true);
+  for (const exposureHistory of [
+    undefined,
+    canonicalExposureHistory(),
+    canonicalExposureHistory({ attemptId: "attempt-transfer-foreign" }),
+    canonicalExposureHistory({
+      attemptId: validTransfer.transferAttemptId,
+      learnerPrivateScopeId: "other-learner",
+    }),
+    canonicalExposureHistory({ attemptId: validTransfer.transferAttemptId, ambiguous: true }),
+    canonicalExposureHistory({ attemptId: validTransfer.transferAttemptId, conflicting: true }),
+    canonicalExposureHistory({ attemptId: validTransfer.transferAttemptId, stale: true }),
+    canonicalExposureHistory({ attemptId: validTransfer.transferAttemptId, replayed: true }),
+    canonicalExposureHistory({ attemptId: validTransfer.transferAttemptId, clientInferred: true }),
+    canonicalExposureHistory({ attemptId: validTransfer.transferAttemptId, callerPaired: true }),
+  ]) {
+    const result = evaluateAttemptEvidence([], {
+      ...base,
+      farTransfer: farTransferEvidence({ exposureHistory }),
+      stableD7: stableD7Evidence(),
+    });
+    assert.equal(result.independentRetrieval, true);
+    assert.equal(result.farTransfer, false);
+    assert.equal(result.stableD7, true);
+  }
+
+  const validD7 = stableD7Evidence();
+  const d7Result = evaluateAttemptEvidence([], { ...base, stableD7: validD7 });
+  assert.equal(d7Result.independentRetrieval, true);
+  assert.equal(d7Result.stableD7, true);
+  for (const exposureHistory of [
+    undefined,
+    canonicalExposureHistory(),
+    canonicalExposureHistory({ attemptId: "attempt-d7-foreign" }),
+    canonicalExposureHistory({
+      attemptId: validD7.d7AttemptId,
+      learnerPrivateScopeId: "other-learner",
+    }),
+    canonicalExposureHistory({ attemptId: validD7.d7AttemptId, ambiguous: true }),
+    canonicalExposureHistory({ attemptId: validD7.d7AttemptId, conflicting: true }),
+    canonicalExposureHistory({ attemptId: validD7.d7AttemptId, stale: true }),
+    canonicalExposureHistory({ attemptId: validD7.d7AttemptId, replayed: true }),
+    canonicalExposureHistory({ attemptId: validD7.d7AttemptId, clientInferred: true }),
+    canonicalExposureHistory({ attemptId: validD7.d7AttemptId, callerPaired: true }),
+  ]) {
+    const result = evaluateAttemptEvidence([], {
+      ...base,
+      farTransfer: farTransferEvidence(),
+      stableD7: stableD7Evidence({ exposureHistory }),
+    });
+    assert.equal(result.independentRetrieval, true);
+    assert.equal(result.farTransfer, true);
+    assert.equal(result.stableD7, false);
+  }
+
+  const bareTransferCount = farTransferEvidence({
+    exposureHistory: undefined,
+    preResponseCueExposureCount: 0,
+  });
+  const bareD7Count = stableD7Evidence({
+    exposureHistory: undefined,
+    preResponseCueExposureCount: 0,
+  });
+  const copiedCountOnly = evaluateAttemptEvidence([], {
+    ...base,
+    farTransfer: bareTransferCount,
+    stableD7: bareD7Count,
+  });
+  assert.equal(copiedCountOnly.independentRetrieval, true);
+  assert.equal(copiedCountOnly.farTransfer, false);
+  assert.equal(copiedCountOnly.stableD7, false);
+
+  const zeroCountOnly = evaluateAttemptEvidence([], {
+    exposureHistory: canonicalExposureHistory(),
+    attempt: canonicalIndependentAttempt(),
+  });
+  assert.equal(zeroCountOnly.independentRetrieval, false);
+  assert.equal(zeroCountOnly.farTransfer, false);
+  assert.equal(zeroCountOnly.stableD7, false);
+});
+
+test("affirmative learning evidence requires ambiguous to be exact primitive false", () => {
+  const affirmative = contract.cueExposure.learningEvidenceGate.requiredAffirmativeEvidence;
+  for (const evidenceContract of Object.values(affirmative)) {
+    assert.equal(evidenceContract.ambiguousMustExactlyEqual, false);
+  }
+  const base = {
+    exposureHistory: canonicalExposureHistory(),
+    attempt: canonicalIndependentAttempt(),
+    independentResponse: independentResponseEvidence(),
+  };
+  const invalidAmbiguityValues = [undefined, null, true, "true", "false", 0, 1, {}, []];
+
+  for (const ambiguous of invalidAmbiguityValues) {
+    const independentResponse = independentResponseEvidence();
+    if (ambiguous === undefined) delete independentResponse.ambiguous;
+    else independentResponse.ambiguous = ambiguous;
+    const result = evaluateAttemptEvidence([], {
+      ...base,
+      independentResponse,
+      farTransfer: farTransferEvidence(),
+      stableD7: stableD7Evidence(),
+    });
+    assert.equal(result.independentRetrieval, false, `independentResponse: ${String(ambiguous)}`);
+    assert.equal(result.farTransfer, false, `independentResponse: ${String(ambiguous)}`);
+    assert.equal(result.stableD7, false, `independentResponse: ${String(ambiguous)}`);
+  }
+
+  for (const ambiguous of invalidAmbiguityValues) {
+    const farTransfer = farTransferEvidence();
+    if (ambiguous === undefined) delete farTransfer.ambiguous;
+    else farTransfer.ambiguous = ambiguous;
+    const result = evaluateAttemptEvidence([], {
+      ...base,
+      farTransfer,
+      stableD7: stableD7Evidence(),
+    });
+    assert.equal(result.independentRetrieval, true, `farTransfer: ${String(ambiguous)}`);
+    assert.equal(result.farTransfer, false, `farTransfer: ${String(ambiguous)}`);
+    assert.equal(result.stableD7, true, `farTransfer: ${String(ambiguous)}`);
+  }
+
+  for (const ambiguous of invalidAmbiguityValues) {
+    const stableD7 = stableD7Evidence();
+    if (ambiguous === undefined) delete stableD7.ambiguous;
+    else stableD7.ambiguous = ambiguous;
+    const result = evaluateAttemptEvidence([], {
+      ...base,
+      farTransfer: farTransferEvidence(),
+      stableD7,
+    });
+    assert.equal(result.independentRetrieval, true, `stableD7: ${String(ambiguous)}`);
+    assert.equal(result.farTransfer, true, `stableD7: ${String(ambiguous)}`);
+    assert.equal(result.stableD7, false, `stableD7: ${String(ambiguous)}`);
+  }
+
+  const exactFalse = evaluateAttemptEvidence([], {
+    ...base,
+    farTransfer: farTransferEvidence(),
+    stableD7: stableD7Evidence(),
+  });
+  assert.equal(exactFalse.independentRetrieval, true);
+  assert.equal(exactFalse.farTransfer, true);
+  assert.equal(exactFalse.stableD7, true);
+
+  const falseAlone = evaluateAttemptEvidence([], {
+    exposureHistory: canonicalExposureHistory(),
+    attempt: canonicalIndependentAttempt(),
+    independentResponse: { ambiguous: false },
+    farTransfer: { ambiguous: false },
+    stableD7: { ambiguous: false },
+  });
+  assert.equal(falseAlone.independentRetrieval, false);
+  assert.equal(falseAlone.farTransfer, false);
+  assert.equal(falseAlone.stableD7, false);
 });
 
 test("far transfer requires a distinct eligible non-same-representation submitted result", () => {
@@ -2086,8 +2493,19 @@ test("far transfer requires a distinct eligible non-same-representation submitte
     farTransferEvidence({ evaluationCompleted: false }),
     farTransferEvidence({ resultId: "" }),
     farTransferEvidence({ assistanceState: "ASSISTED" }),
-    farTransferEvidence({ exposureHistoryComplete: false }),
-    farTransferEvidence({ preResponseCueExposureCount: 1 }),
+    farTransferEvidence({ exposureHistory: undefined }),
+    farTransferEvidence({
+      exposureHistory: canonicalExposureHistory({
+        attemptId: "attempt-transfer-1",
+        complete: false,
+      }),
+    }),
+    farTransferEvidence({
+      exposureHistory: canonicalExposureHistory({
+        attemptId: "attempt-transfer-1",
+        preResponseCueExposureCount: 1,
+      }),
+    }),
     farTransferEvidence({ ambiguous: true }),
   ]) {
     assert.equal(evaluateAttemptEvidence([], { ...base, farTransfer }).farTransfer, false);
@@ -2120,8 +2538,19 @@ test("stable D+7 requires a completed hidden-cue nonconflicted canonical evaluat
     stableD7Evidence({ representationRelation: "SAME_REPRESENTATION" }),
     stableD7Evidence({ unresolvedScoringConflictCount: 1 }),
     stableD7Evidence({ assistanceState: "ASSISTED" }),
-    stableD7Evidence({ exposureHistoryComplete: false }),
-    stableD7Evidence({ preResponseCueExposureCount: 1 }),
+    stableD7Evidence({ exposureHistory: undefined }),
+    stableD7Evidence({
+      exposureHistory: canonicalExposureHistory({
+        attemptId: "attempt-d7-1",
+        complete: false,
+      }),
+    }),
+    stableD7Evidence({
+      exposureHistory: canonicalExposureHistory({
+        attemptId: "attempt-d7-1",
+        preResponseCueExposureCount: 1,
+      }),
+    }),
     stableD7Evidence({ ambiguous: true }),
   ]) {
     assert.equal(evaluateAttemptEvidence([], { ...base, stableD7 }).stableD7, false);

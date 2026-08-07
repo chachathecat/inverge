@@ -30,6 +30,10 @@ PR #692 mutation is included.
     fallback or caller domain/locator override exists. Every declared required binding has an exact closed
     schema for type, enum or pattern, and target type must agree with kind policy. Individual missing, null,
     empty, malformed, wrong-type, ambiguous or inconsistent bindings reject; truthiness-only validation is forbidden.
+    `OFFICIAL_PERMITTED_RANGE.itemRightsManifestId` is an exact trimmed primitive string in the closed `irm_`
+    format. One separate authoritative item-rights resolution must bind that ID and the anchor's kind, domain,
+    target type, general rights manifest and exact target revision. A bare truthy ID, caller equality, fallback,
+    unresolved, ambiguous, conflicting, stale, replayed, cross-revision or client-inferred binding rejects.
 12. `LEARNER_ATTEMPT_RANGE` and `PRIVATE_SOURCE_RANGE` are owner-bound `LEARNER_PRIVATE` with
     `VAULT_LOCAL_ONLY`; unknown, missing or conflicting mappings reject or hold rather than fall back shared.
     Their owner and vault-target references use exact primitive-string formats and must resolve through one
@@ -49,11 +53,17 @@ PR #692 mutation is included.
     an actual submitted-and-evaluated canonical response; far transfer additionally requires a distinct eligible
     non-same-representation task and evaluated result; stable D+7 requires an actually completed D+7 evaluation,
     cue `HIDDEN` with all-surface byte absence, non-same representation and zero unresolved scoring conflicts.
-    Before any of those credits, canonical history must supply `preResponseCueExposureCount` as an exact
-    nonnegative safe integer with authoritative, non-ambiguous, non-conflicting, fresh, non-client-inferred state.
-    Exactly zero preserves eligibility only; a positive count denies all three credits, while missing or invalid
-    counts fail closed. Any far-transfer or D+7 count copy must match that history exactly. Zero alone creates no
-    affirmative evidence.
+    Before any credit, base canonical history must carry exact valid non-null attempt and learner IDs bound to the
+    evaluated attempt. Far-transfer and D+7 each require a separate canonical history bound respectively to
+    `transferAttemptId` or `d7AttemptId` and the authenticated learner scope; source-attempt history and an unbound
+    copied count cannot substitute. Every applicable history is independently authoritative, complete, single-record,
+    non-ambiguous, non-conflicting, fresh, non-replayed, non-client-inferred and non-caller-paired, and carries its own
+    exact nonnegative-safe-integer `preResponseCueExposureCount`. Exactly zero preserves eligibility only; a positive
+    count or invalid/cross-bound history denies the affected credit. Zero alone creates no affirmative evidence.
+    The canonical independent-response, far-transfer and stable-D+7 records additionally require
+    `ambiguous === false` by exact primitive equality. Missing or any other value denies that record's credit;
+    invalid independent response also denies its dependent credits, while invalid transfer/D+7 ambiguity does not
+    weaken the other affirmative gates. Exact false alone creates no evidence.
 17. Timing and classification derive from the canonical Assistance/Exposure ledger, while attempt state
     derives only from the canonical server attempt ledger; untrusted client state is rejected.
 18. Every render-capable `BEFORE_RESPONSE` validator, including the separate exposure-event validator,
@@ -149,10 +159,14 @@ All fail closed or hold.
 - far transfer lacks a distinct eligible non-same-representation task, independent submission or evaluated result;
 - D+7 evidence lacks a completed canonical D+7 evaluation, hidden all-surface cue bytes or conflict-free score;
 - missing exposure history/record, failed render, partial commit or ambiguity still creates positive evidence;
+- base exposure history omits attempt/learner identity or borrows a zero-count history from another attempt or learner;
+- far-transfer or D+7 uses missing history, source-attempt history, foreign-attempt history or an unbound count copy;
 - canonical history omits `preResponseCueExposureCount` or supplies a boolean, string, fraction, negative,
-  NaN, infinite, unsafe, object, array, ambiguous, conflicting, stale or client-inferred count;
+  NaN, infinite, unsafe, object, array, ambiguous, conflicting, stale, replayed, client-inferred or caller-paired state;
 - a positive pre-response count receives independent retrieval, far-transfer or stable-D+7 credit, or exact
   zero creates affirmative evidence without the separate response/transfer/D+7 records;
+- independent response, far-transfer or stable-D+7 omits `ambiguous` or supplies null, true, a string, number,
+  object or array, or exact false alone creates affirmative evidence;
 - an `ASSISTED` attempt receives independent retrieval, far-transfer or stable-D+7 evidence;
 - timing/classification comes from untrusted client input;
 - a caller label, `canonicalExposureRecordCommitted` boolean, client event or inferred timing selects
@@ -191,6 +205,9 @@ All are rejected.
   or an unresolved, foreign-owner, cross-learner, cross-tenant, ambiguous, conflicting, stale, replayed,
   client-inferred or non-authoritative owner-boundary result;
 - any declared anchor required binding is omitted, null, empty, malformed, wrong-type, ambiguous or inconsistent;
+- an official-permitted anchor uses a missing, empty, whitespace, malformed or wrong-type item manifest ID, a bare
+  truthy ID, caller assertion, or an unresolved, ambiguous, conflicting, stale, replayed, cross-revision or
+  client-inferred item-rights binding;
 - private excerpt, offset, locator, attempt reference, digest or identifier in a bodyless receipt;
 - personal free text in logs, analytics, issue artifacts or training;
 - learner opt-in, consent, contract, administrator choice or O5 used to train a raw annotation body;
@@ -243,13 +260,14 @@ npm run build
 Current correction-source evidence:
 
 - JavaScript syntax check: passed.
-- Focused behavioral contract suite: 28/28 passed.
+- Focused behavioral contract suite: 31/31 passed.
 - Strict JSON parse, balanced Markdown fences, cross-artifact assertions and `git diff --check`: passed.
 - Typecheck: passed.
 - Lint: passed with 0 errors and 9 pre-existing warnings outside the MCAL diff.
 - Full Node test suite: 1,232/1,232 passed.
-- Production build: passed on repository-standard Node 22 with a workspace-only shim for the unavailable
-  host memory-metrics syscall; exact-head GitHub and Vercel builds remain required without that shim.
+- Production build: compilation, TypeScript, page-data collection and 54/54 static pages passed locally on
+  host Node 24 after a workspace-only preload handled the unavailable `uv_resident_set_memory` syscall; no
+  preload or repository byte is published. Exact-head GitHub Node 22 and Vercel builds remain required.
 
 The repository PR Contract, Fast CI, Full CI, Learner Loop Health, Risk Gate and Runtime
 Gate must also pass on the same exact head.

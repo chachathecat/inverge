@@ -333,6 +333,28 @@ type AnnotationAnchorBaseV1<
 
 type PrivateAnchorOwnerBindingRefV1 = `pob_${string}`;
 type VaultLocalTargetRefV1 = `vault_${string}`;
+type ItemRightsManifestIdV1 = `irm_${string}`;
+
+type AuthoritativeItemRightsManifestBoundaryV1 = {
+  source: "CANONICAL_SERVER_ITEM_RIGHTS_MANIFEST_BOUNDARY";
+  serverSide: true;
+  authoritative: true;
+  resolved: true;
+  matchingRecordCount: 1;
+  ambiguous: false;
+  conflicting: false;
+  stale: false;
+  replayed: false;
+  clientInferred: false;
+  crossRevision: false;
+  itemRightsManifestId: ItemRightsManifestIdV1;
+  anchorId: string;
+  kind: "OFFICIAL_PERMITTED_RANGE";
+  domain: "SHARED_OFFICIAL_PERMITTED";
+  targetType: "OFFICIAL_PERMITTED_CONTENT_REVISION_RANGE";
+  targetRevisionId: string;
+  rightsManifestId: string;
+};
 
 type AuthoritativePrivateAnchorOwnerBoundaryV1 = {
   authenticatedLearnerId: string;
@@ -387,7 +409,7 @@ type AnnotationAnchorV1 =
       "SHARED_OFFICIAL_PERMITTED",
       "SHARED_STABLE_SELECTOR",
       "OFFICIAL_PERMITTED_CONTENT_REVISION_RANGE"
-    > & { itemRightsManifestId: string })
+    > & { itemRightsManifestId: ItemRightsManifestIdV1 })
   | (AnnotationAnchorBaseV1<
       "LEARNER_ATTEMPT_RANGE",
       "LEARNER_PRIVATE",
@@ -429,7 +451,14 @@ type PrivateAnchorBodylessReceiptV1 = {
   inconsistent binding은 모두 reject하며 truthiness-only 검사는 금지한다.
 - shared cue는 답안길 소유·라이선스·item-permitted official content에만 연결한다.
 - `QUESTION_UNIT`은 두 shared domain 중 하나를 명시적으로 선택하고 rights state를 반드시 가진다.
-- `OFFICIAL_PERMITTED_RANGE`는 item-level rights를 반드시 가진다.
+- `OFFICIAL_PERMITTED_RANGE`는 item-level rights를 반드시 가진다. `itemRightsManifestId`는 exact
+  primitive trimmed string이며 `^irm_[A-Za-z0-9][A-Za-z0-9._:-]{2,123}$` closed format을 통과해야
+  한다. ID truthiness나 caller equality만으로는 충분하지 않다. 별도 trusted parameter인
+  `CANONICAL_SERVER_ITEM_RIGHTS_MANIFEST_BOUNDARY`에서 authoritative item record가 정확히 한 건
+  resolve되어야 하고, 그 resolution은 item manifest ID·anchor ID/kind/domain/target type·기존
+  `rightsManifestId`와 특히 같은 `targetRevisionId`를 field-for-field bind한다. missing·undefined·null·
+  empty·whitespace·malformed·wrong-type ID, unresolved·ambiguous·conflicting·stale·replayed·
+  cross-revision·client-inferred resolution, caller assertion·fallback·inference는 모두 reject한다.
 - 제3자 교재의 exact text range, OCR, 문제문장, 해설표현은 개인 vault 밖으로 나가지 않는다.
 - `LEARNER_ATTEMPT_RANGE`와 `PRIVATE_SOURCE_RANGE`는 owner-bound `LEARNER_PRIVATE` 및
   `VAULT_LOCAL_ONLY`만 허용한다. target digest는 vault-local integrity metadata일 뿐이다.
@@ -666,7 +695,21 @@ const CANONICAL_REVIEW_ONLY_RENDER_GATE_V1 = {
 
 type CanonicalExposureHistoryV1 = {
   source: "CANONICAL_ASSISTANCE_EXPOSURE_LEDGER";
+  authoritative: true;
   complete: true;
+  matchingRecordCount: 1;
+  attemptId: string;
+  learnerPrivateScopeId: string;
+  missingExposureRecord: false;
+  failedRender: false;
+  partialCommit: false;
+  ambiguousRecord: false;
+  ambiguous: false;
+  conflicting: false;
+  stale: false;
+  replayed: false;
+  clientInferred: false;
+  callerPaired: false;
   preResponseCueExposureCount: number; // exact nonnegative safe integer
   preResponseCueExposureCountAuthoritative: true;
   preResponseCueExposureCountAmbiguous: false;
@@ -693,19 +736,27 @@ type CanonicalExposureHistoryV1 = {
   stable D+7 evidence는 모두 부적격이며 뒤의 event가 이를 independent로 복구할 수 없다.
 - pre-response cue가 없다는 record는 eligibility만 보존한다. empty event list, cue-free record 또는
   `AFTER_RESPONSE` event만으로는 positive learning evidence가 생기지 않는다.
-- independent retrieval·far transfer·stable D+7 credit 전에 canonical exposure history의
-  `preResponseCueExposureCount`가 exact primitive number, nonnegative safe integer이고 authoritative·
-  non-ambiguous·non-conflicting·fresh·non-client-inferred여야 한다. 정확히 0일 때에만 다른 affirmative
-  evidence가 독립적으로 통과할 자격을 보존한다. 0보다 크면 세 credit 모두 거부하고, missing·null·
-  boolean·string·fractional·negative·NaN·infinite·unsafe integer·object·array·stale·ambiguous·conflicting·
-  client/caller-inferred count는 positive evidence 0으로 fail closed한다. exact 0 자체는 response,
-  retrieval, transfer 또는 D+7 evidence를 만들지 않는다. far-transfer와 stable-D+7 record가 count copy를
-  가지면 authoritative history와 exact match해야 하며 누락·invalid·불일치 copy도 conflicting history로
-  fail closed한다.
+- independent retrieval·far transfer·stable D+7 credit 전에 각 applicable canonical exposure history는
+  위 closed shape와 exact source를 만족하고 authoritative·complete·single-record·non-ambiguous·
+  non-conflicting·fresh·non-replayed·non-client-inferred·non-caller-paired여야 한다. base history의 exact,
+  valid, non-null `attemptId`와 `learnerPrivateScopeId`는 평가하는 `attempt`의 두 값과 정확히 같아야 한다.
+  far-transfer history는 별도 canonical history로 그 record의 `transferAttemptId` 및 authenticated learner
+  scope에, stable-D+7 history는 별도 canonical history로 `d7AttemptId` 및 같은 learner scope에 각각
+  bind한다. source attempt의 history나 unbound copied count를 downstream history로 대체할 수 없다.
+- 각 history의 `preResponseCueExposureCount`는 exact primitive number, nonnegative safe integer이고
+  authoritative·non-ambiguous·non-conflicting·fresh·non-client-inferred여야 한다. 정확히 0일 때에만 해당
+  affirmative evidence가 독립적으로 통과할 자격을 보존한다. 0보다 크면 해당 credit을 거부하고,
+  missing·null·boolean·string·fractional·negative·NaN·infinite·unsafe integer·object·array·stale·ambiguous·
+  conflicting·replayed·client/caller-inferred history 또는 count는 affected credit을 fail closed한다. exact 0
+  자체는 response, retrieval, transfer 또는 D+7 evidence를 만들지 않는다.
 - positive independent retrieval은 별도의 canonical submitted-and-evaluated response record,
   far transfer는 distinct eligible non-same-representation task와 submitted/evaluated result,
   stable D+7은 completed D+7·`HIDDEN`·all-surface byte absence·non-same representation·scoring conflict 0
-  record를 각각 요구한다. exposure event는 이 affirmative evidence를 대체하지 않는다.
+  record를 각각 요구한다. 세 affirmative record의 `ambiguous`는 exact primitive `false`여야 한다.
+  missing·undefined·null·`true`·string(`"true"`, `"false"` 포함)·number·object·array는 해당 record의
+  credit을 만들 수 없다. invalid independent response는 dependent far-transfer와 D+7도 막고, invalid
+  transfer 또는 D+7 ambiguity는 각각의 credit만 막으며 다른 gate를 약화하지 않는다. exact `false`나
+  exposure event는 그 자체로 affirmative evidence를 만들지 않는다.
 - confirmation consumption → exposure → `ASSISTED` → independent-evidence invalidation의 exact transaction이
   모두 commit된 다음에만 cue byte를 렌더한다. partial commit, ordering ambiguity, ledger record
   failure 또는 render/submit race는 rollback 후 fail closed하며 cue byte와 independent credit 모두 0이다.
