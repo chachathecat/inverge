@@ -43,6 +43,8 @@ function validAnchor(overrides = {}) {
     bodyLocatorPolicy,
     rightsManifestId: "rights-manifest-1",
     status: "ACTIVE",
+    requiredBindingsAmbiguous: false,
+    conflictingRequiredBindings: [],
     ...overrides,
   };
   if (["LEARNER_ATTEMPT_RANGE", "PRIVATE_SOURCE_RANGE"].includes(kind)) {
@@ -271,10 +273,32 @@ function validateAnchor(
       reason: "REQUIRED_BINDING_SCHEMA_KEY_SET_MISMATCH",
     };
   }
-  if (candidate.requiredBindingsAmbiguous === true) {
+  const ambiguityAndConflictGate = anchorContract.closedAmbiguityAndConflictStateGate;
+  const ambiguityGate = ambiguityAndConflictGate?.requiredBindingsAmbiguous;
+  if (
+    typeof candidate.requiredBindingsAmbiguous !== ambiguityGate?.requiredPrimitiveType
+  ) {
+    return {
+      accepted: false,
+      disposition: "REJECT",
+      reason: "REQUIRED_BINDING_AMBIGUITY_STATE_INVALID",
+    };
+  }
+  if (candidate.requiredBindingsAmbiguous !== ambiguityGate.requiredExactValue) {
     return { accepted: false, disposition: "REJECT", reason: "REQUIRED_BINDING_AMBIGUOUS" };
   }
-  if (Array.isArray(candidate.conflictingRequiredBindings) && candidate.conflictingRequiredBindings.length > 0) {
+  const conflictGate = ambiguityAndConflictGate?.conflictingRequiredBindings;
+  if (
+    conflictGate?.requiredType !== "array"
+    || !Array.isArray(candidate.conflictingRequiredBindings)
+  ) {
+    return {
+      accepted: false,
+      disposition: "REJECT",
+      reason: "REQUIRED_BINDING_CONFLICT_STATE_INVALID",
+    };
+  }
+  if (candidate.conflictingRequiredBindings.length !== conflictGate.requiredLength) {
     return { accepted: false, disposition: "REJECT", reason: "REQUIRED_BINDING_INCONSISTENT" };
   }
   for (const field of anchorContract.requiredBindings) {
@@ -750,6 +774,13 @@ function authorizeExactPreResponseCueRender(subject) {
     confirmation.ambiguous !== false
     || confirmation.matchingRecordCount !== gate.exactMatchingRecordCount
   ) return fail("CONFIRMATION_AMBIGUOUS");
+  const identifierGate = gate.concreteConfirmationIdentifierGate;
+  for (const field of identifierGate.fields) {
+    if (
+      !isCanonicalIdentifier(subject[field], identifierGate.schema)
+      || !isCanonicalIdentifier(confirmation[field], identifierGate.schema)
+    ) return fail(`CONFIRMATION_${field.toUpperCase()}_INVALID`);
+  }
   for (const field of gate.confirmationBindingFields) {
     if (confirmation[field] !== subject[field]) {
       return fail(`CONFIRMATION_${field.toUpperCase()}_MISMATCH`);
@@ -850,6 +881,14 @@ function canonicalIndependentAttempt(overrides = {}) {
     attemptId: "attempt-1",
     learnerPrivateScopeId: "learner-1",
     canonicalAttemptState: "SUBMITTED",
+    matchingRecordCount: 1,
+    known: true,
+    resolved: true,
+    ambiguous: false,
+    conflicting: false,
+    stale: false,
+    clientInferred: false,
+    submittedAt: "2026-08-01T00:00:00.000Z",
     assistanceState: "INDEPENDENT",
     ...overrides,
   };
@@ -935,22 +974,48 @@ function parseCanonicalUtcMilliseconds(value) {
   return milliseconds;
 }
 
-function hasTrustedD7ElapsedInterval(candidate) {
-  const gate = contract.cueExposure.learningEvidenceGate
-    .requiredAffirmativeEvidence.stableD7.trustedElapsedIntervalGate;
+function isCanonicalIdentifier(value, schema) {
+  return typeof value === schema.type
+    && value.trim() === value
+    && value.length >= schema.minLength
+    && new RegExp(schema.pattern).test(value);
+}
+
+function hasTrustedD7ElapsedInterval(candidate, canonicalSourceAttempt) {
+  const stableD7Gate = contract.cueExposure.learningEvidenceGate
+    .requiredAffirmativeEvidence.stableD7;
+  const gate = stableD7Gate.trustedElapsedIntervalGate;
   if (
     candidate?.[gate.sourceAttemptTimestampSourceField]
       !== gate.sourceAttemptTimestampRequiredSource
     || candidate?.[gate.evaluationTimestampSourceField]
       !== gate.evaluationTimestampRequiredSource
+    || !canonicalSourceAttempt
+    || canonicalSourceAttempt[gate.canonicalSourceAttemptSourceField]
+      !== gate.canonicalSourceAttemptRequiredSource
+    || !hasExactCanonicalAttemptResolutionStates(canonicalSourceAttempt)
+    || canonicalSourceAttempt.matchingRecordCount
+      !== gate.exactMatchingCanonicalSourceAttemptCount
+    || canonicalSourceAttempt.canonicalAttemptState
+      !== stableD7Gate.requiredCanonicalAttemptState
+    || candidate?.sourceAttemptId
+      !== canonicalSourceAttempt[gate.canonicalSourceAttemptIdField]
+    || candidate?.learnerPrivateScopeId
+      !== canonicalSourceAttempt[gate.canonicalSourceAttemptLearnerPrivateScopeIdField]
+    || candidate?.[gate.sourceAttemptTimestampField]
+      !== canonicalSourceAttempt[gate.canonicalSourceAttemptTimestampField]
   ) return false;
+  const canonicalSourceAttemptSubmittedAt = parseCanonicalUtcMilliseconds(
+    canonicalSourceAttempt[gate.canonicalSourceAttemptTimestampField],
+  );
   const sourceAttemptSubmittedAt = parseCanonicalUtcMilliseconds(
     candidate[gate.sourceAttemptTimestampField],
   );
   const d7EvaluationCompletedAt = parseCanonicalUtcMilliseconds(
     candidate[gate.evaluationTimestampField],
   );
-  return sourceAttemptSubmittedAt !== null
+  return canonicalSourceAttemptSubmittedAt !== null
+    && sourceAttemptSubmittedAt === canonicalSourceAttemptSubmittedAt
     && d7EvaluationCompletedAt !== null
     && d7EvaluationCompletedAt - sourceAttemptSubmittedAt >= gate.minimumElapsedMilliseconds;
 }
@@ -1095,7 +1160,7 @@ function evaluateAttemptEvidence(events, evidence = {}) {
     && d7.d7AttemptId.length > 0
     && d7.d7AttemptId !== attempt.attemptId
     && d7.timing === "D_PLUS_7"
-    && hasTrustedD7ElapsedInterval(d7)
+    && hasTrustedD7ElapsedInterval(d7, attempt)
     && d7.actualSubmission === true
     && d7.evaluationCompleted === true
     && d7.cueState === "HIDDEN"
@@ -1603,7 +1668,7 @@ test("MCAL paths resolve and V13 remains sole active master plan", () => {
   assert.match(active, /dabangil-professional-exam-reasoning-os-final-master-plan-v13-2026-08-06\.md/);
   assert.match(active, /Memory Cue & Annotation Layer/);
   assert.doesNotMatch(active, /final-master-plan-v14/);
-  assert.equal(contract.version, "1.0.10");
+  assert.equal(contract.version, "1.0.11");
   assert.equal(contract.compatibility.v13RemainsSoleActiveMasterPlan, true);
   assert.equal(contract.compatibility.newMasterPlanVersionCreated, false);
 });
@@ -1775,6 +1840,9 @@ test("Markdown fences and exact boundary language are present", () => {
   assert.match(annex, /`recordFailure === true`/);
   assert.match(annex, /`replayed === false`는 exact primitive equality/);
   assert.match(annex, /`cancelled` 역시\s+exact primitive `false`/);
+  assert.match(annex, /request와 confirmation 양쪽의 `cueId`/);
+  assert.match(annex, /identified source attempt는 `evidence\.attempt`/);
+  assert.match(annex, /`requiredBindingsAmbiguous`는 exact primitive `false`/);
   assert.match(annex, /candidate가 제공한 `closedValueSchema: true`/);
   assert.match(annex, /actual candidate object 전체/);
   assert.match(annex, /outer canonical timing\/classification resolution도 `resolved === true`/);
@@ -1794,9 +1862,10 @@ test("Markdown fences and exact boundary language are present", () => {
   assert.match(annex, /`currentlyAuthorized`는 정확히 `false`/);
   const qa = read(P.qa);
   assert.match(qa, /PR #692 is merged at `512bfdb9232a86bf4f7d4cfbc076a9df1c8a7da2`/);
-  assert.match(qa, /Focused behavioral contract suite: 46\/46 passed/);
+  assert.match(qa, /Focused behavioral contract suite: 49\/49 passed/);
   assert.match(qa, /`cancelled` field must be exact primitive `false`/);
   assert.match(qa, /validate the actual candidate's exact top-level and nested field sets/);
+  assert.doesNotMatch(qa, /Focused behavioral contract suite: 46\/46 passed/);
   assert.doesNotMatch(qa, /Focused behavioral contract suite: 44\/44 passed/);
   assert.doesNotMatch(qa, /Focused behavioral contract suite: 41\/41 passed/);
   assert.doesNotMatch(qa, /Focused behavioral contract suite: 39\/39 passed/);
@@ -1875,6 +1944,50 @@ test("every declared anchor required binding uses exact closed validation", () =
   assert.equal(validateAnchor(validAnchor({ requiredBindingsAmbiguous: true })).accepted, false);
   assert.equal(validateAnchor(validAnchor({ conflictingRequiredBindings: ["profileId"] })).accepted, false);
   assert.equal(validateAnchor(validAnchor({ targetType: "VESG_CONCEPT_NODE" })).accepted, false);
+});
+
+test("anchor ambiguity and conflict metadata require exact closed state types", () => {
+  const gate = contract.anchors.closedAmbiguityAndConflictStateGate;
+  assert.deepEqual(gate.requiredBindingsAmbiguous, {
+    requiredPrimitiveType: "boolean",
+    requiredExactValue: false,
+  });
+  assert.deepEqual(gate.conflictingRequiredBindings, {
+    requiredType: "array",
+    requiredLength: 0,
+  });
+  assert.equal(
+    gate.missingMalformedWrongTypeAmbiguousOrConflictingBehavior,
+    "FAIL_CLOSED_REJECT",
+  );
+
+  const missingAmbiguity = validAnchor();
+  delete missingAmbiguity.requiredBindingsAmbiguous;
+  const missingConflicts = validAnchor();
+  delete missingConflicts.conflictingRequiredBindings;
+  for (const candidate of [
+    missingAmbiguity,
+    ...[undefined, null, "false", "true", 0, 1, {}, []].map(
+      (requiredBindingsAmbiguous) => validAnchor({ requiredBindingsAmbiguous }),
+    ),
+    missingConflicts,
+    ...[undefined, null, false, true, "", "profileId", 0, 1, {}].map(
+      (conflictingRequiredBindings) => validAnchor({ conflictingRequiredBindings }),
+    ),
+  ]) {
+    assert.equal(validateAnchor(candidate).accepted, false);
+  }
+
+  assert.equal(validateAnchor(validAnchor({ requiredBindingsAmbiguous: true })).accepted, false);
+  assert.equal(
+    validateAnchor(validAnchor({ conflictingRequiredBindings: ["profileId"] })).accepted,
+    false,
+  );
+  const valid = validAnchor();
+  assert.equal(
+    validateAnchor(valid, contract.anchors, canonicalPrivateOwnerBoundary(valid)).accepted,
+    true,
+  );
 });
 
 test("official-permitted anchors require a closed item-rights ID bound to the exact revision", () => {
@@ -2849,6 +2962,65 @@ test("stable D+7 requires trusted timestamps separated by at least seven elapsed
   }
 });
 
+test("stable D+7 binds its source timestamp to one resolved canonical source attempt", () => {
+  const gate = contract.cueExposure.learningEvidenceGate
+    .requiredAffirmativeEvidence.stableD7.trustedElapsedIntervalGate;
+  assert.equal(gate.canonicalSourceAttemptRecordRef, "evidence.attempt");
+  assert.equal(
+    gate.canonicalSourceAttemptResolutionStateGateRef,
+    "cueExposure.canonicalAttemptResolutionStateGate",
+  );
+  assert.equal(gate.canonicalSourceAttemptRequiredSource, "CANONICAL_SERVER_ATTEMPT_LEDGER");
+  assert.equal(gate.canonicalSourceAttemptIdField, "attemptId");
+  assert.equal(gate.canonicalSourceAttemptLearnerPrivateScopeIdField, "learnerPrivateScopeId");
+  assert.equal(gate.canonicalSourceAttemptTimestampField, "submittedAt");
+  assert.equal(gate.exactMatchingCanonicalSourceAttemptCount, 1);
+  assert.equal(
+    gate.sourceAttemptIdLearnerAndTimestampMustExactlyBindResolvedCanonicalSourceAttempt,
+    true,
+  );
+
+  const base = {
+    exposureHistory: canonicalExposureHistory(),
+    independentResponse: independentResponseEvidence(),
+  };
+  assert.equal(evaluateAttemptEvidence([], {
+    ...base,
+    attempt: canonicalIndependentAttempt(),
+    stableD7: stableD7Evidence(),
+  }).stableD7, true);
+
+  for (const attempt of [
+    canonicalIndependentAttempt({ submittedAt: "2026-08-08T00:00:00.000Z" }),
+    canonicalIndependentAttempt({ submittedAt: undefined }),
+    canonicalIndependentAttempt({ submittedAt: "2026-08-01" }),
+    canonicalIndependentAttempt({ resolved: false }),
+    canonicalIndependentAttempt({ matchingRecordCount: 0 }),
+    canonicalIndependentAttempt({ ambiguous: true }),
+  ]) {
+    const result = evaluateAttemptEvidence([], {
+      ...base,
+      attempt,
+      stableD7: stableD7Evidence(),
+    });
+    assert.equal(result.independentRetrieval, true);
+    assert.equal(result.stableD7, false);
+  }
+
+  for (const stableD7 of [
+    stableD7Evidence({ sourceAttemptSubmittedAt: undefined }),
+    stableD7Evidence({ sourceAttemptSubmittedAt: "2026-07-31T00:00:00.000Z" }),
+    stableD7Evidence({ sourceAttemptId: "attempt-other" }),
+    stableD7Evidence({ learnerPrivateScopeId: "learner-other" }),
+  ]) {
+    assert.equal(evaluateAttemptEvidence([], {
+      ...base,
+      attempt: canonicalIndependentAttempt(),
+      stableD7,
+    }).stableD7, false);
+  }
+});
+
 test("raw annotation bodies reject opt-in, O5, relabel and direct-promotion bypasses", () => {
   const overrides = contract.personalAnnotation.possibleOverrideAuthorities;
   assert.deepEqual(overrides, {
@@ -3329,6 +3501,42 @@ test("pre-response confirmation rejects missing, stale, replayed, mismatched and
     }));
     assert.equal(result.accepted, false, field);
     assert.match(result.reason, /MISMATCH/, field);
+  }
+});
+
+test("pre-response confirmation binds concrete canonical cue and request identifiers", () => {
+  const gate = contract.cueExposure.beforeResponseGate.concreteConfirmationIdentifierGate;
+  assert.deepEqual(gate.fields, ["cueId", "cueRevisionId", "requestId"]);
+  assert.deepEqual(gate.schema, {
+    type: "string",
+    trimmed: true,
+    minLength: 3,
+    pattern: "^[A-Za-z0-9][A-Za-z0-9._:-]{2,127}$",
+  });
+  assert.equal(gate.requiredOnRequest, true);
+  assert.equal(gate.requiredOnConfirmation, true);
+  assert.equal(gate.validateBeforeEqualityComparison, true);
+
+  for (const field of gate.fields) {
+    for (const invalid of [undefined, null, "", " ", "?", 1, true, {}, []]) {
+      const request = cueRenderRequest();
+      if (invalid === undefined) {
+        delete request[field];
+        delete request.confirmation[field];
+      } else {
+        request[field] = invalid;
+        request.confirmation[field] = invalid;
+      }
+      for (const validate of [
+        evaluateCueRender,
+        (subject) => validateCueExposureEvent(cueEvent(subject)),
+      ]) {
+        const result = validate(request);
+        assert.equal(result.accepted, false, `${field}: ${String(invalid)}`);
+        assert.equal(result.mayRenderCueBytes, false, `${field}: ${String(invalid)}`);
+        assert.equal(result.reason, `CONFIRMATION_${field.toUpperCase()}_INVALID`);
+      }
+    }
   }
 });
 

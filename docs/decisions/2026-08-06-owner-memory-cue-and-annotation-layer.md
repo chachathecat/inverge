@@ -95,7 +95,10 @@ non-null exact `attemptId`와 learner scope가 exact `INDEPENDENT_ATTEMPT_OPEN` 
 single-use confirmation을 모두 요구한다. confirmation은 `replayed === false`도 exact primitive equality로
 만족해야 하며 missing·default·coercion은 non-replayed 증거가 아니다. `cancelled`도 정확히 primitive
 `false`여야 하므로 missing·null·string·number·object·array·`true` 또는 다른 malformed 값은 active
-confirmation 증거가 아니다. client boolean과 preselected consent는 부족하다.
+confirmation 증거가 아니다. request와 confirmation의 `cueId`, `cueRevisionId`, `requestId`는 서로
+비교하기 전에 양쪽에서 각각 exact trimmed canonical identifier schema를 통과해야 한다. 두 값이 함께
+누락되거나 null·wrong-type·empty·whitespace·malformed인 채 같아도 confirmation binding이 아니다.
+client boolean과 preselected consent는 부족하다.
 모든 `BEFORE_RESPONSE` render-capable validator는 하나의
 `EXACT_PRE_RESPONSE_RENDER_GATE_V1`에 위임해야 하며 별도 event validator, alternate route 또는
 약한 두 번째 policy로 우회할 수 없다. confirmation consumption → cue exposure record → `ASSISTED`
@@ -146,11 +149,13 @@ copy 자체는 어떤 affirmative learning evidence도 만들지 않는다.
 positive independent retrieval은 exact submitted-and-evaluated response record, far transfer는 distinct
 eligible non-same-representation task와 submitted/evaluated independent result, stable D+7은 completed
 D+7 evaluation·cue `HIDDEN`·all-surface byte absence·non-same representation·unresolved scoring conflict 0의
-별도 canonical evidence를 각각 요구한다. stable D+7은 또한 canonical server attempt ledger의
-`sourceAttemptSubmittedAt`과 canonical D+7 evaluation ledger의 `d7EvaluationCompletedAt`을 exact
-RFC3339 UTC millisecond instant로 결합하고, server가 후자-전자를 계산한 실제 elapsed interval이 최소
-`604800000` ms여야 한다. `D_PLUS_7` label, caller-supplied elapsed 값, missing·malformed·non-UTC·reversed
-또는 7일 미만 interval은 credit을 만들지 못한다. 세 affirmative record의 `ambiguous`는 exact primitive
+별도 canonical evidence를 각각 요구한다. stable D+7은 canonical server attempt ledger의 identified
+source attempt를 한 건으로 resolve하고 D+7 record의 `sourceAttemptId`, learner scope 및
+`sourceAttemptSubmittedAt`을 그 attempt의 exact `attemptId`, learner scope 및 canonical `submittedAt`과
+field-for-field bind한다. 그 timestamp와 canonical D+7 evaluation ledger의 `d7EvaluationCompletedAt`은 exact
+RFC3339 UTC millisecond instant이고 server가 계산한 실제 elapsed interval이 최소 `604800000` ms여야 한다.
+independently supplied older timestamp, `D_PLUS_7` label, caller elapsed 값, missing·mismatched·malformed·
+unresolved provenance, non-UTC·reversed 또는 7일 미만 interval은 credit을 만들지 못한다. 세 affirmative record의 `ambiguous`는 exact primitive
 `false`여야 한다. missing·undefined·null·`true`·string(`"true"`, `"false"` 포함)·number·object·array는
 해당 record의 credit을 만들지 못한다. invalid independent response는 dependent far-transfer와 D+7을
 함께 막고 invalid transfer/D+7 ambiguity는 각 credit만 막는다. exact false만으로는 증거가 생기지 않는다.
@@ -168,7 +173,9 @@ unresolved scoring conflict 0을 요구한다.
 - primary semantic highlight 최대 3개이며 revision-bound typed anchor가 필수다.
 - anchor의 열 `requiredBindings`는 각 필드의 exact type·closed enum·pattern과 kind별 domain·locator·
   target-type consistency를 모두 검증한다. missing·null·empty·malformed·wrong-type·ambiguous·inconsistent
-  binding은 reject하고 truthiness-only validation은 금지한다.
+  binding은 reject하고 truthiness-only validation은 금지한다. `requiredBindingsAmbiguous`는 exact primitive
+  `false`, `conflictingRequiredBindings`는 exact empty array여야 하며 필드 누락·wrong-type·malformed state,
+  genuine ambiguity 또는 non-empty conflict array는 reject한다.
 - `OFFICIAL_PERMITTED_RANGE`의 `itemRightsManifestId`는 exact trimmed primitive string과
   `^irm_[A-Za-z0-9][A-Za-z0-9._:-]{2,123}$` closed format을 통과해야 한다. 별도
   `CANONICAL_SERVER_ITEM_RIGHTS_MANIFEST_BOUNDARY`의 authoritative item record 한 건이 manifest ID와

@@ -329,6 +329,8 @@ type AnnotationAnchorBaseV1<
   rightsManifestId: string;
   createdAt: string;
   status: "ACTIVE" | "HELD" | "SUPERSEDED";
+  requiredBindingsAmbiguous: false;
+  conflictingRequiredBindings: [];
 };
 
 type PrivateAnchorOwnerBindingRefV1 = `pob_${string}`;
@@ -448,7 +450,10 @@ type PrivateAnchorBodylessReceiptV1 = {
   `targetRevisionId`, `targetDigest`, `bodyLocatorPolicy`, `rightsManifestId`, `status`)는 선언된
   closed schema로 각각 exact type·enum·pattern을 검증한다. `targetDigest`는 exact `sha256:` digest이고
   `targetType`은 kind policy와 일치해야 한다. missing·null·empty·malformed·wrong-type·ambiguous·
-  inconsistent binding은 모두 reject하며 truthiness-only 검사는 금지한다.
+  inconsistent binding은 모두 reject하며 truthiness-only 검사는 금지한다. ambiguity/conflict state도
+  closed type이다. `requiredBindingsAmbiguous`는 exact primitive `false`,
+  `conflictingRequiredBindings`는 exact empty array여야 하며 필드 누락·wrong-type·malformed state,
+  primitive `true` 또는 non-empty conflict array는 모두 reject한다.
 - shared cue는 답안길 소유·라이선스·item-permitted official content에만 연결한다.
 - `QUESTION_UNIT`은 두 shared domain 중 하나를 명시적으로 선택하고 rights state를 반드시 가진다.
 - `OFFICIAL_PERMITTED_RANGE`는 item-level rights를 반드시 가진다. `itemRightsManifestId`는 exact
@@ -510,7 +515,10 @@ D+7 stable / timed: HIDDEN
   server-recorded single-use confirmation을 명시적으로 완료해야 한다. confirmation의 `replayed`는 exact
   primitive `false`여야 하며 missing·default·coercion은 non-replayed 증거가 아니다. `cancelled` 역시
   exact primitive `false`여야 하므로 missing·null·string·number·object·array·`true` 또는 다른 malformed
-  값은 active confirmation을 증명하지 못한다. client boolean이나 미리 선택된 consent는 confirmation이 아니다.
+  값은 active confirmation을 증명하지 못한다. request와 confirmation 양쪽의 `cueId`, `cueRevisionId`,
+  `requestId`는 equality 비교 전에 각각 exact trimmed canonical identifier schema를 통과해야 한다.
+  두 쪽이 함께 누락되어 `undefined === undefined`가 되거나 null·wrong-type·empty·whitespace·malformed
+  identifier가 서로 같아도 reveal을 승인하지 않는다. client boolean이나 미리 선택된 consent는 confirmation이 아니다.
 - cue render request validator와 별도 cue exposure event validator를 포함해 `BEFORE_RESPONSE` byte를
   허용할 수 있는 모든 path는 동일 `EXACT_PRE_RESPONSE_RENDER_GATE_V1`에 위임한다. alternate route나
   약한 두 번째 policy는 금지한다.
@@ -553,6 +561,11 @@ D+7 stable / timed: HIDDEN
   independent transfer attempt와 evaluated result의 canonical record를 별도로 요구한다.
 - stable D+7은 실제 완료된 D+7 independent evaluation, cue `HIDDEN`, 모든 surface의 cue byte 부재,
   non-same representation 및 unresolved scoring conflict 0의 canonical record를 별도로 요구한다.
+  identified source attempt는 `evidence.attempt`에서 canonical server attempt ledger 한 건으로 resolve하고
+  shared canonical resolution-state gate를 통과해야 한다. D+7 record의 `sourceAttemptId`, learner scope 및
+  `sourceAttemptSubmittedAt`은 그 record의 exact `attemptId`, learner scope 및 canonical `submittedAt`과
+  field-for-field 일치해야 한다. 별도로 공급한 더 오래된 timestamp, missing·mismatched·malformed 또는
+  unresolved provenance는 stable credit을 만들지 못한다.
 - missing exposure history/record, failed render, partial commit 또는 ambiguous record는 positive learning
   evidence 0으로 fail closed한다. `ASSISTED` attempt는 어떤 affirmative record가 있어도 부적격이다.
 - cue를 보고 맞힌 것은 independent mastery가 아니다.
@@ -837,10 +850,13 @@ type CanonicalExposureHistoryV1 = {
 - positive independent retrieval은 별도의 canonical submitted-and-evaluated response record,
   far transfer는 distinct eligible non-same-representation task와 submitted/evaluated result,
   stable D+7은 completed D+7·`HIDDEN`·all-surface byte absence·non-same representation·scoring conflict 0
-  record를 각각 요구한다. stable D+7은 canonical attempt ledger의 `sourceAttemptSubmittedAt`과 canonical
-  D+7 evaluation ledger의 `d7EvaluationCompletedAt`을 exact RFC3339 UTC millisecond instant로 bind하고,
+  record를 각각 요구한다. stable D+7은 canonical attempt ledger의 identified source attempt를 한 건으로
+  resolve하고 D+7 record의 `sourceAttemptId`, learner scope 및 `sourceAttemptSubmittedAt`을 그 attempt의
+  exact `attemptId`, learner scope 및 `submittedAt`과 field-for-field bind한 뒤, canonical D+7 evaluation
+  ledger의 `d7EvaluationCompletedAt`을 exact RFC3339 UTC millisecond instant로 결합하고,
   server가 계산한 실제 elapsed interval이 최소 `604800000` ms여야 한다. `D_PLUS_7` label이나 caller elapsed
-  값은 이를 대체하지 못하고 missing·malformed·non-UTC·reversed·short interval은 credit을 만들지 못한다.
+  값은 이를 대체하지 못하고 independently supplied older source timestamp, missing·mismatched·malformed·
+  unresolved provenance, non-UTC·reversed·short interval은 credit을 만들지 못한다.
   세 affirmative record의 `ambiguous`는 exact primitive `false`여야 한다.
   missing·undefined·null·`true`·string(`"true"`, `"false"` 포함)·number·object·array는 해당 record의
   credit을 만들 수 없다. invalid independent response는 dependent far-transfer와 D+7도 막고, invalid

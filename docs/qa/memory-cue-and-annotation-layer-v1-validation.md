@@ -30,6 +30,9 @@ PR #692 mutation is included.
     fallback or caller domain/locator override exists. Every declared required binding has an exact closed
     schema for type, enum or pattern, and target type must agree with kind policy. Individual missing, null,
     empty, malformed, wrong-type, ambiguous or inconsistent bindings reject; truthiness-only validation is forbidden.
+    Anchor ambiguity/conflict metadata is also closed: `requiredBindingsAmbiguous` must be exact primitive
+    `false`, while `conflictingRequiredBindings` must be an exact empty array. Missing, malformed or wrong-type
+    state, genuine ambiguity and non-empty conflicts reject.
     `OFFICIAL_PERMITTED_RANGE.itemRightsManifestId` is an exact trimmed primitive string in the closed `irm_`
     format. One separate authoritative item-rights resolution must bind that ID and the anchor's kind, domain,
     target type, general rights manifest and exact target revision. A bare truthy ID, caller equality, fallback,
@@ -65,10 +68,13 @@ PR #692 mutation is included.
     The canonical independent-response, far-transfer and stable-D+7 records additionally require
     `ambiguous === false` by exact primitive equality. Missing or any other value denies that record's credit;
     invalid independent response also denies its dependent credits, while invalid transfer/D+7 ambiguity does not
-    weaken the other affirmative gates. Stable D+7 also binds `sourceAttemptSubmittedAt` from the canonical server
-    attempt ledger to `d7EvaluationCompletedAt` from the canonical D+7 evaluation ledger as exact RFC3339 UTC
-    millisecond instants and requires a server-computed elapsed interval of at least 604800000 ms. A timing label,
-    caller elapsed value, missing/malformed/non-UTC timestamp, reversal or shorter interval creates no credit.
+    weaken the other affirmative gates. Stable D+7 resolves one canonical source attempt from `evidence.attempt`
+    through the shared exact resolution-state gate, then field-for-field binds the D+7 record's source attempt ID,
+    learner scope and `sourceAttemptSubmittedAt` to that record's exact ID, scope and canonical `submittedAt`.
+    It binds that timestamp to `d7EvaluationCompletedAt` from the canonical D+7 evaluation ledger as exact RFC3339
+    UTC millisecond instants and requires a server-computed elapsed interval of at least 604800000 ms. An independently
+    supplied older timestamp, timing label, caller elapsed value, missing/mismatched/malformed/unresolved provenance,
+    non-UTC timestamp, reversal or shorter interval creates no credit.
     Exact false alone creates no evidence.
 17. Timing and classification derive from the canonical Assistance/Exposure ledger, while attempt state
     derives only from the canonical server attempt ledger; untrusted client state is rejected.
@@ -83,7 +89,9 @@ PR #692 mutation is included.
 19. The shared gate requires one active deliberate server-recorded single-use confirmation bound exactly to
     learner, attempt, cue, cue revision and one request. Its `cancelled` field must be exact primitive `false`;
     missing, null, strings, numbers, objects, arrays, `true` and every other malformed value fail closed across
-    both render-capable validators.
+    both render-capable validators. Before equality comparison, `cueId`, `cueRevisionId` and `requestId` on both
+    request and confirmation must independently pass the exact trimmed canonical identifier schema. Matching
+    missing, null, wrong-type, empty, whitespace or malformed values cannot authorize reveal.
 20. Client booleans and preselected consent are insufficient. Missing, cancelled, stale, replayed,
     mismatched or ambiguous confirmations fail closed with no cue bytes.
 21. Confirmation consumption, exposure record, `ASSISTED` transition and independent-evidence invalidation
@@ -186,7 +194,8 @@ All fail closed or hold.
 - far transfer lacks a distinct eligible non-same-representation task, independent submission or evaluated result;
 - D+7 evidence lacks a completed canonical D+7 evaluation, hidden all-surface cue bytes or conflict-free score;
 - D+7 relies on `D_PLUS_7` or a caller elapsed value without trusted source/evaluation timestamps proving at
-  least 604800000 ms, or accepts malformed, non-UTC, reversed or shorter timestamps;
+  least 604800000 ms, accepts malformed, non-UTC, reversed or shorter timestamps, or trusts an independently
+  supplied older source timestamp that is not bound to one resolved canonical source attempt;
 - missing exposure history/record, failed render, partial commit or ambiguity still creates positive evidence;
 - base exposure history omits attempt/learner identity or borrows a zero-count history from another attempt or learner;
 - far-transfer or D+7 uses missing history, source-attempt history, foreign-attempt history or an unbound count copy;
@@ -214,7 +223,8 @@ All fail closed or hold.
 - a pre-response attempt resolution has `resolved !== true`, `conflicting !== false` or
   `clientInferred !== false` but either render validator still authorizes cue bytes;
 - confirmation is missing, cancelled, stale, replayed, mismatched, ambiguous, a client boolean or preselected,
-  or its `cancelled` field is anything other than exact primitive `false`;
+  its `cancelled` field is anything other than exact primitive `false`, or matching missing/malformed cue or
+  request identifiers pass through equality;
 - a confirmation explicitly carries `replayed: true` while `consumed: false` and `singleUse: true` but either
   render validator still treats it as a deliberate non-replayed override;
 - cue bytes render before confirmation consumption, exposure, `ASSISTED` and evidence-invalidation commits all succeed;
@@ -251,7 +261,8 @@ All are rejected.
 - a private anchor uses a missing, whitespace, malformed or wrong-type owner/vault reference, caller equality,
   or an unresolved, foreign-owner, cross-learner, cross-tenant, ambiguous, conflicting, stale, replayed,
   client-inferred or non-authoritative owner-boundary result;
-- any declared anchor required binding is omitted, null, empty, malformed, wrong-type, ambiguous or inconsistent;
+- any declared anchor required binding is omitted, null, empty, malformed, wrong-type, ambiguous or inconsistent,
+  or its ambiguity/conflict state is missing, wrong-type, malformed, genuinely ambiguous or non-empty;
 - an official-permitted anchor uses a missing, empty, whitespace, malformed or wrong-type item manifest ID, a bare
   truthy ID, caller assertion, or an unresolved, ambiguous, conflicting, stale, replayed, cross-revision or
   client-inferred item-rights binding;
@@ -310,7 +321,7 @@ npm run build
 Current correction-source evidence:
 
 - JavaScript syntax check: passed.
-- Focused behavioral contract suite: 46/46 passed.
+- Focused behavioral contract suite: 49/49 passed.
 - Strict JSON parse, balanced Markdown fences, cross-artifact assertions and `git diff --check`: passed.
 - Typecheck: passed.
 - Lint: passed with 0 errors and 9 pre-existing warnings outside the MCAL diff.

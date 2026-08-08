@@ -1,6 +1,6 @@
 {
   "schema": "dabangil_memory_cue_and_annotation_layer_v1",
-  "version": "1.0.10",
+  "version": "1.0.11",
   "dated": "2026-08-06 KST",
   "status": "proposed_non_authoritative",
   "repository": "chachathecat/inverge",
@@ -439,6 +439,17 @@
     "requiredBindingSchemaKeySetMustExactlyEqualRequiredBindings": true,
     "requiredBindingValidationMode": "EXACT_TYPE_CLOSED_ENUM_PATTERN_AND_KIND_POLICY_CONSISTENCY",
     "missingNullEmptyMalformedWrongTypeAmbiguousOrInconsistentBindingBehavior": "FAIL_CLOSED_REJECT",
+    "closedAmbiguityAndConflictStateGate": {
+      "requiredBindingsAmbiguous": {
+        "requiredPrimitiveType": "boolean",
+        "requiredExactValue": false
+      },
+      "conflictingRequiredBindings": {
+        "requiredType": "array",
+        "requiredLength": 0
+      },
+      "missingMalformedWrongTypeAmbiguousOrConflictingBehavior": "FAIL_CLOSED_REJECT"
+    },
     "targetTypeMustMatchKindPolicy": true,
     "truthinessOnlyValidationAllowed": false,
     "itemRightsManifestBindingGate": {
@@ -1427,6 +1438,23 @@
         "cueRevisionId",
         "requestId"
       ],
+      "concreteConfirmationIdentifierGate": {
+        "fields": [
+          "cueId",
+          "cueRevisionId",
+          "requestId"
+        ],
+        "schema": {
+          "type": "string",
+          "trimmed": true,
+          "minLength": 3,
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{2,127}$"
+        },
+        "requiredOnRequest": true,
+        "requiredOnConfirmation": true,
+        "validateBeforeEqualityComparison": true,
+        "missingNullWrongTypeEmptyWhitespaceOrMalformedBehavior": "FAIL_CLOSED_NO_CUE_BYTES"
+      },
       "exactBindingRequired": true,
       "singleUse": true,
       "exactMatchingRecordCount": 1,
@@ -1659,6 +1687,15 @@
             "sourceAttemptTimestampField": "sourceAttemptSubmittedAt",
             "sourceAttemptTimestampSourceField": "canonicalAttemptSource",
             "sourceAttemptTimestampRequiredSource": "CANONICAL_SERVER_ATTEMPT_LEDGER",
+            "canonicalSourceAttemptRecordRef": "evidence.attempt",
+            "canonicalSourceAttemptResolutionStateGateRef": "cueExposure.canonicalAttemptResolutionStateGate",
+            "canonicalSourceAttemptSourceField": "source",
+            "canonicalSourceAttemptRequiredSource": "CANONICAL_SERVER_ATTEMPT_LEDGER",
+            "canonicalSourceAttemptIdField": "attemptId",
+            "canonicalSourceAttemptLearnerPrivateScopeIdField": "learnerPrivateScopeId",
+            "canonicalSourceAttemptTimestampField": "submittedAt",
+            "exactMatchingCanonicalSourceAttemptCount": 1,
+            "sourceAttemptIdLearnerAndTimestampMustExactlyBindResolvedCanonicalSourceAttempt": true,
             "evaluationTimestampField": "d7EvaluationCompletedAt",
             "evaluationTimestampSourceField": "source",
             "evaluationTimestampRequiredSource": "CANONICAL_D7_EVALUATION_LEDGER",
@@ -1667,6 +1704,7 @@
             "comparison": "D7_EVALUATION_COMPLETED_AT_MINUS_SOURCE_ATTEMPT_SUBMITTED_AT_GTE_MINIMUM",
             "serverComputedFromTrustedTimestamps": true,
             "callerSuppliedElapsedOrTimingLabelSufficient": false,
+            "missingMismatchedMalformedOrUnresolvedProvenanceBehavior": "FAIL_CLOSED_FOR_STABLE_D7_CREDIT",
             "missingMalformedNonUtcReversedOrShortIntervalBehavior": "FAIL_CLOSED_FOR_STABLE_D7_CREDIT"
           },
           "completedEvaluationRequired": true,
