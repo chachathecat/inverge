@@ -1,6 +1,6 @@
 {
   "schema": "dabangil_memory_cue_and_annotation_layer_v1",
-  "version": "1.0.11",
+  "version": "1.0.12",
   "dated": "2026-08-06 KST",
   "status": "proposed_non_authoritative",
   "repository": "chachathecat/inverge",
@@ -901,6 +901,115 @@
       "crossObjectProofAllowed": false,
       "missingUndefinedNullNonBooleanTrueAmbiguousCrossObjectOrUnvalidatedBehavior": "FAIL_CLOSED_CANDIDATE_INELIGIBLE"
     },
+    "clearedContentBankProvenanceGate": {
+      "appliesTo": "SEPARATELY_AUTHORED_RIGHTS_REVIEWED_CLEARED_CONTENT_BANK_OBJECT",
+      "decisionContextField": "clearedContentProvenance",
+      "resolutionSource": "CANONICAL_CLEARED_CONTENT_PROMOTION_RIGHTS_PROVENANCE_RESOLVER",
+      "independentResolutionRequired": true,
+      "exactMatchingRecordCount": 1,
+      "candidateClosedSchema": {
+        "additionalTopLevelFieldsAllowed": false,
+        "requiredTopLevelFields": [
+          "kind",
+          "signalId",
+          "signalRevisionId",
+          "purposeId",
+          "o5ScopeId"
+        ],
+        "identifierFields": [
+          "signalId",
+          "signalRevisionId",
+          "purposeId",
+          "o5ScopeId"
+        ],
+        "identifierPattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{2,127}$",
+        "exactValues": {
+          "kind": "SEPARATELY_AUTHORED_RIGHTS_REVIEWED_CLEARED_CONTENT_BANK_OBJECT"
+        },
+        "callerSuppliedProvenanceBooleanFieldsForbidden": [
+          "separateObjectIdentity",
+          "separatelyAuthored",
+          "rightsOwned",
+          "rightsReviewed",
+          "provenanceReviewed"
+        ],
+        "privateRawOrFreeTextFieldsForbidden": [
+          "rawAnswer",
+          "rawAnnotationBody",
+          "rawBodyPointer",
+          "freeText",
+          "excerpt",
+          "reconstructivePayload"
+        ],
+        "missingUnknownAdditionalWrongTypeMalformedPrivateRawOrCallerProvenanceFieldBehavior": "FAIL_CLOSED_CANDIDATE_INELIGIBLE"
+      },
+      "recordClosedSchema": {
+        "additionalFieldsAllowed": false,
+        "requiredFields": [
+          "source",
+          "recordId",
+          "independentlyResolved",
+          "matchingRecordCount",
+          "known",
+          "resolved",
+          "ambiguous",
+          "conflicting",
+          "stale",
+          "clientInferred",
+          "replayed",
+          "kind",
+          "signalId",
+          "signalRevisionId",
+          "purposeId",
+          "o5ScopeId",
+          "separateObjectIdentity",
+          "separatelyAuthored",
+          "rightsOwned",
+          "rightsReviewed",
+          "provenanceReviewed",
+          "derivedFromPersonalRawContent",
+          "containsPrivateRawContent"
+        ],
+        "identifierFields": [
+          "recordId",
+          "signalId",
+          "signalRevisionId",
+          "purposeId",
+          "o5ScopeId"
+        ],
+        "identifierPattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{2,127}$",
+        "exactValues": {
+          "source": "CANONICAL_CLEARED_CONTENT_PROMOTION_RIGHTS_PROVENANCE_RESOLVER",
+          "independentlyResolved": true,
+          "matchingRecordCount": 1,
+          "known": true,
+          "resolved": true,
+          "ambiguous": false,
+          "conflicting": false,
+          "stale": false,
+          "clientInferred": false,
+          "replayed": false,
+          "kind": "SEPARATELY_AUTHORED_RIGHTS_REVIEWED_CLEARED_CONTENT_BANK_OBJECT",
+          "separateObjectIdentity": true,
+          "separatelyAuthored": true,
+          "rightsOwned": true,
+          "rightsReviewed": true,
+          "provenanceReviewed": true,
+          "derivedFromPersonalRawContent": false,
+          "containsPrivateRawContent": false
+        }
+      },
+      "exactCandidateBindingFields": [
+        "kind",
+        "signalId",
+        "signalRevisionId",
+        "purposeId",
+        "o5ScopeId"
+      ],
+      "callerSuppliedProvenanceBooleansAccepted": false,
+      "separatelyAuthoredAndRightsOwnedCanonicalProofRequired": true,
+      "missingAmbiguousConflictingStaleInferredMismatchedNonSingleUnknownOrPrivateRawBehavior": "FAIL_CLOSED_CANDIDATE_INELIGIBLE_NO_HYPOTHETICAL_RECEIPTS"
+    },
     "signalPurposeGate": {
       "appliesTo": "SEPARATE_NON_RECONSTRUCTIVE_SIGNAL",
       "consentRecordSource": "CANONICAL_VERSIONED_CONSENT_OPT_OUT_LEDGER",
@@ -1136,6 +1245,8 @@
     "trainingCandidateWithoutExactCandidateBoundApprovalReceipts": 0,
     "mockOrHypotheticalReceiptAuthorizesCurrentTraining": 0,
     "trainingDecisionWithoutTrustedServerEvaluationTime": 0,
+    "learningEvidenceFromUnresolvedOrNonSingleCanonicalAttempt": 0,
+    "clearedContentCandidateWithoutCanonicalBoundProvenance": 0,
     "personalEditorBeforeCpfPrivacyExportDeleteGates": 0,
     "mcalRuntimeBeforeCoreLoopAcceptance": 0,
     "otherProfileTermAutoInheritance": 0,
@@ -1556,6 +1667,22 @@
       "afterResponseOnlySequenceCreatesPositiveEvidence": false,
       "completeExposureHistoryRequired": true,
       "exposureHistorySource": "CANONICAL_ASSISTANCE_EXPOSURE_LEDGER",
+      "baseAttemptResolutionGate": {
+        "recordRef": "evidence.attempt",
+        "resolutionSource": "CANONICAL_SERVER_ATTEMPT_LEDGER",
+        "resolutionStateGateRef": "cueExposure.canonicalAttemptResolutionStateGate",
+        "exactMatchingRecordCount": 1,
+        "evaluatedBeforeCredits": [
+          "independentRetrieval",
+          "farTransfer",
+          "stableD7"
+        ],
+        "dependentCreditsDeniedWhenInvalid": [
+          "farTransfer",
+          "stableD7"
+        ],
+        "missingMalformedWrongTypeUnknownUnresolvedAmbiguousConflictingStaleClientInferredOrNonSingleBehavior": "FAIL_CLOSED_NO_POSITIVE_LEARNING_EVIDENCE"
+      },
       "exposureHistoryBindingGate": {
         "additionalFieldsAllowed": false,
         "requiredFields": [

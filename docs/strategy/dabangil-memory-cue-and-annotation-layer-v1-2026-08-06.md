@@ -555,6 +555,12 @@ D+7 stable / timed: HIDDEN
   `canonicalRecordCommitted === true`를 exact primitive equality로 증명해야 하며 필드 생략은 실패다.
 - pre-response cue가 없다는 사실은 independent-evidence **eligibility만 보존**한다. empty sequence나
   `AFTER_RESPONSE` event 자체는 independent retrieval·far transfer·stable D+7 증거를 만들지 않는다.
+- base `evidence.attempt`에는 complete canonical attempt-resolution state/count gate를 먼저 적용한다.
+  source는 `CANONICAL_SERVER_ATTEMPT_LEDGER`, 상태는 `known === true`, `resolved === true`,
+  `ambiguous === false`, `conflicting === false`, `stale === false`, `clientInferred === false`, count는
+  `matchingRecordCount === 1`이어야 한다. missing·malformed·wrong-type·반대 상태·0건·복수 record는
+  independent retrieval 전에 positive evidence 0으로 fail closed하고 dependent far transfer와 stable D+7도
+  함께 차단한다.
 - independent retrieval은 actual submitted response와 completed evaluation이 exact learner/attempt에
   묶인 canonical response-evaluation record를 별도로 요구한다.
 - far transfer는 그 독립 회상 외에도 distinct eligible task, non-same representation, actual submitted
@@ -1009,6 +1015,18 @@ input이나 training candidate로 만들 수 없다. raw body의 이름·별칭�
 - raw annotation body의 rename·alias·직접 promotion이 아닌, 별도로 작성되고 실제 권리를
   소유하며 provenance와 rights review를 통과한 별도 Cleared Content Bank object.
 
+Cleared Content Bank candidate는 exact identifier-only closed field set만 허용한다. caller가 공급한
+`separateObjectIdentity`·`separatelyAuthored`·`rightsOwned`·`rightsReviewed`·`provenanceReviewed`
+boolean, unknown field, `rawAnswer`·private raw pointer·free text·excerpt·reconstructive payload는 eligibility
+증거가 아니며 즉시 reject한다. 별도 canonical promotion/rights/provenance resolver의 independently
+resolved record 한 건이 known·resolved·non-ambiguous·non-conflicting·fresh·non-client-inferred·
+non-replayed 상태를 exact하게 만족하고 candidate kind·`signalId`·`signalRevisionId`·`purposeId`·
+`o5ScopeId`를 field-for-field bind해야 한다. 그 closed record가 separate object identity, separate
+authorship, actual rights ownership, rights/provenance review 및 personal/private raw content 부재를 각각
+증명해야 한다. missing·malformed·unknown·mismatched·ambiguous·conflicting·stale·inferred·0건·복수
+record는 hypothetical approval receipt 평가 전에 fail closed한다. 이 canonical proof를 가진 유효한 별도
+authored·rights-owned candidate path는 유지한다.
+
 contribution gate, Cleared Content Bank promotion gate와 exact-purpose O5 gate는 서로 다른
 승인이다. contribution은 promotion을, promotion은 O5를, O5는 contribution/promotion을 대신하지
 않는다. 미래 승인도 global boolean이 아니라 contribution·promotion·O5 각각의 independently
@@ -1294,6 +1312,7 @@ cue_reveal_without_exposure_event = 0
 cue_view_promotes_independent_mastery = 0
 d7_stable_with_visible_cue = 0
 d7_stable_without_actual_7_day_elapsed_interval = 0
+learning_evidence_from_unresolved_or_non_single_canonical_attempt = 0
 after_response_request_without_closed_classification = 0
 review_only_event_without_provenance_or_ordering = 0
 same_representation_counted_as_far_transfer = 0
@@ -1313,6 +1332,7 @@ training_candidate_without_distinct_contribution_promotion_o5_gates = 0
 training_candidate_without_exact_candidate_bound_approval_receipts = 0
 mock_or_hypothetical_receipt_authorizes_current_training = 0
 training_decision_without_trusted_server_evaluation_time = 0
+cleared_content_candidate_without_canonical_bound_provenance = 0
 personal_editor_before_cpf_privacy_export_delete_gates = 0
 mcal_runtime_before_core_loop_acceptance = 0
 other_profile_term_auto_inheritance = 0

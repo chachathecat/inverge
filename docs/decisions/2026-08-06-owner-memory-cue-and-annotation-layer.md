@@ -146,6 +146,12 @@ affirmative evidence의 자격을 보존한다. missing·undefined·null·boolea
 infinite·unsafe·object·array·cross-attempt·cross-learner·ambiguous·conflicting·stale·replayed·
 client/caller-inferred history 또는 count는 affected credit을 fail closed한다. exact 0이나 unbound count
 copy 자체는 어떤 affirmative learning evidence도 만들지 않는다.
+그보다 먼저 base `evidence.attempt` 자체가 `CANONICAL_SERVER_ATTEMPT_LEDGER`에서 정확히 한 건으로
+resolve되어야 한다. `known === true`, `resolved === true`, `ambiguous === false`,
+`conflicting === false`, `stale === false`, `clientInferred === false`와
+`matchingRecordCount === 1`을 모두 exact primitive/value로 통과한 뒤에만 independent retrieval을
+평가하며 far transfer와 stable D+7은 그 valid base credit에 의존한다. 어느 필드든 missing·malformed·
+wrong-type·반대 상태이거나 record가 0건/복수이면 세 positive credit은 모두 fail closed한다.
 positive independent retrieval은 exact submitted-and-evaluated response record, far transfer는 distinct
 eligible non-same-representation task와 submitted/evaluated independent result, stable D+7은 completed
 D+7 evaluation·cue `HIDDEN`·all-surface byte absence·non-same representation·unresolved scoring conflict 0의
@@ -208,7 +214,16 @@ promotion할 수도 없다.
 
 미래 candidate는 raw body와 별개의 closed-schema non-reconstructive signal, 또는 raw body의
 재명명·직접승격이 아닌 별도 authored·rights-owned·provenance/rights-reviewed Cleared Content
-Bank object뿐이다. contribution, Cleared Content Bank promotion과 exact-purpose O5는 서로
+Bank object뿐이다. Cleared Content Bank 후보 자체는 exact identifier-only closed schema를 통과해야 하므로
+unknown field, `rawAnswer` 같은 private-raw/free-text field 및 caller가 공급한
+`separateObjectIdentity`·`separatelyAuthored`·`rightsOwned`·`rightsReviewed`·`provenanceReviewed`
+boolean을 허용하지 않는다. 별도 canonical promotion/rights/provenance resolver가 independently
+resolved·known·non-ambiguous·non-conflicting·fresh·non-client-inferred single record를 반환하고 exact
+candidate/revision/purpose/O5 scope에 bind하여 separate identity, separate authorship, actual rights
+ownership, rights/provenance review 및 personal raw content 부재를 증명해야 eligibility가 보존된다.
+missing·mismatched·stale·inferred·0건/복수 record나 unknown/private field는 hypothetical receipt 전에
+fail closed한다. 이 canonical proof를 가진 별도 authored·rights-owned 후보 경로는 유지된다.
+contribution, Cleared Content Bank promotion과 exact-purpose O5는 서로
 구별된 gate이며 어느 것도 다른 gate를 대신하지 않는다. 각 미래 승인은 global boolean이 아니라
 independently resolved contribution·promotion·O5 receipt여야 하고, 세 receipt가 exact `signalId`·
 `signalRevisionId`·`purposeId`·`o5ScopeId`에 모두 일치해야 한다. cross-candidate/revision/purpose/scope,

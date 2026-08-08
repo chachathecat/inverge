@@ -65,6 +65,11 @@ PR #692 mutation is included.
     non-ambiguous, non-conflicting, fresh, non-replayed, non-client-inferred and non-caller-paired, and carries its own
     exact nonnegative-safe-integer `preResponseCueExposureCount`. Exactly zero preserves eligibility only; a positive
     count or invalid/cross-bound history denies the affected credit. Zero alone creates no affirmative evidence.
+    Before those checks can grant credit, base `evidence.attempt` itself must resolve from the canonical server attempt
+    ledger through the complete state/count gate: known and resolved are exact true; ambiguous, conflicting, stale and
+    client-inferred are exact false; and `matchingRecordCount` is exactly one. Missing, malformed, wrong-type, opposite
+    state, zero-record or multi-record attempts fail closed before independent retrieval and deny dependent far-transfer
+    and stable-D+7 credit.
     The canonical independent-response, far-transfer and stable-D+7 records additionally require
     `ambiguous === false` by exact primitive equality. Missing or any other value denies that record's credit;
     invalid independent response also denies its dependent credits, while invalid transfer/D+7 ambiguity does not
@@ -151,7 +156,16 @@ PR #692 mutation is included.
     unvalidated values fail closed; the canonical closed signal-schema validator must bind proof to the exact
     signal/revision and validate the actual candidate's exact top-level and nested field sets. Candidate-supplied
     `closedValueSchema` or proof markers are insufficient, and undeclared raw-answer, free-text or reconstructive
-    fields fail closed before eligibility. Client assertions are rejected. Absence of evidence is not content-safety evidence. A signal further
+    fields fail closed before eligibility. Client assertions are rejected. Absence of evidence is not content-safety evidence.
+    A Cleared Content Bank candidate separately uses an identifier-only closed candidate schema. Caller-controlled
+    authorship, rights, review or separate-object booleans, unknown fields and private-raw/free-text fields such as
+    `rawAnswer` are rejected. Eligibility requires one independently resolved, known, fresh, non-ambiguous,
+    non-conflicting, non-client-inferred and non-replayed canonical promotion/rights/provenance record bound
+    field-for-field to the exact candidate, revision, purpose and O5 scope. The closed record must prove separate object
+    identity, separate authorship, actual rights ownership, rights/provenance review and absence of personal/private raw
+    content. Missing, malformed, stale, inferred, mismatched, zero-record or multi-record provenance fails closed before
+    hypothetical receipts; the valid separately authored and rights-owned candidate path remains available.
+    A signal further
     requires active exact-purpose consent and active finite purpose-scoped retention bound to exact signal,
     revision, purpose and O5 scope. Both expiries are compared at each decision with an exact trusted server-clock
     instant and must be strictly later; caller/candidate/client time, a fixed date, missing or invalid time, and the
@@ -193,6 +207,8 @@ All fail closed or hold.
 - an independent response lacks an actual canonical submission or completed evaluation;
 - far transfer lacks a distinct eligible non-same-representation task, independent submission or evaluated result;
 - D+7 evidence lacks a completed canonical D+7 evaluation, hidden all-surface cue bytes or conflict-free score;
+- base `evidence.attempt` is missing, malformed, unresolved, ambiguous, conflicting, stale, client-inferred or does
+  not resolve to exactly one canonical server attempt, yet independent retrieval or dependent transfer receives credit;
 - D+7 relies on `D_PLUS_7` or a caller elapsed value without trusted source/evaluation timestamps proving at
   least 604800000 ms, accepts malformed, non-UTC, reversed or shorter timestamps, or trusts an independently
   supplied older source timestamp that is not bound to one resolved canonical source attempt;
@@ -273,6 +289,9 @@ All are rejected.
 - a reconstructive signal admitted as non-reconstructive;
 - a candidate-supplied closed-schema/proof marker substitutes for validation of the actual signal object, or an
   undeclared raw-answer, free-text, reconstructive or nested field reaches candidate eligibility;
+- a Cleared Content Bank candidate supplies provenance booleans, an unknown/private-raw field, or a missing,
+  ambiguous, conflicting, stale, inferred, mismatched or non-single canonical promotion/rights/provenance record and
+  still reaches candidate eligibility or hypothetical receipts;
 - any one of the five signal content-safety fields is omitted, undefined, null, non-boolean or true;
 - signal safety proof is ambiguous, taken from another object, or not closed-schema validated;
 - a raw pointer or reconstructive derivative renamed, aliased or relabeled as a signal;
@@ -321,7 +340,7 @@ npm run build
 Current correction-source evidence:
 
 - JavaScript syntax check: passed.
-- Focused behavioral contract suite: 49/49 passed.
+- Focused behavioral contract suite: 51/51 passed.
 - Strict JSON parse, balanced Markdown fences, cross-artifact assertions and `git diff --check`: passed.
 - Typecheck: passed.
 - Lint: passed with 0 errors and 9 pre-existing warnings outside the MCAL diff.
