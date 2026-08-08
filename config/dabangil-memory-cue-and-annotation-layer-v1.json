@@ -1,6 +1,6 @@
 {
   "schema": "dabangil_memory_cue_and_annotation_layer_v1",
-  "version": "1.0.6",
+  "version": "1.0.7",
   "dated": "2026-08-06 KST",
   "status": "proposed_non_authoritative",
   "repository": "chachathecat/inverge",
@@ -1137,6 +1137,24 @@
         "MATERIAL"
       ]
     },
+    "recordFailureGate": {
+      "gateId": "EXACT_RENDER_RECORD_FAILURE_GATE_V1",
+      "appliesToEveryRenderCapableExposureEventTiming": [
+        "BEFORE_RESPONSE",
+        "AFTER_RESPONSE",
+        "REVIEW_ONLY"
+      ],
+      "sharedAcrossEveryRenderCapableValidator": true,
+      "renderCapableValidators": [
+        "CUE_RENDER_REQUEST_VALIDATOR",
+        "CUE_EXPOSURE_EVENT_VALIDATOR"
+      ],
+      "field": "recordFailure",
+      "requiredPrimitiveType": "boolean",
+      "requiredExactValue": false,
+      "evaluatedBeforeTimingRouting": true,
+      "missingUndefinedNullTrueStringNumberObjectArrayOrAmbiguousBehavior": "FAIL_CLOSED_NO_CUE_BYTES"
+    },
     "canonicalRecordCommittedGate": {
       "appliesToEveryRenderCapableExposureEventTiming": [
         "BEFORE_RESPONSE",
@@ -1199,6 +1217,15 @@
         "requestId"
       ],
       "exactMatchingResolutionCount": 1,
+      "requiredResolutionBooleanStates": {
+        "known": true,
+        "resolved": true,
+        "ambiguous": false,
+        "conflicting": false,
+        "crossLearner": false,
+        "stale": false,
+        "clientInferred": false
+      },
       "matchingCanonicalOpenIndependentAttemptCount": 0,
       "canonicalExposureRecordStateRequired": "COMMITTED",
       "callerSuppliedReviewOnlyLabelSufficient": false,
@@ -1265,6 +1292,7 @@
       "confirmationMustBeServerRecorded": true,
       "confirmationMustBeDeliberate": true,
       "confirmationMustBeActive": true,
+      "confirmationReplayedMustExactlyEqual": false,
       "clientBooleanSufficient": false,
       "preselectedConsentSufficient": false,
       "missingCancelledStaleReplayedMismatchedOrAmbiguousBehavior": "FAIL_CLOSED_NO_CUE_BYTES",

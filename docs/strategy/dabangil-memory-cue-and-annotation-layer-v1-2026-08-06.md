@@ -507,8 +507,9 @@ D+7 stable / timed: HIDDEN
   판정한 non-null exact attempt와 learner scope 한 건에만 허용하며, client가 보낸 attempt state나
   latest-attempt 추론은 신뢰하지 않는다.
 - learner가 해당 learner·attempt·cue·cue revision·단일 request에 정확히 묶인 active deliberate
-  server-recorded single-use confirmation을 명시적으로 완료해야 한다. client boolean이나 미리 선택된
-  consent는 confirmation이 아니다.
+  server-recorded single-use confirmation을 명시적으로 완료해야 한다. confirmation의 `replayed`는 exact
+  primitive `false`여야 하며 missing·default·coercion은 non-replayed 증거가 아니다. client boolean이나
+  미리 선택된 consent는 confirmation이 아니다.
 - cue render request validator와 별도 cue exposure event validator를 포함해 `BEFORE_RESPONSE` byte를
   허용할 수 있는 모든 path는 동일 `EXACT_PRE_RESPONSE_RENDER_GATE_V1`에 위임한다. alternate route나
   약한 두 번째 policy는 금지한다.
@@ -539,7 +540,8 @@ D+7 stable / timed: HIDDEN
   attempt scope의 open independent attempt가 0건임을 별도로 증명해야 한다. nested absence resolution 자체도
   shared canonical attempt resolution state gate를 독립적으로 통과해야 하며, missing·unresolved·ambiguous·
   conflicting·cross-learner·stale·client-inferred resolution 또는 matching open attempt는 cue byte 0으로
-  fail closed한다.
+  fail closed한다. outer canonical timing/classification resolution도 `resolved === true`를 포함한 required
+  exact state를 독립적으로 만족해야 하며 valid nested proof가 unresolved outer resolution을 대체하지 못한다.
 - pre-response cue가 없다는 사실은 independent-evidence **eligibility만 보존**한다. empty sequence나
   `AFTER_RESPONSE` event 자체는 independent retrieval·far transfer·stable D+7 증거를 만들지 않는다.
 - independent retrieval은 actual submitted response와 completed evaluation이 exact learner/attempt에
@@ -567,6 +569,7 @@ type CueExposureEventBaseV1 = CanonicalAssistanceExposureEventV1 & {
   shownAt: string;
   derivedFrom: "CANONICAL_ASSISTANCE_EXPOSURE_LEDGER";
   canonicalRecordCommitted: true;
+  recordFailure: false;
 };
 
 type CueExposureEventV1 = CueExposureEventBaseV1 & (
@@ -640,6 +643,7 @@ type ExactCanonicalSubmittedAttemptBindingV1 = {
 type CanonicalReviewOnlyResolutionV1 = {
   source: "CANONICAL_SERVER_CUE_TIMING_CLASSIFICATION_RESOLVER";
   known: true;
+  resolved: true;
   matchingResolutionCount: 1;
   ambiguous: false;
   conflicting: false;
@@ -676,6 +680,18 @@ const CUE_TIMING_CLASSIFICATION_V1 = {
   REVIEW_ONLY: ["NONE", "LOW", "MATERIAL"],
 } as const;
 
+const EXACT_RENDER_RECORD_FAILURE_GATE_V1 = {
+  field: "recordFailure",
+  requiredPrimitiveType: "boolean",
+  requiredExactValue: false,
+  evaluatedBeforeTimingRouting: true,
+  renderCapableValidators: [
+    "CUE_RENDER_REQUEST_VALIDATOR",
+    "CUE_EXPOSURE_EVENT_VALIDATOR",
+  ],
+  invalidStateBehavior: "FAIL_CLOSED_NO_CUE_BYTES",
+} as const;
+
 type PreResponseCueConfirmationV1 = {
   source: "CANONICAL_SERVER_CONFIRMATION_LEDGER";
   status: "CONFIRMED";
@@ -690,6 +706,7 @@ type PreResponseCueConfirmationV1 = {
   singleUse: true;
   matchingRecordCount: 1;
   stale: false;
+  replayed: false;
   consumed: false;
   ambiguous: false;
 };
@@ -722,11 +739,21 @@ const PRE_RESPONSE_RENDER_GATE_V1 = {
     "CUE_EXPOSURE_EVENT_VALIDATOR",
   ],
   attemptResolutionStateGate: "EXACT_CANONICAL_ATTEMPT_RESOLUTION_STATE_GATE_V1",
+  confirmationReplayedMustExactlyEqual: false,
   alternateValidatorBypassAllowed: false,
 } as const;
 
 const CANONICAL_REVIEW_ONLY_RENDER_GATE_V1 = {
   timingClassificationSource: "CANONICAL_SERVER_CUE_TIMING_CLASSIFICATION_RESOLVER",
+  requiredResolutionBooleanStates: {
+    known: true,
+    resolved: true,
+    ambiguous: false,
+    conflicting: false,
+    crossLearner: false,
+    stale: false,
+    clientInferred: false,
+  },
   openAttemptAbsenceSource: "CANONICAL_SERVER_ATTEMPT_LEDGER",
   openAttemptStateFilter: "INDEPENDENT_ATTEMPT_OPEN",
   openAttemptAbsenceResolutionStateGate: "EXACT_CANONICAL_ATTEMPT_RESOLUTION_STATE_GATE_V1",
@@ -770,12 +797,16 @@ type CanonicalExposureHistoryV1 = {
   cue byte 0으로 fail closed한다. request-side와 event-side `AFTER_RESPONSE`는 같은 exact-boolean gate를
   사용하며 `canonicalExposureRecordCommitted` 또는 다른 alias는 canonical field를 대체하지 못한다.
   exact true는 이 prerequisite 하나만 충족하며 attempt·learner·ordering·race gate를 우회하지 못한다.
+  두 validator는 timing routing 전에 shared `EXACT_RENDER_RECORD_FAILURE_GATE_V1`을 적용하므로,
+  `recordFailure === false`를 exact primitive equality로 요구한다. `canonicalRecordCommitted === true`와
+  `recordFailure === true`의 모순 상태도 cue byte 0으로 fail closed한다.
 - timing과 assistance classification은 canonical ledger가 파생하며 untrusted client 값을 받지 않는다.
 - attempt state는 `CANONICAL_SERVER_ATTEMPT_LEDGER`에서 파생한다. `BEFORE_RESPONSE`는 exact
   learner/attempt resolution의 `INDEPENDENT_ATTEMPT_OPEN`과 exact single-use confirmation이 모두 없으면
   허용하지 않으며, 모든 render-capable validator가 위 shared gate에 위임해야 한다.
 - confirmation은 learner·attempt·cue·cue revision·request 다섯 필드가 모두 정확히 일치하는 단 하나의
-  active, deliberate, server-recorded, non-cancelled, fresh, unused record여야 한다. 단순 client
+  active, deliberate, server-recorded, non-cancelled, fresh, unused, explicitly non-replayed record여야 한다.
+  `replayed === false`는 exact primitive equality로 검증하며, 단순 client
   boolean·preselected consent는 부족하다.
 - `BEFORE_RESPONSE + NONE`은 invalid다. `NONE`은 해당 attempt에 pre-response cue exposure가
   하나도 없었음을 뜻한다.

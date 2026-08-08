@@ -196,6 +196,8 @@ All fail closed or hold.
 - a pre-response attempt resolution has `resolved !== true`, `conflicting !== false` or
   `clientInferred !== false` but either render validator still authorizes cue bytes;
 - confirmation is missing, cancelled, stale, replayed, mismatched, ambiguous, a client boolean or preselected;
+- a confirmation explicitly carries `replayed: true` while `consumed: false` and `singleUse: true` but either
+  render validator still treats it as a deliberate non-replayed override;
 - cue bytes render before confirmation consumption, exposure, `ASSISTED` and evidence-invalidation commits all succeed;
 - partial commit, record failure or render/submit race still renders cue bytes;
 - an already submitted attempt is treated as `BEFORE_RESPONSE`;
@@ -205,7 +207,10 @@ All fail closed or hold.
   unresolved or pre-submission attempt reference;
 - request-side `AFTER_RESPONSE` accepts `canonicalExposureRecordCommitted: true` while
   `canonicalRecordCommitted` is missing, false or malformed;
+- exposure-event `AFTER_RESPONSE` accepts `canonicalRecordCommitted: true` together with `recordFailure: true`;
 - an attempt-unbound variant other than evidence-neutral `REVIEW_ONLY` renders cue bytes;
+- an outer canonical `REVIEW_ONLY` timing/classification resolution omits `resolved` or has `resolved !== true`
+  while a valid nested open-attempt absence proof still authorizes cue bytes;
 - a `REVIEW_ONLY` nested zero-count open-attempt absence resolution has `resolved !== true`,
   `conflicting !== false` or `clientInferred !== false` but is accepted as canonical proof;
 - ambiguous ordering or a render/submit race receives independent credit;
@@ -282,7 +287,7 @@ npm run build
 Current correction-source evidence:
 
 - JavaScript syntax check: passed.
-- Focused behavioral contract suite: 36/36 passed.
+- Focused behavioral contract suite: 39/39 passed.
 - Strict JSON parse, balanced Markdown fences, cross-artifact assertions and `git diff --check`: passed.
 - Typecheck: passed.
 - Lint: passed with 0 errors and 9 pre-existing warnings outside the MCAL diff.

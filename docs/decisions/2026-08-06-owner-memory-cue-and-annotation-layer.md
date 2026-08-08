@@ -77,6 +77,9 @@ FULL → DECOMPOSITION_ONLY → PROMPT_ONLY → HIDDEN
 object·array·ambiguous 또는 caller-inferred commit state는 cue byte 0으로 fail closed한다. request와 event의
 `AFTER_RESPONSE`는 동일 exact-boolean gate를 사용하며 `canonicalExposureRecordCommitted` 같은 alias는
 canonical field를 대체하지 못한다. exact true 하나만으로 다른 binding·ordering·race gate를 우회하지 못한다.
+모든 render-capable request/event validator는 timing 분기 전에 shared record-failure gate를 적용하며,
+`recordFailure === false`를 exact primitive equality로 요구한다. 따라서 `canonicalRecordCommitted === true`와
+함께 `recordFailure === true`가 있더라도 cue byte 0으로 fail closed한다.
 `BEFORE_RESPONSE`는 `LOW` 또는 `MATERIAL`만 허용하며 `NONE`은 invalid다. `NONE`은 해당
 attempt에 pre-response cue exposure가 없었다는 뜻이다. timing과 classification은 canonical
 ledger에서 파생하고 client 입력을 신뢰하지 않는다. sequence에 pre-response event가 하나라도
@@ -85,7 +88,8 @@ ordering ambiguity와 render/submit race도 fail closed다.
 `BEFORE_RESPONSE` attempt state는 client가 아니라 canonical server attempt ledger에서 파생하며,
 non-null exact `attemptId`와 learner scope가 exact `INDEPENDENT_ATTEMPT_OPEN` 한 건에 resolve되어야
 하고, exact learner·attempt·cue·cue revision·단일 request에 묶인 active deliberate server-recorded
-single-use confirmation을 모두 요구한다. client boolean과 preselected consent는 부족하다.
+single-use confirmation을 모두 요구한다. confirmation은 `replayed === false`도 exact primitive equality로
+만족해야 하며 missing·default·coercion은 non-replayed 증거가 아니다. client boolean과 preselected consent는 부족하다.
 모든 `BEFORE_RESPONSE` render-capable validator는 하나의
 `EXACT_PRE_RESPONSE_RENDER_GATE_V1`에 위임해야 하며 별도 event validator, alternate route 또는
 약한 두 번째 policy로 우회할 수 없다. confirmation consumption → cue exposure record → `ASSISTED`
@@ -108,6 +112,8 @@ scope·cue·cue revision·request에 묶인 canonical timing/classification 및 
 resolve해야 한다. canonical server attempt ledger에서 같은 learner/attempt scope의 open independent
 attempt가 0건임도 별도로 증명한다. missing·unresolved·ambiguous·conflicting·cross-learner·stale·client-inferred
 state 또는 matching open attempt는 cue byte 0으로 fail closed한다.
+outer canonical timing/classification resolution 자체도 `resolved === true`를 포함한 required exact state를
+독립적으로 만족해야 하며, nested open-attempt absence proof가 valid해도 outer unresolved state를 대체하지 못한다.
 submitted binding, `BEFORE_RESPONSE` open-attempt binding 및 `REVIEW_ONLY`의 nested zero-count absence proof는
 각자의 canonical server attempt resolution에 같은 exact state gate를 독립적으로 적용한다. `known === true`,
 `resolved === true`, `ambiguous === false`, `conflicting === false`, `stale === false`,

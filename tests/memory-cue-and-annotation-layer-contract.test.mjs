@@ -397,6 +397,7 @@ function canonicalReviewOnlyResolution(overrides = {}) {
   const base = {
     source: "CANONICAL_SERVER_CUE_TIMING_CLASSIFICATION_RESOLVER",
     known: true,
+    resolved: true,
     matchingResolutionCount: 1,
     ambiguous: false,
     conflicting: false,
@@ -458,6 +459,7 @@ function cueEvent(overrides = {}) {
     derivedFrom: "CANONICAL_ASSISTANCE_EXPOSURE_LEDGER",
     ordering: "ORDERED",
     canonicalRecordCommitted: true,
+    recordFailure: false,
     renderSubmitRaceDetected: false,
     attemptId: "attempt-1",
     learnerPrivateScopeId: "learner-1",
@@ -553,6 +555,12 @@ function hasExactCanonicalRecordCommit(subject) {
   return typeof value === gate.requiredPrimitiveType && value === gate.requiredValue;
 }
 
+function hasExactNoRecordFailure(subject) {
+  const gate = contract.cueExposure.recordFailureGate;
+  const value = subject[gate.field];
+  return typeof value === gate.requiredPrimitiveType && value === gate.requiredExactValue;
+}
+
 function authorizeCanonicalReviewOnlyCueRender(subject) {
   const gate = contract.cueExposure.reviewOnlyGate;
   const fail = (reason) => ({
@@ -565,7 +573,7 @@ function authorizeCanonicalReviewOnlyCueRender(subject) {
   if (subject.renderSubmitRaceDetected === true) {
     return fail(contract.cueExposure.renderSubmitRaceBehavior);
   }
-  if (subject.recordFailure === true) return fail(contract.cueExposure.recordFailureBehavior);
+  if (!hasExactNoRecordFailure(subject)) return fail(contract.cueExposure.recordFailureBehavior);
   if (subject.ordering !== undefined && subject.ordering !== "ORDERED") {
     return fail(contract.cueExposure.ambiguousOrderingBehavior);
   }
@@ -588,13 +596,10 @@ function authorizeCanonicalReviewOnlyCueRender(subject) {
   if (!resolution) return fail("CANONICAL_REVIEW_ONLY_RESOLUTION_MISSING");
   if (
     resolution.source !== gate.canonicalResolutionSource
-    || resolution.known !== true
+    || Object.entries(gate.requiredResolutionBooleanStates).some(
+      ([field, expected]) => resolution[field] !== expected,
+    )
     || resolution.matchingResolutionCount !== gate.exactMatchingResolutionCount
-    || resolution.ambiguous !== false
-    || resolution.conflicting !== false
-    || resolution.crossLearner !== false
-    || resolution.stale !== false
-    || resolution.clientInferred !== false
   ) return fail("CANONICAL_REVIEW_ONLY_RESOLUTION_INVALID");
   if (
     resolution.canonicalTiming !== gate.requiredCanonicalTiming
@@ -663,7 +668,7 @@ function authorizeExactPreResponseCueRender(subject) {
   if (subject.renderSubmitRaceDetected === true) {
     return fail(cue.preResponseAtomicCommit.renderSubmitRaceBehavior);
   }
-  if (subject.recordFailure === true) return fail(cue.preResponseAtomicCommit.recordFailureBehavior);
+  if (!hasExactNoRecordFailure(subject)) return fail(cue.preResponseAtomicCommit.recordFailureBehavior);
   if (!hasExactCanonicalRecordCommit(subject)) {
     return fail(cue.preResponseAtomicCommit.recordFailureBehavior);
   }
@@ -731,6 +736,9 @@ function authorizeExactPreResponseCueRender(subject) {
     return fail("CONFIRMATION_STATE_INVALID");
   }
   if (confirmation.stale !== false) return fail("CONFIRMATION_STALE");
+  if (confirmation.replayed !== gate.confirmationReplayedMustExactlyEqual) {
+    return fail("CONFIRMATION_REPLAYED");
+  }
   if (confirmation.consumed !== false || confirmation.singleUse !== true) {
     return fail("CONFIRMATION_REPLAYED");
   }
@@ -760,6 +768,9 @@ function authorizeExactPreResponseCueRender(subject) {
 
 function validateCueExposureEvent(event) {
   const cue = contract.cueExposure;
+  if (!hasExactNoRecordFailure(event)) {
+    return { accepted: false, mayRenderCueBytes: false, reason: cue.recordFailureBehavior };
+  }
   if (!hasExactCanonicalRecordCommit(event)) {
     return { accepted: false, mayRenderCueBytes: false, reason: cue.recordFailureBehavior };
   }
@@ -1406,6 +1417,7 @@ function cueConfirmation(overrides = {}) {
     singleUse: true,
     matchingRecordCount: 1,
     stale: false,
+    replayed: false,
     consumed: false,
     cancelled: false,
     ambiguous: false,
@@ -1450,7 +1462,7 @@ function evaluateCueRender(request) {
     reason,
   });
   if (request.renderSubmitRaceDetected) return fail(cue.preResponseAtomicCommit.renderSubmitRaceBehavior);
-  if (request.recordFailure) return fail(cue.preResponseAtomicCommit.recordFailureBehavior);
+  if (!hasExactNoRecordFailure(request)) return fail(cue.preResponseAtomicCommit.recordFailureBehavior);
 
   if (
     request.timing === "REVIEW_ONLY"
@@ -1497,7 +1509,7 @@ test("MCAL paths resolve and V13 remains sole active master plan", () => {
   assert.match(active, /dabangil-professional-exam-reasoning-os-final-master-plan-v13-2026-08-06\.md/);
   assert.match(active, /Memory Cue & Annotation Layer/);
   assert.doesNotMatch(active, /final-master-plan-v14/);
-  assert.equal(contract.version, "1.0.6");
+  assert.equal(contract.version, "1.0.7");
   assert.equal(contract.compatibility.v13RemainsSoleActiveMasterPlan, true);
   assert.equal(contract.compatibility.newMasterPlanVersionCreated, false);
 });
@@ -1665,6 +1677,10 @@ test("Markdown fences and exact boundary language are present", () => {
   assert.match(annex, /`consent\.expired === false`/);
   assert.match(annex, /`canonicalExposureRecordCommitted`[^\n]*대체/);
   assert.match(annex, /canonical attempt resolution state gate/);
+  assert.match(annex, /EXACT_RENDER_RECORD_FAILURE_GATE_V1/);
+  assert.match(annex, /`recordFailure === true`/);
+  assert.match(annex, /`replayed === false`는 exact primitive equality/);
+  assert.match(annex, /outer canonical timing\/classification resolution도 `resolved === true`/);
   assert.match(annex, /preResponseCueExposureCount/);
   assert.match(annex, /CANONICAL_SERVER_ITEM_RIGHTS_MANIFEST_BOUNDARY/);
   assert.match(annex, /transferAttemptId/);
@@ -1673,7 +1689,8 @@ test("Markdown fences and exact boundary language are present", () => {
   assert.match(annex, /`currentlyAuthorized`는 정확히 `false`/);
   const qa = read(P.qa);
   assert.match(qa, /PR #692 is merged at `512bfdb9232a86bf4f7d4cfbc076a9df1c8a7da2`/);
-  assert.match(qa, /Focused behavioral contract suite: 36\/36 passed/);
+  assert.match(qa, /Focused behavioral contract suite: 39\/39 passed/);
+  assert.doesNotMatch(qa, /Focused behavioral contract suite: 36\/36 passed/);
   assert.doesNotMatch(qa, /Focused behavioral contract suite: 34\/34 passed/);
   assert.doesNotMatch(qa, /Focused behavioral contract suite: 31\/31 passed/);
   assert.doesNotMatch(qa, /Focused behavioral contract suite: 28\/28 passed/);
@@ -3093,6 +3110,28 @@ test("pre-response confirmation rejects missing, stale, replayed, mismatched and
   }
 });
 
+test("pre-response rejects confirmations explicitly marked replayed across both render validators", () => {
+  const gate = contract.cueExposure.beforeResponseGate;
+  assert.equal(gate.confirmationReplayedMustExactlyEqual, false);
+  const subject = cueRenderRequest({
+    assistanceClassification: "LOW",
+    confirmation: cueConfirmation({
+      replayed: true,
+      consumed: false,
+      singleUse: true,
+    }),
+  });
+  for (const validate of [
+    evaluateCueRender,
+    (request) => validateCueExposureEvent(cueEvent(request)),
+  ]) {
+    const result = validate(subject);
+    assert.equal(result.accepted, false);
+    assert.equal(result.mayRenderCueBytes, false);
+    assert.equal(result.reason, "CONFIRMATION_REPLAYED");
+  }
+});
+
 test("valid confirmation commits exact assisted transition before render and races fail closed", () => {
   const valid = evaluateCueRender(cueRenderRequest());
   assert.deepEqual(valid, {
@@ -3317,6 +3356,35 @@ test("after-response requests require canonicalRecordCommitted and ignore aliase
   })).accepted, true);
 });
 
+test("after-response exposure events reject explicit record failures before timing routing", () => {
+  const gate = contract.cueExposure.recordFailureGate;
+  assert.equal(gate.gateId, "EXACT_RENDER_RECORD_FAILURE_GATE_V1");
+  assert.equal(gate.sharedAcrossEveryRenderCapableValidator, true);
+  assert.equal(gate.evaluatedBeforeTimingRouting, true);
+  assert.equal(gate.field, "recordFailure");
+  assert.equal(gate.requiredPrimitiveType, "boolean");
+  assert.equal(gate.requiredExactValue, false);
+
+  const event = validateCueExposureEvent(cueEvent({
+    timing: "AFTER_RESPONSE",
+    canonicalRecordCommitted: true,
+    recordFailure: true,
+  }));
+  assert.equal(event.accepted, false);
+  assert.equal(event.mayRenderCueBytes, false);
+  assert.equal(event.reason, contract.cueExposure.recordFailureBehavior);
+
+  const request = evaluateCueRender(cueRenderRequest({
+    canonicalAttemptState: "SUBMITTED",
+    timing: "AFTER_RESPONSE",
+    confirmation: undefined,
+    canonicalRecordCommitted: true,
+    recordFailure: true,
+  }));
+  assert.equal(request.accepted, false);
+  assert.equal(request.mayRenderCueBytes, false);
+});
+
 test("review-only requires canonical server derivation and no matching open attempt", () => {
   const gate = contract.cueExposure.reviewOnlyGate;
   assert.equal(gate.gateId, "CANONICAL_REVIEW_ONLY_RENDER_GATE_V1");
@@ -3424,6 +3492,29 @@ test("review-only requires canonical server derivation and no matching open atte
   }));
   assert.equal(invalidBoundReview.accepted, false);
   assert.equal(invalidBoundReview.mayRenderCueBytes, false);
+});
+
+test("review-only rejects unresolved outer canonical timing resolutions across both validators", () => {
+  const gate = contract.cueExposure.reviewOnlyGate;
+  assert.equal(gate.requiredResolutionBooleanStates.resolved, true);
+
+  const missingResolved = canonicalReviewOnlyResolution();
+  delete missingResolved.resolved;
+  for (const reviewOnlyResolution of [
+    missingResolved,
+    canonicalReviewOnlyResolution({ resolved: false }),
+  ]) {
+    const subject = reviewOnlyRequest({ reviewOnlyResolution });
+    for (const validate of [
+      evaluateCueRender,
+      (request) => validateCueExposureEvent(cueEvent(request)),
+    ]) {
+      const result = validate(subject);
+      assert.equal(result.accepted, false);
+      assert.equal(result.mayRenderCueBytes, false);
+      assert.equal(result.reason, "CANONICAL_REVIEW_ONLY_RESOLUTION_INVALID");
+    }
+  }
 });
 
 test("review-only independently validates the nested canonical absence-resolution state", () => {
