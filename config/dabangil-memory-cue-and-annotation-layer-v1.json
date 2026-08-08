@@ -1,6 +1,6 @@
 {
   "schema": "dabangil_memory_cue_and_annotation_layer_v1",
-  "version": "1.0.9",
+  "version": "1.0.10",
   "dated": "2026-08-06 KST",
   "status": "proposed_non_authoritative",
   "repository": "chachathecat/inverge",
@@ -769,6 +769,121 @@
       "requiredValue": false,
       "closedSchemaValidationRequired": true,
       "validationSource": "CANONICAL_CLOSED_SIGNAL_SCHEMA_VALIDATOR",
+      "canonicalCandidateValueSchema": {
+        "validator": "CANONICAL_CLOSED_SIGNAL_SCHEMA_VALIDATOR",
+        "actualCandidateObjectMustValidate": true,
+        "candidateSuppliedSchemaOrProofMarkersSufficient": false,
+        "additionalTopLevelFieldsAllowed": false,
+        "requiredTopLevelFields": [
+          "kind",
+          "signalId",
+          "signalRevisionId",
+          "purposeId",
+          "o5ScopeId",
+          "separateObjectIdentity",
+          "closedValueSchema",
+          "containsRawAnnotationBody",
+          "containsRawBodyPointer",
+          "containsExcerptOrFreeText",
+          "reconstructive",
+          "reconstructiveDerivativeOfRawBody",
+          "contentSafetyProofValidated",
+          "contentSafetyProofValidationSource",
+          "contentSafetyProofAmbiguous",
+          "contentSafetyProofSignalId",
+          "contentSafetyProofSignalRevisionId",
+          "consent",
+          "retention"
+        ],
+        "topLevelIdentifierFields": [
+          "signalId",
+          "signalRevisionId",
+          "purposeId",
+          "o5ScopeId",
+          "contentSafetyProofSignalId",
+          "contentSafetyProofSignalRevisionId"
+        ],
+        "identifierPattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{2,127}$",
+        "topLevelExactValues": {
+          "kind": "SEPARATE_NON_RECONSTRUCTIVE_SIGNAL",
+          "separateObjectIdentity": true,
+          "closedValueSchema": true,
+          "containsRawAnnotationBody": false,
+          "containsRawBodyPointer": false,
+          "containsExcerptOrFreeText": false,
+          "reconstructive": false,
+          "reconstructiveDerivativeOfRawBody": false,
+          "contentSafetyProofValidated": true,
+          "contentSafetyProofValidationSource": "CANONICAL_CLOSED_SIGNAL_SCHEMA_VALIDATOR",
+          "contentSafetyProofAmbiguous": false
+        },
+        "nestedObjectSchemas": {
+          "consent": {
+            "additionalFieldsAllowed": false,
+            "requiredFields": [
+              "source",
+              "state",
+              "exactPurpose",
+              "signalId",
+              "signalRevisionId",
+              "purposeId",
+              "o5ScopeId",
+              "expired",
+              "revoked",
+              "expiresAt"
+            ],
+            "identifierFields": [
+              "signalId",
+              "signalRevisionId",
+              "purposeId",
+              "o5ScopeId"
+            ],
+            "rfc3339UtcMillisecondFields": [
+              "expiresAt"
+            ],
+            "exactValues": {
+              "source": "CANONICAL_VERSIONED_CONSENT_OPT_OUT_LEDGER",
+              "state": "ACTIVE",
+              "exactPurpose": true,
+              "expired": false,
+              "revoked": false
+            }
+          },
+          "retention": {
+            "additionalFieldsAllowed": false,
+            "requiredFields": [
+              "source",
+              "state",
+              "signalId",
+              "signalRevisionId",
+              "purposeId",
+              "o5ScopeId",
+              "finite",
+              "expiresAt",
+              "expired",
+              "revoked"
+            ],
+            "identifierFields": [
+              "signalId",
+              "signalRevisionId",
+              "purposeId",
+              "o5ScopeId"
+            ],
+            "rfc3339UtcMillisecondFields": [
+              "expiresAt"
+            ],
+            "exactValues": {
+              "source": "CANONICAL_PURPOSE_SCOPED_RETENTION_LEDGER",
+              "state": "ACTIVE",
+              "finite": true,
+              "expired": false,
+              "revoked": false
+            }
+          }
+        },
+        "undeclaredFreeTextOrReconstructiveFieldsAllowed": false,
+        "missingUnknownAdditionalWrongTypeMalformedOrProhibitedFieldBehavior": "FAIL_CLOSED_CANDIDATE_INELIGIBLE"
+      },
       "clientValidationAssertionAccepted": false,
       "exactSignalAndRevisionBindingRequired": true,
       "ambiguousProofAllowed": false,
@@ -1005,6 +1120,7 @@
     "rawPersonalAnnotationBodyRenamedOrAliasedForTraining": 0,
     "rawPersonalAnnotationBodyDirectlyPromotedToClearedContentBank": 0,
     "reconstructiveAnnotationSignalUsedAsTrainingCandidate": 0,
+    "trainingSignalCandidateWithUndeclaredFreeTextOrReconstructiveField": 0,
     "trainingCandidateWithoutDistinctContributionPromotionO5Gates": 0,
     "trainingCandidateWithoutExactCandidateBoundApprovalReceipts": 0,
     "mockOrHypotheticalReceiptAuthorizesCurrentTraining": 0,
@@ -1318,6 +1434,8 @@
       "confirmationMustBeServerRecorded": true,
       "confirmationMustBeDeliberate": true,
       "confirmationMustBeActive": true,
+      "confirmationCancelledMustExactlyEqual": false,
+      "missingNullStringNumberObjectArrayTrueOrOtherNonFalseCancellationBehavior": "FAIL_CLOSED_NO_CUE_BYTES",
       "confirmationReplayedMustExactlyEqual": false,
       "clientBooleanSufficient": false,
       "preselectedConsentSufficient": false,

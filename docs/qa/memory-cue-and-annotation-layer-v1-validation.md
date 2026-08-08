@@ -81,7 +81,9 @@ PR #692 mutation is included.
     `ambiguous === false`, `conflicting === false`, `stale === false` and `clientInferred === false` by exact
     primitive equality. Missing, defaulted, coerced or merely truthy state cannot satisfy that gate.
 19. The shared gate requires one active deliberate server-recorded single-use confirmation bound exactly to
-    learner, attempt, cue, cue revision and one request.
+    learner, attempt, cue, cue revision and one request. Its `cancelled` field must be exact primitive `false`;
+    missing, null, strings, numbers, objects, arrays, `true` and every other malformed value fail closed across
+    both render-capable validators.
 20. Client booleans and preselected consent are insufficient. Missing, cancelled, stale, replayed,
     mismatched or ambiguous confirmations fail closed with no cue bytes.
 21. Confirmation consumption, exposure record, `ASSISTED` transition and independent-evidence invalidation
@@ -139,7 +141,9 @@ PR #692 mutation is included.
     and `reconstructiveDerivativeOfRawBody` to be explicitly present on the same validated candidate object,
     primitive boolean and exactly false. Missing, undefined, null, non-boolean, true, ambiguous, cross-object or
     unvalidated values fail closed; the canonical closed signal-schema validator must bind proof to the exact
-    signal/revision and client assertions are rejected. Absence of evidence is not content-safety evidence. A signal further
+    signal/revision and validate the actual candidate's exact top-level and nested field sets. Candidate-supplied
+    `closedValueSchema` or proof markers are insufficient, and undeclared raw-answer, free-text or reconstructive
+    fields fail closed before eligibility. Client assertions are rejected. Absence of evidence is not content-safety evidence. A signal further
     requires active exact-purpose consent and active finite purpose-scoped retention bound to exact signal,
     revision, purpose and O5 scope. Both expiries are compared at each decision with an exact trusted server-clock
     instant and must be strictly later; caller/candidate/client time, a fixed date, missing or invalid time, and the
@@ -209,7 +213,8 @@ All fail closed or hold.
   closed, stale, cancelled, replayed or mismatched;
 - a pre-response attempt resolution has `resolved !== true`, `conflicting !== false` or
   `clientInferred !== false` but either render validator still authorizes cue bytes;
-- confirmation is missing, cancelled, stale, replayed, mismatched, ambiguous, a client boolean or preselected;
+- confirmation is missing, cancelled, stale, replayed, mismatched, ambiguous, a client boolean or preselected,
+  or its `cancelled` field is anything other than exact primitive `false`;
 - a confirmation explicitly carries `replayed: true` while `consumed: false` and `singleUse: true` but either
   render validator still treats it as a deliberate non-replayed override;
 - cue bytes render before confirmation consumption, exposure, `ASSISTED` and evidence-invalidation commits all succeed;
@@ -255,6 +260,8 @@ All are rejected.
 - learner opt-in, consent, contract, administrator choice or O5 used to train a raw annotation body;
 - a raw annotation body renamed, aliased or directly promoted as Cleared Content;
 - a reconstructive signal admitted as non-reconstructive;
+- a candidate-supplied closed-schema/proof marker substitutes for validation of the actual signal object, or an
+  undeclared raw-answer, free-text, reconstructive or nested field reaches candidate eligibility;
 - any one of the five signal content-safety fields is omitted, undefined, null, non-boolean or true;
 - signal safety proof is ambiguous, taken from another object, or not closed-schema validated;
 - a raw pointer or reconstructive derivative renamed, aliased or relabeled as a signal;
@@ -303,7 +310,7 @@ npm run build
 Current correction-source evidence:
 
 - JavaScript syntax check: passed.
-- Focused behavioral contract suite: 44/44 passed.
+- Focused behavioral contract suite: 46/46 passed.
 - Strict JSON parse, balanced Markdown fences, cross-artifact assertions and `git diff --check`: passed.
 - Typecheck: passed.
 - Lint: passed with 0 errors and 9 pre-existing warnings outside the MCAL diff.

@@ -93,7 +93,9 @@ ordering ambiguity와 render/submit race도 fail closed다.
 non-null exact `attemptId`와 learner scope가 exact `INDEPENDENT_ATTEMPT_OPEN` 한 건에 resolve되어야
 하고, exact learner·attempt·cue·cue revision·단일 request에 묶인 active deliberate server-recorded
 single-use confirmation을 모두 요구한다. confirmation은 `replayed === false`도 exact primitive equality로
-만족해야 하며 missing·default·coercion은 non-replayed 증거가 아니다. client boolean과 preselected consent는 부족하다.
+만족해야 하며 missing·default·coercion은 non-replayed 증거가 아니다. `cancelled`도 정확히 primitive
+`false`여야 하므로 missing·null·string·number·object·array·`true` 또는 다른 malformed 값은 active
+confirmation 증거가 아니다. client boolean과 preselected consent는 부족하다.
 모든 `BEFORE_RESPONSE` render-capable validator는 하나의
 `EXACT_PRE_RESPONSE_RENDER_GATE_V1`에 위임해야 하며 별도 event validator, alternate route 또는
 약한 두 번째 policy로 우회할 수 없다. confirmation consumption → cue exposure record → `ASSISTED`
@@ -211,6 +213,11 @@ mock·fixture·hypothetical/future context는 canonical false를 override할 수
 authorization boundary를 바꾸는 별도 승인 변경이 필요하다.
 
 signal은 raw body·raw pointer·reconstructive derivative를 rename·alias·relabel한 객체일 수 없다.
+canonical closed signal-schema validator는 `closedValueSchema: true`나 safety-proof marker를 후보가
+제공했다는 사실을 신뢰하지 않고 실제 candidate object 전체를 검증한다. top-level 및 consent·retention
+nested object는 선언된 exact field set만 허용하며 additional/unknown field를 금지한다. 따라서
+`rawAnswer`, free-text 또는 reconstructive payload 같은 미선언 field는 기존 safety marker가 모두
+통과해도 candidate eligibility 전에 fail closed한다.
 `SEPARATE_NON_RECONSTRUCTIVE_SIGNAL`의 같은 validated candidate object에는 다음 다섯 property가
 각각 명시적으로 존재하고 primitive boolean이며 정확히 `false`여야 한다:
 `containsRawAnnotationBody`, `containsRawBodyPointer`, `containsExcerptOrFreeText`, `reconstructive`,

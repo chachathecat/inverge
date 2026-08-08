@@ -508,8 +508,9 @@ D+7 stable / timed: HIDDEN
   latest-attempt 추론은 신뢰하지 않는다.
 - learner가 해당 learner·attempt·cue·cue revision·단일 request에 정확히 묶인 active deliberate
   server-recorded single-use confirmation을 명시적으로 완료해야 한다. confirmation의 `replayed`는 exact
-  primitive `false`여야 하며 missing·default·coercion은 non-replayed 증거가 아니다. client boolean이나
-  미리 선택된 consent는 confirmation이 아니다.
+  primitive `false`여야 하며 missing·default·coercion은 non-replayed 증거가 아니다. `cancelled` 역시
+  exact primitive `false`여야 하므로 missing·null·string·number·object·array·`true` 또는 다른 malformed
+  값은 active confirmation을 증명하지 못한다. client boolean이나 미리 선택된 consent는 confirmation이 아니다.
 - cue render request validator와 별도 cue exposure event validator를 포함해 `BEFORE_RESPONSE` byte를
   허용할 수 있는 모든 path는 동일 `EXACT_PRE_RESPONSE_RENDER_GATE_V1`에 위임한다. alternate route나
   약한 두 번째 policy는 금지한다.
@@ -1021,7 +1022,11 @@ reconstructiveDerivativeOfRawBody = false
 
 어느 하나라도 missing·undefined·null·non-boolean·`true`이거나 proof가 ambiguous·cross-object·
 unvalidated이면 candidate eligibility는 fail closed다. validation source는
-`CANONICAL_CLOSED_SIGNAL_SCHEMA_VALIDATOR`여야 하며 client assertion은 받지 않는다. property 부재는
+`CANONICAL_CLOSED_SIGNAL_SCHEMA_VALIDATOR`여야 하며 client assertion은 받지 않는다. 이 validator는
+candidate가 제공한 `closedValueSchema: true`나 proof marker를 적합성 증거로 신뢰하지 않고 실제
+actual candidate object 전체의 exact top-level 및 consent·retention nested field set과 값을 검증한다.
+additional/unknown field는 허용하지 않으므로 `rawAnswer`, free text 또는 reconstructive payload가 하나라도
+있으면 다른 marker가 모두 정상이어도 eligibility 전에 fail closed한다. property 부재는
 content safety의 증거가 아니다.
 
 - `CANONICAL_VERSIONED_CONSENT_OPT_OUT_LEDGER`의 active exact-purpose consent. consent는 exact

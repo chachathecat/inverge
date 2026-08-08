@@ -733,7 +733,7 @@ function authorizeExactPreResponseCueRender(subject) {
     return fail("CONFIRMATION_NOT_DELIBERATE_SERVER_RECORD");
   }
   if (confirmation.active !== true) return fail("CONFIRMATION_NOT_ACTIVE");
-  if (confirmation.status === "CANCELLED" || confirmation.cancelled === true) {
+  if (confirmation.status === "CANCELLED" || confirmation.cancelled !== false) {
     return fail("CONFIRMATION_CANCELLED");
   }
   if (confirmation.status !== gate.acceptedConfirmationState) {
@@ -1119,6 +1119,61 @@ function evaluateAttemptEvidence(events, evidence = {}) {
 
 function validateSignalContentSafetyProof(candidate) {
   const gate = contract.personalAnnotation.signalContentSafetyProofGate;
+  const schema = gate.canonicalCandidateValueSchema;
+  const failClosed = () => ({ accepted: false, reason: "SIGNAL_CLOSED_VALUE_SCHEMA_INVALID" });
+  if (
+    !candidate
+    || typeof candidate !== "object"
+    || Array.isArray(candidate)
+    || !schema
+    || typeof schema !== "object"
+    || Array.isArray(schema)
+    || schema.validator !== gate.validationSource
+    || schema.actualCandidateObjectMustValidate !== true
+    || schema.candidateSuppliedSchemaOrProofMarkersSufficient !== false
+    || schema.additionalTopLevelFieldsAllowed !== false
+    || schema.undeclaredFreeTextOrReconstructiveFieldsAllowed !== false
+    || JSON.stringify(sorted(Object.keys(candidate)))
+      !== JSON.stringify(sorted(schema.requiredTopLevelFields))
+  ) return failClosed();
+
+  const identifierPattern = new RegExp(schema.identifierPattern);
+  for (const field of schema.topLevelIdentifierFields) {
+    const value = candidate[field];
+    if (
+      typeof value !== "string"
+      || value.trim() !== value
+      || !identifierPattern.test(value)
+    ) return failClosed();
+  }
+  for (const [field, requiredValue] of Object.entries(schema.topLevelExactValues)) {
+    if (candidate[field] !== requiredValue) return failClosed();
+  }
+  for (const [recordName, recordSchema] of Object.entries(schema.nestedObjectSchemas)) {
+    const record = candidate[recordName];
+    if (
+      !record
+      || typeof record !== "object"
+      || Array.isArray(record)
+      || recordSchema.additionalFieldsAllowed !== false
+      || JSON.stringify(sorted(Object.keys(record)))
+        !== JSON.stringify(sorted(recordSchema.requiredFields))
+    ) return failClosed();
+    for (const field of recordSchema.identifierFields) {
+      const value = record[field];
+      if (
+        typeof value !== "string"
+        || value.trim() !== value
+        || !identifierPattern.test(value)
+      ) return failClosed();
+    }
+    for (const field of recordSchema.rfc3339UtcMillisecondFields) {
+      if (parseExactUtcInstant(record[field]) === null) return failClosed();
+    }
+    for (const [field, requiredValue] of Object.entries(recordSchema.exactValues)) {
+      if (record[field] !== requiredValue) return failClosed();
+    }
+  }
   if (
     candidate.contentSafetyProofValidated !== true
     || candidate.contentSafetyProofValidationSource !== gate.validationSource
@@ -1548,7 +1603,7 @@ test("MCAL paths resolve and V13 remains sole active master plan", () => {
   assert.match(active, /dabangil-professional-exam-reasoning-os-final-master-plan-v13-2026-08-06\.md/);
   assert.match(active, /Memory Cue & Annotation Layer/);
   assert.doesNotMatch(active, /final-master-plan-v14/);
-  assert.equal(contract.version, "1.0.9");
+  assert.equal(contract.version, "1.0.10");
   assert.equal(contract.compatibility.v13RemainsSoleActiveMasterPlan, true);
   assert.equal(contract.compatibility.newMasterPlanVersionCreated, false);
 });
@@ -1719,6 +1774,9 @@ test("Markdown fences and exact boundary language are present", () => {
   assert.match(annex, /EXACT_RENDER_RECORD_FAILURE_GATE_V1/);
   assert.match(annex, /`recordFailure === true`/);
   assert.match(annex, /`replayed === false`는 exact primitive equality/);
+  assert.match(annex, /`cancelled` 역시\s+exact primitive `false`/);
+  assert.match(annex, /candidate가 제공한 `closedValueSchema: true`/);
+  assert.match(annex, /actual candidate object 전체/);
   assert.match(annex, /outer canonical timing\/classification resolution도 `resolved === true`/);
   assert.match(annex, /모든 render-capable request\/event variant/);
   assert.match(annex, /pre-response request는\s+`assistanceClassification`/);
@@ -1736,7 +1794,10 @@ test("Markdown fences and exact boundary language are present", () => {
   assert.match(annex, /`currentlyAuthorized`는 정확히 `false`/);
   const qa = read(P.qa);
   assert.match(qa, /PR #692 is merged at `512bfdb9232a86bf4f7d4cfbc076a9df1c8a7da2`/);
-  assert.match(qa, /Focused behavioral contract suite: 44\/44 passed/);
+  assert.match(qa, /Focused behavioral contract suite: 46\/46 passed/);
+  assert.match(qa, /`cancelled` field must be exact primitive `false`/);
+  assert.match(qa, /validate the actual candidate's exact top-level and nested field sets/);
+  assert.doesNotMatch(qa, /Focused behavioral contract suite: 44\/44 passed/);
   assert.doesNotMatch(qa, /Focused behavioral contract suite: 41\/41 passed/);
   assert.doesNotMatch(qa, /Focused behavioral contract suite: 39\/39 passed/);
   assert.doesNotMatch(qa, /Focused behavioral contract suite: 36\/36 passed/);
@@ -2946,6 +3007,38 @@ test("signals require affirmative same-object validated boolean-false content-sa
   }
 });
 
+test("training signals validate the actual closed value schema before candidate eligibility", () => {
+  const gate = contract.personalAnnotation.signalContentSafetyProofGate;
+  const schema = gate.canonicalCandidateValueSchema;
+  assert.equal(schema.validator, gate.validationSource);
+  assert.equal(schema.actualCandidateObjectMustValidate, true);
+  assert.equal(schema.candidateSuppliedSchemaOrProofMarkersSufficient, false);
+  assert.equal(schema.additionalTopLevelFieldsAllowed, false);
+  assert.equal(schema.undeclaredFreeTextOrReconstructiveFieldsAllowed, false);
+
+  const allHypotheticalGates = hypotheticalReceiptValidTrainingDecisionContext();
+  const validCandidate = signalCandidate();
+  assert.deepEqual(sorted(Object.keys(validCandidate)), sorted(schema.requiredTopLevelFields));
+  assert.equal(evaluateTrainingCandidate(validCandidate, allHypotheticalGates).candidateEligible, true);
+
+  for (const candidate of [
+    signalCandidate({ rawAnswer: "undeclared learner answer" }),
+    signalCandidate({ freeText: "undeclared annotation text" }),
+    signalCandidate({ reconstructivePayload: { answerTokens: ["private"] } }),
+    signalCandidate({ consent: { rawAnswer: "nested undeclared content" } }),
+    signalCandidate({ retention: { freeText: "nested undeclared content" } }),
+  ]) {
+    assert.equal(candidate.closedValueSchema, true);
+    assert.equal(candidate.contentSafetyProofValidated, true);
+    assert.equal(candidate.contentSafetyProofValidationSource, gate.validationSource);
+    const result = evaluateTrainingCandidate(candidate, allHypotheticalGates);
+    assert.equal(result.candidateEligible, false);
+    assert.equal(result.hypotheticalReceiptsValid === true, false);
+    assert.equal(result.currentlyAuthorized, false);
+    assert.equal(result.reason, "SIGNAL_CLOSED_VALUE_SCHEMA_INVALID");
+  }
+});
+
 test("signals require exact-purpose consent and finite purpose-bound retention", () => {
   const gate = contract.personalAnnotation.signalPurposeGate;
   assert.equal(gate.exactPurposeConsentRequired, true);
@@ -3236,6 +3329,41 @@ test("pre-response confirmation rejects missing, stale, replayed, mismatched and
     }));
     assert.equal(result.accepted, false, field);
     assert.match(result.reason, /MISMATCH/, field);
+  }
+});
+
+test("pre-response confirmation requires cancelled to be exact primitive false across both validators", () => {
+  const gate = contract.cueExposure.beforeResponseGate;
+  assert.equal(gate.confirmationCancelledMustExactlyEqual, false);
+  assert.equal(
+    gate.missingNullStringNumberObjectArrayTrueOrOtherNonFalseCancellationBehavior,
+    "FAIL_CLOSED_NO_CUE_BYTES",
+  );
+
+  const missingCancellation = cueConfirmation();
+  delete missingCancellation.cancelled;
+  for (const confirmation of [
+    missingCancellation,
+    cueConfirmation({ cancelled: undefined }),
+    cueConfirmation({ cancelled: null }),
+    cueConfirmation({ cancelled: "false" }),
+    cueConfirmation({ cancelled: "true" }),
+    cueConfirmation({ cancelled: 0 }),
+    cueConfirmation({ cancelled: 1 }),
+    cueConfirmation({ cancelled: {} }),
+    cueConfirmation({ cancelled: [] }),
+    cueConfirmation({ cancelled: true }),
+  ]) {
+    const request = cueRenderRequest({ confirmation });
+    for (const validate of [
+      evaluateCueRender,
+      (subject) => validateCueExposureEvent(cueEvent(subject)),
+    ]) {
+      const result = validate(request);
+      assert.equal(result.accepted, false);
+      assert.equal(result.mayRenderCueBytes, false);
+      assert.equal(result.reason, "CONFIRMATION_CANCELLED");
+    }
   }
 });
 
