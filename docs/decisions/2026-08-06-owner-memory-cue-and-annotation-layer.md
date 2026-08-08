@@ -168,10 +168,20 @@ unresolved provenance, non-UTC·reversed 또는 7일 미만 interval은 credit�
 far transfer의 origin task는 transfer record가 임의로 공급한 두 task ID의 차이로 증명하지 않는다.
 resolved `evidence.attempt`가 `CANONICAL_SERVER_ATTEMPT_TASK_BINDING_RESOLVER`에서 정확히 한 건으로 resolve된
 closed `taskBinding`을 직접 가져야 하고, 그 binding의 attempt·learner scope는 source attempt와 정확히 같으며
-`originTaskId`는 canonical `taskId`와 field-for-field 같아야 한다. `transferTaskId`는 바로 그 canonical
-source task와 달라야 한다. binding이 missing·malformed·ambiguous·conflicting·stale·client/caller-inferred·
-mismatched·0건·복수이거나 supplied origin이 다르면 far-transfer credit만 fail closed하며, 기존 canonical
-attempt gate를 통과한 independent-retrieval 판단은 바꾸지 않는다.
+`originTaskId`는 canonical source `taskId`와 field-for-field 같아야 한다. 실제 `transferAttemptId`도
+`CANONICAL_SERVER_ATTEMPT_LEDGER`에서 exact submitted canonical transfer attempt 한 건으로 독립 resolve하고,
+그 attempt가 직접 가진 별도 closed `taskBinding`을
+`CANONICAL_SERVER_ATTEMPT_TASK_BINDING_RESOLVER`에서 exact single record로 다시 resolve해야 한다.
+canonical transfer attempt와 그 task binding은 각각 `transferAttemptId`·authenticated learner scope 및
+서로의 attempt identity에 exact-bind되어야 하고 source attempt/binding으로 대체하거나 재사용할 수 없다.
+`transferTaskId`는 canonical transfer binding의 `taskId`와 정확히 같아야 하며, canonical source task와
+canonical transfer task 자체가 서로 달라야 한다. 이 두 canonical identity는 trim·case-fold·alias·추론·
+정규화 없이 field-for-field 비교한다. caller가 공급한 task inequality, `distinctEligibleTask: true` 또는
+`NON_SAME_REPRESENTATION`만으로 canonical distinctness를 만들 수 없다.
+source 또는 transfer binding이 missing·malformed·wrong-source·extra-field·ambiguous·conflicting·stale·
+client/caller-inferred·mismatched·cross-attempt·cross-learner·unresolved·0건·복수이거나 supplied identity가
+다르면 far-transfer credit만 fail closed한다. transfer-only 실패는 이미 valid한 independent retrieval과
+stable D+7을 바꾸지 않는다.
 missing exposure record/history, failed render, partial commit, ambiguous record 또는 `ASSISTED` attempt는
 positive learning evidence 0으로 fail closed한다.
 `HIDDEN`은 DOM·SSR·접근성 text·prefetch·cache·direct API output 어디에도 cue byte가 없음을 뜻한다.

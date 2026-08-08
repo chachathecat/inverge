@@ -897,6 +897,62 @@ function canonicalSourceTaskBinding(overrides = {}) {
   };
 }
 
+function canonicalTransferTaskBinding(overrides = {}) {
+  return {
+    source: "CANONICAL_SERVER_ATTEMPT_TASK_BINDING_RESOLVER",
+    attemptId: "attempt-transfer-1",
+    learnerPrivateScopeId: "learner-1",
+    taskId: "task-transfer-1",
+    matchingRecordCount: 1,
+    serverSide: true,
+    authoritative: true,
+    independentlyResolved: true,
+    known: true,
+    resolved: true,
+    ambiguous: false,
+    conflicting: false,
+    stale: false,
+    clientInferred: false,
+    callerInferred: false,
+    mismatched: false,
+    ...overrides,
+  };
+}
+
+function canonicalSubmittedTransferAttempt(overrides = {}) {
+  const attemptId = Object.hasOwn(overrides, "attemptId")
+    ? overrides.attemptId
+    : "attempt-transfer-1";
+  const learnerPrivateScopeId = Object.hasOwn(overrides, "learnerPrivateScopeId")
+    ? overrides.learnerPrivateScopeId
+    : "learner-1";
+  const taskBinding = Object.hasOwn(overrides, "taskBinding")
+    ? overrides.taskBinding
+    : canonicalTransferTaskBinding({ attemptId, learnerPrivateScopeId });
+  return {
+    source: "CANONICAL_SERVER_ATTEMPT_LEDGER",
+    attemptId,
+    learnerPrivateScopeId,
+    canonicalAttemptState: "SUBMITTED",
+    matchingRecordCount: 1,
+    submittedAt: "2026-08-02T00:00:00.000Z",
+    assistanceState: "INDEPENDENT",
+    serverSide: true,
+    authoritative: true,
+    independentlyResolved: true,
+    known: true,
+    resolved: true,
+    ambiguous: false,
+    conflicting: false,
+    stale: false,
+    clientInferred: false,
+    callerInferred: false,
+    mismatched: false,
+    taskBinding,
+    ...overrides,
+  };
+}
+
 function canonicalIndependentAttempt(overrides = {}) {
   return {
     source: "CANONICAL_SERVER_ATTEMPT_LEDGER",
@@ -949,6 +1005,10 @@ function farTransferEvidence(overrides = {}) {
     evaluationCompleted: true,
     resultId: "transfer-result-1",
     assistanceState: "INDEPENDENT",
+    canonicalTransferAttempt: canonicalSubmittedTransferAttempt({
+      attemptId: transferAttemptId,
+      learnerPrivateScopeId,
+    }),
     exposureHistory: canonicalExposureHistory({
       attemptId: transferAttemptId,
       learnerPrivateScopeId,
@@ -1043,10 +1103,8 @@ function hasTrustedD7ElapsedInterval(candidate, canonicalSourceAttempt) {
     && d7EvaluationCompletedAt - sourceAttemptSubmittedAt >= gate.minimumElapsedMilliseconds;
 }
 
-function hasExactCanonicalSourceTaskBinding(canonicalSourceAttempt, transfer) {
-  const gate = contract.cueExposure.learningEvidenceGate
-    .requiredAffirmativeEvidence.farTransfer.canonicalSourceTaskBindingGate;
-  const binding = canonicalSourceAttempt?.[gate.recordField];
+function validateExactCanonicalTaskBinding(canonicalAttempt, gate) {
+  const binding = canonicalAttempt?.[gate.recordField];
   if (
     !binding
     || typeof binding !== "object"
@@ -1065,16 +1123,95 @@ function hasExactCanonicalSourceTaskBinding(canonicalSourceAttempt, transfer) {
   )) {
     if (binding[field] !== expected) return false;
   }
-  for (const field of gate.canonicalSourceAttemptBindingFields) {
-    if (binding[field] !== canonicalSourceAttempt[field]) return false;
+  const bindingFields = gate.canonicalSourceAttemptBindingFields
+    ?? gate.canonicalTransferAttemptBindingFields;
+  for (const field of bindingFields) {
+    if (binding[field] !== canonicalAttempt[field]) return false;
   }
-  const canonicalTaskId = binding[gate.canonicalTaskIdField];
-  const originTaskId = transfer?.[gate.transferOriginTaskIdField];
-  const transferTaskId = transfer?.[gate.transferTaskIdField];
-  return isCanonicalIdentifier(originTaskId, gate.identifierSchema)
-    && isCanonicalIdentifier(transferTaskId, gate.identifierSchema)
-    && originTaskId === canonicalTaskId
-    && transferTaskId !== canonicalTaskId;
+  return { accepted: true, binding, taskId: binding[gate.canonicalTaskIdField] };
+}
+
+function resolveExactCanonicalTransferAttempt(canonicalSourceAttempt, transfer, gate) {
+  const canonicalTransferAttempt = transfer?.[gate.recordField];
+  if (
+    !canonicalTransferAttempt
+    || typeof canonicalTransferAttempt !== "object"
+    || Array.isArray(canonicalTransferAttempt)
+    || canonicalTransferAttempt === canonicalSourceAttempt
+    || gate.additionalFieldsAllowed !== false
+    || JSON.stringify(sorted(Object.keys(canonicalTransferAttempt)))
+      !== JSON.stringify(sorted(gate.requiredFields))
+    || canonicalTransferAttempt.source !== gate.resolutionSource
+    || canonicalTransferAttempt.matchingRecordCount !== gate.exactMatchingRecordCount
+    || canonicalTransferAttempt.canonicalAttemptState !== gate.requiredCanonicalAttemptState
+    || canonicalTransferAttempt.assistanceState !== gate.requiredAssistanceState
+  ) return false;
+  for (const field of gate.identifierFields) {
+    if (!isCanonicalIdentifier(canonicalTransferAttempt[field], gate.identifierSchema)) return false;
+  }
+  for (const field of gate.timestampFields) {
+    if (parseCanonicalUtcMilliseconds(canonicalTransferAttempt[field]) === null) return false;
+  }
+  for (const [field, expected] of Object.entries(
+    gate.requiredExactPrimitiveBooleanStates,
+  )) {
+    if (canonicalTransferAttempt[field] !== expected) return false;
+  }
+  for (const [attemptField, transferField] of Object.entries(
+    gate.transferRecordBindingFields,
+  )) {
+    if (canonicalTransferAttempt[attemptField] !== transfer?.[transferField]) return false;
+  }
+  if (
+    gate.mustDifferFromCanonicalSourceAttemptId !== true
+    || canonicalTransferAttempt.attemptId === canonicalSourceAttempt?.attemptId
+  ) return false;
+  return canonicalTransferAttempt;
+}
+
+function hasExactCanonicalFarTransferTaskBindings(canonicalSourceAttempt, transfer) {
+  const farTransferGate = contract.cueExposure.learningEvidenceGate
+    .requiredAffirmativeEvidence.farTransfer;
+  const sourceGate = farTransferGate.canonicalSourceTaskBindingGate;
+  const transferAttemptGate = farTransferGate.canonicalTransferAttemptResolutionGate;
+  const transferGate = farTransferGate.canonicalTransferTaskBindingGate;
+  const comparisonGate = farTransferGate.canonicalTaskIdentityComparisonGate;
+  const source = validateExactCanonicalTaskBinding(canonicalSourceAttempt, sourceGate);
+  if (!source.accepted) return false;
+  const canonicalTransferAttempt = resolveExactCanonicalTransferAttempt(
+    canonicalSourceAttempt,
+    transfer,
+    transferAttemptGate,
+  );
+  if (!canonicalTransferAttempt) return false;
+  const canonicalTransfer = validateExactCanonicalTaskBinding(
+    canonicalTransferAttempt,
+    transferGate,
+  );
+  if (
+    !canonicalTransfer.accepted
+    || canonicalTransfer.binding === source.binding
+    || transferGate.mustBindExactlyToResolvedCanonicalTransferAttempt !== true
+    || Object.entries(transferGate.transferRecordBindingFields).some(
+      ([bindingField, transferField]) => (
+        canonicalTransfer.binding[bindingField] !== transfer?.[transferField]
+      ),
+    )
+    || comparisonGate.comparison !== "EXACT_FIELD_FOR_FIELD"
+    || comparisonGate.trimAllowed !== false
+    || comparisonGate.caseFoldAllowed !== false
+    || comparisonGate.aliasResolutionAllowed !== false
+    || comparisonGate.inferenceAllowed !== false
+    || comparisonGate.sourceAndTransferBindingsValidatedIndependently !== true
+    || comparisonGate.sourceBindingMaySubstituteForTransferBinding !== false
+  ) return false;
+  const originTaskId = transfer?.[comparisonGate.transferOriginTaskIdField];
+  const transferTaskId = transfer?.[comparisonGate.transferTaskIdField];
+  return isCanonicalIdentifier(originTaskId, sourceGate.identifierSchema)
+    && isCanonicalIdentifier(transferTaskId, transferGate.identifierSchema)
+    && originTaskId === source.taskId
+    && transferTaskId === canonicalTransfer.taskId
+    && source.taskId !== canonicalTransfer.taskId;
 }
 
 function noPositiveEvidence({ failClosed, eligibilityPreserved }) {
@@ -1195,7 +1332,7 @@ function evaluateAttemptEvidence(events, evidence = {}) {
     && transfer.transferAttemptId !== attempt.attemptId
     && typeof transfer.originTaskId === "string"
     && typeof transfer.transferTaskId === "string"
-    && hasExactCanonicalSourceTaskBinding(attempt, transfer)
+    && hasExactCanonicalFarTransferTaskBindings(attempt, transfer)
     && transfer.distinctEligibleTask === true
     && transfer.representationRelation === "NON_SAME_REPRESENTATION"
     && transfer.actualSubmission === true
@@ -1836,7 +1973,7 @@ test("MCAL paths resolve and V13 remains sole active master plan", () => {
   assert.match(active, /dabangil-professional-exam-reasoning-os-final-master-plan-v13-2026-08-06\.md/);
   assert.match(active, /Memory Cue & Annotation Layer/);
   assert.doesNotMatch(active, /final-master-plan-v14/);
-  assert.equal(contract.version, "1.0.13");
+  assert.equal(contract.version, "1.0.14");
   assert.equal(contract.compatibility.v13RemainsSoleActiveMasterPlan, true);
   assert.equal(contract.compatibility.newMasterPlanVersionCreated, false);
 });
@@ -2033,13 +2170,17 @@ test("Markdown fences and exact boundary language are present", () => {
   assert.match(annex, /`rawAnswer`·private raw pointer/);
   assert.match(annex, /CANONICAL_SERVER_ATTEMPT_TASK_BINDING_RESOLVER/);
   assert.match(annex, /`originTaskId`는 그 binding의\s+canonical `taskId`와 정확히 같/);
+  assert.match(annex, /canonical transfer attempt/);
+  assert.match(annex, /source와 transfer의 canonical task identity는.*field-for-field/);
   const qa = read(P.qa);
   assert.match(qa, /PR #692 is merged at `512bfdb9232a86bf4f7d4cfbc076a9df1c8a7da2`/);
-  assert.match(qa, /Focused behavioral contract suite: 52\/52 passed/);
+  assert.match(qa, /Focused behavioral contract suite: 53\/53 passed/);
   assert.match(qa, /Merely supplying two different task IDs is insufficient/);
+  assert.match(qa, /canonical transfer attempt and its independently resolved task binding/);
   assert.match(qa, /`cancelled` field must be exact primitive `false`/);
   assert.match(qa, /validate the actual candidate's exact top-level and nested field sets/);
   assert.match(qa, /canonical promotion\/rights\/provenance record/);
+  assert.doesNotMatch(qa, /Focused behavioral contract suite: 52\/52 passed/);
   assert.doesNotMatch(qa, /Focused behavioral contract suite: 51\/51 passed/);
   assert.doesNotMatch(qa, /Focused behavioral contract suite: 49\/49 passed/);
   assert.doesNotMatch(qa, /Focused behavioral contract suite: 46\/46 passed/);
@@ -3060,9 +3201,13 @@ test("far transfer binds the supplied origin to one exact canonical source task"
   const sourceTaskA = canonicalIndependentAttempt({
     taskBinding: canonicalSourceTaskBinding({ taskId: "task-a" }),
   });
+  const transferAttemptForTask = (taskId) => canonicalSubmittedTransferAttempt({
+    taskBinding: canonicalTransferTaskBinding({ taskId }),
+  });
   const mismatchedOrigin = evaluate(sourceTaskA, farTransferEvidence({
     originTaskId: "task-b",
     transferTaskId: "task-c",
+    canonicalTransferAttempt: transferAttemptForTask("task-c"),
   }));
   assert.equal(mismatchedOrigin.independentRetrieval, true);
   assert.equal(mismatchedOrigin.farTransfer, false);
@@ -3071,6 +3216,7 @@ test("far transfer binds the supplied origin to one exact canonical source task"
   const valid = evaluate(sourceTaskA, farTransferEvidence({
     originTaskId: "task-a",
     transferTaskId: "task-c",
+    canonicalTransferAttempt: transferAttemptForTask("task-c"),
   }));
   assert.equal(valid.independentRetrieval, true);
   assert.equal(valid.farTransfer, true);
@@ -3079,6 +3225,7 @@ test("far transfer binds the supplied origin to one exact canonical source task"
   const sameTask = evaluate(sourceTaskA, farTransferEvidence({
     originTaskId: "task-a",
     transferTaskId: "task-a",
+    canonicalTransferAttempt: transferAttemptForTask("task-a"),
   }));
   assert.equal(sameTask.independentRetrieval, true);
   assert.equal(sameTask.farTransfer, false);
@@ -3116,11 +3263,169 @@ test("far transfer binds the supplied origin to one exact canonical source task"
   for (const taskBinding of invalidBindings) {
     const result = evaluate(
       canonicalIndependentAttempt({ taskBinding }),
-      farTransferEvidence({ originTaskId: "task-origin-1", transferTaskId: "task-c" }),
+      farTransferEvidence({
+        originTaskId: "task-origin-1",
+        transferTaskId: "task-c",
+        canonicalTransferAttempt: transferAttemptForTask("task-c"),
+      }),
     );
     assert.equal(result.independentRetrieval, true);
     assert.equal(result.farTransfer, false);
     assert.equal(result.stableD7, true);
+  }
+});
+
+test("far transfer binds the transfer task to one independently resolved canonical attempt", () => {
+  const farTransferGate = contract.cueExposure.learningEvidenceGate
+    .requiredAffirmativeEvidence.farTransfer;
+  const attemptGate = farTransferGate.canonicalTransferAttemptResolutionGate;
+  const sourceTaskGate = farTransferGate.canonicalSourceTaskBindingGate;
+  const transferTaskGate = farTransferGate.canonicalTransferTaskBindingGate;
+  const comparisonGate = farTransferGate.canonicalTaskIdentityComparisonGate;
+  assert.equal(attemptGate.recordRef, "evidence.farTransfer.canonicalTransferAttempt");
+  assert.equal(attemptGate.resolutionSource, "CANONICAL_SERVER_ATTEMPT_LEDGER");
+  assert.equal(attemptGate.exactMatchingRecordCount, 1);
+  assert.equal(attemptGate.requiredCanonicalAttemptState, "SUBMITTED");
+  assert.equal(attemptGate.canonicalSourceAttemptMaySubstitute, false);
+  assert.equal(sourceTaskGate.resolutionSource, "CANONICAL_SERVER_ATTEMPT_TASK_BINDING_RESOLVER");
+  assert.equal(transferTaskGate.resolutionSource, "CANONICAL_SERVER_ATTEMPT_TASK_BINDING_RESOLVER");
+  assert.equal(transferTaskGate.sourceBindingMaySubstituteForTransferBinding, false);
+  assert.equal(transferTaskGate.sameBindingRecordMaySatisfySourceAndTransfer, false);
+  assert.equal(transferTaskGate.mustBindExactlyToResolvedCanonicalTransferAttempt, true);
+  assert.equal(comparisonGate.comparison, "EXACT_FIELD_FOR_FIELD");
+  for (const field of [
+    "trimAllowed",
+    "caseFoldAllowed",
+    "aliasResolutionAllowed",
+    "inferenceAllowed",
+    "callerSuppliedTaskInequalitySufficient",
+    "distinctEligibleTaskFlagSufficient",
+    "nonSameRepresentationFlagSufficient",
+    "sourceBindingMaySubstituteForTransferBinding",
+  ]) assert.equal(comparisonGate[field], false, field);
+  assert.equal(comparisonGate.sourceAndTransferBindingsValidatedIndependently, true);
+
+  const sourceTaskA = canonicalIndependentAttempt({
+    taskBinding: canonicalSourceTaskBinding({ taskId: "task-a" }),
+  });
+  const base = {
+    exposureHistory: canonicalExposureHistory(),
+    attempt: sourceTaskA,
+    independentResponse: independentResponseEvidence(),
+    stableD7: stableD7Evidence(),
+  };
+  const transferAttemptForTask = (taskId, overrides = {}) => canonicalSubmittedTransferAttempt({
+    taskBinding: canonicalTransferTaskBinding({ taskId }),
+    ...overrides,
+  });
+  const transferFor = (canonicalTaskId, suppliedTransferTaskId, overrides = {}) => farTransferEvidence({
+    originTaskId: "task-a",
+    transferTaskId: suppliedTransferTaskId,
+    canonicalTransferAttempt: transferAttemptForTask(canonicalTaskId),
+    ...overrides,
+  });
+  const evaluate = (farTransfer) => evaluateAttemptEvidence([], { ...base, farTransfer });
+  const assertTransferOnlyFailure = (farTransfer, label) => {
+    const result = evaluate(farTransfer);
+    assert.equal(result.independentRetrieval, true, `${label}: independentRetrieval`);
+    assert.equal(result.farTransfer, false, `${label}: farTransfer`);
+    assert.equal(result.stableD7, true, `${label}: stableD7`);
+  };
+
+  assertTransferOnlyFailure(
+    transferFor("task-a", "task-c"),
+    "canonical source A plus actual transfer A cannot be made distinct by supplied C",
+  );
+  const valid = evaluate(transferFor("task-c", "task-c"));
+  assert.equal(valid.independentRetrieval, true);
+  assert.equal(valid.farTransfer, true);
+  assert.equal(valid.stableD7, true);
+  assertTransferOnlyFailure(
+    transferFor("task-c", "task-b"),
+    "supplied transfer B cannot replace canonical transfer C",
+  );
+  assertTransferOnlyFailure(
+    transferFor("task-a", "task-a"),
+    "canonical source A and transfer A are not far transfer",
+  );
+  for (const suppliedTransferTaskId of ["TASK-C", "task-c ", "task-alias-c"]) {
+    assertTransferOnlyFailure(
+      transferFor("task-c", suppliedTransferTaskId),
+      `task identity is not normalized: ${suppliedTransferTaskId}`,
+    );
+  }
+
+  const validTransferAttempt = () => transferAttemptForTask("task-c");
+  const invalidTransferAttempts = [undefined, null, [], {}];
+  for (const field of attemptGate.requiredFields) {
+    const missing = validTransferAttempt();
+    delete missing[field];
+    invalidTransferAttempts.push(missing);
+  }
+  for (const [field, expected] of Object.entries(
+    attemptGate.requiredExactPrimitiveBooleanStates,
+  )) {
+    invalidTransferAttempts.push(
+      transferAttemptForTask("task-c", { [field]: !expected }),
+      transferAttemptForTask("task-c", { [field]: String(expected) }),
+    );
+  }
+  invalidTransferAttempts.push(
+    transferAttemptForTask("task-c", { source: "OTHER_SERVER_ATTEMPT_RESOLVER" }),
+    transferAttemptForTask("task-c", { attemptId: "attempt-foreign" }),
+    transferAttemptForTask("task-c", { attemptId: "" }),
+    transferAttemptForTask("task-c", { learnerPrivateScopeId: "learner-foreign" }),
+    transferAttemptForTask("task-c", { learnerPrivateScopeId: "" }),
+    transferAttemptForTask("task-c", { matchingRecordCount: 0 }),
+    transferAttemptForTask("task-c", { matchingRecordCount: 2 }),
+    transferAttemptForTask("task-c", { canonicalAttemptState: "INDEPENDENT_ATTEMPT_OPEN" }),
+    transferAttemptForTask("task-c", { assistanceState: "ASSISTED" }),
+    transferAttemptForTask("task-c", { submittedAt: "2026-08-02" }),
+    transferAttemptForTask("task-c", { extraField: true }),
+    sourceTaskA,
+    transferAttemptForTask("task-c", { taskBinding: sourceTaskA.taskBinding }),
+  );
+  for (const [index, canonicalTransferAttempt] of invalidTransferAttempts.entries()) {
+    assertTransferOnlyFailure(
+      transferFor("task-c", "task-c", { canonicalTransferAttempt }),
+      `invalid canonical transfer attempt ${index}`,
+    );
+  }
+
+  const validTransferTaskBinding = () => canonicalTransferTaskBinding({ taskId: "task-c" });
+  const invalidTransferTaskBindings = [undefined, null, [], {}];
+  for (const field of transferTaskGate.requiredFields) {
+    const missing = validTransferTaskBinding();
+    delete missing[field];
+    invalidTransferTaskBindings.push(missing);
+  }
+  for (const [field, expected] of Object.entries(
+    transferTaskGate.requiredExactPrimitiveBooleanStates,
+  )) {
+    invalidTransferTaskBindings.push(
+      canonicalTransferTaskBinding({ taskId: "task-c", [field]: !expected }),
+      canonicalTransferTaskBinding({ taskId: "task-c", [field]: String(expected) }),
+    );
+  }
+  invalidTransferTaskBindings.push(
+    canonicalTransferTaskBinding({ source: "OTHER_TASK_BINDING_RESOLVER", taskId: "task-c" }),
+    canonicalTransferTaskBinding({ attemptId: "attempt-foreign", taskId: "task-c" }),
+    canonicalTransferTaskBinding({ learnerPrivateScopeId: "learner-foreign", taskId: "task-c" }),
+    canonicalTransferTaskBinding({ taskId: "" }),
+    canonicalTransferTaskBinding({ taskId: " task-c" }),
+    canonicalTransferTaskBinding({ taskId: null }),
+    canonicalTransferTaskBinding({ taskId: "task-c", matchingRecordCount: 0 }),
+    canonicalTransferTaskBinding({ taskId: "task-c", matchingRecordCount: 2 }),
+    canonicalTransferTaskBinding({ taskId: "task-c", extraField: true }),
+    sourceTaskA.taskBinding,
+  );
+  for (const [index, taskBinding] of invalidTransferTaskBindings.entries()) {
+    assertTransferOnlyFailure(
+      transferFor("task-c", "task-c", {
+        canonicalTransferAttempt: canonicalSubmittedTransferAttempt({ taskBinding }),
+      }),
+      `invalid canonical transfer task binding ${index}`,
+    );
   }
 });
 

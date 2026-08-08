@@ -567,10 +567,17 @@ D+7 stable / timed: HIDDEN
   independent transfer attempt와 evaluated result의 canonical record를 별도로 요구한다. source attempt가
   직접 가진 closed `taskBinding`은 `CANONICAL_SERVER_ATTEMPT_TASK_BINDING_RESOLVER`에서 exact single record로
   server-resolve되고 attempt·learner scope에 exact-bind되어야 한다. transfer의 `originTaskId`는 그 binding의
-  canonical `taskId`와 정확히 같고 `transferTaskId`는 바로 그 canonical source task와 달라야 한다.
-  caller가 서로 다른 두 task ID를 공급한 것만으로는 충분하지 않다. missing·malformed·ambiguous·conflicting·
-  stale·client/caller-inferred·mismatched·0건·복수 binding은 far-transfer credit만 fail closed하며 independent
-  retrieval은 기존 canonical-attempt gate 결과를 유지한다.
+  canonical `taskId`와 정확히 같아야 한다. 실제 `transferAttemptId`는 `CANONICAL_SERVER_ATTEMPT_LEDGER`의
+  exact single submitted canonical transfer attempt로 별도 resolve하고, 그 attempt가 직접 가진 별도
+  `taskBinding`도 같은 server task-binding resolver에서 exact single authoritative record로 독립 resolve한다.
+  canonical transfer attempt와 그 binding은 transfer record의 attempt ID·authenticated learner scope 및
+  서로의 attempt identity에 정확히 bind되며 source attempt/binding으로 대체하거나 재사용할 수 없다.
+  `transferTaskId`는 canonical transfer task와 정확히 같고 두 canonical task 자체가 달라야 한다.
+  source와 transfer의 canonical task identity는 trim·case-fold·alias·추론·정규화 없이 field-for-field 비교한다.
+  caller task inequality, `distinctEligibleTask: true` 또는 `NON_SAME_REPRESENTATION`만으로는 충분하지 않다.
+  missing·malformed·wrong-source·extra-field·ambiguous·conflicting·stale·client/caller-inferred·mismatched·
+  cross-attempt·cross-learner·unresolved·0건·복수 transfer attempt/task binding은 far-transfer credit만 fail
+  closed하며 otherwise valid independent retrieval과 stable D+7은 유지한다.
 - stable D+7은 실제 완료된 D+7 independent evaluation, cue `HIDDEN`, 모든 surface의 cue byte 부재,
   non-same representation 및 unresolved scoring conflict 0의 canonical record를 별도로 요구한다.
   identified source attempt는 `evidence.attempt`에서 canonical server attempt ledger 한 건으로 resolve하고

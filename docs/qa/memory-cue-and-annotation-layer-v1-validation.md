@@ -72,10 +72,17 @@ PR #692 mutation is included.
     and stable-D+7 credit.
     Far transfer additionally resolves the source attempt's closed `taskBinding` from the canonical server attempt-task
     binding resolver as exactly one fresh, non-inferred, non-ambiguous, non-conflicting, non-mismatched record bound to
-    the same attempt and learner. The supplied `originTaskId` must equal that canonical source `taskId`, and
-    `transferTaskId` must differ from that canonical task. Merely supplying two different task IDs is insufficient;
-    missing, malformed or invalid canonical task binding denies far-transfer only and leaves independent retrieval under
-    its existing canonical-attempt gate.
+    the same attempt and learner. It separately resolves the actual `transferAttemptId` to exactly one submitted
+    canonical transfer attempt and its independently resolved task binding from the same authoritative server ledgers.
+    That transfer attempt and binding must bind exactly to the transfer record's attempt ID and authenticated learner,
+    and a source attempt or source binding cannot substitute for either transfer record. The supplied `originTaskId`
+    must equal the canonical source `taskId`; the supplied `transferTaskId` must equal the canonical transfer `taskId`;
+    and those two canonical task identities must differ by exact field-for-field comparison without trimming,
+    case-folding, aliases, inference or normalization. Merely supplying two different task IDs is insufficient, as are
+    `distinctEligibleTask: true` and `NON_SAME_REPRESENTATION`. Missing, malformed, wrong-source, extra-field,
+    ambiguous, conflicting, stale, inferred, mismatched, cross-attempt, cross-learner, unresolved, zero-record or
+    multi-record transfer-attempt/task bindings deny far-transfer only and preserve otherwise valid independent
+    retrieval and stable D+7.
     The canonical independent-response, far-transfer and stable-D+7 records additionally require
     `ambiguous === false` by exact primitive equality. Missing or any other value denies that record's credit;
     invalid independent response also denies its dependent credits, while invalid transfer/D+7 ambiguity does not
@@ -346,7 +353,7 @@ npm run build
 Current correction-source evidence:
 
 - JavaScript syntax check: passed.
-- Focused behavioral contract suite: 52/52 passed.
+- Focused behavioral contract suite: 53/53 passed.
 - Strict JSON parse, balanced Markdown fences, cross-artifact assertions and `git diff --check`: passed.
 - Typecheck: passed.
 - Lint: passed with 0 errors and 9 pre-existing warnings outside the MCAL diff.
