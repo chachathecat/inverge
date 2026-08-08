@@ -47,7 +47,8 @@ PR #692 mutation is included.
 14. `CueExposureEvent` reuses the canonical Assistance/Exposure ledger; no parallel cue ledger is allowed.
 15. The cue-render request and exposure-event validators use the same closed timing/classification map.
     It permits only `LOW` or `MATERIAL` for `BEFORE_RESPONSE`; a request with the classification omitted
-    or set to `NONE` is invalid.
+    or set to `NONE` is invalid. A submitted-attempt `AFTER_RESPONSE` request must likewise provide one of
+    its mapped `NONE`, `LOW` or `MATERIAL` values before success; omission and arbitrary values reject.
 16. `NONE` means the attempt has no pre-response cue. Any pre-response event makes independent retrieval,
     far transfer and stable D+7 ineligible for the whole attempt; later events cannot restore independence.
     Cue absence preserves eligibility only and never creates positive evidence. Independent retrieval requires
@@ -64,7 +65,11 @@ PR #692 mutation is included.
     The canonical independent-response, far-transfer and stable-D+7 records additionally require
     `ambiguous === false` by exact primitive equality. Missing or any other value denies that record's credit;
     invalid independent response also denies its dependent credits, while invalid transfer/D+7 ambiguity does not
-    weaken the other affirmative gates. Exact false alone creates no evidence.
+    weaken the other affirmative gates. Stable D+7 also binds `sourceAttemptSubmittedAt` from the canonical server
+    attempt ledger to `d7EvaluationCompletedAt` from the canonical D+7 evaluation ledger as exact RFC3339 UTC
+    millisecond instants and requires a server-computed elapsed interval of at least 604800000 ms. A timing label,
+    caller elapsed value, missing/malformed/non-UTC timestamp, reversal or shorter interval creates no credit.
+    Exact false alone creates no evidence.
 17. Timing and classification derive from the canonical Assistance/Exposure ledger, while attempt state
     derives only from the canonical server attempt ledger; untrusted client state is rejected.
 18. Every render-capable `BEFORE_RESPONSE` validator, including the separate exposure-event validator,
@@ -98,6 +103,9 @@ PR #692 mutation is included.
     matching open independent attempts. The nested zero-count absence result is itself validated as a complete
     canonical resolution; missing, unresolved, ambiguous, conflicting, cross-learner, stale or client-inferred
     state, or any matching open attempt, fails closed with no cue bytes.
+    Before an exposure event can take that early `REVIEW_ONLY` route, it must independently carry exact canonical
+    Assistance/Exposure-ledger provenance and `ordering === "ORDERED"`; omission, client provenance or ambiguous
+    ordering rejects. The request validator remains free of those event-only fields.
     Independently, every render-capable request and exposure-event timing require
     `canonicalRecordCommitted === true`; truthy strings/numbers and every missing, null, false, object, array,
     ambiguous or inferred value fail closed, including on `AFTER_RESPONSE` and `REVIEW_ONLY`.
@@ -106,7 +114,8 @@ PR #692 mutation is included.
 23. Any decomposition displayed before a response is assistance/exposure.
 24. The default collapsed surface exposes only `formalTerm` unless rules 18–22 have passed.
 25. `HIDDEN` forbids cue bytes in DOM, SSR, accessibility text, prefetch, cache and direct API output.
-26. D+7 stable and timed evidence require cue `HIDDEN` and a non-same representation.
+26. D+7 stable and timed evidence require cue `HIDDEN`, a non-same representation and the trusted actual
+    elapsed-interval proof defined in rule 16.
 27. Same-cue repetition is not far transfer.
 28. Memory Post-it expanded-card maximum is one.
 29. Semantic highlights require `ALL_OF`: a non-empty visible text label and a valid computed accessible
@@ -172,6 +181,8 @@ All fail closed or hold.
 - an independent response lacks an actual canonical submission or completed evaluation;
 - far transfer lacks a distinct eligible non-same-representation task, independent submission or evaluated result;
 - D+7 evidence lacks a completed canonical D+7 evaluation, hidden all-surface cue bytes or conflict-free score;
+- D+7 relies on `D_PLUS_7` or a caller elapsed value without trusted source/evaluation timestamps proving at
+  least 604800000 ms, or accepts malformed, non-UTC, reversed or shorter timestamps;
 - missing exposure history/record, failed render, partial commit or ambiguity still creates positive evidence;
 - base exposure history omits attempt/learner identity or borrows a zero-count history from another attempt or learner;
 - far-transfer or D+7 uses missing history, source-attempt history, foreign-attempt history or an unbound count copy;
@@ -184,6 +195,7 @@ All fail closed or hold.
 - an `ASSISTED` attempt receives independent retrieval, far-transfer or stable-D+7 evidence;
 - timing/classification comes from untrusted client input;
 - a `BEFORE_RESPONSE` request omits assistance classification or supplies `NONE` but still renders or records exposure;
+- an `AFTER_RESPONSE` request omits assistance classification or supplies an arbitrary value but still renders;
 - a caller label, `canonicalExposureRecordCommitted` boolean, client event or inferred timing selects
   `REVIEW_ONLY` without trusted canonical resolution;
 - the request or alternate exposure-event path renders `REVIEW_ONLY` while a matching canonical open independent
@@ -211,6 +223,7 @@ All fail closed or hold.
   `canonicalRecordCommitted` is missing, false or malformed;
 - exposure-event `AFTER_RESPONSE` accepts `canonicalRecordCommitted: true` together with `recordFailure: true`;
 - a `REVIEW_ONLY` request omits `canonicalRecordCommitted` or supplies a non-boolean/non-true value but still renders;
+- a `REVIEW_ONLY` exposure event omits canonical provenance or exact ordering but reaches the shared gate and renders;
 - an attempt-unbound variant other than evidence-neutral `REVIEW_ONLY` renders cue bytes;
 - an outer canonical `REVIEW_ONLY` timing/classification resolution omits `resolved` or has `resolved !== true`
   while a valid nested open-attempt absence proof still authorizes cue bytes;
@@ -290,7 +303,7 @@ npm run build
 Current correction-source evidence:
 
 - JavaScript syntax check: passed.
-- Focused behavioral contract suite: 41/41 passed.
+- Focused behavioral contract suite: 44/44 passed.
 - Strict JSON parse, balanced Markdown fences, cross-artifact assertions and `git diff --check`: passed.
 - Typecheck: passed.
 - Lint: passed with 0 errors and 9 pre-existing warnings outside the MCAL diff.

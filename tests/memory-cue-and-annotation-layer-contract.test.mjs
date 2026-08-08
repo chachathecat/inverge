@@ -562,6 +562,11 @@ function hasExactNoRecordFailure(subject) {
   return typeof value === gate.requiredPrimitiveType && value === gate.requiredExactValue;
 }
 
+function hasAllowedTimingClassification(subject) {
+  const allowed = contract.cueExposure.closedTimingClassificationMap[subject.timing];
+  return Array.isArray(allowed) && allowed.includes(subject.assistanceClassification);
+}
+
 function authorizeCanonicalReviewOnlyCueRender(subject) {
   const gate = contract.cueExposure.reviewOnlyGate;
   const fail = (reason) => ({
@@ -773,21 +778,20 @@ function validateCueExposureEvent(event) {
   if (!hasExactCanonicalRecordCommit(event)) {
     return { accepted: false, mayRenderCueBytes: false, reason: cue.recordFailureBehavior };
   }
-  if (
-    event.timing === "REVIEW_ONLY"
-    || event.reviewOnlyResolution?.canonicalTiming === "REVIEW_ONLY"
-  ) return authorizeCanonicalReviewOnlyCueRender(event);
   if (event.derivedFrom !== cue.timingAndClassificationSource) {
     return { accepted: false, mayRenderCueBytes: false, reason: "UNTRUSTED_DERIVATION" };
   }
   if (event.ordering !== "ORDERED") {
     return { accepted: false, mayRenderCueBytes: false, reason: cue.ambiguousOrderingBehavior };
   }
+  if (
+    event.timing === "REVIEW_ONLY"
+    || event.reviewOnlyResolution?.canonicalTiming === "REVIEW_ONLY"
+  ) return authorizeCanonicalReviewOnlyCueRender(event);
   if (event.renderSubmitRaceDetected) {
     return { accepted: false, mayRenderCueBytes: false, reason: cue.renderSubmitRaceBehavior };
   }
-  const allowed = cue.closedTimingClassificationMap[event.timing];
-  if (!allowed || !allowed.includes(event.assistanceClassification)) {
+  if (!hasAllowedTimingClassification(event)) {
     return { accepted: false, mayRenderCueBytes: false, reason: "TIMING_CLASSIFICATION_INVALID" };
   }
   if (event.timing === "BEFORE_RESPONSE") {
@@ -903,6 +907,8 @@ function stableD7Evidence(overrides = {}) {
     learnerPrivateScopeId,
     canonicalAttemptState: "SUBMITTED",
     timing: "D_PLUS_7",
+    sourceAttemptSubmittedAt: "2026-08-01T00:00:00.000Z",
+    d7EvaluationCompletedAt: "2026-08-08T00:00:00.000Z",
     actualSubmission: true,
     evaluationCompleted: true,
     cueState: "HIDDEN",
@@ -917,6 +923,36 @@ function stableD7Evidence(overrides = {}) {
     ambiguous: false,
     ...overrides,
   };
+}
+
+function parseCanonicalUtcMilliseconds(value) {
+  if (
+    typeof value !== "string"
+    || !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/.test(value)
+  ) return null;
+  const milliseconds = Date.parse(value);
+  if (!Number.isFinite(milliseconds) || new Date(milliseconds).toISOString() !== value) return null;
+  return milliseconds;
+}
+
+function hasTrustedD7ElapsedInterval(candidate) {
+  const gate = contract.cueExposure.learningEvidenceGate
+    .requiredAffirmativeEvidence.stableD7.trustedElapsedIntervalGate;
+  if (
+    candidate?.[gate.sourceAttemptTimestampSourceField]
+      !== gate.sourceAttemptTimestampRequiredSource
+    || candidate?.[gate.evaluationTimestampSourceField]
+      !== gate.evaluationTimestampRequiredSource
+  ) return false;
+  const sourceAttemptSubmittedAt = parseCanonicalUtcMilliseconds(
+    candidate[gate.sourceAttemptTimestampField],
+  );
+  const d7EvaluationCompletedAt = parseCanonicalUtcMilliseconds(
+    candidate[gate.evaluationTimestampField],
+  );
+  return sourceAttemptSubmittedAt !== null
+    && d7EvaluationCompletedAt !== null
+    && d7EvaluationCompletedAt - sourceAttemptSubmittedAt >= gate.minimumElapsedMilliseconds;
 }
 
 function noPositiveEvidence({ failClosed, eligibilityPreserved }) {
@@ -1059,6 +1095,7 @@ function evaluateAttemptEvidence(events, evidence = {}) {
     && d7.d7AttemptId.length > 0
     && d7.d7AttemptId !== attempt.attemptId
     && d7.timing === "D_PLUS_7"
+    && hasTrustedD7ElapsedInterval(d7)
     && d7.actualSubmission === true
     && d7.evaluationCompleted === true
     && d7.cueState === "HIDDEN"
@@ -1473,6 +1510,7 @@ function evaluateCueRender(request) {
     if (request.timing !== cue.afterResponseGate.onlyAllowedTimingForSubmittedAttempt) {
       return fail("SUBMITTED_ATTEMPT_AFTER_RESPONSE_ONLY");
     }
+    if (!hasAllowedTimingClassification(request)) return fail("TIMING_CLASSIFICATION_INVALID");
     const binding = validateCanonicalAttemptBinding(request);
     if (!binding.accepted) return fail(binding.reason);
     if (!hasExactCanonicalRecordCommit(request)) return fail(cue.recordFailureBehavior);
@@ -1487,11 +1525,7 @@ function evaluateCueRender(request) {
   }
 
   if (request.timing !== "BEFORE_RESPONSE") return fail("NON_SUBMITTED_AFTER_RESPONSE_INVALID");
-  const allowedAssistanceClassifications = cue.closedTimingClassificationMap[request.timing];
-  if (
-    !allowedAssistanceClassifications
-    || !allowedAssistanceClassifications.includes(request.assistanceClassification)
-  ) return fail("TIMING_CLASSIFICATION_INVALID");
+  if (!hasAllowedTimingClassification(request)) return fail("TIMING_CLASSIFICATION_INVALID");
   return authorizeExactPreResponseCueRender(request);
 }
 
@@ -1514,7 +1548,7 @@ test("MCAL paths resolve and V13 remains sole active master plan", () => {
   assert.match(active, /dabangil-professional-exam-reasoning-os-final-master-plan-v13-2026-08-06\.md/);
   assert.match(active, /Memory Cue & Annotation Layer/);
   assert.doesNotMatch(active, /final-master-plan-v14/);
-  assert.equal(contract.version, "1.0.8");
+  assert.equal(contract.version, "1.0.9");
   assert.equal(contract.compatibility.v13RemainsSoleActiveMasterPlan, true);
   assert.equal(contract.compatibility.newMasterPlanVersionCreated, false);
 });
@@ -1688,6 +1722,11 @@ test("Markdown fences and exact boundary language are present", () => {
   assert.match(annex, /outer canonical timing\/classification resolution도 `resolved === true`/);
   assert.match(annex, /모든 render-capable request\/event variant/);
   assert.match(annex, /pre-response request는\s+`assistanceClassification`/);
+  assert.match(annex, /submitted-attempt `AFTER_RESPONSE` request/);
+  assert.match(annex, /`sourceAttemptSubmittedAt`/);
+  assert.match(annex, /최소 `604800000` ms/);
+  assert.match(annex, /shared gate로 routing하기 전에/);
+  assert.match(annex, /request path에는 이\s+event-only 필드를 요구하지 않는다/);
   assert.match(annex, /`canonicalRecordCommitted === true`를 exact primitive equality로 증명/);
   assert.match(annex, /preResponseCueExposureCount/);
   assert.match(annex, /CANONICAL_SERVER_ITEM_RIGHTS_MANIFEST_BOUNDARY/);
@@ -1697,7 +1736,8 @@ test("Markdown fences and exact boundary language are present", () => {
   assert.match(annex, /`currentlyAuthorized`는 정확히 `false`/);
   const qa = read(P.qa);
   assert.match(qa, /PR #692 is merged at `512bfdb9232a86bf4f7d4cfbc076a9df1c8a7da2`/);
-  assert.match(qa, /Focused behavioral contract suite: 41\/41 passed/);
+  assert.match(qa, /Focused behavioral contract suite: 44\/44 passed/);
+  assert.doesNotMatch(qa, /Focused behavioral contract suite: 41\/41 passed/);
   assert.doesNotMatch(qa, /Focused behavioral contract suite: 39\/39 passed/);
   assert.doesNotMatch(qa, /Focused behavioral contract suite: 36\/36 passed/);
   assert.doesNotMatch(qa, /Focused behavioral contract suite: 34\/34 passed/);
@@ -2699,6 +2739,55 @@ test("stable D+7 requires a completed hidden-cue nonconflicted canonical evaluat
   }
 });
 
+test("stable D+7 requires trusted timestamps separated by at least seven elapsed days", () => {
+  const gate = contract.cueExposure.learningEvidenceGate
+    .requiredAffirmativeEvidence.stableD7.trustedElapsedIntervalGate;
+  assert.equal(gate.sourceAttemptTimestampField, "sourceAttemptSubmittedAt");
+  assert.equal(gate.sourceAttemptTimestampSourceField, "canonicalAttemptSource");
+  assert.equal(gate.sourceAttemptTimestampRequiredSource, "CANONICAL_SERVER_ATTEMPT_LEDGER");
+  assert.equal(gate.evaluationTimestampField, "d7EvaluationCompletedAt");
+  assert.equal(gate.evaluationTimestampSourceField, "source");
+  assert.equal(gate.evaluationTimestampRequiredSource, "CANONICAL_D7_EVALUATION_LEDGER");
+  assert.equal(gate.requiredTimestampFormat, "RFC3339_UTC_MILLISECONDS");
+  assert.equal(gate.minimumElapsedMilliseconds, 7 * 24 * 60 * 60 * 1000);
+  assert.equal(gate.serverComputedFromTrustedTimestamps, true);
+  assert.equal(gate.callerSuppliedElapsedOrTimingLabelSufficient, false);
+  assert.equal(contract.hardGates.d7StableWithoutActual7DayElapsedInterval, 0);
+
+  const base = {
+    exposureHistory: canonicalExposureHistory(),
+    attempt: canonicalIndependentAttempt(),
+    independentResponse: independentResponseEvidence(),
+  };
+  for (const stableD7 of [
+    stableD7Evidence({ sourceAttemptSubmittedAt: undefined }),
+    stableD7Evidence({ d7EvaluationCompletedAt: undefined }),
+    stableD7Evidence({ sourceAttemptSubmittedAt: "2026-08-01" }),
+    stableD7Evidence({ d7EvaluationCompletedAt: "2026-08-08T09:00:00.000+09:00" }),
+    stableD7Evidence({ d7EvaluationCompletedAt: "2026-08-07T23:59:59.999Z" }),
+    stableD7Evidence({ d7EvaluationCompletedAt: "2026-08-01T00:00:00.001Z" }),
+    stableD7Evidence({
+      d7EvaluationCompletedAt: "2026-08-01T00:00:00.001Z",
+      elapsedMilliseconds: 7 * 24 * 60 * 60 * 1000,
+    }),
+  ]) {
+    const result = evaluateAttemptEvidence([], { ...base, stableD7 });
+    assert.equal(result.independentRetrieval, true);
+    assert.equal(result.stableD7, false);
+  }
+
+  for (const d7EvaluationCompletedAt of [
+    "2026-08-08T00:00:00.000Z",
+    "2026-08-09T00:00:00.000Z",
+  ]) {
+    const result = evaluateAttemptEvidence([], {
+      ...base,
+      stableD7: stableD7Evidence({ d7EvaluationCompletedAt }),
+    });
+    assert.equal(result.stableD7, true, d7EvaluationCompletedAt);
+  }
+});
+
 test("raw annotation bodies reject opt-in, O5, relabel and direct-promotion bypasses", () => {
   const overrides = contract.personalAnnotation.possibleOverrideAuthorities;
   assert.deepEqual(overrides, {
@@ -3396,6 +3485,46 @@ test("after-response requests require canonicalRecordCommitted and ignore aliase
   })).accepted, true);
 });
 
+test("after-response requests validate the closed timing classification before render", () => {
+  const gate = contract.cueExposure.afterResponseGate;
+  assert.equal(
+    gate.timingClassificationMapRef,
+    "cueExposure.closedTimingClassificationMap.AFTER_RESPONSE",
+  );
+  assert.equal(gate.assistanceClassificationRequiredOnRequest, true);
+  assert.equal(
+    gate.missingOrDisallowedAssistanceClassificationBehavior,
+    "FAIL_CLOSED_NO_CUE_BYTES",
+  );
+  assert.equal(contract.hardGates.afterResponseRequestWithoutClosedClassification, 0);
+
+  const omitted = cueRenderRequest({ timing: "AFTER_RESPONSE", confirmation: undefined });
+  delete omitted.assistanceClassification;
+  for (const request of [
+    omitted,
+    cueRenderRequest({
+      timing: "AFTER_RESPONSE",
+      assistanceClassification: "BOGUS",
+      confirmation: undefined,
+    }),
+  ]) {
+    const result = evaluateCueRender(request);
+    assert.equal(result.accepted, false);
+    assert.equal(result.mayRenderCueBytes, false);
+    assert.equal(result.reason, "TIMING_CLASSIFICATION_INVALID");
+  }
+
+  for (const assistanceClassification of contract.cueExposure.closedTimingClassificationMap.AFTER_RESPONSE) {
+    const result = evaluateCueRender(cueRenderRequest({
+      timing: "AFTER_RESPONSE",
+      assistanceClassification,
+      confirmation: undefined,
+    }));
+    assert.equal(result.accepted, true, assistanceClassification);
+    assert.equal(result.mayRenderCueBytes, true, assistanceClassification);
+  }
+});
+
 test("after-response exposure events reject explicit record failures before timing routing", () => {
   const gate = contract.cueExposure.recordFailureGate;
   assert.equal(gate.gateId, "EXACT_RENDER_RECORD_FAILURE_GATE_V1");
@@ -3466,6 +3595,36 @@ test("review-only requests require exact canonicalRecordCommitted across both va
 
   assert.equal(evaluateCueRender(reviewOnlyRequest()).accepted, true);
   assert.equal(validateCueExposureEvent(cueEvent(reviewOnlyRequest())).accepted, true);
+});
+
+test("review-only exposure events require canonical provenance and exact ordering before routing", () => {
+  const gate = contract.cueExposure.reviewOnlyGate.exposureEventPreRoutingGate;
+  assert.equal(gate.validator, "CUE_EXPOSURE_EVENT_VALIDATOR");
+  assert.equal(gate.evaluatedBeforeReviewOnlyRouting, true);
+  assert.equal(gate.requiredDerivedFromField, "derivedFrom");
+  assert.equal(gate.requiredDerivedFromSourceRef, "cueExposure.timingAndClassificationSource");
+  assert.equal(gate.requiredOrderingField, "ordering");
+  assert.equal(gate.requiredOrderingValue, "ORDERED");
+  assert.equal(gate.requestValidatorRequiresEventOnlyFields, false);
+  assert.equal(contract.hardGates.reviewOnlyEventWithoutProvenanceOrOrdering, 0);
+
+  const missingProvenance = cueEvent(reviewOnlyRequest());
+  delete missingProvenance.derivedFrom;
+  const missingOrdering = cueEvent(reviewOnlyRequest());
+  delete missingOrdering.ordering;
+  for (const event of [
+    missingProvenance,
+    cueEvent(reviewOnlyRequest({ derivedFrom: "CLIENT_EVENT" })),
+    missingOrdering,
+    cueEvent(reviewOnlyRequest({ ordering: "AMBIGUOUS" })),
+  ]) {
+    const result = validateCueExposureEvent(event);
+    assert.equal(result.accepted, false);
+    assert.equal(result.mayRenderCueBytes, false);
+  }
+
+  assert.equal(validateCueExposureEvent(cueEvent(reviewOnlyRequest())).accepted, true);
+  assert.equal(evaluateCueRender(reviewOnlyRequest()).accepted, true);
 });
 
 test("review-only requires canonical server derivation and no matching open attempt", () => {

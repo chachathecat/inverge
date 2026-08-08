@@ -1,6 +1,6 @@
 {
   "schema": "dabangil_memory_cue_and_annotation_layer_v1",
-  "version": "1.0.8",
+  "version": "1.0.9",
   "dated": "2026-08-06 KST",
   "status": "proposed_non_authoritative",
   "repository": "chachathecat/inverge",
@@ -989,6 +989,9 @@
     "cueRevealWithoutExposureEvent": 0,
     "cueViewPromotesIndependentMastery": 0,
     "d7StableWithVisibleCue": 0,
+    "d7StableWithoutActual7DayElapsedInterval": 0,
+    "afterResponseRequestWithoutClosedClassification": 0,
+    "reviewOnlyEventWithoutProvenanceOrOrdering": 0,
     "sameRepresentationCountedAsFarTransfer": 0,
     "colorOnlySemanticHighlight": 0,
     "primaryHighlightsOverThree": 0,
@@ -1238,6 +1241,16 @@
       "callerSuppliedCanonicalExposureRecordCommittedAccepted": false,
       "clientEventAccepted": false,
       "inferredTimingAccepted": false,
+      "exposureEventPreRoutingGate": {
+        "validator": "CUE_EXPOSURE_EVENT_VALIDATOR",
+        "evaluatedBeforeReviewOnlyRouting": true,
+        "requiredDerivedFromField": "derivedFrom",
+        "requiredDerivedFromSourceRef": "cueExposure.timingAndClassificationSource",
+        "requiredOrderingField": "ordering",
+        "requiredOrderingValue": "ORDERED",
+        "requestValidatorRequiresEventOnlyFields": false,
+        "missingWrongOrAmbiguousProvenanceOrOrderingBehavior": "FAIL_CLOSED_NO_CUE_BYTES"
+      },
       "missingAmbiguousConflictingCrossLearnerStaleClientInferredUnresolvedOrOpenAttemptBehavior": "FAIL_CLOSED_NO_CUE_BYTES"
     },
     "canonicalAttemptStates": [
@@ -1330,6 +1343,9 @@
     "afterResponseGate": {
       "requiredCanonicalAttemptState": "SUBMITTED",
       "onlyAllowedTimingForSubmittedAttempt": "AFTER_RESPONSE",
+      "timingClassificationMapRef": "cueExposure.closedTimingClassificationMap.AFTER_RESPONSE",
+      "assistanceClassificationRequiredOnRequest": true,
+      "missingOrDisallowedAssistanceClassificationBehavior": "FAIL_CLOSED_NO_CUE_BYTES",
       "deliberatePreResponseConfirmationRequired": false,
       "exposureRecordCommittedBeforeRender": true,
       "canonicalRecordCommittedGateRef": "cueExposure.canonicalRecordCommittedGate",
@@ -1521,6 +1537,20 @@
           "source": "CANONICAL_D7_EVALUATION_LEDGER",
           "requiresIndependentRetrieval": true,
           "requiredTiming": "D_PLUS_7",
+          "trustedElapsedIntervalGate": {
+            "sourceAttemptTimestampField": "sourceAttemptSubmittedAt",
+            "sourceAttemptTimestampSourceField": "canonicalAttemptSource",
+            "sourceAttemptTimestampRequiredSource": "CANONICAL_SERVER_ATTEMPT_LEDGER",
+            "evaluationTimestampField": "d7EvaluationCompletedAt",
+            "evaluationTimestampSourceField": "source",
+            "evaluationTimestampRequiredSource": "CANONICAL_D7_EVALUATION_LEDGER",
+            "requiredTimestampFormat": "RFC3339_UTC_MILLISECONDS",
+            "minimumElapsedMilliseconds": 604800000,
+            "comparison": "D7_EVALUATION_COMPLETED_AT_MINUS_SOURCE_ATTEMPT_SUBMITTED_AT_GTE_MINIMUM",
+            "serverComputedFromTrustedTimestamps": true,
+            "callerSuppliedElapsedOrTimingLabelSufficient": false,
+            "missingMalformedNonUtcReversedOrShortIntervalBehavior": "FAIL_CLOSED_FOR_STABLE_D7_CREDIT"
+          },
           "completedEvaluationRequired": true,
           "requiredCueState": "HIDDEN",
           "hiddenCueBytesAbsentAcrossAllSurfacesRequired": true,

@@ -84,7 +84,9 @@ canonical field를 대체하지 못한다. exact true 하나만으로 다른 bin
 request와 event validator는 같은 closed timing/classification map을 확인한다. `BEFORE_RESPONSE`는
 `LOW` 또는 `MATERIAL`만 허용하며, request가 classification을 생략하거나 `NONE`을 쓰면 invalid다. `NONE`은 해당
 attempt에 pre-response cue exposure가 없었다는 뜻이다. timing과 classification은 canonical
-ledger에서 파생하고 client 입력을 신뢰하지 않는다. sequence에 pre-response event가 하나라도
+ledger에서 파생하고 client 입력을 신뢰하지 않는다. submitted-attempt `AFTER_RESPONSE` request도 성공 전에
+같은 map의 `NONE`·`LOW`·`MATERIAL` 중 하나를 명시해야 하며 missing 또는 임의 값은 cue byte 0으로 실패한다.
+sequence에 pre-response event가 하나라도
 있으면 independent retrieval·far transfer·stable D+7은 부적격이며 뒤의 event가 복구하지 못한다.
 ordering ambiguity와 render/submit race도 fail closed다.
 `BEFORE_RESPONSE` attempt state는 client가 아니라 canonical server attempt ledger에서 파생하며,
@@ -116,6 +118,10 @@ attempt가 0건임도 별도로 증명한다. missing·unresolved·ambiguous·co
 state 또는 matching open attempt는 cue byte 0으로 fail closed한다.
 outer canonical timing/classification resolution 자체도 `resolved === true`를 포함한 required exact state를
 독립적으로 만족해야 하며, nested open-attempt absence proof가 valid해도 outer unresolved state를 대체하지 못한다.
+exposure-event path는 이 shared review-only gate로 조기 routing하기 전에 event의 `derivedFrom`이 exact
+`CANONICAL_ASSISTANCE_EXPOSURE_LEDGER`이고 `ordering === "ORDERED"`임을 각각 요구한다. 두 필드의 누락,
+client provenance 또는 ambiguous ordering은 cue byte 0으로 실패하며 request path가 event-only 필드를
+합성하거나 그 누락을 허용하는 근거가 될 수 없다.
 submitted binding, `BEFORE_RESPONSE` open-attempt binding 및 `REVIEW_ONLY`의 nested zero-count absence proof는
 각자의 canonical server attempt resolution에 같은 exact state gate를 독립적으로 적용한다. `known === true`,
 `resolved === true`, `ambiguous === false`, `conflicting === false`, `stale === false`,
@@ -138,7 +144,11 @@ copy 자체는 어떤 affirmative learning evidence도 만들지 않는다.
 positive independent retrieval은 exact submitted-and-evaluated response record, far transfer는 distinct
 eligible non-same-representation task와 submitted/evaluated independent result, stable D+7은 completed
 D+7 evaluation·cue `HIDDEN`·all-surface byte absence·non-same representation·unresolved scoring conflict 0의
-별도 canonical evidence를 각각 요구한다. 세 affirmative record의 `ambiguous`는 exact primitive
+별도 canonical evidence를 각각 요구한다. stable D+7은 또한 canonical server attempt ledger의
+`sourceAttemptSubmittedAt`과 canonical D+7 evaluation ledger의 `d7EvaluationCompletedAt`을 exact
+RFC3339 UTC millisecond instant로 결합하고, server가 후자-전자를 계산한 실제 elapsed interval이 최소
+`604800000` ms여야 한다. `D_PLUS_7` label, caller-supplied elapsed 값, missing·malformed·non-UTC·reversed
+또는 7일 미만 interval은 credit을 만들지 못한다. 세 affirmative record의 `ambiguous`는 exact primitive
 `false`여야 한다. missing·undefined·null·`true`·string(`"true"`, `"false"` 포함)·number·object·array는
 해당 record의 credit을 만들지 못한다. invalid independent response는 dependent far-transfer와 D+7을
 함께 막고 invalid transfer/D+7 ambiguity는 각 credit만 막는다. exact false만으로는 증거가 생기지 않는다.
@@ -258,9 +268,11 @@ cross-profile cue·정답·mastery 상속은 금지한다.
   independent-attempt-open + exact learner/attempt/cue/revision/request-bound single-use confirmation +
   atomic confirmation consumption/`ASSISTED`/independent-evidence invalidation before any cue byte.
 - cue absence preserves eligibility only; independent response, distinct non-same-representation transfer
-  and completed hidden/no-conflict D+7 each require separate affirmative canonical evidence.
-- `AFTER_RESPONSE` exact canonical submitted-attempt binding; `REVIEW_ONLY` may be unbound only after trusted
-  canonical timing/classification derivation and proof of zero matching open independent attempts.
+  and completed hidden/no-conflict D+7 each require separate affirmative canonical evidence; D+7 additionally
+  requires trusted source/evaluation instants proving at least 604800000 ms of actual elapsed time.
+- `AFTER_RESPONSE` exact canonical submitted-attempt binding plus closed-map request classification;
+  `REVIEW_ONLY` may be unbound only after trusted canonical timing/classification derivation and proof of zero
+  matching open independent attempts, while its event path proves canonical provenance and exact ordering before routing.
 - every anchor required binding exact schema and kind-policy consistency; truthiness-only validation 0.
 - raw personal annotation body direct training·rename/alias 우회·direct Cleared Content promotion 0;
   raw pointer/reconstructive-derivative relabel 우회 0; 다섯 content-safety property의 같은-object

@@ -805,6 +805,8 @@ type CanonicalExposureHistoryV1 = {
 - timing과 assistance classification은 canonical ledger가 파생하며 untrusted client 값을 받지 않는다.
   request와 event validator는 같은 closed timing/classification map을 사용한다. pre-response request는
   `assistanceClassification`이 명시된 `LOW` 또는 `MATERIAL`이어야 하며 omitted 또는 `NONE`은 렌더하지 않는다.
+  submitted-attempt `AFTER_RESPONSE` request도 성공 전에 mapped `NONE`·`LOW`·`MATERIAL` 중 하나를
+  명시해야 하며 omitted 또는 임의 값은 렌더하지 않는다.
 - attempt state는 `CANONICAL_SERVER_ATTEMPT_LEDGER`에서 파생한다. `BEFORE_RESPONSE`는 exact
   learner/attempt resolution의 `INDEPENDENT_ATTEMPT_OPEN`과 exact single-use confirmation이 모두 없으면
   허용하지 않으며, 모든 render-capable validator가 위 shared gate에 위임해야 한다.
@@ -834,7 +836,11 @@ type CanonicalExposureHistoryV1 = {
 - positive independent retrieval은 별도의 canonical submitted-and-evaluated response record,
   far transfer는 distinct eligible non-same-representation task와 submitted/evaluated result,
   stable D+7은 completed D+7·`HIDDEN`·all-surface byte absence·non-same representation·scoring conflict 0
-  record를 각각 요구한다. 세 affirmative record의 `ambiguous`는 exact primitive `false`여야 한다.
+  record를 각각 요구한다. stable D+7은 canonical attempt ledger의 `sourceAttemptSubmittedAt`과 canonical
+  D+7 evaluation ledger의 `d7EvaluationCompletedAt`을 exact RFC3339 UTC millisecond instant로 bind하고,
+  server가 계산한 실제 elapsed interval이 최소 `604800000` ms여야 한다. `D_PLUS_7` label이나 caller elapsed
+  값은 이를 대체하지 못하고 missing·malformed·non-UTC·reversed·short interval은 credit을 만들지 못한다.
+  세 affirmative record의 `ambiguous`는 exact primitive `false`여야 한다.
   missing·undefined·null·`true`·string(`"true"`, `"false"` 포함)·number·object·array는 해당 record의
   credit을 만들 수 없다. invalid independent response는 dependent far-transfer와 D+7도 막고, invalid
   transfer 또는 D+7 ambiguity는 각각의 credit만 막으며 다른 gate를 약화하지 않는다. exact `false`나
@@ -850,7 +856,10 @@ type CanonicalExposureHistoryV1 = {
   validation을 통과해야 하며, bound/unbound 모두 independent retrieval·far transfer·stable D+7에는
   중립이다. 단, 두 render-capable path에서 trusted server resolution과 matching open independent
   attempt 0건이 먼저 증명되어야 하며 caller label, boolean, client event 또는 timing inference는
-  authorization evidence가 아니다.
+  authorization evidence가 아니다. exposure-event path는 이 shared gate로 routing하기 전에
+  `derivedFrom === "CANONICAL_ASSISTANCE_EXPOSURE_LEDGER"`와 `ordering === "ORDERED"`를 모두 exact하게
+  증명하며 누락·client provenance·ambiguous ordering은 cue byte 0으로 실패한다. request path에는 이
+  event-only 필드를 요구하지 않는다.
 
 `HIDDEN`은 CSS로 가리거나 접어 둔 상태가 아니다. cue·decomposition·prompt·memory gloss
 바이트가 DOM, SSR payload, accessibility text, prefetch response, cache entry 또는 direct
@@ -1263,6 +1272,9 @@ private_anchor_without_exact_authoritative_owner_binding = 0
 cue_reveal_without_exposure_event = 0
 cue_view_promotes_independent_mastery = 0
 d7_stable_with_visible_cue = 0
+d7_stable_without_actual_7_day_elapsed_interval = 0
+after_response_request_without_closed_classification = 0
+review_only_event_without_provenance_or_ordering = 0
 same_representation_counted_as_far_transfer = 0
 color_only_semantic_highlight = 0
 primary_highlights_over_three = 0
