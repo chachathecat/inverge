@@ -70,6 +70,12 @@ PR #692 mutation is included.
     client-inferred are exact false; and `matchingRecordCount` is exactly one. Missing, malformed, wrong-type, opposite
     state, zero-record or multi-record attempts fail closed before independent retrieval and deny dependent far-transfer
     and stable-D+7 credit.
+    Far transfer additionally resolves the source attempt's closed `taskBinding` from the canonical server attempt-task
+    binding resolver as exactly one fresh, non-inferred, non-ambiguous, non-conflicting, non-mismatched record bound to
+    the same attempt and learner. The supplied `originTaskId` must equal that canonical source `taskId`, and
+    `transferTaskId` must differ from that canonical task. Merely supplying two different task IDs is insufficient;
+    missing, malformed or invalid canonical task binding denies far-transfer only and leaves independent retrieval under
+    its existing canonical-attempt gate.
     The canonical independent-response, far-transfer and stable-D+7 records additionally require
     `ambiguous === false` by exact primitive equality. Missing or any other value denies that record's credit;
     invalid independent response also denies its dependent credits, while invalid transfer/D+7 ambiguity does not
@@ -340,7 +346,7 @@ npm run build
 Current correction-source evidence:
 
 - JavaScript syntax check: passed.
-- Focused behavioral contract suite: 51/51 passed.
+- Focused behavioral contract suite: 52/52 passed.
 - Strict JSON parse, balanced Markdown fences, cross-artifact assertions and `git diff --check`: passed.
 - Typecheck: passed.
 - Lint: passed with 0 errors and 9 pre-existing warnings outside the MCAL diff.

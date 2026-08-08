@@ -165,6 +165,13 @@ unresolved provenance, non-UTC·reversed 또는 7일 미만 interval은 credit�
 `false`여야 한다. missing·undefined·null·`true`·string(`"true"`, `"false"` 포함)·number·object·array는
 해당 record의 credit을 만들지 못한다. invalid independent response는 dependent far-transfer와 D+7을
 함께 막고 invalid transfer/D+7 ambiguity는 각 credit만 막는다. exact false만으로는 증거가 생기지 않는다.
+far transfer의 origin task는 transfer record가 임의로 공급한 두 task ID의 차이로 증명하지 않는다.
+resolved `evidence.attempt`가 `CANONICAL_SERVER_ATTEMPT_TASK_BINDING_RESOLVER`에서 정확히 한 건으로 resolve된
+closed `taskBinding`을 직접 가져야 하고, 그 binding의 attempt·learner scope는 source attempt와 정확히 같으며
+`originTaskId`는 canonical `taskId`와 field-for-field 같아야 한다. `transferTaskId`는 바로 그 canonical
+source task와 달라야 한다. binding이 missing·malformed·ambiguous·conflicting·stale·client/caller-inferred·
+mismatched·0건·복수이거나 supplied origin이 다르면 far-transfer credit만 fail closed하며, 기존 canonical
+attempt gate를 통과한 independent-retrieval 판단은 바꾸지 않는다.
 missing exposure record/history, failed render, partial commit, ambiguous record 또는 `ASSISTED` attempt는
 positive learning evidence 0으로 fail closed한다.
 `HIDDEN`은 DOM·SSR·접근성 text·prefetch·cache·direct API output 어디에도 cue byte가 없음을 뜻한다.

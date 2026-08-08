@@ -1,6 +1,6 @@
 {
   "schema": "dabangil_memory_cue_and_annotation_layer_v1",
-  "version": "1.0.12",
+  "version": "1.0.13",
   "dated": "2026-08-06 KST",
   "status": "proposed_non_authoritative",
   "repository": "chachathecat/inverge",
@@ -1804,6 +1804,66 @@
           "exactSourceAttemptAndLearnerBindingRequired": true,
           "completeCanonicalExposureHistoryRequired": true,
           "canonicalExposureHistoryMustBindToTransferAttemptId": true,
+          "canonicalSourceTaskBindingGate": {
+            "recordRef": "evidence.attempt.taskBinding",
+            "recordField": "taskBinding",
+            "resolutionSource": "CANONICAL_SERVER_ATTEMPT_TASK_BINDING_RESOLVER",
+            "additionalFieldsAllowed": false,
+            "requiredFields": [
+              "source",
+              "attemptId",
+              "learnerPrivateScopeId",
+              "taskId",
+              "matchingRecordCount",
+              "serverSide",
+              "authoritative",
+              "independentlyResolved",
+              "known",
+              "resolved",
+              "ambiguous",
+              "conflicting",
+              "stale",
+              "clientInferred",
+              "callerInferred",
+              "mismatched"
+            ],
+            "identifierFields": [
+              "attemptId",
+              "learnerPrivateScopeId",
+              "taskId"
+            ],
+            "identifierSchema": {
+              "type": "string",
+              "minLength": 3,
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{2,127}$"
+            },
+            "exactMatchingRecordCount": 1,
+            "requiredExactPrimitiveBooleanStates": {
+              "serverSide": true,
+              "authoritative": true,
+              "independentlyResolved": true,
+              "known": true,
+              "resolved": true,
+              "ambiguous": false,
+              "conflicting": false,
+              "stale": false,
+              "clientInferred": false,
+              "callerInferred": false,
+              "mismatched": false
+            },
+            "canonicalSourceAttemptBindingFields": [
+              "attemptId",
+              "learnerPrivateScopeId"
+            ],
+            "canonicalTaskIdField": "taskId",
+            "transferOriginTaskIdField": "originTaskId",
+            "transferTaskIdField": "transferTaskId",
+            "originTaskIdMustExactlyEqualCanonicalSourceTaskId": true,
+            "transferTaskIdMustDifferFromCanonicalSourceTaskId": true,
+            "callerSuppliedOriginAndTransferDifferenceSufficient": false,
+            "invalidBindingAffectsIndependentRetrieval": false,
+            "missingMalformedAmbiguousConflictingStaleInferredMismatchedOrNonSingleBehavior": "FAIL_CLOSED_FOR_FAR_TRANSFER_CREDIT"
+          },
           "ambiguousMustExactlyEqual": false
         },
         "stableD7": {

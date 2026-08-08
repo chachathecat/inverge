@@ -564,7 +564,13 @@ D+7 stable / timed: HIDDEN
 - independent retrieval은 actual submitted response와 completed evaluation이 exact learner/attempt에
   묶인 canonical response-evaluation record를 별도로 요구한다.
 - far transfer는 그 독립 회상 외에도 distinct eligible task, non-same representation, actual submitted
-  independent transfer attempt와 evaluated result의 canonical record를 별도로 요구한다.
+  independent transfer attempt와 evaluated result의 canonical record를 별도로 요구한다. source attempt가
+  직접 가진 closed `taskBinding`은 `CANONICAL_SERVER_ATTEMPT_TASK_BINDING_RESOLVER`에서 exact single record로
+  server-resolve되고 attempt·learner scope에 exact-bind되어야 한다. transfer의 `originTaskId`는 그 binding의
+  canonical `taskId`와 정확히 같고 `transferTaskId`는 바로 그 canonical source task와 달라야 한다.
+  caller가 서로 다른 두 task ID를 공급한 것만으로는 충분하지 않다. missing·malformed·ambiguous·conflicting·
+  stale·client/caller-inferred·mismatched·0건·복수 binding은 far-transfer credit만 fail closed하며 independent
+  retrieval은 기존 canonical-attempt gate 결과를 유지한다.
 - stable D+7은 실제 완료된 D+7 independent evaluation, cue `HIDDEN`, 모든 surface의 cue byte 부재,
   non-same representation 및 unresolved scoring conflict 0의 canonical record를 별도로 요구한다.
   identified source attempt는 `evidence.attempt`에서 canonical server attempt ledger 한 건으로 resolve하고
