@@ -542,6 +542,8 @@ D+7 stable / timed: HIDDEN
   conflicting·cross-learner·stale·client-inferred resolution 또는 matching open attempt는 cue byte 0으로
   fail closed한다. outer canonical timing/classification resolution도 `resolved === true`를 포함한 required
   exact state를 독립적으로 만족해야 하며 valid nested proof가 unresolved outer resolution을 대체하지 못한다.
+  이 두 validator의 `REVIEW_ONLY` path도 shared canonical-record gate를 먼저 통과해
+  `canonicalRecordCommitted === true`를 exact primitive equality로 증명해야 하며 필드 생략은 실패다.
 - pre-response cue가 없다는 사실은 independent-evidence **eligibility만 보존**한다. empty sequence나
   `AFTER_RESPONSE` event 자체는 independent retrieval·far transfer·stable D+7 증거를 만들지 않는다.
 - independent retrieval은 actual submitted response와 completed evaluation이 exact learner/attempt에
@@ -791,7 +793,7 @@ type CanonicalExposureHistoryV1 = {
 };
 ```
 
-- 모든 render-capable exposure-event variant(`BEFORE_RESPONSE`, `AFTER_RESPONSE`, `REVIEW_ONLY`)는
+- 모든 render-capable request/event variant(`BEFORE_RESPONSE`, `AFTER_RESPONSE`, `REVIEW_ONLY`)는
   `canonicalRecordCommitted === true`를 요구한다. truthiness는 금지하며 missing·undefined·null·false·
   string(`"true"`, `"false"` 포함)·number·object·array·ambiguous 또는 caller-inferred commit state는
   cue byte 0으로 fail closed한다. request-side와 event-side `AFTER_RESPONSE`는 같은 exact-boolean gate를
@@ -801,6 +803,8 @@ type CanonicalExposureHistoryV1 = {
   `recordFailure === false`를 exact primitive equality로 요구한다. `canonicalRecordCommitted === true`와
   `recordFailure === true`의 모순 상태도 cue byte 0으로 fail closed한다.
 - timing과 assistance classification은 canonical ledger가 파생하며 untrusted client 값을 받지 않는다.
+  request와 event validator는 같은 closed timing/classification map을 사용한다. pre-response request는
+  `assistanceClassification`이 명시된 `LOW` 또는 `MATERIAL`이어야 하며 omitted 또는 `NONE`은 렌더하지 않는다.
 - attempt state는 `CANONICAL_SERVER_ATTEMPT_LEDGER`에서 파생한다. `BEFORE_RESPONSE`는 exact
   learner/attempt resolution의 `INDEPENDENT_ATTEMPT_OPEN`과 exact single-use confirmation이 모두 없으면
   허용하지 않으며, 모든 render-capable validator가 위 shared gate에 위임해야 한다.

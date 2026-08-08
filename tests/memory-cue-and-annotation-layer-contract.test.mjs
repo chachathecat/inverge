@@ -446,6 +446,7 @@ function reviewOnlyRequest(overrides = {}) {
     cueRevisionId: "cue-revision-1",
     requestId: "request-1",
     reviewOnlyResolution: canonicalReviewOnlyResolution(),
+    canonicalRecordCommitted: true,
     recordFailure: false,
     renderSubmitRaceDetected: false,
     ...overrides,
@@ -577,9 +578,7 @@ function authorizeCanonicalReviewOnlyCueRender(subject) {
   if (subject.ordering !== undefined && subject.ordering !== "ORDERED") {
     return fail(contract.cueExposure.ambiguousOrderingBehavior);
   }
-  if (subject.canonicalRecordCommitted !== undefined && subject.canonicalRecordCommitted !== true) {
-    return fail("REVIEW_ONLY_CALLER_CANONICAL_CONFLICT");
-  }
+  if (!hasExactCanonicalRecordCommit(subject)) return fail(contract.cueExposure.recordFailureBehavior);
   if (
     Object.hasOwn(subject, "canonicalExposureRecordCommitted")
     || subject.clientEvent !== undefined
@@ -1436,6 +1435,7 @@ function cueRenderRequest(overrides = {}) {
       : canonicalOpenAttemptResolution();
   return {
     timing,
+    assistanceClassification: "LOW",
     attemptId: "attempt-1",
     learnerPrivateScopeId: "learner-1",
     cueId: "cue-1",
@@ -1487,6 +1487,11 @@ function evaluateCueRender(request) {
   }
 
   if (request.timing !== "BEFORE_RESPONSE") return fail("NON_SUBMITTED_AFTER_RESPONSE_INVALID");
+  const allowedAssistanceClassifications = cue.closedTimingClassificationMap[request.timing];
+  if (
+    !allowedAssistanceClassifications
+    || !allowedAssistanceClassifications.includes(request.assistanceClassification)
+  ) return fail("TIMING_CLASSIFICATION_INVALID");
   return authorizeExactPreResponseCueRender(request);
 }
 
@@ -1509,7 +1514,7 @@ test("MCAL paths resolve and V13 remains sole active master plan", () => {
   assert.match(active, /dabangil-professional-exam-reasoning-os-final-master-plan-v13-2026-08-06\.md/);
   assert.match(active, /Memory Cue & Annotation Layer/);
   assert.doesNotMatch(active, /final-master-plan-v14/);
-  assert.equal(contract.version, "1.0.7");
+  assert.equal(contract.version, "1.0.8");
   assert.equal(contract.compatibility.v13RemainsSoleActiveMasterPlan, true);
   assert.equal(contract.compatibility.newMasterPlanVersionCreated, false);
 });
@@ -1681,6 +1686,9 @@ test("Markdown fences and exact boundary language are present", () => {
   assert.match(annex, /`recordFailure === true`/);
   assert.match(annex, /`replayed === false`는 exact primitive equality/);
   assert.match(annex, /outer canonical timing\/classification resolution도 `resolved === true`/);
+  assert.match(annex, /모든 render-capable request\/event variant/);
+  assert.match(annex, /pre-response request는\s+`assistanceClassification`/);
+  assert.match(annex, /`canonicalRecordCommitted === true`를 exact primitive equality로 증명/);
   assert.match(annex, /preResponseCueExposureCount/);
   assert.match(annex, /CANONICAL_SERVER_ITEM_RIGHTS_MANIFEST_BOUNDARY/);
   assert.match(annex, /transferAttemptId/);
@@ -1689,7 +1697,8 @@ test("Markdown fences and exact boundary language are present", () => {
   assert.match(annex, /`currentlyAuthorized`는 정확히 `false`/);
   const qa = read(P.qa);
   assert.match(qa, /PR #692 is merged at `512bfdb9232a86bf4f7d4cfbc076a9df1c8a7da2`/);
-  assert.match(qa, /Focused behavioral contract suite: 39\/39 passed/);
+  assert.match(qa, /Focused behavioral contract suite: 41\/41 passed/);
+  assert.doesNotMatch(qa, /Focused behavioral contract suite: 39\/39 passed/);
   assert.doesNotMatch(qa, /Focused behavioral contract suite: 36\/36 passed/);
   assert.doesNotMatch(qa, /Focused behavioral contract suite: 34\/34 passed/);
   assert.doesNotMatch(qa, /Focused behavioral contract suite: 31\/31 passed/);
@@ -2096,6 +2105,37 @@ test("cue timing mapping rejects pre-response NONE and preserves sticky ineligib
     farTransfer: false,
     stableD7: false,
   });
+});
+
+test("pre-response requests reject omitted or NONE assistance classification", () => {
+  const gate = contract.cueExposure.beforeResponseGate;
+  assert.equal(
+    gate.timingClassificationMapRef,
+    "cueExposure.closedTimingClassificationMap.BEFORE_RESPONSE",
+  );
+  assert.deepEqual(
+    gate.requiredAssistanceClassifications,
+    contract.cueExposure.closedTimingClassificationMap.BEFORE_RESPONSE,
+  );
+  assert.equal(gate.assistanceClassificationRequiredOnRequest, true);
+
+  const omitted = cueRenderRequest();
+  delete omitted.assistanceClassification;
+  for (const request of [
+    omitted,
+    cueRenderRequest({ assistanceClassification: "NONE" }),
+  ]) {
+    const result = evaluateCueRender(request);
+    assert.equal(result.accepted, false);
+    assert.equal(result.mayRenderCueBytes, false);
+    assert.equal(result.reason, "TIMING_CLASSIFICATION_INVALID");
+  }
+
+  for (const assistanceClassification of gate.requiredAssistanceClassifications) {
+    const result = evaluateCueRender(cueRenderRequest({ assistanceClassification }));
+    assert.equal(result.accepted, true, assistanceClassification);
+    assert.equal(result.mayRenderCueBytes, true, assistanceClassification);
+  }
 });
 
 test("every BEFORE_RESPONSE render path delegates to one exact gate and rejects all bypasses", () => {
@@ -3383,6 +3423,49 @@ test("after-response exposure events reject explicit record failures before timi
   }));
   assert.equal(request.accepted, false);
   assert.equal(request.mayRenderCueBytes, false);
+});
+
+test("review-only requests require exact canonicalRecordCommitted across both validators", () => {
+  const commitGate = contract.cueExposure.canonicalRecordCommittedGate;
+  const reviewOnlyGate = contract.cueExposure.reviewOnlyGate;
+  assert.equal(commitGate.sharedAcrossEveryRenderCapableValidator, true);
+  assert.deepEqual(commitGate.renderCapableValidators, [
+    "CUE_RENDER_REQUEST_VALIDATOR",
+    "CUE_EXPOSURE_EVENT_VALIDATOR",
+  ]);
+  assert.equal(
+    reviewOnlyGate.canonicalRecordCommittedGateRef,
+    "cueExposure.canonicalRecordCommittedGate",
+  );
+
+  const omitted = reviewOnlyRequest();
+  delete omitted.canonicalRecordCommitted;
+  for (const subject of [
+    omitted,
+    reviewOnlyRequest({ canonicalRecordCommitted: undefined }),
+    reviewOnlyRequest({ canonicalRecordCommitted: null }),
+    reviewOnlyRequest({ canonicalRecordCommitted: false }),
+    reviewOnlyRequest({ canonicalRecordCommitted: "true" }),
+    reviewOnlyRequest({ canonicalRecordCommitted: 1 }),
+    reviewOnlyRequest({ canonicalRecordCommitted: {} }),
+    reviewOnlyRequest({ canonicalRecordCommitted: [] }),
+  ]) {
+    const event = cueEvent(subject);
+    if (!Object.hasOwn(subject, "canonicalRecordCommitted")) {
+      delete event.canonicalRecordCommitted;
+    }
+    for (const result of [
+      evaluateCueRender(subject),
+      validateCueExposureEvent(event),
+    ]) {
+      assert.equal(result.accepted, false);
+      assert.equal(result.mayRenderCueBytes, false);
+      assert.equal(result.reason, contract.cueExposure.recordFailureBehavior);
+    }
+  }
+
+  assert.equal(evaluateCueRender(reviewOnlyRequest()).accepted, true);
+  assert.equal(validateCueExposureEvent(cueEvent(reviewOnlyRequest())).accepted, true);
 });
 
 test("review-only requires canonical server derivation and no matching open attempt", () => {

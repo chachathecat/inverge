@@ -45,8 +45,9 @@ PR #692 mutation is included.
     receipt without excerpt, offset, locator, attempt reference, digest or identifier and cannot enter shared
     graph, analytics, logs, cache index, cross-user or Portable Core content-bearing projection.
 14. `CueExposureEvent` reuses the canonical Assistance/Exposure ledger; no parallel cue ledger is allowed.
-15. The closed timing/classification map permits only `LOW` or `MATERIAL` for `BEFORE_RESPONSE`;
-    `BEFORE_RESPONSE + NONE` is invalid.
+15. The cue-render request and exposure-event validators use the same closed timing/classification map.
+    It permits only `LOW` or `MATERIAL` for `BEFORE_RESPONSE`; a request with the classification omitted
+    or set to `NONE` is invalid.
 16. `NONE` means the attempt has no pre-response cue. Any pre-response event makes independent retrieval,
     far transfer and stable D+7 ineligible for the whole attempt; later events cannot restore independence.
     Cue absence preserves eligibility only and never creates positive evidence. Independent retrieval requires
@@ -97,7 +98,7 @@ PR #692 mutation is included.
     matching open independent attempts. The nested zero-count absence result is itself validated as a complete
     canonical resolution; missing, unresolved, ambiguous, conflicting, cross-learner, stale or client-inferred
     state, or any matching open attempt, fails closed with no cue bytes.
-    Independently, every render-capable exposure-event timing and the request-side submitted-attempt path require
+    Independently, every render-capable request and exposure-event timing require
     `canonicalRecordCommitted === true`; truthy strings/numbers and every missing, null, false, object, array,
     ambiguous or inferred value fail closed, including on `AFTER_RESPONSE` and `REVIEW_ONLY`.
     `canonicalExposureRecordCommitted` and every alternate alias are ignored as commit evidence. Exact true
@@ -182,6 +183,7 @@ All fail closed or hold.
   object or array, or exact false alone creates affirmative evidence;
 - an `ASSISTED` attempt receives independent retrieval, far-transfer or stable-D+7 evidence;
 - timing/classification comes from untrusted client input;
+- a `BEFORE_RESPONSE` request omits assistance classification or supplies `NONE` but still renders or records exposure;
 - a caller label, `canonicalExposureRecordCommitted` boolean, client event or inferred timing selects
   `REVIEW_ONLY` without trusted canonical resolution;
 - the request or alternate exposure-event path renders `REVIEW_ONLY` while a matching canonical open independent
@@ -208,6 +210,7 @@ All fail closed or hold.
 - request-side `AFTER_RESPONSE` accepts `canonicalExposureRecordCommitted: true` while
   `canonicalRecordCommitted` is missing, false or malformed;
 - exposure-event `AFTER_RESPONSE` accepts `canonicalRecordCommitted: true` together with `recordFailure: true`;
+- a `REVIEW_ONLY` request omits `canonicalRecordCommitted` or supplies a non-boolean/non-true value but still renders;
 - an attempt-unbound variant other than evidence-neutral `REVIEW_ONLY` renders cue bytes;
 - an outer canonical `REVIEW_ONLY` timing/classification resolution omits `resolved` or has `resolved !== true`
   while a valid nested open-attempt absence proof still authorizes cue bytes;
@@ -287,7 +290,7 @@ npm run build
 Current correction-source evidence:
 
 - JavaScript syntax check: passed.
-- Focused behavioral contract suite: 39/39 passed.
+- Focused behavioral contract suite: 41/41 passed.
 - Strict JSON parse, balanced Markdown fences, cross-artifact assertions and `git diff --check`: passed.
 - Typecheck: passed.
 - Lint: passed with 0 errors and 9 pre-existing warnings outside the MCAL diff.

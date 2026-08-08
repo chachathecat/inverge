@@ -72,15 +72,17 @@ FULL → DECOMPOSITION_ONLY → PROMPT_ONLY → HIDDEN
 
 답변 전에 decomposition·memory gloss·prompt 중 어떤 단서든 표시하면 assistance/exposure다.
 `CueExposureEvent`는 별도 ledger를 만들지 않고 canonical Assistance/Exposure ledger를 재사용한다.
-모든 render-capable exposure-event timing(`BEFORE_RESPONSE`, `AFTER_RESPONSE`, `REVIEW_ONLY`)은
+모든 render-capable request와 exposure-event timing(`BEFORE_RESPONSE`, `AFTER_RESPONSE`, `REVIEW_ONLY`)은
 `canonicalRecordCommitted === true`를 요구한다. truthiness는 금지하며 missing·null·false·string·number·
 object·array·ambiguous 또는 caller-inferred commit state는 cue byte 0으로 fail closed한다. request와 event의
 `AFTER_RESPONSE`는 동일 exact-boolean gate를 사용하며 `canonicalExposureRecordCommitted` 같은 alias는
 canonical field를 대체하지 못한다. exact true 하나만으로 다른 binding·ordering·race gate를 우회하지 못한다.
+`REVIEW_ONLY` request도 이 canonical field를 생략하거나 exact primitive `true` 이외의 값을 쓰면 렌더하지 않는다.
 모든 render-capable request/event validator는 timing 분기 전에 shared record-failure gate를 적용하며,
 `recordFailure === false`를 exact primitive equality로 요구한다. 따라서 `canonicalRecordCommitted === true`와
 함께 `recordFailure === true`가 있더라도 cue byte 0으로 fail closed한다.
-`BEFORE_RESPONSE`는 `LOW` 또는 `MATERIAL`만 허용하며 `NONE`은 invalid다. `NONE`은 해당
+request와 event validator는 같은 closed timing/classification map을 확인한다. `BEFORE_RESPONSE`는
+`LOW` 또는 `MATERIAL`만 허용하며, request가 classification을 생략하거나 `NONE`을 쓰면 invalid다. `NONE`은 해당
 attempt에 pre-response cue exposure가 없었다는 뜻이다. timing과 classification은 canonical
 ledger에서 파생하고 client 입력을 신뢰하지 않는다. sequence에 pre-response event가 하나라도
 있으면 independent retrieval·far transfer·stable D+7은 부적격이며 뒤의 event가 복구하지 못한다.
