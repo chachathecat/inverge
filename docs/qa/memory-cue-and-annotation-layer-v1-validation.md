@@ -13,7 +13,7 @@ This record validates the V13 follow-up contract only:
 No runtime, UI, API, schema, persistence, provider, dependency, real content, roadmap or
 PR #692 mutation is included.
 
-Machine contract version: `1.0.18`.
+Machine contract version: `1.0.19`.
 
 ## Static assertions
 
@@ -120,11 +120,12 @@ Machine contract version: `1.0.18`.
     policies cannot authorize bytes. That gate requires one non-null exact attempt and learner scope resolving
     through the canonical server attempt ledger to exactly one closed, authoritative, server-side, independently
     resolved `INDEPENDENT_ATTEMPT_OPEN` record. Extra fields, zero/multiple records and non-boolean resolution state fail.
-    Its resolution,
-    every submitted-attempt resolution and the `REVIEW_ONLY` nested open-attempt absence resolution each pass the
-    same canonical-attempt-resolution state gate independently: `known === true`, `resolved === true`,
+    Its resolution and the `REVIEW_ONLY` nested open-attempt absence resolution each pass the same generic
+    canonical-attempt-resolution state gate independently: `known === true`, `resolved === true`,
     `ambiguous === false`, `conflicting === false`, `stale === false` and `clientInferred === false` by exact
-    primitive equality. Missing, defaulted, coerced or merely truthy state cannot satisfy that gate.
+    primitive equality. Missing, defaulted, coerced or merely truthy state cannot satisfy that gate. Submitted
+    attempts additionally use the stricter record-specific gate in rule 22; the generic state subset is not
+    authoritative or sufficient for submitted rendering.
 19. The shared gate requires one closed, single, authoritative, server-side, independently resolved, active deliberate
     server-recorded single-use confirmation bound exactly to learner, attempt, cue, cue revision and one request.
     known/resolved are exact true; ambiguous, conflicting, cross-learner, cross-attempt, mismatched, stale, replayed,
@@ -141,13 +142,19 @@ Machine contract version: `1.0.18`.
 22. Missing, empty, unknown, unresolved, ambiguous, conflicting, cross-learner, cross-attempt, submitted, closed,
     stale, cancelled, replayed, mismatched or client-inferred pre-response references, partial commit, inconsistent ledger state,
     record failure and render/submit race roll back and render no cue bytes. A canonical
-    submitted response permits `AFTER_RESPONSE` only. `AFTER_RESPONSE` requires both its request/event and its
-    independent canonical resolution to carry a non-null exact `attemptId` plus an exact primitive-string,
-    trimmed, non-empty `learnerPrivateScopeId`, bound to that authenticated learner and exact submitted attempt.
-    Two missing values cannot bind through `undefined === undefined`. Missing, undefined, null, empty, whitespace,
-    wrong-type, malformed, unknown, ambiguous, conflicting, cross-learner, cross-attempt, mismatched, stale,
-    replayed, client-inferred, caller-asserted, unresolved, pre-submission or latest-inferred references fail closed
-    with no cue bytes. Only evidence-neutral `REVIEW_ONLY` may remain attempt-unbound,
+    submitted response permits `AFTER_RESPONSE` only. Request, exposure-event and optional bound-review consumers
+    all delegate to `EXACT_CANONICAL_SUBMITTED_ATTEMPT_RESOLUTION_GATE_V1`. It accepts only one non-null, non-array,
+    additional-field-free record from `CANONICAL_SERVER_ATTEMPT_LEDGER`, with count 1 and exact state `SUBMITTED`.
+    `serverSide`, `authoritative`, `independentlyResolved`, `known`, `resolved`, `submitted` and
+    `submittedBeforeExposure` are exact primitive true. `crossLearner`, `crossAttempt`, `mismatched`, `replayed`,
+    `preSubmission`, `closed`, `stale`, `cancelled`, `ambiguous`, `conflicting`, `clientInferred` and
+    `callerInferred` are exact primitive false. The request/event subject and canonical record each independently
+    validate `attemptId` and `learnerPrivateScopeId` against the same exact trimmed canonical identifier schema
+    before equality. Subject and record learner scope must both exactly match server-authenticated
+    `authenticatedLearnerPrivateScopeId`; client/caller aliases cannot substitute. Matching missing, whitespace, malformed or
+    wrong-type values cannot bind. Wrong source/state/count, extra fields, foreign IDs, untrusted booleans and outer
+    source/state/success substitution fail closed with no cue bytes or positive learning evidence. Only
+    evidence-neutral `REVIEW_ONLY` may remain attempt-unbound,
     and both render paths delegate to `CANONICAL_REVIEW_ONLY_RENDER_GATE_V1`. Caller labels,
     `canonicalExposureRecordCommitted` booleans, client events and inferred timing do not authorize it. A trusted
     server resolver must prove one exact canonical timing/classification plus committed exposure bound to learner,
@@ -208,21 +215,34 @@ Machine contract version: `1.0.18`.
     primitive boolean and exactly false. Missing, undefined, null, non-boolean, true, ambiguous, cross-object or
     unvalidated values fail closed; the canonical closed signal-schema validator must bind proof to the exact
     signal/revision and validate the actual candidate's exact top-level and nested field sets. Candidate-supplied
-    `closedValueSchema` or proof markers are insufficient, and undeclared raw-answer, free-text or reconstructive
-    fields fail closed before eligibility. Client assertions are rejected. Absence of evidence is not content-safety evidence.
+    `closedValueSchema`, safety booleans, source labels or proof markers are non-authoritative echoes. Eligibility also
+    requires exactly one additional-field-free `CANONICAL_SIGNAL_ORIGIN_CONTENT_SAFETY_RESOLVER` decision-context
+    record bound to exact signal, revision, purpose and O5 scope. It must resolve the separate non-reconstructive origin;
+    server-side, authoritative, independently-resolved, known, resolved and separate-object states are exact true,
+    while every raw/reconstructive/rename/direct-promotion, ambiguous, conflicting, mismatched, cross-bound, stale,
+    replayed, cancelled and client/caller-inferred state is exact false. Missing, extra, wrong-source, non-single,
+    foreign or unsafe resolution fails before eligibility. Undeclared raw-answer, free-text or reconstructive fields
+    also fail closed. Client assertions are rejected. Absence of evidence is not content-safety evidence.
     A Cleared Content Bank candidate separately uses an identifier-only closed candidate schema. Caller-controlled
     authorship, rights, review or separate-object booleans, unknown fields and private-raw/free-text fields such as
-    `rawAnswer` are rejected. Eligibility requires one independently resolved, known, fresh, non-ambiguous,
-    non-conflicting, non-client-inferred and non-replayed canonical promotion/rights/provenance record bound
-    field-for-field to the exact candidate, revision, purpose and O5 scope. The closed record must prove separate object
-    identity, separate authorship, actual rights ownership, rights/provenance review and absence of personal/private raw
-    content. Missing, malformed, stale, inferred, mismatched, zero-record or multi-record provenance fails closed before
-    hypothetical receipts; the valid separately authored and rights-owned candidate path remains available.
-    A signal further
-    requires active exact-purpose consent and active finite purpose-scoped retention bound to exact signal,
-    revision, purpose and O5 scope. Both expiries are compared at each decision with an exact trusted server-clock
-    instant and must be strictly later; caller/candidate/client time, a fixed date, missing or invalid time, and the
-    at/after-expiry boundary fail closed. Generic opt-in, contract, administrator choice or O5 cannot substitute;
+    `rawAnswer` are rejected. Eligibility requires one additional-field-free closed canonical promotion/rights/
+    provenance record bound field-for-field to the exact candidate, revision, purpose and O5 scope. Server-side,
+    authoritative, independently-resolved, known and resolved are exact true; ambiguity, conflict, stale, replay,
+    cancellation, mismatch, client/caller inference and every cross-bound state are exact false. The record must prove
+    separate object identity, separate authorship, actual rights ownership, rights/provenance review and absence of
+    personal/private raw content. Missing, malformed, extra, unsafe, inferred, mismatched, zero-record or multi-record
+    provenance fails closed before hypothetical receipts; the valid separately authored and rights-owned candidate path
+    remains available.
+    A signal further requires separate closed canonical consent and retention decision-context records; candidate nested
+    objects are non-authoritative echoes. Each record has an exact source and canonical ID, one match, server-side,
+    authoritative, independently-resolved, known and resolved exact true, all unsafe/inferred/cross states exact false,
+    exact signal/revision/purpose/O5 binding and field-for-field agreement with its candidate echo. Consent must be active
+    and exact-purpose; retention must be active, finite and purpose-scoped. Expiry uses only their canonical `expiresAt`
+    values and one closed trusted-clock record with exact source/ID/count, server-side, authoritative,
+    independently-resolved, trusted, known and resolved true and every unsafe/inferred state false. Both expiries must be
+    strictly later than its canonical `evaluatedAt`; caller/candidate/client time, a fixed date, missing, extra, unsafe or
+    invalid canonical records and the at/after-expiry boundary fail closed. Generic opt-in, contract, administrator
+    choice or O5 cannot substitute;
     `consent.expired`, `consent.revoked`, `retention.expired` and `retention.revoked` must each be exact primitive
     boolean false. Missing, undefined, null, true, strings, numbers, objects, arrays, mismatched, indefinite or
     cross-purpose records fail closed before candidate eligibility or hypothetical receipts. Exact false preserves
@@ -313,10 +333,11 @@ All fail closed or hold.
 - cue bytes render before confirmation consumption, exposure, `ASSISTED` and evidence-invalidation commits all succeed;
 - partial commit, record failure or render/submit race still renders cue bytes;
 - an already submitted attempt is treated as `BEFORE_RESPONSE`;
-- `AFTER_RESPONSE` omits either `attemptId` or `learnerPrivateScopeId`, accepts matching undefined learner scopes,
-  accepts whitespace/wrong-type scope, borrows another learner's binding, uses client/latest/caller inference, or
-  resolves an unknown, ambiguous, conflicting, cross-learner, cross-attempt, mismatched, stale, replayed,
-  unresolved or pre-submission attempt reference;
+- `AFTER_RESPONSE` or optional bound `REVIEW_ONLY` omits either identifier, accepts matching malformed identifiers,
+  borrows another learner/attempt binding, uses client/latest/caller inference, accepts an open or additional-field
+  record, or resolves a non-single, non-server-side, non-authoritative, dependently resolved, unknown, ambiguous,
+  conflicting, cross-scope, mismatched, stale, replayed, cancelled, unresolved, pre-submission or caller-inferred
+  canonical attempt while still rendering or creating positive learning evidence;
 - request-side `AFTER_RESPONSE` accepts `canonicalExposureRecordCommitted: true` while
   `canonicalRecordCommitted` is missing, false or malformed;
 - exposure-event `AFTER_RESPONSE` accepts `canonicalRecordCommitted: true` together with `recordFailure: true`;
@@ -356,16 +377,22 @@ All are rejected.
 - a reconstructive signal admitted as non-reconstructive;
 - a candidate-supplied closed-schema/proof marker substitutes for validation of the actual signal object, or an
   undeclared raw-answer, free-text, reconstructive or nested field reaches candidate eligibility;
-- a Cleared Content Bank candidate supplies provenance booleans, an unknown/private-raw field, or a missing,
-  ambiguous, conflicting, stale, inferred, mismatched or non-single canonical promotion/rights/provenance record and
-  still reaches candidate eligibility or hypothetical receipts;
+- a Cleared Content Bank candidate supplies provenance booleans, an unknown/private-raw field, or a missing, extra,
+  non-server-side, non-authoritative, independently-unresolved, caller-inferred, cross-bound, ambiguous, conflicting,
+  stale, mismatched or non-single canonical promotion/rights/provenance record and still reaches candidate eligibility
+  or hypothetical receipts;
 - any one of the five signal content-safety fields is omitted, undefined, null, non-boolean or true;
+- candidate safety booleans/source markers substitute for a missing, extra, non-server-side, non-authoritative,
+  independently-unresolved, inferred, cross-bound or unsafe canonical origin/content-safety resolution;
 - signal safety proof is ambiguous, taken from another object, or not closed-schema validated;
 - a raw pointer or reconstructive derivative renamed, aliased or relabeled as a signal;
 - signal consent or retention is missing, generic, mismatched, indefinite or cross-purpose, or any consent/retention
   `expired`/`revoked` field is missing, undefined, null, true, a string, number, object or array instead of exact false;
+- a candidate-nested consent/retention object substitutes for a missing, extra, wrong-source, non-single,
+  non-server-side, non-authoritative, independently-unresolved, inferred or foreign canonical decision-context record;
 - consent or retention expiry is checked against a fixed/caller time, or is at/before trusted decision time;
-- trusted decision time is caller-controlled, missing, invalid, ambiguous or outside the server clock boundary;
+- trusted decision time is caller-controlled, missing, extra, invalid, non-single, non-server-side, non-authoritative,
+  independently-unresolved, inferred, ambiguous or outside the server clock boundary;
 - O5, contract, administrator choice or generic opt-in substitutes for exact-purpose consent or finite retention;
 - contribution, promotion or O5 treated as interchangeable gates;
 - contribution, promotion or O5 uses a global boolean or a missing, mismatched, cross-bound, ambiguous, replayed,
@@ -405,17 +432,16 @@ npm test
 npm run build
 ```
 
-Current correction-source evidence:
+Cycle 1 source-only workspace evidence:
 
 - JavaScript syntax check: passed.
-- Focused behavioral contract suite: 61/61 passed.
+- Focused behavioral contract suite: 62/62 passed.
 - Strict JSON parse, balanced Markdown fences, cross-artifact assertions and `git diff --check`: passed.
-- Typecheck: passed.
-- Lint: passed with 0 errors and 9 pre-existing warnings outside the MCAL diff.
-- Full Node test suite: 1,232/1,232 passed.
-- Production build: compilation, TypeScript, page-data collection and 54/54 static pages passed locally on
-  host Node 24 after a workspace-only preload handled the unavailable `uv_resident_set_memory` syscall; no
-  preload or repository byte is published. Exact-head GitHub Node 22 and Vercel builds remain required.
+- This materialized source-only workspace does not contain the repository dependency tree or the non-MCAL source
+  files needed to rerun typecheck, lint, the full Node suite or production build before push. The pre-cycle exact head
+  `902824817eb123269d7b13ddf617b09891bf9ca3` had recorded typecheck pass, lint pass with 0 errors and 9 pre-existing
+  warnings outside the MCAL diff, full Node 1,232/1,232 pass, and production build pass through 54/54 static pages.
+  Those baseline results do not substitute for the required seven exact-head gates on the corrective commit.
 
 The repository PR Contract, Fast CI, Full CI, Learner Loop Health, Risk Gate and Runtime
 Gate must also pass on the same exact head.

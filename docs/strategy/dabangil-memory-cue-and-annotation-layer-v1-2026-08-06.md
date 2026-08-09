@@ -26,7 +26,7 @@ execution_rule: "This annex fixes contracts and development order only. It autho
 
 `Memory Cue & Annotation Layer(MCAL)`은 V13을 대체하는 새 마스터플랜이 아니다.
 V13의 근거·개념·문항·검증·학습증거 사이에 다음 연결점만 고정하는 필수 후속 부속계약이다.
-동기화된 machine contract version은 `1.0.18`이다.
+동기화된 machine contract version은 `1.0.19`이다.
 
 ```text
 VESG / exact definition / QuestionUnit
@@ -533,19 +533,25 @@ D+7 stable / timed: HIDDEN
   inconsistent ledger state 또는 render/submit race는 모두 fail closed하며 cue byte를 전혀 렌더하지 않는다.
 - pre-response의 실제 `renderSubmitRaceDetected`는 exact primitive `false`여야 하며 missing·coercion·string·
   number·object·array도 안전 상태를 증명하지 못한다.
-- submitted binding, `BEFORE_RESPONSE` open-attempt binding, `REVIEW_ONLY` nested zero-count absence proof의
-  canonical attempt resolution은 하나의 shared `canonical attempt resolution state gate`를 각각 독립적으로
-  통과해야 한다. 이 gate는 `known === true`, `resolved === true`, `ambiguous === false`,
+- `BEFORE_RESPONSE` open-attempt binding과 `REVIEW_ONLY` nested zero-count absence proof의 canonical attempt
+  resolution은 shared generic `canonical attempt resolution state gate`를 각각 독립적으로 통과해야 한다.
+  이 gate는 `known === true`, `resolved === true`, `ambiguous === false`,
   `conflicting === false`, `stale === false`, `clientInferred === false`를 exact primitive equality로 요구하며
-  missing·default·coercion·truthiness로 대체하지 않는다.
-- 이미 response가 제출된 canonical attempt는 `AFTER_RESPONSE`만 허용한다. 이 variant의 request/event와
-  canonical server attempt resolution은 각각 non-null exact `attemptId`와 exact primitive string인
-  trimmed·non-empty `learnerPrivateScopeId`를 독립적으로 가져야 한다. 두 필드는 바로 그 authenticated
-  learner scope의 `SUBMITTED` attempt 한 건과 정확히 일치한 뒤에만 렌더한다. 두 쪽이 모두 필드를
-  생략해 matching `undefined` values가 된 경우도 binding이 아니며, client/latest/caller 추론은 금지한다.
-- missing·undefined·null·empty·whitespace·wrong-type·malformed·unknown·ambiguous·conflicting·cross-learner·
-  cross-attempt·mismatched·stale·replayed·client-inferred·caller-asserted·unresolved·pre-submission attempt 또는
-  learner-scope reference는 fail closed하며 cue byte를 전혀 렌더하지 않는다.
+  missing·default·coercion·truthiness로 대체하지 않는다. 이 generic subset은 submitted rendering을 단독으로
+  authorize하지 않는다.
+- 이미 response가 제출된 canonical attempt는 `AFTER_RESPONSE`만 허용한다. request, exposure event와 optional
+  bound `REVIEW_ONLY`는 모두 하나의 authoritative `EXACT_CANONICAL_SUBMITTED_ATTEMPT_RESOLUTION_GATE_V1`에
+  위임한다. resolution은 additional-field-free non-null·non-array closed object, exact server ledger source,
+  count 1 및 `SUBMITTED`를 요구한다. server-side·authoritative·independently-resolved·known·resolved·submitted·
+  submitted-before-exposure는 exact primitive true이고 cross-learner·cross-attempt·mismatch·replay·pre-submission·
+  closed·stale·cancelled·ambiguity·conflict·client/caller inference는 exact primitive false여야 한다.
+  subject와 record의 `attemptId`·`learnerPrivateScopeId`는 같은 exact trimmed canonical identifier schema를 각각
+  독립적으로 통과한 다음 server-authenticated `authenticatedLearnerPrivateScopeId`와 exact attempt에
+  field-for-field로 일치해야 한다. authenticated scope, subject와 record의 learner scope 세 값은 모두
+  독립적으로 schema-valid해야 하며 client/caller authenticated-scope alias는 받지 않는다.
+  matching missing·whitespace·malformed·wrong-type identifier, outer source/state/success claim, client/latest/caller
+  inference, missing·extra-field·wrong-source·zero/multiple·foreign·unsafe·unsubmitted record는 cue byte와 positive
+  learning evidence를 모두 0으로 fail closed한다. 약한 outer policy는 authorization authority가 아니다.
 - 별도 `REVIEW_ONLY` variant만 attempt에 묶이지 않을 수 있고 항상 evidence-neutral이지만,
   caller label·`canonicalExposureRecordCommitted` boolean·client event·inferred timing으로 선택할 수 없다.
   cue render request validator와 exposure-event validator 모두
@@ -690,6 +696,9 @@ type ExactCanonicalSubmittedAttemptBindingV1 = {
   learnerPrivateScopeId: string;
   canonicalAttemptState: "SUBMITTED";
   matchingRecordCount: 1;
+  serverSide: true;
+  authoritative: true;
+  independentlyResolved: true;
   known: true;
   resolved: true;
   submitted: true;
@@ -705,6 +714,7 @@ type ExactCanonicalSubmittedAttemptBindingV1 = {
   stale: false;
   cancelled: false;
   clientInferred: false;
+  callerInferred: false;
 };
 
 type CanonicalReviewOnlyResolutionV1 = {
@@ -813,6 +823,50 @@ const EXACT_CANONICAL_ATTEMPT_RESOLUTION_STATE_GATE_V1 = {
   },
   eachResolutionValidatedIndependently: true,
   truthinessDefaultingCoercionOrAbsenceAccepted: false,
+} as const;
+
+const EXACT_CANONICAL_SUBMITTED_ATTEMPT_RESOLUTION_GATE_V1 = {
+  source: "CANONICAL_SERVER_ATTEMPT_LEDGER",
+  additionalFieldsAllowed: false,
+  requiredFields: [
+    "source", "attemptId", "learnerPrivateScopeId", "canonicalAttemptState",
+    "matchingRecordCount", "serverSide", "authoritative", "independentlyResolved",
+    "known", "resolved", "submitted", "submittedBeforeExposure", "crossLearner",
+    "crossAttempt", "mismatched", "replayed", "preSubmission", "closed", "stale",
+    "cancelled", "ambiguous", "conflicting", "clientInferred", "callerInferred",
+  ],
+  identifierFields: ["attemptId", "learnerPrivateScopeId"],
+  identifierSchema: "EXACT_TRIMMED_CANONICAL_IDENTIFIER_V1",
+  exactMatchingRecordCount: 1,
+  requiredCanonicalAttemptState: "SUBMITTED",
+  requiredExactPrimitiveBooleanStates: {
+    serverSide: true,
+    authoritative: true,
+    independentlyResolved: true,
+    known: true,
+    resolved: true,
+    submitted: true,
+    submittedBeforeExposure: true,
+    crossLearner: false,
+    crossAttempt: false,
+    mismatched: false,
+    replayed: false,
+    preSubmission: false,
+    closed: false,
+    stale: false,
+    cancelled: false,
+    ambiguous: false,
+    conflicting: false,
+    clientInferred: false,
+    callerInferred: false,
+  },
+  consumers: [
+    "validateCanonicalAttemptBinding",
+    "evaluateCueRender.AFTER_RESPONSE",
+    "validateCueExposureEvent.AFTER_RESPONSE",
+    "authorizeCanonicalReviewOnlyCueRender.OPTIONAL_BOUND_REVIEW_ONLY",
+  ],
+  weakerOuterPolicyAuthoritative: false,
 } as const;
 
 const PRE_RESPONSE_RENDER_GATE_V1 = {
@@ -936,9 +990,11 @@ type CanonicalExposureHistoryV1 = {
   모두 commit된 다음에만 cue byte를 렌더한다. partial commit, ordering ambiguity, ledger record
   failure 또는 render/submit race는 rollback 후 fail closed하며 cue byte와 independent credit 모두 0이다.
 - canonical state가 `SUBMITTED`이면 `BEFORE_RESPONSE`는 거부하고 `AFTER_RESPONSE`만 허용한다.
-  `AFTER_RESPONSE`는 non-null exact `attemptId`를 canonical server ledger의 exact submitted attempt에
-  resolve해야 한다. missing/empty/unknown/cross-learner/cross-attempt/mismatch/replay/pre-submission,
-  client attempt ID 또는 latest-attempt 추론은 모두 cue byte 0으로 fail closed한다.
+  `AFTER_RESPONSE` request/event와 optional bound review는 동일 closed submitted-record gate로 exact source,
+  single count, `SUBMITTED`, server-side/authority/independent-resolution, full safe/unsafe primitive state와
+  independently schema-validated exact attempt/learner binding을 증명해야 한다. malformed matching IDs,
+  undeclared fields, outer/caller substitution, unknown/cross-scope/mismatch/replay/pre-submission/cancellation/
+  inference는 cue byte와 positive learning evidence를 모두 0으로 fail closed한다.
 - `REVIEW_ONLY`만 attempt-unbound일 수 있다. optional binding이 있으면 동일 exact submitted-attempt
   validation을 통과해야 하며, bound/unbound 모두 independent retrieval·far transfer·stable D+7에는
   중립이다. 단, 두 render-capable path에서 trusted server resolution과 matching open independent
@@ -1087,12 +1143,13 @@ input이나 training candidate로 만들 수 없다. raw body의 이름·별칭�
 Cleared Content Bank candidate는 exact identifier-only closed field set만 허용한다. caller가 공급한
 `separateObjectIdentity`·`separatelyAuthored`·`rightsOwned`·`rightsReviewed`·`provenanceReviewed`
 boolean, unknown field, `rawAnswer`·private raw pointer·free text·excerpt·reconstructive payload는 eligibility
-증거가 아니며 즉시 reject한다. 별도 canonical promotion/rights/provenance resolver의 independently
-resolved record 한 건이 known·resolved·non-ambiguous·non-conflicting·fresh·non-client-inferred·
-non-replayed 상태를 exact하게 만족하고 candidate kind·`signalId`·`signalRevisionId`·`purposeId`·
-`o5ScopeId`를 field-for-field bind해야 한다. 그 closed record가 separate object identity, separate
-authorship, actual rights ownership, rights/provenance review 및 personal/private raw content 부재를 각각
-증명해야 한다. missing·malformed·unknown·mismatched·ambiguous·conflicting·stale·inferred·0건·복수
+증거가 아니며 즉시 reject한다. 별도 canonical promotion/rights/provenance resolver의 additional-field-free
+closed record 한 건이 exact source·count 1을 갖고 `serverSide`·`authoritative`·`independentlyResolved`·
+`known`·`resolved` exact true와 `ambiguous`·`conflicting`·`stale`·`clientInferred`·`callerInferred`·
+`replayed`·`cancelled`·`mismatched`·모든 cross-bound state exact false를 만족해야 한다. record는 candidate
+kind·`signalId`·`signalRevisionId`·`purposeId`·`o5ScopeId`를 field-for-field bind하고 separate object
+identity, separate authorship, actual rights ownership, rights/provenance review 및 personal/private raw content
+부재를 각각 증명해야 한다. missing·extra·malformed·unknown·mismatched·unsafe·stale·inferred·0건·복수
 record는 hypothetical approval receipt 평가 전에 fail closed한다. 이 canonical proof를 가진 유효한 별도
 authored·rights-owned candidate path는 유지한다.
 
@@ -1116,7 +1173,8 @@ safe candidate eligibility를 유지하되 hypothetical receipt validity와 curr
 mock·fixture·hypothetical/future context가 이를 override할 수 없다. 현재 사용 activation은 canonical
 authorization boundary를 바꾸는 별도 Owner 승인 변경을 요구한다.
 
-`SEPARATE_NON_RECONSTRUCTIVE_SIGNAL`에는 위 세 gate와 별도로 다음 두 record가 모두 필요하다.
+`SEPARATE_NON_RECONSTRUCTIVE_SIGNAL`에는 위 세 approval gate와 별도로 canonical origin/content-safety,
+consent, retention decision-context resolution 및 trusted decision-time record가 모두 필요하다.
 
 그보다 먼저, 같은 validated signal candidate object에 아래 다섯 property가 각각 명시적으로 존재하고
 primitive boolean이며 정확히 `false`여야 한다.
@@ -1138,10 +1196,24 @@ additional/unknown field는 허용하지 않으므로 `rawAnswer`, free text 또
 있으면 다른 marker가 모두 정상이어도 eligibility 전에 fail closed한다. property 부재는
 content safety의 증거가 아니다.
 
-- `CANONICAL_VERSIONED_CONSENT_OPT_OUT_LEDGER`의 active exact-purpose consent. consent는 exact
-  `signalId`·`signalRevisionId`·`purposeId`·`o5ScopeId`에 묶여야 한다.
-- `CANONICAL_PURPOSE_SCOPED_RETENTION_LEDGER`의 active finite purpose-bound retention. 동일 네 binding과 non-empty
-  `expiresAt`을 가지며 indefinite retention은 허용하지 않는다.
+candidate의 다섯 safety boolean, source label, `closedValueSchema`와 proof marker는 canonical origin 또는
+content-safety 판정을 대신하지 않는다. 별도 decision-context의 additional-field-free closed
+`CANONICAL_SIGNAL_ORIGIN_CONTENT_SAFETY_RESOLVER` record 한 건이 exact signal·revision·purpose·O5 scope에
+bind하고 `SEPARATE_NON_RECONSTRUCTIVE_SIGNAL_ORIGIN`을 resolve해야 한다. server-side·authoritative·
+independently-resolved·known·resolved·separate-object state는 exact true이고 raw body/pointer/excerpt/
+free-text/reconstructive/rename/direct-promotion·ambiguous·conflicting·mismatched·cross-bound·stale·replayed·
+cancelled·client/caller-inferred state는 exact false다. candidate echo만 있거나 record가 missing·extra·
+wrong-source·0건/복수·foreign·unsafe이면 hypothetical receipt 평가 전에 fail closed한다.
+
+- `CANONICAL_VERSIONED_CONSENT_OPT_OUT_LEDGER`의 active exact-purpose canonical consent resolution 한 건.
+- `CANONICAL_PURPOSE_SCOPED_RETENTION_LEDGER`의 active finite purpose-bound retention canonical resolution 한 건.
+
+candidate 내부 consent/retention은 non-authoritative echo다. 두 decision-context record는 각각
+additional-field-free closed object, exact canonical record ID·source·count 1, server-side·authoritative·
+independently-resolved·known·resolved exact true와 ambiguous·conflicting·mismatched·cross-bound·stale·
+replayed·cancelled·client/caller-inferred exact false를 요구한다. 둘 다 exact `signalId`·`signalRevisionId`·
+`purposeId`·`o5ScopeId`에 bind되고 source/state/expiry/boolean을 포함한 candidate echo와 field-for-field로
+일치해야 한다. candidate label이나 canonical-looking nested object만으로 ledger resolution을 대체할 수 없다.
 
 두 canonical record는 각각 `consent.expired === false`, `consent.revoked === false`,
 `retention.expired === false`, `retention.revoked === false`를 exact primitive boolean으로 요구한다.
@@ -1151,11 +1223,13 @@ undefined·null·true·string(`"true"`, `"false"`)·number·object·array 또는
 binding·finite-retention·trusted-time·strict-future-expiry gate가 통과할 때 eligibility만 보존하며 consent,
 receipt, current use, training, promotion 또는 O5 authorization을 만들지 않는다.
 
-consent와 retention의 두 `expiresAt`은 decision 시점마다 `TRUSTED_SERVER_CLOCK_BOUNDARY`에서 얻거나
-trusted server boundary를 통해 주입된 exact ISO-8601 UTC `evaluatedAt`과 비교한다. 두 expiry 모두
-evaluation time보다 엄격히 뒤여야 한다. candidate·caller·client time, missing·invalid·ambiguous·untrusted
-clock, expiry와 같은 시각 또는 그 이전은 candidate eligibility false로 fail closed한다. 고정 날짜 비교는
-금지한다.
+consent와 retention의 두 `expiresAt`은 candidate echo가 아니라 위 canonical resolution에서만 읽는다.
+decision 시점의 `TRUSTED_SERVER_CLOCK_BOUNDARY`도 additional-field-free closed canonical record 한 건이어야
+한다. exact source·record ID·count 1, server-side·authoritative·independently-resolved·trusted·known·resolved
+exact true와 ambiguous·conflicting·stale·replayed·cancelled·client/caller-inferred exact false를 검증한 뒤
+canonical ISO-8601 UTC `evaluatedAt`만 비교에 사용한다. 두 expiry 모두 evaluation time보다 엄격히 뒤여야
+한다. candidate·caller·client time, missing·extra·invalid·ambiguous·untrusted·non-single clock record,
+expiry와 같은 시각 또는 그 이전은 candidate eligibility false로 fail closed한다. 고정 날짜 비교는 금지한다.
 
 ```ts
 type CandidateBoundTrainingApprovalReceiptV1 = {
@@ -1191,10 +1265,22 @@ type CandidateBoundTrainingApprovalReceiptV1 = {
 
 type TrustedTrainingDecisionTimeV1 = {
   source: "TRUSTED_SERVER_CLOCK_BOUNDARY";
+  recordId: string;
   evaluatedAt: string;
+  matchingRecordCount: 1;
   serverSide: true;
+  authoritative: true;
+  independentlyResolved: true;
   trusted: true;
+  known: true;
+  resolved: true;
   ambiguous: false;
+  conflicting: false;
+  stale: false;
+  replayed: false;
+  cancelled: false;
+  clientInferred: false;
+  callerInferred: false;
 };
 ```
 
@@ -1459,9 +1545,11 @@ review_only_with_matching_open_independent_attempt = 0
 - every declared anchor required binding passes exact type, closed enum, pattern and kind-policy consistency;
   truthiness-only validation is forbidden.
 - personal annotation remains last and private.
-- every signal content-safety field is present on the same validated object as boolean `false`; missing,
-  undefined, null, non-boolean, true, ambiguous, cross-object and unvalidated proofs fail closed.
-- consent and retention expiry use trusted server decision time, and contribution/promotion/O5 each require
+- every signal content-safety field is present on the same validated object as boolean `false`, and one separate
+  closed authoritative `CANONICAL_SIGNAL_ORIGIN_CONTENT_SAFETY_RESOLVER` record proves the bound safe origin;
+  candidate-only, missing, extra, unsafe, inferred or cross-object proofs fail closed.
+- consent and retention use separate closed authoritative decision-context records and expiry uses one closed trusted
+  server decision-time record; candidate/caller-shaped echoes cannot substitute. Contribution/promotion/O5 each require
   an independently resolved exact-candidate-bound receipt while canonical authorization flags remain false.
 - Portable Core owns interfaces only.
 - MCAL-1 through MCAL-4 remain unauthorized.

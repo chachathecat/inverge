@@ -485,6 +485,7 @@ function reviewOnlyRequest(overrides = {}) {
     timing: "REVIEW_ONLY",
     assistanceClassification: "NONE",
     learnerPrivateScopeId: "learner-1",
+    authenticatedLearnerPrivateScopeId: "learner-1",
     attemptScopeId: "question-scope-1",
     cueId: "cue-1",
     cueRevisionId: "cue-revision-1",
@@ -508,6 +509,7 @@ function cueEvent(overrides = {}) {
     renderSubmitRaceDetected: false,
     attemptId: "attempt-1",
     learnerPrivateScopeId: "learner-1",
+    authenticatedLearnerPrivateScopeId: "learner-1",
     attemptResolution: canonicalAttemptResolution(),
     ...overrides,
   };
@@ -530,16 +532,6 @@ function cueEvent(overrides = {}) {
       : canonicalReviewOnlyResolution();
   }
   return event;
-}
-
-function hasExactCanonicalAttemptResolutionStates(resolution) {
-  const stateGate = contract.cueExposure.canonicalAttemptResolutionStateGate;
-  return resolution !== null
-    && typeof resolution === "object"
-    && !Array.isArray(resolution)
-    && Object.entries(stateGate.requiredExactPrimitiveBooleanStates).every(
-      ([field, expected]) => resolution[field] === expected,
-    );
 }
 
 function hasExactClosedCanonicalRecord(record, gate) {
@@ -632,52 +624,55 @@ function hasExactPreResponseNoRaceState(subject) {
 
 function validateCanonicalAttemptBinding(subject) {
   const gate = contract.cueExposure.afterResponseGate;
+  const resolutionGate = gate.canonicalSubmittedAttemptResolutionGate;
   if (
     subject.clientAttemptId !== undefined
     || subject.inferLatestAttempt === true
     || subject.clientLearnerPrivateScopeId !== undefined
     || subject.callerLearnerPrivateScopeId !== undefined
+    || subject.clientAuthenticatedLearnerPrivateScopeId !== undefined
+    || subject.callerAuthenticatedLearnerPrivateScopeId !== undefined
     || subject.inferLearnerPrivateScopeId === true
   ) {
     return { accepted: false, reason: "UNTRUSTED_OR_INFERRED_ATTEMPT_OR_LEARNER_SCOPE" };
   }
-  if (typeof subject.attemptId !== "string" || subject.attemptId.trim().length === 0) {
+  if (!isCanonicalIdentifier(subject.attemptId, resolutionGate.identifierSchema)) {
     return { accepted: false, reason: "EXACT_ATTEMPT_ID_REQUIRED" };
   }
   const learnerScopeRule = gate.learnerPrivateScopeBindingRule;
   const learnerScope = subject[learnerScopeRule.field];
+  if (!isCanonicalIdentifier(learnerScope, resolutionGate.identifierSchema)) {
+    return { accepted: false, reason: "EXACT_LEARNER_PRIVATE_SCOPE_ID_REQUIRED" };
+  }
+  const authenticatedLearnerScope = subject[learnerScopeRule.authenticatedField];
   if (
-    typeof learnerScope !== learnerScopeRule.requiredPrimitiveType
-    || learnerScope.trim() !== learnerScope
-    || learnerScope.length < learnerScopeRule.minimumLength
-  ) return { accepted: false, reason: "EXACT_LEARNER_PRIVATE_SCOPE_ID_REQUIRED" };
+    !isCanonicalIdentifier(authenticatedLearnerScope, resolutionGate.identifierSchema)
+    || authenticatedLearnerScope !== learnerScope
+  ) {
+    return { accepted: false, reason: "AUTHENTICATED_LEARNER_PRIVATE_SCOPE_MISMATCH" };
+  }
   const resolution = subject.attemptResolution;
   if (!resolution) return { accepted: false, reason: "ATTEMPT_RESOLUTION_MISSING" };
-  if (resolution.source !== gate.attemptResolutionSource) {
-    return { accepted: false, reason: "ATTEMPT_RESOLUTION_SOURCE_INVALID" };
-  }
-  if (!hasExactCanonicalAttemptResolutionStates(resolution)) {
-    return { accepted: false, reason: "ATTEMPT_RESOLUTION_STATE_INVALID" };
-  }
-  const resolvedLearnerScope = resolution[learnerScopeRule.field];
   if (
-    typeof resolvedLearnerScope !== learnerScopeRule.requiredPrimitiveType
-    || resolvedLearnerScope.trim() !== resolvedLearnerScope
-    || resolvedLearnerScope.length < learnerScopeRule.minimumLength
-  ) return { accepted: false, reason: "CANONICAL_LEARNER_PRIVATE_SCOPE_ID_REQUIRED" };
-  if (
-    resolution.matchingRecordCount !== gate.exactMatchingRecordCount
-    || Object.entries(gate.requiredResolutionBooleanStates).some(
-      ([field, expected]) => resolution[field] !== expected,
-    )
+    !hasExactClosedCanonicalRecord(resolution, resolutionGate)
+    || resolution.canonicalAttemptState !== resolutionGate.requiredCanonicalAttemptState
   ) return { accepted: false, reason: "ATTEMPT_RESOLUTION_INVALID" };
-  for (const field of gate.exactBindingFields) {
-    if (resolution[field] !== subject[field]) {
-      return { accepted: false, reason: `ATTEMPT_${field.toUpperCase()}_MISMATCH` };
+  for (const [recordField, subjectField] of Object.entries(resolutionGate.recordBindingFields)) {
+    if (
+      !isCanonicalIdentifier(subject[subjectField], resolutionGate.identifierSchema)
+      || resolution[recordField] !== subject[subjectField]
+    ) {
+      return { accepted: false, reason: `ATTEMPT_${recordField.toUpperCase()}_MISMATCH` };
     }
   }
-  if (resolution.canonicalAttemptState !== gate.requiredCanonicalAttemptState) {
-    return { accepted: false, reason: "ATTEMPT_NOT_SUBMITTED" };
+  if (
+    subject.canonicalAttemptState !== undefined
+    && subject.canonicalAttemptState !== resolutionGate.requiredCanonicalAttemptState
+  ) {
+    return { accepted: false, reason: "OUTER_ATTEMPT_STATE_CONFLICT" };
+  }
+  if (resolution.learnerPrivateScopeId !== authenticatedLearnerScope) {
+    return { accepted: false, reason: "AUTHENTICATED_LEARNER_PRIVATE_SCOPE_MISMATCH" };
   }
   return { accepted: true };
 }
@@ -1893,7 +1888,7 @@ function evaluateAttemptEvidence(events, evidence = {}) {
   return validateLearningEvidence(events, evidence);
 }
 
-function validateSignalContentSafetyProof(candidate) {
+function validateSignalContentSafetyProof(candidate, decisionContext = {}) {
   const gate = contract.personalAnnotation.signalContentSafetyProofGate;
   const schema = gate.canonicalCandidateValueSchema;
   const failClosed = () => ({ accepted: false, reason: "SIGNAL_CLOSED_VALUE_SCHEMA_INVALID" });
@@ -1970,6 +1965,23 @@ function validateSignalContentSafetyProof(candidate) {
       || candidate[field] !== false
     ) {
       return { accepted: false, reason: `SIGNAL_CONTENT_SAFETY_${field}_NOT_EXPLICIT_FALSE` };
+    }
+  }
+  const resolutionGate = gate.canonicalOriginContentSafetyResolutionGate;
+  const resolution = decisionContext?.[resolutionGate.decisionContextField];
+  if (
+    !hasExactClosedCanonicalRecord(resolution, resolutionGate)
+    || resolution.originClassification !== resolutionGate.requiredOriginClassification
+  ) return { accepted: false, reason: "CANONICAL_SIGNAL_ORIGIN_CONTENT_SAFETY_INVALID" };
+  for (const field of resolutionGate.exactCandidateBindingFields) {
+    if (
+      !isCanonicalIdentifier(candidate[field], resolutionGate.identifierSchema)
+      || resolution[field] !== candidate[field]
+    ) return { accepted: false, reason: "CANONICAL_SIGNAL_ORIGIN_CONTENT_SAFETY_MISMATCH" };
+  }
+  for (const field of resolutionGate.candidateSafetyEchoFields) {
+    if (resolution[field] !== candidate[field]) {
+      return { accepted: false, reason: "CANONICAL_SIGNAL_CONTENT_SAFETY_ECHO_MISMATCH" };
     }
   }
   return { accepted: true };
@@ -2052,13 +2064,136 @@ function parseExactUtcInstant(value) {
   return milliseconds;
 }
 
+function signalContentSafetyResolution(overrides = {}) {
+  return {
+    source: "CANONICAL_SIGNAL_ORIGIN_CONTENT_SAFETY_RESOLVER",
+    resolutionId: "signal-safety-resolution-1",
+    originClassification: "SEPARATE_NON_RECONSTRUCTIVE_SIGNAL_ORIGIN",
+    matchingRecordCount: 1,
+    serverSide: true,
+    authoritative: true,
+    independentlyResolved: true,
+    known: true,
+    resolved: true,
+    signalId: "signal-1",
+    signalRevisionId: "signal-revision-1",
+    purposeId: "offline-training-purpose-1",
+    o5ScopeId: "o5-scope-1",
+    separateObjectIdentity: true,
+    containsRawAnnotationBody: false,
+    containsRawBodyPointer: false,
+    containsExcerptOrFreeText: false,
+    reconstructive: false,
+    reconstructiveDerivativeOfRawBody: false,
+    renamedOrAliasedRawBody: false,
+    renamedRawPointerAsSignal: false,
+    renamedReconstructiveDerivativeAsSignal: false,
+    directPromotionFromRawBody: false,
+    ambiguous: false,
+    conflicting: false,
+    mismatched: false,
+    crossCandidate: false,
+    crossRevision: false,
+    crossPurpose: false,
+    crossScope: false,
+    stale: false,
+    replayed: false,
+    cancelled: false,
+    clientInferred: false,
+    callerInferred: false,
+    ...overrides,
+  };
+}
+
+function canonicalConsentResolution(overrides = {}) {
+  return {
+    source: "CANONICAL_VERSIONED_CONSENT_OPT_OUT_LEDGER",
+    recordId: "consent-record-1",
+    signalId: "signal-1",
+    signalRevisionId: "signal-revision-1",
+    purposeId: "offline-training-purpose-1",
+    o5ScopeId: "o5-scope-1",
+    state: "ACTIVE",
+    expiresAt: "2026-12-31T00:00:00.000Z",
+    matchingRecordCount: 1,
+    serverSide: true,
+    authoritative: true,
+    independentlyResolved: true,
+    known: true,
+    resolved: true,
+    exactPurpose: true,
+    expired: false,
+    revoked: false,
+    ambiguous: false,
+    conflicting: false,
+    mismatched: false,
+    crossCandidate: false,
+    crossRevision: false,
+    crossPurpose: false,
+    crossScope: false,
+    stale: false,
+    replayed: false,
+    cancelled: false,
+    clientInferred: false,
+    callerInferred: false,
+    ...overrides,
+  };
+}
+
+function canonicalRetentionResolution(overrides = {}) {
+  return {
+    source: "CANONICAL_PURPOSE_SCOPED_RETENTION_LEDGER",
+    recordId: "retention-record-1",
+    signalId: "signal-1",
+    signalRevisionId: "signal-revision-1",
+    purposeId: "offline-training-purpose-1",
+    o5ScopeId: "o5-scope-1",
+    state: "ACTIVE",
+    expiresAt: "2026-12-31T00:00:00.000Z",
+    matchingRecordCount: 1,
+    serverSide: true,
+    authoritative: true,
+    independentlyResolved: true,
+    known: true,
+    resolved: true,
+    finite: true,
+    expired: false,
+    revoked: false,
+    ambiguous: false,
+    conflicting: false,
+    mismatched: false,
+    crossCandidate: false,
+    crossRevision: false,
+    crossPurpose: false,
+    crossScope: false,
+    stale: false,
+    replayed: false,
+    cancelled: false,
+    clientInferred: false,
+    callerInferred: false,
+    ...overrides,
+  };
+}
+
 function trustedEvaluationTime(overrides = {}) {
   return {
     source: "TRUSTED_SERVER_CLOCK_BOUNDARY",
+    recordId: "trusted-time-record-1",
     evaluatedAt: "2026-09-01T00:00:00.000Z",
+    matchingRecordCount: 1,
     serverSide: true,
+    authoritative: true,
+    independentlyResolved: true,
     trusted: true,
+    known: true,
+    resolved: true,
     ambiguous: false,
+    conflicting: false,
+    stale: false,
+    replayed: false,
+    cancelled: false,
+    clientInferred: false,
+    callerInferred: false,
     ...overrides,
   };
 }
@@ -2113,6 +2248,9 @@ function futureApprovalReceipts(overrides = {}) {
 
 function trainingDecisionContext(overrides = {}) {
   return {
+    signalContentSafetyResolution: signalContentSafetyResolution(),
+    consentResolution: canonicalConsentResolution(),
+    retentionResolution: canonicalRetentionResolution(),
     trustedEvaluationTime: trustedEvaluationTime(),
     ...overrides,
   };
@@ -2132,17 +2270,31 @@ function validateTrustedEvaluationTime(candidate, decisionContext) {
     || decisionContext.callerEvaluationTime !== undefined
     || decisionContext.clientEvaluationTime !== undefined
   ) return { accepted: false, reason: "CALLER_CONTROLLED_EVALUATION_TIME" };
-  const record = decisionContext.trustedEvaluationTime;
+  const record = decisionContext?.[gate.decisionContextField];
   const milliseconds = parseExactUtcInstant(record?.evaluatedAt);
   if (
-    !record
-    || record.source !== gate.source
-    || record.serverSide !== true
-    || record.trusted !== true
-    || record.ambiguous !== false
+    !hasExactClosedCanonicalRecord(record, gate)
     || milliseconds === null
   ) return { accepted: false, reason: "TRUSTED_EVALUATION_TIME_INVALID" };
   return { accepted: true, milliseconds };
+}
+
+function validateCanonicalPurposeResolution(candidate, candidateEcho, decisionContext, gate) {
+  const record = decisionContext?.[gate.decisionContextField];
+  if (
+    !hasExactClosedCanonicalRecord(record, gate)
+    || record.state !== gate.requiredState
+  ) return { accepted: false };
+  for (const field of gate.exactCandidateBindingFields) {
+    if (
+      !isCanonicalIdentifier(candidate[field], gate.identifierSchema)
+      || record[field] !== candidate[field]
+    ) return { accepted: false };
+  }
+  for (const [field, value] of Object.entries(candidateEcho ?? {})) {
+    if (record[field] !== value) return { accepted: false };
+  }
+  return { accepted: true, record };
 }
 
 function validateTrainingApprovalReceipts(candidate, decisionContext) {
@@ -2228,7 +2380,7 @@ function evaluateTrainingCandidate(candidate, decisionContext = {}) {
     return { candidateEligible: false, currentlyAuthorized: false, reason: "UNKNOWN_CANDIDATE_KIND" };
   }
   if (candidate.kind === "SEPARATE_NON_RECONSTRUCTIVE_SIGNAL") {
-    const contentSafety = validateSignalContentSafetyProof(candidate);
+    const contentSafety = validateSignalContentSafetyProof(candidate, decisionContext);
     if (!contentSafety.accepted) {
       return { candidateEligible: false, currentlyAuthorized: false, reason: contentSafety.reason };
     }
@@ -2241,12 +2393,31 @@ function evaluateTrainingCandidate(candidate, decisionContext = {}) {
     const purposeGate = annotation.signalPurposeGate;
     const consent = candidate.consent;
     const retention = candidate.retention;
+    const canonicalConsent = validateCanonicalPurposeResolution(
+      candidate,
+      consent,
+      decisionContext,
+      purposeGate.canonicalConsentResolutionGate,
+    );
+    const canonicalRetention = validateCanonicalPurposeResolution(
+      candidate,
+      retention,
+      decisionContext,
+      purposeGate.canonicalRetentionResolutionGate,
+    );
+    if (!canonicalConsent.accepted || !canonicalRetention.accepted) {
+      return {
+        candidateEligible: false,
+        currentlyAuthorized: false,
+        reason: "CANONICAL_SIGNAL_PURPOSE_RESOLUTION_INVALID",
+      };
+    }
     const trustedTime = validateTrustedEvaluationTime(candidate, decisionContext);
     if (!trustedTime.accepted) {
       return { candidateEligible: false, currentlyAuthorized: false, reason: trustedTime.reason };
     }
-    const retentionExpiry = parseExactUtcInstant(retention?.expiresAt);
-    const consentExpiry = parseExactUtcInstant(consent?.expiresAt);
+    const retentionExpiry = parseExactUtcInstant(canonicalRetention.record.expiresAt);
+    const consentExpiry = parseExactUtcInstant(canonicalConsent.record.expiresAt);
     const exactPurposeStatesValid = Object.entries(
       purposeGate.requiredExactPrimitiveBooleanStates,
     ).every(([recordName, requiredStates]) => Object.entries(requiredStates).every(
@@ -2371,6 +2542,8 @@ function clearedContentProvenanceRecord(overrides = {}) {
   return {
     source: "CANONICAL_CLEARED_CONTENT_PROMOTION_RIGHTS_PROVENANCE_RESOLVER",
     recordId: "ccp-record-1",
+    serverSide: true,
+    authoritative: true,
     independentlyResolved: true,
     matchingRecordCount: 1,
     known: true,
@@ -2379,7 +2552,14 @@ function clearedContentProvenanceRecord(overrides = {}) {
     conflicting: false,
     stale: false,
     clientInferred: false,
+    callerInferred: false,
     replayed: false,
+    cancelled: false,
+    mismatched: false,
+    crossCandidate: false,
+    crossRevision: false,
+    crossPurpose: false,
+    crossScope: false,
     kind: "SEPARATELY_AUTHORED_RIGHTS_REVIEWED_CLEARED_CONTENT_BANK_OBJECT",
     signalId: "signal-1",
     signalRevisionId: "signal-revision-1",
@@ -2444,6 +2624,7 @@ function cueRenderRequest(overrides = {}) {
     assistanceClassification: "LOW",
     attemptId: "attempt-1",
     learnerPrivateScopeId: "learner-1",
+    authenticatedLearnerPrivateScopeId: "learner-1",
     cueId: "cue-1",
     cueRevisionId: "cue-revision-1",
     requestId: "request-1",
@@ -2522,7 +2703,7 @@ test("MCAL paths resolve and V13 remains sole active master plan", () => {
   assert.match(active, /dabangil-professional-exam-reasoning-os-final-master-plan-v13-2026-08-06\.md/);
   assert.match(active, /Memory Cue & Annotation Layer/);
   assert.doesNotMatch(active, /final-master-plan-v14/);
-  assert.equal(contract.version, "1.0.18");
+  assert.equal(contract.version, "1.0.19");
   assert.equal(contract.compatibility.v13RemainsSoleActiveMasterPlan, true);
   assert.equal(contract.compatibility.newMasterPlanVersionCreated, false);
 });
@@ -2663,8 +2844,11 @@ test("Markdown fences and exact boundary language are present", () => {
   const decision = read(P.decision);
   const qa = read(P.qa);
   for (const body of [annex, decision, qa]) {
-    assert.match(body, /machine contract version(?:은|:) `1\.0\.18`/i);
-    assert.doesNotMatch(body, /1\.0\.17/);
+    assert.match(body, /machine contract version(?:은|:) `1\.0\.19`/i);
+    assert.doesNotMatch(body, /1\.0\.18/);
+    assert.match(body, /CANONICAL_SIGNAL_ORIGIN_CONTENT_SAFETY_RESOLVER/);
+    assert.match(body, /decision-context/);
+    assert.match(body, /caller(?:-|\/)?.?inferred/i);
   }
   assert.match(annex, /암기용 풀이입니다\. 시험용 정확한 정의를 대체하지 않습니다\./);
   assert.match(annex, /MCAL-4 — personal annotation editor/);
@@ -2679,7 +2863,7 @@ test("Markdown fences and exact boundary language are present", () => {
   assert.match(annex, /direct raw-body model training = 0 unconditionally/);
   assert.match(annex, /\(`ALL_OF`\)/);
   assert.match(annex, /eligibility만 보존/);
-  assert.match(annex, /non-null exact `attemptId`/);
+  assert.match(annex, /EXACT_CANONICAL_SUBMITTED_ATTEMPT_RESOLUTION_GATE_V1/);
   assert.match(annex, /CANONICAL_VERSIONED_CONSENT_OPT_OUT_LEDGER/);
   assert.match(annex, /finite purpose-bound retention/);
   assert.match(annex, /EXACT_PRE_RESPONSE_RENDER_GATE_V1/);
@@ -2692,7 +2876,7 @@ test("Markdown fences and exact boundary language are present", () => {
   assert.match(annex, /truthiness-only 검사는 금지/);
   assert.match(annex, /CANONICAL_SERVER_PRIVATE_ANCHOR_OWNER_BOUNDARY/);
   assert.match(annex, /canonicalRecordCommitted === true/);
-  assert.match(annex, /matching `undefined` values/);
+  assert.match(annex, /matching missing·whitespace·malformed·wrong-type identifier/);
   assert.match(annex, /`consent\.expired === false`/);
   assert.match(annex, /`canonicalExposureRecordCommitted`[^\n]*대체/);
   assert.match(annex, /canonical attempt resolution state gate/);
@@ -2741,7 +2925,7 @@ test("Markdown fences and exact boundary language are present", () => {
   assert.match(decision, /각 evaluation completion은 자신이 bind된 canonical attempt의 `submittedAt`/);
   assert.match(decision, /receipt set은 `contribution`·`promotion`·`o5`만 가진 closed object/);
   assert.match(qa, /PR #692 is merged at `512bfdb9232a86bf4f7d4cfbc076a9df1c8a7da2`/);
-  assert.match(qa, /Focused behavioral contract suite: 61\/61 passed/);
+  assert.match(qa, /Focused behavioral contract suite: 62\/62 passed/);
   assert.match(qa, /Merely supplying two different task IDs is insufficient/);
   assert.match(qa, /canonical transfer attempt and its independently resolved task binding/);
   assert.match(qa, /canonicalD7Attempt/);
@@ -5007,6 +5191,8 @@ test("cleared content eligibility requires closed independently resolved candida
     null,
     [],
     clearedContentProvenanceRecord({ source: "CLIENT" }),
+    clearedContentProvenanceRecord({ serverSide: false }),
+    clearedContentProvenanceRecord({ authoritative: false }),
     clearedContentProvenanceRecord({ independentlyResolved: false }),
     clearedContentProvenanceRecord({ matchingRecordCount: 0 }),
     clearedContentProvenanceRecord({ matchingRecordCount: 2 }),
@@ -5016,7 +5202,14 @@ test("cleared content eligibility requires closed independently resolved candida
     clearedContentProvenanceRecord({ conflicting: true }),
     clearedContentProvenanceRecord({ stale: true }),
     clearedContentProvenanceRecord({ clientInferred: true }),
+    clearedContentProvenanceRecord({ callerInferred: true }),
     clearedContentProvenanceRecord({ replayed: true }),
+    clearedContentProvenanceRecord({ cancelled: true }),
+    clearedContentProvenanceRecord({ mismatched: true }),
+    clearedContentProvenanceRecord({ crossCandidate: true }),
+    clearedContentProvenanceRecord({ crossRevision: true }),
+    clearedContentProvenanceRecord({ crossPurpose: true }),
+    clearedContentProvenanceRecord({ crossScope: true }),
     clearedContentProvenanceRecord({ signalId: "signal-other" }),
     clearedContentProvenanceRecord({ signalRevisionId: "revision-other" }),
     clearedContentProvenanceRecord({ separatelyAuthored: false }),
@@ -5031,6 +5224,22 @@ test("cleared content eligibility requires closed independently resolved candida
     const missing = clearedContentProvenanceRecord();
     delete missing[field];
     invalidRecords.push(missing);
+  }
+  for (const field of gate.recordClosedSchema.identifierFields) {
+    invalidRecords.push(clearedContentProvenanceRecord({ [field]: "?" }));
+  }
+  for (const field of gate.exactCandidateBindingFields) {
+    invalidRecords.push(clearedContentProvenanceRecord({ [field]: `foreign-${field}` }));
+  }
+  for (const [field, expected] of Object.entries(gate.recordClosedSchema.exactValues)) {
+    const invalidValues = typeof expected === "boolean"
+      ? [!expected, null, String(expected), 0, {}, []]
+      : typeof expected === "number"
+        ? [expected + 1, String(expected), null]
+        : [`wrong-${field}`, null];
+    for (const invalidValue of invalidValues) {
+      invalidRecords.push(clearedContentProvenanceRecord({ [field]: invalidValue }));
+    }
   }
   for (const clearedContentProvenance of invalidRecords) {
     const result = evaluateTrainingCandidate(
@@ -5100,6 +5309,7 @@ test("only separate safe candidates remain behind distinct contribution, promoti
 
 test("signals require affirmative same-object validated boolean-false content-safety proofs", () => {
   const gate = contract.personalAnnotation.signalContentSafetyProofGate;
+  const resolutionGate = gate.canonicalOriginContentSafetyResolutionGate;
   assert.deepEqual(gate.requiredBooleanFalseFields, [
     "containsRawAnnotationBody",
     "containsRawBodyPointer",
@@ -5116,9 +5326,25 @@ test("signals require affirmative same-object validated boolean-false content-sa
   assert.equal(gate.exactSignalAndRevisionBindingRequired, true);
   assert.equal(gate.ambiguousProofAllowed, false);
   assert.equal(gate.crossObjectProofAllowed, false);
+  assert.equal(resolutionGate.additionalFieldsAllowed, false);
+  assert.equal(
+    resolutionGate.resolutionSource,
+    "CANONICAL_SIGNAL_ORIGIN_CONTENT_SAFETY_RESOLVER",
+  );
+  assert.equal(resolutionGate.exactMatchingRecordCount, 1);
+  assert.equal(
+    resolutionGate.requiredOriginClassification,
+    "SEPARATE_NON_RECONSTRUCTIVE_SIGNAL_ORIGIN",
+  );
+  assert.equal(resolutionGate.candidateSourceLabelBooleanOrSchemaMarkerSubstitutionAllowed, false);
 
   const allHypotheticalGates = hypotheticalReceiptValidTrainingDecisionContext();
   const validCandidate = signalCandidate();
+  const validResolution = signalContentSafetyResolution();
+  assert.deepEqual(
+    sorted(Object.keys(validResolution)),
+    sorted(resolutionGate.requiredFields),
+  );
   for (const field of gate.requiredBooleanFalseFields) {
     assert.equal(Object.hasOwn(validCandidate, field), true, field);
     assert.equal(typeof validCandidate[field], "boolean", field);
@@ -5148,6 +5374,54 @@ test("signals require affirmative same-object validated boolean-false content-sa
     const result = evaluateTrainingCandidate(invalidCandidate, allHypotheticalGates);
     assert.equal(result.candidateEligible, false, result.reason);
     assert.equal(result.currentlyAuthorized, false, result.reason);
+  }
+
+  const invalidResolutions = [
+    [undefined, "missing resolution"],
+    [null, "null resolution"],
+    [[], "array resolution"],
+    [{ ...validResolution, extraField: true }, "extra field"],
+    [signalContentSafetyResolution({ source: "CLIENT" }), "wrong source"],
+    [signalContentSafetyResolution({ matchingRecordCount: 0 }), "zero records"],
+    [signalContentSafetyResolution({ matchingRecordCount: 2 }), "multiple records"],
+    [signalContentSafetyResolution({
+      originClassification: "PERSONAL_ANNOTATION_RAW_BODY",
+    }), "raw origin"],
+  ];
+  for (const field of resolutionGate.requiredFields) {
+    const missing = signalContentSafetyResolution();
+    delete missing[field];
+    invalidResolutions.push([missing, `missing ${field}`]);
+  }
+  for (const field of resolutionGate.identifierFields) {
+    invalidResolutions.push([signalContentSafetyResolution({ [field]: "?" }), `malformed ${field}`]);
+  }
+  for (const field of resolutionGate.exactCandidateBindingFields) {
+    invalidResolutions.push([
+      signalContentSafetyResolution({ [field]: `foreign-${field}` }),
+      `foreign ${field}`,
+    ]);
+  }
+  for (const [field, expected] of Object.entries(
+    resolutionGate.requiredExactPrimitiveBooleanStates,
+  )) {
+    for (const invalidValue of [!expected, null, String(expected), 0, {}, []]) {
+      invalidResolutions.push([
+        signalContentSafetyResolution({ [field]: invalidValue }),
+        `${field}: ${String(invalidValue)}`,
+      ]);
+    }
+  }
+  for (const [signalContentSafetyResolutionRecord, label] of invalidResolutions) {
+    const result = evaluateTrainingCandidate(
+      validCandidate,
+      hypotheticalReceiptValidTrainingDecisionContext({
+        signalContentSafetyResolution: signalContentSafetyResolutionRecord,
+      }),
+    );
+    assert.equal(result.candidateEligible, false, label);
+    assert.equal(result.hypotheticalReceiptsValid === true, false, label);
+    assert.equal(result.currentlyAuthorized, false, label);
   }
 
   assert.deepEqual(evaluateTrainingCandidate(validCandidate, allHypotheticalGates), {
@@ -5202,6 +5476,86 @@ test("signals require exact-purpose consent and finite purpose-bound retention",
   assert.equal(gate.administratorChoiceAcceptedAsConsent, false);
   assert.equal(gate.o5AcceptedAsConsentOrRetention, false);
   assert.equal(gate.indefiniteRetentionAccepted, false);
+  assert.equal(gate.candidateNestedConsentOrRetentionRecordAuthoritative, false);
+
+  const canonicalResolutionCases = [
+    {
+      label: "consent",
+      decisionContextField: "consentResolution",
+      gate: gate.canonicalConsentResolutionGate,
+      fixture: canonicalConsentResolution,
+    },
+    {
+      label: "retention",
+      decisionContextField: "retentionResolution",
+      gate: gate.canonicalRetentionResolutionGate,
+      fixture: canonicalRetentionResolution,
+    },
+  ];
+  for (const canonicalCase of canonicalResolutionCases) {
+    const canonicalRecord = canonicalCase.fixture();
+    assert.equal(canonicalCase.gate.additionalFieldsAllowed, false, canonicalCase.label);
+    assert.equal(canonicalCase.gate.exactMatchingRecordCount, 1, canonicalCase.label);
+    assert.equal(canonicalCase.gate.requiredState, "ACTIVE", canonicalCase.label);
+    assert.equal(
+      canonicalCase.gate.candidateSourceLabelStateOrBooleanSubstitutionAllowed,
+      false,
+      canonicalCase.label,
+    );
+    assert.deepEqual(
+      sorted(Object.keys(canonicalRecord)),
+      sorted(canonicalCase.gate.requiredFields),
+      canonicalCase.label,
+    );
+
+    const invalidRecords = [
+      [undefined, "missing resolution"],
+      [null, "null resolution"],
+      [[], "array resolution"],
+      [{ ...canonicalRecord, extraField: true }, "extra field"],
+      [canonicalCase.fixture({ source: "CLIENT" }), "wrong source"],
+      [canonicalCase.fixture({ state: "INACTIVE" }), "wrong state"],
+      [canonicalCase.fixture({ matchingRecordCount: 0 }), "zero records"],
+      [canonicalCase.fixture({ matchingRecordCount: 2 }), "multiple records"],
+      [canonicalCase.fixture({ expiresAt: "not-a-time" }), "malformed expiry"],
+    ];
+    for (const field of canonicalCase.gate.requiredFields) {
+      const missing = canonicalCase.fixture();
+      delete missing[field];
+      invalidRecords.push([missing, `missing ${field}`]);
+    }
+    for (const field of canonicalCase.gate.identifierFields) {
+      invalidRecords.push([canonicalCase.fixture({ [field]: "?" }), `malformed ${field}`]);
+    }
+    for (const field of canonicalCase.gate.exactCandidateBindingFields) {
+      invalidRecords.push([
+        canonicalCase.fixture({ [field]: `foreign-${field}` }),
+        `foreign ${field}`,
+      ]);
+    }
+    for (const [field, expected] of Object.entries(
+      canonicalCase.gate.requiredExactPrimitiveBooleanStates,
+    )) {
+      for (const invalidValue of [!expected, null, String(expected), 0, {}, []]) {
+        invalidRecords.push([
+          canonicalCase.fixture({ [field]: invalidValue }),
+          `${field}: ${String(invalidValue)}`,
+        ]);
+      }
+    }
+    for (const [record, mutation] of invalidRecords) {
+      const result = evaluateTrainingCandidate(
+        signalCandidate(),
+        hypotheticalReceiptValidTrainingDecisionContext({
+          [canonicalCase.decisionContextField]: record,
+        }),
+      );
+      const label = `${canonicalCase.label}: ${mutation}`;
+      assert.equal(result.candidateEligible, false, label);
+      assert.equal(result.hypotheticalReceiptsValid === true, false, label);
+      assert.equal(result.currentlyAuthorized, false, label);
+    }
+  }
 
   const allHypotheticalGates = hypotheticalReceiptValidTrainingDecisionContext();
   assert.deepEqual(evaluateTrainingCandidate(signalCandidate(), allHypotheticalGates), {
@@ -5474,8 +5828,20 @@ test("consent and retention expiry use only trusted server decision time", () =>
   assert.equal(gate.callerProvidedTimeAccepted, false);
   assert.equal(gate.candidateProvidedTimeAccepted, false);
   assert.equal(gate.expiryBoundaryPolicy, "EXPIRY_MUST_BE_STRICTLY_AFTER_EVALUATION_TIME");
+  assert.equal(gate.additionalFieldsAllowed, false);
+  assert.equal(gate.exactMatchingRecordCount, 1);
+  assert.deepEqual(
+    sorted(Object.keys(trustedEvaluationTime())),
+    sorted(gate.requiredFields),
+  );
 
   const decisionAtBoundary = hypotheticalReceiptValidTrainingDecisionContext({
+    consentResolution: canonicalConsentResolution({
+      expiresAt: "2026-09-02T00:00:00.000Z",
+    }),
+    retentionResolution: canonicalRetentionResolution({
+      expiresAt: "2026-09-02T00:00:00.000Z",
+    }),
     trustedEvaluationTime: trustedEvaluationTime({ evaluatedAt: "2026-09-01T00:00:00.000Z" }),
   });
   const beforeExpiry = evaluateTrainingCandidate(signalCandidate({
@@ -5493,25 +5859,57 @@ test("consent and retention expiry use only trusted server decision time", () =>
     ]) {
       const result = evaluateTrainingCandidate(signalCandidate({
         [field]: { expiresAt },
-      }), decisionAtBoundary);
+      }), hypotheticalReceiptValidTrainingDecisionContext({
+        trustedEvaluationTime: trustedEvaluationTime({
+          evaluatedAt: "2026-09-01T00:00:00.000Z",
+        }),
+        ...(field === "consent"
+          ? { consentResolution: canonicalConsentResolution({ expiresAt }) }
+          : { retentionResolution: canonicalRetentionResolution({ expiresAt }) }),
+      }));
       assert.equal(result.candidateEligible, false, `${field}: ${expiresAt}`);
       assert.equal(result.currentlyAuthorized, false, `${field}: ${expiresAt}`);
     }
   }
 
-  const invalidContexts = [
-    {},
-    trainingDecisionContext({ trustedEvaluationTime: undefined }),
-    trainingDecisionContext({ trustedEvaluationTime: trustedEvaluationTime({ source: "CLIENT_CLOCK" }) }),
-    trainingDecisionContext({ trustedEvaluationTime: trustedEvaluationTime({ evaluatedAt: "not-a-time" }) }),
-    trainingDecisionContext({ trustedEvaluationTime: trustedEvaluationTime({ evaluatedAt: "2026-9-1" }) }),
-    trainingDecisionContext({ trustedEvaluationTime: trustedEvaluationTime({ serverSide: false }) }),
-    trainingDecisionContext({ trustedEvaluationTime: trustedEvaluationTime({ trusted: false }) }),
-    trainingDecisionContext({ trustedEvaluationTime: trustedEvaluationTime({ ambiguous: true }) }),
+  const invalidTimeRecords = [
+    [undefined, "missing record"],
+    [null, "null record"],
+    [[], "array record"],
+    [{ ...trustedEvaluationTime(), extraField: true }, "extra field"],
+    [trustedEvaluationTime({ source: "CLIENT_CLOCK" }), "wrong source"],
+    [trustedEvaluationTime({ evaluatedAt: "not-a-time" }), "malformed time"],
+    [trustedEvaluationTime({ evaluatedAt: "2026-9-1" }), "non-canonical time"],
+    [trustedEvaluationTime({ matchingRecordCount: 0 }), "zero records"],
+    [trustedEvaluationTime({ matchingRecordCount: 2 }), "multiple records"],
+  ];
+  for (const field of gate.requiredFields) {
+    const missing = trustedEvaluationTime();
+    delete missing[field];
+    invalidTimeRecords.push([missing, `missing ${field}`]);
+  }
+  for (const field of gate.identifierFields) {
+    invalidTimeRecords.push([trustedEvaluationTime({ [field]: "?" }), `malformed ${field}`]);
+  }
+  for (const [field, expected] of Object.entries(gate.requiredExactPrimitiveBooleanStates)) {
+    for (const invalidValue of [!expected, null, String(expected), 0, {}, []]) {
+      invalidTimeRecords.push([
+        trustedEvaluationTime({ [field]: invalidValue }),
+        `${field}: ${String(invalidValue)}`,
+      ]);
+    }
+  }
+  for (const [record, label] of invalidTimeRecords) {
+    const context = trainingDecisionContext({ trustedEvaluationTime: record });
+    const result = evaluateTrainingCandidate(signalCandidate(), context);
+    assert.equal(result.candidateEligible, false, label);
+    assert.equal(result.hypotheticalReceiptsValid === true, false, label);
+    assert.equal(result.currentlyAuthorized, false, label);
+  }
+  for (const context of [
     trainingDecisionContext({ callerEvaluationTime: "2026-08-01T00:00:00.000Z" }),
     trainingDecisionContext({ clientEvaluationTime: "2026-08-01T00:00:00.000Z" }),
-  ];
-  for (const context of invalidContexts) {
+  ]) {
     const result = evaluateTrainingCandidate(signalCandidate(), context);
     assert.equal(result.candidateEligible, false, result.reason);
     assert.equal(result.currentlyAuthorized, false, result.reason);
@@ -5802,6 +6200,190 @@ test("after-response rejects every non-exact canonical submitted-attempt referen
     assert.equal(result.mayRenderCueBytes, false, result.reason);
     assert.equal(result.independentEvidenceEligible, false, result.reason);
   }
+});
+
+test("submitted-attempt resolution is one closed authoritative record across every consumer", () => {
+  const outerGate = contract.cueExposure.afterResponseGate;
+  const gate = outerGate.canonicalSubmittedAttemptResolutionGate;
+  assert.equal(gate.gateId, "EXACT_CANONICAL_SUBMITTED_ATTEMPT_RESOLUTION_GATE_V1");
+  assert.equal(gate.additionalFieldsAllowed, false);
+  assert.equal(gate.resolutionSource, "CANONICAL_SERVER_ATTEMPT_LEDGER");
+  assert.equal(gate.exactMatchingRecordCount, 1);
+  assert.equal(gate.requiredCanonicalAttemptState, "SUBMITTED");
+  assert.equal(gate.subjectAndRecordIdentifiersValidatedIndependentlyBeforeEquality, true);
+  assert.equal(gate.authenticatedLearnerPrivateScopeBindingRequired, true);
+  assert.equal(
+    gate.authenticatedLearnerPrivateScopeField,
+    "authenticatedLearnerPrivateScopeId",
+  );
+  assert.equal(gate.authenticatedScopeAndSubjectAndRecordMustExactlyMatch, true);
+  assert.equal(gate.clientOrCallerAuthenticatedScopeAssertionAccepted, false);
+  assert.equal(gate.everyConsumerDelegatesToThisGate, true);
+  assert.equal(outerGate.genericAttemptResolutionStateGateSufficientForSubmittedAttempt, false);
+  assert.equal(outerGate.weakerOuterResolutionStatePolicyAuthoritative, false);
+  assert.deepEqual(gate.identifierFields, ["attemptId", "learnerPrivateScopeId"]);
+  assert.deepEqual(gate.identifierSchema, {
+    type: "string",
+    minLength: 3,
+    pattern: "^[A-Za-z0-9][A-Za-z0-9._:-]{2,127}$",
+  });
+  assert.deepEqual(sorted(Object.keys(canonicalAttemptResolution())), sorted(gate.requiredFields));
+  assert.deepEqual(gate.requiredExactPrimitiveBooleanStates, {
+    serverSide: true,
+    authoritative: true,
+    independentlyResolved: true,
+    known: true,
+    resolved: true,
+    submitted: true,
+    submittedBeforeExposure: true,
+    crossLearner: false,
+    crossAttempt: false,
+    mismatched: false,
+    replayed: false,
+    preSubmission: false,
+    closed: false,
+    stale: false,
+    cancelled: false,
+    ambiguous: false,
+    conflicting: false,
+    clientInferred: false,
+    callerInferred: false,
+  });
+
+  const consumers = [
+    ["after-response request", (attemptResolution, overrides = {}) => evaluateCueRender(
+      cueRenderRequest({
+        timing: "AFTER_RESPONSE",
+        canonicalAttemptState: "SUBMITTED",
+        confirmation: undefined,
+        attemptResolution,
+        ...overrides,
+      }),
+    )],
+    ["after-response event", (attemptResolution, overrides = {}) => validateCueExposureEvent(
+      cueEvent({ timing: "AFTER_RESPONSE", attemptResolution, ...overrides }),
+    )],
+    ["bound review request", (attemptResolution, overrides = {}) => evaluateCueRender(
+      reviewOnlyRequest({ attemptId: "attempt-1", attemptResolution, ...overrides }),
+    )],
+    ["bound review event", (attemptResolution, overrides = {}) => validateCueExposureEvent(
+      cueEvent(reviewOnlyRequest({ attemptId: "attempt-1", attemptResolution, ...overrides })),
+    )],
+    ["bound review authorizer", (attemptResolution, overrides = {}) => (
+      authorizeCanonicalReviewOnlyCueRender(
+        reviewOnlyRequest({ attemptId: "attempt-1", attemptResolution, ...overrides }),
+      )
+    )],
+  ];
+  const assertRejected = (attemptResolution, label, overrides = {}) => {
+    for (const [name, validate] of consumers) {
+      const result = validate(attemptResolution, overrides);
+      assert.equal(result.accepted, false, `${name}: ${label}`);
+      assert.equal(result.mayRenderCueBytes, false, `${name}: ${label}`);
+      assert.notEqual(result.positiveLearningEvidence, true, `${name}: ${label}`);
+    }
+  };
+
+  for (const malformed of [null, [], "record", 1, {}]) {
+    assertRejected(malformed, `malformed ${String(malformed)}`);
+  }
+  for (const field of gate.requiredFields) {
+    const record = canonicalAttemptResolution();
+    delete record[field];
+    assertRejected(record, `missing ${field}`);
+  }
+  assertRejected(canonicalAttemptResolution({ extraField: true }), "undeclared extra field");
+  assertRejected(canonicalAttemptResolution({ source: "CLIENT" }), "wrong source");
+  assertRejected(canonicalAttemptResolution({ matchingRecordCount: 0 }), "zero records");
+  assertRejected(canonicalAttemptResolution({ matchingRecordCount: 2 }), "multiple records");
+  assertRejected(
+    canonicalAttemptResolution({ canonicalAttemptState: "INDEPENDENT_ATTEMPT_OPEN" }),
+    "wrong canonical state",
+  );
+
+  for (const [field, expected] of Object.entries(gate.requiredExactPrimitiveBooleanStates)) {
+    const omitted = canonicalAttemptResolution();
+    delete omitted[field];
+    assertRejected(omitted, `omitted boolean ${field}`);
+    assertRejected(canonicalAttemptResolution({ [field]: !expected }), `unsafe boolean ${field}`);
+    for (const value of [null, String(expected), 1, {}, []]) {
+      assertRejected(canonicalAttemptResolution({ [field]: value }), `non-boolean ${field}`);
+    }
+  }
+
+  for (const field of gate.identifierFields) {
+    assertRejected(
+      canonicalAttemptResolution({ [field]: `foreign-${field}` }),
+      `foreign canonical ${field}`,
+    );
+    assertRejected(
+      canonicalAttemptResolution(),
+      `foreign subject ${field}`,
+      { [field]: `foreign-${field}` },
+    );
+    for (const value of [undefined, null, "", " ", "?", "a b", 1, true, {}, []]) {
+      assertRejected(
+        canonicalAttemptResolution({ [field]: value }),
+        `matching malformed ${field}: ${String(value)}`,
+        { [field]: value },
+      );
+    }
+  }
+
+  for (const value of [undefined, null, "", " ", "?", "learner-foreign", 1, true, {}, []]) {
+    assertRejected(
+      canonicalAttemptResolution(),
+      `invalid authenticated learner scope: ${String(value)}`,
+      { authenticatedLearnerPrivateScopeId: value },
+    );
+  }
+  assertRejected(canonicalAttemptResolution(), "client authenticated scope assertion", {
+    clientAuthenticatedLearnerPrivateScopeId: "learner-1",
+  });
+  assertRejected(canonicalAttemptResolution(), "caller authenticated scope assertion", {
+    callerAuthenticatedLearnerPrivateScopeId: "learner-1",
+  });
+
+  assertRejected(
+    canonicalAttemptResolution({ serverSide: false }),
+    "outer trust state cannot substitute",
+    {
+      serverSide: true,
+      authoritative: true,
+      independentlyResolved: true,
+      known: true,
+      resolved: true,
+      submitted: true,
+      callerInferred: false,
+    },
+  );
+  assertRejected(undefined, "outer source and success claims cannot substitute", {
+    canonicalAttemptStateSource: "CANONICAL_SERVER_ATTEMPT_LEDGER",
+    canonicalAttemptState: "SUBMITTED",
+    resolutionKnown: true,
+    resolutionSucceeded: true,
+  });
+
+  for (const [, validate] of consumers) {
+    const result = validate(canonicalAttemptResolution());
+    assert.equal(result.accepted, true);
+    assert.equal(result.mayRenderCueBytes, true);
+    assert.notEqual(result.positiveLearningEvidence, true);
+  }
+  for (const assistanceClassification of ["NONE", "LOW", "MATERIAL"]) {
+    const result = evaluateCueRender(cueRenderRequest({
+      timing: "AFTER_RESPONSE",
+      canonicalAttemptState: "SUBMITTED",
+      assistanceClassification,
+      confirmation: undefined,
+    }));
+    assert.equal(result.accepted, true, assistanceClassification);
+    assert.equal(result.mayRenderCueBytes, true, assistanceClassification);
+    assert.equal(result.positiveLearningEvidence, false, assistanceClassification);
+  }
+  assert.equal(evaluateCueRender(cueRenderRequest()).accepted, true);
+  assert.equal(evaluateCueRender(reviewOnlyRequest()).accepted, true);
+  assert.equal(validateCueExposureEvent(cueEvent(reviewOnlyRequest())).accepted, true);
 });
 
 test("after-response requests require canonicalRecordCommitted and ignore aliases", () => {
