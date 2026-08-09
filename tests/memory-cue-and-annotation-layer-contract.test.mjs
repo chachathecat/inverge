@@ -721,6 +721,27 @@ function hasAllowedTimingClassification(subject) {
   return Array.isArray(allowed) && allowed.includes(subject.assistanceClassification);
 }
 
+function validateExactReviewOnlyAuthenticatedLearnerScope(subject, resolution, openAttempt) {
+  const gate = contract.cueExposure.reviewOnlyGate.authenticatedLearnerScopeBindingGate;
+  if (
+    gate.clientOrCallerAliasAllowed !== false
+    || gate.inferenceAllowed !== false
+    || gate.comparison !== "EXACT_FIELD_FOR_FIELD"
+    || gate.allValidatedLearnerScopesMustExactlyEqual !== true
+    || gate.untrustedAliasFields.some((field) => subject[field] !== undefined)
+    || subject.inferLearnerPrivateScopeId === true
+  ) return false;
+  const authenticatedLearnerScope = subject[gate.field];
+  const learnerScopes = [
+    authenticatedLearnerScope,
+    subject.learnerPrivateScopeId,
+    resolution?.learnerPrivateScopeId,
+    openAttempt?.learnerPrivateScopeId,
+  ];
+  return learnerScopes.every((value) => isCanonicalIdentifier(value, gate.identifierSchema))
+    && learnerScopes.every((value) => value === authenticatedLearnerScope);
+}
+
 function authorizeCanonicalReviewOnlyCueRender(subject) {
   const gate = contract.cueExposure.reviewOnlyGate;
   const fail = (reason) => ({
@@ -789,6 +810,9 @@ function authorizeCanonicalReviewOnlyCueRender(subject) {
       ([recordField, subjectField]) => openAttempt[recordField] !== subject[subjectField],
     )
   ) return fail("MATCHING_CANONICAL_OPEN_ATTEMPT_NOT_PROVEN_ABSENT");
+  if (!validateExactReviewOnlyAuthenticatedLearnerScope(subject, resolution, openAttempt)) {
+    return fail("AUTHENTICATED_LEARNER_PRIVATE_SCOPE_MISMATCH");
+  }
   if (subject.attemptId !== undefined || subject.attemptResolution !== undefined) {
     const binding = validateCanonicalAttemptBinding(subject);
     if (!binding.accepted) return fail(binding.reason);
@@ -1706,6 +1730,22 @@ function resolveExactCanonicalD7Attempt(canonicalSourceAttempt, candidate, gate)
   for (const field of gate.timestampFields) {
     if (parseCanonicalUtcMilliseconds(canonicalD7Attempt[field]) === null) return false;
   }
+  const orderingGate = gate.canonicalSourceSubmissionOrderingGate;
+  const canonicalSourceSubmittedAt = parseCanonicalUtcMilliseconds(
+    canonicalSourceAttempt?.[orderingGate.canonicalSourceTimestampField],
+  );
+  const canonicalD7SubmittedAt = parseCanonicalUtcMilliseconds(
+    canonicalD7Attempt?.[orderingGate.canonicalD7TimestampField],
+  );
+  if (
+    orderingGate.comparison
+      !== "CANONICAL_D7_ATTEMPT_SUBMITTED_AT_GTE_CANONICAL_SOURCE_ATTEMPT_SUBMITTED_AT"
+    || orderingGate.equalityAccepted !== true
+    || orderingGate.callerOrOuterTimestampSubstitutionAllowed !== false
+    || canonicalSourceSubmittedAt === null
+    || canonicalD7SubmittedAt === null
+    || canonicalD7SubmittedAt < canonicalSourceSubmittedAt
+  ) return false;
   for (const [field, expected] of Object.entries(
     gate.requiredExactPrimitiveBooleanStates,
   )) {
@@ -2746,7 +2786,7 @@ test("MCAL paths resolve and V13 remains sole active master plan", () => {
   assert.match(active, /dabangil-professional-exam-reasoning-os-final-master-plan-v13-2026-08-06\.md/);
   assert.match(active, /Memory Cue & Annotation Layer/);
   assert.doesNotMatch(active, /final-master-plan-v14/);
-  assert.equal(contract.version, "1.0.20");
+  assert.equal(contract.version, "1.0.21");
   assert.equal(contract.compatibility.v13RemainsSoleActiveMasterPlan, true);
   assert.equal(contract.compatibility.newMasterPlanVersionCreated, false);
 });
@@ -2887,7 +2927,8 @@ test("Markdown fences and exact boundary language are present", () => {
   const decision = read(P.decision);
   const qa = read(P.qa);
   for (const body of [annex, decision, qa]) {
-    assert.match(body, /machine contract version(?:은|:) `1\.0\.20`/i);
+    assert.match(body, /machine contract version(?:은|:) `1\.0\.21`/i);
+    assert.doesNotMatch(body, /1\.0\.20/);
     assert.doesNotMatch(body, /1\.0\.19/);
     assert.doesNotMatch(body, /1\.0\.18/);
     assert.match(body, /CANONICAL_SIGNAL_ORIGIN_CONTENT_SAFETY_RESOLVER/);
@@ -2966,11 +3007,15 @@ test("Markdown fences and exact boundary language are present", () => {
   assert.match(annex, /evaluation completion은 bound base attempt의 canonical `submittedAt`/);
   assert.match(annex, /authenticated learner scope와 subject·attempt-resolution·confirmation learner scope 네 값/);
   assert.match(annex, /canonical transfer attempt의 `submittedAt` 자체도 canonical base\/source attempt/);
+  assert.match(annex, /authenticated learner scope, subject learner scope, outer canonical review-only resolution learner scope/);
+  assert.match(annex, /canonical D\+7 attempt의 `submittedAt` 자체도 canonical base\/source attempt/);
   assert.match(annex, /receipt set은 `contribution`·`promotion`·`o5`만 가진 closed object/);
   assert.match(decision, /outer resolution과 nested absence record는 각각 non-null·non-array closed object/);
   assert.match(decision, /각 evaluation completion은 자신이 bind된 canonical attempt의 `submittedAt`/);
   assert.match(decision, /인증된 요청 문맥의 `authenticatedLearnerPrivateScopeId`/);
   assert.match(decision, /canonical transfer attempt의 `submittedAt`은 canonical base\/source attempt/);
+  assert.match(decision, /REVIEW_ONLY도 인증된 요청 문맥의 `authenticatedLearnerPrivateScopeId`/);
+  assert.match(decision, /canonical D\+7 attempt의 `submittedAt` 자체도 canonical base\/source attempt/);
   assert.match(decision, /receipt set은 `contribution`·`promotion`·`o5`만 가진 closed object/);
   assert.match(qa, /PR #692 is merged at `512bfdb9232a86bf4f7d4cfbc076a9df1c8a7da2`/);
   assert.match(qa, /Focused behavioral contract suite: 62\/62 passed/);
@@ -2988,6 +3033,8 @@ test("Markdown fences and exact boundary language are present", () => {
   assert.match(qa, /one millisecond before rejects, equality and later completion pass/);
   assert.match(qa, /authenticated request-context learner scope/);
   assert.match(qa, /canonical transfer attempt's `submittedAt` must be at or after/);
+  assert.match(qa, /outer canonical review-only resolution\s+learner scope/);
+  assert.match(qa, /canonical D\+7 attempt's `submittedAt` must also be at or after/);
   assert.match(qa, /receipt set is a closed object containing exactly contribution, promotion and O5 fields/);
   assert.doesNotMatch(qa, /Focused behavioral contract suite: 52\/52 passed/);
   assert.doesNotMatch(qa, /Focused behavioral contract suite: 57\/57 passed/);
@@ -4767,6 +4814,7 @@ test("stable D+7 requires a completed hidden-cue nonconflicted canonical evaluat
 test("stable D+7 resolves one exact canonical D+7 attempt without weakening other credits", () => {
   const gate = contract.cueExposure.learningEvidenceGate
     .requiredAffirmativeEvidence.stableD7.canonicalD7AttemptResolutionGate;
+  const orderingGate = gate.canonicalSourceSubmissionOrderingGate;
   assert.equal(gate.recordRef, "evidence.stableD7.canonicalD7Attempt");
   assert.equal(gate.resolutionSource, "CANONICAL_SERVER_ATTEMPT_LEDGER");
   assert.equal(gate.exactMatchingRecordCount, 1);
@@ -4777,6 +4825,20 @@ test("stable D+7 resolves one exact canonical D+7 attempt without weakening othe
   assert.equal(gate.canonicalSourceAttemptMaySubstitute, false);
   assert.equal(gate.outerD7ClaimsMaySubstitute, false);
   assert.equal(gate.invalidD7AttemptAffectsIndependentRetrievalOrFarTransfer, false);
+  assert.equal(orderingGate.canonicalSourceAttemptRecordRef, "evidence.attempt");
+  assert.equal(orderingGate.canonicalSourceTimestampField, "submittedAt");
+  assert.equal(
+    orderingGate.canonicalD7AttemptRecordRef,
+    "evidence.stableD7.canonicalD7Attempt",
+  );
+  assert.equal(orderingGate.canonicalD7TimestampField, "submittedAt");
+  assert.equal(
+    orderingGate.comparison,
+    "CANONICAL_D7_ATTEMPT_SUBMITTED_AT_GTE_CANONICAL_SOURCE_ATTEMPT_SUBMITTED_AT",
+  );
+  assert.equal(orderingGate.equalityAccepted, true);
+  assert.equal(orderingGate.callerOrOuterTimestampSubstitutionAllowed, false);
+  assert.equal(orderingGate.invalidOrderingAffectsIndependentRetrievalOrFarTransfer, false);
 
   const sourceAttempt = canonicalIndependentAttempt();
   const base = {
@@ -4789,6 +4851,36 @@ test("stable D+7 resolves one exact canonical D+7 attempt without weakening othe
   assert.equal(valid.independentRetrieval, true);
   assert.equal(valid.farTransfer, true);
   assert.equal(valid.stableD7, true);
+
+  const equalSubmissionInstant = evaluateAttemptEvidence([], {
+    ...base,
+    stableD7: stableD7Evidence({
+      canonicalD7Attempt: canonicalSubmittedD7Attempt({ submittedAt: sourceAttempt.submittedAt }),
+    }),
+  });
+  assert.equal(equalSubmissionInstant.independentRetrieval, true);
+  assert.equal(equalSubmissionInstant.farTransfer, true);
+  assert.equal(equalSubmissionInstant.stableD7, true);
+
+  for (const stableD7 of [
+    stableD7Evidence({
+      canonicalD7Attempt: canonicalSubmittedD7Attempt({
+        submittedAt: "2026-07-31T23:59:59.999Z",
+      }),
+    }),
+    stableD7Evidence({
+      canonicalD7Attempt: canonicalSubmittedD7Attempt({
+        submittedAt: "2026-07-31T23:59:59.999Z",
+      }),
+      sourceAttemptSubmittedAt: "1900-01-01T00:00:00.000Z",
+      d7AttemptSubmittedAt: "2099-01-01T00:00:00.000Z",
+    }),
+  ]) {
+    const result = evaluateAttemptEvidence([], { ...base, stableD7 });
+    assert.equal(result.independentRetrieval, true);
+    assert.equal(result.farTransfer, true);
+    assert.equal(result.stableD7, false);
+  }
 
   const invalidCanonicalD7Attempts = [
     undefined,
@@ -6788,6 +6880,7 @@ test("review-only exposure events require canonical provenance and exact orderin
 
 test("review-only requires canonical server derivation and no matching open attempt", () => {
   const gate = contract.cueExposure.reviewOnlyGate;
+  const learnerScopeGate = gate.authenticatedLearnerScopeBindingGate;
   assert.equal(gate.gateId, "CANONICAL_REVIEW_ONLY_RENDER_GATE_V1");
   assert.equal(gate.sharedAcrossEveryRenderCapableValidator, true);
   assert.equal(gate.callerSuppliedReviewOnlyLabelSufficient, false);
@@ -6795,6 +6888,58 @@ test("review-only requires canonical server derivation and no matching open atte
   assert.equal(gate.clientEventAccepted, false);
   assert.equal(gate.inferredTimingAccepted, false);
   assert.equal(gate.matchingCanonicalOpenIndependentAttemptCount, 0);
+  assert.equal(learnerScopeGate.field, "authenticatedLearnerPrivateScopeId");
+  assert.equal(learnerScopeGate.source, "AUTHENTICATED_REQUEST_CONTEXT");
+  assert.deepEqual(learnerScopeGate.independentlyValidatedRefs, [
+    "subject.authenticatedLearnerPrivateScopeId",
+    "subject.learnerPrivateScopeId",
+    "subject.reviewOnlyResolution.learnerPrivateScopeId",
+    "subject.reviewOnlyResolution.openIndependentAttemptResolution.learnerPrivateScopeId",
+  ]);
+  assert.equal(learnerScopeGate.comparison, "EXACT_FIELD_FOR_FIELD");
+  assert.equal(learnerScopeGate.clientOrCallerAliasAllowed, false);
+  assert.equal(learnerScopeGate.inferenceAllowed, false);
+
+  const assertNoReviewOnlyRender = (subject, label) => {
+    for (const validate of [
+      evaluateCueRender,
+      (request) => validateCueExposureEvent(cueEvent(request)),
+    ]) {
+      const result = validate(subject);
+      assert.equal(result.accepted, false, `${label}: ${validate.name}`);
+      assert.equal(result.mayRenderCueBytes, false, `${label}: ${validate.name}`);
+    }
+  };
+  for (const invalid of [undefined, null, "", " ", "?", 1, true, {}, []]) {
+    assertNoReviewOnlyRender(
+      reviewOnlyRequest({ authenticatedLearnerPrivateScopeId: invalid }),
+      `authenticated learner scope ${String(invalid)}`,
+    );
+  }
+  for (const overrides of [
+    { authenticatedLearnerPrivateScopeId: "learner-foreign" },
+    { clientLearnerPrivateScopeId: "learner-1" },
+    { callerLearnerPrivateScopeId: "learner-1" },
+    { clientAuthenticatedLearnerPrivateScopeId: "learner-1" },
+    { callerAuthenticatedLearnerPrivateScopeId: "learner-1" },
+    { inferLearnerPrivateScopeId: true },
+  ]) assertNoReviewOnlyRender(reviewOnlyRequest(overrides), JSON.stringify(overrides));
+
+  assertNoReviewOnlyRender(reviewOnlyRequest({
+    learnerPrivateScopeId: "learner-foreign",
+    reviewOnlyResolution: canonicalReviewOnlyResolution({
+      learnerPrivateScopeId: "learner-foreign",
+      openIndependentAttemptResolution: { learnerPrivateScopeId: "learner-foreign" },
+    }),
+  }), "coordinated foreign learner without authenticated match");
+  assertNoReviewOnlyRender(reviewOnlyRequest({
+    authenticatedLearnerPrivateScopeId: "?",
+    learnerPrivateScopeId: "?",
+    reviewOnlyResolution: canonicalReviewOnlyResolution({
+      learnerPrivateScopeId: "?",
+      openIndependentAttemptResolution: { learnerPrivateScopeId: "?" },
+    }),
+  }), "matching malformed learner scopes");
 
   for (const request of [
     reviewOnlyRequest({ reviewOnlyResolution: undefined }),

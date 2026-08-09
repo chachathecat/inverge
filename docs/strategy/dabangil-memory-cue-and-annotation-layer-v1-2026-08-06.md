@@ -26,7 +26,7 @@ execution_rule: "This annex fixes contracts and development order only. It autho
 
 `Memory Cue & Annotation Layer(MCAL)`은 V13을 대체하는 새 마스터플랜이 아니다.
 V13의 근거·개념·문항·검증·학습증거 사이에 다음 연결점만 고정하는 필수 후속 부속계약이다.
-동기화된 machine contract version은 `1.0.20`이다.
+동기화된 machine contract version은 `1.0.21`이다.
 
 ```text
 VESG / exact definition / QuestionUnit
@@ -573,6 +573,10 @@ D+7 stable / timed: HIDDEN
   attempt resolver에서 `INDEPENDENT_ATTEMPT_OPEN`을 조회하고 같은 learner-private/attempt scope의 zero match를
   증명한다. safe state는 exact primitive true, declared ambiguity·conflict·cross-scope·mismatch·stale·replay·
   cancellation·client/caller inference는 exact primitive false여야 한다.
+  authenticated learner scope, subject learner scope, outer canonical review-only resolution learner scope,
+  nested zero-match absence record learner scope 네 값도 같은 exact canonical identifier schema를 독립적으로
+  통과하고 field-for-field로 일치해야 한다. matching malformed, coordinated foreign learner, client/caller alias
+  또는 inference는 request/event 양쪽에서 cue reveal을 승인하지 않는다.
   이 두 validator의 `REVIEW_ONLY` path도 shared canonical-record gate를 먼저 통과해
   `canonicalRecordCommitted === true`를 exact primitive equality로 증명해야 하며 필드 생략은 실패다.
   outer timing 또는 nested canonical timing이 `REVIEW_ONLY`인 모든 path는 routing이나 다른 early return 전에
@@ -630,6 +634,9 @@ D+7 stable / timed: HIDDEN
   더 오래된 timestamp, missing·mismatched·malformed 또는 unresolved provenance는 stable credit을 만들지 못한다.
   이와 별도로 D+7 evaluation completion은 자기 canonical D+7 attempt의 `submittedAt`과 같은 시각이거나 뒤여야
   한다. 1 ms 이전은 stable D+7만 거부하고 equality와 later completion은 통과한다.
+  canonical D+7 attempt의 `submittedAt` 자체도 canonical base/source attempt의 `submittedAt`과 같거나 뒤여야 한다.
+  두 trusted canonical attempt record의 exact RFC3339 UTC millisecond timestamp만 비교하며 D+7 attempt가 source보다
+  1 ms 앞서면 stable D+7만 거부한다. equality와 later는 허용하고 outer/caller source·D+7 timestamp는 대체하지 못한다.
 - missing exposure history/record, failed render, partial commit 또는 ambiguous record는 positive learning
   evidence 0으로 fail closed한다. `ASSISTED` attempt는 어떤 affirmative record가 있어도 부적격이다.
 - cue를 보고 맞힌 것은 independent mastery가 아니다.

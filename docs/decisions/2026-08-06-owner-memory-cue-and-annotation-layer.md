@@ -20,7 +20,7 @@ does_not_authorize:
 
 V13의 필수 후속 부속계약으로 `Memory Cue & Annotation Layer(MCAL)`를 채택한다.
 V13은 계속 유일한 active master plan이며 MCAL은 V14가 아니다.
-동기화된 machine contract version은 `1.0.20`이다.
+동기화된 machine contract version은 `1.0.21`이다.
 MCAL은 별도의 정의 저장소나 두 번째 정의 authority가 아니다. 모든 `exactDefinitionRef`는
 released·versioned VESG concept/evidence projection을 가리키며, 해석 실패·hold·drift 시 cue도 release하지 않는다.
 
@@ -162,6 +162,11 @@ independent state를 조회하고 같은 learner-private/attempt scope에 bind�
 known/resolved/server-side/authoritative/independently-resolved는 exact true이고, declared ambiguity·conflict·
 cross-scope·mismatch·stale·replay·cancel·client/caller inference는 exact false이며 undeclared field는 cue byte 0으로
 fail closed한다.
+REVIEW_ONLY도 인증된 요청 문맥의 `authenticatedLearnerPrivateScopeId`, subject learner scope, outer canonical
+review-only resolution learner scope, nested open-attempt absence record learner scope 네 값을 같은 exact canonical
+identifier schema로 각각 검증한 뒤 field-for-field로 모두 같게 요구한다. matching malformed 값, 인증 문맥과
+다른 foreign learner에 맞춘 세 record/subject, client/caller alias 또는 inference는 두 render validator 모두에서
+cue byte 0으로 실패한다.
 
 cue absence는 independent-evidence eligibility만 보존한다. empty event, cue-free sequence 또는
 `AFTER_RESPONSE` event만으로 independent retrieval·far transfer·stable D+7이 positive가 될 수 없다.
@@ -206,7 +211,10 @@ scope 및 submission ID에 exact-bind되고 base/source attempt와 달라야 하
 `INDEPENDENT`여야 하며 canonical `submittedAt`을 가져야 한다. known/resolved는 exact true이고 ambiguous·conflicting·cross-learner·cross-attempt·
 mismatched·stale·replayed·cancelled·client/caller-inferred는 exact false여야 한다. outer D+7 claims나 base
 attempt로 대체할 수 없고, 이 D+7-only resolution 실패는 otherwise valid independent retrieval과 far transfer를
-바꾸지 않는다. seven-day interval은 bound base attempt record의 canonical `submittedAt`과 bound
+바꾸지 않는다. canonical D+7 attempt의 `submittedAt` 자체도 canonical base/source attempt의 `submittedAt`과
+같거나 그 뒤여야 한다. 두 trusted canonical attempt record timestamp만 비교하며 D+7 attempt가 source보다 1 ms
+앞서면 stable D+7만 fail closed한다. equality와 later는 허용하고 outer/caller source·D+7 timestamp는 대체하지 못한다.
+seven-day interval은 bound base attempt record의 canonical `submittedAt`과 bound
 `canonicalD7Evaluation.d7EvaluationCompletedAt` 두 exact RFC3339 UTC millisecond instant만으로 계산하며 최소
 `604800000` ms여야 한다. outer source/completion timestamp, independently supplied older timestamp,
 `D_PLUS_7` label, caller elapsed 값, missing·mismatched·malformed·

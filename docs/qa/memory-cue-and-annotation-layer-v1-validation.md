@@ -13,7 +13,7 @@ This record validates the V13 follow-up contract only:
 No runtime, UI, API, schema, persistence, provider, dependency, real content, roadmap or
 PR #692 mutation is included.
 
-Machine contract version: `1.0.20`.
+Machine contract version: `1.0.21`.
 
 ## Static assertions
 
@@ -112,6 +112,10 @@ Machine contract version: `1.0.20`.
     stale, replayed, cancelled and client/caller-inferred exact false. Missing, malformed, wrong-source, zero/multiple,
     foreign, reused, unsubmitted, assisted or unsafe resolution denies stable D+7 only and preserves otherwise valid
     independent retrieval and far transfer; outer claims and the base attempt cannot substitute.
+    That canonical D+7 attempt's `submittedAt` must also be at or after the canonical base/source attempt's
+    `submittedAt`. Only those two trusted canonical attempt-record timestamps may satisfy the comparison; one
+    millisecond before rejects stable D+7, equality and later pass, and outer/caller source or D+7 timestamps cannot
+    substitute. This failure preserves otherwise valid independent retrieval and far-transfer credit.
     The interval uses only the bound source attempt's canonical `submittedAt` and the bound
     `canonicalD7Evaluation.d7EvaluationCompletedAt`, both exact RFC3339 UTC millisecond instants, and requires at least
     604800000 ms. An outer or independently supplied timestamp, source label, timing label, caller elapsed value,
@@ -176,6 +180,10 @@ Machine contract version: `1.0.20`.
     and attempt scopes, and exactly zero matches. Safe states are exact primitive true and every declared ambiguity,
     conflict, cross-scope, mismatch, stale, replay, cancellation or client/caller inference state is exact primitive false.
     Missing, malformed, extra-field, non-boolean, unresolved, foreign-scope or nonzero records fail with no cue bytes.
+    The authenticated request-context learner scope, subject learner scope, outer canonical review-only resolution
+    learner scope and nested zero-match absence-record learner scope are each independently canonical identifiers and
+    must all be field-for-field equal. Matching malformed scopes, a coordinated foreign learner that differs from the
+    authenticated context, client/caller aliases and inferred scope reject across both render validators.
     For review-only identified by either outer timing or nested canonical timing, both validators require the actual
     subject's `renderSubmitRaceDetected === false` by exact primitive equality before routing or any other early return,
     and the shared review-only authorizer revalidates it. Missing, undefined, null, true, strings, numbers, objects,
@@ -442,20 +450,22 @@ npm test
 npm run build
 ```
 
-Cycle 2 source-only workspace evidence:
+Cycle 3 source-only workspace evidence:
 
 - JavaScript syntax check: passed.
 - Focused behavioral contract suite: 62/62 passed.
 - Strict JSON parse, balanced Markdown fences, cross-artifact assertions and `git diff --check`: passed.
-- Mutation coverage now rejects missing, malformed, foreign, aliased or inferred pre-response authenticated learner
-  scope across both render validators, and rejects a canonical transfer attempt that predates its canonical source
-  attempt or tries to repair that order with outer/caller timestamps. Equality and later canonical transfer submission
-  preserve far-transfer; an ordering-only failure preserves otherwise valid independent retrieval and stable D+7.
+- Mutation coverage rejects missing, malformed, foreign, aliased or inferred authenticated learner scope across
+  pre-response and review-only request/event validators. Review-only independently binds authenticated, subject,
+  outer canonical resolution and nested zero-match absence-record learner scopes.
+- Canonical transfer and canonical D+7 attempts must each be at or after their canonical source attempt. Predating
+  downstream attempts and outer/caller timestamp substitution reject only the affected far-transfer or stable-D+7
+  credit; equality and later submissions pass and otherwise valid independent credits remain isolated.
 - This materialized source-only workspace does not contain the repository dependency tree or the non-MCAL source
-  files needed to rerun typecheck, lint, the full Node suite or production build before push. The cycle-2 base exact
-  head `e9b6b8a67a28e147fb804feb33593087419a57ad` passed PR Contract, Fast CI, Full CI, Learner Loop Health,
+  files needed to rerun typecheck, lint, the full Node suite or production build before push. The cycle-3 base exact
+  head `d9b9d00180e1ec7c714eab7b433a4f95a19c05d7` passed PR Contract, Fast CI, Full CI, Learner Loop Health,
   Risk Gate, Runtime Gate and Vercel deployment. Those base-head results do not substitute for the required seven
-  exact-head gates on the cycle-2 corrective commit.
+  exact-head gates on the cycle-3 corrective commit.
 
 The repository PR Contract, Fast CI, Full CI, Learner Loop Health, Risk Gate and Runtime
 Gate must also pass on the same exact head.
