@@ -13,6 +13,8 @@ This record validates the V13 follow-up contract only:
 No runtime, UI, API, schema, persistence, provider, dependency, real content, roadmap or
 PR #692 mutation is included.
 
+Machine contract version: `1.0.18`.
+
 ## Static assertions
 
 1. V13 remains the sole active master plan; MCAL is a mandatory follow-up annex, not V14.
@@ -94,8 +96,13 @@ PR #692 mutation is included.
     the source and transfer attempts plus learner, submission, evaluation, result and task IDs; its failure denies only
     far-transfer. Stable D+7 resolves one canonical source attempt from `evidence.attempt` and a separate candidate-owned
     closed `canonicalD7Evaluation`.
+    Each canonical evaluation completion must be at or after its own bound canonical submission: response uses the base
+    attempt, transfer uses the canonical transfer attempt and D+7 uses the canonical D+7 attempt. Both values are exact
+    RFC3339 UTC millisecond fields from those records; one millisecond before rejects, equality and later completion pass,
+    and outer/caller timestamp substitution cannot satisfy the ordering gate. Response failure denies all dependent
+    credits, while transfer and D+7 ordering failures remain isolated to their own credits.
     The actual D+7 candidate also carries one separately resolved authoritative `canonicalD7Attempt` bound exactly to
-    `d7AttemptId`, authenticated learner scope and submission ID, distinct from the base/source attempt, exactly `SUBMITTED` and
+    `d7AttemptId`, authenticated learner scope, submission ID and canonical `submittedAt`, distinct from the base/source attempt, exactly `SUBMITTED` and
     `INDEPENDENT`, with known/resolved exact true and ambiguous, conflicting, cross-learner, cross-attempt, mismatched,
     stale, replayed, cancelled and client/caller-inferred exact false. Missing, malformed, wrong-source, zero/multiple,
     foreign, reused, unsubmitted, assisted or unsafe resolution denies stable D+7 only and preserves otherwise valid
@@ -145,9 +152,13 @@ PR #692 mutation is included.
     `canonicalExposureRecordCommitted` booleans, client events and inferred timing do not authorize it. A trusted
     server resolver must prove one exact canonical timing/classification plus committed exposure bound to learner,
     attempt scope, cue, cue revision and request, while the canonical attempt ledger independently proves zero
-    matching open independent attempts. The nested zero-count absence result is itself validated as a complete
-    canonical resolution; missing, unresolved, ambiguous, conflicting, cross-learner, stale or client-inferred
-    state, or any matching open attempt, fails closed with no cue bytes.
+    matching open independent attempts. The outer resolution and nested zero-count absence result are independently
+    non-null, non-array closed canonical records with no undeclared fields. The outer record requires its exact resolver,
+    one authoritative/server-side/independently-resolved match and exact request/scope/timing/classification bindings.
+    The nested record requires the exact server attempt resolver, exact open-independent query, the same learner-private
+    and attempt scopes, and exactly zero matches. Safe states are exact primitive true and every declared ambiguity,
+    conflict, cross-scope, mismatch, stale, replay, cancellation or client/caller inference state is exact primitive false.
+    Missing, malformed, extra-field, non-boolean, unresolved, foreign-scope or nonzero records fail with no cue bytes.
     For review-only identified by either outer timing or nested canonical timing, both validators require the actual
     subject's `renderSubmitRaceDetected === false` by exact primitive equality before routing or any other early return,
     and the shared review-only authorizer revalidates it. Missing, undefined, null, true, strings, numbers, objects,
@@ -181,9 +192,14 @@ PR #692 mutation is included.
 35. Rename, alias or relabel cannot erase raw-body origin or directly promote that body to Cleared Content.
 36. Only a separate non-reconstructive signal or separately authored, rights-reviewed Cleared Content Bank
     object may be a future candidate; contribution, promotion and O5 remain three distinct gates. Each future
-    approval requires its own independently resolved receipt bound to exact signal, revision, purpose and O5 scope;
-    global booleans, cross-candidate/revision/purpose/scope, missing, ambiguous, replayed, stale, revoked or unresolved
-    receipts cannot authorize a candidate, and all canonical authorization flags remain false. Even a structurally
+    approval requires its own independently resolved receipt bound to exact signal, revision, purpose and O5 scope.
+    The receipt set is a closed object containing exactly contribution, promotion and O5 fields, and every receipt is a
+    closed canonical record with exact kind-specific source, one match, a distinct canonical nonempty receipt ID and no
+    undeclared fields. Server-side, authoritative, independently-resolved, known, resolved and active are exact true;
+    ambiguity, conflict, replay, stale, revocation, client/caller inference and declared cross-scope states are exact false.
+    Global booleans, duplicate IDs, cross-candidate/revision/purpose/scope, missing, extra, malformed, wrong-source,
+    non-boolean or unresolved receipts make `hypotheticalReceiptsValid` and `currentlyAuthorized` false while preserving
+    an otherwise safe candidate's eligibility. All canonical authorization flags remain false. Even a structurally
     valid candidate-bound mock/future receipt set proves only the future binding contract: it cannot authorize
     current training, offline training or any other current use; `currentlyAuthorized` remains exactly false and
     future activation requires a separately authorized canonical-boundary change. A signal also

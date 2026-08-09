@@ -26,6 +26,7 @@ execution_rule: "This annex fixes contracts and development order only. It autho
 
 `Memory Cue & Annotation Layer(MCAL)`은 V13을 대체하는 새 마스터플랜이 아니다.
 V13의 근거·개념·문항·검증·학습증거 사이에 다음 연결점만 고정하는 필수 후속 부속계약이다.
+동기화된 machine contract version은 `1.0.18`이다.
 
 ```text
 VESG / exact definition / QuestionUnit
@@ -556,6 +557,12 @@ D+7 stable / timed: HIDDEN
   conflicting·cross-learner·stale·client-inferred resolution 또는 matching open attempt는 cue byte 0으로
   fail closed한다. outer canonical timing/classification resolution도 `resolved === true`를 포함한 required
   exact state를 독립적으로 만족해야 하며 valid nested proof가 unresolved outer resolution을 대체하지 못한다.
+  outer resolution과 nested zero-count absence record는 각각 non-null·non-array closed canonical object이며
+  undeclared field를 허용하지 않는다. outer record는 exact resolver·one authoritative/server-side/
+  independently-resolved match·request/scope/timing/classification binding을 요구한다. nested record는 exact server
+  attempt resolver에서 `INDEPENDENT_ATTEMPT_OPEN`을 조회하고 같은 learner-private/attempt scope의 zero match를
+  증명한다. safe state는 exact primitive true, declared ambiguity·conflict·cross-scope·mismatch·stale·replay·
+  cancellation·client/caller inference는 exact primitive false여야 한다.
   이 두 validator의 `REVIEW_ONLY` path도 shared canonical-record gate를 먼저 통과해
   `canonicalRecordCommitted === true`를 exact primitive equality로 증명해야 하며 필드 생략은 실패다.
   outer timing 또는 nested canonical timing이 `REVIEW_ONLY`인 모든 path는 routing이나 다른 early return 전에
@@ -575,7 +582,8 @@ D+7 stable / timed: HIDDEN
   함께 차단한다.
 - independent retrieval은 candidate-owned closed `canonicalResponseEvaluation`이 exact base attempt·learner·
   submission 및 candidate evaluation ID에 bind되고, single authoritative resolved fresh record의 모든 safe/unsafe
-  state를 exact primitive로 통과해야 한다. caller source label이나 outer success flag는 대체하지 못한다.
+  state를 exact primitive로 통과해야 한다. evaluation completion은 bound base attempt의 canonical `submittedAt`과
+  같은 시각이거나 그 뒤여야 하고 caller source label, outer success flag 또는 outer/caller timestamp는 대체하지 못한다.
 - far transfer는 그 독립 회상 외에도 distinct eligible task, non-same representation, actual submitted
   independent transfer attempt와 candidate-owned closed `canonicalTransferEvaluation`을 별도로 요구한다. 이
   evaluation은 source/transfer attempt·learner·submission·evaluation·result·task IDs에 exact-bind된다. source attempt가
@@ -592,10 +600,12 @@ D+7 stable / timed: HIDDEN
   missing·malformed·wrong-source·extra-field·ambiguous·conflicting·stale·client/caller-inferred·mismatched·
   cross-attempt·cross-learner·unresolved·0건·복수 transfer attempt/task binding은 far-transfer credit만 fail
   closed하며 otherwise valid independent retrieval과 stable D+7은 유지한다.
+  transfer evaluation completion도 canonical transfer attempt의 `submittedAt`과 같은 시각이거나 그 뒤여야 하며,
+  1 ms 이전 또는 outer/caller timestamp 대체는 far-transfer만 fail closed한다.
 - stable D+7은 실제 완료된 D+7 independent evaluation, cue `HIDDEN`, 모든 surface의 cue byte 부재,
   non-same representation 및 unresolved scoring conflict 0의 canonical record를 별도로 요구한다.
   실제 D+7 candidate의 `canonicalD7Attempt`도 `CANONICAL_SERVER_ATTEMPT_LEDGER`에서 exact single authoritative
-  record로 별도 resolve하며 `d7AttemptId`, authenticated learner scope 및 submission ID에 exact-bind되고 base/source attempt와
+  record로 별도 resolve하며 `d7AttemptId`, authenticated learner scope, submission ID 및 canonical `submittedAt`에 exact-bind되고 base/source attempt와
   달라야 한다. 이 record는 exact `SUBMITTED`·`INDEPENDENT`, known/resolved exact true, ambiguous·conflicting·
   cross-learner·cross-attempt·mismatched·stale·replayed·cancelled·client/caller-inferred exact false여야 한다.
   missing·malformed·wrong-source·0건·복수·foreign·reused·unsubmitted·assisted·unsafe record 또는 outer claim/base
@@ -605,6 +615,8 @@ D+7 stable / timed: HIDDEN
   attempt·learner·submission에 bind된다. interval은 source attempt record의 canonical `submittedAt`과 이 bound
   evaluation record의 `d7EvaluationCompletedAt`만으로 계산한다. outer/source-labeled timestamp, 별도로 공급한
   더 오래된 timestamp, missing·mismatched·malformed 또는 unresolved provenance는 stable credit을 만들지 못한다.
+  이와 별도로 D+7 evaluation completion은 자기 canonical D+7 attempt의 `submittedAt`과 같은 시각이거나 뒤여야
+  한다. 1 ms 이전은 stable D+7만 거부하고 equality와 later completion은 통과한다.
 - missing exposure history/record, failed render, partial commit 또는 ambiguous record는 positive learning
   evidence 0으로 fail closed한다. `ASSISTED` attempt는 어떤 affirmative record가 있어도 부적격이다.
 - cue를 보고 맞힌 것은 independent mastery가 아니다.
@@ -697,14 +709,22 @@ type ExactCanonicalSubmittedAttemptBindingV1 = {
 
 type CanonicalReviewOnlyResolutionV1 = {
   source: "CANONICAL_SERVER_CUE_TIMING_CLASSIFICATION_RESOLVER";
+  serverSide: true;
+  authoritative: true;
+  independentlyResolved: true;
   known: true;
   resolved: true;
   matchingResolutionCount: 1;
   ambiguous: false;
   conflicting: false;
   crossLearner: false;
+  crossAttempt: false;
+  mismatched: false;
   stale: false;
+  replayed: false;
+  cancelled: false;
   clientInferred: false;
+  callerInferred: false;
   canonicalTiming: "REVIEW_ONLY";
   canonicalAssistanceClassification: "NONE" | "LOW" | "MATERIAL";
   canonicalExposureRecordState: "COMMITTED";
@@ -719,13 +739,21 @@ type CanonicalReviewOnlyResolutionV1 = {
     learnerPrivateScopeId: string;
     attemptScopeId: string;
     matchingRecordCount: 0;
+    serverSide: true;
+    authoritative: true;
+    independentlyResolved: true;
     known: true;
     resolved: true;
     ambiguous: false;
     conflicting: false;
     crossLearner: false;
+    crossAttempt: false;
+    mismatched: false;
     stale: false;
+    replayed: false;
+    cancelled: false;
     clientInferred: false;
+    callerInferred: false;
   };
 };
 
@@ -1078,6 +1106,12 @@ receipt는 authorization false로 fail closed한다. 이 문서는 그 세 gate 
 canonical authorization flag는 모두 false다. 테스트의 future receipt는 모의 상태일 뿐 canonical
 authorization을 변경하지 않는다. structurally valid하고 candidate-bound인 receipt set도 미래 binding
 contract를 만족할 수 있음을 증명할 뿐, 현재 training·offline training 또는 다른 사용을 승인하지 않는다.
+receipt set은 `contribution`·`promotion`·`o5`만 가진 closed object이고 각 receipt도 no-extra-field closed
+canonical record다. kind-specific canonical source와 exact one match를 요구한다. `serverSide`·`authoritative`·
+`independentlyResolved`·`known`·`resolved`·`active`는 exact true이고 `ambiguous`·`conflicting`·`replayed`·
+`stale`·`revoked`·`clientInferred`·`callerInferred`·`crossCandidate`·`crossRevision`·`crossPurpose`·`crossScope`는
+exact false다. missing·extra·malformed·duplicate ID·foreign binding·wrong source·non-boolean record는 otherwise
+safe candidate eligibility를 유지하되 hypothetical receipt validity와 current authorization을 false로 둔다.
 이 계약 아래 모든 canonical authorization flag와 `currentlyAuthorized`는 정확히 `false`이며,
 mock·fixture·hypothetical/future context가 이를 override할 수 없다. 현재 사용 activation은 canonical
 authorization boundary를 바꾸는 별도 Owner 승인 변경을 요구한다.
@@ -1131,13 +1165,24 @@ type CandidateBoundTrainingApprovalReceiptV1 = {
     | "CANONICAL_CONTRIBUTION_APPROVAL_RESOLVER"
     | "CANONICAL_PROMOTION_APPROVAL_RESOLVER"
     | "CANONICAL_O5_APPROVAL_RESOLVER";
+  serverSide: true;
+  authoritative: true;
   independentlyResolved: true;
+  known: true;
+  resolved: true;
   matchingRecordCount: 1;
   active: true;
   ambiguous: false;
+  conflicting: false;
   replayed: false;
   stale: false;
   revoked: false;
+  clientInferred: false;
+  callerInferred: false;
+  crossCandidate: false;
+  crossRevision: false;
+  crossPurpose: false;
+  crossScope: false;
   signalId: string;
   signalRevisionId: string;
   purposeId: string;

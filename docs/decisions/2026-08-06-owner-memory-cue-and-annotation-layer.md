@@ -20,6 +20,7 @@ does_not_authorize:
 
 V13의 필수 후속 부속계약으로 `Memory Cue & Annotation Layer(MCAL)`를 채택한다.
 V13은 계속 유일한 active master plan이며 MCAL은 V14가 아니다.
+동기화된 machine contract version은 `1.0.18`이다.
 MCAL은 별도의 정의 저장소나 두 번째 정의 authority가 아니다. 모든 `exactDefinitionRef`는
 released·versioned VESG concept/evidence projection을 가리키며, 해석 실패·hold·drift 시 cue도 release하지 않는다.
 
@@ -140,6 +141,13 @@ submitted binding, `BEFORE_RESPONSE` open-attempt binding 및 `REVIEW_ONLY`의 n
 `resolved === true`, `ambiguous === false`, `conflicting === false`, `stale === false`,
 `clientInferred === false`가 exact primitive equality로 모두 성립해야 하며 누락·default·coercion·truthiness는
 canonical resolution 증거가 아니다.
+특히 `REVIEW_ONLY` outer resolution과 nested absence record는 각각 non-null·non-array closed object여야 한다.
+outer record는 exact canonical timing/classification source, one authoritative/server-side/independently-resolved
+match와 request/scope/cue bindings를 요구한다. nested record는 exact server attempt resolver에서 exact open-
+independent state를 조회하고 같은 learner-private/attempt scope에 bind된 zero match를 증명해야 한다. 두 record의
+known/resolved/server-side/authoritative/independently-resolved는 exact true이고, declared ambiguity·conflict·
+cross-scope·mismatch·stale·replay·cancel·client/caller inference는 exact false이며 undeclared field는 cue byte 0으로
+fail closed한다.
 
 cue absence는 independent-evidence eligibility만 보존한다. empty event, cue-free sequence 또는
 `AFTER_RESPONSE` event만으로 independent retrieval·far transfer·stable D+7이 positive가 될 수 없다.
@@ -168,12 +176,16 @@ attempt·learner·submission ID 및 candidate evaluation ID에 exact-bind된다.
 `actualSubmission`/`evaluationCompleted` flag는 대체 증거가 아니다. invalid response는 dependent far transfer와
 stable D+7도 막는다. 동일 bounded surface의 far transfer도 closed `canonicalTransferEvaluation`을 exact source/
 transfer attempt/learner/submission/evaluation/result/task IDs에 bind하며, invalid transfer evaluation은 far-transfer만 막는다.
+각 evaluation completion은 자신이 bind된 canonical attempt의 `submittedAt`과 같은 시각이거나 그 뒤여야 한다.
+response는 base attempt, transfer는 canonical transfer attempt, D+7은 canonical D+7 attempt의 timestamp를 사용하며
+두 값은 모두 bound record의 exact RFC3339 UTC millisecond field여야 한다. 1 ms 이전 completion이나 outer/caller
+timestamp 대체는 fail closed하고 response/transfer/D+7 실패 격리는 그대로 유지한다.
 stable D+7은 completed D+7 evaluation·cue `HIDDEN`·all-surface byte absence·non-same representation·unresolved
 scoring conflict 0을 담은 candidate-owned closed `canonicalD7Evaluation`을 요구한다. 이에 더해 실제 D+7
 candidate의 `canonicalD7Attempt`를 같은 authoritative server
 attempt ledger에서 정확히 한 건으로 별도 resolve한다. 이 record는 `d7AttemptId`와 authenticated learner
 scope 및 submission ID에 exact-bind되고 base/source attempt와 달라야 하며, state는 exact `SUBMITTED`, assistance는 exact
-`INDEPENDENT`여야 한다. known/resolved는 exact true이고 ambiguous·conflicting·cross-learner·cross-attempt·
+`INDEPENDENT`여야 하며 canonical `submittedAt`을 가져야 한다. known/resolved는 exact true이고 ambiguous·conflicting·cross-learner·cross-attempt·
 mismatched·stale·replayed·cancelled·client/caller-inferred는 exact false여야 한다. outer D+7 claims나 base
 attempt로 대체할 수 없고, 이 D+7-only resolution 실패는 otherwise valid independent retrieval과 far transfer를
 바꾸지 않는다. seven-day interval은 bound base attempt record의 canonical `submittedAt`과 bound
@@ -267,6 +279,12 @@ contribution, Cleared Content Bank promotion과 exact-purpose O5는 서로
 independently resolved contribution·promotion·O5 receipt여야 하고, 세 receipt가 exact `signalId`·
 `signalRevisionId`·`purposeId`·`o5ScopeId`에 모두 일치해야 한다. cross-candidate/revision/purpose/scope,
 missing, ambiguous, replayed, stale, revoked 또는 independently unresolved receipt는 fail closed한다.
+receipt set은 `contribution`·`promotion`·`o5`만 가진 closed object이고 각 receipt도 undeclared field가 없는 closed
+canonical record여야 한다. kind-specific source와 one match, 서로 다른 canonical nonempty `receiptId`, exact candidate
+bindings를 요구한다. server-side·authoritative·independently-resolved·known·resolved·active는 exact true이고
+ambiguous·conflicting·replayed·stale·revoked·client/caller-inferred·모든 declared cross-scope state는 exact false다.
+누락·extra·malformed·duplicate·wrong-source·non-boolean record는 candidate eligibility는 보존하되 hypothetical
+receipt validity와 current authorization을 모두 false로 둔다.
 현재 세 canonical authorization은 모두 정확히 false이며 테스트의 미래 receipt 모의는 이를 변경하지
 않는다. structurally valid·candidate-bound receipt set은 미래 binding contract의 유효성만 증명하고 현재
 training·offline training·다른 사용을 승인하지 않는다. `currentlyAuthorized`도 항상 false이고,

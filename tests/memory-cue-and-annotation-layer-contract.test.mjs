@@ -427,11 +427,19 @@ function canonicalReviewOnlyResolution(overrides = {}) {
     known: true,
     resolved: true,
     matchingResolutionCount: 1,
+    serverSide: true,
+    authoritative: true,
+    independentlyResolved: true,
     ambiguous: false,
     conflicting: false,
     crossLearner: false,
+    crossAttempt: false,
+    mismatched: false,
     stale: false,
+    replayed: false,
+    cancelled: false,
     clientInferred: false,
+    callerInferred: false,
     canonicalTiming: "REVIEW_ONLY",
     canonicalAssistanceClassification: "NONE",
     canonicalExposureRecordState: "COMMITTED",
@@ -446,13 +454,21 @@ function canonicalReviewOnlyResolution(overrides = {}) {
       learnerPrivateScopeId: "learner-1",
       attemptScopeId: "question-scope-1",
       matchingRecordCount: 0,
+      serverSide: true,
+      authoritative: true,
+      independentlyResolved: true,
       known: true,
       resolved: true,
       ambiguous: false,
       conflicting: false,
       crossLearner: false,
+      crossAttempt: false,
+      mismatched: false,
       stale: false,
+      replayed: false,
+      cancelled: false,
       clientInferred: false,
+      callerInferred: false,
     },
   };
   const resolution = { ...base, ...overrides };
@@ -555,6 +571,25 @@ function hasExactCandidateEnvelope(candidate, gate) {
     && gate.additionalFieldsAllowed === false
     && JSON.stringify(sorted(Object.keys(candidate)))
       === JSON.stringify(sorted(gate.requiredFields));
+}
+
+function hasExactClosedReviewOnlyRecord(record, gate) {
+  if (
+    !record
+    || typeof record !== "object"
+    || Array.isArray(record)
+    || gate.additionalFieldsAllowed !== false
+    || JSON.stringify(sorted(Object.keys(record)))
+      !== JSON.stringify(sorted(gate.requiredFields))
+    || record.source !== gate.resolutionSource
+    || record[gate.matchingRecordCountField] !== gate.exactMatchingRecordCount
+  ) return false;
+  for (const field of gate.identifierFields) {
+    if (!isCanonicalIdentifier(record[field], gate.identifierSchema)) return false;
+  }
+  return Object.entries(gate.requiredExactPrimitiveBooleanStates).every(
+    ([field, expected]) => record[field] === expected,
+  );
 }
 
 function validateExactPreResponseOpenAttempt(subject) {
@@ -701,12 +736,9 @@ function authorizeCanonicalReviewOnlyCueRender(subject) {
 
   const resolution = subject.reviewOnlyResolution;
   if (!resolution) return fail("CANONICAL_REVIEW_ONLY_RESOLUTION_MISSING");
+  const resolutionGate = gate.canonicalReviewOnlyResolutionGate;
   if (
-    resolution.source !== gate.canonicalResolutionSource
-    || Object.entries(gate.requiredResolutionBooleanStates).some(
-      ([field, expected]) => resolution[field] !== expected,
-    )
-    || resolution.matchingResolutionCount !== gate.exactMatchingResolutionCount
+    !hasExactClosedReviewOnlyRecord(resolution, resolutionGate)
   ) return fail("CANONICAL_REVIEW_ONLY_RESOLUTION_INVALID");
   if (
     resolution.canonicalTiming !== gate.requiredCanonicalTiming
@@ -721,7 +753,7 @@ function authorizeCanonicalReviewOnlyCueRender(subject) {
       && subject.assistanceClassification !== resolution.canonicalAssistanceClassification
     )
   ) return fail("REVIEW_ONLY_CALLER_CANONICAL_CONFLICT");
-  for (const field of gate.exactBindingFields) {
+  for (const field of resolutionGate.recordBindingFields) {
     if (
       typeof subject[field] !== "string"
       || subject[field].trim().length === 0
@@ -732,18 +764,14 @@ function authorizeCanonicalReviewOnlyCueRender(subject) {
     return fail("CANONICAL_REVIEW_ONLY_EXPOSURE_RECORD_NOT_COMMITTED");
   }
   const openAttempt = resolution.openIndependentAttemptResolution;
+  const absenceGate = gate.canonicalOpenIndependentAttemptAbsenceResolutionGate;
   if (
-    !openAttempt
-    || openAttempt.source !== gate.canonicalAttemptAbsenceSource
-    || !hasExactCanonicalAttemptResolutionStates(openAttempt)
-    || openAttempt.queriedCanonicalAttemptState !== gate.openAttemptStateFilter
-    || openAttempt.known !== true
-    || openAttempt.matchingRecordCount !== gate.matchingCanonicalOpenIndependentAttemptCount
-    || openAttempt.ambiguous !== false
-    || openAttempt.crossLearner !== false
-    || openAttempt.stale !== false
-    || openAttempt.learnerPrivateScopeId !== subject.learnerPrivateScopeId
-    || openAttempt.attemptScopeId !== subject.attemptScopeId
+    !hasExactClosedReviewOnlyRecord(openAttempt, absenceGate)
+    || openAttempt.queriedCanonicalAttemptState
+      !== absenceGate.requiredQueriedCanonicalAttemptState
+    || Object.entries(absenceGate.recordBindingFields).some(
+      ([recordField, subjectField]) => openAttempt[recordField] !== subject[subjectField],
+    )
   ) return fail("MATCHING_CANONICAL_OPEN_ATTEMPT_NOT_PROVEN_ABSENT");
   if (subject.attemptId !== undefined || subject.attemptResolution !== undefined) {
     const binding = validateCanonicalAttemptBinding(subject);
@@ -1373,6 +1401,19 @@ function isCanonicalIdentifier(value, schema) {
     && new RegExp(schema.pattern).test(value);
 }
 
+function canonicalEvaluationFollowsSubmission(canonicalAttempt, evaluation, evaluationGate) {
+  const gate = evaluationGate.canonicalSubmissionOrderingGate;
+  const submittedAt = parseCanonicalUtcMilliseconds(
+    canonicalAttempt?.[gate.canonicalAttemptTimestampField],
+  );
+  const evaluationCompletedAt = parseCanonicalUtcMilliseconds(
+    evaluation?.[gate.canonicalEvaluationTimestampField],
+  );
+  return submittedAt !== null
+    && evaluationCompletedAt !== null
+    && evaluationCompletedAt >= submittedAt;
+}
+
 function resolveExactCanonicalBaseAttempt(attempt, gate) {
   if (
     !hasExactClosedCanonicalRecord(attempt, gate)
@@ -1389,6 +1430,7 @@ function resolveExactCanonicalResponseEvaluation(canonicalSourceAttempt, candida
   if (
     !hasExactCandidateEnvelope(candidate, envelopeGate)
     || !hasExactClosedCanonicalRecord(evaluation, gate)
+    || !canonicalEvaluationFollowsSubmission(canonicalSourceAttempt, evaluation, gate)
   ) return false;
   for (const [recordField, candidateField] of Object.entries(gate.recordBindingFields)) {
     if (
@@ -1416,6 +1458,7 @@ function resolveExactCanonicalTransferEvaluation(
   if (
     !hasExactCandidateEnvelope(candidate, envelopeGate)
     || !hasExactClosedCanonicalRecord(evaluation, gate)
+    || !canonicalEvaluationFollowsSubmission(canonicalTransferAttempt, evaluation, gate)
     || evaluation.representationRelation !== gate.requiredRepresentationRelation
     || evaluation.assistanceState !== gate.requiredAssistanceState
   ) return false;
@@ -1447,6 +1490,7 @@ function resolveExactCanonicalD7Evaluation(
   if (
     !hasExactCandidateEnvelope(candidate, envelopeGate)
     || !hasExactClosedCanonicalRecord(evaluation, gate)
+    || !canonicalEvaluationFollowsSubmission(canonicalD7Attempt, evaluation, gate)
     || evaluation.timing !== gate.requiredTiming
     || evaluation.cueState !== gate.requiredCueState
     || evaluation.representationRelation !== gate.requiredRepresentationRelation
@@ -1582,6 +1626,7 @@ function canonicalSubmittedD7Attempt(overrides = {}) {
     submissionId,
     canonicalAttemptState: "SUBMITTED",
     matchingRecordCount: 1,
+    submittedAt: "2026-08-08T00:00:00.000Z",
     assistanceState: "INDEPENDENT",
     serverSide: true,
     authoritative: true,
@@ -1619,6 +1664,9 @@ function resolveExactCanonicalD7Attempt(canonicalSourceAttempt, candidate, gate)
   ) return false;
   for (const field of gate.identifierFields) {
     if (!isCanonicalIdentifier(canonicalD7Attempt[field], gate.identifierSchema)) return false;
+  }
+  for (const field of gate.timestampFields) {
+    if (parseCanonicalUtcMilliseconds(canonicalD7Attempt[field]) === null) return false;
   }
   for (const [field, expected] of Object.entries(
     gate.requiredExactPrimitiveBooleanStates,
@@ -2021,13 +2069,24 @@ function approvalReceipt(kind, overrides = {}) {
     receiptId: `${kind.toLowerCase().replaceAll("_", "-")}-receipt-1`,
     approvalKind: kind,
     source: sources[kind],
+    serverSide: true,
+    authoritative: true,
     independentlyResolved: true,
+    known: true,
+    resolved: true,
     matchingRecordCount: 1,
     active: true,
     ambiguous: false,
+    conflicting: false,
     replayed: false,
     stale: false,
     revoked: false,
+    clientInferred: false,
+    callerInferred: false,
+    crossCandidate: false,
+    crossRevision: false,
+    crossPurpose: false,
+    crossScope: false,
     signalId: "signal-1",
     signalRevisionId: "signal-revision-1",
     purposeId: "offline-training-purpose-1",
@@ -2089,31 +2148,45 @@ function validateTrustedEvaluationTime(candidate, decisionContext) {
 function validateTrainingApprovalReceipts(candidate, decisionContext) {
   const gate = contract.personalAnnotation.trainingApprovalReceiptGate;
   const receipts = decisionContext.approvalReceipts;
-  if (!receipts || typeof receipts !== "object" || Array.isArray(receipts)) {
+  const setGate = gate.receiptSetGate;
+  if (
+    !receipts
+    || typeof receipts !== "object"
+    || Array.isArray(receipts)
+    || setGate.additionalFieldsAllowed !== false
+    || JSON.stringify(sorted(Object.keys(receipts)))
+      !== JSON.stringify(sorted(setGate.requiredFields))
+  ) {
     return { authorized: false, reason: "CANDIDATE_BOUND_APPROVAL_RECEIPTS_MISSING" };
   }
+  const recordGate = gate.receiptRecordGate;
   const receiptIds = [];
   for (const kind of gate.receiptKinds) {
     const field = gate.receiptFieldsByKind[kind];
     const receipt = receipts[field];
     if (
       !receipt
+      || typeof receipt !== "object"
+      || Array.isArray(receipt)
+      || recordGate.additionalFieldsAllowed !== false
+      || JSON.stringify(sorted(Object.keys(receipt)))
+        !== JSON.stringify(sorted(recordGate.requiredFields))
       || receipt.approvalKind !== kind
       || receipt.source !== gate.resolutionSourcesByKind[kind]
-      || receipt.independentlyResolved !== true
       || receipt.matchingRecordCount !== gate.exactMatchingRecordCount
-      || receipt.active !== true
-      || receipt.ambiguous !== false
-      || receipt.replayed !== false
-      || receipt.stale !== false
-      || receipt.revoked !== false
-      || typeof receipt.receiptId !== "string"
-      || receipt.receiptId.trim().length === 0
+      || Object.entries(recordGate.requiredExactPrimitiveBooleanStates).some(
+        ([stateField, expected]) => receipt[stateField] !== expected,
+      )
+      || recordGate.identifierFields.some(
+        (identifierField) => !isCanonicalIdentifier(
+          receipt[identifierField],
+          recordGate.identifierSchema,
+        ),
+      )
     ) return { authorized: false, reason: `APPROVAL_RECEIPT_${kind}_INVALID` };
     for (const bindingField of gate.exactBindingFields) {
       if (
-        typeof candidate[bindingField] !== "string"
-        || candidate[bindingField].trim().length === 0
+        !isCanonicalIdentifier(candidate[bindingField], recordGate.identifierSchema)
         || receipt[bindingField] !== candidate[bindingField]
       ) return { authorized: false, reason: `APPROVAL_RECEIPT_${kind}_${bindingField}_MISMATCH` };
     }
@@ -2449,7 +2522,7 @@ test("MCAL paths resolve and V13 remains sole active master plan", () => {
   assert.match(active, /dabangil-professional-exam-reasoning-os-final-master-plan-v13-2026-08-06\.md/);
   assert.match(active, /Memory Cue & Annotation Layer/);
   assert.doesNotMatch(active, /final-master-plan-v14/);
-  assert.equal(contract.version, "1.0.17");
+  assert.equal(contract.version, "1.0.18");
   assert.equal(contract.compatibility.v13RemainsSoleActiveMasterPlan, true);
   assert.equal(contract.compatibility.newMasterPlanVersionCreated, false);
 });
@@ -2587,6 +2660,12 @@ test("Markdown fences and exact boundary language are present", () => {
     assert.equal((body.match(/```/g) ?? []).length % 2, 0, p);
   }
   const annex = read(P.annex);
+  const decision = read(P.decision);
+  const qa = read(P.qa);
+  for (const body of [annex, decision, qa]) {
+    assert.match(body, /machine contract version(?:은|:) `1\.0\.18`/i);
+    assert.doesNotMatch(body, /1\.0\.17/);
+  }
   assert.match(annex, /암기용 풀이입니다\. 시험용 정확한 정의를 대체하지 않습니다\./);
   assert.match(annex, /MCAL-4 — personal annotation editor/);
   assert.match(annex, /PERSONAL_RAW_VAULT/);
@@ -2655,7 +2734,12 @@ test("Markdown fences and exact boundary language are present", () => {
   assert.match(annex, /outer completion\/source timestamp/);
   assert.match(annex, /base 전용 safe-state gate/);
   assert.match(annex, /`renderSubmitRaceDetected === false`/);
-  const qa = read(P.qa);
+  assert.match(annex, /nested zero-count absence record는 각각 non-null·non-array closed canonical object/);
+  assert.match(annex, /evaluation completion은 bound base attempt의 canonical `submittedAt`/);
+  assert.match(annex, /receipt set은 `contribution`·`promotion`·`o5`만 가진 closed object/);
+  assert.match(decision, /outer resolution과 nested absence record는 각각 non-null·non-array closed object/);
+  assert.match(decision, /각 evaluation completion은 자신이 bind된 canonical attempt의 `submittedAt`/);
+  assert.match(decision, /receipt set은 `contribution`·`promotion`·`o5`만 가진 closed object/);
   assert.match(qa, /PR #692 is merged at `512bfdb9232a86bf4f7d4cfbc076a9df1c8a7da2`/);
   assert.match(qa, /Focused behavioral contract suite: 61\/61 passed/);
   assert.match(qa, /Merely supplying two different task IDs is insufficient/);
@@ -2669,6 +2753,8 @@ test("Markdown fences and exact boundary language are present", () => {
   assert.match(qa, /`cancelled` field must be exact primitive `false`/);
   assert.match(qa, /validate the actual candidate's exact top-level and nested field sets/);
   assert.match(qa, /canonical promotion\/rights\/provenance record/);
+  assert.match(qa, /one millisecond before rejects, equality and later completion pass/);
+  assert.match(qa, /receipt set is a closed object containing exactly contribution, promotion and O5 fields/);
   assert.doesNotMatch(qa, /Focused behavioral contract suite: 52\/52 passed/);
   assert.doesNotMatch(qa, /Focused behavioral contract suite: 57\/57 passed/);
   assert.doesNotMatch(qa, /Focused behavioral contract suite: 54\/54 passed/);
@@ -3549,6 +3635,15 @@ test("base attempt and independent-response evaluation reject every closed-recor
     farTransfer: true,
     stableD7: true,
   });
+  assert.equal(
+    responseGate.canonicalSubmissionOrderingGate.comparison,
+    "EVALUATION_COMPLETED_AT_GTE_CANONICAL_ATTEMPT_SUBMITTED_AT",
+  );
+  assert.equal(responseGate.canonicalSubmissionOrderingGate.equalityAccepted, true);
+  assert.equal(
+    responseGate.canonicalSubmissionOrderingGate.callerOrOuterTimestampSubstitutionAllowed,
+    false,
+  );
 
   const invalidAttempts = [];
   for (const field of baseGate.requiredFields) {
@@ -3607,7 +3702,13 @@ test("base attempt and independent-response evaluation reject every closed-recor
     );
   }
 
-  const invalidResponses = [];
+  const invalidResponses = [
+    [undefined, "response missing"],
+    [null, "response null"],
+    [[], "response array"],
+    [{}, "response malformed object"],
+    ["response", "response malformed primitive"],
+  ];
   for (const field of learningGate.requiredAffirmativeEvidence.independentRetrieval
     .candidateEnvelopeGate.requiredFields) {
     const candidate = independentResponseEvidence();
@@ -3632,8 +3733,17 @@ test("base attempt and independent-response evaluation reject every closed-recor
       }),
       `response evaluation non-boolean ${field}`,
     ]);
+    invalidResponses.push([
+      independentResponseEvidence({
+        canonicalResponseEvaluation: canonicalResponseEvaluation({ [field]: !expected }),
+      }),
+      `response evaluation unsafe ${field}`,
+    ]);
   }
   invalidResponses.push(
+    [independentResponseEvidence({ canonicalResponseEvaluation: null }), "response evaluation null"],
+    [independentResponseEvidence({ canonicalResponseEvaluation: [] }), "response evaluation array"],
+    [independentResponseEvidence({ canonicalResponseEvaluation: {} }), "response evaluation malformed"],
     [independentResponseEvidence({ source: "CLIENT" }), "response wrong source"],
     [independentResponseEvidence({ matchingRecordCount: 0 }), "response zero records"],
     [independentResponseEvidence({ matchingRecordCount: 2 }), "response multiple records"],
@@ -3664,6 +3774,40 @@ test("base attempt and independent-response evaluation reject every closed-recor
     assert.equal(result.farTransfer, false, `${label}: farTransfer`);
     assert.equal(result.stableD7, false, `${label}: stableD7`);
   }
+
+  const oneMillisecondBefore = independentResponseEvidence({
+    canonicalResponseEvaluation: canonicalResponseEvaluation({
+      evaluationCompletedAt: "2026-07-31T23:59:59.999Z",
+    }),
+  });
+  const oneMillisecondBeforeResult = validateLearningEvidence([], {
+    ...validEvidence,
+    independentResponse: oneMillisecondBefore,
+  });
+  assert.equal(oneMillisecondBeforeResult.independentRetrieval, false);
+  assert.equal(oneMillisecondBeforeResult.farTransfer, false);
+  assert.equal(oneMillisecondBeforeResult.stableD7, false);
+
+  const atSubmission = validateLearningEvidence([], {
+    ...validEvidence,
+    independentResponse: independentResponseEvidence({
+      evaluationCompletedAt: "2026-08-01T00:00:00.000Z",
+    }),
+  });
+  assert.equal(atSubmission.independentRetrieval, true);
+  assert.equal(atSubmission.farTransfer, true);
+  assert.equal(atSubmission.stableD7, true);
+
+  const substitutedOuterTimestamp = oneMillisecondBefore;
+  substitutedOuterTimestamp.evaluationCompletedAt = "2099-01-01T00:00:00.000Z";
+  substitutedOuterTimestamp.callerEvaluationCompletedAt = "2099-01-01T00:00:00.000Z";
+  const substituted = validateLearningEvidence([], {
+    ...validEvidence,
+    independentResponse: substitutedOuterTimestamp,
+  });
+  assert.equal(substituted.independentRetrieval, false);
+  assert.equal(substituted.farTransfer, false);
+  assert.equal(substituted.stableD7, false);
 });
 
 test("base, far-transfer and D+7 exposure histories bind to their own evaluated attempts", () => {
@@ -4162,6 +4306,19 @@ test("far-transfer canonical evaluation rejects every mutation without weakening
   assert.equal(valid.independentRetrieval, true);
   assert.equal(valid.farTransfer, true);
   assert.equal(valid.stableD7, true);
+  assert.equal(
+    evaluationGate.canonicalSubmissionOrderingGate.comparison,
+    "EVALUATION_COMPLETED_AT_GTE_CANONICAL_ATTEMPT_SUBMITTED_AT",
+  );
+  assert.equal(evaluationGate.canonicalSubmissionOrderingGate.equalityAccepted, true);
+  assert.equal(
+    evaluationGate.canonicalSubmissionOrderingGate.callerOrOuterTimestampSubstitutionAllowed,
+    false,
+  );
+
+  for (const malformed of [undefined, null, [], {}, "transfer"]) {
+    assertTransferOnlyFailure(malformed, `transfer malformed ${String(malformed)}`);
+  }
 
   for (const field of farTransferGate.candidateEnvelopeGate.requiredFields) {
     const candidate = farTransferEvidence();
@@ -4189,8 +4346,17 @@ test("far-transfer canonical evaluation rejects every mutation without weakening
       }),
       `transfer evaluation non-boolean ${field}`,
     );
+    assertTransferOnlyFailure(
+      farTransferEvidence({
+        canonicalTransferEvaluation: canonicalTransferEvaluation({ [field]: !expected }),
+      }),
+      `transfer evaluation unsafe ${field}`,
+    );
   }
   for (const [record, label] of [
+    [null, "null"],
+    [[], "array"],
+    [{}, "malformed object"],
     [canonicalTransferEvaluation({ source: "CLIENT" }), "wrong source"],
     [canonicalTransferEvaluation({ matchingRecordCount: 0 }), "zero records"],
     [canonicalTransferEvaluation({ matchingRecordCount: 2 }), "multiple records"],
@@ -4215,6 +4381,27 @@ test("far-transfer canonical evaluation rejects every mutation without weakening
       `transfer evaluation ${label}`,
     );
   }
+
+  const oneMillisecondBefore = farTransferEvidence({
+    canonicalTransferEvaluation: canonicalTransferEvaluation({
+      evaluationCompletedAt: "2026-08-01T23:59:59.999Z",
+    }),
+  });
+  assertTransferOnlyFailure(oneMillisecondBefore, "transfer evaluation before submission");
+
+  const atSubmission = validateLearningEvidence([], {
+    ...base,
+    farTransfer: farTransferEvidence({
+      evaluationCompletedAt: "2026-08-02T00:00:00.000Z",
+    }),
+  });
+  assert.equal(atSubmission.independentRetrieval, true);
+  assert.equal(atSubmission.farTransfer, true);
+  assert.equal(atSubmission.stableD7, true);
+
+  oneMillisecondBefore.evaluationCompletedAt = "2099-01-01T00:00:00.000Z";
+  oneMillisecondBefore.callerEvaluationCompletedAt = "2099-01-01T00:00:00.000Z";
+  assertTransferOnlyFailure(oneMillisecondBefore, "transfer outer timestamp substitution");
 });
 
 test("stable D+7 requires a completed hidden-cue nonconflicted canonical evaluation", () => {
@@ -4270,6 +4457,7 @@ test("stable D+7 resolves one exact canonical D+7 attempt without weakening othe
   assert.equal(gate.exactMatchingRecordCount, 1);
   assert.equal(gate.requiredCanonicalAttemptState, "SUBMITTED");
   assert.equal(gate.requiredAssistanceState, "INDEPENDENT");
+  assert.deepEqual(gate.timestampFields, ["submittedAt"]);
   assert.equal(gate.mustDifferFromCanonicalSourceAttemptId, true);
   assert.equal(gate.canonicalSourceAttemptMaySubstitute, false);
   assert.equal(gate.outerD7ClaimsMaySubstitute, false);
@@ -4300,6 +4488,7 @@ test("stable D+7 resolves one exact canonical D+7 attempt without weakening othe
     canonicalSubmittedD7Attempt({ learnerPrivateScopeId: "learner-foreign" }),
     canonicalSubmittedD7Attempt({ canonicalAttemptState: "INDEPENDENT_ATTEMPT_OPEN" }),
     canonicalSubmittedD7Attempt({ assistanceState: "ASSISTED" }),
+    canonicalSubmittedD7Attempt({ submittedAt: "2026-08-08" }),
     canonicalSubmittedD7Attempt({ extraField: true }),
   ];
   for (const field of gate.requiredFields) {
@@ -4357,6 +4546,19 @@ test("D+7 canonical evaluation rejects every mutation and binds its own completi
   assert.equal(valid.independentRetrieval, true);
   assert.equal(valid.farTransfer, true);
   assert.equal(valid.stableD7, true);
+  assert.equal(
+    evaluationGate.canonicalSubmissionOrderingGate.comparison,
+    "EVALUATION_COMPLETED_AT_GTE_CANONICAL_ATTEMPT_SUBMITTED_AT",
+  );
+  assert.equal(evaluationGate.canonicalSubmissionOrderingGate.equalityAccepted, true);
+  assert.equal(
+    evaluationGate.canonicalSubmissionOrderingGate.callerOrOuterTimestampSubstitutionAllowed,
+    false,
+  );
+
+  for (const malformed of [undefined, null, [], {}, "D+7"]) {
+    assertD7OnlyFailure(malformed, `D+7 malformed ${String(malformed)}`);
+  }
 
   for (const field of stableGate.candidateEnvelopeGate.requiredFields) {
     const candidate = stableD7Evidence();
@@ -4384,8 +4586,17 @@ test("D+7 canonical evaluation rejects every mutation and binds its own completi
       }),
       `D+7 evaluation non-boolean ${field}`,
     );
+    assertD7OnlyFailure(
+      stableD7Evidence({
+        canonicalD7Evaluation: canonicalD7Evaluation({ [field]: !expected }),
+      }),
+      `D+7 evaluation unsafe ${field}`,
+    );
   }
   for (const [record, label] of [
+    [null, "null"],
+    [[], "array"],
+    [{}, "malformed object"],
     [canonicalD7Evaluation({ source: "CLIENT" }), "wrong source"],
     [canonicalD7Evaluation({ matchingRecordCount: 0 }), "zero records"],
     [canonicalD7Evaluation({ matchingRecordCount: 2 }), "multiple records"],
@@ -4408,6 +4619,35 @@ test("D+7 canonical evaluation rejects every mutation and binds its own completi
       `D+7 evaluation ${label}`,
     );
   }
+
+  const d7SubmittedAt = "2026-08-08T00:05:00.000Z";
+  const d7OneMillisecondBefore = stableD7Evidence({
+    canonicalD7Attempt: canonicalSubmittedD7Attempt({ submittedAt: d7SubmittedAt }),
+    canonicalD7Evaluation: canonicalD7Evaluation({
+      d7EvaluationCompletedAt: "2026-08-08T00:04:59.999Z",
+    }),
+  });
+  assertD7OnlyFailure(d7OneMillisecondBefore, "D+7 evaluation before own submission");
+
+  for (const d7EvaluationCompletedAt of [
+    d7SubmittedAt,
+    "2026-08-08T00:05:00.001Z",
+  ]) {
+    const ordered = validateLearningEvidence([], {
+      ...base,
+      stableD7: stableD7Evidence({
+        canonicalD7Attempt: canonicalSubmittedD7Attempt({ submittedAt: d7SubmittedAt }),
+        canonicalD7Evaluation: canonicalD7Evaluation({ d7EvaluationCompletedAt }),
+      }),
+    });
+    assert.equal(ordered.independentRetrieval, true, d7EvaluationCompletedAt);
+    assert.equal(ordered.farTransfer, true, d7EvaluationCompletedAt);
+    assert.equal(ordered.stableD7, true, d7EvaluationCompletedAt);
+  }
+
+  d7OneMillisecondBefore.d7EvaluationCompletedAt = "2099-01-01T00:00:00.000Z";
+  d7OneMillisecondBefore.callerEvaluationCompletedAt = "2099-01-01T00:00:00.000Z";
+  assertD7OnlyFailure(d7OneMillisecondBefore, "D+7 outer timestamp substitution");
 
   const substitutedOuterTimestamp = stableD7Evidence({
     canonicalD7Evaluation: canonicalD7Evaluation({
@@ -4511,6 +4751,9 @@ test("stable D+7 binds its source timestamp to one resolved canonical source att
   const laterSourceAttempt = evaluateAttemptEvidence([], {
     ...base,
     attempt: canonicalIndependentAttempt({ submittedAt: "2026-08-08T00:00:00.000Z" }),
+    independentResponse: independentResponseEvidence({
+      evaluationCompletedAt: "2026-08-08T00:00:00.000Z",
+    }),
     stableD7: stableD7Evidence(),
   });
   assert.equal(laterSourceAttempt.independentRetrieval, true);
@@ -5088,6 +5331,8 @@ test("future training approvals are independently resolved and exact-candidate b
   assert.equal(gate.validReceiptSetEffectUnderThisContract, "HYPOTHETICAL_FUTURE_BINDING_PROOF_ONLY");
   assert.equal(gate.currentTrainingAuthorizationEffectUnderThisContract, false);
   assert.equal(gate.mockFixtureHypotheticalOrFutureReceiptOverrideAllowed, false);
+  assert.equal(gate.receiptSetGate.additionalFieldsAllowed, false);
+  assert.equal(gate.receiptRecordGate.additionalFieldsAllowed, false);
 
   const validCandidate = signalCandidate();
   const valid = evaluateTrainingCandidate(
@@ -5128,29 +5373,89 @@ test("future training approvals are independently resolved and exact-candidate b
     assert.equal(result.hypotheticalReceiptsValid, mask === 7, `receipt mask ${mask}`);
   }
 
-  const invalidReceiptSets = [];
+  const invalidReceiptSets = [
+    [null, "null set"],
+    [[], "array set"],
+    [{}, "malformed set"],
+    ["receipts", "string set"],
+    [{ ...futureApprovalReceipts(), extraField: true }, "set extra field"],
+  ];
+  const withReceipt = (field, receipt) => {
+    const set = futureApprovalReceipts();
+    set[field] = receipt;
+    return set;
+  };
   for (const field of ["contribution", "promotion", "o5"]) {
-    invalidReceiptSets.push(futureApprovalReceipts({ [field]: undefined }));
-    invalidReceiptSets.push(futureApprovalReceipts({ [field]: { ambiguous: true } }));
-    invalidReceiptSets.push(futureApprovalReceipts({ [field]: { replayed: true } }));
-    invalidReceiptSets.push(futureApprovalReceipts({ [field]: { independentlyResolved: false } }));
-    invalidReceiptSets.push(futureApprovalReceipts({ [field]: { matchingRecordCount: 0 } }));
+    const missingSetField = futureApprovalReceipts();
+    delete missingSetField[field];
+    invalidReceiptSets.push([missingSetField, `set missing ${field}`]);
+    for (const malformed of [null, [], {}, "receipt", 1]) {
+      invalidReceiptSets.push([withReceipt(field, malformed), `${field} malformed receipt`]);
+    }
+    for (const receiptField of gate.receiptRecordGate.requiredFields) {
+      const receipt = approvalReceipt(
+        Object.entries(gate.receiptFieldsByKind).find(([, value]) => value === field)[0],
+      );
+      delete receipt[receiptField];
+      invalidReceiptSets.push([withReceipt(field, receipt), `${field} missing ${receiptField}`]);
+    }
+    invalidReceiptSets.push([
+      withReceipt(field, { ...futureApprovalReceipts()[field], extraField: true }),
+      `${field} extra field`,
+    ]);
+    invalidReceiptSets.push([
+      withReceipt(field, { ...futureApprovalReceipts()[field], approvalKind: "OTHER_APPROVAL" }),
+      `${field} wrong kind`,
+    ]);
+    invalidReceiptSets.push([
+      withReceipt(field, { ...futureApprovalReceipts()[field], source: "CLIENT" }),
+      `${field} wrong source`,
+    ]);
+    invalidReceiptSets.push([
+      withReceipt(field, { ...futureApprovalReceipts()[field], matchingRecordCount: 0 }),
+      `${field} zero records`,
+    ]);
+    invalidReceiptSets.push([
+      withReceipt(field, { ...futureApprovalReceipts()[field], matchingRecordCount: 2 }),
+      `${field} multiple records`,
+    ]);
+    invalidReceiptSets.push([
+      withReceipt(field, { ...futureApprovalReceipts()[field], receiptId: " receipt " }),
+      `${field} malformed receipt ID`,
+    ]);
+    for (const [stateField, expected] of Object.entries(
+      gate.receiptRecordGate.requiredExactPrimitiveBooleanStates,
+    )) {
+      invalidReceiptSets.push([
+        withReceipt(field, { ...futureApprovalReceipts()[field], [stateField]: String(expected) }),
+        `${field} non-boolean ${stateField}`,
+      ]);
+      invalidReceiptSets.push([
+        withReceipt(field, { ...futureApprovalReceipts()[field], [stateField]: !expected }),
+        `${field} unsafe ${stateField}`,
+      ]);
+    }
     for (const bindingField of gate.exactBindingFields) {
-      invalidReceiptSets.push(futureApprovalReceipts({
-        [field]: { [bindingField]: `cross-${bindingField}` },
-      }));
+      invalidReceiptSets.push([
+        withReceipt(field, {
+          ...futureApprovalReceipts()[field],
+          [bindingField]: `cross-${bindingField}`,
+        }),
+        `${field} foreign ${bindingField}`,
+      ]);
     }
   }
   const reused = futureApprovalReceipts();
   reused.promotion.receiptId = reused.contribution.receiptId;
-  invalidReceiptSets.push(reused);
+  invalidReceiptSets.push([reused, "duplicated receipt IDs"]);
 
-  for (const approvalReceipts of invalidReceiptSets) {
+  for (const [approvalReceipts, label] of invalidReceiptSets) {
     const result = evaluateTrainingCandidate(validCandidate, hypotheticalReceiptValidTrainingDecisionContext({
       approvalReceipts,
     }));
-    assert.equal(result.candidateEligible, true, result.reason);
-    assert.equal(result.currentlyAuthorized, false, result.reason);
+    assert.equal(result.candidateEligible, true, label);
+    assert.equal(result.hypotheticalReceiptsValid, false, label);
+    assert.equal(result.currentlyAuthorized, false, label);
   }
   for (const key of ["trainingSignalContribution", "clearedContentBankPromotion", "o5OfflineTraining"]) {
     assert.equal(contract.authorizationBoundary[key], false, key);
@@ -5877,58 +6182,100 @@ test("review-only requires canonical server derivation and no matching open atte
   assert.equal(invalidBoundReview.mayRenderCueBytes, false);
 });
 
-test("review-only rejects unresolved outer canonical timing resolutions across both validators", () => {
-  const gate = contract.cueExposure.reviewOnlyGate;
-  assert.equal(gate.requiredResolutionBooleanStates.resolved, true);
+test("review-only outer resolution is one closed authoritative canonical record", () => {
+  const gate = contract.cueExposure.reviewOnlyGate.canonicalReviewOnlyResolutionGate;
+  assert.equal(gate.additionalFieldsAllowed, false);
+  assert.equal(gate.matchingRecordCountField, "matchingResolutionCount");
+  assert.equal(gate.exactMatchingRecordCount, 1);
 
-  const missingResolved = canonicalReviewOnlyResolution();
-  delete missingResolved.resolved;
-  for (const reviewOnlyResolution of [
-    missingResolved,
-    canonicalReviewOnlyResolution({ resolved: false }),
-  ]) {
+  const assertRejected = (reviewOnlyResolution, label) => {
     const subject = reviewOnlyRequest({ reviewOnlyResolution });
     for (const validate of [
       evaluateCueRender,
       (request) => validateCueExposureEvent(cueEvent(request)),
     ]) {
       const result = validate(subject);
-      assert.equal(result.accepted, false);
-      assert.equal(result.mayRenderCueBytes, false);
-      assert.equal(result.reason, "CANONICAL_REVIEW_ONLY_RESOLUTION_INVALID");
+      assert.equal(result.accepted, false, label);
+      assert.equal(result.mayRenderCueBytes, false, label);
     }
+  };
+
+  for (const malformed of [null, [], {}, "record", 1]) {
+    assertRejected(malformed, `outer shape ${String(malformed)}`);
   }
+  for (const field of gate.requiredFields) {
+    const record = canonicalReviewOnlyResolution();
+    delete record[field];
+    assertRejected(record, `outer missing ${field}`);
+  }
+  assertRejected(canonicalReviewOnlyResolution({ extraField: true }), "outer extra field");
+  assertRejected(canonicalReviewOnlyResolution({ source: "CLIENT" }), "outer wrong source");
+  assertRejected(canonicalReviewOnlyResolution({ matchingResolutionCount: 0 }), "outer zero records");
+  assertRejected(canonicalReviewOnlyResolution({ matchingResolutionCount: 2 }), "outer multiple records");
+  for (const [field, expected] of Object.entries(gate.requiredExactPrimitiveBooleanStates)) {
+    assertRejected(
+      canonicalReviewOnlyResolution({ [field]: String(expected) }),
+      `outer non-boolean ${field}`,
+    );
+    assertRejected(canonicalReviewOnlyResolution({ [field]: !expected }), `outer unsafe ${field}`);
+  }
+  for (const field of gate.recordBindingFields) {
+    assertRejected(canonicalReviewOnlyResolution({ [field]: `foreign-${field}` }), `outer ${field}`);
+  }
+
+  const valid = evaluateCueRender(reviewOnlyRequest());
+  assert.equal(valid.accepted, true);
+  assert.equal(valid.mayRenderCueBytes, true);
+  assert.equal(valid.evidenceNeutral, true);
+  assert.equal(valid.independentEvidenceEligible, false);
 });
 
-test("review-only independently validates the nested canonical absence-resolution state", () => {
-  const stateGate = contract.cueExposure.canonicalAttemptResolutionStateGate;
+test("review-only absence proof is one closed authoritative zero-match canonical record", () => {
   const reviewOnlyGate = contract.cueExposure.reviewOnlyGate;
-  assert.equal(
-    reviewOnlyGate.canonicalAttemptAbsenceResolutionStateGateRef,
-    "cueExposure.canonicalAttemptResolutionStateGate",
-  );
-  assert.equal(stateGate.eachResolutionValidatedIndependently, true);
-  assert.equal(stateGate.truthinessDefaultingCoercionOrAbsenceAccepted, false);
+  const gate = reviewOnlyGate.canonicalOpenIndependentAttemptAbsenceResolutionGate;
+  assert.equal(gate.additionalFieldsAllowed, false);
+  assert.equal(gate.exactMatchingRecordCount, 0);
+  assert.equal(gate.requiredQueriedCanonicalAttemptState, "INDEPENDENT_ATTEMPT_OPEN");
 
-  for (const [field, invalidValue] of [
-    ["resolved", false],
-    ["conflicting", true],
-    ["clientInferred", true],
-  ]) {
-    const subject = reviewOnlyRequest({
-      reviewOnlyResolution: canonicalReviewOnlyResolution({
-        openIndependentAttemptResolution: { [field]: invalidValue },
-      }),
-    });
+  const assertRejected = (record, label) => {
+    const resolution = canonicalReviewOnlyResolution();
+    resolution.openIndependentAttemptResolution = record;
+    const subject = reviewOnlyRequest({ reviewOnlyResolution: resolution });
     for (const validate of [
       evaluateCueRender,
       (request) => validateCueExposureEvent(cueEvent(request)),
     ]) {
       const result = validate(subject);
-      assert.equal(result.accepted, false, field);
-      assert.equal(result.mayRenderCueBytes, false, field);
+      assert.equal(result.accepted, false, label);
+      assert.equal(result.mayRenderCueBytes, false, label);
     }
+  };
+  const validRecord = () => canonicalReviewOnlyResolution().openIndependentAttemptResolution;
+
+  for (const malformed of [null, [], {}, "record", 1]) {
+    assertRejected(malformed, `absence shape ${String(malformed)}`);
   }
+  for (const field of gate.requiredFields) {
+    const record = validRecord();
+    delete record[field];
+    assertRejected(record, `absence missing ${field}`);
+  }
+  assertRejected({ ...validRecord(), extraField: true }, "absence extra field");
+  assertRejected({ ...validRecord(), source: "CLIENT" }, "absence wrong source");
+  assertRejected({ ...validRecord(), matchingRecordCount: 1 }, "absence nonzero count");
+  assertRejected({ ...validRecord(), queriedCanonicalAttemptState: "SUBMITTED" }, "absence query");
+  assertRejected({ ...validRecord(), learnerPrivateScopeId: "learner-foreign" }, "absence learner");
+  assertRejected({ ...validRecord(), attemptScopeId: "scope-foreign" }, "absence attempt scope");
+  for (const [field, expected] of Object.entries(gate.requiredExactPrimitiveBooleanStates)) {
+    assertRejected({ ...validRecord(), [field]: String(expected) }, `absence non-boolean ${field}`);
+    assertRejected({ ...validRecord(), [field]: !expected }, `absence unsafe ${field}`);
+  }
+
+  const valid = validateCueExposureEvent(cueEvent(reviewOnlyRequest()));
+  assert.equal(valid.accepted, true);
+  assert.equal(valid.mayRenderCueBytes, true);
+  assert.equal(valid.evidenceNeutral, true);
+  assert.equal(valid.independentEvidenceEligible, false);
 });
 
 test("semantic-highlight accessibility requires visible label and computed name together", () => {

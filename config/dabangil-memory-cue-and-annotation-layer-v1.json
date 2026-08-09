@@ -1,6 +1,6 @@
 {
   "schema": "dabangil_memory_cue_and_annotation_layer_v1",
-  "version": "1.0.17",
+  "version": "1.0.18",
   "dated": "2026-08-06 KST",
   "status": "proposed_non_authoritative",
   "repository": "chachathecat/inverge",
@@ -1101,10 +1101,83 @@
         "PROMOTION_APPROVAL": "promotion",
         "O5_APPROVAL": "o5"
       },
+      "receiptSetGate": {
+        "additionalFieldsAllowed": false,
+        "requiredFields": [
+          "contribution",
+          "promotion",
+          "o5"
+        ],
+        "missingNullArrayMalformedOrExtraFieldBehavior": "FAIL_CLOSED_NOT_AUTHORIZED"
+      },
       "resolutionSourcesByKind": {
         "CONTRIBUTION_APPROVAL": "CANONICAL_CONTRIBUTION_APPROVAL_RESOLVER",
         "PROMOTION_APPROVAL": "CANONICAL_PROMOTION_APPROVAL_RESOLVER",
         "O5_APPROVAL": "CANONICAL_O5_APPROVAL_RESOLVER"
+      },
+      "receiptRecordGate": {
+        "additionalFieldsAllowed": false,
+        "requiredFields": [
+          "receiptId",
+          "approvalKind",
+          "source",
+          "matchingRecordCount",
+          "serverSide",
+          "authoritative",
+          "independentlyResolved",
+          "known",
+          "resolved",
+          "active",
+          "ambiguous",
+          "conflicting",
+          "replayed",
+          "stale",
+          "revoked",
+          "clientInferred",
+          "callerInferred",
+          "crossCandidate",
+          "crossRevision",
+          "crossPurpose",
+          "crossScope",
+          "signalId",
+          "signalRevisionId",
+          "purposeId",
+          "o5ScopeId"
+        ],
+        "identifierFields": [
+          "receiptId",
+          "signalId",
+          "signalRevisionId",
+          "purposeId",
+          "o5ScopeId"
+        ],
+        "identifierSchema": {
+          "type": "string",
+          "minLength": 3,
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{2,127}$"
+        },
+        "requiredExactPrimitiveBooleanStates": {
+          "serverSide": true,
+          "authoritative": true,
+          "independentlyResolved": true,
+          "known": true,
+          "resolved": true,
+          "active": true,
+          "ambiguous": false,
+          "conflicting": false,
+          "replayed": false,
+          "stale": false,
+          "revoked": false,
+          "clientInferred": false,
+          "callerInferred": false,
+          "crossCandidate": false,
+          "crossRevision": false,
+          "crossPurpose": false,
+          "crossScope": false
+        },
+        "kindAndKindSpecificCanonicalSourceRequired": true,
+        "exactlyOneMatchingRecordRequired": true,
+        "missingNullArrayMalformedWrongSourceWrongKindExtraFieldNonBooleanUnsafeOrUnboundBehavior": "FAIL_CLOSED_NOT_AUTHORIZED"
       },
       "exactBindingFields": [
         "signalId",
@@ -1461,6 +1534,140 @@
       "canonicalResolutionSource": "CANONICAL_SERVER_CUE_TIMING_CLASSIFICATION_RESOLVER",
       "canonicalAttemptAbsenceSource": "CANONICAL_SERVER_ATTEMPT_LEDGER",
       "canonicalAttemptAbsenceResolutionStateGateRef": "cueExposure.canonicalAttemptResolutionStateGate",
+      "canonicalReviewOnlyResolutionGate": {
+        "recordRef": "subject.reviewOnlyResolution",
+        "resolutionSource": "CANONICAL_SERVER_CUE_TIMING_CLASSIFICATION_RESOLVER",
+        "additionalFieldsAllowed": false,
+        "requiredFields": [
+          "source",
+          "matchingResolutionCount",
+          "serverSide",
+          "authoritative",
+          "independentlyResolved",
+          "known",
+          "resolved",
+          "ambiguous",
+          "conflicting",
+          "crossLearner",
+          "crossAttempt",
+          "mismatched",
+          "stale",
+          "replayed",
+          "cancelled",
+          "clientInferred",
+          "callerInferred",
+          "canonicalTiming",
+          "canonicalAssistanceClassification",
+          "canonicalExposureRecordState",
+          "learnerPrivateScopeId",
+          "attemptScopeId",
+          "cueId",
+          "cueRevisionId",
+          "requestId",
+          "openIndependentAttemptResolution"
+        ],
+        "identifierFields": [
+          "learnerPrivateScopeId",
+          "attemptScopeId",
+          "cueId",
+          "cueRevisionId",
+          "requestId"
+        ],
+        "identifierSchema": {
+          "type": "string",
+          "minLength": 3,
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{2,127}$"
+        },
+        "matchingRecordCountField": "matchingResolutionCount",
+        "exactMatchingRecordCount": 1,
+        "requiredExactPrimitiveBooleanStates": {
+          "serverSide": true,
+          "authoritative": true,
+          "independentlyResolved": true,
+          "known": true,
+          "resolved": true,
+          "ambiguous": false,
+          "conflicting": false,
+          "crossLearner": false,
+          "crossAttempt": false,
+          "mismatched": false,
+          "stale": false,
+          "replayed": false,
+          "cancelled": false,
+          "clientInferred": false,
+          "callerInferred": false
+        },
+        "recordBindingFields": [
+          "learnerPrivateScopeId",
+          "attemptScopeId",
+          "cueId",
+          "cueRevisionId",
+          "requestId"
+        ],
+        "missingNullArrayMalformedWrongSourceExtraFieldNonBooleanUnsafeOrUnboundBehavior": "FAIL_CLOSED_NO_CUE_BYTES"
+      },
+      "canonicalOpenIndependentAttemptAbsenceResolutionGate": {
+        "recordRef": "subject.reviewOnlyResolution.openIndependentAttemptResolution",
+        "recordField": "openIndependentAttemptResolution",
+        "resolutionSource": "CANONICAL_SERVER_ATTEMPT_LEDGER",
+        "additionalFieldsAllowed": false,
+        "requiredFields": [
+          "source",
+          "queriedCanonicalAttemptState",
+          "learnerPrivateScopeId",
+          "attemptScopeId",
+          "matchingRecordCount",
+          "serverSide",
+          "authoritative",
+          "independentlyResolved",
+          "known",
+          "resolved",
+          "ambiguous",
+          "conflicting",
+          "crossLearner",
+          "crossAttempt",
+          "mismatched",
+          "stale",
+          "replayed",
+          "cancelled",
+          "clientInferred",
+          "callerInferred"
+        ],
+        "identifierFields": [
+          "learnerPrivateScopeId",
+          "attemptScopeId"
+        ],
+        "identifierSchema": {
+          "type": "string",
+          "minLength": 3,
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{2,127}$"
+        },
+        "matchingRecordCountField": "matchingRecordCount",
+        "exactMatchingRecordCount": 0,
+        "requiredQueriedCanonicalAttemptState": "INDEPENDENT_ATTEMPT_OPEN",
+        "requiredExactPrimitiveBooleanStates": {
+          "serverSide": true,
+          "authoritative": true,
+          "independentlyResolved": true,
+          "known": true,
+          "resolved": true,
+          "ambiguous": false,
+          "conflicting": false,
+          "crossLearner": false,
+          "crossAttempt": false,
+          "mismatched": false,
+          "stale": false,
+          "replayed": false,
+          "cancelled": false,
+          "clientInferred": false,
+          "callerInferred": false
+        },
+        "recordBindingFields": {
+          "learnerPrivateScopeId": "learnerPrivateScopeId",
+          "attemptScopeId": "attemptScopeId"
+        },
+        "missingNullArrayMalformedWrongSourceExtraFieldNonBooleanUnsafeForeignScopeOrNonzeroCountBehavior": "FAIL_CLOSED_NO_CUE_BYTES"
+      },
       "openAttemptStateFilter": "INDEPENDENT_ATTEMPT_OPEN",
       "requiredCanonicalTiming": "REVIEW_ONLY",
       "allowedCanonicalAssistanceClassifications": [
@@ -2135,6 +2342,16 @@
               "submissionId": "submissionId",
               "evaluationId": "evaluationId"
             },
+            "canonicalSubmissionOrderingGate": {
+              "canonicalAttemptRecordRef": "evidence.attempt",
+              "canonicalAttemptTimestampField": "submittedAt",
+              "canonicalEvaluationTimestampField": "evaluationCompletedAt",
+              "requiredTimestampFormat": "RFC3339_UTC_MILLISECONDS",
+              "comparison": "EVALUATION_COMPLETED_AT_GTE_CANONICAL_ATTEMPT_SUBMITTED_AT",
+              "equalityAccepted": true,
+              "callerOrOuterTimestampSubstitutionAllowed": false,
+              "oneMillisecondBeforeBehavior": "FAIL_CLOSED_NO_INDEPENDENT_RETRIEVAL_CREDIT"
+            },
             "mustBindExactlyToCanonicalBaseAttempt": true,
             "submissionIdMustExactlyEqualCanonicalBaseAttemptSubmissionId": true,
             "callerSourceLabelOrOuterSuccessFlagsSufficient": false,
@@ -2255,6 +2472,16 @@
               "resultId": "resultId",
               "originTaskId": "originTaskId",
               "transferTaskId": "transferTaskId"
+            },
+            "canonicalSubmissionOrderingGate": {
+              "canonicalAttemptRecordRef": "evidence.farTransfer.canonicalTransferAttempt",
+              "canonicalAttemptTimestampField": "submittedAt",
+              "canonicalEvaluationTimestampField": "evaluationCompletedAt",
+              "requiredTimestampFormat": "RFC3339_UTC_MILLISECONDS",
+              "comparison": "EVALUATION_COMPLETED_AT_GTE_CANONICAL_ATTEMPT_SUBMITTED_AT",
+              "equalityAccepted": true,
+              "callerOrOuterTimestampSubstitutionAllowed": false,
+              "oneMillisecondBeforeBehavior": "FAIL_CLOSED_FOR_FAR_TRANSFER_CREDIT"
             },
             "mustBindExactlyToCanonicalSourceAndTransferAttempts": true,
             "callerSourceLabelOrOuterSuccessFlagsSufficient": false,
@@ -2609,6 +2836,16 @@
               "learnerPrivateScopeId": "learnerPrivateScopeId",
               "submissionId": "submissionId"
             },
+            "canonicalSubmissionOrderingGate": {
+              "canonicalAttemptRecordRef": "evidence.stableD7.canonicalD7Attempt",
+              "canonicalAttemptTimestampField": "submittedAt",
+              "canonicalEvaluationTimestampField": "d7EvaluationCompletedAt",
+              "requiredTimestampFormat": "RFC3339_UTC_MILLISECONDS",
+              "comparison": "EVALUATION_COMPLETED_AT_GTE_CANONICAL_ATTEMPT_SUBMITTED_AT",
+              "equalityAccepted": true,
+              "callerOrOuterTimestampSubstitutionAllowed": false,
+              "oneMillisecondBeforeBehavior": "FAIL_CLOSED_FOR_STABLE_D7_CREDIT"
+            },
             "mustBindExactlyToCanonicalD7Attempt": true,
             "evaluationSubmissionIdMustExactlyEqualCanonicalD7AttemptSubmissionId": true,
             "callerSourceLabelOuterTimestampOrOuterSuccessFlagsSufficient": false,
@@ -2628,6 +2865,7 @@
               "submissionId",
               "canonicalAttemptState",
               "matchingRecordCount",
+              "submittedAt",
               "assistanceState",
               "serverSide",
               "authoritative",
@@ -2655,6 +2893,10 @@
               "minLength": 3,
               "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{2,127}$"
             },
+            "timestampFields": [
+              "submittedAt"
+            ],
+            "requiredTimestampFormat": "RFC3339_UTC_MILLISECONDS",
             "exactMatchingRecordCount": 1,
             "requiredCanonicalAttemptState": "SUBMITTED",
             "requiredAssistanceState": "INDEPENDENT",
