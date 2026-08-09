@@ -1,0 +1,3488 @@
+{
+  "schema": "dabangil_memory_cue_and_annotation_layer_v1",
+  "version": "1.0.22",
+  "dated": "2026-08-06 KST",
+  "status": "proposed_non_authoritative",
+  "repository": "chachathecat/inverge",
+  "activeMasterPlan": "docs/strategy/dabangil-professional-exam-reasoning-os-final-master-plan-v13-2026-08-06.md",
+  "activePointer": "docs/strategy/ACTIVE-MASTER-PLAN.md",
+  "mandatoryAnnex": "docs/strategy/dabangil-memory-cue-and-annotation-layer-v1-2026-08-06.md",
+  "ownerDecision": "docs/decisions/2026-08-06-owner-memory-cue-and-annotation-layer.md",
+  "validationRecord": "docs/qa/memory-cue-and-annotation-layer-v1-validation.md",
+  "focusedTest": "tests/memory-cue-and-annotation-layer-contract.test.mjs",
+  "authorizationBoundary": {
+    "runtime": false,
+    "api": false,
+    "ui": false,
+    "schema": false,
+    "migration": false,
+    "rls": false,
+    "storage": false,
+    "persistence": false,
+    "provider": false,
+    "dependency": false,
+    "packageLock": false,
+    "environment": false,
+    "deployment": false,
+    "production": false,
+    "terminologyCorpusBuild": false,
+    "hanjaDictionaryImport": false,
+    "realHistoricalQuestionIngestion": false,
+    "realThirdPartySource": false,
+    "personalAnnotationBody": false,
+    "personalAnnotationSync": false,
+    "analytics": false,
+    "modelTraining": false,
+    "personalRawBodyTraining": false,
+    "trainingSignalContribution": false,
+    "clearedContentBankPromotion": false,
+    "o5OfflineTraining": false,
+    "firstStageLearnerActivation": false,
+    "otherExamProfile": false,
+    "externalLearner": false,
+    "commercial": false,
+    "roadmapMutation": false,
+    "pr692Mutation": false,
+    "readyTransition": false,
+    "merge": false,
+    "autoMerge": false,
+    "mcal1TerminologyConstruction": false,
+    "mcal2MemoryPostItRuntime": false,
+    "mcal3SemanticHighlightRuntime": false,
+    "mcal4PersonalAnnotationRuntime": false
+  },
+  "role": {
+    "name": "Memory Cue & Annotation Layer",
+    "shortName": "MCAL",
+    "relationshipToV13": "mandatory_follow_up_annex_not_new_master_plan",
+    "directOfficialDefinitionAuthority": false,
+    "directAnswerAuthority": false,
+    "directScoringAuthority": false,
+    "directMasteryAuthority": false,
+    "exactDefinitionAuthority": "VESG_RELEASED_VERSIONED_CONCEPT_EVIDENCE_PROJECTION",
+    "mayBecomeSecondDefinitionAuthority": false
+  },
+  "exactDevelopmentPriority": [
+    "CORE_AUTHORITY_CONCEPT_QUESTION_VERIFICATION_ENGINES",
+    "ATTEMPT_REPAIR_TRANSFER_D7_LOOP",
+    "TERMINOLOGY_DECOMPOSITION_MEMORY_POSTIT_MVP",
+    "SEMANTIC_HIGHLIGHTING",
+    "PERSONAL_ANNOTATION_EDITOR"
+  ],
+  "separation": {
+    "requiredDistinctFields": [
+      "formalTerm",
+      "literalGloss",
+      "memoryGloss",
+      "exactDefinitionRef",
+      "independentRetrievalEvidence"
+    ],
+    "memoryGlossMayEqualExactDefinition": false,
+    "literalGlossMayBePresentedAsProfessionalDefinition": false,
+    "cueViewMayPromoteIndependentMastery": false,
+    "cueAbsenceMayCreatePositiveLearningEvidence": false,
+    "highlightInteractionMayPromoteMastery": false,
+    "exactDefinitionRefMayResolveOutsideReleasedVesgProjection": false,
+    "mcalMayActAsSecondDefinitionAuthority": false
+  },
+  "decomposition": {
+    "kinds": [
+      "VERIFIED_HANJA",
+      "KOREAN_MORPHEME",
+      "ENGLISH_ROOT",
+      "LATIN_GREEK_ROOT",
+      "FORMULA_SEMANTICS",
+      "PLAIN_LANGUAGE_ONLY",
+      "NO_SAFE_DECOMPOSITION"
+    ],
+    "evidenceStatuses": [
+      "SOURCE_VERIFIED",
+      "CONVENTIONAL_MEANING_VERIFIED",
+      "PEDAGOGIC_ONLY",
+      "DISPUTED",
+      "UNKNOWN",
+      "HELD"
+    ],
+    "learnerVisibleStatuses": [
+      "SOURCE_VERIFIED",
+      "CONVENTIONAL_MEANING_VERIFIED",
+      "PEDAGOGIC_ONLY"
+    ],
+    "inventedHanjaAllowed": false,
+    "disputedOrUnknownLearnerVisible": false,
+    "pedagogicOnlyMayBeShownAsEtymology": false,
+    "noSafeDecompositionAllowed": true
+  },
+  "memoryCue": {
+    "requiredFields": [
+      "cueId",
+      "profileId",
+      "scopeNodeId",
+      "graphSnapshotId",
+      "normSnapshotId",
+      "rightsManifestId",
+      "terminologySnapshotId",
+      "formalTerm",
+      "decompositionKind",
+      "componentIds",
+      "memoryGloss",
+      "exactDefinitionRef",
+      "meaningBoundaryNote",
+      "contrastScopeNodeIds",
+      "recallPromptIds",
+      "applicationPromptIds",
+      "sourceRefs",
+      "authorAgentId",
+      "subjectReviewRef",
+      "rightsReviewRef",
+      "releaseStatus"
+    ],
+    "optionalFields": [
+      "literalGloss",
+      "trapWarning",
+      "linguisticReviewRef"
+    ],
+    "releaseStates": [
+      "CANDIDATE",
+      "DECOMPOSITION_VERIFIED",
+      "SUBJECT_REVIEWED",
+      "RELEASED",
+      "HELD",
+      "SUPERSEDED"
+    ],
+    "targetNormBindingRequired": true,
+    "rightsBindingRequired": true,
+    "subjectReviewRequired": true,
+    "driftCausesHold": true,
+    "exactDefinitionRefContract": {
+      "type": "RELEASED_VERSIONED_VESG_CONCEPT_EVIDENCE_PROJECTION",
+      "releasedConceptRequired": true,
+      "targetDigestRequired": true,
+      "driftOrResolutionFailure": "HOLD"
+    }
+  },
+  "anchors": {
+    "kinds": [
+      "CONCEPT_NODE",
+      "FORMULA_NODE",
+      "PROCEDURE_STEP",
+      "QUESTION_UNIT",
+      "OWNED_CONTENT_RANGE",
+      "OFFICIAL_PERMITTED_RANGE",
+      "LEARNER_ATTEMPT_RANGE",
+      "PRIVATE_SOURCE_RANGE"
+    ],
+    "domains": [
+      "SHARED_OWNED",
+      "SHARED_OFFICIAL_PERMITTED",
+      "LEARNER_PRIVATE"
+    ],
+    "bodyLocatorPolicies": [
+      "NONE",
+      "SHARED_STABLE_SELECTOR",
+      "VAULT_LOCAL_ONLY"
+    ],
+    "targetTypes": [
+      "VESG_CONCEPT_NODE",
+      "VESG_FORMULA_NODE",
+      "VESG_PROCEDURE_STEP",
+      "VERSIONED_QUESTION_UNIT",
+      "OWNED_CONTENT_REVISION_RANGE",
+      "OFFICIAL_PERMITTED_CONTENT_REVISION_RANGE",
+      "LEARNER_ATTEMPT_REVISION_RANGE",
+      "PRIVATE_SOURCE_REVISION_RANGE"
+    ],
+    "statuses": [
+      "ACTIVE",
+      "HELD",
+      "SUPERSEDED"
+    ],
+    "kindPolicy": {
+      "CONCEPT_NODE": {
+        "allowedDomains": [
+          "SHARED_OWNED"
+        ],
+        "allowedBodyLocatorPolicies": [
+          "NONE"
+        ],
+        "allowedTargetTypes": [
+          "VESG_CONCEPT_NODE"
+        ],
+        "domainResolution": "DERIVED_EXACT"
+      },
+      "FORMULA_NODE": {
+        "allowedDomains": [
+          "SHARED_OWNED"
+        ],
+        "allowedBodyLocatorPolicies": [
+          "NONE"
+        ],
+        "allowedTargetTypes": [
+          "VESG_FORMULA_NODE"
+        ],
+        "domainResolution": "DERIVED_EXACT"
+      },
+      "PROCEDURE_STEP": {
+        "allowedDomains": [
+          "SHARED_OWNED"
+        ],
+        "allowedBodyLocatorPolicies": [
+          "NONE"
+        ],
+        "allowedTargetTypes": [
+          "VESG_PROCEDURE_STEP"
+        ],
+        "domainResolution": "DERIVED_EXACT"
+      },
+      "QUESTION_UNIT": {
+        "allowedDomains": [
+          "SHARED_OWNED",
+          "SHARED_OFFICIAL_PERMITTED"
+        ],
+        "allowedBodyLocatorPolicies": [
+          "NONE"
+        ],
+        "allowedTargetTypes": [
+          "VERSIONED_QUESTION_UNIT"
+        ],
+        "domainResolution": "EXPLICIT_ALLOWLIST_VALUE_REQUIRED",
+        "rightsStateRequired": true,
+        "domainRightsConsistencyRequired": true
+      },
+      "OWNED_CONTENT_RANGE": {
+        "allowedDomains": [
+          "SHARED_OWNED"
+        ],
+        "allowedBodyLocatorPolicies": [
+          "SHARED_STABLE_SELECTOR"
+        ],
+        "allowedTargetTypes": [
+          "OWNED_CONTENT_REVISION_RANGE"
+        ],
+        "domainResolution": "DERIVED_EXACT"
+      },
+      "OFFICIAL_PERMITTED_RANGE": {
+        "allowedDomains": [
+          "SHARED_OFFICIAL_PERMITTED"
+        ],
+        "allowedBodyLocatorPolicies": [
+          "SHARED_STABLE_SELECTOR"
+        ],
+        "allowedTargetTypes": [
+          "OFFICIAL_PERMITTED_CONTENT_REVISION_RANGE"
+        ],
+        "domainResolution": "DERIVED_EXACT",
+        "itemLevelRightsRequired": true,
+        "itemLevelRightsBindingGateRequired": true
+      },
+      "LEARNER_ATTEMPT_RANGE": {
+        "allowedDomains": [
+          "LEARNER_PRIVATE"
+        ],
+        "allowedBodyLocatorPolicies": [
+          "VAULT_LOCAL_ONLY"
+        ],
+        "allowedTargetTypes": [
+          "LEARNER_ATTEMPT_REVISION_RANGE"
+        ],
+        "domainResolution": "DERIVED_EXACT",
+        "ownerBound": true,
+        "targetDigestPolicy": "VAULT_LOCAL_INTEGRITY_METADATA_ONLY",
+        "nonVaultProjection": {
+          "mode": "BODYLESS_RECEIPT_ONLY",
+          "allowedFields": [
+            "projectionType",
+            "anchorKind",
+            "privateBodyPresent",
+            "contentBearing"
+          ],
+          "forbiddenFields": [
+            "anchorId",
+            "receiptId",
+            "excerpt",
+            "startOffset",
+            "endOffset",
+            "offsets",
+            "bodyLocator",
+            "bodyLocatorPolicy",
+            "attemptLocator",
+            "attemptRef",
+            "attemptId",
+            "targetDigest",
+            "privateTargetDigest"
+          ],
+          "forbiddenDestinations": [
+            "SHARED_GRAPH",
+            "ANALYTICS",
+            "LOGS",
+            "CACHE_INDEX",
+            "CROSS_USER",
+            "PORTABLE_CORE_CONTENT_BEARING_PROJECTION"
+          ]
+        }
+      },
+      "PRIVATE_SOURCE_RANGE": {
+        "allowedDomains": [
+          "LEARNER_PRIVATE"
+        ],
+        "allowedBodyLocatorPolicies": [
+          "VAULT_LOCAL_ONLY"
+        ],
+        "allowedTargetTypes": [
+          "PRIVATE_SOURCE_REVISION_RANGE"
+        ],
+        "domainResolution": "DERIVED_EXACT",
+        "ownerBound": true,
+        "targetDigestPolicy": "VAULT_LOCAL_INTEGRITY_METADATA_ONLY",
+        "nonVaultProjection": {
+          "mode": "BODYLESS_RECEIPT_ONLY",
+          "allowedFields": [
+            "projectionType",
+            "anchorKind",
+            "privateBodyPresent",
+            "contentBearing"
+          ],
+          "forbiddenFields": [
+            "anchorId",
+            "receiptId",
+            "excerpt",
+            "startOffset",
+            "endOffset",
+            "offsets",
+            "bodyLocator",
+            "bodyLocatorPolicy",
+            "attemptLocator",
+            "attemptRef",
+            "attemptId",
+            "targetDigest",
+            "privateTargetDigest"
+          ],
+          "forbiddenDestinations": [
+            "SHARED_GRAPH",
+            "ANALYTICS",
+            "LOGS",
+            "CACHE_INDEX",
+            "CROSS_USER",
+            "PORTABLE_CORE_CONTENT_BEARING_PROJECTION"
+          ]
+        }
+      }
+    },
+    "kindPolicyKeySetMustExactlyEqualKinds": true,
+    "defaultKindPolicyAllowed": false,
+    "fallbackKindPolicyAllowed": false,
+    "callerSuppliedDomainOverrideAllowed": false,
+    "callerSuppliedBodyLocatorOverrideAllowed": false,
+    "unknownKindBehavior": "REJECT",
+    "missingKindPolicyBehavior": "HELD",
+    "conflictingCallerValueBehavior": "REJECT",
+    "typed": true,
+    "revisionBound": true,
+    "requiredBindings": [
+      "anchorId",
+      "profileId",
+      "kind",
+      "domain",
+      "targetType",
+      "targetRevisionId",
+      "targetDigest",
+      "bodyLocatorPolicy",
+      "rightsManifestId",
+      "status"
+    ],
+    "requiredBindingSchema": {
+      "anchorId": {
+        "type": "string",
+        "minLength": 3,
+        "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{2,127}$"
+      },
+      "profileId": {
+        "type": "string",
+        "minLength": 3,
+        "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{2,127}$"
+      },
+      "kind": {
+        "type": "enum",
+        "valuesSource": "anchors.kinds"
+      },
+      "domain": {
+        "type": "enum",
+        "valuesSource": "anchors.domains"
+      },
+      "targetType": {
+        "type": "enum",
+        "valuesSource": "anchors.targetTypes"
+      },
+      "targetRevisionId": {
+        "type": "string",
+        "minLength": 3,
+        "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{2,127}$"
+      },
+      "targetDigest": {
+        "type": "string",
+        "pattern": "^sha256:[0-9a-f]{64}$"
+      },
+      "bodyLocatorPolicy": {
+        "type": "enum",
+        "valuesSource": "anchors.bodyLocatorPolicies"
+      },
+      "rightsManifestId": {
+        "type": "string",
+        "minLength": 3,
+        "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{2,127}$"
+      },
+      "status": {
+        "type": "enum",
+        "valuesSource": "anchors.statuses"
+      }
+    },
+    "requiredBindingSchemaKeySetMustExactlyEqualRequiredBindings": true,
+    "requiredBindingValidationMode": "EXACT_TYPE_CLOSED_ENUM_PATTERN_AND_KIND_POLICY_CONSISTENCY",
+    "missingNullEmptyMalformedWrongTypeAmbiguousOrInconsistentBindingBehavior": "FAIL_CLOSED_REJECT",
+    "closedAmbiguityAndConflictStateGate": {
+      "requiredBindingsAmbiguous": {
+        "requiredPrimitiveType": "boolean",
+        "requiredExactValue": false
+      },
+      "conflictingRequiredBindings": {
+        "requiredType": "array",
+        "requiredLength": 0
+      },
+      "missingMalformedWrongTypeAmbiguousOrConflictingBehavior": "FAIL_CLOSED_REJECT"
+    },
+    "targetTypeMustMatchKindPolicy": true,
+    "truthinessOnlyValidationAllowed": false,
+    "itemRightsManifestBindingGate": {
+      "appliesToKinds": [
+        "OFFICIAL_PERMITTED_RANGE"
+      ],
+      "candidateField": "itemRightsManifestId",
+      "candidateFieldSchema": {
+        "type": "string",
+        "trimmed": true,
+        "minLength": 7,
+        "pattern": "^irm_[A-Za-z0-9][A-Za-z0-9._:-]{2,123}$"
+      },
+      "resolutionSource": "CANONICAL_SERVER_ITEM_RIGHTS_MANIFEST_BOUNDARY",
+      "resolutionSchema": {
+        "additionalFieldsAllowed": false,
+        "requiredFields": [
+          "source",
+          "serverSide",
+          "authoritative",
+          "resolved",
+          "matchingRecordCount",
+          "ambiguous",
+          "conflicting",
+          "stale",
+          "replayed",
+          "clientInferred",
+          "crossRevision",
+          "itemRightsManifestId",
+          "anchorId",
+          "kind",
+          "domain",
+          "targetType",
+          "targetRevisionId",
+          "rightsManifestId"
+        ]
+      },
+      "exactMatchingRecordCount": 1,
+      "requiredBooleanStates": {
+        "serverSide": true,
+        "authoritative": true,
+        "resolved": true,
+        "ambiguous": false,
+        "conflicting": false,
+        "stale": false,
+        "replayed": false,
+        "clientInferred": false,
+        "crossRevision": false
+      },
+      "exactAnchorBindingFields": [
+        "itemRightsManifestId",
+        "anchorId",
+        "kind",
+        "domain",
+        "targetType",
+        "targetRevisionId",
+        "rightsManifestId"
+      ],
+      "callerAssertionFieldsForbidden": [
+        "itemRightsManifestResolved",
+        "itemRightsManifestAuthoritative",
+        "itemRightsManifestMatchesTargetRevision",
+        "itemRightsTargetRevisionId",
+        "itemRightsBinding",
+        "clientItemRightsBinding"
+      ],
+      "callerAssertionTruthinessClientEqualityFallbackOrInferenceAccepted": false,
+      "bareIdentifierEstablishesBinding": false,
+      "missingUndefinedNullEmptyWhitespaceMalformedWrongTypeAmbiguousConflictingUnresolvedStaleCrossRevisionOrClientInferredBehavior": "FAIL_CLOSED_REJECT"
+    },
+    "privateOwnerBindingGate": {
+      "appliesToKinds": [
+        "LEARNER_ATTEMPT_RANGE",
+        "PRIVATE_SOURCE_RANGE"
+      ],
+      "candidateConditionalRequiredFields": [
+        "ownerBindingRef",
+        "vaultLocalTargetRef",
+        "targetDigestScope"
+      ],
+      "candidateFieldSchemas": {
+        "ownerBindingRef": {
+          "type": "string",
+          "pattern": "^pob_[A-Za-z0-9][A-Za-z0-9._:-]{2,123}$"
+        },
+        "vaultLocalTargetRef": {
+          "type": "string",
+          "pattern": "^vault_[A-Za-z0-9][A-Za-z0-9._:-]{2,121}$"
+        },
+        "targetDigestScope": {
+          "type": "literal",
+          "value": "VAULT_LOCAL_INTEGRITY_METADATA_ONLY"
+        }
+      },
+      "authenticatedContextSchema": {
+        "additionalFieldsAllowed": false,
+        "requiredFields": [
+          "authenticatedLearnerId",
+          "tenantScopeId",
+          "resolution"
+        ],
+        "idPattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{2,127}$"
+      },
+      "resolutionSource": "CANONICAL_SERVER_PRIVATE_ANCHOR_OWNER_BOUNDARY",
+      "resolutionSchema": {
+        "additionalFieldsAllowed": false,
+        "requiredFields": [
+          "source",
+          "serverSide",
+          "authoritative",
+          "resolved",
+          "matchingRecordCount",
+          "ambiguous",
+          "conflicting",
+          "stale",
+          "replayed",
+          "clientInferred",
+          "crossLearner",
+          "crossTenant",
+          "ownerBindingRef",
+          "authenticatedLearnerId",
+          "tenantScopeId",
+          "anchorId",
+          "kind",
+          "vaultLocalTargetRef",
+          "targetRevisionId",
+          "targetDigest",
+          "targetDigestScope",
+          "bodyLocatorPolicy"
+        ]
+      },
+      "exactMatchingRecordCount": 1,
+      "requiredBooleanStates": {
+        "serverSide": true,
+        "authoritative": true,
+        "resolved": true,
+        "ambiguous": false,
+        "conflicting": false,
+        "stale": false,
+        "replayed": false,
+        "clientInferred": false,
+        "crossLearner": false,
+        "crossTenant": false
+      },
+      "authenticatedScopeFields": [
+        "authenticatedLearnerId",
+        "tenantScopeId"
+      ],
+      "exactPrivateAnchorAndVaultBindingFields": [
+        "ownerBindingRef",
+        "anchorId",
+        "kind",
+        "vaultLocalTargetRef",
+        "targetRevisionId",
+        "targetDigest",
+        "targetDigestScope",
+        "bodyLocatorPolicy"
+      ],
+      "callerAssertionFieldsForbidden": [
+        "authenticatedLearnerId",
+        "tenantScopeId",
+        "ownerBindingResolved",
+        "ownerMatchesAuthenticatedLearner",
+        "ownerMatchesTenant",
+        "ownerBoundaryResolution",
+        "clientOwnerBinding"
+      ],
+      "callerAssertionTruthinessOrClientEqualityAccepted": false,
+      "missingNullEmptyWhitespaceMalformedWrongTypeForeignOwnerCrossLearnerCrossTenantAmbiguousConflictingStaleReplayedUnresolvedOrClientInferredBehavior": "FAIL_CLOSED_REJECT"
+    },
+    "semanticHighlightRequiresRevisionBoundTypedAnchor": true
+  },
+  "cueFading": {
+    "states": [
+      "FULL",
+      "DECOMPOSITION_ONLY",
+      "PROMPT_ONLY",
+      "HIDDEN"
+    ],
+    "initialState": "FULL",
+    "d7StableState": "HIDDEN",
+    "timedIntegrationState": "HIDDEN",
+    "revealCreatesExposureEvent": true,
+    "beforeResponseRevealIsAssisted": true,
+    "sameCueRepeatIsFarTransfer": false,
+    "stableRequiresNonSameRepresentation": true,
+    "anyPreResponseDecompositionDisplayCreatesExposure": true,
+    "canonicalLedger": "ASSISTANCE_EXPOSURE_LEDGER",
+    "separateCueExposureLedgerAllowed": false,
+    "atomicExposureRecordBeforeRenderRequired": true,
+    "renderOnExposureRecordFailure": false,
+    "hiddenCueBytesForbiddenIn": [
+      "DOM",
+      "SSR",
+      "ACCESSIBILITY_TEXT",
+      "PREFETCH",
+      "CACHE",
+      "DIRECT_API_OUTPUT"
+    ]
+  },
+  "memoryPostItMvp": {
+    "defaultCollapsed": true,
+    "maximumExpandedCardsPerSurface": 1,
+    "mayObscurePrimaryResponse": false,
+    "createsFourthTodayPrimaryTask": false,
+    "timedAttemptDefaultHidden": true,
+    "includes": [
+      "REVIEWED_SYSTEM_CUE",
+      "DECOMPOSITION",
+      "MEMORY_GLOSS",
+      "EXACT_DEFINITION_LINK",
+      "CONTRAST_TRAP",
+      "RECALL_PROMPT",
+      "CUE_FADING"
+    ],
+    "excludes": [
+      "PERSONAL_FREE_TEXT",
+      "DRAGGABLE_NOTE",
+      "THIRD_PARTY_SOURCE_PERSISTENCE",
+      "SHARING",
+      "BATCH_IMPORT",
+      "BACKGROUND_SYNC",
+      "RAW_TEXT_ANALYTICS"
+    ],
+    "collapsedDefaultVisibleFields": [
+      "formalTerm"
+    ],
+    "collapsedDecompositionRequiresAtomicExposureBeforeRender": true,
+    "exposureRecordFailureBehavior": "DO_NOT_RENDER_CUE_BYTES"
+  },
+  "semanticHighlight": {
+    "roles": [
+      "EXACT_DEFINITION",
+      "CONDITION_TRIGGER",
+      "PROCEDURE_SEQUENCE",
+      "EXCEPTION_TRAP",
+      "FORMULA_UNIT_VERIFICATION",
+      "DECISIVE_FACT"
+    ],
+    "maximumPrimaryHighlightsPerSurface": 3,
+    "colorOnlyMeaningAllowed": false,
+    "textLabelRequired": true,
+    "accessibleNameRequired": true,
+    "accessibilityRequirement": {
+      "requirementMode": "ALL_OF",
+      "conditions": [
+        {
+          "field": "visibleTextLabel",
+          "predicate": "NON_EMPTY_TRIMMED_STRING"
+        },
+        {
+          "field": "computedAccessibleName",
+          "predicate": "VALID_NON_EMPTY_COMPUTED_ACCESSIBLE_NAME"
+        },
+        {
+          "field": "colorOnlyMeaning",
+          "predicate": "EXACT_PRIMITIVE_FALSE"
+        }
+      ],
+      "redundantAriaLabelRequired": false,
+      "visibleTextMaySupplyComputedAccessibleName": true
+    },
+    "timedAttemptDefaultHidden": true,
+    "interactionPromotesMastery": false,
+    "revisionBoundTypedAnchorRequired": true,
+    "anchorTargetDigestRequired": true
+  },
+  "personalAnnotation": {
+    "kinds": [
+      "USER_MNEMONIC",
+      "OWN_WORDS_EXPLANATION",
+      "CONFUSION_NOTE",
+      "FORMULA_CUE",
+      "SELF_QUESTION",
+      "EXAM_COMPRESSION",
+      "PRIVATE_SOURCE_NOTE"
+    ],
+    "bodyPlane": "PERSONAL_RAW_VAULT",
+    "sharedReuse": false,
+    "crossUserReuse": false,
+    "directRawBodyTrainingAllowed": false,
+    "directRawBodyTrainingProhibition": "UNCONDITIONAL_NON_OVERRIDABLE",
+    "rawBodyRenameAliasOrDirectPromotionAllowed": false,
+    "rawBodyOriginClassificationSurvivesRenameOrAlias": true,
+    "rawPointerRenameAliasOrSignalReclassificationAllowed": false,
+    "reconstructiveDerivativeRenameAliasOrSignalReclassificationAllowed": false,
+    "possibleOverrideAuthorities": {
+      "learnerConsent": false,
+      "learnerOptIn": false,
+      "contract": false,
+      "administratorChoice": false,
+      "futureO5": false
+    },
+    "futureTrainingCandidateKinds": [
+      "SEPARATE_NON_RECONSTRUCTIVE_SIGNAL",
+      "SEPARATELY_AUTHORED_RIGHTS_REVIEWED_CLEARED_CONTENT_BANK_OBJECT"
+    ],
+    "futureTrainingCandidateRequirements": {
+      "SEPARATE_NON_RECONSTRUCTIVE_SIGNAL": [
+        "SEPARATE_OBJECT_IDENTITY",
+        "CLOSED_NON_RECONSTRUCTIVE_VALUE_SCHEMA",
+        "AFFIRMATIVE_SAME_OBJECT_BOOLEAN_FALSE_CONTENT_SAFETY_PROOF",
+        "NO_RAW_BODY",
+        "NO_RAW_BODY_POINTER",
+        "NO_EXCERPT_OR_FREE_TEXT",
+        "NO_REVERSIBLE_BODY_DERIVATION",
+        "NOT_RENAMED_ALIASED_OR_RELABELED_RAW_BODY_POINTER_OR_RECONSTRUCTIVE_DERIVATIVE",
+        "EXACT_SIGNAL_REVISION_PURPOSE_BOUND_CONSENT",
+        "FINITE_PURPOSE_BOUND_RETENTION"
+      ],
+      "SEPARATELY_AUTHORED_RIGHTS_REVIEWED_CLEARED_CONTENT_BANK_OBJECT": [
+        "SEPARATE_OBJECT_IDENTITY",
+        "SEPARATELY_AUTHORED",
+        "ACTUALLY_RIGHTS_OWNED",
+        "RIGHTS_REVIEWED",
+        "PROVENANCE_REVIEWED",
+        "NOT_RENAMED_ALIASED_OR_DIRECTLY_PROMOTED_RAW_ANNOTATION_BODY"
+      ]
+    },
+    "signalContentSafetyProofGate": {
+      "appliesTo": "SEPARATE_NON_RECONSTRUCTIVE_SIGNAL",
+      "candidateSafetyEchoLocation": "SAME_VALIDATED_SIGNAL_CANDIDATE_OBJECT",
+      "canonicalProofLocation": "TRUSTED_DECISION_CONTEXT",
+      "candidateSafetyValuesOrValidatorMarkersAloneSufficient": false,
+      "requiredBooleanFalseFields": [
+        "containsRawAnnotationBody",
+        "containsRawBodyPointer",
+        "containsExcerptOrFreeText",
+        "reconstructive",
+        "reconstructiveDerivativeOfRawBody"
+      ],
+      "eachFieldMustBeExplicitlyPresent": true,
+      "requiredPrimitiveType": "boolean",
+      "requiredValue": false,
+      "closedSchemaValidationRequired": true,
+      "validationSource": "CANONICAL_CLOSED_SIGNAL_SCHEMA_VALIDATOR",
+      "canonicalCandidateValueSchema": {
+        "validator": "CANONICAL_CLOSED_SIGNAL_SCHEMA_VALIDATOR",
+        "actualCandidateObjectMustValidate": true,
+        "candidateSuppliedSchemaOrProofMarkersSufficient": false,
+        "additionalTopLevelFieldsAllowed": false,
+        "requiredTopLevelFields": [
+          "kind",
+          "signalId",
+          "signalRevisionId",
+          "purposeId",
+          "o5ScopeId",
+          "separateObjectIdentity",
+          "closedValueSchema",
+          "containsRawAnnotationBody",
+          "containsRawBodyPointer",
+          "containsExcerptOrFreeText",
+          "reconstructive",
+          "reconstructiveDerivativeOfRawBody",
+          "contentSafetyProofValidated",
+          "contentSafetyProofValidationSource",
+          "contentSafetyProofAmbiguous",
+          "contentSafetyProofSignalId",
+          "contentSafetyProofSignalRevisionId",
+          "consent",
+          "retention"
+        ],
+        "topLevelIdentifierFields": [
+          "signalId",
+          "signalRevisionId",
+          "purposeId",
+          "o5ScopeId",
+          "contentSafetyProofSignalId",
+          "contentSafetyProofSignalRevisionId"
+        ],
+        "identifierPattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{2,127}$",
+        "topLevelExactValues": {
+          "kind": "SEPARATE_NON_RECONSTRUCTIVE_SIGNAL",
+          "separateObjectIdentity": true,
+          "closedValueSchema": true,
+          "containsRawAnnotationBody": false,
+          "containsRawBodyPointer": false,
+          "containsExcerptOrFreeText": false,
+          "reconstructive": false,
+          "reconstructiveDerivativeOfRawBody": false,
+          "contentSafetyProofValidated": true,
+          "contentSafetyProofValidationSource": "CANONICAL_CLOSED_SIGNAL_SCHEMA_VALIDATOR",
+          "contentSafetyProofAmbiguous": false
+        },
+        "nestedObjectSchemas": {
+          "consent": {
+            "additionalFieldsAllowed": false,
+            "requiredFields": [
+              "source",
+              "state",
+              "exactPurpose",
+              "signalId",
+              "signalRevisionId",
+              "purposeId",
+              "o5ScopeId",
+              "expired",
+              "revoked",
+              "expiresAt"
+            ],
+            "identifierFields": [
+              "signalId",
+              "signalRevisionId",
+              "purposeId",
+              "o5ScopeId"
+            ],
+            "rfc3339UtcMillisecondFields": [
+              "expiresAt"
+            ],
+            "exactValues": {
+              "source": "CANONICAL_VERSIONED_CONSENT_OPT_OUT_LEDGER",
+              "state": "ACTIVE",
+              "exactPurpose": true,
+              "expired": false,
+              "revoked": false
+            }
+          },
+          "retention": {
+            "additionalFieldsAllowed": false,
+            "requiredFields": [
+              "source",
+              "state",
+              "signalId",
+              "signalRevisionId",
+              "purposeId",
+              "o5ScopeId",
+              "finite",
+              "expiresAt",
+              "expired",
+              "revoked"
+            ],
+            "identifierFields": [
+              "signalId",
+              "signalRevisionId",
+              "purposeId",
+              "o5ScopeId"
+            ],
+            "rfc3339UtcMillisecondFields": [
+              "expiresAt"
+            ],
+            "exactValues": {
+              "source": "CANONICAL_PURPOSE_SCOPED_RETENTION_LEDGER",
+              "state": "ACTIVE",
+              "finite": true,
+              "expired": false,
+              "revoked": false
+            }
+          }
+        },
+        "undeclaredFreeTextOrReconstructiveFieldsAllowed": false,
+        "missingUnknownAdditionalWrongTypeMalformedOrProhibitedFieldBehavior": "FAIL_CLOSED_CANDIDATE_INELIGIBLE"
+      },
+      "canonicalOriginContentSafetyResolutionGate": {
+        "decisionContextField": "signalContentSafetyResolution",
+        "resolutionSource": "CANONICAL_SIGNAL_ORIGIN_CONTENT_SAFETY_RESOLVER",
+        "additionalFieldsAllowed": false,
+        "requiredFields": [
+          "source",
+          "resolutionId",
+          "originClassification",
+          "matchingRecordCount",
+          "serverSide",
+          "authoritative",
+          "independentlyResolved",
+          "known",
+          "resolved",
+          "signalId",
+          "signalRevisionId",
+          "purposeId",
+          "o5ScopeId",
+          "separateObjectIdentity",
+          "containsRawAnnotationBody",
+          "containsRawBodyPointer",
+          "containsExcerptOrFreeText",
+          "reconstructive",
+          "reconstructiveDerivativeOfRawBody",
+          "renamedOrAliasedRawBody",
+          "renamedRawPointerAsSignal",
+          "renamedReconstructiveDerivativeAsSignal",
+          "directPromotionFromRawBody",
+          "ambiguous",
+          "conflicting",
+          "mismatched",
+          "crossCandidate",
+          "crossRevision",
+          "crossPurpose",
+          "crossScope",
+          "stale",
+          "replayed",
+          "cancelled",
+          "clientInferred",
+          "callerInferred"
+        ],
+        "identifierFields": [
+          "resolutionId",
+          "signalId",
+          "signalRevisionId",
+          "purposeId",
+          "o5ScopeId"
+        ],
+        "identifierSchema": {
+          "type": "string",
+          "minLength": 3,
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{2,127}$"
+        },
+        "exactMatchingRecordCount": 1,
+        "requiredOriginClassification": "SEPARATE_NON_RECONSTRUCTIVE_SIGNAL_ORIGIN",
+        "requiredExactPrimitiveBooleanStates": {
+          "serverSide": true,
+          "authoritative": true,
+          "independentlyResolved": true,
+          "known": true,
+          "resolved": true,
+          "separateObjectIdentity": true,
+          "containsRawAnnotationBody": false,
+          "containsRawBodyPointer": false,
+          "containsExcerptOrFreeText": false,
+          "reconstructive": false,
+          "reconstructiveDerivativeOfRawBody": false,
+          "renamedOrAliasedRawBody": false,
+          "renamedRawPointerAsSignal": false,
+          "renamedReconstructiveDerivativeAsSignal": false,
+          "directPromotionFromRawBody": false,
+          "ambiguous": false,
+          "conflicting": false,
+          "mismatched": false,
+          "crossCandidate": false,
+          "crossRevision": false,
+          "crossPurpose": false,
+          "crossScope": false,
+          "stale": false,
+          "replayed": false,
+          "cancelled": false,
+          "clientInferred": false,
+          "callerInferred": false
+        },
+        "exactCandidateBindingFields": [
+          "signalId",
+          "signalRevisionId",
+          "purposeId",
+          "o5ScopeId"
+        ],
+        "candidateSafetyEchoFields": [
+          "separateObjectIdentity",
+          "containsRawAnnotationBody",
+          "containsRawBodyPointer",
+          "containsExcerptOrFreeText",
+          "reconstructive",
+          "reconstructiveDerivativeOfRawBody"
+        ],
+        "candidateSourceLabelBooleanOrSchemaMarkerSubstitutionAllowed": false,
+        "missingMalformedExtraFieldWrongSourceNonSingleUnsafeUnboundOrInferredBehavior": "FAIL_CLOSED_CANDIDATE_INELIGIBLE_NO_HYPOTHETICAL_RECEIPTS"
+      },
+      "clientValidationAssertionAccepted": false,
+      "exactSignalAndRevisionBindingRequired": true,
+      "ambiguousProofAllowed": false,
+      "crossObjectProofAllowed": false,
+      "missingUndefinedNullNonBooleanTrueAmbiguousCrossObjectOrUnvalidatedBehavior": "FAIL_CLOSED_CANDIDATE_INELIGIBLE"
+    },
+    "clearedContentBankProvenanceGate": {
+      "appliesTo": "SEPARATELY_AUTHORED_RIGHTS_REVIEWED_CLEARED_CONTENT_BANK_OBJECT",
+      "decisionContextField": "clearedContentProvenance",
+      "resolutionSource": "CANONICAL_CLEARED_CONTENT_PROMOTION_RIGHTS_PROVENANCE_RESOLVER",
+      "independentResolutionRequired": true,
+      "exactMatchingRecordCount": 1,
+      "candidateClosedSchema": {
+        "additionalTopLevelFieldsAllowed": false,
+        "requiredTopLevelFields": [
+          "kind",
+          "signalId",
+          "signalRevisionId",
+          "purposeId",
+          "o5ScopeId"
+        ],
+        "identifierFields": [
+          "signalId",
+          "signalRevisionId",
+          "purposeId",
+          "o5ScopeId"
+        ],
+        "identifierPattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{2,127}$",
+        "exactValues": {
+          "kind": "SEPARATELY_AUTHORED_RIGHTS_REVIEWED_CLEARED_CONTENT_BANK_OBJECT"
+        },
+        "callerSuppliedProvenanceBooleanFieldsForbidden": [
+          "separateObjectIdentity",
+          "separatelyAuthored",
+          "rightsOwned",
+          "rightsReviewed",
+          "provenanceReviewed"
+        ],
+        "privateRawOrFreeTextFieldsForbidden": [
+          "rawAnswer",
+          "rawAnnotationBody",
+          "rawBodyPointer",
+          "freeText",
+          "excerpt",
+          "reconstructivePayload"
+        ],
+        "missingUnknownAdditionalWrongTypeMalformedPrivateRawOrCallerProvenanceFieldBehavior": "FAIL_CLOSED_CANDIDATE_INELIGIBLE"
+      },
+      "recordClosedSchema": {
+        "additionalFieldsAllowed": false,
+        "requiredFields": [
+          "source",
+          "recordId",
+          "serverSide",
+          "authoritative",
+          "independentlyResolved",
+          "matchingRecordCount",
+          "known",
+          "resolved",
+          "ambiguous",
+          "conflicting",
+          "stale",
+          "clientInferred",
+          "callerInferred",
+          "replayed",
+          "cancelled",
+          "mismatched",
+          "crossCandidate",
+          "crossRevision",
+          "crossPurpose",
+          "crossScope",
+          "kind",
+          "signalId",
+          "signalRevisionId",
+          "purposeId",
+          "o5ScopeId",
+          "separateObjectIdentity",
+          "separatelyAuthored",
+          "rightsOwned",
+          "rightsReviewed",
+          "provenanceReviewed",
+          "derivedFromPersonalRawContent",
+          "containsPrivateRawContent"
+        ],
+        "identifierFields": [
+          "recordId",
+          "signalId",
+          "signalRevisionId",
+          "purposeId",
+          "o5ScopeId"
+        ],
+        "identifierPattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{2,127}$",
+        "exactValues": {
+          "source": "CANONICAL_CLEARED_CONTENT_PROMOTION_RIGHTS_PROVENANCE_RESOLVER",
+          "serverSide": true,
+          "authoritative": true,
+          "independentlyResolved": true,
+          "matchingRecordCount": 1,
+          "known": true,
+          "resolved": true,
+          "ambiguous": false,
+          "conflicting": false,
+          "stale": false,
+          "clientInferred": false,
+          "callerInferred": false,
+          "replayed": false,
+          "cancelled": false,
+          "mismatched": false,
+          "crossCandidate": false,
+          "crossRevision": false,
+          "crossPurpose": false,
+          "crossScope": false,
+          "kind": "SEPARATELY_AUTHORED_RIGHTS_REVIEWED_CLEARED_CONTENT_BANK_OBJECT",
+          "separateObjectIdentity": true,
+          "separatelyAuthored": true,
+          "rightsOwned": true,
+          "rightsReviewed": true,
+          "provenanceReviewed": true,
+          "derivedFromPersonalRawContent": false,
+          "containsPrivateRawContent": false
+        }
+      },
+      "exactCandidateBindingFields": [
+        "kind",
+        "signalId",
+        "signalRevisionId",
+        "purposeId",
+        "o5ScopeId"
+      ],
+      "callerSuppliedProvenanceBooleansAccepted": false,
+      "separatelyAuthoredAndRightsOwnedCanonicalProofRequired": true,
+      "missingAmbiguousConflictingStaleInferredMismatchedNonSingleUnknownOrPrivateRawBehavior": "FAIL_CLOSED_CANDIDATE_INELIGIBLE_NO_HYPOTHETICAL_RECEIPTS"
+    },
+    "signalPurposeGate": {
+      "appliesTo": "SEPARATE_NON_RECONSTRUCTIVE_SIGNAL",
+      "consentRecordSource": "CANONICAL_VERSIONED_CONSENT_OPT_OUT_LEDGER",
+      "retentionRecordSource": "CANONICAL_PURPOSE_SCOPED_RETENTION_LEDGER",
+      "candidateNestedConsentOrRetentionRecordAuthoritative": false,
+      "canonicalConsentResolutionGate": {
+        "decisionContextField": "consentResolution",
+        "resolutionSource": "CANONICAL_VERSIONED_CONSENT_OPT_OUT_LEDGER",
+        "additionalFieldsAllowed": false,
+        "requiredFields": [
+          "source",
+          "recordId",
+          "signalId",
+          "signalRevisionId",
+          "purposeId",
+          "o5ScopeId",
+          "state",
+          "expiresAt",
+          "matchingRecordCount",
+          "serverSide",
+          "authoritative",
+          "independentlyResolved",
+          "known",
+          "resolved",
+          "exactPurpose",
+          "expired",
+          "revoked",
+          "ambiguous",
+          "conflicting",
+          "mismatched",
+          "crossCandidate",
+          "crossRevision",
+          "crossPurpose",
+          "crossScope",
+          "stale",
+          "replayed",
+          "cancelled",
+          "clientInferred",
+          "callerInferred"
+        ],
+        "identifierFields": [
+          "recordId",
+          "signalId",
+          "signalRevisionId",
+          "purposeId",
+          "o5ScopeId"
+        ],
+        "identifierSchema": {
+          "type": "string",
+          "minLength": 3,
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{2,127}$"
+        },
+        "timestampFields": [
+          "expiresAt"
+        ],
+        "exactMatchingRecordCount": 1,
+        "requiredState": "ACTIVE",
+        "requiredExactPrimitiveBooleanStates": {
+          "serverSide": true,
+          "authoritative": true,
+          "independentlyResolved": true,
+          "known": true,
+          "resolved": true,
+          "exactPurpose": true,
+          "expired": false,
+          "revoked": false,
+          "ambiguous": false,
+          "conflicting": false,
+          "mismatched": false,
+          "crossCandidate": false,
+          "crossRevision": false,
+          "crossPurpose": false,
+          "crossScope": false,
+          "stale": false,
+          "replayed": false,
+          "cancelled": false,
+          "clientInferred": false,
+          "callerInferred": false
+        },
+        "exactCandidateBindingFields": [
+          "signalId",
+          "signalRevisionId",
+          "purposeId",
+          "o5ScopeId"
+        ],
+        "candidateConsentEchoMustExactlyEqualCanonicalRecord": true,
+        "candidateSourceLabelStateOrBooleanSubstitutionAllowed": false,
+        "missingMalformedExtraFieldWrongSourceNonSingleUnsafeUnboundExpiredRevokedOrInferredBehavior": "FAIL_CLOSED_CANDIDATE_INELIGIBLE_NO_HYPOTHETICAL_RECEIPTS"
+      },
+      "canonicalRetentionResolutionGate": {
+        "decisionContextField": "retentionResolution",
+        "resolutionSource": "CANONICAL_PURPOSE_SCOPED_RETENTION_LEDGER",
+        "additionalFieldsAllowed": false,
+        "requiredFields": [
+          "source",
+          "recordId",
+          "signalId",
+          "signalRevisionId",
+          "purposeId",
+          "o5ScopeId",
+          "state",
+          "expiresAt",
+          "matchingRecordCount",
+          "serverSide",
+          "authoritative",
+          "independentlyResolved",
+          "known",
+          "resolved",
+          "finite",
+          "expired",
+          "revoked",
+          "ambiguous",
+          "conflicting",
+          "mismatched",
+          "crossCandidate",
+          "crossRevision",
+          "crossPurpose",
+          "crossScope",
+          "stale",
+          "replayed",
+          "cancelled",
+          "clientInferred",
+          "callerInferred"
+        ],
+        "identifierFields": [
+          "recordId",
+          "signalId",
+          "signalRevisionId",
+          "purposeId",
+          "o5ScopeId"
+        ],
+        "identifierSchema": {
+          "type": "string",
+          "minLength": 3,
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{2,127}$"
+        },
+        "timestampFields": [
+          "expiresAt"
+        ],
+        "exactMatchingRecordCount": 1,
+        "requiredState": "ACTIVE",
+        "requiredExactPrimitiveBooleanStates": {
+          "serverSide": true,
+          "authoritative": true,
+          "independentlyResolved": true,
+          "known": true,
+          "resolved": true,
+          "finite": true,
+          "expired": false,
+          "revoked": false,
+          "ambiguous": false,
+          "conflicting": false,
+          "mismatched": false,
+          "crossCandidate": false,
+          "crossRevision": false,
+          "crossPurpose": false,
+          "crossScope": false,
+          "stale": false,
+          "replayed": false,
+          "cancelled": false,
+          "clientInferred": false,
+          "callerInferred": false
+        },
+        "exactCandidateBindingFields": [
+          "signalId",
+          "signalRevisionId",
+          "purposeId",
+          "o5ScopeId"
+        ],
+        "candidateRetentionEchoMustExactlyEqualCanonicalRecord": true,
+        "candidateSourceLabelStateOrBooleanSubstitutionAllowed": false,
+        "missingMalformedExtraFieldWrongSourceNonSingleUnsafeUnboundExpiredRevokedOrInferredBehavior": "FAIL_CLOSED_CANDIDATE_INELIGIBLE_NO_HYPOTHETICAL_RECEIPTS"
+      },
+      "exactBindingFields": [
+        "signalId",
+        "signalRevisionId",
+        "purposeId",
+        "o5ScopeId"
+      ],
+      "requiredConsentState": "ACTIVE",
+      "requiredRetentionState": "ACTIVE",
+      "requiredExactPrimitiveBooleanStates": {
+        "consent": {
+          "expired": false,
+          "revoked": false
+        },
+        "retention": {
+          "expired": false,
+          "revoked": false
+        }
+      },
+      "exactFalseOnlyPreservesEligibility": true,
+      "exactFalseCreatesConsentReceiptOrAuthorization": false,
+      "truthinessDefaultingCoercionOrAbsenceAccepted": false,
+      "missingUndefinedNullTrueStringNumberObjectArrayOrOtherNonFalseBehavior": "FAIL_CLOSED_CANDIDATE_INELIGIBLE_NO_HYPOTHETICAL_RECEIPTS",
+      "exactPurposeConsentRequired": true,
+      "finitePurposeBoundRetentionRequired": true,
+      "retentionExpiresAtRequired": true,
+      "consentExpiresAtRequired": true,
+      "retentionExpiryMustBeFutureAtEvaluation": true,
+      "consentExpiryMustBeFutureAtEvaluation": true,
+      "trustedEvaluationTimeGate": {
+        "source": "TRUSTED_SERVER_CLOCK_BOUNDARY",
+        "decisionContextField": "trustedEvaluationTime",
+        "resolutionSource": "TRUSTED_SERVER_CLOCK_BOUNDARY",
+        "field": "evaluatedAt",
+        "format": "EXACT_ISO_8601_UTC_INSTANT",
+        "additionalFieldsAllowed": false,
+        "requiredFields": [
+          "source",
+          "recordId",
+          "evaluatedAt",
+          "matchingRecordCount",
+          "serverSide",
+          "authoritative",
+          "independentlyResolved",
+          "trusted",
+          "known",
+          "resolved",
+          "ambiguous",
+          "conflicting",
+          "stale",
+          "replayed",
+          "cancelled",
+          "clientInferred",
+          "callerInferred"
+        ],
+        "identifierFields": [
+          "recordId"
+        ],
+        "identifierSchema": {
+          "type": "string",
+          "minLength": 3,
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{2,127}$"
+        },
+        "timestampFields": [
+          "evaluatedAt"
+        ],
+        "exactMatchingRecordCount": 1,
+        "requiredExactPrimitiveBooleanStates": {
+          "serverSide": true,
+          "authoritative": true,
+          "independentlyResolved": true,
+          "trusted": true,
+          "known": true,
+          "resolved": true,
+          "ambiguous": false,
+          "conflicting": false,
+          "stale": false,
+          "replayed": false,
+          "cancelled": false,
+          "clientInferred": false,
+          "callerInferred": false
+        },
+        "callerProvidedTimeAccepted": false,
+        "candidateProvidedTimeAccepted": false,
+        "missingOrInvalidBehavior": "FAIL_CLOSED_CANDIDATE_INELIGIBLE",
+        "expiryBoundaryPolicy": "EXPIRY_MUST_BE_STRICTLY_AFTER_EVALUATION_TIME"
+      },
+      "genericOptInAccepted": false,
+      "contractAcceptedAsConsent": false,
+      "administratorChoiceAcceptedAsConsent": false,
+      "o5AcceptedAsConsentOrRetention": false,
+      "indefiniteRetentionAccepted": false,
+      "missingMismatchedExpiredRevokedIndefiniteOrCrossPurposeBehavior": "FAIL_CLOSED_CANDIDATE_INELIGIBLE"
+    },
+    "trainingGateSeparation": {
+      "contributionGate": "DISTINCT_REQUIRED",
+      "promotionGate": "DISTINCT_REQUIRED",
+      "o5Gate": "DISTINCT_REQUIRED",
+      "contributionImpliesPromotion": false,
+      "promotionImpliesO5": false,
+      "o5MayBypassContributionOrPromotion": false,
+      "allPresentAuthorizations": false,
+      "currentlyAuthorized": false,
+      "canonicalAuthorizationBoundaryPath": "authorizationBoundary",
+      "canonicalAuthorizationFields": [
+        "modelTraining",
+        "personalRawBodyTraining",
+        "trainingSignalContribution",
+        "clearedContentBankPromotion",
+        "o5OfflineTraining"
+      ],
+      "requiredCurrentCanonicalValue": false,
+      "globalAuthorizationFlagsMayAuthorizeCandidate": false,
+      "independentlyResolvedCandidateBoundReceiptsRequired": true,
+      "receiptValidityImpliesCurrentAuthorization": false,
+      "hypotheticalOrMockReceiptsMayAuthorizeCurrentUse": false,
+      "futureActivationRequiresSeparatelyAuthorizedCanonicalBoundaryChange": true
+    },
+    "trainingApprovalReceiptGate": {
+      "appliesToEveryFutureTrainingCandidate": true,
+      "receiptKinds": [
+        "CONTRIBUTION_APPROVAL",
+        "PROMOTION_APPROVAL",
+        "O5_APPROVAL"
+      ],
+      "receiptFieldsByKind": {
+        "CONTRIBUTION_APPROVAL": "contribution",
+        "PROMOTION_APPROVAL": "promotion",
+        "O5_APPROVAL": "o5"
+      },
+      "receiptSetGate": {
+        "additionalFieldsAllowed": false,
+        "requiredFields": [
+          "contribution",
+          "promotion",
+          "o5"
+        ],
+        "missingNullArrayMalformedOrExtraFieldBehavior": "FAIL_CLOSED_NOT_AUTHORIZED"
+      },
+      "resolutionSourcesByKind": {
+        "CONTRIBUTION_APPROVAL": "CANONICAL_CONTRIBUTION_APPROVAL_RESOLVER",
+        "PROMOTION_APPROVAL": "CANONICAL_PROMOTION_APPROVAL_RESOLVER",
+        "O5_APPROVAL": "CANONICAL_O5_APPROVAL_RESOLVER"
+      },
+      "receiptRecordGate": {
+        "additionalFieldsAllowed": false,
+        "requiredFields": [
+          "receiptId",
+          "approvalKind",
+          "source",
+          "matchingRecordCount",
+          "serverSide",
+          "authoritative",
+          "independentlyResolved",
+          "known",
+          "resolved",
+          "active",
+          "ambiguous",
+          "conflicting",
+          "replayed",
+          "stale",
+          "revoked",
+          "clientInferred",
+          "callerInferred",
+          "crossCandidate",
+          "crossRevision",
+          "crossPurpose",
+          "crossScope",
+          "signalId",
+          "signalRevisionId",
+          "purposeId",
+          "o5ScopeId"
+        ],
+        "identifierFields": [
+          "receiptId",
+          "signalId",
+          "signalRevisionId",
+          "purposeId",
+          "o5ScopeId"
+        ],
+        "identifierSchema": {
+          "type": "string",
+          "minLength": 3,
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{2,127}$"
+        },
+        "requiredExactPrimitiveBooleanStates": {
+          "serverSide": true,
+          "authoritative": true,
+          "independentlyResolved": true,
+          "known": true,
+          "resolved": true,
+          "active": true,
+          "ambiguous": false,
+          "conflicting": false,
+          "replayed": false,
+          "stale": false,
+          "revoked": false,
+          "clientInferred": false,
+          "callerInferred": false,
+          "crossCandidate": false,
+          "crossRevision": false,
+          "crossPurpose": false,
+          "crossScope": false
+        },
+        "kindAndKindSpecificCanonicalSourceRequired": true,
+        "exactlyOneMatchingRecordRequired": true,
+        "missingNullArrayMalformedWrongSourceWrongKindExtraFieldNonBooleanUnsafeOrUnboundBehavior": "FAIL_CLOSED_NOT_AUTHORIZED"
+      },
+      "exactBindingFields": [
+        "signalId",
+        "signalRevisionId",
+        "purposeId",
+        "o5ScopeId"
+      ],
+      "exactMatchingRecordCount": 1,
+      "independentResolutionRequired": true,
+      "activeRequired": true,
+      "distinctReceiptIdsRequired": true,
+      "replayedAllowed": false,
+      "ambiguousAllowed": false,
+      "staleAllowed": false,
+      "revokedAllowed": false,
+      "crossCandidateCrossRevisionCrossPurposeCrossScopeAllowed": false,
+      "globalAuthorizationBooleanSubstitutionAllowed": false,
+      "validReceiptSetEffectUnderThisContract": "HYPOTHETICAL_FUTURE_BINDING_PROOF_ONLY",
+      "currentTrainingAuthorizationEffectUnderThisContract": false,
+      "mockFixtureHypotheticalOrFutureReceiptOverrideAllowed": false,
+      "missingMismatchedAmbiguousReplayedStaleRevokedOrUnresolvedBehavior": "FAIL_CLOSED_NOT_AUTHORIZED"
+    },
+    "freeTextAnalytics": false,
+    "activationPrerequisites": [
+      "CPF_SOURCE_SAFETY_CLOSURE",
+      "SEPARATE_SCHEMA_RLS_STORAGE_PROVIDER_WORK",
+      "RETENTION_EXPORT_DELETE",
+      "PRIVATE_ANCHOR_ORPHAN_POLICY",
+      "NO_BODY_LOG_TRACE",
+      "SYNC_CONFLICT_POLICY",
+      "ACCESSIBILITY",
+      "HOSTILE_CROSS_USER_TEST",
+      "OWNER_PRIVATE_RUNTIME_EVIDENCE"
+    ]
+  },
+  "portableCore": {
+    "reusableInterfaces": [
+      "MEMORY_CUE",
+      "TERM_COMPONENT",
+      "ANNOTATION_ANCHOR",
+      "CUE_PRESENTATION_STATE",
+      "CUE_EXPOSURE_EVENT",
+      "SEMANTIC_HIGHLIGHT_ROLE",
+      "BODYLESS_ANNOTATION_RECEIPT"
+    ],
+    "profileOwned": [
+      "FORMAL_TERMINOLOGY",
+      "EXACT_DEFINITION",
+      "DECOMPOSITION",
+      "MEMORY_GLOSS",
+      "CONTRAST_TRAP",
+      "CURRENTNESS",
+      "RIGHTS",
+      "REVIEWER_REGISTRY",
+      "RELEASE_POLICY"
+    ],
+    "crossProfileCueInheritanceAllowed": false,
+    "crossProfileDefinitionInheritanceAllowed": false,
+    "crossProfileMasteryTransferAllowed": false
+  },
+  "implementationProgram": [
+    {
+      "workId": "MCAL-0",
+      "name": "source_only_contracts_and_validation",
+      "authorizedByThisContract": true,
+      "runtime": false,
+      "realContent": false
+    },
+    {
+      "workId": "MCAL-1",
+      "name": "reviewed_appraiser_second_terminology_registry",
+      "authorizedByThisContract": false,
+      "learnerUi": false,
+      "seedTotal": "45-60",
+      "requires": [
+        "RELEASED_VERSIONED_VESG_CONCEPTS"
+      ]
+    },
+    {
+      "workId": "MCAL-2",
+      "name": "memory_postit_mvp",
+      "authorizedByThisContract": false,
+      "requires": [
+        "CORE_ENGINE_ACCEPTED",
+        "ATTEMPT_REPAIR_TRANSFER_D7_ACCEPTED",
+        "MCAL_1_REVIEWED",
+        "CPF_2A_CLOSED",
+        "APPROVED_BODYLESS_EXPOSURE_PATH",
+        "CANONICAL_ASSISTANCE_EXPOSURE_LEDGER_REUSE",
+        "OWNER_PRIVATE_ACTIVATION"
+      ]
+    },
+    {
+      "workId": "MCAL-3",
+      "name": "semantic_highlighting",
+      "authorizedByThisContract": false,
+      "requires": [
+        "MCAL_2_USABILITY_ACCESSIBILITY_PASS",
+        "REVISION_BOUND_TYPED_ANCHORS",
+        "STABLE_OWNED_OR_PERMITTED_ANCHORS"
+      ]
+    },
+    {
+      "workId": "MCAL-4",
+      "name": "personal_annotation_editor",
+      "authorizedByThisContract": false,
+      "requires": [
+        "CPF_PRIVACY_EXPORT_DELETE_GATES",
+        "SEPARATE_PERSISTENCE_SCHEMA_WORK",
+        "OWNER_PRIVATE_HOSTILE_RUNTIME_EVIDENCE"
+      ]
+    }
+  ],
+  "hardGates": {
+    "memoryGlossUsedAsExactDefinition": 0,
+    "literalGlossPresentedAsProfessionalDefinition": 0,
+    "inventedOrUnverifiedHanjaReleased": 0,
+    "cueWithoutProfileOrScopeNode": 0,
+    "cueWithoutExactDefinitionOrNormOrRights": 0,
+    "staleCueAfterDefinitionDrift": 0,
+    "cueRevealWithoutExposureEvent": 0,
+    "cueViewPromotesIndependentMastery": 0,
+    "d7StableWithVisibleCue": 0,
+    "d7StableWithoutActual7DayElapsedInterval": 0,
+    "d7StableWithoutExactCanonicalD7AttemptResolution": 0,
+    "afterResponseRequestWithoutClosedClassification": 0,
+    "reviewOnlyEventWithoutProvenanceOrOrdering": 0,
+    "sameRepresentationCountedAsFarTransfer": 0,
+    "farTransferWithoutIndependentCanonicalSourceAndTransferTaskBindings": 0,
+    "colorOnlySemanticHighlight": 0,
+    "primaryHighlightsOverThree": 0,
+    "expandedMemoryCardsOverOne": 0,
+    "memoryCardObscuresPrimaryResponse": 0,
+    "privateSourceRangeInSharedPlane": 0,
+    "personalAnnotationBodyOutsidePersonalRawVault": 0,
+    "personalFreeTextInLogsOrAnalytics": 0,
+    "crossUserPersonalCueReuse": 0,
+    "directRawPersonalAnnotationBodyTraining": 0,
+    "rawPersonalAnnotationBodyRenamedOrAliasedForTraining": 0,
+    "rawPersonalAnnotationBodyDirectlyPromotedToClearedContentBank": 0,
+    "reconstructiveAnnotationSignalUsedAsTrainingCandidate": 0,
+    "trainingSignalCandidateWithUndeclaredFreeTextOrReconstructiveField": 0,
+    "trainingCandidateWithoutDistinctContributionPromotionO5Gates": 0,
+    "trainingCandidateWithoutExactCandidateBoundApprovalReceipts": 0,
+    "mockOrHypotheticalReceiptAuthorizesCurrentTraining": 0,
+    "trainingDecisionWithoutTrustedServerEvaluationTime": 0,
+    "learningEvidenceFromUnresolvedOrNonSingleCanonicalAttempt": 0,
+    "positiveLearningEvidenceFromUnsafeBaseAttemptResolution": 0,
+    "clearedContentCandidateWithoutCanonicalBoundProvenance": 0,
+    "personalEditorBeforeCpfPrivacyExportDeleteGates": 0,
+    "mcalRuntimeBeforeCoreLoopAcceptance": 0,
+    "otherProfileTermAutoInheritance": 0,
+    "mcalCreatesFourthTodayPrimaryTask": 0,
+    "exactDefinitionRefOutsideReleasedVersionedVesgProjection": 0,
+    "mcalSecondDefinitionAuthority": 0,
+    "mcal1TermWithoutReleasedVesgConcept": 0,
+    "mcal2BeforeCpf2aClosure": 0,
+    "mcal2WithoutApprovedBodylessExposurePath": 0,
+    "separateCueExposureLedger": 0,
+    "preResponseDecompositionWithoutExposure": 0,
+    "collapsedCueBytesBeforeAtomicExposure": 0,
+    "hiddenCueBytesInForbiddenSurface": 0,
+    "semanticHighlightWithoutRevisionBoundTypedAnchor": 0,
+    "anchorMissingOrInvalidRequiredBinding": 0,
+    "privateAnchorWithoutExactAuthoritativeOwnerBinding": 0,
+    "anchorKindPolicyFallbackUsed": 0,
+    "learnerAttemptRangeOutsideVaultLocal": 0,
+    "privateTargetDigestInSharedProjection": 0,
+    "preResponseCueClassifiedNone": 0,
+    "preResponseAttemptCountedIndependent": 0,
+    "preResponseCueWithoutCanonicalIndependentAttemptOpen": 0,
+    "preResponseCueWithoutExactSingleUseConfirmation": 0,
+    "preResponseCueBeforeAtomicAssistedTransition": 0,
+    "preResponseCueAfterPartialCommitOrRace": 0,
+    "preResponseCueFromOpenOrUnsafeConfirmationRecord": 0,
+    "renderCapableExposureEventWithoutExactBooleanCommittedRecord": 0,
+    "independentCreditWithoutExactCanonicalPreResponseExposureCount": 0,
+    "positiveCreditFromOpenUnresolvedOrUnboundEvaluationRecord": 0,
+    "d7CreditFromOuterOrSubstitutedCompletionTimestamp": 0,
+    "submittedAttemptRenderedAsBeforeResponse": 0,
+    "reviewOnlyWithoutCanonicalServerResolution": 0,
+    "reviewOnlyWithMatchingOpenIndependentAttempt": 0,
+    "reviewOnlyWithoutExactNoRaceState": 0,
+    "semanticHighlightMissingVisibleTextLabel": 0,
+    "semanticHighlightMissingComputedAccessibleName": 0
+  },
+  "compatibility": {
+    "v13RemainsSoleActiveMasterPlan": true,
+    "newMasterPlanVersionCreated": false,
+    "preserveV11SourceSafety": true,
+    "preserveAttemptFirst": true,
+    "preserveAssistanceExposureMasterySeparation": true,
+    "preserveTodayMaximumThree": true,
+    "preservePortableProfileIsolation": true,
+    "preserveCurrentAppraiserSecondRuntimeScope": true,
+    "cpf1CompleteClaimed": false,
+    "pr692Mutated": false,
+    "mcal1Through4Authorized": false,
+    "cpf2aCompleteClaimed": false,
+    "pr692LateP2Resolved": false
+  },
+  "definitionAuthority": {
+    "canonicalAuthority": "VESG",
+    "exactDefinitionRefTarget": "RELEASED_VERSIONED_VESG_CONCEPT_EVIDENCE_PROJECTION",
+    "requiredBindings": [
+      "profileId",
+      "conceptId",
+      "graphSnapshotId",
+      "normSnapshotId",
+      "evidenceProjectionRevision",
+      "releaseRef",
+      "targetDigest"
+    ],
+    "releasedConceptRequired": true,
+    "versionBindingRequired": true,
+    "evidenceProjectionBindingRequired": true,
+    "mcalMayCreateDefinitionAuthority": false,
+    "mcalMayOverrideDefinition": false,
+    "unresolvedOrHeldDefinitionMayRelease": false
+  },
+  "cueExposure": {
+    "eventName": "CueExposureEvent",
+    "canonicalLedger": "ASSISTANCE_EXPOSURE_LEDGER",
+    "canonicalEventKind": "CUE_EXPOSURE",
+    "discriminator": "timing",
+    "eventVariants": [
+      {
+        "timing": "BEFORE_RESPONSE",
+        "allowedAssistanceClassifications": [
+          "LOW",
+          "MATERIAL"
+        ],
+        "preResponseExposure": true,
+        "independentEvidenceEligible": false,
+        "requiredCanonicalAttemptState": "INDEPENDENT_ATTEMPT_OPEN",
+        "requiredConfirmationGate": "EXACT_SINGLE_USE_DELIBERATE_CONFIRMATION",
+        "requiredPreRenderTransaction": "PRE_RESPONSE_ATOMIC_COMMIT",
+        "positiveLearningEvidenceCreatedByEvent": false
+      },
+      {
+        "timing": "AFTER_RESPONSE",
+        "allowedAssistanceClassifications": [
+          "NONE",
+          "LOW",
+          "MATERIAL"
+        ],
+        "preResponseExposure": false,
+        "independentEvidenceEligibility": "SEPARATE_AFFIRMATIVE_CANONICAL_EVIDENCE_REQUIRED",
+        "submittedAttemptEligible": true,
+        "attemptIdRequired": true,
+        "requiredAttemptBindingGate": "EXACT_CANONICAL_SUBMITTED_ATTEMPT_BINDING",
+        "positiveLearningEvidenceCreatedByEvent": false
+      },
+      {
+        "timing": "REVIEW_ONLY",
+        "allowedAssistanceClassifications": [
+          "NONE",
+          "LOW",
+          "MATERIAL"
+        ],
+        "preResponseExposure": false,
+        "independentEvidenceEligibility": "EVIDENCE_NEUTRAL",
+        "attemptIdPolicy": "OPTIONAL_IF_PRESENT_MUST_RESOLVE_EXACTLY",
+        "requiredCanonicalTimingClassificationGate": "CANONICAL_REVIEW_ONLY_RENDER_GATE_V1",
+        "matchingCanonicalOpenIndependentAttemptAllowed": false,
+        "positiveLearningEvidenceCreatedByEvent": false
+      }
+    ],
+    "closedTimingClassificationMap": {
+      "BEFORE_RESPONSE": [
+        "LOW",
+        "MATERIAL"
+      ],
+      "AFTER_RESPONSE": [
+        "NONE",
+        "LOW",
+        "MATERIAL"
+      ],
+      "REVIEW_ONLY": [
+        "NONE",
+        "LOW",
+        "MATERIAL"
+      ]
+    },
+    "recordFailureGate": {
+      "gateId": "EXACT_RENDER_RECORD_FAILURE_GATE_V1",
+      "appliesToEveryRenderCapableExposureEventTiming": [
+        "BEFORE_RESPONSE",
+        "AFTER_RESPONSE",
+        "REVIEW_ONLY"
+      ],
+      "sharedAcrossEveryRenderCapableValidator": true,
+      "renderCapableValidators": [
+        "CUE_RENDER_REQUEST_VALIDATOR",
+        "CUE_EXPOSURE_EVENT_VALIDATOR"
+      ],
+      "field": "recordFailure",
+      "requiredPrimitiveType": "boolean",
+      "requiredExactValue": false,
+      "evaluatedBeforeTimingRouting": true,
+      "missingUndefinedNullTrueStringNumberObjectArrayOrAmbiguousBehavior": "FAIL_CLOSED_NO_CUE_BYTES"
+    },
+    "canonicalRecordCommittedGate": {
+      "appliesToEveryRenderCapableExposureEventTiming": [
+        "BEFORE_RESPONSE",
+        "AFTER_RESPONSE",
+        "REVIEW_ONLY"
+      ],
+      "sharedAcrossEveryRenderCapableValidator": true,
+      "renderCapableValidators": [
+        "CUE_RENDER_REQUEST_VALIDATOR",
+        "CUE_EXPOSURE_EVENT_VALIDATOR"
+      ],
+      "field": "canonicalRecordCommitted",
+      "requiredPrimitiveType": "boolean",
+      "requiredValue": true,
+      "truthinessAllowed": false,
+      "callerInferredCommitStateAllowed": false,
+      "missingUndefinedNullFalseStringNumberObjectArrayOrAmbiguousBehavior": "FAIL_CLOSED_NO_CUE_BYTES"
+    },
+    "separateLedgerAllowed": false,
+    "timingAndClassificationSource": "CANONICAL_ASSISTANCE_EXPOSURE_LEDGER",
+    "untrustedClientTimingOrClassificationAccepted": false,
+    "attemptStateSource": "CANONICAL_SERVER_ATTEMPT_LEDGER",
+    "untrustedClientAttemptStateAccepted": false,
+    "canonicalAttemptResolutionStateGate": {
+      "gateId": "EXACT_CANONICAL_ATTEMPT_RESOLUTION_STATE_GATE_V1",
+      "appliesToEveryCanonicalAttemptResolutionIn": [
+        "EXACT_CANONICAL_SUBMITTED_ATTEMPT_BINDING",
+        "EXACT_PRE_RESPONSE_RENDER_GATE_V1",
+        "CANONICAL_REVIEW_ONLY_OPEN_ATTEMPT_ABSENCE_PROOF",
+        "CANONICAL_FAR_TRANSFER_ATTEMPT_RESOLUTION",
+        "CANONICAL_D7_ATTEMPT_RESOLUTION"
+      ],
+      "requiredExactPrimitiveBooleanStates": {
+        "known": true,
+        "resolved": true,
+        "ambiguous": false,
+        "conflicting": false,
+        "stale": false,
+        "clientInferred": false
+      },
+      "eachResolutionValidatedIndependently": true,
+      "truthinessDefaultingCoercionOrAbsenceAccepted": false,
+      "missingUndefinedNullStringNumberObjectArrayOrWrongStateBehavior": "FAIL_CLOSED_NO_CUE_BYTES"
+    },
+    "reviewOnlyGate": {
+      "gateId": "CANONICAL_REVIEW_ONLY_RENDER_GATE_V1",
+      "sharedAcrossEveryRenderCapableValidator": true,
+      "renderCapableValidators": [
+        "CUE_RENDER_REQUEST_VALIDATOR",
+        "CUE_EXPOSURE_EVENT_VALIDATOR"
+      ],
+      "canonicalRecordCommittedGateRef": "cueExposure.canonicalRecordCommittedGate",
+      "canonicalResolutionSource": "CANONICAL_SERVER_CUE_TIMING_CLASSIFICATION_RESOLVER",
+      "canonicalAttemptAbsenceSource": "CANONICAL_SERVER_ATTEMPT_LEDGER",
+      "canonicalAttemptAbsenceResolutionStateGateRef": "cueExposure.canonicalAttemptResolutionStateGate",
+      "authenticatedLearnerScopeBindingGate": {
+        "field": "authenticatedLearnerPrivateScopeId",
+        "source": "AUTHENTICATED_REQUEST_CONTEXT",
+        "identifierSchema": {
+          "type": "string",
+          "minLength": 3,
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{2,127}$"
+        },
+        "independentlyValidatedRefs": [
+          "subject.authenticatedLearnerPrivateScopeId",
+          "subject.learnerPrivateScopeId",
+          "subject.reviewOnlyResolution.learnerPrivateScopeId",
+          "subject.reviewOnlyResolution.openIndependentAttemptResolution.learnerPrivateScopeId"
+        ],
+        "comparison": "EXACT_FIELD_FOR_FIELD",
+        "allValidatedLearnerScopesMustExactlyEqual": true,
+        "untrustedAliasFields": [
+          "clientLearnerPrivateScopeId",
+          "callerLearnerPrivateScopeId",
+          "clientAuthenticatedLearnerPrivateScopeId",
+          "callerAuthenticatedLearnerPrivateScopeId"
+        ],
+        "clientOrCallerAliasAllowed": false,
+        "inferenceAllowed": false,
+        "missingMalformedMatchingMalformedForeignAliasedOrInferredBehavior": "FAIL_CLOSED_NO_CUE_BYTES"
+      },
+      "canonicalReviewOnlyResolutionGate": {
+        "recordRef": "subject.reviewOnlyResolution",
+        "resolutionSource": "CANONICAL_SERVER_CUE_TIMING_CLASSIFICATION_RESOLVER",
+        "additionalFieldsAllowed": false,
+        "requiredFields": [
+          "source",
+          "matchingResolutionCount",
+          "serverSide",
+          "authoritative",
+          "independentlyResolved",
+          "known",
+          "resolved",
+          "ambiguous",
+          "conflicting",
+          "crossLearner",
+          "crossAttempt",
+          "mismatched",
+          "stale",
+          "replayed",
+          "cancelled",
+          "clientInferred",
+          "callerInferred",
+          "canonicalTiming",
+          "canonicalAssistanceClassification",
+          "canonicalExposureRecordState",
+          "learnerPrivateScopeId",
+          "attemptScopeId",
+          "cueId",
+          "cueRevisionId",
+          "requestId",
+          "openIndependentAttemptResolution"
+        ],
+        "identifierFields": [
+          "learnerPrivateScopeId",
+          "attemptScopeId",
+          "cueId",
+          "cueRevisionId",
+          "requestId"
+        ],
+        "identifierSchema": {
+          "type": "string",
+          "minLength": 3,
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{2,127}$"
+        },
+        "matchingRecordCountField": "matchingResolutionCount",
+        "exactMatchingRecordCount": 1,
+        "requiredExactPrimitiveBooleanStates": {
+          "serverSide": true,
+          "authoritative": true,
+          "independentlyResolved": true,
+          "known": true,
+          "resolved": true,
+          "ambiguous": false,
+          "conflicting": false,
+          "crossLearner": false,
+          "crossAttempt": false,
+          "mismatched": false,
+          "stale": false,
+          "replayed": false,
+          "cancelled": false,
+          "clientInferred": false,
+          "callerInferred": false
+        },
+        "recordBindingFields": [
+          "learnerPrivateScopeId",
+          "attemptScopeId",
+          "cueId",
+          "cueRevisionId",
+          "requestId"
+        ],
+        "missingNullArrayMalformedWrongSourceExtraFieldNonBooleanUnsafeOrUnboundBehavior": "FAIL_CLOSED_NO_CUE_BYTES"
+      },
+      "canonicalOpenIndependentAttemptAbsenceResolutionGate": {
+        "recordRef": "subject.reviewOnlyResolution.openIndependentAttemptResolution",
+        "recordField": "openIndependentAttemptResolution",
+        "resolutionSource": "CANONICAL_SERVER_ATTEMPT_LEDGER",
+        "additionalFieldsAllowed": false,
+        "requiredFields": [
+          "source",
+          "queriedCanonicalAttemptState",
+          "learnerPrivateScopeId",
+          "attemptScopeId",
+          "matchingRecordCount",
+          "serverSide",
+          "authoritative",
+          "independentlyResolved",
+          "known",
+          "resolved",
+          "ambiguous",
+          "conflicting",
+          "crossLearner",
+          "crossAttempt",
+          "mismatched",
+          "stale",
+          "replayed",
+          "cancelled",
+          "clientInferred",
+          "callerInferred"
+        ],
+        "identifierFields": [
+          "learnerPrivateScopeId",
+          "attemptScopeId"
+        ],
+        "identifierSchema": {
+          "type": "string",
+          "minLength": 3,
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{2,127}$"
+        },
+        "matchingRecordCountField": "matchingRecordCount",
+        "exactMatchingRecordCount": 0,
+        "requiredQueriedCanonicalAttemptState": "INDEPENDENT_ATTEMPT_OPEN",
+        "requiredExactPrimitiveBooleanStates": {
+          "serverSide": true,
+          "authoritative": true,
+          "independentlyResolved": true,
+          "known": true,
+          "resolved": true,
+          "ambiguous": false,
+          "conflicting": false,
+          "crossLearner": false,
+          "crossAttempt": false,
+          "mismatched": false,
+          "stale": false,
+          "replayed": false,
+          "cancelled": false,
+          "clientInferred": false,
+          "callerInferred": false
+        },
+        "recordBindingFields": {
+          "learnerPrivateScopeId": "learnerPrivateScopeId",
+          "attemptScopeId": "attemptScopeId"
+        },
+        "missingNullArrayMalformedWrongSourceExtraFieldNonBooleanUnsafeForeignScopeOrNonzeroCountBehavior": "FAIL_CLOSED_NO_CUE_BYTES"
+      },
+      "openAttemptStateFilter": "INDEPENDENT_ATTEMPT_OPEN",
+      "requiredCanonicalTiming": "REVIEW_ONLY",
+      "allowedCanonicalAssistanceClassifications": [
+        "NONE",
+        "LOW",
+        "MATERIAL"
+      ],
+      "exactBindingFields": [
+        "learnerPrivateScopeId",
+        "attemptScopeId",
+        "cueId",
+        "cueRevisionId",
+        "requestId"
+      ],
+      "exactMatchingResolutionCount": 1,
+      "requiredResolutionBooleanStates": {
+        "known": true,
+        "resolved": true,
+        "ambiguous": false,
+        "conflicting": false,
+        "crossLearner": false,
+        "stale": false,
+        "clientInferred": false
+      },
+      "matchingCanonicalOpenIndependentAttemptCount": 0,
+      "canonicalExposureRecordStateRequired": "COMMITTED",
+      "renderSubmitRaceExactFalseGate": {
+        "field": "renderSubmitRaceDetected",
+        "requiredPrimitiveType": "boolean",
+        "requiredExactValue": false,
+        "appliesWhenOuterOrNestedCanonicalTimingIsReviewOnly": true,
+        "evaluatedBeforeReviewOnlyRoutingOrEarlyReturnInEachValidator": true,
+        "revalidatedBySharedReviewOnlyAuthorizer": true,
+        "truthinessCoercionDefaultingOrAbsenceAccepted": false,
+        "missingUndefinedNullStringNumberObjectArrayOrTrueBehavior": "FAIL_CLOSED_NO_CUE_BYTES"
+      },
+      "callerSuppliedReviewOnlyLabelSufficient": false,
+      "callerSuppliedCanonicalExposureRecordCommittedAccepted": false,
+      "clientEventAccepted": false,
+      "inferredTimingAccepted": false,
+      "exposureEventPreRoutingGate": {
+        "validator": "CUE_EXPOSURE_EVENT_VALIDATOR",
+        "evaluatedBeforeReviewOnlyRouting": true,
+        "requiredDerivedFromField": "derivedFrom",
+        "requiredDerivedFromSourceRef": "cueExposure.timingAndClassificationSource",
+        "requiredOrderingField": "ordering",
+        "requiredOrderingValue": "ORDERED",
+        "requestValidatorRequiresEventOnlyFields": false,
+        "missingWrongOrAmbiguousProvenanceOrOrderingBehavior": "FAIL_CLOSED_NO_CUE_BYTES"
+      },
+      "missingAmbiguousConflictingCrossLearnerStaleClientInferredUnresolvedOrOpenAttemptBehavior": "FAIL_CLOSED_NO_CUE_BYTES"
+    },
+    "canonicalAttemptStates": [
+      "INDEPENDENT_ATTEMPT_OPEN",
+      "ASSISTED",
+      "SUBMITTED"
+    ],
+    "beforeResponseGate": {
+      "gateId": "EXACT_PRE_RESPONSE_RENDER_GATE_V1",
+      "sharedAcrossEveryRenderCapableValidator": true,
+      "renderCapableValidators": [
+        "CUE_RENDER_REQUEST_VALIDATOR",
+        "CUE_EXPOSURE_EVENT_VALIDATOR"
+      ],
+      "timingClassificationMapRef": "cueExposure.closedTimingClassificationMap.BEFORE_RESPONSE",
+      "requiredAssistanceClassifications": [
+        "LOW",
+        "MATERIAL"
+      ],
+      "assistanceClassificationRequiredOnRequest": true,
+      "missingNoneOrDisallowedAssistanceClassificationBehavior": "FAIL_CLOSED_NO_CUE_BYTES",
+      "everyBeforeResponseAuthorizationMustDelegateToGateId": "EXACT_PRE_RESPONSE_RENDER_GATE_V1",
+      "alternateValidatorBypassAllowed": false,
+      "alternateValidatorBypassBehavior": "FAIL_CLOSED_NO_CUE_BYTES",
+      "nonNullExactAttemptIdRequired": true,
+      "nonNullExactLearnerPrivateScopeIdRequired": true,
+      "authenticatedLearnerScopeBindingGate": {
+        "field": "authenticatedLearnerPrivateScopeId",
+        "source": "AUTHENTICATED_REQUEST_CONTEXT",
+        "identifierSchema": {
+          "type": "string",
+          "minLength": 3,
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{2,127}$"
+        },
+        "independentlyValidatedRefs": [
+          "subject.authenticatedLearnerPrivateScopeId",
+          "subject.learnerPrivateScopeId",
+          "subject.attemptResolution.learnerPrivateScopeId",
+          "subject.confirmation.learnerPrivateScopeId"
+        ],
+        "comparison": "EXACT_FIELD_FOR_FIELD",
+        "allValidatedLearnerScopesMustExactlyEqual": true,
+        "untrustedAliasFields": [
+          "clientLearnerPrivateScopeId",
+          "callerLearnerPrivateScopeId",
+          "clientAuthenticatedLearnerPrivateScopeId",
+          "callerAuthenticatedLearnerPrivateScopeId"
+        ],
+        "clientOrCallerAliasAllowed": false,
+        "inferenceAllowed": false,
+        "missingMalformedMatchingMalformedForeignAliasedOrInferredBehavior": "FAIL_CLOSED_NO_CUE_BYTES"
+      },
+      "attemptResolutionSource": "CANONICAL_SERVER_ATTEMPT_LEDGER",
+      "attemptResolutionStateGateRef": "cueExposure.canonicalAttemptResolutionStateGate",
+      "canonicalOpenAttemptResolutionGate": {
+        "recordRef": "subject.attemptResolution",
+        "resolutionSource": "CANONICAL_SERVER_ATTEMPT_LEDGER",
+        "additionalFieldsAllowed": false,
+        "requiredFields": [
+          "source",
+          "attemptId",
+          "learnerPrivateScopeId",
+          "canonicalAttemptState",
+          "matchingRecordCount",
+          "serverSide",
+          "authoritative",
+          "independentlyResolved",
+          "known",
+          "resolved",
+          "submitted",
+          "submittedBeforeExposure",
+          "crossLearner",
+          "crossAttempt",
+          "mismatched",
+          "replayed",
+          "preSubmission",
+          "closed",
+          "stale",
+          "cancelled",
+          "ambiguous",
+          "conflicting",
+          "clientInferred",
+          "callerInferred"
+        ],
+        "identifierFields": [
+          "attemptId",
+          "learnerPrivateScopeId"
+        ],
+        "identifierSchema": {
+          "type": "string",
+          "minLength": 3,
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{2,127}$"
+        },
+        "exactMatchingRecordCount": 1,
+        "requiredCanonicalAttemptState": "INDEPENDENT_ATTEMPT_OPEN",
+        "requiredExactPrimitiveBooleanStates": {
+          "serverSide": true,
+          "authoritative": true,
+          "independentlyResolved": true,
+          "known": true,
+          "resolved": true,
+          "submitted": false,
+          "submittedBeforeExposure": false,
+          "crossLearner": false,
+          "crossAttempt": false,
+          "mismatched": false,
+          "replayed": false,
+          "preSubmission": true,
+          "closed": false,
+          "stale": false,
+          "cancelled": false,
+          "ambiguous": false,
+          "conflicting": false,
+          "clientInferred": false,
+          "callerInferred": false
+        },
+        "recordBindingFields": {
+          "attemptId": "attemptId",
+          "learnerPrivateScopeId": "learnerPrivateScopeId"
+        },
+        "callerSourceLabelOrOuterStateSufficient": false,
+        "missingMalformedWrongSourceExtraFieldZeroMultipleUnsafeUnresolvedOrUnboundBehavior": "FAIL_CLOSED_NO_CUE_BYTES"
+      },
+      "attemptBindingFields": [
+        "attemptId",
+        "learnerPrivateScopeId"
+      ],
+      "invalidAttemptReferenceStates": [
+        "MISSING",
+        "EMPTY",
+        "UNKNOWN",
+        "UNRESOLVED",
+        "AMBIGUOUS",
+        "CONFLICTING",
+        "CROSS_LEARNER",
+        "CROSS_ATTEMPT",
+        "SUBMITTED",
+        "CLOSED",
+        "STALE",
+        "CANCELLED",
+        "REPLAYED",
+        "MISMATCHED",
+        "CLIENT_INFERRED"
+      ],
+      "invalidAttemptReferenceBehavior": "FAIL_CLOSED_NO_CUE_BYTES",
+      "eligibleCanonicalAttemptState": "INDEPENDENT_ATTEMPT_OPEN",
+      "explicitDeliberateLearnerConfirmationRequired": true,
+      "confirmationRecordSource": "CANONICAL_SERVER_CONFIRMATION_LEDGER",
+      "canonicalConfirmationResolutionGate": {
+        "recordRef": "subject.confirmation",
+        "resolutionSource": "CANONICAL_SERVER_CONFIRMATION_LEDGER",
+        "additionalFieldsAllowed": false,
+        "requiredFields": [
+          "source",
+          "status",
+          "attemptId",
+          "learnerPrivateScopeId",
+          "cueId",
+          "cueRevisionId",
+          "requestId",
+          "serverSide",
+          "authoritative",
+          "independentlyResolved",
+          "known",
+          "resolved",
+          "serverRecorded",
+          "deliberate",
+          "active",
+          "singleUse",
+          "matchingRecordCount",
+          "stale",
+          "replayed",
+          "consumed",
+          "cancelled",
+          "ambiguous",
+          "conflicting",
+          "crossLearner",
+          "crossAttempt",
+          "mismatched",
+          "clientInferred",
+          "callerInferred"
+        ],
+        "identifierFields": [
+          "attemptId",
+          "learnerPrivateScopeId",
+          "cueId",
+          "cueRevisionId",
+          "requestId"
+        ],
+        "identifierSchema": {
+          "type": "string",
+          "minLength": 3,
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{2,127}$"
+        },
+        "exactMatchingRecordCount": 1,
+        "requiredStatus": "CONFIRMED",
+        "requiredExactPrimitiveBooleanStates": {
+          "serverSide": true,
+          "authoritative": true,
+          "independentlyResolved": true,
+          "known": true,
+          "resolved": true,
+          "serverRecorded": true,
+          "deliberate": true,
+          "active": true,
+          "singleUse": true,
+          "consumed": false,
+          "cancelled": false,
+          "ambiguous": false,
+          "conflicting": false,
+          "crossLearner": false,
+          "crossAttempt": false,
+          "mismatched": false,
+          "stale": false,
+          "replayed": false,
+          "clientInferred": false,
+          "callerInferred": false
+        },
+        "recordBindingFields": [
+          "attemptId",
+          "learnerPrivateScopeId",
+          "cueId",
+          "cueRevisionId",
+          "requestId"
+        ],
+        "clientBooleanPreselectionSourceLabelOrOuterStateSufficient": false,
+        "missingMalformedWrongSourceExtraFieldZeroMultipleUnsafeUnresolvedOrUnboundBehavior": "FAIL_CLOSED_NO_CUE_BYTES"
+      },
+      "confirmationBindingFields": [
+        "attemptId",
+        "learnerPrivateScopeId",
+        "cueId",
+        "cueRevisionId",
+        "requestId"
+      ],
+      "concreteConfirmationIdentifierGate": {
+        "fields": [
+          "cueId",
+          "cueRevisionId",
+          "requestId"
+        ],
+        "schema": {
+          "type": "string",
+          "trimmed": true,
+          "minLength": 3,
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{2,127}$"
+        },
+        "requiredOnRequest": true,
+        "requiredOnConfirmation": true,
+        "validateBeforeEqualityComparison": true,
+        "missingNullWrongTypeEmptyWhitespaceOrMalformedBehavior": "FAIL_CLOSED_NO_CUE_BYTES"
+      },
+      "exactBindingRequired": true,
+      "singleUse": true,
+      "exactMatchingRecordCount": 1,
+      "acceptedConfirmationState": "CONFIRMED",
+      "confirmationMustBeServerRecorded": true,
+      "confirmationMustBeDeliberate": true,
+      "confirmationMustBeActive": true,
+      "confirmationCancelledMustExactlyEqual": false,
+      "missingNullStringNumberObjectArrayTrueOrOtherNonFalseCancellationBehavior": "FAIL_CLOSED_NO_CUE_BYTES",
+      "confirmationReplayedMustExactlyEqual": false,
+      "clientBooleanSufficient": false,
+      "preselectedConsentSufficient": false,
+      "missingCancelledStaleReplayedMismatchedOrAmbiguousBehavior": "FAIL_CLOSED_NO_CUE_BYTES",
+      "submittedAttemptBehavior": "AFTER_RESPONSE_ONLY"
+    },
+    "preResponseAtomicCommit": {
+      "mode": "ATOMIC_ALL_OR_NOTHING",
+      "renderSubmitRaceExactFalseGate": {
+        "field": "renderSubmitRaceDetected",
+        "requiredPrimitiveType": "boolean",
+        "requiredExactValue": false,
+        "missingUndefinedNullStringNumberObjectArrayOrTrueBehavior": "ROLLBACK_FAIL_CLOSED_NO_CUE_BYTES"
+      },
+      "orderedSteps": [
+        "CONFIRMATION_CONSUMPTION_COMMITTED",
+        "CUE_EXPOSURE_RECORD_COMMITTED",
+        "ATTEMPT_STATE_TRANSITIONED_TO_ASSISTED",
+        "INDEPENDENT_EVIDENCE_INVALIDATED"
+      ],
+      "renderBarrier": "ALL_ORDERED_STEPS_COMMITTED",
+      "renderStep": "CUE_BYTES_RENDERED",
+      "postCommitAttemptState": "ASSISTED",
+      "postCommitIndependentEvidenceEligible": false,
+      "partialCommitBehavior": "ROLLBACK_FAIL_CLOSED_NO_CUE_BYTES",
+      "recordFailureBehavior": "ROLLBACK_FAIL_CLOSED_NO_CUE_BYTES",
+      "renderSubmitRaceBehavior": "ROLLBACK_FAIL_CLOSED_NO_CUE_BYTES"
+    },
+    "afterResponseGate": {
+      "requiredCanonicalAttemptState": "SUBMITTED",
+      "onlyAllowedTimingForSubmittedAttempt": "AFTER_RESPONSE",
+      "timingClassificationMapRef": "cueExposure.closedTimingClassificationMap.AFTER_RESPONSE",
+      "assistanceClassificationRequiredOnRequest": true,
+      "missingOrDisallowedAssistanceClassificationBehavior": "FAIL_CLOSED_NO_CUE_BYTES",
+      "deliberatePreResponseConfirmationRequired": false,
+      "exposureRecordCommittedBeforeRender": true,
+      "canonicalRecordCommittedGateRef": "cueExposure.canonicalRecordCommittedGate",
+      "canonicalRecordCommittedField": "canonicalRecordCommitted",
+      "canonicalExposureRecordCommittedAliasAccepted": false,
+      "alternateCommitFieldFallbackAllowed": false,
+      "sharedAcrossEveryApplicableRenderCapableValidator": true,
+      "renderCapableValidators": [
+        "CUE_RENDER_REQUEST_VALIDATOR",
+        "CUE_EXPOSURE_EVENT_VALIDATOR"
+      ],
+      "nonNullExactAttemptIdRequired": true,
+      "nonNullExactLearnerPrivateScopeIdRequired": true,
+      "genericAttemptResolutionStateGateRef": "cueExposure.canonicalAttemptResolutionStateGate",
+      "genericAttemptResolutionStateGateSufficientForSubmittedAttempt": false,
+      "authoritativeSubmittedAttemptResolutionGateRef": "cueExposure.afterResponseGate.canonicalSubmittedAttemptResolutionGate",
+      "canonicalSubmittedAttemptResolutionGate": {
+        "gateId": "EXACT_CANONICAL_SUBMITTED_ATTEMPT_RESOLUTION_GATE_V1",
+        "recordRef": "subject.attemptResolution",
+        "recordField": "attemptResolution",
+        "resolutionSource": "CANONICAL_SERVER_ATTEMPT_LEDGER",
+        "additionalFieldsAllowed": false,
+        "requiredFields": [
+          "source",
+          "attemptId",
+          "learnerPrivateScopeId",
+          "canonicalAttemptState",
+          "matchingRecordCount",
+          "serverSide",
+          "authoritative",
+          "independentlyResolved",
+          "known",
+          "resolved",
+          "submitted",
+          "submittedBeforeExposure",
+          "crossLearner",
+          "crossAttempt",
+          "mismatched",
+          "replayed",
+          "preSubmission",
+          "closed",
+          "stale",
+          "cancelled",
+          "ambiguous",
+          "conflicting",
+          "clientInferred",
+          "callerInferred"
+        ],
+        "identifierFields": [
+          "attemptId",
+          "learnerPrivateScopeId"
+        ],
+        "identifierSchema": {
+          "type": "string",
+          "minLength": 3,
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{2,127}$"
+        },
+        "recordBindingFields": {
+          "attemptId": "attemptId",
+          "learnerPrivateScopeId": "learnerPrivateScopeId"
+        },
+        "exactMatchingRecordCount": 1,
+        "requiredCanonicalAttemptState": "SUBMITTED",
+        "requiredExactPrimitiveBooleanStates": {
+          "serverSide": true,
+          "authoritative": true,
+          "independentlyResolved": true,
+          "known": true,
+          "resolved": true,
+          "submitted": true,
+          "submittedBeforeExposure": true,
+          "crossLearner": false,
+          "crossAttempt": false,
+          "mismatched": false,
+          "replayed": false,
+          "preSubmission": false,
+          "closed": false,
+          "stale": false,
+          "cancelled": false,
+          "ambiguous": false,
+          "conflicting": false,
+          "clientInferred": false,
+          "callerInferred": false
+        },
+        "subjectAndRecordIdentifiersValidatedIndependentlyBeforeEquality": true,
+        "authenticatedLearnerPrivateScopeField": "authenticatedLearnerPrivateScopeId",
+        "authenticatedLearnerPrivateScopeBindingRequired": true,
+        "authenticatedScopeAndSubjectAndRecordMustExactlyMatch": true,
+        "clientOrCallerAuthenticatedScopeAssertionAccepted": false,
+        "outerCanonicalAttemptStateSourceLabelOrSuccessBooleanSufficient": false,
+        "callerOrInferredResolutionStateSufficient": false,
+        "everyConsumerDelegatesToThisGate": true,
+        "consumers": [
+          "validateCanonicalAttemptBinding",
+          "evaluateCueRender.AFTER_RESPONSE",
+          "validateCueExposureEvent.AFTER_RESPONSE",
+          "authorizeCanonicalReviewOnlyCueRender.OPTIONAL_BOUND_REVIEW_ONLY"
+        ],
+        "missingMalformedExtraFieldWrongSourceZeroMultipleForeignUnsafeUnsubmittedOrInferredBehavior": "FAIL_CLOSED_NO_CUE_BYTES_NO_POSITIVE_LEARNING_EVIDENCE"
+      },
+      "exactBindingFields": [
+        "attemptId",
+        "learnerPrivateScopeId"
+      ],
+      "learnerPrivateScopeBindingRule": {
+        "field": "learnerPrivateScopeId",
+        "authenticatedField": "authenticatedLearnerPrivateScopeId",
+        "subjectAndCanonicalResolutionIndependentlyRequired": true,
+        "requiredPrimitiveType": "string",
+        "trimmedRequired": true,
+        "minimumLength": 1,
+        "exactMatchRequired": true,
+        "authenticatedLearnerScopeBindingRequired": true,
+        "authenticatedSubjectAndCanonicalRecordExactMatchRequired": true,
+        "matchingMissingOrUndefinedAccepted": false
+      },
+      "weakerOuterResolutionStatePolicyAuthoritative": false,
+      "clientAttemptIdAccepted": false,
+      "latestAttemptInferenceAllowed": false,
+      "clientOrCallerLearnerPrivateScopeAssertionAccepted": false,
+      "learnerPrivateScopeInferenceAllowed": false,
+      "missingEmptyWrongTypeMalformedUnknownAmbiguousConflictingCrossLearnerCrossAttemptMismatchedStaleReplayedClientInferredCallerAssertedUnresolvedOrPreSubmissionBehavior": "FAIL_CLOSED_NO_CUE_BYTES",
+      "reviewOnlyMayRemainUnbound": true,
+      "reviewOnlyEvidenceNeutral": true
+    },
+    "learningEvidenceGate": {
+      "evaluationMode": "SEPARATE_AFFIRMATIVE_CANONICAL_EVIDENCE",
+      "cueAbsenceEffect": "PRESERVE_ELIGIBILITY_ONLY",
+      "cueAbsenceCreatesPositiveEvidence": false,
+      "exposureEventCreatesPositiveEvidence": false,
+      "emptySequenceCreatesPositiveEvidence": false,
+      "afterResponseOnlySequenceCreatesPositiveEvidence": false,
+      "completeExposureHistoryRequired": true,
+      "exposureHistorySource": "CANONICAL_ASSISTANCE_EXPOSURE_LEDGER",
+      "baseAttemptResolutionGate": {
+        "recordRef": "evidence.attempt",
+        "resolutionSource": "CANONICAL_SERVER_ATTEMPT_LEDGER",
+        "resolutionStateGateRef": "cueExposure.canonicalAttemptResolutionStateGate",
+        "additionalFieldsAllowed": false,
+        "requiredFields": [
+          "source",
+          "attemptId",
+          "learnerPrivateScopeId",
+          "submissionId",
+          "canonicalAttemptState",
+          "matchingRecordCount",
+          "submittedAt",
+          "assistanceState",
+          "serverSide",
+          "authoritative",
+          "independentlyResolved",
+          "known",
+          "resolved",
+          "ambiguous",
+          "conflicting",
+          "crossLearner",
+          "crossAttempt",
+          "mismatched",
+          "stale",
+          "replayed",
+          "cancelled",
+          "clientInferred",
+          "callerInferred",
+          "taskBinding"
+        ],
+        "identifierFields": [
+          "attemptId",
+          "learnerPrivateScopeId",
+          "submissionId"
+        ],
+        "identifierSchema": {
+          "type": "string",
+          "minLength": 3,
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{2,127}$"
+        },
+        "timestampFields": [
+          "submittedAt"
+        ],
+        "requiredTimestampFormat": "RFC3339_UTC_MILLISECONDS",
+        "exactMatchingRecordCount": 1,
+        "requiredCanonicalAttemptState": "SUBMITTED",
+        "requiredAssistanceState": "INDEPENDENT",
+        "requiredExactPrimitiveBooleanStates": {
+          "serverSide": true,
+          "authoritative": true,
+          "independentlyResolved": true,
+          "known": true,
+          "resolved": true,
+          "ambiguous": false,
+          "conflicting": false,
+          "crossLearner": false,
+          "crossAttempt": false,
+          "mismatched": false,
+          "stale": false,
+          "replayed": false,
+          "cancelled": false,
+          "clientInferred": false,
+          "callerInferred": false
+        },
+        "baseSpecificSafeResolutionStateGate": {
+          "requiredExactPrimitiveBooleanStates": {
+            "crossLearner": false,
+            "crossAttempt": false,
+            "replayed": false,
+            "cancelled": false
+          },
+          "evaluatedBeforeAnyPositiveCredit": true,
+          "sharedGenericAttemptResolutionHelperExpanded": false,
+          "truthinessCoercionDefaultingOrAbsenceAccepted": false,
+          "missingUndefinedNullStringNumberObjectArrayOrTrueBehavior": "FAIL_CLOSED_NO_POSITIVE_LEARNING_EVIDENCE"
+        },
+        "evaluatedBeforeCredits": [
+          "independentRetrieval",
+          "farTransfer",
+          "stableD7"
+        ],
+        "dependentCreditsDeniedWhenInvalid": [
+          "farTransfer",
+          "stableD7"
+        ],
+        "callerSourceLabelOrOuterSuccessFlagsSufficient": false,
+        "missingMalformedWrongTypeUnknownUnresolvedAmbiguousConflictingStaleClientInferredOrNonSingleBehavior": "FAIL_CLOSED_NO_POSITIVE_LEARNING_EVIDENCE"
+      },
+      "exposureHistoryBindingGate": {
+        "additionalFieldsAllowed": false,
+        "requiredFields": [
+          "source",
+          "authoritative",
+          "serverSide",
+          "independentlyResolved",
+          "known",
+          "resolved",
+          "complete",
+          "matchingRecordCount",
+          "attemptId",
+          "learnerPrivateScopeId",
+          "missingExposureRecord",
+          "failedRender",
+          "partialCommit",
+          "ambiguousRecord",
+          "ambiguous",
+          "conflicting",
+          "stale",
+          "replayed",
+          "cancelled",
+          "crossLearner",
+          "crossAttempt",
+          "mismatched",
+          "clientInferred",
+          "callerInferred",
+          "callerPaired",
+          "preResponseCueExposureCount",
+          "preResponseCueExposureCountAuthoritative",
+          "preResponseCueExposureCountAmbiguous",
+          "preResponseCueExposureCountConflicting",
+          "preResponseCueExposureCountStale",
+          "preResponseCueExposureCountClientInferred"
+        ],
+        "identityFields": [
+          "attemptId",
+          "learnerPrivateScopeId"
+        ],
+        "identityFieldPattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{2,127}$",
+        "exactMatchingRecordCount": 1,
+        "requiredBooleanStates": {
+          "authoritative": true,
+          "serverSide": true,
+          "independentlyResolved": true,
+          "known": true,
+          "resolved": true,
+          "complete": true,
+          "missingExposureRecord": false,
+          "failedRender": false,
+          "partialCommit": false,
+          "ambiguousRecord": false,
+          "ambiguous": false,
+          "conflicting": false,
+          "stale": false,
+          "replayed": false,
+          "cancelled": false,
+          "crossLearner": false,
+          "crossAttempt": false,
+          "mismatched": false,
+          "clientInferred": false,
+          "callerInferred": false,
+          "callerPaired": false
+        },
+        "baseHistoryExpectedBindings": {
+          "attemptId": "attempt.attemptId",
+          "learnerPrivateScopeId": "attempt.learnerPrivateScopeId"
+        },
+        "downstreamHistories": {
+          "farTransfer": {
+            "historyField": "exposureHistory",
+            "attemptIdField": "transferAttemptId",
+            "learnerPrivateScopeIdField": "learnerPrivateScopeId"
+          },
+          "stableD7": {
+            "historyField": "exposureHistory",
+            "attemptIdField": "d7AttemptId",
+            "learnerPrivateScopeIdField": "learnerPrivateScopeId"
+          }
+        },
+        "eachApplicableHistoryValidatedIndependently": true,
+        "bareDownstreamCountCopyEstablishesAttemptBinding": false,
+        "sourceAttemptHistoryMaySubstituteForDownstreamHistory": false,
+        "missingMalformedWrongTypeEmptyCrossAttemptCrossLearnerAmbiguousConflictingStaleReplayedUnresolvedClientInferredOrCallerPairedBehavior": "FAIL_CLOSED_FOR_AFFECTED_CREDIT"
+      },
+      "preResponseCueExposureCountGate": {
+        "field": "preResponseCueExposureCount",
+        "sourceMustEqualExposureHistorySource": true,
+        "authoritativeStateFields": {
+          "preResponseCueExposureCountAuthoritative": true,
+          "preResponseCueExposureCountAmbiguous": false,
+          "preResponseCueExposureCountConflicting": false,
+          "preResponseCueExposureCountStale": false,
+          "preResponseCueExposureCountClientInferred": false
+        },
+        "requiredPrimitiveType": "number",
+        "integerRequired": true,
+        "safeIntegerRequired": true,
+        "minimum": 0,
+        "independentCreditRequiredValue": 0,
+        "eachApplicableCanonicalHistoryMustCarryItsOwnCount": true,
+        "downstreamEvidenceCountCopiesAcceptedAsHistory": false,
+        "exactZeroEffect": "PRESERVE_ELIGIBILITY_ONLY",
+        "baseHistoryCountAboveZeroEffect": "DENY_INDEPENDENT_RETRIEVAL_FAR_TRANSFER_AND_STABLE_D7",
+        "downstreamHistoryCountAboveZeroEffect": "DENY_AFFECTED_CREDIT",
+        "invalidBaseCountBehavior": "FAIL_CLOSED_NO_POSITIVE_LEARNING_EVIDENCE",
+        "invalidDownstreamCountBehavior": "FAIL_CLOSED_FOR_AFFECTED_CREDIT"
+      },
+      "assistedAttemptEligible": false,
+      "invalidHistoryConditions": [
+        "MISSING_EXPOSURE_RECORD",
+        "FAILED_RENDER",
+        "PARTIAL_COMMIT",
+        "AMBIGUOUS_RECORD"
+      ],
+      "invalidBaseHistoryBehavior": "FAIL_CLOSED_NO_POSITIVE_LEARNING_EVIDENCE",
+      "invalidDownstreamHistoryBehavior": "FAIL_CLOSED_FOR_AFFECTED_CREDIT",
+      "canonicalAffirmativeEvidenceOutcomePredicate": {
+        "field": "affirmativeEvidenceOutcomeAccepted",
+        "requiredPlacement": "INSIDE_EACH_CLOSED_CANONICAL_EVALUATION_RECORD",
+        "requiredExactPrimitiveBooleanValue": true,
+        "applicableCanonicalRecords": [
+          "canonicalResponseEvaluation",
+          "canonicalTransferEvaluation",
+          "canonicalD7Evaluation"
+        ],
+        "meaning": "AUTHORITATIVE_CANONICAL_EVALUATOR_ACCEPTED_PERFORMANCE_FOR_CORRESPONDING_AFFIRMATIVE_EVIDENCE_CREDIT",
+        "completionRecordExistenceResultIdScoreOrThresholdSufficient": false,
+        "outerCallerClientOrCrossStageOutcomeSubstitutionAllowed": false,
+        "inferenceDefaultingAliasingOrCoercionAllowed": false,
+        "createsNumericScoringRubricThresholdOrMasteryAuthority": false,
+        "invalidBehavior": "FAIL_CLOSED_FOR_AFFECTED_CREDIT_WITH_EXISTING_DEPENDENCY_PROPAGATION"
+      },
+      "requiredAffirmativeEvidence": {
+        "independentRetrieval": {
+          "source": "CANONICAL_SERVER_RESPONSE_EVALUATION_LEDGER",
+          "candidateEnvelopeGate": {
+            "additionalFieldsAllowed": false,
+            "requiredFields": [
+              "attemptId",
+              "learnerPrivateScopeId",
+              "submissionId",
+              "evaluationId",
+              "canonicalResponseEvaluation"
+            ]
+          },
+          "canonicalResponseEvaluationResolutionGate": {
+            "recordRef": "evidence.independentResponse.canonicalResponseEvaluation",
+            "recordField": "canonicalResponseEvaluation",
+            "resolutionSource": "CANONICAL_SERVER_RESPONSE_EVALUATION_LEDGER",
+            "additionalFieldsAllowed": false,
+            "requiredFields": [
+              "source",
+              "attemptId",
+              "learnerPrivateScopeId",
+              "submissionId",
+              "evaluationId",
+              "evaluationCompletedAt",
+              "matchingRecordCount",
+              "serverSide",
+              "authoritative",
+              "independentlyResolved",
+              "known",
+              "resolved",
+              "actualSubmission",
+              "evaluationCompleted",
+              "affirmativeEvidenceOutcomeAccepted",
+              "ambiguous",
+              "conflicting",
+              "crossLearner",
+              "crossAttempt",
+              "mismatched",
+              "stale",
+              "replayed",
+              "cancelled",
+              "clientInferred",
+              "callerInferred"
+            ],
+            "identifierFields": [
+              "attemptId",
+              "learnerPrivateScopeId",
+              "submissionId",
+              "evaluationId"
+            ],
+            "identifierSchema": {
+              "type": "string",
+              "minLength": 3,
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{2,127}$"
+            },
+            "timestampFields": [
+              "evaluationCompletedAt"
+            ],
+            "requiredTimestampFormat": "RFC3339_UTC_MILLISECONDS",
+            "exactMatchingRecordCount": 1,
+            "requiredExactPrimitiveBooleanStates": {
+              "serverSide": true,
+              "authoritative": true,
+              "independentlyResolved": true,
+              "known": true,
+              "resolved": true,
+              "actualSubmission": true,
+              "evaluationCompleted": true,
+              "affirmativeEvidenceOutcomeAccepted": true,
+              "ambiguous": false,
+              "conflicting": false,
+              "crossLearner": false,
+              "crossAttempt": false,
+              "mismatched": false,
+              "stale": false,
+              "replayed": false,
+              "cancelled": false,
+              "clientInferred": false,
+              "callerInferred": false
+            },
+            "recordBindingFields": {
+              "attemptId": "attemptId",
+              "learnerPrivateScopeId": "learnerPrivateScopeId",
+              "submissionId": "submissionId",
+              "evaluationId": "evaluationId"
+            },
+            "canonicalSubmissionOrderingGate": {
+              "canonicalAttemptRecordRef": "evidence.attempt",
+              "canonicalAttemptTimestampField": "submittedAt",
+              "canonicalEvaluationTimestampField": "evaluationCompletedAt",
+              "requiredTimestampFormat": "RFC3339_UTC_MILLISECONDS",
+              "comparison": "EVALUATION_COMPLETED_AT_GTE_CANONICAL_ATTEMPT_SUBMITTED_AT",
+              "equalityAccepted": true,
+              "callerOrOuterTimestampSubstitutionAllowed": false,
+              "oneMillisecondBeforeBehavior": "FAIL_CLOSED_NO_INDEPENDENT_RETRIEVAL_CREDIT"
+            },
+            "mustBindExactlyToCanonicalBaseAttempt": true,
+            "submissionIdMustExactlyEqualCanonicalBaseAttemptSubmissionId": true,
+            "callerSourceLabelOrOuterSuccessFlagsSufficient": false,
+            "missingMalformedWrongSourceExtraFieldZeroMultipleUnsafeUnresolvedUnfreshOrUnboundBehavior": "FAIL_CLOSED_NO_INDEPENDENT_RETRIEVAL_CREDIT"
+          },
+          "requiredCanonicalAttemptState": "SUBMITTED",
+          "requiredAssistanceState": "INDEPENDENT",
+          "actualSubmissionRequired": true,
+          "completedEvaluationRequired": true,
+          "exactAttemptAndLearnerBindingRequired": true,
+          "ambiguousMustExactlyEqual": false
+        },
+        "farTransfer": {
+          "source": "CANONICAL_TRANSFER_EVALUATION_LEDGER",
+          "requiresIndependentRetrieval": true,
+          "candidateEnvelopeGate": {
+            "additionalFieldsAllowed": false,
+            "requiredFields": [
+              "sourceAttemptId",
+              "transferAttemptId",
+              "learnerPrivateScopeId",
+              "submissionId",
+              "evaluationId",
+              "resultId",
+              "originTaskId",
+              "transferTaskId",
+              "canonicalTransferAttempt",
+              "canonicalTransferEvaluation",
+              "exposureHistory"
+            ]
+          },
+          "canonicalTransferEvaluationResolutionGate": {
+            "recordRef": "evidence.farTransfer.canonicalTransferEvaluation",
+            "recordField": "canonicalTransferEvaluation",
+            "resolutionSource": "CANONICAL_TRANSFER_EVALUATION_LEDGER",
+            "additionalFieldsAllowed": false,
+            "requiredFields": [
+              "source",
+              "sourceAttemptId",
+              "transferAttemptId",
+              "learnerPrivateScopeId",
+              "submissionId",
+              "evaluationId",
+              "resultId",
+              "originTaskId",
+              "transferTaskId",
+              "evaluationCompletedAt",
+              "matchingRecordCount",
+              "serverSide",
+              "authoritative",
+              "independentlyResolved",
+              "known",
+              "resolved",
+              "actualSubmission",
+              "evaluationCompleted",
+              "affirmativeEvidenceOutcomeAccepted",
+              "distinctEligibleTask",
+              "representationRelation",
+              "assistanceState",
+              "ambiguous",
+              "conflicting",
+              "crossLearner",
+              "crossAttempt",
+              "mismatched",
+              "stale",
+              "replayed",
+              "cancelled",
+              "clientInferred",
+              "callerInferred"
+            ],
+            "identifierFields": [
+              "sourceAttemptId",
+              "transferAttemptId",
+              "learnerPrivateScopeId",
+              "submissionId",
+              "evaluationId",
+              "resultId",
+              "originTaskId",
+              "transferTaskId"
+            ],
+            "identifierSchema": {
+              "type": "string",
+              "minLength": 3,
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{2,127}$"
+            },
+            "timestampFields": [
+              "evaluationCompletedAt"
+            ],
+            "requiredTimestampFormat": "RFC3339_UTC_MILLISECONDS",
+            "exactMatchingRecordCount": 1,
+            "requiredRepresentationRelation": "NON_SAME_REPRESENTATION",
+            "requiredAssistanceState": "INDEPENDENT",
+            "requiredExactPrimitiveBooleanStates": {
+              "serverSide": true,
+              "authoritative": true,
+              "independentlyResolved": true,
+              "known": true,
+              "resolved": true,
+              "actualSubmission": true,
+              "evaluationCompleted": true,
+              "affirmativeEvidenceOutcomeAccepted": true,
+              "distinctEligibleTask": true,
+              "ambiguous": false,
+              "conflicting": false,
+              "crossLearner": false,
+              "crossAttempt": false,
+              "mismatched": false,
+              "stale": false,
+              "replayed": false,
+              "cancelled": false,
+              "clientInferred": false,
+              "callerInferred": false
+            },
+            "recordBindingFields": {
+              "sourceAttemptId": "sourceAttemptId",
+              "transferAttemptId": "transferAttemptId",
+              "learnerPrivateScopeId": "learnerPrivateScopeId",
+              "submissionId": "submissionId",
+              "evaluationId": "evaluationId",
+              "resultId": "resultId",
+              "originTaskId": "originTaskId",
+              "transferTaskId": "transferTaskId"
+            },
+            "canonicalSubmissionOrderingGate": {
+              "canonicalAttemptRecordRef": "evidence.farTransfer.canonicalTransferAttempt",
+              "canonicalAttemptTimestampField": "submittedAt",
+              "canonicalEvaluationTimestampField": "evaluationCompletedAt",
+              "requiredTimestampFormat": "RFC3339_UTC_MILLISECONDS",
+              "comparison": "EVALUATION_COMPLETED_AT_GTE_CANONICAL_ATTEMPT_SUBMITTED_AT",
+              "equalityAccepted": true,
+              "callerOrOuterTimestampSubstitutionAllowed": false,
+              "oneMillisecondBeforeBehavior": "FAIL_CLOSED_FOR_FAR_TRANSFER_CREDIT"
+            },
+            "mustBindExactlyToCanonicalSourceAndTransferAttempts": true,
+            "callerSourceLabelOrOuterSuccessFlagsSufficient": false,
+            "invalidEvaluationAffectsIndependentRetrievalOrStableD7": false,
+            "missingMalformedWrongSourceExtraFieldZeroMultipleUnsafeUnresolvedUnfreshOrUnboundBehavior": "FAIL_CLOSED_FOR_FAR_TRANSFER_CREDIT"
+          },
+          "distinctEligibleTaskRequired": true,
+          "requiredRepresentationRelation": "NON_SAME_REPRESENTATION",
+          "actualSubmissionRequired": true,
+          "completedEvaluationAndResultRequired": true,
+          "independentTransferAttemptRequired": true,
+          "requiredCanonicalAttemptState": "SUBMITTED",
+          "exactSourceAttemptAndLearnerBindingRequired": true,
+          "completeCanonicalExposureHistoryRequired": true,
+          "canonicalExposureHistoryMustBindToTransferAttemptId": true,
+          "canonicalTransferAttemptResolutionGate": {
+            "recordRef": "evidence.farTransfer.canonicalTransferAttempt",
+            "recordField": "canonicalTransferAttempt",
+            "resolutionSource": "CANONICAL_SERVER_ATTEMPT_LEDGER",
+            "resolutionStateGateRef": "cueExposure.canonicalAttemptResolutionStateGate",
+            "additionalFieldsAllowed": false,
+            "requiredFields": [
+              "source",
+              "attemptId",
+              "learnerPrivateScopeId",
+              "submissionId",
+              "canonicalAttemptState",
+              "matchingRecordCount",
+              "submittedAt",
+              "assistanceState",
+              "serverSide",
+              "authoritative",
+              "independentlyResolved",
+              "known",
+              "resolved",
+              "ambiguous",
+              "conflicting",
+              "crossLearner",
+              "crossAttempt",
+              "stale",
+              "replayed",
+              "cancelled",
+              "clientInferred",
+              "callerInferred",
+              "mismatched",
+              "taskBinding"
+            ],
+            "identifierFields": [
+              "attemptId",
+              "learnerPrivateScopeId",
+              "submissionId"
+            ],
+            "identifierSchema": {
+              "type": "string",
+              "minLength": 3,
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{2,127}$"
+            },
+            "timestampFields": [
+              "submittedAt"
+            ],
+            "requiredTimestampFormat": "RFC3339_UTC_MILLISECONDS",
+            "exactMatchingRecordCount": 1,
+            "requiredCanonicalAttemptState": "SUBMITTED",
+            "requiredAssistanceState": "INDEPENDENT",
+            "requiredExactPrimitiveBooleanStates": {
+              "serverSide": true,
+              "authoritative": true,
+              "independentlyResolved": true,
+              "known": true,
+              "resolved": true,
+              "ambiguous": false,
+              "conflicting": false,
+              "crossLearner": false,
+              "crossAttempt": false,
+              "stale": false,
+              "replayed": false,
+              "cancelled": false,
+              "clientInferred": false,
+              "callerInferred": false,
+              "mismatched": false
+            },
+            "transferRecordBindingFields": {
+              "attemptId": "transferAttemptId",
+              "learnerPrivateScopeId": "learnerPrivateScopeId",
+              "submissionId": "submissionId"
+            },
+            "canonicalSourceSubmissionOrderingGate": {
+              "canonicalSourceAttemptRecordRef": "evidence.attempt",
+              "canonicalSourceTimestampField": "submittedAt",
+              "canonicalTransferAttemptRecordRef": "evidence.farTransfer.canonicalTransferAttempt",
+              "canonicalTransferTimestampField": "submittedAt",
+              "requiredTimestampFormat": "RFC3339_UTC_MILLISECONDS",
+              "comparison": "CANONICAL_TRANSFER_ATTEMPT_SUBMITTED_AT_GTE_CANONICAL_SOURCE_ATTEMPT_SUBMITTED_AT",
+              "equalityAccepted": true,
+              "callerOrOuterTimestampSubstitutionAllowed": false,
+              "oneMillisecondBeforeBehavior": "FAIL_CLOSED_FOR_FAR_TRANSFER_CREDIT",
+              "invalidOrderingAffectsIndependentRetrievalOrStableD7": false
+            },
+            "mustDifferFromCanonicalSourceAttemptId": true,
+            "evaluationSubmissionIdMustExactlyEqualCanonicalTransferAttemptSubmissionId": true,
+            "canonicalSourceAttemptMaySubstitute": false,
+            "invalidTransferAttemptAffectsIndependentRetrievalOrStableD7": false,
+            "missingMalformedWrongSourceExtraFieldAmbiguousConflictingStaleInferredMismatchedCrossAttemptCrossLearnerUnresolvedOrNonSingleBehavior": "FAIL_CLOSED_FOR_FAR_TRANSFER_CREDIT"
+          },
+          "canonicalSourceTaskBindingGate": {
+            "recordRef": "evidence.attempt.taskBinding",
+            "recordField": "taskBinding",
+            "resolutionSource": "CANONICAL_SERVER_ATTEMPT_TASK_BINDING_RESOLVER",
+            "additionalFieldsAllowed": false,
+            "requiredFields": [
+              "source",
+              "attemptId",
+              "learnerPrivateScopeId",
+              "taskId",
+              "matchingRecordCount",
+              "serverSide",
+              "authoritative",
+              "independentlyResolved",
+              "known",
+              "resolved",
+              "ambiguous",
+              "conflicting",
+              "crossLearner",
+              "crossAttempt",
+              "stale",
+              "replayed",
+              "cancelled",
+              "clientInferred",
+              "callerInferred",
+              "mismatched"
+            ],
+            "identifierFields": [
+              "attemptId",
+              "learnerPrivateScopeId",
+              "taskId"
+            ],
+            "identifierSchema": {
+              "type": "string",
+              "minLength": 3,
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{2,127}$"
+            },
+            "exactMatchingRecordCount": 1,
+            "requiredExactPrimitiveBooleanStates": {
+              "serverSide": true,
+              "authoritative": true,
+              "independentlyResolved": true,
+              "known": true,
+              "resolved": true,
+              "ambiguous": false,
+              "conflicting": false,
+              "crossLearner": false,
+              "crossAttempt": false,
+              "stale": false,
+              "replayed": false,
+              "cancelled": false,
+              "clientInferred": false,
+              "callerInferred": false,
+              "mismatched": false
+            },
+            "canonicalSourceAttemptBindingFields": [
+              "attemptId",
+              "learnerPrivateScopeId"
+            ],
+            "canonicalTaskIdField": "taskId",
+            "transferOriginTaskIdField": "originTaskId",
+            "originTaskIdMustExactlyEqualCanonicalSourceTaskId": true,
+            "invalidBindingAffectsIndependentRetrieval": false,
+            "missingMalformedAmbiguousConflictingStaleInferredMismatchedOrNonSingleBehavior": "FAIL_CLOSED_FOR_FAR_TRANSFER_CREDIT"
+          },
+          "canonicalTransferTaskBindingGate": {
+            "recordRef": "evidence.farTransfer.canonicalTransferAttempt.taskBinding",
+            "recordField": "taskBinding",
+            "resolutionSource": "CANONICAL_SERVER_ATTEMPT_TASK_BINDING_RESOLVER",
+            "additionalFieldsAllowed": false,
+            "requiredFields": [
+              "source",
+              "attemptId",
+              "learnerPrivateScopeId",
+              "taskId",
+              "matchingRecordCount",
+              "serverSide",
+              "authoritative",
+              "independentlyResolved",
+              "known",
+              "resolved",
+              "ambiguous",
+              "conflicting",
+              "crossLearner",
+              "crossAttempt",
+              "stale",
+              "replayed",
+              "cancelled",
+              "clientInferred",
+              "callerInferred",
+              "mismatched"
+            ],
+            "identifierFields": [
+              "attemptId",
+              "learnerPrivateScopeId",
+              "taskId"
+            ],
+            "identifierSchema": {
+              "type": "string",
+              "minLength": 3,
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{2,127}$"
+            },
+            "exactMatchingRecordCount": 1,
+            "requiredExactPrimitiveBooleanStates": {
+              "serverSide": true,
+              "authoritative": true,
+              "independentlyResolved": true,
+              "known": true,
+              "resolved": true,
+              "ambiguous": false,
+              "conflicting": false,
+              "crossLearner": false,
+              "crossAttempt": false,
+              "stale": false,
+              "replayed": false,
+              "cancelled": false,
+              "clientInferred": false,
+              "callerInferred": false,
+              "mismatched": false
+            },
+            "canonicalTransferAttemptBindingFields": [
+              "attemptId",
+              "learnerPrivateScopeId"
+            ],
+            "transferRecordBindingFields": {
+              "attemptId": "transferAttemptId",
+              "learnerPrivateScopeId": "learnerPrivateScopeId"
+            },
+            "mustBindExactlyToResolvedCanonicalTransferAttempt": true,
+            "canonicalTaskIdField": "taskId",
+            "transferTaskIdField": "transferTaskId",
+            "transferTaskIdMustExactlyEqualCanonicalTransferTaskId": true,
+            "sourceBindingMaySubstituteForTransferBinding": false,
+            "sameBindingRecordMaySatisfySourceAndTransfer": false,
+            "invalidBindingAffectsIndependentRetrievalOrStableD7": false,
+            "missingMalformedWrongSourceExtraFieldAmbiguousConflictingStaleInferredMismatchedOrNonSingleBehavior": "FAIL_CLOSED_FOR_FAR_TRANSFER_CREDIT"
+          },
+          "canonicalTaskIdentityComparisonGate": {
+            "canonicalSourceTaskIdRef": "evidence.attempt.taskBinding.taskId",
+            "canonicalTransferTaskIdRef": "evidence.farTransfer.canonicalTransferAttempt.taskBinding.taskId",
+            "transferOriginTaskIdField": "originTaskId",
+            "transferTaskIdField": "transferTaskId",
+            "comparison": "EXACT_FIELD_FOR_FIELD",
+            "trimAllowed": false,
+            "caseFoldAllowed": false,
+            "aliasResolutionAllowed": false,
+            "inferenceAllowed": false,
+            "originTaskIdMustExactlyEqualCanonicalSourceTaskId": true,
+            "transferTaskIdMustExactlyEqualCanonicalTransferTaskId": true,
+            "canonicalSourceAndTransferTaskIdsMustDiffer": true,
+            "callerSuppliedTaskInequalitySufficient": false,
+            "distinctEligibleTaskFlagSufficient": false,
+            "nonSameRepresentationFlagSufficient": false,
+            "sourceAndTransferBindingsValidatedIndependently": true,
+            "sourceBindingMaySubstituteForTransferBinding": false
+          },
+          "ambiguousMustExactlyEqual": false
+        },
+        "stableD7": {
+          "source": "CANONICAL_D7_EVALUATION_LEDGER",
+          "requiresIndependentRetrieval": true,
+          "requiredTiming": "D_PLUS_7",
+          "candidateEnvelopeGate": {
+            "additionalFieldsAllowed": false,
+            "requiredFields": [
+              "sourceAttemptId",
+              "d7AttemptId",
+              "learnerPrivateScopeId",
+              "submissionId",
+              "evaluationId",
+              "canonicalD7Attempt",
+              "canonicalD7Evaluation",
+              "exposureHistory"
+            ]
+          },
+          "canonicalD7EvaluationResolutionGate": {
+            "recordRef": "evidence.stableD7.canonicalD7Evaluation",
+            "recordField": "canonicalD7Evaluation",
+            "resolutionSource": "CANONICAL_D7_EVALUATION_LEDGER",
+            "additionalFieldsAllowed": false,
+            "requiredFields": [
+              "source",
+              "evaluationId",
+              "sourceAttemptId",
+              "attemptId",
+              "learnerPrivateScopeId",
+              "submissionId",
+              "d7EvaluationCompletedAt",
+              "matchingRecordCount",
+              "serverSide",
+              "authoritative",
+              "independentlyResolved",
+              "known",
+              "resolved",
+              "actualSubmission",
+              "evaluationCompleted",
+              "affirmativeEvidenceOutcomeAccepted",
+              "timing",
+              "cueState",
+              "hiddenCueBytesAbsentAcrossAllSurfaces",
+              "representationRelation",
+              "unresolvedScoringConflictCount",
+              "assistanceState",
+              "ambiguous",
+              "conflicting",
+              "crossLearner",
+              "crossAttempt",
+              "mismatched",
+              "stale",
+              "replayed",
+              "cancelled",
+              "clientInferred",
+              "callerInferred"
+            ],
+            "identifierFields": [
+              "evaluationId",
+              "sourceAttemptId",
+              "attemptId",
+              "learnerPrivateScopeId",
+              "submissionId"
+            ],
+            "identifierSchema": {
+              "type": "string",
+              "minLength": 3,
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{2,127}$"
+            },
+            "timestampFields": [
+              "d7EvaluationCompletedAt"
+            ],
+            "requiredTimestampFormat": "RFC3339_UTC_MILLISECONDS",
+            "exactMatchingRecordCount": 1,
+            "requiredTiming": "D_PLUS_7",
+            "requiredCueState": "HIDDEN",
+            "requiredRepresentationRelation": "NON_SAME_REPRESENTATION",
+            "maximumUnresolvedScoringConflictCount": 0,
+            "requiredAssistanceState": "INDEPENDENT",
+            "requiredExactPrimitiveBooleanStates": {
+              "serverSide": true,
+              "authoritative": true,
+              "independentlyResolved": true,
+              "known": true,
+              "resolved": true,
+              "actualSubmission": true,
+              "evaluationCompleted": true,
+              "affirmativeEvidenceOutcomeAccepted": true,
+              "hiddenCueBytesAbsentAcrossAllSurfaces": true,
+              "ambiguous": false,
+              "conflicting": false,
+              "crossLearner": false,
+              "crossAttempt": false,
+              "mismatched": false,
+              "stale": false,
+              "replayed": false,
+              "cancelled": false,
+              "clientInferred": false,
+              "callerInferred": false
+            },
+            "recordBindingFields": {
+              "evaluationId": "evaluationId",
+              "sourceAttemptId": "sourceAttemptId",
+              "attemptId": "d7AttemptId",
+              "learnerPrivateScopeId": "learnerPrivateScopeId",
+              "submissionId": "submissionId"
+            },
+            "canonicalSubmissionOrderingGate": {
+              "canonicalAttemptRecordRef": "evidence.stableD7.canonicalD7Attempt",
+              "canonicalAttemptTimestampField": "submittedAt",
+              "canonicalEvaluationTimestampField": "d7EvaluationCompletedAt",
+              "requiredTimestampFormat": "RFC3339_UTC_MILLISECONDS",
+              "comparison": "EVALUATION_COMPLETED_AT_GTE_CANONICAL_ATTEMPT_SUBMITTED_AT",
+              "equalityAccepted": true,
+              "callerOrOuterTimestampSubstitutionAllowed": false,
+              "oneMillisecondBeforeBehavior": "FAIL_CLOSED_FOR_STABLE_D7_CREDIT"
+            },
+            "mustBindExactlyToCanonicalD7Attempt": true,
+            "evaluationSubmissionIdMustExactlyEqualCanonicalD7AttemptSubmissionId": true,
+            "callerSourceLabelOuterTimestampOrOuterSuccessFlagsSufficient": false,
+            "invalidD7EvaluationAffectsIndependentRetrievalOrFarTransfer": false,
+            "missingMalformedWrongSourceExtraFieldZeroMultipleUnsafeUnresolvedUnfreshUnboundOrSubstitutedTimestampBehavior": "FAIL_CLOSED_FOR_STABLE_D7_CREDIT"
+          },
+          "canonicalD7AttemptResolutionGate": {
+            "recordRef": "evidence.stableD7.canonicalD7Attempt",
+            "recordField": "canonicalD7Attempt",
+            "resolutionSource": "CANONICAL_SERVER_ATTEMPT_LEDGER",
+            "resolutionStateGateRef": "cueExposure.canonicalAttemptResolutionStateGate",
+            "additionalFieldsAllowed": false,
+            "requiredFields": [
+              "source",
+              "attemptId",
+              "learnerPrivateScopeId",
+              "submissionId",
+              "canonicalAttemptState",
+              "matchingRecordCount",
+              "submittedAt",
+              "assistanceState",
+              "serverSide",
+              "authoritative",
+              "independentlyResolved",
+              "known",
+              "resolved",
+              "ambiguous",
+              "conflicting",
+              "crossLearner",
+              "crossAttempt",
+              "mismatched",
+              "stale",
+              "replayed",
+              "cancelled",
+              "clientInferred",
+              "callerInferred"
+            ],
+            "identifierFields": [
+              "attemptId",
+              "learnerPrivateScopeId",
+              "submissionId"
+            ],
+            "identifierSchema": {
+              "type": "string",
+              "minLength": 3,
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{2,127}$"
+            },
+            "timestampFields": [
+              "submittedAt"
+            ],
+            "requiredTimestampFormat": "RFC3339_UTC_MILLISECONDS",
+            "exactMatchingRecordCount": 1,
+            "requiredCanonicalAttemptState": "SUBMITTED",
+            "requiredAssistanceState": "INDEPENDENT",
+            "requiredExactPrimitiveBooleanStates": {
+              "serverSide": true,
+              "authoritative": true,
+              "independentlyResolved": true,
+              "known": true,
+              "resolved": true,
+              "ambiguous": false,
+              "conflicting": false,
+              "crossLearner": false,
+              "crossAttempt": false,
+              "mismatched": false,
+              "stale": false,
+              "replayed": false,
+              "cancelled": false,
+              "clientInferred": false,
+              "callerInferred": false
+            },
+            "d7RecordBindingFields": {
+              "attemptId": "d7AttemptId",
+              "learnerPrivateScopeId": "learnerPrivateScopeId",
+              "submissionId": "submissionId"
+            },
+            "canonicalSourceSubmissionOrderingGate": {
+              "canonicalSourceAttemptRecordRef": "evidence.attempt",
+              "canonicalSourceTimestampField": "submittedAt",
+              "canonicalD7AttemptRecordRef": "evidence.stableD7.canonicalD7Attempt",
+              "canonicalD7TimestampField": "submittedAt",
+              "requiredTimestampFormat": "RFC3339_UTC_MILLISECONDS",
+              "comparison": "CANONICAL_D7_ATTEMPT_SUBMITTED_AT_GTE_CANONICAL_SOURCE_ATTEMPT_SUBMITTED_AT",
+              "equalityAccepted": true,
+              "callerOrOuterTimestampSubstitutionAllowed": false,
+              "oneMillisecondBeforeBehavior": "FAIL_CLOSED_FOR_STABLE_D7_CREDIT",
+              "invalidOrderingAffectsIndependentRetrievalOrFarTransfer": false
+            },
+            "mustDifferFromCanonicalSourceAttemptId": true,
+            "canonicalSourceAttemptMaySubstitute": false,
+            "outerD7ClaimsMaySubstitute": false,
+            "invalidD7AttemptAffectsIndependentRetrievalOrFarTransfer": false,
+            "missingMalformedWrongSourceExtraFieldZeroMultipleForeignReusedUnsubmittedAssistedUnsafeOrInferredBehavior": "FAIL_CLOSED_FOR_STABLE_D7_CREDIT"
+          },
+          "trustedElapsedIntervalGate": {
+            "canonicalSourceAttemptRecordRef": "evidence.attempt",
+            "canonicalSourceAttemptResolutionStateGateRef": "cueExposure.canonicalAttemptResolutionStateGate",
+            "canonicalSourceAttemptSourceField": "source",
+            "canonicalSourceAttemptRequiredSource": "CANONICAL_SERVER_ATTEMPT_LEDGER",
+            "canonicalSourceAttemptIdField": "attemptId",
+            "canonicalSourceAttemptLearnerPrivateScopeIdField": "learnerPrivateScopeId",
+            "canonicalSourceAttemptTimestampField": "submittedAt",
+            "exactMatchingCanonicalSourceAttemptCount": 1,
+            "sourceAttemptIdLearnerAndTimestampMustExactlyBindResolvedCanonicalSourceAttempt": true,
+            "canonicalD7EvaluationRecordRef": "evidence.stableD7.canonicalD7Evaluation",
+            "canonicalD7EvaluationResolutionGateRef": "cueExposure.learningEvidenceGate.requiredAffirmativeEvidence.stableD7.canonicalD7EvaluationResolutionGate",
+            "evaluationTimestampField": "d7EvaluationCompletedAt",
+            "evaluationTimestampRequiredSource": "CANONICAL_D7_EVALUATION_LEDGER",
+            "requiredTimestampFormat": "RFC3339_UTC_MILLISECONDS",
+            "minimumElapsedMilliseconds": 604800000,
+            "comparison": "D7_EVALUATION_COMPLETED_AT_MINUS_SOURCE_ATTEMPT_SUBMITTED_AT_GTE_MINIMUM",
+            "serverComputedFromTrustedTimestamps": true,
+            "callerSuppliedElapsedOrTimingLabelSufficient": false,
+            "outerSourceAttemptTimestampOrD7CompletionTimestampAccepted": false,
+            "missingMismatchedMalformedOrUnresolvedProvenanceBehavior": "FAIL_CLOSED_FOR_STABLE_D7_CREDIT",
+            "missingMalformedNonUtcReversedOrShortIntervalBehavior": "FAIL_CLOSED_FOR_STABLE_D7_CREDIT"
+          },
+          "completedEvaluationRequired": true,
+          "requiredCueState": "HIDDEN",
+          "hiddenCueBytesAbsentAcrossAllSurfacesRequired": true,
+          "nonSameRepresentationRequired": true,
+          "maximumUnresolvedScoringConflictCount": 0,
+          "independentD7AttemptRequired": true,
+          "requiredCanonicalAttemptState": "SUBMITTED",
+          "exactSourceAttemptAndLearnerBindingRequired": true,
+          "completeCanonicalExposureHistoryRequired": true,
+          "canonicalExposureHistoryMustBindToD7AttemptId": true,
+          "ambiguousMustExactlyEqual": false
+        }
+      }
+    },
+    "noneRequiresNoPreResponseCueInAttempt": true,
+    "preResponseIneligibleEvidence": [
+      "INDEPENDENT_RETRIEVAL",
+      "FAR_TRANSFER",
+      "STABLE_D7"
+    ],
+    "preResponseIneligibilityStickyForAttempt": true,
+    "laterEventsMayRestoreIndependentClassification": false,
+    "ambiguousOrderingBehavior": "FAIL_CLOSED",
+    "renderSubmitRaceBehavior": "FAIL_CLOSED_NO_CUE_BYTES_NO_INDEPENDENT_CREDIT",
+    "atomicRecordBeforeRender": true,
+    "preResponseDecompositionCountsAsExposure": true,
+    "recordFailureBehavior": "DO_NOT_RENDER_CUE_BYTES",
+    "recordFailureAttemptEvidenceBehavior": "FAIL_CLOSED_NO_INDEPENDENT_CREDIT"
+  }
+}

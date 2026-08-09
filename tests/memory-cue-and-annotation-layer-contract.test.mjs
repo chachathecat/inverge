@@ -1,0 +1,7385 @@
+import assert from "node:assert/strict";
+import fs from "node:fs";
+import path from "node:path";
+import test from "node:test";
+
+const ROOT = process.cwd();
+const P = {
+  active: "docs/strategy/ACTIVE-MASTER-PLAN.md",
+  annex: "docs/strategy/dabangil-memory-cue-and-annotation-layer-v1-2026-08-06.md",
+  decision: "docs/decisions/2026-08-06-owner-memory-cue-and-annotation-layer.md",
+  contract: "config/dabangil-memory-cue-and-annotation-layer-v1.json",
+  qa: "docs/qa/memory-cue-and-annotation-layer-v1-validation.md",
+};
+
+const read = (p) => fs.readFileSync(path.join(ROOT, p), "utf8");
+const contract = JSON.parse(read(P.contract));
+
+const sorted = (values) => [...values].sort();
+const VALID_SHA256 = `sha256:${"a".repeat(64)}`;
+
+function validAnchor(overrides = {}) {
+  const kind = overrides.kind ?? "LEARNER_ATTEMPT_RANGE";
+  const defaultsByKind = {
+    CONCEPT_NODE: ["SHARED_OWNED", "NONE", "VESG_CONCEPT_NODE"],
+    FORMULA_NODE: ["SHARED_OWNED", "NONE", "VESG_FORMULA_NODE"],
+    PROCEDURE_STEP: ["SHARED_OWNED", "NONE", "VESG_PROCEDURE_STEP"],
+    QUESTION_UNIT: ["SHARED_OWNED", "NONE", "VERSIONED_QUESTION_UNIT"],
+    OWNED_CONTENT_RANGE: ["SHARED_OWNED", "SHARED_STABLE_SELECTOR", "OWNED_CONTENT_REVISION_RANGE"],
+    OFFICIAL_PERMITTED_RANGE: ["SHARED_OFFICIAL_PERMITTED", "SHARED_STABLE_SELECTOR", "OFFICIAL_PERMITTED_CONTENT_REVISION_RANGE"],
+    LEARNER_ATTEMPT_RANGE: ["LEARNER_PRIVATE", "VAULT_LOCAL_ONLY", "LEARNER_ATTEMPT_REVISION_RANGE"],
+    PRIVATE_SOURCE_RANGE: ["LEARNER_PRIVATE", "VAULT_LOCAL_ONLY", "PRIVATE_SOURCE_REVISION_RANGE"],
+  };
+  const [domain, bodyLocatorPolicy, targetType] = defaultsByKind[kind]
+    ?? defaultsByKind.CONCEPT_NODE;
+  const candidate = {
+    anchorId: "anchor-1",
+    profileId: "profile-appraiser-second",
+    kind,
+    domain,
+    targetType,
+    targetRevisionId: "revision-1",
+    targetDigest: VALID_SHA256,
+    bodyLocatorPolicy,
+    rightsManifestId: "rights-manifest-1",
+    status: "ACTIVE",
+    requiredBindingsAmbiguous: false,
+    conflictingRequiredBindings: [],
+    ...overrides,
+  };
+  if (["LEARNER_ATTEMPT_RANGE", "PRIVATE_SOURCE_RANGE"].includes(kind)) {
+    candidate.ownerBindingRef ??= "pob_owner_scope_local_1";
+    candidate.vaultLocalTargetRef ??= "vault_target_1";
+    candidate.targetDigestScope ??= "VAULT_LOCAL_INTEGRITY_METADATA_ONLY";
+  }
+  if (kind === "QUESTION_UNIT") candidate.rightsState ??= candidate.domain;
+  if (kind === "OFFICIAL_PERMITTED_RANGE") {
+    candidate.itemRightsManifestId ??= "irm_item_rights_manifest_1";
+  }
+  return candidate;
+}
+
+function canonicalItemRightsBoundary(candidate, overrides = {}) {
+  return {
+    source: "CANONICAL_SERVER_ITEM_RIGHTS_MANIFEST_BOUNDARY",
+    serverSide: true,
+    authoritative: true,
+    resolved: true,
+    matchingRecordCount: 1,
+    ambiguous: false,
+    conflicting: false,
+    stale: false,
+    replayed: false,
+    clientInferred: false,
+    crossRevision: false,
+    itemRightsManifestId: candidate.itemRightsManifestId,
+    anchorId: candidate.anchorId,
+    kind: candidate.kind,
+    domain: candidate.domain,
+    targetType: candidate.targetType,
+    targetRevisionId: candidate.targetRevisionId,
+    rightsManifestId: candidate.rightsManifestId,
+    ...overrides,
+  };
+}
+
+function canonicalPrivateOwnerBoundary(candidate, overrides = {}) {
+  const authenticatedLearnerId = overrides.authenticatedLearnerId ?? "learner-1";
+  const tenantScopeId = overrides.tenantScopeId ?? "tenant-1";
+  const baseResolution = {
+    source: "CANONICAL_SERVER_PRIVATE_ANCHOR_OWNER_BOUNDARY",
+    serverSide: true,
+    authoritative: true,
+    resolved: true,
+    matchingRecordCount: 1,
+    ambiguous: false,
+    conflicting: false,
+    stale: false,
+    replayed: false,
+    clientInferred: false,
+    crossLearner: false,
+    crossTenant: false,
+    ownerBindingRef: candidate.ownerBindingRef,
+    authenticatedLearnerId,
+    tenantScopeId,
+    anchorId: candidate.anchorId,
+    kind: candidate.kind,
+    vaultLocalTargetRef: candidate.vaultLocalTargetRef,
+    targetRevisionId: candidate.targetRevisionId,
+    targetDigest: candidate.targetDigest,
+    targetDigestScope: candidate.targetDigestScope,
+    bodyLocatorPolicy: candidate.bodyLocatorPolicy,
+  };
+  const resolution = Object.hasOwn(overrides, "resolution")
+    ? overrides.resolution == null
+      ? overrides.resolution
+      : { ...baseResolution, ...overrides.resolution }
+    : baseResolution;
+  return {
+    authenticatedLearnerId,
+    tenantScopeId,
+    resolution,
+    ...Object.fromEntries(
+      Object.entries(overrides).filter(([key]) => ![
+        "authenticatedLearnerId",
+        "tenantScopeId",
+        "resolution",
+      ].includes(key)),
+    ),
+  };
+}
+
+function validatePrivateAnchorOwnerBinding(candidate, ownerBoundary, anchorContract) {
+  const gate = anchorContract.privateOwnerBindingGate;
+  const fail = (reason) => ({ accepted: false, disposition: "REJECT", reason });
+  for (const field of gate.callerAssertionFieldsForbidden) {
+    if (Object.hasOwn(candidate, field)) return fail(`CALLER_OWNER_ASSERTION_${field}_FORBIDDEN`);
+  }
+  for (const field of gate.candidateConditionalRequiredFields) {
+    if (!Object.hasOwn(candidate, field)) return fail(`PRIVATE_OWNER_BINDING_${field}_MISSING`);
+    const schema = gate.candidateFieldSchemas[field];
+    const value = candidate[field];
+    const valid = schema.type === "string"
+      ? typeof value === "string"
+        && value.trim() === value
+        && new RegExp(schema.pattern).test(value)
+      : schema.type === "literal" && value === schema.value;
+    if (!valid) return fail(`PRIVATE_OWNER_BINDING_${field}_INVALID`);
+  }
+  const contextSchema = gate.authenticatedContextSchema;
+  if (
+    !ownerBoundary
+    || typeof ownerBoundary !== "object"
+    || Array.isArray(ownerBoundary)
+    || JSON.stringify(sorted(Object.keys(ownerBoundary)))
+      !== JSON.stringify(sorted(contextSchema.requiredFields))
+  ) return fail("AUTHORITATIVE_OWNER_BOUNDARY_INVALID");
+  const idPattern = new RegExp(contextSchema.idPattern);
+  for (const field of gate.authenticatedScopeFields) {
+    const value = ownerBoundary[field];
+    if (typeof value !== "string" || value.trim() !== value || !idPattern.test(value)) {
+      return fail(`AUTHENTICATED_OWNER_SCOPE_${field}_INVALID`);
+    }
+  }
+  const resolution = ownerBoundary.resolution;
+  const resolutionSchema = gate.resolutionSchema;
+  if (
+    !resolution
+    || typeof resolution !== "object"
+    || Array.isArray(resolution)
+    || JSON.stringify(sorted(Object.keys(resolution)))
+      !== JSON.stringify(sorted(resolutionSchema.requiredFields))
+  ) return fail("PRIVATE_OWNER_RESOLUTION_SCHEMA_INVALID");
+  if (
+    resolution.source !== gate.resolutionSource
+    || resolution.matchingRecordCount !== gate.exactMatchingRecordCount
+  ) return fail("PRIVATE_OWNER_RESOLUTION_SOURCE_OR_COUNT_INVALID");
+  for (const [field, requiredValue] of Object.entries(gate.requiredBooleanStates)) {
+    if (resolution[field] !== requiredValue) {
+      return fail(`PRIVATE_OWNER_RESOLUTION_${field}_INVALID`);
+    }
+  }
+  for (const field of gate.authenticatedScopeFields) {
+    if (resolution[field] !== ownerBoundary[field]) {
+      return fail(`PRIVATE_OWNER_RESOLUTION_${field}_MISMATCH`);
+    }
+  }
+  for (const field of gate.exactPrivateAnchorAndVaultBindingFields) {
+    if (resolution[field] !== candidate[field]) {
+      return fail(`PRIVATE_OWNER_RESOLUTION_${field}_MISMATCH`);
+    }
+  }
+  return { accepted: true };
+}
+
+function validateItemRightsManifestBinding(candidate, itemRightsBoundary, anchorContract) {
+  const gate = anchorContract.itemRightsManifestBindingGate;
+  const fail = (reason) => ({ accepted: false, disposition: "REJECT", reason });
+  for (const field of gate.callerAssertionFieldsForbidden) {
+    if (Object.hasOwn(candidate, field)) return fail(`CALLER_ITEM_RIGHTS_ASSERTION_${field}_FORBIDDEN`);
+  }
+  const value = candidate[gate.candidateField];
+  const schema = gate.candidateFieldSchema;
+  if (
+    typeof value !== "string"
+    || value.trim() !== value
+    || value.length < schema.minLength
+    || !new RegExp(schema.pattern).test(value)
+  ) return fail("ITEM_RIGHTS_MANIFEST_ID_INVALID");
+  if (
+    !itemRightsBoundary
+    || typeof itemRightsBoundary !== "object"
+    || Array.isArray(itemRightsBoundary)
+    || JSON.stringify(sorted(Object.keys(itemRightsBoundary)))
+      !== JSON.stringify(sorted(gate.resolutionSchema.requiredFields))
+  ) return fail("ITEM_RIGHTS_RESOLUTION_SCHEMA_INVALID");
+  if (
+    itemRightsBoundary.source !== gate.resolutionSource
+    || itemRightsBoundary.matchingRecordCount !== gate.exactMatchingRecordCount
+  ) return fail("ITEM_RIGHTS_RESOLUTION_SOURCE_OR_COUNT_INVALID");
+  for (const [field, requiredValue] of Object.entries(gate.requiredBooleanStates)) {
+    if (itemRightsBoundary[field] !== requiredValue) {
+      return fail(`ITEM_RIGHTS_RESOLUTION_${field}_INVALID`);
+    }
+  }
+  for (const field of gate.exactAnchorBindingFields) {
+    if (itemRightsBoundary[field] !== candidate[field]) {
+      return fail(`ITEM_RIGHTS_RESOLUTION_${field}_MISMATCH`);
+    }
+  }
+  return { accepted: true };
+}
+
+function anchorPolicyIntegrity(anchorContract = contract.anchors) {
+  const declaredKinds = sorted(anchorContract.kinds);
+  const mappedKinds = sorted(Object.keys(anchorContract.kindPolicy ?? {}));
+  if (JSON.stringify(declaredKinds) !== JSON.stringify(mappedKinds)) {
+    return { valid: false, reason: "KIND_POLICY_KEY_SET_MISMATCH" };
+  }
+  if (
+    anchorContract.defaultKindPolicyAllowed !== false
+    || anchorContract.fallbackKindPolicyAllowed !== false
+    || Object.keys(anchorContract.kindPolicy).some((key) => /default|fallback|unknown|\*/i.test(key))
+  ) {
+    return { valid: false, reason: "FALLBACK_POLICY_FORBIDDEN" };
+  }
+  return { valid: true };
+}
+
+function validateAnchor(
+  candidate,
+  anchorContract = contract.anchors,
+  ownerBoundary,
+  itemRightsBoundary,
+) {
+  const integrity = anchorPolicyIntegrity(anchorContract);
+  if (!integrity.valid) return { accepted: false, disposition: "REJECT", reason: integrity.reason };
+
+  const policy = anchorContract.kindPolicy[candidate.kind];
+  if (!policy) {
+    return {
+      accepted: false,
+      disposition: anchorContract.unknownKindBehavior,
+      reason: "UNKNOWN_KIND",
+    };
+  }
+  if (
+    JSON.stringify(sorted(Object.keys(anchorContract.requiredBindingSchema ?? {})))
+    !== JSON.stringify(sorted(anchorContract.requiredBindings))
+  ) {
+    return {
+      accepted: false,
+      disposition: "REJECT",
+      reason: "REQUIRED_BINDING_SCHEMA_KEY_SET_MISMATCH",
+    };
+  }
+  const ambiguityAndConflictGate = anchorContract.closedAmbiguityAndConflictStateGate;
+  const ambiguityGate = ambiguityAndConflictGate?.requiredBindingsAmbiguous;
+  if (
+    typeof candidate.requiredBindingsAmbiguous !== ambiguityGate?.requiredPrimitiveType
+  ) {
+    return {
+      accepted: false,
+      disposition: "REJECT",
+      reason: "REQUIRED_BINDING_AMBIGUITY_STATE_INVALID",
+    };
+  }
+  if (candidate.requiredBindingsAmbiguous !== ambiguityGate.requiredExactValue) {
+    return { accepted: false, disposition: "REJECT", reason: "REQUIRED_BINDING_AMBIGUOUS" };
+  }
+  const conflictGate = ambiguityAndConflictGate?.conflictingRequiredBindings;
+  if (
+    conflictGate?.requiredType !== "array"
+    || !Array.isArray(candidate.conflictingRequiredBindings)
+  ) {
+    return {
+      accepted: false,
+      disposition: "REJECT",
+      reason: "REQUIRED_BINDING_CONFLICT_STATE_INVALID",
+    };
+  }
+  if (candidate.conflictingRequiredBindings.length !== conflictGate.requiredLength) {
+    return { accepted: false, disposition: "REJECT", reason: "REQUIRED_BINDING_INCONSISTENT" };
+  }
+  for (const field of anchorContract.requiredBindings) {
+    if (!Object.hasOwn(candidate, field)) {
+      return { accepted: false, disposition: "REJECT", reason: `REQUIRED_BINDING_${field}_MISSING` };
+    }
+    const schema = anchorContract.requiredBindingSchema[field];
+    const value = candidate[field];
+    let valid = false;
+    if (schema.type === "string") {
+      valid = typeof value === "string"
+        && value.trim() === value
+        && value.length >= (schema.minLength ?? 0)
+        && (schema.pattern == null || new RegExp(schema.pattern).test(value));
+    } else if (schema.type === "enum") {
+      const sourceKey = schema.valuesSource.split(".").at(-1);
+      valid = typeof value === "string" && anchorContract[sourceKey]?.includes(value) === true;
+    }
+    if (!valid) {
+      return { accepted: false, disposition: "REJECT", reason: `REQUIRED_BINDING_${field}_INVALID` };
+    }
+  }
+  if (!policy.allowedDomains.includes(candidate.domain)) {
+    return { accepted: false, disposition: "REJECT", reason: "DOMAIN_CONFLICT" };
+  }
+  if (!policy.allowedBodyLocatorPolicies.includes(candidate.bodyLocatorPolicy)) {
+    return { accepted: false, disposition: "REJECT", reason: "LOCATOR_CONFLICT" };
+  }
+  if (!policy.allowedTargetTypes.includes(candidate.targetType)) {
+    return { accepted: false, disposition: "REJECT", reason: "TARGET_TYPE_CONFLICT" };
+  }
+  if (policy.rightsStateRequired && !candidate.rightsState) {
+    return { accepted: false, disposition: "REJECT", reason: "RIGHTS_STATE_REQUIRED" };
+  }
+  if (policy.domainRightsConsistencyRequired && candidate.rightsState !== candidate.domain) {
+    return { accepted: false, disposition: "REJECT", reason: "RIGHTS_DOMAIN_CONFLICT" };
+  }
+  if (policy.itemLevelRightsRequired) {
+    const itemRightsValidation = validateItemRightsManifestBinding(
+      candidate,
+      itemRightsBoundary,
+      anchorContract,
+    );
+    if (!itemRightsValidation.accepted) return itemRightsValidation;
+  }
+  if (policy.targetDigestPolicy && candidate.targetDigestScope !== policy.targetDigestPolicy) {
+    return { accepted: false, disposition: "REJECT", reason: "PRIVATE_DIGEST_SCOPE_CONFLICT" };
+  }
+  if (policy.ownerBound) {
+    const ownerValidation = validatePrivateAnchorOwnerBinding(
+      candidate,
+      ownerBoundary,
+      anchorContract,
+    );
+    if (!ownerValidation.accepted) return ownerValidation;
+  }
+  return { accepted: true, policy };
+}
+
+function projectPrivateAnchorOutsideVault(
+  candidate,
+  destination = "PRIVATE_METADATA_RECEIPT",
+  ownerBoundary,
+) {
+  const validation = validateAnchor(candidate, contract.anchors, ownerBoundary);
+  if (!validation.accepted) return validation;
+  const projection = validation.policy.nonVaultProjection;
+  if (!projection) return { accepted: false, reason: "NON_PRIVATE_ANCHOR" };
+  if (projection.forbiddenDestinations.includes(destination)) {
+    return { accepted: false, reason: "FORBIDDEN_PROJECTION_DESTINATION" };
+  }
+  return {
+    accepted: true,
+    receipt: {
+      projectionType: projection.mode,
+      anchorKind: candidate.kind,
+      privateBodyPresent: false,
+      contentBearing: false,
+    },
+  };
+}
+
+function canonicalAttemptResolution(overrides = {}) {
+  return {
+    source: "CANONICAL_SERVER_ATTEMPT_LEDGER",
+    attemptId: "attempt-1",
+    learnerPrivateScopeId: "learner-1",
+    canonicalAttemptState: "SUBMITTED",
+    matchingRecordCount: 1,
+    serverSide: true,
+    authoritative: true,
+    independentlyResolved: true,
+    known: true,
+    resolved: true,
+    submitted: true,
+    submittedBeforeExposure: true,
+    crossLearner: false,
+    crossAttempt: false,
+    mismatched: false,
+    replayed: false,
+    preSubmission: false,
+    closed: false,
+    stale: false,
+    cancelled: false,
+    ambiguous: false,
+    conflicting: false,
+    clientInferred: false,
+    callerInferred: false,
+    ...overrides,
+  };
+}
+
+function canonicalOpenAttemptResolution(overrides = {}) {
+  return canonicalAttemptResolution({
+    canonicalAttemptState: "INDEPENDENT_ATTEMPT_OPEN",
+    submitted: false,
+    submittedBeforeExposure: false,
+    preSubmission: true,
+    ...overrides,
+  });
+}
+
+function canonicalReviewOnlyResolution(overrides = {}) {
+  const base = {
+    source: "CANONICAL_SERVER_CUE_TIMING_CLASSIFICATION_RESOLVER",
+    known: true,
+    resolved: true,
+    matchingResolutionCount: 1,
+    serverSide: true,
+    authoritative: true,
+    independentlyResolved: true,
+    ambiguous: false,
+    conflicting: false,
+    crossLearner: false,
+    crossAttempt: false,
+    mismatched: false,
+    stale: false,
+    replayed: false,
+    cancelled: false,
+    clientInferred: false,
+    callerInferred: false,
+    canonicalTiming: "REVIEW_ONLY",
+    canonicalAssistanceClassification: "NONE",
+    canonicalExposureRecordState: "COMMITTED",
+    learnerPrivateScopeId: "learner-1",
+    attemptScopeId: "question-scope-1",
+    cueId: "cue-1",
+    cueRevisionId: "cue-revision-1",
+    requestId: "request-1",
+    openIndependentAttemptResolution: {
+      source: "CANONICAL_SERVER_ATTEMPT_LEDGER",
+      queriedCanonicalAttemptState: "INDEPENDENT_ATTEMPT_OPEN",
+      learnerPrivateScopeId: "learner-1",
+      attemptScopeId: "question-scope-1",
+      matchingRecordCount: 0,
+      serverSide: true,
+      authoritative: true,
+      independentlyResolved: true,
+      known: true,
+      resolved: true,
+      ambiguous: false,
+      conflicting: false,
+      crossLearner: false,
+      crossAttempt: false,
+      mismatched: false,
+      stale: false,
+      replayed: false,
+      cancelled: false,
+      clientInferred: false,
+      callerInferred: false,
+    },
+  };
+  const resolution = { ...base, ...overrides };
+  if (Object.hasOwn(overrides, "openIndependentAttemptResolution")) {
+    resolution.openIndependentAttemptResolution = overrides.openIndependentAttemptResolution == null
+      ? overrides.openIndependentAttemptResolution
+      : { ...base.openIndependentAttemptResolution, ...overrides.openIndependentAttemptResolution };
+  }
+  return resolution;
+}
+
+function reviewOnlyRequest(overrides = {}) {
+  return {
+    timing: "REVIEW_ONLY",
+    assistanceClassification: "NONE",
+    learnerPrivateScopeId: "learner-1",
+    authenticatedLearnerPrivateScopeId: "learner-1",
+    attemptScopeId: "question-scope-1",
+    cueId: "cue-1",
+    cueRevisionId: "cue-revision-1",
+    requestId: "request-1",
+    reviewOnlyResolution: canonicalReviewOnlyResolution(),
+    canonicalRecordCommitted: true,
+    recordFailure: false,
+    renderSubmitRaceDetected: false,
+    ...overrides,
+  };
+}
+
+function cueEvent(overrides = {}) {
+  const event = {
+    timing: "AFTER_RESPONSE",
+    assistanceClassification: "NONE",
+    derivedFrom: "CANONICAL_ASSISTANCE_EXPOSURE_LEDGER",
+    ordering: "ORDERED",
+    canonicalRecordCommitted: true,
+    recordFailure: false,
+    renderSubmitRaceDetected: false,
+    attemptId: "attempt-1",
+    learnerPrivateScopeId: "learner-1",
+    authenticatedLearnerPrivateScopeId: "learner-1",
+    attemptResolution: canonicalAttemptResolution(),
+    ...overrides,
+  };
+  if (event.timing === "BEFORE_RESPONSE") {
+    return { ...event, ...cueRenderRequest(), ...overrides };
+  }
+  if (
+    event.timing === "REVIEW_ONLY"
+    && !Object.hasOwn(overrides, "attemptId")
+    && !Object.hasOwn(overrides, "attemptResolution")
+  ) {
+    delete event.attemptId;
+    delete event.attemptResolution;
+    event.attemptScopeId = overrides.attemptScopeId ?? "question-scope-1";
+    event.cueId = overrides.cueId ?? "cue-1";
+    event.cueRevisionId = overrides.cueRevisionId ?? "cue-revision-1";
+    event.requestId = overrides.requestId ?? "request-1";
+    event.reviewOnlyResolution = Object.hasOwn(overrides, "reviewOnlyResolution")
+      ? overrides.reviewOnlyResolution
+      : canonicalReviewOnlyResolution();
+  }
+  return event;
+}
+
+function hasExactClosedCanonicalRecord(record, gate) {
+  if (
+    !record
+    || typeof record !== "object"
+    || Array.isArray(record)
+    || gate.additionalFieldsAllowed !== false
+    || JSON.stringify(sorted(Object.keys(record)))
+      !== JSON.stringify(sorted(gate.requiredFields))
+    || record.source !== gate.resolutionSource
+    || record.matchingRecordCount !== gate.exactMatchingRecordCount
+  ) return false;
+  for (const field of gate.identifierFields ?? []) {
+    if (!isCanonicalIdentifier(record[field], gate.identifierSchema)) return false;
+  }
+  for (const field of gate.timestampFields ?? []) {
+    if (parseCanonicalUtcMilliseconds(record[field]) === null) return false;
+  }
+  return !Object.entries(gate.requiredExactPrimitiveBooleanStates ?? {}).some(
+    ([field, expected]) => record[field] !== expected,
+  );
+}
+
+function hasExactCandidateEnvelope(candidate, gate) {
+  return candidate !== null
+    && typeof candidate === "object"
+    && !Array.isArray(candidate)
+    && gate.additionalFieldsAllowed === false
+    && JSON.stringify(sorted(Object.keys(candidate)))
+      === JSON.stringify(sorted(gate.requiredFields));
+}
+
+function hasExactClosedReviewOnlyRecord(record, gate) {
+  if (
+    !record
+    || typeof record !== "object"
+    || Array.isArray(record)
+    || gate.additionalFieldsAllowed !== false
+    || JSON.stringify(sorted(Object.keys(record)))
+      !== JSON.stringify(sorted(gate.requiredFields))
+    || record.source !== gate.resolutionSource
+    || record[gate.matchingRecordCountField] !== gate.exactMatchingRecordCount
+  ) return false;
+  for (const field of gate.identifierFields) {
+    if (!isCanonicalIdentifier(record[field], gate.identifierSchema)) return false;
+  }
+  return Object.entries(gate.requiredExactPrimitiveBooleanStates).every(
+    ([field, expected]) => record[field] === expected,
+  );
+}
+
+function validateExactPreResponseOpenAttempt(subject) {
+  const gate = contract.cueExposure.beforeResponseGate.canonicalOpenAttemptResolutionGate;
+  const resolution = subject.attemptResolution;
+  if (
+    !hasExactClosedCanonicalRecord(resolution, gate)
+    || resolution.canonicalAttemptState !== gate.requiredCanonicalAttemptState
+  ) return false;
+  for (const [recordField, subjectField] of Object.entries(gate.recordBindingFields)) {
+    if (
+      !isCanonicalIdentifier(subject[subjectField], gate.identifierSchema)
+      || resolution[recordField] !== subject[subjectField]
+    ) return false;
+  }
+  return subject.canonicalAttemptState === resolution.canonicalAttemptState;
+}
+
+function validateExactCanonicalConfirmation(subject) {
+  const gate = contract.cueExposure.beforeResponseGate.canonicalConfirmationResolutionGate;
+  const confirmation = subject.confirmation;
+  if (
+    !hasExactClosedCanonicalRecord(confirmation, gate)
+    || confirmation.status !== gate.requiredStatus
+  ) return false;
+  for (const field of gate.recordBindingFields) {
+    if (
+      !isCanonicalIdentifier(subject[field], gate.identifierSchema)
+      || confirmation[field] !== subject[field]
+    ) return false;
+  }
+  return true;
+}
+
+function validateExactPreResponseAuthenticatedLearnerScope(subject) {
+  const gate = contract.cueExposure.beforeResponseGate.authenticatedLearnerScopeBindingGate;
+  if (
+    gate.clientOrCallerAliasAllowed !== false
+    || gate.inferenceAllowed !== false
+    || gate.comparison !== "EXACT_FIELD_FOR_FIELD"
+    || gate.allValidatedLearnerScopesMustExactlyEqual !== true
+    || gate.untrustedAliasFields.some((field) => subject[field] !== undefined)
+    || subject.inferLearnerPrivateScopeId === true
+  ) return false;
+  const authenticatedLearnerScope = subject[gate.field];
+  const learnerScopes = [
+    authenticatedLearnerScope,
+    subject.learnerPrivateScopeId,
+    subject.attemptResolution?.learnerPrivateScopeId,
+    subject.confirmation?.learnerPrivateScopeId,
+  ];
+  return learnerScopes.every((value) => isCanonicalIdentifier(value, gate.identifierSchema))
+    && learnerScopes.every((value) => value === authenticatedLearnerScope);
+}
+
+function hasExactPreResponseNoRaceState(subject) {
+  const gate = contract.cueExposure.preResponseAtomicCommit.renderSubmitRaceExactFalseGate;
+  const value = subject[gate.field];
+  return typeof value === gate.requiredPrimitiveType && value === gate.requiredExactValue;
+}
+
+function validateCanonicalAttemptBinding(subject) {
+  const gate = contract.cueExposure.afterResponseGate;
+  const resolutionGate = gate.canonicalSubmittedAttemptResolutionGate;
+  if (
+    subject.clientAttemptId !== undefined
+    || subject.inferLatestAttempt === true
+    || subject.clientLearnerPrivateScopeId !== undefined
+    || subject.callerLearnerPrivateScopeId !== undefined
+    || subject.clientAuthenticatedLearnerPrivateScopeId !== undefined
+    || subject.callerAuthenticatedLearnerPrivateScopeId !== undefined
+    || subject.inferLearnerPrivateScopeId === true
+  ) {
+    return { accepted: false, reason: "UNTRUSTED_OR_INFERRED_ATTEMPT_OR_LEARNER_SCOPE" };
+  }
+  if (!isCanonicalIdentifier(subject.attemptId, resolutionGate.identifierSchema)) {
+    return { accepted: false, reason: "EXACT_ATTEMPT_ID_REQUIRED" };
+  }
+  const learnerScopeRule = gate.learnerPrivateScopeBindingRule;
+  const learnerScope = subject[learnerScopeRule.field];
+  if (!isCanonicalIdentifier(learnerScope, resolutionGate.identifierSchema)) {
+    return { accepted: false, reason: "EXACT_LEARNER_PRIVATE_SCOPE_ID_REQUIRED" };
+  }
+  const authenticatedLearnerScope = subject[learnerScopeRule.authenticatedField];
+  if (
+    !isCanonicalIdentifier(authenticatedLearnerScope, resolutionGate.identifierSchema)
+    || authenticatedLearnerScope !== learnerScope
+  ) {
+    return { accepted: false, reason: "AUTHENTICATED_LEARNER_PRIVATE_SCOPE_MISMATCH" };
+  }
+  const resolution = subject.attemptResolution;
+  if (!resolution) return { accepted: false, reason: "ATTEMPT_RESOLUTION_MISSING" };
+  if (
+    !hasExactClosedCanonicalRecord(resolution, resolutionGate)
+    || resolution.canonicalAttemptState !== resolutionGate.requiredCanonicalAttemptState
+  ) return { accepted: false, reason: "ATTEMPT_RESOLUTION_INVALID" };
+  for (const [recordField, subjectField] of Object.entries(resolutionGate.recordBindingFields)) {
+    if (
+      !isCanonicalIdentifier(subject[subjectField], resolutionGate.identifierSchema)
+      || resolution[recordField] !== subject[subjectField]
+    ) {
+      return { accepted: false, reason: `ATTEMPT_${recordField.toUpperCase()}_MISMATCH` };
+    }
+  }
+  if (
+    subject.canonicalAttemptState !== undefined
+    && subject.canonicalAttemptState !== resolutionGate.requiredCanonicalAttemptState
+  ) {
+    return { accepted: false, reason: "OUTER_ATTEMPT_STATE_CONFLICT" };
+  }
+  if (resolution.learnerPrivateScopeId !== authenticatedLearnerScope) {
+    return { accepted: false, reason: "AUTHENTICATED_LEARNER_PRIVATE_SCOPE_MISMATCH" };
+  }
+  return { accepted: true };
+}
+
+function hasExactCanonicalRecordCommit(subject) {
+  const gate = contract.cueExposure.canonicalRecordCommittedGate;
+  const value = subject[gate.field];
+  return typeof value === gate.requiredPrimitiveType && value === gate.requiredValue;
+}
+
+function hasExactNoRecordFailure(subject) {
+  const gate = contract.cueExposure.recordFailureGate;
+  const value = subject[gate.field];
+  return typeof value === gate.requiredPrimitiveType && value === gate.requiredExactValue;
+}
+
+function hasExactReviewOnlyNoRaceState(subject) {
+  const gate = contract.cueExposure.reviewOnlyGate.renderSubmitRaceExactFalseGate;
+  const value = subject[gate.field];
+  return typeof value === gate.requiredPrimitiveType && value === gate.requiredExactValue;
+}
+
+function hasAllowedTimingClassification(subject) {
+  const allowed = contract.cueExposure.closedTimingClassificationMap[subject.timing];
+  return Array.isArray(allowed) && allowed.includes(subject.assistanceClassification);
+}
+
+function validateExactReviewOnlyAuthenticatedLearnerScope(subject, resolution, openAttempt) {
+  const gate = contract.cueExposure.reviewOnlyGate.authenticatedLearnerScopeBindingGate;
+  if (
+    gate.clientOrCallerAliasAllowed !== false
+    || gate.inferenceAllowed !== false
+    || gate.comparison !== "EXACT_FIELD_FOR_FIELD"
+    || gate.allValidatedLearnerScopesMustExactlyEqual !== true
+    || gate.untrustedAliasFields.some((field) => subject[field] !== undefined)
+    || subject.inferLearnerPrivateScopeId === true
+  ) return false;
+  const authenticatedLearnerScope = subject[gate.field];
+  const learnerScopes = [
+    authenticatedLearnerScope,
+    subject.learnerPrivateScopeId,
+    resolution?.learnerPrivateScopeId,
+    openAttempt?.learnerPrivateScopeId,
+  ];
+  return learnerScopes.every((value) => isCanonicalIdentifier(value, gate.identifierSchema))
+    && learnerScopes.every((value) => value === authenticatedLearnerScope);
+}
+
+function authorizeCanonicalReviewOnlyCueRender(subject) {
+  const gate = contract.cueExposure.reviewOnlyGate;
+  const fail = (reason) => ({
+    accepted: false,
+    mayRenderCueBytes: false,
+    independentEvidenceEligible: false,
+    gateId: gate.gateId,
+    reason,
+  });
+  if (!hasExactReviewOnlyNoRaceState(subject)) {
+    return fail(contract.cueExposure.renderSubmitRaceBehavior);
+  }
+  if (!hasExactNoRecordFailure(subject)) return fail(contract.cueExposure.recordFailureBehavior);
+  if (subject.ordering !== undefined && subject.ordering !== "ORDERED") {
+    return fail(contract.cueExposure.ambiguousOrderingBehavior);
+  }
+  if (!hasExactCanonicalRecordCommit(subject)) return fail(contract.cueExposure.recordFailureBehavior);
+  if (
+    Object.hasOwn(subject, "canonicalExposureRecordCommitted")
+    || subject.clientEvent !== undefined
+    || subject.clientTiming !== undefined
+    || subject.clientAssistanceClassification !== undefined
+    || subject.inferTiming === true
+  ) return fail("UNTRUSTED_REVIEW_ONLY_INPUT");
+  if (
+    subject.derivedFrom !== undefined
+    && subject.derivedFrom !== contract.cueExposure.timingAndClassificationSource
+  ) return fail("UNTRUSTED_REVIEW_ONLY_EVENT_DERIVATION");
+
+  const resolution = subject.reviewOnlyResolution;
+  if (!resolution) return fail("CANONICAL_REVIEW_ONLY_RESOLUTION_MISSING");
+  const resolutionGate = gate.canonicalReviewOnlyResolutionGate;
+  if (
+    !hasExactClosedReviewOnlyRecord(resolution, resolutionGate)
+  ) return fail("CANONICAL_REVIEW_ONLY_RESOLUTION_INVALID");
+  if (
+    resolution.canonicalTiming !== gate.requiredCanonicalTiming
+    || !gate.allowedCanonicalAssistanceClassifications.includes(
+      resolution.canonicalAssistanceClassification,
+    )
+  ) return fail("CANONICAL_REVIEW_ONLY_TIMING_CLASSIFICATION_INVALID");
+  if (
+    (subject.timing !== undefined && subject.timing !== resolution.canonicalTiming)
+    || (
+      subject.assistanceClassification !== undefined
+      && subject.assistanceClassification !== resolution.canonicalAssistanceClassification
+    )
+  ) return fail("REVIEW_ONLY_CALLER_CANONICAL_CONFLICT");
+  for (const field of resolutionGate.recordBindingFields) {
+    if (
+      typeof subject[field] !== "string"
+      || subject[field].trim().length === 0
+      || resolution[field] !== subject[field]
+    ) return fail(`REVIEW_ONLY_${field.toUpperCase()}_MISMATCH`);
+  }
+  if (resolution.canonicalExposureRecordState !== gate.canonicalExposureRecordStateRequired) {
+    return fail("CANONICAL_REVIEW_ONLY_EXPOSURE_RECORD_NOT_COMMITTED");
+  }
+  const openAttempt = resolution.openIndependentAttemptResolution;
+  const absenceGate = gate.canonicalOpenIndependentAttemptAbsenceResolutionGate;
+  if (
+    !hasExactClosedReviewOnlyRecord(openAttempt, absenceGate)
+    || openAttempt.queriedCanonicalAttemptState
+      !== absenceGate.requiredQueriedCanonicalAttemptState
+    || Object.entries(absenceGate.recordBindingFields).some(
+      ([recordField, subjectField]) => openAttempt[recordField] !== subject[subjectField],
+    )
+  ) return fail("MATCHING_CANONICAL_OPEN_ATTEMPT_NOT_PROVEN_ABSENT");
+  if (!validateExactReviewOnlyAuthenticatedLearnerScope(subject, resolution, openAttempt)) {
+    return fail("AUTHENTICATED_LEARNER_PRIVATE_SCOPE_MISMATCH");
+  }
+  if (subject.attemptId !== undefined || subject.attemptResolution !== undefined) {
+    const binding = validateCanonicalAttemptBinding(subject);
+    if (!binding.accepted) return fail(binding.reason);
+  }
+  return {
+    accepted: true,
+    mayRenderCueBytes: true,
+    independentEvidenceEligible: false,
+    evidenceNeutral: true,
+    timing: gate.requiredCanonicalTiming,
+    assistanceClassification: resolution.canonicalAssistanceClassification,
+    gateId: gate.gateId,
+  };
+}
+
+function authorizeExactPreResponseCueRender(subject) {
+  const cue = contract.cueExposure;
+  const gate = cue.beforeResponseGate;
+  const fail = (reason) => ({
+    accepted: false,
+    mayRenderCueBytes: false,
+    independentEvidenceEligible: false,
+    gateId: gate.gateId,
+    reason,
+  });
+
+  if (subject.timing !== "BEFORE_RESPONSE") return fail("PRE_RESPONSE_GATE_TIMING_INVALID");
+  if (!hasExactPreResponseNoRaceState(subject)) {
+    return fail(cue.preResponseAtomicCommit.renderSubmitRaceBehavior);
+  }
+  if (!hasExactNoRecordFailure(subject)) return fail(cue.preResponseAtomicCommit.recordFailureBehavior);
+  if (!hasExactCanonicalRecordCommit(subject)) {
+    return fail(cue.preResponseAtomicCommit.recordFailureBehavior);
+  }
+  if (subject.clientAttemptId !== undefined || subject.inferLatestAttempt === true) {
+    return fail("UNTRUSTED_OR_INFERRED_ATTEMPT_ID");
+  }
+  if (
+    subject.canonicalAttemptStateSource !== gate.attemptResolutionSource
+    || subject.clientAttemptState !== undefined
+  ) return fail("UNTRUSTED_ATTEMPT_STATE");
+  if (!isCanonicalIdentifier(
+    subject.attemptId,
+    gate.canonicalOpenAttemptResolutionGate.identifierSchema,
+  )) {
+    return fail("EXACT_ATTEMPT_ID_REQUIRED");
+  }
+  if (!isCanonicalIdentifier(
+    subject.learnerPrivateScopeId,
+    gate.authenticatedLearnerScopeBindingGate.identifierSchema,
+  )) return fail("EXACT_LEARNER_PRIVATE_SCOPE_ID_REQUIRED");
+
+  const resolution = subject.attemptResolution;
+  if (!resolution) return fail("ATTEMPT_RESOLUTION_MISSING");
+  if (!validateExactPreResponseOpenAttempt(subject)) {
+    return fail("ATTEMPT_RESOLUTION_INVALID");
+  }
+
+  const confirmation = subject.confirmation;
+  if (!confirmation) {
+    if (subject.clientConfirmationBoolean === true) return fail("CLIENT_BOOLEAN_INSUFFICIENT");
+    if (subject.preselectedConsent === true) return fail("PRESELECTED_CONSENT_INSUFFICIENT");
+    return fail("CONFIRMATION_MISSING");
+  }
+  if (!validateExactCanonicalConfirmation(subject)) {
+    return fail("CONFIRMATION_RESOLUTION_INVALID");
+  }
+  if (!validateExactPreResponseAuthenticatedLearnerScope(subject)) {
+    return fail("AUTHENTICATED_LEARNER_PRIVATE_SCOPE_MISMATCH");
+  }
+  if (JSON.stringify(subject.commitSteps) !== JSON.stringify(cue.preResponseAtomicCommit.orderedSteps)) {
+    return fail(cue.preResponseAtomicCommit.partialCommitBehavior);
+  }
+  return {
+    accepted: true,
+    mayRenderCueBytes: true,
+    canonicalAttemptState: cue.preResponseAtomicCommit.postCommitAttemptState,
+    independentEvidenceEligible: cue.preResponseAtomicCommit.postCommitIndependentEvidenceEligible,
+    positiveLearningEvidence: false,
+    atomicCommitCompletedBeforeRender: true,
+    gateId: gate.gateId,
+    orderedSteps: [...subject.commitSteps, cue.preResponseAtomicCommit.renderStep],
+  };
+}
+
+function validateCueExposureEvent(event) {
+  const cue = contract.cueExposure;
+  const reviewOnlyRoute = event.timing === "REVIEW_ONLY"
+    || event.reviewOnlyResolution?.canonicalTiming === "REVIEW_ONLY";
+  if (reviewOnlyRoute && !hasExactReviewOnlyNoRaceState(event)) {
+    return { accepted: false, mayRenderCueBytes: false, reason: cue.renderSubmitRaceBehavior };
+  }
+  if (!hasExactNoRecordFailure(event)) {
+    return { accepted: false, mayRenderCueBytes: false, reason: cue.recordFailureBehavior };
+  }
+  if (!hasExactCanonicalRecordCommit(event)) {
+    return { accepted: false, mayRenderCueBytes: false, reason: cue.recordFailureBehavior };
+  }
+  if (event.derivedFrom !== cue.timingAndClassificationSource) {
+    return { accepted: false, mayRenderCueBytes: false, reason: "UNTRUSTED_DERIVATION" };
+  }
+  if (event.ordering !== "ORDERED") {
+    return { accepted: false, mayRenderCueBytes: false, reason: cue.ambiguousOrderingBehavior };
+  }
+  if (reviewOnlyRoute) return authorizeCanonicalReviewOnlyCueRender(event);
+  if (event.renderSubmitRaceDetected) {
+    return { accepted: false, mayRenderCueBytes: false, reason: cue.renderSubmitRaceBehavior };
+  }
+  if (!hasAllowedTimingClassification(event)) {
+    return { accepted: false, mayRenderCueBytes: false, reason: "TIMING_CLASSIFICATION_INVALID" };
+  }
+  if (event.timing === "BEFORE_RESPONSE") {
+    return authorizeExactPreResponseCueRender(event);
+  }
+  if (event.timing === "AFTER_RESPONSE") {
+    const binding = validateCanonicalAttemptBinding(event);
+    if (!binding.accepted) return { ...binding, mayRenderCueBytes: false };
+  }
+  if (
+    event.timing === "REVIEW_ONLY"
+    && (event.attemptId !== undefined || event.attemptResolution !== undefined)
+  ) {
+    const binding = validateCanonicalAttemptBinding(event);
+    if (!binding.accepted) return { ...binding, mayRenderCueBytes: false };
+  }
+  return {
+    accepted: true,
+    mayRenderCueBytes: true,
+    positiveLearningEvidence: false,
+    evidenceNeutral: event.timing === "REVIEW_ONLY",
+  };
+}
+
+function canonicalExposureHistory(overrides = {}) {
+  return {
+    source: "CANONICAL_ASSISTANCE_EXPOSURE_LEDGER",
+    authoritative: true,
+    serverSide: true,
+    independentlyResolved: true,
+    known: true,
+    resolved: true,
+    complete: true,
+    matchingRecordCount: 1,
+    attemptId: "attempt-1",
+    learnerPrivateScopeId: "learner-1",
+    missingExposureRecord: false,
+    failedRender: false,
+    partialCommit: false,
+    ambiguousRecord: false,
+    ambiguous: false,
+    conflicting: false,
+    stale: false,
+    replayed: false,
+    cancelled: false,
+    crossLearner: false,
+    crossAttempt: false,
+    mismatched: false,
+    clientInferred: false,
+    callerInferred: false,
+    callerPaired: false,
+    preResponseCueExposureCount: 0,
+    preResponseCueExposureCountAuthoritative: true,
+    preResponseCueExposureCountAmbiguous: false,
+    preResponseCueExposureCountConflicting: false,
+    preResponseCueExposureCountStale: false,
+    preResponseCueExposureCountClientInferred: false,
+    ...overrides,
+  };
+}
+
+function canonicalSourceTaskBinding(overrides = {}) {
+  return {
+    source: "CANONICAL_SERVER_ATTEMPT_TASK_BINDING_RESOLVER",
+    attemptId: "attempt-1",
+    learnerPrivateScopeId: "learner-1",
+    taskId: "task-origin-1",
+    matchingRecordCount: 1,
+    serverSide: true,
+    authoritative: true,
+    independentlyResolved: true,
+    known: true,
+    resolved: true,
+    ambiguous: false,
+    conflicting: false,
+    crossLearner: false,
+    crossAttempt: false,
+    stale: false,
+    replayed: false,
+    cancelled: false,
+    clientInferred: false,
+    callerInferred: false,
+    mismatched: false,
+    ...overrides,
+  };
+}
+
+function canonicalTransferTaskBinding(overrides = {}) {
+  return {
+    source: "CANONICAL_SERVER_ATTEMPT_TASK_BINDING_RESOLVER",
+    attemptId: "attempt-transfer-1",
+    learnerPrivateScopeId: "learner-1",
+    taskId: "task-transfer-1",
+    matchingRecordCount: 1,
+    serverSide: true,
+    authoritative: true,
+    independentlyResolved: true,
+    known: true,
+    resolved: true,
+    ambiguous: false,
+    conflicting: false,
+    crossLearner: false,
+    crossAttempt: false,
+    stale: false,
+    replayed: false,
+    cancelled: false,
+    clientInferred: false,
+    callerInferred: false,
+    mismatched: false,
+    ...overrides,
+  };
+}
+
+function canonicalSubmittedTransferAttempt(overrides = {}) {
+  const attemptId = Object.hasOwn(overrides, "attemptId")
+    ? overrides.attemptId
+    : "attempt-transfer-1";
+  const learnerPrivateScopeId = Object.hasOwn(overrides, "learnerPrivateScopeId")
+    ? overrides.learnerPrivateScopeId
+    : "learner-1";
+  const submissionId = Object.hasOwn(overrides, "submissionId")
+    ? overrides.submissionId
+    : "submission-transfer-1";
+  const taskBinding = Object.hasOwn(overrides, "taskBinding")
+    ? overrides.taskBinding
+    : canonicalTransferTaskBinding({ attemptId, learnerPrivateScopeId });
+  return {
+    source: "CANONICAL_SERVER_ATTEMPT_LEDGER",
+    attemptId,
+    learnerPrivateScopeId,
+    submissionId,
+    canonicalAttemptState: "SUBMITTED",
+    matchingRecordCount: 1,
+    submittedAt: "2026-08-02T00:00:00.000Z",
+    assistanceState: "INDEPENDENT",
+    serverSide: true,
+    authoritative: true,
+    independentlyResolved: true,
+    known: true,
+    resolved: true,
+    ambiguous: false,
+    conflicting: false,
+    crossLearner: false,
+    crossAttempt: false,
+    stale: false,
+    replayed: false,
+    cancelled: false,
+    clientInferred: false,
+    callerInferred: false,
+    mismatched: false,
+    taskBinding,
+    ...overrides,
+  };
+}
+
+function canonicalIndependentAttempt(overrides = {}) {
+  return {
+    source: "CANONICAL_SERVER_ATTEMPT_LEDGER",
+    attemptId: "attempt-1",
+    learnerPrivateScopeId: "learner-1",
+    submissionId: "submission-1",
+    canonicalAttemptState: "SUBMITTED",
+    matchingRecordCount: 1,
+    serverSide: true,
+    authoritative: true,
+    independentlyResolved: true,
+    known: true,
+    resolved: true,
+    ambiguous: false,
+    conflicting: false,
+    crossLearner: false,
+    crossAttempt: false,
+    mismatched: false,
+    stale: false,
+    replayed: false,
+    cancelled: false,
+    clientInferred: false,
+    callerInferred: false,
+    submittedAt: "2026-08-01T00:00:00.000Z",
+    assistanceState: "INDEPENDENT",
+    taskBinding: canonicalSourceTaskBinding(),
+    ...overrides,
+  };
+}
+
+function canonicalResponseEvaluation(overrides = {}) {
+  return {
+    source: "CANONICAL_SERVER_RESPONSE_EVALUATION_LEDGER",
+    attemptId: "attempt-1",
+    learnerPrivateScopeId: "learner-1",
+    submissionId: "submission-1",
+    evaluationId: "evaluation-1",
+    evaluationCompletedAt: "2026-08-01T00:05:00.000Z",
+    matchingRecordCount: 1,
+    serverSide: true,
+    authoritative: true,
+    independentlyResolved: true,
+    known: true,
+    resolved: true,
+    actualSubmission: true,
+    evaluationCompleted: true,
+    affirmativeEvidenceOutcomeAccepted: true,
+    ambiguous: false,
+    conflicting: false,
+    crossLearner: false,
+    crossAttempt: false,
+    mismatched: false,
+    stale: false,
+    replayed: false,
+    cancelled: false,
+    clientInferred: false,
+    callerInferred: false,
+    ...overrides,
+  };
+}
+
+function independentResponseEvidence(overrides = {}) {
+  const identifierFields = ["attemptId", "learnerPrivateScopeId", "submissionId", "evaluationId"];
+  const identifiers = Object.fromEntries(identifierFields.map((field) => [
+    field,
+    Object.hasOwn(overrides, field)
+      ? overrides[field]
+      : canonicalResponseEvaluation()[field],
+  ]));
+  const recordFields = new Set([
+    "source",
+    "evaluationCompletedAt",
+    "matchingRecordCount",
+    "serverSide",
+    "authoritative",
+    "independentlyResolved",
+    "known",
+    "resolved",
+    "actualSubmission",
+    "evaluationCompleted",
+    "affirmativeEvidenceOutcomeAccepted",
+    "ambiguous",
+    "conflicting",
+    "crossLearner",
+    "crossAttempt",
+    "mismatched",
+    "stale",
+    "replayed",
+    "cancelled",
+    "clientInferred",
+    "callerInferred",
+  ]);
+  const recordOverrides = Object.fromEntries(
+    Object.entries(overrides).filter(([field]) => recordFields.has(field)),
+  );
+  const extraEnvelopeFields = Object.fromEntries(
+    Object.entries(overrides).filter(([field]) => (
+      !identifierFields.includes(field)
+      && !recordFields.has(field)
+      && field !== "canonicalResponseEvaluation"
+    )),
+  );
+  const canonicalRecord = Object.hasOwn(overrides, "canonicalResponseEvaluation")
+    ? overrides.canonicalResponseEvaluation
+    : canonicalResponseEvaluation({ ...identifiers, ...recordOverrides });
+  return {
+    ...identifiers,
+    canonicalResponseEvaluation: canonicalRecord,
+    ...extraEnvelopeFields,
+  };
+}
+
+function canonicalTransferEvaluation(overrides = {}) {
+  return {
+    source: "CANONICAL_TRANSFER_EVALUATION_LEDGER",
+    sourceAttemptId: "attempt-1",
+    transferAttemptId: "attempt-transfer-1",
+    learnerPrivateScopeId: "learner-1",
+    submissionId: "submission-transfer-1",
+    evaluationId: "evaluation-transfer-1",
+    resultId: "transfer-result-1",
+    originTaskId: "task-origin-1",
+    transferTaskId: "task-transfer-1",
+    evaluationCompletedAt: "2026-08-02T00:05:00.000Z",
+    matchingRecordCount: 1,
+    serverSide: true,
+    authoritative: true,
+    independentlyResolved: true,
+    known: true,
+    resolved: true,
+    actualSubmission: true,
+    evaluationCompleted: true,
+    affirmativeEvidenceOutcomeAccepted: true,
+    distinctEligibleTask: true,
+    representationRelation: "NON_SAME_REPRESENTATION",
+    assistanceState: "INDEPENDENT",
+    ambiguous: false,
+    conflicting: false,
+    crossLearner: false,
+    crossAttempt: false,
+    mismatched: false,
+    stale: false,
+    replayed: false,
+    cancelled: false,
+    clientInferred: false,
+    callerInferred: false,
+    ...overrides,
+  };
+}
+
+function farTransferEvidence(overrides = {}) {
+  const candidateFields = [
+    "sourceAttemptId",
+    "transferAttemptId",
+    "learnerPrivateScopeId",
+    "submissionId",
+    "evaluationId",
+    "resultId",
+    "originTaskId",
+    "transferTaskId",
+  ];
+  const defaults = canonicalTransferEvaluation();
+  const identifiers = Object.fromEntries(candidateFields.map((field) => [
+    field,
+    Object.hasOwn(overrides, field) ? overrides[field] : defaults[field],
+  ]));
+  const recordFields = new Set([
+    "source",
+    "evaluationCompletedAt",
+    "matchingRecordCount",
+    "serverSide",
+    "authoritative",
+    "independentlyResolved",
+    "known",
+    "resolved",
+    "actualSubmission",
+    "evaluationCompleted",
+    "affirmativeEvidenceOutcomeAccepted",
+    "distinctEligibleTask",
+    "representationRelation",
+    "assistanceState",
+    "ambiguous",
+    "conflicting",
+    "crossLearner",
+    "crossAttempt",
+    "mismatched",
+    "stale",
+    "replayed",
+    "cancelled",
+    "clientInferred",
+    "callerInferred",
+  ]);
+  const recordOverrides = Object.fromEntries(
+    Object.entries(overrides).filter(([field]) => recordFields.has(field)),
+  );
+  const reservedFields = new Set([
+    ...candidateFields,
+    ...recordFields,
+    "canonicalTransferAttempt",
+    "canonicalTransferEvaluation",
+    "exposureHistory",
+  ]);
+  const extraEnvelopeFields = Object.fromEntries(
+    Object.entries(overrides).filter(([field]) => !reservedFields.has(field)),
+  );
+  const canonicalTransferAttempt = Object.hasOwn(overrides, "canonicalTransferAttempt")
+    ? overrides.canonicalTransferAttempt
+    : canonicalSubmittedTransferAttempt({
+      attemptId: identifiers.transferAttemptId,
+      learnerPrivateScopeId: identifiers.learnerPrivateScopeId,
+      submissionId: identifiers.submissionId,
+    });
+  const canonicalEvaluation = Object.hasOwn(overrides, "canonicalTransferEvaluation")
+    ? overrides.canonicalTransferEvaluation
+    : canonicalTransferEvaluation({ ...identifiers, ...recordOverrides });
+  const exposureHistory = Object.hasOwn(overrides, "exposureHistory")
+    ? overrides.exposureHistory
+    : canonicalExposureHistory({
+      attemptId: identifiers.transferAttemptId,
+      learnerPrivateScopeId: identifiers.learnerPrivateScopeId,
+    });
+  return {
+    ...identifiers,
+    canonicalTransferAttempt,
+    canonicalTransferEvaluation: canonicalEvaluation,
+    exposureHistory,
+    ...extraEnvelopeFields,
+  };
+}
+
+function canonicalD7Evaluation(overrides = {}) {
+  return {
+    source: "CANONICAL_D7_EVALUATION_LEDGER",
+    evaluationId: "evaluation-d7-1",
+    sourceAttemptId: "attempt-1",
+    attemptId: "attempt-d7-1",
+    learnerPrivateScopeId: "learner-1",
+    submissionId: "submission-d7-1",
+    d7EvaluationCompletedAt: "2026-08-08T00:00:00.000Z",
+    matchingRecordCount: 1,
+    serverSide: true,
+    authoritative: true,
+    independentlyResolved: true,
+    known: true,
+    resolved: true,
+    actualSubmission: true,
+    evaluationCompleted: true,
+    affirmativeEvidenceOutcomeAccepted: true,
+    timing: "D_PLUS_7",
+    cueState: "HIDDEN",
+    hiddenCueBytesAbsentAcrossAllSurfaces: true,
+    representationRelation: "NON_SAME_REPRESENTATION",
+    unresolvedScoringConflictCount: 0,
+    assistanceState: "INDEPENDENT",
+    ambiguous: false,
+    conflicting: false,
+    crossLearner: false,
+    crossAttempt: false,
+    mismatched: false,
+    stale: false,
+    replayed: false,
+    cancelled: false,
+    clientInferred: false,
+    callerInferred: false,
+    ...overrides,
+  };
+}
+
+function stableD7Evidence(overrides = {}) {
+  const sourceAttemptId = Object.hasOwn(overrides, "sourceAttemptId")
+    ? overrides.sourceAttemptId
+    : "attempt-1";
+  const d7AttemptId = Object.hasOwn(overrides, "d7AttemptId")
+    ? overrides.d7AttemptId
+    : "attempt-d7-1";
+  const learnerPrivateScopeId = Object.hasOwn(overrides, "learnerPrivateScopeId")
+    ? overrides.learnerPrivateScopeId
+    : "learner-1";
+  const submissionId = Object.hasOwn(overrides, "submissionId")
+    ? overrides.submissionId
+    : "submission-d7-1";
+  const evaluationId = Object.hasOwn(overrides, "evaluationId")
+    ? overrides.evaluationId
+    : "evaluation-d7-1";
+  const recordFields = new Set([
+    "source",
+    "d7EvaluationCompletedAt",
+    "matchingRecordCount",
+    "serverSide",
+    "authoritative",
+    "independentlyResolved",
+    "known",
+    "resolved",
+    "actualSubmission",
+    "evaluationCompleted",
+    "affirmativeEvidenceOutcomeAccepted",
+    "timing",
+    "cueState",
+    "hiddenCueBytesAbsentAcrossAllSurfaces",
+    "representationRelation",
+    "unresolvedScoringConflictCount",
+    "assistanceState",
+    "ambiguous",
+    "conflicting",
+    "crossLearner",
+    "crossAttempt",
+    "mismatched",
+    "stale",
+    "replayed",
+    "cancelled",
+    "clientInferred",
+    "callerInferred",
+  ]);
+  const recordOverrides = Object.fromEntries(
+    Object.entries(overrides).filter(([field]) => recordFields.has(field)),
+  );
+  const reservedFields = new Set([
+    "sourceAttemptId",
+    "d7AttemptId",
+    "learnerPrivateScopeId",
+    "submissionId",
+    "evaluationId",
+    ...recordFields,
+    "canonicalD7Attempt",
+    "canonicalD7Evaluation",
+    "exposureHistory",
+  ]);
+  const extraEnvelopeFields = Object.fromEntries(
+    Object.entries(overrides).filter(([field]) => !reservedFields.has(field)),
+  );
+  const canonicalD7Attempt = Object.hasOwn(overrides, "canonicalD7Attempt")
+    ? overrides.canonicalD7Attempt
+    : canonicalSubmittedD7Attempt({ attemptId: d7AttemptId, learnerPrivateScopeId, submissionId });
+  const canonicalEvaluation = Object.hasOwn(overrides, "canonicalD7Evaluation")
+    ? overrides.canonicalD7Evaluation
+    : canonicalD7Evaluation({
+      sourceAttemptId,
+      attemptId: d7AttemptId,
+      learnerPrivateScopeId,
+      submissionId,
+      evaluationId,
+      ...recordOverrides,
+    });
+  const exposureHistory = Object.hasOwn(overrides, "exposureHistory")
+    ? overrides.exposureHistory
+    : canonicalExposureHistory({ attemptId: d7AttemptId, learnerPrivateScopeId });
+  return {
+    sourceAttemptId,
+    d7AttemptId,
+    learnerPrivateScopeId,
+    submissionId,
+    evaluationId,
+    canonicalD7Attempt,
+    canonicalD7Evaluation: canonicalEvaluation,
+    exposureHistory,
+    ...extraEnvelopeFields,
+  };
+}
+
+function parseCanonicalUtcMilliseconds(value) {
+  if (
+    typeof value !== "string"
+    || !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/.test(value)
+  ) return null;
+  const milliseconds = Date.parse(value);
+  if (!Number.isFinite(milliseconds) || new Date(milliseconds).toISOString() !== value) return null;
+  return milliseconds;
+}
+
+function isCanonicalIdentifier(value, schema) {
+  return typeof value === schema.type
+    && value.trim() === value
+    && value.length >= schema.minLength
+    && new RegExp(schema.pattern).test(value);
+}
+
+function canonicalEvaluationFollowsSubmission(canonicalAttempt, evaluation, evaluationGate) {
+  const gate = evaluationGate.canonicalSubmissionOrderingGate;
+  const submittedAt = parseCanonicalUtcMilliseconds(
+    canonicalAttempt?.[gate.canonicalAttemptTimestampField],
+  );
+  const evaluationCompletedAt = parseCanonicalUtcMilliseconds(
+    evaluation?.[gate.canonicalEvaluationTimestampField],
+  );
+  return submittedAt !== null
+    && evaluationCompletedAt !== null
+    && evaluationCompletedAt >= submittedAt;
+}
+
+function resolveExactCanonicalBaseAttempt(attempt, gate) {
+  if (
+    !hasExactClosedCanonicalRecord(attempt, gate)
+    || attempt.canonicalAttemptState !== gate.requiredCanonicalAttemptState
+    || attempt.assistanceState !== gate.requiredAssistanceState
+  ) return false;
+  return attempt;
+}
+
+function resolveExactCanonicalResponseEvaluation(canonicalSourceAttempt, candidate, gate) {
+  const envelopeGate = contract.cueExposure.learningEvidenceGate
+    .requiredAffirmativeEvidence.independentRetrieval.candidateEnvelopeGate;
+  const evaluation = candidate?.[gate.recordField];
+  if (
+    !hasExactCandidateEnvelope(candidate, envelopeGate)
+    || !hasExactClosedCanonicalRecord(evaluation, gate)
+    || !canonicalEvaluationFollowsSubmission(canonicalSourceAttempt, evaluation, gate)
+  ) return false;
+  for (const [recordField, candidateField] of Object.entries(gate.recordBindingFields)) {
+    if (
+      !isCanonicalIdentifier(candidate[candidateField], gate.identifierSchema)
+      || evaluation[recordField] !== candidate[candidateField]
+    ) return false;
+  }
+  if (
+    evaluation.attemptId !== canonicalSourceAttempt?.attemptId
+    || evaluation.learnerPrivateScopeId !== canonicalSourceAttempt?.learnerPrivateScopeId
+    || evaluation.submissionId !== canonicalSourceAttempt?.submissionId
+  ) return false;
+  return evaluation;
+}
+
+function resolveExactCanonicalTransferEvaluation(
+  canonicalSourceAttempt,
+  canonicalTransferAttempt,
+  candidate,
+  gate,
+) {
+  const envelopeGate = contract.cueExposure.learningEvidenceGate
+    .requiredAffirmativeEvidence.farTransfer.candidateEnvelopeGate;
+  const evaluation = candidate?.[gate.recordField];
+  if (
+    !hasExactCandidateEnvelope(candidate, envelopeGate)
+    || !hasExactClosedCanonicalRecord(evaluation, gate)
+    || !canonicalEvaluationFollowsSubmission(canonicalTransferAttempt, evaluation, gate)
+    || evaluation.representationRelation !== gate.requiredRepresentationRelation
+    || evaluation.assistanceState !== gate.requiredAssistanceState
+  ) return false;
+  for (const [recordField, candidateField] of Object.entries(gate.recordBindingFields)) {
+    if (
+      !isCanonicalIdentifier(candidate[candidateField], gate.identifierSchema)
+      || evaluation[recordField] !== candidate[candidateField]
+    ) return false;
+  }
+  if (
+    evaluation.sourceAttemptId !== canonicalSourceAttempt?.attemptId
+    || evaluation.learnerPrivateScopeId !== canonicalSourceAttempt?.learnerPrivateScopeId
+    || evaluation.transferAttemptId !== canonicalTransferAttempt?.attemptId
+    || evaluation.learnerPrivateScopeId !== canonicalTransferAttempt?.learnerPrivateScopeId
+    || evaluation.submissionId !== canonicalTransferAttempt?.submissionId
+  ) return false;
+  return evaluation;
+}
+
+function resolveExactCanonicalD7Evaluation(
+  canonicalSourceAttempt,
+  canonicalD7Attempt,
+  candidate,
+  gate,
+) {
+  const envelopeGate = contract.cueExposure.learningEvidenceGate
+    .requiredAffirmativeEvidence.stableD7.candidateEnvelopeGate;
+  const evaluation = candidate?.[gate.recordField];
+  if (
+    !hasExactCandidateEnvelope(candidate, envelopeGate)
+    || !hasExactClosedCanonicalRecord(evaluation, gate)
+    || !canonicalEvaluationFollowsSubmission(canonicalD7Attempt, evaluation, gate)
+    || evaluation.timing !== gate.requiredTiming
+    || evaluation.cueState !== gate.requiredCueState
+    || evaluation.representationRelation !== gate.requiredRepresentationRelation
+    || evaluation.unresolvedScoringConflictCount !== gate.maximumUnresolvedScoringConflictCount
+    || evaluation.assistanceState !== gate.requiredAssistanceState
+  ) return false;
+  for (const [recordField, candidateField] of Object.entries(gate.recordBindingFields)) {
+    if (
+      !isCanonicalIdentifier(candidate[candidateField], gate.identifierSchema)
+      || evaluation[recordField] !== candidate[candidateField]
+    ) return false;
+  }
+  if (
+    evaluation.sourceAttemptId !== canonicalSourceAttempt?.attemptId
+    || evaluation.learnerPrivateScopeId !== canonicalSourceAttempt?.learnerPrivateScopeId
+    || evaluation.attemptId !== canonicalD7Attempt?.attemptId
+    || evaluation.learnerPrivateScopeId !== canonicalD7Attempt?.learnerPrivateScopeId
+    || evaluation.submissionId !== canonicalD7Attempt?.submissionId
+  ) return false;
+  return evaluation;
+}
+
+function hasTrustedD7ElapsedInterval(canonicalSourceAttempt, canonicalD7Evaluation) {
+  const stableD7Gate = contract.cueExposure.learningEvidenceGate
+    .requiredAffirmativeEvidence.stableD7;
+  const gate = stableD7Gate.trustedElapsedIntervalGate;
+  if (
+    !canonicalSourceAttempt
+    || canonicalSourceAttempt[gate.canonicalSourceAttemptSourceField]
+      !== gate.canonicalSourceAttemptRequiredSource
+    || canonicalSourceAttempt.matchingRecordCount
+      !== gate.exactMatchingCanonicalSourceAttemptCount
+    || canonicalSourceAttempt.canonicalAttemptState
+      !== stableD7Gate.requiredCanonicalAttemptState
+    || canonicalD7Evaluation?.source !== gate.evaluationTimestampRequiredSource
+    || canonicalD7Evaluation.sourceAttemptId
+      !== canonicalSourceAttempt[gate.canonicalSourceAttemptIdField]
+    || canonicalD7Evaluation.learnerPrivateScopeId
+      !== canonicalSourceAttempt[gate.canonicalSourceAttemptLearnerPrivateScopeIdField]
+  ) return false;
+  const canonicalSourceAttemptSubmittedAt = parseCanonicalUtcMilliseconds(
+    canonicalSourceAttempt[gate.canonicalSourceAttemptTimestampField],
+  );
+  const d7EvaluationCompletedAt = parseCanonicalUtcMilliseconds(
+    canonicalD7Evaluation[gate.evaluationTimestampField],
+  );
+  return canonicalSourceAttemptSubmittedAt !== null
+    && d7EvaluationCompletedAt !== null
+    && d7EvaluationCompletedAt - canonicalSourceAttemptSubmittedAt
+      >= gate.minimumElapsedMilliseconds;
+}
+
+function validateExactCanonicalTaskBinding(canonicalAttempt, gate) {
+  const binding = canonicalAttempt?.[gate.recordField];
+  if (
+    !binding
+    || typeof binding !== "object"
+    || Array.isArray(binding)
+    || gate.additionalFieldsAllowed !== false
+    || JSON.stringify(sorted(Object.keys(binding)))
+      !== JSON.stringify(sorted(gate.requiredFields))
+    || binding.source !== gate.resolutionSource
+    || binding.matchingRecordCount !== gate.exactMatchingRecordCount
+  ) return false;
+  for (const field of gate.identifierFields) {
+    if (!isCanonicalIdentifier(binding[field], gate.identifierSchema)) return false;
+  }
+  for (const [field, expected] of Object.entries(
+    gate.requiredExactPrimitiveBooleanStates,
+  )) {
+    if (binding[field] !== expected) return false;
+  }
+  const bindingFields = gate.canonicalSourceAttemptBindingFields
+    ?? gate.canonicalTransferAttemptBindingFields;
+  for (const field of bindingFields) {
+    if (binding[field] !== canonicalAttempt[field]) return false;
+  }
+  return { accepted: true, binding, taskId: binding[gate.canonicalTaskIdField] };
+}
+
+function resolveExactCanonicalTransferAttempt(canonicalSourceAttempt, transfer, gate) {
+  const canonicalTransferAttempt = transfer?.[gate.recordField];
+  if (
+    !canonicalTransferAttempt
+    || typeof canonicalTransferAttempt !== "object"
+    || Array.isArray(canonicalTransferAttempt)
+    || canonicalTransferAttempt === canonicalSourceAttempt
+    || gate.additionalFieldsAllowed !== false
+    || JSON.stringify(sorted(Object.keys(canonicalTransferAttempt)))
+      !== JSON.stringify(sorted(gate.requiredFields))
+    || canonicalTransferAttempt.source !== gate.resolutionSource
+    || canonicalTransferAttempt.matchingRecordCount !== gate.exactMatchingRecordCount
+    || canonicalTransferAttempt.canonicalAttemptState !== gate.requiredCanonicalAttemptState
+    || canonicalTransferAttempt.assistanceState !== gate.requiredAssistanceState
+  ) return false;
+  for (const field of gate.identifierFields) {
+    if (!isCanonicalIdentifier(canonicalTransferAttempt[field], gate.identifierSchema)) return false;
+  }
+  for (const field of gate.timestampFields) {
+    if (parseCanonicalUtcMilliseconds(canonicalTransferAttempt[field]) === null) return false;
+  }
+  const orderingGate = gate.canonicalSourceSubmissionOrderingGate;
+  const canonicalSourceSubmittedAt = parseCanonicalUtcMilliseconds(
+    canonicalSourceAttempt?.[orderingGate.canonicalSourceTimestampField],
+  );
+  const canonicalTransferSubmittedAt = parseCanonicalUtcMilliseconds(
+    canonicalTransferAttempt?.[orderingGate.canonicalTransferTimestampField],
+  );
+  if (
+    orderingGate.comparison
+      !== "CANONICAL_TRANSFER_ATTEMPT_SUBMITTED_AT_GTE_CANONICAL_SOURCE_ATTEMPT_SUBMITTED_AT"
+    || orderingGate.equalityAccepted !== true
+    || orderingGate.callerOrOuterTimestampSubstitutionAllowed !== false
+    || canonicalSourceSubmittedAt === null
+    || canonicalTransferSubmittedAt === null
+    || canonicalTransferSubmittedAt < canonicalSourceSubmittedAt
+  ) return false;
+  for (const [field, expected] of Object.entries(
+    gate.requiredExactPrimitiveBooleanStates,
+  )) {
+    if (canonicalTransferAttempt[field] !== expected) return false;
+  }
+  for (const [attemptField, transferField] of Object.entries(
+    gate.transferRecordBindingFields,
+  )) {
+    if (canonicalTransferAttempt[attemptField] !== transfer?.[transferField]) return false;
+  }
+  if (
+    gate.mustDifferFromCanonicalSourceAttemptId !== true
+    || canonicalTransferAttempt.attemptId === canonicalSourceAttempt?.attemptId
+  ) return false;
+  return canonicalTransferAttempt;
+}
+
+function canonicalSubmittedD7Attempt(overrides = {}) {
+  const attemptId = Object.hasOwn(overrides, "attemptId")
+    ? overrides.attemptId
+    : "attempt-d7-1";
+  const learnerPrivateScopeId = Object.hasOwn(overrides, "learnerPrivateScopeId")
+    ? overrides.learnerPrivateScopeId
+    : "learner-1";
+  const submissionId = Object.hasOwn(overrides, "submissionId")
+    ? overrides.submissionId
+    : "submission-d7-1";
+  return {
+    source: "CANONICAL_SERVER_ATTEMPT_LEDGER",
+    attemptId,
+    learnerPrivateScopeId,
+    submissionId,
+    canonicalAttemptState: "SUBMITTED",
+    matchingRecordCount: 1,
+    submittedAt: "2026-08-08T00:00:00.000Z",
+    assistanceState: "INDEPENDENT",
+    serverSide: true,
+    authoritative: true,
+    independentlyResolved: true,
+    known: true,
+    resolved: true,
+    ambiguous: false,
+    conflicting: false,
+    crossLearner: false,
+    crossAttempt: false,
+    mismatched: false,
+    stale: false,
+    replayed: false,
+    cancelled: false,
+    clientInferred: false,
+    callerInferred: false,
+    ...overrides,
+  };
+}
+
+function resolveExactCanonicalD7Attempt(canonicalSourceAttempt, candidate, gate) {
+  const canonicalD7Attempt = candidate?.[gate.recordField];
+  if (
+    !canonicalD7Attempt
+    || typeof canonicalD7Attempt !== "object"
+    || Array.isArray(canonicalD7Attempt)
+    || canonicalD7Attempt === canonicalSourceAttempt
+    || gate.additionalFieldsAllowed !== false
+    || JSON.stringify(sorted(Object.keys(canonicalD7Attempt)))
+      !== JSON.stringify(sorted(gate.requiredFields))
+    || canonicalD7Attempt.source !== gate.resolutionSource
+    || canonicalD7Attempt.matchingRecordCount !== gate.exactMatchingRecordCount
+    || canonicalD7Attempt.canonicalAttemptState !== gate.requiredCanonicalAttemptState
+    || canonicalD7Attempt.assistanceState !== gate.requiredAssistanceState
+  ) return false;
+  for (const field of gate.identifierFields) {
+    if (!isCanonicalIdentifier(canonicalD7Attempt[field], gate.identifierSchema)) return false;
+  }
+  for (const field of gate.timestampFields) {
+    if (parseCanonicalUtcMilliseconds(canonicalD7Attempt[field]) === null) return false;
+  }
+  const orderingGate = gate.canonicalSourceSubmissionOrderingGate;
+  const canonicalSourceSubmittedAt = parseCanonicalUtcMilliseconds(
+    canonicalSourceAttempt?.[orderingGate.canonicalSourceTimestampField],
+  );
+  const canonicalD7SubmittedAt = parseCanonicalUtcMilliseconds(
+    canonicalD7Attempt?.[orderingGate.canonicalD7TimestampField],
+  );
+  if (
+    orderingGate.comparison
+      !== "CANONICAL_D7_ATTEMPT_SUBMITTED_AT_GTE_CANONICAL_SOURCE_ATTEMPT_SUBMITTED_AT"
+    || orderingGate.equalityAccepted !== true
+    || orderingGate.callerOrOuterTimestampSubstitutionAllowed !== false
+    || canonicalSourceSubmittedAt === null
+    || canonicalD7SubmittedAt === null
+    || canonicalD7SubmittedAt < canonicalSourceSubmittedAt
+  ) return false;
+  for (const [field, expected] of Object.entries(
+    gate.requiredExactPrimitiveBooleanStates,
+  )) {
+    if (canonicalD7Attempt[field] !== expected) return false;
+  }
+  for (const [attemptField, candidateField] of Object.entries(gate.d7RecordBindingFields)) {
+    if (canonicalD7Attempt[attemptField] !== candidate?.[candidateField]) return false;
+  }
+  if (
+    gate.mustDifferFromCanonicalSourceAttemptId !== true
+    || canonicalD7Attempt.attemptId === canonicalSourceAttempt?.attemptId
+  ) return false;
+  return canonicalD7Attempt;
+}
+
+function hasExactCanonicalFarTransferTaskBindings(canonicalSourceAttempt, transfer) {
+  const farTransferGate = contract.cueExposure.learningEvidenceGate
+    .requiredAffirmativeEvidence.farTransfer;
+  const sourceGate = farTransferGate.canonicalSourceTaskBindingGate;
+  const transferAttemptGate = farTransferGate.canonicalTransferAttemptResolutionGate;
+  const transferGate = farTransferGate.canonicalTransferTaskBindingGate;
+  const comparisonGate = farTransferGate.canonicalTaskIdentityComparisonGate;
+  const source = validateExactCanonicalTaskBinding(canonicalSourceAttempt, sourceGate);
+  if (!source.accepted) return false;
+  const canonicalTransferAttempt = resolveExactCanonicalTransferAttempt(
+    canonicalSourceAttempt,
+    transfer,
+    transferAttemptGate,
+  );
+  if (!canonicalTransferAttempt) return false;
+  const canonicalTransfer = validateExactCanonicalTaskBinding(
+    canonicalTransferAttempt,
+    transferGate,
+  );
+  if (
+    !canonicalTransfer.accepted
+    || canonicalTransfer.binding === source.binding
+    || transferGate.mustBindExactlyToResolvedCanonicalTransferAttempt !== true
+    || Object.entries(transferGate.transferRecordBindingFields).some(
+      ([bindingField, transferField]) => (
+        canonicalTransfer.binding[bindingField] !== transfer?.[transferField]
+      ),
+    )
+    || comparisonGate.comparison !== "EXACT_FIELD_FOR_FIELD"
+    || comparisonGate.trimAllowed !== false
+    || comparisonGate.caseFoldAllowed !== false
+    || comparisonGate.aliasResolutionAllowed !== false
+    || comparisonGate.inferenceAllowed !== false
+    || comparisonGate.sourceAndTransferBindingsValidatedIndependently !== true
+    || comparisonGate.sourceBindingMaySubstituteForTransferBinding !== false
+  ) return false;
+  const originTaskId = transfer?.[comparisonGate.transferOriginTaskIdField];
+  const transferTaskId = transfer?.[comparisonGate.transferTaskIdField];
+  return isCanonicalIdentifier(originTaskId, sourceGate.identifierSchema)
+    && isCanonicalIdentifier(transferTaskId, transferGate.identifierSchema)
+    && originTaskId === source.taskId
+    && transferTaskId === canonicalTransfer.taskId
+    && source.taskId !== canonicalTransfer.taskId;
+}
+
+function noPositiveEvidence({ failClosed, eligibilityPreserved }) {
+  return {
+    failClosed,
+    independentEvidenceEligibilityPreserved: eligibilityPreserved,
+    independentRetrieval: false,
+    farTransfer: false,
+    stableD7: false,
+  };
+}
+
+function validateCanonicalExposureHistory(history, expectedAttemptId, expectedLearnerScopeId) {
+  const gate = contract.cueExposure.learningEvidenceGate.exposureHistoryBindingGate;
+  const countGate = contract.cueExposure.learningEvidenceGate.preResponseCueExposureCountGate;
+  if (
+    !history
+    || typeof history !== "object"
+    || Array.isArray(history)
+    || JSON.stringify(sorted(Object.keys(history)))
+      !== JSON.stringify(sorted(gate.requiredFields))
+    || history.source !== contract.cueExposure.learningEvidenceGate.exposureHistorySource
+    || history.matchingRecordCount !== gate.exactMatchingRecordCount
+  ) return { accepted: false };
+  const identityPattern = new RegExp(gate.identityFieldPattern);
+  for (const field of gate.identityFields) {
+    const value = history[field];
+    if (typeof value !== "string" || value.trim() !== value || !identityPattern.test(value)) {
+      return { accepted: false };
+    }
+  }
+  if (
+    history.attemptId !== expectedAttemptId
+    || history.learnerPrivateScopeId !== expectedLearnerScopeId
+  ) return { accepted: false };
+  for (const [field, expected] of Object.entries(gate.requiredBooleanStates)) {
+    if (history[field] !== expected) return { accepted: false };
+  }
+  const count = history.preResponseCueExposureCount;
+  if (
+    typeof count !== countGate.requiredPrimitiveType
+    || !Number.isSafeInteger(count)
+    || count < countGate.minimum
+    || Object.entries(countGate.authoritativeStateFields).some(
+      ([field, expected]) => history[field] !== expected,
+    )
+  ) return { accepted: false };
+  return { accepted: true, count };
+}
+
+function validateLearningEvidence(events, evidence = {}) {
+  const validated = events.map(validateCueExposureEvent);
+  if (validated.some((result) => !result.accepted)) {
+    return noPositiveEvidence({ failClosed: true, eligibilityPreserved: false });
+  }
+  const suppliedAttempt = evidence.attempt;
+  const baseAttemptGate = contract.cueExposure.learningEvidenceGate.baseAttemptResolutionGate;
+  const baseSafeStateGate = baseAttemptGate.baseSpecificSafeResolutionStateGate;
+  const attempt = resolveExactCanonicalBaseAttempt(suppliedAttempt, baseAttemptGate);
+  if (
+    !attempt
+    || Object.entries(baseSafeStateGate.requiredExactPrimitiveBooleanStates).some(
+      ([field, expected]) => attempt[field] !== expected,
+    )
+  ) {
+    return noPositiveEvidence({ failClosed: true, eligibilityPreserved: false });
+  }
+  const historyValidation = validateCanonicalExposureHistory(
+    evidence.exposureHistory,
+    attempt?.attemptId,
+    attempt?.learnerPrivateScopeId,
+  );
+  if (!historyValidation.accepted) {
+    return noPositiveEvidence({ failClosed: true, eligibilityPreserved: false });
+  }
+  const countGate = contract.cueExposure.learningEvidenceGate.preResponseCueExposureCountGate;
+  const count = historyValidation.count;
+  const preResponse = events.some((event) => event.timing === "BEFORE_RESPONSE")
+    || count > countGate.independentCreditRequiredValue;
+  const assisted = evidence.attempt?.assistanceState === "ASSISTED";
+  if (preResponse || assisted) {
+    return noPositiveEvidence({ failClosed: false, eligibilityPreserved: false });
+  }
+
+  const response = evidence.independentResponse;
+  const independentGate = contract.cueExposure.learningEvidenceGate
+    .requiredAffirmativeEvidence.independentRetrieval
+    .canonicalResponseEvaluationResolutionGate;
+  const canonicalResponseEvaluationRecord = resolveExactCanonicalResponseEvaluation(
+    attempt,
+    response,
+    independentGate,
+  );
+  const independentRetrieval = Boolean(canonicalResponseEvaluationRecord);
+
+  const transfer = evidence.farTransfer;
+  const farTransferGate = contract.cueExposure.learningEvidenceGate
+    .requiredAffirmativeEvidence.farTransfer;
+  const canonicalTransferAttempt = resolveExactCanonicalTransferAttempt(
+    attempt,
+    transfer,
+    farTransferGate.canonicalTransferAttemptResolutionGate,
+  );
+  const canonicalTransferEvaluationRecord = resolveExactCanonicalTransferEvaluation(
+    attempt,
+    canonicalTransferAttempt,
+    transfer,
+    farTransferGate.canonicalTransferEvaluationResolutionGate,
+  );
+  const transferHistory = validateCanonicalExposureHistory(
+    transfer?.exposureHistory,
+    transfer?.transferAttemptId,
+    transfer?.learnerPrivateScopeId,
+  );
+  const farTransfer = Boolean(
+    independentRetrieval
+    && transfer
+    && canonicalTransferAttempt
+    && canonicalTransferEvaluationRecord
+    && hasExactCanonicalFarTransferTaskBindings(attempt, transfer)
+    && transferHistory.accepted
+    && transferHistory.count === countGate.independentCreditRequiredValue
+  );
+
+  const d7 = evidence.stableD7;
+  const stableD7Gate = contract.cueExposure.learningEvidenceGate
+    .requiredAffirmativeEvidence.stableD7;
+  const canonicalD7AttemptGate = stableD7Gate.canonicalD7AttemptResolutionGate;
+  const canonicalD7Attempt = resolveExactCanonicalD7Attempt(
+    attempt,
+    d7,
+    canonicalD7AttemptGate,
+  );
+  const canonicalD7EvaluationRecord = resolveExactCanonicalD7Evaluation(
+    attempt,
+    canonicalD7Attempt,
+    d7,
+    stableD7Gate.canonicalD7EvaluationResolutionGate,
+  );
+  const d7History = validateCanonicalExposureHistory(
+    d7?.exposureHistory,
+    d7?.d7AttemptId,
+    d7?.learnerPrivateScopeId,
+  );
+  const stableD7 = Boolean(
+    independentRetrieval
+    && d7
+    && canonicalD7Attempt
+    && canonicalD7EvaluationRecord
+    && hasTrustedD7ElapsedInterval(attempt, canonicalD7EvaluationRecord)
+    && d7History.accepted
+    && d7History.count === countGate.independentCreditRequiredValue
+  );
+
+  return {
+    failClosed: false,
+    independentEvidenceEligibilityPreserved: true,
+    independentRetrieval,
+    farTransfer,
+    stableD7,
+  };
+}
+
+function evaluateAttemptEvidence(events, evidence = {}) {
+  return validateLearningEvidence(events, evidence);
+}
+
+function validateSignalContentSafetyProof(candidate, decisionContext = {}) {
+  const gate = contract.personalAnnotation.signalContentSafetyProofGate;
+  const schema = gate.canonicalCandidateValueSchema;
+  const failClosed = () => ({ accepted: false, reason: "SIGNAL_CLOSED_VALUE_SCHEMA_INVALID" });
+  if (
+    !candidate
+    || typeof candidate !== "object"
+    || Array.isArray(candidate)
+    || !schema
+    || typeof schema !== "object"
+    || Array.isArray(schema)
+    || schema.validator !== gate.validationSource
+    || schema.actualCandidateObjectMustValidate !== true
+    || schema.candidateSuppliedSchemaOrProofMarkersSufficient !== false
+    || schema.additionalTopLevelFieldsAllowed !== false
+    || schema.undeclaredFreeTextOrReconstructiveFieldsAllowed !== false
+    || JSON.stringify(sorted(Object.keys(candidate)))
+      !== JSON.stringify(sorted(schema.requiredTopLevelFields))
+  ) return failClosed();
+
+  const identifierPattern = new RegExp(schema.identifierPattern);
+  for (const field of schema.topLevelIdentifierFields) {
+    const value = candidate[field];
+    if (
+      typeof value !== "string"
+      || value.trim() !== value
+      || !identifierPattern.test(value)
+    ) return failClosed();
+  }
+  for (const [field, requiredValue] of Object.entries(schema.topLevelExactValues)) {
+    if (candidate[field] !== requiredValue) return failClosed();
+  }
+  for (const [recordName, recordSchema] of Object.entries(schema.nestedObjectSchemas)) {
+    const record = candidate[recordName];
+    if (
+      !record
+      || typeof record !== "object"
+      || Array.isArray(record)
+      || recordSchema.additionalFieldsAllowed !== false
+      || JSON.stringify(sorted(Object.keys(record)))
+        !== JSON.stringify(sorted(recordSchema.requiredFields))
+    ) return failClosed();
+    for (const field of recordSchema.identifierFields) {
+      const value = record[field];
+      if (
+        typeof value !== "string"
+        || value.trim() !== value
+        || !identifierPattern.test(value)
+      ) return failClosed();
+    }
+    for (const field of recordSchema.rfc3339UtcMillisecondFields) {
+      if (parseExactUtcInstant(record[field]) === null) return failClosed();
+    }
+    for (const [field, requiredValue] of Object.entries(recordSchema.exactValues)) {
+      if (record[field] !== requiredValue) return failClosed();
+    }
+  }
+  if (
+    candidate.contentSafetyProofValidated !== true
+    || candidate.contentSafetyProofValidationSource !== gate.validationSource
+    || candidate.contentSafetyProofAmbiguous !== false
+    || typeof candidate.signalId !== "string"
+    || candidate.signalId.trim().length === 0
+    || typeof candidate.signalRevisionId !== "string"
+    || candidate.signalRevisionId.trim().length === 0
+    || candidate.contentSafetyProofSignalId !== candidate.signalId
+    || candidate.contentSafetyProofSignalRevisionId !== candidate.signalRevisionId
+  ) {
+    return { accepted: false, reason: "SIGNAL_CONTENT_SAFETY_PROOF_UNVALIDATED_OR_CROSS_OBJECT" };
+  }
+  for (const field of gate.requiredBooleanFalseFields) {
+    if (
+      !Object.hasOwn(candidate, field)
+      || typeof candidate[field] !== "boolean"
+      || candidate[field] !== false
+    ) {
+      return { accepted: false, reason: `SIGNAL_CONTENT_SAFETY_${field}_NOT_EXPLICIT_FALSE` };
+    }
+  }
+  const resolutionGate = gate.canonicalOriginContentSafetyResolutionGate;
+  const resolution = decisionContext?.[resolutionGate.decisionContextField];
+  if (
+    !hasExactClosedCanonicalRecord(resolution, resolutionGate)
+    || resolution.originClassification !== resolutionGate.requiredOriginClassification
+  ) return { accepted: false, reason: "CANONICAL_SIGNAL_ORIGIN_CONTENT_SAFETY_INVALID" };
+  for (const field of resolutionGate.exactCandidateBindingFields) {
+    if (
+      !isCanonicalIdentifier(candidate[field], resolutionGate.identifierSchema)
+      || resolution[field] !== candidate[field]
+    ) return { accepted: false, reason: "CANONICAL_SIGNAL_ORIGIN_CONTENT_SAFETY_MISMATCH" };
+  }
+  for (const field of resolutionGate.candidateSafetyEchoFields) {
+    if (resolution[field] !== candidate[field]) {
+      return { accepted: false, reason: "CANONICAL_SIGNAL_CONTENT_SAFETY_ECHO_MISMATCH" };
+    }
+  }
+  return { accepted: true };
+}
+
+function validateClearedContentBankProvenance(candidate, decisionContext) {
+  const gate = contract.personalAnnotation.clearedContentBankProvenanceGate;
+  const candidateSchema = gate.candidateClosedSchema;
+  const recordSchema = gate.recordClosedSchema;
+  const failClosed = (reason = "CLEARED_CONTENT_PROVENANCE_INVALID") => ({
+    accepted: false,
+    reason,
+  });
+  if (
+    !candidate
+    || typeof candidate !== "object"
+    || Array.isArray(candidate)
+    || candidateSchema.additionalTopLevelFieldsAllowed !== false
+    || JSON.stringify(sorted(Object.keys(candidate)))
+      !== JSON.stringify(sorted(candidateSchema.requiredTopLevelFields))
+  ) return failClosed("CLEARED_CONTENT_CANDIDATE_CLOSED_SCHEMA_INVALID");
+
+  const candidateIdentifierPattern = new RegExp(candidateSchema.identifierPattern);
+  for (const field of candidateSchema.identifierFields) {
+    const value = candidate[field];
+    if (
+      typeof value !== "string"
+      || value.trim() !== value
+      || !candidateIdentifierPattern.test(value)
+    ) return failClosed("CLEARED_CONTENT_CANDIDATE_CLOSED_SCHEMA_INVALID");
+  }
+  for (const [field, requiredValue] of Object.entries(candidateSchema.exactValues)) {
+    if (candidate[field] !== requiredValue) {
+      return failClosed("CLEARED_CONTENT_CANDIDATE_CLOSED_SCHEMA_INVALID");
+    }
+  }
+
+  const record = decisionContext?.[gate.decisionContextField];
+  if (
+    !record
+    || typeof record !== "object"
+    || Array.isArray(record)
+    || recordSchema.additionalFieldsAllowed !== false
+    || JSON.stringify(sorted(Object.keys(record)))
+      !== JSON.stringify(sorted(recordSchema.requiredFields))
+  ) return failClosed();
+
+  const recordIdentifierPattern = new RegExp(recordSchema.identifierPattern);
+  for (const field of recordSchema.identifierFields) {
+    const value = record[field];
+    if (
+      typeof value !== "string"
+      || value.trim() !== value
+      || !recordIdentifierPattern.test(value)
+    ) return failClosed();
+  }
+  for (const [field, requiredValue] of Object.entries(recordSchema.exactValues)) {
+    if (record[field] !== requiredValue) return failClosed();
+  }
+  if (
+    record.source !== gate.resolutionSource
+    || record.independentlyResolved !== gate.independentResolutionRequired
+    || record.matchingRecordCount !== gate.exactMatchingRecordCount
+  ) return failClosed();
+  for (const field of gate.exactCandidateBindingFields) {
+    if (record[field] !== candidate[field]) {
+      return failClosed("CLEARED_CONTENT_PROVENANCE_CANDIDATE_MISMATCH");
+    }
+  }
+  return { accepted: true };
+}
+
+function parseExactUtcInstant(value) {
+  if (
+    typeof value !== "string"
+    || !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/.test(value)
+  ) return null;
+  const milliseconds = Date.parse(value);
+  if (!Number.isFinite(milliseconds) || new Date(milliseconds).toISOString() !== value) return null;
+  return milliseconds;
+}
+
+function signalContentSafetyResolution(overrides = {}) {
+  return {
+    source: "CANONICAL_SIGNAL_ORIGIN_CONTENT_SAFETY_RESOLVER",
+    resolutionId: "signal-safety-resolution-1",
+    originClassification: "SEPARATE_NON_RECONSTRUCTIVE_SIGNAL_ORIGIN",
+    matchingRecordCount: 1,
+    serverSide: true,
+    authoritative: true,
+    independentlyResolved: true,
+    known: true,
+    resolved: true,
+    signalId: "signal-1",
+    signalRevisionId: "signal-revision-1",
+    purposeId: "offline-training-purpose-1",
+    o5ScopeId: "o5-scope-1",
+    separateObjectIdentity: true,
+    containsRawAnnotationBody: false,
+    containsRawBodyPointer: false,
+    containsExcerptOrFreeText: false,
+    reconstructive: false,
+    reconstructiveDerivativeOfRawBody: false,
+    renamedOrAliasedRawBody: false,
+    renamedRawPointerAsSignal: false,
+    renamedReconstructiveDerivativeAsSignal: false,
+    directPromotionFromRawBody: false,
+    ambiguous: false,
+    conflicting: false,
+    mismatched: false,
+    crossCandidate: false,
+    crossRevision: false,
+    crossPurpose: false,
+    crossScope: false,
+    stale: false,
+    replayed: false,
+    cancelled: false,
+    clientInferred: false,
+    callerInferred: false,
+    ...overrides,
+  };
+}
+
+function canonicalConsentResolution(overrides = {}) {
+  return {
+    source: "CANONICAL_VERSIONED_CONSENT_OPT_OUT_LEDGER",
+    recordId: "consent-record-1",
+    signalId: "signal-1",
+    signalRevisionId: "signal-revision-1",
+    purposeId: "offline-training-purpose-1",
+    o5ScopeId: "o5-scope-1",
+    state: "ACTIVE",
+    expiresAt: "2026-12-31T00:00:00.000Z",
+    matchingRecordCount: 1,
+    serverSide: true,
+    authoritative: true,
+    independentlyResolved: true,
+    known: true,
+    resolved: true,
+    exactPurpose: true,
+    expired: false,
+    revoked: false,
+    ambiguous: false,
+    conflicting: false,
+    mismatched: false,
+    crossCandidate: false,
+    crossRevision: false,
+    crossPurpose: false,
+    crossScope: false,
+    stale: false,
+    replayed: false,
+    cancelled: false,
+    clientInferred: false,
+    callerInferred: false,
+    ...overrides,
+  };
+}
+
+function canonicalRetentionResolution(overrides = {}) {
+  return {
+    source: "CANONICAL_PURPOSE_SCOPED_RETENTION_LEDGER",
+    recordId: "retention-record-1",
+    signalId: "signal-1",
+    signalRevisionId: "signal-revision-1",
+    purposeId: "offline-training-purpose-1",
+    o5ScopeId: "o5-scope-1",
+    state: "ACTIVE",
+    expiresAt: "2026-12-31T00:00:00.000Z",
+    matchingRecordCount: 1,
+    serverSide: true,
+    authoritative: true,
+    independentlyResolved: true,
+    known: true,
+    resolved: true,
+    finite: true,
+    expired: false,
+    revoked: false,
+    ambiguous: false,
+    conflicting: false,
+    mismatched: false,
+    crossCandidate: false,
+    crossRevision: false,
+    crossPurpose: false,
+    crossScope: false,
+    stale: false,
+    replayed: false,
+    cancelled: false,
+    clientInferred: false,
+    callerInferred: false,
+    ...overrides,
+  };
+}
+
+function trustedEvaluationTime(overrides = {}) {
+  return {
+    source: "TRUSTED_SERVER_CLOCK_BOUNDARY",
+    recordId: "trusted-time-record-1",
+    evaluatedAt: "2026-09-01T00:00:00.000Z",
+    matchingRecordCount: 1,
+    serverSide: true,
+    authoritative: true,
+    independentlyResolved: true,
+    trusted: true,
+    known: true,
+    resolved: true,
+    ambiguous: false,
+    conflicting: false,
+    stale: false,
+    replayed: false,
+    cancelled: false,
+    clientInferred: false,
+    callerInferred: false,
+    ...overrides,
+  };
+}
+
+function approvalReceipt(kind, overrides = {}) {
+  const sources = contract.personalAnnotation.trainingApprovalReceiptGate.resolutionSourcesByKind;
+  return {
+    receiptId: `${kind.toLowerCase().replaceAll("_", "-")}-receipt-1`,
+    approvalKind: kind,
+    source: sources[kind],
+    serverSide: true,
+    authoritative: true,
+    independentlyResolved: true,
+    known: true,
+    resolved: true,
+    matchingRecordCount: 1,
+    active: true,
+    ambiguous: false,
+    conflicting: false,
+    replayed: false,
+    stale: false,
+    revoked: false,
+    clientInferred: false,
+    callerInferred: false,
+    crossCandidate: false,
+    crossRevision: false,
+    crossPurpose: false,
+    crossScope: false,
+    signalId: "signal-1",
+    signalRevisionId: "signal-revision-1",
+    purposeId: "offline-training-purpose-1",
+    o5ScopeId: "o5-scope-1",
+    ...overrides,
+  };
+}
+
+function futureApprovalReceipts(overrides = {}) {
+  const receipts = {
+    contribution: approvalReceipt("CONTRIBUTION_APPROVAL"),
+    promotion: approvalReceipt("PROMOTION_APPROVAL"),
+    o5: approvalReceipt("O5_APPROVAL"),
+  };
+  for (const field of Object.keys(receipts)) {
+    if (Object.hasOwn(overrides, field)) {
+      receipts[field] = overrides[field] == null
+        ? overrides[field]
+        : { ...receipts[field], ...overrides[field] };
+    }
+  }
+  return receipts;
+}
+
+function trainingDecisionContext(overrides = {}) {
+  return {
+    signalContentSafetyResolution: signalContentSafetyResolution(),
+    consentResolution: canonicalConsentResolution(),
+    retentionResolution: canonicalRetentionResolution(),
+    trustedEvaluationTime: trustedEvaluationTime(),
+    ...overrides,
+  };
+}
+
+function hypotheticalReceiptValidTrainingDecisionContext(overrides = {}) {
+  return trainingDecisionContext({
+    approvalReceipts: futureApprovalReceipts(),
+    ...overrides,
+  });
+}
+
+function validateTrustedEvaluationTime(candidate, decisionContext) {
+  const gate = contract.personalAnnotation.signalPurposeGate.trustedEvaluationTimeGate;
+  if (
+    Object.hasOwn(candidate, "evaluationTime")
+    || decisionContext.callerEvaluationTime !== undefined
+    || decisionContext.clientEvaluationTime !== undefined
+  ) return { accepted: false, reason: "CALLER_CONTROLLED_EVALUATION_TIME" };
+  const record = decisionContext?.[gate.decisionContextField];
+  const milliseconds = parseExactUtcInstant(record?.evaluatedAt);
+  if (
+    !hasExactClosedCanonicalRecord(record, gate)
+    || milliseconds === null
+  ) return { accepted: false, reason: "TRUSTED_EVALUATION_TIME_INVALID" };
+  return { accepted: true, milliseconds };
+}
+
+function validateCanonicalPurposeResolution(candidate, candidateEcho, decisionContext, gate) {
+  const record = decisionContext?.[gate.decisionContextField];
+  if (
+    !hasExactClosedCanonicalRecord(record, gate)
+    || record.state !== gate.requiredState
+  ) return { accepted: false };
+  for (const field of gate.exactCandidateBindingFields) {
+    if (
+      !isCanonicalIdentifier(candidate[field], gate.identifierSchema)
+      || record[field] !== candidate[field]
+    ) return { accepted: false };
+  }
+  for (const [field, value] of Object.entries(candidateEcho ?? {})) {
+    if (record[field] !== value) return { accepted: false };
+  }
+  return { accepted: true, record };
+}
+
+function validateTrainingApprovalReceipts(candidate, decisionContext) {
+  const gate = contract.personalAnnotation.trainingApprovalReceiptGate;
+  const receipts = decisionContext.approvalReceipts;
+  const setGate = gate.receiptSetGate;
+  if (
+    !receipts
+    || typeof receipts !== "object"
+    || Array.isArray(receipts)
+    || setGate.additionalFieldsAllowed !== false
+    || JSON.stringify(sorted(Object.keys(receipts)))
+      !== JSON.stringify(sorted(setGate.requiredFields))
+  ) {
+    return { authorized: false, reason: "CANDIDATE_BOUND_APPROVAL_RECEIPTS_MISSING" };
+  }
+  const recordGate = gate.receiptRecordGate;
+  const receiptIds = [];
+  for (const kind of gate.receiptKinds) {
+    const field = gate.receiptFieldsByKind[kind];
+    const receipt = receipts[field];
+    if (
+      !receipt
+      || typeof receipt !== "object"
+      || Array.isArray(receipt)
+      || recordGate.additionalFieldsAllowed !== false
+      || JSON.stringify(sorted(Object.keys(receipt)))
+        !== JSON.stringify(sorted(recordGate.requiredFields))
+      || receipt.approvalKind !== kind
+      || receipt.source !== gate.resolutionSourcesByKind[kind]
+      || receipt.matchingRecordCount !== gate.exactMatchingRecordCount
+      || Object.entries(recordGate.requiredExactPrimitiveBooleanStates).some(
+        ([stateField, expected]) => receipt[stateField] !== expected,
+      )
+      || recordGate.identifierFields.some(
+        (identifierField) => !isCanonicalIdentifier(
+          receipt[identifierField],
+          recordGate.identifierSchema,
+        ),
+      )
+    ) return { authorized: false, reason: `APPROVAL_RECEIPT_${kind}_INVALID` };
+    for (const bindingField of gate.exactBindingFields) {
+      if (
+        !isCanonicalIdentifier(candidate[bindingField], recordGate.identifierSchema)
+        || receipt[bindingField] !== candidate[bindingField]
+      ) return { authorized: false, reason: `APPROVAL_RECEIPT_${kind}_${bindingField}_MISMATCH` };
+    }
+    receiptIds.push(receipt.receiptId);
+  }
+  if (new Set(receiptIds).size !== receiptIds.length) {
+    return { authorized: false, reason: "APPROVAL_RECEIPT_REUSE_FORBIDDEN" };
+  }
+  return { authorized: true };
+}
+
+function evaluateTrainingCandidate(candidate, decisionContext = {}) {
+  const annotation = contract.personalAnnotation;
+  const rawOrigin = candidate.originKind === "PERSONAL_ANNOTATION_RAW_BODY"
+    || candidate.originKind === "PERSONAL_ANNOTATION_RAW_POINTER"
+    || candidate.containsRawAnnotationBody === true
+    || candidate.containsRawBodyPointer === true
+    || candidate.reconstructiveDerivativeOfRawBody === true;
+  if (rawOrigin) {
+    return {
+      candidateEligible: false,
+      currentlyAuthorized: false,
+      reason: "RAW_ANNOTATION_BODY_UNCONDITIONALLY_INELIGIBLE",
+    };
+  }
+  if (
+    candidate.renameOrAliasOfRawBody
+    || candidate.directPromotionFromRawBody
+    || candidate.renamedRawPointerAsSignal
+    || candidate.renamedReconstructiveDerivativeAsSignal
+  ) {
+    return {
+      candidateEligible: false,
+      currentlyAuthorized: false,
+      reason: "RAW_BODY_RELABEL_OR_DIRECT_PROMOTION_FORBIDDEN",
+    };
+  }
+  if (!annotation.futureTrainingCandidateKinds.includes(candidate.kind)) {
+    return { candidateEligible: false, currentlyAuthorized: false, reason: "UNKNOWN_CANDIDATE_KIND" };
+  }
+  if (candidate.kind === "SEPARATE_NON_RECONSTRUCTIVE_SIGNAL") {
+    const contentSafety = validateSignalContentSafetyProof(candidate, decisionContext);
+    if (!contentSafety.accepted) {
+      return { candidateEligible: false, currentlyAuthorized: false, reason: contentSafety.reason };
+    }
+    if (
+      candidate.separateObjectIdentity !== true
+      || candidate.closedValueSchema !== true
+    ) {
+      return { candidateEligible: false, currentlyAuthorized: false, reason: "SIGNAL_RECONSTRUCTIVE_OR_NOT_SEPARATE" };
+    }
+    const purposeGate = annotation.signalPurposeGate;
+    const consent = candidate.consent;
+    const retention = candidate.retention;
+    const canonicalConsent = validateCanonicalPurposeResolution(
+      candidate,
+      consent,
+      decisionContext,
+      purposeGate.canonicalConsentResolutionGate,
+    );
+    const canonicalRetention = validateCanonicalPurposeResolution(
+      candidate,
+      retention,
+      decisionContext,
+      purposeGate.canonicalRetentionResolutionGate,
+    );
+    if (!canonicalConsent.accepted || !canonicalRetention.accepted) {
+      return {
+        candidateEligible: false,
+        currentlyAuthorized: false,
+        reason: "CANONICAL_SIGNAL_PURPOSE_RESOLUTION_INVALID",
+      };
+    }
+    const trustedTime = validateTrustedEvaluationTime(candidate, decisionContext);
+    if (!trustedTime.accepted) {
+      return { candidateEligible: false, currentlyAuthorized: false, reason: trustedTime.reason };
+    }
+    const retentionExpiry = parseExactUtcInstant(canonicalRetention.record.expiresAt);
+    const consentExpiry = parseExactUtcInstant(canonicalConsent.record.expiresAt);
+    const exactPurposeStatesValid = Object.entries(
+      purposeGate.requiredExactPrimitiveBooleanStates,
+    ).every(([recordName, requiredStates]) => Object.entries(requiredStates).every(
+      ([field, expected]) => candidate[recordName]?.[field] === expected,
+    ));
+    if (
+      candidate.genericOptIn === true
+      || candidate.contractAsConsent === true
+      || candidate.administratorChoiceAsConsent === true
+      || candidate.o5AsConsentOrRetention === true
+      || !consent
+      || !retention
+      || consent.source !== purposeGate.consentRecordSource
+      || retention.source !== purposeGate.retentionRecordSource
+      || consent.state !== purposeGate.requiredConsentState
+      || retention.state !== purposeGate.requiredRetentionState
+      || consent.exactPurpose !== true
+      || !exactPurposeStatesValid
+      || retention.finite !== true
+      || typeof consent.expiresAt !== "string"
+      || consent.expiresAt.trim().length === 0
+      || typeof retention.expiresAt !== "string"
+      || retention.expiresAt.trim().length === 0
+      || retentionExpiry === null
+      || consentExpiry === null
+      || retentionExpiry <= trustedTime.milliseconds
+      || consentExpiry <= trustedTime.milliseconds
+    ) {
+      return { candidateEligible: false, currentlyAuthorized: false, reason: "SIGNAL_PURPOSE_CONSENT_OR_RETENTION_INVALID" };
+    }
+    for (const field of purposeGate.exactBindingFields) {
+      if (consent[field] !== candidate[field] || retention[field] !== candidate[field]) {
+        return { candidateEligible: false, currentlyAuthorized: false, reason: "SIGNAL_PURPOSE_BINDING_MISMATCH" };
+      }
+    }
+  }
+  if (candidate.kind === "SEPARATELY_AUTHORED_RIGHTS_REVIEWED_CLEARED_CONTENT_BANK_OBJECT") {
+    const provenance = validateClearedContentBankProvenance(candidate, decisionContext);
+    if (!provenance.accepted) {
+      return { candidateEligible: false, currentlyAuthorized: false, reason: provenance.reason };
+    }
+  }
+  const approval = validateTrainingApprovalReceipts(candidate, decisionContext);
+  return {
+    candidateEligible: true,
+    hypotheticalReceiptsValid: approval.authorized,
+    currentlyAuthorized: false,
+    reason: approval.authorized
+      ? "HYPOTHETICAL_RECEIPTS_VALID_CURRENT_USE_UNAUTHORIZED"
+      : approval.reason,
+  };
+}
+
+function signalCandidate(overrides = {}) {
+  const base = {
+    kind: "SEPARATE_NON_RECONSTRUCTIVE_SIGNAL",
+    signalId: "signal-1",
+    signalRevisionId: "signal-revision-1",
+    purposeId: "offline-training-purpose-1",
+    o5ScopeId: "o5-scope-1",
+    separateObjectIdentity: true,
+    closedValueSchema: true,
+    containsRawAnnotationBody: false,
+    containsRawBodyPointer: false,
+    containsExcerptOrFreeText: false,
+    reconstructive: false,
+    reconstructiveDerivativeOfRawBody: false,
+    contentSafetyProofValidated: true,
+    contentSafetyProofValidationSource: "CANONICAL_CLOSED_SIGNAL_SCHEMA_VALIDATOR",
+    contentSafetyProofAmbiguous: false,
+    contentSafetyProofSignalId: "signal-1",
+    contentSafetyProofSignalRevisionId: "signal-revision-1",
+    consent: {
+      source: "CANONICAL_VERSIONED_CONSENT_OPT_OUT_LEDGER",
+      state: "ACTIVE",
+      exactPurpose: true,
+      signalId: "signal-1",
+      signalRevisionId: "signal-revision-1",
+      purposeId: "offline-training-purpose-1",
+      o5ScopeId: "o5-scope-1",
+      expired: false,
+      revoked: false,
+      expiresAt: "2026-12-31T00:00:00.000Z",
+    },
+    retention: {
+      source: "CANONICAL_PURPOSE_SCOPED_RETENTION_LEDGER",
+      state: "ACTIVE",
+      signalId: "signal-1",
+      signalRevisionId: "signal-revision-1",
+      purposeId: "offline-training-purpose-1",
+      o5ScopeId: "o5-scope-1",
+      finite: true,
+      expiresAt: "2026-12-31T00:00:00.000Z",
+      expired: false,
+      revoked: false,
+    },
+  };
+  const candidate = { ...base, ...overrides };
+  if (Object.hasOwn(overrides, "consent")) {
+    candidate.consent = overrides.consent == null ? overrides.consent : { ...base.consent, ...overrides.consent };
+  }
+  if (Object.hasOwn(overrides, "retention")) {
+    candidate.retention = overrides.retention == null
+      ? overrides.retention
+      : { ...base.retention, ...overrides.retention };
+  }
+  return candidate;
+}
+
+function clearedContentCandidate(overrides = {}) {
+  return {
+    kind: "SEPARATELY_AUTHORED_RIGHTS_REVIEWED_CLEARED_CONTENT_BANK_OBJECT",
+    signalId: "signal-1",
+    signalRevisionId: "signal-revision-1",
+    purposeId: "offline-training-purpose-1",
+    o5ScopeId: "o5-scope-1",
+    ...overrides,
+  };
+}
+
+function clearedContentProvenanceRecord(overrides = {}) {
+  return {
+    source: "CANONICAL_CLEARED_CONTENT_PROMOTION_RIGHTS_PROVENANCE_RESOLVER",
+    recordId: "ccp-record-1",
+    serverSide: true,
+    authoritative: true,
+    independentlyResolved: true,
+    matchingRecordCount: 1,
+    known: true,
+    resolved: true,
+    ambiguous: false,
+    conflicting: false,
+    stale: false,
+    clientInferred: false,
+    callerInferred: false,
+    replayed: false,
+    cancelled: false,
+    mismatched: false,
+    crossCandidate: false,
+    crossRevision: false,
+    crossPurpose: false,
+    crossScope: false,
+    kind: "SEPARATELY_AUTHORED_RIGHTS_REVIEWED_CLEARED_CONTENT_BANK_OBJECT",
+    signalId: "signal-1",
+    signalRevisionId: "signal-revision-1",
+    purposeId: "offline-training-purpose-1",
+    o5ScopeId: "o5-scope-1",
+    separateObjectIdentity: true,
+    separatelyAuthored: true,
+    rightsOwned: true,
+    rightsReviewed: true,
+    provenanceReviewed: true,
+    derivedFromPersonalRawContent: false,
+    containsPrivateRawContent: false,
+    ...overrides,
+  };
+}
+
+function cueConfirmation(overrides = {}) {
+  return {
+    source: "CANONICAL_SERVER_CONFIRMATION_LEDGER",
+    status: "CONFIRMED",
+    attemptId: "attempt-1",
+    learnerPrivateScopeId: "learner-1",
+    cueId: "cue-1",
+    cueRevisionId: "cue-revision-1",
+    requestId: "request-1",
+    serverSide: true,
+    authoritative: true,
+    independentlyResolved: true,
+    known: true,
+    resolved: true,
+    serverRecorded: true,
+    deliberate: true,
+    active: true,
+    singleUse: true,
+    matchingRecordCount: 1,
+    stale: false,
+    replayed: false,
+    consumed: false,
+    cancelled: false,
+    ambiguous: false,
+    conflicting: false,
+    crossLearner: false,
+    crossAttempt: false,
+    mismatched: false,
+    clientInferred: false,
+    callerInferred: false,
+    ...overrides,
+  };
+}
+
+function cueRenderRequest(overrides = {}) {
+  const timing = overrides.timing ?? "BEFORE_RESPONSE";
+  const canonicalAttemptState = overrides.canonicalAttemptState
+    ?? (timing === "AFTER_RESPONSE" ? "SUBMITTED" : "INDEPENDENT_ATTEMPT_OPEN");
+  const attemptResolution = Object.hasOwn(overrides, "attemptResolution")
+    ? overrides.attemptResolution
+    : timing === "AFTER_RESPONSE"
+      ? canonicalAttemptResolution()
+      : canonicalOpenAttemptResolution();
+  return {
+    timing,
+    assistanceClassification: "LOW",
+    attemptId: "attempt-1",
+    learnerPrivateScopeId: "learner-1",
+    authenticatedLearnerPrivateScopeId: "learner-1",
+    cueId: "cue-1",
+    cueRevisionId: "cue-revision-1",
+    requestId: "request-1",
+    canonicalAttemptStateSource: "CANONICAL_SERVER_ATTEMPT_LEDGER",
+    canonicalAttemptState,
+    attemptResolution,
+    confirmation: cueConfirmation(),
+    commitSteps: [...contract.cueExposure.preResponseAtomicCommit.orderedSteps],
+    canonicalRecordCommitted: true,
+    recordFailure: false,
+    renderSubmitRaceDetected: false,
+    ...overrides,
+  };
+}
+
+function evaluateCueRender(request) {
+  const cue = contract.cueExposure;
+  const fail = (reason) => ({
+    accepted: false,
+    mayRenderCueBytes: false,
+    independentEvidenceEligible: false,
+    reason,
+  });
+  const reviewOnlyRoute = request.timing === "REVIEW_ONLY"
+    || request.reviewOnlyResolution?.canonicalTiming === "REVIEW_ONLY";
+  if (reviewOnlyRoute && !hasExactReviewOnlyNoRaceState(request)) {
+    return fail(cue.renderSubmitRaceBehavior);
+  }
+  if (!reviewOnlyRoute && request.renderSubmitRaceDetected) {
+    return fail(cue.preResponseAtomicCommit.renderSubmitRaceBehavior);
+  }
+  if (!hasExactNoRecordFailure(request)) return fail(cue.preResponseAtomicCommit.recordFailureBehavior);
+
+  if (reviewOnlyRoute) return authorizeCanonicalReviewOnlyCueRender(request);
+
+  if (request.canonicalAttemptState === "SUBMITTED") {
+    if (request.timing !== cue.afterResponseGate.onlyAllowedTimingForSubmittedAttempt) {
+      return fail("SUBMITTED_ATTEMPT_AFTER_RESPONSE_ONLY");
+    }
+    if (!hasAllowedTimingClassification(request)) return fail("TIMING_CLASSIFICATION_INVALID");
+    const binding = validateCanonicalAttemptBinding(request);
+    if (!binding.accepted) return fail(binding.reason);
+    if (!hasExactCanonicalRecordCommit(request)) return fail(cue.recordFailureBehavior);
+    return {
+      accepted: true,
+      mayRenderCueBytes: true,
+      independentEvidenceEligible: false,
+      positiveLearningEvidence: false,
+      attemptId: request.attemptId,
+      timing: "AFTER_RESPONSE",
+    };
+  }
+
+  if (request.timing !== "BEFORE_RESPONSE") return fail("NON_SUBMITTED_AFTER_RESPONSE_INVALID");
+  if (!hasAllowedTimingClassification(request)) return fail("TIMING_CLASSIFICATION_INVALID");
+  return authorizeExactPreResponseCueRender(request);
+}
+
+function validateSemanticHighlightAccessibility(candidate) {
+  const rule = contract.semanticHighlight.accessibilityRequirement;
+  const checks = {
+    visibleTextLabel: typeof candidate.visibleTextLabel === "string"
+      && candidate.visibleTextLabel.trim().length > 0,
+    computedAccessibleName: typeof candidate.computedAccessibleName === "string"
+      && candidate.computedAccessibleName.trim().length > 0,
+    colorOnlyMeaning: candidate.colorOnlyMeaning === false,
+  };
+  const conditionResults = rule.conditions.map(({ field }) => checks[field] === true);
+  const accepted = rule.requirementMode === "ALL_OF" && conditionResults.every(Boolean);
+  return { accepted, checks };
+}
+
+test("MCAL paths resolve and V13 remains sole active master plan", () => {
+  for (const p of Object.values(P)) assert.equal(fs.existsSync(path.join(ROOT, p)), true, p);
+  const active = read(P.active);
+  assert.match(active, /dabangil-professional-exam-reasoning-os-final-master-plan-v13-2026-08-06\.md/);
+  assert.match(active, /Memory Cue & Annotation Layer/);
+  assert.doesNotMatch(active, /final-master-plan-v14/);
+  assert.equal(contract.version, "1.0.22");
+  assert.equal(contract.compatibility.v13RemainsSoleActiveMasterPlan, true);
+  assert.equal(contract.compatibility.newMasterPlanVersionCreated, false);
+});
+
+test("authorization remains fail-closed and development order is exact", () => {
+  for (const [key, value] of Object.entries(contract.authorizationBoundary)) {
+    assert.equal(value, false, `authorizationBoundary.${key}`);
+  }
+  assert.deepEqual(contract.exactDevelopmentPriority, [
+    "CORE_AUTHORITY_CONCEPT_QUESTION_VERIFICATION_ENGINES",
+    "ATTEMPT_REPAIR_TRANSFER_D7_LOOP",
+    "TERMINOLOGY_DECOMPOSITION_MEMORY_POSTIT_MVP",
+    "SEMANTIC_HIGHLIGHTING",
+    "PERSONAL_ANNOTATION_EDITOR",
+  ]);
+  assert.equal(contract.implementationProgram[0].authorizedByThisContract, true);
+  for (const work of contract.implementationProgram.slice(1)) {
+    assert.equal(work.authorizedByThisContract, false, work.workId);
+  }
+  assert.equal(contract.compatibility.mcal1Through4Authorized, false);
+  for (const key of [
+    "mcal1TerminologyConstruction",
+    "mcal2MemoryPostItRuntime",
+    "mcal3SemanticHighlightRuntime",
+    "mcal4PersonalAnnotationRuntime",
+  ]) assert.equal(contract.authorizationBoundary[key], false, key);
+});
+
+test("released VESG projection is the only exact-definition authority", () => {
+  assert.equal(contract.definitionAuthority.canonicalAuthority, "VESG");
+  assert.equal(
+    contract.definitionAuthority.exactDefinitionRefTarget,
+    "RELEASED_VERSIONED_VESG_CONCEPT_EVIDENCE_PROJECTION",
+  );
+  assert.equal(contract.definitionAuthority.releasedConceptRequired, true);
+  assert.equal(contract.definitionAuthority.versionBindingRequired, true);
+  assert.equal(contract.definitionAuthority.evidenceProjectionBindingRequired, true);
+  assert.deepEqual(contract.definitionAuthority.requiredBindings, [
+    "profileId",
+    "conceptId",
+    "graphSnapshotId",
+    "normSnapshotId",
+    "evidenceProjectionRevision",
+    "releaseRef",
+    "targetDigest",
+  ]);
+  assert.equal(contract.definitionAuthority.unresolvedOrHeldDefinitionMayRelease, false);
+  assert.equal(contract.definitionAuthority.mcalMayCreateDefinitionAuthority, false);
+  assert.equal(contract.definitionAuthority.mcalMayOverrideDefinition, false);
+  assert.equal(contract.role.mayBecomeSecondDefinitionAuthority, false);
+  const mcal1 = contract.implementationProgram.find((work) => work.workId === "MCAL-1");
+  assert.ok(mcal1.requires.includes("RELEASED_VERSIONED_VESG_CONCEPTS"));
+});
+
+test("mnemonic, exact definition, cue exposure and D+7 stay separate", () => {
+  assert.equal(contract.separation.memoryGlossMayEqualExactDefinition, false);
+  assert.equal(contract.separation.literalGlossMayBePresentedAsProfessionalDefinition, false);
+  assert.equal(contract.separation.cueViewMayPromoteIndependentMastery, false);
+  assert.equal(contract.decomposition.inventedHanjaAllowed, false);
+  assert.equal(contract.decomposition.disputedOrUnknownLearnerVisible, false);
+  assert.equal(contract.cueFading.revealCreatesExposureEvent, true);
+  assert.equal(contract.cueFading.beforeResponseRevealIsAssisted, true);
+  assert.equal(contract.cueFading.anyPreResponseDecompositionDisplayCreatesExposure, true);
+  assert.equal(contract.cueExposure.canonicalLedger, "ASSISTANCE_EXPOSURE_LEDGER");
+  assert.equal(contract.cueExposure.separateLedgerAllowed, false);
+  assert.equal(contract.cueExposure.timingAndClassificationSource, "CANONICAL_ASSISTANCE_EXPOSURE_LEDGER");
+  assert.equal(contract.cueExposure.untrustedClientTimingOrClassificationAccepted, false);
+  assert.equal(contract.cueExposure.attemptStateSource, "CANONICAL_SERVER_ATTEMPT_LEDGER");
+  assert.equal(contract.cueExposure.untrustedClientAttemptStateAccepted, false);
+  assert.equal(contract.cueExposure.beforeResponseGate.clientBooleanSufficient, false);
+  assert.equal(contract.cueExposure.beforeResponseGate.preselectedConsentSufficient, false);
+  assert.equal(contract.cueExposure.laterEventsMayRestoreIndependentClassification, false);
+  assert.equal(contract.cueExposure.atomicRecordBeforeRender, true);
+  assert.equal(contract.cueExposure.recordFailureBehavior, "DO_NOT_RENDER_CUE_BYTES");
+  assert.equal(contract.cueFading.renderOnExposureRecordFailure, false);
+  assert.equal(contract.memoryPostItMvp.exposureRecordFailureBehavior, "DO_NOT_RENDER_CUE_BYTES");
+  assert.equal(contract.cueFading.d7StableState, "HIDDEN");
+  assert.equal(contract.cueFading.stableRequiresNonSameRepresentation, true);
+  assert.deepEqual(contract.cueFading.hiddenCueBytesForbiddenIn, [
+    "DOM",
+    "SSR",
+    "ACCESSIBILITY_TEXT",
+    "PREFETCH",
+    "CACHE",
+    "DIRECT_API_OUTPUT",
+  ]);
+  const mcal2 = contract.implementationProgram.find((work) => work.workId === "MCAL-2");
+  assert.ok(mcal2.requires.includes("CPF_2A_CLOSED"));
+  assert.ok(mcal2.requires.includes("APPROVED_BODYLESS_EXPOSURE_PATH"));
+  assert.ok(mcal2.requires.includes("CANONICAL_ASSISTANCE_EXPOSURE_LEDGER_REUSE"));
+});
+
+test("highlights and personal annotations remain bounded and private", () => {
+  assert.equal(contract.memoryPostItMvp.defaultCollapsed, true);
+  assert.deepEqual(contract.memoryPostItMvp.collapsedDefaultVisibleFields, ["formalTerm"]);
+  assert.equal(contract.memoryPostItMvp.collapsedDecompositionRequiresAtomicExposureBeforeRender, true);
+  assert.equal(contract.memoryPostItMvp.maximumExpandedCardsPerSurface, 1);
+  assert.equal(contract.memoryPostItMvp.createsFourthTodayPrimaryTask, false);
+  assert.equal(contract.semanticHighlight.maximumPrimaryHighlightsPerSurface, 3);
+  assert.equal(contract.semanticHighlight.colorOnlyMeaningAllowed, false);
+  assert.equal(contract.semanticHighlight.textLabelRequired, true);
+  assert.equal(contract.semanticHighlight.accessibleNameRequired, true);
+  assert.equal(contract.semanticHighlight.accessibilityRequirement.requirementMode, "ALL_OF");
+  assert.equal(contract.semanticHighlight.accessibilityRequirement.redundantAriaLabelRequired, false);
+  assert.equal(contract.semanticHighlight.revisionBoundTypedAnchorRequired, true);
+  assert.equal(contract.semanticHighlight.anchorTargetDigestRequired, true);
+  assert.equal(contract.anchors.typed, true);
+  assert.equal(contract.anchors.revisionBound, true);
+  for (const key of ["targetType", "targetRevisionId", "targetDigest"]) {
+    assert.ok(contract.anchors.requiredBindings.includes(key), key);
+  }
+  assert.equal(contract.personalAnnotation.bodyPlane, "PERSONAL_RAW_VAULT");
+  assert.equal(contract.personalAnnotation.sharedReuse, false);
+  assert.equal(contract.personalAnnotation.crossUserReuse, false);
+  assert.equal(contract.personalAnnotation.directRawBodyTrainingAllowed, false);
+  assert.equal(contract.personalAnnotation.directRawBodyTrainingProhibition, "UNCONDITIONAL_NON_OVERRIDABLE");
+  assert.equal(contract.personalAnnotation.rawBodyRenameAliasOrDirectPromotionAllowed, false);
+  assert.equal(contract.personalAnnotation.freeTextAnalytics, false);
+});
+
+test("Portable Core owns interfaces only and hard gates are zero", () => {
+  assert.equal(contract.portableCore.crossProfileCueInheritanceAllowed, false);
+  assert.equal(contract.portableCore.crossProfileDefinitionInheritanceAllowed, false);
+  assert.equal(contract.portableCore.crossProfileMasteryTransferAllowed, false);
+  assert.ok(contract.portableCore.reusableInterfaces.includes("MEMORY_CUE"));
+  assert.ok(contract.portableCore.profileOwned.includes("EXACT_DEFINITION"));
+  for (const [key, value] of Object.entries(contract.hardGates)) {
+    assert.equal(value, 0, `hardGates.${key}`);
+  }
+});
+
+test("Markdown fences and exact boundary language are present", () => {
+  for (const p of [P.active, P.annex, P.decision, P.qa]) {
+    const body = read(p);
+    assert.equal((body.match(/```/g) ?? []).length % 2, 0, p);
+  }
+  const annex = read(P.annex);
+  const decision = read(P.decision);
+  const qa = read(P.qa);
+  for (const body of [annex, decision, qa]) {
+    assert.match(body, /machine contract version(?:은|:) `1\.0\.22`/i);
+    assert.doesNotMatch(body, /1\.0\.21/);
+    assert.doesNotMatch(body, /1\.0\.20/);
+    assert.doesNotMatch(body, /1\.0\.19/);
+    assert.doesNotMatch(body, /1\.0\.18/);
+    assert.match(body, /CANONICAL_SIGNAL_ORIGIN_CONTENT_SAFETY_RESOLVER/);
+    assert.match(body, /decision-context/);
+    assert.match(body, /caller(?:-|\/)?.?inferred/i);
+    assert.match(body, /affirmativeEvidenceOutcomeAccepted/);
+  }
+  assert.match(annex, /암기용 풀이입니다\. 시험용 정확한 정의를 대체하지 않습니다\./);
+  assert.match(annex, /MCAL-4 — personal annotation editor/);
+  assert.match(annex, /PERSONAL_RAW_VAULT/);
+  assert.match(annex, /primary highlight 기본 최대 3개/);
+  assert.match(annex, /canonical Assistance\/Exposure ledger/);
+  assert.match(annex, /DOM, SSR payload, accessibility text, prefetch response, cache entry 또는 direct/);
+  assert.match(annex, /released, versioned VESG concept\/evidence projection/);
+  assert.match(annex, /BODYLESS_RECEIPT_ONLY/);
+  assert.match(annex, /BEFORE_RESPONSE \+ NONE/);
+  assert.match(annex, /CANONICAL_SERVER_ATTEMPT_LEDGER/);
+  assert.match(annex, /direct raw-body model training = 0 unconditionally/);
+  assert.match(annex, /\(`ALL_OF`\)/);
+  assert.match(annex, /eligibility만 보존/);
+  assert.match(annex, /EXACT_CANONICAL_SUBMITTED_ATTEMPT_RESOLUTION_GATE_V1/);
+  assert.match(annex, /CANONICAL_VERSIONED_CONSENT_OPT_OUT_LEDGER/);
+  assert.match(annex, /finite purpose-bound retention/);
+  assert.match(annex, /EXACT_PRE_RESPONSE_RENDER_GATE_V1/);
+  assert.match(annex, /containsRawAnnotationBody = false/);
+  assert.match(annex, /property 부재는\s+content safety의 증거가 아니다/);
+  assert.match(annex, /CANONICAL_REVIEW_ONLY_RENDER_GATE_V1/);
+  assert.match(annex, /matching open independent\s+attempt 0건/);
+  assert.match(annex, /TRUSTED_SERVER_CLOCK_BOUNDARY/);
+  assert.match(annex, /independently\s+resolved receipt/);
+  assert.match(annex, /truthiness-only 검사는 금지/);
+  assert.match(annex, /CANONICAL_SERVER_PRIVATE_ANCHOR_OWNER_BOUNDARY/);
+  assert.match(annex, /canonicalRecordCommitted === true/);
+  assert.match(annex, /matching missing·whitespace·malformed·wrong-type identifier/);
+  assert.match(annex, /`consent\.expired === false`/);
+  assert.match(annex, /`canonicalExposureRecordCommitted`[^\n]*대체/);
+  assert.match(annex, /canonical attempt resolution state gate/);
+  assert.match(annex, /EXACT_RENDER_RECORD_FAILURE_GATE_V1/);
+  assert.match(annex, /`recordFailure === true`/);
+  assert.match(annex, /`replayed === false`는 exact primitive equality/);
+  assert.match(annex, /`cancelled` 역시\s+exact primitive `false`/);
+  assert.match(annex, /request와 confirmation 양쪽의 `cueId`/);
+  assert.match(annex, /identified source attempt는 `evidence\.attempt`/);
+  assert.match(annex, /base `evidence\.attempt`에는 additional-field-free canonical attempt record gate/);
+  assert.match(annex, /`requiredBindingsAmbiguous`는 exact primitive `false`/);
+  assert.match(annex, /candidate가 제공한 `closedValueSchema: true`/);
+  assert.match(annex, /actual candidate object 전체/);
+  assert.match(annex, /outer canonical timing\/classification resolution도 `resolved === true`/);
+  assert.match(annex, /모든 render-capable request\/event variant/);
+  assert.match(annex, /pre-response request는\s+`assistanceClassification`/);
+  assert.match(annex, /submitted-attempt `AFTER_RESPONSE` request/);
+  assert.match(annex, /bound D\+7 evaluation record의 `d7EvaluationCompletedAt`/);
+  assert.match(annex, /최소 `604800000` ms/);
+  assert.match(annex, /shared gate로 routing하기 전에/);
+  assert.match(annex, /request path에는 이\s+event-only 필드를 요구하지 않는다/);
+  assert.match(annex, /`canonicalRecordCommitted === true`를 exact primitive equality로 증명/);
+  assert.match(annex, /preResponseCueExposureCount/);
+  assert.match(annex, /CANONICAL_SERVER_ITEM_RIGHTS_MANIFEST_BOUNDARY/);
+  assert.match(annex, /transferAttemptId/);
+  assert.match(annex, /d7AttemptId/);
+  assert.match(annex, /`ambiguous`는 exact primitive `false`/);
+  assert.match(annex, /`currentlyAuthorized`는 정확히 `false`/);
+  assert.match(annex, /canonical promotion\/rights\/provenance resolver/);
+  assert.match(annex, /`rawAnswer`·private raw pointer/);
+  assert.match(annex, /CANONICAL_SERVER_ATTEMPT_TASK_BINDING_RESOLVER/);
+  assert.match(annex, /`originTaskId`는 그 binding의\s+canonical `taskId`와 정확히 같/);
+  assert.match(annex, /canonical transfer attempt/);
+  assert.match(annex, /source와 transfer의 canonical task identity는.*field-for-field/);
+  assert.match(annex, /canonicalD7Attempt/);
+  assert.match(annex, /canonicalResponseEvaluation/);
+  assert.match(annex, /canonicalTransferEvaluation/);
+  assert.match(annex, /canonicalD7Evaluation/);
+  assert.match(annex, /outer completion\/source timestamp/);
+  assert.match(annex, /base 전용 safe-state gate/);
+  assert.match(annex, /`renderSubmitRaceDetected === false`/);
+  assert.match(annex, /nested zero-count absence record는 각각 non-null·non-array closed canonical object/);
+  assert.match(annex, /evaluation completion은 bound base attempt의 canonical `submittedAt`/);
+  assert.match(annex, /authenticated learner scope와 subject·attempt-resolution·confirmation learner scope 네 값/);
+  assert.match(annex, /canonical transfer attempt의 `submittedAt` 자체도 canonical base\/source attempt/);
+  assert.match(annex, /authenticated learner scope, subject learner scope, outer canonical review-only resolution learner scope/);
+  assert.match(annex, /canonical D\+7 attempt의 `submittedAt` 자체도 canonical base\/source attempt/);
+  assert.match(annex, /receipt set은 `contribution`·`promotion`·`o5`만 가진 closed object/);
+  assert.match(decision, /outer resolution과 nested absence record는 각각 non-null·non-array closed object/);
+  assert.match(decision, /각 evaluation completion은 자신이 bind된 canonical attempt의 `submittedAt`/);
+  assert.match(decision, /인증된 요청 문맥의 `authenticatedLearnerPrivateScopeId`/);
+  assert.match(decision, /canonical transfer attempt의 `submittedAt`은 canonical base\/source attempt/);
+  assert.match(decision, /REVIEW_ONLY도 인증된 요청 문맥의 `authenticatedLearnerPrivateScopeId`/);
+  assert.match(decision, /canonical D\+7 attempt의 `submittedAt` 자체도 canonical base\/source attempt/);
+  assert.match(decision, /receipt set은 `contribution`·`promotion`·`o5`만 가진 closed object/);
+  assert.match(qa, /PR #692 is merged at `512bfdb9232a86bf4f7d4cfbc076a9df1c8a7da2`/);
+  assert.match(qa, /Focused behavioral contract suite: 63\/63 passed/);
+  assert.match(qa, /Merely supplying two different task IDs is insufficient/);
+  assert.match(qa, /canonical transfer attempt and its independently resolved task binding/);
+  assert.match(qa, /canonicalD7Attempt/);
+  assert.match(qa, /canonicalResponseEvaluation/);
+  assert.match(qa, /canonicalTransferEvaluation/);
+  assert.match(qa, /canonicalD7Evaluation/);
+  assert.match(qa, /base-specific safe-state gate/);
+  assert.match(qa, /`renderSubmitRaceDetected === false`/);
+  assert.match(qa, /`cancelled` field must be exact primitive `false`/);
+  assert.match(qa, /validate the actual candidate's exact top-level and nested field sets/);
+  assert.match(qa, /canonical promotion\/rights\/provenance record/);
+  assert.match(qa, /one millisecond before rejects, equality and later completion pass/);
+  assert.match(qa, /authenticated request-context learner scope/);
+  assert.match(qa, /canonical transfer attempt's `submittedAt` must be at or after/);
+  assert.match(qa, /outer canonical review-only resolution\s+learner scope/);
+  assert.match(qa, /canonical D\+7 attempt's `submittedAt` must also be at or after/);
+  assert.match(qa, /receipt set is a closed object containing exactly contribution, promotion and O5 fields/);
+  assert.doesNotMatch(qa, /Focused behavioral contract suite: 52\/52 passed/);
+  assert.doesNotMatch(qa, /Focused behavioral contract suite: 62\/62 passed/);
+  assert.doesNotMatch(qa, /Focused behavioral contract suite: 57\/57 passed/);
+  assert.doesNotMatch(qa, /Focused behavioral contract suite: 54\/54 passed/);
+  assert.doesNotMatch(qa, /Focused behavioral contract suite: 51\/51 passed/);
+  assert.doesNotMatch(qa, /Focused behavioral contract suite: 49\/49 passed/);
+  assert.doesNotMatch(qa, /Focused behavioral contract suite: 46\/46 passed/);
+  assert.doesNotMatch(qa, /Focused behavioral contract suite: 44\/44 passed/);
+  assert.doesNotMatch(qa, /Focused behavioral contract suite: 41\/41 passed/);
+  assert.doesNotMatch(qa, /Focused behavioral contract suite: 39\/39 passed/);
+  assert.doesNotMatch(qa, /Focused behavioral contract suite: 36\/36 passed/);
+  assert.doesNotMatch(qa, /Focused behavioral contract suite: 34\/34 passed/);
+  assert.doesNotMatch(qa, /Focused behavioral contract suite: 31\/31 passed/);
+  assert.doesNotMatch(qa, /Focused behavioral contract suite: 28\/28 passed/);
+  assert.doesNotMatch(qa, /Focused behavioral contract suite: 25\/25 passed/);
+  assert.doesNotMatch(qa, /Focused behavioral contract suite: 23\/23 passed/);
+  assert.doesNotMatch(qa, /Focused behavioral contract suite: 16\/16 passed/);
+  assert.doesNotMatch(qa, /Focused behavioral contract suite: 12\/12 passed/);
+  assert.doesNotMatch(qa, /PR #692 remains open|Repository CI is pending/);
+});
+
+test("anchor kind policy is exact and rejects unknown or fallback mappings", () => {
+  assert.deepEqual(
+    sorted(Object.keys(contract.anchors.kindPolicy)),
+    sorted(contract.anchors.kinds),
+  );
+  assert.deepEqual(anchorPolicyIntegrity(), { valid: true });
+  assert.deepEqual(
+    validateAnchor(validAnchor({ kind: "UNKNOWN_KIND" })),
+    { accepted: false, disposition: "REJECT", reason: "UNKNOWN_KIND" },
+  );
+
+  const withFallback = structuredClone(contract.anchors);
+  withFallback.kindPolicy.DEFAULT = {
+    allowedDomains: ["SHARED_OWNED"],
+    allowedBodyLocatorPolicies: ["NONE"],
+  };
+  assert.equal(validateAnchor(validAnchor({ kind: "UNKNOWN_KIND" }), withFallback).accepted, false);
+  assert.equal(anchorPolicyIntegrity(withFallback).reason, "KIND_POLICY_KEY_SET_MISMATCH");
+
+  const missingMapping = structuredClone(contract.anchors);
+  delete missingMapping.kindPolicy.CONCEPT_NODE;
+  assert.equal(anchorPolicyIntegrity(missingMapping).valid, false);
+});
+
+test("every declared anchor required binding uses exact closed validation", () => {
+  assert.deepEqual(
+    sorted(Object.keys(contract.anchors.requiredBindingSchema)),
+    sorted(contract.anchors.requiredBindings),
+  );
+  assert.equal(contract.anchors.requiredBindingSchemaKeySetMustExactlyEqualRequiredBindings, true);
+  assert.equal(contract.anchors.truthinessOnlyValidationAllowed, false);
+  const valid = validAnchor();
+  assert.equal(
+    validateAnchor(valid, contract.anchors, canonicalPrivateOwnerBoundary(valid)).accepted,
+    true,
+  );
+
+  const invalidValues = {
+    anchorId: [null, "", " anchor-1", 1, [], "?"],
+    profileId: [null, "", " profile-1", 1, [], "?"],
+    kind: [null, "", 1, [], "UNKNOWN_KIND"],
+    domain: [null, "", 1, [], "UNKNOWN_DOMAIN"],
+    targetType: [null, "", 1, [], "UNKNOWN_TARGET"],
+    targetRevisionId: [null, "", " revision-1", 1, [], "?"],
+    targetDigest: [null, "", 1, [], "sha256:not-a-digest"],
+    bodyLocatorPolicy: [null, "", 1, [], "UNKNOWN_LOCATOR"],
+    rightsManifestId: [null, "", " rights-1", 1, [], "?"],
+    status: [null, "", 1, [], "UNKNOWN_STATUS"],
+  };
+  for (const field of contract.anchors.requiredBindings) {
+    const omitted = validAnchor();
+    delete omitted[field];
+    assert.equal(validateAnchor(omitted).accepted, false, `${field}: omitted`);
+    for (const invalid of invalidValues[field]) {
+      assert.equal(
+        validateAnchor(validAnchor({ [field]: invalid })).accepted,
+        false,
+        `${field}: ${JSON.stringify(invalid)}`,
+      );
+    }
+  }
+  assert.equal(validateAnchor(validAnchor({ requiredBindingsAmbiguous: true })).accepted, false);
+  assert.equal(validateAnchor(validAnchor({ conflictingRequiredBindings: ["profileId"] })).accepted, false);
+  assert.equal(validateAnchor(validAnchor({ targetType: "VESG_CONCEPT_NODE" })).accepted, false);
+});
+
+test("anchor ambiguity and conflict metadata require exact closed state types", () => {
+  const gate = contract.anchors.closedAmbiguityAndConflictStateGate;
+  assert.deepEqual(gate.requiredBindingsAmbiguous, {
+    requiredPrimitiveType: "boolean",
+    requiredExactValue: false,
+  });
+  assert.deepEqual(gate.conflictingRequiredBindings, {
+    requiredType: "array",
+    requiredLength: 0,
+  });
+  assert.equal(
+    gate.missingMalformedWrongTypeAmbiguousOrConflictingBehavior,
+    "FAIL_CLOSED_REJECT",
+  );
+
+  const missingAmbiguity = validAnchor();
+  delete missingAmbiguity.requiredBindingsAmbiguous;
+  const missingConflicts = validAnchor();
+  delete missingConflicts.conflictingRequiredBindings;
+  for (const candidate of [
+    missingAmbiguity,
+    ...[undefined, null, "false", "true", 0, 1, {}, []].map(
+      (requiredBindingsAmbiguous) => validAnchor({ requiredBindingsAmbiguous }),
+    ),
+    missingConflicts,
+    ...[undefined, null, false, true, "", "profileId", 0, 1, {}].map(
+      (conflictingRequiredBindings) => validAnchor({ conflictingRequiredBindings }),
+    ),
+  ]) {
+    assert.equal(validateAnchor(candidate).accepted, false);
+  }
+
+  assert.equal(validateAnchor(validAnchor({ requiredBindingsAmbiguous: true })).accepted, false);
+  assert.equal(
+    validateAnchor(validAnchor({ conflictingRequiredBindings: ["profileId"] })).accepted,
+    false,
+  );
+  const valid = validAnchor();
+  assert.equal(
+    validateAnchor(valid, contract.anchors, canonicalPrivateOwnerBoundary(valid)).accepted,
+    true,
+  );
+});
+
+test("official-permitted anchors require a closed item-rights ID bound to the exact revision", () => {
+  const gate = contract.anchors.itemRightsManifestBindingGate;
+  const anchor = validAnchor({ kind: "OFFICIAL_PERMITTED_RANGE" });
+  const boundary = canonicalItemRightsBoundary(anchor);
+  assert.deepEqual(gate.appliesToKinds, ["OFFICIAL_PERMITTED_RANGE"]);
+  assert.equal(gate.bareIdentifierEstablishesBinding, false);
+  assert.equal(gate.callerAssertionTruthinessClientEqualityFallbackOrInferenceAccepted, false);
+  assert.equal(gate.resolutionSchema.additionalFieldsAllowed, false);
+  assert.equal(validateAnchor(anchor).accepted, false);
+  assert.equal(validateAnchor(anchor, contract.anchors, undefined, boundary).accepted, true);
+
+  for (const invalid of [undefined, null, "", "   ", " irm_item_rights_1", "item-rights-1", 1, true, {}, []]) {
+    const candidate = validAnchor({ kind: "OFFICIAL_PERMITTED_RANGE" });
+    if (invalid === undefined) delete candidate.itemRightsManifestId;
+    else candidate.itemRightsManifestId = invalid;
+    assert.equal(
+      validateAnchor(
+        candidate,
+        contract.anchors,
+        undefined,
+        canonicalItemRightsBoundary(candidate),
+      ).accepted,
+      false,
+      `itemRightsManifestId: ${String(invalid)}`,
+    );
+  }
+
+  for (const invalidBoundary of [
+    undefined,
+    null,
+    {},
+    canonicalItemRightsBoundary(anchor, { source: "CLIENT" }),
+    canonicalItemRightsBoundary(anchor, { serverSide: false }),
+    canonicalItemRightsBoundary(anchor, { authoritative: false }),
+    canonicalItemRightsBoundary(anchor, { resolved: false }),
+    canonicalItemRightsBoundary(anchor, { matchingRecordCount: 0 }),
+    canonicalItemRightsBoundary(anchor, { matchingRecordCount: 2 }),
+    canonicalItemRightsBoundary(anchor, { ambiguous: true }),
+    canonicalItemRightsBoundary(anchor, { conflicting: true }),
+    canonicalItemRightsBoundary(anchor, { stale: true }),
+    canonicalItemRightsBoundary(anchor, { replayed: true }),
+    canonicalItemRightsBoundary(anchor, { clientInferred: true }),
+    canonicalItemRightsBoundary(anchor, { crossRevision: true }),
+    canonicalItemRightsBoundary(anchor, { itemRightsManifestId: "irm_other_manifest_1" }),
+    canonicalItemRightsBoundary(anchor, { anchorId: "other-anchor" }),
+    canonicalItemRightsBoundary(anchor, { targetRevisionId: "other-revision" }),
+    canonicalItemRightsBoundary(anchor, { rightsManifestId: "other-rights-manifest" }),
+    canonicalItemRightsBoundary(anchor, { unexpected: true }),
+  ]) {
+    assert.equal(
+      validateAnchor(anchor, contract.anchors, undefined, invalidBoundary).accepted,
+      false,
+      JSON.stringify(invalidBoundary),
+    );
+  }
+
+  for (const assertion of gate.callerAssertionFieldsForbidden) {
+    const candidate = validAnchor({ kind: "OFFICIAL_PERMITTED_RANGE", [assertion]: true });
+    assert.equal(
+      validateAnchor(
+        candidate,
+        contract.anchors,
+        undefined,
+        canonicalItemRightsBoundary(candidate),
+      ).accepted,
+      false,
+      assertion,
+    );
+  }
+});
+
+test("private anchors require an exact authoritative owner binding and remain vault-local", () => {
+  const gate = contract.anchors.privateOwnerBindingGate;
+  assert.deepEqual(gate.appliesToKinds, ["LEARNER_ATTEMPT_RANGE", "PRIVATE_SOURCE_RANGE"]);
+  assert.equal(gate.callerAssertionTruthinessOrClientEqualityAccepted, false);
+  assert.equal(gate.resolutionSource, "CANONICAL_SERVER_PRIVATE_ANCHOR_OWNER_BOUNDARY");
+  assert.equal(gate.resolutionSchema.additionalFieldsAllowed, false);
+  const base = validAnchor();
+  const boundary = canonicalPrivateOwnerBoundary(base);
+  assert.equal(validateAnchor(base).accepted, false);
+  assert.equal(validateAnchor(base, contract.anchors, boundary).accepted, true);
+  for (const domain of ["SHARED_OWNED", "SHARED_OFFICIAL_PERMITTED"]) {
+    const result = validateAnchor({ ...base, domain }, contract.anchors, boundary);
+    assert.equal(result.accepted, false, domain);
+    assert.equal(result.reason, "DOMAIN_CONFLICT", domain);
+  }
+  const locatorResult = validateAnchor(
+    { ...base, bodyLocatorPolicy: "SHARED_STABLE_SELECTOR" },
+    contract.anchors,
+    boundary,
+  );
+  assert.equal(locatorResult.accepted, false);
+  assert.equal(locatorResult.reason, "LOCATOR_CONFLICT");
+
+  for (const kind of gate.appliesToKinds) {
+    const anchor = validAnchor({ kind });
+    assert.equal(
+      validateAnchor(anchor, contract.anchors, canonicalPrivateOwnerBoundary(anchor)).accepted,
+      true,
+      kind,
+    );
+  }
+
+  for (const [field, invalidValues] of Object.entries({
+    ownerBindingRef: [undefined, null, "", "   ", 1, {}, [], "owner-scope-local"],
+    vaultLocalTargetRef: [undefined, null, "", "   ", 1, {}, [], "target-1"],
+    targetDigestScope: [undefined, null, "", "VAULT_LOCAL", 1, {}, []],
+  })) {
+    for (const invalidValue of invalidValues) {
+      const candidate = validAnchor();
+      if (invalidValue === undefined) delete candidate[field];
+      else candidate[field] = invalidValue;
+      const result = validateAnchor(
+        candidate,
+        contract.anchors,
+        canonicalPrivateOwnerBoundary(candidate),
+      );
+      assert.equal(result.accepted, false, `${field}: ${String(invalidValue)}`);
+    }
+  }
+
+  const invalidBoundaries = [
+    undefined,
+    null,
+    {},
+    canonicalPrivateOwnerBoundary(base, { authenticatedLearnerId: 1 }),
+    canonicalPrivateOwnerBoundary(base, { tenantScopeId: [] }),
+    canonicalPrivateOwnerBoundary(base, { resolution: undefined }),
+    canonicalPrivateOwnerBoundary(base, { resolution: { source: "CLIENT" } }),
+    canonicalPrivateOwnerBoundary(base, { resolution: { serverSide: false } }),
+    canonicalPrivateOwnerBoundary(base, { resolution: { authoritative: false } }),
+    canonicalPrivateOwnerBoundary(base, { resolution: { resolved: false } }),
+    canonicalPrivateOwnerBoundary(base, { resolution: { matchingRecordCount: 0 } }),
+    canonicalPrivateOwnerBoundary(base, { resolution: { matchingRecordCount: 2 } }),
+    canonicalPrivateOwnerBoundary(base, { resolution: { ambiguous: true } }),
+    canonicalPrivateOwnerBoundary(base, { resolution: { conflicting: true } }),
+    canonicalPrivateOwnerBoundary(base, { resolution: { stale: true } }),
+    canonicalPrivateOwnerBoundary(base, { resolution: { replayed: true } }),
+    canonicalPrivateOwnerBoundary(base, { resolution: { clientInferred: true } }),
+    canonicalPrivateOwnerBoundary(base, { resolution: { crossLearner: true } }),
+    canonicalPrivateOwnerBoundary(base, { resolution: { crossTenant: true } }),
+    canonicalPrivateOwnerBoundary(base, { resolution: { authenticatedLearnerId: "other-learner" } }),
+    canonicalPrivateOwnerBoundary(base, { resolution: { tenantScopeId: "other-tenant" } }),
+    canonicalPrivateOwnerBoundary(base, { resolution: { ownerBindingRef: "pob_other_owner_1" } }),
+    canonicalPrivateOwnerBoundary(base, { resolution: { anchorId: "other-anchor" } }),
+    canonicalPrivateOwnerBoundary(base, { resolution: { kind: "PRIVATE_SOURCE_RANGE" } }),
+    canonicalPrivateOwnerBoundary(base, { resolution: { vaultLocalTargetRef: "vault_other_target_1" } }),
+    canonicalPrivateOwnerBoundary(base, { resolution: { targetRevisionId: "other-revision" } }),
+    canonicalPrivateOwnerBoundary(base, { resolution: { targetDigest: `sha256:${"b".repeat(64)}` } }),
+    canonicalPrivateOwnerBoundary(base, { resolution: { bodyLocatorPolicy: "SHARED_STABLE_SELECTOR" } }),
+    canonicalPrivateOwnerBoundary(base, { resolution: { unexpected: true } }),
+  ];
+  const missingScope = canonicalPrivateOwnerBoundary(base);
+  delete missingScope.tenantScopeId;
+  invalidBoundaries.push(missingScope);
+  for (const ownerBoundary of invalidBoundaries) {
+    assert.equal(
+      validateAnchor(base, contract.anchors, ownerBoundary).accepted,
+      false,
+      JSON.stringify(ownerBoundary),
+    );
+  }
+
+  for (const assertion of gate.callerAssertionFieldsForbidden) {
+    const candidate = validAnchor({ [assertion]: true });
+    assert.equal(
+      validateAnchor(
+        candidate,
+        contract.anchors,
+        canonicalPrivateOwnerBoundary(candidate),
+      ).accepted,
+      false,
+      assertion,
+    );
+  }
+});
+
+test("private non-vault projection is a content-free bodyless receipt", () => {
+  const learnerPolicy = contract.anchors.kindPolicy.LEARNER_ATTEMPT_RANGE;
+  const sourcePolicy = contract.anchors.kindPolicy.PRIVATE_SOURCE_RANGE;
+  assert.deepEqual(sourcePolicy.allowedDomains, learnerPolicy.allowedDomains);
+  assert.deepEqual(
+    sourcePolicy.allowedBodyLocatorPolicies,
+    learnerPolicy.allowedBodyLocatorPolicies,
+  );
+  assert.deepEqual(sourcePolicy.nonVaultProjection, learnerPolicy.nonVaultProjection);
+  assert.notDeepEqual(sourcePolicy.allowedTargetTypes, learnerPolicy.allowedTargetTypes);
+
+  for (const kind of ["LEARNER_ATTEMPT_RANGE", "PRIVATE_SOURCE_RANGE"]) {
+    const anchor = validAnchor({
+      kind,
+      anchorId: "private_anchor",
+      receiptId: "private_receipt",
+      excerpt: "private answer",
+      startOffset: 1,
+      endOffset: 9,
+      bodyLocator: "vault-only",
+      attemptLocator: "attempt-only",
+      attemptRef: "attempt_ref",
+    });
+    const ownerBoundary = canonicalPrivateOwnerBoundary(anchor);
+    const projected = projectPrivateAnchorOutsideVault(
+      anchor,
+      "PRIVATE_METADATA_RECEIPT",
+      ownerBoundary,
+    );
+    assert.equal(projected.accepted, true, kind);
+    const policy = contract.anchors.kindPolicy[kind].nonVaultProjection;
+    assert.deepEqual(sorted(Object.keys(projected.receipt)), sorted(policy.allowedFields), kind);
+    for (const field of policy.forbiddenFields) {
+      assert.equal(Object.hasOwn(projected.receipt, field), false, `${kind}.${field}`);
+    }
+    for (const destination of policy.forbiddenDestinations) {
+      assert.equal(
+        projectPrivateAnchorOutsideVault(anchor, destination, ownerBoundary).accepted,
+        false,
+        `${kind}.${destination}`,
+      );
+    }
+  }
+});
+
+test("cue timing mapping rejects pre-response NONE and preserves sticky ineligibility", () => {
+  const commitGate = contract.cueExposure.canonicalRecordCommittedGate;
+  assert.deepEqual(
+    sorted(Object.keys(contract.cueExposure.closedTimingClassificationMap)),
+    sorted(contract.cueExposure.eventVariants.map(({ timing }) => timing)),
+  );
+  assert.deepEqual(
+    sorted(commitGate.appliesToEveryRenderCapableExposureEventTiming),
+    sorted(contract.cueExposure.eventVariants.map(({ timing }) => timing)),
+  );
+  assert.equal(commitGate.requiredPrimitiveType, "boolean");
+  assert.equal(commitGate.requiredValue, true);
+  assert.equal(commitGate.truthinessAllowed, false);
+  for (const timing of ["BEFORE_RESPONSE", "AFTER_RESPONSE", "REVIEW_ONLY"]) {
+    for (const canonicalRecordCommitted of [
+      undefined,
+      null,
+      false,
+      "true",
+      "false",
+      0,
+      1,
+      {},
+      [],
+    ]) {
+      const result = validateCueExposureEvent(cueEvent({ timing, canonicalRecordCommitted }));
+      assert.equal(result.accepted, false, `${timing}: ${String(canonicalRecordCommitted)}`);
+      assert.equal(result.mayRenderCueBytes, false, `${timing}: ${String(canonicalRecordCommitted)}`);
+    }
+  }
+  assert.deepEqual(validateCueExposureEvent(cueEvent({
+    timing: "AFTER_RESPONSE",
+    canonicalRecordCommitted: true,
+  })), {
+    accepted: true,
+    mayRenderCueBytes: true,
+    positiveLearningEvidence: false,
+    evidenceNeutral: false,
+  });
+  assert.equal(validateCueExposureEvent(cueEvent({
+    timing: "BEFORE_RESPONSE",
+    assistanceClassification: "NONE",
+  })).accepted, false);
+  for (const assistanceClassification of ["LOW", "MATERIAL"]) {
+    assert.equal(validateCueExposureEvent(cueEvent({
+      timing: "BEFORE_RESPONSE",
+      assistanceClassification,
+    })).accepted, true, assistanceClassification);
+  }
+
+  const sequence = evaluateAttemptEvidence([
+    cueEvent({ timing: "BEFORE_RESPONSE", assistanceClassification: "LOW" }),
+    cueEvent({
+      timing: "AFTER_RESPONSE",
+      assistanceClassification: "MATERIAL",
+      independentEvidenceEligible: true,
+    }),
+  ], {
+    exposureHistory: canonicalExposureHistory({ preResponseCueExposureCount: 1 }),
+    attempt: canonicalIndependentAttempt(),
+    independentResponse: independentResponseEvidence(),
+    farTransfer: farTransferEvidence({
+      exposureHistory: canonicalExposureHistory({
+        attemptId: "attempt-transfer-1",
+        preResponseCueExposureCount: 1,
+      }),
+    }),
+    stableD7: stableD7Evidence({
+      exposureHistory: canonicalExposureHistory({
+        attemptId: "attempt-d7-1",
+        preResponseCueExposureCount: 1,
+      }),
+    }),
+  });
+  assert.deepEqual(sequence, {
+    failClosed: false,
+    independentEvidenceEligibilityPreserved: false,
+    independentRetrieval: false,
+    farTransfer: false,
+    stableD7: false,
+  });
+
+  assert.equal(validateCueExposureEvent(cueEvent({
+    derivedFrom: "UNTRUSTED_CLIENT",
+  })).accepted, false);
+  assert.equal(validateCueExposureEvent(cueEvent({
+    ordering: "AMBIGUOUS",
+  })).accepted, false);
+  assert.equal(validateCueExposureEvent(cueEvent({
+    renderSubmitRaceDetected: true,
+  })).accepted, false);
+  assert.deepEqual(validateCueExposureEvent(cueEvent({
+    canonicalRecordCommitted: false,
+  })), {
+    accepted: false,
+    mayRenderCueBytes: false,
+    reason: "DO_NOT_RENDER_CUE_BYTES",
+  });
+  assert.deepEqual(evaluateAttemptEvidence([cueEvent({
+    canonicalRecordCommitted: false,
+  })]), {
+    failClosed: true,
+    independentEvidenceEligibilityPreserved: false,
+    independentRetrieval: false,
+    farTransfer: false,
+    stableD7: false,
+  });
+});
+
+test("pre-response requests reject omitted or NONE assistance classification", () => {
+  const gate = contract.cueExposure.beforeResponseGate;
+  assert.equal(
+    gate.timingClassificationMapRef,
+    "cueExposure.closedTimingClassificationMap.BEFORE_RESPONSE",
+  );
+  assert.deepEqual(
+    gate.requiredAssistanceClassifications,
+    contract.cueExposure.closedTimingClassificationMap.BEFORE_RESPONSE,
+  );
+  assert.equal(gate.assistanceClassificationRequiredOnRequest, true);
+
+  const omitted = cueRenderRequest();
+  delete omitted.assistanceClassification;
+  for (const request of [
+    omitted,
+    cueRenderRequest({ assistanceClassification: "NONE" }),
+  ]) {
+    const result = evaluateCueRender(request);
+    assert.equal(result.accepted, false);
+    assert.equal(result.mayRenderCueBytes, false);
+    assert.equal(result.reason, "TIMING_CLASSIFICATION_INVALID");
+  }
+
+  for (const assistanceClassification of gate.requiredAssistanceClassifications) {
+    const result = evaluateCueRender(cueRenderRequest({ assistanceClassification }));
+    assert.equal(result.accepted, true, assistanceClassification);
+    assert.equal(result.mayRenderCueBytes, true, assistanceClassification);
+  }
+});
+
+test("every BEFORE_RESPONSE render path delegates to one exact gate and rejects all bypasses", () => {
+  const gate = contract.cueExposure.beforeResponseGate;
+  const learnerScopeGate = gate.authenticatedLearnerScopeBindingGate;
+  assert.equal(gate.gateId, "EXACT_PRE_RESPONSE_RENDER_GATE_V1");
+  assert.equal(gate.sharedAcrossEveryRenderCapableValidator, true);
+  assert.equal(gate.alternateValidatorBypassAllowed, false);
+  assert.deepEqual(gate.renderCapableValidators, [
+    "CUE_RENDER_REQUEST_VALIDATOR",
+    "CUE_EXPOSURE_EVENT_VALIDATOR",
+  ]);
+  assert.equal(learnerScopeGate.field, "authenticatedLearnerPrivateScopeId");
+  assert.equal(learnerScopeGate.source, "AUTHENTICATED_REQUEST_CONTEXT");
+  assert.deepEqual(learnerScopeGate.independentlyValidatedRefs, [
+    "subject.authenticatedLearnerPrivateScopeId",
+    "subject.learnerPrivateScopeId",
+    "subject.attemptResolution.learnerPrivateScopeId",
+    "subject.confirmation.learnerPrivateScopeId",
+  ]);
+  assert.equal(learnerScopeGate.comparison, "EXACT_FIELD_FOR_FIELD");
+  assert.equal(learnerScopeGate.clientOrCallerAliasAllowed, false);
+  assert.equal(learnerScopeGate.inferenceAllowed, false);
+
+  const invalidOverrides = [
+    { attemptId: undefined },
+    { attemptId: "" },
+    { learnerPrivateScopeId: undefined },
+    { learnerPrivateScopeId: "" },
+    { authenticatedLearnerPrivateScopeId: undefined },
+    { authenticatedLearnerPrivateScopeId: null },
+    { authenticatedLearnerPrivateScopeId: "" },
+    { authenticatedLearnerPrivateScopeId: " " },
+    { authenticatedLearnerPrivateScopeId: "?" },
+    { authenticatedLearnerPrivateScopeId: 1 },
+    { authenticatedLearnerPrivateScopeId: true },
+    { authenticatedLearnerPrivateScopeId: {} },
+    { authenticatedLearnerPrivateScopeId: [] },
+    { authenticatedLearnerPrivateScopeId: "learner-foreign" },
+    { clientLearnerPrivateScopeId: "learner-1" },
+    { callerLearnerPrivateScopeId: "learner-1" },
+    { clientAuthenticatedLearnerPrivateScopeId: "learner-1" },
+    { callerAuthenticatedLearnerPrivateScopeId: "learner-1" },
+    { inferLearnerPrivateScopeId: true },
+    {
+      learnerPrivateScopeId: "learner-foreign",
+      attemptResolution: canonicalOpenAttemptResolution({
+        learnerPrivateScopeId: "learner-foreign",
+      }),
+      confirmation: cueConfirmation({ learnerPrivateScopeId: "learner-foreign" }),
+    },
+    {
+      authenticatedLearnerPrivateScopeId: "?",
+      learnerPrivateScopeId: "?",
+      attemptResolution: canonicalOpenAttemptResolution({ learnerPrivateScopeId: "?" }),
+      confirmation: cueConfirmation({ learnerPrivateScopeId: "?" }),
+    },
+    { attemptResolution: undefined },
+    { attemptResolution: canonicalOpenAttemptResolution({ source: "CLIENT" }) },
+    { attemptResolution: canonicalOpenAttemptResolution({ known: false }) },
+    { attemptResolution: canonicalOpenAttemptResolution({ matchingRecordCount: 0 }) },
+    { attemptResolution: canonicalOpenAttemptResolution({ matchingRecordCount: 2, ambiguous: true }) },
+    { attemptResolution: canonicalOpenAttemptResolution({ crossLearner: true }) },
+    { attemptResolution: canonicalOpenAttemptResolution({ crossAttempt: true }) },
+    { attemptResolution: canonicalOpenAttemptResolution({ mismatched: true }) },
+    { attemptResolution: canonicalOpenAttemptResolution({ stale: true }) },
+    { attemptResolution: canonicalOpenAttemptResolution({ cancelled: true }) },
+    { attemptResolution: canonicalOpenAttemptResolution({ replayed: true }) },
+    { attemptResolution: canonicalOpenAttemptResolution({ closed: true }) },
+    { attemptResolution: canonicalAttemptResolution() },
+    { attemptResolution: canonicalOpenAttemptResolution({ attemptId: "other-attempt" }) },
+    { attemptResolution: canonicalOpenAttemptResolution({ learnerPrivateScopeId: "other-learner" }) },
+    { clientAttemptId: "attempt-1" },
+    { inferLatestAttempt: true },
+    { clientAttemptState: "INDEPENDENT_ATTEMPT_OPEN" },
+    { canonicalAttemptStateSource: "CLIENT" },
+    { confirmation: undefined },
+    { confirmation: cueConfirmation({ source: "CLIENT" }) },
+    { confirmation: cueConfirmation({ serverRecorded: false }) },
+    { confirmation: cueConfirmation({ deliberate: false }) },
+    { confirmation: cueConfirmation({ active: false }) },
+    { confirmation: cueConfirmation({ status: "CANCELLED", cancelled: true }) },
+    { confirmation: cueConfirmation({ stale: true }) },
+    { confirmation: cueConfirmation({ consumed: true }) },
+    { confirmation: cueConfirmation({ singleUse: false }) },
+    { confirmation: cueConfirmation({ matchingRecordCount: 2, ambiguous: true }) },
+    { confirmation: undefined, clientConfirmationBoolean: true },
+    { confirmation: undefined, preselectedConsent: true },
+    { commitSteps: ["CONFIRMATION_CONSUMPTION_COMMITTED"] },
+    { commitSteps: [...contract.cueExposure.preResponseAtomicCommit.orderedSteps].reverse() },
+    { canonicalRecordCommitted: false },
+    { recordFailure: true },
+    { renderSubmitRaceDetected: true },
+  ];
+  for (const field of gate.confirmationBindingFields) {
+    invalidOverrides.push({ confirmation: cueConfirmation({ [field]: `wrong-${field}` }) });
+  }
+
+  for (const overrides of invalidOverrides) {
+    const event = cueEvent({
+      timing: "BEFORE_RESPONSE",
+      assistanceClassification: "LOW",
+      ...overrides,
+    });
+    for (const validate of [validateCueExposureEvent, evaluateCueRender]) {
+      const result = validate(event);
+      assert.equal(result.accepted, false, `${validate.name}: ${result.reason}`);
+      assert.equal(result.mayRenderCueBytes, false, `${validate.name}: ${result.reason}`);
+    }
+  }
+
+  const insufficientFlagOnly = validateCueExposureEvent({
+    timing: "BEFORE_RESPONSE",
+    assistanceClassification: "LOW",
+    derivedFrom: "CANONICAL_ASSISTANCE_EXPOSURE_LEDGER",
+    ordering: "ORDERED",
+    canonicalRecordCommitted: true,
+    renderSubmitRaceDetected: false,
+    attemptId: "attempt-1",
+  });
+  assert.equal(insufficientFlagOnly.accepted, false);
+  assert.equal(insufficientFlagOnly.mayRenderCueBytes, false);
+
+  const validEvent = cueEvent({ timing: "BEFORE_RESPONSE", assistanceClassification: "MATERIAL" });
+  for (const validate of [validateCueExposureEvent, evaluateCueRender]) {
+    const result = validate(validEvent);
+    assert.equal(result.accepted, true, validate.name);
+    assert.equal(result.mayRenderCueBytes, true, validate.name);
+    assert.equal(result.gateId, gate.gateId, validate.name);
+    assert.equal(result.atomicCommitCompletedBeforeRender, true, validate.name);
+    assert.equal(result.canonicalAttemptState, "ASSISTED", validate.name);
+    assert.equal(result.independentEvidenceEligible, false, validate.name);
+    assert.equal(result.orderedSteps.at(-1), "CUE_BYTES_RENDERED", validate.name);
+  }
+});
+
+test("pre-response rejects noncanonical attempt resolution states across both render validators", () => {
+  const stateGate = contract.cueExposure.canonicalAttemptResolutionStateGate;
+  const beforeResponseGate = contract.cueExposure.beforeResponseGate;
+  assert.equal(stateGate.gateId, "EXACT_CANONICAL_ATTEMPT_RESOLUTION_STATE_GATE_V1");
+  assert.equal(
+    beforeResponseGate.attemptResolutionStateGateRef,
+    "cueExposure.canonicalAttemptResolutionStateGate",
+  );
+  assert.deepEqual(stateGate.requiredExactPrimitiveBooleanStates, {
+    known: true,
+    resolved: true,
+    ambiguous: false,
+    conflicting: false,
+    stale: false,
+    clientInferred: false,
+  });
+
+  for (const [field, invalidValue] of [
+    ["resolved", false],
+    ["conflicting", true],
+    ["clientInferred", true],
+  ]) {
+    const subject = cueEvent({
+      timing: "BEFORE_RESPONSE",
+      assistanceClassification: "LOW",
+      attemptResolution: canonicalOpenAttemptResolution({ [field]: invalidValue }),
+    });
+    for (const validate of [evaluateCueRender, validateCueExposureEvent]) {
+      const result = validate(subject);
+      assert.equal(result.accepted, false, `${validate.name}: ${field}`);
+      assert.equal(result.mayRenderCueBytes, false, `${validate.name}: ${field}`);
+    }
+  }
+});
+
+test("pre-response canonical attempt and confirmation records reject the closed-shape mutation matrix", () => {
+  const beforeGate = contract.cueExposure.beforeResponseGate;
+  const attemptGate = beforeGate.canonicalOpenAttemptResolutionGate;
+  const confirmationGate = beforeGate.canonicalConfirmationResolutionGate;
+  const validators = [
+    evaluateCueRender,
+    (subject) => validateCueExposureEvent(cueEvent(subject)),
+  ];
+  const assertNoRender = (request, label) => {
+    for (const validate of validators) {
+      const result = validate(request);
+      assert.equal(result.accepted, false, `${label}: ${validate.name}`);
+      assert.equal(result.mayRenderCueBytes, false, `${label}: ${validate.name}`);
+    }
+  };
+
+  const invalidAttempts = [];
+  for (const field of attemptGate.requiredFields) {
+    const record = canonicalOpenAttemptResolution();
+    delete record[field];
+    invalidAttempts.push([record, `attempt missing ${field}`]);
+  }
+  for (const [field, expected] of Object.entries(attemptGate.requiredExactPrimitiveBooleanStates)) {
+    invalidAttempts.push([
+      canonicalOpenAttemptResolution({ [field]: String(expected) }),
+      `attempt non-boolean ${field}`,
+    ]);
+  }
+  invalidAttempts.push(
+    [canonicalOpenAttemptResolution({ source: "CLIENT" }), "attempt wrong source"],
+    [canonicalOpenAttemptResolution({ matchingRecordCount: 0 }), "attempt zero records"],
+    [canonicalOpenAttemptResolution({ matchingRecordCount: 2 }), "attempt multiple records"],
+    [canonicalOpenAttemptResolution({ attemptId: "attempt-foreign" }), "attempt foreign attempt"],
+    [canonicalOpenAttemptResolution({ learnerPrivateScopeId: "learner-foreign" }), "attempt foreign learner"],
+    [canonicalOpenAttemptResolution({ extraField: true }), "attempt extra field"],
+  );
+  for (const [attemptResolution, label] of invalidAttempts) {
+    assertNoRender(cueRenderRequest({ attemptResolution }), label);
+  }
+
+  const invalidConfirmations = [];
+  for (const field of confirmationGate.requiredFields) {
+    const record = cueConfirmation();
+    delete record[field];
+    invalidConfirmations.push([record, `confirmation missing ${field}`]);
+  }
+  for (const [field, expected] of Object.entries(
+    confirmationGate.requiredExactPrimitiveBooleanStates,
+  )) {
+    invalidConfirmations.push([
+      cueConfirmation({ [field]: String(expected) }),
+      `confirmation non-boolean ${field}`,
+    ]);
+  }
+  invalidConfirmations.push(
+    [cueConfirmation({ source: "CLIENT" }), "confirmation wrong source"],
+    [cueConfirmation({ matchingRecordCount: 0 }), "confirmation zero records"],
+    [cueConfirmation({ matchingRecordCount: 2 }), "confirmation multiple records"],
+    [cueConfirmation({ conflicting: true }), "confirmation conflicting"],
+    [cueConfirmation({ stale: true }), "confirmation stale"],
+    [cueConfirmation({ replayed: true }), "confirmation replayed"],
+    [cueConfirmation({ cancelled: true }), "confirmation cancelled"],
+    [cueConfirmation({ clientInferred: true }), "confirmation client inferred"],
+    [cueConfirmation({ callerInferred: true }), "confirmation caller inferred"],
+    [cueConfirmation({ attemptId: "attempt-foreign" }), "confirmation foreign attempt"],
+    [cueConfirmation({ learnerPrivateScopeId: "learner-foreign" }), "confirmation foreign learner"],
+    [cueConfirmation({ requestId: "request-foreign" }), "confirmation foreign request"],
+    [cueConfirmation({ extraField: true }), "confirmation extra field"],
+  );
+  for (const [confirmation, label] of invalidConfirmations) {
+    assertNoRender(cueRenderRequest({ confirmation }), label);
+  }
+
+  for (const invalidRaceState of [undefined, null, "false", 0, 1, {}, []]) {
+    assertNoRender(
+      cueRenderRequest({ renderSubmitRaceDetected: invalidRaceState }),
+      `pre-response race state ${String(invalidRaceState)}`,
+    );
+  }
+  for (const validate of validators) {
+    const result = validate(cueRenderRequest());
+    assert.equal(result.accepted, true, validate.name);
+    assert.equal(result.mayRenderCueBytes, true, validate.name);
+  }
+});
+
+test("cue absence and after-response-only exposure preserve eligibility but create no evidence", () => {
+  const gate = contract.cueExposure.learningEvidenceGate;
+  assert.equal(gate.cueAbsenceEffect, "PRESERVE_ELIGIBILITY_ONLY");
+  assert.equal(gate.cueAbsenceCreatesPositiveEvidence, false);
+  assert.equal(gate.emptySequenceCreatesPositiveEvidence, false);
+  assert.equal(gate.afterResponseOnlySequenceCreatesPositiveEvidence, false);
+  assert.equal(contract.separation.cueAbsenceMayCreatePositiveLearningEvidence, false);
+
+  for (const events of [
+    [],
+    [cueEvent({ timing: "AFTER_RESPONSE", assistanceClassification: "NONE" })],
+  ]) {
+    assert.deepEqual(evaluateAttemptEvidence(events, {
+      exposureHistory: canonicalExposureHistory(),
+      attempt: canonicalIndependentAttempt(),
+    }), {
+      failClosed: false,
+      independentEvidenceEligibilityPreserved: true,
+      independentRetrieval: false,
+      farTransfer: false,
+      stableD7: false,
+    });
+  }
+});
+
+test("independent retrieval requires affirmative canonical submitted and evaluated response evidence", () => {
+  const countGate = contract.cueExposure.learningEvidenceGate.preResponseCueExposureCountGate;
+  assert.equal(countGate.requiredPrimitiveType, "number");
+  assert.equal(countGate.integerRequired, true);
+  assert.equal(countGate.safeIntegerRequired, true);
+  assert.equal(countGate.minimum, 0);
+  assert.equal(countGate.independentCreditRequiredValue, 0);
+  assert.equal(countGate.eachApplicableCanonicalHistoryMustCarryItsOwnCount, true);
+  assert.equal(countGate.downstreamEvidenceCountCopiesAcceptedAsHistory, false);
+  assert.equal(countGate.exactZeroEffect, "PRESERVE_ELIGIBILITY_ONLY");
+  assert.equal(
+    countGate.baseHistoryCountAboveZeroEffect,
+    "DENY_INDEPENDENT_RETRIEVAL_FAR_TRANSFER_AND_STABLE_D7",
+  );
+  assert.equal(countGate.downstreamHistoryCountAboveZeroEffect, "DENY_AFFECTED_CREDIT");
+  const base = {
+    exposureHistory: canonicalExposureHistory(),
+    attempt: canonicalIndependentAttempt(),
+    independentResponse: independentResponseEvidence(),
+  };
+  assert.deepEqual(evaluateAttemptEvidence([], base), {
+    failClosed: false,
+    independentEvidenceEligibilityPreserved: true,
+    independentRetrieval: true,
+    farTransfer: false,
+    stableD7: false,
+  });
+
+  const invalidEvidence = [
+    { ...base, attempt: undefined },
+    { ...base, independentResponse: undefined },
+    { ...base, attempt: canonicalIndependentAttempt({ source: "CLIENT" }) },
+    { ...base, attempt: canonicalIndependentAttempt({ canonicalAttemptState: "INDEPENDENT_ATTEMPT_OPEN" }) },
+    { ...base, independentResponse: independentResponseEvidence({ source: "CLIENT" }) },
+    { ...base, independentResponse: independentResponseEvidence({ attemptId: "other-attempt" }) },
+    { ...base, independentResponse: independentResponseEvidence({ learnerPrivateScopeId: "other-learner" }) },
+    { ...base, independentResponse: independentResponseEvidence({ actualSubmission: false }) },
+    { ...base, independentResponse: independentResponseEvidence({ evaluationCompleted: false }) },
+    { ...base, independentResponse: independentResponseEvidence({ ambiguous: true }) },
+  ];
+  for (const evidence of invalidEvidence) {
+    assert.equal(evaluateAttemptEvidence([], evidence).independentRetrieval, false);
+  }
+
+  const assisted = evaluateAttemptEvidence([], {
+    ...base,
+    attempt: canonicalIndependentAttempt({ assistanceState: "ASSISTED" }),
+  });
+  assert.equal(assisted.independentEvidenceEligibilityPreserved, false);
+  assert.equal(assisted.independentRetrieval, false);
+
+  for (const exposureHistory of [
+    undefined,
+    canonicalExposureHistory({ complete: false }),
+    canonicalExposureHistory({ missingExposureRecord: true }),
+    canonicalExposureHistory({ failedRender: true }),
+    canonicalExposureHistory({ partialCommit: true }),
+    canonicalExposureHistory({ ambiguousRecord: true }),
+  ]) {
+    const result = evaluateAttemptEvidence([], { ...base, exposureHistory });
+    assert.equal(result.failClosed, true);
+    assert.equal(result.independentRetrieval, false);
+  }
+
+  const missingCount = canonicalExposureHistory();
+  delete missingCount.preResponseCueExposureCount;
+  const invalidCountHistories = [
+    missingCount,
+    canonicalExposureHistory({ preResponseCueExposureCount: undefined }),
+    canonicalExposureHistory({ preResponseCueExposureCount: null }),
+    canonicalExposureHistory({ preResponseCueExposureCount: false }),
+    canonicalExposureHistory({ preResponseCueExposureCount: true }),
+    canonicalExposureHistory({ preResponseCueExposureCount: "0" }),
+    canonicalExposureHistory({ preResponseCueExposureCount: 0.5 }),
+    canonicalExposureHistory({ preResponseCueExposureCount: -1 }),
+    canonicalExposureHistory({ preResponseCueExposureCount: Number.NaN }),
+    canonicalExposureHistory({ preResponseCueExposureCount: Number.POSITIVE_INFINITY }),
+    canonicalExposureHistory({ preResponseCueExposureCount: Number.MAX_SAFE_INTEGER + 1 }),
+    canonicalExposureHistory({ preResponseCueExposureCount: {} }),
+    canonicalExposureHistory({ preResponseCueExposureCount: [] }),
+    canonicalExposureHistory({ preResponseCueExposureCountAuthoritative: false }),
+    canonicalExposureHistory({ preResponseCueExposureCountAmbiguous: true }),
+    canonicalExposureHistory({ preResponseCueExposureCountConflicting: true }),
+    canonicalExposureHistory({ preResponseCueExposureCountStale: true }),
+    canonicalExposureHistory({ preResponseCueExposureCountClientInferred: true }),
+  ];
+  for (const exposureHistory of invalidCountHistories) {
+    const result = evaluateAttemptEvidence([], {
+      ...base,
+      exposureHistory,
+      farTransfer: farTransferEvidence(),
+      stableD7: stableD7Evidence(),
+    });
+    assert.deepEqual(result, noPositiveEvidence({ failClosed: true, eligibilityPreserved: false }));
+  }
+
+  const transferExposed = evaluateAttemptEvidence([], {
+    ...base,
+    farTransfer: farTransferEvidence({
+      exposureHistory: canonicalExposureHistory({
+        attemptId: "attempt-transfer-1",
+        preResponseCueExposureCount: 1,
+      }),
+    }),
+  });
+  assert.equal(transferExposed.independentRetrieval, true);
+  assert.equal(transferExposed.farTransfer, false);
+  const d7Exposed = evaluateAttemptEvidence([], {
+    ...base,
+    stableD7: stableD7Evidence({
+      exposureHistory: canonicalExposureHistory({
+        attemptId: "attempt-d7-1",
+        preResponseCueExposureCount: 1,
+      }),
+    }),
+  });
+  assert.equal(d7Exposed.independentRetrieval, true);
+  assert.equal(d7Exposed.stableD7, false);
+
+  const priorCueExposure = evaluateAttemptEvidence([], {
+    ...base,
+    exposureHistory: canonicalExposureHistory({ preResponseCueExposureCount: 1 }),
+  });
+  assert.deepEqual(
+    priorCueExposure,
+    noPositiveEvidence({ failClosed: false, eligibilityPreserved: false }),
+  );
+});
+
+test("base attempt and independent-response evaluation reject every closed-record mutation", () => {
+  const learningGate = contract.cueExposure.learningEvidenceGate;
+  const baseGate = learningGate.baseAttemptResolutionGate;
+  const responseGate = learningGate.requiredAffirmativeEvidence.independentRetrieval
+    .canonicalResponseEvaluationResolutionGate;
+  const validEvidence = {
+    exposureHistory: canonicalExposureHistory(),
+    attempt: canonicalIndependentAttempt(),
+    independentResponse: independentResponseEvidence(),
+    farTransfer: farTransferEvidence(),
+    stableD7: stableD7Evidence(),
+  };
+  assert.deepEqual(validateLearningEvidence([], validEvidence), {
+    failClosed: false,
+    independentEvidenceEligibilityPreserved: true,
+    independentRetrieval: true,
+    farTransfer: true,
+    stableD7: true,
+  });
+  assert.equal(
+    responseGate.canonicalSubmissionOrderingGate.comparison,
+    "EVALUATION_COMPLETED_AT_GTE_CANONICAL_ATTEMPT_SUBMITTED_AT",
+  );
+  assert.equal(responseGate.canonicalSubmissionOrderingGate.equalityAccepted, true);
+  assert.equal(
+    responseGate.canonicalSubmissionOrderingGate.callerOrOuterTimestampSubstitutionAllowed,
+    false,
+  );
+
+  const invalidAttempts = [];
+  for (const field of baseGate.requiredFields) {
+    const record = canonicalIndependentAttempt();
+    delete record[field];
+    invalidAttempts.push([record, `base attempt missing ${field}`]);
+  }
+  for (const [field, expected] of Object.entries(baseGate.requiredExactPrimitiveBooleanStates)) {
+    invalidAttempts.push([
+      canonicalIndependentAttempt({ [field]: String(expected) }),
+      `base attempt non-boolean ${field}`,
+    ]);
+  }
+  invalidAttempts.push(
+    [canonicalIndependentAttempt({ source: "CLIENT" }), "base attempt wrong source"],
+    [canonicalIndependentAttempt({ matchingRecordCount: 0 }), "base attempt zero records"],
+    [canonicalIndependentAttempt({ matchingRecordCount: 2 }), "base attempt multiple records"],
+    [canonicalIndependentAttempt({ submittedAt: "2026-08-01" }), "base attempt malformed timestamp"],
+    [canonicalIndependentAttempt({ learnerPrivateScopeId: "learner-foreign" }), "base attempt foreign learner"],
+    [canonicalIndependentAttempt({ extraField: true }), "base attempt extra field"],
+  );
+  for (const [attempt, label] of invalidAttempts) {
+    assert.deepEqual(
+      validateLearningEvidence([], { ...validEvidence, attempt }),
+      noPositiveEvidence({ failClosed: true, eligibilityPreserved: false }),
+      label,
+    );
+  }
+
+  const historyGate = learningGate.exposureHistoryBindingGate;
+  const invalidHistories = [];
+  for (const field of historyGate.requiredFields) {
+    const history = canonicalExposureHistory();
+    delete history[field];
+    invalidHistories.push([history, `base history missing ${field}`]);
+  }
+  for (const [field, expected] of Object.entries(historyGate.requiredBooleanStates)) {
+    invalidHistories.push([
+      canonicalExposureHistory({ [field]: String(expected) }),
+      `base history non-boolean ${field}`,
+    ]);
+  }
+  invalidHistories.push(
+    [canonicalExposureHistory({ source: "CLIENT" }), "base history wrong source"],
+    [canonicalExposureHistory({ matchingRecordCount: 0 }), "base history zero records"],
+    [canonicalExposureHistory({ matchingRecordCount: 2 }), "base history multiple records"],
+    [canonicalExposureHistory({ attemptId: "attempt-foreign" }), "base history foreign attempt"],
+    [canonicalExposureHistory({ learnerPrivateScopeId: "learner-foreign" }), "base history foreign learner"],
+    [canonicalExposureHistory({ extraField: true }), "base history extra field"],
+  );
+  for (const [exposureHistory, label] of invalidHistories) {
+    assert.deepEqual(
+      validateLearningEvidence([], { ...validEvidence, exposureHistory }),
+      noPositiveEvidence({ failClosed: true, eligibilityPreserved: false }),
+      label,
+    );
+  }
+
+  const invalidResponses = [
+    [undefined, "response missing"],
+    [null, "response null"],
+    [[], "response array"],
+    [{}, "response malformed object"],
+    ["response", "response malformed primitive"],
+  ];
+  for (const field of learningGate.requiredAffirmativeEvidence.independentRetrieval
+    .candidateEnvelopeGate.requiredFields) {
+    const candidate = independentResponseEvidence();
+    delete candidate[field];
+    invalidResponses.push([candidate, `response envelope missing ${field}`]);
+  }
+  const extraEnvelope = independentResponseEvidence();
+  extraEnvelope.extraField = true;
+  invalidResponses.push([extraEnvelope, "response envelope extra field"]);
+  for (const field of responseGate.requiredFields) {
+    const record = canonicalResponseEvaluation();
+    delete record[field];
+    invalidResponses.push([
+      independentResponseEvidence({ canonicalResponseEvaluation: record }),
+      `response evaluation missing ${field}`,
+    ]);
+  }
+  for (const [field, expected] of Object.entries(responseGate.requiredExactPrimitiveBooleanStates)) {
+    invalidResponses.push([
+      independentResponseEvidence({
+        canonicalResponseEvaluation: canonicalResponseEvaluation({ [field]: String(expected) }),
+      }),
+      `response evaluation non-boolean ${field}`,
+    ]);
+    invalidResponses.push([
+      independentResponseEvidence({
+        canonicalResponseEvaluation: canonicalResponseEvaluation({ [field]: !expected }),
+      }),
+      `response evaluation unsafe ${field}`,
+    ]);
+  }
+  invalidResponses.push(
+    [independentResponseEvidence({ canonicalResponseEvaluation: null }), "response evaluation null"],
+    [independentResponseEvidence({ canonicalResponseEvaluation: [] }), "response evaluation array"],
+    [independentResponseEvidence({ canonicalResponseEvaluation: {} }), "response evaluation malformed"],
+    [independentResponseEvidence({ source: "CLIENT" }), "response wrong source"],
+    [independentResponseEvidence({ matchingRecordCount: 0 }), "response zero records"],
+    [independentResponseEvidence({ matchingRecordCount: 2 }), "response multiple records"],
+    [independentResponseEvidence({ conflicting: true }), "response conflicting"],
+    [independentResponseEvidence({ stale: true }), "response stale"],
+    [independentResponseEvidence({ replayed: true }), "response replayed"],
+    [independentResponseEvidence({ cancelled: true }), "response cancelled"],
+    [independentResponseEvidence({ clientInferred: true }), "response client inferred"],
+    [independentResponseEvidence({ callerInferred: true }), "response caller inferred"],
+    [independentResponseEvidence({ attemptId: "attempt-foreign" }), "response foreign attempt"],
+    [independentResponseEvidence({ learnerPrivateScopeId: "learner-foreign" }), "response foreign learner"],
+    [independentResponseEvidence({ submissionId: "submission-foreign" }), "response foreign submission"],
+    [independentResponseEvidence({
+      evaluationId: "evaluation-foreign",
+      canonicalResponseEvaluation: canonicalResponseEvaluation(),
+    }), "response foreign evaluation"],
+    [independentResponseEvidence({ evaluationCompletedAt: "2026-08-01" }), "response malformed timestamp"],
+    [independentResponseEvidence({
+      canonicalResponseEvaluation: canonicalResponseEvaluation({ attemptId: "attempt-foreign" }),
+    }), "response unbound canonical attempt"],
+    [independentResponseEvidence({
+      canonicalResponseEvaluation: canonicalResponseEvaluation({ extraField: true }),
+    }), "response evaluation extra field"],
+  );
+  for (const [independentResponse, label] of invalidResponses) {
+    const result = validateLearningEvidence([], { ...validEvidence, independentResponse });
+    assert.equal(result.independentRetrieval, false, `${label}: independentRetrieval`);
+    assert.equal(result.farTransfer, false, `${label}: farTransfer`);
+    assert.equal(result.stableD7, false, `${label}: stableD7`);
+  }
+
+  const oneMillisecondBefore = independentResponseEvidence({
+    canonicalResponseEvaluation: canonicalResponseEvaluation({
+      evaluationCompletedAt: "2026-07-31T23:59:59.999Z",
+    }),
+  });
+  const oneMillisecondBeforeResult = validateLearningEvidence([], {
+    ...validEvidence,
+    independentResponse: oneMillisecondBefore,
+  });
+  assert.equal(oneMillisecondBeforeResult.independentRetrieval, false);
+  assert.equal(oneMillisecondBeforeResult.farTransfer, false);
+  assert.equal(oneMillisecondBeforeResult.stableD7, false);
+
+  const atSubmission = validateLearningEvidence([], {
+    ...validEvidence,
+    independentResponse: independentResponseEvidence({
+      evaluationCompletedAt: "2026-08-01T00:00:00.000Z",
+    }),
+  });
+  assert.equal(atSubmission.independentRetrieval, true);
+  assert.equal(atSubmission.farTransfer, true);
+  assert.equal(atSubmission.stableD7, true);
+
+  const substitutedOuterTimestamp = oneMillisecondBefore;
+  substitutedOuterTimestamp.evaluationCompletedAt = "2099-01-01T00:00:00.000Z";
+  substitutedOuterTimestamp.callerEvaluationCompletedAt = "2099-01-01T00:00:00.000Z";
+  const substituted = validateLearningEvidence([], {
+    ...validEvidence,
+    independentResponse: substitutedOuterTimestamp,
+  });
+  assert.equal(substituted.independentRetrieval, false);
+  assert.equal(substituted.farTransfer, false);
+  assert.equal(substituted.stableD7, false);
+});
+
+test("base, far-transfer and D+7 exposure histories bind to their own evaluated attempts", () => {
+  const gate = contract.cueExposure.learningEvidenceGate.exposureHistoryBindingGate;
+  assert.equal(gate.additionalFieldsAllowed, false);
+  assert.equal(gate.eachApplicableHistoryValidatedIndependently, true);
+  assert.equal(gate.bareDownstreamCountCopyEstablishesAttemptBinding, false);
+  assert.equal(gate.sourceAttemptHistoryMaySubstituteForDownstreamHistory, false);
+  const base = {
+    exposureHistory: canonicalExposureHistory(),
+    attempt: canonicalIndependentAttempt(),
+    independentResponse: independentResponseEvidence(),
+  };
+  assert.equal(evaluateAttemptEvidence([], base).independentRetrieval, true);
+
+  const missingAttempt = canonicalExposureHistory();
+  delete missingAttempt.attemptId;
+  const missingLearner = canonicalExposureHistory();
+  delete missingLearner.learnerPrivateScopeId;
+  for (const exposureHistory of [
+    missingAttempt,
+    missingLearner,
+    canonicalExposureHistory({ attemptId: "other-attempt" }),
+    canonicalExposureHistory({ learnerPrivateScopeId: "other-learner" }),
+  ]) {
+    const result = evaluateAttemptEvidence([], { ...base, exposureHistory });
+    assert.equal(result.failClosed, true);
+    assert.equal(result.independentRetrieval, false);
+  }
+
+  const validTransfer = farTransferEvidence();
+  const transferResult = evaluateAttemptEvidence([], { ...base, farTransfer: validTransfer });
+  assert.equal(transferResult.independentRetrieval, true);
+  assert.equal(transferResult.farTransfer, true);
+  for (const exposureHistory of [
+    undefined,
+    canonicalExposureHistory(),
+    canonicalExposureHistory({ attemptId: "attempt-transfer-foreign" }),
+    canonicalExposureHistory({
+      attemptId: validTransfer.transferAttemptId,
+      learnerPrivateScopeId: "other-learner",
+    }),
+    canonicalExposureHistory({ attemptId: validTransfer.transferAttemptId, ambiguous: true }),
+    canonicalExposureHistory({ attemptId: validTransfer.transferAttemptId, conflicting: true }),
+    canonicalExposureHistory({ attemptId: validTransfer.transferAttemptId, stale: true }),
+    canonicalExposureHistory({ attemptId: validTransfer.transferAttemptId, replayed: true }),
+    canonicalExposureHistory({ attemptId: validTransfer.transferAttemptId, clientInferred: true }),
+    canonicalExposureHistory({ attemptId: validTransfer.transferAttemptId, callerPaired: true }),
+  ]) {
+    const result = evaluateAttemptEvidence([], {
+      ...base,
+      farTransfer: farTransferEvidence({ exposureHistory }),
+      stableD7: stableD7Evidence(),
+    });
+    assert.equal(result.independentRetrieval, true);
+    assert.equal(result.farTransfer, false);
+    assert.equal(result.stableD7, true);
+  }
+
+  const validD7 = stableD7Evidence();
+  const d7Result = evaluateAttemptEvidence([], { ...base, stableD7: validD7 });
+  assert.equal(d7Result.independentRetrieval, true);
+  assert.equal(d7Result.stableD7, true);
+  for (const exposureHistory of [
+    undefined,
+    canonicalExposureHistory(),
+    canonicalExposureHistory({ attemptId: "attempt-d7-foreign" }),
+    canonicalExposureHistory({
+      attemptId: validD7.d7AttemptId,
+      learnerPrivateScopeId: "other-learner",
+    }),
+    canonicalExposureHistory({ attemptId: validD7.d7AttemptId, ambiguous: true }),
+    canonicalExposureHistory({ attemptId: validD7.d7AttemptId, conflicting: true }),
+    canonicalExposureHistory({ attemptId: validD7.d7AttemptId, stale: true }),
+    canonicalExposureHistory({ attemptId: validD7.d7AttemptId, replayed: true }),
+    canonicalExposureHistory({ attemptId: validD7.d7AttemptId, clientInferred: true }),
+    canonicalExposureHistory({ attemptId: validD7.d7AttemptId, callerPaired: true }),
+  ]) {
+    const result = evaluateAttemptEvidence([], {
+      ...base,
+      farTransfer: farTransferEvidence(),
+      stableD7: stableD7Evidence({ exposureHistory }),
+    });
+    assert.equal(result.independentRetrieval, true);
+    assert.equal(result.farTransfer, true);
+    assert.equal(result.stableD7, false);
+  }
+
+  const bareTransferCount = farTransferEvidence({
+    exposureHistory: undefined,
+    preResponseCueExposureCount: 0,
+  });
+  const bareD7Count = stableD7Evidence({
+    exposureHistory: undefined,
+    preResponseCueExposureCount: 0,
+  });
+  const copiedCountOnly = evaluateAttemptEvidence([], {
+    ...base,
+    farTransfer: bareTransferCount,
+    stableD7: bareD7Count,
+  });
+  assert.equal(copiedCountOnly.independentRetrieval, true);
+  assert.equal(copiedCountOnly.farTransfer, false);
+  assert.equal(copiedCountOnly.stableD7, false);
+
+  const zeroCountOnly = evaluateAttemptEvidence([], {
+    exposureHistory: canonicalExposureHistory(),
+    attempt: canonicalIndependentAttempt(),
+  });
+  assert.equal(zeroCountOnly.independentRetrieval, false);
+  assert.equal(zeroCountOnly.farTransfer, false);
+  assert.equal(zeroCountOnly.stableD7, false);
+});
+
+test("affirmative learning evidence requires ambiguous to be exact primitive false", () => {
+  const affirmative = contract.cueExposure.learningEvidenceGate.requiredAffirmativeEvidence;
+  for (const evidenceContract of Object.values(affirmative)) {
+    assert.equal(evidenceContract.ambiguousMustExactlyEqual, false);
+  }
+  const base = {
+    exposureHistory: canonicalExposureHistory(),
+    attempt: canonicalIndependentAttempt(),
+    independentResponse: independentResponseEvidence(),
+  };
+  const invalidAmbiguityValues = [undefined, null, true, "true", "false", 0, 1, {}, []];
+
+  for (const ambiguous of invalidAmbiguityValues) {
+    const independentResponse = independentResponseEvidence();
+    if (ambiguous === undefined) delete independentResponse.canonicalResponseEvaluation.ambiguous;
+    else independentResponse.canonicalResponseEvaluation.ambiguous = ambiguous;
+    const result = evaluateAttemptEvidence([], {
+      ...base,
+      independentResponse,
+      farTransfer: farTransferEvidence(),
+      stableD7: stableD7Evidence(),
+    });
+    assert.equal(result.independentRetrieval, false, `independentResponse: ${String(ambiguous)}`);
+    assert.equal(result.farTransfer, false, `independentResponse: ${String(ambiguous)}`);
+    assert.equal(result.stableD7, false, `independentResponse: ${String(ambiguous)}`);
+  }
+
+  for (const ambiguous of invalidAmbiguityValues) {
+    const farTransfer = farTransferEvidence();
+    if (ambiguous === undefined) delete farTransfer.canonicalTransferEvaluation.ambiguous;
+    else farTransfer.canonicalTransferEvaluation.ambiguous = ambiguous;
+    const result = evaluateAttemptEvidence([], {
+      ...base,
+      farTransfer,
+      stableD7: stableD7Evidence(),
+    });
+    assert.equal(result.independentRetrieval, true, `farTransfer: ${String(ambiguous)}`);
+    assert.equal(result.farTransfer, false, `farTransfer: ${String(ambiguous)}`);
+    assert.equal(result.stableD7, true, `farTransfer: ${String(ambiguous)}`);
+  }
+
+  for (const ambiguous of invalidAmbiguityValues) {
+    const stableD7 = stableD7Evidence();
+    if (ambiguous === undefined) delete stableD7.canonicalD7Evaluation.ambiguous;
+    else stableD7.canonicalD7Evaluation.ambiguous = ambiguous;
+    const result = evaluateAttemptEvidence([], {
+      ...base,
+      farTransfer: farTransferEvidence(),
+      stableD7,
+    });
+    assert.equal(result.independentRetrieval, true, `stableD7: ${String(ambiguous)}`);
+    assert.equal(result.farTransfer, true, `stableD7: ${String(ambiguous)}`);
+    assert.equal(result.stableD7, false, `stableD7: ${String(ambiguous)}`);
+  }
+
+  const exactFalse = evaluateAttemptEvidence([], {
+    ...base,
+    farTransfer: farTransferEvidence(),
+    stableD7: stableD7Evidence(),
+  });
+  assert.equal(exactFalse.independentRetrieval, true);
+  assert.equal(exactFalse.farTransfer, true);
+  assert.equal(exactFalse.stableD7, true);
+
+  const falseAlone = evaluateAttemptEvidence([], {
+    exposureHistory: canonicalExposureHistory(),
+    attempt: canonicalIndependentAttempt(),
+    independentResponse: { ambiguous: false },
+    farTransfer: { ambiguous: false },
+    stableD7: { ambiguous: false },
+  });
+  assert.equal(falseAlone.independentRetrieval, false);
+  assert.equal(falseAlone.farTransfer, false);
+  assert.equal(falseAlone.stableD7, false);
+});
+
+test("affirmative learning evidence requires record-internal canonical accepted performance", () => {
+  const learningGate = contract.cueExposure.learningEvidenceGate;
+  const affirmative = learningGate.requiredAffirmativeEvidence;
+  const outcomeField = "affirmativeEvidenceOutcomeAccepted";
+  const sharedPredicate = learningGate.canonicalAffirmativeEvidenceOutcomePredicate;
+  assert.equal(sharedPredicate.field, outcomeField);
+  assert.equal(sharedPredicate.requiredPlacement, "INSIDE_EACH_CLOSED_CANONICAL_EVALUATION_RECORD");
+  assert.equal(sharedPredicate.requiredExactPrimitiveBooleanValue, true);
+  assert.deepEqual(sharedPredicate.applicableCanonicalRecords, [
+    "canonicalResponseEvaluation",
+    "canonicalTransferEvaluation",
+    "canonicalD7Evaluation",
+  ]);
+  assert.equal(sharedPredicate.completionRecordExistenceResultIdScoreOrThresholdSufficient, false);
+  assert.equal(sharedPredicate.outerCallerClientOrCrossStageOutcomeSubstitutionAllowed, false);
+  assert.equal(sharedPredicate.inferenceDefaultingAliasingOrCoercionAllowed, false);
+  assert.equal(sharedPredicate.createsNumericScoringRubricThresholdOrMasteryAuthority, false);
+
+  const validEvidence = () => ({
+    exposureHistory: canonicalExposureHistory(),
+    attempt: canonicalIndependentAttempt(),
+    independentResponse: independentResponseEvidence(),
+    farTransfer: farTransferEvidence(),
+    stableD7: stableD7Evidence(),
+  });
+  const stages = [
+    {
+      label: "base response",
+      slot: "independentResponse",
+      gate: affirmative.independentRetrieval.canonicalResponseEvaluationResolutionGate,
+      createRecord: canonicalResponseEvaluation,
+      createCandidate: (record) => independentResponseEvidence({
+        canonicalResponseEvaluation: record,
+      }),
+      crossStageRecord: canonicalTransferEvaluation,
+      expected: { independentRetrieval: false, farTransfer: false, stableD7: false },
+    },
+    {
+      label: "transfer",
+      slot: "farTransfer",
+      gate: affirmative.farTransfer.canonicalTransferEvaluationResolutionGate,
+      createRecord: canonicalTransferEvaluation,
+      createCandidate: (record) => farTransferEvidence({
+        canonicalTransferEvaluation: record,
+      }),
+      crossStageRecord: canonicalD7Evaluation,
+      expected: { independentRetrieval: true, farTransfer: false, stableD7: true },
+    },
+    {
+      label: "D+7",
+      slot: "stableD7",
+      gate: affirmative.stableD7.canonicalD7EvaluationResolutionGate,
+      createRecord: canonicalD7Evaluation,
+      createCandidate: (record) => stableD7Evidence({
+        canonicalD7Evaluation: record,
+      }),
+      crossStageRecord: canonicalResponseEvaluation,
+      expected: { independentRetrieval: true, farTransfer: true, stableD7: false },
+    },
+  ];
+  const evaluateStage = (stage, record, outerClaims = {}) => {
+    const candidate = stage.createCandidate(record);
+    Object.assign(candidate, outerClaims);
+    return evaluateAttemptEvidence([], { ...validEvidence(), [stage.slot]: candidate });
+  };
+  const assertIsolation = (actual, expected, label) => {
+    assert.equal(actual.independentRetrieval, expected.independentRetrieval, `${label}: independentRetrieval`);
+    assert.equal(actual.farTransfer, expected.farTransfer, `${label}: farTransfer`);
+    assert.equal(actual.stableD7, expected.stableD7, `${label}: stableD7`);
+  };
+  const invalidOutcomeMutations = [
+    ["field deleted", (record) => { delete record[outcomeField]; }],
+    ["undefined", (record) => { record[outcomeField] = undefined; }],
+    ["false", (record) => { record[outcomeField] = false; }],
+    ["null", (record) => { record[outcomeField] = null; }],
+    ["string true", (record) => { record[outcomeField] = "true"; }],
+    ["string false", (record) => { record[outcomeField] = "false"; }],
+    ["zero", (record) => { record[outcomeField] = 0; }],
+    ["one", (record) => { record[outcomeField] = 1; }],
+    ["object", (record) => { record[outcomeField] = {}; }],
+    ["array", (record) => { record[outcomeField] = []; }],
+  ];
+
+  for (const stage of stages) {
+    assert.ok(stage.gate.requiredFields.includes(outcomeField), stage.label);
+    assert.equal(stage.gate.requiredExactPrimitiveBooleanStates[outcomeField], true, stage.label);
+
+    for (const [label, mutate] of invalidOutcomeMutations) {
+      const record = stage.createRecord();
+      mutate(record);
+      assertIsolation(evaluateStage(stage, record), stage.expected, `${stage.label}: ${label}`);
+    }
+
+    const completionOnly = stage.createRecord();
+    assert.equal(completionOnly.actualSubmission, true);
+    assert.equal(completionOnly.evaluationCompleted, true);
+    delete completionOnly[outcomeField];
+    assertIsolation(
+      evaluateStage(stage, completionOnly),
+      stage.expected,
+      `${stage.label}: completion without accepted outcome`,
+    );
+
+    for (const [label, rejectedOutcomeClaims] of [
+      ["unsuccessful", { success: false }],
+      ["incorrect", { correct: false }],
+      ["zero score", { score: 0 }],
+      ["below threshold", { score: 49, threshold: 50, thresholdMet: false }],
+    ]) {
+      const rejectedRecord = stage.createRecord({ [outcomeField]: false });
+      assertIsolation(
+        evaluateStage(stage, rejectedRecord, rejectedOutcomeClaims),
+        stage.expected,
+        `${stage.label}: canonical evaluator rejected ${label}`,
+      );
+    }
+
+    const nestedRejectedOutcome = stage.createRecord({ [outcomeField]: false });
+    assertIsolation(
+      evaluateStage(stage, nestedRejectedOutcome, {
+        success: true,
+        correct: true,
+        score: 100,
+        threshold: 1,
+        thresholdMet: true,
+        callerSuccess: true,
+      }),
+      stage.expected,
+      `${stage.label}: outer success claims cannot rescue nested rejection`,
+    );
+
+    const crossStageOutcome = stage.createRecord();
+    crossStageOutcome[outcomeField] = stage.crossStageRecord();
+    assertIsolation(
+      evaluateStage(stage, crossStageOutcome),
+      stage.expected,
+      `${stage.label}: cross-stage outcome substitution`,
+    );
+  }
+
+  const transferWithResultButRejected = canonicalTransferEvaluation({
+    [outcomeField]: false,
+  });
+  assert.equal(typeof transferWithResultButRejected.resultId, "string");
+  assertIsolation(
+    evaluateStage(stages[1], transferWithResultButRejected),
+    stages[1].expected,
+    "transfer resultId existence cannot substitute",
+  );
+
+  const exactTrue = evaluateAttemptEvidence([], validEvidence());
+  assert.deepEqual(exactTrue, {
+    failClosed: false,
+    independentEvidenceEligibilityPreserved: true,
+    independentRetrieval: true,
+    farTransfer: true,
+    stableD7: true,
+  });
+});
+
+test("far transfer requires a distinct eligible non-same-representation submitted result", () => {
+  const base = {
+    exposureHistory: canonicalExposureHistory(),
+    attempt: canonicalIndependentAttempt(),
+    independentResponse: independentResponseEvidence(),
+  };
+  const valid = evaluateAttemptEvidence([], { ...base, farTransfer: farTransferEvidence() });
+  assert.equal(valid.independentRetrieval, true);
+  assert.equal(valid.farTransfer, true);
+  assert.equal(valid.stableD7, false);
+
+  for (const farTransfer of [
+    undefined,
+    farTransferEvidence({ source: "CLIENT" }),
+    farTransferEvidence({ canonicalAttemptSource: "CLIENT" }),
+    farTransferEvidence({ sourceAttemptId: "other-attempt" }),
+    farTransferEvidence({ learnerPrivateScopeId: "other-learner" }),
+    farTransferEvidence({ canonicalAttemptState: "INDEPENDENT_ATTEMPT_OPEN" }),
+    farTransferEvidence({ transferAttemptId: "attempt-1" }),
+    farTransferEvidence({ transferTaskId: "task-origin-1" }),
+    farTransferEvidence({ distinctEligibleTask: false }),
+    farTransferEvidence({ representationRelation: "SAME_REPRESENTATION" }),
+    farTransferEvidence({ actualSubmission: false }),
+    farTransferEvidence({ evaluationCompleted: false }),
+    farTransferEvidence({ resultId: "" }),
+    farTransferEvidence({ assistanceState: "ASSISTED" }),
+    farTransferEvidence({ exposureHistory: undefined }),
+    farTransferEvidence({
+      exposureHistory: canonicalExposureHistory({
+        attemptId: "attempt-transfer-1",
+        complete: false,
+      }),
+    }),
+    farTransferEvidence({
+      exposureHistory: canonicalExposureHistory({
+        attemptId: "attempt-transfer-1",
+        preResponseCueExposureCount: 1,
+      }),
+    }),
+    farTransferEvidence({ ambiguous: true }),
+  ]) {
+    assert.equal(evaluateAttemptEvidence([], { ...base, farTransfer }).farTransfer, false);
+  }
+});
+
+test("far transfer binds the supplied origin to one exact canonical source task", () => {
+  const base = {
+    exposureHistory: canonicalExposureHistory(),
+    independentResponse: independentResponseEvidence(),
+    stableD7: stableD7Evidence(),
+  };
+  const evaluate = (attempt, farTransfer) => evaluateAttemptEvidence([], {
+    ...base,
+    attempt,
+    farTransfer,
+  });
+
+  const sourceTaskA = canonicalIndependentAttempt({
+    taskBinding: canonicalSourceTaskBinding({ taskId: "task-a" }),
+  });
+  const transferAttemptForTask = (taskId) => canonicalSubmittedTransferAttempt({
+    taskBinding: canonicalTransferTaskBinding({ taskId }),
+  });
+  const mismatchedOrigin = evaluate(sourceTaskA, farTransferEvidence({
+    originTaskId: "task-b",
+    transferTaskId: "task-c",
+    canonicalTransferAttempt: transferAttemptForTask("task-c"),
+  }));
+  assert.equal(mismatchedOrigin.independentRetrieval, true);
+  assert.equal(mismatchedOrigin.farTransfer, false);
+  assert.equal(mismatchedOrigin.stableD7, true);
+
+  const valid = evaluate(sourceTaskA, farTransferEvidence({
+    originTaskId: "task-a",
+    transferTaskId: "task-c",
+    canonicalTransferAttempt: transferAttemptForTask("task-c"),
+  }));
+  assert.equal(valid.independentRetrieval, true);
+  assert.equal(valid.farTransfer, true);
+  assert.equal(valid.stableD7, true);
+
+  const sameTask = evaluate(sourceTaskA, farTransferEvidence({
+    originTaskId: "task-a",
+    transferTaskId: "task-a",
+    canonicalTransferAttempt: transferAttemptForTask("task-a"),
+  }));
+  assert.equal(sameTask.independentRetrieval, true);
+  assert.equal(sameTask.farTransfer, false);
+  assert.equal(sameTask.stableD7, true);
+
+  const invalidBindings = [undefined, null, [], {}];
+  for (const field of contract.cueExposure.learningEvidenceGate
+    .requiredAffirmativeEvidence.farTransfer.canonicalSourceTaskBindingGate.requiredFields) {
+    const missing = canonicalSourceTaskBinding();
+    delete missing[field];
+    invalidBindings.push(missing);
+  }
+  invalidBindings.push(
+    canonicalSourceTaskBinding({ source: "CLIENT" }),
+    canonicalSourceTaskBinding({ attemptId: "attempt-other" }),
+    canonicalSourceTaskBinding({ learnerPrivateScopeId: "learner-other" }),
+    canonicalSourceTaskBinding({ taskId: "" }),
+    canonicalSourceTaskBinding({ taskId: " task-a" }),
+    canonicalSourceTaskBinding({ taskId: null }),
+    canonicalSourceTaskBinding({ matchingRecordCount: 0 }),
+    canonicalSourceTaskBinding({ matchingRecordCount: 2 }),
+    canonicalSourceTaskBinding({ serverSide: false }),
+    canonicalSourceTaskBinding({ authoritative: false }),
+    canonicalSourceTaskBinding({ independentlyResolved: false }),
+    canonicalSourceTaskBinding({ known: false }),
+    canonicalSourceTaskBinding({ resolved: false }),
+    canonicalSourceTaskBinding({ ambiguous: true }),
+    canonicalSourceTaskBinding({ conflicting: true }),
+    canonicalSourceTaskBinding({ stale: true }),
+    canonicalSourceTaskBinding({ clientInferred: true }),
+    canonicalSourceTaskBinding({ callerInferred: true }),
+    canonicalSourceTaskBinding({ mismatched: true }),
+    canonicalSourceTaskBinding({ unknownField: true }),
+  );
+  for (const taskBinding of invalidBindings) {
+    const result = evaluate(
+      canonicalIndependentAttempt({ taskBinding }),
+      farTransferEvidence({
+        originTaskId: "task-origin-1",
+        transferTaskId: "task-c",
+        canonicalTransferAttempt: transferAttemptForTask("task-c"),
+      }),
+    );
+    assert.equal(result.independentRetrieval, true);
+    assert.equal(result.farTransfer, false);
+    assert.equal(result.stableD7, true);
+  }
+});
+
+test("far transfer binds the transfer task to one independently resolved canonical attempt", () => {
+  const farTransferGate = contract.cueExposure.learningEvidenceGate
+    .requiredAffirmativeEvidence.farTransfer;
+  const attemptGate = farTransferGate.canonicalTransferAttemptResolutionGate;
+  const sourceTaskGate = farTransferGate.canonicalSourceTaskBindingGate;
+  const transferTaskGate = farTransferGate.canonicalTransferTaskBindingGate;
+  const comparisonGate = farTransferGate.canonicalTaskIdentityComparisonGate;
+  const orderingGate = attemptGate.canonicalSourceSubmissionOrderingGate;
+  assert.equal(attemptGate.recordRef, "evidence.farTransfer.canonicalTransferAttempt");
+  assert.equal(attemptGate.resolutionSource, "CANONICAL_SERVER_ATTEMPT_LEDGER");
+  assert.equal(attemptGate.exactMatchingRecordCount, 1);
+  assert.equal(attemptGate.requiredCanonicalAttemptState, "SUBMITTED");
+  assert.equal(attemptGate.canonicalSourceAttemptMaySubstitute, false);
+  assert.equal(orderingGate.canonicalSourceAttemptRecordRef, "evidence.attempt");
+  assert.equal(orderingGate.canonicalSourceTimestampField, "submittedAt");
+  assert.equal(
+    orderingGate.canonicalTransferAttemptRecordRef,
+    "evidence.farTransfer.canonicalTransferAttempt",
+  );
+  assert.equal(orderingGate.canonicalTransferTimestampField, "submittedAt");
+  assert.equal(
+    orderingGate.comparison,
+    "CANONICAL_TRANSFER_ATTEMPT_SUBMITTED_AT_GTE_CANONICAL_SOURCE_ATTEMPT_SUBMITTED_AT",
+  );
+  assert.equal(orderingGate.equalityAccepted, true);
+  assert.equal(orderingGate.callerOrOuterTimestampSubstitutionAllowed, false);
+  assert.equal(orderingGate.invalidOrderingAffectsIndependentRetrievalOrStableD7, false);
+  assert.equal(sourceTaskGate.resolutionSource, "CANONICAL_SERVER_ATTEMPT_TASK_BINDING_RESOLVER");
+  assert.equal(transferTaskGate.resolutionSource, "CANONICAL_SERVER_ATTEMPT_TASK_BINDING_RESOLVER");
+  assert.equal(transferTaskGate.sourceBindingMaySubstituteForTransferBinding, false);
+  assert.equal(transferTaskGate.sameBindingRecordMaySatisfySourceAndTransfer, false);
+  assert.equal(transferTaskGate.mustBindExactlyToResolvedCanonicalTransferAttempt, true);
+  assert.equal(comparisonGate.comparison, "EXACT_FIELD_FOR_FIELD");
+  for (const field of [
+    "trimAllowed",
+    "caseFoldAllowed",
+    "aliasResolutionAllowed",
+    "inferenceAllowed",
+    "callerSuppliedTaskInequalitySufficient",
+    "distinctEligibleTaskFlagSufficient",
+    "nonSameRepresentationFlagSufficient",
+    "sourceBindingMaySubstituteForTransferBinding",
+  ]) assert.equal(comparisonGate[field], false, field);
+  assert.equal(comparisonGate.sourceAndTransferBindingsValidatedIndependently, true);
+
+  const sourceTaskA = canonicalIndependentAttempt({
+    taskBinding: canonicalSourceTaskBinding({ taskId: "task-a" }),
+  });
+  const base = {
+    exposureHistory: canonicalExposureHistory(),
+    attempt: sourceTaskA,
+    independentResponse: independentResponseEvidence(),
+    stableD7: stableD7Evidence(),
+  };
+  const transferAttemptForTask = (taskId, overrides = {}) => canonicalSubmittedTransferAttempt({
+    taskBinding: canonicalTransferTaskBinding({ taskId }),
+    ...overrides,
+  });
+  const transferFor = (canonicalTaskId, suppliedTransferTaskId, overrides = {}) => farTransferEvidence({
+    originTaskId: "task-a",
+    transferTaskId: suppliedTransferTaskId,
+    canonicalTransferAttempt: transferAttemptForTask(canonicalTaskId),
+    ...overrides,
+  });
+  const evaluate = (farTransfer) => evaluateAttemptEvidence([], { ...base, farTransfer });
+  const assertTransferOnlyFailure = (farTransfer, label) => {
+    const result = evaluate(farTransfer);
+    assert.equal(result.independentRetrieval, true, `${label}: independentRetrieval`);
+    assert.equal(result.farTransfer, false, `${label}: farTransfer`);
+    assert.equal(result.stableD7, true, `${label}: stableD7`);
+  };
+
+  assertTransferOnlyFailure(
+    transferFor("task-a", "task-c"),
+    "canonical source A plus actual transfer A cannot be made distinct by supplied C",
+  );
+  const valid = evaluate(transferFor("task-c", "task-c"));
+  assert.equal(valid.independentRetrieval, true);
+  assert.equal(valid.farTransfer, true);
+  assert.equal(valid.stableD7, true);
+  const equalSubmissionInstant = evaluate(transferFor("task-c", "task-c", {
+    canonicalTransferAttempt: transferAttemptForTask("task-c", {
+      submittedAt: sourceTaskA.submittedAt,
+    }),
+  }));
+  assert.equal(equalSubmissionInstant.independentRetrieval, true);
+  assert.equal(equalSubmissionInstant.farTransfer, true);
+  assert.equal(equalSubmissionInstant.stableD7, true);
+  assertTransferOnlyFailure(
+    transferFor("task-c", "task-c", {
+      canonicalTransferAttempt: transferAttemptForTask("task-c", {
+        submittedAt: "2026-07-31T23:59:59.999Z",
+      }),
+    }),
+    "canonical transfer attempt cannot predate the canonical source response",
+  );
+  assertTransferOnlyFailure(
+    transferFor("task-c", "task-c", {
+      canonicalTransferAttempt: transferAttemptForTask("task-c", {
+        submittedAt: "2026-07-31T23:59:59.999Z",
+      }),
+      sourceAttemptSubmittedAt: "1900-01-01T00:00:00.000Z",
+      transferAttemptSubmittedAt: "2099-01-01T00:00:00.000Z",
+    }),
+    "outer timestamps cannot replace canonical source-to-transfer ordering",
+  );
+  assertTransferOnlyFailure(
+    transferFor("task-c", "task-b"),
+    "supplied transfer B cannot replace canonical transfer C",
+  );
+  assertTransferOnlyFailure(
+    transferFor("task-a", "task-a"),
+    "canonical source A and transfer A are not far transfer",
+  );
+  for (const suppliedTransferTaskId of ["TASK-C", "task-c ", "task-alias-c"]) {
+    assertTransferOnlyFailure(
+      transferFor("task-c", suppliedTransferTaskId),
+      `task identity is not normalized: ${suppliedTransferTaskId}`,
+    );
+  }
+
+  const validTransferAttempt = () => transferAttemptForTask("task-c");
+  const invalidTransferAttempts = [undefined, null, [], {}];
+  for (const field of attemptGate.requiredFields) {
+    const missing = validTransferAttempt();
+    delete missing[field];
+    invalidTransferAttempts.push(missing);
+  }
+  for (const [field, expected] of Object.entries(
+    attemptGate.requiredExactPrimitiveBooleanStates,
+  )) {
+    invalidTransferAttempts.push(
+      transferAttemptForTask("task-c", { [field]: !expected }),
+      transferAttemptForTask("task-c", { [field]: String(expected) }),
+    );
+  }
+  invalidTransferAttempts.push(
+    transferAttemptForTask("task-c", { source: "OTHER_SERVER_ATTEMPT_RESOLVER" }),
+    transferAttemptForTask("task-c", { attemptId: "attempt-foreign" }),
+    transferAttemptForTask("task-c", { attemptId: "" }),
+    transferAttemptForTask("task-c", { learnerPrivateScopeId: "learner-foreign" }),
+    transferAttemptForTask("task-c", { learnerPrivateScopeId: "" }),
+    transferAttemptForTask("task-c", { matchingRecordCount: 0 }),
+    transferAttemptForTask("task-c", { matchingRecordCount: 2 }),
+    transferAttemptForTask("task-c", { canonicalAttemptState: "INDEPENDENT_ATTEMPT_OPEN" }),
+    transferAttemptForTask("task-c", { assistanceState: "ASSISTED" }),
+    transferAttemptForTask("task-c", { submittedAt: "2026-08-02" }),
+    transferAttemptForTask("task-c", { extraField: true }),
+    sourceTaskA,
+    transferAttemptForTask("task-c", { taskBinding: sourceTaskA.taskBinding }),
+  );
+  for (const [index, canonicalTransferAttempt] of invalidTransferAttempts.entries()) {
+    assertTransferOnlyFailure(
+      transferFor("task-c", "task-c", { canonicalTransferAttempt }),
+      `invalid canonical transfer attempt ${index}`,
+    );
+  }
+
+  const validTransferTaskBinding = () => canonicalTransferTaskBinding({ taskId: "task-c" });
+  const invalidTransferTaskBindings = [undefined, null, [], {}];
+  for (const field of transferTaskGate.requiredFields) {
+    const missing = validTransferTaskBinding();
+    delete missing[field];
+    invalidTransferTaskBindings.push(missing);
+  }
+  for (const [field, expected] of Object.entries(
+    transferTaskGate.requiredExactPrimitiveBooleanStates,
+  )) {
+    invalidTransferTaskBindings.push(
+      canonicalTransferTaskBinding({ taskId: "task-c", [field]: !expected }),
+      canonicalTransferTaskBinding({ taskId: "task-c", [field]: String(expected) }),
+    );
+  }
+  invalidTransferTaskBindings.push(
+    canonicalTransferTaskBinding({ source: "OTHER_TASK_BINDING_RESOLVER", taskId: "task-c" }),
+    canonicalTransferTaskBinding({ attemptId: "attempt-foreign", taskId: "task-c" }),
+    canonicalTransferTaskBinding({ learnerPrivateScopeId: "learner-foreign", taskId: "task-c" }),
+    canonicalTransferTaskBinding({ taskId: "" }),
+    canonicalTransferTaskBinding({ taskId: " task-c" }),
+    canonicalTransferTaskBinding({ taskId: null }),
+    canonicalTransferTaskBinding({ taskId: "task-c", matchingRecordCount: 0 }),
+    canonicalTransferTaskBinding({ taskId: "task-c", matchingRecordCount: 2 }),
+    canonicalTransferTaskBinding({ taskId: "task-c", extraField: true }),
+    sourceTaskA.taskBinding,
+  );
+  for (const [index, taskBinding] of invalidTransferTaskBindings.entries()) {
+    assertTransferOnlyFailure(
+      transferFor("task-c", "task-c", {
+        canonicalTransferAttempt: canonicalSubmittedTransferAttempt({ taskBinding }),
+      }),
+      `invalid canonical transfer task binding ${index}`,
+    );
+  }
+});
+
+test("far-transfer canonical evaluation rejects every mutation without weakening other credits", () => {
+  const farTransferGate = contract.cueExposure.learningEvidenceGate
+    .requiredAffirmativeEvidence.farTransfer;
+  const evaluationGate = farTransferGate.canonicalTransferEvaluationResolutionGate;
+  const base = {
+    exposureHistory: canonicalExposureHistory(),
+    attempt: canonicalIndependentAttempt(),
+    independentResponse: independentResponseEvidence(),
+    stableD7: stableD7Evidence(),
+  };
+  const assertTransferOnlyFailure = (farTransfer, label) => {
+    const result = validateLearningEvidence([], { ...base, farTransfer });
+    assert.equal(result.independentRetrieval, true, `${label}: independentRetrieval`);
+    assert.equal(result.farTransfer, false, `${label}: farTransfer`);
+    assert.equal(result.stableD7, true, `${label}: stableD7`);
+  };
+  const valid = validateLearningEvidence([], { ...base, farTransfer: farTransferEvidence() });
+  assert.equal(valid.independentRetrieval, true);
+  assert.equal(valid.farTransfer, true);
+  assert.equal(valid.stableD7, true);
+  assert.equal(
+    evaluationGate.canonicalSubmissionOrderingGate.comparison,
+    "EVALUATION_COMPLETED_AT_GTE_CANONICAL_ATTEMPT_SUBMITTED_AT",
+  );
+  assert.equal(evaluationGate.canonicalSubmissionOrderingGate.equalityAccepted, true);
+  assert.equal(
+    evaluationGate.canonicalSubmissionOrderingGate.callerOrOuterTimestampSubstitutionAllowed,
+    false,
+  );
+
+  for (const malformed of [undefined, null, [], {}, "transfer"]) {
+    assertTransferOnlyFailure(malformed, `transfer malformed ${String(malformed)}`);
+  }
+
+  for (const field of farTransferGate.candidateEnvelopeGate.requiredFields) {
+    const candidate = farTransferEvidence();
+    delete candidate[field];
+    assertTransferOnlyFailure(candidate, `transfer envelope missing ${field}`);
+  }
+  const extraEnvelope = farTransferEvidence();
+  extraEnvelope.extraField = true;
+  assertTransferOnlyFailure(extraEnvelope, "transfer envelope extra field");
+
+  for (const field of evaluationGate.requiredFields) {
+    const record = canonicalTransferEvaluation();
+    delete record[field];
+    assertTransferOnlyFailure(
+      farTransferEvidence({ canonicalTransferEvaluation: record }),
+      `transfer evaluation missing ${field}`,
+    );
+  }
+  for (const [field, expected] of Object.entries(
+    evaluationGate.requiredExactPrimitiveBooleanStates,
+  )) {
+    assertTransferOnlyFailure(
+      farTransferEvidence({
+        canonicalTransferEvaluation: canonicalTransferEvaluation({ [field]: String(expected) }),
+      }),
+      `transfer evaluation non-boolean ${field}`,
+    );
+    assertTransferOnlyFailure(
+      farTransferEvidence({
+        canonicalTransferEvaluation: canonicalTransferEvaluation({ [field]: !expected }),
+      }),
+      `transfer evaluation unsafe ${field}`,
+    );
+  }
+  for (const [record, label] of [
+    [null, "null"],
+    [[], "array"],
+    [{}, "malformed object"],
+    [canonicalTransferEvaluation({ source: "CLIENT" }), "wrong source"],
+    [canonicalTransferEvaluation({ matchingRecordCount: 0 }), "zero records"],
+    [canonicalTransferEvaluation({ matchingRecordCount: 2 }), "multiple records"],
+    [canonicalTransferEvaluation({ conflicting: true }), "conflicting"],
+    [canonicalTransferEvaluation({ stale: true }), "stale"],
+    [canonicalTransferEvaluation({ replayed: true }), "replayed"],
+    [canonicalTransferEvaluation({ cancelled: true }), "cancelled"],
+    [canonicalTransferEvaluation({ clientInferred: true }), "client inferred"],
+    [canonicalTransferEvaluation({ callerInferred: true }), "caller inferred"],
+    [canonicalTransferEvaluation({ sourceAttemptId: "attempt-foreign" }), "foreign source attempt"],
+    [canonicalTransferEvaluation({ transferAttemptId: "attempt-transfer-foreign" }), "foreign transfer attempt"],
+    [canonicalTransferEvaluation({ learnerPrivateScopeId: "learner-foreign" }), "foreign learner"],
+    [canonicalTransferEvaluation({ submissionId: "submission-foreign" }), "foreign submission"],
+    [canonicalTransferEvaluation({ evaluationId: "evaluation-foreign" }), "foreign evaluation"],
+    [canonicalTransferEvaluation({ originTaskId: "task-foreign" }), "foreign origin task"],
+    [canonicalTransferEvaluation({ transferTaskId: "task-foreign" }), "foreign transfer task"],
+    [canonicalTransferEvaluation({ evaluationCompletedAt: "2026-08-02" }), "malformed timestamp"],
+    [canonicalTransferEvaluation({ extraField: true }), "extra field"],
+  ]) {
+    assertTransferOnlyFailure(
+      farTransferEvidence({ canonicalTransferEvaluation: record }),
+      `transfer evaluation ${label}`,
+    );
+  }
+
+  const oneMillisecondBefore = farTransferEvidence({
+    canonicalTransferEvaluation: canonicalTransferEvaluation({
+      evaluationCompletedAt: "2026-08-01T23:59:59.999Z",
+    }),
+  });
+  assertTransferOnlyFailure(oneMillisecondBefore, "transfer evaluation before submission");
+
+  const atSubmission = validateLearningEvidence([], {
+    ...base,
+    farTransfer: farTransferEvidence({
+      evaluationCompletedAt: "2026-08-02T00:00:00.000Z",
+    }),
+  });
+  assert.equal(atSubmission.independentRetrieval, true);
+  assert.equal(atSubmission.farTransfer, true);
+  assert.equal(atSubmission.stableD7, true);
+
+  oneMillisecondBefore.evaluationCompletedAt = "2099-01-01T00:00:00.000Z";
+  oneMillisecondBefore.callerEvaluationCompletedAt = "2099-01-01T00:00:00.000Z";
+  assertTransferOnlyFailure(oneMillisecondBefore, "transfer outer timestamp substitution");
+});
+
+test("stable D+7 requires a completed hidden-cue nonconflicted canonical evaluation", () => {
+  const base = {
+    exposureHistory: canonicalExposureHistory(),
+    attempt: canonicalIndependentAttempt(),
+    independentResponse: independentResponseEvidence(),
+  };
+  const valid = evaluateAttemptEvidence([], { ...base, stableD7: stableD7Evidence() });
+  assert.equal(valid.independentRetrieval, true);
+  assert.equal(valid.stableD7, true);
+
+  for (const stableD7 of [
+    undefined,
+    stableD7Evidence({ source: "CLIENT" }),
+    stableD7Evidence({ canonicalAttemptSource: "CLIENT" }),
+    stableD7Evidence({ sourceAttemptId: "other-attempt" }),
+    stableD7Evidence({ learnerPrivateScopeId: "other-learner" }),
+    stableD7Evidence({ canonicalAttemptState: "INDEPENDENT_ATTEMPT_OPEN" }),
+    stableD7Evidence({ d7AttemptId: "attempt-1" }),
+    stableD7Evidence({ timing: "D_PLUS_1" }),
+    stableD7Evidence({ actualSubmission: false }),
+    stableD7Evidence({ evaluationCompleted: false }),
+    stableD7Evidence({ cueState: "PROMPT_ONLY" }),
+    stableD7Evidence({ hiddenCueBytesAbsentAcrossAllSurfaces: false }),
+    stableD7Evidence({ representationRelation: "SAME_REPRESENTATION" }),
+    stableD7Evidence({ unresolvedScoringConflictCount: 1 }),
+    stableD7Evidence({ assistanceState: "ASSISTED" }),
+    stableD7Evidence({ exposureHistory: undefined }),
+    stableD7Evidence({
+      exposureHistory: canonicalExposureHistory({
+        attemptId: "attempt-d7-1",
+        complete: false,
+      }),
+    }),
+    stableD7Evidence({
+      exposureHistory: canonicalExposureHistory({
+        attemptId: "attempt-d7-1",
+        preResponseCueExposureCount: 1,
+      }),
+    }),
+    stableD7Evidence({ ambiguous: true }),
+  ]) {
+    assert.equal(evaluateAttemptEvidence([], { ...base, stableD7 }).stableD7, false);
+  }
+});
+
+test("stable D+7 resolves one exact canonical D+7 attempt without weakening other credits", () => {
+  const gate = contract.cueExposure.learningEvidenceGate
+    .requiredAffirmativeEvidence.stableD7.canonicalD7AttemptResolutionGate;
+  const orderingGate = gate.canonicalSourceSubmissionOrderingGate;
+  assert.equal(gate.recordRef, "evidence.stableD7.canonicalD7Attempt");
+  assert.equal(gate.resolutionSource, "CANONICAL_SERVER_ATTEMPT_LEDGER");
+  assert.equal(gate.exactMatchingRecordCount, 1);
+  assert.equal(gate.requiredCanonicalAttemptState, "SUBMITTED");
+  assert.equal(gate.requiredAssistanceState, "INDEPENDENT");
+  assert.deepEqual(gate.timestampFields, ["submittedAt"]);
+  assert.equal(gate.mustDifferFromCanonicalSourceAttemptId, true);
+  assert.equal(gate.canonicalSourceAttemptMaySubstitute, false);
+  assert.equal(gate.outerD7ClaimsMaySubstitute, false);
+  assert.equal(gate.invalidD7AttemptAffectsIndependentRetrievalOrFarTransfer, false);
+  assert.equal(orderingGate.canonicalSourceAttemptRecordRef, "evidence.attempt");
+  assert.equal(orderingGate.canonicalSourceTimestampField, "submittedAt");
+  assert.equal(
+    orderingGate.canonicalD7AttemptRecordRef,
+    "evidence.stableD7.canonicalD7Attempt",
+  );
+  assert.equal(orderingGate.canonicalD7TimestampField, "submittedAt");
+  assert.equal(
+    orderingGate.comparison,
+    "CANONICAL_D7_ATTEMPT_SUBMITTED_AT_GTE_CANONICAL_SOURCE_ATTEMPT_SUBMITTED_AT",
+  );
+  assert.equal(orderingGate.equalityAccepted, true);
+  assert.equal(orderingGate.callerOrOuterTimestampSubstitutionAllowed, false);
+  assert.equal(orderingGate.invalidOrderingAffectsIndependentRetrievalOrFarTransfer, false);
+
+  const sourceAttempt = canonicalIndependentAttempt();
+  const base = {
+    exposureHistory: canonicalExposureHistory(),
+    attempt: sourceAttempt,
+    independentResponse: independentResponseEvidence(),
+    farTransfer: farTransferEvidence(),
+  };
+  const valid = evaluateAttemptEvidence([], { ...base, stableD7: stableD7Evidence() });
+  assert.equal(valid.independentRetrieval, true);
+  assert.equal(valid.farTransfer, true);
+  assert.equal(valid.stableD7, true);
+
+  const equalSubmissionInstant = evaluateAttemptEvidence([], {
+    ...base,
+    stableD7: stableD7Evidence({
+      canonicalD7Attempt: canonicalSubmittedD7Attempt({ submittedAt: sourceAttempt.submittedAt }),
+    }),
+  });
+  assert.equal(equalSubmissionInstant.independentRetrieval, true);
+  assert.equal(equalSubmissionInstant.farTransfer, true);
+  assert.equal(equalSubmissionInstant.stableD7, true);
+
+  for (const stableD7 of [
+    stableD7Evidence({
+      canonicalD7Attempt: canonicalSubmittedD7Attempt({
+        submittedAt: "2026-07-31T23:59:59.999Z",
+      }),
+    }),
+    stableD7Evidence({
+      canonicalD7Attempt: canonicalSubmittedD7Attempt({
+        submittedAt: "2026-07-31T23:59:59.999Z",
+      }),
+      sourceAttemptSubmittedAt: "1900-01-01T00:00:00.000Z",
+      d7AttemptSubmittedAt: "2099-01-01T00:00:00.000Z",
+    }),
+  ]) {
+    const result = evaluateAttemptEvidence([], { ...base, stableD7 });
+    assert.equal(result.independentRetrieval, true);
+    assert.equal(result.farTransfer, true);
+    assert.equal(result.stableD7, false);
+  }
+
+  const invalidCanonicalD7Attempts = [
+    undefined,
+    null,
+    [],
+    {},
+    sourceAttempt,
+    canonicalSubmittedD7Attempt({ source: "CLIENT" }),
+    canonicalSubmittedD7Attempt({ matchingRecordCount: 0 }),
+    canonicalSubmittedD7Attempt({ matchingRecordCount: 2 }),
+    canonicalSubmittedD7Attempt({ attemptId: "attempt-d7-foreign" }),
+    canonicalSubmittedD7Attempt({ learnerPrivateScopeId: "learner-foreign" }),
+    canonicalSubmittedD7Attempt({ canonicalAttemptState: "INDEPENDENT_ATTEMPT_OPEN" }),
+    canonicalSubmittedD7Attempt({ assistanceState: "ASSISTED" }),
+    canonicalSubmittedD7Attempt({ submittedAt: "2026-08-08" }),
+    canonicalSubmittedD7Attempt({ extraField: true }),
+  ];
+  for (const field of gate.requiredFields) {
+    const omitted = canonicalSubmittedD7Attempt();
+    delete omitted[field];
+    invalidCanonicalD7Attempts.push(omitted);
+  }
+  for (const [field, expected] of Object.entries(
+    gate.requiredExactPrimitiveBooleanStates,
+  )) {
+    const omitted = canonicalSubmittedD7Attempt();
+    delete omitted[field];
+    invalidCanonicalD7Attempts.push(omitted);
+    for (const invalidValue of [undefined, null, !expected, String(expected), 0, 1, {}, []]) {
+      invalidCanonicalD7Attempts.push(canonicalSubmittedD7Attempt({ [field]: invalidValue }));
+    }
+  }
+
+  for (const canonicalD7Attempt of invalidCanonicalD7Attempts) {
+    const result = evaluateAttemptEvidence([], {
+      ...base,
+      stableD7: stableD7Evidence({ canonicalD7Attempt }),
+    });
+    assert.equal(result.independentRetrieval, true);
+    assert.equal(result.farTransfer, true);
+    assert.equal(result.stableD7, false);
+  }
+
+  const reused = evaluateAttemptEvidence([], {
+    ...base,
+    stableD7: stableD7Evidence({ d7AttemptId: sourceAttempt.attemptId }),
+  });
+  assert.equal(reused.independentRetrieval, true);
+  assert.equal(reused.farTransfer, true);
+  assert.equal(reused.stableD7, false);
+});
+
+test("D+7 canonical evaluation rejects every mutation and binds its own completion timestamp", () => {
+  const stableGate = contract.cueExposure.learningEvidenceGate
+    .requiredAffirmativeEvidence.stableD7;
+  const evaluationGate = stableGate.canonicalD7EvaluationResolutionGate;
+  const base = {
+    exposureHistory: canonicalExposureHistory(),
+    attempt: canonicalIndependentAttempt(),
+    independentResponse: independentResponseEvidence(),
+    farTransfer: farTransferEvidence(),
+  };
+  const assertD7OnlyFailure = (stableD7, label) => {
+    const result = validateLearningEvidence([], { ...base, stableD7 });
+    assert.equal(result.independentRetrieval, true, `${label}: independentRetrieval`);
+    assert.equal(result.farTransfer, true, `${label}: farTransfer`);
+    assert.equal(result.stableD7, false, `${label}: stableD7`);
+  };
+  const valid = validateLearningEvidence([], { ...base, stableD7: stableD7Evidence() });
+  assert.equal(valid.independentRetrieval, true);
+  assert.equal(valid.farTransfer, true);
+  assert.equal(valid.stableD7, true);
+  assert.equal(
+    evaluationGate.canonicalSubmissionOrderingGate.comparison,
+    "EVALUATION_COMPLETED_AT_GTE_CANONICAL_ATTEMPT_SUBMITTED_AT",
+  );
+  assert.equal(evaluationGate.canonicalSubmissionOrderingGate.equalityAccepted, true);
+  assert.equal(
+    evaluationGate.canonicalSubmissionOrderingGate.callerOrOuterTimestampSubstitutionAllowed,
+    false,
+  );
+
+  for (const malformed of [undefined, null, [], {}, "D+7"]) {
+    assertD7OnlyFailure(malformed, `D+7 malformed ${String(malformed)}`);
+  }
+
+  for (const field of stableGate.candidateEnvelopeGate.requiredFields) {
+    const candidate = stableD7Evidence();
+    delete candidate[field];
+    assertD7OnlyFailure(candidate, `D+7 envelope missing ${field}`);
+  }
+  const extraEnvelope = stableD7Evidence();
+  extraEnvelope.extraField = true;
+  assertD7OnlyFailure(extraEnvelope, "D+7 envelope extra field");
+
+  for (const field of evaluationGate.requiredFields) {
+    const record = canonicalD7Evaluation();
+    delete record[field];
+    assertD7OnlyFailure(
+      stableD7Evidence({ canonicalD7Evaluation: record }),
+      `D+7 evaluation missing ${field}`,
+    );
+  }
+  for (const [field, expected] of Object.entries(
+    evaluationGate.requiredExactPrimitiveBooleanStates,
+  )) {
+    assertD7OnlyFailure(
+      stableD7Evidence({
+        canonicalD7Evaluation: canonicalD7Evaluation({ [field]: String(expected) }),
+      }),
+      `D+7 evaluation non-boolean ${field}`,
+    );
+    assertD7OnlyFailure(
+      stableD7Evidence({
+        canonicalD7Evaluation: canonicalD7Evaluation({ [field]: !expected }),
+      }),
+      `D+7 evaluation unsafe ${field}`,
+    );
+  }
+  for (const [record, label] of [
+    [null, "null"],
+    [[], "array"],
+    [{}, "malformed object"],
+    [canonicalD7Evaluation({ source: "CLIENT" }), "wrong source"],
+    [canonicalD7Evaluation({ matchingRecordCount: 0 }), "zero records"],
+    [canonicalD7Evaluation({ matchingRecordCount: 2 }), "multiple records"],
+    [canonicalD7Evaluation({ conflicting: true }), "conflicting"],
+    [canonicalD7Evaluation({ stale: true }), "stale"],
+    [canonicalD7Evaluation({ replayed: true }), "replayed"],
+    [canonicalD7Evaluation({ cancelled: true }), "cancelled"],
+    [canonicalD7Evaluation({ clientInferred: true }), "client inferred"],
+    [canonicalD7Evaluation({ callerInferred: true }), "caller inferred"],
+    [canonicalD7Evaluation({ sourceAttemptId: "attempt-foreign" }), "foreign source attempt"],
+    [canonicalD7Evaluation({ attemptId: "attempt-d7-foreign" }), "foreign D+7 attempt"],
+    [canonicalD7Evaluation({ learnerPrivateScopeId: "learner-foreign" }), "foreign learner"],
+    [canonicalD7Evaluation({ submissionId: "submission-foreign" }), "foreign submission"],
+    [canonicalD7Evaluation({ evaluationId: "evaluation-foreign" }), "foreign evaluation"],
+    [canonicalD7Evaluation({ d7EvaluationCompletedAt: "2026-08-08" }), "malformed timestamp"],
+    [canonicalD7Evaluation({ extraField: true }), "extra field"],
+  ]) {
+    assertD7OnlyFailure(
+      stableD7Evidence({ canonicalD7Evaluation: record }),
+      `D+7 evaluation ${label}`,
+    );
+  }
+
+  const d7SubmittedAt = "2026-08-08T00:05:00.000Z";
+  const d7OneMillisecondBefore = stableD7Evidence({
+    canonicalD7Attempt: canonicalSubmittedD7Attempt({ submittedAt: d7SubmittedAt }),
+    canonicalD7Evaluation: canonicalD7Evaluation({
+      d7EvaluationCompletedAt: "2026-08-08T00:04:59.999Z",
+    }),
+  });
+  assertD7OnlyFailure(d7OneMillisecondBefore, "D+7 evaluation before own submission");
+
+  for (const d7EvaluationCompletedAt of [
+    d7SubmittedAt,
+    "2026-08-08T00:05:00.001Z",
+  ]) {
+    const ordered = validateLearningEvidence([], {
+      ...base,
+      stableD7: stableD7Evidence({
+        canonicalD7Attempt: canonicalSubmittedD7Attempt({ submittedAt: d7SubmittedAt }),
+        canonicalD7Evaluation: canonicalD7Evaluation({ d7EvaluationCompletedAt }),
+      }),
+    });
+    assert.equal(ordered.independentRetrieval, true, d7EvaluationCompletedAt);
+    assert.equal(ordered.farTransfer, true, d7EvaluationCompletedAt);
+    assert.equal(ordered.stableD7, true, d7EvaluationCompletedAt);
+  }
+
+  d7OneMillisecondBefore.d7EvaluationCompletedAt = "2099-01-01T00:00:00.000Z";
+  d7OneMillisecondBefore.callerEvaluationCompletedAt = "2099-01-01T00:00:00.000Z";
+  assertD7OnlyFailure(d7OneMillisecondBefore, "D+7 outer timestamp substitution");
+
+  const substitutedOuterTimestamp = stableD7Evidence({
+    canonicalD7Evaluation: canonicalD7Evaluation({
+      d7EvaluationCompletedAt: "2026-08-07T23:59:59.999Z",
+    }),
+  });
+  substitutedOuterTimestamp.d7EvaluationCompletedAt = "2099-01-01T00:00:00.000Z";
+  substitutedOuterTimestamp.source = "CANONICAL_D7_EVALUATION_LEDGER";
+  assertD7OnlyFailure(substitutedOuterTimestamp, "outer completion timestamp substitution");
+
+  assertD7OnlyFailure(
+    stableD7Evidence({ d7EvaluationCompletedAt: "2026-08-07T23:59:59.999Z" }),
+    "one millisecond short",
+  );
+  const exactBoundary = validateLearningEvidence([], {
+    ...base,
+    stableD7: stableD7Evidence({ d7EvaluationCompletedAt: "2026-08-08T00:00:00.000Z" }),
+  });
+  assert.equal(exactBoundary.stableD7, true);
+});
+
+test("stable D+7 requires trusted timestamps separated by at least seven elapsed days", () => {
+  const gate = contract.cueExposure.learningEvidenceGate
+    .requiredAffirmativeEvidence.stableD7.trustedElapsedIntervalGate;
+  assert.equal(gate.canonicalSourceAttemptTimestampField, "submittedAt");
+  assert.equal(
+    gate.canonicalD7EvaluationRecordRef,
+    "evidence.stableD7.canonicalD7Evaluation",
+  );
+  assert.equal(gate.evaluationTimestampField, "d7EvaluationCompletedAt");
+  assert.equal(gate.evaluationTimestampRequiredSource, "CANONICAL_D7_EVALUATION_LEDGER");
+  assert.equal(gate.requiredTimestampFormat, "RFC3339_UTC_MILLISECONDS");
+  assert.equal(gate.minimumElapsedMilliseconds, 7 * 24 * 60 * 60 * 1000);
+  assert.equal(gate.serverComputedFromTrustedTimestamps, true);
+  assert.equal(gate.callerSuppliedElapsedOrTimingLabelSufficient, false);
+  assert.equal(gate.outerSourceAttemptTimestampOrD7CompletionTimestampAccepted, false);
+  assert.equal(contract.hardGates.d7StableWithoutActual7DayElapsedInterval, 0);
+
+  const base = {
+    exposureHistory: canonicalExposureHistory(),
+    attempt: canonicalIndependentAttempt(),
+    independentResponse: independentResponseEvidence(),
+  };
+  for (const stableD7 of [
+    stableD7Evidence({ sourceAttemptSubmittedAt: undefined }),
+    stableD7Evidence({ d7EvaluationCompletedAt: undefined }),
+    stableD7Evidence({ sourceAttemptSubmittedAt: "2026-08-01" }),
+    stableD7Evidence({ d7EvaluationCompletedAt: "2026-08-08T09:00:00.000+09:00" }),
+    stableD7Evidence({ d7EvaluationCompletedAt: "2026-08-07T23:59:59.999Z" }),
+    stableD7Evidence({ d7EvaluationCompletedAt: "2026-08-01T00:00:00.001Z" }),
+    stableD7Evidence({
+      d7EvaluationCompletedAt: "2026-08-01T00:00:00.001Z",
+      elapsedMilliseconds: 7 * 24 * 60 * 60 * 1000,
+    }),
+  ]) {
+    const result = evaluateAttemptEvidence([], { ...base, stableD7 });
+    assert.equal(result.independentRetrieval, true);
+    assert.equal(result.stableD7, false);
+  }
+
+  for (const d7EvaluationCompletedAt of [
+    "2026-08-08T00:00:00.000Z",
+    "2026-08-09T00:00:00.000Z",
+  ]) {
+    const result = evaluateAttemptEvidence([], {
+      ...base,
+      stableD7: stableD7Evidence({ d7EvaluationCompletedAt }),
+    });
+    assert.equal(result.stableD7, true, d7EvaluationCompletedAt);
+  }
+});
+
+test("stable D+7 binds its source timestamp to one resolved canonical source attempt", () => {
+  const gate = contract.cueExposure.learningEvidenceGate
+    .requiredAffirmativeEvidence.stableD7.trustedElapsedIntervalGate;
+  assert.equal(gate.canonicalSourceAttemptRecordRef, "evidence.attempt");
+  assert.equal(
+    gate.canonicalSourceAttemptResolutionStateGateRef,
+    "cueExposure.canonicalAttemptResolutionStateGate",
+  );
+  assert.equal(gate.canonicalSourceAttemptRequiredSource, "CANONICAL_SERVER_ATTEMPT_LEDGER");
+  assert.equal(gate.canonicalSourceAttemptIdField, "attemptId");
+  assert.equal(gate.canonicalSourceAttemptLearnerPrivateScopeIdField, "learnerPrivateScopeId");
+  assert.equal(gate.canonicalSourceAttemptTimestampField, "submittedAt");
+  assert.equal(gate.exactMatchingCanonicalSourceAttemptCount, 1);
+  assert.equal(
+    gate.sourceAttemptIdLearnerAndTimestampMustExactlyBindResolvedCanonicalSourceAttempt,
+    true,
+  );
+
+  const base = {
+    exposureHistory: canonicalExposureHistory(),
+    independentResponse: independentResponseEvidence(),
+  };
+  assert.equal(evaluateAttemptEvidence([], {
+    ...base,
+    attempt: canonicalIndependentAttempt(),
+    stableD7: stableD7Evidence(),
+  }).stableD7, true);
+
+  const laterSourceAttempt = evaluateAttemptEvidence([], {
+    ...base,
+    attempt: canonicalIndependentAttempt({ submittedAt: "2026-08-08T00:00:00.000Z" }),
+    independentResponse: independentResponseEvidence({
+      evaluationCompletedAt: "2026-08-08T00:00:00.000Z",
+    }),
+    stableD7: stableD7Evidence(),
+  });
+  assert.equal(laterSourceAttempt.independentRetrieval, true);
+  assert.equal(laterSourceAttempt.stableD7, false);
+
+  for (const attempt of [
+    canonicalIndependentAttempt({ submittedAt: undefined }),
+    canonicalIndependentAttempt({ submittedAt: "2026-08-01" }),
+    canonicalIndependentAttempt({ resolved: false }),
+    canonicalIndependentAttempt({ matchingRecordCount: 0 }),
+    canonicalIndependentAttempt({ ambiguous: true }),
+  ]) {
+    const result = evaluateAttemptEvidence([], {
+      ...base,
+      attempt,
+      stableD7: stableD7Evidence(),
+    });
+    assert.equal(result.failClosed, true);
+    assert.equal(result.independentRetrieval, false);
+    assert.equal(result.stableD7, false);
+  }
+
+  for (const stableD7 of [
+    stableD7Evidence({ sourceAttemptSubmittedAt: undefined }),
+    stableD7Evidence({ sourceAttemptSubmittedAt: "2026-07-31T00:00:00.000Z" }),
+    stableD7Evidence({ sourceAttemptId: "attempt-other" }),
+    stableD7Evidence({ learnerPrivateScopeId: "learner-other" }),
+  ]) {
+    assert.equal(evaluateAttemptEvidence([], {
+      ...base,
+      attempt: canonicalIndependentAttempt(),
+      stableD7,
+    }).stableD7, false);
+  }
+});
+
+test("base canonical attempt resolution fails closed before retrieval and dependent transfer credit", () => {
+  const gate = contract.cueExposure.learningEvidenceGate.baseAttemptResolutionGate;
+  assert.equal(gate.recordRef, "evidence.attempt");
+  assert.equal(gate.resolutionSource, "CANONICAL_SERVER_ATTEMPT_LEDGER");
+  assert.equal(
+    gate.resolutionStateGateRef,
+    "cueExposure.canonicalAttemptResolutionStateGate",
+  );
+  assert.equal(gate.exactMatchingRecordCount, 1);
+  assert.deepEqual(gate.evaluatedBeforeCredits, [
+    "independentRetrieval",
+    "farTransfer",
+    "stableD7",
+  ]);
+
+  const base = {
+    exposureHistory: canonicalExposureHistory(),
+    independentResponse: independentResponseEvidence(),
+    farTransfer: farTransferEvidence(),
+    stableD7: stableD7Evidence(),
+  };
+  const valid = evaluateAttemptEvidence([], {
+    ...base,
+    attempt: canonicalIndependentAttempt(),
+  });
+  assert.equal(valid.independentRetrieval, true);
+  assert.equal(valid.farTransfer, true);
+  assert.equal(valid.stableD7, true);
+
+  const invalidAttempts = [null, [], {}];
+  for (const [field, expected] of Object.entries(
+    contract.cueExposure.canonicalAttemptResolutionStateGate.requiredExactPrimitiveBooleanStates,
+  )) {
+    const omitted = canonicalIndependentAttempt();
+    delete omitted[field];
+    invalidAttempts.push(omitted);
+    for (const invalidValue of [null, !expected, String(expected), 0, 1, {}, []]) {
+      invalidAttempts.push(canonicalIndependentAttempt({ [field]: invalidValue }));
+    }
+  }
+  const omittedCount = canonicalIndependentAttempt();
+  delete omittedCount.matchingRecordCount;
+  invalidAttempts.push(
+    omittedCount,
+    ...[null, 0, 2, "1", false, true, {}, []].map(
+      (matchingRecordCount) => canonicalIndependentAttempt({ matchingRecordCount }),
+    ),
+    canonicalIndependentAttempt({ source: "CLIENT" }),
+  );
+
+  for (const attempt of invalidAttempts) {
+    assert.deepEqual(evaluateAttemptEvidence([], { ...base, attempt }), {
+      failClosed: true,
+      independentEvidenceEligibilityPreserved: false,
+      independentRetrieval: false,
+      farTransfer: false,
+      stableD7: false,
+    });
+  }
+});
+
+test("base attempt requires exact false cross-scope replay and cancellation state", () => {
+  const gate = contract.cueExposure.learningEvidenceGate.baseAttemptResolutionGate
+    .baseSpecificSafeResolutionStateGate;
+  assert.deepEqual(gate.requiredExactPrimitiveBooleanStates, {
+    crossLearner: false,
+    crossAttempt: false,
+    replayed: false,
+    cancelled: false,
+  });
+  assert.equal(gate.evaluatedBeforeAnyPositiveCredit, true);
+  assert.equal(gate.sharedGenericAttemptResolutionHelperExpanded, false);
+  assert.equal(gate.truthinessCoercionDefaultingOrAbsenceAccepted, false);
+
+  const base = {
+    exposureHistory: canonicalExposureHistory(),
+    independentResponse: independentResponseEvidence(),
+    farTransfer: farTransferEvidence(),
+    stableD7: stableD7Evidence(),
+  };
+  const valid = evaluateAttemptEvidence([], { ...base, attempt: canonicalIndependentAttempt() });
+  assert.equal(valid.independentRetrieval, true);
+  assert.equal(valid.farTransfer, true);
+  assert.equal(valid.stableD7, true);
+
+  for (const field of Object.keys(gate.requiredExactPrimitiveBooleanStates)) {
+    const omitted = canonicalIndependentAttempt();
+    delete omitted[field];
+    const invalidAttempts = [
+      omitted,
+      ...[undefined, null, true, "false", 0, 1, {}, []].map(
+        (value) => canonicalIndependentAttempt({ [field]: value }),
+      ),
+    ];
+    for (const attempt of invalidAttempts) {
+      assert.deepEqual(
+        evaluateAttemptEvidence([], { ...base, attempt }),
+        noPositiveEvidence({ failClosed: true, eligibilityPreserved: false }),
+        field,
+      );
+    }
+  }
+});
+
+test("raw annotation bodies reject opt-in, O5, relabel and direct-promotion bypasses", () => {
+  const overrides = contract.personalAnnotation.possibleOverrideAuthorities;
+  assert.deepEqual(overrides, {
+    learnerConsent: false,
+    learnerOptIn: false,
+    contract: false,
+    administratorChoice: false,
+    futureO5: false,
+  });
+  const allHypotheticalGates = {
+    ...contract.authorizationBoundary,
+    trainingSignalContribution: true,
+    clearedContentBankPromotion: true,
+    o5OfflineTraining: true,
+  };
+  assert.deepEqual(evaluateTrainingCandidate({
+    kind: "SEPARATELY_AUTHORED_RIGHTS_REVIEWED_CLEARED_CONTENT_BANK_OBJECT",
+    originKind: "PERSONAL_ANNOTATION_RAW_BODY",
+    learnerConsent: true,
+    learnerOptIn: true,
+    administratorChoice: true,
+    futureO5: true,
+  }, allHypotheticalGates), {
+    candidateEligible: false,
+    currentlyAuthorized: false,
+    reason: "RAW_ANNOTATION_BODY_UNCONDITIONALLY_INELIGIBLE",
+  });
+  for (const bypass of [
+    { renameOrAliasOfRawBody: true },
+    { directPromotionFromRawBody: true },
+    { renamedRawPointerAsSignal: true },
+    { renamedReconstructiveDerivativeAsSignal: true },
+  ]) {
+    assert.equal(evaluateTrainingCandidate({
+      kind: "SEPARATELY_AUTHORED_RIGHTS_REVIEWED_CLEARED_CONTENT_BANK_OBJECT",
+      ...bypass,
+    }, allHypotheticalGates).candidateEligible, false);
+  }
+});
+
+test("cleared content eligibility requires closed independently resolved candidate-bound provenance", () => {
+  const gate = contract.personalAnnotation.clearedContentBankProvenanceGate;
+  assert.equal(
+    gate.resolutionSource,
+    "CANONICAL_CLEARED_CONTENT_PROMOTION_RIGHTS_PROVENANCE_RESOLVER",
+  );
+  assert.equal(gate.independentResolutionRequired, true);
+  assert.equal(gate.exactMatchingRecordCount, 1);
+  assert.equal(gate.candidateClosedSchema.additionalTopLevelFieldsAllowed, false);
+  assert.equal(gate.recordClosedSchema.additionalFieldsAllowed, false);
+  assert.equal(gate.callerSuppliedProvenanceBooleansAccepted, false);
+  assert.equal(gate.separatelyAuthoredAndRightsOwnedCanonicalProofRequired, true);
+
+  const candidate = clearedContentCandidate();
+  const provenance = clearedContentProvenanceRecord();
+  assert.deepEqual(
+    sorted(Object.keys(candidate)),
+    sorted(gate.candidateClosedSchema.requiredTopLevelFields),
+  );
+  assert.deepEqual(
+    sorted(Object.keys(provenance)),
+    sorted(gate.recordClosedSchema.requiredFields),
+  );
+  assert.deepEqual(evaluateTrainingCandidate(
+    candidate,
+    hypotheticalReceiptValidTrainingDecisionContext({
+      clearedContentProvenance: provenance,
+    }),
+  ), {
+    candidateEligible: true,
+    hypotheticalReceiptsValid: true,
+    currentlyAuthorized: false,
+    reason: "HYPOTHETICAL_RECEIPTS_VALID_CURRENT_USE_UNAUTHORIZED",
+  });
+
+  const callerBooleanOnly = clearedContentCandidate({
+    separateObjectIdentity: true,
+    separatelyAuthored: true,
+    rightsOwned: true,
+    rightsReviewed: true,
+    provenanceReviewed: true,
+  });
+  for (const invalidCandidate of [
+    callerBooleanOnly,
+    clearedContentCandidate({ rawAnswer: "private learner answer" }),
+    clearedContentCandidate({ freeText: "undeclared content" }),
+    clearedContentCandidate({ unknownField: true }),
+  ]) {
+    const result = evaluateTrainingCandidate(
+      invalidCandidate,
+      hypotheticalReceiptValidTrainingDecisionContext(),
+    );
+    assert.equal(result.candidateEligible, false);
+    assert.equal(result.hypotheticalReceiptsValid === true, false);
+    assert.equal(result.currentlyAuthorized, false);
+    assert.equal(result.reason, "CLEARED_CONTENT_CANDIDATE_CLOSED_SCHEMA_INVALID");
+  }
+  for (const field of gate.candidateClosedSchema.requiredTopLevelFields) {
+    const missing = clearedContentCandidate();
+    delete missing[field];
+    assert.equal(evaluateTrainingCandidate(
+      missing,
+      hypotheticalReceiptValidTrainingDecisionContext({
+        clearedContentProvenance: provenance,
+      }),
+    ).candidateEligible, false, field);
+  }
+
+  const invalidRecords = [
+    undefined,
+    null,
+    [],
+    clearedContentProvenanceRecord({ source: "CLIENT" }),
+    clearedContentProvenanceRecord({ serverSide: false }),
+    clearedContentProvenanceRecord({ authoritative: false }),
+    clearedContentProvenanceRecord({ independentlyResolved: false }),
+    clearedContentProvenanceRecord({ matchingRecordCount: 0 }),
+    clearedContentProvenanceRecord({ matchingRecordCount: 2 }),
+    clearedContentProvenanceRecord({ known: false }),
+    clearedContentProvenanceRecord({ resolved: false }),
+    clearedContentProvenanceRecord({ ambiguous: true }),
+    clearedContentProvenanceRecord({ conflicting: true }),
+    clearedContentProvenanceRecord({ stale: true }),
+    clearedContentProvenanceRecord({ clientInferred: true }),
+    clearedContentProvenanceRecord({ callerInferred: true }),
+    clearedContentProvenanceRecord({ replayed: true }),
+    clearedContentProvenanceRecord({ cancelled: true }),
+    clearedContentProvenanceRecord({ mismatched: true }),
+    clearedContentProvenanceRecord({ crossCandidate: true }),
+    clearedContentProvenanceRecord({ crossRevision: true }),
+    clearedContentProvenanceRecord({ crossPurpose: true }),
+    clearedContentProvenanceRecord({ crossScope: true }),
+    clearedContentProvenanceRecord({ signalId: "signal-other" }),
+    clearedContentProvenanceRecord({ signalRevisionId: "revision-other" }),
+    clearedContentProvenanceRecord({ separatelyAuthored: false }),
+    clearedContentProvenanceRecord({ rightsOwned: false }),
+    clearedContentProvenanceRecord({ rightsReviewed: false }),
+    clearedContentProvenanceRecord({ provenanceReviewed: false }),
+    clearedContentProvenanceRecord({ derivedFromPersonalRawContent: true }),
+    clearedContentProvenanceRecord({ containsPrivateRawContent: true }),
+    clearedContentProvenanceRecord({ rawAnswer: "unknown private field" }),
+  ];
+  for (const field of gate.recordClosedSchema.requiredFields) {
+    const missing = clearedContentProvenanceRecord();
+    delete missing[field];
+    invalidRecords.push(missing);
+  }
+  for (const field of gate.recordClosedSchema.identifierFields) {
+    invalidRecords.push(clearedContentProvenanceRecord({ [field]: "?" }));
+  }
+  for (const field of gate.exactCandidateBindingFields) {
+    invalidRecords.push(clearedContentProvenanceRecord({ [field]: `foreign-${field}` }));
+  }
+  for (const [field, expected] of Object.entries(gate.recordClosedSchema.exactValues)) {
+    const invalidValues = typeof expected === "boolean"
+      ? [!expected, null, String(expected), 0, {}, []]
+      : typeof expected === "number"
+        ? [expected + 1, String(expected), null]
+        : [`wrong-${field}`, null];
+    for (const invalidValue of invalidValues) {
+      invalidRecords.push(clearedContentProvenanceRecord({ [field]: invalidValue }));
+    }
+  }
+  for (const clearedContentProvenance of invalidRecords) {
+    const result = evaluateTrainingCandidate(
+      candidate,
+      hypotheticalReceiptValidTrainingDecisionContext({ clearedContentProvenance }),
+    );
+    assert.equal(result.candidateEligible, false);
+    assert.equal(result.hypotheticalReceiptsValid === true, false);
+    assert.equal(result.currentlyAuthorized, false);
+  }
+});
+
+test("only separate safe candidates remain behind distinct contribution, promotion and O5 gates", () => {
+  assert.deepEqual(contract.personalAnnotation.futureTrainingCandidateKinds, [
+    "SEPARATE_NON_RECONSTRUCTIVE_SIGNAL",
+    "SEPARATELY_AUTHORED_RIGHTS_REVIEWED_CLEARED_CONTENT_BANK_OBJECT",
+  ]);
+  assert.deepEqual(contract.personalAnnotation.trainingGateSeparation, {
+    contributionGate: "DISTINCT_REQUIRED",
+    promotionGate: "DISTINCT_REQUIRED",
+    o5Gate: "DISTINCT_REQUIRED",
+    contributionImpliesPromotion: false,
+    promotionImpliesO5: false,
+    o5MayBypassContributionOrPromotion: false,
+    allPresentAuthorizations: false,
+    currentlyAuthorized: false,
+    canonicalAuthorizationBoundaryPath: "authorizationBoundary",
+    canonicalAuthorizationFields: [
+      "modelTraining",
+      "personalRawBodyTraining",
+      "trainingSignalContribution",
+      "clearedContentBankPromotion",
+      "o5OfflineTraining",
+    ],
+    requiredCurrentCanonicalValue: false,
+    globalAuthorizationFlagsMayAuthorizeCandidate: false,
+    independentlyResolvedCandidateBoundReceiptsRequired: true,
+    receiptValidityImpliesCurrentAuthorization: false,
+    hypotheticalOrMockReceiptsMayAuthorizeCurrentUse: false,
+    futureActivationRequiresSeparatelyAuthorizedCanonicalBoundaryChange: true,
+  });
+  const safeSignal = evaluateTrainingCandidate(signalCandidate(), trainingDecisionContext());
+  assert.deepEqual(safeSignal, {
+    candidateEligible: true,
+    hypotheticalReceiptsValid: false,
+    currentlyAuthorized: false,
+    reason: "CANDIDATE_BOUND_APPROVAL_RECEIPTS_MISSING",
+  });
+  assert.equal(evaluateTrainingCandidate({
+    kind: "SEPARATE_NON_RECONSTRUCTIVE_SIGNAL",
+    separateObjectIdentity: true,
+    closedValueSchema: true,
+    reconstructive: true,
+  }).candidateEligible, false);
+  assert.equal(evaluateTrainingCandidate({
+    kind: "SEPARATELY_AUTHORED_RIGHTS_REVIEWED_CLEARED_CONTENT_BANK_OBJECT",
+    separateObjectIdentity: true,
+    separatelyAuthored: true,
+    rightsOwned: true,
+    rightsReviewed: true,
+    provenanceReviewed: true,
+  }).currentlyAuthorized, false);
+  for (const key of ["trainingSignalContribution", "clearedContentBankPromotion", "o5OfflineTraining"]) {
+    assert.equal(contract.authorizationBoundary[key], false, key);
+  }
+});
+
+test("signals require affirmative same-object validated boolean-false content-safety proofs", () => {
+  const gate = contract.personalAnnotation.signalContentSafetyProofGate;
+  const resolutionGate = gate.canonicalOriginContentSafetyResolutionGate;
+  assert.deepEqual(gate.requiredBooleanFalseFields, [
+    "containsRawAnnotationBody",
+    "containsRawBodyPointer",
+    "containsExcerptOrFreeText",
+    "reconstructive",
+    "reconstructiveDerivativeOfRawBody",
+  ]);
+  assert.equal(gate.eachFieldMustBeExplicitlyPresent, true);
+  assert.equal(gate.requiredPrimitiveType, "boolean");
+  assert.equal(gate.requiredValue, false);
+  assert.equal(gate.closedSchemaValidationRequired, true);
+  assert.equal(gate.validationSource, "CANONICAL_CLOSED_SIGNAL_SCHEMA_VALIDATOR");
+  assert.equal(gate.clientValidationAssertionAccepted, false);
+  assert.equal(gate.exactSignalAndRevisionBindingRequired, true);
+  assert.equal(gate.ambiguousProofAllowed, false);
+  assert.equal(gate.crossObjectProofAllowed, false);
+  assert.equal(resolutionGate.additionalFieldsAllowed, false);
+  assert.equal(
+    resolutionGate.resolutionSource,
+    "CANONICAL_SIGNAL_ORIGIN_CONTENT_SAFETY_RESOLVER",
+  );
+  assert.equal(resolutionGate.exactMatchingRecordCount, 1);
+  assert.equal(
+    resolutionGate.requiredOriginClassification,
+    "SEPARATE_NON_RECONSTRUCTIVE_SIGNAL_ORIGIN",
+  );
+  assert.equal(resolutionGate.candidateSourceLabelBooleanOrSchemaMarkerSubstitutionAllowed, false);
+
+  const allHypotheticalGates = hypotheticalReceiptValidTrainingDecisionContext();
+  const validCandidate = signalCandidate();
+  const validResolution = signalContentSafetyResolution();
+  assert.deepEqual(
+    sorted(Object.keys(validResolution)),
+    sorted(resolutionGate.requiredFields),
+  );
+  for (const field of gate.requiredBooleanFalseFields) {
+    assert.equal(Object.hasOwn(validCandidate, field), true, field);
+    assert.equal(typeof validCandidate[field], "boolean", field);
+    assert.equal(validCandidate[field], false, field);
+
+    const omitted = signalCandidate();
+    delete omitted[field];
+    assert.equal(evaluateTrainingCandidate(omitted, allHypotheticalGates).candidateEligible, false, `${field}: omitted`);
+
+    for (const invalidValue of [undefined, null, "false", 0, {}, true]) {
+      const result = evaluateTrainingCandidate(
+        signalCandidate({ [field]: invalidValue }),
+        allHypotheticalGates,
+      );
+      assert.equal(result.candidateEligible, false, `${field}: ${String(invalidValue)}`);
+      assert.equal(result.currentlyAuthorized, false, `${field}: ${String(invalidValue)}`);
+    }
+  }
+  for (const invalidCandidate of [
+    signalCandidate({ contentSafetyProofValidated: false }),
+    signalCandidate({ contentSafetyProofValidated: undefined }),
+    signalCandidate({ contentSafetyProofValidationSource: "CLIENT" }),
+    signalCandidate({ contentSafetyProofAmbiguous: true }),
+    signalCandidate({ contentSafetyProofSignalId: "other-signal" }),
+    signalCandidate({ contentSafetyProofSignalRevisionId: "other-revision" }),
+  ]) {
+    const result = evaluateTrainingCandidate(invalidCandidate, allHypotheticalGates);
+    assert.equal(result.candidateEligible, false, result.reason);
+    assert.equal(result.currentlyAuthorized, false, result.reason);
+  }
+
+  const invalidResolutions = [
+    [undefined, "missing resolution"],
+    [null, "null resolution"],
+    [[], "array resolution"],
+    [{ ...validResolution, extraField: true }, "extra field"],
+    [signalContentSafetyResolution({ source: "CLIENT" }), "wrong source"],
+    [signalContentSafetyResolution({ matchingRecordCount: 0 }), "zero records"],
+    [signalContentSafetyResolution({ matchingRecordCount: 2 }), "multiple records"],
+    [signalContentSafetyResolution({
+      originClassification: "PERSONAL_ANNOTATION_RAW_BODY",
+    }), "raw origin"],
+  ];
+  for (const field of resolutionGate.requiredFields) {
+    const missing = signalContentSafetyResolution();
+    delete missing[field];
+    invalidResolutions.push([missing, `missing ${field}`]);
+  }
+  for (const field of resolutionGate.identifierFields) {
+    invalidResolutions.push([signalContentSafetyResolution({ [field]: "?" }), `malformed ${field}`]);
+  }
+  for (const field of resolutionGate.exactCandidateBindingFields) {
+    invalidResolutions.push([
+      signalContentSafetyResolution({ [field]: `foreign-${field}` }),
+      `foreign ${field}`,
+    ]);
+  }
+  for (const [field, expected] of Object.entries(
+    resolutionGate.requiredExactPrimitiveBooleanStates,
+  )) {
+    for (const invalidValue of [!expected, null, String(expected), 0, {}, []]) {
+      invalidResolutions.push([
+        signalContentSafetyResolution({ [field]: invalidValue }),
+        `${field}: ${String(invalidValue)}`,
+      ]);
+    }
+  }
+  for (const [signalContentSafetyResolutionRecord, label] of invalidResolutions) {
+    const result = evaluateTrainingCandidate(
+      validCandidate,
+      hypotheticalReceiptValidTrainingDecisionContext({
+        signalContentSafetyResolution: signalContentSafetyResolutionRecord,
+      }),
+    );
+    assert.equal(result.candidateEligible, false, label);
+    assert.equal(result.hypotheticalReceiptsValid === true, false, label);
+    assert.equal(result.currentlyAuthorized, false, label);
+  }
+
+  assert.deepEqual(evaluateTrainingCandidate(validCandidate, allHypotheticalGates), {
+    candidateEligible: true,
+    hypotheticalReceiptsValid: true,
+    currentlyAuthorized: false,
+    reason: "HYPOTHETICAL_RECEIPTS_VALID_CURRENT_USE_UNAUTHORIZED",
+  });
+  for (const key of ["trainingSignalContribution", "clearedContentBankPromotion", "o5OfflineTraining"]) {
+    assert.equal(contract.authorizationBoundary[key], false, key);
+  }
+});
+
+test("training signals validate the actual closed value schema before candidate eligibility", () => {
+  const gate = contract.personalAnnotation.signalContentSafetyProofGate;
+  const schema = gate.canonicalCandidateValueSchema;
+  assert.equal(schema.validator, gate.validationSource);
+  assert.equal(schema.actualCandidateObjectMustValidate, true);
+  assert.equal(schema.candidateSuppliedSchemaOrProofMarkersSufficient, false);
+  assert.equal(schema.additionalTopLevelFieldsAllowed, false);
+  assert.equal(schema.undeclaredFreeTextOrReconstructiveFieldsAllowed, false);
+
+  const allHypotheticalGates = hypotheticalReceiptValidTrainingDecisionContext();
+  const validCandidate = signalCandidate();
+  assert.deepEqual(sorted(Object.keys(validCandidate)), sorted(schema.requiredTopLevelFields));
+  assert.equal(evaluateTrainingCandidate(validCandidate, allHypotheticalGates).candidateEligible, true);
+
+  for (const candidate of [
+    signalCandidate({ rawAnswer: "undeclared learner answer" }),
+    signalCandidate({ freeText: "undeclared annotation text" }),
+    signalCandidate({ reconstructivePayload: { answerTokens: ["private"] } }),
+    signalCandidate({ consent: { rawAnswer: "nested undeclared content" } }),
+    signalCandidate({ retention: { freeText: "nested undeclared content" } }),
+  ]) {
+    assert.equal(candidate.closedValueSchema, true);
+    assert.equal(candidate.contentSafetyProofValidated, true);
+    assert.equal(candidate.contentSafetyProofValidationSource, gate.validationSource);
+    const result = evaluateTrainingCandidate(candidate, allHypotheticalGates);
+    assert.equal(result.candidateEligible, false);
+    assert.equal(result.hypotheticalReceiptsValid === true, false);
+    assert.equal(result.currentlyAuthorized, false);
+    assert.equal(result.reason, "SIGNAL_CLOSED_VALUE_SCHEMA_INVALID");
+  }
+});
+
+test("signals require exact-purpose consent and finite purpose-bound retention", () => {
+  const gate = contract.personalAnnotation.signalPurposeGate;
+  assert.equal(gate.exactPurposeConsentRequired, true);
+  assert.equal(gate.finitePurposeBoundRetentionRequired, true);
+  assert.equal(gate.genericOptInAccepted, false);
+  assert.equal(gate.contractAcceptedAsConsent, false);
+  assert.equal(gate.administratorChoiceAcceptedAsConsent, false);
+  assert.equal(gate.o5AcceptedAsConsentOrRetention, false);
+  assert.equal(gate.indefiniteRetentionAccepted, false);
+  assert.equal(gate.candidateNestedConsentOrRetentionRecordAuthoritative, false);
+
+  const canonicalResolutionCases = [
+    {
+      label: "consent",
+      decisionContextField: "consentResolution",
+      gate: gate.canonicalConsentResolutionGate,
+      fixture: canonicalConsentResolution,
+    },
+    {
+      label: "retention",
+      decisionContextField: "retentionResolution",
+      gate: gate.canonicalRetentionResolutionGate,
+      fixture: canonicalRetentionResolution,
+    },
+  ];
+  for (const canonicalCase of canonicalResolutionCases) {
+    const canonicalRecord = canonicalCase.fixture();
+    assert.equal(canonicalCase.gate.additionalFieldsAllowed, false, canonicalCase.label);
+    assert.equal(canonicalCase.gate.exactMatchingRecordCount, 1, canonicalCase.label);
+    assert.equal(canonicalCase.gate.requiredState, "ACTIVE", canonicalCase.label);
+    assert.equal(
+      canonicalCase.gate.candidateSourceLabelStateOrBooleanSubstitutionAllowed,
+      false,
+      canonicalCase.label,
+    );
+    assert.deepEqual(
+      sorted(Object.keys(canonicalRecord)),
+      sorted(canonicalCase.gate.requiredFields),
+      canonicalCase.label,
+    );
+
+    const invalidRecords = [
+      [undefined, "missing resolution"],
+      [null, "null resolution"],
+      [[], "array resolution"],
+      [{ ...canonicalRecord, extraField: true }, "extra field"],
+      [canonicalCase.fixture({ source: "CLIENT" }), "wrong source"],
+      [canonicalCase.fixture({ state: "INACTIVE" }), "wrong state"],
+      [canonicalCase.fixture({ matchingRecordCount: 0 }), "zero records"],
+      [canonicalCase.fixture({ matchingRecordCount: 2 }), "multiple records"],
+      [canonicalCase.fixture({ expiresAt: "not-a-time" }), "malformed expiry"],
+    ];
+    for (const field of canonicalCase.gate.requiredFields) {
+      const missing = canonicalCase.fixture();
+      delete missing[field];
+      invalidRecords.push([missing, `missing ${field}`]);
+    }
+    for (const field of canonicalCase.gate.identifierFields) {
+      invalidRecords.push([canonicalCase.fixture({ [field]: "?" }), `malformed ${field}`]);
+    }
+    for (const field of canonicalCase.gate.exactCandidateBindingFields) {
+      invalidRecords.push([
+        canonicalCase.fixture({ [field]: `foreign-${field}` }),
+        `foreign ${field}`,
+      ]);
+    }
+    for (const [field, expected] of Object.entries(
+      canonicalCase.gate.requiredExactPrimitiveBooleanStates,
+    )) {
+      for (const invalidValue of [!expected, null, String(expected), 0, {}, []]) {
+        invalidRecords.push([
+          canonicalCase.fixture({ [field]: invalidValue }),
+          `${field}: ${String(invalidValue)}`,
+        ]);
+      }
+    }
+    for (const [record, mutation] of invalidRecords) {
+      const result = evaluateTrainingCandidate(
+        signalCandidate(),
+        hypotheticalReceiptValidTrainingDecisionContext({
+          [canonicalCase.decisionContextField]: record,
+        }),
+      );
+      const label = `${canonicalCase.label}: ${mutation}`;
+      assert.equal(result.candidateEligible, false, label);
+      assert.equal(result.hypotheticalReceiptsValid === true, false, label);
+      assert.equal(result.currentlyAuthorized, false, label);
+    }
+  }
+
+  const allHypotheticalGates = hypotheticalReceiptValidTrainingDecisionContext();
+  assert.deepEqual(evaluateTrainingCandidate(signalCandidate(), allHypotheticalGates), {
+    candidateEligible: true,
+    hypotheticalReceiptsValid: true,
+    currentlyAuthorized: false,
+    reason: "HYPOTHETICAL_RECEIPTS_VALID_CURRENT_USE_UNAUTHORIZED",
+  });
+
+  const invalidCandidates = [
+    signalCandidate({ consent: undefined }),
+    signalCandidate({ retention: undefined }),
+    signalCandidate({ consent: { source: "GENERIC_OPT_IN" } }),
+    signalCandidate({ retention: { source: "GENERIC_RETENTION" } }),
+    signalCandidate({ consent: { exactPurpose: false } }),
+    signalCandidate({ consent: { expired: true } }),
+    signalCandidate({ consent: { revoked: true } }),
+    signalCandidate({ consent: { expiresAt: "2026-08-01T00:00:00.000Z" } }),
+    signalCandidate({ retention: { expired: true } }),
+    signalCandidate({ retention: { revoked: true } }),
+    signalCandidate({ retention: { finite: false } }),
+    signalCandidate({ retention: { expiresAt: "" } }),
+    signalCandidate({ retention: { expiresAt: "2026-08-01T00:00:00.000Z" } }),
+    signalCandidate({ genericOptIn: true, consent: undefined, retention: undefined }),
+    signalCandidate({ contractAsConsent: true, consent: undefined, retention: undefined }),
+    signalCandidate({ administratorChoiceAsConsent: true, consent: undefined, retention: undefined }),
+    signalCandidate({ o5AsConsentOrRetention: true, consent: undefined, retention: undefined }),
+    signalCandidate({ containsRawBodyPointer: true }),
+    signalCandidate({ reconstructiveDerivativeOfRawBody: true }),
+    signalCandidate({ renamedRawPointerAsSignal: true }),
+    signalCandidate({ renamedReconstructiveDerivativeAsSignal: true }),
+  ];
+  for (const field of gate.exactBindingFields) {
+    invalidCandidates.push(signalCandidate({ consent: { [field]: `wrong-${field}` } }));
+    invalidCandidates.push(signalCandidate({ retention: { [field]: `wrong-${field}` } }));
+  }
+  for (const candidate of invalidCandidates) {
+    const result = evaluateTrainingCandidate(candidate, allHypotheticalGates);
+    assert.equal(result.candidateEligible, false, result.reason);
+    assert.equal(result.currentlyAuthorized, false, result.reason);
+  }
+  for (const key of ["trainingSignalContribution", "clearedContentBankPromotion", "o5OfflineTraining"]) {
+    assert.equal(contract.authorizationBoundary[key], false, key);
+  }
+});
+
+test("consent and retention expiry and revocation states require exact primitive false", () => {
+  const gate = contract.personalAnnotation.signalPurposeGate;
+  assert.deepEqual(gate.requiredExactPrimitiveBooleanStates, {
+    consent: { expired: false, revoked: false },
+    retention: { expired: false, revoked: false },
+  });
+  assert.equal(gate.exactFalseOnlyPreservesEligibility, true);
+  assert.equal(gate.exactFalseCreatesConsentReceiptOrAuthorization, false);
+  assert.equal(gate.truthinessDefaultingCoercionOrAbsenceAccepted, false);
+
+  const allHypotheticalGates = hypotheticalReceiptValidTrainingDecisionContext();
+  const invalidValues = [undefined, null, true, "true", "false", 0, 1, {}, []];
+  for (const [recordName, states] of Object.entries(gate.requiredExactPrimitiveBooleanStates)) {
+    for (const stateName of Object.keys(states)) {
+      const omitted = signalCandidate();
+      delete omitted[recordName][stateName];
+      const omittedResult = evaluateTrainingCandidate(omitted, allHypotheticalGates);
+      assert.equal(omittedResult.candidateEligible, false, `${recordName}.${stateName}: omitted`);
+      assert.equal(omittedResult.hypotheticalReceiptsValid === true, false);
+      assert.equal(omittedResult.currentlyAuthorized, false);
+
+      for (const invalidValue of invalidValues) {
+        const result = evaluateTrainingCandidate(signalCandidate({
+          [recordName]: { [stateName]: invalidValue },
+        }), allHypotheticalGates);
+        assert.equal(
+          result.candidateEligible,
+          false,
+          `${recordName}.${stateName}: ${String(invalidValue)}`,
+        );
+        assert.equal(result.hypotheticalReceiptsValid === true, false);
+        assert.equal(result.currentlyAuthorized, false);
+      }
+    }
+  }
+
+  const valid = evaluateTrainingCandidate(signalCandidate(), allHypotheticalGates);
+  assert.equal(valid.candidateEligible, true);
+  assert.equal(valid.hypotheticalReceiptsValid, true);
+  assert.equal(valid.currentlyAuthorized, false);
+
+  for (const candidate of [
+    signalCandidate({ consent: { state: "INACTIVE" } }),
+    signalCandidate({ consent: { exactPurpose: false } }),
+    signalCandidate({ retention: { finite: false } }),
+    signalCandidate({ retention: { purposeId: "purpose-other" } }),
+  ]) {
+    const result = evaluateTrainingCandidate(candidate, allHypotheticalGates);
+    assert.equal(result.candidateEligible, false, result.reason);
+    assert.equal(result.hypotheticalReceiptsValid === true, false);
+    assert.equal(result.currentlyAuthorized, false);
+  }
+
+  const falseOnly = signalCandidate();
+  falseOnly.consent = { expired: false, revoked: false };
+  falseOnly.retention = { expired: false, revoked: false };
+  const falseOnlyResult = evaluateTrainingCandidate(falseOnly, allHypotheticalGates);
+  assert.equal(falseOnlyResult.candidateEligible, false);
+  assert.equal(falseOnlyResult.hypotheticalReceiptsValid === true, false);
+  assert.equal(falseOnlyResult.currentlyAuthorized, false);
+
+  const noApprovalReceipts = evaluateTrainingCandidate(signalCandidate(), trainingDecisionContext());
+  assert.equal(noApprovalReceipts.candidateEligible, true);
+  assert.equal(noApprovalReceipts.hypotheticalReceiptsValid, false);
+  assert.equal(noApprovalReceipts.currentlyAuthorized, false);
+});
+
+test("future training approvals are independently resolved and exact-candidate bound", () => {
+  const gate = contract.personalAnnotation.trainingApprovalReceiptGate;
+  assert.equal(gate.appliesToEveryFutureTrainingCandidate, true);
+  assert.deepEqual(gate.exactBindingFields, [
+    "signalId",
+    "signalRevisionId",
+    "purposeId",
+    "o5ScopeId",
+  ]);
+  assert.equal(gate.globalAuthorizationBooleanSubstitutionAllowed, false);
+  assert.equal(gate.independentResolutionRequired, true);
+  assert.equal(gate.replayedAllowed, false);
+  assert.equal(gate.ambiguousAllowed, false);
+  assert.equal(gate.validReceiptSetEffectUnderThisContract, "HYPOTHETICAL_FUTURE_BINDING_PROOF_ONLY");
+  assert.equal(gate.currentTrainingAuthorizationEffectUnderThisContract, false);
+  assert.equal(gate.mockFixtureHypotheticalOrFutureReceiptOverrideAllowed, false);
+  assert.equal(gate.receiptSetGate.additionalFieldsAllowed, false);
+  assert.equal(gate.receiptRecordGate.additionalFieldsAllowed, false);
+
+  const validCandidate = signalCandidate();
+  const valid = evaluateTrainingCandidate(
+    validCandidate,
+    hypotheticalReceiptValidTrainingDecisionContext(),
+  );
+  assert.deepEqual(valid, {
+    candidateEligible: true,
+    hypotheticalReceiptsValid: true,
+    currentlyAuthorized: false,
+    reason: "HYPOTHETICAL_RECEIPTS_VALID_CURRENT_USE_UNAUTHORIZED",
+  });
+
+  const globalBooleanSubstitution = evaluateTrainingCandidate(validCandidate, trainingDecisionContext({
+    trainingSignalContribution: true,
+    clearedContentBankPromotion: true,
+    o5OfflineTraining: true,
+  }));
+  assert.equal(globalBooleanSubstitution.candidateEligible, true);
+  assert.equal(globalBooleanSubstitution.hypotheticalReceiptsValid, false);
+  assert.equal(globalBooleanSubstitution.currentlyAuthorized, false);
+
+  const receiptFields = ["contribution", "promotion", "o5"];
+  for (let mask = 0; mask < 2 ** receiptFields.length; mask += 1) {
+    const approvalReceipts = futureApprovalReceipts();
+    for (const [index, field] of receiptFields.entries()) {
+      if ((mask & (1 << index)) === 0) approvalReceipts[field] = undefined;
+    }
+    const result = evaluateTrainingCandidate(validCandidate, hypotheticalReceiptValidTrainingDecisionContext({
+      approvalReceipts,
+      trainingSignalContribution: true,
+      clearedContentBankPromotion: true,
+      o5OfflineTraining: true,
+      mockFixture: true,
+      hypotheticalFutureContext: true,
+    }));
+    assert.equal(result.currentlyAuthorized, false, `receipt mask ${mask}`);
+    assert.equal(result.hypotheticalReceiptsValid, mask === 7, `receipt mask ${mask}`);
+  }
+
+  const invalidReceiptSets = [
+    [null, "null set"],
+    [[], "array set"],
+    [{}, "malformed set"],
+    ["receipts", "string set"],
+    [{ ...futureApprovalReceipts(), extraField: true }, "set extra field"],
+  ];
+  const withReceipt = (field, receipt) => {
+    const set = futureApprovalReceipts();
+    set[field] = receipt;
+    return set;
+  };
+  for (const field of ["contribution", "promotion", "o5"]) {
+    const missingSetField = futureApprovalReceipts();
+    delete missingSetField[field];
+    invalidReceiptSets.push([missingSetField, `set missing ${field}`]);
+    for (const malformed of [null, [], {}, "receipt", 1]) {
+      invalidReceiptSets.push([withReceipt(field, malformed), `${field} malformed receipt`]);
+    }
+    for (const receiptField of gate.receiptRecordGate.requiredFields) {
+      const receipt = approvalReceipt(
+        Object.entries(gate.receiptFieldsByKind).find(([, value]) => value === field)[0],
+      );
+      delete receipt[receiptField];
+      invalidReceiptSets.push([withReceipt(field, receipt), `${field} missing ${receiptField}`]);
+    }
+    invalidReceiptSets.push([
+      withReceipt(field, { ...futureApprovalReceipts()[field], extraField: true }),
+      `${field} extra field`,
+    ]);
+    invalidReceiptSets.push([
+      withReceipt(field, { ...futureApprovalReceipts()[field], approvalKind: "OTHER_APPROVAL" }),
+      `${field} wrong kind`,
+    ]);
+    invalidReceiptSets.push([
+      withReceipt(field, { ...futureApprovalReceipts()[field], source: "CLIENT" }),
+      `${field} wrong source`,
+    ]);
+    invalidReceiptSets.push([
+      withReceipt(field, { ...futureApprovalReceipts()[field], matchingRecordCount: 0 }),
+      `${field} zero records`,
+    ]);
+    invalidReceiptSets.push([
+      withReceipt(field, { ...futureApprovalReceipts()[field], matchingRecordCount: 2 }),
+      `${field} multiple records`,
+    ]);
+    invalidReceiptSets.push([
+      withReceipt(field, { ...futureApprovalReceipts()[field], receiptId: " receipt " }),
+      `${field} malformed receipt ID`,
+    ]);
+    for (const [stateField, expected] of Object.entries(
+      gate.receiptRecordGate.requiredExactPrimitiveBooleanStates,
+    )) {
+      invalidReceiptSets.push([
+        withReceipt(field, { ...futureApprovalReceipts()[field], [stateField]: String(expected) }),
+        `${field} non-boolean ${stateField}`,
+      ]);
+      invalidReceiptSets.push([
+        withReceipt(field, { ...futureApprovalReceipts()[field], [stateField]: !expected }),
+        `${field} unsafe ${stateField}`,
+      ]);
+    }
+    for (const bindingField of gate.exactBindingFields) {
+      invalidReceiptSets.push([
+        withReceipt(field, {
+          ...futureApprovalReceipts()[field],
+          [bindingField]: `cross-${bindingField}`,
+        }),
+        `${field} foreign ${bindingField}`,
+      ]);
+    }
+  }
+  const reused = futureApprovalReceipts();
+  reused.promotion.receiptId = reused.contribution.receiptId;
+  invalidReceiptSets.push([reused, "duplicated receipt IDs"]);
+
+  for (const [approvalReceipts, label] of invalidReceiptSets) {
+    const result = evaluateTrainingCandidate(validCandidate, hypotheticalReceiptValidTrainingDecisionContext({
+      approvalReceipts,
+    }));
+    assert.equal(result.candidateEligible, true, label);
+    assert.equal(result.hypotheticalReceiptsValid, false, label);
+    assert.equal(result.currentlyAuthorized, false, label);
+  }
+  for (const key of ["trainingSignalContribution", "clearedContentBankPromotion", "o5OfflineTraining"]) {
+    assert.equal(contract.authorizationBoundary[key], false, key);
+  }
+  assert.equal(contract.personalAnnotation.trainingGateSeparation.currentlyAuthorized, false);
+  assert.equal(contract.personalAnnotation.trainingGateSeparation.receiptValidityImpliesCurrentAuthorization, false);
+  for (const key of contract.personalAnnotation.trainingGateSeparation.canonicalAuthorizationFields) {
+    assert.equal(contract.authorizationBoundary[key], false, key);
+    assert.equal(typeof contract.authorizationBoundary[key], "boolean", key);
+  }
+});
+
+test("consent and retention expiry use only trusted server decision time", () => {
+  const gate = contract.personalAnnotation.signalPurposeGate.trustedEvaluationTimeGate;
+  assert.equal(gate.source, "TRUSTED_SERVER_CLOCK_BOUNDARY");
+  assert.equal(gate.callerProvidedTimeAccepted, false);
+  assert.equal(gate.candidateProvidedTimeAccepted, false);
+  assert.equal(gate.expiryBoundaryPolicy, "EXPIRY_MUST_BE_STRICTLY_AFTER_EVALUATION_TIME");
+  assert.equal(gate.additionalFieldsAllowed, false);
+  assert.equal(gate.exactMatchingRecordCount, 1);
+  assert.deepEqual(
+    sorted(Object.keys(trustedEvaluationTime())),
+    sorted(gate.requiredFields),
+  );
+
+  const decisionAtBoundary = hypotheticalReceiptValidTrainingDecisionContext({
+    consentResolution: canonicalConsentResolution({
+      expiresAt: "2026-09-02T00:00:00.000Z",
+    }),
+    retentionResolution: canonicalRetentionResolution({
+      expiresAt: "2026-09-02T00:00:00.000Z",
+    }),
+    trustedEvaluationTime: trustedEvaluationTime({ evaluatedAt: "2026-09-01T00:00:00.000Z" }),
+  });
+  const beforeExpiry = evaluateTrainingCandidate(signalCandidate({
+    consent: { expiresAt: "2026-09-02T00:00:00.000Z" },
+    retention: { expiresAt: "2026-09-02T00:00:00.000Z" },
+  }), decisionAtBoundary);
+  assert.equal(beforeExpiry.candidateEligible, true);
+  assert.equal(beforeExpiry.hypotheticalReceiptsValid, true);
+  assert.equal(beforeExpiry.currentlyAuthorized, false);
+
+  for (const field of ["consent", "retention"]) {
+    for (const expiresAt of [
+      "2026-09-01T00:00:00.000Z",
+      "2026-08-31T23:59:59.999Z",
+    ]) {
+      const result = evaluateTrainingCandidate(signalCandidate({
+        [field]: { expiresAt },
+      }), hypotheticalReceiptValidTrainingDecisionContext({
+        trustedEvaluationTime: trustedEvaluationTime({
+          evaluatedAt: "2026-09-01T00:00:00.000Z",
+        }),
+        ...(field === "consent"
+          ? { consentResolution: canonicalConsentResolution({ expiresAt }) }
+          : { retentionResolution: canonicalRetentionResolution({ expiresAt }) }),
+      }));
+      assert.equal(result.candidateEligible, false, `${field}: ${expiresAt}`);
+      assert.equal(result.currentlyAuthorized, false, `${field}: ${expiresAt}`);
+    }
+  }
+
+  const invalidTimeRecords = [
+    [undefined, "missing record"],
+    [null, "null record"],
+    [[], "array record"],
+    [{ ...trustedEvaluationTime(), extraField: true }, "extra field"],
+    [trustedEvaluationTime({ source: "CLIENT_CLOCK" }), "wrong source"],
+    [trustedEvaluationTime({ evaluatedAt: "not-a-time" }), "malformed time"],
+    [trustedEvaluationTime({ evaluatedAt: "2026-9-1" }), "non-canonical time"],
+    [trustedEvaluationTime({ matchingRecordCount: 0 }), "zero records"],
+    [trustedEvaluationTime({ matchingRecordCount: 2 }), "multiple records"],
+  ];
+  for (const field of gate.requiredFields) {
+    const missing = trustedEvaluationTime();
+    delete missing[field];
+    invalidTimeRecords.push([missing, `missing ${field}`]);
+  }
+  for (const field of gate.identifierFields) {
+    invalidTimeRecords.push([trustedEvaluationTime({ [field]: "?" }), `malformed ${field}`]);
+  }
+  for (const [field, expected] of Object.entries(gate.requiredExactPrimitiveBooleanStates)) {
+    for (const invalidValue of [!expected, null, String(expected), 0, {}, []]) {
+      invalidTimeRecords.push([
+        trustedEvaluationTime({ [field]: invalidValue }),
+        `${field}: ${String(invalidValue)}`,
+      ]);
+    }
+  }
+  for (const [record, label] of invalidTimeRecords) {
+    const context = trainingDecisionContext({ trustedEvaluationTime: record });
+    const result = evaluateTrainingCandidate(signalCandidate(), context);
+    assert.equal(result.candidateEligible, false, label);
+    assert.equal(result.hypotheticalReceiptsValid === true, false, label);
+    assert.equal(result.currentlyAuthorized, false, label);
+  }
+  for (const context of [
+    trainingDecisionContext({ callerEvaluationTime: "2026-08-01T00:00:00.000Z" }),
+    trainingDecisionContext({ clientEvaluationTime: "2026-08-01T00:00:00.000Z" }),
+  ]) {
+    const result = evaluateTrainingCandidate(signalCandidate(), context);
+    assert.equal(result.candidateEligible, false, result.reason);
+    assert.equal(result.currentlyAuthorized, false, result.reason);
+  }
+  const candidateControlled = evaluateTrainingCandidate(
+    signalCandidate({ evaluationTime: "2026-08-01T00:00:00.000Z" }),
+    hypotheticalReceiptValidTrainingDecisionContext(),
+  );
+  assert.equal(candidateControlled.candidateEligible, false);
+  assert.equal(candidateControlled.currentlyAuthorized, false);
+});
+
+test("pre-response confirmation rejects missing, stale, replayed, mismatched and ambiguous records", () => {
+  for (const request of [
+    cueRenderRequest({ confirmation: undefined }),
+    cueRenderRequest({ confirmation: cueConfirmation({ status: "CANCELLED" }) }),
+    cueRenderRequest({ confirmation: cueConfirmation({ stale: true }) }),
+    cueRenderRequest({ confirmation: cueConfirmation({ consumed: true }) }),
+    cueRenderRequest({ confirmation: cueConfirmation({ matchingRecordCount: 2, ambiguous: true }) }),
+    cueRenderRequest({ confirmation: undefined, clientConfirmationBoolean: true }),
+    cueRenderRequest({ confirmation: undefined, preselectedConsent: true }),
+    cueRenderRequest({ clientAttemptState: "INDEPENDENT_ATTEMPT_OPEN" }),
+  ]) {
+    const result = evaluateCueRender(request);
+    assert.equal(result.accepted, false, result.reason);
+    assert.equal(result.mayRenderCueBytes, false, result.reason);
+  }
+  for (const field of contract.cueExposure.beforeResponseGate.confirmationBindingFields) {
+    const result = evaluateCueRender(cueRenderRequest({
+      confirmation: cueConfirmation({ [field]: `wrong-${field}` }),
+    }));
+    assert.equal(result.accepted, false, field);
+    assert.equal(result.reason, "CONFIRMATION_RESOLUTION_INVALID", field);
+  }
+});
+
+test("pre-response confirmation binds concrete canonical cue and request identifiers", () => {
+  const gate = contract.cueExposure.beforeResponseGate.concreteConfirmationIdentifierGate;
+  assert.deepEqual(gate.fields, ["cueId", "cueRevisionId", "requestId"]);
+  assert.deepEqual(gate.schema, {
+    type: "string",
+    trimmed: true,
+    minLength: 3,
+    pattern: "^[A-Za-z0-9][A-Za-z0-9._:-]{2,127}$",
+  });
+  assert.equal(gate.requiredOnRequest, true);
+  assert.equal(gate.requiredOnConfirmation, true);
+  assert.equal(gate.validateBeforeEqualityComparison, true);
+
+  for (const field of gate.fields) {
+    for (const invalid of [undefined, null, "", " ", "?", 1, true, {}, []]) {
+      const request = cueRenderRequest();
+      if (invalid === undefined) {
+        delete request[field];
+        delete request.confirmation[field];
+      } else {
+        request[field] = invalid;
+        request.confirmation[field] = invalid;
+      }
+      for (const validate of [
+        evaluateCueRender,
+        (subject) => validateCueExposureEvent(cueEvent(subject)),
+      ]) {
+        const result = validate(request);
+        assert.equal(result.accepted, false, `${field}: ${String(invalid)}`);
+        assert.equal(result.mayRenderCueBytes, false, `${field}: ${String(invalid)}`);
+        assert.equal(result.reason, "CONFIRMATION_RESOLUTION_INVALID");
+      }
+    }
+  }
+});
+
+test("pre-response confirmation requires cancelled to be exact primitive false across both validators", () => {
+  const gate = contract.cueExposure.beforeResponseGate;
+  assert.equal(gate.confirmationCancelledMustExactlyEqual, false);
+  assert.equal(
+    gate.missingNullStringNumberObjectArrayTrueOrOtherNonFalseCancellationBehavior,
+    "FAIL_CLOSED_NO_CUE_BYTES",
+  );
+
+  const missingCancellation = cueConfirmation();
+  delete missingCancellation.cancelled;
+  for (const confirmation of [
+    missingCancellation,
+    cueConfirmation({ cancelled: undefined }),
+    cueConfirmation({ cancelled: null }),
+    cueConfirmation({ cancelled: "false" }),
+    cueConfirmation({ cancelled: "true" }),
+    cueConfirmation({ cancelled: 0 }),
+    cueConfirmation({ cancelled: 1 }),
+    cueConfirmation({ cancelled: {} }),
+    cueConfirmation({ cancelled: [] }),
+    cueConfirmation({ cancelled: true }),
+  ]) {
+    const request = cueRenderRequest({ confirmation });
+    for (const validate of [
+      evaluateCueRender,
+      (subject) => validateCueExposureEvent(cueEvent(subject)),
+    ]) {
+      const result = validate(request);
+      assert.equal(result.accepted, false);
+      assert.equal(result.mayRenderCueBytes, false);
+      assert.equal(result.reason, "CONFIRMATION_RESOLUTION_INVALID");
+    }
+  }
+});
+
+test("pre-response rejects confirmations explicitly marked replayed across both render validators", () => {
+  const gate = contract.cueExposure.beforeResponseGate;
+  assert.equal(gate.confirmationReplayedMustExactlyEqual, false);
+  const subject = cueRenderRequest({
+    assistanceClassification: "LOW",
+    confirmation: cueConfirmation({
+      replayed: true,
+      consumed: false,
+      singleUse: true,
+    }),
+  });
+  for (const validate of [
+    evaluateCueRender,
+    (request) => validateCueExposureEvent(cueEvent(request)),
+  ]) {
+    const result = validate(subject);
+    assert.equal(result.accepted, false);
+    assert.equal(result.mayRenderCueBytes, false);
+    assert.equal(result.reason, "CONFIRMATION_RESOLUTION_INVALID");
+  }
+});
+
+test("valid confirmation commits exact assisted transition before render and races fail closed", () => {
+  const valid = evaluateCueRender(cueRenderRequest());
+  assert.deepEqual(valid, {
+    accepted: true,
+    mayRenderCueBytes: true,
+    canonicalAttemptState: "ASSISTED",
+    independentEvidenceEligible: false,
+    positiveLearningEvidence: false,
+    atomicCommitCompletedBeforeRender: true,
+    gateId: "EXACT_PRE_RESPONSE_RENDER_GATE_V1",
+    orderedSteps: [
+      "CONFIRMATION_CONSUMPTION_COMMITTED",
+      "CUE_EXPOSURE_RECORD_COMMITTED",
+      "ATTEMPT_STATE_TRANSITIONED_TO_ASSISTED",
+      "INDEPENDENT_EVIDENCE_INVALIDATED",
+      "CUE_BYTES_RENDERED",
+    ],
+  });
+  for (const request of [
+    cueRenderRequest({ commitSteps: ["CONFIRMATION_RECORD_COMMITTED"] }),
+    cueRenderRequest({ commitSteps: [
+      "CUE_EXPOSURE_RECORD_COMMITTED",
+      "CONFIRMATION_RECORD_COMMITTED",
+      "ATTEMPT_STATE_TRANSITIONED_TO_ASSISTED",
+      "INDEPENDENT_EVIDENCE_INVALIDATED",
+    ] }),
+    cueRenderRequest({ recordFailure: true }),
+    cueRenderRequest({ renderSubmitRaceDetected: true }),
+  ]) {
+    assert.equal(evaluateCueRender(request).mayRenderCueBytes, false);
+  }
+  assert.equal(evaluateCueRender(cueRenderRequest({
+    canonicalAttemptState: "SUBMITTED",
+    timing: "BEFORE_RESPONSE",
+  })).accepted, false);
+  assert.deepEqual(evaluateCueRender(cueRenderRequest({
+    canonicalAttemptState: "SUBMITTED",
+    timing: "AFTER_RESPONSE",
+    confirmation: undefined,
+    canonicalRecordCommitted: true,
+  })), {
+    accepted: true,
+    mayRenderCueBytes: true,
+    independentEvidenceEligible: false,
+    positiveLearningEvidence: false,
+    attemptId: "attempt-1",
+    timing: "AFTER_RESPONSE",
+  });
+});
+
+test("submitted-attempt bindings require exact learner scope across request and event validators", () => {
+  const gate = contract.cueExposure.afterResponseGate;
+  assert.equal(gate.sharedAcrossEveryApplicableRenderCapableValidator, true);
+  assert.deepEqual(gate.renderCapableValidators, [
+    "CUE_RENDER_REQUEST_VALIDATOR",
+    "CUE_EXPOSURE_EVENT_VALIDATOR",
+  ]);
+  assert.equal(gate.nonNullExactLearnerPrivateScopeIdRequired, true);
+  assert.equal(gate.learnerPrivateScopeBindingRule.requiredPrimitiveType, "string");
+  assert.equal(gate.learnerPrivateScopeBindingRule.trimmedRequired, true);
+  assert.equal(gate.learnerPrivateScopeBindingRule.matchingMissingOrUndefinedAccepted, false);
+
+  const validators = [
+    ["request", (overrides = {}) => evaluateCueRender(cueRenderRequest({
+      canonicalAttemptState: "SUBMITTED",
+      timing: "AFTER_RESPONSE",
+      confirmation: undefined,
+      ...overrides,
+    }))],
+    ["event", (overrides = {}) => validateCueExposureEvent(cueEvent({
+      timing: "AFTER_RESPONSE",
+      ...overrides,
+    }))],
+  ];
+  const invalidBindings = [
+    {
+      learnerPrivateScopeId: undefined,
+      attemptResolution: canonicalAttemptResolution({ learnerPrivateScopeId: undefined }),
+    },
+    { learnerPrivateScopeId: undefined },
+    { attemptResolution: canonicalAttemptResolution({ learnerPrivateScopeId: undefined }) },
+    {
+      learnerPrivateScopeId: "learner-foreign",
+      attemptResolution: canonicalAttemptResolution({
+        learnerPrivateScopeId: "learner-foreign",
+        crossLearner: true,
+      }),
+    },
+    { attemptResolution: canonicalAttemptResolution({ learnerPrivateScopeId: "learner-other" }) },
+    { attemptResolution: canonicalAttemptResolution({ resolved: false }) },
+    { attemptResolution: canonicalAttemptResolution({ ambiguous: true }) },
+    { attemptResolution: canonicalAttemptResolution({ conflicting: true }) },
+    { attemptResolution: canonicalAttemptResolution({ stale: true }) },
+    { attemptResolution: canonicalAttemptResolution({ replayed: true }) },
+    { attemptResolution: canonicalAttemptResolution({ clientInferred: true }) },
+    { clientLearnerPrivateScopeId: "learner-1" },
+    { callerLearnerPrivateScopeId: "learner-1" },
+    { inferLearnerPrivateScopeId: true },
+    {
+      attemptId: undefined,
+      attemptResolution: canonicalAttemptResolution({ attemptId: undefined }),
+    },
+    { attemptId: null },
+    { attemptId: "   " },
+    { attemptResolution: canonicalAttemptResolution({ attemptId: "attempt-other" }) },
+    { attemptResolution: canonicalAttemptResolution({ crossAttempt: true }) },
+    { clientAttemptId: "attempt-1" },
+    { inferLatestAttempt: true },
+  ];
+  for (const invalidScope of [null, "", "   ", " learner-1", "learner-1 ", 0, true, {}, []]) {
+    invalidBindings.push({ learnerPrivateScopeId: invalidScope });
+    invalidBindings.push({
+      attemptResolution: canonicalAttemptResolution({ learnerPrivateScopeId: invalidScope }),
+    });
+  }
+
+  for (const [name, validate] of validators) {
+    for (const invalidBinding of invalidBindings) {
+      const result = validate(invalidBinding);
+      assert.equal(result.accepted, false, `${name}: ${result.reason}`);
+      assert.equal(result.mayRenderCueBytes, false, `${name}: ${result.reason}`);
+    }
+    const valid = validate();
+    assert.equal(valid.accepted, true, name);
+    assert.equal(valid.mayRenderCueBytes, true, name);
+  }
+});
+
+test("after-response rejects every non-exact canonical submitted-attempt reference", () => {
+  const base = {
+    canonicalAttemptState: "SUBMITTED",
+    timing: "AFTER_RESPONSE",
+    confirmation: undefined,
+    canonicalRecordCommitted: true,
+  };
+  const invalidRequests = [
+    cueRenderRequest({ ...base, attemptId: undefined }),
+    cueRenderRequest({ ...base, attemptId: "" }),
+    cueRenderRequest({ ...base, attemptResolution: undefined }),
+    cueRenderRequest({ ...base, attemptResolution: canonicalAttemptResolution({ known: false }) }),
+    cueRenderRequest({ ...base, attemptResolution: canonicalAttemptResolution({ matchingRecordCount: 0 }) }),
+    cueRenderRequest({ ...base, attemptResolution: canonicalAttemptResolution({ crossLearner: true }) }),
+    cueRenderRequest({ ...base, attemptResolution: canonicalAttemptResolution({ crossAttempt: true }) }),
+    cueRenderRequest({ ...base, attemptResolution: canonicalAttemptResolution({ mismatched: true }) }),
+    cueRenderRequest({ ...base, attemptResolution: canonicalAttemptResolution({ replayed: true }) }),
+    cueRenderRequest({ ...base, attemptResolution: canonicalAttemptResolution({ preSubmission: true }) }),
+    cueRenderRequest({ ...base, attemptResolution: canonicalAttemptResolution({ submitted: false }) }),
+    cueRenderRequest({ ...base, attemptResolution: canonicalAttemptResolution({ submittedBeforeExposure: false }) }),
+    cueRenderRequest({ ...base, attemptResolution: canonicalAttemptResolution({ canonicalAttemptState: "INDEPENDENT_ATTEMPT_OPEN" }) }),
+    cueRenderRequest({ ...base, attemptResolution: canonicalAttemptResolution({ source: "CLIENT" }) }),
+    cueRenderRequest({ ...base, attemptResolution: canonicalAttemptResolution({ attemptId: "other-attempt" }) }),
+    cueRenderRequest({ ...base, attemptResolution: canonicalAttemptResolution({ learnerPrivateScopeId: "other-learner" }) }),
+    cueRenderRequest({ ...base, clientAttemptId: "attempt-1" }),
+    cueRenderRequest({ ...base, inferLatestAttempt: true }),
+  ];
+  for (const request of invalidRequests) {
+    const result = evaluateCueRender(request);
+    assert.equal(result.accepted, false, result.reason);
+    assert.equal(result.mayRenderCueBytes, false, result.reason);
+    assert.equal(result.independentEvidenceEligible, false, result.reason);
+  }
+});
+
+test("submitted-attempt resolution is one closed authoritative record across every consumer", () => {
+  const outerGate = contract.cueExposure.afterResponseGate;
+  const gate = outerGate.canonicalSubmittedAttemptResolutionGate;
+  assert.equal(gate.gateId, "EXACT_CANONICAL_SUBMITTED_ATTEMPT_RESOLUTION_GATE_V1");
+  assert.equal(gate.additionalFieldsAllowed, false);
+  assert.equal(gate.resolutionSource, "CANONICAL_SERVER_ATTEMPT_LEDGER");
+  assert.equal(gate.exactMatchingRecordCount, 1);
+  assert.equal(gate.requiredCanonicalAttemptState, "SUBMITTED");
+  assert.equal(gate.subjectAndRecordIdentifiersValidatedIndependentlyBeforeEquality, true);
+  assert.equal(gate.authenticatedLearnerPrivateScopeBindingRequired, true);
+  assert.equal(
+    gate.authenticatedLearnerPrivateScopeField,
+    "authenticatedLearnerPrivateScopeId",
+  );
+  assert.equal(gate.authenticatedScopeAndSubjectAndRecordMustExactlyMatch, true);
+  assert.equal(gate.clientOrCallerAuthenticatedScopeAssertionAccepted, false);
+  assert.equal(gate.everyConsumerDelegatesToThisGate, true);
+  assert.equal(outerGate.genericAttemptResolutionStateGateSufficientForSubmittedAttempt, false);
+  assert.equal(outerGate.weakerOuterResolutionStatePolicyAuthoritative, false);
+  assert.deepEqual(gate.identifierFields, ["attemptId", "learnerPrivateScopeId"]);
+  assert.deepEqual(gate.identifierSchema, {
+    type: "string",
+    minLength: 3,
+    pattern: "^[A-Za-z0-9][A-Za-z0-9._:-]{2,127}$",
+  });
+  assert.deepEqual(sorted(Object.keys(canonicalAttemptResolution())), sorted(gate.requiredFields));
+  assert.deepEqual(gate.requiredExactPrimitiveBooleanStates, {
+    serverSide: true,
+    authoritative: true,
+    independentlyResolved: true,
+    known: true,
+    resolved: true,
+    submitted: true,
+    submittedBeforeExposure: true,
+    crossLearner: false,
+    crossAttempt: false,
+    mismatched: false,
+    replayed: false,
+    preSubmission: false,
+    closed: false,
+    stale: false,
+    cancelled: false,
+    ambiguous: false,
+    conflicting: false,
+    clientInferred: false,
+    callerInferred: false,
+  });
+
+  const consumers = [
+    ["after-response request", (attemptResolution, overrides = {}) => evaluateCueRender(
+      cueRenderRequest({
+        timing: "AFTER_RESPONSE",
+        canonicalAttemptState: "SUBMITTED",
+        confirmation: undefined,
+        attemptResolution,
+        ...overrides,
+      }),
+    )],
+    ["after-response event", (attemptResolution, overrides = {}) => validateCueExposureEvent(
+      cueEvent({ timing: "AFTER_RESPONSE", attemptResolution, ...overrides }),
+    )],
+    ["bound review request", (attemptResolution, overrides = {}) => evaluateCueRender(
+      reviewOnlyRequest({ attemptId: "attempt-1", attemptResolution, ...overrides }),
+    )],
+    ["bound review event", (attemptResolution, overrides = {}) => validateCueExposureEvent(
+      cueEvent(reviewOnlyRequest({ attemptId: "attempt-1", attemptResolution, ...overrides })),
+    )],
+    ["bound review authorizer", (attemptResolution, overrides = {}) => (
+      authorizeCanonicalReviewOnlyCueRender(
+        reviewOnlyRequest({ attemptId: "attempt-1", attemptResolution, ...overrides }),
+      )
+    )],
+  ];
+  const assertRejected = (attemptResolution, label, overrides = {}) => {
+    for (const [name, validate] of consumers) {
+      const result = validate(attemptResolution, overrides);
+      assert.equal(result.accepted, false, `${name}: ${label}`);
+      assert.equal(result.mayRenderCueBytes, false, `${name}: ${label}`);
+      assert.notEqual(result.positiveLearningEvidence, true, `${name}: ${label}`);
+    }
+  };
+
+  for (const malformed of [null, [], "record", 1, {}]) {
+    assertRejected(malformed, `malformed ${String(malformed)}`);
+  }
+  for (const field of gate.requiredFields) {
+    const record = canonicalAttemptResolution();
+    delete record[field];
+    assertRejected(record, `missing ${field}`);
+  }
+  assertRejected(canonicalAttemptResolution({ extraField: true }), "undeclared extra field");
+  assertRejected(canonicalAttemptResolution({ source: "CLIENT" }), "wrong source");
+  assertRejected(canonicalAttemptResolution({ matchingRecordCount: 0 }), "zero records");
+  assertRejected(canonicalAttemptResolution({ matchingRecordCount: 2 }), "multiple records");
+  assertRejected(
+    canonicalAttemptResolution({ canonicalAttemptState: "INDEPENDENT_ATTEMPT_OPEN" }),
+    "wrong canonical state",
+  );
+
+  for (const [field, expected] of Object.entries(gate.requiredExactPrimitiveBooleanStates)) {
+    const omitted = canonicalAttemptResolution();
+    delete omitted[field];
+    assertRejected(omitted, `omitted boolean ${field}`);
+    assertRejected(canonicalAttemptResolution({ [field]: !expected }), `unsafe boolean ${field}`);
+    for (const value of [null, String(expected), 1, {}, []]) {
+      assertRejected(canonicalAttemptResolution({ [field]: value }), `non-boolean ${field}`);
+    }
+  }
+
+  for (const field of gate.identifierFields) {
+    assertRejected(
+      canonicalAttemptResolution({ [field]: `foreign-${field}` }),
+      `foreign canonical ${field}`,
+    );
+    assertRejected(
+      canonicalAttemptResolution(),
+      `foreign subject ${field}`,
+      { [field]: `foreign-${field}` },
+    );
+    for (const value of [undefined, null, "", " ", "?", "a b", 1, true, {}, []]) {
+      assertRejected(
+        canonicalAttemptResolution({ [field]: value }),
+        `matching malformed ${field}: ${String(value)}`,
+        { [field]: value },
+      );
+    }
+  }
+
+  for (const value of [undefined, null, "", " ", "?", "learner-foreign", 1, true, {}, []]) {
+    assertRejected(
+      canonicalAttemptResolution(),
+      `invalid authenticated learner scope: ${String(value)}`,
+      { authenticatedLearnerPrivateScopeId: value },
+    );
+  }
+  assertRejected(canonicalAttemptResolution(), "client authenticated scope assertion", {
+    clientAuthenticatedLearnerPrivateScopeId: "learner-1",
+  });
+  assertRejected(canonicalAttemptResolution(), "caller authenticated scope assertion", {
+    callerAuthenticatedLearnerPrivateScopeId: "learner-1",
+  });
+
+  assertRejected(
+    canonicalAttemptResolution({ serverSide: false }),
+    "outer trust state cannot substitute",
+    {
+      serverSide: true,
+      authoritative: true,
+      independentlyResolved: true,
+      known: true,
+      resolved: true,
+      submitted: true,
+      callerInferred: false,
+    },
+  );
+  assertRejected(undefined, "outer source and success claims cannot substitute", {
+    canonicalAttemptStateSource: "CANONICAL_SERVER_ATTEMPT_LEDGER",
+    canonicalAttemptState: "SUBMITTED",
+    resolutionKnown: true,
+    resolutionSucceeded: true,
+  });
+
+  for (const [, validate] of consumers) {
+    const result = validate(canonicalAttemptResolution());
+    assert.equal(result.accepted, true);
+    assert.equal(result.mayRenderCueBytes, true);
+    assert.notEqual(result.positiveLearningEvidence, true);
+  }
+  for (const assistanceClassification of ["NONE", "LOW", "MATERIAL"]) {
+    const result = evaluateCueRender(cueRenderRequest({
+      timing: "AFTER_RESPONSE",
+      canonicalAttemptState: "SUBMITTED",
+      assistanceClassification,
+      confirmation: undefined,
+    }));
+    assert.equal(result.accepted, true, assistanceClassification);
+    assert.equal(result.mayRenderCueBytes, true, assistanceClassification);
+    assert.equal(result.positiveLearningEvidence, false, assistanceClassification);
+  }
+  assert.equal(evaluateCueRender(cueRenderRequest()).accepted, true);
+  assert.equal(evaluateCueRender(reviewOnlyRequest()).accepted, true);
+  assert.equal(validateCueExposureEvent(cueEvent(reviewOnlyRequest())).accepted, true);
+});
+
+test("after-response requests require canonicalRecordCommitted and ignore aliases", () => {
+  const gate = contract.cueExposure.afterResponseGate;
+  assert.equal(gate.canonicalRecordCommittedGateRef, "cueExposure.canonicalRecordCommittedGate");
+  assert.equal(gate.canonicalRecordCommittedField, "canonicalRecordCommitted");
+  assert.equal(gate.canonicalExposureRecordCommittedAliasAccepted, false);
+  assert.equal(gate.alternateCommitFieldFallbackAllowed, false);
+
+  for (const canonicalRecordCommitted of [
+    undefined,
+    null,
+    false,
+    "true",
+    "false",
+    0,
+    1,
+    {},
+    [],
+  ]) {
+    const request = cueRenderRequest({
+      canonicalAttemptState: "SUBMITTED",
+      timing: "AFTER_RESPONSE",
+      confirmation: undefined,
+      canonicalRecordCommitted,
+      canonicalExposureRecordCommitted: true,
+    });
+    const result = evaluateCueRender(request);
+    assert.equal(result.accepted, false, String(canonicalRecordCommitted));
+    assert.equal(result.mayRenderCueBytes, false, String(canonicalRecordCommitted));
+  }
+
+  const valid = evaluateCueRender(cueRenderRequest({
+    canonicalAttemptState: "SUBMITTED",
+    timing: "AFTER_RESPONSE",
+    confirmation: undefined,
+    canonicalRecordCommitted: true,
+    canonicalExposureRecordCommitted: false,
+  }));
+  assert.equal(valid.accepted, true);
+  assert.equal(valid.mayRenderCueBytes, true);
+
+  const trueAlone = evaluateCueRender(cueRenderRequest({
+    canonicalAttemptState: "SUBMITTED",
+    timing: "AFTER_RESPONSE",
+    confirmation: undefined,
+    canonicalRecordCommitted: true,
+    attemptId: undefined,
+  }));
+  assert.equal(trueAlone.accepted, false);
+  assert.equal(trueAlone.mayRenderCueBytes, false);
+
+  assert.equal(validateCueExposureEvent(cueEvent({
+    timing: "AFTER_RESPONSE",
+    canonicalRecordCommitted: false,
+    canonicalExposureRecordCommitted: true,
+  })).accepted, false);
+  assert.equal(validateCueExposureEvent(cueEvent({
+    timing: "AFTER_RESPONSE",
+    canonicalRecordCommitted: true,
+  })).accepted, true);
+});
+
+test("after-response requests validate the closed timing classification before render", () => {
+  const gate = contract.cueExposure.afterResponseGate;
+  assert.equal(
+    gate.timingClassificationMapRef,
+    "cueExposure.closedTimingClassificationMap.AFTER_RESPONSE",
+  );
+  assert.equal(gate.assistanceClassificationRequiredOnRequest, true);
+  assert.equal(
+    gate.missingOrDisallowedAssistanceClassificationBehavior,
+    "FAIL_CLOSED_NO_CUE_BYTES",
+  );
+  assert.equal(contract.hardGates.afterResponseRequestWithoutClosedClassification, 0);
+
+  const omitted = cueRenderRequest({ timing: "AFTER_RESPONSE", confirmation: undefined });
+  delete omitted.assistanceClassification;
+  for (const request of [
+    omitted,
+    cueRenderRequest({
+      timing: "AFTER_RESPONSE",
+      assistanceClassification: "BOGUS",
+      confirmation: undefined,
+    }),
+  ]) {
+    const result = evaluateCueRender(request);
+    assert.equal(result.accepted, false);
+    assert.equal(result.mayRenderCueBytes, false);
+    assert.equal(result.reason, "TIMING_CLASSIFICATION_INVALID");
+  }
+
+  for (const assistanceClassification of contract.cueExposure.closedTimingClassificationMap.AFTER_RESPONSE) {
+    const result = evaluateCueRender(cueRenderRequest({
+      timing: "AFTER_RESPONSE",
+      assistanceClassification,
+      confirmation: undefined,
+    }));
+    assert.equal(result.accepted, true, assistanceClassification);
+    assert.equal(result.mayRenderCueBytes, true, assistanceClassification);
+  }
+});
+
+test("after-response exposure events reject explicit record failures before timing routing", () => {
+  const gate = contract.cueExposure.recordFailureGate;
+  assert.equal(gate.gateId, "EXACT_RENDER_RECORD_FAILURE_GATE_V1");
+  assert.equal(gate.sharedAcrossEveryRenderCapableValidator, true);
+  assert.equal(gate.evaluatedBeforeTimingRouting, true);
+  assert.equal(gate.field, "recordFailure");
+  assert.equal(gate.requiredPrimitiveType, "boolean");
+  assert.equal(gate.requiredExactValue, false);
+
+  const event = validateCueExposureEvent(cueEvent({
+    timing: "AFTER_RESPONSE",
+    canonicalRecordCommitted: true,
+    recordFailure: true,
+  }));
+  assert.equal(event.accepted, false);
+  assert.equal(event.mayRenderCueBytes, false);
+  assert.equal(event.reason, contract.cueExposure.recordFailureBehavior);
+
+  const request = evaluateCueRender(cueRenderRequest({
+    canonicalAttemptState: "SUBMITTED",
+    timing: "AFTER_RESPONSE",
+    confirmation: undefined,
+    canonicalRecordCommitted: true,
+    recordFailure: true,
+  }));
+  assert.equal(request.accepted, false);
+  assert.equal(request.mayRenderCueBytes, false);
+});
+
+test("review-only requests require exact canonicalRecordCommitted across both validators", () => {
+  const commitGate = contract.cueExposure.canonicalRecordCommittedGate;
+  const reviewOnlyGate = contract.cueExposure.reviewOnlyGate;
+  assert.equal(commitGate.sharedAcrossEveryRenderCapableValidator, true);
+  assert.deepEqual(commitGate.renderCapableValidators, [
+    "CUE_RENDER_REQUEST_VALIDATOR",
+    "CUE_EXPOSURE_EVENT_VALIDATOR",
+  ]);
+  assert.equal(
+    reviewOnlyGate.canonicalRecordCommittedGateRef,
+    "cueExposure.canonicalRecordCommittedGate",
+  );
+
+  const omitted = reviewOnlyRequest();
+  delete omitted.canonicalRecordCommitted;
+  for (const subject of [
+    omitted,
+    reviewOnlyRequest({ canonicalRecordCommitted: undefined }),
+    reviewOnlyRequest({ canonicalRecordCommitted: null }),
+    reviewOnlyRequest({ canonicalRecordCommitted: false }),
+    reviewOnlyRequest({ canonicalRecordCommitted: "true" }),
+    reviewOnlyRequest({ canonicalRecordCommitted: 1 }),
+    reviewOnlyRequest({ canonicalRecordCommitted: {} }),
+    reviewOnlyRequest({ canonicalRecordCommitted: [] }),
+  ]) {
+    const event = cueEvent(subject);
+    if (!Object.hasOwn(subject, "canonicalRecordCommitted")) {
+      delete event.canonicalRecordCommitted;
+    }
+    for (const result of [
+      evaluateCueRender(subject),
+      validateCueExposureEvent(event),
+    ]) {
+      assert.equal(result.accepted, false);
+      assert.equal(result.mayRenderCueBytes, false);
+      assert.equal(result.reason, contract.cueExposure.recordFailureBehavior);
+    }
+  }
+
+  assert.equal(evaluateCueRender(reviewOnlyRequest()).accepted, true);
+  assert.equal(validateCueExposureEvent(cueEvent(reviewOnlyRequest())).accepted, true);
+});
+
+test("review-only requires exact false race state before routing and revalidates it", () => {
+  const gate = contract.cueExposure.reviewOnlyGate.renderSubmitRaceExactFalseGate;
+  assert.equal(gate.field, "renderSubmitRaceDetected");
+  assert.equal(gate.requiredPrimitiveType, "boolean");
+  assert.equal(gate.requiredExactValue, false);
+  assert.equal(gate.appliesWhenOuterOrNestedCanonicalTimingIsReviewOnly, true);
+  assert.equal(gate.evaluatedBeforeReviewOnlyRoutingOrEarlyReturnInEachValidator, true);
+  assert.equal(gate.revalidatedBySharedReviewOnlyAuthorizer, true);
+  assert.equal(gate.truthinessCoercionDefaultingOrAbsenceAccepted, false);
+
+  const invalidStates = [
+    { omit: true },
+    { value: undefined },
+    { value: null },
+    { value: true },
+    { value: "false" },
+    { value: 0 },
+    { value: 1 },
+    { value: {} },
+    { value: [] },
+  ];
+  for (const invalidState of invalidStates) {
+    for (const nestedOnly of [false, true]) {
+      const subject = reviewOnlyRequest(nestedOnly ? {
+        timing: undefined,
+        assistanceClassification: undefined,
+      } : {});
+      if (invalidState.omit) delete subject.renderSubmitRaceDetected;
+      else subject.renderSubmitRaceDetected = invalidState.value;
+      const event = cueEvent(subject);
+      if (invalidState.omit) delete event.renderSubmitRaceDetected;
+      for (const result of [
+        evaluateCueRender(subject),
+        validateCueExposureEvent(event),
+        authorizeCanonicalReviewOnlyCueRender(subject),
+      ]) {
+        assert.equal(result.accepted, false);
+        assert.equal(result.mayRenderCueBytes, false);
+        assert.equal(result.reason, contract.cueExposure.renderSubmitRaceBehavior);
+      }
+    }
+  }
+
+  const beforeOtherEarlyReturns = reviewOnlyRequest({ recordFailure: true });
+  delete beforeOtherEarlyReturns.renderSubmitRaceDetected;
+  const beforeOtherEarlyReturnsEvent = cueEvent(beforeOtherEarlyReturns);
+  delete beforeOtherEarlyReturnsEvent.renderSubmitRaceDetected;
+  for (const result of [
+    evaluateCueRender(beforeOtherEarlyReturns),
+    validateCueExposureEvent(beforeOtherEarlyReturnsEvent),
+  ]) {
+    assert.equal(result.reason, contract.cueExposure.renderSubmitRaceBehavior);
+    assert.equal(result.mayRenderCueBytes, false);
+  }
+
+  const nestedOnlyValid = reviewOnlyRequest({
+    timing: undefined,
+    assistanceClassification: undefined,
+    renderSubmitRaceDetected: false,
+  });
+  assert.equal(evaluateCueRender(reviewOnlyRequest()).accepted, true);
+  assert.equal(validateCueExposureEvent(cueEvent(reviewOnlyRequest())).accepted, true);
+  assert.equal(evaluateCueRender(nestedOnlyValid).accepted, true);
+  assert.equal(validateCueExposureEvent(cueEvent(nestedOnlyValid)).accepted, true);
+});
+
+test("review-only exposure events require canonical provenance and exact ordering before routing", () => {
+  const gate = contract.cueExposure.reviewOnlyGate.exposureEventPreRoutingGate;
+  assert.equal(gate.validator, "CUE_EXPOSURE_EVENT_VALIDATOR");
+  assert.equal(gate.evaluatedBeforeReviewOnlyRouting, true);
+  assert.equal(gate.requiredDerivedFromField, "derivedFrom");
+  assert.equal(gate.requiredDerivedFromSourceRef, "cueExposure.timingAndClassificationSource");
+  assert.equal(gate.requiredOrderingField, "ordering");
+  assert.equal(gate.requiredOrderingValue, "ORDERED");
+  assert.equal(gate.requestValidatorRequiresEventOnlyFields, false);
+  assert.equal(contract.hardGates.reviewOnlyEventWithoutProvenanceOrOrdering, 0);
+
+  const missingProvenance = cueEvent(reviewOnlyRequest());
+  delete missingProvenance.derivedFrom;
+  const missingOrdering = cueEvent(reviewOnlyRequest());
+  delete missingOrdering.ordering;
+  for (const event of [
+    missingProvenance,
+    cueEvent(reviewOnlyRequest({ derivedFrom: "CLIENT_EVENT" })),
+    missingOrdering,
+    cueEvent(reviewOnlyRequest({ ordering: "AMBIGUOUS" })),
+  ]) {
+    const result = validateCueExposureEvent(event);
+    assert.equal(result.accepted, false);
+    assert.equal(result.mayRenderCueBytes, false);
+  }
+
+  assert.equal(validateCueExposureEvent(cueEvent(reviewOnlyRequest())).accepted, true);
+  assert.equal(evaluateCueRender(reviewOnlyRequest()).accepted, true);
+});
+
+test("review-only requires canonical server derivation and no matching open attempt", () => {
+  const gate = contract.cueExposure.reviewOnlyGate;
+  const learnerScopeGate = gate.authenticatedLearnerScopeBindingGate;
+  assert.equal(gate.gateId, "CANONICAL_REVIEW_ONLY_RENDER_GATE_V1");
+  assert.equal(gate.sharedAcrossEveryRenderCapableValidator, true);
+  assert.equal(gate.callerSuppliedReviewOnlyLabelSufficient, false);
+  assert.equal(gate.callerSuppliedCanonicalExposureRecordCommittedAccepted, false);
+  assert.equal(gate.clientEventAccepted, false);
+  assert.equal(gate.inferredTimingAccepted, false);
+  assert.equal(gate.matchingCanonicalOpenIndependentAttemptCount, 0);
+  assert.equal(learnerScopeGate.field, "authenticatedLearnerPrivateScopeId");
+  assert.equal(learnerScopeGate.source, "AUTHENTICATED_REQUEST_CONTEXT");
+  assert.deepEqual(learnerScopeGate.independentlyValidatedRefs, [
+    "subject.authenticatedLearnerPrivateScopeId",
+    "subject.learnerPrivateScopeId",
+    "subject.reviewOnlyResolution.learnerPrivateScopeId",
+    "subject.reviewOnlyResolution.openIndependentAttemptResolution.learnerPrivateScopeId",
+  ]);
+  assert.equal(learnerScopeGate.comparison, "EXACT_FIELD_FOR_FIELD");
+  assert.equal(learnerScopeGate.clientOrCallerAliasAllowed, false);
+  assert.equal(learnerScopeGate.inferenceAllowed, false);
+
+  const assertNoReviewOnlyRender = (subject, label) => {
+    for (const validate of [
+      evaluateCueRender,
+      (request) => validateCueExposureEvent(cueEvent(request)),
+    ]) {
+      const result = validate(subject);
+      assert.equal(result.accepted, false, `${label}: ${validate.name}`);
+      assert.equal(result.mayRenderCueBytes, false, `${label}: ${validate.name}`);
+    }
+  };
+  for (const invalid of [undefined, null, "", " ", "?", 1, true, {}, []]) {
+    assertNoReviewOnlyRender(
+      reviewOnlyRequest({ authenticatedLearnerPrivateScopeId: invalid }),
+      `authenticated learner scope ${String(invalid)}`,
+    );
+  }
+  for (const overrides of [
+    { authenticatedLearnerPrivateScopeId: "learner-foreign" },
+    { clientLearnerPrivateScopeId: "learner-1" },
+    { callerLearnerPrivateScopeId: "learner-1" },
+    { clientAuthenticatedLearnerPrivateScopeId: "learner-1" },
+    { callerAuthenticatedLearnerPrivateScopeId: "learner-1" },
+    { inferLearnerPrivateScopeId: true },
+  ]) assertNoReviewOnlyRender(reviewOnlyRequest(overrides), JSON.stringify(overrides));
+
+  assertNoReviewOnlyRender(reviewOnlyRequest({
+    learnerPrivateScopeId: "learner-foreign",
+    reviewOnlyResolution: canonicalReviewOnlyResolution({
+      learnerPrivateScopeId: "learner-foreign",
+      openIndependentAttemptResolution: { learnerPrivateScopeId: "learner-foreign" },
+    }),
+  }), "coordinated foreign learner without authenticated match");
+  assertNoReviewOnlyRender(reviewOnlyRequest({
+    authenticatedLearnerPrivateScopeId: "?",
+    learnerPrivateScopeId: "?",
+    reviewOnlyResolution: canonicalReviewOnlyResolution({
+      learnerPrivateScopeId: "?",
+      openIndependentAttemptResolution: { learnerPrivateScopeId: "?" },
+    }),
+  }), "matching malformed learner scopes");
+
+  for (const request of [
+    reviewOnlyRequest({ reviewOnlyResolution: undefined }),
+    reviewOnlyRequest({ canonicalExposureRecordCommitted: true }),
+    reviewOnlyRequest({ clientEvent: { timing: "REVIEW_ONLY" } }),
+    reviewOnlyRequest({ inferTiming: true }),
+    reviewOnlyRequest({ timing: "BEFORE_RESPONSE" }),
+    reviewOnlyRequest({ assistanceClassification: "LOW" }),
+    reviewOnlyRequest({ reviewOnlyResolution: canonicalReviewOnlyResolution({ known: false }) }),
+    reviewOnlyRequest({ reviewOnlyResolution: canonicalReviewOnlyResolution({ matchingResolutionCount: 2 }) }),
+    reviewOnlyRequest({ reviewOnlyResolution: canonicalReviewOnlyResolution({ ambiguous: true }) }),
+    reviewOnlyRequest({ reviewOnlyResolution: canonicalReviewOnlyResolution({ conflicting: true }) }),
+    reviewOnlyRequest({ reviewOnlyResolution: canonicalReviewOnlyResolution({ crossLearner: true }) }),
+    reviewOnlyRequest({ reviewOnlyResolution: canonicalReviewOnlyResolution({ stale: true }) }),
+    reviewOnlyRequest({ reviewOnlyResolution: canonicalReviewOnlyResolution({ clientInferred: true }) }),
+    reviewOnlyRequest({ reviewOnlyResolution: canonicalReviewOnlyResolution({
+      canonicalExposureRecordState: "MISSING",
+    }) }),
+    reviewOnlyRequest({ reviewOnlyResolution: canonicalReviewOnlyResolution({
+      openIndependentAttemptResolution: null,
+    }) }),
+    reviewOnlyRequest({ recordFailure: true }),
+    reviewOnlyRequest({ renderSubmitRaceDetected: true }),
+  ]) {
+    const result = evaluateCueRender(request);
+    assert.equal(result.accepted, false, result.reason);
+    assert.equal(result.mayRenderCueBytes, false, result.reason);
+  }
+
+  const openAttemptResolution = canonicalReviewOnlyResolution({
+    openIndependentAttemptResolution: { matchingRecordCount: 1 },
+  });
+  for (const validate of [
+    (subject) => evaluateCueRender(subject),
+    (subject) => validateCueExposureEvent(cueEvent(subject)),
+  ]) {
+    const result = validate(reviewOnlyRequest({ reviewOnlyResolution: openAttemptResolution }));
+    assert.equal(result.accepted, false, result.reason);
+    assert.equal(result.mayRenderCueBytes, false, result.reason);
+  }
+
+  const alternatePathCallerLabel = validateCueExposureEvent(cueEvent({
+    timing: "REVIEW_ONLY",
+    reviewOnlyResolution: undefined,
+  }));
+  assert.equal(alternatePathCallerLabel.accepted, false);
+  assert.equal(alternatePathCallerLabel.mayRenderCueBytes, false);
+  const alternatePathClientEvent = validateCueExposureEvent(cueEvent({
+    timing: "REVIEW_ONLY",
+    derivedFrom: "CLIENT_EVENT",
+  }));
+  assert.equal(alternatePathClientEvent.accepted, false);
+  assert.equal(alternatePathClientEvent.mayRenderCueBytes, false);
+
+  for (const openIndependentAttemptResolution of [
+    { source: "CLIENT" },
+    { queriedCanonicalAttemptState: "SUBMITTED" },
+    { known: false },
+    { ambiguous: true },
+    { crossLearner: true },
+    { stale: true },
+    { learnerPrivateScopeId: "other-learner" },
+    { attemptScopeId: "other-scope" },
+  ]) {
+    const result = evaluateCueRender(reviewOnlyRequest({
+      reviewOnlyResolution: canonicalReviewOnlyResolution({ openIndependentAttemptResolution }),
+    }));
+    assert.equal(result.accepted, false, result.reason);
+    assert.equal(result.mayRenderCueBytes, false, result.reason);
+  }
+  for (const field of gate.exactBindingFields) {
+    const missing = reviewOnlyRequest();
+    delete missing[field];
+    assert.equal(evaluateCueRender(missing).accepted, false, `${field}: missing`);
+    const mismatch = reviewOnlyRequest({
+      reviewOnlyResolution: canonicalReviewOnlyResolution({ [field]: `other-${field}` }),
+    });
+    assert.equal(evaluateCueRender(mismatch).accepted, false, `${field}: mismatch`);
+  }
+
+  const event = validateCueExposureEvent(cueEvent({ timing: "REVIEW_ONLY" }));
+  assert.deepEqual(event, {
+    accepted: true,
+    mayRenderCueBytes: true,
+    independentEvidenceEligible: false,
+    evidenceNeutral: true,
+    timing: "REVIEW_ONLY",
+    assistanceClassification: "NONE",
+    gateId: "CANONICAL_REVIEW_ONLY_RENDER_GATE_V1",
+  });
+  assert.deepEqual(evaluateCueRender(reviewOnlyRequest()), event);
+
+  const invalidBoundReview = evaluateCueRender(reviewOnlyRequest({
+    attemptId: "attempt-1",
+    attemptResolution: canonicalAttemptResolution({ attemptId: "other-attempt" }),
+  }));
+  assert.equal(invalidBoundReview.accepted, false);
+  assert.equal(invalidBoundReview.mayRenderCueBytes, false);
+});
+
+test("review-only outer resolution is one closed authoritative canonical record", () => {
+  const gate = contract.cueExposure.reviewOnlyGate.canonicalReviewOnlyResolutionGate;
+  assert.equal(gate.additionalFieldsAllowed, false);
+  assert.equal(gate.matchingRecordCountField, "matchingResolutionCount");
+  assert.equal(gate.exactMatchingRecordCount, 1);
+
+  const assertRejected = (reviewOnlyResolution, label) => {
+    const subject = reviewOnlyRequest({ reviewOnlyResolution });
+    for (const validate of [
+      evaluateCueRender,
+      (request) => validateCueExposureEvent(cueEvent(request)),
+    ]) {
+      const result = validate(subject);
+      assert.equal(result.accepted, false, label);
+      assert.equal(result.mayRenderCueBytes, false, label);
+    }
+  };
+
+  for (const malformed of [null, [], {}, "record", 1]) {
+    assertRejected(malformed, `outer shape ${String(malformed)}`);
+  }
+  for (const field of gate.requiredFields) {
+    const record = canonicalReviewOnlyResolution();
+    delete record[field];
+    assertRejected(record, `outer missing ${field}`);
+  }
+  assertRejected(canonicalReviewOnlyResolution({ extraField: true }), "outer extra field");
+  assertRejected(canonicalReviewOnlyResolution({ source: "CLIENT" }), "outer wrong source");
+  assertRejected(canonicalReviewOnlyResolution({ matchingResolutionCount: 0 }), "outer zero records");
+  assertRejected(canonicalReviewOnlyResolution({ matchingResolutionCount: 2 }), "outer multiple records");
+  for (const [field, expected] of Object.entries(gate.requiredExactPrimitiveBooleanStates)) {
+    assertRejected(
+      canonicalReviewOnlyResolution({ [field]: String(expected) }),
+      `outer non-boolean ${field}`,
+    );
+    assertRejected(canonicalReviewOnlyResolution({ [field]: !expected }), `outer unsafe ${field}`);
+  }
+  for (const field of gate.recordBindingFields) {
+    assertRejected(canonicalReviewOnlyResolution({ [field]: `foreign-${field}` }), `outer ${field}`);
+  }
+
+  const valid = evaluateCueRender(reviewOnlyRequest());
+  assert.equal(valid.accepted, true);
+  assert.equal(valid.mayRenderCueBytes, true);
+  assert.equal(valid.evidenceNeutral, true);
+  assert.equal(valid.independentEvidenceEligible, false);
+});
+
+test("review-only absence proof is one closed authoritative zero-match canonical record", () => {
+  const reviewOnlyGate = contract.cueExposure.reviewOnlyGate;
+  const gate = reviewOnlyGate.canonicalOpenIndependentAttemptAbsenceResolutionGate;
+  assert.equal(gate.additionalFieldsAllowed, false);
+  assert.equal(gate.exactMatchingRecordCount, 0);
+  assert.equal(gate.requiredQueriedCanonicalAttemptState, "INDEPENDENT_ATTEMPT_OPEN");
+
+  const assertRejected = (record, label) => {
+    const resolution = canonicalReviewOnlyResolution();
+    resolution.openIndependentAttemptResolution = record;
+    const subject = reviewOnlyRequest({ reviewOnlyResolution: resolution });
+    for (const validate of [
+      evaluateCueRender,
+      (request) => validateCueExposureEvent(cueEvent(request)),
+    ]) {
+      const result = validate(subject);
+      assert.equal(result.accepted, false, label);
+      assert.equal(result.mayRenderCueBytes, false, label);
+    }
+  };
+  const validRecord = () => canonicalReviewOnlyResolution().openIndependentAttemptResolution;
+
+  for (const malformed of [null, [], {}, "record", 1]) {
+    assertRejected(malformed, `absence shape ${String(malformed)}`);
+  }
+  for (const field of gate.requiredFields) {
+    const record = validRecord();
+    delete record[field];
+    assertRejected(record, `absence missing ${field}`);
+  }
+  assertRejected({ ...validRecord(), extraField: true }, "absence extra field");
+  assertRejected({ ...validRecord(), source: "CLIENT" }, "absence wrong source");
+  assertRejected({ ...validRecord(), matchingRecordCount: 1 }, "absence nonzero count");
+  assertRejected({ ...validRecord(), queriedCanonicalAttemptState: "SUBMITTED" }, "absence query");
+  assertRejected({ ...validRecord(), learnerPrivateScopeId: "learner-foreign" }, "absence learner");
+  assertRejected({ ...validRecord(), attemptScopeId: "scope-foreign" }, "absence attempt scope");
+  for (const [field, expected] of Object.entries(gate.requiredExactPrimitiveBooleanStates)) {
+    assertRejected({ ...validRecord(), [field]: String(expected) }, `absence non-boolean ${field}`);
+    assertRejected({ ...validRecord(), [field]: !expected }, `absence unsafe ${field}`);
+  }
+
+  const valid = validateCueExposureEvent(cueEvent(reviewOnlyRequest()));
+  assert.equal(valid.accepted, true);
+  assert.equal(valid.mayRenderCueBytes, true);
+  assert.equal(valid.evidenceNeutral, true);
+  assert.equal(valid.independentEvidenceEligible, false);
+});
+
+test("semantic-highlight accessibility requires visible label and computed name together", () => {
+  assert.equal(validateSemanticHighlightAccessibility({
+    visibleTextLabel: "정확한 정의",
+    computedAccessibleName: "",
+    colorOnlyMeaning: false,
+  }).accepted, false);
+  assert.equal(validateSemanticHighlightAccessibility({
+    visibleTextLabel: "",
+    computedAccessibleName: "정확한 정의",
+    colorOnlyMeaning: false,
+  }).accepted, false);
+  assert.equal(validateSemanticHighlightAccessibility({
+    visibleTextLabel: "정확한 정의",
+    computedAccessibleName: "정확한 정의",
+    colorOnlyMeaning: false,
+  }).accepted, true);
+  assert.equal(contract.semanticHighlight.accessibilityRequirement.redundantAriaLabelRequired, false);
+  assert.equal(validateSemanticHighlightAccessibility({
+    visibleTextLabel: "정확한 정의",
+    computedAccessibleName: "정확한 정의",
+    colorOnlyMeaning: false,
+    ariaLabel: undefined,
+  }).accepted, true);
+});
+
+test("semantic-highlight accessibility requires candidate-owned exact primitive false", () => {
+  const rule = contract.semanticHighlight.accessibilityRequirement;
+  assert.equal(rule.requirementMode, "ALL_OF");
+  assert.deepEqual(rule.conditions, [
+    {
+      field: "visibleTextLabel",
+      predicate: "NON_EMPTY_TRIMMED_STRING",
+    },
+    {
+      field: "computedAccessibleName",
+      predicate: "VALID_NON_EMPTY_COMPUTED_ACCESSIBLE_NAME",
+    },
+    {
+      field: "colorOnlyMeaning",
+      predicate: "EXACT_PRIMITIVE_FALSE",
+    },
+  ]);
+  assert.equal(contract.semanticHighlight.colorOnlyMeaningAllowed, false);
+  assert.equal(rule.redundantAriaLabelRequired, false);
+  assert.equal(rule.visibleTextMaySupplyComputedAccessibleName, true);
+
+  const accessibleCandidate = {
+    visibleTextLabel: "정확한 정의",
+    computedAccessibleName: "정확한 정의",
+    colorOnlyMeaning: false,
+  };
+  assert.equal(validateSemanticHighlightAccessibility(accessibleCandidate).accepted, true);
+
+  const missingColorState = {
+    visibleTextLabel: accessibleCandidate.visibleTextLabel,
+    computedAccessibleName: accessibleCandidate.computedAccessibleName,
+  };
+  assert.equal(validateSemanticHighlightAccessibility(missingColorState).accepted, false);
+  for (const invalidValue of [true, "true", "false", null, undefined, 0, 1, [], {}]) {
+    assert.equal(validateSemanticHighlightAccessibility({
+      ...accessibleCandidate,
+      colorOnlyMeaning: invalidValue,
+    }).accepted, false, `colorOnlyMeaning=${String(invalidValue)}`);
+  }
+
+  assert.equal(validateSemanticHighlightAccessibility({
+    ...accessibleCandidate,
+    visibleTextLabel: "",
+  }).accepted, false);
+  assert.equal(validateSemanticHighlightAccessibility({
+    ...accessibleCandidate,
+    computedAccessibleName: "",
+  }).accepted, false);
+  assert.equal(validateSemanticHighlightAccessibility({
+    ...accessibleCandidate,
+    ariaLabel: undefined,
+  }).accepted, true);
+});

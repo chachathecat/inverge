@@ -1,0 +1,435 @@
+---
+decision_title: "답안길 Memory Cue & Annotation Layer V13 후속 Owner 결정"
+status: "owner-decision/proposed-for-merge"
+dated: "2026-08-06 KST"
+repository: "chachathecat/inverge"
+active_master_plan: "docs/strategy/dabangil-professional-exam-reasoning-os-final-master-plan-v13-2026-08-06.md"
+mandatory_annex: "docs/strategy/dabangil-memory-cue-and-annotation-layer-v1-2026-08-06.md"
+machine_contract: "config/dabangil-memory-cue-and-annotation-layer-v1.json"
+validation_record: "docs/qa/memory-cue-and-annotation-layer-v1-validation.md"
+does_not_authorize:
+  - "runtime, API, UI, schema, migration, RLS, Storage, provider, dependency, deployment or Production"
+  - "terminology corpus build, Hanja dictionary import, real source processing or personal annotation persistence"
+  - "MCAL-1 terminology construction, MCAL-2 Memory Post-it runtime, MCAL-3 semantic-highlight runtime or MCAL-4 personal-annotation runtime"
+  - "roadmap/WIP mutation, CPF-2A implementation, PR #692 mutation, Ready transition, merge or auto-merge"
+---
+
+# Owner 결정 — Memory Cue & Annotation Layer
+
+## 1. 결정
+
+V13의 필수 후속 부속계약으로 `Memory Cue & Annotation Layer(MCAL)`를 채택한다.
+V13은 계속 유일한 active master plan이며 MCAL은 V14가 아니다.
+동기화된 machine contract version은 `1.0.22`이다.
+MCAL은 별도의 정의 저장소나 두 번째 정의 authority가 아니다. 모든 `exactDefinitionRef`는
+released·versioned VESG concept/evidence projection을 가리키며, 해석 실패·hold·drift 시 cue도 release하지 않는다.
+
+MCAL의 역할은 다음 연결점을 고정하는 것이다.
+
+```text
+검증된 exact definition·concept·QuestionUnit
+→ 검증된 한자/형태소/어근 해부
+→ 암기용 쉬운 풀이와 대비
+→ 단서 제거형 회상
+→ attempt/repair/transfer/D+1/D+7 evidence
+```
+
+## 2. 정확한 개발 우선순위
+
+```text
+핵심 근거·개념·문제·검증 엔진
+→ attempt/repair/transfer/D+7 루프
+→ 용어 해부·기억 포스트잇 MVP
+→ 의미형 하이라이트
+→ 개인 주석 편집기
+```
+
+이 순서를 문서와 기계계약에 고정한다. 이번 결정은 MCAL-0 source-only 계약만 허용한다.
+
+## 3. 정의와 암기말 분리
+
+```text
+formalTerm ≠ literalGloss ≠ memoryGloss ≠ exactDefinitionRef ≠ independent evidence
+```
+
+암기말·비유·한자 직역은 공식 정의, 공식답안, 채점기준 또는 mastery가 아니다.
+`exactDefinitionRef`는 released·versioned VESG concept/evidence projection으로만 resolve한다.
+MCAL은 그 projection을 표시할 뿐 정의를 생성·덮어쓰기·release하는 authority가 아니다.
+모든 cue는 정확한 정의 reference와 “암기용 풀이” 경계를 가진다.
+
+## 4. 한자·어근 안전성
+
+- 출처 없는 한자·어근을 추측하지 않는다.
+- disputed/unknown은 hold.
+- pedagogic-only 해석은 어원이라고 표시하지 않는다.
+- 안전한 분해가 없으면 분해하지 않는다.
+- profile별 과목·언어·권리 검토를 독립 수행한다.
+
+## 5. Cue fading과 evidence
+
+```text
+FULL → DECOMPOSITION_ONLY → PROMPT_ONLY → HIDDEN
+```
+
+답변 전에 decomposition·memory gloss·prompt 중 어떤 단서든 표시하면 assistance/exposure다.
+`CueExposureEvent`는 별도 ledger를 만들지 않고 canonical Assistance/Exposure ledger를 재사용한다.
+모든 render-capable request와 exposure-event timing(`BEFORE_RESPONSE`, `AFTER_RESPONSE`, `REVIEW_ONLY`)은
+`canonicalRecordCommitted === true`를 요구한다. truthiness는 금지하며 missing·null·false·string·number·
+object·array·ambiguous 또는 caller-inferred commit state는 cue byte 0으로 fail closed한다. request와 event의
+`AFTER_RESPONSE`는 동일 exact-boolean gate를 사용하며 `canonicalExposureRecordCommitted` 같은 alias는
+canonical field를 대체하지 못한다. exact true 하나만으로 다른 binding·ordering·race gate를 우회하지 못한다.
+`REVIEW_ONLY` request도 이 canonical field를 생략하거나 exact primitive `true` 이외의 값을 쓰면 렌더하지 않는다.
+모든 render-capable request/event validator는 timing 분기 전에 shared record-failure gate를 적용하며,
+`recordFailure === false`를 exact primitive equality로 요구한다. 따라서 `canonicalRecordCommitted === true`와
+함께 `recordFailure === true`가 있더라도 cue byte 0으로 fail closed한다.
+request와 event validator는 같은 closed timing/classification map을 확인한다. `BEFORE_RESPONSE`는
+`LOW` 또는 `MATERIAL`만 허용하며, request가 classification을 생략하거나 `NONE`을 쓰면 invalid다. `NONE`은 해당
+attempt에 pre-response cue exposure가 없었다는 뜻이다. timing과 classification은 canonical
+ledger에서 파생하고 client 입력을 신뢰하지 않는다. submitted-attempt `AFTER_RESPONSE` request도 성공 전에
+같은 map의 `NONE`·`LOW`·`MATERIAL` 중 하나를 명시해야 하며 missing 또는 임의 값은 cue byte 0으로 실패한다.
+sequence에 pre-response event가 하나라도
+있으면 independent retrieval·far transfer·stable D+7은 부적격이며 뒤의 event가 복구하지 못한다.
+ordering ambiguity와 render/submit race도 fail closed다.
+`BEFORE_RESPONSE` attempt state는 client가 아니라 canonical server attempt ledger에서 파생하며,
+non-null exact `attemptId`와 learner scope가 exact `INDEPENDENT_ATTEMPT_OPEN` 한 건에 resolve되어야
+하고, exact learner·attempt·cue·cue revision·단일 request에 묶인 active deliberate server-recorded
+single-use confirmation을 모두 요구한다. confirmation은 `replayed === false`도 exact primitive equality로
+만족해야 하며 missing·default·coercion은 non-replayed 증거가 아니다. `cancelled`도 정확히 primitive
+`false`여야 하므로 missing·null·string·number·object·array·`true` 또는 다른 malformed 값은 active
+confirmation 증거가 아니다. request와 confirmation의 `cueId`, `cueRevisionId`, `requestId`는 서로
+비교하기 전에 양쪽에서 각각 exact trimmed canonical identifier schema를 통과해야 한다. 두 값이 함께
+누락되거나 null·wrong-type·empty·whitespace·malformed인 채 같아도 confirmation binding이 아니다.
+인증된 요청 문맥의 `authenticatedLearnerPrivateScopeId`, subject의 `learnerPrivateScopeId`, canonical
+open-attempt resolution의 learner scope, canonical confirmation의 learner scope 네 값은 각각 같은 exact
+canonical identifier schema를 독립적으로 통과한 뒤 field-for-field로 모두 같아야 한다. 네 값이 함께
+malformed이거나 subject·attempt·confirmation이 같은 foreign learner를 주장해도 인증 문맥과 다르면 실패한다.
+client/caller learner-scope alias 또는 inferred learner scope는 이 인증 경계를 대체하지 못한다.
+confirmation 자체도 추가 필드가 없는 closed single canonical record여야 한다. exact source·record count 1,
+server-side·authoritative·independently-resolved·known·resolved·server-recorded·deliberate·active·single-use는
+primitive `true`, consumed·cancelled·ambiguous·conflicting·cross-learner·cross-attempt·mismatched·stale·replayed·
+client/caller-inferred는 primitive `false`여야 한다. learner·attempt·cue·cue revision·request binding을 모두
+record 자체에서 검증하며 source label, client boolean, preselected consent 또는 outer success state는 부족하다.
+모든 `BEFORE_RESPONSE` render-capable validator는 하나의
+`EXACT_PRE_RESPONSE_RENDER_GATE_V1`에 위임해야 하며 별도 event validator, alternate route 또는
+약한 두 번째 policy로 우회할 수 없다. confirmation consumption → cue exposure record → `ASSISTED`
+전환 → independent-evidence invalidation은 all-or-nothing으로 cue byte 렌더 전에 commit한다.
+missing·empty·unknown·unresolved·ambiguous·conflicting·cross-learner·cross-attempt·submitted·closed·stale·
+cancelled·replayed·mismatched·client-inferred attempt reference, invalid confirmation, partial commit, record failure,
+inconsistent ledger state 또는 render/submit race는 cue byte 0으로 fail closed한다. 이미 submitted인
+canonical attempt는 `AFTER_RESPONSE`만 허용한다. 이 variant는
+`EXACT_CANONICAL_SUBMITTED_ATTEMPT_RESOLUTION_GATE_V1` 하나를 authoritative policy로 사용한다. resolution은
+추가 필드 없는 non-null·non-array closed record이며 exact `CANONICAL_SERVER_ATTEMPT_LEDGER`, count 1,
+`SUBMITTED`를 요구한다. `serverSide`·`authoritative`·`independentlyResolved`·`known`·`resolved`·`submitted`·
+`submittedBeforeExposure`는 primitive `true`, `crossLearner`·`crossAttempt`·`mismatched`·`replayed`·
+`preSubmission`·`closed`·`stale`·`cancelled`·`ambiguous`·`conflicting`·`clientInferred`·`callerInferred`는
+primitive `false`여야 한다. request/event subject와 record의 `attemptId`·`learnerPrivateScopeId`는 동일한
+exact trimmed canonical identifier schema를 각각 독립적으로 통과한 다음에만 비교하며, authenticated learner
+scope `authenticatedLearnerPrivateScopeId` 및 exact attempt와 일치해야 한다. authenticated scope, subject와
+record의 learner scope는 모두 독립적으로 schema-valid하고 field-for-field 같아야 하며 client/caller alias는
+대체할 수 없다. 양쪽 모두 missing·whitespace·malformed·wrong-type인 채 같아도 binding이
+아니다. client/latest/caller 추론, outer source/state/success claim, missing·extra-field·wrong-source·zero/multiple·
+foreign·unsafe·unsubmitted resolution은 cue byte와 positive learning evidence를 모두 0으로 fail closed한다.
+request, exposure event 및 optional bound `REVIEW_ONLY`는 모두 이 동일 gate에 위임하고 약한 outer policy는
+authorization authority가 아니다.
+오직 별도 `REVIEW_ONLY` variant만 attempt-unbound일 수 있고 항상 evidence-neutral이다. 그러나
+caller가 붙인 `REVIEW_ONLY` label, `canonicalExposureRecordCommitted` boolean, client event 또는 inferred
+timing은 authorization evidence가 아니다. cue request와 exposure-event 두 render path 모두
+`CANONICAL_REVIEW_ONLY_RENDER_GATE_V1`에 위임하고, trusted server resolver가 exact learner·attempt
+scope·cue·cue revision·request에 묶인 canonical timing/classification 및 committed exposure를 한 건으로
+resolve해야 한다. canonical server attempt ledger에서 같은 learner/attempt scope의 open independent
+attempt가 0건임도 별도로 증명한다. missing·unresolved·ambiguous·conflicting·cross-learner·stale·client-inferred
+state 또는 matching open attempt는 cue byte 0으로 fail closed한다.
+outer canonical timing/classification resolution 자체도 `resolved === true`를 포함한 required exact state를
+독립적으로 만족해야 하며, nested open-attempt absence proof가 valid해도 outer unresolved state를 대체하지 못한다.
+exposure-event path는 이 shared review-only gate로 조기 routing하기 전에 event의 `derivedFrom`이 exact
+`CANONICAL_ASSISTANCE_EXPOSURE_LEDGER`이고 `ordering === "ORDERED"`임을 각각 요구한다. 두 필드의 누락,
+client provenance 또는 ambiguous ordering은 cue byte 0으로 실패하며 request path가 event-only 필드를
+합성하거나 그 누락을 허용하는 근거가 될 수 없다.
+outer `timing` 또는 nested canonical timing 중 어느 쪽에서든 review-only path가 식별되면 두 render
+validator는 routing이나 다른 early return 전에 실제 subject의 `renderSubmitRaceDetected === false`를 exact
+primitive equality로 요구하고 shared review-only authorizer에서 같은 필드를 다시 검증한다. missing·undefined·
+null·`true`·string·number·object·array·default·coercion은 cue byte 0으로 fail closed한다.
+`BEFORE_RESPONSE` open-attempt binding 및 `REVIEW_ONLY`의 nested zero-count absence proof는 각자의 canonical
+server attempt resolution에 같은 generic exact state gate를 독립적으로 적용한다. `known === true`,
+`resolved === true`, `ambiguous === false`, `conflicting === false`, `stale === false`,
+`clientInferred === false`가 exact primitive equality로 모두 성립해야 하며 누락·default·coercion·truthiness는
+canonical resolution 증거가 아니다. submitted binding에는 앞서 정의한 더 엄격한 record-specific gate가
+추가로 적용되며 이 generic subset만으로는 authorization할 수 없다.
+특히 `REVIEW_ONLY` outer resolution과 nested absence record는 각각 non-null·non-array closed object여야 한다.
+outer record는 exact canonical timing/classification source, one authoritative/server-side/independently-resolved
+match와 request/scope/cue bindings를 요구한다. nested record는 exact server attempt resolver에서 exact open-
+independent state를 조회하고 같은 learner-private/attempt scope에 bind된 zero match를 증명해야 한다. 두 record의
+known/resolved/server-side/authoritative/independently-resolved는 exact true이고, declared ambiguity·conflict·
+cross-scope·mismatch·stale·replay·cancel·client/caller inference는 exact false이며 undeclared field는 cue byte 0으로
+fail closed한다.
+REVIEW_ONLY도 인증된 요청 문맥의 `authenticatedLearnerPrivateScopeId`, subject learner scope, outer canonical
+review-only resolution learner scope, nested open-attempt absence record learner scope 네 값을 같은 exact canonical
+identifier schema로 각각 검증한 뒤 field-for-field로 모두 같게 요구한다. matching malformed 값, 인증 문맥과
+다른 foreign learner에 맞춘 세 record/subject, client/caller alias 또는 inference는 두 render validator 모두에서
+cue byte 0으로 실패한다.
+
+cue absence는 independent-evidence eligibility만 보존한다. empty event, cue-free sequence 또는
+`AFTER_RESPONSE` event만으로 independent retrieval·far transfer·stable D+7이 positive가 될 수 없다.
+세 credit을 판단하기 전에 base canonical exposure history는 exact valid non-null `attemptId` 및
+`learnerPrivateScopeId`를 포함하고 evaluated attempt의 두 값과 정확히 같아야 한다. far-transfer는
+source history나 copied count가 아니라 별도의 authoritative canonical history를 요구하며 그 history는
+`transferAttemptId`와 authenticated learner scope에 exact-bind한다. stable D+7도 별도 history를
+`d7AttemptId`와 같은 learner scope에 exact-bind한다. 각 history는 authoritative·complete·single-record·
+non-ambiguous·non-conflicting·fresh·non-replayed·non-client-inferred·non-caller-paired여야 하고,
+자체 `preResponseCueExposureCount`를 exact nonnegative safe integer로 제공해야 한다. 정확히 0만 해당
+affirmative evidence의 자격을 보존한다. missing·undefined·null·boolean·string·fractional·negative·NaN·
+infinite·unsafe·object·array·cross-attempt·cross-learner·ambiguous·conflicting·stale·replayed·
+client/caller-inferred history 또는 count는 affected credit을 fail closed한다. exact 0이나 unbound count
+copy 자체는 어떤 affirmative learning evidence도 만들지 않는다.
+그보다 먼저 base `evidence.attempt` 자체가 추가 필드 없는 closed canonical record로
+`CANONICAL_SERVER_ATTEMPT_LEDGER`에서 정확히 한 건 resolve되어야 한다. exact attempt·learner·submission ID,
+canonical `submittedAt`, `SUBMITTED`·`INDEPENDENT`, server-side·authoritative·independently-resolved·known·resolved
+primitive true와 ambiguous·conflicting·mismatched·stale·client/caller-inferred primitive false를 요구한다. 또한 base 전용 safe-state
+gate가 `crossLearner`, `crossAttempt`, `replayed`, `cancelled`를 각각 exact primitive `false`로 요구하며
+shared generic resolution helper를 확장하거나 review-only absence semantics를 바꾸지 않는다. 그 뒤에만 independent retrieval을
+평가하며 far transfer와 stable D+7은 그 valid base credit에 의존한다. 어느 필드든 missing·malformed·
+wrong-type·반대 상태이거나 record가 0건/복수이면 세 positive credit은 모두 fail closed한다.
+positive independent retrieval은 candidate-owned `canonicalResponseEvaluation`을 요구한다. 이 record는 closed,
+single, server-side, authoritative, independently resolved, known, resolved, fresh, non-conflicting이고 base attempt의
+attempt·learner·submission ID 및 candidate evaluation ID에 exact-bind된다. caller source string이나 outer
+`actualSubmission`/`evaluationCompleted` flag는 대체 증거가 아니다. invalid response는 dependent far transfer와
+stable D+7도 막는다. 동일 bounded surface의 far transfer도 closed `canonicalTransferEvaluation`을 exact source/
+transfer attempt/learner/submission/evaluation/result/task IDs에 bind하며, invalid transfer evaluation은 far-transfer만 막는다.
+세 closed canonical evaluation record는 동일한 record-internal canonical predicate
+`affirmativeEvidenceOutcomeAccepted`를 required field로 가지며 exact primitive `true`일 때만 해당 affirmative
+learning evidence를 부여한다. 이 값은 해당 record의 authoritative canonical evaluator가 그 credit에 필요한
+performance를 받아들였다는 뜻일 뿐이며 MCAL에 numeric score·rubric·threshold·mastery authority를 만들지 않는다.
+evaluation/submission completion, record 또는 `resultId` 존재, truthiness, non-zero score, outer/caller/client
+`success`·`correct`·`score`·`threshold`·`thresholdMet`, 다른 attempt·learner·submission·evaluation·transfer·D+7
+stage의 outcome은 대체하지 못한다. missing·`false`·null·undefined·string·number·object·array·malformed·wrong-source·
+zero/multiple·unresolved·ambiguous·conflicting·stale·replayed·cancelled·cross-scope·mismatched·inferred·defaulted·
+aliased·coerced 값은 affected credit을 fail closed한다. invalid base-response outcome은 세 credit을 모두 막고,
+invalid transfer outcome은 otherwise-valid independent retrieval과 stable D+7을 보존하며 far-transfer만 막고,
+invalid D+7 outcome은 otherwise-valid independent retrieval과 far-transfer를 보존하며 stable D+7만 막는다.
+각 evaluation completion은 자신이 bind된 canonical attempt의 `submittedAt`과 같은 시각이거나 그 뒤여야 한다.
+response는 base attempt, transfer는 canonical transfer attempt, D+7은 canonical D+7 attempt의 timestamp를 사용하며
+두 값은 모두 bound record의 exact RFC3339 UTC millisecond field여야 한다. 1 ms 이전 completion이나 outer/caller
+timestamp 대체는 fail closed하고 response/transfer/D+7 실패 격리는 그대로 유지한다.
+이 evaluation 자체 순서와 별도로 canonical transfer attempt의 `submittedAt`은 canonical base/source attempt의
+`submittedAt`과 같거나 그 뒤여야 한다. source와 transfer 양쪽의 trusted canonical record timestamp만 비교하며
+transfer가 source보다 1 ms라도 앞서면 far-transfer만 fail closed한다. equality와 later는 허용하고 outer/caller
+source·transfer timestamp는 이 순서를 대체하지 못한다.
+stable D+7은 completed D+7 evaluation·cue `HIDDEN`·all-surface byte absence·non-same representation·unresolved
+scoring conflict 0을 담은 candidate-owned closed `canonicalD7Evaluation`을 요구한다. 이에 더해 실제 D+7
+candidate의 `canonicalD7Attempt`를 같은 authoritative server
+attempt ledger에서 정확히 한 건으로 별도 resolve한다. 이 record는 `d7AttemptId`와 authenticated learner
+scope 및 submission ID에 exact-bind되고 base/source attempt와 달라야 하며, state는 exact `SUBMITTED`, assistance는 exact
+`INDEPENDENT`여야 하며 canonical `submittedAt`을 가져야 한다. known/resolved는 exact true이고 ambiguous·conflicting·cross-learner·cross-attempt·
+mismatched·stale·replayed·cancelled·client/caller-inferred는 exact false여야 한다. outer D+7 claims나 base
+attempt로 대체할 수 없고, 이 D+7-only resolution 실패는 otherwise valid independent retrieval과 far transfer를
+바꾸지 않는다. canonical D+7 attempt의 `submittedAt` 자체도 canonical base/source attempt의 `submittedAt`과
+같거나 그 뒤여야 한다. 두 trusted canonical attempt record timestamp만 비교하며 D+7 attempt가 source보다 1 ms
+앞서면 stable D+7만 fail closed한다. equality와 later는 허용하고 outer/caller source·D+7 timestamp는 대체하지 못한다.
+seven-day interval은 bound base attempt record의 canonical `submittedAt`과 bound
+`canonicalD7Evaluation.d7EvaluationCompletedAt` 두 exact RFC3339 UTC millisecond instant만으로 계산하며 최소
+`604800000` ms여야 한다. outer source/completion timestamp, independently supplied older timestamp,
+`D_PLUS_7` label, caller elapsed 값, missing·mismatched·malformed·
+unresolved provenance, non-UTC·reversed 또는 7일 미만 interval은 credit을 만들지 못한다. 세 affirmative record의 `ambiguous`는 exact primitive
+`false`여야 한다. missing·undefined·null·`true`·string(`"true"`, `"false"` 포함)·number·object·array는
+해당 record의 credit을 만들지 못한다. invalid independent response는 dependent far-transfer와 D+7을
+함께 막고 invalid transfer/D+7 ambiguity는 각 credit만 막는다. exact false만으로는 증거가 생기지 않는다.
+far transfer의 origin task는 transfer record가 임의로 공급한 두 task ID의 차이로 증명하지 않는다.
+resolved `evidence.attempt`가 `CANONICAL_SERVER_ATTEMPT_TASK_BINDING_RESOLVER`에서 정확히 한 건으로 resolve된
+closed `taskBinding`을 직접 가져야 하고, 그 binding의 attempt·learner scope는 source attempt와 정확히 같으며
+`originTaskId`는 canonical source `taskId`와 field-for-field 같아야 한다. 실제 `transferAttemptId`도
+`CANONICAL_SERVER_ATTEMPT_LEDGER`에서 exact submitted canonical transfer attempt 한 건으로 독립 resolve하고,
+그 attempt가 직접 가진 별도 closed `taskBinding`을
+`CANONICAL_SERVER_ATTEMPT_TASK_BINDING_RESOLVER`에서 exact single record로 다시 resolve해야 한다.
+canonical transfer attempt와 그 task binding은 각각 `transferAttemptId`·authenticated learner scope 및
+서로의 attempt identity에 exact-bind되어야 하고 source attempt/binding으로 대체하거나 재사용할 수 없다.
+`transferTaskId`는 canonical transfer binding의 `taskId`와 정확히 같아야 하며, canonical source task와
+canonical transfer task 자체가 서로 달라야 한다. 이 두 canonical identity는 trim·case-fold·alias·추론·
+정규화 없이 field-for-field 비교한다. caller가 공급한 task inequality, `distinctEligibleTask: true` 또는
+`NON_SAME_REPRESENTATION`만으로 canonical distinctness를 만들 수 없다.
+source 또는 transfer binding이 missing·malformed·wrong-source·extra-field·ambiguous·conflicting·stale·
+client/caller-inferred·mismatched·cross-attempt·cross-learner·unresolved·0건·복수이거나 supplied identity가
+다르면 far-transfer credit만 fail closed한다. transfer-only 실패는 이미 valid한 independent retrieval과
+stable D+7을 바꾸지 않는다.
+missing exposure record/history, failed render, partial commit, ambiguous record 또는 `ASSISTED` attempt는
+positive learning evidence 0으로 fail closed한다.
+`HIDDEN`은 DOM·SSR·접근성 text·prefetch·cache·direct API output 어디에도 cue byte가 없음을 뜻한다.
+D+7 stable과 timed integration은 cue hidden, non-same representation,
+unresolved scoring conflict 0을 요구한다.
+
+## 6. 표면 규칙
+
+- memory card 기본 collapsed이며, 선기록 없는 기본 접힘 상태에는 formal term만 보인다.
+- decomposition을 접힘 상태에 미리 표시하려면 exposure를 렌더 전에 원자적으로 기록한다.
+- expanded 최대 1개.
+- primary semantic highlight 최대 3개이며 revision-bound typed anchor가 필수다.
+- anchor의 열 `requiredBindings`는 각 필드의 exact type·closed enum·pattern과 kind별 domain·locator·
+  target-type consistency를 모두 검증한다. missing·null·empty·malformed·wrong-type·ambiguous·inconsistent
+  binding은 reject하고 truthiness-only validation은 금지한다. `requiredBindingsAmbiguous`는 exact primitive
+  `false`, `conflictingRequiredBindings`는 exact empty array여야 하며 필드 누락·wrong-type·malformed state,
+  genuine ambiguity 또는 non-empty conflict array는 reject한다.
+- `OFFICIAL_PERMITTED_RANGE`의 `itemRightsManifestId`는 exact trimmed primitive string과
+  `^irm_[A-Za-z0-9][A-Za-z0-9._:-]{2,123}$` closed format을 통과해야 한다. 별도
+  `CANONICAL_SERVER_ITEM_RIGHTS_MANIFEST_BOUNDARY`의 authoritative item record 한 건이 manifest ID와
+  anchor ID/kind/domain/target type/`rightsManifestId`, 특히 exact `targetRevisionId`를 field-for-field
+  bind해야 한다. bare truthy ID, caller assertion/equality, fallback, missing·empty·whitespace·malformed·
+  wrong-type·unresolved·ambiguous·conflicting·stale·replayed·cross-revision·client-inferred binding은 reject한다.
+- private anchor의 `ownerBindingRef`와 `vaultLocalTargetRef`는 closed primitive-string schema와 exact
+  format을 통과해야 한다. `CANONICAL_SERVER_PRIVATE_ANCHOR_OWNER_BOUNDARY`의 server-side authoritative
+  resolution 한 건이 authenticated learner·tenant와 정확히 일치하고 owner ref·anchor·kind·vault-local
+  target·revision·digest·scope·locator를 field-for-field bind해야 한다. caller/client equality·truthiness는
+  증거가 아니며 missing·malformed·wrong-type·foreign/cross-owner·cross-tenant·ambiguous·conflicting·stale·
+  replayed·unresolved·client-inferred resolution은 reject한다.
+- color-only 의미 금지; 실제 semantic-highlight candidate 자체의 `colorOnlyMeaning`은 exact primitive
+  `false`여야 하고 text label과 accessible name도 필수다. 필드 누락·`undefined`·`null`·문자열·숫자·
+  배열·객체·truthiness coercion·default/inference 또는 전역 `colorOnlyMeaningAllowed: false`는 candidate의
+  명시적 exact false를 대신할 수 없다.
+- primary response를 가리지 않는다.
+- Today에 네 번째 primary task를 만들지 않는다.
+
+## 7. 개인 주석
+
+개인 자유문장은 마지막 단계다. Personal Raw Vault, owner isolation, retention,
+export/delete, RLS/Storage/provider, backup, logs/traces, sync conflict, hostile
+cross-user 검증을 별도 승인하기 전 구현하지 않는다.
+
+개인 메모·제3자 원문 anchor는 shared VESG, Exam World, generator, analytics,
+training 또는 다른 사용자 응답으로 승격하지 않는다.
+
+Personal Raw Vault의 raw annotation body를 직접 training하는 것은 default-off가 아니라
+무조건적·비우회 금지다. learner consent·opt-in, 계약, 관리자 선택 또는 미래 O5도 이를 허용할
+수 없다. rename·alias·relabel로 원본 분류를 지우거나 raw body를 Cleared Content Bank로 직접
+promotion할 수도 없다.
+
+미래 candidate는 raw body와 별개의 closed-schema non-reconstructive signal, 또는 raw body의
+재명명·직접승격이 아닌 별도 authored·rights-owned·provenance/rights-reviewed Cleared Content
+Bank object뿐이다. Cleared Content Bank 후보 자체는 exact identifier-only closed schema를 통과해야 하므로
+unknown field, `rawAnswer` 같은 private-raw/free-text field 및 caller가 공급한
+`separateObjectIdentity`·`separatelyAuthored`·`rightsOwned`·`rightsReviewed`·`provenanceReviewed`
+boolean을 허용하지 않는다. 별도 canonical promotion/rights/provenance resolver가 additional-field-free
+closed record를 정확히 한 건 반환해야 한다. 그 record의 source와 count는 exact하고 `serverSide`·
+`authoritative`·`independentlyResolved`·`known`·`resolved`는 primitive true, `ambiguous`·`conflicting`·
+`stale`·`clientInferred`·`callerInferred`·`replayed`·`cancelled`·`mismatched` 및 모든 candidate/revision/
+purpose/O5 cross-state는 primitive false여야 한다. record는 exact candidate/revision/purpose/O5 scope에
+bind하고 separate identity, separate authorship, actual rights ownership, rights/provenance review 및
+personal/private raw content 부재를 증명해야 eligibility가 보존된다. missing·extra·mismatched·stale·
+inferred·0건/복수 record, false authority/server state 또는 unknown/private field는 hypothetical receipt
+전에 fail closed한다. 이 canonical proof를 가진 별도 authored·rights-owned 후보 경로는 유지된다.
+contribution, Cleared Content Bank promotion과 exact-purpose O5는 서로
+구별된 gate이며 어느 것도 다른 gate를 대신하지 않는다. 각 미래 승인은 global boolean이 아니라
+independently resolved contribution·promotion·O5 receipt여야 하고, 세 receipt가 exact `signalId`·
+`signalRevisionId`·`purposeId`·`o5ScopeId`에 모두 일치해야 한다. cross-candidate/revision/purpose/scope,
+missing, ambiguous, replayed, stale, revoked 또는 independently unresolved receipt는 fail closed한다.
+receipt set은 `contribution`·`promotion`·`o5`만 가진 closed object이고 각 receipt도 undeclared field가 없는 closed
+canonical record여야 한다. kind-specific source와 one match, 서로 다른 canonical nonempty `receiptId`, exact candidate
+bindings를 요구한다. server-side·authoritative·independently-resolved·known·resolved·active는 exact true이고
+ambiguous·conflicting·replayed·stale·revoked·client/caller-inferred·모든 declared cross-scope state는 exact false다.
+누락·extra·malformed·duplicate·wrong-source·non-boolean record는 candidate eligibility는 보존하되 hypothetical
+receipt validity와 current authorization을 모두 false로 둔다.
+현재 세 canonical authorization은 모두 정확히 false이며 테스트의 미래 receipt 모의는 이를 변경하지
+않는다. structurally valid·candidate-bound receipt set은 미래 binding contract의 유효성만 증명하고 현재
+training·offline training·다른 사용을 승인하지 않는다. `currentlyAuthorized`도 항상 false이고,
+mock·fixture·hypothetical/future context는 canonical false를 override할 수 없다. 활성화에는 canonical
+authorization boundary를 바꾸는 별도 승인 변경이 필요하다.
+
+signal은 raw body·raw pointer·reconstructive derivative를 rename·alias·relabel한 객체일 수 없다.
+canonical closed signal-schema validator는 `closedValueSchema: true`나 safety-proof marker를 후보가
+제공했다는 사실을 신뢰하지 않고 실제 candidate object 전체를 검증한다. top-level 및 consent·retention
+nested object는 선언된 exact field set만 허용하며 additional/unknown field를 금지한다. 따라서
+`rawAnswer`, free-text 또는 reconstructive payload 같은 미선언 field는 기존 safety marker가 모두
+통과해도 candidate eligibility 전에 fail closed한다.
+`SEPARATE_NON_RECONSTRUCTIVE_SIGNAL`의 같은 validated candidate object에는 다음 다섯 property가
+각각 명시적으로 존재하고 primitive boolean이며 정확히 `false`여야 한다:
+`containsRawAnnotationBody`, `containsRawBodyPointer`, `containsExcerptOrFreeText`, `reconstructive`,
+`reconstructiveDerivativeOfRawBody`. missing·undefined·null·non-boolean·`true`·ambiguous·cross-object·
+unvalidated 값은 안전의 증거가 아니며 candidate 단계에서 fail closed한다. proof는 canonical closed
+signal-schema validator가 exact signal/revision에 묶어 검증해야 하며 client assertion은 받지 않는다.
+이 candidate property·source label·`contentSafetyProofValidated` marker는 echo일 뿐 origin 또는 content
+safety 판정 authority가 아니다. 별도 decision-context의 additional-field-free closed
+`CANONICAL_SIGNAL_ORIGIN_CONTENT_SAFETY_RESOLVER` record 한 건이 exact signal/revision/purpose/O5 scope에
+bind하고 `SEPARATE_NON_RECONSTRUCTIVE_SIGNAL_ORIGIN`을 resolve해야 한다. `serverSide`·`authoritative`·
+`independentlyResolved`·`known`·`resolved`·`separateObjectIdentity`는 exact true이고 raw body/pointer/
+excerpt/free-text/reconstructive/rename/direct-promotion 및 ambiguous/conflicting/mismatched/cross/stale/
+replayed/cancelled/client-or-caller-inferred state는 모두 exact false여야 한다. candidate-only echo,
+missing·extra·wrong-source·0건/복수·foreign 또는 unsafe resolution은 eligibility 전에 fail closed한다.
+
+candidate 내부 consent와 retention은 non-authoritative echo다. 별도 decision-context에서 각각
+additional-field-free closed canonical consent resolution과 retention resolution을 정확히 한 건 resolve해야
+한다. 두 record는 exact source·canonical record ID·count 1, `serverSide`·`authoritative`·
+`independentlyResolved`·`known`·`resolved` true, ambiguous/conflicting/mismatched/cross/stale/replayed/
+cancelled/client-or-caller-inferred false를 요구하며 exact `signalId`·`signalRevisionId`·`purposeId`·
+`o5ScopeId`와 candidate echo 전체에 일치해야 한다. consent는 active exact-purpose, retention은 active finite
+purpose-scoped 상태여야 한다. expiry 판정은 candidate가 주장한 timestamp가 아니라 이 canonical record의
+`expiresAt`만 사용한다.
+
+trusted decision time도 별도 closed `TRUSTED_SERVER_CLOCK_BOUNDARY` decision-context record 한 건이어야
+한다. exact source·record ID·count 1과 server-side·authoritative·independently-resolved·trusted·known·
+resolved true, 모든 ambiguous/conflicting/stale/replayed/cancelled/client/caller-inferred false를 검증한 뒤
+canonical `evaluatedAt`만 consent/retention expiry와 비교한다. 두 expiry는 evaluation time보다 엄격히
+뒤여야 한다. caller/candidate/client time, 고정 날짜, missing/extra/invalid/untrusted/ambiguous time record,
+at-expiry 또는 post-expiry는 fail closed한다. generic opt-in, contract, administrator choice 또는 O5는 이를
+대체하지 못한다.
+각 canonical record는 `consent.expired === false`, `consent.revoked === false`,
+`retention.expired === false`, `retention.revoked === false`를 exact primitive boolean으로 요구한다.
+`!== true`, truthiness, defaulting, coercion 또는 true의 부재는 금지한다. missing·undefined·null·true·string·
+number·object·array 또는 다른 non-false 값 하나라도 있으면 candidate eligibility와 hypothetical receipt는
+fail closed한다. exact false는 다른 source·ACTIVE·purpose·binding·finite-retention·trusted-time·strict-future
+expiry gate가 모두 통과할 때 eligibility만 보존하며 consent·receipt·current authorization·training·promotion·
+O5 authorization을 만들지 않는다. mismatched·indefinite·cross-purpose record도 fail closed다.
+
+`LEARNER_ATTEMPT_RANGE`와 `PRIVATE_SOURCE_RANGE`는 owner-bound `LEARNER_PRIVATE` 및
+`VAULT_LOCAL_ONLY`로 강제한다. private target digest는 vault-local integrity metadata일 뿐이며,
+non-vault에는 excerpt·offset·locator·attempt reference·digest·identifier가 없는 bodyless receipt만
+허용한다. shared graph·analytics·logs·cache index·cross-user·Portable Core content projection은 금지한다.
+
+## 8. Portable Core
+
+공통 코어는 cue·component·anchor·fading·exposure·highlight interface만 재사용한다.
+각 ExamProfile이 용어·정확한 정의·한자/어근·암기말·권리·현재성·검토자를 소유한다.
+cross-profile cue·정답·mastery 상속은 금지한다.
+
+## 9. 비승인 경계
+
+이 결정은 다음을 승인하지 않는다.
+
+- runtime/UI/API/schema/persistence/dependency;
+- 실제 용어목록·사전·교재·기출 처리;
+- 개인 주석 저장·동기화·export·analytics;
+- 제1차 또는 다른 시험 activation;
+- MCAL-1 용어 구축, MCAL-2 포스트잇 runtime, MCAL-3 하이라이트 runtime, MCAL-4 편집기 runtime;
+- released VESG concept 없는 MCAL-1 term;
+- CPF-2A closure와 approved bodyless exposure path 없는 MCAL-2;
+- roadmap/WIP, CPF-2A, PR #692 변경;
+- Ready, merge, auto-merge.
+
+## 10. 완료조건
+
+- V13 single active pointer 유지.
+- MCAL annex/decision/JSON/QA/test 연결.
+- 모든 authorization false.
+- strict JSON, path, fence, focused tests 통과.
+- released·versioned VESG definition projection과 mnemonic separation.
+- canonical Assistance/Exposure ledger 재사용과 render-before-record 금지.
+- 모든 render-capable validator가 공유하는 exact pre-response gate + canonical
+  independent-attempt-open + exact learner/attempt/cue/revision/request-bound single-use confirmation +
+  atomic confirmation consumption/`ASSISTED`/independent-evidence invalidation before any cue byte.
+- cue absence preserves eligibility only; independent response, distinct non-same-representation transfer
+  and completed hidden/no-conflict D+7 each require separate affirmative canonical evidence; D+7 additionally
+  requires trusted source/evaluation instants proving at least 604800000 ms of actual elapsed time.
+- pre-response confirmation, base attempt/exposure history, independent response evaluation, transfer evaluation,
+  transfer/D+7 attempts and D+7 evaluation use closed single authoritative server-resolved records with exact
+  cross-record identifiers; mutation matrices deny every omitted field, extra field, wrong/zero/multiple source,
+  unsafe or non-boolean state, foreign binding and substituted timestamp while preserving unrelated valid credit.
+- `AFTER_RESPONSE` closed authoritative canonical submitted-attempt record binding plus closed-map request
+  classification, shared without bypass by request, event and optional bound-review consumers;
+  `REVIEW_ONLY` may be unbound only after trusted canonical timing/classification derivation and proof of zero
+  matching open independent attempts, while its event path proves canonical provenance and exact ordering before routing.
+- every anchor required binding exact schema and kind-policy consistency; truthiness-only validation 0.
+- raw personal annotation body direct training·rename/alias 우회·direct Cleared Content promotion 0;
+  raw pointer/reconstructive-derivative relabel 우회 0; 다섯 content-safety property의 같은-object
+  validated explicit boolean false proof; trusted-time exact-purpose consent와 finite purpose retention;
+  exact-candidate-bound independently resolved contribution/promotion/O5 receipts와 현재 canonical
+  authorization false.
+- HIDDEN byte absence와 revision-bound typed anchor.
+- MCAL-1~MCAL-4 authorization false.
+- cue fading/evidence/source safety/portable profile gates.
+- runtime·roadmap·CPF-2A·PR #692 변화 0.

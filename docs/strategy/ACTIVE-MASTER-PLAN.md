@@ -33,6 +33,30 @@ The V13 source-only validation record is:
 
 - `docs/qa/master-plan-v13-exam-digital-twin-portability-validation.md`
 
+## Mandatory V13 follow-up — Memory Cue & Annotation Layer
+
+The exact MCAL Owner decision is:
+
+- `docs/decisions/2026-08-06-owner-memory-cue-and-annotation-layer.md`
+
+The exact MCAL machine-readable proposed contract is:
+
+- `config/dabangil-memory-cue-and-annotation-layer-v1.json`
+
+The mandatory MCAL detailed specification is:
+
+- `docs/strategy/dabangil-memory-cue-and-annotation-layer-v1-2026-08-06.md`
+
+The MCAL source-only validation record is:
+
+- `docs/qa/memory-cue-and-annotation-layer-v1-validation.md`
+
+MCAL is a mandatory V13 follow-up annex. It is not V14 and does not compete with or
+replace V13. It fixes terminology-decomposition, memory-gloss, cue-fading,
+semantic-highlight and learner-private annotation interfaces only. It authorizes no
+terminology corpus, learner UI, persistence, personal free text, dependency, real
+source, Ready transition or merge.
+
 ## Mandatory V12 baseline and earlier annexes
 
 V13 supersedes V12 only as the single active strategy entry point. The following remain
@@ -66,6 +90,7 @@ ACTIVE-MASTER-PLAN.md
    ├─ VESG — official scope, target-date norm, historical observation and priority truth
    ├─ Appraiser Coverage Compiler & Original Question Engine
    ├─ Exam Digital Twin & Robust Curriculum Control
+   ├─ Memory Cue & Annotation Layer — mandatory V13 follow-up
    ├─ Portable Professional Exam Core & Exam Profile contract — internal only
    ├─ V11 — source-safety and legal-operation annex
    ├─ V8 — reasoning OS, evidence, Full-Day and Owner-private annex
@@ -81,7 +106,7 @@ current law, accounting standards and official exam authority
 → final dated Owner decisions for their exact scope
 → exact machine-readable contracts
 → final master plan v13
-→ V13 mandatory detailed specifications
+→ V13 mandatory detailed specifications and follow-up annexes
 → V12 and earlier mandatory annex detail where non-conflicting
 ```
 
@@ -90,6 +115,12 @@ policy remains the only authority that selects `CoreOutcome`, learning value and
 priority. A future optimizer may only operate inside the exact separately approved
 adapter boundary and cannot decide official answers, mastery, pass risk, Law status,
 feedback or delayed recovery.
+
+MCAL likewise has no official-definition, answer, scoring or mastery authority and may not
+become a second definition authority. `exactDefinitionRef` resolves only to a released,
+versioned VESG concept/evidence projection. `memoryGloss`, literal Hanja/root explanations,
+post-it opens and highlight interactions cannot replace that projection or independent
+learner evidence.
 
 ## Current product and runtime boundary
 
@@ -121,6 +152,10 @@ not authorize:
 - a universal exam claim;
 - First-stage learner-facing activation.
 
+MCAL does not expand the learner-facing scope. Its portable interface may be reused only
+after an independently admitted ExamProfile supplies its own terminology, exact
+definitions, decomposition evidence, currentness, rights and subject review.
+
 ## V13 decision model
 
 V13 keeps four values separate:
@@ -144,6 +179,19 @@ official scope and current answer
 
 No scenario weight, priority or expert judgment may be presented as a question
 probability, pass probability or confirmed forecast.
+
+MCAL adds this separation:
+
+```text
+literalGloss
+≠ memoryGloss
+≠ exactDefinitionRef
+≠ independent retrieval evidence
+```
+
+A mnemonic is an encoding aid, not an exact answer. A visible cue makes the affected
+response assisted. D+7 stable evidence requires the cue hidden and a non-same
+representation.
 
 ## V13 execution order
 
@@ -178,12 +226,21 @@ probability, pass probability or confirmed forecast.
    - EDT-6 isolated synthetic evaluation lab
    - EDT-7 separately authorized read adapters
 
-5. Portable-core proof
+5. MCAL
+   - MCAL-0 source-only contract and validation
+   - MCAL-1 reviewed Appraiser Second terminology registry only from released VESG concepts, learner UI 0
+   - MCAL-2 Memory Post-it MVP only after attempt/repair/transfer/D+7 acceptance,
+     CPF-2A closure and an approved bodyless exposure path
+   - MCAL-3 bounded semantic highlighting on revision-bound typed anchors
+   - MCAL-4 personal annotation editor only after CPF/privacy/export-delete gates
+   - MCAL-1 through MCAL-4 remain unauthorized by this annex
+
+6. Portable-core proof
    - PEXK-0 internal interfaces
    - PEXK-1 author-created synthetic mock profile only
    - no real second exam corpus or learner-facing profile
 
-6. Activation
+7. Activation
    - rights-cleared synthetic Owner dogfood
    - exact-head evidence
    - separate First-stage decision
@@ -191,8 +248,42 @@ probability, pass probability or confirmed forecast.
    - separate external/commercial and Production gates
 ```
 
+Within MCAL, the exact learner-facing development priority is:
+
+```text
+core authority/concept/question/verification engines
+→ attempt/repair/transfer/D+7 loop
+→ terminology decomposition + Memory Post-it MVP
+→ semantic highlighting
+→ personal annotation editor
+```
+
 This ordering defines strategy only. It creates no automatic roadmap selection or runtime
 authority.
+
+## MCAL learning and surface boundary
+
+The future MCAL contract requires:
+
+- verified Hanja/morpheme/root/formula decomposition or no decomposition;
+- separate `memoryGloss` and `exactDefinitionRef`, where the latter is a released,
+  versioned VESG concept/evidence projection and MCAL is never a second authority;
+- an explicit “암기용, 정확한 정의를 대체하지 않음” boundary;
+- cue fading from full to decomposition-only to prompt-only to hidden;
+- canonical Assistance/Exposure ledger reuse for every `CueExposureEvent`;
+- any decomposition shown before an answer counted as exposure;
+- default collapsed output limited to `formalTerm` unless exposure is atomically recorded
+  before rendering, with no cue render on record failure;
+- `HIDDEN` cue bytes absent from DOM, SSR, accessibility text, prefetch, cache and direct API output;
+- hidden cue in D+7 stable and timed evidence;
+- one expanded memory card per surface;
+- at most three primary semantic highlights on revision-bound typed anchors;
+- text labels and accessible names instead of color-only meaning;
+- no fourth Today primary task;
+- private annotation body only in Personal Raw Vault after separate approval.
+
+A future personal annotation editor is the last MCAL stage because it creates free-text,
+source-range, retention, export/delete, sync and cross-user isolation risk.
 
 ## Open-source and interoperability boundary
 
@@ -213,6 +304,10 @@ isolation, logging, fallback and rollback.
 QTI, W3C PROV, Caliper and xAPI are compatibility/reference targets only. V13 makes no
 certification or conformance claim.
 
+MCAL adds no dependency candidate. A future dictionary, linguistic resource, editor or
+annotation library requires its own version/license/rights/SBOM/data-egress review and
+cannot be inferred from this source contract.
+
 ## V12-T0 / CPF-1 inherited control-plane checkpoint
 
 At baseline `59b65cc20f64803151723b4df13348979fc0b391`, V12-T0 source-only alignment is recorded as complete.
@@ -229,6 +324,13 @@ configuration settings also remain unknown because this Work authorizes no live
 service access. These records grant no runtime, migration, real-content,
 Production, merge or CPF-2A authority.
 
+MCAL does not weaken this checkpoint. In particular, it authorizes no personal-note
+body, private source selector, sync queue, background retry, annotation analytics or
+external provider. MCAL-2 remains blocked until CPF-2A closes and an approved bodyless
+exposure path can atomically reuse the canonical Assistance/Exposure ledger. MCAL-4 remains
+blocked until the exact intended data path clears its source-safety, privacy, export/delete,
+retention and access gates.
+
 ## Execution boundary
 
 These documents are strategy and proposed policy artifacts. They do not by themselves
@@ -238,12 +340,15 @@ authorize:
 - provider, dependency, package, environment or deployment changes;
 - historical-question ingestion;
 - generated-question or scoring runtime;
+- terminology corpus or dictionary import;
+- Memory Post-it, semantic-highlight or annotation-editor runtime;
+- personal annotation persistence, sync, export, analytics or training;
 - real third-party source processing;
 - learner-data fitting, online learning or model-weight updates;
 - First-stage or another-exam learner-facing activation;
 - external learners, payment, entitlement or Production;
-- Ready transition, merge or auto-merge.
+- roadmap/WIP mutation, PR #692 mutation, Ready transition, merge or auto-merge.
 
 Every later Work must reconcile live authority, current official sources, target-exam
 law/accounting/standards, source rights, current provider behavior, current dependency
-licenses and exact roadmap capacity.
+licenses, CPF/source-safety status and exact roadmap capacity.
