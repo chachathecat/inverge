@@ -65,9 +65,10 @@ PR #692 mutation is included.
     non-ambiguous, non-conflicting, fresh, non-replayed, non-client-inferred and non-caller-paired, and carries its own
     exact nonnegative-safe-integer `preResponseCueExposureCount`. Exactly zero preserves eligibility only; a positive
     count or invalid/cross-bound history denies the affected credit. Zero alone creates no affirmative evidence.
-    Before those checks can grant credit, base `evidence.attempt` itself must resolve from the canonical server attempt
-    ledger through the complete state/count gate: known and resolved are exact true; ambiguous, conflicting, stale and
-    client-inferred are exact false; and `matchingRecordCount` is exactly one. A base-specific safe-state gate also
+    Before those checks can grant credit, base `evidence.attempt` itself must be a closed canonical server-ledger record
+    with exact attempt, learner and submission IDs plus canonical `submittedAt`: server-side, authoritative,
+    independently-resolved, known and resolved are exact true; ambiguous, conflicting, mismatched, stale and
+    client/caller-inferred are exact false; and `matchingRecordCount` is exactly one. A base-specific safe-state gate also
     requires `crossLearner`, `crossAttempt`, `replayed` and `cancelled` to exist as exact primitive false without
     expanding the shared generic resolution helper or changing review-only absence semantics. Missing, malformed, wrong-type, opposite
     state, zero-record or multi-record attempts fail closed before independent retrieval and deny dependent far-transfer
@@ -85,21 +86,24 @@ PR #692 mutation is included.
     ambiguous, conflicting, stale, inferred, mismatched, cross-attempt, cross-learner, unresolved, zero-record or
     multi-record transfer-attempt/task bindings deny far-transfer only and preserve otherwise valid independent
     retrieval and stable D+7.
-    The canonical independent-response, far-transfer and stable-D+7 records additionally require
-    `ambiguous === false` by exact primitive equality. Missing or any other value denies that record's credit;
-    invalid independent response also denies its dependent credits, while invalid transfer/D+7 ambiguity does not
-    weaken the other affirmative gates. Stable D+7 resolves one canonical source attempt from `evidence.attempt`
-    through the shared exact resolution-state gate, then field-for-field binds the D+7 record's source attempt ID,
-    learner scope and `sourceAttemptSubmittedAt` to that record's exact ID, scope and canonical `submittedAt`.
+    Independent retrieval resolves a candidate-owned closed `canonicalResponseEvaluation` that is single,
+    authoritative, server-side, independently resolved, known, resolved and fresh, with every unsafe state exact false.
+    It binds to the base attempt's exact attempt, learner and submission IDs and the candidate evaluation ID; caller
+    source labels or outer success flags cannot substitute. Invalid response resolution denies its dependent transfer
+    and D+7 credits. Far transfer independently resolves an equivalent closed `canonicalTransferEvaluation` bound to
+    the source and transfer attempts plus learner, submission, evaluation, result and task IDs; its failure denies only
+    far-transfer. Stable D+7 resolves one canonical source attempt from `evidence.attempt` and a separate candidate-owned
+    closed `canonicalD7Evaluation`.
     The actual D+7 candidate also carries one separately resolved authoritative `canonicalD7Attempt` bound exactly to
-    `d7AttemptId` and the authenticated learner scope, distinct from the base/source attempt, exactly `SUBMITTED` and
+    `d7AttemptId`, authenticated learner scope and submission ID, distinct from the base/source attempt, exactly `SUBMITTED` and
     `INDEPENDENT`, with known/resolved exact true and ambiguous, conflicting, cross-learner, cross-attempt, mismatched,
     stale, replayed, cancelled and client/caller-inferred exact false. Missing, malformed, wrong-source, zero/multiple,
     foreign, reused, unsubmitted, assisted or unsafe resolution denies stable D+7 only and preserves otherwise valid
     independent retrieval and far transfer; outer claims and the base attempt cannot substitute.
-    It binds that timestamp to `d7EvaluationCompletedAt` from the canonical D+7 evaluation ledger as exact RFC3339
-    UTC millisecond instants and requires a server-computed elapsed interval of at least 604800000 ms. An independently
-    supplied older timestamp, timing label, caller elapsed value, missing/mismatched/malformed/unresolved provenance,
+    The interval uses only the bound source attempt's canonical `submittedAt` and the bound
+    `canonicalD7Evaluation.d7EvaluationCompletedAt`, both exact RFC3339 UTC millisecond instants, and requires at least
+    604800000 ms. An outer or independently supplied timestamp, source label, timing label, caller elapsed value,
+    missing/mismatched/malformed/unresolved provenance,
     non-UTC timestamp, reversal or shorter interval creates no credit.
     Exact false alone creates no evidence.
 17. Timing and classification derive from the canonical Assistance/Exposure ledger, while attempt state
@@ -107,19 +111,24 @@ PR #692 mutation is included.
 18. Every render-capable `BEFORE_RESPONSE` validator, including the separate exposure-event validator,
     delegates to the same `EXACT_PRE_RESPONSE_RENDER_GATE_V1`; alternate routing and weaker duplicate
     policies cannot authorize bytes. That gate requires one non-null exact attempt and learner scope resolving
-    through the canonical server attempt ledger to exactly one `INDEPENDENT_ATTEMPT_OPEN` record. Its resolution,
+    through the canonical server attempt ledger to exactly one closed, authoritative, server-side, independently
+    resolved `INDEPENDENT_ATTEMPT_OPEN` record. Extra fields, zero/multiple records and non-boolean resolution state fail.
+    Its resolution,
     every submitted-attempt resolution and the `REVIEW_ONLY` nested open-attempt absence resolution each pass the
     same canonical-attempt-resolution state gate independently: `known === true`, `resolved === true`,
     `ambiguous === false`, `conflicting === false`, `stale === false` and `clientInferred === false` by exact
     primitive equality. Missing, defaulted, coerced or merely truthy state cannot satisfy that gate.
-19. The shared gate requires one active deliberate server-recorded single-use confirmation bound exactly to
-    learner, attempt, cue, cue revision and one request. Its `cancelled` field must be exact primitive `false`;
+19. The shared gate requires one closed, single, authoritative, server-side, independently resolved, active deliberate
+    server-recorded single-use confirmation bound exactly to learner, attempt, cue, cue revision and one request.
+    known/resolved are exact true; ambiguous, conflicting, cross-learner, cross-attempt, mismatched, stale, replayed,
+    cancelled and client/caller-inferred are exact false. Its `cancelled` field must be exact primitive `false`;
     missing, null, strings, numbers, objects, arrays, `true` and every other malformed value fail closed across
     both render-capable validators. Before equality comparison, `cueId`, `cueRevisionId` and `requestId` on both
     request and confirmation must independently pass the exact trimmed canonical identifier schema. Matching
     missing, null, wrong-type, empty, whitespace or malformed values cannot authorize reveal.
-20. Client booleans and preselected consent are insufficient. Missing, cancelled, stale, replayed,
-    mismatched or ambiguous confirmations fail closed with no cue bytes.
+20. Client booleans, preselected consent, source labels and outer success state are insufficient. Missing, extra-field,
+    wrong-source, zero/multiple, cancelled, stale, replayed, conflicting, inferred, mismatched or ambiguous confirmations
+    fail closed with no cue bytes. The actual pre-response race state must also be exact primitive `false`.
 21. Confirmation consumption, exposure record, `ASSISTED` transition and independent-evidence invalidation
     commit in that exact all-or-nothing order before any cue byte renders.
 22. Missing, empty, unknown, unresolved, ambiguous, conflicting, cross-learner, cross-attempt, submitted, closed,
@@ -277,6 +286,14 @@ All fail closed or hold.
   request identifiers pass through equality;
 - a confirmation explicitly carries `replayed: true` while `consumed: false` and `singleUse: true` but either
   render validator still treats it as a deliberate non-replayed override;
+- any decisive confirmation/open-attempt/base-attempt/exposure-history/response-evaluation/transfer-evaluation/
+  transfer-attempt/task-binding/D+7-attempt/D+7-evaluation record omits a required field, adds an undeclared field,
+  uses a wrong source or zero/multiple count, supplies a non-boolean safe state, or carries conflicting, stale,
+  replayed, cancelled, inferred, foreign or unbound identity state but still authorizes cue bytes or positive credit;
+- an invalid canonical response evaluation preserves independent retrieval or unlocks dependent transfer/D+7 credit;
+- an invalid canonical transfer evaluation weakens independent retrieval or stable D+7 instead of failing transfer only;
+- a D+7 evaluation uses an outer/source-labeled completion time, an unbound evaluation ID or a substituted source
+  attempt timestamp instead of its own bound canonical completion record, or its failure weakens other valid credits;
 - cue bytes render before confirmation consumption, exposure, `ASSISTED` and evidence-invalidation commits all succeed;
 - partial commit, record failure or render/submit race still renders cue bytes;
 - an already submitted attempt is treated as `BEFORE_RESPONSE`;
@@ -375,7 +392,7 @@ npm run build
 Current correction-source evidence:
 
 - JavaScript syntax check: passed.
-- Focused behavioral contract suite: 57/57 passed.
+- Focused behavioral contract suite: 61/61 passed.
 - Strict JSON parse, balanced Markdown fences, cross-artifact assertions and `git diff --check`: passed.
 - Typecheck: passed.
 - Lint: passed with 0 errors and 9 pre-existing warnings outside the MCAL diff.
