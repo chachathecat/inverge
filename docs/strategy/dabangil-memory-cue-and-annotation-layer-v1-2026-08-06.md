@@ -553,12 +553,18 @@ D+7 stable / timed: HIDDEN
   exact state를 독립적으로 만족해야 하며 valid nested proof가 unresolved outer resolution을 대체하지 못한다.
   이 두 validator의 `REVIEW_ONLY` path도 shared canonical-record gate를 먼저 통과해
   `canonicalRecordCommitted === true`를 exact primitive equality로 증명해야 하며 필드 생략은 실패다.
+  outer timing 또는 nested canonical timing이 `REVIEW_ONLY`인 모든 path는 routing이나 다른 early return 전에
+  실제 subject의 `renderSubmitRaceDetected === false`를 exact primitive equality로 요구하고 shared review-only
+  authorizer가 같은 필드를 다시 검증한다. missing·undefined·null·`true`·string·number·object·array·default·
+  coercion은 cue byte 0으로 실패하며 exact false만 otherwise valid review-only render를 보존한다.
 - pre-response cue가 없다는 사실은 independent-evidence **eligibility만 보존**한다. empty sequence나
   `AFTER_RESPONSE` event 자체는 independent retrieval·far transfer·stable D+7 증거를 만들지 않는다.
 - base `evidence.attempt`에는 complete canonical attempt-resolution state/count gate를 먼저 적용한다.
   source는 `CANONICAL_SERVER_ATTEMPT_LEDGER`, 상태는 `known === true`, `resolved === true`,
   `ambiguous === false`, `conflicting === false`, `stale === false`, `clientInferred === false`, count는
-  `matchingRecordCount === 1`이어야 한다. missing·malformed·wrong-type·반대 상태·0건·복수 record는
+  `matchingRecordCount === 1`이어야 한다. base 전용 safe-state gate는 별도로 `crossLearner`, `crossAttempt`,
+  `replayed`, `cancelled`를 모두 exact primitive `false`로 요구하며 shared generic attempt-resolution helper를
+  확장하거나 review-only absence semantics를 바꾸지 않는다. missing·malformed·wrong-type·반대 상태·0건·복수 record는
   independent retrieval 전에 positive evidence 0으로 fail closed하고 dependent far transfer와 stable D+7도
   함께 차단한다.
 - independent retrieval은 actual submitted response와 completed evaluation이 exact learner/attempt에
@@ -580,6 +586,12 @@ D+7 stable / timed: HIDDEN
   closed하며 otherwise valid independent retrieval과 stable D+7은 유지한다.
 - stable D+7은 실제 완료된 D+7 independent evaluation, cue `HIDDEN`, 모든 surface의 cue byte 부재,
   non-same representation 및 unresolved scoring conflict 0의 canonical record를 별도로 요구한다.
+  실제 D+7 candidate의 `canonicalD7Attempt`도 `CANONICAL_SERVER_ATTEMPT_LEDGER`에서 exact single authoritative
+  record로 별도 resolve하며 `d7AttemptId`와 authenticated learner scope에 exact-bind되고 base/source attempt와
+  달라야 한다. 이 record는 exact `SUBMITTED`·`INDEPENDENT`, known/resolved exact true, ambiguous·conflicting·
+  cross-learner·cross-attempt·mismatched·stale·replayed·cancelled·client/caller-inferred exact false여야 한다.
+  missing·malformed·wrong-source·0건·복수·foreign·reused·unsubmitted·assisted·unsafe record 또는 outer claim/base
+  attempt 대체는 stable D+7만 fail closed하고 otherwise valid independent retrieval과 far transfer는 유지한다.
   identified source attempt는 `evidence.attempt`에서 canonical server attempt ledger 한 건으로 resolve하고
   shared canonical resolution-state gate를 통과해야 한다. D+7 record의 `sourceAttemptId`, learner scope 및
   `sourceAttemptSubmittedAt`은 그 record의 exact `attemptId`, learner scope 및 canonical `submittedAt`과
@@ -896,6 +908,9 @@ type CanonicalExposureHistoryV1 = {
   `derivedFrom === "CANONICAL_ASSISTANCE_EXPOSURE_LEDGER"`와 `ordering === "ORDERED"`를 모두 exact하게
   증명하며 누락·client provenance·ambiguous ordering은 cue byte 0으로 실패한다. request path에는 이
   event-only 필드를 요구하지 않는다.
+  outer timing이나 nested canonical timing으로 review-only가 식별되면 두 validator는 이 routing과 다른 early
+  return보다 먼저 actual subject의 `renderSubmitRaceDetected === false`를 exact primitive equality로 검증하고
+  shared authorizer에서 재검증한다. missing·non-boolean·`true`는 cue byte 0이며 exact false만 통과할 수 있다.
 
 `HIDDEN`은 CSS로 가리거나 접어 둔 상태가 아니다. cue·decomposition·prompt·memory gloss
 바이트가 DOM, SSR payload, accessibility text, prefetch response, cache entry 또는 direct

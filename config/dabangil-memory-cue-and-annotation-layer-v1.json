@@ -1,6 +1,6 @@
 {
   "schema": "dabangil_memory_cue_and_annotation_layer_v1",
-  "version": "1.0.15",
+  "version": "1.0.16",
   "dated": "2026-08-06 KST",
   "status": "proposed_non_authoritative",
   "repository": "chachathecat/inverge",
@@ -1229,6 +1229,7 @@
     "cueViewPromotesIndependentMastery": 0,
     "d7StableWithVisibleCue": 0,
     "d7StableWithoutActual7DayElapsedInterval": 0,
+    "d7StableWithoutExactCanonicalD7AttemptResolution": 0,
     "afterResponseRequestWithoutClosedClassification": 0,
     "reviewOnlyEventWithoutProvenanceOrOrdering": 0,
     "sameRepresentationCountedAsFarTransfer": 0,
@@ -1251,6 +1252,7 @@
     "mockOrHypotheticalReceiptAuthorizesCurrentTraining": 0,
     "trainingDecisionWithoutTrustedServerEvaluationTime": 0,
     "learningEvidenceFromUnresolvedOrNonSingleCanonicalAttempt": 0,
+    "positiveLearningEvidenceFromUnsafeBaseAttemptResolution": 0,
     "clearedContentCandidateWithoutCanonicalBoundProvenance": 0,
     "personalEditorBeforeCpfPrivacyExportDeleteGates": 0,
     "mcalRuntimeBeforeCoreLoopAcceptance": 0,
@@ -1282,6 +1284,7 @@
     "submittedAttemptRenderedAsBeforeResponse": 0,
     "reviewOnlyWithoutCanonicalServerResolution": 0,
     "reviewOnlyWithMatchingOpenIndependentAttempt": 0,
+    "reviewOnlyWithoutExactNoRaceState": 0,
     "semanticHighlightMissingVisibleTextLabel": 0,
     "semanticHighlightMissingComputedAccessibleName": 0
   },
@@ -1481,6 +1484,16 @@
       },
       "matchingCanonicalOpenIndependentAttemptCount": 0,
       "canonicalExposureRecordStateRequired": "COMMITTED",
+      "renderSubmitRaceExactFalseGate": {
+        "field": "renderSubmitRaceDetected",
+        "requiredPrimitiveType": "boolean",
+        "requiredExactValue": false,
+        "appliesWhenOuterOrNestedCanonicalTimingIsReviewOnly": true,
+        "evaluatedBeforeReviewOnlyRoutingOrEarlyReturnInEachValidator": true,
+        "revalidatedBySharedReviewOnlyAuthorizer": true,
+        "truthinessCoercionDefaultingOrAbsenceAccepted": false,
+        "missingUndefinedNullStringNumberObjectArrayOrTrueBehavior": "FAIL_CLOSED_NO_CUE_BYTES"
+      },
       "callerSuppliedReviewOnlyLabelSufficient": false,
       "callerSuppliedCanonicalExposureRecordCommittedAccepted": false,
       "clientEventAccepted": false,
@@ -1678,6 +1691,18 @@
         "resolutionSource": "CANONICAL_SERVER_ATTEMPT_LEDGER",
         "resolutionStateGateRef": "cueExposure.canonicalAttemptResolutionStateGate",
         "exactMatchingRecordCount": 1,
+        "baseSpecificSafeResolutionStateGate": {
+          "requiredExactPrimitiveBooleanStates": {
+            "crossLearner": false,
+            "crossAttempt": false,
+            "replayed": false,
+            "cancelled": false
+          },
+          "evaluatedBeforeAnyPositiveCredit": true,
+          "sharedGenericAttemptResolutionHelperExpanded": false,
+          "truthinessCoercionDefaultingOrAbsenceAccepted": false,
+          "missingUndefinedNullStringNumberObjectArrayOrTrueBehavior": "FAIL_CLOSED_NO_POSITIVE_LEARNING_EVIDENCE"
+        },
         "evaluatedBeforeCredits": [
           "independentRetrieval",
           "farTransfer",
@@ -2021,6 +2046,74 @@
           "source": "CANONICAL_D7_EVALUATION_LEDGER",
           "requiresIndependentRetrieval": true,
           "requiredTiming": "D_PLUS_7",
+          "canonicalD7AttemptResolutionGate": {
+            "recordRef": "evidence.stableD7.canonicalD7Attempt",
+            "recordField": "canonicalD7Attempt",
+            "resolutionSource": "CANONICAL_SERVER_ATTEMPT_LEDGER",
+            "resolutionStateGateRef": "cueExposure.canonicalAttemptResolutionStateGate",
+            "additionalFieldsAllowed": false,
+            "requiredFields": [
+              "source",
+              "attemptId",
+              "learnerPrivateScopeId",
+              "canonicalAttemptState",
+              "matchingRecordCount",
+              "assistanceState",
+              "serverSide",
+              "authoritative",
+              "independentlyResolved",
+              "known",
+              "resolved",
+              "ambiguous",
+              "conflicting",
+              "crossLearner",
+              "crossAttempt",
+              "mismatched",
+              "stale",
+              "replayed",
+              "cancelled",
+              "clientInferred",
+              "callerInferred"
+            ],
+            "identifierFields": [
+              "attemptId",
+              "learnerPrivateScopeId"
+            ],
+            "identifierSchema": {
+              "type": "string",
+              "minLength": 3,
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{2,127}$"
+            },
+            "exactMatchingRecordCount": 1,
+            "requiredCanonicalAttemptState": "SUBMITTED",
+            "requiredAssistanceState": "INDEPENDENT",
+            "requiredExactPrimitiveBooleanStates": {
+              "serverSide": true,
+              "authoritative": true,
+              "independentlyResolved": true,
+              "known": true,
+              "resolved": true,
+              "ambiguous": false,
+              "conflicting": false,
+              "crossLearner": false,
+              "crossAttempt": false,
+              "mismatched": false,
+              "stale": false,
+              "replayed": false,
+              "cancelled": false,
+              "clientInferred": false,
+              "callerInferred": false
+            },
+            "d7RecordBindingFields": {
+              "attemptId": "d7AttemptId",
+              "learnerPrivateScopeId": "learnerPrivateScopeId"
+            },
+            "mustDifferFromCanonicalSourceAttemptId": true,
+            "canonicalSourceAttemptMaySubstitute": false,
+            "outerD7ClaimsMaySubstitute": false,
+            "invalidD7AttemptAffectsIndependentRetrievalOrFarTransfer": false,
+            "missingMalformedWrongSourceExtraFieldZeroMultipleForeignReusedUnsubmittedAssistedUnsafeOrInferredBehavior": "FAIL_CLOSED_FOR_STABLE_D7_CREDIT"
+          },
           "trustedElapsedIntervalGate": {
             "sourceAttemptTimestampField": "sourceAttemptSubmittedAt",
             "sourceAttemptTimestampSourceField": "canonicalAttemptSource",

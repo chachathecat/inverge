@@ -127,6 +127,10 @@ exposure-event path는 이 shared review-only gate로 조기 routing하기 전�
 `CANONICAL_ASSISTANCE_EXPOSURE_LEDGER`이고 `ordering === "ORDERED"`임을 각각 요구한다. 두 필드의 누락,
 client provenance 또는 ambiguous ordering은 cue byte 0으로 실패하며 request path가 event-only 필드를
 합성하거나 그 누락을 허용하는 근거가 될 수 없다.
+outer `timing` 또는 nested canonical timing 중 어느 쪽에서든 review-only path가 식별되면 두 render
+validator는 routing이나 다른 early return 전에 실제 subject의 `renderSubmitRaceDetected === false`를 exact
+primitive equality로 요구하고 shared review-only authorizer에서 같은 필드를 다시 검증한다. missing·undefined·
+null·`true`·string·number·object·array·default·coercion은 cue byte 0으로 fail closed한다.
 submitted binding, `BEFORE_RESPONSE` open-attempt binding 및 `REVIEW_ONLY`의 nested zero-count absence proof는
 각자의 canonical server attempt resolution에 같은 exact state gate를 독립적으로 적용한다. `known === true`,
 `resolved === true`, `ambiguous === false`, `conflicting === false`, `stale === false`,
@@ -149,7 +153,9 @@ copy 자체는 어떤 affirmative learning evidence도 만들지 않는다.
 그보다 먼저 base `evidence.attempt` 자체가 `CANONICAL_SERVER_ATTEMPT_LEDGER`에서 정확히 한 건으로
 resolve되어야 한다. `known === true`, `resolved === true`, `ambiguous === false`,
 `conflicting === false`, `stale === false`, `clientInferred === false`와
-`matchingRecordCount === 1`을 모두 exact primitive/value로 통과한 뒤에만 independent retrieval을
+`matchingRecordCount === 1`을 모두 exact primitive/value로 통과해야 한다. 또한 base 전용 safe-state
+gate가 `crossLearner`, `crossAttempt`, `replayed`, `cancelled`를 각각 exact primitive `false`로 요구하며
+shared generic resolution helper를 확장하거나 review-only absence semantics를 바꾸지 않는다. 그 뒤에만 independent retrieval을
 평가하며 far transfer와 stable D+7은 그 valid base credit에 의존한다. 어느 필드든 missing·malformed·
 wrong-type·반대 상태이거나 record가 0건/복수이면 세 positive credit은 모두 fail closed한다.
 positive independent retrieval은 exact submitted-and-evaluated response record, far transfer는 distinct
@@ -158,7 +164,13 @@ D+7 evaluation·cue `HIDDEN`·all-surface byte absence·non-same representation�
 별도 canonical evidence를 각각 요구한다. stable D+7은 canonical server attempt ledger의 identified
 source attempt를 한 건으로 resolve하고 D+7 record의 `sourceAttemptId`, learner scope 및
 `sourceAttemptSubmittedAt`을 그 attempt의 exact `attemptId`, learner scope 및 canonical `submittedAt`과
-field-for-field bind한다. 그 timestamp와 canonical D+7 evaluation ledger의 `d7EvaluationCompletedAt`은 exact
+field-for-field bind한다. 이에 더해 실제 D+7 candidate의 `canonicalD7Attempt`를 같은 authoritative server
+attempt ledger에서 정확히 한 건으로 별도 resolve한다. 이 record는 `d7AttemptId`와 authenticated learner
+scope에 exact-bind되고 base/source attempt와 달라야 하며, state는 exact `SUBMITTED`, assistance는 exact
+`INDEPENDENT`여야 한다. known/resolved는 exact true이고 ambiguous·conflicting·cross-learner·cross-attempt·
+mismatched·stale·replayed·cancelled·client/caller-inferred는 exact false여야 한다. outer D+7 claims나 base
+attempt로 대체할 수 없고, 이 D+7-only resolution 실패는 otherwise valid independent retrieval과 far transfer를
+바꾸지 않는다. 그 timestamp와 canonical D+7 evaluation ledger의 `d7EvaluationCompletedAt`은 exact
 RFC3339 UTC millisecond instant이고 server가 계산한 실제 elapsed interval이 최소 `604800000` ms여야 한다.
 independently supplied older timestamp, `D_PLUS_7` label, caller elapsed 값, missing·mismatched·malformed·
 unresolved provenance, non-UTC·reversed 또는 7일 미만 interval은 credit을 만들지 못한다. 세 affirmative record의 `ambiguous`는 exact primitive

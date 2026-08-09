@@ -586,6 +586,12 @@ function hasExactNoRecordFailure(subject) {
   return typeof value === gate.requiredPrimitiveType && value === gate.requiredExactValue;
 }
 
+function hasExactReviewOnlyNoRaceState(subject) {
+  const gate = contract.cueExposure.reviewOnlyGate.renderSubmitRaceExactFalseGate;
+  const value = subject[gate.field];
+  return typeof value === gate.requiredPrimitiveType && value === gate.requiredExactValue;
+}
+
 function hasAllowedTimingClassification(subject) {
   const allowed = contract.cueExposure.closedTimingClassificationMap[subject.timing];
   return Array.isArray(allowed) && allowed.includes(subject.assistanceClassification);
@@ -600,7 +606,7 @@ function authorizeCanonicalReviewOnlyCueRender(subject) {
     gateId: gate.gateId,
     reason,
   });
-  if (subject.renderSubmitRaceDetected === true) {
+  if (!hasExactReviewOnlyNoRaceState(subject)) {
     return fail(contract.cueExposure.renderSubmitRaceBehavior);
   }
   if (!hasExactNoRecordFailure(subject)) return fail(contract.cueExposure.recordFailureBehavior);
@@ -803,6 +809,11 @@ function authorizeExactPreResponseCueRender(subject) {
 
 function validateCueExposureEvent(event) {
   const cue = contract.cueExposure;
+  const reviewOnlyRoute = event.timing === "REVIEW_ONLY"
+    || event.reviewOnlyResolution?.canonicalTiming === "REVIEW_ONLY";
+  if (reviewOnlyRoute && !hasExactReviewOnlyNoRaceState(event)) {
+    return { accepted: false, mayRenderCueBytes: false, reason: cue.renderSubmitRaceBehavior };
+  }
   if (!hasExactNoRecordFailure(event)) {
     return { accepted: false, mayRenderCueBytes: false, reason: cue.recordFailureBehavior };
   }
@@ -815,10 +826,7 @@ function validateCueExposureEvent(event) {
   if (event.ordering !== "ORDERED") {
     return { accepted: false, mayRenderCueBytes: false, reason: cue.ambiguousOrderingBehavior };
   }
-  if (
-    event.timing === "REVIEW_ONLY"
-    || event.reviewOnlyResolution?.canonicalTiming === "REVIEW_ONLY"
-  ) return authorizeCanonicalReviewOnlyCueRender(event);
+  if (reviewOnlyRoute) return authorizeCanonicalReviewOnlyCueRender(event);
   if (event.renderSubmitRaceDetected) {
     return { accepted: false, mayRenderCueBytes: false, reason: cue.renderSubmitRaceBehavior };
   }
@@ -964,7 +972,11 @@ function canonicalIndependentAttempt(overrides = {}) {
     resolved: true,
     ambiguous: false,
     conflicting: false,
+    crossLearner: false,
+    crossAttempt: false,
     stale: false,
+    replayed: false,
+    cancelled: false,
     clientInferred: false,
     submittedAt: "2026-08-01T00:00:00.000Z",
     assistanceState: "INDEPENDENT",
@@ -1021,6 +1033,9 @@ function farTransferEvidence(overrides = {}) {
 function stableD7Evidence(overrides = {}) {
   const d7AttemptId = overrides.d7AttemptId ?? "attempt-d7-1";
   const learnerPrivateScopeId = overrides.learnerPrivateScopeId ?? "learner-1";
+  const canonicalD7Attempt = Object.hasOwn(overrides, "canonicalD7Attempt")
+    ? overrides.canonicalD7Attempt
+    : canonicalSubmittedD7Attempt({ attemptId: d7AttemptId, learnerPrivateScopeId });
   return {
     source: "CANONICAL_D7_EVALUATION_LEDGER",
     canonicalAttemptSource: "CANONICAL_SERVER_ATTEMPT_LEDGER",
@@ -1038,6 +1053,7 @@ function stableD7Evidence(overrides = {}) {
     representationRelation: "NON_SAME_REPRESENTATION",
     unresolvedScoringConflictCount: 0,
     assistanceState: "INDEPENDENT",
+    canonicalD7Attempt,
     exposureHistory: canonicalExposureHistory({
       attemptId: d7AttemptId,
       learnerPrivateScopeId,
@@ -1169,6 +1185,72 @@ function resolveExactCanonicalTransferAttempt(canonicalSourceAttempt, transfer, 
   return canonicalTransferAttempt;
 }
 
+function canonicalSubmittedD7Attempt(overrides = {}) {
+  const attemptId = Object.hasOwn(overrides, "attemptId")
+    ? overrides.attemptId
+    : "attempt-d7-1";
+  const learnerPrivateScopeId = Object.hasOwn(overrides, "learnerPrivateScopeId")
+    ? overrides.learnerPrivateScopeId
+    : "learner-1";
+  return {
+    source: "CANONICAL_SERVER_ATTEMPT_LEDGER",
+    attemptId,
+    learnerPrivateScopeId,
+    canonicalAttemptState: "SUBMITTED",
+    matchingRecordCount: 1,
+    assistanceState: "INDEPENDENT",
+    serverSide: true,
+    authoritative: true,
+    independentlyResolved: true,
+    known: true,
+    resolved: true,
+    ambiguous: false,
+    conflicting: false,
+    crossLearner: false,
+    crossAttempt: false,
+    mismatched: false,
+    stale: false,
+    replayed: false,
+    cancelled: false,
+    clientInferred: false,
+    callerInferred: false,
+    ...overrides,
+  };
+}
+
+function resolveExactCanonicalD7Attempt(canonicalSourceAttempt, candidate, gate) {
+  const canonicalD7Attempt = candidate?.[gate.recordField];
+  if (
+    !canonicalD7Attempt
+    || typeof canonicalD7Attempt !== "object"
+    || Array.isArray(canonicalD7Attempt)
+    || canonicalD7Attempt === canonicalSourceAttempt
+    || gate.additionalFieldsAllowed !== false
+    || JSON.stringify(sorted(Object.keys(canonicalD7Attempt)))
+      !== JSON.stringify(sorted(gate.requiredFields))
+    || canonicalD7Attempt.source !== gate.resolutionSource
+    || canonicalD7Attempt.matchingRecordCount !== gate.exactMatchingRecordCount
+    || canonicalD7Attempt.canonicalAttemptState !== gate.requiredCanonicalAttemptState
+    || canonicalD7Attempt.assistanceState !== gate.requiredAssistanceState
+  ) return false;
+  for (const field of gate.identifierFields) {
+    if (!isCanonicalIdentifier(canonicalD7Attempt[field], gate.identifierSchema)) return false;
+  }
+  for (const [field, expected] of Object.entries(
+    gate.requiredExactPrimitiveBooleanStates,
+  )) {
+    if (canonicalD7Attempt[field] !== expected) return false;
+  }
+  for (const [attemptField, candidateField] of Object.entries(gate.d7RecordBindingFields)) {
+    if (canonicalD7Attempt[attemptField] !== candidate?.[candidateField]) return false;
+  }
+  if (
+    gate.mustDifferFromCanonicalSourceAttemptId !== true
+    || canonicalD7Attempt.attemptId === canonicalSourceAttempt?.attemptId
+  ) return false;
+  return canonicalD7Attempt;
+}
+
 function hasExactCanonicalFarTransferTaskBindings(canonicalSourceAttempt, transfer) {
   const farTransferGate = contract.cueExposure.learningEvidenceGate
     .requiredAffirmativeEvidence.farTransfer;
@@ -1269,11 +1351,15 @@ function evaluateAttemptEvidence(events, evidence = {}) {
   }
   const attempt = evidence.attempt;
   const baseAttemptGate = contract.cueExposure.learningEvidenceGate.baseAttemptResolutionGate;
+  const baseSafeStateGate = baseAttemptGate.baseSpecificSafeResolutionStateGate;
   if (
     !attempt
     || attempt.source !== baseAttemptGate.resolutionSource
     || !hasExactCanonicalAttemptResolutionStates(attempt)
     || attempt.matchingRecordCount !== baseAttemptGate.exactMatchingRecordCount
+    || Object.entries(baseSafeStateGate.requiredExactPrimitiveBooleanStates).some(
+      ([field, expected]) => attempt[field] !== expected,
+    )
   ) {
     return noPositiveEvidence({ failClosed: true, eligibilityPreserved: false });
   }
@@ -1346,6 +1432,13 @@ function evaluateAttemptEvidence(events, evidence = {}) {
   );
 
   const d7 = evidence.stableD7;
+  const canonicalD7AttemptGate = contract.cueExposure.learningEvidenceGate
+    .requiredAffirmativeEvidence.stableD7.canonicalD7AttemptResolutionGate;
+  const canonicalD7Attempt = resolveExactCanonicalD7Attempt(
+    attempt,
+    d7,
+    canonicalD7AttemptGate,
+  );
   const d7History = validateCanonicalExposureHistory(
     d7?.exposureHistory,
     d7?.d7AttemptId,
@@ -1362,6 +1455,7 @@ function evaluateAttemptEvidence(events, evidence = {}) {
     && typeof d7.d7AttemptId === "string"
     && d7.d7AttemptId.length > 0
     && d7.d7AttemptId !== attempt.attemptId
+    && canonicalD7Attempt
     && d7.timing === "D_PLUS_7"
     && hasTrustedD7ElapsedInterval(d7, attempt)
     && d7.actualSubmission === true
@@ -1923,13 +2017,17 @@ function evaluateCueRender(request) {
     independentEvidenceEligible: false,
     reason,
   });
-  if (request.renderSubmitRaceDetected) return fail(cue.preResponseAtomicCommit.renderSubmitRaceBehavior);
+  const reviewOnlyRoute = request.timing === "REVIEW_ONLY"
+    || request.reviewOnlyResolution?.canonicalTiming === "REVIEW_ONLY";
+  if (reviewOnlyRoute && !hasExactReviewOnlyNoRaceState(request)) {
+    return fail(cue.renderSubmitRaceBehavior);
+  }
+  if (!reviewOnlyRoute && request.renderSubmitRaceDetected) {
+    return fail(cue.preResponseAtomicCommit.renderSubmitRaceBehavior);
+  }
   if (!hasExactNoRecordFailure(request)) return fail(cue.preResponseAtomicCommit.recordFailureBehavior);
 
-  if (
-    request.timing === "REVIEW_ONLY"
-    || request.reviewOnlyResolution?.canonicalTiming === "REVIEW_ONLY"
-  ) return authorizeCanonicalReviewOnlyCueRender(request);
+  if (reviewOnlyRoute) return authorizeCanonicalReviewOnlyCueRender(request);
 
   if (request.canonicalAttemptState === "SUBMITTED") {
     if (request.timing !== cue.afterResponseGate.onlyAllowedTimingForSubmittedAttempt) {
@@ -1974,7 +2072,7 @@ test("MCAL paths resolve and V13 remains sole active master plan", () => {
   assert.match(active, /dabangil-professional-exam-reasoning-os-final-master-plan-v13-2026-08-06\.md/);
   assert.match(active, /Memory Cue & Annotation Layer/);
   assert.doesNotMatch(active, /final-master-plan-v14/);
-  assert.equal(contract.version, "1.0.15");
+  assert.equal(contract.version, "1.0.16");
   assert.equal(contract.compatibility.v13RemainsSoleActiveMasterPlan, true);
   assert.equal(contract.compatibility.newMasterPlanVersionCreated, false);
 });
@@ -2173,15 +2271,22 @@ test("Markdown fences and exact boundary language are present", () => {
   assert.match(annex, /`originTaskId`는 그 binding의\s+canonical `taskId`와 정확히 같/);
   assert.match(annex, /canonical transfer attempt/);
   assert.match(annex, /source와 transfer의 canonical task identity는.*field-for-field/);
+  assert.match(annex, /canonicalD7Attempt/);
+  assert.match(annex, /base 전용 safe-state gate/);
+  assert.match(annex, /`renderSubmitRaceDetected === false`/);
   const qa = read(P.qa);
   assert.match(qa, /PR #692 is merged at `512bfdb9232a86bf4f7d4cfbc076a9df1c8a7da2`/);
-  assert.match(qa, /Focused behavioral contract suite: 54\/54 passed/);
+  assert.match(qa, /Focused behavioral contract suite: 57\/57 passed/);
   assert.match(qa, /Merely supplying two different task IDs is insufficient/);
   assert.match(qa, /canonical transfer attempt and its independently resolved task binding/);
+  assert.match(qa, /canonicalD7Attempt/);
+  assert.match(qa, /base-specific safe-state gate/);
+  assert.match(qa, /`renderSubmitRaceDetected === false`/);
   assert.match(qa, /`cancelled` field must be exact primitive `false`/);
   assert.match(qa, /validate the actual candidate's exact top-level and nested field sets/);
   assert.match(qa, /canonical promotion\/rights\/provenance record/);
   assert.doesNotMatch(qa, /Focused behavioral contract suite: 52\/52 passed/);
+  assert.doesNotMatch(qa, /Focused behavioral contract suite: 54\/54 passed/);
   assert.doesNotMatch(qa, /Focused behavioral contract suite: 51\/51 passed/);
   assert.doesNotMatch(qa, /Focused behavioral contract suite: 49\/49 passed/);
   assert.doesNotMatch(qa, /Focused behavioral contract suite: 46\/46 passed/);
@@ -3475,6 +3580,76 @@ test("stable D+7 requires a completed hidden-cue nonconflicted canonical evaluat
   }
 });
 
+test("stable D+7 resolves one exact canonical D+7 attempt without weakening other credits", () => {
+  const gate = contract.cueExposure.learningEvidenceGate
+    .requiredAffirmativeEvidence.stableD7.canonicalD7AttemptResolutionGate;
+  assert.equal(gate.recordRef, "evidence.stableD7.canonicalD7Attempt");
+  assert.equal(gate.resolutionSource, "CANONICAL_SERVER_ATTEMPT_LEDGER");
+  assert.equal(gate.exactMatchingRecordCount, 1);
+  assert.equal(gate.requiredCanonicalAttemptState, "SUBMITTED");
+  assert.equal(gate.requiredAssistanceState, "INDEPENDENT");
+  assert.equal(gate.mustDifferFromCanonicalSourceAttemptId, true);
+  assert.equal(gate.canonicalSourceAttemptMaySubstitute, false);
+  assert.equal(gate.outerD7ClaimsMaySubstitute, false);
+  assert.equal(gate.invalidD7AttemptAffectsIndependentRetrievalOrFarTransfer, false);
+
+  const sourceAttempt = canonicalIndependentAttempt();
+  const base = {
+    exposureHistory: canonicalExposureHistory(),
+    attempt: sourceAttempt,
+    independentResponse: independentResponseEvidence(),
+    farTransfer: farTransferEvidence(),
+  };
+  const valid = evaluateAttemptEvidence([], { ...base, stableD7: stableD7Evidence() });
+  assert.equal(valid.independentRetrieval, true);
+  assert.equal(valid.farTransfer, true);
+  assert.equal(valid.stableD7, true);
+
+  const invalidCanonicalD7Attempts = [
+    undefined,
+    null,
+    [],
+    {},
+    sourceAttempt,
+    canonicalSubmittedD7Attempt({ source: "CLIENT" }),
+    canonicalSubmittedD7Attempt({ matchingRecordCount: 0 }),
+    canonicalSubmittedD7Attempt({ matchingRecordCount: 2 }),
+    canonicalSubmittedD7Attempt({ attemptId: "attempt-d7-foreign" }),
+    canonicalSubmittedD7Attempt({ learnerPrivateScopeId: "learner-foreign" }),
+    canonicalSubmittedD7Attempt({ canonicalAttemptState: "INDEPENDENT_ATTEMPT_OPEN" }),
+    canonicalSubmittedD7Attempt({ assistanceState: "ASSISTED" }),
+    canonicalSubmittedD7Attempt({ extraField: true }),
+  ];
+  for (const [field, expected] of Object.entries(
+    gate.requiredExactPrimitiveBooleanStates,
+  )) {
+    const omitted = canonicalSubmittedD7Attempt();
+    delete omitted[field];
+    invalidCanonicalD7Attempts.push(omitted);
+    for (const invalidValue of [undefined, null, !expected, String(expected), 0, 1, {}, []]) {
+      invalidCanonicalD7Attempts.push(canonicalSubmittedD7Attempt({ [field]: invalidValue }));
+    }
+  }
+
+  for (const canonicalD7Attempt of invalidCanonicalD7Attempts) {
+    const result = evaluateAttemptEvidence([], {
+      ...base,
+      stableD7: stableD7Evidence({ canonicalD7Attempt }),
+    });
+    assert.equal(result.independentRetrieval, true);
+    assert.equal(result.farTransfer, true);
+    assert.equal(result.stableD7, false);
+  }
+
+  const reused = evaluateAttemptEvidence([], {
+    ...base,
+    stableD7: stableD7Evidence({ d7AttemptId: sourceAttempt.attemptId }),
+  });
+  assert.equal(reused.independentRetrieval, true);
+  assert.equal(reused.farTransfer, true);
+  assert.equal(reused.stableD7, false);
+});
+
 test("stable D+7 requires trusted timestamps separated by at least seven elapsed days", () => {
   const gate = contract.cueExposure.learningEvidenceGate
     .requiredAffirmativeEvidence.stableD7.trustedElapsedIntervalGate;
@@ -3653,6 +3828,49 @@ test("base canonical attempt resolution fails closed before retrieval and depend
       farTransfer: false,
       stableD7: false,
     });
+  }
+});
+
+test("base attempt requires exact false cross-scope replay and cancellation state", () => {
+  const gate = contract.cueExposure.learningEvidenceGate.baseAttemptResolutionGate
+    .baseSpecificSafeResolutionStateGate;
+  assert.deepEqual(gate.requiredExactPrimitiveBooleanStates, {
+    crossLearner: false,
+    crossAttempt: false,
+    replayed: false,
+    cancelled: false,
+  });
+  assert.equal(gate.evaluatedBeforeAnyPositiveCredit, true);
+  assert.equal(gate.sharedGenericAttemptResolutionHelperExpanded, false);
+  assert.equal(gate.truthinessCoercionDefaultingOrAbsenceAccepted, false);
+
+  const base = {
+    exposureHistory: canonicalExposureHistory(),
+    independentResponse: independentResponseEvidence(),
+    farTransfer: farTransferEvidence(),
+    stableD7: stableD7Evidence(),
+  };
+  const valid = evaluateAttemptEvidence([], { ...base, attempt: canonicalIndependentAttempt() });
+  assert.equal(valid.independentRetrieval, true);
+  assert.equal(valid.farTransfer, true);
+  assert.equal(valid.stableD7, true);
+
+  for (const field of Object.keys(gate.requiredExactPrimitiveBooleanStates)) {
+    const omitted = canonicalIndependentAttempt();
+    delete omitted[field];
+    const invalidAttempts = [
+      omitted,
+      ...[undefined, null, true, "false", 0, 1, {}, []].map(
+        (value) => canonicalIndependentAttempt({ [field]: value }),
+      ),
+    ];
+    for (const attempt of invalidAttempts) {
+      assert.deepEqual(
+        evaluateAttemptEvidence([], { ...base, attempt }),
+        noPositiveEvidence({ failClosed: true, eligibilityPreserved: false }),
+        field,
+      );
+    }
   }
 });
 
@@ -4675,6 +4893,72 @@ test("review-only requests require exact canonicalRecordCommitted across both va
 
   assert.equal(evaluateCueRender(reviewOnlyRequest()).accepted, true);
   assert.equal(validateCueExposureEvent(cueEvent(reviewOnlyRequest())).accepted, true);
+});
+
+test("review-only requires exact false race state before routing and revalidates it", () => {
+  const gate = contract.cueExposure.reviewOnlyGate.renderSubmitRaceExactFalseGate;
+  assert.equal(gate.field, "renderSubmitRaceDetected");
+  assert.equal(gate.requiredPrimitiveType, "boolean");
+  assert.equal(gate.requiredExactValue, false);
+  assert.equal(gate.appliesWhenOuterOrNestedCanonicalTimingIsReviewOnly, true);
+  assert.equal(gate.evaluatedBeforeReviewOnlyRoutingOrEarlyReturnInEachValidator, true);
+  assert.equal(gate.revalidatedBySharedReviewOnlyAuthorizer, true);
+  assert.equal(gate.truthinessCoercionDefaultingOrAbsenceAccepted, false);
+
+  const invalidStates = [
+    { omit: true },
+    { value: undefined },
+    { value: null },
+    { value: true },
+    { value: "false" },
+    { value: 0 },
+    { value: 1 },
+    { value: {} },
+    { value: [] },
+  ];
+  for (const invalidState of invalidStates) {
+    for (const nestedOnly of [false, true]) {
+      const subject = reviewOnlyRequest(nestedOnly ? {
+        timing: undefined,
+        assistanceClassification: undefined,
+      } : {});
+      if (invalidState.omit) delete subject.renderSubmitRaceDetected;
+      else subject.renderSubmitRaceDetected = invalidState.value;
+      const event = cueEvent(subject);
+      if (invalidState.omit) delete event.renderSubmitRaceDetected;
+      for (const result of [
+        evaluateCueRender(subject),
+        validateCueExposureEvent(event),
+        authorizeCanonicalReviewOnlyCueRender(subject),
+      ]) {
+        assert.equal(result.accepted, false);
+        assert.equal(result.mayRenderCueBytes, false);
+        assert.equal(result.reason, contract.cueExposure.renderSubmitRaceBehavior);
+      }
+    }
+  }
+
+  const beforeOtherEarlyReturns = reviewOnlyRequest({ recordFailure: true });
+  delete beforeOtherEarlyReturns.renderSubmitRaceDetected;
+  const beforeOtherEarlyReturnsEvent = cueEvent(beforeOtherEarlyReturns);
+  delete beforeOtherEarlyReturnsEvent.renderSubmitRaceDetected;
+  for (const result of [
+    evaluateCueRender(beforeOtherEarlyReturns),
+    validateCueExposureEvent(beforeOtherEarlyReturnsEvent),
+  ]) {
+    assert.equal(result.reason, contract.cueExposure.renderSubmitRaceBehavior);
+    assert.equal(result.mayRenderCueBytes, false);
+  }
+
+  const nestedOnlyValid = reviewOnlyRequest({
+    timing: undefined,
+    assistanceClassification: undefined,
+    renderSubmitRaceDetected: false,
+  });
+  assert.equal(evaluateCueRender(reviewOnlyRequest()).accepted, true);
+  assert.equal(validateCueExposureEvent(cueEvent(reviewOnlyRequest())).accepted, true);
+  assert.equal(evaluateCueRender(nestedOnlyValid).accepted, true);
+  assert.equal(validateCueExposureEvent(cueEvent(nestedOnlyValid)).accepted, true);
 });
 
 test("review-only exposure events require canonical provenance and exact ordering before routing", () => {

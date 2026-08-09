@@ -67,7 +67,9 @@ PR #692 mutation is included.
     count or invalid/cross-bound history denies the affected credit. Zero alone creates no affirmative evidence.
     Before those checks can grant credit, base `evidence.attempt` itself must resolve from the canonical server attempt
     ledger through the complete state/count gate: known and resolved are exact true; ambiguous, conflicting, stale and
-    client-inferred are exact false; and `matchingRecordCount` is exactly one. Missing, malformed, wrong-type, opposite
+    client-inferred are exact false; and `matchingRecordCount` is exactly one. A base-specific safe-state gate also
+    requires `crossLearner`, `crossAttempt`, `replayed` and `cancelled` to exist as exact primitive false without
+    expanding the shared generic resolution helper or changing review-only absence semantics. Missing, malformed, wrong-type, opposite
     state, zero-record or multi-record attempts fail closed before independent retrieval and deny dependent far-transfer
     and stable-D+7 credit.
     Far transfer additionally resolves the source attempt's closed `taskBinding` from the canonical server attempt-task
@@ -89,6 +91,12 @@ PR #692 mutation is included.
     weaken the other affirmative gates. Stable D+7 resolves one canonical source attempt from `evidence.attempt`
     through the shared exact resolution-state gate, then field-for-field binds the D+7 record's source attempt ID,
     learner scope and `sourceAttemptSubmittedAt` to that record's exact ID, scope and canonical `submittedAt`.
+    The actual D+7 candidate also carries one separately resolved authoritative `canonicalD7Attempt` bound exactly to
+    `d7AttemptId` and the authenticated learner scope, distinct from the base/source attempt, exactly `SUBMITTED` and
+    `INDEPENDENT`, with known/resolved exact true and ambiguous, conflicting, cross-learner, cross-attempt, mismatched,
+    stale, replayed, cancelled and client/caller-inferred exact false. Missing, malformed, wrong-source, zero/multiple,
+    foreign, reused, unsubmitted, assisted or unsafe resolution denies stable D+7 only and preserves otherwise valid
+    independent retrieval and far transfer; outer claims and the base attempt cannot substitute.
     It binds that timestamp to `d7EvaluationCompletedAt` from the canonical D+7 evaluation ledger as exact RFC3339
     UTC millisecond instants and requires a server-computed elapsed interval of at least 604800000 ms. An independently
     supplied older timestamp, timing label, caller elapsed value, missing/mismatched/malformed/unresolved provenance,
@@ -131,6 +139,10 @@ PR #692 mutation is included.
     matching open independent attempts. The nested zero-count absence result is itself validated as a complete
     canonical resolution; missing, unresolved, ambiguous, conflicting, cross-learner, stale or client-inferred
     state, or any matching open attempt, fails closed with no cue bytes.
+    For review-only identified by either outer timing or nested canonical timing, both validators require the actual
+    subject's `renderSubmitRaceDetected === false` by exact primitive equality before routing or any other early return,
+    and the shared review-only authorizer revalidates it. Missing, undefined, null, true, strings, numbers, objects,
+    arrays, defaulting or coercion reject with no cue bytes; exact false preserves an otherwise valid review-only render.
     Before an exposure event can take that early `REVIEW_ONLY` route, it must independently carry exact canonical
     Assistance/Exposure-ledger provenance and `ordering === "ORDERED"`; omission, client provenance or ambiguous
     ordering rejects. The request validator remains free of those event-only fields.
@@ -223,8 +235,12 @@ All fail closed or hold.
 - an independent response lacks an actual canonical submission or completed evaluation;
 - far transfer lacks a distinct eligible non-same-representation task, independent submission or evaluated result;
 - D+7 evidence lacks a completed canonical D+7 evaluation, hidden all-surface cue bytes or conflict-free score;
+- D+7 candidate lacks one exact canonical D+7 attempt, reuses the base attempt, crosses scope, is unsubmitted/assisted,
+  or carries any ambiguous, conflicting, mismatched, stale, replayed, cancelled or inferred resolution state;
 - base `evidence.attempt` is missing, malformed, unresolved, ambiguous, conflicting, stale, client-inferred or does
   not resolve to exactly one canonical server attempt, yet independent retrieval or dependent transfer receives credit;
+- base `evidence.attempt` omits or coerces `crossLearner`, `crossAttempt`, `replayed` or `cancelled`, or any is not exact
+  primitive false, yet any positive credit is granted;
 - D+7 relies on `D_PLUS_7` or a caller elapsed value without trusted source/evaluation timestamps proving at
   least 604800000 ms, accepts malformed, non-UTC, reversed or shorter timestamps, or trusts an independently
   supplied older source timestamp that is not bound to one resolved canonical source attempt;
@@ -245,6 +261,8 @@ All fail closed or hold.
   `REVIEW_ONLY` without trusted canonical resolution;
 - the request or alternate exposure-event path renders `REVIEW_ONLY` while a matching canonical open independent
   attempt exists;
+- an outer- or nested-timing `REVIEW_ONLY` path reaches routing or another early return without the actual subject's
+  exact primitive `renderSubmitRaceDetected: false`, or the shared authorizer does not revalidate it;
 - attempt state comes from client input instead of the canonical server attempt ledger;
 - `BEFORE_RESPONSE` is requested without canonical `INDEPENDENT_ATTEMPT_OPEN`;
 - the separate event validator or an alternate render route authorizes `BEFORE_RESPONSE` without the exact
@@ -357,7 +375,7 @@ npm run build
 Current correction-source evidence:
 
 - JavaScript syntax check: passed.
-- Focused behavioral contract suite: 54/54 passed.
+- Focused behavioral contract suite: 57/57 passed.
 - Strict JSON parse, balanced Markdown fences, cross-artifact assertions and `git diff --check`: passed.
 - Typecheck: passed.
 - Lint: passed with 0 errors and 9 pre-existing warnings outside the MCAL diff.
