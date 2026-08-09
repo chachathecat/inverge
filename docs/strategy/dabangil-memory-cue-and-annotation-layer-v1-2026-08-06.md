@@ -971,9 +971,11 @@ type SemanticHighlightRoleV1 =
 강제 규칙:
 
 - 색만으로 의미를 전달하지 않는다.
-- 비어 있지 않은 visible text label과 valid computed accessible name을 항상 둘 다 제공한다
-  (`ALL_OF`). visible text가 올바른 computed accessible name을 만들면 중복 `aria-label`은
-  요구하지 않는다.
+- 같은 실제 candidate에 비어 있지 않은 visible text label, valid computed accessible name,
+  `colorOnlyMeaning` exact primitive `false`를 항상 함께 제공한다(`ALL_OF`). candidate 필드의 missing·
+  `undefined`·`null`·문자열·숫자·배열·객체, truthiness coercion, default/inference 또는 전역
+  `colorOnlyMeaningAllowed: false`는 세 번째 조건을 대신할 수 없다. visible text가 올바른 computed
+  accessible name을 만들면 중복 `aria-label`은 요구하지 않는다.
 - concept/question surface의 primary highlight 기본 최대 3개.
 - 모든 문장을 칠하는 기능을 기본값으로 제공하지 않는다.
 - highlight click/view는 mastery가 아니다.

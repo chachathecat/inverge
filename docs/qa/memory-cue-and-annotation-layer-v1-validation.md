@@ -146,8 +146,11 @@ PR #692 mutation is included.
     elapsed-interval proof defined in rule 16.
 27. Same-cue repetition is not far transfer.
 28. Memory Post-it expanded-card maximum is one.
-29. Semantic highlights require `ALL_OF`: a non-empty visible text label and a valid computed accessible
-    name. Visible text may supply that name, so a redundant `aria-label` is not required.
+29. Semantic highlights require three exact `ALL_OF` conditions on the same candidate: a non-empty visible
+    text label, a valid computed accessible name and `colorOnlyMeaning` exactly primitive `false`. Missing or
+    malformed candidate state, coercion, defaulting, inference or global `colorOnlyMeaningAllowed: false`
+    cannot satisfy the third condition. Visible text may supply the computed name, so a redundant `aria-label`
+    is not required.
 30. Semantic highlights have closed roles and maximum three primary highlights.
 31. Every semantic highlight binds a revision-bound typed anchor and target digest.
 32. Color alone never carries meaning.
@@ -326,6 +329,7 @@ All are blocking defects.
 ### UX and accessibility
 
 - color-only highlight;
+- semantic highlight whose own `colorOnlyMeaning` is missing or anything other than exact primitive `false`;
 - visible text label without a valid computed accessible name;
 - computed accessible name without a non-empty visible text label;
 - semantic highlight with an untyped or unversioned anchor;
@@ -353,7 +357,7 @@ npm run build
 Current correction-source evidence:
 
 - JavaScript syntax check: passed.
-- Focused behavioral contract suite: 53/53 passed.
+- Focused behavioral contract suite: 54/54 passed.
 - Strict JSON parse, balanced Markdown fences, cross-artifact assertions and `git diff --check`: passed.
 - Typecheck: passed.
 - Lint: passed with 0 errors and 9 pre-existing warnings outside the MCAL diff.

@@ -211,7 +211,10 @@ unresolved scoring conflict 0을 요구한다.
   target·revision·digest·scope·locator를 field-for-field bind해야 한다. caller/client equality·truthiness는
   증거가 아니며 missing·malformed·wrong-type·foreign/cross-owner·cross-tenant·ambiguous·conflicting·stale·
   replayed·unresolved·client-inferred resolution은 reject한다.
-- color-only 의미 금지; text label과 accessible name 필수.
+- color-only 의미 금지; 실제 semantic-highlight candidate 자체의 `colorOnlyMeaning`은 exact primitive
+  `false`여야 하고 text label과 accessible name도 필수다. 필드 누락·`undefined`·`null`·문자열·숫자·
+  배열·객체·truthiness coercion·default/inference 또는 전역 `colorOnlyMeaningAllowed: false`는 candidate의
+  명시적 exact false를 대신할 수 없다.
 - primary response를 가리지 않는다.
 - Today에 네 번째 primary task를 만들지 않는다.
 

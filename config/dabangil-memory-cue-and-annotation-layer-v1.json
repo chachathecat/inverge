@@ -1,6 +1,6 @@
 {
   "schema": "dabangil_memory_cue_and_annotation_layer_v1",
-  "version": "1.0.14",
+  "version": "1.0.15",
   "dated": "2026-08-06 KST",
   "status": "proposed_non_authoritative",
   "repository": "chachathecat/inverge",
@@ -703,6 +703,10 @@
         {
           "field": "computedAccessibleName",
           "predicate": "VALID_NON_EMPTY_COMPUTED_ACCESSIBLE_NAME"
+        },
+        {
+          "field": "colorOnlyMeaning",
+          "predicate": "EXACT_PRIMITIVE_FALSE"
         }
       ],
       "redundantAriaLabelRequired": false,

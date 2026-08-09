@@ -1961,10 +1961,11 @@ function validateSemanticHighlightAccessibility(candidate) {
       && candidate.visibleTextLabel.trim().length > 0,
     computedAccessibleName: typeof candidate.computedAccessibleName === "string"
       && candidate.computedAccessibleName.trim().length > 0,
+    colorOnlyMeaning: candidate.colorOnlyMeaning === false,
   };
   const conditionResults = rule.conditions.map(({ field }) => checks[field] === true);
   const accepted = rule.requirementMode === "ALL_OF" && conditionResults.every(Boolean);
-  return { accepted: accepted && candidate.colorOnlyMeaning !== true, checks };
+  return { accepted, checks };
 }
 
 test("MCAL paths resolve and V13 remains sole active master plan", () => {
@@ -1973,7 +1974,7 @@ test("MCAL paths resolve and V13 remains sole active master plan", () => {
   assert.match(active, /dabangil-professional-exam-reasoning-os-final-master-plan-v13-2026-08-06\.md/);
   assert.match(active, /Memory Cue & Annotation Layer/);
   assert.doesNotMatch(active, /final-master-plan-v14/);
-  assert.equal(contract.version, "1.0.14");
+  assert.equal(contract.version, "1.0.15");
   assert.equal(contract.compatibility.v13RemainsSoleActiveMasterPlan, true);
   assert.equal(contract.compatibility.newMasterPlanVersionCreated, false);
 });
@@ -2174,7 +2175,7 @@ test("Markdown fences and exact boundary language are present", () => {
   assert.match(annex, /source와 transfer의 canonical task identity는.*field-for-field/);
   const qa = read(P.qa);
   assert.match(qa, /PR #692 is merged at `512bfdb9232a86bf4f7d4cfbc076a9df1c8a7da2`/);
-  assert.match(qa, /Focused behavioral contract suite: 53\/53 passed/);
+  assert.match(qa, /Focused behavioral contract suite: 54\/54 passed/);
   assert.match(qa, /Merely supplying two different task IDs is insufficient/);
   assert.match(qa, /canonical transfer attempt and its independently resolved task binding/);
   assert.match(qa, /`cancelled` field must be exact primitive `false`/);
@@ -4873,19 +4874,77 @@ test("semantic-highlight accessibility requires visible label and computed name 
   assert.equal(validateSemanticHighlightAccessibility({
     visibleTextLabel: "정확한 정의",
     computedAccessibleName: "",
+    colorOnlyMeaning: false,
   }).accepted, false);
   assert.equal(validateSemanticHighlightAccessibility({
     visibleTextLabel: "",
     computedAccessibleName: "정확한 정의",
+    colorOnlyMeaning: false,
   }).accepted, false);
   assert.equal(validateSemanticHighlightAccessibility({
     visibleTextLabel: "정확한 정의",
     computedAccessibleName: "정확한 정의",
+    colorOnlyMeaning: false,
   }).accepted, true);
   assert.equal(contract.semanticHighlight.accessibilityRequirement.redundantAriaLabelRequired, false);
   assert.equal(validateSemanticHighlightAccessibility({
     visibleTextLabel: "정확한 정의",
     computedAccessibleName: "정확한 정의",
+    colorOnlyMeaning: false,
+    ariaLabel: undefined,
+  }).accepted, true);
+});
+
+test("semantic-highlight accessibility requires candidate-owned exact primitive false", () => {
+  const rule = contract.semanticHighlight.accessibilityRequirement;
+  assert.equal(rule.requirementMode, "ALL_OF");
+  assert.deepEqual(rule.conditions, [
+    {
+      field: "visibleTextLabel",
+      predicate: "NON_EMPTY_TRIMMED_STRING",
+    },
+    {
+      field: "computedAccessibleName",
+      predicate: "VALID_NON_EMPTY_COMPUTED_ACCESSIBLE_NAME",
+    },
+    {
+      field: "colorOnlyMeaning",
+      predicate: "EXACT_PRIMITIVE_FALSE",
+    },
+  ]);
+  assert.equal(contract.semanticHighlight.colorOnlyMeaningAllowed, false);
+  assert.equal(rule.redundantAriaLabelRequired, false);
+  assert.equal(rule.visibleTextMaySupplyComputedAccessibleName, true);
+
+  const accessibleCandidate = {
+    visibleTextLabel: "정확한 정의",
+    computedAccessibleName: "정확한 정의",
+    colorOnlyMeaning: false,
+  };
+  assert.equal(validateSemanticHighlightAccessibility(accessibleCandidate).accepted, true);
+
+  const missingColorState = {
+    visibleTextLabel: accessibleCandidate.visibleTextLabel,
+    computedAccessibleName: accessibleCandidate.computedAccessibleName,
+  };
+  assert.equal(validateSemanticHighlightAccessibility(missingColorState).accepted, false);
+  for (const invalidValue of [true, "true", "false", null, undefined, 0, 1, [], {}]) {
+    assert.equal(validateSemanticHighlightAccessibility({
+      ...accessibleCandidate,
+      colorOnlyMeaning: invalidValue,
+    }).accepted, false, `colorOnlyMeaning=${String(invalidValue)}`);
+  }
+
+  assert.equal(validateSemanticHighlightAccessibility({
+    ...accessibleCandidate,
+    visibleTextLabel: "",
+  }).accepted, false);
+  assert.equal(validateSemanticHighlightAccessibility({
+    ...accessibleCandidate,
+    computedAccessibleName: "",
+  }).accepted, false);
+  assert.equal(validateSemanticHighlightAccessibility({
+    ...accessibleCandidate,
     ariaLabel: undefined,
   }).accepted, true);
 });
