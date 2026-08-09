@@ -616,6 +616,27 @@ function validateExactCanonicalConfirmation(subject) {
   return true;
 }
 
+function validateExactPreResponseAuthenticatedLearnerScope(subject) {
+  const gate = contract.cueExposure.beforeResponseGate.authenticatedLearnerScopeBindingGate;
+  if (
+    gate.clientOrCallerAliasAllowed !== false
+    || gate.inferenceAllowed !== false
+    || gate.comparison !== "EXACT_FIELD_FOR_FIELD"
+    || gate.allValidatedLearnerScopesMustExactlyEqual !== true
+    || gate.untrustedAliasFields.some((field) => subject[field] !== undefined)
+    || subject.inferLearnerPrivateScopeId === true
+  ) return false;
+  const authenticatedLearnerScope = subject[gate.field];
+  const learnerScopes = [
+    authenticatedLearnerScope,
+    subject.learnerPrivateScopeId,
+    subject.attemptResolution?.learnerPrivateScopeId,
+    subject.confirmation?.learnerPrivateScopeId,
+  ];
+  return learnerScopes.every((value) => isCanonicalIdentifier(value, gate.identifierSchema))
+    && learnerScopes.every((value) => value === authenticatedLearnerScope);
+}
+
 function hasExactPreResponseNoRaceState(subject) {
   const gate = contract.cueExposure.preResponseAtomicCommit.renderSubmitRaceExactFalseGate;
   const value = subject[gate.field];
@@ -809,13 +830,16 @@ function authorizeExactPreResponseCueRender(subject) {
     subject.canonicalAttemptStateSource !== gate.attemptResolutionSource
     || subject.clientAttemptState !== undefined
   ) return fail("UNTRUSTED_ATTEMPT_STATE");
-  if (typeof subject.attemptId !== "string" || subject.attemptId.trim().length === 0) {
+  if (!isCanonicalIdentifier(
+    subject.attemptId,
+    gate.canonicalOpenAttemptResolutionGate.identifierSchema,
+  )) {
     return fail("EXACT_ATTEMPT_ID_REQUIRED");
   }
-  if (
-    typeof subject.learnerPrivateScopeId !== "string"
-    || subject.learnerPrivateScopeId.trim().length === 0
-  ) return fail("EXACT_LEARNER_PRIVATE_SCOPE_ID_REQUIRED");
+  if (!isCanonicalIdentifier(
+    subject.learnerPrivateScopeId,
+    gate.authenticatedLearnerScopeBindingGate.identifierSchema,
+  )) return fail("EXACT_LEARNER_PRIVATE_SCOPE_ID_REQUIRED");
 
   const resolution = subject.attemptResolution;
   if (!resolution) return fail("ATTEMPT_RESOLUTION_MISSING");
@@ -831,6 +855,9 @@ function authorizeExactPreResponseCueRender(subject) {
   }
   if (!validateExactCanonicalConfirmation(subject)) {
     return fail("CONFIRMATION_RESOLUTION_INVALID");
+  }
+  if (!validateExactPreResponseAuthenticatedLearnerScope(subject)) {
+    return fail("AUTHENTICATED_LEARNER_PRIVATE_SCOPE_MISMATCH");
   }
   if (JSON.stringify(subject.commitSteps) !== JSON.stringify(cue.preResponseAtomicCommit.orderedSteps)) {
     return fail(cue.preResponseAtomicCommit.partialCommitBehavior);
@@ -1587,6 +1614,22 @@ function resolveExactCanonicalTransferAttempt(canonicalSourceAttempt, transfer, 
   for (const field of gate.timestampFields) {
     if (parseCanonicalUtcMilliseconds(canonicalTransferAttempt[field]) === null) return false;
   }
+  const orderingGate = gate.canonicalSourceSubmissionOrderingGate;
+  const canonicalSourceSubmittedAt = parseCanonicalUtcMilliseconds(
+    canonicalSourceAttempt?.[orderingGate.canonicalSourceTimestampField],
+  );
+  const canonicalTransferSubmittedAt = parseCanonicalUtcMilliseconds(
+    canonicalTransferAttempt?.[orderingGate.canonicalTransferTimestampField],
+  );
+  if (
+    orderingGate.comparison
+      !== "CANONICAL_TRANSFER_ATTEMPT_SUBMITTED_AT_GTE_CANONICAL_SOURCE_ATTEMPT_SUBMITTED_AT"
+    || orderingGate.equalityAccepted !== true
+    || orderingGate.callerOrOuterTimestampSubstitutionAllowed !== false
+    || canonicalSourceSubmittedAt === null
+    || canonicalTransferSubmittedAt === null
+    || canonicalTransferSubmittedAt < canonicalSourceSubmittedAt
+  ) return false;
   for (const [field, expected] of Object.entries(
     gate.requiredExactPrimitiveBooleanStates,
   )) {
@@ -2703,7 +2746,7 @@ test("MCAL paths resolve and V13 remains sole active master plan", () => {
   assert.match(active, /dabangil-professional-exam-reasoning-os-final-master-plan-v13-2026-08-06\.md/);
   assert.match(active, /Memory Cue & Annotation Layer/);
   assert.doesNotMatch(active, /final-master-plan-v14/);
-  assert.equal(contract.version, "1.0.19");
+  assert.equal(contract.version, "1.0.20");
   assert.equal(contract.compatibility.v13RemainsSoleActiveMasterPlan, true);
   assert.equal(contract.compatibility.newMasterPlanVersionCreated, false);
 });
@@ -2844,7 +2887,8 @@ test("Markdown fences and exact boundary language are present", () => {
   const decision = read(P.decision);
   const qa = read(P.qa);
   for (const body of [annex, decision, qa]) {
-    assert.match(body, /machine contract version(?:은|:) `1\.0\.19`/i);
+    assert.match(body, /machine contract version(?:은|:) `1\.0\.20`/i);
+    assert.doesNotMatch(body, /1\.0\.19/);
     assert.doesNotMatch(body, /1\.0\.18/);
     assert.match(body, /CANONICAL_SIGNAL_ORIGIN_CONTENT_SAFETY_RESOLVER/);
     assert.match(body, /decision-context/);
@@ -2920,9 +2964,13 @@ test("Markdown fences and exact boundary language are present", () => {
   assert.match(annex, /`renderSubmitRaceDetected === false`/);
   assert.match(annex, /nested zero-count absence record는 각각 non-null·non-array closed canonical object/);
   assert.match(annex, /evaluation completion은 bound base attempt의 canonical `submittedAt`/);
+  assert.match(annex, /authenticated learner scope와 subject·attempt-resolution·confirmation learner scope 네 값/);
+  assert.match(annex, /canonical transfer attempt의 `submittedAt` 자체도 canonical base\/source attempt/);
   assert.match(annex, /receipt set은 `contribution`·`promotion`·`o5`만 가진 closed object/);
   assert.match(decision, /outer resolution과 nested absence record는 각각 non-null·non-array closed object/);
   assert.match(decision, /각 evaluation completion은 자신이 bind된 canonical attempt의 `submittedAt`/);
+  assert.match(decision, /인증된 요청 문맥의 `authenticatedLearnerPrivateScopeId`/);
+  assert.match(decision, /canonical transfer attempt의 `submittedAt`은 canonical base\/source attempt/);
   assert.match(decision, /receipt set은 `contribution`·`promotion`·`o5`만 가진 closed object/);
   assert.match(qa, /PR #692 is merged at `512bfdb9232a86bf4f7d4cfbc076a9df1c8a7da2`/);
   assert.match(qa, /Focused behavioral contract suite: 62\/62 passed/);
@@ -2938,6 +2986,8 @@ test("Markdown fences and exact boundary language are present", () => {
   assert.match(qa, /validate the actual candidate's exact top-level and nested field sets/);
   assert.match(qa, /canonical promotion\/rights\/provenance record/);
   assert.match(qa, /one millisecond before rejects, equality and later completion pass/);
+  assert.match(qa, /authenticated request-context learner scope/);
+  assert.match(qa, /canonical transfer attempt's `submittedAt` must be at or after/);
   assert.match(qa, /receipt set is a closed object containing exactly contribution, promotion and O5 fields/);
   assert.doesNotMatch(qa, /Focused behavioral contract suite: 52\/52 passed/);
   assert.doesNotMatch(qa, /Focused behavioral contract suite: 57\/57 passed/);
@@ -3433,6 +3483,7 @@ test("pre-response requests reject omitted or NONE assistance classification", (
 
 test("every BEFORE_RESPONSE render path delegates to one exact gate and rejects all bypasses", () => {
   const gate = contract.cueExposure.beforeResponseGate;
+  const learnerScopeGate = gate.authenticatedLearnerScopeBindingGate;
   assert.equal(gate.gateId, "EXACT_PRE_RESPONSE_RENDER_GATE_V1");
   assert.equal(gate.sharedAcrossEveryRenderCapableValidator, true);
   assert.equal(gate.alternateValidatorBypassAllowed, false);
@@ -3440,12 +3491,51 @@ test("every BEFORE_RESPONSE render path delegates to one exact gate and rejects 
     "CUE_RENDER_REQUEST_VALIDATOR",
     "CUE_EXPOSURE_EVENT_VALIDATOR",
   ]);
+  assert.equal(learnerScopeGate.field, "authenticatedLearnerPrivateScopeId");
+  assert.equal(learnerScopeGate.source, "AUTHENTICATED_REQUEST_CONTEXT");
+  assert.deepEqual(learnerScopeGate.independentlyValidatedRefs, [
+    "subject.authenticatedLearnerPrivateScopeId",
+    "subject.learnerPrivateScopeId",
+    "subject.attemptResolution.learnerPrivateScopeId",
+    "subject.confirmation.learnerPrivateScopeId",
+  ]);
+  assert.equal(learnerScopeGate.comparison, "EXACT_FIELD_FOR_FIELD");
+  assert.equal(learnerScopeGate.clientOrCallerAliasAllowed, false);
+  assert.equal(learnerScopeGate.inferenceAllowed, false);
 
   const invalidOverrides = [
     { attemptId: undefined },
     { attemptId: "" },
     { learnerPrivateScopeId: undefined },
     { learnerPrivateScopeId: "" },
+    { authenticatedLearnerPrivateScopeId: undefined },
+    { authenticatedLearnerPrivateScopeId: null },
+    { authenticatedLearnerPrivateScopeId: "" },
+    { authenticatedLearnerPrivateScopeId: " " },
+    { authenticatedLearnerPrivateScopeId: "?" },
+    { authenticatedLearnerPrivateScopeId: 1 },
+    { authenticatedLearnerPrivateScopeId: true },
+    { authenticatedLearnerPrivateScopeId: {} },
+    { authenticatedLearnerPrivateScopeId: [] },
+    { authenticatedLearnerPrivateScopeId: "learner-foreign" },
+    { clientLearnerPrivateScopeId: "learner-1" },
+    { callerLearnerPrivateScopeId: "learner-1" },
+    { clientAuthenticatedLearnerPrivateScopeId: "learner-1" },
+    { callerAuthenticatedLearnerPrivateScopeId: "learner-1" },
+    { inferLearnerPrivateScopeId: true },
+    {
+      learnerPrivateScopeId: "learner-foreign",
+      attemptResolution: canonicalOpenAttemptResolution({
+        learnerPrivateScopeId: "learner-foreign",
+      }),
+      confirmation: cueConfirmation({ learnerPrivateScopeId: "learner-foreign" }),
+    },
+    {
+      authenticatedLearnerPrivateScopeId: "?",
+      learnerPrivateScopeId: "?",
+      attemptResolution: canonicalOpenAttemptResolution({ learnerPrivateScopeId: "?" }),
+      confirmation: cueConfirmation({ learnerPrivateScopeId: "?" }),
+    },
     { attemptResolution: undefined },
     { attemptResolution: canonicalOpenAttemptResolution({ source: "CLIENT" }) },
     { attemptResolution: canonicalOpenAttemptResolution({ known: false }) },
@@ -4323,11 +4413,26 @@ test("far transfer binds the transfer task to one independently resolved canonic
   const sourceTaskGate = farTransferGate.canonicalSourceTaskBindingGate;
   const transferTaskGate = farTransferGate.canonicalTransferTaskBindingGate;
   const comparisonGate = farTransferGate.canonicalTaskIdentityComparisonGate;
+  const orderingGate = attemptGate.canonicalSourceSubmissionOrderingGate;
   assert.equal(attemptGate.recordRef, "evidence.farTransfer.canonicalTransferAttempt");
   assert.equal(attemptGate.resolutionSource, "CANONICAL_SERVER_ATTEMPT_LEDGER");
   assert.equal(attemptGate.exactMatchingRecordCount, 1);
   assert.equal(attemptGate.requiredCanonicalAttemptState, "SUBMITTED");
   assert.equal(attemptGate.canonicalSourceAttemptMaySubstitute, false);
+  assert.equal(orderingGate.canonicalSourceAttemptRecordRef, "evidence.attempt");
+  assert.equal(orderingGate.canonicalSourceTimestampField, "submittedAt");
+  assert.equal(
+    orderingGate.canonicalTransferAttemptRecordRef,
+    "evidence.farTransfer.canonicalTransferAttempt",
+  );
+  assert.equal(orderingGate.canonicalTransferTimestampField, "submittedAt");
+  assert.equal(
+    orderingGate.comparison,
+    "CANONICAL_TRANSFER_ATTEMPT_SUBMITTED_AT_GTE_CANONICAL_SOURCE_ATTEMPT_SUBMITTED_AT",
+  );
+  assert.equal(orderingGate.equalityAccepted, true);
+  assert.equal(orderingGate.callerOrOuterTimestampSubstitutionAllowed, false);
+  assert.equal(orderingGate.invalidOrderingAffectsIndependentRetrievalOrStableD7, false);
   assert.equal(sourceTaskGate.resolutionSource, "CANONICAL_SERVER_ATTEMPT_TASK_BINDING_RESOLVER");
   assert.equal(transferTaskGate.resolutionSource, "CANONICAL_SERVER_ATTEMPT_TASK_BINDING_RESOLVER");
   assert.equal(transferTaskGate.sourceBindingMaySubstituteForTransferBinding, false);
@@ -4381,6 +4486,32 @@ test("far transfer binds the transfer task to one independently resolved canonic
   assert.equal(valid.independentRetrieval, true);
   assert.equal(valid.farTransfer, true);
   assert.equal(valid.stableD7, true);
+  const equalSubmissionInstant = evaluate(transferFor("task-c", "task-c", {
+    canonicalTransferAttempt: transferAttemptForTask("task-c", {
+      submittedAt: sourceTaskA.submittedAt,
+    }),
+  }));
+  assert.equal(equalSubmissionInstant.independentRetrieval, true);
+  assert.equal(equalSubmissionInstant.farTransfer, true);
+  assert.equal(equalSubmissionInstant.stableD7, true);
+  assertTransferOnlyFailure(
+    transferFor("task-c", "task-c", {
+      canonicalTransferAttempt: transferAttemptForTask("task-c", {
+        submittedAt: "2026-07-31T23:59:59.999Z",
+      }),
+    }),
+    "canonical transfer attempt cannot predate the canonical source response",
+  );
+  assertTransferOnlyFailure(
+    transferFor("task-c", "task-c", {
+      canonicalTransferAttempt: transferAttemptForTask("task-c", {
+        submittedAt: "2026-07-31T23:59:59.999Z",
+      }),
+      sourceAttemptSubmittedAt: "1900-01-01T00:00:00.000Z",
+      transferAttemptSubmittedAt: "2099-01-01T00:00:00.000Z",
+    }),
+    "outer timestamps cannot replace canonical source-to-transfer ordering",
+  );
   assertTransferOnlyFailure(
     transferFor("task-c", "task-b"),
     "supplied transfer B cannot replace canonical transfer C",

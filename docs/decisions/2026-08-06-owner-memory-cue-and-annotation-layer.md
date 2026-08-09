@@ -20,7 +20,7 @@ does_not_authorize:
 
 V13의 필수 후속 부속계약으로 `Memory Cue & Annotation Layer(MCAL)`를 채택한다.
 V13은 계속 유일한 active master plan이며 MCAL은 V14가 아니다.
-동기화된 machine contract version은 `1.0.19`이다.
+동기화된 machine contract version은 `1.0.20`이다.
 MCAL은 별도의 정의 저장소나 두 번째 정의 authority가 아니다. 모든 `exactDefinitionRef`는
 released·versioned VESG concept/evidence projection을 가리키며, 해석 실패·hold·drift 시 cue도 release하지 않는다.
 
@@ -99,6 +99,11 @@ single-use confirmation을 모두 요구한다. confirmation은 `replayed === fa
 confirmation 증거가 아니다. request와 confirmation의 `cueId`, `cueRevisionId`, `requestId`는 서로
 비교하기 전에 양쪽에서 각각 exact trimmed canonical identifier schema를 통과해야 한다. 두 값이 함께
 누락되거나 null·wrong-type·empty·whitespace·malformed인 채 같아도 confirmation binding이 아니다.
+인증된 요청 문맥의 `authenticatedLearnerPrivateScopeId`, subject의 `learnerPrivateScopeId`, canonical
+open-attempt resolution의 learner scope, canonical confirmation의 learner scope 네 값은 각각 같은 exact
+canonical identifier schema를 독립적으로 통과한 뒤 field-for-field로 모두 같아야 한다. 네 값이 함께
+malformed이거나 subject·attempt·confirmation이 같은 foreign learner를 주장해도 인증 문맥과 다르면 실패한다.
+client/caller learner-scope alias 또는 inferred learner scope는 이 인증 경계를 대체하지 못한다.
 confirmation 자체도 추가 필드가 없는 closed single canonical record여야 한다. exact source·record count 1,
 server-side·authoritative·independently-resolved·known·resolved·server-recorded·deliberate·active·single-use는
 primitive `true`, consumed·cancelled·ambiguous·conflicting·cross-learner·cross-attempt·mismatched·stale·replayed·
@@ -189,6 +194,10 @@ transfer attempt/learner/submission/evaluation/result/task IDs에 bind하며, in
 response는 base attempt, transfer는 canonical transfer attempt, D+7은 canonical D+7 attempt의 timestamp를 사용하며
 두 값은 모두 bound record의 exact RFC3339 UTC millisecond field여야 한다. 1 ms 이전 completion이나 outer/caller
 timestamp 대체는 fail closed하고 response/transfer/D+7 실패 격리는 그대로 유지한다.
+이 evaluation 자체 순서와 별도로 canonical transfer attempt의 `submittedAt`은 canonical base/source attempt의
+`submittedAt`과 같거나 그 뒤여야 한다. source와 transfer 양쪽의 trusted canonical record timestamp만 비교하며
+transfer가 source보다 1 ms라도 앞서면 far-transfer만 fail closed한다. equality와 later는 허용하고 outer/caller
+source·transfer timestamp는 이 순서를 대체하지 못한다.
 stable D+7은 completed D+7 evaluation·cue `HIDDEN`·all-surface byte absence·non-same representation·unresolved
 scoring conflict 0을 담은 candidate-owned closed `canonicalD7Evaluation`을 요구한다. 이에 더해 실제 D+7
 candidate의 `canonicalD7Attempt`를 같은 authoritative server

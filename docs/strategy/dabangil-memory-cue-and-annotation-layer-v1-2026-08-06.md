@@ -26,7 +26,7 @@ execution_rule: "This annex fixes contracts and development order only. It autho
 
 `Memory Cue & Annotation Layer(MCAL)`은 V13을 대체하는 새 마스터플랜이 아니다.
 V13의 근거·개념·문항·검증·학습증거 사이에 다음 연결점만 고정하는 필수 후속 부속계약이다.
-동기화된 machine contract version은 `1.0.19`이다.
+동기화된 machine contract version은 `1.0.20`이다.
 
 ```text
 VESG / exact definition / QuestionUnit
@@ -523,6 +523,10 @@ D+7 stable / timed: HIDDEN
   record이고 server-side·authoritative·independently-resolved·known·resolved가 primitive true, ambiguous·
   conflicting·cross-learner·cross-attempt·mismatched·stale·replayed·cancelled·client/caller-inferred가 primitive
   false여야 한다. client boolean, 미리 선택된 consent, source label 또는 outer success state는 confirmation이 아니다.
+- authenticated learner scope와 subject·attempt-resolution·confirmation learner scope 네 값은 모두 같은 exact
+  canonical identifier schema를 독립적으로 통과하고 field-for-field로 일치해야 한다. matching malformed 값,
+  인증 문맥과 다른 foreign learner에 맞춘 subject/attempt/confirmation, client/caller scope alias 또는 inference는
+  cue reveal을 승인하지 않는다.
 - cue render request validator와 별도 cue exposure event validator를 포함해 `BEFORE_RESPONSE` byte를
   허용할 수 있는 모든 path는 동일 `EXACT_PRE_RESPONSE_RENDER_GATE_V1`에 위임한다. alternate route나
   약한 두 번째 policy는 금지한다.
@@ -608,6 +612,9 @@ D+7 stable / timed: HIDDEN
   closed하며 otherwise valid independent retrieval과 stable D+7은 유지한다.
   transfer evaluation completion도 canonical transfer attempt의 `submittedAt`과 같은 시각이거나 그 뒤여야 하며,
   1 ms 이전 또는 outer/caller timestamp 대체는 far-transfer만 fail closed한다.
+  canonical transfer attempt의 `submittedAt` 자체도 canonical base/source attempt의 `submittedAt`과 같거나 뒤여야
+  한다. 두 trusted canonical attempt record의 exact RFC3339 UTC millisecond timestamp만 비교하며 transfer가 source보다
+  1 ms 앞서면 far-transfer만 거부한다. equality와 later는 허용하고 outer/caller source·transfer timestamp는 대체하지 못한다.
 - stable D+7은 실제 완료된 D+7 independent evaluation, cue `HIDDEN`, 모든 surface의 cue byte 부재,
   non-same representation 및 unresolved scoring conflict 0의 canonical record를 별도로 요구한다.
   실제 D+7 candidate의 `canonicalD7Attempt`도 `CANONICAL_SERVER_ATTEMPT_LEDGER`에서 exact single authoritative

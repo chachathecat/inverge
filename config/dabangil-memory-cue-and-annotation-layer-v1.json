@@ -1,6 +1,6 @@
 {
   "schema": "dabangil_memory_cue_and_annotation_layer_v1",
-  "version": "1.0.19",
+  "version": "1.0.20",
   "dated": "2026-08-06 KST",
   "status": "proposed_non_authoritative",
   "repository": "chachathecat/inverge",
@@ -2080,6 +2080,32 @@
       "alternateValidatorBypassBehavior": "FAIL_CLOSED_NO_CUE_BYTES",
       "nonNullExactAttemptIdRequired": true,
       "nonNullExactLearnerPrivateScopeIdRequired": true,
+      "authenticatedLearnerScopeBindingGate": {
+        "field": "authenticatedLearnerPrivateScopeId",
+        "source": "AUTHENTICATED_REQUEST_CONTEXT",
+        "identifierSchema": {
+          "type": "string",
+          "minLength": 3,
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{2,127}$"
+        },
+        "independentlyValidatedRefs": [
+          "subject.authenticatedLearnerPrivateScopeId",
+          "subject.learnerPrivateScopeId",
+          "subject.attemptResolution.learnerPrivateScopeId",
+          "subject.confirmation.learnerPrivateScopeId"
+        ],
+        "comparison": "EXACT_FIELD_FOR_FIELD",
+        "allValidatedLearnerScopesMustExactlyEqual": true,
+        "untrustedAliasFields": [
+          "clientLearnerPrivateScopeId",
+          "callerLearnerPrivateScopeId",
+          "clientAuthenticatedLearnerPrivateScopeId",
+          "callerAuthenticatedLearnerPrivateScopeId"
+        ],
+        "clientOrCallerAliasAllowed": false,
+        "inferenceAllowed": false,
+        "missingMalformedMatchingMalformedForeignAliasedOrInferredBehavior": "FAIL_CLOSED_NO_CUE_BYTES"
+      },
       "attemptResolutionSource": "CANONICAL_SERVER_ATTEMPT_LEDGER",
       "attemptResolutionStateGateRef": "cueExposure.canonicalAttemptResolutionStateGate",
       "canonicalOpenAttemptResolutionGate": {
@@ -2973,6 +2999,18 @@
               "attemptId": "transferAttemptId",
               "learnerPrivateScopeId": "learnerPrivateScopeId",
               "submissionId": "submissionId"
+            },
+            "canonicalSourceSubmissionOrderingGate": {
+              "canonicalSourceAttemptRecordRef": "evidence.attempt",
+              "canonicalSourceTimestampField": "submittedAt",
+              "canonicalTransferAttemptRecordRef": "evidence.farTransfer.canonicalTransferAttempt",
+              "canonicalTransferTimestampField": "submittedAt",
+              "requiredTimestampFormat": "RFC3339_UTC_MILLISECONDS",
+              "comparison": "CANONICAL_TRANSFER_ATTEMPT_SUBMITTED_AT_GTE_CANONICAL_SOURCE_ATTEMPT_SUBMITTED_AT",
+              "equalityAccepted": true,
+              "callerOrOuterTimestampSubstitutionAllowed": false,
+              "oneMillisecondBeforeBehavior": "FAIL_CLOSED_FOR_FAR_TRANSFER_CREDIT",
+              "invalidOrderingAffectsIndependentRetrievalOrStableD7": false
             },
             "mustDifferFromCanonicalSourceAttemptId": true,
             "evaluationSubmissionIdMustExactlyEqualCanonicalTransferAttemptSubmissionId": true,

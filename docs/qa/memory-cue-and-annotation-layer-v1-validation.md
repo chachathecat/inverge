@@ -13,7 +13,7 @@ This record validates the V13 follow-up contract only:
 No runtime, UI, API, schema, persistence, provider, dependency, real content, roadmap or
 PR #692 mutation is included.
 
-Machine contract version: `1.0.19`.
+Machine contract version: `1.0.20`.
 
 ## Static assertions
 
@@ -88,6 +88,11 @@ Machine contract version: `1.0.19`.
     ambiguous, conflicting, stale, inferred, mismatched, cross-attempt, cross-learner, unresolved, zero-record or
     multi-record transfer-attempt/task bindings deny far-transfer only and preserve otherwise valid independent
     retrieval and stable D+7.
+    Independently of evaluation ordering, the canonical transfer attempt's `submittedAt` must be at or after the
+    canonical base/source attempt's `submittedAt`. Only those two trusted canonical attempt-record timestamps may
+    satisfy the comparison; one millisecond before rejects far-transfer, equality and later pass, and outer/caller
+    source or transfer timestamps cannot substitute. This failure preserves otherwise valid independent retrieval
+    and stable D+7.
     Independent retrieval resolves a candidate-owned closed `canonicalResponseEvaluation` that is single,
     authoritative, server-side, independently resolved, known, resolved and fresh, with every unsafe state exact false.
     It binds to the base attempt's exact attempt, learner and submission IDs and the candidate evaluation ID; caller
@@ -126,6 +131,11 @@ Machine contract version: `1.0.19`.
     primitive equality. Missing, defaulted, coerced or merely truthy state cannot satisfy that gate. Submitted
     attempts additionally use the stricter record-specific gate in rule 22; the generic state subset is not
     authoritative or sufficient for submitted rendering.
+    The authenticated request-context learner scope, subject learner scope, canonical open-attempt learner scope
+    and canonical confirmation learner scope are each independently validated against the same exact identifier
+    schema and must all be field-for-field equal. Matching malformed values, a foreign learner shared by the
+    subject/attempt/confirmation but not the authenticated context, client/caller aliases and inferred scope all
+    reject across both render validators.
 19. The shared gate requires one closed, single, authoritative, server-side, independently resolved, active deliberate
     server-recorded single-use confirmation bound exactly to learner, attempt, cue, cue revision and one request.
     known/resolved are exact true; ambiguous, conflicting, cross-learner, cross-attempt, mismatched, stale, replayed,
@@ -432,16 +442,20 @@ npm test
 npm run build
 ```
 
-Cycle 1 source-only workspace evidence:
+Cycle 2 source-only workspace evidence:
 
 - JavaScript syntax check: passed.
 - Focused behavioral contract suite: 62/62 passed.
 - Strict JSON parse, balanced Markdown fences, cross-artifact assertions and `git diff --check`: passed.
+- Mutation coverage now rejects missing, malformed, foreign, aliased or inferred pre-response authenticated learner
+  scope across both render validators, and rejects a canonical transfer attempt that predates its canonical source
+  attempt or tries to repair that order with outer/caller timestamps. Equality and later canonical transfer submission
+  preserve far-transfer; an ordering-only failure preserves otherwise valid independent retrieval and stable D+7.
 - This materialized source-only workspace does not contain the repository dependency tree or the non-MCAL source
-  files needed to rerun typecheck, lint, the full Node suite or production build before push. The pre-cycle exact head
-  `902824817eb123269d7b13ddf617b09891bf9ca3` had recorded typecheck pass, lint pass with 0 errors and 9 pre-existing
-  warnings outside the MCAL diff, full Node 1,232/1,232 pass, and production build pass through 54/54 static pages.
-  Those baseline results do not substitute for the required seven exact-head gates on the corrective commit.
+  files needed to rerun typecheck, lint, the full Node suite or production build before push. The cycle-2 base exact
+  head `e9b6b8a67a28e147fb804feb33593087419a57ad` passed PR Contract, Fast CI, Full CI, Learner Loop Health,
+  Risk Gate, Runtime Gate and Vercel deployment. Those base-head results do not substitute for the required seven
+  exact-head gates on the cycle-2 corrective commit.
 
 The repository PR Contract, Fast CI, Full CI, Learner Loop Health, Risk Gate and Runtime
 Gate must also pass on the same exact head.
