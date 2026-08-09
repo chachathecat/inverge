@@ -1,0 +1,204 @@
+{
+  "schema": "dabangil_indispensable_product_gap_elimination_v1",
+  "version": "1.0.0",
+  "dated": "2026-08-10 KST",
+  "status": "proposed_non_authoritative",
+  "repository": "chachathecat/inverge",
+  "activeStrategy": "docs/strategy/dabangil-professional-exam-reasoning-os-final-master-plan-v13-1-2026-08-10.md",
+  "mandatoryBaselines": [
+    "docs/strategy/dabangil-professional-exam-reasoning-os-final-master-plan-v13-2026-08-06.md",
+    "docs/strategy/dabangil-memory-cue-and-annotation-layer-v1-2026-08-06.md"
+  ],
+  "scope": {
+    "strategyCoverage": "APPRAISER_FIRST_5_PLUS_SECOND_3",
+    "currentLearnerRuntime": "APPRAISER_SECOND_THREE_SUBJECTS_ONLY",
+    "portableCoreLearnerVisible": false,
+    "firstStageRuntimeAuthorized": false,
+    "otherExamProfileAuthorized": false
+  },
+  "authorizations": {
+    "runtime": false,
+    "schema": false,
+    "provider": false,
+    "dependency": false,
+    "deployment": false,
+    "commercialActivation": false,
+    "production": false
+  },
+  "productMinimum": {
+    "axes": [
+      "FIRST_MEANINGFUL_VALUE",
+      "EVIDENCE_ANCHORED_DIAGNOSIS",
+      "OUTCOME_QUALIFIED_VERIFIED_GAP_CLOSURE",
+      "PERSONAL_RECURRING_DEDUCTION_DNA",
+      "DAILY_COMMAND_AND_RECOVERY",
+      "TRUST_ABSTENTION_AND_ESCALATION",
+      "LEARNER_OWNED_CONTINUITY",
+      "PAID_USE_AND_RENEWAL_PROOF"
+    ],
+    "allRequired": true,
+    "substitutionAllowed": false
+  },
+  "firstMeaningfulValue": {
+    "required": [
+      "LEARNER_CONFIRMED_PROBLEM_AND_ANSWER_REVISION",
+      "EXACT_SUBJECT_TASK_SOURCE_BINDING",
+      "USABLE_ANSWER_EVIDENCE_ANCHOR",
+      "ONE_BIGGEST_GAP_WITH_EVIDENCE_AND_UNCERTAINTY",
+      "ONE_BOUNDED_REPAIR_ACTION",
+      "SAVED_REOPENABLE_RESULT",
+      "NO_FALSE_SUCCESS_OR_HIDDEN_CONFLICT"
+    ],
+    "initialP50MinutesHypothesis": 5,
+    "worldClassP50MinutesTarget": 3
+  },
+  "answerEvidenceAnchor": {
+    "closedKinds": [
+      "PAGE_LINE_RANGE",
+      "PARAGRAPH",
+      "OUTLINE_NODE",
+      "CALCULATION_STEP",
+      "TABLE_CELL",
+      "CONCLUSION",
+      "MISSING_REQUIRED_SLOT"
+    ],
+    "learnerPrivateRawExcerptOnly": true,
+    "revisionBound": true,
+    "unknownLocationBehavior": "UNCERTAIN_OR_BLOCKED",
+    "genericSummaryIsUsableAnchor": false
+  },
+  "successfulPerformanceGate": {
+    "evaluationCompletionAloneCreatesPositiveEvidence": false,
+    "requiredFor": [
+      "INDEPENDENT_RETRIEVAL",
+      "FAR_TRANSFER",
+      "STABLE_D7",
+      "GAP_CLOSURE"
+    ],
+    "requiredExactFields": [
+      "evaluationRef",
+      "attemptRef",
+      "learnerPrivateScopeRef",
+      "taskRef",
+      "outcomeState",
+      "acceptedByPolicy",
+      "thresholdPolicyRef",
+      "subjectValidatorRefs",
+      "deterministicCheckRefs",
+      "rubricOrAcceptedResultRefs",
+      "unresolvedConflictCount",
+      "outcomeDigest",
+      "basisChecksum"
+    ],
+    "acceptedOutcomeState": "ACCEPTED_SUCCESS",
+    "acceptedByPolicyMustEqual": true,
+    "unresolvedConflictCountMustEqual": 0,
+    "unsafeOutcomeStates": [
+      "INCORRECT",
+      "ZERO_OR_EMPTY",
+      "BELOW_THRESHOLD",
+      "UNRESOLVED",
+      "CONFLICT",
+      "STALE"
+    ],
+    "baseTransferAndD7RequireIndependentOutcomeRecords": true,
+    "clientOrModelSuccessFlagAuthority": false,
+    "missingMalformedUnsafeOrUnboundBehavior": "FAIL_CLOSED_NO_POSITIVE_EVIDENCE"
+  },
+  "gapClosure": {
+    "states": [
+      "DETECTED",
+      "REPAIR_PENDING",
+      "REPAIR_VERIFIED_SAME_SESSION",
+      "D1_PENDING",
+      "D1_REPRODUCED",
+      "TRANSFER_PENDING",
+      "D7_TRANSFER_CONFIRMED",
+      "TIMED_RECURRENCE_CHECK_PENDING",
+      "TIMED_RECURRENCE_CLEAR",
+      "RECURRED",
+      "BLOCKED",
+      "STALE"
+    ],
+    "sameSessionRepairIsElimination": false,
+    "d7VerifiedNonSameSurfaceSuccessfulOutcomeRequired": true,
+    "timedSuccessfulOutcomeRequiredWhenPolicyRequires": true,
+    "subsequentQualifyingFailureReopens": true,
+    "falseClosureAllowed": false
+  },
+  "recurringDeductionDNA": {
+    "learnerPrivate": true,
+    "bodylessDerivedProjection": true,
+    "secondMasteryOracle": false,
+    "rawBodyAllowed": false,
+    "requiresDistinctEligibleItemFamilies": true,
+    "assistedGuidedSameSurfaceStaleOrUnsuccessfulExcludedFromPositiveRecovery": true,
+    "counterEvidenceRequired": true
+  },
+  "dailyCommand": {
+    "todayPrimaryTaskMax": 3,
+    "executionBlocks": "ZERO_TO_N_WITHIN_AVAILABLE_MINUTES",
+    "reviewQueue": "MINUTE_BUDGETED",
+    "blockCompletionChangesMastery": false,
+    "engagementMetricMaySetPriority": false,
+    "nativeEvidencePolicyAuthority": true
+  },
+  "northStar": {
+    "name": "VERIFIED_RECURRING_GAP_ELIMINATIONS_PER_ACTIVE_LEARNER_PER_EFFECTIVE_STUDY_HOUR",
+    "requiresD7VerifiedTransfer": true,
+    "requiresTimedOutcomeWhenPolicyRequires": true,
+    "unresolvedConflictCount": 0,
+    "duplicateFamilyOrReplayCount": 0
+  },
+  "commercialProof": {
+    "paymentOnlySufficient": false,
+    "required": [
+      "EXACT_APPROVED_OFFER_PAYMENT",
+      "USABLE_REVIEW_COUNT_AT_LEAST_2",
+      "DIRECT_REPAIR",
+      "D1_INDEPENDENT_SUCCESSFUL_OUTCOME",
+      "VOLUNTARY_NEXT_PACK_PURCHASE"
+    ],
+    "ownerDogfoodMayCountAsExternalRenewalProof": false,
+    "activatesPriceOrCheckout": false
+  },
+  "criticalPath": [
+    "CLOSE_CURRENT_BLOCKING_SOURCE_WORK",
+    "CPF_SOURCE_SAFETY",
+    "V13_1_AUTHORITY_RECONCILIATION",
+    "EVIDENCE_ANCHORED_GOLDEN_VERTICAL",
+    "REPAIR_VERIFICATION",
+    "D1_INDEPENDENT_RECONSTRUCTION",
+    "D7_VERIFIED_TRANSFER",
+    "TIMED_RECURRENCE",
+    "PERSONAL_DEDUCTION_DNA",
+    "TODAY_FULL_DAY_REPLANNING",
+    "OWNER_PRIVATE_ACCEPTANCE",
+    "EXTERNAL_PAID_CANARY_AND_REPURCHASE"
+  ],
+  "mergeDependency": {
+    "stackedOnPullRequest": 694,
+    "requiredBeforeRetargetToMain": [
+      "PR_694_SUCCESSFUL_PERFORMANCE_P1_RESOLVED",
+      "PR_694_EXACT_HEAD_TESTS_PASS",
+      "PR_694_FRESH_REVIEW_NO_ACTIONABLE_BLOCKER",
+      "PR_694_EXPLICIT_MERGE"
+    ],
+    "thisContractRepairsPR694": false
+  },
+  "hardGates": {
+    "genericUnanchoredBiggestGap": 0,
+    "positiveLearningEvidenceWithoutSuccessfulOutcome": 0,
+    "gapClosedWithoutD7VerifiedTransfer": 0,
+    "closureWithoutRequiredTimedRecurrence": 0,
+    "guidedOrSameSurfaceAsIndependent": 0,
+    "rawBodyInDeductionDnaOrAnalytics": 0,
+    "secondMasteryOracleCreated": 0,
+    "todayPrimaryTasksOverThree": 0,
+    "ownerDogfoodCountedAsMarketOrRenewalProof": 0,
+    "purchaseOnlyCountedAsProductMarketFit": 0,
+    "strategyDocumentActivatedPriceOrCheckout": 0,
+    "portableCoreLearnerVisible": 0,
+    "otherExamProfileActivated": 0
+  }
+}
