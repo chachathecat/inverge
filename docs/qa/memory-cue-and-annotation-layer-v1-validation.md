@@ -13,7 +13,7 @@ This record validates the V13 follow-up contract only:
 No runtime, UI, API, schema, persistence, provider, dependency, real content, roadmap or
 PR #692 mutation is included.
 
-Machine contract version: `1.0.21`.
+Machine contract version: `1.0.22`.
 
 ## Static assertions
 
@@ -101,6 +101,16 @@ Machine contract version: `1.0.21`.
     the source and transfer attempts plus learner, submission, evaluation, result and task IDs; its failure denies only
     far-transfer. Stable D+7 resolves one canonical source attempt from `evidence.attempt` and a separate candidate-owned
     closed `canonicalD7Evaluation`.
+    All three closed canonical evaluation records require the same record-internal
+    `affirmativeEvidenceOutcomeAccepted` field to be exact primitive `true`. It means only that the authoritative
+    canonical evaluator accepted performance for that corresponding affirmative-evidence credit; it does not make
+    MCAL a numeric scoring, rubric, threshold or mastery authority. Completion, record or `resultId` existence,
+    truthiness, non-zero score, outer/caller/client `success`, `correct`, `score`, `threshold` or `thresholdMet`, and an
+    outcome from another attempt, learner, submission, evaluation, transfer or D+7 stage cannot substitute. Missing,
+    false, null, undefined, string, number, object, array, malformed, wrong-source, zero/multiple, unresolved,
+    ambiguous, conflicting, stale, replayed, cancelled, cross-scope, mismatched, inferred, defaulted, aliased or
+    coerced outcome evidence fails closed. Invalid response outcome denies all three credits; invalid transfer outcome
+    denies far-transfer only; invalid D+7 outcome denies stable D+7 only, preserving the otherwise-valid credits.
     Each canonical evaluation completion must be at or after its own bound canonical submission: response uses the base
     attempt, transfer uses the canonical transfer attempt and D+7 uses the canonical D+7 attempt. Both values are exact
     RFC3339 UTC millisecond fields from those records; one millisecond before rejects, equality and later completion pass,
@@ -316,6 +326,9 @@ All fail closed or hold.
   zero creates affirmative evidence without the separate response/transfer/D+7 records;
 - independent response, far-transfer or stable-D+7 omits `ambiguous` or supplies null, true, a string, number,
   object or array, or exact false alone creates affirmative evidence;
+- any canonical response, transfer or D+7 evaluation omits `affirmativeEvidenceOutcomeAccepted`, supplies anything
+  other than exact primitive true, substitutes completion/result/score/threshold/outer success or cross-stage outcome,
+  or weakens base-response versus transfer versus D+7 failure isolation;
 - an `ASSISTED` attempt receives independent retrieval, far-transfer or stable-D+7 evidence;
 - timing/classification comes from untrusted client input;
 - a `BEFORE_RESPONSE` request omits assistance classification or supplies `NONE` but still renders or records exposure;
@@ -453,7 +466,7 @@ npm run build
 Cycle 3 source-only workspace evidence:
 
 - JavaScript syntax check: passed.
-- Focused behavioral contract suite: 62/62 passed.
+- Focused behavioral contract suite: 63/63 passed.
 - Strict JSON parse, balanced Markdown fences, cross-artifact assertions and `git diff --check`: passed.
 - Mutation coverage rejects missing, malformed, foreign, aliased or inferred authenticated learner scope across
   pre-response and review-only request/event validators. Review-only independently binds authenticated, subject,

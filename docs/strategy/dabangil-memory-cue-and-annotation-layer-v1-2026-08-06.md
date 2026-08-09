@@ -26,7 +26,7 @@ execution_rule: "This annex fixes contracts and development order only. It autho
 
 `Memory Cue & Annotation Layer(MCAL)`은 V13을 대체하는 새 마스터플랜이 아니다.
 V13의 근거·개념·문항·검증·학습증거 사이에 다음 연결점만 고정하는 필수 후속 부속계약이다.
-동기화된 machine contract version은 `1.0.21`이다.
+동기화된 machine contract version은 `1.0.22`이다.
 
 ```text
 VESG / exact definition / QuestionUnit
@@ -598,6 +598,17 @@ D+7 stable / timed: HIDDEN
   submission 및 candidate evaluation ID에 bind되고, single authoritative resolved fresh record의 모든 safe/unsafe
   state를 exact primitive로 통과해야 한다. evaluation completion은 bound base attempt의 canonical `submittedAt`과
   같은 시각이거나 그 뒤여야 하고 caller source label, outer success flag 또는 outer/caller timestamp는 대체하지 못한다.
+- response·transfer·D+7의 세 closed canonical evaluation record는 shared record-internal predicate
+  `affirmativeEvidenceOutcomeAccepted`를 required field로 가지며 exact primitive `true`여야 한다. 이는 해당
+  authoritative canonical evaluator가 그 affirmative-evidence credit에 필요한 performance를 받아들였다는 뜻만
+  가지며 MCAL이 numeric scoring·rubric·threshold·mastery authority가 되는 것은 아니다. completion, record/
+  `resultId` 존재, truthiness, non-zero score, outer/caller/client `success`·`correct`·`score`·`threshold`·
+  `thresholdMet`, 다른 attempt·learner·submission·evaluation·transfer·D+7 stage outcome은 대체하지 못한다.
+  missing·false·null·undefined·string·number·object·array·malformed·wrong-source·zero/multiple·unresolved·ambiguous·
+  conflicting·stale·replayed·cancelled·cross-scope·mismatched·inferred·defaulted·aliased·coerced outcome은 fail closed한다.
+  invalid response outcome은 independent retrieval·far transfer·stable D+7을 모두 막고, invalid transfer outcome은
+  otherwise-valid independent retrieval·stable D+7을 보존하며 far-transfer만 막고, invalid D+7 outcome은
+  otherwise-valid independent retrieval·far transfer를 보존하며 stable D+7만 막는다.
 - far transfer는 그 독립 회상 외에도 distinct eligible task, non-same representation, actual submitted
   independent transfer attempt와 candidate-owned closed `canonicalTransferEvaluation`을 별도로 요구한다. 이
   evaluation은 source/transfer attempt·learner·submission·evaluation·result·task IDs에 exact-bind된다. source attempt가
@@ -989,7 +1000,11 @@ type CanonicalExposureHistoryV1 = {
   `canonicalD7Evaluation`을 source attempt·canonical D+7 attempt·learner·submission·evaluation ID에 bind한다.
   세 record 모두 exact source, one match, server-side·authoritative·independently-resolved·known·resolved true와
   모든 declared unsafe state exact false를 요구하고 undeclared extra field를 거부한다. caller source string과
-  outer success boolean은 canonical resolution을 대체하지 못한다. stable D+7 interval은 bound source attempt의
+  outer success boolean은 canonical resolution을 대체하지 못한다. 각 record 내부의
+  `affirmativeEvidenceOutcomeAccepted`도 exact primitive `true`여야 하며 completion·record/result 존재·truthy/
+  non-zero score·outer/caller/client outcome·cross-stage outcome·default/alias/coercion은 이를 대체하지 못한다.
+  이 predicate는 기존 canonical evaluator의 acceptance만 전달하며 새 scoring·rubric·threshold·mastery authority가 아니다.
+  stable D+7 interval은 bound source attempt의
   canonical `submittedAt`과 bound D+7 evaluation record의 `d7EvaluationCompletedAt` exact RFC3339 UTC
   millisecond instant만 결합하고,
   server가 계산한 실제 elapsed interval이 최소 `604800000` ms여야 한다. `D_PLUS_7` label이나 caller elapsed

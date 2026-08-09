@@ -1,6 +1,6 @@
 {
   "schema": "dabangil_memory_cue_and_annotation_layer_v1",
-  "version": "1.0.21",
+  "version": "1.0.22",
   "dated": "2026-08-06 KST",
   "status": "proposed_non_authoritative",
   "repository": "chachathecat/inverge",
@@ -2716,6 +2716,22 @@
       ],
       "invalidBaseHistoryBehavior": "FAIL_CLOSED_NO_POSITIVE_LEARNING_EVIDENCE",
       "invalidDownstreamHistoryBehavior": "FAIL_CLOSED_FOR_AFFECTED_CREDIT",
+      "canonicalAffirmativeEvidenceOutcomePredicate": {
+        "field": "affirmativeEvidenceOutcomeAccepted",
+        "requiredPlacement": "INSIDE_EACH_CLOSED_CANONICAL_EVALUATION_RECORD",
+        "requiredExactPrimitiveBooleanValue": true,
+        "applicableCanonicalRecords": [
+          "canonicalResponseEvaluation",
+          "canonicalTransferEvaluation",
+          "canonicalD7Evaluation"
+        ],
+        "meaning": "AUTHORITATIVE_CANONICAL_EVALUATOR_ACCEPTED_PERFORMANCE_FOR_CORRESPONDING_AFFIRMATIVE_EVIDENCE_CREDIT",
+        "completionRecordExistenceResultIdScoreOrThresholdSufficient": false,
+        "outerCallerClientOrCrossStageOutcomeSubstitutionAllowed": false,
+        "inferenceDefaultingAliasingOrCoercionAllowed": false,
+        "createsNumericScoringRubricThresholdOrMasteryAuthority": false,
+        "invalidBehavior": "FAIL_CLOSED_FOR_AFFECTED_CREDIT_WITH_EXISTING_DEPENDENCY_PROPAGATION"
+      },
       "requiredAffirmativeEvidence": {
         "independentRetrieval": {
           "source": "CANONICAL_SERVER_RESPONSE_EVALUATION_LEDGER",
@@ -2749,6 +2765,7 @@
               "resolved",
               "actualSubmission",
               "evaluationCompleted",
+              "affirmativeEvidenceOutcomeAccepted",
               "ambiguous",
               "conflicting",
               "crossLearner",
@@ -2784,6 +2801,7 @@
               "resolved": true,
               "actualSubmission": true,
               "evaluationCompleted": true,
+              "affirmativeEvidenceOutcomeAccepted": true,
               "ambiguous": false,
               "conflicting": false,
               "crossLearner": false,
@@ -2866,6 +2884,7 @@
               "resolved",
               "actualSubmission",
               "evaluationCompleted",
+              "affirmativeEvidenceOutcomeAccepted",
               "distinctEligibleTask",
               "representationRelation",
               "assistanceState",
@@ -2910,6 +2929,7 @@
               "resolved": true,
               "actualSubmission": true,
               "evaluationCompleted": true,
+              "affirmativeEvidenceOutcomeAccepted": true,
               "distinctEligibleTask": true,
               "ambiguous": false,
               "conflicting": false,
@@ -3241,6 +3261,7 @@
               "resolved",
               "actualSubmission",
               "evaluationCompleted",
+              "affirmativeEvidenceOutcomeAccepted",
               "timing",
               "cueState",
               "hiddenCueBytesAbsentAcrossAllSurfaces",
@@ -3288,6 +3309,7 @@
               "resolved": true,
               "actualSubmission": true,
               "evaluationCompleted": true,
+              "affirmativeEvidenceOutcomeAccepted": true,
               "hiddenCueBytesAbsentAcrossAllSurfaces": true,
               "ambiguous": false,
               "conflicting": false,

@@ -20,7 +20,7 @@ does_not_authorize:
 
 V13의 필수 후속 부속계약으로 `Memory Cue & Annotation Layer(MCAL)`를 채택한다.
 V13은 계속 유일한 active master plan이며 MCAL은 V14가 아니다.
-동기화된 machine contract version은 `1.0.21`이다.
+동기화된 machine contract version은 `1.0.22`이다.
 MCAL은 별도의 정의 저장소나 두 번째 정의 authority가 아니다. 모든 `exactDefinitionRef`는
 released·versioned VESG concept/evidence projection을 가리키며, 해석 실패·hold·drift 시 cue도 release하지 않는다.
 
@@ -195,6 +195,17 @@ attempt·learner·submission ID 및 candidate evaluation ID에 exact-bind된다.
 `actualSubmission`/`evaluationCompleted` flag는 대체 증거가 아니다. invalid response는 dependent far transfer와
 stable D+7도 막는다. 동일 bounded surface의 far transfer도 closed `canonicalTransferEvaluation`을 exact source/
 transfer attempt/learner/submission/evaluation/result/task IDs에 bind하며, invalid transfer evaluation은 far-transfer만 막는다.
+세 closed canonical evaluation record는 동일한 record-internal canonical predicate
+`affirmativeEvidenceOutcomeAccepted`를 required field로 가지며 exact primitive `true`일 때만 해당 affirmative
+learning evidence를 부여한다. 이 값은 해당 record의 authoritative canonical evaluator가 그 credit에 필요한
+performance를 받아들였다는 뜻일 뿐이며 MCAL에 numeric score·rubric·threshold·mastery authority를 만들지 않는다.
+evaluation/submission completion, record 또는 `resultId` 존재, truthiness, non-zero score, outer/caller/client
+`success`·`correct`·`score`·`threshold`·`thresholdMet`, 다른 attempt·learner·submission·evaluation·transfer·D+7
+stage의 outcome은 대체하지 못한다. missing·`false`·null·undefined·string·number·object·array·malformed·wrong-source·
+zero/multiple·unresolved·ambiguous·conflicting·stale·replayed·cancelled·cross-scope·mismatched·inferred·defaulted·
+aliased·coerced 값은 affected credit을 fail closed한다. invalid base-response outcome은 세 credit을 모두 막고,
+invalid transfer outcome은 otherwise-valid independent retrieval과 stable D+7을 보존하며 far-transfer만 막고,
+invalid D+7 outcome은 otherwise-valid independent retrieval과 far-transfer를 보존하며 stable D+7만 막는다.
 각 evaluation completion은 자신이 bind된 canonical attempt의 `submittedAt`과 같은 시각이거나 그 뒤여야 한다.
 response는 base attempt, transfer는 canonical transfer attempt, D+7은 canonical D+7 attempt의 timestamp를 사용하며
 두 값은 모두 bound record의 exact RFC3339 UTC millisecond field여야 한다. 1 ms 이전 completion이나 outer/caller

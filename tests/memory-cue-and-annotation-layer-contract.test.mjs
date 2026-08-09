@@ -1123,6 +1123,7 @@ function canonicalResponseEvaluation(overrides = {}) {
     resolved: true,
     actualSubmission: true,
     evaluationCompleted: true,
+    affirmativeEvidenceOutcomeAccepted: true,
     ambiguous: false,
     conflicting: false,
     crossLearner: false,
@@ -1156,6 +1157,7 @@ function independentResponseEvidence(overrides = {}) {
     "resolved",
     "actualSubmission",
     "evaluationCompleted",
+    "affirmativeEvidenceOutcomeAccepted",
     "ambiguous",
     "conflicting",
     "crossLearner",
@@ -1207,6 +1209,7 @@ function canonicalTransferEvaluation(overrides = {}) {
     resolved: true,
     actualSubmission: true,
     evaluationCompleted: true,
+    affirmativeEvidenceOutcomeAccepted: true,
     distinctEligibleTask: true,
     representationRelation: "NON_SAME_REPRESENTATION",
     assistanceState: "INDEPENDENT",
@@ -1251,6 +1254,7 @@ function farTransferEvidence(overrides = {}) {
     "resolved",
     "actualSubmission",
     "evaluationCompleted",
+    "affirmativeEvidenceOutcomeAccepted",
     "distinctEligibleTask",
     "representationRelation",
     "assistanceState",
@@ -1320,6 +1324,7 @@ function canonicalD7Evaluation(overrides = {}) {
     resolved: true,
     actualSubmission: true,
     evaluationCompleted: true,
+    affirmativeEvidenceOutcomeAccepted: true,
     timing: "D_PLUS_7",
     cueState: "HIDDEN",
     hiddenCueBytesAbsentAcrossAllSurfaces: true,
@@ -1367,6 +1372,7 @@ function stableD7Evidence(overrides = {}) {
     "resolved",
     "actualSubmission",
     "evaluationCompleted",
+    "affirmativeEvidenceOutcomeAccepted",
     "timing",
     "cueState",
     "hiddenCueBytesAbsentAcrossAllSurfaces",
@@ -2786,7 +2792,7 @@ test("MCAL paths resolve and V13 remains sole active master plan", () => {
   assert.match(active, /dabangil-professional-exam-reasoning-os-final-master-plan-v13-2026-08-06\.md/);
   assert.match(active, /Memory Cue & Annotation Layer/);
   assert.doesNotMatch(active, /final-master-plan-v14/);
-  assert.equal(contract.version, "1.0.21");
+  assert.equal(contract.version, "1.0.22");
   assert.equal(contract.compatibility.v13RemainsSoleActiveMasterPlan, true);
   assert.equal(contract.compatibility.newMasterPlanVersionCreated, false);
 });
@@ -2927,13 +2933,15 @@ test("Markdown fences and exact boundary language are present", () => {
   const decision = read(P.decision);
   const qa = read(P.qa);
   for (const body of [annex, decision, qa]) {
-    assert.match(body, /machine contract version(?:은|:) `1\.0\.21`/i);
+    assert.match(body, /machine contract version(?:은|:) `1\.0\.22`/i);
+    assert.doesNotMatch(body, /1\.0\.21/);
     assert.doesNotMatch(body, /1\.0\.20/);
     assert.doesNotMatch(body, /1\.0\.19/);
     assert.doesNotMatch(body, /1\.0\.18/);
     assert.match(body, /CANONICAL_SIGNAL_ORIGIN_CONTENT_SAFETY_RESOLVER/);
     assert.match(body, /decision-context/);
     assert.match(body, /caller(?:-|\/)?.?inferred/i);
+    assert.match(body, /affirmativeEvidenceOutcomeAccepted/);
   }
   assert.match(annex, /암기용 풀이입니다\. 시험용 정확한 정의를 대체하지 않습니다\./);
   assert.match(annex, /MCAL-4 — personal annotation editor/);
@@ -3018,7 +3026,7 @@ test("Markdown fences and exact boundary language are present", () => {
   assert.match(decision, /canonical D\+7 attempt의 `submittedAt` 자체도 canonical base\/source attempt/);
   assert.match(decision, /receipt set은 `contribution`·`promotion`·`o5`만 가진 closed object/);
   assert.match(qa, /PR #692 is merged at `512bfdb9232a86bf4f7d4cfbc076a9df1c8a7da2`/);
-  assert.match(qa, /Focused behavioral contract suite: 62\/62 passed/);
+  assert.match(qa, /Focused behavioral contract suite: 63\/63 passed/);
   assert.match(qa, /Merely supplying two different task IDs is insufficient/);
   assert.match(qa, /canonical transfer attempt and its independently resolved task binding/);
   assert.match(qa, /canonicalD7Attempt/);
@@ -3037,6 +3045,7 @@ test("Markdown fences and exact boundary language are present", () => {
   assert.match(qa, /canonical D\+7 attempt's `submittedAt` must also be at or after/);
   assert.match(qa, /receipt set is a closed object containing exactly contribution, promotion and O5 fields/);
   assert.doesNotMatch(qa, /Focused behavioral contract suite: 52\/52 passed/);
+  assert.doesNotMatch(qa, /Focused behavioral contract suite: 62\/62 passed/);
   assert.doesNotMatch(qa, /Focused behavioral contract suite: 57\/57 passed/);
   assert.doesNotMatch(qa, /Focused behavioral contract suite: 54\/54 passed/);
   assert.doesNotMatch(qa, /Focused behavioral contract suite: 51\/51 passed/);
@@ -4317,6 +4326,166 @@ test("affirmative learning evidence requires ambiguous to be exact primitive fal
   assert.equal(falseAlone.independentRetrieval, false);
   assert.equal(falseAlone.farTransfer, false);
   assert.equal(falseAlone.stableD7, false);
+});
+
+test("affirmative learning evidence requires record-internal canonical accepted performance", () => {
+  const learningGate = contract.cueExposure.learningEvidenceGate;
+  const affirmative = learningGate.requiredAffirmativeEvidence;
+  const outcomeField = "affirmativeEvidenceOutcomeAccepted";
+  const sharedPredicate = learningGate.canonicalAffirmativeEvidenceOutcomePredicate;
+  assert.equal(sharedPredicate.field, outcomeField);
+  assert.equal(sharedPredicate.requiredPlacement, "INSIDE_EACH_CLOSED_CANONICAL_EVALUATION_RECORD");
+  assert.equal(sharedPredicate.requiredExactPrimitiveBooleanValue, true);
+  assert.deepEqual(sharedPredicate.applicableCanonicalRecords, [
+    "canonicalResponseEvaluation",
+    "canonicalTransferEvaluation",
+    "canonicalD7Evaluation",
+  ]);
+  assert.equal(sharedPredicate.completionRecordExistenceResultIdScoreOrThresholdSufficient, false);
+  assert.equal(sharedPredicate.outerCallerClientOrCrossStageOutcomeSubstitutionAllowed, false);
+  assert.equal(sharedPredicate.inferenceDefaultingAliasingOrCoercionAllowed, false);
+  assert.equal(sharedPredicate.createsNumericScoringRubricThresholdOrMasteryAuthority, false);
+
+  const validEvidence = () => ({
+    exposureHistory: canonicalExposureHistory(),
+    attempt: canonicalIndependentAttempt(),
+    independentResponse: independentResponseEvidence(),
+    farTransfer: farTransferEvidence(),
+    stableD7: stableD7Evidence(),
+  });
+  const stages = [
+    {
+      label: "base response",
+      slot: "independentResponse",
+      gate: affirmative.independentRetrieval.canonicalResponseEvaluationResolutionGate,
+      createRecord: canonicalResponseEvaluation,
+      createCandidate: (record) => independentResponseEvidence({
+        canonicalResponseEvaluation: record,
+      }),
+      crossStageRecord: canonicalTransferEvaluation,
+      expected: { independentRetrieval: false, farTransfer: false, stableD7: false },
+    },
+    {
+      label: "transfer",
+      slot: "farTransfer",
+      gate: affirmative.farTransfer.canonicalTransferEvaluationResolutionGate,
+      createRecord: canonicalTransferEvaluation,
+      createCandidate: (record) => farTransferEvidence({
+        canonicalTransferEvaluation: record,
+      }),
+      crossStageRecord: canonicalD7Evaluation,
+      expected: { independentRetrieval: true, farTransfer: false, stableD7: true },
+    },
+    {
+      label: "D+7",
+      slot: "stableD7",
+      gate: affirmative.stableD7.canonicalD7EvaluationResolutionGate,
+      createRecord: canonicalD7Evaluation,
+      createCandidate: (record) => stableD7Evidence({
+        canonicalD7Evaluation: record,
+      }),
+      crossStageRecord: canonicalResponseEvaluation,
+      expected: { independentRetrieval: true, farTransfer: true, stableD7: false },
+    },
+  ];
+  const evaluateStage = (stage, record, outerClaims = {}) => {
+    const candidate = stage.createCandidate(record);
+    Object.assign(candidate, outerClaims);
+    return evaluateAttemptEvidence([], { ...validEvidence(), [stage.slot]: candidate });
+  };
+  const assertIsolation = (actual, expected, label) => {
+    assert.equal(actual.independentRetrieval, expected.independentRetrieval, `${label}: independentRetrieval`);
+    assert.equal(actual.farTransfer, expected.farTransfer, `${label}: farTransfer`);
+    assert.equal(actual.stableD7, expected.stableD7, `${label}: stableD7`);
+  };
+  const invalidOutcomeMutations = [
+    ["field deleted", (record) => { delete record[outcomeField]; }],
+    ["undefined", (record) => { record[outcomeField] = undefined; }],
+    ["false", (record) => { record[outcomeField] = false; }],
+    ["null", (record) => { record[outcomeField] = null; }],
+    ["string true", (record) => { record[outcomeField] = "true"; }],
+    ["string false", (record) => { record[outcomeField] = "false"; }],
+    ["zero", (record) => { record[outcomeField] = 0; }],
+    ["one", (record) => { record[outcomeField] = 1; }],
+    ["object", (record) => { record[outcomeField] = {}; }],
+    ["array", (record) => { record[outcomeField] = []; }],
+  ];
+
+  for (const stage of stages) {
+    assert.ok(stage.gate.requiredFields.includes(outcomeField), stage.label);
+    assert.equal(stage.gate.requiredExactPrimitiveBooleanStates[outcomeField], true, stage.label);
+
+    for (const [label, mutate] of invalidOutcomeMutations) {
+      const record = stage.createRecord();
+      mutate(record);
+      assertIsolation(evaluateStage(stage, record), stage.expected, `${stage.label}: ${label}`);
+    }
+
+    const completionOnly = stage.createRecord();
+    assert.equal(completionOnly.actualSubmission, true);
+    assert.equal(completionOnly.evaluationCompleted, true);
+    delete completionOnly[outcomeField];
+    assertIsolation(
+      evaluateStage(stage, completionOnly),
+      stage.expected,
+      `${stage.label}: completion without accepted outcome`,
+    );
+
+    for (const [label, rejectedOutcomeClaims] of [
+      ["unsuccessful", { success: false }],
+      ["incorrect", { correct: false }],
+      ["zero score", { score: 0 }],
+      ["below threshold", { score: 49, threshold: 50, thresholdMet: false }],
+    ]) {
+      const rejectedRecord = stage.createRecord({ [outcomeField]: false });
+      assertIsolation(
+        evaluateStage(stage, rejectedRecord, rejectedOutcomeClaims),
+        stage.expected,
+        `${stage.label}: canonical evaluator rejected ${label}`,
+      );
+    }
+
+    const nestedRejectedOutcome = stage.createRecord({ [outcomeField]: false });
+    assertIsolation(
+      evaluateStage(stage, nestedRejectedOutcome, {
+        success: true,
+        correct: true,
+        score: 100,
+        threshold: 1,
+        thresholdMet: true,
+        callerSuccess: true,
+      }),
+      stage.expected,
+      `${stage.label}: outer success claims cannot rescue nested rejection`,
+    );
+
+    const crossStageOutcome = stage.createRecord();
+    crossStageOutcome[outcomeField] = stage.crossStageRecord();
+    assertIsolation(
+      evaluateStage(stage, crossStageOutcome),
+      stage.expected,
+      `${stage.label}: cross-stage outcome substitution`,
+    );
+  }
+
+  const transferWithResultButRejected = canonicalTransferEvaluation({
+    [outcomeField]: false,
+  });
+  assert.equal(typeof transferWithResultButRejected.resultId, "string");
+  assertIsolation(
+    evaluateStage(stages[1], transferWithResultButRejected),
+    stages[1].expected,
+    "transfer resultId existence cannot substitute",
+  );
+
+  const exactTrue = evaluateAttemptEvidence([], validEvidence());
+  assert.deepEqual(exactTrue, {
+    failClosed: false,
+    independentEvidenceEligibilityPreserved: true,
+    independentRetrieval: true,
+    farTransfer: true,
+    stableD7: true,
+  });
 });
 
 test("far transfer requires a distinct eligible non-same-representation submitted result", () => {
