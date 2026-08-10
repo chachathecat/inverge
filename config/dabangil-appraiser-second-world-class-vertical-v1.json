@@ -1,0 +1,311 @@
+{
+  "schema": "dabangil_appraiser_second_world_class_vertical_v1",
+  "version": "1.0.0",
+  "dated": "2026-08-10 KST",
+  "status": "proposed_non_authoritative_source_contract",
+  "repository": "chachathecat/inverge",
+  "activeMasterPlan": "docs/strategy/dabangil-professional-exam-reasoning-os-final-master-plan-v13-2026-08-06.md",
+  "activePointer": "docs/strategy/ACTIVE-MASTER-PLAN.md",
+  "role": {
+    "name": "Appraiser Second World-Class Vertical Execution Standard",
+    "relationshipToV13": "subordinate_execution_standard_not_new_master_plan",
+    "mayReplaceActiveMasterPlan": false,
+    "mayCreateSecondMasteryAuthority": false,
+    "learnerFacingScope": [
+      "appraisal_practice",
+      "appraisal_theory",
+      "appraisal_compensation_law"
+    ]
+  },
+  "authorizationBoundary": {
+    "runtime": false,
+    "ui": false,
+    "api": false,
+    "schema": false,
+    "migration": false,
+    "rls": false,
+    "storage": false,
+    "persistence": false,
+    "provider": false,
+    "dependency": false,
+    "environment": false,
+    "deployment": false,
+    "production": false,
+    "realContent": false,
+    "ownerActivation": false,
+    "externalLearner": false,
+    "commercial": false,
+    "pricing": false,
+    "payment": false,
+    "roadmapMutation": false,
+    "activePointerMutation": false,
+    "firstStageActivation": false,
+    "otherExamActivation": false
+  },
+  "productPromise": "내 답안의 가장 큰 감점 원인을 정확한 위치에서 찾아 직접 고치게 하고 다음 날·다른 문제·제한시간 전체 답안에서 다시 틀리지 않는지 확인한 뒤 그 증거로 오늘의 공부를 다시 정한다.",
+  "coreLoop": [
+    "CAPTURE",
+    "CONFIRMED_REVISION",
+    "EXACT_ANSWER_ANCHOR",
+    "SUCCESSFUL_OUTCOME_QUALIFIED_BIGGEST_GAP",
+    "DIRECT_REPAIR",
+    "SAME_SESSION_VERIFICATION",
+    "D1_INDEPENDENT_RECONSTRUCTION",
+    "D7_VERIFIED_NON_SAME_SURFACE_TRANSFER",
+    "TIMED_RECURRENCE",
+    "RECURRING_DEDUCTION_PROJECTION",
+    "EVIDENCE_DRIVEN_REPLAN"
+  ],
+  "hardInvariants": {
+    "exactAnchorRequiredForUsableGap": true,
+    "evaluationCompletionSufficientForPositiveEvidence": false,
+    "aiViewIsIndependentPerformance": false,
+    "sameItemOrSameSurfaceIsTransfer": false,
+    "verifiedNonSameSurfaceRequiredForD7": true,
+    "timedRecurrenceRequiredForClosure": true,
+    "laterIndependentFailureReopensClosure": true,
+    "practiceDeterministicConflictBlocksNumericRelease": true,
+    "lawSourceOrEffectiveVersionConflictBlocksVerifiedRelease": true,
+    "blockCompletionChangesMastery": false,
+    "todayCoreOutcomeMax": 3,
+    "fullDayExecutionBlockLimitMode": "AVAILABLE_MINUTES_0_TO_N",
+    "engagementMaySetLearningPriority": false,
+    "rawLearnerBodyInSharedAnalyticsOrTraining": false,
+    "oneCanonicalMasteryAuthority": true
+  },
+  "tutorStateMachine": [
+    "INTAKE",
+    "ORIENT",
+    "COMMIT",
+    "ATTEMPT",
+    "DIAGNOSE",
+    "SCAFFOLD",
+    "RECONSTRUCT",
+    "REPAIR",
+    "VERIFY",
+    "CONTRAST",
+    "TRANSFER",
+    "TIMED_RECURRENCE",
+    "SCHEDULE"
+  ],
+  "scaffoldLadder": [
+    "NEUTRAL_REPROMPT",
+    "RECALL_CUE",
+    "REPRESENTATION_CUE",
+    "DISCRIMINATION_QUESTION",
+    "CONCEPT_HINT",
+    "STRUCTURAL_HINT",
+    "PARTIAL_EXAMPLE",
+    "WORKED_STEP",
+    "FULL_SOLUTION"
+  ],
+  "goldenVerticals": {
+    "practice": {
+      "requiredStory": [
+        "EXACT_CALCULATION_STEP_ANCHOR",
+        "KNOWLEDGE_VS_EXECUTION_DIAGNOSIS",
+        "DETERMINISTIC_RECALCULATION",
+        "DIRECT_REPAIR",
+        "D1",
+        "D7_CHANGED_VALUES_VERIFIED_VARIANT",
+        "TIMED_FULL_SOLUTION_RECURRENCE"
+      ],
+      "hardGates": {
+        "deterministicGoldAccuracy": 1.0,
+        "unitSignRoundingConflictReleased": 0,
+        "sameSurfaceAsTransfer": 0
+      }
+    },
+    "theory": {
+      "requiredStory": [
+        "EXACT_PARAGRAPH_OR_OUTLINE_ANCHOR",
+        "DEMAND_VERB_AND_ARGUMENT_DIAGNOSIS",
+        "DIRECT_PARAGRAPH_REPAIR",
+        "D1_BLANK_OUTLINE",
+        "D7_DIFFERENT_COMMAND_VERIFIED_VARIANT",
+        "TIMED_FULL_ANSWER_RECURRENCE"
+      ],
+      "hardGates": {
+        "unsupportedAssertionVerifiedRelease": 0,
+        "singleLlmScoreAsTruth": false
+      }
+    },
+    "law": {
+      "requiredStory": [
+        "EXACT_APPLICATION_ANCHOR",
+        "CONTROLLING_SOURCE_EFFECTIVE_VERSION",
+        "DIRECT_APPLICATION_REPAIR",
+        "D1",
+        "D7_CHANGED_FACTS_VERIFIED_VARIANT",
+        "TIMED_FULL_ANSWER_RECURRENCE"
+      ],
+      "hardGates": {
+        "sourceEffectiveVersionBindingCoverage": 1.0,
+        "unknownConflictFailClosed": 1.0,
+        "unsupportedVerifiedRelease": 0
+      }
+    }
+  },
+  "lanes": {
+    "syntheticBuild": {
+      "allowed": [
+        "AUTHOR_CREATED_SYNTHETIC_FIXTURE",
+        "LOCAL_OR_DISPOSABLE_DATABASE",
+        "MOCK_ACCOUNT",
+        "STATE_MACHINE",
+        "UI_CONTRACT",
+        "DETERMINISTIC_VALIDATOR",
+        "GOLDEN_VERTICAL_STRUCTURE",
+        "HOSTILE_TEST"
+      ],
+      "forbidden": [
+        "REAL_LEARNER_BODY",
+        "LIVE_PRIVATE_STORAGE",
+        "LIVE_PROVIDER",
+        "SUPABASE_MUTATION",
+        "PREVIEW_ACTIVATION",
+        "PRODUCTION",
+        "PAYMENT"
+      ]
+    },
+    "liveActivation": {
+      "requiredPreconditions": [
+        "CURRENT_O3A_EXACT_APPROVAL",
+        "S236P_TERMINAL_DISPOSITION_OR_EXPLICIT_REPLACEMENT",
+        "CPF_PRIVACY_RLS_GATES",
+        "OWNER_ACTIVATION_APPROVAL",
+        "EXACT_RUNTIME_EVIDENCE"
+      ]
+    }
+  },
+  "implementationSlices": [
+    "WCV_0_SOURCE_STANDARD",
+    "WCV_1_GOLDEN_3_CONTRACTS",
+    "WCV_2_CAPTURE_AND_ANCHOR",
+    "WCV_3_DIAGNOSE_AND_REPAIR",
+    "WCV_4_D1_D7_TIMED",
+    "WCV_5_PERSONAL_STUDY_LEDGER",
+    "WCV_6_RECURRING_DEDUCTION_PROJECTION",
+    "WCV_7_DAILY_COMMAND",
+    "WCV_8_OWNER_PRIVATE_ACCEPTANCE",
+    "WCV_9_EXTERNAL_PAID_CANARY",
+    "WCV_10_GOLDEN_9_STAGED_EXPANSION"
+  ],
+  "benchmarkAdoption": {
+    "UWORLD": {
+      "adopt": [
+        "EXAM_FIDELITY",
+        "REPORT_TO_PRACTICE"
+      ],
+      "reject": [
+        "QBANK_FIRST_PRODUCT",
+        "SEEN_SCORE_AS_TRANSFER"
+      ]
+    },
+    "AMBOSS": {
+      "adopt": [
+        "EVIDENCE_TO_RECOMMENDATION",
+        "EXAM_IMPORTANCE"
+      ],
+      "reject": [
+        "UNEXPLAINED_FIXED_PLAN"
+      ]
+    },
+    "DUOLINGO_BIRDBRAIN": {
+      "adopt": [
+        "LEARNER_X_TASK_DIFFICULTY",
+        "AB_OR_SHADOW_EVAL"
+      ],
+      "reject": [
+        "OPAQUE_EARLY_ML_AUTHORITY"
+      ]
+    },
+    "KHANMIGO": {
+      "adopt": [
+        "LEARNING_MEASUREMENT_SEPARATION"
+      ],
+      "reject": [
+        "LABEL_ONLY_LANE_SPLIT"
+      ]
+    },
+    "OATUTOR": {
+      "adopt": [
+        "STEP_KC_MAPPING",
+        "BOUNDED_SCAFFOLDS",
+        "POLICY_EVAL"
+      ],
+      "reject": [
+        "BKT_AS_CANONICAL_TRUTH"
+      ]
+    },
+    "FSRS": {
+      "adopt": [
+        "REVIEW_DUE_CANDIDATE"
+      ],
+      "reject": [
+        "MASTERY_OR_PRIORITY_AUTHORITY"
+      ]
+    },
+    "H5P_BRANCHING": {
+      "adopt": [
+        "CONTRAST_AUTHORING_PATTERN"
+      ],
+      "reject": [
+        "RUNTIME_IMPORT_AS_CORE",
+        "BRANCH_SCORE_AS_MASTERY"
+      ]
+    }
+  },
+  "openSourceQualificationRequiredFields": [
+    "project",
+    "version",
+    "license",
+    "maintenance",
+    "securityPosture",
+    "transitiveDependencies",
+    "sbom",
+    "dataEgress",
+    "offlineOrSelfHost",
+    "adoptedMechanism",
+    "rejectedMechanism",
+    "exactInterface",
+    "benchmark",
+    "fallback",
+    "rollback",
+    "uninstallability",
+    "promotionGate"
+  ],
+  "standardsTargets": {
+    "QTI_3": "COMPATIBILITY_TARGET_NOT_CURRENT_CONFORMANCE_CLAIM",
+    "CALIPER": "BODYLESS_EVENT_VOCABULARY_TARGET",
+    "W3C_PROV": "LINEAGE_AND_DERIVATION_TARGET",
+    "NIST_AI_RMF_GENAI": "GOVERNANCE_TEVV_INCIDENT_REFERENCE"
+  },
+  "metricsHypotheses": {
+    "firstMeaningfulValueP50MinutesMax": 5,
+    "worldClassFirstValueP50MinutesMax": 3,
+    "biggestGapTop1ExternalAgreementMin": 0.8,
+    "directRepairRateMin": 0.6,
+    "d1IndependentParticipationMin": 0.5,
+    "fourWeekSameGapRecurrenceReductionMin": 0.25,
+    "interactionAndWaitShareOfStudyTimeMax": 0.05,
+    "activePaidVoluntaryRepurchaseMin": 0.65,
+    "veryDisappointedQualifiedActiveMin": 0.4,
+    "hypothesisOnlyNotMarketingClaim": true
+  },
+  "northStar": "VERIFIED_RECURRING_GAP_ELIMINATIONS_PER_ACTIVE_LEARNER_PER_EFFECTIVE_STUDY_HOUR",
+  "forbiddenNorthStars": [
+    "MESSAGES",
+    "TIME_IN_APP",
+    "STREAK",
+    "TOKEN_USAGE",
+    "GENERATED_ITEM_COUNT",
+    "ASSISTED_SCORE",
+    "UPLOAD_VOLUME"
+  ],
+  "pr697Disposition": {
+    "productIdeasAbsorbed": true,
+    "activeMasterPromotionRejected": true,
+    "recommendedAfterThisStandardAccepted": "SUPERSEDE_AND_CLOSE"
+  }
+}
