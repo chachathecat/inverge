@@ -31,8 +31,8 @@ const includesAll = (text, markers, label) => {
   }
 };
 
-test("synchronizes WCV contract v1.0.4 and keeps V13 authoritative", () => {
-  assert.equal(contract.version, "1.0.4");
+test("synchronizes WCV contract v1.0.5 and keeps V13 authoritative", () => {
+  assert.equal(contract.version, "1.0.5");
   assert.equal(
     contract.activeMasterPlan,
     "docs/strategy/dabangil-professional-exam-reasoning-os-final-master-plan-v13-2026-08-06.md",
@@ -40,10 +40,10 @@ test("synchronizes WCV contract v1.0.4 and keeps V13 authoritative", () => {
   assert.equal(contract.role.mayReplaceActiveMasterPlan, false);
   assert.equal(contract.authorizationBoundary.activePointerMutation, false);
   assert.equal(contract.authorizationBoundary.roadmapMutation, false);
-  includesAll(decision, ["contract_version: \"1.0.4\"", "V13은 계속 답안길의 유일한 active master plan"], "decision");
-  includesAll(strategy, ["version: \"1.0.4\"", "V13을 교체하지 않는다"], "strategy");
-  assert.ok(benchmark.includes("contract version: `1.0.4`"));
-  assert.ok(validation.includes("contract version: `1.0.4`"));
+  includesAll(decision, ["contract_version: \"1.0.5\"", "V13은 계속 답안길의 유일한 active master plan"], "decision");
+  includesAll(strategy, ["version: \"1.0.5\"", "V13을 교체하지 않는다"], "strategy");
+  assert.ok(benchmark.includes("contract version: `1.0.5`"));
+  assert.ok(validation.includes("contract version: `1.0.5`"));
 });
 
 test("authorizes no runtime, content, commercial, dependency or Production mutation", () => {
@@ -86,6 +86,8 @@ test("pins the exact learner-value sequence", () => {
     "D7_VERIFIED_NON_SAME_SURFACE_TRANSFER",
     "TIMED_RECURRENCE",
     "RECURRING_DEDUCTION_PROJECTION",
+    "AUTOMATIC_ERROR_NOTE",
+    "SAFE_LEARNING_GAP_AND_CONCEPT_STATE_SIGNALS",
     "EVIDENCE_DRIVEN_REPLAN",
   ]);
 });
@@ -125,9 +127,310 @@ test("commits append-only exposure before any help byte", () => {
     exposedMayBeRelabeledUnseen: false,
     laterDistinctIndependentAttemptRequired: true,
     clientOrModelMayAssertExposureState: false,
+    lineageDiscriminator: "lineageMode",
+    lineageModes: [
+      {
+        lineageMode: "attempt_first",
+        attemptRef: {
+          presence: "REQUIRED",
+          nonEmpty: true,
+          genuine: true,
+          placeholderAllowed: false,
+        },
+        guidedOverrideConfirmationRef: {
+          presence: "FORBIDDEN",
+          value: null,
+        },
+        requiredBindings: [
+          "LEARNER_SCOPE",
+          "TUTOR_EPISODE",
+          "ITEM_REVISION",
+          "ATTEMPT",
+        ],
+      },
+      {
+        lineageMode: "confirmed_pre_attempt_guided_override",
+        attemptRef: {
+          presence: "EXPLICIT_NULL",
+          value: null,
+          placeholderAllowed: false,
+        },
+        guidedOverrideConfirmationRef: {
+          presence: "REQUIRED",
+          nonEmpty: true,
+          trustedServerRecorded: true,
+        },
+        requiredBindings: [
+          "LEARNER_SCOPE",
+          "TUTOR_EPISODE",
+          "ITEM_REVISION",
+          "GUIDED_OVERRIDE_CONFIRMATION",
+        ],
+      },
+    ],
   });
   includesAll(strategy, ["AssistanceExposureCommitV1", "output 0 byte"], "strategy exposure contract");
   assert.ok(validation.includes("Pre-help exposure"));
+});
+
+test("gates every generated full solution on canonical S215 release and prior exposure", () => {
+  const x = contract.hardInvariants;
+  const release = contract.generatedFullSolutionReleaseContract;
+  assert.equal(x.generatedFullSolutionRequiresCanonicalS215Release, true);
+  assert.equal(x.exposureAndS215ReleaseAreIndependentConjunctiveGates, true);
+  assert.deepEqual(release, {
+    s215Version: "s215.reference_answer_critic_consensus_release_gate.v1",
+    appliesToGeneratedPaths: [
+      "NORMAL_SCAFFOLD_FULL_SOLUTION",
+      "CONFIRMED_GUIDED_OVERRIDE_FULL_SOLUTION",
+      "SEMANTICALLY_COMPLETE_GENERATED_SOLUTION_ANY_LABEL",
+    ],
+    semanticRelabelBypassAllowed: false,
+    learnerAuthoredTimedFullAnswerPhraseAloneClassifiedAsGeneratedFullSolution: false,
+    requiredResult: {
+      status: "released",
+      releaseDecision: {
+        status: "released",
+        learningReferenceStatus: "released_learning_reference",
+        releaseGateStatus: "released",
+        referenceAnswerReleaseAllowed: true,
+        learnerFacingLearningReferenceAllowed: true,
+        requiredCaveatKey: "learning_reference_not_official_answer",
+        learningReferenceOnly: true,
+        officialClaimAllowed: false,
+        officialGradingClaimAllowed: false,
+        officialModelAnswerClaimAllowed: false,
+        confirmedScoreClaimAllowed: false,
+        scorePredictionAllowed: false,
+        passProbabilityAllowed: false,
+        passGuaranteeAllowed: false,
+      },
+    },
+    learnerVisibleDisclosures: [
+      "OFFICIAL_SOURCE_STATUS",
+      "CANONICAL_VERIFICATION_STATUS",
+      "VERIFICATION_REPORT",
+      "UNCERTAINTY_AND_ALTERNATIVES",
+    ],
+    releaseBlockerGate: {
+      openBlockingReleaseBlockerCount: 0,
+      unresolvedBlockingUncertaintyCount: 0,
+      blockedCodes: [
+        "legal_source_blocker",
+        "calculation_blocker",
+        "consensus_missing",
+        "unresolved_consensus_conflict",
+      ],
+    },
+    authority: {
+      trustedResolverOwnsRelease: true,
+      client: false,
+      model: false,
+      requestLabels: false,
+      outerBooleans: false,
+    },
+    conjunctiveGates: {
+      exposureCommitRequired: true,
+      s215ReleasedDecisionRequired: true,
+      oneMaySubstituteForOther: false,
+    },
+    failureBehavior: {
+      generatedFullSolutionBytes: 0,
+      positiveEvidence: 0,
+      usageSuccess: 0,
+    },
+  });
+  includesAll(
+    strategy,
+    [
+      "GeneratedFullSolutionReleaseContractV1",
+      "s215.reference_answer_critic_consensus_release_gate.v1",
+      "learner-authored timed full-answer attempt",
+    ],
+    "strategy S215 full-solution gate",
+  );
+});
+
+test("requires exact ready S216 and S217 outputs before review completion and replan", () => {
+  const x = contract.hardInvariants;
+  const completion = contract.reviewCompletionContract;
+  assert.equal(x.reviewCompletionRequiresSafeLearningGapS216AndS217, true);
+  assert.equal(x.reviewCompletionChangesMastery, false);
+  assert.deepEqual(completion, {
+    s216Version: "s216.error_notebook_gap_taxonomy.v1",
+    s217Version: "s217.personal_core_concept_graph.v1",
+    authority: "TRUSTED_SERVER_RESOLVER",
+    requiredOutputs: [
+      "SAFE_LEARNING_GAP_SIGNAL",
+      "S216_AUTOMATIC_ERROR_NOTE_READY",
+      "S217_CONCEPT_STATE_GRAPH_READY",
+    ],
+    s216AutomaticErrorNote: {
+      status: "ready",
+      requiredMetadata: [
+        "WHY_WRONG",
+        "CORRECT_PRINCIPLE",
+        "IMMEDIATE_FIX",
+        "RECURRENCE",
+        "NEXT_REVIEW",
+      ],
+    },
+    s217ConceptStateResult: {
+      status: "ready",
+      canonicalStates: [
+        "unknown",
+        "exposed",
+        "confused",
+        "wrong",
+        "recurring",
+        "recovering",
+        "stable",
+        "at-risk",
+      ],
+    },
+    exactBinding: {
+      cardinality: "EXACTLY_ONE_CHAIN",
+      fields: [
+        "LEARNER_SCOPE",
+        "SOURCE_REVIEW",
+        "ANSWER_SUBMISSION_AND_EVIDENCE",
+        "S216_ENTRY",
+        "S217_GRAPH",
+        "S217_SOURCE_REFERENCE_TO_EXACT_S216_ENTRY",
+      ],
+      s217SourceReferenceToExactS216EntryRequired: true,
+      unrelatedAmbiguousStaleOrCrossReviewArtifactAccepted: false,
+    },
+    dataBoundary: {
+      metadataOnly: true,
+      rawLearnerContentAllowed: false,
+    },
+    replan: {
+      requiresResolvedOutputRefs: true,
+      requiredRefs: [
+        "SAFE_LEARNING_GAP_SIGNAL_REF",
+        "S216_AUTOMATIC_ERROR_NOTE_REF",
+        "S217_CONCEPT_STATE_GRAPH_REF",
+      ],
+    },
+    failClosed: {
+      on: ["MISSING", "UNSAFE", "STALE", "AMBIGUOUS", "WITHHELD"],
+      preserve: ["SAFE_BLOCKER", "SAFE_REASON", "SAFE_NEXT_ACTION"],
+      reviewCompleted: false,
+      readyErrorNoteEmitted: false,
+      readyConceptStateEmitted: false,
+      outerCompletionBooleanMaySubstitute: false,
+    },
+    completionEffects: {
+      positiveEvidenceAwarded: false,
+      masteryChanged: false,
+      gapClosed: false,
+      learningPrioritySet: false,
+      secondMasteryAuthorityCreated: false,
+    },
+    clientModelRequestOrOuterClaimsMayComplete: false,
+  });
+  assert.deepEqual(contract.coreLoop.slice(-5), [
+    "TIMED_RECURRENCE",
+    "RECURRING_DEDUCTION_PROJECTION",
+    "AUTOMATIC_ERROR_NOTE",
+    "SAFE_LEARNING_GAP_AND_CONCEPT_STATE_SIGNALS",
+    "EVIDENCE_DRIVEN_REPLAN",
+  ]);
+});
+
+test("preserves the confirmed guided override without fabricating an attempt", () => {
+  const x = contract.hardInvariants;
+  const override = contract.guidedRevealOverrideContract;
+  assert.equal(x.guidedOverrideMayFabricateAttempt, false);
+  assert.equal(x.guidedOverrideIsIndependentEvidence, false);
+  assert.deepEqual(contract.defaultAttemptFirstPath, [
+    "ORIENT",
+    "COMMIT",
+    "ATTEMPT",
+    "DIAGNOSE",
+    "SCAFFOLD",
+    "RECONSTRUCT",
+    "REPAIR",
+    "VERIFY",
+    "CONTRAST",
+    "TRANSFER",
+    "TIMED_RECURRENCE",
+    "SCHEDULE",
+  ]);
+  assert.deepEqual(contract.assistanceExposureContract.lineageModes, [
+    {
+      lineageMode: "attempt_first",
+      attemptRef: {
+        presence: "REQUIRED",
+        nonEmpty: true,
+        genuine: true,
+        placeholderAllowed: false,
+      },
+      guidedOverrideConfirmationRef: { presence: "FORBIDDEN", value: null },
+      requiredBindings: ["LEARNER_SCOPE", "TUTOR_EPISODE", "ITEM_REVISION", "ATTEMPT"],
+    },
+    {
+      lineageMode: "confirmed_pre_attempt_guided_override",
+      attemptRef: { presence: "EXPLICIT_NULL", value: null, placeholderAllowed: false },
+      guidedOverrideConfirmationRef: {
+        presence: "REQUIRED",
+        nonEmpty: true,
+        trustedServerRecorded: true,
+      },
+      requiredBindings: [
+        "LEARNER_SCOPE",
+        "TUTOR_EPISODE",
+        "ITEM_REVISION",
+        "GUIDED_OVERRIDE_CONFIRMATION",
+      ],
+    },
+  ]);
+  assert.deepEqual(override, {
+    mode: "confirmed_pre_attempt_guided_override",
+    defaultMode: "attempt_first",
+    deliberateLearnerRequestRequired: true,
+    trustedServerConfirmationRequired: true,
+    confirmationIsExposureCommit: false,
+    path: [
+      "ORIENT",
+      "CONFIRM_GUIDED_REVEAL_OVERRIDE",
+      "COMMIT_ASSISTANCE_EXPOSURE",
+      "GUIDED_STUDY",
+      "RECONSTRUCT",
+      "REPAIR",
+      "VERIFY",
+      "SCHEDULE_LATER_DISTINCT_INDEPENDENT_REVIEW",
+      "GUIDED_EXIT",
+    ],
+    attemptStepPresent: false,
+    emptyPlaceholderOrSyntheticAttemptAllowed: false,
+    exposureCommitBeforeFirstHelpByte: true,
+    commitFailure: {
+      helpBytes: 0,
+      positiveEvidence: 0,
+      usageSuccess: 0,
+      episodeState: "BLOCKED",
+    },
+    bypassSurfaces: ["RETRY", "DIRECT_ENDPOINT", "CACHE", "PREFETCH", "MULTI_TAB"],
+    permanentQualification: {
+      assistanceState: "ASSISTED",
+      exposureState: "EXPOSED",
+      learningOnly: true,
+      mayRelabelUnseen: false,
+      mayRelabelIndependent: false,
+    },
+    cannotEstablish: ["STABLE_MASTERY", "D1", "D7", "TRANSFER", "CLOSURE"],
+    laterIndependentReview: {
+      mode: "attempt_first",
+      distinct: true,
+      durableScheduleRequiredBefore: "GUIDED_EXIT",
+      scheduleFailure: "BLOCK_GUIDED_COMPLETION",
+      committedExposureLineageRetained: true,
+    },
+    generatedFullSolutionReleaseContractRef: "generatedFullSolutionReleaseContract",
+  });
+  assert.equal(override.path.includes("ATTEMPT"), false);
 });
 
 test("binds D+1 to the frozen D0 configuration and restarts on mismatch", () => {

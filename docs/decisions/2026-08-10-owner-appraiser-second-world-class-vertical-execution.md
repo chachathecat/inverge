@@ -1,7 +1,7 @@
 ---
 document_title: "Owner Decision — 감정평가사 2차 World-Class Vertical Execution Standard v1"
 status: "owner-decision/proposed-source-only"
-contract_version: "1.0.4"
+contract_version: "1.0.5"
 dated: "2026-08-10 KST"
 repository: "chachathecat/inverge"
 active_master_plan: "docs/strategy/dabangil-professional-exam-reasoning-os-final-master-plan-v13-2026-08-06.md"
@@ -62,6 +62,8 @@ confirmed revision
 → sealed D+7 verified non-same-surface transfer
 → timed recurrence
 → learner-private recurring deduction projection
+→ automatic error note
+→ safe learning-gap and concept-state signals
 → evidence-driven Today / Full-Day
 ```
 
@@ -126,6 +128,70 @@ pyBKT의 현재 disposition은 정확히 `benchmark_only`다.
 - pyBKT는 mastery, biggest gap, transfer, Today priority 또는 pass readiness
   authority가 아니다.
 
+### 4.5 generated full solution의 canonical S215 gate
+
+normal scaffold 또는 confirmed guided override가 generated full solution에
+도달하면 기존 canonical S215 release result를 반드시 resolve한다.
+
+- version은 정확히 `s215.reference_answer_critic_consensus_release_gate.v1`이다.
+- top-level과 `releaseDecision.status`는 모두 `released`여야 한다.
+- `released_learning_reference`, exact caveat와 모든 non-official/non-score/
+  non-probability false guardrail을 요구한다.
+- official-source status, canonical verification status, verification report,
+  uncertainty와 alternatives를 learner에게 공개한다.
+- open blocking blocker 또는 unresolved blocking uncertainty가 있으면 fail closed다.
+  특히 legal source, calculation, missing consensus와 unresolved consensus
+  conflict는 release를 막는다.
+- trusted resolver만 release authority를 가진다.
+- exposure commit과 S215 release는 독립 conjunctive gate이고 어느 하나라도
+  실패하면 generated full-solution byte는 정확히 0이다.
+- semantically complete solution은 worked step/explanation으로 relabel해 우회할
+  수 없다. learner-authored timed answer는 문구만으로 generated output이 아니다.
+
+### 4.6 confirmed pre-attempt guided override
+
+attempt-first는 default로 유지한다. learner가 명시적으로 요청하고 trusted server가
+clear confirmation을 기록한 경우에만 다음 path를 허용한다.
+
+```text
+ORIENT → CONFIRM_GUIDED_REVEAL_OVERRIDE → COMMIT_ASSISTANCE_EXPOSURE
+→ GUIDED_STUDY → RECONSTRUCT → REPAIR → VERIFY
+→ SCHEDULE_LATER_DISTINCT_INDEPENDENT_REVIEW → GUIDED_EXIT
+```
+
+이 path에는 `ATTEMPT`가 없고 empty, placeholder, synthetic 또는 fabricated
+attempt를 만들지 않는다. `attempt_first` lineage는 genuine non-empty attempt ref를,
+confirmed override lineage는 `attemptRef: null`과 exact-bound confirmation ref를
+요구한다. confirmation은 exposure commit이 아니며 help 전 commit 실패는 help,
+positive evidence와 usage success 모두 0이고 episode를 block한다.
+
+guided 결과는 영구 assisted/exposed·learning-only다. unseen/independent, stable
+mastery, D+1, D+7, transfer 또는 closure가 될 수 없다. `GUIDED_EXIT` 전에 later
+distinct attempt-first independent review를 durable하게 schedule해야 한다. schedule
+실패는 guided completion을 막되 이미 commit된 exposure lineage를 지우지 않는다.
+
+### 4.7 S216/S217 review-completion contract
+
+모든 completed review는 정확히 다음 세 safe output을 resolve한다.
+
+1. safe learning-gap signal
+2. `s216.error_notebook_gap_taxonomy.v1`의 status `ready` automatic error note
+3. `s217.personal_core_concept_graph.v1`의 status `ready` concept-state graph
+
+S216 note는 why wrong, correct principle, immediate fix, recurrence와 next review를
+모두 포함한다. S217 state는 `unknown`, `exposed`, `confused`, `wrong`, `recurring`,
+`recovering`, `stable`, `at-risk`만 사용한다.
+
+같은 learner scope, source review, answer submission/evidence, S216 entry, S217 graph와
+그 exact S216 entry를 가리키는 S217 source ref를 요구한다. output은 metadata-only이고
+raw learner content를 포함하지 않는다. missing/unsafe/stale/ambiguous/withheld면 safe
+blocker·reason·next action만 보존하고 completed, ready error note 또는 ready concept
+state를 emit하지 않는다. replan은 세 resolved output ref가 모두 필요하다.
+
+Review completion 자체는 positive evidence, mastery change, gap closure 또는 learning
+priority를 만들지 않으며 두 번째 mastery authority가 아니다. client, model, request
+또는 outer boolean은 completion authority가 아니다.
+
 ## 5. 외부 제품·오픈소스 채택 원칙
 
 기능을 복사하지 않고 작동 메커니즘만 추출한다.
@@ -173,11 +239,19 @@ learning priority authority가 될 수 없다.
 - evaluation completion은 successful learning evidence가 아니다.
 - AI/guided/full-reveal/same-surface success는 independent transfer가 아니다.
 - help output은 prior exposure commit 없이는 0 byte다.
+- generated full solution은 exact canonical S215 release 없이는 0 byte다.
+- exposure commit과 S215 release는 서로 대체하지 못한다.
 - exposed work는 unseen으로 복귀할 수 없다.
+- confirmed pre-attempt guided override는 attempt를 fabricate하지 않으며 later
+  distinct independent review를 guided exit 전에 schedule한다.
 - D+1은 frozen D0 configuration과 exact match해야 한다.
 - D+7은 sealed verified non-same-surface item의 independent success가 필요하다.
 - timed recurrence 없이는 gap closure가 아니다.
 - 후속 qualifying failure는 closure를 reopen한다.
+- completed review는 safe gap, ready S216 error note와 ready S217 concept state를
+  exact-bound해 emit해야 하며 missing/withheld artifact는 fail closed다.
+- review completion 자체는 positive evidence, mastery, closure 또는 priority를
+  변경하지 않는다.
 - 실무 deterministic conflict는 numeric release를 막는다.
 - 법규 source/effective-version conflict는 verified release를 막는다.
 - block completion은 mastery를 바꾸지 않는다.

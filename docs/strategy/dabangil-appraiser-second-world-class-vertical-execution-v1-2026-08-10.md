@@ -3,7 +3,7 @@ document_title: "답안길 감정평가사 2차 World-Class Vertical Execution S
 document_subtitle: "정확한 감점 위치·AI 협업 교정·독립 전이·재발 검증·하루 관제"
 document_role: "V13 subordinate execution standard; not a new master plan"
 status: "proposed_non_authoritative_source_contract"
-version: "1.0.4"
+version: "1.0.5"
 dated: "2026-08-10 KST"
 repository: "chachathecat/inverge"
 active_master_plan: "docs/strategy/dabangil-professional-exam-reasoning-os-final-master-plan-v13-2026-08-06.md"
@@ -108,6 +108,8 @@ Capture
 → Sealed D+7 Verified Non-Same-Surface Transfer
 → Timed Full-Answer Recurrence
 → Recurring Deduction Projection
+→ Automatic Error Note
+→ Safe Learning-Gap and Concept-State Signals
 → Today / Full-Day Replan
 ```
 
@@ -316,8 +318,11 @@ usable legal reference body를 release하지 않는다.
 type VerticalTutorStateV1 =
   | "intake"
   | "orient"
+  | "confirm_guided_reveal_override"
   | "commit"
+  | "commit_assistance_exposure"
   | "attempt"
+  | "guided_study"
   | "diagnose"
   | "scaffold"
   | "reconstruct"
@@ -327,6 +332,7 @@ type VerticalTutorStateV1 =
   | "transfer"
   | "timed_recurrence"
   | "schedule"
+  | "schedule_later_distinct_independent_review"
   | "completed"
   | "guided_exit"
   | "blocked"
@@ -359,13 +365,88 @@ neutral reprompt
 - full solution 뒤 same-item success는 transfer가 아니다.
 - client/model은 tutor state, qualification 또는 evidence effect를 제출하지 못한다.
 
-### 6.2 pre-help exposure transaction
+### 6.2 canonical generated full-solution release
 
 ```ts
+type GeneratedFullSolutionReleaseContractV1 = {
+  s215Version: "s215.reference_answer_critic_consensus_release_gate.v1";
+  path:
+    | "normal_scaffold_full_solution"
+    | "confirmed_guided_override_full_solution"
+    | "semantically_complete_generated_solution_any_label";
+  exposureCommitRequired: true;
+  s215Result: {
+    status: "released";
+    releaseDecision: {
+      status: "released";
+      learningReferenceStatus: "released_learning_reference";
+      releaseGateStatus: "released";
+      referenceAnswerReleaseAllowed: true;
+      learnerFacingLearningReferenceAllowed: true;
+      requiredCaveatKey: "learning_reference_not_official_answer";
+      learningReferenceOnly: true;
+      officialClaimAllowed: false;
+      officialGradingClaimAllowed: false;
+      officialModelAnswerClaimAllowed: false;
+      confirmedScoreClaimAllowed: false;
+      scorePredictionAllowed: false;
+      passProbabilityAllowed: false;
+      passGuaranteeAllowed: false;
+    };
+    openBlockingReleaseBlockerCount: 0;
+    unresolvedBlockingUncertaintyCount: 0;
+  };
+  learnerVisibleDisclosureRefs: {
+    officialSourceStatusRef: string;
+    canonicalVerificationStatusRef: string;
+    verificationReportRef: string;
+    uncertaintyAndAlternativesRef: string;
+  };
+  authority: {
+    trustedResolverOwnsRelease: true;
+    client: false;
+    model: false;
+    requestLabels: false;
+    outerBooleans: false;
+  };
+  failure: {
+    generatedFullSolutionBytes: 0;
+  };
+};
+```
+
+Generated full solution은 기존 S215 canonical reference-answer package와 release
+decision을 그대로 사용한다. 별도의 answer authority를 만들지 않는다.
+
+- `legal_source_blocker`, `calculation_blocker`, `consensus_missing` 또는
+  `unresolved_consensus_conflict`를 포함한 open blocking blocker나 unresolved
+  blocking uncertainty가 하나라도 있으면 release는 fail closed다.
+- exposure commit과 S215 release는 서로 대체할 수 없는 독립 conjunctive gate다.
+  어느 하나라도 실패하면 generated full-solution output은 정확히 0 byte다.
+- normal scaffold와 confirmed guided override에 같은 gate를 적용한다.
+- worked step, explanation 또는 다른 낮은 rung으로 relabel한 semantically complete
+  generated solution도 우회하지 못한다.
+- learner-authored timed full-answer attempt는 문구에 `full solution`이 들어갔다는
+  이유만으로 generated full solution으로 분류하지 않는다.
+
+### 6.3 pre-help exposure transaction
+
+```ts
+type AssistanceExposureLineageV1 =
+  | {
+      lineageMode: "attempt_first";
+      attemptRef: string;
+      guidedOverrideConfirmationRef: null;
+    }
+  | {
+      lineageMode: "confirmed_pre_attempt_guided_override";
+      attemptRef: null;
+      guidedOverrideConfirmationRef: string;
+    };
+
 type AssistanceExposureCommitV1 = {
   learnerScopeRef: string;
   tutorEpisodeRef: string;
-  attemptRef: string;
   itemRevisionRef: string;
   assistanceKind: string;
   outputKind: "hint" | "explanation" | "worked_step" | "probe" | "full_solution";
@@ -374,7 +455,7 @@ type AssistanceExposureCommitV1 = {
   transactionState: "committed";
   idempotencyKey: string;
   derivationAuthority: "trusted_server";
-};
+} & AssistanceExposureLineageV1;
 ```
 
 어떤 hint, explanation, worked step, probe 또는 full solution byte도 위 event가
@@ -386,7 +467,66 @@ trusted server에 append-only로 commit되기 전에 반환하지 않는다.
 - 이후 독립 evidence는 별도의 distinct independent attempt가 필요
 - retry, multi-tab, direct endpoint, cache, prefetch가 우회하지 못함
 
-### 6.3 Learning / Measurement Lane
+`attempt_first` lineage는 실제 non-empty genuine `attemptRef`를 요구하며 guided
+confirmation으로 대체할 수 없다. `confirmed_pre_attempt_guided_override` lineage는
+`attemptRef: null`과 learner/episode/item revision에 exact-bound된 trusted-server
+confirmation ref를 요구한다. empty, placeholder, synthetic 또는 fabricated attempt
+ref는 어느 mode에서도 허용하지 않는다.
+
+### 6.4 confirmed pre-attempt guided override
+
+Default path는 계속 attempt-first다.
+
+```text
+ORIENT
+→ CONFIRM_GUIDED_REVEAL_OVERRIDE
+→ COMMIT_ASSISTANCE_EXPOSURE
+→ GUIDED_STUDY
+→ RECONSTRUCT
+→ REPAIR
+→ VERIFY
+→ SCHEDULE_LATER_DISTINCT_INDEPENDENT_REVIEW
+→ GUIDED_EXIT
+```
+
+```ts
+type ConfirmedGuidedRevealOverrideV1 = {
+  mode: "confirmed_pre_attempt_guided_override";
+  deliberateLearnerRequest: true;
+  trustedServerConfirmationRef: string;
+  attemptRef: null;
+  confirmationIsExposureCommit: false;
+  exposureCommitBeforeFirstHelpByte: true;
+  attemptStepPresent: false;
+  fabricatedAttemptAllowed: false;
+  permanentQualification: {
+    assistanceState: "assisted";
+    exposureState: "exposed";
+    learningOnly: true;
+    mayRelabelUnseen: false;
+    mayRelabelIndependent: false;
+  };
+  laterIndependentReview: {
+    mode: "attempt_first";
+    distinct: true;
+    durableScheduleRequiredBefore: "guided_exit";
+  };
+};
+```
+
+- learner가 override를 deliberately request하고 trusted server가 clear confirmation을
+  기록해야 한다. confirmation 자체는 exposure commit이 아니다.
+- `ATTEMPT`는 이 path에 없고 empty/placeholder/synthetic attempt를 만들지 않는다.
+- commit 실패는 help 0 byte, positive evidence 0, usage success 0과 blocked episode다.
+- retry, direct endpoint, cache, prefetch와 multi-tab은 commit을 우회하지 못한다.
+- 결과는 영구 assisted/exposed, learning-only다. unseen/independent로 relabel하지
+  못하며 stable mastery, D+1, D+7, transfer 또는 closure를 만들지 못한다.
+- later distinct `attempt_first` independent review를 `GUIDED_EXIT` 전에 durable하게
+  schedule해야 한다. schedule 실패는 guided completion을 막지만 이미 commit된
+  exposure lineage는 지우지 않는다.
+- full solution까지 도달하면 6.2의 canonical S215 release gate도 함께 적용한다.
+
+### 6.5 Learning / Measurement Lane
 
 Learning Lane:
 
@@ -555,6 +695,92 @@ type RecurringDeductionSignatureV1 = {
 - assisted/same-surface/unverified attempt는 recurrence 분자에 넣지 않는다.
 - counter-evidence를 보존한다.
 - raw body를 projection, graph label 또는 analytics에 넣지 않는다.
+
+### 9.1 mandatory review-completion tail
+
+Canonical tail은 다음 순서를 고정한다.
+
+```text
+TIMED_RECURRENCE
+→ RECURRING_DEDUCTION_PROJECTION
+→ AUTOMATIC_ERROR_NOTE
+→ SAFE_LEARNING_GAP_AND_CONCEPT_STATE_SIGNALS
+→ EVIDENCE_DRIVEN_REPLAN
+```
+
+```ts
+type WcvReviewCompletionContractV1 = {
+  s216Version: "s216.error_notebook_gap_taxonomy.v1";
+  s217Version: "s217.personal_core_concept_graph.v1";
+  authority: "trusted_server_resolver";
+  exactBinding: {
+    learnerScopeRef: string;
+    sourceReviewRef: string;
+    answerSubmissionAndEvidenceRef: string;
+    s216EntryRef: string;
+    s217GraphRef: string;
+    s217SourceEntryRef: string;
+  };
+  requiredOutputs: [
+    "safe_learning_gap_signal",
+    "s216_automatic_error_note_ready",
+    "s217_concept_state_graph_ready",
+  ];
+  s216: {
+    status: "ready";
+    requiredMetadata: [
+      "why_wrong",
+      "correct_principle",
+      "immediate_fix",
+      "recurrence",
+      "next_review",
+    ];
+  };
+  s217: {
+    status: "ready";
+    canonicalStates: [
+      "unknown",
+      "exposed",
+      "confused",
+      "wrong",
+      "recurring",
+      "recovering",
+      "stable",
+      "at-risk",
+    ];
+  };
+  dataBoundary: {
+    metadataOnly: true;
+    rawLearnerContentAllowed: false;
+  };
+  resolvedOutputRefs: {
+    safeLearningGapSignalRef: string;
+    s216AutomaticErrorNoteRef: string;
+    s217ConceptStateGraphRef: string;
+  };
+  completionEffects: {
+    positiveEvidenceAwarded: false;
+    masteryChanged: false;
+    gapClosed: false;
+    learningPrioritySet: false;
+    secondMasteryAuthorityCreated: false;
+  };
+};
+```
+
+같은 learner scope, source review, answer submission/evidence, S216 entry와 S217
+graph를 exact binding하고, S217 source ref가 바로 그 S216 entry를 가리켜야 한다.
+unrelated, ambiguous, stale 또는 cross-review artifact는 completion을 만족하지
+못한다. 모든 output은 metadata-only이고 raw learner content를 포함하지 않는다.
+
+S216 또는 S217이 missing, unsafe, stale, ambiguous 또는 withheld면 safe blocker,
+reason과 next-action metadata만 보존한다. review를 completed로 보고하지 않고 ready
+error note나 ready concept-state result를 emit하지 않는다. client/model/request/outer
+completion boolean은 trusted resolver를 대체하지 못한다. `EVIDENCE_DRIVEN_REPLAN`은
+세 required output의 resolved ref가 모두 있어야 한다.
+
+Review completion 자체는 positive evidence를 부여하거나 mastery를 변경하거나 gap을
+close하거나 learning priority를 정하지 않으며 두 번째 mastery authority를 만들지 않는다.
 
 ---
 

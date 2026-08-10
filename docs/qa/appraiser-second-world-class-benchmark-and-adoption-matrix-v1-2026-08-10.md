@@ -1,7 +1,7 @@
 # 감정평가사 2차 World-Class Benchmark & Adoption Matrix v1
 
 - 작성일: 2026-08-10 KST
-- contract version: `1.0.4`
+- contract version: `1.0.5`
 - 상태: source-only benchmark / non-operative
 - 목적: 세계급 제품·연구·오픈소스의 작동 원리를 추출하고 답안길의
   `adopt / adapt / reject / proof` 결정을 고정한다.
