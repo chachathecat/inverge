@@ -192,7 +192,16 @@
         "PRODUCTION_ACCEPTANCE_CURRENT"
       ],
       "ownerPrivateAcceptanceMaySubstitute": false,
-      "genericOwnerActivationMaySubstitute": false
+      "genericOwnerActivationMaySubstitute": false,
+      "canonicalDependencyPath": [
+        "S241A",
+        "O3C",
+        "S239A",
+        "S242C",
+        "O4F",
+        "S243C"
+      ],
+      "shorterPathAllowed": false
     }
   },
   "implementationSlices": [
