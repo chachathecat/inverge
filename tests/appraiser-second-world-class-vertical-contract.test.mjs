@@ -133,7 +133,7 @@ test("requires append-only exposure commit before every help output", () => {
   assert.equal(exposure.exposedMayBeRelabeledUnseen, false);
   assert.equal(exposure.laterDistinctIndependentAttemptRequired, true);
   assert.equal(exposure.clientOrModelMayAssertExposureState, false);
-  assert.match(strategy, /Pre-help exposure transaction/i);
+  assert.match(strategy, /AssistanceExposureCommitV1/);
   assert.match(strategy, /output 0 byte/);
   assert.match(validation, /Pre-help exposure/);
 });
