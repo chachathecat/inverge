@@ -26,7 +26,7 @@ execution_rule: "This annex fixes contracts and development order only. It autho
 
 `Memory Cue & Annotation Layer(MCAL)`은 V13을 대체하는 새 마스터플랜이 아니다.
 V13의 근거·개념·문항·검증·학습증거 사이에 다음 연결점만 고정하는 필수 후속 부속계약이다.
-동기화된 machine contract version은 `1.0.22`이다.
+동기화된 machine contract version은 `1.0.24`이다.
 
 ```text
 VESG / exact definition / QuestionUnit
@@ -517,12 +517,17 @@ D+7 stable / timed: HIDDEN
   primitive `false`여야 하며 missing·default·coercion은 non-replayed 증거가 아니다. `cancelled` 역시
   exact primitive `false`여야 하므로 missing·null·string·number·object·array·`true` 또는 다른 malformed
   값은 active confirmation을 증명하지 못한다. request와 confirmation 양쪽의 `cueId`, `cueRevisionId`,
-  `requestId`는 equality 비교 전에 각각 exact trimmed canonical identifier schema를 통과해야 한다.
+  `requestId`, `confirmationId`는 equality 비교 전에 각각 exact trimmed canonical identifier schema를 통과해야 한다.
   두 쪽이 함께 누락되어 `undefined === undefined`가 되거나 null·wrong-type·empty·whitespace·malformed
   identifier가 서로 같아도 reveal을 승인하지 않는다. confirmation은 추가 필드 없는 exact single canonical
   record이고 server-side·authoritative·independently-resolved·known·resolved가 primitive true, ambiguous·
   conflicting·cross-learner·cross-attempt·mismatched·stale·replayed·cancelled·client/caller-inferred가 primitive
   false여야 한다. client boolean, 미리 선택된 consent, source label 또는 outer success state는 confirmation이 아니다.
+- confirmation binding의 exact ordered list는 `attemptId → learnerPrivateScopeId → cueId →
+  cueRevisionId → requestId → confirmationId`으로 canonical confirmation `recordBindingFields`와 동일하다.
+  outer request/event subject, canonical confirmation record, authoritative transaction post-state receipt의
+  `confirmationId`는 각각 canonical identifier schema를 독립적으로 통과한 뒤 exact equality를 만족해야 하며,
+  누락·malformed·mismatch·inference·alias는 모두 cue byte 0·evidence 0·no-throw로 실패한다.
 - authenticated learner scope와 subject·attempt-resolution·confirmation learner scope 네 값은 모두 같은 exact
   canonical identifier schema를 독립적으로 통과하고 field-for-field로 일치해야 한다. matching malformed 값,
   인증 문맥과 다른 foreign learner에 맞춘 subject/attempt/confirmation, client/caller scope alias 또는 inference는
@@ -802,7 +807,10 @@ const EXACT_RENDER_RECORD_FAILURE_GATE_V1 = {
   field: "recordFailure",
   requiredPrimitiveType: "boolean",
   requiredExactValue: false,
-  evaluatedBeforeTimingRouting: true,
+  appliesToTimings: ["AFTER_RESPONSE", "REVIEW_ONLY"],
+  evaluatedBeforeApplicableTimingRouting: true,
+  beforeResponseFailureStateSource:
+    "AUTHORITATIVE_PRE_RESPONSE_TRANSACTION_POST_STATE_RESOLUTION_GATE_V1",
   renderCapableValidators: [
     "CUE_RENDER_REQUEST_VALIDATOR",
     "CUE_EXPOSURE_EVENT_VALIDATOR",
@@ -818,6 +826,7 @@ type PreResponseCueConfirmationV1 = {
   cueId: string;
   cueRevisionId: string;
   requestId: string;
+  confirmationId: string;
   serverRecorded: true;
   deliberate: true;
   active: true;
@@ -836,6 +845,56 @@ const PRE_RESPONSE_RENDER_TRANSACTION_V1 = [
   "INDEPENDENT_EVIDENCE_INVALIDATED",
   "CUE_BYTES_RENDERED",
 ] as const;
+
+type AuthoritativePreResponseTransactionPostStateV1 = {
+  source: "CANONICAL_SERVER_PRE_RESPONSE_TRANSACTION_POST_STATE_RESOLVER";
+  transactionId: string;
+  matchingRecordCount: 1;
+  serverSide: true;
+  authoritative: true;
+  independentlyResolved: true;
+  known: true;
+  resolved: true;
+  committed: true;
+  committedBeforeRender: true;
+  renderBarrierSatisfied: true;
+  confirmationConsumed: true;
+  cueExposureRecordCommitted: true;
+  postCommitAttemptState: "ASSISTED";
+  postCommitIndependentEvidenceEligible: false;
+  positiveLearningEvidenceAwarded: false;
+  learnerPrivateScopeId: string;
+  attemptId: string;
+  cueId: string;
+  cueRevisionId: string;
+  requestId: string;
+  confirmationId: string;
+  orderedCommittedSteps: readonly [
+    "CONFIRMATION_CONSUMPTION_COMMITTED",
+    "CUE_EXPOSURE_RECORD_COMMITTED",
+    "ATTEMPT_STATE_TRANSITIONED_TO_ASSISTED",
+    "INDEPENDENT_EVIDENCE_INVALIDATED",
+  ];
+  partialCommit: false;
+  recordFailure: false;
+  wrongCommitOrder: false;
+  renderSubmitRaceDetected: false;
+  ambiguous: false;
+  conflicting: false;
+  crossLearner: false;
+  crossAttempt: false;
+  crossCue: false;
+  crossCueRevision: false;
+  crossRequest: false;
+  crossConfirmation: false;
+  mismatched: false;
+  stale: false;
+  replayed: false;
+  cancelled: false;
+  inferred: false;
+  clientInferred: false;
+  callerInferred: false;
+};
 
 const EXACT_CANONICAL_ATTEMPT_RESOLUTION_STATE_GATE_V1 = {
   requiredExactPrimitiveBooleanStates: {
@@ -953,15 +1012,11 @@ type CanonicalExposureHistoryV1 = {
 };
 ```
 
-- 모든 render-capable request/event variant(`BEFORE_RESPONSE`, `AFTER_RESPONSE`, `REVIEW_ONLY`)는
-  `canonicalRecordCommitted === true`를 요구한다. truthiness는 금지하며 missing·undefined·null·false·
-  string(`"true"`, `"false"` 포함)·number·object·array·ambiguous 또는 caller-inferred commit state는
-  cue byte 0으로 fail closed한다. request-side와 event-side `AFTER_RESPONSE`는 같은 exact-boolean gate를
-  사용하며 `canonicalExposureRecordCommitted` 또는 다른 alias는 canonical field를 대체하지 못한다.
-  exact true는 이 prerequisite 하나만 충족하며 attempt·learner·ordering·race gate를 우회하지 못한다.
-  두 validator는 timing routing 전에 shared `EXACT_RENDER_RECORD_FAILURE_GATE_V1`을 적용하므로,
-  `recordFailure === false`를 exact primitive equality로 요구한다. `canonicalRecordCommitted === true`와
-  `recordFailure === true`의 모순 상태도 cue byte 0으로 fail closed한다.
+- `AFTER_RESPONSE`와 `REVIEW_ONLY` render-capable request/event는 shared gate에서
+  `canonicalRecordCommitted === true`와 `recordFailure === false`를 exact primitive equality로 요구한다.
+  `BEFORE_RESPONSE`는 request-owned completion proof를 사용하지 않는다. `commitSteps`, outer
+  `canonicalRecordCommitted`/`recordFailure`, success/completion/atomicity booleans 및 caller source/label이
+  subject에 있으면 authorization path에서 reject한다.
 - timing과 assistance classification은 canonical ledger가 파생하며 untrusted client 값을 받지 않는다.
   request와 event validator는 같은 closed timing/classification map을 사용한다. pre-response request는
   `assistanceClassification`이 명시된 `LOW` 또는 `MATERIAL`이어야 하며 omitted 또는 `NONE`은 렌더하지 않는다.
@@ -970,7 +1025,7 @@ type CanonicalExposureHistoryV1 = {
 - attempt state는 `CANONICAL_SERVER_ATTEMPT_LEDGER`에서 파생한다. `BEFORE_RESPONSE`는 exact
   learner/attempt resolution의 `INDEPENDENT_ATTEMPT_OPEN`과 exact single-use confirmation이 모두 없으면
   허용하지 않으며, 모든 render-capable validator가 위 shared gate에 위임해야 한다.
-- confirmation은 learner·attempt·cue·cue revision·request 다섯 필드가 모두 정확히 일치하는 단 하나의
+- confirmation은 learner·attempt·cue·cue revision·request·confirmation identity 여섯 필드가 모두 정확히 일치하는 단 하나의
   active, deliberate, server-recorded, non-cancelled, fresh, unused, explicitly non-replayed record여야 한다.
   `replayed === false`는 exact primitive equality로 검증하며, 단순 client
   boolean·preselected consent는 부족하다.
@@ -1016,8 +1071,15 @@ type CanonicalExposureHistoryV1 = {
   transfer 또는 D+7 evaluation은 각각의 credit만 막으며 다른 gate를 약화하지 않는다. exact `false`나
   exposure event는 그 자체로 affirmative evidence를 만들지 않는다.
 - confirmation consumption → exposure → `ASSISTED` → independent-evidence invalidation의 exact transaction이
-  모두 commit된 다음에만 cue byte를 렌더한다. partial commit, ordering ambiguity, ledger record
-  failure 또는 render/submit race는 rollback 후 fail closed하며 cue byte와 independent credit 모두 0이다.
+  모두 commit된 다음에만 cue byte를 렌더한다. 완료 증거는 untrusted request subject 밖의 trusted decision
+  context에서 canonical server post-state resolver가 반환한 non-null·non-array·additional-field-free record
+  정확히 한 건뿐이다. 이 record는 learner-private scope·attempt·cue·cue revision·request·confirmation identity를
+  exact-bind하고 server-side authority, independent resolution, commit-before-render, confirmation consumption,
+  exposure commit, `ASSISTED` post-state, independent/positive evidence false 및 exact ordered steps를 record 내부에서
+  증명한다. partial/wrong-order/record-failure/race, ambiguity/conflict/cross-binding/mismatch/stale/replay/cancel/
+  inference는 exact false여야 한다. pre-transaction confirmation의 `consumed === false`, open attempt, outer boolean,
+  source label 또는 expected-step array는 대체 증거가 아니다. invalid resolution은 exception 없이 cue byte와 모든
+  affirmative evidence를 0으로 fail closed한다.
 - canonical state가 `SUBMITTED`이면 `BEFORE_RESPONSE`는 거부하고 `AFTER_RESPONSE`만 허용한다.
   `AFTER_RESPONSE` request/event와 optional bound review는 동일 closed submitted-record gate로 exact source,
   single count, `SUBMITTED`, server-side/authority/independent-resolution, full safe/unsafe primitive state와
@@ -1160,6 +1222,10 @@ append-only exposure/history where learning evidence depends on it
 input이나 training candidate로 만들 수 없다. raw body의 이름·별칭·label·container를 바꾸어도
 원래의 `PERSONAL_ANNOTATION_RAW_BODY` 분류가 유지되며, 그것을 Cleared Content Bank object로
 직접 승격할 수 없다.
+
+training candidate validator는 `originKind`, `kind` 등 어떤 candidate field보다 먼저 container gate를
+실행한다. `null`, `undefined`, primitive, array, Date/Map 및 malformed/non-record container는 exception 없이
+`candidateEligible === false`, `currentlyAuthorized === false`, disclosure/promotion 0으로 fail closed한다.
 
 미래 training candidate가 될 수 있는 것은 다음 두 종류뿐이다.
 
@@ -1566,14 +1632,17 @@ review_only_with_matching_open_independent_attempt = 0
 - every decisive canonical record in the bounded render/evidence surface is closed, single, exact-source,
   server-side, authoritative, resolved, exact-bound and exact-safe-state validated; mutation matrices cover every
   required omission, extra field, wrong/zero/multiple source, non-boolean state, foreign binding and timestamp substitution.
-- every render-capable `BEFORE_RESPONSE` validator delegates to one exact gate, and its exact
-  learner/attempt resolution, confirmation consumption and `ASSISTED` transition finish before render.
+- every render-capable `BEFORE_RESPONSE` validator delegates to one exact gate, rejects request-owned atomic
+  proof fields, and requires one closed canonical server post-state resolution outside the request proving the exact
+  learner/attempt/cue/revision/request/confirmation binding, ordered atomic commit and `ASSISTED` transition before render.
 - every `REVIEW_ONLY` render-capable path requires canonical server timing/classification derivation,
   committed exposure proof and matching open independent attempt count zero.
 - semantic highlight role/budget/accessibility and revision-bound typed anchors exist.
 - every declared anchor required binding passes exact type, closed enum, pattern and kind-policy consistency;
   truthiness-only validation is forbidden.
 - personal annotation remains last and private.
+- training-candidate container validation runs before every field read and null/undefined/primitives/arrays/non-records
+  fail closed without throwing or disclosing/promoting material.
 - every signal content-safety field is present on the same validated object as boolean `false`, and one separate
   closed authoritative `CANONICAL_SIGNAL_ORIGIN_CONTENT_SAFETY_RESOLVER` record proves the bound safe origin;
   candidate-only, missing, extra, unsafe, inferred or cross-object proofs fail closed.

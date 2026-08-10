@@ -499,13 +499,16 @@ function reviewOnlyRequest(overrides = {}) {
 }
 
 function cueEvent(overrides = {}) {
+  const timing = overrides.timing ?? "AFTER_RESPONSE";
   const event = {
-    timing: "AFTER_RESPONSE",
+    timing,
     assistanceClassification: "NONE",
     derivedFrom: "CANONICAL_ASSISTANCE_EXPOSURE_LEDGER",
     ordering: "ORDERED",
-    canonicalRecordCommitted: true,
-    recordFailure: false,
+    ...(timing === "BEFORE_RESPONSE" ? {} : {
+      canonicalRecordCommitted: true,
+      recordFailure: false,
+    }),
     renderSubmitRaceDetected: false,
     attemptId: "attempt-1",
     learnerPrivateScopeId: "learner-1",
@@ -828,13 +831,53 @@ function authorizeCanonicalReviewOnlyCueRender(subject) {
   };
 }
 
-function authorizeExactPreResponseCueRender(subject) {
+function validateAuthoritativePreResponsePostState(subject, decisionContext) {
+  const atomic = contract.cueExposure.preResponseAtomicCommit;
+  const gate = atomic.authoritativePostStateResolutionGate;
+  if (
+    atomic.untrustedRequestAtomicProofFields.some((field) => Object.hasOwn(subject, field))
+    || Object.hasOwn(subject, gate.decisionContextField)
+    || decisionContext === null
+    || typeof decisionContext !== "object"
+    || Array.isArray(decisionContext)
+    || Object.getPrototypeOf(decisionContext) !== Object.prototype
+    || gate.decisionContextAdditionalFieldsAllowed !== false
+    || JSON.stringify(sorted(Object.keys(decisionContext)))
+      !== JSON.stringify([gate.decisionContextField])
+  ) return { accepted: false, reason: "AUTHORITATIVE_PRE_RESPONSE_POST_STATE_MISSING_OR_UNTRUSTED" };
+
+  const receipt = decisionContext[gate.decisionContextField];
+  if (
+    !hasExactClosedCanonicalRecord(receipt, gate)
+    || receipt.postCommitAttemptState !== gate.requiredPostCommitAttemptState
+    || JSON.stringify(receipt.orderedCommittedSteps) !== JSON.stringify(atomic.orderedSteps)
+  ) return { accepted: false, reason: "AUTHORITATIVE_PRE_RESPONSE_POST_STATE_INVALID" };
+
+  const expectedBindings = {
+    learnerPrivateScopeId: subject.authenticatedLearnerPrivateScopeId,
+    attemptId: subject.attemptId,
+    cueId: subject.cueId,
+    cueRevisionId: subject.cueRevisionId,
+    requestId: subject.requestId,
+    confirmationId: subject.confirmation?.confirmationId,
+  };
+  for (const field of gate.recordBindingFields) {
+    if (
+      !isCanonicalIdentifier(expectedBindings[field], gate.identifierSchema)
+      || receipt[field] !== expectedBindings[field]
+    ) return { accepted: false, reason: `AUTHORITATIVE_PRE_RESPONSE_${field.toUpperCase()}_MISMATCH` };
+  }
+  return { accepted: true, receipt };
+}
+
+function authorizeExactPreResponseCueRender(subject, decisionContext = {}) {
   const cue = contract.cueExposure;
   const gate = cue.beforeResponseGate;
   const fail = (reason) => ({
     accepted: false,
     mayRenderCueBytes: false,
     independentEvidenceEligible: false,
+    positiveLearningEvidence: false,
     gateId: gate.gateId,
     reason,
   });
@@ -842,10 +885,6 @@ function authorizeExactPreResponseCueRender(subject) {
   if (subject.timing !== "BEFORE_RESPONSE") return fail("PRE_RESPONSE_GATE_TIMING_INVALID");
   if (!hasExactPreResponseNoRaceState(subject)) {
     return fail(cue.preResponseAtomicCommit.renderSubmitRaceBehavior);
-  }
-  if (!hasExactNoRecordFailure(subject)) return fail(cue.preResponseAtomicCommit.recordFailureBehavior);
-  if (!hasExactCanonicalRecordCommit(subject)) {
-    return fail(cue.preResponseAtomicCommit.recordFailureBehavior);
   }
   if (subject.clientAttemptId !== undefined || subject.inferLatestAttempt === true) {
     return fail("UNTRUSTED_OR_INFERRED_ATTEMPT_ID");
@@ -883,27 +922,42 @@ function authorizeExactPreResponseCueRender(subject) {
   if (!validateExactPreResponseAuthenticatedLearnerScope(subject)) {
     return fail("AUTHENTICATED_LEARNER_PRIVATE_SCOPE_MISMATCH");
   }
-  if (JSON.stringify(subject.commitSteps) !== JSON.stringify(cue.preResponseAtomicCommit.orderedSteps)) {
-    return fail(cue.preResponseAtomicCommit.partialCommitBehavior);
-  }
+  const postState = validateAuthoritativePreResponsePostState(subject, decisionContext);
+  if (!postState.accepted) return fail(postState.reason);
   return {
     accepted: true,
     mayRenderCueBytes: true,
-    canonicalAttemptState: cue.preResponseAtomicCommit.postCommitAttemptState,
-    independentEvidenceEligible: cue.preResponseAtomicCommit.postCommitIndependentEvidenceEligible,
+    canonicalAttemptState: postState.receipt.postCommitAttemptState,
+    independentEvidenceEligible: postState.receipt.postCommitIndependentEvidenceEligible,
     positiveLearningEvidence: false,
-    atomicCommitCompletedBeforeRender: true,
+    atomicCommitCompletedBeforeRender: postState.receipt.committedBeforeRender,
     gateId: gate.gateId,
-    orderedSteps: [...subject.commitSteps, cue.preResponseAtomicCommit.renderStep],
+    orderedSteps: [
+      ...postState.receipt.orderedCommittedSteps,
+      cue.preResponseAtomicCommit.renderStep,
+    ],
   };
 }
 
-function validateCueExposureEvent(event) {
+function validateCueExposureEvent(event, decisionContext = {}) {
   const cue = contract.cueExposure;
   const reviewOnlyRoute = event.timing === "REVIEW_ONLY"
     || event.reviewOnlyResolution?.canonicalTiming === "REVIEW_ONLY";
+  const preResponseRoute = event.timing === "BEFORE_RESPONSE";
   if (reviewOnlyRoute && !hasExactReviewOnlyNoRaceState(event)) {
     return { accepted: false, mayRenderCueBytes: false, reason: cue.renderSubmitRaceBehavior };
+  }
+  if (preResponseRoute) {
+    if (event.derivedFrom !== cue.timingAndClassificationSource) {
+      return { accepted: false, mayRenderCueBytes: false, reason: "UNTRUSTED_DERIVATION" };
+    }
+    if (event.ordering !== "ORDERED") {
+      return { accepted: false, mayRenderCueBytes: false, reason: cue.ambiguousOrderingBehavior };
+    }
+    if (!hasAllowedTimingClassification(event)) {
+      return { accepted: false, mayRenderCueBytes: false, reason: "TIMING_CLASSIFICATION_INVALID" };
+    }
+    return authorizeExactPreResponseCueRender(event, decisionContext);
   }
   if (!hasExactNoRecordFailure(event)) {
     return { accepted: false, mayRenderCueBytes: false, reason: cue.recordFailureBehavior };
@@ -923,9 +977,6 @@ function validateCueExposureEvent(event) {
   }
   if (!hasAllowedTimingClassification(event)) {
     return { accepted: false, mayRenderCueBytes: false, reason: "TIMING_CLASSIFICATION_INVALID" };
-  }
-  if (event.timing === "BEFORE_RESPONSE") {
-    return authorizeExactPreResponseCueRender(event);
   }
   if (event.timing === "AFTER_RESPONSE") {
     const binding = validateCanonicalAttemptBinding(event);
@@ -1860,8 +1911,10 @@ function validateCanonicalExposureHistory(history, expectedAttemptId, expectedLe
   return { accepted: true, count };
 }
 
-function validateLearningEvidence(events, evidence = {}) {
-  const validated = events.map(validateCueExposureEvent);
+function validateLearningEvidence(events, evidence = {}, renderDecisionContexts = []) {
+  const validated = events.map((event, index) => (
+    validateCueExposureEvent(event, renderDecisionContexts[index] ?? {})
+  ));
   if (validated.some((result) => !result.accepted)) {
     return noPositiveEvidence({ failClosed: true, eligibilityPreserved: false });
   }
@@ -1973,8 +2026,8 @@ function validateLearningEvidence(events, evidence = {}) {
   };
 }
 
-function evaluateAttemptEvidence(events, evidence = {}) {
-  return validateLearningEvidence(events, evidence);
+function evaluateAttemptEvidence(events, evidence = {}, renderDecisionContexts = []) {
+  return validateLearningEvidence(events, evidence, renderDecisionContexts);
 }
 
 function validateSignalContentSafetyProof(candidate, decisionContext = {}) {
@@ -2441,6 +2494,21 @@ function validateTrainingApprovalReceipts(candidate, decisionContext) {
 
 function evaluateTrainingCandidate(candidate, decisionContext = {}) {
   const annotation = contract.personalAnnotation;
+  const containerGate = annotation.trainingCandidateContainerGate;
+  if (
+    candidate === null
+    || typeof candidate !== "object"
+    || Array.isArray(candidate)
+    || Object.getPrototypeOf(candidate) !== Object.prototype
+  ) {
+    return {
+      candidateEligible: containerGate.candidateEligibleOnFailure,
+      hypotheticalReceiptsValid: false,
+      currentlyAuthorized: containerGate.currentlyAuthorizedOnFailure,
+      discloseOrPromote: containerGate.disclosureOrPromotionAllowedOnFailure,
+      reason: "TRAINING_CANDIDATE_CONTAINER_INVALID",
+    };
+  }
   const rawOrigin = candidate.originKind === "PERSONAL_ANNOTATION_RAW_BODY"
     || candidate.originKind === "PERSONAL_ANNOTATION_RAW_POINTER"
     || candidate.containsRawAnnotationBody === true
@@ -2674,6 +2742,7 @@ function cueConfirmation(overrides = {}) {
     cueId: "cue-1",
     cueRevisionId: "cue-revision-1",
     requestId: "request-1",
+    confirmationId: "confirmation-1",
     serverSide: true,
     authoritative: true,
     independentlyResolved: true,
@@ -2699,6 +2768,64 @@ function cueConfirmation(overrides = {}) {
   };
 }
 
+function canonicalPreResponseTransactionPostStateResolution(overrides = {}) {
+  return {
+    source: "CANONICAL_SERVER_PRE_RESPONSE_TRANSACTION_POST_STATE_RESOLVER",
+    transactionId: "transaction-1",
+    matchingRecordCount: 1,
+    serverSide: true,
+    authoritative: true,
+    independentlyResolved: true,
+    known: true,
+    resolved: true,
+    committed: true,
+    committedBeforeRender: true,
+    renderBarrierSatisfied: true,
+    confirmationConsumed: true,
+    cueExposureRecordCommitted: true,
+    postCommitAttemptState: "ASSISTED",
+    postCommitIndependentEvidenceEligible: false,
+    positiveLearningEvidenceAwarded: false,
+    learnerPrivateScopeId: "learner-1",
+    attemptId: "attempt-1",
+    cueId: "cue-1",
+    cueRevisionId: "cue-revision-1",
+    requestId: "request-1",
+    confirmationId: "confirmation-1",
+    orderedCommittedSteps: [...contract.cueExposure.preResponseAtomicCommit.orderedSteps],
+    partialCommit: false,
+    recordFailure: false,
+    wrongCommitOrder: false,
+    renderSubmitRaceDetected: false,
+    ambiguous: false,
+    conflicting: false,
+    crossLearner: false,
+    crossAttempt: false,
+    crossCue: false,
+    crossCueRevision: false,
+    crossRequest: false,
+    crossConfirmation: false,
+    mismatched: false,
+    stale: false,
+    replayed: false,
+    cancelled: false,
+    inferred: false,
+    clientInferred: false,
+    callerInferred: false,
+    ...overrides,
+  };
+}
+
+function preResponseRenderDecisionContext(overrides = {}) {
+  const field = contract.cueExposure.preResponseAtomicCommit
+    .authoritativePostStateResolutionGate.decisionContextField;
+  return {
+    [field]: Object.hasOwn(overrides, field)
+      ? overrides[field]
+      : canonicalPreResponseTransactionPostStateResolution(),
+  };
+}
+
 function cueRenderRequest(overrides = {}) {
   const timing = overrides.timing ?? "BEFORE_RESPONSE";
   const canonicalAttemptState = overrides.canonicalAttemptState
@@ -2708,7 +2835,7 @@ function cueRenderRequest(overrides = {}) {
     : timing === "AFTER_RESPONSE"
       ? canonicalAttemptResolution()
       : canonicalOpenAttemptResolution();
-  return {
+  const request = {
     timing,
     assistanceClassification: "LOW",
     attemptId: "attempt-1",
@@ -2717,19 +2844,22 @@ function cueRenderRequest(overrides = {}) {
     cueId: "cue-1",
     cueRevisionId: "cue-revision-1",
     requestId: "request-1",
+    confirmationId: "confirmation-1",
     canonicalAttemptStateSource: "CANONICAL_SERVER_ATTEMPT_LEDGER",
     canonicalAttemptState,
     attemptResolution,
     confirmation: cueConfirmation(),
-    commitSteps: [...contract.cueExposure.preResponseAtomicCommit.orderedSteps],
-    canonicalRecordCommitted: true,
-    recordFailure: false,
     renderSubmitRaceDetected: false,
+    ...(timing === "BEFORE_RESPONSE" ? {} : {
+      canonicalRecordCommitted: true,
+      recordFailure: false,
+    }),
     ...overrides,
   };
+  return request;
 }
 
-function evaluateCueRender(request) {
+function evaluateCueRender(request, decisionContext = {}) {
   const cue = contract.cueExposure;
   const fail = (reason) => ({
     accepted: false,
@@ -2745,11 +2875,14 @@ function evaluateCueRender(request) {
   if (!reviewOnlyRoute && request.renderSubmitRaceDetected) {
     return fail(cue.preResponseAtomicCommit.renderSubmitRaceBehavior);
   }
-  if (!hasExactNoRecordFailure(request)) return fail(cue.preResponseAtomicCommit.recordFailureBehavior);
-
-  if (reviewOnlyRoute) return authorizeCanonicalReviewOnlyCueRender(request);
+  if (reviewOnlyRoute) {
+    if (!hasExactNoRecordFailure(request)) return fail(cue.recordFailureBehavior);
+    if (!hasExactCanonicalRecordCommit(request)) return fail(cue.recordFailureBehavior);
+    return authorizeCanonicalReviewOnlyCueRender(request);
+  }
 
   if (request.canonicalAttemptState === "SUBMITTED") {
+    if (!hasExactNoRecordFailure(request)) return fail(cue.recordFailureBehavior);
     if (request.timing !== cue.afterResponseGate.onlyAllowedTimingForSubmittedAttempt) {
       return fail("SUBMITTED_ATTEMPT_AFTER_RESPONSE_ONLY");
     }
@@ -2769,7 +2902,7 @@ function evaluateCueRender(request) {
 
   if (request.timing !== "BEFORE_RESPONSE") return fail("NON_SUBMITTED_AFTER_RESPONSE_INVALID");
   if (!hasAllowedTimingClassification(request)) return fail("TIMING_CLASSIFICATION_INVALID");
-  return authorizeExactPreResponseCueRender(request);
+  return authorizeExactPreResponseCueRender(request, decisionContext);
 }
 
 function validateSemanticHighlightAccessibility(candidate) {
@@ -2792,7 +2925,7 @@ test("MCAL paths resolve and V13 remains sole active master plan", () => {
   assert.match(active, /dabangil-professional-exam-reasoning-os-final-master-plan-v13-2026-08-06\.md/);
   assert.match(active, /Memory Cue & Annotation Layer/);
   assert.doesNotMatch(active, /final-master-plan-v14/);
-  assert.equal(contract.version, "1.0.22");
+  assert.equal(contract.version, "1.0.24");
   assert.equal(contract.compatibility.v13RemainsSoleActiveMasterPlan, true);
   assert.equal(contract.compatibility.newMasterPlanVersionCreated, false);
 });
@@ -2933,7 +3066,9 @@ test("Markdown fences and exact boundary language are present", () => {
   const decision = read(P.decision);
   const qa = read(P.qa);
   for (const body of [annex, decision, qa]) {
-    assert.match(body, /machine contract version(?:은|:) `1\.0\.22`/i);
+    assert.match(body, /machine contract version(?:은|:) `1\.0\.24`/i);
+    assert.doesNotMatch(body, /1\.0\.23/);
+    assert.doesNotMatch(body, /1\.0\.22/);
     assert.doesNotMatch(body, /1\.0\.21/);
     assert.doesNotMatch(body, /1\.0\.20/);
     assert.doesNotMatch(body, /1\.0\.19/);
@@ -2942,6 +3077,11 @@ test("Markdown fences and exact boundary language are present", () => {
     assert.match(body, /decision-context/);
     assert.match(body, /caller(?:-|\/)?.?inferred/i);
     assert.match(body, /affirmativeEvidenceOutcomeAccepted/);
+    assert.match(body, /CANONICAL_SERVER_PRE_RESPONSE_TRANSACTION_POST_STATE_RESOLVER/);
+    assert.match(body, /`null`/);
+    assert.match(body, /`undefined`/);
+    assert.match(body, /primitive/i);
+    assert.match(body, /array/i);
   }
   assert.match(annex, /암기용 풀이입니다\. 시험용 정확한 정의를 대체하지 않습니다\./);
   assert.match(annex, /MCAL-4 — personal annotation editor/);
@@ -2971,10 +3111,10 @@ test("Markdown fences and exact boundary language are present", () => {
   assert.match(annex, /canonicalRecordCommitted === true/);
   assert.match(annex, /matching missing·whitespace·malformed·wrong-type identifier/);
   assert.match(annex, /`consent\.expired === false`/);
-  assert.match(annex, /`canonicalExposureRecordCommitted`[^\n]*대체/);
+  assert.match(annex, /`canonicalExposureRecordCommitted`[^\n]*(?:대체|선택)/);
   assert.match(annex, /canonical attempt resolution state gate/);
   assert.match(annex, /EXACT_RENDER_RECORD_FAILURE_GATE_V1/);
-  assert.match(annex, /`recordFailure === true`/);
+  assert.match(annex, /`canonicalRecordCommitted`\/`recordFailure`/);
   assert.match(annex, /`replayed === false`는 exact primitive equality/);
   assert.match(annex, /`cancelled` 역시\s+exact primitive `false`/);
   assert.match(annex, /request와 confirmation 양쪽의 `cueId`/);
@@ -2984,7 +3124,7 @@ test("Markdown fences and exact boundary language are present", () => {
   assert.match(annex, /candidate가 제공한 `closedValueSchema: true`/);
   assert.match(annex, /actual candidate object 전체/);
   assert.match(annex, /outer canonical timing\/classification resolution도 `resolved === true`/);
-  assert.match(annex, /모든 render-capable request\/event variant/);
+  assert.match(annex, /모든 render-capable (?:request\/event variant|validator)/);
   assert.match(annex, /pre-response request는\s+`assistanceClassification`/);
   assert.match(annex, /submitted-attempt `AFTER_RESPONSE` request/);
   assert.match(annex, /bound D\+7 evaluation record의 `d7EvaluationCompletedAt`/);
@@ -3026,7 +3166,7 @@ test("Markdown fences and exact boundary language are present", () => {
   assert.match(decision, /canonical D\+7 attempt의 `submittedAt` 자체도 canonical base\/source attempt/);
   assert.match(decision, /receipt set은 `contribution`·`promotion`·`o5`만 가진 closed object/);
   assert.match(qa, /PR #692 is merged at `512bfdb9232a86bf4f7d4cfbc076a9df1c8a7da2`/);
-  assert.match(qa, /Focused behavioral contract suite: 63\/63 passed/);
+  assert.match(qa, /Focused behavioral contract suite: 66\/66 passed/);
   assert.match(qa, /Merely supplying two different task IDs is insufficient/);
   assert.match(qa, /canonical transfer attempt and its independently resolved task binding/);
   assert.match(qa, /canonicalD7Attempt/);
@@ -3044,6 +3184,7 @@ test("Markdown fences and exact boundary language are present", () => {
   assert.match(qa, /outer canonical review-only resolution\s+learner scope/);
   assert.match(qa, /canonical D\+7 attempt's `submittedAt` must also be at or after/);
   assert.match(qa, /receipt set is a closed object containing exactly contribution, promotion and O5 fields/);
+  assert.doesNotMatch(qa, /Focused behavioral contract suite: 63\/63 passed/);
   assert.doesNotMatch(qa, /Focused behavioral contract suite: 52\/52 passed/);
   assert.doesNotMatch(qa, /Focused behavioral contract suite: 62\/62 passed/);
   assert.doesNotMatch(qa, /Focused behavioral contract suite: 57\/57 passed/);
@@ -3404,8 +3545,12 @@ test("cue timing mapping rejects pre-response NONE and preserves sticky ineligib
     sorted(contract.cueExposure.eventVariants.map(({ timing }) => timing)),
   );
   assert.deepEqual(
-    sorted(commitGate.appliesToEveryRenderCapableExposureEventTiming),
-    sorted(contract.cueExposure.eventVariants.map(({ timing }) => timing)),
+    sorted(commitGate.appliesToRenderCapableExposureEventTimings),
+    ["AFTER_RESPONSE", "REVIEW_ONLY"],
+  );
+  assert.equal(
+    commitGate.beforeResponseCommitProofSourceRef,
+    "cueExposure.preResponseAtomicCommit.authoritativePostStateResolutionGate",
   );
   assert.equal(commitGate.requiredPrimitiveType, "boolean");
   assert.equal(commitGate.requiredValue, true);
@@ -3444,7 +3589,7 @@ test("cue timing mapping rejects pre-response NONE and preserves sticky ineligib
     assert.equal(validateCueExposureEvent(cueEvent({
       timing: "BEFORE_RESPONSE",
       assistanceClassification,
-    })).accepted, true, assistanceClassification);
+    }), preResponseRenderDecisionContext()).accepted, true, assistanceClassification);
   }
 
   const sequence = evaluateAttemptEvidence([
@@ -3470,7 +3615,7 @@ test("cue timing mapping rejects pre-response NONE and preserves sticky ineligib
         preResponseCueExposureCount: 1,
       }),
     }),
-  });
+  }, [preResponseRenderDecisionContext(), {}]);
   assert.deepEqual(sequence, {
     failClosed: false,
     independentEvidenceEligibilityPreserved: false,
@@ -3531,7 +3676,10 @@ test("pre-response requests reject omitted or NONE assistance classification", (
   }
 
   for (const assistanceClassification of gate.requiredAssistanceClassifications) {
-    const result = evaluateCueRender(cueRenderRequest({ assistanceClassification }));
+    const result = evaluateCueRender(
+      cueRenderRequest({ assistanceClassification }),
+      preResponseRenderDecisionContext(),
+    );
     assert.equal(result.accepted, true, assistanceClassification);
     assert.equal(result.mayRenderCueBytes, true, assistanceClassification);
   }
@@ -3640,7 +3788,7 @@ test("every BEFORE_RESPONSE render path delegates to one exact gate and rejects 
       ...overrides,
     });
     for (const validate of [validateCueExposureEvent, evaluateCueRender]) {
-      const result = validate(event);
+      const result = validate(event, preResponseRenderDecisionContext());
       assert.equal(result.accepted, false, `${validate.name}: ${result.reason}`);
       assert.equal(result.mayRenderCueBytes, false, `${validate.name}: ${result.reason}`);
     }
@@ -3660,7 +3808,7 @@ test("every BEFORE_RESPONSE render path delegates to one exact gate and rejects 
 
   const validEvent = cueEvent({ timing: "BEFORE_RESPONSE", assistanceClassification: "MATERIAL" });
   for (const validate of [validateCueExposureEvent, evaluateCueRender]) {
-    const result = validate(validEvent);
+    const result = validate(validEvent, preResponseRenderDecisionContext());
     assert.equal(result.accepted, true, validate.name);
     assert.equal(result.mayRenderCueBytes, true, validate.name);
     assert.equal(result.gateId, gate.gateId, validate.name);
@@ -3668,6 +3816,150 @@ test("every BEFORE_RESPONSE render path delegates to one exact gate and rejects 
     assert.equal(result.canonicalAttemptState, "ASSISTED", validate.name);
     assert.equal(result.independentEvidenceEligible, false, validate.name);
     assert.equal(result.orderedSteps.at(-1), "CUE_BYTES_RENDERED", validate.name);
+  }
+});
+
+test("pre-response rendering requires one closed authoritative post-state receipt outside the request", () => {
+  const atomic = contract.cueExposure.preResponseAtomicCommit;
+  const gate = atomic.authoritativePostStateResolutionGate;
+  const contextField = gate.decisionContextField;
+  assert.equal(gate.gateId, "AUTHORITATIVE_PRE_RESPONSE_TRANSACTION_POST_STATE_RESOLUTION_GATE_V1");
+  assert.equal(gate.obtainedOutsideUntrustedRequestSubject, true);
+  assert.equal(gate.requestSubjectResolutionAccepted, false);
+  assert.equal(gate.additionalFieldsAllowed, false);
+  assert.equal(gate.exactMatchingRecordCount, 1);
+  assert.equal(gate.soleAuthoritativeAtomicCompletionProofForEveryBeforeResponseValidator, true);
+  assert.deepEqual(gate.recordBindingFields, [
+    "learnerPrivateScopeId",
+    "attemptId",
+    "cueId",
+    "cueRevisionId",
+    "requestId",
+    "confirmationId",
+  ]);
+
+  const validators = [
+    ["request", (subject, context) => evaluateCueRender(subject, context)],
+    ["event", (subject, context) => validateCueExposureEvent(cueEvent(subject), context)],
+  ];
+  const assertNoRender = (subject, context, label) => {
+    for (const [name, validate] of validators) {
+      let result;
+      assert.doesNotThrow(() => {
+        result = validate(subject, context);
+      }, `${label}: ${name}`);
+      assert.equal(result.accepted, false, `${label}: ${name}`);
+      assert.equal(result.mayRenderCueBytes, false, `${label}: ${name}`);
+      assert.equal(result.independentEvidenceEligible, false, `${label}: ${name}`);
+      assert.equal(result.positiveLearningEvidence, false, `${label}: ${name}`);
+    }
+  };
+
+  const validSubject = cueRenderRequest();
+  assert.equal(validSubject.confirmation.consumed, false);
+  assert.equal(validSubject.attemptResolution.canonicalAttemptState, "INDEPENDENT_ATTEMPT_OPEN");
+  assertNoRender(validSubject, {}, "pre-transaction records without authoritative receipt");
+
+  for (const untrustedField of atomic.untrustedRequestAtomicProofFields) {
+    const value = untrustedField === "commitSteps"
+      ? [...atomic.orderedSteps]
+      : untrustedField.includes("Source")
+        ? gate.resolutionSource
+        : untrustedField === "recordFailure"
+          ? false
+          : true;
+    assertNoRender(
+      cueRenderRequest({ [untrustedField]: value }),
+      preResponseRenderDecisionContext(),
+      `request-owned proof ${untrustedField}`,
+    );
+  }
+
+  for (const receipt of [undefined, null, "receipt", 0, 1, true, false, [], {}]) {
+    assertNoRender(
+      validSubject,
+      { [contextField]: receipt },
+      `malformed receipt ${String(receipt)}`,
+    );
+  }
+  assertNoRender(validSubject, null, "null decision context");
+  assertNoRender(validSubject, [], "array decision context");
+  assertNoRender(
+    validSubject,
+    {
+      [contextField]: canonicalPreResponseTransactionPostStateResolution(),
+      extraDecisionContextField: true,
+    },
+    "extra decision-context field",
+  );
+  assertNoRender(
+    cueRenderRequest({
+      [contextField]: canonicalPreResponseTransactionPostStateResolution(),
+    }),
+    preResponseRenderDecisionContext(),
+    "request-located canonical-looking receipt",
+  );
+
+  for (const field of gate.requiredFields) {
+    const receipt = canonicalPreResponseTransactionPostStateResolution();
+    delete receipt[field];
+    assertNoRender(validSubject, { [contextField]: receipt }, `receipt missing ${field}`);
+  }
+  const invalidReceipts = [
+    [canonicalPreResponseTransactionPostStateResolution({ extraField: true }), "extra field"],
+    [canonicalPreResponseTransactionPostStateResolution({ source: "CALLER" }), "wrong source"],
+    [canonicalPreResponseTransactionPostStateResolution({ matchingRecordCount: 0 }), "zero records"],
+    [canonicalPreResponseTransactionPostStateResolution({ matchingRecordCount: 2 }), "multiple records"],
+    [canonicalPreResponseTransactionPostStateResolution({ learnerPrivateScopeId: "learner-foreign" }), "wrong learner"],
+    [canonicalPreResponseTransactionPostStateResolution({ attemptId: "attempt-foreign" }), "wrong attempt"],
+    [canonicalPreResponseTransactionPostStateResolution({ cueId: "cue-foreign" }), "wrong cue"],
+    [canonicalPreResponseTransactionPostStateResolution({ cueRevisionId: "cue-revision-foreign" }), "wrong cue revision"],
+    [canonicalPreResponseTransactionPostStateResolution({ requestId: "request-foreign" }), "wrong request"],
+    [canonicalPreResponseTransactionPostStateResolution({ confirmationId: "confirmation-foreign" }), "wrong confirmation"],
+    [canonicalPreResponseTransactionPostStateResolution({ committed: false }), "not committed"],
+    [canonicalPreResponseTransactionPostStateResolution({ committedBeforeRender: false }), "not committed before render"],
+    [canonicalPreResponseTransactionPostStateResolution({ renderBarrierSatisfied: false }), "render barrier incomplete"],
+    [canonicalPreResponseTransactionPostStateResolution({ confirmationConsumed: false }), "confirmation not consumed"],
+    [canonicalPreResponseTransactionPostStateResolution({ cueExposureRecordCommitted: false }), "exposure not committed"],
+    [canonicalPreResponseTransactionPostStateResolution({ postCommitAttemptState: "INDEPENDENT_ATTEMPT_OPEN" }), "post-state not assisted"],
+    [canonicalPreResponseTransactionPostStateResolution({ postCommitIndependentEvidenceEligible: true }), "independent evidence still eligible"],
+    [canonicalPreResponseTransactionPostStateResolution({ positiveLearningEvidenceAwarded: true }), "positive evidence awarded"],
+    [canonicalPreResponseTransactionPostStateResolution({ partialCommit: true }), "partial transaction"],
+    [canonicalPreResponseTransactionPostStateResolution({ recordFailure: true }), "record failure"],
+    [canonicalPreResponseTransactionPostStateResolution({ wrongCommitOrder: true }), "wrong commit order flag"],
+    [canonicalPreResponseTransactionPostStateResolution({
+      orderedCommittedSteps: [...atomic.orderedSteps].reverse(),
+    }), "wrong committed-step order"],
+    [canonicalPreResponseTransactionPostStateResolution({ renderSubmitRaceDetected: true }), "render-submit race"],
+    [canonicalPreResponseTransactionPostStateResolution({ stale: true }), "stale"],
+    [canonicalPreResponseTransactionPostStateResolution({ replayed: true }), "replayed"],
+    [canonicalPreResponseTransactionPostStateResolution({ ambiguous: true }), "ambiguous"],
+    [canonicalPreResponseTransactionPostStateResolution({ conflicting: true }), "conflicting"],
+    [canonicalPreResponseTransactionPostStateResolution({ cancelled: true }), "cancelled"],
+    [canonicalPreResponseTransactionPostStateResolution({ inferred: true }), "inferred"],
+    [canonicalPreResponseTransactionPostStateResolution({ crossLearner: true }), "cross learner"],
+    [canonicalPreResponseTransactionPostStateResolution({ crossAttempt: true }), "cross attempt"],
+    [canonicalPreResponseTransactionPostStateResolution({ crossCue: true }), "cross cue"],
+    [canonicalPreResponseTransactionPostStateResolution({ crossCueRevision: true }), "cross cue revision"],
+    [canonicalPreResponseTransactionPostStateResolution({ crossRequest: true }), "cross request"],
+    [canonicalPreResponseTransactionPostStateResolution({ crossConfirmation: true }), "cross confirmation"],
+    [canonicalPreResponseTransactionPostStateResolution({ mismatched: true }), "mismatched"],
+    [canonicalPreResponseTransactionPostStateResolution({ clientInferred: true }), "client inferred"],
+    [canonicalPreResponseTransactionPostStateResolution({ callerInferred: true }), "caller inferred"],
+  ];
+  for (const [receipt, label] of invalidReceipts) {
+    assertNoRender(validSubject, { [contextField]: receipt }, label);
+  }
+
+  for (const [name, validate] of validators) {
+    const result = validate(validSubject, preResponseRenderDecisionContext());
+    assert.equal(result.accepted, true, name);
+    assert.equal(result.mayRenderCueBytes, true, name);
+    assert.equal(result.canonicalAttemptState, "ASSISTED", name);
+    assert.equal(result.independentEvidenceEligible, false, name);
+    assert.equal(result.positiveLearningEvidence, false, name);
+    assert.equal(result.atomicCommitCompletedBeforeRender, true, name);
+    assert.deepEqual(result.orderedSteps, [...atomic.orderedSteps, atomic.renderStep], name);
   }
 });
 
@@ -3712,7 +4004,7 @@ test("pre-response canonical attempt and confirmation records reject the closed-
   const confirmationGate = beforeGate.canonicalConfirmationResolutionGate;
   const validators = [
     evaluateCueRender,
-    (subject) => validateCueExposureEvent(cueEvent(subject)),
+    (subject, context) => validateCueExposureEvent(cueEvent(subject), context),
   ];
   const assertNoRender = (request, label) => {
     for (const validate of validators) {
@@ -3786,7 +4078,7 @@ test("pre-response canonical attempt and confirmation records reject the closed-
     );
   }
   for (const validate of validators) {
-    const result = validate(cueRenderRequest());
+    const result = validate(cueRenderRequest(), preResponseRenderDecisionContext());
     assert.equal(result.accepted, true, validate.name);
     assert.equal(result.mayRenderCueBytes, true, validate.name);
   }
@@ -5470,6 +5762,56 @@ test("base attempt requires exact false cross-scope replay and cancellation stat
   }
 });
 
+test("training candidate container validation is null-safe and precedes every field read", () => {
+  const gate = contract.personalAnnotation.trainingCandidateContainerGate;
+  assert.equal(gate.evaluatedBeforeAnyCandidateFieldRead, true);
+  assert.equal(gate.requiredContainerType, "NON_NULL_NON_ARRAY_PLAIN_OBJECT_RECORD");
+  assert.equal(gate.candidateEligibleOnFailure, false);
+  assert.equal(gate.currentlyAuthorizedOnFailure, false);
+  assert.equal(gate.disclosureOrPromotionAllowedOnFailure, false);
+  assert.equal(gate.throwAllowedOnFailure, false);
+
+  for (const candidate of [
+    null,
+    undefined,
+    "candidate",
+    0,
+    1,
+    true,
+    false,
+    [],
+    [signalCandidate()],
+    new Date("2026-08-10T00:00:00.000Z"),
+    new Map(),
+  ]) {
+    let result;
+    assert.doesNotThrow(() => {
+      result = evaluateTrainingCandidate(candidate, hypotheticalReceiptValidTrainingDecisionContext());
+    }, String(candidate));
+    assert.deepEqual(result, {
+      candidateEligible: false,
+      hypotheticalReceiptsValid: false,
+      currentlyAuthorized: false,
+      discloseOrPromote: false,
+      reason: "TRAINING_CANDIDATE_CONTAINER_INVALID",
+    });
+  }
+
+  const valid = evaluateTrainingCandidate(
+    signalCandidate(),
+    hypotheticalReceiptValidTrainingDecisionContext(),
+  );
+  assert.equal(valid.candidateEligible, true);
+  assert.equal(valid.currentlyAuthorized, false);
+  assert.equal(evaluateTrainingCandidate({
+    originKind: "PERSONAL_ANNOTATION_RAW_BODY",
+  }).candidateEligible, false);
+  assert.equal(evaluateTrainingCandidate(
+    signalCandidate({ reconstructiveDerivativeOfRawBody: true }),
+    hypotheticalReceiptValidTrainingDecisionContext(),
+  ).candidateEligible, false);
+});
+
 test("raw annotation bodies reject opt-in, O5, relabel and direct-promotion bypasses", () => {
   const overrides = contract.personalAnnotation.possibleOverrideAuthorities;
   assert.deepEqual(overrides, {
@@ -6332,7 +6674,7 @@ test("pre-response confirmation rejects missing, stale, replayed, mismatched and
   for (const field of contract.cueExposure.beforeResponseGate.confirmationBindingFields) {
     const result = evaluateCueRender(cueRenderRequest({
       confirmation: cueConfirmation({ [field]: `wrong-${field}` }),
-    }));
+    }), preResponseRenderDecisionContext());
     assert.equal(result.accepted, false, field);
     assert.equal(result.reason, "CONFIRMATION_RESOLUTION_INVALID", field);
   }
@@ -6340,7 +6682,7 @@ test("pre-response confirmation rejects missing, stale, replayed, mismatched and
 
 test("pre-response confirmation binds concrete canonical cue and request identifiers", () => {
   const gate = contract.cueExposure.beforeResponseGate.concreteConfirmationIdentifierGate;
-  assert.deepEqual(gate.fields, ["cueId", "cueRevisionId", "requestId"]);
+  assert.deepEqual(gate.fields, ["cueId", "cueRevisionId", "requestId", "confirmationId"]);
   assert.deepEqual(gate.schema, {
     type: "string",
     trimmed: true,
@@ -6372,6 +6714,113 @@ test("pre-response confirmation binds concrete canonical cue and request identif
       }
     }
   }
+});
+
+test("pre-response confirmation binding synchronizes six fields and rejects isolated identity drift", () => {
+  const beforeGate = contract.cueExposure.beforeResponseGate;
+  const confirmationGate = beforeGate.canonicalConfirmationResolutionGate;
+  const concreteGate = beforeGate.concreteConfirmationIdentifierGate;
+  const receiptGate = contract.cueExposure.preResponseAtomicCommit
+    .authoritativePostStateResolutionGate;
+  const expectedBindingFields = [
+    "attemptId",
+    "learnerPrivateScopeId",
+    "cueId",
+    "cueRevisionId",
+    "requestId",
+    "confirmationId",
+  ];
+  assert.deepEqual(beforeGate.confirmationBindingFields, expectedBindingFields);
+  assert.deepEqual(
+    beforeGate.confirmationBindingFields,
+    confirmationGate.recordBindingFields,
+  );
+  for (const field of concreteGate.fields) {
+    assert.equal(beforeGate.confirmationBindingFields.includes(field), true, field);
+  }
+
+  const toEvent = (subject) => {
+    const event = cueEvent(subject);
+    for (const field of expectedBindingFields) {
+      if (!Object.hasOwn(subject, field)) delete event[field];
+    }
+    return event;
+  };
+  const validators = [
+    ["request", (subject, context) => evaluateCueRender(subject, context)],
+    ["event", (subject, context) => validateCueExposureEvent(toEvent(subject), context)],
+  ];
+  const assertNoRender = (subject, context, label) => {
+    for (const [name, validate] of validators) {
+      let result;
+      assert.doesNotThrow(() => {
+        result = validate(subject, context);
+      }, `${label}: ${name}`);
+      assert.equal(result.accepted, false, `${label}: ${name}`);
+      assert.equal(result.mayRenderCueBytes, false, `${label}: ${name}`);
+      assert.equal(result.independentEvidenceEligible, false, `${label}: ${name}`);
+      assert.equal(result.positiveLearningEvidence, false, `${label}: ${name}`);
+      assert.equal(result.orderedSteps, undefined, `${label}: ${name}`);
+    }
+  };
+
+  const validSubject = cueRenderRequest();
+  const validContext = preResponseRenderDecisionContext();
+  for (const [name, validate] of validators) {
+    let result;
+    assert.doesNotThrow(() => {
+      result = validate(validSubject, validContext);
+    }, name);
+    assert.equal(result.accepted, true, name);
+    assert.equal(result.mayRenderCueBytes, true, name);
+    assert.equal(result.independentEvidenceEligible, false, name);
+    assert.equal(result.positiveLearningEvidence, false, name);
+  }
+
+  const nestedMismatch = cueRenderRequest();
+  nestedMismatch.confirmation.confirmationId = "confirmation-nested-other";
+  assertNoRender(nestedMismatch, validContext, "nested confirmation mismatch");
+
+  assertNoRender(
+    cueRenderRequest({ confirmationId: "confirmation-outer-other" }),
+    validContext,
+    "outer confirmation mismatch",
+  );
+
+  assertNoRender(
+    validSubject,
+    {
+      [receiptGate.decisionContextField]: canonicalPreResponseTransactionPostStateResolution({
+        confirmationId: "confirmation-receipt-other",
+      }),
+    },
+    "receipt confirmation mismatch",
+  );
+
+  const missingNested = cueRenderRequest();
+  delete missingNested.confirmation.confirmationId;
+  const missingOuter = cueRenderRequest();
+  delete missingOuter.confirmationId;
+  const malformedNested = cueRenderRequest();
+  malformedNested.confirmation.confirmationId = "?";
+  const malformedOuter = cueRenderRequest({ confirmationId: "?" });
+  for (const [subject, label] of [
+    [missingNested, "missing nested confirmation"],
+    [missingOuter, "missing outer confirmation"],
+    [malformedNested, "malformed nested confirmation"],
+    [malformedOuter, "malformed outer confirmation"],
+  ]) {
+    assertNoRender(subject, validContext, label);
+  }
+  assertNoRender(
+    validSubject,
+    {
+      [receiptGate.decisionContextField]: canonicalPreResponseTransactionPostStateResolution({
+        confirmationId: "?",
+      }),
+    },
+    "malformed receipt confirmation",
+  );
 });
 
 test("pre-response confirmation requires cancelled to be exact primitive false across both validators", () => {
@@ -6432,7 +6881,7 @@ test("pre-response rejects confirmations explicitly marked replayed across both 
 });
 
 test("valid confirmation commits exact assisted transition before render and races fail closed", () => {
-  const valid = evaluateCueRender(cueRenderRequest());
+  const valid = evaluateCueRender(cueRenderRequest(), preResponseRenderDecisionContext());
   assert.deepEqual(valid, {
     accepted: true,
     mayRenderCueBytes: true,
@@ -6773,7 +7222,10 @@ test("submitted-attempt resolution is one closed authoritative record across eve
     assert.equal(result.mayRenderCueBytes, true, assistanceClassification);
     assert.equal(result.positiveLearningEvidence, false, assistanceClassification);
   }
-  assert.equal(evaluateCueRender(cueRenderRequest()).accepted, true);
+  assert.equal(evaluateCueRender(
+    cueRenderRequest(),
+    preResponseRenderDecisionContext(),
+  ).accepted, true);
   assert.equal(evaluateCueRender(reviewOnlyRequest()).accepted, true);
   assert.equal(validateCueExposureEvent(cueEvent(reviewOnlyRequest())).accepted, true);
 });
@@ -6883,7 +7335,7 @@ test("after-response exposure events reject explicit record failures before timi
   const gate = contract.cueExposure.recordFailureGate;
   assert.equal(gate.gateId, "EXACT_RENDER_RECORD_FAILURE_GATE_V1");
   assert.equal(gate.sharedAcrossEveryRenderCapableValidator, true);
-  assert.equal(gate.evaluatedBeforeTimingRouting, true);
+  assert.equal(gate.evaluatedBeforeApplicableTimingRouting, true);
   assert.equal(gate.field, "recordFailure");
   assert.equal(gate.requiredPrimitiveType, "boolean");
   assert.equal(gate.requiredExactValue, false);

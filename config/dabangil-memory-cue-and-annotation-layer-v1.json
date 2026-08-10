@@ -1,6 +1,6 @@
 {
   "schema": "dabangil_memory_cue_and_annotation_layer_v1",
-  "version": "1.0.22",
+  "version": "1.0.24",
   "dated": "2026-08-06 KST",
   "status": "proposed_non_authoritative",
   "repository": "chachathecat/inverge",
@@ -747,6 +747,15 @@
       "SEPARATE_NON_RECONSTRUCTIVE_SIGNAL",
       "SEPARATELY_AUTHORED_RIGHTS_REVIEWED_CLEARED_CONTENT_BANK_OBJECT"
     ],
+    "trainingCandidateContainerGate": {
+      "evaluatedBeforeAnyCandidateFieldRead": true,
+      "requiredContainerType": "NON_NULL_NON_ARRAY_PLAIN_OBJECT_RECORD",
+      "candidateEligibleOnFailure": false,
+      "currentlyAuthorizedOnFailure": false,
+      "disclosureOrPromotionAllowedOnFailure": false,
+      "throwAllowedOnFailure": false,
+      "nullUndefinedPrimitiveArrayMalformedOrNonRecordBehavior": "FAIL_CLOSED_CANDIDATE_INELIGIBLE_NO_DISCLOSURE_NO_THROW"
+    },
     "futureTrainingCandidateRequirements": {
       "SEPARATE_NON_RECONSTRUCTIVE_SIGNAL": [
         "SEPARATE_OBJECT_IDENTITY",
@@ -1800,8 +1809,7 @@
     },
     "recordFailureGate": {
       "gateId": "EXACT_RENDER_RECORD_FAILURE_GATE_V1",
-      "appliesToEveryRenderCapableExposureEventTiming": [
-        "BEFORE_RESPONSE",
+      "appliesToRenderCapableExposureEventTimings": [
         "AFTER_RESPONSE",
         "REVIEW_ONLY"
       ],
@@ -1813,12 +1821,12 @@
       "field": "recordFailure",
       "requiredPrimitiveType": "boolean",
       "requiredExactValue": false,
-      "evaluatedBeforeTimingRouting": true,
+      "evaluatedBeforeApplicableTimingRouting": true,
+      "beforeResponseFailureStateSourceRef": "cueExposure.preResponseAtomicCommit.authoritativePostStateResolutionGate",
       "missingUndefinedNullTrueStringNumberObjectArrayOrAmbiguousBehavior": "FAIL_CLOSED_NO_CUE_BYTES"
     },
     "canonicalRecordCommittedGate": {
-      "appliesToEveryRenderCapableExposureEventTiming": [
-        "BEFORE_RESPONSE",
+      "appliesToRenderCapableExposureEventTimings": [
         "AFTER_RESPONSE",
         "REVIEW_ONLY"
       ],
@@ -1832,6 +1840,7 @@
       "requiredValue": true,
       "truthinessAllowed": false,
       "callerInferredCommitStateAllowed": false,
+      "beforeResponseCommitProofSourceRef": "cueExposure.preResponseAtomicCommit.authoritativePostStateResolutionGate",
       "missingUndefinedNullFalseStringNumberObjectArrayOrAmbiguousBehavior": "FAIL_CLOSED_NO_CUE_BYTES"
     },
     "separateLedgerAllowed": false,
@@ -2241,6 +2250,7 @@
           "cueId",
           "cueRevisionId",
           "requestId",
+          "confirmationId",
           "serverSide",
           "authoritative",
           "independentlyResolved",
@@ -2268,7 +2278,8 @@
           "learnerPrivateScopeId",
           "cueId",
           "cueRevisionId",
-          "requestId"
+          "requestId",
+          "confirmationId"
         ],
         "identifierSchema": {
           "type": "string",
@@ -2304,7 +2315,8 @@
           "learnerPrivateScopeId",
           "cueId",
           "cueRevisionId",
-          "requestId"
+          "requestId",
+          "confirmationId"
         ],
         "clientBooleanPreselectionSourceLabelOrOuterStateSufficient": false,
         "missingMalformedWrongSourceExtraFieldZeroMultipleUnsafeUnresolvedOrUnboundBehavior": "FAIL_CLOSED_NO_CUE_BYTES"
@@ -2314,13 +2326,15 @@
         "learnerPrivateScopeId",
         "cueId",
         "cueRevisionId",
-        "requestId"
+        "requestId",
+        "confirmationId"
       ],
       "concreteConfirmationIdentifierGate": {
         "fields": [
           "cueId",
           "cueRevisionId",
-          "requestId"
+          "requestId",
+          "confirmationId"
         ],
         "schema": {
           "type": "string",
@@ -2362,6 +2376,137 @@
         "ATTEMPT_STATE_TRANSITIONED_TO_ASSISTED",
         "INDEPENDENT_EVIDENCE_INVALIDATED"
       ],
+      "authoritativePostStateResolutionGate": {
+        "gateId": "AUTHORITATIVE_PRE_RESPONSE_TRANSACTION_POST_STATE_RESOLUTION_GATE_V1",
+        "decisionContextField": "preResponseTransactionPostStateResolution",
+        "obtainedOutsideUntrustedRequestSubject": true,
+        "decisionContextAdditionalFieldsAllowed": false,
+        "requestSubjectResolutionAccepted": false,
+        "resolutionSource": "CANONICAL_SERVER_PRE_RESPONSE_TRANSACTION_POST_STATE_RESOLVER",
+        "additionalFieldsAllowed": false,
+        "requiredFields": [
+          "source",
+          "transactionId",
+          "matchingRecordCount",
+          "serverSide",
+          "authoritative",
+          "independentlyResolved",
+          "known",
+          "resolved",
+          "committed",
+          "committedBeforeRender",
+          "renderBarrierSatisfied",
+          "confirmationConsumed",
+          "cueExposureRecordCommitted",
+          "postCommitAttemptState",
+          "postCommitIndependentEvidenceEligible",
+          "positiveLearningEvidenceAwarded",
+          "learnerPrivateScopeId",
+          "attemptId",
+          "cueId",
+          "cueRevisionId",
+          "requestId",
+          "confirmationId",
+          "orderedCommittedSteps",
+          "partialCommit",
+          "recordFailure",
+          "wrongCommitOrder",
+          "renderSubmitRaceDetected",
+          "ambiguous",
+          "conflicting",
+          "crossLearner",
+          "crossAttempt",
+          "crossCue",
+          "crossCueRevision",
+          "crossRequest",
+          "crossConfirmation",
+          "mismatched",
+          "stale",
+          "replayed",
+          "cancelled",
+          "inferred",
+          "clientInferred",
+          "callerInferred"
+        ],
+        "identifierFields": [
+          "transactionId",
+          "learnerPrivateScopeId",
+          "attemptId",
+          "cueId",
+          "cueRevisionId",
+          "requestId",
+          "confirmationId"
+        ],
+        "identifierSchema": {
+          "type": "string",
+          "minLength": 3,
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{2,127}$"
+        },
+        "exactMatchingRecordCount": 1,
+        "requiredExactPrimitiveBooleanStates": {
+          "serverSide": true,
+          "authoritative": true,
+          "independentlyResolved": true,
+          "known": true,
+          "resolved": true,
+          "committed": true,
+          "committedBeforeRender": true,
+          "renderBarrierSatisfied": true,
+          "confirmationConsumed": true,
+          "cueExposureRecordCommitted": true,
+          "postCommitIndependentEvidenceEligible": false,
+          "positiveLearningEvidenceAwarded": false,
+          "partialCommit": false,
+          "recordFailure": false,
+          "wrongCommitOrder": false,
+          "renderSubmitRaceDetected": false,
+          "ambiguous": false,
+          "conflicting": false,
+          "crossLearner": false,
+          "crossAttempt": false,
+          "crossCue": false,
+          "crossCueRevision": false,
+          "crossRequest": false,
+          "crossConfirmation": false,
+          "mismatched": false,
+          "stale": false,
+          "replayed": false,
+          "cancelled": false,
+          "inferred": false,
+          "clientInferred": false,
+          "callerInferred": false
+        },
+        "requiredPostCommitAttemptState": "ASSISTED",
+        "requiredOrderedCommittedStepsRef": "cueExposure.preResponseAtomicCommit.orderedSteps",
+        "recordBindingFields": [
+          "learnerPrivateScopeId",
+          "attemptId",
+          "cueId",
+          "cueRevisionId",
+          "requestId",
+          "confirmationId"
+        ],
+        "soleAuthoritativeAtomicCompletionProofForEveryBeforeResponseValidator": true,
+        "missingNullPrimitiveArrayMalformedExtraFieldWrongSourceZeroMultipleUnresolvedUnboundPartialWrongOrderUnsafeStaleReplayAmbiguousConflictCancelledOrInferredBehavior": "ROLLBACK_FAIL_CLOSED_NO_CUE_BYTES_NO_EVIDENCE_NO_THROW"
+      },
+      "untrustedRequestAtomicProofFields": [
+        "commitSteps",
+        "canonicalRecordCommitted",
+        "canonicalExposureRecordCommitted",
+        "recordFailure",
+        "atomicCommitCompletedBeforeRender",
+        "transactionCommitted",
+        "transactionCompleted",
+        "commitSucceeded",
+        "atomicityConfirmed",
+        "outerSuccess",
+        "transactionResolutionSource",
+        "transactionStateSource",
+        "canonicalTransactionSource",
+        "postStateResolved",
+        "postStateSource"
+      ],
+      "untrustedRequestAtomicProofFieldBehavior": "REJECT_FAIL_CLOSED_NO_CUE_BYTES",
       "renderBarrier": "ALL_ORDERED_STEPS_COMMITTED",
       "renderStep": "CUE_BYTES_RENDERED",
       "postCommitAttemptState": "ASSISTED",
