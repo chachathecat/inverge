@@ -3,6 +3,7 @@ document_title: "답안길 감정평가사 2차 World-Class Vertical Execution S
 document_subtitle: "정확한 감점 위치·교정·독립 전이·재발 검증·하루 관제"
 document_role: "V13 subordinate execution standard; not a new master plan"
 status: "proposed_non_authoritative_source_contract"
+version: "1.0.1"
 dated: "2026-08-10 KST"
 repository: "chachathecat/inverge"
 active_master_plan: "docs/strategy/dabangil-professional-exam-reasoning-os-final-master-plan-v13-2026-08-06.md"
@@ -25,22 +26,21 @@ production_authorization: "none"
 > 다시 나타나는지 확인한 뒤, 그 증거로 오늘의 공부를 다시 지휘하는
 > 감정평가사 2차 합격관제 OS다.**
 
-이 문서는 V13을 교체하지 않는다. V13의 기술적 두뇌를 감정평가사 2차의
-learner-facing product로 번역하는 실행 표준이다.
+이 문서는 V13을 교체하지 않는다. V13의 Trust, evidence, source/rights,
+transfer, Full-Day, privacy 원칙을 감정평가사 2차 learner-facing product로
+번역하는 subordinate execution standard다.
+
+이 문서는 어떤 runtime, schema, provider, real content, payment, external
+learner 또는 Production 작업도 승인하지 않는다.
+
+---
 
 ## 1. 세계급의 정의
 
-세계급은 다음이 아니다.
+세계급은 기능 수, AI 대화량, 생성 답안 길이, dashboard, streak, 단순
+결제자 수 또는 guided practice score로 판정하지 않는다.
 
-- 기능 수
-- AI 대화량
-- 생성 답안 길이
-- 화려한 dashboard
-- streak
-- 단순 결제자 수
-- guided practice score
-
-세계급 판정은 다음 아홉 축으로 분리한다.
+세계급 판정은 다음 아홉 축을 분리한다.
 
 ```text
 Trust
@@ -53,8 +53,6 @@ Continuity
 Daily Command
 Market Proof
 ```
-
-### 1.1 준비상태
 
 ```ts
 type WorldClassVerticalReadinessV1 = {
@@ -77,11 +75,14 @@ type WorldClassVerticalReadinessV1 = {
 };
 ```
 
-어떤 boolean도 다른 boolean을 대신하지 않는다.
+한 준비상태가 다른 준비상태를 자동으로 대신하지 않는다. 문서와 CI만으로
+runtime, subject quality, efficacy, price 또는 PMF를 주장하지 않는다.
+
+---
 
 ## 2. 최초 핵심 사용자
 
-첫 product cohort:
+첫 cohort는 다음에 집중한다.
 
 - 감정평가사 2차 유예생·재시생
 - 주 2~3회 이상 답안을 쓰는 learner
@@ -89,14 +90,13 @@ type WorldClassVerticalReadinessV1 = {
 - 실무 계산, 법규 포섭, 이론 비교·평가의 반복 감점이 있는 learner
 - 오답노트와 D+1 복습이 끊기는 learner
 
-초기 비핵심:
+초기 비핵심은 기본강의 미완료자, 답안을 거의 쓰지 않는 learner,
+공식 점수·모범답안만 원하는 learner, 자유형 범용 AI chat를 원하는
+learner다.
 
-- 기본강의도 끝나지 않은 learner
-- 답안을 거의 쓰지 않는 learner
-- 공식 점수·모범답안만 원하는 learner
-- 자유형 범용 AI chat를 원하는 learner
+---
 
-## 3. 한 줄 vertical
+## 3. 하나의 완전한 vertical
 
 ```text
 Capture
@@ -112,13 +112,13 @@ Capture
 → Today / Full-Day Replan
 ```
 
-어느 단계도 뒤 단계를 추론으로 대체하지 않는다.
+어느 단계도 뒤 단계를 추론·alias·outer claim으로 대체하지 않는다.
+
+---
 
 ## 4. System 1 — Capture & Answer Evidence Anchor
 
-### 4.1 목적
-
-총평이 아니라 exact location에 diagnosis를 붙인다.
+총평이 아니라 정확한 답안 위치에 diagnosis를 붙인다.
 
 ```ts
 type AnswerEvidenceAnchorKindV1 =
@@ -146,16 +146,16 @@ type AnswerEvidenceAnchorV1 = {
 };
 ```
 
-### 4.2 규칙
+불변식:
 
 - immutable source asset과 editable OCR/problem/answer revision을 분리한다.
-- answer/source revision 변경 시 anchor는 stale이다.
-- `missing_required_slot`은 검증된 requirement/rubric에서 누락된 slot만 가리킨다.
-- 위치를 확정할 수 없으면 uncertain이며 usable biggest gap을 만들지 않는다.
+- answer/source revision이 바뀌면 anchor와 파생 diagnosis는 stale이다.
+- `missing_required_slot`은 검증된 requirement/rubric의 누락만 가리킨다.
+- 위치를 확정할 수 없으면 `uncertain`이며 usable biggest gap을 만들지 않는다.
 - learner-private locator/body는 vault-local이다.
 - raw excerpt를 analytics, logs, shared graph, cross-user cache로 보내지 않는다.
 
-### 4.3 UX
+Learner UX:
 
 ```text
 답안 위치
@@ -168,9 +168,9 @@ type AnswerEvidenceAnchorV1 = {
 해당 문단을 8분 안에 다시 쓰세요.
 ```
 
-## 5. System 2 — Subject-Specific Diagnosis
+---
 
-### 5.1 공통
+## 5. System 2 — Subject-Specific Diagnosis
 
 ```ts
 type GapCauseCodeV1 =
@@ -207,7 +207,8 @@ type GapFindingV3 = {
 };
 ```
 
-biggest gap은 LLM의 자유형 선호가 아니다. versioned policy가 다음을 사용한다.
+biggest gap은 LLM의 자유형 선호가 아니다. Versioned policy가 다음을
+bounded input으로 사용한다.
 
 ```text
 exam impact
@@ -219,9 +220,7 @@ exam impact
 ÷ estimated repair minutes
 ```
 
-### 5.2 실무
-
-진단 해상도:
+### 5.1 실무
 
 ```text
 방법 선택
@@ -235,9 +234,11 @@ exam impact
 → 답안지 전사
 ```
 
-숫자·단위·부호·반올림·역산은 deterministic validator가 AI보다 우선한다.
+숫자·단위·부호·반올림·역산은 deterministic validator가 AI보다
+우선한다. AI와 deterministic result가 충돌하면 숫자 결과를 release하지
+않는다.
 
-### 5.3 이론
+### 5.2 이론
 
 ```text
 요구 동사
@@ -250,9 +251,10 @@ exam impact
 → 결론·압축
 ```
 
-단일 LLM 자유형 점수를 truth로 사용하지 않는다.
+단일 LLM 자유형 숫자점수를 truth로 사용하지 않는다. Dimension evidence,
+independent verifier, disagreement state를 보존한다.
 
-### 5.4 법규
+### 5.3 법규
 
 ```text
 쟁점
@@ -264,8 +266,10 @@ exam impact
 → 결론·구제
 ```
 
-source, effective date, controlling rule, conflict가 닫히지 않으면
-verified conclusion 또는 usable reference body를 release하지 않는다.
+source, effective date, controlling rule 또는 conflict가 닫히지 않으면
+verified conclusion이나 usable reference body를 release하지 않는다.
+
+---
 
 ## 6. System 3 — Server-Enforced Tutor State Machine
 
@@ -289,8 +293,6 @@ type VerticalTutorStateV1 =
   | "blocked"
   | "stale";
 ```
-
-정상 흐름:
 
 ```text
 intake
@@ -326,7 +328,7 @@ neutral reprompt
 - answer leak 수준의 hint는 실제 높은 assistance로 기록한다.
 - full solution 뒤에는 closed-book reconstruction을 요구한다.
 - full solution 뒤 same-item success는 transfer가 아니다.
-- client/model은 state, qualification, mastery를 제출하지 못한다.
+- client/model은 tutor state, qualification, mastery를 제출하지 못한다.
 
 ### 6.2 Learning / Measurement Lane
 
@@ -334,7 +336,7 @@ Learning Lane:
 
 - scaffold, explanation, contrast, repair 허용
 - same item 사용 가능
-- objective: 이해와 교정
+- objective는 이해와 교정
 
 Measurement Lane:
 
@@ -342,9 +344,12 @@ Measurement Lane:
 - pre-presentation unseen snapshot
 - verified item family
 - server timer
-- objective: 독립 수행과 transfer
+- objective는 독립 수행과 transfer
 
-route, cache, prefetch, event, eligibility를 분리한다.
+route, cache, prefetch, event, eligibility를 물리적으로 분리한다. UI label만
+바꾸는 가짜 lane 분리는 금지한다.
+
+---
 
 ## 7. System 4 — Gap Closure Case
 
@@ -381,8 +386,6 @@ type GapClosureCaseV1 = {
 };
 ```
 
-상태 규칙:
-
 | 사건 | 최대 상태 |
 |---|---|
 | gap 탐지 | detected |
@@ -390,12 +393,14 @@ type GapClosureCaseV1 = {
 | D+1 무도움 성공 | d1_reproduced |
 | D+7 verified non-same-surface 성공 | d7_transfer_confirmed |
 | timed full answer에서 재발 없음 | timed_recurrence_clear |
-| 후속 qualifying failure | recurred |
+| 후속 qualifying independent failure | recurred |
 | source/validator conflict | blocked |
 | basis 변경 | stale |
 
-`감점 원인이 제거됨` 표현은 policy-required evidence가 모두 있을 때만 허용한다.
-인과효과를 주장하려면 별도 controlled efficacy study가 필요하다.
+`감점 원인이 제거됨` 표현은 policy-required evidence가 모두 있을 때만
+허용한다. 인과효과 주장은 별도 controlled efficacy study가 필요하다.
+
+---
 
 ## 8. System 5 — Verified Transfer Foundry
 
@@ -429,22 +434,24 @@ type VariantQualificationV1 = {
 };
 ```
 
-D+7 자격:
+D+7 자격은 다음을 모두 요구한다.
 
-- rights/source/version current
+- current rights/source/version
 - exact target skill
 - non-same-surface item family
 - answer/rubric/validator
 - pre-presentation unseen
-- hidden solution
+- solution hidden
 - independent attempt
 - replay/contamination 0
 
-generated item은 기본 learning-only/unverified다.
+generated item은 기본 `learning_only/unverified`다.
+
+---
 
 ## 9. System 6 — Personal Recurring Deduction Projection
 
-canonical MasteryState는 하나만 유지한다.
+Canonical MasteryState는 하나만 유지한다.
 
 ```ts
 type RecurringDeductionStatusV1 =
@@ -478,11 +485,13 @@ type RecurringDeductionSignatureV1 = {
 ```
 
 - 한 failure를 관련 concept 전체에 복제하지 않는다.
-- 같은 attempt 파생 gap은 한 번만 기여한다.
-- 서로 다른 eligible item family가 없으면 repeating으로 승격하지 않는다.
-- assisted/same-surface/unverified는 recurrence 분자에 넣지 않는다.
+- 같은 attempt의 파생 gap은 한 번만 기여한다.
+- 서로 다른 eligible item family가 없으면 `repeating`으로 승격하지 않는다.
+- assisted, same-surface, unverified attempt는 recurrence 분자에 넣지 않는다.
 - counter-evidence를 보존한다.
-- raw body를 projection 또는 analytics에 넣지 않는다.
+- raw body를 projection, graph label, analytics에 넣지 않는다.
+
+---
 
 ## 10. System 7 — Personal Study Ledger
 
@@ -514,13 +523,15 @@ immutable source
 
 정당한 switching cost는 데이터 감금이 아니라 accumulated learning lineage다.
 
+---
+
 ## 11. System 8 — Evidence-Driven Daily Command
 
 ```ts
 type DailyCommandDecisionV1 = {
   learnerScopeRef: string;
   studyDateKst: string;
-  availableMinutes: number;
+  availableMinutes: number; // trusted-server integer, 30..720
   evidenceThroughRef: string;
   coreOutcomeRefs: string[]; // 0..3
   executionBlockRefs: string[]; // 0..N
@@ -542,20 +553,24 @@ type DailyCommandDecisionV1 = {
 - 실무·이론·법규 시험 영향
 - 건강·피로·결석·밀림
 
-규칙:
+불변식:
 
-- CoreOutcome 0..3
-- ExecutionBlock 0..N, available minutes 내
-- due review는 item count보다 minute budget
-- closure-confirmed gap priority down
-- recurrence gap priority up
-- 무엇을 defer/shorten/drop했는지 설명
-- engagement/streak/time-in-app는 priority input이 아님
-- block completion은 mastery/closure 변화 없음
+- `availableMinutes`는 trusted server가 **integer 30..720**으로 검증한다.
+- 30 미만, 720 초과, non-integer, missing, malformed 값은 plan을 만들지
+  않고 `REJECT_NO_PLAN`한다.
+- CoreOutcome은 0..3이다.
+- ExecutionBlock은 validated available minutes 안의 0..N이다.
+- due review는 item count보다 minute budget을 사용한다.
+- closure-confirmed gap은 priority가 내려가고 recurrence gap은 올라간다.
+- defer/shorten/drop 이유를 설명한다.
+- engagement, streak, time-in-app는 priority input이 아니다.
+- block completion은 mastery/closure를 바꾸지 않는다.
+
+---
 
 ## 12. System 9 — Trust, Abstention, Escalation
 
-### 12.1 역할
+역할:
 
 - deterministic validator: 계산·단위·부호·반올림
 - source registry: 법령·기준·공식자료·effective version
@@ -564,7 +579,7 @@ type DailyCommandDecisionV1 = {
 - release resolver: candidate, critic, conflict, final gate
 - human: 별도 승인된 benchmark/escalation
 
-### 12.2 상태
+Learner-facing 상태:
 
 ```text
 verified
@@ -577,7 +592,7 @@ stale
 blocked
 ```
 
-중대한 오류율만 낮추려고 모든 결과를 block하는 것도 실패다. 함께 본다.
+품질은 다음을 함께 본다.
 
 ```text
 severe error among released
@@ -586,15 +601,11 @@ severe error among released
 + resolution latency
 ```
 
-### 12.3 인간 escalation
+초기 human marketplace는 만들지 않는다. Named expert blind benchmark,
+exact owner-authorized quality-review lane, future academy instructor approval만
+별도 gate로 허용한다.
 
-초기 marketplace를 만들지 않는다.
-
-허용 후보:
-
-- named expert blind benchmark
-- exact owner-authorized quality review lane
-- future academy instructor approval
+---
 
 ## 13. Golden 3 — 세 개의 완전한 vertical
 
@@ -614,8 +625,8 @@ severe error among released
 완료 evidence:
 
 - supported calculation type
-- deterministic gold 100%
-- unit/sign/rounding conflict 0
+- deterministic Gold 100%
+- unit/sign/rounding conflict release 0
 - same-surface contamination 0
 
 ### 13.2 이론
@@ -634,7 +645,7 @@ severe error among released
 
 - rubric dimensions
 - independent second review
-- unsupported assertion release 0
+- unsupported assertion verified release 0
 - exact score보다 dimension evidence 우선
 
 ### 13.3 법규
@@ -655,6 +666,8 @@ severe error among released
 - conflict/unknown fail-closed 100%
 - unsupported verified release 0
 
+---
+
 ## 14. Synthetic Build Lane / Live Activation Lane
 
 ### 14.1 Synthetic Build Lane
@@ -674,7 +687,7 @@ severe error among released
 금지:
 
 - real learner body
-- real private storage
+- live private storage
 - live provider
 - Supabase mutation
 - Preview activation
@@ -683,15 +696,20 @@ severe error among released
 
 ### 14.2 Live Activation Lane
 
-선행:
+Live activation은 다음을 모두 요구한다.
 
-- current O3A exact approval
-- S236P terminal disposition 또는 explicit replacement decision
+- current unexpired O3A exact approval
+- **completed exact S236P acceptance**, 즉 current evidence에서
+  `acceptanceCompleted=true` 및 `terminalPass=true`
 - CPF/privacy/RLS conditions
-- Owner activation approval
+- exact Owner activation approval
 - exact runtime evidence
 
-분리를 roadmapping할 때 안전 gate를 우회하지 않는다.
+S236P의 `blocked`, failed, consumed, terminal disposition 또는 generic
+replacement proposal은 acceptance가 아니며 live activation의 선행조건을
+충족하지 않는다. 이것은 AGENTS.md의 S236A dependency를 약화하지 않는다.
+
+---
 
 ## 15. Dependency-Ordered Implementation Slices
 
@@ -705,13 +723,14 @@ WCV-5 Personal Study Ledger
 WCV-6 Recurring Deduction Projection
 WCV-7 Today / Full-Day Daily Command
 WCV-8 Owner-Private Integrated Acceptance
-WCV-9 External Trust and Paid Canary
-WCV-10 Golden 9 and Staged Expansion
+WCV-9 External Trust and Commercial O4 Gate
+WCV-10 External Paid Canary
+WCV-11 Golden 9 and Staged Expansion
 ```
 
 ### WCV-0
 
-- 본 문서 세트
+- 본 source package
 - no runtime
 - no active pointer
 - no roadmap state fabrication
@@ -719,8 +738,8 @@ WCV-10 Golden 9 and Staged Expansion
 ### WCV-1
 
 - 실무·이론·법규 각 1개 완전 story
-- synthetic fixture
-- source/rights placeholders are closed and explicit
+- author-created synthetic fixture
+- closed source/rights placeholder
 - no real content
 
 ### WCV-2
@@ -736,7 +755,7 @@ WCV-10 Golden 9 and Staged Expansion
 - top-1 policy
 - counter-evidence
 - one repair action
-- same-session verification
+- same-session successful-outcome verification
 - subject fail-closed
 
 ### WCV-4
@@ -763,6 +782,7 @@ WCV-10 Golden 9 and Staged Expansion
 
 ### WCV-7
 
+- availableMinutes integer 30..720
 - CoreOutcome≤3
 - ExecutionBlock 0..N
 - evidence reasons
@@ -770,30 +790,70 @@ WCV-10 Golden 9 and Staged Expansion
 
 ### WCV-8
 
-- authenticated owner
+- authenticated Owner-private only
 - three-subject end-to-end
 - exact deployment/head
 - accessibility and friction
 - raw leak 0
 
-### WCV-9
+Owner dogfood는 external usability, price, payment, refund, support 또는
+capacity를 검증하지 않는다.
+
+### WCV-9 — External Trust and Commercial O4 Gate
+
+Paid canary 전에 별도의 exact external-commercial gate를 완료한다.
+
+필수:
 
 - external expert top-1 review
-- Wave A 3~5
-- exact offer
+- canonical external-commercial dependency path audit
+- exact price/offer/refund/capacity/support manifest
+- separately approved exact external-commercial O4 packet
+- current commercial-readiness evidence
+- current Production acceptance evidence
+
+현재 canonical path는 다음 순서를 보존한다.
+
+```text
+S241A
+→ O3C
+→ S239A
+→ S242C
+→ O4F
+→ S243C
+```
+
+Generic Owner activation, Owner-private acceptance, dogfood, Early Value,
+strategy document 또는 generic packet은 exact external-commercial O4와
+canonical dependency path를 대신하지 못한다.
+
+### WCV-10 — External Paid Canary
+
+WCV-9, exact O4 approval, canonical commercial path, current commercial and
+Production evidence가 모두 확인된 뒤에만 Wave A 3~5명을 허용한다.
+
+- exact offer and entitlement
 - support/cost/refund
+- false charge 0
+- raw leak/cross-account 0
 - voluntary next-pack decision
 
-### WCV-10
+### WCV-11 — Golden 9 and Staged Expansion
 
 - Golden 9
-- 10~15 then 20~30
+- 총 10~15명
+- 총 20~30명
 - second renewal
 - quality drift/capacity
 
+각 wave는 별도 exact Owner approval을 요구하며 public self-serve를 자동으로
+허용하지 않는다.
+
+---
+
 ## 16. World-Class Eval Manifest
 
-### 16.1 분리된 set
+Set은 물리적·운영적으로 구분한다.
 
 ```text
 development fixture
@@ -803,7 +863,7 @@ development fixture
 ≠ marketing evidence
 ```
 
-### 16.2 핵심 지표 가설
+초기 product hypothesis:
 
 | 지표 | 초기 gate 가설 |
 |---|---:|
@@ -813,7 +873,6 @@ development fixture
 | deterministic Practice Gold | 100% |
 | unsupported Law verified release | 0 |
 | severe fail-open | 0 |
-| released general severe misfeedback | 극소수, 별도 confidence interval |
 | result→direct repair | ≥60% |
 | D+1 independent participation | ≥50% |
 | D+7 eligible participation | ≥30~40% |
@@ -822,22 +881,18 @@ development fixture
 | active paid voluntary repurchase | ≥65% 가설 |
 | qualified active learner “very disappointed” | ≥40% 가설 |
 
-수치는 marketing claim이 아니라 versioned product hypothesis다.
+수치는 marketing claim이 아니라 versioned hypothesis다.
 
-### 16.3 North Star
+North Star:
 
 ```text
 Verified Recurring-Gap Eliminations
 per Active Learner per Effective Study Hour
 ```
 
-필수 분자:
-
-- distinct recurring gap
-- D+7 verified non-same-surface independent success
-- policy-required timed recurrence
-- unresolved conflict 0
-- replay/same-family duplicate 0
+분자는 distinct recurring gap, D+7 verified non-same-surface independent
+success, policy-required timed recurrence, unresolved conflict 0,
+replay/same-family duplicate 0을 요구한다.
 
 금지 North Star:
 
@@ -849,9 +904,11 @@ per Active Learner per Effective Study Hour
 - assisted score
 - upload volume
 
+---
+
 ## 17. Open-Source Qualification Ledger
 
-각 후보는 다음을 통과해야 한다.
+각 후보는 다음 필드를 닫아야 한다.
 
 ```text
 project
@@ -887,9 +944,14 @@ promotion gate
 | W3C PROV | lineage_target | provenance model |
 | NIST AI RMF | governance_reference | risk/TEVV/incident process |
 
+어떤 외부 도구도 answer, mastery, biggest gap, release 또는 learning priority
+authority가 아니다.
+
+---
+
 ## 18. UX Contract
 
-### 18.1 First Meaningful Value
+First Meaningful Value:
 
 ```text
 confirmed answer
@@ -899,8 +961,6 @@ confirmed answer
 ```
 
 OCR 완료나 AI 응답 도착은 value가 아니다.
-
-### 18.2 화면
 
 첫 화면:
 
@@ -914,11 +974,9 @@ OCR 완료나 AI 응답 도착은 value가 아니다.
 - one next action
 - next independent check
 
-one screen = one dominant action.
+한 화면의 dominant action은 하나다.
 
-### 18.3 Progress
-
-가짜 점수 대신:
+가짜 점수 대신 다음을 보여준다.
 
 ```text
 방법 선택: 독립 확인
@@ -927,19 +985,14 @@ one screen = one dominant action.
 timed full solution: 근거 부족
 ```
 
-보여줄 수 있는 지표:
+허용 progress는 same-gap recurrence, completion time, blank/partial, D+7
+success, unassisted share다.
 
-- same-gap recurrence
-- completion time
-- blank/partial
-- D+7 success
-- unassisted share
+---
 
 ## 19. Market Proof
 
 결제만으로 PMF를 선언하지 않는다.
-
-qualified product-value event:
 
 ```text
 exact offer purchase
@@ -949,7 +1002,10 @@ AND D+1 independent attempt
 AND voluntary next-pack purchase or explicit decline
 ```
 
-서로 다른 가격, feature manifest, refund policy를 합산하지 않는다.
+서로 다른 가격, feature manifest, duration, refund policy를 합산하지 않는다.
+Owner dogfood와 external commercial evidence를 같은 분자에 넣지 않는다.
+
+---
 
 ## 20. 명시적 Non-goals
 
@@ -969,6 +1025,10 @@ AND voluntary next-pack purchase or explicit decline
 - adaptive model before rule baseline
 - unlimited AI
 - raw learner content training by default
+- S236P blocked state를 acceptance로 해석
+- Owner-private evidence로 external commercial gate 대체
+
+---
 
 ## 21. Definition of Done
 
@@ -982,9 +1042,10 @@ AND voluntary next-pack purchase or explicit decline
 6. D+1, D+7 and timed recurrence separated
 7. later failure reopens closure
 8. Personal Study Ledger resumes correctly
-9. Today explains max-three priorities
+9. Today explains max-three priorities within 30..720 minutes
 10. severe fail-open and raw leak 0
 11. external biggest-gap review
-12. paid user voluntarily repurchases
+12. exact external-commercial O4 and canonical path
+13. paid user voluntarily repurchases
 
 문서와 CI만으로 완료를 주장하지 않는다.
