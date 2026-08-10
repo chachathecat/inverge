@@ -13,7 +13,7 @@ This record validates the V13 follow-up contract only:
 No runtime, UI, API, schema, persistence, provider, dependency, real content, roadmap or
 PR #692 mutation is included.
 
-Machine contract version: `1.0.23`.
+Machine contract version: `1.0.24`.
 
 ## Static assertions
 
@@ -153,6 +153,10 @@ Machine contract version: `1.0.23`.
 19. The shared gate requires one closed, single, authoritative, server-side, independently resolved, active deliberate
     server-recorded single-use confirmation bound exactly to learner, attempt, cue, cue revision, one request and one
     canonical confirmation identity.
+    Its exact ordered confirmation-binding list is `attemptId`, `learnerPrivateScopeId`, `cueId`, `cueRevisionId`,
+    `requestId`, `confirmationId`, identical to the canonical confirmation record-binding list and inclusive of every
+    concrete confirmation identifier. The outer request/event subject, canonical confirmation record and authoritative
+    transaction post-state receipt each validate `confirmationId` independently before exact equality comparison.
     known/resolved are exact true; ambiguous, conflicting, cross-learner, cross-attempt, mismatched, stale, replayed,
     cancelled and client/caller-inferred are exact false. Its `cancelled` field must be exact primitive `false`;
     missing, null, strings, numbers, objects, arrays, `true` and every other malformed value fail closed across
@@ -366,6 +370,9 @@ All fail closed or hold.
 - confirmation is missing, cancelled, stale, replayed, mismatched, ambiguous, a client boolean or preselected,
   its `cancelled` field is anything other than exact primitive `false`, or matching missing/malformed cue or
   request identifiers pass through equality;
+- the outer subject, canonical confirmation record or authoritative post-state receipt alone changes, omits or
+  malforms `confirmationId` while every other field and the decision context remain valid, but either validator
+  still accepts, renders cue bytes or awards positive/independent evidence;
 - a confirmation explicitly carries `replayed: true` while `consumed: false` and `singleUse: true` but either
   render validator still treats it as a deliberate non-replayed override;
 - any decisive confirmation/open-attempt/base-attempt/exposure-history/response-evaluation/transfer-evaluation/
@@ -490,10 +497,10 @@ npm run build
 NODE_OPTIONS='--require ../next-memory-usage-shim.cjs' npm run build
 ```
 
-Post-merge two-finding hotfix working-tree evidence:
+Post-merge authorized P2 correction working-tree evidence:
 
 - JavaScript syntax check: passed.
-- Focused behavioral contract suite: 65/65 passed, 0 failed, 0 skipped.
+- Focused behavioral contract suite: 66/66 passed, 0 failed, 0 skipped.
 - Strict JSON parse, balanced Markdown fences (decision 8, QA 2, strategy 60), cross-artifact assertions and
   `git diff --check`: passed.
 - `npm run typecheck`: passed.
@@ -510,6 +517,11 @@ Post-merge two-finding hotfix working-tree evidence:
 - Adversarial coverage now proves that request-owned step arrays, commit/success aliases, pre-transaction records
   and every malformed or unbound post-state receipt fail closed across both pre-response render validators; only
   the closed external canonical post-state receipt can cross the render barrier.
+- Confirmation-binding coverage proves the exact ordered six-field list is identical to the canonical confirmation
+  record-binding list and contains every concrete identifier. With an otherwise-valid authoritative decision context,
+  both render validators accept the exact outer/canonical/receipt match and fail closed without throwing, rendering or
+  evidence when only the nested confirmation, outer subject or receipt `confirmationId` is changed, missing or malformed.
+  The existing confirmation-binding mutation loop now exercises `confirmationId` against that valid context.
 - Candidate-container coverage proves `null`, `undefined`, primitives, arrays and non-plain record containers return
   deterministic ineligibility without throwing, while prior valid-signal behavior and all raw-body or reconstructive
   derivative denials remain intact.

@@ -20,7 +20,7 @@ does_not_authorize:
 
 V13의 필수 후속 부속계약으로 `Memory Cue & Annotation Layer(MCAL)`를 채택한다.
 V13은 계속 유일한 active master plan이며 MCAL은 V14가 아니다.
-동기화된 machine contract version은 `1.0.23`이다.
+동기화된 machine contract version은 `1.0.24`이다.
 MCAL은 별도의 정의 저장소나 두 번째 정의 authority가 아니다. 모든 `exactDefinitionRef`는
 released·versioned VESG concept/evidence projection을 가리키며, 해석 실패·hold·drift 시 cue도 release하지 않는다.
 
@@ -96,6 +96,11 @@ single-use confirmation을 모두 요구한다. confirmation은 `replayed === fa
 confirmation 증거가 아니다. request와 confirmation의 `cueId`, `cueRevisionId`, `requestId`, `confirmationId`는 서로
 비교하기 전에 양쪽에서 각각 exact trimmed canonical identifier schema를 통과해야 한다. 두 값이 함께
 누락되거나 null·wrong-type·empty·whitespace·malformed인 채 같아도 confirmation binding이 아니다.
+confirmation binding의 exact ordered field list는 `attemptId → learnerPrivateScopeId → cueId →
+cueRevisionId → requestId → confirmationId`이며 canonical confirmation resolution의
+`recordBindingFields`와 정확히 같은 목록이어야 한다. 외부 request/event subject, authoritative canonical
+confirmation record, authoritative transaction post-state receipt의 `confirmationId`는 각각 schema를 통과한 후
+서로 정확히 같아야 하며, 어느 하나의 누락·malformed·mismatch도 cue byte 0으로 실패한다.
 인증된 요청 문맥의 `authenticatedLearnerPrivateScopeId`, subject의 `learnerPrivateScopeId`, canonical
 open-attempt resolution의 learner scope, canonical confirmation의 learner scope 네 값은 각각 같은 exact
 canonical identifier schema를 독립적으로 통과한 뒤 field-for-field로 모두 같아야 한다. 네 값이 함께

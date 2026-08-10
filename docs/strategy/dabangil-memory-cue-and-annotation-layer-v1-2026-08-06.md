@@ -26,7 +26,7 @@ execution_rule: "This annex fixes contracts and development order only. It autho
 
 `Memory Cue & Annotation Layer(MCAL)`은 V13을 대체하는 새 마스터플랜이 아니다.
 V13의 근거·개념·문항·검증·학습증거 사이에 다음 연결점만 고정하는 필수 후속 부속계약이다.
-동기화된 machine contract version은 `1.0.23`이다.
+동기화된 machine contract version은 `1.0.24`이다.
 
 ```text
 VESG / exact definition / QuestionUnit
@@ -517,12 +517,17 @@ D+7 stable / timed: HIDDEN
   primitive `false`여야 하며 missing·default·coercion은 non-replayed 증거가 아니다. `cancelled` 역시
   exact primitive `false`여야 하므로 missing·null·string·number·object·array·`true` 또는 다른 malformed
   값은 active confirmation을 증명하지 못한다. request와 confirmation 양쪽의 `cueId`, `cueRevisionId`,
-  `requestId`는 equality 비교 전에 각각 exact trimmed canonical identifier schema를 통과해야 한다.
+  `requestId`, `confirmationId`는 equality 비교 전에 각각 exact trimmed canonical identifier schema를 통과해야 한다.
   두 쪽이 함께 누락되어 `undefined === undefined`가 되거나 null·wrong-type·empty·whitespace·malformed
   identifier가 서로 같아도 reveal을 승인하지 않는다. confirmation은 추가 필드 없는 exact single canonical
   record이고 server-side·authoritative·independently-resolved·known·resolved가 primitive true, ambiguous·
   conflicting·cross-learner·cross-attempt·mismatched·stale·replayed·cancelled·client/caller-inferred가 primitive
   false여야 한다. client boolean, 미리 선택된 consent, source label 또는 outer success state는 confirmation이 아니다.
+- confirmation binding의 exact ordered list는 `attemptId → learnerPrivateScopeId → cueId →
+  cueRevisionId → requestId → confirmationId`으로 canonical confirmation `recordBindingFields`와 동일하다.
+  outer request/event subject, canonical confirmation record, authoritative transaction post-state receipt의
+  `confirmationId`는 각각 canonical identifier schema를 독립적으로 통과한 뒤 exact equality를 만족해야 하며,
+  누락·malformed·mismatch·inference·alias는 모두 cue byte 0·evidence 0·no-throw로 실패한다.
 - authenticated learner scope와 subject·attempt-resolution·confirmation learner scope 네 값은 모두 같은 exact
   canonical identifier schema를 독립적으로 통과하고 field-for-field로 일치해야 한다. matching malformed 값,
   인증 문맥과 다른 foreign learner에 맞춘 subject/attempt/confirmation, client/caller scope alias 또는 inference는

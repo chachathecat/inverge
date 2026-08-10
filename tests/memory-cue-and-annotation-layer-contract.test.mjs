@@ -2925,7 +2925,7 @@ test("MCAL paths resolve and V13 remains sole active master plan", () => {
   assert.match(active, /dabangil-professional-exam-reasoning-os-final-master-plan-v13-2026-08-06\.md/);
   assert.match(active, /Memory Cue & Annotation Layer/);
   assert.doesNotMatch(active, /final-master-plan-v14/);
-  assert.equal(contract.version, "1.0.23");
+  assert.equal(contract.version, "1.0.24");
   assert.equal(contract.compatibility.v13RemainsSoleActiveMasterPlan, true);
   assert.equal(contract.compatibility.newMasterPlanVersionCreated, false);
 });
@@ -3066,7 +3066,8 @@ test("Markdown fences and exact boundary language are present", () => {
   const decision = read(P.decision);
   const qa = read(P.qa);
   for (const body of [annex, decision, qa]) {
-    assert.match(body, /machine contract version(?:은|:) `1\.0\.23`/i);
+    assert.match(body, /machine contract version(?:은|:) `1\.0\.24`/i);
+    assert.doesNotMatch(body, /1\.0\.23/);
     assert.doesNotMatch(body, /1\.0\.22/);
     assert.doesNotMatch(body, /1\.0\.21/);
     assert.doesNotMatch(body, /1\.0\.20/);
@@ -3165,7 +3166,7 @@ test("Markdown fences and exact boundary language are present", () => {
   assert.match(decision, /canonical D\+7 attempt의 `submittedAt` 자체도 canonical base\/source attempt/);
   assert.match(decision, /receipt set은 `contribution`·`promotion`·`o5`만 가진 closed object/);
   assert.match(qa, /PR #692 is merged at `512bfdb9232a86bf4f7d4cfbc076a9df1c8a7da2`/);
-  assert.match(qa, /Focused behavioral contract suite: 65\/65 passed/);
+  assert.match(qa, /Focused behavioral contract suite: 66\/66 passed/);
   assert.match(qa, /Merely supplying two different task IDs is insufficient/);
   assert.match(qa, /canonical transfer attempt and its independently resolved task binding/);
   assert.match(qa, /canonicalD7Attempt/);
@@ -3787,7 +3788,7 @@ test("every BEFORE_RESPONSE render path delegates to one exact gate and rejects 
       ...overrides,
     });
     for (const validate of [validateCueExposureEvent, evaluateCueRender]) {
-      const result = validate(event);
+      const result = validate(event, preResponseRenderDecisionContext());
       assert.equal(result.accepted, false, `${validate.name}: ${result.reason}`);
       assert.equal(result.mayRenderCueBytes, false, `${validate.name}: ${result.reason}`);
     }
@@ -6673,7 +6674,7 @@ test("pre-response confirmation rejects missing, stale, replayed, mismatched and
   for (const field of contract.cueExposure.beforeResponseGate.confirmationBindingFields) {
     const result = evaluateCueRender(cueRenderRequest({
       confirmation: cueConfirmation({ [field]: `wrong-${field}` }),
-    }));
+    }), preResponseRenderDecisionContext());
     assert.equal(result.accepted, false, field);
     assert.equal(result.reason, "CONFIRMATION_RESOLUTION_INVALID", field);
   }
@@ -6713,6 +6714,113 @@ test("pre-response confirmation binds concrete canonical cue and request identif
       }
     }
   }
+});
+
+test("pre-response confirmation binding synchronizes six fields and rejects isolated identity drift", () => {
+  const beforeGate = contract.cueExposure.beforeResponseGate;
+  const confirmationGate = beforeGate.canonicalConfirmationResolutionGate;
+  const concreteGate = beforeGate.concreteConfirmationIdentifierGate;
+  const receiptGate = contract.cueExposure.preResponseAtomicCommit
+    .authoritativePostStateResolutionGate;
+  const expectedBindingFields = [
+    "attemptId",
+    "learnerPrivateScopeId",
+    "cueId",
+    "cueRevisionId",
+    "requestId",
+    "confirmationId",
+  ];
+  assert.deepEqual(beforeGate.confirmationBindingFields, expectedBindingFields);
+  assert.deepEqual(
+    beforeGate.confirmationBindingFields,
+    confirmationGate.recordBindingFields,
+  );
+  for (const field of concreteGate.fields) {
+    assert.equal(beforeGate.confirmationBindingFields.includes(field), true, field);
+  }
+
+  const toEvent = (subject) => {
+    const event = cueEvent(subject);
+    for (const field of expectedBindingFields) {
+      if (!Object.hasOwn(subject, field)) delete event[field];
+    }
+    return event;
+  };
+  const validators = [
+    ["request", (subject, context) => evaluateCueRender(subject, context)],
+    ["event", (subject, context) => validateCueExposureEvent(toEvent(subject), context)],
+  ];
+  const assertNoRender = (subject, context, label) => {
+    for (const [name, validate] of validators) {
+      let result;
+      assert.doesNotThrow(() => {
+        result = validate(subject, context);
+      }, `${label}: ${name}`);
+      assert.equal(result.accepted, false, `${label}: ${name}`);
+      assert.equal(result.mayRenderCueBytes, false, `${label}: ${name}`);
+      assert.equal(result.independentEvidenceEligible, false, `${label}: ${name}`);
+      assert.equal(result.positiveLearningEvidence, false, `${label}: ${name}`);
+      assert.equal(result.orderedSteps, undefined, `${label}: ${name}`);
+    }
+  };
+
+  const validSubject = cueRenderRequest();
+  const validContext = preResponseRenderDecisionContext();
+  for (const [name, validate] of validators) {
+    let result;
+    assert.doesNotThrow(() => {
+      result = validate(validSubject, validContext);
+    }, name);
+    assert.equal(result.accepted, true, name);
+    assert.equal(result.mayRenderCueBytes, true, name);
+    assert.equal(result.independentEvidenceEligible, false, name);
+    assert.equal(result.positiveLearningEvidence, false, name);
+  }
+
+  const nestedMismatch = cueRenderRequest();
+  nestedMismatch.confirmation.confirmationId = "confirmation-nested-other";
+  assertNoRender(nestedMismatch, validContext, "nested confirmation mismatch");
+
+  assertNoRender(
+    cueRenderRequest({ confirmationId: "confirmation-outer-other" }),
+    validContext,
+    "outer confirmation mismatch",
+  );
+
+  assertNoRender(
+    validSubject,
+    {
+      [receiptGate.decisionContextField]: canonicalPreResponseTransactionPostStateResolution({
+        confirmationId: "confirmation-receipt-other",
+      }),
+    },
+    "receipt confirmation mismatch",
+  );
+
+  const missingNested = cueRenderRequest();
+  delete missingNested.confirmation.confirmationId;
+  const missingOuter = cueRenderRequest();
+  delete missingOuter.confirmationId;
+  const malformedNested = cueRenderRequest();
+  malformedNested.confirmation.confirmationId = "?";
+  const malformedOuter = cueRenderRequest({ confirmationId: "?" });
+  for (const [subject, label] of [
+    [missingNested, "missing nested confirmation"],
+    [missingOuter, "missing outer confirmation"],
+    [malformedNested, "malformed nested confirmation"],
+    [malformedOuter, "malformed outer confirmation"],
+  ]) {
+    assertNoRender(subject, validContext, label);
+  }
+  assertNoRender(
+    validSubject,
+    {
+      [receiptGate.decisionContextField]: canonicalPreResponseTransactionPostStateResolution({
+        confirmationId: "?",
+      }),
+    },
+    "malformed receipt confirmation",
+  );
 });
 
 test("pre-response confirmation requires cancelled to be exact primitive false across both validators", () => {

@@ -1,6 +1,6 @@
 {
   "schema": "dabangil_memory_cue_and_annotation_layer_v1",
-  "version": "1.0.23",
+  "version": "1.0.24",
   "dated": "2026-08-06 KST",
   "status": "proposed_non_authoritative",
   "repository": "chachathecat/inverge",
@@ -2326,7 +2326,8 @@
         "learnerPrivateScopeId",
         "cueId",
         "cueRevisionId",
-        "requestId"
+        "requestId",
+        "confirmationId"
       ],
       "concreteConfirmationIdentifierGate": {
         "fields": [
