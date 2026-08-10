@@ -25,6 +25,13 @@ const contractText = read(paths.contract);
 const runner = read(paths.runner);
 const contract = JSON.parse(contractText);
 
+test("synchronizes contract version 1.0.2 across source artifacts", () => {
+  assert.equal(contract.version, "1.0.2");
+  assert.match(decision, /contract_version: "1\.0\.2"/);
+  assert.match(strategy, /version: "1\.0\.2"/);
+  assert.match(validation, /contract version: `1\.0\.2`/);
+});
+
 test("pins V13 as the sole active master and forbids active-pointer mutation", () => {
   const expected =
     "docs/strategy/dabangil-professional-exam-reasoning-os-final-master-plan-v13-2026-08-06.md";
@@ -103,6 +110,15 @@ test("fails closed on evidence, transfer, closure, source, and raw data", () => 
     true,
   );
   assert.equal(invariant.rawLearnerBodyInSharedAnalyticsOrTraining, false);
+  assert.equal(invariant.rawLearnerContentAsModelTrainingInputForbidden, true);
+  assert.equal(
+    invariant.exactPurposeConsentAloneSufficientForRawLearnerContentTraining,
+    false,
+  );
+  assert.deepEqual(invariant.futureTrainingCandidates, [
+    "CONSENTED_PSEUDONYMOUS_NON_RECONSTRUCTIVE_SIGNALS",
+    "PROMOTED_CLEARED_CONTENT_BANK_MATERIAL",
+  ]);
   assert.equal(invariant.oneCanonicalMasteryAuthority, true);
 });
 
@@ -157,26 +173,45 @@ test("separates safe synthetic building from exact completed S236P live activati
   assert.match(strategy, /terminalPass=true/);
 });
 
-test("requires a separate external-commercial O4 gate before paid canary", () => {
+test("orders Golden 9, the O4 entry gate, S243C canary, and later expansion", () => {
   const slices = contract.implementationSlices;
-  const gate = slices.indexOf("WCV_9_EXTERNAL_TRUST_AND_COMMERCIAL_O4_GATE");
-  const canary = slices.indexOf("WCV_10_EXTERNAL_PAID_CANARY");
+  const gate = slices.indexOf(
+    "WCV_9_GOLDEN_9_EXTERNAL_READINESS_AND_COMMERCIAL_O4_ENTRY_GATE",
+  );
+  const canary = slices.indexOf("WCV_10_S243C_PAID_CANARY");
+  const expansion = slices.indexOf("WCV_11_POST_CANARY_STAGED_EXPANSION");
   assert.ok(gate >= 0);
   assert.ok(canary > gate);
+  assert.ok(expansion > canary);
+  const commercial = contract.lanes.commercialActivation;
   assert.ok(
-    contract.lanes.commercialActivation.paidCanaryRequiredPreconditions.includes(
+    commercial.paidCanaryRequiredPreconditions.includes(
       "EXACT_EXTERNAL_COMMERCIAL_O4_PACKET_APPROVED",
     ),
   );
-  assert.equal(
-    contract.lanes.commercialActivation.ownerPrivateAcceptanceMaySubstitute,
-    false,
+  assert.ok(
+    commercial.paidCanaryRequiredPreconditions.includes(
+      "PRE_CANARY_COMMERCIAL_DEPENDENCY_PATH_COMPLETED_THROUGH_O4F",
+    ),
+  );
+  assert.ok(
+    commercial.paidCanaryRequiredPreconditions.includes(
+      "EXACT_AUTHORIZATION_TO_ENTER_S243C",
+    ),
+  );
+  assert.ok(
+    !commercial.paidCanaryRequiredPreconditions.includes("S243C_COMPLETED"),
   );
   assert.equal(
-    contract.lanes.commercialActivation.genericOwnerActivationMaySubstitute,
+    commercial.ownerPrivateAcceptanceMaySubstitute,
     false,
   );
-  assert.deepEqual(contract.lanes.commercialActivation.canonicalDependencyPath, [
+  assert.equal(commercial.genericOwnerActivationMaySubstitute, false);
+  assert.equal(
+    commercial.ownerPrivateEvidenceMaySubstituteExternalCommercialPath,
+    false,
+  );
+  assert.deepEqual(commercial.canonicalDependencyPath, [
     "S241A",
     "O3C",
     "S239A",
@@ -184,7 +219,50 @@ test("requires a separate external-commercial O4 gate before paid canary", () =>
     "O4F",
     "S243C",
   ]);
+  assert.deepEqual(commercial.preCanaryCompletedPath, [
+    "S241A",
+    "O3C",
+    "S239A",
+    "S242C",
+    "O4F",
+  ]);
+  assert.deepEqual(commercial.dependencyOrderedExternalStages, [
+    "S241A",
+    "O3C",
+    "S239A_GOLDEN_9_EXTERNAL_READINESS",
+    "S242C",
+    "O4F",
+    "S243C_PAID_WAVE_A",
+    "POST_CANARY_STAGED_EXPANSION",
+  ]);
+  assert.equal(commercial.paidCanaryTarget, "S243C");
+  assert.equal(commercial.s243cCompletionRequiredBeforePaidCanaryEntry, false);
+  assert.deepEqual(
+    commercial.laterExternalWavesAndAcceptanceRequiredPreconditions,
+    ["S243C_COMPLETED"],
+  );
+  assert.match(
+    strategy,
+    /S239A \/ Golden 9 external readiness[\s\S]*S242C[\s\S]*O4F/,
+  );
+  assert.match(strategy, /S243C는 External Founding Beta Wave A 자체다/);
+  assert.match(strategy, /WCV-11 — Post-Canary Staged Expansion/);
 });
+
+test(
+  "categorically forbids raw learner-content training without a default exception",
+  () => {
+    const combined = `${decision}\n${strategy}\n${validation}`;
+    assert.match(combined, /private raw learner content.*model training input/);
+    assert.match(
+      combined,
+      /exact-purpose consent.*insufficient|exact-purpose consent.*충분하지 않다/,
+    );
+    assert.match(combined, /consented pseudonymous non-reconstructive/);
+    assert.match(combined, /promoted Cleared Content Bank material/);
+    assert.doesNotMatch(combined, /raw learner content training by default/i);
+  },
+);
 
 test("constrains Full-Day availability to trusted integer 30 through 720", () => {
   assert.deepEqual(contract.hardInvariants.fullDayAvailableMinutes, {

@@ -1,6 +1,6 @@
 {
   "schema": "dabangil_appraiser_second_world_class_vertical_v1",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "dated": "2026-08-10 KST",
   "status": "proposed_non_authoritative_source_contract",
   "repository": "chachathecat/inverge",
@@ -71,6 +71,12 @@
     "fullDayExecutionBlockLimitMode": "AVAILABLE_MINUTES_0_TO_N",
     "engagementMaySetLearningPriority": false,
     "rawLearnerBodyInSharedAnalyticsOrTraining": false,
+    "rawLearnerContentAsModelTrainingInputForbidden": true,
+    "exactPurposeConsentAloneSufficientForRawLearnerContentTraining": false,
+    "futureTrainingCandidates": [
+      "CONSENTED_PSEUDONYMOUS_NON_RECONSTRUCTIVE_SIGNALS",
+      "PROMOTED_CLEARED_CONTENT_BANK_MATERIAL"
+    ],
     "oneCanonicalMasteryAuthority": true,
     "fullDayAvailableMinutes": {
       "requiredType": "integer",
@@ -185,14 +191,17 @@
     },
     "commercialActivation": {
       "paidCanaryRequiredPreconditions": [
-        "WCV_9_EXTERNAL_TRUST_AND_COMMERCIAL_O4_GATE_COMPLETED",
+        "WCV_9_GOLDEN_9_EXTERNAL_READINESS_AND_COMMERCIAL_O4_ENTRY_GATE_COMPLETED",
+        "GOLDEN_9_EXTERNAL_READINESS_COMPLETED_AT_S239A",
         "EXACT_EXTERNAL_COMMERCIAL_O4_PACKET_APPROVED",
-        "CANONICAL_COMMERCIAL_DEPENDENCY_PATH_SATISFIED",
+        "PRE_CANARY_COMMERCIAL_DEPENDENCY_PATH_COMPLETED_THROUGH_O4F",
+        "EXACT_AUTHORIZATION_TO_ENTER_S243C",
         "COMMERCIAL_READINESS_EVIDENCE_CURRENT",
         "PRODUCTION_ACCEPTANCE_CURRENT"
       ],
       "ownerPrivateAcceptanceMaySubstitute": false,
       "genericOwnerActivationMaySubstitute": false,
+      "ownerPrivateEvidenceMaySubstituteExternalCommercialPath": false,
       "canonicalDependencyPath": [
         "S241A",
         "O3C",
@@ -200,6 +209,27 @@
         "S242C",
         "O4F",
         "S243C"
+      ],
+      "preCanaryCompletedPath": [
+        "S241A",
+        "O3C",
+        "S239A",
+        "S242C",
+        "O4F"
+      ],
+      "dependencyOrderedExternalStages": [
+        "S241A",
+        "O3C",
+        "S239A_GOLDEN_9_EXTERNAL_READINESS",
+        "S242C",
+        "O4F",
+        "S243C_PAID_WAVE_A",
+        "POST_CANARY_STAGED_EXPANSION"
+      ],
+      "paidCanaryTarget": "S243C",
+      "s243cCompletionRequiredBeforePaidCanaryEntry": false,
+      "laterExternalWavesAndAcceptanceRequiredPreconditions": [
+        "S243C_COMPLETED"
       ],
       "shorterPathAllowed": false
     }
@@ -214,9 +244,9 @@
     "WCV_6_RECURRING_DEDUCTION_PROJECTION",
     "WCV_7_DAILY_COMMAND",
     "WCV_8_OWNER_PRIVATE_ACCEPTANCE",
-    "WCV_9_EXTERNAL_TRUST_AND_COMMERCIAL_O4_GATE",
-    "WCV_10_EXTERNAL_PAID_CANARY",
-    "WCV_11_GOLDEN_9_STAGED_EXPANSION"
+    "WCV_9_GOLDEN_9_EXTERNAL_READINESS_AND_COMMERCIAL_O4_ENTRY_GATE",
+    "WCV_10_S243C_PAID_CANARY",
+    "WCV_11_POST_CANARY_STAGED_EXPANSION"
   ],
   "benchmarkAdoption": {
     "UWORLD": {

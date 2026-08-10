@@ -1,6 +1,7 @@
 ---
 document_title: "Owner Decision — 감정평가사 2차 World-Class Vertical Execution Standard v1"
 status: "owner-decision/proposed-source-only"
+contract_version: "1.0.2"
 dated: "2026-08-10 KST"
 repository: "chachathecat/inverge"
 active_master_plan: "docs/strategy/dabangil-professional-exam-reasoning-os-final-master-plan-v13-2026-08-06.md"
@@ -100,11 +101,12 @@ learning priority 또는 release authority가 될 수 없다.
 11. Recurring Deduction Projection
 12. Today / Full-Day
 13. Owner dogfood
-14. external trust + exact external-commercial O4 packet
-15. canonical path S241A → O3C → S239A → S242C → O4F → S243C 충족
-16. external 3~5 paid canary
-17. Golden 9 + 10~15명
-18. 20~30명 + voluntary repurchase
+14. S241A → O3C → S239A / Golden 9 external readiness
+15. S242C → O4F / external trust + exact external-commercial O4 entry gate
+16. exact authorization to enter S243C
+17. S243C / external 3~5 paid Wave A
+18. S243C completion 뒤 post-canary 10~15명 staged expansion
+19. 20~30명 + voluntary repurchase
 ```
 
 ## 6. 불변식
@@ -123,7 +125,11 @@ learning priority 또는 release authority가 될 수 없다.
 - Full-Day available minutes는 trusted-server integer 30..720이고
   ExecutionBlock은 그 범위 안에서 0..N이다.
 - engagement, streak, time-in-app는 learning priority를 결정하지 않는다.
-- raw learner body는 shared analytics, graph label, cross-user training에 들어가지 않는다.
+- raw learner body는 shared analytics, graph label, cross-user cache에 들어가지 않는다.
+- private raw learner content는 model training input으로 절대 사용하지 않는다.
+- exact-purpose consent만으로 raw learner-content training을 허용할 수 없다.
+- future training 후보는 consented pseudonymous non-reconstructive signal 또는
+  promoted Cleared Content Bank material뿐이다.
 - S236P blocked, failed 또는 terminal disposition은 completed exact acceptance가 아니다.
 - Owner-private acceptance, generic Owner activation, dogfood 또는 Early Value는
   exact external-commercial O4 packet과 canonical commercial path를 대체하지 않는다.
@@ -156,3 +162,4 @@ PR #697의 product-value 아이디어는 이 표준에 흡수한다.
 - FSRS/BKT/OR-Tools를 canonical authority로 사용
 - S236P completed acceptance 없이 live activation
 - exact external-commercial O4 packet과 canonical commercial path 없이 paid canary
+- S243C completion을 S243C paid Wave A 진입 선행조건으로 사용

@@ -3,7 +3,7 @@ document_title: "답안길 감정평가사 2차 World-Class Vertical Execution S
 document_subtitle: "정확한 감점 위치·교정·독립 전이·재발 검증·하루 관제"
 document_role: "V13 subordinate execution standard; not a new master plan"
 status: "proposed_non_authoritative_source_contract"
-version: "1.0.1"
+version: "1.0.2"
 dated: "2026-08-10 KST"
 repository: "chachathecat/inverge"
 active_master_plan: "docs/strategy/dabangil-professional-exam-reasoning-os-final-master-plan-v13-2026-08-06.md"
@@ -723,9 +723,9 @@ WCV-5 Personal Study Ledger
 WCV-6 Recurring Deduction Projection
 WCV-7 Today / Full-Day Daily Command
 WCV-8 Owner-Private Integrated Acceptance
-WCV-9 External Trust and Commercial O4 Gate
-WCV-10 External Paid Canary
-WCV-11 Golden 9 and Staged Expansion
+WCV-9 Golden 9 External Readiness and Commercial O4 Entry Gate
+WCV-10 S243C Paid Canary
+WCV-11 Post-Canary Staged Expansion
 ```
 
 ### WCV-0
@@ -799,13 +799,18 @@ WCV-11 Golden 9 and Staged Expansion
 Owner dogfood는 external usability, price, payment, refund, support 또는
 capacity를 검증하지 않는다.
 
-### WCV-9 — External Trust and Commercial O4 Gate
+### WCV-9 — Golden 9 External Readiness and Commercial O4 Entry Gate
 
-Paid canary 전에 별도의 exact external-commercial gate를 완료한다.
+먼저 O3C 뒤 S239A에서 Golden 9 external readiness를 완료하고, 그 다음
+S242C와 O4F의 별도 exact external-commercial entry gate를 완료한다.
+Paid canary는 이 순서를 건너뛸 수 없다.
 
 필수:
 
 - external expert top-1 review
+- S239A / Golden 9 external readiness
+- S242C completion
+- O4F completion
 - canonical external-commercial dependency path audit
 - exact price/offer/refund/capacity/support manifest
 - separately approved exact external-commercial O4 packet
@@ -823,14 +828,29 @@ S241A
 → S243C
 ```
 
+Paid-canary 진입 전에 완료되어야 하는 pre-canary path는 다음에서 끝난다.
+
+```text
+S241A
+→ O3C
+→ S239A / Golden 9 external readiness
+→ S242C
+→ O4F
+```
+
+그 뒤에는 `EXACT_AUTHORIZATION_TO_ENTER_S243C`가 있어야 한다. S243C
+completion은 S243C 진입 조건이 아니다.
+
 Generic Owner activation, Owner-private acceptance, dogfood, Early Value,
 strategy document 또는 generic packet은 exact external-commercial O4와
 canonical dependency path를 대신하지 못한다.
 
-### WCV-10 — External Paid Canary
+### WCV-10 — S243C Paid Canary
 
-WCV-9, exact O4 approval, canonical commercial path, current commercial and
-Production evidence가 모두 확인된 뒤에만 Wave A 3~5명을 허용한다.
+S243C는 External Founding Beta Wave A 자체다. WCV-9, O4F까지의 completed
+pre-canary path, exact O4 approval, current commercial/Production evidence와
+exact authorization to enter S243C가 모두 확인된 뒤 Wave A 3~5명을 허용한다.
+S243C completion을 S243C 진입 선행조건으로 요구해서는 안 된다.
 
 - exact offer and entitlement
 - support/cost/refund
@@ -838,16 +858,17 @@ Production evidence가 모두 확인된 뒤에만 Wave A 3~5명을 허용한다.
 - raw leak/cross-account 0
 - voluntary next-pack decision
 
-### WCV-11 — Golden 9 and Staged Expansion
+### WCV-11 — Post-Canary Staged Expansion
 
-- Golden 9
 - 총 10~15명
 - 총 20~30명
 - second renewal
 - quality drift/capacity
 
+S243C completion은 이 post-canary external wave와 acceptance만 gate한다.
 각 wave는 별도 exact Owner approval을 요구하며 public self-serve를 자동으로
-허용하지 않는다.
+허용하지 않는다. Owner-private evidence는 어느 external-commercial path도
+대체할 수 없다.
 
 ---
 
@@ -1024,7 +1045,9 @@ Owner dogfood와 external commercial evidence를 같은 분자에 넣지 않는�
 - full 20-year content build before Golden 3
 - adaptive model before rule baseline
 - unlimited AI
-- raw learner content training by default
+- private raw learner content를 model training input으로 사용하는 행위
+- exact-purpose consent만으로 raw learner-content training을 허용하는 행위
+- consented pseudonymous non-reconstructive signal 또는 promoted Cleared Content Bank material이 아닌 대상을 future training candidate로 사용하는 행위
 - S236P blocked state를 acceptance로 해석
 - Owner-private evidence로 external commercial gate 대체
 
