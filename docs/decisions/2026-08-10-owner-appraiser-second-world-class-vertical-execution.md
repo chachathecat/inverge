@@ -35,7 +35,8 @@ Trust, reasoning, transfer, Full-Day, privacy, source/rights/version 원칙을
 
 ## 2. 이 결정이 승인하는 것
 
-이번 source-only Work가 승인하는 것은 다음 여섯 artifact뿐이다.
+이번 source-only Work가 승인하는 것은 다음 여섯 artifact와 기존 test runner의
+정확한 등록 변경뿐이다.
 
 1. Owner decision
 2. world-class vertical execution strategy
@@ -43,6 +44,7 @@ Trust, reasoning, transfer, Full-Day, privacy, source/rights/version 원칙을
 4. machine-readable mirror
 5. source validation record
 6. focused regression test
+7. `scripts/run-node-tests.mjs`의 focused test 등록
 
 이 결정은 구현·활성화를 승인하지 않는다.
 
@@ -88,18 +90,21 @@ learning priority 또는 release authority가 될 수 없다.
 1. 본 source-only execution standard
 2. PR #697 active-master 승격안 supersede/close
 3. O3A 만료 및 S236P blocked 상태 read-only reconciliation
-4. synthetic/local build lane과 live activation lane 분리 결정
-5. Golden 3 완전 수직루프
-6. Capture + exact anchor
-7. Diagnose + repair verification
-8. D+1 + D+7 + timed recurrence
-9. Personal Study Ledger
-10. Recurring Deduction Projection
-11. Today / Full-Day
-12. Owner dogfood
-13. external 3~5 paid canary
-14. Golden 9 + 10~15명
-15. 20~30명 + voluntary repurchase
+4. live activation은 S236P completed exact acceptance 전까지 금지
+5. synthetic/local build lane과 live activation lane 분리 결정
+6. Golden 3 완전 수직루프
+7. Capture + exact anchor
+8. Diagnose + repair verification
+9. D+1 + D+7 + timed recurrence
+10. Personal Study Ledger
+11. Recurring Deduction Projection
+12. Today / Full-Day
+13. Owner dogfood
+14. external trust + exact external-commercial O4 packet
+15. canonical path S241A → O3C → S239A → S242C → O4F → S243C 충족
+16. external 3~5 paid canary
+17. Golden 9 + 10~15명
+18. 20~30명 + voluntary repurchase
 ```
 
 ## 6. 불변식
@@ -115,9 +120,13 @@ learning priority 또는 release authority가 될 수 없다.
 - 법규 source/effective-version conflict는 verified conclusion을 막는다.
 - block completion은 mastery를 바꾸지 않는다.
 - Today CoreOutcome은 0..3이다.
-- Full-Day ExecutionBlock은 가용시간 안에서 0..N이다.
+- Full-Day available minutes는 trusted-server integer 30..720이고
+  ExecutionBlock은 그 범위 안에서 0..N이다.
 - engagement, streak, time-in-app는 learning priority를 결정하지 않는다.
 - raw learner body는 shared analytics, graph label, cross-user training에 들어가지 않는다.
+- S236P blocked, failed 또는 terminal disposition은 completed exact acceptance가 아니다.
+- Owner-private acceptance, generic Owner activation, dogfood 또는 Early Value는
+  exact external-commercial O4 packet과 canonical commercial path를 대체하지 않는다.
 
 ## 7. PR #697 disposition
 
@@ -145,3 +154,5 @@ PR #697의 product-value 아이디어는 이 표준에 흡수한다.
 - streak, leaderboard, casino-style gamification
 - 전체 20년 문제은행을 초기 critical path에 배치
 - FSRS/BKT/OR-Tools를 canonical authority로 사용
+- S236P completed acceptance 없이 live activation
+- exact external-commercial O4 packet과 canonical commercial path 없이 paid canary
