@@ -1,6 +1,6 @@
 {
   "schema": "dabangil_appraiser_second_world_class_vertical_v1",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "dated": "2026-08-10 KST",
   "status": "proposed_non_authoritative_source_contract",
   "repository": "chachathecat/inverge",
@@ -71,7 +71,13 @@
     "fullDayExecutionBlockLimitMode": "AVAILABLE_MINUTES_0_TO_N",
     "engagementMaySetLearningPriority": false,
     "rawLearnerBodyInSharedAnalyticsOrTraining": false,
-    "oneCanonicalMasteryAuthority": true
+    "oneCanonicalMasteryAuthority": true,
+    "fullDayAvailableMinutes": {
+      "requiredType": "integer",
+      "minimum": 30,
+      "maximum": 720,
+      "outsideRangeBehavior": "REJECT_NO_PLAN"
+    }
   },
   "tutorStateMachine": [
     "INTAKE",
@@ -171,11 +177,22 @@
     "liveActivation": {
       "requiredPreconditions": [
         "CURRENT_O3A_EXACT_APPROVAL",
-        "S236P_TERMINAL_DISPOSITION_OR_EXPLICIT_REPLACEMENT",
+        "S236P_COMPLETED_EXACT_ACCEPTANCE",
         "CPF_PRIVACY_RLS_GATES",
         "OWNER_ACTIVATION_APPROVAL",
         "EXACT_RUNTIME_EVIDENCE"
       ]
+    },
+    "commercialActivation": {
+      "paidCanaryRequiredPreconditions": [
+        "WCV_9_EXTERNAL_TRUST_AND_COMMERCIAL_O4_GATE_COMPLETED",
+        "EXACT_EXTERNAL_COMMERCIAL_O4_PACKET_APPROVED",
+        "CANONICAL_COMMERCIAL_DEPENDENCY_PATH_SATISFIED",
+        "COMMERCIAL_READINESS_EVIDENCE_CURRENT",
+        "PRODUCTION_ACCEPTANCE_CURRENT"
+      ],
+      "ownerPrivateAcceptanceMaySubstitute": false,
+      "genericOwnerActivationMaySubstitute": false
     }
   },
   "implementationSlices": [
@@ -188,8 +205,9 @@
     "WCV_6_RECURRING_DEDUCTION_PROJECTION",
     "WCV_7_DAILY_COMMAND",
     "WCV_8_OWNER_PRIVATE_ACCEPTANCE",
-    "WCV_9_EXTERNAL_PAID_CANARY",
-    "WCV_10_GOLDEN_9_STAGED_EXPANSION"
+    "WCV_9_EXTERNAL_TRUST_AND_COMMERCIAL_O4_GATE",
+    "WCV_10_EXTERNAL_PAID_CANARY",
+    "WCV_11_GOLDEN_9_STAGED_EXPANSION"
   ],
   "benchmarkAdoption": {
     "UWORLD": {
