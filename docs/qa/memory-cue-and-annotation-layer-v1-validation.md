@@ -13,7 +13,7 @@ This record validates the V13 follow-up contract only:
 No runtime, UI, API, schema, persistence, provider, dependency, real content, roadmap or
 PR #692 mutation is included.
 
-Machine contract version: `1.0.22`.
+Machine contract version: `1.0.23`.
 
 ## Static assertions
 
@@ -151,7 +151,8 @@ Machine contract version: `1.0.22`.
     subject/attempt/confirmation but not the authenticated context, client/caller aliases and inferred scope all
     reject across both render validators.
 19. The shared gate requires one closed, single, authoritative, server-side, independently resolved, active deliberate
-    server-recorded single-use confirmation bound exactly to learner, attempt, cue, cue revision and one request.
+    server-recorded single-use confirmation bound exactly to learner, attempt, cue, cue revision, one request and one
+    canonical confirmation identity.
     known/resolved are exact true; ambiguous, conflicting, cross-learner, cross-attempt, mismatched, stale, replayed,
     cancelled and client/caller-inferred are exact false. Its `cancelled` field must be exact primitive `false`;
     missing, null, strings, numbers, objects, arrays, `true` and every other malformed value fail closed across
@@ -162,7 +163,17 @@ Machine contract version: `1.0.22`.
     wrong-source, zero/multiple, cancelled, stale, replayed, conflicting, inferred, mismatched or ambiguous confirmations
     fail closed with no cue bytes. The actual pre-response race state must also be exact primitive `false`.
 21. Confirmation consumption, exposure record, `ASSISTED` transition and independent-evidence invalidation
-    commit in that exact all-or-nothing order before any cue byte renders.
+    commit in that exact all-or-nothing order before any cue byte renders. Every render-capable `BEFORE_RESPONSE`
+    validator uses one non-null, non-array, additional-field-free canonical post-state record obtained from trusted
+    decision context outside the request subject. `CANONICAL_SERVER_PRE_RESPONSE_TRANSACTION_POST_STATE_RESOLVER`
+    must return exactly one server-side, authoritative, independently resolved, known, resolved and committed record
+    bound to the exact learner-private scope, attempt, cue, cue revision, request and confirmation identity. It proves
+    commit-before-render, render-barrier satisfaction, confirmation consumption, exposure commit, `ASSISTED` post-state,
+    independent/positive evidence false and the exact ordered steps. Partial/wrong-order/record-failure/race,
+    ambiguity/conflict/cross-binding/mismatch/stale/replay/cancellation/inference are exact false. Request-owned
+    `commitSteps`, outer commit/failure/success/completion/atomicity booleans, source labels, the still-unused
+    pre-transaction confirmation and still-open pre-transaction attempt cannot substitute and are rejected on the
+    atomic authorization path. Invalid post-state resolution fails closed with zero cue bytes/evidence and no exception.
 22. Missing, empty, unknown, unresolved, ambiguous, conflicting, cross-learner, cross-attempt, submitted, closed,
     stale, cancelled, replayed, mismatched or client-inferred pre-response references, partial commit, inconsistent ledger state,
     record failure and render/submit race roll back and render no cue bytes. A canonical
@@ -201,11 +212,11 @@ Machine contract version: `1.0.22`.
     Before an exposure event can take that early `REVIEW_ONLY` route, it must independently carry exact canonical
     Assistance/Exposure-ledger provenance and `ordering === "ORDERED"`; omission, client provenance or ambiguous
     ordering rejects. The request validator remains free of those event-only fields.
-    Independently, every render-capable request and exposure-event timing require
+    Independently, `AFTER_RESPONSE` and `REVIEW_ONLY` render paths require
     `canonicalRecordCommitted === true`; truthy strings/numbers and every missing, null, false, object, array,
-    ambiguous or inferred value fail closed, including on `AFTER_RESPONSE` and `REVIEW_ONLY`.
-    `canonicalExposureRecordCommitted` and every alternate alias are ignored as commit evidence. Exact true
-    satisfies only this prerequisite and bypasses no other gate.
+    ambiguous or inferred value fail closed. `canonicalExposureRecordCommitted` and every alternate alias are
+    ignored as commit evidence. `BEFORE_RESPONSE` instead rejects that outer field and uses only rule 21's
+    authoritative post-state resolution.
 23. Any decomposition displayed before a response is assistance/exposure.
 24. The default collapsed surface exposes only `formalTerm` unless rules 18–22 have passed.
 25. `HIDDEN` forbids cue bytes in DOM, SSR, accessibility text, prefetch, cache and direct API output.
@@ -222,10 +233,14 @@ Machine contract version: `1.0.22`.
 31. Every semantic highlight binds a revision-bound typed anchor and target digest.
 32. Color alone never carries meaning.
 33. Shared cues attach only to owned, licensed or item-permitted official material.
-34. Personal raw annotation bodies remain in Personal Raw Vault and are unconditionally ineligible for
+34. Before `originKind`, `kind` or any other training-candidate field is read, the candidate container must be a
+    non-null, non-array plain record. `null`, `undefined`, primitive strings/numbers/booleans, arrays and malformed/non-record
+    containers deterministically return `candidateEligible === false`, `currentlyAuthorized === false`, disclose or
+    promote nothing and throw no exception. Existing valid candidate paths remain unchanged.
+35. Personal raw annotation bodies remain in Personal Raw Vault and are unconditionally ineligible for
     direct training; consent, opt-in, contract, administrator choice and future O5 cannot override this.
-35. Rename, alias or relabel cannot erase raw-body origin or directly promote that body to Cleared Content.
-36. Only a separate non-reconstructive signal or separately authored, rights-reviewed Cleared Content Bank
+36. Rename, alias or relabel cannot erase raw-body origin or directly promote that body to Cleared Content.
+37. Only a separate non-reconstructive signal or separately authored, rights-reviewed Cleared Content Bank
     object may be a future candidate; contribution, promotion and O5 remain three distinct gates. Each future
     approval requires its own independently resolved receipt bound to exact signal, revision, purpose and O5 scope.
     The receipt set is a closed object containing exactly contribution, promotion and O5 fields, and every receipt is a
@@ -276,12 +291,12 @@ Machine contract version: `1.0.22`.
     cross-purpose records fail closed before candidate eligibility or hypothetical receipts. Exact false preserves
     eligibility only after every other gate passes and creates no consent, receipt or authorization. Raw bodies, raw
     pointers and reconstructive derivatives cannot be renamed, aliased or relabeled into signals.
-37. MCAL-2 requires CPF-2A closure and an approved bodyless exposure path.
-38. Personal editor is blocked pending CPF, privacy, retention, export/delete, schema/RLS/Storage and hostile runtime gates.
-39. Portable Core reuses interfaces only; terminology, definitions, rights and reviews stay profile-owned.
-40. MCAL cannot create a fourth Today primary task.
-41. MCAL-1 through MCAL-4 remain unauthorized.
-42. Every authorization flag and current-use training authorization is exactly boolean false; no fixture,
+38. MCAL-2 requires CPF-2A closure and an approved bodyless exposure path.
+39. Personal editor is blocked pending CPF, privacy, retention, export/delete, schema/RLS/Storage and hostile runtime gates.
+40. Portable Core reuses interfaces only; terminology, definitions, rights and reviews stay profile-owned.
+41. MCAL cannot create a fourth Today primary task.
+42. MCAL-1 through MCAL-4 remain unauthorized.
+43. Every authorization flag and current-use training authorization is exactly boolean false; no fixture,
     hypothetical context or mock receipt can override it, and every hard-gate ceiling is zero.
 
 ## Hostile review
@@ -362,6 +377,14 @@ All fail closed or hold.
 - a D+7 evaluation uses an outer/source-labeled completion time, an unbound evaluation ID or a substituted source
   attempt timestamp instead of its own bound canonical completion record, or its failure weakens other valid credits;
 - cue bytes render before confirmation consumption, exposure, `ASSISTED` and evidence-invalidation commits all succeed;
+- request-owned expected `commitSteps`, outer commit/failure/success/completion/atomicity booleans, caller labels or
+  source strings authorize `BEFORE_RESPONSE` without the external canonical post-state resolution;
+- the pre-transaction confirmation remains unconsumed and the attempt remains independently open, yet those records
+  alone are treated as proof that the post-transaction state committed;
+- the authoritative pre-render post-state resolution is missing, null, primitive, array, malformed, extra-field,
+  wrong-source, zero/multiple, wrong-learner/attempt/cue/revision/request/confirmation, partial, wrong-order,
+  confirmation-unconsumed, exposure-uncommitted, non-`ASSISTED`, independent-evidence-eligible, stale, replayed,
+  ambiguous, conflicting, cancelled, inferred, cross-bound or mismatched but either render validator emits cue bytes;
 - partial commit, record failure or render/submit race still renders cue bytes;
 - an already submitted attempt is treated as `BEFORE_RESPONSE`;
 - `AFTER_RESPONSE` or optional bound `REVIEW_ONLY` omits either identifier, accepts matching malformed identifiers,
@@ -403,6 +426,8 @@ All are rejected.
   client-inferred item-rights binding;
 - private excerpt, offset, locator, attempt reference, digest or identifier in a bodyless receipt;
 - personal free text in logs, analytics, issue artifacts or training;
+- a `null`, `undefined`, primitive, array or malformed/non-record training candidate is dereferenced before container
+  validation, throws, becomes eligible/authorized, or discloses/promotes material;
 - learner opt-in, consent, contract, administrator choice or O5 used to train a raw annotation body;
 - a raw annotation body renamed, aliased or directly promoted as Cleared Content;
 - a reconstructive signal admitted as non-reconstructive;
@@ -455,30 +480,39 @@ All are blocking defects.
 ```text
 node --check tests/memory-cue-and-annotation-layer-contract.test.mjs
 node --test tests/memory-cue-and-annotation-layer-contract.test.mjs
-JSON.parse(config/dabangil-memory-cue-and-annotation-layer-v1.json)
-balanced Markdown fences
+node -e "JSON.parse(require('node:fs').readFileSync('config/dabangil-memory-cue-and-annotation-layer-v1.json','utf8'))"
+node -e "for (const p of ['docs/decisions/2026-08-06-owner-memory-cue-and-annotation-layer.md','docs/qa/memory-cue-and-annotation-layer-v1-validation.md','docs/strategy/dabangil-memory-cue-and-annotation-layer-v1-2026-08-06.md']) { const f=String.fromCharCode(96).repeat(3); const n=require('node:fs').readFileSync(p,'utf8').split(f).length-1; if (n%2) throw new Error(p); }"
+git diff --check
 npm run typecheck
 npm run lint
 npm test
 npm run build
+NODE_OPTIONS='--require ../next-memory-usage-shim.cjs' npm run build
 ```
 
-Cycle 3 source-only workspace evidence:
+Post-merge two-finding hotfix working-tree evidence:
 
 - JavaScript syntax check: passed.
-- Focused behavioral contract suite: 63/63 passed.
-- Strict JSON parse, balanced Markdown fences, cross-artifact assertions and `git diff --check`: passed.
-- Mutation coverage rejects missing, malformed, foreign, aliased or inferred authenticated learner scope across
-  pre-response and review-only request/event validators. Review-only independently binds authenticated, subject,
-  outer canonical resolution and nested zero-match absence-record learner scopes.
-- Canonical transfer and canonical D+7 attempts must each be at or after their canonical source attempt. Predating
-  downstream attempts and outer/caller timestamp substitution reject only the affected far-transfer or stable-D+7
-  credit; equality and later submissions pass and otherwise valid independent credits remain isolated.
-- This materialized source-only workspace does not contain the repository dependency tree or the non-MCAL source
-  files needed to rerun typecheck, lint, the full Node suite or production build before push. The cycle-3 base exact
-  head `d9b9d00180e1ec7c714eab7b433a4f95a19c05d7` passed PR Contract, Fast CI, Full CI, Learner Loop Health,
-  Risk Gate, Runtime Gate and Vercel deployment. Those base-head results do not substitute for the required seven
-  exact-head gates on the cycle-3 corrective commit.
+- Focused behavioral contract suite: 65/65 passed, 0 failed, 0 skipped.
+- Strict JSON parse, balanced Markdown fences (decision 8, QA 2, strategy 60), cross-artifact assertions and
+  `git diff --check`: passed.
+- `npm run typecheck`: passed.
+- `npm run lint`: passed with 0 errors and 9 pre-existing warnings, all outside the five changed paths.
+- Full `npm test`: 1232/1232 passed, 0 failed, 0 skipped.
+- The first plain `npm run build` invocation was environment-blocked before source compilation because this
+  sandbox has no `/proc`; Node 24.14.0 itself reproduces `ENOENT: uv_resident_set_memory` on
+  `process.memoryUsage()`. This is not a source or dependency failure.
+- `NODE_OPTIONS='--require ../next-memory-usage-shim.cjs' npm run build`: passed with an external, untracked
+  procfs-compatibility preload that changes only the unavailable RSS observation to `0`. Next.js 16.2.4 compiled,
+  completed TypeScript, generated 54/54 static pages and finalized optimization. One existing NFT dynamic-trace
+  warning remained outside the five changed paths. The standard exact-head CI/Vercel build remains mandatory and
+  this local compatibility result does not substitute for it.
+- Adversarial coverage now proves that request-owned step arrays, commit/success aliases, pre-transaction records
+  and every malformed or unbound post-state receipt fail closed across both pre-response render validators; only
+  the closed external canonical post-state receipt can cross the render barrier.
+- Candidate-container coverage proves `null`, `undefined`, primitives, arrays and non-plain record containers return
+  deterministic ineligibility without throwing, while prior valid-signal behavior and all raw-body or reconstructive
+  derivative denials remain intact.
 
 The repository PR Contract, Fast CI, Full CI, Learner Loop Health, Risk Gate and Runtime
 Gate must also pass on the same exact head.
