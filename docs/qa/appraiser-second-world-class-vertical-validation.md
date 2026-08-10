@@ -2,7 +2,7 @@
 
 - 작성일: 2026-08-10 KST
 - 상태: source-only validation
-- contract version: `1.0.3`
+- contract version: `1.0.4`
 - runtime evidence: none
 - active master change: none
 - roadmap state change: none
@@ -75,6 +75,12 @@ The sources support design mechanisms, not Dabangil efficacy or pricing claims.
 ### Activation and commercial
 
 - completed exact S236P acceptance required before live activation under current authority
+- immediately before each live activation, exactly one canonical content-addressed
+  S236P completion artifact must resolve and recompute its receipt, assertion-evidence,
+  primary-attestor-provenance, verified-attestation, exact environment/vault, final
+  O4V digest/current decision-receipt/approval/revocation and completion-time bindings
+- completion booleans alone are insufficient; unresolved, ambiguous, stale, revoked,
+  mismatched or non-recomputable S236P evidence blocks live activation
 - blocked/failed/terminal disposition cannot substitute
 - current canonical external lifecycle remains
   `S241A → O3C → S239A → S242C → O4F → S243C`
@@ -97,8 +103,8 @@ The sources support design mechanisms, not Dabangil efficacy or pricing claims.
 
 ## 5. Exact-head review corrections
 
-Three exact-head Codex review rounds found eleven substantive issues. Contract
-`1.0.3` closes them as follows.
+Five exact-head Codex review rounds found thirteen substantive issues. Contract
+`1.0.4` closes them as follows.
 
 1. **S236P gate** — current exact `acceptanceCompleted=true` and
    `terminalPass=true` required.
@@ -122,6 +128,13 @@ Three exact-head Codex review rounds found eleven substantive issues. Contract
     unit/sign/rounding, answer transfer and no-program-storage guardrail.
 11. **pyBKT** — disposition is `benchmark_only`; shadow requires exact O2 and
     sufficient closed-schema events.
+12. **pyBKT declaration binding** — the focused test binds the operative
+    disposition heading to its immediately following `benchmark_only` value and
+    rejects `shadow` or `benchmark_shadow_only` in that same declaration.
+13. **S236P activation revalidation** — completion flags cannot substitute for
+    downstream resolution and recomputation of the exact content-addressed
+    completion artifact, its evidence sets, verified attestation, exact
+    environment/vault, current O4V binding and completion time at activation.
 
 ## 6. Focused commands
 

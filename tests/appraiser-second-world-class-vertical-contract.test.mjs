@@ -31,8 +31,8 @@ const includesAll = (text, markers, label) => {
   }
 };
 
-test("synchronizes WCV contract v1.0.3 and keeps V13 authoritative", () => {
-  assert.equal(contract.version, "1.0.3");
+test("synchronizes WCV contract v1.0.4 and keeps V13 authoritative", () => {
+  assert.equal(contract.version, "1.0.4");
   assert.equal(
     contract.activeMasterPlan,
     "docs/strategy/dabangil-professional-exam-reasoning-os-final-master-plan-v13-2026-08-06.md",
@@ -40,10 +40,10 @@ test("synchronizes WCV contract v1.0.3 and keeps V13 authoritative", () => {
   assert.equal(contract.role.mayReplaceActiveMasterPlan, false);
   assert.equal(contract.authorizationBoundary.activePointerMutation, false);
   assert.equal(contract.authorizationBoundary.roadmapMutation, false);
-  includesAll(decision, ["contract_version: \"1.0.3\"", "V13은 계속 답안길의 유일한 active master plan"], "decision");
-  includesAll(strategy, ["version: \"1.0.3\"", "V13을 교체하지 않는다"], "strategy");
-  assert.ok(benchmark.includes("contract version: `1.0.3`"));
-  assert.ok(validation.includes("contract version: `1.0.3`"));
+  includesAll(decision, ["contract_version: \"1.0.4\"", "V13은 계속 답안길의 유일한 active master plan"], "decision");
+  includesAll(strategy, ["version: \"1.0.4\"", "V13을 교체하지 않는다"], "strategy");
+  assert.ok(benchmark.includes("contract version: `1.0.4`"));
+  assert.ok(validation.includes("contract version: `1.0.4`"));
 });
 
 test("authorizes no runtime, content, commercial, dependency or Production mutation", () => {
@@ -211,11 +211,62 @@ test("requires the complete reset-safe casio_fx_9860giii routine", () => {
 });
 
 test("separates synthetic building from completed exact live activation", () => {
+  const live = contract.lanes.liveActivation;
+  const s236p = live.s236pActivationRevalidation;
   assert.ok(contract.lanes.syntheticBuild.allowed.includes("STATE_MACHINE"));
   assert.ok(contract.lanes.syntheticBuild.forbidden.includes("REAL_LEARNER_BODY"));
-  assert.ok(contract.lanes.liveActivation.requiredPreconditions.includes("CURRENT_O3A_EXACT_APPROVAL"));
-  assert.ok(contract.lanes.liveActivation.requiredPreconditions.includes("S236P_COMPLETED_EXACT_ACCEPTANCE"));
-  includesAll(strategy, ["acceptanceCompleted=true", "terminalPass=true"], "strategy activation gate");
+  assert.ok(live.requiredPreconditions.includes("CURRENT_O3A_EXACT_APPROVAL"));
+  assert.ok(
+    live.requiredPreconditions.includes(
+      "S236P_CURRENT_EXACT_ACCEPTANCE_ARTIFACT_RESOLVED_AND_RECOMPUTED_AT_ACTIVATION",
+    ),
+  );
+  assert.equal(s236p.required, true);
+  assert.equal(s236p.timing, "IMMEDIATELY_BEFORE_EACH_LIVE_ACTIVATION");
+  assert.equal(s236p.artifact, "CANONICAL_CONTENT_ADDRESSED_S236P_COMPLETION_ARTIFACT");
+  assert.equal(s236p.resolutionCardinality, "EXACTLY_ONE");
+  assert.deepEqual(s236p.requiredState, { acceptanceCompleted: true, terminalPass: true });
+  for (const binding of [
+    "RECEIPT_SET",
+    "ASSERTION_EVIDENCE_SET",
+    "PRIMARY_ATTESTOR_PROVENANCE_SET",
+    "VERIFIED_INDEPENDENT_ATTESTATION",
+    "EXACT_ENVIRONMENT_AND_VAULT",
+    "FINAL_O4V_APPROVED_PACKET_DIGEST",
+    "CURRENT_O4V_DECISION_RECEIPT_APPROVAL_AND_REVOCATION_STATE",
+    "COMPLETION_TIME",
+  ]) {
+    assert.ok(s236p.recomputeBindings.includes(binding), `missing S236P binding: ${binding}`);
+  }
+  for (const rejected of [
+    "UNRESOLVED",
+    "AMBIGUOUS",
+    "DIGEST_MISMATCH",
+    "RECOMPUTE_FAILURE",
+    "MISSING_OR_INVALID_ATTESTATION",
+    "O4V_BINDING_MISMATCH_OR_REVOKED",
+    "ENVIRONMENT_OR_VAULT_MISMATCH",
+    "STALE",
+  ]) {
+    assert.ok(s236p.reject.includes(rejected), `missing S236P rejection: ${rejected}`);
+  }
+  assert.equal(s236p.failureDisposition, "BLOCK_LIVE_ACTIVATION");
+  includesAll(
+    strategy,
+    [
+      "acceptanceCompleted=true",
+      "terminalPass=true",
+      "canonical content-addressed S236P completion artifact",
+      "current O4V",
+      "recompute",
+    ],
+    "strategy activation gate",
+  );
+  includesAll(
+    validation,
+    ["completion booleans alone are insufficient", "content-addressed", "blocks live activation"],
+    "validation activation gate",
+  );
 });
 
 test("preserves the current O4F-to-S243C ordering without circularity", () => {

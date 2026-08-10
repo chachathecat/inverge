@@ -3,7 +3,7 @@ document_title: "답안길 감정평가사 2차 World-Class Vertical Execution S
 document_subtitle: "정확한 감점 위치·AI 협업 교정·독립 전이·재발 검증·하루 관제"
 document_role: "V13 subordinate execution standard; not a new master plan"
 status: "proposed_non_authoritative_source_contract"
-version: "1.0.3"
+version: "1.0.4"
 dated: "2026-08-10 KST"
 repository: "chachathecat/inverge"
 active_master_plan: "docs/strategy/dabangil-professional-exam-reasoning-os-final-master-plan-v13-2026-08-06.md"
@@ -739,7 +739,14 @@ Synthetic Build Lane 허용:
 
 Live activation은 current unexpired O3A exact approval, completed exact S236P
 acceptance (`acceptanceCompleted=true`, `terminalPass=true`), CPF/privacy/RLS,
-exact Owner activation과 exact runtime evidence를 모두 요구한다.
+exact Owner activation과 exact runtime evidence를 모두 요구한다. 두 completion
+boolean은 필요조건일 뿐 충분조건이 아니다. 각 live activation 직전에 downstream은
+정확히 하나의 canonical content-addressed S236P completion artifact를 다시 resolve하고,
+receipt/assertion-evidence/primary-attestor-provenance sets, verified independent
+attestation, exact environment/vault, final O4V approved-packet digest, current O4V
+decision receipt·approval·revocation state와 completion time을 모두 recompute해야 한다.
+unresolved, ambiguous, duplicate, stale, revoked, digest mismatch, attestation failure,
+environment/vault mismatch 또는 recomputation failure는 live activation을 막는다.
 
 S236P blocked, failed, consumed 또는 terminal disposition은 acceptance가 아니다.
 후속 #713이 canonical authority를 명시적으로 바꾸기 전까지 이 gate를

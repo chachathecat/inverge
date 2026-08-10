@@ -1,7 +1,7 @@
 ---
 document_title: "Owner Decision — 감정평가사 2차 World-Class Vertical Execution Standard v1"
 status: "owner-decision/proposed-source-only"
-contract_version: "1.0.3"
+contract_version: "1.0.4"
 dated: "2026-08-10 KST"
 repository: "chachathecat/inverge"
 active_master_plan: "docs/strategy/dabangil-professional-exam-reasoning-os-final-master-plan-v13-2026-08-06.md"
@@ -214,6 +214,10 @@ PR #697과 Issue #695는 2026-08-10 KST에 superseded 상태로 merge 없이
 - streak/leaderboard/casino-style gamification
 - 학원·출판사·learner-private content의 shared bank/training 사용
 - S236P completed exact acceptance 없이 live activation
+- live activation 직전에 canonical content-addressed S236P completion artifact와
+  receipt/assertion/provenance sets, verified attestation, exact environment/vault,
+  final current O4V binding·decision receipt·approval·revocation state 및 completion
+  time을 resolve·recompute하지 않는 것
 - current canonical commercial gate를 별도 authority 없이 우회
 - pyBKT를 O2와 충분한 event data 전 shadow로 실행
 

@@ -1,6 +1,6 @@
 {
   "schema": "dabangil_appraiser_second_world_class_vertical_v1",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "dated": "2026-08-10 KST",
   "status": "proposed_non_authoritative_source_contract",
   "repository": "chachathecat/inverge",
@@ -235,11 +235,46 @@
     "liveActivation": {
       "requiredPreconditions": [
         "CURRENT_O3A_EXACT_APPROVAL",
-        "S236P_COMPLETED_EXACT_ACCEPTANCE",
+        "S236P_CURRENT_EXACT_ACCEPTANCE_ARTIFACT_RESOLVED_AND_RECOMPUTED_AT_ACTIVATION",
         "CPF_PRIVACY_RLS_GATES",
         "OWNER_ACTIVATION_APPROVAL",
         "EXACT_RUNTIME_EVIDENCE"
-      ]
+      ],
+      "s236pActivationRevalidation": {
+        "required": true,
+        "timing": "IMMEDIATELY_BEFORE_EACH_LIVE_ACTIVATION",
+        "artifact": "CANONICAL_CONTENT_ADDRESSED_S236P_COMPLETION_ARTIFACT",
+        "resolutionCardinality": "EXACTLY_ONE",
+        "requiredState": {
+          "acceptanceCompleted": true,
+          "terminalPass": true
+        },
+        "recomputeBindings": [
+          "RECEIPT_SET",
+          "ASSERTION_EVIDENCE_SET",
+          "PRIMARY_ATTESTOR_PROVENANCE_SET",
+          "VERIFIED_INDEPENDENT_ATTESTATION",
+          "EXACT_ENVIRONMENT_AND_VAULT",
+          "FINAL_O4V_APPROVED_PACKET_DIGEST",
+          "CURRENT_O4V_DECISION_RECEIPT_APPROVAL_AND_REVOCATION_STATE",
+          "COMPLETION_TIME"
+        ],
+        "reject": [
+          "UNRESOLVED",
+          "AMBIGUOUS",
+          "DUPLICATE",
+          "DIGEST_MISMATCH",
+          "RECOMPUTE_FAILURE",
+          "MISSING_OR_INVALID_ATTESTATION",
+          "O4V_BINDING_MISMATCH_OR_REVOKED",
+          "ENVIRONMENT_OR_VAULT_MISMATCH",
+          "STALE",
+          "FAILED",
+          "BLOCKED",
+          "CONSUMED"
+        ],
+        "failureDisposition": "BLOCK_LIVE_ACTIVATION"
+      }
     },
     "commercialActivation": {
       "paidCanaryRequiredPreconditions": [
