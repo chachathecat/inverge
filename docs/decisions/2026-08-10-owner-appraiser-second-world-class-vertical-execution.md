@@ -1,7 +1,7 @@
 ---
 document_title: "Owner Decision — 감정평가사 2차 World-Class Vertical Execution Standard v1"
 status: "owner-decision/proposed-source-only"
-contract_version: "1.0.5"
+contract_version: "1.0.6"
 dated: "2026-08-10 KST"
 repository: "chachathecat/inverge"
 active_master_plan: "docs/strategy/dabangil-professional-exam-reasoning-os-final-master-plan-v13-2026-08-06.md"
@@ -147,6 +147,41 @@ normal scaffold 또는 confirmed guided override가 generated full solution에
   실패하면 generated full-solution byte는 정확히 0이다.
 - semantically complete solution은 worked step/explanation으로 relabel해 우회할
   수 없다. learner-authored timed answer는 문구만으로 generated output이 아니다.
+
+Contract v1.0.6은 이 release를 생성 solution package에 exact-bind한다. trusted
+server resolver는 generated solution release candidate에서 정확히 하나의 S215 gate
+input/result, S214 pipeline result와 source pack, S214의 S207 prerequisite, matched
+S207 reference package로 이어지는 canonical chain 하나만 resolve해야 한다.
+
+- generated candidate와 S215 input/result의 `gateId`, `questionId`,
+  `s214PipelineId`, `referencePackageId` tuple은 field-for-field 동일해야 한다.
+- `questionId`는 S214 result, S214 source pack과 matched S207 package에도 같고,
+  `s214PipelineId`는 S214 `pipelineId`와 같아야 한다.
+- `referencePackageId`는 S214 source pack, S214 S207 prerequisite와 matched S207
+  package `id`까지 같아야 한다. subject도 S215/S214/source-pack/S207 전체에서
+  동일해야 한다.
+- required S215 result의 `sourceAnchorIntegrity.status`는 `passed`이고
+  `fabricatedSourceAnchorIds`와 `fabricatedEvidenceAnchorIds`는 모두 빈 배열이어야
+  한다. S215 result에 존재하지 않는 canonical `sourceAnchorIds` 배열을 가정하지
+  않으며 exact S214 pipeline과 S207 package에서 anchor를 resolve한다.
+- generated full solution과 official-source status, canonical-verification status,
+  verification report, uncertainty/alternatives disclosure는 모두 같은 package
+  identity를 inherit하거나 exact tuple로 보유하고 non-empty package-qualified
+  source/evidence refs를 가져야 한다.
+- source ref는 `(referencePackageId, questionId, sourceAnchorId)`로 matched S207
+  `sourceAnchors[].anchorId`에 정확히 한 번, evidence ref는 같은 package/question의
+  `evidenceAnchors[].evidenceId`에 정확히 한 번 resolve한다. linked evidence의 모든
+  source ref도 같은 package 안에서 resolve한다.
+- cited anchor 전부를 resolve하지만 package 전체 anchor set 인용은 요구하지 않는다.
+  global unqualified ID match, cross-question/package, mixed-package, empty,
+  missing/multiple/stale/fabricated anchor 또는 disclosure identity mismatch는 모두
+  fail closed다.
+- client, model, request label, disclosure string과 outer boolean에는 identity
+  resolution authority가 없다. 별도의 release authority를 만들지 않는다.
+
+어느 identity, pipeline, package 또는 anchor binding이라도 실패하면 S215 result가
+`released`여도 generated full-solution byte, positive evidence와 usage success는 모두
+정확히 0이다.
 
 ### 4.6 confirmed pre-attempt guided override
 

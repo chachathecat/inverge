@@ -31,8 +31,8 @@ const includesAll = (text, markers, label) => {
   }
 };
 
-test("synchronizes WCV contract v1.0.5 and keeps V13 authoritative", () => {
-  assert.equal(contract.version, "1.0.5");
+test("synchronizes WCV contract v1.0.6 and keeps V13 authoritative", () => {
+  assert.equal(contract.version, "1.0.6");
   assert.equal(
     contract.activeMasterPlan,
     "docs/strategy/dabangil-professional-exam-reasoning-os-final-master-plan-v13-2026-08-06.md",
@@ -40,10 +40,10 @@ test("synchronizes WCV contract v1.0.5 and keeps V13 authoritative", () => {
   assert.equal(contract.role.mayReplaceActiveMasterPlan, false);
   assert.equal(contract.authorizationBoundary.activePointerMutation, false);
   assert.equal(contract.authorizationBoundary.roadmapMutation, false);
-  includesAll(decision, ["contract_version: \"1.0.5\"", "V13은 계속 답안길의 유일한 active master plan"], "decision");
-  includesAll(strategy, ["version: \"1.0.5\"", "V13을 교체하지 않는다"], "strategy");
-  assert.ok(benchmark.includes("contract version: `1.0.5`"));
-  assert.ok(validation.includes("contract version: `1.0.5`"));
+  includesAll(decision, ["contract_version: \"1.0.6\"", "V13은 계속 답안길의 유일한 active master plan"], "decision");
+  includesAll(strategy, ["version: \"1.0.6\"", "V13을 교체하지 않는다"], "strategy");
+  assert.ok(benchmark.includes("contract version: `1.0.6`"));
+  assert.ok(validation.includes("contract version: `1.0.6`"));
 });
 
 test("authorizes no runtime, content, commercial, dependency or Production mutation", () => {
@@ -176,9 +176,10 @@ test("commits append-only exposure before any help byte", () => {
 test("gates every generated full solution on canonical S215 release and prior exposure", () => {
   const x = contract.hardInvariants;
   const release = contract.generatedFullSolutionReleaseContract;
+  const { canonicalResultBinding: _canonicalResultBinding, ...releaseWithoutCanonicalResultBinding } = release;
   assert.equal(x.generatedFullSolutionRequiresCanonicalS215Release, true);
   assert.equal(x.exposureAndS215ReleaseAreIndependentConjunctiveGates, true);
-  assert.deepEqual(release, {
+  assert.deepEqual(releaseWithoutCanonicalResultBinding, {
     s215Version: "s215.reference_answer_critic_consensus_release_gate.v1",
     appliesToGeneratedPaths: [
       "NORMAL_SCAFFOLD_FULL_SOLUTION",
@@ -189,6 +190,11 @@ test("gates every generated full solution on canonical S215 release and prior ex
     learnerAuthoredTimedFullAnswerPhraseAloneClassifiedAsGeneratedFullSolution: false,
     requiredResult: {
       status: "released",
+      sourceAnchorIntegrity: {
+        status: "passed",
+        fabricatedSourceAnchorIds: [],
+        fabricatedEvidenceAnchorIds: [],
+      },
       releaseDecision: {
         status: "released",
         learningReferenceStatus: "released_learning_reference",
@@ -249,6 +255,311 @@ test("gates every generated full solution on canonical S215 release and prior ex
     ],
     "strategy S215 full-solution gate",
   );
+});
+
+test("exact-binds generated solutions and disclosures to one canonical S215-S214-S207 package", () => {
+  const binding = contract.generatedFullSolutionReleaseContract.canonicalResultBinding;
+  const expectedBinding = {
+    authority: "TRUSTED_SERVER_RESOLVER",
+    releaseAuthority: "EXISTING_CANONICAL_S215_RESULT_ONLY",
+    secondReleaseAuthorityCreated: false,
+    canonicalChain: [
+      "GENERATED_SOLUTION_RELEASE_CANDIDATE",
+      "S215_GATE_INPUT",
+      "S215_GATE_RESULT",
+      "S214_PIPELINE_RESULT",
+      "S214_SOURCE_PACK",
+      "S214_S207_PREREQUISITE",
+      "MATCHED_S207_REFERENCE_PACKAGE",
+    ],
+    resolution: {
+      cardinality: "EXACTLY_ONE",
+      failClosedStates: ["MISSING", "MULTIPLE", "AMBIGUOUS", "STALE", "FOREIGN", "MISMATCHED"],
+    },
+    identity: {
+      tupleFields: ["gateId", "questionId", "s214PipelineId", "referencePackageId"],
+      equality: "FIELD_FOR_FIELD_EXACT",
+      fieldMappings: {
+        gateId: ["generatedSolution.gateId", "s215GateInput.gateId", "s215Result.gateId"],
+        questionId: [
+          "generatedSolution.questionId",
+          "s215GateInput.questionId",
+          "s215Result.questionId",
+          "s214Result.questionId",
+          "s214Result.sourcePack.questionId",
+          "matchedS207ReferencePackage.questionId",
+        ],
+        s214PipelineId: [
+          "generatedSolution.s214PipelineId",
+          "s215GateInput.s214PipelineId",
+          "s215Result.s214PipelineId",
+          "s214Result.pipelineId",
+        ],
+        referencePackageId: [
+          "generatedSolution.referencePackageId",
+          "s215GateInput.referencePackageId",
+          "s215Result.referencePackageId",
+          "s214Result.sourcePack.referencePackageId",
+          "s214Result.releasePrerequisites.s207Package.referencePackageId",
+          "matchedS207ReferencePackage.id",
+        ],
+      },
+      subjectMappings: [
+        "generatedSolution.subject",
+        "s215GateInput.subject",
+        "s215Result.subject",
+        "s214Result.subject",
+        "s214Result.sourcePack.subject",
+        "matchedS207ReferencePackage.subject",
+      ],
+      subjectEquality: "FIELD_FOR_FIELD_EXACT",
+    },
+    requiredS215Result: {
+      sourceAnchorIntegrity: {
+        status: "passed",
+        fabricatedSourceAnchorIds: [],
+        fabricatedEvidenceAnchorIds: [],
+      },
+      canonicalSourceAnchorIdsArrayAssumed: false,
+    },
+    boundArtifacts: [
+      {
+        artifact: "GENERATED_FULL_SOLUTION",
+        identity: "INHERIT_OR_CARRY_EXACT_TUPLE",
+        sourceAnchorRefs: "NON_EMPTY_PACKAGE_QUALIFIED",
+        evidenceAnchorRefs: "NON_EMPTY_PACKAGE_QUALIFIED",
+      },
+      {
+        artifact: "OFFICIAL_SOURCE_STATUS",
+        identity: "INHERIT_OR_CARRY_EXACT_TUPLE",
+        sourceAnchorRefs: "NON_EMPTY_PACKAGE_QUALIFIED",
+        evidenceAnchorRefs: "NON_EMPTY_PACKAGE_QUALIFIED",
+      },
+      {
+        artifact: "CANONICAL_VERIFICATION_STATUS",
+        identity: "INHERIT_OR_CARRY_EXACT_TUPLE",
+        sourceAnchorRefs: "NON_EMPTY_PACKAGE_QUALIFIED",
+        evidenceAnchorRefs: "NON_EMPTY_PACKAGE_QUALIFIED",
+      },
+      {
+        artifact: "VERIFICATION_REPORT",
+        identity: "INHERIT_OR_CARRY_EXACT_TUPLE",
+        sourceAnchorRefs: "NON_EMPTY_PACKAGE_QUALIFIED",
+        evidenceAnchorRefs: "NON_EMPTY_PACKAGE_QUALIFIED",
+      },
+      {
+        artifact: "UNCERTAINTY_AND_ALTERNATIVES",
+        identity: "INHERIT_OR_CARRY_EXACT_TUPLE",
+        sourceAnchorRefs: "NON_EMPTY_PACKAGE_QUALIFIED",
+        evidenceAnchorRefs: "NON_EMPTY_PACKAGE_QUALIFIED",
+      },
+    ],
+    anchorResolution: {
+      sourceAnchorRefTuple: ["referencePackageId", "questionId", "sourceAnchorId"],
+      sourceAnchorTarget: "matchedS207ReferencePackage.sourceAnchors[].anchorId",
+      evidenceAnchorRefTuple: ["referencePackageId", "questionId", "evidenceId"],
+      evidenceAnchorTarget: "matchedS207ReferencePackage.evidenceAnchors[].evidenceId",
+      pipelineSourcePackMembershipRequired: true,
+      resolutionCardinality: "EXACTLY_ONE",
+      linkedEvidenceSourceAnchorRefsResolveWithinSamePackage: true,
+      globalUnqualifiedAnchorIdMatchAllowed: false,
+      emptyRequiredAnchorRefsAllowed: false,
+      entireCanonicalAnchorSetCitationRequired: false,
+    },
+    identityAuthority: {
+      trustedServerResolver: true,
+      client: false,
+      model: false,
+      requestLabels: false,
+      disclosureStrings: false,
+      outerBooleans: false,
+    },
+    rejectedConditions: [
+      "CROSS_QUESTION_ANCHOR",
+      "CROSS_PACKAGE_ANCHOR",
+      "MIXED_PACKAGE_DISCLOSURE",
+      "GLOBAL_UNQUALIFIED_ANCHOR_MATCH",
+      "EMPTY_REQUIRED_ANCHORS",
+      "UNRESOLVED_ANCHOR",
+      "MULTIPLE_ANCHOR_MATCHES",
+      "STALE_ANCHOR",
+      "FABRICATED_ANCHOR",
+      "DISCLOSURE_IDENTITY_MISMATCH",
+    ],
+    failureBehavior: {
+      generatedFullSolutionBytes: 0,
+      positiveEvidence: 0,
+      usageSuccess: 0,
+    },
+  };
+  assert.deepEqual(binding, expectedBinding);
+
+  const identity = {
+    gateId: "gate-practice-2026-q1",
+    questionId: "question-practice-2026-q1",
+    s214PipelineId: "pipeline-practice-2026-q1",
+    referencePackageId: "package-practice-2026-q1",
+    subject: "practice",
+  };
+  const sourceAnchorRef = {
+    referencePackageId: identity.referencePackageId,
+    questionId: identity.questionId,
+    sourceAnchorId: "source-anchor-1",
+  };
+  const evidenceAnchorRef = {
+    referencePackageId: identity.referencePackageId,
+    questionId: identity.questionId,
+    evidenceId: "evidence-anchor-1",
+  };
+  const artifact = (artifactName) => ({
+    artifact: artifactName,
+    ...identity,
+    sourceAnchorRefs: [{ ...sourceAnchorRef }],
+    evidenceAnchorRefs: [{ ...evidenceAnchorRef }],
+  });
+  const fixture = {
+    generatedSolution: artifact("GENERATED_FULL_SOLUTION"),
+    s215GateInputs: [{ ...identity }],
+    s215Results: [{
+      ...identity,
+      status: "released",
+      sourceAnchorIntegrity: {
+        status: "passed",
+        fabricatedSourceAnchorIds: [],
+        fabricatedEvidenceAnchorIds: [],
+      },
+    }],
+    s214Results: [{
+      pipelineId: identity.s214PipelineId,
+      questionId: identity.questionId,
+      subject: identity.subject,
+      sourcePack: {
+        questionId: identity.questionId,
+        subject: identity.subject,
+        referencePackageId: identity.referencePackageId,
+        sourceAnchorIds: [sourceAnchorRef.sourceAnchorId],
+        evidenceAnchorIds: [evidenceAnchorRef.evidenceId],
+      },
+      releasePrerequisites: {
+        s207Package: { referencePackageId: identity.referencePackageId },
+      },
+    }],
+    s207Packages: [{
+      id: identity.referencePackageId,
+      questionId: identity.questionId,
+      subject: identity.subject,
+      sourceAnchors: [{
+        anchorId: sourceAnchorRef.sourceAnchorId,
+        questionId: identity.questionId,
+      }],
+      evidenceAnchors: [{
+        evidenceId: evidenceAnchorRef.evidenceId,
+        sourceAnchorIds: [sourceAnchorRef.sourceAnchorId],
+      }],
+    }],
+    disclosures: expectedBinding.boundArtifacts.slice(1).map(({ artifact: artifactName }) => artifact(artifactName)),
+  };
+  const clone = (value) => JSON.parse(JSON.stringify(value));
+  const exactIdentity = (candidate, generated) => (
+    expectedBinding.identity.tupleFields.every((field) => candidate[field] === generated[field])
+  );
+  const failClosed = () => ({ released: false, ...expectedBinding.failureBehavior });
+  const evaluate = (candidate) => {
+    const generated = candidate.generatedSolution;
+    const s215Inputs = candidate.s215GateInputs.filter((entry) => exactIdentity(entry, generated));
+    const s215Results = candidate.s215Results.filter((entry) => exactIdentity(entry, generated));
+    const s214Results = candidate.s214Results.filter((entry) => (
+      entry.pipelineId === generated.s214PipelineId
+      && entry.questionId === generated.questionId
+      && entry.sourcePack.questionId === generated.questionId
+      && entry.sourcePack.referencePackageId === generated.referencePackageId
+      && entry.releasePrerequisites.s207Package.referencePackageId === generated.referencePackageId
+    ));
+    const s207Packages = candidate.s207Packages.filter((entry) => (
+      entry.id === generated.referencePackageId && entry.questionId === generated.questionId
+    ));
+    if ([s215Inputs, s215Results, s214Results, s207Packages].some((matches) => matches.length !== 1)) {
+      return failClosed();
+    }
+
+    const [s215Input] = s215Inputs;
+    const [s215Result] = s215Results;
+    const [s214Result] = s214Results;
+    const [s207Package] = s207Packages;
+    const chain = [generated, s215Input, s215Result, s214Result, s214Result.sourcePack, s207Package];
+    if (chain.some((entry) => entry.stale === true || entry.subject !== generated.subject)) return failClosed();
+    if (s215Result.status !== "released") return failClosed();
+    if (!Object.is(s215Result.sourceAnchorIntegrity.status, "passed")) return failClosed();
+    if (s215Result.sourceAnchorIntegrity.fabricatedSourceAnchorIds.length !== 0) return failClosed();
+    if (s215Result.sourceAnchorIntegrity.fabricatedEvidenceAnchorIds.length !== 0) return failClosed();
+
+    const artifacts = [generated, ...candidate.disclosures];
+    const requiredArtifacts = expectedBinding.boundArtifacts.map((entry) => entry.artifact);
+    if (artifacts.length !== requiredArtifacts.length) return failClosed();
+    if (artifacts.some((entry, index) => entry.artifact !== requiredArtifacts[index])) return failClosed();
+    for (const entry of artifacts) {
+      if (!exactIdentity(entry, generated) || entry.subject !== generated.subject || entry.stale === true) return failClosed();
+      if (entry.sourceAnchorRefs.length === 0 || entry.evidenceAnchorRefs.length === 0) return failClosed();
+      for (const ref of entry.sourceAnchorRefs) {
+        if (ref.stale === true) return failClosed();
+        if (ref.referencePackageId !== generated.referencePackageId || ref.questionId !== generated.questionId) {
+          return failClosed();
+        }
+        if (s214Result.sourcePack.sourceAnchorIds.filter((id) => id === ref.sourceAnchorId).length !== 1) {
+          return failClosed();
+        }
+        const resolved = s207Package.sourceAnchors.filter((anchor) => (
+          anchor.anchorId === ref.sourceAnchorId && anchor.questionId === ref.questionId && anchor.stale !== true
+        ));
+        if (resolved.length !== 1) return failClosed();
+      }
+      for (const ref of entry.evidenceAnchorRefs) {
+        if (ref.stale === true) return failClosed();
+        if (ref.referencePackageId !== generated.referencePackageId || ref.questionId !== generated.questionId) {
+          return failClosed();
+        }
+        if (s214Result.sourcePack.evidenceAnchorIds.filter((id) => id === ref.evidenceId).length !== 1) {
+          return failClosed();
+        }
+        const resolved = s207Package.evidenceAnchors.filter((anchor) => (
+          anchor.evidenceId === ref.evidenceId && anchor.stale !== true
+        ));
+        if (resolved.length !== 1 || resolved[0].sourceAnchorIds.length === 0) return failClosed();
+        for (const linkedSourceAnchorId of resolved[0].sourceAnchorIds) {
+          if (s214Result.sourcePack.sourceAnchorIds.filter((id) => id === linkedSourceAnchorId).length !== 1) {
+            return failClosed();
+          }
+          const linked = s207Package.sourceAnchors.filter((anchor) => (
+            anchor.anchorId === linkedSourceAnchorId
+            && anchor.questionId === generated.questionId
+            && anchor.stale !== true
+          ));
+          if (linked.length !== 1) return failClosed();
+        }
+      }
+    }
+    return { released: true };
+  };
+
+  assert.deepEqual(evaluate(fixture), { released: true });
+  const nearMatches = [
+    ["gateId", (value) => { value.s215Results[0].gateId = "foreign-gate"; }],
+    ["questionId", (value) => { value.s215Results[0].questionId = "foreign-question"; }],
+    ["s214PipelineId", (value) => { value.s215Results[0].s214PipelineId = "foreign-pipeline"; }],
+    ["referencePackageId", (value) => { value.s215Results[0].referencePackageId = "foreign-package"; }],
+    ["source anchor", (value) => { value.generatedSolution.sourceAnchorRefs[0].sourceAnchorId = "foreign-source"; }],
+    ["verification/evidence anchor", (value) => {
+      value.disclosures[2].evidenceAnchorRefs[0].evidenceId = "foreign-evidence";
+    }],
+    ["multiple canonical result", (value) => { value.s215Results.push(clone(value.s215Results[0])); }],
+    ["mixed-package disclosure", (value) => { value.disclosures[0].referencePackageId = "foreign-package"; }],
+    ["stale matched package", (value) => { value.s207Packages[0].stale = true; }],
+  ];
+  for (const [label, mutate] of nearMatches) {
+    const nearMatch = clone(fixture);
+    mutate(nearMatch);
+    assert.deepEqual(evaluate(nearMatch), failClosed(), `${label} must fail closed`);
+  }
 });
 
 test("requires exact ready S216 and S217 outputs before review completion and replan", () => {

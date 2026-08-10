@@ -1,6 +1,6 @@
 {
   "schema": "dabangil_appraiser_second_world_class_vertical_v1",
-  "version": "1.0.5",
+  "version": "1.0.6",
   "dated": "2026-08-10 KST",
   "status": "proposed_non_authoritative_source_contract",
   "repository": "chachathecat/inverge",
@@ -263,6 +263,11 @@
     "learnerAuthoredTimedFullAnswerPhraseAloneClassifiedAsGeneratedFullSolution": false,
     "requiredResult": {
       "status": "released",
+      "sourceAnchorIntegrity": {
+        "status": "passed",
+        "fabricatedSourceAnchorIds": [],
+        "fabricatedEvidenceAnchorIds": []
+      },
       "releaseDecision": {
         "status": "released",
         "learningReferenceStatus": "released_learning_reference",
@@ -278,6 +283,163 @@
         "scorePredictionAllowed": false,
         "passProbabilityAllowed": false,
         "passGuaranteeAllowed": false
+      }
+    },
+    "canonicalResultBinding": {
+      "authority": "TRUSTED_SERVER_RESOLVER",
+      "releaseAuthority": "EXISTING_CANONICAL_S215_RESULT_ONLY",
+      "secondReleaseAuthorityCreated": false,
+      "canonicalChain": [
+        "GENERATED_SOLUTION_RELEASE_CANDIDATE",
+        "S215_GATE_INPUT",
+        "S215_GATE_RESULT",
+        "S214_PIPELINE_RESULT",
+        "S214_SOURCE_PACK",
+        "S214_S207_PREREQUISITE",
+        "MATCHED_S207_REFERENCE_PACKAGE"
+      ],
+      "resolution": {
+        "cardinality": "EXACTLY_ONE",
+        "failClosedStates": [
+          "MISSING",
+          "MULTIPLE",
+          "AMBIGUOUS",
+          "STALE",
+          "FOREIGN",
+          "MISMATCHED"
+        ]
+      },
+      "identity": {
+        "tupleFields": [
+          "gateId",
+          "questionId",
+          "s214PipelineId",
+          "referencePackageId"
+        ],
+        "equality": "FIELD_FOR_FIELD_EXACT",
+        "fieldMappings": {
+          "gateId": [
+            "generatedSolution.gateId",
+            "s215GateInput.gateId",
+            "s215Result.gateId"
+          ],
+          "questionId": [
+            "generatedSolution.questionId",
+            "s215GateInput.questionId",
+            "s215Result.questionId",
+            "s214Result.questionId",
+            "s214Result.sourcePack.questionId",
+            "matchedS207ReferencePackage.questionId"
+          ],
+          "s214PipelineId": [
+            "generatedSolution.s214PipelineId",
+            "s215GateInput.s214PipelineId",
+            "s215Result.s214PipelineId",
+            "s214Result.pipelineId"
+          ],
+          "referencePackageId": [
+            "generatedSolution.referencePackageId",
+            "s215GateInput.referencePackageId",
+            "s215Result.referencePackageId",
+            "s214Result.sourcePack.referencePackageId",
+            "s214Result.releasePrerequisites.s207Package.referencePackageId",
+            "matchedS207ReferencePackage.id"
+          ]
+        },
+        "subjectMappings": [
+          "generatedSolution.subject",
+          "s215GateInput.subject",
+          "s215Result.subject",
+          "s214Result.subject",
+          "s214Result.sourcePack.subject",
+          "matchedS207ReferencePackage.subject"
+        ],
+        "subjectEquality": "FIELD_FOR_FIELD_EXACT"
+      },
+      "requiredS215Result": {
+        "sourceAnchorIntegrity": {
+          "status": "passed",
+          "fabricatedSourceAnchorIds": [],
+          "fabricatedEvidenceAnchorIds": []
+        },
+        "canonicalSourceAnchorIdsArrayAssumed": false
+      },
+      "boundArtifacts": [
+        {
+          "artifact": "GENERATED_FULL_SOLUTION",
+          "identity": "INHERIT_OR_CARRY_EXACT_TUPLE",
+          "sourceAnchorRefs": "NON_EMPTY_PACKAGE_QUALIFIED",
+          "evidenceAnchorRefs": "NON_EMPTY_PACKAGE_QUALIFIED"
+        },
+        {
+          "artifact": "OFFICIAL_SOURCE_STATUS",
+          "identity": "INHERIT_OR_CARRY_EXACT_TUPLE",
+          "sourceAnchorRefs": "NON_EMPTY_PACKAGE_QUALIFIED",
+          "evidenceAnchorRefs": "NON_EMPTY_PACKAGE_QUALIFIED"
+        },
+        {
+          "artifact": "CANONICAL_VERIFICATION_STATUS",
+          "identity": "INHERIT_OR_CARRY_EXACT_TUPLE",
+          "sourceAnchorRefs": "NON_EMPTY_PACKAGE_QUALIFIED",
+          "evidenceAnchorRefs": "NON_EMPTY_PACKAGE_QUALIFIED"
+        },
+        {
+          "artifact": "VERIFICATION_REPORT",
+          "identity": "INHERIT_OR_CARRY_EXACT_TUPLE",
+          "sourceAnchorRefs": "NON_EMPTY_PACKAGE_QUALIFIED",
+          "evidenceAnchorRefs": "NON_EMPTY_PACKAGE_QUALIFIED"
+        },
+        {
+          "artifact": "UNCERTAINTY_AND_ALTERNATIVES",
+          "identity": "INHERIT_OR_CARRY_EXACT_TUPLE",
+          "sourceAnchorRefs": "NON_EMPTY_PACKAGE_QUALIFIED",
+          "evidenceAnchorRefs": "NON_EMPTY_PACKAGE_QUALIFIED"
+        }
+      ],
+      "anchorResolution": {
+        "sourceAnchorRefTuple": [
+          "referencePackageId",
+          "questionId",
+          "sourceAnchorId"
+        ],
+        "sourceAnchorTarget": "matchedS207ReferencePackage.sourceAnchors[].anchorId",
+        "evidenceAnchorRefTuple": [
+          "referencePackageId",
+          "questionId",
+          "evidenceId"
+        ],
+        "evidenceAnchorTarget": "matchedS207ReferencePackage.evidenceAnchors[].evidenceId",
+        "pipelineSourcePackMembershipRequired": true,
+        "resolutionCardinality": "EXACTLY_ONE",
+        "linkedEvidenceSourceAnchorRefsResolveWithinSamePackage": true,
+        "globalUnqualifiedAnchorIdMatchAllowed": false,
+        "emptyRequiredAnchorRefsAllowed": false,
+        "entireCanonicalAnchorSetCitationRequired": false
+      },
+      "identityAuthority": {
+        "trustedServerResolver": true,
+        "client": false,
+        "model": false,
+        "requestLabels": false,
+        "disclosureStrings": false,
+        "outerBooleans": false
+      },
+      "rejectedConditions": [
+        "CROSS_QUESTION_ANCHOR",
+        "CROSS_PACKAGE_ANCHOR",
+        "MIXED_PACKAGE_DISCLOSURE",
+        "GLOBAL_UNQUALIFIED_ANCHOR_MATCH",
+        "EMPTY_REQUIRED_ANCHORS",
+        "UNRESOLVED_ANCHOR",
+        "MULTIPLE_ANCHOR_MATCHES",
+        "STALE_ANCHOR",
+        "FABRICATED_ANCHOR",
+        "DISCLOSURE_IDENTITY_MISMATCH"
+      ],
+      "failureBehavior": {
+        "generatedFullSolutionBytes": 0,
+        "positiveEvidence": 0,
+        "usageSuccess": 0
       }
     },
     "learnerVisibleDisclosures": [

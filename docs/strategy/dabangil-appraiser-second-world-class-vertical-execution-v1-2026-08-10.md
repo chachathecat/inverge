@@ -3,7 +3,7 @@ document_title: "답안길 감정평가사 2차 World-Class Vertical Execution S
 document_subtitle: "정확한 감점 위치·AI 협업 교정·독립 전이·재발 검증·하루 관제"
 document_role: "V13 subordinate execution standard; not a new master plan"
 status: "proposed_non_authoritative_source_contract"
-version: "1.0.5"
+version: "1.0.6"
 dated: "2026-08-10 KST"
 repository: "chachathecat/inverge"
 active_master_plan: "docs/strategy/dabangil-professional-exam-reasoning-os-final-master-plan-v13-2026-08-06.md"
@@ -368,6 +368,120 @@ neutral reprompt
 ### 6.2 canonical generated full-solution release
 
 ```ts
+type GeneratedSolutionPackageIdentityV1 = {
+  gateId: string;
+  questionId: string;
+  s214PipelineId: string;
+  referencePackageId: string;
+  subject: "law" | "theory" | "practice";
+};
+
+type PackageQualifiedSourceAnchorRefV1 = {
+  referencePackageId: string;
+  questionId: string;
+  sourceAnchorId: string;
+};
+
+type PackageQualifiedEvidenceAnchorRefV1 = {
+  referencePackageId: string;
+  questionId: string;
+  evidenceId: string;
+};
+
+type BoundGeneratedSolutionArtifactV1 = GeneratedSolutionPackageIdentityV1 & {
+  artifact:
+    | "generated_full_solution"
+    | "official_source_status"
+    | "canonical_verification_status"
+    | "verification_report"
+    | "uncertainty_and_alternatives";
+  sourceAnchorRefs: [
+    PackageQualifiedSourceAnchorRefV1,
+    ...PackageQualifiedSourceAnchorRefV1[],
+  ];
+  evidenceAnchorRefs: [
+    PackageQualifiedEvidenceAnchorRefV1,
+    ...PackageQualifiedEvidenceAnchorRefV1[],
+  ];
+};
+
+type CanonicalGeneratedSolutionResultBindingV1 = {
+  authority: "trusted_server_resolver";
+  releaseAuthority: "existing_canonical_s215_result_only";
+  secondReleaseAuthorityCreated: false;
+  resolutionCardinality: "exactly_one";
+  chain: {
+    generatedSolution: GeneratedSolutionPackageIdentityV1;
+    s215GateInput: GeneratedSolutionPackageIdentityV1;
+    s215Result: GeneratedSolutionPackageIdentityV1 & {
+      sourceAnchorIntegrity: {
+        status: "passed";
+        fabricatedSourceAnchorIds: [];
+        fabricatedEvidenceAnchorIds: [];
+      };
+    };
+    s214Result: {
+      pipelineId: string;
+      questionId: string;
+      subject: "law" | "theory" | "practice";
+      sourcePack: {
+        questionId: string;
+        subject: "law" | "theory" | "practice";
+        referencePackageId: string;
+        sourceAnchorIds: string[];
+        evidenceAnchorIds: string[];
+      };
+      releasePrerequisites: {
+        s207Package: { referencePackageId: string };
+      };
+    };
+    matchedS207Package: {
+      id: string;
+      questionId: string;
+      subject: "law" | "theory" | "practice";
+      sourceAnchors: Array<{ anchorId: string; questionId: string }>;
+      evidenceAnchors: Array<{ evidenceId: string; sourceAnchorIds: string[] }>;
+    };
+  };
+  exactIdentityTuple: [
+    "gateId",
+    "questionId",
+    "s214PipelineId",
+    "referencePackageId",
+  ];
+  exactSubjectBinding: true;
+  boundArtifacts: [
+    BoundGeneratedSolutionArtifactV1 & { artifact: "generated_full_solution" },
+    BoundGeneratedSolutionArtifactV1 & { artifact: "official_source_status" },
+    BoundGeneratedSolutionArtifactV1 & { artifact: "canonical_verification_status" },
+    BoundGeneratedSolutionArtifactV1 & { artifact: "verification_report" },
+    BoundGeneratedSolutionArtifactV1 & { artifact: "uncertainty_and_alternatives" },
+  ];
+  anchorResolution: {
+    sourceTuple: ["referencePackageId", "questionId", "sourceAnchorId"];
+    evidenceTuple: ["referencePackageId", "questionId", "evidenceId"];
+    exactS214SourcePackMembershipRequired: true;
+    matchedS207PackageResolutionCardinality: "exactly_one";
+    linkedEvidenceSourceAnchorsResolveWithinSamePackage: true;
+    globalUnqualifiedAnchorIdMatchAllowed: false;
+    emptyRequiredAnchorRefsAllowed: false;
+    entireCanonicalAnchorSetCitationRequired: false;
+    s215CanonicalSourceAnchorIdsArrayAssumed: false;
+  };
+  identityAuthority: {
+    client: false;
+    model: false;
+    requestLabels: false;
+    disclosureStrings: false;
+    outerBooleans: false;
+  };
+  failure: {
+    generatedFullSolutionBytes: 0;
+    positiveEvidence: 0;
+    usageSuccess: 0;
+  };
+};
+
 type GeneratedFullSolutionReleaseContractV1 = {
   s215Version: "s215.reference_answer_critic_consensus_release_gate.v1";
   path:
@@ -377,6 +491,11 @@ type GeneratedFullSolutionReleaseContractV1 = {
   exposureCommitRequired: true;
   s215Result: {
     status: "released";
+    sourceAnchorIntegrity: {
+      status: "passed";
+      fabricatedSourceAnchorIds: [];
+      fabricatedEvidenceAnchorIds: [];
+    };
     releaseDecision: {
       status: "released";
       learningReferenceStatus: "released_learning_reference";
@@ -396,6 +515,7 @@ type GeneratedFullSolutionReleaseContractV1 = {
     openBlockingReleaseBlockerCount: 0;
     unresolvedBlockingUncertaintyCount: 0;
   };
+  canonicalResultBinding: CanonicalGeneratedSolutionResultBindingV1;
   learnerVisibleDisclosureRefs: {
     officialSourceStatusRef: string;
     canonicalVerificationStatusRef: string;
@@ -411,6 +531,8 @@ type GeneratedFullSolutionReleaseContractV1 = {
   };
   failure: {
     generatedFullSolutionBytes: 0;
+    positiveEvidence: 0;
+    usageSuccess: 0;
   };
 };
 ```
@@ -428,6 +550,23 @@ decision을 그대로 사용한다. 별도의 answer authority를 만들지 않�
   generated solution도 우회하지 못한다.
 - learner-authored timed full-answer attempt는 문구에 `full solution`이 들어갔다는
   이유만으로 generated full solution으로 분류하지 않는다.
+- trusted resolver는 generated candidate → S215 input/result → exact S214 pipeline,
+  source pack과 S207 prerequisite → matched S207 package를 정확히 하나만 resolve한다.
+  `gateId`, `questionId`, `s214PipelineId`, `referencePackageId` tuple과 subject는
+  전체 chain에서 field-for-field 같아야 한다.
+- required S215 result는 `sourceAnchorIntegrity.status="passed"`와 빈 fabricated
+  source/evidence 배열을 가져야 한다. S215 result에 canonical `sourceAnchorIds`
+  배열이 있다고 가정하지 않고 exact S214/S207 chain에서 anchor를 resolve한다.
+- generated solution과 네 disclosure는 동일 package identity와 non-empty
+  package-qualified source/evidence refs를 가진다. source/evidence ref와 linked
+  evidence의 source ref는 matched S207 package 안에서 각각 정확히 한 번 resolve하고
+  exact S214 source pack에도 속해야 한다. global ID-only match는 금지한다.
+- 모든 cited anchor는 resolve하지만 package 전체 canonical anchor set을 인용할
+  필요는 없다. missing, multiple, ambiguous, stale, foreign, cross-question/package,
+  mixed-package, fabricated 또는 disclosure identity mismatch는 fail closed다.
+- client/model/request label/disclosure string/outer boolean은 identity authority가
+  아니며, released S215를 빌려와도 mismatch 시 output, positive evidence와 usage
+  success는 모두 0이다.
 
 ### 6.3 pre-help exposure transaction
 
