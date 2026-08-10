@@ -2,6 +2,7 @@
 
 - 작성일: 2026-08-10 KST
 - 상태: source-only validation
+- contract version: `1.0.1`
 - runtime evidence: none
 - active master change: none
 - roadmap state change: none
@@ -14,6 +15,7 @@
 4. `config/dabangil-appraiser-second-world-class-vertical-v1.json`
 5. `docs/qa/appraiser-second-world-class-vertical-validation.md`
 6. `tests/appraiser-second-world-class-vertical-contract.test.mjs`
+7. `scripts/run-node-tests.mjs` — default CI test registration only
 
 ## 2. Source hierarchy
 
@@ -54,14 +56,37 @@ The sources support design mechanisms, not Dabangil efficacy or pricing claims.
 - later independent failure reopens closure
 - one canonical mastery authority
 - Today CoreOutcome max 3
-- Full-Day 0..N within available minutes
+- Full-Day ExecutionBlock 0..N within available minutes
+- Full-Day available minutes restricted to trusted-server integer 30..720
 - engagement does not set learning priority
 - raw learner body excluded from shared analytics/training
 - FSRS due-date candidate only
 - BKT benchmark/shadow only
+- completed exact S236P acceptance required before live activation
+- S236P blocked, failed or terminal disposition cannot substitute
+- separately approved exact external-commercial O4 gate required before paid canary
+- canonical commercial dependency path `S241A → O3C → S239A → S242C → O4F → S243C` preserved
+- Owner-private acceptance and generic Owner activation cannot substitute for the external-commercial gate
+- focused contract test registered in the default Node runner
 - V13 remains active
 
-## 5. Commands
+## 5. Fresh review corrections
+
+The first exact-head Codex review of PR #700 found four actionable issues. This
+correction closes them as follows.
+
+1. **S236P gate** — live activation now requires current exact evidence with
+   `acceptanceCompleted=true` and `terminalPass=true`; blocked or terminal
+   disposition is not acceptance.
+2. **Commercial gate** — WCV-9 is now a separate external trust and exact
+   external-commercial O4 gate; WCV-10 is the paid canary and cannot start from
+   Owner-private acceptance alone.
+3. **Full-Day range** — `availableMinutes` is a trusted-server integer in
+   the closed 30..720 range; outside-range or malformed values produce no plan.
+4. **Default CI coverage** — the focused contract test is registered in
+   `scripts/run-node-tests.mjs` so `npm test` executes it by default.
+
+## 6. Commands
 
 ```bash
 node --check tests/appraiser-second-world-class-vertical-contract.test.mjs
@@ -74,15 +99,16 @@ npm test
 npm run build
 ```
 
-The focused source test can be run without new dependencies.
+The focused source test requires no new dependency.
 
-## 6. Non-claims
+## 7. Non-claims
 
 Passing these checks proves only:
 
 - source files exist and agree;
 - the machine mirror parses;
 - key invariants are pinned;
+- default CI executes the contract test;
 - no active pointer/runtime authorization is asserted.
 
 It does not prove:
@@ -96,7 +122,8 @@ It does not prove:
 - commercial readiness;
 - Production readiness.
 
-## 7. Rollback
+## 8. Rollback
 
-Rollback is deletion/revert of these six source-only artifacts. No data, schema,
-runtime, provider or deployment cleanup is required.
+Rollback is a focused revert/removal of the six additive source artifacts plus
+the one-line default-runner registration. No data, schema, runtime, provider or
+deployment cleanup is required.
