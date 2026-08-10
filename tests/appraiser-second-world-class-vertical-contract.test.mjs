@@ -254,7 +254,7 @@ test("keeps private raw bodies out of training and shared planes", () => {
   ]);
 });
 
-test("keeps pyBKT benchmark-only until O2 and sufficient event data", () => {
+test("keeps the pyBKT disposition declaration benchmark-only until O2 and sufficient event data", () => {
   const bkt = contract.benchmarkAdoption.PYBKT;
   assert.equal(bkt.currentDisposition, "BENCHMARK_ONLY");
   assert.deepEqual(bkt.shadowPrerequisites, [
@@ -265,9 +265,15 @@ test("keeps pyBKT benchmark-only until O2 and sufficient event data", () => {
   assert.ok(bkt.reject.includes("SHADOW_FROM_SYNTHETIC_BENCHMARK_ALONE"));
   assert.ok(bkt.reject.includes("CANONICAL_MASTERY_AUTHORITY"));
   includesAll(strategy, ["pyBKT", "benchmark_only", "exact-scope O2 measurement/consent gate"], "strategy pyBKT boundary");
-  includesAll(benchmark, ["Current disposition is exactly:", "> `benchmark_only`"], "benchmark pyBKT boundary");
+  assert.match(
+    benchmark,
+    /Current disposition is exactly:\s*\n\s*>\s*`benchmark_only`/i,
+  );
+  assert.doesNotMatch(
+    benchmark,
+    /Current disposition is exactly:\s*\n\s*>\s*`(?:shadow|benchmark_shadow_only)`/i,
+  );
   includesAll(validation, ["pyBKT", "benchmark_only"], "validation pyBKT boundary");
-  assert.equal(/Current disposition:\s*`benchmark_shadow_only`/i.test(benchmark), false);
 });
 
 test("registers the focused contract in the default test runner", () => {
