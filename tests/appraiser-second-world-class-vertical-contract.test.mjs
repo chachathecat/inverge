@@ -13,6 +13,7 @@ const paths = {
     "config/dabangil-appraiser-second-world-class-vertical-v1.json",
   validation:
     "docs/qa/appraiser-second-world-class-vertical-validation.md",
+  runner: "scripts/run-node-tests.mjs",
 };
 
 const read = (path) => readFileSync(path, "utf8");
@@ -21,6 +22,7 @@ const strategy = read(paths.strategy);
 const benchmark = read(paths.benchmark);
 const validation = read(paths.validation);
 const contractText = read(paths.contract);
+const runner = read(paths.runner);
 const contract = JSON.parse(contractText);
 
 test("pins V13 as the sole active master and forbids active-pointer mutation", () => {
@@ -112,8 +114,8 @@ test("keeps Today max three while allowing bounded full-day blocks", () => {
   );
   assert.equal(contract.hardInvariants.blockCompletionChangesMastery, false);
   assert.equal(contract.hardInvariants.engagementMaySetLearningPriority, false);
-  assert.match(strategy, /CoreOutcome 0\.\.3/);
-  assert.match(strategy, /ExecutionBlock 0\.\.N/);
+  assert.match(strategy, /CoreOutcome은 0\.\.3/);
+  assert.match(strategy, /ExecutionBlock은 validated available minutes 안의 0\.\.N/);
 });
 
 test("defines complete Practice, Theory, and Law Golden verticals", () => {
@@ -131,7 +133,7 @@ test("defines complete Practice, Theory, and Law Golden verticals", () => {
   );
 });
 
-test("separates safe synthetic building from live activation", () => {
+test("separates safe synthetic building from exact completed S236P live activation", () => {
   assert.ok(contract.lanes.syntheticBuild.allowed.includes("STATE_MACHINE"));
   assert.ok(
     contract.lanes.syntheticBuild.forbidden.includes("REAL_LEARNER_BODY"),
@@ -143,9 +145,61 @@ test("separates safe synthetic building from live activation", () => {
   );
   assert.ok(
     contract.lanes.liveActivation.requiredPreconditions.includes(
+      "S236P_COMPLETED_EXACT_ACCEPTANCE",
+    ),
+  );
+  assert.ok(
+    !contract.lanes.liveActivation.requiredPreconditions.includes(
       "S236P_TERMINAL_DISPOSITION_OR_EXPLICIT_REPLACEMENT",
     ),
   );
+  assert.match(strategy, /acceptanceCompleted=true/);
+  assert.match(strategy, /terminalPass=true/);
+});
+
+test("requires a separate external-commercial O4 gate before paid canary", () => {
+  const slices = contract.implementationSlices;
+  const gate = slices.indexOf("WCV_9_EXTERNAL_TRUST_AND_COMMERCIAL_O4_GATE");
+  const canary = slices.indexOf("WCV_10_EXTERNAL_PAID_CANARY");
+  assert.ok(gate >= 0);
+  assert.ok(canary > gate);
+  assert.ok(
+    contract.lanes.commercialActivation.paidCanaryRequiredPreconditions.includes(
+      "EXACT_EXTERNAL_COMMERCIAL_O4_PACKET_APPROVED",
+    ),
+  );
+  assert.equal(
+    contract.lanes.commercialActivation.ownerPrivateAcceptanceMaySubstitute,
+    false,
+  );
+  assert.equal(
+    contract.lanes.commercialActivation.genericOwnerActivationMaySubstitute,
+    false,
+  );
+  assert.deepEqual(contract.lanes.commercialActivation.canonicalDependencyPath, [
+    "S241A",
+    "O3C",
+    "S239A",
+    "S242C",
+    "O4F",
+    "S243C",
+  ]);
+});
+
+test("constrains Full-Day availability to trusted integer 30 through 720", () => {
+  assert.deepEqual(contract.hardInvariants.fullDayAvailableMinutes, {
+    requiredType: "integer",
+    minimum: 30,
+    maximum: 720,
+    outsideRangeBehavior: "REJECT_NO_PLAN",
+  });
+  assert.match(strategy, /integer 30\.\.720/);
+  assert.match(strategy, /REJECT_NO_PLAN/);
+});
+
+test("registers this contract in the default Node test runner", () => {
+  const marker = "tests/appraiser-second-world-class-vertical-contract.test.mjs";
+  assert.match(runner, new RegExp(marker.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
 });
 
 test("adopts world-class mechanisms but rejects external authority leakage", () => {
@@ -205,7 +259,10 @@ test("keeps the benchmark matrix grounded and candid about evidence limits", () 
     "Tutor CoPilot",
     "Retrieval Practice",
   ]) {
-    assert.match(benchmark, new RegExp(marker.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
+    assert.match(
+      benchmark,
+      new RegExp(marker.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")),
+    );
   }
   assert.match(benchmark, /외부 제품의 마케팅 주장은 답안길 효능 증거가 아니다/);
 });
