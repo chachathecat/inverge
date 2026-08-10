@@ -1,6 +1,6 @@
 {
   "schema": "dabangil_appraiser_second_world_class_vertical_v1",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "dated": "2026-08-10 KST",
   "status": "proposed_non_authoritative_source_contract",
   "repository": "chachathecat/inverge",
@@ -66,6 +66,13 @@
     "laterIndependentFailureReopensClosure": true,
     "practiceDeterministicConflictBlocksNumericRelease": true,
     "lawSourceOrEffectiveVersionConflictBlocksVerifiedRelease": true,
+    "helpOutputRequiresPriorExposureCommit": true,
+    "exposureCommitFailureBehavior": "ZERO_HELP_BYTES_NO_EVIDENCE",
+    "exposedAttemptMayReturnToUnseen": false,
+    "laterDistinctIndependentAttemptRequiredAfterExposure": true,
+    "d1RequiresFrozenD0Configuration": true,
+    "incompatibleD0D1ConfigurationBehavior": "STALE_RESTART_D0",
+    "securityRepairMaySilentlyPreserveD0Evidence": false,
     "blockCompletionChangesMastery": false,
     "todayCoreOutcomeMax": 3,
     "fullDayExecutionBlockLimitMode": "AVAILABLE_MINUTES_0_TO_N",
@@ -111,16 +118,61 @@
     "WORKED_STEP",
     "FULL_SOLUTION"
   ],
+  "assistanceExposureContract": {
+    "authority": "TRUSTED_SERVER_APPEND_ONLY",
+    "commitBeforeOutput": true,
+    "coveredOutputKinds": [
+      "HINT",
+      "EXPLANATION",
+      "WORKED_STEP",
+      "PROBE",
+      "FULL_SOLUTION"
+    ],
+    "commitFailureBehavior": "ZERO_OUTPUT_NO_EVIDENCE",
+    "exposedMayBeRelabeledUnseen": false,
+    "laterDistinctIndependentAttemptRequired": true,
+    "clientOrModelMayAssertExposureState": false
+  },
+  "frozenD0Configuration": {
+    "requiredBindings": [
+      "PROBLEM_REVISION",
+      "SOURCE_VERSION",
+      "MODEL_VERSION",
+      "PROMPT_VERSION",
+      "RUBRIC_VERSION",
+      "VALIDATOR_VERSION",
+      "FULL_DAY_POLICY_VERSION",
+      "NOTEBOOK_SCHEMA_VERSION",
+      "TUTOR_POLICY_VERSION",
+      "ASSISTANCE_POLICY_VERSION",
+      "MEASUREMENT_POLICY_VERSION",
+      "ITEM_RELEASE_ARTIFACT"
+    ],
+    "onMismatch": "STALE_RESTART_D0",
+    "securityRepairBehavior": "INVALIDATE_AND_RESTART",
+    "silentEvidenceCarryForwardAllowed": false
+  },
   "goldenVerticals": {
     "practice": {
       "requiredStory": [
         "EXACT_CALCULATION_STEP_ANCHOR",
         "KNOWLEDGE_VS_EXECUTION_DIAGNOSIS",
         "DETERMINISTIC_RECALCULATION",
+        "CASIO_FX_9860GIII_RESET_SAFE_ROUTINE",
         "DIRECT_REPAIR",
         "D1",
         "D7_CHANGED_VALUES_VERIFIED_VARIANT",
         "TIMED_FULL_SOLUTION_RECURRENCE"
+      ],
+      "calculatorRoutineRequirements": [
+        "FORMULA",
+        "EXTRACTED_VALUES",
+        "HAND_KEY_SEQUENCE",
+        "EXPECTED_DISPLAY",
+        "UNIT_SIGN_ROUNDING_CHECKS",
+        "ANSWER_SHEET_TRANSFER",
+        "RESET_SAFE_REPRODUCTION",
+        "NO_PROGRAM_STORAGE_GUARDRAIL"
       ],
       "hardGates": {
         "deterministicGoldAccuracy": 1.0,
@@ -293,6 +345,21 @@
       ],
       "reject": [
         "BKT_AS_CANONICAL_TRUTH"
+      ]
+    },
+    "PYBKT": {
+      "currentDisposition": "BENCHMARK_ONLY",
+      "adopt": [
+        "LOCAL_SYNTHETIC_BENCHMARK"
+      ],
+      "shadowPrerequisites": [
+        "EXACT_O2_MEASUREMENT_CONSENT_GATE",
+        "SUFFICIENT_CLOSED_SCHEMA_SKILL_EVENTS"
+      ],
+      "reject": [
+        "HIDDEN_SHADOW_BEFORE_O2",
+        "SHADOW_FROM_SYNTHETIC_BENCHMARK_ALONE",
+        "CANONICAL_MASTERY_AUTHORITY"
       ]
     },
     "FSRS": {

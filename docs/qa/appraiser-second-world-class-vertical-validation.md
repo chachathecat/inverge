@@ -2,7 +2,7 @@
 
 - 작성일: 2026-08-10 KST
 - 상태: source-only validation
-- contract version: `1.0.2`
+- contract version: `1.0.3`
 - runtime evidence: none
 - active master change: none
 - roadmap state change: none
@@ -15,28 +15,29 @@
 4. `config/dabangil-appraiser-second-world-class-vertical-v1.json`
 5. `docs/qa/appraiser-second-world-class-vertical-validation.md`
 6. `tests/appraiser-second-world-class-vertical-contract.test.mjs`
-7. `scripts/run-node-tests.mjs` — default CI test registration only
+7. `scripts/run-node-tests.mjs` — default CI registration only
 
 ## 2. Source hierarchy
 
 - V13 remains the sole active master plan.
 - This package is a subordinate execution standard.
-- No `ACTIVE-MASTER-PLAN.md` change is included.
-- No `roadmap/active-program.yml` change is included.
-- PR #697 is not modified by this source package.
+- `ACTIVE-MASTER-PLAN.md` and `roadmap/active-program.yml` are unchanged.
+- PR #697 and Issue #695 are superseded/closed without merge.
+- #701 is the final implementation program and #713 is a future authority
+  reconciliation; neither changes authority through this PR.
 
 ## 3. Benchmark evidence
 
-The benchmark matrix uses primary/official sources where possible.
+The benchmark matrix uses primary/official sources where possible:
 
 - UWorld official product pages
-- AMBOSS official support pages
+- AMBOSS official support
 - Duolingo official engineering/learning blog
 - Khan Academy official support
-- OATutor official GitHub repository
-- Open Spaced Repetition official GitHub repositories
+- OATutor, Ajv, decimal.js, Inspect AI, FSRS, pyBKT, pgvector,
+  PaddleOCR and Tesseract official repositories/sites
 - H5P official content page
-- 1EdTech QTI and Caliper official pages
+- 1EdTech QTI/Caliper
 - W3C PROV
 - NIST AI RMF GenAI Profile
 - Scientific Reports RCT
@@ -48,63 +49,81 @@ The sources support design mechanisms, not Dabangil efficacy or pricing claims.
 
 ## 4. Required source assertions
 
+### Product and evidence
+
 - exact answer anchor required
 - successful outcome required
-- guided/full reveal is not independent
+- guided/full reveal/same surface is not independent transfer
 - D+7 verified non-same-surface required
 - timed recurrence required for closure
 - later independent failure reopens closure
-- one canonical mastery authority
-- Today CoreOutcome max 3
-- Full-Day ExecutionBlock 0..N within available minutes
-- Full-Day available minutes restricted to trusted-server integer 30..720
-- engagement does not set learning priority
-- raw learner body excluded from shared analytics, graph labels and cross-user cache
+- one canonical MasteryState authority
+- Today CoreOutcome 0..3
+- Full-Day availableMinutes trusted-server integer 30..720
+- block completion and engagement do not change mastery/priority
+
+### Trust and privacy
+
+- Practice deterministic conflict blocks numeric release
+- Law source/effective-version conflict blocks verified release
+- raw body excluded from shared analytics, graph labels, calibration and cache
 - private raw learner content categorically forbidden as model training input
-- exact-purpose consent alone insufficient for raw learner-content training
-- future training candidates limited to consented pseudonymous non-reconstructive signals or promoted Cleared Content Bank material
-- FSRS due-date candidate only
-- BKT benchmark/shadow only
-- completed exact S236P acceptance required before live activation
-- S236P blocked, failed or terminal disposition cannot substitute
-- Golden 9 external readiness at S239A precedes S242C, O4F and paid Wave A
-- separately approved exact external-commercial O4 entry gate required before paid canary
-- full lifecycle path `S241A → O3C → S239A → S242C → O4F → S243C` preserved
-- pre-canary completed path ends at `S241A → O3C → S239A → S242C → O4F`
-- S243C is the paid canary target and its completion is not an entry prerequisite
+- exact-purpose consent is insufficient for raw-body training
+- future training candidates limited to pseudonymous non-reconstructive signals
+  or promoted Cleared Content Bank material
+
+### Activation and commercial
+
+- completed exact S236P acceptance required before live activation under current authority
+- blocked/failed/terminal disposition cannot substitute
+- current canonical external lifecycle remains
+  `S241A → O3C → S239A → S242C → O4F → S243C`
+- S243C is Wave A and its completion is not an entry prerequisite
 - exact authorization to enter S243C is required
-- S243C completion gates only later external waves and acceptance
-- Owner-private acceptance and generic Owner activation cannot substitute for the external-commercial gate
-- focused contract test registered in the default Node runner
-- V13 remains active
+- Owner-private evidence cannot substitute current external-commercial gates
+- #713 may later reconcile a new accelerated Owner authority only through a
+  separate exact source Work
+
+### Open source
+
+- FSRS due-date candidate only
+- pyBKT current disposition exactly `benchmark_only`
+- pyBKT shadow requires exact O2 measurement/consent and sufficient
+  closed-schema skill-event data
+- local synthetic benchmark alone is insufficient for pyBKT shadow
+- every dependency requires version/license/security/SBOM/data-egress/fallback/
+  rollback/uninstallability evidence
+- this PR installs no dependency
 
 ## 5. Exact-head review corrections
 
-The two exact-head Codex reviews of PR #700 found seven actionable issues. Contract
-`1.0.2` closes them as follows.
+Three exact-head Codex review rounds found eleven substantive issues. Contract
+`1.0.3` closes them as follows.
 
-1. **S236P gate** — live activation now requires current exact evidence with
-   `acceptanceCompleted=true` and `terminalPass=true`; blocked or terminal
-   disposition is not acceptance.
-2. **Commercial gate** — WCV-9 is now a separate external trust and exact
-   external-commercial O4 gate; WCV-10 is the paid canary and cannot start from
-   Owner-private acceptance alone.
-3. **Full-Day range** — `availableMinutes` is a trusted-server integer in
-   the closed 30..720 range; outside-range or malformed values produce no plan.
-4. **Default CI coverage** — the focused contract test is registered in
-   `scripts/run-node-tests.mjs` so `npm test` executes it by default.
-5. **Paid-canary entry** — the completed pre-canary path ends at O4F; S243C is
-   Wave A itself, so entry requires exact S243C authorization rather than prior
-   S243C completion. S243C completion gates only later waves and acceptance.
-6. **Golden 9 order** — WCV-9 now performs S239A / Golden 9 external readiness
-   before S242C/O4F commercial entry gating; WCV-10 is S243C paid Wave A and
-   WCV-11 contains post-canary expansion only.
-7. **Training prohibition** — private raw learner content is categorically
-   forbidden as model training input. Exact-purpose consent alone is insufficient;
-   only consented pseudonymous non-reconstructive signals or promoted Cleared
-   Content Bank material can be future training candidates.
+1. **S236P gate** — current exact `acceptanceCompleted=true` and
+   `terminalPass=true` required.
+2. **Commercial gate** — separate external trust/O4 entry gate before paid canary.
+3. **Full-Day range** — trusted-server integer 30..720, malformed values rejected.
+4. **Default CI coverage** — focused test registered in default Node runner.
+5. **S243C entry** — O4F completed path plus exact entry authorization; S243C
+   completion only gates later waves.
+6. **Golden 9 order** — S239A precedes S242C/O4F under current authority.
+7. **Raw training prohibition** — private raw learner content categorically
+   prohibited from training; consent does not override this.
+8. **Pre-help exposure** — append-only trusted-server exposure/assistance event
+   must commit before any help byte. Failure yields zero output/evidence and
+   exposed work cannot return to unseen.
+9. **Frozen D0** — D+1 binds exact problem/source/item/model/prompt/rubric/
+   validator/tutor/assistance/measurement/Notebook/Full-Day configuration.
+   Mismatch makes evidence stale and restarts D0; security repair invalidates
+   rather than silently preserves evidence.
+10. **GIII routine** — applicable Practice Golden vertical requires formula,
+    extracted values, reset-safe hand-key sequence, expected display,
+    unit/sign/rounding, answer transfer and no-program-storage guardrail.
+11. **pyBKT** — disposition is `benchmark_only`; shadow requires exact O2 and
+    sufficient closed-schema events.
 
-## 6. Commands
+## 6. Focused commands
 
 ```bash
 node --check tests/appraiser-second-world-class-vertical-contract.test.mjs
@@ -113,33 +132,58 @@ node --test tests/appraiser-second-world-class-vertical-contract.test.mjs
 git diff --check
 ```
 
-The focused source test requires no new dependency. Typecheck, lint, full `npm test`
-and build are not duplicated locally; exact-head Fast CI, Full CI and Vercel are
-the authoritative one-time full validation.
+Exact-head repository checks also require:
 
-## 7. Non-claims
+```bash
+npm run typecheck
+npm run lint
+npm test
+npm run build
+```
 
-Passing these checks proves only:
+Fast CI, Full CI, Learner Loop Health, PR Contract, Risk Gate, Runtime Gate and
+Vercel must be current for the exact final head. Old-head results are not reused.
 
-- source files exist and agree;
-- the machine mirror parses;
-- key invariants are pinned;
-- default CI executes the contract test;
-- no active pointer/runtime authorization is asserted.
+## 7. Adversarial source assertions
+
+Focused tests must reject or detect:
+
+- no exact anchor but usable biggest gap
+- evaluation completion used as positive evidence
+- help bytes returned without committed exposure
+- exposed attempt relabeled unseen
+- D+1 across a mismatched frozen configuration
+- security repair silently preserving incompatible evidence
+- Practice Golden missing any required GIII routine field
+- pyBKT marked shadow before O2/event sufficiency
+- same-surface/guided success counted as transfer
+- blocked/stale source released as verified
+- raw body allowed into shared/training planes
+- default runner omitting the focused contract test
+
+## 8. Non-claims
+
+Passing source checks proves only:
+
+- files exist and agree
+- machine mirror parses
+- versioned invariants are pinned
+- default CI executes focused regression
+- active pointer, roadmap and runtime authorization are unchanged
 
 It does not prove:
 
-- runtime behavior;
-- subject-matter correctness;
-- Golden 3 completion;
-- learning efficacy;
-- external usability;
-- willingness to pay;
-- commercial readiness;
-- Production readiness.
+- runtime behavior
+- subject-matter correctness
+- Golden content readiness
+- learning efficacy
+- external usability
+- willingness to pay
+- commercial readiness
+- Production readiness
 
-## 8. Rollback
+## 9. Rollback
 
 Rollback is a focused revert/removal of the six additive source artifacts plus
-the one-line default-runner registration. No data, schema, runtime, provider or
+the one-line default-runner registration. No learner data, schema, provider or
 deployment cleanup is required.
