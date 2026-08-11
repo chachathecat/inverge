@@ -1,5 +1,5 @@
 {
-  "contractVersion": "dabangil.unified_program.v2",
+  "contractVersion": "dabangil.unified_program.v3",
   "decision": {
     "id": "owner_o1r_owner_dogfood_private_plane_schedule_2026_07_26",
     "status": "approved_for_source_amendment_only",
@@ -11,6 +11,19 @@
   "priorDecision": {
     "id": "owner_o1_post_650_reset_2026_07_23",
     "status": "authoritative_for_unaffected_scope"
+  },
+  "campaignDeliveryDecision": {
+    "id": "owner_wcv_campaign_c1_vertical_slice_reconciliation_2026_08_11",
+    "status": "approved_source_only",
+    "decisionDateKst": "2026-08-11",
+    "decisionRecord": "docs/decisions/2026-08-11-owner-accelerated-vertical-slice-authority-roadmap-reconciliation.md",
+    "leadIssue": 713,
+    "runtimeAuthorized": false,
+    "applicationAuthorized": false,
+    "realContentAuthorized": false,
+    "learnerActivationAuthorized": false,
+    "commercialActivationAuthorized": false,
+    "productionAuthorized": false
   },
   "scopeDecisions": {
     "O3A": {
@@ -786,6 +799,253 @@
     },
     "onlineWeightUpdateAllowed": false
   },
+  "wcvCampaignOverlay": {
+    "id": "wcv_campaign_c1_c6_vertical_delivery_v1",
+    "parentIssue": 701,
+    "activeMasterPlan": "docs/strategy/dabangil-professional-exam-reasoning-os-final-master-plan-v13-2026-08-06.md",
+    "relationshipToV13": "subordinate_execution_campaign_not_active_master",
+    "wcvBehaviorContractVersion": "1.0.8",
+    "wcvBehaviorContractVersionBumped": false,
+    "runtimeMutationInC1": false,
+    "applicationMutationInC1": false,
+    "deliveryModel": {
+      "mergeProducingWorkLimit": 1,
+      "writingBranchLimit": 1,
+      "writingPrLimit": 1,
+      "mutationWriterLimit": 1,
+      "perPlanGlobalWriterCapEnforcedBySelectors": true,
+      "globalWriterCapSelectorPaths": [
+        "lib/agent-factory/roadmap-runner.ts",
+        "scripts/automation/determine-next-task.mjs"
+      ],
+      "crossProcessDistributedWriterLeasePresent": false,
+      "crossProcessOwnerSingleWriterProhibitionRemainsControlling": true,
+      "readOnlyResearchInsideWorkMayRunConcurrently": true,
+      "nonOverlappingInspectionInsideWorkMayRunConcurrently": true,
+      "additionalMutationWritersAllowed": false
+    },
+    "verticalClosureRule": {
+      "multipleAdjacentIssuesMayCloseInOnePr": true,
+      "requiredSharedProperties": [
+        "ONE_LEARNER_VISIBLE_OUTCOME",
+        "ONE_INDEPENDENTLY_TESTABLE_ACCEPTANCE_STORY",
+        "ONE_DEPLOYMENT_AND_ROLLBACK_UNIT",
+        "ONE_COHERENT_DATA_AND_PRIVACY_BOUNDARY"
+      ],
+      "oneExplicitLeadIssueRequired": true,
+      "everyIncludedIssueListedInPrBody": true,
+      "acceptanceMappingRequiredPerIssue": true,
+      "silentOrPartialCompletionAllowed": false
+    },
+    "completeVerticalRule": {
+      "requiredLayers": [
+        "CONTRACT_AND_MACHINE_VALIDATION",
+        "API_AND_STORAGE_PERSISTENCE",
+        "RUNTIME_LOGIC",
+        "LEARNER_UI",
+        "FOCUSED_HOSTILE_AND_RUNTIME_EVIDENCE",
+        "FEATURE_FLAG_AND_SAFE_DEFERRED_BEHAVIOR",
+        "ROLLBACK_EVIDENCE"
+      ],
+      "mandatoryContractOnlyPrecursorForSameBehaviorAllowed": false,
+      "horizontalLayerSplitAllowed": false,
+      "oversizedVerticalDisposition": "REDUCE_LEARNER_OUTCOME_KEEP_REQUIRED_LAYERS_TOGETHER"
+    },
+    "reviewConvergence": {
+      "reviewStartRequiresFeatureCompleteVertical": true,
+      "reviewStartRequiresFocusedValidation": true,
+      "reviewStartRequiresApplicableRuntimeEvidence": true,
+      "exactHeadFullVerticalReviewCount": 1,
+      "maximumBlockingCorrectionPasses": 1,
+      "maximumExactHeadCorrectionVerificationPasses": 1,
+      "p0Blocks": true,
+      "p1Blocks": true,
+      "p2BlockingInvariantClasses": [
+        "SAFETY",
+        "RIGHTS",
+        "PRIVACY",
+        "EVIDENCE",
+        "LEARNER_OUTCOME",
+        "ROLLBACK"
+      ],
+      "nonBlockingP2P3Disposition": "MAPPED_BACKLOG_NO_REVIEW_EXTENSION",
+      "remainingCoreBlockerDisposition": "RETURN_DRAFT_STOP_RESIZE_OR_STRUCTURAL_RECOVERY",
+      "recursiveReviewOrCorrectionAllowed": false,
+      "replacementPrDiffCopyLoopAllowed": false
+    },
+    "campaigns": [
+      {
+        "id": "C1",
+        "roadmapItemId": "WCV-C1",
+        "name": "Authority reconciliation",
+        "leadIssue": 713,
+        "includedIssues": [713],
+        "dependencies": ["WCV-0"],
+        "state": "completed_source_only_on_reconciliation_merge",
+        "runtimeMutation": false,
+        "currentRuntimeReadinessEstablished": false
+      },
+      {
+        "id": "C2",
+        "roadmapItemId": "WCV-C2",
+        "name": "First Trusted Repair Vertical",
+        "leadIssue": 702,
+        "includedIssues": [702, 703, 704, 705],
+        "dependencies": ["WCV-C1"],
+        "state": "sole_next_implementation_campaign",
+        "requiredOutcome": [
+          "RIGHTS_SAFE_FIXTURE",
+          "CAPTURE_OCR_CONFIRMATION",
+          "EXACT_ANSWER_ANCHOR",
+          "INDEPENDENT_ATTEMPT",
+          "BIGGEST_GAP",
+          "BOUNDED_SCAFFOLD",
+          "LEARNER_REPAIR",
+          "VERIFICATION",
+          "DURABLE_REOPEN_RESUME"
+        ],
+        "mayCloseIncludedIssuesOnlyWhenAllMappedAcceptanceComplete": true
+      },
+      {
+        "id": "C3",
+        "roadmapItemId": "WCV-C3",
+        "name": "Durable Learning and Daily Command Vertical",
+        "leadIssue": 706,
+        "includedIssues": [706, 707, 708],
+        "dependencies": ["WCV-C2"],
+        "state": "queued"
+      },
+      {
+        "id": "C4",
+        "roadmapItemId": "WCV-C4",
+        "name": "Owner Proof and Commercial Readiness",
+        "leadIssue": 709,
+        "includedIssues": [709, 710],
+        "dependencies": ["WCV-C3"],
+        "state": "queued",
+        "learnerActivationAuthorized": false,
+        "paymentActivationAuthorized": false
+      },
+      {
+        "id": "C5",
+        "roadmapItemId": "WCV-C5",
+        "name": "Frozen Paid Cohort",
+        "leadIssue": 711,
+        "includedIssues": [711],
+        "dependencies": ["WCV-C4", "O4W"],
+        "state": "queued",
+        "cohortAuthorizationGate": "O4W",
+        "cohortAuthorization": {
+          "roadmapItemId": "O4W",
+          "decisionScope": "exact_frozen_cohort_manifest_activation_only",
+          "authorizationGranted": false,
+          "automaticStartAllowed": false,
+          "learnerActivationAuthorized": false,
+          "paymentActivationAuthorized": false,
+          "delayedEvidenceAuthorized": false,
+          "productionAuthorized": false
+        },
+        "separateExactCohortAuthorizationRequired": true,
+        "realDelayedEvidenceMayBeSimulated": false
+      },
+      {
+        "id": "C6",
+        "roadmapItemId": "WCV-C6",
+        "name": "Verified-Bank and Calibration Flywheel",
+        "leadIssue": 712,
+        "includedIssues": [712],
+        "dependencies": ["WCV-C5"],
+        "state": "queued",
+        "rawLearnerBodyReuseOrTrainingAllowed": false
+      }
+    ],
+    "issue714Tracker": {
+      "issue": 714,
+      "state": "open_cross_vertical_acceptance_tracker",
+      "mergeProducing": false,
+      "standalonePrerequisiteBeforeC2": false,
+      "standaloneSourcePrRequired": false,
+      "behaviorImplementedByC1": false,
+      "requirementInventory": [
+        "adaptive_expertise_controller",
+        "cognitive_load_budget",
+        "concept_repair_need_decision",
+        "concept_repair_input_modes_and_private_artifact_boundary",
+        "concept_progression_gate_and_three_continue_semantics",
+        "episode_metacognitive_prediction_and_self_diagnosis",
+        "initial_scaffold_fading_and_control_transfer",
+        "same_session_reconstruction_application_and_no_shortcut_invariants",
+        "metacognitive_calibration_over_time",
+        "transfer_distance_and_practice_sequence",
+        "motivation_volition_recovery_and_minimum_maintenance",
+        "durable_control_transfer_and_assistance_fading",
+        "concept_artifact_revision_deferral_export_delete_lineage",
+        "today_full_day_defer_reduce_drop_and_equivalent_task_semantics",
+        "owner_proof_of_instructional_mode_and_routing_quality",
+        "red_team_over_scaffolding_under_scaffolding_and_shortcuts",
+        "baseline_metacognitive_and_autonomy_comparison",
+        "continuous_instructional_mode_effectiveness",
+        "continuous_scaffold_fading_and_transfer_distance_calibration",
+        "continuous_concept_repair_routing_error_monitoring",
+        "continuous_metacognitive_and_control_transfer_monitoring"
+      ],
+      "allocations": {
+        "C2": [
+          "adaptive_expertise_controller",
+          "cognitive_load_budget",
+          "concept_repair_need_decision",
+          "concept_repair_input_modes_and_private_artifact_boundary",
+          "concept_progression_gate_and_three_continue_semantics",
+          "episode_metacognitive_prediction_and_self_diagnosis",
+          "initial_scaffold_fading_and_control_transfer",
+          "same_session_reconstruction_application_and_no_shortcut_invariants"
+        ],
+        "C3": [
+          "metacognitive_calibration_over_time",
+          "transfer_distance_and_practice_sequence",
+          "motivation_volition_recovery_and_minimum_maintenance",
+          "durable_control_transfer_and_assistance_fading",
+          "concept_artifact_revision_deferral_export_delete_lineage",
+          "today_full_day_defer_reduce_drop_and_equivalent_task_semantics"
+        ],
+        "C4": [
+          "owner_proof_of_instructional_mode_and_routing_quality",
+          "red_team_over_scaffolding_under_scaffolding_and_shortcuts",
+          "baseline_metacognitive_and_autonomy_comparison"
+        ],
+        "C6": [
+          "continuous_instructional_mode_effectiveness",
+          "continuous_scaffold_fading_and_transfer_distance_calibration",
+          "continuous_concept_repair_routing_error_monitoring",
+          "continuous_metacognitive_and_control_transfer_monitoring"
+        ]
+      }
+    },
+    "historicalStandaloneSequence": {
+      "sequence": [702, 714, 703],
+      "operative": false,
+      "preservedAsHistory": true
+    },
+    "soleNextImplementationCampaign": "C2",
+    "soleNextImplementationLeadIssue": 702,
+    "laterCampaignsQueued": ["C3", "C4", "C5", "C6"],
+    "legacyFactualGates": {
+      "CPF-1": {
+        "status": "blocked",
+        "executionState": "blocked_unknown_reachable_sinks",
+        "complete": false,
+        "bypassAllowed": false
+      },
+      "S236P": {
+        "status": "blocked",
+        "executionState": "acceptance_blocked",
+        "acceptanceCompleted": false,
+        "terminalPass": false,
+        "nextLiveAttemptAuthorized": false,
+        "bypassAllowed": false
+      }
+    }
+  },
   "ownerGates": {
     "O1R": "approved_for_this_source_amendment_only",
     "O2": "future_measurement_consent_retention_gate",
@@ -799,12 +1059,21 @@
     "O2O": "future_exact_owner_private_schedule_comparison_measurement_retention_gate",
     "O4P": "future_exact_owner_only_optimizer_limited_activation_gate",
     "O4F": "future_external_commercial_beta_activation_gate",
+    "O4W": "future_exact_frozen_paid_cohort_manifest_authorization_unapproved",
     "O4D": "future_public_self_serve_activation_gate"
   },
   "roadmapContract": {
-    "wipLimit": 2,
+    "wipLimit": 3,
+    "blockedControlPlaneReservationCount": 2,
+    "mergeProducingDeliverySlotCount": 1,
+    "globalMergeProducingWriterLimit": 1,
+    "wipLimitDoesNotAuthorizeWriterCount": true,
+    "campaignLockGroup": "wcv-vertical-campaign",
+    "soleNextImplementationItemId": "WCV-C2",
+    "soleNextImplementationLeadIssue": 702,
     "primaryStatusesUsed": [
       "completed",
+      "blocked",
       "queued"
     ],
     "runnerSupportedPrimaryStatuses": {
@@ -833,6 +1102,21 @@
     "blockedFutureItemsConsumeWipProhibited": true,
     "flatLockGroupOnly": true,
     "globalExclusivityAutomaticallyEnforced": false,
+    "globalExclusivityAutomaticallyEnforcedScope": "cross_process_distributed_writer_lease_absent",
+    "perPlanGlobalMergeProducingWriterLimitEnforced": true,
+    "perPlanGlobalMergeProducingWriterLimitSelectorPaths": [
+      "lib/agent-factory/roadmap-runner.ts",
+      "scripts/automation/determine-next-task.mjs"
+    ],
+    "activeWriterStatusesConsumeWriterCapacity": [
+      "active",
+      "in_progress",
+      "in_review",
+      "pr_open"
+    ],
+    "blockedAndHumanDecisionConsumeWriterCapacity": false,
+    "crossProcessDistributedWriterLeasePresent": false,
+    "crossProcessOwnerSingleWriterProhibitionRemainsControlling": true,
     "perLockGroupConcurrentWriterLimit": 1,
     "additionalConcurrentWritersInSameLockGroup": 0,
     "sharedControlPlaneOverallMutationWip": 1,
@@ -850,6 +1134,7 @@
       "ownerPrivateOptimizerMeasurementRetention": "O2O",
       "optimizerLimitedActivation": "O4P",
       "externalCommercialBeta": "O4F",
+      "frozenPaidCohortManifestAuthorization": "O4W",
       "golden9": "O3C",
       "firstRoundRights": "O3B",
       "firstRoundPrivateRuntime": "O4B",
@@ -857,12 +1142,28 @@
       "publicSelfServe": "O4D",
       "sharedSignalOssLimitedActivation": "O4E"
     },
+    "frozenPaidCohortAuthorization": {
+      "roadmapItemId": "O4W",
+      "status": "queued",
+      "executionState": "exact_frozen_cohort_authorization_unmet",
+      "decisionScope": "exact_frozen_cohort_manifest_activation_only",
+      "gatedCampaign": "WCV-C5",
+      "gatedIssue": 711,
+      "dependencies": ["WCV-C4"],
+      "authorizationGranted": false,
+      "automaticStartAllowed": false,
+      "learnerActivationAuthorized": false,
+      "paymentActivationAuthorized": false,
+      "delayedEvidenceAuthorized": false,
+      "productionAuthorized": false
+    },
     "s234ResetReadyItemIdsSnapshot": [
       "S235A",
       "S235B"
     ],
     "currentStateAuthority": "roadmap/active-program.yml",
     "currentReadyItemIdsMirrored": false,
+    "wcvCampaignGraphMirrored": true,
     "selectionAutomaticallyStartsWork": false
   },
   "brand": {

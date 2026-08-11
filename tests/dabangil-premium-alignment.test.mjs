@@ -4,6 +4,7 @@ import { readFile } from "node:fs/promises";
 
 const sourceOfTruthDocs = [
   "AGENTS.md",
+  "docs/decisions/2026-08-11-owner-accelerated-vertical-slice-authority-roadmap-reconciliation.md",
   "docs/decisions/2026-07-30-owner-o4v-lean-owner-private-gate.md",
   "docs/decisions/2026-07-29-owner-o3a-golden-3-approval.md",
   "docs/decisions/2026-07-26-owner-dogfood-private-plane-schedule-amendment.md",
@@ -159,7 +160,7 @@ test("S200R docs preserve no-official-authority and no-B2C-human-review boundari
 test("active program adds S200R, completes S201/S202, preserves WIP, and updates downstream dependencies", async () => {
   const roadmap = parseActiveProgram(await read("roadmap/active-program.yml"));
 
-  assert.equal(roadmap.program.wipLimit, 2);
+  assert.equal(roadmap.program.wipLimit, 3);
   assert.equal(roadmap.byId.get("S201").status, "completed");
   assert.equal(roadmap.byId.get("S202").status, "completed");
 
@@ -331,7 +332,7 @@ test("S234R contract fixes authority, native Owner path, and learning glossary",
   const contract = await read("docs/dabangil-unified-program-contract.md");
   const agents = await read("AGENTS.md");
 
-  assert.equal(policy.contractVersion, "dabangil.unified_program.v2");
+  assert.equal(policy.contractVersion, "dabangil.unified_program.v3");
   assert.equal(policy.decision.status, "approved_for_source_amendment_only");
   assert.equal(
     policy.scopeDecisions.O3A.status,
@@ -933,9 +934,61 @@ test("Post-650 data, consent, quarantine, OSS, and Owner gates remain non-active
   for (const gate of ["O2", "O3", "O4", "O5"]) {
     assert.match(policy.ownerGates[gate], /^future_/);
   }
+  assert.equal(
+    policy.ownerGates.O4W,
+    "future_exact_frozen_paid_cohort_manifest_authorization_unapproved",
+  );
   assert.equal(policy.roadmapContract.perLockGroupConcurrentWriterLimit, 1);
   assert.equal(policy.roadmapContract.additionalConcurrentWritersInSameLockGroup, 0);
   assert.equal(policy.roadmapContract.sharedControlPlaneOverallMutationWip, 1);
+  assert.equal(policy.roadmapContract.wipLimit, 3);
+  assert.equal(policy.roadmapContract.blockedControlPlaneReservationCount, 2);
+  assert.equal(policy.roadmapContract.mergeProducingDeliverySlotCount, 1);
+  assert.equal(policy.roadmapContract.globalMergeProducingWriterLimit, 1);
+  assert.equal(policy.roadmapContract.globalExclusivityAutomaticallyEnforced, false);
+  assert.equal(
+    policy.roadmapContract.globalExclusivityAutomaticallyEnforcedScope,
+    "cross_process_distributed_writer_lease_absent",
+  );
+  assert.equal(
+    policy.roadmapContract.perPlanGlobalMergeProducingWriterLimitEnforced,
+    true,
+  );
+  assert.deepEqual(
+    policy.roadmapContract.perPlanGlobalMergeProducingWriterLimitSelectorPaths,
+    [
+      "lib/agent-factory/roadmap-runner.ts",
+      "scripts/automation/determine-next-task.mjs",
+    ],
+  );
+  assert.deepEqual(
+    policy.roadmapContract.activeWriterStatusesConsumeWriterCapacity,
+    ["active", "in_progress", "in_review", "pr_open"],
+  );
+  assert.equal(
+    policy.roadmapContract.blockedAndHumanDecisionConsumeWriterCapacity,
+    false,
+  );
+  assert.equal(policy.roadmapContract.crossProcessDistributedWriterLeasePresent, false);
+  assert.equal(
+    policy.roadmapContract.crossProcessOwnerSingleWriterProhibitionRemainsControlling,
+    true,
+  );
+  assert.deepEqual(policy.roadmapContract.frozenPaidCohortAuthorization, {
+    roadmapItemId: "O4W",
+    status: "queued",
+    executionState: "exact_frozen_cohort_authorization_unmet",
+    decisionScope: "exact_frozen_cohort_manifest_activation_only",
+    gatedCampaign: "WCV-C5",
+    gatedIssue: 711,
+    dependencies: ["WCV-C4"],
+    authorizationGranted: false,
+    automaticStartAllowed: false,
+    learnerActivationAuthorized: false,
+    paymentActivationAuthorized: false,
+    delayedEvidenceAuthorized: false,
+    productionAuthorized: false,
+  });
   assert.deepEqual(policy.roadmapContract.historicalCompletionMetadata, {
     range: "S200_through_S224",
     completionScope: "historical_contract_evidence",
@@ -952,7 +1005,11 @@ test("Post-650 data, consent, quarantine, OSS, and Owner gates remain non-active
   assert.equal(policy.roadmapContract.currentReadyItemIdsMirrored, false);
   assert.equal(policy.roadmapContract.selectionAutomaticallyStartsWork, false);
   assert.equal("readyAfterMerge" in policy.roadmapContract, false);
-  assert.deepEqual(policy.roadmapContract.primaryStatusesUsed, ["completed", "queued"]);
+  assert.deepEqual(policy.roadmapContract.primaryStatusesUsed, [
+    "completed",
+    "blocked",
+    "queued",
+  ]);
   assert.deepEqual(policy.roadmapContract.runnerSupportedPrimaryStatuses.blocked, [
     "blocked",
     "human_decision",
@@ -974,6 +1031,10 @@ test("Post-650 data, consent, quarantine, OSS, and Owner gates remain non-active
   assert.equal(
     policy.roadmapContract.scopedGateEdges.externalCommercialBeta,
     "O4F",
+  );
+  assert.equal(
+    policy.roadmapContract.scopedGateEdges.frozenPaidCohortManifestAuthorization,
+    "O4W",
   );
   assert.equal(policy.roadmapContract.scopedGateEdges.publicSelfServe, "O4D");
   assert.equal(policy.roadmapContract.scopedGateEdges.sharedSignalOssLimitedActivation, "O4E");

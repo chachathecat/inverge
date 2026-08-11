@@ -205,8 +205,11 @@ test("roadmap docs distinguish the S234 snapshot from current lean O4V-reconcile
     unified,
     /S236A requires both a valid O3A decision and the exact completed S236P/i,
   );
-  assert.match(unified, /O3A and lean O4V are completed as\s+exact Owner decisions/i);
-  assert.match(unified, /S236B and S236P remain queued/i);
+  assert.match(unified, /O3A and lean O4V are completed\s+as exact Owner decisions/i);
+  assert.match(
+    unified,
+    /S236B remains queued,\s+CPF-1 and S236P remain\s+factually blocked/i,
+  );
   assert.match(unified, /O4V does not itself create a\s+resource or start S236P/i);
 });
 

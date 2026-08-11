@@ -32,6 +32,7 @@ export interface RoadmapProgram {
   id?: string;
   completionItem?: string;
   wipLimit?: number;
+  globalMergeProducingWriterLimit?: number;
   maxRepairAttempts?: number;
   [key: string]: RoadmapScalar | undefined;
 }
@@ -107,6 +108,9 @@ export interface RoadmapRunnerPlan {
   wipLimit: number;
   wipOccupiedCount: number;
   availableSlots: number;
+  globalMergeProducingWriterLimit: number | null;
+  activeWriterCount: number;
+  availableWriterSlots: number | null;
   selectionSlots: number;
   completedItemIds: string[];
   queuedItemIds: string[];
@@ -164,6 +168,33 @@ function statusCategory(value: unknown): RoadmapStatusCategory {
   if (BLOCKED_STATUSES.has(status)) return "blocked";
 
   return "unknown";
+}
+
+function resolveGlobalMergeProducingWriterLimit(
+  program: RoadmapProgram,
+): number | null {
+  if (
+    !Object.prototype.hasOwnProperty.call(
+      program,
+      "globalMergeProducingWriterLimit",
+    )
+  ) {
+    return null;
+  }
+
+  const value = program.globalMergeProducingWriterLimit;
+
+  if (
+    typeof value !== "number" ||
+    !Number.isInteger(value) ||
+    value <= 0
+  ) {
+    throw new Error(
+      "roadmap.program.globalMergeProducingWriterLimit must be a positive integer when present.",
+    );
+  }
+
+  return value;
 }
 
 function stripComment(line: string): string {
@@ -580,6 +611,8 @@ export function validateRoadmap(roadmap: ActiveProgramRoadmap): void {
     throw new Error("roadmap.program.wipLimit must be a positive number.");
   }
 
+  resolveGlobalMergeProducingWriterLimit(roadmap.program);
+
   const ids = new Set<string>();
 
   for (const item of roadmap.items) {
@@ -795,7 +828,23 @@ export function createRoadmapRunnerPlanAt(
   const wipLimit = Math.max(1, Number(roadmap.program.wipLimit ?? 1));
   const wipOccupiedCount = wipItems.length;
   const availableSlots = Math.max(0, wipLimit - wipOccupiedCount);
-  const selectionSlots = Math.min(2, availableSlots);
+  const globalMergeProducingWriterLimit =
+    resolveGlobalMergeProducingWriterLimit(roadmap.program);
+  const activeWriterCount = wipItems.filter(
+    (item) => statusCategory(item.status) === "active",
+  ).length;
+  const availableWriterSlots =
+    globalMergeProducingWriterLimit === null
+      ? null
+      : Math.max(
+          0,
+          globalMergeProducingWriterLimit - activeWriterCount,
+        );
+  const selectionSlots = Math.min(
+    2,
+    availableSlots,
+    availableWriterSlots ?? 2,
+  );
 
   const readyAnalyses = orderedItems
     .map(({ item, order }) => {
@@ -832,6 +881,9 @@ export function createRoadmapRunnerPlanAt(
     wipLimit,
     wipOccupiedCount,
     availableSlots,
+    globalMergeProducingWriterLimit,
+    activeWriterCount,
+    availableWriterSlots,
     selectionSlots,
     completedItemIds: analyses
       .filter((analysis) => analysis.statusCategory === "completed")

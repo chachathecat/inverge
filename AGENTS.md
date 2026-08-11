@@ -5,6 +5,9 @@
 Use this authority order when sources conflict:
 
 1. a dated Owner decision for the exact decision it owns, currently
+   `docs/decisions/2026-08-11-owner-accelerated-vertical-slice-authority-roadmap-reconciliation.md`
+   for the WCV campaign delivery model, single-writer limit, multi-issue
+   vertical closure, bounded review, and #701-#714 mapping,
    `docs/decisions/2026-07-29-owner-o3a-golden-3-approval.md` for the exact
    O3A packet,
    `docs/decisions/2026-07-26-owner-dogfood-private-plane-schedule-amendment.md`
@@ -23,6 +26,10 @@ Use this authority order when sources conflict:
 Live GitHub and the current tree remain authoritative for implemented state.
 Attachments, old execution prompts, handoffs, issue prose, and historical plans
 are inputs, not live operational truth.
+
+V13 is the sole active master plan. The Appraiser Second World-Class Vertical
+Execution Standard `1.0.8` is a subordinate V13 execution standard only. It
+does not create a second active master or a second mastery authority.
 
 ## Product scope (Owner O1R amendment on 2026-07-26)
 
@@ -832,8 +839,24 @@ A source-level green check does not prove real runtime behavior or content corre
 
 ## Autonomous delivery contract
 
-- One issue produces one focused, reviewable pull request.
-- Every implementation PR must link exactly one GitHub issue using `Closes #<issue>` or `Fixes #<issue>`.
+- At any time there is at most one merge-producing Work, one writing branch,
+  one writing PR, and one writer mutating shared authority or implementation
+  state. Read-only research and non-overlapping inspection may run concurrently
+  inside that Work.
+- Every PR has one explicit lead issue. A complete learner-visible vertical may
+  close multiple adjacent child issues only when they form one learner-visible
+  outcome, one independently testable acceptance story, one deployment and
+  rollback unit, and one coherent data/privacy boundary.
+- Every included issue must be listed explicitly in the PR body with its
+  acceptance mapping and completion evidence. No issue may be silently or
+  partially declared complete.
+- A runtime vertical contains every layer required for its promised outcome in
+  one PR: relevant contract and machine validation, API and storage/persistence,
+  runtime logic, learner UI, focused and hostile tests, applicable runtime
+  evidence, feature flag and safe-deferred behavior, and rollback evidence.
+- Do not require a contract-only precursor PR for behavior implemented by the
+  same vertical. If the vertical is too large, reduce the learner outcome; do
+  not split it horizontally into contract, API, runtime, UI, and QA PRs.
 - Each issue must define goal, non-goals, risk classification, acceptance criteria, runtime evidence requirements, rollout/rollback, and remaining risks.
 - Do not ask the human about routine implementation details, file selection, naming, test placement, or ordinary refactoring choices.
 - Make reasonable implementation decisions independently.
@@ -859,6 +882,17 @@ Stop implementation and create a `human-decision` record only when:
 Do not stop for ordinary implementation choices.
 
 ## Review guidelines
+
+Review begins only after the complete vertical and its focused validation and
+required runtime evidence are ready. Request one exact-head full-vertical
+review, batch all blocking findings into at most one corrective pass, and run
+at most one bounded exact-head correction verification. P0/P1 always block. A
+P2 blocks only when it violates an explicitly named core safety, rights,
+privacy, evidence, learner-outcome, or rollback invariant. Other P2/P3 findings
+are mapped to backlog and do not extend the review loop. If a core blocker
+remains after the bounded verification, return Draft and stop for resize or
+structural recovery; recursive review/correction cycles and replacement-PR
+diff copying are prohibited.
 
 Treat the following as blocking P1 findings:
 
@@ -902,11 +936,26 @@ Content-quality work also requires domain eval evidence. A structurally valid JS
 Roadmap primary status must use runner-supported values. Encode future gates
 as `queued` items with unmet dependencies so they consume no mutation WIP.
 `blocked` and `human_decision` consume WIP and are not future-state labels.
-The runner enforces only one flat exact-string `lockGroup`; it does not
-automatically enforce global, hierarchical, multi-lock, cross-run, or
-owned-file exclusivity. Serialize shared source-of-truth, schema, auth/RLS,
-billing, and control-plane mutation at overall WIP one through dependencies
-or an explicit manual Owner gate.
+The runner supports one flat exact-string `lockGroup` and now also enforces an
+explicit positive-integer `program.globalMergeProducingWriterLimit` within
+each parsed roadmap plan. Both executable selectors count raw `active`,
+`in_progress`, `in_review`, and `pr_open` aliases against that global capacity,
+even when an active item's dependencies are invalid. `blocked` and
+`human_decision` consume WIP but not writer capacity. Distinct lock groups do
+not bypass the global per-plan cap.
+
+The selectors do not provide a cross-process distributed writer lease,
+hierarchical/multi-lock ownership, cross-run reservation, or owned-file
+exclusivity. The Owner single-writer prohibition remains controlling across
+independent Work windows. The WCV campaign therefore retains one shared flat
+lock group and dependency chain in addition to the mechanically enforced cap.
+
+`program.wipLimit` is three: two occupied reservations preserve the truthful
+blocked CPF-1 and S236P items, and one slot permits the sole merge-producing
+delivery. This runner capacity is not permission for three writers. Shared
+source-of-truth, schema, auth/RLS, billing, and control-plane mutation remains
+serialized through the global writer limit, dependencies, and exact Owner
+authority.
 
 Owner gates:
 
@@ -914,6 +963,7 @@ Owner gates:
 - O2: Production measurement, consent, retention, and telemetry;
 - O3: rights, Gold reviewers, and public/shared content;
 - O4: migration, secret, provider, price/payment, real users, and flags;
+- O4W: exact frozen paid-cohort manifest authorization for WCV-C5 only;
 - O5: research opt-in, offline training, and efficacy claims.
 
 O1R is approved only for the 2026-07-26 source amendment. O3A is approved
@@ -921,8 +971,11 @@ only for exact packet
 `o3a-s234r-appraiser-second-2026-q1-owner-private-golden-3-v2` under the
 2026-07-29 dated decision; it authorizes no immediate operation, leaves S236A
 unstarted, and still requires completed exact S236P plus a manual S236A start.
-O4V, O4A, O4T, O2O, O4P, external-commercial activation, public activation,
-and O2/O5 remain unmet until their separate exact-scope packets are accepted.
+O4V, O4A, O4T, O2O, O4P, O4W, external-commercial activation, public
+activation, and O2/O5 remain unmet until their separate exact-scope packets
+are accepted. O4W is a queued, unapproved auxiliary gate after WCV-C4; WCV-C5
+depends on it, and it grants no learner, payment, delayed-evidence, cohort or
+Production authority in C1.
 O4V is the private-plane binding gate, O4T is the post-benchmark threshold
 decision, O2O is the exact Owner-private comparison measurement/retention
 gate, and O4P is optimizer limited activation only. O2O cannot authorize

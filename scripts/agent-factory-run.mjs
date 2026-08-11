@@ -440,9 +440,23 @@ function planForTarget(plan, options) {
       throw new Error(`Roadmap item ${options.target} is ${analysis.readinessStatus}, not ready. ${reasons}`);
     }
 
+    const explicitSelectionSlots = Math.min(
+      1,
+      options.maxTasks,
+      plan.selectionSlots,
+    );
+
+    if (!(explicitSelectionSlots >= 1)) {
+      throw new Error(
+        `Roadmap item ${options.target} is ready but cannot be selected because ` +
+        `roadmap selection capacity is exhausted. Explicit targets cannot bypass ` +
+        `WIP or global merge-producing writer limits.`,
+      );
+    }
+
     return {
       ...plan,
-      selectionSlots: 1,
+      selectionSlots: explicitSelectionSlots,
       selectedItemIds: [analysis.itemId],
       selectedItems: [selectedFromAnalysis(analysis)],
     };

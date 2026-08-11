@@ -57,6 +57,24 @@ semantic-highlight and learner-private annotation interfaces only. It authorizes
 terminology corpus, learner UI, persistence, personal free text, dependency, real
 source, Ready transition or merge.
 
+## Subordinate V13 execution standard — Appraiser Second WCV
+
+The merged Appraiser Second World-Class Vertical Execution Standard is:
+
+- `docs/decisions/2026-08-10-owner-appraiser-second-world-class-vertical-execution.md`
+- `docs/strategy/dabangil-appraiser-second-world-class-vertical-execution-v1-2026-08-10.md`
+- `config/dabangil-appraiser-second-world-class-vertical-v1.json` at exactly `1.0.8`
+
+It is a subordinate V13 execution standard, not another active master plan. The dated
+campaign delivery decision is:
+
+- `docs/decisions/2026-08-11-owner-accelerated-vertical-slice-authority-roadmap-reconciliation.md`
+
+That decision changes how later WCV outcomes are delivered: one merge-producing writer,
+complete learner-visible verticals, explicit multi-issue acceptance mapping, and bounded
+exact-head review. It does not change the `1.0.8` learner-behavior baseline and authorizes
+no runtime, content, learner, payment or Production work by itself.
+
 ## Mandatory V12 baseline and earlier annexes
 
 V13 supersedes V12 only as the single active strategy entry point. The following remain
@@ -91,6 +109,7 @@ ACTIVE-MASTER-PLAN.md
    ├─ Appraiser Coverage Compiler & Original Question Engine
    ├─ Exam Digital Twin & Robust Curriculum Control
    ├─ Memory Cue & Annotation Layer — mandatory V13 follow-up
+   ├─ Appraiser Second WCV 1.0.8 — subordinate vertical execution standard
    ├─ Portable Professional Exam Core & Exam Profile contract — internal only
    ├─ V11 — source-safety and legal-operation annex
    ├─ V8 — reasoning OS, evidence, Full-Day and Owner-private annex
