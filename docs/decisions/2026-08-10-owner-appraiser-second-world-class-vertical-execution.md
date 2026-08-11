@@ -1,7 +1,7 @@
 ---
 document_title: "Owner Decision — 감정평가사 2차 World-Class Vertical Execution Standard v1"
 status: "owner-decision/proposed-source-only"
-contract_version: "1.0.7"
+contract_version: "1.0.8"
 dated: "2026-08-10 KST"
 repository: "chachathecat/inverge"
 active_master_plan: "docs/strategy/dabangil-professional-exam-reasoning-os-final-master-plan-v13-2026-08-06.md"
@@ -183,7 +183,7 @@ S207 reference package로 이어지는 canonical chain 하나만 resolve해야 �
 `released`여도 generated full-solution byte, positive evidence와 usage success는 모두
 정확히 0이다.
 
-Contract v1.0.7은 이 exact binding에 current canonical S207 release-state veto를
+Contract v1.0.8은 이 exact binding에 current canonical S207 release-state veto를
 추가한다. trusted server resolver는 매 generated-output authorization의 첫 byte 직전에
 현재 S207 registry를 새로 읽고, 기존 S215→S214→S207 chain과 같은
 `referencePackageId`, `questionId`, subject의 package를 정확히 하나만 resolve한다.
@@ -227,6 +227,24 @@ mastery, D+1, D+7, transfer 또는 closure가 될 수 없다. `GUIDED_EXIT` 전�
 distinct attempt-first independent review를 durable하게 schedule해야 한다. schedule
 실패는 guided completion을 막되 이미 commit된 exposure lineage를 지우지 않는다.
 
+### 4.6.1 canonical tutor transition authority
+
+`config/dabangil-appraiser-second-world-class-vertical-v1.json`의
+`tutorStateMachine`과 `tutorTransitionContract`를 유일한 machine-readable state/
+transition authority로 둔다. strategy의 `VerticalTutorStateV1`에 이미 선언된
+confirmed override 5개 state와 `COMPLETED`, `BLOCKED`, `STALE`를 모두 enum에
+포함한다. default attempt-first path와 confirmed guided path의 모든 adjacent edge만
+normal transition으로 허용하며 undeclared edge는 state advance 없이 reject한다.
+
+`DIAGNOSE → SCAFFOLD`와 `COMMIT_ASSISTANCE_EXPOSURE → GUIDED_STUDY`는 successful
+append-only exposure commit 없이는 진행하거나 help byte를 만들 수 없다. exposure
+commit 실패와 later independent review durable-schedule 실패는 각각 명시된
+`BLOCKED` transition으로만 닫힌다. current basis/configuration invalidation은 선언된
+active/completed state에서 `STALE`로만 이동하며 incompatible evidence를 보존하지
+않는다. guided path에는 `ATTEMPT` 또는 exposure-commit shortcut이 없고,
+`SCHEDULE_LATER_DISTINCT_INDEPENDENT_REVIEW → GUIDED_EXIT`는 durable schedule
+성공을 요구한다.
+
 ### 4.7 S216/S217 review-completion contract
 
 모든 completed review는 정확히 다음 세 safe output을 resolve한다.
@@ -248,6 +266,29 @@ state를 emit하지 않는다. replan은 세 resolved output ref가 모두 필�
 Review completion 자체는 positive evidence, mastery change, gap closure 또는 learning
 priority를 만들지 않으며 두 번째 mastery authority가 아니다. client, model, request
 또는 outer boolean은 completion authority가 아니다.
+
+### 4.8 structured D+7 eligibility
+
+`d7EligibilityContract`는 `WCV_4_D1_D7_TIMED`가 소비하는 유일한 structured D+7
+eligibility authority다. trusted server가 acceptance 직전에 fresh하게 다음 conjunct를
+모두 확인해야 한다.
+
+1. exact learner scope와 closure case
+2. exact D+7 use를 현재 허용하는 rights decision
+3. current source identity/effective version와 exact target skill set
+4. source와 다른 item revision 및 trusted-verified non-same-surface family
+5. current exact-bound answer, rubric와 validator
+6. exact learner/candidate에 bind된 trusted-server sealed pre-presentation unseen snapshot
+7. hidden solution과 hint/reference/probe/solution byte 0
+8. genuine non-empty successful completed `attempt_first` independent attempt
+9. replay 0과 cache/prefetch/direct-route/multi-tab contamination 0
+10. acceptance 시점의 fresh currentness; prior eligibility result reuse 금지
+
+하나라도 missing/invalid/stale/mismatched/ambiguous/foreign이면 accepted D+7 evidence,
+mastery advance, closure advance와 transfer confirmation은 모두 0/false이고 safe maximum
+status는 기존 `d1_reproduced`다. request/client/model/outer boolean과 summary boolean은
+authority가 아니다. generated item은 canonical verified-bank release authority를 통해
+별도 승격되기 전까지 `learning_only/unverified`다.
 
 ## 5. 외부 제품·오픈소스 채택 원칙
 

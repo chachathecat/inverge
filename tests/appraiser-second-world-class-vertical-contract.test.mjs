@@ -31,8 +31,291 @@ const includesAll = (text, markers, label) => {
   }
 };
 
-test("synchronizes WCV contract v1.0.7 and keeps V13 authoritative", () => {
-  assert.equal(contract.version, "1.0.7");
+const clone = (value) => JSON.parse(JSON.stringify(value));
+
+const valueAtPath = (value, path) => typeof path === "string"
+  ? path.split(".").reduce((current, key) => current?.[key], value)
+  : undefined;
+
+const isNonEmptyString = (value) => typeof value === "string" && value.trim().length > 0;
+
+const isRecord = (value) => value !== null && typeof value === "object" && !Array.isArray(value);
+
+const exactStringSet = (actual, expected) => {
+  if (!Array.isArray(actual) || !Array.isArray(expected) || actual.length === 0) return false;
+  if (actual.some((value) => !isNonEmptyString(value))) return false;
+  if (new Set(actual).size !== actual.length || new Set(expected).size !== expected.length) return false;
+  return [...actual].sort().join("\u0000") === [...expected].sort().join("\u0000");
+};
+
+const tutorDefinitionErrors = ({
+  states = contract.tutorStateMachine,
+  defaultPath = contract.defaultAttemptFirstPath,
+  guidedPath = contract.guidedRevealOverrideContract.path,
+  transitionContract = contract.tutorTransitionContract,
+} = {}) => {
+  const errors = [];
+  const stateSet = new Set(states);
+  if (stateSet.size !== states.length) errors.push("duplicate state");
+
+  const normalEdges = new Set();
+  for (const transition of transitionContract.normalTransitions ?? []) {
+    if (!stateSet.has(transition.from) || !stateSet.has(transition.to)) {
+      errors.push(`normal endpoint outside enum: ${transition.from}->${transition.to}`);
+    }
+    const edge = `${transition.from}->${transition.to}`;
+    if (normalEdges.has(edge)) errors.push(`duplicate normal edge: ${edge}`);
+    normalEdges.add(edge);
+  }
+  for (const transition of transitionContract.failClosedTransitions ?? []) {
+    if (!stateSet.has(transition.from) || !stateSet.has(transition.to)) {
+      errors.push(`fail-closed endpoint outside enum: ${transition.from}->${transition.to}`);
+    }
+  }
+  const invalidation = transitionContract.basisOrConfigurationInvalidationTransition;
+  if (!stateSet.has(invalidation?.to)) errors.push("stale endpoint outside enum");
+  for (const from of invalidation?.fromStates ?? []) {
+    if (!stateSet.has(from)) errors.push(`stale source outside enum: ${from}`);
+  }
+
+  for (const [label, path] of [["default", defaultPath], ["guided", guidedPath]]) {
+    for (const state of path) {
+      if (!stateSet.has(state)) errors.push(`${label} path state outside enum: ${state}`);
+    }
+    for (let index = 0; index < path.length - 1; index += 1) {
+      const edge = `${path[index]}->${path[index + 1]}`;
+      if (!normalEdges.has(edge)) errors.push(`${label} adjacent edge missing: ${edge}`);
+    }
+  }
+  const expectedNormalEdges = new Set(["INTAKE->ORIENT", "SCHEDULE->COMPLETED"]);
+  for (const path of [defaultPath, guidedPath]) {
+    for (let index = 0; index < path.length - 1; index += 1) {
+      expectedNormalEdges.add(`${path[index]}->${path[index + 1]}`);
+    }
+  }
+  for (const edge of normalEdges) {
+    if (!expectedNormalEdges.has(edge)) errors.push(`normal path broadened: ${edge}`);
+  }
+  if (guidedPath.includes("ATTEMPT")) errors.push("guided path contains ATTEMPT");
+  if (normalEdges.has("CONFIRM_GUIDED_REVEAL_OVERRIDE->GUIDED_STUDY")) {
+    errors.push("guided path bypasses exposure commit");
+  }
+  if (!normalEdges.has("SCHEDULE->COMPLETED")) errors.push("default terminal edge missing");
+  for (const terminal of ["COMPLETED", "GUIDED_EXIT", "BLOCKED", "STALE"]) {
+    if (!stateSet.has(terminal)) errors.push(`terminal state missing: ${terminal}`);
+  }
+  return errors;
+};
+
+const rejectedTutorTransition = {
+  accepted: false,
+  stateAdvance: false,
+  helpBytes: 0,
+  positiveEvidence: 0,
+};
+
+const evaluateTutorTransition = (from, to, conditions = {}) => {
+  const machine = contract.tutorTransitionContract;
+  const states = new Set(contract.tutorStateMachine);
+  if (!states.has(from) || !states.has(to)) return rejectedTutorTransition;
+
+  const failClosed = machine.failClosedTransitions.find(
+    (transition) => transition.from === from && transition.to === to,
+  );
+  if (failClosed) {
+    return conditions[failClosed.when] === true
+      ? { accepted: true, stateAdvance: true, to }
+      : rejectedTutorTransition;
+  }
+
+  const invalidation = machine.basisOrConfigurationInvalidationTransition;
+  if (to === invalidation.to && invalidation.fromStates.includes(from)) {
+    return conditions[invalidation.when] === true
+      ? { accepted: true, stateAdvance: true, to }
+      : rejectedTutorTransition;
+  }
+
+  const normal = machine.normalTransitions.find(
+    (transition) => transition.from === from && transition.to === to,
+  );
+  if (!normal) return rejectedTutorTransition;
+
+  const helpGuard = machine.helpProducingTransitionGuards.find(
+    (guard) => guard.from === from && guard.to === to,
+  );
+  if (helpGuard && conditions[helpGuard.requires] !== true) return rejectedTutorTransition;
+  const completionGuard = machine.guidedCompletionGuard;
+  if (
+    completionGuard.from === from
+    && completionGuard.to === to
+    && conditions[completionGuard.requires] !== true
+  ) return rejectedTutorTransition;
+
+  return { accepted: true, stateAdvance: true, to };
+};
+
+const evaluateD7Eligibility = (candidate, context, _outerSummaryBoolean = false) => {
+  const gate = contract.d7EligibilityContract;
+  const failure = { eligible: false, ...gate.failureBehavior };
+  const artifactIsCurrentAndBound = (artifact) => isRecord(artifact)
+    && isNonEmptyString(artifact.ref)
+    && artifact.authority === "TRUSTED_SERVER_RESOLVER"
+    && artifact.current === true
+    && artifact.stale === false
+    && artifact.ambiguous === false
+    && artifact.itemRevisionRef === candidate?.candidate?.itemRevisionRef
+    && artifact.sourceIdentityRef === context.sourceIdentityRef
+    && artifact.effectiveVersionRef === context.effectiveVersionRef;
+
+  for (const conjunct of gate.requiredConjuncts) {
+    const value = valueAtPath(candidate, conjunct.path);
+    let passed = false;
+    switch (conjunct.predicate) {
+      case "EXACT_TRUSTED_CONTEXT":
+        passed = valueAtPath(context, conjunct.contextPath) === conjunct.expected
+          && context.trustedServerResolved === true
+          && context.requestSupplied === false
+          && context.clientSupplied === false
+          && context.modelSupplied === false;
+        break;
+      case "EXACT_CONTEXT_BINDING":
+        passed = isNonEmptyString(value) && value === valueAtPath(context, conjunct.contextPath);
+        break;
+      case "CURRENT_EXACT_D7_RIGHTS":
+        passed = isRecord(value)
+          && isNonEmptyString(value.decisionRef)
+          && value.authority === conjunct.expectedAuthority
+          && value.decision === conjunct.expectedDecision
+          && value.use === conjunct.expectedUse
+          && value.current === true
+          && value.resolvedFreshAtAcceptance === true
+          && value.stale === false
+          && value.ambiguous === false
+          && value.learnerScopeRef === context.learnerScopeRef
+          && value.closureCaseRef === context.closureCaseRef
+          && value.itemRevisionRef === candidate?.candidate?.itemRevisionRef
+          && value.sourceIdentityRef === context.sourceIdentityRef
+          && value.effectiveVersionRef === context.effectiveVersionRef;
+        break;
+      case "CURRENT_SOURCE_AND_EFFECTIVE_VERSION":
+        passed = isRecord(value)
+          && isNonEmptyString(value.resolutionRef)
+          && value.authority === "TRUSTED_SERVER_RESOLVER"
+          && value.current === true
+          && value.resolvedFreshAtAcceptance === true
+          && value.stale === false
+          && value.ambiguous === false
+          && value.identityRef === context.sourceIdentityRef
+          && value.effectiveVersionRef === context.effectiveVersionRef
+          && value.itemRevisionRef === candidate?.candidate?.itemRevisionRef;
+        break;
+      case "EXACT_CONTEXT_STRING_SET":
+        passed = exactStringSet(value, valueAtPath(context, conjunct.contextPath));
+        break;
+      case "DIFFERENT_CONTEXT_VALUE":
+        passed = isNonEmptyString(value)
+          && isNonEmptyString(valueAtPath(context, conjunct.contextPath))
+          && value !== valueAtPath(context, conjunct.contextPath);
+        break;
+      case "TRUSTED_NON_SAME_SURFACE_FAMILY":
+        passed = isRecord(value)
+          && isNonEmptyString(value.verificationRef)
+          && value.authority === "TRUSTED_SERVER_VERIFIER"
+          && value.current === true
+          && value.stale === false
+          && value.ambiguous === false
+          && value.verified === true
+          && value.nonSameSurface === true
+          && value.itemRevisionRef === candidate?.candidate?.itemRevisionRef
+          && isNonEmptyString(value.candidateItemFamilyRef)
+          && value.sourceItemFamilyRef === context.sourceItemFamilyRef
+          && value.candidateItemFamilyRef !== context.sourceItemFamilyRef;
+        break;
+      case "CURRENT_EXACT_BOUND_ARTIFACTS":
+        passed = isRecord(value)
+          && artifactIsCurrentAndBound(value.answer)
+          && artifactIsCurrentAndBound(value.rubric)
+          && artifactIsCurrentAndBound(value.validator);
+        break;
+      case "TRUSTED_SEALED_PRE_PRESENTATION_UNSEEN_SNAPSHOT":
+        passed = isRecord(value)
+          && value.authority === "TRUSTED_SERVER_RESOLVER"
+          && isNonEmptyString(value.snapshotRef)
+          && value.sealed === true
+          && value.createdBeforePresentation === true
+          && value.createdAfterPresentation === false
+          && value.learnerScopeRef === context.learnerScopeRef
+          && value.itemRevisionRef === candidate?.candidate?.itemRevisionRef
+          && value.solutionHiddenAtSeal === true
+          && value.helpBytesAtSeal === 0
+          && value.priorUseCount === 0
+          && value.consumptionCount === 1
+          && value.consumedByAttemptRef === candidate?.attempt?.attemptRef
+          && value.reused === false
+          && value.stale === false
+          && value.ambiguous === false;
+        break;
+      case "HIDDEN_ZERO_HELP_BYTES":
+        passed = isRecord(value)
+          && value.solutionHidden === true
+          && ["hintBytes", "referenceBytes", "probeBytes", "solutionBytes"]
+            .every((field) => value[field] === 0);
+        break;
+      case "GENUINE_COMPLETED_ATTEMPT_FIRST_SUCCESS":
+        passed = isRecord(value)
+          && value.authority === "TRUSTED_SERVER_RESOLVER"
+          && isNonEmptyString(value.attemptRef)
+          && value.mode === "attempt_first"
+          && value.genuine === true
+          && value.nonEmpty === true
+          && value.successful === true
+          && value.completed === true
+          && value.committed === true
+          && value.committedBeforeAnySolutionBytes === true
+          && value.submittedBeforeSolutionReveal === true
+          && value.assisted === false
+          && value.guidedOverride === false
+          && value.synthetic === false
+          && value.placeholder === false
+          && value.stale === false
+          && value.ambiguous === false
+          && value.learnerScopeRef === context.learnerScopeRef
+          && value.closureCaseRef === context.closureCaseRef
+          && value.itemRevisionRef === candidate?.candidate?.itemRevisionRef;
+        break;
+      case "EXACT_ZERO":
+        passed = Number.isInteger(value) && value === 0;
+        break;
+      case "ZERO_CONTAMINATION_VECTOR":
+        passed = isRecord(value)
+          && ["total", "cache", "prefetch", "directRoute", "multiTab", "other"]
+            .every((field) => Number.isInteger(value[field]) && value[field] === 0);
+        break;
+      case "FRESH_ACCEPTANCE_CURRENTNESS":
+        passed = isRecord(value)
+          && value.authority === "TRUSTED_SERVER_RESOLVER"
+          && value.verifiedFreshAtAcceptance === true
+          && value.verifiedAt === "D7_ACCEPTANCE"
+          && value.priorEligibilityResultReused === false
+          && value.rightsCurrent === true
+          && value.sourceCurrent === true
+          && value.artifactsCurrent === true
+          && value.unseenSnapshotCurrent === true
+          && value.attemptCurrent === true
+          && value.driftDetected === false
+          && value.stale === false
+          && value.ambiguous === false;
+        break;
+      default:
+        passed = false;
+    }
+    if (!passed) return failure;
+  }
+  return { eligible: true };
+};
+
+test("synchronizes WCV contract v1.0.8 and keeps V13 authoritative", () => {
+  assert.equal(contract.version, "1.0.8");
   assert.equal(
     contract.activeMasterPlan,
     "docs/strategy/dabangil-professional-exam-reasoning-os-final-master-plan-v13-2026-08-06.md",
@@ -40,10 +323,12 @@ test("synchronizes WCV contract v1.0.7 and keeps V13 authoritative", () => {
   assert.equal(contract.role.mayReplaceActiveMasterPlan, false);
   assert.equal(contract.authorizationBoundary.activePointerMutation, false);
   assert.equal(contract.authorizationBoundary.roadmapMutation, false);
-  includesAll(decision, ["contract_version: \"1.0.7\"", "V13은 계속 답안길의 유일한 active master plan"], "decision");
-  includesAll(strategy, ["version: \"1.0.7\"", "V13을 교체하지 않는다"], "strategy");
-  assert.ok(benchmark.includes("contract version: `1.0.7`"));
-  assert.ok(validation.includes("contract version: `1.0.7`"));
+  includesAll(decision, ["contract_version: \"1.0.8\"", "V13은 계속 답안길의 유일한 active master plan"], "decision");
+  includesAll(strategy, ["version: \"1.0.8\"", "V13을 교체하지 않는다"], "strategy");
+  assert.ok(benchmark.includes("contract version: `1.0.8`"));
+  assert.ok(validation.includes("contract version: `1.0.8`"));
+  assert.ok(validation.includes("24/24 passed"));
+  assert.ok(validation.includes("1,256/1,256 passed"));
 });
 
 test("authorizes no runtime, content, commercial, dependency or Production mutation", () => {
@@ -1253,6 +1538,96 @@ test("preserves the confirmed guided override without fabricating an attempt", (
   assert.equal(override.path.includes("ATTEMPT"), false);
 });
 
+test("enforces the complete canonical tutor state and transition machine", () => {
+  const transitionContract = contract.tutorTransitionContract;
+  assert.equal(transitionContract.authority, "CANONICAL_MACHINE_READABLE_TRANSITION_AUTHORITY");
+  assert.equal(transitionContract.stateEnumRef, "tutorStateMachine");
+  assert.equal(tutorDefinitionErrors().length, 0);
+
+  for (const path of [contract.defaultAttemptFirstPath, contract.guidedRevealOverrideContract.path]) {
+    for (let index = 0; index < path.length - 1; index += 1) {
+      const result = evaluateTutorTransition(path[index], path[index + 1], {
+        SUCCESSFUL_APPEND_ONLY_ASSISTANCE_EXPOSURE_COMMIT: true,
+        DURABLE_LATER_DISTINCT_ATTEMPT_FIRST_REVIEW_SCHEDULE: true,
+      });
+      assert.equal(result.accepted, true, `${path[index]}->${path[index + 1]}`);
+      assert.equal(result.stateAdvance, true, `${path[index]}->${path[index + 1]}`);
+    }
+  }
+  assert.equal(evaluateTutorTransition("INTAKE", "ORIENT").accepted, true);
+  assert.equal(evaluateTutorTransition("SCHEDULE", "COMPLETED").accepted, true);
+
+  const missingGuidedState = contract.tutorStateMachine.filter(
+    (state) => state !== "GUIDED_STUDY",
+  );
+  assert.ok(tutorDefinitionErrors({ states: missingGuidedState }).length > 0);
+
+  const missingAdjacentTransition = clone(transitionContract);
+  missingAdjacentTransition.normalTransitions = missingAdjacentTransition.normalTransitions.filter(
+    ({ from, to }) => !(from === "VERIFY" && to === "SCHEDULE_LATER_DISTINCT_INDEPENDENT_REVIEW"),
+  );
+  assert.ok(tutorDefinitionErrors({ transitionContract: missingAdjacentTransition }).length > 0);
+
+  const externalEndpoint = clone(transitionContract);
+  externalEndpoint.normalTransitions[0].to = "UNDECLARED_STATE";
+  assert.ok(tutorDefinitionErrors({ transitionContract: externalEndpoint }).length > 0);
+
+  const broadenedNormalPath = clone(transitionContract);
+  broadenedNormalPath.normalTransitions.push({
+    from: "ATTEMPT",
+    to: "TRANSFER",
+    paths: ["UNDECLARED_SHORTCUT"],
+  });
+  assert.ok(tutorDefinitionErrors({ transitionContract: broadenedNormalPath }).length > 0);
+
+  const guidedWithAttempt = [...contract.guidedRevealOverrideContract.path];
+  guidedWithAttempt.splice(3, 0, "ATTEMPT");
+  assert.ok(tutorDefinitionErrors({ guidedPath: guidedWithAttempt }).length > 0);
+
+  assert.deepEqual(
+    evaluateTutorTransition("ORIENT", "GUIDED_STUDY", {
+      SUCCESSFUL_APPEND_ONLY_ASSISTANCE_EXPOSURE_COMMIT: true,
+    }),
+    rejectedTutorTransition,
+  );
+  assert.deepEqual(
+    evaluateTutorTransition("CONFIRM_GUIDED_REVEAL_OVERRIDE", "GUIDED_STUDY", {
+      SUCCESSFUL_APPEND_ONLY_ASSISTANCE_EXPOSURE_COMMIT: true,
+    }),
+    rejectedTutorTransition,
+  );
+  assert.deepEqual(
+    evaluateTutorTransition("COMMIT_ASSISTANCE_EXPOSURE", "GUIDED_STUDY"),
+    rejectedTutorTransition,
+  );
+  assert.equal(
+    evaluateTutorTransition("COMMIT_ASSISTANCE_EXPOSURE", "BLOCKED", {
+      ASSISTANCE_EXPOSURE_COMMIT_FAILED: true,
+    }).accepted,
+    true,
+  );
+  assert.deepEqual(
+    evaluateTutorTransition("SCHEDULE_LATER_DISTINCT_INDEPENDENT_REVIEW", "GUIDED_EXIT"),
+    rejectedTutorTransition,
+  );
+  assert.equal(
+    evaluateTutorTransition("SCHEDULE_LATER_DISTINCT_INDEPENDENT_REVIEW", "BLOCKED", {
+      DURABLE_LATER_DISTINCT_INDEPENDENT_REVIEW_SCHEDULE_FAILED: true,
+    }).accepted,
+    true,
+  );
+  assert.deepEqual(
+    evaluateTutorTransition("COMPLETED", "STALE"),
+    rejectedTutorTransition,
+  );
+  assert.equal(
+    evaluateTutorTransition("COMPLETED", "STALE", {
+      CURRENT_BASIS_OR_CONFIGURATION_INVALID: true,
+    }).accepted,
+    true,
+  );
+});
+
 test("binds D+1 to the frozen D0 configuration and restarts on mismatch", () => {
   const x = contract.hardInvariants;
   const frozen = contract.frozenD0Configuration;
@@ -1278,6 +1653,307 @@ test("binds D+1 to the frozen D0 configuration and restarts on mismatch", () => 
   assert.equal(frozen.silentEvidenceCarryForwardAllowed, false);
   includesAll(strategy, ["FrozenD0ConfigurationSnapshotV1", "D0부터 restart"], "strategy frozen D0 contract");
   assert.ok(validation.includes("Frozen D0"));
+});
+
+test("enforces every structured D+7 conjunct with a one-conjunct hostile matrix", () => {
+  const gate = contract.d7EligibilityContract;
+  const context = {
+    resolutionAuthority: "TRUSTED_SERVER_RESOLVER",
+    trustedServerResolved: true,
+    requestSupplied: false,
+    clientSupplied: false,
+    modelSupplied: false,
+    learnerScopeRef: "learner-scope-1",
+    closureCaseRef: "closure-case-1",
+    sourceIdentityRef: "source-identity-1",
+    effectiveVersionRef: "effective-version-1",
+    sourceItemRevisionRef: "item-revision-source",
+    sourceItemFamilyRef: "item-family-source",
+    targetSkillRefs: ["skill-a", "skill-b"],
+  };
+  const currentArtifact = (ref) => ({
+    ref,
+    authority: "TRUSTED_SERVER_RESOLVER",
+    current: true,
+    stale: false,
+    ambiguous: false,
+    itemRevisionRef: "item-revision-candidate",
+    sourceIdentityRef: context.sourceIdentityRef,
+    effectiveVersionRef: context.effectiveVersionRef,
+  });
+  const eligible = {
+    bindings: {
+      learnerScopeRef: context.learnerScopeRef,
+      closureCaseRef: context.closureCaseRef,
+    },
+    candidate: {
+      itemRevisionRef: "item-revision-candidate",
+      targetSkillRefs: [...context.targetSkillRefs],
+    },
+    rights: {
+      decisionRef: "rights-decision-1",
+      authority: "TRUSTED_SERVER_RESOLVER",
+      decision: "AUTHORIZED",
+      use: "D7_TRANSFER_ACCEPTANCE",
+      current: true,
+      resolvedFreshAtAcceptance: true,
+      stale: false,
+      ambiguous: false,
+      learnerScopeRef: context.learnerScopeRef,
+      closureCaseRef: context.closureCaseRef,
+      itemRevisionRef: "item-revision-candidate",
+      sourceIdentityRef: context.sourceIdentityRef,
+      effectiveVersionRef: context.effectiveVersionRef,
+    },
+    source: {
+      resolutionRef: "source-resolution-1",
+      authority: "TRUSTED_SERVER_RESOLVER",
+      current: true,
+      resolvedFreshAtAcceptance: true,
+      stale: false,
+      ambiguous: false,
+      identityRef: context.sourceIdentityRef,
+      effectiveVersionRef: context.effectiveVersionRef,
+      itemRevisionRef: "item-revision-candidate",
+    },
+    surface: {
+      verificationRef: "surface-verification-1",
+      authority: "TRUSTED_SERVER_VERIFIER",
+      current: true,
+      stale: false,
+      ambiguous: false,
+      verified: true,
+      nonSameSurface: true,
+      itemRevisionRef: "item-revision-candidate",
+      sourceItemFamilyRef: context.sourceItemFamilyRef,
+      candidateItemFamilyRef: "item-family-candidate",
+    },
+    artifacts: {
+      answer: currentArtifact("answer-1"),
+      rubric: currentArtifact("rubric-1"),
+      validator: currentArtifact("validator-1"),
+    },
+    unseenSnapshot: {
+      authority: "TRUSTED_SERVER_RESOLVER",
+      snapshotRef: "unseen-snapshot-1",
+      sealed: true,
+      createdBeforePresentation: true,
+      createdAfterPresentation: false,
+      learnerScopeRef: context.learnerScopeRef,
+      itemRevisionRef: "item-revision-candidate",
+      solutionHiddenAtSeal: true,
+      helpBytesAtSeal: 0,
+      priorUseCount: 0,
+      consumptionCount: 1,
+      consumedByAttemptRef: "attempt-1",
+      reused: false,
+      stale: false,
+      ambiguous: false,
+    },
+    presentation: {
+      solutionHidden: true,
+      hintBytes: 0,
+      referenceBytes: 0,
+      probeBytes: 0,
+      solutionBytes: 0,
+    },
+    attempt: {
+      authority: "TRUSTED_SERVER_RESOLVER",
+      attemptRef: "attempt-1",
+      mode: "attempt_first",
+      genuine: true,
+      nonEmpty: true,
+      successful: true,
+      completed: true,
+      committed: true,
+      committedBeforeAnySolutionBytes: true,
+      submittedBeforeSolutionReveal: true,
+      assisted: false,
+      guidedOverride: false,
+      synthetic: false,
+      placeholder: false,
+      stale: false,
+      ambiguous: false,
+      learnerScopeRef: context.learnerScopeRef,
+      closureCaseRef: context.closureCaseRef,
+      itemRevisionRef: "item-revision-candidate",
+    },
+    replayCount: 0,
+    contamination: {
+      total: 0,
+      cache: 0,
+      prefetch: 0,
+      directRoute: 0,
+      multiTab: 0,
+      other: 0,
+    },
+    currentness: {
+      authority: "TRUSTED_SERVER_RESOLVER",
+      verifiedFreshAtAcceptance: true,
+      verifiedAt: "D7_ACCEPTANCE",
+      priorEligibilityResultReused: false,
+      rightsCurrent: true,
+      sourceCurrent: true,
+      artifactsCurrent: true,
+      unseenSnapshotCurrent: true,
+      attemptCurrent: true,
+      driftDetected: false,
+      stale: false,
+      ambiguous: false,
+    },
+    outerEligibilitySummary: true,
+  };
+
+  assert.equal(gate.consumedBy, "WCV_4_D1_D7_TIMED");
+  assert.deepEqual(contract.implementationSliceContractBindings.WCV_4_D1_D7_TIMED, {
+    d7EligibilityContractRef: "d7EligibilityContract",
+    structuredGateRequired: true,
+    summaryBooleanMaySubstitute: false,
+  });
+  assert.equal(gate.authority, "TRUSTED_SERVER_RESOLVER");
+  assert.equal(gate.evaluationTiming, "FRESH_IMMEDIATELY_BEFORE_D7_ACCEPTANCE");
+  assert.equal(gate.allConjunctsRequired, true);
+  assert.equal(gate.priorEligibilityResultReusable, false);
+  assert.deepEqual(gate.decisionContextBoundary, {
+    onlyAcceptedInput: "TRUSTED_SERVER_RESOLVED_CONTEXT",
+    requestFieldsReadAsAuthority: false,
+    clientFieldsReadAsAuthority: false,
+    modelFieldsReadAsAuthority: false,
+    outerBooleanReadAsAuthority: false,
+    candidateAuthorityClaimMaySubstitute: false,
+  });
+  assert.equal(new Set(gate.requiredConjuncts.map(({ id }) => id)).size, gate.requiredConjuncts.length);
+  for (const conjunct of gate.requiredConjuncts) {
+    assert.ok(gate.predicateVocabulary.includes(conjunct.predicate), conjunct.id);
+  }
+  assert.equal(gate.summaryBooleanCompatibility.eligibilityAuthority, false);
+  assert.equal(gate.summaryBooleanCompatibility.maySubstituteForStructuredGate, false);
+  assert.equal(gate.generatedItemPolicy.defaultQualification, "learning_only");
+  assert.equal(gate.generatedItemPolicy.defaultVerification, "unverified");
+  assert.equal(evaluateD7Eligibility(eligible, context).eligible, true);
+
+  const hostileCases = [];
+  const addCase = (label, mutateCandidate, mutateContext = () => {}, outer = false) => {
+    const candidate = clone(eligible);
+    const candidateContext = clone(context);
+    mutateCandidate(candidate);
+    mutateContext(candidateContext);
+    hostileCases.push([label, candidate, candidateContext, outer]);
+  };
+
+  addCase(
+    "request authority cannot substitute",
+    (value) => { value.outerAuthorityClaim = "TRUSTED_SERVER_RESOLVER"; },
+    (value) => {
+      value.resolutionAuthority = "REQUEST";
+      value.trustedServerResolved = false;
+      value.requestSupplied = true;
+    },
+  );
+  addCase("cross-learner binding", (value) => { value.bindings.learnerScopeRef = "learner-foreign"; });
+  addCase("cross-closure binding", (value) => { value.bindings.closureCaseRef = "closure-foreign"; });
+  addCase("missing rights", (value) => { delete value.rights; });
+  addCase("missing rights decision ref", (value) => { delete value.rights.decisionRef; });
+  addCase("blocked rights", (value) => { value.rights.decision = "BLOCKED"; });
+  addCase("stale rights", (value) => { value.rights.stale = true; });
+  addCase("non-fresh rights", (value) => { value.rights.resolvedFreshAtAcceptance = false; });
+  addCase("foreign-scope rights", (value) => { value.rights.learnerScopeRef = "learner-foreign"; });
+  addCase("wrong-use rights", (value) => { value.rights.use = "LEARNING_ONLY"; });
+  addCase("missing source", (value) => { delete value.source; });
+  addCase("missing source resolution ref", (value) => { delete value.source.resolutionRef; });
+  addCase("stale source", (value) => { value.source.stale = true; });
+  addCase("non-fresh source", (value) => { value.source.resolvedFreshAtAcceptance = false; });
+  addCase("mismatched source identity", (value) => { value.source.identityRef = "source-other"; });
+  addCase("foreign effective version", (value) => { value.source.effectiveVersionRef = "version-other"; });
+  addCase("partial skill set", (value) => { value.candidate.targetSkillRefs = ["skill-a"]; });
+  addCase("superset skill set", (value) => { value.candidate.targetSkillRefs.push("skill-c"); });
+  addCase("cross-skill set", (value) => { value.candidate.targetSkillRefs = ["skill-x", "skill-y"]; });
+  addCase(
+    "same item revision",
+    () => {},
+    (value) => { value.sourceItemRevisionRef = "item-revision-candidate"; },
+  );
+  addCase("same-surface family", (value) => {
+    value.surface.candidateItemFamilyRef = context.sourceItemFamilyRef;
+    value.surface.nonSameSurface = false;
+  });
+  addCase("untrusted surface verification", (value) => { value.surface.authority = "MODEL"; });
+  addCase("stale surface verification", (value) => { value.surface.stale = true; });
+  addCase("ambiguous surface verification", (value) => { value.surface.ambiguous = true; });
+  addCase("missing answer artifact", (value) => { delete value.artifacts.answer; });
+  addCase("stale rubric artifact", (value) => { value.artifacts.rubric.stale = true; });
+  addCase("ambiguous answer artifact", (value) => { value.artifacts.answer.ambiguous = true; });
+  addCase("foreign validator artifact", (value) => {
+    value.artifacts.validator.itemRevisionRef = "item-revision-foreign";
+  });
+  addCase("missing unseen snapshot", (value) => { delete value.unseenSnapshot; });
+  addCase("foreign unseen snapshot", (value) => {
+    value.unseenSnapshot.learnerScopeRef = "learner-foreign";
+  });
+  addCase("unsealed unseen snapshot", (value) => { value.unseenSnapshot.sealed = false; });
+  addCase("reused unseen snapshot", (value) => { value.unseenSnapshot.reused = true; });
+  addCase("previously consumed unseen snapshot", (value) => { value.unseenSnapshot.priorUseCount = 1; });
+  addCase("snapshot consumed by another attempt", (value) => {
+    value.unseenSnapshot.consumedByAttemptRef = "attempt-foreign";
+  });
+  addCase("ambiguous unseen snapshot", (value) => { value.unseenSnapshot.ambiguous = true; });
+  addCase("after-presentation snapshot", (value) => {
+    value.unseenSnapshot.createdBeforePresentation = false;
+    value.unseenSnapshot.createdAfterPresentation = true;
+  });
+  addCase("prior exposure at seal", (value) => { value.unseenSnapshot.helpBytesAtSeal = 1; });
+  addCase("hint byte", (value) => { value.presentation.hintBytes = 1; });
+  addCase("reference byte", (value) => { value.presentation.referenceBytes = 1; });
+  addCase("probe byte", (value) => { value.presentation.probeBytes = 1; });
+  addCase("solution byte", (value) => { value.presentation.solutionBytes = 1; });
+  addCase("assisted attempt", (value) => { value.attempt.assisted = true; });
+  addCase("guided attempt", (value) => { value.attempt.guidedOverride = true; });
+  addCase("synthetic attempt", (value) => { value.attempt.synthetic = true; });
+  addCase("placeholder attempt", (value) => { value.attempt.placeholder = true; });
+  addCase("unsuccessful attempt", (value) => { value.attempt.successful = false; });
+  addCase("incomplete attempt", (value) => { value.attempt.completed = false; });
+  addCase("empty attempt", (value) => { value.attempt.nonEmpty = false; });
+  addCase("attempt committed after solution bytes", (value) => {
+    value.attempt.committedBeforeAnySolutionBytes = false;
+  });
+  addCase("stale attempt", (value) => { value.attempt.stale = true; });
+  addCase("ambiguous attempt", (value) => { value.attempt.ambiguous = true; });
+  addCase("cross-learner attempt", (value) => { value.attempt.learnerScopeRef = "learner-foreign"; });
+  addCase("cross-closure attempt", (value) => { value.attempt.closureCaseRef = "closure-foreign"; });
+  addCase("replay", (value) => { value.replayCount = 1; });
+  for (const channel of ["cache", "prefetch", "directRoute", "multiTab", "other"]) {
+    addCase(`${channel} contamination`, (value) => { value.contamination[channel] = 1; });
+  }
+  addCase("prior eligibility result reused", (value) => {
+    value.currentness.priorEligibilityResultReused = true;
+  });
+  addCase("currentness drift before acceptance", (value) => {
+    value.currentness.driftDetected = true;
+    value.currentness.sourceCurrent = false;
+  });
+  addCase("ambiguous currentness", (value) => { value.currentness.ambiguous = true; });
+  addCase(
+    "outer true while trusted rights conjunct fails",
+    (value) => { value.rights.current = false; value.outerEligibilitySummary = true; },
+    () => {},
+    true,
+  );
+
+  const failure = { eligible: false, ...gate.failureBehavior };
+  for (const [label, candidate, candidateContext, outer] of hostileCases) {
+    assert.deepEqual(
+      evaluateD7Eligibility(candidate, candidateContext, outer),
+      failure,
+      label,
+    );
+  }
+  assert.deepEqual(gate.failureBehavior, {
+    acceptedD7Evidence: false,
+    masteryAdvance: false,
+    closureAdvance: false,
+    transferConfirmed: false,
+    safeMaximumGapClosureStatus: "d1_reproduced",
+  });
 });
 
 test("keeps Today at three and Full-Day at trusted-server integer 30..720", () => {

@@ -3,7 +3,7 @@ document_title: "답안길 감정평가사 2차 World-Class Vertical Execution S
 document_subtitle: "정확한 감점 위치·AI 협업 교정·독립 전이·재발 검증·하루 관제"
 document_role: "V13 subordinate execution standard; not a new master plan"
 status: "proposed_non_authoritative_source_contract"
-version: "1.0.7"
+version: "1.0.8"
 dated: "2026-08-10 KST"
 repository: "chachathecat/inverge"
 active_master_plan: "docs/strategy/dabangil-professional-exam-reasoning-os-final-master-plan-v13-2026-08-06.md"
@@ -345,6 +345,29 @@ intake → orient → commit → attempt → diagnose → scaffold
 → timed_recurrence → schedule
 ```
 
+### 6.0 canonical machine-readable transition authority
+
+`config/dabangil-appraiser-second-world-class-vertical-v1.json`의
+`tutorStateMachine`은 위 `VerticalTutorStateV1`의 complete enum mirror이고,
+`tutorTransitionContract`는 유일한 machine-readable transition authority다. 별도
+parallel state authority를 만들지 않는다.
+
+- default path의 모든 adjacent edge와 `INTAKE → ORIENT`,
+  `SCHEDULE → COMPLETED`를 선언한다.
+- confirmed guided path의 모든 adjacent edge를 선언하되 `ATTEMPT`와
+  `CONFIRM_GUIDED_REVEAL_OVERRIDE → GUIDED_STUDY` shortcut을 허용하지 않는다.
+- `DIAGNOSE → SCAFFOLD` 및
+  `COMMIT_ASSISTANCE_EXPOSURE → GUIDED_STUDY`는 successful append-only exposure
+  commit을 요구한다. 실패는 help/positive evidence 0인 `BLOCKED` transition이다.
+- `SCHEDULE_LATER_DISTINCT_INDEPENDENT_REVIEW → GUIDED_EXIT`는 durable later
+  distinct `attempt_first` schedule 성공을 요구하며 실패는 `BLOCKED`다.
+- current basis/configuration invalidation만 선언된 fail-closed transition으로
+  `STALE`에 들어갈 수 있고 incompatible evidence carry-forward는 금지한다.
+- undeclared transition은 `REJECT`, state advance false, help/positive evidence 0이다.
+
+normal path 또는 guided path의 새 edge는 이 subordinate correction에서 암묵적으로
+추가할 수 없다.
+
 ### 6.1 scaffold ladder
 
 ```text
@@ -594,7 +617,7 @@ decision을 그대로 사용한다. 별도의 answer authority를 만들지 않�
 - client/model/request label/disclosure string/outer boolean은 identity authority가
   아니며, released S215를 빌려와도 mismatch 시 output, positive evidence와 usage
   success는 모두 0이다.
-- Contract v1.0.7은 매 generated-output authorization의 첫 byte 직전에 trusted
+- Contract v1.0.8은 매 generated-output authorization의 첫 byte 직전에 trusted
   resolver가 current canonical S207 registry에서 바로 그 exact-bound package를 다시
   resolve하도록 요구한다. 과거 성공 check, S214 embedded prerequisite, cached 또는
   historical snapshot은 재사용하거나 대체할 수 없다.
@@ -842,6 +865,22 @@ D+7 자격은 current rights/source/version, exact target skill,
 non-same-surface item family, answer/rubric/validator, unseen snapshot, hidden
 solution, independent attempt와 replay/contamination 0을 모두 요구한다.
 Generated item은 기본 `learning_only/unverified`다.
+
+`d7EligibilityContract`는 `WCV_4_D1_D7_TIMED`가 소비하는 유일한 machine-readable
+eligibility gate다. trusted server가 D+7 acceptance 직전에 fresh하게 exact learner/
+closure-case binding, exact-use current rights, current exact source/effective version,
+exact target-skill set, different revision, trusted non-same-surface family, current
+exact-bound answer/rubric/validator, exact-bound sealed pre-presentation unseen snapshot,
+hidden solution과 zero hint/reference/probe/solution bytes, genuine non-empty successful
+completed `attempt_first` independent attempt, replay 0, 모든 cache/prefetch/direct-route/
+multi-tab contamination 0을 conjunctively 확인한다. prior eligibility result는 재사용할
+수 없다.
+
+summary boolean, request, client 또는 model은 authority가 아니다. 한 conjunct라도
+missing/invalid/stale/mismatched/ambiguous/foreign이면 accepted D+7 evidence,
+mastery/closure advance와 transfer confirmation은 모두 false이고 기존 safe maximum
+`d1_reproduced`를 유지한다. generated candidate는 별도 canonical verified-bank release
+authority가 승격하기 전까지 `learning_only/unverified`다.
 
 ---
 

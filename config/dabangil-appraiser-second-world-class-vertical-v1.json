@@ -1,6 +1,6 @@
 {
   "schema": "dabangil_appraiser_second_world_class_vertical_v1",
-  "version": "1.0.7",
+  "version": "1.0.8",
   "dated": "2026-08-10 KST",
   "status": "proposed_non_authoritative_source_contract",
   "repository": "chachathecat/inverge",
@@ -103,8 +103,11 @@
   "tutorStateMachine": [
     "INTAKE",
     "ORIENT",
+    "CONFIRM_GUIDED_REVEAL_OVERRIDE",
     "COMMIT",
+    "COMMIT_ASSISTANCE_EXPOSURE",
     "ATTEMPT",
+    "GUIDED_STUDY",
     "DIAGNOSE",
     "SCAFFOLD",
     "RECONSTRUCT",
@@ -113,7 +116,12 @@
     "CONTRAST",
     "TRANSFER",
     "TIMED_RECURRENCE",
-    "SCHEDULE"
+    "SCHEDULE",
+    "SCHEDULE_LATER_DISTINCT_INDEPENDENT_REVIEW",
+    "COMPLETED",
+    "GUIDED_EXIT",
+    "BLOCKED",
+    "STALE"
   ],
   "defaultAttemptFirstPath": [
     "ORIENT",
@@ -129,6 +137,237 @@
     "TIMED_RECURRENCE",
     "SCHEDULE"
   ],
+  "tutorTransitionContract": {
+    "authority": "CANONICAL_MACHINE_READABLE_TRANSITION_AUTHORITY",
+    "stateEnumRef": "tutorStateMachine",
+    "pathRefs": [
+      "defaultAttemptFirstPath",
+      "guidedRevealOverrideContract.path"
+    ],
+    "normalTerminalStates": [
+      "COMPLETED",
+      "GUIDED_EXIT"
+    ],
+    "failClosedStates": [
+      "BLOCKED",
+      "STALE"
+    ],
+    "normalTransitions": [
+      {
+        "from": "INTAKE",
+        "to": "ORIENT",
+        "paths": [
+          "ENTRY"
+        ]
+      },
+      {
+        "from": "ORIENT",
+        "to": "COMMIT",
+        "paths": [
+          "DEFAULT_ATTEMPT_FIRST"
+        ]
+      },
+      {
+        "from": "COMMIT",
+        "to": "ATTEMPT",
+        "paths": [
+          "DEFAULT_ATTEMPT_FIRST"
+        ]
+      },
+      {
+        "from": "ATTEMPT",
+        "to": "DIAGNOSE",
+        "paths": [
+          "DEFAULT_ATTEMPT_FIRST"
+        ]
+      },
+      {
+        "from": "DIAGNOSE",
+        "to": "SCAFFOLD",
+        "paths": [
+          "DEFAULT_ATTEMPT_FIRST"
+        ]
+      },
+      {
+        "from": "SCAFFOLD",
+        "to": "RECONSTRUCT",
+        "paths": [
+          "DEFAULT_ATTEMPT_FIRST"
+        ]
+      },
+      {
+        "from": "RECONSTRUCT",
+        "to": "REPAIR",
+        "paths": [
+          "DEFAULT_ATTEMPT_FIRST",
+          "CONFIRMED_GUIDED_OVERRIDE"
+        ]
+      },
+      {
+        "from": "REPAIR",
+        "to": "VERIFY",
+        "paths": [
+          "DEFAULT_ATTEMPT_FIRST",
+          "CONFIRMED_GUIDED_OVERRIDE"
+        ]
+      },
+      {
+        "from": "VERIFY",
+        "to": "CONTRAST",
+        "paths": [
+          "DEFAULT_ATTEMPT_FIRST"
+        ]
+      },
+      {
+        "from": "CONTRAST",
+        "to": "TRANSFER",
+        "paths": [
+          "DEFAULT_ATTEMPT_FIRST"
+        ]
+      },
+      {
+        "from": "TRANSFER",
+        "to": "TIMED_RECURRENCE",
+        "paths": [
+          "DEFAULT_ATTEMPT_FIRST"
+        ]
+      },
+      {
+        "from": "TIMED_RECURRENCE",
+        "to": "SCHEDULE",
+        "paths": [
+          "DEFAULT_ATTEMPT_FIRST"
+        ]
+      },
+      {
+        "from": "SCHEDULE",
+        "to": "COMPLETED",
+        "paths": [
+          "DEFAULT_ATTEMPT_FIRST_TERMINAL"
+        ]
+      },
+      {
+        "from": "ORIENT",
+        "to": "CONFIRM_GUIDED_REVEAL_OVERRIDE",
+        "paths": [
+          "CONFIRMED_GUIDED_OVERRIDE"
+        ]
+      },
+      {
+        "from": "CONFIRM_GUIDED_REVEAL_OVERRIDE",
+        "to": "COMMIT_ASSISTANCE_EXPOSURE",
+        "paths": [
+          "CONFIRMED_GUIDED_OVERRIDE"
+        ]
+      },
+      {
+        "from": "COMMIT_ASSISTANCE_EXPOSURE",
+        "to": "GUIDED_STUDY",
+        "paths": [
+          "CONFIRMED_GUIDED_OVERRIDE"
+        ]
+      },
+      {
+        "from": "GUIDED_STUDY",
+        "to": "RECONSTRUCT",
+        "paths": [
+          "CONFIRMED_GUIDED_OVERRIDE"
+        ]
+      },
+      {
+        "from": "VERIFY",
+        "to": "SCHEDULE_LATER_DISTINCT_INDEPENDENT_REVIEW",
+        "paths": [
+          "CONFIRMED_GUIDED_OVERRIDE"
+        ]
+      },
+      {
+        "from": "SCHEDULE_LATER_DISTINCT_INDEPENDENT_REVIEW",
+        "to": "GUIDED_EXIT",
+        "paths": [
+          "CONFIRMED_GUIDED_OVERRIDE"
+        ]
+      }
+    ],
+    "helpProducingTransitionGuards": [
+      {
+        "from": "DIAGNOSE",
+        "to": "SCAFFOLD",
+        "requires": "SUCCESSFUL_APPEND_ONLY_ASSISTANCE_EXPOSURE_COMMIT"
+      },
+      {
+        "from": "COMMIT_ASSISTANCE_EXPOSURE",
+        "to": "GUIDED_STUDY",
+        "requires": "SUCCESSFUL_APPEND_ONLY_ASSISTANCE_EXPOSURE_COMMIT"
+      }
+    ],
+    "guidedCompletionGuard": {
+      "from": "SCHEDULE_LATER_DISTINCT_INDEPENDENT_REVIEW",
+      "to": "GUIDED_EXIT",
+      "requires": "DURABLE_LATER_DISTINCT_ATTEMPT_FIRST_REVIEW_SCHEDULE"
+    },
+    "failClosedTransitions": [
+      {
+        "from": "DIAGNOSE",
+        "to": "BLOCKED",
+        "when": "ASSISTANCE_EXPOSURE_COMMIT_FAILED",
+        "helpBytes": 0,
+        "positiveEvidence": 0
+      },
+      {
+        "from": "COMMIT_ASSISTANCE_EXPOSURE",
+        "to": "BLOCKED",
+        "when": "ASSISTANCE_EXPOSURE_COMMIT_FAILED",
+        "helpBytes": 0,
+        "positiveEvidence": 0
+      },
+      {
+        "from": "SCHEDULE_LATER_DISTINCT_INDEPENDENT_REVIEW",
+        "to": "BLOCKED",
+        "when": "DURABLE_LATER_DISTINCT_INDEPENDENT_REVIEW_SCHEDULE_FAILED",
+        "guidedCompletion": false,
+        "committedExposureLineageRetained": true
+      }
+    ],
+    "basisOrConfigurationInvalidationTransition": {
+      "fromStates": [
+        "ORIENT",
+        "CONFIRM_GUIDED_REVEAL_OVERRIDE",
+        "COMMIT",
+        "COMMIT_ASSISTANCE_EXPOSURE",
+        "ATTEMPT",
+        "GUIDED_STUDY",
+        "DIAGNOSE",
+        "SCAFFOLD",
+        "RECONSTRUCT",
+        "REPAIR",
+        "VERIFY",
+        "CONTRAST",
+        "TRANSFER",
+        "TIMED_RECURRENCE",
+        "SCHEDULE",
+        "SCHEDULE_LATER_DISTINCT_INDEPENDENT_REVIEW",
+        "COMPLETED",
+        "GUIDED_EXIT"
+      ],
+      "to": "STALE",
+      "when": "CURRENT_BASIS_OR_CONFIGURATION_INVALID",
+      "normalPathEligible": false,
+      "evidenceCarryForwardAllowed": false
+    },
+    "undeclaredTransitionBehavior": {
+      "result": "REJECT",
+      "stateAdvance": false,
+      "helpBytes": 0,
+      "positiveEvidence": 0
+    },
+    "noPathBroadening": {
+      "defaultAttemptFirst": true,
+      "confirmedGuidedOverride": true,
+      "guidedPathMayContainAttempt": false,
+      "guidedShortcutAroundExposureCommitAllowed": false
+    }
+  },
   "scaffoldLadder": [
     "NEUTRAL_REPROMPT",
     "RECALL_CUE",
@@ -606,6 +845,156 @@
     "securityRepairBehavior": "INVALIDATE_AND_RESTART",
     "silentEvidenceCarryForwardAllowed": false
   },
+  "d7EligibilityContract": {
+    "schema": "d7_eligibility_contract_v1",
+    "consumedBy": "WCV_4_D1_D7_TIMED",
+    "authority": "TRUSTED_SERVER_RESOLVER",
+    "evaluationTiming": "FRESH_IMMEDIATELY_BEFORE_D7_ACCEPTANCE",
+    "allConjunctsRequired": true,
+    "priorEligibilityResultReusable": false,
+    "decisionContextBoundary": {
+      "onlyAcceptedInput": "TRUSTED_SERVER_RESOLVED_CONTEXT",
+      "requestFieldsReadAsAuthority": false,
+      "clientFieldsReadAsAuthority": false,
+      "modelFieldsReadAsAuthority": false,
+      "outerBooleanReadAsAuthority": false,
+      "candidateAuthorityClaimMaySubstitute": false
+    },
+    "failClosedOn": [
+      "MISSING",
+      "INVALID",
+      "STALE",
+      "MISMATCHED",
+      "AMBIGUOUS",
+      "FOREIGN"
+    ],
+    "predicateVocabulary": [
+      "EXACT_TRUSTED_CONTEXT",
+      "EXACT_CONTEXT_BINDING",
+      "CURRENT_EXACT_D7_RIGHTS",
+      "CURRENT_SOURCE_AND_EFFECTIVE_VERSION",
+      "EXACT_CONTEXT_STRING_SET",
+      "DIFFERENT_CONTEXT_VALUE",
+      "TRUSTED_NON_SAME_SURFACE_FAMILY",
+      "CURRENT_EXACT_BOUND_ARTIFACTS",
+      "TRUSTED_SEALED_PRE_PRESENTATION_UNSEEN_SNAPSHOT",
+      "HIDDEN_ZERO_HELP_BYTES",
+      "GENUINE_COMPLETED_ATTEMPT_FIRST_SUCCESS",
+      "EXACT_ZERO",
+      "ZERO_CONTAMINATION_VECTOR",
+      "FRESH_ACCEPTANCE_CURRENTNESS"
+    ],
+    "requiredConjuncts": [
+      {
+        "id": "TRUSTED_SERVER_RESOLUTION_AUTHORITY",
+        "predicate": "EXACT_TRUSTED_CONTEXT",
+        "contextPath": "resolutionAuthority",
+        "expected": "TRUSTED_SERVER_RESOLVER"
+      },
+      {
+        "id": "EXACT_LEARNER_SCOPE_BINDING",
+        "predicate": "EXACT_CONTEXT_BINDING",
+        "path": "bindings.learnerScopeRef",
+        "contextPath": "learnerScopeRef"
+      },
+      {
+        "id": "EXACT_CLOSURE_CASE_BINDING",
+        "predicate": "EXACT_CONTEXT_BINDING",
+        "path": "bindings.closureCaseRef",
+        "contextPath": "closureCaseRef"
+      },
+      {
+        "id": "CURRENT_RIGHTS_FOR_EXACT_D7_USE",
+        "predicate": "CURRENT_EXACT_D7_RIGHTS",
+        "path": "rights",
+        "expectedUse": "D7_TRANSFER_ACCEPTANCE",
+        "expectedDecision": "AUTHORIZED",
+        "expectedAuthority": "TRUSTED_SERVER_RESOLVER"
+      },
+      {
+        "id": "CURRENT_EXACT_SOURCE_AND_EFFECTIVE_VERSION",
+        "predicate": "CURRENT_SOURCE_AND_EFFECTIVE_VERSION",
+        "path": "source"
+      },
+      {
+        "id": "EXACT_TARGET_SKILL_SET",
+        "predicate": "EXACT_CONTEXT_STRING_SET",
+        "path": "candidate.targetSkillRefs",
+        "contextPath": "targetSkillRefs"
+      },
+      {
+        "id": "DIFFERENT_ITEM_REVISION",
+        "predicate": "DIFFERENT_CONTEXT_VALUE",
+        "path": "candidate.itemRevisionRef",
+        "contextPath": "sourceItemRevisionRef"
+      },
+      {
+        "id": "VERIFIED_NON_SAME_SURFACE_ITEM_FAMILY",
+        "predicate": "TRUSTED_NON_SAME_SURFACE_FAMILY",
+        "path": "surface"
+      },
+      {
+        "id": "CURRENT_EXACT_BOUND_ANSWER_RUBRIC_VALIDATOR",
+        "predicate": "CURRENT_EXACT_BOUND_ARTIFACTS",
+        "path": "artifacts"
+      },
+      {
+        "id": "TRUSTED_SEALED_PRE_PRESENTATION_UNSEEN_SNAPSHOT",
+        "predicate": "TRUSTED_SEALED_PRE_PRESENTATION_UNSEEN_SNAPSHOT",
+        "path": "unseenSnapshot"
+      },
+      {
+        "id": "HIDDEN_SOLUTION_AND_ZERO_HELP_BYTES",
+        "predicate": "HIDDEN_ZERO_HELP_BYTES",
+        "path": "presentation"
+      },
+      {
+        "id": "GENUINE_COMPLETED_ATTEMPT_FIRST_INDEPENDENT_SUCCESS",
+        "predicate": "GENUINE_COMPLETED_ATTEMPT_FIRST_SUCCESS",
+        "path": "attempt"
+      },
+      {
+        "id": "REPLAY_COUNT_ZERO",
+        "predicate": "EXACT_ZERO",
+        "path": "replayCount"
+      },
+      {
+        "id": "CONTAMINATION_COUNTS_ZERO",
+        "predicate": "ZERO_CONTAMINATION_VECTOR",
+        "path": "contamination"
+      },
+      {
+        "id": "FRESH_CURRENTNESS_AT_D7_ACCEPTANCE",
+        "predicate": "FRESH_ACCEPTANCE_CURRENTNESS",
+        "path": "currentness"
+      }
+    ],
+    "summaryBooleanCompatibility": {
+      "ref": "hardInvariants.verifiedNonSameSurfaceRequiredForD7",
+      "retained": true,
+      "eligibilityAuthority": false,
+      "maySubstituteForStructuredGate": false
+    },
+    "prohibitedAuthorities": [
+      "REQUEST",
+      "CLIENT",
+      "MODEL",
+      "OUTER_BOOLEAN"
+    ],
+    "failureBehavior": {
+      "acceptedD7Evidence": false,
+      "masteryAdvance": false,
+      "closureAdvance": false,
+      "transferConfirmed": false,
+      "safeMaximumGapClosureStatus": "d1_reproduced"
+    },
+    "generatedItemPolicy": {
+      "defaultQualification": "learning_only",
+      "defaultVerification": "unverified",
+      "separatePromotionRequired": true,
+      "promotionAuthority": "CANONICAL_VERIFIED_BANK_RELEASE_AUTHORITY"
+    }
+  },
   "goldenVerticals": {
     "practice": {
       "requiredStory": [
@@ -789,6 +1178,13 @@
     "WCV_10_S243C_PAID_CANARY",
     "WCV_11_POST_CANARY_STAGED_EXPANSION"
   ],
+  "implementationSliceContractBindings": {
+    "WCV_4_D1_D7_TIMED": {
+      "d7EligibilityContractRef": "d7EligibilityContract",
+      "structuredGateRequired": true,
+      "summaryBooleanMaySubstitute": false
+    }
+  },
   "benchmarkAdoption": {
     "UWORLD": {
       "adopt": [

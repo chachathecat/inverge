@@ -1,7 +1,7 @@
 # 감정평가사 2차 World-Class Benchmark & Adoption Matrix v1
 
 - 작성일: 2026-08-10 KST
-- contract version: `1.0.7`
+- contract version: `1.0.8`
 - 상태: source-only benchmark / non-operative
 - 목적: 세계급 제품·연구·오픈소스의 작동 원리를 추출하고 답안길의
   `adopt / adapt / reject / proof` 결정을 고정한다.
@@ -347,6 +347,19 @@ Reject:
 - H5P runtime as core dependency
 - branch score as mastery
 - unverified branch as D+7
+
+D+7 adoption boundary:
+
+- one trusted-server structured gate conjunctively binds current rights/source/effective
+  version, exact skill, different verified non-same-surface family, current answer/rubric/
+  validator, a sealed pre-presentation unseen snapshot, hidden solution, genuine completed
+  attempt-first independent success, replay 0 and contamination 0
+- a summary boolean, assisted/guided/synthetic/placeholder attempt, reused snapshot or
+  prior eligibility result cannot establish transfer
+- any failed conjunct preserves `d1_reproduced` as the safe maximum and creates no D+7
+  evidence, mastery/closure advance or transfer confirmation
+- generated items remain `learning_only/unverified` until separately promoted by the
+  canonical verified-bank authority
 
 Source:
 - https://h5p.org/branching-scenario

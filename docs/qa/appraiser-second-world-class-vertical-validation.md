@@ -2,7 +2,7 @@
 
 - 작성일: 2026-08-10 KST
 - 상태: source-only validation
-- contract version: `1.0.7`
+- contract version: `1.0.8`
 - runtime evidence: none
 - active master change: none
 - roadmap state change: none
@@ -75,7 +75,17 @@ The sources support design mechanisms, not Dabangil efficacy or pricing claims.
   deterministic ISO-instant regex, and every released package must provide it
 - confirmed pre-attempt guided override fabricates no attempt and schedules a
   later distinct attempt-first independent review before guided exit
-- D+7 verified non-same-surface required
+- canonical tutor enum includes every default, guided, terminal and fail-closed
+  state; one transition authority declares every permitted adjacent edge,
+  exposure/schedule failure and basis/configuration invalidation path
+- undeclared tutor transitions produce no state advance, help or positive evidence;
+  guided help and exit require the exact exposure-commit and durable-schedule guards
+- D+7 verified non-same-surface requires one fresh trusted-server structured gate
+  over current rights/source/effective version, exact learner/case/skill/item-family
+  bindings, current answer/rubric/validator, sealed unseen state, hidden solution,
+  genuine completed attempt-first independent success, replay 0 and contamination 0
+- any D+7 conjunct failure creates no accepted evidence, mastery/closure advance or
+  transfer confirmation and preserves `d1_reproduced` as the safe maximum
 - timed recurrence required for closure
 - later independent failure reopens closure
 - one canonical MasteryState authority
@@ -134,8 +144,8 @@ The sources support design mechanisms, not Dabangil efficacy or pricing claims.
 
 ## 5. Exact-head review corrections
 
-Ten finding-producing exact-head Codex reviews found twenty-one substantive issues;
-Contract `1.0.7` closes them as follows.
+Eleven finding-producing exact-head Codex reviews found twenty-three substantive issues;
+Contract `1.0.8` closes them as follows.
 
 1. **S236P gate** — current exact `acceptanceCompleted=true` and
    `terminalPass=true` required.
@@ -192,7 +202,7 @@ Contract `1.0.7` closes them as follows.
     `PRR_kwDOSMHn8M8AAAABI_o-lA`, thread `PRRT_kwDOSMHn8M6X8AGP`, comment
     `PRRC_kwDOSMHn8M7flTjV` found that a historical released S215 result could still
     authorize output after the exact S207 package became blocked or lost an
-    S214/S215 downstream-use permission. Contract v1.0.7 now freshly resolves the
+    S214/S215 downstream-use permission. Contract v1.0.8 now freshly resolves the
     exact current canonical package at each output authorization immediately before
     the first byte; requires current `release.status == "released"`, zero blockers
     where `status == "open" && severity == "blocking"`, zero uncertainties where
@@ -234,8 +244,25 @@ Contract `1.0.7` closes them as follows.
     present, and requires it when `release.status == "released"`. Valid draft and
     blocked packages without `releasedAt` can coexist with the exact released
     target, while a missing or malformed timestamp in any released matched or
-    unmatched package still fails the complete registry closed. Cycle 8 exact-head
-    review is pending.
+    unmatched package still fails the complete registry closed.
+22. **Complete canonical tutor machine** — cycle-8 review
+    `PRR_kwDOSMHn8M8AAAABJDkQxg` reviewed
+    `faee2efe44fc4838bc0936e13f6818c260adddee`; thread
+    `PRRT_kwDOSMHn8M6YGnBj` / comment `PRRC_kwDOSMHn8M7f0Por` found that five
+    guided-path states were absent from the closed JSON enum. Contract v1.0.8 mirrors
+    the full `VerticalTutorStateV1`, including `COMPLETED`, `BLOCKED` and `STALE`,
+    and installs one transition authority for every default/guided adjacent edge,
+    guarded help and guided exit, fail-closed exposure/schedule failures, current
+    basis/configuration invalidation and undeclared-transition rejection.
+23. **Complete structured D+7 eligibility** — the same cycle-8 review, thread
+    `PRRT_kwDOSMHn8M6YGnBl` / comment `PRRC_kwDOSMHn8M7f0Pot`, found that a
+    summary boolean was the only machine-enforceable D+7 rule. The new
+    `d7EligibilityContract`, consumed by `WCV_4_D1_D7_TIMED`, requires every current
+    exact rights/source/version/skill/family/artifact/unseen/hidden/independent/
+    replay/contamination/currentness conjunct under trusted-server authority. Every
+    hostile one-conjunct failure returns the same no-evidence, no-mastery, no-closure,
+    no-transfer result with safe maximum `d1_reproduced`. Cycle 9 exact-head review
+    is pending.
 
 ## 6. Focused commands
 
@@ -245,6 +272,9 @@ node -e "JSON.parse(require('fs').readFileSync('config/dabangil-appraiser-second
 node --test tests/appraiser-second-world-class-vertical-contract.test.mjs
 git diff --check
 ```
+
+Current contract `1.0.8` focused result: **24/24 passed**. After lockfile-based
+dependency installation, the default Node regression result is **1,256/1,256 passed**.
 
 Exact-head repository checks also require:
 
@@ -284,9 +314,21 @@ Focused tests must reject or detect:
 - semantically complete generated solution bypassing S215 through a lower-rung label
 - exposed attempt relabeled unseen
 - guided override fabricating an empty, placeholder or synthetic attempt
+- missing guided tutor state, missing adjacent edge, transition endpoint outside the
+  enum, undeclared edge, exposure-commit shortcut or `ATTEMPT` inside guided path
+- continued guided help after exposure-commit failure or guided exit after durable-
+  schedule failure
 - guided exit without a later distinct independent review schedule
 - D+1 across a mismatched frozen configuration
 - security repair silently preserving incompatible evidence
+- D+7 rights missing/blocked/stale/foreign or scoped to another learner/case/use
+- D+7 source/effective version missing/stale/mismatched/foreign; partial, superset or
+  cross-skill target; same item or same-surface family
+- D+7 answer/rubric/validator missing/stale/foreign; unseen snapshot missing, foreign,
+  unsealed, reused or created after presentation; any pre-attempt help byte
+- D+7 assisted/guided/synthetic/placeholder/unsuccessful/incomplete attempt, replay,
+  cache/prefetch/direct-route/multi-tab contamination, or post-success currentness drift
+- outer D+7 summary `true` while any trusted conjunct fails
 - Practice Golden missing any required GIII routine field
 - ts-fsrs declared outside `benchmark_only` or advanced to its future learner-hidden
   due-date role without adapter evidence, exact-scope O2, beta evidence and a
