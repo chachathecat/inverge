@@ -126,6 +126,18 @@ The sources support design mechanisms, not Dabangil efficacy or pricing claims.
 
 ### Open source
 
+- the canonical dependency/model-adapter lifecycle vocabulary is derived from
+  `AGENTS.md` and contains exactly `proposed`, `benchmark_only`, `shadow`,
+  `limited_activation`, `active` and `rollback`
+- the strategy and benchmark lifecycle ledgers mirror exactly nine candidates:
+  Ajv `proposed`, decimal.js `proposed`, Inspect AI `proposed`, ts-fsrs
+  `benchmark_only`, pyBKT `benchmark_only`, pgvector `proposed`, PaddleOCR
+  `benchmark_only`, Tesseract `proposed` and OR-Tools `proposed`
+- planning phase and role metadata are separate from lifecycle state; phase or
+  role never authorizes adoption, activation or a skipped qualification edge
+- OATutor, H5P Branching, QTI 3, Caliper, W3C PROV and NIST AI RMF remain in a
+  separate pattern/reference classification ledger, outside lifecycle state
+- the mandatory first qualification edge remains `proposed → benchmark_only`
 - ts-fsrs current disposition exactly `benchmark_only`
 - current ts-fsrs scope is isolated synthetic/offline comparison against a fixed
   or native scheduling baseline, with no learner-hidden instrumentation,
@@ -144,7 +156,7 @@ The sources support design mechanisms, not Dabangil efficacy or pricing claims.
 
 ## 5. Exact-head review corrections
 
-Eleven finding-producing exact-head Codex reviews found twenty-three substantive issues;
+Twelve finding-producing exact-head Codex reviews found twenty-four substantive issues;
 Contract `1.0.8` closes them as follows.
 
 1. **S236P gate** — current exact `acceptanceCompleted=true` and
@@ -261,8 +273,25 @@ Contract `1.0.8` closes them as follows.
     exact rights/source/version/skill/family/artifact/unseen/hidden/independent/
     replay/contamination/currentness conjunct under trusted-server authority. Every
     hostile one-conjunct failure returns the same no-evidence, no-mastery, no-closure,
-    no-transfer result with safe maximum `d1_reproduced`. Cycle 9 exact-head review
-    is pending.
+    no-transfer result with safe maximum `d1_reproduced`.
+24. **Canonical dependency lifecycle vocabulary** — cycle-9 review
+    `PRR_kwDOSMHn8M8AAAABJDyaIw` reviewed exact head
+    `018fb69c9babc820fa99cfe6ac67f65c9b60e2a3`; thread
+    `PRRT_kwDOSMHn8M6YHJFT` / comment `PRRC_kwDOSMHn8M7f1B6r` found a
+    pre-existing but newly detected lifecycle defect. The benchmark matrix held
+    three `future_phase_1_candidate` and one `future_optional_adapter` operative
+    values, and the strategy ledger mirrored the corresponding four entries: eight
+    invalid occurrences in total. Ajv, decimal.js, Inspect AI and OR-Tools now use
+    canonical `proposed`; their `phase_1` or `optional_adapter` planning meaning is
+    stored only in separately named metadata. Both documents mirror all nine actual
+    dependency/model-adapter candidates, keep ts-fsrs/pyBKT/PaddleOCR exactly
+    `benchmark_only`, and place six pattern/reference entries outside the lifecycle
+    ledger. The existing open-source qualification test now derives the exact
+    six-state vocabulary from `AGENTS.md`, parses and compares both ledgers, and uses
+    hostile mutated fixtures to reject missing, duplicate, unknown, case-shifted,
+    composite and forbidden lifecycle-slot values, including
+    `future_phase_1_candidate`, `future_optional_adapter`, `deferred_due_candidate`
+    and `benchmark_shadow_only`.
 
 ## 6. Focused commands
 
@@ -334,6 +363,10 @@ Focused tests must reject or detect:
   due-date role without adapter evidence, exact-scope O2, beta evidence and a
   separately authorized transition
 - pyBKT marked shadow before O2/event sufficiency
+- a dependency/model-adapter lifecycle row with a missing, duplicate, unknown,
+  case-shifted or composite state; any forbidden legacy lifecycle value; either
+  document disagreeing with the other; planning metadata used as lifecycle authority;
+  or a pattern/reference category placed inside the lifecycle ledger
 - same-surface/guided success counted as transfer
 - review marked complete without ready exact-bound S216/S217 outputs
 - review completion itself changing positive evidence, mastery, closure or priority

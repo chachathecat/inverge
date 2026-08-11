@@ -1283,16 +1283,38 @@ transitive dependencies, SBOM, data egress, offline/self-host, adopted/rejected
 mechanism, exact interface, benchmark, fallback, rollback, uninstallability와
 promotion gate를 닫아야 한다.
 
-| Candidate | Current disposition | Allowed role |
+### Dependency/model-adapter lifecycle ledger
+
+`Lifecycle state`는 `AGENTS.md`의 canonical six-state vocabulary만 사용한다.
+계획 시기와 의도한 역할은 각각 `Planning phase`, `Planning role`에만 기록하며
+lifecycle authority를 만들지 않는다.
+
+| Candidate | Lifecycle state | Planning phase | Planning role | Allowed role |
+|---|---|---|---|---|
+| Ajv | proposed | phase_1 | structured_output_validator | strict structured-output validation |
+| decimal.js | proposed | phase_1 | deterministic_decimal_engine | deterministic decimals/rounding |
+| Inspect AI | proposed | phase_1 | offline_eval_harness | offline Gold/adversarial eval |
+| ts-fsrs | benchmark_only | current_benchmark | future_due_date_candidate | isolated synthetic/offline comparison only |
+| pyBKT | benchmark_only | current_benchmark | knowledge_tracing_benchmark | local synthetic benchmark only |
+| pgvector | proposed | phase_2 | cleared_content_search | rights-cleared similarity/search candidate |
+| PaddleOCR | benchmark_only | phase_2 | ocr_benchmark | authorized-data OCR benchmark only |
+| Tesseract | proposed | phase_2 | printed_text_fallback | printed-text local fallback candidate |
+| OR-Tools | proposed | future | optional_adapter | selected-block placement only |
+
+The first qualification edge is always `proposed → benchmark_only`. A planning
+phase or role never permits a candidate to skip qualification evidence, and this
+ledger installs, activates, benchmarks or authorizes no dependency.
+
+### Pattern/reference classification ledger
+
+These non-adapter references are outside the dependency/model-adapter lifecycle
+ledger. Their categories describe a pattern, compatibility target or reference;
+they are not lifecycle states.
+
+| Reference | Reference category | Allowed use |
 |---|---|---|
 | OATutor | pattern_reference | step/KC/scaffold pattern |
-| Ajv | future_phase_1_candidate | strict structured-output validation |
-| decimal.js | future_phase_1_candidate | deterministic decimals/rounding |
-| Inspect AI | future_phase_1_candidate | offline Gold/adversarial eval |
-| ts-fsrs | benchmark_only | isolated synthetic/offline comparison only |
-| pyBKT | benchmark_only | local synthetic benchmark only |
 | H5P Branching | authoring_pattern | contrast-set design |
-| OR-Tools | future_optional_adapter | selected-block placement only |
 | QTI 3 | compatibility_target | item/test interchange |
 | Caliper | vocabulary_target | bodyless event vocabulary |
 | W3C PROV | lineage_target | provenance model |

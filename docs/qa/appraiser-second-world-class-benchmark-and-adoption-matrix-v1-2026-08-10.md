@@ -165,6 +165,43 @@ Source:
 
 ## 3. Open-source candidates
 
+### Dependency/model-adapter lifecycle ledger
+
+`Lifecycle state`는 `AGENTS.md`의 canonical six-state vocabulary만 사용한다.
+계획 시기와 의도한 역할은 각각 `Planning phase`, `Planning role`에만 기록하며
+lifecycle authority를 만들지 않는다.
+
+| Candidate | Lifecycle state | Planning phase | Planning role | Allowed role |
+|---|---|---|---|---|
+| Ajv | proposed | phase_1 | structured_output_validator | strict structured-output validation |
+| decimal.js | proposed | phase_1 | deterministic_decimal_engine | deterministic decimals/rounding |
+| Inspect AI | proposed | phase_1 | offline_eval_harness | offline Gold/adversarial eval |
+| ts-fsrs | benchmark_only | current_benchmark | future_due_date_candidate | isolated synthetic/offline comparison only |
+| pyBKT | benchmark_only | current_benchmark | knowledge_tracing_benchmark | local synthetic benchmark only |
+| pgvector | proposed | phase_2 | cleared_content_search | rights-cleared similarity/search candidate |
+| PaddleOCR | benchmark_only | phase_2 | ocr_benchmark | authorized-data OCR benchmark only |
+| Tesseract | proposed | phase_2 | printed_text_fallback | printed-text local fallback candidate |
+| OR-Tools | proposed | future | optional_adapter | selected-block placement only |
+
+The first qualification edge is always `proposed → benchmark_only`. A planning
+phase or role never permits a candidate to skip qualification evidence, and this
+matrix installs, activates, benchmarks or authorizes no dependency.
+
+### Pattern/reference classification ledger
+
+These non-adapter references are outside the dependency/model-adapter lifecycle
+ledger. Their categories describe a pattern, compatibility target or reference;
+they are not lifecycle states.
+
+| Reference | Reference category | Allowed use |
+|---|---|---|
+| OATutor | pattern_reference | step/KC/scaffold pattern |
+| H5P Branching | authoring_pattern | contrast-set design |
+| QTI 3 | compatibility_target | item/test interchange |
+| Caliper | vocabulary_target | bodyless event vocabulary |
+| W3C PROV | lineage_target | provenance model |
+| NIST AI RMF | governance_reference | risk/TEVV/incident process |
+
 ### 3.1 OATutor
 
 Mechanism:
@@ -211,7 +248,9 @@ Reject:
 - schema-valid output을 semantic truth로 간주
 - exact package/license/security/SBOM review 없는 도입
 
-Current disposition: `future_phase_1_candidate`.
+Current lifecycle state: `proposed`.
+
+Planning phase: `phase_1`.
 
 Source:
 - https://ajv.js.org/
@@ -229,7 +268,9 @@ Reject:
 - method selection 또는 legal/theory truth authority
 - exact version/license/SBOM/fallback 없는 도입
 
-Current disposition: `future_phase_1_candidate`.
+Current lifecycle state: `proposed`.
+
+Planning phase: `phase_1`.
 
 Source:
 - https://github.com/MikeMcl/decimal.js
@@ -247,7 +288,9 @@ Reject:
 - production learner raw body를 shared eval corpus로 복제
 - eval framework output을 release authority로 사용
 
-Current disposition: `future_phase_1_candidate`.
+Current lifecycle state: `proposed`.
+
+Planning phase: `phase_1`.
 
 Source:
 - https://github.com/UKGovernmentBEIS/inspect_ai
@@ -381,7 +424,15 @@ Tesseract proposed role:
 - printed-text local fallback candidate
 - not assumed adequate for handwriting
 
-All remain Phase 2 or reference candidates and require separate qualification.
+Current lifecycle states:
+
+- pgvector: `proposed`
+- PaddleOCR: `benchmark_only`
+- Tesseract: `proposed`
+
+Their planning phase remains `phase_2`; none may skip the required
+`proposed → benchmark_only` qualification edge or treat planning metadata as
+lifecycle authority.
 
 Sources:
 - https://github.com/pgvector/pgvector
@@ -399,7 +450,9 @@ Forbidden:
 - mastery, biggest gap 또는 learning priority 결정
 - native planner baseline 이전 activation
 
-Current disposition: `future_optional_adapter`.
+Current lifecycle state: `proposed`.
+
+Planning role: `optional_adapter`.
 
 Source:
 - https://developers.google.com/optimization

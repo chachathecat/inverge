@@ -3,6 +3,7 @@ import { readFileSync } from "node:fs";
 import test from "node:test";
 
 const files = {
+  agents: "AGENTS.md",
   decision:
     "docs/decisions/2026-08-10-owner-appraiser-second-world-class-vertical-execution.md",
   strategy:
@@ -17,6 +18,7 @@ const files = {
 };
 
 const read = (path) => readFileSync(path, "utf8");
+const agents = read(files.agents);
 const decision = read(files.decision);
 const strategy = read(files.strategy);
 const benchmark = read(files.benchmark);
@@ -46,6 +48,143 @@ const exactStringSet = (actual, expected) => {
   if (actual.some((value) => !isNonEmptyString(value))) return false;
   if (new Set(actual).size !== actual.length || new Set(expected).size !== expected.length) return false;
   return [...actual].sort().join("\u0000") === [...expected].sort().join("\u0000");
+};
+
+const unquoteMarkdownCell = (value) => {
+  const trimmed = value.trim();
+  const code = trimmed.match(/^`([^`]*)`$/);
+  return code ? code[1] : trimmed;
+};
+
+const tableAfterHeading = (text, heading) => {
+  const headingMarker = `### ${heading}`;
+  const headingIndex = text.indexOf(headingMarker);
+  if (headingIndex < 0) return { headers: [], rows: [] };
+  const afterHeading = text.slice(headingIndex + headingMarker.length);
+  const nextHeadingIndex = afterHeading.search(/^### /m);
+  const section = nextHeadingIndex < 0
+    ? afterHeading
+    : afterHeading.slice(0, nextHeadingIndex);
+  const lines = section.split("\n");
+  const tableStart = lines.findIndex((line) => line.trim().startsWith("|"));
+  if (tableStart < 0) return { headers: [], rows: [] };
+  const tableLines = [];
+  for (const line of lines.slice(tableStart)) {
+    if (!line.trim().startsWith("|")) break;
+    tableLines.push(line.trim());
+  }
+  const parseLine = (line) => line
+    .split("|")
+    .slice(1, -1)
+    .map(unquoteMarkdownCell);
+  const headers = parseLine(tableLines[0] ?? "");
+  const separator = parseLine(tableLines[1] ?? "");
+  if (
+    headers.length === 0
+    || separator.length !== headers.length
+    || separator.some((cell) => !/^:?-{3,}:?$/.test(cell))
+  ) return { headers: [], rows: [] };
+  return {
+    headers,
+    rows: tableLines.slice(2).map((line) => {
+      const cells = parseLine(line);
+      return Object.fromEntries(headers.map((header, index) => [header, cells[index] ?? ""]));
+    }),
+  };
+};
+
+const deriveLifecycleVocabulary = (text) => {
+  const declaration = text.match(
+    /Dependency and model adapters use the state vocabulary([\s\S]*?)\.\nThis reset schedules only/,
+  )?.[1] ?? "";
+  return [...declaration.matchAll(/`([^`]+)`/g)].map((match) => match[1]);
+};
+
+const expectedLifecycleCandidates = [
+  "Ajv",
+  "decimal.js",
+  "Inspect AI",
+  "ts-fsrs",
+  "pyBKT",
+  "pgvector",
+  "PaddleOCR",
+  "Tesseract",
+  "OR-Tools",
+];
+
+const expectedReferenceEntries = [
+  "OATutor",
+  "H5P Branching",
+  "QTI 3",
+  "Caliper",
+  "W3C PROV",
+  "NIST AI RMF",
+];
+
+const forbiddenLifecycleSlotValues = [
+  "future_phase_1_candidate",
+  "future_optional_adapter",
+  "deferred_due_candidate",
+  "benchmark_shadow_only",
+];
+
+const lifecycleLedgerErrors = (lifecycleRows, referenceRows, canonicalStates) => {
+  const errors = [];
+  const canonical = new Set(canonicalStates);
+  const forbidden = new Set(forbiddenLifecycleSlotValues);
+  const seenCandidates = new Set();
+
+  for (const row of lifecycleRows) {
+    const candidate = row.Candidate;
+    const state = row["Lifecycle state"];
+    if (!isNonEmptyString(candidate)) errors.push("missing candidate");
+    if (seenCandidates.has(candidate)) errors.push(`duplicate candidate: ${candidate}`);
+    seenCandidates.add(candidate);
+    if (!isNonEmptyString(state)) errors.push(`missing lifecycle state: ${candidate}`);
+    if (!canonical.has(state)) errors.push(`unknown lifecycle state: ${candidate}:${state}`);
+    if (forbidden.has(state)) errors.push(`forbidden lifecycle state: ${candidate}:${state}`);
+    for (const field of ["Planning phase", "Planning role"]) {
+      const value = row[field];
+      if (!isNonEmptyString(value)) errors.push(`missing ${field}: ${candidate}`);
+      if (canonical.has(value) || forbidden.has(value)) {
+        errors.push(`planning metadata occupies lifecycle authority: ${candidate}:${field}`);
+      }
+    }
+    if (!isNonEmptyString(row["Allowed role"])) errors.push(`missing allowed role: ${candidate}`);
+  }
+
+  for (const candidate of expectedLifecycleCandidates) {
+    if (!seenCandidates.has(candidate)) errors.push(`missing lifecycle candidate: ${candidate}`);
+  }
+  for (const candidate of seenCandidates) {
+    if (!expectedLifecycleCandidates.includes(candidate)) {
+      errors.push(`unexpected lifecycle candidate: ${candidate}`);
+    }
+  }
+
+  const seenReferences = new Set();
+  for (const row of referenceRows) {
+    const reference = row.Reference;
+    const category = row["Reference category"];
+    if (!isNonEmptyString(reference)) errors.push("missing reference");
+    if (seenReferences.has(reference)) errors.push(`duplicate reference: ${reference}`);
+    seenReferences.add(reference);
+    if (!isNonEmptyString(category)) errors.push(`missing reference category: ${reference}`);
+    if (canonical.has(category) || forbidden.has(category)) {
+      errors.push(`reference category occupies lifecycle state: ${reference}`);
+    }
+    if (seenCandidates.has(reference)) errors.push(`reference inside lifecycle ledger: ${reference}`);
+    if (!isNonEmptyString(row["Allowed use"])) errors.push(`missing allowed use: ${reference}`);
+  }
+  for (const reference of expectedReferenceEntries) {
+    if (!seenReferences.has(reference)) errors.push(`missing reference entry: ${reference}`);
+  }
+  for (const reference of seenReferences) {
+    if (!expectedReferenceEntries.includes(reference)) {
+      errors.push(`unexpected reference entry: ${reference}`);
+    }
+  }
+  return errors;
 };
 
 const tutorDefinitionErrors = ({
@@ -2112,7 +2251,7 @@ test("keeps the pyBKT disposition declaration benchmark-only until O2 and suffic
   );
   assert.match(
     strategy,
-    /^\| ts-fsrs \| benchmark_only \| isolated synthetic\/offline comparison only \|$/m,
+    /^\| ts-fsrs \| benchmark_only \| current_benchmark \| future_due_date_candidate \| isolated synthetic\/offline comparison only \|$/m,
   );
   includesAll(
     fsrsSection,
@@ -2174,6 +2313,142 @@ test("registers the focused contract in the default test runner", () => {
 });
 
 test("requires complete open-source qualification before adoption", () => {
+  const canonicalStates = deriveLifecycleVocabulary(agents);
+  assert.deepEqual(canonicalStates, [
+    "proposed",
+    "benchmark_only",
+    "shadow",
+    "limited_activation",
+    "active",
+    "rollback",
+  ]);
+
+  const strategyLifecycle = tableAfterHeading(
+    strategy,
+    "Dependency/model-adapter lifecycle ledger",
+  );
+  const benchmarkLifecycle = tableAfterHeading(
+    benchmark,
+    "Dependency/model-adapter lifecycle ledger",
+  );
+  const strategyReferences = tableAfterHeading(
+    strategy,
+    "Pattern/reference classification ledger",
+  );
+  const benchmarkReferences = tableAfterHeading(
+    benchmark,
+    "Pattern/reference classification ledger",
+  );
+  const lifecycleHeaders = [
+    "Candidate",
+    "Lifecycle state",
+    "Planning phase",
+    "Planning role",
+    "Allowed role",
+  ];
+  const referenceHeaders = ["Reference", "Reference category", "Allowed use"];
+  assert.deepEqual(strategyLifecycle.headers, lifecycleHeaders);
+  assert.deepEqual(benchmarkLifecycle.headers, lifecycleHeaders);
+  assert.deepEqual(strategyReferences.headers, referenceHeaders);
+  assert.deepEqual(benchmarkReferences.headers, referenceHeaders);
+  assert.deepEqual(strategyLifecycle.rows, benchmarkLifecycle.rows);
+  assert.deepEqual(strategyReferences.rows, benchmarkReferences.rows);
+  assert.deepEqual(
+    strategyLifecycle.rows.map((row) => [row.Candidate, row["Lifecycle state"]]),
+    [
+      ["Ajv", "proposed"],
+      ["decimal.js", "proposed"],
+      ["Inspect AI", "proposed"],
+      ["ts-fsrs", "benchmark_only"],
+      ["pyBKT", "benchmark_only"],
+      ["pgvector", "proposed"],
+      ["PaddleOCR", "benchmark_only"],
+      ["Tesseract", "proposed"],
+      ["OR-Tools", "proposed"],
+    ],
+  );
+  assert.deepEqual(
+    strategyReferences.rows.map((row) => row.Reference),
+    expectedReferenceEntries,
+  );
+  assert.deepEqual(
+    lifecycleLedgerErrors(
+      strategyLifecycle.rows,
+      strategyReferences.rows,
+      canonicalStates,
+    ),
+    [],
+  );
+  assert.deepEqual(
+    lifecycleLedgerErrors(
+      benchmarkLifecycle.rows,
+      benchmarkReferences.rows,
+      canonicalStates,
+    ),
+    [],
+  );
+
+  const hostileFixtureFails = (mutate) => {
+    const lifecycleRows = clone(strategyLifecycle.rows);
+    const referenceRows = clone(strategyReferences.rows);
+    mutate(lifecycleRows, referenceRows);
+    return lifecycleLedgerErrors(lifecycleRows, referenceRows, canonicalStates).length > 0;
+  };
+  const hostileFixtures = [
+    ["missing lifecycle state", (rows) => { rows[0]["Lifecycle state"] = ""; }],
+    ["duplicate lifecycle row", (rows) => { rows.push(clone(rows[0])); }],
+    ["duplicate lifecycle state in one slot", (rows) => {
+      rows[0]["Lifecycle state"] = "proposed / proposed";
+    }],
+    ["unknown lifecycle state", (rows) => { rows[0]["Lifecycle state"] = "queued"; }],
+    ["case-shifted lifecycle state", (rows) => { rows[0]["Lifecycle state"] = "Proposed"; }],
+    ["composite lifecycle state", (rows) => {
+      rows[0]["Lifecycle state"] = "proposed / benchmark_only";
+    }],
+    ["planning metadata as lifecycle authority", (rows) => {
+      rows[0]["Planning phase"] = "proposed";
+    }],
+    ["reference placed in lifecycle ledger", (rows) => {
+      rows.push({
+        Candidate: "OATutor",
+        "Lifecycle state": "proposed",
+        "Planning phase": "reference",
+        "Planning role": "pattern_reference",
+        "Allowed role": "step/KC/scaffold pattern",
+      });
+    }],
+  ];
+  for (const [label, mutate] of hostileFixtures) {
+    assert.equal(hostileFixtureFails(mutate), true, label);
+  }
+  for (const forbiddenState of forbiddenLifecycleSlotValues) {
+    assert.equal(
+      hostileFixtureFails((rows) => { rows[0]["Lifecycle state"] = forbiddenState; }),
+      true,
+      forbiddenState,
+    );
+    assert.equal(
+      strategyLifecycle.rows.some((row) => row["Lifecycle state"] === forbiddenState),
+      false,
+      `strategy lifecycle slot ${forbiddenState}`,
+    );
+    assert.equal(
+      benchmarkLifecycle.rows.some((row) => row["Lifecycle state"] === forbiddenState),
+      false,
+      `benchmark lifecycle slot ${forbiddenState}`,
+    );
+  }
+  includesAll(
+    strategy,
+    ["Planning phase", "Planning role", "proposed → benchmark_only", "not lifecycle states"],
+    "strategy lifecycle separation",
+  );
+  includesAll(
+    benchmark,
+    ["Planning phase", "Planning role", "proposed → benchmark_only", "not lifecycle states"],
+    "benchmark lifecycle separation",
+  );
+
   const required = new Set(contract.openSourceQualificationRequiredFields);
   for (const field of [
     "project",
