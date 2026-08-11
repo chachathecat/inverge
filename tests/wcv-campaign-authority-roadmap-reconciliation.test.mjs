@@ -454,16 +454,25 @@ test("registers this focused reconciliation test exactly once", async () => {
   assert.equal(matches.length, 1);
 });
 
-test("limits C1 to the declared 29 source and test paths", async () => {
+test("limits C1 to the declared 30 source and test paths", async () => {
   const decision = await text(DECISION);
   const manifest = decision.match(/## 11\. C1 changed-path manifest([\s\S]*)$/)?.[1] ?? "";
   const paths = [...manifest.matchAll(/`([^`]+)`/g)].map((match) => match[1]);
 
-  assert.equal(paths.length, 29);
-  assert.equal(new Set(paths).size, 29);
+  assert.equal(paths.length, 30);
+  assert.equal(new Set(paths).size, 30);
+  assert.equal(paths[29], "scripts/agent-factory-run.mjs");
   assert.deepEqual(
     paths.filter((path) => path.startsWith("lib/")),
     ["lib/agent-factory/roadmap-runner.ts"],
+  );
+  assert.deepEqual(
+    paths.filter((path) => path.startsWith("scripts/")),
+    [
+      "scripts/run-node-tests.mjs",
+      "scripts/automation/determine-next-task.mjs",
+      "scripts/agent-factory-run.mjs",
+    ],
   );
   for (const path of paths) {
     assert.doesNotMatch(path, /^(?:app|supabase|migrations)\//, path);

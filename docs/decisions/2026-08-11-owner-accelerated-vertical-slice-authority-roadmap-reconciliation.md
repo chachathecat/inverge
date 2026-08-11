@@ -351,12 +351,17 @@ The source reconciliation is limited to these paths:
 27. `tests/inverge-roadmap-curriculum-docs.test.mjs`
 28. `lib/agent-factory/roadmap-runner.ts`
 29. `scripts/automation/determine-next-task.mjs`
+30. `scripts/agent-factory-run.mjs`
 
 Paths 13 through 27 are assertion-only conformance updates required when
 the repository-wide default and Learner Loop suites encountered the new
 truthful three-slot roadmap, sole selected WCV-C2 campaign and current blocked
-S236P state. Paths 28 and 29 are the only executable-selector additions to the
-cumulative manifest; they mechanically enforce the explicit per-plan global
-writer cap and do not implement learner behavior. No other
+S236P state. Paths 28 and 29 are the two underlying executable selectors added
+by C1-R; they mechanically enforce the explicit per-plan global writer cap.
+Path 30 is the existing explicit-target orchestration entrypoint added to the
+cumulative manifest by C1-R3 solely to preserve exhausted selection capacity
+and fail closed instead of expanding zero capacity to one. Path 30 is not a
+third selector. None of paths 28 through 30 implements learner behavior. Path
+9 remains the existing executable test runner. No other
 runtime/application/lib path is in scope, and no path outside this manifest
 may change.
