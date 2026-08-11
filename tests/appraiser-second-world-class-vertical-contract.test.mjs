@@ -671,6 +671,7 @@ test("requires the exact current S207 package to remain releasable at output aut
     && candidate.subject === generated.subject
   );
   const idPattern = /^[a-z0-9][a-z0-9_-]{2,180}$/;
+  const isoInstantPattern = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/;
   const releaseStatuses = [
     "draft",
     "blocked",
@@ -785,8 +786,15 @@ test("requires the exact current S207 package to remain releasable at output aut
     if (pkg.stale !== undefined) requireBoolean(pkg.stale, `${label}.stale`);
 
     const release = requireRecord(pkg.release, `${label}.release`);
-    requireEnum(release.status, releaseStatuses, `${label}.release.status`);
-    requireString(release.releasedAt, `${label}.release.releasedAt`);
+    const releaseStatus = requireEnum(release.status, releaseStatuses, `${label}.release.status`);
+    if (release.releasedAt !== undefined) {
+      if (typeof release.releasedAt !== "string" || !isoInstantPattern.test(release.releasedAt)) {
+        throw new TypeError(`${label}.release.releasedAt must be a deterministic ISO instant`);
+      }
+    }
+    if (releaseStatus === "released" && release.releasedAt === undefined) {
+      throw new TypeError(`${label}.release.releasedAt is required for released packages`);
+    }
     requireEnum(
       release.requiredCaveatKey,
       ["learning_reference_not_official_answer"],
@@ -854,6 +862,24 @@ test("requires the exact current S207 package to remain releasable at output aut
     evidenceAnchorIds: [],
     ...overrides,
   });
+  const addUnrelatedPackageWithoutReleasedAtToBothReads = (candidate, status) => {
+    for (const registry of [
+      candidate.currentS207RegistryAtOutputAuthorization,
+      candidate.currentS207RegistryImmediatelyBeforeFirstByte,
+    ]) {
+      const pkg = currentReleasedPackage();
+      pkg.id = `package-unrelated-${status}`;
+      pkg.questionId = `question-unrelated-${status}`;
+      pkg.release.status = status;
+      delete pkg.release.releasedAt;
+      if (status === "blocked") {
+        pkg.releaseBlockers.push(releaseBlocker({
+          blockerId: "blocker-unrelated-blocked",
+        }));
+      }
+      registry.packages.push(pkg);
+    }
+  };
   const resolveEligibleCurrentPackage = (registry, generated) => {
     try {
       const currentRegistry = validateCurrentS207RegistryProjection(registry);
@@ -914,7 +940,13 @@ test("requires the exact current S207 package to remain releasable at output aut
   ];
   const negativeMutations = nonReleasedStatuses.map((status) => [
     `current release status ${status}`,
-    (value) => mutateBothCurrentReads(value, (pkg) => { pkg.release.status = status; }),
+    (value) => mutateBothCurrentReads(value, (pkg) => {
+      pkg.release.status = status;
+      if (["draft", "blocked"].includes(status)) delete pkg.release.releasedAt;
+      if (status === "blocked") {
+        pkg.releaseBlockers.push(releaseBlocker({ blockerId: "blocker-matched-blocked" }));
+      }
+    }),
   ]);
   negativeMutations.push(
     ["open blocking release blocker", (value) => mutateBothCurrentReads(value, (pkg) => {
@@ -926,6 +958,18 @@ test("requires the exact current S207 package to remain releasable at output aut
     ["blocked release-blocking uncertainty", (value) => mutateBothCurrentReads(value, (pkg) => {
       pkg.uncertainty.push(currentUncertainty({ resolutionStatus: "blocked" }));
     })],
+    ["exact released package missing releasedAt", (value) => mutateBothCurrentReads(value, (pkg) => {
+      delete pkg.release.releasedAt;
+    })],
+    ["exact released package with malformed releasedAt", (value) => mutateBothCurrentReads(value, (pkg) => {
+      pkg.release.releasedAt = "2026-08-10T00:00:00Z";
+    })],
+    ["exact released package with non-string releasedAt", (value) => mutateBothCurrentReads(value, (pkg) => {
+      pkg.release.releasedAt = 1723248000000;
+    })],
+    ["unrelated released package missing releasedAt", (value) => {
+      addUnrelatedPackageWithoutReleasedAtToBothReads(value, "released");
+    }],
     ["open blocker with unsupported severity", (value) => mutateBothCurrentReads(value, (pkg) => {
       pkg.releaseBlockers.push(releaseBlocker({ severity: "blockng" }));
     })],
@@ -997,6 +1041,12 @@ test("requires the exact current S207 package to remain releasable at output aut
   }
 
   const positiveControls = [
+    ["unrelated valid draft package without releasedAt", (value) => {
+      addUnrelatedPackageWithoutReleasedAtToBothReads(value, "draft");
+    }],
+    ["unrelated valid blocked package without releasedAt", (value) => {
+      addUnrelatedPackageWithoutReleasedAtToBothReads(value, "blocked");
+    }],
     ["resolved blocker", (value) => mutateBothCurrentReads(value, (pkg) => {
       pkg.releaseBlockers.push(releaseBlocker({ status: "resolved" }));
     })],
@@ -1379,6 +1429,49 @@ test("keeps private raw bodies out of training and shared planes", () => {
 });
 
 test("keeps the pyBKT disposition declaration benchmark-only until O2 and sufficient event data", () => {
+  const fsrsSection = benchmark.match(/### 3\.5 FSRS \/ ts-fsrs[\s\S]*?(?=### 3\.6 pyBKT)/)?.[0] ?? "";
+  assert.match(
+    fsrsSection,
+    /Current disposition is exactly:\s*\n\s*>\s*`benchmark_only`/i,
+  );
+  assert.match(
+    strategy,
+    /^\| ts-fsrs \| benchmark_only \| isolated synthetic\/offline comparison only \|$/m,
+  );
+  includesAll(
+    fsrsSection,
+    [
+      "isolated synthetic/offline comparison against a fixed/native scheduling baseline",
+      "due-date candidate for an already-selected ReviewUnit only",
+      "adapter-specific benchmark/comparison evidence",
+      "exact-scope O2 measurement/consent approval",
+      "beta evidence",
+      "a separately authorized lifecycle transition",
+      "learner-hidden instrumentation",
+      "learner-state mutation",
+      "product authority",
+      "biggest gap",
+      "mastery/closure",
+      "Today priority",
+      "D+7 eligibility",
+      "pass readiness",
+    ],
+    "benchmark ts-fsrs boundary",
+  );
+  includesAll(
+    strategy,
+    [
+      "ts-fsrs의 current disposition은 정확히 `benchmark_only`",
+      "adapter-specific benchmark/comparison",
+      "exact-scope O2 measurement/consent approval",
+      "beta evidence",
+      "a separately authorized lifecycle transition",
+    ],
+    "strategy ts-fsrs boundary",
+  );
+  assert.doesNotMatch(benchmark, /deferred_due_candidate/);
+  assert.doesNotMatch(strategy, /deferred_due_candidate/);
+
   const bkt = contract.benchmarkAdoption.PYBKT;
   assert.equal(bkt.currentDisposition, "BENCHMARK_ONLY");
   assert.deepEqual(bkt.shadowPrerequisites, [

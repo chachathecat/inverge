@@ -1250,7 +1250,7 @@ promotion gate를 닫아야 한다.
 | Ajv | future_phase_1_candidate | strict structured-output validation |
 | decimal.js | future_phase_1_candidate | deterministic decimals/rounding |
 | Inspect AI | future_phase_1_candidate | offline Gold/adversarial eval |
-| ts-fsrs | deferred_due_candidate | ReviewUnit due only |
+| ts-fsrs | benchmark_only | isolated synthetic/offline comparison only |
 | pyBKT | benchmark_only | local synthetic benchmark only |
 | H5P Branching | authoring_pattern | contrast-set design |
 | OR-Tools | future_optional_adapter | selected-block placement only |
@@ -1258,6 +1258,18 @@ promotion gate를 닫아야 한다.
 | Caliper | vocabulary_target | bodyless event vocabulary |
 | W3C PROV | lineage_target | provenance model |
 | NIST AI RMF | governance_reference | risk/TEVV/incident process |
+
+ts-fsrs의 current disposition은 정확히 `benchmark_only`다. 현재 허용 범위는
+fixed/native scheduling baseline에 대한 isolated synthetic/offline comparison뿐이며,
+learner-hidden instrumentation, learner-state mutation 또는 product authority를 만들지
+않는다. ts-fsrs는 biggest gap, mastery, closure, Today priority, D+7 eligibility 또는
+pass readiness를 결정할 수 없다.
+
+미래의 별도 gated role은 native policy가 이미 선택한 ReviewUnit의 due-date
+candidate뿐이다. 그 learner-hidden role 전에는 adapter-specific benchmark/comparison
+evidence, exact-scope O2 measurement/consent approval, exact adapter/version/configuration의
+beta evidence와 a separately authorized lifecycle transition이 모두 필요하다. 이 PR은
+ts-fsrs를 설치, 활성화 또는 실행하지 않는다.
 
 pyBKT는 다음 전에는 hidden shadow로 전환하지 않는다.
 

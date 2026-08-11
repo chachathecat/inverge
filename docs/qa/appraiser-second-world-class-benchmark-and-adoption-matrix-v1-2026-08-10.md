@@ -254,10 +254,28 @@ Source:
 
 ### 3.5 FSRS / ts-fsrs
 
-Allowed role:
+Current disposition is exactly:
 
-- 이미 선택된 ReviewUnit의 due-date candidate
-- fixed baseline과 비교
+> `benchmark_only`
+
+Allowed now:
+
+- isolated synthetic/offline comparison against a fixed/native scheduling baseline
+- no learner-hidden instrumentation
+- no learner-state mutation
+- no product authority
+
+Future gated role, distinct from the current disposition:
+
+- due-date candidate for an already-selected ReviewUnit only
+- the native policy still selects the ReviewUnit and retains every priority decision
+
+Before that learner-hidden future role, require all of:
+
+1. adapter-specific benchmark/comparison evidence
+2. exact-scope O2 measurement/consent approval
+3. beta evidence for the exact adapter/version/configuration
+4. a separately authorized lifecycle transition
 
 Forbidden:
 
@@ -267,7 +285,7 @@ Forbidden:
 - D+7 eligibility
 - pass readiness
 
-Current disposition: `deferred_due_candidate`.
+This source-only PR does not install, activate or execute ts-fsrs.
 
 Source:
 - https://github.com/open-spaced-repetition/free-spaced-repetition-scheduler
@@ -522,7 +540,7 @@ Source:
 | Ajv | strict output schema | closed candidate contract | semantic oracle |
 | decimal.js | exact decimals | Practice validator | method authority |
 | Inspect AI | offline eval harness | Owner Gold/adversarial | production authority |
-| FSRS | due-date candidate | ReviewUnit only | priority/mastery |
+| FSRS | isolated benchmark comparison | gated ReviewUnit due-date candidate | priority/mastery |
 | pyBKT | benchmark only | O2-gated future shadow | hidden early instrumentation |
 | H5P | branching authoring | contrast foundry | runtime/score truth |
 | OR-Tools | task placement | post-native planner | priority authority |
