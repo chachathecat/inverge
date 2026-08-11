@@ -631,12 +631,22 @@ test("requires the exact current S207 package to remain releasable at output aut
     id: identity.referencePackageId,
     questionId: identity.questionId,
     subject: identity.subject,
-    release: { status: "released" },
+    release: {
+      status: "released",
+      releasedAt: "2026-08-10T00:00:00.000Z",
+      requiredCaveatKey: "learning_reference_not_official_answer",
+      noOfficialAnswerGuardrail: true,
+      learnerFacingOfficialClaimAllowed: false,
+      releaseRequiresNoOpenBlockers: true,
+    },
     releaseBlockers: [],
     uncertainty: [],
     downstreamUsage: {
       s214GenerationInput: true,
       s215ReleaseGateInput: true,
+      s211LawReviewInput: true,
+      s212TheoryReviewInput: true,
+      s213PracticeReviewInput: true,
     },
   });
   const fixture = {
@@ -660,30 +670,215 @@ test("requires the exact current S207 package to remain releasable at output aut
       .every((field) => candidate[field] === generated[field])
     && candidate.subject === generated.subject
   );
-  const resolveEligibleCurrentPackage = (registry, generated) => {
-    if (registry?.source !== expectedGate.source || !Array.isArray(registry.packages)) return null;
-    const matches = registry.packages.filter((entry) => (
-      entry
-      && typeof entry === "object"
-      && entry.id === generated.referencePackageId
-      && entry.questionId === generated.questionId
-      && entry.subject === generated.subject
+  const idPattern = /^[a-z0-9][a-z0-9_-]{2,180}$/;
+  const releaseStatuses = [
+    "draft",
+    "blocked",
+    "cross_checked",
+    "source_verified",
+    "subject_validated",
+    "ready_for_s215",
+    "released",
+  ];
+  const releaseBlockerKinds = [
+    "rights",
+    "problem_text",
+    "source_anchor",
+    "legal_source",
+    "calculation",
+    "theory_validation",
+    "subject_validation",
+    "unresolved_consensus",
+    "prohibited_claim",
+    "data_boundary",
+    "unsupported_subject",
+  ];
+  const requiredResolvers = [
+    "s208",
+    "s209",
+    "s210",
+    "s214",
+    "s215",
+    "human_decision",
+    "s207_validator",
+  ];
+  const uncertaintyKinds = [
+    "source_uncertainty",
+    "rights_uncertainty",
+    "problem_text_uncertainty",
+    "calculation_uncertainty",
+    "legal_version_uncertainty",
+    "theory_term_uncertainty",
+    "consensus_conflict",
+    "subject_validator_gap",
+  ];
+  const requireRecord = (value, label) => {
+    if (value === null || typeof value !== "object" || Array.isArray(value)) {
+      throw new TypeError(`${label} must be an object`);
+    }
+    return value;
+  };
+  const requireId = (value, label) => {
+    if (typeof value !== "string" || !idPattern.test(value)) {
+      throw new TypeError(`${label} must be a canonical id`);
+    }
+    return value;
+  };
+  const requireString = (value, label) => {
+    if (typeof value !== "string" || value.trim().length === 0) {
+      throw new TypeError(`${label} must be a non-empty string`);
+    }
+    return value;
+  };
+  const requireEnum = (value, allowed, label) => {
+    if (!allowed.includes(value)) throw new TypeError(`${label} has an unsupported value`);
+    return value;
+  };
+  const requireBoolean = (value, label) => {
+    if (typeof value !== "boolean") throw new TypeError(`${label} must be boolean`);
+    return value;
+  };
+  const requireIdArray = (value, label) => {
+    if (!Array.isArray(value)) throw new TypeError(`${label} must be an array`);
+    value.forEach((entry, index) => requireId(entry, `${label}[${index}]`));
+    return value;
+  };
+  const requireUniqueIds = (values, label) => {
+    if (new Set(values).size !== values.length) throw new TypeError(`${label} ids must be unique`);
+  };
+  const validateReleaseBlockerProjection = (value, index, packageLabel) => {
+    const label = `${packageLabel}.releaseBlockers[${index}]`;
+    const blocker = requireRecord(value, label);
+    requireId(blocker.blockerId, `${label}.blockerId`);
+    requireEnum(blocker.kind, releaseBlockerKinds, `${label}.kind`);
+    requireEnum(blocker.status, ["open", "resolved"], `${label}.status`);
+    requireEnum(blocker.severity, ["blocking", "warning"], `${label}.severity`);
+    requireString(blocker.summary, `${label}.summary`);
+    requireEnum(blocker.requiredResolver, requiredResolvers, `${label}.requiredResolver`);
+    requireIdArray(blocker.sourceAnchorIds, `${label}.sourceAnchorIds`);
+    requireIdArray(blocker.evidenceAnchorIds, `${label}.evidenceAnchorIds`);
+    return blocker;
+  };
+  const validateUncertaintyProjection = (value, index, packageLabel) => {
+    const label = `${packageLabel}.uncertainty[${index}]`;
+    const uncertainty = requireRecord(value, label);
+    requireId(uncertainty.uncertaintyId, `${label}.uncertaintyId`);
+    requireEnum(uncertainty.kind, uncertaintyKinds, `${label}.kind`);
+    requireEnum(uncertainty.severity, ["low", "medium", "high", "blocking"], `${label}.severity`);
+    requireString(uncertainty.summary, `${label}.summary`);
+    requireEnum(
+      uncertainty.resolutionStatus,
+      ["open", "resolved", "accepted_as_alternative", "blocked"],
+      `${label}.resolutionStatus`,
+    );
+    requireBoolean(uncertainty.releaseBlocking, `${label}.releaseBlocking`);
+    requireIdArray(uncertainty.sourceAnchorIds, `${label}.sourceAnchorIds`);
+    requireIdArray(uncertainty.evidenceAnchorIds, `${label}.evidenceAnchorIds`);
+    return uncertainty;
+  };
+  const validateCurrentS207PackageProjection = (value, index) => {
+    const label = `currentS207Registry.packages[${index}]`;
+    const pkg = requireRecord(value, label);
+    requireId(pkg.id, `${label}.id`);
+    requireId(pkg.questionId, `${label}.questionId`);
+    requireEnum(pkg.subject, ["practice", "theory", "law"], `${label}.subject`);
+    if (pkg.stale !== undefined) requireBoolean(pkg.stale, `${label}.stale`);
+
+    const release = requireRecord(pkg.release, `${label}.release`);
+    requireEnum(release.status, releaseStatuses, `${label}.release.status`);
+    requireString(release.releasedAt, `${label}.release.releasedAt`);
+    requireEnum(
+      release.requiredCaveatKey,
+      ["learning_reference_not_official_answer"],
+      `${label}.release.requiredCaveatKey`,
+    );
+    if (release.noOfficialAnswerGuardrail !== true) {
+      throw new TypeError(`${label}.release.noOfficialAnswerGuardrail must be true`);
+    }
+    if (release.learnerFacingOfficialClaimAllowed !== false) {
+      throw new TypeError(`${label}.release.learnerFacingOfficialClaimAllowed must be false`);
+    }
+    if (release.releaseRequiresNoOpenBlockers !== true) {
+      throw new TypeError(`${label}.release.releaseRequiresNoOpenBlockers must be true`);
+    }
+
+    if (!Array.isArray(pkg.releaseBlockers)) throw new TypeError(`${label}.releaseBlockers must be an array`);
+    if (!Array.isArray(pkg.uncertainty)) throw new TypeError(`${label}.uncertainty must be an array`);
+    const releaseBlockers = pkg.releaseBlockers.map((entry, blockerIndex) => (
+      validateReleaseBlockerProjection(entry, blockerIndex, label)
     ));
-    if (matches.length !== 1) return null;
-    const [matched] = matches;
-    if (matched.stale === true || matched.release?.status !== "released") return null;
-    if (!Array.isArray(matched.releaseBlockers) || !Array.isArray(matched.uncertainty)) return null;
-    const openBlockingReleaseBlockerCount = matched.releaseBlockers.filter((blocker) => (
-      blocker?.status === "open" && blocker?.severity === "blocking"
-    )).length;
-    const unresolvedBlockingUncertaintyCount = matched.uncertainty.filter((uncertainty) => (
-      uncertainty?.releaseBlocking === true
-      && !["resolved", "accepted_as_alternative"].includes(uncertainty?.resolutionStatus)
-    )).length;
-    if (openBlockingReleaseBlockerCount !== 0 || unresolvedBlockingUncertaintyCount !== 0) return null;
-    if (matched.downstreamUsage?.s214GenerationInput !== true) return null;
-    if (matched.downstreamUsage?.s215ReleaseGateInput !== true) return null;
-    return matched;
+    const uncertainty = pkg.uncertainty.map((entry, uncertaintyIndex) => (
+      validateUncertaintyProjection(entry, uncertaintyIndex, label)
+    ));
+    requireUniqueIds(releaseBlockers.map((entry) => entry.blockerId), `${label}.releaseBlockers`);
+    requireUniqueIds(uncertainty.map((entry) => entry.uncertaintyId), `${label}.uncertainty`);
+
+    const downstreamUsage = requireRecord(pkg.downstreamUsage, `${label}.downstreamUsage`);
+    for (const field of [
+      "s214GenerationInput",
+      "s215ReleaseGateInput",
+      "s211LawReviewInput",
+      "s212TheoryReviewInput",
+      "s213PracticeReviewInput",
+    ]) {
+      requireBoolean(downstreamUsage[field], `${label}.downstreamUsage.${field}`);
+    }
+    return pkg;
+  };
+  const validateCurrentS207RegistryProjection = (value) => {
+    const registry = requireRecord(value, "currentS207Registry");
+    if (registry.source !== expectedGate.source) throw new TypeError("currentS207Registry.source is invalid");
+    if (!Array.isArray(registry.packages)) throw new TypeError("currentS207Registry.packages must be an array");
+    registry.packages.forEach((entry, index) => validateCurrentS207PackageProjection(entry, index));
+    return registry;
+  };
+  const releaseBlocker = (overrides = {}) => ({
+    blockerId: "blocker-current-s207",
+    kind: "calculation",
+    status: "open",
+    severity: "blocking",
+    summary: "Synthetic metadata-only blocker",
+    requiredResolver: "s207_validator",
+    sourceAnchorIds: [],
+    evidenceAnchorIds: [],
+    ...overrides,
+  });
+  const currentUncertainty = (overrides = {}) => ({
+    uncertaintyId: "uncertainty-current-s207",
+    kind: "calculation_uncertainty",
+    severity: "blocking",
+    summary: "Synthetic metadata-only uncertainty",
+    resolutionStatus: "open",
+    releaseBlocking: true,
+    sourceAnchorIds: [],
+    evidenceAnchorIds: [],
+    ...overrides,
+  });
+  const resolveEligibleCurrentPackage = (registry, generated) => {
+    try {
+      const currentRegistry = validateCurrentS207RegistryProjection(registry);
+      const matches = currentRegistry.packages.filter((entry) => (
+        entry.id === generated.referencePackageId
+        && entry.questionId === generated.questionId
+        && entry.subject === generated.subject
+      ));
+      if (matches.length !== 1) return null;
+      const [matched] = matches;
+      if (matched.stale === true || matched.release.status !== "released") return null;
+      const openBlockingReleaseBlockerCount = matched.releaseBlockers.filter((blocker) => (
+        blocker.status === "open" && blocker.severity === "blocking"
+      )).length;
+      const unresolvedBlockingUncertaintyCount = matched.uncertainty.filter((uncertainty) => (
+        uncertainty.releaseBlocking === true
+        && !["resolved", "accepted_as_alternative"].includes(uncertainty.resolutionStatus)
+      )).length;
+      if (openBlockingReleaseBlockerCount !== 0 || unresolvedBlockingUncertaintyCount !== 0) return null;
+      if (matched.downstreamUsage.s214GenerationInput !== true) return null;
+      if (matched.downstreamUsage.s215ReleaseGateInput !== true) return null;
+      return matched;
+    } catch {
+      return null;
+    }
   };
   const evaluate = (candidate) => {
     const generated = candidate.generatedSolution;
@@ -723,14 +918,44 @@ test("requires the exact current S207 package to remain releasable at output aut
   ]);
   negativeMutations.push(
     ["open blocking release blocker", (value) => mutateBothCurrentReads(value, (pkg) => {
-      pkg.releaseBlockers.push({ status: "open", severity: "blocking" });
+      pkg.releaseBlockers.push(releaseBlocker());
     })],
     ["open release-blocking uncertainty", (value) => mutateBothCurrentReads(value, (pkg) => {
-      pkg.uncertainty.push({ releaseBlocking: true, resolutionStatus: "open" });
+      pkg.uncertainty.push(currentUncertainty());
     })],
     ["blocked release-blocking uncertainty", (value) => mutateBothCurrentReads(value, (pkg) => {
-      pkg.uncertainty.push({ releaseBlocking: true, resolutionStatus: "blocked" });
+      pkg.uncertainty.push(currentUncertainty({ resolutionStatus: "blocked" }));
     })],
+    ["open blocker with unsupported severity", (value) => mutateBothCurrentReads(value, (pkg) => {
+      pkg.releaseBlockers.push(releaseBlocker({ severity: "blockng" }));
+    })],
+    ["blocker with missing status", (value) => mutateBothCurrentReads(value, (pkg) => {
+      const blocker = releaseBlocker();
+      delete blocker.status;
+      pkg.releaseBlockers.push(blocker);
+    })],
+    ["blocker with unsupported status", (value) => mutateBothCurrentReads(value, (pkg) => {
+      pkg.releaseBlockers.push(releaseBlocker({ status: "pending" }));
+    })],
+    ["uncertainty with missing releaseBlocking", (value) => mutateBothCurrentReads(value, (pkg) => {
+      const uncertainty = currentUncertainty();
+      delete uncertainty.releaseBlocking;
+      pkg.uncertainty.push(uncertainty);
+    })],
+    ["uncertainty with non-boolean releaseBlocking", (value) => mutateBothCurrentReads(value, (pkg) => {
+      pkg.uncertainty.push(currentUncertainty({ releaseBlocking: "true" }));
+    })],
+    ["uncertainty with missing resolutionStatus", (value) => mutateBothCurrentReads(value, (pkg) => {
+      const uncertainty = currentUncertainty();
+      delete uncertainty.resolutionStatus;
+      pkg.uncertainty.push(uncertainty);
+    })],
+    ["uncertainty with unsupported resolutionStatus", (value) => mutateBothCurrentReads(value, (pkg) => {
+      pkg.uncertainty.push(currentUncertainty({ resolutionStatus: "accepted" }));
+    })],
+    ["malformed entry only before first byte", (value) => {
+      value.currentS207RegistryImmediatelyBeforeFirstByte.packages[0].releaseBlockers.push(null);
+    }],
     ["S214 downstream use disabled", (value) => mutateBothCurrentReads(value, (pkg) => {
       pkg.downstreamUsage.s214GenerationInput = false;
     })],
@@ -747,6 +972,12 @@ test("requires the exact current S207 package to remain releasable at output aut
     }],
     ["invalid current package", (value) => {
       delete value.currentS207RegistryAtOutputAuthorization.packages[0].downstreamUsage;
+    }],
+    ["malformed unmatched package", (value) => {
+      const foreignPackage = currentReleasedPackage();
+      foreignPackage.id = "foreign-package";
+      foreignPackage.releaseBlockers.push(releaseBlocker({ severity: "blockng" }));
+      value.currentS207RegistryAtOutputAuthorization.packages.push(foreignPackage);
     }],
     ["foreign current package", (value) => {
       value.currentS207RegistryAtOutputAuthorization.packages[0].id = "foreign-package";
@@ -767,16 +998,16 @@ test("requires the exact current S207 package to remain releasable at output aut
 
   const positiveControls = [
     ["resolved blocker", (value) => mutateBothCurrentReads(value, (pkg) => {
-      pkg.releaseBlockers.push({ status: "resolved", severity: "blocking" });
+      pkg.releaseBlockers.push(releaseBlocker({ status: "resolved" }));
     })],
     ["open warning-only blocker", (value) => mutateBothCurrentReads(value, (pkg) => {
-      pkg.releaseBlockers.push({ status: "open", severity: "warning" });
+      pkg.releaseBlockers.push(releaseBlocker({ severity: "warning" }));
     })],
     ["resolved uncertainty", (value) => mutateBothCurrentReads(value, (pkg) => {
-      pkg.uncertainty.push({ releaseBlocking: true, resolutionStatus: "resolved" });
+      pkg.uncertainty.push(currentUncertainty({ resolutionStatus: "resolved" }));
     })],
     ["accepted alternative uncertainty", (value) => mutateBothCurrentReads(value, (pkg) => {
-      pkg.uncertainty.push({ releaseBlocking: true, resolutionStatus: "accepted_as_alternative" });
+      pkg.uncertainty.push(currentUncertainty({ resolutionStatus: "accepted_as_alternative" }));
     })],
   ];
   for (const [label, mutate] of positiveControls) {
