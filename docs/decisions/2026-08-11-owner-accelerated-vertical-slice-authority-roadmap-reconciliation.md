@@ -352,7 +352,7 @@ The source reconciliation is limited to these paths:
 28. `lib/agent-factory/roadmap-runner.ts`
 29. `scripts/automation/determine-next-task.mjs`
 
-The last fifteen paths are assertion-only conformance updates required when
+Paths 13 through 27 are assertion-only conformance updates required when
 the repository-wide default and Learner Loop suites encountered the new
 truthful three-slot roadmap, sole selected WCV-C2 campaign and current blocked
 S236P state. Paths 28 and 29 are the only executable-selector additions to the
