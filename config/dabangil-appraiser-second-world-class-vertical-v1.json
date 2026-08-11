@@ -1,6 +1,6 @@
 {
   "schema": "dabangil_appraiser_second_world_class_vertical_v1",
-  "version": "1.0.6",
+  "version": "1.0.7",
   "dated": "2026-08-10 KST",
   "status": "proposed_non_authoritative_source_contract",
   "repository": "chachathecat/inverge",
@@ -355,6 +355,33 @@
           "matchedS207ReferencePackage.subject"
         ],
         "subjectEquality": "FIELD_FOR_FIELD_EXACT"
+      },
+      "currentS207ReleaseStateGate": {
+        "authority": "TRUSTED_SERVER_RESOLVER",
+        "source": "CURRENT_CANONICAL_S207_REGISTRY_AT_OUTPUT_AUTHORIZATION",
+        "cachedHistoricalOrEmbeddedStateAllowed": false,
+        "identityRef": "canonicalResultBinding.identity",
+        "resolutionCardinality": "EXACTLY_ONE",
+        "evaluation": {
+          "timing": "EACH_OUTPUT_AUTHORIZATION_IMMEDIATELY_BEFORE_FIRST_BYTE",
+          "priorSuccessfulEvaluationReusable": false,
+          "stateDriftBeforeFirstByteFailsClosed": true
+        },
+        "requiredCurrentState": {
+          "release": {
+            "status": "released"
+          },
+          "openBlockingReleaseBlockerCount": 0,
+          "unresolvedBlockingUncertaintyCount": 0,
+          "downstreamUsage": {
+            "s214GenerationInput": true,
+            "s215ReleaseGateInput": true
+          }
+        },
+        "vetoOnly": true,
+        "mayAuthorizeWithoutReleasedS215": false,
+        "oldReleasedS215ResultMaySubstitute": false,
+        "failureBehaviorRef": "generatedFullSolutionReleaseContract.failureBehavior"
       },
       "requiredS215Result": {
         "sourceAnchorIntegrity": {

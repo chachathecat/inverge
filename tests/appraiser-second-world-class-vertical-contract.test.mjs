@@ -31,8 +31,8 @@ const includesAll = (text, markers, label) => {
   }
 };
 
-test("synchronizes WCV contract v1.0.6 and keeps V13 authoritative", () => {
-  assert.equal(contract.version, "1.0.6");
+test("synchronizes WCV contract v1.0.7 and keeps V13 authoritative", () => {
+  assert.equal(contract.version, "1.0.7");
   assert.equal(
     contract.activeMasterPlan,
     "docs/strategy/dabangil-professional-exam-reasoning-os-final-master-plan-v13-2026-08-06.md",
@@ -40,10 +40,10 @@ test("synchronizes WCV contract v1.0.6 and keeps V13 authoritative", () => {
   assert.equal(contract.role.mayReplaceActiveMasterPlan, false);
   assert.equal(contract.authorizationBoundary.activePointerMutation, false);
   assert.equal(contract.authorizationBoundary.roadmapMutation, false);
-  includesAll(decision, ["contract_version: \"1.0.6\"", "V13은 계속 답안길의 유일한 active master plan"], "decision");
-  includesAll(strategy, ["version: \"1.0.6\"", "V13을 교체하지 않는다"], "strategy");
-  assert.ok(benchmark.includes("contract version: `1.0.6`"));
-  assert.ok(validation.includes("contract version: `1.0.6`"));
+  includesAll(decision, ["contract_version: \"1.0.7\"", "V13은 계속 답안길의 유일한 active master plan"], "decision");
+  includesAll(strategy, ["version: \"1.0.7\"", "V13을 교체하지 않는다"], "strategy");
+  assert.ok(benchmark.includes("contract version: `1.0.7`"));
+  assert.ok(validation.includes("contract version: `1.0.7`"));
 });
 
 test("authorizes no runtime, content, commercial, dependency or Production mutation", () => {
@@ -314,6 +314,33 @@ test("exact-binds generated solutions and disclosures to one canonical S215-S214
       ],
       subjectEquality: "FIELD_FOR_FIELD_EXACT",
     },
+    currentS207ReleaseStateGate: {
+      authority: "TRUSTED_SERVER_RESOLVER",
+      source: "CURRENT_CANONICAL_S207_REGISTRY_AT_OUTPUT_AUTHORIZATION",
+      cachedHistoricalOrEmbeddedStateAllowed: false,
+      identityRef: "canonicalResultBinding.identity",
+      resolutionCardinality: "EXACTLY_ONE",
+      evaluation: {
+        timing: "EACH_OUTPUT_AUTHORIZATION_IMMEDIATELY_BEFORE_FIRST_BYTE",
+        priorSuccessfulEvaluationReusable: false,
+        stateDriftBeforeFirstByteFailsClosed: true,
+      },
+      requiredCurrentState: {
+        release: {
+          status: "released",
+        },
+        openBlockingReleaseBlockerCount: 0,
+        unresolvedBlockingUncertaintyCount: 0,
+        downstreamUsage: {
+          s214GenerationInput: true,
+          s215ReleaseGateInput: true,
+        },
+      },
+      vetoOnly: true,
+      mayAuthorizeWithoutReleasedS215: false,
+      oldReleasedS215ResultMaySubstitute: false,
+      failureBehaviorRef: "generatedFullSolutionReleaseContract.failureBehavior",
+    },
     requiredS215Result: {
       sourceAnchorIntegrity: {
         status: "passed",
@@ -559,6 +586,207 @@ test("exact-binds generated solutions and disclosures to one canonical S215-S214
     const nearMatch = clone(fixture);
     mutate(nearMatch);
     assert.deepEqual(evaluate(nearMatch), failClosed(), `${label} must fail closed`);
+  }
+});
+
+test("requires the exact current S207 package to remain releasable at output authorization", () => {
+  const gate = contract.generatedFullSolutionReleaseContract.canonicalResultBinding.currentS207ReleaseStateGate;
+  const expectedGate = {
+    authority: "TRUSTED_SERVER_RESOLVER",
+    source: "CURRENT_CANONICAL_S207_REGISTRY_AT_OUTPUT_AUTHORIZATION",
+    cachedHistoricalOrEmbeddedStateAllowed: false,
+    identityRef: "canonicalResultBinding.identity",
+    resolutionCardinality: "EXACTLY_ONE",
+    evaluation: {
+      timing: "EACH_OUTPUT_AUTHORIZATION_IMMEDIATELY_BEFORE_FIRST_BYTE",
+      priorSuccessfulEvaluationReusable: false,
+      stateDriftBeforeFirstByteFailsClosed: true,
+    },
+    requiredCurrentState: {
+      release: {
+        status: "released",
+      },
+      openBlockingReleaseBlockerCount: 0,
+      unresolvedBlockingUncertaintyCount: 0,
+      downstreamUsage: {
+        s214GenerationInput: true,
+        s215ReleaseGateInput: true,
+      },
+    },
+    vetoOnly: true,
+    mayAuthorizeWithoutReleasedS215: false,
+    oldReleasedS215ResultMaySubstitute: false,
+    failureBehaviorRef: "generatedFullSolutionReleaseContract.failureBehavior",
+  };
+  assert.deepEqual(gate, expectedGate);
+
+  const identity = {
+    gateId: "gate-practice-current-s207",
+    questionId: "question-practice-current-s207",
+    s214PipelineId: "pipeline-practice-current-s207",
+    referencePackageId: "package-practice-current-s207",
+    subject: "practice",
+  };
+  const currentReleasedPackage = () => ({
+    id: identity.referencePackageId,
+    questionId: identity.questionId,
+    subject: identity.subject,
+    release: { status: "released" },
+    releaseBlockers: [],
+    uncertainty: [],
+    downstreamUsage: {
+      s214GenerationInput: true,
+      s215ReleaseGateInput: true,
+    },
+  });
+  const fixture = {
+    generatedSolution: { ...identity },
+    exposureCommit: { status: "committed" },
+    historicalS215Results: [{ ...identity, status: "released" }],
+    currentS207RegistryAtOutputAuthorization: {
+      source: expectedGate.source,
+      packages: [currentReleasedPackage()],
+    },
+    currentS207RegistryImmediatelyBeforeFirstByte: {
+      source: expectedGate.source,
+      packages: [currentReleasedPackage()],
+    },
+    historicalOrEmbeddedS207Packages: [currentReleasedPackage()],
+  };
+  const clone = (value) => JSON.parse(JSON.stringify(value));
+  const zeroOutcomes = contract.generatedFullSolutionReleaseContract.failureBehavior;
+  const exactS215Identity = (candidate, generated) => (
+    contract.generatedFullSolutionReleaseContract.canonicalResultBinding.identity.tupleFields
+      .every((field) => candidate[field] === generated[field])
+    && candidate.subject === generated.subject
+  );
+  const resolveEligibleCurrentPackage = (registry, generated) => {
+    if (registry?.source !== expectedGate.source || !Array.isArray(registry.packages)) return null;
+    const matches = registry.packages.filter((entry) => (
+      entry
+      && typeof entry === "object"
+      && entry.id === generated.referencePackageId
+      && entry.questionId === generated.questionId
+      && entry.subject === generated.subject
+    ));
+    if (matches.length !== 1) return null;
+    const [matched] = matches;
+    if (matched.stale === true || matched.release?.status !== "released") return null;
+    if (!Array.isArray(matched.releaseBlockers) || !Array.isArray(matched.uncertainty)) return null;
+    const openBlockingReleaseBlockerCount = matched.releaseBlockers.filter((blocker) => (
+      blocker?.status === "open" && blocker?.severity === "blocking"
+    )).length;
+    const unresolvedBlockingUncertaintyCount = matched.uncertainty.filter((uncertainty) => (
+      uncertainty?.releaseBlocking === true
+      && !["resolved", "accepted_as_alternative"].includes(uncertainty?.resolutionStatus)
+    )).length;
+    if (openBlockingReleaseBlockerCount !== 0 || unresolvedBlockingUncertaintyCount !== 0) return null;
+    if (matched.downstreamUsage?.s214GenerationInput !== true) return null;
+    if (matched.downstreamUsage?.s215ReleaseGateInput !== true) return null;
+    return matched;
+  };
+  const evaluate = (candidate) => {
+    const generated = candidate.generatedSolution;
+    const releasedS215Results = candidate.historicalS215Results.filter((result) => (
+      result.status === "released" && exactS215Identity(result, generated)
+    ));
+    if (candidate.exposureCommit?.status !== "committed" || releasedS215Results.length !== 1) {
+      return zeroOutcomes;
+    }
+    const currentReads = [
+      candidate.currentS207RegistryAtOutputAuthorization,
+      candidate.currentS207RegistryImmediatelyBeforeFirstByte,
+    ];
+    if (currentReads.some((registry) => resolveEligibleCurrentPackage(registry, generated) === null)) {
+      return zeroOutcomes;
+    }
+    return { authorizedByAllIndependentConjuncts: true };
+  };
+  const mutateBothCurrentReads = (candidate, mutate) => {
+    mutate(candidate.currentS207RegistryAtOutputAuthorization.packages[0]);
+    mutate(candidate.currentS207RegistryImmediatelyBeforeFirstByte.packages[0]);
+  };
+
+  assert.deepEqual(evaluate(fixture), { authorizedByAllIndependentConjuncts: true });
+
+  const nonReleasedStatuses = [
+    "draft",
+    "blocked",
+    "cross_checked",
+    "source_verified",
+    "subject_validated",
+    "ready_for_s215",
+  ];
+  const negativeMutations = nonReleasedStatuses.map((status) => [
+    `current release status ${status}`,
+    (value) => mutateBothCurrentReads(value, (pkg) => { pkg.release.status = status; }),
+  ]);
+  negativeMutations.push(
+    ["open blocking release blocker", (value) => mutateBothCurrentReads(value, (pkg) => {
+      pkg.releaseBlockers.push({ status: "open", severity: "blocking" });
+    })],
+    ["open release-blocking uncertainty", (value) => mutateBothCurrentReads(value, (pkg) => {
+      pkg.uncertainty.push({ releaseBlocking: true, resolutionStatus: "open" });
+    })],
+    ["blocked release-blocking uncertainty", (value) => mutateBothCurrentReads(value, (pkg) => {
+      pkg.uncertainty.push({ releaseBlocking: true, resolutionStatus: "blocked" });
+    })],
+    ["S214 downstream use disabled", (value) => mutateBothCurrentReads(value, (pkg) => {
+      pkg.downstreamUsage.s214GenerationInput = false;
+    })],
+    ["S215 downstream use disabled", (value) => mutateBothCurrentReads(value, (pkg) => {
+      pkg.downstreamUsage.s215ReleaseGateInput = false;
+    })],
+    ["missing current package", (value) => {
+      value.currentS207RegistryAtOutputAuthorization.packages = [];
+    }],
+    ["duplicate current package", (value) => {
+      value.currentS207RegistryAtOutputAuthorization.packages.push(
+        clone(value.currentS207RegistryAtOutputAuthorization.packages[0]),
+      );
+    }],
+    ["invalid current package", (value) => {
+      delete value.currentS207RegistryAtOutputAuthorization.packages[0].downstreamUsage;
+    }],
+    ["foreign current package", (value) => {
+      value.currentS207RegistryAtOutputAuthorization.packages[0].id = "foreign-package";
+    }],
+    ["historical or cached release while current canonical package is blocked", (value) => {
+      mutateBothCurrentReads(value, (pkg) => { pkg.release.status = "blocked"; });
+      value.historicalOrEmbeddedS207Packages[0].release.status = "released";
+    }],
+    ["current-state drift before first generated byte", (value) => {
+      value.currentS207RegistryImmediatelyBeforeFirstByte.packages[0].release.status = "blocked";
+    }],
+  );
+  for (const [label, mutate] of negativeMutations) {
+    const candidate = clone(fixture);
+    mutate(candidate);
+    assert.deepEqual(evaluate(candidate), zeroOutcomes, `${label} must yield exact zero outcomes`);
+  }
+
+  const positiveControls = [
+    ["resolved blocker", (value) => mutateBothCurrentReads(value, (pkg) => {
+      pkg.releaseBlockers.push({ status: "resolved", severity: "blocking" });
+    })],
+    ["open warning-only blocker", (value) => mutateBothCurrentReads(value, (pkg) => {
+      pkg.releaseBlockers.push({ status: "open", severity: "warning" });
+    })],
+    ["resolved uncertainty", (value) => mutateBothCurrentReads(value, (pkg) => {
+      pkg.uncertainty.push({ releaseBlocking: true, resolutionStatus: "resolved" });
+    })],
+    ["accepted alternative uncertainty", (value) => mutateBothCurrentReads(value, (pkg) => {
+      pkg.uncertainty.push({ releaseBlocking: true, resolutionStatus: "accepted_as_alternative" });
+    })],
+  ];
+  for (const [label, mutate] of positiveControls) {
+    const candidate = clone(fixture);
+    mutate(candidate);
+    assert.deepEqual(
+      evaluate(candidate),
+      { authorizedByAllIndependentConjuncts: true },
+      `${label} must retain its canonical nonblocking meaning`,
+    );
   }
 });
 

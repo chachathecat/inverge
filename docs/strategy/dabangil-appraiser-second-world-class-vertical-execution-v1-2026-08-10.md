@@ -3,7 +3,7 @@ document_title: "답안길 감정평가사 2차 World-Class Vertical Execution S
 document_subtitle: "정확한 감점 위치·AI 협업 교정·독립 전이·재발 검증·하루 관제"
 document_role: "V13 subordinate execution standard; not a new master plan"
 status: "proposed_non_authoritative_source_contract"
-version: "1.0.6"
+version: "1.0.7"
 dated: "2026-08-10 KST"
 repository: "chachathecat/inverge"
 active_master_plan: "docs/strategy/dabangil-professional-exam-reasoning-os-final-master-plan-v13-2026-08-06.md"
@@ -405,6 +405,32 @@ type BoundGeneratedSolutionArtifactV1 = GeneratedSolutionPackageIdentityV1 & {
   ];
 };
 
+type CurrentS207ReleaseStateGateV1 = {
+  authority: "TRUSTED_SERVER_RESOLVER";
+  source: "CURRENT_CANONICAL_S207_REGISTRY_AT_OUTPUT_AUTHORIZATION";
+  cachedHistoricalOrEmbeddedStateAllowed: false;
+  identityRef: "canonicalResultBinding.identity";
+  resolutionCardinality: "EXACTLY_ONE";
+  evaluation: {
+    timing: "EACH_OUTPUT_AUTHORIZATION_IMMEDIATELY_BEFORE_FIRST_BYTE";
+    priorSuccessfulEvaluationReusable: false;
+    stateDriftBeforeFirstByteFailsClosed: true;
+  };
+  requiredCurrentState: {
+    release: { status: "released" };
+    openBlockingReleaseBlockerCount: 0;
+    unresolvedBlockingUncertaintyCount: 0;
+    downstreamUsage: {
+      s214GenerationInput: true;
+      s215ReleaseGateInput: true;
+    };
+  };
+  vetoOnly: true;
+  mayAuthorizeWithoutReleasedS215: false;
+  oldReleasedS215ResultMaySubstitute: false;
+  failureBehaviorRef: "generatedFullSolutionReleaseContract.failureBehavior";
+};
+
 type CanonicalGeneratedSolutionResultBindingV1 = {
   authority: "trusted_server_resolver";
   releaseAuthority: "existing_canonical_s215_result_only";
@@ -450,6 +476,7 @@ type CanonicalGeneratedSolutionResultBindingV1 = {
     "referencePackageId",
   ];
   exactSubjectBinding: true;
+  currentS207ReleaseStateGate: CurrentS207ReleaseStateGateV1;
   boundArtifacts: [
     BoundGeneratedSolutionArtifactV1 & { artifact: "generated_full_solution" },
     BoundGeneratedSolutionArtifactV1 & { artifact: "official_source_status" },
@@ -567,6 +594,26 @@ decision을 그대로 사용한다. 별도의 answer authority를 만들지 않�
 - client/model/request label/disclosure string/outer boolean은 identity authority가
   아니며, released S215를 빌려와도 mismatch 시 output, positive evidence와 usage
   success는 모두 0이다.
+- Contract v1.0.7은 매 generated-output authorization의 첫 byte 직전에 trusted
+  resolver가 current canonical S207 registry에서 바로 그 exact-bound package를 다시
+  resolve하도록 요구한다. 과거 성공 check, S214 embedded prerequisite, cached 또는
+  historical snapshot은 재사용하거나 대체할 수 없다.
+- current package는 `referencePackageId`, `questionId`, subject와 기존
+  S215→S214→S207 chain에 field-for-field 맞는 exactly-one package여야 한다.
+  missing, multiple, ambiguous, invalid, foreign 또는 stale resolution은 fail closed다.
+- current `release.status`는 `released`여야 한다. open blocking release blocker는
+  `status == "open" && severity == "blocking"`, unresolved blocking uncertainty는
+  `releaseBlocking == true && resolutionStatus`가 `resolved` 또는
+  `accepted_as_alternative`가 아닌 경우로 exact package 안에서 계산하며 둘 다 0이어야
+  한다. resolved blocker, open warning-only blocker, resolved uncertainty와 accepted
+  alternative는 canonical nonblocking 의미를 유지한다.
+- current `downstreamUsage.s214GenerationInput`과 `s215ReleaseGateInput`은 모두
+  `true`여야 한다. state가 first byte 전에 drift하거나 어느 current-state 조건이라도
+  실패하면 historical S215 result가 `released`여도 output, positive evidence와 usage
+  success는 모두 0이다.
+- 이 current-state gate는 veto-only다. 기존 exact released S215 result와 exposure
+  commit을 대체하지 않고, client/model/request/disclosure/outer boolean claim은
+  current-state authority가 아니다.
 
 ### 6.3 pre-help exposure transaction
 
