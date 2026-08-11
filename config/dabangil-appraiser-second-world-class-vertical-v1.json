@@ -1,0 +1,1320 @@
+{
+  "schema": "dabangil_appraiser_second_world_class_vertical_v1",
+  "version": "1.0.8",
+  "dated": "2026-08-10 KST",
+  "status": "proposed_non_authoritative_source_contract",
+  "repository": "chachathecat/inverge",
+  "activeMasterPlan": "docs/strategy/dabangil-professional-exam-reasoning-os-final-master-plan-v13-2026-08-06.md",
+  "activePointer": "docs/strategy/ACTIVE-MASTER-PLAN.md",
+  "role": {
+    "name": "Appraiser Second World-Class Vertical Execution Standard",
+    "relationshipToV13": "subordinate_execution_standard_not_new_master_plan",
+    "mayReplaceActiveMasterPlan": false,
+    "mayCreateSecondMasteryAuthority": false,
+    "learnerFacingScope": [
+      "appraisal_practice",
+      "appraisal_theory",
+      "appraisal_compensation_law"
+    ]
+  },
+  "authorizationBoundary": {
+    "runtime": false,
+    "ui": false,
+    "api": false,
+    "schema": false,
+    "migration": false,
+    "rls": false,
+    "storage": false,
+    "persistence": false,
+    "provider": false,
+    "dependency": false,
+    "environment": false,
+    "deployment": false,
+    "production": false,
+    "realContent": false,
+    "ownerActivation": false,
+    "externalLearner": false,
+    "commercial": false,
+    "pricing": false,
+    "payment": false,
+    "roadmapMutation": false,
+    "activePointerMutation": false,
+    "firstStageActivation": false,
+    "otherExamActivation": false
+  },
+  "productPromise": "내 답안의 가장 큰 감점 원인을 정확한 위치에서 찾아 직접 고치게 하고 다음 날·다른 문제·제한시간 전체 답안에서 다시 틀리지 않는지 확인한 뒤 그 증거로 오늘의 공부를 다시 정한다.",
+  "coreLoop": [
+    "CAPTURE",
+    "CONFIRMED_REVISION",
+    "EXACT_ANSWER_ANCHOR",
+    "SUCCESSFUL_OUTCOME_QUALIFIED_BIGGEST_GAP",
+    "DIRECT_REPAIR",
+    "SAME_SESSION_VERIFICATION",
+    "D1_INDEPENDENT_RECONSTRUCTION",
+    "D7_VERIFIED_NON_SAME_SURFACE_TRANSFER",
+    "TIMED_RECURRENCE",
+    "RECURRING_DEDUCTION_PROJECTION",
+    "AUTOMATIC_ERROR_NOTE",
+    "SAFE_LEARNING_GAP_AND_CONCEPT_STATE_SIGNALS",
+    "EVIDENCE_DRIVEN_REPLAN"
+  ],
+  "hardInvariants": {
+    "exactAnchorRequiredForUsableGap": true,
+    "evaluationCompletionSufficientForPositiveEvidence": false,
+    "aiViewIsIndependentPerformance": false,
+    "sameItemOrSameSurfaceIsTransfer": false,
+    "verifiedNonSameSurfaceRequiredForD7": true,
+    "timedRecurrenceRequiredForClosure": true,
+    "laterIndependentFailureReopensClosure": true,
+    "practiceDeterministicConflictBlocksNumericRelease": true,
+    "lawSourceOrEffectiveVersionConflictBlocksVerifiedRelease": true,
+    "helpOutputRequiresPriorExposureCommit": true,
+    "exposureCommitFailureBehavior": "ZERO_HELP_BYTES_NO_EVIDENCE",
+    "generatedFullSolutionRequiresCanonicalS215Release": true,
+    "exposureAndS215ReleaseAreIndependentConjunctiveGates": true,
+    "exposedAttemptMayReturnToUnseen": false,
+    "laterDistinctIndependentAttemptRequiredAfterExposure": true,
+    "guidedOverrideMayFabricateAttempt": false,
+    "guidedOverrideIsIndependentEvidence": false,
+    "reviewCompletionRequiresSafeLearningGapS216AndS217": true,
+    "reviewCompletionChangesMastery": false,
+    "d1RequiresFrozenD0Configuration": true,
+    "incompatibleD0D1ConfigurationBehavior": "STALE_RESTART_D0",
+    "securityRepairMaySilentlyPreserveD0Evidence": false,
+    "blockCompletionChangesMastery": false,
+    "todayCoreOutcomeMax": 3,
+    "fullDayExecutionBlockLimitMode": "AVAILABLE_MINUTES_0_TO_N",
+    "engagementMaySetLearningPriority": false,
+    "rawLearnerBodyInSharedAnalyticsOrTraining": false,
+    "rawLearnerContentAsModelTrainingInputForbidden": true,
+    "exactPurposeConsentAloneSufficientForRawLearnerContentTraining": false,
+    "futureTrainingCandidates": [
+      "CONSENTED_PSEUDONYMOUS_NON_RECONSTRUCTIVE_SIGNALS",
+      "PROMOTED_CLEARED_CONTENT_BANK_MATERIAL"
+    ],
+    "oneCanonicalMasteryAuthority": true,
+    "fullDayAvailableMinutes": {
+      "requiredType": "integer",
+      "minimum": 30,
+      "maximum": 720,
+      "outsideRangeBehavior": "REJECT_NO_PLAN"
+    }
+  },
+  "tutorStateMachine": [
+    "INTAKE",
+    "ORIENT",
+    "CONFIRM_GUIDED_REVEAL_OVERRIDE",
+    "COMMIT",
+    "COMMIT_ASSISTANCE_EXPOSURE",
+    "ATTEMPT",
+    "GUIDED_STUDY",
+    "DIAGNOSE",
+    "SCAFFOLD",
+    "RECONSTRUCT",
+    "REPAIR",
+    "VERIFY",
+    "CONTRAST",
+    "TRANSFER",
+    "TIMED_RECURRENCE",
+    "SCHEDULE",
+    "SCHEDULE_LATER_DISTINCT_INDEPENDENT_REVIEW",
+    "COMPLETED",
+    "GUIDED_EXIT",
+    "BLOCKED",
+    "STALE"
+  ],
+  "defaultAttemptFirstPath": [
+    "ORIENT",
+    "COMMIT",
+    "ATTEMPT",
+    "DIAGNOSE",
+    "SCAFFOLD",
+    "RECONSTRUCT",
+    "REPAIR",
+    "VERIFY",
+    "CONTRAST",
+    "TRANSFER",
+    "TIMED_RECURRENCE",
+    "SCHEDULE"
+  ],
+  "tutorTransitionContract": {
+    "authority": "CANONICAL_MACHINE_READABLE_TRANSITION_AUTHORITY",
+    "stateEnumRef": "tutorStateMachine",
+    "pathRefs": [
+      "defaultAttemptFirstPath",
+      "guidedRevealOverrideContract.path"
+    ],
+    "normalTerminalStates": [
+      "COMPLETED",
+      "GUIDED_EXIT"
+    ],
+    "failClosedStates": [
+      "BLOCKED",
+      "STALE"
+    ],
+    "normalTransitions": [
+      {
+        "from": "INTAKE",
+        "to": "ORIENT",
+        "paths": [
+          "ENTRY"
+        ]
+      },
+      {
+        "from": "ORIENT",
+        "to": "COMMIT",
+        "paths": [
+          "DEFAULT_ATTEMPT_FIRST"
+        ]
+      },
+      {
+        "from": "COMMIT",
+        "to": "ATTEMPT",
+        "paths": [
+          "DEFAULT_ATTEMPT_FIRST"
+        ]
+      },
+      {
+        "from": "ATTEMPT",
+        "to": "DIAGNOSE",
+        "paths": [
+          "DEFAULT_ATTEMPT_FIRST"
+        ]
+      },
+      {
+        "from": "DIAGNOSE",
+        "to": "SCAFFOLD",
+        "paths": [
+          "DEFAULT_ATTEMPT_FIRST"
+        ]
+      },
+      {
+        "from": "SCAFFOLD",
+        "to": "RECONSTRUCT",
+        "paths": [
+          "DEFAULT_ATTEMPT_FIRST"
+        ]
+      },
+      {
+        "from": "RECONSTRUCT",
+        "to": "REPAIR",
+        "paths": [
+          "DEFAULT_ATTEMPT_FIRST",
+          "CONFIRMED_GUIDED_OVERRIDE"
+        ]
+      },
+      {
+        "from": "REPAIR",
+        "to": "VERIFY",
+        "paths": [
+          "DEFAULT_ATTEMPT_FIRST",
+          "CONFIRMED_GUIDED_OVERRIDE"
+        ]
+      },
+      {
+        "from": "VERIFY",
+        "to": "CONTRAST",
+        "paths": [
+          "DEFAULT_ATTEMPT_FIRST"
+        ]
+      },
+      {
+        "from": "CONTRAST",
+        "to": "TRANSFER",
+        "paths": [
+          "DEFAULT_ATTEMPT_FIRST"
+        ]
+      },
+      {
+        "from": "TRANSFER",
+        "to": "TIMED_RECURRENCE",
+        "paths": [
+          "DEFAULT_ATTEMPT_FIRST"
+        ]
+      },
+      {
+        "from": "TIMED_RECURRENCE",
+        "to": "SCHEDULE",
+        "paths": [
+          "DEFAULT_ATTEMPT_FIRST"
+        ]
+      },
+      {
+        "from": "SCHEDULE",
+        "to": "COMPLETED",
+        "paths": [
+          "DEFAULT_ATTEMPT_FIRST_TERMINAL"
+        ]
+      },
+      {
+        "from": "ORIENT",
+        "to": "CONFIRM_GUIDED_REVEAL_OVERRIDE",
+        "paths": [
+          "CONFIRMED_GUIDED_OVERRIDE"
+        ]
+      },
+      {
+        "from": "CONFIRM_GUIDED_REVEAL_OVERRIDE",
+        "to": "COMMIT_ASSISTANCE_EXPOSURE",
+        "paths": [
+          "CONFIRMED_GUIDED_OVERRIDE"
+        ]
+      },
+      {
+        "from": "COMMIT_ASSISTANCE_EXPOSURE",
+        "to": "GUIDED_STUDY",
+        "paths": [
+          "CONFIRMED_GUIDED_OVERRIDE"
+        ]
+      },
+      {
+        "from": "GUIDED_STUDY",
+        "to": "RECONSTRUCT",
+        "paths": [
+          "CONFIRMED_GUIDED_OVERRIDE"
+        ]
+      },
+      {
+        "from": "VERIFY",
+        "to": "SCHEDULE_LATER_DISTINCT_INDEPENDENT_REVIEW",
+        "paths": [
+          "CONFIRMED_GUIDED_OVERRIDE"
+        ]
+      },
+      {
+        "from": "SCHEDULE_LATER_DISTINCT_INDEPENDENT_REVIEW",
+        "to": "GUIDED_EXIT",
+        "paths": [
+          "CONFIRMED_GUIDED_OVERRIDE"
+        ]
+      }
+    ],
+    "helpProducingTransitionGuards": [
+      {
+        "from": "DIAGNOSE",
+        "to": "SCAFFOLD",
+        "requires": "SUCCESSFUL_APPEND_ONLY_ASSISTANCE_EXPOSURE_COMMIT"
+      },
+      {
+        "from": "COMMIT_ASSISTANCE_EXPOSURE",
+        "to": "GUIDED_STUDY",
+        "requires": "SUCCESSFUL_APPEND_ONLY_ASSISTANCE_EXPOSURE_COMMIT"
+      }
+    ],
+    "guidedCompletionGuard": {
+      "from": "SCHEDULE_LATER_DISTINCT_INDEPENDENT_REVIEW",
+      "to": "GUIDED_EXIT",
+      "requires": "DURABLE_LATER_DISTINCT_ATTEMPT_FIRST_REVIEW_SCHEDULE"
+    },
+    "failClosedTransitions": [
+      {
+        "from": "DIAGNOSE",
+        "to": "BLOCKED",
+        "when": "ASSISTANCE_EXPOSURE_COMMIT_FAILED",
+        "helpBytes": 0,
+        "positiveEvidence": 0
+      },
+      {
+        "from": "COMMIT_ASSISTANCE_EXPOSURE",
+        "to": "BLOCKED",
+        "when": "ASSISTANCE_EXPOSURE_COMMIT_FAILED",
+        "helpBytes": 0,
+        "positiveEvidence": 0
+      },
+      {
+        "from": "SCHEDULE_LATER_DISTINCT_INDEPENDENT_REVIEW",
+        "to": "BLOCKED",
+        "when": "DURABLE_LATER_DISTINCT_INDEPENDENT_REVIEW_SCHEDULE_FAILED",
+        "guidedCompletion": false,
+        "committedExposureLineageRetained": true
+      }
+    ],
+    "basisOrConfigurationInvalidationTransition": {
+      "fromStates": [
+        "ORIENT",
+        "CONFIRM_GUIDED_REVEAL_OVERRIDE",
+        "COMMIT",
+        "COMMIT_ASSISTANCE_EXPOSURE",
+        "ATTEMPT",
+        "GUIDED_STUDY",
+        "DIAGNOSE",
+        "SCAFFOLD",
+        "RECONSTRUCT",
+        "REPAIR",
+        "VERIFY",
+        "CONTRAST",
+        "TRANSFER",
+        "TIMED_RECURRENCE",
+        "SCHEDULE",
+        "SCHEDULE_LATER_DISTINCT_INDEPENDENT_REVIEW",
+        "COMPLETED",
+        "GUIDED_EXIT"
+      ],
+      "to": "STALE",
+      "when": "CURRENT_BASIS_OR_CONFIGURATION_INVALID",
+      "normalPathEligible": false,
+      "evidenceCarryForwardAllowed": false
+    },
+    "undeclaredTransitionBehavior": {
+      "result": "REJECT",
+      "stateAdvance": false,
+      "helpBytes": 0,
+      "positiveEvidence": 0
+    },
+    "noPathBroadening": {
+      "defaultAttemptFirst": true,
+      "confirmedGuidedOverride": true,
+      "guidedPathMayContainAttempt": false,
+      "guidedShortcutAroundExposureCommitAllowed": false
+    }
+  },
+  "scaffoldLadder": [
+    "NEUTRAL_REPROMPT",
+    "RECALL_CUE",
+    "REPRESENTATION_CUE",
+    "DISCRIMINATION_QUESTION",
+    "CONCEPT_HINT",
+    "STRUCTURAL_HINT",
+    "PARTIAL_EXAMPLE",
+    "WORKED_STEP",
+    "FULL_SOLUTION"
+  ],
+  "assistanceExposureContract": {
+    "authority": "TRUSTED_SERVER_APPEND_ONLY",
+    "commitBeforeOutput": true,
+    "coveredOutputKinds": [
+      "HINT",
+      "EXPLANATION",
+      "WORKED_STEP",
+      "PROBE",
+      "FULL_SOLUTION"
+    ],
+    "commitFailureBehavior": "ZERO_OUTPUT_NO_EVIDENCE",
+    "exposedMayBeRelabeledUnseen": false,
+    "laterDistinctIndependentAttemptRequired": true,
+    "clientOrModelMayAssertExposureState": false,
+    "lineageDiscriminator": "lineageMode",
+    "lineageModes": [
+      {
+        "lineageMode": "attempt_first",
+        "attemptRef": {
+          "presence": "REQUIRED",
+          "nonEmpty": true,
+          "genuine": true,
+          "placeholderAllowed": false
+        },
+        "guidedOverrideConfirmationRef": {
+          "presence": "FORBIDDEN",
+          "value": null
+        },
+        "requiredBindings": [
+          "LEARNER_SCOPE",
+          "TUTOR_EPISODE",
+          "ITEM_REVISION",
+          "ATTEMPT"
+        ]
+      },
+      {
+        "lineageMode": "confirmed_pre_attempt_guided_override",
+        "attemptRef": {
+          "presence": "EXPLICIT_NULL",
+          "value": null,
+          "placeholderAllowed": false
+        },
+        "guidedOverrideConfirmationRef": {
+          "presence": "REQUIRED",
+          "nonEmpty": true,
+          "trustedServerRecorded": true
+        },
+        "requiredBindings": [
+          "LEARNER_SCOPE",
+          "TUTOR_EPISODE",
+          "ITEM_REVISION",
+          "GUIDED_OVERRIDE_CONFIRMATION"
+        ]
+      }
+    ]
+  },
+  "guidedRevealOverrideContract": {
+    "mode": "confirmed_pre_attempt_guided_override",
+    "defaultMode": "attempt_first",
+    "deliberateLearnerRequestRequired": true,
+    "trustedServerConfirmationRequired": true,
+    "confirmationIsExposureCommit": false,
+    "path": [
+      "ORIENT",
+      "CONFIRM_GUIDED_REVEAL_OVERRIDE",
+      "COMMIT_ASSISTANCE_EXPOSURE",
+      "GUIDED_STUDY",
+      "RECONSTRUCT",
+      "REPAIR",
+      "VERIFY",
+      "SCHEDULE_LATER_DISTINCT_INDEPENDENT_REVIEW",
+      "GUIDED_EXIT"
+    ],
+    "attemptStepPresent": false,
+    "emptyPlaceholderOrSyntheticAttemptAllowed": false,
+    "exposureCommitBeforeFirstHelpByte": true,
+    "commitFailure": {
+      "helpBytes": 0,
+      "positiveEvidence": 0,
+      "usageSuccess": 0,
+      "episodeState": "BLOCKED"
+    },
+    "bypassSurfaces": [
+      "RETRY",
+      "DIRECT_ENDPOINT",
+      "CACHE",
+      "PREFETCH",
+      "MULTI_TAB"
+    ],
+    "permanentQualification": {
+      "assistanceState": "ASSISTED",
+      "exposureState": "EXPOSED",
+      "learningOnly": true,
+      "mayRelabelUnseen": false,
+      "mayRelabelIndependent": false
+    },
+    "cannotEstablish": [
+      "STABLE_MASTERY",
+      "D1",
+      "D7",
+      "TRANSFER",
+      "CLOSURE"
+    ],
+    "laterIndependentReview": {
+      "mode": "attempt_first",
+      "distinct": true,
+      "durableScheduleRequiredBefore": "GUIDED_EXIT",
+      "scheduleFailure": "BLOCK_GUIDED_COMPLETION",
+      "committedExposureLineageRetained": true
+    },
+    "generatedFullSolutionReleaseContractRef": "generatedFullSolutionReleaseContract"
+  },
+  "generatedFullSolutionReleaseContract": {
+    "s215Version": "s215.reference_answer_critic_consensus_release_gate.v1",
+    "appliesToGeneratedPaths": [
+      "NORMAL_SCAFFOLD_FULL_SOLUTION",
+      "CONFIRMED_GUIDED_OVERRIDE_FULL_SOLUTION",
+      "SEMANTICALLY_COMPLETE_GENERATED_SOLUTION_ANY_LABEL"
+    ],
+    "semanticRelabelBypassAllowed": false,
+    "learnerAuthoredTimedFullAnswerPhraseAloneClassifiedAsGeneratedFullSolution": false,
+    "requiredResult": {
+      "status": "released",
+      "sourceAnchorIntegrity": {
+        "status": "passed",
+        "fabricatedSourceAnchorIds": [],
+        "fabricatedEvidenceAnchorIds": []
+      },
+      "releaseDecision": {
+        "status": "released",
+        "learningReferenceStatus": "released_learning_reference",
+        "releaseGateStatus": "released",
+        "referenceAnswerReleaseAllowed": true,
+        "learnerFacingLearningReferenceAllowed": true,
+        "requiredCaveatKey": "learning_reference_not_official_answer",
+        "learningReferenceOnly": true,
+        "officialClaimAllowed": false,
+        "officialGradingClaimAllowed": false,
+        "officialModelAnswerClaimAllowed": false,
+        "confirmedScoreClaimAllowed": false,
+        "scorePredictionAllowed": false,
+        "passProbabilityAllowed": false,
+        "passGuaranteeAllowed": false
+      }
+    },
+    "canonicalResultBinding": {
+      "authority": "TRUSTED_SERVER_RESOLVER",
+      "releaseAuthority": "EXISTING_CANONICAL_S215_RESULT_ONLY",
+      "secondReleaseAuthorityCreated": false,
+      "canonicalChain": [
+        "GENERATED_SOLUTION_RELEASE_CANDIDATE",
+        "S215_GATE_INPUT",
+        "S215_GATE_RESULT",
+        "S214_PIPELINE_RESULT",
+        "S214_SOURCE_PACK",
+        "S214_S207_PREREQUISITE",
+        "MATCHED_S207_REFERENCE_PACKAGE"
+      ],
+      "resolution": {
+        "cardinality": "EXACTLY_ONE",
+        "failClosedStates": [
+          "MISSING",
+          "MULTIPLE",
+          "AMBIGUOUS",
+          "STALE",
+          "FOREIGN",
+          "MISMATCHED"
+        ]
+      },
+      "identity": {
+        "tupleFields": [
+          "gateId",
+          "questionId",
+          "s214PipelineId",
+          "referencePackageId"
+        ],
+        "equality": "FIELD_FOR_FIELD_EXACT",
+        "fieldMappings": {
+          "gateId": [
+            "generatedSolution.gateId",
+            "s215GateInput.gateId",
+            "s215Result.gateId"
+          ],
+          "questionId": [
+            "generatedSolution.questionId",
+            "s215GateInput.questionId",
+            "s215Result.questionId",
+            "s214Result.questionId",
+            "s214Result.sourcePack.questionId",
+            "matchedS207ReferencePackage.questionId"
+          ],
+          "s214PipelineId": [
+            "generatedSolution.s214PipelineId",
+            "s215GateInput.s214PipelineId",
+            "s215Result.s214PipelineId",
+            "s214Result.pipelineId"
+          ],
+          "referencePackageId": [
+            "generatedSolution.referencePackageId",
+            "s215GateInput.referencePackageId",
+            "s215Result.referencePackageId",
+            "s214Result.sourcePack.referencePackageId",
+            "s214Result.releasePrerequisites.s207Package.referencePackageId",
+            "matchedS207ReferencePackage.id"
+          ]
+        },
+        "subjectMappings": [
+          "generatedSolution.subject",
+          "s215GateInput.subject",
+          "s215Result.subject",
+          "s214Result.subject",
+          "s214Result.sourcePack.subject",
+          "matchedS207ReferencePackage.subject"
+        ],
+        "subjectEquality": "FIELD_FOR_FIELD_EXACT"
+      },
+      "currentS207ReleaseStateGate": {
+        "authority": "TRUSTED_SERVER_RESOLVER",
+        "source": "CURRENT_CANONICAL_S207_REGISTRY_AT_OUTPUT_AUTHORIZATION",
+        "cachedHistoricalOrEmbeddedStateAllowed": false,
+        "identityRef": "canonicalResultBinding.identity",
+        "resolutionCardinality": "EXACTLY_ONE",
+        "evaluation": {
+          "timing": "EACH_OUTPUT_AUTHORIZATION_IMMEDIATELY_BEFORE_FIRST_BYTE",
+          "priorSuccessfulEvaluationReusable": false,
+          "stateDriftBeforeFirstByteFailsClosed": true
+        },
+        "requiredCurrentState": {
+          "release": {
+            "status": "released"
+          },
+          "openBlockingReleaseBlockerCount": 0,
+          "unresolvedBlockingUncertaintyCount": 0,
+          "downstreamUsage": {
+            "s214GenerationInput": true,
+            "s215ReleaseGateInput": true
+          }
+        },
+        "vetoOnly": true,
+        "mayAuthorizeWithoutReleasedS215": false,
+        "oldReleasedS215ResultMaySubstitute": false,
+        "failureBehaviorRef": "generatedFullSolutionReleaseContract.failureBehavior"
+      },
+      "requiredS215Result": {
+        "sourceAnchorIntegrity": {
+          "status": "passed",
+          "fabricatedSourceAnchorIds": [],
+          "fabricatedEvidenceAnchorIds": []
+        },
+        "canonicalSourceAnchorIdsArrayAssumed": false
+      },
+      "boundArtifacts": [
+        {
+          "artifact": "GENERATED_FULL_SOLUTION",
+          "identity": "INHERIT_OR_CARRY_EXACT_TUPLE",
+          "sourceAnchorRefs": "NON_EMPTY_PACKAGE_QUALIFIED",
+          "evidenceAnchorRefs": "NON_EMPTY_PACKAGE_QUALIFIED"
+        },
+        {
+          "artifact": "OFFICIAL_SOURCE_STATUS",
+          "identity": "INHERIT_OR_CARRY_EXACT_TUPLE",
+          "sourceAnchorRefs": "NON_EMPTY_PACKAGE_QUALIFIED",
+          "evidenceAnchorRefs": "NON_EMPTY_PACKAGE_QUALIFIED"
+        },
+        {
+          "artifact": "CANONICAL_VERIFICATION_STATUS",
+          "identity": "INHERIT_OR_CARRY_EXACT_TUPLE",
+          "sourceAnchorRefs": "NON_EMPTY_PACKAGE_QUALIFIED",
+          "evidenceAnchorRefs": "NON_EMPTY_PACKAGE_QUALIFIED"
+        },
+        {
+          "artifact": "VERIFICATION_REPORT",
+          "identity": "INHERIT_OR_CARRY_EXACT_TUPLE",
+          "sourceAnchorRefs": "NON_EMPTY_PACKAGE_QUALIFIED",
+          "evidenceAnchorRefs": "NON_EMPTY_PACKAGE_QUALIFIED"
+        },
+        {
+          "artifact": "UNCERTAINTY_AND_ALTERNATIVES",
+          "identity": "INHERIT_OR_CARRY_EXACT_TUPLE",
+          "sourceAnchorRefs": "NON_EMPTY_PACKAGE_QUALIFIED",
+          "evidenceAnchorRefs": "NON_EMPTY_PACKAGE_QUALIFIED"
+        }
+      ],
+      "anchorResolution": {
+        "sourceAnchorRefTuple": [
+          "referencePackageId",
+          "questionId",
+          "sourceAnchorId"
+        ],
+        "sourceAnchorTarget": "matchedS207ReferencePackage.sourceAnchors[].anchorId",
+        "evidenceAnchorRefTuple": [
+          "referencePackageId",
+          "questionId",
+          "evidenceId"
+        ],
+        "evidenceAnchorTarget": "matchedS207ReferencePackage.evidenceAnchors[].evidenceId",
+        "pipelineSourcePackMembershipRequired": true,
+        "resolutionCardinality": "EXACTLY_ONE",
+        "linkedEvidenceSourceAnchorRefsResolveWithinSamePackage": true,
+        "globalUnqualifiedAnchorIdMatchAllowed": false,
+        "emptyRequiredAnchorRefsAllowed": false,
+        "entireCanonicalAnchorSetCitationRequired": false
+      },
+      "identityAuthority": {
+        "trustedServerResolver": true,
+        "client": false,
+        "model": false,
+        "requestLabels": false,
+        "disclosureStrings": false,
+        "outerBooleans": false
+      },
+      "rejectedConditions": [
+        "CROSS_QUESTION_ANCHOR",
+        "CROSS_PACKAGE_ANCHOR",
+        "MIXED_PACKAGE_DISCLOSURE",
+        "GLOBAL_UNQUALIFIED_ANCHOR_MATCH",
+        "EMPTY_REQUIRED_ANCHORS",
+        "UNRESOLVED_ANCHOR",
+        "MULTIPLE_ANCHOR_MATCHES",
+        "STALE_ANCHOR",
+        "FABRICATED_ANCHOR",
+        "DISCLOSURE_IDENTITY_MISMATCH"
+      ],
+      "failureBehavior": {
+        "generatedFullSolutionBytes": 0,
+        "positiveEvidence": 0,
+        "usageSuccess": 0
+      }
+    },
+    "learnerVisibleDisclosures": [
+      "OFFICIAL_SOURCE_STATUS",
+      "CANONICAL_VERIFICATION_STATUS",
+      "VERIFICATION_REPORT",
+      "UNCERTAINTY_AND_ALTERNATIVES"
+    ],
+    "releaseBlockerGate": {
+      "openBlockingReleaseBlockerCount": 0,
+      "unresolvedBlockingUncertaintyCount": 0,
+      "blockedCodes": [
+        "legal_source_blocker",
+        "calculation_blocker",
+        "consensus_missing",
+        "unresolved_consensus_conflict"
+      ]
+    },
+    "authority": {
+      "trustedResolverOwnsRelease": true,
+      "client": false,
+      "model": false,
+      "requestLabels": false,
+      "outerBooleans": false
+    },
+    "conjunctiveGates": {
+      "exposureCommitRequired": true,
+      "s215ReleasedDecisionRequired": true,
+      "oneMaySubstituteForOther": false
+    },
+    "failureBehavior": {
+      "generatedFullSolutionBytes": 0,
+      "positiveEvidence": 0,
+      "usageSuccess": 0
+    }
+  },
+  "reviewCompletionContract": {
+    "s216Version": "s216.error_notebook_gap_taxonomy.v1",
+    "s217Version": "s217.personal_core_concept_graph.v1",
+    "authority": "TRUSTED_SERVER_RESOLVER",
+    "requiredOutputs": [
+      "SAFE_LEARNING_GAP_SIGNAL",
+      "S216_AUTOMATIC_ERROR_NOTE_READY",
+      "S217_CONCEPT_STATE_GRAPH_READY"
+    ],
+    "s216AutomaticErrorNote": {
+      "status": "ready",
+      "requiredMetadata": [
+        "WHY_WRONG",
+        "CORRECT_PRINCIPLE",
+        "IMMEDIATE_FIX",
+        "RECURRENCE",
+        "NEXT_REVIEW"
+      ]
+    },
+    "s217ConceptStateResult": {
+      "status": "ready",
+      "canonicalStates": [
+        "unknown",
+        "exposed",
+        "confused",
+        "wrong",
+        "recurring",
+        "recovering",
+        "stable",
+        "at-risk"
+      ]
+    },
+    "exactBinding": {
+      "cardinality": "EXACTLY_ONE_CHAIN",
+      "fields": [
+        "LEARNER_SCOPE",
+        "SOURCE_REVIEW",
+        "ANSWER_SUBMISSION_AND_EVIDENCE",
+        "S216_ENTRY",
+        "S217_GRAPH",
+        "S217_SOURCE_REFERENCE_TO_EXACT_S216_ENTRY"
+      ],
+      "s217SourceReferenceToExactS216EntryRequired": true,
+      "unrelatedAmbiguousStaleOrCrossReviewArtifactAccepted": false
+    },
+    "dataBoundary": {
+      "metadataOnly": true,
+      "rawLearnerContentAllowed": false
+    },
+    "replan": {
+      "requiresResolvedOutputRefs": true,
+      "requiredRefs": [
+        "SAFE_LEARNING_GAP_SIGNAL_REF",
+        "S216_AUTOMATIC_ERROR_NOTE_REF",
+        "S217_CONCEPT_STATE_GRAPH_REF"
+      ]
+    },
+    "failClosed": {
+      "on": [
+        "MISSING",
+        "UNSAFE",
+        "STALE",
+        "AMBIGUOUS",
+        "WITHHELD"
+      ],
+      "preserve": [
+        "SAFE_BLOCKER",
+        "SAFE_REASON",
+        "SAFE_NEXT_ACTION"
+      ],
+      "reviewCompleted": false,
+      "readyErrorNoteEmitted": false,
+      "readyConceptStateEmitted": false,
+      "outerCompletionBooleanMaySubstitute": false
+    },
+    "completionEffects": {
+      "positiveEvidenceAwarded": false,
+      "masteryChanged": false,
+      "gapClosed": false,
+      "learningPrioritySet": false,
+      "secondMasteryAuthorityCreated": false
+    },
+    "clientModelRequestOrOuterClaimsMayComplete": false
+  },
+  "frozenD0Configuration": {
+    "requiredBindings": [
+      "PROBLEM_REVISION",
+      "SOURCE_VERSION",
+      "MODEL_VERSION",
+      "PROMPT_VERSION",
+      "RUBRIC_VERSION",
+      "VALIDATOR_VERSION",
+      "FULL_DAY_POLICY_VERSION",
+      "NOTEBOOK_SCHEMA_VERSION",
+      "TUTOR_POLICY_VERSION",
+      "ASSISTANCE_POLICY_VERSION",
+      "MEASUREMENT_POLICY_VERSION",
+      "ITEM_RELEASE_ARTIFACT"
+    ],
+    "onMismatch": "STALE_RESTART_D0",
+    "securityRepairBehavior": "INVALIDATE_AND_RESTART",
+    "silentEvidenceCarryForwardAllowed": false
+  },
+  "d7EligibilityContract": {
+    "schema": "d7_eligibility_contract_v1",
+    "consumedBy": "WCV_4_D1_D7_TIMED",
+    "authority": "TRUSTED_SERVER_RESOLVER",
+    "evaluationTiming": "FRESH_IMMEDIATELY_BEFORE_D7_ACCEPTANCE",
+    "allConjunctsRequired": true,
+    "priorEligibilityResultReusable": false,
+    "decisionContextBoundary": {
+      "onlyAcceptedInput": "TRUSTED_SERVER_RESOLVED_CONTEXT",
+      "requestFieldsReadAsAuthority": false,
+      "clientFieldsReadAsAuthority": false,
+      "modelFieldsReadAsAuthority": false,
+      "outerBooleanReadAsAuthority": false,
+      "candidateAuthorityClaimMaySubstitute": false
+    },
+    "failClosedOn": [
+      "MISSING",
+      "INVALID",
+      "STALE",
+      "MISMATCHED",
+      "AMBIGUOUS",
+      "FOREIGN"
+    ],
+    "predicateVocabulary": [
+      "EXACT_TRUSTED_CONTEXT",
+      "EXACT_CONTEXT_BINDING",
+      "CURRENT_EXACT_D7_RIGHTS",
+      "CURRENT_SOURCE_AND_EFFECTIVE_VERSION",
+      "EXACT_CONTEXT_STRING_SET",
+      "DIFFERENT_CONTEXT_VALUE",
+      "TRUSTED_NON_SAME_SURFACE_FAMILY",
+      "CURRENT_EXACT_BOUND_ARTIFACTS",
+      "TRUSTED_SEALED_PRE_PRESENTATION_UNSEEN_SNAPSHOT",
+      "HIDDEN_ZERO_HELP_BYTES",
+      "GENUINE_COMPLETED_ATTEMPT_FIRST_SUCCESS",
+      "EXACT_ZERO",
+      "ZERO_CONTAMINATION_VECTOR",
+      "FRESH_ACCEPTANCE_CURRENTNESS"
+    ],
+    "requiredConjuncts": [
+      {
+        "id": "TRUSTED_SERVER_RESOLUTION_AUTHORITY",
+        "predicate": "EXACT_TRUSTED_CONTEXT",
+        "contextPath": "resolutionAuthority",
+        "expected": "TRUSTED_SERVER_RESOLVER"
+      },
+      {
+        "id": "EXACT_LEARNER_SCOPE_BINDING",
+        "predicate": "EXACT_CONTEXT_BINDING",
+        "path": "bindings.learnerScopeRef",
+        "contextPath": "learnerScopeRef"
+      },
+      {
+        "id": "EXACT_CLOSURE_CASE_BINDING",
+        "predicate": "EXACT_CONTEXT_BINDING",
+        "path": "bindings.closureCaseRef",
+        "contextPath": "closureCaseRef"
+      },
+      {
+        "id": "CURRENT_RIGHTS_FOR_EXACT_D7_USE",
+        "predicate": "CURRENT_EXACT_D7_RIGHTS",
+        "path": "rights",
+        "expectedUse": "D7_TRANSFER_ACCEPTANCE",
+        "expectedDecision": "AUTHORIZED",
+        "expectedAuthority": "TRUSTED_SERVER_RESOLVER"
+      },
+      {
+        "id": "CURRENT_EXACT_SOURCE_AND_EFFECTIVE_VERSION",
+        "predicate": "CURRENT_SOURCE_AND_EFFECTIVE_VERSION",
+        "path": "source"
+      },
+      {
+        "id": "EXACT_TARGET_SKILL_SET",
+        "predicate": "EXACT_CONTEXT_STRING_SET",
+        "path": "candidate.targetSkillRefs",
+        "contextPath": "targetSkillRefs"
+      },
+      {
+        "id": "DIFFERENT_ITEM_REVISION",
+        "predicate": "DIFFERENT_CONTEXT_VALUE",
+        "path": "candidate.itemRevisionRef",
+        "contextPath": "sourceItemRevisionRef"
+      },
+      {
+        "id": "VERIFIED_NON_SAME_SURFACE_ITEM_FAMILY",
+        "predicate": "TRUSTED_NON_SAME_SURFACE_FAMILY",
+        "path": "surface"
+      },
+      {
+        "id": "CURRENT_EXACT_BOUND_ANSWER_RUBRIC_VALIDATOR",
+        "predicate": "CURRENT_EXACT_BOUND_ARTIFACTS",
+        "path": "artifacts"
+      },
+      {
+        "id": "TRUSTED_SEALED_PRE_PRESENTATION_UNSEEN_SNAPSHOT",
+        "predicate": "TRUSTED_SEALED_PRE_PRESENTATION_UNSEEN_SNAPSHOT",
+        "path": "unseenSnapshot"
+      },
+      {
+        "id": "HIDDEN_SOLUTION_AND_ZERO_HELP_BYTES",
+        "predicate": "HIDDEN_ZERO_HELP_BYTES",
+        "path": "presentation"
+      },
+      {
+        "id": "GENUINE_COMPLETED_ATTEMPT_FIRST_INDEPENDENT_SUCCESS",
+        "predicate": "GENUINE_COMPLETED_ATTEMPT_FIRST_SUCCESS",
+        "path": "attempt"
+      },
+      {
+        "id": "REPLAY_COUNT_ZERO",
+        "predicate": "EXACT_ZERO",
+        "path": "replayCount"
+      },
+      {
+        "id": "CONTAMINATION_COUNTS_ZERO",
+        "predicate": "ZERO_CONTAMINATION_VECTOR",
+        "path": "contamination"
+      },
+      {
+        "id": "FRESH_CURRENTNESS_AT_D7_ACCEPTANCE",
+        "predicate": "FRESH_ACCEPTANCE_CURRENTNESS",
+        "path": "currentness"
+      }
+    ],
+    "summaryBooleanCompatibility": {
+      "ref": "hardInvariants.verifiedNonSameSurfaceRequiredForD7",
+      "retained": true,
+      "eligibilityAuthority": false,
+      "maySubstituteForStructuredGate": false
+    },
+    "prohibitedAuthorities": [
+      "REQUEST",
+      "CLIENT",
+      "MODEL",
+      "OUTER_BOOLEAN"
+    ],
+    "failureBehavior": {
+      "acceptedD7Evidence": false,
+      "masteryAdvance": false,
+      "closureAdvance": false,
+      "transferConfirmed": false,
+      "safeMaximumGapClosureStatus": "d1_reproduced"
+    },
+    "generatedItemPolicy": {
+      "defaultQualification": "learning_only",
+      "defaultVerification": "unverified",
+      "separatePromotionRequired": true,
+      "promotionAuthority": "CANONICAL_VERIFIED_BANK_RELEASE_AUTHORITY"
+    }
+  },
+  "goldenVerticals": {
+    "practice": {
+      "requiredStory": [
+        "EXACT_CALCULATION_STEP_ANCHOR",
+        "KNOWLEDGE_VS_EXECUTION_DIAGNOSIS",
+        "DETERMINISTIC_RECALCULATION",
+        "CASIO_FX_9860GIII_RESET_SAFE_ROUTINE",
+        "DIRECT_REPAIR",
+        "D1",
+        "D7_CHANGED_VALUES_VERIFIED_VARIANT",
+        "TIMED_FULL_SOLUTION_RECURRENCE"
+      ],
+      "calculatorRoutineRequirements": [
+        "FORMULA",
+        "EXTRACTED_VALUES",
+        "HAND_KEY_SEQUENCE",
+        "EXPECTED_DISPLAY",
+        "UNIT_SIGN_ROUNDING_CHECKS",
+        "ANSWER_SHEET_TRANSFER",
+        "RESET_SAFE_REPRODUCTION",
+        "NO_PROGRAM_STORAGE_GUARDRAIL"
+      ],
+      "hardGates": {
+        "deterministicGoldAccuracy": 1.0,
+        "unitSignRoundingConflictReleased": 0,
+        "sameSurfaceAsTransfer": 0
+      }
+    },
+    "theory": {
+      "requiredStory": [
+        "EXACT_PARAGRAPH_OR_OUTLINE_ANCHOR",
+        "DEMAND_VERB_AND_ARGUMENT_DIAGNOSIS",
+        "DIRECT_PARAGRAPH_REPAIR",
+        "D1_BLANK_OUTLINE",
+        "D7_DIFFERENT_COMMAND_VERIFIED_VARIANT",
+        "TIMED_FULL_ANSWER_RECURRENCE"
+      ],
+      "hardGates": {
+        "unsupportedAssertionVerifiedRelease": 0,
+        "singleLlmScoreAsTruth": false
+      }
+    },
+    "law": {
+      "requiredStory": [
+        "EXACT_APPLICATION_ANCHOR",
+        "CONTROLLING_SOURCE_EFFECTIVE_VERSION",
+        "DIRECT_APPLICATION_REPAIR",
+        "D1",
+        "D7_CHANGED_FACTS_VERIFIED_VARIANT",
+        "TIMED_FULL_ANSWER_RECURRENCE"
+      ],
+      "hardGates": {
+        "sourceEffectiveVersionBindingCoverage": 1.0,
+        "unknownConflictFailClosed": 1.0,
+        "unsupportedVerifiedRelease": 0
+      }
+    }
+  },
+  "lanes": {
+    "syntheticBuild": {
+      "allowed": [
+        "AUTHOR_CREATED_SYNTHETIC_FIXTURE",
+        "LOCAL_OR_DISPOSABLE_DATABASE",
+        "MOCK_ACCOUNT",
+        "STATE_MACHINE",
+        "UI_CONTRACT",
+        "DETERMINISTIC_VALIDATOR",
+        "GOLDEN_VERTICAL_STRUCTURE",
+        "HOSTILE_TEST"
+      ],
+      "forbidden": [
+        "REAL_LEARNER_BODY",
+        "LIVE_PRIVATE_STORAGE",
+        "LIVE_PROVIDER",
+        "SUPABASE_MUTATION",
+        "PREVIEW_ACTIVATION",
+        "PRODUCTION",
+        "PAYMENT"
+      ]
+    },
+    "liveActivation": {
+      "requiredPreconditions": [
+        "CURRENT_O3A_EXACT_APPROVAL",
+        "S236P_CURRENT_EXACT_ACCEPTANCE_ARTIFACT_RESOLVED_AND_RECOMPUTED_AT_ACTIVATION",
+        "CPF_PRIVACY_RLS_GATES",
+        "OWNER_ACTIVATION_APPROVAL",
+        "EXACT_RUNTIME_EVIDENCE"
+      ],
+      "s236pActivationRevalidation": {
+        "required": true,
+        "timing": "IMMEDIATELY_BEFORE_EACH_LIVE_ACTIVATION",
+        "artifact": "CANONICAL_CONTENT_ADDRESSED_S236P_COMPLETION_ARTIFACT",
+        "resolutionCardinality": "EXACTLY_ONE",
+        "requiredState": {
+          "acceptanceCompleted": true,
+          "terminalPass": true
+        },
+        "recomputeBindings": [
+          "RECEIPT_SET",
+          "ASSERTION_EVIDENCE_SET",
+          "PRIMARY_ATTESTOR_PROVENANCE_SET",
+          "VERIFIED_INDEPENDENT_ATTESTATION",
+          "EXACT_ENVIRONMENT_AND_VAULT",
+          "FINAL_O4V_APPROVED_PACKET_DIGEST",
+          "CURRENT_O4V_DECISION_RECEIPT_APPROVAL_AND_REVOCATION_STATE",
+          "COMPLETION_TIME"
+        ],
+        "reject": [
+          "UNRESOLVED",
+          "AMBIGUOUS",
+          "DUPLICATE",
+          "DIGEST_MISMATCH",
+          "RECOMPUTE_FAILURE",
+          "MISSING_OR_INVALID_ATTESTATION",
+          "O4V_BINDING_MISMATCH_OR_REVOKED",
+          "ENVIRONMENT_OR_VAULT_MISMATCH",
+          "STALE",
+          "FAILED",
+          "BLOCKED",
+          "CONSUMED"
+        ],
+        "failureDisposition": "BLOCK_LIVE_ACTIVATION"
+      }
+    },
+    "commercialActivation": {
+      "paidCanaryRequiredPreconditions": [
+        "WCV_9_GOLDEN_9_EXTERNAL_READINESS_AND_COMMERCIAL_O4_ENTRY_GATE_COMPLETED",
+        "GOLDEN_9_EXTERNAL_READINESS_COMPLETED_AT_S239A",
+        "EXACT_EXTERNAL_COMMERCIAL_O4_PACKET_APPROVED",
+        "PRE_CANARY_COMMERCIAL_DEPENDENCY_PATH_COMPLETED_THROUGH_O4F",
+        "EXACT_AUTHORIZATION_TO_ENTER_S243C",
+        "COMMERCIAL_READINESS_EVIDENCE_CURRENT",
+        "PRODUCTION_ACCEPTANCE_CURRENT"
+      ],
+      "ownerPrivateAcceptanceMaySubstitute": false,
+      "genericOwnerActivationMaySubstitute": false,
+      "ownerPrivateEvidenceMaySubstituteExternalCommercialPath": false,
+      "canonicalDependencyPath": [
+        "S241A",
+        "O3C",
+        "S239A",
+        "S242C",
+        "O4F",
+        "S243C"
+      ],
+      "preCanaryCompletedPath": [
+        "S241A",
+        "O3C",
+        "S239A",
+        "S242C",
+        "O4F"
+      ],
+      "dependencyOrderedExternalStages": [
+        "S241A",
+        "O3C",
+        "S239A_GOLDEN_9_EXTERNAL_READINESS",
+        "S242C",
+        "O4F",
+        "S243C_PAID_WAVE_A",
+        "POST_CANARY_STAGED_EXPANSION"
+      ],
+      "paidCanaryTarget": "S243C",
+      "s243cCompletionRequiredBeforePaidCanaryEntry": false,
+      "laterExternalWavesAndAcceptanceRequiredPreconditions": [
+        "S243C_COMPLETED"
+      ],
+      "shorterPathAllowed": false
+    }
+  },
+  "implementationSlices": [
+    "WCV_0_SOURCE_STANDARD",
+    "WCV_1_GOLDEN_3_CONTRACTS",
+    "WCV_2_CAPTURE_AND_ANCHOR",
+    "WCV_3_DIAGNOSE_AND_REPAIR",
+    "WCV_4_D1_D7_TIMED",
+    "WCV_5_PERSONAL_STUDY_LEDGER",
+    "WCV_6_RECURRING_DEDUCTION_PROJECTION",
+    "WCV_7_DAILY_COMMAND",
+    "WCV_8_OWNER_PRIVATE_ACCEPTANCE",
+    "WCV_9_GOLDEN_9_EXTERNAL_READINESS_AND_COMMERCIAL_O4_ENTRY_GATE",
+    "WCV_10_S243C_PAID_CANARY",
+    "WCV_11_POST_CANARY_STAGED_EXPANSION"
+  ],
+  "implementationSliceContractBindings": {
+    "WCV_4_D1_D7_TIMED": {
+      "d7EligibilityContractRef": "d7EligibilityContract",
+      "structuredGateRequired": true,
+      "summaryBooleanMaySubstitute": false
+    }
+  },
+  "benchmarkAdoption": {
+    "UWORLD": {
+      "adopt": [
+        "EXAM_FIDELITY",
+        "REPORT_TO_PRACTICE"
+      ],
+      "reject": [
+        "QBANK_FIRST_PRODUCT",
+        "SEEN_SCORE_AS_TRANSFER"
+      ]
+    },
+    "AMBOSS": {
+      "adopt": [
+        "EVIDENCE_TO_RECOMMENDATION",
+        "EXAM_IMPORTANCE"
+      ],
+      "reject": [
+        "UNEXPLAINED_FIXED_PLAN"
+      ]
+    },
+    "DUOLINGO_BIRDBRAIN": {
+      "adopt": [
+        "LEARNER_X_TASK_DIFFICULTY",
+        "AB_OR_SHADOW_EVAL"
+      ],
+      "reject": [
+        "OPAQUE_EARLY_ML_AUTHORITY"
+      ]
+    },
+    "KHANMIGO": {
+      "adopt": [
+        "LEARNING_MEASUREMENT_SEPARATION"
+      ],
+      "reject": [
+        "LABEL_ONLY_LANE_SPLIT"
+      ]
+    },
+    "OATUTOR": {
+      "adopt": [
+        "STEP_KC_MAPPING",
+        "BOUNDED_SCAFFOLDS",
+        "POLICY_EVAL"
+      ],
+      "reject": [
+        "BKT_AS_CANONICAL_TRUTH"
+      ]
+    },
+    "PYBKT": {
+      "currentDisposition": "BENCHMARK_ONLY",
+      "adopt": [
+        "LOCAL_SYNTHETIC_BENCHMARK"
+      ],
+      "shadowPrerequisites": [
+        "EXACT_O2_MEASUREMENT_CONSENT_GATE",
+        "SUFFICIENT_CLOSED_SCHEMA_SKILL_EVENTS"
+      ],
+      "reject": [
+        "HIDDEN_SHADOW_BEFORE_O2",
+        "SHADOW_FROM_SYNTHETIC_BENCHMARK_ALONE",
+        "CANONICAL_MASTERY_AUTHORITY"
+      ]
+    },
+    "FSRS": {
+      "adopt": [
+        "REVIEW_DUE_CANDIDATE"
+      ],
+      "reject": [
+        "MASTERY_OR_PRIORITY_AUTHORITY"
+      ]
+    },
+    "H5P_BRANCHING": {
+      "adopt": [
+        "CONTRAST_AUTHORING_PATTERN"
+      ],
+      "reject": [
+        "RUNTIME_IMPORT_AS_CORE",
+        "BRANCH_SCORE_AS_MASTERY"
+      ]
+    }
+  },
+  "openSourceQualificationRequiredFields": [
+    "project",
+    "version",
+    "license",
+    "maintenance",
+    "securityPosture",
+    "transitiveDependencies",
+    "sbom",
+    "dataEgress",
+    "offlineOrSelfHost",
+    "adoptedMechanism",
+    "rejectedMechanism",
+    "exactInterface",
+    "benchmark",
+    "fallback",
+    "rollback",
+    "uninstallability",
+    "promotionGate"
+  ],
+  "standardsTargets": {
+    "QTI_3": "COMPATIBILITY_TARGET_NOT_CURRENT_CONFORMANCE_CLAIM",
+    "CALIPER": "BODYLESS_EVENT_VOCABULARY_TARGET",
+    "W3C_PROV": "LINEAGE_AND_DERIVATION_TARGET",
+    "NIST_AI_RMF_GENAI": "GOVERNANCE_TEVV_INCIDENT_REFERENCE"
+  },
+  "metricsHypotheses": {
+    "firstMeaningfulValueP50MinutesMax": 5,
+    "worldClassFirstValueP50MinutesMax": 3,
+    "biggestGapTop1ExternalAgreementMin": 0.8,
+    "directRepairRateMin": 0.6,
+    "d1IndependentParticipationMin": 0.5,
+    "fourWeekSameGapRecurrenceReductionMin": 0.25,
+    "interactionAndWaitShareOfStudyTimeMax": 0.05,
+    "activePaidVoluntaryRepurchaseMin": 0.65,
+    "veryDisappointedQualifiedActiveMin": 0.4,
+    "hypothesisOnlyNotMarketingClaim": true
+  },
+  "northStar": "VERIFIED_RECURRING_GAP_ELIMINATIONS_PER_ACTIVE_LEARNER_PER_EFFECTIVE_STUDY_HOUR",
+  "forbiddenNorthStars": [
+    "MESSAGES",
+    "TIME_IN_APP",
+    "STREAK",
+    "TOKEN_USAGE",
+    "GENERATED_ITEM_COUNT",
+    "ASSISTED_SCORE",
+    "UPLOAD_VOLUME"
+  ],
+  "pr697Disposition": {
+    "productIdeasAbsorbed": true,
+    "activeMasterPromotionRejected": true,
+    "recommendedAfterThisStandardAccepted": "SUPERSEDE_AND_CLOSE"
+  }
+}
