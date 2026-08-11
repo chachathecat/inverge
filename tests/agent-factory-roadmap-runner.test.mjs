@@ -1980,7 +1980,7 @@ test("unsupported pseudo-statuses stay unknown and cannot encode future gates", 
   assert.equal(byId(plan, "S101").readinessStatus, "unknown");
 });
 
-test("live S236P and CPF-1 blocked WIP fill capacity and prevent S236A promotion", () => {
+test("live blockers reserve two slots while the sole delivery slot selects WCV-C2", () => {
   const source = readFileSync("roadmap/active-program.yml", "utf8");
   const evaluatedAt = new Date(
     LIVE_PRE_EXPIRY_EVALUATED_AT,
@@ -2005,19 +2005,19 @@ test("live S236P and CPF-1 blocked WIP fill capacity and prevent S236A promotion
   );
   assert.equal(plan.programId, "post-650-unified-program-v1");
   assert.equal(plan.completionItem, "S299");
-  assert.equal(plan.wipLimit, 2);
+  assert.equal(plan.wipLimit, 3);
   assert.equal(plan.wipOccupiedCount, 2);
-  assert.equal(plan.availableSlots, 0);
-  assert.deepEqual(plan.readyItemIds, ["S236B"]);
-  assert.deepEqual(plan.selectedItemIds, []);
+  assert.equal(plan.availableSlots, 1);
+  assert.deepEqual(plan.readyItemIds, ["WCV-C2", "S236B"]);
+  assert.deepEqual(plan.selectedItemIds, ["WCV-C2"]);
   assert.deepEqual(
     postMerge.selected.map((entry) => entry.id),
     plan.selectedItemIds,
   );
   assert.deepEqual([...new Set(plan.analyses.map((analysis) => analysis.status))], [
     "completed",
-    "blocked",
     "queued",
+    "blocked",
   ]);
   assert.ok(plan.analyses.every((analysis) => supported.has(analysis.statusCategory)));
 
@@ -2028,6 +2028,16 @@ test("live S236P and CPF-1 blocked WIP fill capacity and prevent S236A promotion
   const s235b = byId(plan, "S235B");
   assert.equal(s235b.status, "completed");
   assert.equal(s235b.readinessStatus, "completed");
+
+  const wcvC1 = byId(plan, "WCV-C1");
+  assert.equal(wcvC1.status, "completed");
+  assert.equal(wcvC1.readinessStatus, "completed");
+
+  const wcvC2 = byId(plan, "WCV-C2");
+  assert.equal(wcvC2.status, "queued");
+  assert.equal(wcvC2.readinessStatus, "ready");
+  assert.deepEqual(wcvC2.dependencies, ["WCV-C1"]);
+  assert.equal(wcvC2.lockGroup, "wcv-vertical-campaign");
 
   const o3a = byId(plan, "O3A");
   assert.equal(o3a.status, "completed");
@@ -2129,9 +2139,9 @@ test("live TypeScript runner and post-merge selector agree without starting work
     );
     assertRunnerSelectorParity(plan, postMerge);
     assert.equal(plan.wipOccupiedCount, 2);
-    assert.equal(plan.availableSlots, 0);
-    assert.deepEqual(plan.readyItemIds, ["S236B"]);
-    assert.deepEqual(plan.selectedItemIds, []);
+    assert.equal(plan.availableSlots, 1);
+    assert.deepEqual(plan.readyItemIds, ["WCV-C2", "S236B"]);
+    assert.deepEqual(plan.selectedItemIds, ["WCV-C2"]);
     assert.deepEqual(postMerge.active, []);
   } finally {
     rmSync(directory, { recursive: true, force: true });

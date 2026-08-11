@@ -1,7 +1,9 @@
 # 답안길 Post-#650 Unified Program Contract
 
-- Contract version: `dabangil.unified_program.v2`
+- Contract version: `dabangil.unified_program.v3`
 - Current exact-scope Owner decisions:
+  `docs/decisions/2026-08-11-owner-accelerated-vertical-slice-authority-roadmap-reconciliation.md`
+  for WCV campaign delivery and roadmap reconciliation,
   `docs/decisions/2026-07-30-owner-o4v-lean-owner-private-gate.md` for lean
   O4V, and
   `docs/decisions/2026-07-29-owner-o3a-golden-3-approval.md`
@@ -110,6 +112,94 @@ packet and explicit Owner approval.
 The repository still contains legacy first-round compatibility routes and
 code. This reset neither audits nor removes them and must not claim runtime
 absence. Their presence is not authorization for new activation or exposure.
+
+## 2A. WCV campaign delivery overlay
+
+V13 remains the sole active master. The Appraiser Second World-Class Vertical
+Execution Standard `1.0.8` is subordinate to V13 and retains its complete
+behavior, safety and activation baseline. The 2026-08-11 Owner decision changes
+only the delivery model and WCV campaign graph.
+
+### One merge-producing writer
+
+At every point in time, there is at most one merge-producing Work, one writing
+branch, one writing PR and one writer. Read-only research and non-overlapping
+inspection may run concurrently inside that Work.
+
+The roadmap runner counts a `blocked` item as occupied WIP. CPF-1 and S236P are
+both truthfully blocked. `program.wipLimit` is therefore three: two blocked
+control-plane reservations plus exactly one merge-producing delivery slot.
+This capacity is not permission for three writers. The WCV items use one flat
+lock group and a dependency chain; the global merge-producing writer limit is
+one and remains manually Owner-enforced.
+
+### Complete vertical and closure rule
+
+A complete runtime vertical keeps these required layers in one PR and rollback
+unit:
+
+```text
+contract and machine validation
++ API and storage/persistence
++ runtime logic
++ learner UI
++ focused/hostile tests and applicable runtime evidence
++ feature flag and safe-deferred behavior
++ rollback evidence
+```
+
+One PR may close multiple adjacent child issues only when they form one
+learner-visible outcome, one independently testable acceptance story, one
+deployment/rollback unit and one coherent data/privacy boundary. The PR body
+lists every included issue and maps every acceptance condition. A source-only
+artifact cannot establish runtime readiness.
+
+Do not create a mandatory contract-only precursor for behavior implemented by
+the same vertical. If the outcome is too large, reduce the learner outcome
+without splitting its layers.
+
+### Bounded review
+
+Finish the complete vertical and focused/runtime evidence before review. Then
+request one exact-head full-vertical review, batch blocking findings into at
+most one corrective pass and perform at most one bounded exact-head correction
+verification. P0/P1 always block. A P2 blocks only for an explicitly named
+core safety, rights, privacy, evidence, learner-outcome or rollback invariant;
+other P2/P3 findings go to backlog. A remaining core blocker returns the PR to
+Draft and stops the campaign for resize or structural recovery. Recursive
+review/correction cycles are prohibited.
+
+### Campaign map
+
+| Campaign | Lead | Included issues | State after C1 | Outcome |
+|---|---:|---|---|---|
+| C1 | #713 | #713 | completed source-only on reconciliation merge | authority and roadmap reconciliation; runtime mutation zero |
+| C2 | #702 | #702–#705 | sole next implementation campaign | rights-safe Capture/OCR → anchor → independent attempt → gap → scaffold → repair → verification → durable reopen/resume |
+| C3 | #706 | #706–#708 | queued behind C2 | frozen D+1, sealed D+7, recurrence/reopening, Ledger, recurring deduction and Today/Full-Day |
+| C4 | #709 | #709–#710 | queued behind C3 | Owner proof, red-team, baseline and invitation-only commercial readiness; no activation |
+| C5 | #711 | #711 | queued behind C4 and exact cohort gate | frozen paid cohort with real delayed-evidence windows |
+| C6 | #712 | #712 | queued behind C5 | verified-bank and bodyless calibration flywheel |
+
+Issue #701 remains the parent program. Issue #714 remains an open,
+non-merge-producing cross-vertical acceptance tracker. It is not a standalone
+source PR or prerequisite before C2, and this reconciliation implements none
+of its behavior.
+
+### #714 durable allocation
+
+| Campaign | Allocated requirement groups |
+|---|---|
+| C2 | adaptive expertise controller; cognitive-load budget; concept-repair need decision; private typed/photo/PDF/voice/structured artifact modes; concept progression gate and three continue semantics; episode prediction/self-diagnosis; initial fading/control transfer; no upload/view/skip shortcut |
+| C3 | longitudinal metacognitive calibration; transfer-distance sequencing; motivation/volition/recovery; durable fading/control transfer; artifact/revision/deferral/export/delete lineage; Today/Full-Day defer/reduce/drop and equivalent-task semantics |
+| C4 | Owner proof of instructional-mode/routing quality; over/under-scaffolding and shortcut red-team; baseline metacognitive/autonomy comparison |
+| C6 | continuous instructional-mode, fading, transfer-distance, routing-error, metacognitive and control-transfer calibration |
+
+The allocation inventory is machine mirrored. No #714 requirement may be lost,
+silently treated as implemented, or restored as a standalone prerequisite PR.
+
+The historical `#702 → #714 → #703` merge-gate sequence is explicitly
+superseded. After C1, #702 is the sole next implementation lead as lead of C2.
+No C2 source or runtime work is part of C1.
 
 ## 3. Learning execution glossary
 
@@ -812,27 +902,31 @@ Scoped O3A and O4-family gates are not interchangeable:
 - O4D: future public self-serve activation.
 
 An approval packet states exact scope, non-goals, owner action, evidence,
-unapproved safe state, and expiry. O1R is approved only for this source
+unapproved safe state, and expiry. O1R is approved only for its source
 amendment. O3A is approved only for the exact immutable packet named by the
 2026-07-29 decision and authorizes no immediate operation. O4V is approved
-only for the lean Owner-private gate in the 2026-07-30 decision and authorizes
-no immediate operation; S236P remains unstarted. Every other O4-family
-runtime/content/commercial gate above remains a future gate.
+only for the lean Owner-private gate in the 2026-07-30 decision and authorized
+no immediate operation at decision time. The live roadmap now records S236P
+as factually blocked after its consumed failed attempt; acceptance remains
+false. Every other O4-family runtime/content/commercial gate above remains a
+future gate.
 
 ## 13. Roadmap, locks, and WIP
 
-This reset itself is one global-exclusive docs/contracts/roadmap PR with
-mutation WIP one. The root/owner agent is the sole mutation writer and
-additional agents are read-only auditors. This boundary is manually
-Owner-enforced; the flat roadmap runner does not enforce global exclusivity
-automatically.
+Every Work is global single-writer for merge-producing mutation. The root/
+Owner writer owns the one writing branch and PR; additional inspection is
+read-only and non-overlapping. This boundary is manually Owner-enforced; the
+flat roadmap runner does not enforce global exclusivity automatically.
 
 Primary statuses use only runner-supported values. Future gated work is
 `queued` with unmet dependencies; it is not marked `blocked` or
 `human_decision`, because those values consume WIP.
 
-`program.wipLimit` is two. Shared source-of-truth, schema, auth/RLS, billing,
-and other control-plane mutations are serialized at overall WIP one.
+`program.wipLimit` is three. Two slots are occupied by the truthful blocked
+CPF-1 and S236P control-plane items, leaving one merge-producing delivery
+slot. The separate global merge-producing writer limit is exactly one, so WIP
+three never authorizes parallel writers. Shared source-of-truth, schema,
+auth/RLS, billing, runtime and other control-plane mutations are serialized.
 
 The runner enforces only one flat exact-string `lockGroup`. It has no global,
 hierarchical, multi-lock, cross-run reservation, or owned-file-overlap
@@ -840,10 +934,9 @@ enforcement. Global exclusivity therefore requires dependency ordering or a
 manual Owner gate. Prose never claims automatic global enforcement.
 
 Each lock group permits one concurrent writer and zero additional concurrent
-writers. Any Work must declare an exact owned-file manifest; overlap is
-resolved before mutation. Shared source-of-truth, schema, auth/RLS, billing,
-and control-plane mutation remain overall WIP one even when program WIP is
-two.
+writers. All WCV campaign items share `wcv-vertical-campaign`. Any Work must
+declare an exact owned-file manifest; overlap is resolved before mutation.
+The C1-to-C6 dependency chain and global writer limit serialize campaign work.
 
 The S234 reset snapshot contained exactly:
 
@@ -852,10 +945,14 @@ The S234 reset snapshot contained exactly:
 
 S234R, S235A, and S235B are completed as source/contract evidence. The current
 authority is `roadmap/active-program.yml`; this contract deliberately does
-not mirror its dynamic ready-item list. O3A and lean O4V are completed as
-exact Owner decisions; S236B and S236P remain queued. S236A remains queued
-with S236P as its sole unmet dependency. Selection is metadata-only: it does
-not start, reserve, provision, author, or execute work.
+not mirror its general dynamic ready-item list. O3A and lean O4V are completed
+as exact Owner decisions; S236B remains queued, CPF-1 and S236P remain
+factually blocked, and S236A remains queued with S236P as its unmet dependency.
+The machine mirror pins only the WCV campaign graph and sole next campaign,
+not the unrelated dynamic ready list. Runner selection is metadata-only: it
+does not start, reserve, provision, author, or execute work. After C1, the
+single available runner slot selects WCV-C2; a separate exact Work must still
+start it.
 
 PR #660 remains Draft and blocked. Its current exploratory OCR evidence does
 not establish S236B. Any continuation must reconcile onto amended main and

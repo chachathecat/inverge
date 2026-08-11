@@ -3,8 +3,17 @@ version: 1
 program:
   id: post-650-unified-program-v1
   completionItem: S299
-  wipLimit: 2
+  wipLimit: 3
   maxRepairAttempts: 3
+  blockedControlPlaneReservationCount: 2
+  mergeProducingDeliverySlotCount: 1
+  globalMergeProducingWriterLimit: 1
+  wipLimitDoesNotAuthorizeWriterCount: true
+  campaignOverlay: WCV-C1-C6
+  campaignLockGroup: wcv-vertical-campaign
+  soleNextImplementationItem: WCV-C2
+  soleNextImplementationLeadIssue: 702
+  crossVerticalAcceptanceTrackerIssue: 714
   activeMasterPlan: docs/strategy/dabangil-professional-exam-reasoning-os-final-master-plan-v13-2026-08-06.md
   v12T0Status: completed_source_only_alignment
   cpf1Status: blocked_unknown_reachable_sinks
@@ -298,6 +307,91 @@ items:
     lockGroup: source-safety-control-plane
     risk: high
     priority: 31.1
+  - id: WCV-0
+    title: Appraiser Second World-Class Vertical Execution Standard 1.0.8
+    status: completed
+    completionScope: source_only_subordinate_v13_execution_standard
+    currentRuntimeReadinessEstablished: false
+    leadIssue: 699
+    mergedPr: 700
+    contractVersion: 1.0.8
+    runtimeMutation: false
+    dependencies: [S234R]
+    lockGroup: wcv-vertical-campaign
+    risk: high
+    priority: 31.11
+  - id: WCV-C1
+    title: C1 Authority Reconciliation
+    status: completed
+    completionScope: source_only_authority_and_roadmap_reconciliation
+    currentRuntimeReadinessEstablished: false
+    leadIssue: 713
+    includedIssues: [713]
+    runtimeMutation: false
+    applicationMutation: false
+    dependencies: [WCV-0]
+    lockGroup: wcv-vertical-campaign
+    risk: high
+    priority: 31.12
+  - id: WCV-C2
+    title: C2 First Trusted Repair Vertical
+    status: queued
+    executionState: sole_next_implementation_campaign
+    leadIssue: 702
+    includedIssues: [702, 703, 704, 705]
+    crossVerticalAcceptanceTracker: 714
+    requiredLayers: [contract_machine_validation, api_storage_persistence, runtime_logic, learner_ui, focused_hostile_runtime_evidence, feature_flag_safe_deferred, rollback]
+    standalone702SourcePrAllowed: false
+    standalone714PrerequisitePrAllowed: false
+    sourceOnlyCompletionEstablishesRuntimeReadiness: false
+    dependencies: [WCV-C1]
+    lockGroup: wcv-vertical-campaign
+    risk: high
+    priority: 31.13
+  - id: WCV-C3
+    title: C3 Durable Learning and Daily Command Vertical
+    status: queued
+    leadIssue: 706
+    includedIssues: [706, 707, 708]
+    crossVerticalAcceptanceTracker: 714
+    dependencies: [WCV-C2]
+    lockGroup: wcv-vertical-campaign
+    risk: high
+    priority: 31.14
+  - id: WCV-C4
+    title: C4 Owner Proof and Commercial Readiness
+    status: queued
+    leadIssue: 709
+    includedIssues: [709, 710]
+    crossVerticalAcceptanceTracker: 714
+    learnerActivationAuthorized: false
+    paymentActivationAuthorized: false
+    dependencies: [WCV-C3]
+    lockGroup: wcv-vertical-campaign
+    risk: high
+    priority: 31.15
+  - id: WCV-C5
+    title: C5 Frozen Paid Cohort
+    status: queued
+    leadIssue: 711
+    includedIssues: [711]
+    separateExactCohortAuthorizationRequired: true
+    delayedEvidenceSimulationAllowed: false
+    dependencies: [WCV-C4]
+    lockGroup: wcv-vertical-campaign
+    risk: high
+    priority: 31.16
+  - id: WCV-C6
+    title: C6 Verified-Bank and Calibration Flywheel
+    status: queued
+    leadIssue: 712
+    includedIssues: [712]
+    crossVerticalAcceptanceTracker: 714
+    rawLearnerBodyReuseOrTrainingAllowed: false
+    dependencies: [WCV-C5]
+    lockGroup: wcv-vertical-campaign
+    risk: high
+    priority: 31.17
   - id: CPF-1
     title: Persistence-Sink Inventory
     status: blocked
