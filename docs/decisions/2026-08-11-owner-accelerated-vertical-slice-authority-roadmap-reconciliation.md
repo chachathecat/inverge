@@ -333,8 +333,10 @@ The source reconciliation is limited to these paths:
 24. `tests/s223-three-subject-corpus-reference-quality-acceptance.test.mjs`
 25. `tests/s224-three-subject-learner-runtime-acceptance.test.mjs`
 26. `tests/theory-answer-review-engine.test.mjs`
+27. `tests/inverge-roadmap-curriculum-docs.test.mjs`
 
-The last fourteen paths are assertion-only conformance updates required when
-the repository-wide default suite encountered the new truthful three-slot
-roadmap and sole selected WCV-C2 campaign. No runtime/application path is in
-scope, and no path outside this manifest may change.
+The last fifteen paths are assertion-only conformance updates required when
+the repository-wide default and Learner Loop suites encountered the new
+truthful three-slot roadmap, sole selected WCV-C2 campaign and current blocked
+S236P state. No runtime/application path is in scope, and no path outside this
+manifest may change.

@@ -70,8 +70,10 @@ The initial pre-edit manifest was fixed at 12 source/control-plane/test paths:
 
 Before publication, the repository-wide default suite demonstrated that its
 legacy live-roadmap assertions also had to recognize the truthful third slot
-and sole WCV-C2 selection. The final manifest was therefore frozen at 26 paths
-by adding these assertion-only conformance surfaces:
+and sole WCV-C2 selection. The initial exact-head Learner Loop gate then
+identified one more assertion that still described S236P as queued. The
+bounded corrective manifest was therefore frozen at 27 paths by adding these
+assertion-only conformance surfaces:
 
 13. `tests/inverge-product-constitution.test.mjs`
 14. `tests/practice-answer-review-engine.test.mjs`
@@ -87,6 +89,7 @@ by adding these assertion-only conformance surfaces:
 24. `tests/s223-three-subject-corpus-reference-quality-acceptance.test.mjs`
 25. `tests/s224-three-subject-learner-runtime-acceptance.test.mjs`
 26. `tests/theory-answer-review-engine.test.mjs`
+27. `tests/inverge-roadmap-curriculum-docs.test.mjs`
 
 No runtime/application, schema, migration, RLS, Storage, provider, dependency,
 content, deployment or Production path is in the final manifest.
@@ -220,6 +223,13 @@ LOCAL DEPENDENCY BLOCK — eslint absent
 
 npm run build
 LOCAL DEPENDENCY BLOCK — next absent
+
+Initial exact-head 1879d57b51dd8f8653685a065f0e8519a74f3dbd
+PR Contract / Risk Gate / Runtime Gate / Vercel: PASS
+Full default Node suite in Full CI: PASS — 1,272/1,272
+Fast CI typecheck / lint / focused tests: PASS
+Learner Loop in Fast CI / Full CI / Learner Loop Health: 707/708 — one stale roadmap-doc assertion expected S236P queued and an exact legacy line wrap
+Bounded correction: update the existing roadmap-doc assertion to S236P factually blocked and preserve the compatible dynamic-ready-list wording; no behavior change
 ```
 
 GitHub exact-head CI is authoritative for dependency-backed typecheck, lint,

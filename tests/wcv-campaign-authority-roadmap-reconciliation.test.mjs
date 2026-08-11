@@ -317,13 +317,13 @@ test("registers this focused reconciliation test exactly once", async () => {
   assert.equal(matches.length, 1);
 });
 
-test("limits C1 to the declared 26 source and test paths", async () => {
+test("limits C1 to the declared 27 source and test paths", async () => {
   const decision = await text(DECISION);
   const manifest = decision.match(/## 11\. C1 changed-path manifest([\s\S]*)$/)?.[1] ?? "";
   const paths = [...manifest.matchAll(/`([^`]+)`/g)].map((match) => match[1]);
 
-  assert.equal(paths.length, 26);
-  assert.equal(new Set(paths).size, 26);
+  assert.equal(paths.length, 27);
+  assert.equal(new Set(paths).size, 27);
   for (const path of paths) {
     assert.doesNotMatch(path, /^(?:app|lib|supabase|migrations)\//, path);
   }

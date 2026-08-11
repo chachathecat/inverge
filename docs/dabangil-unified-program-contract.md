@@ -945,8 +945,9 @@ The S234 reset snapshot contained exactly:
 
 S234R, S235A, and S235B are completed as source/contract evidence. The current
 authority is `roadmap/active-program.yml`; this contract deliberately does
-not mirror its general dynamic ready-item list. O3A and lean O4V are completed
-as exact Owner decisions; S236B remains queued, CPF-1 and S236P remain
+not mirror its dynamic ready-item list.
+O3A and lean O4V are completed as exact Owner decisions; S236B remains queued,
+CPF-1 and S236P remain
 factually blocked, and S236A remains queued with S236P as its unmet dependency.
 The machine mirror pins only the WCV campaign graph and sole next campaign,
 not the unrelated dynamic ready list. Runner selection is metadata-only: it
