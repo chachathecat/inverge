@@ -77,7 +77,13 @@ function itemWithRawDependencies({
   ].join("\n");
 }
 
-function roadmap(items, { wipLimit = 2 } = {}) {
+function roadmap(
+  items,
+  {
+    wipLimit = 2,
+    globalMergeProducingWriterLimit,
+  } = {},
+) {
   return [
     "version: 1",
     "",
@@ -85,6 +91,11 @@ function roadmap(items, { wipLimit = 2 } = {}) {
     "  id: test-program",
     "  completionItem: S999",
     `  wipLimit: ${wipLimit}`,
+    ...(globalMergeProducingWriterLimit === undefined
+      ? []
+      : [
+          `  globalMergeProducingWriterLimit: ${globalMergeProducingWriterLimit}`,
+        ]),
     "",
     "items:",
     ...items,
@@ -215,6 +226,22 @@ function assertRunnerSelectorParity(plan, selector) {
   assert.equal(selector.generatedAt, plan.generatedAt);
   assert.equal(selector.activeCount, plan.wipOccupiedCount);
   assert.equal(selector.availableSlots, plan.availableSlots);
+  assert.equal(
+    selector.globalMergeProducingWriterLimit,
+    plan.globalMergeProducingWriterLimit,
+  );
+  assert.equal(
+    selector.activeWriterCount,
+    plan.activeWriterCount,
+  );
+  assert.equal(
+    selector.availableWriterSlots,
+    plan.availableWriterSlots,
+  );
+  assert.equal(
+    selector.selectionSlots,
+    plan.selectionSlots,
+  );
   assert.deepEqual(
     selector.selected.map((entry) => entry.id),
     plan.selectedItemIds,
@@ -227,6 +254,21 @@ function assertRunnerSelectorParity(plan, selector) {
     selector.active.map((entry) => entry.id),
     effectiveActiveIds(plan),
   );
+}
+
+function replaceItemStatus(source, itemId, status) {
+  const marker = `  - id: ${itemId}\n`;
+  const start = source.indexOf(marker);
+  assert.notEqual(start, -1, `missing roadmap item ${itemId}`);
+  const next = source.indexOf("\n  - id: ", start + marker.length);
+  const end = next === -1 ? source.length : next;
+  const block = source.slice(start, end);
+  const updated = block.replace(
+    /\n    status: [^\n]+/,
+    `\n    status: ${status}`,
+  );
+  assert.notEqual(updated, block, `missing status for ${itemId}`);
+  return source.slice(0, start) + updated + source.slice(end);
 }
 
 test("completed dependencies make an item ready", () => {
@@ -2008,6 +2050,10 @@ test("live blockers reserve two slots while the sole delivery slot selects WCV-C
   assert.equal(plan.wipLimit, 3);
   assert.equal(plan.wipOccupiedCount, 2);
   assert.equal(plan.availableSlots, 1);
+  assert.equal(plan.globalMergeProducingWriterLimit, 1);
+  assert.equal(plan.activeWriterCount, 0);
+  assert.equal(plan.availableWriterSlots, 1);
+  assert.equal(plan.selectionSlots, 1);
   assert.deepEqual(plan.readyItemIds, ["WCV-C2", "S236B"]);
   assert.deepEqual(plan.selectedItemIds, ["WCV-C2"]);
   assert.deepEqual(
@@ -2108,6 +2154,166 @@ test("live blockers reserve two slots while the sole delivery slot selects WCV-C
   assert.deepEqual(byId(plan, "S270").dependencies, ["O2"]);
   assert.deepEqual(byId(plan, "O4E").dependencies, ["S270"]);
   assert.deepEqual(byId(plan, "S271").dependencies, ["O4E"]);
+});
+
+test("global writer cap survives either or both blocker clearances across lock groups", () => {
+  const original = readFileSync("roadmap/active-program.yml", "utf8");
+  const evaluatedAt = new Date(
+    LIVE_PRE_EXPIRY_EVALUATED_AT,
+  );
+
+  for (const clearedIds of [
+    ["CPF-1"],
+    ["S236P"],
+    ["CPF-1", "S236P"],
+  ]) {
+    const source = clearedIds.reduce(
+      (candidate, itemId) =>
+        replaceItemStatus(candidate, itemId, "completed"),
+      original,
+    );
+    const plan = createRoadmapRunnerPlanFromYamlAt(
+      source,
+      evaluatedAt,
+    );
+    const selector = createNextTaskResultFromYaml(
+      source,
+      evaluatedAt,
+    );
+
+    assert.equal(plan.globalMergeProducingWriterLimit, 1);
+    assert.equal(plan.activeWriterCount, 0);
+    assert.equal(plan.availableWriterSlots, 1);
+    assert.equal(plan.selectionSlots, 1);
+    assert.ok(plan.readyItemIds.includes("WCV-C2"));
+    assert.ok(plan.readyItemIds.includes("S236B"));
+    assert.deepEqual(plan.selectedItemIds, ["WCV-C2"]);
+    assertRunnerSelectorParity(plan, selector);
+  }
+});
+
+test("every raw active alias consumes writer capacity even when dependencies are invalid", () => {
+  for (const activeStatus of [
+    "active",
+    "in_progress",
+    "in_review",
+    "pr_open",
+  ]) {
+    const source = roadmap(
+      [
+        item({ id: "S100", status: "queued", priority: 1 }),
+        item({
+          id: "S101",
+          status: activeStatus,
+          dependencies: ["S100"],
+          lockGroup: "active-writer",
+          priority: 2,
+        }),
+        item({
+          id: "S102",
+          lockGroup: "different-ready-group",
+          priority: 3,
+        }),
+      ],
+      {
+        wipLimit: 3,
+        globalMergeProducingWriterLimit: 1,
+      },
+    );
+    const evaluatedAt = new Date(
+      LIVE_PRE_EXPIRY_EVALUATED_AT,
+    );
+    const plan = createRoadmapRunnerPlanFromYamlAt(
+      source,
+      evaluatedAt,
+    );
+    const selector = createNextTaskResultFromYaml(
+      source,
+      evaluatedAt,
+    );
+
+    assert.equal(plan.activeWriterCount, 1, activeStatus);
+    assert.equal(plan.availableWriterSlots, 0, activeStatus);
+    assert.equal(plan.selectionSlots, 0, activeStatus);
+    assert.deepEqual(plan.selectedItemIds, [], activeStatus);
+    assert.equal(byId(plan, "S101").readinessStatus, "blocked");
+    assertRunnerSelectorParity(plan, selector);
+  }
+});
+
+test("malformed explicit global writer limits fail both selectors closed", () => {
+  for (const malformed of [0, -1, 1.5, "nonnumeric"]) {
+    const source = roadmap(
+      [item({ id: "S100", priority: 1 })],
+      {
+        globalMergeProducingWriterLimit: malformed,
+      },
+    );
+    const expected =
+      /globalMergeProducingWriterLimit must be a positive integer when present/;
+
+    assert.throws(
+      () => createRoadmapRunnerPlanFromYaml(source),
+      expected,
+      String(malformed),
+    );
+    assert.throws(
+      () =>
+        createNextTaskResultFromYaml(
+          source,
+          new Date(LIVE_PRE_EXPIRY_EVALUATED_AT),
+        ),
+      expected,
+      String(malformed),
+    );
+    assert.throws(
+      () =>
+        selectNextTasks(
+          {
+            program: {
+              wipLimit: 2,
+              globalMergeProducingWriterLimit: malformed,
+            },
+            items: [
+              {
+                id: "S100",
+                status: "queued",
+                dependencies: [],
+                priority: 1,
+              },
+            ],
+          },
+          new Date(LIVE_PRE_EXPIRY_EVALUATED_AT),
+        ),
+      expected,
+      String(malformed),
+    );
+  }
+});
+
+test("roadmaps without a global writer limit retain legacy maximum-two selection", () => {
+  const source = roadmap([
+    item({ id: "S100", lockGroup: "group-a", priority: 1 }),
+    item({ id: "S101", lockGroup: "group-b", priority: 2 }),
+    item({ id: "S102", lockGroup: "group-c", priority: 3 }),
+  ]);
+  const evaluatedAt = new Date(
+    LIVE_PRE_EXPIRY_EVALUATED_AT,
+  );
+  const plan = createRoadmapRunnerPlanFromYamlAt(
+    source,
+    evaluatedAt,
+  );
+  const selector = createNextTaskResultFromYaml(
+    source,
+    evaluatedAt,
+  );
+
+  assert.equal(plan.globalMergeProducingWriterLimit, null);
+  assert.equal(plan.availableWriterSlots, null);
+  assert.equal(plan.selectionSlots, 2);
+  assert.deepEqual(plan.selectedItemIds, ["S100", "S101"]);
+  assertRunnerSelectorParity(plan, selector);
 });
 
 test("live TypeScript runner and post-merge selector agree without starting work", () => {

@@ -936,11 +936,19 @@ Content-quality work also requires domain eval evidence. A structurally valid JS
 Roadmap primary status must use runner-supported values. Encode future gates
 as `queued` items with unmet dependencies so they consume no mutation WIP.
 `blocked` and `human_decision` consume WIP and are not future-state labels.
-The runner enforces only one flat exact-string `lockGroup`; it does not
-automatically enforce global, hierarchical, multi-lock, cross-run, or
-owned-file exclusivity. The WCV campaign therefore uses one shared flat lock
-group and dependency chain. Its global merge-producing writer limit is one and
-is manually Owner-enforced.
+The runner supports one flat exact-string `lockGroup` and now also enforces an
+explicit positive-integer `program.globalMergeProducingWriterLimit` within
+each parsed roadmap plan. Both executable selectors count raw `active`,
+`in_progress`, `in_review`, and `pr_open` aliases against that global capacity,
+even when an active item's dependencies are invalid. `blocked` and
+`human_decision` consume WIP but not writer capacity. Distinct lock groups do
+not bypass the global per-plan cap.
+
+The selectors do not provide a cross-process distributed writer lease,
+hierarchical/multi-lock ownership, cross-run reservation, or owned-file
+exclusivity. The Owner single-writer prohibition remains controlling across
+independent Work windows. The WCV campaign therefore retains one shared flat
+lock group and dependency chain in addition to the mechanically enforced cap.
 
 `program.wipLimit` is three: two occupied reservations preserve the truthful
 blocked CPF-1 and S236P items, and one slot permits the sole merge-producing
@@ -955,6 +963,7 @@ Owner gates:
 - O2: Production measurement, consent, retention, and telemetry;
 - O3: rights, Gold reviewers, and public/shared content;
 - O4: migration, secret, provider, price/payment, real users, and flags;
+- O4W: exact frozen paid-cohort manifest authorization for WCV-C5 only;
 - O5: research opt-in, offline training, and efficacy claims.
 
 O1R is approved only for the 2026-07-26 source amendment. O3A is approved
@@ -962,8 +971,11 @@ only for exact packet
 `o3a-s234r-appraiser-second-2026-q1-owner-private-golden-3-v2` under the
 2026-07-29 dated decision; it authorizes no immediate operation, leaves S236A
 unstarted, and still requires completed exact S236P plus a manual S236A start.
-O4V, O4A, O4T, O2O, O4P, external-commercial activation, public activation,
-and O2/O5 remain unmet until their separate exact-scope packets are accepted.
+O4V, O4A, O4T, O2O, O4P, O4W, external-commercial activation, public
+activation, and O2/O5 remain unmet until their separate exact-scope packets
+are accepted. O4W is a queued, unapproved auxiliary gate after WCV-C4; WCV-C5
+depends on it, and it grants no learner, payment, delayed-evidence, cohort or
+Production authority in C1.
 O4V is the private-plane binding gate, O4T is the post-benchmark threshold
 decision, O2O is the exact Owner-private comparison measurement/retention
 gate, and O4P is optimizer limited activation only. O2O cannot authorize

@@ -370,17 +370,35 @@ items:
     lockGroup: wcv-vertical-campaign
     risk: high
     priority: 31.15
+  - id: O4W
+    title: Owner WCV Frozen Paid Cohort Manifest Authorization
+    status: queued
+    executionState: exact_frozen_cohort_authorization_unmet
+    decisionScope: exact_frozen_cohort_manifest_activation_only
+    gatedCampaign: WCV-C5
+    gatedIssue: 711
+    authorizationGranted: false
+    automaticStartAllowed: false
+    learnerActivationAuthorized: false
+    paymentActivationAuthorized: false
+    delayedEvidenceAuthorized: false
+    productionAuthorized: false
+    dependencies: [WCV-C4]
+    lockGroup: wcv-vertical-campaign
+    risk: high
+    priority: 31.16
   - id: WCV-C5
     title: C5 Frozen Paid Cohort
     status: queued
     leadIssue: 711
     includedIssues: [711]
+    cohortAuthorizationGate: O4W
     separateExactCohortAuthorizationRequired: true
     delayedEvidenceSimulationAllowed: false
-    dependencies: [WCV-C4]
+    dependencies: [WCV-C4, O4W]
     lockGroup: wcv-vertical-campaign
     risk: high
-    priority: 31.16
+    priority: 31.17
   - id: WCV-C6
     title: C6 Verified-Bank and Calibration Flywheel
     status: queued
@@ -391,7 +409,7 @@ items:
     dependencies: [WCV-C5]
     lockGroup: wcv-vertical-campaign
     risk: high
-    priority: 31.17
+    priority: 31.18
   - id: CPF-1
     title: Persistence-Sink Inventory
     status: blocked

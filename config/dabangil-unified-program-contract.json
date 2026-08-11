@@ -813,6 +813,13 @@
       "writingBranchLimit": 1,
       "writingPrLimit": 1,
       "mutationWriterLimit": 1,
+      "perPlanGlobalWriterCapEnforcedBySelectors": true,
+      "globalWriterCapSelectorPaths": [
+        "lib/agent-factory/roadmap-runner.ts",
+        "scripts/automation/determine-next-task.mjs"
+      ],
+      "crossProcessDistributedWriterLeasePresent": false,
+      "crossProcessOwnerSingleWriterProhibitionRemainsControlling": true,
       "readOnlyResearchInsideWorkMayRunConcurrently": true,
       "nonOverlappingInspectionInsideWorkMayRunConcurrently": true,
       "additionalMutationWritersAllowed": false
@@ -925,8 +932,19 @@
         "name": "Frozen Paid Cohort",
         "leadIssue": 711,
         "includedIssues": [711],
-        "dependencies": ["WCV-C4"],
+        "dependencies": ["WCV-C4", "O4W"],
         "state": "queued",
+        "cohortAuthorizationGate": "O4W",
+        "cohortAuthorization": {
+          "roadmapItemId": "O4W",
+          "decisionScope": "exact_frozen_cohort_manifest_activation_only",
+          "authorizationGranted": false,
+          "automaticStartAllowed": false,
+          "learnerActivationAuthorized": false,
+          "paymentActivationAuthorized": false,
+          "delayedEvidenceAuthorized": false,
+          "productionAuthorized": false
+        },
         "separateExactCohortAuthorizationRequired": true,
         "realDelayedEvidenceMayBeSimulated": false
       },
@@ -1041,6 +1059,7 @@
     "O2O": "future_exact_owner_private_schedule_comparison_measurement_retention_gate",
     "O4P": "future_exact_owner_only_optimizer_limited_activation_gate",
     "O4F": "future_external_commercial_beta_activation_gate",
+    "O4W": "future_exact_frozen_paid_cohort_manifest_authorization_unapproved",
     "O4D": "future_public_self_serve_activation_gate"
   },
   "roadmapContract": {
@@ -1083,6 +1102,21 @@
     "blockedFutureItemsConsumeWipProhibited": true,
     "flatLockGroupOnly": true,
     "globalExclusivityAutomaticallyEnforced": false,
+    "globalExclusivityAutomaticallyEnforcedScope": "cross_process_distributed_writer_lease_absent",
+    "perPlanGlobalMergeProducingWriterLimitEnforced": true,
+    "perPlanGlobalMergeProducingWriterLimitSelectorPaths": [
+      "lib/agent-factory/roadmap-runner.ts",
+      "scripts/automation/determine-next-task.mjs"
+    ],
+    "activeWriterStatusesConsumeWriterCapacity": [
+      "active",
+      "in_progress",
+      "in_review",
+      "pr_open"
+    ],
+    "blockedAndHumanDecisionConsumeWriterCapacity": false,
+    "crossProcessDistributedWriterLeasePresent": false,
+    "crossProcessOwnerSingleWriterProhibitionRemainsControlling": true,
     "perLockGroupConcurrentWriterLimit": 1,
     "additionalConcurrentWritersInSameLockGroup": 0,
     "sharedControlPlaneOverallMutationWip": 1,
@@ -1100,12 +1134,28 @@
       "ownerPrivateOptimizerMeasurementRetention": "O2O",
       "optimizerLimitedActivation": "O4P",
       "externalCommercialBeta": "O4F",
+      "frozenPaidCohortManifestAuthorization": "O4W",
       "golden9": "O3C",
       "firstRoundRights": "O3B",
       "firstRoundPrivateRuntime": "O4B",
       "academyPilot": "O4C",
       "publicSelfServe": "O4D",
       "sharedSignalOssLimitedActivation": "O4E"
+    },
+    "frozenPaidCohortAuthorization": {
+      "roadmapItemId": "O4W",
+      "status": "queued",
+      "executionState": "exact_frozen_cohort_authorization_unmet",
+      "decisionScope": "exact_frozen_cohort_manifest_activation_only",
+      "gatedCampaign": "WCV-C5",
+      "gatedIssue": 711,
+      "dependencies": ["WCV-C4"],
+      "authorizationGranted": false,
+      "automaticStartAllowed": false,
+      "learnerActivationAuthorized": false,
+      "paymentActivationAuthorized": false,
+      "delayedEvidenceAuthorized": false,
+      "productionAuthorized": false
     },
     "s234ResetReadyItemIdsSnapshot": [
       "S235A",

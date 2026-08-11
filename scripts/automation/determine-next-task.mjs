@@ -40,6 +40,34 @@ function normalizeStatus(value) {
     .replace(/[\s-]+/g, "_");
 }
 
+function resolveGlobalMergeProducingWriterLimit(
+  program,
+) {
+  if (
+    !Object.prototype.hasOwnProperty.call(
+      program,
+      "globalMergeProducingWriterLimit",
+    )
+  ) {
+    return null;
+  }
+
+  const value =
+    program.globalMergeProducingWriterLimit;
+
+  if (
+    typeof value !== "number" ||
+    !Number.isInteger(value) ||
+    value <= 0
+  ) {
+    throw new Error(
+      "roadmap.program.globalMergeProducingWriterLimit must be a positive integer when present.",
+    );
+  }
+
+  return value;
+}
+
 function approvalExpiryEpochMs(item) {
   if (
     !Object.prototype.hasOwnProperty.call(
@@ -422,6 +450,10 @@ function validateRoadmap(roadmap) {
     );
   }
 
+  resolveGlobalMergeProducingWriterLimit(
+    roadmap.program,
+  );
+
   const ids = new Set();
 
   for (const item of roadmap.items) {
@@ -581,6 +613,24 @@ export function selectNextTasks(
     0,
     wipLimit - rawWipItems.length,
   );
+  const globalMergeProducingWriterLimit =
+    resolveGlobalMergeProducingWriterLimit(
+      roadmap.program,
+    );
+  const activeWriterCount = rawWipItems.filter(
+    (item) =>
+      EFFECTIVE_ACTIVE_STATUSES.has(
+        normalizeStatus(item.status),
+      ),
+  ).length;
+  const availableWriterSlots =
+    globalMergeProducingWriterLimit === null
+      ? null
+      : Math.max(
+          0,
+          globalMergeProducingWriterLimit -
+            activeWriterCount,
+        );
 
   const eligible = [];
   const blockedByLock = [];
@@ -637,6 +687,7 @@ export function selectNextTasks(
   const selectionSlots = Math.min(
     2,
     availableSlots,
+    availableWriterSlots ?? 2,
   );
 
   for (const item of eligible) {
@@ -671,6 +722,10 @@ export function selectNextTasks(
     wipLimit,
     activeCount: rawWipItems.length,
     availableSlots,
+    globalMergeProducingWriterLimit,
+    activeWriterCount,
+    availableWriterSlots,
+    selectionSlots,
     active: effectiveActiveItems.map(
       removeInternalFields,
     ),

@@ -90,9 +90,14 @@ assertion-only conformance surfaces:
 25. `tests/s224-three-subject-learner-runtime-acceptance.test.mjs`
 26. `tests/theory-answer-review-engine.test.mjs`
 27. `tests/inverge-roadmap-curriculum-docs.test.mjs`
+28. `lib/agent-factory/roadmap-runner.ts`
+29. `scripts/automation/determine-next-task.mjs`
 
-No runtime/application, schema, migration, RLS, Storage, provider, dependency,
-content, deployment or Production path is in the final manifest.
+The C1-R structural recovery adds only paths 28 and 29 to the cumulative
+manifest. They are the two existing executable roadmap selectors and implement
+only per-plan control-plane selection capacity. No other runtime/application/
+lib, schema, migration, RLS, Storage, provider, dependency, content, deployment
+or Production path is in the final 29-path manifest.
 
 ## 4. Reconciled delivery model
 
@@ -129,6 +134,18 @@ campaign lock group: wcv-vertical-campaign
 selected next item after C1: WCV-C2
 ```
 
+Both executable selectors now enforce the explicit positive-integer global
+writer limit inside one parsed roadmap plan. Raw `active`, `in_progress`,
+`in_review` and `pr_open` aliases consume writer capacity even when dependency
+validation makes them ineffective. `blocked` and `human_decision` retain WIP
+reservations without consuming writer capacity. Distinct lock groups cannot
+expand selection above the cap. A roadmap without the field retains the
+historical maximum-two selection behavior.
+
+This is not a cross-process distributed writer lease. The exact Owner
+single-writer prohibition remains controlling across independently launched
+Work windows.
+
 CPF-1 remains `blocked_unknown_reachable_sinks` with `cpf1Complete: false`.
 S236P remains `acceptance_blocked` with `acceptanceCompleted: false`,
 `terminalPass: false` and `nextLiveAttemptAuthorized: false`.
@@ -141,7 +158,8 @@ S236P remains `acceptance_blocked` with `acceptanceCompleted: false`,
 | C2 | #702 | #702–#705 | C1 | sole next implementation campaign |
 | C3 | #706 | #706–#708 | C2 | queued |
 | C4 | #709 | #709–#710 | C3 | queued; no activation |
-| C5 | #711 | #711 | C4 plus exact cohort gate | queued |
+| O4W | — | auxiliary Owner gate | C4 | queued, unapproved, non-activating |
+| C5 | #711 | #711 | C4 plus O4W exact cohort gate | queued |
 | C6 | #712 | #712 | C5 | queued |
 
 Issue #701 remains the parent. Issue #714 remains an open non-merge-producing
@@ -184,6 +202,21 @@ The focused test fails when:
 - review starts before completion/validation;
 - correction/review recursion is permitted; or
 - the focused test drops out of the default runner.
+
+C1-R adds hostile cases that fail when:
+
+- either or both truthful blockers clear and distinct-lock ready items exceed
+  the global one-writer selection cap;
+- any raw active alias leaves additional writer capacity, including when its
+  dependencies are invalid;
+- an explicit writer limit is zero, negative, fractional or nonnumeric;
+- a roadmap without an explicit limit loses its legacy maximum-two behavior;
+- TypeScript and MJS selector results diverge;
+- O4W is absent, approved, activating, or not dependent on WCV-C4;
+- WCV-C5 omits either WCV-C4 or O4W;
+- completing C2-C4 selects C5 instead of O4W;
+- completing O4W still leaves C5 ineligible; or
+- roadmap, machine mirror and prose disagree about the O4W edge.
 
 ## 9. Exact commands and results
 
@@ -235,6 +268,60 @@ Bounded correction: update the existing roadmap-doc assertion to S236P factually
 GitHub exact-head CI is authoritative for dependency-backed typecheck, lint,
 build and the complete default Node suite because this C1 Work installs no
 dependencies. Its exact head and result are appended to the PR evidence.
+
+## 9A. C1-R structural recovery validation
+
+The recovery began from exact Draft head
+`def6323b99d172f00cd3fca2e5a366136cd51c32`, tree
+`745a9b811bebbc322fcd7bdd95e7560e581df870`, and parent
+`1879d57b51dd8f8653685a065f0e8519a74f3dbd`. Main remained exactly
+`2b75e1687bba711692769ad0f6558b0e552da772`, tree
+`eaebb2a6029e843e675741bb93bd62bbc7f2cb55`. PR #715 was open, Draft,
+mergeable, and cumulative 27 paths. Both P1 review threads were unresolved;
+#713 and #701-#714 were open; and no competing merge-producing writer had
+advanced.
+
+The recovery working diff is restricted to the approved 12-path subset. The
+only paths newly added to the cumulative PR are the TypeScript and MJS
+selectors, so the cumulative manifest is exactly 29 paths.
+
+```text
+node scripts/run-node-tests.mjs tests/wcv-campaign-authority-roadmap-reconciliation.test.mjs tests/agent-factory-roadmap-runner.test.mjs tests/dabangil-premium-alignment.test.mjs tests/inverge-product-constitution.test.mjs --workers=1
+PASS — 88/88
+
+node scripts/run-node-tests.mjs tests/wcv-campaign-authority-roadmap-reconciliation.test.mjs tests/agent-factory-roadmap-runner.test.mjs tests/dabangil-premium-alignment.test.mjs tests/inverge-product-constitution.test.mjs tests/s234r-owner-dogfood-private-plane-schedule-amendment.test.mjs tests/appraiser-second-world-class-vertical-contract.test.mjs --workers=1
+PASS — 131/131
+
+node scripts/run-node-tests.mjs --workers=1
+DEPENDENCY-ABSENT LOCAL DIAGNOSTIC — 1,258/1,261 passed; the only three load failures were ERR_MODULE_NOT_FOUND for @supabase/supabase-js, fast-xml-parser and typescript because node_modules was absent
+
+npm ci
+PASS — 482 packages installed from the unchanged lockfile
+
+node scripts/run-node-tests.mjs --workers=1 --test-reporter=dot
+PASS — 1,261/1,261
+
+npm run typecheck
+PASS
+
+npm run lint
+PASS — 0 errors, 12 warnings
+
+NEXT_TELEMETRY_DISABLED=1 npm run build
+LOCAL ENVIRONMENT BLOCK — Next.js could not start because the host lacks uv_resident_set_memory; no source diagnostic was emitted
+
+node -e "const c=JSON.parse(require('node:fs').readFileSync('config/dabangil-unified-program-contract.json','utf8')); if(c.contractVersion!=='dabangil.unified_program.v3'||c.wcvCampaignOverlay.wcvBehaviorContractVersion!=='1.0.8') process.exit(1)"
+PASS — unified-program v3 and WCV 1.0.8 preserved
+
+git diff --name-only --diff-filter=ACM -- '*.mjs' | xargs -r -n1 node --check
+PASS
+
+git diff --check
+PASS
+```
+
+Exact-head GitHub CI remains authoritative for the build and merge gate. The
+local environment block above is not represented as a successful build.
 
 ## 10. Rollback
 

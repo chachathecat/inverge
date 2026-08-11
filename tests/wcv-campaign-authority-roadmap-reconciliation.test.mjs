@@ -70,6 +70,36 @@ function sorted(values) {
   return [...values].sort((a, b) => a.localeCompare(b));
 }
 
+function replaceItemStatus(source, itemId, status) {
+  const marker = `  - id: ${itemId}\n`;
+  const start = source.indexOf(marker);
+  assert.notEqual(start, -1, `missing roadmap item ${itemId}`);
+  const next = source.indexOf("\n  - id: ", start + marker.length);
+  const end = next === -1 ? source.length : next;
+  const block = source.slice(start, end);
+  const updated = block.replace(
+    /\n    status: [^\n]+/,
+    `\n    status: ${status}`,
+  );
+  assert.notEqual(updated, block, `missing status for ${itemId}`);
+  return source.slice(0, start) + updated + source.slice(end);
+}
+
+function removeItem(source, itemId) {
+  const marker = `  - id: ${itemId}\n`;
+  const start = source.indexOf(marker);
+  assert.notEqual(start, -1, `missing roadmap item ${itemId}`);
+  const next = source.indexOf("\n  - id: ", start + marker.length);
+  const end = next === -1 ? source.length : next;
+  return source.slice(0, start) + source.slice(end + (next === -1 ? 0 : 1));
+}
+
+function analysisById(plan, itemId) {
+  const analysis = plan.analyses.find((entry) => entry.itemId === itemId);
+  assert.ok(analysis, `missing analysis for ${itemId}`);
+  return analysis;
+}
+
 test("keeps V13 as the sole active master and WCV 1.0.8 subordinate", async () => {
   const [pointer, roadmapSource, unified, wcv, decision] = await Promise.all([
     text("docs/strategy/ACTIVE-MASTER-PLAN.md"),
@@ -132,6 +162,10 @@ test("reconciles two truthful blocked reservations with one delivery slot", asyn
   assert.equal(plan.wipLimit, 3);
   assert.equal(plan.wipOccupiedCount, 2);
   assert.equal(plan.availableSlots, 1);
+  assert.equal(plan.globalMergeProducingWriterLimit, 1);
+  assert.equal(plan.activeWriterCount, 0);
+  assert.equal(plan.availableWriterSlots, 1);
+  assert.equal(plan.selectionSlots, 1);
   assert.deepEqual(plan.selectedItemIds, ["WCV-C2"]);
 });
 
@@ -184,7 +218,8 @@ test("installs the exact C1 through C6 dependency graph", async () => {
     "WCV-C2": { status: "queued", dependencies: ["WCV-C1"] },
     "WCV-C3": { status: "queued", dependencies: ["WCV-C2"] },
     "WCV-C4": { status: "queued", dependencies: ["WCV-C3"] },
-    "WCV-C5": { status: "queued", dependencies: ["WCV-C4"] },
+    O4W: { status: "queued", dependencies: ["WCV-C4"] },
+    "WCV-C5": { status: "queued", dependencies: ["WCV-C4", "O4W"] },
     "WCV-C6": { status: "queued", dependencies: ["WCV-C5"] },
   };
 
@@ -195,6 +230,108 @@ test("installs the exact C1 through C6 dependency graph", async () => {
     assert.deepEqual(item.dependencies, value.dependencies, `${id} dependencies`);
     assert.equal(item.lockGroup, "wcv-vertical-campaign", `${id} lockGroup`);
   }
+});
+
+test("gates C5 on one queued unapproved O4W Owner authorization", async () => {
+  const [roadmapSource, unified, contract] = await Promise.all([
+    text("roadmap/active-program.yml"),
+    json("config/dabangil-unified-program-contract.json"),
+    text("docs/dabangil-unified-program-contract.md"),
+  ]);
+  const roadmap = parseRoadmap(roadmapSource);
+  const o4w = roadmap.byId.get("O4W");
+  const c5 = roadmap.byId.get("WCV-C5");
+  const machineC5 = unified.wcvCampaignOverlay.campaigns.find(
+    (campaign) => campaign.id === "C5",
+  );
+  const machineGate =
+    unified.roadmapContract.frozenPaidCohortAuthorization;
+
+  assert.deepEqual(o4w, {
+    id: "O4W",
+    title: "Owner WCV Frozen Paid Cohort Manifest Authorization",
+    status: "queued",
+    executionState: "exact_frozen_cohort_authorization_unmet",
+    decisionScope: "exact_frozen_cohort_manifest_activation_only",
+    gatedCampaign: "WCV-C5",
+    gatedIssue: 711,
+    authorizationGranted: false,
+    automaticStartAllowed: false,
+    learnerActivationAuthorized: false,
+    paymentActivationAuthorized: false,
+    delayedEvidenceAuthorized: false,
+    productionAuthorized: false,
+    dependencies: ["WCV-C4"],
+    lockGroup: "wcv-vertical-campaign",
+    risk: "high",
+    priority: 31.16,
+  });
+  assert.equal(c5.cohortAuthorizationGate, "O4W");
+  assert.equal(c5.separateExactCohortAuthorizationRequired, true);
+  assert.deepEqual(c5.dependencies, ["WCV-C4", "O4W"]);
+  assert.equal(c5.priority, 31.17);
+  assert.equal(roadmap.byId.get("WCV-C6").priority, 31.18);
+  assert.equal(
+    unified.ownerGates.O4W,
+    "future_exact_frozen_paid_cohort_manifest_authorization_unapproved",
+  );
+  assert.equal(
+    unified.roadmapContract.scopedGateEdges.frozenPaidCohortManifestAuthorization,
+    "O4W",
+  );
+  assert.deepEqual(machineC5.dependencies, ["WCV-C4", "O4W"]);
+  assert.equal(machineC5.cohortAuthorizationGate, "O4W");
+  assert.deepEqual(machineC5.cohortAuthorization, {
+    roadmapItemId: "O4W",
+    decisionScope: "exact_frozen_cohort_manifest_activation_only",
+    authorizationGranted: false,
+    automaticStartAllowed: false,
+    learnerActivationAuthorized: false,
+    paymentActivationAuthorized: false,
+    delayedEvidenceAuthorized: false,
+    productionAuthorized: false,
+  });
+  assert.equal(machineGate.status, "queued");
+  assert.equal(machineGate.authorizationGranted, false);
+  assert.equal(machineGate.delayedEvidenceAuthorized, false);
+  assert.match(contract, /O4W: exact frozen paid-cohort manifest authorization for WCV-C5 only/);
+  assert.match(contract, /WCV-C5\s+depends on both WCV-C4 and O4W/);
+
+  const c4Complete = ["WCV-C2", "WCV-C3", "WCV-C4"].reduce(
+    (source, itemId) => replaceItemStatus(source, itemId, "completed"),
+    roadmapSource,
+  );
+  const beforeAuthorization = createRoadmapRunnerPlanFromYamlAt(
+    c4Complete,
+    new Date("2026-08-11T08:00:00.000Z"),
+  );
+  assert.deepEqual(beforeAuthorization.selectedItemIds, ["O4W"]);
+  assert.equal(analysisById(beforeAuthorization, "O4W").readinessStatus, "ready");
+  assert.deepEqual(
+    analysisById(beforeAuthorization, "WCV-C5").missingDependencies,
+    ["O4W"],
+  );
+
+  const o4wComplete = replaceItemStatus(c4Complete, "O4W", "completed");
+  const afterAuthorization = createRoadmapRunnerPlanFromYamlAt(
+    o4wComplete,
+    new Date("2026-08-11T08:00:00.000Z"),
+  );
+  assert.equal(analysisById(afterAuthorization, "WCV-C5").readinessStatus, "ready");
+  assert.deepEqual(afterAuthorization.selectedItemIds, ["WCV-C5"]);
+
+  const hostileWithoutGate = removeItem(roadmapSource, "O4W").replace(
+    "dependencies: [WCV-C4, O4W]",
+    "dependencies: [WCV-C4]",
+  );
+  assert.throws(() => {
+    const hostile = parseRoadmap(hostileWithoutGate);
+    assert.ok(hostile.byId.has("O4W"), "O4W gate must exist");
+    assert.deepEqual(
+      hostile.byId.get("WCV-C5").dependencies,
+      ["WCV-C4", "O4W"],
+    );
+  });
 });
 
 test("removes one-issue-only language as the controlling PR rule", async () => {
@@ -317,15 +454,22 @@ test("registers this focused reconciliation test exactly once", async () => {
   assert.equal(matches.length, 1);
 });
 
-test("limits C1 to the declared 27 source and test paths", async () => {
+test("limits C1 to the declared 29 source and test paths", async () => {
   const decision = await text(DECISION);
   const manifest = decision.match(/## 11\. C1 changed-path manifest([\s\S]*)$/)?.[1] ?? "";
   const paths = [...manifest.matchAll(/`([^`]+)`/g)].map((match) => match[1]);
 
-  assert.equal(paths.length, 27);
-  assert.equal(new Set(paths).size, 27);
+  assert.equal(paths.length, 29);
+  assert.equal(new Set(paths).size, 29);
+  assert.deepEqual(
+    paths.filter((path) => path.startsWith("lib/")),
+    ["lib/agent-factory/roadmap-runner.ts"],
+  );
   for (const path of paths) {
-    assert.doesNotMatch(path, /^(?:app|lib|supabase|migrations)\//, path);
+    assert.doesNotMatch(path, /^(?:app|supabase|migrations)\//, path);
+    if (path.startsWith("lib/")) {
+      assert.equal(path, "lib/agent-factory/roadmap-runner.ts");
+    }
   }
 });
 

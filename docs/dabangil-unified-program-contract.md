@@ -131,7 +131,10 @@ both truthfully blocked. `program.wipLimit` is therefore three: two blocked
 control-plane reservations plus exactly one merge-producing delivery slot.
 This capacity is not permission for three writers. The WCV items use one flat
 lock group and a dependency chain; the global merge-producing writer limit is
-one and remains manually Owner-enforced.
+one. Both executable roadmap selectors enforce that explicit cap within each
+parsed plan, including across distinct lock groups and after either blocker
+clears. This is not a cross-process distributed writer lease; the Owner
+single-writer prohibition remains controlling across independent Work windows.
 
 ### Complete vertical and closure rule
 
@@ -177,7 +180,7 @@ review/correction cycles are prohibited.
 | C2 | #702 | #702–#705 | sole next implementation campaign | rights-safe Capture/OCR → anchor → independent attempt → gap → scaffold → repair → verification → durable reopen/resume |
 | C3 | #706 | #706–#708 | queued behind C2 | frozen D+1, sealed D+7, recurrence/reopening, Ledger, recurring deduction and Today/Full-Day |
 | C4 | #709 | #709–#710 | queued behind C3 | Owner proof, red-team, baseline and invitation-only commercial readiness; no activation |
-| C5 | #711 | #711 | queued behind C4 and exact cohort gate | frozen paid cohort with real delayed-evidence windows |
+| C5 | #711 | #711 | queued behind C4 and unapproved O4W exact cohort gate | frozen paid cohort with real delayed-evidence windows |
 | C6 | #712 | #712 | queued behind C5 | verified-bank and bodyless calibration flywheel |
 
 Issue #701 remains the parent program. Issue #714 remains an open,
@@ -898,7 +901,8 @@ Scoped O3A and O4-family gates are not interchangeable:
 - O4T: exact post-benchmark optimizer threshold decision;
 - O2O: exact Owner-private comparison measurement/retention only;
 - O4P: exact Owner-only optimizer limited activation;
-- O4F: future external commercial beta activation; and
+- O4F: future external commercial beta activation;
+- O4W: exact frozen paid-cohort manifest authorization for WCV-C5 only; and
 - O4D: future public self-serve activation.
 
 An approval packet states exact scope, non-goals, owner action, evidence,
@@ -909,14 +913,23 @@ only for the lean Owner-private gate in the 2026-07-30 decision and authorized
 no immediate operation at decision time. The live roadmap now records S236P
 as factually blocked after its consumed failed attempt; acceptance remains
 false. Every other O4-family runtime/content/commercial gate above remains a
-future gate.
+future gate. O4W is queued and unapproved; it authorizes no learner, payment,
+delayed-evidence, cohort or Production operation in C1.
 
 ## 13. Roadmap, locks, and WIP
 
 Every Work is global single-writer for merge-producing mutation. The root/
 Owner writer owns the one writing branch and PR; additional inspection is
-read-only and non-overlapping. This boundary is manually Owner-enforced; the
-flat roadmap runner does not enforce global exclusivity automatically.
+read-only and non-overlapping. Both executable selectors mechanically enforce
+the explicit `program.globalMergeProducingWriterLimit` within one parsed
+roadmap plan. They count raw `active`, `in_progress`, `in_review` and `pr_open`
+aliases against writer capacity even when an active item's dependencies are
+invalid. `blocked` and `human_decision` retain WIP reservations but consume no
+writer capacity.
+
+This per-plan selection cap is not a cross-process distributed writer lease.
+It cannot prevent a human from opening independent Work windows, so the Owner
+single-writer prohibition remains controlling across processes.
 
 Primary statuses use only runner-supported values. Future gated work is
 `queued` with unmet dependencies; it is not marked `blocked` or
@@ -928,15 +941,19 @@ slot. The separate global merge-producing writer limit is exactly one, so WIP
 three never authorizes parallel writers. Shared source-of-truth, schema,
 auth/RLS, billing, runtime and other control-plane mutations are serialized.
 
-The runner enforces only one flat exact-string `lockGroup`. It has no global,
-hierarchical, multi-lock, cross-run reservation, or owned-file-overlap
-enforcement. Global exclusivity therefore requires dependency ordering or a
-manual Owner gate. Prose never claims automatic global enforcement.
+The runner still supports only one flat exact-string `lockGroup`; it has no
+hierarchical or multi-lock ownership model, cross-run reservation, distributed
+lease, or owned-file-overlap enforcement. The explicit global writer cap now
+prevents distinct lock groups from expanding one plan beyond one selected
+merge-producing item. Cross-process exclusivity still requires exact Owner
+authority and manual launch discipline.
 
 Each lock group permits one concurrent writer and zero additional concurrent
-writers. All WCV campaign items share `wcv-vertical-campaign`. Any Work must
-declare an exact owned-file manifest; overlap is resolved before mutation.
-The C1-to-C6 dependency chain and global writer limit serialize campaign work.
+writers. All WCV campaign items and the auxiliary O4W gate share
+`wcv-vertical-campaign`. O4W remains queued and unapproved after C1; WCV-C5
+depends on both WCV-C4 and O4W. Any Work must declare an exact owned-file
+manifest; overlap is resolved before mutation. The C1-to-C6 dependency chain,
+O4W edge and global writer limit serialize campaign work.
 
 The S234 reset snapshot contained exactly:
 

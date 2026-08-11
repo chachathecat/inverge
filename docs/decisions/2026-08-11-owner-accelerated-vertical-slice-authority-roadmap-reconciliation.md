@@ -91,9 +91,16 @@ program.wipLimit = 3
 
 `wipLimit: 3` is not permission for three writers. The global merge-producing
 writer limit remains exactly one. The WCV campaign items share one flat
-`lockGroup` and are dependency-ordered. The current runner can therefore
-select no more than the one next WCV campaign while CPF-1 and S236P remain
-blocked.
+`lockGroup` and are dependency-ordered. Both executable selectors additionally
+treat `program.globalMergeProducingWriterLimit` as fail-closed executable
+authority. They count raw `active`, `in_progress`, `in_review` and `pr_open`
+aliases as writers even when their dependencies are invalid; `blocked` and
+`human_decision` items reserve WIP but do not consume writer capacity. Distinct
+lock groups cannot bypass the cap.
+
+This is per-plan selection enforcement, not a cross-process distributed writer
+lease. The Owner prohibition on concurrent merge-producing Work remains
+controlling across independently launched Work windows.
 
 ## 4. Vertical closure rule
 
@@ -210,9 +217,17 @@ source PR precedes it.
 ### C5 — Frozen Paid Cohort
 
 - Lead and only included issue: #711
-- Depends on: C4 and separate exact cohort authorization
+- Depends on: C4 and O4W, the separate exact frozen-cohort manifest
+  authorization
 - State: queued
+- O4W state in C1: queued, unapproved and non-activating
 - Real-time boundary: D+7, four-week and repurchase windows are not simulated
+
+O4W is an auxiliary Owner gate, not a seventh implementation campaign. It
+depends on C4 and may become the sole selected authorization Work only after C4
+completes. C5 remains dependency-blocked until a later exact Owner decision
+completes O4W. C1 grants no learner, payment, delayed-evidence, cohort or
+Production authority.
 
 ### C6 — Verified-Bank and Calibration Flywheel
 
@@ -334,9 +349,14 @@ The source reconciliation is limited to these paths:
 25. `tests/s224-three-subject-learner-runtime-acceptance.test.mjs`
 26. `tests/theory-answer-review-engine.test.mjs`
 27. `tests/inverge-roadmap-curriculum-docs.test.mjs`
+28. `lib/agent-factory/roadmap-runner.ts`
+29. `scripts/automation/determine-next-task.mjs`
 
 The last fifteen paths are assertion-only conformance updates required when
 the repository-wide default and Learner Loop suites encountered the new
 truthful three-slot roadmap, sole selected WCV-C2 campaign and current blocked
-S236P state. No runtime/application path is in scope, and no path outside this
-manifest may change.
+S236P state. Paths 28 and 29 are the only executable-selector additions to the
+cumulative manifest; they mechanically enforce the explicit per-plan global
+writer cap and do not implement learner behavior. No other
+runtime/application/lib path is in scope, and no path outside this manifest
+may change.
