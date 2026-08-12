@@ -1226,14 +1226,14 @@ function verifyPersistedRuntime(databaseContainer) {
               and a.artifact_kind='repair_submission'
           )=2
       )::text),
-      (select not exists(
+      (select (not exists(
         select 1
         from public.wcv_c2_trusted_repair_private_artifacts a
         where a.artifact_kind='repair_submission'
         group by a.session_id, a.user_id
         having count(*) > 2
-      )::text),
-      (select not exists(
+      ))::text),
+      (select (not exists(
         select 1
         from public.wcv_c2_trusted_repair_sessions s
         where (
@@ -1253,7 +1253,7 @@ function verifyPersistedRuntime(databaseContainer) {
                 and a.revision_number <> (s.state_data->>'revisionNumber')::integer
             )
           )
-      )::text)
+      ))::text)
     );`,
   );
   const values = result.split("|");

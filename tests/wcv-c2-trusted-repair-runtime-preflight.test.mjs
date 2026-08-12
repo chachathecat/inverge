@@ -96,6 +96,15 @@ test("C2 persisted runtime assertions serialize booleans unambiguously", () => {
     (persistedRuntimeVerifier.match(/\(count\(\*\) [=>] 0\)::text/g) ?? []).length,
     7,
   );
+  assert.equal(
+    (
+      persistedRuntimeVerifier.match(
+        /\(select \(not exists\([\s\S]*?\)\)::text\)/g,
+      ) ?? []
+    ).length,
+    2,
+  );
+  assert.doesNotMatch(persistedRuntimeVerifier, /\(select not exists\(/);
   assert.match(
     persistedRuntimeVerifier,
     /exposure_revision_binding_closed/,
