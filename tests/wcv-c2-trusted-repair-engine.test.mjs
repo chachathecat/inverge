@@ -26,6 +26,8 @@ import {
   planTrustedRepairSubmission,
   selectTrustedRepairScaffoldExposure,
   trustedRepairAggregateForRelease,
+  trustedRepairPartialRetryAvailable,
+  trustedRepairSubmissionCount,
   trustedRepairSourceBindingMatches,
   trustedRepairSourceVersion,
 } from "../lib/review-os/trusted-repair-engine.ts";
@@ -151,6 +153,43 @@ test("numeric anchors compare complete values without substring collisions", () 
   );
 });
 
+test("semantic anchors require scoped positive assertions and reject negated concepts", () => {
+  const fixture = trustedRepairCanonicalFixture("appraisal_theory");
+  const stateData = {
+    ...initialTrustedRepairStateData("TYPED_TEXT"),
+    predictionConfidence: "medium",
+  };
+  for (const attemptText of [
+    "최유효이용은 합리적이지 않고 가능하지 않다",
+    "최유효이용은 비합리적이며 불가능하다",
+    "최유효이용은 합리적이지만 가능하지 않다",
+    "최유효이용은 합리적이지만 가능은 하지 않다",
+    "최유효이용이 합리적인지 불확실하고 가능한지 의문이다",
+  ]) {
+    const diagnosis = diagnoseTrustedRepairAttempt({ fixture, attemptText, stateData });
+    assert.ok(
+      diagnosis.candidates.some(
+        (candidate) => candidate.anchorId === "theory-exact-definition",
+      ),
+      attemptText,
+    );
+  }
+
+  for (const attemptText of [
+    "최유효이용은 합리적이고 가능한 이용이다",
+    "거절된 대안은 불가능하다. 최유효이용은 합리적이고 가능한 이용이다",
+  ]) {
+    const diagnosis = diagnoseTrustedRepairAttempt({ fixture, attemptText, stateData });
+    assert.equal(
+      diagnosis.candidates.some(
+        (candidate) => candidate.anchorId === "theory-exact-definition",
+      ),
+      false,
+      attemptText,
+    );
+  }
+});
+
 for (const subject of ["appraisal_practical", "appraisal_theory", "appraisal_compensation_law"]) {
   test(`${subject} completes the ordered trusted-repair journey without pre-help leakage`, () => {
     const fixture = trustedRepairCanonicalFixture(subject);
@@ -175,7 +214,7 @@ for (const subject of ["appraisal_practical", "appraisal_theory", "appraisal_com
     aggregate = apply(aggregate, planTrustedRepairExposure({ aggregate, exposureId: nextId(), occurredAt: "2026-08-12T00:03:00.000Z" }));
     assert.equal(aggregate.exposures.length, 1);
     assert.equal(aggregate.exposures[0].scaffoldKind, "smallest_eligible_scaffold");
-    aggregate = apply(aggregate, planTrustedRepairSubmission({ aggregate, artifactId: nextId(), body: REPAIRS[subject], occurredAt: "2026-08-12T00:04:00.000Z" }));
+    aggregate = apply(aggregate, planTrustedRepairSubmission({ aggregate, fixture, sourceBinding, artifactId: nextId(), body: REPAIRS[subject], occurredAt: "2026-08-12T00:04:00.000Z" }));
     aggregate = apply(aggregate, planTrustedRepairContinuation({ aggregate, fixture, sourceBinding, continuation: "VERIFY_AND_CONTINUE", exposureId: nextId(), occurredAt: "2026-08-12T00:05:00.000Z" }));
     assert.equal(aggregate.session.outcome, subject === "appraisal_compensation_law" ? "blocked" : "verified");
     assert.ok(aggregate.session.stateData.resultReasonCodes.includes("no_mastery_transfer_stability_score_or_pass_claim"));
@@ -292,6 +331,8 @@ test("Law source-binding drift after repair submission fails closed without rebi
     aggregate,
     planTrustedRepairSubmission({
       aggregate,
+      fixture,
+      sourceBinding: BLOCKED_LAW,
       artifactId: nextId(),
       body: REPAIRS.appraisal_compensation_law,
       occurredAt: "2026-08-12T01:03:00.000Z",
@@ -388,6 +429,8 @@ test("guided continuation selects its committed level-3 exposure immediately and
     aggregate,
     planTrustedRepairSubmission({
       aggregate,
+      fixture,
+      sourceBinding: SYNTHETIC_SOURCE_BINDING,
       artifactId: nextId(),
       body: REPAIRS.appraisal_practical,
       occurredAt: "2026-08-12T02:01:00.000Z",
@@ -430,6 +473,202 @@ test("guided continuation selects its committed level-3 exposure immediately and
   assert.deepEqual(reloaded, immediate);
 });
 
+test("partial permits one durable append-only retry, verifies the latest repair, and then closes the retry gate", () => {
+  const fixture = trustedRepairCanonicalFixture("appraisal_theory");
+  const sourceBinding = SYNTHETIC_SOURCE_BINDING;
+  let aggregate = aggregateFor("appraisal_theory");
+  aggregate = apply(
+    aggregate,
+    planTrustedRepairRevisionConfirmation({
+      aggregate,
+      artifactId: nextId(),
+      body: "확정 수정본",
+      occurredAt: "2026-08-12T03:00:00.000Z",
+    }),
+  );
+  aggregate = apply(
+    aggregate,
+    planTrustedRepairPrediction({
+      aggregate,
+      prediction: "likely_partial",
+      confidence: "medium",
+    }),
+  );
+  aggregate = apply(
+    aggregate,
+    planTrustedRepairIndependentAttempt({
+      aggregate,
+      artifactId: nextId(),
+      body: "법적·물리적·경제적 가능성을 사례와 반대 사실에 적용해 결론을 낸다.",
+      occurredAt: "2026-08-12T03:01:00.000Z",
+    }),
+  );
+  aggregate = apply(
+    aggregate,
+    planTrustedRepairSelfDiagnosis({
+      aggregate,
+      selfDiagnosisCode: "missing_definition",
+    }),
+  );
+  aggregate = apply(
+    aggregate,
+    planTrustedRepairDiagnosis({ aggregate, fixture, sourceBinding }),
+  );
+  aggregate = apply(
+    aggregate,
+    planTrustedRepairExposure({
+      aggregate,
+      exposureId: nextId(),
+      occurredAt: "2026-08-12T03:02:00.000Z",
+    }),
+  );
+  aggregate = apply(
+    aggregate,
+    planTrustedRepairSubmission({
+      aggregate,
+      fixture,
+      sourceBinding,
+      artifactId: nextId(),
+      body: "최유효이용은 합리적이지 않고 가능하지 않다",
+      occurredAt: "2026-08-12T03:03:00.000Z",
+    }),
+  );
+  const firstPartial = apply(
+    aggregate,
+    planTrustedRepairContinuation({
+      aggregate,
+      fixture,
+      sourceBinding,
+      continuation: "VERIFY_AND_CONTINUE",
+      exposureId: nextId(),
+      occurredAt: "2026-08-12T03:04:00.000Z",
+    }),
+  );
+  const durableIdentity = {
+    sessionId: firstPartial.session.sessionId,
+    confirmedRevisionId: firstPartial.session.confirmedRevisionId,
+    revisionNumber: firstPartial.session.stateData.revisionNumber,
+    primaryGapId: firstPartial.session.primaryGapId,
+  };
+  assert.equal(firstPartial.session.state, "partial");
+  assert.equal(trustedRepairSubmissionCount(firstPartial), 1);
+  assert.equal(trustedRepairPartialRetryAvailable(firstPartial), true);
+
+  const retrySubmitted = apply(
+    firstPartial,
+    planTrustedRepairSubmission({
+      aggregate: firstPartial,
+      fixture,
+      sourceBinding,
+      artifactId: nextId(),
+      body: "최유효이용은 합리적이고 가능한 이용이다",
+      occurredAt: "2026-08-12T03:05:00.000Z",
+    }),
+  );
+  assert.equal(retrySubmitted.session.state, "repair_submitted");
+  assert.equal(trustedRepairSubmissionCount(retrySubmitted), 2);
+  assert.deepEqual(
+    retrySubmitted.artifacts
+      .filter((artifact) => artifact.kind === "repair_submission")
+      .map((artifact) => artifact.body),
+    [
+      "최유효이용은 합리적이지 않고 가능하지 않다",
+      "최유효이용은 합리적이고 가능한 이용이다",
+    ],
+  );
+  assert.deepEqual(
+    {
+      sessionId: retrySubmitted.session.sessionId,
+      confirmedRevisionId: retrySubmitted.session.confirmedRevisionId,
+      revisionNumber: retrySubmitted.session.stateData.revisionNumber,
+      primaryGapId: retrySubmitted.session.primaryGapId,
+    },
+    durableIdentity,
+  );
+  const verified = apply(
+    retrySubmitted,
+    planTrustedRepairContinuation({
+      aggregate: retrySubmitted,
+      fixture,
+      sourceBinding,
+      continuation: "VERIFY_AND_CONTINUE",
+      exposureId: nextId(),
+      occurredAt: "2026-08-12T03:06:00.000Z",
+    }),
+  );
+  assert.equal(verified.session.state, "verified");
+  assert.equal(verified.session.outcome, "verified");
+  assert.equal(trustedRepairPartialRetryAvailable(verified), false);
+
+  const secondRetrySubmitted = apply(
+    firstPartial,
+    planTrustedRepairSubmission({
+      aggregate: firstPartial,
+      fixture,
+      sourceBinding,
+      artifactId: nextId(),
+      body: "최유효이용은 비합리적이며 불가능하다",
+      occurredAt: "2026-08-12T03:07:00.000Z",
+    }),
+  );
+  const secondPartial = apply(
+    secondRetrySubmitted,
+    planTrustedRepairContinuation({
+      aggregate: secondRetrySubmitted,
+      fixture,
+      sourceBinding,
+      continuation: "VERIFY_AND_CONTINUE",
+      exposureId: nextId(),
+      occurredAt: "2026-08-12T03:08:00.000Z",
+    }),
+  );
+  assert.equal(secondPartial.session.state, "partial");
+  assert.equal(trustedRepairSubmissionCount(secondPartial), 2);
+  assert.equal(trustedRepairPartialRetryAvailable(secondPartial), false);
+  assert.throws(
+    () =>
+      planTrustedRepairSubmission({
+        aggregate: secondPartial,
+        fixture,
+        sourceBinding,
+        artifactId: nextId(),
+        body: REPAIRS.appraisal_theory,
+        occurredAt: "2026-08-12T03:09:00.000Z",
+      }),
+    (error) =>
+      error instanceof TrustedRepairContractError &&
+      error.code === "invalid_transition",
+  );
+  for (const continuation of ["DEFER_FOR_NOW", "SWITCH_TO_GUIDED"]) {
+    const fallback = planTrustedRepairContinuation({
+      aggregate: secondPartial,
+      fixture,
+      sourceBinding,
+      continuation,
+      exposureId: nextId(),
+      occurredAt: "2026-08-12T03:10:00.000Z",
+    });
+    assert.equal(
+      fallback.outcome,
+      continuation === "DEFER_FOR_NOW" ? "deferred" : "guided",
+    );
+  }
+
+  const sourceDrift = planTrustedRepairSubmission({
+    aggregate: firstPartial,
+    fixture,
+    sourceBinding: {
+      ...SYNTHETIC_SOURCE_BINDING,
+      bindingVersion: "synthetic_fixture:changed",
+    },
+    artifactId: nextId(),
+    body: REPAIRS.appraisal_theory,
+    occurredAt: "2026-08-12T03:11:00.000Z",
+  });
+  assert.equal(sourceDrift.nextState, "blocked");
+  assert.equal(sourceDrift.artifact, null);
+});
+
 test("help cannot precede diagnosis and revision drift invalidates old anchors and claims", () => {
   const aggregate = aggregateFor("appraisal_practical");
   assert.throws(
@@ -464,6 +703,7 @@ test("cognitive-load budget and every AI-like step expose one purpose and one ne
     initialAssistanceLevel: 0,
     smallestScaffoldAssistanceLevel: 1,
     guidedAssistanceLevel: 3,
+    maximumImmediatePartialRetries: 1,
   });
   assert.deepEqual(Object.keys(TRUSTED_REPAIR_STEP_GUIDANCE), [
     "editable_capture_draft",
@@ -474,6 +714,7 @@ test("cognitive-load budget and every AI-like step expose one purpose and one ne
     "diagnosed",
     "exposure_committed",
     "repair_submitted",
+    "partial",
   ]);
   for (const guidance of Object.values(TRUSTED_REPAIR_STEP_GUIDANCE)) {
     assert.ok(guidance.learningPurposeKo.length > 0);

@@ -186,6 +186,12 @@ export function TrustedRepairLoop() {
     if (state === "exposure_committed") {
       return { label: "복구 답안 확정", run: () => command("submit_repair", { body: repair }), disabled: !repair.trim() };
     }
+    if (state === "partial" && view.session.immediatePartialRetryAvailable) {
+      return { label: "남은 기준 다시 쓰기", run: () => command("submit_repair", { body: repair }), disabled: !repair.trim() };
+    }
+    if (state === "partial") {
+      return { label: "가이드로 전환", run: () => command("continue", { continuation: "SWITCH_TO_GUIDED" }), disabled: false };
+    }
     if (state === "repair_submitted") {
       return { label: "같은 세션에서 검증하고 계속", run: () => command("continue", { continuation: "VERIFY_AND_CONTINUE" }), disabled: false };
     }
@@ -307,8 +313,8 @@ export function TrustedRepairLoop() {
               </aside>
             ) : null}
 
-            {view.session.state === "exposure_committed" ? (
-              <label className="block space-y-2"><span className="v3-type-label-strong">보지 않고 다시 구성한 복구 답안</span><Textarea aria-label="복구 답안" value={repair} onChange={(event) => setRepair(event.target.value)} className="min-h-48" /></label>
+            {view.session.state === "exposure_committed" || (view.session.state === "partial" && view.session.immediatePartialRetryAvailable) ? (
+              <label className="block space-y-2"><span className="v3-type-label-strong">{view.session.state === "partial" ? "남은 기준 다시 쓰기" : "보지 않고 다시 구성한 복구 답안"}</span><Textarea aria-label={view.session.state === "partial" ? "남은 기준 다시 쓰기" : "복구 답안"} value={repair} onChange={(event) => setRepair(event.target.value)} className="min-h-48" /></label>
             ) : null}
 
             {terminal ? (
@@ -327,12 +333,12 @@ export function TrustedRepairLoop() {
           {busy ? "안전하게 저장 중…" : primary.label}
         </Button>
 
-        {view && ["diagnosed", "repair_submitted"].includes(view.session.state) ? (
+        {view && ["diagnosed", "repair_submitted", "partial"].includes(view.session.state) ? (
           <details className="rounded-lg border border-[var(--color-border-default)] p-3">
             <summary className="min-h-11 cursor-pointer py-2 font-medium">다른 방식으로 하기</summary>
             <div className="mt-3 flex flex-col gap-2 sm:flex-row">
               <Button type="button" variant="outline" disabled={busy} onClick={() => command("continue", { continuation: "DEFER_FOR_NOW" })}>지금은 보류 · DEFER_FOR_NOW</Button>
-              <Button type="button" variant="outline" disabled={busy} onClick={() => command("continue", { continuation: "SWITCH_TO_GUIDED" })}>가이드로 전환 · SWITCH_TO_GUIDED</Button>
+              {view.session.state === "partial" && !view.session.immediatePartialRetryAvailable ? null : <Button type="button" variant="outline" disabled={busy} onClick={() => command("continue", { continuation: "SWITCH_TO_GUIDED" })}>가이드로 전환 · SWITCH_TO_GUIDED</Button>}
             </div>
           </details>
         ) : null}

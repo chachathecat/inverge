@@ -136,6 +136,7 @@ export const TRUSTED_REPAIR_LOAD_BUDGET = {
   initialAssistanceLevel: 0,
   smallestScaffoldAssistanceLevel: 1,
   guidedAssistanceLevel: 3,
+  maximumImmediatePartialRetries: 1,
 } as const;
 
 export const TRUSTED_REPAIR_STEP_GUIDANCE = {
@@ -170,6 +171,10 @@ export const TRUSTED_REPAIR_STEP_GUIDANCE = {
   repair_submitted: {
     learningPurposeKo: "같은 세션의 한 성공 기준만 직접 재검증한다.",
     nextActionKo: "검증, 보류 또는 가이드 전환 중 하나를 고르세요.",
+  },
+  partial: {
+    learningPurposeKo: "남은 한 기준을 같은 세션과 수정본에 묶어 다시 복구한다.",
+    nextActionKo: "허용된 한 번의 재시도로 남은 기준을 다시 쓰세요.",
   },
 } as const;
 

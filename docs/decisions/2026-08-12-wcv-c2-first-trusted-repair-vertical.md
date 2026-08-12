@@ -24,13 +24,25 @@ The supported flow is:
 5. receive up to three evidence-bound gaps with one deterministic primary gap;
 6. atomically commit an exposure before receiving one bounded scaffold;
 7. reconstruct and submit one repair;
-8. choose verify-and-continue, defer, or guided mode; and
-9. recover the canonical state after refresh, another browser, or a Next
+8. choose verify-and-continue, defer, or guided mode;
+9. when verification is honestly `partial`, append at most one immediate
+   same-session repair retry against the unchanged revision and primary gap;
+10. after a second `partial`, keep defer and guided mode available without
+    clearing the session; and
+11. recover the canonical state after refresh, another browser, or a Next
    process restart.
 
 A successful result is same-session criterion evidence only. It is not
 mastery, transfer, stability, gap elimination, score improvement, or pass
 evidence.
+
+Required semantic concepts count only when positively asserted in their local
+clause. Negated and antonym forms such as `합리적이지 않다`, `가능하지 않다`,
+`비합리적`, and `불가능` do not satisfy their positive concepts; materially
+ambiguous polarity fails closed. A negative counterexample in a separate
+clause does not erase a clear positive assertion about the target. Numeric
+tokens, acceptable alternatives, and forbidden-false-claim checks retain
+their existing behavior.
 
 ## Rights and source boundary
 
@@ -59,6 +71,14 @@ exposure effects, or RPCs. The server authenticates first and then uses an
 exact-user, exact-session-kind service repository with CAS and idempotency
 receipts. There is no user-client fallback.
 
+The retry limit is reconstructed from append-only `repair_submission`
+artifacts rather than client state. The first failed repair and its bounded
+retry remain distinct artifacts; replay cannot duplicate either one. The
+server evaluates the latest eligible artifact only against the same current
+source binding, confirmed revision, and primary gap. `partial`, retry, defer,
+or guided transitions create no mastery, transfer, stability, score, pass, or
+independent-success evidence.
+
 The API returns explicit allowlisted DTOs. It never returns stored private
 artifact bodies, hidden references, checksums, policy secrets, credentials,
 or provider payloads. A scaffold is assembled only after the corresponding
@@ -71,8 +91,8 @@ to a fresh isolated local Supabase stack twice. Its full pass exercises two
 Auth identities, grants and forced RLS, direct CRUD/RPC denial, tenant
 isolation, CAS, replay, exposure atomicity, all subjects, all input modes,
 390/768/1440 widths, 200% reflow, keyboard completion, Axe serious/critical
-zero, new-browser recovery, process-restart recovery, and zero live-provider
-browser requests. Published evidence is metadata-only.
+zero, bounded partial retry, refresh/new-browser/process-restart recovery, and
+zero live-provider browser requests. Published evidence is metadata-only.
 
 Rollback is forward disable first: keep
 `WCV_C2_TRUSTED_REPAIR_ENABLED` absent or false. The migration is applied only

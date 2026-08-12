@@ -27,6 +27,8 @@ import {
   planTrustedRepairSubmission,
   selectTrustedRepairScaffoldExposure,
   trustedRepairAggregateForRelease,
+  trustedRepairPartialRetryAvailable,
+  trustedRepairSubmissionCount,
   trustedRepairSourceBindingMatches,
   trustedRepairSourceVersion,
 } from "./trusted-repair-engine";
@@ -101,6 +103,20 @@ export function trustedRepairView(aggregate: TrustedRepairAggregate) {
   const anchorsVisible =
     sourceBindingCurrent &&
     releaseAggregate.session.state !== "editable_capture_draft";
+  const repairSubmissionCount = trustedRepairSubmissionCount(releaseAggregate);
+  const immediatePartialRetryAvailable =
+    trustedRepairPartialRetryAvailable(releaseAggregate);
+  const guidance =
+    releaseAggregate.session.state === "partial" &&
+    !immediatePartialRetryAvailable
+      ? {
+          learningPurposeKo: "남은 기준을 성공으로 과장하지 않고 안전하게 이어간다.",
+          nextActionKo: "가이드로 전환하세요. 지금은 어렵다면 보류할 수 있습니다.",
+        }
+      : TRUSTED_REPAIR_STEP_GUIDANCE[
+          releaseAggregate.session
+            .state as keyof typeof TRUSTED_REPAIR_STEP_GUIDANCE
+        ] ?? null;
   return {
     contractVersion: TRUSTED_REPAIR_CONTRACT_VERSION,
     session: {
@@ -124,11 +140,9 @@ export function trustedRepairView(aggregate: TrustedRepairAggregate) {
       repairPath: releaseAggregate.session.stateData.repairPath,
       continuation: releaseAggregate.session.stateData.continuation,
       resultReasonCodes: releaseAggregate.session.stateData.resultReasonCodes,
-      guidance:
-        TRUSTED_REPAIR_STEP_GUIDANCE[
-          releaseAggregate.session
-            .state as keyof typeof TRUSTED_REPAIR_STEP_GUIDANCE
-        ] ?? null,
+      repairSubmissionCount,
+      immediatePartialRetryAvailable,
+      guidance,
       createdAt: releaseAggregate.session.createdAt,
       updatedAt: releaseAggregate.session.updatedAt,
     },
@@ -384,9 +398,11 @@ export function createTrustedRepairService(authenticatedUserId: string) {
       commandId: string;
       body: string;
     }) {
-      return transition(input, (aggregate) =>
+      return transition(input, (aggregate, fixture) =>
         planTrustedRepairSubmission({
           aggregate,
+          fixture,
+          sourceBinding: resolveTrustedRepairSourceBinding(fixture),
           artifactId: crypto.randomUUID(),
           body: input.body,
           occurredAt: nowIso(),

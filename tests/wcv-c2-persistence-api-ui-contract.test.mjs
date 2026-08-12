@@ -12,6 +12,7 @@ const REPOSITORY = "lib/review-os/trusted-repair-repository.ts";
 const ROUTE = "app/api/review-os/trusted-repair/route.ts";
 const ACCESS = "lib/review-os/trusted-repair-access.ts";
 const SERVER = "lib/review-os/trusted-repair-server.ts";
+const ENGINE = "lib/review-os/trusted-repair-engine.ts";
 const UI = "components/review-os/trusted-repair-loop.tsx";
 const WORKFLOW = ".github/workflows/wcv-c2-trusted-repair-runtime.yml";
 
@@ -75,13 +76,24 @@ test("route checks default-off Owner access before parsing and rejects extra JSO
 });
 
 test("DTO and UI expose bounded fields only after committed help and support durable accessible recovery", async () => {
-  const [server, ui] = await Promise.all([readFile(SERVER, "utf8"), readFile(UI, "utf8")]);
+  const [server, engine, ui] = await Promise.all([
+    readFile(SERVER, "utf8"),
+    readFile(ENGINE, "utf8"),
+    readFile(UI, "utf8"),
+  ]);
   assert.match(server, /matchingExposure/);
   assert.match(server, /selectTrustedRepairScaffoldExposure\(aggregate\)/);
   assert.match(server, /if \(!primary \|\| !matchingExposure\) return null/);
   assert.match(server, /trustedRepairSourceBindingMatches/);
   assert.match(server, /trustedRepairAggregateForRelease/);
   assert.match(server, /sourceBindingCurrent &&/);
+  assert.match(server, /trustedRepairPartialRetryAvailable/);
+  assert.match(server, /repairSubmissionCount/);
+  assert.match(engine, /maximumImmediatePartialRetries/);
+  assert.match(engine, /bounded_partial_retry_submission_committed/);
+  assert.match(engine, /guardState\(input\.aggregate, \["exposure_committed", "partial"\]\)/);
+  assert.match(engine, /trustedRepairSourceBindingMatches\(input\)/);
+  assert.match(engine, /repair\.revisionNumber !== input\.aggregate\.session\.stateData\.revisionNumber/);
   assert.match(server, /sameSessionCriterionOnly: true/);
   for (const claim of ["masteryClaimed", "transferClaimed", "stabilityClaimed", "scoreClaimed", "passClaimed"]) {
     assert.match(server, new RegExp(`${claim}: false`));
@@ -95,6 +107,9 @@ test("DTO and UI expose bounded fields only after committed help and support dur
   assert.match(ui, /VERIFY_AND_CONTINUE/);
   assert.match(ui, /DEFER_FOR_NOW/);
   assert.match(ui, /SWITCH_TO_GUIDED/);
+  assert.match(ui, /남은 기준 다시 쓰기/);
+  assert.match(ui, /immediatePartialRetryAvailable/);
+  assert.match(ui, /\["diagnosed", "repair_submitted", "partial"\]/);
   assert.match(ui, /aria-labelledby/);
   assert.match(ui, /role="alert"/);
   assert.doesNotMatch(ui, /openai|anthropic|gemini|chat\/completions/i);
@@ -141,4 +156,20 @@ test("machine contract maps all four issues and exactly eight C2 allocations", a
   assert.equal(contract.fixtureInventory.goldCandidateCount, 18);
   assert.equal(contract.lawBoundary.verifiedOutcomeAllowedOnCurrentRepositoryState, false);
   assert.equal(contract.rollout.defaultOff, true);
+  assert.deepEqual(contract.partialRepairRetry, {
+    immediateRetryLimit: 1,
+    sameSessionRequired: true,
+    confirmedRevisionAndPrimaryGapPreserved: true,
+    repairSubmissionsAppendOnly: true,
+    latestEligibleRepairEvaluated: true,
+    serverEnforced: true,
+    casAndIdempotencyRequired: true,
+    afterLimitAlternatives: ["DEFER_FOR_NOW", "SWITCH_TO_GUIDED"],
+    positiveEvidenceCreatedByPartialOrRetrySubmission: false,
+  });
+  assert.equal(contract.semanticAnchorPolarity.positiveAssertionRequired, true);
+  assert.equal(
+    contract.semanticAnchorPolarity.negatedOrAntonymOccurrenceCountsAsPositive,
+    false,
+  );
 });

@@ -618,6 +618,10 @@ function verifyPersistedRuntime(databaseContainer) {
     "exposure_revision_binding_closed",
     "law_verified_release_zero",
     "private_artifacts_immutable",
+    "corrected_partial_retry_verified",
+    "second_failed_retry_remains_partial",
+    "partial_retry_artifact_limit_enforced",
+    "partial_retry_revision_and_gap_preserved",
   ];
   const result = databaseQuery(
     databaseContainer,
@@ -632,7 +636,57 @@ function verifyPersistedRuntime(databaseContainer) {
         where a.id is null),
       (select (count(*) = 0)::text from public.wcv_c2_trusted_repair_sessions
         where subject='appraisal_compensation_law' and state='verified'),
-      (select (count(*) = 0)::text from public.wcv_c2_trusted_repair_private_artifacts where immutable is not true)
+      (select (count(*) = 0)::text from public.wcv_c2_trusted_repair_private_artifacts where immutable is not true),
+      (select exists(
+        select 1
+        from public.wcv_c2_trusted_repair_sessions s
+        where s.state='verified'
+          and (
+            select count(*)
+            from public.wcv_c2_trusted_repair_private_artifacts a
+            where a.session_id=s.id and a.user_id=s.user_id
+              and a.artifact_kind='repair_submission'
+          )=2
+      )::text),
+      (select exists(
+        select 1
+        from public.wcv_c2_trusted_repair_sessions s
+        where s.state='partial'
+          and (
+            select count(*)
+            from public.wcv_c2_trusted_repair_private_artifacts a
+            where a.session_id=s.id and a.user_id=s.user_id
+              and a.artifact_kind='repair_submission'
+          )=2
+      )::text),
+      (select not exists(
+        select 1
+        from public.wcv_c2_trusted_repair_private_artifacts a
+        where a.artifact_kind='repair_submission'
+        group by a.session_id, a.user_id
+        having count(*) > 2
+      )::text),
+      (select not exists(
+        select 1
+        from public.wcv_c2_trusted_repair_sessions s
+        where (
+          select count(*)
+          from public.wcv_c2_trusted_repair_private_artifacts a
+          where a.session_id=s.id and a.user_id=s.user_id
+            and a.artifact_kind='repair_submission'
+        )=2
+          and (
+            s.confirmed_revision_id is null
+            or s.primary_gap_id is null
+            or exists(
+              select 1
+              from public.wcv_c2_trusted_repair_private_artifacts a
+              where a.session_id=s.id and a.user_id=s.user_id
+                and a.artifact_kind='repair_submission'
+                and a.revision_number <> (s.state_data->>'revisionNumber')::integer
+            )
+          )
+      )::text)
     );`,
   );
   const values = result.split("|");
@@ -791,12 +845,14 @@ async function runFinalRuntime() {
     assertions.push({ id: "cas_replay_and_exposure_failure_zero_help", result: "passed" });
     assertions.push({ id: "responsive_keyboard_axe_and_input_modes", result: "passed" });
     assertions.push({ id: "new_browser_exact_user_recovery", result: "passed" });
+    assertions.push({ id: "bounded_partial_retry_recovery_and_append_only", result: "passed" });
 
     const recoverySessionId = required(
       databaseQuery(
         databaseContainer,
         `select id::text from public.wcv_c2_trusted_repair_sessions
-         where user_id='${userA.userId}'::uuid order by updated_at desc limit 1;`,
+         where user_id='${userA.userId}'::uuid and state='partial'
+         order by updated_at desc limit 1;`,
       ),
       "bodyless recovery session id",
       UUID_PATTERN,
@@ -882,6 +938,7 @@ async function runFinalRuntime() {
       inputModes: 5,
       repairPaths: 6,
       continuationCommands: 3,
+      immediatePartialRetries: 1,
     },
     leakCounts,
     cleanup: {

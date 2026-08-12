@@ -1,4 +1,5 @@
 import {
+  TRUSTED_REPAIR_LOAD_BUDGET,
   TrustedRepairContractError,
   type TrustedRepairAggregate,
   type TrustedRepairArtifactKind,
@@ -110,10 +111,55 @@ function conceptPresent(text: string, concept: string) {
   return false;
 }
 
+const MAX_POLARITY_CLAUSES = 64;
+const MAX_CONCEPT_OCCURRENCES_PER_CLAUSE = 32;
+const NEGATING_PREFIXES = new Set(["불", "비", "미", "무"]);
+const NEGATING_SUFFIX = /^(?:(?:은|는|도)?(?:이|하)지(?:는|도)?(?:않|못|아니)|(?:은|는|도)?(?:이|가)?아니|(?:이|하)?는?것이아니|(?:이|하)?라고보기어렵|성(?:은|이|도)?없)/;
+const AMBIGUOUS_SUFFIX = /^(?:(?:한|인|일)지|(?:할|일)수도|여부|불확실|미정|의문|(?:이|하)?라고단정하기어렵)/;
+
+function compactPolarityClause(value: string) {
+  return value
+    .normalize("NFKC")
+    .toLowerCase()
+    .replace(/[\s,._·:()[\]{}]+/g, "");
+}
+
+function conceptPositivelyAsserted(text: string, concept: string) {
+  const normalizedConcept = normalizeEvidence(concept);
+  if (/^\d+$/.test(normalizedConcept) || !/[가-힣]/.test(normalizedConcept)) {
+    return conceptPresent(text, concept);
+  }
+
+  const clauses = text
+    .normalize("NFKC")
+    .toLowerCase()
+    .split(/[.!?。！？;\n]+/)
+    .slice(0, MAX_POLARITY_CLAUSES);
+  for (const rawClause of clauses) {
+    const clause = compactPolarityClause(rawClause);
+    let fromIndex = 0;
+    for (
+      let occurrence = 0;
+      occurrence < MAX_CONCEPT_OCCURRENCES_PER_CLAUSE;
+      occurrence += 1
+    ) {
+      const index = clause.indexOf(normalizedConcept, fromIndex);
+      if (index < 0) break;
+      const prefix = clause.slice(Math.max(0, index - 1), index);
+      const suffix = clause.slice(index + normalizedConcept.length, index + normalizedConcept.length + 24);
+      const negated = NEGATING_PREFIXES.has(prefix) || NEGATING_SUFFIX.test(suffix);
+      const ambiguous = AMBIGUOUS_SUFFIX.test(suffix);
+      if (!negated && !ambiguous) return true;
+      fromIndex = index + Math.max(1, normalizedConcept.length);
+    }
+  }
+  return false;
+}
+
 function anchorEvidence(text: string, fixture: TrustedRepairFixture) {
   return fixture.anchors.map((anchor) => {
     const missing = anchor.requiredConcepts.filter(
-      (concept) => !conceptPresent(text, concept),
+      (concept) => !conceptPositivelyAsserted(text, concept),
     );
     const acceptablePresent = anchor.acceptableAlternatives.filter((concept) =>
       conceptPresent(text, concept),
@@ -135,9 +181,47 @@ export function latestTrustedRepairArtifact(
   aggregate: TrustedRepairAggregate,
   kind: TrustedRepairArtifactKind,
 ) {
-  return [...aggregate.artifacts]
-    .filter((artifact) => artifact.kind === kind)
-    .sort((left, right) => right.revisionNumber - left.revisionNumber)[0] ?? null;
+  return aggregate.artifacts.reduce<TrustedRepairPrivateArtifact | null>(
+    (latest, artifact) => {
+      if (artifact.kind !== kind) return latest;
+      if (!latest || artifact.revisionNumber > latest.revisionNumber) {
+        return artifact;
+      }
+      if (
+        artifact.revisionNumber === latest.revisionNumber &&
+        artifact.createdAt >= latest.createdAt
+      ) {
+        return artifact;
+      }
+      return latest;
+    },
+    null,
+  );
+}
+
+export function trustedRepairSubmissionCount(
+  aggregate: TrustedRepairAggregate,
+) {
+  return aggregate.artifacts.filter(
+    (artifact) => artifact.kind === "repair_submission",
+  ).length;
+}
+
+export function trustedRepairPartialRetryAvailable(
+  aggregate: TrustedRepairAggregate,
+) {
+  const retriesUsed = Math.max(0, trustedRepairSubmissionCount(aggregate) - 1);
+  return (
+    aggregate.session.state === "partial" &&
+    aggregate.session.outcome === "partial" &&
+    aggregate.session.confirmedRevisionId !== null &&
+    aggregate.session.primaryGapId !== null &&
+    aggregate.session.independentAttemptBeforeHelp &&
+    aggregate.exposures.every(
+      (exposure) => exposure.scaffoldKind !== "guided_solution",
+    ) &&
+    retriesUsed < TRUSTED_REPAIR_LOAD_BUDGET.maximumImmediatePartialRetries
+  );
 }
 
 function basePlan(
@@ -526,16 +610,32 @@ export function planTrustedRepairExposure(input: {
 
 export function planTrustedRepairSubmission(input: {
   aggregate: TrustedRepairAggregate;
+  fixture: TrustedRepairFixture;
+  sourceBinding: TrustedRepairLawBindingState;
   artifactId: string;
   body: string;
   occurredAt: string;
 }) {
-  guardState(input.aggregate, "exposure_committed");
+  guardState(input.aggregate, ["exposure_committed", "partial"]);
+  if (!trustedRepairSourceBindingMatches(input)) {
+    return planTrustedRepairSourceBindingDrift(input.aggregate);
+  }
+  const retryingPartial = input.aggregate.session.state === "partial";
+  const submissionCount = trustedRepairSubmissionCount(input.aggregate);
+  if (
+    (retryingPartial && !trustedRepairPartialRetryAvailable(input.aggregate)) ||
+    (!retryingPartial && submissionCount !== 0)
+  ) {
+    throw new TrustedRepairContractError("invalid_transition");
+  }
   const plan = basePlan(input.aggregate, "repair_submitted", {
     ...input.aggregate.session.stateData,
+    continuation: null,
     resultReasonCodes: [
       ...input.aggregate.session.stateData.resultReasonCodes,
-      "learner_reconstruction_committed",
+      retryingPartial
+        ? "bounded_partial_retry_submission_committed"
+        : "learner_reconstruction_committed",
     ],
   });
   return {
@@ -582,6 +682,7 @@ export function planTrustedRepairContinuation(input: {
     "diagnosed",
     "exposure_committed",
     "repair_submitted",
+    "partial",
   ];
   guardState(input.aggregate, permittedStates);
 
@@ -635,7 +736,12 @@ export function planTrustedRepairContinuation(input: {
     input.aggregate,
     "repair_submission",
   );
-  if (!repair) throw new TrustedRepairContractError("invalid_transition");
+  if (
+    !repair ||
+    repair.revisionNumber !== input.aggregate.session.stateData.revisionNumber
+  ) {
+    throw new TrustedRepairContractError("invalid_transition");
+  }
   const sourceBlocked =
     input.fixture.sourceBinding.requiredStatus === "current_law_verified" &&
     (input.sourceBinding.sourceStatus !== "verified" ||

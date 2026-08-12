@@ -104,6 +104,27 @@
     "DEFER_FOR_NOW",
     "SWITCH_TO_GUIDED"
   ],
+  "partialRepairRetry": {
+    "immediateRetryLimit": 1,
+    "sameSessionRequired": true,
+    "confirmedRevisionAndPrimaryGapPreserved": true,
+    "repairSubmissionsAppendOnly": true,
+    "latestEligibleRepairEvaluated": true,
+    "serverEnforced": true,
+    "casAndIdempotencyRequired": true,
+    "afterLimitAlternatives": [
+      "DEFER_FOR_NOW",
+      "SWITCH_TO_GUIDED"
+    ],
+    "positiveEvidenceCreatedByPartialOrRetrySubmission": false
+  },
+  "semanticAnchorPolarity": {
+    "positiveAssertionRequired": true,
+    "negatedOrAntonymOccurrenceCountsAsPositive": false,
+    "ambiguousOccurrenceFailsClosed": true,
+    "clauseScoped": true,
+    "boundedDeterministicMatcher": true
+  },
   "lawBoundary": {
     "sourceId": "law-source-land-compensation-act",
     "sourceAnchorId": "law-anchor-land-compensation-act-current-candidate",

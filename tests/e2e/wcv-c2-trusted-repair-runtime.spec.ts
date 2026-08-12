@@ -227,6 +227,37 @@ async function apiCommand(
   return { response, body, commandId };
 }
 
+async function createFirstPartialTheory(context: BrowserContext) {
+  let view = (
+    await apiCommand(context, "start", {
+      subject: "appraisal_theory",
+      inputMode: "TYPED_TEXT",
+    })
+  ).body.view;
+  for (const [action, fields] of [
+    ["confirm_revision", { body: "합성 확정 수정본" }],
+    ["commit_prediction", { prediction: "likely_partial", confidence: "medium" }],
+    ["commit_attempt", { body: "법적·물리적·경제적 가능성을 사례와 반대 사실에 적용해 결론을 낸다." }],
+    ["commit_self_diagnosis", { selfDiagnosisCode: "missing_definition" }],
+    ["diagnose", {}],
+    ["request_scaffold", {}],
+    ["submit_repair", { body: "최유효이용은 합리적이지 않고 가능하지 않다" }],
+    ["continue", { continuation: "VERIFY_AND_CONTINUE" }],
+  ] as const) {
+    const result = await apiCommand(context, action, {
+      sessionId: view.session.sessionId,
+      expectedVersion: view.session.recordVersion,
+      ...fields,
+    });
+    expect(result.response.status()).toBe(200);
+    view = result.body.view;
+  }
+  expect(view.session.state).toBe("partial");
+  expect(view.session.repairSubmissionCount).toBe(1);
+  expect(view.session.immediatePartialRetryAvailable).toBe(true);
+  return view;
+}
+
 test("three subjects, responsive flow, keyboard, input modes, attacks, and new-browser recovery", async ({ browser }) => {
   requireRuntime();
   test.skip(Boolean(recoverySessionId), "normal pass is omitted during restart recovery");
@@ -362,6 +393,110 @@ test("three subjects, responsive flow, keyboard, input modes, attacks, and new-b
   expect(exposureLoser).not.toHaveProperty("view");
   expect(JSON.stringify(exposureLoser)).not.toContain("scaffold");
 
+  const firstPartial = await createFirstPartialTheory(modeContext);
+  const durablePartialIdentity = {
+    sessionId: firstPartial.session.sessionId,
+    revisionNumber: firstPartial.session.revisionNumber,
+    primaryGapId: firstPartial.session.primaryGapId,
+  };
+  const partialContext = await contextFor(browser);
+  const partialPage = await partialContext.newPage();
+  let retryRequest: Record<string, unknown> | null = null;
+  partialPage.on("request", (request) => {
+    if (
+      request.method() === "POST" &&
+      new URL(request.url()).pathname === "/api/review-os/trusted-repair"
+    ) {
+      const body = request.postDataJSON() as Record<string, unknown>;
+      if (body.action === "submit_repair") retryRequest = body;
+    }
+  });
+  await partialPage.goto(
+    `/app/trusted-repair?sessionId=${encodeURIComponent(firstPartial.session.sessionId)}`,
+  );
+  await expectState(partialPage, "partial");
+  await expect(partialPage.getByLabel("남은 기준 다시 쓰기")).toBeVisible();
+  await expect(
+    partialPage.getByRole("button", { name: "남은 기준 다시 쓰기" }),
+  ).toBeVisible();
+  await partialPage.reload();
+  await expectState(partialPage, "partial");
+  await expect(partialPage.getByLabel("남은 기준 다시 쓰기")).toBeVisible();
+  await fillText(
+    partialPage,
+    "남은 기준 다시 쓰기",
+    "최유효이용은 비합리적이며 불가능하다",
+    false,
+  );
+  await activatePrimary(partialPage, false);
+  await expectState(partialPage, "repair_submitted");
+  expect(retryRequest).not.toBeNull();
+  const afterRetryLoad = await partialContext.request.get(
+    `/api/review-os/trusted-repair?sessionId=${firstPartial.session.sessionId}`,
+  );
+  expect(afterRetryLoad.status()).toBe(200);
+  const afterRetryView = (await afterRetryLoad.json()).view;
+  expect(afterRetryView.session.repairSubmissionCount).toBe(2);
+  expect({
+    sessionId: afterRetryView.session.sessionId,
+    revisionNumber: afterRetryView.session.revisionNumber,
+    primaryGapId: afterRetryView.session.primaryGapId,
+  }).toEqual(durablePartialIdentity);
+  const replayedRetry = await apiCommand(
+    partialContext,
+    "submit_repair",
+    {
+      sessionId: retryRequest?.sessionId,
+      expectedVersion: retryRequest?.expectedVersion,
+      body: "재전송은 기존 append-only 결과를 바꾸지 않는다",
+    },
+    String(retryRequest?.commandId),
+  );
+  expect(replayedRetry.response.status()).toBe(200);
+  expect(replayedRetry.body.view.session.recordVersion).toBe(
+    afterRetryView.session.recordVersion,
+  );
+  expect(replayedRetry.body.view.session.repairSubmissionCount).toBe(2);
+  await activatePrimary(partialPage, false);
+  await expectState(partialPage, "partial");
+  await expect(
+    partialPage.getByRole("button", { name: "가이드로 전환" }),
+  ).toBeVisible();
+  await partialPage.getByText("다른 방식으로 하기").click();
+  await expect(
+    partialPage.getByRole("button", { name: /DEFER_FOR_NOW/ }),
+  ).toBeVisible();
+  expect(partialPage.url()).toContain(firstPartial.session.sessionId);
+  const exhaustedLoad = await partialContext.request.get(
+    `/api/review-os/trusted-repair?sessionId=${firstPartial.session.sessionId}`,
+  );
+  const exhaustedView = (await exhaustedLoad.json()).view;
+  expect(exhaustedView.session.immediatePartialRetryAvailable).toBe(false);
+  const thirdSubmission = await apiCommand(partialContext, "submit_repair", {
+    sessionId: exhaustedView.session.sessionId,
+    expectedVersion: exhaustedView.session.recordVersion,
+    body: repairs.appraisal_theory,
+  });
+  expect(thirdSubmission.response.status()).toBe(409);
+  expect(thirdSubmission.body).not.toHaveProperty("view");
+  await partialContext.close();
+
+  const correctablePartial = await createFirstPartialTheory(modeContext);
+  const correctedRetry = await apiCommand(modeContext, "submit_repair", {
+    sessionId: correctablePartial.session.sessionId,
+    expectedVersion: correctablePartial.session.recordVersion,
+    body: "최유효이용은 합리적이고 가능한 이용이다",
+  });
+  expect(correctedRetry.response.status()).toBe(200);
+  expect(correctedRetry.body.view.session.repairSubmissionCount).toBe(2);
+  const correctedVerification = await apiCommand(modeContext, "continue", {
+    sessionId: correctedRetry.body.view.session.sessionId,
+    expectedVersion: correctedRetry.body.view.session.recordVersion,
+    continuation: "VERIFY_AND_CONTINUE",
+  });
+  expect(correctedVerification.response.status()).toBe(200);
+  expect(correctedVerification.body.view.session.state).toBe("verified");
+
   const contextB = await contextFor(browser, emailB, passwordB);
   const crossTenant = await contextB.request.get(
     `/api/review-os/trusted-repair?sessionId=${startView.session.sessionId}`,
@@ -379,6 +514,9 @@ test("three subjects, responsive flow, keyboard, input modes, attacks, and new-b
     axeSeriousCritical: 0,
     keyboardOnly: "passed",
     newBrowserRecovery: "passed",
+    partialRetryRefreshAndBrowserRecovery: "passed",
+    partialRetryCasIdempotencyAndBound: "passed",
+    correctedPartialRetryVerification: "passed",
     providerNetworkRequests: 0,
   };
   if (evidencePath) writeFileSync(evidencePath, `${JSON.stringify(evidence, null, 2)}\n`, { mode: 0o600 });
@@ -391,11 +529,12 @@ test("process restart recovers a bodyless canonical session", async ({ browser }
   const page = await context.newPage();
   const foreignHosts = monitorProviderBoundary(page);
   await page.goto(`/app/trusted-repair?sessionId=${encodeURIComponent(recoverySessionId)}`);
-  await expect(page.locator("[data-trusted-repair-state]")).not.toHaveAttribute(
-    "data-trusted-repair-state",
-    "start",
-  );
+  await expectState(page, "partial");
   await expect(page.locator("[data-primary-action]:visible")).toHaveCount(1);
+  await expect(
+    page.getByRole("button", { name: /남은 기준 다시 쓰기|가이드로 전환/ }),
+  ).toBeVisible();
+  expect(page.url()).toContain(recoverySessionId);
   expect([...foreignHosts]).toEqual([]);
   await context.close();
 });

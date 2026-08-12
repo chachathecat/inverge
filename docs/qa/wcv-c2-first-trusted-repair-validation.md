@@ -9,7 +9,7 @@ to PR #716 after the final candidate workflow completes.
 | Issue | Resulting-on-merge result | Primary evidence |
 |---|---|---|
 | #702 | complete | rights manifests, eligible/denied classes, release transitions, 21-item inventory, hostile rights/near-copy/no-promotion tests |
-| #703 | complete | server-owned episode, pre-help commitment, max-three/top-one gaps, smallest scaffold, reconstruction and guided/deferred exits |
+| #703 | complete | server-owned episode, pre-help commitment, max-three/top-one gaps, polarity-aware anchors, smallest scaffold, one bounded append-only partial retry and guided/deferred exits |
 | #704 | complete | seven distinct fixtures per subject and 18 non-Owner-adjudicated Gold candidates across nine families |
 | #705 | complete | isolated forced-RLS storage, CAS/RPC repository, allowlisted API, mobile UI and full runtime/recovery gate |
 
@@ -35,6 +35,12 @@ to PR #716 after the final candidate workflow completes.
 - Input modes: 5 deterministic private representations.
 - Repair paths: 6 bounded paths.
 - Continuations: 3 distinct commands.
+- Partial retry: at most 1 immediate retry in the same durable session;
+  confirmed revision and primary gap remain exact, both submissions are
+  append-only, and the latest eligible submission is regraded.
+- Semantic polarity: positive assertion required; negated, antonym, or
+  materially ambiguous required concepts fail closed within a bounded local
+  clause matcher.
 - Law: expected and observed terminal result remains blocked until the
   existing registry can prove exact official current-law binding.
 - Publication: no learner/fixture bodies, credentials, screenshots, traces,
@@ -50,9 +56,13 @@ to PR #716 after the final candidate workflow completes.
 - actual browser → Next API → service repository → local PostgREST/Auth →
   PostgreSQL execution;
 - CAS, idempotent replay, and failed-exposure zero-help behavior;
+- incorrect repair → `partial` → same-session append-only rewrite → corrected
+  retry `verified`, including retry-command replay without a duplicate body;
+- second failed repair remains `partial`, rejects a third submission through
+  the API, and keeps `DEFER_FOR_NOW` plus `SWITCH_TO_GUIDED` available;
 - Practice and Theory same-session verified, Law blocked;
 - 390px all-subject completion, representative 768px and 1440px completion,
   200% reflow, keyboard completion, and Axe serious/critical zero;
-- all five input modes, refresh/new-browser/process-restart recovery, and zero
-  external provider browser requests; and
+- all five input modes, partial-CTA refresh/new-browser/process-restart
+  recovery, and zero external provider browser requests; and
 - unconditional no-backup Docker cleanup with exact head unchanged.
