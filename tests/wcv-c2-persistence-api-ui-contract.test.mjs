@@ -8,6 +8,7 @@ import {
 } from "../scripts/automation/runtime-risk-contract.mjs";
 
 const SQL = "supabase/migrations/20260812011903_wcv_c2_trusted_repair_vertical.sql";
+const LAW_REGISTRY = "lib/review-os/law-source-version-registry.ts";
 const REPOSITORY = "lib/review-os/trusted-repair-repository.ts";
 const ROUTE = "app/api/review-os/trusted-repair/route.ts";
 const ACCESS = "lib/review-os/trusted-repair-access.ts";
@@ -115,11 +116,13 @@ test("DTO and UI expose bounded fields only after committed help and support dur
   assert.doesNotMatch(ui, /openai|anthropic|gemini|chat\/completions/i);
 });
 
-test("generic Runtime Gate delegates only the exact C2 migration to its branch-agnostic stricter check", async () => {
+test("generic Runtime Gate delegates the exact C2 protected paths to its branch-agnostic stricter check", async () => {
   const workflow = await readFile(WORKFLOW, "utf8");
-  assert.deepEqual(DEDICATED_RUNTIME_ADAPTER_PATHS, [SQL]);
-  assert.deepEqual(runtimeRequiredPathRecords([SQL]), []);
-  assert.match(workflow, new RegExp(`- ["']${SQL}["']`));
+  assert.deepEqual(DEDICATED_RUNTIME_ADAPTER_PATHS, [SQL, LAW_REGISTRY]);
+  assert.deepEqual(runtimeRequiredPathRecords([SQL, LAW_REGISTRY]), []);
+  for (const delegatedPath of DEDICATED_RUNTIME_ADAPTER_PATHS) {
+    assert.match(workflow, new RegExp(`- ["']${delegatedPath}["']`));
+  }
   assert.doesNotMatch(
     workflow,
     /github\.event\.pull_request\.head\.ref\s*==/,

@@ -10,6 +10,7 @@ on:
       - "app/app/trusted-repair/**"
       - "components/review-os/trusted-repair-loop.tsx"
       - "lib/review-os/trusted-repair-*.ts"
+      - "lib/review-os/law-source-version-registry.ts"
       - "scripts/automation/runtime-risk-contract.mjs"
       - "scripts/automation/verify-wcv-c2-trusted-repair-runtime.mjs"
       - "supabase/migrations/20260812011903_wcv_c2_trusted_repair_vertical.sql"

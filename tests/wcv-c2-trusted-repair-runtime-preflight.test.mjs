@@ -6,10 +6,20 @@ import path from "node:path";
 import test from "node:test";
 import { pathToFileURL } from "node:url";
 
+import { DEDICATED_RUNTIME_ADAPTER_PATHS } from "../scripts/automation/runtime-risk-contract.mjs";
+
 const root = process.cwd();
 const read = (relativePath) => fs.readFileSync(path.join(root, relativePath), "utf8");
 
 const workflow = read(".github/workflows/wcv-c2-trusted-repair-runtime.yml");
+const workflowPullRequestPathsBlock =
+  workflow.match(/\n    paths:\n((?:      - [^\n]+\n)+)/)?.[1] ?? "";
+const workflowPullRequestPaths = [
+  ...workflowPullRequestPathsBlock.matchAll(/^\s+- ["']([^"']+)["']\s*$/gm),
+].map(([, protectedPath]) => protectedPath);
+const C2_MIGRATION =
+  "supabase/migrations/20260812011903_wcv_c2_trusted_repair_vertical.sql";
+const LAW_REGISTRY = "lib/review-os/law-source-version-registry.ts";
 const verifier = read("scripts/automation/verify-wcv-c2-trusted-repair-runtime.mjs");
 const config = read("tests/runtime/wcv-c2-supabase/supabase/config.toml");
 const migrationDirectory = path.join(
@@ -36,6 +46,23 @@ test("C2 workflow is exact-head, branch-agnostic, path-triggered, same-repositor
   assert.match(
     workflow,
     /supabase\/migrations\/20260812011903_wcv_c2_trusted_repair_vertical\.sql/,
+  );
+  assert.ok(DEDICATED_RUNTIME_ADAPTER_PATHS.includes(C2_MIGRATION));
+  assert.ok(DEDICATED_RUNTIME_ADAPTER_PATHS.includes(LAW_REGISTRY));
+  for (const delegatedPath of DEDICATED_RUNTIME_ADAPTER_PATHS) {
+    assert.equal(
+      workflowPullRequestPaths.filter(
+        (protectedPath) => protectedPath === delegatedPath,
+      ).length,
+      1,
+      `${delegatedPath} must appear exactly once in pull_request.paths`,
+    );
+  }
+  assert.equal(
+    workflowPullRequestPaths.filter(
+      (protectedPath) => protectedPath === LAW_REGISTRY,
+    ).length,
+    1,
   );
   assert.doesNotMatch(
     workflow,
