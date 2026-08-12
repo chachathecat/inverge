@@ -610,24 +610,37 @@ async function verifyDirectRls(input) {
 }
 
 function verifyPersistedRuntime(databaseContainer) {
+  const assertionIds = [
+    "sessions_present",
+    "private_artifacts_present",
+    "exposure_events_present",
+    "command_receipts_present",
+    "exposure_revision_binding_closed",
+    "law_verified_release_zero",
+    "private_artifacts_immutable",
+  ];
   const result = databaseQuery(
     databaseContainer,
     `select concat_ws('|',
-      (select count(*) > 0 from public.wcv_c2_trusted_repair_sessions),
-      (select count(*) > 0 from public.wcv_c2_trusted_repair_private_artifacts),
-      (select count(*) > 0 from public.wcv_c2_trusted_repair_exposure_events),
-      (select count(*) > 0 from public.wcv_c2_trusted_repair_command_receipts),
-      (select count(*) = 0 from public.wcv_c2_trusted_repair_exposure_events e
+      (select (count(*) > 0)::text from public.wcv_c2_trusted_repair_sessions),
+      (select (count(*) > 0)::text from public.wcv_c2_trusted_repair_private_artifacts),
+      (select (count(*) > 0)::text from public.wcv_c2_trusted_repair_exposure_events),
+      (select (count(*) > 0)::text from public.wcv_c2_trusted_repair_command_receipts),
+      (select (count(*) = 0)::text from public.wcv_c2_trusted_repair_exposure_events e
         left join public.wcv_c2_trusted_repair_private_artifacts a
           on a.id=e.revision_id and a.session_id=e.session_id and a.user_id=e.user_id
         where a.id is null),
-      (select count(*) = 0 from public.wcv_c2_trusted_repair_sessions
+      (select (count(*) = 0)::text from public.wcv_c2_trusted_repair_sessions
         where subject='appraisal_compensation_law' and state='verified'),
-      (select count(*) = 0 from public.wcv_c2_trusted_repair_private_artifacts where immutable is not true)
+      (select (count(*) = 0)::text from public.wcv_c2_trusted_repair_private_artifacts where immutable is not true)
     );`,
   );
-  if (result !== "true|true|true|true|true|true|true") {
-    throw new Error("persisted C2 runtime invariants failed");
+  const values = result.split("|");
+  const failed = assertionIds.filter((_, index) => values[index] !== "true");
+  if (failed.length > 0 || values.length !== assertionIds.length) {
+    throw new Error(
+      `persisted C2 runtime invariants failed: ${failed.join(",") || "shape"}`,
+    );
   }
 }
 

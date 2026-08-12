@@ -74,6 +74,23 @@ test("C2 verifier uses locked local runtimes and suppresses remote credentials",
   assert.doesNotMatch(verifier, /https?:\/\/[a-z0-9-]+\.supabase\.co/i);
 });
 
+test("C2 persisted runtime assertions serialize booleans unambiguously", () => {
+  const persistedRuntimeVerifier = verifier.match(
+    /function verifyPersistedRuntime[\s\S]*?function runFinalRuntime/,
+  )?.[0] ?? "";
+  assert.equal(
+    (persistedRuntimeVerifier.match(/\(count\(\*\) [=>] 0\)::text/g) ?? []).length,
+    7,
+  );
+  assert.match(
+    persistedRuntimeVerifier,
+    /exposure_revision_binding_closed/,
+  );
+  assert.match(persistedRuntimeVerifier, /law_verified_release_zero/);
+  assert.match(persistedRuntimeVerifier, /private_artifacts_immutable/);
+  assert.match(persistedRuntimeVerifier, /failed\.join\(","\) \|\| "shape"/);
+});
+
 test("C2 runtime workdir remains local-only and retains the preflight tenant probe", () => {
   assert.equal(migrationNames.length, 1);
   assert.match(config, /^project_id = "wcv-c2-trusted-repair"/m);
