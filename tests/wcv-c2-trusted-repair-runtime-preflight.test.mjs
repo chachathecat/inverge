@@ -47,7 +47,7 @@ test("C2 workflow is exact-head, same-repository, least-privilege, and cleanup-b
   assert.doesNotMatch(workflow, /supabase\s+(?:login|link)|--linked|db\s+push/i);
 });
 
-test("C2 verifier uses the locked local CLI and suppresses remote credentials", () => {
+test("C2 verifier uses locked local runtimes and suppresses remote credentials", () => {
   assert.equal(lockfile.packages["node_modules/supabase"].version, "2.95.0");
   assert.match(verifier, /node_modules\/\.bin\/supabase/);
   assert.match(verifier, /EXPECTED_CLI_VERSION = "2\.95\.0"/);
@@ -60,15 +60,18 @@ test("C2 verifier uses the locked local CLI and suppresses remote credentials", 
   assert.match(verifier, /"stop"/);
   assert.match(verifier, /"--no-backup"/);
   assert.match(verifier, /two_local_authenticated_identities/);
-  assert.match(verifier, /same_user_operation_permitted/);
-  assert.match(verifier, /cross_user_rls_denial/);
+  assert.match(verifier, /first_fresh_empty_state_migrations/);
+  assert.match(verifier, /second_fresh_empty_state_migrations/);
+  assert.match(verifier, /three_subject_actual_browser_to_postgres_chain/);
+  assert.match(verifier, /cas_replay_and_exposure_failure_zero_help/);
+  assert.match(verifier, /next_process_restart_recovery/);
   assert.match(verifier, /crossUserReadRows/);
   assert.match(verifier, /crossUserDeleteRows/);
   assert.match(verifier, /remoteSupabaseUsed: false/);
   assert.doesNotMatch(verifier, /https?:\/\/[a-z0-9-]+\.supabase\.co/i);
 });
 
-test("C2 preflight workdir is local-only and the synthetic table is RLS isolated", () => {
+test("C2 runtime workdir remains local-only and retains the preflight tenant probe", () => {
   assert.equal(migrationNames.length, 1);
   assert.match(config, /^project_id = "wcv-c2-trusted-repair"/m);
   assert.match(config, /\[api\][\s\S]*enabled = true/);

@@ -2,6 +2,8 @@
 
 - Contract version: `dabangil.unified_program.v3`
 - Current exact-scope Owner decisions:
+  `docs/decisions/2026-08-12-wcv-c2-first-trusted-repair-vertical.md`
+  for the synthetic/default-OFF C2 implementation,
   `docs/decisions/2026-08-11-owner-accelerated-vertical-slice-authority-roadmap-reconciliation.md`
   for WCV campaign delivery and roadmap reconciliation,
   `docs/decisions/2026-07-30-owner-o4v-lean-owner-private-gate.md` for lean
@@ -177,22 +179,22 @@ review/correction cycles are prohibited.
 | Campaign | Lead | Included issues | State after C1 | Outcome |
 |---|---:|---|---|---|
 | C1 | #713 | #713 | completed source-only on reconciliation merge | authority and roadmap reconciliation; runtime mutation zero |
-| C2 | #702 | #702–#705 | sole next implementation campaign | rights-safe Capture/OCR → anchor → independent attempt → gap → scaffold → repair → verification → durable reopen/resume |
-| C3 | #706 | #706–#708 | queued behind C2 | frozen D+1, sealed D+7, recurrence/reopening, Ledger, recurring deduction and Today/Full-Day |
+| C2 | #702 | #702–#705 | completed synthetic/default-OFF on PR #716 merge | rights-safe Capture/OCR → anchor → independent attempt → gap → scaffold → repair → verification → durable reopen/resume |
+| C3 | #706 | #706–#708 | sole next implementation campaign | frozen D+1, sealed D+7, recurrence/reopening, Ledger, recurring deduction and Today/Full-Day |
 | C4 | #709 | #709–#710 | queued behind C3 | Owner proof, red-team, baseline and invitation-only commercial readiness; no activation |
 | C5 | #711 | #711 | queued behind C4 and unapproved O4W exact cohort gate | frozen paid cohort with real delayed-evidence windows |
 | C6 | #712 | #712 | queued behind C5 | verified-bank and bodyless calibration flywheel |
 
 Issue #701 remains the parent program. Issue #714 remains an open,
 non-merge-producing cross-vertical acceptance tracker. It is not a standalone
-source PR or prerequisite before C2, and this reconciliation implements none
-of its behavior.
+source PR. C2 implements and evidence-maps exactly its eight C2 allocations;
+the allocated C3, C4 and C6 requirements remain open.
 
 ### #714 durable allocation
 
 | Campaign | Allocated requirement groups |
 |---|---|
-| C2 | adaptive expertise controller; cognitive-load budget; concept-repair need decision; private typed/photo/PDF/voice/structured artifact modes; concept progression gate and three continue semantics; episode prediction/self-diagnosis; initial fading/control transfer; no upload/view/skip shortcut |
+| C2 (implemented) | adaptive expertise controller; cognitive-load budget; concept-repair need decision; private typed/photo/PDF/voice/structured artifact modes; concept progression gate and three continue semantics; episode prediction/self-diagnosis; initial fading/control transfer; no upload/view/skip shortcut |
 | C3 | longitudinal metacognitive calibration; transfer-distance sequencing; motivation/volition/recovery; durable fading/control transfer; artifact/revision/deferral/export/delete lineage; Today/Full-Day defer/reduce/drop and equivalent-task semantics |
 | C4 | Owner proof of instructional-mode/routing quality; over/under-scaffolding and shortcut red-team; baseline metacognitive/autonomy comparison |
 | C6 | continuous instructional-mode, fading, transfer-distance, routing-error, metacognitive and control-transfer calibration |

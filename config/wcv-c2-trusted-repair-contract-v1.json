@@ -1,0 +1,196 @@
+{
+  "contractVersion": "wcv_c2_trusted_repair.v1",
+  "decisionDateKst": "2026-08-12",
+  "rollout": {
+    "serverFlag": "WCV_C2_TRUSTED_REPAIR_ENABLED",
+    "enabledValue": "true",
+    "defaultOff": true,
+    "ownerOrSyntheticTestIdentityRequired": true,
+    "remoteEnvironmentMutationAuthorized": false,
+    "realLearnerActivationAuthorized": false
+  },
+  "subjects": [
+    "appraisal_practical",
+    "appraisal_theory",
+    "appraisal_compensation_law"
+  ],
+  "stateFlow": [
+    "editable_capture_draft",
+    "revision_confirmed",
+    "prediction_committed",
+    "independent_attempt_committed",
+    "self_diagnosis_committed",
+    "diagnosed",
+    "exposure_committed",
+    "repair_submitted",
+    "verified|partial|guided|deferred|blocked|uncertain|stale"
+  ],
+  "bindings": [
+    "revision",
+    "fixture",
+    "source",
+    "rubric",
+    "policy",
+    "validator"
+  ],
+  "persistence": {
+    "canonicalMetadataBodyless": true,
+    "privateArtifactsAppendOnly": true,
+    "exposureEventsAppendOnly": true,
+    "authenticatedDirectMutationAllowed": false,
+    "serviceRoleRepositoryOnly": true,
+    "userClientFallbackAllowed": false,
+    "exactUserAndSessionKindFiltersRequired": true,
+    "casRequired": true,
+    "idempotencyReceiptRequired": true,
+    "exposureAndStateAtomic": true,
+    "helpBytesBeforeExposureCommitAllowed": false
+  },
+  "rights": {
+    "eligibleClasses": [
+      "INVERGE_ORIGINAL_SYNTHETIC",
+      "RIGHTS_CLEARED_OFFICIAL_METADATA",
+      "CLEARED_DETERMINISTIC_TEMPLATE",
+      "EXACT_APPROVED_FIXTURE_MATERIAL"
+    ],
+    "deniedClasses": [
+      "ACADEMY",
+      "TEXTBOOK",
+      "MOCK_EXAM",
+      "LECTURE",
+      "LEARNER_PRIVATE",
+      "RIGHTS_UNKNOWN"
+    ],
+    "rawBodyTrainingAllowed": false,
+    "automaticPromotionAllowed": false,
+    "fixtureReleaseState": "AUTOMATED_CHECKED",
+    "ownerAdjudicationClaimed": false
+  },
+  "fixtureInventory": {
+    "total": 21,
+    "perSubject": 7,
+    "kinds": [
+      "canonical",
+      "near_miss",
+      "counterexample",
+      "flip_condition",
+      "sealed_future_variant_a",
+      "sealed_future_variant_b",
+      "timed_integration"
+    ],
+    "runtimeFixturesPerSubject": 1,
+    "goldCandidateFamilies": 9,
+    "samplesPerGoldCandidateFamily": 2,
+    "goldCandidateCount": 18,
+    "goldAdjudicationState": "REGRESSION_CANDIDATE_NOT_OWNER_REVIEWED"
+  },
+  "inputModes": [
+    "TYPED_TEXT",
+    "EDITABLE_PHOTO_OCR",
+    "EDITABLE_PDF_OCR",
+    "EDITABLE_VOICE_TRANSCRIPTION",
+    "STRUCTURED_SELECTION"
+  ],
+  "repairPaths": [
+    "WORKED_CONCEPT_FIRST",
+    "LEARNER_GENERATED",
+    "UPLOAD_EXISTING_ARTIFACT",
+    "VOICE_TEACH_BACK",
+    "STRUCTURED_SELECTION",
+    "QUICK_VERIFICATION"
+  ],
+  "continuationCommands": [
+    "VERIFY_AND_CONTINUE",
+    "DEFER_FOR_NOW",
+    "SWITCH_TO_GUIDED"
+  ],
+  "lawBoundary": {
+    "sourceId": "law-source-land-compensation-act",
+    "sourceAnchorId": "law-anchor-land-compensation-act-current-candidate",
+    "requiredStatus": "current_law_verified",
+    "currentRepositoryStatus": "current_law_unresolved",
+    "verifiedOutcomeAllowedOnCurrentRepositoryState": false,
+    "inventedSourceOrCurrentnessAllowed": false
+  },
+  "issueAcceptance": {
+    "702": {
+      "statusOnMerge": "completed",
+      "evidence": [
+        "lib/review-os/trusted-repair-fixtures.ts",
+        "tests/wcv-c2-rights-fixtures.test.mjs"
+      ]
+    },
+    "703": {
+      "statusOnMerge": "completed",
+      "evidence": [
+        "lib/review-os/trusted-repair-engine.ts",
+        "lib/review-os/trusted-repair-server.ts",
+        "tests/wcv-c2-trusted-repair-engine.test.mjs"
+      ]
+    },
+    "704": {
+      "statusOnMerge": "completed",
+      "evidence": [
+        "lib/review-os/trusted-repair-fixtures.ts",
+        "tests/wcv-c2-rights-fixtures.test.mjs"
+      ]
+    },
+    "705": {
+      "statusOnMerge": "completed",
+      "evidence": [
+        "supabase/migrations/20260812011903_wcv_c2_trusted_repair_vertical.sql",
+        "app/api/review-os/trusted-repair/route.ts",
+        "components/review-os/trusted-repair-loop.tsx",
+        "scripts/automation/verify-wcv-c2-trusted-repair-runtime.mjs"
+      ]
+    }
+  },
+  "issue714C2Allocations": {
+    "adaptive_expertise_controller": [
+      "trusted-repair-engine repairPathFor",
+      "six bounded repair paths"
+    ],
+    "cognitive_load_budget": [
+      "maximum three gap candidates",
+      "one deterministic primary gap",
+      "one scaffold per exposure"
+    ],
+    "concept_repair_need_decision": [
+      "required|optional|blocked",
+      "INSUFFICIENT_EVIDENCE"
+    ],
+    "concept_repair_input_modes_and_private_artifact_boundary": [
+      "five deterministic editable input modes",
+      "append-only service-only private artifacts"
+    ],
+    "concept_progression_gate_and_three_continue_semantics": [
+      "server-owned state gate",
+      "VERIFY_AND_CONTINUE|DEFER_FOR_NOW|SWITCH_TO_GUIDED"
+    ],
+    "episode_metacognitive_prediction_and_self_diagnosis": [
+      "prediction before independent attempt",
+      "self diagnosis before server diagnosis"
+    ],
+    "initial_scaffold_fading_and_control_transfer": [
+      "assistance level zero before exposure",
+      "smallest scaffold level one",
+      "guided exit level three with zero independent-success effect"
+    ],
+    "same_session_reconstruction_application_and_no_shortcut_invariants": [
+      "repair submission required before verification",
+      "upload save view skip defer guided never create verified evidence",
+      "same-session criterion only"
+    ]
+  },
+  "scopeExclusions": [
+    "D+1 execution",
+    "D+7 execution",
+    "timed recurrence execution",
+    "Today Full-Day Queue or Ledger projection",
+    "live OCR model or voice provider",
+    "remote Supabase mutation",
+    "real learner or content activation",
+    "payment pricing entitlement or Production changes",
+    "mastery transfer stability score or pass claims"
+  ]
+}

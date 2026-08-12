@@ -15,7 +15,7 @@ jobs:
       github.event.pull_request.head.ref == 'agent/wcv-c2-first-trusted-repair-vertical' &&
       github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 60
     concurrency:
       group: wcv-c2-trusted-repair-runtime-${{ github.event.pull_request.number }}
       cancel-in-progress: true
@@ -48,7 +48,10 @@ jobs:
       - name: Install locked dependencies
         run: npm ci
 
-      - name: Run exact-head isolated Supabase preflight
+      - name: Install the bounded Chromium runtime
+        run: npm exec playwright install -- --with-deps chromium
+
+      - name: Run exact-head complete isolated C2 runtime gate
         env:
           GITHUB_RUN_ID: ${{ github.run_id }}
           GITHUB_RUN_ATTEMPT: ${{ github.run_attempt }}

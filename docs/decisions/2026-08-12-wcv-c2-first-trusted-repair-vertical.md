@@ -1,0 +1,89 @@
+# 2026-08-12 WCV-C2 First Trusted Repair Vertical
+
+## Decision
+
+Implement Issues #702–#705 as one default-OFF, Owner/test-only, synthetic
+three-subject repair vertical. The single rollback unit includes the contract,
+rights-safe fixtures, server-owned state machine, isolated persistence and RLS,
+service-only repository, API, learner UI, focused hostile tests, and the exact-
+head local Supabase/browser runtime gate.
+
+The server flag is `WCV_C2_TRUSTED_REPAIR_ENABLED`. Only the exact string
+`true` can pass the flag gate, and authenticated Owner/test identity is still
+required. No Preview, Production, remote Supabase, real learner, or provider
+activation is authorized.
+
+## Learner outcome
+
+The supported flow is:
+
+1. choose one rights-safe canonical synthetic fixture;
+2. edit and confirm a capture draft as an immutable revision;
+3. view stable semantic anchors;
+4. commit a prediction, an independent attempt, and a self-diagnosis;
+5. receive up to three evidence-bound gaps with one deterministic primary gap;
+6. atomically commit an exposure before receiving one bounded scaffold;
+7. reconstruct and submit one repair;
+8. choose verify-and-continue, defer, or guided mode; and
+9. recover the canonical state after refresh, another browser, or a Next
+   process restart.
+
+A successful result is same-session criterion evidence only. It is not
+mastery, transfer, stability, gap elimination, score improvement, or pass
+evidence.
+
+## Rights and source boundary
+
+The repository contains 21 Inverge-original synthetic fixtures: seven per
+subject across canonical, near-miss, counterexample, flip-condition, two
+sealed future variants, and timed integration. Only the three canonical
+Learning fixtures are executable in C2. The 18 Gold items are regression
+candidates and remain `REGRESSION_CANDIDATE_NOT_OWNER_REVIEWED`.
+
+Academy, textbook, mock-exam, lecture, learner-private, and rights-unknown
+content is rejected. Raw-body training, reconstruction of denied sources,
+near copies, sharing, self-publication, and self-promotion are prohibited.
+
+The existing Law registry does not provide a verified current-law binding for
+the selected source and anchor. Therefore the Law walkthrough remains
+`blocked`, with zero verified release. This PR does not invent a source,
+version, effective date, or currentness claim.
+
+## Storage and authority
+
+The canonical session table is bodyless. Learner bodies live only in an
+append-only private-artifact table. Assistance lives in an append-only,
+bodyless exposure table. Authenticated clients can read only their bodyless
+session row and cannot directly mutate canonical state, private artifacts,
+exposure effects, or RPCs. The server authenticates first and then uses an
+exact-user, exact-session-kind service repository with CAS and idempotency
+receipts. There is no user-client fallback.
+
+The API returns explicit allowlisted DTOs. It never returns stored private
+artifact bodies, hidden references, checksums, policy secrets, credentials,
+or provider payloads. A scaffold is assembled only after the corresponding
+exposure transaction commits; a failed exposure returns zero help bytes.
+
+## Validation and rollback
+
+The dedicated `wcv-c2-trusted-repair-runtime` check applies both C2 migrations
+to a fresh isolated local Supabase stack twice. Its full pass exercises two
+Auth identities, grants and forced RLS, direct CRUD/RPC denial, tenant
+isolation, CAS, replay, exposure atomicity, all subjects, all input modes,
+390/768/1440 widths, 200% reflow, keyboard completion, Axe serious/critical
+zero, new-browser recovery, process-restart recovery, and zero live-provider
+browser requests. Published evidence is metadata-only.
+
+Rollback is forward disable first: keep
+`WCV_C2_TRUSTED_REPAIR_ENABLED` absent or false. The migration is applied only
+to fresh ephemeral local databases in this Work. Reverting the source and
+migration in another fresh isolated environment is the destructive rollback
+test boundary; no remote rollback is authorized.
+
+## Resulting-on-merge authority
+
+On merge, WCV-C2 is completed and WCV-C3 / Issue #706 becomes the sole next
+implementation campaign and lead. Issue #714 remains open; only its exact
+eight C2 allocations are evidence-mapped. C3, C4, and C6 allocations remain
+open. O4W remains queued and unapproved; CPF-1 and S236P remain blocked; V13
+remains the sole active master and WCV `1.0.8` remains subordinate.

@@ -25,6 +25,23 @@
     "commercialActivationAuthorized": false,
     "productionAuthorized": false
   },
+  "c2ImplementationDecision": {
+    "id": "owner_wcv_c2_first_trusted_repair_vertical_2026_08_12",
+    "status": "implemented_synthetic_default_off_on_merge",
+    "decisionDateKst": "2026-08-12",
+    "decisionRecord": "docs/decisions/2026-08-12-wcv-c2-first-trusted-repair-vertical.md",
+    "machineContract": "config/wcv-c2-trusted-repair-contract-v1.json",
+    "validationEvidence": "docs/qa/wcv-c2-first-trusted-repair-validation.md",
+    "leadIssue": 702,
+    "includedIssues": [702, 703, 704, 705],
+    "defaultOff": true,
+    "syntheticOwnerTestRuntimeAuthorized": true,
+    "realContentAuthorized": false,
+    "learnerActivationAuthorized": false,
+    "commercialActivationAuthorized": false,
+    "remoteSupabaseAuthorized": false,
+    "productionAuthorized": false
+  },
   "scopeDecisions": {
     "O3A": {
       "id": "owner_o3a_appraiser_second_2026_q1_owner_private_golden_3_2026_07_29",
@@ -892,7 +909,15 @@
         "leadIssue": 702,
         "includedIssues": [702, 703, 704, 705],
         "dependencies": ["WCV-C1"],
-        "state": "sole_next_implementation_campaign",
+        "state": "completed_synthetic_default_off_vertical",
+        "mergedPr": 716,
+        "currentRuntimeReadinessEstablished": true,
+        "currentRuntimeReadinessScope": "synthetic_owner_test_only_default_off",
+        "implementationDecision": "docs/decisions/2026-08-12-wcv-c2-first-trusted-repair-vertical.md",
+        "machineContract": "config/wcv-c2-trusted-repair-contract-v1.json",
+        "validationEvidence": "docs/qa/wcv-c2-first-trusted-repair-validation.md",
+        "realLearnerActivationAuthorized": false,
+        "remoteSupabaseMutationAuthorized": false,
         "requiredOutcome": [
           "RIGHTS_SAFE_FIXTURE",
           "CAPTURE_OCR_CONFIRMATION",
@@ -913,7 +938,7 @@
         "leadIssue": 706,
         "includedIssues": [706, 707, 708],
         "dependencies": ["WCV-C2"],
-        "state": "queued"
+        "state": "sole_next_implementation_campaign"
       },
       {
         "id": "C4",
@@ -966,6 +991,18 @@
       "standalonePrerequisiteBeforeC2": false,
       "standaloneSourcePrRequired": false,
       "behaviorImplementedByC1": false,
+      "behaviorImplementedByC2": true,
+      "c2CompletionEvidence": {
+        "adaptive_expertise_controller": "lib/review-os/trusted-repair-engine.ts",
+        "cognitive_load_budget": "lib/review-os/trusted-repair-contract.ts",
+        "concept_repair_need_decision": "lib/review-os/trusted-repair-engine.ts",
+        "concept_repair_input_modes_and_private_artifact_boundary": "lib/review-os/trusted-repair-fixtures.ts",
+        "concept_progression_gate_and_three_continue_semantics": "lib/review-os/trusted-repair-engine.ts",
+        "episode_metacognitive_prediction_and_self_diagnosis": "lib/review-os/trusted-repair-engine.ts",
+        "initial_scaffold_fading_and_control_transfer": "lib/review-os/trusted-repair-engine.ts",
+        "same_session_reconstruction_application_and_no_shortcut_invariants": "tests/wcv-c2-trusted-repair-engine.test.mjs"
+      },
+      "remainingAllocationCampaignsOpen": ["C3", "C4", "C6"],
       "requirementInventory": [
         "adaptive_expertise_controller",
         "cognitive_load_budget",
@@ -1026,9 +1063,9 @@
       "operative": false,
       "preservedAsHistory": true
     },
-    "soleNextImplementationCampaign": "C2",
-    "soleNextImplementationLeadIssue": 702,
-    "laterCampaignsQueued": ["C3", "C4", "C5", "C6"],
+    "soleNextImplementationCampaign": "C3",
+    "soleNextImplementationLeadIssue": 706,
+    "laterCampaignsQueued": ["C4", "C5", "C6"],
     "legacyFactualGates": {
       "CPF-1": {
         "status": "blocked",

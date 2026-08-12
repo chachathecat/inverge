@@ -11,8 +11,8 @@ program:
   wipLimitDoesNotAuthorizeWriterCount: true
   campaignOverlay: WCV-C1-C6
   campaignLockGroup: wcv-vertical-campaign
-  soleNextImplementationItem: WCV-C2
-  soleNextImplementationLeadIssue: 702
+  soleNextImplementationItem: WCV-C3
+  soleNextImplementationLeadIssue: 706
   crossVerticalAcceptanceTrackerIssue: 714
   activeMasterPlan: docs/strategy/dabangil-professional-exam-reasoning-os-final-master-plan-v13-2026-08-06.md
   v12T0Status: completed_source_only_alignment
@@ -335,15 +335,26 @@ items:
     priority: 31.12
   - id: WCV-C2
     title: C2 First Trusted Repair Vertical
-    status: queued
-    executionState: sole_next_implementation_campaign
+    status: completed
+    executionState: completed_synthetic_default_off_vertical
+    completionScope: three_subject_owner_test_synthetic_default_off_runtime
+    currentRuntimeReadinessEstablished: true
+    currentRuntimeReadinessScope: synthetic_owner_test_only_default_off
     leadIssue: 702
     includedIssues: [702, 703, 704, 705]
+    mergedPr: 716
+    implementationDecision: docs/decisions/2026-08-12-wcv-c2-first-trusted-repair-vertical.md
+    machineContract: config/wcv-c2-trusted-repair-contract-v1.json
+    validationEvidence: docs/qa/wcv-c2-first-trusted-repair-validation.md
     crossVerticalAcceptanceTracker: 714
     requiredLayers: [contract_machine_validation, api_storage_persistence, runtime_logic, learner_ui, focused_hostile_runtime_evidence, feature_flag_safe_deferred, rollback]
     standalone702SourcePrAllowed: false
     standalone714PrerequisitePrAllowed: false
     sourceOnlyCompletionEstablishesRuntimeReadiness: false
+    defaultOff: true
+    realLearnerActivationAuthorized: false
+    remoteSupabaseMutationAuthorized: false
+    liveProviderAuthorized: false
     dependencies: [WCV-C1]
     lockGroup: wcv-vertical-campaign
     risk: high
@@ -351,6 +362,7 @@ items:
   - id: WCV-C3
     title: C3 Durable Learning and Daily Command Vertical
     status: queued
+    executionState: sole_next_implementation_campaign
     leadIssue: 706
     includedIssues: [706, 707, 708]
     crossVerticalAcceptanceTracker: 714

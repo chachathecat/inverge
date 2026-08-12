@@ -166,7 +166,7 @@ test("reconciles two truthful blocked reservations with one delivery slot", asyn
   assert.equal(plan.activeWriterCount, 0);
   assert.equal(plan.availableWriterSlots, 1);
   assert.equal(plan.selectionSlots, 1);
-  assert.deepEqual(plan.selectedItemIds, ["WCV-C2"]);
+  assert.deepEqual(plan.selectedItemIds, ["WCV-C3"]);
 });
 
 test("preserves CPF-1 and S236P factual blocked states without bypass", async () => {
@@ -191,7 +191,7 @@ test("preserves CPF-1 and S236P factual blocked states without bypass", async ()
   assert.equal(unified.wcvCampaignOverlay.legacyFactualGates.S236P.bypassAllowed, false);
 });
 
-test("makes C2 led by #702 the sole selected next implementation campaign", async () => {
+test("records C2 complete and makes C3 led by #706 the sole selected next campaign", async () => {
   const [roadmapSource, unified] = await Promise.all([
     text("roadmap/active-program.yml"),
     json("config/dabangil-unified-program-contract.json"),
@@ -200,14 +200,15 @@ test("makes C2 led by #702 the sole selected next implementation campaign", asyn
   const campaigns = unified.wcvCampaignOverlay.campaigns;
   const next = campaigns.filter((campaign) => campaign.state === "sole_next_implementation_campaign");
 
-  assert.equal(roadmap.program.soleNextImplementationItem, "WCV-C2");
-  assert.equal(roadmap.program.soleNextImplementationLeadIssue, 702);
+  assert.equal(roadmap.program.soleNextImplementationItem, "WCV-C3");
+  assert.equal(roadmap.program.soleNextImplementationLeadIssue, 706);
   assert.equal(next.length, 1);
-  assert.equal(next[0].id, "C2");
-  assert.equal(next[0].leadIssue, 702);
-  assert.deepEqual(next[0].includedIssues, [702, 703, 704, 705]);
-  assert.deepEqual(unified.wcvCampaignOverlay.laterCampaignsQueued, ["C3", "C4", "C5", "C6"]);
-  assert.equal(roadmap.byId.get("WCV-C2").executionState, "sole_next_implementation_campaign");
+  assert.equal(next[0].id, "C3");
+  assert.equal(next[0].leadIssue, 706);
+  assert.deepEqual(next[0].includedIssues, [706, 707, 708]);
+  assert.deepEqual(unified.wcvCampaignOverlay.laterCampaignsQueued, ["C4", "C5", "C6"]);
+  assert.equal(roadmap.byId.get("WCV-C2").executionState, "completed_synthetic_default_off_vertical");
+  assert.equal(roadmap.byId.get("WCV-C3").executionState, "sole_next_implementation_campaign");
 });
 
 test("installs the exact C1 through C6 dependency graph", async () => {
@@ -215,7 +216,7 @@ test("installs the exact C1 through C6 dependency graph", async () => {
   const expected = {
     "WCV-0": { status: "completed", dependencies: ["S234R"] },
     "WCV-C1": { status: "completed", dependencies: ["WCV-0"] },
-    "WCV-C2": { status: "queued", dependencies: ["WCV-C1"] },
+    "WCV-C2": { status: "completed", dependencies: ["WCV-C1"] },
     "WCV-C3": { status: "queued", dependencies: ["WCV-C2"] },
     "WCV-C4": { status: "queued", dependencies: ["WCV-C3"] },
     O4W: { status: "queued", dependencies: ["WCV-C4"] },
@@ -297,7 +298,7 @@ test("gates C5 on one queued unapproved O4W Owner authorization", async () => {
   assert.match(contract, /O4W: exact frozen paid-cohort manifest authorization for WCV-C5 only/);
   assert.match(contract, /WCV-C5\s+depends on both WCV-C4 and O4W/);
 
-  const c4Complete = ["WCV-C2", "WCV-C3", "WCV-C4"].reduce(
+  const c4Complete = ["WCV-C3", "WCV-C4"].reduce(
     (source, itemId) => replaceItemStatus(source, itemId, "completed"),
     roadmapSource,
   );

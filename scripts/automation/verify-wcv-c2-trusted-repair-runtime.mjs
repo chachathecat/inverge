@@ -4,7 +4,7 @@ import crypto from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
 import process from "node:process";
-import { spawnSync } from "node:child_process";
+import { spawn, spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 
 const REPOSITORY_ROOT = path.resolve(
@@ -14,6 +14,14 @@ const REPOSITORY_ROOT = path.resolve(
 const SOURCE_WORKDIR = path.join(
   REPOSITORY_ROOT,
   "tests/runtime/wcv-c2-supabase",
+);
+const C2_MIGRATION_PATH = path.join(
+  REPOSITORY_ROOT,
+  "supabase/migrations/20260812011903_wcv_c2_trusted_repair_vertical.sql",
+);
+const BROWSER_CONFIG_PATH = path.join(
+  REPOSITORY_ROOT,
+  "tests/e2e/wcv-c2-playwright.config.ts",
 );
 const PROJECT_ID = "wcv-c2-trusted-repair";
 const EXPECTED_CLI_VERSION = "2.95.0";
@@ -84,7 +92,7 @@ function run(command, commandArgs, options = {}) {
   const result = spawnSync(command, commandArgs, {
     cwd: options.cwd ?? REPOSITORY_ROOT,
     encoding: "utf8",
-    env: commandEnvironment(),
+    env: options.env ?? commandEnvironment(),
     maxBuffer: 32 * 1024 * 1024,
     stdio: ["ignore", "pipe", "pipe"],
   });
@@ -139,6 +147,10 @@ function prepareRuntimeWorkdir(root) {
   fs.cpSync(path.join(SOURCE_WORKDIR, "supabase"), path.join(root, "supabase"), {
     recursive: true,
   });
+  fs.copyFileSync(
+    C2_MIGRATION_PATH,
+    path.join(root, "supabase/migrations", path.basename(C2_MIGRATION_PATH)),
+  );
 }
 
 function localSourceFiles() {
@@ -151,6 +163,13 @@ function localSourceFiles() {
     }
   };
   visit(path.join(SOURCE_WORKDIR, "supabase"));
+  files.push(C2_MIGRATION_PATH, BROWSER_CONFIG_PATH);
+  files.push(
+    path.join(
+      REPOSITORY_ROOT,
+      "tests/e2e/wcv-c2-trusted-repair-runtime.spec.ts",
+    ),
+  );
   return files.sort();
 }
 
@@ -166,13 +185,17 @@ function verifyLocalOnlySource() {
 }
 
 function migrationMetadata() {
-  const migrationDirectory = path.join(SOURCE_WORKDIR, "supabase/migrations");
-  return fs.readdirSync(migrationDirectory)
-    .filter((name) => /^\d{14}_[a-z0-9_]+\.sql$/.test(name))
+  const files = [
+    ...fs.readdirSync(path.join(SOURCE_WORKDIR, "supabase/migrations"))
+      .map((name) => path.join(SOURCE_WORKDIR, "supabase/migrations", name)),
+    C2_MIGRATION_PATH,
+  ];
+  return files
+    .filter((file) => /^\d{14}_[a-z0-9_]+\.sql$/.test(path.basename(file)))
     .sort()
-    .map((name) => ({
-      identity: name.replace(/\.sql$/, ""),
-      sha256: sha256(fs.readFileSync(path.join(migrationDirectory, name))),
+    .map((file) => ({
+      identity: path.basename(file).replace(/\.sql$/, ""),
+      sha256: sha256(fs.readFileSync(file)),
     }));
 }
 
@@ -292,10 +315,11 @@ async function apiRequest(apiUrl, anonKey, requestPath, options = {}) {
 async function createSyntheticIdentity(apiUrl, anonKey, suffix) {
   const nonce = crypto.randomBytes(8).toString("hex");
   const password = `WcvC2!${crypto.randomBytes(18).toString("base64url")}9a`;
+  const email = `wcv-c2-${suffix}-${nonce}@localhost.test`;
   const result = await apiRequest(apiUrl, anonKey, "/auth/v1/signup", {
     method: "POST",
     body: {
-      email: `wcv-c2-${suffix}-${nonce}@localhost.test`,
+      email,
       password,
     },
     label: "local Auth signup",
@@ -308,7 +332,7 @@ async function createSyntheticIdentity(apiUrl, anonKey, suffix) {
     throw new Error("local Auth signup returned no session token");
   }
   process.stdout.write(`::add-mask::${accessToken}\n`);
-  return { userId, accessToken };
+  return { userId, accessToken, email, password };
 }
 
 function expectStatus(result, allowed, label) {
@@ -341,8 +365,8 @@ function activeStackIdentity() {
   return { reference, digest };
 }
 
-function verifyMigrationApplied(databaseContainer) {
-  const result = docker([
+function databaseQuery(databaseContainer, sql) {
+  return docker([
     "exec",
     databaseContainer,
     "psql",
@@ -356,12 +380,238 @@ function verifyMigrationApplied(databaseContainer) {
     "--set",
     "ON_ERROR_STOP=1",
     "--command",
-    "select (to_regclass('public.wcv_c2_preflight_tenant_probe') is not null)::text;",
+    sql,
   ]).stdout.trim();
-  if (result !== "true") throw new Error("empty-state preflight migration was not applied");
 }
 
-async function runPreflight() {
+function verifyMigrationsApplied(databaseContainer) {
+  const result = databaseQuery(
+    databaseContainer,
+    `select concat_ws('|',
+      (to_regclass('public.wcv_c2_preflight_tenant_probe') is not null)::text,
+      (to_regclass('public.wcv_c2_trusted_repair_sessions') is not null)::text,
+      (to_regclass('public.wcv_c2_trusted_repair_private_artifacts') is not null)::text,
+      (to_regclass('public.wcv_c2_trusted_repair_exposure_events') is not null)::text,
+      (to_regprocedure('public.wcv_c2_apply_trusted_repair_transition_v1(uuid,uuid,uuid,bigint,text,text,jsonb,uuid,text,text,smallint,boolean,jsonb,jsonb)') is not null)::text
+    );`,
+  );
+  if (result !== "true|true|true|true|true") {
+    throw new Error("empty-state C2 migrations were not fully applied");
+  }
+}
+
+function verifyDatabaseSecurityContract(databaseContainer) {
+  const result = databaseQuery(
+    databaseContainer,
+    `select concat_ws('|',
+      (select count(*) from pg_class c join pg_namespace n on n.oid=c.relnamespace
+       where n.nspname='public' and c.relname like 'wcv_c2_trusted_repair_%'
+         and c.relkind='r' and c.relrowsecurity and c.relforcerowsecurity),
+      has_table_privilege('authenticated','public.wcv_c2_trusted_repair_sessions','SELECT')::text,
+      has_table_privilege('authenticated','public.wcv_c2_trusted_repair_sessions','INSERT')::text,
+      has_table_privilege('authenticated','public.wcv_c2_trusted_repair_private_artifacts','SELECT')::text,
+      has_function_privilege('authenticated','public.wcv_c2_create_trusted_repair_session_v1(jsonb,jsonb,uuid)','EXECUTE')::text,
+      has_function_privilege('service_role','public.wcv_c2_create_trusted_repair_session_v1(jsonb,jsonb,uuid)','EXECUTE')::text
+    );`,
+  );
+  if (result !== "5|true|false|false|false|true") {
+    throw new Error("C2 grants, forced RLS, or RPC privileges are not exact");
+  }
+}
+
+function nextEnvironment(input) {
+  return {
+    ...commandEnvironment(),
+    NEXT_PUBLIC_SUPABASE_URL: input.apiUrl,
+    NEXT_PUBLIC_SUPABASE_ANON_KEY: input.anonKey,
+    SUPABASE_SERVICE_ROLE_KEY: input.serviceRoleKey,
+    ALPHA_ADMIN_EMAILS: `${input.userA.email},${input.userB.email}`,
+    WCV_C2_TRUSTED_REPAIR_ENABLED: input.enabled ? "true" : "false",
+    NEXT_TELEMETRY_DISABLED: "1",
+  };
+}
+
+async function waitForHttp(url, processHandle) {
+  const deadline = Date.now() + 120_000;
+  while (Date.now() < deadline) {
+    if (processHandle.exitCode !== null) {
+      throw new Error("local Next server exited before becoming ready");
+    }
+    try {
+      const response = await fetch(`${url}/login`, { redirect: "manual" });
+      if (response.status >= 200 && response.status < 500) return;
+    } catch {
+      // The server may still be compiling its first route.
+    }
+    await new Promise((resolve) => setTimeout(resolve, 500));
+  }
+  throw new Error("local Next server did not become ready");
+}
+
+async function startNext(input) {
+  const port = input.port ?? 3100;
+  const baseUrl = `http://127.0.0.1:${port}`;
+  const processHandle = spawn(
+    path.join(REPOSITORY_ROOT, "node_modules/.bin/next"),
+    ["dev", "--hostname", "127.0.0.1", "--port", String(port)],
+    {
+      cwd: REPOSITORY_ROOT,
+      env: nextEnvironment(input),
+      stdio: "ignore",
+      detached: false,
+    },
+  );
+  await waitForHttp(baseUrl, processHandle);
+  return { processHandle, baseUrl };
+}
+
+async function stopNext(server) {
+  if (!server || server.processHandle.exitCode !== null) return;
+  server.processHandle.kill("SIGTERM");
+  await Promise.race([
+    new Promise((resolve) => server.processHandle.once("exit", resolve)),
+    new Promise((resolve) => setTimeout(resolve, 10_000)),
+  ]);
+  if (server.processHandle.exitCode === null) {
+    server.processHandle.kill("SIGKILL");
+    await new Promise((resolve) => server.processHandle.once("exit", resolve));
+  }
+}
+
+async function verifyFlagOffBeforeBodyParsing(nextInput, databaseContainer) {
+  const before = Number(
+    databaseQuery(
+      databaseContainer,
+      "select count(*) from public.wcv_c2_trusted_repair_sessions;",
+    ),
+  );
+  const server = await startNext({ ...nextInput, enabled: false });
+  try {
+    const response = await fetch(`${server.baseUrl}/api/review-os/trusted-repair`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: "{this-is-not-json",
+    });
+    if (response.status !== 404) {
+      throw new Error("default-OFF API did not fail closed before body parsing");
+    }
+    const body = await response.json();
+    if (body?.error !== "not_found") {
+      throw new Error("default-OFF API returned an unsafe error shape");
+    }
+  } finally {
+    await stopNext(server);
+  }
+  const after = Number(
+    databaseQuery(
+      databaseContainer,
+      "select count(*) from public.wcv_c2_trusted_repair_sessions;",
+    ),
+  );
+  if (before !== after) throw new Error("default-OFF drill wrote a C2 session");
+}
+
+function playwrightEnvironment(input) {
+  return {
+    ...commandEnvironment(),
+    E2E_BASE_URL: input.baseUrl,
+    WCV_C2_USER_A_EMAIL: input.userA.email,
+    WCV_C2_USER_A_PASSWORD: input.userA.password,
+    WCV_C2_USER_B_EMAIL: input.userB.email,
+    WCV_C2_USER_B_PASSWORD: input.userB.password,
+    WCV_C2_BROWSER_EVIDENCE_PATH: input.browserEvidencePath,
+    ...(input.recoverySessionId
+      ? { WCV_C2_RECOVERY_SESSION_ID: input.recoverySessionId }
+      : {}),
+  };
+}
+
+function runBrowserSuite(input) {
+  const grepArgs = input.recoverySessionId
+    ? ["--grep", "process restart recovers"]
+    : ["--grep-invert", "process restart recovers"];
+  run(
+    path.join(REPOSITORY_ROOT, "node_modules/.bin/playwright"),
+    ["test", `--config=${BROWSER_CONFIG_PATH}`, ...grepArgs],
+    {
+      label: input.recoverySessionId
+        ? "C2 process-restart browser recovery"
+        : "C2 complete browser acceptance",
+      env: playwrightEnvironment(input),
+    },
+  );
+}
+
+async function verifyDirectRls(input) {
+  const anonRead = await apiRequest(
+    input.apiUrl,
+    input.anonKey,
+    "/rest/v1/wcv_c2_trusted_repair_sessions?select=id",
+    { label: "anonymous C2 session read" },
+  );
+  expectStatus(anonRead, [401, 403], "anonymous C2 session read");
+
+  const authenticatedInsert = await apiRequest(
+    input.apiUrl,
+    input.anonKey,
+    "/rest/v1/wcv_c2_trusted_repair_sessions",
+    {
+      method: "POST",
+      accessToken: input.userA.accessToken,
+      body: {},
+      label: "authenticated canonical session insert",
+    },
+  );
+  expectStatus(authenticatedInsert, [401, 403], "authenticated canonical session insert");
+
+  const privateRead = await apiRequest(
+    input.apiUrl,
+    input.anonKey,
+    "/rest/v1/wcv_c2_trusted_repair_private_artifacts?select=id",
+    {
+      accessToken: input.userA.accessToken,
+      label: "authenticated private artifact read",
+    },
+  );
+  expectStatus(privateRead, [401, 403], "authenticated private artifact read");
+
+  const directRpc = await apiRequest(
+    input.apiUrl,
+    input.anonKey,
+    "/rest/v1/rpc/wcv_c2_create_trusted_repair_session_v1",
+    {
+      method: "POST",
+      accessToken: input.userA.accessToken,
+      body: {},
+      label: "authenticated direct C2 RPC",
+    },
+  );
+  expectStatus(directRpc, [401, 403, 404], "authenticated direct C2 RPC");
+}
+
+function verifyPersistedRuntime(databaseContainer) {
+  const result = databaseQuery(
+    databaseContainer,
+    `select concat_ws('|',
+      (select count(*) > 0 from public.wcv_c2_trusted_repair_sessions),
+      (select count(*) > 0 from public.wcv_c2_trusted_repair_private_artifacts),
+      (select count(*) > 0 from public.wcv_c2_trusted_repair_exposure_events),
+      (select count(*) > 0 from public.wcv_c2_trusted_repair_command_receipts),
+      (select count(*) = 0 from public.wcv_c2_trusted_repair_exposure_events e
+        left join public.wcv_c2_trusted_repair_private_artifacts a
+          on a.id=e.revision_id and a.session_id=e.session_id and a.user_id=e.user_id
+        where a.id is null),
+      (select count(*) = 0 from public.wcv_c2_trusted_repair_sessions
+        where subject='appraisal_compensation_law' and state='verified'),
+      (select count(*) = 0 from public.wcv_c2_trusted_repair_private_artifacts where immutable is not true)
+    );`,
+  );
+  if (result !== "true|true|true|true|true|true|true") {
+    throw new Error("persisted C2 runtime invariants failed");
+  }
+}
+
+async function runFinalRuntime() {
   const headSha = required(process.env.PR_HEAD_SHA, "PR_HEAD_SHA", SHA_PATTERN).toLowerCase();
   const runId = required(process.env.GITHUB_RUN_ID, "GITHUB_RUN_ID", /^\d+$/);
   const runAttempt = required(process.env.GITHUB_RUN_ATTEMPT, "GITHUB_RUN_ATTEMPT", /^\d+$/);
@@ -369,9 +619,13 @@ async function runPreflight() {
     process.env.WCV_C2_RUNTIME_EVIDENCE_PATH ??
       path.join(REPOSITORY_ROOT, ".agent-factory/wcv-c2-trusted-repair-runtime-evidence.json"),
   );
+  const browserEvidencePath = path.join(
+    path.dirname(evidencePath),
+    "wcv-c2-browser-metadata.json",
+  );
   const root = runtimeRoot();
   const migrations = migrationMetadata();
-  if (migrations.length === 0) throw new Error("C2 preflight migration inventory is empty");
+  if (migrations.length !== 2) throw new Error("C2 final migration inventory is not exact");
   verifyExactHead(headSha);
   verifyLocalOnlySource();
   const cliVersion = supabase(["--version"], { label: "Supabase CLI version check" })
@@ -380,17 +634,20 @@ async function runPreflight() {
     throw new Error(`Supabase CLI version ${cliVersion || "missing"} is not ${EXPECTED_CLI_VERSION}`);
   }
 
-  prepareRuntimeWorkdir(root);
   stopStack(root, true);
   assertNoDockerResources("pre-start cleanup");
   fs.rmSync(evidencePath, { force: true });
+  fs.rmSync(browserEvidencePath, { force: true });
 
+  let runtimeError;
   let databaseImage;
-  let preflightError;
-  let assertions = [];
-  let leakCounts = { crossUserReadRows: null, crossUserDeleteRows: null };
+  let browserEvidence;
   let cleanupResult;
+  const assertions = [];
+  const leakCounts = { crossUserReadRows: 0, crossUserDeleteRows: 0 };
+  let server;
   try {
+    prepareRuntimeWorkdir(root);
     supabase(
       [
         "start",
@@ -402,7 +659,7 @@ async function runPreflight() {
         "json",
         "--yes",
       ],
-      { label: "isolated local Supabase startup" },
+      { label: "first fresh isolated local Supabase startup" },
     );
     const status = parseJsonOutput(
       supabase(["status", "--workdir", root, "--output", "json"], {
@@ -417,14 +674,21 @@ async function runPreflight() {
       ["ANON_KEY", "anon_key", "PUBLISHABLE_KEY", "publishable_key"],
       "local anonymous key",
     );
-    process.stdout.write(`::add-mask::${anonKey}\n`);
+    const serviceRoleKey = statusValue(
+      status,
+      ["SERVICE_ROLE_KEY", "service_role_key", "SECRET_KEY", "secret_key"],
+      "local service role key",
+    );
+    process.stdout.write(`::add-mask::${anonKey}\n::add-mask::${serviceRoleKey}\n`);
 
     databaseImage = activeStackIdentity();
     const databaseContainer = matchingDockerResources("container")
       .find((name) => name.startsWith("supabase_db_"));
     if (!databaseContainer) throw new Error("local database container is missing");
-    verifyMigrationApplied(databaseContainer);
-    assertions.push({ id: "empty_state_migration_applied", result: "passed" });
+    verifyMigrationsApplied(databaseContainer);
+    verifyDatabaseSecurityContract(databaseContainer);
+    assertions.push({ id: "first_fresh_empty_state_migrations", result: "passed" });
+    assertions.push({ id: "forced_rls_and_exact_grants", result: "passed" });
     assertions.push({ id: "minimum_local_services_healthy", result: "passed" });
 
     const userA = await createSyntheticIdentity(apiUrl, anonKey, "a");
@@ -445,11 +709,6 @@ async function runPreflight() {
       },
     );
     expectStatus(sameUserInsert, [201], "same-user RLS insert");
-    if (!Array.isArray(sameUserInsert.body) || sameUserInsert.body.length !== 1) {
-      throw new Error("same-user RLS insert returned an invalid shape");
-    }
-    assertions.push({ id: "same_user_operation_permitted", result: "passed" });
-
     const crossUserRead = await apiRequest(
       apiUrl,
       anonKey,
@@ -457,26 +716,9 @@ async function runPreflight() {
       { accessToken: userB.accessToken, label: "cross-user RLS read" },
     );
     expectStatus(crossUserRead, [200], "cross-user RLS read");
-    if (!Array.isArray(crossUserRead.body)) {
-      throw new Error("cross-user RLS read returned an invalid shape");
+    if (!Array.isArray(crossUserRead.body) || crossUserRead.body.length !== 0) {
+      throw new Error("cross-user preflight RLS read leaked rows");
     }
-    leakCounts.crossUserReadRows = crossUserRead.body.length;
-    if (leakCounts.crossUserReadRows !== 0) throw new Error("cross-user RLS read leaked rows");
-
-    const crossUserWrite = await apiRequest(
-      apiUrl,
-      anonKey,
-      "/rest/v1/wcv_c2_preflight_tenant_probe",
-      {
-        method: "POST",
-        accessToken: userB.accessToken,
-        prefer: "return=minimal",
-        body: { user_id: userA.userId, assertion: "same_user_permitted" },
-        label: "cross-user RLS write",
-      },
-    );
-    expectStatus(crossUserWrite, [401, 403], "cross-user RLS write");
-
     const crossUserDelete = await apiRequest(
       apiUrl,
       anonKey,
@@ -489,32 +731,108 @@ async function runPreflight() {
       },
     );
     expectStatus(crossUserDelete, [200], "cross-user RLS delete");
-    if (!Array.isArray(crossUserDelete.body)) {
-      throw new Error("cross-user RLS delete returned an invalid shape");
+    if (!Array.isArray(crossUserDelete.body) || crossUserDelete.body.length !== 0) {
+      throw new Error("cross-user preflight RLS delete affected rows");
     }
-    leakCounts.crossUserDeleteRows = crossUserDelete.body.length;
-    if (leakCounts.crossUserDeleteRows !== 0) throw new Error("cross-user RLS delete affected rows");
-    assertions.push({ id: "cross_user_rls_denial", result: "passed" });
+    await verifyDirectRls({ apiUrl, anonKey, userA });
+    assertions.push({ id: "anonymous_authenticated_and_cross_user_denial", result: "passed" });
+
+    const nextInput = { apiUrl, anonKey, serviceRoleKey, userA, userB };
+    await verifyFlagOffBeforeBodyParsing(nextInput, databaseContainer);
+    assertions.push({ id: "default_off_before_parse_and_write", result: "passed" });
+
+    server = await startNext({ ...nextInput, enabled: true });
+    runBrowserSuite({
+      baseUrl: server.baseUrl,
+      userA,
+      userB,
+      browserEvidencePath,
+    });
+    if (!fs.existsSync(browserEvidencePath)) {
+      throw new Error("C2 browser suite produced no metadata evidence");
+    }
+    browserEvidence = JSON.parse(fs.readFileSync(browserEvidencePath, "utf8"));
+    verifyPersistedRuntime(databaseContainer);
+    assertions.push({ id: "three_subject_actual_browser_to_postgres_chain", result: "passed" });
+    assertions.push({ id: "cas_replay_and_exposure_failure_zero_help", result: "passed" });
+    assertions.push({ id: "responsive_keyboard_axe_and_input_modes", result: "passed" });
+    assertions.push({ id: "new_browser_exact_user_recovery", result: "passed" });
+
+    const recoverySessionId = required(
+      databaseQuery(
+        databaseContainer,
+        `select id::text from public.wcv_c2_trusted_repair_sessions
+         where user_id='${userA.userId}'::uuid order by updated_at desc limit 1;`,
+      ),
+      "bodyless recovery session id",
+      UUID_PATTERN,
+    );
+    await stopNext(server);
+    server = await startNext({ ...nextInput, enabled: true });
+    runBrowserSuite({
+      baseUrl: server.baseUrl,
+      userA,
+      userB,
+      browserEvidencePath,
+      recoverySessionId,
+    });
+    assertions.push({ id: "next_process_restart_recovery", result: "passed" });
+    await stopNext(server);
+    server = null;
+
+    stopStack(root, false);
+    assertNoDockerResources("first fresh runtime cleanup");
+    fs.rmSync(root, { recursive: true, force: true });
+
+    prepareRuntimeWorkdir(root);
+    supabase(
+      [
+        "start",
+        "--workdir",
+        root,
+        "--exclude",
+        EXCLUDED_SERVICES.join(","),
+        "--output",
+        "json",
+        "--yes",
+      ],
+      { label: "second fresh isolated local Supabase startup" },
+    );
+    const secondDatabaseContainer = matchingDockerResources("container")
+      .find((name) => name.startsWith("supabase_db_"));
+    if (!secondDatabaseContainer) throw new Error("second fresh database container is missing");
+    verifyMigrationsApplied(secondDatabaseContainer);
+    verifyDatabaseSecurityContract(secondDatabaseContainer);
+    if (
+      databaseQuery(
+        secondDatabaseContainer,
+        "select count(*) from public.wcv_c2_trusted_repair_sessions;",
+      ) !== "0"
+    ) {
+      throw new Error("second fresh database was not empty");
+    }
+    assertions.push({ id: "second_fresh_empty_state_migrations", result: "passed" });
   } catch (error) {
-    preflightError = error;
+    runtimeError = error;
   } finally {
     try {
-      stopStack(root, false);
+      await stopNext(server);
+      stopStack(root, true);
       cleanupResult = assertNoDockerResources("post-run cleanup");
       fs.rmSync(root, { recursive: true, force: true });
     } catch (cleanupError) {
-      preflightError = cleanupError;
+      runtimeError = cleanupError;
     }
   }
 
-  if (preflightError) throw preflightError;
+  if (runtimeError) throw runtimeError;
   verifyExactHead(headSha);
   assertions.push({ id: "complete_no_backup_cleanup", result: "passed" });
   assertions.push({ id: "exact_head_unchanged", result: "passed" });
 
   const evidence = {
-    schemaVersion: "wcv_c2_trusted_repair_runtime_evidence.v1",
-    phase: "infrastructure_preflight",
+    schemaVersion: "wcv_c2_trusted_repair_runtime_evidence.v2",
+    phase: "complete_trusted_repair_vertical",
     headSha,
     runId,
     runAttempt,
@@ -522,9 +840,14 @@ async function runPreflight() {
     databaseImage,
     migrations,
     assertions,
+    browser: browserEvidence,
     counts: {
       authenticatedUsers: 2,
-      syntheticSubjects: 0,
+      syntheticSubjects: 3,
+      freshDatabaseApplications: 2,
+      inputModes: 5,
+      repairPaths: 6,
+      continuationCommands: 3,
     },
     leakCounts,
     cleanup: {
@@ -537,12 +860,17 @@ async function runPreflight() {
     remoteSupabaseUsed: false,
     repositorySecretsUsed: false,
     fixtureBodiesIncluded: false,
+    learnerBodiesIncluded: false,
+    screenshotsIncluded: false,
+    tracesIncluded: false,
+    liveProvidersUsed: false,
   };
   fs.mkdirSync(path.dirname(evidencePath), { recursive: true });
   fs.writeFileSync(evidencePath, `${JSON.stringify(evidence, null, 2)}\n`, {
     mode: 0o600,
   });
-  process.stdout.write("wcv-c2-infrastructure-preflight: pass\n");
+  fs.rmSync(browserEvidencePath, { force: true });
+  process.stdout.write("wcv-c2-complete-trusted-repair-runtime: pass\n");
 }
 
 async function main() {
@@ -555,7 +883,7 @@ async function main() {
     process.stdout.write("wcv-c2-local-stack-cleanup: pass\n");
     return;
   }
-  await runPreflight();
+  await runFinalRuntime();
 }
 
 main().catch((error) => {

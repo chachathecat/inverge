@@ -266,8 +266,8 @@ test("S221 safe keys, docs, runner, roadmap, and Agent Factory example target ar
   assert.deepEqual(s225?.missingDependencies, ["O4D"]);
   assert.equal(plan.wipOccupiedCount, 2);
   assert.equal(plan.availableSlots, 1);
-  assert.deepEqual(plan.readyItemIds, ["WCV-C2", "S236B"]);
-  assert.deepEqual(plan.selectedItemIds, ["WCV-C2"]);
+  assert.deepEqual(plan.readyItemIds, ["WCV-C3", "S236B"]);
+  assert.deepEqual(plan.selectedItemIds, ["WCV-C3"]);
 });
 
 test("S221 commercial fixtures and docs stay metadata-only without raw content fields or authority claims", async () => {

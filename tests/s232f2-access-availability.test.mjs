@@ -196,6 +196,7 @@ test("S232F.2 every data-bearing app page gates a fresh access result before dow
     "app/app/input/page.tsx",
     "app/app/notes/page.tsx",
     "app/app/today/page.tsx",
+    "app/app/trusted-repair/page.tsx",
   ].sort();
   const allPages = collectPageFiles("app/app").sort();
 
@@ -228,6 +229,7 @@ test("S232F.2 every data-bearing app page gates a fresh access result before dow
   assert.match(read("app/app/input/page.tsx"), /redirect\(`\/app\/capture/);
   assert.match(read("app/app/today/page.tsx"), /redirect\("\/app/);
   assert.match(read("app/app/notes/page.tsx"), /ReviewOsItemsPage/);
+  assert.match(read("app/app/trusted-repair/page.tsx"), /await requireTrustedRepairAccess\(\)/);
   assert.equal(read("app/app/acceptance/trust-provenance/[state]/page.tsx").includes("getReviewOsServerContext"), false);
 });
 
