@@ -4,10 +4,10 @@ import { notFound } from "next/navigation";
 
 import { ReviewOsAppShell } from "@/components/review-os/app-shell";
 import { ReviewOsAccessState } from "@/components/review-os/review-os-access-state";
-import { isAllowedAdminEmail } from "@/lib/auth/admin";
 import { getReviewOsServerContext } from "@/lib/review-os/server";
 import {
   isTrustedRepairEnabled,
+  isTrustedRepairOwner,
   requireTrustedRepairAccess,
 } from "@/lib/review-os/trusted-repair-access";
 
@@ -42,7 +42,7 @@ export default async function ReviewOsLayout({ children }: { children: ReactNode
     <ReviewOsAppShell
       email={session.email}
       trustedRepairEnabled={
-        isTrustedRepairEnabled() && isAllowedAdminEmail(session.email)
+        isTrustedRepairEnabled() && isTrustedRepairOwner(session.email)
       }
       rightSlot={
         usage && !isMetadataOnlyTrustAcceptance ? (

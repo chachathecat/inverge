@@ -23,6 +23,10 @@ export function isTrustedRepairEnabled() {
   return process.env[TRUSTED_REPAIR_FLAG] === "true";
 }
 
+export function isTrustedRepairOwner(email: string | null) {
+  return isAllowedAdminEmail(email);
+}
+
 export async function requireTrustedRepairAccess(): Promise<
   InvergeServerSession & { userId: string }
 > {
@@ -33,7 +37,7 @@ export async function requireTrustedRepairAccess(): Promise<
   if (!session.isAuthenticated || !session.userId) {
     throw new TrustedRepairAccessError("auth_required");
   }
-  if (!isAllowedAdminEmail(session.email)) {
+  if (!isTrustedRepairOwner(session.email)) {
     throw new TrustedRepairAccessError("owner_required");
   }
   return { ...session, userId: session.userId };

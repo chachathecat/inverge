@@ -67,7 +67,9 @@ test("route checks default-off Owner access before parsing and rejects extra JSO
   assert.match(route, /Cache-Control.*private, no-store/);
   assert.match(route, /Vary: "Cookie"/);
   assert.match(access, /process\.env\[TRUSTED_REPAIR_FLAG\] === "true"/);
-  assert.match(access, /isAllowedAdminEmail\(session\.email\)/);
+  assert.match(access, /export function isTrustedRepairOwner/);
+  assert.match(access, /return isAllowedAdminEmail\(email\)/);
+  assert.match(access, /isTrustedRepairOwner\(session\.email\)/);
   assert.match(await readFile(".env.example", "utf8"), /WCV_C2_TRUSTED_REPAIR_ENABLED=false/);
 });
 

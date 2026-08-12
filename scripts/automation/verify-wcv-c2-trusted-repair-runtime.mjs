@@ -656,6 +656,7 @@ async function runFinalRuntime() {
 
   stopStack(root, true);
   assertNoDockerResources("pre-start cleanup");
+  fs.mkdirSync(path.dirname(evidencePath), { recursive: true, mode: 0o700 });
   fs.rmSync(evidencePath, { force: true });
   fs.rmSync(browserEvidencePath, { force: true });
 
