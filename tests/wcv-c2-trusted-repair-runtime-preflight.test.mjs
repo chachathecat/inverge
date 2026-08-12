@@ -19,14 +19,21 @@ const migration = read(
 );
 const lockfile = JSON.parse(read("package-lock.json"));
 
-test("C2 workflow is exact-head, same-repository, least-privilege, and cleanup-bound", () => {
+test("C2 workflow is exact-head, branch-agnostic, path-triggered, same-repository, least-privilege, and cleanup-bound", () => {
   assert.match(workflow, /pull_request:/);
   assert.doesNotMatch(workflow, /pull_request_target/);
   assert.match(workflow, /branches: \[main\]/);
   assert.match(workflow, /types: \[opened, synchronize, reopened\]/);
   assert.match(workflow, /permissions:\s*\n\s+contents: read/);
   assert.match(workflow, /name: wcv-c2-trusted-repair-runtime/);
-  assert.match(workflow, /agent\/wcv-c2-first-trusted-repair-vertical/);
+  assert.match(
+    workflow,
+    /supabase\/migrations\/20260812011903_wcv_c2_trusted_repair_vertical\.sql/,
+  );
+  assert.doesNotMatch(
+    workflow,
+    /github\.event\.pull_request\.head\.ref\s*==/,
+  );
   assert.match(workflow, /head\.repo\.full_name == github\.repository/);
   assert.match(workflow, /ref: \$\{\{ github\.event\.pull_request\.head\.sha \}\}/);
   assert.match(workflow, /test "\$\(git rev-parse HEAD\)" = "\$\{PR_HEAD_SHA\}"/);

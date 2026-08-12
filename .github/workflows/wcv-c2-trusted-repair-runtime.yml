@@ -4,6 +4,18 @@ on:
   pull_request:
     branches: [main]
     types: [opened, synchronize, reopened]
+    paths:
+      - ".github/workflows/wcv-c2-trusted-repair-runtime.yml"
+      - "app/api/review-os/trusted-repair/**"
+      - "app/app/trusted-repair/**"
+      - "components/review-os/trusted-repair-loop.tsx"
+      - "lib/review-os/trusted-repair-*.ts"
+      - "scripts/automation/runtime-risk-contract.mjs"
+      - "scripts/automation/verify-wcv-c2-trusted-repair-runtime.mjs"
+      - "supabase/migrations/20260812011903_wcv_c2_trusted_repair_vertical.sql"
+      - "tests/e2e/wcv-c2-*.ts"
+      - "tests/runtime/wcv-c2-supabase/**"
+      - "tests/wcv-c2-*.test.mjs"
 
 permissions:
   contents: read
@@ -11,9 +23,7 @@ permissions:
 jobs:
   wcv-c2-trusted-repair-runtime:
     name: wcv-c2-trusted-repair-runtime
-    if: >-
-      github.event.pull_request.head.ref == 'agent/wcv-c2-first-trusted-repair-vertical' &&
-      github.event.pull_request.head.repo.full_name == github.repository
+    if: github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-latest
     timeout-minutes: 60
     concurrency:

@@ -61,10 +61,20 @@ function normalizeEvidence(value: string) {
     .replace(/[\s,._·:;()[\]{}]+/g, "");
 }
 
+function numericEvidenceTokens(value: string) {
+  return (value.normalize("NFKC").match(/\d[\d,._]*/g) ?? []).map((token) =>
+    token.replace(/[,._]/g, ""),
+  );
+}
+
 function conceptPresent(text: string, concept: string) {
   const normalizedText = normalizeEvidence(text);
   const normalizedConcept = normalizeEvidence(concept);
-  if (normalizedText.includes(normalizedConcept)) return true;
+  if (/^\d+$/.test(normalizedConcept)) {
+    if (numericEvidenceTokens(text).includes(normalizedConcept)) return true;
+  } else if (normalizedText.includes(normalizedConcept)) {
+    return true;
+  }
   if (normalizedConcept === "200000000") {
     return normalizedText.includes("2억");
   }

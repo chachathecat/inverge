@@ -107,6 +107,40 @@ const BLOCKED_LAW = {
   blockerCount: 2,
 };
 
+test("numeric anchors compare complete values without substring collisions", () => {
+  const fixture = trustedRepairCanonicalFixture("appraisal_practical");
+  const stateData = {
+    ...initialTrustedRepairStateData("TYPED_TEXT"),
+    predictionConfidence: "medium",
+  };
+  const commaFormatted = diagnoseTrustedRepairAttempt({
+    fixture,
+    attemptText:
+      "면적 100m²와 단가 2,000,000원을 곱해 200,000,000원을 얻는다. 원 단위 양수 부호이며 반올림 없음으로 쓰고 나누어 검산한다.",
+    stateData,
+  });
+  assert.equal(commaFormatted.repairNeed, "optional");
+  assert.equal(
+    commaFormatted.candidates[0].gapId,
+    "gap-practice-input-role-verification",
+  );
+
+  const wrongIntermediate = diagnoseTrustedRepairAttempt({
+    fixture,
+    attemptText:
+      "면적 100m²와 단가 2,000,000원을 곱해 20,000,000원을 얻는다. 원 단위 양수 부호이며 반올림 없음으로 쓰고 나누어 검산한다.",
+    stateData,
+  });
+  assert.equal(wrongIntermediate.repairNeed, "required");
+  assert.ok(
+    wrongIntermediate.candidates.some((candidate) =>
+      candidate.supportingEvidence.includes(
+        "independent_attempt:practice-intermediate-calculation:false_claim:20000000",
+      ),
+    ),
+  );
+});
+
 for (const subject of ["appraisal_practical", "appraisal_theory", "appraisal_compensation_law"]) {
   test(`${subject} completes the ordered trusted-repair journey without pre-help leakage`, () => {
     const fixture = trustedRepairCanonicalFixture(subject);

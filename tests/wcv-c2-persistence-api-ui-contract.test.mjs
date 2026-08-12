@@ -13,6 +13,7 @@ const ROUTE = "app/api/review-os/trusted-repair/route.ts";
 const ACCESS = "lib/review-os/trusted-repair-access.ts";
 const SERVER = "lib/review-os/trusted-repair-server.ts";
 const UI = "components/review-os/trusted-repair-loop.tsx";
+const WORKFLOW = ".github/workflows/wcv-c2-trusted-repair-runtime.yml";
 
 test("migration is service-only, exact-user, forced-RLS, append-only and CAS/replay atomic", async () => {
   const sql = await readFile(SQL, "utf8");
@@ -95,9 +96,19 @@ test("DTO and UI expose bounded fields only after committed help and support dur
   assert.doesNotMatch(ui, /openai|anthropic|gemini|chat\/completions/i);
 });
 
-test("generic Runtime Gate delegates only the exact C2 migration to its dedicated stricter check", () => {
+test("generic Runtime Gate delegates only the exact C2 migration to its branch-agnostic stricter check", async () => {
+  const workflow = await readFile(WORKFLOW, "utf8");
   assert.deepEqual(DEDICATED_RUNTIME_ADAPTER_PATHS, [SQL]);
   assert.deepEqual(runtimeRequiredPathRecords([SQL]), []);
+  assert.match(workflow, new RegExp(`- ["']${SQL}["']`));
+  assert.doesNotMatch(
+    workflow,
+    /github\.event\.pull_request\.head\.ref\s*==/,
+  );
+  assert.match(
+    workflow,
+    /if: github\.event\.pull_request\.head\.repo\.full_name == github\.repository/,
+  );
   assert.deepEqual(
     runtimeRequiredPathRecords(["supabase/migrations/20990101000000_unreviewed.sql"]),
     [{
