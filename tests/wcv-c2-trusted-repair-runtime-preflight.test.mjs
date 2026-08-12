@@ -65,6 +65,9 @@ test("C2 verifier uses locked local runtimes and suppresses remote credentials",
   assert.match(verifier, /three_subject_actual_browser_to_postgres_chain/);
   assert.match(verifier, /cas_replay_and_exposure_failure_zero_help/);
   assert.match(verifier, /next_process_restart_recovery/);
+  assert.match(verifier, /sanitizedBrowserFailureLocations/);
+  assert.match(verifier, /allowFailure: true/);
+  assert.match(verifier, /sanitized assertion line\(s\)/);
   assert.match(verifier, /crossUserReadRows/);
   assert.match(verifier, /crossUserDeleteRows/);
   assert.match(verifier, /remoteSupabaseUsed: false/);

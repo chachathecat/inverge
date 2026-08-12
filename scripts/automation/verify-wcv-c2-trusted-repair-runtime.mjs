@@ -526,20 +526,40 @@ function playwrightEnvironment(input) {
   };
 }
 
+function sanitizedBrowserFailureLocations(result) {
+  const output = `${result.stdout ?? ""}\n${result.stderr ?? ""}`;
+  const locations = [];
+  for (const match of output.matchAll(
+    /wcv-c2-trusted-repair-runtime\.spec\.ts:(\d+):\d+/g,
+  )) {
+    if (!locations.includes(match[1])) locations.push(match[1]);
+  }
+  return locations.slice(-5);
+}
+
 function runBrowserSuite(input) {
   const grepArgs = input.recoverySessionId
     ? ["--grep", "process restart recovers"]
     : ["--grep-invert", "process restart recovers"];
-  run(
+  const label = input.recoverySessionId
+    ? "C2 process-restart browser recovery"
+    : "C2 complete browser acceptance";
+  const result = run(
     path.join(REPOSITORY_ROOT, "node_modules/.bin/playwright"),
     ["test", `--config=${BROWSER_CONFIG_PATH}`, ...grepArgs],
     {
-      label: input.recoverySessionId
-        ? "C2 process-restart browser recovery"
-        : "C2 complete browser acceptance",
+      label,
       env: playwrightEnvironment(input),
+      allowFailure: true,
     },
   );
+  if (result.status !== 0) {
+    const locations = sanitizedBrowserFailureLocations(result);
+    const suffix = locations.length
+      ? ` at sanitized assertion line(s) ${locations.join(",")}`
+      : " with no safe assertion location";
+    throw new Error(`${label} failed with status ${result.status}${suffix}`);
+  }
 }
 
 async function verifyDirectRls(input) {
