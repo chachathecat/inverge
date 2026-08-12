@@ -24,6 +24,10 @@ import {
   planTrustedRepairRevisionDrift,
   planTrustedRepairSelfDiagnosis,
   planTrustedRepairSubmission,
+  selectTrustedRepairScaffoldExposure,
+  trustedRepairAggregateForRelease,
+  trustedRepairSourceBindingMatches,
+  trustedRepairSourceVersion,
 } from "../lib/review-os/trusted-repair-engine.ts";
 import { trustedRepairCanonicalFixture } from "../lib/review-os/trusted-repair-fixtures.ts";
 
@@ -32,7 +36,13 @@ const SESSION_ID = "20000000-0000-4000-8000-000000000001";
 let idCounter = 10;
 const nextId = () => `30000000-0000-4000-8000-${String(idCounter++).padStart(12, "0")}`;
 
-function aggregateFor(subject, inputMode = "TYPED_TEXT") {
+function aggregateFor(
+  subject,
+  inputMode = "TYPED_TEXT",
+  sourceBinding = subject === "appraisal_compensation_law"
+    ? BLOCKED_LAW
+    : SYNTHETIC_SOURCE_BINDING,
+) {
   const fixture = trustedRepairCanonicalFixture(subject);
   return {
     session: {
@@ -50,7 +60,7 @@ function aggregateFor(subject, inputMode = "TYPED_TEXT") {
       bindings: {
         contractVersion: TRUSTED_REPAIR_CONTRACT_VERSION,
         fixtureVersion: TRUSTED_REPAIR_FIXTURE_VERSION,
-        sourceVersion: fixture.sourceBinding.sourceId,
+        sourceVersion: trustedRepairSourceVersion(fixture, sourceBinding),
         rubricVersion: TRUSTED_REPAIR_RUBRIC_VERSION,
         policyVersion: TRUSTED_REPAIR_POLICY_VERSION,
         validatorVersion: TRUSTED_REPAIR_VALIDATOR_VERSION,
@@ -207,6 +217,217 @@ test("all six bounded repair paths and all three continuation commands are reach
     const plan = planTrustedRepairContinuation({ aggregate: diagnosed, fixture, sourceBinding: SYNTHETIC_SOURCE_BINDING, continuation, exposureId: nextId(), occurredAt: "2026-08-12T00:00:00.000Z" });
     assert.equal(plan.outcome, continuation === "DEFER_FOR_NOW" ? "deferred" : "guided");
   }
+});
+
+test("Law source-binding drift after repair submission fails closed without rebinding or verified release", () => {
+  const fixture = trustedRepairCanonicalFixture("appraisal_compensation_law");
+  const changedBinding = {
+    ...BLOCKED_LAW,
+    bindingVersion: `${BLOCKED_LAW.bindingVersion}:changed`,
+  };
+  let aggregate = aggregateFor(
+    "appraisal_compensation_law",
+    "TYPED_TEXT",
+    BLOCKED_LAW,
+  );
+  aggregate = apply(
+    aggregate,
+    planTrustedRepairRevisionConfirmation({
+      aggregate,
+      artifactId: nextId(),
+      body: "확정 수정본",
+      occurredAt: "2026-08-12T01:00:00.000Z",
+    }),
+  );
+  aggregate = apply(
+    aggregate,
+    planTrustedRepairPrediction({
+      aggregate,
+      prediction: "likely_blocked",
+      confidence: "medium",
+    }),
+  );
+  aggregate = apply(
+    aggregate,
+    planTrustedRepairIndependentAttempt({
+      aggregate,
+      artifactId: nextId(),
+      body: "공식 출처의 유효 버전을 먼저 확인하고 사실을 요건에 포섭한다.",
+      occurredAt: "2026-08-12T01:01:00.000Z",
+    }),
+  );
+  aggregate = apply(
+    aggregate,
+    planTrustedRepairSelfDiagnosis({
+      aggregate,
+      selfDiagnosisCode: "source_currentness_uncertain",
+    }),
+  );
+  const diagnosisDrift = planTrustedRepairDiagnosis({
+    aggregate,
+    fixture,
+    sourceBinding: changedBinding,
+  });
+  assert.equal(diagnosisDrift.nextState, "blocked");
+  assert.equal(diagnosisDrift.outcome, "blocked");
+  assert.equal(diagnosisDrift.primaryGapId, null);
+  assert.deepEqual(diagnosisDrift.stateData.gapCandidates, []);
+  aggregate = apply(
+    aggregate,
+    planTrustedRepairDiagnosis({
+      aggregate,
+      fixture,
+      sourceBinding: BLOCKED_LAW,
+    }),
+  );
+  aggregate = apply(
+    aggregate,
+    planTrustedRepairExposure({
+      aggregate,
+      exposureId: nextId(),
+      occurredAt: "2026-08-12T01:02:00.000Z",
+    }),
+  );
+  aggregate = apply(
+    aggregate,
+    planTrustedRepairSubmission({
+      aggregate,
+      artifactId: nextId(),
+      body: REPAIRS.appraisal_compensation_law,
+      occurredAt: "2026-08-12T01:03:00.000Z",
+    }),
+  );
+  assert.equal(aggregate.session.state, "repair_submitted");
+  const persistedSourceVersion = aggregate.session.bindings.sourceVersion;
+  assert.equal(
+    trustedRepairSourceBindingMatches({
+      aggregate,
+      fixture,
+      sourceBinding: changedBinding,
+    }),
+    false,
+  );
+
+  const driftPlan = planTrustedRepairContinuation({
+    aggregate,
+    fixture,
+    sourceBinding: changedBinding,
+    continuation: "VERIFY_AND_CONTINUE",
+    exposureId: nextId(),
+    occurredAt: "2026-08-12T01:04:00.000Z",
+  });
+  const blocked = apply(aggregate, driftPlan);
+  assert.equal(blocked.session.state, "blocked");
+  assert.equal(blocked.session.outcome, "blocked");
+  assert.equal(blocked.session.bindings.sourceVersion, persistedSourceVersion);
+  assert.equal(blocked.session.primaryGapId, null);
+  assert.equal(blocked.session.assistanceLevel, 0);
+  assert.equal(blocked.session.independentAttemptBeforeHelp, false);
+  assert.deepEqual(blocked.session.stateData.gapCandidates, []);
+  assert.deepEqual(blocked.session.stateData.resultReasonCodes, [
+    "source_binding_version_drift",
+    "verified_release_denied_until_new_session_diagnosis",
+  ]);
+  assert.equal(driftPlan.exposure, null);
+  assert.equal(driftPlan.artifact, null);
+
+  const previouslyVerified = {
+    ...aggregate,
+    session: {
+      ...aggregate.session,
+      state: "verified",
+      outcome: "verified",
+    },
+  };
+  const release = trustedRepairAggregateForRelease({
+    aggregate: previouslyVerified,
+    fixture,
+    sourceBinding: changedBinding,
+  });
+  assert.equal(release.session.state, "blocked");
+  assert.equal(release.session.outcome, "blocked");
+  assert.equal(release.session.bindings.sourceVersion, persistedSourceVersion);
+  assert.equal(release.exposures.length, 0);
+  assert.deepEqual(release.session.stateData.gapCandidates, []);
+});
+
+test("guided continuation selects its committed level-3 exposure immediately and after oldest-first reload", () => {
+  const fixture = trustedRepairCanonicalFixture("appraisal_practical");
+  let aggregate = aggregateFor("appraisal_practical");
+  aggregate = {
+    ...aggregate,
+    session: {
+      ...aggregate.session,
+      state: "diagnosed",
+      confirmedRevisionId: nextId(),
+      primaryGapId: "gap-practice-input-role",
+      stateData: {
+        ...aggregate.session.stateData,
+        gapCandidates: [{
+          gapId: "gap-practice-input-role",
+          anchorId: "practice-input-role",
+          labelKo: "자료 역할",
+          rank: 1,
+          supportingEvidence: ["missing"],
+          counterEvidence: [],
+          repairActionKo: "다시 구성",
+          successCriterionKo: "기준",
+        }],
+      },
+    },
+  };
+  aggregate = apply(
+    aggregate,
+    planTrustedRepairExposure({
+      aggregate,
+      exposureId: nextId(),
+      occurredAt: "2026-08-12T02:00:00.000Z",
+    }),
+  );
+  aggregate = apply(
+    aggregate,
+    planTrustedRepairSubmission({
+      aggregate,
+      artifactId: nextId(),
+      body: REPAIRS.appraisal_practical,
+      occurredAt: "2026-08-12T02:01:00.000Z",
+    }),
+  );
+  const guidedExposureId = nextId();
+  aggregate = apply(
+    aggregate,
+    planTrustedRepairContinuation({
+      aggregate,
+      fixture,
+      sourceBinding: SYNTHETIC_SOURCE_BINDING,
+      continuation: "SWITCH_TO_GUIDED",
+      exposureId: guidedExposureId,
+      occurredAt: "2026-08-12T02:02:00.000Z",
+    }),
+  );
+  assert.equal(aggregate.exposures.length, 2);
+  const immediate = selectTrustedRepairScaffoldExposure(aggregate);
+  assert.deepEqual(
+    {
+      exposureId: immediate?.exposureId,
+      assistanceLevel: immediate?.assistanceLevel,
+      scaffoldKind: immediate?.scaffoldKind,
+    },
+    {
+      exposureId: guidedExposureId,
+      assistanceLevel: 3,
+      scaffoldKind: "guided_solution",
+    },
+  );
+
+  const oldestFirstReload = structuredClone({
+    ...aggregate,
+    exposures: [...aggregate.exposures].sort((left, right) =>
+      left.occurredAt.localeCompare(right.occurredAt),
+    ),
+  });
+  const reloaded = selectTrustedRepairScaffoldExposure(oldestFirstReload);
+  assert.deepEqual(reloaded, immediate);
 });
 
 test("help cannot precede diagnosis and revision drift invalidates old anchors and claims", () => {

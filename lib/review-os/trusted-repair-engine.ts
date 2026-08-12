@@ -44,6 +44,32 @@ export const SYNTHETIC_SOURCE_BINDING: TrustedRepairLawBindingState = {
   blockerCount: 0,
 };
 
+export function trustedRepairSourceVersion(
+  fixture: TrustedRepairFixture,
+  sourceBinding: TrustedRepairLawBindingState,
+) {
+  return [
+    fixture.sourceBinding.sourceId,
+    sourceBinding.bindingVersion,
+    sourceBinding.sourceStatus,
+    sourceBinding.versionStatus,
+    sourceBinding.currentLawStatus,
+    sourceBinding.sourceAnchorId ?? "no-anchor",
+    `blockers-${sourceBinding.blockerCount}`,
+  ].join(":");
+}
+
+export function trustedRepairSourceBindingMatches(input: {
+  aggregate: TrustedRepairAggregate;
+  fixture: TrustedRepairFixture;
+  sourceBinding: TrustedRepairLawBindingState;
+}) {
+  return (
+    input.aggregate.session.bindings.sourceVersion ===
+    trustedRepairSourceVersion(input.fixture, input.sourceBinding)
+  );
+}
+
 function guardState(
   aggregate: TrustedRepairAggregate,
   expected: TrustedRepairState | readonly TrustedRepairState[],
@@ -132,6 +158,74 @@ function basePlan(
     artifact: null,
     exposure: null,
   };
+}
+
+export function planTrustedRepairSourceBindingDrift(
+  aggregate: TrustedRepairAggregate,
+): TrustedRepairTransitionPlan {
+  const plan = basePlan(aggregate, "blocked", {
+    ...aggregate.session.stateData,
+    gapCandidates: [],
+    repairNeed: "blocked",
+    repairPath: null,
+    continuation: null,
+    resultReasonCodes: [
+      "source_binding_version_drift",
+      "verified_release_denied_until_new_session_diagnosis",
+    ],
+  });
+  return {
+    ...plan,
+    primaryGapId: null,
+    outcome: "blocked",
+    assistanceLevel: 0,
+    independentAttemptBeforeHelp: false,
+  };
+}
+
+export function trustedRepairAggregateForRelease(input: {
+  aggregate: TrustedRepairAggregate;
+  fixture: TrustedRepairFixture;
+  sourceBinding: TrustedRepairLawBindingState;
+}): TrustedRepairAggregate {
+  if (trustedRepairSourceBindingMatches(input)) return input.aggregate;
+  const plan = planTrustedRepairSourceBindingDrift(input.aggregate);
+  return {
+    session: {
+      ...input.aggregate.session,
+      state: plan.nextState,
+      confirmedRevisionId: plan.confirmedRevisionId,
+      primaryGapId: plan.primaryGapId,
+      outcome: plan.outcome,
+      assistanceLevel: plan.assistanceLevel,
+      independentAttemptBeforeHelp: plan.independentAttemptBeforeHelp,
+      stateData: plan.stateData,
+    },
+    artifacts: input.aggregate.artifacts,
+    exposures: [],
+  };
+}
+
+export function selectTrustedRepairScaffoldExposure(
+  aggregate: TrustedRepairAggregate,
+) {
+  const expectedKind =
+    aggregate.session.state === "guided" &&
+    aggregate.session.assistanceLevel === 3
+      ? "guided_solution"
+      : "smallest_eligible_scaffold";
+  for (let index = aggregate.exposures.length - 1; index >= 0; index -= 1) {
+    const exposure = aggregate.exposures[index];
+    if (
+      exposure.revisionId === aggregate.session.confirmedRevisionId &&
+      exposure.gapId === aggregate.session.primaryGapId &&
+      exposure.assistanceLevel === aggregate.session.assistanceLevel &&
+      exposure.scaffoldKind === expectedKind
+    ) {
+      return exposure;
+    }
+  }
+  return null;
 }
 
 export function initialTrustedRepairStateData(
@@ -361,6 +455,9 @@ export function planTrustedRepairDiagnosis(input: {
   sourceBinding: TrustedRepairLawBindingState;
 }) {
   guardState(input.aggregate, "self_diagnosis_committed");
+  if (!trustedRepairSourceBindingMatches(input)) {
+    return planTrustedRepairSourceBindingDrift(input.aggregate);
+  }
   const attempt = latestTrustedRepairArtifact(
     input.aggregate,
     "independent_attempt",
@@ -487,6 +584,10 @@ export function planTrustedRepairContinuation(input: {
     "repair_submitted",
   ];
   guardState(input.aggregate, permittedStates);
+
+  if (!trustedRepairSourceBindingMatches(input)) {
+    return planTrustedRepairSourceBindingDrift(input.aggregate);
+  }
 
   if (input.continuation === "DEFER_FOR_NOW") {
     const plan = basePlan(input.aggregate, "deferred", {

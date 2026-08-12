@@ -77,7 +77,11 @@ test("route checks default-off Owner access before parsing and rejects extra JSO
 test("DTO and UI expose bounded fields only after committed help and support durable accessible recovery", async () => {
   const [server, ui] = await Promise.all([readFile(SERVER, "utf8"), readFile(UI, "utf8")]);
   assert.match(server, /matchingExposure/);
+  assert.match(server, /selectTrustedRepairScaffoldExposure\(aggregate\)/);
   assert.match(server, /if \(!primary \|\| !matchingExposure\) return null/);
+  assert.match(server, /trustedRepairSourceBindingMatches/);
+  assert.match(server, /trustedRepairAggregateForRelease/);
+  assert.match(server, /sourceBindingCurrent &&/);
   assert.match(server, /sameSessionCriterionOnly: true/);
   for (const claim of ["masteryClaimed", "transferClaimed", "stabilityClaimed", "scoreClaimed", "passClaimed"]) {
     assert.match(server, new RegExp(`${claim}: false`));

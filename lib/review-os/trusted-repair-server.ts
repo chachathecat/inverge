@@ -25,6 +25,10 @@ import {
   planTrustedRepairRevisionDrift,
   planTrustedRepairSelfDiagnosis,
   planTrustedRepairSubmission,
+  selectTrustedRepairScaffoldExposure,
+  trustedRepairAggregateForRelease,
+  trustedRepairSourceBindingMatches,
+  trustedRepairSourceVersion,
 } from "./trusted-repair-engine";
 import {
   trustedRepairBankFirstSelection,
@@ -64,29 +68,12 @@ function fixtureForAggregate(aggregate: TrustedRepairAggregate) {
   return fixture;
 }
 
-function sourceVersion(fixture: TrustedRepairFixture) {
-  const source = resolveTrustedRepairSourceBinding(fixture);
-  return [
-    fixture.sourceBinding.sourceId,
-    source.bindingVersion,
-    source.sourceStatus,
-    source.versionStatus,
-    source.currentLawStatus,
-    source.sourceAnchorId ?? "no-anchor",
-    `blockers-${source.blockerCount}`,
-  ].join(":");
-}
-
 function scaffoldFor(aggregate: TrustedRepairAggregate, fixture: TrustedRepairFixture) {
   if (!POST_EXPOSURE_STATES.has(aggregate.session.state)) return null;
   const primary = aggregate.session.stateData.gapCandidates.find(
     (candidate) => candidate.gapId === aggregate.session.primaryGapId,
   );
-  const matchingExposure = aggregate.exposures.find(
-    (exposure) =>
-      exposure.revisionId === aggregate.session.confirmedRevisionId &&
-      exposure.gapId === aggregate.session.primaryGapId,
-  );
+  const matchingExposure = selectTrustedRepairScaffoldExposure(aggregate);
   if (!primary || !matchingExposure) return null;
   const text = fixture.scaffoldByAnchor[primary.anchorId];
   if (!text) throw new TrustedRepairContractError("invalid_transition");
@@ -101,35 +88,49 @@ function scaffoldFor(aggregate: TrustedRepairAggregate, fixture: TrustedRepairFi
 export function trustedRepairView(aggregate: TrustedRepairAggregate) {
   const fixture = fixtureForAggregate(aggregate);
   const source = resolveTrustedRepairSourceBinding(fixture);
-  const anchorsVisible = aggregate.session.state !== "editable_capture_draft";
+  const sourceBindingCurrent = trustedRepairSourceBindingMatches({
+    aggregate,
+    fixture,
+    sourceBinding: source,
+  });
+  const releaseAggregate = trustedRepairAggregateForRelease({
+    aggregate,
+    fixture,
+    sourceBinding: source,
+  });
+  const anchorsVisible =
+    sourceBindingCurrent &&
+    releaseAggregate.session.state !== "editable_capture_draft";
   return {
     contractVersion: TRUSTED_REPAIR_CONTRACT_VERSION,
     session: {
-      sessionId: aggregate.session.sessionId,
-      fixtureId: aggregate.session.fixtureId,
-      subject: aggregate.session.subject,
-      state: aggregate.session.state,
-      recordVersion: aggregate.session.recordVersion,
-      outcome: aggregate.session.outcome,
-      inputMode: aggregate.session.stateData.inputMode,
-      revisionNumber: aggregate.session.stateData.revisionNumber,
-      primaryGapId: aggregate.session.primaryGapId,
-      assistanceLevel: aggregate.session.assistanceLevel,
+      sessionId: releaseAggregate.session.sessionId,
+      fixtureId: releaseAggregate.session.fixtureId,
+      subject: releaseAggregate.session.subject,
+      state: releaseAggregate.session.state,
+      recordVersion: releaseAggregate.session.recordVersion,
+      outcome: releaseAggregate.session.outcome,
+      inputMode: releaseAggregate.session.stateData.inputMode,
+      revisionNumber: releaseAggregate.session.stateData.revisionNumber,
+      primaryGapId: releaseAggregate.session.primaryGapId,
+      assistanceLevel: releaseAggregate.session.assistanceLevel,
       independentAttemptBeforeHelp:
-        aggregate.session.independentAttemptBeforeHelp,
-      prediction: aggregate.session.stateData.prediction,
-      predictionConfidence: aggregate.session.stateData.predictionConfidence,
-      selfDiagnosisCode: aggregate.session.stateData.selfDiagnosisCode,
-      repairNeed: aggregate.session.stateData.repairNeed,
-      repairPath: aggregate.session.stateData.repairPath,
-      continuation: aggregate.session.stateData.continuation,
-      resultReasonCodes: aggregate.session.stateData.resultReasonCodes,
+        releaseAggregate.session.independentAttemptBeforeHelp,
+      prediction: releaseAggregate.session.stateData.prediction,
+      predictionConfidence:
+        releaseAggregate.session.stateData.predictionConfidence,
+      selfDiagnosisCode: releaseAggregate.session.stateData.selfDiagnosisCode,
+      repairNeed: releaseAggregate.session.stateData.repairNeed,
+      repairPath: releaseAggregate.session.stateData.repairPath,
+      continuation: releaseAggregate.session.stateData.continuation,
+      resultReasonCodes: releaseAggregate.session.stateData.resultReasonCodes,
       guidance:
         TRUSTED_REPAIR_STEP_GUIDANCE[
-          aggregate.session.state as keyof typeof TRUSTED_REPAIR_STEP_GUIDANCE
+          releaseAggregate.session
+            .state as keyof typeof TRUSTED_REPAIR_STEP_GUIDANCE
         ] ?? null,
-      createdAt: aggregate.session.createdAt,
-      updatedAt: aggregate.session.updatedAt,
+      createdAt: releaseAggregate.session.createdAt,
+      updatedAt: releaseAggregate.session.updatedAt,
     },
     fixture: {
       fixtureId: fixture.fixtureId,
@@ -154,10 +155,10 @@ export function trustedRepairView(aggregate: TrustedRepairAggregate) {
         }))
       : [],
     diagnosis:
-      aggregate.session.stateData.gapCandidates.length > 0
+      releaseAggregate.session.stateData.gapCandidates.length > 0
         ? {
-            primaryGapId: aggregate.session.primaryGapId,
-            candidates: aggregate.session.stateData.gapCandidates.map(
+            primaryGapId: releaseAggregate.session.primaryGapId,
+            candidates: releaseAggregate.session.stateData.gapCandidates.map(
               (candidate) => ({
                 gapId: candidate.gapId,
                 anchorId: candidate.anchorId,
@@ -180,16 +181,17 @@ export function trustedRepairView(aggregate: TrustedRepairAggregate) {
       currentLawStatus: source.currentLawStatus,
       blockerCount: source.blockerCount,
       verifiedForCurrentLaw:
+        sourceBindingCurrent &&
         source.sourceStatus === "verified" &&
         source.versionStatus === "verified" &&
         source.currentLawStatus === "current_law_verified" &&
         source.blockerCount === 0,
     },
     editableCaptureDraft:
-      aggregate.session.state === "editable_capture_draft"
-        ? fixture.editableDrafts[aggregate.session.stateData.inputMode]
+      releaseAggregate.session.state === "editable_capture_draft"
+        ? fixture.editableDrafts[releaseAggregate.session.stateData.inputMode]
         : null,
-    scaffold: scaffoldFor(aggregate, fixture),
+    scaffold: scaffoldFor(releaseAggregate, fixture),
     claimBoundary: {
       sameSessionCriterionOnly: true,
       masteryClaimed: false,
@@ -260,6 +262,7 @@ export function createTrustedRepairService(authenticatedUserId: string) {
         throw new TrustedRepairContractError("rights_blocked");
       }
       const occurredAt = nowIso();
+      const currentSourceBinding = resolveTrustedRepairSourceBinding(fixture);
       const sessionId = crypto.randomUUID();
       const artifactId = crypto.randomUUID();
       const session = {
@@ -277,7 +280,10 @@ export function createTrustedRepairService(authenticatedUserId: string) {
         bindings: {
           contractVersion: TRUSTED_REPAIR_CONTRACT_VERSION,
           fixtureVersion: TRUSTED_REPAIR_FIXTURE_VERSION,
-          sourceVersion: sourceVersion(fixture),
+          sourceVersion: trustedRepairSourceVersion(
+            fixture,
+            currentSourceBinding,
+          ),
           rubricVersion: TRUSTED_REPAIR_RUBRIC_VERSION,
           policyVersion: TRUSTED_REPAIR_POLICY_VERSION,
           validatorVersion: TRUSTED_REPAIR_VALIDATOR_VERSION,
