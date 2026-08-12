@@ -7,8 +7,9 @@ import process from "node:process";
 import { spawn, spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 
+const MODULE_PATH = fileURLToPath(import.meta.url);
 const REPOSITORY_ROOT = path.resolve(
-  path.dirname(fileURLToPath(import.meta.url)),
+  path.dirname(MODULE_PATH),
   "../..",
 );
 const SOURCE_WORKDIR = path.join(
@@ -56,6 +57,309 @@ const FORBIDDEN_LOCAL_SOURCE = [
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const SHA_PATTERN = /^[0-9a-f]{40}$/i;
 const IMAGE_DIGEST_PATTERN = /^sha256:[0-9a-f]{64}$/i;
+const DIAGNOSTIC_MAX_LINES = 40;
+const DIAGNOSTIC_MAX_CHARS = 4_096;
+const COMMAND_SENSITIVITY_POLICIES = Object.freeze([
+  "synthetic_test_only",
+  "repository_metadata_only",
+  "local_runtime_metadata_only",
+  "local_supabase_control",
+  "docker_resource_metadata_only",
+  "local_supabase_status_secrets",
+  "docker_image_metadata_only",
+  "sql_query_body_secret",
+  "local_server_metadata_only",
+  "browser_assertion_locations_only",
+]);
+
+function commandSpec(stageId, commandId, safeLabel, sensitivityPolicy, query = {}) {
+  return Object.freeze({
+    stageId,
+    commandId,
+    safeLabel,
+    sensitivityPolicy,
+    ...query,
+  });
+}
+
+const COMMAND_SPECS = Object.freeze({
+  diagnostic_regression_failure: commandSpec(
+    "diagnostic_regression",
+    "diagnostic_regression_failure",
+    "diagnostic regression failing child",
+    "synthetic_test_only",
+  ),
+  diagnostic_regression_success: commandSpec(
+    "diagnostic_regression",
+    "diagnostic_regression_success",
+    "diagnostic regression successful child",
+    "synthetic_test_only",
+  ),
+  diagnostic_regression_allow_failure: commandSpec(
+    "diagnostic_regression",
+    "diagnostic_regression_allow_failure",
+    "diagnostic regression allowed failure",
+    "synthetic_test_only",
+  ),
+  git_head_verification: commandSpec(
+    "exact_head_verification",
+    "git_head_verification",
+    "exact Git head verification",
+    "repository_metadata_only",
+  ),
+  supabase_cli_version: commandSpec(
+    "runtime_preflight",
+    "supabase_cli_version",
+    "locked local Supabase CLI version",
+    "local_runtime_metadata_only",
+  ),
+  pre_start_supabase_stop: commandSpec(
+    "pre_start_cleanup",
+    "pre_start_supabase_stop",
+    "pre-start local Supabase shutdown",
+    "local_supabase_control",
+  ),
+  pre_start_container_list: commandSpec(
+    "pre_start_cleanup",
+    "pre_start_container_list",
+    "pre-start C2 container inventory",
+    "docker_resource_metadata_only",
+  ),
+  pre_start_volume_list: commandSpec(
+    "pre_start_cleanup",
+    "pre_start_volume_list",
+    "pre-start C2 volume inventory",
+    "docker_resource_metadata_only",
+  ),
+  pre_start_network_list: commandSpec(
+    "pre_start_cleanup",
+    "pre_start_network_list",
+    "pre-start C2 network inventory",
+    "docker_resource_metadata_only",
+  ),
+  first_supabase_start: commandSpec(
+    "first_fresh_database_start",
+    "first_supabase_start",
+    "first fresh isolated local Supabase startup",
+    "local_supabase_control",
+  ),
+  first_supabase_status: commandSpec(
+    "first_fresh_database_start",
+    "first_supabase_status",
+    "first local Supabase status",
+    "local_supabase_status_secrets",
+  ),
+  active_container_list: commandSpec(
+    "first_fresh_database_inspection",
+    "active_container_list",
+    "active C2 container inventory",
+    "docker_resource_metadata_only",
+  ),
+  database_image_inspect: commandSpec(
+    "first_fresh_database_inspection",
+    "database_image_inspect",
+    "local database image identity",
+    "docker_image_metadata_only",
+  ),
+  verify_migrations_psql: commandSpec(
+    "first_fresh_database_verification",
+    "verify_migrations_psql",
+    "verify first fresh migration inventory",
+    "sql_query_body_secret",
+    { queryId: "verify_migrations", queryDescription: "schema existence predicates" },
+  ),
+  verify_security_contract_psql: commandSpec(
+    "first_fresh_database_verification",
+    "verify_security_contract_psql",
+    "verify first fresh security contract",
+    "sql_query_body_secret",
+    { queryId: "verify_security_contract", queryDescription: "forced RLS and grant predicates" },
+  ),
+  flag_off_session_count_before_psql: commandSpec(
+    "default_off_verification",
+    "flag_off_session_count_before_psql",
+    "count sessions before default-OFF request",
+    "sql_query_body_secret",
+    { queryId: "flag_off_session_count_before", queryDescription: "aggregate session row count" },
+  ),
+  next_flag_off_start: commandSpec(
+    "default_off_verification",
+    "next_flag_off_start",
+    "default-OFF local Next server",
+    "local_server_metadata_only",
+  ),
+  flag_off_session_count_after_psql: commandSpec(
+    "default_off_verification",
+    "flag_off_session_count_after_psql",
+    "count sessions after default-OFF request",
+    "sql_query_body_secret",
+    { queryId: "flag_off_session_count_after", queryDescription: "aggregate session row count" },
+  ),
+  next_initial_start: commandSpec(
+    "browser_runtime",
+    "next_initial_start",
+    "initial local Next server",
+    "local_server_metadata_only",
+  ),
+  browser_acceptance: commandSpec(
+    "browser_runtime",
+    "browser_acceptance",
+    "C2 complete browser acceptance",
+    "browser_assertion_locations_only",
+  ),
+  verify_persisted_runtime_psql: commandSpec(
+    "persisted_runtime_verification",
+    "verify_persisted_runtime_psql",
+    "verify persisted C2 runtime invariants",
+    "sql_query_body_secret",
+    { queryId: "verify_persisted_runtime", queryDescription: "aggregate bodyless invariant predicates" },
+  ),
+  recovery_session_lookup_psql: commandSpec(
+    "process_restart_recovery",
+    "recovery_session_lookup_psql",
+    "lookup bodyless recovery session",
+    "sql_query_body_secret",
+    { queryId: "recovery_session_lookup", queryDescription: "latest partial session identifier lookup" },
+  ),
+  next_recovery_start: commandSpec(
+    "process_restart_recovery",
+    "next_recovery_start",
+    "recovery local Next server",
+    "local_server_metadata_only",
+  ),
+  browser_recovery: commandSpec(
+    "process_restart_recovery",
+    "browser_recovery",
+    "C2 process-restart browser recovery",
+    "browser_assertion_locations_only",
+  ),
+  first_supabase_stop: commandSpec(
+    "first_fresh_database_cleanup",
+    "first_supabase_stop",
+    "first fresh local Supabase shutdown",
+    "local_supabase_control",
+  ),
+  first_cleanup_container_list: commandSpec(
+    "first_fresh_database_cleanup",
+    "first_cleanup_container_list",
+    "first cleanup C2 container inventory",
+    "docker_resource_metadata_only",
+  ),
+  first_cleanup_volume_list: commandSpec(
+    "first_fresh_database_cleanup",
+    "first_cleanup_volume_list",
+    "first cleanup C2 volume inventory",
+    "docker_resource_metadata_only",
+  ),
+  first_cleanup_network_list: commandSpec(
+    "first_fresh_database_cleanup",
+    "first_cleanup_network_list",
+    "first cleanup C2 network inventory",
+    "docker_resource_metadata_only",
+  ),
+  second_supabase_start: commandSpec(
+    "second_fresh_database_start",
+    "second_supabase_start",
+    "second fresh isolated local Supabase startup",
+    "local_supabase_control",
+  ),
+  second_database_container_list: commandSpec(
+    "second_fresh_database_verification",
+    "second_database_container_list",
+    "second fresh database container inventory",
+    "docker_resource_metadata_only",
+  ),
+  second_verify_migrations_psql: commandSpec(
+    "second_fresh_database_verification",
+    "second_verify_migrations_psql",
+    "verify second fresh migration inventory",
+    "sql_query_body_secret",
+    { queryId: "second_verify_migrations", queryDescription: "schema existence predicates" },
+  ),
+  second_verify_security_psql: commandSpec(
+    "second_fresh_database_verification",
+    "second_verify_security_psql",
+    "verify second fresh security contract",
+    "sql_query_body_secret",
+    { queryId: "second_verify_security", queryDescription: "forced RLS and grant predicates" },
+  ),
+  second_empty_database_psql: commandSpec(
+    "second_fresh_database_verification",
+    "second_empty_database_psql",
+    "verify second fresh database is empty",
+    "sql_query_body_secret",
+    { queryId: "second_empty_database", queryDescription: "aggregate session row count" },
+  ),
+  final_supabase_stop: commandSpec(
+    "final_resource_cleanup",
+    "final_supabase_stop",
+    "final local Supabase shutdown",
+    "local_supabase_control",
+  ),
+  final_cleanup_container_list: commandSpec(
+    "final_resource_cleanup",
+    "final_cleanup_container_list",
+    "final C2 container inventory",
+    "docker_resource_metadata_only",
+  ),
+  final_cleanup_volume_list: commandSpec(
+    "final_resource_cleanup",
+    "final_cleanup_volume_list",
+    "final C2 volume inventory",
+    "docker_resource_metadata_only",
+  ),
+  final_cleanup_network_list: commandSpec(
+    "final_resource_cleanup",
+    "final_cleanup_network_list",
+    "final C2 network inventory",
+    "docker_resource_metadata_only",
+  ),
+  cleanup_only_supabase_stop: commandSpec(
+    "workflow_cleanup",
+    "cleanup_only_supabase_stop",
+    "idempotent workflow local Supabase shutdown",
+    "local_supabase_control",
+  ),
+  cleanup_only_container_list: commandSpec(
+    "workflow_cleanup",
+    "cleanup_only_container_list",
+    "workflow cleanup C2 container inventory",
+    "docker_resource_metadata_only",
+  ),
+  cleanup_only_volume_list: commandSpec(
+    "workflow_cleanup",
+    "cleanup_only_volume_list",
+    "workflow cleanup C2 volume inventory",
+    "docker_resource_metadata_only",
+  ),
+  cleanup_only_network_list: commandSpec(
+    "workflow_cleanup",
+    "cleanup_only_network_list",
+    "workflow cleanup C2 network inventory",
+    "docker_resource_metadata_only",
+  ),
+});
+
+const PRE_START_RESOURCE_SPECS = Object.freeze({
+  container: COMMAND_SPECS.pre_start_container_list,
+  volume: COMMAND_SPECS.pre_start_volume_list,
+  network: COMMAND_SPECS.pre_start_network_list,
+});
+const FIRST_CLEANUP_RESOURCE_SPECS = Object.freeze({
+  container: COMMAND_SPECS.first_cleanup_container_list,
+  volume: COMMAND_SPECS.first_cleanup_volume_list,
+  network: COMMAND_SPECS.first_cleanup_network_list,
+});
+const FINAL_RESOURCE_SPECS = Object.freeze({
+  container: COMMAND_SPECS.final_cleanup_container_list,
+  volume: COMMAND_SPECS.final_cleanup_volume_list,
+  network: COMMAND_SPECS.final_cleanup_network_list,
+});
+const CLEANUP_ONLY_RESOURCE_SPECS = Object.freeze({
+  container: COMMAND_SPECS.cleanup_only_container_list,
+  volume: COMMAND_SPECS.cleanup_only_volume_list,
+  network: COMMAND_SPECS.cleanup_only_network_list,
+});
 
 const args = new Set(process.argv.slice(2));
 const cleanupOnly = args.has("--cleanup");
@@ -70,6 +374,204 @@ function required(value, label, pattern) {
 
 function sha256(value) {
   return crypto.createHash("sha256").update(value).digest("hex");
+}
+
+function sanitizeDiagnosticText(value) {
+  let output = String(value ?? "")
+    .replace(/\u001b\[[0-?]*[ -\/]*[@-~]/g, "")
+    .replace(/(?:\/home\/runner\/work\/_temp|\/runner\/_work\/_temp)(?:\/[^\s'\"]*)?/gi, "<runner-temp-path>")
+    .replace(/[A-Za-z]:\\[^\r\n]*?\\_temp(?:\\[^\s'\"]*)?/gi, "<runner-temp-path>")
+    .replace(/\/home\/runner\/work\/[^\s'\"]+/gi, "<runner-workspace-path>")
+    .replace(new RegExp(REPOSITORY_ROOT.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "g"), "<repository-root>")
+    .replace(/\b(?:postgres(?:ql)?|mysql|mariadb|redis|mongodb(?:\+srv)?)?:\/\/[^\s'\"]+/gi, "<redacted-database-url>")
+    .replace(/\bhttps?:\/\/[^\s\/@:]+:[^\s\/@]+@[^\s'\"]+/gi, "<redacted-credential-url>")
+    .replace(/\bhttps?:\/\/[a-z0-9-]+\.supabase\.co\b[^\s'\"]*/gi, "<redacted-supabase-url>")
+    .replace(/\bBearer\s+[^\s,;]+/gi, "Bearer <redacted-token>")
+    .replace(/\beyJ[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}\b/g, "<redacted-jwt>")
+    .replace(/\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b/gi, "<redacted-email>")
+    .replace(/\b[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}\b/gi, "<redacted-uuid>")
+    .replace(
+      /((?:supabase[_ -]?)?(?:anon|service[_ -]?role|secret)?[_ -]?key|password|passwd|token|database_url|connection_string)\s*[=:]\s*(?:\"[^\"]*\"|'[^']*'|[^\s,;}\]]+)/gi,
+      "$1=<redacted-secret>",
+    )
+    .replace(
+      /((?:raw[_ -]?)?(?:problem[_ -]?body|learner[_ -]?(?:answer|body)|ocr[_ -]?(?:body|text)|repair[_ -]?(?:submission|body)|fixture[_ -]?body|provider[_ -]?(?:payload|body)|payload|request[_ -]?body|response[_ -]?body))\s*[=:]\s*(?:\"[^\"]*\"|'[^']*'|[^\s,;}\]]+)/gi,
+      "$1=<redacted-body>",
+    )
+    .replace(/'(?:''|[^'])*'/g, "'<redacted-sql-literal>'")
+    .replace(
+      /\b(?=[A-Za-z0-9_-]{32,}\b)(?=[A-Za-z0-9_-]*[A-Z])(?=[A-Za-z0-9_-]*[a-z])(?=[A-Za-z0-9_-]*\d)[A-Za-z0-9_-]{32,}\b/g,
+      "<redacted-long-secret>",
+    );
+  return output;
+}
+
+function boundedSanitizedExcerpt(value) {
+  const sanitized = sanitizeDiagnosticText(value).replace(/\r\n?/g, "\n");
+  const lines = sanitized.split("\n");
+  let truncated = lines.length > DIAGNOSTIC_MAX_LINES;
+  const retainedLineCount = truncated
+    ? Math.max(1, DIAGNOSTIC_MAX_LINES - 1)
+    : DIAGNOSTIC_MAX_LINES;
+  let excerpt = lines.slice(-retainedLineCount).join("\n");
+  const marker = "<truncated>\n";
+  const availableCharacters = truncated
+    ? DIAGNOSTIC_MAX_CHARS - marker.length
+    : DIAGNOSTIC_MAX_CHARS;
+  if (excerpt.length > availableCharacters) {
+    excerpt = excerpt.slice(-Math.max(0, DIAGNOSTIC_MAX_CHARS - marker.length));
+    truncated = true;
+  }
+  if (!truncated) return excerpt;
+  return `${marker}${excerpt.slice(-Math.max(0, DIAGNOSTIC_MAX_CHARS - marker.length))}`;
+}
+
+function validateCommandSpec(specification) {
+  for (const field of ["stageId", "commandId", "safeLabel", "sensitivityPolicy"]) {
+    if (typeof specification?.[field] !== "string" || specification[field].length === 0) {
+      throw new Error(`external command specification is missing ${field}`);
+    }
+  }
+  if (
+    !/^[a-z0-9_]+$/.test(specification.stageId) ||
+    !/^[a-z0-9_]+$/.test(specification.commandId) ||
+    /[\r\n]/.test(specification.safeLabel) ||
+    specification.safeLabel.length > 160
+  ) {
+    throw new Error("external command specification has an unsafe identity field");
+  }
+  if (!COMMAND_SENSITIVITY_POLICIES.includes(specification.sensitivityPolicy)) {
+    throw new Error("external command specification has an unknown sensitivity policy");
+  }
+  if (
+    specification.sensitivityPolicy === "sql_query_body_secret" &&
+    (typeof specification.queryId !== "string" ||
+      specification.queryId.length === 0 ||
+      typeof specification.queryDescription !== "string" ||
+      specification.queryDescription.length === 0)
+  ) {
+    throw new Error("SQL command specification is missing safe query metadata");
+  }
+  return specification;
+}
+
+function safeExecutable(command) {
+  const name = path.basename(command);
+  if (command === process.execPath || /^node(?:\.exe)?$/i.test(name)) return "node";
+  return name || "<external-command>";
+}
+
+function sanitizedArgv(command, commandArgs, specification) {
+  const safe = [safeExecutable(command)];
+  for (let index = 0; index < commandArgs.length; index += 1) {
+    const value = String(commandArgs[index]);
+    if (value === "--workdir") {
+      safe.push(value, "<runner-temp-workdir>");
+      index += 1;
+      continue;
+    }
+    if (value === "--command") {
+      const sql = String(commandArgs[index + 1] ?? "");
+      safe.push(
+        value,
+        `<sql query_id=${specification.queryId ?? "undeclared"} sha256=${sha256(sql)} shape=${specification.queryDescription ?? "undeclared"}>`,
+      );
+      index += 1;
+      continue;
+    }
+    if (value === "-e" || value === "--eval") {
+      safe.push(value, "<inline-script>");
+      index += 1;
+      continue;
+    }
+    const normalized = value.startsWith(`${REPOSITORY_ROOT}${path.sep}`)
+      ? `<repository-root>/${path.relative(REPOSITORY_ROOT, value).split(path.sep).join("/")}`
+      : value.replace(
+        /--config=(?:\/home\/runner\/work\/[^\s]+|[^\s]+)/,
+        (match) => match.startsWith("--config=")
+          ? `--config=${match.slice("--config=".length).startsWith(REPOSITORY_ROOT)
+            ? `<repository-root>/${path.relative(REPOSITORY_ROOT, match.slice("--config=".length)).split(path.sep).join("/")}`
+            : "<config-path>"}`
+          : match,
+      );
+    safe.push(sanitizeDiagnosticText(normalized));
+  }
+  return Object.freeze(safe);
+}
+
+class SanitizedCommandFailure extends Error {
+  constructor(fields) {
+    super("sanitized external command failure");
+    this.name = "SanitizedCommandFailure";
+    this.stageId = /^[a-z0-9_]+$/.test(fields.stageId) ? fields.stageId : "invalid_stage";
+    this.commandId = /^[a-z0-9_]+$/.test(fields.commandId)
+      ? fields.commandId
+      : "invalid_command";
+    this.safeLabel = boundedSanitizedExcerpt(fields.safeLabel)
+      .replace(/[\r\n]+/g, " ")
+      .slice(0, 160);
+    this.status = Number.isInteger(fields.status) ? fields.status : null;
+    this.signal = typeof fields.signal === "string" && /^[A-Z0-9]+$/.test(fields.signal)
+      ? fields.signal
+      : null;
+    this.safeArgv = Object.freeze(
+      (Array.isArray(fields.safeArgv) ? fields.safeArgv : []).map((value) =>
+        sanitizeDiagnosticText(value),
+      ),
+    );
+    this.stdoutExcerpt = boundedSanitizedExcerpt(fields.stdoutExcerpt);
+    this.stderrExcerpt = boundedSanitizedExcerpt(fields.stderrExcerpt);
+  }
+
+  toSafeObject() {
+    return {
+      stageId: this.stageId,
+      commandId: this.commandId,
+      safeLabel: this.safeLabel,
+      status: this.status,
+      signal: this.signal,
+      safeArgv: this.safeArgv,
+      stdoutExcerpt: this.stdoutExcerpt,
+      stderrExcerpt: this.stderrExcerpt,
+    };
+  }
+}
+
+function sanitizedCommandFailure(command, commandArgs, specification, result, overrides = {}) {
+  const spec = validateCommandSpec(specification);
+  const errorText = result.error instanceof Error ? result.error.message : "";
+  return new SanitizedCommandFailure({
+    stageId: spec.stageId,
+    commandId: spec.commandId,
+    safeLabel: spec.safeLabel,
+    status: Number.isInteger(result.status) ? result.status : null,
+    signal: typeof result.signal === "string" ? result.signal : null,
+    safeArgv: sanitizedArgv(command, commandArgs, spec),
+    stdoutExcerpt: boundedSanitizedExcerpt(overrides.stdout ?? result.stdout ?? ""),
+    stderrExcerpt: boundedSanitizedExcerpt(
+      overrides.stderr ?? [result.stderr ?? "", errorText].filter(Boolean).join("\n"),
+    ),
+  });
+}
+
+function formatRuntimeFailure(error) {
+  if (!(error instanceof SanitizedCommandFailure)) {
+    return `wcv-c2-runtime-verification: ${boundedSanitizedExcerpt(error?.message ?? error)}`;
+  }
+  const safe = error.toSafeObject();
+  return [
+    "wcv-c2-runtime-verification: sanitized command failure",
+    `stage_id: ${safe.stageId}`,
+    `command_id: ${safe.commandId}`,
+    `safe_label: ${safe.safeLabel}`,
+    `status: ${safe.status ?? "unavailable"}`,
+    `signal: ${safe.signal ?? "none"}`,
+    `safe_argv: ${JSON.stringify(safe.safeArgv)}`,
+    "stdout_tail:",
+    safe.stdoutExcerpt || "<empty>",
+    "stderr_tail:",
+    safe.stderrExcerpt || "<empty>",
+  ].join("\n");
 }
 
 function commandEnvironment() {
@@ -89,6 +591,7 @@ function commandEnvironment() {
 }
 
 function run(command, commandArgs, options = {}) {
+  const specification = validateCommandSpec(options.commandSpec);
   const result = spawnSync(command, commandArgs, {
     cwd: options.cwd ?? REPOSITORY_ROOT,
     encoding: "utf8",
@@ -98,16 +601,18 @@ function run(command, commandArgs, options = {}) {
   });
   if (result.error) {
     if (options.allowFailure) return result;
-    throw new Error(`${options.label ?? command} could not execute`);
+    throw sanitizedCommandFailure(command, commandArgs, specification, result);
   }
   if (result.status !== 0 && !options.allowFailure) {
-    throw new Error(`${options.label ?? command} failed with status ${result.status}`);
+    throw sanitizedCommandFailure(command, commandArgs, specification, result);
   }
   return result;
 }
 
 function gitHead() {
-  return run("git", ["rev-parse", "HEAD"], { label: "git head verification" })
+  return run("git", ["rev-parse", "HEAD"], {
+    commandSpec: COMMAND_SPECS.git_head_verification,
+  })
     .stdout.trim().toLowerCase();
 }
 
@@ -116,14 +621,13 @@ function verifyExactHead(headSha) {
 }
 
 function docker(commandArgs, options = {}) {
-  return run("docker", commandArgs, { ...options, label: options.label ?? "docker command" });
+  return run("docker", commandArgs, options);
 }
 
 function supabase(commandArgs, options = {}) {
   const executable = path.join(REPOSITORY_ROOT, "node_modules/.bin/supabase");
   return run(executable, commandArgs, {
     ...options,
-    label: options.label ?? "local Supabase CLI command",
   });
 }
 
@@ -199,35 +703,35 @@ function migrationMetadata() {
     }));
 }
 
-function matchingDockerResources(kind) {
+function matchingDockerResources(kind, specification, options = {}) {
   const format = kind === "container" ? "{{.Names}}" : "{{.Name}}";
   const commandArgs =
     kind === "container"
-      ? ["ps", "--all", "--format", format]
+      ? ["ps", ...(options.includeStopped === false ? [] : ["--all"]), "--format", format]
       : [kind, "ls", "--format", format];
-  return docker(commandArgs).stdout
+  return docker(commandArgs, { commandSpec: specification }).stdout
     .split(/\r?\n/)
     .map((value) => value.trim())
     .filter((value) => value.includes(PROJECT_ID));
 }
 
-function dockerResourceSnapshot() {
+function dockerResourceSnapshot(resourceSpecs) {
   return {
-    containers: matchingDockerResources("container"),
-    volumes: matchingDockerResources("volume"),
-    networks: matchingDockerResources("network"),
+    containers: matchingDockerResources("container", resourceSpecs.container),
+    volumes: matchingDockerResources("volume", resourceSpecs.volume),
+    networks: matchingDockerResources("network", resourceSpecs.network),
   };
 }
 
-function assertNoDockerResources(label) {
-  const snapshot = dockerResourceSnapshot();
+function assertNoDockerResources(label, resourceSpecs) {
+  const snapshot = dockerResourceSnapshot(resourceSpecs);
   if (snapshot.containers.length || snapshot.volumes.length || snapshot.networks.length) {
     throw new Error(`${label} left C2 Docker resources behind`);
   }
   return snapshot;
 }
 
-function stopStack(root, allowFailure = false) {
+function stopStack(root, specification, allowFailure = false) {
   return supabase(
     [
       "stop",
@@ -238,18 +742,24 @@ function stopStack(root, allowFailure = false) {
       "--no-backup",
       "--yes",
     ],
-    { allowFailure, label: "local Supabase shutdown" },
+    { allowFailure, commandSpec: specification },
   );
 }
 
-function cleanup(root, requireComplete) {
+function cleanup(root, requireComplete, dependencies = {}) {
+  const stopStackFn = dependencies.stopStackFn ?? stopStack;
+  const assertNoDockerResourcesFn =
+    dependencies.assertNoDockerResourcesFn ?? assertNoDockerResources;
   if (fs.existsSync(path.join(root, "supabase/config.toml"))) {
     // The verifier normally removes the stack itself. A second workflow-level
     // cleanup must therefore be idempotent: the CLI may report no running
     // project, while the resource assertion below remains authoritative.
-    stopStack(root, true);
+    stopStackFn(root, COMMAND_SPECS.cleanup_only_supabase_stop, true);
   }
-  const snapshot = assertNoDockerResources("local Supabase cleanup");
+  const snapshot = assertNoDockerResourcesFn(
+    "local Supabase cleanup",
+    CLEANUP_ONLY_RESOURCE_SPECS,
+  );
   fs.rmSync(root, { recursive: true, force: true });
   if (requireComplete && (snapshot.containers.length || snapshot.volumes.length || snapshot.networks.length)) {
     throw new Error("complete C2 cleanup was not established");
@@ -342,10 +852,11 @@ function expectStatus(result, allowed, label) {
 }
 
 function activeStackIdentity() {
-  const containers = docker(["ps", "--format", "{{.Names}}"]).stdout
-    .split(/\r?\n/)
-    .map((value) => value.trim())
-    .filter((value) => value.includes(PROJECT_ID));
+  const containers = matchingDockerResources(
+    "container",
+    COMMAND_SPECS.active_container_list,
+    { includeStopped: false },
+  );
   for (const prefix of REQUIRED_CONTAINER_PREFIXES) {
     if (!containers.some((name) => name.startsWith(prefix))) {
       throw new Error(`required local Supabase service ${prefix} is not running`);
@@ -357,15 +868,15 @@ function activeStackIdentity() {
     "--format",
     "{{.Config.Image}}|{{.Image}}",
     databaseContainer,
-  ]).stdout.trim();
+  ], { commandSpec: COMMAND_SPECS.database_image_inspect }).stdout.trim();
   const [reference, digest] = identity.split("|");
   if (!reference || !IMAGE_DIGEST_PATTERN.test(digest ?? "")) {
     throw new Error("local database image identity is invalid");
   }
-  return { reference, digest };
+  return { reference, digest, databaseContainer };
 }
 
-function databaseQuery(databaseContainer, sql) {
+function databaseQuery(databaseContainer, specification, sql) {
   return docker([
     "exec",
     databaseContainer,
@@ -381,12 +892,13 @@ function databaseQuery(databaseContainer, sql) {
     "ON_ERROR_STOP=1",
     "--command",
     sql,
-  ]).stdout.trim();
+  ], { commandSpec: specification }).stdout.trim();
 }
 
-function verifyMigrationsApplied(databaseContainer) {
+function verifyMigrationsApplied(databaseContainer, specification) {
   const result = databaseQuery(
     databaseContainer,
+    specification,
     `select concat_ws('|',
       (to_regclass('public.wcv_c2_preflight_tenant_probe') is not null)::text,
       (to_regclass('public.wcv_c2_trusted_repair_sessions') is not null)::text,
@@ -400,9 +912,10 @@ function verifyMigrationsApplied(databaseContainer) {
   }
 }
 
-function verifyDatabaseSecurityContract(databaseContainer) {
+function verifyDatabaseSecurityContract(databaseContainer, specification) {
   const result = databaseQuery(
     databaseContainer,
+    specification,
     `select concat_ws('|',
       (select count(*) from pg_class c join pg_namespace n on n.oid=c.relnamespace
        where n.nspname='public' and c.relname like 'wcv_c2_trusted_repair_%'
@@ -431,11 +944,29 @@ function nextEnvironment(input) {
   };
 }
 
-async function waitForHttp(url, processHandle) {
+async function waitForHttp(url, processHandle, command) {
   const deadline = Date.now() + 120_000;
+  let spawnError = null;
+  processHandle.once("error", (error) => {
+    spawnError = error;
+  });
   while (Date.now() < deadline) {
+    if (spawnError) {
+      throw sanitizedCommandFailure(
+        command.executable,
+        command.args,
+        command.specification,
+        { error: spawnError, status: null, signal: processHandle.signalCode },
+      );
+    }
     if (processHandle.exitCode !== null) {
-      throw new Error("local Next server exited before becoming ready");
+      throw sanitizedCommandFailure(
+        command.executable,
+        command.args,
+        command.specification,
+        { status: processHandle.exitCode, signal: processHandle.signalCode },
+        { stderr: "local Next server exited before becoming ready" },
+      );
     }
     try {
       const response = await fetch(`${url}/login`, { redirect: "manual" });
@@ -445,15 +976,24 @@ async function waitForHttp(url, processHandle) {
     }
     await new Promise((resolve) => setTimeout(resolve, 500));
   }
-  throw new Error("local Next server did not become ready");
+  throw sanitizedCommandFailure(
+    command.executable,
+    command.args,
+    command.specification,
+    { status: processHandle.exitCode, signal: processHandle.signalCode },
+    { stderr: "local Next server did not become ready within the bounded deadline" },
+  );
 }
 
 async function startNext(input) {
   const port = input.port ?? 3100;
   const baseUrl = `http://127.0.0.1:${port}`;
+  const executable = path.join(REPOSITORY_ROOT, "node_modules/.bin/next");
+  const commandArgs = ["dev", "--hostname", "127.0.0.1", "--port", String(port)];
+  const specification = validateCommandSpec(input.commandSpec);
   const processHandle = spawn(
-    path.join(REPOSITORY_ROOT, "node_modules/.bin/next"),
-    ["dev", "--hostname", "127.0.0.1", "--port", String(port)],
+    executable,
+    commandArgs,
     {
       cwd: REPOSITORY_ROOT,
       env: nextEnvironment(input),
@@ -461,7 +1001,11 @@ async function startNext(input) {
       detached: false,
     },
   );
-  await waitForHttp(baseUrl, processHandle);
+  await waitForHttp(baseUrl, processHandle, {
+    executable,
+    args: commandArgs,
+    specification,
+  });
   return { processHandle, baseUrl };
 }
 
@@ -482,10 +1026,15 @@ async function verifyFlagOffBeforeBodyParsing(nextInput, databaseContainer) {
   const before = Number(
     databaseQuery(
       databaseContainer,
+      COMMAND_SPECS.flag_off_session_count_before_psql,
       "select count(*) from public.wcv_c2_trusted_repair_sessions;",
     ),
   );
-  const server = await startNext({ ...nextInput, enabled: false });
+  const server = await startNext({
+    ...nextInput,
+    enabled: false,
+    commandSpec: COMMAND_SPECS.next_flag_off_start,
+  });
   try {
     const response = await fetch(`${server.baseUrl}/api/review-os/trusted-repair`, {
       method: "POST",
@@ -505,6 +1054,7 @@ async function verifyFlagOffBeforeBodyParsing(nextInput, databaseContainer) {
   const after = Number(
     databaseQuery(
       databaseContainer,
+      COMMAND_SPECS.flag_off_session_count_after_psql,
       "select count(*) from public.wcv_c2_trusted_repair_sessions;",
     ),
   );
@@ -537,28 +1087,44 @@ function sanitizedBrowserFailureLocations(result) {
   return locations.slice(-5);
 }
 
+function browserFailureFromResult(executable, commandArgs, specification, result) {
+  const spec = validateCommandSpec(specification);
+  if (spec.sensitivityPolicy !== "browser_assertion_locations_only") {
+    throw new Error("browser failure command has an invalid sensitivity policy");
+  }
+  const locations = sanitizedBrowserFailureLocations(result);
+  const stderr = locations.length
+    ? `browser assertions failed at sanitized assertion line(s) ${locations.join(",")}`
+    : "browser assertions failed with no safe assertion location";
+  return sanitizedCommandFailure(
+    executable,
+    commandArgs,
+    spec,
+    result,
+    { stdout: "", stderr },
+  );
+}
+
 function runBrowserSuite(input) {
   const grepArgs = input.recoverySessionId
     ? ["--grep", "process restart recovers"]
     : ["--grep-invert", "process restart recovers"];
-  const label = input.recoverySessionId
-    ? "C2 process-restart browser recovery"
-    : "C2 complete browser acceptance";
+  const specification = input.recoverySessionId
+    ? COMMAND_SPECS.browser_recovery
+    : COMMAND_SPECS.browser_acceptance;
+  const executable = path.join(REPOSITORY_ROOT, "node_modules/.bin/playwright");
+  const commandArgs = ["test", `--config=${BROWSER_CONFIG_PATH}`, ...grepArgs];
   const result = run(
-    path.join(REPOSITORY_ROOT, "node_modules/.bin/playwright"),
-    ["test", `--config=${BROWSER_CONFIG_PATH}`, ...grepArgs],
+    executable,
+    commandArgs,
     {
-      label,
+      commandSpec: specification,
       env: playwrightEnvironment(input),
       allowFailure: true,
     },
   );
   if (result.status !== 0) {
-    const locations = sanitizedBrowserFailureLocations(result);
-    const suffix = locations.length
-      ? ` at sanitized assertion line(s) ${locations.join(",")}`
-      : " with no safe assertion location";
-    throw new Error(`${label} failed with status ${result.status}${suffix}`);
+    throw browserFailureFromResult(executable, commandArgs, specification, result);
   }
 }
 
@@ -625,6 +1191,7 @@ function verifyPersistedRuntime(databaseContainer) {
   ];
   const result = databaseQuery(
     databaseContainer,
+    COMMAND_SPECS.verify_persisted_runtime_psql,
     `select concat_ws('|',
       (select (count(*) > 0)::text from public.wcv_c2_trusted_repair_sessions),
       (select (count(*) > 0)::text from public.wcv_c2_trusted_repair_private_artifacts),
@@ -715,14 +1282,16 @@ async function runFinalRuntime() {
   if (migrations.length !== 2) throw new Error("C2 final migration inventory is not exact");
   verifyExactHead(headSha);
   verifyLocalOnlySource();
-  const cliVersion = supabase(["--version"], { label: "Supabase CLI version check" })
+  const cliVersion = supabase(["--version"], {
+    commandSpec: COMMAND_SPECS.supabase_cli_version,
+  })
     .stdout.trim();
   if (cliVersion !== EXPECTED_CLI_VERSION) {
     throw new Error(`Supabase CLI version ${cliVersion || "missing"} is not ${EXPECTED_CLI_VERSION}`);
   }
 
-  stopStack(root, true);
-  assertNoDockerResources("pre-start cleanup");
+  stopStack(root, COMMAND_SPECS.pre_start_supabase_stop, true);
+  assertNoDockerResources("pre-start cleanup", PRE_START_RESOURCE_SPECS);
   fs.mkdirSync(path.dirname(evidencePath), { recursive: true, mode: 0o700 });
   fs.rmSync(evidencePath, { force: true });
   fs.rmSync(browserEvidencePath, { force: true });
@@ -747,11 +1316,11 @@ async function runFinalRuntime() {
         "json",
         "--yes",
       ],
-      { label: "first fresh isolated local Supabase startup" },
+      { commandSpec: COMMAND_SPECS.first_supabase_start },
     );
     const status = parseJsonOutput(
       supabase(["status", "--workdir", root, "--output", "json"], {
-        label: "local Supabase status",
+        commandSpec: COMMAND_SPECS.first_supabase_status,
       }).stdout,
       "local Supabase status",
     );
@@ -769,12 +1338,17 @@ async function runFinalRuntime() {
     );
     process.stdout.write(`::add-mask::${anonKey}\n::add-mask::${serviceRoleKey}\n`);
 
-    databaseImage = activeStackIdentity();
-    const databaseContainer = matchingDockerResources("container")
-      .find((name) => name.startsWith("supabase_db_"));
-    if (!databaseContainer) throw new Error("local database container is missing");
-    verifyMigrationsApplied(databaseContainer);
-    verifyDatabaseSecurityContract(databaseContainer);
+    const stackIdentity = activeStackIdentity();
+    databaseImage = {
+      reference: stackIdentity.reference,
+      digest: stackIdentity.digest,
+    };
+    const { databaseContainer } = stackIdentity;
+    verifyMigrationsApplied(databaseContainer, COMMAND_SPECS.verify_migrations_psql);
+    verifyDatabaseSecurityContract(
+      databaseContainer,
+      COMMAND_SPECS.verify_security_contract_psql,
+    );
     assertions.push({ id: "first_fresh_empty_state_migrations", result: "passed" });
     assertions.push({ id: "forced_rls_and_exact_grants", result: "passed" });
     assertions.push({ id: "minimum_local_services_healthy", result: "passed" });
@@ -829,7 +1403,11 @@ async function runFinalRuntime() {
     await verifyFlagOffBeforeBodyParsing(nextInput, databaseContainer);
     assertions.push({ id: "default_off_before_parse_and_write", result: "passed" });
 
-    server = await startNext({ ...nextInput, enabled: true });
+    server = await startNext({
+      ...nextInput,
+      enabled: true,
+      commandSpec: COMMAND_SPECS.next_initial_start,
+    });
     runBrowserSuite({
       baseUrl: server.baseUrl,
       userA,
@@ -850,6 +1428,7 @@ async function runFinalRuntime() {
     const recoverySessionId = required(
       databaseQuery(
         databaseContainer,
+        COMMAND_SPECS.recovery_session_lookup_psql,
         `select id::text from public.wcv_c2_trusted_repair_sessions
          where user_id='${userA.userId}'::uuid and state='partial'
          order by updated_at desc limit 1;`,
@@ -858,7 +1437,11 @@ async function runFinalRuntime() {
       UUID_PATTERN,
     );
     await stopNext(server);
-    server = await startNext({ ...nextInput, enabled: true });
+    server = await startNext({
+      ...nextInput,
+      enabled: true,
+      commandSpec: COMMAND_SPECS.next_recovery_start,
+    });
     runBrowserSuite({
       baseUrl: server.baseUrl,
       userA,
@@ -870,8 +1453,11 @@ async function runFinalRuntime() {
     await stopNext(server);
     server = null;
 
-    stopStack(root, false);
-    assertNoDockerResources("first fresh runtime cleanup");
+    stopStack(root, COMMAND_SPECS.first_supabase_stop, false);
+    assertNoDockerResources(
+      "first fresh runtime cleanup",
+      FIRST_CLEANUP_RESOURCE_SPECS,
+    );
     fs.rmSync(root, { recursive: true, force: true });
 
     prepareRuntimeWorkdir(root);
@@ -886,16 +1472,26 @@ async function runFinalRuntime() {
         "json",
         "--yes",
       ],
-      { label: "second fresh isolated local Supabase startup" },
+      { commandSpec: COMMAND_SPECS.second_supabase_start },
     );
-    const secondDatabaseContainer = matchingDockerResources("container")
+    const secondDatabaseContainer = matchingDockerResources(
+      "container",
+      COMMAND_SPECS.second_database_container_list,
+    )
       .find((name) => name.startsWith("supabase_db_"));
     if (!secondDatabaseContainer) throw new Error("second fresh database container is missing");
-    verifyMigrationsApplied(secondDatabaseContainer);
-    verifyDatabaseSecurityContract(secondDatabaseContainer);
+    verifyMigrationsApplied(
+      secondDatabaseContainer,
+      COMMAND_SPECS.second_verify_migrations_psql,
+    );
+    verifyDatabaseSecurityContract(
+      secondDatabaseContainer,
+      COMMAND_SPECS.second_verify_security_psql,
+    );
     if (
       databaseQuery(
         secondDatabaseContainer,
+        COMMAND_SPECS.second_empty_database_psql,
         "select count(*) from public.wcv_c2_trusted_repair_sessions;",
       ) !== "0"
     ) {
@@ -907,8 +1503,11 @@ async function runFinalRuntime() {
   } finally {
     try {
       await stopNext(server);
-      stopStack(root, true);
-      cleanupResult = assertNoDockerResources("post-run cleanup");
+      stopStack(root, COMMAND_SPECS.final_supabase_stop, true);
+      cleanupResult = assertNoDockerResources(
+        "post-run cleanup",
+        FINAL_RESOURCE_SPECS,
+      );
       fs.rmSync(root, { recursive: true, force: true });
     } catch (cleanupError) {
       runtimeError = cleanupError;
@@ -977,7 +1576,23 @@ async function main() {
   await runFinalRuntime();
 }
 
-main().catch((error) => {
-  process.stderr.write(`wcv-c2-runtime-verification: ${error.message}\n`);
-  process.exitCode = 1;
-});
+if (path.resolve(process.argv[1] ?? "") === MODULE_PATH) {
+  main().catch((error) => {
+    process.stderr.write(`${formatRuntimeFailure(error)}\n`);
+    process.exitCode = 1;
+  });
+}
+
+export {
+  COMMAND_SPECS,
+  DIAGNOSTIC_MAX_CHARS,
+  DIAGNOSTIC_MAX_LINES,
+  SanitizedCommandFailure,
+  boundedSanitizedExcerpt,
+  browserFailureFromResult,
+  cleanup,
+  formatRuntimeFailure,
+  run,
+  sanitizeDiagnosticText,
+  sanitizedBrowserFailureLocations,
+};

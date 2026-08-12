@@ -1,7 +1,10 @@
 import assert from "node:assert/strict";
+import { spawnSync } from "node:child_process";
 import fs from "node:fs";
+import os from "node:os";
 import path from "node:path";
 import test from "node:test";
+import { pathToFileURL } from "node:url";
 
 const root = process.cwd();
 const read = (relativePath) => fs.readFileSync(path.join(root, relativePath), "utf8");
@@ -18,6 +21,10 @@ const migration = read(
   `tests/runtime/wcv-c2-supabase/supabase/migrations/${migrationNames[0]}`,
 );
 const lockfile = JSON.parse(read("package-lock.json"));
+const verifierModule = await import(
+  pathToFileURL(path.join(root, "scripts/automation/verify-wcv-c2-trusted-repair-runtime.mjs"))
+    .href
+);
 
 test("C2 workflow is exact-head, branch-agnostic, path-triggered, same-repository, least-privilege, and cleanup-bound", () => {
   assert.match(workflow, /pull_request:/);
@@ -117,4 +124,259 @@ test("C2 runtime workdir remains local-only and retains the preflight tenant pro
   assert.match(migration, /with check \(\(select auth\.uid\(\)\) = user_id\)/);
   assert.match(migration, /wcv_c2_preflight_tenant_probe_user_id_idx/);
   assert.doesNotMatch(migration, /security definer/i);
+});
+
+test("C2 command failures expose bounded structured diagnostics without protected canaries", () => {
+  const canaries = {
+    token: "TokenCanary-Aa1-7c7d4ed53f9b",
+    password: "PasswordCanary-Aa1-9f8e7d6c",
+    jwt: "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJjYW5hcnkifQ.signatureCanary123",
+    serviceRole: "ServiceRoleCanaryAa1_0123456789abcdefghijklmnopqrstuvwxyz",
+    databaseUrl: "postgresql://canary_user:canary_password@localhost:5432/canary_db",
+    email: "diagnostic-canary@example.test",
+    uuid: "123e4567-e89b-12d3-a456-426614174000",
+    learnerAnswer: "RAW_LEARNER_ANSWER_CANARY_Aa1",
+    ocrBody: "RAW_OCR_BODY_CANARY_Aa1",
+    problemBody: "RAW_PROBLEM_BODY_CANARY_Aa1",
+    repairSubmission: "RAW_REPAIR_SUBMISSION_CANARY_Aa1",
+    fixtureBody: "RAW_FIXTURE_BODY_CANARY_Aa1",
+    providerPayload: "RAW_PROVIDER_PAYLOAD_CANARY_Aa1",
+    sqlBody: "RAW_SQL_BODY_CANARY_Aa1",
+    longSecret: "LongBase64CanaryAa10123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ_abcdef",
+  };
+  const injected = [
+    "safe technical marker: synthetic child failed",
+    `Authorization: Bearer ${canaries.token}`,
+    `password=${canaries.password}`,
+    `jwt=${canaries.jwt}`,
+    `SUPABASE_SERVICE_ROLE_KEY=${canaries.serviceRole}`,
+    `database_url=${canaries.databaseUrl}`,
+    `email=${canaries.email}`,
+    `session_id=${canaries.uuid}`,
+    `learner_answer=${canaries.learnerAnswer}`,
+    `ocr_body=${canaries.ocrBody}`,
+    `problem_body=${canaries.problemBody}`,
+    `repair_submission=${canaries.repairSubmission}`,
+    `fixture_body=${canaries.fixtureBody}`,
+    `provider_payload=${canaries.providerPayload}`,
+    `select '${canaries.sqlBody}';`,
+    `opaque=${canaries.longSecret}`,
+  ].join("\n");
+  let failure;
+  try {
+    verifierModule.run(
+      process.execPath,
+      [
+        "-e",
+        `process.stdout.write(${JSON.stringify(`stdout-safe\n${injected}\n`)}); process.stderr.write(${JSON.stringify(`stderr-safe\n${injected}\n`)}); process.exit(7);`,
+      ],
+      { commandSpec: verifierModule.COMMAND_SPECS.diagnostic_regression_failure },
+    );
+  } catch (error) {
+    failure = error;
+  }
+
+  assert.ok(failure instanceof verifierModule.SanitizedCommandFailure);
+  assert.deepEqual(Object.keys(failure.toSafeObject()), [
+    "stageId",
+    "commandId",
+    "safeLabel",
+    "status",
+    "signal",
+    "safeArgv",
+    "stdoutExcerpt",
+    "stderrExcerpt",
+  ]);
+  const output = verifierModule.formatRuntimeFailure(failure);
+  assert.match(output, /stage_id: diagnostic_regression/);
+  assert.match(output, /command_id: diagnostic_regression_failure/);
+  assert.match(output, /safe_label: diagnostic regression failing child/);
+  assert.match(output, /status: 7/);
+  assert.match(output, /signal: none/);
+  assert.match(output, /stderr-safe/);
+  assert.match(output, /safe technical marker: synthetic child failed/);
+  for (const canary of Object.values(canaries)) {
+    assert.doesNotMatch(output, new RegExp(canary.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
+  }
+});
+
+test("C2 diagnostic tails truncate deterministically and retain the final relevant lines", () => {
+  const input = Array.from(
+    { length: 100 },
+    (_, index) => `diagnostic-line-${String(index).padStart(3, "0")}-${"x".repeat(100)}`,
+  ).join("\n");
+  const first = verifierModule.boundedSanitizedExcerpt(input);
+  const second = verifierModule.boundedSanitizedExcerpt(input);
+  assert.equal(first, second);
+  assert.match(first, /^<truncated>/);
+  assert.match(first, /diagnostic-line-099/);
+  assert.doesNotMatch(first, /diagnostic-line-000/);
+  assert.ok(first.length <= verifierModule.DIAGNOSTIC_MAX_CHARS);
+  assert.ok(first.split("\n").length <= verifierModule.DIAGNOSTIC_MAX_LINES);
+});
+
+test("C2 successful and explicitly allowed child-command behavior remains unchanged", () => {
+  const success = verifierModule.run(
+    process.execPath,
+    ["-e", 'process.stdout.write("unchanged-success")'],
+    { commandSpec: verifierModule.COMMAND_SPECS.diagnostic_regression_success },
+  );
+  assert.equal(success.status, 0);
+  assert.equal(success.stdout, "unchanged-success");
+
+  const allowed = verifierModule.run(
+    process.execPath,
+    ["-e", 'process.stderr.write("expected nonzero"); process.exit(9)'],
+    {
+      commandSpec: verifierModule.COMMAND_SPECS.diagnostic_regression_allow_failure,
+      allowFailure: true,
+    },
+  );
+  assert.equal(allowed.status, 9);
+  assert.equal(allowed.stderr, "expected nonzero");
+  assert.notEqual(allowed.status, 0);
+});
+
+test("C2 SQL and workdir argv diagnostics expose only query metadata and normalized shape", () => {
+  const sql = "select 'SQL_ARGV_BODY_CANARY' from private_table where user_id='123e4567-e89b-12d3-a456-426614174000';";
+  let failure;
+  try {
+    verifierModule.run(
+      process.execPath,
+      [
+        "--command",
+        sql,
+        "--workdir",
+        "/home/runner/work/_temp/wcv-c2-sensitive-workdir",
+      ],
+      { commandSpec: verifierModule.COMMAND_SPECS.verify_migrations_psql },
+    );
+  } catch (error) {
+    failure = error;
+  }
+  assert.ok(failure instanceof verifierModule.SanitizedCommandFailure);
+  const safeArgv = JSON.stringify(failure.safeArgv);
+  assert.match(safeArgv, /query_id=verify_migrations/);
+  assert.match(safeArgv, /sha256=[0-9a-f]{64}/);
+  assert.match(safeArgv, /shape=schema existence predicates/);
+  assert.match(safeArgv, /<runner-temp-workdir>/);
+  assert.doesNotMatch(safeArgv, /SQL_ARGV_BODY_CANARY|private_table|123e4567/);
+});
+
+test("C2 workflow cleanup remains idempotent when shutdown is already nonzero", () => {
+  const temporaryRoot = fs.mkdtempSync(path.join(root, "wcv-c2-cleanup-test-"));
+  fs.mkdirSync(path.join(temporaryRoot, "supabase"), { recursive: true });
+  fs.writeFileSync(path.join(temporaryRoot, "supabase/config.toml"), "project_id='synthetic'\n");
+  let stopCalls = 0;
+  let snapshotCalls = 0;
+  const dependencies = {
+    stopStackFn: (_root, specification, allowFailure) => {
+      stopCalls += 1;
+      assert.equal(specification.commandId, "cleanup_only_supabase_stop");
+      assert.equal(allowFailure, true);
+      return { status: 1 };
+    },
+    assertNoDockerResourcesFn: (_label, specifications) => {
+      snapshotCalls += 1;
+      assert.equal(specifications.container.commandId, "cleanup_only_container_list");
+      return { containers: [], volumes: [], networks: [] };
+    },
+  };
+
+  verifierModule.cleanup(temporaryRoot, true, dependencies);
+  verifierModule.cleanup(temporaryRoot, true, dependencies);
+  assert.equal(stopCalls, 1);
+  assert.equal(snapshotCalls, 2);
+  assert.equal(fs.existsSync(temporaryRoot), false);
+});
+
+test("C2 browser failures retain only sanitized assertion locations", () => {
+  const rawResult = {
+    status: 5,
+    signal: null,
+    stdout: "learner_answer=BROWSER_RAW_ANSWER_CANARY\nwcv-c2-trusted-repair-runtime.spec.ts:321:9\n",
+    stderr: "Bearer BrowserTokenCanaryAa1\nprovider_payload=BROWSER_PROVIDER_CANARY\n",
+  };
+  const failure = verifierModule.browserFailureFromResult(
+    process.execPath,
+    ["-e", "BROWSER_INLINE_CANARY"],
+    verifierModule.COMMAND_SPECS.browser_acceptance,
+    rawResult,
+  );
+  const output = verifierModule.formatRuntimeFailure(failure);
+  assert.match(output, /command_id: browser_acceptance/);
+  assert.match(output, /sanitized assertion line\(s\) 321/);
+  assert.doesNotMatch(
+    output,
+    /BROWSER_RAW_ANSWER_CANARY|BrowserTokenCanaryAa1|BROWSER_PROVIDER_CANARY|BROWSER_INLINE_CANARY/,
+  );
+});
+
+test("C2 diagnostic formatting cannot create runtime success, evidence, usage, or source mutation", () => {
+  const before = spawnSync("git", ["status", "--porcelain=v1"], {
+    cwd: root,
+    encoding: "utf8",
+  }).stdout;
+  const probe = path.join(
+    os.tmpdir(),
+    `wcv-c2-diagnostic-no-side-effect-${process.pid}-${Date.now()}.json`,
+  );
+  assert.equal(fs.existsSync(probe), false);
+  const output = verifierModule.formatRuntimeFailure(
+    new verifierModule.SanitizedCommandFailure({
+      stageId: "diagnostic_regression",
+      commandId: "diagnostic_no_side_effect",
+      safeLabel: "diagnostic no-side-effect proof",
+      status: 1,
+      signal: null,
+      safeArgv: Object.freeze(["synthetic"]),
+      stdoutExcerpt: "",
+      stderrExcerpt: "safe failure",
+    }),
+  );
+  const after = spawnSync("git", ["status", "--porcelain=v1"], {
+    cwd: root,
+    encoding: "utf8",
+  }).stdout;
+  assert.equal(before, after);
+  assert.equal(fs.existsSync(probe), false);
+  assert.doesNotMatch(
+    output,
+    /wcv-c2-complete-trusted-repair-runtime: pass|runtime success|artifact success|usage commit|learner evidence/i,
+  );
+});
+
+test("C2 external command inventory has stable mandatory IDs and explicit sensitivity policies", () => {
+  for (const commandId of [
+    "pre_start_container_list",
+    "pre_start_volume_list",
+    "pre_start_network_list",
+    "first_supabase_start",
+    "first_supabase_status",
+    "active_container_list",
+    "database_image_inspect",
+    "verify_migrations_psql",
+    "verify_security_contract_psql",
+    "verify_persisted_runtime_psql",
+    "recovery_session_lookup_psql",
+    "first_supabase_stop",
+    "second_supabase_start",
+    "second_database_container_list",
+    "second_verify_migrations_psql",
+    "second_verify_security_psql",
+    "second_empty_database_psql",
+    "final_supabase_stop",
+  ]) {
+    const specification = verifierModule.COMMAND_SPECS[commandId];
+    assert.equal(specification.commandId, commandId);
+    assert.ok(specification.stageId.length > 0);
+    assert.ok(specification.safeLabel.length > 0);
+    assert.ok(specification.sensitivityPolicy.length > 0);
+  }
+  assert.equal(
+    verifierModule.COMMAND_SPECS.final_cleanup_container_list.stageId,
+    "final_resource_cleanup",
+  );
+  assert.match(verifier, /formatRuntimeFailure\(error\)/);
+  assert.doesNotMatch(verifier, /JSON\.stringify\(result\)/);
 });
