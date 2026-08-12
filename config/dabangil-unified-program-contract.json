@@ -1106,8 +1106,8 @@
     "globalMergeProducingWriterLimit": 1,
     "wipLimitDoesNotAuthorizeWriterCount": true,
     "campaignLockGroup": "wcv-vertical-campaign",
-    "soleNextImplementationItemId": "WCV-C2",
-    "soleNextImplementationLeadIssue": 702,
+    "soleNextImplementationItemId": "WCV-C3",
+    "soleNextImplementationLeadIssue": 706,
     "primaryStatusesUsed": [
       "completed",
       "blocked",

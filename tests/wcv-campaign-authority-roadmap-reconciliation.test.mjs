@@ -202,6 +202,8 @@ test("records C2 complete and makes C3 led by #706 the sole selected next campai
 
   assert.equal(roadmap.program.soleNextImplementationItem, "WCV-C3");
   assert.equal(roadmap.program.soleNextImplementationLeadIssue, 706);
+  assert.equal(unified.roadmapContract.soleNextImplementationItemId, "WCV-C3");
+  assert.equal(unified.roadmapContract.soleNextImplementationLeadIssue, 706);
   assert.equal(next.length, 1);
   assert.equal(next[0].id, "C3");
   assert.equal(next[0].leadIssue, 706);

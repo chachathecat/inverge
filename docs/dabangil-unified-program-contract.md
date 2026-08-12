@@ -176,7 +176,7 @@ review/correction cycles are prohibited.
 
 ### Campaign map
 
-| Campaign | Lead | Included issues | State after C1 | Outcome |
+| Campaign | Lead | Included issues | Resulting-on-merge state | Outcome |
 |---|---:|---|---|---|
 | C1 | #713 | #713 | completed source-only on reconciliation merge | authority and roadmap reconciliation; runtime mutation zero |
 | C2 | #702 | #702–#705 | completed synthetic/default-OFF on PR #716 merge | rights-safe Capture/OCR → anchor → independent attempt → gap → scaffold → repair → verification → durable reopen/resume |
@@ -203,8 +203,9 @@ The allocation inventory is machine mirrored. No #714 requirement may be lost,
 silently treated as implemented, or restored as a standalone prerequisite PR.
 
 The historical `#702 → #714 → #703` merge-gate sequence is explicitly
-superseded. After C1, #702 is the sole next implementation lead as lead of C2.
-No C2 source or runtime work is part of C1.
+superseded. After C1, #702 was the sole C2 implementation lead. On PR #716
+merge, #706 becomes the sole next implementation lead for C3. No C3 source or
+runtime work begins in C2.
 
 ## 3. Learning execution glossary
 
@@ -970,9 +971,9 @@ CPF-1 and S236P remain
 factually blocked, and S236A remains queued with S236P as its unmet dependency.
 The machine mirror pins only the WCV campaign graph and sole next campaign,
 not the unrelated dynamic ready list. Runner selection is metadata-only: it
-does not start, reserve, provision, author, or execute work. After C1, the
-single available runner slot selects WCV-C2; a separate exact Work must still
-start it.
+does not start, reserve, provision, author, or execute work. After C2 merges,
+the single available runner slot selects WCV-C3; a separate exact Work must
+still start it. This C2 Work does not begin C3.
 
 PR #660 remains Draft and blocked. Its current exploratory OCR evidence does
 not establish S236B. Any continuation must reconcile onto amended main and
