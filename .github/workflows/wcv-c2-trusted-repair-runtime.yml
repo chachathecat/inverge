@@ -25,7 +25,6 @@ jobs:
       SUPABASE_TELEMETRY_DISABLED: "1"
       PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
       WCV_C2_RUNTIME_EVIDENCE_PATH: ${{ github.workspace }}/.agent-factory/wcv-c2-trusted-repair-runtime-evidence.json
-      WCV_C2_SUPABASE_WORKDIR: ${{ runner.temp }}/wcv-c2-supabase-${{ github.run_id }}-${{ github.run_attempt }}
 
     steps:
       - name: Check out exact PR head
@@ -53,6 +52,7 @@ jobs:
         env:
           GITHUB_RUN_ID: ${{ github.run_id }}
           GITHUB_RUN_ATTEMPT: ${{ github.run_attempt }}
+          WCV_C2_SUPABASE_WORKDIR: ${{ runner.temp }}/wcv-c2-supabase-${{ github.run_id }}-${{ github.run_attempt }}
         run: node scripts/automation/verify-wcv-c2-trusted-repair-runtime.mjs
 
       - name: Unconditionally remove local Supabase state
@@ -60,6 +60,7 @@ jobs:
         env:
           GITHUB_RUN_ID: ${{ github.run_id }}
           GITHUB_RUN_ATTEMPT: ${{ github.run_attempt }}
+          WCV_C2_SUPABASE_WORKDIR: ${{ runner.temp }}/wcv-c2-supabase-${{ github.run_id }}-${{ github.run_attempt }}
         run: >-
           node scripts/automation/verify-wcv-c2-trusted-repair-runtime.mjs
           --cleanup

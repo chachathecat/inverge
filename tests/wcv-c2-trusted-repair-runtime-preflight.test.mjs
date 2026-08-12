@@ -31,6 +31,13 @@ test("C2 workflow is exact-head, same-repository, least-privilege, and cleanup-b
   assert.match(workflow, /ref: \$\{\{ github\.event\.pull_request\.head\.sha \}\}/);
   assert.match(workflow, /test "\$\(git rev-parse HEAD\)" = "\$\{PR_HEAD_SHA\}"/);
   assert.match(workflow, /cancel-in-progress: true/);
+  const jobEnvironment = workflow.match(/\n    env:\n([\s\S]*?)\n\n    steps:/)?.[1] ?? "";
+  assert.doesNotMatch(jobEnvironment, /runner\./);
+  assert.equal(
+    (workflow.match(/WCV_C2_SUPABASE_WORKDIR: \$\{\{ runner\.temp \}\}/g) ?? [])
+      .length,
+    2,
+  );
   assert.match(workflow, /if: always\(\)/);
   assert.match(workflow, /--cleanup/);
   assert.match(workflow, /--require-complete/);
