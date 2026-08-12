@@ -65,10 +65,14 @@ ${recommendation}
 `;
 }
 
-function run(body) {
+function run(body, headRef = null) {
   const directory = fs.mkdtempSync(path.join(os.tmpdir(), "inverge-pr-contract-"));
   const eventPath = path.join(directory, "event.json");
-  fs.writeFileSync(eventPath, JSON.stringify({ pull_request: { body } }), "utf8");
+  fs.writeFileSync(
+    eventPath,
+    JSON.stringify({ pull_request: { body, head: headRef ? { ref: headRef } : {} } }),
+    "utf8",
+  );
 
   return spawnSync(process.execPath, [SCRIPT], {
     encoding: "utf8",
@@ -94,6 +98,31 @@ test("missing linked issue fails", () => {
 test("multiple linked issues fail", () => {
   const result = run(completeBody({ issueLine: "Closes #123\nFixes #124" }));
   assert.notEqual(result.status, 0);
+});
+
+test("the exact WCV-C2 branch accepts its four-issue vertical closure", () => {
+  const result = run(
+    completeBody({
+      issueLine: ["Closes #702", "Closes #703", "Closes #704", "Closes #705"].join("\n"),
+    }),
+    "agent/wcv-c2-first-trusted-repair-vertical",
+  );
+  assert.equal(result.status, 0, result.stderr);
+});
+
+test("the WCV-C2 branch rejects a missing, duplicate, or foreign closing issue", () => {
+  const invalidSets = [
+    ["Closes #702", "Closes #703", "Closes #704"],
+    ["Closes #702", "Closes #703", "Closes #704", "Closes #704"],
+    ["Closes #702", "Closes #703", "Closes #704", "Closes #706"],
+  ];
+  for (const issueLines of invalidSets) {
+    const result = run(
+      completeBody({ issueLine: issueLines.join("\n") }),
+      "agent/wcv-c2-first-trusted-repair-vertical",
+    );
+    assert.notEqual(result.status, 0);
+  }
 });
 
 test("more than one checked merge recommendation fails", () => {
