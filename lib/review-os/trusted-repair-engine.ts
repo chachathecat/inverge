@@ -88,34 +88,19 @@ function normalizeEvidence(value: string) {
     .replace(/[\s,._·:;()[\]{}]+/g, "");
 }
 
-function numericEvidenceTokens(value: string) {
-  return (value.normalize("NFKC").match(/\d[\d,._]*/g) ?? []).map((token) =>
-    token.replace(/[,._]/g, ""),
-  );
-}
-
-function conceptPresent(text: string, concept: string) {
-  const normalizedText = normalizeEvidence(text);
-  const normalizedConcept = normalizeEvidence(concept);
-  if (/^\d+$/.test(normalizedConcept)) {
-    if (numericEvidenceTokens(text).includes(normalizedConcept)) return true;
-  } else if (normalizedText.includes(normalizedConcept)) {
-    return true;
-  }
-  if (normalizedConcept === "200000000") {
-    return normalizedText.includes("2억");
-  }
-  if (normalizedConcept === "2000000") {
-    return normalizedText.includes("200만원");
-  }
-  return false;
-}
-
 const MAX_POLARITY_CLAUSES = 64;
 const MAX_CONCEPT_OCCURRENCES_PER_CLAUSE = 32;
 const NEGATING_PREFIXES = new Set(["불", "비", "미", "무"]);
 const NEGATING_SUFFIX = /^(?:(?:은|는|도)?(?:이|하)지(?:는|도)?(?:않|못|아니)|(?:은|는|도)?(?:이|가)?아니|(?:이|하)?는?것이아니|(?:이|하)?라고보기어렵|성(?:은|이|도)?없)/;
-const AMBIGUOUS_SUFFIX = /^(?:(?:한|인|일)지|(?:할|일)수도|여부|불확실|미정|의문|(?:이|하)?라고단정하기어렵)/;
+const AMBIGUOUS_SUFFIX = /^(?:(?:한|인|일)지|(?:할|일|인|한)지도|(?:할|일)수도|여부|불확실|미정|의문|(?:이|하)?라고단정하기어렵)/;
+const AMBIGUOUS_PREFIX = /(?:아마|혹시|불확실|미정|의문)$/;
+const NUMERIC_UNIT_PREFIX = /^(?:억원|만원|천원|원(?:\/m²)?|제곱미터|m²|퍼센트|%|개|명|배|억)/;
+
+export type ConceptAssertionState =
+  | "positive"
+  | "negated"
+  | "ambiguous"
+  | "absent";
 
 function compactPolarityClause(value: string) {
   return value
@@ -124,54 +109,163 @@ function compactPolarityClause(value: string) {
     .replace(/[\s,._·:()[\]{}]+/g, "");
 }
 
-function conceptPositivelyAsserted(text: string, concept: string) {
-  const normalizedConcept = normalizeEvidence(concept);
-  if (/^\d+$/.test(normalizedConcept) || !/[가-힣]/.test(normalizedConcept)) {
-    return conceptPresent(text, concept);
+function literalOccurrences(clause: string, literal: string) {
+  const occurrences: { index: number; length: number }[] = [];
+  let fromIndex = 0;
+  for (
+    let occurrence = 0;
+    occurrence < MAX_CONCEPT_OCCURRENCES_PER_CLAUSE;
+    occurrence += 1
+  ) {
+    const index = clause.indexOf(literal, fromIndex);
+    if (index < 0) break;
+    occurrences.push({ index, length: literal.length });
+    fromIndex = index + Math.max(1, literal.length);
+  }
+  return occurrences;
+}
+
+function conceptOccurrences(clause: string, normalizedConcept: string) {
+  if (!/^\d+$/.test(normalizedConcept)) {
+    return literalOccurrences(clause, normalizedConcept);
   }
 
+  const occurrences: { index: number; length: number }[] = [];
+  for (const match of clause.matchAll(/\d+/g)) {
+    if (match[0] === normalizedConcept && match.index !== undefined) {
+      occurrences.push({ index: match.index, length: match[0].length });
+    }
+  }
+  const aliases =
+    normalizedConcept === "200000000"
+      ? ["2억"]
+      : normalizedConcept === "2000000"
+        ? ["200만원"]
+        : [];
+  for (const alias of aliases) {
+    occurrences.push(...literalOccurrences(clause, alias));
+  }
+  return occurrences
+    .sort((left, right) => left.index - right.index || left.length - right.length)
+    .slice(0, MAX_CONCEPT_OCCURRENCES_PER_CLAUSE);
+}
+
+function classifyConceptOccurrence(
+  clause: string,
+  occurrence: { index: number; length: number },
+  numeric: boolean,
+): Exclude<ConceptAssertionState, "absent"> {
+  const prefix = clause.slice(Math.max(0, occurrence.index - 12), occurrence.index);
+  const suffix = clause.slice(
+    occurrence.index + occurrence.length,
+    occurrence.index + occurrence.length + 32,
+  );
+  const suffixes = [suffix];
+  if (numeric) {
+    const withoutUnit = suffix.replace(NUMERIC_UNIT_PREFIX, "");
+    if (withoutUnit !== suffix) suffixes.push(withoutUnit);
+  }
+  const negated =
+    NEGATING_PREFIXES.has(prefix.slice(-1)) ||
+    suffixes.some((candidate) => NEGATING_SUFFIX.test(candidate));
+  const ambiguous =
+    AMBIGUOUS_PREFIX.test(prefix) ||
+    suffixes.some((candidate) => AMBIGUOUS_SUFFIX.test(candidate));
+  if (negated) return "negated";
+  if (ambiguous) return "ambiguous";
+  return "positive";
+}
+
+export function evaluateConceptAssertionState(
+  text: string,
+  concept: string,
+): ConceptAssertionState {
+  const normalizedConcept = normalizeEvidence(concept);
+  if (normalizedConcept.length === 0) return "absent" as const;
+
+  let negated = false;
+  let ambiguous = false;
   const clauses = text
     .normalize("NFKC")
     .toLowerCase()
-    .split(/[.!?。！？;\n]+/)
+    .split(/[!?。！？;\n]+|\.(?!\d)/)
     .slice(0, MAX_POLARITY_CLAUSES);
+
   for (const rawClause of clauses) {
     const clause = compactPolarityClause(rawClause);
-    let fromIndex = 0;
-    for (
-      let occurrence = 0;
-      occurrence < MAX_CONCEPT_OCCURRENCES_PER_CLAUSE;
-      occurrence += 1
-    ) {
-      const index = clause.indexOf(normalizedConcept, fromIndex);
-      if (index < 0) break;
-      const prefix = clause.slice(Math.max(0, index - 1), index);
-      const suffix = clause.slice(index + normalizedConcept.length, index + normalizedConcept.length + 24);
-      const negated = NEGATING_PREFIXES.has(prefix) || NEGATING_SUFFIX.test(suffix);
-      const ambiguous = AMBIGUOUS_SUFFIX.test(suffix);
-      if (!negated && !ambiguous) return true;
-      fromIndex = index + Math.max(1, normalizedConcept.length);
+    const occurrences = conceptOccurrences(clause, normalizedConcept);
+    for (const occurrence of occurrences) {
+      const state = classifyConceptOccurrence(
+        clause,
+        occurrence,
+        /^\d+$/.test(normalizedConcept),
+      );
+      if (state === "positive") return "positive" as const;
+      if (state === "ambiguous") ambiguous = true;
+      if (state === "negated") negated = true;
     }
   }
-  return false;
+  if (ambiguous) return "ambiguous" as const;
+  if (negated) return "negated" as const;
+  return "absent" as const;
 }
 
 function anchorEvidence(text: string, fixture: TrustedRepairFixture) {
   return fixture.anchors.map((anchor) => {
-    const missing = anchor.requiredConcepts.filter(
-      (concept) => !conceptPositivelyAsserted(text, concept),
+    const alternatives = anchor.acceptableAlternativeGroups.flatMap((group) =>
+      group.alternatives.map((alternative) => ({
+        alternative,
+        requiredConcepts: group.requiredConcepts,
+        state: evaluateConceptAssertionState(text, alternative),
+      })),
     );
-    const acceptablePresent = anchor.acceptableAlternatives.filter((concept) =>
-      conceptPresent(text, concept),
+    const required = anchor.requiredConcepts.map((concept) => {
+      const canonicalState = evaluateConceptAssertionState(text, concept);
+      const mappedAlternativeSupport = alternatives
+        .filter(
+          (entry) =>
+            entry.state === "positive" &&
+            entry.requiredConcepts.includes(concept),
+        )
+        .map((entry) => entry.alternative);
+      return {
+        concept,
+        canonicalState,
+        mappedAlternativeSupport,
+        satisfied:
+          canonicalState === "positive" || mappedAlternativeSupport.length > 0,
+      };
+    });
+    const forbidden = anchor.forbiddenFalseClaims.map((claim) => ({
+      claim,
+      state: evaluateConceptAssertionState(text, claim),
+    }));
+    const missing = required.filter((entry) => !entry.satisfied);
+    const falseClaims = forbidden.filter((entry) => entry.state === "positive");
+    const canonicalPositiveSupport = required.filter(
+      (entry) => entry.canonicalState === "positive",
     );
-    const falseClaims = anchor.forbiddenFalseClaims.filter((claim) =>
-      conceptPresent(text, claim),
+    const mappedAlternativeSupport = required.flatMap((entry) =>
+      entry.mappedAlternativeSupport.map((alternative) => ({
+        concept: entry.concept,
+        alternative,
+      })),
     );
     return {
       anchor,
       missing,
-      acceptablePresent,
+      canonicalPositiveSupport,
+      mappedAlternativeSupport,
+      nonPositiveAlternatives: alternatives.filter(
+        (entry) => entry.state === "negated" || entry.state === "ambiguous",
+      ),
       falseClaims,
+      negatedForbiddenClaims: forbidden.filter(
+        (entry) => entry.state === "negated",
+      ),
+      ambiguousForbiddenClaims: forbidden.filter(
+        (entry) => entry.state === "ambiguous",
+      ),
       satisfied: missing.length === 0 && falseClaims.length === 0,
     };
   });
@@ -478,16 +572,46 @@ export function diagnoseTrustedRepairAttempt(input: {
         entry.falseClaims.length * 100,
       supportingEvidence: [
         ...entry.missing.map(
-          (concept) => `independent_attempt:${entry.anchor.anchorId}:missing:${concept}`,
+          (missing) =>
+            `independent_attempt:${entry.anchor.anchorId}:missing:${missing.concept}`,
         ),
+        ...entry.missing
+          .filter(
+            (missing) =>
+              missing.canonicalState === "negated" ||
+              missing.canonicalState === "ambiguous",
+          )
+          .map(
+            (missing) =>
+              `independent_attempt:${entry.anchor.anchorId}:required_${missing.canonicalState}_no_support:${missing.concept}`,
+          ),
         ...entry.falseClaims.map(
-          (claim) => `independent_attempt:${entry.anchor.anchorId}:false_claim:${claim}`,
+          ({ claim }) =>
+            `independent_attempt:${entry.anchor.anchorId}:false_claim:${claim}`,
         ),
       ],
-      counterEvidence: entry.acceptablePresent.map(
-        (concept) =>
-          `independent_attempt:${entry.anchor.anchorId}:alternative_present:${concept}`,
-      ),
+      counterEvidence: [
+        ...entry.canonicalPositiveSupport.map(
+          ({ concept }) =>
+            `independent_attempt:${entry.anchor.anchorId}:canonical_positive_support:${concept}`,
+        ),
+        ...entry.mappedAlternativeSupport.map(
+          ({ concept, alternative }) =>
+            `independent_attempt:${entry.anchor.anchorId}:mapped_alternative_support:${alternative}->${concept}`,
+        ),
+        ...entry.negatedForbiddenClaims.map(
+          ({ claim }) =>
+            `independent_attempt:${entry.anchor.anchorId}:forbidden_claim_negated_ignored:${claim}`,
+        ),
+        ...entry.ambiguousForbiddenClaims.map(
+          ({ claim }) =>
+            `independent_attempt:${entry.anchor.anchorId}:forbidden_claim_ambiguous_ignored:${claim}`,
+        ),
+        ...entry.nonPositiveAlternatives.map(
+          ({ alternative, state }) =>
+            `independent_attempt:${entry.anchor.anchorId}:alternative_${state}_no_credit:${alternative}`,
+        ),
+      ],
       repairActionKo: `${entry.anchor.labelKo}을(를) 근거와 함께 한 문장으로 다시 구성하세요.`,
       successCriterionKo: input.fixture.successCriterionKo,
     }))
@@ -516,7 +640,33 @@ export function diagnoseTrustedRepairAttempt(input: {
     supportingEvidence: [
       `independent_attempt:${fallbackAnchor.anchorId}:present_needs_reconstruction`,
     ],
-    counterEvidence: ["same_session_reconstruction_not_yet_observed"],
+    counterEvidence: [
+      ...evidence.flatMap((entry) =>
+        entry.canonicalPositiveSupport.map(
+          ({ concept }) =>
+            `independent_attempt:${entry.anchor.anchorId}:canonical_positive_support:${concept}`,
+        ),
+      ),
+      ...evidence.flatMap((entry) =>
+        entry.mappedAlternativeSupport.map(
+          ({ concept, alternative }) =>
+            `independent_attempt:${entry.anchor.anchorId}:mapped_alternative_support:${alternative}->${concept}`,
+        ),
+      ),
+      ...evidence.flatMap((entry) =>
+        entry.negatedForbiddenClaims.map(
+          ({ claim }) =>
+            `independent_attempt:${entry.anchor.anchorId}:forbidden_claim_negated_ignored:${claim}`,
+        ),
+      ),
+      ...evidence.flatMap((entry) =>
+        entry.ambiguousForbiddenClaims.map(
+          ({ claim }) =>
+            `independent_attempt:${entry.anchor.anchorId}:forbidden_claim_ambiguous_ignored:${claim}`,
+        ),
+      ),
+      "same_session_reconstruction_not_yet_observed",
+    ],
     repairActionKo: `${fallbackAnchor.labelKo}을(를) 보지 않고 한 번 더 구성하세요.`,
     successCriterionKo: input.fixture.successCriterionKo,
   };

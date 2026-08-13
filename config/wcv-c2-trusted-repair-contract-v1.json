@@ -1,5 +1,7 @@
 {
   "contractVersion": "wcv_c2_trusted_repair.v1",
+  "fixtureVersion": "wcv_c2_rights_safe_fixtures.2026-08-12.v2",
+  "rubricVersion": "wcv_c2_semantic_anchor_rubric.v2",
   "decisionDateKst": "2026-08-12",
   "rollout": {
     "serverFlag": "WCV_C2_TRUSTED_REPAIR_ENABLED",
@@ -119,11 +121,41 @@
     "positiveEvidenceCreatedByPartialOrRetrySubmission": false
   },
   "semanticAnchorPolarity": {
+    "assertionStates": [
+      "positive",
+      "negated",
+      "ambiguous",
+      "absent"
+    ],
+    "oneBoundedEvaluatorFor": [
+      "requiredConcepts",
+      "acceptableAlternatives",
+      "forbiddenFalseClaims"
+    ],
     "positiveAssertionRequired": true,
     "negatedOrAntonymOccurrenceCountsAsPositive": false,
     "ambiguousOccurrenceFailsClosed": true,
     "clauseScoped": true,
-    "boundedDeterministicMatcher": true
+    "boundedDeterministicMatcher": true,
+    "forbiddenFalseClaimsBlockOnlyWhenPositive": true,
+    "acceptableAlternativesRequirePositiveAssertion": true,
+    "acceptableAlternativesSatisfyExplicitMappedConceptsOnly": true,
+    "alternativeGroupsValidated": true
+  },
+  "dedicatedRuntime": {
+    "event": "pull_request",
+    "sameRepositoryPullRequests": true,
+    "forkPullRequests": true,
+    "pullRequestTargetAllowed": false,
+    "permissions": {
+      "contents": "read"
+    },
+    "repositorySecretsAllowed": false,
+    "writeCapableTokensAllowed": false,
+    "githubHostedEphemeralRunnerRequired": true,
+    "exactPullRequestHeadCheckout": true,
+    "remoteSupabaseOrProviderAccessAllowed": false,
+    "metadataOnlyArtifact": true
   },
   "lawBoundary": {
     "sourceId": "law-source-land-compensation-act",

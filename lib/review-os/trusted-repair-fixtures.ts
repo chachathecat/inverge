@@ -29,7 +29,10 @@ const PRACTICE_ANCHORS = [
     anchorId: "practice-input-role",
     labelKo: "면적과 단가의 역할",
     requiredConcepts: ["면적", "단가"],
-    acceptableAlternatives: ["수량", "단위가격"],
+    acceptableAlternativeGroups: [
+      { requiredConcepts: ["면적"], alternatives: ["수량"] },
+      { requiredConcepts: ["단가"], alternatives: ["단위가격"] },
+    ],
     forbiddenFalseClaims: ["단가끼리 곱한다", "면적은 단위가 없다"],
     weight: 300,
   },
@@ -37,7 +40,12 @@ const PRACTICE_ANCHORS = [
     anchorId: "practice-intermediate-calculation",
     labelKo: "중간 산식과 결과",
     requiredConcepts: ["100", "2000000", "200000000"],
-    acceptableAlternatives: ["2억", "100×200만원"],
+    acceptableAlternativeGroups: [
+      {
+        requiredConcepts: ["200000000"],
+        alternatives: ["2억", "100×200만원"],
+      },
+    ],
     forbiddenFalseClaims: ["20000000", "20억"],
     weight: 240,
   },
@@ -45,7 +53,12 @@ const PRACTICE_ANCHORS = [
     anchorId: "practice-unit-rounding-verification",
     labelKo: "단위·부호·백분율·반올림·검산",
     requiredConcepts: ["m²", "원", "부호", "반올림", "검산"],
-    acceptableAlternatives: ["제곱미터", "양수", "반올림 없음", "역산"],
+    acceptableAlternativeGroups: [
+      { requiredConcepts: ["m²"], alternatives: ["제곱미터"] },
+      { requiredConcepts: ["부호"], alternatives: ["양수"] },
+      { requiredConcepts: ["반올림"], alternatives: ["반올림 없음"] },
+      { requiredConcepts: ["검산"], alternatives: ["역산"] },
+    ],
     forbiddenFalseClaims: ["퍼센트 단위", "음수"],
     weight: 180,
   },
@@ -56,7 +69,12 @@ const THEORY_ANCHORS = [
     anchorId: "theory-exact-definition",
     labelKo: "정확한 정의",
     requiredConcepts: ["최유효이용", "합리적", "가능"],
-    acceptableAlternatives: ["법적 가능", "물리적 가능"],
+    acceptableAlternativeGroups: [
+      {
+        requiredConcepts: ["가능"],
+        alternatives: ["법적 가능", "물리적 가능"],
+      },
+    ],
     forbiddenFalseClaims: ["항상 현재 이용", "가격이 가장 높은 이용만"],
     weight: 300,
   },
@@ -64,7 +82,11 @@ const THEORY_ANCHORS = [
     anchorId: "theory-argument-chain",
     labelKo: "논거의 연결",
     requiredConcepts: ["법적", "물리적", "경제적"],
-    acceptableAlternatives: ["허용", "실현", "수익"],
+    acceptableAlternativeGroups: [
+      { requiredConcepts: ["법적"], alternatives: ["허용"] },
+      { requiredConcepts: ["물리적"], alternatives: ["실현"] },
+      { requiredConcepts: ["경제적"], alternatives: ["수익"] },
+    ],
     forbiddenFalseClaims: ["검토 순서가 불필요", "하나의 요건만 충족"],
     weight: 240,
   },
@@ -72,7 +94,10 @@ const THEORY_ANCHORS = [
     anchorId: "theory-application-and-counter",
     labelKo: "사례 적용과 반대 고려",
     requiredConcepts: ["사례", "반대", "결론"],
-    acceptableAlternatives: ["적용", "한계"],
+    acceptableAlternativeGroups: [
+      { requiredConcepts: ["사례"], alternatives: ["적용"] },
+      { requiredConcepts: ["반대"], alternatives: ["한계"] },
+    ],
     forbiddenFalseClaims: ["정의만 쓰면 적용 완료", "반대 사실은 무시"],
     weight: 180,
   },
@@ -83,7 +108,10 @@ const LAW_ANCHORS = [
     anchorId: "law-source-effective-version",
     labelKo: "공식 출처와 유효 버전",
     requiredConcepts: ["공식", "유효", "버전"],
-    acceptableAlternatives: ["시행", "기준일"],
+    acceptableAlternativeGroups: [
+      { requiredConcepts: ["유효"], alternatives: ["시행"] },
+      { requiredConcepts: ["버전"], alternatives: ["기준일"] },
+    ],
     forbiddenFalseClaims: ["출처 불명 조문", "현재법 추정"],
     weight: 360,
   },
@@ -91,7 +119,10 @@ const LAW_ANCHORS = [
     anchorId: "law-fact-to-element",
     labelKo: "사실과 요건의 연결",
     requiredConcepts: ["사실", "요건", "포섭"],
-    acceptableAlternatives: ["사안", "해당"],
+    acceptableAlternativeGroups: [
+      { requiredConcepts: ["사실"], alternatives: ["사안"] },
+      { requiredConcepts: ["포섭"], alternatives: ["해당"] },
+    ],
     forbiddenFalseClaims: ["요건 없는 결론", "사실 없는 조문 나열"],
     weight: 260,
   },
@@ -99,7 +130,13 @@ const LAW_ANCHORS = [
     anchorId: "law-conflict-withhold",
     labelKo: "출처 충돌 시 보류",
     requiredConcepts: ["충돌", "보류", "검증"],
-    acceptableAlternatives: ["불확실", "확인 필요"],
+    acceptableAlternativeGroups: [
+      { requiredConcepts: ["충돌"], alternatives: ["불확실"] },
+      {
+        requiredConcepts: ["보류", "검증"],
+        alternatives: ["확인 필요"],
+      },
+    ],
     forbiddenFalseClaims: ["충돌해도 확정", "근거 없이 현행"],
     weight: 220,
   },
@@ -280,10 +317,60 @@ export function trustedRepairCanonicalFixture(subject: TrustedRepairSubject) {
   return fixture;
 }
 
+function normalizeSemanticTerm(value: string) {
+  return value
+    .normalize("NFKC")
+    .toLowerCase()
+    .replace(/[\s,._·:;()[\]{}]+/g, "");
+}
+
+export function validateTrustedRepairAlternativeGroups(
+  anchor: TrustedRepairSemanticAnchor,
+) {
+  const reasons: string[] = [];
+  const requiredConcepts = new Set(anchor.requiredConcepts);
+  const seenAlternatives = new Set<string>();
+
+  if (anchor.acceptableAlternativeGroups.length === 0) {
+    reasons.push("alternative_groups_empty");
+  }
+  anchor.acceptableAlternativeGroups.forEach((group, groupIndex) => {
+    if (group.requiredConcepts.length === 0) {
+      reasons.push(`group_${groupIndex}:required_concepts_empty`);
+    }
+    for (const concept of group.requiredConcepts) {
+      if (!requiredConcepts.has(concept)) {
+        reasons.push(`group_${groupIndex}:unknown_required_concept:${concept}`);
+      }
+    }
+    if (group.alternatives.length === 0) {
+      reasons.push(`group_${groupIndex}:alternatives_empty`);
+    }
+    for (const alternative of group.alternatives) {
+      const normalized = normalizeSemanticTerm(alternative);
+      if (normalized.length === 0) {
+        reasons.push(`group_${groupIndex}:alternative_empty`);
+        continue;
+      }
+      if (seenAlternatives.has(normalized)) {
+        reasons.push(`group_${groupIndex}:duplicate_alternative:${normalized}`);
+      }
+      seenAlternatives.add(normalized);
+    }
+  });
+
+  return { valid: reasons.length === 0, reasons } as const;
+}
+
 export function validateTrustedRepairFixtureEligibility(
   fixture: TrustedRepairFixture,
 ) {
   const manifest = fixture.rights;
+  const alternativeGroupReasons = fixture.anchors.flatMap((anchor) =>
+    validateTrustedRepairAlternativeGroups(anchor).reasons.map(
+      (reason) => `${anchor.anchorId}:${reason}`,
+    ),
+  );
   const rightsAllowed = (
     TRUSTED_REPAIR_ELIGIBLE_RIGHTS_CLASSES as readonly TrustedRepairRightsClass[]
   ).includes(manifest.rightsClass);
@@ -301,6 +388,7 @@ export function validateTrustedRepairFixtureEligibility(
       manifest.reconstructionOfDeniedSource === false &&
       manifest.nearCopyScore === 0 &&
       manifest.sharingAllowed === false &&
+      alternativeGroupReasons.length === 0 &&
       fixture.releaseState === "AUTOMATED_CHECKED",
     reasons: [
       ...(rightsAllowed ? [] : ["rights_class_not_eligible"]),
@@ -309,6 +397,7 @@ export function validateTrustedRepairFixtureEligibility(
       ...(manifest.rawBodyTrainingAllowed ? ["raw_body_training"] : []),
       ...(manifest.reconstructionOfDeniedSource ? ["reconstruction_risk"] : []),
       ...(manifest.nearCopyScore !== 0 ? ["near_copy_risk"] : []),
+      ...alternativeGroupReasons,
     ],
   } as const;
 }

@@ -39,8 +39,18 @@ to PR #716 after the final candidate workflow completes.
   confirmed revision and primary gap remain exact, both submissions are
   append-only, and the latest eligible submission is regraded.
 - Semantic polarity: positive assertion required; negated, antonym, or
-  materially ambiguous required concepts fail closed within a bounded local
-  clause matcher.
+  materially ambiguous required concepts fail closed within one bounded local
+  assertion-state evaluator shared by canonical concepts, acceptable
+  alternatives, and forbidden false claims. Alternatives satisfy only their
+  explicitly mapped concepts and only when positive. Forbidden claims block
+  only when positive; negated and ambiguous mentions remain diagnostic only.
+- Semantic bindings: fixture
+  `wcv_c2_rights_safe_fixtures.2026-08-12.v2` and rubric
+  `wcv_c2_semantic_anchor_rubric.v2`.
+- Dedicated runtime: same-repository and fork `pull_request` events run at the
+  exact pull-request head with `contents: read`, no secrets, and a
+  GitHub-hosted ephemeral runner. `pull_request_target`, write-capable tokens,
+  remote Supabase, and provider access are prohibited.
 - Law: expected and observed terminal result remains blocked until the
   existing registry can prove exact official current-law binding.
 - Publication: no learner/fixture bodies, credentials, screenshots, traces,
@@ -66,3 +76,6 @@ to PR #716 after the final candidate workflow completes.
 - all five input modes, partial-CTA refresh/new-browser/process-restart
   recovery, and zero external provider browser requests; and
 - unconditional no-backup Docker cleanup with exact head unchanged.
+
+This correction changes no learner state, Law source, database, migration,
+provider, or Production activation.

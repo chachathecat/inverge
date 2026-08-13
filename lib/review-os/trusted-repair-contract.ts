@@ -1,9 +1,9 @@
 export const TRUSTED_REPAIR_CONTRACT_VERSION =
   "wcv_c2_trusted_repair.v1" as const;
 export const TRUSTED_REPAIR_FIXTURE_VERSION =
-  "wcv_c2_rights_safe_fixtures.2026-08-12.v1" as const;
+  "wcv_c2_rights_safe_fixtures.2026-08-12.v2" as const;
 export const TRUSTED_REPAIR_RUBRIC_VERSION =
-  "wcv_c2_semantic_anchor_rubric.v1" as const;
+  "wcv_c2_semantic_anchor_rubric.v2" as const;
 export const TRUSTED_REPAIR_POLICY_VERSION =
   "wcv_c2_exposure_and_independence_policy.v1" as const;
 export const TRUSTED_REPAIR_VALIDATOR_VERSION =
@@ -240,11 +240,17 @@ export type TrustedRepairRightsManifest = Readonly<{
   purpose: "owner_test_only";
 }>;
 
+export type TrustedRepairSemanticAlternativeGroup = Readonly<{
+  requiredConcepts: readonly string[];
+  alternatives: readonly string[];
+}>;
+
 export type TrustedRepairSemanticAnchor = Readonly<{
   anchorId: string;
   labelKo: string;
   requiredConcepts: readonly string[];
-  acceptableAlternatives: readonly string[];
+  acceptableAlternativeGroups:
+    readonly TrustedRepairSemanticAlternativeGroup[];
   forbiddenFalseClaims: readonly string[];
   weight: number;
 }>;

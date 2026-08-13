@@ -36,12 +36,16 @@ const verifierModule = await import(
     .href
 );
 
-test("C2 workflow is exact-head, branch-agnostic, path-triggered, same-repository, least-privilege, and cleanup-bound", () => {
+test("C2 workflow is fork-safe, exact-head, path-triggered, least-privilege, and cleanup-bound", () => {
   assert.match(workflow, /pull_request:/);
   assert.doesNotMatch(workflow, /pull_request_target/);
   assert.match(workflow, /branches: \[main\]/);
   assert.match(workflow, /types: \[opened, synchronize, reopened\]/);
   assert.match(workflow, /permissions:\s*\n\s+contents: read/);
+  assert.equal(
+    workflow.match(/permissions:\s*\n\s+contents: read/)?.[0],
+    "permissions:\n  contents: read",
+  );
   assert.match(workflow, /name: wcv-c2-trusted-repair-runtime/);
   assert.match(
     workflow,
@@ -68,7 +72,9 @@ test("C2 workflow is exact-head, branch-agnostic, path-triggered, same-repositor
     workflow,
     /github\.event\.pull_request\.head\.ref\s*==/,
   );
-  assert.match(workflow, /head\.repo\.full_name == github\.repository/);
+  assert.doesNotMatch(workflow, /head\.repo|github\.repository|github\.actor/);
+  assert.doesNotMatch(workflow, /\b(?:fork|source[_ -]?repo)\b/i);
+  assert.doesNotMatch(workflow, /^\s*if:\s*.*(?:head|actor|repository)/im);
   assert.match(workflow, /ref: \$\{\{ github\.event\.pull_request\.head\.sha \}\}/);
   assert.match(workflow, /test "\$\(git rev-parse HEAD\)" = "\$\{PR_HEAD_SHA\}"/);
   assert.match(workflow, /cancel-in-progress: true/);
@@ -84,6 +90,11 @@ test("C2 workflow is exact-head, branch-agnostic, path-triggered, same-repositor
   assert.match(workflow, /--require-complete/);
   assert.match(workflow, /if: success\(\)/);
   assert.doesNotMatch(workflow, /secrets\./);
+  assert.doesNotMatch(workflow, /permissions:[\s\S]*?\b(?:write|id-token)\b/i);
+  assert.doesNotMatch(workflow, /self-hosted/);
+  assert.match(workflow, /runs-on: ubuntu-latest/);
+  assert.match(workflow, /actions\/upload-artifact@v4/);
+  assert.match(workflow, /WCV_C2_RUNTIME_EVIDENCE_PATH/);
   assert.doesNotMatch(workflow, /\bnpx\b/);
   assert.doesNotMatch(workflow, /supabase\s+(?:login|link)|--linked|db\s+push/i);
 });

@@ -18,10 +18,10 @@ export const RUNTIME_REQUIRED_PATTERNS = Object.freeze([
 ]);
 
 // WCV-C2 has an exact-head, two-fresh-database runtime gate that is stricter
-// than the generic S233A/S236P adapters. Its branch-agnostic workflow covers
-// every same-repository PR that modifies the exact C2 migration or the exact
-// Law source-version registry. Only those exact paths are delegated; arbitrary
-// migration paths remain fail-closed here.
+// than the generic S233A/S236P adapters. Its read-only, secret-free
+// pull_request workflow covers same-repository and fork PRs that modify the
+// exact C2 migration or Law source-version registry. Only those exact paths
+// are delegated; arbitrary migration paths remain fail-closed here.
 export const DEDICATED_RUNTIME_ADAPTER_PATHS = Object.freeze([
   "supabase/migrations/20260812011903_wcv_c2_trusted_repair_vertical.sql",
   "lib/review-os/law-source-version-registry.ts",

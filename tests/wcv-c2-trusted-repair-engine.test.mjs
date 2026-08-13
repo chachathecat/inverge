@@ -14,6 +14,7 @@ import {
 import {
   SYNTHETIC_SOURCE_BINDING,
   diagnoseTrustedRepairAttempt,
+  evaluateConceptAssertionState,
   initialTrustedRepairStateData,
   planTrustedRepairContinuation,
   planTrustedRepairDiagnosis,
@@ -105,7 +106,7 @@ function apply(aggregate, plan) {
 }
 
 const REPAIRS = {
-  appraisal_practical: "면적 100m²와 단가 2000000원을 곱해 200000000원을 얻는다. 원 단위 양수 부호이며 백분율이 아니고 반올림 없음으로 쓴 뒤 나누어 검산한다.",
+  appraisal_practical: "수량 100m²와 단위가격 2000000원을 곱해 200000000원을 얻는다. 원 단위 양수이며 퍼센트 단위가 아니고 음수가 아니다. 반올림 없음으로 쓰고 역산하여 검산한다.",
   appraisal_theory: "최유효이용은 합리적이고 가능한 이용이다. 법적·물리적·경제적 가능성을 사례와 반대 사실에 적용해 결론을 낸다.",
   appraisal_compensation_law: "공식 출처의 유효 버전을 검증하고 사실을 요건에 포섭한다. 출처 충돌이면 결론을 보류하고 검증한다.",
 };
@@ -118,6 +119,211 @@ const BLOCKED_LAW = {
   sourceAnchorId: "law-anchor-land-compensation-act-current-candidate",
   blockerCount: 2,
 };
+
+const PRACTICE_STATE_DATA = {
+  ...initialTrustedRepairStateData("TYPED_TEXT"),
+  predictionConfidence: "medium",
+};
+
+test("C2 semantic bindings advance only the fixture and rubric to v2", () => {
+  assert.equal(
+    TRUSTED_REPAIR_FIXTURE_VERSION,
+    "wcv_c2_rights_safe_fixtures.2026-08-12.v2",
+  );
+  assert.equal(
+    TRUSTED_REPAIR_RUBRIC_VERSION,
+    "wcv_c2_semantic_anchor_rubric.v2",
+  );
+  assert.equal(TRUSTED_REPAIR_CONTRACT_VERSION, "wcv_c2_trusted_repair.v1");
+  assert.equal(
+    TRUSTED_REPAIR_POLICY_VERSION,
+    "wcv_c2_exposure_and_independence_policy.v1",
+  );
+  assert.equal(
+    TRUSTED_REPAIR_VALIDATOR_VERSION,
+    "wcv_c2_deterministic_subject_oracles.v1",
+  );
+});
+
+test("one bounded assertion-state evaluator preserves polarity and occurrence precedence", () => {
+  for (const [text, concept] of [
+    ["퍼센트 단위가 아니다", "퍼센트 단위"],
+    ["음수가 아니다", "음수"],
+    ["20,000,000원이 아니다", "20000000"],
+    ["수량이 아니다", "수량"],
+    ["단위가격도 아니다", "단위가격"],
+  ]) {
+    assert.equal(evaluateConceptAssertionState(text, concept), "negated", text);
+  }
+  for (const [text, concept] of [
+    ["퍼센트 단위다", "퍼센트 단위"],
+    ["음수다", "음수"],
+    ["20,000,000원이다", "20000000"],
+    ["결과는 2억이다", "200000000"],
+    ["단가는 200만원이다", "2000000"],
+  ]) {
+    assert.equal(evaluateConceptAssertionState(text, concept), "positive", text);
+  }
+  assert.equal(
+    evaluateConceptAssertionState("음수인지 불확실하다", "음수"),
+    "ambiguous",
+  );
+  assert.equal(
+    evaluateConceptAssertionState(
+      "반례 값은 음수가 아니다. 그러나 이 계산 결과는 음수다.",
+      "음수",
+    ),
+    "positive",
+  );
+  assert.equal(
+    evaluateConceptAssertionState("결과는 200,000,000원이다", "20000000"),
+    "absent",
+  );
+});
+
+test("negated or ambiguous forbidden claims remain diagnostic and never manufacture a block", () => {
+  const fixture = trustedRepairCanonicalFixture("appraisal_practical");
+  const validWithNegations = diagnoseTrustedRepairAttempt({
+    fixture,
+    attemptText: REPAIRS.appraisal_practical,
+    stateData: PRACTICE_STATE_DATA,
+  });
+  assert.equal(validWithNegations.repairNeed, "optional");
+  assert.ok(
+    validWithNegations.candidates[0].counterEvidence.includes(
+      "independent_attempt:practice-unit-rounding-verification:forbidden_claim_negated_ignored:퍼센트 단위",
+    ),
+  );
+  assert.ok(
+    validWithNegations.candidates[0].counterEvidence.includes(
+      "independent_attempt:practice-unit-rounding-verification:forbidden_claim_negated_ignored:음수",
+    ),
+  );
+
+  const positiveForbiddenClaims = diagnoseTrustedRepairAttempt({
+    fixture,
+    attemptText:
+      "수량 100m²와 단위가격 2000000원을 곱해 200000000원을 얻는다. 원 단위 양수이며 퍼센트 단위다. 음수다. 반올림 없음으로 쓰고 역산하여 검산한다.",
+    stateData: PRACTICE_STATE_DATA,
+  });
+  const unitGap = positiveForbiddenClaims.candidates.find(
+    (candidate) =>
+      candidate.anchorId === "practice-unit-rounding-verification",
+  );
+  assert.ok(unitGap);
+  assert.ok(
+    unitGap.supportingEvidence.includes(
+      "independent_attempt:practice-unit-rounding-verification:false_claim:퍼센트 단위",
+    ),
+  );
+  assert.ok(
+    unitGap.supportingEvidence.includes(
+      "independent_attempt:practice-unit-rounding-verification:false_claim:음수",
+    ),
+  );
+
+  const ambiguousForbiddenClaim = diagnoseTrustedRepairAttempt({
+    fixture,
+    attemptText:
+      "수량 100m²와 단위가격 2000000원을 곱해 200000000원을 얻는다. 원 단위 양수이며 퍼센트 단위가 아니다. 음수인지 불확실하다. 반올림 없음으로 쓰고 역산하여 검산한다.",
+    stateData: PRACTICE_STATE_DATA,
+  });
+  assert.equal(ambiguousForbiddenClaim.repairNeed, "optional");
+  assert.ok(
+    ambiguousForbiddenClaim.candidates[0].counterEvidence.includes(
+      "independent_attempt:practice-unit-rounding-verification:forbidden_claim_ambiguous_ignored:음수",
+    ),
+  );
+
+  const missingConcepts = diagnoseTrustedRepairAttempt({
+    fixture,
+    attemptText: "퍼센트 단위가 아니다. 음수가 아니다. 필요한 산식은 아직 쓰지 않았다.",
+    stateData: PRACTICE_STATE_DATA,
+  });
+  assert.equal(missingConcepts.repairNeed, "required");
+  assert.ok(
+    missingConcepts.candidates.some((candidate) =>
+      candidate.supportingEvidence.some((item) => item.includes(":missing:")),
+    ),
+  );
+});
+
+test("acceptable alternatives satisfy only their explicit required-concept mappings", () => {
+  const fixture = trustedRepairCanonicalFixture("appraisal_practical");
+  const mapped = diagnoseTrustedRepairAttempt({
+    fixture,
+    attemptText: "수량 100m²와 단위가격 2,000,000원을 곱한다",
+    stateData: PRACTICE_STATE_DATA,
+  });
+  assert.equal(
+    mapped.candidates.some(
+      (candidate) => candidate.anchorId === "practice-input-role",
+    ),
+    false,
+  );
+
+  for (const [attemptText, expectedMissing] of [
+    ["수량 100m²로 계산하지만 가격 역할은 아직 정하지 않았다", "단가"],
+    ["단위가격 2,000,000원을 쓰지만 투입 면은 아직 정하지 않았다", "면적"],
+    ["수량이 아니다. 단위가격도 아니다. 산식 역할을 다시 정해야 한다", "면적"],
+    ["면적 100m²와 가격 2,000,000원을 사용한다", "단가"],
+  ]) {
+    const diagnosis = diagnoseTrustedRepairAttempt({
+      fixture,
+      attemptText,
+      stateData: PRACTICE_STATE_DATA,
+    });
+    const inputRoleGap = diagnosis.candidates.find(
+      (candidate) => candidate.anchorId === "practice-input-role",
+    );
+    assert.ok(inputRoleGap, attemptText);
+    assert.ok(
+      inputRoleGap.supportingEvidence.includes(
+        `independent_attempt:practice-input-role:missing:${expectedMissing}`,
+      ),
+      attemptText,
+    );
+  }
+});
+
+test("one explicit alternative may satisfy multiple concepts only when mapped to each", () => {
+  const fixture = trustedRepairCanonicalFixture("appraisal_compensation_law");
+  const diagnosis = diagnoseTrustedRepairAttempt({
+    fixture,
+    attemptText:
+      "공식 출처의 시행 기준일을 확인한다. 사안을 요건에 해당시킨다. 출처가 불확실하면 확인 필요하다는 결론을 낸다.",
+    stateData: PRACTICE_STATE_DATA,
+  });
+  assert.equal(
+    diagnosis.candidates.some(
+      (candidate) => candidate.anchorId === "law-conflict-withhold",
+    ),
+    false,
+  );
+});
+
+test("an explicitly rejected wrong numeric claim does not block a positive correct value", () => {
+  const fixture = trustedRepairCanonicalFixture("appraisal_practical");
+  const diagnosis = diagnoseTrustedRepairAttempt({
+    fixture,
+    attemptText:
+      "수량 100m²와 단위가격 2,000,000원을 곱한다. 결과는 20,000,000원이 아니다. 200,000,000원을 얻는다. 원 단위 양수이며 퍼센트 단위가 아니고 음수가 아니다. 반올림 없음으로 쓰고 역산하여 검산한다.",
+    stateData: PRACTICE_STATE_DATA,
+  });
+  assert.equal(diagnosis.repairNeed, "optional");
+  assert.equal(
+    diagnosis.candidates.some(
+      (candidate) =>
+        candidate.anchorId === "practice-intermediate-calculation",
+    ),
+    false,
+  );
+  assert.ok(
+    diagnosis.candidates[0].counterEvidence.includes(
+      "independent_attempt:practice-intermediate-calculation:forbidden_claim_negated_ignored:20000000",
+    ),
+  );
+});
 
 test("numeric anchors compare complete values without substring collisions", () => {
   const fixture = trustedRepairCanonicalFixture("appraisal_practical");

@@ -24,7 +24,6 @@ permissions:
 jobs:
   wcv-c2-trusted-repair-runtime:
     name: wcv-c2-trusted-repair-runtime
-    if: github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-latest
     timeout-minutes: 60
     concurrency:

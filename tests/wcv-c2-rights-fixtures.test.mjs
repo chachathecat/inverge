@@ -4,7 +4,9 @@ import test from "node:test";
 import {
   TRUSTED_REPAIR_DENIED_RIGHTS_CLASSES,
   TRUSTED_REPAIR_ELIGIBLE_RIGHTS_CLASSES,
+  TRUSTED_REPAIR_FIXTURE_VERSION,
   TRUSTED_REPAIR_INPUT_MODES,
+  TRUSTED_REPAIR_RUBRIC_VERSION,
   TRUSTED_REPAIR_SUBJECTS,
   trustedRepairReleaseTransition,
 } from "../lib/review-os/trusted-repair-contract.ts";
@@ -13,8 +15,83 @@ import {
   TRUSTED_REPAIR_GOLD_CANDIDATES,
   assertTrustedRepairFixtureInventory,
   trustedRepairBankFirstSelection,
+  trustedRepairCanonicalFixture,
+  validateTrustedRepairAlternativeGroups,
   validateTrustedRepairFixtureEligibility,
 } from "../lib/review-os/trusted-repair-fixtures.ts";
+
+const EXPECTED_ALTERNATIVE_GROUPS = {
+  "practice-input-role": [
+    { requiredConcepts: ["면적"], alternatives: ["수량"] },
+    { requiredConcepts: ["단가"], alternatives: ["단위가격"] },
+  ],
+  "practice-intermediate-calculation": [
+    {
+      requiredConcepts: ["200000000"],
+      alternatives: ["2억", "100×200만원"],
+    },
+  ],
+  "practice-unit-rounding-verification": [
+    { requiredConcepts: ["m²"], alternatives: ["제곱미터"] },
+    { requiredConcepts: ["부호"], alternatives: ["양수"] },
+    { requiredConcepts: ["반올림"], alternatives: ["반올림 없음"] },
+    { requiredConcepts: ["검산"], alternatives: ["역산"] },
+  ],
+  "theory-exact-definition": [
+    {
+      requiredConcepts: ["가능"],
+      alternatives: ["법적 가능", "물리적 가능"],
+    },
+  ],
+  "theory-argument-chain": [
+    { requiredConcepts: ["법적"], alternatives: ["허용"] },
+    { requiredConcepts: ["물리적"], alternatives: ["실현"] },
+    { requiredConcepts: ["경제적"], alternatives: ["수익"] },
+  ],
+  "theory-application-and-counter": [
+    { requiredConcepts: ["사례"], alternatives: ["적용"] },
+    { requiredConcepts: ["반대"], alternatives: ["한계"] },
+  ],
+  "law-source-effective-version": [
+    { requiredConcepts: ["유효"], alternatives: ["시행"] },
+    { requiredConcepts: ["버전"], alternatives: ["기준일"] },
+  ],
+  "law-fact-to-element": [
+    { requiredConcepts: ["사실"], alternatives: ["사안"] },
+    { requiredConcepts: ["포섭"], alternatives: ["해당"] },
+  ],
+  "law-conflict-withhold": [
+    { requiredConcepts: ["충돌"], alternatives: ["불확실"] },
+    {
+      requiredConcepts: ["보류", "검증"],
+      alternatives: ["확인 필요"],
+    },
+  ],
+};
+
+const PRIOR_ALTERNATIVES = [
+  "수량",
+  "단위가격",
+  "2억",
+  "100×200만원",
+  "제곱미터",
+  "양수",
+  "반올림 없음",
+  "역산",
+  "법적 가능",
+  "물리적 가능",
+  "허용",
+  "실현",
+  "수익",
+  "적용",
+  "한계",
+  "시행",
+  "기준일",
+  "사안",
+  "해당",
+  "불확실",
+  "확인 필요",
+];
 
 test("C2 owns exactly 21 rights-safe fixtures and 18 non-adjudicated Gold candidates", () => {
   assert.doesNotThrow(() => assertTrustedRepairFixtureInventory());
@@ -60,6 +137,87 @@ test("every fixture is synthetic, body-training denied, private, and complete in
     assert.equal(fixture.rights.reconstructionOfDeniedSource, false);
     assert.equal(fixture.rights.nearCopyScore, 0);
     assert.equal(fixture.rights.sharingAllowed, false);
+  }
+});
+
+test("v2 semantic fixtures preserve and explicitly map every prior alternative exactly once", () => {
+  assert.equal(
+    TRUSTED_REPAIR_FIXTURE_VERSION,
+    "wcv_c2_rights_safe_fixtures.2026-08-12.v2",
+  );
+  assert.equal(
+    TRUSTED_REPAIR_RUBRIC_VERSION,
+    "wcv_c2_semantic_anchor_rubric.v2",
+  );
+  const anchors = TRUSTED_REPAIR_SUBJECTS.flatMap(
+    (subject) => trustedRepairCanonicalFixture(subject).anchors,
+  );
+  assert.deepEqual(
+    Object.fromEntries(
+      anchors.map((anchor) => [
+        anchor.anchorId,
+        anchor.acceptableAlternativeGroups,
+      ]),
+    ),
+    EXPECTED_ALTERNATIVE_GROUPS,
+  );
+  const alternatives = anchors.flatMap((anchor) =>
+    anchor.acceptableAlternativeGroups.flatMap((group) => group.alternatives),
+  );
+  assert.deepEqual([...alternatives].sort(), [...PRIOR_ALTERNATIVES].sort());
+  assert.equal(new Set(alternatives).size, PRIOR_ALTERNATIVES.length);
+  for (const anchor of anchors) {
+    assert.deepEqual(validateTrustedRepairAlternativeGroups(anchor), {
+      valid: true,
+      reasons: [],
+    });
+    for (const group of anchor.acceptableAlternativeGroups) {
+      assert.ok(group.requiredConcepts.length > 0);
+      assert.ok(group.alternatives.length > 0);
+      assert.ok(
+        group.requiredConcepts.every((concept) =>
+          anchor.requiredConcepts.includes(concept),
+        ),
+      );
+    }
+  }
+});
+
+test("alternative-group validation fails closed for empty, duplicate, and unknown mappings", () => {
+  const mutations = [
+    (anchor) => {
+      anchor.acceptableAlternativeGroups = [];
+    },
+    (anchor) => {
+      anchor.acceptableAlternativeGroups[0].requiredConcepts = [];
+    },
+    (anchor) => {
+      anchor.acceptableAlternativeGroups[0].requiredConcepts = ["없는 개념"];
+    },
+    (anchor) => {
+      anchor.acceptableAlternativeGroups[0].alternatives = [];
+    },
+    (anchor) => {
+      anchor.acceptableAlternativeGroups[0].alternatives = ["   "];
+    },
+    (anchor) => {
+      anchor.acceptableAlternativeGroups.push({
+        requiredConcepts: ["면적"],
+        alternatives: ["수 량"],
+      });
+    },
+  ];
+
+  for (const mutate of mutations) {
+    const fixture = structuredClone(
+      trustedRepairCanonicalFixture("appraisal_practical"),
+    );
+    mutate(fixture.anchors[0]);
+    assert.equal(
+      validateTrustedRepairAlternativeGroups(fixture.anchors[0]).valid,
+      false,
+    );
+    assert.equal(validateTrustedRepairFixtureEligibility(fixture).eligible, false);
   }
 });
 

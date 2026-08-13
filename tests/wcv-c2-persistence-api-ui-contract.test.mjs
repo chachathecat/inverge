@@ -116,7 +116,7 @@ test("DTO and UI expose bounded fields only after committed help and support dur
   assert.doesNotMatch(ui, /openai|anthropic|gemini|chat\/completions/i);
 });
 
-test("generic Runtime Gate delegates the exact C2 protected paths to its branch-agnostic stricter check", async () => {
+test("generic Runtime Gate delegates exact C2 paths to a fork-safe read-only pull_request check", async () => {
   const workflow = await readFile(WORKFLOW, "utf8");
   assert.deepEqual(DEDICATED_RUNTIME_ADAPTER_PATHS, [SQL, LAW_REGISTRY]);
   assert.deepEqual(runtimeRequiredPathRecords([SQL, LAW_REGISTRY]), []);
@@ -127,10 +127,17 @@ test("generic Runtime Gate delegates the exact C2 protected paths to its branch-
     workflow,
     /github\.event\.pull_request\.head\.ref\s*==/,
   );
-  assert.match(
-    workflow,
-    /if: github\.event\.pull_request\.head\.repo\.full_name == github\.repository/,
-  );
+  assert.match(workflow, /on:\s*\n\s+pull_request:/);
+  assert.doesNotMatch(workflow, /pull_request_target/);
+  assert.match(workflow, /permissions:\s*\n\s+contents: read/);
+  assert.doesNotMatch(workflow, /head\.repo|github\.repository|github\.actor/);
+  assert.doesNotMatch(workflow, /\b(?:fork|source[_ -]?repo)\b/i);
+  assert.doesNotMatch(workflow, /secrets\./);
+  assert.doesNotMatch(workflow, /permissions:[\s\S]*?\b(?:write|id-token)\b/i);
+  assert.match(workflow, /ref: \$\{\{ github\.event\.pull_request\.head\.sha \}\}/);
+  assert.match(workflow, /if: always\(\)/);
+  assert.match(workflow, /--cleanup/);
+  assert.match(workflow, /actions\/upload-artifact@v4/);
   assert.deepEqual(
     runtimeRequiredPathRecords(["supabase/migrations/20990101000000_unreviewed.sql"]),
     [{
@@ -175,4 +182,41 @@ test("machine contract maps all four issues and exactly eight C2 allocations", a
     contract.semanticAnchorPolarity.negatedOrAntonymOccurrenceCountsAsPositive,
     false,
   );
+  assert.deepEqual(contract.semanticAnchorPolarity.assertionStates, [
+    "positive",
+    "negated",
+    "ambiguous",
+    "absent",
+  ]);
+  assert.deepEqual(contract.semanticAnchorPolarity.oneBoundedEvaluatorFor, [
+    "requiredConcepts",
+    "acceptableAlternatives",
+    "forbiddenFalseClaims",
+  ]);
+  assert.equal(
+    contract.semanticAnchorPolarity.forbiddenFalseClaimsBlockOnlyWhenPositive,
+    true,
+  );
+  assert.equal(
+    contract.semanticAnchorPolarity.acceptableAlternativesSatisfyExplicitMappedConceptsOnly,
+    true,
+  );
+  assert.equal(
+    contract.fixtureVersion,
+    "wcv_c2_rights_safe_fixtures.2026-08-12.v2",
+  );
+  assert.equal(contract.rubricVersion, "wcv_c2_semantic_anchor_rubric.v2");
+  assert.deepEqual(contract.dedicatedRuntime, {
+    event: "pull_request",
+    sameRepositoryPullRequests: true,
+    forkPullRequests: true,
+    pullRequestTargetAllowed: false,
+    permissions: { contents: "read" },
+    repositorySecretsAllowed: false,
+    writeCapableTokensAllowed: false,
+    githubHostedEphemeralRunnerRequired: true,
+    exactPullRequestHeadCheckout: true,
+    remoteSupabaseOrProviderAccessAllowed: false,
+    metadataOnlyArtifact: true,
+  });
 });
