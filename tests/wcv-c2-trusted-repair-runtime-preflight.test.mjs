@@ -20,6 +20,10 @@ const workflowPullRequestPaths = [
 const C2_MIGRATION =
   "supabase/migrations/20260812011903_wcv_c2_trusted_repair_vertical.sql";
 const LAW_REGISTRY = "lib/review-os/law-source-version-registry.ts";
+const c2Migration = read(C2_MIGRATION);
+const machineContract = JSON.parse(
+  read("config/wcv-c2-trusted-repair-contract-v1.json"),
+);
 const verifier = read("scripts/automation/verify-wcv-c2-trusted-repair-runtime.mjs");
 const config = read("tests/runtime/wcv-c2-supabase/supabase/config.toml");
 const migrationDirectory = path.join(
@@ -35,6 +39,23 @@ const verifierModule = await import(
   pathToFileURL(path.join(root, "scripts/automation/verify-wcv-c2-trusted-repair-runtime.mjs"))
     .href
 );
+
+function exactPersistedCheckValue(sql, column) {
+  const checks = [
+    ...sql.matchAll(
+      new RegExp(
+        `${column}\\s+text\\s+not\\s+null\\s+check\\s*\\(([\\s\\S]*?)\\)`,
+        "g",
+      ),
+    ),
+  ];
+  assert.equal(checks.length, 1, `${column} must have one closed CHECK`);
+  const equality = checks[0][1].match(
+    new RegExp(`^\\s*${column}\\s*=\\s*'([^']+)'\\s*$`),
+  );
+  assert.ok(equality, `${column} must accept exactly one semantic version`);
+  return equality[1];
+}
 
 test("C2 workflow is fork-safe, exact-head, path-triggered, least-privilege, and cleanup-bound", () => {
   assert.match(workflow, /pull_request:/);
@@ -124,6 +145,27 @@ test("C2 verifier uses locked local runtimes and suppresses remote credentials",
   assert.match(verifier, /crossUserDeleteRows/);
   assert.match(verifier, /remoteSupabaseUsed: false/);
   assert.doesNotMatch(verifier, /https?:\/\/[a-z0-9-]+\.supabase\.co/i);
+});
+
+test("C2 migration preflight binds the current machine-contract semantic versions", () => {
+  const currentBindings = {
+    fixtureVersion: machineContract.fixtureVersion,
+    rubricVersion: machineContract.rubricVersion,
+  };
+  assert.deepEqual(
+    {
+      fixtureVersion: exactPersistedCheckValue(c2Migration, "fixture_version"),
+      rubricVersion: exactPersistedCheckValue(c2Migration, "rubric_version"),
+    },
+    currentBindings,
+  );
+  assert.match(currentBindings.fixtureVersion, /\.v2$/);
+  assert.match(currentBindings.rubricVersion, /\.v2$/);
+  for (const priorVersion of Object.values(currentBindings).map((version) =>
+    version.replace(/\.v2$/, ".v1"),
+  )) {
+    assert.equal(c2Migration.split(priorVersion).length - 1, 0);
+  }
 });
 
 test("C2 persisted runtime assertions serialize booleans unambiguously", () => {

@@ -8,6 +8,8 @@ import {
 } from "../scripts/automation/runtime-risk-contract.mjs";
 
 const SQL = "supabase/migrations/20260812011903_wcv_c2_trusted_repair_vertical.sql";
+const CONTRACT = "lib/review-os/trusted-repair-contract.ts";
+const MACHINE_CONTRACT = "config/wcv-c2-trusted-repair-contract-v1.json";
 const LAW_REGISTRY = "lib/review-os/law-source-version-registry.ts";
 const REPOSITORY = "lib/review-os/trusted-repair-repository.ts";
 const ROUTE = "app/api/review-os/trusted-repair/route.ts";
@@ -16,6 +18,43 @@ const SERVER = "lib/review-os/trusted-repair-server.ts";
 const ENGINE = "lib/review-os/trusted-repair-engine.ts";
 const UI = "components/review-os/trusted-repair-loop.tsx";
 const WORKFLOW = ".github/workflows/wcv-c2-trusted-repair-runtime.yml";
+
+function exportedStringConstant(source, constantName) {
+  const match = source.match(
+    new RegExp(
+      `export const ${constantName}\\s*=\\s*["']([^"']+)["']\\s+as const;`,
+    ),
+  );
+  assert.ok(match, `${constantName} must remain an exact exported string constant`);
+  return match[1];
+}
+
+function exactPersistedCheckValue(sql, column) {
+  const checks = [
+    ...sql.matchAll(
+      new RegExp(
+        `${column}\\s+text\\s+not\\s+null\\s+check\\s*\\(([\\s\\S]*?)\\)`,
+        "g",
+      ),
+    ),
+  ];
+  assert.equal(checks.length, 1, `${column} must have one closed CHECK`);
+  const equality = checks[0][1].match(
+    new RegExp(`^\\s*${column}\\s*=\\s*'([^']+)'\\s*$`),
+  );
+  assert.ok(equality, `${column} must accept exactly one semantic version`);
+  return equality[1];
+}
+
+function sessionBindingSymbol(source, property) {
+  const sessionCreation =
+    source.match(/const session = \{[\s\S]*?\n      \};/)?.[0] ?? "";
+  const match = sessionCreation.match(
+    new RegExp(`${property}:\\s*([A-Z][A-Z0-9_]+),`),
+  );
+  assert.ok(match, `${property} must be assigned from an exported constant`);
+  return match[1];
+}
 
 test("migration is service-only, exact-user, forced-RLS, append-only and CAS/replay atomic", async () => {
   const sql = await readFile(SQL, "utf8");
@@ -42,6 +81,53 @@ test("migration is service-only, exact-user, forced-RLS, append-only and CAS/rep
   assert.match(sql, /security invoker\s+set search_path = ''/g);
   assert.doesNotMatch(sql, /https?:\/\//);
   assert.doesNotMatch(sql, /supabase\s+(?:link|db push|login)/i);
+});
+
+test("persisted semantic versions stay closed across TypeScript, JSON, server, and SQL", async () => {
+  const [contractSource, machineContractSource, server, sql] = await Promise.all([
+    readFile(CONTRACT, "utf8"),
+    readFile(MACHINE_CONTRACT, "utf8"),
+    readFile(SERVER, "utf8"),
+    readFile(SQL, "utf8"),
+  ]);
+  const machineContract = JSON.parse(machineContractSource);
+  const typescriptBindings = {
+    fixtureVersion: exportedStringConstant(
+      contractSource,
+      "TRUSTED_REPAIR_FIXTURE_VERSION",
+    ),
+    rubricVersion: exportedStringConstant(
+      contractSource,
+      "TRUSTED_REPAIR_RUBRIC_VERSION",
+    ),
+  };
+  const machineBindings = {
+    fixtureVersion: machineContract.fixtureVersion,
+    rubricVersion: machineContract.rubricVersion,
+  };
+  const serverBindings = {
+    fixtureVersion: sessionBindingSymbol(server, "fixtureVersion"),
+    rubricVersion: sessionBindingSymbol(server, "rubricVersion"),
+  };
+  const persistedBindings = {
+    fixtureVersion: exactPersistedCheckValue(sql, "fixture_version"),
+    rubricVersion: exactPersistedCheckValue(sql, "rubric_version"),
+  };
+
+  assert.deepEqual(machineBindings, typescriptBindings);
+  assert.deepEqual(serverBindings, {
+    fixtureVersion: "TRUSTED_REPAIR_FIXTURE_VERSION",
+    rubricVersion: "TRUSTED_REPAIR_RUBRIC_VERSION",
+  });
+  assert.deepEqual(persistedBindings, typescriptBindings);
+  assert.match(typescriptBindings.fixtureVersion, /\.v2$/);
+  assert.match(typescriptBindings.rubricVersion, /\.v2$/);
+
+  for (const priorVersion of Object.values(typescriptBindings).map((version) =>
+    version.replace(/\.v2$/, ".v1"),
+  )) {
+    assert.equal(sql.split(priorVersion).length - 1, 0);
+  }
 });
 
 test("repository has no user-client fallback and scopes every read or receipt to exact identity", async () => {

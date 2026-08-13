@@ -54,11 +54,11 @@ create table if not exists public.wcv_c2_trusted_repair_sessions (
   independent_attempt_before_help boolean not null default false,
   contract_version text not null check (contract_version = 'wcv_c2_trusted_repair.v1'),
   fixture_version text not null check (
-    fixture_version = 'wcv_c2_rights_safe_fixtures.2026-08-12.v1'
+    fixture_version = 'wcv_c2_rights_safe_fixtures.2026-08-12.v2'
   ),
   source_version text not null,
   rubric_version text not null check (
-    rubric_version = 'wcv_c2_semantic_anchor_rubric.v1'
+    rubric_version = 'wcv_c2_semantic_anchor_rubric.v2'
   ),
   policy_version text not null check (
     policy_version = 'wcv_c2_exposure_and_independence_policy.v1'
