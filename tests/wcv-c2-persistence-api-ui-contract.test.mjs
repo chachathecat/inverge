@@ -83,6 +83,83 @@ function sessionBindingSymbol(source, property) {
   return match[1];
 }
 
+function exactCheckoutStep(source) {
+  const lines = source.split("\n");
+  const header = "      - name: Check out exact PR head";
+  const starts = lines.flatMap((line, index) =>
+    line === header ? [index] : [],
+  );
+  assert.equal(starts.length, 1, "workflow must have one exact checkout step");
+  const start = starts[0];
+  let end = lines.length;
+  for (let index = start + 1; index < lines.length; index += 1) {
+    if (lines[index].startsWith("      - ")) {
+      end = index;
+      break;
+    }
+  }
+  return {
+    block: lines.slice(start, end).join("\n"),
+    laterSteps: lines.slice(end).join("\n"),
+  };
+}
+
+function assertCheckoutCredentialBoundary(source) {
+  const { block, laterSteps } = exactCheckoutStep(source);
+  const withBlock =
+    block.match(/^        with:\n((?:          [^\n]+\n?)*)/m)?.[1] ?? "";
+  assert.notEqual(withBlock, "", "exact checkout step must have a with block");
+  assert.equal(
+    (block.match(/^        uses: actions\/checkout@v4$/gm) ?? []).length,
+    1,
+    "exact checkout step must use actions/checkout@v4 once",
+  );
+  assert.equal(
+    (source.match(/^\s*uses: actions\/checkout@/gm) ?? []).length,
+    1,
+    "workflow must have no later checkout operation",
+  );
+  assert.equal(
+    (
+      withBlock.match(
+        /^          ref: \$\{\{ github\.event\.pull_request\.head\.sha \}\}$/gm,
+      ) ?? []
+    ).length,
+    1,
+    "exact checkout step must bind the pull-request head SHA",
+  );
+  assert.equal(
+    (withBlock.match(/^          fetch-depth: 0$/gm) ?? []).length,
+    1,
+    "exact checkout step must retain complete history",
+  );
+  assert.equal(
+    (withBlock.match(/^          persist-credentials: false$/gm) ?? []).length,
+    1,
+    "exact checkout step must disable credential persistence",
+  );
+  assert.equal(
+    (source.match(/^\s*persist-credentials: false$/gm) ?? []).length,
+    1,
+    "workflow must disable credential persistence exactly once",
+  );
+  assert.equal(
+    (source.match(/^\s*persist-credentials: true$/gm) ?? []).length,
+    0,
+    "workflow must never enable credential persistence",
+  );
+  assert.doesNotMatch(withBlock, /^\s*token:/m);
+  assert.doesNotMatch(
+    laterSteps,
+    /\bgit\b[^\n]*\b(?:push|pull|fetch|clone|ls-remote)\b/im,
+  );
+  assert.doesNotMatch(laterSteps, /^\s*uses: actions\/checkout@/im);
+  assert.doesNotMatch(
+    laterSteps,
+    /\bgit\b[^\n]*(?:credential(?:[.-]helper|\s+helper)|extraheader)\b|\bcredential-helper\b/im,
+  );
+}
+
 test("migration is service-only, exact-user, forced-RLS, append-only and CAS/replay atomic", async () => {
   const sql = await readFile(SQL, "utf8");
   for (const table of [
@@ -269,6 +346,16 @@ test("generic Runtime Gate delegates exact C2 paths to a fork-safe read-only pul
   assert.match(workflow, /if: always\(\)/);
   assert.match(workflow, /--cleanup/);
   assert.match(workflow, /actions\/upload-artifact@v4/);
+  assertCheckoutCredentialBoundary(workflow);
+  const workflowWithoutCredentialBoundary = workflow.replace(
+    /^          persist-credentials: false\n/m,
+    "",
+  );
+  assert.notEqual(workflowWithoutCredentialBoundary, workflow);
+  assert.throws(
+    () => assertCheckoutCredentialBoundary(workflowWithoutCredentialBoundary),
+    /disable credential persistence/,
+  );
   assert.deepEqual(
     runtimeRequiredPathRecords(["supabase/migrations/20990101000000_unreviewed.sql"]),
     [{

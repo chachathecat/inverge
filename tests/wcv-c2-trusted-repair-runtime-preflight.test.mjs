@@ -60,6 +60,83 @@ function assertDedicatedPathClosure(paths) {
   }
 }
 
+function exactCheckoutStep(source) {
+  const lines = source.split("\n");
+  const header = "      - name: Check out exact PR head";
+  const starts = lines.flatMap((line, index) =>
+    line === header ? [index] : [],
+  );
+  assert.equal(starts.length, 1, "workflow must have one exact checkout step");
+  const start = starts[0];
+  let end = lines.length;
+  for (let index = start + 1; index < lines.length; index += 1) {
+    if (lines[index].startsWith("      - ")) {
+      end = index;
+      break;
+    }
+  }
+  return {
+    block: lines.slice(start, end).join("\n"),
+    laterSteps: lines.slice(end).join("\n"),
+  };
+}
+
+function assertCheckoutCredentialBoundary(source) {
+  const { block, laterSteps } = exactCheckoutStep(source);
+  const withBlock =
+    block.match(/^        with:\n((?:          [^\n]+\n?)*)/m)?.[1] ?? "";
+  assert.notEqual(withBlock, "", "exact checkout step must have a with block");
+  assert.equal(
+    (block.match(/^        uses: actions\/checkout@v4$/gm) ?? []).length,
+    1,
+    "exact checkout step must use actions/checkout@v4 once",
+  );
+  assert.equal(
+    (source.match(/^\s*uses: actions\/checkout@/gm) ?? []).length,
+    1,
+    "workflow must have no later checkout operation",
+  );
+  assert.equal(
+    (
+      withBlock.match(
+        /^          ref: \$\{\{ github\.event\.pull_request\.head\.sha \}\}$/gm,
+      ) ?? []
+    ).length,
+    1,
+    "exact checkout step must bind the pull-request head SHA",
+  );
+  assert.equal(
+    (withBlock.match(/^          fetch-depth: 0$/gm) ?? []).length,
+    1,
+    "exact checkout step must retain complete history",
+  );
+  assert.equal(
+    (withBlock.match(/^          persist-credentials: false$/gm) ?? []).length,
+    1,
+    "exact checkout step must disable credential persistence",
+  );
+  assert.equal(
+    (source.match(/^\s*persist-credentials: false$/gm) ?? []).length,
+    1,
+    "workflow must disable credential persistence exactly once",
+  );
+  assert.equal(
+    (source.match(/^\s*persist-credentials: true$/gm) ?? []).length,
+    0,
+    "workflow must never enable credential persistence",
+  );
+  assert.doesNotMatch(withBlock, /^\s*token:/m);
+  assert.doesNotMatch(
+    laterSteps,
+    /\bgit\b[^\n]*\b(?:push|pull|fetch|clone|ls-remote)\b/im,
+  );
+  assert.doesNotMatch(laterSteps, /^\s*uses: actions\/checkout@/im);
+  assert.doesNotMatch(
+    laterSteps,
+    /\bgit\b[^\n]*(?:credential(?:[.-]helper|\s+helper)|extraheader)\b|\bcredential-helper\b/im,
+  );
+}
+
 function exactPersistedCheckValue(sql, column) {
   const checks = [
     ...sql.matchAll(
@@ -146,6 +223,16 @@ test("C2 workflow is fork-safe, exact-head, path-triggered, least-privilege, and
   assert.match(workflow, /WCV_C2_RUNTIME_EVIDENCE_PATH/);
   assert.doesNotMatch(workflow, /\bnpx\b/);
   assert.doesNotMatch(workflow, /supabase\s+(?:login|link)|--linked|db\s+push/i);
+  assertCheckoutCredentialBoundary(workflow);
+  const workflowWithoutCredentialBoundary = workflow.replace(
+    /^          persist-credentials: false\n/m,
+    "",
+  );
+  assert.notEqual(workflowWithoutCredentialBoundary, workflow);
+  assert.throws(
+    () => assertCheckoutCredentialBoundary(workflowWithoutCredentialBoundary),
+    /disable credential persistence/,
+  );
 });
 
 test("C2 verifier uses locked local runtimes and suppresses remote credentials", () => {
