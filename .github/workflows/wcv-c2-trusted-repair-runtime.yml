@@ -7,7 +7,10 @@ on:
     paths:
       - ".github/workflows/wcv-c2-trusted-repair-runtime.yml"
       - "app/api/review-os/trusted-repair/**"
+      - "app/app/layout.tsx"
       - "app/app/trusted-repair/**"
+      - "components/learner/learner-ui.tsx"
+      - "components/review-os/app-shell.tsx"
       - "components/review-os/trusted-repair-loop.tsx"
       - "lib/review-os/trusted-repair-*.ts"
       - "lib/review-os/law-source-version-registry.ts"

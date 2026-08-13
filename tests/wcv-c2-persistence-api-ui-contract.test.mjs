@@ -4,6 +4,7 @@ import test from "node:test";
 
 import {
   DEDICATED_RUNTIME_ADAPTER_PATHS,
+  RUNTIME_REQUIRED_PATTERNS,
   runtimeRequiredPathRecords,
 } from "../scripts/automation/runtime-risk-contract.mjs";
 
@@ -18,6 +19,32 @@ const SERVER = "lib/review-os/trusted-repair-server.ts";
 const ENGINE = "lib/review-os/trusted-repair-engine.ts";
 const UI = "components/review-os/trusted-repair-loop.tsx";
 const WORKFLOW = ".github/workflows/wcv-c2-trusted-repair-runtime.yml";
+const APP_LAYOUT = "app/app/layout.tsx";
+const APP_SHELL = "components/review-os/app-shell.tsx";
+const LEARNER_UI = "components/learner/learner-ui.tsx";
+const DEDICATED_RUNTIME_PATHS = [
+  SQL,
+  LAW_REGISTRY,
+  APP_LAYOUT,
+  APP_SHELL,
+  LEARNER_UI,
+];
+const GENERIC_RUNTIME_PATTERNS = [
+  "supabase/migrations/**",
+  "app/api/auth/**",
+  "lib/auth/**",
+  "middleware.ts",
+  "app/api/notifications/**",
+  "lib/notifications/**",
+  "app/api/billing/**",
+  "lib/billing/**",
+  "app/api/payments/**",
+  "lib/payments/**",
+  "app/api/entitlements/**",
+  "lib/entitlements/**",
+  "config/paid-launch-readiness.json",
+  "vercel.json",
+];
 
 function exportedStringConstant(source, constantName) {
   const match = source.match(
@@ -203,12 +230,27 @@ test("DTO and UI expose bounded fields only after committed help and support dur
 });
 
 test("generic Runtime Gate delegates exact C2 paths to a fork-safe read-only pull_request check", async () => {
-  const workflow = await readFile(WORKFLOW, "utf8");
-  assert.deepEqual(DEDICATED_RUNTIME_ADAPTER_PATHS, [SQL, LAW_REGISTRY]);
-  assert.deepEqual(runtimeRequiredPathRecords([SQL, LAW_REGISTRY]), []);
+  const [workflow, appLayout, appShell, learnerUi] = await Promise.all([
+    readFile(WORKFLOW, "utf8"),
+    readFile(APP_LAYOUT, "utf8"),
+    readFile(APP_SHELL, "utf8"),
+    readFile(LEARNER_UI, "utf8"),
+  ]);
+  assert.deepEqual(DEDICATED_RUNTIME_ADAPTER_PATHS, DEDICATED_RUNTIME_PATHS);
+  assert.deepEqual(RUNTIME_REQUIRED_PATTERNS, GENERIC_RUNTIME_PATTERNS);
+  assert.deepEqual(runtimeRequiredPathRecords(DEDICATED_RUNTIME_PATHS), []);
   for (const delegatedPath of DEDICATED_RUNTIME_ADAPTER_PATHS) {
-    assert.match(workflow, new RegExp(`- ["']${delegatedPath}["']`));
+    assert.equal(
+      (workflow.match(new RegExp(`- ["']${delegatedPath}["']`, "g")) ?? [])
+        .length,
+      1,
+    );
   }
+  assert.match(appLayout, /requireTrustedRepairAccess\(\)/);
+  assert.match(appLayout, /trustedRepairEnabled/);
+  assert.match(appShell, /trustedRepairEnabled=\{trustedRepairEnabled\}/);
+  assert.match(learnerUi, /trustedRepairEnabled\s*\?/);
+  assert.match(learnerUi, /href: "\/app\/trusted-repair"/);
   assert.doesNotMatch(
     workflow,
     /github\.event\.pull_request\.head\.ref\s*==/,
@@ -220,6 +262,9 @@ test("generic Runtime Gate delegates exact C2 paths to a fork-safe read-only pul
   assert.doesNotMatch(workflow, /\b(?:fork|source[_ -]?repo)\b/i);
   assert.doesNotMatch(workflow, /secrets\./);
   assert.doesNotMatch(workflow, /permissions:[\s\S]*?\b(?:write|id-token)\b/i);
+  assert.doesNotMatch(workflow, /- ["']app\/app\/\*\*["']/);
+  assert.doesNotMatch(workflow, /- ["']components\/\*\*["']/);
+  assert.doesNotMatch(workflow, /- ["']lib\/\*\*["']/);
   assert.match(workflow, /ref: \$\{\{ github\.event\.pull_request\.head\.sha \}\}/);
   assert.match(workflow, /if: always\(\)/);
   assert.match(workflow, /--cleanup/);
@@ -287,12 +332,34 @@ test("machine contract maps all four issues and exactly eight C2 allocations", a
     contract.semanticAnchorPolarity.acceptableAlternativesSatisfyExplicitMappedConceptsOnly,
     true,
   );
+  assert.equal(contract.semanticAnchorPolarity.completeSemanticTokenRequired, true);
+  assert.equal(
+    contract.semanticAnchorPolarity.unrelatedLexicalSubstringCountsAsOccurrence,
+    false,
+  );
+  assert.equal(
+    contract.semanticAnchorPolarity.sameClausePositiveNegatedConflict,
+    "ambiguous",
+  );
+  assert.equal(
+    contract.semanticAnchorPolarity.sameClauseAmbiguousMixFailsClosed,
+    true,
+  );
+  assert.equal(
+    contract.semanticAnchorPolarity.everyOccurrenceInspectedBeforeClauseDecision,
+    true,
+  );
+  assert.equal(
+    contract.semanticAnchorPolarity.independentCleanPositiveClauseMayWinOverSeparateNegatedCounterexample,
+    true,
+  );
   assert.equal(
     contract.fixtureVersion,
     "wcv_c2_rights_safe_fixtures.2026-08-12.v2",
   );
   assert.equal(contract.rubricVersion, "wcv_c2_semantic_anchor_rubric.v2");
   assert.deepEqual(contract.dedicatedRuntime, {
+    protectedPaths: DEDICATED_RUNTIME_PATHS,
     event: "pull_request",
     sameRepositoryPullRequests: true,
     forkPullRequests: true,

@@ -258,6 +258,42 @@ async function createFirstPartialTheory(context: BrowserContext) {
   return view;
 }
 
+async function completeApiRepairCase(input: {
+  context: BrowserContext;
+  subject: (typeof subjects)[number];
+  attemptBody: string;
+  repairBody: string;
+}) {
+  let view = (
+    await apiCommand(input.context, "start", {
+      subject: input.subject,
+      inputMode: "TYPED_TEXT",
+    })
+  ).body.view;
+  let diagnosedView: typeof view | null = null;
+  for (const [action, fields] of [
+    ["confirm_revision", { body: "합성 확정 수정본" }],
+    ["commit_prediction", { prediction: "likely_partial", confidence: "medium" }],
+    ["commit_attempt", { body: input.attemptBody }],
+    ["commit_self_diagnosis", { selfDiagnosisCode: "semantic_boundary_check" }],
+    ["diagnose", {}],
+    ["request_scaffold", {}],
+    ["submit_repair", { body: input.repairBody }],
+    ["continue", { continuation: "VERIFY_AND_CONTINUE" }],
+  ] as const) {
+    const result = await apiCommand(input.context, action, {
+      sessionId: view.session.sessionId,
+      expectedVersion: view.session.recordVersion,
+      ...fields,
+    });
+    expect(result.response.status()).toBe(200);
+    view = result.body.view;
+    if (action === "diagnose") diagnosedView = structuredClone(view);
+  }
+  expect(diagnosedView).not.toBeNull();
+  return { diagnosedView: diagnosedView!, finalView: view };
+}
+
 test("three subjects, responsive flow, keyboard, input modes, attacks, and new-browser recovery", async ({ browser }) => {
   requireRuntime();
   test.skip(Boolean(recoverySessionId), "normal pass is omitted during restart recovery");
@@ -497,6 +533,40 @@ test("three subjects, responsive flow, keyboard, input modes, attacks, and new-b
   expect(correctedVerification.response.status()).toBe(200);
   expect(correctedVerification.body.view.session.state).toBe("verified");
 
+  const lexicalCurrencyCase = await completeApiRepairCase({
+    context: modeContext,
+    subject: "appraisal_practical",
+    attemptBody:
+      "수량 100m²와 단위가격 2000000을 곱해 200000000을 얻는다. m² 단위 양수이며 오류 원인을 점검한다. 반올림 없음으로 쓰고 역산하여 검산한다.",
+    repairBody:
+      "수량 100m²와 단위가격 2000000을 곱해 200000000을 얻는다. m² 단위 양수이며 오류 원인을 점검한다. 반올림 없음으로 쓰고 역산하여 검산한다.",
+  });
+  expect(lexicalCurrencyCase.diagnosedView.session.primaryGapId).toBe(
+    "gap-practice-unit-rounding-verification",
+  );
+  expect(
+    lexicalCurrencyCase.diagnosedView.diagnosis.candidates.find(
+      (candidate: { gapId: string }) =>
+        candidate.gapId === "gap-practice-unit-rounding-verification",
+    )?.supportingEvidence,
+  ).toContain(
+    "independent_attempt:practice-unit-rounding-verification:missing:원",
+  );
+  expect(lexicalCurrencyCase.finalView.session.state).toBe("partial");
+
+  const sameClauseConflictCase = await completeApiRepairCase({
+    context: modeContext,
+    subject: "appraisal_theory",
+    attemptBody:
+      "법적·물리적·경제적 가능성을 사례와 반대 사실에 적용해 결론을 낸다.",
+    repairBody:
+      "최유효이용은 합리적이지만 합리적이지 않고 가능하다",
+  });
+  expect(sameClauseConflictCase.diagnosedView.session.primaryGapId).toBe(
+    "gap-theory-exact-definition",
+  );
+  expect(sameClauseConflictCase.finalView.session.state).toBe("partial");
+
   const contextB = await contextFor(browser, emailB, passwordB);
   const crossTenant = await contextB.request.get(
     `/api/review-os/trusted-repair?sessionId=${startView.session.sessionId}`,
@@ -517,6 +587,8 @@ test("three subjects, responsive flow, keyboard, input modes, attacks, and new-b
     partialRetryRefreshAndBrowserRecovery: "passed",
     partialRetryCasIdempotencyAndBound: "passed",
     correctedPartialRetryVerification: "passed",
+    lexicalCurrencyBoundaryFailClosed: "passed",
+    sameClausePolarityConflictFailClosed: "passed",
     providerNetworkRequests: 0,
   };
   if (evidencePath) writeFileSync(evidencePath, `${JSON.stringify(evidence, null, 2)}\n`, { mode: 0o600 });

@@ -42,10 +42,16 @@ clause. Negated and antonym forms such as `합리적이지 않다`, `가능하�
 ambiguous polarity fails closed. A negative counterexample in a separate
 clause does not erase a clear positive assertion about the target. Canonical
 required concepts, acceptable alternatives, and forbidden false claims all use
-the same bounded clause-local assertion-state evaluator. An alternative counts
-only when positively asserted and satisfies only its explicitly mapped required
-concepts. A forbidden claim blocks only when positively asserted; negated or
-ambiguous mentions remain diagnostic metadata without manufacturing a block.
+the same bounded clause-local assertion-state evaluator. Nonnumeric concepts
+must be complete semantic tokens, valid Korean inflections, or explicit
+measurement/unit attachments; arbitrary lexical substrings do not count. Every
+occurrence in one clause is inspected before a decision, so positive/negative
+or positive/ambiguous conflicts in that clause fail closed as `ambiguous`. A
+clean positive target in a separate clause still outranks a distinct negated
+counterexample. An alternative counts only when positively asserted and
+satisfies only its explicitly mapped required concepts. A forbidden claim
+blocks only when positively asserted; negated or ambiguous mentions remain
+diagnostic metadata without manufacturing a block.
 The binding versions are
 `wcv_c2_rights_safe_fixtures.2026-08-12.v2` and
 `wcv_c2_semantic_anchor_rubric.v2`.
@@ -96,6 +102,11 @@ The dedicated `wcv-c2-trusted-repair-runtime` check is a read-only, secret-free
 `pull_request` workflow for both same-repository and fork pull requests. It
 checks out the exact pull-request head on a GitHub-hosted ephemeral runner;
 `pull_request_target` and write-capable authority are prohibited. The check
+protects the exact C2 migration, exact Law registry, and the three exact
+shared-shell integration paths (`app/app/layout.tsx`,
+`components/review-os/app-shell.tsx`, and
+`components/learner/learner-ui.tsx`); every delegated path is machine-bound to
+the literal workflow trigger. The check
 applies both C2 migrations to a fresh isolated runner-local Supabase stack
 twice. Its full pass exercises two Auth identities, grants and forced RLS,
 direct CRUD/RPC denial, tenant isolation, CAS, replay, exposure atomicity, all
@@ -108,8 +119,9 @@ Rollback is forward disable first: keep
 `WCV_C2_TRUSTED_REPAIR_ENABLED` absent or false. The migration is applied only
 to fresh ephemeral local databases in this Work. Reverting the source and
 migration in another fresh isolated environment is the destructive rollback
-test boundary; no remote rollback is authorized. This correction changes no
-learner state, Law source, database, migration, provider, or Production
+test boundary; no remote rollback is authorized. Fixture and rubric bindings
+remain semantic v2. This correction changes no learner state, API, server, Law
+source or behavior, database, migration, schema, provider, or Production
 activation.
 
 ## Resulting-on-merge authority

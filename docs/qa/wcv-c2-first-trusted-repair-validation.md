@@ -41,7 +41,12 @@ to PR #716 after the final candidate workflow completes.
 - Semantic polarity: positive assertion required; negated, antonym, or
   materially ambiguous required concepts fail closed within one bounded local
   assertion-state evaluator shared by canonical concepts, acceptable
-  alternatives, and forbidden false claims. Alternatives satisfy only their
+  alternatives, and forbidden false claims. Nonnumeric occurrences require a
+  complete semantic token, valid Korean inflection, or explicit unit attachment
+  rather than an arbitrary substring. Every occurrence is inspected before the
+  clause decision: positive/negative and positive/ambiguous same-clause mixes
+  are `ambiguous`, while a clean positive target in a separate clause still
+  outranks a distinct negated counterexample. Alternatives satisfy only their
   explicitly mapped concepts and only when positive. Forbidden claims block
   only when positive; negated and ambiguous mentions remain diagnostic only.
 - Semantic bindings: fixture
@@ -49,8 +54,11 @@ to PR #716 after the final candidate workflow completes.
   `wcv_c2_semantic_anchor_rubric.v2`.
 - Dedicated runtime: same-repository and fork `pull_request` events run at the
   exact pull-request head with `contents: read`, no secrets, and a
-  GitHub-hosted ephemeral runner. `pull_request_target`, write-capable tokens,
-  remote Supabase, and provider access are prohibited.
+  GitHub-hosted ephemeral runner. Its exact delegated set is the C2 migration,
+  Law registry, `app/app/layout.tsx`, `components/review-os/app-shell.tsx`, and
+  `components/learner/learner-ui.tsx`; all five paths are machine-bound to the
+  literal workflow trigger. `pull_request_target`, write-capable tokens, remote
+  Supabase, and provider access are prohibited.
 - Law: expected and observed terminal result remains blocked until the
   existing registry can prove exact official current-law binding.
 - Publication: no learner/fixture bodies, credentials, screenshots, traces,
@@ -77,5 +85,6 @@ to PR #716 after the final candidate workflow completes.
   recovery, and zero external provider browser requests; and
 - unconditional no-backup Docker cleanup with exact head unchanged.
 
-This correction changes no learner state, Law source, database, migration,
+Fixture and rubric remain semantic v2. This correction changes no learner
+state, API, server, Law source or behavior, database, migration, schema,
 provider, or Production activation.

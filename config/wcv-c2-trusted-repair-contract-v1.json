@@ -140,9 +140,22 @@
     "forbiddenFalseClaimsBlockOnlyWhenPositive": true,
     "acceptableAlternativesRequirePositiveAssertion": true,
     "acceptableAlternativesSatisfyExplicitMappedConceptsOnly": true,
-    "alternativeGroupsValidated": true
+    "alternativeGroupsValidated": true,
+    "completeSemanticTokenRequired": true,
+    "unrelatedLexicalSubstringCountsAsOccurrence": false,
+    "sameClausePositiveNegatedConflict": "ambiguous",
+    "sameClauseAmbiguousMixFailsClosed": true,
+    "everyOccurrenceInspectedBeforeClauseDecision": true,
+    "independentCleanPositiveClauseMayWinOverSeparateNegatedCounterexample": true
   },
   "dedicatedRuntime": {
+    "protectedPaths": [
+      "supabase/migrations/20260812011903_wcv_c2_trusted_repair_vertical.sql",
+      "lib/review-os/law-source-version-registry.ts",
+      "app/app/layout.tsx",
+      "components/review-os/app-shell.tsx",
+      "components/learner/learner-ui.tsx"
+    ],
     "event": "pull_request",
     "sameRepositoryPullRequests": true,
     "forkPullRequests": true,

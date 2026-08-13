@@ -181,6 +181,217 @@ test("one bounded assertion-state evaluator preserves polarity and occurrence pr
   );
 });
 
+test("complete semantic tokens reject lexical embedding while preserving Korean inflections and units", () => {
+  for (const text of [
+    "원인 분석",
+    "원칙을 검토한다",
+    "원가를 계산한다",
+    "지원 대상",
+    "회원 정보",
+    "원화 금액",
+  ]) {
+    assert.equal(evaluateConceptAssertionState(text, "원"), "absent", text);
+  }
+  for (const text of [
+    "200000000원이다",
+    "원 단위 양수다",
+    "원으로 표시한다",
+    "결과 단위는 원이다",
+  ]) {
+    assert.equal(evaluateConceptAssertionState(text, "원"), "positive", text);
+  }
+  for (const [text, concept] of [
+    ["최유효이용은", "최유효이용"],
+    ["합리적이다", "합리적"],
+    ["가능하다", "가능"],
+    ["검산한다", "검산"],
+    ["포섭한다", "포섭"],
+    ["검증한다", "검증"],
+    ["100m²와 단가", "m²"],
+    ["법적·가능", "법적 가능"],
+  ]) {
+    assert.equal(evaluateConceptAssertionState(text, concept), "positive", text);
+  }
+  assert.equal(
+    evaluateConceptAssertionState("원 단위가 아니다", "원"),
+    "negated",
+  );
+  assert.equal(
+    evaluateConceptAssertionState("m² 단위가 아니다", "m²"),
+    "negated",
+  );
+  assert.equal(
+    evaluateConceptAssertionState("원 단위인지 불확실하다", "원"),
+    "ambiguous",
+  );
+  assert.equal(evaluateConceptAssertionState("수량화 과정", "수량"), "absent");
+  assert.equal(
+    evaluateConceptAssertionState("퍼센트 단위화", "퍼센트 단위"),
+    "absent",
+  );
+});
+
+test("same-clause polarity conflicts fail closed after every occurrence is inspected", () => {
+  assert.equal(
+    evaluateConceptAssertionState(
+      "최유효이용은 합리적이지만 합리적이지 않고 가능하다",
+      "합리적",
+    ),
+    "ambiguous",
+  );
+  assert.equal(
+    evaluateConceptAssertionState(
+      "최유효이용은 합리적이지 않지만 합리적이라고도 쓰고 가능하다",
+      "합리적",
+    ),
+    "ambiguous",
+  );
+  assert.equal(
+    evaluateConceptAssertionState(
+      "최유효이용은 합리적이지만 합리적인지 불확실하다",
+      "합리적",
+    ),
+    "ambiguous",
+  );
+  assert.equal(
+    evaluateConceptAssertionState("합리적이고 합리적이다", "합리적"),
+    "positive",
+  );
+  assert.equal(
+    evaluateConceptAssertionState(
+      "반례 이용은 합리적이지 않다. 최유효이용은 합리적이다.",
+      "합리적",
+    ),
+    "positive",
+  );
+});
+
+test("an unrelated currency substring stays missing and cannot satisfy the Practical unit anchor", () => {
+  const fixture = trustedRepairCanonicalFixture("appraisal_practical");
+  const diagnosis = diagnoseTrustedRepairAttempt({
+    fixture,
+    attemptText:
+      "수량 100m²와 단위가격 2000000을 곱해 200000000을 얻는다. m² 단위 양수이며 오류 원인을 점검한다. 반올림 없음으로 쓰고 역산하여 검산한다.",
+    stateData: PRACTICE_STATE_DATA,
+  });
+  assert.equal(diagnosis.repairNeed, "required");
+  assert.equal(
+    diagnosis.primary.gapId,
+    "gap-practice-unit-rounding-verification",
+  );
+  assert.ok(
+    diagnosis.primary.supportingEvidence.includes(
+      "independent_attempt:practice-unit-rounding-verification:missing:원",
+    ),
+  );
+  const canonical = diagnoseTrustedRepairAttempt({
+    fixture,
+    attemptText: REPAIRS.appraisal_practical,
+    stateData: PRACTICE_STATE_DATA,
+  });
+  assert.equal(canonical.repairNeed, "optional");
+});
+
+test("a contradictory same-clause Theory repair remains partial with ambiguous diagnostic evidence", () => {
+  const fixture = trustedRepairCanonicalFixture("appraisal_theory");
+  const contradictoryRepair =
+    "최유효이용은 합리적이지만 합리적이지 않고 가능하다";
+  const diagnosis = diagnoseTrustedRepairAttempt({
+    fixture,
+    attemptText: contradictoryRepair,
+    stateData: PRACTICE_STATE_DATA,
+  });
+  const definitionGap = diagnosis.candidates.find(
+    (candidate) => candidate.anchorId === "theory-exact-definition",
+  );
+  assert.ok(definitionGap);
+  assert.ok(
+    definitionGap.supportingEvidence.includes(
+      "independent_attempt:theory-exact-definition:required_ambiguous_no_support:합리적",
+    ),
+  );
+
+  let aggregate = aggregateFor("appraisal_theory");
+  aggregate = apply(
+    aggregate,
+    planTrustedRepairRevisionConfirmation({
+      aggregate,
+      artifactId: nextId(),
+      body: "합성 확정 수정본",
+      occurredAt: "2026-08-12T00:10:00.000Z",
+    }),
+  );
+  aggregate = apply(
+    aggregate,
+    planTrustedRepairPrediction({
+      aggregate,
+      prediction: "likely_partial",
+      confidence: "medium",
+    }),
+  );
+  aggregate = apply(
+    aggregate,
+    planTrustedRepairIndependentAttempt({
+      aggregate,
+      artifactId: nextId(),
+      body: "법적·물리적·경제적 가능성을 사례와 반대 사실에 적용한다.",
+      occurredAt: "2026-08-12T00:11:00.000Z",
+    }),
+  );
+  aggregate = apply(
+    aggregate,
+    planTrustedRepairSelfDiagnosis({
+      aggregate,
+      selfDiagnosisCode: "missing_definition",
+    }),
+  );
+  aggregate = apply(
+    aggregate,
+    planTrustedRepairDiagnosis({
+      aggregate,
+      fixture,
+      sourceBinding: SYNTHETIC_SOURCE_BINDING,
+    }),
+  );
+  aggregate = apply(
+    aggregate,
+    planTrustedRepairExposure({
+      aggregate,
+      exposureId: nextId(),
+      occurredAt: "2026-08-12T00:12:00.000Z",
+    }),
+  );
+  aggregate = apply(
+    aggregate,
+    planTrustedRepairSubmission({
+      aggregate,
+      fixture,
+      sourceBinding: SYNTHETIC_SOURCE_BINDING,
+      artifactId: nextId(),
+      body: contradictoryRepair,
+      occurredAt: "2026-08-12T00:13:00.000Z",
+    }),
+  );
+  aggregate = apply(
+    aggregate,
+    planTrustedRepairContinuation({
+      aggregate,
+      fixture,
+      sourceBinding: SYNTHETIC_SOURCE_BINDING,
+      continuation: "VERIFY_AND_CONTINUE",
+      exposureId: nextId(),
+      occurredAt: "2026-08-12T00:14:00.000Z",
+    }),
+  );
+  assert.equal(aggregate.session.state, "partial");
+  assert.equal(aggregate.session.outcome, "partial");
+  assert.ok(
+    aggregate.session.stateData.resultReasonCodes.includes(
+      "same_session_primary_criterion_not_yet_passed",
+    ),
+  );
+});
+
 test("negated or ambiguous forbidden claims remain diagnostic and never manufacture a block", () => {
   const fixture = trustedRepairCanonicalFixture("appraisal_practical");
   const validWithNegations = diagnoseTrustedRepairAttempt({

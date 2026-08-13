@@ -20,6 +20,16 @@ const workflowPullRequestPaths = [
 const C2_MIGRATION =
   "supabase/migrations/20260812011903_wcv_c2_trusted_repair_vertical.sql";
 const LAW_REGISTRY = "lib/review-os/law-source-version-registry.ts";
+const APP_LAYOUT = "app/app/layout.tsx";
+const APP_SHELL = "components/review-os/app-shell.tsx";
+const LEARNER_UI = "components/learner/learner-ui.tsx";
+const DEDICATED_RUNTIME_PATHS = [
+  C2_MIGRATION,
+  LAW_REGISTRY,
+  APP_LAYOUT,
+  APP_SHELL,
+  LEARNER_UI,
+];
 const c2Migration = read(C2_MIGRATION);
 const machineContract = JSON.parse(
   read("config/wcv-c2-trusted-repair-contract-v1.json"),
@@ -39,6 +49,16 @@ const verifierModule = await import(
   pathToFileURL(path.join(root, "scripts/automation/verify-wcv-c2-trusted-repair-runtime.mjs"))
     .href
 );
+
+function assertDedicatedPathClosure(paths) {
+  for (const delegatedPath of DEDICATED_RUNTIME_PATHS) {
+    assert.equal(
+      paths.filter((protectedPath) => protectedPath === delegatedPath).length,
+      1,
+      `${delegatedPath} must appear exactly once in pull_request.paths`,
+    );
+  }
+}
 
 function exactPersistedCheckValue(sql, column) {
   const checks = [
@@ -72,23 +92,28 @@ test("C2 workflow is fork-safe, exact-head, path-triggered, least-privilege, and
     workflow,
     /supabase\/migrations\/20260812011903_wcv_c2_trusted_repair_vertical\.sql/,
   );
-  assert.ok(DEDICATED_RUNTIME_ADAPTER_PATHS.includes(C2_MIGRATION));
-  assert.ok(DEDICATED_RUNTIME_ADAPTER_PATHS.includes(LAW_REGISTRY));
-  for (const delegatedPath of DEDICATED_RUNTIME_ADAPTER_PATHS) {
-    assert.equal(
-      workflowPullRequestPaths.filter(
-        (protectedPath) => protectedPath === delegatedPath,
-      ).length,
-      1,
-      `${delegatedPath} must appear exactly once in pull_request.paths`,
+  assert.deepEqual(DEDICATED_RUNTIME_ADAPTER_PATHS, DEDICATED_RUNTIME_PATHS);
+  assert.deepEqual(
+    machineContract.dedicatedRuntime.protectedPaths,
+    DEDICATED_RUNTIME_PATHS,
+  );
+  assertDedicatedPathClosure(workflowPullRequestPaths);
+  for (const delegatedPath of DEDICATED_RUNTIME_PATHS) {
+    assert.throws(
+      () =>
+        assertDedicatedPathClosure(
+          workflowPullRequestPaths.filter(
+            (protectedPath) => protectedPath !== delegatedPath,
+          ),
+        ),
+      `${delegatedPath} deletion must fail the focused contract`,
     );
   }
-  assert.equal(
-    workflowPullRequestPaths.filter(
-      (protectedPath) => protectedPath === LAW_REGISTRY,
-    ).length,
-    1,
-  );
+  assert.match(read(APP_LAYOUT), /requireTrustedRepairAccess\(\)/);
+  assert.match(read(APP_LAYOUT), /trustedRepairEnabled/);
+  assert.match(read(APP_SHELL), /trustedRepairEnabled=\{trustedRepairEnabled\}/);
+  assert.match(read(LEARNER_UI), /trustedRepairEnabled\s*\?/);
+  assert.match(read(LEARNER_UI), /href: "\/app\/trusted-repair"/);
   assert.doesNotMatch(
     workflow,
     /github\.event\.pull_request\.head\.ref\s*==/,
@@ -112,6 +137,9 @@ test("C2 workflow is fork-safe, exact-head, path-triggered, least-privilege, and
   assert.match(workflow, /if: success\(\)/);
   assert.doesNotMatch(workflow, /secrets\./);
   assert.doesNotMatch(workflow, /permissions:[\s\S]*?\b(?:write|id-token)\b/i);
+  assert.doesNotMatch(workflow, /- ["']app\/app\/\*\*["']/);
+  assert.doesNotMatch(workflow, /- ["']components\/\*\*["']/);
+  assert.doesNotMatch(workflow, /- ["']lib\/\*\*["']/);
   assert.doesNotMatch(workflow, /self-hosted/);
   assert.match(workflow, /runs-on: ubuntu-latest/);
   assert.match(workflow, /actions\/upload-artifact@v4/);

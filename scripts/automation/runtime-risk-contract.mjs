@@ -20,11 +20,15 @@ export const RUNTIME_REQUIRED_PATTERNS = Object.freeze([
 // WCV-C2 has an exact-head, two-fresh-database runtime gate that is stricter
 // than the generic S233A/S236P adapters. Its read-only, secret-free
 // pull_request workflow covers same-repository and fork PRs that modify the
-// exact C2 migration or Law source-version registry. Only those exact paths
-// are delegated; arbitrary migration paths remain fail-closed here.
+// exact C2 migration, Law source-version registry, or one of the three exact
+// shared-shell integration paths. Only those exact paths are delegated;
+// arbitrary migration paths remain fail-closed here.
 export const DEDICATED_RUNTIME_ADAPTER_PATHS = Object.freeze([
   "supabase/migrations/20260812011903_wcv_c2_trusted_repair_vertical.sql",
   "lib/review-os/law-source-version-registry.ts",
+  "app/app/layout.tsx",
+  "components/review-os/app-shell.tsx",
+  "components/learner/learner-ui.tsx",
 ]);
 
 export function runtimeRequiredPathRecords(files) {
