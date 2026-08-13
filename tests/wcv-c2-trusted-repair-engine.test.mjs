@@ -120,10 +120,100 @@ const BLOCKED_LAW = {
   blockerCount: 2,
 };
 
+const VERIFIED_LAW = {
+  ...BLOCKED_LAW,
+  bindingVersion: "synthetic-verified-law-binding",
+  sourceStatus: "verified",
+  versionStatus: "verified",
+  currentLawStatus: "current_law_verified",
+  blockerCount: 0,
+};
+
+const VERIFIED_LAW_WITH_OPEN_BLOCKER = {
+  ...VERIFIED_LAW,
+  blockerCount: 1,
+};
+
 const PRACTICE_STATE_DATA = {
   ...initialTrustedRepairStateData("TYPED_TEXT"),
   predictionConfidence: "medium",
 };
+
+function prepareRepairSubmittedJourney(subject, sourceBinding) {
+  const fixture = trustedRepairCanonicalFixture(subject);
+  let aggregate = aggregateFor(subject, "TYPED_TEXT", sourceBinding);
+  aggregate = apply(
+    aggregate,
+    planTrustedRepairRevisionConfirmation({
+      aggregate,
+      artifactId: nextId(),
+      body: "확정 수정본",
+      occurredAt: "2026-08-12T00:01:00.000Z",
+    }),
+  );
+  aggregate = apply(
+    aggregate,
+    planTrustedRepairPrediction({
+      aggregate,
+      prediction: "likely_partial",
+      confidence: "medium",
+    }),
+  );
+  aggregate = apply(
+    aggregate,
+    planTrustedRepairIndependentAttempt({
+      aggregate,
+      artifactId: nextId(),
+      body: "독립적으로 적은 근거가 있지만 핵심 기준 일부는 아직 빠져 있다.",
+      occurredAt: "2026-08-12T00:02:00.000Z",
+    }),
+  );
+  aggregate = apply(
+    aggregate,
+    planTrustedRepairSelfDiagnosis({
+      aggregate,
+      selfDiagnosisCode: "missing_core_reason",
+    }),
+  );
+  aggregate = apply(
+    aggregate,
+    planTrustedRepairDiagnosis({ aggregate, fixture, sourceBinding }),
+  );
+  aggregate = apply(
+    aggregate,
+    planTrustedRepairExposure({
+      aggregate,
+      exposureId: nextId(),
+      occurredAt: "2026-08-12T00:03:00.000Z",
+    }),
+  );
+  return apply(
+    aggregate,
+    planTrustedRepairSubmission({
+      aggregate,
+      fixture,
+      sourceBinding,
+      artifactId: nextId(),
+      body: REPAIRS[subject],
+      occurredAt: "2026-08-12T00:04:00.000Z",
+    }),
+  );
+}
+
+function verifyPreparedJourney(aggregate, subject, sourceBinding) {
+  const fixture = trustedRepairCanonicalFixture(subject);
+  return apply(
+    aggregate,
+    planTrustedRepairContinuation({
+      aggregate,
+      fixture,
+      sourceBinding,
+      continuation: "VERIFY_AND_CONTINUE",
+      exposureId: nextId(),
+      occurredAt: "2026-08-12T00:05:00.000Z",
+    }),
+  );
+}
 
 test("C2 semantic bindings advance only the fixture and rubric to v2", () => {
   assert.equal(
@@ -637,6 +727,105 @@ for (const subject of ["appraisal_practical", "appraisal_theory", "appraisal_com
     assert.ok(aggregate.session.stateData.resultReasonCodes.includes("no_mastery_transfer_stability_score_or_pass_claim"));
   });
 }
+
+test("Law verification requires zero active blockers while Practice and Theory remain unchanged", () => {
+  const verifiedLaw = verifyPreparedJourney(
+    prepareRepairSubmittedJourney(
+      "appraisal_compensation_law",
+      VERIFIED_LAW,
+    ),
+    "appraisal_compensation_law",
+    VERIFIED_LAW,
+  );
+  assert.equal(verifiedLaw.session.state, "verified");
+  assert.equal(verifiedLaw.session.outcome, "verified");
+  assert.ok(
+    verifiedLaw.session.stateData.resultReasonCodes.includes(
+      "same_session_primary_criterion_passed",
+    ),
+  );
+
+  const blockedLaw = verifyPreparedJourney(
+    prepareRepairSubmittedJourney(
+      "appraisal_compensation_law",
+      VERIFIED_LAW_WITH_OPEN_BLOCKER,
+    ),
+    "appraisal_compensation_law",
+    VERIFIED_LAW_WITH_OPEN_BLOCKER,
+  );
+  assert.equal(blockedLaw.session.state, "blocked");
+  assert.equal(blockedLaw.session.outcome, "blocked");
+  assert.ok(
+    blockedLaw.session.stateData.resultReasonCodes.includes(
+      "law_source_currentness_unverified",
+    ),
+  );
+
+  for (const subject of ["appraisal_practical", "appraisal_theory"]) {
+    const aggregate = verifyPreparedJourney(
+      prepareRepairSubmittedJourney(subject, SYNTHETIC_SOURCE_BINDING),
+      subject,
+      SYNTHETIC_SOURCE_BINDING,
+    );
+    assert.equal(aggregate.session.outcome, "verified", subject);
+    assert.ok(
+      aggregate.session.stateData.resultReasonCodes.includes(
+        "no_mastery_transfer_stability_score_or_pass_claim",
+      ),
+      subject,
+    );
+  }
+  assert.ok(
+    verifiedLaw.session.stateData.resultReasonCodes.includes(
+      "no_mastery_transfer_stability_score_or_pass_claim",
+    ),
+  );
+});
+
+test("an open-blocker Law session fails closed when the current binding reaches zero blockers", () => {
+  const fixture = trustedRepairCanonicalFixture("appraisal_compensation_law");
+  const aggregate = prepareRepairSubmittedJourney(
+    "appraisal_compensation_law",
+    VERIFIED_LAW_WITH_OPEN_BLOCKER,
+  );
+  const persistedSourceVersion = aggregate.session.bindings.sourceVersion;
+
+  assert.equal(
+    persistedSourceVersion,
+    trustedRepairSourceVersion(fixture, VERIFIED_LAW_WITH_OPEN_BLOCKER),
+  );
+  assert.notEqual(
+    persistedSourceVersion,
+    trustedRepairSourceVersion(fixture, VERIFIED_LAW),
+  );
+  assert.equal(
+    trustedRepairSourceBindingMatches({
+      aggregate,
+      fixture,
+      sourceBinding: VERIFIED_LAW,
+    }),
+    false,
+  );
+
+  const driftPlan = planTrustedRepairContinuation({
+    aggregate,
+    fixture,
+    sourceBinding: VERIFIED_LAW,
+    continuation: "VERIFY_AND_CONTINUE",
+    exposureId: nextId(),
+    occurredAt: "2026-08-12T00:06:00.000Z",
+  });
+  const blocked = apply(aggregate, driftPlan);
+  assert.equal(blocked.session.state, "blocked");
+  assert.equal(blocked.session.outcome, "blocked");
+  assert.equal(blocked.session.bindings.sourceVersion, persistedSourceVersion);
+  assert.deepEqual(blocked.session.stateData.resultReasonCodes, [
+    "source_binding_version_drift",
+    "verified_release_denied_until_new_session_diagnosis",
+  ]);
+  assert.equal(driftPlan.exposure, null);
+  assert.equal(driftPlan.artifact, null);
+});
 
 test("all six bounded repair paths and all three continuation commands are reachable", () => {
   const fixture = trustedRepairCanonicalFixture("appraisal_practical");

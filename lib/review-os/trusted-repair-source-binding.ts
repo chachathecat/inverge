@@ -1,6 +1,9 @@
 import "server-only";
 
-import { loadLawSourceVersionRegistry } from "./law-source-version-registry";
+import {
+  countReferencedOpenBlockingLawSourceBlockers,
+  loadLawSourceVersionRegistry,
+} from "./law-source-version-registry";
 import {
   SYNTHETIC_SOURCE_BINDING,
   type TrustedRepairLawBindingState,
@@ -33,15 +36,19 @@ export function resolveTrustedRepairSourceBinding(
       blockerCount: 1,
     };
   }
+  const blockerIds = [
+    ...source.blockerIds,
+    ...anchor.blockerIds,
+  ];
   return {
     bindingVersion: `${registry.schemaVersion}:${registry.generatedAt}`,
     sourceStatus: source.sourceStatus,
     versionStatus: source.versionMetadata.versionStatus,
     currentLawStatus: source.versionMetadata.currentLawStatus,
     sourceAnchorId: anchor.anchorId,
-    blockerCount: new Set([
-      ...source.blockerIds,
-      ...anchor.blockerIds,
-    ]).size,
+    blockerCount: countReferencedOpenBlockingLawSourceBlockers(
+      blockerIds,
+      registry.blockers,
+    ),
   };
 }

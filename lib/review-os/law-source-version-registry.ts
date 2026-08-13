@@ -878,11 +878,35 @@ function isVerifiedLike(sourceStatus: LegalSourceStatus, versionStatus?: LawVers
   return sourceStatus === "verified" && (versionStatus === undefined || versionStatus === "verified" || versionStatus === "applicable_to_exam_date");
 }
 
-function hasOpenBlockingBlockers(blockerIds: readonly string[], blockersById: ReadonlyMap<string, LegalSourceBlocker>) {
-  return blockerIds.some((blockerId) => {
+function isOpenBlockingLawSourceBlocker(blocker: LegalSourceBlocker) {
+  return blocker.status === "open" && blocker.severity === "blocking";
+}
+
+export function countReferencedOpenBlockingLawSourceBlockers(
+  blockerIds: readonly string[],
+  blockers: readonly LegalSourceBlocker[],
+) {
+  const blockersById = new Map(blockers.map((blocker) => [blocker.blockerId, blocker]));
+  if (blockersById.size !== blockers.length) {
+    throw new Error("law-source blocker registry contains duplicate blocker IDs");
+  }
+
+  let count = 0;
+  for (const blockerId of new Set(blockerIds)) {
     const blocker = blockersById.get(blockerId);
-    return blocker?.status === "open" && blocker.severity === "blocking";
-  });
+    if (!blocker) {
+      throw new Error(`unknown law-source blocker reference ${blockerId}`);
+    }
+    if (isOpenBlockingLawSourceBlocker(blocker)) count += 1;
+  }
+  return count;
+}
+
+function hasOpenBlockingBlockers(blockerIds: readonly string[], blockersById: ReadonlyMap<string, LegalSourceBlocker>) {
+  return countReferencedOpenBlockingLawSourceBlockers(
+    blockerIds,
+    [...blockersById.values()],
+  ) > 0;
 }
 
 function assertUniqueIds(ids: readonly string[], sourceName: string) {
@@ -1164,7 +1188,7 @@ export function buildLawSourceVersionReport(
       unresolvedConflictCount: lawSources.filter((source) => (
         source.sourceStatus === "unresolved_conflict" || source.versionMetadata.versionStatus === "unresolved_conflict"
       )).length,
-      openBlockingBlockerCount: registry.blockers.filter((blocker) => blocker.status === "open" && blocker.severity === "blocking").length,
+      openBlockingBlockerCount: registry.blockers.filter(isOpenBlockingLawSourceBlocker).length,
       blockedReleasePackageLinkCount: blockedReleasePackageLinkIds.length,
       highConfidenceReviewAllowedCheckCount: registry.examDateVersionChecks.filter((check) => check.releaseConfidence.s211HighConfidenceAllowed).length,
       sourceStatusCounts: countByStatus(LEGAL_SOURCE_STATUSES, lawSources, (source) => source.sourceStatus),

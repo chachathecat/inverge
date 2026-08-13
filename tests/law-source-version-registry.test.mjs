@@ -7,6 +7,7 @@ import path from "node:path";
 
 import {
   buildLawSourceVersionReport,
+  countReferencedOpenBlockingLawSourceBlockers,
   loadLawSourceVersionRegistry,
   loadLawSourceVersionReport,
 } from "../lib/review-os/law-source-version-registry.ts";
@@ -109,6 +110,27 @@ function syntheticVerifiedAnchor(sourceId = "synthetic-s208-land-compensation-ac
     s207SourceAnchorKind: "law_source_version",
     s205SourceReferenceKind: "subject_validator",
     containsRawContent: false,
+  };
+}
+
+function syntheticBlocker({
+  blockerId,
+  status,
+  severity,
+  sourceIds = [],
+  sourceAnchorIds = [],
+}) {
+  return {
+    blockerId,
+    kind: "release_ready_blocked",
+    status,
+    severity,
+    summary: `Synthetic blocker ${blockerId}`,
+    requiredResolver: "human_decision",
+    sourceIds,
+    sourceAnchorIds,
+    referencePackageLinkIds: [],
+    evidenceReviewLinkIds: [],
   };
 }
 
@@ -220,7 +242,105 @@ test("S208 default law source registry loads as metadata-only blocked candidate 
   assert.equal(report.totals.verifiedLawSourceCount, 0);
   assert.equal(report.totals.needsOfficialVerificationCount, 10);
   assert.equal(report.totals.openBlockingBlockerCount, 10);
+  assert.equal(
+    countReferencedOpenBlockingLawSourceBlockers(
+      [
+        ...registry.lawSources.flatMap((source) => source.blockerIds),
+        ...registry.sourceAnchors.flatMap((anchor) => anchor.blockerIds),
+      ],
+      registry.blockers,
+    ),
+    report.totals.openBlockingBlockerCount,
+  );
   assert.equal(report.safeUse, "s208_law_source_version_validation_only");
+});
+
+test("S208 active blocker counting deduplicates references and fails closed", () => {
+  const blockers = [
+    syntheticBlocker({
+      blockerId: "synthetic-open-blocking-a",
+      status: "open",
+      severity: "blocking",
+    }),
+    syntheticBlocker({
+      blockerId: "synthetic-resolved-blocking",
+      status: "resolved",
+      severity: "blocking",
+    }),
+    syntheticBlocker({
+      blockerId: "synthetic-open-warning",
+      status: "open",
+      severity: "warning",
+    }),
+    syntheticBlocker({
+      blockerId: "synthetic-resolved-warning",
+      status: "resolved",
+      severity: "warning",
+    }),
+    syntheticBlocker({
+      blockerId: "synthetic-open-blocking-b",
+      status: "open",
+      severity: "blocking",
+    }),
+  ];
+
+  assert.equal(
+    countReferencedOpenBlockingLawSourceBlockers(
+      ["synthetic-open-blocking-a"],
+      blockers,
+    ),
+    1,
+  );
+  assert.equal(
+    countReferencedOpenBlockingLawSourceBlockers(
+      ["synthetic-resolved-blocking"],
+      blockers,
+    ),
+    0,
+  );
+  assert.equal(
+    countReferencedOpenBlockingLawSourceBlockers(
+      ["synthetic-open-warning"],
+      blockers,
+    ),
+    0,
+  );
+  assert.equal(
+    countReferencedOpenBlockingLawSourceBlockers(
+      ["synthetic-resolved-warning"],
+      blockers,
+    ),
+    0,
+  );
+  assert.equal(
+    countReferencedOpenBlockingLawSourceBlockers(
+      ["synthetic-open-blocking-a", "synthetic-open-blocking-a"],
+      blockers,
+    ),
+    1,
+  );
+  assert.equal(
+    countReferencedOpenBlockingLawSourceBlockers(
+      [
+        "synthetic-open-blocking-a",
+        "synthetic-resolved-blocking",
+        "synthetic-open-warning",
+        "synthetic-resolved-warning",
+        "synthetic-open-blocking-b",
+        "synthetic-open-blocking-b",
+      ],
+      blockers,
+    ),
+    2,
+  );
+  assert.throws(
+    () =>
+      countReferencedOpenBlockingLawSourceBlockers(
+        ["synthetic-unknown-blocker"],
+        blockers,
+      ),
+    /unknown law-source blocker reference/,
+  );
 });
 
 test("S208 report is deterministic and CLI-checkable", () => {
@@ -256,6 +376,58 @@ test("S208 validator accepts verified synthetic exam-date version, S207 link, an
   assert.equal(report.totals.verifiedLawSourceCount, 1);
   assert.equal(report.totals.highConfidenceReviewAllowedCheckCount, 1);
   assert.equal(report.totals.blockedReleasePackageLinkCount, 0);
+});
+
+test("S208 verified metadata retains resolved and warning blocker provenance without blocking release", async () => {
+  const provenanceIds = [
+    "synthetic-resolved-blocking-provenance",
+    "synthetic-open-warning-provenance",
+  ];
+  const config = await makeFixtureConfig((registry) => {
+    Object.assign(registry, syntheticVerifiedRegistry(registry));
+    const sourceId = registry.lawSources[0].sourceId;
+    const sourceAnchorId = registry.sourceAnchors[0].anchorId;
+    registry.blockers = [
+      syntheticBlocker({
+        blockerId: provenanceIds[0],
+        status: "resolved",
+        severity: "blocking",
+        sourceIds: [sourceId],
+        sourceAnchorIds: [sourceAnchorId],
+      }),
+      syntheticBlocker({
+        blockerId: provenanceIds[1],
+        status: "open",
+        severity: "warning",
+        sourceIds: [sourceId],
+        sourceAnchorIds: [sourceAnchorId],
+      }),
+    ];
+    registry.lawSources[0].blockerIds = [...provenanceIds];
+    registry.lawSources[0].downstreamUse.blockUntilResolved = true;
+    registry.sourceAnchors[0].blockerIds = [...provenanceIds];
+  });
+  const registry = loadLawSourceVersionRegistry(config);
+  const report = loadLawSourceVersionReport(config);
+  const referencedBlockerIds = [
+    ...registry.lawSources[0].blockerIds,
+    ...registry.sourceAnchors[0].blockerIds,
+  ];
+
+  assert.deepEqual(registry.lawSources[0].blockerIds, provenanceIds);
+  assert.deepEqual(registry.sourceAnchors[0].blockerIds, provenanceIds);
+  assert.equal(
+    countReferencedOpenBlockingLawSourceBlockers(
+      referencedBlockerIds,
+      registry.blockers,
+    ),
+    0,
+  );
+  assert.equal(report.totals.openBlockingBlockerCount, 0);
+  assert.equal(registry.referencePackageLinks[0].releaseReady, true);
+  assert.equal(registry.evidenceReviewLinks[0].reviewConfidence, "high");
+  assert.equal(registry.lawSources[0].sourceStatus, "verified");
+  assert.equal(registry.sourceAnchors[0].legalSourceStatus, "verified");
 });
 
 test("S208 validation rejects raw content fields and missing source IDs", async () => {

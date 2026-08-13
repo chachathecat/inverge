@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
 
+import { countReferencedOpenBlockingLawSourceBlockers } from "../lib/review-os/law-source-version-registry.ts";
 import {
   DEDICATED_RUNTIME_ADAPTER_PATHS,
   RUNTIME_REQUIRED_PATTERNS,
@@ -17,6 +18,7 @@ const ROUTE = "app/api/review-os/trusted-repair/route.ts";
 const ACCESS = "lib/review-os/trusted-repair-access.ts";
 const SERVER = "lib/review-os/trusted-repair-server.ts";
 const ENGINE = "lib/review-os/trusted-repair-engine.ts";
+const SOURCE_BINDING = "lib/review-os/trusted-repair-source-binding.ts";
 const UI = "components/review-os/trusted-repair-loop.tsx";
 const WORKFLOW = ".github/workflows/wcv-c2-trusted-repair-runtime.yml";
 const APP_LAYOUT = "app/app/layout.tsx";
@@ -158,6 +160,21 @@ function assertCheckoutCredentialBoundary(source) {
     laterSteps,
     /\bgit\b[^\n]*(?:credential(?:[.-]helper|\s+helper)|extraheader)\b|\bcredential-helper\b/im,
   );
+}
+
+function contractBlocker(blockerId, status, severity) {
+  return {
+    blockerId,
+    kind: "release_ready_blocked",
+    status,
+    severity,
+    summary: `Contract blocker ${blockerId}`,
+    requiredResolver: "human_decision",
+    sourceIds: [],
+    sourceAnchorIds: [],
+    referencePackageLinkIds: [],
+    evidenceReviewLinkIds: [],
+  };
 }
 
 test("migration is service-only, exact-user, forced-RLS, append-only and CAS/replay atomic", async () => {
@@ -304,6 +321,91 @@ test("DTO and UI expose bounded fields only after committed help and support dur
   assert.match(ui, /aria-labelledby/);
   assert.match(ui, /role="alert"/);
   assert.doesNotMatch(ui, /openai|anthropic|gemini|chat\/completions/i);
+});
+
+test("Law source binding counts only unique referenced open blocking records and fails closed", async () => {
+  const [sourceBinding, registry, engine, machineContractSource] =
+    await Promise.all([
+      readFile(SOURCE_BINDING, "utf8"),
+      readFile(LAW_REGISTRY, "utf8"),
+      readFile(ENGINE, "utf8"),
+      readFile(MACHINE_CONTRACT, "utf8"),
+    ]);
+  const machineContract = JSON.parse(machineContractSource);
+  const helperSource = registry.match(
+    /export function countReferencedOpenBlockingLawSourceBlockers[\s\S]*?\n}\n\nfunction hasOpenBlockingBlockers/,
+  )?.[0];
+  assert.ok(helperSource, "registry must export one shared active-blocker helper");
+
+  assert.match(
+    sourceBinding,
+    /countReferencedOpenBlockingLawSourceBlockers,\s*\n\s*loadLawSourceVersionRegistry,/,
+  );
+  assert.match(
+    sourceBinding,
+    /const blockerIds = \[\s*\.\.\.source\.blockerIds,\s*\.\.\.anchor\.blockerIds,\s*\];/,
+  );
+  assert.match(
+    sourceBinding,
+    /countReferencedOpenBlockingLawSourceBlockers\(\s*blockerIds,\s*registry\.blockers,\s*\)/,
+  );
+  assert.doesNotMatch(sourceBinding, /blockerCount:\s*new Set/);
+  assert.match(
+    registry,
+    /return blocker\.status === "open" && blocker\.severity === "blocking";/,
+  );
+  assert.match(registry, /unknown law-source blocker reference/);
+  assert.doesNotMatch(helperSource, /console\.|rawContent|bodyText/);
+
+  const blockers = [
+    contractBlocker("contract-resolved-blocking", "resolved", "blocking"),
+    contractBlocker("contract-open-warning", "open", "warning"),
+    contractBlocker("contract-open-blocking", "open", "blocking"),
+  ];
+  assert.equal(
+    countReferencedOpenBlockingLawSourceBlockers(
+      ["contract-resolved-blocking", "contract-open-warning"],
+      blockers,
+    ),
+    0,
+  );
+  assert.equal(
+    countReferencedOpenBlockingLawSourceBlockers(
+      ["contract-open-blocking", "contract-open-blocking"],
+      blockers,
+    ),
+    1,
+  );
+  assert.throws(
+    () =>
+      countReferencedOpenBlockingLawSourceBlockers(
+        ["contract-unknown-blocker"],
+        blockers,
+      ),
+    /unknown law-source blocker reference/,
+  );
+
+  assert.match(
+    sourceBinding,
+    /sourceType === "synthetic"[\s\S]*return SYNTHETIC_SOURCE_BINDING;/,
+  );
+  assert.match(
+    sourceBinding,
+    /if \(!source \|\| !anchor\)[\s\S]*blockerCount: 1,/,
+  );
+  assert.match(
+    engine,
+    /`blockers-\$\{sourceBinding\.blockerCount\}`/,
+  );
+  assert.match(engine, /trustedRepairSourceBindingMatches\(input\)/);
+  assert.match(
+    engine,
+    /input\.sourceBinding\.sourceStatus !== "verified" \|\|[\s\S]{0,400}input\.sourceBinding\.blockerCount > 0/,
+  );
+  assert.equal(
+    machineContract.lawBoundary.verifiedOutcomeAllowedOnCurrentRepositoryState,
+    false,
+  );
 });
 
 test("generic Runtime Gate delegates exact C2 paths to a fork-safe read-only pull_request check", async () => {
