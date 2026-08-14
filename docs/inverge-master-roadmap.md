@@ -39,6 +39,17 @@ cannot close those issues. Only terminal C2R-C-L may complete #703, #704,
 first covered in Practice remain mandatory for Theory and Law. No stage starts
 automatically. Exactly one merge-producing writer remains permitted.
 
+Coverage is non-self-referential. Each stage declares only its assigned rows
+as `candidate_coverage_pending_exact_merge` with exact assertion/test metadata
+and receipt policy `github_exact_head_pinned_squash_merge_v1`. The final
+reviewed head/tree, fresh checks and review live in PR evidence outside the
+candidate commit. Squash merge is expected-head-pinned; the same Work then
+indexes one `MergeCoverageReceiptV1` on #717 and validates it against live
+GitHub. Coverage becomes effective only after every matrix, exact-head test,
+final-review, merge and receipt predicate passes. C2R-C-L needs no successor
+repository PR, but #703/#704/#705/#717 remain open and #706/C3 remains blocked
+if its receipt is missing or invalid.
+
 V13 remains the sole active master and WCV 1.0.8 remains subordinate. This
 authority grants no learner, provider, payment, cohort, remote Supabase,
 Production, or C3 activation.

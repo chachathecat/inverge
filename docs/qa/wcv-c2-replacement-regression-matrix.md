@@ -7,15 +7,28 @@
 - Final review: `PRR_kwDOSMHn8M8AAAABJhaiDA`
 - Source thread inventory: 21 total, including 2 historically resolved and 19 intentionally unresolved
 - Initial coverage state: every row is `uncovered`
-- Future merged commit state: `none` until the assigned replacement stage merges
+- Initial candidate coverage declaration: `none` for every row
+- Receipt policy: `github_exact_head_pinned_squash_merge_v1`
 
-This matrix is the mandatory carry-forward ledger for PR #716. A later
-replacement PR may change a row from `uncovered` only by adding the named
-regression (or a stricter exact successor), recording the exact test path, and
-recording the merged commit. Donor-branch tests, donor CI, or donor runtime
-evidence do not cover a row because PR #716 was not merged.
+This matrix is the mandatory carry-forward ledger for PR #716. A later stage
+may change only its assigned rows to
+`candidate_coverage_pending_exact_merge`. Its candidate declaration must
+record `findingThreadId`, `coveringStage`, `coveringPrNumber`,
+`exactRegressionAssertionId`, `exactFutureTestPath`,
+`inheritedRegressionObligations`, and `receiptPolicyId`. The receipt policy ID
+must be `github_exact_head_pinned_squash_merge_v1`. All 21 rows remain
+`uncovered` with declaration `none` in this authority PR.
 
-| # | Original review / thread ID | Historical thread state | Severity | Exact finding | Affected domain | Assigned replacement stage | Required future regression | Status | Future test path | Future merged commit |
+The exact reviewed head/tree and resulting squash-merge commit are external
+GitHub evidence; a stage does not place those future or self-referential values
+inside its candidate commit. Effective coverage additionally requires the
+named regression to pass on the exact reviewed head, final actionable
+P0/P1/P2 `0/0/0`, an expected-head-pinned squash merge, a validated live
+GitHub merge receipt, and a matching Tracker #717 `MergeCoverageReceiptV1`
+index. Donor evidence, an unmerged candidate, stale review/CI, or tracker text
+alone cannot cover a row.
+
+| # | Original review / thread ID | Historical thread state | Severity | Exact finding | Affected domain | Assigned replacement stage | Required future regression | Status | Future test path | Candidate coverage declaration |
 |---:|---|---|---:|---|---|---|---|---|---|---|
 | 1 | `PRR_kwDOSMHn8M8AAAABJNa_Uw` / `PRRT_kwDOSMHn8M6Yc-Tw` | `resolved` | `P1` | **Run the migration gate on every modifying PR** — This job executes only for the hard-coded C2 branch, while `scripts/automation/runtime-risk-contract.mjs` now unconditionally removes this migration from the generic runtime-required paths. Consequently, any subsequent PR from another branch that modifies `20260812011903_wcv_c2_trusted_repair_vertical.sql` receives neither runtime gate, leaving security- and persistence-sensitive changes unvalidated; scope the delegation to this exact PR or make the dedicated workflow run whenever the migration changes. | CI/runtime coverage | `C2R-C-P` | Any branch or fork that changes the replacement migration must select exactly one required fresh-database/browser gate; generic and dedicated classification may not leave a gap. | `uncovered` | `tests/wcv-c2r-runtime-preflight.test.mjs` | `none` |
 | 2 | `PRR_kwDOSMHn8M8AAAABJNa_Uw` / `PRRT_kwDOSMHn8M6Yc-Tz` | `resolved` | `P2` | **Match numeric claims without substring collisions** — For the practical intermediate-calculation anchor, `200000000` is required while `20000000` is forbidden, so this substring check classifies the canonical correct value `200,000,000원` as also containing the forbidden `20,000,000` claim. A learner who reproduces the exact expected calculation therefore cannot satisfy the anchor and is incorrectly sent to a gap/partial outcome; compare normalized numeric tokens or parsed numeric values rather than arbitrary substrings. | Practice numeric semantics | `C2R-C-P` | The correct `200,000,000` token must not match forbidden `20,000,000`; the actual forbidden value must still fail. | `uncovered` | `tests/wcv-c2r-practice-validator.test.mjs` | `none` |

@@ -284,6 +284,16 @@ test("keeps roadmap selection metadata-only with one writer and no stage auto-st
   assert.equal(c2.automaticStartAllowed, false);
   assert.equal(c2.terminalDonorEvidencePromotedToMain, false);
   assert.equal(c2.uncoveredReviewFindingCount, 21);
+  assert.equal(c2.coverageCandidateState, "candidate_coverage_pending_exact_merge");
+  assert.equal(
+    c2.coverageReceiptPolicyId,
+    "github_exact_head_pinned_squash_merge_v1",
+  );
+  assert.equal(c2.coverageReceiptVersion, "MergeCoverageReceiptV1");
+  assert.equal(c2.coverageMergeExpectedHeadPinned, true);
+  assert.equal(c2.coverageLiveGithubReceiptValidationRequired, true);
+  assert.equal(c2.coverageSuccessorRepositoryPrRequired, false);
+  assert.equal(c2.terminalIssueClosureRequiresValidatedCoverageReceipt, true);
   assert.equal(c3.executionState, "blocked_until_terminal_c2r_c_l_merge");
   assert.equal(c3.terminalReplacementDependency, "C2R-C-L");
   assert.equal(c3.automaticStartAllowed, false);
@@ -322,6 +332,10 @@ test("installs all 21 donor findings as uncovered matrix rows", async () => {
     21,
   );
   assert.doesNotMatch(matrix, /\| `covered` \|/);
+  assert.doesNotMatch(matrix, /Future merged commit/i);
+  assert.match(matrix, /Candidate coverage declaration/);
+  assert.match(matrix, /candidate_coverage_pending_exact_merge/);
+  assert.match(matrix, /github_exact_head_pinned_squash_merge_v1/);
   assert.doesNotMatch(matrix, /C2R-(?:D|E|F)/);
 
   for (const [index, [review, thread, severity, stage]] of
@@ -334,6 +348,133 @@ test("installs all 21 donor findings as uncovered matrix rows", async () => {
     assert.ok(row.includes("**"), `${thread} exact finding title`);
     assert.ok(row.includes("tests/"), `${thread} future test path`);
   }
+});
+
+test("installs non-self-referential exact-head merge coverage receipts", async () => {
+  const unified = await json("config/dabangil-unified-program-contract.json");
+  const protocol = unified.wcvCampaignOverlay.c2StructuralRecovery.coverageProtocol;
+  const candidate = protocol.repositoryCandidateDeclaration;
+  const identity = protocol.externalExactCandidateIdentity;
+  const merge = protocol.expectedHeadPinnedMerge;
+  const receipt = protocol.postMergeReceipt;
+  const live = protocol.liveGithubReceiptVerification;
+  const effective = protocol.effectiveCoveragePredicate;
+  const terminal = protocol.terminalC2RCL;
+
+  assert.equal(
+    protocol.version,
+    "wcv_c2r_non_self_referential_merge_coverage_v1",
+  );
+  assert.equal(protocol.initialRowCount, 21);
+  assert.equal(protocol.initialRowStatus, "uncovered");
+  assert.equal(protocol.allRowsRemainUncoveredInAuthorityPr718, true);
+  assert.equal(protocol.candidateStatus, "candidate_coverage_pending_exact_merge");
+  assert.equal(
+    protocol.receiptPolicyId,
+    "github_exact_head_pinned_squash_merge_v1",
+  );
+  assert.equal(candidate.assignedRowsOnly, true);
+  assert.equal(candidate.fromStatus, "uncovered");
+  assert.equal(candidate.toStatus, "candidate_coverage_pending_exact_merge");
+  assert.deepEqual(candidate.requiredFieldsExactly, [
+    "findingThreadId",
+    "coveringStage",
+    "coveringPrNumber",
+    "exactRegressionAssertionId",
+    "exactFutureTestPath",
+    "inheritedRegressionObligations",
+    "receiptPolicyId",
+  ]);
+  assert.equal(
+    candidate.ownReviewedHeadTreeOrFutureMergeCommitMustNotBeCommittedWhenSelfReferential,
+    true,
+  );
+  assert.equal(candidate.candidateDeclarationAloneCreatesEffectiveCoverage, false);
+
+  assert.equal(identity.storedOutsideCandidateCommit, true);
+  assert.deepEqual(identity.finalActionableP0P1P2Exactly, [0, 0, 0]);
+  assert.equal(identity.freshChecksAndFinalReviewMustBelongToReviewedHead, true);
+  assert.equal(merge.method, "squash");
+  assert.equal(merge.expectedHeadShaRequired, true);
+  assert.equal(merge.remoteHeadMismatchFailsClosed, true);
+  assert.equal(merge.successfulMergeSuppliesResultingMergeCommitSha, true);
+
+  assert.equal(receipt.receiptVersion, "MergeCoverageReceiptV1");
+  assert.equal(receipt.trackerIssue, 717);
+  assert.equal(receipt.sameReplacementStageWorkMayPublishAfterSuccessfulMerge, true);
+  assert.equal(receipt.exactlyOneTrackerReceiptCommentPerSuccessfulStageMerge, true);
+  assert.equal(receipt.trackerCommentIsIndexNotIndependentSourceOfTruth, true);
+  assert.deepEqual(receipt.requiredFieldsAtLeast, [
+    "receiptVersion",
+    "stageId",
+    "coveringPrNumber",
+    "reviewedHeadSha",
+    "reviewedTreeSha",
+    "finalReviewId",
+    "mergeCommitSha",
+    "mergeTreeSha",
+    "coveredFindingThreadIds",
+    "regressionTestPaths",
+    "baseBranch",
+    "mergedAt",
+  ]);
+  assert.equal(receipt.liveGithubVerificationRequired, true);
+  assert.equal(receipt.successorRepositoryPrRequired, false);
+  assert.equal(receipt.repositoryBookkeepingPrAllowed, false);
+
+  for (const key of [
+    "pullRequestMustBeMerged",
+    "exactReviewedHeadMustBeMergeInput",
+    "livePrMergeCommitMustEqualReceiptMergeCommit",
+    "mergeCommitMustBePresentOnMain",
+    "mergeTreeMustBeCompatibleWithCandidateEvidence",
+    "finalReviewAndRequiredChecksMustBelongToReviewedHead",
+    "falseReceiptRejected",
+    "mismatchedMergeCommitRejected",
+  ]) {
+    assert.equal(live[key], true, key);
+  }
+
+  assert.equal(effective.allConditionsRequired, true);
+  assert.deepEqual(effective.conditionsExactly, [
+    "MATRIX_ROW_HAS_EXACT_CANDIDATE_DECLARATION",
+    "NAMED_REGRESSION_EXISTS_AND_PASSED_ON_EXACT_REVIEWED_HEAD",
+    "FINAL_EXACT_HEAD_REVIEW_ACTIONABLE_P0_P1_P2_IS_0_0_0",
+    "EXPECTED_HEAD_PINNED_SQUASH_MERGE_SUCCEEDED",
+    "LIVE_GITHUB_MERGE_RECEIPT_VALIDATES",
+    "TRACKER_717_MERGE_COVERAGE_RECEIPT_V1_INDEX_EXISTS_AND_MATCHES",
+  ]);
+  assert.equal(
+    effective.donorTestUnmergedCandidateStaleReviewOldCiOrTrackerTextAloneMayCover,
+    false,
+  );
+
+  const coveragePasses = (evidence) =>
+    effective.conditionsExactly.every((condition) => evidence[condition] === true);
+  const completeEvidence = Object.fromEntries(
+    effective.conditionsExactly.map((condition) => [condition, true]),
+  );
+  assert.equal(coveragePasses(completeEvidence), true);
+  for (const condition of effective.conditionsExactly) {
+    assert.equal(
+      coveragePasses({ ...completeEvidence, [condition]: false }),
+      false,
+      condition,
+    );
+  }
+
+  assert.equal(terminal.successorRepositoryPrRequired, false);
+  assert.equal(terminal.issueClosureBeforeReceiptValidationAllowed, false);
+  assert.equal(terminal.receiptFailureLeavesRepositoryMergeFactual, true);
+  assert.equal(terminal.receiptFailureKeepsIssuesOpenAndC3Blocked, true);
+  assert.deepEqual(terminal.orderedCloseoutExactly, [
+    "DECLARE_CANDIDATE_COVERAGE_IN_C2R_C_L_PR",
+    "PASS_FRESH_EXACT_HEAD_CHECKS_AND_FINAL_REVIEW",
+    "SQUASH_MERGE_WITH_EXPECTED_REVIEWED_HEAD_PINNED",
+    "PUBLISH_MERGE_COVERAGE_RECEIPT_V1_TO_TRACKER_717",
+    "VERIFY_EFFECTIVE_COVERAGE_FOR_ALL_REQUIRED_ROWS",
+    "CLOSE_703_704_705_717_AND_UNBLOCK_706_C3",
+  ]);
 });
 
 test("inherits every common Practice regression in Theory and Law", async () => {

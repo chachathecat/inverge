@@ -919,6 +919,114 @@
       "standalone714SourceOnlyAuthorized": true,
       "oneMergeProducingWriterAtATime": true,
       "automaticStartAllowed": false,
+      "coverageProtocol": {
+        "version": "wcv_c2r_non_self_referential_merge_coverage_v1",
+        "initialRowCount": 21,
+        "initialRowStatus": "uncovered",
+        "allRowsRemainUncoveredInAuthorityPr718": true,
+        "candidateStatus": "candidate_coverage_pending_exact_merge",
+        "receiptPolicyId": "github_exact_head_pinned_squash_merge_v1",
+        "repositoryCandidateDeclaration": {
+          "assignedRowsOnly": true,
+          "fromStatus": "uncovered",
+          "toStatus": "candidate_coverage_pending_exact_merge",
+          "requiredFieldsExactly": [
+            "findingThreadId",
+            "coveringStage",
+            "coveringPrNumber",
+            "exactRegressionAssertionId",
+            "exactFutureTestPath",
+            "inheritedRegressionObligations",
+            "receiptPolicyId"
+          ],
+          "receiptPolicyId": "github_exact_head_pinned_squash_merge_v1",
+          "ownReviewedHeadTreeOrFutureMergeCommitMustNotBeCommittedWhenSelfReferential": true,
+          "candidateDeclarationAloneCreatesEffectiveCoverage": false
+        },
+        "externalExactCandidateIdentity": {
+          "storedOutsideCandidateCommit": true,
+          "requiredFieldsExactly": [
+            "coveringPrNumber",
+            "finalReviewedHeadSha",
+            "finalReviewedTreeSha",
+            "freshCheckIds",
+            "finalReviewId",
+            "finalActionableP0P1P2",
+            "coveredFindingThreadIds",
+            "regressionTestPaths"
+          ],
+          "finalActionableP0P1P2Exactly": [0, 0, 0],
+          "freshChecksAndFinalReviewMustBelongToReviewedHead": true
+        },
+        "expectedHeadPinnedMerge": {
+          "method": "squash",
+          "expectedHeadShaRequired": true,
+          "remoteHeadMismatchFailsClosed": true,
+          "successfulMergeSuppliesResultingMergeCommitSha": true
+        },
+        "postMergeReceipt": {
+          "receiptVersion": "MergeCoverageReceiptV1",
+          "trackerIssue": 717,
+          "sameReplacementStageWorkMayPublishAfterSuccessfulMerge": true,
+          "exactlyOneTrackerReceiptCommentPerSuccessfulStageMerge": true,
+          "trackerCommentIsIndexNotIndependentSourceOfTruth": true,
+          "requiredFieldsAtLeast": [
+            "receiptVersion",
+            "stageId",
+            "coveringPrNumber",
+            "reviewedHeadSha",
+            "reviewedTreeSha",
+            "finalReviewId",
+            "mergeCommitSha",
+            "mergeTreeSha",
+            "coveredFindingThreadIds",
+            "regressionTestPaths",
+            "baseBranch",
+            "mergedAt"
+          ],
+          "liveGithubVerificationRequired": true,
+          "successorRepositoryPrRequired": false,
+          "repositoryBookkeepingPrAllowed": false,
+          "writeOrValidationFailureDisposition": "KEEP_ISSUES_OPEN_KEEP_C3_BLOCKED_REQUIRE_SEPARATELY_AUTHORIZED_RECEIPT_ONLY_RECOVERY"
+        },
+        "liveGithubReceiptVerification": {
+          "pullRequestMustBeMerged": true,
+          "exactReviewedHeadMustBeMergeInput": true,
+          "livePrMergeCommitMustEqualReceiptMergeCommit": true,
+          "mergeCommitMustBePresentOnMain": true,
+          "mergeTreeMustBeCompatibleWithCandidateEvidence": true,
+          "finalReviewAndRequiredChecksMustBelongToReviewedHead": true,
+          "falseReceiptRejected": true,
+          "mismatchedMergeCommitRejected": true
+        },
+        "effectiveCoveragePredicate": {
+          "allConditionsRequired": true,
+          "conditionsExactly": [
+            "MATRIX_ROW_HAS_EXACT_CANDIDATE_DECLARATION",
+            "NAMED_REGRESSION_EXISTS_AND_PASSED_ON_EXACT_REVIEWED_HEAD",
+            "FINAL_EXACT_HEAD_REVIEW_ACTIONABLE_P0_P1_P2_IS_0_0_0",
+            "EXPECTED_HEAD_PINNED_SQUASH_MERGE_SUCCEEDED",
+            "LIVE_GITHUB_MERGE_RECEIPT_VALIDATES",
+            "TRACKER_717_MERGE_COVERAGE_RECEIPT_V1_INDEX_EXISTS_AND_MATCHES"
+          ],
+          "donorTestUnmergedCandidateStaleReviewOldCiOrTrackerTextAloneMayCover": false
+        },
+        "terminalC2RCL": {
+          "successorRepositoryPrRequired": false,
+          "orderedCloseoutExactly": [
+            "DECLARE_CANDIDATE_COVERAGE_IN_C2R_C_L_PR",
+            "PASS_FRESH_EXACT_HEAD_CHECKS_AND_FINAL_REVIEW",
+            "SQUASH_MERGE_WITH_EXPECTED_REVIEWED_HEAD_PINNED",
+            "PUBLISH_MERGE_COVERAGE_RECEIPT_V1_TO_TRACKER_717",
+            "VERIFY_EFFECTIVE_COVERAGE_FOR_ALL_REQUIRED_ROWS",
+            "CLOSE_703_704_705_717_AND_UNBLOCK_706_C3"
+          ],
+          "issueClosureBeforeReceiptValidationAllowed": false,
+          "receiptFailureLeavesRepositoryMergeFactual": true,
+          "receiptFailureKeepsIssuesOpenAndC3Blocked": true,
+          "receiptFailureRecovery": "SEPARATELY_AUTHORIZED_RECEIPT_ONLY_RECOVERY_NOT_CODE_OR_BOOKKEEPING_PR"
+        }
+      },
       "replacementStages": [
         {
           "order": 1,

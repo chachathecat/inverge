@@ -240,6 +240,43 @@ Every replacement stage has `automaticStartAllowed: false`. Runner selection
 is metadata-only and cannot start, reserve, provision, author, review or merge
 a stage. The maximum remains one merge-producing writer.
 
+### Non-self-referential regression coverage
+
+All 21 PR #716 matrix rows remain `uncovered` in the authority PR. A future
+stage may change only its assigned rows to
+`candidate_coverage_pending_exact_merge`, with the finding/thread ID, stage,
+PR number, exact regression assertion ID and test path, inherited-regression
+obligations, and receipt policy
+`github_exact_head_pinned_squash_merge_v1`. That declaration is a pre-merge
+candidate, not effective coverage. A candidate commit does not record its own
+reviewed head/tree or future squash-merge commit when doing so would be
+self-referential.
+
+GitHub evidence outside the candidate commit binds the exact covering PR,
+final reviewed head/tree, fresh checks, final review anchored to that head,
+actionable P0/P1/P2 `0/0/0`, covered finding IDs and regression paths. Merge
+is squash-only with the reviewed head supplied as the expected head; a stale
+remote head fails closed. The successful operation supplies the merge commit.
+
+The same stage Work then adds exactly one machine-readable
+`MergeCoverageReceiptV1` comment to Tracker #717. It indexes the stage, PR,
+reviewed head/tree, final review, merge commit/tree, covered finding/thread
+IDs, regression paths, base and merged-at time. Live GitHub remains the source
+of truth: the PR must be merged from the reviewed head, the live merge commit
+must match and be present on `main`, its tree must be compatible with the
+candidate evidence, and the final review and checks must belong to the
+reviewed head. The tracker comment alone grants nothing.
+
+Effective coverage requires the exact matrix declaration, the named passing
+regression on the reviewed head, final review `0/0/0`, expected-head-pinned
+merge, a valid live GitHub merge receipt, and the matching tracker index. A
+donor test, unmerged candidate, stale review or CI result, false or mismatched
+receipt, or tracker prose alone fails closed. Terminal C2R-C-L may publish and
+validate its own post-merge receipt and then close #703/#704/#705/#717 and
+unblock #706/C3 without a successor repository PR. Missing or invalid receipt
+keeps those issues open and C3 blocked; only separately authorized
+receipt-only recovery may repair the index.
+
 ### #714 durable allocation
 
 | Campaign | Allocated requirement groups |

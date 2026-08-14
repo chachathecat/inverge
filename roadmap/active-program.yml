@@ -353,6 +353,13 @@ items:
     wcvC2Complete: false
     reviewFindingCount: 21
     uncoveredReviewFindingCount: 21
+    coverageCandidateState: candidate_coverage_pending_exact_merge
+    coverageReceiptPolicyId: github_exact_head_pinned_squash_merge_v1
+    coverageReceiptVersion: MergeCoverageReceiptV1
+    coverageMergeExpectedHeadPinned: true
+    coverageLiveGithubReceiptValidationRequired: true
+    coverageSuccessorRepositoryPrRequired: false
+    terminalIssueClosureRequiresValidatedCoverageReceipt: true
     replacementStages: [C2R-A, C2R-B, C2R-C-P, C2R-C-T, C2R-C-L]
     independentlyCompleteSourceContractStages: [C2R-A, C2R-B]
     completeLearnerVisibleRuntimeStages: [C2R-C-P, C2R-C-T, C2R-C-L]

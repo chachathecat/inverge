@@ -155,15 +155,61 @@ carry-forward ledger for all 21 PR #716 review threads. Every row begins
 commit, test, CI run, runtime artifact, or thread resolution covers a row in
 main.
 
-A future stage may cover a row only when its merged commit contains the named
-regression or a stricter exact successor, the matrix records the final test
-path, and the matrix records the merged commit.
+A future replacement-stage PR may change only its assigned rows from
+`uncovered` to `candidate_coverage_pending_exact_merge`. Each changed row must
+record the finding/thread ID, covering stage, covering PR number, exact
+regression assertion ID, exact future test path, inherited-regression
+obligations where applicable, and receipt policy
+`github_exact_head_pinned_squash_merge_v1`. A candidate declaration is not
+effective coverage. A stage must not commit its own reviewed head, reviewed
+tree, or not-yet-created squash-merge commit when that would make the commit
+self-referential.
+
+The exact candidate identity instead exists outside the candidate commit. It
+is the covering PR number, exact final reviewed head and tree, fresh check IDs,
+final review ID anchored to that head, actionable P0/P1/P2 exactly `0/0/0`,
+and the exact covered finding IDs and regression paths in the PR evidence.
+Every coverage-producing stage must use an expected-head-pinned squash merge.
+If the live PR head differs from the final reviewed head, merge fails closed.
+The successful merge operation supplies the resulting merge commit SHA.
+
+After a successful expected-head-pinned merge, the same replacement-stage
+Work may publish exactly one machine-readable `MergeCoverageReceiptV1` comment
+to Tracker #717. It records at least the receipt version, stage ID, covering
+PR, reviewed head and tree, final review ID, merge commit and tree, covered
+finding/thread IDs, regression paths, base branch, and merged-at timestamp.
+The tracker comment is an index, not an independent source of truth. Live
+GitHub verification must prove that the PR is merged, the reviewed head was
+the merge input, the live PR merge commit equals the receipt, that commit is
+on `main`, its tree is compatible with the candidate evidence, and the final
+review and required checks belonged to the reviewed head.
+
+A row is effectively covered only when all six predicates hold:
+
+1. the row contains its exact candidate coverage declaration;
+2. the named regression exists and passed on the exact reviewed head;
+3. the final exact-head review reported actionable `0/0/0`;
+4. the expected-head-pinned squash merge succeeded;
+5. the live GitHub merge receipt validates; and
+6. the matching Tracker #717 `MergeCoverageReceiptV1` index exists.
+
+No donor test, unmerged candidate, stale review, old CI result, or tracker text
+alone creates coverage. A false receipt, mismatched merge commit, stale head,
+or missing receipt fails closed.
 
 C2R-C-P owns Practice and common-runtime rows 1, 2, 4, 6, 8, 9, 10, 11, 12,
 14 and 19. C2R-C-T owns Theory rows 5, 13, 16, 18 and 20. C2R-C-L owns Law
 source/drift/blocker/anchor/version rows 3, 7, 15, 17 and 21. Common rows 1,
 4, 6, 8, 11 and 14 first covered in C2R-C-P remain mandatory inherited
 regressions in both C2R-C-T and C2R-C-L. All 21 statuses remain `uncovered`.
+
+Terminal C2R-C-L can declare candidate coverage in its own PR, pass fresh
+exact-head checks and final review, merge with the reviewed head pinned,
+publish its receipt, verify effective coverage for all required rows, and only
+then close #703, #704, #705 and #717 and unblock #706/C3. It needs no successor
+repository PR. If its receipt cannot be written or validated, the merge remains
+factual but the issues stay open and C3 stays blocked pending separately
+authorized receipt-only recovery, never a code or bookkeeping PR.
 
 ## 7. Writer, start, and activation boundaries
 
