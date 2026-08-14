@@ -65,20 +65,20 @@ function parseRoadmap(source) {
 }
 
 const EXPECTED_REVIEW_THREADS = [
-  ["PRR_kwDOSMHn8M8AAAABJNa_Uw", "PRRT_kwDOSMHn8M6Yc-Tw", "P1", "C2R-F"],
+  ["PRR_kwDOSMHn8M8AAAABJNa_Uw", "PRRT_kwDOSMHn8M6Yc-Tw", "P1", "C2R-C-P"],
   ["PRR_kwDOSMHn8M8AAAABJNa_Uw", "PRRT_kwDOSMHn8M6Yc-Tz", "P2", "C2R-C-P"],
-  ["PRR_kwDOSMHn8M8AAAABJNgBTQ", "PRRT_kwDOSMHn8M6YdKTb", "P2", "C2R-E"],
-  ["PRR_kwDOSMHn8M8AAAABJNgBTQ", "PRRT_kwDOSMHn8M6YdKTe", "P2", "C2R-E"],
+  ["PRR_kwDOSMHn8M8AAAABJNgBTQ", "PRRT_kwDOSMHn8M6YdKTb", "P2", "C2R-C-L"],
+  ["PRR_kwDOSMHn8M8AAAABJNgBTQ", "PRRT_kwDOSMHn8M6YdKTe", "P2", "C2R-C-P"],
   ["PRR_kwDOSMHn8M8AAAABJNyCoQ", "PRRT_kwDOSMHn8M6YdyeQ", "P2", "C2R-C-T"],
-  ["PRR_kwDOSMHn8M8AAAABJNyCoQ", "PRRT_kwDOSMHn8M6YdyeT", "P2", "C2R-F"],
-  ["PRR_kwDOSMHn8M8AAAABJPkFng", "PRRT_kwDOSMHn8M6Yhqf6", "P2", "C2R-F"],
-  ["PRR_kwDOSMHn8M8AAAABJQTmPw", "PRRT_kwDOSMHn8M6YjVBK", "P1", "C2R-F"],
+  ["PRR_kwDOSMHn8M8AAAABJNyCoQ", "PRRT_kwDOSMHn8M6YdyeT", "P2", "C2R-C-P"],
+  ["PRR_kwDOSMHn8M8AAAABJPkFng", "PRRT_kwDOSMHn8M6Yhqf6", "P2", "C2R-C-L"],
+  ["PRR_kwDOSMHn8M8AAAABJQTmPw", "PRRT_kwDOSMHn8M6YjVBK", "P1", "C2R-C-P"],
   ["PRR_kwDOSMHn8M8AAAABJQTmPw", "PRRT_kwDOSMHn8M6YjVBO", "P2", "C2R-C-P"],
   ["PRR_kwDOSMHn8M8AAAABJQTmPw", "PRRT_kwDOSMHn8M6YjVBT", "P2", "C2R-C-P"],
-  ["PRR_kwDOSMHn8M8AAAABJYXLgg", "PRRT_kwDOSMHn8M6Y2Phg", "P2", "C2R-F"],
+  ["PRR_kwDOSMHn8M8AAAABJYXLgg", "PRRT_kwDOSMHn8M6Y2Phg", "P2", "C2R-C-P"],
   ["PRR_kwDOSMHn8M8AAAABJYXLgg", "PRRT_kwDOSMHn8M6Y2Phk", "P2", "C2R-C-P"],
   ["PRR_kwDOSMHn8M8AAAABJYXLgg", "PRRT_kwDOSMHn8M6Y2Phn", "P2", "C2R-C-T"],
-  ["PRR_kwDOSMHn8M8AAAABJZA5IA", "PRRT_kwDOSMHn8M6Y3rmj", "P2", "C2R-F"],
+  ["PRR_kwDOSMHn8M8AAAABJZA5IA", "PRRT_kwDOSMHn8M6Y3rmj", "P2", "C2R-C-P"],
   ["PRR_kwDOSMHn8M8AAAABJZod9A", "PRRT_kwDOSMHn8M6Y5DLv", "P2", "C2R-C-L"],
   ["PRR_kwDOSMHn8M8AAAABJaEsIA", "PRRT_kwDOSMHn8M6Y6CKf", "P2", "C2R-C-T"],
   ["PRR_kwDOSMHn8M8AAAABJgtWdA", "PRRT_kwDOSMHn8M6ZJGtq", "P2", "C2R-C-L"],
@@ -119,7 +119,7 @@ test("records PR #716 as a closed unmerged donor and keeps WCV-C2 incomplete", a
   assert.match(decision, /They are not promoted into main/);
 });
 
-test("installs the exact terminally serial C2R-A through C2R-F replacement chain", async () => {
+test("installs the exact terminally serial five-stage replacement chain", async () => {
   const unified = await json("config/dabangil-unified-program-contract.json");
   const recovery = unified.wcvCampaignOverlay.c2StructuralRecovery;
   const stages = recovery.replacementStages;
@@ -130,12 +130,12 @@ test("installs the exact terminally serial C2R-A through C2R-F replacement chain
   assert.equal(recovery.standalone714SourceOnlyAuthorized, true);
   assert.equal(recovery.oneMergeProducingWriterAtATime, true);
   assert.equal(recovery.automaticStartAllowed, false);
-  assert.deepEqual(stages.map((stage) => stage.order), [1, 2, 3, 4, 5, 6, 7, 8]);
+  assert.deepEqual(stages.map((stage) => stage.order), [1, 2, 3, 4, 5]);
   assert.deepEqual(
     stages.map((stage) => stage.id),
-    ["C2R-A", "C2R-B", "C2R-C-P", "C2R-C-T", "C2R-C-L", "C2R-D", "C2R-E", "C2R-F"],
+    ["C2R-A", "C2R-B", "C2R-C-P", "C2R-C-T", "C2R-C-L"],
   );
-  assert.deepEqual(stages.map((stage) => stage.issue), [702, 714, 703, 703, 703, 704, 705, 705]);
+  assert.deepEqual(stages.map((stage) => stage.issue), [702, 714, 703, 703, 703]);
   assert.deepEqual(
     stages.map((stage) => stage.dependencies),
     [
@@ -144,11 +144,19 @@ test("installs the exact terminally serial C2R-A through C2R-F replacement chain
       ["C2R-B"],
       ["C2R-C-P"],
       ["C2R-C-T"],
-      ["C2R-C-L"],
-      ["C2R-D"],
-      ["C2R-E"],
     ],
   );
+  for (const stage of stages.slice(0, 2)) {
+    assert.equal(stage.outcomeType, "independently_complete_source_contract_outcome");
+    assert.equal(stage.horizontalRuntimeLayer, false);
+    assert.equal(stage.sourceContractOnly, true);
+  }
+  for (const stage of stages.slice(2)) {
+    assert.equal(
+      stage.outcomeType,
+      "independently_deployable_learner_visible_runtime_vertical",
+    );
+  }
   assert.equal(stages[0].state, "authorized_unstarted");
   for (const stage of stages) {
     assert.equal(stage.terminalMergeRequired, true, stage.id);
@@ -159,7 +167,61 @@ test("installs the exact terminally serial C2R-A through C2R-F replacement chain
   }
 });
 
-test("binds #703, #704, #705 and #706 to the required terminal predecessors", async () => {
+test("declares complete Practice, Theory and Law outcomes without horizontal runtime stages", async () => {
+  const unified = await json("config/dabangil-unified-program-contract.json");
+  const stages = unified.wcvCampaignOverlay.c2StructuralRecovery.replacementStages;
+  const byId = new Map(stages.map((stage) => [stage.id, stage]));
+  const practice = byId.get("C2R-C-P");
+  const theory = byId.get("C2R-C-T");
+  const law = byId.get("C2R-C-L");
+
+  assert.equal(practice.commonRuntimeSubstrateFirstLandsHere, true);
+  assert.deepEqual(practice.acceptanceContributionIssues, [703, 704, 705]);
+  assert.deepEqual(theory.acceptanceContributionIssues, [703, 704, 705]);
+  assert.deepEqual(law.acceptanceContributionIssues, [703, 704, 705]);
+  for (const required of [
+    "TYPED_PRACTICE_CALCULATION_RELATION_VALIDATOR",
+    "PRACTICE_GOLDEN_AND_OWNER_GOLD_FIXTURES",
+    "PERSISTENCE_FORCED_RLS_SERVER_IDEMPOTENCY_CAS",
+    "API",
+    "LEARNER_UI",
+    "BROWSER_NEXT_SUPABASE_POSTGRES_RUNTIME_EVIDENCE",
+    "SAFE_DEFERRED_CAPABILITY_BOUNDARY",
+    "INDEPENDENT_ROLLBACK",
+  ]) {
+    assert.ok(practice.requiredChangedLayers.includes(required), required);
+  }
+  for (const [stage, validator, fixture, rollback] of [
+    [
+      theory,
+      "TYPED_THEORY_TARGET_SCOPED_PREDICATE_VALIDATOR",
+      "THEORY_GOLDEN_AND_OWNER_GOLD_FIXTURES",
+      "ROLLBACK_INDEPENDENT_OF_PRACTICE",
+    ],
+    [
+      law,
+      "EXACT_LAW_SOURCE_ANCHOR_LOCATOR_EFFECTIVE_VERSION_APPLICABLE_DATE_VALIDATOR",
+      "LAW_GOLDEN_AND_OWNER_GOLD_FIXTURES",
+      "ROLLBACK_INDEPENDENT_OF_PRACTICE_AND_THEORY",
+    ],
+  ]) {
+    assert.ok(stage.requiredChangedLayers.includes(validator), validator);
+    assert.ok(stage.requiredChangedLayers.includes(fixture), fixture);
+    assert.ok(
+      stage.requiredChangedLayers.includes("NECESSARY_PERSISTENCE_SERVER_API_UI_INTEGRATION_DELTA"),
+      stage.id,
+    );
+    assert.ok(stage.requiredChangedLayers.includes("BROWSER_TO_DATABASE_RUNTIME_EVIDENCE"), stage.id);
+    assert.ok(stage.requiredChangedLayers.includes(rollback), rollback);
+  }
+  assert.equal(practice.terminalIssueClosureAllowed, false);
+  assert.equal(theory.terminalIssueClosureAllowed, false);
+  assert.equal(law.terminalIssueClosureAllowed, true);
+  assert.deepEqual(law.terminalClosureIssues, [703, 704, 705]);
+  assert.equal(law.terminalWcvC2Closeout, true);
+});
+
+test("prohibits #703, #704, #705 closure and #706 start before terminal Law", async () => {
   const unified = await json("config/dabangil-unified-program-contract.json");
   const rules =
     unified.wcvCampaignOverlay.c2StructuralRecovery.dependencyRules;
@@ -169,12 +231,16 @@ test("binds #703, #704, #705 and #706 to the required terminal predecessors", as
 
   assert.equal(rules.sourceFirewallAndCognitiveArchitectureAreSerial, true);
   assert.deepEqual(rules.issue703RequiresTerminalIssues, [702, 714]);
-  assert.equal(rules.issue704CompletionRequiresTerminalIssue, 703);
-  assert.deepEqual(rules.issue705RuntimeRequiresTerminalIssues, [702, 714, 703, 704]);
+  assert.equal(rules.runtimeSubjectStagesAreCompleteOutcomes, true);
+  assert.equal(rules.intermediateSubjectStagesMayRecordAcceptanceContributions, true);
+  assert.equal(rules.intermediateSubjectStagesMayCloseIssues703To705, false);
+  assert.equal(rules.issue703ClosureRequiresTerminalReplacementStage, "C2R-C-L");
+  assert.equal(rules.issue704ClosureRequiresTerminalReplacementStage, "C2R-C-L");
+  assert.equal(rules.issue705ClosureRequiresTerminalReplacementStage, "C2R-C-L");
   assert.equal(rules.issue706RequiresTerminalIssue, 705);
-  assert.equal(rules.issue706RequiresTerminalReplacementStage, "C2R-F");
-  assert.equal(c3.state, "queued_blocked_until_terminal_c2r_f");
-  assert.equal(c3.terminalReplacementDependency, "C2R-F");
+  assert.equal(rules.issue706RequiresTerminalReplacementStage, "C2R-C-L");
+  assert.equal(c3.state, "queued_blocked_until_terminal_c2r_c_l");
+  assert.equal(c3.terminalReplacementDependency, "C2R-C-L");
   assert.equal(c3.automaticStartAllowed, false);
 });
 
@@ -203,18 +269,23 @@ test("keeps roadmap selection metadata-only with one writer and no stage auto-st
     "C2R-C-P",
     "C2R-C-T",
     "C2R-C-L",
-    "C2R-D",
-    "C2R-E",
-    "C2R-F",
   ]);
+  assert.deepEqual(c2.independentlyCompleteSourceContractStages, ["C2R-A", "C2R-B"]);
+  assert.deepEqual(c2.completeLearnerVisibleRuntimeStages, ["C2R-C-P", "C2R-C-T", "C2R-C-L"]);
+  assert.equal(c2.commonRuntimeSubstrateFirstStage, "C2R-C-P");
+  assert.equal(c2.subjectGoldenFixturesDistributedIntoRuntimeStages, true);
+  assert.equal(c2.intermediateSubjectStagesMayCloseIssues703To705, false);
+  assert.equal(c2.issue703ClosureStage, "C2R-C-L");
+  assert.equal(c2.issue704ClosureStage, "C2R-C-L");
+  assert.equal(c2.issue705ClosureStage, "C2R-C-L");
   assert.equal(c2.priorAtomic702To705SinglePrRequired, false);
   assert.equal(c2.standalone702SourcePrAllowed, true);
   assert.equal(c2.standalone714PrerequisitePrAllowed, true);
   assert.equal(c2.automaticStartAllowed, false);
   assert.equal(c2.terminalDonorEvidencePromotedToMain, false);
   assert.equal(c2.uncoveredReviewFindingCount, 21);
-  assert.equal(c3.executionState, "blocked_until_terminal_c2r_f_merge");
-  assert.equal(c3.terminalReplacementDependency, "C2R-F");
+  assert.equal(c3.executionState, "blocked_until_terminal_c2r_c_l_merge");
+  assert.equal(c3.terminalReplacementDependency, "C2R-C-L");
   assert.equal(c3.automaticStartAllowed, false);
   assert.equal(plan.globalMergeProducingWriterLimit, 1);
   assert.equal(plan.activeWriterCount, 0);
@@ -251,6 +322,7 @@ test("installs all 21 donor findings as uncovered matrix rows", async () => {
     21,
   );
   assert.doesNotMatch(matrix, /\| `covered` \|/);
+  assert.doesNotMatch(matrix, /C2R-(?:D|E|F)/);
 
   for (const [index, [review, thread, severity, stage]] of
     EXPECTED_REVIEW_THREADS.entries()) {
@@ -262,6 +334,59 @@ test("installs all 21 donor findings as uncovered matrix rows", async () => {
     assert.ok(row.includes("**"), `${thread} exact finding title`);
     assert.ok(row.includes("tests/"), `${thread} future test path`);
   }
+});
+
+test("inherits every common Practice regression in Theory and Law", async () => {
+  const unified = await json("config/dabangil-unified-program-contract.json");
+  const stages = new Map(
+    unified.wcvCampaignOverlay.c2StructuralRecovery.replacementStages.map(
+      (stage) => [stage.id, stage],
+    ),
+  );
+  const common = [1, 4, 6, 8, 11, 14];
+
+  assert.deepEqual(stages.get("C2R-C-P").commonRegressionRows, common);
+  assert.deepEqual(stages.get("C2R-C-T").inheritedCommonRegressionRows, common);
+  assert.deepEqual(stages.get("C2R-C-L").inheritedCommonRegressionRows, common);
+});
+
+test("registers the recovery decision before the unaffected 2026-08-11 authority", async () => {
+  const agents = await text("AGENTS.md");
+  const index = agents.match(
+    /## Product source of truth([\s\S]*?)## Product scope/,
+  )?.[1] ?? "";
+  const recovery =
+    "docs/decisions/2026-08-14-wcv-c2-structural-recovery.md";
+  const prior =
+    "docs/decisions/2026-08-11-owner-accelerated-vertical-slice-authority-roadmap-reconciliation.md";
+
+  assert.ok(index.indexOf(recovery) >= 0);
+  assert.ok(index.indexOf(prior) > index.indexOf(recovery));
+  assert.match(index, /PR #716 terminal disposition, Tracker #717, WCV-C2 structural/);
+  assert.match(index, /five-stage replacement-chain mapping/);
+  assert.match(index, /V13 supremacy, WCV 1\.0\.8 subordination/);
+  assert.match(index, /ban on\n   horizontal contract\/API\/storage\/runtime\/UI\/QA splitting/);
+});
+
+test("retains the root complete-vertical rule and removes horizontal recovery stages", async () => {
+  const paths = [
+    "AGENTS.md",
+    "roadmap/active-program.yml",
+    "config/dabangil-unified-program-contract.json",
+    "docs/dabangil-unified-program-contract.md",
+    "docs/inverge-master-roadmap.md",
+    DECISION,
+    MATRIX,
+  ];
+  const sources = await Promise.all(paths.map((path) => text(path)));
+  const agents = sources[0];
+  const recoveryAuthority = sources.slice(1).join("\n");
+
+  assert.match(agents, /A runtime vertical contains every layer required for its promised outcome in\n  one PR/);
+  assert.match(agents, /do\s+not split it horizontally into contract, API, runtime, UI, and QA PRs/);
+  assert.doesNotMatch(recoveryAuthority, /C2R-(?:D|E|F)/);
+  assert.match(recoveryAuthority, /validator-only, fixture-only, persistence-only/);
+  assert.doesNotMatch(recoveryAuthority, /runtimeAuthorized"?:\s*true/);
 });
 
 test("keeps V13 and WCV 1.0.8 while denying every activation class", async () => {
@@ -309,7 +434,7 @@ test("registers the structural recovery authority test exactly once", async () =
   assert.equal(FOCUSED_TEST.endsWith(".test.mjs"), true);
 });
 
-test("declares the exact eleven-path source-contract ownership boundary", async () => {
+test("declares the exact twelve-path source-contract ownership boundary", async () => {
   const decision = await text(DECISION);
   const manifest =
     decision.match(/## 10\. Exact owned-path manifest([\s\S]*)$/)?.[1] ?? "";
@@ -318,6 +443,7 @@ test("declares the exact eleven-path source-contract ownership boundary", async 
   );
 
   assert.deepEqual(paths, [
+    "AGENTS.md",
     "roadmap/active-program.yml",
     "config/dabangil-unified-program-contract.json",
     "docs/dabangil-unified-program-contract.md",
@@ -342,6 +468,7 @@ test("declares the exact eleven-path source-contract ownership boundary", async 
 
 test("keeps all structural recovery authority artifacts newline-terminated", async () => {
   for (const path of [
+    "AGENTS.md",
     DECISION,
     MATRIX,
     "roadmap/active-program.yml",

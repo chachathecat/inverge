@@ -23,11 +23,20 @@ promoted into main and does not establish WCV-C2 completion.
 
 Tracker #717 owns the exact serial recovery graph:
 
-`C2R-A/#702 → C2R-B/#714 → C2R-C-P/#703 → C2R-C-T/#703 → C2R-C-L/#703 → C2R-D/#704 → C2R-E/#705 → C2R-F/#705`
+`C2R-A/#702 → C2R-B/#714 → C2R-C-P → C2R-C-T → C2R-C-L`
 
-The sequence is terminally serial. #702 and #714 are not parallel; #703 waits
-for both, #704 waits for terminal #703, #705 runtime waits for #702/#714/#703/
-#704, and #706 remains blocked until terminal C2R-F/#705 merge. No stage starts
+The sequence is terminally serial. C2R-A and C2R-B are independently complete
+source-contract outcomes and are not parallel. C2R-C-P, C2R-C-T and C2R-C-L
+are complete Practice, Theory and Law learner-visible runtime verticals. Each
+contains its matching Golden/Owner-Gold fixtures and every changed
+persistence/API/runtime/UI/evidence/safe-deferred/rollback layer required for
+that subject outcome. The common runtime substrate first lands within
+C2R-C-P, not as a separate foundation.
+
+C2R-C-P and C2R-C-T may record #703/#704/#705 acceptance contributions but
+cannot close those issues. Only terminal C2R-C-L may complete #703, #704,
+#705 and WCV-C2; #706 remains blocked until that merge. Common regressions
+first covered in Practice remain mandatory for Theory and Law. No stage starts
 automatically. Exactly one merge-producing writer remains permitted.
 
 V13 remains the sole active master and WCV 1.0.8 remains subordinate. This

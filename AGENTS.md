@@ -5,9 +5,15 @@
 Use this authority order when sources conflict:
 
 1. a dated Owner decision for the exact decision it owns, currently
+   `docs/decisions/2026-08-14-wcv-c2-structural-recovery.md`
+   for PR #716 terminal disposition, Tracker #717, WCV-C2 structural
+   recovery, the five-stage replacement-chain mapping, and only the exact
+   supersession that decision owns,
    `docs/decisions/2026-08-11-owner-accelerated-vertical-slice-authority-roadmap-reconciliation.md`
-   for the WCV campaign delivery model, single-writer limit, multi-issue
-   vertical closure, bounded review, and #701-#714 mapping,
+   for unaffected scope, including V13 supremacy, WCV 1.0.8 subordination,
+   the single-writer limit, complete learner-visible verticals, the ban on
+   horizontal contract/API/storage/runtime/UI/QA splitting, bounded review,
+   and unaffected #701-#714 mapping,
    `docs/decisions/2026-07-29-owner-o3a-golden-3-approval.md` for the exact
    O3A packet,
    `docs/decisions/2026-07-26-owner-dogfood-private-plane-schedule-amendment.md`
@@ -30,6 +36,17 @@ are inputs, not live operational truth.
 V13 is the sole active master plan. The Appraiser Second World-Class Vertical
 Execution Standard `1.0.8` is a subordinate V13 execution standard only. It
 does not create a second active master or a second mastery authority.
+
+For WCV-C2 structural recovery only, the exact serial mapping is
+`C2R-A → C2R-B → C2R-C-P → C2R-C-T → C2R-C-L`. C2R-A and C2R-B are
+independently complete source-contract outcomes. C2R-C-P, C2R-C-T and
+C2R-C-L are complete Practice, Theory and Law learner-visible runtime
+verticals: matching Golden/Owner-Gold fixtures and every changed
+persistence/API/runtime/UI/evidence/safe-deferred/rollback layer stay inside
+their subject vertical. The common runtime substrate first lands only inside
+C2R-C-P. C2R-C-P and C2R-C-T may record acceptance contributions but cannot
+close #703, #704 or #705; only terminal C2R-C-L may close them, complete
+WCV-C2 and unblock #706. No replacement stage starts automatically.
 
 ## Product scope (Owner O1R amendment on 2026-07-26)
 

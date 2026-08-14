@@ -73,32 +73,61 @@ For WCV-C2 recovery only, this decision supersedes:
 - any representation of PR #716 as mergeable completion evidence.
 
 The prior decision remains historical and controls unaffected scope. This
-supersession does not weaken complete-vertical requirements inside each
-runtime-producing replacement stage, bounded review, rights, source,
-privacy, evidence, learner-outcome, rollback, or activation gates.
+supersession does not weaken complete-vertical requirements inside any
+runtime-producing replacement stage, bounded review, rights, source, privacy,
+evidence, learner-outcome, rollback, or activation gates. The first two stages
+are independently complete source-contract outcomes; the remaining three are
+independently deployable, learner-visible subject runtime outcomes, never
+horizontal implementation layers.
 
 ## 4. Authoritative replacement chain
 
 | Order | Stage | Issue | Exact scope | Terminal predecessor |
 |---:|---|---:|---|---|
-| 1 | C2R-A | #702 | rights-safe source firewall, source-contract only | this authority PR |
-| 2 | C2R-B | #714 | cognitive architecture contract, source-contract only | terminal C2R-A |
-| 3 | C2R-C-P | #703 | shared tutor kernel plus typed Practice validator | terminal C2R-B |
-| 4 | C2R-C-T | #703 | typed Theory target-scope validator | terminal C2R-C-P |
-| 5 | C2R-C-L | #703 | typed Law exact source-anchor-version validator | terminal C2R-C-T |
-| 6 | C2R-D | #704 | Golden 3 and Owner Gold fixtures | terminal C2R-C-L |
-| 7 | C2R-E | #705 | persistence, forced RLS, and server | terminal C2R-D |
-| 8 | C2R-F | #705 | API, learner UI, runtime evidence, and terminal closeout | terminal C2R-E |
+| 1 | C2R-A | #702 | independently complete rights-safe source-firewall contract | this authority PR |
+| 2 | C2R-B | #714 | independently complete cognitive-architecture and typed proof-obligation contract | terminal C2R-A |
+| 3 | C2R-C-P | #703 lead; #704/#705 contributions | complete Practice trusted-repair learner outcome | terminal C2R-B |
+| 4 | C2R-C-T | #703 lead; #704/#705 contributions | complete Theory trusted-repair learner outcome | terminal C2R-C-P |
+| 5 | C2R-C-L | terminal #703/#704/#705 | complete Law trusted-repair learner outcome and WCV-C2 closeout | terminal C2R-C-T |
 
-The sequence is strictly serial. C2R-A and C2R-B are not parallel. #703 cannot
-begin before terminal #702 and terminal #714. #704 cannot complete before all
-three #703 validator stages terminate. #705 runtime cannot begin before
-terminal #702, #714, #703, and #704. #706/C3 remains blocked until terminal
-C2R-F merges and therefore terminal #705 is established.
+The five-stage sequence is strictly serial. C2R-A and C2R-B are not parallel.
+#703 runtime cannot begin before terminal #702 and terminal #714. C2R-C-P and
+C2R-C-T may record explicit acceptance contributions to #703, #704 and #705,
+but they cannot close those issues or declare WCV-C2 complete. Only terminal
+C2R-C-L may complete #703, #704 and #705, close WCV-C2, and unblock #706/C3.
 
 Standalone #702 and standalone #714 are authorized only as the exact
 source-contract stages C2R-A and C2R-B. This decision does not start either
 stage and does not authorize their implementation in this PR.
+
+### C2R-C-P complete outcome
+
+The Practice PR must include every changed layer required for an independently
+deployable Practice trusted-repair learner outcome: the shared tutor episode
+kernel it needs; a typed calculation-relation validator; matching Practice
+Golden and Owner-Gold fixtures; persistence, forced RLS, server,
+idempotency/CAS, API and learner UI; focused and hostile tests; actual browser
+→ Next → Supabase/Postgres evidence; a safe-deferred capability boundary; and
+independent rollback. The common runtime substrate may first land only inside
+this complete Practice outcome, never as a separate foundation or
+persistence-only completion.
+
+### C2R-C-T complete outcome
+
+The Theory PR must include the typed target-scoped predicate validator,
+matching Theory Golden and Owner-Gold fixtures, every necessary
+persistence/server/API/UI integration delta, complete browser-to-database
+evidence, a safe-deferred Theory capability boundary, and rollback that does
+not require reverting the merged Practice outcome.
+
+### C2R-C-L complete outcome
+
+The Law PR must include the exact source-anchor-locator/effective-version/
+applicable-date validator, matching Law Golden and Owner-Gold fixtures, every
+necessary persistence/server/API/UI integration delta, complete
+browser-to-database evidence, a safe-deferred Law capability boundary, and
+rollback that does not require reverting Practice or Theory. This is the only
+stage that may terminally complete #703, #704 and #705 and WCV-C2.
 
 ## 5. Typed proof obligations
 
@@ -129,6 +158,12 @@ main.
 A future stage may cover a row only when its merged commit contains the named
 regression or a stricter exact successor, the matrix records the final test
 path, and the matrix records the merged commit.
+
+C2R-C-P owns Practice and common-runtime rows 1, 2, 4, 6, 8, 9, 10, 11, 12,
+14 and 19. C2R-C-T owns Theory rows 5, 13, 16, 18 and 20. C2R-C-L owns Law
+source/drift/blocker/anchor/version rows 3, 7, 15, 17 and 21. Common rows 1,
+4, 6, 8, 11 and 14 first covered in C2R-C-P remain mandatory inherited
+regressions in both C2R-C-T and C2R-C-L. All 21 statuses remain `uncovered`.
 
 ## 7. Writer, start, and activation boundaries
 
@@ -172,7 +207,8 @@ After this authority PR merges:
 - #717 remains the structural recovery tracker;
 - C2R-A is the first authorized but unstarted replacement stage;
 - every later stage remains dependency-blocked and unstarted;
-- #706 remains blocked by terminal C2R-F;
+- #703, #704 and #705 remain open until terminal C2R-C-L;
+- #706 remains blocked by terminal C2R-C-L;
 - V13 remains the sole active master;
 - WCV 1.0.8 remains subordinate; and
 - all runtime, learner, provider, payment, cohort, and Production activation
@@ -180,18 +216,19 @@ After this authority PR merges:
 
 ## 10. Exact owned-path manifest
 
-This authority PR owns exactly these eleven paths:
+This authority PR owns exactly these twelve paths:
 
-1. `roadmap/active-program.yml`
-2. `config/dabangil-unified-program-contract.json`
-3. `docs/dabangil-unified-program-contract.md`
-4. `docs/inverge-master-roadmap.md`
-5. `docs/decisions/2026-08-14-wcv-c2-structural-recovery.md`
-6. `docs/qa/wcv-c2-replacement-regression-matrix.md`
-7. `tests/wcv-campaign-authority-roadmap-reconciliation.test.mjs`
-8. `tests/wcv-c2r-structural-recovery-authority.test.mjs`
-9. `tests/dabangil-premium-alignment.test.mjs`
-10. `tests/s234r-owner-dogfood-private-plane-schedule-amendment.test.mjs`
-11. `scripts/run-node-tests.mjs`
+1. `AGENTS.md`
+2. `roadmap/active-program.yml`
+3. `config/dabangil-unified-program-contract.json`
+4. `docs/dabangil-unified-program-contract.md`
+5. `docs/inverge-master-roadmap.md`
+6. `docs/decisions/2026-08-14-wcv-c2-structural-recovery.md`
+7. `docs/qa/wcv-c2-replacement-regression-matrix.md`
+8. `tests/wcv-campaign-authority-roadmap-reconciliation.test.mjs`
+9. `tests/wcv-c2r-structural-recovery-authority.test.mjs`
+10. `tests/dabangil-premium-alignment.test.mjs`
+11. `tests/s234r-owner-dogfood-private-plane-schedule-amendment.test.mjs`
+12. `scripts/run-node-tests.mjs`
 
 No other path is authorized in this PR.

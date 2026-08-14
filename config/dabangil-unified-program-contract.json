@@ -925,6 +925,8 @@
           "id": "C2R-A",
           "issue": 702,
           "scope": "rights_safe_source_firewall",
+          "outcomeType": "independently_complete_source_contract_outcome",
+          "horizontalRuntimeLayer": false,
           "dependencies": ["WCV-C2R-AUTHORITY"],
           "state": "authorized_unstarted",
           "sourceContractOnly": true,
@@ -936,6 +938,8 @@
           "id": "C2R-B",
           "issue": 714,
           "scope": "cognitive_architecture_contract",
+          "outcomeType": "independently_complete_source_contract_outcome",
+          "horizontalRuntimeLayer": false,
           "dependencies": ["C2R-A"],
           "state": "queued_dependency_blocked",
           "sourceContractOnly": true,
@@ -946,9 +950,28 @@
           "order": 3,
           "id": "C2R-C-P",
           "issue": 703,
-          "scope": "shared_tutor_kernel_and_practice_validator",
+          "scope": "complete_practice_trusted_repair_vertical",
+          "outcomeType": "independently_deployable_learner_visible_runtime_vertical",
+          "learnerVisibleOutcome": "practice_trusted_repair",
           "dependencies": ["C2R-B"],
           "state": "queued_dependency_blocked",
+          "requiredChangedLayers": [
+            "SHARED_TUTOR_EPISODE_KERNEL",
+            "TYPED_PRACTICE_CALCULATION_RELATION_VALIDATOR",
+            "PRACTICE_GOLDEN_AND_OWNER_GOLD_FIXTURES",
+            "PERSISTENCE_FORCED_RLS_SERVER_IDEMPOTENCY_CAS",
+            "API",
+            "LEARNER_UI",
+            "FOCUSED_AND_HOSTILE_TESTS",
+            "BROWSER_NEXT_SUPABASE_POSTGRES_RUNTIME_EVIDENCE",
+            "SAFE_DEFERRED_CAPABILITY_BOUNDARY",
+            "INDEPENDENT_ROLLBACK"
+          ],
+          "commonRuntimeSubstrateFirstLandsHere": true,
+          "acceptanceContributionIssues": [703, 704, 705],
+          "directRegressionRows": [1, 2, 4, 6, 8, 9, 10, 11, 12, 14, 19],
+          "commonRegressionRows": [1, 4, 6, 8, 11, 14],
+          "terminalIssueClosureAllowed": false,
           "terminalMergeRequired": true,
           "automaticStartAllowed": false
         },
@@ -956,9 +979,23 @@
           "order": 4,
           "id": "C2R-C-T",
           "issue": 703,
-          "scope": "theory_target_scope_validator",
+          "scope": "complete_theory_trusted_repair_vertical",
+          "outcomeType": "independently_deployable_learner_visible_runtime_vertical",
+          "learnerVisibleOutcome": "theory_trusted_repair",
           "dependencies": ["C2R-C-P"],
           "state": "queued_dependency_blocked",
+          "requiredChangedLayers": [
+            "TYPED_THEORY_TARGET_SCOPED_PREDICATE_VALIDATOR",
+            "THEORY_GOLDEN_AND_OWNER_GOLD_FIXTURES",
+            "NECESSARY_PERSISTENCE_SERVER_API_UI_INTEGRATION_DELTA",
+            "BROWSER_TO_DATABASE_RUNTIME_EVIDENCE",
+            "SAFE_DEFERRED_THEORY_CAPABILITY_BOUNDARY",
+            "ROLLBACK_INDEPENDENT_OF_PRACTICE"
+          ],
+          "acceptanceContributionIssues": [703, 704, 705],
+          "directRegressionRows": [5, 13, 16, 18, 20],
+          "inheritedCommonRegressionRows": [1, 4, 6, 8, 11, 14],
+          "terminalIssueClosureAllowed": false,
           "terminalMergeRequired": true,
           "automaticStartAllowed": false
         },
@@ -966,39 +1003,25 @@
           "order": 5,
           "id": "C2R-C-L",
           "issue": 703,
-          "scope": "law_exact_source_anchor_version_validator",
+          "scope": "complete_law_trusted_repair_vertical_and_terminal_wcv_c2_closeout",
+          "outcomeType": "independently_deployable_learner_visible_runtime_vertical",
+          "learnerVisibleOutcome": "law_trusted_repair",
           "dependencies": ["C2R-C-T"],
           "state": "queued_dependency_blocked",
-          "terminalMergeRequired": true,
-          "automaticStartAllowed": false
-        },
-        {
-          "order": 6,
-          "id": "C2R-D",
-          "issue": 704,
-          "scope": "golden_3_and_owner_gold_fixtures",
-          "dependencies": ["C2R-C-L"],
-          "state": "queued_dependency_blocked",
-          "terminalMergeRequired": true,
-          "automaticStartAllowed": false
-        },
-        {
-          "order": 7,
-          "id": "C2R-E",
-          "issue": 705,
-          "scope": "persistence_rls_server",
-          "dependencies": ["C2R-D"],
-          "state": "queued_dependency_blocked",
-          "terminalMergeRequired": true,
-          "automaticStartAllowed": false
-        },
-        {
-          "order": 8,
-          "id": "C2R-F",
-          "issue": 705,
-          "scope": "api_ui_runtime_terminal_closeout",
-          "dependencies": ["C2R-E"],
-          "state": "queued_dependency_blocked",
+          "requiredChangedLayers": [
+            "EXACT_LAW_SOURCE_ANCHOR_LOCATOR_EFFECTIVE_VERSION_APPLICABLE_DATE_VALIDATOR",
+            "LAW_GOLDEN_AND_OWNER_GOLD_FIXTURES",
+            "NECESSARY_PERSISTENCE_SERVER_API_UI_INTEGRATION_DELTA",
+            "BROWSER_TO_DATABASE_RUNTIME_EVIDENCE",
+            "SAFE_DEFERRED_LAW_CAPABILITY_BOUNDARY",
+            "ROLLBACK_INDEPENDENT_OF_PRACTICE_AND_THEORY"
+          ],
+          "acceptanceContributionIssues": [703, 704, 705],
+          "directRegressionRows": [3, 7, 15, 17, 21],
+          "inheritedCommonRegressionRows": [1, 4, 6, 8, 11, 14],
+          "terminalIssueClosureAllowed": true,
+          "terminalClosureIssues": [703, 704, 705],
+          "terminalWcvC2Closeout": true,
           "terminalMergeRequired": true,
           "automaticStartAllowed": false
         }
@@ -1006,10 +1029,14 @@
       "dependencyRules": {
         "sourceFirewallAndCognitiveArchitectureAreSerial": true,
         "issue703RequiresTerminalIssues": [702, 714],
-        "issue704CompletionRequiresTerminalIssue": 703,
-        "issue705RuntimeRequiresTerminalIssues": [702, 714, 703, 704],
+        "runtimeSubjectStagesAreCompleteOutcomes": true,
+        "intermediateSubjectStagesMayRecordAcceptanceContributions": true,
+        "intermediateSubjectStagesMayCloseIssues703To705": false,
+        "issue703ClosureRequiresTerminalReplacementStage": "C2R-C-L",
+        "issue704ClosureRequiresTerminalReplacementStage": "C2R-C-L",
+        "issue705ClosureRequiresTerminalReplacementStage": "C2R-C-L",
         "issue706RequiresTerminalIssue": 705,
-        "issue706RequiresTerminalReplacementStage": "C2R-F"
+        "issue706RequiresTerminalReplacementStage": "C2R-C-L"
       }
     },
     "campaigns": [
@@ -1040,10 +1067,7 @@
           "C2R-B",
           "C2R-C-P",
           "C2R-C-T",
-          "C2R-C-L",
-          "C2R-D",
-          "C2R-E",
-          "C2R-F"
+          "C2R-C-L"
         ],
         "automaticStartAllowed": false,
         "requiredOutcome": [
@@ -1067,8 +1091,8 @@
         "leadIssue": 706,
         "includedIssues": [706, 707, 708],
         "dependencies": ["WCV-C2"],
-        "state": "queued_blocked_until_terminal_c2r_f",
-        "terminalReplacementDependency": "C2R-F",
+        "state": "queued_blocked_until_terminal_c2r_c_l",
+        "terminalReplacementDependency": "C2R-C-L",
         "automaticStartAllowed": false
       },
       {

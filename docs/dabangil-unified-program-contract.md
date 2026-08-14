@@ -168,9 +168,10 @@ without splitting its layers.
 For WCV-C2 recovery only, the 2026-08-14 decision is the exact authorized
 exception: PR #716 proved that Practice, Theory and Law carry different typed
 proof obligations. The prior atomic #702–#705 single-PR requirement is
-superseded by eight serial replacement PRs. This exception does not permit
-horizontal splitting outside the named chain and does not weaken the complete
-runtime-vertical rule for C2R-E or C2R-F.
+superseded by two independently complete source-contract outcomes followed by
+three subject-complete learner-visible runtime verticals. This exception does
+not permit a validator-only, fixture-only, persistence-only, API-only or
+UI-only runtime stage and does not weaken the complete-runtime-vertical rule.
 
 ### Bounded review
 
@@ -188,8 +189,8 @@ review/correction cycles are prohibited.
 | Campaign | Lead | Included issues | State after C1 | Outcome |
 |---|---:|---|---|---|
 | C1 | #713 | #713 | completed source-only on reconciliation merge | authority and roadmap reconciliation; runtime mutation zero |
-| C2R | #717 | #702, #714, #703, #704, #705 | structural-recovery authority installed; no stage started | eight terminally serial replacement PRs that rebuild the trusted-repair outcome with typed subject validators |
-| C3 | #706 | #706–#708 | blocked until terminal C2R-F/#705 merge | frozen D+1, sealed D+7, recurrence/reopening, Ledger, recurring deduction and Today/Full-Day |
+| C2R | #717 | #702, #714, #703, #704, #705 | structural-recovery authority installed; no stage started | five terminally serial outcomes: two source contracts and three complete subject runtime verticals |
+| C3 | #706 | #706–#708 | blocked until terminal C2R-C-L/#705 merge | frozen D+1, sealed D+7, recurrence/reopening, Ledger, recurring deduction and Today/Full-Day |
 | C4 | #709 | #709–#710 | queued behind C3 | Owner proof, red-team, baseline and invitation-only commercial readiness; no activation |
 | C5 | #711 | #711 | queued behind C4 and unapproved O4W exact cohort gate | frozen paid cohort with real delayed-evidence windows |
 | C6 | #712 | #712 | queued behind C5 | verified-bank and bodyless calibration flywheel |
@@ -204,19 +205,36 @@ neither C2R-A nor C2R-B.
 
 | Order | Stage | Issue | Scope | Depends on |
 |---:|---|---:|---|---|
-| 1 | C2R-A | #702 | rights-safe source firewall | terminal merge of this authority PR |
-| 2 | C2R-B | #714 | cognitive architecture contract | terminal C2R-A |
-| 3 | C2R-C-P | #703 | shared tutor kernel plus Practice validator | terminal C2R-B |
-| 4 | C2R-C-T | #703 | Theory target-scope validator | terminal C2R-C-P |
-| 5 | C2R-C-L | #703 | Law exact source-anchor-version validator | terminal C2R-C-T |
-| 6 | C2R-D | #704 | Golden 3 and Owner Gold fixtures | terminal C2R-C-L |
-| 7 | C2R-E | #705 | persistence, forced RLS and server | terminal C2R-D |
-| 8 | C2R-F | #705 | API, UI, runtime evidence and terminal closeout | terminal C2R-E |
+| 1 | C2R-A | #702 | independently complete rights-safe source-firewall contract | terminal merge of this authority PR |
+| 2 | C2R-B | #714 | independently complete cognitive-architecture and typed proof-obligation contract | terminal C2R-A |
+| 3 | C2R-C-P | #703 lead; contributes to #704/#705 | complete Practice trusted-repair learner outcome | terminal C2R-B |
+| 4 | C2R-C-T | #703 lead; contributes to #704/#705 | complete Theory trusted-repair learner outcome | terminal C2R-C-P |
+| 5 | C2R-C-L | #703 lead; terminal #703/#704/#705 closeout | complete Law trusted-repair learner outcome and WCV-C2 closeout | terminal C2R-C-T |
 
-C2R-A and C2R-B are serial, never parallel. #703 cannot begin before terminal
-#702 and #714. #704 cannot complete before terminal #703. #705 runtime cannot
-begin before terminal #702, #714, #703 and #704. #706/C3 remains blocked until
-terminal C2R-F establishes terminal #705.
+C2R-A and C2R-B are serial, never parallel, and each is a source-contract
+outcome rather than a horizontal runtime layer. C2R-C-P contains in one PR the
+shared tutor episode kernel needed by Practice, the typed calculation-relation
+validator, matching Practice Golden/Owner-Gold fixtures, all required
+persistence/forced-RLS/server/idempotency/CAS, API and learner UI layers,
+focused and hostile tests, actual browser → Next → Supabase/Postgres evidence,
+a safe-deferred capability boundary and independent rollback. The common
+runtime substrate first lands only as part of that complete Practice outcome.
+
+C2R-C-T adds in one PR the typed Theory target-scoped predicate validator,
+matching Theory Golden/Owner-Gold fixtures, every necessary
+persistence/server/API/UI integration delta, complete browser-to-database
+evidence, a safe-deferred Theory boundary and rollback that preserves the
+already merged Practice outcome. C2R-C-L does the same for the exact Law
+source/anchor/locator/effective-version/applicable-date predicate, with Law
+fixtures, necessary integration deltas, complete runtime evidence, a
+safe-deferred Law boundary and rollback that preserves Practice and Theory.
+
+C2R-C-P and C2R-C-T may record explicit contributions to #703/#704/#705 but
+may not close any of them. Only terminal C2R-C-L may complete #703, #704 and
+#705, mark WCV-C2 complete and unblock #706/C3. Common persistence, exposure,
+partial-loop, API/UI, fork-safe workflow, shared-shell, checkout-credential and
+runtime-boundary regressions first covered by C2R-C-P remain mandatory
+inherited regressions in C2R-C-T and C2R-C-L.
 
 Every replacement stage has `automaticStartAllowed: false`. Runner selection
 is metadata-only and cannot start, reserve, provision, author, review or merge

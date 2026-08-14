@@ -353,7 +353,18 @@ items:
     wcvC2Complete: false
     reviewFindingCount: 21
     uncoveredReviewFindingCount: 21
-    replacementStages: [C2R-A, C2R-B, C2R-C-P, C2R-C-T, C2R-C-L, C2R-D, C2R-E, C2R-F]
+    replacementStages: [C2R-A, C2R-B, C2R-C-P, C2R-C-T, C2R-C-L]
+    independentlyCompleteSourceContractStages: [C2R-A, C2R-B]
+    completeLearnerVisibleRuntimeStages: [C2R-C-P, C2R-C-T, C2R-C-L]
+    commonRuntimeSubstrateFirstStage: C2R-C-P
+    subjectGoldenFixturesDistributedIntoRuntimeStages: true
+    c2rCPRequiredOutcome: [shared_tutor_kernel, practice_relation_validator, practice_gold_fixtures, persistence_rls_server_idempotency_cas, api, learner_ui, focused_hostile_tests, browser_next_supabase_postgres_evidence, safe_deferred_boundary, independent_rollback]
+    c2rCTRequiredOutcome: [theory_target_scope_validator, theory_gold_fixtures, necessary_persistence_server_api_ui_delta, browser_database_evidence, safe_deferred_boundary, practice_independent_rollback]
+    c2rCLRequiredOutcome: [law_exact_version_validator, law_gold_fixtures, necessary_persistence_server_api_ui_delta, browser_database_evidence, safe_deferred_boundary, practice_theory_independent_rollback, terminal_wcv_c2_closeout]
+    intermediateSubjectStagesMayCloseIssues703To705: false
+    issue703ClosureStage: C2R-C-L
+    issue704ClosureStage: C2R-C-L
+    issue705ClosureStage: C2R-C-L
     requiredLayers: [contract_machine_validation, api_storage_persistence, runtime_logic, learner_ui, focused_hostile_runtime_evidence, feature_flag_safe_deferred, rollback]
     priorAtomic702To705SinglePrRequired: false
     standalone702SourcePrAllowed: true
@@ -367,11 +378,11 @@ items:
   - id: WCV-C3
     title: C3 Durable Learning and Daily Command Vertical
     status: queued
-    executionState: blocked_until_terminal_c2r_f_merge
+    executionState: blocked_until_terminal_c2r_c_l_merge
     leadIssue: 706
     includedIssues: [706, 707, 708]
     crossVerticalAcceptanceTracker: 714
-    terminalReplacementDependency: C2R-F
+    terminalReplacementDependency: C2R-C-L
     automaticStartAllowed: false
     dependencies: [WCV-C2]
     lockGroup: wcv-vertical-campaign
