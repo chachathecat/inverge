@@ -25,6 +25,10 @@ Tracker #717 owns the exact serial recovery graph:
 
 `C2R-A/#702 → C2R-B/#714 → C2R-C-P → C2R-C-T → C2R-C-L`
 
+The formal identities remain separate: roadmap item `WCV-C2`, campaign ID
+`C2`, recovery tracker #717, and current authorized but unstarted stage
+`C2R-A` for Issue #702.
+
 The sequence is terminally serial. C2R-A and C2R-B are independently complete
 source-contract outcomes and are not parallel. C2R-C-P, C2R-C-T and C2R-C-L
 are complete Practice, Theory and Law learner-visible runtime verticals. Each
@@ -38,6 +42,11 @@ cannot close those issues. Only terminal C2R-C-L may complete #703, #704,
 #705 and WCV-C2; #706 remains blocked until that merge. Common regressions
 first covered in Practice remain mandatory for Theory and Law. No stage starts
 automatically. Exactly one merge-producing writer remains permitted.
+
+C2R-C-P requires terminal validated merges of both C2R-A and C2R-B; issue
+state or closure cannot substitute for either stage merge. C2R-B completes
+only the Issue #714 allocation for campaign C2 and leaves Issue #714 open with
+its C3, C4 and C6 allocations preserved.
 
 Coverage is non-self-referential. Each stage declares only its assigned rows
 as `candidate_coverage_pending_exact_merge` with exact assertion/test metadata

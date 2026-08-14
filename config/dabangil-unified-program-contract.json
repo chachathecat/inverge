@@ -897,6 +897,21 @@
       "regressionMatrix": "docs/qa/wcv-c2-replacement-regression-matrix.md",
       "status": "authority_installed_no_replacement_stage_started",
       "wcvC2Complete": false,
+      "authorityGraph": {
+        "roadmapItemId": "WCV-C2",
+        "campaignId": "C2",
+        "recoveryTrackerIssue": 717,
+        "structuralAuthorityPr": 718,
+        "currentReplacementStageId": "C2R-A",
+        "currentReplacementStageIssue": 702,
+        "replacementStageChain": [
+          "C2R-A",
+          "C2R-B",
+          "C2R-C-P",
+          "C2R-C-T",
+          "C2R-C-L"
+        ]
+      },
       "terminalDonor": {
         "pr": 716,
         "state": "closed_draft_unmerged",
@@ -1035,7 +1050,8 @@
           "scope": "rights_safe_source_firewall",
           "outcomeType": "independently_complete_source_contract_outcome",
           "horizontalRuntimeLayer": false,
-          "dependencies": ["WCV-C2R-AUTHORITY"],
+          "dependencies": [],
+          "startRequiresTerminalStructuralAuthorityPr": 718,
           "state": "authorized_unstarted",
           "sourceContractOnly": true,
           "terminalMergeRequired": true,
@@ -1136,7 +1152,11 @@
       ],
       "dependencyRules": {
         "sourceFirewallAndCognitiveArchitectureAreSerial": true,
-        "issue703RequiresTerminalIssues": [702, 714],
+        "c2rCPStartRequiresTerminalReplacementStages": ["C2R-A", "C2R-B"],
+        "issueTerminalStateMaySubstituteForStageMerge": false,
+        "issue714MustRemainOpenAfterC2RB": true,
+        "c2rBCompletesOnlyIssue714Allocation": "C2",
+        "issue714RemainingAllocationsPreserved": ["C3", "C4", "C6"],
         "runtimeSubjectStagesAreCompleteOutcomes": true,
         "intermediateSubjectStagesMayRecordAcceptanceContributions": true,
         "intermediateSubjectStagesMayCloseIssues703To705": false,
@@ -1257,6 +1277,9 @@
       "standaloneSourcePrRequired": true,
       "automaticStartAllowed": false,
       "behaviorImplementedByC1": false,
+      "c2rBClosesIssue714": false,
+      "c2rBCompletesOnlyAllocation": "C2",
+      "remainingAllocationsAfterC2RB": ["C3", "C4", "C6"],
       "requirementInventory": [
         "adaptive_expertise_controller",
         "cognitive_load_budget",
@@ -1317,8 +1340,11 @@
       "operative": false,
       "preservedAsHistory": true
     },
-    "soleNextImplementationCampaign": "C2R",
+    "soleNextImplementationCampaign": "C2",
     "soleNextImplementationLeadIssue": 717,
+    "soleNextImplementationTrackerIssue": 717,
+    "soleNextReplacementStage": "C2R-A",
+    "soleNextReplacementStageIssue": 702,
     "laterCampaignsQueued": ["C3", "C4", "C5", "C6"],
     "legacyFactualGates": {
       "CPF-1": {
@@ -1361,7 +1387,11 @@
     "wipLimitDoesNotAuthorizeWriterCount": true,
     "campaignLockGroup": "wcv-vertical-campaign",
     "soleNextImplementationItemId": "WCV-C2",
+    "soleNextImplementationCampaignId": "C2",
     "soleNextImplementationLeadIssue": 717,
+    "soleNextImplementationTrackerIssue": 717,
+    "soleNextReplacementStageId": "C2R-A",
+    "soleNextReplacementStageIssue": 702,
     "primaryStatusesUsed": [
       "completed",
       "blocked",

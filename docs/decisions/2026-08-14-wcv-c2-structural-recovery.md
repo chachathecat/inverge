@@ -5,6 +5,11 @@ decision_id: "owner_wcv_c2r_structural_recovery_2026_08_14"
 dated: "2026-08-14 KST"
 repository: "chachathecat/inverge"
 lead_issue: 717
+roadmap_item_id: "WCV-C2"
+campaign_id: "C2"
+recovery_tracker_issue: 717
+current_replacement_stage: "C2R-A"
+current_replacement_stage_issue: 702
 terminal_pr: 716
 terminal_pr_merged: false
 active_master_plan: "docs/strategy/dabangil-professional-exam-reasoning-os-final-master-plan-v13-2026-08-06.md"
@@ -33,6 +38,10 @@ Structural recovery tracker #717 is the lead authority record for the exact
 serial WCV-C2R replacement chain. The 2026-08-11 C1 delivery decision remains
 authoritative for unaffected scope, including V13 supremacy, WCV 1.0.8
 subordination, and the global one-writer limit.
+
+The identifiers are not aliases: the roadmap item is `WCV-C2`, the campaign
+ID is `C2`, the recovery tracker is #717, and the current authorized but
+unstarted replacement stage is `C2R-A` for Issue #702.
 
 No replacement stage starts automatically. Each stage requires a new explicit
 Work, a fresh exact-main gate, and the terminal merge of every listed
@@ -91,10 +100,16 @@ horizontal implementation layers.
 | 5 | C2R-C-L | terminal #703/#704/#705 | complete Law trusted-repair learner outcome and WCV-C2 closeout | terminal C2R-C-T |
 
 The five-stage sequence is strictly serial. C2R-A and C2R-B are not parallel.
-#703 runtime cannot begin before terminal #702 and terminal #714. C2R-C-P and
-C2R-C-T may record explicit acceptance contributions to #703, #704 and #705,
-but they cannot close those issues or declare WCV-C2 complete. Only terminal
-C2R-C-L may complete #703, #704 and #705, close WCV-C2, and unblock #706/C3.
+C2R-C-P cannot begin before terminal validated merges of both C2R-A and
+C2R-B. Issue state or closure cannot substitute for either replacement-stage
+merge. C2R-C-P and C2R-C-T may record explicit acceptance contributions to
+#703, #704 and #705, but they cannot close those issues or declare WCV-C2
+complete. Only terminal C2R-C-L may complete #703, #704 and #705, close
+WCV-C2, and unblock #706/C3.
+
+C2R-B completes only the Issue #714 requirements allocated to campaign C2. It
+must not close Issue #714; the allocations for C3, C4 and C6 remain open and
+preserved after the C2R-B merge.
 
 Standalone #702 and standalone #714 are authorized only as the exact
 source-contract stages C2R-A and C2R-B. This decision does not start either

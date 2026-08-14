@@ -209,10 +209,20 @@ test("keeps WCV-C2 as the metadata umbrella led by recovery tracker #717", async
   ]);
   const roadmap = parseRoadmap(roadmapSource);
   const campaigns = unified.wcvCampaignOverlay.campaigns;
-  const c2 = campaigns.find((campaign) => campaign.id === "C2");
+  const selectedCampaigns = campaigns.filter(
+    (campaign) => campaign.id === unified.wcvCampaignOverlay.soleNextImplementationCampaign,
+  );
+  const c2 = selectedCampaigns[0];
 
+  assert.equal(selectedCampaigns.length, 1);
+  assert.equal(unified.wcvCampaignOverlay.soleNextImplementationCampaign, "C2");
+  assert.equal(roadmap.program.campaignOverlay, "C2");
   assert.equal(roadmap.program.soleNextImplementationItem, "WCV-C2");
+  assert.equal(roadmap.program.soleNextImplementationCampaign, "C2");
   assert.equal(roadmap.program.soleNextImplementationLeadIssue, 717);
+  assert.equal(roadmap.program.soleNextImplementationTrackerIssue, 717);
+  assert.equal(roadmap.program.soleNextReplacementStage, "C2R-A");
+  assert.equal(roadmap.program.soleNextReplacementStageIssue, 702);
   assert.equal(roadmap.program.structuralRecoveryTrackerIssue, 717);
   assert.equal(roadmap.program.wcvC2Complete, false);
   assert.equal(roadmap.program.replacementStageAutomaticStartAllowed, false);
@@ -220,6 +230,14 @@ test("keeps WCV-C2 as the metadata umbrella led by recovery tracker #717", async
   assert.deepEqual(c2.includedIssues, [702, 714, 703, 704, 705]);
   assert.equal(c2.wcvC2Complete, false);
   assert.equal(c2.automaticStartAllowed, false);
+  assert.equal(
+    unified.wcvCampaignOverlay.soleNextReplacementStage,
+    unified.wcvCampaignOverlay.c2StructuralRecovery.authorityGraph.currentReplacementStageId,
+  );
+  assert.equal(
+    unified.wcvCampaignOverlay.soleNextReplacementStageIssue,
+    unified.wcvCampaignOverlay.c2StructuralRecovery.authorityGraph.currentReplacementStageIssue,
+  );
   assert.deepEqual(unified.wcvCampaignOverlay.laterCampaignsQueued, ["C3", "C4", "C5", "C6"]);
   assert.equal(
     roadmap.byId.get("WCV-C2").executionState,
@@ -418,7 +436,7 @@ test("records the old atomic rule as history and authorizes serial C2R-A then C2
     unified.wcvCampaignOverlay.issue714Tracker.automaticStartAllowed,
     false,
   );
-  assert.match(contract, /Standalone #702 and #714 are authorized only as/);
+  assert.match(contract, /Standalone\s+#702 and #714 are authorized only as/);
   assert.match(decision, /standalone sequence `#702 source-only → #714 source-only → #703`/);
   assert.match(recovery, /C2R-A and C2R-B are not parallel/);
 });
@@ -434,6 +452,18 @@ test("allocates every #714 requirement to C2, C3, C4 or C6 exactly once", async 
   assert.equal(tracker.mergeProducingWhenStageActive, true);
   assert.equal(tracker.automaticStartAllowed, false);
   assert.equal(tracker.behaviorImplementedByC1, false);
+  assert.equal(tracker.c2rBClosesIssue714, false);
+  assert.equal(tracker.c2rBCompletesOnlyAllocation, "C2");
+  assert.deepEqual(tracker.remainingAllocationsAfterC2RB, ["C3", "C4", "C6"]);
+  for (const allocationKey of allocationKeys) {
+    assert.equal(
+      unified.wcvCampaignOverlay.campaigns.filter(
+        (campaign) => campaign.id === allocationKey,
+      ).length,
+      1,
+      allocationKey,
+    );
+  }
   assert.equal(new Set(allocated).size, allocated.length, "duplicate #714 allocation");
   assert.deepEqual(sorted(allocated), sorted(tracker.requirementInventory));
 });

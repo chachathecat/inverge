@@ -189,17 +189,18 @@ review/correction cycles are prohibited.
 | Campaign | Lead | Included issues | State after C1 | Outcome |
 |---|---:|---|---|---|
 | C1 | #713 | #713 | completed source-only on reconciliation merge | authority and roadmap reconciliation; runtime mutation zero |
-| C2R | #717 | #702, #714, #703, #704, #705 | structural-recovery authority installed; no stage started | five terminally serial outcomes: two source contracts and three complete subject runtime verticals |
+| C2 | #717 | #702, #714, #703, #704, #705 | structural-recovery authority installed; no stage started | C2R-A through C2R-C-L: two source contracts and three complete subject runtime verticals |
 | C3 | #706 | #706–#708 | blocked until terminal C2R-C-L/#705 merge | frozen D+1, sealed D+7, recurrence/reopening, Ledger, recurring deduction and Today/Full-Day |
 | C4 | #709 | #709–#710 | queued behind C3 | Owner proof, red-team, baseline and invitation-only commercial readiness; no activation |
 | C5 | #711 | #711 | queued behind C4 and unapproved O4W exact cohort gate | frozen paid cohort with real delayed-evidence windows |
 | C6 | #712 | #712 | queued behind C5 | verified-bank and bodyless calibration flywheel |
 
-Issue #701 remains the parent program. Structural recovery tracker #717 is the
-lead for C2R. Issue #714 remains open and becomes the exact standalone
-source-contract prerequisite C2R-B after terminal C2R-A. It is merge-producing
-only when a separately authorized C2R-B Work starts; this authority PR starts
-neither C2R-A nor C2R-B.
+Issue #701 remains the parent program. The exact identifiers are roadmap item
+`WCV-C2`, campaign `C2`, recovery tracker #717, and current authorized but
+unstarted replacement stage C2R-A for Issue #702. Issue #714 remains open and
+becomes the exact standalone source-contract prerequisite C2R-B after terminal
+C2R-A. It is merge-producing only when a separately authorized C2R-B Work
+starts; this authority PR starts neither C2R-A nor C2R-B.
 
 ### C2R serial replacement chain
 
@@ -210,6 +211,11 @@ neither C2R-A nor C2R-B.
 | 3 | C2R-C-P | #703 lead; contributes to #704/#705 | complete Practice trusted-repair learner outcome | terminal C2R-B |
 | 4 | C2R-C-T | #703 lead; contributes to #704/#705 | complete Theory trusted-repair learner outcome | terminal C2R-C-P |
 | 5 | C2R-C-L | #703 lead; terminal #703/#704/#705 closeout | complete Law trusted-repair learner outcome and WCV-C2 closeout | terminal C2R-C-T |
+
+Within the replacement-stage graph, C2R-A has no earlier stage dependency; it
+has the separate start gate of this structural-authority PR's terminal merge.
+C2R-C-P requires terminal validated merges of both C2R-A and C2R-B. Issue
+state or closure cannot substitute for either stage merge.
 
 C2R-A and C2R-B are serial, never parallel, and each is a source-contract
 outcome rather than a horizontal runtime layer. C2R-C-P contains in one PR the
@@ -287,15 +293,16 @@ receipt-only recovery may repair the index.
 | C6 | continuous instructional-mode, fading, transfer-distance, routing-error, metacognitive and control-transfer calibration |
 
 The allocation inventory is machine mirrored. No #714 requirement may be lost
-or silently treated as implemented. C2R-B now installs the standalone
-source-contract prerequisite; later allocations remain assigned to their
-original C2/C3/C4/C6 delivery stages.
+or silently treated as implemented. C2R-B completes only the requirements
+allocated to campaign C2 and must leave Issue #714 open. The C3, C4 and C6
+allocations remain preserved for their original delivery stages.
 
 The 2026-08-11 atomic C2 requirement and its prohibition on standalone #702
-and #714 are preserved as history and are explicitly superseded for C2R.
-Tracker #717 is the C2R lead. Standalone #702 and #714 are authorized only as
-the serial source-contract stages C2R-A and C2R-B. No stage is started by this
-contract.
+and #714 are preserved as history and are explicitly superseded only for the
+C2 structural-recovery stage chain. Tracker #717 is the recovery tracker and
+campaign-C2 lead record, not a replacement-stage ID or Issue #702. Standalone
+#702 and #714 are authorized only as the serial source-contract stages C2R-A
+and C2R-B. No stage is started by this contract.
 
 ## 3. Learning execution glossary
 

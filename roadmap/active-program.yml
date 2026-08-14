@@ -9,10 +9,15 @@ program:
   mergeProducingDeliverySlotCount: 1
   globalMergeProducingWriterLimit: 1
   wipLimitDoesNotAuthorizeWriterCount: true
-  campaignOverlay: WCV-C2R-STRUCTURAL-RECOVERY
+  campaignOverlay: C2
+  structuralRecoveryOverlayId: WCV-C2R-STRUCTURAL-RECOVERY
   campaignLockGroup: wcv-vertical-campaign
   soleNextImplementationItem: WCV-C2
+  soleNextImplementationCampaign: C2
   soleNextImplementationLeadIssue: 717
+  soleNextImplementationTrackerIssue: 717
+  soleNextReplacementStage: C2R-A
+  soleNextReplacementStageIssue: 702
   crossVerticalAcceptanceTrackerIssue: 714
   structuralRecoveryTrackerIssue: 717
   terminalDonorPr: 716
@@ -342,6 +347,7 @@ items:
     title: C2 First Trusted Repair Structural Recovery
     status: queued
     executionState: structural_recovery_authority_installed_no_stage_started
+    campaignId: C2
     leadIssue: 717
     includedIssues: [702, 714, 703, 704, 705]
     crossVerticalAcceptanceTracker: 714
@@ -361,6 +367,8 @@ items:
     coverageSuccessorRepositoryPrRequired: false
     terminalIssueClosureRequiresValidatedCoverageReceipt: true
     replacementStages: [C2R-A, C2R-B, C2R-C-P, C2R-C-T, C2R-C-L]
+    currentReplacementStage: C2R-A
+    currentReplacementStageIssue: 702
     independentlyCompleteSourceContractStages: [C2R-A, C2R-B]
     completeLearnerVisibleRuntimeStages: [C2R-C-P, C2R-C-T, C2R-C-L]
     commonRuntimeSubstrateFirstStage: C2R-C-P
@@ -376,6 +384,11 @@ items:
     priorAtomic702To705SinglePrRequired: false
     standalone702SourcePrAllowed: true
     standalone714PrerequisitePrAllowed: true
+    c2rCPStartRequiresTerminalReplacementStages: [C2R-A, C2R-B]
+    issueTerminalStateMaySubstituteForStageMerge: false
+    issue714MustRemainOpenAfterC2RB: true
+    c2rBCompletesOnlyIssue714Allocation: C2
+    issue714RemainingAllocationsPreserved: [C3, C4, C6]
     automaticStartAllowed: false
     sourceOnlyCompletionEstablishesRuntimeReadiness: false
     dependencies: [WCV-C1]
