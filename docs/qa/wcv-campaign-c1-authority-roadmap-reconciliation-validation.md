@@ -12,6 +12,22 @@
 - C2 implementation: not started
 - real content, learner, payment and Production activation: none
 
+## 2026-08-14 launch-order supersession
+
+This document's campaign table and hostile assertions record the historical
+2026-08-11 C1 publication state. For current active-roadmap selection, the
+2026-08-14 ULC-0 Owner decision supersedes only these launch-order edges:
+
+```yaml
+WCV-C4: [ULC-I1]
+ULC-R1: [WCV-C4]
+ULC-L1: [ULC-R1]
+O4W: [ULC-L1]
+```
+
+The C1 entries below remain historical validation evidence and are not current
+roadmap or dependency authority. No C1 behavior or runtime state is changed.
+
 ## 1. Read-only start audit
 
 The exact start was reverified before mutation:
@@ -172,7 +188,7 @@ CPF-1 remains `blocked_unknown_reachable_sinks` with `cpf1Complete: false`.
 S236P remains `acceptance_blocked` with `acceptanceCompleted: false`,
 `terminalPass: false` and `nextLiveAttemptAuthorized: false`.
 
-## 6. Final campaign map
+## 6. Historical campaign map at C1 publication
 
 | Campaign | Lead | Included issues | Dependency | State after C1 |
 |---|---:|---|---|---|
@@ -206,7 +222,7 @@ are disjoint and their union equals the inventory:
 
 C1 claims none of this behavior implemented.
 
-## 8. Focused hostile assertions
+## 8. Historical focused hostile assertions at C1 publication
 
 The focused test fails when:
 

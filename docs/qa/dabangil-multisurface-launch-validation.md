@@ -38,6 +38,48 @@ their owned source:
 | exact `WCV-C2` roadmap block | `a3e2b591ee6efe88b2e99a2f9a37f25e0691519b6f0041e46f8045ce3d44fccf` |
 | complete 21-row regression matrix | `b92d4ad88a44e10a7eb61670509c288cf871916a2570253f3f25cef211ebffeb` |
 
+## One-time dependency-graph correction
+
+The sole automated review of exact head
+`208e87e9cd494454f132266a2ee5c6c4605b41d3` was
+`PRR_kwDOSMHn8M8AAAABJjst-w`. It reported actionable
+`P0/P1/P2 = 0/2/0` in exactly these unresolved threads:
+
+- `PRRT_kwDOSMHn8M6ZPhNr`: WCV-C4 could become ready before ULC-I1; and
+- `PRRT_kwDOSMHn8M6ZPhN4`: O4W could become ready before ULC-L1.
+
+The read-only cross-artifact audit found the ULC source contract, Owner
+decision, launch strategy, master roadmap and Issue #719 sequence already
+canonical. The stale active-roadmap and legacy-WCV mirrors are corrected to
+these exact direct dependencies:
+
+```yaml
+WCV-C3: [WCV-C2]
+ULC-M1: [WCV-C3, S241A]
+ULC-M2: [ULC-M1]
+ULC-K1: [ULC-M2]
+ULC-F1: [ULC-K1]
+ULC-F2: [ULC-F1]
+ULC-F3: [ULC-F2]
+ULC-F4: [ULC-F3]
+ULC-F5: [ULC-F4]
+ULC-I1: [ULC-F5]
+WCV-C4: [ULC-I1]
+ULC-R1: [WCV-C4]
+ULC-L1: [ULC-R1]
+O4W: [ULC-L1]
+WCV-C5: [WCV-C4, O4W]
+WCV-C6: [WCV-C5]
+```
+
+The correction adds only three existing legacy-mirror files to the owned
+manifest: the WCV reconciliation test, the premium-alignment mirror test and
+the historical C1 validation record whose pre-ULC assertions now carry an
+explicit supersession notice. The final authority boundary is exactly 17
+paths. It starts no stage and changes no product, runtime, dependency package,
+workflow, database, provider, learner, payment, store, deployment or
+Production state.
+
 ## Required validation commands
 
 ```bash
@@ -63,17 +105,19 @@ The focused test must prove:
 3. WCV-C2R baseline hashes and the 21-row count remain exact.
 4. WCV-C2/C2/C2R-A/#702 remains the sole implementation selection.
 5. Every future sequence ID is unique and every dependency resolves.
-6. No future ULC item is selected, started, or automatically started.
-7. Free ULC-L1 has no O4W/WCV-C5/WCV-C6 dependency.
-8. The paid route retains O4W, WCV-C5, WCV-C6, and a separate authorization.
-9. Public/student surfaces are exactly Web/iOS/Android.
-10. One authoritative learner state serves every surface.
-11. The final WebView/static-export shapes are prohibited.
-12. First-round, mobile, instructor, public-release, and payment runtime are
+6. All 16 active-roadmap direct edges exactly match the correction table.
+7. The ULC and legacy-WCV machine mirrors encode the same WCV-C4 and O4W gates.
+8. No future ULC item is selected, started, or automatically started.
+9. Free ULC-L1 has no O4W/WCV-C5/WCV-C6 dependency.
+10. The paid route retains O4W, WCV-C5, WCV-C6, and a separate authorization.
+11. Public/student surfaces are exactly Web/iOS/Android.
+12. One authoritative learner state serves every surface.
+13. The final WebView/static-export shapes are prohibited.
+14. First-round, mobile, instructor, public-release, and payment runtime are
     future-gated.
-13. Account deletion includes both in-app and external Web paths.
-14. The coordinated availability window is at most 24 hours.
-15. The exact 14-path ownership boundary contains no runtime, dependency,
+15. Account deletion includes both in-app and external Web paths.
+16. The coordinated availability window is at most 24 hours.
+17. The exact 17-path ownership boundary contains no runtime, dependency,
     workflow, database, or native-project path.
 
 ## Hostile read-only audit checklist
@@ -84,6 +128,10 @@ The audit fails closed on any of these counterexamples:
 - C2R-A, its issue, its state, the replacement chain, matrix, or writer limit
   changes.
 - Any ULC item is marked active, selected, started, or automatically started.
+- WCV-C4 has any direct dependency other than ULC-I1.
+- ULC-R1 has any direct dependency other than WCV-C4.
+- O4W has any direct dependency other than ULC-L1.
+- a legacy-WCV machine or test mirror retains either pre-ULC edge.
 - ULC-L1 gains an O4W/C5/C6 dependency or a paid/efficacy claim.
 - O4W/C5/C6 is removed from the later paid path.
 - a fourth public surface appears or one of Web/iOS/Android disappears.
@@ -95,9 +143,9 @@ The audit fails closed on any of these counterexamples:
 - any package, lockfile, runtime, workflow, database, `apps/mobile`, provider,
   payment, store, deployment, or Production mutation appears.
 
-## Local result
+## Initial local result on reviewed head `208e87e9...`
 
-The complete local validation set produced:
+Before the automated review, the complete local validation set produced:
 
 - exact owned-path equality: passed, 14/14 paths and no package, lockfile,
   runtime, workflow, database, provider, native-project, payment, deployment,
@@ -124,9 +172,10 @@ The complete local validation set produced:
   free/paid separation, surface parity, deletion coverage, launch window, and
   newline/fence integrity.
 
-The local actionable severity is exactly:
+The initial local hostile audit reported `P0/P1/P2 = 0/0/0`, but it did not
+catch the two active-roadmap mirror defects and does not supersede review
+`PRR_kwDOSMHn8M8AAAABJjst-w`.
 
-`P0/P1/P2 = 0/0/0`
-
-No local source check substitutes for fresh exact-head GitHub CI, Vercel, or
-the single final automated review.
+After the one-time correction, fresh exact-head GitHub CI and Vercel must all
+succeed, and the final exact-head review must report actionable
+`P0/P1/P2 = 0/0/0`. No local source check substitutes for those gates.

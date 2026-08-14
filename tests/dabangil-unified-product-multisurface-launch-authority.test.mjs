@@ -18,6 +18,11 @@ const PARITY = "docs/qa/dabangil-cross-surface-parity-matrix.md";
 const COMPLIANCE = "docs/qa/dabangil-store-compliance-matrix.md";
 const FOCUSED_TEST =
   "tests/dabangil-unified-product-multisurface-launch-authority.test.mjs";
+const WCV_RECONCILIATION_TEST =
+  "tests/wcv-campaign-authority-roadmap-reconciliation.test.mjs";
+const PREMIUM_ALIGNMENT_TEST = "tests/dabangil-premium-alignment.test.mjs";
+const WCV_C1_VALIDATION =
+  "docs/qa/wcv-campaign-c1-authority-roadmap-reconciliation-validation.md";
 
 async function text(path) {
   return readFile(path, "utf8");
@@ -106,6 +111,9 @@ const EXPECTED_OWNED_PATHS = [
   PARITY,
   COMPLIANCE,
   FOCUSED_TEST,
+  WCV_RECONCILIATION_TEST,
+  PREMIUM_ALIGNMENT_TEST,
+  WCV_C1_VALIDATION,
 ];
 
 test("keeps V13 sole and installs one subordinate ULC-0 authority", async () => {
@@ -326,10 +334,16 @@ test("installs a unique, resolved and fully gated complete-vertical sequence", a
   }
 });
 
-test("mirrors future ULC items in the roadmap without starting them", async () => {
-  const source = await text("roadmap/active-program.yml");
+test("mirrors the complete active-roadmap dependency graph without starting ULC items", async () => {
+  const [source, unified, launch, historicalC1Validation] = await Promise.all([
+    text("roadmap/active-program.yml"),
+    json("config/dabangil-unified-program-contract.json"),
+    json(CONTRACT),
+    text(WCV_C1_VALIDATION),
+  ]);
   const roadmap = parseRoadmap(source);
-  const expectedDependencies = new Map([
+  const expectedDirectDependencies = new Map([
+    ["WCV-C3", ["WCV-C2"]],
     ["ULC-M1", ["WCV-C3", "S241A"]],
     ["ULC-M2", ["ULC-M1"]],
     ["ULC-K1", ["ULC-M2"]],
@@ -339,30 +353,75 @@ test("mirrors future ULC items in the roadmap without starting them", async () =
     ["ULC-F4", ["ULC-F3"]],
     ["ULC-F5", ["ULC-F4"]],
     ["ULC-I1", ["ULC-F5"]],
-    ["ULC-R1", ["WCV-C4", "ULC-I1"]],
+    ["WCV-C4", ["ULC-I1"]],
+    ["ULC-R1", ["WCV-C4"]],
     ["ULC-L1", ["ULC-R1"]],
+    ["O4W", ["ULC-L1"]],
+    ["WCV-C5", ["WCV-C4", "O4W"]],
+    ["WCV-C6", ["WCV-C5"]],
   ]);
+  const ulcIds = [
+    "ULC-M1",
+    "ULC-M2",
+    "ULC-K1",
+    "ULC-F1",
+    "ULC-F2",
+    "ULC-F3",
+    "ULC-F4",
+    "ULC-F5",
+    "ULC-I1",
+    "ULC-R1",
+    "ULC-L1",
+  ];
 
-  for (const [id, dependencies] of expectedDependencies) {
+  for (const [id, dependencies] of expectedDirectDependencies) {
     const item = roadmap.byId.get(id);
     assert.ok(item, id);
+    assert.deepEqual(item.dependencies, dependencies, `${id} dependencies`);
+  }
+  for (const id of ulcIds) {
+    const item = roadmap.byId.get(id);
     assert.equal(item.status, "queued", id);
     assert.equal(item.leadIssue, 719, id);
-    assert.deepEqual(item.dependencies, dependencies, id);
     assert.equal(item.automaticStartAllowed, false, id);
     assert.equal(item.selected, false, id);
     assert.equal(item.started, false, id);
   }
-  assert.deepEqual(roadmap.byId.get("WCV-C4").dependencies, ["WCV-C3"]);
-  assert.deepEqual(roadmap.byId.get("O4W").dependencies, ["WCV-C4"]);
-  assert.deepEqual(roadmap.byId.get("WCV-C5").dependencies, ["WCV-C4", "O4W"]);
+
+  const launchById = new Map(
+    launch.futureCompleteVerticalSequence.stages.map((stage) => [stage.id, stage]),
+  );
+  assert.deepEqual(launchById.get("WCV-C4").dependencies, ["ULC-I1"]);
+  assert.deepEqual(launchById.get("ULC-R1").dependencies, ["WCV-C4"]);
+  assert.deepEqual(launchById.get("ULC-L1").dependencies, ["ULC-R1"]);
+  assert.deepEqual(
+    launchById.get("ULC-M1").operationalPrerequisites,
+    ["S241A"],
+  );
+  assert.deepEqual(
+    unified.wcvCampaignOverlay.campaigns.find(
+      (campaign) => campaign.id === "C4",
+    ).dependencies,
+    ["ULC-I1"],
+  );
+  assert.deepEqual(
+    unified.roadmapContract.frozenPaidCohortAuthorization.dependencies,
+    ["ULC-L1"],
+  );
   assert.deepEqual(roadmap.program.launchConvergenceSequence, EXPECTED_SEQUENCE);
   assert.equal(roadmap.program.paidEvidenceRouteAfter, "ULC-L1");
-  assert.deepEqual(
-    (await json(CONTRACT)).futureCompleteVerticalSequence.stages.find(
-      (stage) => stage.id === "ULC-M1",
-    ).operationalPrerequisites,
-    ["S241A"],
+  assert.match(historicalC1Validation, /2026-08-14 launch-order supersession/);
+  for (const edge of [
+    "WCV-C4: [ULC-I1]",
+    "ULC-R1: [WCV-C4]",
+    "ULC-L1: [ULC-R1]",
+    "O4W: [ULC-L1]",
+  ]) {
+    assert.ok(historicalC1Validation.includes(edge), edge);
+  }
+  assert.match(
+    historicalC1Validation,
+    /C1 entries below remain historical validation evidence and are not current\nroadmap or dependency authority/,
   );
 });
 
@@ -545,17 +604,18 @@ test("keeps parity and compliance documents aligned with the machine authority",
   assert.match(compliance, /DabangilReleaseManifestV1/);
   assert.match(compliance, /at most 24 hours/);
   assert.match(strategy, /ULC-L1 → O4W → WCV-C5 → WCV-C6/);
-  assert.match(validation, /P0\/P1\/P2 = 0\/0\/0/);
+  assert.match(validation, /PRR_kwDOSMHn8M8AAAABJjst-w/);
+  assert.match(validation, /final exact-head review must report[\s\S]*P0\/P1\/P2 = 0\/0\/0/);
 });
 
-test("declares the exact fourteen-path docs-contracts-only ownership boundary", async () => {
+test("declares the exact seventeen-path docs-contracts-only ownership boundary", async () => {
   const [launch, decision] = await Promise.all([json(CONTRACT), text(DECISION)]);
   const manifest = decision.match(/## 12\. Exact owned-path manifest([\s\S]*)$/)?.[1] ?? "";
   const paths = [...manifest.matchAll(/`([^`]+)`/g)].map((match) => match[1]);
 
   assert.deepEqual(launch.ownedPathsExactly, EXPECTED_OWNED_PATHS);
   assert.deepEqual(paths, EXPECTED_OWNED_PATHS);
-  assert.equal(new Set(paths).size, 14);
+  assert.equal(new Set(paths).size, 17);
   for (const path of paths) {
     assert.doesNotMatch(
       path,

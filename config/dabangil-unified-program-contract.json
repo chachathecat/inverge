@@ -1271,7 +1271,7 @@
         "name": "Owner Proof and Commercial Readiness",
         "leadIssue": 709,
         "includedIssues": [709, 710],
-        "dependencies": ["WCV-C3"],
+        "dependencies": ["ULC-I1"],
         "state": "queued",
         "learnerActivationAuthorized": false,
         "paymentActivationAuthorized": false
@@ -1512,7 +1512,7 @@
       "decisionScope": "exact_frozen_cohort_manifest_activation_only",
       "gatedCampaign": "WCV-C5",
       "gatedIssue": 711,
-      "dependencies": ["WCV-C4"],
+      "dependencies": ["ULC-L1"],
       "authorizationGranted": false,
       "automaticStartAllowed": false,
       "learnerActivationAuthorized": false,

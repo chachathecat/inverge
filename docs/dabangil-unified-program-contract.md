@@ -196,8 +196,8 @@ review/correction cycles are prohibited.
 | C1 | #713 | #713 | completed source-only on reconciliation merge | authority and roadmap reconciliation; runtime mutation zero |
 | C2 | #717 | #702, #714, #703, #704, #705 | structural-recovery authority installed; no stage started | C2R-A through C2R-C-L: two source contracts and three complete subject runtime verticals |
 | C3 | #706 | #706–#708 | blocked until terminal C2R-C-L/#705 merge | frozen D+1, sealed D+7, recurrence/reopening, Ledger, recurring deduction and Today/Full-Day |
-| C4 | #709 | #709–#710 | queued behind C3 | Owner proof, red-team, baseline and invitation-only commercial readiness; no activation |
-| C5 | #711 | #711 | queued behind C4 and unapproved O4W exact cohort gate | frozen paid cohort with real delayed-evidence windows |
+| C4 | #709 | #709–#710 | queued behind ULC-I1 and the complete ULC pre-proof chain | Owner proof, red-team, baseline and invitation-only commercial readiness; no activation |
+| C5 | #711 | #711 | queued behind C4 and unapproved O4W exact cohort gate after ULC-L1 | frozen paid cohort with real delayed-evidence windows |
 | C6 | #712 | #712 | queued behind C5 | verified-bank and bodyless calibration flywheel |
 
 Issue #701 remains the parent program. The exact identifiers are roadmap item
@@ -347,6 +347,32 @@ Payment continues to require a separate exact Owner decision.
 After terminal C2R-C-L, the controlling launch sequence is:
 
 `WCV-C3 → ULC-M1 → ULC-M2 → ULC-K1 → ULC-F1 → ULC-F2 → ULC-F3 → ULC-F4 → ULC-F5 → ULC-I1 → WCV-C4 → ULC-R1 → ULC-L1`
+
+The active roadmap encodes the complete free-launch and later paid/evidence
+order with these exact direct dependencies:
+
+```yaml
+WCV-C3: [WCV-C2]
+ULC-M1: [WCV-C3, S241A]
+ULC-M2: [ULC-M1]
+ULC-K1: [ULC-M2]
+ULC-F1: [ULC-K1]
+ULC-F2: [ULC-F1]
+ULC-F3: [ULC-F2]
+ULC-F4: [ULC-F3]
+ULC-F5: [ULC-F4]
+ULC-I1: [ULC-F5]
+WCV-C4: [ULC-I1]
+ULC-R1: [WCV-C4]
+ULC-L1: [ULC-R1]
+O4W: [ULC-L1]
+WCV-C5: [WCV-C4, O4W]
+WCV-C6: [WCV-C5]
+```
+
+WCV-C3 retains `terminalReplacementDependency: C2R-C-L` while its active
+roadmap dependency remains the WCV-C2 umbrella. WCV-C5 intentionally retains
+both direct dependencies even though O4W is downstream of ULC-L1.
 
 Every runtime stage is an independently deployable learner or instructor
 outcome. Framework-only, API-only, persistence-only, UI-only and QA-only
@@ -1104,8 +1130,8 @@ only for the lean Owner-private gate in the 2026-07-30 decision and authorized
 no immediate operation at decision time. The live roadmap now records S236P
 as factually blocked after its consumed failed attempt; acceptance remains
 false. Every other O4-family runtime/content/commercial gate above remains a
-future gate. O4W is queued and unapproved; it authorizes no learner, payment,
-delayed-evidence, cohort or Production operation in C1.
+future gate. O4W is queued and unapproved behind ULC-L1; it authorizes no learner,
+payment, delayed-evidence, cohort or Production operation.
 
 ## 13. Roadmap, locks, and WIP
 
@@ -1141,10 +1167,11 @@ authority and manual launch discipline.
 
 Each lock group permits one concurrent writer and zero additional concurrent
 writers. All WCV campaign items and the auxiliary O4W gate share
-`wcv-vertical-campaign`. O4W remains queued and unapproved after C1; WCV-C5
-depends on both WCV-C4 and O4W. Any Work must declare an exact owned-file
-manifest; overlap is resolved before mutation. The C1-to-C6 dependency chain,
-O4W edge and global writer limit serialize campaign work.
+`wcv-vertical-campaign`. WCV-C4 depends directly on ULC-I1, and O4W remains
+queued and unapproved behind ULC-L1; WCV-C5 depends on both WCV-C4 and O4W.
+Any Work must declare an exact owned-file manifest; overlap is resolved before
+mutation. The complete ULC/WCV dependency graph, O4W edge and global writer
+limit serialize campaign work.
 
 The S234 reset snapshot contained exactly:
 

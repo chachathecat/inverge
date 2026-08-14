@@ -558,7 +558,7 @@ items:
     crossVerticalAcceptanceTracker: 714
     learnerActivationAuthorized: false
     paymentActivationAuthorized: false
-    dependencies: [WCV-C3]
+    dependencies: [ULC-I1]
     lockGroup: wcv-vertical-campaign
     risk: high
     priority: 31.15
@@ -576,7 +576,7 @@ items:
     storeSubmissionAuthorized: false
     deploymentAuthorized: false
     productionAuthorized: false
-    dependencies: [WCV-C4, ULC-I1]
+    dependencies: [WCV-C4]
     lockGroup: unified-launch-convergence
     risk: high
     priority: 31.151
@@ -612,7 +612,7 @@ items:
     paymentActivationAuthorized: false
     delayedEvidenceAuthorized: false
     productionAuthorized: false
-    dependencies: [WCV-C4]
+    dependencies: [ULC-L1]
     lockGroup: wcv-vertical-campaign
     risk: high
     priority: 31.16

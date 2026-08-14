@@ -299,5 +299,8 @@ This authority owns exactly:
 12. `docs/qa/dabangil-cross-surface-parity-matrix.md`
 13. `docs/qa/dabangil-store-compliance-matrix.md`
 14. `tests/dabangil-unified-product-multisurface-launch-authority.test.mjs`
+15. `tests/wcv-campaign-authority-roadmap-reconciliation.test.mjs`
+16. `tests/dabangil-premium-alignment.test.mjs`
+17. `docs/qa/wcv-campaign-c1-authority-roadmap-reconciliation-validation.md`
 
 No other path is authorized.

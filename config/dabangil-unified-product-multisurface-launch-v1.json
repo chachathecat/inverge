@@ -461,6 +461,9 @@
     "docs/qa/dabangil-multisurface-launch-validation.md",
     "docs/qa/dabangil-cross-surface-parity-matrix.md",
     "docs/qa/dabangil-store-compliance-matrix.md",
-    "tests/dabangil-unified-product-multisurface-launch-authority.test.mjs"
+    "tests/dabangil-unified-product-multisurface-launch-authority.test.mjs",
+    "tests/wcv-campaign-authority-roadmap-reconciliation.test.mjs",
+    "tests/dabangil-premium-alignment.test.mjs",
+    "docs/qa/wcv-campaign-c1-authority-roadmap-reconciliation-validation.md"
   ]
 }

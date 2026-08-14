@@ -85,6 +85,26 @@ function replaceItemStatus(source, itemId, status) {
   return source.slice(0, start) + updated + source.slice(end);
 }
 
+function completeDependencyClosure(source, itemId) {
+  const roadmap = parseRoadmap(source);
+  const visited = new Set();
+  let completedSource = source;
+
+  function complete(currentId) {
+    if (visited.has(currentId)) return;
+    visited.add(currentId);
+    const item = roadmap.byId.get(currentId);
+    assert.ok(item, `missing roadmap item ${currentId}`);
+    for (const dependency of item.dependencies) complete(dependency);
+    if (item.status !== "completed") {
+      completedSource = replaceItemStatus(completedSource, currentId, "completed");
+    }
+  }
+
+  complete(itemId);
+  return completedSource;
+}
+
 function removeItem(source, itemId) {
   const marker = `  - id: ${itemId}\n`;
   const start = source.indexOf(marker);
@@ -259,8 +279,8 @@ test("installs the exact C1 through C6 dependency graph", async () => {
     "WCV-C1": { status: "completed", dependencies: ["WCV-0"] },
     "WCV-C2": { status: "queued", dependencies: ["WCV-C1"] },
     "WCV-C3": { status: "queued", dependencies: ["WCV-C2"] },
-    "WCV-C4": { status: "queued", dependencies: ["WCV-C3"] },
-    O4W: { status: "queued", dependencies: ["WCV-C4"] },
+    "WCV-C4": { status: "queued", dependencies: ["ULC-I1"] },
+    O4W: { status: "queued", dependencies: ["ULC-L1"] },
     "WCV-C5": { status: "queued", dependencies: ["WCV-C4", "O4W"] },
     "WCV-C6": { status: "queued", dependencies: ["WCV-C5"] },
   };
@@ -274,7 +294,7 @@ test("installs the exact C1 through C6 dependency graph", async () => {
   }
 });
 
-test("gates C5 on one queued unapproved O4W Owner authorization", async () => {
+test("gates the paid route behind ULC-L1 and one unapproved O4W Owner authorization", async () => {
   const [roadmapSource, unified, contract] = await Promise.all([
     text("roadmap/active-program.yml"),
     json("config/dabangil-unified-program-contract.json"),
@@ -283,6 +303,9 @@ test("gates C5 on one queued unapproved O4W Owner authorization", async () => {
   const roadmap = parseRoadmap(roadmapSource);
   const o4w = roadmap.byId.get("O4W");
   const c5 = roadmap.byId.get("WCV-C5");
+  const machineC4 = unified.wcvCampaignOverlay.campaigns.find(
+    (campaign) => campaign.id === "C4",
+  );
   const machineC5 = unified.wcvCampaignOverlay.campaigns.find(
     (campaign) => campaign.id === "C5",
   );
@@ -303,7 +326,7 @@ test("gates C5 on one queued unapproved O4W Owner authorization", async () => {
     paymentActivationAuthorized: false,
     delayedEvidenceAuthorized: false,
     productionAuthorized: false,
-    dependencies: ["WCV-C4"],
+    dependencies: ["ULC-L1"],
     lockGroup: "wcv-vertical-campaign",
     risk: "high",
     priority: 31.16,
@@ -321,6 +344,7 @@ test("gates C5 on one queued unapproved O4W Owner authorization", async () => {
     unified.roadmapContract.scopedGateEdges.frozenPaidCohortManifestAuthorization,
     "O4W",
   );
+  assert.deepEqual(machineC4.dependencies, ["ULC-I1"]);
   assert.deepEqual(machineC5.dependencies, ["WCV-C4", "O4W"]);
   assert.equal(machineC5.cohortAuthorizationGate, "O4W");
   assert.deepEqual(machineC5.cohortAuthorization, {
@@ -334,33 +358,45 @@ test("gates C5 on one queued unapproved O4W Owner authorization", async () => {
     productionAuthorized: false,
   });
   assert.equal(machineGate.status, "queued");
+  assert.deepEqual(machineGate.dependencies, ["ULC-L1"]);
   assert.equal(machineGate.authorizationGranted, false);
   assert.equal(machineGate.delayedEvidenceAuthorized, false);
   assert.match(contract, /O4W: exact frozen paid-cohort manifest authorization for WCV-C5 only/);
-  assert.match(contract, /WCV-C5\s+depends on both WCV-C4 and O4W/);
+  assert.match(contract, /WCV-C4 depends directly on ULC-I1/);
+  assert.match(contract, /O4W remains[\s\S]*behind ULC-L1/);
+  assert.match(contract, /WCV-C5 depends on both WCV-C4 and O4W/);
 
-  const c4Complete = ["WCV-C2", "WCV-C3", "WCV-C4"].reduce(
-    (source, itemId) => replaceItemStatus(source, itemId, "completed"),
-    roadmapSource,
+  const evaluationTime = new Date("2026-08-08T08:00:00.000Z");
+  const throughC4 = completeDependencyClosure(roadmapSource, "WCV-C4");
+  const beforeFreeLaunch = createRoadmapRunnerPlanFromYamlAt(
+    throughC4,
+    evaluationTime,
   );
+  assert.equal(analysisById(beforeFreeLaunch, "O4W").readinessStatus, "blocked");
+  assert.deepEqual(
+    analysisById(beforeFreeLaunch, "O4W").missingDependencies,
+    ["ULC-L1"],
+  );
+
+  const throughFreeLaunch = completeDependencyClosure(throughC4, "ULC-L1");
   const beforeAuthorization = createRoadmapRunnerPlanFromYamlAt(
-    c4Complete,
-    new Date("2026-08-11T08:00:00.000Z"),
+    throughFreeLaunch,
+    evaluationTime,
   );
-  assert.deepEqual(beforeAuthorization.selectedItemIds, ["O4W"]);
   assert.equal(analysisById(beforeAuthorization, "O4W").readinessStatus, "ready");
+  assert.ok(beforeAuthorization.readyItemIds.includes("O4W"));
   assert.deepEqual(
     analysisById(beforeAuthorization, "WCV-C5").missingDependencies,
     ["O4W"],
   );
 
-  const o4wComplete = replaceItemStatus(c4Complete, "O4W", "completed");
+  const o4wComplete = replaceItemStatus(throughFreeLaunch, "O4W", "completed");
   const afterAuthorization = createRoadmapRunnerPlanFromYamlAt(
     o4wComplete,
-    new Date("2026-08-11T08:00:00.000Z"),
+    evaluationTime,
   );
   assert.equal(analysisById(afterAuthorization, "WCV-C5").readinessStatus, "ready");
-  assert.deepEqual(afterAuthorization.selectedItemIds, ["WCV-C5"]);
+  assert.ok(afterAuthorization.readyItemIds.includes("WCV-C5"));
 
   const hostileWithoutGate = removeItem(roadmapSource, "O4W").replace(
     "dependencies: [WCV-C4, O4W]",

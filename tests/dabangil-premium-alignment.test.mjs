@@ -981,7 +981,7 @@ test("Post-650 data, consent, quarantine, OSS, and Owner gates remain non-active
     decisionScope: "exact_frozen_cohort_manifest_activation_only",
     gatedCampaign: "WCV-C5",
     gatedIssue: 711,
-    dependencies: ["WCV-C4"],
+    dependencies: ["ULC-L1"],
     authorizationGranted: false,
     automaticStartAllowed: false,
     learnerActivationAuthorized: false,

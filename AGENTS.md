@@ -1068,9 +1068,10 @@ only for exact packet
 unstarted, and still requires completed exact S236P plus a manual S236A start.
 O4V, O4A, O4T, O2O, O4P, O4W, external-commercial activation, public
 activation, and O2/O5 remain unmet until their separate exact-scope packets
-are accepted. O4W is a queued, unapproved auxiliary gate after WCV-C4; WCV-C5
-depends on it, and it grants no learner, payment, delayed-evidence, cohort or
-Production authority in C1.
+are accepted. WCV-C4 is queued behind ULC-I1. O4W is a queued, unapproved
+auxiliary gate after ULC-L1; WCV-C5 depends on both WCV-C4 and O4W, and the
+gate grants no learner, payment, delayed-evidence, cohort or Production
+authority.
 O4V is the private-plane binding gate, O4T is the post-benchmark threshold
 decision, O2O is the exact Owner-private comparison measurement/retention
 gate, and O4P is optimizer limited activation only. O2O cannot authorize
