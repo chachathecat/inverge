@@ -356,6 +356,8 @@ test("cross-layer semantic scope reduction is bounded, fail-closed, and version 
   assert.match(engine, /DISTINCT_COUNTEREXAMPLE_SCOPE/);
   assert.match(engine, /entry\.hasPositiveOccurrence/);
   assert.match(engine, /forbidden_claim_contradictory_positive/);
+  assert.doesNotMatch(engine, /MAX_POLARITY_CLAUSES/);
+  assert.doesNotMatch(engine, /MAX_CONCEPT_OCCURRENCES_PER_CLAUSE/);
   assert.doesNotMatch(engine, /openai|anthropic|gemini|embedding|chat\/completions/i);
 
   assert.equal(
@@ -375,6 +377,18 @@ test("cross-layer semantic scope reduction is bounded, fail-closed, and version 
     machine.semanticAnchorPolarity.forbiddenPositiveOccurrenceSurvivesAggregateConflict,
     true,
   );
+  assert.equal(
+    machine.semanticAnchorPolarity.completeAcceptedInputScanRequired,
+    true,
+  );
+  assert.equal(
+    machine.semanticAnchorPolarity.silentClauseTruncationAllowed,
+    false,
+  );
+  assert.equal(
+    machine.semanticAnchorPolarity.silentOccurrenceTruncationAllowed,
+    false,
+  );
   assert.equal(machine.semanticAnchorPolarity.externalNlpModelProviderUsed, false);
 
   for (const source of [decision, qa]) {
@@ -383,6 +397,8 @@ test("cross-layer semantic scope reduction is bounded, fail-closed, and version 
     assert.match(source, /unscoped|unscoped|범위/u);
     assert.match(source, /distinct explicit counterexample|명시적 반례|명시적.*counterexample/u);
     assert.match(source, /positive forbidden occurrence|positive occurrence|긍정.*금지/u);
+    assert.match(source, /64.*65|64\/65|64·65/u);
+    assert.match(source, /32.*33|32\/33|32·33/u);
     assert.match(source, /no external NLP|외부 NLP/iu);
     assert.match(source, /semantic v2/);
   }
@@ -485,8 +501,38 @@ test("Law source binding counts only unique referenced open blocking records and
   );
   assert.match(engine, /trustedRepairSourceBindingMatches\(input\)/);
   assert.match(
-    engine,
-    /input\.sourceBinding\.sourceStatus !== "verified" \|\|[\s\S]{0,400}input\.sourceBinding\.blockerCount > 0/,
+    sourceBinding,
+    /sourceStatus: reduceTrustedRepairLawVerificationStatus\(\s*source\.sourceStatus,\s*anchor\.legalSourceStatus,\s*\)/,
+  );
+  assert.match(
+    sourceBinding,
+    /versionStatus: reduceTrustedRepairLawVerificationStatus\(\s*source\.versionMetadata\.versionStatus,\s*anchor\.versionStatus,\s*\)/,
+  );
+  const releasePredicate = engine.match(
+    /export function trustedRepairLawReleaseEligible[\s\S]*?\n}\n/,
+  )?.[0];
+  assert.ok(releasePredicate, "engine must expose one shared exact Law predicate");
+  assert.match(releasePredicate, /sourceStatus === "verified"/);
+  assert.match(releasePredicate, /versionStatus === "verified"/);
+  assert.match(releasePredicate, /currentLawStatus === "current_law_verified"/);
+  assert.match(releasePredicate, /sourceAnchorId ===[\s\S]*sourceAnchorId/);
+  assert.match(releasePredicate, /blockerCount === 0/);
+  assert.equal(
+    (engine.match(/!trustedRepairLawReleaseEligible\(input\)/g) ?? []).length,
+    2,
+    "diagnosis and continuation must share the exact Law predicate",
+  );
+  assert.equal(
+    machineContract.lawBoundary.effectiveSourceStatusIncludesExactAnchorStatus,
+    true,
+  );
+  assert.equal(
+    machineContract.lawBoundary.effectiveVersionStatusIncludesExactAnchorStatus,
+    true,
+  );
+  assert.equal(
+    machineContract.lawBoundary.sharedDiagnosisContinuationPredicate,
+    true,
   );
   assert.equal(
     machineContract.lawBoundary.verifiedOutcomeAllowedOnCurrentRepositoryState,

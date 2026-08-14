@@ -53,7 +53,10 @@ to PR #716 after the final candidate workflow completes.
   positive aggregate. Any positive forbidden occurrence remains blocking even
   when contradictory wording makes its aggregate ambiguous; pure negated and
   pure ambiguous forbidden mentions remain nonblocking diagnostics. The
-  evaluator uses no external NLP, model, embedding, or provider.
+  complete accepted input is scanned without silent clause or occurrence
+  truncation: clause 64/65 and occurrence 32/33 retain late contradiction,
+  ambiguity, and positive forbidden evidence. The evaluator uses no external NLP,
+  model, embedding, or provider.
 - Semantic bindings: fixture
   `wcv_c2_rights_safe_fixtures.2026-08-12.v2` and rubric
   `wcv_c2_semantic_anchor_rubric.v2`.
@@ -64,8 +67,13 @@ to PR #716 after the final candidate workflow completes.
   `components/learner/learner-ui.tsx`; all five paths are machine-bound to the
   literal workflow trigger. `pull_request_target`, write-capable tokens, remote
   Supabase, and provider access are prohibited.
-- Law: expected and observed terminal result remains blocked until the
-  existing registry can prove exact official current-law binding.
+- Law: release-facing source and version statuses fail-closed reduce both the
+  source record and exact selected anchor. Diagnosis and continuation share
+  one predicate requiring verified effective source/version, verified current
+  Law, exact anchor identity, and zero referenced open blocking blockers.
+  Resolved/warning provenance cannot bypass another gate, anchor-state drift
+  invalidates an old session, and the expected and observed terminal result
+  remains blocked until the existing registry proves that complete binding.
 - Publication: no learner/fixture bodies, credentials, screenshots, traces,
   provider bodies, or remote project data enter CI artifacts or GitHub text.
 

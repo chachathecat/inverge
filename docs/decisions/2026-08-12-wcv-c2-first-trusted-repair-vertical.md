@@ -56,6 +56,13 @@ distinct explicit counterexample such as a `반례`, `다른`, `비교대상`, o
 the word `반례` cannot give the same target a distinct scope. No external NLP,
 model, embedding, or provider call is used.
 
+The 12,000-character accepted input is scanned completely. No clause or
+per-clause occurrence is silently truncated: the clause 64/65 boundary and
+occurrence 32/33 boundary retain late same-target negation, ambiguity, and
+positive forbidden claims. Every retained semantic budget therefore either
+completes its scan or fails closed; omitted late evidence can never produce a
+verified result.
+
 An alternative counts only when its aggregate is positive and satisfies only
 its explicitly mapped required concepts. A forbidden claim blocks whenever
 any positive occurrence exists, including when a same-target negation or
@@ -83,6 +90,17 @@ The existing Law registry does not provide a verified current-law binding for
 the selected source and anchor. Therefore the Law walkthrough remains
 `blocked`, with zero verified release. This PR does not invent a source,
 version, effective date, or currentness claim.
+
+For a real Law binding, release-facing source and version status each reduce
+the source record and the exact selected anchor with the fail-closed order
+`blocked` > `unresolved_conflict` > `needs_official_verification` >
+`verified`; an incompatible synthetic status blocks. Diagnosis and
+continuation share one release predicate requiring both effective statuses to
+be `verified`, current Law to be verified, the exact fixture anchor identity,
+and zero referenced open blocking blockers. Resolved and warning blocker IDs
+remain provenance and do not bypass any of those gates. The resulting
+effective statuses and anchor identity remain in the source-version
+fingerprint, so an anchor-state change invalidates an old session.
 
 ## Storage and authority
 

@@ -152,6 +152,9 @@
     "unscopedConflictFailsClosed": true,
     "distinctExplicitCounterexampleMayNotEraseCleanTargetPositive": true,
     "forbiddenPositiveOccurrenceSurvivesAggregateConflict": true,
+    "completeAcceptedInputScanRequired": true,
+    "silentClauseTruncationAllowed": false,
+    "silentOccurrenceTruncationAllowed": false,
     "externalNlpModelProviderUsed": false
   },
   "dedicatedRuntime": {
@@ -181,6 +184,11 @@
     "sourceAnchorId": "law-anchor-land-compensation-act-current-candidate",
     "requiredStatus": "current_law_verified",
     "currentRepositoryStatus": "current_law_unresolved",
+    "effectiveSourceStatusIncludesExactAnchorStatus": true,
+    "effectiveVersionStatusIncludesExactAnchorStatus": true,
+    "sharedDiagnosisContinuationPredicate": true,
+    "exactSelectedAnchorIdentityRequired": true,
+    "openBlockingBlockerCountRequired": 0,
     "verifiedOutcomeAllowedOnCurrentRepositoryState": false,
     "inventedSourceOrCurrentnessAllowed": false
   },

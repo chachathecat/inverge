@@ -5,6 +5,7 @@ import {
   loadLawSourceVersionRegistry,
 } from "./law-source-version-registry";
 import {
+  reduceTrustedRepairLawVerificationStatus,
   SYNTHETIC_SOURCE_BINDING,
   type TrustedRepairLawBindingState,
 } from "./trusted-repair-engine";
@@ -42,8 +43,14 @@ export function resolveTrustedRepairSourceBinding(
   ];
   return {
     bindingVersion: `${registry.schemaVersion}:${registry.generatedAt}`,
-    sourceStatus: source.sourceStatus,
-    versionStatus: source.versionMetadata.versionStatus,
+    sourceStatus: reduceTrustedRepairLawVerificationStatus(
+      source.sourceStatus,
+      anchor.legalSourceStatus,
+    ),
+    versionStatus: reduceTrustedRepairLawVerificationStatus(
+      source.versionMetadata.versionStatus,
+      anchor.versionStatus,
+    ),
     currentLawStatus: source.versionMetadata.currentLawStatus,
     sourceAnchorId: anchor.anchorId,
     blockerCount: countReferencedOpenBlockingLawSourceBlockers(

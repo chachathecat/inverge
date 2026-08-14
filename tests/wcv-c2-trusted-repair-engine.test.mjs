@@ -10,6 +10,7 @@ import {
   TRUSTED_REPAIR_STEP_GUIDANCE,
   TRUSTED_REPAIR_VALIDATOR_VERSION,
   TrustedRepairContractError,
+  requiredTrustedRepairText,
 } from "../lib/review-os/trusted-repair-contract.ts";
 import {
   SYNTHETIC_SOURCE_BINDING,
@@ -25,8 +26,10 @@ import {
   planTrustedRepairRevisionDrift,
   planTrustedRepairSelfDiagnosis,
   planTrustedRepairSubmission,
+  reduceTrustedRepairLawVerificationStatus,
   selectTrustedRepairScaffoldExposure,
   trustedRepairAggregateForRelease,
+  trustedRepairLawReleaseEligible,
   trustedRepairPartialRetryAvailable,
   trustedRepairSubmissionCount,
   trustedRepairSourceBindingMatches,
@@ -134,6 +137,26 @@ const VERIFIED_LAW_WITH_OPEN_BLOCKER = {
   blockerCount: 1,
 };
 
+const VERIFIED_LAW_WITH_ANCHOR_NEEDS_VERIFICATION = {
+  ...VERIFIED_LAW,
+  sourceStatus: "needs_official_verification",
+};
+
+const VERIFIED_LAW_WITH_ANCHOR_CONFLICT = {
+  ...VERIFIED_LAW,
+  sourceStatus: "unresolved_conflict",
+};
+
+const VERIFIED_LAW_WITH_ANCHOR_VERSION_UNVERIFIED = {
+  ...VERIFIED_LAW,
+  versionStatus: "needs_official_verification",
+};
+
+const VERIFIED_LAW_WITH_ANCHOR_MISMATCH = {
+  ...VERIFIED_LAW,
+  sourceAnchorId: "law-anchor-mismatch",
+};
+
 const PRACTICE_STATE_DATA = {
   ...initialTrustedRepairStateData("TYPED_TEXT"),
   predictionConfidence: "medium",
@@ -237,6 +260,24 @@ test("C2 semantic bindings advance only the fixture and rubric to v2", () => {
     TRUSTED_REPAIR_VALIDATOR_VERSION,
     "wcv_c2_deterministic_subject_oracles.v1",
   );
+});
+
+test("Law source and exact-anchor statuses reduce deterministically and fail closed", () => {
+  for (const [sourceStatus, anchorStatus, expected] of [
+    ["verified", "verified", "verified"],
+    ["verified", "needs_official_verification", "needs_official_verification"],
+    ["needs_official_verification", "verified", "needs_official_verification"],
+    ["needs_official_verification", "unresolved_conflict", "unresolved_conflict"],
+    ["unresolved_conflict", "blocked", "blocked"],
+    ["blocked", "verified", "blocked"],
+    ["synthetic_fixture", "verified", "blocked"],
+  ]) {
+    assert.equal(
+      reduceTrustedRepairLawVerificationStatus(sourceStatus, anchorStatus),
+      expected,
+      `${sourceStatus}:${anchorStatus}`,
+    );
+  }
 });
 
 test("one bounded assertion-state evaluator preserves polarity and occurrence precedence", () => {
@@ -382,6 +423,121 @@ test("bounded subject scopes fail closed on same-target cross-sentence conflicts
       "200000000",
     ),
     "ambiguous",
+  );
+});
+
+test("semantic evaluation scans the complete clause 64/65 and occurrence 32/33 boundaries", () => {
+  const unrelatedClause = "별도 검토 문장이다";
+  const clause64Clean = [
+    "최유효이용은 합리적이다",
+    ...Array(63).fill(unrelatedClause),
+  ].join(". ");
+  const clause65Clean = [clause64Clean, unrelatedClause].join(". ");
+  const clause65Negation = [
+    "최유효이용은 합리적이다",
+    ...Array(63).fill(unrelatedClause),
+    "최유효이용은 합리적이지 않다",
+  ].join(". ");
+  const clause65Ambiguity = [
+    "최유효이용은 합리적이다",
+    ...Array(63).fill(unrelatedClause),
+    "최유효이용은 합리적인지 불확실하다",
+  ].join(". ");
+
+  assert.equal(
+    evaluateConceptAssertionState(clause64Clean, "합리적"),
+    "positive",
+  );
+  assert.equal(
+    evaluateConceptAssertionState(clause65Clean, "합리적"),
+    "positive",
+  );
+  assert.equal(
+    evaluateConceptAssertionState(clause65Negation, "합리적"),
+    "ambiguous",
+  );
+  assert.equal(
+    evaluateConceptAssertionState(clause65Ambiguity, "합리적"),
+    "ambiguous",
+  );
+
+  const occurrence33Conflict = [
+    "최유효이용은",
+    ...Array(32).fill("합리적이고"),
+    "합리적이지 않다",
+  ].join(" ");
+  assert.equal(
+    evaluateConceptAssertionState(occurrence33Conflict, "합리적"),
+    "ambiguous",
+  );
+
+  const cleanTheoryClause = REPAIRS.appraisal_theory.replaceAll(".", " ");
+  const clause65Forbidden = [
+    cleanTheoryClause,
+    ...Array(63).fill(unrelatedClause),
+    "항상 현재 이용이다",
+  ].join(". ");
+  const occurrence33Forbidden = [
+    cleanTheoryClause,
+    ...Array(32).fill("항상 현재 이용은 아니다"),
+    "항상 현재 이용이다",
+  ].join(" ");
+  const fixture = trustedRepairCanonicalFixture("appraisal_theory");
+  for (const attemptText of [clause65Forbidden, occurrence33Forbidden]) {
+    const diagnosis = diagnoseTrustedRepairAttempt({
+      fixture,
+      attemptText,
+      stateData: {
+        ...initialTrustedRepairStateData("TYPED_TEXT"),
+        predictionConfidence: "medium",
+      },
+    });
+    assert.equal(diagnosis.repairNeed, "required", attemptText);
+    assert.ok(
+      diagnosis.candidates.some((candidate) =>
+        candidate.supportingEvidence.some((entry) =>
+          entry.includes("false_claim:항상 현재 이용"),
+        ),
+      ),
+      attemptText,
+    );
+    const continued = verifyPreparedJourney(
+      prepareRepairSubmittedJourney(
+        "appraisal_theory",
+        SYNTHETIC_SOURCE_BINDING,
+        attemptText,
+      ),
+      "appraisal_theory",
+      SYNTHETIC_SOURCE_BINDING,
+    );
+    assert.notEqual(continued.session.outcome, "verified", attemptText);
+  }
+});
+
+test("the complete accepted-input character boundary is deterministic and non-throwing", () => {
+  const suffix = " 합리적이다";
+  const boundaryText = `${"가".repeat(12_000 - suffix.length)}${suffix}`;
+  assert.equal(boundaryText.length, 12_000);
+  const accepted = requiredTrustedRepairText(boundaryText);
+  const first = evaluateConceptAssertionState(accepted, "합리적");
+  const second = evaluateConceptAssertionState(accepted, "합리적");
+  assert.equal(first, "positive");
+  assert.equal(second, first);
+
+  const denseUnit = "합리적이다 ";
+  const densePrefix = denseUnit.repeat(
+    Math.floor(12_000 / denseUnit.length),
+  );
+  const denseBoundaryText = `${densePrefix}${"가".repeat(
+    12_000 - densePrefix.length,
+  )}`;
+  assert.equal(denseBoundaryText.length, 12_000);
+  assert.equal(
+    evaluateConceptAssertionState(
+      requiredTrustedRepairText(denseBoundaryText),
+      "합리적",
+    ),
+    "positive",
   );
 });
 
@@ -921,6 +1077,85 @@ test("Law verification requires zero active blockers while Practice and Theory r
       "no_mastery_transfer_stability_score_or_pass_claim",
     ),
   );
+});
+
+test("one exact Law release predicate blocks every nonverified selected-anchor state in diagnosis and continuation", () => {
+  const fixture = trustedRepairCanonicalFixture("appraisal_compensation_law");
+  assert.equal(
+    trustedRepairLawReleaseEligible({
+      fixture,
+      sourceBinding: VERIFIED_LAW,
+    }),
+    true,
+  );
+
+  for (const [label, sourceBinding] of [
+    ["anchor_needs_official_verification", VERIFIED_LAW_WITH_ANCHOR_NEEDS_VERIFICATION],
+    ["anchor_unresolved_conflict", VERIFIED_LAW_WITH_ANCHOR_CONFLICT],
+    ["anchor_version_unverified", VERIFIED_LAW_WITH_ANCHOR_VERSION_UNVERIFIED],
+    ["anchor_mismatch", VERIFIED_LAW_WITH_ANCHOR_MISMATCH],
+    ["open_blocker", VERIFIED_LAW_WITH_OPEN_BLOCKER],
+  ]) {
+    assert.equal(
+      trustedRepairLawReleaseEligible({ fixture, sourceBinding }),
+      false,
+      label,
+    );
+    const submitted = prepareRepairSubmittedJourney(
+      "appraisal_compensation_law",
+      sourceBinding,
+    );
+    assert.equal(submitted.session.stateData.repairNeed, "blocked", label);
+    const blocked = verifyPreparedJourney(
+      submitted,
+      "appraisal_compensation_law",
+      sourceBinding,
+    );
+    assert.equal(blocked.session.state, "blocked", label);
+    assert.equal(blocked.session.outcome, "blocked", label);
+  }
+});
+
+test("an exact-anchor state change invalidates an old Law session through source-version drift", () => {
+  const fixture = trustedRepairCanonicalFixture("appraisal_compensation_law");
+  const aggregate = prepareRepairSubmittedJourney(
+    "appraisal_compensation_law",
+    VERIFIED_LAW,
+  );
+  const changedAnchorBinding = {
+    ...VERIFIED_LAW_WITH_ANCHOR_NEEDS_VERIFICATION,
+    bindingVersion: VERIFIED_LAW.bindingVersion,
+  };
+  const persistedSourceVersion = aggregate.session.bindings.sourceVersion;
+
+  assert.notEqual(
+    persistedSourceVersion,
+    trustedRepairSourceVersion(fixture, changedAnchorBinding),
+  );
+  assert.equal(
+    trustedRepairSourceBindingMatches({
+      aggregate,
+      fixture,
+      sourceBinding: changedAnchorBinding,
+    }),
+    false,
+  );
+
+  const driftPlan = planTrustedRepairContinuation({
+    aggregate,
+    fixture,
+    sourceBinding: changedAnchorBinding,
+    continuation: "VERIFY_AND_CONTINUE",
+    exposureId: nextId(),
+    occurredAt: "2026-08-12T00:06:00.000Z",
+  });
+  const blocked = apply(aggregate, driftPlan);
+  assert.equal(blocked.session.state, "blocked");
+  assert.equal(blocked.session.outcome, "blocked");
+  assert.deepEqual(blocked.session.stateData.resultReasonCodes, [
+    "source_binding_version_drift",
+    "verified_release_denied_until_new_session_diagnosis",
+  ]);
 });
 
 test("an open-blocker Law session fails closed when the current binding reaches zero blockers", () => {

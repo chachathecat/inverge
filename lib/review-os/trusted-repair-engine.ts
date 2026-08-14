@@ -45,6 +45,34 @@ export const SYNTHETIC_SOURCE_BINDING: TrustedRepairLawBindingState = {
   blockerCount: 0,
 };
 
+type TrustedRepairRealLawVerificationStatus = Exclude<
+  TrustedRepairLawBindingState["sourceStatus"],
+  "synthetic_fixture"
+>;
+
+const TRUSTED_REPAIR_LAW_STATUS_PRECEDENCE = {
+  verified: 0,
+  needs_official_verification: 1,
+  unresolved_conflict: 2,
+  blocked: 3,
+} as const satisfies Record<TrustedRepairRealLawVerificationStatus, number>;
+
+export function reduceTrustedRepairLawVerificationStatus(
+  sourceStatus: TrustedRepairLawBindingState["sourceStatus"],
+  anchorStatus: TrustedRepairLawBindingState["sourceStatus"],
+): TrustedRepairRealLawVerificationStatus {
+  if (
+    sourceStatus === "synthetic_fixture" ||
+    anchorStatus === "synthetic_fixture"
+  ) {
+    return "blocked";
+  }
+  return TRUSTED_REPAIR_LAW_STATUS_PRECEDENCE[sourceStatus] >=
+    TRUSTED_REPAIR_LAW_STATUS_PRECEDENCE[anchorStatus]
+    ? sourceStatus
+    : anchorStatus;
+}
+
 export function trustedRepairSourceVersion(
   fixture: TrustedRepairFixture,
   sourceBinding: TrustedRepairLawBindingState,
@@ -71,6 +99,20 @@ export function trustedRepairSourceBindingMatches(input: {
   );
 }
 
+export function trustedRepairLawReleaseEligible(input: {
+  fixture: TrustedRepairFixture;
+  sourceBinding: TrustedRepairLawBindingState;
+}) {
+  return (
+    input.sourceBinding.sourceStatus === "verified" &&
+    input.sourceBinding.versionStatus === "verified" &&
+    input.sourceBinding.currentLawStatus === "current_law_verified" &&
+    input.sourceBinding.sourceAnchorId ===
+      input.fixture.sourceBinding.sourceAnchorId &&
+    input.sourceBinding.blockerCount === 0
+  );
+}
+
 function guardState(
   aggregate: TrustedRepairAggregate,
   expected: TrustedRepairState | readonly TrustedRepairState[],
@@ -88,8 +130,6 @@ function normalizeEvidence(value: string) {
     .replace(/[\s,._·:;()[\]{}]+/g, "");
 }
 
-const MAX_POLARITY_CLAUSES = 64;
-const MAX_CONCEPT_OCCURRENCES_PER_CLAUSE = 32;
 const MAX_SUBJECT_LOOKBACK_TOKENS = 4;
 const MAX_SUBJECT_SCOPE_KEY_LENGTH = 48;
 const NEGATING_PREFIXES = new Set(["불", "비", "미", "무"]);
@@ -198,11 +238,7 @@ function compactPolarityClause(value: string) {
 function literalOccurrences(clause: string, literal: string) {
   const occurrences: { index: number; length: number }[] = [];
   let fromIndex = 0;
-  for (
-    let occurrence = 0;
-    occurrence < MAX_CONCEPT_OCCURRENCES_PER_CLAUSE;
-    occurrence += 1
-  ) {
+  while (fromIndex <= clause.length) {
     const index = clause.indexOf(literal, fromIndex);
     if (index < 0) break;
     occurrences.push({ index, length: literal.length });
@@ -320,9 +356,9 @@ function conceptOccurrences(
   for (const alias of aliases) {
     occurrences.push(...completeSemanticOccurrences(clause, alias));
   }
-  return occurrences
-    .sort((left, right) => left.index - right.index || left.length - right.length)
-    .slice(0, MAX_CONCEPT_OCCURRENCES_PER_CLAUSE);
+  return occurrences.sort(
+    (left, right) => left.index - right.index || left.length - right.length,
+  );
 }
 
 function classifyConceptOccurrence(
@@ -484,8 +520,7 @@ function evaluateConceptAssertion(
   const clauses = text
     .normalize("NFKC")
     .toLowerCase()
-    .split(/[!?。！？;\n]+|\.(?!\d)/)
-    .slice(0, MAX_POLARITY_CLAUSES);
+    .split(/[!?。！？;\n]+|\.(?!\d)/);
 
   for (const rawClause of clauses) {
     const clause = compactPolarityClause(rawClause);
@@ -1106,12 +1141,7 @@ export function planTrustedRepairDiagnosis(input: {
   });
   const sourceBlocked =
     input.fixture.sourceBinding.requiredStatus === "current_law_verified" &&
-    (input.sourceBinding.sourceStatus !== "verified" ||
-      input.sourceBinding.versionStatus !== "verified" ||
-      input.sourceBinding.currentLawStatus !== "current_law_verified" ||
-      input.sourceBinding.sourceAnchorId !==
-        input.fixture.sourceBinding.sourceAnchorId ||
-      input.sourceBinding.blockerCount > 0);
+    !trustedRepairLawReleaseEligible(input);
   const plan = basePlan(input.aggregate, "diagnosed", {
     ...input.aggregate.session.stateData,
     gapCandidates: diagnosis.candidates,
@@ -1296,10 +1326,7 @@ export function planTrustedRepairContinuation(input: {
   }
   const sourceBlocked =
     input.fixture.sourceBinding.requiredStatus === "current_law_verified" &&
-    (input.sourceBinding.sourceStatus !== "verified" ||
-      input.sourceBinding.versionStatus !== "verified" ||
-      input.sourceBinding.currentLawStatus !== "current_law_verified" ||
-      input.sourceBinding.blockerCount > 0);
+    !trustedRepairLawReleaseEligible(input);
   const criterionPassed = primaryAnchorSatisfied({
     aggregate: input.aggregate,
     fixture: input.fixture,
