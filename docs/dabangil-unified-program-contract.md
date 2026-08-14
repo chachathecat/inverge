@@ -1,9 +1,11 @@
 # 답안길 Post-#650 Unified Program Contract
 
-- Contract version: `dabangil.unified_program.v3`
+- Contract version: `dabangil.unified_program.v4`
 - Current exact-scope Owner decisions:
+  `docs/decisions/2026-08-14-wcv-c2-structural-recovery.md`
+  for PR #716 terminal closure and the serial WCV-C2R replacement chain,
   `docs/decisions/2026-08-11-owner-accelerated-vertical-slice-authority-roadmap-reconciliation.md`
-  for WCV campaign delivery and roadmap reconciliation,
+  for unaffected WCV campaign delivery and roadmap reconciliation,
   `docs/decisions/2026-07-30-owner-o4v-lean-owner-private-gate.md` for lean
   O4V, and
   `docs/decisions/2026-07-29-owner-o3a-golden-3-approval.md`
@@ -118,7 +120,9 @@ absence. Their presence is not authorization for new activation or exposure.
 V13 remains the sole active master. The Appraiser Second World-Class Vertical
 Execution Standard `1.0.8` is subordinate to V13 and retains its complete
 behavior, safety and activation baseline. The 2026-08-11 Owner decision changes
-only the delivery model and WCV campaign graph.
+the delivery model and WCV campaign graph for unaffected scope. The
+2026-08-14 Owner decision supersedes only the failed C2 atomic delivery shape
+with the exact serial WCV-C2R structural-recovery chain.
 
 ### One merge-producing writer
 
@@ -161,6 +165,13 @@ Do not create a mandatory contract-only precursor for behavior implemented by
 the same vertical. If the outcome is too large, reduce the learner outcome
 without splitting its layers.
 
+For WCV-C2 recovery only, the 2026-08-14 decision is the exact authorized
+exception: PR #716 proved that Practice, Theory and Law carry different typed
+proof obligations. The prior atomic #702–#705 single-PR requirement is
+superseded by eight serial replacement PRs. This exception does not permit
+horizontal splitting outside the named chain and does not weaken the complete
+runtime-vertical rule for C2R-E or C2R-F.
+
 ### Bounded review
 
 Finish the complete vertical and focused/runtime evidence before review. Then
@@ -177,16 +188,39 @@ review/correction cycles are prohibited.
 | Campaign | Lead | Included issues | State after C1 | Outcome |
 |---|---:|---|---|---|
 | C1 | #713 | #713 | completed source-only on reconciliation merge | authority and roadmap reconciliation; runtime mutation zero |
-| C2 | #702 | #702–#705 | sole next implementation campaign | rights-safe Capture/OCR → anchor → independent attempt → gap → scaffold → repair → verification → durable reopen/resume |
-| C3 | #706 | #706–#708 | queued behind C2 | frozen D+1, sealed D+7, recurrence/reopening, Ledger, recurring deduction and Today/Full-Day |
+| C2R | #717 | #702, #714, #703, #704, #705 | structural-recovery authority installed; no stage started | eight terminally serial replacement PRs that rebuild the trusted-repair outcome with typed subject validators |
+| C3 | #706 | #706–#708 | blocked until terminal C2R-F/#705 merge | frozen D+1, sealed D+7, recurrence/reopening, Ledger, recurring deduction and Today/Full-Day |
 | C4 | #709 | #709–#710 | queued behind C3 | Owner proof, red-team, baseline and invitation-only commercial readiness; no activation |
 | C5 | #711 | #711 | queued behind C4 and unapproved O4W exact cohort gate | frozen paid cohort with real delayed-evidence windows |
 | C6 | #712 | #712 | queued behind C5 | verified-bank and bodyless calibration flywheel |
 
-Issue #701 remains the parent program. Issue #714 remains an open,
-non-merge-producing cross-vertical acceptance tracker. It is not a standalone
-source PR or prerequisite before C2, and this reconciliation implements none
-of its behavior.
+Issue #701 remains the parent program. Structural recovery tracker #717 is the
+lead for C2R. Issue #714 remains open and becomes the exact standalone
+source-contract prerequisite C2R-B after terminal C2R-A. It is merge-producing
+only when a separately authorized C2R-B Work starts; this authority PR starts
+neither C2R-A nor C2R-B.
+
+### C2R serial replacement chain
+
+| Order | Stage | Issue | Scope | Depends on |
+|---:|---|---:|---|---|
+| 1 | C2R-A | #702 | rights-safe source firewall | terminal merge of this authority PR |
+| 2 | C2R-B | #714 | cognitive architecture contract | terminal C2R-A |
+| 3 | C2R-C-P | #703 | shared tutor kernel plus Practice validator | terminal C2R-B |
+| 4 | C2R-C-T | #703 | Theory target-scope validator | terminal C2R-C-P |
+| 5 | C2R-C-L | #703 | Law exact source-anchor-version validator | terminal C2R-C-T |
+| 6 | C2R-D | #704 | Golden 3 and Owner Gold fixtures | terminal C2R-C-L |
+| 7 | C2R-E | #705 | persistence, forced RLS and server | terminal C2R-D |
+| 8 | C2R-F | #705 | API, UI, runtime evidence and terminal closeout | terminal C2R-E |
+
+C2R-A and C2R-B are serial, never parallel. #703 cannot begin before terminal
+#702 and #714. #704 cannot complete before terminal #703. #705 runtime cannot
+begin before terminal #702, #714, #703 and #704. #706/C3 remains blocked until
+terminal C2R-F establishes terminal #705.
+
+Every replacement stage has `automaticStartAllowed: false`. Runner selection
+is metadata-only and cannot start, reserve, provision, author, review or merge
+a stage. The maximum remains one merge-producing writer.
 
 ### #714 durable allocation
 
@@ -197,12 +231,16 @@ of its behavior.
 | C4 | Owner proof of instructional-mode/routing quality; over/under-scaffolding and shortcut red-team; baseline metacognitive/autonomy comparison |
 | C6 | continuous instructional-mode, fading, transfer-distance, routing-error, metacognitive and control-transfer calibration |
 
-The allocation inventory is machine mirrored. No #714 requirement may be lost,
-silently treated as implemented, or restored as a standalone prerequisite PR.
+The allocation inventory is machine mirrored. No #714 requirement may be lost
+or silently treated as implemented. C2R-B now installs the standalone
+source-contract prerequisite; later allocations remain assigned to their
+original C2/C3/C4/C6 delivery stages.
 
-The historical `#702 → #714 → #703` merge-gate sequence is explicitly
-superseded. After C1, #702 is the sole next implementation lead as lead of C2.
-No C2 source or runtime work is part of C1.
+The 2026-08-11 atomic C2 requirement and its prohibition on standalone #702
+and #714 are preserved as history and are explicitly superseded for C2R.
+Tracker #717 is the C2R lead. Standalone #702 and #714 are authorized only as
+the serial source-contract stages C2R-A and C2R-B. No stage is started by this
+contract.
 
 ## 3. Learning execution glossary
 
@@ -966,11 +1004,12 @@ not mirror its dynamic ready-item list.
 O3A and lean O4V are completed as exact Owner decisions; S236B remains queued,
 CPF-1 and S236P remain
 factually blocked, and S236A remains queued with S236P as its unmet dependency.
-The machine mirror pins only the WCV campaign graph and sole next campaign,
+The machine mirror pins the WCV campaign graph and structural-recovery chain,
 not the unrelated dynamic ready list. Runner selection is metadata-only: it
 does not start, reserve, provision, author, or execute work. After C1, the
-single available runner slot selects WCV-C2; a separate exact Work must still
-start it.
+single available runner slot may select the WCV-C2 umbrella; lead authority is
+#717 and a separate exact Work must still start C2R-A. No later replacement
+stage can auto-start or bypass its terminal predecessor.
 
 PR #660 remains Draft and blocked. Its current exploratory OCR evidence does
 not establish S236B. Any continuation must reconcile onto amended main and

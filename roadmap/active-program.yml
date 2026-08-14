@@ -9,11 +9,16 @@ program:
   mergeProducingDeliverySlotCount: 1
   globalMergeProducingWriterLimit: 1
   wipLimitDoesNotAuthorizeWriterCount: true
-  campaignOverlay: WCV-C1-C6
+  campaignOverlay: WCV-C2R-STRUCTURAL-RECOVERY
   campaignLockGroup: wcv-vertical-campaign
   soleNextImplementationItem: WCV-C2
-  soleNextImplementationLeadIssue: 702
+  soleNextImplementationLeadIssue: 717
   crossVerticalAcceptanceTrackerIssue: 714
+  structuralRecoveryTrackerIssue: 717
+  terminalDonorPr: 716
+  terminalDonorMerged: false
+  wcvC2Complete: false
+  replacementStageAutomaticStartAllowed: false
   activeMasterPlan: docs/strategy/dabangil-professional-exam-reasoning-os-final-master-plan-v13-2026-08-06.md
   v12T0Status: completed_source_only_alignment
   cpf1Status: blocked_unknown_reachable_sinks
@@ -334,15 +339,26 @@ items:
     risk: high
     priority: 31.12
   - id: WCV-C2
-    title: C2 First Trusted Repair Vertical
+    title: C2 First Trusted Repair Structural Recovery
     status: queued
-    executionState: sole_next_implementation_campaign
-    leadIssue: 702
-    includedIssues: [702, 703, 704, 705]
+    executionState: structural_recovery_authority_installed_no_stage_started
+    leadIssue: 717
+    includedIssues: [702, 714, 703, 704, 705]
     crossVerticalAcceptanceTracker: 714
+    structuralRecoveryTracker: 717
+    terminalDonorPr: 716
+    terminalDonorMerged: false
+    terminalDonorReadOnly: true
+    terminalDonorEvidencePromotedToMain: false
+    wcvC2Complete: false
+    reviewFindingCount: 21
+    uncoveredReviewFindingCount: 21
+    replacementStages: [C2R-A, C2R-B, C2R-C-P, C2R-C-T, C2R-C-L, C2R-D, C2R-E, C2R-F]
     requiredLayers: [contract_machine_validation, api_storage_persistence, runtime_logic, learner_ui, focused_hostile_runtime_evidence, feature_flag_safe_deferred, rollback]
-    standalone702SourcePrAllowed: false
-    standalone714PrerequisitePrAllowed: false
+    priorAtomic702To705SinglePrRequired: false
+    standalone702SourcePrAllowed: true
+    standalone714PrerequisitePrAllowed: true
+    automaticStartAllowed: false
     sourceOnlyCompletionEstablishesRuntimeReadiness: false
     dependencies: [WCV-C1]
     lockGroup: wcv-vertical-campaign
@@ -351,9 +367,12 @@ items:
   - id: WCV-C3
     title: C3 Durable Learning and Daily Command Vertical
     status: queued
+    executionState: blocked_until_terminal_c2r_f_merge
     leadIssue: 706
     includedIssues: [706, 707, 708]
     crossVerticalAcceptanceTracker: 714
+    terminalReplacementDependency: C2R-F
+    automaticStartAllowed: false
     dependencies: [WCV-C2]
     lockGroup: wcv-vertical-campaign
     risk: high

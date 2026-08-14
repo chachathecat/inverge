@@ -9,10 +9,10 @@ const ACTIVE_MASTER =
   "docs/strategy/dabangil-professional-exam-reasoning-os-final-master-plan-v13-2026-08-06.md";
 const DECISION =
   "docs/decisions/2026-08-11-owner-accelerated-vertical-slice-authority-roadmap-reconciliation.md";
+const RECOVERY_DECISION =
+  "docs/decisions/2026-08-14-wcv-c2-structural-recovery.md";
 const VALIDATION =
   "docs/qa/wcv-campaign-c1-authority-roadmap-reconciliation-validation.md";
-const FOCUSED_TEST =
-  "tests/wcv-campaign-authority-roadmap-reconciliation.test.mjs";
 
 async function text(path) {
   return readFile(path, "utf8");
@@ -123,7 +123,7 @@ test("keeps V13 as the sole active master and WCV 1.0.8 subordinate", async () =
   assert.match(decision, /No V14, V13\.1, second active master/);
 });
 
-test("installs exactly one dated C1 Owner decision with a source-only boundary", async () => {
+test("preserves the C1 decision and installs the later C2R source-contract boundary", async () => {
   const [decision, unified] = await Promise.all([
     text(DECISION),
     json("config/dabangil-unified-program-contract.json"),
@@ -132,7 +132,7 @@ test("installs exactly one dated C1 Owner decision with a source-only boundary",
   assert.match(decision, /status: "owner-decision\/approved-source-only"/);
   assert.match(decision, /lead_issue: 713/);
   assert.match(decision, /runtime_authorization: "none"/);
-  assert.equal(unified.contractVersion, "dabangil.unified_program.v3");
+  assert.equal(unified.contractVersion, "dabangil.unified_program.v4");
   assert.equal(unified.campaignDeliveryDecision.decisionRecord, DECISION);
   for (const key of [
     "runtimeAuthorized",
@@ -144,6 +144,17 @@ test("installs exactly one dated C1 Owner decision with a source-only boundary",
   ]) {
     assert.equal(unified.campaignDeliveryDecision[key], false, key);
   }
+  assert.equal(
+    unified.structuralRecoveryDecision.decisionRecord,
+    RECOVERY_DECISION,
+  );
+  assert.equal(unified.structuralRecoveryDecision.leadIssue, 717);
+  assert.equal(unified.structuralRecoveryDecision.terminalPr, 716);
+  assert.equal(unified.structuralRecoveryDecision.wcvC2Complete, false);
+  assert.equal(
+    unified.structuralRecoveryDecision.replacementStageAutomaticStartAllowed,
+    false,
+  );
 });
 
 test("reconciles two truthful blocked reservations with one delivery slot", async () => {
@@ -191,23 +202,36 @@ test("preserves CPF-1 and S236P factual blocked states without bypass", async ()
   assert.equal(unified.wcvCampaignOverlay.legacyFactualGates.S236P.bypassAllowed, false);
 });
 
-test("makes C2 led by #702 the sole selected next implementation campaign", async () => {
+test("keeps WCV-C2 as the metadata umbrella led by recovery tracker #717", async () => {
   const [roadmapSource, unified] = await Promise.all([
     text("roadmap/active-program.yml"),
     json("config/dabangil-unified-program-contract.json"),
   ]);
   const roadmap = parseRoadmap(roadmapSource);
   const campaigns = unified.wcvCampaignOverlay.campaigns;
-  const next = campaigns.filter((campaign) => campaign.state === "sole_next_implementation_campaign");
+  const c2 = campaigns.find((campaign) => campaign.id === "C2");
 
   assert.equal(roadmap.program.soleNextImplementationItem, "WCV-C2");
-  assert.equal(roadmap.program.soleNextImplementationLeadIssue, 702);
-  assert.equal(next.length, 1);
-  assert.equal(next[0].id, "C2");
-  assert.equal(next[0].leadIssue, 702);
-  assert.deepEqual(next[0].includedIssues, [702, 703, 704, 705]);
+  assert.equal(roadmap.program.soleNextImplementationLeadIssue, 717);
+  assert.equal(roadmap.program.structuralRecoveryTrackerIssue, 717);
+  assert.equal(roadmap.program.wcvC2Complete, false);
+  assert.equal(roadmap.program.replacementStageAutomaticStartAllowed, false);
+  assert.equal(c2.leadIssue, 717);
+  assert.deepEqual(c2.includedIssues, [702, 714, 703, 704, 705]);
+  assert.equal(c2.wcvC2Complete, false);
+  assert.equal(c2.automaticStartAllowed, false);
   assert.deepEqual(unified.wcvCampaignOverlay.laterCampaignsQueued, ["C3", "C4", "C5", "C6"]);
-  assert.equal(roadmap.byId.get("WCV-C2").executionState, "sole_next_implementation_campaign");
+  assert.equal(
+    roadmap.byId.get("WCV-C2").executionState,
+    "structural_recovery_authority_installed_no_stage_started",
+  );
+  assert.deepEqual(
+    createRoadmapRunnerPlanFromYamlAt(
+      roadmapSource,
+      new Date("2026-08-14T08:00:00.000Z"),
+    ).selectedItemIds,
+    ["WCV-C2"],
+  );
 });
 
 test("installs the exact C1 through C6 dependency graph", async () => {
@@ -362,19 +386,41 @@ test("requires every complete vertical layer and rejects horizontal precursors",
   assert.equal(rule.oversizedVerticalDisposition, "REDUCE_LEARNER_OUTCOME_KEEP_REQUIRED_LAYERS_TOGETHER");
 });
 
-test("supersedes standalone #702 and #714 prerequisite PRs", async () => {
-  const [unified, contract, decision] = await Promise.all([
+test("records the old atomic rule as history and authorizes serial C2R-A then C2R-B", async () => {
+  const [unified, contract, decision, recovery] = await Promise.all([
     json("config/dabangil-unified-program-contract.json"),
     text("docs/dabangil-unified-program-contract.md"),
     text(DECISION),
+    text(RECOVERY_DECISION),
   ]);
 
   assert.equal(unified.wcvCampaignOverlay.historicalStandaloneSequence.operative, false);
   assert.deepEqual(unified.wcvCampaignOverlay.historicalStandaloneSequence.sequence, [702, 714, 703]);
-  assert.equal(unified.wcvCampaignOverlay.issue714Tracker.standalonePrerequisiteBeforeC2, false);
-  assert.equal(unified.wcvCampaignOverlay.issue714Tracker.standaloneSourcePrRequired, false);
-  assert.match(contract, /historical `#702 → #714 → #703` merge-gate sequence is explicitly\nsuperseded/);
+  assert.equal(
+    unified.wcvCampaignOverlay.c2StructuralRecovery
+      .priorAtomic702To705SinglePrRequirementSuperseded,
+    true,
+  );
+  assert.equal(
+    unified.wcvCampaignOverlay.c2StructuralRecovery
+      .standalone702SourceOnlyAuthorized,
+    true,
+  );
+  assert.equal(
+    unified.wcvCampaignOverlay.issue714Tracker.standaloneSourcePrAuthorized,
+    true,
+  );
+  assert.equal(
+    unified.wcvCampaignOverlay.issue714Tracker.standaloneSourcePrRequired,
+    true,
+  );
+  assert.equal(
+    unified.wcvCampaignOverlay.issue714Tracker.automaticStartAllowed,
+    false,
+  );
+  assert.match(contract, /Standalone #702 and #714 are authorized only as/);
   assert.match(decision, /standalone sequence `#702 source-only → #714 source-only → #703`/);
+  assert.match(recovery, /C2R-A and C2R-B are not parallel/);
 });
 
 test("allocates every #714 requirement to C2, C3, C4 or C6 exactly once", async () => {
@@ -384,7 +430,9 @@ test("allocates every #714 requirement to C2, C3, C4 or C6 exactly once", async 
   const allocated = allocationKeys.flatMap((key) => tracker.allocations[key]);
 
   assert.deepEqual(allocationKeys, ["C2", "C3", "C4", "C6"]);
-  assert.equal(tracker.mergeProducing, false);
+  assert.equal(tracker.currentMergeProducing, false);
+  assert.equal(tracker.mergeProducingWhenStageActive, true);
+  assert.equal(tracker.automaticStartAllowed, false);
   assert.equal(tracker.behaviorImplementedByC1, false);
   assert.equal(new Set(allocated).size, allocated.length, "duplicate #714 allocation");
   assert.deepEqual(sorted(allocated), sorted(tracker.requirementInventory));

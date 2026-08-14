@@ -4,11 +4,35 @@
 - 상세 제품 기준: `docs/inverge-second-round-final-product-spec.md`
 - 실행 상태와 의존성 기준: `roadmap/active-program.yml`
 - Current exact-scope authority:
+  `docs/decisions/2026-08-14-wcv-c2-structural-recovery.md` for the
+  terminal unmerged closure of PR #716 and the serial WCV-C2R replacement
+  chain,
   `docs/decisions/2026-07-29-owner-o3a-golden-3-approval.md` for O3A,
   `docs/decisions/2026-07-26-owner-dogfood-private-plane-schedule-amendment.md`
   for the program amendment, and `docs/dabangil-unified-program-contract.md`
   supersede historical ordering in this document; this file remains phase
   history and second-round detail.
+
+## 2026-08-14 WCV-C2 Structural Recovery
+
+PR #716 is closed Draft and unmerged at head
+`ca5193526ab0e1ca2f75660066b5a0da8f668ec1`, tree
+`8f470e82e5545f4caddb3d902b08f6a15eb31e48`. Its branch is retained as a
+read-only donor. Its successful first-attempt CI/runtime evidence is not
+promoted into main and does not establish WCV-C2 completion.
+
+Tracker #717 owns the exact serial recovery graph:
+
+`C2R-A/#702 → C2R-B/#714 → C2R-C-P/#703 → C2R-C-T/#703 → C2R-C-L/#703 → C2R-D/#704 → C2R-E/#705 → C2R-F/#705`
+
+The sequence is terminally serial. #702 and #714 are not parallel; #703 waits
+for both, #704 waits for terminal #703, #705 runtime waits for #702/#714/#703/
+#704, and #706 remains blocked until terminal C2R-F/#705 merge. No stage starts
+automatically. Exactly one merge-producing writer remains permitted.
+
+V13 remains the sole active master and WCV 1.0.8 remains subordinate. This
+authority grants no learner, provider, payment, cohort, remote Supabase,
+Production, or C3 activation.
 
 ## 1. Final Product Definition
 
