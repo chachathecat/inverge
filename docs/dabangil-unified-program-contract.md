@@ -2,6 +2,10 @@
 
 - Contract version: `dabangil.unified_program.v4`
 - Current exact-scope Owner decisions:
+  `docs/decisions/2026-08-14-owner-unified-product-multisurface-launch.md`
+  for the final public product, future Web/iOS/Android and instructor
+  surfaces, free-limited launch, separate paid/evidence route, and coordinated
+  release,
   `docs/decisions/2026-08-14-wcv-c2-structural-recovery.md`
   for PR #716 terminal closure and the serial WCV-C2R replacement chain,
   `docs/decisions/2026-08-11-owner-accelerated-vertical-slice-authority-roadmap-reconciliation.md`
@@ -49,6 +53,7 @@ Attachments, handoffs, issue prose, and old prompts are inputs, not live state.
 | `docs/inverge-curriculum-system.md` | Legacy compatibility metadata until a new verified Foundation registry exists |
 | `docs/inverge-study-schedule-system.md` | Legacy templates, not first-round runtime authority |
 | `docs/inverge-business-model.md` | Target catalog history; activation still gated |
+| ULC-0 / Issue #719 | Mandatory subordinate V13 launch amendment; authority installed, no runtime started |
 | S222 completion | Academy source-contract history, not live Academy service readiness |
 | S223/S224 completion | Historical source/runtime contract acceptance, not current content, commercial, or efficacy readiness |
 | `o4v-s234r-owner-private-plane-binding-v1` | Rejected and superseded 88-field enterprise packet; never materialized and cannot authorize work |
@@ -303,6 +308,92 @@ C2 structural-recovery stage chain. Tracker #717 is the recovery tracker and
 campaign-C2 lead record, not a replacement-stage ID or Issue #702. Standalone
 #702 and #714 are authorized only as the serial source-contract stages C2R-A
 and C2R-B. No stage is started by this contract.
+
+## 2B. Unified product and multisurface launch convergence
+
+The 2026-08-14 ULC-0 decision is a mandatory subordinate V13 launch
+amendment led by Issue #719. It is not V14, V13.1, another active master or
+the current implementation campaign. Its machine contract is
+`config/dabangil-unified-product-multisurface-launch-v1.json`.
+
+The final public product is **답안길 — 감정평가사 1·2차 통합 합격
+운영체계**. Student surfaces are exactly Web, iOS/iPadOS and Android. The
+complete instructor authoring/review console is Web-primary; student apps may
+consume tenant-authorized assignments and approved feedback.
+
+### Preserved current authority
+
+ULC-0 does not change the sole current implementation item `WCV-C2`, campaign
+`C2`, Tracker #717, current replacement stage `C2R-A` for #702, the five-stage
+C2R chain, the 21-row regression matrix, the one-writer limit or no-auto-start.
+WCV-C2 remains incomplete and C2R-A remains authorized but unstarted.
+
+### Free-limited and paid routes
+
+The future ULC-L1 route is free-limited public Web/iOS/Android 1.0. For this
+route only, paid Founding Beta and paid-conversion evidence are not
+prerequisites. It has no in-app purchase CTA, activates no payment, and grants
+no commercial-readiness, retention, efficacy, score-gain, pass-rate or causal
+claim. The existing S225/O4D commercial route keeps its prior requirements.
+
+After ULC-L1, the separate paid/evidence path is:
+
+`O4W → WCV-C5 → WCV-C6 → separate payment/paid-claim activation authority`
+
+Payment continues to require a separate exact Owner decision.
+
+### Future complete outcomes
+
+After terminal C2R-C-L, the controlling launch sequence is:
+
+`WCV-C3 → ULC-M1 → ULC-M2 → ULC-K1 → ULC-F1 → ULC-F2 → ULC-F3 → ULC-F4 → ULC-F5 → ULC-I1 → WCV-C4 → ULC-R1 → ULC-L1`
+
+Every runtime stage is an independently deployable learner or instructor
+outcome. Framework-only, API-only, persistence-only, UI-only and QA-only
+mandatory PRs remain prohibited. Every stage is queued, unselected, unstarted
+and `automaticStartAllowed: false`.
+
+### Architecture and learner state
+
+Existing Next.js/Vercel remains Web plus trusted HTTP API. Future native
+student clients use Expo React Native, Expo Router, EAS Build/Submit/Workflows
+and Maestro. Existing Supabase/Postgres remains authoritative persistence and
+tenant boundary. ULC-0 installs no dependency or native project.
+
+A remote-website-only WebView and a static-exported server app are prohibited
+as the final native product. All surfaces use one server-authoritative mastery,
+verified and source-currentness state. Clients cannot set those states,
+receive a service-role secret or place raw answer/OCR/concept/score/private
+text in push payloads. Critical mobile behavior requires a versioned trusted
+HTTP API.
+
+### Concept Decoder and Formula Graph
+
+Concept Decoder is structured learner-error repair with term/Hanja/English/
+symbol decomposition, intuitive explanation, precise exam definition,
+analogy limits, applicability, confusions, exam-writing layer, learner-error
+provenance, retrieval prompts and D+1/D+7 scheduling.
+
+Formula Graph is a typed relation object with expression, variables, units,
+causal direction, applicability, derived forms, rounding/sign constraints,
+common errors, exact source/version and a link to the learner's failed
+attempt. Explanation alone creates no mastery evidence; only reconstruction
+and later independent performance may change learning state.
+
+### Store and coordinated release
+
+ULC-R1 must prove iOS and Android in-app deletion, an external Web deletion
+resource, privacy/App Privacy/Data Safety declarations, AI/source/currentness/
+human-review disclosure, notification privacy, least-privilege permissions,
+app-review access and delete/export verification.
+
+One `DabangilReleaseManifestV1` binds exact source, Web deployment, native
+builds, API/evidence/validator versions, migrations, policy/disclosure,
+deletion, store metadata and per-surface final gates. iOS and Android are
+approved and held, Web remains gated, and one manual command opens all three
+within at most 24 hours.
+
+ULC-0 activates none of this runtime.
 
 ## 3. Learning execution glossary
 
