@@ -88,6 +88,101 @@ const EXPECTED_REVIEW_THREADS = [
   ["PRR_kwDOSMHn8M8AAAABJhaiDA", "PRRT_kwDOSMHn8M6ZKl1F", "P2", "C2R-C-L"],
 ];
 
+const EXPECTED_FORBIDDEN_CLAIM_TRUTH_TABLE = [
+  {
+    evidenceSet: "none",
+    semanticState: "absent",
+    releaseEffect: "nonblocking",
+  },
+  {
+    evidenceSet: "negated only",
+    semanticState: "negated",
+    releaseEffect: "nonblocking",
+  },
+  {
+    evidenceSet: "non-assertive only",
+    semanticState: "non-assertive",
+    releaseEffect: "nonblocking",
+  },
+  {
+    evidenceSet: "positive only",
+    semanticState: "positive",
+    releaseEffect: "blocking",
+  },
+  {
+    evidenceSet: "positive + negated",
+    semanticState: "ambiguous",
+    releaseEffect: "blocking",
+  },
+  {
+    evidenceSet: "positive + unresolved ambiguous",
+    semanticState: "ambiguous",
+    releaseEffect: "blocking",
+  },
+  {
+    evidenceSet: "unresolved assertive ambiguous only",
+    semanticState: "ambiguous",
+    releaseEffect: "blocking",
+  },
+];
+
+function markdownCells(line) {
+  return line
+    .split("|")
+    .slice(1, -1)
+    .map((cell) => cell.trim());
+}
+
+function unquoteMarkdownCode(value) {
+  return value.replaceAll("`", "").trim();
+}
+
+function parseMatrixRows(source) {
+  return new Map(
+    source
+      .split(/\r?\n/)
+      .filter((line) => /^\| \d+ \|/.test(line))
+      .map((line) => {
+        const cells = markdownCells(line);
+        return [
+          Number(cells[0]),
+          {
+            number: Number(cells[0]),
+            reviewAndThread: cells[1],
+            historicalThreadState: unquoteMarkdownCode(cells[2]),
+            severity: unquoteMarkdownCode(cells[3]),
+            exactFinding: cells[4],
+            affectedDomain: cells[5],
+            assignedReplacementStage: unquoteMarkdownCode(cells[6]),
+            requiredFutureRegression: cells[7],
+            status: unquoteMarkdownCode(cells[8]),
+            futureTestPath: unquoteMarkdownCode(cells[9]),
+            candidateCoverageDeclaration: unquoteMarkdownCode(cells[10]),
+          },
+        ];
+      }),
+  );
+}
+
+function parseForbiddenClaimTruthTable(source) {
+  const section =
+    source.match(
+      /### Forbidden-claim polarity release truth table([\s\S]*?)\n\| # \|/,
+    )?.[1] ?? "";
+
+  return section
+    .split(/\r?\n/)
+    .filter((line) => /^\| `/.test(line))
+    .map((line) => {
+      const [evidenceSet, semanticState, releaseEffect] = markdownCells(line);
+      return {
+        evidenceSet: unquoteMarkdownCode(evidenceSet),
+        semanticState: unquoteMarkdownCode(semanticState),
+        releaseEffect: unquoteMarkdownCode(releaseEffect),
+      };
+    });
+}
+
 test("records PR #716 as a closed unmerged donor and keeps WCV-C2 incomplete", async () => {
   const [unified, decision] = await Promise.all([
     json("config/dabangil-unified-program-contract.json"),
@@ -441,6 +536,82 @@ test("installs all 21 donor findings as uncovered matrix rows", async () => {
     assert.ok(row.includes(`| \`${stage}\` |`), thread);
     assert.ok(row.includes("**"), `${thread} exact finding title`);
     assert.ok(row.includes("tests/"), `${thread} future test path`);
+  }
+});
+
+test("keeps ambiguous forbidden evidence release-blocking across rows 9 and 13", async () => {
+  const matrix = await text(MATRIX);
+  const rows = parseMatrixRows(matrix);
+  const row9 = rows.get(9);
+  const row13 = rows.get(13);
+  const invariant =
+    matrix.match(
+      /## Forbidden-claim polarity release invariant([\s\S]*?)### Forbidden-claim polarity release truth table/,
+    )?.[1] ?? "";
+
+  assert.equal(rows.size, 21);
+  assert.equal(row9.assignedReplacementStage, "C2R-C-P");
+  assert.match(
+    row9.requiredFutureRegression,
+    /every occurrence is explicitly negated or genuinely non-assertive/,
+  );
+  assert.match(
+    row9.requiredFutureRegression,
+    /no positive or unresolved assertive occurrence exists/,
+  );
+  assert.match(
+    row9.requiredFutureRegression,
+    /purely negated, and purely non-assertive evidence are nonblocking/,
+  );
+  assert.match(row9.requiredFutureRegression, /Positive-only evidence blocks/);
+  assert.match(
+    row9.requiredFutureRegression,
+    /Positive \+ negated mixed polarity is semantically `ambiguous` but release-blocking/,
+  );
+  assert.match(
+    row9.requiredFutureRegression,
+    /positive \+ unresolved ambiguous evidence is release-blocking/,
+  );
+  assert.match(
+    row9.requiredFutureRegression,
+    /Unresolved assertive ambiguity fails closed as `partial` or `blocked`/,
+  );
+  assert.match(
+    row9.requiredFutureRegression,
+    /No positive, mixed-polarity, or assertively ambiguous forbidden evidence may produce `verified`/,
+  );
+  assert.doesNotMatch(
+    row9.requiredFutureRegression,
+    /ambiguous forbidden mentions must be nonblocking/i,
+  );
+
+  assert.equal(row13.assignedReplacementStage, "C2R-C-T");
+  assert.match(
+    row13.requiredFutureRegression,
+    /Same-clause positive and negated assertions for the same target must reduce to ambiguous/,
+  );
+  assert.match(invariant, /For a required claim, `ambiguous` means unsatisfied/);
+  assert.match(
+    invariant,
+    /ambiguous assertive or mixed-polarity evidence blocks\n`verified` release/,
+  );
+  assert.match(
+    invariant,
+    /Only absent, purely negated, or purely non-assertive\nforbidden evidence is nonblocking/,
+  );
+
+  const truthTable = parseForbiddenClaimTruthTable(matrix);
+  assert.deepEqual(truthTable, EXPECTED_FORBIDDEN_CLAIM_TRUTH_TABLE);
+  for (const row of truthTable) {
+    const expectedBlocking = ![
+      "none",
+      "negated only",
+      "non-assertive only",
+    ].includes(row.evidenceSet);
+    assert.equal(row.releaseEffect, expectedBlocking ? "blocking" : "nonblocking");
+    if (row.semanticState === "ambiguous") {
+      assert.equal(row.releaseEffect, "blocking", row.evidenceSet);
+    }
   }
 });
 
