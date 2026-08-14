@@ -1,5 +1,5 @@
 {
-  "contractVersion": "dabangil.unified_program.v3",
+  "contractVersion": "dabangil.unified_program.v4",
   "decision": {
     "id": "owner_o1r_owner_dogfood_private_plane_schedule_2026_07_26",
     "status": "approved_for_source_amendment_only",
@@ -24,6 +24,24 @@
     "learnerActivationAuthorized": false,
     "commercialActivationAuthorized": false,
     "productionAuthorized": false
+  },
+  "structuralRecoveryDecision": {
+    "id": "owner_wcv_c2r_structural_recovery_2026_08_14",
+    "status": "approved_source_contract_only",
+    "decisionDateKst": "2026-08-14",
+    "decisionRecord": "docs/decisions/2026-08-14-wcv-c2-structural-recovery.md",
+    "leadIssue": 717,
+    "terminalPr": 716,
+    "wcvC2Complete": false,
+    "runtimeAuthorized": false,
+    "applicationAuthorized": false,
+    "realContentAuthorized": false,
+    "learnerActivationAuthorized": false,
+    "providerActivationAuthorized": false,
+    "paymentActivationAuthorized": false,
+    "commercialActivationAuthorized": false,
+    "productionAuthorized": false,
+    "replacementStageAutomaticStartAllowed": false
   },
   "scopeDecisions": {
     "O3A": {
@@ -800,7 +818,7 @@
     "onlineWeightUpdateAllowed": false
   },
   "wcvCampaignOverlay": {
-    "id": "wcv_campaign_c1_c6_vertical_delivery_v1",
+    "id": "wcv_campaign_c2r_serial_replacement_v2",
     "parentIssue": 701,
     "activeMasterPlan": "docs/strategy/dabangil-professional-exam-reasoning-os-final-master-plan-v13-2026-08-06.md",
     "relationshipToV13": "subordinate_execution_campaign_not_active_master",
@@ -873,6 +891,282 @@
       "recursiveReviewOrCorrectionAllowed": false,
       "replacementPrDiffCopyLoopAllowed": false
     },
+    "c2StructuralRecovery": {
+      "trackerIssue": 717,
+      "authorityDecision": "docs/decisions/2026-08-14-wcv-c2-structural-recovery.md",
+      "regressionMatrix": "docs/qa/wcv-c2-replacement-regression-matrix.md",
+      "status": "authority_installed_no_replacement_stage_started",
+      "wcvC2Complete": false,
+      "authorityGraph": {
+        "roadmapItemId": "WCV-C2",
+        "campaignId": "C2",
+        "recoveryTrackerIssue": 717,
+        "structuralAuthorityPr": 718,
+        "currentReplacementStageId": "C2R-A",
+        "currentReplacementStageIssue": 702,
+        "replacementStageChain": [
+          "C2R-A",
+          "C2R-B",
+          "C2R-C-P",
+          "C2R-C-T",
+          "C2R-C-L"
+        ]
+      },
+      "terminalDonor": {
+        "pr": 716,
+        "state": "closed_draft_unmerged",
+        "merged": false,
+        "head": "ca5193526ab0e1ca2f75660066b5a0da8f668ec1",
+        "tree": "8f470e82e5545f4caddb3d902b08f6a15eb31e48",
+        "baseMain": "03a3886de105de104de04672ffaa6507b2ead592",
+        "baseMainTree": "e14c019b8a49c5dca822ea81b95639b09543a668",
+        "finalReview": "PRR_kwDOSMHn8M8AAAABJhaiDA",
+        "finalActionableP0P1P2": [0, 0, 3],
+        "reviewThreadCount": 21,
+        "historicallyResolvedThreadCount": 2,
+        "intentionallyUnresolvedThreadCount": 19,
+        "branchRetainedReadOnly": true,
+        "runtimeEvidencePromotedToMain": false,
+        "mainCompletionEvidence": false
+      },
+      "priorAtomic702To705SinglePrRequirementSuperseded": true,
+      "standalone702SourceOnlyAuthorized": true,
+      "standalone714SourceOnlyAuthorized": true,
+      "oneMergeProducingWriterAtATime": true,
+      "automaticStartAllowed": false,
+      "coverageProtocol": {
+        "version": "wcv_c2r_non_self_referential_merge_coverage_v1",
+        "initialRowCount": 21,
+        "initialRowStatus": "uncovered",
+        "allRowsRemainUncoveredInAuthorityPr718": true,
+        "candidateStatus": "candidate_coverage_pending_exact_merge",
+        "receiptPolicyId": "github_exact_head_pinned_squash_merge_v1",
+        "repositoryCandidateDeclaration": {
+          "assignedRowsOnly": true,
+          "fromStatus": "uncovered",
+          "toStatus": "candidate_coverage_pending_exact_merge",
+          "requiredFieldsExactly": [
+            "findingThreadId",
+            "coveringStage",
+            "coveringPrNumber",
+            "exactRegressionAssertionId",
+            "exactFutureTestPath",
+            "inheritedRegressionObligations",
+            "receiptPolicyId"
+          ],
+          "receiptPolicyId": "github_exact_head_pinned_squash_merge_v1",
+          "ownReviewedHeadTreeOrFutureMergeCommitMustNotBeCommittedWhenSelfReferential": true,
+          "candidateDeclarationAloneCreatesEffectiveCoverage": false
+        },
+        "externalExactCandidateIdentity": {
+          "storedOutsideCandidateCommit": true,
+          "requiredFieldsExactly": [
+            "coveringPrNumber",
+            "finalReviewedHeadSha",
+            "finalReviewedTreeSha",
+            "freshCheckIds",
+            "finalReviewId",
+            "finalActionableP0P1P2",
+            "coveredFindingThreadIds",
+            "regressionTestPaths"
+          ],
+          "finalActionableP0P1P2Exactly": [0, 0, 0],
+          "freshChecksAndFinalReviewMustBelongToReviewedHead": true
+        },
+        "expectedHeadPinnedMerge": {
+          "method": "squash",
+          "expectedHeadShaRequired": true,
+          "remoteHeadMismatchFailsClosed": true,
+          "successfulMergeSuppliesResultingMergeCommitSha": true
+        },
+        "postMergeReceipt": {
+          "receiptVersion": "MergeCoverageReceiptV1",
+          "trackerIssue": 717,
+          "sameReplacementStageWorkMayPublishAfterSuccessfulMerge": true,
+          "exactlyOneTrackerReceiptCommentPerSuccessfulStageMerge": true,
+          "trackerCommentIsIndexNotIndependentSourceOfTruth": true,
+          "requiredFieldsAtLeast": [
+            "receiptVersion",
+            "stageId",
+            "coveringPrNumber",
+            "reviewedHeadSha",
+            "reviewedTreeSha",
+            "finalReviewId",
+            "mergeCommitSha",
+            "mergeTreeSha",
+            "coveredFindingThreadIds",
+            "regressionTestPaths",
+            "baseBranch",
+            "mergedAt"
+          ],
+          "liveGithubVerificationRequired": true,
+          "successorRepositoryPrRequired": false,
+          "repositoryBookkeepingPrAllowed": false,
+          "writeOrValidationFailureDisposition": "KEEP_ISSUES_OPEN_KEEP_C3_BLOCKED_REQUIRE_SEPARATELY_AUTHORIZED_RECEIPT_ONLY_RECOVERY"
+        },
+        "liveGithubReceiptVerification": {
+          "pullRequestMustBeMerged": true,
+          "exactReviewedHeadMustBeMergeInput": true,
+          "livePrMergeCommitMustEqualReceiptMergeCommit": true,
+          "mergeCommitMustBePresentOnMain": true,
+          "mergeTreeMustBeCompatibleWithCandidateEvidence": true,
+          "finalReviewAndRequiredChecksMustBelongToReviewedHead": true,
+          "falseReceiptRejected": true,
+          "mismatchedMergeCommitRejected": true
+        },
+        "effectiveCoveragePredicate": {
+          "allConditionsRequired": true,
+          "conditionsExactly": [
+            "MATRIX_ROW_HAS_EXACT_CANDIDATE_DECLARATION",
+            "NAMED_REGRESSION_EXISTS_AND_PASSED_ON_EXACT_REVIEWED_HEAD",
+            "FINAL_EXACT_HEAD_REVIEW_ACTIONABLE_P0_P1_P2_IS_0_0_0",
+            "EXPECTED_HEAD_PINNED_SQUASH_MERGE_SUCCEEDED",
+            "LIVE_GITHUB_MERGE_RECEIPT_VALIDATES",
+            "TRACKER_717_MERGE_COVERAGE_RECEIPT_V1_INDEX_EXISTS_AND_MATCHES"
+          ],
+          "donorTestUnmergedCandidateStaleReviewOldCiOrTrackerTextAloneMayCover": false
+        },
+        "terminalC2RCL": {
+          "successorRepositoryPrRequired": false,
+          "orderedCloseoutExactly": [
+            "DECLARE_CANDIDATE_COVERAGE_IN_C2R_C_L_PR",
+            "PASS_FRESH_EXACT_HEAD_CHECKS_AND_FINAL_REVIEW",
+            "SQUASH_MERGE_WITH_EXPECTED_REVIEWED_HEAD_PINNED",
+            "PUBLISH_MERGE_COVERAGE_RECEIPT_V1_TO_TRACKER_717",
+            "VERIFY_EFFECTIVE_COVERAGE_FOR_ALL_REQUIRED_ROWS",
+            "CLOSE_703_704_705_717_AND_UNBLOCK_706_C3"
+          ],
+          "issueClosureBeforeReceiptValidationAllowed": false,
+          "receiptFailureLeavesRepositoryMergeFactual": true,
+          "receiptFailureKeepsIssuesOpenAndC3Blocked": true,
+          "receiptFailureRecovery": "SEPARATELY_AUTHORIZED_RECEIPT_ONLY_RECOVERY_NOT_CODE_OR_BOOKKEEPING_PR"
+        }
+      },
+      "replacementStages": [
+        {
+          "order": 1,
+          "id": "C2R-A",
+          "issue": 702,
+          "scope": "rights_safe_source_firewall",
+          "outcomeType": "independently_complete_source_contract_outcome",
+          "horizontalRuntimeLayer": false,
+          "dependencies": [],
+          "startRequiresTerminalStructuralAuthorityPr": 718,
+          "state": "authorized_unstarted",
+          "sourceContractOnly": true,
+          "terminalMergeRequired": true,
+          "automaticStartAllowed": false
+        },
+        {
+          "order": 2,
+          "id": "C2R-B",
+          "issue": 714,
+          "scope": "cognitive_architecture_contract",
+          "outcomeType": "independently_complete_source_contract_outcome",
+          "horizontalRuntimeLayer": false,
+          "dependencies": ["C2R-A"],
+          "state": "queued_dependency_blocked",
+          "sourceContractOnly": true,
+          "terminalMergeRequired": true,
+          "automaticStartAllowed": false
+        },
+        {
+          "order": 3,
+          "id": "C2R-C-P",
+          "issue": 703,
+          "scope": "complete_practice_trusted_repair_vertical",
+          "outcomeType": "independently_deployable_learner_visible_runtime_vertical",
+          "learnerVisibleOutcome": "practice_trusted_repair",
+          "dependencies": ["C2R-B"],
+          "state": "queued_dependency_blocked",
+          "requiredChangedLayers": [
+            "SHARED_TUTOR_EPISODE_KERNEL",
+            "TYPED_PRACTICE_CALCULATION_RELATION_VALIDATOR",
+            "PRACTICE_GOLDEN_AND_OWNER_GOLD_FIXTURES",
+            "PERSISTENCE_FORCED_RLS_SERVER_IDEMPOTENCY_CAS",
+            "API",
+            "LEARNER_UI",
+            "FOCUSED_AND_HOSTILE_TESTS",
+            "BROWSER_NEXT_SUPABASE_POSTGRES_RUNTIME_EVIDENCE",
+            "SAFE_DEFERRED_CAPABILITY_BOUNDARY",
+            "INDEPENDENT_ROLLBACK"
+          ],
+          "commonRuntimeSubstrateFirstLandsHere": true,
+          "acceptanceContributionIssues": [703, 704, 705],
+          "directRegressionRows": [1, 2, 4, 6, 8, 9, 10, 11, 12, 14, 19],
+          "commonRegressionRows": [1, 4, 6, 8, 11, 14],
+          "terminalIssueClosureAllowed": false,
+          "terminalMergeRequired": true,
+          "automaticStartAllowed": false
+        },
+        {
+          "order": 4,
+          "id": "C2R-C-T",
+          "issue": 703,
+          "scope": "complete_theory_trusted_repair_vertical",
+          "outcomeType": "independently_deployable_learner_visible_runtime_vertical",
+          "learnerVisibleOutcome": "theory_trusted_repair",
+          "dependencies": ["C2R-C-P"],
+          "state": "queued_dependency_blocked",
+          "requiredChangedLayers": [
+            "TYPED_THEORY_TARGET_SCOPED_PREDICATE_VALIDATOR",
+            "THEORY_GOLDEN_AND_OWNER_GOLD_FIXTURES",
+            "NECESSARY_PERSISTENCE_SERVER_API_UI_INTEGRATION_DELTA",
+            "BROWSER_TO_DATABASE_RUNTIME_EVIDENCE",
+            "SAFE_DEFERRED_THEORY_CAPABILITY_BOUNDARY",
+            "ROLLBACK_INDEPENDENT_OF_PRACTICE"
+          ],
+          "acceptanceContributionIssues": [703, 704, 705],
+          "directRegressionRows": [5, 13, 16, 18, 20],
+          "inheritedCommonRegressionRows": [1, 4, 6, 8, 11, 14],
+          "terminalIssueClosureAllowed": false,
+          "terminalMergeRequired": true,
+          "automaticStartAllowed": false
+        },
+        {
+          "order": 5,
+          "id": "C2R-C-L",
+          "issue": 703,
+          "scope": "complete_law_trusted_repair_vertical_and_terminal_wcv_c2_closeout",
+          "outcomeType": "independently_deployable_learner_visible_runtime_vertical",
+          "learnerVisibleOutcome": "law_trusted_repair",
+          "dependencies": ["C2R-C-T"],
+          "state": "queued_dependency_blocked",
+          "requiredChangedLayers": [
+            "EXACT_LAW_SOURCE_ANCHOR_LOCATOR_EFFECTIVE_VERSION_APPLICABLE_DATE_VALIDATOR",
+            "LAW_GOLDEN_AND_OWNER_GOLD_FIXTURES",
+            "NECESSARY_PERSISTENCE_SERVER_API_UI_INTEGRATION_DELTA",
+            "BROWSER_TO_DATABASE_RUNTIME_EVIDENCE",
+            "SAFE_DEFERRED_LAW_CAPABILITY_BOUNDARY",
+            "ROLLBACK_INDEPENDENT_OF_PRACTICE_AND_THEORY"
+          ],
+          "acceptanceContributionIssues": [703, 704, 705],
+          "directRegressionRows": [3, 7, 15, 17, 21],
+          "inheritedCommonRegressionRows": [1, 4, 6, 8, 11, 14],
+          "terminalIssueClosureAllowed": true,
+          "terminalClosureIssues": [703, 704, 705],
+          "terminalWcvC2Closeout": true,
+          "terminalMergeRequired": true,
+          "automaticStartAllowed": false
+        }
+      ],
+      "dependencyRules": {
+        "sourceFirewallAndCognitiveArchitectureAreSerial": true,
+        "c2rCPStartRequiresTerminalReplacementStages": ["C2R-A", "C2R-B"],
+        "issueTerminalStateMaySubstituteForStageMerge": false,
+        "issue714MustRemainOpenAfterC2RB": true,
+        "c2rBCompletesOnlyIssue714Allocation": "C2",
+        "issue714RemainingAllocationsPreserved": ["C3", "C4", "C6"],
+        "runtimeSubjectStagesAreCompleteOutcomes": true,
+        "intermediateSubjectStagesMayRecordAcceptanceContributions": true,
+        "intermediateSubjectStagesMayCloseIssues703To705": false,
+        "issue703ClosureRequiresTerminalReplacementStage": "C2R-C-L",
+        "issue704ClosureRequiresTerminalReplacementStage": "C2R-C-L",
+        "issue705ClosureRequiresTerminalReplacementStage": "C2R-C-L",
+        "issue706RequiresTerminalIssue": 705,
+        "issue706RequiresTerminalReplacementStage": "C2R-C-L"
+      }
+    },
     "campaigns": [
       {
         "id": "C1",
@@ -888,11 +1182,22 @@
       {
         "id": "C2",
         "roadmapItemId": "WCV-C2",
-        "name": "First Trusted Repair Vertical",
-        "leadIssue": 702,
-        "includedIssues": [702, 703, 704, 705],
+        "name": "First Trusted Repair Structural Recovery",
+        "leadIssue": 717,
+        "includedIssues": [702, 714, 703, 704, 705],
         "dependencies": ["WCV-C1"],
-        "state": "sole_next_implementation_campaign",
+        "state": "structural_recovery_authority_installed_no_stage_started",
+        "wcvC2Complete": false,
+        "terminalDonorPr": 716,
+        "terminalDonorMerged": false,
+        "replacementChain": [
+          "C2R-A",
+          "C2R-B",
+          "C2R-C-P",
+          "C2R-C-T",
+          "C2R-C-L"
+        ],
+        "automaticStartAllowed": false,
         "requiredOutcome": [
           "RIGHTS_SAFE_FIXTURE",
           "CAPTURE_OCR_CONFIRMATION",
@@ -904,7 +1209,8 @@
           "VERIFICATION",
           "DURABLE_REOPEN_RESUME"
         ],
-        "mayCloseIncludedIssuesOnlyWhenAllMappedAcceptanceComplete": true
+        "issueClosureFollowsTerminalReplacementStageMap": true,
+        "mayCloseAllIncludedIssuesInOnePr": false
       },
       {
         "id": "C3",
@@ -913,7 +1219,9 @@
         "leadIssue": 706,
         "includedIssues": [706, 707, 708],
         "dependencies": ["WCV-C2"],
-        "state": "queued"
+        "state": "queued_blocked_until_terminal_c2r_c_l",
+        "terminalReplacementDependency": "C2R-C-L",
+        "automaticStartAllowed": false
       },
       {
         "id": "C4",
@@ -961,11 +1269,17 @@
     ],
     "issue714Tracker": {
       "issue": 714,
-      "state": "open_cross_vertical_acceptance_tracker",
-      "mergeProducing": false,
-      "standalonePrerequisiteBeforeC2": false,
-      "standaloneSourcePrRequired": false,
+      "state": "open_c2r_b_source_contract_prerequisite",
+      "currentMergeProducing": false,
+      "mergeProducingWhenStageActive": true,
+      "standalonePrerequisiteBeforeC2RCP": true,
+      "standaloneSourcePrAuthorized": true,
+      "standaloneSourcePrRequired": true,
+      "automaticStartAllowed": false,
       "behaviorImplementedByC1": false,
+      "c2rBClosesIssue714": false,
+      "c2rBCompletesOnlyAllocation": "C2",
+      "remainingAllocationsAfterC2RB": ["C3", "C4", "C6"],
       "requirementInventory": [
         "adaptive_expertise_controller",
         "cognitive_load_budget",
@@ -1027,7 +1341,10 @@
       "preservedAsHistory": true
     },
     "soleNextImplementationCampaign": "C2",
-    "soleNextImplementationLeadIssue": 702,
+    "soleNextImplementationLeadIssue": 717,
+    "soleNextImplementationTrackerIssue": 717,
+    "soleNextReplacementStage": "C2R-A",
+    "soleNextReplacementStageIssue": 702,
     "laterCampaignsQueued": ["C3", "C4", "C5", "C6"],
     "legacyFactualGates": {
       "CPF-1": {
@@ -1070,7 +1387,11 @@
     "wipLimitDoesNotAuthorizeWriterCount": true,
     "campaignLockGroup": "wcv-vertical-campaign",
     "soleNextImplementationItemId": "WCV-C2",
-    "soleNextImplementationLeadIssue": 702,
+    "soleNextImplementationCampaignId": "C2",
+    "soleNextImplementationLeadIssue": 717,
+    "soleNextImplementationTrackerIssue": 717,
+    "soleNextReplacementStageId": "C2R-A",
+    "soleNextReplacementStageIssue": 702,
     "primaryStatusesUsed": [
       "completed",
       "blocked",
@@ -1164,7 +1485,9 @@
     "currentStateAuthority": "roadmap/active-program.yml",
     "currentReadyItemIdsMirrored": false,
     "wcvCampaignGraphMirrored": true,
-    "selectionAutomaticallyStartsWork": false
+    "selectionAutomaticallyStartsWork": false,
+    "replacementStageAutomaticStartAllowed": false,
+    "structuralRecoveryTrackerIssue": 717
   },
   "brand": {
     "mineralCobalt": "#4653A6",

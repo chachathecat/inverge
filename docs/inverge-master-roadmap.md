@@ -4,11 +4,64 @@
 - 상세 제품 기준: `docs/inverge-second-round-final-product-spec.md`
 - 실행 상태와 의존성 기준: `roadmap/active-program.yml`
 - Current exact-scope authority:
+  `docs/decisions/2026-08-14-wcv-c2-structural-recovery.md` for the
+  terminal unmerged closure of PR #716 and the serial WCV-C2R replacement
+  chain,
   `docs/decisions/2026-07-29-owner-o3a-golden-3-approval.md` for O3A,
   `docs/decisions/2026-07-26-owner-dogfood-private-plane-schedule-amendment.md`
   for the program amendment, and `docs/dabangil-unified-program-contract.md`
   supersede historical ordering in this document; this file remains phase
   history and second-round detail.
+
+## 2026-08-14 WCV-C2 Structural Recovery
+
+PR #716 is closed Draft and unmerged at head
+`ca5193526ab0e1ca2f75660066b5a0da8f668ec1`, tree
+`8f470e82e5545f4caddb3d902b08f6a15eb31e48`. Its branch is retained as a
+read-only donor. Its successful first-attempt CI/runtime evidence is not
+promoted into main and does not establish WCV-C2 completion.
+
+Tracker #717 owns the exact serial recovery graph:
+
+`C2R-A/#702 → C2R-B/#714 → C2R-C-P → C2R-C-T → C2R-C-L`
+
+The formal identities remain separate: roadmap item `WCV-C2`, campaign ID
+`C2`, recovery tracker #717, and current authorized but unstarted stage
+`C2R-A` for Issue #702.
+
+The sequence is terminally serial. C2R-A and C2R-B are independently complete
+source-contract outcomes and are not parallel. C2R-C-P, C2R-C-T and C2R-C-L
+are complete Practice, Theory and Law learner-visible runtime verticals. Each
+contains its matching Golden/Owner-Gold fixtures and every changed
+persistence/API/runtime/UI/evidence/safe-deferred/rollback layer required for
+that subject outcome. The common runtime substrate first lands within
+C2R-C-P, not as a separate foundation.
+
+C2R-C-P and C2R-C-T may record #703/#704/#705 acceptance contributions but
+cannot close those issues. Only terminal C2R-C-L may complete #703, #704,
+#705 and WCV-C2; #706 remains blocked until that merge. Common regressions
+first covered in Practice remain mandatory for Theory and Law. No stage starts
+automatically. Exactly one merge-producing writer remains permitted.
+
+C2R-C-P requires terminal validated merges of both C2R-A and C2R-B; issue
+state or closure cannot substitute for either stage merge. C2R-B completes
+only the Issue #714 allocation for campaign C2 and leaves Issue #714 open with
+its C3, C4 and C6 allocations preserved.
+
+Coverage is non-self-referential. Each stage declares only its assigned rows
+as `candidate_coverage_pending_exact_merge` with exact assertion/test metadata
+and receipt policy `github_exact_head_pinned_squash_merge_v1`. The final
+reviewed head/tree, fresh checks and review live in PR evidence outside the
+candidate commit. Squash merge is expected-head-pinned; the same Work then
+indexes one `MergeCoverageReceiptV1` on #717 and validates it against live
+GitHub. Coverage becomes effective only after every matrix, exact-head test,
+final-review, merge and receipt predicate passes. C2R-C-L needs no successor
+repository PR, but #703/#704/#705/#717 remain open and #706/C3 remains blocked
+if its receipt is missing or invalid.
+
+V13 remains the sole active master and WCV 1.0.8 remains subordinate. This
+authority grants no learner, provider, payment, cohort, remote Supabase,
+Production, or C3 activation.
 
 ## 1. Final Product Definition
 

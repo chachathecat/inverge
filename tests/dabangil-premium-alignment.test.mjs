@@ -332,7 +332,7 @@ test("S234R contract fixes authority, native Owner path, and learning glossary",
   const contract = await read("docs/dabangil-unified-program-contract.md");
   const agents = await read("AGENTS.md");
 
-  assert.equal(policy.contractVersion, "dabangil.unified_program.v3");
+  assert.equal(policy.contractVersion, "dabangil.unified_program.v4");
   assert.equal(policy.decision.status, "approved_for_source_amendment_only");
   assert.equal(
     policy.scopeDecisions.O3A.status,

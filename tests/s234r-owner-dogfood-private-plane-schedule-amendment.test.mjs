@@ -3659,7 +3659,7 @@ test("S234R stays source-only while the later lean O4V decision keeps activation
     "docs/decisions/2026-07-30-owner-o4v-lean-owner-private-gate.md",
   );
 
-  assert.equal(unified.contractVersion, "dabangil.unified_program.v3");
+  assert.equal(unified.contractVersion, "dabangil.unified_program.v4");
   assert.equal(
     unified.decision.id,
     "owner_o1r_owner_dogfood_private_plane_schedule_2026_07_26",
