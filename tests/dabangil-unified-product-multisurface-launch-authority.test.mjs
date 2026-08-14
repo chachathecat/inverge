@@ -24,6 +24,11 @@ const PREMIUM_ALIGNMENT_TEST = "tests/dabangil-premium-alignment.test.mjs";
 const WCV_C1_VALIDATION =
   "docs/qa/wcv-campaign-c1-authority-roadmap-reconciliation-validation.md";
 
+const POST_EXPIRY_DIAGNOSTIC_AT =
+  new Date("2026-08-14T10:00:00.000Z");
+const ACCEPTANCE_GATE_ISOLATION_AT =
+  new Date("2026-07-29T01:00:00.000Z");
+
 async function text(path) {
   return readFile(path, "utf8");
 }
@@ -112,6 +117,23 @@ function completeDependencyClosure(source, itemId) {
   }
 
   complete(itemId);
+
+  // This is a status-only synthetic fixture. It neither renews/removes an
+  // approval nor establishes live readiness, changes authority metadata, or
+  // changes execution state.
+  const completedRoadmap = parseRoadmap(completedSource);
+  for (const currentId of visited) {
+    const originalItem = { ...roadmap.byId.get(currentId) };
+    const completedItem = { ...completedRoadmap.byId.get(currentId) };
+    delete originalItem.status;
+    delete completedItem.status;
+    assert.deepEqual(
+      completedItem,
+      originalItem,
+      `${currentId} synthetic completion changed a non-status field`,
+    );
+  }
+
   return completedSource;
 }
 
@@ -322,7 +344,7 @@ test("keeps C2R-A as the sole implementation selection with one writer", async (
   const roadmap = parseRoadmap(roadmapSource);
   const plan = createRoadmapRunnerPlanFromYamlAt(
     roadmapSource,
-    new Date("2026-08-14T10:00:00.000Z"),
+    POST_EXPIRY_DIAGNOSTIC_AT,
   );
   const preserved = launch.preservedCurrentAuthority;
 
@@ -478,9 +500,82 @@ test("mirrors the complete active-roadmap dependency graph without starting ULC 
   );
 });
 
-test("keeps first- and second-round authenticated acceptance independent", async () => {
+test("keeps status-only completion fail-closed after transitive approval expiry", async () => {
   const source = await text("roadmap/active-program.yml");
-  const evaluationTime = new Date("2026-08-14T10:00:00.000Z");
+  const roadmap = parseRoadmap(source);
+  const o3a = roadmap.byId.get("O3A");
+
+  assert.ok(o3a, "missing O3A roadmap item");
+  assert.equal(o3a.approvalExpiresAt, "2026-08-09T14:59:59.000Z");
+  assert.match(
+    o3a.approvalExpiresAt,
+    /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/,
+  );
+  const approvalExpiresAtEpochMs = Date.parse(o3a.approvalExpiresAt);
+  assert.ok(Number.isFinite(approvalExpiresAtEpochMs));
+  assert.equal(
+    new Date(approvalExpiresAtEpochMs).toISOString(),
+    o3a.approvalExpiresAt,
+  );
+  assert.ok(
+    ACCEPTANCE_GATE_ISOLATION_AT.getTime() < approvalExpiresAtEpochMs,
+  );
+  assert.ok(
+    POST_EXPIRY_DIAGNOSTIC_AT.getTime() >= approvalExpiresAtEpochMs,
+  );
+
+  // The original post-expiry instant proves that changing status alone cannot
+  // launder the expired O3A approval into effective downstream completion.
+  const throughKnowledgeRepair = completeDependencyClosure(source, "ULC-K1");
+  const completedRoadmap = parseRoadmap(throughKnowledgeRepair);
+  assert.equal(completedRoadmap.byId.get("ULC-K1").status, "completed");
+  assert.equal(
+    completedRoadmap.byId.get("O3A").approvalExpiresAt,
+    o3a.approvalExpiresAt,
+  );
+
+  const postExpiryPlan = createRoadmapRunnerPlanFromYamlAt(
+    throughKnowledgeRepair,
+    POST_EXPIRY_DIAGNOSTIC_AT,
+  );
+  const ulcF1 = analysisById(postExpiryPlan, "ULC-F1");
+  assert.equal(ulcF1.readinessStatus, "blocked");
+  assert.deepEqual(ulcF1.missingDependencies, ["ULC-K1", "S238B"]);
+  assert.deepEqual(
+    ulcF1.blockedReasons.map(({ code, dependencyId }) => ({
+      code,
+      dependencyId,
+    })),
+    [
+      { code: "expired_dependency", dependencyId: "ULC-K1" },
+      { code: "missing_dependency", dependencyId: "S238B" },
+    ],
+  );
+  const expiredPath = ulcF1.blockedReasons[0];
+  assert.equal(expiredPath.dependencyExpiresAt, o3a.approvalExpiresAt);
+  assert.equal(expiredPath.evaluatedAt, POST_EXPIRY_DIAGNOSTIC_AT.toISOString());
+  assert.match(
+    expiredPath.message,
+    /effective completion was invalidated by a prerequisite approval/,
+  );
+});
+
+test("keeps first- and second-round authenticated acceptance independent", async () => {
+  const [source, agents, decision] = await Promise.all([
+    text("roadmap/active-program.yml"),
+    text("AGENTS.md"),
+    text(DECISION),
+  ]);
+  const roadmap = parseRoadmap(source);
+  const approvalExpiresAtEpochMs = Date.parse(
+    roadmap.byId.get("O3A").approvalExpiresAt,
+  );
+
+  // This controlled pre-expiry instant isolates only the two authenticated
+  // acceptance gates; it is not a claim of current live readiness.
+  assert.ok(
+    ACCEPTANCE_GATE_ISOLATION_AT.getTime() < approvalExpiresAtEpochMs,
+  );
 
   const firstAccepted = completeDependencyClosure(source, "S238B");
   const firstAcceptedThroughWcvC3 = completeDependencyClosure(
@@ -489,7 +584,7 @@ test("keeps first- and second-round authenticated acceptance independent", async
   );
   const beforeSecondAcceptance = createRoadmapRunnerPlanFromYamlAt(
     firstAcceptedThroughWcvC3,
-    evaluationTime,
+    ACCEPTANCE_GATE_ISOLATION_AT,
   );
   assert.equal(
     analysisById(beforeSecondAcceptance, "ULC-M1").readinessStatus,
@@ -503,7 +598,7 @@ test("keeps first- and second-round authenticated acceptance independent", async
   const throughKnowledgeRepair = completeDependencyClosure(source, "ULC-K1");
   const beforeFirstAcceptance = createRoadmapRunnerPlanFromYamlAt(
     throughKnowledgeRepair,
-    evaluationTime,
+    ACCEPTANCE_GATE_ISOLATION_AT,
   );
   assert.equal(
     analysisById(beforeFirstAcceptance, "ULC-F1").readinessStatus,
@@ -513,6 +608,10 @@ test("keeps first- and second-round authenticated acceptance independent", async
     analysisById(beforeFirstAcceptance, "ULC-F1").missingDependencies,
     ["S238B"],
   );
+  assert.equal(
+    analysisById(beforeFirstAcceptance, "ULC-K1").readinessStatus,
+    "completed",
+  );
 
   const bothAccepted = completeDependencyClosure(
     throughKnowledgeRepair,
@@ -520,13 +619,39 @@ test("keeps first- and second-round authenticated acceptance independent", async
   );
   const afterBothAcceptances = createRoadmapRunnerPlanFromYamlAt(
     bothAccepted,
-    evaluationTime,
+    ACCEPTANCE_GATE_ISOLATION_AT,
   );
+  const ulcF1 = analysisById(afterBothAcceptances, "ULC-F1");
   assert.equal(
-    analysisById(afterBothAcceptances, "ULC-F1").readinessStatus,
+    ulcF1.readinessStatus,
     "ready",
   );
+  assert.deepEqual(ulcF1.missingDependencies, []);
   assert.ok(afterBothAcceptances.readyItemIds.includes("ULC-F1"));
+
+  const bothAcceptedRoadmap = parseRoadmap(bothAccepted);
+  for (const [id, dependency] of [
+    ["ULC-F2", "ULC-F1"],
+    ["ULC-F3", "ULC-F2"],
+    ["ULC-F4", "ULC-F3"],
+    ["ULC-F5", "ULC-F4"],
+  ]) {
+    assert.deepEqual(bothAcceptedRoadmap.byId.get(id).dependencies, [dependency]);
+  }
+  for (const id of ["ULC-F1", "ULC-F2", "ULC-F3", "ULC-F4", "ULC-F5"]) {
+    const item = bothAcceptedRoadmap.byId.get(id);
+    assert.equal(item.selected, false, `${id} selected`);
+    assert.equal(item.started, false, `${id} started`);
+  }
+
+  assert.match(
+    agents,
+    /Neither acceptance evidence nor mastery may substitute or transfer from one\ntrack to the other\./,
+  );
+  assert.match(
+    decision,
+    /Acceptance evidence and mastery may not\nsubstitute or transfer in either direction\./,
+  );
 });
 
 test("records the native architecture without creating or installing it", async () => {

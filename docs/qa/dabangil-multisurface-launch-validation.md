@@ -67,9 +67,9 @@ The complete operational-prerequisite audit establishes the canonical model:
 - acceptance substitution is prohibited in both directions; and
 - mastery transfer is prohibited in both directions.
 
-The second and absolutely final corrective commit preserves the exact
-13-stage order and makes the active roadmap, machine contracts, prose,
-validation, parity and focused tests agree on these final direct dependencies:
+The second product-authority corrective commit preserves the exact 13-stage
+order and makes the active roadmap, machine contracts, prose, validation,
+parity and focused tests agree on these final direct dependencies:
 
 ```yaml
 WCV-C3: [WCV-C2]
@@ -90,10 +90,41 @@ WCV-C5: [WCV-C4, O4W]
 WCV-C6: [WCV-C5]
 ```
 
-Both corrections remain inside the same 17-path docs/contracts/tests-only
-authority boundary. They start no stage and change no product, runtime,
-dependency package, workflow, database, provider, learner, payment, store,
-deployment or Production state.
+Both product-authority corrections remain inside the same 17-path
+docs/contracts/tests-only authority boundary. They start no stage and change
+no product, runtime, dependency package, workflow, database, provider,
+learner, payment, store, deployment or Production state.
+
+## Terminal temporal-isolation fixture correction
+
+Exact head `4417281c26ffda42179224ca3dc0f8293e51e2f6`, tree
+`56b79348c2c60c39dcb63c66e9456d25b810f462`, retained the correct ULC
+authority but failed Fast CI run `31803144615` and Full CI run `31803144660`
+on the same single focused assertion. Full CI completed 1,312 of 1,313 tests.
+No old-head workflow was rerun.
+
+The original explanation attributing the result to retained
+`executionState: future_gated_unselected_unstarted` was not the exact causal
+diagnosis. The hostile test evaluated a status-only synthetic dependency
+closure at `2026-08-14T10:00:00.000Z`, after the transitive O3A approval had
+expired at `2026-08-09T14:59:59.000Z`. ULC-K1 therefore was not effectively
+completed, and the roadmap runner correctly reported missing dependencies
+`[ULC-K1, S238B]`.
+
+The third and absolutely terminal correction changes only the focused test
+fixture and this QA record. It keeps the synthetic closure status-only and
+separates two proofs:
+
+- at the original post-expiry diagnostic instant, expired transitive approval
+  remains fail-closed and ULC-F1 reports `[ULC-K1, S238B]`;
+- at the controlled pre-expiry instant `2026-07-29T01:00:00.000Z`, the test
+  isolates authenticated acceptance: ULC-M1 reports only `[S241A]`, ULC-F1
+  reports only `[S238B]`, and completing both exact gates makes only ULC-F1
+  ready for selection.
+
+No authority, roadmap dependency, approval, runtime, learner, product,
+provider, payment, deployment or Production semantic changes. Fresh
+exact-head CI and Vercel evidence remain required and are not claimed here.
 
 ## Required validation commands
 
@@ -134,6 +165,14 @@ The focused test must prove:
 16. The coordinated availability window is at most 24 hours.
 17. The exact 17-path ownership boundary contains no runtime, dependency,
     workflow, database, or native-project path.
+18. O3A approval expiry is parsed from the active roadmap and remains exact.
+19. Status-only completion cannot launder an expired transitive approval.
+20. Post-expiry ULC-F1 reports exactly `[ULC-K1, S238B]` with expired-path
+    blocker evidence.
+21. Pre-expiry acceptance isolation reports exactly `[S241A]` for ULC-M1 and
+    `[S238B]` for ULC-F1.
+22. Both independent acceptances permit ULC-F1 readiness without starting it
+    or allowing a later first-round stage to bypass it.
 
 ## Hostile read-only audit checklist
 
@@ -157,6 +196,14 @@ The audit fails closed on any of these counterexamples:
 - the release window exceeds 24 hours.
 - any package, lockfile, runtime, workflow, database, `apps/mobile`, provider,
   payment, store, deployment, or Production mutation appears.
+- a status-only fixture removes, replaces, extends or renews O3A approval
+  expiry.
+- the post-expiry diagnostic accepts ULC-K1 as effective completion or omits
+  either `ULC-K1` or `S238B` from ULC-F1's exact missing dependencies.
+- the pre-expiry acceptance isolation reports anything other than `[S241A]`
+  for ULC-M1 or `[S238B]` for ULC-F1.
+- either acceptance gate substitutes for the other, mastery transfers between
+  tracks, or synthetic readiness starts an actual stage.
 
 ## Initial local result on reviewed head `208e87e9...`
 
@@ -191,6 +238,6 @@ The initial local hostile audit reported `P0/P1/P2 = 0/0/0`, but it did not
 catch the two active-roadmap mirror defects and does not supersede review
 `PRR_kwDOSMHn8M8AAAABJjst-w`.
 
-After the one-time correction, fresh exact-head GitHub CI and Vercel must all
-succeed, and the final exact-head review must report actionable
+After the terminal fixture correction, fresh exact-head GitHub CI and Vercel
+must all succeed, and the final exact-head review must report actionable
 `P0/P1/P2 = 0/0/0`. No local source check substitutes for those gates.
