@@ -5,6 +5,11 @@
 Use this authority order when sources conflict:
 
 1. a dated Owner decision for the exact decision it owns, currently
+   `docs/decisions/2026-08-14-owner-unified-product-multisurface-launch.md`
+   for the final 1·2차 public product, future Web/iOS/Android and instructor
+   surfaces, free-limited ULC-L1 route, separate paid/evidence route, Concept
+   Decoder, Formula Graph, coordinated release, and only the exact launch
+   supersession that decision owns,
    `docs/decisions/2026-08-14-wcv-c2-structural-recovery.md`
    for PR #716 terminal disposition, Tracker #717, WCV-C2 structural
    recovery, the five-stage replacement-chain mapping, and only the exact
@@ -36,6 +41,13 @@ are inputs, not live operational truth.
 V13 is the sole active master plan. The Appraiser Second World-Class Vertical
 Execution Standard `1.0.8` is a subordinate V13 execution standard only. It
 does not create a second active master or a second mastery authority.
+
+The Unified Product and Multisurface Launch Convergence contract is a
+mandatory subordinate V13 launch amendment led by Issue #719. It is not V14,
+V13.1, another active master, or the current implementation campaign. It
+defines the final public product as **답안길 — 감정평가사 1·2차 통합 합격
+운영체계**, with student surfaces Web, iOS/iPadOS and Android and a
+Web-primary instructor workbench. It installs no runtime or activation.
 
 For WCV-C2 structural recovery only, the exact serial mapping is
 `C2R-A → C2R-B → C2R-C-P → C2R-C-T → C2R-C-L`. C2R-A and C2R-B are
@@ -71,6 +83,15 @@ commercial validation, and public self-serve remain a separate deferred
 commercial path and must precede S225 public self-serve launch. Owner-private,
 external-commercial, and public-launch acceptance are separate.
 
+For the exact future free-limited ULC-L1 route only, paid Founding Beta,
+paid-cohort and paid-conversion evidence are not prerequisites. ULC-L1 has no
+in-app purchase CTA, activates no payment, and grants no commercial,
+retention, efficacy, score-gain, pass-rate or causal claim. The S225/O4D
+commercial route keeps its existing prerequisites. Market-fit or efficacy
+uncertainty alone does not require a beta label; every capability instead
+shows an honest `supported`, `limited`, `AI-assisted`, `human-unreviewed`,
+`source-currentness-required` or `blocked` state.
+
 Owner dogfood may establish `owner_dogfood_ready` and
 `owner_private_accepted` only. It cannot establish `commercial_ready`,
 `external_usability_validated`, `observed_efficacy`, or
@@ -88,9 +109,19 @@ code and routes are present, unaudited by this reset, and not newly authorized.
 - do not activate first-round pricing, billing, public claims, or content;
 - do not delete first-round code or regression coverage solely to simplify a task.
 
-Both-track work begins only after separately authenticated first-round and
-second-round acceptance. First-round evidence never silently transfers
-mastery to second-round, or vice versa.
+Future first-round learner runtime is authorized only through the terminally
+serial ULC-F1 through ULC-F5 complete subject outcomes after WCV-C3, ULC-M1,
+ULC-M2 and ULC-K1. This amendment does not start any of them. Civil Law,
+Economics, Real Estate Principles, Appraisal-related Law and Accounting each
+require Web/iOS/Android parity and their own exact source, rights,
+currentness, domain-quality and rollback evidence.
+
+The second-round roadmap item `S241A` is the authenticated-acceptance
+operational prerequisite consumed by `ULC-M1`. The first-round roadmap item
+`S238B` is the independently authenticated-acceptance operational
+prerequisite consumed by `ULC-F1`. Both-track work requires both gates.
+Neither acceptance evidence nor mastery may substitute or transfer from one
+track to the other.
 
 Do not add, expose, or expand learner-facing scope to:
 
@@ -171,6 +202,42 @@ Core operating loop:
 - historical question → attempt → OCR confirmation → Evidence Review → one biggest gap → one next action → compare with verified learning reference → rewrite or recalculate → error note/concept graph → scheduled review
 
 When practice calculation is relevant, the loop must prefer a reset-safe CASIO fx-9860GIII hand-keyed routine and must not teach stored-program dependency as an exam strategy.
+
+## Unified multisurface architecture and release rules
+
+The future native target is Expo React Native with Expo Router, EAS
+Build/Submit/Workflows and Maestro. Existing Next.js/Vercel remains Web plus
+trusted HTTP API, and existing Supabase/Postgres remains authoritative
+persistence and tenant boundary. ULC-0 installs none of these dependencies or
+projects. The first complete native learner-outcome PR must bind exact
+versions, licenses, security evidence, SBOM, lockfile and rollback.
+
+The final app must not be a remote-website-only WebView wrapper or a static
+export of the current server application. Web and native surfaces use one
+server-authoritative mastery, verified and source-currentness state. Clients
+cannot set those states; mobile never receives a service-role key. Push
+payloads contain no raw answer, OCR, concept, score or private text. Critical
+learner behavior requires a versioned mobile-consumable HTTP API and cannot
+exist only behind framework-private server actions.
+
+The future complete order after terminal C2R-C-L is WCV-C3, ULC-M1, ULC-M2,
+ULC-K1, ULC-F1 through ULC-F5, ULC-I1, WCV-C4, ULC-R1 and ULC-L1. Every
+runtime stage is one independently deployable learner or instructor outcome;
+framework-only, API-only, persistence-only, UI-only and QA-only mandatory PRs
+are prohibited. No stage starts automatically.
+
+Concept Decoder is structured learner-error repair, not a generic AI
+summary. Formula Graph is a typed relation object, not free-form formatted
+text. Easy explanation creates no mastery evidence; only learner
+reconstruction and later independent performance may change learning state.
+
+ULC-R1 must prove in-app account deletion on iOS and Android, an external Web
+deletion resource, privacy/App Privacy/Data Safety declarations, AI/source/
+currentness/human-review disclosure, least-privilege permissions, private
+notifications, app-review access and delete/export verification. One
+`DabangilReleaseManifestV1` binds exact Web/iOS/Android release identity.
+iOS and Android are approved and held, Web remains gated, and one manual
+command opens all three within at most 24 hours.
 
 ## Historical-question and reference-answer rules
 
@@ -454,6 +521,12 @@ Do not teach calculator program storage as an exam strategy.
 A separate instructor-facing B2B contract is allowed, but Academy runtime is
 not authorized. It requires a named partner packet and explicit Owner
 approval before any pilot.
+
+The future ULC-I1 outcome converges the complete instructor authoring and
+review workbench on Web after ULC-F5. Student apps may consume only
+tenant-authorized assignments and approved feedback. ULC-I1 remains queued,
+unselected, unstarted and independently gated; the ULC-0 source amendment is
+not an academy pilot or runtime authorization.
 
 - Product name: **학원용 답안 운영 콘솔**
 - Audience: academy staff / instructors / graders only
@@ -998,9 +1071,10 @@ only for exact packet
 unstarted, and still requires completed exact S236P plus a manual S236A start.
 O4V, O4A, O4T, O2O, O4P, O4W, external-commercial activation, public
 activation, and O2/O5 remain unmet until their separate exact-scope packets
-are accepted. O4W is a queued, unapproved auxiliary gate after WCV-C4; WCV-C5
-depends on it, and it grants no learner, payment, delayed-evidence, cohort or
-Production authority in C1.
+are accepted. WCV-C4 is queued behind ULC-I1. O4W is a queued, unapproved
+auxiliary gate after ULC-L1; WCV-C5 depends on both WCV-C4 and O4W, and the
+gate grants no learner, payment, delayed-evidence, cohort or Production
+authority.
 O4V is the private-plane binding gate, O4T is the post-benchmark threshold
 decision, O2O is the exact Owner-private comparison measurement/retention
 gate, and O4P is optimizer limited activation only. O2O cannot authorize

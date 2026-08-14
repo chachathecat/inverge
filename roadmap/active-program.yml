@@ -25,6 +25,14 @@ program:
   wcvC2Complete: false
   replacementStageAutomaticStartAllowed: false
   activeMasterPlan: docs/strategy/dabangil-professional-exam-reasoning-os-final-master-plan-v13-2026-08-06.md
+  launchConvergenceAmendment: ULC-0
+  launchConvergenceLeadIssue: 719
+  launchConvergenceState: authority_installed_no_runtime_started
+  launchConvergenceAutomaticStartAllowed: false
+  launchConvergencePublicReleaseAuthorized: false
+  launchConvergencePaymentActivationAuthorized: false
+  launchConvergenceSequence: [WCV-C3, ULC-M1, ULC-M2, ULC-K1, ULC-F1, ULC-F2, ULC-F3, ULC-F4, ULC-F5, ULC-I1, WCV-C4, ULC-R1, ULC-L1]
+  paidEvidenceRouteAfter: ULC-L1
   v12T0Status: completed_source_only_alignment
   cpf1Status: blocked_unknown_reachable_sinks
   cpf1Evidence: docs/qa/v12-t0-cpf1-persistence-sink-inventory-2026-08-06.md
@@ -408,6 +416,140 @@ items:
     lockGroup: wcv-vertical-campaign
     risk: high
     priority: 31.14
+  - id: ULC-M1
+    title: Native Install Auth Today and Review Queue Outcome
+    status: queued
+    executionState: future_gated_unselected_unstarted
+    leadIssue: 719
+    outcomeType: independently_deployable_native_learner_outcome
+    selected: false
+    started: false
+    automaticStartAllowed: false
+    mobileRuntimeAuthorized: false
+    learnerActivationAuthorized: false
+    dependencies: [WCV-C3, S241A]
+    lockGroup: unified-launch-convergence
+    risk: high
+    priority: 31.141
+  - id: ULC-M2
+    title: Native Capture OCR Trusted Repair and Offline Sync Outcome
+    status: queued
+    executionState: future_gated_unselected_unstarted
+    leadIssue: 719
+    outcomeType: independently_deployable_native_learner_outcome
+    selected: false
+    started: false
+    automaticStartAllowed: false
+    mobileRuntimeAuthorized: false
+    learnerActivationAuthorized: false
+    dependencies: [ULC-M1]
+    lockGroup: unified-launch-convergence
+    risk: high
+    priority: 31.142
+  - id: ULC-K1
+    title: Concept Decoder Formula Graph and Cross-Surface Knowledge Repair Outcome
+    status: queued
+    executionState: future_gated_unselected_unstarted
+    leadIssue: 719
+    outcomeType: independently_deployable_learner_knowledge_repair_outcome
+    selected: false
+    started: false
+    automaticStartAllowed: false
+    learnerActivationAuthorized: false
+    dependencies: [ULC-M2]
+    lockGroup: unified-launch-convergence
+    risk: high
+    priority: 31.143
+  - id: ULC-F1
+    title: First-Round Civil Law MCQ Web iOS Android Outcome
+    status: queued
+    executionState: future_gated_unselected_unstarted
+    leadIssue: 719
+    outcomeType: independently_deployable_first_round_subject_outcome
+    selected: false
+    started: false
+    automaticStartAllowed: false
+    firstRoundRuntimeAuthorized: false
+    learnerActivationAuthorized: false
+    dependencies: [ULC-K1, S238B]
+    lockGroup: unified-launch-convergence
+    risk: high
+    priority: 31.144
+  - id: ULC-F2
+    title: First-Round Economics MCQ Web iOS Android Outcome
+    status: queued
+    executionState: future_gated_unselected_unstarted
+    leadIssue: 719
+    outcomeType: independently_deployable_first_round_subject_outcome
+    selected: false
+    started: false
+    automaticStartAllowed: false
+    firstRoundRuntimeAuthorized: false
+    learnerActivationAuthorized: false
+    dependencies: [ULC-F1]
+    lockGroup: unified-launch-convergence
+    risk: high
+    priority: 31.145
+  - id: ULC-F3
+    title: First-Round Real Estate Principles MCQ Web iOS Android Outcome
+    status: queued
+    executionState: future_gated_unselected_unstarted
+    leadIssue: 719
+    outcomeType: independently_deployable_first_round_subject_outcome
+    selected: false
+    started: false
+    automaticStartAllowed: false
+    firstRoundRuntimeAuthorized: false
+    learnerActivationAuthorized: false
+    dependencies: [ULC-F2]
+    lockGroup: unified-launch-convergence
+    risk: high
+    priority: 31.146
+  - id: ULC-F4
+    title: First-Round Appraisal-Related Law MCQ Web iOS Android Outcome
+    status: queued
+    executionState: future_gated_unselected_unstarted
+    leadIssue: 719
+    outcomeType: independently_deployable_first_round_subject_outcome
+    selected: false
+    started: false
+    automaticStartAllowed: false
+    firstRoundRuntimeAuthorized: false
+    learnerActivationAuthorized: false
+    dependencies: [ULC-F3]
+    lockGroup: unified-launch-convergence
+    risk: high
+    priority: 31.147
+  - id: ULC-F5
+    title: First-Round Accounting MCQ Web iOS Android Outcome
+    status: queued
+    executionState: future_gated_unselected_unstarted
+    leadIssue: 719
+    outcomeType: independently_deployable_first_round_subject_outcome
+    selected: false
+    started: false
+    automaticStartAllowed: false
+    firstRoundRuntimeAuthorized: false
+    learnerActivationAuthorized: false
+    dependencies: [ULC-F4]
+    lockGroup: unified-launch-convergence
+    risk: high
+    priority: 31.148
+  - id: ULC-I1
+    title: Web-Primary Instructor Authoring Review and Approval Workbench Outcome
+    status: queued
+    executionState: future_gated_unselected_unstarted
+    leadIssue: 719
+    outcomeType: independently_deployable_instructor_outcome
+    selected: false
+    started: false
+    automaticStartAllowed: false
+    instructorRuntimeAuthorized: false
+    learnerActivationAuthorized: false
+    dependencies: [ULC-F5]
+    lockGroup: unified-launch-convergence
+    risk: high
+    priority: 31.149
   - id: WCV-C4
     title: C4 Owner Proof and Commercial Readiness
     status: queued
@@ -416,10 +558,47 @@ items:
     crossVerticalAcceptanceTracker: 714
     learnerActivationAuthorized: false
     paymentActivationAuthorized: false
-    dependencies: [WCV-C3]
+    dependencies: [ULC-I1]
     lockGroup: wcv-vertical-campaign
     risk: high
     priority: 31.15
+  - id: ULC-R1
+    title: Multisurface Store Privacy Disclosure and Coordinated Release Readiness
+    status: queued
+    executionState: future_gated_unselected_unstarted
+    leadIssue: 719
+    outcomeType: independently_verifiable_release_readiness_outcome
+    selected: false
+    started: false
+    automaticStartAllowed: false
+    publicReleaseAuthorized: false
+    paymentActivationAuthorized: false
+    storeSubmissionAuthorized: false
+    deploymentAuthorized: false
+    productionAuthorized: false
+    dependencies: [WCV-C4]
+    lockGroup: unified-launch-convergence
+    risk: high
+    priority: 31.151
+  - id: ULC-L1
+    title: Free-Limited Public Web iOS Android 1.0 Coordinated Release
+    status: queued
+    executionState: future_gated_unselected_unstarted
+    leadIssue: 719
+    outcomeType: coordinated_public_release_outcome
+    selected: false
+    started: false
+    automaticStartAllowed: false
+    publicReleaseAuthorized: false
+    learnerActivationAuthorized: false
+    paymentActivationAuthorized: false
+    paidCohortRequired: false
+    paidConversionEvidenceRequired: false
+    maximumAvailabilityWindowHours: 24
+    dependencies: [ULC-R1]
+    lockGroup: unified-launch-convergence
+    risk: high
+    priority: 31.152
   - id: O4W
     title: Owner WCV Frozen Paid Cohort Manifest Authorization
     status: queued
@@ -433,7 +612,7 @@ items:
     paymentActivationAuthorized: false
     delayedEvidenceAuthorized: false
     productionAuthorized: false
-    dependencies: [WCV-C4]
+    dependencies: [ULC-L1]
     lockGroup: wcv-vertical-campaign
     risk: high
     priority: 31.16
