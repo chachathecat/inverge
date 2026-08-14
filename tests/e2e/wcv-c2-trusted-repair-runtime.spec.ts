@@ -241,7 +241,13 @@ async function createFirstPartialTheory(context: BrowserContext) {
     ["commit_self_diagnosis", { selfDiagnosisCode: "missing_definition" }],
     ["diagnose", {}],
     ["request_scaffold", {}],
-    ["submit_repair", { body: "최유효이용은 합리적이지 않고 가능하지 않다" }],
+    [
+      "submit_repair",
+      {
+        body:
+          "최유효이용은 합리적이고 가능하다. 최유효이용은 합리적이지 않다.",
+      },
+    ],
     ["continue", { continuation: "VERIFY_AND_CONTINUE" }],
   ] as const) {
     const result = await apiCommand(context, action, {
@@ -589,6 +595,7 @@ test("three subjects, responsive flow, keyboard, input modes, attacks, and new-b
     correctedPartialRetryVerification: "passed",
     lexicalCurrencyBoundaryFailClosed: "passed",
     sameClausePolarityConflictFailClosed: "passed",
+    crossSentenceSameTargetConflictFailClosed: "passed",
     providerNetworkRequests: 0,
   };
   if (evidencePath) writeFileSync(evidencePath, `${JSON.stringify(evidence, null, 2)}\n`, { mode: 0o600 });

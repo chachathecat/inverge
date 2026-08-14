@@ -18,9 +18,13 @@ const ROUTE = "app/api/review-os/trusted-repair/route.ts";
 const ACCESS = "lib/review-os/trusted-repair-access.ts";
 const SERVER = "lib/review-os/trusted-repair-server.ts";
 const ENGINE = "lib/review-os/trusted-repair-engine.ts";
+const ENGINE_TEST = "tests/wcv-c2-trusted-repair-engine.test.mjs";
 const SOURCE_BINDING = "lib/review-os/trusted-repair-source-binding.ts";
 const UI = "components/review-os/trusted-repair-loop.tsx";
 const WORKFLOW = ".github/workflows/wcv-c2-trusted-repair-runtime.yml";
+const DECISION =
+  "docs/decisions/2026-08-12-wcv-c2-first-trusted-repair-vertical.md";
+const QA = "docs/qa/wcv-c2-first-trusted-repair-validation.md";
 const APP_LAYOUT = "app/app/layout.tsx";
 const APP_SHELL = "components/review-os/app-shell.tsx";
 const LEARNER_UI = "components/learner/learner-ui.tsx";
@@ -177,6 +181,16 @@ function contractBlocker(blockerId, status, severity) {
   };
 }
 
+function assertCrossSentenceScopeReduction(source) {
+  assert.match(source, /const MAX_SUBJECT_LOOKBACK_TOKENS = \d+;/);
+  assert.match(source, /const MAX_SUBJECT_SCOPE_KEY_LENGTH = \d+;/);
+  assert.match(source, /const occurrencesByScope = new Map/);
+  assert.match(source, /if \(states\.size > 1\) return "ambiguous";/);
+  assert.match(source, /sameTargetConflict: aggregate\.states\.size > 1/);
+  assert.match(source, /unresolvedExplicitConflict/);
+  assert.match(source, /unresolvedUnscopedConflict/);
+}
+
 test("migration is service-only, exact-user, forced-RLS, append-only and CAS/replay atomic", async () => {
   const sql = await readFile(SQL, "utf8");
   for (const table of [
@@ -321,6 +335,78 @@ test("DTO and UI expose bounded fields only after committed help and support dur
   assert.match(ui, /aria-labelledby/);
   assert.match(ui, /role="alert"/);
   assert.doesNotMatch(ui, /openai|anthropic|gemini|chat\/completions/i);
+});
+
+test("cross-layer semantic scope reduction is bounded, fail-closed, and version preserving", async () => {
+  const [engine, engineTest, machineSource, decision, qa] = await Promise.all([
+    readFile(ENGINE, "utf8"),
+    readFile(ENGINE_TEST, "utf8"),
+    readFile(MACHINE_CONTRACT, "utf8"),
+    readFile(DECISION, "utf8"),
+    readFile(QA, "utf8"),
+  ]);
+  const machine = JSON.parse(machineSource);
+
+  assertCrossSentenceScopeReduction(engine);
+  assert.match(engine, /for \(const occurrence of occurrences\)/);
+  assert.match(engine, /SUBJECT_PARTICLES = new Set\(\["은", "는", "이", "가"\]\)/);
+  assert.match(engine, /ANAPHORIC_SUBJECT_SCOPES/);
+  assert.match(engine, /candidate\.kind === "anaphoric"[\s\S]{0,120}lastExplicitScope/);
+  assert.match(engine, /unscoped !== undefined && unscoped\.state !== "positive"/);
+  assert.match(engine, /DISTINCT_COUNTEREXAMPLE_SCOPE/);
+  assert.match(engine, /entry\.hasPositiveOccurrence/);
+  assert.match(engine, /forbidden_claim_contradictory_positive/);
+  assert.doesNotMatch(engine, /openai|anthropic|gemini|embedding|chat\/completions/i);
+
+  assert.equal(
+    machine.semanticAnchorPolarity.crossSentenceSameTargetConflict,
+    "ambiguous",
+  );
+  assert.equal(
+    machine.semanticAnchorPolarity.anaphoricTargetConflictFailsClosed,
+    true,
+  );
+  assert.equal(machine.semanticAnchorPolarity.unscopedConflictFailsClosed, true);
+  assert.equal(
+    machine.semanticAnchorPolarity.distinctExplicitCounterexampleMayNotEraseCleanTargetPositive,
+    true,
+  );
+  assert.equal(
+    machine.semanticAnchorPolarity.forbiddenPositiveOccurrenceSurvivesAggregateConflict,
+    true,
+  );
+  assert.equal(machine.semanticAnchorPolarity.externalNlpModelProviderUsed, false);
+
+  for (const source of [decision, qa]) {
+    assert.match(source, /across sentences|문장 간|문장/u);
+    assert.match(source, /anaphoric|대명|지시/u);
+    assert.match(source, /unscoped|unscoped|범위/u);
+    assert.match(source, /distinct explicit counterexample|명시적 반례|명시적.*counterexample/u);
+    assert.match(source, /positive forbidden occurrence|positive occurrence|긍정.*금지/u);
+    assert.match(source, /no external NLP|외부 NLP/iu);
+    assert.match(source, /semantic v2/);
+  }
+  assert.match(
+    engineTest,
+    /최유효이용은 합리적이고 가능하다\. 최유효이용은 합리적이지 않다\./,
+  );
+  assert.match(engineTest, /"ambiguous"/);
+
+  const withoutSameTargetReduction = engine.replace(
+    'if (states.size > 1) return "ambiguous";',
+    'if (false) return "ambiguous";',
+  );
+  assert.notEqual(withoutSameTargetReduction, engine);
+  assert.throws(
+    () => assertCrossSentenceScopeReduction(withoutSameTargetReduction),
+    /sameTargetConflict/,
+  );
+
+  assert.equal(
+    machine.fixtureVersion,
+    "wcv_c2_rights_safe_fixtures.2026-08-12.v2",
+  );
+  assert.equal(machine.rubricVersion, "wcv_c2_semantic_anchor_rubric.v2");
 });
 
 test("Law source binding counts only unique referenced open blocking records and fails closed", async () => {
@@ -541,6 +627,30 @@ test("machine contract maps all four issues and exactly eight C2 allocations", a
   assert.equal(
     contract.semanticAnchorPolarity.independentCleanPositiveClauseMayWinOverSeparateNegatedCounterexample,
     true,
+  );
+  assert.equal(
+    contract.semanticAnchorPolarity.crossSentenceSameTargetConflict,
+    "ambiguous",
+  );
+  assert.equal(
+    contract.semanticAnchorPolarity.anaphoricTargetConflictFailsClosed,
+    true,
+  );
+  assert.equal(
+    contract.semanticAnchorPolarity.unscopedConflictFailsClosed,
+    true,
+  );
+  assert.equal(
+    contract.semanticAnchorPolarity.distinctExplicitCounterexampleMayNotEraseCleanTargetPositive,
+    true,
+  );
+  assert.equal(
+    contract.semanticAnchorPolarity.forbiddenPositiveOccurrenceSurvivesAggregateConflict,
+    true,
+  );
+  assert.equal(
+    contract.semanticAnchorPolarity.externalNlpModelProviderUsed,
+    false,
   );
   assert.equal(
     contract.fixtureVersion,

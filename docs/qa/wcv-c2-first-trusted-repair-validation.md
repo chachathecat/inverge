@@ -39,16 +39,21 @@ to PR #716 after the final candidate workflow completes.
   confirmed revision and primary gap remain exact, both submissions are
   append-only, and the latest eligible submission is regraded.
 - Semantic polarity: positive assertion required; negated, antonym, or
-  materially ambiguous required concepts fail closed within one bounded local
-  assertion-state evaluator shared by canonical concepts, acceptable
+  materially ambiguous required concepts fail closed within one bounded
+  deterministic evaluator shared by canonical concepts, acceptable
   alternatives, and forbidden false claims. Nonnumeric occurrences require a
-  complete semantic token, valid Korean inflection, or explicit unit attachment
-  rather than an arbitrary substring. Every occurrence is inspected before the
-  clause decision: positive/negative and positive/ambiguous same-clause mixes
-  are `ambiguous`, while a clean positive target in a separate clause still
-  outranks a distinct negated counterexample. Alternatives satisfy only their
-  explicitly mapped concepts and only when positive. Forbidden claims block
-  only when positive; negated and ambiguous mentions remain diagnostic only.
+  complete semantic token, valid Korean inflection, or explicit unit
+  attachment rather than an arbitrary substring. Every occurrence is retained
+  before reduction. Same-clause conflict and conflicting polarity for the same
+  explicit target across sentences are `ambiguous`. Bounded anaphoric subjects
+  inherit the nearest prior explicit target, and unscoped contradiction fails
+  closed. A clearly distinct explicit counterexample does not erase a clean
+  target-positive assertion, but the word `반례` alone creates no exemption.
+  Alternatives satisfy only their explicitly mapped concepts and only from a
+  positive aggregate. Any positive forbidden occurrence remains blocking even
+  when contradictory wording makes its aggregate ambiguous; pure negated and
+  pure ambiguous forbidden mentions remain nonblocking diagnostics. The
+  evaluator uses no external NLP, model, embedding, or provider.
 - Semantic bindings: fixture
   `wcv_c2_rights_safe_fixtures.2026-08-12.v2` and rubric
   `wcv_c2_semantic_anchor_rubric.v2`.
@@ -74,8 +79,9 @@ to PR #716 after the final candidate workflow completes.
 - actual browser → Next API → service repository → local PostgREST/Auth →
   PostgreSQL execution;
 - CAS, idempotent replay, and failed-exposure zero-help behavior;
-- incorrect repair → `partial` → same-session append-only rewrite → corrected
-  retry `verified`, including retry-command replay without a duplicate body;
+- cross-sentence same-target contradictory Theory repair → `partial` →
+  same-session append-only clean rewrite → corrected retry `verified`,
+  including retry-command replay without a duplicate body;
 - second failed repair remains `partial`, rejects a third submission through
   the API, and keeps `DEFER_FOR_NOW` plus `SWITCH_TO_GUIDED` available;
 - Practice and Theory same-session verified, Law blocked;

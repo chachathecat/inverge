@@ -90,6 +90,8 @@ function normalizeEvidence(value: string) {
 
 const MAX_POLARITY_CLAUSES = 64;
 const MAX_CONCEPT_OCCURRENCES_PER_CLAUSE = 32;
+const MAX_SUBJECT_LOOKBACK_TOKENS = 4;
+const MAX_SUBJECT_SCOPE_KEY_LENGTH = 48;
 const NEGATING_PREFIXES = new Set(["불", "비", "미", "무"]);
 const NEGATING_SUFFIX = /^(?:(?:은|는|도)?(?:이|하)지(?:는|도)?(?:않|못|아니)|(?:은|는|도)?(?:이|가)?아니|(?:이|하)?는?것이아니|(?:이|하)?라고보기어렵|성(?:은|이|도)?없)/;
 const AMBIGUOUS_SUFFIX = /^(?:(?:한|인|일)지|(?:할|일|인|한)지도|(?:할|일)수도|여부|불확실|미정|의문|(?:이|하)?라고단정하기어렵)/;
@@ -100,6 +102,22 @@ const KOREAN_SEMANTIC_SUFFIX = /^(?:(?:은|는|이|가|을|를|의|에|에서|�
 const CURRENCY_RIGHT_CONTEXT = /^(?:(?:을|를)?단위|으로|로|이다|이며|이고|이라고|이라는|인지|을|를)/;
 const CURRENCY_LEFT_CONTEXT = /단위(?:은|는|이|가|을|를|로)?$/;
 const UNIT_POLARITY_BRIDGE = /^(?:단위)/;
+const SUBJECT_PARTICLES = new Set(["은", "는", "이", "가"]);
+const SUBJECT_SCOPE_CONNECTOR_PREFIX = /^(?:(?:그러나|하지만|반면|다만))+/;
+const SUBJECT_SCOPE_MODIFIERS = new Set([
+  "반례",
+  "다른",
+  "비교대상",
+  "해당",
+]);
+const DEMONSTRATIVE_SUBJECT_MODIFIERS = new Set(["이", "그", "저"]);
+const ANAPHORIC_SUBJECT_SCOPES = new Set([
+  "이",
+  "그것",
+  "해당이용",
+  "본건",
+]);
+const DISTINCT_COUNTEREXAMPLE_SCOPE = /(?:반례|다른|비교대상|대안)/;
 
 type SemanticOccurrence = Readonly<{
   index: number;
@@ -110,6 +128,11 @@ type SemanticOccurrence = Readonly<{
 type CompactPolarityClause = Readonly<{
   text: string;
   boundaries: ReadonlySet<number>;
+  tokens: readonly Readonly<{
+    text: string;
+    start: number;
+    end: number;
+  }>[];
 }>;
 
 export type ConceptAssertionState =
@@ -118,21 +141,58 @@ export type ConceptAssertionState =
   | "ambiguous"
   | "absent";
 
+type SubjectScope = Readonly<{
+  key: string;
+  distinctCounterexample: boolean;
+}>;
+
+type ConceptAssertionEvaluation = Readonly<{
+  state: ConceptAssertionState;
+  hasPositiveOccurrence: boolean;
+  hasNegatedOccurrence: boolean;
+  hasAmbiguousOccurrence: boolean;
+  sameTargetConflict: boolean;
+  scopeKeys: readonly string[];
+}>;
+
+type SubjectScopeCandidate =
+  | Readonly<{ kind: "explicit"; scope: SubjectScope }>
+  | Readonly<{ kind: "anaphoric" }>
+  | Readonly<{ kind: "unscoped" }>;
+
 function compactPolarityClause(value: string) {
   const boundaries = new Set<number>();
+  const tokens: { text: string; start: number; end: number }[] = [];
   let text = "";
   let separated = false;
+  let tokenStart: number | null = null;
   for (const character of value.normalize("NFKC").toLowerCase()) {
     if (IGNORABLE_SEMANTIC_SEPARATOR.test(character)) {
+      if (tokenStart !== null) {
+        tokens.push({
+          text: text.slice(tokenStart),
+          start: tokenStart,
+          end: text.length,
+        });
+        tokenStart = null;
+      }
       separated = true;
       continue;
     }
     if (separated && text.length > 0) boundaries.add(text.length);
+    if (tokenStart === null) tokenStart = text.length;
     text += character;
     separated = false;
   }
+  if (tokenStart !== null) {
+    tokens.push({
+      text: text.slice(tokenStart),
+      start: tokenStart,
+      end: text.length,
+    });
+  }
   if (separated && text.length > 0) boundaries.add(text.length);
-  return { text, boundaries } satisfies CompactPolarityClause;
+  return { text, boundaries, tokens } satisfies CompactPolarityClause;
 }
 
 function literalOccurrences(clause: string, literal: string) {
@@ -268,7 +328,7 @@ function conceptOccurrences(
 function classifyConceptOccurrence(
   clause: string,
   occurrence: SemanticOccurrence,
-  numeric: boolean,
+  normalizedConcept: string,
 ): Exclude<ConceptAssertionState, "absent"> {
   const prefix = clause.slice(Math.max(0, occurrence.index - 12), occurrence.index);
   const suffix = clause.slice(
@@ -276,29 +336,151 @@ function classifyConceptOccurrence(
     occurrence.index + occurrence.length + occurrence.polarityBridgeLength + 32,
   );
   const suffixes = [suffix];
-  if (numeric) {
+  if (/^\d+$/.test(normalizedConcept)) {
     const withoutUnit = suffix.replace(NUMERIC_UNIT_PREFIX, "");
     if (withoutUnit !== suffix) suffixes.push(withoutUnit);
   }
+  const attachedCurrencyUnit =
+    normalizedConcept === "원" &&
+    /^\d$/.test(clause.slice(occurrence.index - 1, occurrence.index));
   const negated =
-    NEGATING_PREFIXES.has(prefix.slice(-1)) ||
-    suffixes.some((candidate) => NEGATING_SUFFIX.test(candidate));
+    !attachedCurrencyUnit &&
+    (NEGATING_PREFIXES.has(prefix.slice(-1)) ||
+      suffixes.some((candidate) => NEGATING_SUFFIX.test(candidate)));
   const ambiguous =
-    AMBIGUOUS_PREFIX.test(prefix) ||
-    suffixes.some((candidate) => AMBIGUOUS_SUFFIX.test(candidate));
+    !attachedCurrencyUnit &&
+    (AMBIGUOUS_PREFIX.test(prefix) ||
+      suffixes.some((candidate) => AMBIGUOUS_SUFFIX.test(candidate)));
   if (negated) return "negated";
   if (ambiguous) return "ambiguous";
   return "positive";
 }
 
-export function evaluateConceptAssertionState(
+function boundedSubjectScopeKey(value: string) {
+  return normalizeEvidence(value)
+    .replace(SUBJECT_SCOPE_CONNECTOR_PREFIX, "")
+    .slice(0, MAX_SUBJECT_SCOPE_KEY_LENGTH);
+}
+
+function subjectScopeCandidateFromToken(
+  clause: CompactPolarityClause,
+  tokenIndex: number,
+): SubjectScopeCandidate {
+  const token = clause.tokens[tokenIndex];
+  const particle = token.text.slice(-1);
+  if (!SUBJECT_PARTICLES.has(particle) || token.text.length <= 1) {
+    return { kind: "unscoped" };
+  }
+
+  const base = token.text.slice(0, -1);
+  const parts = [base];
+  const previous = clause.tokens[tokenIndex - 1]?.text ?? "";
+  const twoBack = clause.tokens[tokenIndex - 2]?.text ?? "";
+  if (SUBJECT_SCOPE_MODIFIERS.has(previous)) {
+    parts.unshift(previous);
+  } else if (twoBack === "비교" && previous === "대상") {
+    parts.unshift(twoBack, previous);
+  } else if (
+    DEMONSTRATIVE_SUBJECT_MODIFIERS.has(twoBack) &&
+    previous.length > 0 &&
+    previous.length <= 16
+  ) {
+    parts.unshift(twoBack, previous);
+  }
+
+  const key = boundedSubjectScopeKey(parts.join(""));
+  if (key.length === 0) return { kind: "unscoped" };
+  if (ANAPHORIC_SUBJECT_SCOPES.has(key)) return { kind: "anaphoric" };
+  if (base.length < 2 && parts.length === 1) return { kind: "unscoped" };
+  return {
+    kind: "explicit",
+    scope: {
+      key,
+      distinctCounterexample: DISTINCT_COUNTEREXAMPLE_SCOPE.test(key),
+    },
+  };
+}
+
+function subjectScopeCandidateForOccurrence(
+  clause: CompactPolarityClause,
+  occurrence: SemanticOccurrence,
+  normalizedConcept: string,
+): SubjectScopeCandidate {
+  let inspected = 0;
+  for (let index = clause.tokens.length - 1; index >= 0; index -= 1) {
+    const token = clause.tokens[index];
+    if (token.end > occurrence.index) continue;
+    inspected += 1;
+    if (inspected > MAX_SUBJECT_LOOKBACK_TOKENS) break;
+    const candidate = subjectScopeCandidateFromToken(clause, index);
+    if (candidate.kind !== "unscoped") return candidate;
+  }
+
+  const occurrenceEnd = occurrence.index + occurrence.length;
+  const followingParticle = clause.text.slice(
+    occurrenceEnd,
+    occurrenceEnd + 1,
+  );
+  if (
+    SUBJECT_PARTICLES.has(followingParticle) &&
+    (occurrenceEnd + 1 === clause.text.length ||
+      clause.boundaries.has(occurrenceEnd + 1))
+  ) {
+    const key = boundedSubjectScopeKey(normalizedConcept);
+    if (key.length > 0) {
+      return {
+        kind: "explicit",
+        scope: { key, distinctCounterexample: false },
+      };
+    }
+  }
+  return { kind: "unscoped" };
+}
+
+function lastExplicitSubjectScope(clause: CompactPolarityClause) {
+  for (let index = clause.tokens.length - 1; index >= 0; index -= 1) {
+    const candidate = subjectScopeCandidateFromToken(clause, index);
+    if (candidate.kind === "explicit") return candidate.scope;
+  }
+  return null;
+}
+
+function reduceOccurrenceStates(
+  states: ReadonlySet<Exclude<ConceptAssertionState, "absent">>,
+): Exclude<ConceptAssertionState, "absent"> {
+  if (states.size > 1) return "ambiguous";
+  if (states.has("positive")) return "positive";
+  if (states.has("ambiguous")) return "ambiguous";
+  return "negated";
+}
+
+function evaluateConceptAssertion(
   text: string,
   concept: string,
-): ConceptAssertionState {
+): ConceptAssertionEvaluation {
   const normalizedConcept = normalizeEvidence(concept);
-  if (normalizedConcept.length === 0) return "absent" as const;
+  if (normalizedConcept.length === 0) {
+    return {
+      state: "absent",
+      hasPositiveOccurrence: false,
+      hasNegatedOccurrence: false,
+      hasAmbiguousOccurrence: false,
+      sameTargetConflict: false,
+      scopeKeys: [],
+    };
+  }
 
-  const clauseStates: ConceptAssertionState[] = [];
+  const occurrencesByScope = new Map<
+    string | null,
+    {
+      states: Set<Exclude<ConceptAssertionState, "absent">>;
+      distinctCounterexample: boolean;
+    }
+  >();
+  let lastExplicitScope: SubjectScope | null = null;
+  let hasPositiveOccurrence = false;
+  let hasNegatedOccurrence = false;
+  let hasAmbiguousOccurrence = false;
   const clauses = text
     .normalize("NFKC")
     .toLowerCase()
@@ -308,52 +490,117 @@ export function evaluateConceptAssertionState(
   for (const rawClause of clauses) {
     const clause = compactPolarityClause(rawClause);
     const occurrences = conceptOccurrences(clause, normalizedConcept);
-    let positive = false;
-    let negated = false;
-    let ambiguous = false;
     for (const occurrence of occurrences) {
+      const candidate = subjectScopeCandidateForOccurrence(
+        clause,
+        occurrence,
+        normalizedConcept,
+      );
+      const scope =
+        candidate.kind === "explicit"
+          ? candidate.scope
+          : candidate.kind === "anaphoric"
+            ? lastExplicitScope
+            : null;
+      if (candidate.kind === "explicit") lastExplicitScope = candidate.scope;
       const state = classifyConceptOccurrence(
         clause.text,
         occurrence,
-        /^\d+$/.test(normalizedConcept),
+        normalizedConcept,
       );
-      if (state === "positive") positive = true;
-      if (state === "ambiguous") ambiguous = true;
-      if (state === "negated") negated = true;
+      if (state === "positive") hasPositiveOccurrence = true;
+      if (state === "negated") hasNegatedOccurrence = true;
+      if (state === "ambiguous") hasAmbiguousOccurrence = true;
+      const scopeKey = scope?.key ?? null;
+      const aggregate = occurrencesByScope.get(scopeKey) ?? {
+        states: new Set<Exclude<ConceptAssertionState, "absent">>(),
+        distinctCounterexample: scope?.distinctCounterexample ?? false,
+      };
+      aggregate.states.add(state);
+      aggregate.distinctCounterexample ||=
+        scope?.distinctCounterexample ?? false;
+      occurrencesByScope.set(scopeKey, aggregate);
     }
-    if (
-      (positive && negated) ||
-      (positive && ambiguous) ||
-      (negated && ambiguous)
-    ) {
-      clauseStates.push("ambiguous");
-    } else if (positive) {
-      clauseStates.push("positive");
-    } else if (ambiguous) {
-      clauseStates.push("ambiguous");
-    } else if (negated) {
-      clauseStates.push("negated");
-    } else {
-      clauseStates.push("absent");
-    }
+    lastExplicitScope = lastExplicitSubjectScope(clause) ?? lastExplicitScope;
   }
-  if (clauseStates.includes("positive")) return "positive" as const;
-  if (clauseStates.includes("ambiguous")) return "ambiguous" as const;
-  if (clauseStates.includes("negated")) return "negated" as const;
-  return "absent" as const;
+
+  if (occurrencesByScope.size === 0) {
+    return {
+      state: "absent",
+      hasPositiveOccurrence,
+      hasNegatedOccurrence,
+      hasAmbiguousOccurrence,
+      sameTargetConflict: false,
+      scopeKeys: [],
+    };
+  }
+
+  const groups = [...occurrencesByScope].map(([key, aggregate]) => ({
+    key,
+    state: reduceOccurrenceStates(aggregate.states),
+    sameTargetConflict: aggregate.states.size > 1,
+    distinctCounterexample: aggregate.distinctCounterexample,
+  }));
+  const unscoped = groups.find((group) => group.key === null);
+  const explicit = groups.filter((group) => group.key !== null);
+  const cleanPositiveScopes = explicit.filter(
+    (group) => group.state === "positive",
+  );
+  let state: ConceptAssertionState;
+  if (cleanPositiveScopes.length > 0) {
+    const unresolvedExplicitConflict = explicit.some(
+      (group) =>
+        group.state !== "positive" && !group.distinctCounterexample,
+    );
+    const unresolvedUnscopedConflict =
+      unscoped !== undefined && unscoped.state !== "positive";
+    state =
+      unresolvedExplicitConflict || unresolvedUnscopedConflict
+        ? "ambiguous"
+        : "positive";
+  } else if (unscoped?.state === "positive") {
+    state = explicit.some((group) => group.state !== "positive")
+      ? "ambiguous"
+      : "positive";
+  } else if (groups.some((group) => group.state === "ambiguous")) {
+    state = "ambiguous";
+  } else if (groups.some((group) => group.state === "negated")) {
+    state = "negated";
+  } else {
+    state = "absent";
+  }
+
+  return {
+    state,
+    hasPositiveOccurrence,
+    hasNegatedOccurrence,
+    hasAmbiguousOccurrence,
+    sameTargetConflict: groups.some((group) => group.sameTargetConflict),
+    scopeKeys: explicit.map((group) => group.key as string),
+  };
+}
+
+export function evaluateConceptAssertionState(
+  text: string,
+  concept: string,
+): ConceptAssertionState {
+  return evaluateConceptAssertion(text, concept).state;
 }
 
 function anchorEvidence(text: string, fixture: TrustedRepairFixture) {
   return fixture.anchors.map((anchor) => {
     const alternatives = anchor.acceptableAlternativeGroups.flatMap((group) =>
-      group.alternatives.map((alternative) => ({
-        alternative,
-        requiredConcepts: group.requiredConcepts,
-        state: evaluateConceptAssertionState(text, alternative),
-      })),
+      group.alternatives.map((alternative) => {
+        const evaluation = evaluateConceptAssertion(text, alternative);
+        return {
+          alternative,
+          requiredConcepts: group.requiredConcepts,
+          state: evaluation.state,
+        };
+      }),
     );
     const required = anchor.requiredConcepts.map((concept) => {
-      const canonicalState = evaluateConceptAssertionState(text, concept);
+      const canonicalState = evaluateConceptAssertion(text, concept).state;
       const mappedAlternativeSupport = alternatives
         .filter(
           (entry) =>
@@ -369,12 +616,21 @@ function anchorEvidence(text: string, fixture: TrustedRepairFixture) {
           canonicalState === "positive" || mappedAlternativeSupport.length > 0,
       };
     });
-    const forbidden = anchor.forbiddenFalseClaims.map((claim) => ({
-      claim,
-      state: evaluateConceptAssertionState(text, claim),
-    }));
+    const forbidden = anchor.forbiddenFalseClaims.map((claim) => {
+      const evaluation = evaluateConceptAssertion(text, claim);
+      return {
+        claim,
+        state: evaluation.state,
+        hasPositiveOccurrence: evaluation.hasPositiveOccurrence,
+        hasNegatedOccurrence: evaluation.hasNegatedOccurrence,
+        hasAmbiguousOccurrence: evaluation.hasAmbiguousOccurrence,
+        sameTargetConflict: evaluation.sameTargetConflict,
+      };
+    });
     const missing = required.filter((entry) => !entry.satisfied);
-    const falseClaims = forbidden.filter((entry) => entry.state === "positive");
+    const falseClaims = forbidden.filter(
+      (entry) => entry.hasPositiveOccurrence,
+    );
     const canonicalPositiveSupport = required.filter(
       (entry) => entry.canonicalState === "positive",
     );
@@ -394,10 +650,19 @@ function anchorEvidence(text: string, fixture: TrustedRepairFixture) {
       ),
       falseClaims,
       negatedForbiddenClaims: forbidden.filter(
-        (entry) => entry.state === "negated",
+        (entry) =>
+          !entry.hasPositiveOccurrence && entry.state === "negated",
       ),
       ambiguousForbiddenClaims: forbidden.filter(
-        (entry) => entry.state === "ambiguous",
+        (entry) =>
+          !entry.hasPositiveOccurrence && entry.state === "ambiguous",
+      ),
+      contradictoryForbiddenClaims: forbidden.filter(
+        (entry) =>
+          entry.hasPositiveOccurrence &&
+          (entry.hasNegatedOccurrence ||
+            entry.hasAmbiguousOccurrence ||
+            entry.sameTargetConflict),
       ),
       satisfied: missing.length === 0 && falseClaims.length === 0,
     };
@@ -721,6 +986,10 @@ export function diagnoseTrustedRepairAttempt(input: {
         ...entry.falseClaims.map(
           ({ claim }) =>
             `independent_attempt:${entry.anchor.anchorId}:false_claim:${claim}`,
+        ),
+        ...entry.contradictoryForbiddenClaims.map(
+          ({ claim }) =>
+            `independent_attempt:${entry.anchor.anchorId}:forbidden_claim_contradictory_positive:${claim}`,
         ),
       ],
       counterEvidence: [

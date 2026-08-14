@@ -36,22 +36,33 @@ A successful result is same-session criterion evidence only. It is not
 mastery, transfer, stability, gap elimination, score improvement, or pass
 evidence.
 
-Required semantic concepts count only when positively asserted in their local
-clause. Negated and antonym forms such as `합리적이지 않다`, `가능하지 않다`,
+Required semantic concepts count only from a clean positive aggregate.
+Negated and antonym forms such as `합리적이지 않다`, `가능하지 않다`,
 `비합리적`, and `불가능` do not satisfy their positive concepts; materially
-ambiguous polarity fails closed. A negative counterexample in a separate
-clause does not erase a clear positive assertion about the target. Canonical
-required concepts, acceptable alternatives, and forbidden false claims all use
-the same bounded clause-local assertion-state evaluator. Nonnumeric concepts
-must be complete semantic tokens, valid Korean inflections, or explicit
-measurement/unit attachments; arbitrary lexical substrings do not count. Every
-occurrence in one clause is inspected before a decision, so positive/negative
-or positive/ambiguous conflicts in that clause fail closed as `ambiguous`. A
-clean positive target in a separate clause still outranks a distinct negated
-counterexample. An alternative counts only when positively asserted and
-satisfies only its explicitly mapped required concepts. A forbidden claim
-blocks only when positively asserted; negated or ambiguous mentions remain
-diagnostic metadata without manufacturing a block.
+ambiguous polarity fails closed. Canonical required concepts, acceptable
+alternatives, and forbidden false claims all use the same bounded deterministic
+assertion-state evaluator. Nonnumeric concepts must be complete semantic
+tokens, valid Korean inflections, or explicit measurement/unit attachments;
+arbitrary lexical substrings do not count.
+
+Every occurrence is retained before reduction. The evaluator derives a capped
+local Korean subject/scope key from `은`, `는`, `이`, or `가`, strips bounded
+discourse connectors, and resolves `이는`, `그것은`, `해당 이용은`, and
+`본건은` to the nearest preceding explicit non-anaphoric scope. Conflicting
+polarity in one clause or across sentences for the same explicit target is
+`ambiguous`; anaphoric and unscoped contradictions fail closed. A clearly
+distinct explicit counterexample such as a `반례`, `다른`, `비교대상`, or
+`대안` scope does not erase a clean target-positive assertion. Merely writing
+the word `반례` cannot give the same target a distinct scope. No external NLP,
+model, embedding, or provider call is used.
+
+An alternative counts only when its aggregate is positive and satisfies only
+its explicitly mapped required concepts. A forbidden claim blocks whenever
+any positive occurrence exists, including when a same-target negation or
+uncertainty makes the public aggregate `ambiguous`; appended contradictory
+wording cannot neutralize the false claim. Pure negated and pure ambiguous
+forbidden mentions remain nonblocking diagnostic metadata, and contradictory
+positive evidence has its own diagnostic reason.
 The binding versions are
 `wcv_c2_rights_safe_fixtures.2026-08-12.v2` and
 `wcv_c2_semantic_anchor_rubric.v2`.
@@ -112,8 +123,9 @@ twice. Its full pass exercises two Auth identities, grants and forced RLS,
 direct CRUD/RPC denial, tenant isolation, CAS, replay, exposure atomicity, all
 subjects, all input modes, 390/768/1440 widths, 200% reflow, keyboard
 completion, Axe serious/critical zero, bounded partial retry,
-refresh/new-browser/process-restart recovery, and zero live-provider browser
-requests. Published evidence is metadata-only.
+cross-sentence same-target Theory conflict → `partial` → clean retry
+verification, refresh/new-browser/process-restart recovery, and zero
+live-provider browser requests. Published evidence is metadata-only.
 
 Rollback is forward disable first: keep
 `WCV_C2_TRUSTED_REPAIR_ENABLED` absent or false. The migration is applied only

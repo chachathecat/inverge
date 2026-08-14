@@ -139,7 +139,11 @@ const PRACTICE_STATE_DATA = {
   predictionConfidence: "medium",
 };
 
-function prepareRepairSubmittedJourney(subject, sourceBinding) {
+function prepareRepairSubmittedJourney(
+  subject,
+  sourceBinding,
+  repairBody = REPAIRS[subject],
+) {
   const fixture = trustedRepairCanonicalFixture(subject);
   let aggregate = aggregateFor(subject, "TYPED_TEXT", sourceBinding);
   aggregate = apply(
@@ -194,7 +198,7 @@ function prepareRepairSubmittedJourney(subject, sourceBinding) {
       fixture,
       sourceBinding,
       artifactId: nextId(),
-      body: REPAIRS[subject],
+      body: repairBody,
       occurredAt: "2026-08-12T00:04:00.000Z",
     }),
   );
@@ -356,6 +360,66 @@ test("same-clause polarity conflicts fail closed after every occurrence is inspe
   );
 });
 
+test("bounded subject scopes fail closed on same-target cross-sentence conflicts", () => {
+  for (const text of [
+    "최유효이용은 합리적이고 가능하다. 최유효이용은 합리적이지 않다.",
+    "최유효이용은 합리적이지 않다. 최유효이용은 합리적이고 가능하다.",
+    "최유효이용은 합리적이다. 최유효이용은 합리적인지 불확실하다.",
+    "최유효이용은 합리적이다. 이는 합리적이지 않다.",
+    "최유효이용은 합리적이다. 해당 이용은 합리적이지 않다.",
+    "합리적이다. 합리적이지 않다.",
+    "반례라고 적었지만 최유효이용은 합리적이지 않다. 최유효이용은 합리적이다.",
+  ]) {
+    assert.equal(
+      evaluateConceptAssertionState(text, "합리적"),
+      "ambiguous",
+      text,
+    );
+  }
+  assert.equal(
+    evaluateConceptAssertionState(
+      "결과는 200000000원이다. 결과는 200000000원이 아니다.",
+      "200000000",
+    ),
+    "ambiguous",
+  );
+});
+
+test("bounded explicit counterexamples stay distinct while simple states remain stable", () => {
+  assert.equal(
+    evaluateConceptAssertionState(
+      "반례 이용은 합리적이지 않다. 최유효이용은 합리적이다.",
+      "합리적",
+    ),
+    "positive",
+  );
+  assert.equal(
+    evaluateConceptAssertionState(
+      "다른 값은 음수가 아니다. 이 계산 결과는 음수다.",
+      "음수",
+    ),
+    "positive",
+  );
+  assert.equal(
+    evaluateConceptAssertionState(
+      "최유효이용은 합리적이다. 최유효이용은 합리적이다.",
+      "합리적",
+    ),
+    "positive",
+  );
+  assert.equal(
+    evaluateConceptAssertionState("최유효이용은 합리적이지 않다.", "합리적"),
+    "negated",
+  );
+  assert.equal(
+    evaluateConceptAssertionState(
+      "최유효이용은 합리적인지 불확실하다.",
+      "합리적",
+    ),
+    "ambiguous",
+  );
+});
+
 test("an unrelated currency substring stays missing and cannot satisfy the Practical unit anchor", () => {
   const fixture = trustedRepairCanonicalFixture("appraisal_practical");
   const diagnosis = diagnoseTrustedRepairAttempt({
@@ -482,6 +546,61 @@ test("a contradictory same-clause Theory repair remains partial with ambiguous d
   );
 });
 
+test("cross-sentence Theory conflicts stay partial while a distinct counterexample can verify", () => {
+  const fixture = trustedRepairCanonicalFixture("appraisal_theory");
+  const exactReviewRepair =
+    "최유효이용은 합리적이고 가능하다. 최유효이용은 합리적이지 않다.";
+  const diagnosis = diagnoseTrustedRepairAttempt({
+    fixture,
+    attemptText: exactReviewRepair,
+    stateData: PRACTICE_STATE_DATA,
+  });
+  const definitionGap = diagnosis.candidates.find(
+    (candidate) => candidate.anchorId === "theory-exact-definition",
+  );
+  assert.ok(definitionGap);
+  assert.ok(
+    definitionGap.supportingEvidence.includes(
+      "independent_attempt:theory-exact-definition:required_ambiguous_no_support:합리적",
+    ),
+  );
+
+  for (const repairBody of [
+    exactReviewRepair,
+    "최유효이용은 합리적이지 않다. 최유효이용은 합리적이고 가능하다.",
+    "합리적이다. 합리적이지 않다. 최유효이용은 가능한 이용이다.",
+  ]) {
+    const verified = verifyPreparedJourney(
+      prepareRepairSubmittedJourney(
+        "appraisal_theory",
+        SYNTHETIC_SOURCE_BINDING,
+        repairBody,
+      ),
+      "appraisal_theory",
+      SYNTHETIC_SOURCE_BINDING,
+    );
+    assert.equal(verified.session.state, "partial", repairBody);
+    assert.equal(verified.session.outcome, "partial", repairBody);
+  }
+
+  const distinctCounterexample = verifyPreparedJourney(
+    prepareRepairSubmittedJourney(
+      "appraisal_theory",
+      SYNTHETIC_SOURCE_BINDING,
+      "반례 이용은 합리적이지 않다. 최유효이용은 합리적이고 가능한 이용이다.",
+    ),
+    "appraisal_theory",
+    SYNTHETIC_SOURCE_BINDING,
+  );
+  assert.equal(distinctCounterexample.session.state, "verified");
+  assert.equal(distinctCounterexample.session.outcome, "verified");
+  assert.ok(
+    distinctCounterexample.session.stateData.resultReasonCodes.includes(
+      "no_mastery_transfer_stability_score_or_pass_claim",
+    ),
+  );
+});
+
 test("negated or ambiguous forbidden claims remain diagnostic and never manufacture a block", () => {
   const fixture = trustedRepairCanonicalFixture("appraisal_practical");
   const validWithNegations = diagnoseTrustedRepairAttempt({
@@ -520,6 +639,28 @@ test("negated or ambiguous forbidden claims remain diagnostic and never manufact
   assert.ok(
     unitGap.supportingEvidence.includes(
       "independent_attempt:practice-unit-rounding-verification:false_claim:음수",
+    ),
+  );
+
+  const contradictoryForbiddenClaim = diagnoseTrustedRepairAttempt({
+    fixture,
+    attemptText:
+      `${REPAIRS.appraisal_practical} 퍼센트 단위다. 퍼센트 단위가 아니다.`,
+    stateData: PRACTICE_STATE_DATA,
+  });
+  const contradictoryUnitGap = contradictoryForbiddenClaim.candidates.find(
+    (candidate) =>
+      candidate.anchorId === "practice-unit-rounding-verification",
+  );
+  assert.ok(contradictoryUnitGap);
+  assert.ok(
+    contradictoryUnitGap.supportingEvidence.includes(
+      "independent_attempt:practice-unit-rounding-verification:false_claim:퍼센트 단위",
+    ),
+  );
+  assert.ok(
+    contradictoryUnitGap.supportingEvidence.includes(
+      "independent_attempt:practice-unit-rounding-verification:forbidden_claim_contradictory_positive:퍼센트 단위",
     ),
   );
 
