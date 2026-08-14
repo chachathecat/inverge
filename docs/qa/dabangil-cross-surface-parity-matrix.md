@@ -40,7 +40,7 @@ transition accepts them.
 | Formula Graph | required | required | required | ULC-K1 | typed formula relation object | future-gated |
 | Hidden reconstruction | required | required | required | ULC-K1 | assistance-aware exposure/reconstruction | future-gated |
 | D+1/D+7 scheduling | required | required | required | WCV-C3 and ULC-K1 parity | server schedule and independent evidence | future-gated |
-| Civil Law MCQ | required | required | required | ULC-F1 | subject source/rights/domain contract | future-gated |
+| Civil Law MCQ | required | required | required | ULC-F1 after S238B | subject source/rights/domain contract | future-gated |
 | Economics MCQ | required | required | required | ULC-F2 | subject source/rights/domain contract | future-gated |
 | Real Estate Principles MCQ | required | required | required | ULC-F3 | subject source/rights/domain contract | future-gated |
 | Appraisal-related Law MCQ | required | required | required | ULC-F4 | exact current Law/source contract | future-gated |
@@ -74,7 +74,9 @@ transition accepts them.
 
 ## Current authority audit
 
-This matrix is a target contract only. As of ULC-0:
+This matrix is a target contract only. As of ULC-0, ULC-M1 consumes S241A
+and ULC-F1 independently consumes S238B. Neither acceptance gate nor mastery
+may substitute or transfer across tracks.
 
 - no native app exists under this authority;
 - no first-round runtime is authorized;

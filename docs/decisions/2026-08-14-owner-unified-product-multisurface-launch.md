@@ -181,6 +181,12 @@ mandatory order is:
     account, native build evidence, and coordinated-release readiness.
 13. `ULC-L1` — free-limited public Web/iOS/Android 1.0, payment false.
 
+The sequence does not replace either authenticated-acceptance gate.
+`ULC-M1` consumes second-round roadmap item `S241A`; `ULC-F1`
+independently consumes first-round roadmap item `S238B`. Both gates are
+required for both-track work. Acceptance evidence and mastery may not
+substitute or transfer in either direction.
+
 Every runtime stage is one independently deployable learner or instructor
 outcome. Framework-only, API-only, persistence-only, UI-only, and QA-only
 mandatory PRs are prohibited.

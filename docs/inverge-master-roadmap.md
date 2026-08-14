@@ -66,6 +66,11 @@ After terminal C2R-C-L, the complete-outcome order is:
 12. ULC-R1 privacy/store/coordinated-release readiness; and
 13. ULC-L1 free-limited public Web/iOS/Android 1.0.
 
+ULC-M1 consumes the second-round authenticated-acceptance item S241A.
+ULC-F1 independently consumes the first-round authenticated-acceptance item
+S238B. Both are required for both-track work; neither acceptance evidence nor
+mastery substitutes or transfers across tracks.
+
 Every runtime stage is an independently deployable learner or instructor
 outcome; framework-only, API-only, persistence-only, UI-only and QA-only
 mandatory PRs are prohibited. No future item is selected or started.

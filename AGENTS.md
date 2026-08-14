@@ -116,9 +116,12 @@ Economics, Real Estate Principles, Appraisal-related Law and Accounting each
 require Web/iOS/Android parity and their own exact source, rights,
 currentness, domain-quality and rollback evidence.
 
-Both-track work begins only after separately authenticated first-round and
-second-round acceptance. First-round evidence never silently transfers
-mastery to second-round, or vice versa.
+The second-round roadmap item `S241A` is the authenticated-acceptance
+operational prerequisite consumed by `ULC-M1`. The first-round roadmap item
+`S238B` is the independently authenticated-acceptance operational
+prerequisite consumed by `ULC-F1`. Both-track work requires both gates.
+Neither acceptance evidence nor mastery may substitute or transfer from one
+track to the other.
 
 Do not add, expose, or expand learner-facing scope to:
 

@@ -230,7 +230,12 @@
     },
     "bothTrack": {
       "requiresAuthenticatedFirstAcceptance": true,
+      "firstRoundAcceptanceItemId": "S238B",
+      "firstRoundAcceptanceConsumerId": "ULC-F1",
       "requiresAuthenticatedSecondAcceptance": true,
+      "secondRoundAcceptanceItemId": "S241A",
+      "secondRoundAcceptanceConsumerId": "ULC-M1",
+      "acceptanceSubstitutionAllowed": false,
       "masteryAutoTransferAllowed": false
     },
     "academy": {

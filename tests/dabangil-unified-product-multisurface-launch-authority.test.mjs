@@ -80,6 +80,47 @@ function parseRoadmap(source) {
   return { program, items, byId: new Map(items.map((item) => [item.id, item])) };
 }
 
+function replaceItemStatus(source, itemId, status) {
+  const marker = `  - id: ${itemId}\n`;
+  const start = source.indexOf(marker);
+  assert.notEqual(start, -1, `missing roadmap item ${itemId}`);
+  const next = source.indexOf("\n  - id: ", start + marker.length);
+  const end = next === -1 ? source.length : next;
+  const block = source.slice(start, end);
+  const updated = block.replace(
+    /\n    status: [^\n]+/,
+    `\n    status: ${status}`,
+  );
+  assert.notEqual(updated, block, `missing status for ${itemId}`);
+  return source.slice(0, start) + updated + source.slice(end);
+}
+
+function completeDependencyClosure(source, itemId) {
+  const roadmap = parseRoadmap(source);
+  const visited = new Set();
+  let completedSource = source;
+
+  function complete(currentId) {
+    if (visited.has(currentId)) return;
+    visited.add(currentId);
+    const item = roadmap.byId.get(currentId);
+    assert.ok(item, `missing roadmap item ${currentId}`);
+    for (const dependency of item.dependencies) complete(dependency);
+    if (item.status !== "completed") {
+      completedSource = replaceItemStatus(completedSource, currentId, "completed");
+    }
+  }
+
+  complete(itemId);
+  return completedSource;
+}
+
+function analysisById(plan, itemId) {
+  const analysis = plan.analyses.find((entry) => entry.itemId === itemId);
+  assert.ok(analysis, `missing analysis for ${itemId}`);
+  return analysis;
+}
+
 const EXPECTED_SEQUENCE = [
   "WCV-C3",
   "ULC-M1",
@@ -347,7 +388,7 @@ test("mirrors the complete active-roadmap dependency graph without starting ULC 
     ["ULC-M1", ["WCV-C3", "S241A"]],
     ["ULC-M2", ["ULC-M1"]],
     ["ULC-K1", ["ULC-M2"]],
-    ["ULC-F1", ["ULC-K1"]],
+    ["ULC-F1", ["ULC-K1", "S238B"]],
     ["ULC-F2", ["ULC-F1"]],
     ["ULC-F3", ["ULC-F2"]],
     ["ULC-F4", ["ULC-F3"]],
@@ -399,6 +440,18 @@ test("mirrors the complete active-roadmap dependency graph without starting ULC 
     ["S241A"],
   );
   assert.deepEqual(
+    launchById.get("ULC-F1").operationalPrerequisites,
+    ["S238B"],
+  );
+  assert.equal(unified.tracks.bothTrack.requiresAuthenticatedFirstAcceptance, true);
+  assert.equal(unified.tracks.bothTrack.firstRoundAcceptanceItemId, "S238B");
+  assert.equal(unified.tracks.bothTrack.firstRoundAcceptanceConsumerId, "ULC-F1");
+  assert.equal(unified.tracks.bothTrack.requiresAuthenticatedSecondAcceptance, true);
+  assert.equal(unified.tracks.bothTrack.secondRoundAcceptanceItemId, "S241A");
+  assert.equal(unified.tracks.bothTrack.secondRoundAcceptanceConsumerId, "ULC-M1");
+  assert.equal(unified.tracks.bothTrack.acceptanceSubstitutionAllowed, false);
+  assert.equal(unified.tracks.bothTrack.masteryAutoTransferAllowed, false);
+  assert.deepEqual(
     unified.wcvCampaignOverlay.campaigns.find(
       (campaign) => campaign.id === "C4",
     ).dependencies,
@@ -423,6 +476,57 @@ test("mirrors the complete active-roadmap dependency graph without starting ULC 
     historicalC1Validation,
     /C1 entries below remain historical validation evidence and are not current\nroadmap or dependency authority/,
   );
+});
+
+test("keeps first- and second-round authenticated acceptance independent", async () => {
+  const source = await text("roadmap/active-program.yml");
+  const evaluationTime = new Date("2026-08-14T10:00:00.000Z");
+
+  const firstAccepted = completeDependencyClosure(source, "S238B");
+  const firstAcceptedThroughWcvC3 = completeDependencyClosure(
+    firstAccepted,
+    "WCV-C3",
+  );
+  const beforeSecondAcceptance = createRoadmapRunnerPlanFromYamlAt(
+    firstAcceptedThroughWcvC3,
+    evaluationTime,
+  );
+  assert.equal(
+    analysisById(beforeSecondAcceptance, "ULC-M1").readinessStatus,
+    "blocked",
+  );
+  assert.deepEqual(
+    analysisById(beforeSecondAcceptance, "ULC-M1").missingDependencies,
+    ["S241A"],
+  );
+
+  const throughKnowledgeRepair = completeDependencyClosure(source, "ULC-K1");
+  const beforeFirstAcceptance = createRoadmapRunnerPlanFromYamlAt(
+    throughKnowledgeRepair,
+    evaluationTime,
+  );
+  assert.equal(
+    analysisById(beforeFirstAcceptance, "ULC-F1").readinessStatus,
+    "blocked",
+  );
+  assert.deepEqual(
+    analysisById(beforeFirstAcceptance, "ULC-F1").missingDependencies,
+    ["S238B"],
+  );
+
+  const bothAccepted = completeDependencyClosure(
+    throughKnowledgeRepair,
+    "S238B",
+  );
+  const afterBothAcceptances = createRoadmapRunnerPlanFromYamlAt(
+    bothAccepted,
+    evaluationTime,
+  );
+  assert.equal(
+    analysisById(afterBothAcceptances, "ULC-F1").readinessStatus,
+    "ready",
+  );
+  assert.ok(afterBothAcceptances.readyItemIds.includes("ULC-F1"));
 });
 
 test("records the native architecture without creating or installing it", async () => {

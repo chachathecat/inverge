@@ -113,8 +113,10 @@ runtime, navigation, pricing, learner claims, and public exposure are not
 authorized by Foundation.
 
 Both-track begins only after separately proven authenticated first-round and
-second-round acceptance. Academy runtime begins only after a named-partner
-packet and explicit Owner approval.
+second-round acceptance. Roadmap item `S238B` is consumed by `ULC-F1`;
+roadmap item `S241A` is consumed by `ULC-M1`. Neither gate substitutes for
+the other, and mastery never transfers between tracks. Academy runtime begins
+only after a named-partner packet and explicit Owner approval.
 
 The repository still contains legacy first-round compatibility routes and
 code. This reset neither audits nor removes them and must not claim runtime
@@ -356,7 +358,7 @@ WCV-C3: [WCV-C2]
 ULC-M1: [WCV-C3, S241A]
 ULC-M2: [ULC-M1]
 ULC-K1: [ULC-M2]
-ULC-F1: [ULC-K1]
+ULC-F1: [ULC-K1, S238B]
 ULC-F2: [ULC-F1]
 ULC-F3: [ULC-F2]
 ULC-F4: [ULC-F3]
@@ -1096,9 +1098,11 @@ range, pilot dates, content rights, privacy/data-processing terms, support,
 exit/refund owner, tenant isolation evidence, and explicit instructor approval
 before learner handoff. AI drafts never auto-send.
 
-Both-track keeps first- and second-round states separate. Bridge concepts do
-not transfer mastery. It may begin only after separately proven authenticated
-acceptance for both tracks.
+Both-track keeps first- and second-round states separate. `S241A`, Owner-
+Private Second-Round Authenticated Acceptance, is consumed by `ULC-M1`.
+`S238B`, First-Round Authenticated Acceptance, is independently consumed by
+`ULC-F1`. Bridge concepts do not transfer mastery, and acceptance evidence
+cannot substitute in either direction. Both gates must be separately complete.
 
 ## 12. Owner gates
 

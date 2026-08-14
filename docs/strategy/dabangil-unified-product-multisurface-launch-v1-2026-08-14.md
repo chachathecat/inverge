@@ -195,13 +195,13 @@ to `apps/web`.
 Every item is queued, unselected, unstarted, and `automaticStartAllowed:
 false`. Terminal C2R-C-L is the entry gate.
 
-| Order | Item | Complete outcome | Terminal dependency |
+| Order | Item | Complete outcome | Sequence dependency and operational prerequisite |
 |---:|---|---|---|
 | 1 | WCV-C3 | durable evidence, D+1/D+7, transfer, reopening, Ledger, Review Queue, Today | C2R-C-L |
-| 2 | ULC-M1 | native install/auth, Today, Review Queue, push registration, deep link, in-app deletion | WCV-C3 |
+| 2 | ULC-M1 | native install/auth, Today, Review Queue, push registration, deep link, in-app deletion | WCV-C3; operational S241A |
 | 3 | ULC-M2 | camera/share/multipage/OCR confirmation/Trusted Repair/offline draft/idempotent sync | ULC-M1 |
 | 4 | ULC-K1 | Concept Decoder, precise definition, Formula Graph, hidden reconstruction, scheduling, parity | ULC-M2 |
-| 5 | ULC-F1 | Civil Law MCQ on Web/iOS/Android | ULC-K1 |
+| 5 | ULC-F1 | Civil Law MCQ on Web/iOS/Android | ULC-K1; operational S238B |
 | 6 | ULC-F2 | Economics MCQ on Web/iOS/Android | ULC-F1 |
 | 7 | ULC-F3 | Real Estate Principles MCQ on Web/iOS/Android | ULC-F2 |
 | 8 | ULC-F4 | Appraisal-related Law MCQ on Web/iOS/Android | ULC-F3 |
@@ -210,6 +210,10 @@ false`. Terminal C2R-C-L is the entry gate.
 | 11 | WCV-C4 | final-product Owner proof, red-team, routing and instructional-mode proof | ULC-I1 |
 | 12 | ULC-R1 | privacy, disclosure, deletion, store metadata, native evidence and coordinated-release readiness | WCV-C4 |
 | 13 | ULC-L1 | free-limited public Web/iOS/Android 1.0, payment false | ULC-R1 |
+
+The two authenticated-acceptance prerequisites are independent: `S241A`
+is consumed by `ULC-M1`, and `S238B` is consumed by `ULC-F1`. Neither
+acceptance evidence nor mastery substitutes or transfers between tracks.
 
 The roadmap runner continues selecting only WCV-C2 metadata. ULC-0 is not an
 active campaign and consumes no writer slot. No framework-only, API-only,

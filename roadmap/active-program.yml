@@ -471,7 +471,7 @@ items:
     automaticStartAllowed: false
     firstRoundRuntimeAuthorized: false
     learnerActivationAuthorized: false
-    dependencies: [ULC-K1]
+    dependencies: [ULC-K1, S238B]
     lockGroup: unified-launch-convergence
     risk: high
     priority: 31.144

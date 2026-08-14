@@ -38,7 +38,7 @@ their owned source:
 | exact `WCV-C2` roadmap block | `a3e2b591ee6efe88b2e99a2f9a37f25e0691519b6f0041e46f8045ce3d44fccf` |
 | complete 21-row regression matrix | `b92d4ad88a44e10a7eb61670509c288cf871916a2570253f3f25cef211ebffeb` |
 
-## One-time dependency-graph correction
+## Bounded dependency-graph correction history
 
 The sole automated review of exact head
 `208e87e9cd494454f132266a2ee5c6c4605b41d3` was
@@ -48,17 +48,35 @@ The sole automated review of exact head
 - `PRRT_kwDOSMHn8M6ZPhNr`: WCV-C4 could become ready before ULC-I1; and
 - `PRRT_kwDOSMHn8M6ZPhN4`: O4W could become ready before ULC-L1.
 
-The read-only cross-artifact audit found the ULC source contract, Owner
-decision, launch strategy, master roadmap and Issue #719 sequence already
-canonical. The stale active-roadmap and legacy-WCV mirrors are corrected to
-these exact direct dependencies:
+The first corrective commit installed those two inherited sequence edges.
+The sole automated review of exact corrected head
+`cf8a803cb48dde8394dac4d4dd822ff4c577c8b5` was
+`PRR_kwDOSMHn8M8AAAABJkJxfw`. It reported actionable
+`P0/P1/P2 = 0/1/0` in exactly one new unresolved thread:
+
+- `PRRT_kwDOSMHn8M6ZQk2n`: ULC-F1 could become ready after ULC-K1 while
+  S238B, First-Round Authenticated Acceptance, remained queued.
+
+The complete operational-prerequisite audit establishes the canonical model:
+
+- S241A is the second-round authenticated-acceptance roadmap item consumed by
+  ULC-M1;
+- S238B is the first-round authenticated-acceptance roadmap item independently
+  consumed by ULC-F1;
+- both gates are required for both-track work;
+- acceptance substitution is prohibited in both directions; and
+- mastery transfer is prohibited in both directions.
+
+The second and absolutely final corrective commit preserves the exact
+13-stage order and makes the active roadmap, machine contracts, prose,
+validation, parity and focused tests agree on these final direct dependencies:
 
 ```yaml
 WCV-C3: [WCV-C2]
 ULC-M1: [WCV-C3, S241A]
 ULC-M2: [ULC-M1]
 ULC-K1: [ULC-M2]
-ULC-F1: [ULC-K1]
+ULC-F1: [ULC-K1, S238B]
 ULC-F2: [ULC-F1]
 ULC-F3: [ULC-F2]
 ULC-F4: [ULC-F3]
@@ -72,13 +90,10 @@ WCV-C5: [WCV-C4, O4W]
 WCV-C6: [WCV-C5]
 ```
 
-The correction adds only three existing legacy-mirror files to the owned
-manifest: the WCV reconciliation test, the premium-alignment mirror test and
-the historical C1 validation record whose pre-ULC assertions now carry an
-explicit supersession notice. The final authority boundary is exactly 17
-paths. It starts no stage and changes no product, runtime, dependency package,
-workflow, database, provider, learner, payment, store, deployment or
-Production state.
+Both corrections remain inside the same 17-path docs/contracts/tests-only
+authority boundary. They start no stage and change no product, runtime,
+dependency package, workflow, database, provider, learner, payment, store,
+deployment or Production state.
 
 ## Required validation commands
 

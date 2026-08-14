@@ -254,6 +254,7 @@
         "order": 5,
         "id": "ULC-F1",
         "dependencies": ["ULC-K1"],
+        "operationalPrerequisites": ["S238B"],
         "outcome": "five-choice Civil Law MCQ across Web/iOS/Android",
         "outcomeType": "independently_deployable_first_round_subject_outcome",
         "state": "queued_future_gated",
