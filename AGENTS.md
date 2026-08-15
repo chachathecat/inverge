@@ -10,10 +10,17 @@ Use this authority order when sources conflict:
    surfaces, free-limited ULC-L1 route, separate paid/evidence route, Concept
    Decoder, Formula Graph, coordinated release, and only the exact launch
    supersession that decision owns,
+   `docs/decisions/2026-08-15-owner-c2r-a-rights-safe-source-firewall.md`
+   for the exact C2R-A rights-safe source contract, the post-merge
+   current-stage selector transition to C2R-B/#714, and the rule that C2R-B
+   cannot operationally start before a validated C2R-A receipt and #702
+   closure; this later decision becomes repository authority only on its
+   clean expected-head-pinned merge,
    `docs/decisions/2026-08-14-wcv-c2-structural-recovery.md`
    for PR #716 terminal disposition, Tracker #717, WCV-C2 structural
-   recovery, the five-stage replacement-chain mapping, and only the exact
-   supersession that decision owns,
+   recovery, the five-stage replacement-chain mapping, stage scopes and
+   dependencies, one-writer/no-auto-start, preserved #714 allocations, and
+   all unaffected structural-recovery scope,
    `docs/decisions/2026-08-11-owner-accelerated-vertical-slice-authority-roadmap-reconciliation.md`
    for unaffected scope, including V13 supremacy, WCV 1.0.8 subordination,
    the single-writer limit, complete learner-visible verticals, the ban on
@@ -61,12 +68,34 @@ close #703, #704 or #705; only terminal C2R-C-L may close them, complete
 WCV-C2 and unblock #706. No replacement stage starts automatically.
 
 The authority-graph identifiers are distinct: roadmap item `WCV-C2`, campaign
-ID `C2`, recovery tracker #717, and current authorized-but-unstarted stage
-`C2R-A` for Issue #702. C2R-C-P may start only after terminal validated merges
+ID `C2`, recovery tracker #717, completed source-only stage `C2R-A` for Issue
+#702, and current authorized-but-unstarted stage `C2R-B` for Issue #714. C2R-C-P may start only after terminal validated merges
 of both C2R-A and C2R-B; an issue state or issue closure cannot substitute for
 a replacement-stage merge. C2R-B completes only the Issue #714 allocation for
 campaign C2 and must leave Issue #714 open with its C3, C4 and C6 allocations
 preserved.
+
+## C2R-A rights-safe source firewall
+
+C2R-A/#702 installs the source-only rights-safe adaptive variant foundry in
+`config/dabangil-rights-safe-adaptive-variant-foundry-v1.json`. The exact
+source classes, machine denials, unconditional raw-body training ban,
+three-bank separation, bank-first generation-on-gap cascade, near-copy and
+reconstruction firewall, dispute/retirement states and lineage rules are
+mandatory. No runtime or activation is authorized.
+
+The candidate represents its post-merge state: C2R-A is complete source-only
+only after expected-head-pinned merge and validated receipt; C2R-B/#714 is
+then authorized but unstarted. C2R-C-P remains blocked on validated terminal
+merges of both stages. No donor matrix row is assigned to C2R-A, so all 21
+rows remain unchanged and uncovered.
+
+Any source decision that permits or conditionally permits a shared route must
+bind an exact active `RightsManifestV1` ID and version, matching source class,
+purpose, territory and validity window, before blueprint extraction. The
+binding is revalidated at extraction and every shared-route use. A manifest
+attached only at release cannot cure absent pre-blueprint lineage. Deny-only
+decisions may omit the manifest and remain denied.
 
 ## Product scope (Owner O1R amendment on 2026-07-26)
 

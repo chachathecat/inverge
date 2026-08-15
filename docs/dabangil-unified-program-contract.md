@@ -203,11 +203,16 @@ review/correction cycles are prohibited.
 | C6 | #712 | #712 | queued behind C5 | verified-bank and bodyless calibration flywheel |
 
 Issue #701 remains the parent program. The exact identifiers are roadmap item
-`WCV-C2`, campaign `C2`, recovery tracker #717, and current authorized but
-unstarted replacement stage C2R-A for Issue #702. Issue #714 remains open and
-becomes the exact standalone source-contract prerequisite C2R-B after terminal
-C2R-A. It is merge-producing only when a separately authorized C2R-B Work
-starts; this authority PR starts neither C2R-A nor C2R-B.
+`WCV-C2`, campaign `C2`, recovery tracker #717, completed source-only C2R-A
+for Issue #702, and current authorized but unstarted replacement stage C2R-B
+for Issue #714. Issue #714 remains open and is the exact standalone
+source-contract prerequisite C2R-B after terminal C2R-A. It is merge-producing
+only when a separately authorized C2R-B Work starts; this authority PR starts
+neither C2R-A nor C2R-B.
+
+`launchConvergenceAmendment`, `wcvCampaignOverlay`, `roadmapContract`, the ULC
+preserved-current-authority mirror and active roadmap must expose one identical
+sole next replacement stage.
 
 ### C2R serial replacement chain
 
@@ -325,10 +330,13 @@ consume tenant-authorized assignments and approved feedback.
 
 ### Preserved current authority
 
-ULC-0 does not change the sole current implementation item `WCV-C2`, campaign
-`C2`, Tracker #717, current replacement stage `C2R-A` for #702, the five-stage
-C2R chain, the 21-row regression matrix, the one-writer limit or no-auto-start.
-WCV-C2 remains incomplete and C2R-A remains authorized but unstarted.
+ULC-0 preserves the sole current implementation item `WCV-C2`, campaign `C2`,
+Tracker #717, the five-stage C2R chain, the 21-row regression matrix, the
+one-writer limit and no-auto-start. Under merge-and-receipt semantics,
+C2R-A/#702 is represented complete source-only only after its
+expected-head-pinned merge and validated receipt. C2R-B/#714 is the sole
+represented next authorized and unstarted stage, and Issue #714 remains open.
+WCV-C2 remains incomplete and no replacement stage starts automatically.
 
 ### Free-limited and paid routes
 
@@ -1211,3 +1219,29 @@ regenerate exact-head evidence.
 
 Mineral Cobalt `#4653A6`, the approved Figma assets, and home work remain
 queued. They are not implemented or completed by this reset.
+
+## 2026-08-15 C2R-A rights-safe source contract
+
+The Owner decision `docs/decisions/2026-08-15-owner-c2r-a-rights-safe-source-firewall.md` and machine contract `config/dabangil-rights-safe-adaptive-variant-foundry-v1.json` complete the C2R-A source outcome under merge-and-receipt semantics.
+
+For its exact scope, the 2026-08-15 decision precedes and supersedes the
+2026-08-14 structural-recovery decision only for the C2R-A source contract and
+post-merge current-stage selectors. The older decision remains controlling for
+PR #716, Tracker #717, the five-stage chain, stage scopes, one-writer,
+no-auto-start and preserved #714 allocations. The later decision becomes
+repository authority on the clean expected-head-pinned merge; C2R-B cannot
+operationally start before the validated A receipt and #702 closure.
+
+The eight exact source classes fail closed through machine denial codes. Academy/commercial material, learner-private material, rights-unknown material and blocked material cannot enter any shared blueprint, generation, bank, cache, calibration, analytics, training or paid-delivery route. The raw learner-body training ban is unconditional and consent cannot override it.
+
+Learning, Transfer and Measurement banks remain distinct. Bank search precedes bodyless scarcity recording and offline generation. Candidates traverse the exact cheap-to-expensive validation cascade; near-copy, reconstruction, rights, deterministic/source, dispute, staleness and retirement failures block release or assignment.
+
+A conditionally eligible `SourceEligibilityDecisionV1` must bind exact
+`RightsManifestV1.manifestId` and `manifestVersionId` plus
+`rightsEvaluatedAt` before any shared blueprint extraction. Source class,
+purpose, territory, active status and the validity window are revalidated at
+extraction and every shared-route use. Deny-only decisions may omit a manifest
+and remain denied. A later release-manifest binding is independently required
+but cannot cure missing pre-blueprint lineage.
+
+This is source authority only. C2R-A has no assigned donor matrix rows, so the 21-row matrix remains unchanged. The post-merge next stage is C2R-B/#714, authorized but unstarted; C2R-C-P remains blocked until terminal validated A and B merges.

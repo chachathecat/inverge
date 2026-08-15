@@ -1,0 +1,659 @@
+{
+  "contractVersion": "dabangil.rights_safe_adaptive_variant_foundry.v1",
+  "decision": {
+    "id": "owner_c2r_a_rights_safe_source_firewall_2026_08_15",
+    "status": "approved_source_contract_only",
+    "decisionDateKst": "2026-08-15",
+    "decisionRecord": "docs/decisions/2026-08-15-owner-c2r-a-rights-safe-source-firewall.md",
+    "stageId": "C2R-A",
+    "issue": 702,
+    "campaignId": "C2",
+    "recoveryTrackerIssue": 717,
+    "sourceOnly": true,
+    "runtimeReadinessEstablished": false,
+    "automaticStartAllowed": false,
+    "repositoryAuthorityEffectiveOn": "EXPECTED_HEAD_PINNED_MERGE",
+    "operationalSuccessorStartRequires": [
+      "VALIDATED_C2R_A_MERGE_COVERAGE_RECEIPT",
+      "ISSUE_702_TERMINAL_CLOSE"
+    ]
+  },
+  "sourcePolicy": {
+    "sourceClassesExactly": [
+      "INVERGE_ORIGINAL",
+      "RIGHTS_CLEARED_OFFICIAL",
+      "CONTRACTED_EXPERT_ORIGINAL",
+      "CLEARED_DETERMINISTIC_TEMPLATE",
+      "USER_PRIVATE_ONLY",
+      "ACADEMY_OR_COMMERCIAL_TEXTBOOK",
+      "RIGHTS_UNKNOWN",
+      "BLOCKED"
+    ],
+    "hardDeniedSourceClassesExactly": [
+      "ACADEMY_OR_COMMERCIAL_TEXTBOOK",
+      "USER_PRIVATE_ONLY",
+      "RIGHTS_UNKNOWN",
+      "BLOCKED"
+    ],
+    "sharedRoutesExactly": [
+      "SHARED_BLUEPRINT_EXTRACTION",
+      "SHARED_GENERATION_CONTEXT",
+      "SHARED_VARIANT_BANK",
+      "CROSS_USER_CACHE_OR_REUSE",
+      "SHARED_CALIBRATION_BODY",
+      "ANALYTICS_BODY",
+      "MODEL_TRAINING_BODY",
+      "PAID_DELIVERY"
+    ],
+    "sourceEligibility": {
+      "INVERGE_ORIGINAL": {
+        "decision": "CONDITIONALLY_ELIGIBLE",
+        "requiredGate": "VALID_RIGHTS_MANIFEST_AND_PURPOSE_SCOPE",
+        "automaticReleaseAllowed": false,
+        "automaticVerificationAllowed": false
+      },
+      "RIGHTS_CLEARED_OFFICIAL": {
+        "decision": "CONDITIONALLY_ELIGIBLE",
+        "requiredGate": "VALID_RIGHTS_MANIFEST_AND_PURPOSE_SCOPE",
+        "automaticReleaseAllowed": false,
+        "automaticVerificationAllowed": false
+      },
+      "CONTRACTED_EXPERT_ORIGINAL": {
+        "decision": "CONDITIONALLY_ELIGIBLE",
+        "requiredGate": "VALID_RIGHTS_MANIFEST_AND_PURPOSE_SCOPE",
+        "automaticReleaseAllowed": false,
+        "automaticVerificationAllowed": false
+      },
+      "CLEARED_DETERMINISTIC_TEMPLATE": {
+        "decision": "CONDITIONALLY_ELIGIBLE",
+        "requiredGate": "VALID_RIGHTS_MANIFEST_AND_PURPOSE_SCOPE",
+        "automaticReleaseAllowed": false,
+        "automaticVerificationAllowed": false
+      },
+      "USER_PRIVATE_ONLY": {
+        "decision": "DENY_ALL_SHARED_ROUTES",
+        "denialCode": "SOURCE_CLASS_USER_PRIVATE_ONLY_SHARED_USE_DENIED",
+        "routeEligibility": {
+          "SHARED_BLUEPRINT_EXTRACTION": false,
+          "SHARED_GENERATION_CONTEXT": false,
+          "SHARED_VARIANT_BANK": false,
+          "CROSS_USER_CACHE_OR_REUSE": false,
+          "SHARED_CALIBRATION_BODY": false,
+          "ANALYTICS_BODY": false,
+          "MODEL_TRAINING_BODY": false,
+          "PAID_DELIVERY": false
+        }
+      },
+      "ACADEMY_OR_COMMERCIAL_TEXTBOOK": {
+        "decision": "DENY_ALL_SHARED_ROUTES",
+        "denialCode": "SOURCE_CLASS_ACADEMY_OR_COMMERCIAL_TEXTBOOK_SHARED_USE_DENIED",
+        "routeEligibility": {
+          "SHARED_BLUEPRINT_EXTRACTION": false,
+          "SHARED_GENERATION_CONTEXT": false,
+          "SHARED_VARIANT_BANK": false,
+          "CROSS_USER_CACHE_OR_REUSE": false,
+          "SHARED_CALIBRATION_BODY": false,
+          "ANALYTICS_BODY": false,
+          "MODEL_TRAINING_BODY": false,
+          "PAID_DELIVERY": false
+        }
+      },
+      "RIGHTS_UNKNOWN": {
+        "decision": "DENY_ALL_SHARED_ROUTES",
+        "denialCode": "SOURCE_CLASS_RIGHTS_UNKNOWN_SHARED_USE_DENIED",
+        "routeEligibility": {
+          "SHARED_BLUEPRINT_EXTRACTION": false,
+          "SHARED_GENERATION_CONTEXT": false,
+          "SHARED_VARIANT_BANK": false,
+          "CROSS_USER_CACHE_OR_REUSE": false,
+          "SHARED_CALIBRATION_BODY": false,
+          "ANALYTICS_BODY": false,
+          "MODEL_TRAINING_BODY": false,
+          "PAID_DELIVERY": false
+        }
+      },
+      "BLOCKED": {
+        "decision": "DENY_ALL_SHARED_ROUTES",
+        "denialCode": "SOURCE_CLASS_BLOCKED_SHARED_USE_DENIED",
+        "routeEligibility": {
+          "SHARED_BLUEPRINT_EXTRACTION": false,
+          "SHARED_GENERATION_CONTEXT": false,
+          "SHARED_VARIANT_BANK": false,
+          "CROSS_USER_CACHE_OR_REUSE": false,
+          "SHARED_CALIBRATION_BODY": false,
+          "ANALYTICS_BODY": false,
+          "MODEL_TRAINING_BODY": false,
+          "PAID_DELIVERY": false
+        }
+      }
+    },
+    "rawLearnerContent": {
+      "modelTrainingAllowed": false,
+      "consentMayOverrideTrainingBan": false,
+      "sharedBlueprintExtractionAllowed": false,
+      "sharedVariantCreationAllowed": false,
+      "crossUserReuseAllowed": false,
+      "sharedCalibrationBodyAllowed": false,
+      "analyticsBodyAllowed": false
+    },
+    "historicalExamBoundary": {
+      "nonExpressiveSkillBlueprintAfterRightsReviewAllowed": true,
+      "originalWordingAllowed": false,
+      "distinctiveFactPatternAllowed": false,
+      "tableOrDiagramCopyAllowed": false,
+      "answerStructureCopyAllowed": false,
+      "explanationSequenceCopyAllowed": false
+    },
+    "similarityReferenceCorpus": {
+      "legallyHeldOrClearedMaterialOnly": true,
+      "secretlyScrapedAcademyFingerprintCorpusAllowed": false
+    }
+  },
+  "requiredContracts": {
+    "SourceEligibilityDecisionV1": {
+      "identityField": "decisionId",
+      "identityStable": true,
+      "identityUniqueWithinPolicyScope": true,
+      "requiredFields": [
+        "decisionId",
+        "sourceClass",
+        "purpose",
+        "decision",
+        "denialCodes",
+        "decidedAt",
+        "policyVersion",
+        "decisionBasisChecksum"
+      ],
+      "failClosedWhenMissing": true,
+      "conditionallyRequiredFieldsWhenAnySharedRoutePermitted": [
+        "rightsManifestId",
+        "rightsManifestVersionId",
+        "rightsEvaluatedAt"
+      ],
+      "deniedDecisionMayOmitRightsManifestBinding": true,
+      "sharedRoutePermissionWithoutExactRightsBindingFailsClosed": true
+    },
+    "RightsManifestV1": {
+      "requiredFields": [
+        "manifestId",
+        "manifestVersionId",
+        "sourceClass",
+        "rightsHolder",
+        "permittedPurposes",
+        "territory",
+        "validFrom",
+        "validUntil",
+        "status",
+        "provenance"
+      ],
+      "releaseBlockedWhenMissingOrInvalid": true,
+      "identityFieldsExactly": [
+        "manifestId",
+        "manifestVersionId"
+      ],
+      "usableStatusesExactly": [
+        "ACTIVE"
+      ],
+      "failClosedStatusesExactly": [
+        "REVOKED",
+        "DISPUTED",
+        "EXPIRED",
+        "BLOCKED"
+      ],
+      "timeBoundedValidityRequired": true,
+      "changedRightsBasisCreatesNewManifestVersion": true
+    },
+    "HumanCreativeContributionV1": {
+      "requiredFields": [
+        "contributorId",
+        "contributionType",
+        "originalityAttestation",
+        "reviewedAt"
+      ],
+      "cannotSelfCertifyAiOutput": true
+    },
+    "SkillBlueprintV1": {
+      "requiredFields": [
+        "blueprintId",
+        "skillId",
+        "difficultyBand",
+        "itemFamily",
+        "nonExpressiveConstraints",
+        "sourceDecisionId"
+      ],
+      "protectedExpressionAllowed": false
+    },
+    "VariantCandidateV1": {
+      "requiredFields": [
+        "candidateId",
+        "blueprintId",
+        "provenance",
+        "generatorMode",
+        "validationState",
+        "createdAt"
+      ],
+      "aiSelfPromotionAllowed": false
+    },
+    "VariantReleaseArtifactV1": {
+      "requiredFields": [
+        "artifactId",
+        "candidateId",
+        "rightsManifestId",
+        "rightsManifestVersionId",
+        "humanAdjudication",
+        "bankState",
+        "releasedAt"
+      ],
+      "ownerAdjudicationRequiredInitially": true
+    },
+    "ExposureLedgerV1": {
+      "requiredFields": [
+        "artifactId",
+        "learnerScope",
+        "exposureClass",
+        "occurredAt",
+        "idempotencyKey"
+      ],
+      "rawBodyAllowed": false
+    },
+    "BankScarcityEventV1": {
+      "requiredFields": [
+        "skillId",
+        "difficultyBand",
+        "itemFamily",
+        "exposureConstraint",
+        "priority",
+        "occurredAt"
+      ],
+      "bodyAllowed": false
+    },
+    "DisputeAndRetirementV1": {
+      "requiredFields": [
+        "artifactId",
+        "state",
+        "reasonCode",
+        "effectiveAt",
+        "lineage"
+      ],
+      "newAssignmentBlockedStates": [
+        "DISPUTED",
+        "BLOCKED",
+        "STALE",
+        "RETIRED"
+      ]
+    }
+  },
+  "contractReferenceIntegrity": {
+    "failClosedWhenReferenceMissing": true,
+    "failClosedWhenReferenceUnresolved": true,
+    "failClosedWhenReferenceAmbiguous": true,
+    "identityFieldsExactly": [
+      {
+        "contract": "SourceEligibilityDecisionV1",
+        "field": "decisionId"
+      },
+      {
+        "contract": "RightsManifestV1",
+        "field": "manifestId"
+      },
+      {
+        "contract": "RightsManifestV1",
+        "field": "manifestVersionId"
+      },
+      {
+        "contract": "SkillBlueprintV1",
+        "field": "blueprintId"
+      },
+      {
+        "contract": "VariantCandidateV1",
+        "field": "candidateId"
+      },
+      {
+        "contract": "VariantReleaseArtifactV1",
+        "field": "artifactId"
+      }
+    ],
+    "referencesExactly": [
+      {
+        "sourceContract": "SourceEligibilityDecisionV1",
+        "sourceField": "rightsManifestId",
+        "targetContract": "RightsManifestV1",
+        "targetField": "manifestId"
+      },
+      {
+        "sourceContract": "SourceEligibilityDecisionV1",
+        "sourceField": "rightsManifestVersionId",
+        "targetContract": "RightsManifestV1",
+        "targetField": "manifestVersionId"
+      },
+      {
+        "sourceContract": "SkillBlueprintV1",
+        "sourceField": "sourceDecisionId",
+        "targetContract": "SourceEligibilityDecisionV1",
+        "targetField": "decisionId"
+      },
+      {
+        "sourceContract": "VariantCandidateV1",
+        "sourceField": "blueprintId",
+        "targetContract": "SkillBlueprintV1",
+        "targetField": "blueprintId"
+      },
+      {
+        "sourceContract": "VariantReleaseArtifactV1",
+        "sourceField": "candidateId",
+        "targetContract": "VariantCandidateV1",
+        "targetField": "candidateId"
+      },
+      {
+        "sourceContract": "VariantReleaseArtifactV1",
+        "sourceField": "rightsManifestId",
+        "targetContract": "RightsManifestV1",
+        "targetField": "manifestId"
+      },
+      {
+        "sourceContract": "VariantReleaseArtifactV1",
+        "sourceField": "rightsManifestVersionId",
+        "targetContract": "RightsManifestV1",
+        "targetField": "manifestVersionId"
+      },
+      {
+        "sourceContract": "ExposureLedgerV1",
+        "sourceField": "artifactId",
+        "targetContract": "VariantReleaseArtifactV1",
+        "targetField": "artifactId"
+      },
+      {
+        "sourceContract": "DisputeAndRetirementV1",
+        "sourceField": "artifactId",
+        "targetContract": "VariantReleaseArtifactV1",
+        "targetField": "artifactId"
+      }
+    ],
+    "externalOrScopedIdentifiersExactly": [
+      {
+        "sourceContract": "HumanCreativeContributionV1",
+        "sourceField": "contributorId",
+        "resolutionPolicy": "CONTRIBUTOR_REGISTRY_EXACT_POLICY_SCOPE",
+        "failClosedWhenUnresolved": true
+      },
+      {
+        "sourceContract": "SkillBlueprintV1",
+        "sourceField": "skillId",
+        "resolutionPolicy": "FOUNDRY_SKILL_TAXONOMY_EXACT_VERSION",
+        "failClosedWhenUnresolved": true
+      },
+      {
+        "sourceContract": "ExposureLedgerV1",
+        "sourceField": "idempotencyKey",
+        "resolutionPolicy": "LEARNER_SCOPE_EXPOSURE_OPERATION_IDEMPOTENCY",
+        "failClosedWhenUnresolved": true
+      },
+      {
+        "sourceContract": "BankScarcityEventV1",
+        "sourceField": "skillId",
+        "resolutionPolicy": "FOUNDRY_SKILL_TAXONOMY_EXACT_VERSION",
+        "failClosedWhenUnresolved": true
+      }
+    ],
+    "sourceDecisionIdentityPolicy": {
+      "nonEmptyRequired": true,
+      "immutableForExactDecisionRevision": true,
+      "versionedOrInvalidatedWhenDecisionBasisChanges": true,
+      "resolvesExactFields": [
+        "sourceClass",
+        "purpose",
+        "decision",
+        "denialCodes",
+        "decidedAt",
+        "policyVersion",
+        "decisionBasisChecksum",
+        "rightsManifestId",
+        "rightsManifestVersionId",
+        "rightsEvaluatedAt"
+      ],
+      "aiOutputMayCreateDecisionId": false,
+      "aiOutputMaySelfCertifyDecisionId": false,
+      "decisionBasisChecksumRequired": true,
+      "changedDecisionBasisCreatesNewDecisionIdentityOrExactRevision": true,
+      "missingAmbiguousOrStaleIdentityFailsClosed": true
+    },
+    "failClosedWhenDuplicateIdentityVersion": true,
+    "rightsManifestIdentityPolicy": {
+      "exactManifestAndVersionIdentityRequired": true,
+      "manifestVersionUniqueWithinManifest": true,
+      "sourceClassExplicit": true,
+      "permittedPurposesExplicit": true,
+      "statusExplicit": true,
+      "validityWindowRequired": true,
+      "changedRightsBasisCreatesNewManifestVersion": true,
+      "unresolvedDuplicateOrAmbiguousVersionFailsClosed": true
+    },
+    "conditionalRightsManifestBindingPolicy": {
+      "denyOnlyDecision": "DENY_ALL_SHARED_ROUTES",
+      "denyOnlyDecisionMayOmitManifest": true,
+      "anySharedRoutePermissionRequiresExactBinding": true,
+      "requiredFieldsExactly": [
+        "rightsManifestId",
+        "rightsManifestVersionId",
+        "rightsEvaluatedAt"
+      ],
+      "manifestIdAndVersionMustResolveToSameUniqueManifest": true,
+      "sourceClassMustMatch": true,
+      "decisionPurposeMustBePermitted": true,
+      "decisionAndEvaluationMustBeWithinValidityWindow": true,
+      "missingMismatchExpiredRevokedDisputedBlockedOrAmbiguousFailsClosed": true
+    }
+  },
+  "bankModel": {
+    "progressionExactly": [
+      "DRAFT_CANDIDATE",
+      "AUTOMATED_CHECKED",
+      "LEARNING_USABLE",
+      "TRANSFER_VERIFIED",
+      "CALIBRATION_PILOT",
+      "CALIBRATED_MEASUREMENT"
+    ],
+    "holdOrTerminalStatesExactly": [
+      "DISPUTED",
+      "BLOCKED",
+      "STALE",
+      "RETIRED"
+    ],
+    "banksExactly": [
+      "LEARNING_BANK",
+      "TRANSFER_BANK",
+      "MEASUREMENT_BANK"
+    ],
+    "separation": {
+      "LEARNING_BANK": {
+        "minimumState": "LEARNING_USABLE",
+        "impliesTransferQualification": false,
+        "impliesCalibratedMeasurement": false
+      },
+      "TRANSFER_BANK": {
+        "minimumState": "TRANSFER_VERIFIED",
+        "requiresIndependentEvidence": true,
+        "impliesCalibratedMeasurement": false
+      },
+      "MEASUREMENT_BANK": {
+        "minimumState": "CALIBRATED_MEASUREMENT",
+        "requiresPilotAndCalibrationEvidence": true
+      }
+    },
+    "aiOutputMaySelfPublish": false,
+    "aiOutputMaySelfVerify": false,
+    "promotionRequiresAdditionalEvidence": true
+  },
+  "bankFirstGenerationOnGap": {
+    "stepsExactly": [
+      "SEARCH_ELIGIBLE_BANK_ITEM",
+      "ASSIGN_IF_EXACT_SKILL_DIFFICULTY_FAMILY_EXPOSURE_MATCH",
+      "RECORD_BODYLESS_BANK_SCARCITY_EVENT_ON_GAP",
+      "GENERATE_OFFLINE_BATCH_FOR_PRIORITY_GAPS",
+      "REJECT_WITH_CHEAP_GATES_FIRST",
+      "ROUTE_SURVIVORS_TO_STRONG_CRITIC_AND_OWNER",
+      "RELEASE_TO_LEARNING_BANK_FIRST",
+      "PROMOTE_ONLY_FROM_ADDITIONAL_EVIDENCE"
+    ],
+    "realtimeGeneration": {
+      "permittedUseOnly": "CLEARLY_LABELED_LOW_RISK_GUIDED_PRACTICE",
+      "maySatisfyDPlus7Transfer": false,
+      "maySatisfyTimedRecurrence": false,
+      "maySatisfyReadinessEvidence": false,
+      "maySatisfyEfficacyEvidence": false,
+      "maySatisfyCalibratedMeasurement": false
+    }
+  },
+  "validationCascade": {
+    "orderExactly": [
+      "SOURCE_AND_RIGHTS",
+      "SCHEMA_AND_BLUEPRINT",
+      "DETERMINISTIC_AND_SOURCE_VALIDATOR",
+      "SIMILARITY_AND_RECONSTRUCTION_FIREWALL",
+      "LOW_COST_BLIND_SOLVER",
+      "CONDITIONAL_STRONG_CRITIC",
+      "OWNER_ADJUDICATION",
+      "LEARNER_PILOT_AND_CALIBRATION"
+    ],
+    "cheapToExpensive": true,
+    "deterministicOrSourceConflictBlocksRelease": true,
+    "ownerIsInitialFinalContentAdjudicator": true,
+    "externalExpertRequired": false
+  },
+  "similarityAndReconstructionFirewall": {
+    "nearCopyFailureTransformationsExactly": [
+      "NUMBER_ONLY",
+      "NAME_ONLY",
+      "ORDER_ONLY",
+      "WORD_ONLY"
+    ],
+    "releaseBlockedOnNearCopy": true,
+    "protectedProblemReconstructionAllowed": false,
+    "protectedExplanationStructureReconstructionAllowed": false,
+    "outputMustNotEnableOriginalReconstruction": true
+  },
+  "disputeRetirementAndLineage": {
+    "quarantineOnDispute": true,
+    "noNewAssignmentInHoldOrTerminalState": true,
+    "lineageRequiredThroughCandidateReleasePromotionDisputeRetirement": true,
+    "retirementDoesNotEraseAuditLineage": true
+  },
+  "regressionMatrix": {
+    "path": "docs/qa/wcv-c2-replacement-regression-matrix.md",
+    "initialRowCount": 21,
+    "directRowsAssignedToC2RA": [],
+    "rowsChangedByC2RA": [],
+    "unchangedReason": "NO_DONOR_FINDING_ROW_IS_ASSIGNED_TO_C2R_A",
+    "receiptPolicyId": "github_exact_head_pinned_squash_merge_v1"
+  },
+  "successor": {
+    "currentStageRepresentedAfterMerge": "C2R-B",
+    "currentStageIssueRepresentedAfterMerge": 714,
+    "currentStageStateRepresentedAfterMerge": "authorized_unstarted",
+    "c2rACompletionEffectiveOnlyAfterExpectedHeadPinnedMergeAndValidatedReceipt": true,
+    "c2rCPBlockedUntilTerminalValidatedStages": [
+      "C2R-A",
+      "C2R-B"
+    ],
+    "issueStateMaySubstituteForStageMerge": false,
+    "repositoryAuthoritySelectorOwnedByDecision": "owner_c2r_a_rights_safe_source_firewall_2026_08_15",
+    "operationalC2RBStartRequires": [
+      "VALIDATED_C2R_A_MERGE_COVERAGE_RECEIPT",
+      "ISSUE_702_TERMINAL_CLOSE"
+    ]
+  },
+  "authorizationBoundary": {
+    "runtimeMutationAuthorized": false,
+    "applicationMutationAuthorized": false,
+    "apiAuthorized": false,
+    "databaseSchemaAuthorized": false,
+    "migrationAuthorized": false,
+    "rlsAuthorized": false,
+    "storageAuthorized": false,
+    "providerAuthorized": false,
+    "realContentAuthorized": false,
+    "learnerDataAuthorized": false,
+    "firstRoundRuntimeAuthorized": false,
+    "mobileRuntimeAuthorized": false,
+    "instructorRuntimeAuthorized": false,
+    "learnerActivationAuthorized": false,
+    "publicReleaseAuthorized": false,
+    "paymentActivationAuthorized": false,
+    "storeSubmissionAuthorized": false,
+    "deploymentAuthorized": false,
+    "productionAuthorized": false,
+    "dependencyChangeAuthorized": false
+  },
+  "ownedPathsExactly": [
+    "AGENTS.md",
+    "roadmap/active-program.yml",
+    "config/dabangil-unified-program-contract.json",
+    "config/dabangil-unified-product-multisurface-launch-v1.json",
+    "docs/dabangil-unified-program-contract.md",
+    "docs/inverge-master-roadmap.md",
+    "docs/decisions/2026-08-15-owner-c2r-a-rights-safe-source-firewall.md",
+    "docs/strategy/dabangil-rights-safe-adaptive-variant-foundry-v1.md",
+    "config/dabangil-rights-safe-adaptive-variant-foundry-v1.json",
+    "docs/qa/rights-safe-adaptive-variant-foundry-validation.md",
+    "tests/rights-safe-adaptive-variant-foundry-contract.test.mjs",
+    "tests/wcv-c2r-structural-recovery-authority.test.mjs",
+    "tests/wcv-campaign-authority-roadmap-reconciliation.test.mjs",
+    "tests/dabangil-unified-product-multisurface-launch-authority.test.mjs",
+    "scripts/run-node-tests.mjs",
+    "docs/strategy/ACTIVE-MASTER-PLAN.md",
+    "docs/strategy/dabangil-unified-product-multisurface-launch-v1-2026-08-14.md"
+  ],
+  "preBlueprintRightsBinding": {
+    "requiredBeforeSharedBlueprintExtraction": true,
+    "requiredBeforeSharedGenerationContext": true,
+    "requiredBeforeSharedVariantBank": true,
+    "requiredBeforeCrossUserReuse": true,
+    "requiredBeforeSharedCalibration": true,
+    "requiredBeforeAnalyticsBody": true,
+    "requiredBeforeModelTrainingBody": true,
+    "requiredBeforePaidDelivery": true,
+    "sourceClassMustMatch": true,
+    "purposeMustBeIncludedInManifestPurposes": true,
+    "manifestVersionMustMatchExactly": true,
+    "manifestMustBeActive": true,
+    "decisionAndUseMustBeWithinValidityWindow": true,
+    "revalidateAtBlueprintExtraction": true,
+    "revalidateAtEverySharedRouteUse": true,
+    "releaseManifestCannotRetroactivelyCureMissingBlueprintBinding": true,
+    "missingMismatchExpiredRevokedDisputedOrAmbiguousFailsClosed": true
+  },
+  "blueprintUseRevalidation": {
+    "requiredAtEverySharedRouteUse": true,
+    "requiredChecksExactly": [
+      "SOURCE_DECISION_EXISTS_AND_REMAINS_CURRENT",
+      "EXACT_RIGHTS_MANIFEST_ID_AND_VERSION_EXIST_UNIQUELY",
+      "MANIFEST_SOURCE_CLASS_EQUALS_DECISION_SOURCE_CLASS",
+      "REQUESTED_ROUTE_PURPOSE_IS_PERMITTED",
+      "TERRITORY_IS_ELIGIBLE",
+      "MANIFEST_STATUS_IS_ACTIVE",
+      "VALID_FROM_LE_USE_AS_OF_LE_VALID_UNTIL",
+      "NO_DISPUTE_REVOCATION_OR_RETIREMENT_INVALIDATES_USE",
+      "DECISION_BASIS_CHECKSUM_REMAINS_COMPATIBLE"
+    ],
+    "priorDecisionValidityCannotAuthorizeUseAfterManifestExpiryRevocationOrDispute": true,
+    "releaseTimeManifestCannotCureMissingPreBlueprintLineage": true,
+    "failedCheckBlocksBlueprintAndEverySharedRoute": true
+  },
+  "hostileRightsBindingCasesExactly": [
+    "MISSING_MANIFEST_ON_CONDITIONALLY_ELIGIBLE_DECISION",
+    "WRONG_MANIFEST_ID",
+    "RIGHT_MANIFEST_ID_WRONG_VERSION",
+    "SOURCE_CLASS_MISMATCH",
+    "PURPOSE_NOT_PERMITTED",
+    "DECISION_TIME_OUTSIDE_VALIDITY",
+    "BLUEPRINT_USE_AFTER_EXPIRY",
+    "REVOKED_MANIFEST",
+    "DISPUTED_MANIFEST",
+    "AMBIGUOUS_DUPLICATE_MANIFEST_VERSION",
+    "HARD_DENIED_SOURCE_WITH_VALID_MANIFEST",
+    "RELEASE_MANIFEST_ATTEMPTS_TO_CURE_ABSENT_PRE_BLUEPRINT_BINDING",
+    "STALE_DECISION_BASIS_CHECKSUM",
+    "AI_SELF_CERTIFICATION",
+    "PRIVATE_ACADEMY_OR_UNKNOWN_SOURCE_ENTERS_SHARED_ROUTE"
+  ]
+}
