@@ -67,9 +67,11 @@ and terminal paid evidence are both mandatory and non-substitutable; neither
 gate completion starts work or authorizes activation.
 
 ULC-0 leaves PR #718, Tracker #717, WCV-C2/C2, the exact C2R-A through
-C2R-C-L replacement graph, the 21-row regression matrix, C2R-A/#702 as the
-sole next implementation stage, the one-writer limit, and no-auto-start
-authority unchanged.
+C2R-C-L replacement graph, the 21-row regression matrix, the one-writer limit,
+and no-auto-start authority unchanged. The later 2026-08-15 C2R-A decision
+owns only the completed C2R-A source contract and post-merge selector:
+C2R-B/#714 is the represented next authorized but unstarted stage. It cannot
+operationally start before the validated A receipt and #702 closure.
 
 ## Mandatory V13 follow-up — Memory Cue & Annotation Layer
 
@@ -204,8 +206,10 @@ three subjects.
 The final public target is separately defined by the subordinate ULC-0
 amendment as the integrated first- and second-round product on Web,
 iOS/iPadOS and Android. That future target does not activate first-round,
-native, instructor or public runtime now. The exact current implementation
-selection remains WCV-C2/C2/C2R-A/#702.
+native, instructor or public runtime now. The exact current repository
+selection is WCV-C2/C2/#717/C2R-B/#714. C2R-A/#702 is the completed
+source-only predecessor under merge-and-receipt semantics; C2R-B remains
+operationally blocked until the A receipt validates and #702 closes.
 
 The Portable Professional Exam Core is an internal architecture contract only. It does
 not authorize:

@@ -53,8 +53,16 @@
     "leadIssue": 719,
     "relationshipToV13": "mandatory_subordinate_launch_amendment_not_active_master",
     "finalPublicProduct": "답안길 — 감정평가사 1·2차 통합 합격 운영체계",
-    "publicSurfaces": ["web", "ios_ipados", "android"],
-    "studentSurfaces": ["web", "ios_ipados", "android"],
+    "publicSurfaces": [
+      "web",
+      "ios_ipados",
+      "android"
+    ],
+    "studentSurfaces": [
+      "web",
+      "ios_ipados",
+      "android"
+    ],
     "instructorPrimarySurface": "web",
     "freeLimitedPublicRoute": "ULC-L1",
     "freeLimitedRouteRequiresPaidCohort": false,
@@ -69,7 +77,10 @@
     "paidEvidenceRouteStartsAfter": "ULC-L1",
     "legacyPublicPaidLaunchGate": {
       "roadmapItemId": "S225",
-      "requiredDependenciesExactly": ["O4D", "WCV-C6"],
+      "requiredDependenciesExactly": [
+        "O4D",
+        "WCV-C6"
+      ],
       "independentOwnerAuthorization": "O4D",
       "terminalPaidEvidenceRoute": "WCV-C6",
       "bothDependenciesRequired": true,
@@ -82,29 +93,70 @@
       "publicReleaseAuthorized": false
     },
     "activeRoadmapDependencyMirror": {
-      "WCV-C3": ["WCV-C2"],
-      "ULC-M1": ["WCV-C3", "S241A"],
-      "ULC-M2": ["ULC-M1"],
-      "ULC-K1": ["ULC-M2"],
-      "ULC-F1": ["ULC-K1", "S238B"],
-      "ULC-F2": ["ULC-F1"],
-      "ULC-F3": ["ULC-F2"],
-      "ULC-F4": ["ULC-F3"],
-      "ULC-F5": ["ULC-F4"],
-      "ULC-I1": ["ULC-F5"],
-      "WCV-C4": ["ULC-I1"],
-      "ULC-R1": ["WCV-C4"],
-      "ULC-L1": ["ULC-R1"],
-      "O4W": ["ULC-L1"],
-      "WCV-C5": ["WCV-C4", "O4W"],
-      "WCV-C6": ["WCV-C5"],
-      "O4D": ["S245C", "S242V"],
-      "S225": ["O4D", "WCV-C6"]
+      "WCV-C3": [
+        "WCV-C2"
+      ],
+      "ULC-M1": [
+        "WCV-C3",
+        "S241A"
+      ],
+      "ULC-M2": [
+        "ULC-M1"
+      ],
+      "ULC-K1": [
+        "ULC-M2"
+      ],
+      "ULC-F1": [
+        "ULC-K1",
+        "S238B"
+      ],
+      "ULC-F2": [
+        "ULC-F1"
+      ],
+      "ULC-F3": [
+        "ULC-F2"
+      ],
+      "ULC-F4": [
+        "ULC-F3"
+      ],
+      "ULC-F5": [
+        "ULC-F4"
+      ],
+      "ULC-I1": [
+        "ULC-F5"
+      ],
+      "WCV-C4": [
+        "ULC-I1"
+      ],
+      "ULC-R1": [
+        "WCV-C4"
+      ],
+      "ULC-L1": [
+        "ULC-R1"
+      ],
+      "O4W": [
+        "ULC-L1"
+      ],
+      "WCV-C5": [
+        "WCV-C4",
+        "O4W"
+      ],
+      "WCV-C6": [
+        "WCV-C5"
+      ],
+      "O4D": [
+        "S245C",
+        "S242V"
+      ],
+      "S225": [
+        "O4D",
+        "WCV-C6"
+      ]
     },
     "soleNextImplementationItem": "WCV-C2",
     "soleNextImplementationCampaign": "C2",
-    "soleNextReplacementStage": "C2R-A",
-    "soleNextReplacementStageIssue": 702,
+    "soleNextReplacementStage": "C2R-B",
+    "soleNextReplacementStageIssue": 714,
     "structuralRecoveryTrackerIssue": 717,
     "wcvC2Complete": false,
     "runtimeAuthorized": false,
@@ -976,15 +1028,15 @@
       "trackerIssue": 717,
       "authorityDecision": "docs/decisions/2026-08-14-wcv-c2-structural-recovery.md",
       "regressionMatrix": "docs/qa/wcv-c2-replacement-regression-matrix.md",
-      "status": "authority_installed_no_replacement_stage_started",
+      "status": "c2r_a_complete_source_only_c2r_b_authorized_unstarted",
       "wcvC2Complete": false,
       "authorityGraph": {
         "roadmapItemId": "WCV-C2",
         "campaignId": "C2",
         "recoveryTrackerIssue": 717,
         "structuralAuthorityPr": 718,
-        "currentReplacementStageId": "C2R-A",
-        "currentReplacementStageIssue": 702,
+        "currentReplacementStageId": "C2R-B",
+        "currentReplacementStageIssue": 714,
         "replacementStageChain": [
           "C2R-A",
           "C2R-B",
@@ -1002,7 +1054,11 @@
         "baseMain": "03a3886de105de104de04672ffaa6507b2ead592",
         "baseMainTree": "e14c019b8a49c5dca822ea81b95639b09543a668",
         "finalReview": "PRR_kwDOSMHn8M8AAAABJhaiDA",
-        "finalActionableP0P1P2": [0, 0, 3],
+        "finalActionableP0P1P2": [
+          0,
+          0,
+          3
+        ],
         "reviewThreadCount": 21,
         "historicallyResolvedThreadCount": 2,
         "intentionallyUnresolvedThreadCount": 19,
@@ -1051,7 +1107,11 @@
             "coveredFindingThreadIds",
             "regressionTestPaths"
           ],
-          "finalActionableP0P1P2Exactly": [0, 0, 0],
+          "finalActionableP0P1P2Exactly": [
+            0,
+            0,
+            0
+          ],
           "freshChecksAndFinalReviewMustBelongToReviewedHead": true
         },
         "expectedHeadPinnedMerge": {
@@ -1133,10 +1193,32 @@
           "horizontalRuntimeLayer": false,
           "dependencies": [],
           "startRequiresTerminalStructuralAuthorityPr": 718,
-          "state": "authorized_unstarted",
+          "state": "complete_source_only",
           "sourceContractOnly": true,
           "terminalMergeRequired": true,
-          "automaticStartAllowed": false
+          "automaticStartAllowed": false,
+          "directRegressionRows": [],
+          "matrixRowsChanged": [],
+          "completionEffectiveOnlyAfterExpectedHeadPinnedMergeAndValidatedReceipt": true,
+          "ownedPathsExactly": [
+            "AGENTS.md",
+            "roadmap/active-program.yml",
+            "config/dabangil-unified-program-contract.json",
+            "config/dabangil-unified-product-multisurface-launch-v1.json",
+            "docs/dabangil-unified-program-contract.md",
+            "docs/inverge-master-roadmap.md",
+            "docs/decisions/2026-08-15-owner-c2r-a-rights-safe-source-firewall.md",
+            "docs/strategy/dabangil-rights-safe-adaptive-variant-foundry-v1.md",
+            "config/dabangil-rights-safe-adaptive-variant-foundry-v1.json",
+            "docs/qa/rights-safe-adaptive-variant-foundry-validation.md",
+            "tests/rights-safe-adaptive-variant-foundry-contract.test.mjs",
+            "tests/wcv-c2r-structural-recovery-authority.test.mjs",
+            "tests/wcv-campaign-authority-roadmap-reconciliation.test.mjs",
+            "tests/dabangil-unified-product-multisurface-launch-authority.test.mjs",
+            "scripts/run-node-tests.mjs",
+            "docs/strategy/ACTIVE-MASTER-PLAN.md",
+            "docs/strategy/dabangil-unified-product-multisurface-launch-v1-2026-08-14.md"
+          ]
         },
         {
           "order": 2,
@@ -1145,11 +1227,14 @@
           "scope": "cognitive_architecture_contract",
           "outcomeType": "independently_complete_source_contract_outcome",
           "horizontalRuntimeLayer": false,
-          "dependencies": ["C2R-A"],
-          "state": "queued_dependency_blocked",
+          "dependencies": [
+            "C2R-A"
+          ],
+          "state": "authorized_unstarted",
           "sourceContractOnly": true,
           "terminalMergeRequired": true,
-          "automaticStartAllowed": false
+          "automaticStartAllowed": false,
+          "startRequiresValidatedMergeCoverageReceiptStage": "C2R-A"
         },
         {
           "order": 3,
@@ -1158,7 +1243,9 @@
           "scope": "complete_practice_trusted_repair_vertical",
           "outcomeType": "independently_deployable_learner_visible_runtime_vertical",
           "learnerVisibleOutcome": "practice_trusted_repair",
-          "dependencies": ["C2R-B"],
+          "dependencies": [
+            "C2R-B"
+          ],
           "state": "queued_dependency_blocked",
           "requiredChangedLayers": [
             "SHARED_TUTOR_EPISODE_KERNEL",
@@ -1173,9 +1260,32 @@
             "INDEPENDENT_ROLLBACK"
           ],
           "commonRuntimeSubstrateFirstLandsHere": true,
-          "acceptanceContributionIssues": [703, 704, 705],
-          "directRegressionRows": [1, 2, 4, 6, 8, 9, 10, 11, 12, 14, 19],
-          "commonRegressionRows": [1, 4, 6, 8, 11, 14],
+          "acceptanceContributionIssues": [
+            703,
+            704,
+            705
+          ],
+          "directRegressionRows": [
+            1,
+            2,
+            4,
+            6,
+            8,
+            9,
+            10,
+            11,
+            12,
+            14,
+            19
+          ],
+          "commonRegressionRows": [
+            1,
+            4,
+            6,
+            8,
+            11,
+            14
+          ],
           "terminalIssueClosureAllowed": false,
           "terminalMergeRequired": true,
           "automaticStartAllowed": false
@@ -1187,7 +1297,9 @@
           "scope": "complete_theory_trusted_repair_vertical",
           "outcomeType": "independently_deployable_learner_visible_runtime_vertical",
           "learnerVisibleOutcome": "theory_trusted_repair",
-          "dependencies": ["C2R-C-P"],
+          "dependencies": [
+            "C2R-C-P"
+          ],
           "state": "queued_dependency_blocked",
           "requiredChangedLayers": [
             "TYPED_THEORY_TARGET_SCOPED_PREDICATE_VALIDATOR",
@@ -1197,9 +1309,26 @@
             "SAFE_DEFERRED_THEORY_CAPABILITY_BOUNDARY",
             "ROLLBACK_INDEPENDENT_OF_PRACTICE"
           ],
-          "acceptanceContributionIssues": [703, 704, 705],
-          "directRegressionRows": [5, 13, 16, 18, 20],
-          "inheritedCommonRegressionRows": [1, 4, 6, 8, 11, 14],
+          "acceptanceContributionIssues": [
+            703,
+            704,
+            705
+          ],
+          "directRegressionRows": [
+            5,
+            13,
+            16,
+            18,
+            20
+          ],
+          "inheritedCommonRegressionRows": [
+            1,
+            4,
+            6,
+            8,
+            11,
+            14
+          ],
           "terminalIssueClosureAllowed": false,
           "terminalMergeRequired": true,
           "automaticStartAllowed": false
@@ -1211,7 +1340,9 @@
           "scope": "complete_law_trusted_repair_vertical_and_terminal_wcv_c2_closeout",
           "outcomeType": "independently_deployable_learner_visible_runtime_vertical",
           "learnerVisibleOutcome": "law_trusted_repair",
-          "dependencies": ["C2R-C-T"],
+          "dependencies": [
+            "C2R-C-T"
+          ],
           "state": "queued_dependency_blocked",
           "requiredChangedLayers": [
             "EXACT_LAW_SOURCE_ANCHOR_LOCATOR_EFFECTIVE_VERSION_APPLICABLE_DATE_VALIDATOR",
@@ -1221,11 +1352,32 @@
             "SAFE_DEFERRED_LAW_CAPABILITY_BOUNDARY",
             "ROLLBACK_INDEPENDENT_OF_PRACTICE_AND_THEORY"
           ],
-          "acceptanceContributionIssues": [703, 704, 705],
-          "directRegressionRows": [3, 7, 15, 17, 21],
-          "inheritedCommonRegressionRows": [1, 4, 6, 8, 11, 14],
+          "acceptanceContributionIssues": [
+            703,
+            704,
+            705
+          ],
+          "directRegressionRows": [
+            3,
+            7,
+            15,
+            17,
+            21
+          ],
+          "inheritedCommonRegressionRows": [
+            1,
+            4,
+            6,
+            8,
+            11,
+            14
+          ],
           "terminalIssueClosureAllowed": true,
-          "terminalClosureIssues": [703, 704, 705],
+          "terminalClosureIssues": [
+            703,
+            704,
+            705
+          ],
           "terminalWcvC2Closeout": true,
           "terminalMergeRequired": true,
           "automaticStartAllowed": false
@@ -1233,11 +1385,18 @@
       ],
       "dependencyRules": {
         "sourceFirewallAndCognitiveArchitectureAreSerial": true,
-        "c2rCPStartRequiresTerminalReplacementStages": ["C2R-A", "C2R-B"],
+        "c2rCPStartRequiresTerminalReplacementStages": [
+          "C2R-A",
+          "C2R-B"
+        ],
         "issueTerminalStateMaySubstituteForStageMerge": false,
         "issue714MustRemainOpenAfterC2RB": true,
         "c2rBCompletesOnlyIssue714Allocation": "C2",
-        "issue714RemainingAllocationsPreserved": ["C3", "C4", "C6"],
+        "issue714RemainingAllocationsPreserved": [
+          "C3",
+          "C4",
+          "C6"
+        ],
         "runtimeSubjectStagesAreCompleteOutcomes": true,
         "intermediateSubjectStagesMayRecordAcceptanceContributions": true,
         "intermediateSubjectStagesMayCloseIssues703To705": false,
@@ -1246,6 +1405,32 @@
         "issue705ClosureRequiresTerminalReplacementStage": "C2R-C-L",
         "issue706RequiresTerminalIssue": 705,
         "issue706RequiresTerminalReplacementStage": "C2R-C-L"
+      },
+      "c2rASourceContract": {
+        "decisionRecord": "docs/decisions/2026-08-15-owner-c2r-a-rights-safe-source-firewall.md",
+        "decisionId": "owner_c2r_a_rights_safe_source_firewall_2026_08_15",
+        "predecessorDecision": "docs/decisions/2026-08-14-wcv-c2-structural-recovery.md",
+        "supersedesForExactScope": [
+          "c2r_a_source_contract",
+          "post_merge_current_replacement_stage",
+          "post_merge_current_replacement_stage_issue"
+        ],
+        "repositoryAuthorityEffectiveOn": "expected_head_pinned_merge",
+        "contract": "config/dabangil-rights-safe-adaptive-variant-foundry-v1.json",
+        "focusedTest": "tests/rights-safe-adaptive-variant-foundry-contract.test.mjs",
+        "state": "complete_source_only",
+        "postMergeCurrentReplacementStage": "C2R-B",
+        "postMergeCurrentReplacementStageIssue": 714,
+        "operationalSuccessorStartRequires": [
+          "validated_c2r_a_merge_coverage_receipt",
+          "issue_702_terminal_close"
+        ],
+        "preBlueprintRightsManifestBindingRequired": true,
+        "releaseManifestMayCureMissingPreBlueprintBinding": false,
+        "directRegressionRows": [],
+        "matrixRowsChanged": [],
+        "issueClosureRequiresValidatedMergeCoverageReceipt": true,
+        "runtimeReadinessEstablished": false
       }
     },
     "campaigns": [
@@ -1254,8 +1439,12 @@
         "roadmapItemId": "WCV-C1",
         "name": "Authority reconciliation",
         "leadIssue": 713,
-        "includedIssues": [713],
-        "dependencies": ["WCV-0"],
+        "includedIssues": [
+          713
+        ],
+        "dependencies": [
+          "WCV-0"
+        ],
         "state": "completed_source_only_on_reconciliation_merge",
         "runtimeMutation": false,
         "currentRuntimeReadinessEstablished": false
@@ -1265,9 +1454,17 @@
         "roadmapItemId": "WCV-C2",
         "name": "First Trusted Repair Structural Recovery",
         "leadIssue": 717,
-        "includedIssues": [702, 714, 703, 704, 705],
-        "dependencies": ["WCV-C1"],
-        "state": "structural_recovery_authority_installed_no_stage_started",
+        "includedIssues": [
+          702,
+          714,
+          703,
+          704,
+          705
+        ],
+        "dependencies": [
+          "WCV-C1"
+        ],
+        "state": "c2r_a_complete_source_only_c2r_b_authorized_unstarted",
         "wcvC2Complete": false,
         "terminalDonorPr": 716,
         "terminalDonorMerged": false,
@@ -1298,8 +1495,14 @@
         "roadmapItemId": "WCV-C3",
         "name": "Durable Learning and Daily Command Vertical",
         "leadIssue": 706,
-        "includedIssues": [706, 707, 708],
-        "dependencies": ["WCV-C2"],
+        "includedIssues": [
+          706,
+          707,
+          708
+        ],
+        "dependencies": [
+          "WCV-C2"
+        ],
         "state": "queued_blocked_until_terminal_c2r_c_l",
         "terminalReplacementDependency": "C2R-C-L",
         "automaticStartAllowed": false
@@ -1309,8 +1512,13 @@
         "roadmapItemId": "WCV-C4",
         "name": "Owner Proof and Commercial Readiness",
         "leadIssue": 709,
-        "includedIssues": [709, 710],
-        "dependencies": ["ULC-I1"],
+        "includedIssues": [
+          709,
+          710
+        ],
+        "dependencies": [
+          "ULC-I1"
+        ],
         "state": "queued",
         "learnerActivationAuthorized": false,
         "paymentActivationAuthorized": false
@@ -1320,8 +1528,13 @@
         "roadmapItemId": "WCV-C5",
         "name": "Frozen Paid Cohort",
         "leadIssue": 711,
-        "includedIssues": [711],
-        "dependencies": ["WCV-C4", "O4W"],
+        "includedIssues": [
+          711
+        ],
+        "dependencies": [
+          "WCV-C4",
+          "O4W"
+        ],
         "state": "queued",
         "cohortAuthorizationGate": "O4W",
         "cohortAuthorization": {
@@ -1342,15 +1555,19 @@
         "roadmapItemId": "WCV-C6",
         "name": "Verified-Bank and Calibration Flywheel",
         "leadIssue": 712,
-        "includedIssues": [712],
-        "dependencies": ["WCV-C5"],
+        "includedIssues": [
+          712
+        ],
+        "dependencies": [
+          "WCV-C5"
+        ],
         "state": "queued",
         "rawLearnerBodyReuseOrTrainingAllowed": false
       }
     ],
     "issue714Tracker": {
       "issue": 714,
-      "state": "open_c2r_b_source_contract_prerequisite",
+      "state": "open_c2r_b_authorized_unstarted",
       "currentMergeProducing": false,
       "mergeProducingWhenStageActive": true,
       "standalonePrerequisiteBeforeC2RCP": true,
@@ -1360,7 +1577,11 @@
       "behaviorImplementedByC1": false,
       "c2rBClosesIssue714": false,
       "c2rBCompletesOnlyAllocation": "C2",
-      "remainingAllocationsAfterC2RB": ["C3", "C4", "C6"],
+      "remainingAllocationsAfterC2RB": [
+        "C3",
+        "C4",
+        "C6"
+      ],
       "requirementInventory": [
         "adaptive_expertise_controller",
         "cognitive_load_budget",
@@ -1417,16 +1638,25 @@
       }
     },
     "historicalStandaloneSequence": {
-      "sequence": [702, 714, 703],
+      "sequence": [
+        702,
+        714,
+        703
+      ],
       "operative": false,
       "preservedAsHistory": true
     },
     "soleNextImplementationCampaign": "C2",
     "soleNextImplementationLeadIssue": 717,
     "soleNextImplementationTrackerIssue": 717,
-    "soleNextReplacementStage": "C2R-A",
-    "soleNextReplacementStageIssue": 702,
-    "laterCampaignsQueued": ["C3", "C4", "C5", "C6"],
+    "soleNextReplacementStage": "C2R-B",
+    "soleNextReplacementStageIssue": 714,
+    "laterCampaignsQueued": [
+      "C3",
+      "C4",
+      "C5",
+      "C6"
+    ],
     "legacyFactualGates": {
       "CPF-1": {
         "status": "blocked",
@@ -1471,8 +1701,8 @@
     "soleNextImplementationCampaignId": "C2",
     "soleNextImplementationLeadIssue": 717,
     "soleNextImplementationTrackerIssue": 717,
-    "soleNextReplacementStageId": "C2R-A",
-    "soleNextReplacementStageIssue": 702,
+    "soleNextReplacementStageId": "C2R-B",
+    "soleNextReplacementStageIssue": 714,
     "primaryStatusesUsed": [
       "completed",
       "blocked",
@@ -1551,7 +1781,9 @@
       "decisionScope": "exact_frozen_cohort_manifest_activation_only",
       "gatedCampaign": "WCV-C5",
       "gatedIssue": 711,
-      "dependencies": ["ULC-L1"],
+      "dependencies": [
+        "ULC-L1"
+      ],
       "authorizationGranted": false,
       "automaticStartAllowed": false,
       "learnerActivationAuthorized": false,
@@ -1647,5 +1879,30 @@
     "tests/agent-factory-github-actions-button.test.mjs",
     "tests/s235a-owner-private-golden-3-readiness.test.mjs",
     "tests/s234r-owner-dogfood-private-plane-schedule-amendment.test.mjs"
-  ]
+  ],
+  "c2rASourceContractDecision": {
+    "decisionRecord": "docs/decisions/2026-08-15-owner-c2r-a-rights-safe-source-firewall.md",
+    "decisionId": "owner_c2r_a_rights_safe_source_firewall_2026_08_15",
+    "predecessorDecision": "docs/decisions/2026-08-14-wcv-c2-structural-recovery.md",
+    "supersedesForExactScope": [
+      "c2r_a_source_contract",
+      "post_merge_current_replacement_stage",
+      "post_merge_current_replacement_stage_issue"
+    ],
+    "repositoryAuthorityEffectiveOn": "expected_head_pinned_merge",
+    "contract": "config/dabangil-rights-safe-adaptive-variant-foundry-v1.json",
+    "stageId": "C2R-A",
+    "issue": 702,
+    "status": "candidate_represents_complete_source_only_after_merge_and_receipt",
+    "postMergeCurrentReplacementStage": "C2R-B",
+    "postMergeCurrentReplacementStageIssue": 714,
+    "operationalSuccessorStartRequires": [
+      "validated_c2r_a_merge_coverage_receipt",
+      "issue_702_terminal_close"
+    ],
+    "preBlueprintRightsManifestBindingRequired": true,
+    "releaseManifestMayCureMissingPreBlueprintBinding": false,
+    "runtimeReadinessEstablished": false,
+    "automaticStartAllowed": false
+  }
 }

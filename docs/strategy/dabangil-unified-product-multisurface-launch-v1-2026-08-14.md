@@ -6,7 +6,11 @@
 - Relationship: mandatory subordinate launch amendment
 - Machine contract:
   `config/dabangil-unified-product-multisurface-launch-v1.json`
-- Current implementation authority: WCV-C2 / C2 / C2R-A / #702, unchanged
+- Installation-time implementation authority (historical 2026-08-14 state):
+  WCV-C2 / C2 / C2R-A / #702
+- Current repository selector after the later exact C2R-A supersession:
+  WCV-C2 / C2 / #717 / C2R-B / #714; operational start still requires the
+  validated A receipt and #702 closure
 - Current activation: none
 
 ## 1. Product convergence
@@ -344,7 +348,9 @@ ULC-0 source validation must prove:
 - one active master (V13);
 - one ULC-0 lead issue (#719);
 - exact preservation of the WCV-C2R object, roadmap block, and 21-row matrix;
-- exact current selection WCV-C2/C2/C2R-A/#702;
+- exact preserved installation-time selection WCV-C2/C2/C2R-A/#702;
+- exact current repository selector WCV-C2/C2/#717/C2R-B/#714, with B
+  operationally blocked until the validated A receipt and #702 closure;
 - unique future IDs and resolved dependencies;
 - no selected or started ULC stage;
 - no O4W/C5/C6 dependency on free ULC-L1;

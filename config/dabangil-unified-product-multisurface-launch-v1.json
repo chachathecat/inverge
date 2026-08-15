@@ -33,9 +33,15 @@
     "roadmapItemId": "WCV-C2",
     "campaignId": "C2",
     "wcvC2Complete": false,
-    "currentReplacementStageId": "C2R-A",
-    "currentReplacementStageIssue": 702,
+    "currentReplacementStageId": "C2R-B",
+    "currentReplacementStageIssue": 714,
     "currentReplacementStageState": "authorized_unstarted",
+    "currentSelectorDecision": "docs/decisions/2026-08-15-owner-c2r-a-rights-safe-source-firewall.md",
+    "structuralChainDecision": "docs/decisions/2026-08-14-wcv-c2-structural-recovery.md",
+    "c2rBOperationalStartRequires": [
+      "validated_c2r_a_merge_coverage_receipt",
+      "issue_702_terminal_close"
+    ],
     "replacementStageChain": [
       "C2R-A",
       "C2R-B",
@@ -45,8 +51,8 @@
     ],
     "globalMergeProducingWriterLimit": 1,
     "automaticStartAllowed": false,
-    "wcvC2StructuralRecoveryCanonicalSha256": "2dd43160bbb71aa11de0dcd593949200291c5bb52a0b21ee8f3bc961f3682fe6",
-    "roadmapWcvC2BlockSha256": "a3e2b591ee6efe88b2e99a2f9a37f25e0691519b6f0041e46f8045ce3d44fccf",
+    "wcvC2StructuralRecoveryCanonicalSha256": "294fbd66bf1672ec9a6441fe63e9367cb0965e03ecc63d1fbdb9110a60fdd126",
+    "roadmapWcvC2BlockSha256": "4175860d4d5152d52936dc62b4b3882f87e05cfb35be248622bd9043edf98bc9",
     "regressionMatrixSha256": "b92d4ad88a44e10a7eb61670509c288cf871916a2570253f3f25cef211ebffeb",
     "regressionMatrixRowCount": 21
   },
@@ -154,7 +160,10 @@
   },
   "legacyPublicPaidLaunchGate": {
     "roadmapItemId": "S225",
-    "requiredDependenciesExactly": ["O4D", "WCV-C6"],
+    "requiredDependenciesExactly": [
+      "O4D",
+      "WCV-C6"
+    ],
     "independentOwnerAuthorization": "O4D",
     "terminalPaidEvidenceRoute": "WCV-C6",
     "bothDependenciesRequired": true,
@@ -167,24 +176,65 @@
     "publicReleaseAuthorized": false
   },
   "activeRoadmapDependencyMirror": {
-    "WCV-C3": ["WCV-C2"],
-    "ULC-M1": ["WCV-C3", "S241A"],
-    "ULC-M2": ["ULC-M1"],
-    "ULC-K1": ["ULC-M2"],
-    "ULC-F1": ["ULC-K1", "S238B"],
-    "ULC-F2": ["ULC-F1"],
-    "ULC-F3": ["ULC-F2"],
-    "ULC-F4": ["ULC-F3"],
-    "ULC-F5": ["ULC-F4"],
-    "ULC-I1": ["ULC-F5"],
-    "WCV-C4": ["ULC-I1"],
-    "ULC-R1": ["WCV-C4"],
-    "ULC-L1": ["ULC-R1"],
-    "O4W": ["ULC-L1"],
-    "WCV-C5": ["WCV-C4", "O4W"],
-    "WCV-C6": ["WCV-C5"],
-    "O4D": ["S245C", "S242V"],
-    "S225": ["O4D", "WCV-C6"]
+    "WCV-C3": [
+      "WCV-C2"
+    ],
+    "ULC-M1": [
+      "WCV-C3",
+      "S241A"
+    ],
+    "ULC-M2": [
+      "ULC-M1"
+    ],
+    "ULC-K1": [
+      "ULC-M2"
+    ],
+    "ULC-F1": [
+      "ULC-K1",
+      "S238B"
+    ],
+    "ULC-F2": [
+      "ULC-F1"
+    ],
+    "ULC-F3": [
+      "ULC-F2"
+    ],
+    "ULC-F4": [
+      "ULC-F3"
+    ],
+    "ULC-F5": [
+      "ULC-F4"
+    ],
+    "ULC-I1": [
+      "ULC-F5"
+    ],
+    "WCV-C4": [
+      "ULC-I1"
+    ],
+    "ULC-R1": [
+      "WCV-C4"
+    ],
+    "ULC-L1": [
+      "ULC-R1"
+    ],
+    "O4W": [
+      "ULC-L1"
+    ],
+    "WCV-C5": [
+      "WCV-C4",
+      "O4W"
+    ],
+    "WCV-C6": [
+      "WCV-C5"
+    ],
+    "O4D": [
+      "S245C",
+      "S242V"
+    ],
+    "S225": [
+      "O4D",
+      "WCV-C6"
+    ]
   },
   "architecture": {
     "webAndTrustedHttpApi": {
@@ -242,7 +292,9 @@
       {
         "order": 1,
         "id": "WCV-C3",
-        "dependencies": ["C2R-C-L"],
+        "dependencies": [
+          "C2R-C-L"
+        ],
         "outcome": "durable evidence, D+1/D+7, transfer, reopening, Ledger, Review Queue and Today",
         "outcomeType": "independently_deployable_learner_outcome",
         "state": "queued_future_gated",
@@ -253,8 +305,12 @@
       {
         "order": 2,
         "id": "ULC-M1",
-        "dependencies": ["WCV-C3"],
-        "operationalPrerequisites": ["S241A"],
+        "dependencies": [
+          "WCV-C3"
+        ],
+        "operationalPrerequisites": [
+          "S241A"
+        ],
         "outcome": "native install/authentication, Today, Review Queue, push registration, deep link and in-app account deletion",
         "outcomeType": "independently_deployable_native_learner_outcome",
         "state": "queued_future_gated",
@@ -265,7 +321,9 @@
       {
         "order": 3,
         "id": "ULC-M2",
-        "dependencies": ["ULC-M1"],
+        "dependencies": [
+          "ULC-M1"
+        ],
         "outcome": "camera/PDF/photo share, multipage capture, OCR confirmation, second-round Trusted Repair, offline draft and idempotent synchronization",
         "outcomeType": "independently_deployable_native_learner_outcome",
         "state": "queued_future_gated",
@@ -276,7 +334,9 @@
       {
         "order": 4,
         "id": "ULC-K1",
-        "dependencies": ["ULC-M2"],
+        "dependencies": [
+          "ULC-M2"
+        ],
         "outcome": "learner error, Concept Decoder, precise definition, Formula Graph, hidden reconstruction, review scheduling and cross-surface parity",
         "outcomeType": "independently_deployable_learner_knowledge_repair_outcome",
         "state": "queued_future_gated",
@@ -287,8 +347,12 @@
       {
         "order": 5,
         "id": "ULC-F1",
-        "dependencies": ["ULC-K1"],
-        "operationalPrerequisites": ["S238B"],
+        "dependencies": [
+          "ULC-K1"
+        ],
+        "operationalPrerequisites": [
+          "S238B"
+        ],
         "outcome": "five-choice Civil Law MCQ across Web/iOS/Android",
         "outcomeType": "independently_deployable_first_round_subject_outcome",
         "state": "queued_future_gated",
@@ -299,7 +363,9 @@
       {
         "order": 6,
         "id": "ULC-F2",
-        "dependencies": ["ULC-F1"],
+        "dependencies": [
+          "ULC-F1"
+        ],
         "outcome": "Economics MCQ across Web/iOS/Android",
         "outcomeType": "independently_deployable_first_round_subject_outcome",
         "state": "queued_future_gated",
@@ -310,7 +376,9 @@
       {
         "order": 7,
         "id": "ULC-F3",
-        "dependencies": ["ULC-F2"],
+        "dependencies": [
+          "ULC-F2"
+        ],
         "outcome": "Real Estate Principles MCQ across Web/iOS/Android",
         "outcomeType": "independently_deployable_first_round_subject_outcome",
         "state": "queued_future_gated",
@@ -321,7 +389,9 @@
       {
         "order": 8,
         "id": "ULC-F4",
-        "dependencies": ["ULC-F3"],
+        "dependencies": [
+          "ULC-F3"
+        ],
         "outcome": "Appraisal-related Law MCQ across Web/iOS/Android",
         "outcomeType": "independently_deployable_first_round_subject_outcome",
         "state": "queued_future_gated",
@@ -332,7 +402,9 @@
       {
         "order": 9,
         "id": "ULC-F5",
-        "dependencies": ["ULC-F4"],
+        "dependencies": [
+          "ULC-F4"
+        ],
         "outcome": "Accounting MCQ across Web/iOS/Android",
         "outcomeType": "independently_deployable_first_round_subject_outcome",
         "state": "queued_future_gated",
@@ -343,7 +415,9 @@
       {
         "order": 10,
         "id": "ULC-I1",
-        "dependencies": ["ULC-F5"],
+        "dependencies": [
+          "ULC-F5"
+        ],
         "outcome": "Web-primary instructor authoring, rubric, source, class, assignment, AI pre-review, review queue and approval",
         "outcomeType": "independently_deployable_instructor_outcome",
         "state": "queued_future_gated",
@@ -354,7 +428,9 @@
       {
         "order": 11,
         "id": "WCV-C4",
-        "dependencies": ["ULC-I1"],
+        "dependencies": [
+          "ULC-I1"
+        ],
         "outcome": "complete final-product Owner proof, red-team and routing/instructional-mode proof",
         "outcomeType": "independently_verifiable_owner_proof_outcome",
         "state": "queued_future_gated",
@@ -365,7 +441,9 @@
       {
         "order": 12,
         "id": "ULC-R1",
-        "dependencies": ["WCV-C4"],
+        "dependencies": [
+          "WCV-C4"
+        ],
         "outcome": "privacy, AI disclosure, deletion, store metadata, review account, native build evidence and coordinated-release readiness",
         "outcomeType": "independently_verifiable_release_readiness_outcome",
         "state": "queued_future_gated",
@@ -376,7 +454,9 @@
       {
         "order": 13,
         "id": "ULC-L1",
-        "dependencies": ["ULC-R1"],
+        "dependencies": [
+          "ULC-R1"
+        ],
         "outcome": "free-limited public Web/iOS/Android 1.0 with payment activation false",
         "outcomeType": "coordinated_public_release_outcome",
         "state": "queued_future_gated",
@@ -475,7 +555,11 @@
     "validationRecord": "docs/qa/dabangil-multisurface-launch-validation.md",
     "crossSurfaceParityMatrix": "docs/qa/dabangil-cross-surface-parity-matrix.md",
     "storeComplianceMatrix": "docs/qa/dabangil-store-compliance-matrix.md",
-    "localActionableP0P1P2Required": [0, 0, 0],
+    "localActionableP0P1P2Required": [
+      0,
+      0,
+      0
+    ],
     "freshExactHeadCiRequired": true,
     "freshExactHeadVercelRequired": true,
     "singleFinalExactHeadAutomatedReviewRequired": true,
