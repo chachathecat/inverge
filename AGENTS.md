@@ -61,12 +61,27 @@ close #703, #704 or #705; only terminal C2R-C-L may close them, complete
 WCV-C2 and unblock #706. No replacement stage starts automatically.
 
 The authority-graph identifiers are distinct: roadmap item `WCV-C2`, campaign
-ID `C2`, recovery tracker #717, and current authorized-but-unstarted stage
-`C2R-A` for Issue #702. C2R-C-P may start only after terminal validated merges
+ID `C2`, recovery tracker #717, completed source-only stage `C2R-A` for Issue
+#702, and current authorized-but-unstarted stage `C2R-B` for Issue #714. C2R-C-P may start only after terminal validated merges
 of both C2R-A and C2R-B; an issue state or issue closure cannot substitute for
 a replacement-stage merge. C2R-B completes only the Issue #714 allocation for
 campaign C2 and must leave Issue #714 open with its C3, C4 and C6 allocations
 preserved.
+
+## C2R-A rights-safe source firewall
+
+C2R-A/#702 installs the source-only rights-safe adaptive variant foundry in
+`config/dabangil-rights-safe-adaptive-variant-foundry-v1.json`. The exact
+source classes, machine denials, unconditional raw-body training ban,
+three-bank separation, bank-first generation-on-gap cascade, near-copy and
+reconstruction firewall, dispute/retirement states and lineage rules are
+mandatory. No runtime or activation is authorized.
+
+The candidate represents its post-merge state: C2R-A is complete source-only
+only after expected-head-pinned merge and validated receipt; C2R-B/#714 is
+then authorized but unstarted. C2R-C-P remains blocked on validated terminal
+merges of both stages. No donor matrix row is assigned to C2R-A, so all 21
+rows remain unchanged and uncovered.
 
 ## Product scope (Owner O1R amendment on 2026-07-26)
 

@@ -1211,3 +1211,13 @@ regenerate exact-head evidence.
 
 Mineral Cobalt `#4653A6`, the approved Figma assets, and home work remain
 queued. They are not implemented or completed by this reset.
+
+## 2026-08-15 C2R-A rights-safe source contract
+
+The Owner decision `docs/decisions/2026-08-15-owner-c2r-a-rights-safe-source-firewall.md` and machine contract `config/dabangil-rights-safe-adaptive-variant-foundry-v1.json` complete the C2R-A source outcome under merge-and-receipt semantics.
+
+The eight exact source classes fail closed through machine denial codes. Academy/commercial material, learner-private material, rights-unknown material and blocked material cannot enter any shared blueprint, generation, bank, cache, calibration, analytics, training or paid-delivery route. The raw learner-body training ban is unconditional and consent cannot override it.
+
+Learning, Transfer and Measurement banks remain distinct. Bank search precedes bodyless scarcity recording and offline generation. Candidates traverse the exact cheap-to-expensive validation cascade; near-copy, reconstruction, rights, deterministic/source, dispute, staleness and retirement failures block release or assignment.
+
+This is source authority only. C2R-A has no assigned donor matrix rows, so the 21-row matrix remains unchanged. The post-merge next stage is C2R-B/#714, authorized but unstarted; C2R-C-P remains blocked until terminal validated A and B merges.

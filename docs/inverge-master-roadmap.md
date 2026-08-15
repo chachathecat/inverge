@@ -31,10 +31,11 @@ Student surfaces are exactly Web, iOS/iPadOS and Android. The complete
 instructor authoring/review workbench is Web-primary. Student apps consume
 only assigned work and approved feedback.
 
-The current implementation authority remains unchanged: WCV-C2, campaign
-C2, Tracker #717, current replacement stage C2R-A for Issue #702, the exact
-five-stage C2R chain, one merge-producing writer and no automatic start.
-C2R-A remains authorized and unstarted. ULC-0 implements nothing.
+The current implementation authority is WCV-C2, campaign C2, Tracker #717,
+the exact five-stage C2R chain, one merge-producing writer and no automatic
+start. C2R-A/#702 is represented as complete source-only under merge-and-receipt
+semantics; C2R-B/#714 is the current authorized and unstarted stage. ULC-0
+implements nothing.
 
 The future free-limited public ULC-L1 route requires Today, Review Queue,
 five first-round MCQ subjects, three second-round Trusted Repair subjects,
@@ -115,8 +116,8 @@ Tracker #717 owns the exact serial recovery graph:
 `C2R-A/#702 → C2R-B/#714 → C2R-C-P → C2R-C-T → C2R-C-L`
 
 The formal identities remain separate: roadmap item `WCV-C2`, campaign ID
-`C2`, recovery tracker #717, and current authorized but unstarted stage
-`C2R-A` for Issue #702.
+`C2`, recovery tracker #717, completed source-only stage `C2R-A` for Issue
+#702, and current authorized but unstarted stage `C2R-B` for Issue #714.
 
 The sequence is terminally serial. C2R-A and C2R-B are independently complete
 source-contract outcomes and are not parallel. C2R-C-P, C2R-C-T and C2R-C-L
@@ -680,3 +681,9 @@ Production, public/shared exposure, real learners, Golden 9, billing,
 telemetry, navigation, models, prompts, secrets, or deployment changes.
 S236A remains queued until completed exact S236P and then requires a separate
 manual start.
+
+## 2026-08-15 C2R-A Rights-Safe Source Firewall
+
+C2R-A installs the machine-readable rights-safe adaptive variant foundry, exact source classes and denials, raw-body training prohibition, three-bank separation, bank-first generation-on-gap policy, ordered validation cascade, near-copy/reconstruction firewall, and dispute/retirement lineage. It is source-only and activates nothing.
+
+No PR #716 donor finding row is assigned to C2R-A; the 21-row matrix remains unchanged. After expected-head-pinned merge and live receipt validation, #702 may close and C2R-B/#714 is the sole next authorized but unstarted stage. Runtime remains blocked.

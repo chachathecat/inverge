@@ -241,8 +241,8 @@ test("keeps WCV-C2 as the metadata umbrella led by recovery tracker #717", async
   assert.equal(roadmap.program.soleNextImplementationCampaign, "C2");
   assert.equal(roadmap.program.soleNextImplementationLeadIssue, 717);
   assert.equal(roadmap.program.soleNextImplementationTrackerIssue, 717);
-  assert.equal(roadmap.program.soleNextReplacementStage, "C2R-A");
-  assert.equal(roadmap.program.soleNextReplacementStageIssue, 702);
+  assert.equal(roadmap.program.soleNextReplacementStage, "C2R-B");
+  assert.equal(roadmap.program.soleNextReplacementStageIssue, 714);
   assert.equal(roadmap.program.structuralRecoveryTrackerIssue, 717);
   assert.equal(roadmap.program.wcvC2Complete, false);
   assert.equal(roadmap.program.replacementStageAutomaticStartAllowed, false);

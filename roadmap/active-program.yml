@@ -16,8 +16,8 @@ program:
   soleNextImplementationCampaign: C2
   soleNextImplementationLeadIssue: 717
   soleNextImplementationTrackerIssue: 717
-  soleNextReplacementStage: C2R-A
-  soleNextReplacementStageIssue: 702
+  soleNextReplacementStage: C2R-B
+  soleNextReplacementStageIssue: 714
   crossVerticalAcceptanceTrackerIssue: 714
   structuralRecoveryTrackerIssue: 717
   terminalDonorPr: 716
@@ -354,7 +354,7 @@ items:
   - id: WCV-C2
     title: C2 First Trusted Repair Structural Recovery
     status: queued
-    executionState: structural_recovery_authority_installed_no_stage_started
+    executionState: c2r_a_complete_source_only_c2r_b_authorized_unstarted
     campaignId: C2
     leadIssue: 717
     includedIssues: [702, 714, 703, 704, 705]
@@ -375,8 +375,15 @@ items:
     coverageSuccessorRepositoryPrRequired: false
     terminalIssueClosureRequiresValidatedCoverageReceipt: true
     replacementStages: [C2R-A, C2R-B, C2R-C-P, C2R-C-T, C2R-C-L]
-    currentReplacementStage: C2R-A
-    currentReplacementStageIssue: 702
+    currentReplacementStage: C2R-B
+    currentReplacementStageIssue: 714
+    c2rAState: complete_source_only
+    c2rAIssue: 702
+    c2rADirectRegressionRows: []
+    c2rAMatrixRowsChanged: []
+    c2rAIssueClosureRequiresValidatedReceipt: true
+    c2rBState: authorized_unstarted
+    c2rBStartRequiresValidatedC2rAReceipt: true
     independentlyCompleteSourceContractStages: [C2R-A, C2R-B]
     completeLearnerVisibleRuntimeStages: [C2R-C-P, C2R-C-T, C2R-C-L]
     commonRuntimeSubstrateFirstStage: C2R-C-P

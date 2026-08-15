@@ -376,7 +376,7 @@ test("preserves the exact WCV-C2R graph, roadmap block and 21-row matrix", async
   ]);
 });
 
-test("keeps C2R-A as the sole implementation selection with one writer", async () => {
+test("keeps C2R-B as the sole implementation selection after C2R-A with one writer", async () => {
   const [launch, unified, roadmapSource] = await Promise.all([
     json(CONTRACT),
     json("config/dabangil-unified-program-contract.json"),
@@ -393,14 +393,14 @@ test("keeps C2R-A as the sole implementation selection with one writer", async (
   assert.equal(roadmap.program.soleNextImplementationCampaign, "C2");
   assert.equal(roadmap.program.soleNextImplementationLeadIssue, 717);
   assert.equal(roadmap.program.soleNextImplementationTrackerIssue, 717);
-  assert.equal(roadmap.program.soleNextReplacementStage, "C2R-A");
-  assert.equal(roadmap.program.soleNextReplacementStageIssue, 702);
+  assert.equal(roadmap.program.soleNextReplacementStage, "C2R-B");
+  assert.equal(roadmap.program.soleNextReplacementStageIssue, 714);
   assert.equal(roadmap.program.globalMergeProducingWriterLimit, 1);
   assert.equal(roadmap.program.replacementStageAutomaticStartAllowed, false);
   assert.equal(unified.roadmapContract.soleNextImplementationItemId, "WCV-C2");
   assert.equal(unified.roadmapContract.soleNextImplementationCampaignId, "C2");
-  assert.equal(unified.roadmapContract.soleNextReplacementStageId, "C2R-A");
-  assert.equal(unified.roadmapContract.soleNextReplacementStageIssue, 702);
+  assert.equal(unified.roadmapContract.soleNextReplacementStageId, "C2R-B");
+  assert.equal(unified.roadmapContract.soleNextReplacementStageIssue, 714);
   assert.equal(preserved.currentReplacementStageState, "authorized_unstarted");
   assert.equal(plan.globalMergeProducingWriterLimit, 1);
   assert.equal(plan.activeWriterCount, 0);
