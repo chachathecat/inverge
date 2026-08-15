@@ -12,6 +12,32 @@ async function json(path) {
   return JSON.parse(await text(path));
 }
 
+test("keeps the documented C2R-A evidence command executable and focused", async () => {
+  const [packageJson, qa] = await Promise.all([
+    json("package.json"),
+    text("docs/qa/rights-safe-adaptive-variant-foundry-validation.md"),
+  ]);
+  const intendedTestPaths = [
+    "tests/rights-safe-adaptive-variant-foundry-contract.test.mjs",
+    "tests/wcv-c2r-structural-recovery-authority.test.mjs",
+    "tests/wcv-campaign-authority-roadmap-reconciliation.test.mjs",
+    "tests/dabangil-unified-product-multisurface-launch-authority.test.mjs",
+  ];
+  const canonicalCommand = `node scripts/run-node-tests.mjs ${intendedTestPaths.join(" ")}`;
+
+  assert.equal(packageJson.scripts.test, "node scripts/run-node-tests.mjs");
+  assert.equal(Object.hasOwn(packageJson.scripts, "test:node"), false);
+  assert.doesNotMatch(qa, /npm run test:node/);
+  assert.equal(qa.includes(canonicalCommand), true);
+
+  const documentedCommands = [...qa.matchAll(/`(node scripts\/run-node-tests\.mjs(?: [^`\n]+)?)`/g)].map(
+    ([, command]) => command,
+  );
+  assert.deepEqual(documentedCommands, [canonicalCommand]);
+  assert.deepEqual(canonicalCommand.split(/\s+/).slice(2), intendedTestPaths);
+  await Promise.all(intendedTestPaths.map((path) => text(path)));
+});
+
 test("C2RA-SOURCE-001 and C2RA-RAW-002 fail closed across every shared route", async () => {
   const contract = await json(CONTRACT);
   const sourceClasses = ["INVERGE_ORIGINAL","RIGHTS_CLEARED_OFFICIAL","CONTRACTED_EXPERT_ORIGINAL","CLEARED_DETERMINISTIC_TEMPLATE","USER_PRIVATE_ONLY","ACADEMY_OR_COMMERCIAL_TEXTBOOK","RIGHTS_UNKNOWN","BLOCKED"];

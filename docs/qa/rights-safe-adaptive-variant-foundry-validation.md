@@ -17,6 +17,6 @@ The executable authority is `config/dabangil-rights-safe-adaptive-variant-foundr
 
 ## Evidence command
 
-`npm run test:node -- tests/rights-safe-adaptive-variant-foundry-contract.test.mjs tests/wcv-c2r-structural-recovery-authority.test.mjs tests/wcv-campaign-authority-roadmap-reconciliation.test.mjs tests/dabangil-unified-product-multisurface-launch-authority.test.mjs`
+`node scripts/run-node-tests.mjs tests/rights-safe-adaptive-variant-foundry-contract.test.mjs tests/wcv-c2r-structural-recovery-authority.test.mjs tests/wcv-campaign-authority-roadmap-reconciliation.test.mjs tests/dabangil-unified-product-multisurface-launch-authority.test.mjs`
 
 The merge receipt must name the focused test path. `coveredFindingThreadIds` is exactly `[]`; no matrix row is changed or pre-claimed as effective coverage.
