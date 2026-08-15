@@ -9,6 +9,8 @@ const DECISION =
   "docs/decisions/2026-08-14-wcv-c2-structural-recovery.md";
 const C2R_A_DECISION =
   "docs/decisions/2026-08-15-owner-c2r-a-rights-safe-source-firewall.md";
+const C2R_B_DECISION =
+  "docs/decisions/2026-08-15-owner-c2r-b-typed-proof-obligations.md";
 const MATRIX =
   "docs/qa/wcv-c2-replacement-regression-matrix.md";
 const FOCUSED_TEST =
@@ -255,13 +257,14 @@ test("installs the exact terminally serial five-stage replacement chain", async 
       "independently_deployable_learner_visible_runtime_vertical",
     );
   }
-  assert.equal(stages[0].state, "complete_source_only");
-  assert.equal(stages[1].state, "authorized_unstarted");
   for (const stage of stages) {
     assert.equal(stage.terminalMergeRequired, true, stage.id);
     assert.equal(stage.automaticStartAllowed, false, stage.id);
   }
-  for (const stage of stages.slice(2)) {
+  assert.equal(stages[0].state, "complete_source_only");
+  assert.equal(stages[1].state, "complete_source_only");
+  assert.equal(stages[2].state, "authorized_unstarted");
+  for (const stage of stages.slice(3)) {
     assert.equal(stage.state, "queued_dependency_blocked", stage.id);
   }
 });
@@ -289,8 +292,8 @@ test("resolves roadmap, campaign, tracker and current-stage authority without al
     campaignId: "C2",
     recoveryTrackerIssue: 717,
     structuralAuthorityPr: 718,
-    currentReplacementStageId: "C2R-B",
-    currentReplacementStageIssue: 714,
+    currentReplacementStageId: "C2R-C-P",
+    currentReplacementStageIssue: 703,
     replacementStageChain: ["C2R-A", "C2R-B", "C2R-C-P", "C2R-C-T", "C2R-C-L"],
   });
   assert.equal(campaignMatches.length, 1);
@@ -314,7 +317,7 @@ test("resolves roadmap, campaign, tracker and current-stage authority without al
   }
   const current = stages.filter((stage) => stage.state === "authorized_unstarted");
   assert.deepEqual(current.map(({ id, issue }) => ({ id, issue })), [
-    { id: "C2R-B", issue: 714 },
+    { id: "C2R-C-P", issue: 703 },
   ]);
   for (const allocation of Object.keys(overlay.issue714Tracker.allocations)) {
     assert.equal(
@@ -402,6 +405,8 @@ test("uses terminal replacement-stage merges and preserves open #714 allocations
     [],
   );
   assert.equal(issue714.c2rBClosesIssue714, false);
+  assert.equal(issue714.c2AllocationComplete, true);
+  assert.equal(issue714.c2rBState, "complete_source_only");
   assert.equal(issue714.c2rBCompletesOnlyAllocation, "C2");
   assert.deepEqual(issue714.remainingAllocationsAfterC2RB, ["C3", "C4", "C6"]);
   assert.equal(rules.runtimeSubjectStagesAreCompleteOutcomes, true);
@@ -433,8 +438,8 @@ test("keeps roadmap selection metadata-only with one writer and no stage auto-st
   assert.equal(roadmap.program.soleNextImplementationCampaign, "C2");
   assert.equal(roadmap.program.soleNextImplementationLeadIssue, 717);
   assert.equal(roadmap.program.soleNextImplementationTrackerIssue, 717);
-  assert.equal(roadmap.program.soleNextReplacementStage, "C2R-B");
-  assert.equal(roadmap.program.soleNextReplacementStageIssue, 714);
+  assert.equal(roadmap.program.soleNextReplacementStage, "C2R-C-P");
+  assert.equal(roadmap.program.soleNextReplacementStageIssue, 703);
   assert.equal(roadmap.program.structuralRecoveryTrackerIssue, 717);
   assert.equal(roadmap.program.terminalDonorPr, 716);
   assert.equal(roadmap.program.terminalDonorMerged, false);
@@ -442,8 +447,10 @@ test("keeps roadmap selection metadata-only with one writer and no stage auto-st
   assert.equal(roadmap.program.replacementStageAutomaticStartAllowed, false);
   assert.equal(c2.leadIssue, 717);
   assert.equal(c2.campaignId, "C2");
-  assert.equal(c2.currentReplacementStage, "C2R-B");
-  assert.equal(c2.currentReplacementStageIssue, 714);
+  assert.equal(c2.currentReplacementStage, "C2R-C-P");
+  assert.equal(c2.currentReplacementStageIssue, 703);
+  assert.equal(c2.c2rBState, "complete_source_only");
+  assert.equal(c2.c2rCPState, "authorized_unstarted");
   assert.deepEqual(c2.replacementStages, [
     "C2R-A",
     "C2R-B",
@@ -496,8 +503,8 @@ test("keeps roadmap selection metadata-only with one writer and no stage auto-st
     .roadmapContract;
   assert.equal(roadmapContract.soleNextImplementationCampaignId, "C2");
   assert.equal(roadmapContract.soleNextImplementationTrackerIssue, 717);
-  assert.equal(roadmapContract.soleNextReplacementStageId, "C2R-B");
-  assert.equal(roadmapContract.soleNextReplacementStageIssue, 714);
+  assert.equal(roadmapContract.soleNextReplacementStageId, "C2R-C-P");
+  assert.equal(roadmapContract.soleNextReplacementStageIssue, 703);
 });
 
 test("installs all 21 donor findings as uncovered matrix rows", async () => {
@@ -759,7 +766,7 @@ test("inherits every common Practice regression in Theory and Law", async () => 
   assert.deepEqual(stages.get("C2R-C-L").inheritedCommonRegressionRows, common);
 });
 
-test("registers the exact C2R-A supersession before recovery and unaffected authority", async () => {
+test("registers the exact C2R-B then C2R-A supersessions before recovery authority", async () => {
   const agents = await text("AGENTS.md");
   const index = agents.match(
     /## Product source of truth([\s\S]*?)## Product scope/,
@@ -769,13 +776,16 @@ test("registers the exact C2R-A supersession before recovery and unaffected auth
   const prior =
     "docs/decisions/2026-08-11-owner-accelerated-vertical-slice-authority-roadmap-reconciliation.md";
 
-  assert.ok(index.indexOf(C2R_A_DECISION) >= 0);
+  assert.ok(index.indexOf(C2R_B_DECISION) >= 0);
+  assert.ok(index.indexOf(C2R_A_DECISION) > index.indexOf(C2R_B_DECISION));
   assert.ok(index.indexOf(recovery) >= 0);
   assert.ok(index.indexOf(recovery) > index.indexOf(C2R_A_DECISION));
   assert.ok(index.indexOf(prior) > index.indexOf(recovery));
   assert.match(index, /exact C2R-A rights-safe source contract/);
   assert.match(index, /current-stage selector transition to C2R-B\/#714/);
   assert.match(index, /validated C2R-A receipt and #702\s+closure/);
+  assert.match(index, /exact C2R-B typed Practice\/Theory\/Law proof architecture/);
+  assert.match(index, /post-merge current-stage selector transition to\s+C2R-C-P\/#703/);
   assert.match(index, /PR #716 terminal disposition, Tracker #717, WCV-C2 structural/);
   assert.match(index, /five-stage replacement-chain mapping/);
   assert.match(index, /V13 supremacy, WCV 1\.0\.8 subordination/);

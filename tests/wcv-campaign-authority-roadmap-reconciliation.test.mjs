@@ -241,8 +241,8 @@ test("keeps WCV-C2 as the metadata umbrella led by recovery tracker #717", async
   assert.equal(roadmap.program.soleNextImplementationCampaign, "C2");
   assert.equal(roadmap.program.soleNextImplementationLeadIssue, 717);
   assert.equal(roadmap.program.soleNextImplementationTrackerIssue, 717);
-  assert.equal(roadmap.program.soleNextReplacementStage, "C2R-B");
-  assert.equal(roadmap.program.soleNextReplacementStageIssue, 714);
+  assert.equal(roadmap.program.soleNextReplacementStage, "C2R-C-P");
+  assert.equal(roadmap.program.soleNextReplacementStageIssue, 703);
   assert.equal(roadmap.program.structuralRecoveryTrackerIssue, 717);
   assert.equal(roadmap.program.wcvC2Complete, false);
   assert.equal(roadmap.program.replacementStageAutomaticStartAllowed, false);
@@ -261,7 +261,7 @@ test("keeps WCV-C2 as the metadata umbrella led by recovery tracker #717", async
   assert.deepEqual(unified.wcvCampaignOverlay.laterCampaignsQueued, ["C3", "C4", "C5", "C6"]);
   assert.equal(
     roadmap.byId.get("WCV-C2").executionState,
-    "c2r_a_complete_source_only_c2r_b_authorized_unstarted",
+    "c2r_a_and_c2r_b_complete_source_only_c2r_c_p_authorized_unstarted",
   );
   assert.deepEqual(
     createRoadmapRunnerPlanFromYamlAt(
@@ -528,7 +528,7 @@ test("records the old atomic rule as history and authorizes serial C2R-A then C2
     unified.wcvCampaignOverlay.issue714Tracker.automaticStartAllowed,
     false,
   );
-  assert.match(contract, /Standalone\s+#702 and #714 are authorized only as/);
+  assert.match(contract, /Standalone\s+#702 and #714 were authorized only as/);
   assert.match(decision, /standalone sequence `#702 source-only → #714 source-only → #703`/);
   assert.match(recovery, /C2R-A and C2R-B are not parallel/);
 });
@@ -544,6 +544,8 @@ test("allocates every #714 requirement to C2, C3, C4 or C6 exactly once", async 
   assert.equal(tracker.mergeProducingWhenStageActive, true);
   assert.equal(tracker.automaticStartAllowed, false);
   assert.equal(tracker.behaviorImplementedByC1, false);
+  assert.equal(tracker.c2AllocationComplete, true);
+  assert.equal(tracker.c2rBState, "complete_source_only");
   assert.equal(tracker.c2rBClosesIssue714, false);
   assert.equal(tracker.c2rBCompletesOnlyAllocation, "C2");
   assert.deepEqual(tracker.remainingAllocationsAfterC2RB, ["C3", "C4", "C6"]);

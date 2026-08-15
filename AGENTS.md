@@ -5,6 +5,12 @@
 Use this authority order when sources conflict:
 
 1. a dated Owner decision for the exact decision it owns, currently
+   `docs/decisions/2026-08-15-owner-c2r-b-typed-proof-obligations.md`
+   for the exact C2R-B typed Practice/Theory/Law proof architecture, the
+   completed Issue #714 campaign-C2 allocation, the preserved open C3/C4/C6
+   allocations, and the post-merge current-stage selector transition to
+   C2R-C-P/#703; this later decision becomes repository authority only after
+   its expected-head-pinned squash merge and validated #717 receipt,
    `docs/decisions/2026-08-14-owner-unified-product-multisurface-launch.md`
    for the final 1·2차 public product, future Web/iOS/Android and instructor
    surfaces, free-limited ULC-L1 route, separate paid/evidence route, Concept
@@ -68,12 +74,14 @@ close #703, #704 or #705; only terminal C2R-C-L may close them, complete
 WCV-C2 and unblock #706. No replacement stage starts automatically.
 
 The authority-graph identifiers are distinct: roadmap item `WCV-C2`, campaign
-ID `C2`, recovery tracker #717, completed source-only stage `C2R-A` for Issue
-#702, and current authorized-but-unstarted stage `C2R-B` for Issue #714. C2R-C-P may start only after terminal validated merges
-of both C2R-A and C2R-B; an issue state or issue closure cannot substitute for
-a replacement-stage merge. C2R-B completes only the Issue #714 allocation for
-campaign C2 and must leave Issue #714 open with its C3, C4 and C6 allocations
-preserved.
+ID `C2`, recovery tracker #717, completed source-only stages `C2R-A` for Issue
+#702 and `C2R-B` for Issue #714, and current authorized-but-unstarted stage
+`C2R-C-P` for Issue #703. The canonical tuple is
+`WCV-C2 / C2 / #717 / C2R-C-P / #703 / authorized_unstarted`. C2R-C-P may
+start only after terminal validated merges and receipts for both C2R-A and
+C2R-B; an issue state or issue closure cannot substitute for a replacement-
+stage merge. C2R-B completes only the Issue #714 allocation for campaign C2
+and leaves Issue #714 open with its C3, C4 and C6 allocations preserved.
 
 ## C2R-A rights-safe source firewall
 
@@ -96,6 +104,33 @@ purpose, territory and validity window, before blueprint extraction. The
 binding is revalidated at extraction and every shared-route use. A manifest
 attached only at release cannot cure absent pre-blueprint lineage. Deny-only
 decisions may omit the manifest and remain denied.
+
+## C2R-B typed subject proof architecture
+
+C2R-B/#714 installs the source-only contract
+`config/dabangil-c2r-b-typed-subject-proof-architecture-v1.json`. The exact
+`RepairAnchorV1` union has only `CalculationRelationAnchorV1`,
+`ScopedPredicateAnchorV1` and `LawApplicabilityAnchorV1`. Stable identities,
+version identities and the explicit acyclic reference graph are mandatory;
+missing, duplicate, unresolved, ambiguous, cross-subject or cyclic bindings
+fail closed.
+
+Practice proves an ordered calculation relation with operand roles, operator,
+result, unit, sign, rounding, supported transformation and deterministic
+validator. Theory proves predicates only inside one exact target scope and
+fails closed on cross-target evidence, same-target mixed polarity, unresolved
+anaphora or overflow. Law proves one exact source/source-version/anchor/anchor-
+version/locator/effective-window/applicable-date/currentness/zero-blocker
+binding. Generic string or token presence is candidate evidence only and
+cannot create verified, proof, transfer or mastery.
+
+The future Tutor episode interface and its typed/photo/PDF/voice/structured
+private modes, prediction/self-diagnosis order, smallest-scaffold rule, three
+continuation commands and no-shortcut invariants are frozen source contracts,
+not runtime. Only Issue #714 allocation C2 is complete. Issue #714 stays open;
+C3, C4 and C6 remain preserved. C2R-C-P is authorized but unstarted, the
+common runtime substrate may first land only inside that complete Practice
+vertical, and no runtime or activation is authorized.
 
 ## Product scope (Owner O1R amendment on 2026-07-26)
 

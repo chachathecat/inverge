@@ -69,9 +69,15 @@ gate completion starts work or authorizes activation.
 ULC-0 leaves PR #718, Tracker #717, WCV-C2/C2, the exact C2R-A through
 C2R-C-L replacement graph, the 21-row regression matrix, the one-writer limit,
 and no-auto-start authority unchanged. The later 2026-08-15 C2R-A decision
-owns only the completed C2R-A source contract and post-merge selector:
-C2R-B/#714 is the represented next authorized but unstarted stage. It cannot
-operationally start before the validated A receipt and #702 closure.
+owns the completed C2R-A source contract and its post-A selector. The still
+later C2R-B decision owns the typed proof architecture and post-B selector:
+C2R-C-P/#703 is the represented next authorized but unstarted stage after the
+validated B merge and receipt. Issue #714 stays open for C3/C4/C6.
+
+The canonical current tuple is
+`WCV-C2 / C2 / #717 / C2R-C-P / #703 / authorized_unstarted`. C2R-B installs
+no runtime: its Practice relation, Theory target-scope, Law exact-binding,
+generic-token fail-closed and future Tutor episode rules are source contracts.
 
 ## Mandatory V13 follow-up — Memory Cue & Annotation Layer
 
@@ -207,9 +213,9 @@ The final public target is separately defined by the subordinate ULC-0
 amendment as the integrated first- and second-round product on Web,
 iOS/iPadOS and Android. That future target does not activate first-round,
 native, instructor or public runtime now. The exact current repository
-selection is WCV-C2/C2/#717/C2R-B/#714. C2R-A/#702 is the completed
-source-only predecessor under merge-and-receipt semantics; C2R-B remains
-operationally blocked until the A receipt validates and #702 closes.
+selection is WCV-C2/C2/#717/C2R-C-P/#703, authorized but unstarted. C2R-A/#702
+and C2R-B/#714 are completed source-only predecessors under merge-and-receipt
+semantics; C2R-C-P still requires a separate exact start and activates nothing.
 
 The Portable Professional Exam Core is an internal architecture contract only. It does
 not authorize:

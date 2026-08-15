@@ -911,7 +911,7 @@ test("C2RA-PRECEDENCE-013 registers one exact later supersession and preserves t
   ]);
   assert.match(
     roadmap,
-    /soleNextReplacementStageDecision: docs\/decisions\/2026-08-15-owner-c2r-a-rights-safe-source-firewall\.md/,
+    /soleNextReplacementStageDecision: docs\/decisions\/2026-08-15-owner-c2r-b-typed-proof-obligations\.md/,
   );
   assert.match(roadmap, /c2rBOperationalStartRequiresIssue702Closure: true/);
 });
@@ -943,7 +943,7 @@ test("C2RA-MATRIX-009 changes no donor row", async () => {
   assert.deepEqual(contract.regressionMatrix.rowsChangedByC2RA, []);
 });
 
-test("C2RA-AUTH-010 advances only source authority to C2R-B and activates nothing", async () => {
+test("C2RA-AUTH-010 retains the A transition after later B source completion", async () => {
   const [contract, unified, roadmap, agents, decision, qa] = await Promise.all([
     json(CONTRACT),
     json("config/dabangil-unified-program-contract.json"),
@@ -953,16 +953,17 @@ test("C2RA-AUTH-010 advances only source authority to C2R-B and activates nothin
     text("docs/qa/rights-safe-adaptive-variant-foundry-validation.md"),
   ]);
   assert.equal(unified.wcvCampaignOverlay.c2StructuralRecovery.replacementStages[0].state, "complete_source_only");
-  assert.equal(unified.wcvCampaignOverlay.c2StructuralRecovery.replacementStages[1].state, "authorized_unstarted");
-  assert.equal(unified.wcvCampaignOverlay.soleNextReplacementStage, "C2R-B");
-  assert.equal(unified.wcvCampaignOverlay.soleNextReplacementStageIssue, 714);
+  assert.equal(unified.wcvCampaignOverlay.c2StructuralRecovery.replacementStages[1].state, "complete_source_only");
+  assert.equal(unified.wcvCampaignOverlay.c2StructuralRecovery.replacementStages[2].state, "authorized_unstarted");
+  assert.equal(unified.wcvCampaignOverlay.soleNextReplacementStage, "C2R-C-P");
+  assert.equal(unified.wcvCampaignOverlay.soleNextReplacementStageIssue, 703);
   assert.deepEqual(
     unified.wcvCampaignOverlay.c2StructuralRecovery.replacementStages[0].ownedPathsExactly,
     EXPECTED_OWNED_PATHS,
   );
-  assert.match(roadmap, /soleNextReplacementStage: C2R-B/);
-  assert.match(roadmap, /soleNextReplacementStageIssue: 714/);
-  assert.match(agents, /current authorized-but-unstarted stage `C2R-B` for Issue #714/);
+  assert.match(roadmap, /soleNextReplacementStage: C2R-C-P/);
+  assert.match(roadmap, /soleNextReplacementStageIssue: 703/);
+  assert.match(agents, /current authorized-but-unstarted stage\s+`C2R-C-P` for Issue #703/);
   assert.equal(Object.values(contract.authorizationBoundary).every((value) => value === false), true);
   assert.equal(contract.decision.runtimeReadinessEstablished, false);
   assert.equal(contract.successor.c2rACompletionEffectiveOnlyAfterExpectedHeadPinnedMergeAndValidatedReceipt, true);
