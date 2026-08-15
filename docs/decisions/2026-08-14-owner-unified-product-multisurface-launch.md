@@ -111,8 +111,13 @@ claims, and continuous calibration. ULC-L1 establishes none of those states.
 Payment always requires a separate exact Owner authorization.
 
 Existing S225/O4D commercial public-self-serve authority remains attached to
-the commercial path. Its paid Founding Beta requirement is not silently
-deleted or transferred to ULC-L1.
+the commercial path. O4D keeps its exact `[S245C, S242V]` dependencies, and
+S225 now records both independent terminal prerequisites as `[O4D, WCV-C6]`.
+Owner public-self-serve authority alone cannot substitute for terminal paid
+evidence, terminal paid evidence alone cannot substitute for Owner authority,
+and satisfying either or both authorizes no automatic start, payment,
+learner activation, public release, or Production activation. The paid
+Founding Beta requirement is not silently deleted or transferred to ULC-L1.
 
 ## 5. Future architecture
 
@@ -252,6 +257,9 @@ Acceptance requires machine proof that:
 - ULC-L1 does not depend on O4W, WCV-C5, or WCV-C6;
 - paid activation still depends on O4W, WCV-C5, WCV-C6, and separate Owner
   authorization;
+- O4D remains exactly gated by `[S245C, S242V]` and S225 remains blocked until
+  both independent `[O4D, WCV-C6]` dependencies are complete, with no
+  substitution, bypass, automatic start, or activation;
 - final public and student surfaces are exactly Web/iOS/Android;
 - one authoritative learner state serves every surface;
 - first-round, instructor, public-release, payment, and Production runtime
@@ -292,21 +300,35 @@ authorized later ULC stage begins. A rollback does not alter the factual PR
 This authority owns exactly:
 
 1. `AGENTS.md`
-2. `docs/strategy/ACTIVE-MASTER-PLAN.md`
-3. `roadmap/active-program.yml`
-4. `config/dabangil-unified-program-contract.json`
-5. `docs/dabangil-unified-program-contract.md`
+2. `config/dabangil-unified-product-multisurface-launch-v1.json`
+3. `config/dabangil-unified-program-contract.json`
+4. `docs/dabangil-unified-program-contract.md`
+5. `docs/decisions/2026-08-14-owner-unified-product-multisurface-launch.md`
 6. `docs/inverge-master-roadmap.md`
-7. `scripts/run-node-tests.mjs`
-8. `docs/decisions/2026-08-14-owner-unified-product-multisurface-launch.md`
-9. `docs/strategy/dabangil-unified-product-multisurface-launch-v1-2026-08-14.md`
-10. `config/dabangil-unified-product-multisurface-launch-v1.json`
-11. `docs/qa/dabangil-multisurface-launch-validation.md`
-12. `docs/qa/dabangil-cross-surface-parity-matrix.md`
-13. `docs/qa/dabangil-store-compliance-matrix.md`
-14. `tests/dabangil-unified-product-multisurface-launch-authority.test.mjs`
-15. `tests/wcv-campaign-authority-roadmap-reconciliation.test.mjs`
+7. `docs/qa/dabangil-cross-surface-parity-matrix.md`
+8. `docs/qa/dabangil-multisurface-launch-validation.md`
+9. `docs/qa/dabangil-store-compliance-matrix.md`
+10. `docs/qa/wcv-campaign-c1-authority-roadmap-reconciliation-validation.md`
+11. `docs/strategy/ACTIVE-MASTER-PLAN.md`
+12. `docs/strategy/dabangil-unified-product-multisurface-launch-v1-2026-08-14.md`
+13. `roadmap/active-program.yml`
+14. `scripts/run-node-tests.mjs`
+15. `tests/agent-factory-roadmap-runner.test.mjs`
 16. `tests/dabangil-premium-alignment.test.mjs`
-17. `docs/qa/wcv-campaign-c1-authority-roadmap-reconciliation-validation.md`
+17. `tests/dabangil-unified-product-multisurface-launch-authority.test.mjs`
+18. `tests/wcv-campaign-authority-roadmap-reconciliation.test.mjs`
+19. `tests/theory-answer-review-engine.test.mjs`
+20. `tests/practice-answer-review-engine.test.mjs`
+21. `tests/s214-reference-answer-pipeline.test.mjs`
+22. `tests/s215-reference-answer-release-gate.test.mjs`
+23. `tests/s216-error-notebook-gap-taxonomy.test.mjs`
+24. `tests/s217-personal-core-concept-graph.test.mjs`
+25. `tests/s218-similar-question-review-scheduler.test.mjs`
+26. `tests/s219-learner-catalog-usage-ledger.test.mjs`
+27. `tests/s220-billing-entitlement-credit-usage.test.mjs`
+28. `tests/s221-paid-trust-privacy-cost-guardrails.test.mjs`
+29. `tests/s222-academy-answer-operations-tenant-boundary.test.mjs`
+30. `tests/s223-three-subject-corpus-reference-quality-acceptance.test.mjs`
+31. `tests/s224-three-subject-learner-runtime-acceptance.test.mjs`
 
 No other path is authorized.

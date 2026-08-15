@@ -336,7 +336,9 @@ The future ULC-L1 route is free-limited public Web/iOS/Android 1.0. For this
 route only, paid Founding Beta and paid-conversion evidence are not
 prerequisites. It has no in-app purchase CTA, activates no payment, and grants
 no commercial-readiness, retention, efficacy, score-gain, pass-rate or causal
-claim. The existing S225/O4D commercial route keeps its prior requirements.
+claim. The existing S225/O4D commercial route keeps its prior requirements:
+O4D remains `[S245C, S242V]`, while S225 requires both independent terminal
+gates as `[O4D, WCV-C6]`.
 
 After ULC-L1, the separate paid/evidence path is:
 
@@ -370,11 +372,17 @@ ULC-L1: [ULC-R1]
 O4W: [ULC-L1]
 WCV-C5: [WCV-C4, O4W]
 WCV-C6: [WCV-C5]
+O4D: [S245C, S242V]
+S225: [O4D, WCV-C6]
 ```
 
 WCV-C3 retains `terminalReplacementDependency: C2R-C-L` while its active
 roadmap dependency remains the WCV-C2 umbrella. WCV-C5 intentionally retains
 both direct dependencies even though O4W is downstream of ULC-L1.
+O4D authority and WCV-C6 terminal paid evidence are non-substitutable S225
+gates. Neither may be bypassed, and completing either or both authorizes no
+automatic start, learner activation, payment activation, public release, or
+Production activation.
 
 Every runtime stage is an independently deployable learner or instructor
 outcome. Framework-only, API-only, persistence-only, UI-only and QA-only

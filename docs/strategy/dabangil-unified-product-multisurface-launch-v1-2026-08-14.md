@@ -97,6 +97,8 @@ The limited supersession is precise:
 
 - the old `privateFoundingBetaBeforePublicS225` rule remains true for the
   commercial S225/O4D route;
+- O4D keeps `[S245C, S242V]`, and S225 requires both independent
+  `[O4D, WCV-C6]` gates;
 - it is false only as a prerequisite for ULC-L1;
 - ULC-L1 has no in-app purchase CTA and payment remains false;
 - ULC-L1 creates no commercial, retention, efficacy, score-gain, pass-rate,
@@ -125,6 +127,12 @@ This route remains the only future path to payment activation, paid-cohort
 claims, retention/commercial-readiness claims, delayed-evidence claims,
 efficacy/causal claims, and continuous calibration. Passing ULC-L1 does not
 establish any of those states.
+
+The terminal legacy paid launch is deliberately dual-gated. O4D Owner
+public-self-serve authority cannot substitute for WCV-C6 paid evidence, and
+WCV-C6 cannot substitute for O4D. No gate completion bypasses the other or
+authorizes automatic start, learner/payment activation, public release, or
+Production activation.
 
 ## 5. Multisurface architecture
 

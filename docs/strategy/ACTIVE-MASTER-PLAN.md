@@ -61,6 +61,11 @@ workbench, the free-limited ULC-L1 route, and the separate paid/evidence
 route. It installs no runtime, dependency, native project, learner, provider,
 payment, store, deployment, or Production activation.
 
+The legacy paid public-launch terminal remains separately dual-gated: O4D
+retains `[S245C, S242V]`, and S225 requires `[O4D, WCV-C6]`. Owner authority
+and terminal paid evidence are both mandatory and non-substitutable; neither
+gate completion starts work or authorizes activation.
+
 ULC-0 leaves PR #718, Tracker #717, WCV-C2/C2, the exact C2R-A through
 C2R-C-L replacement graph, the 21-row regression matrix, C2R-A/#702 as the
 sole next implementation stage, the one-writer limit, and no-auto-start

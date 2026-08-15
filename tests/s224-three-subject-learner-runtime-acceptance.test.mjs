@@ -348,7 +348,7 @@ test("S224 safe keys, docs, runner, roadmap, and Agent Factory example target ar
   assert.match(agentFactoryButtonTest, /--target[\s\S]{0,80}S225/);
   assert.equal(s224?.statusCategory, "completed");
   assert.equal(s225?.readinessStatus, "blocked");
-  assert.deepEqual(s225?.missingDependencies, ["O4D"]);
+  assert.deepEqual(s225?.missingDependencies, ["O4D", "WCV-C6"]);
   assert.equal(plan.wipOccupiedCount, 2);
   assert.equal(plan.availableSlots, 1);
   assert.deepEqual(plan.readyItemIds, ["WCV-C2", "S236B"]);

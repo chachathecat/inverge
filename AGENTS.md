@@ -87,8 +87,12 @@ For the exact future free-limited ULC-L1 route only, paid Founding Beta,
 paid-cohort and paid-conversion evidence are not prerequisites. ULC-L1 has no
 in-app purchase CTA, activates no payment, and grants no commercial,
 retention, efficacy, score-gain, pass-rate or causal claim. The S225/O4D
-commercial route keeps its existing prerequisites. Market-fit or efficacy
-uncertainty alone does not require a beta label; every capability instead
+commercial route remains separately gated: O4D keeps `[S245C, S242V]`, while
+S225 requires both O4D Owner public-self-serve authority and terminal paid
+evidence WCV-C6 as `[O4D, WCV-C6]`. Neither gate substitutes for or bypasses
+the other, and satisfying either or both starts no work and authorizes no
+activation. Market-fit or efficacy uncertainty alone does not require a beta
+label; every capability instead
 shows an honest `supported`, `limited`, `AI-assisted`, `human-unreviewed`,
 `source-currentness-required` or `blocked` state.
 

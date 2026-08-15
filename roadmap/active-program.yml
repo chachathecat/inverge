@@ -941,7 +941,7 @@ items:
   - id: S225
     title: Full Second-Round Public Self-Serve Launch Acceptance
     status: queued
-    dependencies: [O4D]
+    dependencies: [O4D, WCV-C6]
     lockGroup: second-public-release
     risk: high
     priority: 64

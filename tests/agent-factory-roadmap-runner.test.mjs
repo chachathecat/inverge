@@ -103,6 +103,59 @@ function roadmap(
   ].join("\n");
 }
 
+function s225GateRoadmap({
+  o4dStatus = "queued",
+  wcvC6Status = "queued",
+} = {}) {
+  return roadmap(
+    [
+      item({ id: "ULC-R1", status: "completed", priority: 1 }),
+      item({
+        id: "ULC-L1",
+        status: "completed",
+        dependencies: ["ULC-R1"],
+        priority: 2,
+      }),
+      item({
+        id: "O4W",
+        status: "completed",
+        dependencies: ["ULC-L1"],
+        priority: 3,
+      }),
+      item({ id: "WCV-C4", status: "completed", priority: 4 }),
+      item({
+        id: "WCV-C5",
+        status: "completed",
+        dependencies: ["WCV-C4", "O4W"],
+        priority: 5,
+      }),
+      item({
+        id: "WCV-C6",
+        status: wcvC6Status,
+        dependencies: ["WCV-C5"],
+        priority: 6,
+      }),
+      item({ id: "S245C", status: "completed", priority: 7 }),
+      item({ id: "S242V", status: "completed", priority: 8 }),
+      item({
+        id: "O4D",
+        status: o4dStatus,
+        dependencies: ["S245C", "S242V"],
+        priority: 9,
+      }),
+      item({
+        id: "S225",
+        dependencies: ["O4D", "WCV-C6"],
+        priority: 10,
+      }),
+    ],
+    {
+      wipLimit: 1,
+      globalMergeProducingWriterLimit: 1,
+    },
+  );
+}
+
 function byId(plan, itemId) {
   const analysis = plan.analyses.find((entry) => entry.itemId === itemId);
   assert.ok(analysis, `missing analysis for ${itemId}`);
@@ -2126,7 +2179,7 @@ test("live blockers reserve two slots while the sole delivery slot selects WCV-C
   const s225 = byId(plan, "S225");
   assert.equal(s225.status, "queued");
   assert.equal(s225.readinessStatus, "blocked");
-  assert.deepEqual(s225.missingDependencies, ["O4D"]);
+  assert.deepEqual(s225.missingDependencies, ["O4D", "WCV-C6"]);
 
   for (const id of [
     "S236A",
@@ -2384,6 +2437,87 @@ test("explicit roadmap targets preserve exhausted selection capacity and remain 
       runExplicitTarget(wipExhaustedSource, "S201", "wip-exhausted"),
       "wip-exhausted",
     );
+
+    for (const {
+      label,
+      o4dStatus,
+      wcvC6Status,
+      readinessStatus,
+      missingDependencies,
+      explicitTargetAllowed,
+    } of [
+      {
+        label: "s225-neither",
+        o4dStatus: "queued",
+        wcvC6Status: "queued",
+        readinessStatus: "blocked",
+        missingDependencies: ["O4D", "WCV-C6"],
+        explicitTargetAllowed: false,
+      },
+      {
+        label: "s225-owner-only",
+        o4dStatus: "completed",
+        wcvC6Status: "queued",
+        readinessStatus: "blocked",
+        missingDependencies: ["WCV-C6"],
+        explicitTargetAllowed: false,
+      },
+      {
+        label: "s225-evidence-only",
+        o4dStatus: "queued",
+        wcvC6Status: "completed",
+        readinessStatus: "blocked",
+        missingDependencies: ["O4D"],
+        explicitTargetAllowed: false,
+      },
+      {
+        label: "s225-both",
+        o4dStatus: "completed",
+        wcvC6Status: "completed",
+        readinessStatus: "ready",
+        missingDependencies: [],
+        explicitTargetAllowed: true,
+      },
+    ]) {
+      const source = s225GateRoadmap({ o4dStatus, wcvC6Status });
+      const evaluatedAt = new Date(LIVE_PRE_EXPIRY_EVALUATED_AT);
+      const plan = createRoadmapRunnerPlanFromYamlAt(source, evaluatedAt);
+      const selector = createNextTaskResultFromYaml(source, evaluatedAt);
+      const s225Analysis = byId(plan, "S225");
+      assert.equal(s225Analysis.readinessStatus, readinessStatus, label);
+      assert.deepEqual(
+        s225Analysis.missingDependencies,
+        missingDependencies,
+        label,
+      );
+      assertRunnerSelectorParity(plan, selector);
+
+      const run = runExplicitTarget(source, "S225", label);
+      if (!explicitTargetAllowed) {
+        assert.notEqual(run.result.status, 0, label);
+        assert.equal(existsSync(run.summaryPath), true, label);
+        const rejectionEvidence =
+          `${run.result.stderr}\n${readFileSync(run.summaryPath, "utf8")}`;
+        assert.match(
+          rejectionEvidence,
+          /Roadmap item S225 is blocked, not ready/,
+          label,
+        );
+        for (const dependency of missingDependencies) {
+          assert.match(rejectionEvidence, new RegExp(dependency), label);
+        }
+        assert.equal(existsSync(run.jsonPath), false, label);
+        assert.equal(existsSync(run.markdownPath), false, label);
+        continue;
+      }
+
+      assert.equal(run.result.status, 0, run.result.stderr);
+      const output = JSON.parse(readFileSync(run.jsonPath, "utf8"));
+      assert.deepEqual(output.selectedItemIds, ["S225"]);
+      assert.equal(output.selectedTaskCount, 1);
+      assert.equal(output.packages[0].itemId, "S225");
+      assert.equal(existsSync(run.markdownPath), true);
+    }
 
     const positiveSource = roadmap(
       [

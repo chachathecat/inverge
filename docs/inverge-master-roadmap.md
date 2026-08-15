@@ -50,6 +50,11 @@ future path after ULC-L1 remains:
 
 `O4W → WCV-C5 → WCV-C6 → separate payment/paid-claim activation authority`
 
+The legacy S225 paid public launch requires both independent terminal gates:
+O4D retains `[S245C, S242V]`, and S225 requires `[O4D, WCV-C6]`. Neither gate
+substitutes for or bypasses the other, and no completion authorizes automatic
+start, payment, learner activation, public release, or Production activation.
+
 After terminal C2R-C-L, the complete-outcome order is:
 
 1. WCV-C3 durable learning and daily command;
@@ -469,6 +474,8 @@ Inverge는 전문가 첨삭 인력을 판매하지 않는다. 학원 사용자�
 
 ### S225 Public Paid Launch Acceptance
 
+- O4D Owner public-self-serve authority complete
+- WCV-C6 terminal paid evidence complete
 - all dependencies complete
 - production configuration
 - billing and privacy gates
@@ -647,7 +654,10 @@ runtime mutations freeze from D0 through D+1.
 Wave A/B/C, invitations, capacity claims, pricing, payment, refund, external
 learners, and public self-serve remain in the separate commercial track:
 
-`O3C -> S239A -> S242C -> O4F -> S243C -> S244C -> S245C -> S225`
+`O3C -> S239A -> S242C -> O4F -> S243C -> S244C -> S245C -> O4D -> S225`
+
+That historical commercial chain is only one side of the current S225 gate;
+the executable roadmap also requires terminal paid evidence WCV-C6.
 
 Owner dogfood is operational acceptance only. It is not evidence of
 commercial readiness, efficacy, pricing, retention, cohort capacity, or

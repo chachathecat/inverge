@@ -23,10 +23,16 @@ WCV-C4: [ULC-I1]
 ULC-R1: [WCV-C4]
 ULC-L1: [ULC-R1]
 O4W: [ULC-L1]
+WCV-C5: [WCV-C4, O4W]
+WCV-C6: [WCV-C5]
+O4D: [S245C, S242V]
+S225: [O4D, WCV-C6]
 ```
 
 The C1 entries below remain historical validation evidence and are not current
-roadmap or dependency authority. No C1 behavior or runtime state is changed.
+roadmap or dependency authority. The S225 gates are non-substitutable and
+non-bypassable, and no C1 behavior, start, activation, or runtime state is
+changed.
 
 ## 1. Read-only start audit
 

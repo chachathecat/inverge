@@ -88,12 +88,15 @@ ULC-L1: [ULC-R1]
 O4W: [ULC-L1]
 WCV-C5: [WCV-C4, O4W]
 WCV-C6: [WCV-C5]
+O4D: [S245C, S242V]
+S225: [O4D, WCV-C6]
 ```
 
-Both product-authority corrections remain inside the same 17-path
-docs/contracts/tests-only authority boundary. They start no stage and change
-no product, runtime, dependency package, workflow, database, provider,
-learner, payment, store, deployment or Production state.
+The terminal paid-gate correction fixes the exact source-only authority
+boundary at 31 paths, including all 14 default-suite live-roadmap consumers.
+It starts no stage
+and changes no product, runtime, dependency package, workflow, database,
+provider, learner, payment, store, deployment or Production state.
 
 ## Terminal temporal-isolation fixture correction
 
@@ -151,7 +154,8 @@ The focused test must prove:
 3. WCV-C2R baseline hashes and the 21-row count remain exact.
 4. WCV-C2/C2/C2R-A/#702 remains the sole implementation selection.
 5. Every future sequence ID is unique and every dependency resolves.
-6. All 16 active-roadmap direct edges exactly match the correction table.
+6. All 18 affected active-roadmap direct edges exactly match the correction
+   table.
 7. The ULC and legacy-WCV machine mirrors encode the same WCV-C4 and O4W gates.
 8. No future ULC item is selected, started, or automatically started.
 9. Free ULC-L1 has no O4W/WCV-C5/WCV-C6 dependency.
@@ -163,7 +167,7 @@ The focused test must prove:
     future-gated.
 15. Account deletion includes both in-app and external Web paths.
 16. The coordinated availability window is at most 24 hours.
-17. The exact 17-path ownership boundary contains no runtime, dependency,
+17. The exact 31-path ownership boundary contains no runtime, dependency,
     workflow, database, or native-project path.
 18. O3A approval expiry is parsed from the active roadmap and remains exact.
 19. Status-only completion cannot launder an expired transitive approval.
@@ -173,6 +177,14 @@ The focused test must prove:
     `[S238B]` for ULC-F1.
 22. Both independent acceptances permit ULC-F1 readiness without starting it
     or allowing a later first-round stage to bypass it.
+23. O4D remains exactly `[S245C, S242V]` and S225 remains exactly
+    `[O4D, WCV-C6]` in the live roadmap and both machine mirrors.
+24. Neither gate complete, only O4D complete, only WCV-C6 complete, and both
+    complete produce the exact blocked/ready S225 outcomes in both selectors.
+25. Explicit Agent Factory targeting cannot emit JSON or Markdown packages
+    while either S225 gate is missing, but succeeds once both are complete.
+26. All 14 default-suite live-roadmap assertions use the exact dual-gate
+    expectation, while isolated synthetic-roadmap expectations remain scoped.
 
 ## Hostile read-only audit checklist
 
@@ -205,21 +217,25 @@ The audit fails closed on any of these counterexamples:
 - either acceptance gate substitutes for the other, mastery transfers between
   tracks, or synthetic readiness starts an actual stage.
 
-## Initial local result on reviewed head `208e87e9...`
+## Corrective working-tree validation
 
-Before the automated review, the complete local validation set produced:
+The complete bounded correction produced:
 
-- exact owned-path equality: passed, 14/14 paths and no package, lockfile,
-  runtime, workflow, database, provider, native-project, payment, deployment,
-  or Production path;
-- strict launch/unified JSON parse and active-program YAML parse: passed;
-- focused launch-authority suite: 18/18 passed;
-- affected roadmap/authority suites: 84/84 passed;
-- Agent Factory suites: 403/403 passed, including the separately invoked
-  connected-GitHub contract test;
-- default Node suite after `npm ci`: 1,312/1,312 passed;
+- exact owned-path equality: passed, 31/31 paths and no package, lockfile,
+  production runtime, workflow, database, provider, native-project, payment,
+  deployment, or Production path;
+- strict launch/unified JSON parse and active-program YAML parse: 2/2 JSON and
+  1/1 YAML passed;
+- directly affected 14 live-roadmap tests plus focused ULC and WCV campaign
+  tests: 174/174 passed;
+- focused launch-authority suite: 22/22 passed;
+- complete affected authority suite: 133/133 passed;
+- Agent Factory suite: 403/403 passed;
+- WCV-C2R authority suite: 16/16 passed;
+- premium alignment: 14/14 passed;
+- default Node suite after `npm ci`: 1,317/1,317 passed;
 - typecheck: passed;
-- lint: passed with 0 errors and 11 pre-existing warnings, all outside the 14
+- lint: passed with 0 errors and 11 pre-existing warnings, all outside the 31
   owned paths;
 - plain production build: environment-blocked before source compilation by
   this sandbox's unavailable `/proc` RSS counter
@@ -227,17 +243,16 @@ Before the automated review, the complete local validation set produced:
 - production build with the repository-external, untracked RSS compatibility
   preload: passed with Next.js 16.2.4 compilation, TypeScript, 54/54 static
   pages, and final optimization; one existing NFT dynamic-trace warning
-  remained outside the 14 owned paths;
+  remained outside the 31 owned paths;
 - `git diff --check`: passed; and
-- independent hostile read-only audit: passed across owned paths, preserved
-  WCV-C2R hashes, graph order and dependency resolution, activation denial,
-  free/paid separation, surface parity, deletion coverage, launch window, and
-  newline/fence integrity.
+- bounded hostile audit: `P0/P1/P2 = 0/0/0`, covering exact dual-gate
+  equality, four completion combinations, explicit-target fail-closed output,
+  TypeScript/MJS parity, route ordering, cycle absence, 14/14 live-roadmap
+  mirrors, activation denial, C2R-A preservation, and exact scope.
 
-The initial local hostile audit reported `P0/P1/P2 = 0/0/0`, but it did not
-catch the two active-roadmap mirror defects and does not supersede review
-`PRR_kwDOSMHn8M8AAAABJjst-w`.
+Prior review `PRR_kwDOSMHn8M8AAAABJjst-w` is retained only as historical
+evidence and does not review or authorize the corrective candidate.
 
-After the terminal fixture correction, fresh exact-head GitHub CI and Vercel
-must all succeed, and the final exact-head review must report actionable
-`P0/P1/P2 = 0/0/0`. No local source check substitutes for those gates.
+Fresh exact-head GitHub CI and Vercel must all succeed. The final exact-head review must report
+actionable `P0/P1/P2 = 0/0/0`. No local source check substitutes for those
+gates.

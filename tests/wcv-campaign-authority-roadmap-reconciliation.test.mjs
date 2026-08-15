@@ -377,6 +377,14 @@ test("gates the paid route behind ULC-L1 and one unapproved O4W Owner authorizat
     analysisById(beforeFreeLaunch, "O4W").missingDependencies,
     ["ULC-L1"],
   );
+  assert.equal(
+    analysisById(beforeFreeLaunch, "WCV-C6").readinessStatus,
+    "blocked",
+  );
+  assert.deepEqual(
+    analysisById(beforeFreeLaunch, "WCV-C6").missingDependencies,
+    ["WCV-C5"],
+  );
 
   const throughFreeLaunch = completeDependencyClosure(throughC4, "ULC-L1");
   const beforeAuthorization = createRoadmapRunnerPlanFromYamlAt(
@@ -410,6 +418,54 @@ test("gates the paid route behind ULC-L1 and one unapproved O4W Owner authorizat
       ["WCV-C4", "O4W"],
     );
   });
+});
+
+test("gates legacy S225 on both O4D authority and terminal WCV-C6 evidence", async () => {
+  const [roadmapSource, unified, launch, contract] = await Promise.all([
+    text("roadmap/active-program.yml"),
+    json("config/dabangil-unified-program-contract.json"),
+    json("config/dabangil-unified-product-multisurface-launch-v1.json"),
+    text("docs/dabangil-unified-program-contract.md"),
+  ]);
+  const roadmap = parseRoadmap(roadmapSource);
+  const machineGate = unified.launchConvergenceAmendment.legacyPublicPaidLaunchGate;
+
+  assert.deepEqual(roadmap.byId.get("O4D").dependencies, ["S245C", "S242V"]);
+  assert.deepEqual(roadmap.byId.get("S225").dependencies, ["O4D", "WCV-C6"]);
+  assert.deepEqual(machineGate, launch.legacyPublicPaidLaunchGate);
+  assert.deepEqual(machineGate.requiredDependenciesExactly, ["O4D", "WCV-C6"]);
+  assert.equal(machineGate.bothDependenciesRequired, true);
+  for (const key of [
+    "crossSubstitutionAllowed",
+    "explicitTargetBypassAllowed",
+    "currentActivationAuthorized",
+    "automaticStartAllowed",
+    "learnerActivationAuthorized",
+    "paymentActivationAuthorized",
+    "publicReleaseAuthorized",
+  ]) {
+    assert.equal(machineGate[key], false, key);
+  }
+  assert.match(contract, /S225 requires both independent terminal\ngates as `\[O4D, WCV-C6\]`/);
+  assert.match(contract, /Neither may be bypassed/);
+
+  const evaluationTime = new Date("2026-08-08T08:00:00.000Z");
+  const ownerOnly = completeDependencyClosure(roadmapSource, "O4D");
+  const evidenceOnly = completeDependencyClosure(roadmapSource, "WCV-C6");
+  const both = completeDependencyClosure(ownerOnly, "WCV-C6");
+  for (const [label, fixture, readinessStatus, missingDependencies] of [
+    ["neither", roadmapSource, "blocked", ["O4D", "WCV-C6"]],
+    ["owner only", ownerOnly, "blocked", ["WCV-C6"]],
+    ["evidence only", evidenceOnly, "blocked", ["O4D"]],
+    ["both", both, "ready", []],
+  ]) {
+    const s225 = analysisById(
+      createRoadmapRunnerPlanFromYamlAt(fixture, evaluationTime),
+      "S225",
+    );
+    assert.equal(s225.readinessStatus, readinessStatus, label);
+    assert.deepEqual(s225.missingDependencies, missingDependencies, label);
+  }
 });
 
 test("removes one-issue-only language as the controlling PR rule", async () => {

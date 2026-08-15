@@ -23,6 +23,22 @@ const WCV_RECONCILIATION_TEST =
 const PREMIUM_ALIGNMENT_TEST = "tests/dabangil-premium-alignment.test.mjs";
 const WCV_C1_VALIDATION =
   "docs/qa/wcv-campaign-c1-authority-roadmap-reconciliation-validation.md";
+const LIVE_ROADMAP_EXPECTATION_TESTS = [
+  "tests/agent-factory-roadmap-runner.test.mjs",
+  "tests/theory-answer-review-engine.test.mjs",
+  "tests/practice-answer-review-engine.test.mjs",
+  "tests/s214-reference-answer-pipeline.test.mjs",
+  "tests/s215-reference-answer-release-gate.test.mjs",
+  "tests/s216-error-notebook-gap-taxonomy.test.mjs",
+  "tests/s217-personal-core-concept-graph.test.mjs",
+  "tests/s218-similar-question-review-scheduler.test.mjs",
+  "tests/s219-learner-catalog-usage-ledger.test.mjs",
+  "tests/s220-billing-entitlement-credit-usage.test.mjs",
+  "tests/s221-paid-trust-privacy-cost-guardrails.test.mjs",
+  "tests/s222-academy-answer-operations-tenant-boundary.test.mjs",
+  "tests/s223-three-subject-corpus-reference-quality-acceptance.test.mjs",
+  "tests/s224-three-subject-learner-runtime-acceptance.test.mjs",
+];
 
 const POST_EXPIRY_DIAGNOSTIC_AT =
   new Date("2026-08-14T10:00:00.000Z");
@@ -161,22 +177,24 @@ const EXPECTED_SEQUENCE = [
 
 const EXPECTED_OWNED_PATHS = [
   "AGENTS.md",
-  "docs/strategy/ACTIVE-MASTER-PLAN.md",
-  "roadmap/active-program.yml",
+  CONTRACT,
   "config/dabangil-unified-program-contract.json",
   "docs/dabangil-unified-program-contract.md",
-  "docs/inverge-master-roadmap.md",
-  "scripts/run-node-tests.mjs",
   DECISION,
-  STRATEGY,
-  CONTRACT,
-  VALIDATION,
+  "docs/inverge-master-roadmap.md",
   PARITY,
+  VALIDATION,
   COMPLIANCE,
+  WCV_C1_VALIDATION,
+  "docs/strategy/ACTIVE-MASTER-PLAN.md",
+  STRATEGY,
+  "roadmap/active-program.yml",
+  "scripts/run-node-tests.mjs",
+  "tests/agent-factory-roadmap-runner.test.mjs",
+  PREMIUM_ALIGNMENT_TEST,
   FOCUSED_TEST,
   WCV_RECONCILIATION_TEST,
-  PREMIUM_ALIGNMENT_TEST,
-  WCV_C1_VALIDATION,
+  ...LIVE_ROADMAP_EXPECTATION_TESTS.slice(1),
 ];
 
 test("keeps V13 sole and installs one subordinate ULC-0 authority", async () => {
@@ -267,9 +285,13 @@ test("requires the complete free-limited public 1.0 module set", async () => {
 });
 
 test("separates free launch from paid, efficacy and commercial claims", async () => {
-  const launch = await json(CONTRACT);
+  const [launch, unified] = await Promise.all([
+    json(CONTRACT),
+    json("config/dabangil-unified-program-contract.json"),
+  ]);
   const route = launch.publicOneZero;
   const paid = launch.paidEvidenceRoute;
+  const gate = launch.legacyPublicPaidLaunchGate;
 
   assert.equal(route.priorPrivateFoundingBetaRequirementSupersededForThisRouteOnly, true);
   assert.equal(route.paidCohortRequired, false);
@@ -304,6 +326,25 @@ test("separates free launch from paid, efficacy and commercial claims", async ()
   ]);
   assert.equal(paid.paymentActivationRequiresSeparateExactOwnerAuthorization, true);
   assert.equal(paid.freeLimitedRouteEstablishesAnyPaidEvidenceState, false);
+  assert.deepEqual(gate, {
+    roadmapItemId: "S225",
+    requiredDependenciesExactly: ["O4D", "WCV-C6"],
+    independentOwnerAuthorization: "O4D",
+    terminalPaidEvidenceRoute: "WCV-C6",
+    bothDependenciesRequired: true,
+    crossSubstitutionAllowed: false,
+    explicitTargetBypassAllowed: false,
+    currentActivationAuthorized: false,
+    automaticStartAllowed: false,
+    learnerActivationAuthorized: false,
+    paymentActivationAuthorized: false,
+    publicReleaseAuthorized: false,
+  });
+  assert.deepEqual(unified.launchConvergenceAmendment.legacyPublicPaidLaunchGate, gate);
+  assert.deepEqual(
+    unified.launchConvergenceAmendment.activeRoadmapDependencyMirror,
+    launch.activeRoadmapDependencyMirror,
+  );
 });
 
 test("preserves the exact WCV-C2R graph, roadmap block and 21-row matrix", async () => {
@@ -422,6 +463,8 @@ test("mirrors the complete active-roadmap dependency graph without starting ULC 
     ["O4W", ["ULC-L1"]],
     ["WCV-C5", ["WCV-C4", "O4W"]],
     ["WCV-C6", ["WCV-C5"]],
+    ["O4D", ["S245C", "S242V"]],
+    ["S225", ["O4D", "WCV-C6"]],
   ]);
   const ulcIds = [
     "ULC-M1",
@@ -483,6 +526,13 @@ test("mirrors the complete active-roadmap dependency graph without starting ULC 
     unified.roadmapContract.frozenPaidCohortAuthorization.dependencies,
     ["ULC-L1"],
   );
+  assert.deepEqual(
+    Object.fromEntries(
+      [...expectedDirectDependencies]
+        .filter(([id]) => Object.hasOwn(launch.activeRoadmapDependencyMirror, id)),
+    ),
+    launch.activeRoadmapDependencyMirror,
+  );
   assert.deepEqual(roadmap.program.launchConvergenceSequence, EXPECTED_SEQUENCE);
   assert.equal(roadmap.program.paidEvidenceRouteAfter, "ULC-L1");
   assert.match(historicalC1Validation, /2026-08-14 launch-order supersession/);
@@ -498,6 +548,49 @@ test("mirrors the complete active-roadmap dependency graph without starting ULC 
     historicalC1Validation,
     /C1 entries below remain historical validation evidence and are not current\nroadmap or dependency authority/,
   );
+
+  const visiting = new Set();
+  const visited = new Set();
+  function visit(id) {
+    if (visited.has(id)) return;
+    assert.equal(visiting.has(id), false, `dependency cycle at ${id}`);
+    visiting.add(id);
+    for (const dependency of roadmap.byId.get(id)?.dependencies ?? []) {
+      visit(dependency);
+    }
+    visiting.delete(id);
+    visited.add(id);
+  }
+  for (const id of roadmap.byId.keys()) visit(id);
+});
+
+test("requires both independent S225 gates across all four completion combinations", async () => {
+  const source = await text("roadmap/active-program.yml");
+  const ownerOnly = completeDependencyClosure(source, "O4D");
+  const evidenceOnly = completeDependencyClosure(source, "WCV-C6");
+  const both = completeDependencyClosure(ownerOnly, "WCV-C6");
+  const cases = [
+    ["neither", source, "blocked", ["O4D", "WCV-C6"]],
+    ["owner only", ownerOnly, "blocked", ["WCV-C6"]],
+    ["evidence only", evidenceOnly, "blocked", ["O4D"]],
+    ["both", both, "ready", []],
+  ];
+
+  for (const [label, fixture, readinessStatus, missingDependencies] of cases) {
+    const analysis = analysisById(
+      createRoadmapRunnerPlanFromYamlAt(
+        fixture,
+        ACCEPTANCE_GATE_ISOLATION_AT,
+      ),
+      "S225",
+    );
+    assert.equal(analysis.readinessStatus, readinessStatus, label);
+    assert.deepEqual(analysis.missingDependencies, missingDependencies, label);
+  }
+
+  const roadmap = parseRoadmap(source);
+  assert.deepEqual(roadmap.byId.get("O4D").dependencies, ["S245C", "S242V"]);
+  assert.deepEqual(roadmap.byId.get("S225").dependencies, ["O4D", "WCV-C6"]);
 });
 
 test("keeps status-only completion fail-closed after transitive approval expiry", async () => {
@@ -837,14 +930,14 @@ test("keeps parity and compliance documents aligned with the machine authority",
   assert.match(validation, /final exact-head review must report[\s\S]*P0\/P1\/P2 = 0\/0\/0/);
 });
 
-test("declares the exact seventeen-path docs-contracts-only ownership boundary", async () => {
+test("declares the exact thirty-one-path source-only ownership boundary", async () => {
   const [launch, decision] = await Promise.all([json(CONTRACT), text(DECISION)]);
   const manifest = decision.match(/## 12\. Exact owned-path manifest([\s\S]*)$/)?.[1] ?? "";
   const paths = [...manifest.matchAll(/`([^`]+)`/g)].map((match) => match[1]);
 
   assert.deepEqual(launch.ownedPathsExactly, EXPECTED_OWNED_PATHS);
   assert.deepEqual(paths, EXPECTED_OWNED_PATHS);
-  assert.equal(new Set(paths).size, 17);
+  assert.equal(new Set(paths).size, 31);
   for (const path of paths) {
     assert.doesNotMatch(
       path,
@@ -852,6 +945,21 @@ test("declares the exact seventeen-path docs-contracts-only ownership boundary",
       path,
     );
     assert.doesNotMatch(path, /(?:^|\/)(?:package\.json|[^/]*lock[^/]*)$/, path);
+  }
+});
+
+test("guards every default-suite live-roadmap S225 expectation against stale single gating", async () => {
+  const runner = await text("scripts/run-node-tests.mjs");
+  const exact = /assert\.deepEqual\(s225\??\.missingDependencies, \["O4D", "WCV-C6"\]\);/g;
+  const stale = /assert\.deepEqual\(s225\??\.missingDependencies, \["O4D"\]\);/g;
+
+  assert.equal(LIVE_ROADMAP_EXPECTATION_TESTS.length, 14);
+  for (const path of LIVE_ROADMAP_EXPECTATION_TESTS) {
+    const source = await text(path);
+    assert.equal(source.includes("roadmap/active-program.yml"), true, path);
+    assert.equal(source.match(exact)?.length ?? 0, 1, path);
+    assert.equal(source.match(stale)?.length ?? 0, 0, path);
+    assert.equal(runner.match(new RegExp(path.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "g"))?.length ?? 0, 1, path);
   }
 });
 
