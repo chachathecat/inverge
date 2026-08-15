@@ -341,7 +341,11 @@ function evaluateSharedBlueprintUse(contract, input) {
     aiSelfCertified = false,
     invalidatedByRetirement = false,
   } = input;
+  const allowed = new Set(contract.sourcePolicy.sourceClassesExactly);
   const denied = new Set(contract.sourcePolicy.hardDeniedSourceClassesExactly);
+  if (decision && !allowed.has(decision.sourceClass)) {
+    return { allowed: false, reason: "UNDECLARED_SOURCE_CLASS" };
+  }
   if (
     !decision ||
     denied.has(decision.sourceClass) ||
@@ -401,6 +405,13 @@ function evaluateSharedBlueprintUse(contract, input) {
   }
   const validFrom = Date.parse(manifest.validFrom);
   const validUntil = Date.parse(manifest.validUntil);
+  if (
+    !Number.isFinite(validFrom) ||
+    !Number.isFinite(validUntil) ||
+    validFrom > validUntil
+  ) {
+    return { allowed: false, reason: "INVALID_MANIFEST_VALIDITY_WINDOW" };
+  }
   for (const [label, value] of [
     ["DECISION", decision.decidedAt],
     ["EVALUATION", decision.rightsEvaluatedAt],
@@ -791,6 +802,37 @@ test("C2RA-RIGHTS-012 binds exact rights before blueprint extraction and every s
     mutate(input);
     assert.equal(evaluateSharedBlueprintUse(contract, input).allowed, false, name);
   }
+  for (const [name, mutate] of [
+    [
+      "UNDECLARED_SOURCE_CLASS",
+      (input) => {
+        input.decision.sourceClass = "MISSPELLED_OR_UNKNOWN_SOURCE_CLASS";
+        input.manifests[0].sourceClass = "MISSPELLED_OR_UNKNOWN_SOURCE_CLASS";
+      },
+    ],
+    [
+      "MALFORMED_VALID_FROM",
+      (input) => {
+        input.manifests[0].validFrom = "not-an-instant";
+      },
+    ],
+    [
+      "MISSING_VALID_UNTIL",
+      (input) => {
+        delete input.manifests[0].validUntil;
+      },
+    ],
+    [
+      "INVERTED_VALIDITY_WINDOW",
+      (input) => {
+        input.manifests[0].validFrom = "2026-09-01T00:00:00.000Z";
+      },
+    ],
+  ]) {
+    const input = structuredClone(base);
+    mutate(input);
+    assert.equal(evaluateSharedBlueprintUse(contract, input).allowed, false, name);
+  }
   for (const sourceClass of [
     "USER_PRIVATE_ONLY",
     "ACADEMY_OR_COMMERCIAL_TEXTBOOK",
@@ -914,6 +956,10 @@ test("C2RA-AUTH-010 advances only source authority to C2R-B and activates nothin
   assert.equal(unified.wcvCampaignOverlay.c2StructuralRecovery.replacementStages[1].state, "authorized_unstarted");
   assert.equal(unified.wcvCampaignOverlay.soleNextReplacementStage, "C2R-B");
   assert.equal(unified.wcvCampaignOverlay.soleNextReplacementStageIssue, 714);
+  assert.deepEqual(
+    unified.wcvCampaignOverlay.c2StructuralRecovery.replacementStages[0].ownedPathsExactly,
+    EXPECTED_OWNED_PATHS,
+  );
   assert.match(roadmap, /soleNextReplacementStage: C2R-B/);
   assert.match(roadmap, /soleNextReplacementStageIssue: 714/);
   assert.match(agents, /current authorized-but-unstarted stage `C2R-B` for Issue #714/);

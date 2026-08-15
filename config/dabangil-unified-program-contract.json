@@ -1215,7 +1215,9 @@
             "tests/wcv-c2r-structural-recovery-authority.test.mjs",
             "tests/wcv-campaign-authority-roadmap-reconciliation.test.mjs",
             "tests/dabangil-unified-product-multisurface-launch-authority.test.mjs",
-            "scripts/run-node-tests.mjs"
+            "scripts/run-node-tests.mjs",
+            "docs/strategy/ACTIVE-MASTER-PLAN.md",
+            "docs/strategy/dabangil-unified-product-multisurface-launch-v1-2026-08-14.md"
           ]
         },
         {
