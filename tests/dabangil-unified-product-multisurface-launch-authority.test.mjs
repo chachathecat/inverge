@@ -377,10 +377,11 @@ test("preserves the exact WCV-C2R graph, roadmap block and 21-row matrix", async
 });
 
 test("keeps C2R-B as the sole implementation selection after C2R-A with one writer", async () => {
-  const [launch, unified, roadmapSource] = await Promise.all([
+  const [launch, unified, roadmapSource, unifiedMarkdown] = await Promise.all([
     json(CONTRACT),
     json("config/dabangil-unified-program-contract.json"),
     text("roadmap/active-program.yml"),
+    text("docs/dabangil-unified-program-contract.md"),
   ]);
   const roadmap = parseRoadmap(roadmapSource);
   const plan = createRoadmapRunnerPlanFromYamlAt(
@@ -388,6 +389,67 @@ test("keeps C2R-B as the sole implementation selection after C2R-A with one writ
     POST_EXPIRY_DIAGNOSTIC_AT,
   );
   const preserved = launch.preservedCurrentAuthority;
+  const authorityGraph =
+    unified.wcvCampaignOverlay.c2StructuralRecovery.authorityGraph;
+  const c2Campaign = unified.wcvCampaignOverlay.campaigns.find(
+    (campaign) => campaign.id === "C2",
+  );
+  const expectedCurrentStage = {
+    roadmapItem: "WCV-C2",
+    campaign: "C2",
+    trackerIssue: 717,
+    currentStage: "C2R-B",
+    currentStageIssue: 714,
+  };
+  const currentStageMirrors = {
+    activeRoadmap: {
+      roadmapItem: roadmap.program.soleNextImplementationItem,
+      campaign: roadmap.program.soleNextImplementationCampaign,
+      trackerIssue: roadmap.program.soleNextImplementationTrackerIssue,
+      currentStage: roadmap.program.soleNextReplacementStage,
+      currentStageIssue: roadmap.program.soleNextReplacementStageIssue,
+    },
+    roadmapContract: {
+      roadmapItem: unified.roadmapContract.soleNextImplementationItemId,
+      campaign: unified.roadmapContract.soleNextImplementationCampaignId,
+      trackerIssue: unified.roadmapContract.soleNextImplementationTrackerIssue,
+      currentStage: unified.roadmapContract.soleNextReplacementStageId,
+      currentStageIssue: unified.roadmapContract.soleNextReplacementStageIssue,
+    },
+    wcvCampaignOverlay: {
+      roadmapItem: c2Campaign.roadmapItemId,
+      campaign: unified.wcvCampaignOverlay.soleNextImplementationCampaign,
+      trackerIssue: unified.wcvCampaignOverlay.soleNextImplementationTrackerIssue,
+      currentStage: unified.wcvCampaignOverlay.soleNextReplacementStage,
+      currentStageIssue: unified.wcvCampaignOverlay.soleNextReplacementStageIssue,
+    },
+    launchConvergenceAmendment: {
+      roadmapItem: unified.launchConvergenceAmendment.soleNextImplementationItem,
+      campaign: unified.launchConvergenceAmendment.soleNextImplementationCampaign,
+      trackerIssue: unified.launchConvergenceAmendment.structuralRecoveryTrackerIssue,
+      currentStage: unified.launchConvergenceAmendment.soleNextReplacementStage,
+      currentStageIssue:
+        unified.launchConvergenceAmendment.soleNextReplacementStageIssue,
+    },
+    preservedCurrentAuthority: {
+      roadmapItem: preserved.roadmapItemId,
+      campaign: preserved.campaignId,
+      trackerIssue: preserved.recoveryTrackerIssue,
+      currentStage: preserved.currentReplacementStageId,
+      currentStageIssue: preserved.currentReplacementStageIssue,
+    },
+    authorityGraph: {
+      roadmapItem: authorityGraph.roadmapItemId,
+      campaign: authorityGraph.campaignId,
+      trackerIssue: authorityGraph.recoveryTrackerIssue,
+      currentStage: authorityGraph.currentReplacementStageId,
+      currentStageIssue: authorityGraph.currentReplacementStageIssue,
+    },
+  };
+
+  for (const [mirror, tuple] of Object.entries(currentStageMirrors)) {
+    assert.deepEqual(tuple, expectedCurrentStage, mirror);
+  }
 
   assert.equal(roadmap.program.soleNextImplementationItem, "WCV-C2");
   assert.equal(roadmap.program.soleNextImplementationCampaign, "C2");
@@ -402,6 +464,15 @@ test("keeps C2R-B as the sole implementation selection after C2R-A with one writ
   assert.equal(unified.roadmapContract.soleNextReplacementStageId, "C2R-B");
   assert.equal(unified.roadmapContract.soleNextReplacementStageIssue, 714);
   assert.equal(preserved.currentReplacementStageState, "authorized_unstarted");
+  assert.match(
+    unifiedMarkdown,
+    /completed source-only C2R-A\s+for Issue #702, and current authorized but unstarted replacement stage C2R-B\s+for Issue #714/,
+  );
+  assert.match(unifiedMarkdown, /post-merge next stage is C2R-B\/#714, authorized but unstarted/);
+  assert.doesNotMatch(
+    unifiedMarkdown,
+    /current authorized but\s+unstarted replacement stage C2R-A for Issue #702/,
+  );
   assert.equal(plan.globalMergeProducingWriterLimit, 1);
   assert.equal(plan.activeWriterCount, 0);
   assert.deepEqual(plan.selectedItemIds, ["WCV-C2"]);

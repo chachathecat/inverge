@@ -203,11 +203,16 @@ review/correction cycles are prohibited.
 | C6 | #712 | #712 | queued behind C5 | verified-bank and bodyless calibration flywheel |
 
 Issue #701 remains the parent program. The exact identifiers are roadmap item
-`WCV-C2`, campaign `C2`, recovery tracker #717, and current authorized but
-unstarted replacement stage C2R-A for Issue #702. Issue #714 remains open and
-becomes the exact standalone source-contract prerequisite C2R-B after terminal
-C2R-A. It is merge-producing only when a separately authorized C2R-B Work
-starts; this authority PR starts neither C2R-A nor C2R-B.
+`WCV-C2`, campaign `C2`, recovery tracker #717, completed source-only C2R-A
+for Issue #702, and current authorized but unstarted replacement stage C2R-B
+for Issue #714. Issue #714 remains open and is the exact standalone
+source-contract prerequisite C2R-B after terminal C2R-A. It is merge-producing
+only when a separately authorized C2R-B Work starts; this authority PR starts
+neither C2R-A nor C2R-B.
+
+`launchConvergenceAmendment`, `wcvCampaignOverlay`, `roadmapContract`, the ULC
+preserved-current-authority mirror and active roadmap must expose one identical
+sole next replacement stage.
 
 ### C2R serial replacement chain
 
