@@ -34,13 +34,13 @@ only assigned work and approved feedback.
 The current implementation authority is WCV-C2, campaign C2, Tracker #717,
 the exact five-stage C2R chain, one merge-producing writer and no automatic
 start. C2R-A/#702 is represented as complete source-only under merge-and-receipt
-semantics; C2R-B/#714 is the current authorized and unstarted stage. ULC-0
-implements nothing.
+semantics; C2R-B/#714 is also complete source-only, while C2R-C-P/#703 is the
+current authorized and unstarted stage. ULC-0 implements nothing.
 
-The 2026-08-15 C2R-A decision owns this exact post-merge selector and the
-C2R-A rights-safe source contract. The 2026-08-14 structural decision still
-owns the five-stage chain and unaffected recovery scope. C2R-B remains
-operationally blocked until the A receipt validates and #702 closes.
+The later 2026-08-15 C2R-B decision owns this exact post-B selector and typed
+proof architecture. The C2R-A decision still owns the A rights-safe source
+contract and its historical post-A selector. The 2026-08-14 structural
+decision owns the five-stage chain and unaffected recovery scope.
 
 The future free-limited public ULC-L1 route requires Today, Review Queue,
 five first-round MCQ subjects, three second-round Trusted Repair subjects,
@@ -121,8 +121,10 @@ Tracker #717 owns the exact serial recovery graph:
 `C2R-A/#702 → C2R-B/#714 → C2R-C-P → C2R-C-T → C2R-C-L`
 
 The formal identities remain separate: roadmap item `WCV-C2`, campaign ID
-`C2`, recovery tracker #717, completed source-only stage `C2R-A` for Issue
-#702, and current authorized but unstarted stage `C2R-B` for Issue #714.
+`C2`, recovery tracker #717, completed source-only stages `C2R-A` for Issue
+#702 and `C2R-B` for Issue #714, and current authorized but unstarted stage
+`C2R-C-P` for Issue #703. The canonical tuple is
+`WCV-C2 / C2 / #717 / C2R-C-P / #703 / authorized_unstarted`.
 
 The sequence is terminally serial. C2R-A and C2R-B are independently complete
 source-contract outcomes and are not parallel. C2R-C-P, C2R-C-T and C2R-C-L
@@ -692,3 +694,23 @@ manual start.
 C2R-A installs the machine-readable rights-safe adaptive variant foundry, exact source classes and denials, raw-body training prohibition, three-bank separation, bank-first generation-on-gap policy, ordered validation cascade, near-copy/reconstruction firewall, and dispute/retirement lineage. It is source-only and activates nothing.
 
 No PR #716 donor finding row is assigned to C2R-A; the 21-row matrix remains unchanged. After expected-head-pinned merge and live receipt validation, #702 may close and C2R-B/#714 is the sole next authorized but unstarted stage. Runtime remains blocked.
+
+## 2026-08-15 C2R-B Typed Subject Proof Architecture
+
+C2R-B installs exactly three typed anchors: a Practice calculation relation,
+a Theory target-scoped predicate and a Law exact applicability binding. Every
+stable/version identity and declared reference resolves once through an
+acyclic graph. Disconnected numbers, cross-target Theory evidence,
+same-target mixed polarity, unresolved or overflowing evidence, and stale,
+ambiguous, label-only or blocked Law bindings remain unverified. Generic
+token presence cannot create proof, verification, transfer or mastery.
+
+The future Tutor episode interface freezes prediction and self-diagnosis
+before help, bounded scaffolds, typed/photo/PDF/voice/structured private
+artifacts, three continuation commands and no-shortcut semantics. No runtime
+is installed. Practice, Theory and Law remain complete successor verticals;
+the shared runtime substrate may first land only within C2R-C-P.
+
+Only Issue #714 allocation C2 is complete. Issue #714 stays open for C3, C4
+and C6. The expected-head-pinned merge and validated #717 receipt authorize
+C2R-C-P/#703 as unstarted; they do not start or activate it.

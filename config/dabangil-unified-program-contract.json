@@ -155,8 +155,8 @@
     },
     "soleNextImplementationItem": "WCV-C2",
     "soleNextImplementationCampaign": "C2",
-    "soleNextReplacementStage": "C2R-B",
-    "soleNextReplacementStageIssue": 714,
+    "soleNextReplacementStage": "C2R-C-P",
+    "soleNextReplacementStageIssue": 703,
     "structuralRecoveryTrackerIssue": 717,
     "wcvC2Complete": false,
     "runtimeAuthorized": false,
@@ -1028,15 +1028,15 @@
       "trackerIssue": 717,
       "authorityDecision": "docs/decisions/2026-08-14-wcv-c2-structural-recovery.md",
       "regressionMatrix": "docs/qa/wcv-c2-replacement-regression-matrix.md",
-      "status": "c2r_a_complete_source_only_c2r_b_authorized_unstarted",
+      "status": "c2r_a_and_c2r_b_complete_source_only_c2r_c_p_authorized_unstarted",
       "wcvC2Complete": false,
       "authorityGraph": {
         "roadmapItemId": "WCV-C2",
         "campaignId": "C2",
         "recoveryTrackerIssue": 717,
         "structuralAuthorityPr": 718,
-        "currentReplacementStageId": "C2R-B",
-        "currentReplacementStageIssue": 714,
+        "currentReplacementStageId": "C2R-C-P",
+        "currentReplacementStageIssue": 703,
         "replacementStageChain": [
           "C2R-A",
           "C2R-B",
@@ -1230,11 +1230,24 @@
           "dependencies": [
             "C2R-A"
           ],
-          "state": "authorized_unstarted",
+          "state": "complete_source_only",
           "sourceContractOnly": true,
           "terminalMergeRequired": true,
           "automaticStartAllowed": false,
-          "startRequiresValidatedMergeCoverageReceiptStage": "C2R-A"
+          "startRequiresValidatedMergeCoverageReceiptStage": "C2R-A",
+          "decisionRecord": "docs/decisions/2026-08-15-owner-c2r-b-typed-proof-obligations.md",
+          "contract": "config/dabangil-c2r-b-typed-subject-proof-architecture-v1.json",
+          "focusedTest": "tests/c2r-b-typed-subject-proof-contract.test.mjs",
+          "completionEffectiveOnlyAfterExpectedHeadPinnedMergeAndValidatedReceipt": true,
+          "completedIssue714Allocation": "C2",
+          "issue714ClosureAllowed": false,
+          "remainingIssue714Allocations": [
+            "C3",
+            "C4",
+            "C6"
+          ],
+          "directRegressionRows": [],
+          "matrixRowsChanged": []
         },
         {
           "order": 3,
@@ -1246,7 +1259,11 @@
           "dependencies": [
             "C2R-B"
           ],
-          "state": "queued_dependency_blocked",
+          "state": "authorized_unstarted",
+          "startRequiresValidatedTerminalStages": [
+            "C2R-A",
+            "C2R-B"
+          ],
           "requiredChangedLayers": [
             "SHARED_TUTOR_EPISODE_KERNEL",
             "TYPED_PRACTICE_CALCULATION_RELATION_VALIDATOR",
@@ -1431,6 +1448,37 @@
         "matrixRowsChanged": [],
         "issueClosureRequiresValidatedMergeCoverageReceipt": true,
         "runtimeReadinessEstablished": false
+      },
+      "c2rBSourceContract": {
+        "decisionRecord": "docs/decisions/2026-08-15-owner-c2r-b-typed-proof-obligations.md",
+        "decisionId": "owner_c2r_b_typed_proof_obligations_2026_08_15",
+        "predecessorDecision": "docs/decisions/2026-08-15-owner-c2r-a-rights-safe-source-firewall.md",
+        "structuralChainDecision": "docs/decisions/2026-08-14-wcv-c2-structural-recovery.md",
+        "repositoryAuthorityEffectiveOn": "expected_head_pinned_squash_merge_and_validated_receipt",
+        "contract": "config/dabangil-c2r-b-typed-subject-proof-architecture-v1.json",
+        "focusedTest": "tests/c2r-b-typed-subject-proof-contract.test.mjs",
+        "state": "complete_source_only",
+        "completedIssue714Allocation": "C2",
+        "issue714ClosureAllowed": false,
+        "remainingIssue714Allocations": [
+          "C3",
+          "C4",
+          "C6"
+        ],
+        "postMergeCurrentReplacementStage": "C2R-C-P",
+        "postMergeCurrentReplacementStageIssue": 703,
+        "operationalSuccessorStartRequires": [
+          "validated_terminal_c2r_a_merge_and_receipt",
+          "validated_terminal_c2r_b_merge_and_receipt"
+        ],
+        "repairAnchorKinds": [
+          "PRACTICE_CALCULATION_RELATION",
+          "THEORY_SCOPED_PREDICATE",
+          "LAW_APPLICABILITY"
+        ],
+        "directRegressionRows": [],
+        "matrixRowsChanged": [],
+        "runtimeReadinessEstablished": false
       }
     },
     "campaigns": [
@@ -1464,7 +1512,7 @@
         "dependencies": [
           "WCV-C1"
         ],
-        "state": "c2r_a_complete_source_only_c2r_b_authorized_unstarted",
+        "state": "c2r_a_and_c2r_b_complete_source_only_c2r_c_p_authorized_unstarted",
         "wcvC2Complete": false,
         "terminalDonorPr": 716,
         "terminalDonorMerged": false,
@@ -1567,7 +1615,7 @@
     ],
     "issue714Tracker": {
       "issue": 714,
-      "state": "open_c2r_b_authorized_unstarted",
+      "state": "open_c2_allocation_complete_c3_c4_c6_preserved",
       "currentMergeProducing": false,
       "mergeProducingWhenStageActive": true,
       "standalonePrerequisiteBeforeC2RCP": true,
@@ -1575,6 +1623,8 @@
       "standaloneSourcePrRequired": true,
       "automaticStartAllowed": false,
       "behaviorImplementedByC1": false,
+      "c2AllocationComplete": true,
+      "c2rBState": "complete_source_only",
       "c2rBClosesIssue714": false,
       "c2rBCompletesOnlyAllocation": "C2",
       "remainingAllocationsAfterC2RB": [
@@ -1649,8 +1699,8 @@
     "soleNextImplementationCampaign": "C2",
     "soleNextImplementationLeadIssue": 717,
     "soleNextImplementationTrackerIssue": 717,
-    "soleNextReplacementStage": "C2R-B",
-    "soleNextReplacementStageIssue": 714,
+    "soleNextReplacementStage": "C2R-C-P",
+    "soleNextReplacementStageIssue": 703,
     "laterCampaignsQueued": [
       "C3",
       "C4",
@@ -1701,8 +1751,8 @@
     "soleNextImplementationCampaignId": "C2",
     "soleNextImplementationLeadIssue": 717,
     "soleNextImplementationTrackerIssue": 717,
-    "soleNextReplacementStageId": "C2R-B",
-    "soleNextReplacementStageIssue": 714,
+    "soleNextReplacementStageId": "C2R-C-P",
+    "soleNextReplacementStageIssue": 703,
     "primaryStatusesUsed": [
       "completed",
       "blocked",
@@ -1902,6 +1952,33 @@
     ],
     "preBlueprintRightsManifestBindingRequired": true,
     "releaseManifestMayCureMissingPreBlueprintBinding": false,
+    "runtimeReadinessEstablished": false,
+    "automaticStartAllowed": false
+  },
+  "c2rBSourceContractDecision": {
+    "decisionRecord": "docs/decisions/2026-08-15-owner-c2r-b-typed-proof-obligations.md",
+    "decisionId": "owner_c2r_b_typed_proof_obligations_2026_08_15",
+    "predecessorDecision": "docs/decisions/2026-08-15-owner-c2r-a-rights-safe-source-firewall.md",
+    "structuralChainDecision": "docs/decisions/2026-08-14-wcv-c2-structural-recovery.md",
+    "repositoryAuthorityEffectiveOn": "expected_head_pinned_squash_merge_and_validated_receipt",
+    "contract": "config/dabangil-c2r-b-typed-subject-proof-architecture-v1.json",
+    "stageId": "C2R-B",
+    "issue": 714,
+    "replacementTrackingIssue": 725,
+    "status": "candidate_represents_complete_source_only_after_merge_and_receipt",
+    "completedIssue714Allocation": "C2",
+    "issue714ClosureAllowed": false,
+    "remainingIssue714Allocations": [
+      "C3",
+      "C4",
+      "C6"
+    ],
+    "postMergeCurrentReplacementStage": "C2R-C-P",
+    "postMergeCurrentReplacementStageIssue": 703,
+    "operationalSuccessorStartRequires": [
+      "validated_terminal_c2r_a_merge_and_receipt",
+      "validated_terminal_c2r_b_merge_and_receipt"
+    ],
     "runtimeReadinessEstablished": false,
     "automaticStartAllowed": false
   }

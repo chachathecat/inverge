@@ -16,12 +16,14 @@ program:
   soleNextImplementationCampaign: C2
   soleNextImplementationLeadIssue: 717
   soleNextImplementationTrackerIssue: 717
-  soleNextReplacementStage: C2R-B
-  soleNextReplacementStageIssue: 714
-  soleNextReplacementStageDecision: docs/decisions/2026-08-15-owner-c2r-a-rights-safe-source-firewall.md
+  soleNextReplacementStage: C2R-C-P
+  soleNextReplacementStageIssue: 703
+  soleNextReplacementStageDecision: docs/decisions/2026-08-15-owner-c2r-b-typed-proof-obligations.md
   structuralRecoveryChainDecision: docs/decisions/2026-08-14-wcv-c2-structural-recovery.md
   c2rBOperationalStartRequiresValidatedC2rAReceipt: true
   c2rBOperationalStartRequiresIssue702Closure: true
+  c2rCPOperationalStartRequiresValidatedTerminalStages: [C2R-A, C2R-B]
+  c2rCPOperationalStartRequiresValidatedC2rBReceipt: true
   crossVerticalAcceptanceTrackerIssue: 714
   structuralRecoveryTrackerIssue: 717
   terminalDonorPr: 716
@@ -358,7 +360,7 @@ items:
   - id: WCV-C2
     title: C2 First Trusted Repair Structural Recovery
     status: queued
-    executionState: c2r_a_complete_source_only_c2r_b_authorized_unstarted
+    executionState: c2r_a_and_c2r_b_complete_source_only_c2r_c_p_authorized_unstarted
     campaignId: C2
     leadIssue: 717
     includedIssues: [702, 714, 703, 704, 705]
@@ -379,8 +381,8 @@ items:
     coverageSuccessorRepositoryPrRequired: false
     terminalIssueClosureRequiresValidatedCoverageReceipt: true
     replacementStages: [C2R-A, C2R-B, C2R-C-P, C2R-C-T, C2R-C-L]
-    currentReplacementStage: C2R-B
-    currentReplacementStageIssue: 714
+    currentReplacementStage: C2R-C-P
+    currentReplacementStageIssue: 703
     c2rAState: complete_source_only
     c2rAIssue: 702
     c2rADirectRegressionRows: []
@@ -388,9 +390,21 @@ items:
     c2rAIssueClosureRequiresValidatedReceipt: true
     c2rASourceContractDecision: docs/decisions/2026-08-15-owner-c2r-a-rights-safe-source-firewall.md
     c2rAStructuralPredecessorDecision: docs/decisions/2026-08-14-wcv-c2-structural-recovery.md
-    c2rBState: authorized_unstarted
+    c2rBState: complete_source_only
     c2rBStartRequiresValidatedC2rAReceipt: true
     c2rBStartRequiresIssue702Closure: true
+    c2rBSourceContractDecision: docs/decisions/2026-08-15-owner-c2r-b-typed-proof-obligations.md
+    c2rBSourceContract: config/dabangil-c2r-b-typed-subject-proof-architecture-v1.json
+    c2rBFocusedTest: tests/c2r-b-typed-subject-proof-contract.test.mjs
+    c2rBCompletedIssue714Allocation: C2
+    c2rBIssue714ClosureAllowed: false
+    c2rBRemainingIssue714Allocations: [C3, C4, C6]
+    c2rBDirectRegressionRows: []
+    c2rBMatrixRowsChanged: []
+    c2rBIssueClosureRequiresValidatedReceipt: false
+    c2rCPState: authorized_unstarted
+    c2rCPStartRequiresValidatedTerminalStages: [C2R-A, C2R-B]
+    c2rCPAutomaticStartAllowed: false
     independentlyCompleteSourceContractStages: [C2R-A, C2R-B]
     completeLearnerVisibleRuntimeStages: [C2R-C-P, C2R-C-T, C2R-C-L]
     commonRuntimeSubstrateFirstStage: C2R-C-P

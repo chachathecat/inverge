@@ -203,12 +203,12 @@ review/correction cycles are prohibited.
 | C6 | #712 | #712 | queued behind C5 | verified-bank and bodyless calibration flywheel |
 
 Issue #701 remains the parent program. The exact identifiers are roadmap item
-`WCV-C2`, campaign `C2`, recovery tracker #717, completed source-only C2R-A
-for Issue #702, and current authorized but unstarted replacement stage C2R-B
-for Issue #714. Issue #714 remains open and is the exact standalone
-source-contract prerequisite C2R-B after terminal C2R-A. It is merge-producing
-only when a separately authorized C2R-B Work starts; this authority PR starts
-neither C2R-A nor C2R-B.
+`WCV-C2`, campaign `C2`, recovery tracker #717, completed source-only stages
+C2R-A for Issue #702 and C2R-B for Issue #714, and current authorized but
+unstarted replacement stage C2R-C-P for Issue #703. Issue #714 remains open:
+only its C2 allocation is complete, while C3, C4 and C6 remain preserved. The
+canonical tuple is
+`WCV-C2 / C2 / #717 / C2R-C-P / #703 / authorized_unstarted`.
 
 `launchConvergenceAmendment`, `wcvCampaignOverlay`, `roadmapContract`, the ULC
 preserved-current-authority mirror and active roadmap must expose one identical
@@ -313,8 +313,9 @@ The 2026-08-11 atomic C2 requirement and its prohibition on standalone #702
 and #714 are preserved as history and are explicitly superseded only for the
 C2 structural-recovery stage chain. Tracker #717 is the recovery tracker and
 campaign-C2 lead record, not a replacement-stage ID or Issue #702. Standalone
-#702 and #714 are authorized only as the serial source-contract stages C2R-A
-and C2R-B. No stage is started by this contract.
+#702 and #714 were authorized only as the serial source-contract stages C2R-A
+and C2R-B. Their terminal evidence authorizes C2R-C-P as the current unstarted
+stage; no runtime stage is started by source authority.
 
 ## 2B. Unified product and multisurface launch convergence
 
@@ -333,10 +334,11 @@ consume tenant-authorized assignments and approved feedback.
 ULC-0 preserves the sole current implementation item `WCV-C2`, campaign `C2`,
 Tracker #717, the five-stage C2R chain, the 21-row regression matrix, the
 one-writer limit and no-auto-start. Under merge-and-receipt semantics,
-C2R-A/#702 is represented complete source-only only after its
-expected-head-pinned merge and validated receipt. C2R-B/#714 is the sole
-represented next authorized and unstarted stage, and Issue #714 remains open.
-WCV-C2 remains incomplete and no replacement stage starts automatically.
+C2R-A/#702 and C2R-B/#714 are represented complete source-only only after
+their expected-head-pinned merges and validated receipts. C2R-C-P/#703 is the
+sole represented next authorized and unstarted stage, and Issue #714 remains
+open for C3/C4/C6. WCV-C2 remains incomplete and no replacement stage starts
+automatically.
 
 ### Free-limited and paid routes
 
@@ -1208,8 +1210,9 @@ The machine mirror pins the WCV campaign graph and structural-recovery chain,
 not the unrelated dynamic ready list. Runner selection is metadata-only: it
 does not start, reserve, provision, author, or execute work. After C1, the
 single available runner slot may select the WCV-C2 umbrella; lead authority is
-#717 and a separate exact Work must still start C2R-A. No later replacement
-stage can auto-start or bypass its terminal predecessor.
+#717. C2R-A and C2R-B are terminal source outcomes, but a separate exact Work
+is still required to start C2R-C-P. No later replacement stage can auto-start
+or bypass its terminal predecessor.
 
 PR #660 remains Draft and blocked. Its current exploratory OCR evidence does
 not establish S236B. Any continuation must reconcile onto amended main and
@@ -1245,3 +1248,32 @@ and remain denied. A later release-manifest binding is independently required
 but cannot cure missing pre-blueprint lineage.
 
 This is source authority only. C2R-A has no assigned donor matrix rows, so the 21-row matrix remains unchanged. The post-merge next stage is C2R-B/#714, authorized but unstarted; C2R-C-P remains blocked until terminal validated A and B merges.
+
+## 2026-08-15 C2R-B typed subject proof contract
+
+The later Owner decision
+`docs/decisions/2026-08-15-owner-c2r-b-typed-proof-obligations.md` and machine
+contract `config/dabangil-c2r-b-typed-subject-proof-architecture-v1.json`
+complete only Issue #714's campaign-C2 allocation under merge-and-receipt
+semantics. The A decision remains historical authority for the A contract and
+its post-A selector; the B decision owns the later post-B selector.
+
+`RepairAnchorV1` is exactly the union of Practice calculation relations,
+Theory target-scoped predicates and Law exact applicability anchors. Every
+stable/version identity and internal reference resolves exactly once through
+an acyclic graph. Disconnected numbers, cross-target evidence, same-target
+mixed polarity, unresolved anaphora, status-only Law labels, stale or
+ambiguous Law bindings, unsupported input and overflow all fail closed.
+Generic token presence is candidate evidence only and cannot create verified,
+proof, transfer or mastery.
+
+The future Tutor interface freezes prediction/self-diagnosis before help,
+typed/photo/PDF/voice/structured private inputs, smallest scaffolds, three
+continuation commands and no-shortcut semantics. It implements no runtime.
+The three successor stages remain complete subject outcomes, and their common
+runtime substrate may first land only inside C2R-C-P.
+
+After terminal B merge and receipt, #714 remains open with C3/C4/C6 preserved.
+The current tuple is
+`WCV-C2 / C2 / #717 / C2R-C-P / #703 / authorized_unstarted`. Issue state
+cannot replace either source-stage merge; no runtime or activation begins.

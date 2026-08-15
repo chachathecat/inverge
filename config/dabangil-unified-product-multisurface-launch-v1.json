@@ -33,14 +33,23 @@
     "roadmapItemId": "WCV-C2",
     "campaignId": "C2",
     "wcvC2Complete": false,
-    "currentReplacementStageId": "C2R-B",
-    "currentReplacementStageIssue": 714,
+    "currentReplacementStageId": "C2R-C-P",
+    "currentReplacementStageIssue": 703,
     "currentReplacementStageState": "authorized_unstarted",
-    "currentSelectorDecision": "docs/decisions/2026-08-15-owner-c2r-a-rights-safe-source-firewall.md",
+    "currentSelectorDecision": "docs/decisions/2026-08-15-owner-c2r-b-typed-proof-obligations.md",
     "structuralChainDecision": "docs/decisions/2026-08-14-wcv-c2-structural-recovery.md",
     "c2rBOperationalStartRequires": [
       "validated_c2r_a_merge_coverage_receipt",
       "issue_702_terminal_close"
+    ],
+    "c2rBState": "complete_source_only",
+    "c2rBSourceContract": "config/dabangil-c2r-b-typed-subject-proof-architecture-v1.json",
+    "c2rBCompletedIssue714Allocation": "C2",
+    "c2rBIssue714ClosureAllowed": false,
+    "c2rBRemainingIssue714Allocations": ["C3", "C4", "C6"],
+    "c2rCPOperationalStartRequires": [
+      "validated_terminal_c2r_a_merge_and_receipt",
+      "validated_terminal_c2r_b_merge_and_receipt"
     ],
     "replacementStageChain": [
       "C2R-A",
@@ -51,8 +60,8 @@
     ],
     "globalMergeProducingWriterLimit": 1,
     "automaticStartAllowed": false,
-    "wcvC2StructuralRecoveryCanonicalSha256": "294fbd66bf1672ec9a6441fe63e9367cb0965e03ecc63d1fbdb9110a60fdd126",
-    "roadmapWcvC2BlockSha256": "4175860d4d5152d52936dc62b4b3882f87e05cfb35be248622bd9043edf98bc9",
+    "wcvC2StructuralRecoveryCanonicalSha256": "ec98a90a06f31dd0e118568e97a86e7da29869b0256d4774677946dee9918f2e",
+    "roadmapWcvC2BlockSha256": "0d459ea46f46bb33b69ef124d19d6ee01ffec03b42e55a3f6ae6a866b255bbe7",
     "regressionMatrixSha256": "b92d4ad88a44e10a7eb61670509c288cf871916a2570253f3f25cef211ebffeb",
     "regressionMatrixRowCount": 21
   },

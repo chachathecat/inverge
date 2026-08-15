@@ -1,0 +1,626 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "contractId": "dabangil.c2r_b.typed_subject_proof_architecture.v1",
+  "version": "1.0.0",
+  "stage": {
+    "stageId": "C2R-B",
+    "stageIssue": 714,
+    "replacementTrackingIssue": 725,
+    "recoveryTrackerIssue": 717,
+    "decisionId": "owner_c2r_b_typed_proof_obligations_2026_08_15",
+    "decisionRecord": "docs/decisions/2026-08-15-owner-c2r-b-typed-proof-obligations.md",
+    "predecessorDecision": "docs/decisions/2026-08-15-owner-c2r-a-rights-safe-source-firewall.md",
+    "structuralChainDecision": "docs/decisions/2026-08-14-wcv-c2-structural-recovery.md",
+    "repositoryAuthorityEffectiveOn": "expected_head_pinned_squash_merge_and_validated_receipt",
+    "candidateState": "represents_complete_source_only_after_merge_and_receipt",
+    "completedAllocation": "C2",
+    "issueClosureAllowed": false,
+    "remainingAllocations": ["C3", "C4", "C6"],
+    "runtimeReadinessEstablished": false,
+    "automaticStartAllowed": false
+  },
+  "canonicalCurrentStageTuple": {
+    "tupleVersion": "WcvCurrentStageTupleV1",
+    "roadmapItemId": "WCV-C2",
+    "campaignId": "C2",
+    "recoveryTrackerIssue": 717,
+    "currentReplacementStageId": "C2R-C-P",
+    "currentReplacementStageIssue": 703,
+    "currentReplacementStageState": "authorized_unstarted"
+  },
+  "repairAnchorUnion": {
+    "typeName": "RepairAnchorV1",
+    "typeScript": "type RepairAnchorV1 = CalculationRelationAnchorV1 | ScopedPredicateAnchorV1 | LawApplicabilityAnchorV1;",
+    "discriminator": "anchorKind",
+    "anchorKinds": [
+      "PRACTICE_CALCULATION_RELATION",
+      "THEORY_SCOPED_PREDICATE",
+      "LAW_APPLICABILITY"
+    ],
+    "memberTypes": [
+      "CalculationRelationAnchorV1",
+      "ScopedPredicateAnchorV1",
+      "LawApplicabilityAnchorV1"
+    ],
+    "additionalAnchorKindsAllowed": false
+  },
+  "identitySchemas": {
+    "RepairProofObligationV1": {
+      "stableIdentityFields": ["proofObligationId"],
+      "versionIdentityFields": ["proofObligationVersionId"],
+      "requiredReferenceFields": ["anchorId", "anchorVersionId", "evaluationPolicyId", "episodeInterfaceId"]
+    },
+    "RepairAnchorV1": {
+      "stableIdentityFields": ["anchorId"],
+      "versionIdentityFields": ["anchorVersionId"],
+      "requiredReferenceFields": []
+    },
+    "ProofEvaluationPolicyV1": {
+      "stableIdentityFields": ["evaluationPolicyId"],
+      "versionIdentityFields": ["evaluationPolicyVersionId"],
+      "requiredReferenceFields": []
+    },
+    "TutorEpisodeInterfaceV1": {
+      "stableIdentityFields": ["episodeInterfaceId"],
+      "versionIdentityFields": ["episodeInterfaceVersionId"],
+      "requiredReferenceFields": []
+    },
+    "SubjectVerticalFreezeV1": {
+      "stableIdentityFields": ["verticalFreezeId"],
+      "versionIdentityFields": ["verticalFreezeVersionId"],
+      "requiredReferenceFields": ["proofObligationId"]
+    },
+    "LawSourceV1": {
+      "stableIdentityFields": ["sourceId"],
+      "versionIdentityFields": ["sourceVersionId"],
+      "requiredReferenceFields": []
+    },
+    "LawAnchorV1": {
+      "stableIdentityFields": ["lawAnchorId"],
+      "versionIdentityFields": [],
+      "requiredReferenceFields": ["sourceId"]
+    },
+    "LawAnchorVersionV1": {
+      "stableIdentityFields": ["lawAnchorVersionId"],
+      "versionIdentityFields": [],
+      "requiredReferenceFields": ["lawAnchorId", "sourceId", "sourceVersionId"]
+    },
+    "LawSourceBindingV1": {
+      "stableIdentityFields": ["lawSourceBindingId"],
+      "versionIdentityFields": ["lawSourceBindingVersionId"],
+      "requiredReferenceFields": ["sourceId", "sourceVersionId", "lawAnchorId", "lawAnchorVersionId"]
+    }
+  },
+  "identityRules": {
+    "missingIdentity": "FAIL_CLOSED",
+    "duplicateStableIdentity": "FAIL_CLOSED_AMBIGUOUS_REFERENCE",
+    "duplicateVersionIdentity": "FAIL_CLOSED_AMBIGUOUS_REFERENCE",
+    "semanticChangeRequiresNewVersionIdentity": true,
+    "unresolvedReference": "FAIL_CLOSED",
+    "multiTargetReference": "FAIL_CLOSED_AMBIGUOUS_REFERENCE",
+    "referenceCyclesAllowed": false,
+    "crossSubjectAnchorBindingAllowed": false
+  },
+  "correlatedReferenceBindings": [
+    {
+      "bindingId": "proof-obligation-to-one-anchor-identity-version-subject",
+      "fromType": "RepairProofObligationV1",
+      "toType": "RepairAnchorV1",
+      "identityPairs": [
+        {"fromField": "anchorId", "toField": "anchorId"},
+        {"fromField": "anchorVersionId", "toField": "anchorVersionId"}
+      ],
+      "fromSubjectField": "subject",
+      "targetDiscriminatorField": "anchorKind",
+      "targetSubjectByDiscriminator": {
+        "PRACTICE_CALCULATION_RELATION": "PRACTICE",
+        "THEORY_SCOPED_PREDICATE": "THEORY",
+        "LAW_APPLICABILITY": "LAW"
+      },
+      "cardinality": "exactly_one_composite_target",
+      "failureMode": "FAIL_CLOSED"
+    }
+  ],
+  "referenceGraph": [
+    {
+      "edgeId": "subject-freeze-to-proof-obligation",
+      "fromType": "SubjectVerticalFreezeV1",
+      "fromField": "proofObligationId",
+      "toType": "RepairProofObligationV1",
+      "toField": "proofObligationId",
+      "cardinality": "exactly_one"
+    },
+    {
+      "edgeId": "proof-obligation-to-anchor-id",
+      "fromType": "RepairProofObligationV1",
+      "fromField": "anchorId",
+      "toType": "RepairAnchorV1",
+      "toField": "anchorId",
+      "cardinality": "exactly_one"
+    },
+    {
+      "edgeId": "proof-obligation-to-anchor-version",
+      "fromType": "RepairProofObligationV1",
+      "fromField": "anchorVersionId",
+      "toType": "RepairAnchorV1",
+      "toField": "anchorVersionId",
+      "cardinality": "exactly_one"
+    },
+    {
+      "edgeId": "proof-obligation-to-evaluation-policy",
+      "fromType": "RepairProofObligationV1",
+      "fromField": "evaluationPolicyId",
+      "toType": "ProofEvaluationPolicyV1",
+      "toField": "evaluationPolicyId",
+      "cardinality": "exactly_one"
+    },
+    {
+      "edgeId": "proof-obligation-to-episode-interface",
+      "fromType": "RepairProofObligationV1",
+      "fromField": "episodeInterfaceId",
+      "toType": "TutorEpisodeInterfaceV1",
+      "toField": "episodeInterfaceId",
+      "cardinality": "exactly_one"
+    },
+    {
+      "edgeId": "law-applicability-anchor-to-source-binding",
+      "fromType": "LawApplicabilityAnchorV1",
+      "fromField": "lawSourceBindingId",
+      "toType": "LawSourceBindingV1",
+      "toField": "lawSourceBindingId",
+      "cardinality": "exactly_one"
+    },
+    {
+      "edgeId": "law-source-binding-to-source-id",
+      "fromType": "LawSourceBindingV1",
+      "fromField": "sourceId",
+      "toType": "LawSourceV1",
+      "toField": "sourceId",
+      "cardinality": "exactly_one"
+    },
+    {
+      "edgeId": "law-source-binding-to-source-version",
+      "fromType": "LawSourceBindingV1",
+      "fromField": "sourceVersionId",
+      "toType": "LawSourceV1",
+      "toField": "sourceVersionId",
+      "cardinality": "exactly_one"
+    },
+    {
+      "edgeId": "law-source-binding-to-law-anchor",
+      "fromType": "LawSourceBindingV1",
+      "fromField": "lawAnchorId",
+      "toType": "LawAnchorV1",
+      "toField": "lawAnchorId",
+      "cardinality": "exactly_one"
+    },
+    {
+      "edgeId": "law-source-binding-to-law-anchor-version",
+      "fromType": "LawSourceBindingV1",
+      "fromField": "lawAnchorVersionId",
+      "toType": "LawAnchorVersionV1",
+      "toField": "lawAnchorVersionId",
+      "cardinality": "exactly_one"
+    },
+    {
+      "edgeId": "law-anchor-to-source",
+      "fromType": "LawAnchorV1",
+      "fromField": "sourceId",
+      "toType": "LawSourceV1",
+      "toField": "sourceId",
+      "cardinality": "exactly_one"
+    },
+    {
+      "edgeId": "law-anchor-version-to-anchor",
+      "fromType": "LawAnchorVersionV1",
+      "fromField": "lawAnchorId",
+      "toType": "LawAnchorV1",
+      "toField": "lawAnchorId",
+      "cardinality": "exactly_one"
+    },
+    {
+      "edgeId": "law-anchor-version-to-source-version",
+      "fromType": "LawAnchorVersionV1",
+      "fromField": "sourceVersionId",
+      "toType": "LawSourceV1",
+      "toField": "sourceVersionId",
+      "cardinality": "exactly_one"
+    }
+  ],
+  "proofEvaluation": {
+    "states": ["PASS", "PARTIAL", "AMBIGUOUS", "UNSUPPORTED", "BLOCKED", "STALE"],
+    "verifiedState": "PASS",
+    "allOtherStatesVerified": false,
+    "genericTokenPresence": "CANDIDATE_EVIDENCE_ONLY",
+    "genericTokenPresenceMayCreate": [],
+    "genericTokenPresenceMayNotCreate": [
+      "SATISFIED",
+      "VERIFIED",
+      "CALCULATION_RELATION",
+      "TARGET_SCOPED_SUPPORT",
+      "CURRENT_LAW_APPLICABILITY",
+      "TRANSFER_QUALIFICATION",
+      "MASTERY"
+    ],
+    "requiredClaimAmbiguity": "AMBIGUOUS_UNSATISFIED",
+    "forbiddenClaimAssertiveAmbiguity": "BLOCKED_RELEASE",
+    "unsupportedEvidence": "UNSUPPORTED_UNVERIFIED",
+    "overflow": "UNSUPPORTED_UNVERIFIED",
+    "subjectValidatorRequiredForPass": true,
+    "clientOrModelMaySetVerified": false
+  },
+  "practiceCalculationRelation": {
+    "type": "CalculationRelationAnchorV1",
+    "subject": "PRACTICE",
+    "requiredFields": [
+      "anchorId",
+      "anchorVersionId",
+      "operandRoles",
+      "operator",
+      "operandOrder",
+      "result",
+      "units",
+      "sign",
+      "rounding",
+      "supportedTransformation",
+      "deterministicValidatorId"
+    ],
+    "supportedOperators": ["ADD", "SUBTRACT", "MULTIPLY", "DIVIDE"],
+    "supportedTransformations": [
+      "DIRECT_ORDERED",
+      "COMMUTATIVE_REORDER_ADD",
+      "COMMUTATIVE_REORDER_MULTIPLY",
+      "EXACT_ALGEBRAIC_EQUIVALENCE"
+    ],
+    "operandRolesMustBeUnique": true,
+    "operandOrderMustCoverEveryOperandExactlyOnce": true,
+    "unitCompatibilityRequired": true,
+    "signConstraintRequired": true,
+    "roundingModeAndScaleRequired": true,
+    "deterministicValidatorRequired": true,
+    "disconnectedNumericPresenceResult": "UNSUPPORTED",
+    "substringNumericMatchAllowed": false,
+    "overflowResult": "UNSUPPORTED"
+  },
+  "theoryScopedPredicate": {
+    "type": "ScopedPredicateAnchorV1",
+    "subject": "THEORY",
+    "requiredFields": [
+      "anchorId",
+      "anchorVersionId",
+      "targetScopeId",
+      "acceptedTargetAliases",
+      "requiredPredicates",
+      "forbiddenPredicates",
+      "acceptableAlternatives",
+      "counterexampleScopes",
+      "negationPolicy",
+      "mixedPolarityPolicy",
+      "anaphoraPolicy",
+      "overflowPolicy",
+      "deterministicValidatorId"
+    ],
+    "targetScopeMustResolveExactlyOnce": true,
+    "acceptedAliasesRemainBoundToTarget": true,
+    "crossTargetEvidenceResult": "UNSUPPORTED",
+    "sameTargetMixedPolarityResult": "AMBIGUOUS",
+    "requiredPredicateNegatedResult": "PARTIAL",
+    "forbiddenPredicateAssertedResult": "BLOCKED",
+    "forbiddenPredicateMixedPolarityResult": "BLOCKED",
+    "distinctCounterexampleMayEraseTargetConflict": false,
+    "unresolvedAnaphoraResult": "AMBIGUOUS",
+    "unscopedAssertionResult": "AMBIGUOUS",
+    "overflowResult": "UNSUPPORTED"
+  },
+  "lawApplicability": {
+    "type": "LawApplicabilityAnchorV1",
+    "subject": "LAW",
+    "requiredFields": [
+      "anchorId",
+      "anchorVersionId",
+      "lawSourceBindingId",
+      "sourceId",
+      "sourceVersionId",
+      "lawAnchorId",
+      "lawAnchorVersionId",
+      "exactLocator",
+      "exactVersionIdentity",
+      "effectiveFrom",
+      "effectiveTo",
+      "applicableAsOf",
+      "currentLawApplicability",
+      "blockerState",
+      "deterministicValidatorId"
+    ],
+    "exactBindingRequired": true,
+    "effectiveWindowInclusive": true,
+    "effectiveToMayBeNull": true,
+    "applicableAsOfMustBeInsideEffectiveWindow": true,
+    "sourceAndAnchorVersionMustBeCurrentForApplicableAsOf": true,
+    "openBlockingReferenceCountMustEqual": 0,
+    "statusLabelsAloneResult": "UNSUPPORTED",
+    "unresolvedBindingResult": "BLOCKED",
+    "ambiguousBindingResult": "BLOCKED",
+    "staleBindingResult": "STALE",
+    "locatorOrVersionMismatchResult": "BLOCKED"
+  },
+  "registries": {
+    "evaluationPolicies": [
+      {
+        "evaluationPolicyId": "proof-policy:typed-subject-fail-closed",
+        "evaluationPolicyVersionId": "proof-policy:typed-subject-fail-closed@1",
+        "subjectValidatorRequired": true,
+        "genericFallbackMayPass": false
+      }
+    ],
+    "episodeInterfaces": [
+      {
+        "episodeInterfaceId": "tutor-episode:trusted-repair-shared",
+        "episodeInterfaceVersionId": "tutor-episode:trusted-repair-shared@1",
+        "futureRuntimeInterfaceOnly": true,
+        "phases": [
+          "INDEPENDENT_COMMIT",
+          "METACOGNITIVE_PREDICTION",
+          "LEARNER_SELF_DIAGNOSIS",
+          "SERVER_DIAGNOSIS",
+          "REPAIR_PATH_SELECTION",
+          "SMALLEST_SCAFFOLD",
+          "INDEPENDENT_RECONSTRUCTION",
+          "SAME_SESSION_APPLICATION",
+          "TYPED_VALIDATION",
+          "CONTINUATION_DECISION"
+        ],
+        "privateArtifactInputModes": ["TYPED", "PHOTO", "PDF", "VOICE", "STRUCTURED_SELECTION"],
+        "continuationCommands": ["VERIFY_AND_CONTINUE", "DEFER_FOR_NOW", "SWITCH_TO_GUIDED"],
+        "noShortcutActions": ["SAVE", "UPLOAD", "VIEW", "SKIP", "DEFER_FOR_NOW", "SWITCH_TO_GUIDED"],
+        "noShortcutActionMayCreateVerified": false,
+        "predictionAndSelfDiagnosisPrecedeServerDiagnosis": true,
+        "initialAssistanceLevel": 0,
+        "firstScaffoldAssistanceLevel": 1,
+        "assistanceLevel3IsHonestGuidedExit": true,
+        "episodeMayCreateMasteryTransferOrStability": false
+      }
+    ],
+    "lawSources": [
+      {
+        "sourceId": "law-source:synthetic-official-act",
+        "sourceVersionId": "law-source:synthetic-official-act@2026-01-01",
+        "issuer": "SYNTHETIC_OFFICIAL_FIXTURE",
+        "official": true,
+        "versionIdentity": "2026-01-01"
+      }
+    ],
+    "lawAnchors": [
+      {
+        "lawAnchorId": "law-anchor:synthetic-official-act:article-10",
+        "sourceId": "law-source:synthetic-official-act",
+        "locatorKind": "ARTICLE",
+        "locator": "Article 10"
+      }
+    ],
+    "lawAnchorVersions": [
+      {
+        "lawAnchorVersionId": "law-anchor:synthetic-official-act:article-10@2026-01-01",
+        "lawAnchorId": "law-anchor:synthetic-official-act:article-10",
+        "sourceId": "law-source:synthetic-official-act",
+        "sourceVersionId": "law-source:synthetic-official-act@2026-01-01",
+        "exactLocator": "Article 10",
+        "exactVersionIdentity": "2026-01-01",
+        "effectiveFrom": "2026-01-01",
+        "effectiveTo": null
+      }
+    ],
+    "lawSourceBindings": [
+      {
+        "lawSourceBindingId": "law-binding:synthetic-official-act:article-10",
+        "lawSourceBindingVersionId": "law-binding:synthetic-official-act:article-10@1",
+        "sourceId": "law-source:synthetic-official-act",
+        "sourceVersionId": "law-source:synthetic-official-act@2026-01-01",
+        "lawAnchorId": "law-anchor:synthetic-official-act:article-10",
+        "lawAnchorVersionId": "law-anchor:synthetic-official-act:article-10@2026-01-01",
+        "exactLocator": "Article 10",
+        "exactVersionIdentity": "2026-01-01",
+        "effectiveFrom": "2026-01-01",
+        "effectiveTo": null,
+        "status": "CURRENT",
+        "openBlockingReferenceIds": []
+      }
+    ]
+  },
+  "canonicalAnchors": [
+    {
+      "anchorKind": "PRACTICE_CALCULATION_RELATION",
+      "anchorId": "repair-anchor:practice:synthetic-net-income",
+      "anchorVersionId": "repair-anchor:practice:synthetic-net-income@1",
+      "operandRoles": [
+        {"role": "gross_income", "value": 120000000, "unit": "KRW_PER_YEAR"},
+        {"role": "operating_expense", "value": 20000000, "unit": "KRW_PER_YEAR"}
+      ],
+      "operator": "SUBTRACT",
+      "operandOrder": ["gross_income", "operating_expense"],
+      "result": {"value": 100000000, "unit": "KRW_PER_YEAR"},
+      "units": "KRW_PER_YEAR",
+      "sign": "POSITIVE",
+      "rounding": {"mode": "HALF_UP", "scale": 0},
+      "supportedTransformation": "DIRECT_ORDERED",
+      "deterministicValidatorId": "validator:practice-calculation-relation@1"
+    },
+    {
+      "anchorKind": "THEORY_SCOPED_PREDICATE",
+      "anchorId": "repair-anchor:theory:synthetic-income-approach",
+      "anchorVersionId": "repair-anchor:theory:synthetic-income-approach@1",
+      "targetScopeId": "theory-target:synthetic-income-approach",
+      "acceptedTargetAliases": ["income approach", "synthetic income method"],
+      "requiredPredicates": ["converts_expected_income_to_value"],
+      "forbiddenPredicates": ["uses_only_historical_cost"],
+      "acceptableAlternatives": [
+        ["capitalizes_expected_income"],
+        ["discounts_expected_cash_flow"]
+      ],
+      "counterexampleScopes": ["theory-target:synthetic-cost-approach"],
+      "negationPolicy": "EXPLICIT_POLARITY",
+      "mixedPolarityPolicy": "FAIL_CLOSED",
+      "anaphoraPolicy": "EXACT_TARGET_RESOLUTION_REQUIRED",
+      "overflowPolicy": {"maxClauses": 24, "maxPredicateOccurrences": 64, "result": "UNSUPPORTED"},
+      "deterministicValidatorId": "validator:theory-scoped-predicate@1"
+    },
+    {
+      "anchorKind": "LAW_APPLICABILITY",
+      "anchorId": "repair-anchor:law:synthetic-article-10",
+      "anchorVersionId": "repair-anchor:law:synthetic-article-10@1",
+      "lawSourceBindingId": "law-binding:synthetic-official-act:article-10",
+      "sourceId": "law-source:synthetic-official-act",
+      "sourceVersionId": "law-source:synthetic-official-act@2026-01-01",
+      "lawAnchorId": "law-anchor:synthetic-official-act:article-10",
+      "lawAnchorVersionId": "law-anchor:synthetic-official-act:article-10@2026-01-01",
+      "exactLocator": "Article 10",
+      "exactVersionIdentity": "2026-01-01",
+      "effectiveFrom": "2026-01-01",
+      "effectiveTo": null,
+      "applicableAsOf": "2026-08-15",
+      "currentLawApplicability": "APPLICABLE_CURRENT",
+      "blockerState": {"openBlockingReferenceIds": [], "blockerCount": 0},
+      "deterministicValidatorId": "validator:law-exact-applicability@1"
+    }
+  ],
+  "proofObligations": [
+    {
+      "proofObligationId": "proof-obligation:practice:calculation-relation",
+      "proofObligationVersionId": "proof-obligation:practice:calculation-relation@1",
+      "subject": "PRACTICE",
+      "anchorId": "repair-anchor:practice:synthetic-net-income",
+      "anchorVersionId": "repair-anchor:practice:synthetic-net-income@1",
+      "evaluationPolicyId": "proof-policy:typed-subject-fail-closed",
+      "episodeInterfaceId": "tutor-episode:trusted-repair-shared"
+    },
+    {
+      "proofObligationId": "proof-obligation:theory:scoped-predicate",
+      "proofObligationVersionId": "proof-obligation:theory:scoped-predicate@1",
+      "subject": "THEORY",
+      "anchorId": "repair-anchor:theory:synthetic-income-approach",
+      "anchorVersionId": "repair-anchor:theory:synthetic-income-approach@1",
+      "evaluationPolicyId": "proof-policy:typed-subject-fail-closed",
+      "episodeInterfaceId": "tutor-episode:trusted-repair-shared"
+    },
+    {
+      "proofObligationId": "proof-obligation:law:exact-applicability",
+      "proofObligationVersionId": "proof-obligation:law:exact-applicability@1",
+      "subject": "LAW",
+      "anchorId": "repair-anchor:law:synthetic-article-10",
+      "anchorVersionId": "repair-anchor:law:synthetic-article-10@1",
+      "evaluationPolicyId": "proof-policy:typed-subject-fail-closed",
+      "episodeInterfaceId": "tutor-episode:trusted-repair-shared"
+    }
+  ],
+  "subjectVerticalFreezes": [
+    {
+      "verticalFreezeId": "vertical-freeze:c2r-c-p",
+      "verticalFreezeVersionId": "vertical-freeze:c2r-c-p@1",
+      "stageId": "C2R-C-P",
+      "subject": "PRACTICE",
+      "proofObligationId": "proof-obligation:practice:calculation-relation",
+      "commonRuntimeSubstrateMayFirstLandHere": true,
+      "completeOutcomeRequired": true
+    },
+    {
+      "verticalFreezeId": "vertical-freeze:c2r-c-t",
+      "verticalFreezeVersionId": "vertical-freeze:c2r-c-t@1",
+      "stageId": "C2R-C-T",
+      "subject": "THEORY",
+      "proofObligationId": "proof-obligation:theory:scoped-predicate",
+      "commonRuntimeSubstrateMayFirstLandHere": false,
+      "completeOutcomeRequired": true
+    },
+    {
+      "verticalFreezeId": "vertical-freeze:c2r-c-l",
+      "verticalFreezeVersionId": "vertical-freeze:c2r-c-l@1",
+      "stageId": "C2R-C-L",
+      "subject": "LAW",
+      "proofObligationId": "proof-obligation:law:exact-applicability",
+      "commonRuntimeSubstrateMayFirstLandHere": false,
+      "completeOutcomeRequired": true
+    }
+  ],
+  "architectureFreeze": {
+    "runtimeStages": ["C2R-C-P", "C2R-C-T", "C2R-C-L"],
+    "completeChangedLayersRequired": [
+      "CONTRACT_AND_MACHINE_VALIDATION",
+      "MATCHING_GOLDEN_AND_OWNER_GOLD_FIXTURES",
+      "PERSISTENCE_AND_FORCED_RLS",
+      "SERVER_AND_IDEMPOTENCY_CAS",
+      "API",
+      "LEARNER_UI",
+      "FOCUSED_HOSTILE_AND_BROWSER_DATABASE_EVIDENCE",
+      "SAFE_DEFERRED_CAPABILITY_BOUNDARY",
+      "INDEPENDENT_ROLLBACK"
+    ],
+    "horizontalRuntimeLayerAllowed": false,
+    "commonRuntimeSubstrateFirstStage": "C2R-C-P",
+    "stageMergeUnlocksC2RCP": true,
+    "issueClosureUnlocksC2RCP": false,
+    "c2rCPStartRequiresValidatedTerminalStages": ["C2R-A", "C2R-B"],
+    "c2rCPAutomaticStartAllowed": false
+  },
+  "issue714AllocationBoundary": {
+    "issue": 714,
+    "issueStateAfterMerge": "OPEN",
+    "completedAllocation": "C2",
+    "completedRequirementIds": [
+      "adaptive_expertise_controller",
+      "cognitive_load_budget",
+      "concept_repair_need_decision",
+      "concept_repair_input_modes_and_private_artifact_boundary",
+      "concept_progression_gate_and_three_continue_semantics",
+      "episode_metacognitive_prediction_and_self_diagnosis",
+      "initial_scaffold_fading_and_control_transfer",
+      "same_session_reconstruction_application_and_no_shortcut_invariants"
+    ],
+    "issueClosureAllowed": false,
+    "remainingAllocations": ["C3", "C4", "C6"],
+    "remainingRequirementsPreserved": true,
+    "stageMergeRequiredToUnlockSuccessor": true,
+    "issueStateMaySubstituteForStageMerge": false
+  },
+  "activationBoundary": {
+    "sourceContractOnly": true,
+    "runtimeAuthorized": false,
+    "applicationAuthorized": false,
+    "apiAuthorized": false,
+    "schemaAuthorized": false,
+    "databaseAuthorized": false,
+    "providerAuthorized": false,
+    "learnerAuthorized": false,
+    "paymentAuthorized": false,
+    "deploymentAuthorized": false,
+    "productionAuthorized": false
+  },
+  "validation": {
+    "focusedCommand": "node scripts/run-node-tests.mjs tests/c2r-b-typed-subject-proof-contract.test.mjs tests/rights-safe-adaptive-variant-foundry-contract.test.mjs tests/wcv-c2r-structural-recovery-authority.test.mjs tests/wcv-campaign-authority-roadmap-reconciliation.test.mjs tests/dabangil-unified-product-multisurface-launch-authority.test.mjs",
+    "jsonFiles": [
+      "config/dabangil-c2r-b-typed-subject-proof-architecture-v1.json",
+      "config/dabangil-unified-program-contract.json",
+      "config/dabangil-unified-product-multisurface-launch-v1.json"
+    ],
+    "yamlFiles": ["roadmap/active-program.yml"]
+  },
+  "frozenPathManifest": [
+    "AGENTS.md",
+    "roadmap/active-program.yml",
+    "config/dabangil-unified-program-contract.json",
+    "config/dabangil-unified-product-multisurface-launch-v1.json",
+    "docs/dabangil-unified-program-contract.md",
+    "docs/inverge-master-roadmap.md",
+    "docs/decisions/2026-08-15-owner-c2r-b-typed-proof-obligations.md",
+    "docs/strategy/dabangil-c2r-b-typed-subject-proof-architecture-v1.md",
+    "config/dabangil-c2r-b-typed-subject-proof-architecture-v1.json",
+    "docs/qa/c2r-b-typed-subject-proof-validation.md",
+    "tests/c2r-b-typed-subject-proof-contract.test.mjs",
+    "tests/rights-safe-adaptive-variant-foundry-contract.test.mjs",
+    "tests/wcv-c2r-structural-recovery-authority.test.mjs",
+    "tests/wcv-campaign-authority-roadmap-reconciliation.test.mjs",
+    "tests/dabangil-unified-product-multisurface-launch-authority.test.mjs",
+    "scripts/run-node-tests.mjs",
+    "docs/strategy/ACTIVE-MASTER-PLAN.md",
+    "docs/strategy/dabangil-unified-product-multisurface-launch-v1-2026-08-14.md"
+  ]
+}
