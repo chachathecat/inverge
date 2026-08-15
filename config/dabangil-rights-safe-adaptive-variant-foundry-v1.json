@@ -146,7 +146,11 @@
   },
   "requiredContracts": {
     "SourceEligibilityDecisionV1": {
+      "identityField": "decisionId",
+      "identityStable": true,
+      "identityUniqueWithinPolicyScope": true,
       "requiredFields": [
+        "decisionId",
         "sourceClass",
         "purpose",
         "decision",
@@ -246,6 +250,112 @@
         "STALE",
         "RETIRED"
       ]
+    }
+  },
+  "contractReferenceIntegrity": {
+    "failClosedWhenReferenceMissing": true,
+    "failClosedWhenReferenceUnresolved": true,
+    "failClosedWhenReferenceAmbiguous": true,
+    "identityFieldsExactly": [
+      {
+        "contract": "SourceEligibilityDecisionV1",
+        "field": "decisionId"
+      },
+      {
+        "contract": "RightsManifestV1",
+        "field": "manifestId"
+      },
+      {
+        "contract": "SkillBlueprintV1",
+        "field": "blueprintId"
+      },
+      {
+        "contract": "VariantCandidateV1",
+        "field": "candidateId"
+      },
+      {
+        "contract": "VariantReleaseArtifactV1",
+        "field": "artifactId"
+      }
+    ],
+    "referencesExactly": [
+      {
+        "sourceContract": "SkillBlueprintV1",
+        "sourceField": "sourceDecisionId",
+        "targetContract": "SourceEligibilityDecisionV1",
+        "targetField": "decisionId"
+      },
+      {
+        "sourceContract": "VariantCandidateV1",
+        "sourceField": "blueprintId",
+        "targetContract": "SkillBlueprintV1",
+        "targetField": "blueprintId"
+      },
+      {
+        "sourceContract": "VariantReleaseArtifactV1",
+        "sourceField": "candidateId",
+        "targetContract": "VariantCandidateV1",
+        "targetField": "candidateId"
+      },
+      {
+        "sourceContract": "VariantReleaseArtifactV1",
+        "sourceField": "rightsManifestId",
+        "targetContract": "RightsManifestV1",
+        "targetField": "manifestId"
+      },
+      {
+        "sourceContract": "ExposureLedgerV1",
+        "sourceField": "artifactId",
+        "targetContract": "VariantReleaseArtifactV1",
+        "targetField": "artifactId"
+      },
+      {
+        "sourceContract": "DisputeAndRetirementV1",
+        "sourceField": "artifactId",
+        "targetContract": "VariantReleaseArtifactV1",
+        "targetField": "artifactId"
+      }
+    ],
+    "externalOrScopedIdentifiersExactly": [
+      {
+        "sourceContract": "HumanCreativeContributionV1",
+        "sourceField": "contributorId",
+        "resolutionPolicy": "CONTRIBUTOR_REGISTRY_EXACT_POLICY_SCOPE",
+        "failClosedWhenUnresolved": true
+      },
+      {
+        "sourceContract": "SkillBlueprintV1",
+        "sourceField": "skillId",
+        "resolutionPolicy": "FOUNDRY_SKILL_TAXONOMY_EXACT_VERSION",
+        "failClosedWhenUnresolved": true
+      },
+      {
+        "sourceContract": "ExposureLedgerV1",
+        "sourceField": "idempotencyKey",
+        "resolutionPolicy": "LEARNER_SCOPE_EXPOSURE_OPERATION_IDEMPOTENCY",
+        "failClosedWhenUnresolved": true
+      },
+      {
+        "sourceContract": "BankScarcityEventV1",
+        "sourceField": "skillId",
+        "resolutionPolicy": "FOUNDRY_SKILL_TAXONOMY_EXACT_VERSION",
+        "failClosedWhenUnresolved": true
+      }
+    ],
+    "sourceDecisionIdentityPolicy": {
+      "nonEmptyRequired": true,
+      "immutableForExactDecisionRevision": true,
+      "versionedOrInvalidatedWhenDecisionBasisChanges": true,
+      "resolvesExactFields": [
+        "sourceClass",
+        "purpose",
+        "policyVersion",
+        "decision",
+        "denialCodes",
+        "decidedAt"
+      ],
+      "aiOutputMayCreateDecisionId": false,
+      "aiOutputMaySelfCertifyDecisionId": false
     }
   },
   "bankModel": {

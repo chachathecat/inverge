@@ -14,6 +14,7 @@ The executable authority is `config/dabangil-rights-safe-adaptive-variant-foundr
 | `C2RA-STATE-008` | Disputed, blocked, stale and retired artifacts receive no new assignment and retain lineage. |
 | `C2RA-MATRIX-009` | The donor matrix remains 21 uncovered rows because C2R-A has no assigned donor finding rows. |
 | `C2RA-AUTH-010` | The candidate advances only post-merge authority to C2R-B/#714 and every runtime/activation flag remains false. |
+| `C2RA-REF-011` | All identity, internal-reference and external/scoped identifier fields are classified exactly once; every internal edge resolves to a required target field, and stable source-decision lineage fails closed when missing, stale, ambiguous or unresolved. |
 
 ## Evidence command
 

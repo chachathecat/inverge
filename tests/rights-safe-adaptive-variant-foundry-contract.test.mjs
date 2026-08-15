@@ -4,12 +4,155 @@ import { readFile } from "node:fs/promises";
 
 const root = new URL("../", import.meta.url);
 const CONTRACT = "config/dabangil-rights-safe-adaptive-variant-foundry-v1.json";
+const EXPECTED_REFERENCE_EDGES = [
+  ["SkillBlueprintV1", "sourceDecisionId", "SourceEligibilityDecisionV1", "decisionId"],
+  ["VariantCandidateV1", "blueprintId", "SkillBlueprintV1", "blueprintId"],
+  ["VariantReleaseArtifactV1", "candidateId", "VariantCandidateV1", "candidateId"],
+  ["VariantReleaseArtifactV1", "rightsManifestId", "RightsManifestV1", "manifestId"],
+  ["ExposureLedgerV1", "artifactId", "VariantReleaseArtifactV1", "artifactId"],
+  ["DisputeAndRetirementV1", "artifactId", "VariantReleaseArtifactV1", "artifactId"],
+];
+const EXPECTED_IDENTITY_FIELDS = [
+  ["SourceEligibilityDecisionV1", "decisionId"],
+  ["RightsManifestV1", "manifestId"],
+  ["SkillBlueprintV1", "blueprintId"],
+  ["VariantCandidateV1", "candidateId"],
+  ["VariantReleaseArtifactV1", "artifactId"],
+];
+const EXPECTED_SCOPED_IDENTIFIERS = [
+  ["HumanCreativeContributionV1", "contributorId", "CONTRIBUTOR_REGISTRY_EXACT_POLICY_SCOPE"],
+  ["SkillBlueprintV1", "skillId", "FOUNDRY_SKILL_TAXONOMY_EXACT_VERSION"],
+  ["ExposureLedgerV1", "idempotencyKey", "LEARNER_SCOPE_EXPOSURE_OPERATION_IDEMPOTENCY"],
+  ["BankScarcityEventV1", "skillId", "FOUNDRY_SKILL_TAXONOMY_EXACT_VERSION"],
+];
 
 async function text(path) {
   return readFile(new URL(path, root), "utf8");
 }
 async function json(path) {
   return JSON.parse(await text(path));
+}
+
+function sourceFieldKey(contract, field) {
+  return `${contract}.${field}`;
+}
+
+function validateContractReferenceIntegrity(contract) {
+  const errors = [];
+  const requiredContracts = contract.requiredContracts ?? {};
+  const integrity = contract.contractReferenceIntegrity ?? {};
+  const identities = integrity.identityFieldsExactly ?? [];
+  const references = integrity.referencesExactly ?? [];
+  const scoped = integrity.externalOrScopedIdentifiersExactly ?? [];
+  const expectedReferences = new Map(
+    EXPECTED_REFERENCE_EDGES.map(([sourceContract, sourceField, targetContract, targetField]) => [
+      sourceFieldKey(sourceContract, sourceField),
+      sourceFieldKey(targetContract, targetField),
+    ]),
+  );
+  const classifications = new Map();
+
+  for (const flag of [
+    "failClosedWhenReferenceMissing",
+    "failClosedWhenReferenceUnresolved",
+    "failClosedWhenReferenceAmbiguous",
+  ]) {
+    if (integrity[flag] !== true) errors.push(`fail-closed:${flag}`);
+  }
+
+  function classify(contractName, field, kind) {
+    const key = sourceFieldKey(contractName, field);
+    const kinds = classifications.get(key) ?? [];
+    kinds.push(kind);
+    classifications.set(key, kinds);
+  }
+
+  for (const identity of identities) {
+    const requiredFields = requiredContracts[identity.contract]?.requiredFields;
+    if (!requiredFields) errors.push(`identity-contract:${identity.contract}`);
+    else if (!requiredFields.includes(identity.field)) {
+      errors.push(`identity-field:${sourceFieldKey(identity.contract, identity.field)}`);
+    }
+    classify(identity.contract, identity.field, "identity");
+  }
+
+  const referenceTargets = new Map();
+  for (const reference of references) {
+    const sourceKey = sourceFieldKey(reference.sourceContract, reference.sourceField);
+    const targetKey = sourceFieldKey(reference.targetContract, reference.targetField);
+    const sourceFields = requiredContracts[reference.sourceContract]?.requiredFields;
+    const targetFields = requiredContracts[reference.targetContract]?.requiredFields;
+    if (!sourceFields) errors.push(`source-contract:${reference.sourceContract}`);
+    else if (!sourceFields.includes(reference.sourceField)) errors.push(`source-field:${sourceKey}`);
+    if (!targetFields) errors.push(`target-contract:${reference.targetContract}`);
+    else if (!targetFields.includes(reference.targetField)) errors.push(`target-field:${targetKey}`);
+
+    const targets = referenceTargets.get(sourceKey) ?? [];
+    targets.push(targetKey);
+    referenceTargets.set(sourceKey, targets);
+    classify(reference.sourceContract, reference.sourceField, "internal-reference");
+  }
+
+  for (const [sourceKey, targets] of referenceTargets) {
+    if (targets.length !== 1) errors.push(`ambiguous-reference:${sourceKey}`);
+    const expectedTarget = expectedReferences.get(sourceKey);
+    if (!expectedTarget || targets[0] !== expectedTarget) {
+      errors.push(`reference-target:${sourceKey}->${targets.join(",")}`);
+    }
+  }
+  for (const [sourceKey, targetKey] of expectedReferences) {
+    if (!referenceTargets.has(sourceKey)) errors.push(`missing-reference:${sourceKey}->${targetKey}`);
+  }
+
+  for (const identifier of scoped) {
+    const sourceKey = sourceFieldKey(identifier.sourceContract, identifier.sourceField);
+    const sourceFields = requiredContracts[identifier.sourceContract]?.requiredFields;
+    if (!sourceFields) errors.push(`scoped-contract:${identifier.sourceContract}`);
+    else if (!sourceFields.includes(identifier.sourceField)) errors.push(`scoped-field:${sourceKey}`);
+    if (!identifier.resolutionPolicy || identifier.failClosedWhenUnresolved !== true) {
+      errors.push(`scoped-resolution:${sourceKey}`);
+    }
+    classify(identifier.sourceContract, identifier.sourceField, "external-or-scoped");
+  }
+
+  for (const [contractName, requiredContract] of Object.entries(requiredContracts)) {
+    for (const field of requiredContract.requiredFields) {
+      if (!/(?:Id|Ref|Refs|Key)$/.test(field)) continue;
+      const key = sourceFieldKey(contractName, field);
+      const kinds = classifications.get(key) ?? [];
+      if (kinds.length !== 1) errors.push(`classification:${key}:${kinds.join(",")}`);
+    }
+  }
+  for (const [key, kinds] of classifications) {
+    if (kinds.length !== 1) errors.push(`duplicate-classification:${key}:${kinds.join(",")}`);
+  }
+
+  const decision = requiredContracts.SourceEligibilityDecisionV1 ?? {};
+  if (decision.identityField !== "decisionId") errors.push("decision-identity-field");
+  if (decision.identityStable !== true) errors.push("decision-identity-stability");
+  if (decision.identityUniqueWithinPolicyScope !== true) errors.push("decision-identity-uniqueness");
+  if (!decision.requiredFields?.includes("decisionId")) errors.push("decision-id-required");
+
+  const decisionPolicy = integrity.sourceDecisionIdentityPolicy ?? {};
+  for (const flag of [
+    "nonEmptyRequired",
+    "immutableForExactDecisionRevision",
+    "versionedOrInvalidatedWhenDecisionBasisChanges",
+  ]) {
+    if (decisionPolicy[flag] !== true) errors.push(`decision-policy:${flag}`);
+  }
+  if (decisionPolicy.aiOutputMayCreateDecisionId !== false) errors.push("decision-policy:ai-create");
+  if (decisionPolicy.aiOutputMaySelfCertifyDecisionId !== false) {
+    errors.push("decision-policy:ai-self-certify");
+  }
+
+  return errors;
+}
+
+function assertHostileMutationFails(contract, name, mutate) {
+  const candidate = structuredClone(contract);
+  mutate(candidate);
+  assert.notDeepEqual(validateContractReferenceIntegrity(candidate), [], name);
 }
 
 test("keeps the documented C2R-A evidence command executable and focused", async () => {
@@ -67,6 +210,120 @@ test("C2RA-CONTRACT-003 and C2RA-BANK-004 resolve contracts and separated banks"
   assert.equal(contract.bankModel.separation.TRANSFER_BANK.impliesCalibratedMeasurement, false);
   assert.equal(contract.bankModel.aiOutputMaySelfPublish, false);
   assert.equal(contract.bankModel.aiOutputMaySelfVerify, false);
+});
+
+test("C2RA-REF-011 closes every contract identity and reference", async () => {
+  const [contract, strategy, qa] = await Promise.all([
+    json(CONTRACT),
+    text("docs/strategy/dabangil-rights-safe-adaptive-variant-foundry-v1.md"),
+    text("docs/qa/rights-safe-adaptive-variant-foundry-validation.md"),
+  ]);
+  const integrity = contract.contractReferenceIntegrity;
+
+  assert.deepEqual(validateContractReferenceIntegrity(contract), []);
+  assert.deepEqual(
+    integrity.identityFieldsExactly.map(({ contract: contractName, field }) => [contractName, field]),
+    EXPECTED_IDENTITY_FIELDS,
+  );
+  assert.deepEqual(
+    integrity.referencesExactly.map(
+      ({ sourceContract, sourceField, targetContract, targetField }) => [
+        sourceContract,
+        sourceField,
+        targetContract,
+        targetField,
+      ],
+    ),
+    EXPECTED_REFERENCE_EDGES,
+  );
+  assert.deepEqual(
+    integrity.externalOrScopedIdentifiersExactly.map(
+      ({ sourceContract, sourceField, resolutionPolicy }) => [
+        sourceContract,
+        sourceField,
+        resolutionPolicy,
+      ],
+    ),
+    EXPECTED_SCOPED_IDENTIFIERS,
+  );
+  assert.deepEqual(integrity.sourceDecisionIdentityPolicy.resolvesExactFields, [
+    "sourceClass",
+    "purpose",
+    "policyVersion",
+    "decision",
+    "denialCodes",
+    "decidedAt",
+  ]);
+  assert.match(strategy, /Every reusable `SkillBlueprintV1` binds one stable `sourceDecisionId`/);
+  assert.match(strategy, /Missing, empty, stale, ambiguous or unresolved decision lineage blocks/);
+  assert.match(strategy, /AI output may\s+neither create nor self-certify/);
+  assert.match(qa, /`C2RA-REF-011`/);
+
+  const removeRequiredField = (contractName, field) => (candidate) => {
+    candidate.requiredContracts[contractName].requiredFields =
+      candidate.requiredContracts[contractName].requiredFields.filter((value) => value !== field);
+  };
+  const removeReference = (sourceContract, sourceField) => (candidate) => {
+    candidate.contractReferenceIntegrity.referencesExactly =
+      candidate.contractReferenceIntegrity.referencesExactly.filter(
+        (edge) => edge.sourceContract !== sourceContract || edge.sourceField !== sourceField,
+      );
+  };
+  const findSourceDecisionEdge = (candidate) =>
+    candidate.contractReferenceIntegrity.referencesExactly.find(
+      (edge) =>
+        edge.sourceContract === "SkillBlueprintV1" && edge.sourceField === "sourceDecisionId",
+    );
+
+  assertHostileMutationFails(
+    contract,
+    "missing decision identity",
+    removeRequiredField("SourceEligibilityDecisionV1", "decisionId"),
+  );
+  assertHostileMutationFails(
+    contract,
+    "missing blueprint source-decision lineage",
+    removeRequiredField("SkillBlueprintV1", "sourceDecisionId"),
+  );
+  assertHostileMutationFails(contract, "wrong source-decision target", (candidate) => {
+    Object.assign(findSourceDecisionEdge(candidate), {
+      targetContract: "RightsManifestV1",
+      targetField: "manifestId",
+    });
+  });
+  assertHostileMutationFails(contract, "ambiguous source-decision target", (candidate) => {
+    candidate.contractReferenceIntegrity.referencesExactly.push({
+      sourceContract: "SkillBlueprintV1",
+      sourceField: "sourceDecisionId",
+      targetContract: "RightsManifestV1",
+      targetField: "manifestId",
+    });
+  });
+  assertHostileMutationFails(contract, "missing target contract", (candidate) => {
+    findSourceDecisionEdge(candidate).targetContract = "MissingDecisionContractV1";
+  });
+  assertHostileMutationFails(contract, "missing target field", (candidate) => {
+    findSourceDecisionEdge(candidate).targetField = "missingDecisionId";
+  });
+  assertHostileMutationFails(contract, "unresolved references fail open", (candidate) => {
+    delete candidate.contractReferenceIntegrity.failClosedWhenReferenceUnresolved;
+  });
+  assertHostileMutationFails(contract, "mutable decision identity", (candidate) => {
+    candidate.requiredContracts.SourceEligibilityDecisionV1.identityStable = false;
+  });
+  assertHostileMutationFails(contract, "non-unique decision identity", (candidate) => {
+    candidate.requiredContracts.SourceEligibilityDecisionV1.identityUniqueWithinPolicyScope = false;
+  });
+
+  for (const [name, sourceContract, sourceField] of [
+    ["candidate to blueprint", "VariantCandidateV1", "blueprintId"],
+    ["release to candidate", "VariantReleaseArtifactV1", "candidateId"],
+    ["release to rights manifest", "VariantReleaseArtifactV1", "rightsManifestId"],
+    ["exposure to release artifact", "ExposureLedgerV1", "artifactId"],
+    ["dispute to release artifact", "DisputeAndRetirementV1", "artifactId"],
+  ]) {
+    assertHostileMutationFails(contract, `missing ${name} lineage`, removeReference(sourceContract, sourceField));
+  }
 });
 
 test("C2RA-GAP-005 through C2RA-STATE-008 preserve ordered gates and lineage", async () => {

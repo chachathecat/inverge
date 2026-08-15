@@ -12,6 +12,20 @@ This source-only architecture turns source eligibility into a fail-closed decisi
 6. Traverse source/rights, schema/blueprint, deterministic/source, similarity/reconstruction, blind-solver, strong-critic, Owner and pilot/calibration gates in that order.
 7. Release survivors to Learning Bank first; later evidence separately qualifies Transfer and Measurement banks.
 
+## Stable source-decision lineage
+
+Every reusable `SkillBlueprintV1` binds one stable `sourceDecisionId` that
+resolves exactly to `SourceEligibilityDecisionV1.decisionId`. The resolved
+decision fixes the source class, purpose, policy version, decision basis,
+denial codes and decision time for that exact revision. A changed basis must
+invalidate or version the decision identity; it may not silently reuse the
+old ID.
+
+Missing, empty, stale, ambiguous or unresolved decision lineage blocks the
+blueprint and every later shared route. A valid decision lineage does not
+replace the independently required `RightsManifestV1` lineage. AI output may
+neither create nor self-certify a source-eligibility decision ID.
+
 ## Fail-closed invariants
 
 - Missing or invalid rights manifests block release.

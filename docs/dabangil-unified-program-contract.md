@@ -330,10 +330,13 @@ consume tenant-authorized assignments and approved feedback.
 
 ### Preserved current authority
 
-ULC-0 does not change the sole current implementation item `WCV-C2`, campaign
-`C2`, Tracker #717, current replacement stage `C2R-A` for #702, the five-stage
-C2R chain, the 21-row regression matrix, the one-writer limit or no-auto-start.
-WCV-C2 remains incomplete and C2R-A remains authorized but unstarted.
+ULC-0 preserves the sole current implementation item `WCV-C2`, campaign `C2`,
+Tracker #717, the five-stage C2R chain, the 21-row regression matrix, the
+one-writer limit and no-auto-start. Under merge-and-receipt semantics,
+C2R-A/#702 is represented complete source-only only after its
+expected-head-pinned merge and validated receipt. C2R-B/#714 is the sole
+represented next authorized and unstarted stage, and Issue #714 remains open.
+WCV-C2 remains incomplete and no replacement stage starts automatically.
 
 ### Free-limited and paid routes
 

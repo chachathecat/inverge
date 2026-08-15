@@ -57,6 +57,76 @@ function sha256(value) {
   return createHash("sha256").update(value).digest("hex");
 }
 
+function normalizeAuthorityProse(value) {
+  return value
+    .replace(/\[([^\]]+)]\([^)]*\)/g, "$1")
+    .replace(/`/g, "")
+    .replace(/\bissue\s*#?\s*(\d+)\b/gi, "issue $1")
+    .replace(/#\s*(\d+)\b/g, "issue $1")
+    .replace(/[‐‑‒–—−-]+/g, " ")
+    .replace(/[()[\]{}:/\\|,.;!?]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+    .toLowerCase();
+}
+
+function markdownSections(source) {
+  const headings = [...source.matchAll(/^#{1,6}\s+.+$/gm)];
+  if (headings.length === 0) return [{ heading: "", body: source }];
+  const sections = [];
+  if (headings[0].index > 0) {
+    sections.push({ heading: "", body: source.slice(0, headings[0].index) });
+  }
+  for (const [index, heading] of headings.entries()) {
+    const end = headings[index + 1]?.index ?? source.length;
+    sections.push({
+      heading: heading[0].replace(/^#{1,6}\s+/, ""),
+      body: source.slice(heading.index, end),
+    });
+  }
+  return sections;
+}
+
+function staleCurrentStageAssertions(source) {
+  const statePattern =
+    /\b(?:current replacement stage|current authorized(?: but)? unstarted stage|current or sole next authorized unstarted stage|sole next replacement stage)\b/;
+  const pairPattern = /\bc2r a(?: for)? issue 702\b/;
+  const historicalPattern = /\b(?:historical|formerly|previously|predecessor|superseded)\b/;
+  const stale = [];
+
+  for (const section of markdownSections(source)) {
+    for (const paragraph of section.body.split(/\n\s*\n/)) {
+      const normalized = normalizeAuthorityProse(paragraph);
+      const state = statePattern.exec(normalized);
+      const pair = pairPattern.exec(normalized);
+      if (!state || !pair || historicalPattern.test(normalized)) continue;
+      const between = normalized.slice(
+        Math.min(state.index + state[0].length, pair.index + pair[0].length),
+        Math.max(state.index, pair.index),
+      );
+      const betweenWords = between.trim().split(/\s+/).filter(Boolean);
+      const stateBeforePair = state.index < pair.index && betweenWords.length <= 4;
+      const pairBeforeState =
+        pair.index < state.index && /^(?:is\s+)?(?:the\s*)?$/.test(between.trim());
+      if (stateBeforePair || pairBeforeState) {
+        stale.push({ heading: section.heading, normalized });
+      }
+    }
+  }
+  return stale;
+}
+
+function currentAuthorityTuple(section) {
+  const normalized = normalizeAuthorityProse(section.body);
+  return {
+    roadmapItem: /\bwcv c2\b/.test(normalized) ? "WCV-C2" : null,
+    campaign: /\bcampaign c2\b/.test(normalized) ? "C2" : null,
+    trackerIssue: /\btracker issue 717\b/.test(normalized) ? 717 : null,
+    currentStage: /\bc2r b(?: for)? issue 714\b/.test(normalized) ? "C2R-B" : null,
+    currentStageIssue: /\bc2r b(?: for)? issue 714\b/.test(normalized) ? 714 : null,
+  };
+}
+
 function scalar(value) {
   const trimmed = value.trim();
   if (trimmed === "true") return true;
@@ -377,11 +447,12 @@ test("preserves the exact WCV-C2R graph, roadmap block and 21-row matrix", async
 });
 
 test("keeps C2R-B as the sole implementation selection after C2R-A with one writer", async () => {
-  const [launch, unified, roadmapSource, unifiedMarkdown] = await Promise.all([
+  const [launch, unified, roadmapSource, unifiedMarkdown, foundry] = await Promise.all([
     json(CONTRACT),
     json("config/dabangil-unified-program-contract.json"),
     text("roadmap/active-program.yml"),
     text("docs/dabangil-unified-program-contract.md"),
+    json("config/dabangil-rights-safe-adaptive-variant-foundry-v1.json"),
   ]);
   const roadmap = parseRoadmap(roadmapSource);
   const plan = createRoadmapRunnerPlanFromYamlAt(
@@ -469,10 +540,46 @@ test("keeps C2R-B as the sole implementation selection after C2R-A with one writ
     /completed source-only C2R-A\s+for Issue #702, and current authorized but unstarted replacement stage C2R-B\s+for Issue #714/,
   );
   assert.match(unifiedMarkdown, /post-merge next stage is C2R-B\/#714, authorized but unstarted/);
-  assert.doesNotMatch(
-    unifiedMarkdown,
-    /current authorized but\s+unstarted replacement stage C2R-A for Issue #702/,
+
+  const staleFixtures = [
+    "current replacement stage `C2R-A` for #702",
+    "current replacement stage\n`C2R-A`\nfor Issue #702",
+    "current authorized-but-unstarted stage [C2R-A](https://example.test/stage) for `#702`",
+    "sole next replacement stage C2R-A / Issue 702",
+  ];
+  for (const fixture of staleFixtures) {
+    assert.equal(staleCurrentStageAssertions(fixture).length, 1, fixture);
+  }
+  for (const fixture of [
+    "Historical sequence: C2R-A for Issue #702 preceded C2R-B for Issue #714.",
+    "C2R-A/#702 is the predecessor of C2R-B/#714.",
+    "C2R-A/#702 is complete source-only only after its merge and validated receipt.",
+  ]) {
+    assert.deepEqual(staleCurrentStageAssertions(fixture), [], fixture);
+  }
+
+  const authorityProsePaths = foundry.ownedPathsExactly.filter((path) => path.endsWith(".md"));
+  const authorityProse = await Promise.all(
+    authorityProsePaths.map(async (path) => [path, await text(path)]),
   );
+  const staleCanonicalProse = authorityProse.flatMap(([path, source]) =>
+    staleCurrentStageAssertions(source).map(({ heading, normalized }) => ({
+      path,
+      heading,
+      normalized,
+    })),
+  );
+  assert.deepEqual(staleCanonicalProse, []);
+
+  const currentAuthoritySections = authorityProse.flatMap(([path, source]) =>
+    markdownSections(source)
+      .filter(({ heading }) => /\bcurrent authority\b/.test(normalizeAuthorityProse(heading)))
+      .map((section) => ({ path, section })),
+  );
+  assert.ok(currentAuthoritySections.length > 0);
+  for (const { path, section } of currentAuthoritySections) {
+    assert.deepEqual(currentAuthorityTuple(section), expectedCurrentStage, `${path}:${section.heading}`);
+  }
   assert.equal(plan.globalMergeProducingWriterLimit, 1);
   assert.equal(plan.activeWriterCount, 0);
   assert.deepEqual(plan.selectedItemIds, ["WCV-C2"]);
