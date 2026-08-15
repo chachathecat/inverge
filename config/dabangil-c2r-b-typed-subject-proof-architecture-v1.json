@@ -101,6 +101,26 @@
     "referenceCyclesAllowed": false,
     "crossSubjectAnchorBindingAllowed": false
   },
+  "correlatedReferenceBindings": [
+    {
+      "bindingId": "proof-obligation-to-one-anchor-identity-version-subject",
+      "fromType": "RepairProofObligationV1",
+      "toType": "RepairAnchorV1",
+      "identityPairs": [
+        {"fromField": "anchorId", "toField": "anchorId"},
+        {"fromField": "anchorVersionId", "toField": "anchorVersionId"}
+      ],
+      "fromSubjectField": "subject",
+      "targetDiscriminatorField": "anchorKind",
+      "targetSubjectByDiscriminator": {
+        "PRACTICE_CALCULATION_RELATION": "PRACTICE",
+        "THEORY_SCOPED_PREDICATE": "THEORY",
+        "LAW_APPLICABILITY": "LAW"
+      },
+      "cardinality": "exactly_one_composite_target",
+      "failureMode": "FAIL_CLOSED"
+    }
+  ],
   "referenceGraph": [
     {
       "edgeId": "subject-freeze-to-proof-obligation",
@@ -353,7 +373,7 @@
         "privateArtifactInputModes": ["TYPED", "PHOTO", "PDF", "VOICE", "STRUCTURED_SELECTION"],
         "continuationCommands": ["VERIFY_AND_CONTINUE", "DEFER_FOR_NOW", "SWITCH_TO_GUIDED"],
         "noShortcutActions": ["SAVE", "UPLOAD", "VIEW", "SKIP", "DEFER_FOR_NOW", "SWITCH_TO_GUIDED"],
-        "noShortcutActionMayCreateVerified": true,
+        "noShortcutActionMayCreateVerified": false,
         "predictionAndSelfDiagnosisPrecedeServerDiagnosis": true,
         "initialAssistanceLevel": 0,
         "firstScaffoldAssistanceLevel": 1,

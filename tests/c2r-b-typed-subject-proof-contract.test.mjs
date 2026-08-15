@@ -101,6 +101,29 @@ function validateIdentityAndReferenceGraph(contract) {
     }
   }
 
+  for (const binding of contract.correlatedReferenceBindings ?? []) {
+    for (const source of records[binding.fromType] ?? []) {
+      const targets = (records[binding.toType] ?? []).filter((target) =>
+        binding.identityPairs.every(
+          ({ fromField, toField }) => source[fromField] === target[toField],
+        ),
+      );
+      if (targets.length !== 1) {
+        errors.push(
+          `correlated-target-count:${binding.bindingId}:${source.proofObligationId}:${targets.length}`,
+        );
+        continue;
+      }
+      const targetSubject =
+        binding.targetSubjectByDiscriminator[targets[0][binding.targetDiscriminatorField]];
+      if (source[binding.fromSubjectField] !== targetSubject) {
+        errors.push(
+          `correlated-subject-mismatch:${binding.bindingId}:${source.proofObligationId}`,
+        );
+      }
+    }
+  }
+
   const adjacency = new Map();
   for (const edge of contract.referenceGraph) {
     const next = adjacency.get(edge.fromType) ?? new Set();
@@ -293,12 +316,49 @@ test("C2RB-UNION-001 freezes exactly three typed RepairAnchorV1 members", async 
 test("C2RB-REF-002 resolves unique identities and an acyclic explicit graph", async () => {
   const contract = await json(CONTRACT);
   assert.deepEqual(validateIdentityAndReferenceGraph(contract), []);
+  assert.deepEqual(contract.correlatedReferenceBindings, [
+    {
+      bindingId: "proof-obligation-to-one-anchor-identity-version-subject",
+      fromType: "RepairProofObligationV1",
+      toType: "RepairAnchorV1",
+      identityPairs: [
+        { fromField: "anchorId", toField: "anchorId" },
+        { fromField: "anchorVersionId", toField: "anchorVersionId" },
+      ],
+      fromSubjectField: "subject",
+      targetDiscriminatorField: "anchorKind",
+      targetSubjectByDiscriminator: {
+        PRACTICE_CALCULATION_RELATION: "PRACTICE",
+        THEORY_SCOPED_PREDICATE: "THEORY",
+        LAW_APPLICABILITY: "LAW",
+      },
+      cardinality: "exactly_one_composite_target",
+      failureMode: "FAIL_CLOSED",
+    },
+  ]);
   const hostile = clone(contract);
   hostile.registries.lawSources.push(clone(hostile.registries.lawSources[0]));
   assert.ok(validateIdentityAndReferenceGraph(hostile).some((error) => error.startsWith("duplicate-identity")));
   const unresolved = clone(contract);
   unresolved.proofObligations[0].anchorVersionId = "missing-anchor-version";
   assert.ok(validateIdentityAndReferenceGraph(unresolved).some((error) => error.startsWith("edge-target-count")));
+  const mismatchedPair = clone(contract);
+  mismatchedPair.proofObligations[0].anchorVersionId = contract.canonicalAnchors[1].anchorVersionId;
+  const mismatchedPairErrors = validateIdentityAndReferenceGraph(mismatchedPair);
+  assert.ok(
+    mismatchedPairErrors.some((error) => error.startsWith("correlated-target-count")),
+  );
+  assert.equal(
+    mismatchedPairErrors.some((error) => error.startsWith("edge-target-count:proof-obligation-to-anchor")),
+    false,
+  );
+  const crossSubject = clone(contract);
+  crossSubject.proofObligations[0].subject = "THEORY";
+  assert.ok(
+    validateIdentityAndReferenceGraph(crossSubject).some((error) =>
+      error.startsWith("correlated-subject-mismatch"),
+    ),
+  );
   assert.equal(contract.identityRules.referenceCyclesAllowed, false);
 });
 
@@ -439,7 +499,7 @@ test("C2RB-TUTOR-007 freezes future episode order, modes, commands and no shortc
   assert.deepEqual(episode.privateArtifactInputModes, ["TYPED", "PHOTO", "PDF", "VOICE", "STRUCTURED_SELECTION"]);
   assert.deepEqual(episode.continuationCommands, ["VERIFY_AND_CONTINUE", "DEFER_FOR_NOW", "SWITCH_TO_GUIDED"]);
   assert.deepEqual(episode.noShortcutActions, ["SAVE", "UPLOAD", "VIEW", "SKIP", "DEFER_FOR_NOW", "SWITCH_TO_GUIDED"]);
-  assert.equal(episode.noShortcutActionMayCreateVerified, true);
+  assert.equal(episode.noShortcutActionMayCreateVerified, false);
   assert.equal(episode.episodeMayCreateMasteryTransferOrStability, false);
 });
 

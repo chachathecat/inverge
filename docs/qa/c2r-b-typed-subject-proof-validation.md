@@ -11,7 +11,7 @@ node scripts/run-node-tests.mjs tests/c2r-b-typed-subject-proof-contract.test.mj
 | ID | Assertion |
 |---|---|
 | C2RB-UNION-001 | `RepairAnchorV1` has exactly the Practice, Theory and Law members and discriminator kinds. |
-| C2RB-REF-002 | Every stable/version identity is unique, every declared edge resolves exactly once, and the graph has no cycle. |
+| C2RB-REF-002 | Every stable/version identity is unique, every declared edge resolves exactly once, anchor ID/version/subject resolve as one composite target, and the graph has no cycle. |
 | C2RB-PRACTICE-003 | Roles/operator/order/result/unit/sign/rounding/transformation validate deterministically; disconnected numbers, substrings and overflow cannot pass. |
 | C2RB-THEORY-004 | Evidence stays inside the selected target; mismatch, same-target mixed polarity, unscoped anaphora and overflow fail closed while alternatives remain target-scoped. |
 | C2RB-LAW-005 | Source, source version, anchor, anchor version, locator, effective window, applicable date, currentness and zero blockers resolve as one exact binding; label-only, stale or unresolved input cannot pass. |
@@ -35,6 +35,8 @@ node scripts/run-node-tests.mjs tests/c2r-b-typed-subject-proof-contract.test.mj
 - Law: label-only currentness, unresolved ID, duplicate target, stale source
   version, wrong anchor version, locator drift, version drift, date outside the
   effective window and an open blocker all remain unverified.
+- Reference graph: independently resolvable but mismatched anchor ID/version
+  pairs and cross-subject obligation bindings fail closed.
 
 ## Full validation
 

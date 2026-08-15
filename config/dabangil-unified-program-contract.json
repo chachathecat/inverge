@@ -1512,7 +1512,7 @@
         "dependencies": [
           "WCV-C1"
         ],
-        "state": "c2r_a_complete_source_only_c2r_b_authorized_unstarted",
+        "state": "c2r_a_and_c2r_b_complete_source_only_c2r_c_p_authorized_unstarted",
         "wcvC2Complete": false,
         "terminalDonorPr": 716,
         "terminalDonorMerged": false,

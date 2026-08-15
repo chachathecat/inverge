@@ -39,7 +39,9 @@ episode interface. Subject freeze records reference exactly one proof
 obligation. Law bindings additionally resolve exact source, source version,
 Law anchor and anchor version. Every edge is listed in the machine graph;
 missing, duplicated, unresolved, ambiguous, cross-subject or cyclic references
-are blocking.
+are blocking. An obligation's anchor ID, anchor version and subject must match
+one composite anchor target; independently resolvable but mismatched scalar
+references are blocking.
 
 ## Practice — calculation relation
 

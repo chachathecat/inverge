@@ -74,6 +74,9 @@ vertical freeze, Law source, Law anchor, Law anchor version and Law binding
 has a stable identity. Semantic changes create a new version identity. The
 machine contract lists every internal edge. Missing, duplicate, unresolved,
 multi-target, cross-subject or cyclic references fail closed.
+The proof obligation's `anchorId`, `anchorVersionId` and subject are one
+correlated binding to one anchor record and discriminator subject; resolving
+the two scalar identities independently is insufficient.
 
 ## 3. Practice calculation-relation proof
 

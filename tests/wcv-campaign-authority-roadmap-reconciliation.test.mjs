@@ -248,6 +248,11 @@ test("keeps WCV-C2 as the metadata umbrella led by recovery tracker #717", async
   assert.equal(roadmap.program.replacementStageAutomaticStartAllowed, false);
   assert.equal(c2.leadIssue, 717);
   assert.deepEqual(c2.includedIssues, [702, 714, 703, 704, 705]);
+  assert.equal(
+    c2.state,
+    "c2r_a_and_c2r_b_complete_source_only_c2r_c_p_authorized_unstarted",
+  );
+  assert.equal(c2.state, unified.wcvCampaignOverlay.c2StructuralRecovery.status);
   assert.equal(c2.wcvC2Complete, false);
   assert.equal(c2.automaticStartAllowed, false);
   assert.equal(
