@@ -249,7 +249,7 @@ test("S217 docs, source, roadmap, runner, and safe derived keys are wired", asyn
   assert.equal(s221?.statusCategory, "completed");
   assert.equal(s224?.statusCategory, "completed");
   assert.equal(s225?.readinessStatus, "blocked");
-  assert.deepEqual(s225?.missingDependencies, ["O4D"]);
+  assert.deepEqual(s225?.missingDependencies, ["O4D", "WCV-C6"]);
   assert.equal(plan.wipOccupiedCount, 2);
   assert.equal(plan.availableSlots, 1);
   assert.deepEqual(plan.readyItemIds, ["WCV-C2", "S236B"]);

@@ -112,6 +112,7 @@ const defaultTestFiles = [
   "tests/appraiser-second-world-class-vertical-contract.test.mjs",
   "tests/wcv-campaign-authority-roadmap-reconciliation.test.mjs",
   "tests/wcv-c2r-structural-recovery-authority.test.mjs",
+  "tests/dabangil-unified-product-multisurface-launch-authority.test.mjs",
   "tests/owner-alpha-three-subject-practice-adapter-contract.test.mjs",
   "tests/owner-alpha-explanation-ladder-v1.test.mjs",
   "tests/rewrite-regrade-history-contract.test.mjs",

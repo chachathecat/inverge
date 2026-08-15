@@ -33,6 +33,44 @@ The V13 source-only validation record is:
 
 - `docs/qa/master-plan-v13-exam-digital-twin-portability-validation.md`
 
+## Mandatory V13 launch amendment — Unified Product and Multisurface Launch Convergence
+
+The exact ULC-0 Owner decision is:
+
+- `docs/decisions/2026-08-14-owner-unified-product-multisurface-launch.md`
+
+The exact ULC-0 machine contract is:
+
+- `config/dabangil-unified-product-multisurface-launch-v1.json`
+
+The mandatory detailed launch strategy is:
+
+- `docs/strategy/dabangil-unified-product-multisurface-launch-v1-2026-08-14.md`
+
+The source-only validation records are:
+
+- `docs/qa/dabangil-multisurface-launch-validation.md`
+- `docs/qa/dabangil-cross-surface-parity-matrix.md`
+- `docs/qa/dabangil-store-compliance-matrix.md`
+
+ULC-0 is a mandatory subordinate V13 launch amendment. It is not V14, V13.1,
+another active master, or the current implementation campaign. It defines the
+final public product as **답안길 — 감정평가사 1·2차 통합 합격 운영체계**,
+future student surfaces Web/iOS/iPadOS/Android, a Web-primary instructor
+workbench, the free-limited ULC-L1 route, and the separate paid/evidence
+route. It installs no runtime, dependency, native project, learner, provider,
+payment, store, deployment, or Production activation.
+
+The legacy paid public-launch terminal remains separately dual-gated: O4D
+retains `[S245C, S242V]`, and S225 requires `[O4D, WCV-C6]`. Owner authority
+and terminal paid evidence are both mandatory and non-substitutable; neither
+gate completion starts work or authorizes activation.
+
+ULC-0 leaves PR #718, Tracker #717, WCV-C2/C2, the exact C2R-A through
+C2R-C-L replacement graph, the 21-row regression matrix, C2R-A/#702 as the
+sole next implementation stage, the one-writer limit, and no-auto-start
+authority unchanged.
+
 ## Mandatory V13 follow-up — Memory Cue & Annotation Layer
 
 The exact MCAL Owner decision is:
@@ -109,6 +147,7 @@ ACTIVE-MASTER-PLAN.md
    ├─ Appraiser Coverage Compiler & Original Question Engine
    ├─ Exam Digital Twin & Robust Curriculum Control
    ├─ Memory Cue & Annotation Layer — mandatory V13 follow-up
+   ├─ Unified Product & Multisurface Launch Convergence — mandatory launch amendment
    ├─ Appraiser Second WCV 1.0.8 — subordinate vertical execution standard
    ├─ Portable Professional Exam Core & Exam Profile contract — internal only
    ├─ V11 — source-safety and legal-operation annex
@@ -161,6 +200,12 @@ Certified Appraiser Second Stage
 
 Current learner-facing runtime authority remains exactly the Certified Appraiser Second
 three subjects.
+
+The final public target is separately defined by the subordinate ULC-0
+amendment as the integrated first- and second-round product on Web,
+iOS/iPadOS and Android. That future target does not activate first-round,
+native, instructor or public runtime now. The exact current implementation
+selection remains WCV-C2/C2/C2R-A/#702.
 
 The Portable Professional Exam Core is an internal architecture contract only. It does
 not authorize:

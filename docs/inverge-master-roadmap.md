@@ -4,6 +4,10 @@
 - 상세 제품 기준: `docs/inverge-second-round-final-product-spec.md`
 - 실행 상태와 의존성 기준: `roadmap/active-program.yml`
 - Current exact-scope authority:
+  `docs/decisions/2026-08-14-owner-unified-product-multisurface-launch.md`
+  for the final integrated 1·2차 public product, future Web/iOS/Android and
+  instructor surfaces, free-limited public route, separate paid/evidence
+  route, and coordinated release,
   `docs/decisions/2026-08-14-wcv-c2-structural-recovery.md` for the
   terminal unmerged closure of PR #716 and the serial WCV-C2R replacement
   chain,
@@ -12,6 +16,91 @@
   for the program amendment, and `docs/dabangil-unified-program-contract.md`
   supersede historical ordering in this document; this file remains phase
   history and second-round detail.
+
+## 2026-08-14 Unified Product and Multisurface Launch Convergence
+
+V13 remains the sole active master. ULC-0, led by Issue #719, is a mandatory
+subordinate launch amendment rather than V14, V13.1, another active master or
+the current implementation campaign.
+
+The final public product is:
+
+> 답안길 — 감정평가사 1·2차 통합 합격 운영체계
+
+Student surfaces are exactly Web, iOS/iPadOS and Android. The complete
+instructor authoring/review workbench is Web-primary. Student apps consume
+only assigned work and approved feedback.
+
+The current implementation authority remains unchanged: WCV-C2, campaign
+C2, Tracker #717, current replacement stage C2R-A for Issue #702, the exact
+five-stage C2R chain, one merge-producing writer and no automatic start.
+C2R-A remains authorized and unstarted. ULC-0 implements nothing.
+
+The future free-limited public ULC-L1 route requires Today, Review Queue,
+five first-round MCQ subjects, three second-round Trusted Repair subjects,
+camera/PDF capture, editable OCR confirmation, direct repair, D+1/D+7,
+transfer/reopening, Concept Decoder, Formula Graph, learner-specific automatic
+notes, export, answer/account deletion and AI/source/currentness/human-review
+status.
+
+ULC-L1 requires no paid cohort or paid-conversion evidence, exposes no
+in-app purchase CTA, activates no payment and grants no commercial,
+retention, efficacy, score-gain, pass-rate or causal claim. The separate
+future path after ULC-L1 remains:
+
+`O4W → WCV-C5 → WCV-C6 → separate payment/paid-claim activation authority`
+
+The legacy S225 paid public launch requires both independent terminal gates:
+O4D retains `[S245C, S242V]`, and S225 requires `[O4D, WCV-C6]`. Neither gate
+substitutes for or bypasses the other, and no completion authorizes automatic
+start, payment, learner activation, public release, or Production activation.
+
+After terminal C2R-C-L, the complete-outcome order is:
+
+1. WCV-C3 durable learning and daily command;
+2. ULC-M1 native install/auth/Today/Review Queue/deep link/deletion;
+3. ULC-M2 native capture/OCR/Trusted Repair/offline sync;
+4. ULC-K1 Concept Decoder/Formula Graph/reconstruction/parity;
+5. ULC-F1 Civil Law;
+6. ULC-F2 Economics;
+7. ULC-F3 Real Estate Principles;
+8. ULC-F4 Appraisal-related Law;
+9. ULC-F5 Accounting;
+10. ULC-I1 Web-primary instructor workbench;
+11. WCV-C4 final-product Owner proof and red-team;
+12. ULC-R1 privacy/store/coordinated-release readiness; and
+13. ULC-L1 free-limited public Web/iOS/Android 1.0.
+
+ULC-M1 consumes the second-round authenticated-acceptance item S241A.
+ULC-F1 independently consumes the first-round authenticated-acceptance item
+S238B. Both are required for both-track work; neither acceptance evidence nor
+mastery substitutes or transfers across tracks.
+
+Every runtime stage is an independently deployable learner or instructor
+outcome; framework-only, API-only, persistence-only, UI-only and QA-only
+mandatory PRs are prohibited. No future item is selected or started.
+
+Existing Next.js/Vercel remains Web and trusted HTTP API. Future native apps
+use Expo React Native, Expo Router, EAS Build/Submit/Workflows and Maestro.
+Existing Supabase/Postgres remains authoritative. The final app cannot be a
+remote-only WebView or static-exported server app, and Web/mobile cannot have
+separate mastery truth. Client-set verified/current/mastery, service-role
+exposure and private push payloads are prohibited.
+
+Concept Decoder is structured learner-error repair. Formula Graph is a typed
+relation object. Explanation alone creates no mastery; only learner
+reconstruction and later independent performance may change learning state.
+
+ULC-R1 proves in-app and external-Web deletion, privacy and store
+declarations, AI/source/currentness/human-review disclosure, notification and
+permission privacy, review access and export/delete behavior. One
+`DabangilReleaseManifestV1` binds exact Web/iOS/Android release identity. iOS
+and Android are held after approval, Web remains gated, and all three open
+within at most 24 hours after one manual release command.
+
+This is source authority only. It installs no dependency, native project,
+runtime, learner, instructor, provider, payment, store, deployment or
+Production state.
 
 ## 2026-08-14 WCV-C2 Structural Recovery
 
@@ -385,6 +474,8 @@ Inverge는 전문가 첨삭 인력을 판매하지 않는다. 학원 사용자�
 
 ### S225 Public Paid Launch Acceptance
 
+- O4D Owner public-self-serve authority complete
+- WCV-C6 terminal paid evidence complete
 - all dependencies complete
 - production configuration
 - billing and privacy gates
@@ -563,7 +654,10 @@ runtime mutations freeze from D0 through D+1.
 Wave A/B/C, invitations, capacity claims, pricing, payment, refund, external
 learners, and public self-serve remain in the separate commercial track:
 
-`O3C -> S239A -> S242C -> O4F -> S243C -> S244C -> S245C -> S225`
+`O3C -> S239A -> S242C -> O4F -> S243C -> S244C -> S245C -> O4D -> S225`
+
+That historical commercial chain is only one side of the current S225 gate;
+the executable roadmap also requires terminal paid evidence WCV-C6.
 
 Owner dogfood is operational acceptance only. It is not evidence of
 commercial readiness, efficacy, pricing, retention, cohort capacity, or

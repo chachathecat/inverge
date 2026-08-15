@@ -938,6 +938,27 @@ test("Post-650 data, consent, quarantine, OSS, and Owner gates remain non-active
     policy.ownerGates.O4W,
     "future_exact_frozen_paid_cohort_manifest_authorization_unapproved",
   );
+  assert.deepEqual(
+    policy.launchConvergenceAmendment.legacyPublicPaidLaunchGate,
+    {
+      roadmapItemId: "S225",
+      requiredDependenciesExactly: ["O4D", "WCV-C6"],
+      independentOwnerAuthorization: "O4D",
+      terminalPaidEvidenceRoute: "WCV-C6",
+      bothDependenciesRequired: true,
+      crossSubstitutionAllowed: false,
+      explicitTargetBypassAllowed: false,
+      currentActivationAuthorized: false,
+      automaticStartAllowed: false,
+      learnerActivationAuthorized: false,
+      paymentActivationAuthorized: false,
+      publicReleaseAuthorized: false,
+    },
+  );
+  assert.deepEqual(
+    policy.launchConvergenceAmendment.activeRoadmapDependencyMirror.S225,
+    ["O4D", "WCV-C6"],
+  );
   assert.equal(policy.roadmapContract.perLockGroupConcurrentWriterLimit, 1);
   assert.equal(policy.roadmapContract.additionalConcurrentWritersInSameLockGroup, 0);
   assert.equal(policy.roadmapContract.sharedControlPlaneOverallMutationWip, 1);
@@ -981,7 +1002,7 @@ test("Post-650 data, consent, quarantine, OSS, and Owner gates remain non-active
     decisionScope: "exact_frozen_cohort_manifest_activation_only",
     gatedCampaign: "WCV-C5",
     gatedIssue: 711,
-    dependencies: ["WCV-C4"],
+    dependencies: ["ULC-L1"],
     authorizationGranted: false,
     automaticStartAllowed: false,
     learnerActivationAuthorized: false,
