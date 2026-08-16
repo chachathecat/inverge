@@ -33,10 +33,10 @@
     "roadmapItemId": "WCV-C2",
     "campaignId": "C2",
     "wcvC2Complete": false,
-    "currentReplacementStageId": "C2R-C-P",
+    "currentReplacementStageId": "C2R-C-T",
     "currentReplacementStageIssue": 703,
     "currentReplacementStageState": "authorized_unstarted",
-    "currentSelectorDecision": "docs/decisions/2026-08-15-owner-c2r-b-typed-proof-obligations.md",
+    "currentSelectorDecision": "docs/decisions/2026-08-17-owner-c2r-c-p-practice-trusted-repair.md",
     "structuralChainDecision": "docs/decisions/2026-08-14-wcv-c2-structural-recovery.md",
     "c2rBOperationalStartRequires": [
       "validated_c2r_a_merge_coverage_receipt",
@@ -51,6 +51,12 @@
       "validated_terminal_c2r_a_merge_and_receipt",
       "validated_terminal_c2r_b_merge_and_receipt"
     ],
+    "c2rCPState": "complete_practice_runtime",
+    "c2rCPContract": "config/dabangil-c2r-c-p-practice-trusted-repair-v1.json",
+    "c2rCPCoveringPr": 746,
+    "c2rCTOperationalStartRequires": [
+      "validated_terminal_c2r_c_p_merge_and_receipt"
+    ],
     "replacementStageChain": [
       "C2R-A",
       "C2R-B",
@@ -60,6 +66,8 @@
     ],
     "globalMergeProducingWriterLimit": 1,
     "automaticStartAllowed": false,
+    "githubNativeNonProductionContinuationAllowed": true,
+    "githubNativeDeliveryDecision": "docs/decisions/2026-08-16-owner-github-native-delivery-control.md",
     "wcvC2StructuralRecoveryCanonicalSha256": "ec98a90a06f31dd0e118568e97a86e7da29869b0256d4774677946dee9918f2e",
     "roadmapWcvC2BlockSha256": "0d459ea46f46bb33b69ef124d19d6ee01ffec03b42e55a3f6ae6a866b255bbe7",
     "regressionMatrixSha256": "b92d4ad88a44e10a7eb61670509c288cf871916a2570253f3f25cef211ebffeb",
