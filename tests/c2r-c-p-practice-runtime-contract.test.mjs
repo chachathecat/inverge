@@ -117,6 +117,7 @@ test("[C2R-C-P-R11] API and learner shell remain Owner-only default-off", () => 
 
   const access = read("lib/review-os/trusted-repair-access.ts");
   assert.match(access, /process\.env\[TRUSTED_REPAIR_FLAG\] === "true"/);
+  assert.match(access, /process\.env\.ALPHA_ADMIN_EMAILS/);
   assert.match(access, /process\.env\.WCV_C2R_C_P_OWNER_EMAILS/);
   assert.doesNotMatch(access, /isAllowedAdminEmail/);
   assert.ok(
@@ -128,6 +129,10 @@ test("[C2R-C-P-R11] API and learner shell remain Owner-only default-off", () => 
     /WCV_C2R_C_P_PRACTICE_ENABLED=false/,
   );
   assert.match(read(".env.example"), /WCV_C2R_C_P_OWNER_EMAILS=/);
+  assert.match(
+    read(".env.example"),
+    /explicitly present in both\s*# ALPHA_ADMIN_EMAILS and this feature-local Owner allowlist/,
+  );
   assert.match(
     read("app/app/layout.tsx"),
     /isTrustedRepairEnabled\(\) && isTrustedRepairOwner\(session\.email\)/,

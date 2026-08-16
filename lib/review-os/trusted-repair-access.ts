@@ -24,9 +24,12 @@ export function isTrustedRepairEnabled() {
 }
 
 export function isTrustedRepairOwner(email: string | null) {
-  return isTrustedRepairOwnerEmail(
-    email,
-    process.env.WCV_C2R_C_P_OWNER_EMAILS,
+  return (
+    isTrustedRepairOwnerEmail(email, process.env.ALPHA_ADMIN_EMAILS) &&
+    isTrustedRepairOwnerEmail(
+      email,
+      process.env.WCV_C2R_C_P_OWNER_EMAILS,
+    )
   );
 }
 
