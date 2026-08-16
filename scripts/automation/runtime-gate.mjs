@@ -13,7 +13,7 @@ export const RUNTIME_EVIDENCE_PRODUCER_VERSION = "s233r.postgres.s233a.v1";
 export const S236P_RUNTIME_EVIDENCE_PRODUCER_VERSION =
   "s236p.postgres.owner-private.v5";
 export const C2R_C_P_RUNTIME_EVIDENCE_PRODUCER_VERSION =
-  "c2r-c-p.postgres.practice-trusted-repair.v1";
+  "c2r-c-p.postgres.practice-trusted-repair.v2";
 export const RUNTIME_EVIDENCE_ASSERTION_IDS = Object.freeze([
   "migration_prerequisites_and_target_applied",
   "learner_rls_two_user_isolation",
@@ -51,7 +51,7 @@ export const C2R_C_P_RUNTIME_EVIDENCE_ASSERTION_IDS = Object.freeze([
   "practice_migration_applied",
   "forced_rls_all_tables",
   "practice_only_subject_constraint",
-  "learner_session_two_user_isolation",
+  "authenticated_session_read_denied",
   "anonymous_read_denied",
   "authenticated_private_body_read_denied",
   "authenticated_direct_mutation_denied",

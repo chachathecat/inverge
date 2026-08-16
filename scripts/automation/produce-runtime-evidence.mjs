@@ -12,7 +12,7 @@ export const SCHEMA_VERSION = "inverge.runtime_evidence.v2";
 export const PRODUCER_VERSION = "s233r.postgres.s233a.v1";
 export const S236P_PRODUCER_VERSION = "s236p.postgres.owner-private.v5";
 export const C2R_C_P_PRODUCER_VERSION =
-  "c2r-c-p.postgres.practice-trusted-repair.v1";
+  "c2r-c-p.postgres.practice-trusted-repair.v2";
 export const POSTGRES_IMAGE = "postgres:15.8-bookworm";
 export const ASSERTION_IDS = Object.freeze([
   "migration_prerequisites_and_target_applied",
@@ -51,7 +51,7 @@ export const C2R_C_P_ASSERTION_IDS = Object.freeze([
   "practice_migration_applied",
   "forced_rls_all_tables",
   "practice_only_subject_constraint",
-  "learner_session_two_user_isolation",
+  "authenticated_session_read_denied",
   "anonymous_read_denied",
   "authenticated_private_body_read_denied",
   "authenticated_direct_mutation_denied",
@@ -2426,25 +2426,25 @@ function runC2RCPDatabaseAssertions(containerName, targetMigration) {
   );
   passedAssertions.add("practice_only_subject_constraint");
 
-  assertScalar(
+  assertSqlDenied(
     containerName,
     authenticatedContext(
       USER_A,
       "select count(*) from public.wcv_c2_trusted_repair_sessions;",
     ),
-    "1",
-    "C2R-C-P owner session read assertion",
+    /permission denied/i,
+    "C2R-C-P authenticated owner session read denial assertion",
   );
-  assertScalar(
+  assertSqlDenied(
     containerName,
     authenticatedContext(
       USER_B,
       "select count(*) from public.wcv_c2_trusted_repair_sessions;",
     ),
-    "0",
-    "C2R-C-P cross-user session isolation assertion",
+    /permission denied/i,
+    "C2R-C-P authenticated cross-user session read denial assertion",
   );
-  passedAssertions.add("learner_session_two_user_isolation");
+  passedAssertions.add("authenticated_session_read_denied");
 
   assertSqlDenied(
     containerName,

@@ -108,6 +108,23 @@ test("[C2R-C-P-R01] Practice persistence is forced-RLS, CAS/idempotent, and runt
     read(VERIFIER),
     /authenticated canonical session read[\s\S]*?expectStatus\([\s\S]*?\[401, 403\]/,
   );
+  const runtimeEvidenceProducer = read(
+    "scripts/automation/produce-runtime-evidence.mjs",
+  );
+  const runtimeGate = read("scripts/automation/runtime-gate.mjs");
+  for (const source of [runtimeEvidenceProducer, runtimeGate]) {
+    assert.match(source, /authenticated_session_read_denied/);
+    assert.doesNotMatch(source, /learner_session_two_user_isolation/);
+    assert.match(source, /c2r-c-p\.postgres\.practice-trusted-repair\.v2/);
+  }
+  assert.match(
+    runtimeEvidenceProducer,
+    /assertSqlDenied\([\s\S]*?USER_A[\s\S]*?wcv_c2_trusted_repair_sessions[\s\S]*?authenticated owner session read denial assertion/,
+  );
+  assert.match(
+    runtimeEvidenceProducer,
+    /assertSqlDenied\([\s\S]*?USER_B[\s\S]*?wcv_c2_trusted_repair_sessions[\s\S]*?authenticated cross-user session read denial assertion/,
+  );
   const exposureInsert = sql.indexOf(
     "insert into public.wcv_c2_trusted_repair_exposure_events",
   );
@@ -245,7 +262,7 @@ test("required runtime-gate has an exact closed C2R-C-P migration adapter", () =
   const gate = read("scripts/automation/runtime-gate.mjs");
   for (const source of [producer, gate]) {
     assert.match(source, /20260817010000_c2r_c_p_practice_trusted_repair\.sql/);
-    assert.match(source, /c2r-c-p\.postgres\.practice-trusted-repair\.v1/);
+    assert.match(source, /c2r-c-p\.postgres\.practice-trusted-repair\.v2/);
     assert.match(source, /practice_only_subject_constraint/);
     assert.match(source, /proof_evaluation_persisted/);
     assert.match(source, /exposure_and_state_transition_atomic/);
