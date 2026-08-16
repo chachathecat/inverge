@@ -41,10 +41,70 @@ const REVIEW_EVIDENCE_FIELDS = [
 ];
 const LOCAL_VALIDATION_EVIDENCE_FIELDS = [
   "name",
+  "platform",
   "command",
   "head_sha",
+  "started_at",
+  "exit_code",
   "conclusion",
   "completed_at",
+  "execution_evidence_url",
+  "execution_evidence_sha256",
+];
+const CANONICAL_LOCAL_VALIDATION_COMMANDS = {
+  windows: {
+    focused_contract_test: "node --test tests/foundation-bounded-terminal-delivery-delegation.test.mjs",
+    typecheck: "npm.cmd run typecheck",
+    lint: "npm.cmd run lint",
+    full_tests: "npm.cmd test",
+    build: "npm.cmd run build",
+    diff_check: "git diff --check origin/main...HEAD",
+  },
+  posix: {
+    focused_contract_test: "node --test tests/foundation-bounded-terminal-delivery-delegation.test.mjs",
+    typecheck: "npm run typecheck",
+    lint: "npm run lint",
+    full_tests: "npm test",
+    build: "npm run build",
+    diff_check: "git diff --check origin/main...HEAD",
+  },
+};
+const SUPERSEDED_PR_EVIDENCE_FIELDS = [
+  "pull_request_number",
+  "closed_at",
+  "merged",
+  "final_head_sha",
+  "source_correction_count",
+  "source_correction_head_shas",
+  "source_correction_parent_chain_valid",
+  "exact_head_review_cycle_count",
+  "exact_head_review_evidence",
+  "actionable_finding_evidence",
+];
+const ACTIONABLE_FINDING_EVIDENCE_FIELDS = [
+  "finding_identity_sha256",
+  "severity",
+  "root_invariant_id",
+  "path",
+  "review_comment_database_id",
+  "review_url",
+  "first_observed_cycle_head_sha",
+  "last_observed_cycle_head_sha",
+  "status_at_supersession",
+];
+const REPLACEMENT_FINDING_LINEAGE_FIELDS = [
+  "finding_identity_sha256",
+  "superseded_review_url",
+  "replacement_review_url_or_null",
+  "replacement_severity_or_null",
+  "same_actionable_finding_verdict",
+  "owner_gate_required",
+];
+const FINDING_IDENTITY_PREIMAGE_FIELDS = [
+  "repository",
+  "delivery_issue",
+  "root_invariant_id",
+  "path",
 ];
 const CHECK_EVIDENCE_FIELDS = [
   "name",
@@ -134,6 +194,8 @@ const RECEIPT_FIELDS = [
   "writer_slot_identity",
   "replacement_pr_count",
   "superseded_pr_numbers",
+  "superseded_pr_evidence",
+  "replacement_finding_lineage",
   "replacement_policy_compliant",
   "source_correction_count",
   "source_correction_head_shas",
@@ -210,7 +272,40 @@ function validateClosedContract(contract) {
   assert.deepEqual(contract.review_policy.required_premerge_counts, { P0: 0, P1: 0, P2: 0 });
   exactMembers(contract.owner_gates, OWNER_GATES, "Owner gates");
   exactMembers(contract.receipt_schema.required_fields, RECEIPT_FIELDS, "receipt fields");
-  assert.equal(contract.receipt_schema.replacement_binding.maximum_clean_replacement_prs, 1);
+  const replacement = contract.receipt_schema.replacement_binding;
+  assert.equal(replacement.maximum_clean_replacement_prs, 1);
+  exactMembers(
+    replacement.required_per_superseded_pr_evidence_fields,
+    SUPERSEDED_PR_EVIDENCE_FIELDS,
+    "superseded PR evidence fields",
+  );
+  exactMembers(
+    replacement.required_per_actionable_finding_fields,
+    ACTIONABLE_FINDING_EVIDENCE_FIELDS,
+    "actionable finding evidence fields",
+  );
+  exactMembers(
+    replacement.required_per_replacement_finding_lineage_fields,
+    REPLACEMENT_FINDING_LINEAGE_FIELDS,
+    "replacement finding lineage fields",
+  );
+  exactMembers(
+    replacement.finding_identity_preimage_fields,
+    FINDING_IDENTITY_PREIMAGE_FIELDS,
+    "finding identity preimage fields",
+  );
+  assert.equal(replacement.each_superseded_pr_review_cycle_count_must_equal_maximum, true);
+  assert.equal(
+    replacement.each_superseded_pr_review_evidence_must_satisfy_per_cycle_exact_head_and_validation_bindings,
+    true,
+  );
+  assert.equal(replacement.finding_identity_must_be_lowercase_sha256_of_canonical_preimage, true);
+  assert.equal(
+    replacement.finding_identity_preimage_must_be_recomputed_from_receipt_and_review_metadata,
+    true,
+  );
+  assert.equal(replacement.every_superseded_actionable_finding_must_have_exactly_one_lineage_entry, true);
+  assert.equal(replacement.same_actionable_p0_or_p1_requires_owner_gate_true, true);
   assert.equal(contract.receipt_schema.writer_binding.required_active_merge_producing_writer_count, 1);
   assert.equal(contract.receipt_schema.review_evidence_binding.maximum_exact_head_review_cycles_per_pr, 3);
   exactMembers(
@@ -235,6 +330,23 @@ function validateClosedContract(contract) {
     contract.receipt_schema.local_validation_binding.required_per_validation_fields,
     LOCAL_VALIDATION_EVIDENCE_FIELDS,
     "local validation evidence fields",
+  );
+  assert.deepEqual(
+    contract.receipt_schema.local_validation_binding.canonical_commands_by_platform,
+    CANONICAL_LOCAL_VALIDATION_COMMANDS,
+  );
+  assert.equal(
+    contract.receipt_schema.local_validation_binding.command_must_exactly_equal_canonical_command_for_name_and_platform,
+    true,
+  );
+  assert.equal(contract.receipt_schema.local_validation_binding.exit_code_must_equal, 0);
+  assert.equal(
+    contract.receipt_schema.local_validation_binding.execution_evidence_url_must_be_independently_resolvable,
+    true,
+  );
+  assert.equal(
+    contract.receipt_schema.local_validation_binding.execution_evidence_sha256_must_hash_exact_resolved_evidence_content,
+    true,
   );
   assert.equal(contract.receipt_schema.ruleset_binding.required_name, "main-pr-only");
   assert.equal(contract.receipt_schema.ruleset_binding.required_enforcement, "active");
@@ -373,15 +485,56 @@ test("requires expected-head squash tree equality and a closed metadata-only rec
     final_reviewed_head_must_equal_initial_reviewed_head_when_count_zero: true,
     budget_compliance_verdict_must_be_true: true,
   });
-  assert.deepEqual(receipt.replacement_binding, {
-    maximum_clean_replacement_prs: 1,
-    count_must_equal_superseded_pr_number_count: true,
-    superseded_pr_numbers_must_be_unique_positive_integers: true,
-    superseded_prs_must_be_closed_unmerged_before_replacement: true,
-    replacement_policy_compliance_verdict_must_be_true: true,
-    correction_budget_exhaustion_alone_may_require_owner: false,
-    same_actionable_p0_or_p1_must_survive_clean_replacement_for_owner_gate: true,
-  });
+  const replacement = receipt.replacement_binding;
+  assert.equal(replacement.maximum_clean_replacement_prs, 1);
+  assert.equal(replacement.count_must_equal_superseded_pr_number_count, true);
+  assert.equal(replacement.superseded_pr_numbers_must_be_unique_positive_integers, true);
+  assert.equal(replacement.superseded_prs_must_be_closed_unmerged_before_replacement, true);
+  exactMembers(
+    replacement.required_per_superseded_pr_evidence_fields,
+    SUPERSEDED_PR_EVIDENCE_FIELDS,
+    "superseded PR evidence fields",
+  );
+  assert.equal(replacement.superseded_pr_evidence_count_must_equal_replacement_pr_count, true);
+  assert.equal(replacement.superseded_pr_numbers_must_equal_evidence_pr_numbers, true);
+  assert.equal(replacement.each_superseded_pr_must_be_closed_and_merged_false, true);
+  assert.equal(replacement.each_superseded_pr_review_cycle_count_must_equal_evidence_count, true);
+  assert.equal(replacement.each_superseded_pr_review_cycle_count_must_equal_maximum, true);
+  assert.equal(
+    replacement.each_superseded_pr_review_evidence_must_satisfy_per_cycle_exact_head_and_validation_bindings,
+    true,
+  );
+  assert.equal(replacement.each_superseded_pr_source_correction_chain_must_satisfy_source_correction_binding, true);
+  exactMembers(
+    replacement.required_per_actionable_finding_fields,
+    ACTIONABLE_FINDING_EVIDENCE_FIELDS,
+    "actionable finding evidence fields",
+  );
+  exactMembers(
+    replacement.finding_identity_preimage_fields,
+    FINDING_IDENTITY_PREIMAGE_FIELDS,
+    "finding identity preimage fields",
+  );
+  assert.equal(replacement.finding_identity_must_be_lowercase_sha256_of_canonical_preimage, true);
+  assert.equal(replacement.finding_identity_preimage_must_be_recomputed_from_receipt_and_review_metadata, true);
+  assert.equal(replacement.finding_review_comment_and_url_must_resolve_to_superseded_pr, true);
+  assert.equal(replacement.every_actionable_finding_at_supersession_must_be_represented_exactly_once, true);
+  exactMembers(
+    replacement.required_per_replacement_finding_lineage_fields,
+    REPLACEMENT_FINDING_LINEAGE_FIELDS,
+    "replacement finding lineage fields",
+  );
+  assert.equal(replacement.every_superseded_actionable_finding_must_have_exactly_one_lineage_entry, true);
+  assert.equal(replacement.lineage_finding_identity_must_equal_superseded_finding_identity, true);
+  assert.equal(
+    replacement.same_finding_verdict_requires_matching_identity_and_independently_verifiable_review_urls,
+    true,
+  );
+  assert.equal(replacement.same_actionable_p0_or_p1_requires_owner_gate_true, true);
+  assert.equal(replacement.absent_or_distinct_replacement_finding_requires_same_finding_verdict_false, true);
+  assert.equal(replacement.replacement_policy_compliance_verdict_must_be_true, true);
+  assert.equal(replacement.correction_budget_exhaustion_alone_may_require_owner, false);
+  assert.equal(replacement.same_actionable_p0_or_p1_must_survive_clean_replacement_for_owner_gate, true);
   assert.deepEqual(receipt.writer_binding, {
     required_active_merge_producing_writer_count: 1,
     writer_slot_identity_must_bind_repository_branch_and_pull_request: true,
@@ -429,6 +582,23 @@ test("requires expected-head squash tree equality and a closed metadata-only rec
     LOCAL_VALIDATION_EVIDENCE_FIELDS,
     "local validation evidence fields",
   );
+  assert.deepEqual(
+    receipt.local_validation_binding.canonical_commands_by_platform,
+    CANONICAL_LOCAL_VALIDATION_COMMANDS,
+  );
+  assert.equal(receipt.local_validation_binding.platform_must_be_windows_or_posix, true);
+  assert.equal(
+    receipt.local_validation_binding.command_must_exactly_equal_canonical_command_for_name_and_platform,
+    true,
+  );
+  assert.equal(receipt.local_validation_binding.exit_code_must_equal, 0);
+  assert.equal(receipt.local_validation_binding.execution_evidence_url_must_be_independently_resolvable, true);
+  assert.equal(receipt.local_validation_binding.execution_evidence_sha256_must_be_exact_lowercase_64_hex, true);
+  assert.equal(
+    receipt.local_validation_binding.execution_evidence_url_content_must_bind_name_platform_command_head_start_completion_exit_and_conclusion,
+    true,
+  );
+  assert.equal(receipt.local_validation_binding.execution_evidence_sha256_must_hash_exact_resolved_evidence_content, true);
   assert.equal(receipt.local_validation_binding.required_conclusion, "success");
   assert.equal(receipt.local_validation_binding.validation_head_must_equal_expected_head, true);
   assert.equal(receipt.local_validation_binding.missing_or_unsuccessful_blocks, true);
@@ -566,6 +736,13 @@ test("fails closed under widened writer, review, receipt, start or Owner-gate mu
     (value) => value.receipt_schema.exact_head_checks_binding.required_conclusion = "neutral",
     (value) => value.receipt_schema.exact_head_checks_binding.required_per_check_fields.pop(),
     (value) => value.receipt_schema.replacement_binding.maximum_clean_replacement_prs = 2,
+    (value) => value.receipt_schema.replacement_binding.required_per_superseded_pr_evidence_fields.pop(),
+    (value) => value.receipt_schema.replacement_binding.each_superseded_pr_review_cycle_count_must_equal_maximum = false,
+    (value) => value.receipt_schema.replacement_binding.required_per_actionable_finding_fields.pop(),
+    (value) => value.receipt_schema.replacement_binding.finding_identity_preimage_fields.pop(),
+    (value) => value.receipt_schema.replacement_binding.finding_identity_preimage_must_be_recomputed_from_receipt_and_review_metadata = false,
+    (value) => value.receipt_schema.replacement_binding.every_superseded_actionable_finding_must_have_exactly_one_lineage_entry = false,
+    (value) => value.receipt_schema.replacement_binding.same_actionable_p0_or_p1_requires_owner_gate_true = false,
     (value) => value.receipt_schema.writer_binding.required_active_merge_producing_writer_count = 2,
     (value) => value.receipt_schema.review_evidence_binding.maximum_exact_head_review_cycles_per_pr = 4,
     (value) => value.receipt_schema.review_evidence_binding.required_per_cycle_fields.pop(),
@@ -573,6 +750,10 @@ test("fails closed under widened writer, review, receipt, start or Owner-gate mu
     (value) => value.receipt_schema.review_evidence_binding.each_cycle_all_required_local_validations_successful_must_be_true = false,
     (value) => value.receipt_schema.local_validation_binding.required_names.pop(),
     (value) => value.receipt_schema.local_validation_binding.required_per_validation_fields.pop(),
+    (value) => value.receipt_schema.local_validation_binding.canonical_commands_by_platform.windows.full_tests = "Write-Output pass",
+    (value) => value.receipt_schema.local_validation_binding.command_must_exactly_equal_canonical_command_for_name_and_platform = false,
+    (value) => value.receipt_schema.local_validation_binding.execution_evidence_url_must_be_independently_resolvable = false,
+    (value) => value.receipt_schema.local_validation_binding.execution_evidence_sha256_must_hash_exact_resolved_evidence_content = false,
     (value) => value.receipt_schema.ruleset_binding.required_name = "other",
     (value) => value.receipt_schema.merge_binding.required_method = "merge",
     (value) => value.receipt_schema.issue_association_binding.allowed_kinds.push("unbound"),
@@ -615,7 +796,30 @@ test("fails closed under widened writer, review, receipt, start or Owner-gate mu
         final_reviewed_head_must_equal_initial_reviewed_head_when_count_zero: true,
         budget_compliance_verdict_must_be_true: true,
       });
-      assert.equal(candidate.receipt_schema.replacement_binding.maximum_clean_replacement_prs, 1);
+      const replacement = candidate.receipt_schema.replacement_binding;
+      assert.equal(replacement.maximum_clean_replacement_prs, 1);
+      exactMembers(
+        replacement.required_per_superseded_pr_evidence_fields,
+        SUPERSEDED_PR_EVIDENCE_FIELDS,
+        "superseded PR evidence fields",
+      );
+      exactMembers(
+        replacement.required_per_actionable_finding_fields,
+        ACTIONABLE_FINDING_EVIDENCE_FIELDS,
+        "actionable finding evidence fields",
+      );
+      exactMembers(
+        replacement.finding_identity_preimage_fields,
+        FINDING_IDENTITY_PREIMAGE_FIELDS,
+        "finding identity preimage fields",
+      );
+      assert.equal(replacement.each_superseded_pr_review_cycle_count_must_equal_maximum, true);
+      assert.equal(
+        replacement.finding_identity_preimage_must_be_recomputed_from_receipt_and_review_metadata,
+        true,
+      );
+      assert.equal(replacement.every_superseded_actionable_finding_must_have_exactly_one_lineage_entry, true);
+      assert.equal(replacement.same_actionable_p0_or_p1_requires_owner_gate_true, true);
       assert.equal(candidate.receipt_schema.writer_binding.required_active_merge_producing_writer_count, 1);
       assert.equal(candidate.receipt_schema.review_evidence_binding.maximum_exact_head_review_cycles_per_pr, 3);
       exactMembers(
@@ -640,6 +844,22 @@ test("fails closed under widened writer, review, receipt, start or Owner-gate mu
         candidate.receipt_schema.local_validation_binding.required_per_validation_fields,
         LOCAL_VALIDATION_EVIDENCE_FIELDS,
         "local validation evidence fields",
+      );
+      assert.deepEqual(
+        candidate.receipt_schema.local_validation_binding.canonical_commands_by_platform,
+        CANONICAL_LOCAL_VALIDATION_COMMANDS,
+      );
+      assert.equal(
+        candidate.receipt_schema.local_validation_binding.command_must_exactly_equal_canonical_command_for_name_and_platform,
+        true,
+      );
+      assert.equal(
+        candidate.receipt_schema.local_validation_binding.execution_evidence_url_must_be_independently_resolvable,
+        true,
+      );
+      assert.equal(
+        candidate.receipt_schema.local_validation_binding.execution_evidence_sha256_must_hash_exact_resolved_evidence_content,
+        true,
       );
       assert.equal(candidate.receipt_schema.ruleset_binding.required_name, "main-pr-only");
       assert.equal(candidate.receipt_schema.merge_binding.required_method, "squash");

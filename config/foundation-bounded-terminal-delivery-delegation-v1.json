@@ -166,6 +166,8 @@
       "writer_slot_identity",
       "replacement_pr_count",
       "superseded_pr_numbers",
+      "superseded_pr_evidence",
+      "replacement_finding_lineage",
       "replacement_policy_compliant",
       "source_correction_count",
       "source_correction_head_shas",
@@ -212,6 +214,59 @@
       "count_must_equal_superseded_pr_number_count": true,
       "superseded_pr_numbers_must_be_unique_positive_integers": true,
       "superseded_prs_must_be_closed_unmerged_before_replacement": true,
+      "required_per_superseded_pr_evidence_fields": [
+        "pull_request_number",
+        "closed_at",
+        "merged",
+        "final_head_sha",
+        "source_correction_count",
+        "source_correction_head_shas",
+        "source_correction_parent_chain_valid",
+        "exact_head_review_cycle_count",
+        "exact_head_review_evidence",
+        "actionable_finding_evidence"
+      ],
+      "superseded_pr_evidence_count_must_equal_replacement_pr_count": true,
+      "superseded_pr_numbers_must_equal_evidence_pr_numbers": true,
+      "each_superseded_pr_must_be_closed_and_merged_false": true,
+      "each_superseded_pr_review_cycle_count_must_equal_evidence_count": true,
+      "each_superseded_pr_review_cycle_count_must_equal_maximum": true,
+      "each_superseded_pr_review_evidence_must_satisfy_per_cycle_exact_head_and_validation_bindings": true,
+      "each_superseded_pr_source_correction_chain_must_satisfy_source_correction_binding": true,
+      "required_per_actionable_finding_fields": [
+        "finding_identity_sha256",
+        "severity",
+        "root_invariant_id",
+        "path",
+        "review_comment_database_id",
+        "review_url",
+        "first_observed_cycle_head_sha",
+        "last_observed_cycle_head_sha",
+        "status_at_supersession"
+      ],
+      "finding_identity_preimage_fields": [
+        "repository",
+        "delivery_issue",
+        "root_invariant_id",
+        "path"
+      ],
+      "finding_identity_must_be_lowercase_sha256_of_canonical_preimage": true,
+      "finding_identity_preimage_must_be_recomputed_from_receipt_and_review_metadata": true,
+      "finding_review_comment_and_url_must_resolve_to_superseded_pr": true,
+      "every_actionable_finding_at_supersession_must_be_represented_exactly_once": true,
+      "required_per_replacement_finding_lineage_fields": [
+        "finding_identity_sha256",
+        "superseded_review_url",
+        "replacement_review_url_or_null",
+        "replacement_severity_or_null",
+        "same_actionable_finding_verdict",
+        "owner_gate_required"
+      ],
+      "every_superseded_actionable_finding_must_have_exactly_one_lineage_entry": true,
+      "lineage_finding_identity_must_equal_superseded_finding_identity": true,
+      "same_finding_verdict_requires_matching_identity_and_independently_verifiable_review_urls": true,
+      "same_actionable_p0_or_p1_requires_owner_gate_true": true,
+      "absent_or_distinct_replacement_finding_requires_same_finding_verdict_false": true,
       "replacement_policy_compliance_verdict_must_be_true": true,
       "correction_budget_exhaustion_alone_may_require_owner": false,
       "same_actionable_p0_or_p1_must_survive_clean_replacement_for_owner_gate": true
@@ -291,11 +346,41 @@
       "required_conclusion": "success",
       "required_per_validation_fields": [
         "name",
+        "platform",
         "command",
         "head_sha",
+        "started_at",
+        "exit_code",
         "conclusion",
-        "completed_at"
+        "completed_at",
+        "execution_evidence_url",
+        "execution_evidence_sha256"
       ],
+      "canonical_commands_by_platform": {
+        "windows": {
+          "focused_contract_test": "node --test tests/foundation-bounded-terminal-delivery-delegation.test.mjs",
+          "typecheck": "npm.cmd run typecheck",
+          "lint": "npm.cmd run lint",
+          "full_tests": "npm.cmd test",
+          "build": "npm.cmd run build",
+          "diff_check": "git diff --check origin/main...HEAD"
+        },
+        "posix": {
+          "focused_contract_test": "node --test tests/foundation-bounded-terminal-delivery-delegation.test.mjs",
+          "typecheck": "npm run typecheck",
+          "lint": "npm run lint",
+          "full_tests": "npm test",
+          "build": "npm run build",
+          "diff_check": "git diff --check origin/main...HEAD"
+        }
+      },
+      "platform_must_be_windows_or_posix": true,
+      "command_must_exactly_equal_canonical_command_for_name_and_platform": true,
+      "exit_code_must_equal": 0,
+      "execution_evidence_url_must_be_independently_resolvable": true,
+      "execution_evidence_sha256_must_be_exact_lowercase_64_hex": true,
+      "execution_evidence_url_content_must_bind_name_platform_command_head_start_completion_exit_and_conclusion": true,
+      "execution_evidence_sha256_must_hash_exact_resolved_evidence_content": true,
       "validation_head_must_equal_expected_head": true,
       "missing_or_unsuccessful_blocks": true,
       "all_successful_verdict_must_be_true": true

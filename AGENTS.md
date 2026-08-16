@@ -108,6 +108,12 @@ automatic clean replacement rather than a routine Owner interruption when a
 cycle budget is exhausted,
 verified thread reply/resolution, expected-head-pinned squash merge and a
 validated receipt. Every merge still requires actionable P0/P1/P2 `0/0/0`.
+Every superseded PR receipt preserves its complete exact-head review-cycle and
+source-correction evidence plus stable SHA-256 finding identities and
+replacement lineage. Every named local validation is bound to the exact
+platform-specific canonical command and an independently resolvable,
+digest-bound execution record; a self-reported name or conclusion is not
+sufficient.
 
 The delegation may then select and begin only the next dependency-ready
 non-Production stage from live repository authority. The expected first stage
