@@ -2,6 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
 import { existsSync } from "node:fs";
+import { readFile } from "node:fs/promises";
 import {
   createRoadmapRunnerPlanFromYamlAt,
 } from "../lib/agent-factory/roadmap-runner.ts";
@@ -47,6 +48,8 @@ const POST_EXPIRY_DIAGNOSTIC_AT =
   new Date("2026-08-14T10:00:00.000Z");
 const ACCEPTANCE_GATE_ISOLATION_AT =
   new Date("2026-07-29T01:00:00.000Z");
+const WCV_C2_START_MARKER = Buffer.from("  - id: WCV-C2\n", "utf8");
+const WCV_C3_START_MARKER = Buffer.from("  - id: WCV-C3\n", "utf8");
 
 async function text(path) {
   return readTextFile(path);
@@ -58,6 +61,25 @@ async function json(path) {
 
 function sha256(value) {
   return createHash("sha256").update(value).digest("hex");
+}
+
+function uniqueMarkerIndex(source, marker, label) {
+  assert.ok(Buffer.isBuffer(source), `${label} source must be a Buffer`);
+  const first = source.indexOf(marker);
+  assert.notEqual(first, -1, `missing ${label} marker`);
+  assert.equal(
+    source.indexOf(marker, first + marker.length),
+    -1,
+    `duplicate ${label} marker`,
+  );
+  return first;
+}
+
+function rawWcvC2RoadmapBlock(source) {
+  const start = uniqueMarkerIndex(source, WCV_C2_START_MARKER, "WCV-C2 start");
+  const end = uniqueMarkerIndex(source, WCV_C3_START_MARKER, "WCV-C3 start");
+  assert.ok(start < end, "reversed WCV-C2 and WCV-C3 markers");
+  return source.subarray(start, end);
 }
 
 function normalizeAuthorityProse(value) {
@@ -422,24 +444,75 @@ test("separates free launch from paid, efficacy and commercial claims", async ()
 });
 
 test("preserves the exact WCV-C2R graph, roadmap block and 21-row matrix", async () => {
-  const [launch, unified, roadmap, matrix] = await Promise.all([
+  const [launch, unified, roadmap, matrix, roadmapRaw, matrixRaw] = await Promise.all([
     json(CONTRACT),
     json("config/dabangil-unified-program-contract.json"),
     text("roadmap/active-program.yml"),
     text("docs/qa/wcv-c2-replacement-regression-matrix.md"),
+    readFile("roadmap/active-program.yml"),
+    readFile("docs/qa/wcv-c2-replacement-regression-matrix.md"),
   ]);
   const preserved = launch.preservedCurrentAuthority;
-  const roadmapBlock = roadmap.match(
-    /^  - id: WCV-C2\n[\s\S]*?(?=^  - id: WCV-C3\n)/m,
-  )?.[0];
+  const roadmapBlockRaw = rawWcvC2RoadmapBlock(roadmapRaw);
   const rows = matrix.split(/\r?\n/).filter((line) => /^\| \d+ \|/.test(line));
+  const roadmapBlockText = roadmapBlockRaw.toString("utf8");
+  const roadmapRawText = roadmapRaw.toString("utf8");
+  const matrixRawText = matrixRaw.toString("utf8");
+  const crlfRoadmapRaw = Buffer.from(roadmapRawText.replace(/\n/g, "\r\n"), "utf8");
+  const loneCrRoadmapRaw = Buffer.from(roadmapRawText.replace(/\n/g, "\r"), "utf8");
+  const crlfMatrixRaw = Buffer.from(matrixRawText.replace(/\n/g, "\r\n"), "utf8");
+  const loneCrMatrixRaw = Buffer.from(matrixRawText.replace(/\n/g, "\r"), "utf8");
 
   assert.equal(
     sha256(JSON.stringify(unified.wcvCampaignOverlay.c2StructuralRecovery)),
     preserved.wcvC2StructuralRecoveryCanonicalSha256,
   );
-  assert.equal(sha256(roadmapBlock), preserved.roadmapWcvC2BlockSha256);
-  assert.equal(sha256(matrix), preserved.regressionMatrixSha256);
+  assert.equal(sha256(roadmapBlockRaw), preserved.roadmapWcvC2BlockSha256);
+  assert.equal(sha256(matrixRaw), preserved.regressionMatrixSha256);
+  assert.notEqual(
+    sha256(Buffer.from(roadmapBlockText.replace(/\n/g, "\r\n"), "utf8")),
+    preserved.roadmapWcvC2BlockSha256,
+  );
+  assert.notEqual(
+    sha256(Buffer.from(roadmapBlockText.replace(/\n/g, "\r"), "utf8")),
+    preserved.roadmapWcvC2BlockSha256,
+  );
+  assert.notEqual(sha256(crlfMatrixRaw), preserved.regressionMatrixSha256);
+  assert.notEqual(sha256(loneCrMatrixRaw), preserved.regressionMatrixSha256);
+  assert.throws(
+    () => rawWcvC2RoadmapBlock(crlfRoadmapRaw),
+    /missing WCV-C2 start marker/,
+  );
+  assert.throws(
+    () => rawWcvC2RoadmapBlock(loneCrRoadmapRaw),
+    /missing WCV-C2 start marker/,
+  );
+  assert.throws(
+    () => rawWcvC2RoadmapBlock(Buffer.concat([roadmapRaw, WCV_C2_START_MARKER])),
+    /duplicate WCV-C2 start marker/,
+  );
+  assert.throws(
+    () => rawWcvC2RoadmapBlock(Buffer.concat([roadmapRaw, WCV_C3_START_MARKER])),
+    /duplicate WCV-C3 start marker/,
+  );
+  assert.throws(
+    () => rawWcvC2RoadmapBlock(Buffer.concat([WCV_C3_START_MARKER, WCV_C2_START_MARKER])),
+    /reversed WCV-C2 and WCV-C3 markers/,
+  );
+  assert.throws(
+    () => rawWcvC2RoadmapBlock(Buffer.concat([WCV_C2_START_MARKER, Buffer.from("body\n")])),
+    /missing WCV-C3 start marker/,
+  );
+  assert.deepEqual(
+    parseRoadmap(normalizeLineEndings(crlfRoadmapRaw.toString("utf8"))),
+    parseRoadmap(roadmap),
+  );
+  assert.deepEqual(
+    parseRoadmap(normalizeLineEndings(loneCrRoadmapRaw.toString("utf8"))),
+    parseRoadmap(roadmap),
+  );
+  assert.equal(normalizeLineEndings(crlfMatrixRaw.toString("utf8")), matrix);
+  assert.equal(normalizeLineEndings(loneCrMatrixRaw.toString("utf8")), matrix);
   assert.equal(rows.length, preserved.regressionMatrixRowCount);
   assert.deepEqual(preserved.replacementStageChain, [
     "C2R-A",
