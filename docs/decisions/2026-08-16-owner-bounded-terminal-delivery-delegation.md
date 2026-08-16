@@ -66,7 +66,9 @@ Every PR performs the following bounded cycle:
 2. select only one dependency-ready non-Production stage;
 3. create and synchronize one feature branch, commit series, push and PR;
 4. run scoped local validation and the repository baseline;
-5. obtain fresh remote checks on the exact head;
+5. obtain successful fresh remote checks on the exact head for PR contract,
+   risk, runtime, fast CI, Ubuntu full CI, Windows full CI, learner-loop
+   health, security audit/SBOM and Vercel;
 6. request fresh hostile review of that exact head;
 7. apply at most two source corrections across the PR;
 8. after each correction, rerun local/remote evidence and fresh review;
@@ -91,11 +93,13 @@ authority.
 
 The delegation receipt is metadata-only. It binds repository, issue, PR,
 base, expected/reviewed/remote head, merge commit and parent, candidate and
-merge trees, squash method, exact-head check results, review counts, thread
-state, effective ruleset, issue state, roadmap/current-stage state and the
-next authorized tuple. Candidate and merge trees must match. The merge parent
-must equal the re-fetched base, and reviewed/remote/expected heads must be the
-same commit.
+merge trees, squash method, exact-head check results and their all-successful
+verdict, review counts, thread state, effective ruleset types and exact pull-
+request parameters, issue state, roadmap/current-stage state and the next
+authorized tuple. Candidate and merge trees must match. The merge parent must
+equal the re-fetched base, and reviewed/remote/expected heads must be the same
+commit. A missing, pending, skipped, cancelled or unsuccessful required check
+blocks the receipt.
 
 Raw diffs, source bodies, audit reports, learner answers, OCR, private content,
 credentials and secrets are not receipt fields or uploaded delivery evidence.

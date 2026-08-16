@@ -69,7 +69,7 @@
     "create_feature_branch_and_synchronize_commit_push_pr_body",
     "run_scoped_local_and_repository_baseline_validation",
     "push_by_ordinary_non_force_update",
-    "run_fresh_remote_checks_on_exact_head",
+    "run_and_require_all_fresh_remote_checks_successful_on_exact_head",
     "request_fresh_hostile_review_on_exact_head",
     "apply_at_most_two_source_corrections_when_actionable",
     "rerun_local_remote_and_fresh_exact_head_review_after_each_correction",
@@ -109,6 +109,27 @@
     "main_ruleset_enforcement": "active",
     "main_ruleset_bypass_actors": [],
     "required_rules": ["pull_request", "non_fast_forward", "deletion"],
+    "pull_request_rule_parameters": {
+      "allowed_merge_methods": ["squash"],
+      "required_approving_review_count": 0,
+      "required_review_thread_resolution": true,
+      "dismiss_stale_reviews_on_push": false,
+      "require_code_owner_review": false,
+      "require_last_push_approval": false,
+      "required_reviewers": []
+    },
+    "required_exact_head_checks": [
+      "pr-contract",
+      "risk-classifier",
+      "runtime-gate",
+      "fast-ci",
+      "full-ci",
+      "full-ci-windows",
+      "Learner Loop Health",
+      "security-audit-sbom",
+      "Vercel"
+    ],
+    "all_required_exact_head_checks_must_succeed": true,
     "rollback_through_protected_follow_up_pr": true
   },
   "receipt_schema": {
@@ -128,16 +149,47 @@
       "merge_tree_sha",
       "merge_method",
       "exact_head_checks",
+      "all_required_exact_head_checks_successful",
       "review_counts",
       "all_threads_resolved",
       "ruleset_name",
       "ruleset_enforcement",
       "ruleset_bypass_actor_count",
+      "ruleset_rule_types",
+      "ruleset_pull_request_parameters",
       "issue_state_after_merge",
       "roadmap_state_after_merge",
       "next_authorized_stage_tuple",
       "validated_at"
     ],
+    "exact_head_checks_binding": {
+      "required_names": [
+        "pr-contract",
+        "risk-classifier",
+        "runtime-gate",
+        "fast-ci",
+        "full-ci",
+        "full-ci-windows",
+        "Learner Loop Health",
+        "security-audit-sbom",
+        "Vercel"
+      ],
+      "required_conclusion": "success",
+      "check_head_must_equal_expected_head": true,
+      "missing_pending_skipped_cancelled_or_unsuccessful_blocks": true
+    },
+    "ruleset_binding": {
+      "required_rule_types": ["pull_request", "non_fast_forward", "deletion"],
+      "pull_request_rule_parameters": {
+        "allowed_merge_methods": ["squash"],
+        "required_approving_review_count": 0,
+        "required_review_thread_resolution": true,
+        "dismiss_stale_reviews_on_push": false,
+        "require_code_owner_review": false,
+        "require_last_push_approval": false,
+        "required_reviewers": []
+      }
+    },
     "raw_diff_or_source_body_allowed": false,
     "raw_learner_or_ocr_content_allowed": false,
     "secret_or_credential_allowed": false
