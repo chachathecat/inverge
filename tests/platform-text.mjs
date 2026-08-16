@@ -7,10 +7,6 @@ export function normalizeLineEndings(value) {
   return text.replace(/\r\n?/g, "\n");
 }
 
-export function canonicalTextBytes(value) {
-  return Buffer.from(normalizeLineEndings(value), "utf8");
-}
-
 export function readTextFileSync(path) {
   return normalizeLineEndings(readFileSync(path, "utf8"));
 }

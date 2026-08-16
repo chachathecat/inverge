@@ -25,7 +25,6 @@ import {
   shouldRunFakeGrader,
 } from "../scripts/automation/produce-runtime-evidence.mjs";
 import {
-  canonicalTextBytes,
   readTextFileSync,
 } from "./platform-text.mjs";
 
@@ -454,7 +453,7 @@ test("S236P source uses exact live-ledger versions and unchanged SQL bytes", () 
 
   for (const migration of S236P_RECONCILED_MIGRATIONS) {
     const absolutePath = path.join(WORKSPACE_ROOT, migration.path);
-    const bytes = canonicalTextBytes(fs.readFileSync(absolutePath));
+    const bytes = fs.readFileSync(absolutePath);
     assert.equal(bytes.byteLength, migration.lengthBytes, migration.path);
     assert.equal(sha256(bytes), migration.sha256, migration.path);
   }
