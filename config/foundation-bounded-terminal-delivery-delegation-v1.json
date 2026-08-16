@@ -1,0 +1,224 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "contract_id": "foundation-bounded-terminal-delivery-delegation-v1",
+  "version": 1,
+  "dated": "2026-08-16",
+  "repository": "chachathecat/inverge",
+  "delivery_issue": 736,
+  "decision_path": "docs/decisions/2026-08-16-owner-bounded-terminal-delivery-delegation.md",
+  "authority": {
+    "effective_only_after": ["expected_head_pinned_squash_merge", "validated_delegation_receipt"],
+    "scope": "repository_delivery_control_plane_only",
+    "product_authority_tuple_changed": false,
+    "general_automatic_start_flags_mutated": false,
+    "production_authority": "none"
+  },
+  "predecessor_receipts": [
+    {
+      "outcome": "windows_linux_baseline_parity",
+      "issue": 728,
+      "pull_request": 729,
+      "base_sha": "cc3cfcc1c2f20f89633e5f5c1efe5ac68081f903",
+      "candidate_sha": "4067d7350231180b95efa0a7bbad2382a8b15062",
+      "merge_sha": "a8fd49ba2a31ea88b50a45e4ac218903f3ab0409"
+    },
+    {
+      "outcome": "production_dependency_security",
+      "issue": 730,
+      "pull_request": 731,
+      "base_sha": "a8fd49ba2a31ea88b50a45e4ac218903f3ab0409",
+      "candidate_sha": "d1eb3a5901a07f04d31fa02d0933f3e63c6303a8",
+      "merge_sha": "d3e48a8d2ad956d48faabad2c112e95a9ab1150b"
+    },
+    {
+      "outcome": "development_toolchain_security",
+      "issue": 732,
+      "pull_request": 733,
+      "base_sha": "d3e48a8d2ad956d48faabad2c112e95a9ab1150b",
+      "candidate_sha": "7c45eadf5e8f02dccd6218b1791779895ff12b23",
+      "merge_sha": "54827475893a4884de9a9192f11b38bcba33f429"
+    },
+    {
+      "outcome": "continuous_security_automation",
+      "issue": 734,
+      "pull_request": 735,
+      "base_sha": "54827475893a4884de9a9192f11b38bcba33f429",
+      "candidate_sha": "013ec5bbe25bf34efada118e9a2dd250d0a64077",
+      "merge_sha": "82cfbf73dbe7b94120c551f6e5459c41f96ee831"
+    }
+  ],
+  "writer_policy": {
+    "global_merge_producing_writer_limit": 1,
+    "feature_branch_required": true,
+    "feature_branch_prefix": "codex/",
+    "pull_request_required": true,
+    "ordinary_non_force_push_only": true,
+    "direct_main_push_allowed": false,
+    "force_push_allowed": false,
+    "amend_allowed": false,
+    "rebase_allowed": false,
+    "reset_allowed": false,
+    "history_rewrite_allowed": false,
+    "auto_merge_allowed": false,
+    "ruleset_bypass_allowed": false
+  },
+  "delivery_sequence": [
+    "refresh_live_main_github_authority_dependencies_and_writer_state",
+    "select_one_dependency_ready_non_production_stage",
+    "acquire_single_merge_producing_writer_slot",
+    "create_feature_branch_and_synchronize_commit_push_pr_body",
+    "run_scoped_local_and_repository_baseline_validation",
+    "push_by_ordinary_non_force_update",
+    "run_fresh_remote_checks_on_exact_head",
+    "request_fresh_hostile_review_on_exact_head",
+    "apply_at_most_two_source_corrections_when_actionable",
+    "rerun_local_remote_and_fresh_exact_head_review_after_each_correction",
+    "reply_and_resolve_threads_only_after_verified_correction",
+    "require_zero_actionable_p0_p1_p2_and_all_threads_resolved",
+    "refetch_base_head_ruleset_and_writer_state_before_merge",
+    "squash_merge_with_reviewed_head_as_expected_head",
+    "validate_merge_receipt_and_synchronize_issue_roadmap_current_stage",
+    "release_writer_and_start_next_dependency_ready_non_production_stage"
+  ],
+  "correction_policy": {
+    "maximum_source_corrections_per_pr": 2,
+    "pr_body_metadata_only_correction_counts_as_source_correction": false,
+    "each_source_correction_requires_new_local_validation": true,
+    "each_source_correction_requires_new_remote_exact_head_checks": true,
+    "each_source_correction_requires_new_exact_head_review": true,
+    "unresolved_p0_or_p1_after_budget_requires_owner": true,
+    "unresolved_p2_blocks_merge": true,
+    "test_weakening_or_deletion_allowed": false
+  },
+  "review_policy": {
+    "reviewed_commit_must_equal_remote_head": true,
+    "prior_head_review_reusable_after_source_change": false,
+    "actionable_severities": ["P0", "P1", "P2"],
+    "required_premerge_counts": { "P0": 0, "P1": 0, "P2": 0 },
+    "all_threads_resolved_before_merge": true,
+    "thread_reply_only_after_verified_correction": true,
+    "thread_resolution_only_after_verified_correction": true
+  },
+  "merge_policy": {
+    "method": "squash",
+    "expected_head_required": true,
+    "expected_head_must_equal_reviewed_head": true,
+    "merge_parent_must_equal_refetched_base": true,
+    "merge_tree_must_equal_candidate_tree": true,
+    "main_ruleset_name": "main-pr-only",
+    "main_ruleset_enforcement": "active",
+    "main_ruleset_bypass_actors": [],
+    "required_rules": ["pull_request", "non_fast_forward", "deletion"],
+    "rollback_through_protected_follow_up_pr": true
+  },
+  "receipt_schema": {
+    "schema_id": "BoundedTerminalDeliveryReceiptV1",
+    "metadata_only": true,
+    "required_fields": [
+      "repository",
+      "issue_number",
+      "pull_request_number",
+      "base_sha",
+      "expected_head_sha",
+      "reviewed_head_sha",
+      "remote_head_sha",
+      "merge_sha",
+      "merge_parent_sha",
+      "candidate_tree_sha",
+      "merge_tree_sha",
+      "merge_method",
+      "exact_head_checks",
+      "review_counts",
+      "all_threads_resolved",
+      "ruleset_name",
+      "ruleset_enforcement",
+      "ruleset_bypass_actor_count",
+      "issue_state_after_merge",
+      "roadmap_state_after_merge",
+      "next_authorized_stage_tuple",
+      "validated_at"
+    ],
+    "raw_diff_or_source_body_allowed": false,
+    "raw_learner_or_ocr_content_allowed": false,
+    "secret_or_credential_allowed": false
+  },
+  "synchronization_policy": {
+    "branch_commit_push_pr_body_same_head_required": true,
+    "exactly_one_issue_closing_reference_required": true,
+    "issue_roadmap_current_stage_synchronized_after_receipt": true,
+    "issue_state_may_substitute_for_merge_receipt": false,
+    "roadmap_state_may_lead_validated_repository_receipt": false,
+    "writer_slot_released_only_after_receipt": true
+  },
+  "delegated_start": {
+    "enabled": true,
+    "available_only_after_this_contract_receipt": true,
+    "selector": "next_dependency_ready_non_production_stage_from_live_repository_authority",
+    "expected_first_stage": "C2R-C-P",
+    "expected_first_issue": 703,
+    "expected_first_tuple": ["WCV-C2", "C2", 717, "C2R-C-P", 703, "authorized_unstarted"],
+    "expected_first_stage_terminal_receipts": [
+      {
+        "stage": "C2R-A",
+        "issue": 702,
+        "pull_request": 724,
+        "base_sha": "e22a67bde13cef7a305198fdbcf33dd653deb1f6",
+        "candidate_sha": "e946043010fa6c44d4f634fcc4ebe5d938b738ca",
+        "merge_sha": "2f0638469119e4f43578c0c96b11c8097a924bee",
+        "receipt_scope": "complete_source_only",
+        "issue_state_after_receipt": "closed"
+      },
+      {
+        "stage": "C2R-B",
+        "issue": 714,
+        "pull_request": 726,
+        "base_sha": "2f0638469119e4f43578c0c96b11c8097a924bee",
+        "candidate_sha": "dea1e3b6dd1c40dd6f8e406b145f16cf7a3fa2fc",
+        "merge_sha": "cc3cfcc1c2f20f89633e5f5c1efe5ac68081f903",
+        "receipt_scope": "complete_source_only_issue_714_allocation_c2",
+        "issue_state_after_receipt": "open_c3_c4_c6_preserved"
+      }
+    ],
+    "issue_state_alone_may_start_stage": false,
+    "general_queue_runner_authorized": false,
+    "auto_merge_authorized": false,
+    "existing_stage_automatic_start_flags_rewritten": false,
+    "production_stage_allowed": false,
+    "routine_owner_prompt_required": false
+  },
+  "owner_gates": [
+    "production_migration_rls_or_storage_apply",
+    "production_secret_or_environment_mutation",
+    "actual_charge_price_refund_or_checkout_activation",
+    "real_learner_or_instructor_invitation",
+    "rights_unclear_content",
+    "public_release_or_domain_promotion",
+    "destructive_or_irreversible_data_operation",
+    "material_product_scope_change",
+    "unresolved_p0_or_p1_after_source_correction_budget"
+  ],
+  "preserved_boundaries": [
+    "exact_head_evidence",
+    "one_merge_producing_writer",
+    "rights_privacy_source_and_effective_version_fail_closed",
+    "no_raw_learner_body_in_logs_analytics_or_artifacts",
+    "rollback_per_pr",
+    "no_direct_main_or_force_push_authority",
+    "no_gate_weakening"
+  ],
+  "prohibited_operations": [
+    "production_mutation_without_owner_gate",
+    "payment_or_checkout_activation_without_owner_gate",
+    "real_user_invitation_without_owner_gate",
+    "rights_unclear_content_use_without_owner_gate",
+    "public_release_without_owner_gate",
+    "destructive_operation_without_owner_gate",
+    "material_product_scope_change_without_owner_gate",
+    "direct_main_push",
+    "force_push",
+    "history_rewrite",
+    "auto_merge",
+    "test_weakening",
+    "raw_private_content_in_receipts_or_artifacts"
+  ]
+}
