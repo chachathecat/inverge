@@ -9,6 +9,7 @@ import {
   buildReviewOsAccessUnavailableResult,
 } from "../lib/review-os/access-result.ts";
 import { buildFailureAwareStateModel } from "../lib/review-os/failure-aware-state.ts";
+import { normalizeRepositoryPath } from "./platform-text.mjs";
 
 const read = (path) => readFileSync(path, "utf8");
 
@@ -16,7 +17,9 @@ function collectPageFiles(directory) {
   return readdirSync(directory, { withFileTypes: true }).flatMap((entry) => {
     const fullPath = path.join(directory, entry.name);
     if (entry.isDirectory()) return collectPageFiles(fullPath);
-    return entry.isFile() && entry.name === "page.tsx" ? [fullPath] : [];
+    return entry.isFile() && entry.name === "page.tsx"
+      ? [normalizeRepositoryPath(fullPath)]
+      : [];
   });
 }
 

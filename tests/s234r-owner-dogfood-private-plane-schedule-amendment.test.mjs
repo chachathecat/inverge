@@ -3,6 +3,8 @@ import { createHash } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
 
+import { readTextFile } from "./platform-text.mjs";
+
 const PRIVATE_CONTRACT_SHA256 =
   "9cd35cb2e1ed14cf62910618931d2de61d293ff62d6c9a71a7cdf54cd817e469";
 const SCHEDULER_CONTRACT_SHA256 =
@@ -322,7 +324,7 @@ async function json(path) {
 }
 
 async function text(path) {
-  return readFile(path, "utf8");
+  return readTextFile(path);
 }
 
 function canonicalJson(value) {

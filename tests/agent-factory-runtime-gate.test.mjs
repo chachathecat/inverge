@@ -24,6 +24,10 @@ import {
   s236pMigrationExecutionSteps,
   shouldRunFakeGrader,
 } from "../scripts/automation/produce-runtime-evidence.mjs";
+import {
+  canonicalTextBytes,
+  readTextFileSync,
+} from "./platform-text.mjs";
 
 const WORKSPACE_ROOT = process.cwd();
 const SCRIPT = path.resolve(WORKSPACE_ROOT, "scripts/automation/runtime-gate.mjs");
@@ -450,7 +454,7 @@ test("S236P source uses exact live-ledger versions and unchanged SQL bytes", () 
 
   for (const migration of S236P_RECONCILED_MIGRATIONS) {
     const absolutePath = path.join(WORKSPACE_ROOT, migration.path);
-    const bytes = fs.readFileSync(absolutePath);
+    const bytes = canonicalTextBytes(fs.readFileSync(absolutePath));
     assert.equal(bytes.byteLength, migration.lengthBytes, migration.path);
     assert.equal(sha256(bytes), migration.sha256, migration.path);
   }
@@ -494,7 +498,7 @@ test("S236P replays each migration before applying its successor", () => {
 });
 
 test("S236P provider and raw checkpoints bind the named Owner A fixture set", () => {
-  const producer = fs.readFileSync(
+  const producer = readTextFileSync(
     path.resolve(
       WORKSPACE_ROOT,
       "scripts/automation/produce-runtime-evidence.mjs",
@@ -521,7 +525,7 @@ test("S236P provider and raw checkpoints bind the named Owner A fixture set", ()
 });
 
 test("S236P expiry matrix covers exact boundaries, missing metadata, cleanup, and disable shapes", () => {
-  const producer = fs.readFileSync(
+  const producer = readTextFileSync(
     path.resolve(
       WORKSPACE_ROOT,
       "scripts/automation/produce-runtime-evidence.mjs",
@@ -636,7 +640,7 @@ test("closed S233A and S236P adapters bind exact migrations and reject unsupport
 });
 
 test("workflow statically enforces same-job generation, cleanup, validation, and metadata-only upload", () => {
-  const workflow = fs.readFileSync(WORKFLOW, "utf8");
+  const workflow = readTextFileSync(WORKFLOW);
   assert.match(workflow, /id: risk/);
   assert.match(workflow, /PR_HEAD_SHA: \$\{\{ github\.event\.pull_request\.head\.sha \|\| github\.sha \}\}/);
   assert.match(workflow, /RUNTIME_EVIDENCE_PATH: \$\{\{ github\.workspace \}\}\/\.agent-factory\/runtime-evidence\.json/);
@@ -649,12 +653,12 @@ test("workflow statically enforces same-job generation, cleanup, validation, and
   assert.match(workflow, /path: \$\{\{ env\.RUNTIME_EVIDENCE_PATH \}\}/);
   assert.doesNotMatch(workflow, /download-artifact|services:\s*\n/);
   assert.doesNotMatch(workflow, /if: always\(\)[^\n]*\n\s+uses: actions\/upload-artifact@v4/);
-  const producer = fs.readFileSync(path.join(WORKSPACE_ROOT, "scripts/automation/produce-runtime-evidence.mjs"), "utf8");
+  const producer = readTextFileSync(path.join(WORKSPACE_ROOT, "scripts/automation/produce-runtime-evidence.mjs"));
   assert.match(producer, /"--network",\s*"none"/);
 });
 
 test("producer forces PostgreSQL readiness and statements through loopback TCP", () => {
-  const producer = fs.readFileSync(path.join(WORKSPACE_ROOT, "scripts/automation/produce-runtime-evidence.mjs"), "utf8");
+  const producer = readTextFileSync(path.join(WORKSPACE_ROOT, "scripts/automation/produce-runtime-evidence.mjs"));
   const readinessProbe = producer.match(/const ready = docker\(\[[\s\S]*?\]\);/)?.[0] ?? "";
   const psqlHelper = producer.match(/function psql\([\s\S]*?\n}/)?.[0] ?? "";
 
@@ -668,7 +672,7 @@ test("producer forces PostgreSQL readiness and statements through loopback TCP",
 });
 
 test("producer grants the synthetic service role access to the isolated extension schema", () => {
-  const producer = fs.readFileSync(path.join(WORKSPACE_ROOT, "scripts/automation/produce-runtime-evidence.mjs"), "utf8");
+  const producer = readTextFileSync(path.join(WORKSPACE_ROOT, "scripts/automation/produce-runtime-evidence.mjs"));
   const bootstrap = producer.match(/function bootstrapSql\(\)[\s\S]*?\n}/)?.[0] ?? "";
 
   assert.match(

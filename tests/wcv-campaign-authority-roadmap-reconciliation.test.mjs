@@ -1,9 +1,12 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { readFile } from "node:fs/promises";
 import {
   createRoadmapRunnerPlanFromYamlAt,
 } from "../lib/agent-factory/roadmap-runner.ts";
+import {
+  normalizeLineEndings,
+  readTextFile,
+} from "./platform-text.mjs";
 
 const ACTIVE_MASTER =
   "docs/strategy/dabangil-professional-exam-reasoning-os-final-master-plan-v13-2026-08-06.md";
@@ -15,7 +18,7 @@ const VALIDATION =
   "docs/qa/wcv-campaign-c1-authority-roadmap-reconciliation-validation.md";
 
 async function text(path) {
-  return readFile(path, "utf8");
+  return readTextFile(path);
 }
 
 async function json(path) {
@@ -71,6 +74,7 @@ function sorted(values) {
 }
 
 function replaceItemStatus(source, itemId, status) {
+  source = normalizeLineEndings(source);
   const marker = `  - id: ${itemId}\n`;
   const start = source.indexOf(marker);
   assert.notEqual(start, -1, `missing roadmap item ${itemId}`);

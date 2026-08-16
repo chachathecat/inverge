@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
 import test from "node:test";
+
+import { readTextFileSync } from "./platform-text.mjs";
 
 const files = {
   agents: "AGENTS.md",
@@ -17,7 +18,7 @@ const files = {
   runner: "scripts/run-node-tests.mjs",
 };
 
-const read = (path) => readFileSync(path, "utf8");
+const read = readTextFileSync;
 const agents = read(files.agents);
 const decision = read(files.decision);
 const strategy = read(files.strategy);

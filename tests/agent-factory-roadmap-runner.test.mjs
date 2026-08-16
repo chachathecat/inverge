@@ -23,6 +23,7 @@ import {
   createNextTaskResultFromYaml,
   selectNextTasks,
 } from "../scripts/automation/determine-next-task.mjs";
+import { normalizeLineEndings } from "./platform-text.mjs";
 
 const O3A_EXPIRY = "2026-08-09T14:59:59.000Z";
 const LIVE_PRE_EXPIRY_EVALUATED_AT =
@@ -310,6 +311,7 @@ function assertRunnerSelectorParity(plan, selector) {
 }
 
 function replaceItemStatus(source, itemId, status) {
+  source = normalizeLineEndings(source);
   const marker = `  - id: ${itemId}\n`;
   const start = source.indexOf(marker);
   assert.notEqual(start, -1, `missing roadmap item ${itemId}`);

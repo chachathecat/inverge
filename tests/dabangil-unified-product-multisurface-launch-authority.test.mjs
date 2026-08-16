@@ -2,10 +2,13 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
 import { existsSync } from "node:fs";
-import { readFile } from "node:fs/promises";
 import {
   createRoadmapRunnerPlanFromYamlAt,
 } from "../lib/agent-factory/roadmap-runner.ts";
+import {
+  normalizeLineEndings,
+  readTextFile,
+} from "./platform-text.mjs";
 
 const CONTRACT =
   "config/dabangil-unified-product-multisurface-launch-v1.json";
@@ -46,7 +49,7 @@ const ACCEPTANCE_GATE_ISOLATION_AT =
   new Date("2026-07-29T01:00:00.000Z");
 
 async function text(path) {
-  return readFile(path, "utf8");
+  return readTextFile(path);
 }
 
 async function json(path) {
@@ -172,6 +175,7 @@ function parseRoadmap(source) {
 }
 
 function replaceItemStatus(source, itemId, status) {
+  source = normalizeLineEndings(source);
   const marker = `  - id: ${itemId}\n`;
   const start = source.indexOf(marker);
   assert.notEqual(start, -1, `missing roadmap item ${itemId}`);

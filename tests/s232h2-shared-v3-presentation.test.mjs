@@ -1,8 +1,9 @@
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
 import test from "node:test";
 
-const read = (relativePath) => readFileSync(relativePath, "utf8");
+import { readTextFileSync } from "./platform-text.mjs";
+
+const read = readTextFileSync;
 const feedback = read("components/review-os/feedback-button.tsx");
 const cognitive = read("components/review-os/cognitive-learning-action-card.tsx");
 
