@@ -48,14 +48,18 @@ issue or prose assertion cannot substitute for any merge receipt.
 ## 2. One writer and protected repository path
 
 There is exactly one merge-producing writer across the repository. A delivery
-uses one feature branch and one pull request. The writer may create a branch,
+uses one active feature branch and pull request at a time. The writer may
+create a branch,
 commit intentionally, push by ordinary non-force update and synchronize the
 PR body, issue, roadmap and current-stage record inside the authorized stage
 scope.
 
 Direct push to main, force push, amend, rebase, reset, history rewrite,
-auto-merge and bypass are prohibited. The `main-pr-only` ruleset must remain
-active with an empty bypass list, a pull request requirement, review-thread
+GitHub auto-merge and bypass are prohibited. After every gate is clean, the
+active writer must automatically perform the expected-head-pinned squash
+merge; that controller action is not GitHub auto-merge. The `main-pr-only`
+ruleset must remain active with an empty bypass list, a pull request
+requirement, review-thread
 resolution, squash-only merge, and non-fast-forward/deletion protection.
 
 ## 3. Exact-head delivery cycle
@@ -64,47 +68,69 @@ Every PR performs the following bounded cycle:
 
 1. refresh live GitHub, main, authority, dependencies and writer state;
 2. select only one dependency-ready non-Production stage;
-3. create and synchronize one feature branch, commit series, push and PR;
-4. run scoped local validation and the repository baseline;
-5. obtain successful fresh remote checks on the exact head for PR contract,
+3. create one feature branch and complete the focused candidate;
+4. exhaustively audit the whole same-root change and batch findings;
+5. commit intentionally, then run scoped local validation and the repository
+   baseline on that exact committed head;
+6. push by ordinary non-force update and create or synchronize the PR body to
+   that pushed head;
+7. obtain successful fresh remote checks on the exact head for PR contract,
    risk, runtime, fast CI, Ubuntu full CI, Windows full CI, learner-loop
    health, security audit/SBOM and Vercel;
-6. request fresh hostile review of that exact head;
-7. apply at most two source corrections across the PR;
-8. after each correction, rerun local/remote evidence and fresh review;
-9. reply to and resolve a thread only after the correction is verified;
-10. require actionable P0/P1/P2 `0/0/0` and all threads resolved;
-11. re-fetch base/head/ruleset immediately before merge;
-12. squash merge only with the reviewed head as the expected head;
-13. validate parent/tree/head/check/review/issue/roadmap receipt fields; and
-14. only then release the writer slot and select the next authorized stage.
+8. request fresh hostile review of that exact head;
+9. use at most three exact-head review cycles per PR, with at most one batched
+   source correction between consecutive review cycles;
+10. after each correction, rerun local/remote evidence and fresh review;
+11. reply to and resolve a thread only after the correction is verified;
+12. when the third review cycle is not clean, close the PR unmerged and
+    automatically transfer the still-valid candidate into at most one clean
+    replacement PR;
+13. autonomously repair new or distinct replacement findings; if that
+    replacement itself exhausts its cycles on new or distinct findings, replan
+    them into a new focused delivery rather than interrupting the Owner;
+14. require actionable P0/P1/P2 `0/0/0` and all threads resolved;
+15. re-fetch base/head/ruleset and one-writer state immediately before merge;
+16. squash merge only with the reviewed head as the expected head;
+17. validate parent/tree/head/check/review/local-validation/replacement/issue/
+    roadmap receipt fields; and
+18. only then release the writer slot and select the next authorized stage.
 
 PR-body-only metadata correction does not consume the source-correction
 budget. A commit that changes repository source after actionable review does.
 No failing or skipped test may be weakened, deleted or bypassed to make the
-cycle pass.
-
-If P0 or P1 remains unresolved after two source corrections, stop at the Owner
-gate with the PR open and unmerged. A remaining P2 also blocks merge and must
-be safely deferred or replaced without creating Production or bypass
-authority.
+cycle pass. Correction-budget exhaustion is an internal control and never a
+routine Owner interruption: it triggers automatic clean replacement or safe
+replanning. Owner intervention is allowed only when the same actionable P0 or
+P1 survives one clean replacement PR. A remaining P2 blocks merge but requires
+autonomous repair, replacement or safe replanning rather than an Owner prompt.
 
 ## 4. Receipt and synchronization
 
 The delegation receipt is metadata-only. It binds repository, issue, PR,
 base, expected/reviewed/remote head, merge commit and parent, candidate and
 merge trees, squash method, exact-head check results and their all-successful
-verdict, the initial reviewed head, ordered source-correction heads, exact
-source-correction count and budget verdict, review counts, thread state,
-effective ruleset types and exact pull-request parameters, issue state,
-roadmap/current-stage state and the next authorized tuple. Candidate and merge
-trees must match. The merge parent must equal the re-fetched base, and
-reviewed/remote/expected heads must be the same commit. Each correction head
+verdict, exact-head local-validation results and their all-successful verdict,
+the single writer identity/count, replacement lineage, the initial reviewed
+head, ordered source-correction heads, exact source-correction count and budget
+verdict, independently verifiable review run/reference/reviewer/cycle-head/
+remote-head/reviewed-head/time/terminal-result/count evidence for every cycle,
+thread state, effective ruleset
+types and exact pull-request parameters, the authority-dependent issue
+association kind and closure permission, issue state, roadmap/current-stage
+state and the next authorized tuple. Candidate and merge trees must match. The
+merge parent must equal the re-fetched base, and reviewed/remote/expected heads
+must be the same commit. Each correction head
 must have the preceding reviewed/correction head as its parent; the final
 reviewed head is the last correction head, or the initial reviewed head when
-the count is zero. More than two source corrections blocks the receipt. A
-missing, pending, skipped, cancelled or unsuccessful required check also
-blocks it.
+the count is zero. More than two source corrections or three review cycles
+blocks that PR from merging and triggers replacement or replanning. A missing,
+pending, skipped, cancelled or unsuccessful required check, review or local
+validation also blocks it.
+
+Every delivery has exactly one issue association. A closing reference is used
+only when live stage authority permits that issue to close; a nonterminal stage
+uses a non-closing association. In particular, C2R-C-P and C2R-C-T cannot close
+#703, #704 or #705; only terminal C2R-C-L may close them.
 
 Raw diffs, source bodies, audit reports, learner answers, OCR, private content,
 credentials and secrets are not receipt fields or uploaded delivery evidence.
@@ -144,11 +170,11 @@ Owner approval remains required only for:
 2. Production secret or environment mutation;
 3. actual charge, price, refund or checkout activation;
 4. real learner or instructor invitation;
-5. rights-unclear content;
+5. rights-unclear content or unresolved privacy/legal authority;
 6. public release or domain promotion;
 7. destructive or irreversible data operation;
 8. material product-scope change; and
-9. unresolved P0/P1 after the two-source-correction budget.
+9. the same actionable P0/P1 persisting after one clean replacement PR.
 
 These gates cannot be inferred from a successful non-Production stage,
 receipt, issue closure, preview, CI result or Owner-private evidence.
