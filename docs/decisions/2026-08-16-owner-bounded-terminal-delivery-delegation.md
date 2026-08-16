@@ -94,12 +94,17 @@ authority.
 The delegation receipt is metadata-only. It binds repository, issue, PR,
 base, expected/reviewed/remote head, merge commit and parent, candidate and
 merge trees, squash method, exact-head check results and their all-successful
-verdict, review counts, thread state, effective ruleset types and exact pull-
-request parameters, issue state, roadmap/current-stage state and the next
-authorized tuple. Candidate and merge trees must match. The merge parent must
-equal the re-fetched base, and reviewed/remote/expected heads must be the same
-commit. A missing, pending, skipped, cancelled or unsuccessful required check
-blocks the receipt.
+verdict, the initial reviewed head, ordered source-correction heads, exact
+source-correction count and budget verdict, review counts, thread state,
+effective ruleset types and exact pull-request parameters, issue state,
+roadmap/current-stage state and the next authorized tuple. Candidate and merge
+trees must match. The merge parent must equal the re-fetched base, and
+reviewed/remote/expected heads must be the same commit. Each correction head
+must have the preceding reviewed/correction head as its parent; the final
+reviewed head is the last correction head, or the initial reviewed head when
+the count is zero. More than two source corrections blocks the receipt. A
+missing, pending, skipped, cancelled or unsuccessful required check also
+blocks it.
 
 Raw diffs, source bodies, audit reports, learner answers, OCR, private content,
 credentials and secrets are not receipt fields or uploaded delivery evidence.

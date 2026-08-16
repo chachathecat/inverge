@@ -67,8 +67,13 @@ const RECEIPT_FIELDS = [
   "pull_request_number",
   "base_sha",
   "expected_head_sha",
+  "initial_reviewed_head_sha",
   "reviewed_head_sha",
   "remote_head_sha",
+  "source_correction_count",
+  "source_correction_head_shas",
+  "source_correction_parent_chain_valid",
+  "source_correction_budget_compliant",
   "merge_sha",
   "merge_parent_sha",
   "candidate_tree_sha",
@@ -207,6 +212,15 @@ test("requires expected-head squash tree equality and a closed metadata-only rec
     assert.equal(merge[key], true, key);
   }
   exactMembers(receipt.required_fields, RECEIPT_FIELDS, "receipt fields");
+  assert.deepEqual(receipt.source_correction_binding, {
+    maximum_source_corrections: 2,
+    count_must_equal_correction_head_count: true,
+    correction_head_shas_must_be_unique_exact_40_hex: true,
+    each_correction_head_parent_must_equal_previous_reviewed_or_correction_head: true,
+    final_reviewed_head_must_equal_last_correction_head_when_count_positive: true,
+    final_reviewed_head_must_equal_initial_reviewed_head_when_count_zero: true,
+    budget_compliance_verdict_must_be_true: true,
+  });
   exactMembers(receipt.exact_head_checks_binding.required_names, REQUIRED_CHECKS, "receipt check names");
   assert.equal(receipt.exact_head_checks_binding.required_conclusion, "success");
   assert.equal(receipt.exact_head_checks_binding.check_head_must_equal_expected_head, true);
@@ -305,6 +319,9 @@ test("fails closed under widened writer, review, receipt, start or Owner-gate mu
     (value) => value.merge_policy.all_required_exact_head_checks_must_succeed = false,
     (value) => value.merge_policy.pull_request_rule_parameters.required_review_thread_resolution = false,
     (value) => value.receipt_schema.required_fields.pop(),
+    (value) => value.receipt_schema.source_correction_binding.maximum_source_corrections = 3,
+    (value) => value.receipt_schema.source_correction_binding.count_must_equal_correction_head_count = false,
+    (value) => value.receipt_schema.source_correction_binding.each_correction_head_parent_must_equal_previous_reviewed_or_correction_head = false,
     (value) => value.receipt_schema.exact_head_checks_binding.required_conclusion = "neutral",
     (value) => value.receipt_schema.ruleset_binding.pull_request_rule_parameters.allowed_merge_methods = ["merge"],
     (value) => value.owner_gates.pop(),
@@ -324,6 +341,15 @@ test("fails closed under widened writer, review, receipt, start or Owner-gate mu
       assert.equal(candidate.merge_policy.all_required_exact_head_checks_must_succeed, true);
       assert.deepEqual(candidate.merge_policy.pull_request_rule_parameters, PULL_REQUEST_RULE_PARAMETERS);
       assert.equal(candidate.receipt_schema.exact_head_checks_binding.required_conclusion, "success");
+      assert.deepEqual(candidate.receipt_schema.source_correction_binding, {
+        maximum_source_corrections: 2,
+        count_must_equal_correction_head_count: true,
+        correction_head_shas_must_be_unique_exact_40_hex: true,
+        each_correction_head_parent_must_equal_previous_reviewed_or_correction_head: true,
+        final_reviewed_head_must_equal_last_correction_head_when_count_positive: true,
+        final_reviewed_head_must_equal_initial_reviewed_head_when_count_zero: true,
+        budget_compliance_verdict_must_be_true: true,
+      });
       assert.deepEqual(candidate.receipt_schema.ruleset_binding.pull_request_rule_parameters, PULL_REQUEST_RULE_PARAMETERS);
       assert.equal(candidate.delegated_start.production_stage_allowed, false);
     });
