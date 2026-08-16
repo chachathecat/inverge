@@ -11,6 +11,10 @@ import {
   sanitizeDiagnosticText,
   sanitizedBrowserFailureLocations,
 } from "../scripts/automation/verify-c2r-c-p-practice-runtime.mjs";
+import {
+  isTrustedRepairOwnerEmail,
+  parseTrustedRepairOwnerEmails,
+} from "../lib/review-os/trusted-repair-owner-allowlist.ts";
 import { readTextFileSync } from "./platform-text.mjs";
 
 const ROOT = process.cwd();
@@ -43,6 +47,15 @@ test("[C2R-C-P-R01] Practice persistence is forced-RLS, CAS/idempotent, and runt
   assert.match(sql, /'proofEvaluation'/);
   assert.match(sql, /WCV_C2_CAS_CONFLICT/);
   assert.match(sql, /wcv_c2_trusted_repair_command_receipts/);
+  const commandLock = sql.indexOf("pg_catalog.pg_advisory_xact_lock");
+  const receiptLookup = sql.indexOf(
+    "from public.wcv_c2_trusted_repair_command_receipts as receipt",
+    commandLock,
+  );
+  const sessionLock = sql.indexOf("for update", receiptLookup);
+  assert.ok(commandLock > 0 && receiptLookup > commandLock);
+  assert.ok(sessionLock > receiptLookup);
+  assert.match(sql, /p_user_id::text \|\| ':' \|\| p_session_id::text \|\| ':' \|\| p_command_id::text/);
   assert.match(
     sql,
     /revoke all on function public\.wcv_c2_create_trusted_repair_session_v1\([\s\S]*?from public, anon, authenticated;/,
@@ -78,7 +91,8 @@ test("[C2R-C-P-R11] API and learner shell remain Owner-only default-off", () => 
 
   const access = read("lib/review-os/trusted-repair-access.ts");
   assert.match(access, /process\.env\[TRUSTED_REPAIR_FLAG\] === "true"/);
-  assert.match(access, /isAllowedAdminEmail/);
+  assert.match(access, /process\.env\.WCV_C2R_C_P_OWNER_EMAILS/);
+  assert.doesNotMatch(access, /isAllowedAdminEmail/);
   assert.ok(
     access.indexOf("if (!isTrustedRepairEnabled())") <
       access.indexOf("getServerSessionUser()"),
@@ -87,6 +101,7 @@ test("[C2R-C-P-R11] API and learner shell remain Owner-only default-off", () => 
     read(".env.example"),
     /WCV_C2R_C_P_PRACTICE_ENABLED=false/,
   );
+  assert.match(read(".env.example"), /WCV_C2R_C_P_OWNER_EMAILS=/);
   assert.match(
     read("app/app/layout.tsx"),
     /isTrustedRepairEnabled\(\) && isTrustedRepairOwner\(session\.email\)/,
@@ -94,6 +109,28 @@ test("[C2R-C-P-R11] API and learner shell remain Owner-only default-off", () => 
   assert.match(
     read("components/learner/learner-ui.tsx"),
     /trustedRepairEnabled \? \(/,
+  );
+});
+
+test("trusted repair owner access fails closed without an explicit allowlist", () => {
+  assert.deepEqual(parseTrustedRepairOwnerEmails(undefined), []);
+  assert.deepEqual(parseTrustedRepairOwnerEmails(" ,  "), []);
+  assert.equal(isTrustedRepairOwnerEmail("owner@example.test", undefined), false);
+  assert.equal(isTrustedRepairOwnerEmail("owner@example.test", ""), false);
+  assert.equal(isTrustedRepairOwnerEmail(null, "owner@example.test"), false);
+  assert.equal(
+    isTrustedRepairOwnerEmail(
+      "OWNER@example.test",
+      " second@example.test, owner@example.test ",
+    ),
+    true,
+  );
+  assert.equal(
+    isTrustedRepairOwnerEmail(
+      "learner@example.test",
+      "owner@example.test",
+    ),
+    false,
   );
 });
 

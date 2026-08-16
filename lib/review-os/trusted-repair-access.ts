@@ -1,12 +1,12 @@
 import "server-only";
 
-import { isAllowedAdminEmail } from "@/lib/auth/admin";
 import {
   getServerSessionUser,
   type InvergeServerSession,
 } from "@/lib/auth/session";
 
 import { TRUSTED_REPAIR_FLAG } from "./trusted-repair-contract";
+import { isTrustedRepairOwnerEmail } from "./trusted-repair-owner-allowlist";
 
 export class TrustedRepairAccessError extends Error {
   readonly code: "feature_disabled" | "auth_required" | "owner_required";
@@ -24,7 +24,10 @@ export function isTrustedRepairEnabled() {
 }
 
 export function isTrustedRepairOwner(email: string | null) {
-  return isAllowedAdminEmail(email);
+  return isTrustedRepairOwnerEmail(
+    email,
+    process.env.WCV_C2R_C_P_OWNER_EMAILS,
+  );
 }
 
 export async function requireTrustedRepairAccess(): Promise<

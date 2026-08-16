@@ -320,6 +320,38 @@ test("Practice-only browser to Postgres journey, hostile concurrency, bounded re
     confirmed.body.view.session.recordVersion,
   );
 
+  const duplicateStarted = await apiCommand(owner, "start", {
+    subject: "appraisal_practical",
+    inputMode: "TYPED_TEXT",
+  });
+  const duplicateCommandId = randomUUID();
+  const duplicateFields = {
+    sessionId: duplicateStarted.body.view.session.sessionId,
+    expectedVersion: duplicateStarted.body.view.session.recordVersion,
+    body: "동시 재전송 합성 확정 수정본",
+  };
+  const duplicateRace = await Promise.all([
+    apiCommand(
+      owner,
+      "confirm_revision",
+      duplicateFields,
+      duplicateCommandId,
+    ),
+    apiCommand(
+      owner,
+      "confirm_revision",
+      duplicateFields,
+      duplicateCommandId,
+    ),
+  ]);
+  expect(duplicateRace.map((item) => item.response.status()).sort()).toEqual([
+    200,
+    200,
+  ]);
+  expect(duplicateRace[0].body.view.session.recordVersion).toBe(
+    duplicateRace[1].body.view.session.recordVersion,
+  );
+
   const raceFields = {
     sessionId: started.body.view.session.sessionId,
     expectedVersion: confirmed.body.view.session.recordVersion,

@@ -939,6 +939,7 @@ function nextEnvironment(input) {
     NEXT_PUBLIC_SUPABASE_ANON_KEY: input.anonKey,
     SUPABASE_SERVICE_ROLE_KEY: input.serviceRoleKey,
     ALPHA_ADMIN_EMAILS: `${input.userA.email},${input.userB.email}`,
+    WCV_C2R_C_P_OWNER_EMAILS: `${input.userA.email},${input.userB.email}`,
     WCV_C2R_C_P_PRACTICE_ENABLED: input.enabled ? "true" : "false",
     NEXT_TELEMETRY_DISABLED: "1",
   };

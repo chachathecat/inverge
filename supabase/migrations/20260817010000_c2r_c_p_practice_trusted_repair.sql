@@ -434,6 +434,16 @@ declare
   v_current_state text;
   v_next_version bigint;
 begin
+  -- Serialize one logical command before its receipt lookup. A concurrent
+  -- retry then observes and replays the first committed receipt instead of
+  -- reaching the session CAS check with a stale expected version.
+  perform pg_catalog.pg_advisory_xact_lock(
+    pg_catalog.hashtextextended(
+      p_user_id::text || ':' || p_session_id::text || ':' || p_command_id::text,
+      0
+    )
+  );
+
   select
     receipt.resulting_record_version,
     receipt.resulting_state
