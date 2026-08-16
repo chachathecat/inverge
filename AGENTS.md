@@ -5,6 +5,15 @@
 Use this authority order when sources conflict:
 
 1. a dated Owner decision for the exact decision it owns, currently
+   `docs/decisions/2026-08-16-owner-bounded-terminal-delivery-delegation.md`
+   for the exact repository-delivery delegation after the five foundation
+   outcomes, including one writer, branch/PR-only delivery, bounded source
+   corrections, exact-head checks and hostile review, expected-head-pinned
+   squash merge, receipt validation and automatic continuation to the next
+   dependency-ready non-Production stage; this decision becomes repository
+   authority only after its own expected-head-pinned squash merge and
+   validated #736 receipt, and it changes no product scope or stage-owned
+   `automaticStartAllowed` value,
    `docs/decisions/2026-08-15-owner-c2r-b-typed-proof-obligations.md`
    for the exact C2R-B typed Practice/Theory/Law proof architecture, the
    completed Issue #714 campaign-C2 allocation, the preserved open C3/C4/C6
@@ -82,6 +91,36 @@ start only after terminal validated merges and receipts for both C2R-A and
 C2R-B; an issue state or issue closure cannot substitute for a replacement-
 stage merge. C2R-B completes only the Issue #714 allocation for campaign C2
 and leaves Issue #714 open with its C3, C4 and C6 allocations preserved.
+
+## Bounded terminal-delivery delegation
+
+After the 2026-08-16 bounded terminal-delivery decision itself cleanly merges
+and its #736 receipt validates, the exact delivery control plane is
+`config/foundation-bounded-terminal-delivery-delegation-v1.json`. It delegates
+routine repository delivery to exactly one merge-producing writer using a
+feature branch, ordinary non-force push, a synchronized PR, local and remote
+checks, fresh exact-head hostile review, at most two source corrections,
+verified thread reply/resolution, expected-head-pinned squash merge and a
+validated receipt. Every merge still requires actionable P0/P1/P2 `0/0/0`.
+
+The delegation may then select and begin only the next dependency-ready
+non-Production stage from live repository authority. The expected first stage
+is the unchanged tuple
+`WCV-C2 / C2 / #717 / C2R-C-P / #703 / authorized_unstarted`. This is a
+direct, bounded Owner continuation instruction, not auto-merge, a general
+runner permission or a mutation of historical stage-owned
+`automaticStartAllowed: false` fields. Issue state alone cannot establish a
+dependency receipt or start a stage.
+
+Owner approval remains mandatory for Production migration/RLS/Storage apply,
+Production secret or environment mutation, actual charge/price/refund/
+checkout activation, real learner or instructor invitation, rights-unclear
+content, public release or domain promotion, destructive or irreversible data
+operation, material product-scope change, and unresolved P0/P1 after the two-
+source-correction budget. The delegation grants no bypass, direct-main,
+force-push, history-rewrite, test-weakening, rights/privacy/source/effective-
+version weakening, raw learner-body logging, payment, activation or Production
+authority.
 
 ## C2R-A rights-safe source firewall
 
