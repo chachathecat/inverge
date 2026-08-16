@@ -47,15 +47,41 @@ test("[C2R-C-P-R01] Practice persistence is forced-RLS, CAS/idempotent, and runt
   assert.match(sql, /'proofEvaluation'/);
   assert.match(sql, /WCV_C2_CAS_CONFLICT/);
   assert.match(sql, /wcv_c2_trusted_repair_command_receipts/);
-  const commandLock = sql.indexOf("pg_catalog.pg_advisory_xact_lock");
-  const receiptLookup = sql.indexOf(
-    "from public.wcv_c2_trusted_repair_command_receipts as receipt",
-    commandLock,
+  const transitionStart = sql.indexOf(
+    "create or replace function public.wcv_c2_apply_trusted_repair_transition_v1",
   );
-  const sessionLock = sql.indexOf("for update", receiptLookup);
-  assert.ok(commandLock > 0 && receiptLookup > commandLock);
-  assert.ok(sessionLock > receiptLookup);
-  assert.match(sql, /p_user_id::text \|\| ':' \|\| p_session_id::text \|\| ':' \|\| p_command_id::text/);
+  const createSql = sql.slice(0, transitionStart);
+  const transitionSql = sql.slice(transitionStart);
+  const createCommandLock = createSql.indexOf(
+    "pg_catalog.pg_advisory_xact_lock",
+  );
+  const createReceiptLookup = createSql.indexOf(
+    "from public.wcv_c2_trusted_repair_command_receipts as receipt",
+  );
+  assert.ok(createCommandLock > 0 && createReceiptLookup > createCommandLock);
+  assert.match(
+    createSql,
+    /v_user_id::text \|\| ':' \|\| p_command_id::text/,
+  );
+  const transitionCommandLock = transitionSql.indexOf(
+    "pg_catalog.pg_advisory_xact_lock",
+  );
+  const transitionReceiptLookup = transitionSql.indexOf(
+    "from public.wcv_c2_trusted_repair_command_receipts as receipt",
+  );
+  const sessionLock = transitionSql.indexOf(
+    "for update",
+    transitionReceiptLookup,
+  );
+  assert.ok(
+    transitionCommandLock > 0 &&
+      transitionReceiptLookup > transitionCommandLock,
+  );
+  assert.ok(sessionLock > transitionReceiptLookup);
+  assert.match(
+    transitionSql,
+    /p_user_id::text \|\| ':' \|\| p_session_id::text \|\| ':' \|\| p_command_id::text/,
+  );
   assert.match(
     sql,
     /revoke all on function public\.wcv_c2_create_trusted_repair_session_v1\([\s\S]*?from public, anon, authenticated;/,
@@ -110,6 +136,13 @@ test("[C2R-C-P-R11] API and learner shell remain Owner-only default-off", () => 
     read("components/learner/learner-ui.tsx"),
     /trustedRepairEnabled \? \(/,
   );
+  const loop = read("components/review-os/trusted-repair-loop.tsx");
+  assert.match(loop, /useRef<PendingCommand \| null>\(null\)/);
+  assert.match(
+    loop,
+    /pendingCommandRef\.current\?\.fingerprint === fingerprint/,
+  );
+  assert.match(loop, /responseWasDefinitive/);
 });
 
 test("trusted repair owner access fails closed without an explicit allowlist", () => {

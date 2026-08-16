@@ -304,6 +304,15 @@ begin
   v_requested_session_id := (p_session ->> 'sessionId')::uuid;
   v_user_id := (p_session ->> 'userId')::uuid;
 
+  -- A start retry can carry a newly generated session payload, so serialize
+  -- by the stable user/command identity before consulting the receipt.
+  perform pg_catalog.pg_advisory_xact_lock(
+    pg_catalog.hashtextextended(
+      v_user_id::text || ':' || p_command_id::text,
+      0
+    )
+  );
+
   select
     receipt.session_id,
     receipt.resulting_record_version,

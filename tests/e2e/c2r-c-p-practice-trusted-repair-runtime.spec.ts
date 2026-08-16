@@ -290,6 +290,63 @@ test("Practice-only browser to Postgres journey, hostile concurrency, bounded re
   });
   expect(crossSubject.response.status()).toBe(400);
 
+  const duplicateStartCommandId = randomUUID();
+  const duplicateStart = await Promise.all([
+    apiCommand(
+      owner,
+      "start",
+      { subject: "appraisal_practical", inputMode: "TYPED_TEXT" },
+      duplicateStartCommandId,
+    ),
+    apiCommand(
+      owner,
+      "start",
+      { subject: "appraisal_practical", inputMode: "TYPED_TEXT" },
+      duplicateStartCommandId,
+    ),
+  ]);
+  expect(duplicateStart.map((item) => item.response.status()).sort()).toEqual([
+    200,
+    200,
+  ]);
+  expect(duplicateStart[0].body.view.session.sessionId).toBe(
+    duplicateStart[1].body.view.session.sessionId,
+  );
+
+  const retryPage = await owner.newPage();
+  await retryPage.goto("/app/trusted-repair");
+  await activatePrimary(retryPage);
+  await expectState(retryPage, "editable_capture_draft");
+  const retryCommandIds: string[] = [];
+  let dropFirstDefinitiveResponse = true;
+  await retryPage.route("**/api/review-os/trusted-repair", async (route) => {
+    const payload = route.request().postDataJSON() as {
+      action?: string;
+      commandId?: string;
+    };
+    if (payload.action !== "confirm_revision") {
+      await route.continue();
+      return;
+    }
+    retryCommandIds.push(payload.commandId ?? "");
+    if (dropFirstDefinitiveResponse) {
+      dropFirstDefinitiveResponse = false;
+      const committed = await route.fetch();
+      expect(committed.status()).toBe(200);
+      await route.abort("connectionreset");
+      return;
+    }
+    await route.continue();
+  });
+  await activatePrimary(retryPage);
+  await expect(retryPage.getByRole("alert")).toBeVisible();
+  await activatePrimary(retryPage);
+  await expectState(retryPage, "revision_confirmed");
+  expect(retryCommandIds).toHaveLength(2);
+  expect(retryCommandIds[0]).not.toBe("");
+  expect(retryCommandIds[1]).toBe(retryCommandIds[0]);
+  await retryPage.close();
+
   const started = await apiCommand(owner, "start", {
     subject: "appraisal_practical",
     inputMode: "TYPED_TEXT",

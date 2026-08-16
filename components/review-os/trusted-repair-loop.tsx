@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
 
 import { Button } from "@/components/ui/button";
@@ -19,6 +19,11 @@ type ApiAction =
   | "request_scaffold"
   | "submit_repair"
   | "continue";
+
+type PendingCommand = {
+  fingerprint: string;
+  commandId: string;
+};
 
 const SUBJECTS: readonly { value: Subject; label: string }[] = [
   { value: "appraisal_practical", label: "감정평가실무" },
@@ -84,6 +89,7 @@ export function TrustedRepairLoop() {
   const [selfDiagnosis, setSelfDiagnosis] = useState("missing_core_reason");
   const [busy, setBusy] = useState(Boolean(initialSessionId));
   const [error, setError] = useState<string | null>(null);
+  const pendingCommandRef = useRef<PendingCommand | null>(null);
 
   function acceptView(next: TrustedRepairView) {
     setView(next);
@@ -118,6 +124,7 @@ export function TrustedRepairLoop() {
   async function command(action: ApiAction, fields: Record<string, unknown> = {}) {
     setBusy(true);
     setError(null);
+    let responseWasDefinitive = false;
     try {
       const common = view
         ? {
@@ -125,6 +132,12 @@ export function TrustedRepairLoop() {
             expectedVersion: view.session.recordVersion,
           }
         : {};
+      const fingerprint = JSON.stringify({ action, ...common, ...fields });
+      const commandId =
+        pendingCommandRef.current?.fingerprint === fingerprint
+          ? pendingCommandRef.current.commandId
+          : crypto.randomUUID();
+      pendingCommandRef.current = { fingerprint, commandId };
       const response = await fetch("/api/review-os/trusted-repair", {
         method: "POST",
         credentials: "same-origin",
@@ -133,16 +146,19 @@ export function TrustedRepairLoop() {
         body: JSON.stringify({
           action,
           ...common,
-          commandId: crypto.randomUUID(),
+          commandId,
           ...fields,
         }),
       });
       const payload = await response.json();
+      responseWasDefinitive = true;
       if (!response.ok || !payload.ok) throw new Error(payload.error ?? "command_failed");
+      pendingCommandRef.current = null;
       const next = payload.view as TrustedRepairView;
       acceptView(next);
       setDurableSessionId(next.session.sessionId);
     } catch (caught) {
+      if (responseWasDefinitive) pendingCommandRef.current = null;
       const code = caught instanceof Error ? caught.message : "command_failed";
       setError(
         code === "stale_record"
@@ -201,6 +217,7 @@ export function TrustedRepairLoop() {
         setAttempt("");
         setRepair("");
         setError(null);
+        pendingCommandRef.current = null;
         setDurableSessionId(null);
       },
       disabled: false,
