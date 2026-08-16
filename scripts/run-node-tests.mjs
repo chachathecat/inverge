@@ -121,6 +121,7 @@ const defaultTestFiles = [
   "tests/c2r-b-typed-subject-proof-contract.test.mjs",
   "tests/c2r-c-p-practice-trusted-repair.test.mjs",
   "tests/c2r-c-p-practice-runtime-contract.test.mjs",
+  "tests/c2r-c-p-practice-authority.test.mjs",
   "tests/dabangil-unified-product-multisurface-launch-authority.test.mjs",
   "tests/owner-alpha-three-subject-practice-adapter-contract.test.mjs",
   "tests/owner-alpha-explanation-ladder-v1.test.mjs",

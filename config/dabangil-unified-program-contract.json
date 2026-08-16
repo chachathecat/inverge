@@ -155,7 +155,7 @@
     },
     "soleNextImplementationItem": "WCV-C2",
     "soleNextImplementationCampaign": "C2",
-    "soleNextReplacementStage": "C2R-C-P",
+    "soleNextReplacementStage": "C2R-C-T",
     "soleNextReplacementStageIssue": 703,
     "structuralRecoveryTrackerIssue": 717,
     "wcvC2Complete": false,
@@ -1028,14 +1028,14 @@
       "trackerIssue": 717,
       "authorityDecision": "docs/decisions/2026-08-14-wcv-c2-structural-recovery.md",
       "regressionMatrix": "docs/qa/wcv-c2-replacement-regression-matrix.md",
-      "status": "c2r_a_and_c2r_b_complete_source_only_c2r_c_p_authorized_unstarted",
+      "status": "c2r_a_b_and_c_p_complete_c2r_c_t_authorized_unstarted",
       "wcvC2Complete": false,
       "authorityGraph": {
         "roadmapItemId": "WCV-C2",
         "campaignId": "C2",
         "recoveryTrackerIssue": 717,
         "structuralAuthorityPr": 718,
-        "currentReplacementStageId": "C2R-C-P",
+        "currentReplacementStageId": "C2R-C-T",
         "currentReplacementStageIssue": 703,
         "replacementStageChain": [
           "C2R-A",
@@ -1076,6 +1076,11 @@
         "initialRowCount": 21,
         "initialRowStatus": "uncovered",
         "allRowsRemainUncoveredInAuthorityPr718": true,
+        "effectiveUncoveredRowCountBeforeC2RCPMerge": 21,
+        "postMergeUncoveredRowCount": 10,
+        "activeCandidateCoveringPr": 745,
+        "activeCandidateStage": "C2R-C-P",
+        "activeCandidateRows": [1, 2, 4, 6, 8, 9, 10, 11, 12, 14, 19],
         "candidateStatus": "candidate_coverage_pending_exact_merge",
         "receiptPolicyId": "github_exact_head_pinned_squash_merge_v1",
         "repositoryCandidateDeclaration": {
@@ -1259,7 +1264,14 @@
           "dependencies": [
             "C2R-B"
           ],
-          "state": "authorized_unstarted",
+          "state": "complete_practice_runtime",
+          "decisionRecord": "docs/decisions/2026-08-17-owner-c2r-c-p-practice-trusted-repair.md",
+          "contract": "config/dabangil-c2r-c-p-practice-trusted-repair-v1.json",
+          "coveringPr": 745,
+          "focusedTests": [
+            "tests/c2r-c-p-practice-trusted-repair.test.mjs",
+            "tests/c2r-c-p-practice-runtime-contract.test.mjs"
+          ],
           "startRequiresValidatedTerminalStages": [
             "C2R-A",
             "C2R-B"
@@ -1317,7 +1329,7 @@
           "dependencies": [
             "C2R-C-P"
           ],
-          "state": "queued_dependency_blocked",
+          "state": "authorized_unstarted",
           "requiredChangedLayers": [
             "TYPED_THEORY_TARGET_SCOPED_PREDICATE_VALIDATOR",
             "THEORY_GOLDEN_AND_OWNER_GOLD_FIXTURES",
@@ -1512,7 +1524,7 @@
         "dependencies": [
           "WCV-C1"
         ],
-        "state": "c2r_a_and_c2r_b_complete_source_only_c2r_c_p_authorized_unstarted",
+        "state": "c2r_a_b_and_c_p_complete_c2r_c_t_authorized_unstarted",
         "wcvC2Complete": false,
         "terminalDonorPr": 716,
         "terminalDonorMerged": false,
@@ -1699,7 +1711,7 @@
     "soleNextImplementationCampaign": "C2",
     "soleNextImplementationLeadIssue": 717,
     "soleNextImplementationTrackerIssue": 717,
-    "soleNextReplacementStage": "C2R-C-P",
+    "soleNextReplacementStage": "C2R-C-T",
     "soleNextReplacementStageIssue": 703,
     "laterCampaignsQueued": [
       "C3",
@@ -1751,7 +1763,7 @@
     "soleNextImplementationCampaignId": "C2",
     "soleNextImplementationLeadIssue": 717,
     "soleNextImplementationTrackerIssue": 717,
-    "soleNextReplacementStageId": "C2R-C-P",
+    "soleNextReplacementStageId": "C2R-C-T",
     "soleNextReplacementStageIssue": 703,
     "primaryStatusesUsed": [
       "completed",
