@@ -124,7 +124,13 @@ cycle uses that exact `cycle_head_sha`; the two contexts cannot be substituted
 or compared to each other's head. For every superseded PR, the receipt separately
 binds closed-unmerged state, the complete review-cycle and source-correction
 history, and every actionable finding through a stable SHA-256 identity over
-repository, delivery issue, root invariant and path. Replacement lineage
+repository, delivery issue, root invariant and path. That identity uses the
+versioned `finding-identity-rfc8785-jcs-sha256-v1` encoding: strings are first
+Unicode NFC normalized with no surrounding whitespace, the exact four-member
+JSON object is serialized as UTF-8 RFC 8785 JCS bytes, and the lowercase
+SHA-256 is recomputed. Repository and issue are fixed, root IDs use the closed
+ASCII pattern, and paths are case-sensitive normalized repository-relative
+forward-slash paths with no empty or dot segments. Replacement lineage
 accounts for each such identity exactly once and uses independently verifiable
 review URLs to prove whether the same P0/P1 survived and therefore requires
 the Owner gate. A triggered gate must include a later, independently

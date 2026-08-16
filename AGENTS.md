@@ -123,6 +123,11 @@ Owner authorization record; merely marking the gate required cannot satisfy
 it. That record must be authored by `chachathecat`, postdate the matching
 replacement finding, and bind this repository, replacement PR, stable finding
 identity and review URL.
+The stable finding identity is the lowercase SHA-256 of UTF-8 RFC 8785 JCS
+bytes for the exact four-member object `repository`, `delivery_issue`,
+`root_invariant_id` and normalized repository-relative `path`, using the
+versioned normalization and encoding rules in the machine contract. No
+implementation-defined concatenation, separator or field order is allowed.
 
 The delegation may then select and begin only the next dependency-ready
 non-Production stage from live repository authority. The expected first stage

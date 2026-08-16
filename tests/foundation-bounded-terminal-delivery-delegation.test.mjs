@@ -115,6 +115,22 @@ const FINDING_IDENTITY_PREIMAGE_FIELDS = [
   "root_invariant_id",
   "path",
 ];
+const FINDING_IDENTITY_CANONICALIZATION = {
+  version: "finding-identity-rfc8785-jcs-sha256-v1",
+  standard: "RFC 8785 JSON Canonicalization Scheme",
+  preimage_type: "json_object",
+  exact_object_members: FINDING_IDENTITY_PREIMAGE_FIELDS,
+  string_normalization_before_canonicalization: "Unicode_NFC_and_no_leading_or_trailing_whitespace",
+  member_ordering: "lexicographic_UTF16_code_units_per_RFC8785",
+  repository_value: "chachathecat/inverge",
+  delivery_issue_value: 736,
+  root_invariant_id_pattern: "^[a-z0-9]+(?:_[a-z0-9]+)*$",
+  path_normalization: "repository_relative_forward_slash_unicode_NFC_no_empty_or_dot_segments",
+  path_case_sensitive: true,
+  no_additional_object_members: true,
+  preimage_bytes: "UTF-8_of_RFC8785_canonicalized_object",
+  digest: "SHA-256_lowercase_hex",
+};
 const CHECK_EVIDENCE_FIELDS = [
   "name",
   "head_sha",
@@ -303,6 +319,7 @@ function validateClosedContract(contract) {
     FINDING_IDENTITY_PREIMAGE_FIELDS,
     "finding identity preimage fields",
   );
+  assert.deepEqual(replacement.finding_identity_canonicalization, FINDING_IDENTITY_CANONICALIZATION);
   assert.equal(replacement.each_superseded_pr_review_cycle_count_must_equal_maximum, true);
   assert.equal(
     replacement.each_superseded_pr_review_evidence_must_satisfy_per_cycle_exact_head_and_validation_bindings,
@@ -313,6 +330,7 @@ function validateClosedContract(contract) {
     replacement.finding_identity_preimage_must_be_recomputed_from_receipt_and_review_metadata,
     true,
   );
+  assert.equal(replacement.finding_review_path_must_equal_normalized_canonical_preimage_path, true);
   assert.equal(replacement.every_superseded_actionable_finding_must_have_exactly_one_lineage_entry, true);
   assert.equal(replacement.same_actionable_p0_or_p1_requires_owner_gate_true, true);
   assert.equal(replacement.same_actionable_p0_or_p1_requires_non_null_owner_authorization_record_fields, true);
@@ -544,8 +562,10 @@ test("requires expected-head squash tree equality and a closed metadata-only rec
     FINDING_IDENTITY_PREIMAGE_FIELDS,
     "finding identity preimage fields",
   );
+  assert.deepEqual(replacement.finding_identity_canonicalization, FINDING_IDENTITY_CANONICALIZATION);
   assert.equal(replacement.finding_identity_must_be_lowercase_sha256_of_canonical_preimage, true);
   assert.equal(replacement.finding_identity_preimage_must_be_recomputed_from_receipt_and_review_metadata, true);
+  assert.equal(replacement.finding_review_path_must_equal_normalized_canonical_preimage_path, true);
   assert.equal(replacement.finding_review_comment_and_url_must_resolve_to_superseded_pr, true);
   assert.equal(replacement.every_actionable_finding_at_supersession_must_be_represented_exactly_once, true);
   exactMembers(
@@ -789,7 +809,10 @@ test("fails closed under widened writer, review, receipt, start or Owner-gate mu
     (value) => value.receipt_schema.replacement_binding.each_superseded_pr_review_cycle_count_must_equal_maximum = false,
     (value) => value.receipt_schema.replacement_binding.required_per_actionable_finding_fields.pop(),
     (value) => value.receipt_schema.replacement_binding.finding_identity_preimage_fields.pop(),
+    (value) => value.receipt_schema.replacement_binding.finding_identity_canonicalization.member_ordering = "implementation_defined",
+    (value) => value.receipt_schema.replacement_binding.finding_identity_canonicalization.path_normalization = "platform_default",
     (value) => value.receipt_schema.replacement_binding.finding_identity_preimage_must_be_recomputed_from_receipt_and_review_metadata = false,
+    (value) => value.receipt_schema.replacement_binding.finding_review_path_must_equal_normalized_canonical_preimage_path = false,
     (value) => value.receipt_schema.replacement_binding.every_superseded_actionable_finding_must_have_exactly_one_lineage_entry = false,
     (value) => value.receipt_schema.replacement_binding.same_actionable_p0_or_p1_requires_owner_gate_true = false,
     (value) => value.receipt_schema.replacement_binding.same_actionable_p0_or_p1_requires_non_null_owner_authorization_record_fields = false,
@@ -874,11 +897,13 @@ test("fails closed under widened writer, review, receipt, start or Owner-gate mu
         FINDING_IDENTITY_PREIMAGE_FIELDS,
         "finding identity preimage fields",
       );
+      assert.deepEqual(replacement.finding_identity_canonicalization, FINDING_IDENTITY_CANONICALIZATION);
       assert.equal(replacement.each_superseded_pr_review_cycle_count_must_equal_maximum, true);
       assert.equal(
         replacement.finding_identity_preimage_must_be_recomputed_from_receipt_and_review_metadata,
         true,
       );
+      assert.equal(replacement.finding_review_path_must_equal_normalized_canonical_preimage_path, true);
       assert.equal(replacement.every_superseded_actionable_finding_must_have_exactly_one_lineage_entry, true);
       assert.equal(replacement.same_actionable_p0_or_p1_requires_owner_gate_true, true);
       assert.equal(replacement.same_actionable_p0_or_p1_requires_non_null_owner_authorization_record_fields, true);
