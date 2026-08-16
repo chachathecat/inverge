@@ -16,9 +16,9 @@ program:
   soleNextImplementationCampaign: C2
   soleNextImplementationLeadIssue: 717
   soleNextImplementationTrackerIssue: 717
-  soleNextReplacementStage: C2R-C-P
+  soleNextReplacementStage: C2R-C-T
   soleNextReplacementStageIssue: 703
-  soleNextReplacementStageDecision: docs/decisions/2026-08-15-owner-c2r-b-typed-proof-obligations.md
+  soleNextReplacementStageDecision: docs/decisions/2026-08-17-owner-c2r-c-p-practice-trusted-repair.md
   structuralRecoveryChainDecision: docs/decisions/2026-08-14-wcv-c2-structural-recovery.md
   c2rBOperationalStartRequiresValidatedC2rAReceipt: true
   c2rBOperationalStartRequiresIssue702Closure: true
@@ -30,6 +30,8 @@ program:
   terminalDonorMerged: false
   wcvC2Complete: false
   replacementStageAutomaticStartAllowed: false
+  githubNativeNonProductionContinuationAllowed: true
+  githubNativeDeliveryDecision: docs/decisions/2026-08-16-owner-github-native-delivery-control.md
   activeMasterPlan: docs/strategy/dabangil-professional-exam-reasoning-os-final-master-plan-v13-2026-08-06.md
   launchConvergenceAmendment: ULC-0
   launchConvergenceLeadIssue: 719
@@ -360,7 +362,7 @@ items:
   - id: WCV-C2
     title: C2 First Trusted Repair Structural Recovery
     status: queued
-    executionState: c2r_a_and_c2r_b_complete_source_only_c2r_c_p_authorized_unstarted
+    executionState: c2r_a_b_and_c_p_complete_c2r_c_t_authorized_unstarted
     campaignId: C2
     leadIssue: 717
     includedIssues: [702, 714, 703, 704, 705]
@@ -372,7 +374,7 @@ items:
     terminalDonorEvidencePromotedToMain: false
     wcvC2Complete: false
     reviewFindingCount: 21
-    uncoveredReviewFindingCount: 21
+    uncoveredReviewFindingCount: 10
     coverageCandidateState: candidate_coverage_pending_exact_merge
     coverageReceiptPolicyId: github_exact_head_pinned_squash_merge_v1
     coverageReceiptVersion: MergeCoverageReceiptV1
@@ -381,7 +383,7 @@ items:
     coverageSuccessorRepositoryPrRequired: false
     terminalIssueClosureRequiresValidatedCoverageReceipt: true
     replacementStages: [C2R-A, C2R-B, C2R-C-P, C2R-C-T, C2R-C-L]
-    currentReplacementStage: C2R-C-P
+    currentReplacementStage: C2R-C-T
     currentReplacementStageIssue: 703
     c2rAState: complete_source_only
     c2rAIssue: 702
@@ -402,9 +404,16 @@ items:
     c2rBDirectRegressionRows: []
     c2rBMatrixRowsChanged: []
     c2rBIssueClosureRequiresValidatedReceipt: false
-    c2rCPState: authorized_unstarted
+    c2rCPState: complete_practice_runtime
     c2rCPStartRequiresValidatedTerminalStages: [C2R-A, C2R-B]
     c2rCPAutomaticStartAllowed: false
+    c2rCPDecision: docs/decisions/2026-08-17-owner-c2r-c-p-practice-trusted-repair.md
+    c2rCPContract: config/dabangil-c2r-c-p-practice-trusted-repair-v1.json
+    c2rCPFocusedTests: [tests/c2r-c-p-practice-trusted-repair.test.mjs, tests/c2r-c-p-practice-runtime-contract.test.mjs]
+    c2rCPCoveringPr: 749
+    c2rCPCandidateRegressionRows: [1, 2, 4, 6, 8, 9, 10, 11, 12, 14, 19]
+    c2rCTState: authorized_unstarted
+    c2rCTStartRequiresValidatedTerminalStages: [C2R-C-P]
     independentlyCompleteSourceContractStages: [C2R-A, C2R-B]
     completeLearnerVisibleRuntimeStages: [C2R-C-P, C2R-C-T, C2R-C-L]
     commonRuntimeSubstrateFirstStage: C2R-C-P
