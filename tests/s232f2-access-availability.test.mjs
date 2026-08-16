@@ -200,9 +200,13 @@ test("S232F.2 every data-bearing app page gates a fresh access result before dow
     "app/app/notes/page.tsx",
     "app/app/today/page.tsx",
   ].sort();
+  const specializedGuardPages = ["app/app/trusted-repair/page.tsx"].sort();
   const allPages = collectPageFiles("app/app").sort();
 
-  assert.deepEqual(allPages, [...guardedPages, ...delegatedOrFixturePages].sort());
+  assert.deepEqual(
+    allPages,
+    [...guardedPages, ...delegatedOrFixturePages, ...specializedGuardPages].sort(),
+  );
 
   for (const page of guardedPages) {
     const source = read(page);
@@ -232,6 +236,20 @@ test("S232F.2 every data-bearing app page gates a fresh access result before dow
   assert.match(read("app/app/today/page.tsx"), /redirect\("\/app/);
   assert.match(read("app/app/notes/page.tsx"), /ReviewOsItemsPage/);
   assert.equal(read("app/app/acceptance/trust-provenance/[state]/page.tsx").includes("getReviewOsServerContext"), false);
+
+  const trustedRepairPage = read("app/app/trusted-repair/page.tsx");
+  const trustedRepairContextIndex = trustedRepairPage.indexOf("await requireTrustedRepairAccess()");
+  const trustedRepairDeniedIndex = trustedRepairPage.indexOf("isTrustedRepairAccessError(error)");
+  const trustedRepairNotFoundIndex = trustedRepairPage.indexOf("notFound()", trustedRepairDeniedIndex);
+  const trustedRepairRethrowIndex = trustedRepairPage.indexOf("throw error", trustedRepairNotFoundIndex);
+  const trustedRepairLoopIndex = trustedRepairPage.indexOf(
+    "<TrustedRepairLoop ownerScope={ownerScope} />",
+  );
+  assert.ok(trustedRepairContextIndex >= 0, "trusted repair must resolve its specialized access gate");
+  assert.ok(trustedRepairDeniedIndex > trustedRepairContextIndex);
+  assert.ok(trustedRepairNotFoundIndex > trustedRepairDeniedIndex);
+  assert.ok(trustedRepairRethrowIndex > trustedRepairNotFoundIndex);
+  assert.ok(trustedRepairLoopIndex > trustedRepairRethrowIndex);
 });
 
 test("S232F.2 documents the failure boundary and registers the contract in the full suite", () => {

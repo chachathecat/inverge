@@ -245,7 +245,7 @@ test("keeps WCV-C2 as the metadata umbrella led by recovery tracker #717", async
   assert.equal(roadmap.program.soleNextImplementationCampaign, "C2");
   assert.equal(roadmap.program.soleNextImplementationLeadIssue, 717);
   assert.equal(roadmap.program.soleNextImplementationTrackerIssue, 717);
-  assert.equal(roadmap.program.soleNextReplacementStage, "C2R-C-P");
+  assert.equal(roadmap.program.soleNextReplacementStage, "C2R-C-T");
   assert.equal(roadmap.program.soleNextReplacementStageIssue, 703);
   assert.equal(roadmap.program.structuralRecoveryTrackerIssue, 717);
   assert.equal(roadmap.program.wcvC2Complete, false);
@@ -254,7 +254,7 @@ test("keeps WCV-C2 as the metadata umbrella led by recovery tracker #717", async
   assert.deepEqual(c2.includedIssues, [702, 714, 703, 704, 705]);
   assert.equal(
     c2.state,
-    "c2r_a_and_c2r_b_complete_source_only_c2r_c_p_authorized_unstarted",
+    "c2r_a_b_and_c_p_complete_c2r_c_t_authorized_unstarted",
   );
   assert.equal(c2.state, unified.wcvCampaignOverlay.c2StructuralRecovery.status);
   assert.equal(c2.wcvC2Complete, false);
@@ -270,7 +270,7 @@ test("keeps WCV-C2 as the metadata umbrella led by recovery tracker #717", async
   assert.deepEqual(unified.wcvCampaignOverlay.laterCampaignsQueued, ["C3", "C4", "C5", "C6"]);
   assert.equal(
     roadmap.byId.get("WCV-C2").executionState,
-    "c2r_a_and_c2r_b_complete_source_only_c2r_c_p_authorized_unstarted",
+    "c2r_a_b_and_c_p_complete_c2r_c_t_authorized_unstarted",
   );
   assert.deepEqual(
     createRoadmapRunnerPlanFromYamlAt(

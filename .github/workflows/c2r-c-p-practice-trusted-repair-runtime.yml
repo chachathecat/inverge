@@ -1,0 +1,105 @@
+name: C2R-C-P Practice Trusted Repair Runtime
+
+on:
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened]
+    paths:
+      - ".github/workflows/c2r-c-p-practice-trusted-repair-runtime.yml"
+      - "app/api/review-os/trusted-repair/**"
+      - "app/app/layout.tsx"
+      - "app/app/trusted-repair/**"
+      - "components/learner/learner-ui.tsx"
+      - "components/review-os/app-shell.tsx"
+      - "components/review-os/trusted-repair-loop.tsx"
+      - "lib/review-os/trusted-repair-*.ts"
+      - "config/dabangil-c2r-c-p-practice-trusted-repair-v1.json"
+      - "scripts/automation/produce-runtime-evidence.mjs"
+      - "scripts/automation/runtime-gate.mjs"
+      - "scripts/automation/runtime-risk-contract.mjs"
+      - "scripts/automation/verify-c2r-c-p-practice-runtime.mjs"
+      - "supabase/migrations/20260817010000_c2r_c_p_practice_trusted_repair.sql"
+      - "tests/agent-factory-runtime-gate.test.mjs"
+      - "tests/e2e/c2r-c-p-*.ts"
+      - "tests/runtime/wcv-c2-supabase/**"
+      - "tests/c2r-c-p-*.test.mjs"
+
+permissions:
+  contents: read
+
+jobs:
+  c2r-c-p-practice-trusted-repair-runtime:
+    name: c2r-c-p-practice-trusted-repair-runtime
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    concurrency:
+      group: c2r-c-p-practice-runtime-${{ github.event.pull_request.number }}
+      cancel-in-progress: true
+    env:
+      CI: "true"
+      DO_NOT_TRACK: "1"
+      SUPABASE_TELEMETRY_DISABLED: "1"
+      PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+      C2R_C_P_RUNTIME_EVIDENCE_PATH: ${{ github.workspace }}/.agent-factory/c2r-c-p-practice-runtime-evidence.json
+
+    steps:
+      - name: Check out exact PR head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Verify exact checkout
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "${PR_HEAD_SHA}"
+          [[ "${PR_HEAD_SHA}" =~ ^[0-9a-f]{40}$ ]]
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install locked dependencies
+        run: npm ci
+
+      - name: Install the bounded Chromium runtime
+        run: npm exec playwright install -- --with-deps chromium
+
+      - name: Run exact-head complete isolated C2R-C-P Practice runtime gate
+        env:
+          GITHUB_RUN_ID: ${{ github.run_id }}
+          GITHUB_RUN_ATTEMPT: ${{ github.run_attempt }}
+          C2R_C_P_SUPABASE_WORKDIR: ${{ runner.temp }}/c2r-c-p-supabase-${{ github.run_id }}-${{ github.run_attempt }}
+        run: node scripts/automation/verify-c2r-c-p-practice-runtime.mjs
+
+      - name: Unconditionally remove local Supabase state
+        if: always()
+        env:
+          GITHUB_RUN_ID: ${{ github.run_id }}
+          GITHUB_RUN_ATTEMPT: ${{ github.run_attempt }}
+          C2R_C_P_SUPABASE_WORKDIR: ${{ runner.temp }}/c2r-c-p-supabase-${{ github.run_id }}-${{ github.run_attempt }}
+        run: >-
+          node scripts/automation/verify-c2r-c-p-practice-runtime.mjs
+          --cleanup
+          --require-complete
+
+      - name: Recheck exact head and unchanged dependency declarations
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "${PR_HEAD_SHA}"
+          git diff --exit-code -- package.json package-lock.json
+
+      - name: Upload metadata-only exact-head evidence
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: c2r-c-p-practice-runtime-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ env.C2R_C_P_RUNTIME_EVIDENCE_PATH }}
+          if-no-files-found: error
+          include-hidden-files: true
+          retention-days: 7
