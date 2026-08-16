@@ -28,6 +28,7 @@ const REVIEW_EVIDENCE_FIELDS = [
   "review_run_id",
   "review_url",
   "reviewer",
+  "reviewer_database_id",
   "cycle_head_sha",
   "remote_head_sha_at_review",
   "reviewed_head_sha",
@@ -146,8 +147,10 @@ const ROOT_INVARIANT_DERIVATION = {
   source: "independently_resolved_digest_bound_unedited_github_review_comment_body",
   line_endings_before_extraction: "CRLF_and_CR_to_LF",
   title_source_line: "first_non_empty_line",
-  title_extraction_regex: "^\\*\\*(?:<sub><sub>!\\[(P[0-3]) Badge\\]\\([^\\r\\n)]*\\)</sub></sub> {2})?([^\\r\\n]+)\\*\\*$",
-  priority_capture_group_must_equal_severity_when_present: true,
+  title_extraction_regex: "^\\*\\*<sub><sub>!\\[(P[0-2]) Badge\\]\\(https://img\\.shields\\.io/badge/\\1-[^\\r\\n)]*\\)</sub></sub> {2}([^\\r\\n]+)\\*\\*$",
+  priority_capture_group: 1,
+  priority_capture_group_required: true,
+  priority_capture_group_must_equal_severity: true,
   title_capture_group: 2,
   exactly_one_title_capture_required: true,
   title_must_be_non_empty_single_line_plain_text: true,
@@ -217,6 +220,12 @@ const PULL_REQUEST_RULE_PARAMETERS = {
   require_last_push_approval: false,
   required_reviewers: [],
 };
+const RULESET_CONDITIONS = {
+  ref_name: {
+    include: ["~DEFAULT_BRANCH"],
+    exclude: [],
+  },
+};
 
 const TOP_LEVEL_KEYS = [
   "$schema",
@@ -282,12 +291,26 @@ const RECEIPT_FIELDS = [
   "candidate_tree_sha",
   "merge_tree_sha",
   "merge_method",
+  "merge_completed_at",
   "exact_head_checks",
   "all_required_exact_head_checks_successful",
   "local_validation_results",
   "all_required_local_validations_successful",
   "review_counts",
   "all_threads_resolved",
+  "ruleset_database_id",
+  "ruleset_api_url",
+  "ruleset_record_sha256",
+  "ruleset_record_updated_at",
+  "ruleset_record_response_date",
+  "ruleset_record_response_etag",
+  "ruleset_record_response_request_id",
+  "ruleset_effective_rules_api_url",
+  "ruleset_effective_rules_sha256",
+  "ruleset_effective_rules_response_date",
+  "ruleset_effective_rules_response_etag",
+  "ruleset_effective_rules_response_request_id",
+  "ruleset_observed_at",
   "ruleset_name",
   "ruleset_enforcement",
   "ruleset_bypass_actor_count",
@@ -614,6 +637,9 @@ test("requires expected-head squash tree equality and a closed metadata-only rec
   assert.equal(replacement.finding_identity_must_be_lowercase_sha256_of_canonical_preimage, true);
   assert.equal(replacement.finding_identity_preimage_must_be_recomputed_from_receipt_and_review_metadata, true);
   assert.equal(replacement.root_invariant_id_must_be_recomputed_from_resolved_review_comment_title, true);
+  exactMembers(replacement.severity_must_be_one_of, ["P0", "P1", "P2"], "actionable severity values");
+  assert.equal(replacement.severity_must_equal_mandatory_resolved_review_priority_capture, true);
+  assert.equal(replacement.badge_less_or_unstructured_actionable_review_comment_blocks_receipt, true);
   assert.equal(replacement.receipt_writer_supplied_root_invariant_id_without_exact_derivation_is_invalid, true);
   assert.equal(replacement.review_comment_database_id_and_url_must_equal_resolved_github_comment, true);
   assert.equal(replacement.review_comment_author_login_and_database_id_must_equal_resolved_github_comment_author, true);
@@ -686,6 +712,10 @@ test("requires expected-head squash tree equality and a closed metadata-only rec
     "review evidence fields",
   );
   assert.equal(receipt.review_evidence_binding.review_run_ids_and_urls_must_be_unique, true);
+  assert.equal(receipt.review_evidence_binding.required_reviewer_login, "chatgpt-codex-connector[bot]");
+  assert.equal(receipt.review_evidence_binding.required_reviewer_database_id, 199175422);
+  assert.equal(receipt.review_evidence_binding.review_run_url_must_resolve_reviewer_login_and_database_id, true);
+  assert.equal(receipt.review_evidence_binding.every_actionable_review_comment_author_must_equal_cycle_reviewer, true);
   assert.equal(receipt.review_evidence_binding.cycle_count_must_equal_review_evidence_count, true);
   assert.equal(receipt.review_evidence_binding.cycle_count_must_equal_source_correction_count_plus_one, true);
   assert.equal(receipt.review_evidence_binding.cycle_head_must_equal_remote_head_at_review, true);
@@ -770,18 +800,61 @@ test("requires expected-head squash tree equality and a closed metadata-only rec
   assert.equal(receipt.local_validation_binding.validation_head_must_equal_resolved_context_head, true);
   assert.equal(receipt.local_validation_binding.missing_or_unsuccessful_blocks, true);
   assert.equal(receipt.local_validation_binding.all_successful_verdict_must_be_true, true);
-  assert.equal(receipt.ruleset_binding.required_name, "main-pr-only");
-  assert.equal(receipt.ruleset_binding.required_enforcement, "active");
-  assert.equal(receipt.ruleset_binding.required_bypass_actor_count, 0);
-  exactMembers(receipt.ruleset_binding.required_rule_types, merge.required_rules, "receipt ruleset types");
-  assert.deepEqual(receipt.ruleset_binding.pull_request_rule_parameters, PULL_REQUEST_RULE_PARAMETERS);
-  assert.deepEqual(receipt.ruleset_binding.pull_request_rule_parameters, merge.pull_request_rule_parameters);
+  const ruleset = receipt.ruleset_binding;
+  assert.equal(ruleset.required_database_id, 20903914);
+  assert.equal(ruleset.required_api_url, "https://api.github.com/repos/chachathecat/inverge/rulesets/20903914");
+  assert.equal(ruleset.required_effective_rules_api_url, "https://api.github.com/repos/chachathecat/inverge/rules/branches/main");
+  assert.equal(ruleset.required_target, "branch");
+  assert.equal(ruleset.required_name, "main-pr-only");
+  assert.equal(ruleset.required_enforcement, "active");
+  assert.equal(ruleset.required_bypass_actor_count, 0);
+  exactMembers(ruleset.required_bypass_actors, [], "receipt ruleset bypass actors");
+  assert.deepEqual(ruleset.required_conditions, RULESET_CONDITIONS);
+  exactMembers(ruleset.required_rule_types, merge.required_rules, "receipt ruleset types");
+  assert.deepEqual(ruleset.pull_request_rule_parameters, PULL_REQUEST_RULE_PARAMETERS);
+  assert.deepEqual(ruleset.pull_request_rule_parameters, merge.pull_request_rule_parameters);
+  assert.equal(ruleset.ruleset_api_url_must_be_independently_resolved_immediately_before_merge, true);
+  assert.deepEqual(ruleset.ruleset_api_request_headers, {
+    Accept: "application/vnd.github+json",
+    "X-GitHub-Api-Version": "2022-11-28",
+    "Cache-Control": "no-cache",
+  });
+  assert.equal(ruleset.both_ruleset_responses_must_be_authenticated_https_200_not_304, true);
+  assert.equal(
+    ruleset.ruleset_database_id_api_url_target_name_enforcement_conditions_and_bypass_actors_must_equal_resolved_record,
+    true,
+  );
+  assert.equal(ruleset.resolved_rule_types_must_exactly_equal_required_rule_types, true);
+  assert.equal(ruleset.resolved_pull_request_parameters_must_exactly_equal_required_parameters, true);
+  assert.equal(ruleset.ruleset_record_sha256_preimage, "UTF-8_RFC8785_JCS_of_exact_resolved_ruleset_JSON");
+  assert.equal(ruleset.ruleset_record_sha256_must_be_lowercase_64_hex_and_match_resolved_record, true);
+  assert.equal(ruleset.ruleset_record_updated_at_must_equal_resolved_record_updated_at, true);
+  assert.equal(ruleset.ruleset_record_response_date_and_etag_must_equal_resolved_https_response_headers, true);
+  assert.equal(ruleset.ruleset_record_response_request_id_must_equal_non_empty_X_GitHub_Request_Id, true);
+  assert.equal(ruleset.effective_rules_api_url_must_be_independently_resolved_for_main, true);
+  assert.equal(ruleset.effective_rules_must_include_all_required_rule_types, true);
+  assert.equal(ruleset.effective_rules_sha256_preimage, "UTF-8_RFC8785_JCS_of_exact_resolved_effective_rules_JSON");
+  assert.equal(ruleset.effective_rules_sha256_must_be_lowercase_64_hex_and_match_resolved_record, true);
+  assert.equal(ruleset.effective_rules_response_date_and_etag_must_equal_resolved_https_response_headers, true);
+  assert.equal(ruleset.effective_rules_response_request_id_must_equal_non_empty_X_GitHub_Request_Id, true);
+  assert.equal(ruleset.ruleset_response_dates_must_be_valid_IMF_fixdate_and_within_seconds, 30);
+  assert.equal(ruleset.ruleset_observed_at_must_equal_later_github_response_date, true);
+  assert.equal(ruleset.both_ruleset_response_dates_must_postdate_final_review_and_all_required_checks, true);
+  assert.equal(ruleset.ruleset_observed_at_must_precede_expected_head_pinned_merge_request, true);
+  assert.equal(ruleset.maximum_observation_age_seconds_at_merge_request, 300);
+  assert.equal(ruleset.ruleset_observed_at_must_precede_resolved_pull_request_merged_at, true);
+  assert.equal(
+    ruleset.resolved_pull_request_merged_at_minus_ruleset_observed_at_must_be_between_zero_and_300_seconds,
+    true,
+  );
+  assert.equal(ruleset.stale_unresolved_disabled_bypassed_or_mismatched_ruleset_blocks, true);
   assert.deepEqual(receipt.merge_binding, {
     required_method: "squash",
     expected_head_must_equal_reviewed_head: true,
     expected_head_must_equal_remote_head: true,
     merge_parent_must_equal_refetched_base: true,
     merge_tree_must_equal_candidate_tree: true,
+    merge_completed_at_must_equal_resolved_pull_request_merged_at: true,
   });
   assert.deepEqual(receipt.issue_association_binding, {
     allowed_kinds: ["closing", "non_closing"],
@@ -916,7 +989,9 @@ test("fails closed under widened writer, review, receipt, start or Owner-gate mu
     (value) => value.receipt_schema.replacement_binding.finding_identity_canonicalization.member_ordering = "implementation_defined",
     (value) => value.receipt_schema.replacement_binding.finding_identity_canonicalization.path_normalization = "platform_default",
     (value) => value.receipt_schema.replacement_binding.root_invariant_derivation.source = "receipt_writer",
+    (value) => value.receipt_schema.replacement_binding.root_invariant_derivation.priority_capture_group_required = false,
     (value) => value.receipt_schema.replacement_binding.root_invariant_id_must_be_recomputed_from_resolved_review_comment_title = false,
+    (value) => value.receipt_schema.replacement_binding.severity_must_equal_mandatory_resolved_review_priority_capture = false,
     (value) => value.receipt_schema.replacement_binding.review_comment_body_sha256_must_hash_exact_resolved_comment_body = false,
     (value) => value.receipt_schema.replacement_binding.review_comment_created_at_must_equal_updated_at = false,
     (value) => value.receipt_schema.replacement_binding.finding_identity_preimage_must_be_recomputed_from_receipt_and_review_metadata = false,
@@ -936,6 +1011,8 @@ test("fails closed under widened writer, review, receipt, start or Owner-gate mu
     (value) => value.receipt_schema.writer_binding.required_active_merge_producing_writer_count = 2,
     (value) => value.receipt_schema.review_evidence_binding.maximum_exact_head_review_cycles_per_pr = 4,
     (value) => value.receipt_schema.review_evidence_binding.required_per_cycle_fields.pop(),
+    (value) => value.receipt_schema.review_evidence_binding.required_reviewer_database_id = 1,
+    (value) => value.receipt_schema.review_evidence_binding.every_actionable_review_comment_author_must_equal_cycle_reviewer = false,
     (value) => value.receipt_schema.review_evidence_binding.each_cycle_all_required_remote_checks_successful_must_be_true = false,
     (value) => value.receipt_schema.review_evidence_binding.each_cycle_remote_check_binding_context = "top_level_receipt",
     (value) => value.receipt_schema.review_evidence_binding.each_cycle_all_required_local_validations_successful_must_be_true = false,
@@ -951,7 +1028,16 @@ test("fails closed under widened writer, review, receipt, start or Owner-gate mu
     (value) => value.receipt_schema.local_validation_binding.head_reference_by_context.review_cycle = "expected_head_sha",
     (value) => value.receipt_schema.local_validation_binding.validation_head_must_equal_resolved_context_head = false,
     (value) => value.receipt_schema.ruleset_binding.required_name = "other",
+    (value) => value.receipt_schema.ruleset_binding.required_database_id = 1,
+    (value) => value.receipt_schema.ruleset_binding.required_bypass_actors.push({ actor_id: 1 }),
+    (value) => value.receipt_schema.ruleset_binding.ruleset_api_url_must_be_independently_resolved_immediately_before_merge = false,
+    (value) => value.receipt_schema.ruleset_binding.both_ruleset_responses_must_be_authenticated_https_200_not_304 = false,
+    (value) => value.receipt_schema.ruleset_binding.ruleset_record_sha256_must_be_lowercase_64_hex_and_match_resolved_record = false,
+    (value) => value.receipt_schema.ruleset_binding.effective_rules_must_include_all_required_rule_types = false,
+    (value) => value.receipt_schema.ruleset_binding.ruleset_observed_at_must_equal_later_github_response_date = false,
+    (value) => value.receipt_schema.ruleset_binding.maximum_observation_age_seconds_at_merge_request = 3600,
     (value) => value.receipt_schema.merge_binding.required_method = "merge",
+    (value) => value.receipt_schema.merge_binding.merge_completed_at_must_equal_resolved_pull_request_merged_at = false,
     (value) => value.receipt_schema.issue_association_binding.allowed_kinds.push("unbound"),
     (value) => value.receipt_schema.synchronization_binding.writer_slot_release_requires_complete_valid_receipt = false,
     (value) => value.receipt_schema.ruleset_binding.pull_request_rule_parameters.allowed_merge_methods = ["merge"],
@@ -1042,6 +1128,7 @@ test("fails closed under widened writer, review, receipt, start or Owner-gate mu
         true,
       );
       assert.equal(replacement.root_invariant_id_must_be_recomputed_from_resolved_review_comment_title, true);
+      assert.equal(replacement.severity_must_equal_mandatory_resolved_review_priority_capture, true);
       assert.equal(replacement.review_comment_body_sha256_must_hash_exact_resolved_comment_body, true);
       assert.equal(replacement.review_comment_created_at_must_equal_updated_at, true);
       assert.equal(replacement.finding_review_path_must_equal_normalized_canonical_preimage_path, true);
@@ -1069,6 +1156,11 @@ test("fails closed under widened writer, review, receipt, start or Owner-gate mu
         candidate.receipt_schema.review_evidence_binding.required_per_cycle_fields,
         REVIEW_EVIDENCE_FIELDS,
         "review evidence fields",
+      );
+      assert.equal(candidate.receipt_schema.review_evidence_binding.required_reviewer_database_id, 199175422);
+      assert.equal(
+        candidate.receipt_schema.review_evidence_binding.every_actionable_review_comment_author_must_equal_cycle_reviewer,
+        true,
       );
       assert.equal(
         candidate.receipt_schema.review_evidence_binding.each_cycle_all_required_remote_checks_successful_must_be_true,
@@ -1129,7 +1221,28 @@ test("fails closed under widened writer, review, receipt, start or Owner-gate mu
         true,
       );
       assert.equal(candidate.receipt_schema.ruleset_binding.required_name, "main-pr-only");
+      assert.equal(candidate.receipt_schema.ruleset_binding.required_database_id, 20903914);
+      exactMembers(candidate.receipt_schema.ruleset_binding.required_bypass_actors, [], "receipt ruleset bypass actors");
+      assert.equal(
+        candidate.receipt_schema.ruleset_binding.ruleset_api_url_must_be_independently_resolved_immediately_before_merge,
+        true,
+      );
+      assert.equal(
+        candidate.receipt_schema.ruleset_binding.both_ruleset_responses_must_be_authenticated_https_200_not_304,
+        true,
+      );
+      assert.equal(
+        candidate.receipt_schema.ruleset_binding.ruleset_record_sha256_must_be_lowercase_64_hex_and_match_resolved_record,
+        true,
+      );
+      assert.equal(candidate.receipt_schema.ruleset_binding.effective_rules_must_include_all_required_rule_types, true);
+      assert.equal(candidate.receipt_schema.ruleset_binding.ruleset_observed_at_must_equal_later_github_response_date, true);
+      assert.equal(candidate.receipt_schema.ruleset_binding.maximum_observation_age_seconds_at_merge_request, 300);
       assert.equal(candidate.receipt_schema.merge_binding.required_method, "squash");
+      assert.equal(
+        candidate.receipt_schema.merge_binding.merge_completed_at_must_equal_resolved_pull_request_merged_at,
+        true,
+      );
       exactMembers(
         candidate.receipt_schema.issue_association_binding.allowed_kinds,
         ["closing", "non_closing"],

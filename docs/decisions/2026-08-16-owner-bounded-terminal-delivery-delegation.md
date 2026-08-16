@@ -138,7 +138,12 @@ not a writer-selected label: its lowercase SHA-256 is recomputed from the
 version-normalized finding title extracted from the independently resolved
 digest-bound, unedited GitHub review comment. Its database ID, author, exact
 body digest and identical creation/update time remain in the receipt alongside
-the normalized title. Paths are case-sensitive normalized repository-relative
+the normalized title. Its P0/P1/P2 priority badge is mandatory, is extracted
+from the same resolved heading and must equal receipt severity; badge-less or
+unstructured actionable review evidence blocks. The resolved review run and
+each actionable comment must be authored by
+`chatgpt-codex-connector[bot]`, immutable GitHub database ID `199175422`, not
+the merge-producing writer. Paths are case-sensitive normalized repository-relative
 forward-slash paths with no empty or dot segments. Replacement lineage
 accounts for each such identity exactly once and uses independently verifiable
 review URLs to prove whether the same P0/P1 survived and therefore requires
@@ -164,6 +169,23 @@ the count is zero. More than two source corrections or three review cycles
 blocks that PR from merging and triggers replacement or replanning. A missing,
 pending, skipped, cancelled or unsuccessful required check, review or local
 validation on any reviewed cycle head also blocks it.
+
+Immediately before merge, the receipt independently resolves repository
+ruleset ID `20903914` and the effective rules for `main`. RFC 8785 JCS digests
+bind both exact API records, including the ruleset update time, active
+`main-pr-only` identity, branch target, exact `~DEFAULT_BRANCH` condition,
+empty bypass array, exact pull-request/non-fast-forward/deletion rules and
+exact squash/review-thread parameters. That observation must postdate the
+final checks and review, precede the merge request and be no older than 300
+seconds when the expected-head-pinned merge is requested. Its time is the later
+of the two resolved GitHub `Date` response headers; both `Date` and `ETag`
+headers are receipt-bound and the responses must be within 30 seconds. The
+calls use authenticated HTTPS, the pinned GitHub API version,
+`Cache-Control: no-cache`, response 200 rather than 304, and receipt-bound
+`X-GitHub-Request-Id` values. Post-merge validation also binds the resolved PR
+`merged_at` and requires it to be zero to 300 seconds after the observation.
+Stale, unresolved,
+disabled, bypassed or mismatched protection blocks the receipt and merge.
 
 Every delivery has exactly one issue association. A closing reference is used
 only when live stage authority permits that issue to close; a nonterminal stage

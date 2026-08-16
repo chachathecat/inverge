@@ -118,6 +118,16 @@ Every named remote check likewise resolves its immutable GitHub check-run or
 commit-status database identity and API record in this repository. The
 resolved record must bind the exact name, head, successful conclusion, details
 URL and completion time; receipt-authored check values alone are invalid.
+Immediately before merge, the receipt must freshly resolve repository ruleset
+ID `20903914` and the effective rules for `main`, digest-bind both exact API
+records, and prove active `main-pr-only`, default-branch-only targeting, an
+empty bypass array, the exact three rule types and exact squash/thread
+parameters. GitHub `Date` and `ETag` response headers bind freshness: both
+responses must postdate final checks/review, occur within 30 seconds, and the
+later server date is the observation time, no older than 300 seconds at the
+expected-head-pinned merge request and resolved PR `merged_at`. Both calls use
+authenticated HTTPS, explicit GitHub API versioning, `Cache-Control: no-cache`,
+status 200 rather than 304, and receipt-bound `X-GitHub-Request-Id` values.
 Top-level validation evidence resolves its head against `expected_head_sha`;
 review-cycle evidence resolves against that cycle's `cycle_head_sha`, so an
 intermediate reviewed head is never compared with the final expected head. If
@@ -136,7 +146,13 @@ The `root_invariant_id` is not writer-selected: it is the lowercase SHA-256 of
 the version-normalized finding title extracted from the independently resolved
 digest-bound GitHub review comment, whose database ID, author, body digest and
 unchanged creation/update times are retained in the receipt. A free-form or
-merely pattern-valid root ID is invalid. For a triggered Owner gate, both the
+merely pattern-valid root ID is invalid. Every actionable finding must also
+carry a mandatory P0/P1/P2 badge captured from that resolved review heading;
+the captured priority must equal receipt severity, and a badge-less or
+unstructured actionable comment blocks the receipt. The review run and every
+actionable comment must resolve to `chatgpt-codex-connector[bot]`, immutable
+GitHub database ID `199175422`, so the merge-producing writer cannot self-author
+severity evidence. For a triggered Owner gate, both the
 record payload actor and the immutable GitHub
 record author resolved from the authorization URL must be `chachathecat`; the
 resolved record database identity, Owner user database ID `128282020` and host
