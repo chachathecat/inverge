@@ -400,6 +400,20 @@ test("Practice proof binds role labels to exact operands and result", () => {
   assert.ok(negatedRoleResult.reasonCodes.includes("operand_roles_missing"));
 });
 
+test("Practice proof rejects role labels embedded in explicitly negated terms", () => {
+  const anchor = trustedRepairCanonicalFixture("appraisal_practical").anchors[0]
+    .calculationRelation;
+  assert.ok(anchor);
+  const result = validatePracticeCalculationRelation({
+    text:
+      "총수익이 아닌 비총수익은 120,000,000원/년이고 운영비가 아닌 비운영비는 20,000,000원/년이다. 120,000,000 - 20,000,000 = 100,000,000원/년. 순수익이 아닌 비순수익은 100,000,000원/년으로 양수이며 결과 단위는 원/년이고 반올림 없음.",
+    anchor,
+  });
+  assert.equal(result.verified, false);
+  assert.equal(result.state, "PARTIAL");
+  assert.ok(result.reasonCodes.includes("operand_roles_missing"));
+});
+
 test("Practice proof requires exact KRW/year units on every bound role", () => {
   const anchor = trustedRepairCanonicalFixture("appraisal_practical").anchors[0]
     .calculationRelation;

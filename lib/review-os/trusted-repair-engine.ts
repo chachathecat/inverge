@@ -154,13 +154,14 @@ type ParsedRoleClaim = Readonly<{
 
 function explicitRoleClaims(text: string, roleLabel: string) {
   const claims: ParsedRoleClaim[] = [];
+  const boundedRoleLabel = `(?<![가-힣A-Za-z0-9])${roleLabel}`;
   const patterns = [
     new RegExp(
-      `${roleLabel}\\s*(?:은|는|이|가|:|=)?\\s*(-?\\d[\\d,]*)\\s*((?:원\\s*\\/\\s*(?:년|연)|연간\\s*원))?`,
+      `${boundedRoleLabel}\\s*(?:은|는|이|가|:|=)?\\s*(-?\\d[\\d,]*)\\s*((?:원\\s*\\/\\s*(?:년|연)|연간\\s*원))?`,
       "gu",
     ),
     new RegExp(
-      `(-?\\d[\\d,]*)\\s*((?:원\\s*\\/\\s*(?:년|연)|연간\\s*원))?\\s*(?:은|는|이|가|:|=)?\\s*${roleLabel}`,
+      `(-?\\d[\\d,]*)\\s*((?:원\\s*\\/\\s*(?:년|연)|연간\\s*원))?\\s*(?:은|는|이|가|:|=)?\\s*${boundedRoleLabel}(?![가-힣A-Za-z0-9])`,
       "gu",
     ),
   ];
