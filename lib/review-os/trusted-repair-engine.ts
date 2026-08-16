@@ -37,15 +37,12 @@ export function trustedRepairSourceVersion(
   fixture: TrustedRepairFixture,
   sourceBinding: TrustedRepairSourceBindingState,
 ) {
-  return [
-    fixture.sourceBinding.sourceId,
-    sourceBinding.bindingVersion,
-    sourceBinding.sourceStatus,
-    sourceBinding.versionStatus,
-    sourceBinding.currentLawStatus,
-    sourceBinding.sourceAnchorId ?? "no-anchor",
-    `blockers-${sourceBinding.blockerCount}`,
-  ].join(":");
+  return JSON.stringify({
+    fixtureSource: fixture.sourceBinding,
+    resolvedSource: sourceBinding,
+    rightsManifest: fixture.rights,
+    sourceDecision: fixture.sourceDecision,
+  });
 }
 
 export function trustedRepairSourceBindingMatches(input: {
@@ -112,6 +109,12 @@ function relationNumber(value: string) {
   return Number.isSafeInteger(parsed) ? parsed : null;
 }
 
+const NEGATIVE_CLAIM_PATTERN =
+  /(?:아니|아님|아닌|아닙|아닐|아냐|않|못|틀렸|틀린|틀림|잘못|오류|맞지|옳지|거짓|부정|불성립|(?:성립|유효|정확)할\s*수\s*없)/u;
+
+const SCOPED_RELATION_REFERENCE_PATTERN =
+  /(?:(?:이|그|위(?:의)?|앞(?:의)?|이전(?:의)?|해당|상기|방금(?:의)?)\s*(?:계산(?:식)?|식|관계(?:식)?|등식|산식)|(?:계산\s*관계|계산식|관계식|등식|산식))/u;
+
 function claimTailIsNegated(text: string, claimEnd: number) {
   const tail = text.slice(claimEnd, claimEnd + 64);
   return (
@@ -134,9 +137,18 @@ function claimHeadRejectsRelation(text: string, claimStart: number) {
     boundedHead.lastIndexOf("\n"),
   );
   const clause = boundedHead.slice(clauseStart + 1);
-  return /(?:아니|아님|아닌|아닙|아닐|아냐|않|틀렸|틀린|틀림|잘못|오류)/u.test(
-    clause,
-  );
+  return NEGATIVE_CLAIM_PATTERN.test(clause);
+}
+
+function laterScopedClaimRejectsRelation(text: string, claimEnd: number) {
+  return text
+    .slice(claimEnd)
+    .split(/[.!?;\n]+/u)
+    .some(
+      (clause) =>
+        SCOPED_RELATION_REFERENCE_PATTERN.test(clause) &&
+        NEGATIVE_CLAIM_PATTERN.test(clause),
+    );
 }
 
 function parsePracticeRelations(text: string) {
@@ -346,7 +358,11 @@ export function validatePracticeCalculationRelation(input: {
   const matching = relations.filter(isExpectedRelation);
   const relationIsNegated = (relation: ParsedPracticeRelation) =>
     claimHeadRejectsRelation(normalized, relation.sourceIndex) ||
-    claimTailIsNegated(normalized, relation.sourceIndex + relation.sourceLength);
+    claimTailIsNegated(normalized, relation.sourceIndex + relation.sourceLength) ||
+    laterScopedClaimRejectsRelation(
+      normalized,
+      relation.sourceIndex + relation.sourceLength,
+    );
   const assertedMatching = matching.filter(
     (relation) => !relationIsNegated(relation),
   );

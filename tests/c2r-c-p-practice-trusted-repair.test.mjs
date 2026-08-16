@@ -24,6 +24,7 @@ import {
   planTrustedRepairSubmission,
   selectTrustedRepairScaffoldExposure,
   trustedRepairPartialRetryAvailable,
+  trustedRepairSourceBindingMatches,
   trustedRepairSourceVersion,
   validatePracticeCalculationRelation,
 } from "../lib/review-os/trusted-repair-engine.ts";
@@ -513,6 +514,33 @@ test("Practice proof rejects negated relation and rounding assertions", () => {
     );
   }
 
+  for (const laterRetraction of [
+    "하지만 이 계산은 틀렸다.",
+    "그러나 위의 식은 성립하지 않는다.",
+    "앞의 관계는 유효하지 않다.",
+    "해당 계산식은 참이 아니다.",
+    "상기 등식은 성립할 수 없다.",
+  ]) {
+    const retractedResult = validatePracticeCalculationRelation({
+      text: `${VALID_RELATION} ${laterRetraction}`,
+      anchor,
+    });
+    assert.equal(retractedResult.verified, false, laterRetraction);
+    assert.equal(retractedResult.state, "AMBIGUOUS", laterRetraction);
+    assert.deepEqual(
+      retractedResult.reasonCodes,
+      ["negated_calculation_relation"],
+      laterRetraction,
+    );
+  }
+
+  const unrelatedNegativeClaim = validatePracticeCalculationRelation({
+    text: `${VALID_RELATION} 하지만 운영비가 음수라는 주장은 틀렸다.`,
+    anchor,
+  });
+  assert.equal(unrelatedNegativeClaim.verified, true);
+  assert.equal(unrelatedNegativeClaim.state, "PASS");
+
   for (const negatedRounding of [
     "반올림 없음은 아니다",
     "반올림하지 않음이 아니다",
@@ -822,6 +850,51 @@ test("seven Practice fixtures and two adjudicated Gold tiers retain exact active
       fixture.rights.manifestVersionId,
     );
   }
+});
+
+test("persisted source versions fail closed across exact rights-lineage rotation", () => {
+  const fixture = trustedRepairCanonicalFixture("appraisal_practical");
+  const aggregate = aggregateForPractice();
+  const rotatedFixture = structuredClone(fixture);
+  rotatedFixture.rights.manifestVersionId = `${fixture.rights.manifestId}@2`;
+  rotatedFixture.sourceDecision.rightsManifestVersionId =
+    rotatedFixture.rights.manifestVersionId;
+  rotatedFixture.sourceDecision.decisionBasisChecksum =
+    "sha256:synthetic-practice-canonical-c2r-c-p-v2";
+
+  assert.notEqual(
+    trustedRepairSourceVersion(fixture, SYNTHETIC_SOURCE_BINDING),
+    trustedRepairSourceVersion(rotatedFixture, SYNTHETIC_SOURCE_BINDING),
+  );
+  assert.equal(
+    trustedRepairSourceBindingMatches({
+      aggregate,
+      fixture: rotatedFixture,
+      sourceBinding: SYNTHETIC_SOURCE_BINDING,
+    }),
+    false,
+  );
+
+  const replacementDecisionFixture = structuredClone(fixture);
+  replacementDecisionFixture.sourceDecision.decisionId =
+    `${fixture.sourceDecision.decisionId}:replacement`;
+  replacementDecisionFixture.sourceDecision.decisionBasisChecksum =
+    "sha256:synthetic-practice-canonical-c2r-c-p-replacement";
+  assert.notEqual(
+    trustedRepairSourceVersion(fixture, SYNTHETIC_SOURCE_BINDING),
+    trustedRepairSourceVersion(
+      replacementDecisionFixture,
+      SYNTHETIC_SOURCE_BINDING,
+    ),
+  );
+  assert.equal(
+    trustedRepairSourceBindingMatches({
+      aggregate,
+      fixture: replacementDecisionFixture,
+      sourceBinding: SYNTHETIC_SOURCE_BINDING,
+    }),
+    false,
+  );
 });
 
 test("denied, expired, mismatched, and non-Practice fixture routes fail closed", () => {
