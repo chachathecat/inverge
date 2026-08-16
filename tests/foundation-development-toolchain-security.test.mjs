@@ -8,6 +8,13 @@ async function readJson(path) {
   return JSON.parse(await readFile(path, "utf8"));
 }
 
+function findPackageInstallations(packages, packageName) {
+  const suffix = `/node_modules/${packageName}`;
+  return Object.entries(packages).filter(
+    ([path]) => path === `node_modules/${packageName}` || path.endsWith(suffix),
+  );
+}
+
 test("pins the compatible development-toolchain security releases", async () => {
   const packageJson = await readJson("package.json");
   const packages = (await readJson("package-lock.json")).packages;
@@ -27,7 +34,7 @@ test("pins the compatible development-toolchain security releases", async () => 
 test("removes tar and resolves compatible transitive lint advisories", async () => {
   const packages = (await readJson("package-lock.json")).packages;
   const contract = await readJson(CONTRACT);
-  assert.equal(packages["node_modules/tar"], undefined);
+  assert.deepEqual(findPackageInstallations(packages, "tar"), []);
   assert.equal(packages["node_modules/brace-expansion"].version, "1.1.18");
   assert.equal(
     packages["node_modules/@typescript-eslint/typescript-estree/node_modules/brace-expansion"].version,
@@ -42,6 +49,17 @@ test("removes tar and resolves compatible transitive lint advisories", async () 
     rationale:
       "The current stable Supabase CLI removed tar from its dependency graph, which is stricter than retaining any tar version and resolves the newer live advisory through 7.5.20.",
   });
+});
+
+test("rejects relocated tar installations anywhere in the lock graph", () => {
+  const packages = {
+    "node_modules/tool/node_modules/tar": { dev: true },
+    "node_modules/not-tar": { dev: true },
+  };
+  assert.deepEqual(
+    findPackageInstallations(packages, "tar").map(([path]) => path),
+    ["node_modules/tool/node_modules/tar"],
+  );
 });
 
 test("records every resolved Phase D advisory exactly once", async () => {
