@@ -53,7 +53,7 @@
     ],
     "c2rCPState": "complete_practice_runtime",
     "c2rCPContract": "config/dabangil-c2r-c-p-practice-trusted-repair-v1.json",
-    "c2rCPCoveringPr": 746,
+    "c2rCPCoveringPr": 747,
     "c2rCTOperationalStartRequires": [
       "validated_terminal_c2r_c_p_merge_and_receipt"
     ],

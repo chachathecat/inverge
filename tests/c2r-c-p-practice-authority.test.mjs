@@ -56,7 +56,7 @@ test("C2R-C-P authority selects only C2R-C-T after protected Practice completion
   ];
   assert.deepEqual(current, Array(current.length).fill("C2R-C-T"));
   assert.equal(stages.get("C2R-C-P").state, "complete_practice_runtime");
-  assert.equal(stages.get("C2R-C-P").coveringPr, 746);
+  assert.equal(stages.get("C2R-C-P").coveringPr, 747);
   assert.equal(stages.get("C2R-C-T").state, "authorized_unstarted");
   assert.equal(stages.get("C2R-C-L").state, "queued_dependency_blocked");
   assert.match(roadmap, /soleNextReplacementStage: C2R-C-T/);
@@ -66,7 +66,7 @@ test("C2R-C-P authority selects only C2R-C-T after protected Practice completion
   assert.ok(agents.indexOf(DECISION) < agents.indexOf("docs/decisions/2026-08-15-owner-c2r-b-typed-proof-obligations.md"));
 });
 
-test("C2R-C-P declares exactly 11 non-effective PR 746 regression candidates", async () => {
+test("C2R-C-P declares exactly 11 non-effective PR 747 regression candidates", async () => {
   const [source, unified] = await Promise.all([
     text(MATRIX),
     json("config/dabangil-unified-program-contract.json"),
@@ -96,7 +96,7 @@ test("C2R-C-P declares exactly 11 non-effective PR 746 regression candidates", a
       "receiptPolicyId",
     ]);
     assert.equal(declaration.coveringStage, "C2R-C-P");
-    assert.equal(declaration.coveringPrNumber, 746);
+    assert.equal(declaration.coveringPrNumber, 747);
     assert.equal(declaration.exactRegressionAssertionId, assertionId);
     assert.equal(declaration.exactFutureTestPath, path);
     assert.deepEqual(declaration.inheritedRegressionObligations, inherited);
@@ -105,7 +105,7 @@ test("C2R-C-P declares exactly 11 non-effective PR 746 regression candidates", a
     assert.equal("mergeCommitSha" in declaration, false);
   }
   const coverage = unified.wcvCampaignOverlay.c2StructuralRecovery.coverageProtocol;
-  assert.equal(coverage.activeCandidateCoveringPr, 746);
+  assert.equal(coverage.activeCandidateCoveringPr, 747);
   assert.deepEqual(coverage.activeCandidateRows, [...CANDIDATES.keys()]);
   assert.equal(coverage.postMergeUncoveredRowCount, 10);
   assert.equal(coverage.repositoryCandidateDeclaration.candidateDeclarationAloneCreatesEffectiveCoverage, false);

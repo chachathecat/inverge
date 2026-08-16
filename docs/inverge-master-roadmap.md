@@ -718,6 +718,6 @@ the shared runtime substrate may first land only within C2R-C-P.
 
 Only Issue #714 allocation C2 is complete. Issue #714 stays open for C3, C4
 and C6. The expected-head-pinned merge and validated #717 receipt authorize
-C2R-C-P/#703, whose protected PR #746 merge and validated receipt select
+C2R-C-P/#703, whose protected PR #747 merge and validated receipt select
 C2R-C-T/#703 as the next authorized-but-unstarted stage without Production or
 learner activation.

@@ -536,7 +536,7 @@ test("keeps all 21 donor findings with 11 exact C2R-C-P candidates", async () =>
     rows.filter((row) => row.includes(" | `candidate_coverage_pending_exact_merge` |")).length,
     11,
   );
-  assert.equal(rows.filter((row) => row.includes('"coveringPrNumber":746')).length, 11);
+  assert.equal(rows.filter((row) => row.includes('"coveringPrNumber":747')).length, 11);
   assert.doesNotMatch(matrix, /\| `covered` \|/);
   assert.doesNotMatch(matrix, /Future merged commit/i);
   assert.match(matrix, /Candidate coverage declaration/);

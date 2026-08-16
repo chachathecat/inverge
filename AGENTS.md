@@ -13,7 +13,7 @@ Use this authority order when sources conflict:
    expected-head-pinned squash merge,
    `docs/decisions/2026-08-17-owner-c2r-c-p-practice-trusted-repair.md`
    for the exact complete Practice trusted-repair runtime vertical, its 11
-   candidate regression rows in PR #746, and the post-merge current-stage
+   candidate regression rows in PR #747, and the post-merge current-stage
    selector transition to C2R-C-T/#703; this decision becomes repository
    authority only after its expected-head-pinned squash merge and validated
    #717 receipt,
@@ -204,7 +204,7 @@ UI, exact-head isolated PostgreSQL/browser evidence and independent rollback.
 Generic semantic token presence creates no proof, and Theory/Law runtime is
 not included.
 
-The PR #746 candidate represents its post-merge state: C2R-C-P is complete
+The PR #747 candidate represents its post-merge state: C2R-C-P is complete
 only after exact-head checks, final actionable P0/P1/P2 `0/0/0`, an expected-
 head-pinned squash merge and a validated Tracker #717 receipt. Matrix rows 1,
 2, 4, 6, 8, 9, 10, 11, 12, 14 and 19 are

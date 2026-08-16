@@ -1078,7 +1078,7 @@
         "allRowsRemainUncoveredInAuthorityPr718": true,
         "effectiveUncoveredRowCountBeforeC2RCPMerge": 21,
         "postMergeUncoveredRowCount": 10,
-        "activeCandidateCoveringPr": 746,
+        "activeCandidateCoveringPr": 747,
         "activeCandidateStage": "C2R-C-P",
         "activeCandidateRows": [1, 2, 4, 6, 8, 9, 10, 11, 12, 14, 19],
         "candidateStatus": "candidate_coverage_pending_exact_merge",
@@ -1267,7 +1267,7 @@
           "state": "complete_practice_runtime",
           "decisionRecord": "docs/decisions/2026-08-17-owner-c2r-c-p-practice-trusted-repair.md",
           "contract": "config/dabangil-c2r-c-p-practice-trusted-repair-v1.json",
-          "coveringPr": 746,
+          "coveringPr": 747,
           "focusedTests": [
             "tests/c2r-c-p-practice-trusted-repair.test.mjs",
             "tests/c2r-c-p-practice-runtime-contract.test.mjs"

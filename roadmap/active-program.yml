@@ -410,7 +410,7 @@ items:
     c2rCPDecision: docs/decisions/2026-08-17-owner-c2r-c-p-practice-trusted-repair.md
     c2rCPContract: config/dabangil-c2r-c-p-practice-trusted-repair-v1.json
     c2rCPFocusedTests: [tests/c2r-c-p-practice-trusted-repair.test.mjs, tests/c2r-c-p-practice-runtime-contract.test.mjs]
-    c2rCPCoveringPr: 746
+    c2rCPCoveringPr: 747
     c2rCPCandidateRegressionRows: [1, 2, 4, 6, 8, 9, 10, 11, 12, 14, 19]
     c2rCTState: authorized_unstarted
     c2rCTStartRequiresValidatedTerminalStages: [C2R-C-P]

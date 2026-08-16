@@ -263,7 +263,7 @@ receipt validation. The maximum remains one merge-producing writer.
 
 ### Non-self-referential regression coverage
 
-PR #746 changes only its 11 assigned C2R-C-P rows to
+PR #747 changes only its 11 assigned C2R-C-P rows to
 `candidate_coverage_pending_exact_merge`, with the finding/thread ID, stage,
 PR number, exact regression assertion ID and test path, inherited-regression
 obligations, and receipt policy
@@ -1278,7 +1278,7 @@ The three successor stages remain complete subject outcomes, and their common
 runtime substrate may first land only inside C2R-C-P.
 
 After terminal B merge and receipt, #714 remains open with C3/C4/C6 preserved.
-PR #746 then supplies the complete default-off Owner-only Practice runtime
+PR #747 then supplies the complete default-off Owner-only Practice runtime
 candidate and 11 exact matrix declarations. After its protected merge and
 validated receipt, the current tuple is
 `WCV-C2 / C2 / #717 / C2R-C-T / #703 / authorized_unstarted`. Issue state

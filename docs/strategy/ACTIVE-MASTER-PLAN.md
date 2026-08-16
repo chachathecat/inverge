@@ -74,7 +74,7 @@ owns the completed C2R-A source contract and its post-A selector. The still
 later C2R-B decision owns the typed proof architecture and post-B selector.
 The 2026-08-17 C2R-C-P decision owns the complete Practice runtime candidate
 and post-P selector: C2R-C-T/#703 is authorized but unstarted after the
-validated PR #746 merge and receipt. Issue #714 stays open for C3/C4/C6.
+validated PR #747 merge and receipt. Issue #714 stays open for C3/C4/C6.
 
 The canonical current tuple is
 `WCV-C2 / C2 / #717 / C2R-C-T / #703 / authorized_unstarted`. C2R-B installs
