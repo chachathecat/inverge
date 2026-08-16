@@ -8,9 +8,9 @@
   `config/dabangil-unified-product-multisurface-launch-v1.json`
 - Installation-time implementation authority (historical 2026-08-14 state):
   WCV-C2 / C2 / C2R-A / #702
-- Current repository selector after the later exact C2R-B supersession:
-  WCV-C2 / C2 / #717 / C2R-C-P / #703 / authorized_unstarted; operational
-  start still requires validated terminal A and B merges and receipts
+- Current repository selector after the later exact C2R-C-P supersession:
+  WCV-C2 / C2 / #717 / C2R-C-T / #703 / authorized_unstarted; operational
+  start still requires the validated terminal C2R-C-P merge and receipt
 - Current activation: none
 
 ## 1. Product convergence
@@ -350,8 +350,8 @@ ULC-0 source validation must prove:
 - exact preservation of the WCV-C2R object, roadmap block, and 21-row matrix;
 - exact preserved installation-time selection WCV-C2/C2/C2R-A/#702;
 - exact current repository selector
-  WCV-C2/C2/#717/C2R-C-P/#703/authorized_unstarted, with C2R-C-P requiring a
-  separate exact start after validated terminal A and B evidence;
+  WCV-C2/C2/#717/C2R-C-T/#703/authorized_unstarted, with C2R-C-T requiring the
+  validated terminal C2R-C-P merge and receipt;
 - unique future IDs and resolved dependencies;
 - no selected or started ULC stage;
 - no O4W/C5/C6 dependency on free ULC-L1;
