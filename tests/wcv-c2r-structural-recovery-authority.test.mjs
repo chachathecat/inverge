@@ -1,9 +1,9 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { readFile } from "node:fs/promises";
 import {
   createRoadmapRunnerPlanFromYamlAt,
 } from "../lib/agent-factory/roadmap-runner.ts";
+import { readTextFile } from "./platform-text.mjs";
 
 const DECISION =
   "docs/decisions/2026-08-14-wcv-c2-structural-recovery.md";
@@ -17,7 +17,7 @@ const FOCUSED_TEST =
   "tests/wcv-c2r-structural-recovery-authority.test.mjs";
 
 async function text(path) {
-  return readFile(path, "utf8");
+  return readTextFile(path);
 }
 
 async function json(path) {

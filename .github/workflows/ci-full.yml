@@ -4,6 +4,9 @@ on:
   pull_request:
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 jobs:
   full-ci:
     runs-on: ubuntu-latest
@@ -26,3 +29,34 @@ jobs:
         run: npm run build
       - name: Check closed-beta readiness
         run: npm run check:closed-beta-readiness
+
+  full-ci-windows:
+    name: full-ci-windows
+    runs-on: windows-latest
+    concurrency:
+      group: full-windows-${{ github.event.pull_request.number || github.ref }}
+      cancel-in-progress: true
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: Verify canonical checkout line endings
+        shell: pwsh
+        run: |
+          $unexpected = git ls-files --eol | Select-String 'i/lf\s+w/(?:crlf|mixed)'
+          if ($unexpected) {
+            $unexpected | ForEach-Object { Write-Error $_.Line }
+            exit 1
+          }
+      - name: Install dependencies
+        run: npm.cmd ci
+      - name: Typecheck
+        run: npm.cmd run typecheck
+      - name: Lint
+        run: npm.cmd run lint
+      - name: Run full test suite
+        run: npm.cmd run test -- --workers=1
+      - name: Build
+        run: npm.cmd run build

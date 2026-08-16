@@ -1,13 +1,13 @@
 import assert from "node:assert/strict";
-import { readFile } from "node:fs/promises";
 import vm from "node:vm";
 import test from "node:test";
 
 import ts from "typescript";
 
-const repositorySource = await readFile(
+import { readTextFile } from "./platform-text.mjs";
+
+const repositorySource = await readTextFile(
   new URL("../lib/review-os/repository.ts", import.meta.url),
-  "utf8",
 );
 
 function loadTimestampNormalizer() {

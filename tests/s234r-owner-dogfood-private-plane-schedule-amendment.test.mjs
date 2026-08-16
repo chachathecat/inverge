@@ -3,6 +3,8 @@ import { createHash } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
 
+import { readTextFile } from "./platform-text.mjs";
+
 const PRIVATE_CONTRACT_SHA256 =
   "9cd35cb2e1ed14cf62910618931d2de61d293ff62d6c9a71a7cdf54cd817e469";
 const SCHEDULER_CONTRACT_SHA256 =
@@ -322,7 +324,11 @@ async function json(path) {
 }
 
 async function text(path) {
-  return readFile(path, "utf8");
+  return readTextFile(path);
+}
+
+async function raw(path) {
+  return readFile(path);
 }
 
 function canonicalJson(value) {
@@ -3688,7 +3694,14 @@ test("S234R stays source-only while the later lean O4V decision keeps activation
     /does not approve O3A, O4V, O4A, O4T, O2O, O4P, O4F/i,
   );
   assert.match(decision, /PR #660 remains Draft and blocked/i);
-  assert.equal(fileSha256(o4vDecision), O4V_LEAN_DECISION_SHA256);
+  assert.equal(
+    fileSha256(
+      await raw(
+        "docs/decisions/2026-07-30-owner-o4v-lean-owner-private-gate.md",
+      ),
+    ),
+    O4V_LEAN_DECISION_SHA256,
+  );
   assert.equal(
     unified.privateAuthoringReviewPlane.status,
     "o4v_lean_owner_private_gate_approved_s236p_not_started",
@@ -3716,17 +3729,30 @@ test("exact O3A decision binds immutable evidence without authorizing immediate 
   const decision = await text(
     "docs/decisions/2026-07-29-owner-o3a-golden-3-approval.md",
   );
-  const manifest = await text(
-    "reference_corpus/readiness/appraiser/second_round_owner_private_golden_3_readiness.json",
-  );
-  const report = await text(
-    "reference_corpus/readiness/appraiser/second_round_owner_private_golden_3_readiness_report.json",
-  );
   const scopeDecision = unified.scopeDecisions.O3A;
 
-  assert.equal(fileSha256(decision), O3A_DECISION_SHA256);
-  assert.equal(fileSha256(manifest), O3A_MANIFEST_FILE_SHA256);
-  assert.equal(fileSha256(report), O3A_REPORT_FILE_SHA256);
+  assert.equal(
+    fileSha256(
+      await raw("docs/decisions/2026-07-29-owner-o3a-golden-3-approval.md"),
+    ),
+    O3A_DECISION_SHA256,
+  );
+  assert.equal(
+    fileSha256(
+      await raw(
+        "reference_corpus/readiness/appraiser/second_round_owner_private_golden_3_readiness.json",
+      ),
+    ),
+    O3A_MANIFEST_FILE_SHA256,
+  );
+  assert.equal(
+    fileSha256(
+      await raw(
+        "reference_corpus/readiness/appraiser/second_round_owner_private_golden_3_readiness_report.json",
+      ),
+    ),
+    O3A_REPORT_FILE_SHA256,
+  );
   assert.equal(
     scopeDecision.status,
     "approved_exact_packet_only_subject_to_expiry_and_revocation",
@@ -3768,7 +3794,14 @@ test("lean O4V decision supersedes the 88-field packet and authorizes only futur
   const scopeDecision = unified.scopeDecisions.O4V;
   const activeGate = privatePlane.activeO4VGate;
 
-  assert.equal(fileSha256(decision), O4V_LEAN_DECISION_SHA256);
+  assert.equal(
+    fileSha256(
+      await raw(
+        "docs/decisions/2026-07-30-owner-o4v-lean-owner-private-gate.md",
+      ),
+    ),
+    O4V_LEAN_DECISION_SHA256,
+  );
   assert.equal(
     scopeDecision.status,
     "approved_exact_lean_owner_private_gate_only",
