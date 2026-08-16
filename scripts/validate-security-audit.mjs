@@ -261,8 +261,8 @@ export function validateSecurityAudits({ productionReport, fullReport, policy, n
       violations.push(`${finding.advisory_id} ${finding.package} severity changed from ${exception.severity} to ${finding.severity}`);
     } else if (exception && detectedEnvironment === "development" && exception.environment !== "development") {
       violations.push(`${finding.advisory_id} ${finding.package} has contradictory production classification for a development-only finding`);
-    } else if (exception && detectedEnvironment === "production" && exception.environment === "development" && exception.runtime_reachability === "reachable") {
-      violations.push(`${finding.advisory_id} ${finding.package} has contradictory development/reachable production classification`);
+    } else if (exception && detectedEnvironment === "production" && exception.environment !== "production") {
+      violations.push(`${finding.advisory_id} ${finding.package} has contradictory development classification for a production finding`);
     } else if (blockingSeverity && !exception) {
       violations.push(`unapproved ${detectedEnvironment} ${finding.severity}: ${finding.advisory_id} ${finding.package}`);
     }

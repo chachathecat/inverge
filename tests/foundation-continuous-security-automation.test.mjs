@@ -265,17 +265,19 @@ test("rejects severity drift, duplicate exceptions, and contradictory production
     /duplicate exception/,
   );
 
-  policy.exceptions = [
-    activeException(finding, {
-      environment: "development",
-      runtime_reachability: "reachable",
-    }),
-  ];
-  assert.throws(
-    () =>
-      validateSecurityAudits({ productionReport: report, fullReport: report, policy, now: TEST_NOW }),
-    /contradictory development\/reachable production classification/,
-  );
+  for (const runtime_reachability of ["reachable", "limited", "unreachable"]) {
+    policy.exceptions = [
+      activeException(finding, {
+        environment: "development",
+        runtime_reachability,
+      }),
+    ];
+    assert.throws(
+      () =>
+        validateSecurityAudits({ productionReport: report, fullReport: report, policy, now: TEST_NOW }),
+      /contradictory development classification for a production finding/,
+    );
+  }
 
   policy.exceptions = [
     activeException(finding, {
