@@ -145,10 +145,19 @@ test("[C2R-C-P-R11] API and learner shell remain Owner-only default-off", () => 
   assert.match(loop, /useRef<PendingCommand \| null>\(null\)/);
   assert.match(
     loop,
-    /pendingCommandRef\.current\?\.fingerprint === fingerprint/,
+    /durablePending\?\.fingerprint === fingerprint/,
   );
   assert.match(loop, /responseWasDefinitive/);
   assert.match(loop, /responseWasDefinitive = response\.status < 500/);
+  assert.match(loop, /window\.sessionStorage\.setItem/);
+  assert.match(loop, /window\.sessionStorage\.getItem/);
+  assert.match(
+    loop,
+    /action === "start" \? readDurablePendingCommand\(\) : null/,
+  );
+  assert.match(loop, /if \(action === "start"\) \{/);
+  assert.doesNotMatch(loop, /sessionStorage[\s\S]*TextEncoder|SHA-256/);
+  assert.match(loop, /clearDurablePendingCommand\(\)/);
 });
 
 test("trusted repair owner access fails closed without an explicit allowlist", () => {

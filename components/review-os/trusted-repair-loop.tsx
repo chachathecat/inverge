@@ -25,6 +25,57 @@ type PendingCommand = {
   commandId: string;
 };
 
+const PENDING_COMMAND_STORAGE_KEY =
+  "inverge:c2r-c-p:pending-command:v1";
+const START_FINGERPRINT_PATTERN =
+  /^\{"action":"start","subject":"appraisal_practical","inputMode":"(?:TYPED_TEXT|EDITABLE_PHOTO_OCR|EDITABLE_PDF_OCR|EDITABLE_VOICE_TRANSCRIPTION|STRUCTURED_SELECTION)"\}$/u;
+const UUID_PATTERN =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/iu;
+
+function isPendingCommand(value: unknown): value is PendingCommand {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return false;
+  const record = value as Record<string, unknown>;
+  return (
+    Object.keys(record).length === 2 &&
+    typeof record.fingerprint === "string" &&
+    START_FINGERPRINT_PATTERN.test(record.fingerprint) &&
+    typeof record.commandId === "string" &&
+    UUID_PATTERN.test(record.commandId)
+  );
+}
+
+function readDurablePendingCommand() {
+  try {
+    const encoded = window.sessionStorage.getItem(PENDING_COMMAND_STORAGE_KEY);
+    if (!encoded) return null;
+    const parsed: unknown = JSON.parse(encoded);
+    if (isPendingCommand(parsed)) return parsed;
+    window.sessionStorage.removeItem(PENDING_COMMAND_STORAGE_KEY);
+  } catch {
+    return null;
+  }
+  return null;
+}
+
+function writeDurablePendingCommand(command: PendingCommand) {
+  try {
+    window.sessionStorage.setItem(
+      PENDING_COMMAND_STORAGE_KEY,
+      JSON.stringify(command),
+    );
+  } catch {
+    // Keep the in-memory idempotency path available when storage is denied.
+  }
+}
+
+function clearDurablePendingCommand() {
+  try {
+    window.sessionStorage.removeItem(PENDING_COMMAND_STORAGE_KEY);
+  } catch {
+    // A storage policy failure must not turn a definitive API result into a retry.
+  }
+}
+
 const SUBJECTS: readonly { value: Subject; label: string }[] = [
   { value: "appraisal_practical", label: "감정평가실무" },
 ];
@@ -132,12 +183,22 @@ export function TrustedRepairLoop() {
             expectedVersion: view.session.recordVersion,
           }
         : {};
-      const fingerprint = JSON.stringify({ action, ...common, ...fields });
+      const fingerprint = JSON.stringify({
+        action,
+        ...common,
+        ...fields,
+      });
+      const durablePending =
+        pendingCommandRef.current ??
+        (action === "start" ? readDurablePendingCommand() : null);
       const commandId =
-        pendingCommandRef.current?.fingerprint === fingerprint
-          ? pendingCommandRef.current.commandId
+        durablePending?.fingerprint === fingerprint
+          ? durablePending.commandId
           : crypto.randomUUID();
       pendingCommandRef.current = { fingerprint, commandId };
+      if (action === "start") {
+        writeDurablePendingCommand(pendingCommandRef.current);
+      }
       const response = await fetch("/api/review-os/trusted-repair", {
         method: "POST",
         credentials: "same-origin",
@@ -154,11 +215,15 @@ export function TrustedRepairLoop() {
       responseWasDefinitive = response.status < 500;
       if (!response.ok || !payload.ok) throw new Error(payload.error ?? "command_failed");
       pendingCommandRef.current = null;
+      clearDurablePendingCommand();
       const next = payload.view as TrustedRepairView;
       acceptView(next);
       setDurableSessionId(next.session.sessionId);
     } catch (caught) {
-      if (responseWasDefinitive) pendingCommandRef.current = null;
+      if (responseWasDefinitive) {
+        pendingCommandRef.current = null;
+        clearDurablePendingCommand();
+      }
       const code = caught instanceof Error ? caught.message : "command_failed";
       setError(
         code === "stale_record"
@@ -218,6 +283,7 @@ export function TrustedRepairLoop() {
         setRepair("");
         setError(null);
         pendingCommandRef.current = null;
+        clearDurablePendingCommand();
         setDurableSessionId(null);
       },
       disabled: false,

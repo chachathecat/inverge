@@ -381,6 +381,43 @@ test("Practice-only browser to Postgres journey, hostile concurrency, bounded re
   expect(retryableServerCommandIds[1]).toBe(retryableServerCommandIds[0]);
   await retryPage.close();
 
+  const reloadRetryPage = await owner.newPage();
+  const reloadRetryCommandIds: string[] = [];
+  let replaceCommittedStartWith503 = true;
+  await reloadRetryPage.route("**/api/review-os/trusted-repair", async (route) => {
+    const payload = route.request().postDataJSON() as {
+      action?: string;
+      commandId?: string;
+    };
+    if (payload.action !== "start") {
+      await route.continue();
+      return;
+    }
+    reloadRetryCommandIds.push(payload.commandId ?? "");
+    if (replaceCommittedStartWith503) {
+      replaceCommittedStartWith503 = false;
+      const committed = await route.fetch();
+      expect(committed.status()).toBe(200);
+      await route.fulfill({
+        status: 503,
+        contentType: "application/json",
+        body: JSON.stringify({ ok: false, error: "temporarily_unavailable" }),
+      });
+      return;
+    }
+    await route.continue();
+  });
+  await reloadRetryPage.goto("/app/trusted-repair");
+  await activatePrimary(reloadRetryPage);
+  await expect(reloadRetryPage.getByRole("alert")).toBeVisible();
+  await reloadRetryPage.reload();
+  await activatePrimary(reloadRetryPage);
+  await expectState(reloadRetryPage, "editable_capture_draft");
+  expect(reloadRetryCommandIds).toHaveLength(2);
+  expect(reloadRetryCommandIds[0]).not.toBe("");
+  expect(reloadRetryCommandIds[1]).toBe(reloadRetryCommandIds[0]);
+  await reloadRetryPage.close();
+
   const started = await apiCommand(owner, "start", {
     subject: "appraisal_practical",
     inputMode: "TYPED_TEXT",

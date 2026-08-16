@@ -314,6 +314,30 @@ test("[C2R-C-P-R09] sign claims honor negation and fail closed on positive-negat
   const result = validatePracticeCalculationRelation({ text: conflict, anchor });
   assert.equal(result.verified, false);
   assert.ok(result.reasonCodes.includes("positive_sign_constraint_failed"));
+
+  const mixedNegativePolarity = `${VALID_RELATION.replace(
+    "양수이며",
+    "음수가 아니며",
+  )} 연간 순수익은 100,000,000원/년으로 음수이다.`;
+  const mixedResult = validatePracticeCalculationRelation({
+    text: mixedNegativePolarity,
+    anchor,
+  });
+  assert.equal(mixedResult.verified, false);
+  assert.ok(
+    mixedResult.reasonCodes.includes("positive_sign_constraint_failed"),
+  );
+
+  const unrelatedPositiveSign =
+    "연간 총수익은 120,000,000원/년이고 연간 운영비는 20,000,000원/년이다. 120,000,000 - 20,000,000 = 100,000,000원/년. 연간 순수익은 100,000,000원/년이며 반올림 없음. 총수익은 양수이다.";
+  const unrelatedResult = validatePracticeCalculationRelation({
+    text: unrelatedPositiveSign,
+    anchor,
+  });
+  assert.equal(unrelatedResult.verified, false);
+  assert.ok(
+    unrelatedResult.reasonCodes.includes("positive_sign_constraint_failed"),
+  );
 });
 
 test("Practice proof binds role labels to exact operands and result", () => {
@@ -329,6 +353,53 @@ test("Practice proof binds role labels to exact operands and result", () => {
   assert.equal(result.state, "PARTIAL");
   assert.equal(result.verified, false);
   assert.ok(result.reasonCodes.includes("operand_roles_missing"));
+
+  const negatedRoles =
+    "연간 총수익은 120,000,000원이 아니고 연간 운영비는 20,000,000원이 아니며 연간 순수익은 100,000,000원이 아니다. 120,000,000 - 20,000,000 = 100,000,000원/년. 연간 순수익은 100,000,000원/년으로 양수이며 반올림 없음.";
+  const negatedRoleResult = validatePracticeCalculationRelation({
+    text: negatedRoles,
+    anchor,
+  });
+  assert.equal(negatedRoleResult.verified, false);
+  assert.ok(negatedRoleResult.reasonCodes.includes("operand_roles_missing"));
+});
+
+test("Practice proof rejects negated relation and rounding assertions", () => {
+  const anchor = trustedRepairCanonicalFixture("appraisal_practical").anchors[0]
+    .calculationRelation;
+  assert.ok(anchor);
+
+  const negatedRelation = VALID_RELATION.replace(
+    "120,000,000 - 20,000,000 = 100,000,000원/년.",
+    "120,000,000 - 20,000,000 = 100,000,000원/년 아니다.",
+  );
+  const relationResult = validatePracticeCalculationRelation({
+    text: negatedRelation,
+    anchor,
+  });
+  assert.equal(relationResult.verified, false);
+  assert.equal(relationResult.state, "AMBIGUOUS");
+  assert.deepEqual(relationResult.reasonCodes, [
+    "negated_calculation_relation",
+  ]);
+
+  for (const negatedRounding of [
+    "반올림 없음은 아니다",
+    "반올림하지 않음이 아니다",
+    "반올림 0자리가 아니다",
+  ]) {
+    const roundingResult = validatePracticeCalculationRelation({
+      text: VALID_RELATION.replace("반올림 없음", negatedRounding),
+      anchor,
+    });
+    assert.equal(roundingResult.verified, false, negatedRounding);
+    assert.ok(
+      roundingResult.reasonCodes.includes(
+        "half_up_scale_zero_rounding_not_confirmed",
+      ),
+      negatedRounding,
+    );
+  }
 });
 
 test("Practice proof accepts canonical positive-sign wording and rejects negative-sign wording", () => {

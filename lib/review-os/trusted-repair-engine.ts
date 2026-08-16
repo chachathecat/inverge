@@ -112,6 +112,18 @@ function relationNumber(value: string) {
   return Number.isSafeInteger(parsed) ? parsed : null;
 }
 
+function claimTailIsNegated(text: string, claimEnd: number) {
+  const tail = text.slice(claimEnd, claimEnd + 64);
+  return (
+    /^\s*(?:원(?:\s*\/\s*(?:년|연))?|연간\s*원)?\s*(?:(?:은|는|이|가|을|를|으로|로)\s*)?(?:(?:절대|전혀|결코)\s*)?(?:아니|아님|아닌|아닙|아닐|아냐|않)/u.test(
+      tail,
+    ) ||
+    /^\s*(?:원(?:\s*\/\s*(?:년|연))?|연간\s*원)?\s*(?:과|와)\s*같지\s*않/u.test(
+      tail,
+    )
+  );
+}
+
 function parsePracticeRelations(text: string) {
   const normalized = text.normalize("NFKC");
   const relations: ParsedPracticeRelation[] = [];
@@ -132,8 +144,15 @@ function parsePracticeRelations(text: string) {
   return { normalized, relations } as const;
 }
 
-function explicitRoleValues(text: string, roleLabel: string) {
-  const values: number[] = [];
+type ParsedRoleClaim = Readonly<{
+  value: number;
+  negated: boolean;
+  sourceIndex: number;
+  sourceLength: number;
+}>;
+
+function explicitRoleClaims(text: string, roleLabel: string) {
+  const claims: ParsedRoleClaim[] = [];
   const patterns = [
     new RegExp(
       `${roleLabel}\\s*(?:은|는|이|가|:|=)?\\s*(-?\\d[\\d,]*)`,
@@ -147,10 +166,18 @@ function explicitRoleValues(text: string, roleLabel: string) {
   for (const pattern of patterns) {
     for (const match of text.matchAll(pattern)) {
       const value = relationNumber(match[1]);
-      if (value !== null) values.push(value);
+      if (value === null) continue;
+      const sourceIndex = match.index;
+      const sourceLength = match[0].length;
+      claims.push({
+        value,
+        negated: claimTailIsNegated(text, sourceIndex + sourceLength),
+        sourceIndex,
+        sourceLength,
+      });
     }
   }
-  return values;
+  return claims;
 }
 
 function roleBindingsValid(input: {
@@ -165,12 +192,68 @@ function roleBindingsValid(input: {
     ["순수익", input.resultValue],
   ] as const;
   return claims.every(([label, expectedValue]) => {
-    const values = explicitRoleValues(input.text, label);
+    const roleClaims = explicitRoleClaims(input.text, label);
     return (
-      values.length > 0 &&
-      values.every((claimedValue) => claimedValue === expectedValue)
+      roleClaims.length > 0 &&
+      roleClaims.every(
+        (claim) => !claim.negated && claim.value === expectedValue,
+      )
     );
   });
+}
+
+type SignAssertion = "POSITIVE" | "NEGATIVE";
+
+function signAssertions(text: string) {
+  const assertions: SignAssertion[] = [];
+  const patterns = [
+    { pattern: /양수/gu, asserted: "POSITIVE", negated: "NEGATIVE" },
+    { pattern: /양의\s*부호/gu, asserted: "POSITIVE", negated: "NEGATIVE" },
+    { pattern: /음수/gu, asserted: "NEGATIVE", negated: "POSITIVE" },
+    { pattern: /음의\s*부호/gu, asserted: "NEGATIVE", negated: "POSITIVE" },
+  ] as const;
+  for (const { pattern, asserted, negated } of patterns) {
+    for (const match of text.matchAll(pattern)) {
+      const claimEnd = match.index + match[0].length;
+      if (claimTailIsNegated(text, claimEnd)) {
+        assertions.push(negated);
+        continue;
+      }
+      const tail = text.slice(claimEnd, claimEnd + 24);
+      if (
+        /^\s*(?:(?:은|는|이|가)\s*)?(?:임|이다|이며|이고|입니다|[.,;]|$)/u.test(
+          tail,
+        )
+      ) {
+        assertions.push(asserted);
+      }
+    }
+  }
+  if (/부호\s*(?:는|가|:)?\s*\+/u.test(text)) assertions.push("POSITIVE");
+  if (/부호\s*(?:는|가|:)?\s*-/u.test(text)) assertions.push("NEGATIVE");
+  return assertions;
+}
+
+function boundedClaimTail(text: string, claim: ParsedRoleClaim) {
+  const tail = text.slice(
+    claim.sourceIndex + claim.sourceLength,
+    claim.sourceIndex + claim.sourceLength + 120,
+  );
+  const boundary = tail.search(/[.!?;\n]|(?:총수익|운영비|순수익|결과)/u);
+  return boundary >= 0 ? tail.slice(0, boundary) : tail;
+}
+
+function roundingAssertions(text: string) {
+  const expected: boolean[] = [];
+  const noRoundingPattern = /반올림\s*(?:없음|하지\s*않음|0(?:자리)?)/gu;
+  for (const match of text.matchAll(noRoundingPattern)) {
+    expected.push(!claimTailIsNegated(text, match.index + match[0].length));
+  }
+  const appliedPattern = /반올림\s*(?:필요|적용|함|한다|해야)/gu;
+  for (const match of text.matchAll(appliedPattern)) {
+    expected.push(claimTailIsNegated(text, match.index + match[0].length));
+  }
+  return expected;
 }
 
 export function validatePracticeCalculationRelation(input: {
@@ -196,12 +279,35 @@ export function validatePracticeCalculationRelation(input: {
       ),
     ).size >= 2;
   const matching = relations.filter(isExpectedRelation);
+  const relationIsNegated = (relation: ParsedPracticeRelation) =>
+    claimTailIsNegated(
+      normalized,
+      relation.sourceIndex + relation.sourceLength,
+    );
+  const assertedMatching = matching.filter(
+    (relation) => !relationIsNegated(relation),
+  );
+  const negatedMatching = matching.filter(relationIsNegated);
   const conflicting = relations.filter(
     (relation) =>
-      usesMultipleAnchorValues(relation) && !isExpectedRelation(relation),
+      !relationIsNegated(relation) &&
+      usesMultipleAnchorValues(relation) &&
+      !isExpectedRelation(relation),
   );
 
-  if (matching.length > 0 && conflicting.length > 0) {
+  if (negatedMatching.length > 0) {
+    return {
+      state: "AMBIGUOUS",
+      verified: false,
+      validatorId: input.anchor.deterministicValidatorId,
+      anchorId: input.anchor.anchorId,
+      anchorVersionId: input.anchor.anchorVersionId,
+      reasonCodes: ["negated_calculation_relation"],
+      matchedRelation: null,
+    };
+  }
+
+  if (assertedMatching.length > 0 && conflicting.length > 0) {
     return {
       state: "AMBIGUOUS",
       verified: false,
@@ -213,7 +319,7 @@ export function validatePracticeCalculationRelation(input: {
     };
   }
 
-  const relation = matching[0] ?? null;
+  const relation = assertedMatching[0] ?? null;
   if (!relation) {
     const normalizedNumbers = normalizeEvidence(normalized);
     const allValuesPresent = [
@@ -236,7 +342,7 @@ export function validatePracticeCalculationRelation(input: {
     };
   }
 
-  const unitValid = matching.every((candidate) => {
+  const unitValid = assertedMatching.every((candidate) => {
     const tail = normalized.slice(
       candidate.sourceIndex + candidate.sourceLength,
       candidate.sourceIndex + candidate.sourceLength + 24,
@@ -251,47 +357,26 @@ export function validatePracticeCalculationRelation(input: {
     operatingExpenseValue: operatingExpense.value,
     resultValue: input.anchor.result.value,
   });
-  const positiveNumberNegated =
-    /양수\s*(?:(?:은|는|이|가)\s*)?(?:(?:절대|전혀|결코)\s*)?(?:아니|아님|아닌|아닙)/u.test(
-      normalized,
-    );
-  const positiveLabelNegated =
-    /양의\s*부호\s*(?:(?:은|는|이|가)\s*)?(?:(?:절대|전혀|결코)\s*)?(?:아니|아님|아닌|아닙)/u.test(
-      normalized,
-    );
-  const negativeNumberNegated =
-    /음수\s*(?:(?:은|는|이|가)\s*)?(?:(?:절대|전혀|결코)\s*)?(?:아니|아님|아닌|아닙)/u.test(
-      normalized,
-    );
-  const negativeLabelNegated =
-    /음의\s*부호\s*(?:(?:은|는|이|가)\s*)?(?:(?:절대|전혀|결코)\s*)?(?:아니|아님|아닌|아닙)/u.test(
-      normalized,
-    );
-  const positiveSignNegated = positiveNumberNegated || positiveLabelNegated;
-  const positiveSignStated =
-    (!positiveNumberNegated &&
-      /양수(?:임|이다|이며|이고|입니다|[.,;]|$)/u.test(normalized)) ||
-    (!positiveLabelNegated &&
-      /양의\s*부호(?:임|이다|이며|이고|입니다|[.,;]|$)/u.test(normalized)) ||
-    negativeNumberNegated ||
-    negativeLabelNegated ||
-    /부호\s*(?:는|가|:)?\s*\+/u.test(normalized);
-  const negativeSignAsserted =
-    positiveSignNegated ||
-    (!negativeNumberNegated &&
-      /음수(?:임|이다|이며|이고|입니다|[.,;]|$)/u.test(normalized)) ||
-    (!negativeLabelNegated &&
-      /음의\s*부호(?:임|이다|이며|이고|입니다|[.,;]|$)/u.test(normalized)) ||
-    /부호\s*(?:는|가|:)?\s*-/u.test(normalized);
+  const resultClaims = explicitRoleClaims(normalized, "순수익").filter(
+    (claim) =>
+      !claim.negated && claim.value === input.anchor.result.value,
+  );
+  const scopedResultTails = resultClaims.map((claim) =>
+    boundedClaimTail(normalized, claim),
+  );
+  const positiveSignStated = scopedResultTails.some((tail) =>
+    signAssertions(tail).includes("POSITIVE"),
+  );
+  const negativeSignAsserted = signAssertions(normalized).includes("NEGATIVE");
   const signValid =
     relation.result > 0 &&
     input.anchor.sign === "POSITIVE" &&
     positiveSignStated &&
     !negativeSignAsserted;
-  const roundingConfirmed =
-    /반올림\s*(?:없음|하지\s*않음|0(?:자리)?)/u.test(normalized);
-  const roundingContradicted =
-    /반올림\s*(?:필요|적용|함|한다|해야)/u.test(normalized);
+  const scopedRounding = scopedResultTails.flatMap(roundingAssertions);
+  const allRounding = roundingAssertions(normalized);
+  const roundingConfirmed = scopedRounding.includes(true);
+  const roundingContradicted = allRounding.includes(false);
   const roundingValid = roundingConfirmed && !roundingContradicted;
   const reasonCodes = [
     ...(rolesValid ? [] : ["operand_roles_missing"]),
