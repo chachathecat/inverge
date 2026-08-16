@@ -91,6 +91,10 @@ test("bounds the sole low residual and leaves no critical, high, or moderate", a
   const expiresAt = Date.parse(exception.expires_at);
   assert.ok(expiresAt > evaluatedAt);
   assert.ok(expiresAt - evaluatedAt <= 30 * 24 * 60 * 60 * 1000);
+  assert.ok(
+    expiresAt > Date.now(),
+    `${exception.ghsa} exception expired at ${exception.expires_at}`,
+  );
 });
 
 test("forbids runtime, live Supabase, migration, and browser-install side effects", async () => {
