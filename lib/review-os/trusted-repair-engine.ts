@@ -105,7 +105,7 @@ function relationOperator(value: string): ParsedPracticeRelation["operator"] {
 }
 
 function relationNumber(value: string) {
-  const parsed = Number(value.replaceAll(",", ""));
+  const parsed = Number(value.replaceAll(",", "").replaceAll("−", "-"));
   return Number.isSafeInteger(parsed) ? parsed : null;
 }
 
@@ -190,11 +190,11 @@ function explicitRoleClaims(text: string, roleLabel: string) {
   const boundedRoleLabel = `(?<![가-힣A-Za-z0-9])${roleLabel}`;
   const patterns = [
     new RegExp(
-      `${boundedRoleLabel}\\s*(?:의\\s*)?${ASSERTION_QUALIFIER_SOURCE}${ROLE_VALUE_NOUN_SOURCE}(?:은|는|이|가|:|=)?\\s*(-?\\d[\\d,]*)\\s*((?:원\\s*\\/\\s*(?:년|연)|연간\\s*원))?`,
+      `${boundedRoleLabel}\\s*(?:의\\s*)?${ASSERTION_QUALIFIER_SOURCE}${ROLE_VALUE_NOUN_SOURCE}(?:은|는|이|가|:|=)?\\s*([-−]?\\d[\\d,]*)\\s*((?:원\\s*\\/\\s*(?:년|연)|연간\\s*원))?`,
       "gu",
     ),
     new RegExp(
-      `(-?\\d[\\d,]*)\\s*((?:원\\s*\\/\\s*(?:년|연)|연간\\s*원))?\\s*(?:은|는|이|가|:|=)?\\s*${ASSERTION_QUALIFIER_SOURCE}${boundedRoleLabel}\\s*(?:의\\s*)?${ASSERTION_QUALIFIER_SOURCE}${ROLE_VALUE_NOUN_SOURCE}(?![가-힣A-Za-z0-9])`,
+      `([-−]?\\d[\\d,]*)\\s*((?:원\\s*\\/\\s*(?:년|연)|연간\\s*원))?\\s*(?:은|는|이|가|:|=)?\\s*${ASSERTION_QUALIFIER_SOURCE}${boundedRoleLabel}\\s*(?:의\\s*)?${ASSERTION_QUALIFIER_SOURCE}${ROLE_VALUE_NOUN_SOURCE}(?![가-힣A-Za-z0-9])`,
       "gu",
     ),
   ];
@@ -255,7 +255,7 @@ function roleBindingEvaluation(input: {
 }
 
 const FINAL_RESULT_ROLE_LABEL_SOURCE =
-  "(?:(?:최종\\s*(?:정답|답|결과\\s*(?:값|금액)?|값|금액|결론|계산\\s*(?:결과|값)|산정(?:액|값)|산출(?:액|값|결과)))|정답|답|결론|계산\\s*(?:결과|값)|산정(?:액|값)|산출(?:액|값|결과))";
+  "(?:(?:최종\\s*(?:정답|답|결과\\s*(?:값|금액|수치|치|액|액수)?|값|금액|수치|치|액|액수|결론|계산\\s*(?:결과|값|금액|수치|치)|산정(?:액|값|치)|산출(?:액|값|결과|치)))|정답|답|결론|계산\\s*(?:결과|값|금액|수치|치)|산정(?:액|값|치)|산출(?:액|값|결과|치))";
 
 function finalResultClaimsValid(text: string, expectedValue: number) {
   return explicitRoleClaims(text, FINAL_RESULT_ROLE_LABEL_SOURCE)
@@ -296,7 +296,7 @@ function signAssertions(text: string) {
   const assertions: SignAssertion[] = [];
   const patterns = [
     {
-      pattern: /(?<![가-힣A-Za-z0-9])(?:양수\s*\(\s*\+[^)\n]{0,48}\)|양수|양의\s*(?:부호|값|수|숫자)\s*\(\s*\+[^)\n]{0,48}\)|양\s*\(\s*\+[^)\n]{0,48}\)|양(?=\s*(?:의\s*(?:부호|값|수|숫자)|(?:은|는|이|가|인|으로|로|임|이다|다|이며|이고|입니다|[.,;!?]|$)))|플러스\s*\(\s*\+[^)\n]{0,48}\)|플러스(?:\s*(?:부호|값|수|숫자))?|정\s*\(\s*\+[^)\n]{0,48}\)|positive\s*\(\s*\+[^)\n]{0,48}\)|positive(?:\s+(?:sign|value|number))?|plus\s*\(\s*\+[^)\n]{0,48}\)|plus(?:\s+(?:sign|value|number))?|\(\s*\+\s*(?:\d[\d,.]*\s*(?:원\s*\/\s*(?:년|연)|연간\s*원)?\s*)?\))/giu,
+      pattern: /(?<![가-힣A-Za-z0-9])(?:양수\s*\(\s*\+\s*(?:\d[\d,.]*\s*(?:원\s*\/\s*(?:년|연)|연간\s*원)?\s*)?\)|양수|양의\s*(?:부호|값|수|숫자)\s*\(\s*\+\s*(?:\d[\d,.]*\s*(?:원\s*\/\s*(?:년|연)|연간\s*원)?\s*)?\)|양\s*\(\s*\+\s*(?:\d[\d,.]*\s*(?:원\s*\/\s*(?:년|연)|연간\s*원)?\s*)?\)|양(?=\s*(?:의\s*(?:부호|값|수|숫자)|(?:은|는|이|가|인|으로|로|임|이다|다|이며|이고|입니다|[.,;!?]|$)))|플러스\s*\(\s*\+\s*(?:\d[\d,.]*\s*(?:원\s*\/\s*(?:년|연)|연간\s*원)?\s*)?\)|플러스(?:\s*(?:부호|값|수|숫자))?|정\s*\(\s*\+\s*(?:\d[\d,.]*\s*(?:원\s*\/\s*(?:년|연)|연간\s*원)?\s*)?\)|positive\s*\(\s*\+\s*(?:\d[\d,.]*\s*(?:원\s*\/\s*(?:년|연)|연간\s*원)?\s*)?\)|positive(?:\s+(?:sign|value|number))?|plus\s*\(\s*\+\s*(?:\d[\d,.]*\s*(?:원\s*\/\s*(?:년|연)|연간\s*원)?\s*)?\)|plus(?:\s+(?:sign|value|number))?|\(\s*\+\s*(?:\d[\d,.]*\s*(?:원\s*\/\s*(?:년|연)|연간\s*원)?\s*)?\))/giu,
       asserted: "POSITIVE",
       negated: "NEGATIVE",
     },
@@ -306,7 +306,7 @@ function signAssertions(text: string) {
       negated: "NEGATIVE",
     },
     {
-      pattern: /(?<![가-힣A-Za-z0-9])(?:음수\s*\(\s*[+\-−][^)\n]{0,48}\)|음수|음의\s*(?:부호|값|수|숫자)\s*\(\s*[+\-−][^)\n]{0,48}\)|음\s*\(\s*[+\-−][^)\n]{0,48}\)|음(?=\s*(?:의\s*(?:부호|값|수|숫자)|(?:은|는|이|가|인|으로|로|임|이다|다|이며|이고|입니다|[.,;!?]|$)))|마이너스\s*\(\s*[-−]?[^)\n]{1,48}\)|마이너스(?:\s*(?:부호|값|수|숫자))?|부\s*\(\s*[+\-−][^)\n]{0,48}\)|(?:양수|양|정)\s*\(\s*[-−][^)\n]{0,48}\)|(?:플러스|positive|plus)\s*\(\s*[-−][^)\n]{0,48}\)|비\s*양수|negative\s*\(\s*[-−]?[^)\n]{1,48}\)|negative(?:\s+(?:sign|value|number))?|minus\s*\(\s*[-−]?[^)\n]{1,48}\)|minus(?:\s+(?:sign|value|number))?|non[-\s]?positive|\(\s*[-−]\s*(?:\d[\d,.]*\s*(?:원\s*\/\s*(?:년|연)|연간\s*원)?\s*)?\))/giu,
+      pattern: /(?<![가-힣A-Za-z0-9])(?:음수\s*\(\s*[+\-−][^)\n]{0,48}\)|음수|음의\s*(?:부호|값|수|숫자)\s*\(\s*[+\-−][^)\n]{0,48}\)|음\s*\(\s*[+\-−][^)\n]{0,48}\)|음(?=\s*(?:의\s*(?:부호|값|수|숫자)|(?:은|는|이|가|인|으로|로|임|이다|다|이며|이고|입니다|[.,;!?]|$)))|마이너스\s*\(\s*[-−]?[^)\n]{1,48}\)|마이너스(?:\s*(?:부호|값|수|숫자))?|부\s*\(\s*[+\-−][^)\n]{0,48}\)|(?:양수|양의\s*(?:부호|값|수|숫자)|양|정|플러스|positive|plus)\s*\((?!\s*\+\s*(?:\d[\d,.]*\s*(?:원\s*\/\s*(?:년|연)|연간\s*원)?\s*)?\))[^)\n]*\)|비\s*양수|negative\s*\(\s*[-−]?[^)\n]{1,48}\)|negative(?:\s+(?:sign|value|number))?|minus\s*\(\s*[-−]?[^)\n]{1,48}\)|minus(?:\s+(?:sign|value|number))?|non[-\s]?positive|\(\s*[-−]\s*(?:\d[\d,.]*\s*(?:원\s*\/\s*(?:년|연)|연간\s*원)?\s*)?\))/giu,
       asserted: "NEGATIVE",
       negated: "POSITIVE",
     },

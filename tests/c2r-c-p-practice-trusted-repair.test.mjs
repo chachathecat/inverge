@@ -712,6 +712,10 @@ test("Practice proof accepts canonical positive-sign wording and rejects negativ
     "하지만 순수익은 부(-100,000,000원/년)이다.",
     "하지만 순수익은 양(-100,000,000원/년)이다.",
     "하지만 순수익은 양수(-100,000,000원/년)이다.",
+    "하지만 순수익은 양수(+100,000,000원이 아니라 -100,000,000원/년)이다.",
+    "하지만 순수익은 양수(+100,000,000원이 아니라 음수)이다.",
+    "하지만 순수익은 양의 값(+100,000,000원/년 또는 −100,000,000원/년)이다.",
+    "하지만 순수익은 positive(+100,000,000원/년 or negative)이다.",
     "하지만 순수익은 플러스(-100,000,000원/년)이다.",
     "하지만 순수익은 마이너스(-100,000,000원/년)이다.",
     "하지만 순수익은 negative(-100,000,000원/년)이다.",
@@ -801,10 +805,14 @@ test("Practice proof rejects contradictory explicit final-result aliases", () =>
     "다만 최종 결과값은 90,000,000원/년이다.",
     "다만 최종 결과 금액은 90,000,000원/년이다.",
     "다만 최종 산출값은 90,000,000원/년이다.",
+    "그러나 최종치는 90,000,000원/년이다.",
+    "그러나 최종 수치는 90,000,000원/년이다.",
+    "그러나 최종액은 90,000,000원/년이다.",
     "그러나 계산 결과는 90,000,000원/년이다.",
     "하지만 산정액은 90,000,000원/년이다.",
     "그러나 결론은 90,000,000원/년이다.",
     "최종 답은 100,000,000원/년이 아니다.",
+    "정답은 −90,000,000원/년이다.",
     "최종 답은 100,000,000이다.",
   ]) {
     const result = validatePracticeCalculationRelation({
@@ -819,10 +827,23 @@ test("Practice proof rejects contradictory explicit final-result aliases", () =>
     );
   }
 
+  const unicodeMinusRoleConflict = validatePracticeCalculationRelation({
+    text: `${VALID_RELATION} 그러나 순수익은 −90,000,000원/년이다.`,
+    anchor,
+  });
+  assert.equal(unicodeMinusRoleConflict.verified, false);
+  assert.equal(unicodeMinusRoleConflict.state, "PARTIAL");
+  assert.ok(
+    unicodeMinusRoleConflict.reasonCodes.includes("operand_roles_missing"),
+  );
+
   for (const compatibleClaim of [
     "최종 답은 100,000,000원/년이다.",
     "정답은 100,000,000원/년이다.",
     "최종 결과값은 100,000,000원/년이다.",
+    "최종치는 100,000,000원/년이다.",
+    "최종 수치는 100,000,000원/년이다.",
+    "최종액은 100,000,000원/년이다.",
     "최종 답은 90,000,000원/년이 아니다.",
   ]) {
     const result = validatePracticeCalculationRelation({
