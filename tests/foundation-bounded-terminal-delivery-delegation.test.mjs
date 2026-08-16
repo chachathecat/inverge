@@ -34,6 +34,10 @@ const REVIEW_EVIDENCE_FIELDS = [
   "submitted_at",
   "terminal_result",
   "review_counts",
+  "remote_check_results",
+  "all_required_remote_checks_successful",
+  "local_validation_results",
+  "all_required_local_validations_successful",
 ];
 const LOCAL_VALIDATION_EVIDENCE_FIELDS = [
   "name",
@@ -214,6 +218,14 @@ function validateClosedContract(contract) {
     REVIEW_EVIDENCE_FIELDS,
     "review evidence fields",
   );
+  assert.equal(
+    contract.receipt_schema.review_evidence_binding.each_cycle_all_required_remote_checks_successful_must_be_true,
+    true,
+  );
+  assert.equal(
+    contract.receipt_schema.review_evidence_binding.each_cycle_all_required_local_validations_successful_must_be_true,
+    true,
+  );
   exactMembers(
     contract.receipt_schema.local_validation_binding.required_names,
     REQUIRED_LOCAL_VALIDATIONS,
@@ -386,6 +398,12 @@ test("requires expected-head squash tree equality and a closed metadata-only rec
   assert.equal(receipt.review_evidence_binding.cycle_count_must_equal_source_correction_count_plus_one, true);
   assert.equal(receipt.review_evidence_binding.cycle_head_must_equal_remote_head_at_review, true);
   assert.equal(receipt.review_evidence_binding.reviewed_head_sha_must_equal_cycle_head, true);
+  assert.equal(receipt.review_evidence_binding.each_cycle_remote_check_results_must_satisfy_exact_head_checks_binding, true);
+  assert.equal(receipt.review_evidence_binding.each_cycle_remote_check_head_must_equal_cycle_head, true);
+  assert.equal(receipt.review_evidence_binding.each_cycle_all_required_remote_checks_successful_must_be_true, true);
+  assert.equal(receipt.review_evidence_binding.each_cycle_local_validation_results_must_satisfy_local_validation_binding, true);
+  assert.equal(receipt.review_evidence_binding.each_cycle_local_validation_head_must_equal_cycle_head, true);
+  assert.equal(receipt.review_evidence_binding.each_cycle_all_required_local_validations_successful_must_be_true, true);
   assert.equal(receipt.review_evidence_binding.final_reviewed_head_must_equal_expected_head, true);
   assert.equal(receipt.review_evidence_binding.final_terminal_result, "clean");
   assert.deepEqual(receipt.review_evidence_binding.final_required_actionable_counts, { P0: 0, P1: 0, P2: 0 });
@@ -551,6 +569,8 @@ test("fails closed under widened writer, review, receipt, start or Owner-gate mu
     (value) => value.receipt_schema.writer_binding.required_active_merge_producing_writer_count = 2,
     (value) => value.receipt_schema.review_evidence_binding.maximum_exact_head_review_cycles_per_pr = 4,
     (value) => value.receipt_schema.review_evidence_binding.required_per_cycle_fields.pop(),
+    (value) => value.receipt_schema.review_evidence_binding.each_cycle_all_required_remote_checks_successful_must_be_true = false,
+    (value) => value.receipt_schema.review_evidence_binding.each_cycle_all_required_local_validations_successful_must_be_true = false,
     (value) => value.receipt_schema.local_validation_binding.required_names.pop(),
     (value) => value.receipt_schema.local_validation_binding.required_per_validation_fields.pop(),
     (value) => value.receipt_schema.ruleset_binding.required_name = "other",
@@ -602,6 +622,14 @@ test("fails closed under widened writer, review, receipt, start or Owner-gate mu
         candidate.receipt_schema.review_evidence_binding.required_per_cycle_fields,
         REVIEW_EVIDENCE_FIELDS,
         "review evidence fields",
+      );
+      assert.equal(
+        candidate.receipt_schema.review_evidence_binding.each_cycle_all_required_remote_checks_successful_must_be_true,
+        true,
+      );
+      assert.equal(
+        candidate.receipt_schema.review_evidence_binding.each_cycle_all_required_local_validations_successful_must_be_true,
+        true,
       );
       exactMembers(
         candidate.receipt_schema.local_validation_binding.required_names,

@@ -114,7 +114,8 @@ the single writer identity/count, replacement lineage, the initial reviewed
 head, ordered source-correction heads, exact source-correction count and budget
 verdict, independently verifiable review run/reference/reviewer/cycle-head/
 remote-head/reviewed-head/time/terminal-result/count evidence for every cycle,
-thread state, effective ruleset
+plus successful local-validation and remote-check evidence keyed to that exact
+cycle head. It also binds thread state, effective ruleset
 types and exact pull-request parameters, the authority-dependent issue
 association kind and closure permission, issue state, roadmap/current-stage
 state and the next authorized tuple. Candidate and merge trees must match. The
@@ -125,7 +126,7 @@ reviewed head is the last correction head, or the initial reviewed head when
 the count is zero. More than two source corrections or three review cycles
 blocks that PR from merging and triggers replacement or replanning. A missing,
 pending, skipped, cancelled or unsuccessful required check, review or local
-validation also blocks it.
+validation on any reviewed cycle head also blocks it.
 
 Every delivery has exactly one issue association. A closing reference is used
 only when live stage authority permits that issue to close; a nonterminal stage
