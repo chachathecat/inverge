@@ -464,6 +464,28 @@ test("Practice proof rejects negated relation and rounding assertions", () => {
     "negated_calculation_relation",
   ]);
 
+  for (const relationPrefix of [
+    "틀린 식은 ",
+    "잘못된 계산은 ",
+    "이 관계는 오류라서 ",
+  ]) {
+    const prefixedRelation = VALID_RELATION.replace(
+      "120,000,000 - 20,000,000 = 100,000,000원/년.",
+      `${relationPrefix}120,000,000 - 20,000,000 = 100,000,000원/년.`,
+    );
+    const prefixedResult = validatePracticeCalculationRelation({
+      text: prefixedRelation,
+      anchor,
+    });
+    assert.equal(prefixedResult.verified, false, relationPrefix);
+    assert.equal(prefixedResult.state, "AMBIGUOUS", relationPrefix);
+    assert.deepEqual(
+      prefixedResult.reasonCodes,
+      ["negated_calculation_relation"],
+      relationPrefix,
+    );
+  }
+
   for (const negatedRounding of [
     "반올림 없음은 아니다",
     "반올림하지 않음이 아니다",

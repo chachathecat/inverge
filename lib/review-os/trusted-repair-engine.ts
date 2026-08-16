@@ -124,6 +124,26 @@ function claimTailIsNegated(text: string, claimEnd: number) {
   );
 }
 
+function claimHeadRejectsRelation(text: string, claimStart: number) {
+  const boundedHead = text.slice(Math.max(0, claimStart - 96), claimStart);
+  const clauseStart = Math.max(
+    boundedHead.lastIndexOf("."),
+    boundedHead.lastIndexOf("!"),
+    boundedHead.lastIndexOf("?"),
+    boundedHead.lastIndexOf(";"),
+    boundedHead.lastIndexOf("\n"),
+  );
+  const clause = boundedHead.slice(clauseStart + 1);
+  return (
+    /(?:아닌|틀렸|틀린|틀림|잘못|오류)[^.!?;\n]{0,24}(?:식|관계|계산)\s*(?:은|는|이|가|:)?\s*$/u.test(
+      clause,
+    ) ||
+    /(?:식|관계|계산)\s*(?:은|는|이|가|:)?[^.!?;\n]{0,24}(?:아니다|아닌|틀렸|틀린|틀림|잘못|오류)[^.!?;\n]{0,16}$/u.test(
+      clause,
+    )
+  );
+}
+
 function parsePracticeRelations(text: string) {
   const normalized = text.normalize("NFKC");
   const relations: ParsedPracticeRelation[] = [];
@@ -330,10 +350,8 @@ export function validatePracticeCalculationRelation(input: {
     relation.result === input.anchor.result.value;
   const matching = relations.filter(isExpectedRelation);
   const relationIsNegated = (relation: ParsedPracticeRelation) =>
-    claimTailIsNegated(
-      normalized,
-      relation.sourceIndex + relation.sourceLength,
-    );
+    claimHeadRejectsRelation(normalized, relation.sourceIndex) ||
+    claimTailIsNegated(normalized, relation.sourceIndex + relation.sourceLength);
   const assertedMatching = matching.filter(
     (relation) => !relationIsNegated(relation),
   );
