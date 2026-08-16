@@ -215,16 +215,37 @@ function roleBindingEvaluation(input: {
 
 type SignAssertion = "POSITIVE" | "NEGATIVE";
 
+function claimHeadHasNegationPrefix(text: string, claimStart: number) {
+  return /(?<![가-힣A-Za-z0-9])비\s*$/u.test(text.slice(0, claimStart));
+}
+
 function signAssertions(text: string) {
   const assertions: SignAssertion[] = [];
   const patterns = [
-    { pattern: /양수/gu, asserted: "POSITIVE", negated: "NEGATIVE" },
-    { pattern: /양의\s*부호/gu, asserted: "POSITIVE", negated: "NEGATIVE" },
-    { pattern: /음수/gu, asserted: "NEGATIVE", negated: "POSITIVE" },
-    { pattern: /음의\s*부호/gu, asserted: "NEGATIVE", negated: "POSITIVE" },
+    {
+      pattern: /(?<![가-힣A-Za-z0-9])양수/gu,
+      asserted: "POSITIVE",
+      negated: "NEGATIVE",
+    },
+    {
+      pattern: /(?<![가-힣A-Za-z0-9])양의\s*부호/gu,
+      asserted: "POSITIVE",
+      negated: "NEGATIVE",
+    },
+    {
+      pattern: /(?<![가-힣A-Za-z0-9])음수/gu,
+      asserted: "NEGATIVE",
+      negated: "POSITIVE",
+    },
+    {
+      pattern: /(?<![가-힣A-Za-z0-9])음의\s*부호/gu,
+      asserted: "NEGATIVE",
+      negated: "POSITIVE",
+    },
   ] as const;
   for (const { pattern, asserted, negated } of patterns) {
     for (const match of text.matchAll(pattern)) {
+      if (claimHeadHasNegationPrefix(text, match.index)) continue;
       const claimEnd = match.index + match[0].length;
       if (claimTailIsNegated(text, claimEnd)) {
         assertions.push(negated);

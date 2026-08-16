@@ -515,6 +515,24 @@ test("Practice proof accepts canonical positive-sign wording and rejects negativ
   );
 });
 
+test("Practice proof rejects positive-sign tokens with a lexical negation prefix", () => {
+  const anchor = trustedRepairCanonicalFixture("appraisal_practical").anchors[0]
+    .calculationRelation;
+  assert.ok(anchor);
+  for (const negatedSign of ["비양수이며", "비 양수이며"]) {
+    const result = validatePracticeCalculationRelation({
+      text: VALID_RELATION.replace("양수이며", negatedSign),
+      anchor,
+    });
+    assert.equal(result.verified, false, negatedSign);
+    assert.equal(result.state, "PARTIAL", negatedSign);
+    assert.ok(
+      result.reasonCodes.includes("positive_sign_constraint_failed"),
+      negatedSign,
+    );
+  }
+});
+
 test("Practice GOLDEN adjudication validates its exact grammatical unit wording", () => {
   const anchor = trustedRepairCanonicalFixture("appraisal_practical").anchors[0]
     .calculationRelation;
