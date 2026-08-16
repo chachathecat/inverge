@@ -399,6 +399,29 @@ test("Practice proof binds role labels to exact operands and result", () => {
   });
   assert.equal(negatedRoleResult.verified, false);
   assert.ok(negatedRoleResult.reasonCodes.includes("operand_roles_missing"));
+
+  for (const modifiedRoleConflict of [
+    `${VALID_RELATION} 하지만 실제 총수익 금액은 130,000,000원/년이다.`,
+    `${VALID_RELATION} 운영비의 최종 값은 30,000,000원/년이다.`,
+    `${VALID_RELATION} 순수익의 산정액은 90,000,000원/년이다.`,
+  ]) {
+    const modifiedResult = validatePracticeCalculationRelation({
+      text: modifiedRoleConflict,
+      anchor,
+    });
+    assert.equal(modifiedResult.verified, false, modifiedRoleConflict);
+    assert.ok(
+      modifiedResult.reasonCodes.includes("operand_roles_missing"),
+      modifiedRoleConflict,
+    );
+  }
+
+  const compatibleModifiedRoles = validatePracticeCalculationRelation({
+    text: `${VALID_RELATION} 실제 총수익 금액은 120,000,000원/년이고 운영비의 최종 값은 20,000,000원/년이며 순수익의 산정액은 100,000,000원/년이다.`,
+    anchor,
+  });
+  assert.equal(compatibleModifiedRoles.verified, true);
+  assert.equal(compatibleModifiedRoles.state, "PASS");
 });
 
 test("Practice proof rejects role labels embedded in explicitly negated terms", () => {
@@ -582,6 +605,8 @@ test("Practice proof rejects explicit operator assertions that contradict subtra
     "계산 연산은 더하기이다.",
     "연산 기호는 +이다.",
     "실제로 연산 방식은 ADD이다.",
+    "하지만 이 계산은 덧셈이다.",
+    "위 등식은 ADD이다.",
     "연산자는 곱셈이다.",
     "연산은 나눗셈이다.",
     "연산자는 뺄셈이 아니다.",
@@ -603,6 +628,7 @@ test("Practice proof rejects explicit operator assertions that contradict subtra
     "실제 연산자는 뺄셈이다.",
     "연산 기호는 -이다.",
     "계산 방식은 SUBTRACT이다.",
+    "해당 계산은 뺄셈이다.",
     "연산자는 덧셈이 아니다.",
   ]) {
     const result = validatePracticeCalculationRelation({
@@ -698,6 +724,8 @@ test("Practice proof rejects contradictory result-unit assertions", () => {
   for (const contradiction of [
     `${VALID_RELATION} 하지만 이 결과의 단위는 원/년이 아니다.`,
     `${VALID_RELATION} 결과 단위는 원/년은 틀렸다.`,
+    `${VALID_RELATION} 순수익의 실제 단위는 원/월이다.`,
+    `${VALID_RELATION} 결과의 최종 단위는 원/월이다.`,
     `${VALID_RELATION} 결과 단위는 원/년이라는 주장은 오류다.`,
     `${VALID_RELATION} 순수익의 단위는 원/월이다.`,
     `${VALID_RELATION} 이 결과의 단위는 달러/년이다.`,
@@ -722,6 +750,13 @@ test("Practice proof rejects contradictory result-unit assertions", () => {
     }).state,
     "PASS",
   );
+
+  const compatibleModifiedUnit = validatePracticeCalculationRelation({
+    text: `${VALID_RELATION} 순수익의 실제 단위는 원/년이다.`,
+    anchor,
+  });
+  assert.equal(compatibleModifiedUnit.verified, true);
+  assert.equal(compatibleModifiedUnit.state, "PASS");
 });
 
 test("[C2R-C-P-R19] disconnected numeric presence is UNSUPPORTED, never verified", () => {

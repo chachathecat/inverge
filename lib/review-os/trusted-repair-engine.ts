@@ -179,16 +179,22 @@ type ParsedRoleClaim = Readonly<{
   sourceLength: number;
 }>;
 
+const ASSERTION_QUALIFIER_SOURCE =
+  "(?:(?:실제(?:의)?|정확(?:한)?|최종|계산된|산정된|해당|현재)\\s*)*";
+
+const ROLE_VALUE_NOUN_SOURCE =
+  "(?:(?:금액|값|수치|액수|산정액|계산값|결과값)\\s*)?";
+
 function explicitRoleClaims(text: string, roleLabel: string) {
   const claims: ParsedRoleClaim[] = [];
   const boundedRoleLabel = `(?<![가-힣A-Za-z0-9])${roleLabel}`;
   const patterns = [
     new RegExp(
-      `${boundedRoleLabel}\\s*(?:은|는|이|가|:|=)?\\s*(-?\\d[\\d,]*)\\s*((?:원\\s*\\/\\s*(?:년|연)|연간\\s*원))?`,
+      `${boundedRoleLabel}\\s*(?:의\\s*)?${ASSERTION_QUALIFIER_SOURCE}${ROLE_VALUE_NOUN_SOURCE}(?:은|는|이|가|:|=)?\\s*(-?\\d[\\d,]*)\\s*((?:원\\s*\\/\\s*(?:년|연)|연간\\s*원))?`,
       "gu",
     ),
     new RegExp(
-      `(-?\\d[\\d,]*)\\s*((?:원\\s*\\/\\s*(?:년|연)|연간\\s*원))?\\s*(?:은|는|이|가|:|=)?\\s*${boundedRoleLabel}(?![가-힣A-Za-z0-9])`,
+      `(-?\\d[\\d,]*)\\s*((?:원\\s*\\/\\s*(?:년|연)|연간\\s*원))?\\s*(?:은|는|이|가|:|=)?\\s*${ASSERTION_QUALIFIER_SOURCE}${boundedRoleLabel}\\s*(?:의\\s*)?${ASSERTION_QUALIFIER_SOURCE}${ROLE_VALUE_NOUN_SOURCE}(?![가-힣A-Za-z0-9])`,
       "gu",
     ),
   ];
@@ -336,7 +342,7 @@ type ExplicitOperatorAssertion = Readonly<{
 function explicitOperatorAssertions(text: string) {
   const assertions: ExplicitOperatorAssertion[] = [];
   const pattern =
-    /(?:실제(?:로)?\s*)?(?:연산자|연산\s*(?:기호|방식)|계산\s*방식|계산법|연산)(?:은|는|이|가|:|=)?\s*(덧셈|더하기|가산|플러스|뺄셈|빼기|차감|마이너스|곱셈|곱하기|나눗셈|나누기|ADD|SUBTRACT|MULTIPLY|DIVIDE|[+\-−×xX*÷/])/giu;
+    /(?:실제(?:로)?\s*)?(?:(?:이|그|해당|위(?:의)?|앞(?:의)?)\s*)?(?:연산자|연산\s*(?:기호|방식)|계산\s*방식|계산법|연산|계산(?:식)?|관계(?:식)?|등식|산식)(?:은|는|이|가|의|:|=)?\s*(덧셈|더하기|가산|플러스|뺄셈|빼기|차감|마이너스|곱셈|곱하기|나눗셈|나누기|ADD|SUBTRACT|MULTIPLY|DIVIDE|[+\-−×xX*÷/])/giu;
   for (const match of text.matchAll(pattern)) {
     const token = match[1];
     const operator = /^(?:덧셈|더하기|가산|플러스|ADD|\+)$/iu.test(token)
@@ -356,8 +362,10 @@ function explicitOperatorAssertions(text: string) {
 
 function resultUnitAssertions(text: string) {
   const assertions: ResultUnitAssertion[] = [];
-  const pattern =
-    /(?:이\s*)?(?:결과|순수익)(?:의)?\s*단위\s*(?:은|는|이|가|:|=)?\s*([^,.;!?\n]{1,40})/gu;
+  const pattern = new RegExp(
+    `(?:이\\s*)?(?:결과|순수익)(?:의)?\\s*${ASSERTION_QUALIFIER_SOURCE}단위\\s*(?:은|는|이|가|:|=)?\\s*([^,.;!?\\n]{1,40})`,
+    "gu",
+  );
   for (const match of text.matchAll(pattern)) {
     const claim = match[1].replace(/\s+/gu, "");
     const expectedUnit = claim.match(/^(?:원\/(?:년|연)|연간원)/u);
