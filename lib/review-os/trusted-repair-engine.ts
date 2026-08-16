@@ -362,7 +362,7 @@ export function validatePracticeCalculationRelation(input: {
       candidate.sourceIndex + candidate.sourceLength,
       candidate.sourceIndex + candidate.sourceLength + 24,
     );
-    return /^\s*(?:원\s*\/\s*년|원\s*\/\s*연|연간\s*원)(?![가-힣A-Za-z0-9])/u.test(
+    return /^\s*(?:원\s*\/\s*년|원\s*\/\s*연|연간\s*원)(?:\s*(?:이고|이며|이다|입니다|으로|로|이|가|은|는|을|를))?(?![가-힣A-Za-z0-9])/u.test(
       tail,
     );
   });

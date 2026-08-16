@@ -275,6 +275,7 @@ export function createTrustedRepairService(authenticatedUserId: string) {
         evaluatedAt: occurredAt,
       });
       if (selection.kind !== "selected") {
+        await repository.recordScarcity(selection.event);
         throw new TrustedRepairContractError("rights_blocked");
       }
       const fixture = selection.fixture;

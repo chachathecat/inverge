@@ -209,6 +209,14 @@ export function trustedRepairReleaseTransition(
 }
 
 export type TrustedRepairBank = "LEARNING" | "TRANSFER" | "MEASUREMENT";
+export type TrustedRepairScarcityEvent = Readonly<{
+  eventId: string;
+  subject: TrustedRepairSubject;
+  bank: TrustedRepairBank;
+  reasonCode: "eligible_bank_gap";
+  occurredAt: string;
+  containsBody: false;
+}>;
 export type TrustedRepairFixtureKind =
   | "canonical"
   | "near_miss"

@@ -9,6 +9,7 @@ import {
   type TrustedRepairInputMode,
   type TrustedRepairRightsClass,
   type TrustedRepairPracticeAnchor,
+  type TrustedRepairScarcityEvent,
   type TrustedRepairSubject,
 } from "./trusted-repair-contract";
 
@@ -355,16 +356,17 @@ export function trustedRepairBankFirstSelection(input: {
       validateTrustedRepairFixtureEligibility(fixture, evaluatedAt).eligible,
   );
   if (selected) return { kind: "selected" as const, fixture: selected };
+  const event: TrustedRepairScarcityEvent = {
+    eventId: crypto.randomUUID(),
+    subject: input.subject,
+    bank: input.bank,
+    reasonCode: "eligible_bank_gap",
+    occurredAt: evaluatedAt,
+    containsBody: false,
+  };
   return {
     kind: "scarcity" as const,
-    event: {
-      eventId: `scarcity-${input.subject}-${input.bank}`,
-      subject: input.subject,
-      bank: input.bank,
-      reasonCode: "eligible_bank_gap",
-      occurredAt: evaluatedAt,
-      containsBody: false,
-    },
+    event,
     generationDisposition: "QUARANTINED_AUTOMATED_CHECK_REQUIRED" as const,
     selfPublicationAllowed: false,
     selfPromotionAllowed: false,

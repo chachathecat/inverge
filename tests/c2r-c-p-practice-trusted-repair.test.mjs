@@ -461,6 +461,22 @@ test("Practice proof accepts canonical positive-sign wording and rejects negativ
   );
 });
 
+test("Practice GOLDEN adjudication validates its exact grammatical unit wording", () => {
+  const anchor = trustedRepairCanonicalFixture("appraisal_practical").anchors[0]
+    .calculationRelation;
+  assert.ok(anchor);
+  const golden = TRUSTED_REPAIR_GOLD_CANDIDATES.find(
+    (candidate) => candidate.expectedProofEvaluation === "PASS",
+  );
+  assert.ok(golden);
+  const evaluation = validatePracticeCalculationRelation({
+    text: golden.answerSample,
+    anchor,
+  });
+  assert.equal(evaluation.state, golden.expectedProofEvaluation);
+  assert.equal(evaluation.verified, true);
+});
+
 test("[C2R-C-P-R10] Practice proof declares no unbound semantic alternative group", () => {
   const anchor = trustedRepairCanonicalFixture("appraisal_practical").anchors[0];
   assert.equal("acceptableAlternativeGroups" in anchor, false);
@@ -707,6 +723,7 @@ test("denied, expired, mismatched, and non-Practice fixture routes fail closed",
     evaluatedAt: RIGHTS_EVALUATED_AT,
   });
   assert.equal(scarcity.kind, "scarcity");
+  assert.match(scarcity.event.eventId, /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i);
   assert.equal(scarcity.event.containsBody, false);
   assert.equal(scarcity.selfPublicationAllowed, false);
 });

@@ -18,6 +18,7 @@ import {
   type TrustedRepairBindings,
   type TrustedRepairExposureEvent,
   type TrustedRepairPrivateArtifact,
+  type TrustedRepairScarcityEvent,
   type TrustedRepairStateData,
   type TrustedRepairStoredSession,
   type TrustedRepairTransitionPlan,
@@ -300,6 +301,19 @@ export function createTrustedRepairRepository(authenticatedUserId: string) {
 
   return {
     load,
+    async recordScarcity(event: TrustedRepairScarcityEvent) {
+      const result = await serviceClient()
+        .from("wcv_c2_trusted_repair_scarcity_events")
+        .insert({
+          id: event.eventId,
+          subject: event.subject,
+          bank: event.bank,
+          reason_code: event.reasonCode,
+          contains_body: event.containsBody,
+          occurred_at: event.occurredAt,
+        });
+      if (result.error) throw new TrustedRepairPersistenceError("unavailable");
+    },
     async replayMatches(input: {
       sessionId: string;
       commandId: string;

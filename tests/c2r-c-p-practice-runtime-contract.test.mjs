@@ -243,6 +243,23 @@ test("required runtime-gate has an exact closed C2R-C-P migration adapter", () =
   assert.match(producer, /stale_cas_transition_rejected/);
 });
 
+test("bodyless Practice bank scarcity is persisted before the request is denied", () => {
+  const server = read("lib/review-os/trusted-repair-server.ts");
+  const repository = read("lib/review-os/trusted-repair-repository.ts");
+  const scarcityBranch = server.slice(
+    server.indexOf('if (selection.kind !== "selected")'),
+    server.indexOf("const fixture = selection.fixture"),
+  );
+  assert.match(
+    scarcityBranch,
+    /await repository\.recordScarcity\(selection\.event\);[\s\S]*throw new TrustedRepairContractError\("rights_blocked"\)/,
+  );
+  assert.match(repository, /async recordScarcity\(event: TrustedRepairScarcityEvent\)/);
+  assert.match(repository, /\.from\("wcv_c2_trusted_repair_scarcity_events"\)/);
+  assert.match(repository, /id: event\.eventId/);
+  assert.match(repository, /contains_body: event\.containsBody/);
+});
+
 test("runtime evidence surfaces contain no remote project command and diagnostics redact secrets", () => {
   for (const relativePath of [
     WORKFLOW,
