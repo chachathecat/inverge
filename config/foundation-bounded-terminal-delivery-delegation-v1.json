@@ -260,12 +260,28 @@
         "replacement_review_url_or_null",
         "replacement_severity_or_null",
         "same_actionable_finding_verdict",
-        "owner_gate_required"
+        "owner_gate_required",
+        "owner_authorization_record_url_or_null",
+        "owner_authorization_record_sha256_or_null",
+        "owner_authorization_decision_or_null",
+        "owner_authorization_actor_or_null",
+        "owner_authorized_at_or_null"
       ],
       "every_superseded_actionable_finding_must_have_exactly_one_lineage_entry": true,
       "lineage_finding_identity_must_equal_superseded_finding_identity": true,
       "same_finding_verdict_requires_matching_identity_and_independently_verifiable_review_urls": true,
       "same_actionable_p0_or_p1_requires_owner_gate_true": true,
+      "same_actionable_p0_or_p1_requires_non_null_owner_authorization_record_fields": true,
+      "every_replacement_actionable_finding_must_be_compared_against_all_superseded_finding_identities": true,
+      "matching_p0_or_p1_finding_identity_requires_same_finding_verdict_true": true,
+      "owner_authorization_record_url_must_be_independently_resolvable": true,
+      "owner_authorization_record_sha256_must_hash_exact_resolved_record": true,
+      "owner_authorization_decision_must_equal": "authorized",
+      "owner_authorization_actor_must_equal": "chachathecat",
+      "owner_authorization_record_must_bind_repository_replacement_pr_finding_identity_and_review_url": true,
+      "owner_authorization_must_postdate_replacement_finding": true,
+      "missing_or_invalid_owner_authorization_blocks_receipt": true,
+      "non_triggered_owner_gate_requires_authorization_fields_null": true,
       "absent_or_distinct_replacement_finding_requires_same_finding_verdict_false": true,
       "replacement_policy_compliance_verdict_must_be_true": true,
       "correction_budget_exhaustion_alone_may_require_owner": false,
@@ -299,9 +315,11 @@
       "cycle_head_must_equal_remote_head_at_review": true,
       "reviewed_head_sha_must_equal_cycle_head": true,
       "each_cycle_remote_check_results_must_satisfy_exact_head_checks_binding": true,
+      "each_cycle_remote_check_binding_context": "review_cycle",
       "each_cycle_remote_check_head_must_equal_cycle_head": true,
       "each_cycle_all_required_remote_checks_successful_must_be_true": true,
       "each_cycle_local_validation_results_must_satisfy_local_validation_binding": true,
+      "each_cycle_local_validation_binding_context": "review_cycle",
       "each_cycle_local_validation_head_must_equal_cycle_head": true,
       "each_cycle_all_required_local_validations_successful_must_be_true": true,
       "final_reviewed_head_must_equal_expected_head": true,
@@ -331,7 +349,12 @@
         "details_url",
         "completed_at"
       ],
-      "check_head_must_equal_expected_head": true,
+      "head_reference_by_context": {
+        "top_level_receipt": "expected_head_sha",
+        "review_cycle": "cycle_head_sha"
+      },
+      "top_level_binding_context": "top_level_receipt",
+      "check_head_must_equal_resolved_context_head": true,
       "missing_pending_skipped_cancelled_or_unsuccessful_blocks": true
     },
     "local_validation_binding": {
@@ -381,7 +404,12 @@
       "execution_evidence_sha256_must_be_exact_lowercase_64_hex": true,
       "execution_evidence_url_content_must_bind_name_platform_command_head_start_completion_exit_and_conclusion": true,
       "execution_evidence_sha256_must_hash_exact_resolved_evidence_content": true,
-      "validation_head_must_equal_expected_head": true,
+      "head_reference_by_context": {
+        "top_level_receipt": "expected_head_sha",
+        "review_cycle": "cycle_head_sha"
+      },
+      "top_level_binding_context": "top_level_receipt",
+      "validation_head_must_equal_resolved_context_head": true,
       "missing_or_unsuccessful_blocks": true,
       "all_successful_verdict_must_be_true": true
     },

@@ -99,7 +99,16 @@ const REPLACEMENT_FINDING_LINEAGE_FIELDS = [
   "replacement_severity_or_null",
   "same_actionable_finding_verdict",
   "owner_gate_required",
+  "owner_authorization_record_url_or_null",
+  "owner_authorization_record_sha256_or_null",
+  "owner_authorization_decision_or_null",
+  "owner_authorization_actor_or_null",
+  "owner_authorized_at_or_null",
 ];
+const VALIDATION_HEAD_REFERENCE_BY_CONTEXT = {
+  top_level_receipt: "expected_head_sha",
+  review_cycle: "cycle_head_sha",
+};
 const FINDING_IDENTITY_PREIMAGE_FIELDS = [
   "repository",
   "delivery_issue",
@@ -306,6 +315,14 @@ function validateClosedContract(contract) {
   );
   assert.equal(replacement.every_superseded_actionable_finding_must_have_exactly_one_lineage_entry, true);
   assert.equal(replacement.same_actionable_p0_or_p1_requires_owner_gate_true, true);
+  assert.equal(replacement.same_actionable_p0_or_p1_requires_non_null_owner_authorization_record_fields, true);
+  assert.equal(replacement.every_replacement_actionable_finding_must_be_compared_against_all_superseded_finding_identities, true);
+  assert.equal(replacement.matching_p0_or_p1_finding_identity_requires_same_finding_verdict_true, true);
+  assert.equal(replacement.owner_authorization_record_url_must_be_independently_resolvable, true);
+  assert.equal(replacement.owner_authorization_record_sha256_must_hash_exact_resolved_record, true);
+  assert.equal(replacement.owner_authorization_decision_must_equal, "authorized");
+  assert.equal(replacement.owner_authorization_actor_must_equal, "chachathecat");
+  assert.equal(replacement.missing_or_invalid_owner_authorization_blocks_receipt, true);
   assert.equal(contract.receipt_schema.writer_binding.required_active_merge_producing_writer_count, 1);
   assert.equal(contract.receipt_schema.review_evidence_binding.maximum_exact_head_review_cycles_per_pr, 3);
   exactMembers(
@@ -317,10 +334,17 @@ function validateClosedContract(contract) {
     contract.receipt_schema.review_evidence_binding.each_cycle_all_required_remote_checks_successful_must_be_true,
     true,
   );
+  assert.equal(contract.receipt_schema.review_evidence_binding.each_cycle_remote_check_binding_context, "review_cycle");
   assert.equal(
     contract.receipt_schema.review_evidence_binding.each_cycle_all_required_local_validations_successful_must_be_true,
     true,
   );
+  assert.equal(contract.receipt_schema.review_evidence_binding.each_cycle_local_validation_binding_context, "review_cycle");
+  assert.deepEqual(
+    contract.receipt_schema.exact_head_checks_binding.head_reference_by_context,
+    VALIDATION_HEAD_REFERENCE_BY_CONTEXT,
+  );
+  assert.equal(contract.receipt_schema.exact_head_checks_binding.check_head_must_equal_resolved_context_head, true);
   exactMembers(
     contract.receipt_schema.local_validation_binding.required_names,
     REQUIRED_LOCAL_VALIDATIONS,
@@ -340,6 +364,11 @@ function validateClosedContract(contract) {
     true,
   );
   assert.equal(contract.receipt_schema.local_validation_binding.exit_code_must_equal, 0);
+  assert.deepEqual(
+    contract.receipt_schema.local_validation_binding.head_reference_by_context,
+    VALIDATION_HEAD_REFERENCE_BY_CONTEXT,
+  );
+  assert.equal(contract.receipt_schema.local_validation_binding.validation_head_must_equal_resolved_context_head, true);
   assert.equal(
     contract.receipt_schema.local_validation_binding.execution_evidence_url_must_be_independently_resolvable,
     true,
@@ -531,6 +560,20 @@ test("requires expected-head squash tree equality and a closed metadata-only rec
     true,
   );
   assert.equal(replacement.same_actionable_p0_or_p1_requires_owner_gate_true, true);
+  assert.equal(replacement.same_actionable_p0_or_p1_requires_non_null_owner_authorization_record_fields, true);
+  assert.equal(replacement.every_replacement_actionable_finding_must_be_compared_against_all_superseded_finding_identities, true);
+  assert.equal(replacement.matching_p0_or_p1_finding_identity_requires_same_finding_verdict_true, true);
+  assert.equal(replacement.owner_authorization_record_url_must_be_independently_resolvable, true);
+  assert.equal(replacement.owner_authorization_record_sha256_must_hash_exact_resolved_record, true);
+  assert.equal(replacement.owner_authorization_decision_must_equal, "authorized");
+  assert.equal(replacement.owner_authorization_actor_must_equal, "chachathecat");
+  assert.equal(
+    replacement.owner_authorization_record_must_bind_repository_replacement_pr_finding_identity_and_review_url,
+    true,
+  );
+  assert.equal(replacement.owner_authorization_must_postdate_replacement_finding, true);
+  assert.equal(replacement.missing_or_invalid_owner_authorization_blocks_receipt, true);
+  assert.equal(replacement.non_triggered_owner_gate_requires_authorization_fields_null, true);
   assert.equal(replacement.absent_or_distinct_replacement_finding_requires_same_finding_verdict_false, true);
   assert.equal(replacement.replacement_policy_compliance_verdict_must_be_true, true);
   assert.equal(replacement.correction_budget_exhaustion_alone_may_require_owner, false);
@@ -552,9 +595,11 @@ test("requires expected-head squash tree equality and a closed metadata-only rec
   assert.equal(receipt.review_evidence_binding.cycle_head_must_equal_remote_head_at_review, true);
   assert.equal(receipt.review_evidence_binding.reviewed_head_sha_must_equal_cycle_head, true);
   assert.equal(receipt.review_evidence_binding.each_cycle_remote_check_results_must_satisfy_exact_head_checks_binding, true);
+  assert.equal(receipt.review_evidence_binding.each_cycle_remote_check_binding_context, "review_cycle");
   assert.equal(receipt.review_evidence_binding.each_cycle_remote_check_head_must_equal_cycle_head, true);
   assert.equal(receipt.review_evidence_binding.each_cycle_all_required_remote_checks_successful_must_be_true, true);
   assert.equal(receipt.review_evidence_binding.each_cycle_local_validation_results_must_satisfy_local_validation_binding, true);
+  assert.equal(receipt.review_evidence_binding.each_cycle_local_validation_binding_context, "review_cycle");
   assert.equal(receipt.review_evidence_binding.each_cycle_local_validation_head_must_equal_cycle_head, true);
   assert.equal(receipt.review_evidence_binding.each_cycle_all_required_local_validations_successful_must_be_true, true);
   assert.equal(receipt.review_evidence_binding.final_reviewed_head_must_equal_expected_head, true);
@@ -570,7 +615,9 @@ test("requires expected-head squash tree equality and a closed metadata-only rec
     CHECK_EVIDENCE_FIELDS,
     "check evidence fields",
   );
-  assert.equal(receipt.exact_head_checks_binding.check_head_must_equal_expected_head, true);
+  assert.deepEqual(receipt.exact_head_checks_binding.head_reference_by_context, VALIDATION_HEAD_REFERENCE_BY_CONTEXT);
+  assert.equal(receipt.exact_head_checks_binding.top_level_binding_context, "top_level_receipt");
+  assert.equal(receipt.exact_head_checks_binding.check_head_must_equal_resolved_context_head, true);
   assert.equal(receipt.exact_head_checks_binding.missing_pending_skipped_cancelled_or_unsuccessful_blocks, true);
   exactMembers(
     receipt.local_validation_binding.required_names,
@@ -600,7 +647,9 @@ test("requires expected-head squash tree equality and a closed metadata-only rec
   );
   assert.equal(receipt.local_validation_binding.execution_evidence_sha256_must_hash_exact_resolved_evidence_content, true);
   assert.equal(receipt.local_validation_binding.required_conclusion, "success");
-  assert.equal(receipt.local_validation_binding.validation_head_must_equal_expected_head, true);
+  assert.deepEqual(receipt.local_validation_binding.head_reference_by_context, VALIDATION_HEAD_REFERENCE_BY_CONTEXT);
+  assert.equal(receipt.local_validation_binding.top_level_binding_context, "top_level_receipt");
+  assert.equal(receipt.local_validation_binding.validation_head_must_equal_resolved_context_head, true);
   assert.equal(receipt.local_validation_binding.missing_or_unsuccessful_blocks, true);
   assert.equal(receipt.local_validation_binding.all_successful_verdict_must_be_true, true);
   assert.equal(receipt.ruleset_binding.required_name, "main-pr-only");
@@ -743,17 +792,29 @@ test("fails closed under widened writer, review, receipt, start or Owner-gate mu
     (value) => value.receipt_schema.replacement_binding.finding_identity_preimage_must_be_recomputed_from_receipt_and_review_metadata = false,
     (value) => value.receipt_schema.replacement_binding.every_superseded_actionable_finding_must_have_exactly_one_lineage_entry = false,
     (value) => value.receipt_schema.replacement_binding.same_actionable_p0_or_p1_requires_owner_gate_true = false,
+    (value) => value.receipt_schema.replacement_binding.same_actionable_p0_or_p1_requires_non_null_owner_authorization_record_fields = false,
+    (value) => value.receipt_schema.replacement_binding.every_replacement_actionable_finding_must_be_compared_against_all_superseded_finding_identities = false,
+    (value) => value.receipt_schema.replacement_binding.matching_p0_or_p1_finding_identity_requires_same_finding_verdict_true = false,
+    (value) => value.receipt_schema.replacement_binding.owner_authorization_record_sha256_must_hash_exact_resolved_record = false,
+    (value) => value.receipt_schema.replacement_binding.owner_authorization_actor_must_equal = "any_admin",
+    (value) => value.receipt_schema.replacement_binding.missing_or_invalid_owner_authorization_blocks_receipt = false,
     (value) => value.receipt_schema.writer_binding.required_active_merge_producing_writer_count = 2,
     (value) => value.receipt_schema.review_evidence_binding.maximum_exact_head_review_cycles_per_pr = 4,
     (value) => value.receipt_schema.review_evidence_binding.required_per_cycle_fields.pop(),
     (value) => value.receipt_schema.review_evidence_binding.each_cycle_all_required_remote_checks_successful_must_be_true = false,
+    (value) => value.receipt_schema.review_evidence_binding.each_cycle_remote_check_binding_context = "top_level_receipt",
     (value) => value.receipt_schema.review_evidence_binding.each_cycle_all_required_local_validations_successful_must_be_true = false,
+    (value) => value.receipt_schema.review_evidence_binding.each_cycle_local_validation_binding_context = "top_level_receipt",
+    (value) => value.receipt_schema.exact_head_checks_binding.head_reference_by_context.review_cycle = "expected_head_sha",
+    (value) => value.receipt_schema.exact_head_checks_binding.check_head_must_equal_resolved_context_head = false,
     (value) => value.receipt_schema.local_validation_binding.required_names.pop(),
     (value) => value.receipt_schema.local_validation_binding.required_per_validation_fields.pop(),
     (value) => value.receipt_schema.local_validation_binding.canonical_commands_by_platform.windows.full_tests = "Write-Output pass",
     (value) => value.receipt_schema.local_validation_binding.command_must_exactly_equal_canonical_command_for_name_and_platform = false,
     (value) => value.receipt_schema.local_validation_binding.execution_evidence_url_must_be_independently_resolvable = false,
     (value) => value.receipt_schema.local_validation_binding.execution_evidence_sha256_must_hash_exact_resolved_evidence_content = false,
+    (value) => value.receipt_schema.local_validation_binding.head_reference_by_context.review_cycle = "expected_head_sha",
+    (value) => value.receipt_schema.local_validation_binding.validation_head_must_equal_resolved_context_head = false,
     (value) => value.receipt_schema.ruleset_binding.required_name = "other",
     (value) => value.receipt_schema.merge_binding.required_method = "merge",
     (value) => value.receipt_schema.issue_association_binding.allowed_kinds.push("unbound"),
@@ -820,6 +881,15 @@ test("fails closed under widened writer, review, receipt, start or Owner-gate mu
       );
       assert.equal(replacement.every_superseded_actionable_finding_must_have_exactly_one_lineage_entry, true);
       assert.equal(replacement.same_actionable_p0_or_p1_requires_owner_gate_true, true);
+      assert.equal(replacement.same_actionable_p0_or_p1_requires_non_null_owner_authorization_record_fields, true);
+      assert.equal(
+        replacement.every_replacement_actionable_finding_must_be_compared_against_all_superseded_finding_identities,
+        true,
+      );
+      assert.equal(replacement.matching_p0_or_p1_finding_identity_requires_same_finding_verdict_true, true);
+      assert.equal(replacement.owner_authorization_record_sha256_must_hash_exact_resolved_record, true);
+      assert.equal(replacement.owner_authorization_actor_must_equal, "chachathecat");
+      assert.equal(replacement.missing_or_invalid_owner_authorization_blocks_receipt, true);
       assert.equal(candidate.receipt_schema.writer_binding.required_active_merge_producing_writer_count, 1);
       assert.equal(candidate.receipt_schema.review_evidence_binding.maximum_exact_head_review_cycles_per_pr, 3);
       exactMembers(
@@ -832,7 +902,23 @@ test("fails closed under widened writer, review, receipt, start or Owner-gate mu
         true,
       );
       assert.equal(
+        candidate.receipt_schema.review_evidence_binding.each_cycle_remote_check_binding_context,
+        "review_cycle",
+      );
+      assert.equal(
         candidate.receipt_schema.review_evidence_binding.each_cycle_all_required_local_validations_successful_must_be_true,
+        true,
+      );
+      assert.equal(
+        candidate.receipt_schema.review_evidence_binding.each_cycle_local_validation_binding_context,
+        "review_cycle",
+      );
+      assert.deepEqual(
+        candidate.receipt_schema.exact_head_checks_binding.head_reference_by_context,
+        VALIDATION_HEAD_REFERENCE_BY_CONTEXT,
+      );
+      assert.equal(
+        candidate.receipt_schema.exact_head_checks_binding.check_head_must_equal_resolved_context_head,
         true,
       );
       exactMembers(
@@ -859,6 +945,14 @@ test("fails closed under widened writer, review, receipt, start or Owner-gate mu
       );
       assert.equal(
         candidate.receipt_schema.local_validation_binding.execution_evidence_sha256_must_hash_exact_resolved_evidence_content,
+        true,
+      );
+      assert.deepEqual(
+        candidate.receipt_schema.local_validation_binding.head_reference_by_context,
+        VALIDATION_HEAD_REFERENCE_BY_CONTEXT,
+      );
+      assert.equal(
+        candidate.receipt_schema.local_validation_binding.validation_head_must_equal_resolved_context_head,
         true,
       );
       assert.equal(candidate.receipt_schema.ruleset_binding.required_name, "main-pr-only");

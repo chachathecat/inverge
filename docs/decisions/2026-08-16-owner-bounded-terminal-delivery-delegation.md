@@ -118,13 +118,23 @@ plus successful local-validation and remote-check evidence keyed to that exact
 cycle head. Each local-validation name is pinned to its exact Windows or POSIX
 canonical command, zero exit, exact head and independently resolvable,
 SHA-256-bound execution evidence. A validation label cannot attest to a
-different or no-op command. For every superseded PR, the receipt separately
+different or no-op command. Top-level check and local-validation evidence uses
+`expected_head_sha` as its binding context, while evidence nested in a review
+cycle uses that exact `cycle_head_sha`; the two contexts cannot be substituted
+or compared to each other's head. For every superseded PR, the receipt separately
 binds closed-unmerged state, the complete review-cycle and source-correction
 history, and every actionable finding through a stable SHA-256 identity over
 repository, delivery issue, root invariant and path. Replacement lineage
 accounts for each such identity exactly once and uses independently verifiable
 review URLs to prove whether the same P0/P1 survived and therefore requires
-the Owner gate. It also binds thread state, effective ruleset
+the Owner gate. A triggered gate must include a later, independently
+resolvable Owner authorization record, its exact content digest, decision and
+time. The record must be authored by `chachathecat`, postdate the matching
+replacement finding and bind repository, replacement PR, stable finding
+identity and review URL. Every replacement finding is compared against every
+superseded stable identity; a matching P0/P1 cannot be labeled distinct.
+Acknowledgment that approval is required is not approval and blocks the
+receipt. It also binds thread state, effective ruleset
 types and exact pull-request parameters, the authority-dependent issue
 association kind and closure permission, issue state, roadmap/current-stage
 state and the next authorized tuple. Candidate and merge trees must match. The

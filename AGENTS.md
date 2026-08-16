@@ -114,6 +114,15 @@ replacement lineage. Every named local validation is bound to the exact
 platform-specific canonical command and an independently resolvable,
 digest-bound execution record; a self-reported name or conclusion is not
 sufficient.
+Top-level validation evidence resolves its head against `expected_head_sha`;
+review-cycle evidence resolves against that cycle's `cycle_head_sha`, so an
+intermediate reviewed head is never compared with the final expected head. If
+stable finding lineage proves that the same actionable P0/P1 survived the
+clean replacement, the receipt must also resolve and hash a later explicit
+Owner authorization record; merely marking the gate required cannot satisfy
+it. That record must be authored by `chachathecat`, postdate the matching
+replacement finding, and bind this repository, replacement PR, stable finding
+identity and review URL.
 
 The delegation may then select and begin only the next dependency-ready
 non-Production stage from live repository authority. The expected first stage
