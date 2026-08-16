@@ -11,6 +11,8 @@ import { runtimeRequiredPathRecords } from "./runtime-risk-contract.mjs";
 export const SCHEMA_VERSION = "inverge.runtime_evidence.v2";
 export const PRODUCER_VERSION = "s233r.postgres.s233a.v1";
 export const S236P_PRODUCER_VERSION = "s236p.postgres.owner-private.v5";
+export const C2R_C_P_PRODUCER_VERSION =
+  "c2r-c-p.postgres.practice-trusted-repair.v2";
 export const POSTGRES_IMAGE = "postgres:15.8-bookworm";
 export const ASSERTION_IDS = Object.freeze([
   "migration_prerequisites_and_target_applied",
@@ -45,6 +47,23 @@ export const S236P_ASSERTION_IDS = Object.freeze([
   "persistent_event_log_disabled",
   "cleanup_complete",
 ]);
+export const C2R_C_P_ASSERTION_IDS = Object.freeze([
+  "practice_migration_applied",
+  "forced_rls_all_tables",
+  "practice_only_subject_constraint",
+  "authenticated_session_read_denied",
+  "anonymous_read_denied",
+  "authenticated_private_body_read_denied",
+  "authenticated_direct_mutation_denied",
+  "service_only_rpc_execution",
+  "idempotent_create_replay_no_duplicate_work",
+  "exposure_and_state_transition_atomic",
+  "proof_evaluation_persisted",
+  "stale_cas_transition_rejected",
+  "cleanup_complete",
+]);
+export const C2R_C_P_MIGRATION_PATH =
+  "supabase/migrations/20260817010000_c2r_c_p_practice_trusted_repair.sql";
 export const S236P_MIGRATION_PATHS = Object.freeze([
   "supabase/migrations/20260730025332_s236p_lean_owner_private.sql",
   "supabase/migrations/20260730060233_s236p_owner_private_lifecycle_hardening.sql",
@@ -117,6 +136,17 @@ const S236P_OWNER_A_EXPECTED_VISIBLE_OBJECT_IDS = Object.freeze([
   S236P_REVISION_A,
   S236P_TEMP_OBJECT,
 ]);
+const C2R_C_P_SESSION_A = "c1111111-1111-4111-8111-111111111111";
+const C2R_C_P_SESSION_B = "c2222222-2222-4222-8222-222222222222";
+const C2R_C_P_ARTIFACT_A = "c3333333-3333-4333-8333-333333333333";
+const C2R_C_P_ARTIFACT_B = "c4444444-4444-4444-8444-444444444444";
+const C2R_C_P_CREATE_COMMAND_A = "c5555555-5555-4555-8555-555555555555";
+const C2R_C_P_CREATE_COMMAND_B = "c6666666-6666-4666-8666-666666666666";
+const C2R_C_P_TRANSITION_COMMAND_A = "c7777777-7777-4777-8777-777777777777";
+const C2R_C_P_STALE_COMMAND_A = "c8888888-8888-4888-8888-888888888888";
+const C2R_C_P_ATOMIC_COMMAND_A = "c9999999-9999-4999-8999-999999999999";
+const C2R_C_P_EXPOSURE_A = "caaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
+const C2R_C_P_MISSING_REVISION = "cbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb";
 
 function sha256(value) {
   return crypto.createHash("sha256").update(value).digest("hex");
@@ -445,6 +475,21 @@ export function resolveTargetMigration(riskResult, headSha) {
     ];
     markerError =
       "S236P ordered migration quadruple does not match the supported adapter contract.";
+  } else if (
+    migrationPaths.length === 1 &&
+    migrationPaths[0] === C2R_C_P_MIGRATION_PATH
+  ) {
+    adapter = "c2r-c-p";
+    markerSets = [[
+      "subject text not null check (subject = 'appraisal_practical')",
+      "alter table public.wcv_c2_trusted_repair_sessions force row level security",
+      "public.wcv_c2_create_trusted_repair_session_v1",
+      "public.wcv_c2_apply_trusted_repair_transition_v1",
+      "validator:practice-calculation-relation@1",
+      "'proofEvaluation'",
+    ]];
+    markerError =
+      "C2R-C-P Practice migration does not match the supported adapter contract.";
   } else {
     throw new Error("no closed runtime-evidence adapter supports this runtime-sensitive change set.");
   }
@@ -472,6 +517,12 @@ function evidenceContract(targetMigration) {
     return {
       assertionIds: S236P_ASSERTION_IDS,
       producerVersion: S236P_PRODUCER_VERSION,
+    };
+  }
+  if (targetMigration.adapter === "c2r-c-p") {
+    return {
+      assertionIds: C2R_C_P_ASSERTION_IDS,
+      producerVersion: C2R_C_P_PRODUCER_VERSION,
     };
   }
   return {
@@ -2196,10 +2247,357 @@ function runS236PDatabaseAssertions(containerName, targetMigration) {
   return passedAssertions;
 }
 
+function c2rCPSessionPayload({ sessionId, userId, subject = "appraisal_practical" }) {
+  const timestamp = "2026-08-17T00:00:00.000Z";
+  return {
+    sessionId,
+    userId,
+    fixtureId: "wcv-c2-practice-net-income",
+    subject,
+    state: "editable_capture_draft",
+    recordVersion: 1,
+    confirmedRevisionId: null,
+    primaryGapId: null,
+    outcome: null,
+    assistanceLevel: 0,
+    independentAttemptBeforeHelp: false,
+    contractVersion: "wcv_c2r_c_p_practice_trusted_repair.v1",
+    fixtureVersion:
+      "wcv_c2r_c_p_practice_rights_safe_fixtures.2026-08-17.v1",
+    sourceVersion: "synthetic-owner-test-only.2026-08-17.v1",
+    rubricVersion: "wcv_c2r_c_p_practice_relation_rubric.v1",
+    policyVersion: "wcv_c2r_c_p_exposure_and_independence_policy.v1",
+    validatorVersion: "validator:practice-calculation-relation@1",
+    stateData: {
+      inputMode: "TYPED_TEXT",
+      revisionNumber: 0,
+      prediction: null,
+      predictionConfidence: null,
+      selfDiagnosisCode: null,
+      gapCandidates: [],
+      repairNeed: null,
+      repairPath: null,
+      continuation: null,
+      proofEvaluation: null,
+      resultReasonCodes: [],
+    },
+    createdAt: timestamp,
+    updatedAt: timestamp,
+  };
+}
+
+function c2rCPArtifactPayload(artifactId) {
+  return {
+    artifactId,
+    revisionNumber: 0,
+    kind: "capture_draft",
+    inputMode: "TYPED_TEXT",
+    body: "합성 실무 입력: 총수익 120,000,000원 - 운영비용 20,000,000원 = 순수익 100,000,000원/년",
+    createdAt: "2026-08-17T00:00:00.000Z",
+  };
+}
+
+function c2rCPCreateSql({ session, artifact, commandId }) {
+  return `
+    begin;
+    set local role service_role;
+    select concat_ws(':', out_session_id::text, out_record_version::text, out_state, replayed::text)
+      from public.wcv_c2_create_trusted_repair_session_v1(
+        ${jsonLiteral(session)}, ${jsonLiteral(artifact)}, ${sqlLiteral(commandId)}::uuid
+      );
+    commit;
+  `;
+}
+
+function c2rCPTransitionSql({
+  commandId,
+  expectedVersion,
+  expectedState,
+  nextState,
+  exposure,
+}) {
+  const stateData = {
+    inputMode: "TYPED_TEXT",
+    revisionNumber: 0,
+    prediction: "net_income_relation",
+    predictionConfidence: "high",
+    selfDiagnosisCode: "relation_ready",
+    gapCandidates: [{ gapId: "practice-net-income-relation", priority: 1 }],
+    repairNeed: "ordered_calculation_relation",
+    repairPath: "smallest_eligible_scaffold",
+    continuation: "RETRY_SAME_TARGET",
+    proofEvaluation: {
+      state: "PASS",
+      anchorId: "repair-anchor:practice:synthetic-net-income@1",
+      validatorVersion: "validator:practice-calculation-relation@1",
+      reasonCodes: ["ordered_relation_verified"],
+    },
+    resultReasonCodes: ["ordered_relation_verified"],
+  };
+  const exposureJson = exposure === null ? "null::jsonb" : jsonLiteral(exposure);
+  return `
+    begin;
+    set local role service_role;
+    select concat_ws(':', out_record_version::text, out_state, replayed::text)
+      from public.wcv_c2_apply_trusted_repair_transition_v1(
+        ${sqlLiteral(C2R_C_P_SESSION_A)}::uuid,
+        ${sqlLiteral(USER_A)}::uuid,
+        ${sqlLiteral(commandId)}::uuid,
+        ${expectedVersion},
+        ${sqlLiteral(expectedState)},
+        ${sqlLiteral(nextState)},
+        ${jsonLiteral(stateData)},
+        null::uuid,
+        ${sqlLiteral("practice-net-income-relation")},
+        ${sqlLiteral("partial")},
+        1::smallint,
+        false,
+        null::jsonb,
+        ${exposureJson}
+      );
+    commit;
+  `;
+}
+
+function runC2RCPDatabaseAssertions(containerName, targetMigration) {
+  const passedAssertions = new Set();
+  const migration = targetMigration.migrations[0];
+  applySql(containerName, bootstrapSql(), "isolated Supabase role bootstrap");
+  applySql(containerName, migration.content, "C2R-C-P Practice migration");
+
+  assertScalar(
+    containerName,
+    `select concat_ws(':',
+      (select count(*) from pg_class where relname like 'wcv_c2_trusted_repair_%' and relkind = 'r'),
+      (select count(*) from pg_proc where proname in (
+        'wcv_c2_create_trusted_repair_session_v1',
+        'wcv_c2_apply_trusted_repair_transition_v1'
+      ))
+    );`,
+    "5:2",
+    "C2R-C-P migration inventory assertion",
+  );
+  passedAssertions.add("practice_migration_applied");
+
+  assertScalar(
+    containerName,
+    `select count(*)::text from pg_class
+      where relname in (
+        'wcv_c2_trusted_repair_sessions',
+        'wcv_c2_trusted_repair_private_artifacts',
+        'wcv_c2_trusted_repair_exposure_events',
+        'wcv_c2_trusted_repair_command_receipts',
+        'wcv_c2_trusted_repair_scarcity_events'
+      ) and relrowsecurity and relforcerowsecurity;`,
+    "5",
+    "C2R-C-P forced RLS assertion",
+  );
+  passedAssertions.add("forced_rls_all_tables");
+
+  const sessionA = c2rCPSessionPayload({
+    sessionId: C2R_C_P_SESSION_A,
+    userId: USER_A,
+  });
+  const artifactA = c2rCPArtifactPayload(C2R_C_P_ARTIFACT_A);
+  assertScalar(
+    containerName,
+    c2rCPCreateSql({
+      session: sessionA,
+      artifact: artifactA,
+      commandId: C2R_C_P_CREATE_COMMAND_A,
+    }),
+    `${C2R_C_P_SESSION_A}:1:editable_capture_draft:false`,
+    "C2R-C-P service-only create assertion",
+  );
+
+  assertSqlDenied(
+    containerName,
+    c2rCPCreateSql({
+      session: c2rCPSessionPayload({
+        sessionId: C2R_C_P_SESSION_B,
+        userId: USER_B,
+        subject: "appraisal_theory",
+      }),
+      artifact: c2rCPArtifactPayload(C2R_C_P_ARTIFACT_B),
+      commandId: C2R_C_P_CREATE_COMMAND_B,
+    }),
+    /subject|check constraint/i,
+    "C2R-C-P Practice-only subject assertion",
+  );
+  passedAssertions.add("practice_only_subject_constraint");
+
+  assertSqlDenied(
+    containerName,
+    authenticatedContext(
+      USER_A,
+      "select count(*) from public.wcv_c2_trusted_repair_sessions;",
+    ),
+    /permission denied/i,
+    "C2R-C-P authenticated owner session read denial assertion",
+  );
+  assertSqlDenied(
+    containerName,
+    authenticatedContext(
+      USER_B,
+      "select count(*) from public.wcv_c2_trusted_repair_sessions;",
+    ),
+    /permission denied/i,
+    "C2R-C-P authenticated cross-user session read denial assertion",
+  );
+  passedAssertions.add("authenticated_session_read_denied");
+
+  assertSqlDenied(
+    containerName,
+    anonymousContext("select count(*) from public.wcv_c2_trusted_repair_sessions;"),
+    /permission denied/i,
+    "C2R-C-P anonymous read assertion",
+  );
+  passedAssertions.add("anonymous_read_denied");
+
+  assertSqlDenied(
+    containerName,
+    authenticatedContext(
+      USER_A,
+      "select count(*) from public.wcv_c2_trusted_repair_private_artifacts;",
+    ),
+    /permission denied/i,
+    "C2R-C-P authenticated private body read assertion",
+  );
+  passedAssertions.add("authenticated_private_body_read_denied");
+
+  assertSqlDenied(
+    containerName,
+    authenticatedContext(
+      USER_A,
+      `update public.wcv_c2_trusted_repair_sessions set state='blocked' where id=${sqlLiteral(C2R_C_P_SESSION_A)}::uuid;`,
+    ),
+    /permission denied/i,
+    "C2R-C-P authenticated direct mutation assertion",
+  );
+  passedAssertions.add("authenticated_direct_mutation_denied");
+
+  assertSqlDenied(
+    containerName,
+    authenticatedContext(
+      USER_A,
+      `select * from public.wcv_c2_create_trusted_repair_session_v1('{}'::jsonb, '{}'::jsonb, ${sqlLiteral(C2R_C_P_CREATE_COMMAND_B)}::uuid);`,
+    ),
+    /permission denied/i,
+    "C2R-C-P authenticated RPC execution assertion",
+  );
+  passedAssertions.add("service_only_rpc_execution");
+
+  assertScalar(
+    containerName,
+    c2rCPCreateSql({
+      session: sessionA,
+      artifact: artifactA,
+      commandId: C2R_C_P_CREATE_COMMAND_A,
+    }),
+    `${C2R_C_P_SESSION_A}:1:editable_capture_draft:true`,
+    "C2R-C-P idempotent create replay assertion",
+  );
+  assertScalar(
+    containerName,
+    `select concat_ws(':',
+      (select count(*) from public.wcv_c2_trusted_repair_sessions),
+      (select count(*) from public.wcv_c2_trusted_repair_private_artifacts),
+      (select count(*) from public.wcv_c2_trusted_repair_command_receipts)
+    );`,
+    "1:1:1",
+    "C2R-C-P replay row cardinality assertion",
+  );
+  passedAssertions.add("idempotent_create_replay_no_duplicate_work");
+
+  const exposure = {
+    exposureId: C2R_C_P_EXPOSURE_A,
+    revisionId: C2R_C_P_ARTIFACT_A,
+    gapId: "practice-net-income-relation",
+    assistanceLevel: 1,
+    scaffoldKind: "smallest_eligible_scaffold",
+    occurredAt: "2026-08-17T00:01:00.000Z",
+  };
+  assertScalar(
+    containerName,
+    c2rCPTransitionSql({
+      commandId: C2R_C_P_TRANSITION_COMMAND_A,
+      expectedVersion: 1,
+      expectedState: "editable_capture_draft",
+      nextState: "exposure_committed",
+      exposure,
+    }),
+    "2:exposure_committed:false",
+    "C2R-C-P exposure transition assertion",
+  );
+  assertScalar(
+    containerName,
+    `select concat_ws(':',
+      (select record_version from public.wcv_c2_trusted_repair_sessions where id=${sqlLiteral(C2R_C_P_SESSION_A)}::uuid),
+      (select count(*) from public.wcv_c2_trusted_repair_exposure_events where session_id=${sqlLiteral(C2R_C_P_SESSION_A)}::uuid),
+      (select count(*) from public.wcv_c2_trusted_repair_command_receipts where session_id=${sqlLiteral(C2R_C_P_SESSION_A)}::uuid)
+    );`,
+    "2:1:2",
+    "C2R-C-P exposure and transition atomicity assertion",
+  );
+  passedAssertions.add("exposure_and_state_transition_atomic");
+
+  assertScalar(
+    containerName,
+    `select state_data -> 'proofEvaluation' ->> 'state'
+      from public.wcv_c2_trusted_repair_sessions
+      where id=${sqlLiteral(C2R_C_P_SESSION_A)}::uuid;`,
+    "PASS",
+    "C2R-C-P proof evaluation persistence assertion",
+  );
+  passedAssertions.add("proof_evaluation_persisted");
+
+  assertSqlDenied(
+    containerName,
+    c2rCPTransitionSql({
+      commandId: C2R_C_P_STALE_COMMAND_A,
+      expectedVersion: 1,
+      expectedState: "editable_capture_draft",
+      nextState: "partial",
+      exposure: null,
+    }),
+    /WCV_C2_CAS_CONFLICT/i,
+    "C2R-C-P stale CAS assertion",
+  );
+  assertSqlDenied(
+    containerName,
+    c2rCPTransitionSql({
+      commandId: C2R_C_P_ATOMIC_COMMAND_A,
+      expectedVersion: 2,
+      expectedState: "exposure_committed",
+      nextState: "partial",
+      exposure: { ...exposure, exposureId: C2R_C_P_ATOMIC_COMMAND_A, revisionId: C2R_C_P_MISSING_REVISION },
+    }),
+    /foreign key constraint/i,
+    "C2R-C-P failed exposure atomic rollback assertion",
+  );
+  assertScalar(
+    containerName,
+    `select concat_ws(':',
+      (select record_version from public.wcv_c2_trusted_repair_sessions where id=${sqlLiteral(C2R_C_P_SESSION_A)}::uuid),
+      (select count(*) from public.wcv_c2_trusted_repair_exposure_events where session_id=${sqlLiteral(C2R_C_P_SESSION_A)}::uuid),
+      (select count(*) from public.wcv_c2_trusted_repair_command_receipts where session_id=${sqlLiteral(C2R_C_P_SESSION_A)}::uuid)
+    );`,
+    "2:1:2",
+    "C2R-C-P failed transitions leave no partial writes assertion",
+  );
+  passedAssertions.add("stale_cas_transition_rejected");
+
+  return passedAssertions;
+}
+
 function runDatabaseAssertions(containerName, targetMigration) {
-  return targetMigration.adapter === "s236p"
-    ? runS236PDatabaseAssertions(containerName, targetMigration)
-    : runS233ADatabaseAssertions(containerName, targetMigration);
+  if (targetMigration.adapter === "s236p") {
+    return runS236PDatabaseAssertions(containerName, targetMigration);
+  }
+  if (targetMigration.adapter === "c2r-c-p") {
+    return runC2RCPDatabaseAssertions(containerName, targetMigration);
+  }
+  return runS233ADatabaseAssertions(containerName, targetMigration);
 }
 
 function writeEvidence({ context, migration, passedAssertions, riskBytes }) {
