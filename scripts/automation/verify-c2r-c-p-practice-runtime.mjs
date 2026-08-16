@@ -25,7 +25,7 @@ const BROWSER_CONFIG_PATH = path.join(
   "tests/e2e/c2r-c-p-playwright.config.ts",
 );
 const PROJECT_ID = "c2r-c-p-practice-repair";
-const EXPECTED_CLI_VERSION = "2.95.0";
+const EXPECTED_CLI_VERSION = "2.114.0";
 const EXCLUDED_SERVICES = [
   "realtime",
   "storage-api",

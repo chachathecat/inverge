@@ -114,7 +114,7 @@ test("[C2R-C-P-R08/R11/R14] workflow is fork-safe, shell-complete, and credentia
   assert.doesNotMatch(workflow, /pull_request_target|persist-credentials: true|SUPABASE_ACCESS_TOKEN/);
 
   const verifier = read(VERIFIER);
-  assert.match(verifier, /EXPECTED_CLI_VERSION = "2\.95\.0"/);
+  assert.match(verifier, /EXPECTED_CLI_VERSION = "2\.114\.0"/);
   assert.match(verifier, /remoteSupabaseUsed: false/);
   assert.match(verifier, /repositorySecretsUsed: false/);
   assert.match(verifier, /liveProvidersUsed: false/);
