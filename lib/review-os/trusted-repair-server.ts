@@ -111,6 +111,9 @@ export function trustedRepairView(
     fixture,
     sourceBinding: source,
   });
+  const committedScaffold = scaffoldFor(releaseAggregate, fixture);
+  const answerBearingCriteriaVisible =
+    sourceBindingCurrent && committedScaffold !== null;
   const anchorsVisible =
     sourceBindingCurrent &&
     releaseAggregate.session.state !== "editable_capture_draft";
@@ -174,7 +177,9 @@ export function trustedRepairView(
         rawBodyTrainingAllowed: false,
         sharingAllowed: false,
       },
-      successCriterionKo: fixture.successCriterionKo,
+      ...(answerBearingCriteriaVisible
+        ? { successCriterionKo: fixture.successCriterionKo }
+        : {}),
     },
     anchors: anchorsVisible
       ? fixture.anchors.map((anchor) => ({
@@ -195,7 +200,9 @@ export function trustedRepairView(
                 supportingEvidence: candidate.supportingEvidence,
                 counterEvidence: candidate.counterEvidence,
                 repairActionKo: candidate.repairActionKo,
-                successCriterionKo: candidate.successCriterionKo,
+                ...(answerBearingCriteriaVisible
+                  ? { successCriterionKo: candidate.successCriterionKo }
+                  : {}),
               }),
             ),
           }
@@ -214,7 +221,7 @@ export function trustedRepairView(
       releaseAggregate.session.state === "editable_capture_draft"
         ? fixture.editableDrafts[releaseAggregate.session.stateData.inputMode]
         : null,
-    scaffold: scaffoldFor(releaseAggregate, fixture),
+    scaffold: committedScaffold,
     claimBoundary: {
       sameSessionCriterionOnly: true,
       masteryClaimed: false,

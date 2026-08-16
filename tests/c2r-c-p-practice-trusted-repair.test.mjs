@@ -468,6 +468,7 @@ test("Practice proof rejects negated relation and rounding assertions", () => {
     "틀린 식은 ",
     "잘못된 계산은 ",
     "이 관계는 오류라서 ",
+    "다음은 틀렸다: ",
   ]) {
     const prefixedRelation = VALID_RELATION.replace(
       "120,000,000 - 20,000,000 = 100,000,000원/년.",

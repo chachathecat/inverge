@@ -224,6 +224,7 @@ async function createPartialPractice(context: BrowserContext) {
       inputMode: "TYPED_TEXT",
     })
   ).body.view;
+  expect(view.fixture).not.toHaveProperty("successCriterionKo");
   for (const [action, fields] of [
     ["confirm_revision", { body: "합성 확정 수정본" }],
     ["commit_prediction", { prediction: "likely_partial", confidence: "medium" }],
@@ -241,6 +242,26 @@ async function createPartialPractice(context: BrowserContext) {
     });
     expect(result.response.status()).toBe(200);
     view = result.body.view;
+    const exposureCommitted = new Set([
+      "exposure_committed",
+      "repair_submitted",
+      "verified",
+      "partial",
+      "guided",
+      "blocked",
+      "uncertain",
+    ]).has(view.session.state);
+    if (exposureCommitted) {
+      expect(view.fixture).toHaveProperty("successCriterionKo");
+      for (const candidate of view.diagnosis?.candidates ?? []) {
+        expect(candidate).toHaveProperty("successCriterionKo");
+      }
+    } else {
+      expect(view.fixture).not.toHaveProperty("successCriterionKo");
+      for (const candidate of view.diagnosis?.candidates ?? []) {
+        expect(candidate).not.toHaveProperty("successCriterionKo");
+      }
+    }
   }
   expect(view.session.state).toBe("partial");
   expect(view.session.proofEvaluation.state).toBe("UNSUPPORTED");

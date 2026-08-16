@@ -125,7 +125,7 @@ function claimTailIsNegated(text: string, claimEnd: number) {
 }
 
 function claimHeadRejectsRelation(text: string, claimStart: number) {
-  const boundedHead = text.slice(Math.max(0, claimStart - 96), claimStart);
+  const boundedHead = text.slice(0, claimStart);
   const clauseStart = Math.max(
     boundedHead.lastIndexOf("."),
     boundedHead.lastIndexOf("!"),
@@ -134,13 +134,8 @@ function claimHeadRejectsRelation(text: string, claimStart: number) {
     boundedHead.lastIndexOf("\n"),
   );
   const clause = boundedHead.slice(clauseStart + 1);
-  return (
-    /(?:아닌|틀렸|틀린|틀림|잘못|오류)[^.!?;\n]{0,24}(?:식|관계|계산)\s*(?:은|는|이|가|:)?\s*$/u.test(
-      clause,
-    ) ||
-    /(?:식|관계|계산)\s*(?:은|는|이|가|:)?[^.!?;\n]{0,24}(?:아니다|아닌|틀렸|틀린|틀림|잘못|오류)[^.!?;\n]{0,16}$/u.test(
-      clause,
-    )
+  return /(?:아니|아님|아닌|아닙|아닐|아냐|않|틀렸|틀린|틀림|잘못|오류)/u.test(
+    clause,
   );
 }
 

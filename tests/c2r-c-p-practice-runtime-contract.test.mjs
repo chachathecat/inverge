@@ -264,6 +264,17 @@ test("bodyless Practice bank scarcity is persisted before the request is denied"
 test("guided exposure returns and labels distinct level-three content", () => {
   const server = read("lib/review-os/trusted-repair-server.ts");
   const client = read("components/review-os/trusted-repair-loop.tsx");
+  assert.match(server, /const committedScaffold = scaffoldFor\(releaseAggregate, fixture\)/);
+  assert.match(server, /sourceBindingCurrent && committedScaffold !== null/);
+  assert.match(
+    server,
+    /answerBearingCriteriaVisible[\s\S]*?successCriterionKo: fixture\.successCriterionKo/,
+  );
+  assert.match(
+    server,
+    /answerBearingCriteriaVisible[\s\S]*?successCriterionKo: candidate\.successCriterionKo/,
+  );
+  assert.match(server, /scaffold: committedScaffold/);
   assert.match(server, /scaffoldKind: matchingExposure\.scaffoldKind/);
   assert.match(server, /trustedRepairScaffoldText/);
   assert.match(client, /view\.scaffold\.kind === "guided_solution"/);
