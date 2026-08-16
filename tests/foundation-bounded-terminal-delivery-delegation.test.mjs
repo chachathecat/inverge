@@ -85,8 +85,14 @@ const ACTIONABLE_FINDING_EVIDENCE_FIELDS = [
   "finding_identity_sha256",
   "severity",
   "root_invariant_id",
+  "review_finding_title",
   "path",
   "review_comment_database_id",
+  "review_comment_author_login",
+  "review_comment_author_database_id",
+  "review_comment_body_sha256",
+  "review_comment_created_at",
+  "review_comment_updated_at",
   "review_url",
   "first_observed_cycle_head_sha",
   "last_observed_cycle_head_sha",
@@ -100,9 +106,13 @@ const REPLACEMENT_FINDING_LINEAGE_FIELDS = [
   "same_actionable_finding_verdict",
   "owner_gate_required",
   "owner_authorization_record_url_or_null",
+  "owner_authorization_record_database_id_or_null",
   "owner_authorization_record_sha256_or_null",
   "owner_authorization_decision_or_null",
   "owner_authorization_actor_or_null",
+  "owner_authorization_record_host_author_login_or_null",
+  "owner_authorization_record_host_author_database_id_or_null",
+  "owner_authorization_record_host_created_at_or_null",
   "owner_authorized_at_or_null",
 ];
 const VALIDATION_HEAD_REFERENCE_BY_CONTEXT = {
@@ -124,20 +134,57 @@ const FINDING_IDENTITY_CANONICALIZATION = {
   member_ordering: "lexicographic_UTF16_code_units_per_RFC8785",
   repository_value: "chachathecat/inverge",
   delivery_issue_value: 736,
-  root_invariant_id_pattern: "^[a-z0-9]+(?:_[a-z0-9]+)*$",
+  root_invariant_id_pattern: "^[a-f0-9]{64}$",
   path_normalization: "repository_relative_forward_slash_unicode_NFC_no_empty_or_dot_segments",
   path_case_sensitive: true,
   no_additional_object_members: true,
   preimage_bytes: "UTF-8_of_RFC8785_canonicalized_object",
   digest: "SHA-256_lowercase_hex",
 };
+const ROOT_INVARIANT_DERIVATION = {
+  version: "review-finding-title-nfc-sha256-v1",
+  source: "independently_resolved_digest_bound_unedited_github_review_comment_body",
+  line_endings_before_extraction: "CRLF_and_CR_to_LF",
+  title_source_line: "first_non_empty_line",
+  title_extraction_regex: "^\\*\\*(?:<sub><sub>!\\[(P[0-3]) Badge\\]\\([^\\r\\n)]*\\)</sub></sub> {2})?([^\\r\\n]+)\\*\\*$",
+  priority_capture_group_must_equal_severity_when_present: true,
+  title_capture_group: 2,
+  exactly_one_title_capture_required: true,
+  title_must_be_non_empty_single_line_plain_text: true,
+  unicode_version: "15.1.0",
+  normalization: "Unicode_NFC_trim_and_collapse_each_Unicode_15_1_White_Space_property_run_to_U+0020_case_and_punctuation_preserved",
+  normalized_title_must_equal_receipt_review_finding_title: true,
+  preimage_bytes: "UTF-8_of_normalized_review_finding_title",
+  root_invariant_id: "SHA-256_lowercase_hex",
+  root_invariant_id_pattern: "^[a-f0-9]{64}$",
+};
 const CHECK_EVIDENCE_FIELDS = [
   "name",
+  "github_evidence_kind",
+  "github_evidence_database_id",
+  "github_evidence_api_url",
   "head_sha",
   "conclusion",
   "details_url",
   "completed_at",
 ];
+const GITHUB_CHECK_EVIDENCE_KINDS = ["check_run", "commit_status"];
+const RESOLVED_CHECK_FIELD_MAPPING = {
+  check_run: {
+    name: "name",
+    head_sha: "head_sha",
+    conclusion: "conclusion",
+    details_url: "details_url",
+    completed_at: "completed_at",
+  },
+  commit_status: {
+    name: "context",
+    head_sha: "resolved_commit_sha",
+    conclusion: "state",
+    details_url: "target_url",
+    completed_at: "updated_at",
+  },
+};
 const DELIVERY_SEQUENCE = [
   "refresh_live_main_github_authority_dependencies_and_writer_state",
   "select_one_dependency_ready_non_production_stage",
@@ -563,8 +610,21 @@ test("requires expected-head squash tree equality and a closed metadata-only rec
     "finding identity preimage fields",
   );
   assert.deepEqual(replacement.finding_identity_canonicalization, FINDING_IDENTITY_CANONICALIZATION);
+  assert.deepEqual(replacement.root_invariant_derivation, ROOT_INVARIANT_DERIVATION);
   assert.equal(replacement.finding_identity_must_be_lowercase_sha256_of_canonical_preimage, true);
   assert.equal(replacement.finding_identity_preimage_must_be_recomputed_from_receipt_and_review_metadata, true);
+  assert.equal(replacement.root_invariant_id_must_be_recomputed_from_resolved_review_comment_title, true);
+  assert.equal(replacement.receipt_writer_supplied_root_invariant_id_without_exact_derivation_is_invalid, true);
+  assert.equal(replacement.review_comment_database_id_and_url_must_equal_resolved_github_comment, true);
+  assert.equal(replacement.review_comment_author_login_and_database_id_must_equal_resolved_github_comment_author, true);
+  assert.equal(
+    replacement.review_comment_body_sha256_preimage,
+    "UTF-8_of_exact_resolved_comment_body_after_CRLF_and_CR_to_LF",
+  );
+  assert.equal(replacement.review_comment_body_sha256_must_be_lowercase_64_hex, true);
+  assert.equal(replacement.review_comment_body_sha256_must_hash_exact_resolved_comment_body, true);
+  assert.equal(replacement.review_comment_created_and_updated_at_must_equal_resolved_github_comment, true);
+  assert.equal(replacement.review_comment_created_at_must_equal_updated_at, true);
   assert.equal(replacement.finding_review_path_must_equal_normalized_canonical_preimage_path, true);
   assert.equal(replacement.finding_review_comment_and_url_must_resolve_to_superseded_pr, true);
   assert.equal(replacement.every_actionable_finding_at_supersession_must_be_represented_exactly_once, true);
@@ -584,9 +644,25 @@ test("requires expected-head squash tree equality and a closed metadata-only rec
   assert.equal(replacement.every_replacement_actionable_finding_must_be_compared_against_all_superseded_finding_identities, true);
   assert.equal(replacement.matching_p0_or_p1_finding_identity_requires_same_finding_verdict_true, true);
   assert.equal(replacement.owner_authorization_record_url_must_be_independently_resolvable, true);
+  assert.equal(
+    replacement.owner_authorization_record_url_must_resolve_to_github_record_in_repository,
+    "chachathecat/inverge",
+  );
+  assert.equal(replacement.owner_authorization_record_database_id_must_equal_resolved_github_record, true);
+  assert.equal(
+    replacement.owner_authorization_record_sha256_preimage,
+    "UTF-8_of_exact_resolved_record_body_after_CRLF_and_CR_to_LF",
+  );
   assert.equal(replacement.owner_authorization_record_sha256_must_hash_exact_resolved_record, true);
   assert.equal(replacement.owner_authorization_decision_must_equal, "authorized");
   assert.equal(replacement.owner_authorization_actor_must_equal, "chachathecat");
+  assert.equal(replacement.owner_authorization_record_host_author_login_must_be_resolved_from_github_record, true);
+  assert.equal(replacement.owner_authorization_record_host_author_login_must_equal, "chachathecat");
+  assert.equal(replacement.owner_authorization_record_host_author_database_id_must_be_resolved_from_github_record, true);
+  assert.equal(replacement.owner_authorization_record_host_author_database_id_must_equal, 128282020);
+  assert.equal(replacement.owner_authorization_actor_must_equal_resolved_host_author_login, true);
+  assert.equal(replacement.owner_authorization_record_host_created_at_must_equal_resolved_github_record_created_at, true);
+  assert.equal(replacement.owner_authorized_at_must_equal_resolved_host_created_at, true);
   assert.equal(
     replacement.owner_authorization_record_must_bind_repository_replacement_pr_finding_identity_and_review_url,
     true,
@@ -635,9 +711,31 @@ test("requires expected-head squash tree equality and a closed metadata-only rec
     CHECK_EVIDENCE_FIELDS,
     "check evidence fields",
   );
+  exactMembers(
+    receipt.exact_head_checks_binding.github_evidence_kinds,
+    GITHUB_CHECK_EVIDENCE_KINDS,
+    "GitHub check evidence kinds",
+  );
+  assert.deepEqual(receipt.exact_head_checks_binding.resolved_field_mapping_by_kind, RESOLVED_CHECK_FIELD_MAPPING);
   assert.deepEqual(receipt.exact_head_checks_binding.head_reference_by_context, VALIDATION_HEAD_REFERENCE_BY_CONTEXT);
   assert.equal(receipt.exact_head_checks_binding.top_level_binding_context, "top_level_receipt");
   assert.equal(receipt.exact_head_checks_binding.check_head_must_equal_resolved_context_head, true);
+  assert.equal(receipt.exact_head_checks_binding.each_required_name_must_appear_exactly_once, true);
+  assert.equal(receipt.exact_head_checks_binding.github_evidence_api_url_must_be_independently_resolvable, true);
+  assert.equal(receipt.exact_head_checks_binding.github_evidence_api_url_must_target_same_repository, true);
+  assert.equal(receipt.exact_head_checks_binding.github_evidence_database_id_must_be_positive_integer, true);
+  assert.equal(receipt.exact_head_checks_binding.github_evidence_database_id_must_equal_resolved_object, true);
+  assert.equal(
+    receipt.exact_head_checks_binding.github_evidence_api_url_must_equal_resolved_object_url_or_exact_head_status_collection_url,
+    true,
+  );
+  assert.equal(receipt.exact_head_checks_binding.github_evidence_kind_must_match_resolved_object, true);
+  assert.equal(
+    receipt.exact_head_checks_binding.resolved_evidence_must_bind_name_head_conclusion_details_url_and_completed_at,
+    true,
+  );
+  assert.equal(receipt.exact_head_checks_binding.commit_status_must_resolve_from_exact_head_commit_status_collection, true);
+  assert.equal(receipt.exact_head_checks_binding.fabricated_unresolved_or_mismatched_check_evidence_blocks, true);
   assert.equal(receipt.exact_head_checks_binding.missing_pending_skipped_cancelled_or_unsuccessful_blocks, true);
   exactMembers(
     receipt.local_validation_binding.required_names,
@@ -804,6 +902,12 @@ test("fails closed under widened writer, review, receipt, start or Owner-gate mu
     (value) => value.receipt_schema.source_correction_binding.each_correction_head_parent_must_equal_previous_reviewed_or_correction_head = false,
     (value) => value.receipt_schema.exact_head_checks_binding.required_conclusion = "neutral",
     (value) => value.receipt_schema.exact_head_checks_binding.required_per_check_fields.pop(),
+    (value) => value.receipt_schema.exact_head_checks_binding.github_evidence_kinds.pop(),
+    (value) => value.receipt_schema.exact_head_checks_binding.resolved_field_mapping_by_kind.commit_status.head_sha = "head_sha",
+    (value) => value.receipt_schema.exact_head_checks_binding.github_evidence_api_url_must_be_independently_resolvable = false,
+    (value) => value.receipt_schema.exact_head_checks_binding.github_evidence_database_id_must_be_positive_integer = false,
+    (value) => value.receipt_schema.exact_head_checks_binding.github_evidence_database_id_must_equal_resolved_object = false,
+    (value) => value.receipt_schema.exact_head_checks_binding.resolved_evidence_must_bind_name_head_conclusion_details_url_and_completed_at = false,
     (value) => value.receipt_schema.replacement_binding.maximum_clean_replacement_prs = 2,
     (value) => value.receipt_schema.replacement_binding.required_per_superseded_pr_evidence_fields.pop(),
     (value) => value.receipt_schema.replacement_binding.each_superseded_pr_review_cycle_count_must_equal_maximum = false,
@@ -811,6 +915,10 @@ test("fails closed under widened writer, review, receipt, start or Owner-gate mu
     (value) => value.receipt_schema.replacement_binding.finding_identity_preimage_fields.pop(),
     (value) => value.receipt_schema.replacement_binding.finding_identity_canonicalization.member_ordering = "implementation_defined",
     (value) => value.receipt_schema.replacement_binding.finding_identity_canonicalization.path_normalization = "platform_default",
+    (value) => value.receipt_schema.replacement_binding.root_invariant_derivation.source = "receipt_writer",
+    (value) => value.receipt_schema.replacement_binding.root_invariant_id_must_be_recomputed_from_resolved_review_comment_title = false,
+    (value) => value.receipt_schema.replacement_binding.review_comment_body_sha256_must_hash_exact_resolved_comment_body = false,
+    (value) => value.receipt_schema.replacement_binding.review_comment_created_at_must_equal_updated_at = false,
     (value) => value.receipt_schema.replacement_binding.finding_identity_preimage_must_be_recomputed_from_receipt_and_review_metadata = false,
     (value) => value.receipt_schema.replacement_binding.finding_review_path_must_equal_normalized_canonical_preimage_path = false,
     (value) => value.receipt_schema.replacement_binding.every_superseded_actionable_finding_must_have_exactly_one_lineage_entry = false,
@@ -819,7 +927,11 @@ test("fails closed under widened writer, review, receipt, start or Owner-gate mu
     (value) => value.receipt_schema.replacement_binding.every_replacement_actionable_finding_must_be_compared_against_all_superseded_finding_identities = false,
     (value) => value.receipt_schema.replacement_binding.matching_p0_or_p1_finding_identity_requires_same_finding_verdict_true = false,
     (value) => value.receipt_schema.replacement_binding.owner_authorization_record_sha256_must_hash_exact_resolved_record = false,
+    (value) => value.receipt_schema.replacement_binding.owner_authorization_record_sha256_preimage = "implementation_defined",
     (value) => value.receipt_schema.replacement_binding.owner_authorization_actor_must_equal = "any_admin",
+    (value) => value.receipt_schema.replacement_binding.owner_authorization_record_host_author_login_must_equal = "any_admin",
+    (value) => value.receipt_schema.replacement_binding.owner_authorization_record_host_author_database_id_must_equal = 1,
+    (value) => value.receipt_schema.replacement_binding.owner_authorization_actor_must_equal_resolved_host_author_login = false,
     (value) => value.receipt_schema.replacement_binding.missing_or_invalid_owner_authorization_blocks_receipt = false,
     (value) => value.receipt_schema.writer_binding.required_active_merge_producing_writer_count = 2,
     (value) => value.receipt_schema.review_evidence_binding.maximum_exact_head_review_cycles_per_pr = 4,
@@ -871,6 +983,31 @@ test("fails closed under widened writer, review, receipt, start or Owner-gate mu
         CHECK_EVIDENCE_FIELDS,
         "check evidence fields",
       );
+      exactMembers(
+        candidate.receipt_schema.exact_head_checks_binding.github_evidence_kinds,
+        GITHUB_CHECK_EVIDENCE_KINDS,
+        "GitHub check evidence kinds",
+      );
+      assert.deepEqual(
+        candidate.receipt_schema.exact_head_checks_binding.resolved_field_mapping_by_kind,
+        RESOLVED_CHECK_FIELD_MAPPING,
+      );
+      assert.equal(
+        candidate.receipt_schema.exact_head_checks_binding.github_evidence_api_url_must_be_independently_resolvable,
+        true,
+      );
+      assert.equal(
+        candidate.receipt_schema.exact_head_checks_binding.github_evidence_database_id_must_equal_resolved_object,
+        true,
+      );
+      assert.equal(
+        candidate.receipt_schema.exact_head_checks_binding.github_evidence_database_id_must_be_positive_integer,
+        true,
+      );
+      assert.equal(
+        candidate.receipt_schema.exact_head_checks_binding.resolved_evidence_must_bind_name_head_conclusion_details_url_and_completed_at,
+        true,
+      );
       assert.deepEqual(candidate.receipt_schema.source_correction_binding, {
         maximum_source_corrections: 2,
         count_must_equal_correction_head_count: true,
@@ -898,11 +1035,15 @@ test("fails closed under widened writer, review, receipt, start or Owner-gate mu
         "finding identity preimage fields",
       );
       assert.deepEqual(replacement.finding_identity_canonicalization, FINDING_IDENTITY_CANONICALIZATION);
+      assert.deepEqual(replacement.root_invariant_derivation, ROOT_INVARIANT_DERIVATION);
       assert.equal(replacement.each_superseded_pr_review_cycle_count_must_equal_maximum, true);
       assert.equal(
         replacement.finding_identity_preimage_must_be_recomputed_from_receipt_and_review_metadata,
         true,
       );
+      assert.equal(replacement.root_invariant_id_must_be_recomputed_from_resolved_review_comment_title, true);
+      assert.equal(replacement.review_comment_body_sha256_must_hash_exact_resolved_comment_body, true);
+      assert.equal(replacement.review_comment_created_at_must_equal_updated_at, true);
       assert.equal(replacement.finding_review_path_must_equal_normalized_canonical_preimage_path, true);
       assert.equal(replacement.every_superseded_actionable_finding_must_have_exactly_one_lineage_entry, true);
       assert.equal(replacement.same_actionable_p0_or_p1_requires_owner_gate_true, true);
@@ -913,7 +1054,14 @@ test("fails closed under widened writer, review, receipt, start or Owner-gate mu
       );
       assert.equal(replacement.matching_p0_or_p1_finding_identity_requires_same_finding_verdict_true, true);
       assert.equal(replacement.owner_authorization_record_sha256_must_hash_exact_resolved_record, true);
+      assert.equal(
+        replacement.owner_authorization_record_sha256_preimage,
+        "UTF-8_of_exact_resolved_record_body_after_CRLF_and_CR_to_LF",
+      );
       assert.equal(replacement.owner_authorization_actor_must_equal, "chachathecat");
+      assert.equal(replacement.owner_authorization_record_host_author_login_must_equal, "chachathecat");
+      assert.equal(replacement.owner_authorization_record_host_author_database_id_must_equal, 128282020);
+      assert.equal(replacement.owner_authorization_actor_must_equal_resolved_host_author_login, true);
       assert.equal(replacement.missing_or_invalid_owner_authorization_blocks_receipt, true);
       assert.equal(candidate.receipt_schema.writer_binding.required_active_merge_producing_writer_count, 1);
       assert.equal(candidate.receipt_schema.review_evidence_binding.maximum_exact_head_review_cycles_per_pr, 3);

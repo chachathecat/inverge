@@ -114,6 +114,10 @@ replacement lineage. Every named local validation is bound to the exact
 platform-specific canonical command and an independently resolvable,
 digest-bound execution record; a self-reported name or conclusion is not
 sufficient.
+Every named remote check likewise resolves its immutable GitHub check-run or
+commit-status database identity and API record in this repository. The
+resolved record must bind the exact name, head, successful conclusion, details
+URL and completion time; receipt-authored check values alone are invalid.
 Top-level validation evidence resolves its head against `expected_head_sha`;
 review-cycle evidence resolves against that cycle's `cycle_head_sha`, so an
 intermediate reviewed head is never compared with the final expected head. If
@@ -128,6 +132,15 @@ bytes for the exact four-member object `repository`, `delivery_issue`,
 `root_invariant_id` and normalized repository-relative `path`, using the
 versioned normalization and encoding rules in the machine contract. No
 implementation-defined concatenation, separator or field order is allowed.
+The `root_invariant_id` is not writer-selected: it is the lowercase SHA-256 of
+the version-normalized finding title extracted from the independently resolved
+digest-bound GitHub review comment, whose database ID, author, body digest and
+unchanged creation/update times are retained in the receipt. A free-form or
+merely pattern-valid root ID is invalid. For a triggered Owner gate, both the
+record payload actor and the immutable GitHub
+record author resolved from the authorization URL must be `chachathecat`; the
+resolved record database identity, Owner user database ID `128282020` and host
+creation time must also match the receipt.
 
 The delegation may then select and begin only the next dependency-ready
 non-Production stage from live repository authority. The expected first stage

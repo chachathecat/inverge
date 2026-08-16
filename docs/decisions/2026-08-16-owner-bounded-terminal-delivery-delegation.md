@@ -118,7 +118,12 @@ plus successful local-validation and remote-check evidence keyed to that exact
 cycle head. Each local-validation name is pinned to its exact Windows or POSIX
 canonical command, zero exit, exact head and independently resolvable,
 SHA-256-bound execution evidence. A validation label cannot attest to a
-different or no-op command. Top-level check and local-validation evidence uses
+different or no-op command. Each remote-check entry must also resolve an
+immutable GitHub check-run or commit-status database identity and API record
+in `chachathecat/inverge`. The resolved object, not receipt-authored values,
+binds its exact name, head, successful conclusion, details URL and completion
+time; fabricated, unresolved or mismatched evidence blocks. Top-level check
+and local-validation evidence uses
 `expected_head_sha` as its binding context, while evidence nested in a review
 cycle uses that exact `cycle_head_sha`; the two contexts cannot be substituted
 or compared to each other's head. For every superseded PR, the receipt separately
@@ -128,16 +133,23 @@ repository, delivery issue, root invariant and path. That identity uses the
 versioned `finding-identity-rfc8785-jcs-sha256-v1` encoding: strings are first
 Unicode NFC normalized with no surrounding whitespace, the exact four-member
 JSON object is serialized as UTF-8 RFC 8785 JCS bytes, and the lowercase
-SHA-256 is recomputed. Repository and issue are fixed, root IDs use the closed
-ASCII pattern, and paths are case-sensitive normalized repository-relative
+SHA-256 is recomputed. Repository and issue are fixed. The root invariant is
+not a writer-selected label: its lowercase SHA-256 is recomputed from the
+version-normalized finding title extracted from the independently resolved
+digest-bound, unedited GitHub review comment. Its database ID, author, exact
+body digest and identical creation/update time remain in the receipt alongside
+the normalized title. Paths are case-sensitive normalized repository-relative
 forward-slash paths with no empty or dot segments. Replacement lineage
 accounts for each such identity exactly once and uses independently verifiable
 review URLs to prove whether the same P0/P1 survived and therefore requires
 the Owner gate. A triggered gate must include a later, independently
 resolvable Owner authorization record, its exact content digest, decision and
-time. The record must be authored by `chachathecat`, postdate the matching
-replacement finding and bind repository, replacement PR, stable finding
-identity and review URL. Every replacement finding is compared against every
+time. Both its payload actor and the immutable GitHub hosting-author identity
+resolved from the record URL must be `chachathecat`; the resolved database
+identity, Owner user database ID `128282020` and host creation time must also
+match the receipt. The record must
+postdate the matching replacement finding and bind repository, replacement PR,
+stable finding identity and review URL. Every replacement finding is compared against every
 superseded stable identity; a matching P0/P1 cannot be labeled distinct.
 Acknowledgment that approval is required is not approval and blocks the
 receipt. It also binds thread state, effective ruleset
