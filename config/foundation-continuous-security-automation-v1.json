@@ -1,0 +1,85 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "contract_id": "foundation-continuous-security-automation-v1",
+  "phase": "E",
+  "issue": 734,
+  "policy_version": 1,
+  "evaluated_at": "2026-08-16T08:43:00Z",
+  "blocking_rules": {
+    "production_severities_requiring_approved_exception": ["high", "critical"],
+    "development_severities_requiring_approved_exception": ["high", "critical"],
+    "non_blocking_without_exception": ["info", "low", "moderate"],
+    "expired_exception_blocks": true,
+    "unknown_environment_blocks": true,
+    "unknown_reachability_blocks": true
+  },
+  "exception_schema": {
+    "version": 1,
+    "maximum_duration_days": 30,
+    "required_fields": [
+      "advisory_id",
+      "package",
+      "environment",
+      "severity",
+      "runtime_reachability",
+      "attacker_controlled_input_path",
+      "approved_by",
+      "approved_at",
+      "expires_at",
+      "rationale",
+      "compensating_controls",
+      "source_contract"
+    ],
+    "allowed_environments": ["production", "development"],
+    "allowed_reachability": ["reachable", "limited", "unreachable"],
+    "allowed_approvers": ["repository_owner"]
+  },
+  "exceptions": [
+    {
+      "advisory_id": "GHSA-4X5R-PXFX-6JF8",
+      "package": "@babel/core",
+      "environment": "development",
+      "severity": "low",
+      "runtime_reachability": "unreachable",
+      "attacker_controlled_input_path": "local or CI lint of repository-controlled source containing a malicious sourceMappingURL",
+      "approved_by": "repository_owner",
+      "approved_at": "2026-08-16T07:45:40Z",
+      "expires_at": "2026-09-14T23:59:59Z",
+      "rationale": "Babel 8 is a breaking major and no patched compatible Babel 7 release exists at evaluation time.",
+      "compensating_controls": [
+        "lint only reviewed repository source in isolated local and GitHub Actions workspaces",
+        "do not lint untrusted external source trees"
+      ],
+      "source_contract": "config/foundation-development-toolchain-security-v1.json"
+    }
+  ],
+  "artifact_policy": {
+    "allowed_artifacts": ["security-summary-v1.json", "sbom.cdx.json"],
+    "raw_audit_reports_uploaded": false,
+    "secrets_or_private_content_allowed": false,
+    "sbom_source": "package-lock.json",
+    "sbom_format": "cyclonedx"
+  },
+  "automation": {
+    "dependabot_schedule": "weekly",
+    "dependabot_groups": ["npm-production", "npm-development", "github-actions"],
+    "workflow_check_name": "security-audit-sbom",
+    "workflow_permissions": {
+      "contents": "read"
+    },
+    "audit_commands": [
+      "npm audit --package-lock-only --omit=dev --json",
+      "npm audit --package-lock-only --json"
+    ],
+    "sbom_command": "npm sbom --package-lock-only --sbom-format cyclonedx --sbom-type application"
+  },
+  "acceptance": {
+    "new_unapproved_production_high_or_critical_blocks": true,
+    "new_unapproved_development_high_or_critical_blocks": true,
+    "expired_exception_blocks": true,
+    "all_audit_warnings_universally_block": false,
+    "runtime_or_production_behavior_changed": false,
+    "live_service_called": false,
+    "dependency_graph_changed": false
+  }
+}
