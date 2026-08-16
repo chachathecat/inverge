@@ -86,6 +86,13 @@ the affected optional scope, and continue independent authorized non-
 Production work. This neither waives the clean `0/0/0` gate nor creates an
 Owner interruption; if removing the scope would trigger an Owner gate, stop
 for that gate.
+If the persistent P2 affects mandatory scope, close the candidate unmerged and
+structurally reduce it to a smaller independently complete outcome from
+refreshed `main`. This is the required post-replan disposition, not a third
+clean replan. The reduction may not omit a core safety, rights, privacy,
+evidence, learner-outcome or rollback invariant. If no smaller complete
+outcome preserves those invariants, the material product-scope or learner-
+promise Owner gate applies.
 
 After a validated merge, re-fetch live GitHub and repository authority and
 start the next dependency-ready authorized non-Production stage without a

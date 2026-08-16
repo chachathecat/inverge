@@ -48,6 +48,10 @@ test("repair and replan budgets fail closed without recursive receipt machinery"
   assert.match(decision, /An actionable P2 cannot be waived for merge/);
   assert.match(decision, /close that candidate unmerged, record the P2\s+in backlog/);
   assert.match(decision, /not a third replan or an Owner interruption/);
+  assert.match(decision, /If the persistent P2 affects mandatory scope/);
+  assert.match(decision, /structurally reduce it to a smaller independently complete outcome/);
+  assert.match(decision, /not a\s+third clean replan/);
+  assert.match(decision, /material product-scope or learner-promise change/);
   assert.match(decision, /must not maintain an alternate delivery receipt/);
   assert.doesNotMatch(decision, /\b[0-9a-f]{40}\b/i);
 });

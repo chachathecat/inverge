@@ -55,6 +55,14 @@ authorized non-Production work. This is a terminal disposition for that
 candidate, not a third replan or an Owner interruption. If removing the scope
 would require an Owner-gated change, the applicable Owner gate controls.
 
+If the persistent P2 affects mandatory scope, close the candidate unmerged and
+structurally reduce it to a smaller independently complete outcome from
+refreshed `main`. This is the explicit post-replan terminal disposition, not a
+third clean replan. Structural reduction may not remove a core safety, rights,
+privacy, evidence, learner-outcome or rollback invariant. If no smaller
+complete outcome preserves those invariants, continuing would require a
+material product-scope or learner-promise change and that Owner gate applies.
+
 ## Continuation and Owner gates
 
 After this decision's protected merge is validated, close Issue #736, re-read
