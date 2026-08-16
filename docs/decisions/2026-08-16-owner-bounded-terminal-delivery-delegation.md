@@ -152,20 +152,24 @@ receipt keeps each PR's live identity, head, correction history, review records
 and complete comment sets; it computes no semantic identity between findings.
 Any P0/P1 on the clean replacement triggers the Owner gate regardless of title,
 case, punctuation or wording. The required Issue #736 Owner record must resolve
-its immutable GitHub ID, exact body digest, author `chachathecat`/database ID
-`128282020`, unchanged creation time, repository, issue, superseded/replacement
-PRs, finding URLs, classification and authorized action. The record postdates
-the triggering review and authorizes only bounded repair/replan/close; it never
-authorizes merge before a fresh exact-head `0/0/0`. P2-only replacement
-findings do not falsely trigger the Owner gate.
+and preserve in the receipt its exact GitHub URL and immutable database ID,
+normalized exact-body digest, author `chachathecat`/database ID `128282020`,
+unchanged creation/update times, Owner-authorized time, repository, issue,
+superseded/replacement PRs, finding URLs, classification and authorized action.
+The record postdates the triggering review and authorizes only bounded
+repair/replan/close; it never authorizes merge before a fresh exact-head
+`0/0/0`. P2-only replacement findings do not falsely trigger the Owner gate.
 
 Each corrected actionable thread binds its live thread node ID, top-level
 comment ID and finding head, correction head and resolved GitHub commit time,
-one reply by `chachathecat` after that correction whose exact body binds the
-corrected head and evidence, current `isResolved=true`, `resolvedBy` and the
-later clean review on that correction head. Resolved state without the reply,
-reply without resolution, or reply/resolution without the later clean review
-blocks. GitHub supplies no resolution time, so the receipt records none.
+one reply by `chachathecat`, current `isResolved=true`, `resolvedBy` and the
+later clean review on that correction head. The complete required exact-head
+check set must resolve successful for that correction head first; the reply
+must postdate every resolved check completion time and the clean review
+submission time, and its exact body binds the corrected head. Resolved state
+without the reply, reply before completed verification, reply without
+resolution, or reply/resolution without the later clean review blocks. GitHub
+supplies no resolution time, so the receipt records none.
 
 Candidate and merge trees must match. The merge parent must equal the re-fetched
 base, and reviewed/remote/expected heads must be the same commit. Each

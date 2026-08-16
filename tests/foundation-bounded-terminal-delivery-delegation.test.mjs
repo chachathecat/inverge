@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { createHash } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
 
@@ -89,6 +90,14 @@ const SUPERSEDED_PR_EVIDENCE_FIELDS = [
 
 const OWNER_AUTHORIZATION_RECORD_FIELDS = [
   "decision_id",
+  "record_url",
+  "record_database_id",
+  "record_body_sha256",
+  "host_author_login",
+  "host_author_database_id",
+  "host_created_at",
+  "host_updated_at",
+  "owner_authorized_at",
   "repository",
   "delivery_issue",
   "replacement_pr",
@@ -265,6 +274,10 @@ function firstNonEmptyLine(body) {
   return body.replace(/\r\n?/g, "\n").split("\n").find((line) => line.length > 0) ?? "";
 }
 
+function normalizedBodySha256(body) {
+  return createHash("sha256").update(body.replace(/\r\n?/g, "\n"), "utf8").digest("hex");
+}
+
 function deriveReviewAuthority(contract, { review, comments, complete = true, reported = null }) {
   const binding = contract.receipt_schema.review_evidence_binding;
   assert.equal(complete, true, "review comment pagination must be complete");
@@ -298,6 +311,24 @@ function replacementOwnerGate(contract, derivedCounts) {
   return required;
 }
 
+function validateOwnerAuthorizationEvidence(contract, record, resolved) {
+  const binding = contract.receipt_schema.replacement_binding;
+  assert.ok(resolved, "Owner authorization record must still resolve from GitHub");
+  exactMembers(Object.keys(record), OWNER_AUTHORIZATION_RECORD_FIELDS, "Owner authorization record");
+  assert.equal(record.record_url, resolved.html_url);
+  assert.equal(record.record_database_id, resolved.database_id);
+  assert.equal(record.record_body_sha256, normalizedBodySha256(resolved.body));
+  assert.equal(record.host_author_login, resolved.author_login);
+  assert.equal(record.host_author_login, binding.owner_authorization_record_host_author_login_must_equal);
+  assert.equal(record.host_author_database_id, resolved.author_database_id);
+  assert.equal(record.host_author_database_id, binding.owner_authorization_record_host_author_database_id_must_equal);
+  assert.equal(record.host_created_at, resolved.created_at);
+  assert.equal(record.host_updated_at, resolved.updated_at);
+  assert.equal(record.owner_authorized_at, resolved.created_at);
+  assert.equal(record.host_created_at, record.host_updated_at, "edited Owner record must fail closed");
+  return true;
+}
+
 function validateRemoteMergeAuthority(contract, headSha, checks) {
   const binding = contract.receipt_schema.exact_head_checks_binding;
   const byName = new Map(checks.map((check) => [check.name, check]));
@@ -312,12 +343,18 @@ function validateRemoteMergeAuthority(contract, headSha, checks) {
   return true;
 }
 
-function validateThreadEvidence(contract, thread) {
+function validateThreadEvidence(contract, thread, checks) {
   const binding = contract.receipt_schema.thread_resolution_binding;
+  validateRemoteMergeAuthority(contract, thread.correction_head_sha, checks);
   assert.ok(thread.reply_comment_database_id, "correction-bound reply is required");
   assert.equal(thread.reply_author_login, binding.reply_author_login_must_equal);
   assert.equal(thread.reply_author_database_id, binding.reply_author_database_id_must_equal);
   assert.ok(new Date(thread.reply_created_at) > new Date(thread.correction_commit_committed_at));
+  for (const check of checks) {
+    assert.ok(check.completed_at, `missing completion time for ${check.name}`);
+    assert.ok(new Date(thread.reply_created_at) > new Date(check.completed_at), `reply predates ${check.name}`);
+  }
+  assert.ok(new Date(thread.reply_created_at) > new Date(thread.final_clean_review_submitted_at));
   assert.match(thread.reply_body, new RegExp(thread.correction_head_sha));
   assert.equal(thread.is_resolved, true, "thread must still be resolved live");
   assert.equal(thread.resolved_by_login, binding.resolved_by_login_must_equal);
@@ -391,8 +428,10 @@ function validateClosedContract(contract) {
   assert.equal(replacement.title_hash_prose_equality_punctuation_or_case_normalization_allowed, false);
   assert.equal(replacement.writer_selected_root_invariant_id_allowed, false);
   exactMembers(replacement.required_owner_authorization_record_fields, OWNER_AUTHORIZATION_RECORD_FIELDS, "Owner authorization fields");
+  assert.equal(replacement.owner_authorization_record_required_fields_must_be_preserved_in_receipt, true);
   assert.equal(replacement.owner_authorization_record_host_author_login_must_equal, "chachathecat");
   assert.equal(replacement.owner_authorization_record_host_author_database_id_must_equal, 128282020);
+  assert.equal(replacement.owner_authorization_record_host_updated_at_must_equal_resolved_github_record_updated_at, true);
   assert.equal(replacement.owner_authorization_decision_id_must_be_unique_on_delivery_issue, true);
   assert.equal(replacement.exactly_one_resolved_record_with_decision_id_required, true);
   assert.equal(replacement.owner_repair_authorization_does_not_authorize_merge, true);
@@ -424,6 +463,10 @@ function validateClosedContract(contract) {
 
   const threads = contract.receipt_schema.thread_resolution_binding;
   exactMembers(threads.required_per_actionable_thread_fields, THREAD_EVIDENCE_FIELDS, "thread evidence fields");
+  assert.equal(threads.correction_required_checks_must_resolve_through_exact_head_checks_binding, true);
+  assert.equal(threads.each_correction_check_head_sha_must_equal_correction_head_sha, true);
+  assert.equal(threads.reply_created_at_must_be_after_every_resolved_required_exact_head_check_completed_at, true);
+  assert.equal(threads.reply_created_at_must_be_after_final_clean_review_submitted_at, true);
   assert.equal(threads.resolved_without_correction_bound_reply_blocks, true);
   assert.equal(threads.reply_with_unresolved_thread_blocks, true);
   assert.equal(threads.resolved_with_reply_but_without_later_clean_review_blocks, true);
@@ -485,6 +528,7 @@ function successfulChecks(contract, headSha) {
     github_evidence_kind: index === 0 ? "commit_status" : "check_run",
     head_sha: headSha,
     conclusion: "success",
+    completed_at: `2026-08-16T12:01:${String(index).padStart(2, "0")}Z`,
   }));
 }
 
@@ -496,13 +540,51 @@ function validThreadFixture() {
     reply_author_database_id: 128282020,
     correction_head_sha: correctionHead,
     correction_commit_committed_at: "2026-08-16T12:00:00Z",
-    reply_created_at: "2026-08-16T12:01:00Z",
+    reply_created_at: "2026-08-16T12:03:00Z",
     reply_body: `Addressed at exact corrected head ${correctionHead}; focused and remote exact-head evidence are green.`,
     is_resolved: true,
     resolved_by_login: "chachathecat",
     final_clean_review_database_id: 303,
     final_clean_review_commit_id: correctionHead,
     final_clean_review_submitted_at: "2026-08-16T12:02:00Z",
+  };
+}
+
+function ownerEvidenceFixture() {
+  const body = "decision_id:\r\nowner-736-pr743-structural-simplification-2026-08-16\r\n";
+  const resolved = {
+    html_url: OWNER_RECORD_URL,
+    database_id: 5307469181,
+    body,
+    author_login: "chachathecat",
+    author_database_id: 128282020,
+    created_at: "2026-08-16T12:37:22Z",
+    updated_at: "2026-08-16T12:37:22Z",
+  };
+  return {
+    resolved,
+    record: {
+      decision_id: "owner-736-pr743-structural-simplification-2026-08-16",
+      record_url: resolved.html_url,
+      record_database_id: resolved.database_id,
+      record_body_sha256: normalizedBodySha256(resolved.body),
+      host_author_login: resolved.author_login,
+      host_author_database_id: resolved.author_database_id,
+      host_created_at: resolved.created_at,
+      host_updated_at: resolved.updated_at,
+      owner_authorized_at: resolved.created_at,
+      repository: "chachathecat/inverge",
+      delivery_issue: 736,
+      replacement_pr: 743,
+      superseded_pr: 742,
+      superseded_finding_url: "https://github.com/chachathecat/inverge/pull/742#discussion_r3791617114",
+      replacement_finding_url: "https://github.com/chachathecat/inverge/pull/743#discussion_r3791696198",
+      classification: "same_root",
+      authorized_action: "structural_simplification_repair",
+      authorization_scope: "the current five-file Foundation 5/5 control-plane PR only",
+      merge_authorized: false,
+      production_authority: "none",
+    },
   };
 }
 
@@ -550,6 +632,16 @@ test("every replacement P1 requires Owner classification while P2-only does not"
   const p2 = deriveReviewAuthority(contract, { review: reviewFixture(), comments: [commentFixture("P2")] });
   assert.equal(replacementOwnerGate(contract, p1.counts), true);
   assert.equal(replacementOwnerGate(contract, p2.counts), false);
+});
+
+test("Owner authorization receipt preserves immutable GitHub identity, digest, author, and times", async () => {
+  const contract = await readContract();
+  const { record, resolved } = ownerEvidenceFixture();
+  assert.equal(validateOwnerAuthorizationEvidence(contract, record, resolved), true);
+  assert.throws(() => validateOwnerAuthorizationEvidence(contract, { ...record, record_url: undefined }, resolved));
+  assert.throws(() => validateOwnerAuthorizationEvidence(contract, record, { ...resolved, body: `${resolved.body}edited` }));
+  assert.throws(() => validateOwnerAuthorizationEvidence(contract, record, { ...resolved, updated_at: "2026-08-16T12:38:00Z" }));
+  assert.throws(() => validateOwnerAuthorizationEvidence(contract, record, null));
 });
 
 test("resolved review comments derive counts and reject self-reported clean", async () => {
@@ -603,10 +695,13 @@ test("failed or missing exact-head GitHub checks block", async () => {
 test("thread resolution requires correction reply, resolved state, and later clean review", async () => {
   const contract = await readContract();
   const valid = validThreadFixture();
-  assert.equal(validateThreadEvidence(contract, valid), true);
-  assert.throws(() => validateThreadEvidence(contract, { ...valid, reply_comment_database_id: null }));
-  assert.throws(() => validateThreadEvidence(contract, { ...valid, is_resolved: false }));
-  assert.throws(() => validateThreadEvidence(contract, { ...valid, final_clean_review_database_id: null }));
+  const checks = successfulChecks(contract, valid.correction_head_sha);
+  assert.equal(validateThreadEvidence(contract, valid, checks), true);
+  assert.throws(() => validateThreadEvidence(contract, { ...valid, reply_comment_database_id: null }, checks));
+  assert.throws(() => validateThreadEvidence(contract, { ...valid, is_resolved: false }, checks));
+  assert.throws(() => validateThreadEvidence(contract, { ...valid, final_clean_review_database_id: null }, checks));
+  assert.throws(() => validateThreadEvidence(contract, { ...valid, reply_created_at: "2026-08-16T12:01:05Z" }, checks));
+  assert.throws(() => validateThreadEvidence(contract, { ...valid, reply_created_at: "2026-08-16T12:01:30Z" }, checks));
 });
 
 test("receipt values cannot substitute for live repository state", async () => {
@@ -659,7 +754,10 @@ test("fails closed under authority, review, local, thread, live-state, or Owner-
     (value) => value.receipt_schema.replacement_binding.any_replacement_actionable_p0_or_p1_requires_owner_gate = false,
     (value) => value.receipt_schema.replacement_binding.owner_gate_depends_on_semantic_finding_identity = true,
     (value) => value.receipt_schema.replacement_binding.replacement_comments_must_resolve_symmetrically_with_superseded_comments = false,
+    (value) => value.receipt_schema.replacement_binding.required_owner_authorization_record_fields.pop(),
+    (value) => value.receipt_schema.replacement_binding.owner_authorization_record_required_fields_must_be_preserved_in_receipt = false,
     (value) => value.receipt_schema.replacement_binding.owner_authorization_record_host_author_database_id_must_equal = 1,
+    (value) => value.receipt_schema.replacement_binding.owner_authorization_record_host_updated_at_must_equal_resolved_github_record_updated_at = false,
     (value) => value.receipt_schema.replacement_binding.exactly_one_resolved_record_with_decision_id_required = false,
     (value) => value.receipt_schema.review_evidence_binding.required_per_review_comment_fields.pop(),
     (value) => value.receipt_schema.review_evidence_binding.review_comments_api_must_be_paginated_to_completion_for_exact_review = false,
@@ -671,6 +769,9 @@ test("fails closed under authority, review, local, thread, live-state, or Owner-
     (value) => value.receipt_schema.exact_head_checks_binding.required_conclusion = "neutral",
     (value) => value.receipt_schema.exact_head_checks_binding.missing_pending_skipped_cancelled_or_unsuccessful_blocks = false,
     (value) => value.receipt_schema.thread_resolution_binding.resolved_without_correction_bound_reply_blocks = false,
+    (value) => value.receipt_schema.thread_resolution_binding.correction_required_checks_must_resolve_through_exact_head_checks_binding = false,
+    (value) => value.receipt_schema.thread_resolution_binding.reply_created_at_must_be_after_every_resolved_required_exact_head_check_completed_at = false,
+    (value) => value.receipt_schema.thread_resolution_binding.reply_created_at_must_be_after_final_clean_review_submitted_at = false,
     (value) => value.receipt_schema.thread_resolution_binding.reply_with_unresolved_thread_blocks = false,
     (value) => value.receipt_schema.thread_resolution_binding.resolved_with_reply_but_without_later_clean_review_blocks = false,
     (value) => value.receipt_schema.thread_resolution_binding.receipt_thread_evidence_may_override_live_thread_state = true,

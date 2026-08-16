@@ -147,17 +147,24 @@ classifying `same_root` or `distinct_root` and authorizing `repair`, `replan` or
 wording. P2-only replacement findings remain automatically repairable within
 the remaining budget. A triggered record must resolve from Issue #736, bind
 the repository, issue, superseded/replacement PRs and finding URLs, postdate the
-triggering review, and be authored by `chachathecat`, immutable database ID
-`128282020`. Repair authority is not merge authority; merge remains blocked
-until a fresh exact-head review derives `0/0/0`.
+triggering review, and preserve in the receipt its exact GitHub URL, database
+ID, normalized-body digest, resolved author login/database ID, creation/update
+times and Owner-authorized time alongside every semantic decision field. The
+resolved author must be `chachathecat`, immutable database ID `128282020`, and
+creation/update times must be unchanged. Repair authority is not merge
+authority; merge remains blocked until a fresh exact-head review derives
+`0/0/0`.
 
 Every corrected actionable thread must retain its live GitHub thread node ID,
 top-level comment ID and finding head, the resolved correction commit/head, and
-one reply authored by `chachathecat` after that correction. The reply binds the
-exact corrected head and evidence. The live thread must be resolved by
-`chachathecat`, and a later clean review must resolve to that correction head.
-Resolved state without the correction reply, a reply on an unresolved thread,
-or a resolved reply without the later clean review blocks. GitHub exposes no
+one reply authored by `chachathecat` after that correction. Every required
+exact-head check must first resolve successful for the correction head, and the
+reply time must be later than every resolved check completion time and the
+later clean review submission time. The reply binds the exact corrected head.
+The live thread must be resolved by `chachathecat`, and that clean review must
+resolve to the correction head. Resolved state without the correction reply, a
+reply before completed verification, a reply on an unresolved thread, or a
+resolved reply without the later clean review blocks. GitHub exposes no
 resolution timestamp, so none may be invented.
 
 The receipt is a metadata-only audit summary, never an independent trust root.
