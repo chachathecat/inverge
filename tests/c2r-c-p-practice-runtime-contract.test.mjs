@@ -215,6 +215,15 @@ test("[C2R-C-P-R08/R11/R14] workflow is fork-safe, shell-complete, and credentia
   assert.match(verifier, /practice_actual_browser_to_postgres_chain/);
   assert.match(verifier, /state_data->'proofEvaluation'->>'state'/);
   assert.match(verifier, /is distinct from 'PASS'/);
+  assert.match(verifier, /const executable = process\.execPath/);
+  for (const cliEntry of [
+    "node_modules/supabase/dist/supabase.js",
+    "node_modules/next/dist/bin/next",
+    "node_modules/@playwright/test/cli.js",
+  ]) {
+    assert.match(verifier, new RegExp(cliEntry.replace(/[./@]/g, "\\$&")));
+  }
+  assert.doesNotMatch(verifier, /node_modules\/.bin\/(?:supabase|next|playwright)/);
   assert.doesNotMatch(verifier, /appraisal_compensation_law|three_subject_actual/);
 });
 

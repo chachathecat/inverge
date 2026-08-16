@@ -625,8 +625,11 @@ function docker(commandArgs, options = {}) {
 }
 
 function supabase(commandArgs, options = {}) {
-  const executable = path.join(REPOSITORY_ROOT, "node_modules/.bin/supabase");
-  return run(executable, commandArgs, {
+  const executable = process.execPath;
+  return run(executable, [
+    path.join(REPOSITORY_ROOT, "node_modules/supabase/dist/supabase.js"),
+    ...commandArgs,
+  ], {
     ...options,
   });
 }
@@ -989,8 +992,15 @@ async function waitForHttp(url, processHandle, command) {
 async function startNext(input) {
   const port = input.port ?? 3100;
   const baseUrl = `http://127.0.0.1:${port}`;
-  const executable = path.join(REPOSITORY_ROOT, "node_modules/.bin/next");
-  const commandArgs = ["dev", "--hostname", "127.0.0.1", "--port", String(port)];
+  const executable = process.execPath;
+  const commandArgs = [
+    path.join(REPOSITORY_ROOT, "node_modules/next/dist/bin/next"),
+    "dev",
+    "--hostname",
+    "127.0.0.1",
+    "--port",
+    String(port),
+  ];
   const specification = validateCommandSpec(input.commandSpec);
   const processHandle = spawn(
     executable,
@@ -1113,8 +1123,13 @@ function runBrowserSuite(input) {
   const specification = input.recoverySessionId
     ? COMMAND_SPECS.browser_recovery
     : COMMAND_SPECS.browser_acceptance;
-  const executable = path.join(REPOSITORY_ROOT, "node_modules/.bin/playwright");
-  const commandArgs = ["test", `--config=${BROWSER_CONFIG_PATH}`, ...grepArgs];
+  const executable = process.execPath;
+  const commandArgs = [
+    path.join(REPOSITORY_ROOT, "node_modules/@playwright/test/cli.js"),
+    "test",
+    `--config=${BROWSER_CONFIG_PATH}`,
+    ...grepArgs,
+  ];
   const result = run(
     executable,
     commandArgs,
