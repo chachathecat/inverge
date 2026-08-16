@@ -105,6 +105,7 @@ const defaultTestFiles = [
   "tests/foundation-production-dependency-security.test.mjs",
   "tests/foundation-development-toolchain-security.test.mjs",
   "tests/foundation-continuous-security-automation.test.mjs",
+  "tests/github-native-delivery-control.test.mjs",
   "tests/postgrest-timestamps-normalization.test.mjs",
   "tests/platform-portability.test.mjs",
   "tests/s220b-dabangil-launch-surface.test.mjs",

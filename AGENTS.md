@@ -5,6 +5,12 @@
 Use this authority order when sources conflict:
 
 1. a dated Owner decision for the exact decision it owns, currently
+   `docs/decisions/2026-08-16-owner-github-native-delivery-control.md`
+   for PR #743 terminal unmerged disposition, GitHub-native delivery
+   authority, bounded correction/replacement/replanning, protected squash
+   merge, and automatic continuation of dependency-ready non-Production work;
+   this decision becomes repository authority only after its clean
+   expected-head-pinned squash merge,
    `docs/decisions/2026-08-15-owner-c2r-b-typed-proof-obligations.md`
    for the exact C2R-B typed Practice/Theory/Law proof architecture, the
    completed Issue #714 campaign-C2 allocation, the preserved open C3/C4/C6
@@ -51,6 +57,37 @@ Live GitHub and the current tree remain authoritative for implemented state.
 Attachments, old execution prompts, handoffs, issue prose, and historical plans
 are inputs, not live operational truth.
 
+## GitHub-native delivery control
+
+GitHub is the delivery trust boundary. The live ruleset, current PR head,
+required checks and their configured producers, review submissions, review
+threads, mergeability and merge result are authoritative. Repository files may
+summarize a completed merge, but must not recreate GitHub state as an
+independent receipt, check ledger or proof system.
+
+There is exactly one merge-producing writer. Work uses a feature branch, an
+ordinary non-force push and a pull request. Before merge, the live ruleset-
+required native checks must succeed for the current PR head against the latest
+required base, actionable review findings must be corrected, every review
+thread must be resolved, and a fresh exact-head Codex review must report
+actionable P0/P1/P2 counts of `0/0/0`. Merge is squash-only and pinned to the
+reviewed expected head.
+
+Direct pushes to `main`, force pushes, rebases, amends and history rewrites are
+prohibited. A PR receives at most two source corrections and three exact-head
+review cycles. An exhausted PR closes unmerged and a clean replacement starts
+from refreshed `main`; a non-clean replacement is re-scoped smaller. At most
+two clean replans may address the same root blocker. Stop only when the same
+actionable P0/P1 persists after both clean replans or an Owner gate applies.
+
+After a validated merge, re-fetch live GitHub and repository authority and
+start the next dependency-ready authorized non-Production stage without a
+routine Owner prompt. This automatic continuation grants no Production,
+migration/RLS/Storage apply, secret or environment mutation, payment, real-
+user invitation, rights-unclear content, unresolved privacy/legal operation,
+public release or domain promotion, destructive or irreversible data action,
+or material product-scope change.
+
 V13 is the sole active master plan. The Appraiser Second World-Class Vertical
 Execution Standard `1.0.8` is a subordinate V13 execution standard only. It
 does not create a second active master or a second mastery authority.
@@ -71,7 +108,9 @@ persistence/API/runtime/UI/evidence/safe-deferred/rollback layer stay inside
 their subject vertical. The common runtime substrate first lands only inside
 C2R-C-P. C2R-C-P and C2R-C-T may record acceptance contributions but cannot
 close #703, #704 or #705; only terminal C2R-C-L may close them, complete
-WCV-C2 and unblock #706. No replacement stage starts automatically.
+WCV-C2 and unblock #706. The 2026-08-16 GitHub-native delivery decision
+supersedes the earlier no-auto-start rule only for dependency-ready authorized
+non-Production continuation after its protected foundation merge validates.
 
 The authority-graph identifiers are distinct: roadmap item `WCV-C2`, campaign
 ID `C2`, recovery tracker #717, completed source-only stages `C2R-A` for Issue
@@ -1042,7 +1081,7 @@ Stop implementation and create a `human-decision` record only when:
 - reference-answer release criteria or calculation tolerances would be weakened;
 - public three-subject launch gate would be bypassed;
 - the proposed work exceeds the stated cost or operational budget;
-- the same CI/review failure remains after three repair attempts;
+- the same actionable P0/P1 persists after two clean replans;
 - rollback cannot be made safe.
 
 Do not stop for ordinary implementation choices.
@@ -1050,15 +1089,15 @@ Do not stop for ordinary implementation choices.
 ## Review guidelines
 
 Review begins only after the complete vertical and its focused validation and
-required runtime evidence are ready. Request one exact-head full-vertical
-review, batch all blocking findings into at most one corrective pass, and run
-at most one bounded exact-head correction verification. P0/P1 always block. A
-P2 blocks only when it violates an explicitly named core safety, rights,
-privacy, evidence, learner-outcome, or rollback invariant. Other P2/P3 findings
-are mapped to backlog and do not extend the review loop. If a core blocker
-remains after the bounded verification, return Draft and stop for resize or
-structural recovery; recursive review/correction cycles and replacement-PR
-diff copying are prohibited.
+required runtime evidence are ready. Request a fresh exact-head full-vertical
+review and batch every actionable finding into a correction. A PR receives at
+most two source corrections and three exact-head review cycles. P0/P1 always
+block. A P2 blocks when it violates an explicitly named core safety, rights,
+privacy, evidence, learner-outcome or rollback invariant; the current delivery
+decision additionally requires a clean actionable `0/0/0` review before
+merge. After exhaustion, close unmerged and restart from refreshed `main`; do
+not copy the failed design. If a clean replacement is still non-clean, reduce
+the outcome. Recursive correction cycles are prohibited.
 
 Treat the following as blocking P1 findings:
 
