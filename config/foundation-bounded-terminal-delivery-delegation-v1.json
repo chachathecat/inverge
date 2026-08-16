@@ -60,20 +60,29 @@
     "reset_allowed": false,
     "history_rewrite_allowed": false,
     "auto_merge_allowed": false,
-    "ruleset_bypass_allowed": false
+    "ruleset_bypass_allowed": false,
+    "automatic_ci_and_review_repair_required": true,
+    "automatic_expected_head_pinned_squash_merge_after_gates": true,
+    "superseded_pr_must_close_unmerged_before_replacement": true,
+    "maximum_clean_replacement_prs_per_delivery": 1
   },
   "delivery_sequence": [
     "refresh_live_main_github_authority_dependencies_and_writer_state",
     "select_one_dependency_ready_non_production_stage",
     "acquire_single_merge_producing_writer_slot",
-    "create_feature_branch_and_synchronize_commit_push_pr_body",
-    "run_scoped_local_and_repository_baseline_validation",
+    "create_feature_branch_and_complete_focused_candidate",
+    "run_exhaustive_same_root_audit_and_batch_findings_before_review",
+    "commit_intentionally_after_same_root_audit",
+    "run_scoped_local_and_repository_baseline_validation_on_exact_committed_head",
     "push_by_ordinary_non_force_update",
+    "create_or_synchronize_pull_request_body_to_pushed_head",
     "run_and_require_all_fresh_remote_checks_successful_on_exact_head",
     "request_fresh_hostile_review_on_exact_head",
-    "apply_at_most_two_source_corrections_when_actionable",
+    "apply_one_batched_source_correction_when_actionable_and_cycle_remains",
     "rerun_local_remote_and_fresh_exact_head_review_after_each_correction",
     "reply_and_resolve_threads_only_after_verified_correction",
+    "after_three_exact_head_review_cycles_close_unmerged_and_open_one_clean_replacement",
+    "continue_clean_replacement_until_zero_actionable_findings_same_p0_p1_owner_gate_or_new_focused_replan",
     "require_zero_actionable_p0_p1_p2_and_all_threads_resolved",
     "refetch_base_head_ruleset_and_writer_state_before_merge",
     "squash_merge_with_reviewed_head_as_expected_head",
@@ -82,11 +91,18 @@
   ],
   "correction_policy": {
     "maximum_source_corrections_per_pr": 2,
+    "maximum_exact_head_review_cycles_per_pr": 3,
+    "maximum_clean_replacement_prs_per_delivery": 1,
+    "automatic_replacement_when_focused_pr_exhausts_safe_scope": true,
     "pr_body_metadata_only_correction_counts_as_source_correction": false,
     "each_source_correction_requires_new_local_validation": true,
     "each_source_correction_requires_new_remote_exact_head_checks": true,
     "each_source_correction_requires_new_exact_head_review": true,
-    "unresolved_p0_or_p1_after_budget_requires_owner": true,
+    "correction_budget_exhaustion_requires_owner": false,
+    "correction_budget_exhaustion_action": "automatic_clean_replacement_or_safe_replan",
+    "same_actionable_p0_or_p1_surviving_clean_replacement_requires_owner": true,
+    "new_or_distinct_findings_after_replacement_require_autonomous_repair_or_replan": true,
+    "replacement_cycle_exhaustion_with_new_or_distinct_findings_action": "automatic_campaign_replan_into_new_focused_delivery",
     "unresolved_p2_blocks_merge": true,
     "test_weakening_or_deletion_allowed": false
   },
@@ -96,6 +112,8 @@
     "actionable_severities": ["P0", "P1", "P2"],
     "required_premerge_counts": { "P0": 0, "P1": 0, "P2": 0 },
     "all_threads_resolved_before_merge": true,
+    "exhaustive_same_root_audit_before_each_review": true,
+    "same_root_findings_batched_per_cycle": true,
     "thread_reply_only_after_verified_correction": true,
     "thread_resolution_only_after_verified_correction": true
   },
@@ -144,10 +162,19 @@
       "initial_reviewed_head_sha",
       "reviewed_head_sha",
       "remote_head_sha",
+      "active_merge_producing_writer_count",
+      "writer_slot_identity",
+      "replacement_pr_count",
+      "superseded_pr_numbers",
+      "replacement_policy_compliant",
       "source_correction_count",
       "source_correction_head_shas",
       "source_correction_parent_chain_valid",
       "source_correction_budget_compliant",
+      "exact_head_review_cycle_count",
+      "exact_head_review_evidence",
+      "all_required_exact_head_reviews_terminal",
+      "review_cycle_budget_compliant",
       "merge_sha",
       "merge_parent_sha",
       "candidate_tree_sha",
@@ -155,6 +182,8 @@
       "merge_method",
       "exact_head_checks",
       "all_required_exact_head_checks_successful",
+      "local_validation_results",
+      "all_required_local_validations_successful",
       "review_counts",
       "all_threads_resolved",
       "ruleset_name",
@@ -162,6 +191,8 @@
       "ruleset_bypass_actor_count",
       "ruleset_rule_types",
       "ruleset_pull_request_parameters",
+      "issue_association_kind",
+      "issue_closure_authorized_for_stage",
       "issue_state_after_merge",
       "roadmap_state_after_merge",
       "next_authorized_stage_tuple",
@@ -176,6 +207,45 @@
       "final_reviewed_head_must_equal_initial_reviewed_head_when_count_zero": true,
       "budget_compliance_verdict_must_be_true": true
     },
+    "replacement_binding": {
+      "maximum_clean_replacement_prs": 1,
+      "count_must_equal_superseded_pr_number_count": true,
+      "superseded_pr_numbers_must_be_unique_positive_integers": true,
+      "superseded_prs_must_be_closed_unmerged_before_replacement": true,
+      "replacement_policy_compliance_verdict_must_be_true": true,
+      "correction_budget_exhaustion_alone_may_require_owner": false,
+      "same_actionable_p0_or_p1_must_survive_clean_replacement_for_owner_gate": true
+    },
+    "writer_binding": {
+      "required_active_merge_producing_writer_count": 1,
+      "writer_slot_identity_must_bind_repository_branch_and_pull_request": true,
+      "superseded_pr_writer_slot_must_be_released_before_replacement": true
+    },
+    "review_evidence_binding": {
+      "maximum_exact_head_review_cycles_per_pr": 3,
+      "required_per_cycle_fields": [
+        "review_run_id",
+        "review_url",
+        "reviewer",
+        "cycle_head_sha",
+        "remote_head_sha_at_review",
+        "reviewed_head_sha",
+        "submitted_at",
+        "terminal_result",
+        "review_counts"
+      ],
+      "review_run_ids_and_urls_must_be_unique": true,
+      "cycle_count_must_equal_review_evidence_count": true,
+      "cycle_count_must_equal_source_correction_count_plus_one": true,
+      "cycle_head_must_equal_remote_head_at_review": true,
+      "reviewed_head_sha_must_equal_cycle_head": true,
+      "final_reviewed_head_must_equal_expected_head": true,
+      "final_terminal_result": "clean",
+      "final_required_actionable_counts": { "P0": 0, "P1": 0, "P2": 0 },
+      "all_required_reviews_terminal_verdict_must_be_true": true,
+      "review_cycle_budget_compliance_verdict_must_be_true": true,
+      "independently_verifiable_github_reference_required": true
+    },
     "exact_head_checks_binding": {
       "required_names": [
         "pr-contract",
@@ -189,10 +259,41 @@
         "Vercel"
       ],
       "required_conclusion": "success",
+      "required_per_check_fields": [
+        "name",
+        "head_sha",
+        "conclusion",
+        "details_url",
+        "completed_at"
+      ],
       "check_head_must_equal_expected_head": true,
       "missing_pending_skipped_cancelled_or_unsuccessful_blocks": true
     },
+    "local_validation_binding": {
+      "required_names": [
+        "focused_contract_test",
+        "typecheck",
+        "lint",
+        "full_tests",
+        "build",
+        "diff_check"
+      ],
+      "required_conclusion": "success",
+      "required_per_validation_fields": [
+        "name",
+        "command",
+        "head_sha",
+        "conclusion",
+        "completed_at"
+      ],
+      "validation_head_must_equal_expected_head": true,
+      "missing_or_unsuccessful_blocks": true,
+      "all_successful_verdict_must_be_true": true
+    },
     "ruleset_binding": {
+      "required_name": "main-pr-only",
+      "required_enforcement": "active",
+      "required_bypass_actor_count": 0,
       "required_rule_types": ["pull_request", "non_fast_forward", "deletion"],
       "pull_request_rule_parameters": {
         "allowed_merge_methods": ["squash"],
@@ -204,13 +305,37 @@
         "required_reviewers": []
       }
     },
+    "merge_binding": {
+      "required_method": "squash",
+      "expected_head_must_equal_reviewed_head": true,
+      "expected_head_must_equal_remote_head": true,
+      "merge_parent_must_equal_refetched_base": true,
+      "merge_tree_must_equal_candidate_tree": true
+    },
+    "issue_association_binding": {
+      "allowed_kinds": ["closing", "non_closing"],
+      "kind_must_be_closing_iff_issue_closure_authorized_for_stage": true,
+      "nonterminal_stage_must_bind_non_closing": true,
+      "issue_closure_authority_must_come_from_live_repository_authority": true
+    },
+    "synchronization_binding": {
+      "issue_roadmap_and_current_stage_must_be_read_after_merge": true,
+      "issue_state_must_match_association_kind_and_closure_authority": true,
+      "roadmap_state_may_lead_validated_receipt": false,
+      "next_authorized_stage_tuple_must_come_from_live_repository_authority": true,
+      "writer_slot_release_requires_complete_valid_receipt": true
+    },
     "raw_diff_or_source_body_allowed": false,
     "raw_learner_or_ocr_content_allowed": false,
     "secret_or_credential_allowed": false
   },
   "synchronization_policy": {
     "branch_commit_push_pr_body_same_head_required": true,
-    "exactly_one_issue_closing_reference_required": true,
+    "exactly_one_issue_association_required": true,
+    "closing_reference_required_only_when_live_stage_authority_allows_issue_closure": true,
+    "nonterminal_stage_requires_non_closing_issue_association": true,
+    "c2r_c_p_c2r_c_t_may_close_703_704_or_705": false,
+    "only_terminal_c2r_c_l_may_close_703_704_or_705": true,
     "issue_roadmap_current_stage_synchronized_after_receipt": true,
     "issue_state_may_substitute_for_merge_receipt": false,
     "roadmap_state_may_lead_validated_repository_receipt": false,
@@ -250,18 +375,19 @@
     "auto_merge_authorized": false,
     "existing_stage_automatic_start_flags_rewritten": false,
     "production_stage_allowed": false,
-    "routine_owner_prompt_required": false
+    "routine_owner_prompt_required": false,
+    "correction_budget_exhaustion_may_interrupt_owner": false
   },
   "owner_gates": [
     "production_migration_rls_or_storage_apply",
     "production_secret_or_environment_mutation",
     "actual_charge_price_refund_or_checkout_activation",
     "real_learner_or_instructor_invitation",
-    "rights_unclear_content",
+    "rights_unclear_content_or_unresolved_privacy_legal_authority",
     "public_release_or_domain_promotion",
     "destructive_or_irreversible_data_operation",
     "material_product_scope_change",
-    "unresolved_p0_or_p1_after_source_correction_budget"
+    "same_actionable_p0_or_p1_persists_after_one_clean_replacement_pr"
   ],
   "preserved_boundaries": [
     "exact_head_evidence",

@@ -7,8 +7,9 @@ Use this authority order when sources conflict:
 1. a dated Owner decision for the exact decision it owns, currently
    `docs/decisions/2026-08-16-owner-bounded-terminal-delivery-delegation.md`
    for the exact repository-delivery delegation after the five foundation
-   outcomes, including one writer, branch/PR-only delivery, bounded source
-   corrections, exact-head checks and hostile review, expected-head-pinned
+   outcomes, including one writer, branch/PR-only delivery, bounded exact-head
+   review cycles, automatic clean replacement after cycle exhaustion,
+   exact-head checks and hostile review, expected-head-pinned
    squash merge, receipt validation and automatic continuation to the next
    dependency-ready non-Production stage; this decision becomes repository
    authority only after its own expected-head-pinned squash merge and
@@ -80,7 +81,9 @@ persistence/API/runtime/UI/evidence/safe-deferred/rollback layer stay inside
 their subject vertical. The common runtime substrate first lands only inside
 C2R-C-P. C2R-C-P and C2R-C-T may record acceptance contributions but cannot
 close #703, #704 or #705; only terminal C2R-C-L may close them, complete
-WCV-C2 and unblock #706. No replacement stage starts automatically.
+WCV-C2 and unblock #706. No replacement stage starts automatically except
+through the bounded direct Owner continuation installed after the terminal
+foundation delegation receipt validates.
 
 The authority-graph identifiers are distinct: roadmap item `WCV-C2`, campaign
 ID `C2`, recovery tracker #717, completed source-only stages `C2R-A` for Issue
@@ -100,7 +103,9 @@ and its #736 receipt validates, the exact delivery control plane is
 routine repository delivery to exactly one merge-producing writer using a
 feature branch, ordinary non-force push, a synchronized PR, local and remote
 checks that all succeed on the exact head, fresh exact-head hostile review,
-at most two source corrections,
+an exhaustive same-root audit, at most three exact-head review cycles per PR,
+automatic clean replacement rather than a routine Owner interruption when a
+cycle budget is exhausted,
 verified thread reply/resolution, expected-head-pinned squash merge and a
 validated receipt. Every merge still requires actionable P0/P1/P2 `0/0/0`.
 
@@ -116,9 +121,13 @@ dependency receipt or start a stage.
 Owner approval remains mandatory for Production migration/RLS/Storage apply,
 Production secret or environment mutation, actual charge/price/refund/
 checkout activation, real learner or instructor invitation, rights-unclear
-content, public release or domain promotion, destructive or irreversible data
-operation, material product-scope change, and unresolved P0/P1 after the two-
-source-correction budget. The delegation grants no bypass, direct-main,
+content or unresolved privacy/legal authority, public release or domain
+promotion, destructive or irreversible data
+operation, material product-scope change, and the same actionable P0/P1
+surviving one clean replacement PR. Correction-budget exhaustion itself is
+not an Owner gate. New or distinct findings after the clean replacement
+require autonomous repair or a new focused campaign plan.
+The delegation grants no bypass, direct-main,
 force-push, history-rewrite, test-weakening, rights/privacy/source/effective-
 version weakening, raw learner-body logging, payment, activation or Production
 authority.
