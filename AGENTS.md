@@ -79,6 +79,13 @@ review cycles. An exhausted PR closes unmerged and a clean replacement starts
 from refreshed `main`; a non-clean replacement is re-scoped smaller. At most
 two clean replans may address the same root blocker. Stop only when the same
 actionable P0/P1 persists after both clean replans or an Owner gate applies.
+An actionable P2 never permits merge: correct it or remove the affected
+optional scope before final review. If it alone persists through the second
+clean replan, close that candidate unmerged, record the P2 in backlog, defer
+the affected optional scope, and continue independent authorized non-
+Production work. This neither waives the clean `0/0/0` gate nor creates an
+Owner interruption; if removing the scope would trigger an Owner gate, stop
+for that gate.
 
 After a validated merge, re-fetch live GitHub and repository authority and
 start the next dependency-ready authorized non-Production stage without a

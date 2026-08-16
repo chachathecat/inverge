@@ -45,6 +45,9 @@ test("repair and replan budgets fail closed without recursive receipt machinery"
   assert.match(decision, /at most two source corrections and three exact-head review\s+cycles/);
   assert.match(decision, /at most two clean replans/);
   assert.match(decision, /same actionable\s+P0\/P1 persists after both clean replans/);
+  assert.match(decision, /An actionable P2 cannot be waived for merge/);
+  assert.match(decision, /close that candidate unmerged, record the P2\s+in backlog/);
+  assert.match(decision, /not a third replan or an Owner interruption/);
   assert.match(decision, /must not maintain an alternate delivery receipt/);
   assert.doesNotMatch(decision, /\b[0-9a-f]{40}\b/i);
 });

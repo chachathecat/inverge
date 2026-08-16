@@ -47,6 +47,14 @@ The same root blocker receives at most two clean replans. Budget exhaustion by
 itself does not require an Owner prompt. Stop only when the same actionable
 P0/P1 persists after both clean replans or an Owner gate below applies.
 
+An actionable P2 cannot be waived for merge. It must be corrected or its
+affected optional scope removed before final review. If it alone persists
+through the second clean replan, close that candidate unmerged, record the P2
+in backlog, defer the affected optional scope, and continue independent
+authorized non-Production work. This is a terminal disposition for that
+candidate, not a third replan or an Owner interruption. If removing the scope
+would require an Owner-gated change, the applicable Owner gate controls.
+
 ## Continuation and Owner gates
 
 After this decision's protected merge is validated, close Issue #736, re-read
