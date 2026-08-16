@@ -1,0 +1,271 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "contract_id": "foundation-development-toolchain-security-v1",
+  "phase": "D",
+  "issue": 732,
+  "evaluated_at": "2026-08-16T07:45:40Z",
+  "initial_audit_counts": {
+    "critical": 1,
+    "high": 4,
+    "moderate": 1,
+    "low": 1,
+    "total": 7
+  },
+  "final_audit_counts": {
+    "critical": 0,
+    "high": 0,
+    "moderate": 0,
+    "low": 1,
+    "total": 1
+  },
+  "resolved_toolchain": {
+    "supabase": "2.114.0",
+    "playwright": "1.62.1",
+    "eslint": "9.39.5",
+    "eslint_config_next": "16.2.12",
+    "typescript": "5.9.3",
+    "typescript_eslint": "8.67.0",
+    "brace_expansion_v1": "1.1.18",
+    "brace_expansion_v5": "5.0.9",
+    "js_yaml": "4.3.1",
+    "tar": "not_installed"
+  },
+  "supabase_tar_requirement": {
+    "campaign_minimum": ">=7.5.19",
+    "live_advisory_safe_floor": ">7.5.20",
+    "selected_resolution": "tar_not_installed",
+    "rationale": "The current stable Supabase CLI removed tar from its dependency graph, which is stricter than retaining any tar version and resolves the newer live advisory through 7.5.20."
+  },
+  "resolved_findings": [
+    {
+      "ghsa": "GHSA-7mvr-c777-76hp",
+      "cve": "CVE-2025-59288",
+      "package": "playwright",
+      "classification": "development",
+      "severity": "high",
+      "directness": "transitive through direct @playwright/test",
+      "dependency_paths": ["root > @playwright/test@1.51.1 > playwright@1.51.1"],
+      "runtime_reachability": "development-only browser automation; not imported by application build or start",
+      "attacker_controlled_input_path": "explicit developer or CI browser-download command over a hostile TLS path",
+      "patched_version": "1.55.1",
+      "resolution": "@playwright/test and playwright 1.62.1"
+    },
+    {
+      "ghsa": "GHSA-jxxr-4gwj-5jf2",
+      "cve": "CVE-2026-45149",
+      "package": "brace-expansion",
+      "classification": "development",
+      "severity": "moderate",
+      "directness": "transitive",
+      "dependency_paths": ["root > eslint-config-next > typescript-eslint > minimatch > brace-expansion@5.0.5"],
+      "runtime_reachability": "development-only lint file-pattern expansion",
+      "attacker_controlled_input_path": "repository-controlled lint glob or pattern input",
+      "patched_version": "5.0.6",
+      "resolution": "brace-expansion 5.0.9"
+    },
+    {
+      "ghsa": "GHSA-3jxr-9vmj-r5cp",
+      "cve": "CVE-2026-13149",
+      "package": "brace-expansion",
+      "classification": "development",
+      "severity": "high",
+      "directness": "transitive",
+      "dependency_paths": [
+        "root > eslint > minimatch > brace-expansion@1.1.14",
+        "root > eslint-config-next > typescript-eslint > minimatch > brace-expansion@5.0.5"
+      ],
+      "runtime_reachability": "development-only lint file-pattern expansion",
+      "attacker_controlled_input_path": "repository-controlled lint glob or pattern input",
+      "patched_version": "1.1.16 / 5.0.7",
+      "resolution": "brace-expansion 1.1.18 / 5.0.9"
+    },
+    {
+      "ghsa": "GHSA-mh99-v99m-4gvg",
+      "cve": "CVE-2026-14257",
+      "package": "brace-expansion",
+      "classification": "development",
+      "severity": "high",
+      "directness": "transitive",
+      "dependency_paths": [
+        "root > eslint > minimatch > brace-expansion@1.1.14",
+        "root > eslint-config-next > typescript-eslint > minimatch > brace-expansion@5.0.5"
+      ],
+      "runtime_reachability": "development-only lint file-pattern expansion",
+      "attacker_controlled_input_path": "repository-controlled lint glob or pattern input",
+      "patched_version": "1.1.17 / 5.0.8",
+      "resolution": "brace-expansion 1.1.18 / 5.0.9"
+    },
+    {
+      "ghsa": "GHSA-rgw5-rvv9-x895",
+      "cve": "CVE-2026-69152",
+      "package": "brace-expansion",
+      "classification": "development",
+      "severity": "high",
+      "directness": "transitive",
+      "dependency_paths": [
+        "root > eslint > minimatch > brace-expansion@1.1.14",
+        "root > eslint-config-next > typescript-eslint > minimatch > brace-expansion@5.0.5"
+      ],
+      "runtime_reachability": "development-only lint file-pattern expansion",
+      "attacker_controlled_input_path": "repository-controlled lint glob or pattern input",
+      "patched_version": "1.1.18 / 5.0.9",
+      "resolution": "brace-expansion 1.1.18 / 5.0.9"
+    },
+    {
+      "ghsa": "GHSA-h67p-54hq-rp68",
+      "cve": "CVE-2026-53550",
+      "package": "js-yaml",
+      "classification": "development",
+      "severity": "moderate",
+      "directness": "transitive",
+      "dependency_paths": ["root > eslint > @eslint/eslintrc > js-yaml@4.1.1"],
+      "runtime_reachability": "development-only ESLint configuration parsing",
+      "attacker_controlled_input_path": "repository-controlled YAML lint configuration",
+      "patched_version": "4.2.0",
+      "resolution": "js-yaml 4.3.1"
+    },
+    {
+      "ghsa": "GHSA-52cp-r559-cp3m",
+      "cve": "CVE-2026-59869",
+      "package": "js-yaml",
+      "classification": "development",
+      "severity": "high",
+      "directness": "transitive",
+      "dependency_paths": ["root > eslint > @eslint/eslintrc > js-yaml@4.1.1"],
+      "runtime_reachability": "development-only ESLint configuration parsing",
+      "attacker_controlled_input_path": "repository-controlled YAML lint configuration",
+      "patched_version": "4.3.0",
+      "resolution": "js-yaml 4.3.1"
+    },
+    {
+      "ghsa": "GHSA-5p4m-2wfm-xmqj",
+      "cve": null,
+      "package": "js-yaml",
+      "classification": "development",
+      "severity": "high",
+      "directness": "transitive",
+      "dependency_paths": ["root > eslint > @eslint/eslintrc > js-yaml@4.1.1"],
+      "runtime_reachability": "development-only ESLint configuration parsing",
+      "attacker_controlled_input_path": "repository-controlled YAML lint configuration",
+      "patched_version": "4.3.1",
+      "resolution": "js-yaml 4.3.1"
+    },
+    {
+      "ghsa": "GHSA-vmf3-w455-68vh",
+      "cve": "CVE-2026-53655",
+      "package": "tar",
+      "classification": "development",
+      "severity": "moderate",
+      "directness": "transitive through direct Supabase CLI",
+      "dependency_paths": ["root > supabase@2.95.0 > tar@7.5.13"],
+      "runtime_reachability": "development-only Supabase CLI archive handling",
+      "attacker_controlled_input_path": "explicit local CLI archive operation with a crafted archive",
+      "patched_version": "7.5.16",
+      "resolution": "supabase 2.114.0 no longer depends on tar"
+    },
+    {
+      "ghsa": "GHSA-w8wr-v893-vjvp",
+      "cve": "CVE-2026-59871",
+      "package": "tar",
+      "classification": "development",
+      "severity": "moderate",
+      "directness": "transitive through direct Supabase CLI",
+      "dependency_paths": ["root > supabase@2.95.0 > tar@7.5.13"],
+      "runtime_reachability": "development-only Supabase CLI archive handling",
+      "attacker_controlled_input_path": "explicit local CLI archive operation with a crafted archive",
+      "patched_version": "7.5.18",
+      "resolution": "supabase 2.114.0 no longer depends on tar"
+    },
+    {
+      "ghsa": "GHSA-23hp-3jrh-7fpw",
+      "cve": "CVE-2026-59873",
+      "package": "tar",
+      "classification": "development",
+      "severity": "critical",
+      "directness": "transitive through direct Supabase CLI",
+      "dependency_paths": ["root > supabase@2.95.0 > tar@7.5.13"],
+      "runtime_reachability": "development-only Supabase CLI archive handling",
+      "attacker_controlled_input_path": "explicit local CLI archive operation with a crafted archive",
+      "patched_version": "7.5.19",
+      "resolution": "supabase 2.114.0 no longer depends on tar"
+    },
+    {
+      "ghsa": "GHSA-8x88-c5mf-7j5w",
+      "cve": "CVE-2026-59874",
+      "package": "tar",
+      "classification": "development",
+      "severity": "high",
+      "directness": "transitive through direct Supabase CLI",
+      "dependency_paths": ["root > supabase@2.95.0 > tar@7.5.13"],
+      "runtime_reachability": "development-only Supabase CLI archive handling",
+      "attacker_controlled_input_path": "explicit local CLI archive operation with a crafted archive",
+      "patched_version": "7.5.18",
+      "resolution": "supabase 2.114.0 no longer depends on tar"
+    },
+    {
+      "ghsa": "GHSA-gvwx-54wh-qm9j",
+      "cve": "CVE-2026-59875",
+      "package": "tar",
+      "classification": "development",
+      "severity": "moderate",
+      "directness": "transitive through direct Supabase CLI",
+      "dependency_paths": ["root > supabase@2.95.0 > tar@7.5.13"],
+      "runtime_reachability": "development-only Supabase CLI archive handling",
+      "attacker_controlled_input_path": "explicit local CLI archive operation with a crafted archive",
+      "patched_version": "7.5.17",
+      "resolution": "supabase 2.114.0 no longer depends on tar"
+    },
+    {
+      "ghsa": "GHSA-r292-9mhp-454m",
+      "cve": null,
+      "package": "tar",
+      "classification": "development",
+      "severity": "moderate",
+      "directness": "transitive through direct Supabase CLI",
+      "dependency_paths": ["root > supabase@2.95.0 > tar@7.5.13"],
+      "runtime_reachability": "development-only Supabase CLI archive handling",
+      "attacker_controlled_input_path": "explicit local CLI archive operation with a crafted archive",
+      "patched_version": "7.5.21",
+      "resolution": "supabase 2.114.0 no longer depends on tar"
+    }
+  ],
+  "residual_exceptions": [
+    {
+      "ghsa": "GHSA-4x5r-pxfx-6jf8",
+      "cve": "CVE-2026-49356",
+      "package": "@babel/core",
+      "classification": "development",
+      "severity": "low",
+      "directness": "transitive",
+      "dependency_paths": ["root > eslint-config-next@16.2.12 > eslint-plugin-react-hooks@7.1.1 > @babel/core@7.29.0"],
+      "runtime_reachability": "development-only lint loading; not imported by the application runtime",
+      "attacker_controlled_input_path": "local or CI lint of repository-controlled source containing a malicious sourceMappingURL",
+      "patched_version": "8.0.0 breaking major; no patched 7.x release exists at evaluation",
+      "resolution": "time-bounded exception pending upstream compatible Babel 7 fix or validated Babel 8 migration",
+      "rationale": "Babel 8 is a breaking major outside this non-breaking toolchain patch phase",
+      "compensating_control": "lint only reviewed repository source in isolated local and GitHub Actions workspaces; do not lint untrusted external source trees",
+      "owner": "repository_owner",
+      "expires_at": "2026-09-14T23:59:59Z"
+    }
+  ],
+  "acceptance": {
+    "development_critical": 0,
+    "development_high": 0,
+    "development_moderate": 0,
+    "development_low": 1,
+    "production_runtime_behavior_changed": false,
+    "production_migration_run": false,
+    "live_supabase_command_run": false,
+    "browser_installation_run": false
+  },
+  "required_verification": [
+    "npm.cmd ci",
+    "npm.cmd audit",
+    "npx.cmd supabase --version",
+    "npx.cmd playwright test --list",
+    "npm.cmd run typecheck",
+    "npm.cmd run lint",
+    "npm.cmd test",
+    "npm.cmd run build"
+  ]
+}

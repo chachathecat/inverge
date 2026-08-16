@@ -136,7 +136,7 @@ test("bounds every residual dev-only exception to less than thirty days", async 
   assert.deepEqual(overlap, []);
 });
 
-test("marks every residual package as dev-only or dev-optional in the lock graph", async () => {
+test("keeps every still-installed Phase C residual dev-only or dev-optional", async () => {
   const lock = await readJson("package-lock.json");
   for (const path of [
     "node_modules/@babel/core",
@@ -149,6 +149,7 @@ test("marks every residual package as dev-only or dev-optional in the lock graph
     "node_modules/tar",
   ]) {
     const entry = lock.packages[path];
+    if (entry === undefined) continue;
     assert.equal(entry.dev === true || entry.devOptional === true, true, path);
   }
 });
