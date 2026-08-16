@@ -200,6 +200,14 @@ function explicitRoleClaims(text: string, roleLabel: string) {
   ];
   for (const pattern of patterns) {
     for (const match of text.matchAll(pattern)) {
+      const sourceEnd = match.index + match[0].length;
+      if (
+        /^\s*(?:보다|초과|미만|이상|이하)/u.test(
+          text.slice(sourceEnd, sourceEnd + 12),
+        )
+      ) {
+        continue;
+      }
       const value = relationNumber(match[1]);
       if (value === null) continue;
       const sourceIndex = match.index;
@@ -256,22 +264,22 @@ function signAssertions(text: string) {
   const assertions: SignAssertion[] = [];
   const patterns = [
     {
-      pattern: /(?<![가-힣A-Za-z0-9])양수/gu,
+      pattern: /(?<![가-힣A-Za-z0-9])(?:양수|양의\s*(?:부호|값)|플러스(?:\s*(?:부호|값))?|양\s*\(\s*\+\s*\)|정\s*\(\s*\+\s*\)|positive(?:\s+(?:sign|value))?)/giu,
       asserted: "POSITIVE",
       negated: "NEGATIVE",
     },
     {
-      pattern: /(?<![가-힣A-Za-z0-9])양의\s*부호/gu,
+      pattern: /(?<![가-힣A-Za-z0-9])(?:0|영)\s*(?:보다\s*크(?:다|며|고)|초과)/gu,
       asserted: "POSITIVE",
       negated: "NEGATIVE",
     },
     {
-      pattern: /(?<![가-힣A-Za-z0-9])음수/gu,
+      pattern: /(?<![가-힣A-Za-z0-9])(?:음수|음의\s*(?:부호|값)|마이너스(?:\s*(?:부호|값))?|음\s*\(\s*[-−]\s*\)|부\s*\(\s*[-−]\s*\)|negative(?:\s+(?:sign|value))?)/giu,
       asserted: "NEGATIVE",
       negated: "POSITIVE",
     },
     {
-      pattern: /(?<![가-힣A-Za-z0-9])음의\s*부호/gu,
+      pattern: /(?<![가-힣A-Za-z0-9])(?:0|영)\s*(?:보다\s*작(?:다|으며|고)|미만)/gu,
       asserted: "NEGATIVE",
       negated: "POSITIVE",
     },
@@ -286,7 +294,7 @@ function signAssertions(text: string) {
       }
       const tail = text.slice(claimEnd, claimEnd + 24);
       if (
-        /^\s*(?:(?:은|는|이|가)\s*)?(?:임|이다|이며|이고|입니다|[.,;]|$)/u.test(
+        /^\s*(?:(?:은|는|이|가|인)\s*)?(?:의\s*)?(?:(?:부호|값)(?:은|는|이|가)?\s*)?(?:임|이다|다|이며|이고|입니다|[.,;!?]|$)/u.test(
           tail,
         )
       ) {
@@ -295,7 +303,7 @@ function signAssertions(text: string) {
     }
   }
   for (const match of text.matchAll(
-    /부호\s*(?:는|가|:)?\s*([+\-−])/gu,
+    /부호\s*(?:는|가|:|=)?\s*([+\-−0])/gu,
   )) {
     const asserted = match[1] === "+" ? "POSITIVE" : "NEGATIVE";
     const negated = asserted === "POSITIVE" ? "NEGATIVE" : "POSITIVE";

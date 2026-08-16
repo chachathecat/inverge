@@ -686,6 +686,49 @@ test("Practice proof accepts canonical positive-sign wording and rejects negativ
   assert.ok(
     negativeResult.reasonCodes.includes("positive_sign_constraint_failed"),
   );
+
+  for (const negativeSignClaim of [
+    "하지만 순수익은 마이너스다.",
+    "하지만 부호는 마이너스이다.",
+    "하지만 순수익은 음(-)이다.",
+    "하지만 순수익은 음(-)의 값이다.",
+    "하지만 순수익은 음의 값이다.",
+    "하지만 순수익은 마이너스인 값이다.",
+    "하지만 순수익은 0보다 작다.",
+    "하지만 순수익은 영 미만이다.",
+    "하지만 부호는 0이다.",
+    "하지만 순수익은 negative value이다.",
+    "하지만 순수익은 플러스가 아니다.",
+  ]) {
+    const result = validatePracticeCalculationRelation({
+      text: `${VALID_RELATION} ${negativeSignClaim}`,
+      anchor,
+    });
+    assert.equal(result.verified, false, negativeSignClaim);
+    assert.equal(result.state, "PARTIAL", negativeSignClaim);
+    assert.ok(
+      result.reasonCodes.includes("positive_sign_constraint_failed"),
+      negativeSignClaim,
+    );
+  }
+
+  for (const compatibleSignClaim of [
+    "순수익은 플러스다.",
+    "순수익은 양(+)이다.",
+    "순수익은 양(+)의 값이다.",
+    "부호는 +이다.",
+    "순수익은 0보다 크다.",
+    "순수익은 음(-)이 아니다.",
+    "순수익은 마이너스가 아니다.",
+    "순수익은 0 미만이 아니다.",
+  ]) {
+    const result = validatePracticeCalculationRelation({
+      text: `${VALID_RELATION} ${compatibleSignClaim}`,
+      anchor,
+    });
+    assert.equal(result.verified, true, compatibleSignClaim);
+    assert.equal(result.state, "PASS", compatibleSignClaim);
+  }
 });
 
 test("Practice proof rejects positive-sign tokens with a lexical negation prefix", () => {
