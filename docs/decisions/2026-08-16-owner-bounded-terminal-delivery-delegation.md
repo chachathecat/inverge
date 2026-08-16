@@ -10,6 +10,8 @@ repository_authority_effective_on: "expected_head_pinned_squash_merge_and_valida
 expected_first_stage: "C2R-C-P"
 expected_first_stage_issue: 703
 automatic_non_production_continuation: "bounded_live_authority_selector"
+replacement_owner_gate: "any_actionable_p0_or_p1_requires_owner_classification_and_action"
+structural_simplification_authorization_record: "https://github.com/chachathecat/inverge/issues/736#issuecomment-5307469181"
 general_automatic_start_flag_mutation: false
 runtime_authorization: "stage_owned_only_after_dependency_ready_selection"
 production_authorization: "none"
@@ -85,90 +87,94 @@ Every PR performs the following bounded cycle:
 12. when the third review cycle is not clean, close the PR unmerged and
     automatically transfer the still-valid candidate into at most one clean
     replacement PR;
-13. autonomously repair new or distinct replacement findings; if that
-    replacement itself exhausts its cycles on new or distinct findings, replan
-    them into a new focused delivery rather than interrupting the Owner;
-14. require actionable P0/P1/P2 `0/0/0` and all threads resolved;
-15. re-fetch base/head/ruleset and one-writer state immediately before merge;
-16. squash merge only with the reviewed head as the expected head;
-17. validate parent/tree/head/check/review/local-validation/replacement/issue/
+13. if the clean replacement contains any actionable P0 or P1, stop for one
+    explicit Owner `same_root`/`distinct_root` classification and
+    `repair`/`replan`/`close` action; do not infer semantic identity from a
+    title, prose, punctuation, case, hash or writer-selected label;
+14. repair a P2-only replacement batch automatically within its remaining
+    correction budget;
+15. require actionable P0/P1/P2 `0/0/0` and all threads resolved;
+16. re-fetch base/head/ruleset and one-writer state immediately before merge;
+17. squash merge only with the reviewed head as the expected head;
+18. validate parent/tree/head/check/review/local-validation/replacement/issue/
     roadmap receipt fields; and
-18. only then release the writer slot and select the next authorized stage.
+19. only then release the writer slot and select the next authorized stage.
 
 PR-body-only metadata correction does not consume the source-correction
 budget. A commit that changes repository source after actionable review does.
 No failing or skipped test may be weakened, deleted or bypassed to make the
 cycle pass. Correction-budget exhaustion is an internal control and never a
 routine Owner interruption: it triggers automatic clean replacement or safe
-replanning. Owner intervention is allowed only when the same actionable P0 or
-P1 survives one clean replacement PR. A remaining P2 blocks merge but requires
-autonomous repair, replacement or safe replanning rather than an Owner prompt.
+replanning. Any actionable P0 or P1 on the one clean replacement requires an
+Owner classification and action before further source mutation. The gate is
+existential and cannot be bypassed by rewording. A remaining P2 blocks merge
+but requires autonomous repair or safe replanning rather than an Owner prompt.
+
+For PR #743, the resolved Owner record is
+`https://github.com/chachathecat/inverge/issues/736#issuecomment-5307469181`.
+It classifies PR #742 `discussion_r3791617114` and PR #743
+`discussion_r3791696198` as `same_root`, authorizes
+`structural_simplification_repair` across the existing five-file Foundation
+5/5 scope, keeps `merge_authorized` false until a fresh exact-head `0/0/0`,
+and grants no Production authority.
 
 ## 4. Receipt and synchronization
 
-The delegation receipt is metadata-only. It binds repository, issue, PR,
-base, expected/reviewed/remote head, merge commit and parent, candidate and
-merge trees, squash method, exact-head check results and their all-successful
-verdict, exact-head local-validation results and their all-successful verdict,
-the single writer identity/count, replacement lineage, the initial reviewed
-head, ordered source-correction heads, exact source-correction count and budget
-verdict, independently verifiable review run/reference/reviewer/cycle-head/
-remote-head/reviewed-head/time/terminal-result/count evidence for every cycle,
-plus successful local-validation and remote-check evidence keyed to that exact
-cycle head. Each local-validation name is pinned to its exact Windows or POSIX
-canonical command, zero exit, exact head and independently resolvable,
-SHA-256-bound execution evidence. A validation label cannot attest to a
-different or no-op command. Each remote-check entry must also resolve an
-immutable GitHub check-run or commit-status database identity and API record
-in `chachathecat/inverge`. The resolved object, not receipt-authored values,
-binds its exact name, head, successful conclusion, details URL and completion
-time; fabricated, unresolved or mismatched evidence blocks. Top-level check
-and local-validation evidence uses
-`expected_head_sha` as its binding context, while evidence nested in a review
-cycle uses that exact `cycle_head_sha`; the two contexts cannot be substituted
-or compared to each other's head. For every superseded PR, the receipt separately
-binds closed-unmerged state, the complete review-cycle and source-correction
-history, and every actionable finding through a stable SHA-256 identity over
-repository, delivery issue, root invariant and path. That identity uses the
-versioned `finding-identity-rfc8785-jcs-sha256-v1` encoding: strings are first
-Unicode NFC normalized with no surrounding whitespace, the exact four-member
-JSON object is serialized as UTF-8 RFC 8785 JCS bytes, and the lowercase
-SHA-256 is recomputed. Repository and issue are fixed. The root invariant is
-not a writer-selected label: its lowercase SHA-256 is recomputed from the
-version-normalized finding title extracted from the independently resolved
-digest-bound, unedited GitHub review comment. Its database ID, author, exact
-body digest and identical creation/update time remain in the receipt alongside
-the normalized title. Its P0/P1/P2 priority badge is mandatory, is extracted
-from the same resolved heading and must equal receipt severity; badge-less or
-unstructured actionable review evidence blocks. The resolved review run and
-each actionable comment must be authored by
-`chatgpt-codex-connector[bot]`, immutable GitHub database ID `199175422`, not
-the merge-producing writer. Paths are case-sensitive normalized repository-relative
-forward-slash paths with no empty or dot segments. Replacement lineage
-accounts for each such identity exactly once and uses independently verifiable
-review URLs to prove whether the same P0/P1 survived and therefore requires
-the Owner gate. A triggered gate must include a later, independently
-resolvable Owner authorization record, its exact content digest, decision and
-time. Both its payload actor and the immutable GitHub hosting-author identity
-resolved from the record URL must be `chachathecat`; the resolved database
-identity, Owner user database ID `128282020` and host creation time must also
-match the receipt. The record must
-postdate the matching replacement finding and bind repository, replacement PR,
-stable finding identity and review URL. Every replacement finding is compared against every
-superseded stable identity; a matching P0/P1 cannot be labeled distinct.
-Acknowledgment that approval is required is not approval and blocks the
-receipt. It also binds thread state, effective ruleset
-types and exact pull-request parameters, the authority-dependent issue
-association kind and closure permission, issue state, roadmap/current-stage
-state and the next authorized tuple. Candidate and merge trees must match. The
-merge parent must equal the re-fetched base, and reviewed/remote/expected heads
-must be the same commit. Each correction head
-must have the preceding reviewed/correction head as its parent; the final
-reviewed head is the last correction head, or the initial reviewed head when
-the count is zero. More than two source corrections or three review cycles
-blocks that PR from merging and triggers replacement or replanning. A missing,
-pending, skipped, cancelled or unsuccessful required check, review or local
-validation on any reviewed cycle head also blocks it.
+The delegation receipt is a metadata-only audit summary, not an independent
+trust root. It records repository, issue, PR, base/head/tree/merge identity,
+one-writer state, bounded corrections and reviews, local preflight, remote
+checks, review/thread evidence, ruleset state, issue/roadmap synchronization
+and the next tuple only after those values have been resolved from live state.
+Receipt-authored booleans or counts cannot authorize merge or continuation.
+
+Every local validation name is pinned to its exact Windows or POSIX command,
+zero exit and exact committed head. These records are mandatory development
+preflight before push/review but are writer-authored diagnostics only. They are
+not trusted execution provenance and cannot independently satisfy a merge or
+continuation gate. Every merge-authorizing test, build and security result must
+instead resolve from an immutable exact-head GitHub check-run or commit status
+in `chachathecat/inverge`, binding database/API identity, name, head, successful
+conclusion, details URL and completion time. Missing, pending, skipped,
+cancelled, fabricated or mismatched remote evidence blocks.
+
+For every exact-head review cycle, resolve the immutable GitHub review database
+ID, node/API/HTML identity, reviewer login and database ID, `commit_id`,
+`submitted_at` and body. Retrieve the complete paginated comment set belonging
+to that exact review. Each actionable comment must resolve its immutable
+comment/review/author/path/head/time identity and carry exactly one P0/P1/P2
+badge. The complete resolved comment set derives counts and the terminal result;
+a missing page, badge-less comment, wrong review/head, mismatch, receipt-authored
+count or self-reported `clean` result cannot substitute. The final review must
+resolve to the expected head and derive `0/0/0`.
+
+Superseded and replacement PR evidence remains separate and symmetric. The
+receipt keeps each PR's live identity, head, correction history, review records
+and complete comment sets; it computes no semantic identity between findings.
+Any P0/P1 on the clean replacement triggers the Owner gate regardless of title,
+case, punctuation or wording. The required Issue #736 Owner record must resolve
+its immutable GitHub ID, exact body digest, author `chachathecat`/database ID
+`128282020`, unchanged creation time, repository, issue, superseded/replacement
+PRs, finding URLs, classification and authorized action. The record postdates
+the triggering review and authorizes only bounded repair/replan/close; it never
+authorizes merge before a fresh exact-head `0/0/0`. P2-only replacement
+findings do not falsely trigger the Owner gate.
+
+Each corrected actionable thread binds its live thread node ID, top-level
+comment ID and finding head, correction head and resolved GitHub commit time,
+one reply by `chachathecat` after that correction whose exact body binds the
+corrected head and evidence, current `isResolved=true`, `resolvedBy` and the
+later clean review on that correction head. Resolved state without the reply,
+reply without resolution, or reply/resolution without the later clean review
+blocks. GitHub supplies no resolution time, so the receipt records none.
+
+Candidate and merge trees must match. The merge parent must equal the re-fetched
+base, and reviewed/remote/expected heads must be the same commit. Each
+correction head has the preceding reviewed/correction head as parent; more than
+two source corrections or three review cycles blocks that PR. Immediately
+before and after merge, independently re-fetch PR/base/head/state/mergeability,
+reviews and complete comments, required checks, threads, ruleset/effective
+rules, writer state, Issue #736, live main and roadmap authority. Stale, absent
+or receipt-only state blocks merge or continuation.
 
 Immediately before merge, the receipt independently resolves repository
 ruleset ID `20903914` and the effective rules for `main`. RFC 8785 JCS digests
@@ -234,7 +240,8 @@ Owner approval remains required only for:
 6. public release or domain promotion;
 7. destructive or irreversible data operation;
 8. material product-scope change; and
-9. the same actionable P0/P1 persisting after one clean replacement PR.
+9. classification and action whenever any actionable P0/P1 exists on the one
+   clean replacement PR.
 
 These gates cannot be inferred from a successful non-Production stage,
 receipt, issue closure, preview, CI result or Owner-private evidence.

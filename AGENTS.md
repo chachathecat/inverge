@@ -108,16 +108,23 @@ automatic clean replacement rather than a routine Owner interruption when a
 cycle budget is exhausted,
 verified thread reply/resolution, expected-head-pinned squash merge and a
 validated receipt. Every merge still requires actionable P0/P1/P2 `0/0/0`.
-Every superseded PR receipt preserves its complete exact-head review-cycle and
-source-correction evidence plus stable SHA-256 finding identities and
-replacement lineage. Every named local validation is bound to the exact
-platform-specific canonical command and an independently resolvable,
-digest-bound execution record; a self-reported name or conclusion is not
-sufficient.
+Every superseded and replacement PR preserves separate immutable PR, review,
+comment, author, path, head and timestamp evidence. Every named local
+validation remains mandatory development preflight at the exact committed
+head, but its writer-authored record is diagnostic/advisory only and cannot
+authorize merge or continuation.
 Every named remote check likewise resolves its immutable GitHub check-run or
 commit-status database identity and API record in this repository. The
 resolved record must bind the exact name, head, successful conclusion, details
 URL and completion time; receipt-authored check values alone are invalid.
+For each review cycle, the immutable GitHub review ID, node/API/HTML identity,
+reviewer login and database ID, commit ID, submitted time and body are resolved.
+The complete paginated comment set for that exact review is resolved too.
+Every actionable review comment must carry exactly one mandatory P0/P1/P2
+badge, and the resolved set derives both counts and terminal result. Missing,
+incomplete, badge-less, wrong-review, wrong-head or mismatched evidence fails
+closed; receipt-authored counts or a self-reported `clean` result have no
+authority.
 Immediately before merge, the receipt must freshly resolve repository ruleset
 ID `20903914` and the effective rules for `main`, digest-bind both exact API
 records, and prove active `main-pr-only`, default-branch-only targeting, an
@@ -128,35 +135,37 @@ later server date is the observation time, no older than 300 seconds at the
 expected-head-pinned merge request and resolved PR `merged_at`. Both calls use
 authenticated HTTPS, explicit GitHub API versioning, `Cache-Control: no-cache`,
 status 200 rather than 304, and receipt-bound `X-GitHub-Request-Id` values.
-Top-level validation evidence resolves its head against `expected_head_sha`;
-review-cycle evidence resolves against that cycle's `cycle_head_sha`, so an
-intermediate reviewed head is never compared with the final expected head. If
-stable finding lineage proves that the same actionable P0/P1 survived the
-clean replacement, the receipt must also resolve and hash a later explicit
-Owner authorization record; merely marking the gate required cannot satisfy
-it. That record must be authored by `chachathecat`, postdate the matching
-replacement finding, and bind this repository, replacement PR, stable finding
-identity and review URL.
-The stable finding identity is the lowercase SHA-256 of UTF-8 RFC 8785 JCS
-bytes for the exact four-member object `repository`, `delivery_issue`,
-`root_invariant_id` and normalized repository-relative `path`, using the
-versioned normalization and encoding rules in the machine contract. No
-implementation-defined concatenation, separator or field order is allowed.
-The `root_invariant_id` is not writer-selected: it is the lowercase SHA-256 of
-the version-normalized finding title extracted from the independently resolved
-digest-bound GitHub review comment, whose database ID, author, body digest and
-unchanged creation/update times are retained in the receipt. A free-form or
-merely pattern-valid root ID is invalid. Every actionable finding must also
-carry a mandatory P0/P1/P2 badge captured from that resolved review heading;
-the captured priority must equal receipt severity, and a badge-less or
-unstructured actionable comment blocks the receipt. The review run and every
-actionable comment must resolve to `chatgpt-codex-connector[bot]`, immutable
-GitHub database ID `199175422`, so the merge-producing writer cannot self-author
-severity evidence. For a triggered Owner gate, both the
-record payload actor and the immutable GitHub
-record author resolved from the authorization URL must be `chachathecat`; the
-resolved record database identity, Owner user database ID `128282020` and host
-creation time must also match the receipt.
+Top-level remote-check evidence resolves against `expected_head_sha`, while
+each review resolves its GitHub `commit_id` against that cycle's
+`cycle_head_sha`. No title hash, prose equality, punctuation/case normalization,
+writer-selected root invariant or automatic semantic-equivalence inference is
+used. After an initial PR exhausts at most two corrections and three reviews,
+exactly one clean replacement is allowed. Any actionable P0 or P1 on that
+replacement stops automatic continuation and requires an explicit Owner record
+classifying `same_root` or `distinct_root` and authorizing `repair`, `replan` or
+`close`; the gate depends on the existence of the replacement P0/P1, not its
+wording. P2-only replacement findings remain automatically repairable within
+the remaining budget. A triggered record must resolve from Issue #736, bind
+the repository, issue, superseded/replacement PRs and finding URLs, postdate the
+triggering review, and be authored by `chachathecat`, immutable database ID
+`128282020`. Repair authority is not merge authority; merge remains blocked
+until a fresh exact-head review derives `0/0/0`.
+
+Every corrected actionable thread must retain its live GitHub thread node ID,
+top-level comment ID and finding head, the resolved correction commit/head, and
+one reply authored by `chachathecat` after that correction. The reply binds the
+exact corrected head and evidence. The live thread must be resolved by
+`chachathecat`, and a later clean review must resolve to that correction head.
+Resolved state without the correction reply, a reply on an unresolved thread,
+or a resolved reply without the later clean review blocks. GitHub exposes no
+resolution timestamp, so none may be invented.
+
+The receipt is a metadata-only audit summary, never an independent trust root.
+Immediately before and after merge, independently re-fetch PR/base/head/state,
+reviews and complete comment sets, exact-head checks, actionable threads,
+ruleset/effective rules, writer state, Issue #736, live main and roadmap
+authority. Receipt values cannot substitute for any live state, and the next
+stage may start only from the fresh post-merge result.
 
 The delegation may then select and begin only the next dependency-ready
 non-Production stage from live repository authority. The expected first stage
@@ -172,10 +181,10 @@ Production secret or environment mutation, actual charge/price/refund/
 checkout activation, real learner or instructor invitation, rights-unclear
 content or unresolved privacy/legal authority, public release or domain
 promotion, destructive or irreversible data
-operation, material product-scope change, and the same actionable P0/P1
-surviving one clean replacement PR. Correction-budget exhaustion itself is
-not an Owner gate. New or distinct findings after the clean replacement
-require autonomous repair or a new focused campaign plan.
+operation, material product-scope change, and classification/action whenever
+any actionable P0/P1 exists on the one clean replacement PR. Correction-budget
+exhaustion itself is not an Owner gate, and replacement P2-only findings remain
+routine autonomous repair.
 The delegation grants no bypass, direct-main,
 force-push, history-rewrite, test-weakening, rights/privacy/source/effective-
 version weakening, raw learner-body logging, payment, activation or Production
