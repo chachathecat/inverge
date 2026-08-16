@@ -692,6 +692,10 @@ test("Practice proof accepts canonical positive-sign wording and rejects negativ
     "하지만 부호는 마이너스이다.",
     "하지만 순수익은 음(-)이다.",
     "하지만 순수익은 음(-)의 값이다.",
+    "하지만 최종 순수익 부호는 음(-100,000,000원/년)이다.",
+    "하지만 순수익 부호는 음(+100,000,000원/년)이다.",
+    "하지만 순수익 부호는 음수(-100,000,000원/년)이다.",
+    "하지만 순수익 부호는 음의 값(-100,000,000원/년)이다.",
     "하지만 순수익은 음의 값이다.",
     "하지만 순수익의 부호는 음이다.",
     "하지만 순수익은 음의 수가 된다.",
@@ -705,6 +709,13 @@ test("Practice proof accepts canonical positive-sign wording and rejects negativ
     "하지만 순수익은 not positive이다.",
     "하지만 순수익은 (-)이다.",
     "하지만 순수익은 부(-)이다.",
+    "하지만 순수익은 부(-100,000,000원/년)이다.",
+    "하지만 순수익은 양(-100,000,000원/년)이다.",
+    "하지만 순수익은 양수(-100,000,000원/년)이다.",
+    "하지만 순수익은 플러스(-100,000,000원/년)이다.",
+    "하지만 순수익은 마이너스(-100,000,000원/년)이다.",
+    "하지만 순수익은 negative(-100,000,000원/년)이다.",
+    "하지만 순수익은 (-100,000,000원/년)이다.",
     "하지만 순수익은 0보다 작다.",
     "하지만 순수익은 0보다 작은 수다.",
     "하지만 순수익은 0보다 작거나 같다.",
@@ -731,9 +742,14 @@ test("Practice proof accepts canonical positive-sign wording and rejects negativ
     "순수익은 플러스다.",
     "순수익은 양(+)이다.",
     "순수익은 양(+)의 값이다.",
+    "순수익은 양(+100,000,000원/년)이다.",
+    "순수익은 양수(+100,000,000원/년)이다.",
+    "순수익은 양의 값(+100,000,000원/년)이다.",
     "순수익은 양의 수다.",
     "순수익은 양으로 판정된다.",
     "순수익은 (+)이다.",
+    "순수익은 (+100,000,000원/년)이다.",
+    "순수익은 플러스(+100,000,000원/년)이다.",
     "순수익은 positive number이다.",
     "부호는 +이다.",
     "순수익은 0보다 크다.",
@@ -771,6 +787,50 @@ test("Practice proof accepts canonical positive-sign wording and rejects negativ
       result.reasonCodes.includes("positive_sign_constraint_failed"),
       nonStrictPositive,
     );
+  }
+});
+
+test("Practice proof rejects contradictory explicit final-result aliases", () => {
+  const anchor = trustedRepairCanonicalFixture("appraisal_practical").anchors[0]
+    .calculationRelation;
+  assert.ok(anchor);
+
+  for (const contradictoryClaim of [
+    "그러나 최종 답은 90,000,000원/년이다.",
+    "하지만 정답은 90,000,000원/년이다.",
+    "다만 최종 결과값은 90,000,000원/년이다.",
+    "다만 최종 결과 금액은 90,000,000원/년이다.",
+    "다만 최종 산출값은 90,000,000원/년이다.",
+    "그러나 계산 결과는 90,000,000원/년이다.",
+    "하지만 산정액은 90,000,000원/년이다.",
+    "그러나 결론은 90,000,000원/년이다.",
+    "최종 답은 100,000,000원/년이 아니다.",
+    "최종 답은 100,000,000이다.",
+  ]) {
+    const result = validatePracticeCalculationRelation({
+      text: `${VALID_RELATION} ${contradictoryClaim}`,
+      anchor,
+    });
+    assert.equal(result.verified, false, contradictoryClaim);
+    assert.equal(result.state, "PARTIAL", contradictoryClaim);
+    assert.ok(
+      result.reasonCodes.includes("final_result_claim_conflict"),
+      contradictoryClaim,
+    );
+  }
+
+  for (const compatibleClaim of [
+    "최종 답은 100,000,000원/년이다.",
+    "정답은 100,000,000원/년이다.",
+    "최종 결과값은 100,000,000원/년이다.",
+    "최종 답은 90,000,000원/년이 아니다.",
+  ]) {
+    const result = validatePracticeCalculationRelation({
+      text: `${VALID_RELATION} ${compatibleClaim}`,
+      anchor,
+    });
+    assert.equal(result.verified, true, compatibleClaim);
+    assert.equal(result.state, "PASS", compatibleClaim);
   }
 });
 

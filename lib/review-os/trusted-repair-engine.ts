@@ -254,6 +254,26 @@ function roleBindingEvaluation(input: {
   };
 }
 
+const FINAL_RESULT_ROLE_LABEL_SOURCE =
+  "(?:(?:최종\\s*(?:정답|답|결과\\s*(?:값|금액)?|값|금액|결론|계산\\s*(?:결과|값)|산정(?:액|값)|산출(?:액|값|결과)))|정답|답|결론|계산\\s*(?:결과|값)|산정(?:액|값)|산출(?:액|값|결과))";
+
+function finalResultClaimsValid(text: string, expectedValue: number) {
+  return explicitRoleClaims(text, FINAL_RESULT_ROLE_LABEL_SOURCE)
+    .filter(
+      (claim) =>
+        !/(?:총수익|운영비)(?:의)?\s*(?:(?:실제(?:의)?|정확(?:한)?|계산된|산정된|해당|현재)\s*)*$/u.test(
+          text.slice(Math.max(0, claim.sourceIndex - 32), claim.sourceIndex),
+        ),
+    )
+    .every(
+      (claim) =>
+        claim.unitValid &&
+        (claim.negated
+          ? claim.value !== expectedValue
+          : claim.value === expectedValue),
+    );
+}
+
 type SignAssertion = "POSITIVE" | "NEGATIVE";
 
 function claimHeadHasNegationPrefix(text: string, claimStart: number) {
@@ -276,7 +296,7 @@ function signAssertions(text: string) {
   const assertions: SignAssertion[] = [];
   const patterns = [
     {
-      pattern: /(?<![가-힣A-Za-z0-9])(?:양수|양\s*\(\s*\+\s*\)|양(?=\s*(?:의\s*(?:부호|값|수|숫자)|(?:은|는|이|가|인|으로|로|임|이다|다|이며|이고|입니다|[.,;!?]|$)))|플러스(?:\s*(?:부호|값|수|숫자))?|정\s*\(\s*\+\s*\)|positive(?:\s+(?:sign|value|number))?|plus(?:\s+(?:sign|value|number))?|\(\s*\+\s*\))/giu,
+      pattern: /(?<![가-힣A-Za-z0-9])(?:양수\s*\(\s*\+[^)\n]{0,48}\)|양수|양의\s*(?:부호|값|수|숫자)\s*\(\s*\+[^)\n]{0,48}\)|양\s*\(\s*\+[^)\n]{0,48}\)|양(?=\s*(?:의\s*(?:부호|값|수|숫자)|(?:은|는|이|가|인|으로|로|임|이다|다|이며|이고|입니다|[.,;!?]|$)))|플러스\s*\(\s*\+[^)\n]{0,48}\)|플러스(?:\s*(?:부호|값|수|숫자))?|정\s*\(\s*\+[^)\n]{0,48}\)|positive\s*\(\s*\+[^)\n]{0,48}\)|positive(?:\s+(?:sign|value|number))?|plus\s*\(\s*\+[^)\n]{0,48}\)|plus(?:\s+(?:sign|value|number))?|\(\s*\+\s*(?:\d[\d,.]*\s*(?:원\s*\/\s*(?:년|연)|연간\s*원)?\s*)?\))/giu,
       asserted: "POSITIVE",
       negated: "NEGATIVE",
     },
@@ -286,7 +306,7 @@ function signAssertions(text: string) {
       negated: "NEGATIVE",
     },
     {
-      pattern: /(?<![가-힣A-Za-z0-9])(?:음수|음\s*\(\s*[-−]\s*\)|음(?=\s*(?:의\s*(?:부호|값|수|숫자)|(?:은|는|이|가|인|으로|로|임|이다|다|이며|이고|입니다|[.,;!?]|$)))|마이너스(?:\s*(?:부호|값|수|숫자))?|부\s*\(\s*[-−]\s*\)|비\s*양수|negative(?:\s+(?:sign|value|number))?|minus(?:\s+(?:sign|value|number))?|non[-\s]?positive|\(\s*[-−]\s*\))/giu,
+      pattern: /(?<![가-힣A-Za-z0-9])(?:음수\s*\(\s*[+\-−][^)\n]{0,48}\)|음수|음의\s*(?:부호|값|수|숫자)\s*\(\s*[+\-−][^)\n]{0,48}\)|음\s*\(\s*[+\-−][^)\n]{0,48}\)|음(?=\s*(?:의\s*(?:부호|값|수|숫자)|(?:은|는|이|가|인|으로|로|임|이다|다|이며|이고|입니다|[.,;!?]|$)))|마이너스\s*\(\s*[-−]?[^)\n]{1,48}\)|마이너스(?:\s*(?:부호|값|수|숫자))?|부\s*\(\s*[+\-−][^)\n]{0,48}\)|(?:양수|양|정)\s*\(\s*[-−][^)\n]{0,48}\)|(?:플러스|positive|plus)\s*\(\s*[-−][^)\n]{0,48}\)|비\s*양수|negative\s*\(\s*[-−]?[^)\n]{1,48}\)|negative(?:\s+(?:sign|value|number))?|minus\s*\(\s*[-−]?[^)\n]{1,48}\)|minus(?:\s+(?:sign|value|number))?|non[-\s]?positive|\(\s*[-−]\s*(?:\d[\d,.]*\s*(?:원\s*\/\s*(?:년|연)|연간\s*원)?\s*)?\))/giu,
       asserted: "NEGATIVE",
       negated: "POSITIVE",
     },
@@ -526,6 +546,10 @@ export function validatePracticeCalculationRelation(input: {
     operatingExpenseValue: operatingExpense.value,
     resultValue: input.anchor.result.value,
   });
+  const finalResultAliasesValid = finalResultClaimsValid(
+    normalized,
+    input.anchor.result.value,
+  );
   const resultClaims = explicitRoleClaims(normalized, "순수익").filter(
     (claim) =>
       !claim.negated && claim.value === input.anchor.result.value,
@@ -550,6 +574,7 @@ export function validatePracticeCalculationRelation(input: {
   const reasonCodes = [
     ...(roleBindings.valuesValid ? [] : ["operand_roles_missing"]),
     ...(roleBindings.unitsValid ? [] : ["operand_role_units_invalid"]),
+    ...(finalResultAliasesValid ? [] : ["final_result_claim_conflict"]),
     ...(relationUnitsValid ? [] : ["krw_per_year_unit_missing"]),
     ...(unitContradicted ? ["krw_per_year_unit_conflict"] : []),
     ...(signValid ? [] : ["positive_sign_constraint_failed"]),
