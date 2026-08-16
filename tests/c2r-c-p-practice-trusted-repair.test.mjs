@@ -548,6 +548,8 @@ test("Practice proof rejects negated relation and rounding assertions", () => {
     "하지만 이 답은 틀렸다.",
     "그러나 이 결론은 거짓이다.",
     "다만 최종 결과는 옳지 않다.",
+    "그러나 이 답은 정확하지 않다.",
+    "이 결론은 성립하지 않는다.",
   ]) {
     const retractedResult = validatePracticeCalculationRelation({
       text: `${VALID_RELATION} ${laterRetraction}`,
@@ -618,6 +620,10 @@ test("Practice proof rejects negated relation and rounding assertions", () => {
     "이 결과는 반올림을 적용한 값이 아니다.",
     "이 결과는 반올림하지 않은 값이다.",
     "이 결과는 반올림을 하지 않았다.",
+    "반올림이 필요하지 않다.",
+    "반올림은 필요하지 않다.",
+    "반올림할 필요가 없다.",
+    "반올림할 필요는 없다.",
   ]) {
     const compatibleRounding = validatePracticeCalculationRelation({
       text: `${VALID_RELATION} ${compatibleRoundingClaim}`,
@@ -824,6 +830,9 @@ test("Practice proof rejects contradictory explicit final-result aliases", () =>
     "정답은 −90,000,000원/년이다.",
     '정답은 "−100,000,000원/년"이다.',
     "결론은 - 100,000,000원/년이다.",
+    '하지만 정답은 [90,000,000원/년"이다.',
+    "정답은 (90,000,000원/년)이다.",
+    "정답은 <90,000,000원/년>이다.",
     "최종 답은 100,000,000이다.",
   ]) {
     const result = validatePracticeCalculationRelation({
@@ -861,6 +870,8 @@ test("Practice proof rejects contradictory explicit final-result aliases", () =>
     "결과는 +100,000,000원/년이다.",
     '최종 답은 "+100,000,000원/년"이다.',
     "결론은 + 100,000,000원/년이다.",
+    "정답은 (100,000,000원/년)이다.",
+    "정답은 <100,000,000원/년>이다.",
     "최종 답은 90,000,000원/년이 아니다.",
   ]) {
     const result = validatePracticeCalculationRelation({
@@ -875,6 +886,8 @@ test("Practice proof rejects contradictory explicit final-result aliases", () =>
     "운영비는 --20,000,000원/년이다.",
     "운영비는 +−20,000,000원/년이다.",
     '정답은 "100,000,000원/년\'이다.',
+    '정답은 [100,000,000원/년"이다.',
+    "정답은 <100,000,000원/년]이다.",
   ]) {
     const result = validatePracticeCalculationRelation({
       text: `${VALID_RELATION} ${malformedClaim}`,
