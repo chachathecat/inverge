@@ -545,6 +545,9 @@ test("Practice proof rejects negated relation and rounding assertions", () => {
     "앞의 관계는 유효하지 않다.",
     "해당 계산식은 참이 아니다.",
     "상기 등식은 성립할 수 없다.",
+    "하지만 이 답은 틀렸다.",
+    "그러나 이 결론은 거짓이다.",
+    "다만 최종 결과는 옳지 않다.",
   ]) {
     const retractedResult = validatePracticeCalculationRelation({
       text: `${VALID_RELATION} ${laterRetraction}`,
@@ -819,6 +822,8 @@ test("Practice proof rejects contradictory explicit final-result aliases", () =>
     "그러나 결론은 90,000,000원/년이다.",
     "최종 답은 100,000,000원/년이 아니다.",
     "정답은 −90,000,000원/년이다.",
+    '정답은 "−100,000,000원/년"이다.',
+    "결론은 - 100,000,000원/년이다.",
     "최종 답은 100,000,000이다.",
   ]) {
     const result = validatePracticeCalculationRelation({
@@ -854,6 +859,8 @@ test("Practice proof rejects contradictory explicit final-result aliases", () =>
     "결과값은 100,000,000원/년이다.",
     "결괏값은 100,000,000원/년이다.",
     "결과는 +100,000,000원/년이다.",
+    '최종 답은 "+100,000,000원/년"이다.',
+    "결론은 + 100,000,000원/년이다.",
     "최종 답은 90,000,000원/년이 아니다.",
   ]) {
     const result = validatePracticeCalculationRelation({
@@ -863,6 +870,28 @@ test("Practice proof rejects contradictory explicit final-result aliases", () =>
     assert.equal(result.verified, true, compatibleClaim);
     assert.equal(result.state, "PASS", compatibleClaim);
   }
+
+  for (const malformedClaim of [
+    "운영비는 --20,000,000원/년이다.",
+    "운영비는 +−20,000,000원/년이다.",
+    '정답은 "100,000,000원/년\'이다.',
+  ]) {
+    const result = validatePracticeCalculationRelation({
+      text: `${VALID_RELATION} ${malformedClaim}`,
+      anchor,
+    });
+    assert.equal(result.verified, false, malformedClaim);
+    assert.equal(result.state, "PARTIAL", malformedClaim);
+  }
+
+  const spacedRoleConflict = validatePracticeCalculationRelation({
+    text: `${VALID_RELATION} 그러나 순수익은 − 100,000,000원/년이다.`,
+    anchor,
+  });
+  assert.equal(spacedRoleConflict.verified, false);
+  assert.ok(
+    spacedRoleConflict.reasonCodes.includes("operand_roles_missing"),
+  );
 });
 
 test("Practice proof rejects positive-sign tokens with a lexical negation prefix", () => {

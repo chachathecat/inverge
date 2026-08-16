@@ -115,6 +115,9 @@ const NEGATIVE_CLAIM_PATTERN =
 const SCOPED_RELATION_REFERENCE_PATTERN =
   /(?:(?:이|그|위(?:의)?|앞(?:의)?|이전(?:의)?|해당|상기|방금(?:의)?)\s*(?:계산(?:식)?|식|관계(?:식)?|등식|산식)|(?:계산\s*관계|계산식|관계식|등식|산식))/u;
 
+const SCOPED_RESULT_REJECTION_PATTERN =
+  /(?:(?:(?:이|그|위(?:의)?|앞(?:의)?|이전(?:의)?|해당|상기|방금(?:의)?)\s*|최종\s*)(?:정답|답안|답|결론|결과\s*(?:값|금액|수치|치|액|액수)?|결괏값|계산\s*결과)|(?:정답|답안|답|결론))(?:은|는|이|가|을|를)?\s*(?:(?:절대|전혀|결코)\s*)?(?:아니|아님|아닌|아닙|아닐|아냐|않|못|틀렸|틀린|틀림|잘못|오류|맞지|옳지|거짓|부정|불성립|(?:성립|유효|정확)할\s*수\s*없)/u;
+
 function claimTailIsNegated(text: string, claimEnd: number) {
   const tail = text.slice(claimEnd, claimEnd + 64);
   return (
@@ -146,8 +149,9 @@ function laterScopedClaimRejectsRelation(text: string, claimEnd: number) {
     .split(/[.!?;\n]+/u)
     .some(
       (clause) =>
-        SCOPED_RELATION_REFERENCE_PATTERN.test(clause) &&
-        NEGATIVE_CLAIM_PATTERN.test(clause),
+        (SCOPED_RELATION_REFERENCE_PATTERN.test(clause) &&
+          NEGATIVE_CLAIM_PATTERN.test(clause)) ||
+        SCOPED_RESULT_REJECTION_PATTERN.test(clause),
     );
 }
 
@@ -172,7 +176,8 @@ function parsePracticeRelations(text: string) {
 }
 
 type ParsedRoleClaim = Readonly<{
-  value: number;
+  value: number | null;
+  syntaxValid: boolean;
   negated: boolean;
   unitValid: boolean;
   sourceIndex: number;
@@ -185,20 +190,53 @@ const ASSERTION_QUALIFIER_SOURCE =
 const ROLE_VALUE_NOUN_SOURCE =
   "(?:(?:금액|값|수치|액수|산정액|계산값|결과값)\\s*)?";
 
+const CLAIM_QUOTE_SOURCE = `(["'“”‘’]?)`;
+const CLAIM_SIGNED_NUMBER_SOURCE = "([+−\\-\\t ]*\\d[\\d,]*)";
+
+function claimWrappersMatch(open: string, close: string) {
+  if (open.length === 0 || close.length === 0) {
+    return open.length === 0 && close.length === 0;
+  }
+  return (
+    (open === close && (open === '"' || open === "'")) ||
+    (open === "“" && close === "”") ||
+    (open === "‘" && close === "’")
+  );
+}
+
 function explicitRoleClaims(text: string, roleLabel: string) {
   const claims: ParsedRoleClaim[] = [];
   const boundedRoleLabel = `(?<![가-힣A-Za-z0-9])${roleLabel}`;
+  const unitSource = "((?:원\\s*\\/\\s*(?:년|연)|연간\\s*원))?";
   const patterns = [
-    new RegExp(
-      `${boundedRoleLabel}\\s*(?:의\\s*)?${ASSERTION_QUALIFIER_SOURCE}${ROLE_VALUE_NOUN_SOURCE}(?:은|는|이|가|:|=)?\\s*([+−-]?\\d[\\d,]*)\\s*((?:원\\s*\\/\\s*(?:년|연)|연간\\s*원))?`,
-      "gu",
-    ),
-    new RegExp(
-      `([+−-]?\\d[\\d,]*)\\s*((?:원\\s*\\/\\s*(?:년|연)|연간\\s*원))?\\s*(?:은|는|이|가|:|=)?\\s*${ASSERTION_QUALIFIER_SOURCE}${boundedRoleLabel}\\s*(?:의\\s*)?${ASSERTION_QUALIFIER_SOURCE}${ROLE_VALUE_NOUN_SOURCE}(?![가-힣A-Za-z0-9])`,
-      "gu",
-    ),
+    {
+      pattern: new RegExp(
+        `${boundedRoleLabel}\\s*(?:의\\s*)?${ASSERTION_QUALIFIER_SOURCE}${ROLE_VALUE_NOUN_SOURCE}(?:은|는|이|가|:|=)?\\s*${CLAIM_QUOTE_SOURCE}\\s*${CLAIM_SIGNED_NUMBER_SOURCE}\\s*${unitSource}\\s*${CLAIM_QUOTE_SOURCE}`,
+        "gu",
+      ),
+      openGroup: 1,
+      valueGroup: 2,
+      unitGroup: 3,
+      closeGroup: 4,
+    },
+    {
+      pattern: new RegExp(
+        `${CLAIM_QUOTE_SOURCE}\\s*${CLAIM_SIGNED_NUMBER_SOURCE}\\s*${unitSource}\\s*${CLAIM_QUOTE_SOURCE}\\s*(?:은|는|이|가|:|=)?\\s*${ASSERTION_QUALIFIER_SOURCE}${boundedRoleLabel}\\s*(?:의\\s*)?${ASSERTION_QUALIFIER_SOURCE}${ROLE_VALUE_NOUN_SOURCE}(?![가-힣A-Za-z0-9])`,
+        "gu",
+      ),
+      openGroup: 1,
+      valueGroup: 2,
+      unitGroup: 3,
+      closeGroup: 4,
+    },
   ];
-  for (const pattern of patterns) {
+  for (const {
+    pattern,
+    openGroup,
+    valueGroup,
+    unitGroup,
+    closeGroup,
+  } of patterns) {
     for (const match of text.matchAll(pattern)) {
       const sourceEnd = match.index + match[0].length;
       if (
@@ -208,14 +246,20 @@ function explicitRoleClaims(text: string, roleLabel: string) {
       ) {
         continue;
       }
-      const value = relationNumber(match[1]);
-      if (value === null) continue;
+      const normalizedValue = match[valueGroup]
+        .replace(/[\t ]+/gu, "")
+        .replaceAll("−", "-");
+      const syntaxValid =
+        /^[+-]?\d[\d,]*$/u.test(normalizedValue) &&
+        claimWrappersMatch(match[openGroup], match[closeGroup]);
+      const value = syntaxValid ? relationNumber(normalizedValue) : null;
       const sourceIndex = match.index;
       const sourceLength = match[0].length;
       claims.push({
         value,
+        syntaxValid: syntaxValid && value !== null,
         negated: claimTailIsNegated(text, sourceIndex + sourceLength),
-        unitValid: match[2] !== undefined,
+        unitValid: match[unitGroup] !== undefined,
         sourceIndex,
         sourceLength,
       });
@@ -240,7 +284,8 @@ function roleBindingEvaluation(input: {
     const valuesValid =
       roleClaims.length > 0 &&
       roleClaims.every(
-        (claim) => !claim.negated && claim.value === expectedValue,
+        (claim) =>
+          claim.syntaxValid && !claim.negated && claim.value === expectedValue,
       );
     return {
       valuesValid,
@@ -267,6 +312,7 @@ function finalResultClaimsValid(text: string, expectedValue: number) {
     )
     .every(
       (claim) =>
+        claim.syntaxValid &&
         claim.unitValid &&
         (claim.negated
           ? claim.value !== expectedValue
