@@ -141,8 +141,13 @@
       "pull_request_number",
       "base_sha",
       "expected_head_sha",
+      "initial_reviewed_head_sha",
       "reviewed_head_sha",
       "remote_head_sha",
+      "source_correction_count",
+      "source_correction_head_shas",
+      "source_correction_parent_chain_valid",
+      "source_correction_budget_compliant",
       "merge_sha",
       "merge_parent_sha",
       "candidate_tree_sha",
@@ -162,6 +167,15 @@
       "next_authorized_stage_tuple",
       "validated_at"
     ],
+    "source_correction_binding": {
+      "maximum_source_corrections": 2,
+      "count_must_equal_correction_head_count": true,
+      "correction_head_shas_must_be_unique_exact_40_hex": true,
+      "each_correction_head_parent_must_equal_previous_reviewed_or_correction_head": true,
+      "final_reviewed_head_must_equal_last_correction_head_when_count_positive": true,
+      "final_reviewed_head_must_equal_initial_reviewed_head_when_count_zero": true,
+      "budget_compliance_verdict_must_be_true": true
+    },
     "exact_head_checks_binding": {
       "required_names": [
         "pr-contract",
