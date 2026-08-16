@@ -328,6 +328,32 @@ function roundingAssertions(text: string) {
 
 type ResultUnitAssertion = "EXPECTED" | "CONTRADICTED";
 
+type ExplicitOperatorAssertion = Readonly<{
+  operator: ParsedPracticeRelation["operator"];
+  negated: boolean;
+}>;
+
+function explicitOperatorAssertions(text: string) {
+  const assertions: ExplicitOperatorAssertion[] = [];
+  const pattern =
+    /(?:실제(?:로)?\s*)?(?:연산자|연산\s*(?:기호|방식)|계산\s*방식|계산법|연산)(?:은|는|이|가|:|=)?\s*(덧셈|더하기|가산|플러스|뺄셈|빼기|차감|마이너스|곱셈|곱하기|나눗셈|나누기|ADD|SUBTRACT|MULTIPLY|DIVIDE|[+\-−×xX*÷/])/giu;
+  for (const match of text.matchAll(pattern)) {
+    const token = match[1];
+    const operator = /^(?:덧셈|더하기|가산|플러스|ADD|\+)$/iu.test(token)
+      ? "ADD"
+      : /^(?:뺄셈|빼기|차감|마이너스|SUBTRACT|[-−])$/iu.test(token)
+        ? "SUBTRACT"
+        : /^(?:곱셈|곱하기|MULTIPLY|[×xX*])$/iu.test(token)
+          ? "MULTIPLY"
+          : "DIVIDE";
+    assertions.push({
+      operator,
+      negated: claimTailIsNegated(text, match.index + match[0].length),
+    });
+  }
+  return assertions;
+}
+
 function resultUnitAssertions(text: string) {
   const assertions: ResultUnitAssertion[] = [];
   const pattern =
@@ -370,6 +396,11 @@ export function validatePracticeCalculationRelation(input: {
   const conflicting = relations.filter(
     (relation) => !relationIsNegated(relation) && !isExpectedRelation(relation),
   );
+  const operatorAssertionConflict = explicitOperatorAssertions(normalized).some(
+    (assertion) =>
+      (!assertion.negated && assertion.operator !== input.anchor.operator) ||
+      (assertion.negated && assertion.operator === input.anchor.operator),
+  );
 
   if (negatedMatching.length > 0) {
     return {
@@ -391,6 +422,18 @@ export function validatePracticeCalculationRelation(input: {
       anchorId: input.anchor.anchorId,
       anchorVersionId: input.anchor.anchorVersionId,
       reasonCodes: ["conflicting_calculation_relations"],
+      matchedRelation: null,
+    };
+  }
+
+  if (operatorAssertionConflict) {
+    return {
+      state: "AMBIGUOUS",
+      verified: false,
+      validatorId: input.anchor.deterministicValidatorId,
+      anchorId: input.anchor.anchorId,
+      anchorVersionId: input.anchor.anchorVersionId,
+      reasonCodes: ["operator_assertion_conflict"],
       matchedRelation: null,
     };
   }

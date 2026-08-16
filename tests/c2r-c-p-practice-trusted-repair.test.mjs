@@ -572,6 +572,48 @@ test("Practice proof rejects negated relation and rounding assertions", () => {
   );
 });
 
+test("Practice proof rejects explicit operator assertions that contradict subtraction", () => {
+  const anchor = trustedRepairCanonicalFixture("appraisal_practical").anchors[0]
+    .calculationRelation;
+  assert.ok(anchor);
+
+  for (const operatorClaim of [
+    "실제 연산자는 덧셈이다.",
+    "계산 연산은 더하기이다.",
+    "연산 기호는 +이다.",
+    "실제로 연산 방식은 ADD이다.",
+    "연산자는 곱셈이다.",
+    "연산은 나눗셈이다.",
+    "연산자는 뺄셈이 아니다.",
+  ]) {
+    const result = validatePracticeCalculationRelation({
+      text: `${VALID_RELATION} ${operatorClaim}`,
+      anchor,
+    });
+    assert.equal(result.verified, false, operatorClaim);
+    assert.equal(result.state, "AMBIGUOUS", operatorClaim);
+    assert.deepEqual(
+      result.reasonCodes,
+      ["operator_assertion_conflict"],
+      operatorClaim,
+    );
+  }
+
+  for (const compatibleClaim of [
+    "실제 연산자는 뺄셈이다.",
+    "연산 기호는 -이다.",
+    "계산 방식은 SUBTRACT이다.",
+    "연산자는 덧셈이 아니다.",
+  ]) {
+    const result = validatePracticeCalculationRelation({
+      text: `${VALID_RELATION} ${compatibleClaim}`,
+      anchor,
+    });
+    assert.equal(result.verified, true, compatibleClaim);
+    assert.equal(result.state, "PASS", compatibleClaim);
+  }
+});
+
 test("Practice proof accepts canonical positive-sign wording and rejects negative-sign wording", () => {
   const anchor = trustedRepairCanonicalFixture("appraisal_practical").anchors[0]
     .calculationRelation;
