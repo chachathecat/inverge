@@ -99,7 +99,8 @@ and its #736 receipt validates, the exact delivery control plane is
 `config/foundation-bounded-terminal-delivery-delegation-v1.json`. It delegates
 routine repository delivery to exactly one merge-producing writer using a
 feature branch, ordinary non-force push, a synchronized PR, local and remote
-checks, fresh exact-head hostile review, at most two source corrections,
+checks that all succeed on the exact head, fresh exact-head hostile review,
+at most two source corrections,
 verified thread reply/resolution, expected-head-pinned squash merge and a
 validated receipt. Every merge still requires actionable P0/P1/P2 `0/0/0`.
 

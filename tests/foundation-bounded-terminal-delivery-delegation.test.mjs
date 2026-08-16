@@ -5,6 +5,26 @@ import test from "node:test";
 const CONTRACT_PATH = "config/foundation-bounded-terminal-delivery-delegation-v1.json";
 const DECISION_PATH = "docs/decisions/2026-08-16-owner-bounded-terminal-delivery-delegation.md";
 const EXPECTED_TUPLE = ["WCV-C2", "C2", 717, "C2R-C-P", 703, "authorized_unstarted"];
+const REQUIRED_CHECKS = [
+  "pr-contract",
+  "risk-classifier",
+  "runtime-gate",
+  "fast-ci",
+  "full-ci",
+  "full-ci-windows",
+  "Learner Loop Health",
+  "security-audit-sbom",
+  "Vercel",
+];
+const PULL_REQUEST_RULE_PARAMETERS = {
+  allowed_merge_methods: ["squash"],
+  required_approving_review_count: 0,
+  required_review_thread_resolution: true,
+  dismiss_stale_reviews_on_push: false,
+  require_code_owner_review: false,
+  require_last_push_approval: false,
+  required_reviewers: [],
+};
 
 const TOP_LEVEL_KEYS = [
   "$schema",
@@ -55,11 +75,14 @@ const RECEIPT_FIELDS = [
   "merge_tree_sha",
   "merge_method",
   "exact_head_checks",
+  "all_required_exact_head_checks_successful",
   "review_counts",
   "all_threads_resolved",
   "ruleset_name",
   "ruleset_enforcement",
   "ruleset_bypass_actor_count",
+  "ruleset_rule_types",
+  "ruleset_pull_request_parameters",
   "issue_state_after_merge",
   "roadmap_state_after_merge",
   "next_authorized_stage_tuple",
@@ -150,6 +173,9 @@ test("allows exactly one protected merge-producing writer and no history rewrite
   assert.equal(merge.main_ruleset_enforcement, "active");
   assert.deepEqual(merge.main_ruleset_bypass_actors, []);
   exactMembers(merge.required_rules, ["pull_request", "non_fast_forward", "deletion"], "ruleset rules");
+  assert.deepEqual(merge.pull_request_rule_parameters, PULL_REQUEST_RULE_PARAMETERS);
+  exactMembers(merge.required_exact_head_checks, REQUIRED_CHECKS, "required exact-head checks");
+  assert.equal(merge.all_required_exact_head_checks_must_succeed, true);
 });
 
 test("freezes the ordered exact-head delivery, correction and thread cycle", async () => {
@@ -181,6 +207,13 @@ test("requires expected-head squash tree equality and a closed metadata-only rec
     assert.equal(merge[key], true, key);
   }
   exactMembers(receipt.required_fields, RECEIPT_FIELDS, "receipt fields");
+  exactMembers(receipt.exact_head_checks_binding.required_names, REQUIRED_CHECKS, "receipt check names");
+  assert.equal(receipt.exact_head_checks_binding.required_conclusion, "success");
+  assert.equal(receipt.exact_head_checks_binding.check_head_must_equal_expected_head, true);
+  assert.equal(receipt.exact_head_checks_binding.missing_pending_skipped_cancelled_or_unsuccessful_blocks, true);
+  exactMembers(receipt.ruleset_binding.required_rule_types, merge.required_rules, "receipt ruleset types");
+  assert.deepEqual(receipt.ruleset_binding.pull_request_rule_parameters, PULL_REQUEST_RULE_PARAMETERS);
+  assert.deepEqual(receipt.ruleset_binding.pull_request_rule_parameters, merge.pull_request_rule_parameters);
   assert.equal(receipt.metadata_only, true);
   assert.equal(receipt.raw_diff_or_source_body_allowed, false);
   assert.equal(receipt.raw_learner_or_ocr_content_allowed, false);
@@ -269,7 +302,11 @@ test("fails closed under widened writer, review, receipt, start or Owner-gate mu
     (value) => value.writer_policy.force_push_allowed = true,
     (value) => value.correction_policy.maximum_source_corrections_per_pr = 3,
     (value) => value.review_policy.required_premerge_counts.P1 = 1,
+    (value) => value.merge_policy.all_required_exact_head_checks_must_succeed = false,
+    (value) => value.merge_policy.pull_request_rule_parameters.required_review_thread_resolution = false,
     (value) => value.receipt_schema.required_fields.pop(),
+    (value) => value.receipt_schema.exact_head_checks_binding.required_conclusion = "neutral",
+    (value) => value.receipt_schema.ruleset_binding.pull_request_rule_parameters.allowed_merge_methods = ["merge"],
     (value) => value.owner_gates.pop(),
     (value) => value.delegated_start.production_stage_allowed = true,
     (value) => value.authority.general_automatic_start_flags_mutated = true,
@@ -284,6 +321,10 @@ test("fails closed under widened writer, review, receipt, start or Owner-gate mu
       assert.equal(candidate.writer_policy.force_push_allowed, false);
       assert.equal(candidate.correction_policy.maximum_source_corrections_per_pr, 2);
       assert.deepEqual(candidate.review_policy.required_premerge_counts, { P0: 0, P1: 0, P2: 0 });
+      assert.equal(candidate.merge_policy.all_required_exact_head_checks_must_succeed, true);
+      assert.deepEqual(candidate.merge_policy.pull_request_rule_parameters, PULL_REQUEST_RULE_PARAMETERS);
+      assert.equal(candidate.receipt_schema.exact_head_checks_binding.required_conclusion, "success");
+      assert.deepEqual(candidate.receipt_schema.ruleset_binding.pull_request_rule_parameters, PULL_REQUEST_RULE_PARAMETERS);
       assert.equal(candidate.delegated_start.production_stage_allowed, false);
     });
   }
