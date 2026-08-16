@@ -122,7 +122,7 @@ function applyPlan(aggregate, plan) {
   };
 }
 
-function prepareRepairSubmitted(repairBody) {
+function prepareDiagnosed() {
   const fixture = trustedRepairCanonicalFixture("appraisal_practical");
   let aggregate = aggregateForPractice();
   aggregate = applyPlan(
@@ -167,6 +167,12 @@ function prepareRepairSubmitted(repairBody) {
     }),
   );
   assert.equal(aggregate.session.stateData.proofEvaluation.state, "UNSUPPORTED");
+  return aggregate;
+}
+
+function prepareRepairSubmitted(repairBody) {
+  const fixture = trustedRepairCanonicalFixture("appraisal_practical");
+  let aggregate = prepareDiagnosed();
   aggregate = applyPlan(
     aggregate,
     planTrustedRepairExposure({
@@ -297,6 +303,7 @@ test("[C2R-C-P-R09] sign claims honor negation and fail closed on positive-negat
     VALID_RELATION.replace("양수이며", "양수는 아니다"),
     VALID_RELATION.replace("양수이며", "양수가 결코 아니며"),
     VALID_RELATION.replace("양수이며", "양의 부호가 아니다"),
+    VALID_RELATION.replace("양수이며", "양수라는 주장은 틀렸고"),
   ]) {
     const negatedPositiveResult = validatePracticeCalculationRelation({
       text: negatedPositive,
@@ -392,6 +399,37 @@ test("Practice proof binds role labels to exact operands and result", () => {
   assert.ok(negatedRoleResult.reasonCodes.includes("operand_roles_missing"));
 });
 
+test("Practice proof requires exact KRW/year units on every bound role", () => {
+  const anchor = trustedRepairCanonicalFixture("appraisal_practical").anchors[0]
+    .calculationRelation;
+  assert.ok(anchor);
+  for (const contradictoryUnit of [
+    VALID_RELATION.replace(
+      "총수익은 120,000,000원/년",
+      "총수익은 120,000,000kg",
+    ),
+    VALID_RELATION.replace(
+      "운영비는 20,000,000원/년",
+      "운영비는 20,000,000명",
+    ),
+    VALID_RELATION.replace(
+      "순수익은 100,000,000원/년",
+      "순수익은 100,000,000원/월",
+    ),
+  ]) {
+    const result = validatePracticeCalculationRelation({
+      text: contradictoryUnit,
+      anchor,
+    });
+    assert.equal(result.state, "PARTIAL", contradictoryUnit);
+    assert.equal(result.verified, false, contradictoryUnit);
+    assert.ok(
+      result.reasonCodes.includes("operand_role_units_invalid"),
+      contradictoryUnit,
+    );
+  }
+});
+
 test("Practice proof rejects negated relation and rounding assertions", () => {
   const anchor = trustedRepairCanonicalFixture("appraisal_practical").anchors[0]
     .calculationRelation;
@@ -415,6 +453,7 @@ test("Practice proof rejects negated relation and rounding assertions", () => {
     "반올림 없음은 아니다",
     "반올림하지 않음이 아니다",
     "반올림 0자리가 아니다",
+    "반올림 없음은 틀렸다",
   ]) {
     const roundingResult = validatePracticeCalculationRelation({
       text: VALID_RELATION.replace("반올림 없음", negatedRounding),
@@ -574,6 +613,48 @@ test("[C2R-C-P-R04] guided continuation selects the newest level-three exposure"
   assert.equal(
     selectTrustedRepairScaffoldExposure(aggregate)?.exposureId,
     aggregate.exposures[1].exposureId,
+  );
+});
+
+test("guided mode requires the current smallest scaffold exposure first", () => {
+  const fixture = trustedRepairCanonicalFixture("appraisal_practical");
+  const diagnosed = prepareDiagnosed();
+  assert.throws(
+    () =>
+      planTrustedRepairContinuation({
+        aggregate: diagnosed,
+        fixture,
+        sourceBinding: SYNTHETIC_SOURCE_BINDING,
+        continuation: "SWITCH_TO_GUIDED",
+        exposureId: nextId(),
+        occurredAt: "2026-08-17T00:03:00.000Z",
+      }),
+    /trusted-repair:invalid_transition/,
+  );
+
+  const exposed = applyPlan(
+    diagnosed,
+    planTrustedRepairExposure({
+      aggregate: diagnosed,
+      exposureId: nextId(),
+      occurredAt: "2026-08-17T00:03:00.000Z",
+    }),
+  );
+  const guided = applyPlan(
+    exposed,
+    planTrustedRepairContinuation({
+      aggregate: exposed,
+      fixture,
+      sourceBinding: SYNTHETIC_SOURCE_BINDING,
+      continuation: "SWITCH_TO_GUIDED",
+      exposureId: nextId(),
+      occurredAt: "2026-08-17T00:04:00.000Z",
+    }),
+  );
+  assert.equal(guided.session.state, "guided");
+  assert.deepEqual(
+    guided.exposures.map((exposure) => exposure.scaffoldKind),
+    ["smallest_eligible_scaffold", "guided_solution"],
   );
 });
 

@@ -160,6 +160,7 @@ test("[C2R-C-P-R11] API and learner shell remain Owner-only default-off", () => 
   assert.match(loop, /if \(action === "start"\) \{/);
   assert.match(loop, /record\.ownerScope === ownerScope/);
   assert.match(loop, /JSON\.stringify\(\{ \.\.\.command, ownerScope \}/);
+  assert.match(loop, /view\.session\.state === "diagnosed" \|\|/);
   assert.match(
     read("app/app/trusted-repair/page.tsx"),
     /<TrustedRepairLoop ownerScope=\{ownerScope\} \/>/,

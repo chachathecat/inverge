@@ -115,7 +115,7 @@ function relationNumber(value: string) {
 function claimTailIsNegated(text: string, claimEnd: number) {
   const tail = text.slice(claimEnd, claimEnd + 64);
   return (
-    /^\s*(?:원(?:\s*\/\s*(?:년|연))?|연간\s*원)?\s*(?:(?:은|는|이|가|을|를|으로|로)\s*)?(?:(?:절대|전혀|결코)\s*)?(?:아니|아님|아닌|아닙|아닐|아냐|않)/u.test(
+    /^\s*(?:원(?:\s*\/\s*(?:년|연))?|연간\s*원)?\s*(?:라는?\s*주장)?\s*(?:(?:은|는|이|가|을|를|으로|로)\s*)?(?:(?:절대|전혀|결코)\s*)?(?:아니|아님|아닌|아닙|아닐|아냐|않|틀렸|틀린|틀림|잘못|오류)/u.test(
       tail,
     ) ||
     /^\s*(?:원(?:\s*\/\s*(?:년|연))?|연간\s*원)?\s*(?:과|와)\s*같지\s*않/u.test(
@@ -147,6 +147,7 @@ function parsePracticeRelations(text: string) {
 type ParsedRoleClaim = Readonly<{
   value: number;
   negated: boolean;
+  unitValid: boolean;
   sourceIndex: number;
   sourceLength: number;
 }>;
@@ -155,11 +156,11 @@ function explicitRoleClaims(text: string, roleLabel: string) {
   const claims: ParsedRoleClaim[] = [];
   const patterns = [
     new RegExp(
-      `${roleLabel}\\s*(?:은|는|이|가|:|=)?\\s*(-?\\d[\\d,]*)`,
+      `${roleLabel}\\s*(?:은|는|이|가|:|=)?\\s*(-?\\d[\\d,]*)\\s*((?:원\\s*\\/\\s*(?:년|연)|연간\\s*원))?`,
       "gu",
     ),
     new RegExp(
-      `(-?\\d[\\d,]*)\\s*(?:원(?:\\s*\\/\\s*(?:년|연))?)?\\s*(?:은|는|이|가|:|=)?\\s*${roleLabel}`,
+      `(-?\\d[\\d,]*)\\s*((?:원\\s*\\/\\s*(?:년|연)|연간\\s*원))?\\s*(?:은|는|이|가|:|=)?\\s*${roleLabel}`,
       "gu",
     ),
   ];
@@ -172,6 +173,7 @@ function explicitRoleClaims(text: string, roleLabel: string) {
       claims.push({
         value,
         negated: claimTailIsNegated(text, sourceIndex + sourceLength),
+        unitValid: match[2] !== undefined,
         sourceIndex,
         sourceLength,
       });
@@ -180,7 +182,7 @@ function explicitRoleClaims(text: string, roleLabel: string) {
   return claims;
 }
 
-function roleBindingsValid(input: {
+function roleBindingEvaluation(input: {
   text: string;
   grossIncomeValue: number;
   operatingExpenseValue: number;
@@ -191,15 +193,23 @@ function roleBindingsValid(input: {
     ["운영비", input.operatingExpenseValue],
     ["순수익", input.resultValue],
   ] as const;
-  return claims.every(([label, expectedValue]) => {
+  const evaluated = claims.map(([label, expectedValue]) => {
     const roleClaims = explicitRoleClaims(input.text, label);
-    return (
+    const valuesValid =
       roleClaims.length > 0 &&
       roleClaims.every(
         (claim) => !claim.negated && claim.value === expectedValue,
-      )
-    );
+      );
+    return {
+      valuesValid,
+      unitsValid:
+        valuesValid && roleClaims.every((claim) => claim.unitValid),
+    };
   });
+  return {
+    valuesValid: evaluated.every((entry) => entry.valuesValid),
+    unitsValid: evaluated.every((entry) => entry.unitsValid),
+  };
 }
 
 type SignAssertion = "POSITIVE" | "NEGATIVE";
@@ -368,7 +378,7 @@ export function validatePracticeCalculationRelation(input: {
   });
   const unitAssertions = resultUnitAssertions(normalized);
   const unitContradicted = unitAssertions.includes("CONTRADICTED");
-  const rolesValid = roleBindingsValid({
+  const roleBindings = roleBindingEvaluation({
     text: normalized,
     grossIncomeValue: grossIncome.value,
     operatingExpenseValue: operatingExpense.value,
@@ -396,7 +406,8 @@ export function validatePracticeCalculationRelation(input: {
   const roundingContradicted = allRounding.includes(false);
   const roundingValid = roundingConfirmed && !roundingContradicted;
   const reasonCodes = [
-    ...(rolesValid ? [] : ["operand_roles_missing"]),
+    ...(roleBindings.valuesValid ? [] : ["operand_roles_missing"]),
+    ...(roleBindings.unitsValid ? [] : ["operand_role_units_invalid"]),
     ...(relationUnitsValid ? [] : ["krw_per_year_unit_missing"]),
     ...(unitContradicted ? ["krw_per_year_unit_conflict"] : []),
     ...(signValid ? [] : ["positive_sign_constraint_failed"]),
@@ -1008,7 +1019,14 @@ export function planTrustedRepairContinuation(input: {
   if (input.continuation === "SWITCH_TO_GUIDED") {
     const revisionId = input.aggregate.session.confirmedRevisionId;
     const gapId = input.aggregate.session.primaryGapId;
-    if (!revisionId || !gapId) {
+    const smallestScaffoldCommitted = input.aggregate.exposures.some(
+      (exposure) =>
+        exposure.revisionId === revisionId &&
+        exposure.gapId === gapId &&
+        exposure.assistanceLevel === 1 &&
+        exposure.scaffoldKind === "smallest_eligible_scaffold",
+    );
+    if (!revisionId || !gapId || !smallestScaffoldCommitted) {
       throw new TrustedRepairContractError("invalid_transition");
     }
     const plan = basePlan(input.aggregate, "guided", {

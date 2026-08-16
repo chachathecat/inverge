@@ -440,7 +440,7 @@ export function TrustedRepairLoop({ ownerScope }: { ownerScope: string }) {
             <summary className="min-h-11 cursor-pointer py-2 font-medium">다른 방식으로 하기</summary>
             <div className="mt-3 flex flex-col gap-2 sm:flex-row">
               <Button type="button" variant="outline" disabled={busy} onClick={() => command("continue", { continuation: "DEFER_FOR_NOW" })}>지금은 보류 · DEFER_FOR_NOW</Button>
-              {view.session.state === "partial" && !view.session.immediatePartialRetryAvailable ? null : <Button type="button" variant="outline" disabled={busy} onClick={() => command("continue", { continuation: "SWITCH_TO_GUIDED" })}>가이드로 전환 · SWITCH_TO_GUIDED</Button>}
+              {view.session.state === "diagnosed" || (view.session.state === "partial" && !view.session.immediatePartialRetryAvailable) ? null : <Button type="button" variant="outline" disabled={busy} onClick={() => command("continue", { continuation: "SWITCH_TO_GUIDED" })}>가이드로 전환 · SWITCH_TO_GUIDED</Button>}
             </div>
           </details>
         ) : null}
