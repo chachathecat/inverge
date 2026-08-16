@@ -52,6 +52,13 @@ function assertFindingShape(finding) {
   assert.ok(finding.dependency_paths.every((path) => typeof path === "string"));
 }
 
+function findPackageInstallations(packages, packageName) {
+  const suffix = `/node_modules/${packageName}`;
+  return Object.entries(packages).filter(
+    ([path]) => path === `node_modules/${packageName}` || path.endsWith(suffix),
+  );
+}
+
 test("pins the patched production dependency graph", async () => {
   const packageJson = await readJson("package.json");
   const lock = await readJson("package-lock.json");
@@ -136,21 +143,36 @@ test("bounds every residual dev-only exception to less than thirty days", async 
   assert.deepEqual(overlap, []);
 });
 
-test("marks every residual package as dev-only or dev-optional in the lock graph", async () => {
+test("keeps every still-installed Phase C residual dev-only or dev-optional", async () => {
   const lock = await readJson("package-lock.json");
-  for (const path of [
-    "node_modules/@babel/core",
-    "node_modules/@playwright/test",
-    "node_modules/playwright",
-    "node_modules/brace-expansion",
-    "node_modules/@typescript-eslint/typescript-estree/node_modules/brace-expansion",
-    "node_modules/js-yaml",
-    "node_modules/supabase",
-    "node_modules/tar",
-  ]) {
-    const entry = lock.packages[path];
-    assert.equal(entry.dev === true || entry.devOptional === true, true, path);
+  const contract = await readJson(CONTRACT);
+  const residualPackages = new Set(
+    contract.residual_dev_exceptions.map((finding) => finding.package),
+  );
+
+  for (const packageName of residualPackages) {
+    const installations = findPackageInstallations(lock.packages, packageName);
+    for (const [path, entry] of installations) {
+      assert.equal(entry.dev === true || entry.devOptional === true, true, path);
+    }
   }
+});
+
+test("discovers top-level, relocated nested, and scoped residual installations", () => {
+  const packages = {
+    "node_modules/tar": { dev: true },
+    "node_modules/tool/node_modules/tar": { dev: false },
+    "node_modules/tool/node_modules/@babel/core": { dev: true },
+    "node_modules/not-tar": { dev: false },
+  };
+  assert.deepEqual(
+    findPackageInstallations(packages, "tar").map(([path]) => path),
+    ["node_modules/tar", "node_modules/tool/node_modules/tar"],
+  );
+  assert.deepEqual(
+    findPackageInstallations(packages, "@babel/core").map(([path]) => path),
+    ["node_modules/tool/node_modules/@babel/core"],
+  );
 });
 
 test("requires full compatibility and rollback proof for both bounded overrides", async () => {
