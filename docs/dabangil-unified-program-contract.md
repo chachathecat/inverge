@@ -204,11 +204,12 @@ review/correction cycles are prohibited.
 
 Issue #701 remains the parent program. The exact identifiers are roadmap item
 `WCV-C2`, campaign `C2`, recovery tracker #717, completed source-only stages
-C2R-A for Issue #702 and C2R-B for Issue #714, and current authorized but
-unstarted replacement stage C2R-C-P for Issue #703. Issue #714 remains open:
+C2R-A for Issue #702 and C2R-B for Issue #714, completed Practice stage
+C2R-C-P for Issue #703, and current authorized but unstarted replacement
+stage C2R-C-T for Issue #703. Issue #714 remains open:
 only its C2 allocation is complete, while C3, C4 and C6 remain preserved. The
 canonical tuple is
-`WCV-C2 / C2 / #717 / C2R-C-P / #703 / authorized_unstarted`.
+`WCV-C2 / C2 / #717 / C2R-C-T / #703 / authorized_unstarted`.
 
 `launchConvergenceAmendment`, `wcvCampaignOverlay`, `roadmapContract`, the ULC
 preserved-current-authority mirror and active roadmap must expose one identical
@@ -254,21 +255,23 @@ partial-loop, API/UI, fork-safe workflow, shared-shell, checkout-credential and
 runtime-boundary regressions first covered by C2R-C-P remain mandatory
 inherited regressions in C2R-C-T and C2R-C-L.
 
-Every replacement stage has `automaticStartAllowed: false`. Runner selection
-is metadata-only and cannot start, reserve, provision, author, review or merge
-a stage. The maximum remains one merge-producing writer.
+The structural-recovery records preserve their original
+`automaticStartAllowed: false` fact. The later 2026-08-16 GitHub-native
+delivery decision authorizes automatic continuation only for the next
+dependency-ready, authorized non-Production stage after protected merge and
+receipt validation. The maximum remains one merge-producing writer.
 
 ### Non-self-referential regression coverage
 
-All 21 PR #716 matrix rows remain `uncovered` in the authority PR. A future
-stage may change only its assigned rows to
+PR #748 changes only its 11 assigned C2R-C-P rows to
 `candidate_coverage_pending_exact_merge`, with the finding/thread ID, stage,
 PR number, exact regression assertion ID and test path, inherited-regression
 obligations, and receipt policy
 `github_exact_head_pinned_squash_merge_v1`. That declaration is a pre-merge
 candidate, not effective coverage. A candidate commit does not record its own
 reviewed head/tree or future squash-merge commit when doing so would be
-self-referential.
+self-referential. Those 11 rows do not become effective before merge and
+receipt validation; the other 10 rows remain `uncovered`.
 
 GitHub evidence outside the candidate commit binds the exact covering PR,
 final reviewed head/tree, fresh checks, final review anchored to that head,
@@ -314,8 +317,8 @@ and #714 are preserved as history and are explicitly superseded only for the
 C2 structural-recovery stage chain. Tracker #717 is the recovery tracker and
 campaign-C2 lead record, not a replacement-stage ID or Issue #702. Standalone
 #702 and #714 were authorized only as the serial source-contract stages C2R-A
-and C2R-B. Their terminal evidence authorizes C2R-C-P as the current unstarted
-stage; no runtime stage is started by source authority.
+and C2R-B. Their terminal evidence authorized C2R-C-P; after C2R-C-P's
+protected merge and validated receipt, C2R-C-T is the current unstarted stage.
 
 ## 2B. Unified product and multisurface launch convergence
 
@@ -332,13 +335,14 @@ consume tenant-authorized assignments and approved feedback.
 ### Preserved current authority
 
 ULC-0 preserves the sole current implementation item `WCV-C2`, campaign `C2`,
-Tracker #717, the five-stage C2R chain, the 21-row regression matrix, the
-one-writer limit and no-auto-start. Under merge-and-receipt semantics,
+Tracker #717, the five-stage C2R chain, the 21-row regression matrix and the
+one-writer limit. Under merge-and-receipt semantics,
 C2R-A/#702 and C2R-B/#714 are represented complete source-only only after
-their expected-head-pinned merges and validated receipts. C2R-C-P/#703 is the
-sole represented next authorized and unstarted stage, and Issue #714 remains
-open for C3/C4/C6. WCV-C2 remains incomplete and no replacement stage starts
-automatically.
+their expected-head-pinned merges and validated receipts. C2R-C-P for Issue
+#703 is the complete Practice runtime stage; C2R-C-T for Issue #703 is the
+sole represented next authorized and unstarted stage. Issue #714 remains open
+for C3/C4/C6. WCV-C2 remains incomplete. The later GitHub-native delivery
+decision controls protected non-Production continuation.
 
 ### Free-limited and paid routes
 
@@ -1274,6 +1278,9 @@ The three successor stages remain complete subject outcomes, and their common
 runtime substrate may first land only inside C2R-C-P.
 
 After terminal B merge and receipt, #714 remains open with C3/C4/C6 preserved.
-The current tuple is
-`WCV-C2 / C2 / #717 / C2R-C-P / #703 / authorized_unstarted`. Issue state
-cannot replace either source-stage merge; no runtime or activation begins.
+PR #748 then supplies the complete default-off Owner-only Practice runtime
+candidate and 11 exact matrix declarations. After its protected merge and
+validated receipt, the current tuple is
+`WCV-C2 / C2 / #717 / C2R-C-T / #703 / authorized_unstarted`. Issue state
+cannot replace any required stage merge; no Production or learner activation
+begins.

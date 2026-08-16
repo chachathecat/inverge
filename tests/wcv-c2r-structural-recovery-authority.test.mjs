@@ -263,8 +263,9 @@ test("installs the exact terminally serial five-stage replacement chain", async 
   }
   assert.equal(stages[0].state, "complete_source_only");
   assert.equal(stages[1].state, "complete_source_only");
-  assert.equal(stages[2].state, "authorized_unstarted");
-  for (const stage of stages.slice(3)) {
+  assert.equal(stages[2].state, "complete_practice_runtime");
+  assert.equal(stages[3].state, "authorized_unstarted");
+  for (const stage of stages.slice(4)) {
     assert.equal(stage.state, "queued_dependency_blocked", stage.id);
   }
 });
@@ -292,7 +293,7 @@ test("resolves roadmap, campaign, tracker and current-stage authority without al
     campaignId: "C2",
     recoveryTrackerIssue: 717,
     structuralAuthorityPr: 718,
-    currentReplacementStageId: "C2R-C-P",
+    currentReplacementStageId: "C2R-C-T",
     currentReplacementStageIssue: 703,
     replacementStageChain: ["C2R-A", "C2R-B", "C2R-C-P", "C2R-C-T", "C2R-C-L"],
   });
@@ -317,7 +318,7 @@ test("resolves roadmap, campaign, tracker and current-stage authority without al
   }
   const current = stages.filter((stage) => stage.state === "authorized_unstarted");
   assert.deepEqual(current.map(({ id, issue }) => ({ id, issue })), [
-    { id: "C2R-C-P", issue: 703 },
+    { id: "C2R-C-T", issue: 703 },
   ]);
   for (const allocation of Object.keys(overlay.issue714Tracker.allocations)) {
     assert.equal(
@@ -438,7 +439,7 @@ test("keeps roadmap selection metadata-only with one writer and no stage auto-st
   assert.equal(roadmap.program.soleNextImplementationCampaign, "C2");
   assert.equal(roadmap.program.soleNextImplementationLeadIssue, 717);
   assert.equal(roadmap.program.soleNextImplementationTrackerIssue, 717);
-  assert.equal(roadmap.program.soleNextReplacementStage, "C2R-C-P");
+  assert.equal(roadmap.program.soleNextReplacementStage, "C2R-C-T");
   assert.equal(roadmap.program.soleNextReplacementStageIssue, 703);
   assert.equal(roadmap.program.structuralRecoveryTrackerIssue, 717);
   assert.equal(roadmap.program.terminalDonorPr, 716);
@@ -447,10 +448,11 @@ test("keeps roadmap selection metadata-only with one writer and no stage auto-st
   assert.equal(roadmap.program.replacementStageAutomaticStartAllowed, false);
   assert.equal(c2.leadIssue, 717);
   assert.equal(c2.campaignId, "C2");
-  assert.equal(c2.currentReplacementStage, "C2R-C-P");
+  assert.equal(c2.currentReplacementStage, "C2R-C-T");
   assert.equal(c2.currentReplacementStageIssue, 703);
   assert.equal(c2.c2rBState, "complete_source_only");
-  assert.equal(c2.c2rCPState, "authorized_unstarted");
+  assert.equal(c2.c2rCPState, "complete_practice_runtime");
+  assert.equal(c2.c2rCTState, "authorized_unstarted");
   assert.deepEqual(c2.replacementStages, [
     "C2R-A",
     "C2R-B",
@@ -476,7 +478,7 @@ test("keeps roadmap selection metadata-only with one writer and no stage auto-st
   assert.deepEqual(c2.issue714RemainingAllocationsPreserved, ["C3", "C4", "C6"]);
   assert.equal(c2.automaticStartAllowed, false);
   assert.equal(c2.terminalDonorEvidencePromotedToMain, false);
-  assert.equal(c2.uncoveredReviewFindingCount, 21);
+  assert.equal(c2.uncoveredReviewFindingCount, 10);
   assert.equal(c2.coverageCandidateState, "candidate_coverage_pending_exact_merge");
   assert.equal(
     c2.coverageReceiptPolicyId,
@@ -503,11 +505,11 @@ test("keeps roadmap selection metadata-only with one writer and no stage auto-st
     .roadmapContract;
   assert.equal(roadmapContract.soleNextImplementationCampaignId, "C2");
   assert.equal(roadmapContract.soleNextImplementationTrackerIssue, 717);
-  assert.equal(roadmapContract.soleNextReplacementStageId, "C2R-C-P");
+  assert.equal(roadmapContract.soleNextReplacementStageId, "C2R-C-T");
   assert.equal(roadmapContract.soleNextReplacementStageIssue, 703);
 });
 
-test("installs all 21 donor findings as uncovered matrix rows", async () => {
+test("keeps all 21 donor findings with 11 exact C2R-C-P candidates", async () => {
   const matrix = await text(MATRIX);
   const rows = matrix
     .split(/\r?\n/)
@@ -524,12 +526,17 @@ test("installs all 21 donor findings as uncovered matrix rows", async () => {
   );
   assert.equal(
     rows.filter((row) => row.includes(" | `uncovered` |")).length,
-    21,
+    10,
   );
   assert.equal(
     rows.filter((row) => row.endsWith(" | `none` |")).length,
-    21,
+    10,
   );
+  assert.equal(
+    rows.filter((row) => row.includes(" | `candidate_coverage_pending_exact_merge` |")).length,
+    11,
+  );
+  assert.equal(rows.filter((row) => row.includes('"coveringPrNumber":748')).length, 11);
   assert.doesNotMatch(matrix, /\| `covered` \|/);
   assert.doesNotMatch(matrix, /Future merged commit/i);
   assert.match(matrix, /Candidate coverage declaration/);
@@ -845,8 +852,9 @@ test("keeps V13 and WCV 1.0.8 while denying every activation class", async () =>
   }
   assert.match(decision, /V13 remains the sole active master/);
   assert.match(decision, /WCV 1\.0\.8 remains subordinate/);
-  assert.match(contract, /Every replacement stage has `automaticStartAllowed: false`/);
-  assert.match(roadmap, /No stage starts\nautomatically/);
+  assert.match(contract, /structural-recovery records preserve their original\s+`automaticStartAllowed: false` fact/);
+  assert.match(contract, /GitHub-native\s+delivery decision authorizes automatic continuation/);
+  assert.match(roadmap, /GitHub-native\nprotected non-Production continuation/);
 });
 
 test("registers the structural recovery authority test exactly once", async () => {

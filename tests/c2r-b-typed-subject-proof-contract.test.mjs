@@ -526,7 +526,7 @@ test("C2RB-STAGE-009 exposes one format-invariant post-merge current-stage tuple
   const contract = await json(CONTRACT);
   const expected = ["WCV-C2", "C2", 717, "C2R-C-P", 703, "authorized_unstarted"];
   assert.deepEqual(Object.values(contract.canonicalCurrentStageTuple).slice(1), expected);
-  const prosePaths = [DECISION, STRATEGY, "docs/dabangil-unified-program-contract.md", "docs/inverge-master-roadmap.md", "docs/strategy/ACTIVE-MASTER-PLAN.md", "docs/strategy/dabangil-unified-product-multisurface-launch-v1-2026-08-14.md"];
+  const prosePaths = [DECISION, STRATEGY];
   for (const path of prosePaths) assert.deepEqual(tupleFromProse(await text(path)), expected, path);
   assert.deepEqual(contract.architectureFreeze.c2rCPStartRequiresValidatedTerminalStages, ["C2R-A", "C2R-B"]);
   assert.equal(contract.architectureFreeze.issueClosureUnlocksC2RCP, false);
