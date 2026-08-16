@@ -261,6 +261,15 @@ test("bodyless Practice bank scarcity is persisted before the request is denied"
   assert.match(repository, /contains_body: event\.containsBody/);
 });
 
+test("guided exposure returns and labels distinct level-three content", () => {
+  const server = read("lib/review-os/trusted-repair-server.ts");
+  const client = read("components/review-os/trusted-repair-loop.tsx");
+  assert.match(server, /scaffoldKind: matchingExposure\.scaffoldKind/);
+  assert.match(server, /trustedRepairScaffoldText/);
+  assert.match(client, /view\.scaffold\.kind === "guided_solution"/);
+  assert.match(client, /"가이드 풀이"/u);
+});
+
 test("runtime evidence surfaces contain no remote project command and diagnostics redact secrets", () => {
   for (const relativePath of [
     WORKFLOW,

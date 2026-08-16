@@ -20,6 +20,7 @@ type BaseFixture = Readonly<{
   canonicalPrompt: string;
   anchors: readonly TrustedRepairPracticeAnchor[];
   scaffoldByAnchor: Readonly<Record<string, string>>;
+  guidedSolutionByAnchor: Readonly<Record<string, string>>;
   successCriterionKo: string;
   sourceBinding: TrustedRepairFixture["sourceBinding"];
   expectedOutcome: TrustedRepairFixture["expectedOutcome"];
@@ -61,6 +62,10 @@ const BASE_FIXTURES = [
     scaffoldByAnchor: {
       "repair-anchor:practice:synthetic-net-income":
         "세 칸을 직접 채우세요: 연간 총수익 - 연간 운영비 = 연간 순수익. 숫자, 원/년 단위와 반올림 없음을 함께 적으세요.",
+    },
+    guidedSolutionByAnchor: {
+      "repair-anchor:practice:synthetic-net-income":
+        "가이드 풀이: 연간 총수익 120,000,000원/년에서 연간 운영비 20,000,000원/년을 순서대로 차감합니다. 따라서 연간 순수익은 100,000,000원/년이고 양수이며 반올림은 없습니다. 이 관계를 자신의 문장으로 다시 설명하세요.",
     },
     successCriterionKo:
       "120,000,000 - 20,000,000 = 100,000,000원/년의 순서·연산자·결과·단위·양의 부호·반올림 없음을 하나의 관계로 같은 세션에서 다시 구성한다.",
@@ -168,6 +173,7 @@ export const TRUSTED_REPAIR_FIXTURES: readonly TrustedRepairFixture[] =
       editableDrafts: editableDrafts(base, kind),
       anchors: base.anchors,
       scaffoldByAnchor: base.scaffoldByAnchor,
+      guidedSolutionByAnchor: base.guidedSolutionByAnchor,
       successCriterionKo: base.successCriterionKo,
       sourceBinding: base.sourceBinding,
       rights: rightsManifest(base, kind),
@@ -190,6 +196,16 @@ export function trustedRepairCanonicalFixture(subject: TrustedRepairSubject) {
   );
   if (!fixture) throw new Error(`trusted-repair:missing-canonical:${subject}`);
   return fixture;
+}
+
+export function trustedRepairScaffoldText(input: {
+  fixture: TrustedRepairFixture;
+  anchorId: string;
+  scaffoldKind: "smallest_eligible_scaffold" | "guided_solution";
+}) {
+  return input.scaffoldKind === "guided_solution"
+    ? input.fixture.guidedSolutionByAnchor[input.anchorId]
+    : input.fixture.scaffoldByAnchor[input.anchorId];
 }
 
 export function validateTrustedRepairPracticeAnchor(

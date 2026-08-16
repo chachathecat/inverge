@@ -410,8 +410,8 @@ export function TrustedRepairLoop({ ownerScope }: { ownerScope: string }) {
             ) : null}
 
             {view.scaffold ? (
-              <aside className="rounded-lg border border-[var(--color-border-focus)] bg-[var(--color-background-brand-soft)] p-4" aria-label="커밋된 최소 도움">
-                <p className="v3-type-label-strong">커밋된 최소 도움 · 수준 {view.scaffold.assistanceLevel}</p>
+              <aside className="rounded-lg border border-[var(--color-border-focus)] bg-[var(--color-background-brand-soft)] p-4" aria-label={view.scaffold.kind === "guided_solution" ? "가이드 풀이" : "커밋된 최소 도움"}>
+                <p className="v3-type-label-strong">{view.scaffold.kind === "guided_solution" ? "가이드 풀이" : "커밋된 최소 도움"} · 수준 {view.scaffold.assistanceLevel}</p>
                 <p className="mt-2 leading-6">{view.scaffold.text}</p>
               </aside>
             ) : null}

@@ -115,7 +115,7 @@ function relationNumber(value: string) {
 function claimTailIsNegated(text: string, claimEnd: number) {
   const tail = text.slice(claimEnd, claimEnd + 64);
   return (
-    /^\s*(?:원(?:\s*\/\s*(?:년|연))?|연간\s*원)?\s*(?:라는?\s*주장)?\s*(?:(?:은|는|이|가|을|를|으로|로)\s*)?(?:(?:절대|전혀|결코)\s*)?(?:아니|아님|아닌|아닙|아닐|아냐|않|틀렸|틀린|틀림|잘못|오류)/u.test(
+    /^\s*(?:원(?:\s*\/\s*(?:년|연))?|연간\s*원)?\s*(?:이?라는?\s*주장)?\s*(?:(?:은|는|이|가|을|를|으로|로)\s*)?(?:(?:절대|전혀|결코)\s*)?(?:아니|아님|아닌|아닙|아닐|아냐|않|틀렸|틀린|틀림|잘못|오류)/u.test(
       tail,
     ) ||
     /^\s*(?:원(?:\s*\/\s*(?:년|연))?|연간\s*원)?\s*(?:과|와)\s*같지\s*않/u.test(
@@ -285,11 +285,11 @@ function resultUnitAssertions(text: string) {
     /(?:이\s*)?(?:결과|순수익)(?:의)?\s*단위\s*(?:은|는|이|가|:|=)?\s*([^,.;!?\n]{1,40})/gu;
   for (const match of text.matchAll(pattern)) {
     const claim = match[1].replace(/\s+/gu, "");
-    const expected =
-      claim.startsWith("원/년") ||
-      claim.startsWith("원/연") ||
-      claim.startsWith("연간원");
-    const negated = /아니|않/u.test(claim);
+    const expectedUnit = claim.match(/^(?:원\/(?:년|연)|연간원)/u);
+    const expected = expectedUnit !== null;
+    const negated = expectedUnit
+      ? claimTailIsNegated(claim, expectedUnit[0].length)
+      : /아니|않|틀렸|틀린|틀림|잘못|오류/u.test(claim);
     assertions.push(expected === !negated ? "EXPECTED" : "CONTRADICTED");
   }
   return assertions;

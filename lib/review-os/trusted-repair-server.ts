@@ -35,6 +35,7 @@ import {
 import {
   trustedRepairBankFirstSelection,
   trustedRepairFixtureById,
+  trustedRepairScaffoldText,
   validateTrustedRepairFixtureEligibility,
 } from "./trusted-repair-fixtures";
 import {
@@ -80,7 +81,11 @@ function scaffoldFor(aggregate: TrustedRepairAggregate, fixture: TrustedRepairFi
   );
   const matchingExposure = selectTrustedRepairScaffoldExposure(aggregate);
   if (!primary || !matchingExposure) return null;
-  const text = fixture.scaffoldByAnchor[primary.anchorId];
+  const text = trustedRepairScaffoldText({
+    fixture,
+    anchorId: primary.anchorId,
+    scaffoldKind: matchingExposure.scaffoldKind,
+  });
   if (!text) throw new TrustedRepairContractError("invalid_transition");
   return {
     exposureId: matchingExposure.exposureId,

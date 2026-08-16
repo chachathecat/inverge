@@ -33,6 +33,7 @@ import {
   assertTrustedRepairFixtureInventory,
   trustedRepairBankFirstSelection,
   trustedRepairCanonicalFixture,
+  trustedRepairScaffoldText,
   validateTrustedRepairPracticeAnchor,
   validateTrustedRepairFixtureEligibility,
 } from "../lib/review-os/trusted-repair-fixtures.ts";
@@ -545,6 +546,8 @@ test("Practice proof rejects contradictory result-unit assertions", () => {
   assert.ok(anchor);
   for (const contradiction of [
     `${VALID_RELATION} 하지만 이 결과의 단위는 원/년이 아니다.`,
+    `${VALID_RELATION} 결과 단위는 원/년은 틀렸다.`,
+    `${VALID_RELATION} 결과 단위는 원/년이라는 주장은 오류다.`,
     `${VALID_RELATION} 순수익의 단위는 원/월이다.`,
     `${VALID_RELATION} 이 결과의 단위는 달러/년이다.`,
   ]) {
@@ -614,6 +617,22 @@ test("[C2R-C-P-R04] guided continuation selects the newest level-three exposure"
     selectTrustedRepairScaffoldExposure(aggregate)?.exposureId,
     aggregate.exposures[1].exposureId,
   );
+  const fixture = trustedRepairCanonicalFixture("appraisal_practical");
+  const anchorId = fixture.anchors[0].anchorId;
+  const smallest = trustedRepairScaffoldText({
+    fixture,
+    anchorId,
+    scaffoldKind: "smallest_eligible_scaffold",
+  });
+  const guided = trustedRepairScaffoldText({
+    fixture,
+    anchorId,
+    scaffoldKind: "guided_solution",
+  });
+  assert.ok(smallest);
+  assert.ok(guided);
+  assert.notEqual(guided, smallest);
+  assert.match(guided, /가이드 풀이/u);
 });
 
 test("guided mode requires the current smallest scaffold exposure first", () => {

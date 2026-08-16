@@ -303,6 +303,7 @@ export type TrustedRepairFixture = Readonly<{
   editableDrafts: Readonly<Record<TrustedRepairInputMode, string>>;
   anchors: readonly TrustedRepairPracticeAnchor[];
   scaffoldByAnchor: Readonly<Record<string, string>>;
+  guidedSolutionByAnchor: Readonly<Record<string, string>>;
   successCriterionKo: string;
   sourceBinding: Readonly<{
     sourceType: "synthetic";
