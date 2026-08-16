@@ -1,0 +1,61 @@
+name: Security
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  schedule:
+    - cron: "0 18 * * 0"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: security-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  security-audit-sbom:
+    name: security-audit-sbom
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: Create private runner output directory
+        shell: bash
+        run: mkdir -p "${RUNNER_TEMP}/security"
+      - name: Collect report-only npm audit data
+        shell: bash
+        run: |
+          set +e
+          npm audit --package-lock-only --omit=dev --json > "${RUNNER_TEMP}/security/production-audit.json"
+          production_status=$?
+          npm audit --package-lock-only --json > "${RUNNER_TEMP}/security/full-audit.json"
+          full_status=$?
+          set -e
+          echo "npm audit report exit codes: production=${production_status}, full=${full_status}"
+      - name: Generate package-lock-only CycloneDX SBOM
+        shell: bash
+        run: npm sbom --package-lock-only --sbom-format cyclonedx --sbom-type application > "${RUNNER_TEMP}/security/sbom.cdx.json"
+      - name: Enforce security audit policy and validate artifacts
+        run: >-
+          npm run security:audit:validate --
+          --production-audit "${RUNNER_TEMP}/security/production-audit.json"
+          --full-audit "${RUNNER_TEMP}/security/full-audit.json"
+          --policy config/foundation-continuous-security-automation-v1.json
+          --sbom "${RUNNER_TEMP}/security/sbom.cdx.json"
+          --package package.json
+          --output "${RUNNER_TEMP}/security/security-summary-v1.json"
+      - name: Upload metadata-only security evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: dependency-security-${{ github.sha }}
+          path: |
+            ${{ runner.temp }}/security/security-summary-v1.json
+            ${{ runner.temp }}/security/sbom.cdx.json
+          if-no-files-found: error
+          retention-days: 14
