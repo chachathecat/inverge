@@ -46,6 +46,21 @@ function syntheticRuntimeEnabled() {
   );
 }
 
+function viewEvaluationTime(
+  aggregate: DurableLearningAggregate,
+  fallback = nowIso(),
+) {
+  const nextEligibleAt = aggregate.caseRecord.stateData.nextEligibleAt;
+  if (
+    syntheticRuntimeEnabled() &&
+    !aggregate.caseRecord.stateData.activeAttempt &&
+    nextEligibleAt
+  ) {
+    return addSeconds(nextEligibleAt, 1);
+  }
+  return fallback;
+}
+
 function operationTime(
   aggregate: DurableLearningAggregate,
   operation: "prepare" | "submit" | "clear" | "other",
@@ -73,6 +88,14 @@ export function durableLearningView(
   sourceConfigurationCurrent = true,
 ) {
   const active = aggregate.caseRecord.stateData.activeAttempt;
+  const nextEligibleAt = aggregate.caseRecord.stateData.nextEligibleAt;
+  const evaluatedAtMs = Date.parse(evaluatedAt);
+  const nextEligibleAtMs = nextEligibleAt === null ? null : Date.parse(nextEligibleAt);
+  const waitingForEligibility =
+    nextEligibleAtMs !== null &&
+    (!Number.isFinite(evaluatedAtMs) ||
+      !Number.isFinite(nextEligibleAtMs) ||
+      evaluatedAtMs < nextEligibleAtMs);
   const fixture = active
     ? durableFixtureFor({
         subject: aggregate.caseRecord.subject,
@@ -88,9 +111,11 @@ export function durableLearningView(
       ? null
       : active
         ? "SUBMIT_INDEPENDENT_ATTEMPT"
-        : aggregate.caseRecord.state === "TIMED_RECURRENCE_CONFIRMED"
-          ? "EVALUATE_CURRENTLY_CLEAR"
-          : "PREPARE_INDEPENDENT_ATTEMPT";
+        : waitingForEligibility
+          ? "WAIT_FOR_ELIGIBILITY"
+          : aggregate.caseRecord.state === "TIMED_RECURRENCE_CONFIRMED"
+            ? "EVALUATE_CURRENTLY_CLEAR"
+            : "PREPARE_INDEPENDENT_ATTEMPT";
   return {
     contractVersion: DURABLE_LEARNING_CONTRACT_VERSION,
     case: {
@@ -100,7 +125,7 @@ export function durableLearningView(
       state: aggregate.caseRecord.state,
       recordVersion: aggregate.caseRecord.recordVersion,
       sourcePrimaryGapId: aggregate.caseRecord.stateData.sourcePrimaryGapId,
-      nextEligibleAt: aggregate.caseRecord.stateData.nextEligibleAt,
+      nextEligibleAt,
       sourceConfigurationCurrent,
       nextAction,
       resultReasonCodes: aggregate.caseRecord.stateData.resultReasonCodes,
@@ -206,19 +231,32 @@ export function createDurableLearningService(authenticatedUserId: string) {
     ) => DurableLearningTransitionPlan,
   ) {
     const loaded = await expectedAggregate(common);
-    if (loaded.replayed) return durableLearningView(loaded.aggregate);
+    if (loaded.replayed) {
+      return durableLearningView(
+        loaded.aggregate,
+        viewEvaluationTime(loaded.aggregate),
+      );
+    }
     const current = await sourceCurrent(loaded.aggregate);
     const occurredAt = operationTime(loaded.aggregate, operation);
     if (!current.matches) {
       if (loaded.aggregate.caseRecord.state === "STALE") {
-        return durableLearningView(loaded.aggregate, occurredAt, false);
+        return durableLearningView(
+          loaded.aggregate,
+          viewEvaluationTime(loaded.aggregate, occurredAt),
+          false,
+        );
       }
       const stale = await repository.transition({
         aggregate: loaded.aggregate,
         plan: planConfigurationStale({ aggregate: loaded.aggregate, occurredAt }),
         commandId: common.commandId,
       });
-      return durableLearningView(stale, occurredAt, false);
+      return durableLearningView(
+        stale,
+        viewEvaluationTime(stale, occurredAt),
+        false,
+      );
     }
     const plan = planner(loaded.aggregate, occurredAt);
     const persisted = await repository.transition({
@@ -226,7 +264,10 @@ export function createDurableLearningService(authenticatedUserId: string) {
       plan,
       commandId: common.commandId,
     });
-    return durableLearningView(persisted, occurredAt);
+    return durableLearningView(
+      persisted,
+      viewEvaluationTime(persisted, occurredAt),
+    );
   }
 
   return {
@@ -234,7 +275,11 @@ export function createDurableLearningService(authenticatedUserId: string) {
       const existing = await repository.loadBySourceSession(input.sourceSessionId);
       if (existing) {
         const current = await sourceCurrent(existing);
-        return durableLearningView(existing, nowIso(), current.matches);
+        return durableLearningView(
+          existing,
+          viewEvaluationTime(existing),
+          current.matches,
+        );
       }
       const source = await sourceRepository.load(input.sourceSessionId);
       const occurredAt = nowIso();
@@ -244,12 +289,19 @@ export function createDurableLearningService(authenticatedUserId: string) {
         occurredAt,
       });
       const created = await repository.create({ ...planned, commandId: input.commandId });
-      return durableLearningView(created, occurredAt);
+      return durableLearningView(
+        created,
+        viewEvaluationTime(created, occurredAt),
+      );
     },
     async load(caseId: string) {
       const aggregate = await repository.load(caseId);
       const current = await sourceCurrent(aggregate);
-      return durableLearningView(aggregate, nowIso(), current.matches);
+      return durableLearningView(
+        aggregate,
+        viewEvaluationTime(aggregate),
+        current.matches,
+      );
     },
     prepareAttempt(common: { caseId: string; expectedVersion: number; commandId: string }) {
       return transition(common, "prepare", (aggregate, occurredAt) =>

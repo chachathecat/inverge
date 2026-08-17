@@ -13,6 +13,7 @@ const emailB = process.env.WCV_C3_USER_B_EMAIL ?? "";
 const passwordB = process.env.WCV_C3_USER_B_PASSWORD ?? "";
 const transientEvidencePath = process.env.WCV_C3_TRANSIENT_EVIDENCE_PATH ?? "";
 const recoveryCaseId = process.env.WCV_C3_RECOVERY_CASE_ID ?? "";
+const realTimeC3Only = process.env.WCV_C3_REAL_TIME_C3_ONLY === "true";
 
 const SUBJECTS = ["appraisal_practical", "appraisal_theory", "appraisal_law"] as const;
 type Subject = (typeof SUBJECTS)[number];
@@ -344,7 +345,7 @@ test("WCV-C3 three-subject browser, Postgres, plan, privacy and reopen chain", a
 
 test("WCV-C3 process restart restores exact private case", async ({ browser }) => {
   requireRuntime();
-  test.skip(!recoveryCaseId, "restart restoration runs only after the server restart");
+  test.skip(!recoveryCaseId || realTimeC3Only, "restart restoration runs only after the synthetic server restart");
   const owner = await contextFor(browser);
   const response = await owner.request.get(`/api/review-os/durable-learning?caseId=${recoveryCaseId}`);
   expect(response.status()).toBe(200);
@@ -352,5 +353,22 @@ test("WCV-C3 process restart restores exact private case", async ({ browser }) =
   expect(body.view.case.state).toBe("CURRENTLY_CLEAR");
   expect(body.view.ledger.artifacts).toHaveLength(3);
   expect((body.view as DurableLearningView).ledger.events.every((event) => event.payload.containsBody === false)).toBe(true);
+  await owner.close();
+});
+
+test("WCV-C3 real-time waiting and C3-only navigation honor independent gates", async ({ browser }) => {
+  requireRuntime();
+  test.skip(!recoveryCaseId || !realTimeC3Only, "real-time C3-only verification uses its dedicated restart");
+  const owner = await contextFor(browser);
+  const response = await owner.request.get(`/api/review-os/durable-learning?caseId=${recoveryCaseId}`);
+  expect(response.status()).toBe(200);
+  const body = await response.json();
+  expect((body.view as DurableLearningView).case.nextAction).toBe("WAIT_FOR_ELIGIBILITY");
+  const page = await owner.newPage();
+  await page.goto(`/app/durable-learning?caseId=${recoveryCaseId}`);
+  const primary = page.locator("[data-primary-action]");
+  await expect(primary).toHaveText("다음 가능 시점까지 대기");
+  await expect(primary).toBeDisabled();
+  await expect(page.locator('a[href="/app/trusted-repair"]')).toHaveCount(0);
   await owner.close();
 });

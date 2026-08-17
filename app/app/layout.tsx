@@ -22,7 +22,12 @@ export default async function ReviewOsLayout({ children }: { children: ReactNode
       notFound();
     }
     return (
-      <ReviewOsAppShell email={session.email} trustedRepairEnabled>
+      <ReviewOsAppShell
+        email={session.email}
+        trustedRepairEnabled={
+          isTrustedRepairEnabled() && isTrustedRepairOwner(session.email)
+        }
+      >
         {children}
       </ReviewOsAppShell>
     );

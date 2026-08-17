@@ -81,11 +81,12 @@ test("WCV-C3 persistence separates bodies, forces RLS and exposes only service R
 });
 
 test("WCV-C3 API/UI and exact-head runtime enforce trusted timing and metadata safety", async () => {
-  const [route, server, engine, page, ui, access, env, qa, workflow, verifier, browser] = await Promise.all([
+  const [route, server, engine, page, layout, ui, access, env, qa, workflow, verifier, browser] = await Promise.all([
     read("app/api/review-os/durable-learning/route.ts"),
     read("lib/review-os/durable-learning-server.ts"),
     read("lib/review-os/durable-learning-engine.ts"),
     read("app/app/durable-learning/page.tsx"),
+    read("app/app/layout.tsx"),
     read("components/review-os/durable-learning-command.tsx"),
     read("lib/review-os/durable-learning-access.ts"),
     read(".env.example"),
@@ -101,6 +102,8 @@ test("WCV-C3 API/UI and exact-head runtime enforce trusted timing and metadata s
   assert.doesNotMatch(route, /elapsedSeconds|startedAt/);
   assert.match(server, /process\.env\.CI === "true"/);
   assert.match(server, /process\.env\.VERCEL_ENV !== "production"/);
+  assert.match(server, /evaluatedAtMs < nextEligibleAtMs/);
+  assert.match(server, /"WAIT_FOR_ELIGIBILITY"/);
   assert.match(engine, /trustedStartedAt/);
   assert.match(engine, /elapsedSeconds < fixture\.minimumElapsedSeconds/);
   assert.match(engine, /durableCommitmentPasses\(fixture, input\.commitment\)/);
@@ -110,7 +113,10 @@ test("WCV-C3 API/UI and exact-head runtime enforce trusted timing and metadata s
   assert.match(engine, /snapshot\.digest === digest\(preimage\)/);
   assert.match(engine, /snapshot\.contentReleaseVersion === DURABLE_LEARNING_FIXTURE_VERSION/);
   assert.match(page, /requireDurableLearningAccess/);
+  assert.match(layout, /currentPath\.startsWith\("\/app\/durable-learning"\)[\s\S]*?trustedRepairEnabled=\{[\s\S]*?isTrustedRepairEnabled\(\) && isTrustedRepairOwner\(session\.email\)/);
   assert.match(ui, /data-wcv-c3-durable-learning/);
+  assert.match(ui, /nextAction === "WAIT_FOR_ELIGIBILITY"/);
+  assert.match(ui, /다음 가능 시점까지 대기/);
   assert.match(ui, /D\+1 · D\+7 · 시간제한/);
   assert.match(route, /parseDurableLearnerResponse/);
   assert.match(route, /learnerResponse/);
@@ -143,6 +149,8 @@ test("WCV-C3 API/UI and exact-head runtime enforce trusted timing and metadata s
   assert.match(verifier, /remoteSupabaseUsed: false/);
   assert.match(verifier, /repositorySecretsUsed: false/);
   assert.match(verifier, /process_restart_restore/);
+  assert.match(verifier, /real_time_waiting_action/);
+  assert.match(verifier, /c3_only_navigation_kill_switch/);
   assert.match(browser, /width: 390/);
   assert.match(browser, /width: 768/);
   assert.match(browser, /width: 1440/);
@@ -157,6 +165,8 @@ test("WCV-C3 API/UI and exact-head runtime enforce trusted timing and metadata s
   assert.match(browser, /responseFor\("build_plan"\)/);
   assert.match(browser, /toHaveValue\(answerBody\)/);
   assert.match(browser, /data-wcv-c3-result-note/);
+  assert.match(browser, /nextAction\)\.toBe\("WAIT_FOR_ELIGIBILITY"\)/);
+  assert.match(browser, /a\[href="\/app\/trusted-repair"\]/);
   assert.doesNotMatch(browser, /expectedCommitmentForFixture/);
   assert.match(browser, /cross-user|denied/);
   assert.match(await read("tests/e2e/wcv-c3-playwright.config.ts"), /timeout: 600_000/);

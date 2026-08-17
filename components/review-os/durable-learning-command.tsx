@@ -302,6 +302,8 @@ export function DurableLearningCommand({ ownerScope }: { ownerScope: string }) {
     ? { label: "검증된 C2 복구에서 시작", disabled: !sourceSessionId, run: () => post("start", { sourceSessionId }) }
     : view.case.nextAction === "PREPARE_INDEPENDENT_ATTEMPT"
       ? { label: "독립 시도 시작 · 타이머와 문항 봉인 해제", disabled: false, run: () => post("prepare_attempt") }
+    : view.case.nextAction === "WAIT_FOR_ELIGIBILITY"
+      ? { label: "다음 가능 시점까지 대기", disabled: true, run: () => undefined }
     : view.case.nextAction === "SUBMIT_INDEPENDENT_ATTEMPT"
         ? { label: "독립 시도 제출 및 검증", disabled: body.trim().length === 0 || !learnerResponseFieldsComplete(view.case.subject, fields), run: () => post("record_evidence", { body, learnerResponse: learnerResponseFor(view.case.subject, fields) }) }
         : view.case.nextAction === "EVALUATE_CURRENTLY_CLEAR"

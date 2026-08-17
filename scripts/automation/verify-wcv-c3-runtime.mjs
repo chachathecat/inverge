@@ -151,6 +151,7 @@ function sql(container, query, label) {
 
 function nextEnvironment(input) {
   const owners = `${input.userA.email},${input.userB.email}`;
+  const trustedRepairEnabled = input.trustedRepairEnabled === false ? "false" : "true";
   return {
     ...process.env,
     CI: "true",
@@ -159,14 +160,14 @@ function nextEnvironment(input) {
     SUPABASE_SERVICE_ROLE_KEY: input.serviceRoleKey,
     ALPHA_ADMIN_EMAILS: owners,
     WCV_C2R_C_P_OWNER_EMAILS: owners,
-    WCV_C2R_C_P_PRACTICE_ENABLED: "true",
+    WCV_C2R_C_P_PRACTICE_ENABLED: trustedRepairEnabled,
     WCV_C2R_C_T_OWNER_EMAILS: owners,
-    WCV_C2R_C_T_THEORY_ENABLED: "true",
+    WCV_C2R_C_T_THEORY_ENABLED: trustedRepairEnabled,
     WCV_C2R_C_L_OWNER_EMAILS: owners,
-    WCV_C2R_C_L_LAW_ENABLED: "true",
+    WCV_C2R_C_L_LAW_ENABLED: trustedRepairEnabled,
     WCV_C3_OWNER_EMAILS: owners,
     WCV_C3_DURABLE_LEARNING_ENABLED: input.enabled ? "true" : "false",
-    WCV_C3_SYNTHETIC_RUNTIME: "true",
+    WCV_C3_SYNTHETIC_RUNTIME: input.syntheticRuntime === false ? "false" : "true",
     NEXT_TELEMETRY_DISABLED: "1",
   };
 }
@@ -199,9 +200,14 @@ async function stopNext(server) {
   if (server.handle.exitCode === null) server.handle.kill("SIGKILL");
 }
 
-function runBrowser(server, input, recoveryCaseId = "") {
+function runBrowser(server, input, recoveryCaseId = "", focusedTest = "") {
   const startedAt = Date.now();
-  const result = command(process.execPath, [path.join(ROOT, "node_modules/@playwright/test/cli.js"), "test", "--config=tests/e2e/wcv-c3-playwright.config.ts", ...(recoveryCaseId ? ["--grep", "process restart restores"] : ["--grep-invert", "process restart restores"])], "WCV-C3 browser acceptance", {
+  const selection = focusedTest
+    ? ["--grep", focusedTest]
+    : recoveryCaseId
+      ? ["--grep", "process restart restores"]
+      : ["--grep-invert", "process restart restores"];
+  const result = command(process.execPath, [path.join(ROOT, "node_modules/@playwright/test/cli.js"), "test", "--config=tests/e2e/wcv-c3-playwright.config.ts", ...selection], "WCV-C3 browser acceptance", {
     capture: true,
     env: {
       ...process.env,
@@ -211,6 +217,7 @@ function runBrowser(server, input, recoveryCaseId = "") {
       WCV_C3_USER_B_EMAIL: input.userB.email,
       WCV_C3_USER_B_PASSWORD: input.userB.password,
       WCV_C3_TRANSIENT_EVIDENCE_PATH: transientPath,
+      WCV_C3_REAL_TIME_C3_ONLY: input.realTimeC3Only ? "true" : "false",
       ...(recoveryCaseId ? { WCV_C3_RECOVERY_CASE_ID: recoveryCaseId } : {}),
     },
     allowFailure: true,
@@ -298,6 +305,22 @@ async function runRuntime() {
     runBrowser(server, input, transient.recoveryCaseId);
     await stopNext(server);
     server = null;
+    const c3OnlyInput = {
+      ...input,
+      enabled: true,
+      syntheticRuntime: false,
+      trustedRepairEnabled: false,
+      realTimeC3Only: true,
+    };
+    server = await startNext(c3OnlyInput);
+    runBrowser(
+      server,
+      c3OnlyInput,
+      transient.recoveryCaseId,
+      "real-time waiting and C3-only navigation",
+    );
+    await stopNext(server);
+    server = null;
 
     const invariants = sql(container, `select concat_ws('|',
       (select count(*) from public.wcv_c3_gap_closure_cases),
@@ -316,7 +339,7 @@ async function runRuntime() {
       runId: process.env.GITHUB_RUN_ID ?? "local",
       runAttempt: process.env.GITHUB_RUN_ATTEMPT ?? "1",
       migrations: migrations.map((file) => ({ identity: path.basename(file, ".sql"), sha256: crypto.createHash("sha256").update(fs.readFileSync(file)).digest("hex") })),
-      assertions: ["exact_head", "two_fresh_authenticated_identities", "default_off_before_parse", "forced_rls_service_only", "stable_transactional_aggregate_read", "migration_replay", "three_subject_browser_chain", "responsive_390_768_1440", "keyboard_and_axe", "private_body_projection_separation", "cross_user_denial", "export_delete", "process_restart_restore", "reopen_after_later_failure", "bounded_daily_plan"],
+      assertions: ["exact_head", "two_fresh_authenticated_identities", "default_off_before_parse", "forced_rls_service_only", "stable_transactional_aggregate_read", "migration_replay", "three_subject_browser_chain", "responsive_390_768_1440", "keyboard_and_axe", "private_body_projection_separation", "cross_user_denial", "export_delete", "process_restart_restore", "real_time_waiting_action", "c3_only_navigation_kill_switch", "reopen_after_later_failure", "bounded_daily_plan"],
       counts: { completedSubjects: 3, persistedCases: 2, privateArtifacts: 7, deletionReceipts: 1 },
       remoteSupabaseUsed: false,
       repositorySecretsUsed: false,
