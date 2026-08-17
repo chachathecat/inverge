@@ -12,6 +12,7 @@ import {
   isTrustedRepairSubject,
   parseJsonRejectingDuplicateKeys,
   parsePracticeCalculationClaimV2Input,
+  parseTheoryPredicateClaimV1Input,
   requiredTrustedRepairText,
   requiredTrustedRepairUuid,
   requiredTrustedRepairVersion,
@@ -70,7 +71,10 @@ export async function GET(request: Request) {
     const access = await requireTrustedRepairAccess();
     const url = new URL(request.url);
     const sessionId = requiredTrustedRepairUuid(url.searchParams.get("sessionId"));
-    const view = await createTrustedRepairService(access.userId).load(sessionId);
+    const view = await createTrustedRepairService(
+      access.userId,
+      access.trustedRepairSubjects,
+    ).load(sessionId);
     return response({ ok: true, view });
   } catch (error) {
     return errorResponse(error);
@@ -108,7 +112,10 @@ export async function POST(request: Request) {
     if (typeof action !== "string") {
       throw new TrustedRepairContractError("invalid_input");
     }
-    const service = createTrustedRepairService(access.userId);
+    const service = createTrustedRepairService(
+      access.userId,
+      access.trustedRepairSubjects,
+    );
     let view;
 
     if (action === "start") {
@@ -188,6 +195,18 @@ export async function POST(request: Request) {
       view = await service.confirmPracticeClaim({
         ...commonTransition(record),
         claim: parsePracticeCalculationClaimV2Input(record.claim),
+      });
+    } else if (action === "confirm_theory_claim") {
+      const record = exactObject(raw, [
+        "action",
+        "sessionId",
+        "expectedVersion",
+        "commandId",
+        "claim",
+      ]);
+      view = await service.confirmTheoryClaim({
+        ...commonTransition(record),
+        claim: parseTheoryPredicateClaimV1Input(record.claim),
       });
     } else if (action === "continue") {
       const record = exactObject(raw, [

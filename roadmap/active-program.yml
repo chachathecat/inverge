@@ -16,9 +16,9 @@ program:
   soleNextImplementationCampaign: C2
   soleNextImplementationLeadIssue: 717
   soleNextImplementationTrackerIssue: 717
-  soleNextReplacementStage: C2R-C-T
+  soleNextReplacementStage: C2R-C-L
   soleNextReplacementStageIssue: 703
-  soleNextReplacementStageDecision: docs/decisions/2026-08-17-owner-c2r-c-p-structural-practice-proof-recovery.md
+  soleNextReplacementStageDecision: docs/decisions/2026-08-14-wcv-c2-structural-recovery.md
   structuralRecoveryChainDecision: docs/decisions/2026-08-14-wcv-c2-structural-recovery.md
   c2rBOperationalStartRequiresValidatedC2rAReceipt: true
   c2rBOperationalStartRequiresIssue702Closure: true
@@ -362,7 +362,7 @@ items:
   - id: WCV-C2
     title: C2 First Trusted Repair Structural Recovery
     status: queued
-    executionState: c2r_a_b_and_c_p_complete_c2r_c_t_authorized_unstarted
+    executionState: c2r_a_b_c_p_and_c_t_complete_c2r_c_l_authorized_unstarted
     campaignId: C2
     leadIssue: 717
     includedIssues: [702, 714, 703, 704, 705]
@@ -374,8 +374,8 @@ items:
     terminalDonorEvidencePromotedToMain: false
     wcvC2Complete: false
     reviewFindingCount: 21
-    uncoveredReviewFindingCount: 10
-    coverageCandidateState: candidate_coverage_pending_exact_merge
+    uncoveredReviewFindingCount: 5
+    coverageCandidateState: practice_covered_theory_candidate_pending_exact_merge
     coverageReceiptPolicyId: github_exact_head_pinned_squash_merge_v1
     coverageReceiptVersion: MergeCoverageReceiptV1
     coverageMergeExpectedHeadPinned: true
@@ -383,7 +383,7 @@ items:
     coverageSuccessorRepositoryPrRequired: false
     terminalIssueClosureRequiresValidatedCoverageReceipt: true
     replacementStages: [C2R-A, C2R-B, C2R-C-P, C2R-C-T, C2R-C-L]
-    currentReplacementStage: C2R-C-T
+    currentReplacementStage: C2R-C-L
     currentReplacementStageIssue: 703
     c2rAState: complete_source_only
     c2rAIssue: 702
@@ -412,8 +412,13 @@ items:
     c2rCPFocusedTests: [tests/c2r-c-p-practice-structured-proof.test.mjs, tests/c2r-c-p-practice-runtime-contract.test.mjs]
     c2rCPCoveringPr: 756
     c2rCPCandidateRegressionRows: [1, 2, 4, 6, 8, 9, 10, 11, 12, 14, 19]
-    c2rCTState: authorized_unstarted
+    c2rCTState: complete_theory_runtime
     c2rCTStartRequiresValidatedTerminalStages: [C2R-C-P]
+    c2rCTContract: config/dabangil-c2r-c-t-structural-theory-proof-v1.json
+    c2rCTFocusedTests: [tests/wcv-c2r-theory-target-scope-validator.test.mjs, tests/c2r-c-t-theory-runtime-contract.test.mjs]
+    c2rCTCandidateRegressionRows: [5, 13, 16, 18, 20]
+    c2rCLState: authorized_unstarted
+    c2rCLStartRequiresValidatedTerminalStages: [C2R-C-T]
     independentlyCompleteSourceContractStages: [C2R-A, C2R-B]
     completeLearnerVisibleRuntimeStages: [C2R-C-P, C2R-C-T, C2R-C-L]
     commonRuntimeSubstrateFirstStage: C2R-C-P

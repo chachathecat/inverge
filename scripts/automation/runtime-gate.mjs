@@ -14,6 +14,8 @@ export const S236P_RUNTIME_EVIDENCE_PRODUCER_VERSION =
   "s236p.postgres.owner-private.v5";
 export const C2R_C_P_RUNTIME_EVIDENCE_PRODUCER_VERSION =
   "c2r-c-p.postgres.practice-trusted-repair.v2";
+export const C2R_C_T_RUNTIME_EVIDENCE_PRODUCER_VERSION =
+  "c2r-c-t.postgres.theory-trusted-repair.v1";
 export const RUNTIME_EVIDENCE_ASSERTION_IDS = Object.freeze([
   "migration_prerequisites_and_target_applied",
   "learner_rls_two_user_isolation",
@@ -62,8 +64,25 @@ export const C2R_C_P_RUNTIME_EVIDENCE_ASSERTION_IDS = Object.freeze([
   "stale_cas_transition_rejected",
   "cleanup_complete",
 ]);
+export const C2R_C_T_RUNTIME_EVIDENCE_ASSERTION_IDS = Object.freeze([
+  "theory_delta_migration_applied",
+  "practice_and_theory_subject_bindings_exact",
+  "forced_rls_all_tables_preserved",
+  "authenticated_session_read_denied",
+  "anonymous_read_denied",
+  "authenticated_private_body_read_denied",
+  "authenticated_direct_mutation_denied",
+  "service_only_rpc_execution",
+  "idempotent_theory_create_replay_no_duplicate_work",
+  "free_form_transition_excludes_structured_proof",
+  "stale_cas_transition_rejected",
+  "practice_rows_preserved_by_theory_delta",
+  "cleanup_complete",
+]);
 const C2R_C_P_MIGRATION_PATH =
   "supabase/migrations/20260817090000_c2r_c_p_structured_practice_proof.sql";
+const C2R_C_T_MIGRATION_PATH =
+  "supabase/migrations/20260817113000_c2r_c_t_structural_theory_proof.sql";
 const S236P_MIGRATION_PATHS = Object.freeze([
   "supabase/migrations/20260730025332_s236p_lean_owner_private.sql",
   "supabase/migrations/20260730060233_s236p_owner_private_lifecycle_hardening.sql",
@@ -280,6 +299,22 @@ function expectedRuntimeContract(riskResult, headSha) {
     ]];
     markerError =
       "C2R-C-P Practice migration does not match the supported adapter contract.";
+  } else if (
+    migrations.length === 1 &&
+    migrations[0].path === C2R_C_T_MIGRATION_PATH
+  ) {
+    assertionIds = C2R_C_T_RUNTIME_EVIDENCE_ASSERTION_IDS;
+    producerVersion = C2R_C_T_RUNTIME_EVIDENCE_PRODUCER_VERSION;
+    markerSets = [[
+      "wcv_c2_trusted_repair_sessions_subject_binding_check",
+      "subject = 'appraisal_theory'",
+      "validator:theory-scoped-predicate@1",
+      "theory-target:synthetic-income-approach",
+      "WCV_C2_STRUCTURED_THEORY_PROOF_REQUIRED",
+      "create or replace function public.wcv_c2_apply_trusted_repair_transition_v1",
+    ]];
+    markerError =
+      "C2R-C-T Theory migration does not match the supported adapter contract.";
   } else {
     throw new Error(
       "no closed runtime-evidence adapter supports this runtime-sensitive change set.",

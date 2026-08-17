@@ -205,11 +205,11 @@ review/correction cycles are prohibited.
 Issue #701 remains the parent program. The exact identifiers are roadmap item
 `WCV-C2`, campaign `C2`, recovery tracker #717, completed source-only stages
 C2R-A for Issue #702 and C2R-B for Issue #714, completed Practice stage
-C2R-C-P for Issue #703, and current authorized but unstarted replacement
-stage C2R-C-T for Issue #703. Issue #714 remains open:
+C2R-C-P and completed Theory stage C2R-C-T for Issue #703, and current
+authorized but unstarted replacement stage C2R-C-L for Issue #703. Issue #714 remains open:
 only its C2 allocation is complete, while C3, C4 and C6 remain preserved. The
 canonical tuple is
-`WCV-C2 / C2 / #717 / C2R-C-T / #703 / authorized_unstarted`.
+`WCV-C2 / C2 / #717 / C2R-C-L / #703 / authorized_unstarted`.
 
 `launchConvergenceAmendment`, `wcvCampaignOverlay`, `roadmapContract`, the ULC
 preserved-current-authority mirror and active roadmap must expose one identical
@@ -339,10 +339,11 @@ Tracker #717, the five-stage C2R chain, the 21-row regression matrix and the
 one-writer limit. Under merge-and-receipt semantics,
 C2R-A/#702 and C2R-B/#714 are represented complete source-only only after
 their expected-head-pinned merges and validated receipts. C2R-C-P for Issue
-#703 is the complete Practice runtime stage; C2R-C-T for Issue #703 is the
-sole represented next authorized and unstarted stage. Issue #714 remains open
-for C3/C4/C6. WCV-C2 remains incomplete. The later GitHub-native delivery
-decision controls protected non-Production continuation.
+#703 is the complete Practice runtime stage and C2R-C-T for Issue #703 is the
+complete Theory runtime stage; C2R-C-L for Issue #703 is the sole represented
+next authorized and unstarted stage. Issue #714 remains open for C3/C4/C6.
+WCV-C2 remains incomplete. The later GitHub-native delivery decision controls
+protected non-Production continuation.
 
 ### Free-limited and paid routes
 
@@ -1280,7 +1281,9 @@ runtime substrate may first land only inside C2R-C-P.
 After terminal B merge and receipt, #714 remains open with C3/C4/C6 preserved.
 PR #756 then supplies the complete default-off Owner-only Practice runtime
 candidate and 11 exact matrix declarations. After its protected merge and
-validated receipt, the current tuple is
-`WCV-C2 / C2 / #717 / C2R-C-T / #703 / authorized_unstarted`. Issue state
+validated receipt, C2R-C-T supplies the complete default-off Owner-only Theory
+runtime candidate and five direct matrix declarations. After its protected
+merge and validated receipt, the current tuple is
+`WCV-C2 / C2 / #717 / C2R-C-L / #703 / authorized_unstarted`. Issue state
 cannot replace any required stage merge; no Production or learner activation
 begins.

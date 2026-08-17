@@ -8,6 +8,8 @@ import { after, test } from "node:test";
 import {
   C2R_C_P_RUNTIME_EVIDENCE_ASSERTION_IDS,
   C2R_C_P_RUNTIME_EVIDENCE_PRODUCER_VERSION,
+  C2R_C_T_RUNTIME_EVIDENCE_ASSERTION_IDS,
+  C2R_C_T_RUNTIME_EVIDENCE_PRODUCER_VERSION,
   RUNTIME_EVIDENCE_ASSERTION_IDS,
   RUNTIME_EVIDENCE_PRODUCER_VERSION,
   RUNTIME_EVIDENCE_SCHEMA_VERSION,
@@ -19,6 +21,9 @@ import {
   C2R_C_P_ASSERTION_IDS,
   C2R_C_P_MIGRATION_PATH,
   C2R_C_P_PRODUCER_VERSION,
+  C2R_C_T_ASSERTION_IDS,
+  C2R_C_T_MIGRATION_PATH,
+  C2R_C_T_PRODUCER_VERSION,
   PREREQUISITE_MIGRATIONS,
   PRODUCER_VERSION,
   SCHEMA_VERSION,
@@ -94,6 +99,15 @@ const C2R_C_P_FIXTURE_SQL = [
   "select 'WCV_C2_STRUCTURED_PROOF_REQUIRED';",
   "",
 ].join("\n");
+const C2R_C_T_FIXTURE_SQL = [
+  "select 'wcv_c2_trusted_repair_sessions_subject_binding_check';",
+  "select $$subject = 'appraisal_theory'$$;",
+  "select 'validator:theory-scoped-predicate@1';",
+  "select 'theory-target:synthetic-income-approach';",
+  "select 'WCV_C2_STRUCTURED_THEORY_PROOF_REQUIRED';",
+  "select 'create or replace function public.wcv_c2_apply_trusted_repair_transition_v1';",
+  "",
+].join("\n");
 fs.writeFileSync(path.join(FIXTURE_REPO, MIGRATION_PATH), S233A_FIXTURE_SQL, "utf8");
 S236P_MIGRATION_PATHS.forEach((migrationPath, index) => {
   fs.writeFileSync(
@@ -105,6 +119,11 @@ S236P_MIGRATION_PATHS.forEach((migrationPath, index) => {
 fs.writeFileSync(
   path.join(FIXTURE_REPO, C2R_C_P_MIGRATION_PATH),
   C2R_C_P_FIXTURE_SQL,
+  "utf8",
+);
+fs.writeFileSync(
+  path.join(FIXTURE_REPO, C2R_C_T_MIGRATION_PATH),
+  C2R_C_T_FIXTURE_SQL,
   "utf8",
 );
 fs.writeFileSync(path.join(FIXTURE_REPO, UNSUPPORTED_MIGRATION_PATH), "select 'unsupported-runtime-fixture';\n", "utf8");
@@ -136,6 +155,14 @@ const C2R_C_P_MIGRATION_SHA256 = crypto
   .createHash("sha256")
   .update(
     execFileSync("git", ["show", `${HEAD_SHA}:${C2R_C_P_MIGRATION_PATH}`], {
+      cwd: FIXTURE_REPO,
+    }),
+  )
+  .digest("hex");
+const C2R_C_T_MIGRATION_SHA256 = crypto
+  .createHash("sha256")
+  .update(
+    execFileSync("git", ["show", `${HEAD_SHA}:${C2R_C_T_MIGRATION_PATH}`], {
       cwd: FIXTURE_REPO,
     }),
   )
@@ -349,6 +376,28 @@ test("exact C2R-C-P Practice migration selects its closed runtime adapter and ev
   assert.equal(JSON.parse(result.stdout).status, "verified");
 });
 
+test("exact C2R-C-T Theory migration selects its closed runtime adapter and evidence contract", () => {
+  const risk = requiredRisk();
+  risk.runtimeReasons = [{
+    path: C2R_C_T_MIGRATION_PATH,
+    pattern: "supabase/migrations/**",
+  }];
+  risk.changedFiles = [C2R_C_T_MIGRATION_PATH];
+  const result = run(risk, (evidence) => {
+    evidence.producerVersion = C2R_C_T_RUNTIME_EVIDENCE_PRODUCER_VERSION;
+    evidence.migrations = [{
+      path: C2R_C_T_MIGRATION_PATH,
+      sha256: C2R_C_T_MIGRATION_SHA256,
+    }];
+    evidence.assertions = C2R_C_T_RUNTIME_EVIDENCE_ASSERTION_IDS.map((id) => ({
+      id,
+      passed: true,
+    }));
+  });
+  assert.equal(result.status, 0, result.stderr);
+  assert.equal(JSON.parse(result.stdout).status, "verified");
+});
+
 test("S236P runtime gate rejects missing, reordered, extra, and arbitrary migrations", async (t) => {
   const risk = requiredRisk();
   risk.runtimeReasons = S236P_MIGRATION_PATHS.map((migrationPath) => ({
@@ -499,6 +548,14 @@ test("runtime evidence contract and producer versions stay locked together", () 
     C2R_C_P_ASSERTION_IDS,
     C2R_C_P_RUNTIME_EVIDENCE_ASSERTION_IDS,
   );
+  assert.equal(
+    C2R_C_T_PRODUCER_VERSION,
+    C2R_C_T_RUNTIME_EVIDENCE_PRODUCER_VERSION,
+  );
+  assert.deepEqual(
+    C2R_C_T_ASSERTION_IDS,
+    C2R_C_T_RUNTIME_EVIDENCE_ASSERTION_IDS,
+  );
   for (const migrationPath of PREREQUISITE_MIGRATIONS) {
     assert.equal(fs.existsSync(path.join(WORKSPACE_ROOT, migrationPath)), true, migrationPath);
   }
@@ -635,7 +692,12 @@ test("closed S233A, S236P, and C2R-C-P adapters bind exact migrations and reject
     C2R_C_P_FIXTURE_SQL,
     "utf8",
   );
-  execFileSync("git", ["add", migrationPath, ...S236P_MIGRATION_PATHS, C2R_C_P_MIGRATION_PATH], {
+  fs.writeFileSync(
+    path.join(directory, C2R_C_T_MIGRATION_PATH),
+    C2R_C_T_FIXTURE_SQL,
+    "utf8",
+  );
+  execFileSync("git", ["add", migrationPath, ...S236P_MIGRATION_PATHS, C2R_C_P_MIGRATION_PATH, C2R_C_T_MIGRATION_PATH], {
     cwd: directory,
   });
   execFileSync("git", ["commit", "--quiet", "-m", "fixture"], { cwd: directory });
@@ -684,6 +746,25 @@ test("closed S233A, S236P, and C2R-C-P adapters bind exact migrations and reject
       [{
         path: C2R_C_P_MIGRATION_PATH,
         sha256: sha256(Buffer.from(C2R_C_P_FIXTURE_SQL)),
+      }],
+    );
+    const c2rCtTarget = resolveTargetMigration(
+      {
+        changedFiles: [C2R_C_T_MIGRATION_PATH],
+        changedFilesTruncated: false,
+      },
+      headSha,
+    );
+    assert.equal(c2rCtTarget.adapter, "c2r-c-t");
+    assert.equal(c2rCtTarget.practicePrerequisite.path, C2R_C_P_MIGRATION_PATH);
+    assert.deepEqual(
+      c2rCtTarget.migrations.map(({ path: migrationPathValue, sha256 }) => ({
+        path: migrationPathValue,
+        sha256,
+      })),
+      [{
+        path: C2R_C_T_MIGRATION_PATH,
+        sha256: sha256(Buffer.from(C2R_C_T_FIXTURE_SQL)),
       }],
     );
     assert.throws(

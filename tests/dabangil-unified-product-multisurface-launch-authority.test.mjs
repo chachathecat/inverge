@@ -147,8 +147,8 @@ function currentAuthorityTuple(section) {
     roadmapItem: /\bwcv c2\b/.test(normalized) ? "WCV-C2" : null,
     campaign: /\bcampaign c2\b/.test(normalized) ? "C2" : null,
     trackerIssue: /\btracker issue 717\b/.test(normalized) ? 717 : null,
-    currentStage: /\bc2r c t(?: for)? issue 703\b/.test(normalized) ? "C2R-C-T" : null,
-    currentStageIssue: /\bc2r c t(?: for)? issue 703\b/.test(normalized) ? 703 : null,
+    currentStage: /\bc2r c l(?: for)? issue 703\b/.test(normalized) ? "C2R-C-L" : null,
+    currentStageIssue: /\bc2r c l(?: for)? issue 703\b/.test(normalized) ? 703 : null,
   };
 }
 
@@ -522,7 +522,7 @@ test("preserves the exact WCV-C2R graph, roadmap block and 21-row matrix", async
   ]);
 });
 
-test("keeps C2R-C-T as the sole unstarted selection after terminal Practice", async () => {
+test("keeps C2R-C-L as the sole unstarted selection after terminal Theory", async () => {
   const [
     launch,
     unified,
@@ -555,7 +555,7 @@ test("keeps C2R-C-T as the sole unstarted selection after terminal Practice", as
     roadmapItem: "WCV-C2",
     campaign: "C2",
     trackerIssue: 717,
-    currentStage: "C2R-C-T",
+    currentStage: "C2R-C-L",
     currentStageIssue: 703,
   };
   const currentStageMirrors = {
@@ -612,18 +612,18 @@ test("keeps C2R-C-T as the sole unstarted selection after terminal Practice", as
   assert.equal(roadmap.program.soleNextImplementationCampaign, "C2");
   assert.equal(roadmap.program.soleNextImplementationLeadIssue, 717);
   assert.equal(roadmap.program.soleNextImplementationTrackerIssue, 717);
-  assert.equal(roadmap.program.soleNextReplacementStage, "C2R-C-T");
+  assert.equal(roadmap.program.soleNextReplacementStage, "C2R-C-L");
   assert.equal(roadmap.program.soleNextReplacementStageIssue, 703);
   assert.equal(roadmap.program.globalMergeProducingWriterLimit, 1);
   assert.equal(roadmap.program.replacementStageAutomaticStartAllowed, false);
   assert.equal(unified.roadmapContract.soleNextImplementationItemId, "WCV-C2");
   assert.equal(unified.roadmapContract.soleNextImplementationCampaignId, "C2");
-  assert.equal(unified.roadmapContract.soleNextReplacementStageId, "C2R-C-T");
+  assert.equal(unified.roadmapContract.soleNextReplacementStageId, "C2R-C-L");
   assert.equal(unified.roadmapContract.soleNextReplacementStageIssue, 703);
   assert.equal(preserved.currentReplacementStageState, "authorized_unstarted");
   assert.equal(
     preserved.currentSelectorDecision,
-    "docs/decisions/2026-08-17-owner-c2r-c-p-structural-practice-proof-recovery.md",
+    "docs/decisions/2026-08-14-wcv-c2-structural-recovery.md",
   );
   assert.equal(
     preserved.structuralChainDecision,
@@ -639,16 +639,16 @@ test("keeps C2R-C-T as the sole unstarted selection after terminal Practice", as
   assert.deepEqual(preserved.c2rBRemainingIssue714Allocations, ["C3", "C4", "C6"]);
   assert.match(
     unifiedMarkdown,
-    /completed source-only stages\s+C2R-A for Issue #702 and C2R-B for Issue #714, completed Practice stage\s+C2R-C-P for Issue #703, and current authorized but unstarted replacement\s+stage C2R-C-T for Issue #703/,
+    /completed source-only stages\s+C2R-A for Issue #702 and C2R-B for Issue #714, completed Practice stage\s+C2R-C-P and completed Theory stage C2R-C-T for Issue #703, and current\s+authorized but unstarted replacement stage C2R-C-L for Issue #703/,
   );
   assert.match(unifiedMarkdown, /post-merge next stage is C2R-B\/#714, authorized but unstarted/);
   assert.match(
     activeMasterPlan,
-    /exact current repository\s+selection is WCV-C2\/C2\/#717\/C2R-C-T\/#703/,
+    /exact current repository\s+selection is WCV-C2\/C2\/#717\/C2R-C-L\/#703/,
   );
   assert.match(
     launchStrategy,
-    /Current repository selector after the later exact C2R-C-P supersession:/,
+    /Current repository selector after the later exact C2R-C-T completion:/,
   );
 
   const staleFixtures = [

@@ -3,17 +3,15 @@ import "server-only";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 
 import {
-  TRUSTED_REPAIR_CONTRACT_VERSION,
-  TRUSTED_REPAIR_FIXTURE_VERSION,
-  TRUSTED_REPAIR_POLICY_VERSION,
   PRACTICE_PROOF_EVALUATION_STATES,
-  TRUSTED_REPAIR_RUBRIC_VERSION,
-  TRUSTED_REPAIR_VALIDATOR_VERSION,
+  THEORY_PROOF_EVALUATION_STATES,
   isTrustedRepairInputMode,
   isTrustedRepairOutcome,
   isTrustedRepairState,
   isTrustedRepairSubject,
   parsePracticeCalculationClaimV2,
+  parseTheoryPredicateClaimV1,
+  trustedRepairBindingProfile,
   type TrustedRepairAggregate,
   type TrustedRepairArtifactKind,
   type TrustedRepairBindings,
@@ -72,7 +70,10 @@ function numberValue(value: unknown) {
   return value;
 }
 
-function stateDataValue(value: unknown): TrustedRepairStateData {
+function stateDataValue(
+  value: unknown,
+  subject: TrustedRepairStoredSession["subject"],
+): TrustedRepairStateData {
   const row = objectValue(value);
   const allowedKeys = new Set([
     "inputMode",
@@ -100,14 +101,18 @@ function stateDataValue(value: unknown): TrustedRepairStateData {
   }
   if (row.structuredClaim !== null) {
     try {
-      parsePracticeCalculationClaimV2(row.structuredClaim);
+      if (subject === "appraisal_practical") {
+        parsePracticeCalculationClaimV2(row.structuredClaim);
+      } else {
+        parseTheoryPredicateClaimV1(row.structuredClaim);
+      }
     } catch {
       throw new TrustedRepairPersistenceError("invalid_record");
     }
   }
   if (row.proofEvaluation !== null) {
     const proof = objectValue(row.proofEvaluation);
-    const proofKeys = [
+    const commonProofKeys = [
       "state",
       "verified",
       "validatorId",
@@ -116,16 +121,33 @@ function stateDataValue(value: unknown): TrustedRepairStateData {
       "sourceRevisionId",
       "reasonCodes",
     ];
+    const proofKeys =
+      subject === "appraisal_practical"
+        ? commonProofKeys
+        : [...commonProofKeys, "targetScopeId"];
+    const practiceProofValid =
+      subject === "appraisal_practical" &&
+      PRACTICE_PROOF_EVALUATION_STATES.includes(
+        proof.state as (typeof PRACTICE_PROOF_EVALUATION_STATES)[number],
+      ) &&
+      proof.validatorId === "validator:practice-calculation-claim@2" &&
+      proof.anchorId === "repair-anchor:practice:synthetic-net-income" &&
+      proof.anchorVersionId ===
+        "repair-anchor:practice:synthetic-net-income@1";
+    const theoryProofValid =
+      subject === "appraisal_theory" &&
+      THEORY_PROOF_EVALUATION_STATES.includes(
+        proof.state as (typeof THEORY_PROOF_EVALUATION_STATES)[number],
+      ) &&
+      proof.validatorId === "validator:theory-scoped-predicate@1" &&
+      proof.anchorId === "repair-anchor:theory:synthetic-income-approach" &&
+      proof.anchorVersionId ===
+        "repair-anchor:theory:synthetic-income-approach@1" &&
+      proof.targetScopeId === "theory-target:synthetic-income-approach";
     if (
       Object.keys(proof).some((key) => !proofKeys.includes(key)) ||
-      !PRACTICE_PROOF_EVALUATION_STATES.includes(
-        proof.state as (typeof PRACTICE_PROOF_EVALUATION_STATES)[number],
-      ) ||
+      !(practiceProofValid || theoryProofValid) ||
       proof.verified !== (proof.state === "PASS") ||
-      proof.validatorId !== "validator:practice-calculation-claim@2" ||
-      proof.anchorId !== "repair-anchor:practice:synthetic-net-income" ||
-      proof.anchorVersionId !==
-        "repair-anchor:practice:synthetic-net-income@1" ||
       typeof proof.sourceRevisionId !== "string" ||
       proof.sourceRevisionId !==
         (row.structuredClaim as { sourceRevisionId?: unknown } | null)?.sourceRevisionId ||
@@ -138,7 +160,10 @@ function stateDataValue(value: unknown): TrustedRepairStateData {
   return row as TrustedRepairStateData;
 }
 
-function bindingsFromRow(row: Row): TrustedRepairBindings {
+function bindingsFromRow(
+  row: Row,
+  subject: TrustedRepairStoredSession["subject"],
+): TrustedRepairBindings {
   const bindings = {
     contractVersion: row.contract_version,
     fixtureVersion: row.fixture_version,
@@ -147,14 +172,15 @@ function bindingsFromRow(row: Row): TrustedRepairBindings {
     policyVersion: row.policy_version,
     validatorVersion: row.validator_version,
   };
+  const expected = trustedRepairBindingProfile(subject);
   if (
-    bindings.contractVersion !== TRUSTED_REPAIR_CONTRACT_VERSION ||
-    bindings.fixtureVersion !== TRUSTED_REPAIR_FIXTURE_VERSION ||
+    bindings.contractVersion !== expected.contractVersion ||
+    bindings.fixtureVersion !== expected.fixtureVersion ||
     typeof bindings.sourceVersion !== "string" ||
     !bindings.sourceVersion ||
-    bindings.rubricVersion !== TRUSTED_REPAIR_RUBRIC_VERSION ||
-    bindings.policyVersion !== TRUSTED_REPAIR_POLICY_VERSION ||
-    bindings.validatorVersion !== TRUSTED_REPAIR_VALIDATOR_VERSION
+    bindings.rubricVersion !== expected.rubricVersion ||
+    bindings.policyVersion !== expected.policyVersion ||
+    bindings.validatorVersion !== expected.validatorVersion
   ) {
     throw new TrustedRepairPersistenceError("invalid_record");
   }
@@ -184,8 +210,8 @@ function parseSession(row: Row, expectedUserId: string): TrustedRepairStoredSess
     outcome: row.outcome,
     assistanceLevel: numberValue(row.assistance_level),
     independentAttemptBeforeHelp: row.independent_attempt_before_help,
-    bindings: bindingsFromRow(row),
-    stateData: stateDataValue(row.state_data),
+    bindings: bindingsFromRow(row, row.subject),
+    stateData: stateDataValue(row.state_data, row.subject),
     createdAt: stringValue(row.created_at),
     updatedAt: stringValue(row.updated_at),
   };

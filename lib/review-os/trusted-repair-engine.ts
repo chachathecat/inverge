@@ -1,15 +1,15 @@
 import {
-  TRUSTED_REPAIR_CONTRACT_VERSION,
-  TRUSTED_REPAIR_FIXTURE_VERSION,
   TRUSTED_REPAIR_LOAD_BUDGET,
-  TRUSTED_REPAIR_POLICY_VERSION,
-  TRUSTED_REPAIR_RUBRIC_VERSION,
-  TRUSTED_REPAIR_VALIDATOR_VERSION,
   TrustedRepairContractError,
+  trustedRepairBindingProfile,
   type CalculationRelationAnchorV1,
   type PracticeCalculationClaimV2,
   type PracticeCalculationClaimV2Input,
   type PracticeProofEvaluationState,
+  type ScopedPredicateAnchorV1,
+  type TheoryPredicateClaimV1,
+  type TheoryPredicateClaimV1Input,
+  type TheoryProofEvaluationState,
   type TrustedRepairAggregate,
   type TrustedRepairArtifactKind,
   type TrustedRepairContinuation,
@@ -26,7 +26,7 @@ export type TrustedRepairSourceBindingState = Readonly<{
   bindingVersion: "synthetic_fixture";
   sourceStatus: "synthetic_fixture";
   versionStatus: "synthetic_fixture";
-  currentLawStatus: "not_applicable_practice";
+  currentLawStatus: "not_applicable_practice" | "not_applicable_theory";
   sourceAnchorId: string | null;
   blockerCount: 0;
 }>;
@@ -38,6 +38,11 @@ export const SYNTHETIC_SOURCE_BINDING: TrustedRepairSourceBindingState = {
   currentLawStatus: "not_applicable_practice",
   sourceAnchorId: null,
   blockerCount: 0,
+};
+
+export const SYNTHETIC_THEORY_SOURCE_BINDING: TrustedRepairSourceBindingState = {
+  ...SYNTHETIC_SOURCE_BINDING,
+  currentLawStatus: "not_applicable_theory",
 };
 
 export function trustedRepairSourceVersion(
@@ -58,12 +63,13 @@ export function trustedRepairSourceBindingMatches(input: {
   sourceBinding: TrustedRepairSourceBindingState;
 }) {
   const bindings = input.aggregate.session.bindings;
+  const expected = trustedRepairBindingProfile(input.aggregate.session.subject);
   return (
-    bindings.contractVersion === TRUSTED_REPAIR_CONTRACT_VERSION &&
-    bindings.fixtureVersion === TRUSTED_REPAIR_FIXTURE_VERSION &&
-    bindings.rubricVersion === TRUSTED_REPAIR_RUBRIC_VERSION &&
-    bindings.policyVersion === TRUSTED_REPAIR_POLICY_VERSION &&
-    bindings.validatorVersion === TRUSTED_REPAIR_VALIDATOR_VERSION &&
+    bindings.contractVersion === expected.contractVersion &&
+    bindings.fixtureVersion === expected.fixtureVersion &&
+    bindings.rubricVersion === expected.rubricVersion &&
+    bindings.policyVersion === expected.policyVersion &&
+    bindings.validatorVersion === expected.validatorVersion &&
     bindings.sourceVersion === trustedRepairSourceVersion(input.fixture, input.sourceBinding)
   );
 }
@@ -84,7 +90,17 @@ function normalizeEvidenceCandidate(value: string) {
 
 function practiceRelationAnchor(fixture: TrustedRepairFixture) {
   const anchors = fixture.anchors.flatMap((entry) =>
-    entry.calculationRelation ? [entry.calculationRelation] : [],
+    "calculationRelation" in entry ? [entry.calculationRelation] : [],
+  );
+  if (anchors.length !== 1) {
+    throw new TrustedRepairContractError("invalid_transition");
+  }
+  return anchors[0];
+}
+
+function theoryPredicateAnchor(fixture: TrustedRepairFixture) {
+  const anchors = fixture.anchors.flatMap((entry) =>
+    "scopedPredicate" in entry ? [entry.scopedPredicate] : [],
   );
   if (anchors.length !== 1) {
     throw new TrustedRepairContractError("invalid_transition");
@@ -156,6 +172,228 @@ export function renderPracticeCalculationClaim(claim: PracticeCalculationClaimV2
   return `${format(claim.grossIncome.value)}원/년에서 ${format(claim.operatingExpense.value)}원/년을 차감하면 ${format(claim.result.value)}원/년이며, 부호는 양수이고 반올림은 필요하지 않습니다.`;
 }
 
+export type TheoryPredicateClaimEvaluation = Readonly<{
+  state: TheoryProofEvaluationState;
+  verified: boolean;
+  validatorId: "validator:theory-scoped-predicate@1";
+  anchorId: ScopedPredicateAnchorV1["anchorId"];
+  anchorVersionId: ScopedPredicateAnchorV1["anchorVersionId"];
+  sourceRevisionId: string;
+  targetScopeId: ScopedPredicateAnchorV1["targetScopeId"];
+  reasonCodes: readonly string[];
+}>;
+
+export function validateTheoryPredicateClaim(input: {
+  claim: TheoryPredicateClaimV1;
+  anchor: ScopedPredicateAnchorV1;
+  expectedSourceRevisionId: string;
+}): TheoryPredicateClaimEvaluation {
+  const identityReasons: string[] = [];
+  if (input.claim.sourceRevisionId !== input.expectedSourceRevisionId) {
+    identityReasons.push("source_revision_mismatch");
+  }
+  if (input.claim.anchorId !== input.anchor.anchorId) {
+    identityReasons.push("anchor_identity_mismatch");
+  }
+  if (input.claim.anchorVersionId !== input.anchor.anchorVersionId) {
+    identityReasons.push("anchor_version_mismatch");
+  }
+  if (input.claim.targetScopeId !== input.anchor.targetScopeId) {
+    identityReasons.push("target_scope_identity_mismatch");
+  }
+  if (!Number.isFinite(Date.parse(input.claim.learnerConfirmedAt))) {
+    identityReasons.push("confirmation_time_invalid");
+  }
+
+  const occurrenceCount = input.claim.clauses.reduce(
+    (count, clause) => count + clause.predicates.length,
+    0,
+  );
+  if (
+    input.claim.clauses.length > input.anchor.overflowPolicy.maxClauses ||
+    occurrenceCount > input.anchor.overflowPolicy.maxPredicateOccurrences
+  ) {
+    return {
+      state: "UNSUPPORTED",
+      verified: false,
+      validatorId: input.anchor.deterministicValidatorId,
+      anchorId: input.anchor.anchorId,
+      anchorVersionId: input.anchor.anchorVersionId,
+      sourceRevisionId: input.expectedSourceRevisionId,
+      targetScopeId: input.anchor.targetScopeId,
+      reasonCodes: [...identityReasons, "theory_predicate_bounds_overflow"],
+    };
+  }
+
+  const unresolved = input.claim.clauses.some(
+    (clause) => clause.scopeResolution === "UNRESOLVED_ANAPHORA",
+  );
+  const unscoped = input.claim.clauses.some(
+    (clause) => clause.scopeResolution === "UNSCOPED",
+  );
+  const knownScopes = new Set([
+    input.anchor.targetScopeId,
+    ...input.anchor.counterexampleScopes,
+  ]);
+  const unknownScope = input.claim.clauses.some(
+    (clause) =>
+      clause.scopeResolution === "EXACT" &&
+      clause.scopeId !== null &&
+      !knownScopes.has(clause.scopeId as ScopedPredicateAnchorV1["targetScopeId"]),
+  );
+  if (unresolved || unscoped) {
+    return {
+      state: "AMBIGUOUS",
+      verified: false,
+      validatorId: input.anchor.deterministicValidatorId,
+      anchorId: input.anchor.anchorId,
+      anchorVersionId: input.anchor.anchorVersionId,
+      sourceRevisionId: input.expectedSourceRevisionId,
+      targetScopeId: input.anchor.targetScopeId,
+      reasonCodes: [
+        ...identityReasons,
+        ...(unresolved ? ["unresolved_anaphora"] : []),
+        ...(unscoped ? ["unscoped_assertion"] : []),
+      ],
+    };
+  }
+  if (unknownScope || identityReasons.length > 0) {
+    return {
+      state: "UNSUPPORTED",
+      verified: false,
+      validatorId: input.anchor.deterministicValidatorId,
+      anchorId: input.anchor.anchorId,
+      anchorVersionId: input.anchor.anchorVersionId,
+      sourceRevisionId: input.expectedSourceRevisionId,
+      targetScopeId: input.anchor.targetScopeId,
+      reasonCodes: [
+        ...identityReasons,
+        ...(unknownScope ? ["unknown_target_scope"] : []),
+      ],
+    };
+  }
+
+  const targetPredicates = input.claim.clauses
+    .filter(
+      (clause) =>
+        clause.scopeResolution === "EXACT" &&
+        clause.scopeId === input.anchor.targetScopeId,
+    )
+    .flatMap((clause) => clause.predicates);
+  const targetPolarities = new Map<string, Set<"ASSERTED" | "NEGATED">>();
+  for (const predicate of targetPredicates) {
+    const values =
+      targetPolarities.get(predicate.predicateId) ??
+      new Set<"ASSERTED" | "NEGATED">();
+    values.add(predicate.polarity);
+    targetPolarities.set(predicate.predicateId, values);
+  }
+  const polarities = (predicateId: string) =>
+    targetPolarities.get(predicateId) ?? new Set<"ASSERTED" | "NEGATED">();
+  const mixed = [...targetPolarities.entries()]
+    .filter(([, values]) => values.has("ASSERTED") && values.has("NEGATED"))
+    .map(([predicateId]) => predicateId)
+    .sort();
+  if (mixed.length > 0) {
+    return {
+      state: "AMBIGUOUS",
+      verified: false,
+      validatorId: input.anchor.deterministicValidatorId,
+      anchorId: input.anchor.anchorId,
+      anchorVersionId: input.anchor.anchorVersionId,
+      sourceRevisionId: input.expectedSourceRevisionId,
+      targetScopeId: input.anchor.targetScopeId,
+      reasonCodes: mixed.map((value) => `same_target_mixed_polarity:${value}`),
+    };
+  }
+  const forbidden = input.anchor.forbiddenPredicates.flatMap((predicateId) => {
+    const values = polarities(predicateId);
+    return values.has("ASSERTED") ? [predicateId] : [];
+  });
+  if (forbidden.length > 0) {
+    return {
+      state: "BLOCKED",
+      verified: false,
+      validatorId: input.anchor.deterministicValidatorId,
+      anchorId: input.anchor.anchorId,
+      anchorVersionId: input.anchor.anchorVersionId,
+      sourceRevisionId: input.expectedSourceRevisionId,
+      targetScopeId: input.anchor.targetScopeId,
+      reasonCodes: forbidden.map((value) => `forbidden_predicate_asserted:${value}`),
+    };
+  }
+  const requiredNegated = input.anchor.requiredPredicates.some((predicateId) =>
+    polarities(predicateId).has("NEGATED"),
+  );
+  if (requiredNegated) {
+    return {
+      state: "PARTIAL",
+      verified: false,
+      validatorId: input.anchor.deterministicValidatorId,
+      anchorId: input.anchor.anchorId,
+      anchorVersionId: input.anchor.anchorVersionId,
+      sourceRevisionId: input.expectedSourceRevisionId,
+      targetScopeId: input.anchor.targetScopeId,
+      reasonCodes: ["required_predicate_negated"],
+    };
+  }
+  const requiredSatisfied = input.anchor.requiredPredicates.every((predicateId) =>
+    polarities(predicateId).has("ASSERTED"),
+  );
+  const alternativeSatisfied = input.anchor.acceptableAlternatives.some((group) =>
+    group.every((predicateId) => polarities(predicateId).has("ASSERTED")),
+  );
+  if (requiredSatisfied || alternativeSatisfied) {
+    return {
+      state: "PASS",
+      verified: true,
+      validatorId: input.anchor.deterministicValidatorId,
+      anchorId: input.anchor.anchorId,
+      anchorVersionId: input.anchor.anchorVersionId,
+      sourceRevisionId: input.expectedSourceRevisionId,
+      targetScopeId: input.anchor.targetScopeId,
+      reasonCodes: [],
+    };
+  }
+  const crossTargetOnly =
+    targetPredicates.length === 0 &&
+    input.claim.clauses.some(
+      (clause) =>
+        clause.scopeResolution === "EXACT" &&
+        clause.scopeId !== input.anchor.targetScopeId,
+    );
+  return {
+    state: crossTargetOnly ? "UNSUPPORTED" : "PARTIAL",
+    verified: false,
+    validatorId: input.anchor.deterministicValidatorId,
+    anchorId: input.anchor.anchorId,
+    anchorVersionId: input.anchor.anchorVersionId,
+    sourceRevisionId: input.expectedSourceRevisionId,
+    targetScopeId: input.anchor.targetScopeId,
+    reasonCodes: [
+      crossTargetOnly
+        ? "cross_target_evidence_cannot_satisfy_target"
+        : "required_target_predicate_missing",
+    ],
+  };
+}
+
+export function buildTheoryPredicateClaim(input: {
+  claim: TheoryPredicateClaimV1Input;
+  learnerConfirmedAt: string;
+}): TheoryPredicateClaimV1 {
+  return { ...input.claim, learnerConfirmedAt: input.learnerConfirmedAt };
+}
+
+export function renderTheoryPredicateClaim(claim: TheoryPredicateClaimV1) {
+  const asserted = claim.clauses
+    .filter((clause) => clause.scopeId === claim.targetScopeId)
+    .flatMap((clause) => clause.predicates)
+    .filter((predicate) => predicate.polarity === "ASSERTED")
+    .map((predicate) => predicate.predicateId);
+  return `수익방식의 목표 범위에서 확인된 술어: ${asserted.join(", ")}.`;
+}
+
 function persistedProofEvaluation(
   evaluation: PracticeCalculationClaimEvaluation,
 ): NonNullable<TrustedRepairStateData["proofEvaluation"]> {
@@ -166,6 +404,21 @@ function persistedProofEvaluation(
     anchorId: evaluation.anchorId,
     anchorVersionId: evaluation.anchorVersionId,
     sourceRevisionId: evaluation.sourceRevisionId,
+    reasonCodes: evaluation.reasonCodes,
+  };
+}
+
+function persistedTheoryProofEvaluation(
+  evaluation: TheoryPredicateClaimEvaluation,
+): NonNullable<TrustedRepairStateData["proofEvaluation"]> {
+  return {
+    state: evaluation.state,
+    verified: evaluation.verified,
+    validatorId: evaluation.validatorId,
+    anchorId: evaluation.anchorId,
+    anchorVersionId: evaluation.anchorVersionId,
+    sourceRevisionId: evaluation.sourceRevisionId,
+    targetScopeId: evaluation.targetScopeId,
     reasonCodes: evaluation.reasonCodes,
   };
 }
@@ -590,6 +843,9 @@ export function planTrustedRepairStructuredClaimConfirmation(input: {
   claim: PracticeCalculationClaimV2;
 }) {
   guardState(input.aggregate, "repair_submitted");
+  if (input.aggregate.session.subject !== "appraisal_practical") {
+    throw new TrustedRepairContractError("invalid_transition");
+  }
   if (!trustedRepairSourceBindingMatches(input)) return planTrustedRepairSourceBindingDrift(input.aggregate);
   const revisionId = input.aggregate.session.confirmedRevisionId;
   if (!revisionId || input.claim.sourceRevisionId !== revisionId) {
@@ -618,6 +874,56 @@ export function planTrustedRepairStructuredClaimConfirmation(input: {
       ...(evaluation.state === "PASS"
         ? ["same_session_structured_practice_claim_passed"]
         : ["same_session_structured_practice_claim_not_yet_passed"]),
+      "free_form_evidence_was_candidate_only",
+      "no_mastery_transfer_stability_score_or_pass_claim",
+    ],
+  });
+  return { ...plan, outcome: nextState };
+}
+
+export function planTrustedRepairTheoryClaimConfirmation(input: {
+  aggregate: TrustedRepairAggregate;
+  fixture: TrustedRepairFixture;
+  sourceBinding: TrustedRepairSourceBindingState;
+  claim: TheoryPredicateClaimV1;
+}) {
+  guardState(input.aggregate, "repair_submitted");
+  if (input.aggregate.session.subject !== "appraisal_theory") {
+    throw new TrustedRepairContractError("invalid_transition");
+  }
+  if (!trustedRepairSourceBindingMatches(input)) {
+    return planTrustedRepairSourceBindingDrift(input.aggregate);
+  }
+  const revisionId = input.aggregate.session.confirmedRevisionId;
+  if (!revisionId || input.claim.sourceRevisionId !== revisionId) {
+    return planTrustedRepairSourceBindingDrift(input.aggregate);
+  }
+  const evaluation = validateTheoryPredicateClaim({
+    claim: input.claim,
+    anchor: theoryPredicateAnchor(input.fixture),
+    expectedSourceRevisionId: revisionId,
+  });
+  const independentBoundaryPassed =
+    input.aggregate.session.independentAttemptBeforeHelp &&
+    input.aggregate.exposures.every(
+      (exposure) => exposure.scaffoldKind !== "guided_solution",
+    );
+  const nextState =
+    independentBoundaryPassed && evaluation.state === "PASS"
+      ? ("verified" as const)
+      : independentBoundaryPassed
+        ? ("partial" as const)
+        : ("guided" as const);
+  const plan = basePlan(input.aggregate, nextState, {
+    ...input.aggregate.session.stateData,
+    continuation: "VERIFY_AND_CONTINUE",
+    structuredClaim: input.claim,
+    proofEvaluation: persistedTheoryProofEvaluation(evaluation),
+    resultReasonCodes: [
+      ...input.aggregate.session.stateData.resultReasonCodes,
+      ...(evaluation.state === "PASS"
+        ? ["same_session_structured_theory_claim_passed"]
+        : ["same_session_structured_theory_claim_not_yet_passed"]),
       "free_form_evidence_was_candidate_only",
       "no_mastery_transfer_stability_score_or_pass_claim",
     ],
@@ -701,7 +1007,9 @@ export function planTrustedRepairContinuation(input: {
     proofEvaluation: null,
     resultReasonCodes: [
       ...input.aggregate.session.stateData.resultReasonCodes,
-      "structured_practice_claim_required",
+      input.aggregate.session.subject === "appraisal_practical"
+        ? "structured_practice_claim_required"
+        : "structured_theory_claim_required",
       "free_form_evidence_cannot_create_verified",
       "no_mastery_transfer_stability_score_or_pass_claim",
     ],

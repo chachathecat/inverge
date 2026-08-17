@@ -182,7 +182,10 @@ function exactClaim(aggregate) {
 }
 
 test("C2R-C-P structural lineage freezes Practice-only v2 proof authority", () => {
-  assert.deepEqual(TRUSTED_REPAIR_SUBJECTS, ["appraisal_practical"]);
+  assert.deepEqual(TRUSTED_REPAIR_SUBJECTS, [
+    "appraisal_practical",
+    "appraisal_theory",
+  ]);
   assert.equal(TRUSTED_REPAIR_CONTRACT_VERSION, "wcv_c2r_c_p_structured_practice_proof.v2");
   assert.equal(TRUSTED_REPAIR_VALIDATOR_VERSION, "validator:practice-calculation-claim@2");
   assert.equal(TRUSTED_REPAIR_FLAG, "WCV_C2R_C_P_PRACTICE_ENABLED");
@@ -391,8 +394,20 @@ test("revision replacement clears proof and makes the outcome stale", () => {
 
 test("rights-safe fixtures, banks, current windows and Gold separation remain exact", () => {
   assert.doesNotThrow(() => assertTrustedRepairFixtureInventory());
-  assert.equal(TRUSTED_REPAIR_FIXTURES.length, 7);
-  assert.deepEqual(TRUSTED_REPAIR_GOLD_CANDIDATES.map((entry) => entry.goldTier).sort(), ["GOLDEN", "OWNER_GOLD"]);
+  assert.equal(
+    TRUSTED_REPAIR_FIXTURES.filter(
+      (entry) => entry.subject === "appraisal_practical",
+    ).length,
+    7,
+  );
+  assert.deepEqual(
+    TRUSTED_REPAIR_GOLD_CANDIDATES.filter(
+      (entry) => entry.subject === "appraisal_practical",
+    )
+      .map((entry) => entry.goldTier)
+      .sort(),
+    ["GOLDEN", "OWNER_GOLD"],
+  );
   assert.equal(validateTrustedRepairFixtureEligibility(fixture(), RIGHTS_EVALUATED_AT).eligible, true);
   assert.equal(trustedRepairBankFirstSelection({ subject: "appraisal_practical", bank: "LEARNING", evaluatedAt: RIGHTS_EVALUATED_AT }).kind, "selected");
   assert.equal(trustedRepairBankFirstSelection({ subject: "appraisal_practical", bank: "TRANSFER", evaluatedAt: RIGHTS_EVALUATED_AT }).kind, "scarcity");

@@ -243,7 +243,7 @@ test("S232F.2 every data-bearing app page gates a fresh access result before dow
   const trustedRepairNotFoundIndex = trustedRepairPage.indexOf("notFound()", trustedRepairDeniedIndex);
   const trustedRepairRethrowIndex = trustedRepairPage.indexOf("throw error", trustedRepairNotFoundIndex);
   const trustedRepairLoopIndex = trustedRepairPage.indexOf(
-    "<TrustedRepairLoop ownerScope={ownerScope} />",
+    "<TrustedRepairLoop",
   );
   assert.ok(trustedRepairContextIndex >= 0, "trusted repair must resolve its specialized access gate");
   assert.ok(trustedRepairDeniedIndex > trustedRepairContextIndex);

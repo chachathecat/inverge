@@ -33,10 +33,10 @@
     "roadmapItemId": "WCV-C2",
     "campaignId": "C2",
     "wcvC2Complete": false,
-    "currentReplacementStageId": "C2R-C-T",
+    "currentReplacementStageId": "C2R-C-L",
     "currentReplacementStageIssue": 703,
     "currentReplacementStageState": "authorized_unstarted",
-    "currentSelectorDecision": "docs/decisions/2026-08-17-owner-c2r-c-p-structural-practice-proof-recovery.md",
+    "currentSelectorDecision": "docs/decisions/2026-08-14-wcv-c2-structural-recovery.md",
     "structuralChainDecision": "docs/decisions/2026-08-14-wcv-c2-structural-recovery.md",
     "c2rBOperationalStartRequires": [
       "validated_c2r_a_merge_coverage_receipt",
@@ -57,6 +57,13 @@
     "c2rCTOperationalStartRequires": [
       "validated_terminal_c2r_c_p_merge_and_receipt"
     ],
+    "c2rCTState": "complete_theory_runtime",
+    "c2rCTContract": "config/dabangil-c2r-c-t-structural-theory-proof-v1.json",
+    "c2rCTCoveringPr": 760,
+    "c2rCLOperationalStartRequires": [
+      "validated_terminal_c2r_c_t_merge_and_receipt"
+    ],
+    "c2rCLState": "authorized_unstarted",
     "replacementStageChain": [
       "C2R-A",
       "C2R-B",
@@ -68,9 +75,9 @@
     "automaticStartAllowed": false,
     "githubNativeNonProductionContinuationAllowed": true,
     "githubNativeDeliveryDecision": "docs/decisions/2026-08-16-owner-github-native-delivery-control.md",
-    "wcvC2StructuralRecoveryCanonicalSha256": "b85cc3a58810c32451f6f01a49b8f987f699ab3c36ce8eff995da8e2db274ab5",
-    "roadmapWcvC2BlockSha256": "f72bf1e2adbac0fcada659808a34c59e7cf56f6ce7f1200fc3378df5d9a44113",
-    "regressionMatrixSha256": "5aa27b020153d9224c14c450f7113b6872cf1491a4e32bc4bfeba96fb70eeeb0",
+    "wcvC2StructuralRecoveryCanonicalSha256": "58853d286b07d18ea8aaecd537740703dd30269e17816438c82c015c22fd9ded",
+    "roadmapWcvC2BlockSha256": "15f30400196ed486d8d54dc337784e22ba62cc8ad4bc0921bbba7ff0908a104e",
+    "regressionMatrixSha256": "8f753f7c98cc80e4e276539a8c34038e004cafe38c23a86b38d9e9919c2b0bda",
     "regressionMatrixRowCount": 21
   },
   "finalPublicProduct": {
