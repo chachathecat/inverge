@@ -15,6 +15,8 @@ export const C2R_C_P_PRODUCER_VERSION =
   "c2r-c-p.postgres.practice-trusted-repair.v2";
 export const C2R_C_T_PRODUCER_VERSION =
   "c2r-c-t.postgres.theory-trusted-repair.v1";
+export const C2R_C_L_PRODUCER_VERSION =
+  "c2r-c-l.postgres.law-trusted-repair.v1";
 export const POSTGRES_IMAGE = "postgres:15.8-bookworm";
 export const ASSERTION_IDS = Object.freeze([
   "migration_prerequisites_and_target_applied",
@@ -79,10 +81,27 @@ export const C2R_C_T_ASSERTION_IDS = Object.freeze([
   "practice_rows_preserved_by_theory_delta",
   "cleanup_complete",
 ]);
+export const C2R_C_L_ASSERTION_IDS = Object.freeze([
+  "law_delta_migration_applied",
+  "practice_theory_and_law_subject_bindings_exact",
+  "law_exact_proof_trigger_installed",
+  "forced_rls_all_tables_preserved",
+  "authenticated_session_read_denied",
+  "anonymous_read_denied",
+  "authenticated_private_body_read_denied",
+  "authenticated_direct_mutation_denied",
+  "service_only_rpc_execution",
+  "idempotent_law_create_replay_no_duplicate_work",
+  "unverified_law_transition_rejected",
+  "practice_and_theory_rows_preserved_by_law_delta",
+  "cleanup_complete",
+]);
 export const C2R_C_P_MIGRATION_PATH =
   "supabase/migrations/20260817090000_c2r_c_p_structured_practice_proof.sql";
 export const C2R_C_T_MIGRATION_PATH =
   "supabase/migrations/20260817113000_c2r_c_t_structural_theory_proof.sql";
+export const C2R_C_L_MIGRATION_PATH =
+  "supabase/migrations/20260817170000_c2r_c_l_exact_law_applicability.sql";
 export const S236P_MIGRATION_PATHS = Object.freeze([
   "supabase/migrations/20260730025332_s236p_lean_owner_private.sql",
   "supabase/migrations/20260730060233_s236p_owner_private_lifecycle_hardening.sql",
@@ -157,10 +176,13 @@ const S236P_OWNER_A_EXPECTED_VISIBLE_OBJECT_IDS = Object.freeze([
 ]);
 const C2R_C_P_SESSION_A = "c1111111-1111-4111-8111-111111111111";
 const C2R_C_P_SESSION_B = "c2222222-2222-4222-8222-222222222222";
+const C2R_C_P_SESSION_C = "c7777777-7777-4777-8777-777777777777";
 const C2R_C_P_ARTIFACT_A = "c3333333-3333-4333-8333-333333333333";
 const C2R_C_P_ARTIFACT_B = "c4444444-4444-4444-8444-444444444444";
+const C2R_C_P_ARTIFACT_C = "c8888888-8888-4888-8888-888888888888";
 const C2R_C_P_CREATE_COMMAND_A = "c5555555-5555-4555-8555-555555555555";
 const C2R_C_P_CREATE_COMMAND_B = "c6666666-6666-4666-8666-666666666666";
+const C2R_C_P_CREATE_COMMAND_C = "c9999999-9999-4999-8999-999999999999";
 const C2R_C_P_TRANSITION_COMMAND_A = "c7777777-7777-4777-8777-777777777777";
 const C2R_C_P_STALE_COMMAND_A = "c8888888-8888-4888-8888-888888888888";
 const C2R_C_P_ATOMIC_COMMAND_A = "c9999999-9999-4999-8999-999999999999";
@@ -526,6 +548,21 @@ export function resolveTargetMigration(riskResult, headSha) {
     ]];
     markerError =
       "C2R-C-T Theory migration does not match the supported adapter contract.";
+  } else if (
+    migrationPaths.length === 1 &&
+    migrationPaths[0] === C2R_C_L_MIGRATION_PATH
+  ) {
+    adapter = "c2r-c-l";
+    markerSets = [[
+      "subject = 'appraisal_law'",
+      "validator:law-exact-applicability@1",
+      "law-source:synthetic-official-act@2026-01-01",
+      "law-anchor:synthetic-official-act:article-10@2026-01-01",
+      "WCV_C2_STRUCTURED_LAW_PROOF_REQUIRED",
+      "wcv_c2_validate_exact_law_proof_v1",
+    ]];
+    markerError =
+      "C2R-C-L Law migration does not match the supported adapter contract.";
   } else {
     throw new Error("no closed runtime-evidence adapter supports this runtime-sensitive change set.");
   }
@@ -545,12 +582,12 @@ export function resolveTargetMigration(riskResult, headSha) {
   if (adapter === "s233a") {
     return { adapter, ...migrations[0], migrations };
   }
-  if (adapter === "c2r-c-t") {
+  if (adapter === "c2r-c-t" || adapter === "c2r-c-l") {
     const practicePrerequisiteContent = gitBlob(
       headSha,
       C2R_C_P_MIGRATION_PATH,
     );
-    return {
+    const result = {
       adapter,
       migrations,
       practicePrerequisite: {
@@ -559,6 +596,21 @@ export function resolveTargetMigration(riskResult, headSha) {
         sha256: sha256(practicePrerequisiteContent),
       },
     };
+    if (adapter === "c2r-c-l") {
+      const theoryPrerequisiteContent = gitBlob(
+        headSha,
+        C2R_C_T_MIGRATION_PATH,
+      );
+      return {
+        ...result,
+        theoryPrerequisite: {
+          content: theoryPrerequisiteContent,
+          path: C2R_C_T_MIGRATION_PATH,
+          sha256: sha256(theoryPrerequisiteContent),
+        },
+      };
+    }
+    return result;
   }
   return { adapter, migrations };
 }
@@ -580,6 +632,12 @@ function evidenceContract(targetMigration) {
     return {
       assertionIds: C2R_C_T_ASSERTION_IDS,
       producerVersion: C2R_C_T_PRODUCER_VERSION,
+    };
+  }
+  if (targetMigration.adapter === "c2r-c-l") {
+    return {
+      assertionIds: C2R_C_L_ASSERTION_IDS,
+      producerVersion: C2R_C_L_PRODUCER_VERSION,
     };
   }
   return {
@@ -2307,10 +2365,13 @@ function runS236PDatabaseAssertions(containerName, targetMigration) {
 function c2rCPSessionPayload({ sessionId, userId, subject = "appraisal_practical" }) {
   const timestamp = "2026-08-17T00:00:00.000Z";
   const theory = subject === "appraisal_theory";
+  const law = subject === "appraisal_law";
   return {
     sessionId,
     userId,
-    fixtureId: theory
+    fixtureId: law
+      ? "wcv-c2-law-canonical"
+      : theory
       ? "wcv-c2-theory-canonical"
       : "wcv-c2-practice-net-income",
     subject,
@@ -2321,18 +2382,26 @@ function c2rCPSessionPayload({ sessionId, userId, subject = "appraisal_practical
     outcome: null,
     assistanceLevel: 0,
     independentAttemptBeforeHelp: false,
-    contractVersion: theory
+    contractVersion: law
+      ? "wcv_c2r_c_l_exact_law_applicability_proof.v1"
+      : theory
       ? "wcv_c2r_c_t_structured_theory_proof.v1"
       : "wcv_c2r_c_p_structured_practice_proof.v2",
-    fixtureVersion: theory
+    fixtureVersion: law
+      ? "wcv_c2r_c_l_law_rights_safe_fixtures.2026-08-17.v1"
+      : theory
       ? "wcv_c2r_c_t_theory_rights_safe_fixtures.2026-08-17.v1"
       : "wcv_c2r_c_p_practice_rights_safe_fixtures.2026-08-17.v1",
     sourceVersion: "synthetic-owner-test-only.2026-08-17.v1",
-    rubricVersion: theory
+    rubricVersion: law
+      ? "wcv_c2r_c_l_law_exact_applicability_rubric.v1"
+      : theory
       ? "wcv_c2r_c_t_theory_target_scope_rubric.v1"
       : "wcv_c2r_c_p_practice_relation_rubric.v1",
     policyVersion: "wcv_c2r_c_p_exposure_and_independence_policy.v1",
-    validatorVersion: theory
+    validatorVersion: law
+      ? "validator:law-exact-applicability@1"
+      : theory
       ? "validator:theory-scoped-predicate@1"
       : "validator:practice-calculation-claim@2",
     stateData: {
@@ -2875,6 +2944,189 @@ function runC2RCTDatabaseAssertions(containerName, targetMigration) {
   return passedAssertions;
 }
 
+function runC2RCLDatabaseAssertions(containerName, targetMigration) {
+  const passedAssertions = new Set();
+  const lawMigration = targetMigration.migrations[0];
+  applySql(containerName, bootstrapSql(), "isolated Supabase role bootstrap");
+  applySql(
+    containerName,
+    targetMigration.practicePrerequisite.content,
+    "C2R-C-P Practice prerequisite migration",
+  );
+  applySql(
+    containerName,
+    targetMigration.theoryPrerequisite.content,
+    "C2R-C-T Theory prerequisite migration",
+  );
+  applySql(containerName, lawMigration.content, "C2R-C-L Law delta migration");
+  passedAssertions.add("law_delta_migration_applied");
+
+  assertScalar(
+    containerName,
+    `select concat_ws(':',
+      (select count(*) from pg_class where relname like 'wcv_c2_trusted_repair_%'
+        and relkind='r' and relrowsecurity and relforcerowsecurity),
+      (select count(*) from pg_trigger
+        where tgname='wcv_c2_validate_exact_law_proof_v1' and not tgisinternal)
+    );`,
+    "5:1",
+    "C2R-C-L forced RLS and Law trigger assertion",
+  );
+  passedAssertions.add("forced_rls_all_tables_preserved");
+  passedAssertions.add("law_exact_proof_trigger_installed");
+
+  const sessions = [
+    [
+      c2rCPSessionPayload({ sessionId: C2R_C_P_SESSION_A, userId: USER_A }),
+      c2rCPArtifactPayload(C2R_C_P_ARTIFACT_A),
+      C2R_C_P_CREATE_COMMAND_A,
+    ],
+    [
+      c2rCPSessionPayload({
+        sessionId: C2R_C_P_SESSION_B,
+        userId: USER_B,
+        subject: "appraisal_theory",
+      }),
+      c2rCPArtifactPayload(C2R_C_P_ARTIFACT_B),
+      C2R_C_P_CREATE_COMMAND_B,
+    ],
+    [
+      c2rCPSessionPayload({
+        sessionId: C2R_C_P_SESSION_C,
+        userId: USER_A,
+        subject: "appraisal_law",
+      }),
+      c2rCPArtifactPayload(C2R_C_P_ARTIFACT_C),
+      C2R_C_P_CREATE_COMMAND_C,
+    ],
+  ];
+  for (const [session, artifact, commandId] of sessions) {
+    assertScalar(
+      containerName,
+      c2rCPCreateSql({ session, artifact, commandId }),
+      `${session.sessionId}:1:editable_capture_draft:false`,
+      `C2R-C-L ${session.subject} create assertion`,
+    );
+  }
+  assertScalar(
+    containerName,
+    `select string_agg(subject || ':' || validator_version, ',' order by subject)
+       from public.wcv_c2_trusted_repair_sessions;`,
+    "appraisal_law:validator:law-exact-applicability@1,appraisal_practical:validator:practice-calculation-claim@2,appraisal_theory:validator:theory-scoped-predicate@1",
+    "C2R-C-L subject-exact binding assertion",
+  );
+  passedAssertions.add("practice_theory_and_law_subject_bindings_exact");
+  passedAssertions.add("practice_and_theory_rows_preserved_by_law_delta");
+
+  for (const [assertionId, sql, expected, label] of [
+    [
+      "authenticated_session_read_denied",
+      authenticatedContext(USER_A, "select count(*) from public.wcv_c2_trusted_repair_sessions;"),
+      /permission denied/i,
+      "C2R-C-L authenticated session read denial assertion",
+    ],
+    [
+      "anonymous_read_denied",
+      anonymousContext("select count(*) from public.wcv_c2_trusted_repair_sessions;"),
+      /permission denied/i,
+      "C2R-C-L anonymous read denial assertion",
+    ],
+    [
+      "authenticated_private_body_read_denied",
+      authenticatedContext(USER_B, "select count(*) from public.wcv_c2_trusted_repair_private_artifacts;"),
+      /permission denied/i,
+      "C2R-C-L private body read denial assertion",
+    ],
+    [
+      "authenticated_direct_mutation_denied",
+      authenticatedContext(
+        USER_A,
+        `update public.wcv_c2_trusted_repair_sessions set state='blocked'
+          where id=${sqlLiteral(C2R_C_P_SESSION_C)}::uuid;`,
+      ),
+      /permission denied/i,
+      "C2R-C-L direct mutation denial assertion",
+    ],
+    [
+      "service_only_rpc_execution",
+      authenticatedContext(
+        USER_A,
+        `select * from public.wcv_c2_create_trusted_repair_session_v1(
+          '{}'::jsonb, '{}'::jsonb, ${sqlLiteral(C2R_C_P_STALE_COMMAND_A)}::uuid
+        );`,
+      ),
+      /permission denied/i,
+      "C2R-C-L RPC execution denial assertion",
+    ],
+  ]) {
+    assertSqlDenied(containerName, sql, expected, label);
+    passedAssertions.add(assertionId);
+  }
+
+  const lawSession = sessions[2][0];
+  const lawArtifact = sessions[2][1];
+  assertScalar(
+    containerName,
+    c2rCPCreateSql({
+      session: lawSession,
+      artifact: lawArtifact,
+      commandId: C2R_C_P_CREATE_COMMAND_C,
+    }),
+    `${C2R_C_P_SESSION_C}:1:editable_capture_draft:true`,
+    "C2R-C-L idempotent Law create replay assertion",
+  );
+  assertScalar(
+    containerName,
+    `select concat_ws(':',
+      (select count(*) from public.wcv_c2_trusted_repair_sessions),
+      (select count(*) from public.wcv_c2_trusted_repair_private_artifacts),
+      (select count(*) from public.wcv_c2_trusted_repair_command_receipts));`,
+    "3:3:3",
+    "C2R-C-L replay row cardinality assertion",
+  );
+  passedAssertions.add("idempotent_law_create_replay_no_duplicate_work");
+
+  assertSqlDenied(
+    containerName,
+    c2rCPTransitionSql({
+      commandId: C2R_C_P_TRANSITION_COMMAND_A,
+      expectedVersion: 1,
+      expectedState: "editable_capture_draft",
+      nextState: "verified",
+      exposure: null,
+      sessionId: C2R_C_P_SESSION_C,
+      userId: USER_A,
+      primaryGapId: "law-exact-article-10-applicability",
+    }),
+    /WCV_C2_STRUCTURED_LAW_PROOF_REQUIRED/i,
+    "C2R-C-L unverified Law transition assertion",
+  );
+  passedAssertions.add("unverified_law_transition_rejected");
+
+  applySql(
+    containerName,
+    `begin;
+      delete from public.wcv_c2_trusted_repair_sessions
+      where id in (
+        ${sqlLiteral(C2R_C_P_SESSION_A)}::uuid,
+        ${sqlLiteral(C2R_C_P_SESSION_B)}::uuid,
+        ${sqlLiteral(C2R_C_P_SESSION_C)}::uuid
+      ); commit;`,
+    "C2R-C-L synthetic cleanup",
+  );
+  assertScalar(
+    containerName,
+    `select concat_ws(':',
+      (select count(*) from public.wcv_c2_trusted_repair_sessions),
+      (select count(*) from public.wcv_c2_trusted_repair_private_artifacts),
+      (select count(*) from public.wcv_c2_trusted_repair_command_receipts));`,
+    "0:0:0",
+    "C2R-C-L cleanup assertion",
+  );
+  passedAssertions.add("cleanup_complete");
+  return passedAssertions;
+}
+
 function runDatabaseAssertions(containerName, targetMigration) {
   if (targetMigration.adapter === "s236p") {
     return runS236PDatabaseAssertions(containerName, targetMigration);
@@ -2884,6 +3136,9 @@ function runDatabaseAssertions(containerName, targetMigration) {
   }
   if (targetMigration.adapter === "c2r-c-t") {
     return runC2RCTDatabaseAssertions(containerName, targetMigration);
+  }
+  if (targetMigration.adapter === "c2r-c-l") {
+    return runC2RCLDatabaseAssertions(containerName, targetMigration);
   }
   return runS233ADatabaseAssertions(containerName, targetMigration);
 }

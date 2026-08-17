@@ -5,6 +5,7 @@ import {
   TrustedRepairContractError,
   trustedRepairBindingProfile,
   type PracticeCalculationClaimV2Input,
+  type LawApplicabilityClaimV1Input,
   type TheoryPredicateClaimV1Input,
   type TrustedRepairAggregate,
   type TrustedRepairContinuation,
@@ -14,9 +15,11 @@ import {
 } from "./trusted-repair-contract";
 import {
   initialTrustedRepairStateData,
+  buildLawApplicabilityClaim,
   buildPracticeCalculationClaim,
   buildTheoryPredicateClaim,
   planTrustedRepairStructuredClaimConfirmation,
+  planTrustedRepairLawClaimConfirmation,
   planTrustedRepairTheoryClaimConfirmation,
   planTrustedRepairContinuation,
   planTrustedRepairDiagnosis,
@@ -29,6 +32,7 @@ import {
   planTrustedRepairSubmission,
   selectTrustedRepairScaffoldExposure,
   renderPracticeCalculationClaim,
+  renderLawApplicabilityClaim,
   renderTheoryPredicateClaim,
   trustedRepairAggregateForRelease,
   trustedRepairPartialRetryAvailable,
@@ -130,6 +134,9 @@ export function trustedRepairView(
   const theoryAnchor = fixture.anchors.find(
     (anchor) => "scopedPredicate" in anchor,
   );
+  const lawAnchor = fixture.anchors.find(
+    (anchor) => "lawApplicability" in anchor,
+  );
   const structuredClaim = releaseAggregate.session.stateData.structuredClaim;
   const bindingProfile = trustedRepairBindingProfile(
     releaseAggregate.session.subject,
@@ -229,7 +236,6 @@ export function trustedRepairView(
       sourceStatus: source.sourceStatus,
       versionStatus: source.versionStatus,
       blockerCount: source.blockerCount,
-      practiceOnly: releaseAggregate.session.subject === "appraisal_practical",
       subjectBoundary: releaseAggregate.session.subject,
       exactRightsBindingValidated: sourceBindingCurrent,
     },
@@ -284,12 +290,44 @@ export function trustedRepairView(
             ] as const,
           }
         : null,
+    lawStructuredConfirmation:
+      releaseAggregate.session.state === "repair_submitted" &&
+      releaseAggregate.session.confirmedRevisionId &&
+      lawAnchor &&
+      "lawApplicability" in lawAnchor
+        ? {
+            sourceRevisionId: releaseAggregate.session.confirmedRevisionId,
+            anchorId: lawAnchor.lawApplicability.anchorId,
+            anchorVersionId: lawAnchor.lawApplicability.anchorVersionId,
+            lawSourceBindingId: lawAnchor.lawApplicability.lawSourceBindingId,
+            sourceId: lawAnchor.lawApplicability.sourceId,
+            sourceVersionId: lawAnchor.lawApplicability.sourceVersionId,
+            lawAnchorId: lawAnchor.lawApplicability.lawAnchorId,
+            lawAnchorVersionId:
+              lawAnchor.lawApplicability.lawAnchorVersionId,
+            exactLocator: lawAnchor.lawApplicability.exactLocator,
+            exactVersionIdentity:
+              lawAnchor.lawApplicability.exactVersionIdentity,
+            effectiveFrom: lawAnchor.lawApplicability.effectiveFrom,
+            effectiveTo: lawAnchor.lawApplicability.effectiveTo,
+            applicableAsOf: lawAnchor.lawApplicability.applicableAsOf,
+            currentLawApplicability:
+              lawAnchor.lawApplicability.currentLawApplicability,
+            blockerState: lawAnchor.lawApplicability.blockerState,
+            confirmationModes: [
+              "EXTRACTED_THEN_EDITED",
+              "MANUAL_STRUCTURED",
+            ] as const,
+          }
+        : null,
     canonicalClaimSentence:
       structuredClaim &&
       releaseAggregate.session.stateData.proofEvaluation?.verified === true
         ? "grossIncome" in structuredClaim
           ? renderPracticeCalculationClaim(structuredClaim)
-          : renderTheoryPredicateClaim(structuredClaim)
+          : "clauses" in structuredClaim
+            ? renderTheoryPredicateClaim(structuredClaim)
+            : renderLawApplicabilityClaim(structuredClaim)
         : null,
     claimBoundary: {
       sameSessionCriterionOnly: true,
@@ -553,6 +591,26 @@ export function createTrustedRepairService(
       });
       return transition(input, (aggregate, fixture) =>
         planTrustedRepairTheoryClaimConfirmation({
+          aggregate,
+          fixture,
+          sourceBinding: resolveTrustedRepairSourceBinding(fixture),
+          claim,
+        }),
+      );
+    },
+    confirmLawClaim(input: {
+      sessionId: string;
+      expectedVersion: number;
+      commandId: string;
+      claim: LawApplicabilityClaimV1Input;
+    }) {
+      const learnerConfirmedAt = nowIso();
+      const claim = buildLawApplicabilityClaim({
+        claim: input.claim,
+        learnerConfirmedAt,
+      });
+      return transition(input, (aggregate, fixture) =>
+        planTrustedRepairLawClaimConfirmation({
           aggregate,
           fixture,
           sourceBinding: resolveTrustedRepairSourceBinding(fixture),

@@ -1,0 +1,34 @@
+{
+  "contractVersion": "dabangil.c2r_c_l.exact_law_applicability.v1",
+  "lawSourceBindingId": "law-binding:synthetic-official-act:article-10",
+  "sourceId": "law-source:synthetic-official-act",
+  "sourceVersionId": "law-source:synthetic-official-act@2026-01-01",
+  "sourceStatus": "VERIFIED_CURRENT",
+  "lawAnchorId": "law-anchor:synthetic-official-act:article-10",
+  "lawAnchorVersionId": "law-anchor:synthetic-official-act:article-10@2026-01-01",
+  "anchorStatus": "VERIFIED_CURRENT",
+  "exactLocator": "Article 10",
+  "exactVersionIdentity": "2026-01-01",
+  "effectiveFrom": "2026-01-01",
+  "effectiveTo": null,
+  "applicableAsOf": "2026-08-15",
+  "currentLawApplicability": "APPLICABLE_CURRENT",
+  "referencedBlockerIds": [
+    "law-blocker:resolved-history",
+    "law-blocker:open-warning"
+  ],
+  "blockerCatalog": [
+    {
+      "blockerId": "law-blocker:resolved-history",
+      "status": "resolved",
+      "severity": "blocking"
+    },
+    {
+      "blockerId": "law-blocker:open-warning",
+      "status": "open",
+      "severity": "warning"
+    }
+  ],
+  "metadataOnly": true,
+  "containsRawContent": false
+}

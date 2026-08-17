@@ -2,12 +2,14 @@ import {
   TRUSTED_REPAIR_DENIED_RIGHTS_CLASSES,
   TRUSTED_REPAIR_ELIGIBLE_RIGHTS_CLASSES,
   TRUSTED_REPAIR_FIXTURE_VERSION,
+  TRUSTED_REPAIR_LAW_FIXTURE_VERSION,
   TRUSTED_REPAIR_THEORY_FIXTURE_VERSION,
   TRUSTED_REPAIR_INPUT_MODES,
   type TrustedRepairBank,
   type TrustedRepairFixture,
   type TrustedRepairFixtureKind,
   type TrustedRepairInputMode,
+  type TrustedRepairLawAnchor,
   type TrustedRepairRightsClass,
   type TrustedRepairAnchor,
   type TrustedRepairPracticeAnchor,
@@ -85,6 +87,33 @@ const THEORY_ANCHORS = [
   },
 ] as const satisfies readonly TrustedRepairTheoryAnchor[];
 
+const LAW_ANCHORS = [
+  {
+    anchorId: "repair-anchor:law:synthetic-article-10",
+    labelKo: "합성 공식법령 제10조의 정확한 버전·적용일 결합",
+    weight: 400,
+    lawApplicability: {
+      anchorKind: "LAW_EXACT_APPLICABILITY",
+      anchorId: "repair-anchor:law:synthetic-article-10",
+      anchorVersionId: "repair-anchor:law:synthetic-article-10@1",
+      lawSourceBindingId: "law-binding:synthetic-official-act:article-10",
+      sourceId: "law-source:synthetic-official-act",
+      sourceVersionId: "law-source:synthetic-official-act@2026-01-01",
+      lawAnchorId: "law-anchor:synthetic-official-act:article-10",
+      lawAnchorVersionId:
+        "law-anchor:synthetic-official-act:article-10@2026-01-01",
+      exactLocator: "Article 10",
+      exactVersionIdentity: "2026-01-01",
+      effectiveFrom: "2026-01-01",
+      effectiveTo: null,
+      applicableAsOf: "2026-08-15",
+      currentLawApplicability: "APPLICABLE_CURRENT",
+      blockerState: { openBlockingReferenceIds: [], blockerCount: 0 },
+      deterministicValidatorId: "validator:law-exact-applicability@1",
+    },
+  },
+] as const satisfies readonly TrustedRepairLawAnchor[];
+
 const BASE_FIXTURES = [
   {
     subject: "appraisal_practical",
@@ -136,6 +165,31 @@ const BASE_FIXTURES = [
     },
     expectedOutcome: "verified",
   },
+  {
+    subject: "appraisal_law",
+    slug: "law",
+    labelKo: "법규 · 공식법령 제10조 적용가능성",
+    canonicalPrompt:
+      "Inverge 합성 공식법령 제10조는 2026-01-01 버전이며 2026-08-15 현재 적용 가능하다. 정확한 출처·버전·조문 위치·효력기간·적용일·현재성·열린 차단 근거 0개를 하나의 결합으로 설명하라.",
+    anchors: LAW_ANCHORS,
+    scaffoldByAnchor: {
+      "repair-anchor:law:synthetic-article-10":
+        "출처 ID, 2026-01-01 버전, Article 10 위치, 2026-08-15 적용일, APPLICABLE_CURRENT와 열린 차단 근거 0개를 각각 직접 확인하세요.",
+    },
+    guidedSolutionByAnchor: {
+      "repair-anchor:law:synthetic-article-10":
+        "가이드: 합성 공식법령의 2026-01-01 버전, Article 10, 2026-01-01부터의 효력기간과 2026-08-15 적용일을 정확히 결합합니다. 출처와 앵커는 모두 현재 검증 상태이고 열린 차단 근거는 0개입니다.",
+    },
+    successCriterionKo:
+      "같은 세션에서 정확한 출처·출처 버전·앵커·앵커 버전·Article 10·효력기간·적용일·현재성·열린 차단 근거 0개를 닫힌 구조로 다시 구성한다.",
+    sourceBinding: {
+      sourceType: "synthetic",
+      sourceId: "law-source:synthetic-official-act",
+      sourceAnchorId: null,
+      requiredStatus: "synthetic_fixture",
+    },
+    expectedOutcome: "verified",
+  },
 ] as const satisfies readonly BaseFixture[];
 
 const KINDS = [
@@ -182,11 +236,18 @@ function editableDrafts(
 }
 
 function rightsManifest(base: BaseFixture, kind: TrustedRepairFixtureKind) {
-  const stage = base.subject === "appraisal_practical" ? "c2r-c-p" : "c2r-c-t";
+  const stage =
+    base.subject === "appraisal_practical"
+      ? "c2r-c-p"
+      : base.subject === "appraisal_theory"
+        ? "c2r-c-t"
+        : "c2r-c-l";
   const fixtureVersion =
     base.subject === "appraisal_practical"
       ? TRUSTED_REPAIR_FIXTURE_VERSION
-      : TRUSTED_REPAIR_THEORY_FIXTURE_VERSION;
+      : base.subject === "appraisal_theory"
+        ? TRUSTED_REPAIR_THEORY_FIXTURE_VERSION
+        : TRUSTED_REPAIR_LAW_FIXTURE_VERSION;
   return {
     manifestId: `rights-manifest:${stage}:${base.slug}:${kind}`,
     manifestVersionId: `rights-manifest:${stage}:${base.slug}:${kind}@1`,
@@ -207,7 +268,12 @@ function rightsManifest(base: BaseFixture, kind: TrustedRepairFixtureKind) {
 
 function sourceDecision(base: BaseFixture, kind: TrustedRepairFixtureKind) {
   const manifest = rightsManifest(base, kind);
-  const stage = base.subject === "appraisal_practical" ? "c2r-c-p" : "c2r-c-t";
+  const stage =
+    base.subject === "appraisal_practical"
+      ? "c2r-c-p"
+      : base.subject === "appraisal_theory"
+        ? "c2r-c-t"
+        : "c2r-c-l";
   return {
     decisionId: `source-decision:${stage}:${base.slug}:${kind}`,
     sourceClass: manifest.sourceClass,
@@ -300,6 +366,23 @@ export function validateTrustedRepairTheoryAnchor(
   return { valid: reasons.length === 0, reasons } as const;
 }
 
+export function validateTrustedRepairLawAnchor(anchor: TrustedRepairLawAnchor) {
+  const reasons: string[] = [];
+  if (anchor.anchorId !== anchor.lawApplicability.anchorId) {
+    reasons.push("law_applicability_anchor_id_mismatch");
+  }
+  if (anchor.lawApplicability.anchorKind !== "LAW_EXACT_APPLICABILITY") {
+    reasons.push("law_applicability_kind_invalid");
+  }
+  if (
+    anchor.lawApplicability.blockerState.blockerCount !== 0 ||
+    anchor.lawApplicability.blockerState.openBlockingReferenceIds.length !== 0
+  ) {
+    reasons.push("law_applicability_open_blocker");
+  }
+  return { valid: reasons.length === 0, reasons } as const;
+}
+
 export function validateTrustedRepairFixtureEligibility(
   fixture: TrustedRepairFixture,
   evaluatedAt = new Date().toISOString(),
@@ -309,7 +392,9 @@ export function validateTrustedRepairFixtureEligibility(
     const result =
       "calculationRelation" in anchor
         ? validateTrustedRepairPracticeAnchor(anchor)
-        : validateTrustedRepairTheoryAnchor(anchor);
+        : "scopedPredicate" in anchor
+          ? validateTrustedRepairTheoryAnchor(anchor)
+          : validateTrustedRepairLawAnchor(anchor);
     return result.reasons.map((reason) => `${anchor.anchorId}:${reason}`);
   });
   const rightsAllowed = (
@@ -392,6 +477,12 @@ const GOLD_FAMILIES = [
     "수익방식 기대수익-가치 술어",
     "repair-anchor:theory:synthetic-income-approach",
   ],
+  [
+    "law-exact-article-10-applicability",
+    "appraisal_law",
+    "합성 공식법령 제10조 정확 적용 결합",
+    "repair-anchor:law:synthetic-article-10",
+  ],
 ] as const satisfies readonly (readonly [
   string,
   TrustedRepairSubject,
@@ -412,9 +503,13 @@ export const TRUSTED_REPAIR_GOLD_CANDIDATES: readonly TrustedRepairGoldCandidate
           ? sampleIndex === 1
             ? "연간 총수익은 120,000,000원/년, 연간 운영비는 20,000,000원/년이다. 120,000,000 - 20,000,000 = 100,000,000원/년이고 연간 순수익은 100,000,000원/년으로 양의 부호이며 반올림 없음."
             : "총수익 120,000,000원, 운영비 20,000,000원, 순수익 100,000,000원."
-          : sampleIndex === 1
-            ? "수익방식은 기대수익을 가치로 전환한다. 역사적 원가만 사용한다는 술어는 합성 원가방식 반례에 속한다."
-            : "수익방식과 원가방식은 모두 가치를 설명한다.",
+          : subject === "appraisal_theory"
+            ? sampleIndex === 1
+              ? "수익방식은 기대수익을 가치로 전환한다. 역사적 원가만 사용한다는 술어는 합성 원가방식 반례에 속한다."
+              : "수익방식과 원가방식은 모두 가치를 설명한다."
+            : sampleIndex === 1
+              ? "합성 공식법령 2026-01-01 버전 Article 10은 2026-08-15 현재 적용 가능하고 열린 차단 근거는 0개이다."
+              : "합성 법령 제10조는 현재 적용된다.",
       expectedPrimaryGap: `${anchorId}:missing-or-unsupported`,
       acceptableAlternativeGaps: [
         `${anchorId}:partial`,
@@ -435,7 +530,7 @@ export const TRUSTED_REPAIR_GOLD_CANDIDATES: readonly TrustedRepairGoldCandidate
       expectedProofEvaluation:
         sampleIndex === 1 ? ("PASS" as const) : ("UNSUPPORTED" as const),
       adjudicationState: "OWNER_AUTHORIZED_SYNTHETIC_STAGE_FIXTURE" as const,
-      rightsManifestId: `rights-manifest:${subject === "appraisal_practical" ? "c2r-c-p" : "c2r-c-t"}:gold:${familyId}:${sampleIndex}`,
+      rightsManifestId: `rights-manifest:${subject === "appraisal_practical" ? "c2r-c-p" : subject === "appraisal_theory" ? "c2r-c-t" : "c2r-c-l"}:gold:${familyId}:${sampleIndex}`,
     })),
   );
 
@@ -482,11 +577,11 @@ export function trustedRepairBankFirstSelection(input: {
 export function assertTrustedRepairFixtureInventory(
   evaluatedAt = new Date().toISOString(),
 ) {
-  if (TRUSTED_REPAIR_FIXTURES.length !== 14) {
-    throw new Error("trusted-repair fixture inventory must contain 14 items");
+  if (TRUSTED_REPAIR_FIXTURES.length !== 21) {
+    throw new Error("trusted-repair fixture inventory must contain 21 items");
   }
-  if (TRUSTED_REPAIR_GOLD_CANDIDATES.length !== 4) {
-    throw new Error("trusted-repair Gold inventory must contain 4 candidates");
+  if (TRUSTED_REPAIR_GOLD_CANDIDATES.length !== 6) {
+    throw new Error("trusted-repair Gold inventory must contain 6 candidates");
   }
   for (const fixture of TRUSTED_REPAIR_FIXTURES) {
     if (

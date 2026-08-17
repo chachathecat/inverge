@@ -7,6 +7,7 @@ import {
 
 import {
   TRUSTED_REPAIR_FLAG,
+  TRUSTED_REPAIR_LAW_FLAG,
   TRUSTED_REPAIR_THEORY_FLAG,
   type TrustedRepairSubject,
 } from "./trusted-repair-contract";
@@ -26,7 +27,8 @@ export class TrustedRepairAccessError extends Error {
 export function isTrustedRepairEnabled() {
   return (
     process.env[TRUSTED_REPAIR_FLAG] === "true" ||
-    process.env[TRUSTED_REPAIR_THEORY_FLAG] === "true"
+    process.env[TRUSTED_REPAIR_THEORY_FLAG] === "true" ||
+    process.env[TRUSTED_REPAIR_LAW_FLAG] === "true"
   );
 }
 
@@ -46,6 +48,12 @@ export function trustedRepairAuthorizedSubjects(email: string | null) {
     isTrustedRepairOwnerEmail(email, process.env.WCV_C2R_C_T_OWNER_EMAILS)
   ) {
     subjects.push("appraisal_theory");
+  }
+  if (
+    process.env[TRUSTED_REPAIR_LAW_FLAG] === "true" &&
+    isTrustedRepairOwnerEmail(email, process.env.WCV_C2R_C_L_OWNER_EMAILS)
+  ) {
+    subjects.push("appraisal_law");
   }
   return subjects;
 }

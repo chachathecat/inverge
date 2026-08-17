@@ -4,12 +4,14 @@ import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 
 import {
   PRACTICE_PROOF_EVALUATION_STATES,
+  LAW_PROOF_EVALUATION_STATES,
   THEORY_PROOF_EVALUATION_STATES,
   isTrustedRepairInputMode,
   isTrustedRepairOutcome,
   isTrustedRepairState,
   isTrustedRepairSubject,
   parsePracticeCalculationClaimV2,
+  parseLawApplicabilityClaimV1,
   parseTheoryPredicateClaimV1,
   trustedRepairBindingProfile,
   type TrustedRepairAggregate,
@@ -103,8 +105,10 @@ function stateDataValue(
     try {
       if (subject === "appraisal_practical") {
         parsePracticeCalculationClaimV2(row.structuredClaim);
-      } else {
+      } else if (subject === "appraisal_theory") {
         parseTheoryPredicateClaimV1(row.structuredClaim);
+      } else {
+        parseLawApplicabilityClaimV1(row.structuredClaim);
       }
     } catch {
       throw new TrustedRepairPersistenceError("invalid_record");
@@ -124,7 +128,19 @@ function stateDataValue(
     const proofKeys =
       subject === "appraisal_practical"
         ? commonProofKeys
-        : [...commonProofKeys, "targetScopeId"];
+        : subject === "appraisal_theory"
+          ? [...commonProofKeys, "targetScopeId"]
+          : [
+              ...commonProofKeys,
+              "lawSourceBindingId",
+              "sourceId",
+              "sourceVersionId",
+              "lawAnchorId",
+              "lawAnchorVersionId",
+              "exactLocator",
+              "exactVersionIdentity",
+              "applicableAsOf",
+            ];
     const practiceProofValid =
       subject === "appraisal_practical" &&
       PRACTICE_PROOF_EVALUATION_STATES.includes(
@@ -144,9 +160,28 @@ function stateDataValue(
       proof.anchorVersionId ===
         "repair-anchor:theory:synthetic-income-approach@1" &&
       proof.targetScopeId === "theory-target:synthetic-income-approach";
+    const lawProofValid =
+      subject === "appraisal_law" &&
+      LAW_PROOF_EVALUATION_STATES.includes(
+        proof.state as (typeof LAW_PROOF_EVALUATION_STATES)[number],
+      ) &&
+      proof.validatorId === "validator:law-exact-applicability@1" &&
+      proof.anchorId === "repair-anchor:law:synthetic-article-10" &&
+      proof.anchorVersionId === "repair-anchor:law:synthetic-article-10@1" &&
+      proof.lawSourceBindingId ===
+        "law-binding:synthetic-official-act:article-10" &&
+      proof.sourceId === "law-source:synthetic-official-act" &&
+      proof.sourceVersionId ===
+        "law-source:synthetic-official-act@2026-01-01" &&
+      proof.lawAnchorId === "law-anchor:synthetic-official-act:article-10" &&
+      proof.lawAnchorVersionId ===
+        "law-anchor:synthetic-official-act:article-10@2026-01-01" &&
+      proof.exactLocator === "Article 10" &&
+      proof.exactVersionIdentity === "2026-01-01" &&
+      proof.applicableAsOf === "2026-08-15";
     if (
       Object.keys(proof).some((key) => !proofKeys.includes(key)) ||
-      !(practiceProofValid || theoryProofValid) ||
+      !(practiceProofValid || theoryProofValid || lawProofValid) ||
       proof.verified !== (proof.state === "PASS") ||
       typeof proof.sourceRevisionId !== "string" ||
       proof.sourceRevisionId !==

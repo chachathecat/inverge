@@ -19,29 +19,49 @@ export const TRUSTED_REPAIR_THEORY_VALIDATOR_VERSION =
   "validator:theory-scoped-predicate@1" as const;
 export const TRUSTED_REPAIR_THEORY_FLAG =
   "WCV_C2R_C_T_THEORY_ENABLED" as const;
+export const TRUSTED_REPAIR_LAW_CONTRACT_VERSION =
+  "wcv_c2r_c_l_exact_law_applicability_proof.v1" as const;
+export const TRUSTED_REPAIR_LAW_FIXTURE_VERSION =
+  "wcv_c2r_c_l_law_rights_safe_fixtures.2026-08-17.v1" as const;
+export const TRUSTED_REPAIR_LAW_RUBRIC_VERSION =
+  "wcv_c2r_c_l_law_exact_applicability_rubric.v1" as const;
+export const TRUSTED_REPAIR_LAW_VALIDATOR_VERSION =
+  "validator:law-exact-applicability@1" as const;
+export const TRUSTED_REPAIR_LAW_FLAG = "WCV_C2R_C_L_LAW_ENABLED" as const;
 
 export const TRUSTED_REPAIR_SUBJECTS = [
   "appraisal_practical",
   "appraisal_theory",
+  "appraisal_law",
 ] as const;
 export type TrustedRepairSubject = (typeof TRUSTED_REPAIR_SUBJECTS)[number];
 
 export function trustedRepairBindingProfile(subject: TrustedRepairSubject) {
-  return subject === "appraisal_practical"
-    ? {
+  if (subject === "appraisal_practical") {
+    return {
         contractVersion: TRUSTED_REPAIR_CONTRACT_VERSION,
         fixtureVersion: TRUSTED_REPAIR_FIXTURE_VERSION,
         rubricVersion: TRUSTED_REPAIR_RUBRIC_VERSION,
         policyVersion: TRUSTED_REPAIR_POLICY_VERSION,
         validatorVersion: TRUSTED_REPAIR_VALIDATOR_VERSION,
-      }
-    : {
+      } as const;
+  }
+  if (subject === "appraisal_theory") {
+    return {
         contractVersion: TRUSTED_REPAIR_THEORY_CONTRACT_VERSION,
         fixtureVersion: TRUSTED_REPAIR_THEORY_FIXTURE_VERSION,
         rubricVersion: TRUSTED_REPAIR_THEORY_RUBRIC_VERSION,
         policyVersion: TRUSTED_REPAIR_POLICY_VERSION,
         validatorVersion: TRUSTED_REPAIR_THEORY_VALIDATOR_VERSION,
-      };
+      } as const;
+  }
+  return {
+    contractVersion: TRUSTED_REPAIR_LAW_CONTRACT_VERSION,
+    fixtureVersion: TRUSTED_REPAIR_LAW_FIXTURE_VERSION,
+    rubricVersion: TRUSTED_REPAIR_LAW_RUBRIC_VERSION,
+    policyVersion: TRUSTED_REPAIR_POLICY_VERSION,
+    validatorVersion: TRUSTED_REPAIR_LAW_VALIDATOR_VERSION,
+  } as const;
 }
 
 export const TRUSTED_REPAIR_INPUT_MODES = [
@@ -409,6 +429,70 @@ export type TheoryPredicateClaimV1Input = Readonly<{
 export type TheoryPredicateClaimV1 = TheoryPredicateClaimV1Input &
   Readonly<{ learnerConfirmedAt: string }>;
 
+export const LAW_PROOF_EVALUATION_STATES = [
+  "PASS",
+  "PARTIAL",
+  "AMBIGUOUS",
+  "UNSUPPORTED",
+  "BLOCKED",
+  "STALE",
+] as const;
+export type LawProofEvaluationState =
+  (typeof LAW_PROOF_EVALUATION_STATES)[number];
+
+export type LawApplicabilityAnchorV1 = Readonly<{
+  anchorKind: "LAW_EXACT_APPLICABILITY";
+  anchorId: "repair-anchor:law:synthetic-article-10";
+  anchorVersionId: "repair-anchor:law:synthetic-article-10@1";
+  lawSourceBindingId: "law-binding:synthetic-official-act:article-10";
+  sourceId: "law-source:synthetic-official-act";
+  sourceVersionId: "law-source:synthetic-official-act@2026-01-01";
+  lawAnchorId: "law-anchor:synthetic-official-act:article-10";
+  lawAnchorVersionId: "law-anchor:synthetic-official-act:article-10@2026-01-01";
+  exactLocator: "Article 10";
+  exactVersionIdentity: "2026-01-01";
+  effectiveFrom: "2026-01-01";
+  effectiveTo: null;
+  applicableAsOf: "2026-08-15";
+  currentLawApplicability: "APPLICABLE_CURRENT";
+  blockerState: Readonly<{
+    openBlockingReferenceIds: readonly string[];
+    blockerCount: 0;
+  }>;
+  deterministicValidatorId: "validator:law-exact-applicability@1";
+}>;
+
+export const LAW_CLAIM_CONFIRMATION_MODES = [
+  "EXTRACTED_THEN_EDITED",
+  "MANUAL_STRUCTURED",
+] as const;
+export type LawClaimConfirmationMode =
+  (typeof LAW_CLAIM_CONFIRMATION_MODES)[number];
+
+export type LawApplicabilityClaimV1Input = Readonly<{
+  sourceRevisionId: string;
+  anchorId: LawApplicabilityAnchorV1["anchorId"];
+  anchorVersionId: LawApplicabilityAnchorV1["anchorVersionId"];
+  lawSourceBindingId: LawApplicabilityAnchorV1["lawSourceBindingId"];
+  sourceId: LawApplicabilityAnchorV1["sourceId"];
+  sourceVersionId: LawApplicabilityAnchorV1["sourceVersionId"];
+  lawAnchorId: LawApplicabilityAnchorV1["lawAnchorId"];
+  lawAnchorVersionId: LawApplicabilityAnchorV1["lawAnchorVersionId"];
+  exactLocator: LawApplicabilityAnchorV1["exactLocator"];
+  exactVersionIdentity: LawApplicabilityAnchorV1["exactVersionIdentity"];
+  effectiveFrom: LawApplicabilityAnchorV1["effectiveFrom"];
+  effectiveTo: null;
+  applicableAsOf: LawApplicabilityAnchorV1["applicableAsOf"];
+  currentLawApplicability: LawApplicabilityAnchorV1["currentLawApplicability"];
+  blockerState: Readonly<{
+    openBlockingReferenceIds: readonly string[];
+    blockerCount: number;
+  }>;
+  confirmationMode: LawClaimConfirmationMode;
+}>;
+export type LawApplicabilityClaimV1 = LawApplicabilityClaimV1Input &
+  Readonly<{ learnerConfirmedAt: string }>;
+
 export type TrustedRepairPracticeAnchor = Readonly<{
   anchorId: string;
   labelKo: string;
@@ -422,9 +506,16 @@ export type TrustedRepairTheoryAnchor = Readonly<{
   weight: number;
   scopedPredicate: ScopedPredicateAnchorV1;
 }>;
+export type TrustedRepairLawAnchor = Readonly<{
+  anchorId: string;
+  labelKo: string;
+  weight: number;
+  lawApplicability: LawApplicabilityAnchorV1;
+}>;
 export type TrustedRepairAnchor =
   | TrustedRepairPracticeAnchor
-  | TrustedRepairTheoryAnchor;
+  | TrustedRepairTheoryAnchor
+  | TrustedRepairLawAnchor;
 
 export type TrustedRepairFixture = Readonly<{
   fixtureId: string;
@@ -465,18 +556,22 @@ export type TrustedRepairGapCandidate = Readonly<{
 export type TrustedRepairBindings = Readonly<{
   contractVersion:
     | typeof TRUSTED_REPAIR_CONTRACT_VERSION
-    | typeof TRUSTED_REPAIR_THEORY_CONTRACT_VERSION;
+    | typeof TRUSTED_REPAIR_THEORY_CONTRACT_VERSION
+    | typeof TRUSTED_REPAIR_LAW_CONTRACT_VERSION;
   fixtureVersion:
     | typeof TRUSTED_REPAIR_FIXTURE_VERSION
-    | typeof TRUSTED_REPAIR_THEORY_FIXTURE_VERSION;
+    | typeof TRUSTED_REPAIR_THEORY_FIXTURE_VERSION
+    | typeof TRUSTED_REPAIR_LAW_FIXTURE_VERSION;
   sourceVersion: string;
   rubricVersion:
     | typeof TRUSTED_REPAIR_RUBRIC_VERSION
-    | typeof TRUSTED_REPAIR_THEORY_RUBRIC_VERSION;
+    | typeof TRUSTED_REPAIR_THEORY_RUBRIC_VERSION
+    | typeof TRUSTED_REPAIR_LAW_RUBRIC_VERSION;
   policyVersion: typeof TRUSTED_REPAIR_POLICY_VERSION;
   validatorVersion:
     | typeof TRUSTED_REPAIR_VALIDATOR_VERSION
-    | typeof TRUSTED_REPAIR_THEORY_VALIDATOR_VERSION;
+    | typeof TRUSTED_REPAIR_THEORY_VALIDATOR_VERSION
+    | typeof TRUSTED_REPAIR_LAW_VALIDATOR_VERSION;
 }>;
 
 export type TrustedRepairProofEvaluation =
@@ -498,6 +593,23 @@ export type TrustedRepairProofEvaluation =
       sourceRevisionId: string;
       targetScopeId: ScopedPredicateAnchorV1["targetScopeId"];
       reasonCodes: readonly string[];
+    }>
+  | Readonly<{
+      state: LawProofEvaluationState;
+      verified: boolean;
+      validatorId: "validator:law-exact-applicability@1";
+      anchorId: LawApplicabilityAnchorV1["anchorId"];
+      anchorVersionId: LawApplicabilityAnchorV1["anchorVersionId"];
+      sourceRevisionId: string;
+      lawSourceBindingId: LawApplicabilityAnchorV1["lawSourceBindingId"];
+      sourceId: LawApplicabilityAnchorV1["sourceId"];
+      sourceVersionId: LawApplicabilityAnchorV1["sourceVersionId"];
+      lawAnchorId: LawApplicabilityAnchorV1["lawAnchorId"];
+      lawAnchorVersionId: LawApplicabilityAnchorV1["lawAnchorVersionId"];
+      exactLocator: LawApplicabilityAnchorV1["exactLocator"];
+      exactVersionIdentity: LawApplicabilityAnchorV1["exactVersionIdentity"];
+      applicableAsOf: LawApplicabilityAnchorV1["applicableAsOf"];
+      reasonCodes: readonly string[];
     }>;
 
 export type TrustedRepairStateData = Readonly<{
@@ -510,7 +622,11 @@ export type TrustedRepairStateData = Readonly<{
   repairNeed: "required" | "optional" | "blocked" | null;
   repairPath: TrustedRepairPath | null;
   continuation: TrustedRepairContinuation | null;
-  structuredClaim: PracticeCalculationClaimV2 | TheoryPredicateClaimV1 | null;
+  structuredClaim:
+    | PracticeCalculationClaimV2
+    | TheoryPredicateClaimV1
+    | LawApplicabilityClaimV1
+    | null;
   proofEvaluation: TrustedRepairProofEvaluation | null;
   resultReasonCodes: readonly string[];
 }>;
@@ -630,7 +746,9 @@ export function isTrustedRepairOutcome(
 }
 
 export function trustedRepairSubjectLabel(subject: TrustedRepairSubject) {
-  return subject === "appraisal_practical" ? "감정평가실무" : "감정평가이론";
+  if (subject === "appraisal_practical") return "감정평가실무";
+  if (subject === "appraisal_theory") return "감정평가이론";
+  return "감정평가 및 보상법규";
 }
 
 export function exactObject(
@@ -981,4 +1099,116 @@ export function parseTheoryPredicateClaimV1(
   value: unknown,
 ): TheoryPredicateClaimV1 {
   return parseTheoryClaimCore(value, true) as TheoryPredicateClaimV1;
+}
+
+function parseLawClaimCore(value: unknown, includeConfirmationTime: boolean) {
+  const keys = [
+    "sourceRevisionId",
+    "anchorId",
+    "anchorVersionId",
+    "lawSourceBindingId",
+    "sourceId",
+    "sourceVersionId",
+    "lawAnchorId",
+    "lawAnchorVersionId",
+    "exactLocator",
+    "exactVersionIdentity",
+    "effectiveFrom",
+    "effectiveTo",
+    "applicableAsOf",
+    "currentLawApplicability",
+    "blockerState",
+    "confirmationMode",
+    ...(includeConfirmationTime ? ["learnerConfirmedAt"] : []),
+  ];
+  const record = exactObject(value, keys);
+  const blockerState = exactObject(record.blockerState, [
+    "openBlockingReferenceIds",
+    "blockerCount",
+  ]);
+  if (
+    Object.keys(record).length !== keys.length ||
+    Object.keys(blockerState).length !== 2 ||
+    !Array.isArray(blockerState.openBlockingReferenceIds) ||
+    !Number.isSafeInteger(blockerState.blockerCount) ||
+    Number(blockerState.blockerCount) < 0 ||
+    record.effectiveTo !== null ||
+    !LAW_CLAIM_CONFIRMATION_MODES.includes(
+      record.confirmationMode as LawClaimConfirmationMode,
+    )
+  ) {
+    throw new TrustedRepairContractError("invalid_input");
+  }
+  const openBlockingReferenceIds = blockerState.openBlockingReferenceIds.map(
+    (entry) => requiredTrustedRepairText(entry, 180),
+  );
+  if (
+    new Set(openBlockingReferenceIds).size !== openBlockingReferenceIds.length ||
+    Number(blockerState.blockerCount) !== openBlockingReferenceIds.length
+  ) {
+    throw new TrustedRepairContractError("invalid_input");
+  }
+  const parsed = {
+    sourceRevisionId: requiredTrustedRepairUuid(record.sourceRevisionId),
+    anchorId: requiredTrustedRepairText(record.anchorId, 180),
+    anchorVersionId: requiredTrustedRepairText(record.anchorVersionId, 200),
+    lawSourceBindingId: requiredTrustedRepairText(
+      record.lawSourceBindingId,
+      220,
+    ),
+    sourceId: requiredTrustedRepairText(record.sourceId, 200),
+    sourceVersionId: requiredTrustedRepairText(record.sourceVersionId, 220),
+    lawAnchorId: requiredTrustedRepairText(record.lawAnchorId, 220),
+    lawAnchorVersionId: requiredTrustedRepairText(
+      record.lawAnchorVersionId,
+      240,
+    ),
+    exactLocator: requiredTrustedRepairText(record.exactLocator, 240),
+    exactVersionIdentity: requiredTrustedRepairText(
+      record.exactVersionIdentity,
+      80,
+    ),
+    effectiveFrom: requiredTrustedRepairText(record.effectiveFrom, 40),
+    effectiveTo: null,
+    applicableAsOf: requiredTrustedRepairText(record.applicableAsOf, 40),
+    currentLawApplicability: requiredTrustedRepairText(
+      record.currentLawApplicability,
+      80,
+    ),
+    blockerState: {
+      openBlockingReferenceIds,
+      blockerCount: Number(blockerState.blockerCount),
+    },
+    confirmationMode: record.confirmationMode as LawClaimConfirmationMode,
+  };
+  for (const date of [
+    parsed.effectiveFrom,
+    parsed.applicableAsOf,
+    parsed.exactVersionIdentity,
+  ]) {
+    if (!/^\d{4}-\d{2}-\d{2}$/u.test(date) || !Number.isFinite(Date.parse(date))) {
+      throw new TrustedRepairContractError("invalid_input");
+    }
+  }
+  if (!includeConfirmationTime) return parsed;
+  const learnerConfirmedAt = requiredTrustedRepairText(
+    record.learnerConfirmedAt,
+    64,
+  );
+  if (!Number.isFinite(Date.parse(learnerConfirmedAt))) {
+    throw new TrustedRepairContractError("invalid_input");
+  }
+  return { ...parsed, learnerConfirmedAt };
+}
+
+export function parseLawApplicabilityClaimV1Input(
+  value: unknown,
+): LawApplicabilityClaimV1Input {
+  return parseLawClaimCore(value, false) as LawApplicabilityClaimV1Input;
+}
+
+export function parseLawApplicabilityClaimV1(
+  value: unknown,
+): LawApplicabilityClaimV1 {
+  return parseLawClaimCore(value, true) as LawApplicabilityClaimV1;
 }
