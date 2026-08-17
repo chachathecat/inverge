@@ -117,6 +117,7 @@ test("C2R-C-T exact-head runtime workflow is fork-safe and credential-free", () 
   assert.match(verifier, /cross_subject_start_replay_fails_closed/);
   assert.match(verifier, /enabledSubjects: "both"/);
   assert.match(verifier, /enabledSubjects: "practice"/);
+  assert.match(verifier, /enabledSubjects: "theory"/);
   assert.match(
     verifier,
     /source\.replace\(expected, `project_id = "\$\{PROJECT_ID\}"`\)/,

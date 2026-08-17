@@ -258,6 +258,18 @@ const COMMAND_SPECS = Object.freeze({
     "Theory-disabled cross-subject replay denial",
     "browser_assertion_locations_only",
   ),
+  next_cross_subject_theory_start: commandSpec(
+    "cross_subject_start_replay",
+    "next_cross_subject_theory_start",
+    "Theory-only cross-subject replay local Next server",
+    "local_server_metadata_only",
+  ),
+  browser_cross_subject_theory: commandSpec(
+    "cross_subject_start_replay",
+    "browser_cross_subject_theory",
+    "Practice-disabled cross-subject replay denial",
+    "browser_assertion_locations_only",
+  ),
   next_initial_start: commandSpec(
     "browser_runtime",
     "next_initial_start",
@@ -1880,48 +1892,6 @@ async function runFinalRuntime() {
           practiceCommandId: crypto.randomUUID(),
         }
       : null;
-    if (crossSubjectReplay) {
-      server = await startNext({
-        ...nextInput,
-        enabled: true,
-        enabledSubjects: "both",
-        commandSpec: COMMAND_SPECS.next_cross_subject_seed_start,
-      });
-      runCrossSubjectReplayBrowser({
-        baseUrl: server.baseUrl,
-        userA,
-        userB,
-        browserEvidencePath,
-        crossSubjectReplayPhase: "seed",
-        crossSubjectTheoryCommandId: crossSubjectReplay.theoryCommandId,
-        crossSubjectPracticeCommandId: crossSubjectReplay.practiceCommandId,
-        testName: "cross-subject start replay seed",
-        commandSpec: COMMAND_SPECS.browser_cross_subject_seed,
-      });
-      await stopNext(server);
-      server = null;
-
-      server = await startNext({
-        ...nextInput,
-        enabled: true,
-        enabledSubjects: "practice",
-        commandSpec: COMMAND_SPECS.next_cross_subject_practice_start,
-      });
-      runCrossSubjectReplayBrowser({
-        baseUrl: server.baseUrl,
-        userA,
-        userB,
-        browserEvidencePath,
-        crossSubjectReplayPhase: "verify_practice",
-        crossSubjectTheoryCommandId: crossSubjectReplay.theoryCommandId,
-        crossSubjectPracticeCommandId: crossSubjectReplay.practiceCommandId,
-        testName: "cross-subject start replay is denied with Theory disabled",
-        commandSpec: COMMAND_SPECS.browser_cross_subject_practice,
-      });
-      await stopNext(server);
-      server = null;
-    }
-
     server = await startNext({
       ...nextInput,
       enabled: true,
@@ -1932,14 +1902,6 @@ async function runFinalRuntime() {
       userA,
       userB,
       browserEvidencePath,
-      ...(crossSubjectReplay
-        ? {
-            crossSubjectReplayPhase: "verify_theory",
-            crossSubjectTheoryCommandId: crossSubjectReplay.theoryCommandId,
-            crossSubjectPracticeCommandId:
-              crossSubjectReplay.practiceCommandId,
-          }
-        : {}),
     });
     if (!fs.existsSync(browserEvidencePath)) {
       throw new Error("C2 browser suite produced no metadata evidence");
@@ -1947,10 +1909,6 @@ async function runFinalRuntime() {
     browserEvidence = JSON.parse(fs.readFileSync(browserEvidencePath, "utf8"));
     if (THEORY_RUNTIME) {
       theoryConfirmationDiagnostics(browserEvidence, true);
-      assertions.push({
-        id: "cross_subject_start_replay_fails_closed",
-        result: "passed",
-      });
       assertions.push({
         id: "theory_final_confirmation_metadata_safe",
         result: "passed",
@@ -1995,6 +1953,72 @@ async function runFinalRuntime() {
     assertions.push({ id: "next_process_restart_recovery", result: "passed" });
     await stopNext(server);
     server = null;
+
+    if (crossSubjectReplay) {
+      server = await startNext({
+        ...nextInput,
+        enabled: true,
+        enabledSubjects: "both",
+        commandSpec: COMMAND_SPECS.next_cross_subject_seed_start,
+      });
+      runCrossSubjectReplayBrowser({
+        baseUrl: server.baseUrl,
+        userA,
+        userB,
+        browserEvidencePath,
+        crossSubjectReplayPhase: "seed",
+        crossSubjectTheoryCommandId: crossSubjectReplay.theoryCommandId,
+        crossSubjectPracticeCommandId: crossSubjectReplay.practiceCommandId,
+        testName: "cross-subject start replay seed",
+        commandSpec: COMMAND_SPECS.browser_cross_subject_seed,
+      });
+      await stopNext(server);
+      server = null;
+
+      server = await startNext({
+        ...nextInput,
+        enabled: true,
+        enabledSubjects: "practice",
+        commandSpec: COMMAND_SPECS.next_cross_subject_practice_start,
+      });
+      runCrossSubjectReplayBrowser({
+        baseUrl: server.baseUrl,
+        userA,
+        userB,
+        browserEvidencePath,
+        crossSubjectReplayPhase: "verify_practice",
+        crossSubjectTheoryCommandId: crossSubjectReplay.theoryCommandId,
+        crossSubjectPracticeCommandId: crossSubjectReplay.practiceCommandId,
+        testName: "cross-subject start replay is denied with Theory disabled",
+        commandSpec: COMMAND_SPECS.browser_cross_subject_practice,
+      });
+      await stopNext(server);
+      server = null;
+
+      server = await startNext({
+        ...nextInput,
+        enabled: true,
+        enabledSubjects: "theory",
+        commandSpec: COMMAND_SPECS.next_cross_subject_theory_start,
+      });
+      runCrossSubjectReplayBrowser({
+        baseUrl: server.baseUrl,
+        userA,
+        userB,
+        browserEvidencePath,
+        crossSubjectReplayPhase: "verify_theory",
+        crossSubjectTheoryCommandId: crossSubjectReplay.theoryCommandId,
+        crossSubjectPracticeCommandId: crossSubjectReplay.practiceCommandId,
+        testName: "cross-subject start replay is denied with Practice disabled",
+        commandSpec: COMMAND_SPECS.browser_cross_subject_theory,
+      });
+      await stopNext(server);
+      server = null;
+      assertions.push({
+        id: "cross_subject_start_replay_fails_closed",
+        result: "passed",
+      });
+    }
 
     stopStack(root, COMMAND_SPECS.first_supabase_stop, false);
     assertNoDockerResources(
