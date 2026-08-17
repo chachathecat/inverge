@@ -470,7 +470,7 @@ test("WCV-C3 deterministic planner is bounded, non-overlapping and never mutates
     assert.ok(plan.executionBlocks.every((block) => block.startMinute >= 0 && block.endMinute <= availableMinutes && block.startMinute < block.endMinute));
     for (let i = 1; i < plan.executionBlocks.length; i += 1) assert.ok(plan.executionBlocks[i - 1].endMinute <= plan.executionBlocks[i].startMinute);
   }
-  const proposed = { ...aggregate, caseRecord: { ...aggregate.caseRecord, stateData: { ...aggregate.caseRecord.stateData, latestPlan: buildDeterministicFullDayPlan({ aggregate, availableMinutes: 180, recoveryMode: "NORMAL", fixedCommitments: [], occurredAt: "2026-08-17T01:00:00.000Z" }) } } };
+  const proposed = { ...aggregate, caseRecord: { ...aggregate.caseRecord, recordVersion: aggregate.caseRecord.recordVersion + 1, stateData: { ...aggregate.caseRecord.stateData, latestPlan: buildDeterministicFullDayPlan({ aggregate, availableMinutes: 180, recoveryMode: "NORMAL", fixedCommitments: [], occurredAt: "2026-08-17T01:00:00.000Z" }) } } };
   const decision = planFullDayDecision({ aggregate: proposed, decision: "REJECTED", reason: "deferred_by_learner", occurredAt: "2026-08-17T01:01:00.000Z" });
   assert.equal(decision.nextState, aggregate.caseRecord.state);
   assert.match(decision.stateData.resultReasonCodes[0], /without_mastery_change/);
@@ -516,4 +516,57 @@ test("WCV-C3 planning substitutes an eligible audit until the exact attempt boun
   });
   assert.deepEqual(exactBoundary.coreOutcomes.map((outcome) => outcome.kind), ["D1_REPRODUCTION"]);
   assert.deepEqual(exactBoundary.deferredReasonCodes, []);
+});
+
+test("WCV-C3 rejects a proposed plan after its eligibility or case snapshot changes", () => {
+  const aggregate = initial("appraisal_practical");
+  const latestPlan = buildDeterministicFullDayPlan({
+    aggregate,
+    availableMinutes: 60,
+    recoveryMode: "NORMAL",
+    fixedCommitments: [],
+    occurredAt: "2026-08-17T12:00:00.000Z",
+  });
+  const proposed = {
+    ...aggregate,
+    caseRecord: {
+      ...aggregate.caseRecord,
+      recordVersion: aggregate.caseRecord.recordVersion + 1,
+      stateData: { ...aggregate.caseRecord.stateData, latestPlan },
+    },
+  };
+  assert.doesNotThrow(() =>
+    planFullDayDecision({
+      aggregate: proposed,
+      decision: "ACCEPTED",
+      reason: "accepted_as_proposed",
+      occurredAt: "2026-08-17T23:59:59.000Z",
+    }),
+  );
+  assert.throws(
+    () =>
+      planFullDayDecision({
+        aggregate: proposed,
+        decision: "ACCEPTED",
+        reason: "accepted_as_proposed",
+        occurredAt: aggregate.caseRecord.stateData.nextEligibleAt,
+      }),
+    /stale_plan/,
+  );
+  assert.throws(
+    () =>
+      planFullDayDecision({
+        aggregate: {
+          ...proposed,
+          caseRecord: {
+            ...proposed.caseRecord,
+            recordVersion: proposed.caseRecord.recordVersion + 1,
+          },
+        },
+        decision: "REJECTED",
+        reason: "deferred_by_learner",
+        occurredAt: "2026-08-17T12:01:00.000Z",
+      }),
+    /stale_plan/,
+  );
 });

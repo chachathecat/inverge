@@ -332,6 +332,12 @@ export type ExecutionBlockV1 = Readonly<{
 export type FullDayPlanV1 = Readonly<{
   planId: string;
   plannerVersion: typeof DURABLE_LEARNING_PLANNER_VERSION;
+  proposalContext: Readonly<{
+    caseRecordVersion: number;
+    caseState: DurableLearningState;
+    nextEligibleAt: string | null;
+    waitingForEligibility: boolean;
+  }>;
   availableMinutes: number;
   recoveryMode: "NORMAL" | "MINIMUM_MAINTENANCE";
   coreOutcomes: readonly CoreOutcomeV1[];
@@ -393,6 +399,7 @@ export class DurableLearningContractError extends Error {
     | "invalid_input"
     | "invalid_state"
     | "not_eligible"
+    | "stale_plan"
     | "stale_configuration"
     | "proof_rejected"
     | "not_found";

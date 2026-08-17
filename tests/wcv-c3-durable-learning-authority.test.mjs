@@ -112,6 +112,9 @@ test("WCV-C3 API/UI and exact-head runtime enforce trusted timing and metadata s
   assert.match(engine, /RECURRENCE_RECONFIRMED/);
   assert.match(engine, /next_eligible_at_not_reached/);
   assert.match(engine, /outcomeTemplate\(input\.aggregate, waitingForEligibility\)/);
+  assert.match(engine, /caseRecordVersion: input\.aggregate\.caseRecord\.recordVersion/);
+  assert.match(engine, /recordVersion !== proposalContext\.caseRecordVersion \+ 1/);
+  assert.match(engine, /DurableLearningContractError\("stale_plan"\)/);
   assert.match(engine, /replacementApplied: Boolean\(input\.replacement\)/);
   assert.match(engine, /snapshot\.digest === digest\(preimage\)/);
   assert.match(engine, /snapshot\.contentReleaseVersion === DURABLE_LEARNING_FIXTURE_VERSION/);
@@ -119,6 +122,7 @@ test("WCV-C3 API/UI and exact-head runtime enforce trusted timing and metadata s
   assert.match(layout, /currentPath\.startsWith\("\/app\/durable-learning"\)[\s\S]*?trustedRepairEnabled=\{[\s\S]*?isTrustedRepairEnabled\(\) && isTrustedRepairOwner\(session\.email\)/);
   assert.match(ui, /data-wcv-c3-durable-learning/);
   assert.match(ui, /nextAction === "WAIT_FOR_ELIGIBILITY"/);
+  assert.match(ui, /code === "stale_plan"/);
   assert.match(ui, /다음 가능 시점까지 대기/);
   assert.match(ui, /D\+1 · D\+7 · 시간제한/);
   assert.match(route, /parseDurableLearnerResponse/);

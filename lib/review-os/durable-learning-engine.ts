@@ -841,6 +841,12 @@ export function buildDeterministicFullDayPlan(input: {
   return {
     planId: randomUUID(),
     plannerVersion: DURABLE_LEARNING_PLANNER_VERSION,
+    proposalContext: {
+      caseRecordVersion: input.aggregate.caseRecord.recordVersion,
+      caseState: input.aggregate.caseRecord.state,
+      nextEligibleAt: input.aggregate.caseRecord.stateData.nextEligibleAt,
+      waitingForEligibility,
+    },
     availableMinutes: input.availableMinutes,
     recoveryMode: input.recoveryMode,
     coreOutcomes: outcomes,
@@ -909,6 +915,18 @@ export function planFullDayDecision(input: {
   const currentPlan = input.aggregate.caseRecord.stateData.latestPlan;
   if (!currentPlan || currentPlan.decision !== "PROPOSED") {
     throw new DurableLearningContractError("invalid_state");
+  }
+  const proposalContext = currentPlan.proposalContext;
+  if (
+    !proposalContext ||
+    !Number.isSafeInteger(proposalContext.caseRecordVersion) ||
+    input.aggregate.caseRecord.recordVersion !== proposalContext.caseRecordVersion + 1 ||
+    input.aggregate.caseRecord.state !== proposalContext.caseState ||
+    input.aggregate.caseRecord.stateData.nextEligibleAt !== proposalContext.nextEligibleAt ||
+    isBeforeDurableEligibility(occurredAt, input.aggregate.caseRecord.stateData.nextEligibleAt) !==
+      proposalContext.waitingForEligibility
+  ) {
+    throw new DurableLearningContractError("stale_plan");
   }
   if ((input.decision === "EDITED") !== Boolean(input.replacement)) {
     throw new DurableLearningContractError("invalid_input");

@@ -289,7 +289,14 @@ export function DurableLearningCommand({ ownerScope }: { ownerScope: string }) {
       }
       return payload;
     } catch (caught) {
-      setError(caught instanceof Error && caught.message === "stale_record" ? "다른 탭의 변경을 먼저 다시 불러오세요." : "요청을 안전하게 완료하지 못했습니다. 같은 명령 ID로 다시 시도할 수 있습니다.");
+      const code = caught instanceof Error ? caught.message : "";
+      setError(
+        code === "stale_record"
+          ? "다른 탭의 변경을 먼저 다시 불러오세요."
+          : code === "stale_plan"
+            ? "계획을 만든 뒤 학습 상태나 가능 시점이 바뀌었습니다. 최신 상태로 계획을 다시 만들어 주세요."
+            : "요청을 안전하게 완료하지 못했습니다. 같은 명령 ID로 다시 시도할 수 있습니다.",
+      );
       return null;
     } finally {
       if (definitive) pending.current = null;
