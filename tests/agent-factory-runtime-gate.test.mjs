@@ -12,6 +12,8 @@ import {
   C2R_C_T_RUNTIME_EVIDENCE_PRODUCER_VERSION,
   C2R_C_L_RUNTIME_EVIDENCE_ASSERTION_IDS,
   C2R_C_L_RUNTIME_EVIDENCE_PRODUCER_VERSION,
+  WCV_C3_RUNTIME_EVIDENCE_ASSERTION_IDS,
+  WCV_C3_RUNTIME_EVIDENCE_PRODUCER_VERSION,
   RUNTIME_EVIDENCE_ASSERTION_IDS,
   RUNTIME_EVIDENCE_PRODUCER_VERSION,
   RUNTIME_EVIDENCE_SCHEMA_VERSION,
@@ -29,6 +31,9 @@ import {
   C2R_C_L_ASSERTION_IDS,
   C2R_C_L_MIGRATION_PATH,
   C2R_C_L_PRODUCER_VERSION,
+  WCV_C3_ASSERTION_IDS,
+  WCV_C3_MIGRATION_PATH,
+  WCV_C3_PRODUCER_VERSION,
   PREREQUISITE_MIGRATIONS,
   PRODUCER_VERSION,
   SCHEMA_VERSION,
@@ -122,6 +127,17 @@ const C2R_C_L_FIXTURE_SQL = [
   "select 'wcv_c2_validate_exact_law_proof_v1';",
   "",
 ].join("\n");
+const WCV_C3_FIXTURE_SQL = [
+  "select 'public.wcv_c3_gap_closure_cases';",
+  "select 'public.wcv_c3_private_attempt_artifacts';",
+  "select 'public.wcv_c3_evidence_events';",
+  "select 'public.wcv_c3_create_gap_closure_case_v1';",
+  "select 'public.wcv_c3_apply_transition_v1';",
+  "select 'public.wcv_c3_delete_owned_case_v1';",
+  "alter table public.wcv_c3_gap_closure_cases force row level security;",
+  "select 'containsBody';",
+  "",
+].join("\n");
 fs.writeFileSync(path.join(FIXTURE_REPO, MIGRATION_PATH), S233A_FIXTURE_SQL, "utf8");
 S236P_MIGRATION_PATHS.forEach((migrationPath, index) => {
   fs.writeFileSync(
@@ -143,6 +159,11 @@ fs.writeFileSync(
 fs.writeFileSync(
   path.join(FIXTURE_REPO, C2R_C_L_MIGRATION_PATH),
   C2R_C_L_FIXTURE_SQL,
+  "utf8",
+);
+fs.writeFileSync(
+  path.join(FIXTURE_REPO, WCV_C3_MIGRATION_PATH),
+  WCV_C3_FIXTURE_SQL,
   "utf8",
 );
 fs.writeFileSync(path.join(FIXTURE_REPO, UNSUPPORTED_MIGRATION_PATH), "select 'unsupported-runtime-fixture';\n", "utf8");
@@ -190,6 +211,14 @@ const C2R_C_L_MIGRATION_SHA256 = crypto
   .createHash("sha256")
   .update(
     execFileSync("git", ["show", `${HEAD_SHA}:${C2R_C_L_MIGRATION_PATH}`], {
+      cwd: FIXTURE_REPO,
+    }),
+  )
+  .digest("hex");
+const WCV_C3_MIGRATION_SHA256 = crypto
+  .createHash("sha256")
+  .update(
+    execFileSync("git", ["show", `${HEAD_SHA}:${WCV_C3_MIGRATION_PATH}`], {
       cwd: FIXTURE_REPO,
     }),
   )
@@ -447,6 +476,28 @@ test("exact C2R-C-L Law migration selects its closed runtime adapter and evidenc
   assert.equal(JSON.parse(result.stdout).status, "verified");
 });
 
+test("exact WCV-C3 migration selects its closed runtime adapter and evidence contract", () => {
+  const risk = requiredRisk();
+  risk.runtimeReasons = [{
+    path: WCV_C3_MIGRATION_PATH,
+    pattern: "supabase/migrations/**",
+  }];
+  risk.changedFiles = [WCV_C3_MIGRATION_PATH];
+  const result = run(risk, (evidence) => {
+    evidence.producerVersion = WCV_C3_RUNTIME_EVIDENCE_PRODUCER_VERSION;
+    evidence.migrations = [{
+      path: WCV_C3_MIGRATION_PATH,
+      sha256: WCV_C3_MIGRATION_SHA256,
+    }];
+    evidence.assertions = WCV_C3_RUNTIME_EVIDENCE_ASSERTION_IDS.map((id) => ({
+      id,
+      passed: true,
+    }));
+  });
+  assert.equal(result.status, 0, result.stderr);
+  assert.equal(JSON.parse(result.stdout).status, "verified");
+});
+
 test("S236P runtime gate rejects missing, reordered, extra, and arbitrary migrations", async (t) => {
   const risk = requiredRisk();
   risk.runtimeReasons = S236P_MIGRATION_PATHS.map((migrationPath) => ({
@@ -613,6 +664,14 @@ test("runtime evidence contract and producer versions stay locked together", () 
     C2R_C_L_ASSERTION_IDS,
     C2R_C_L_RUNTIME_EVIDENCE_ASSERTION_IDS,
   );
+  assert.equal(
+    WCV_C3_PRODUCER_VERSION,
+    WCV_C3_RUNTIME_EVIDENCE_PRODUCER_VERSION,
+  );
+  assert.deepEqual(
+    WCV_C3_ASSERTION_IDS,
+    WCV_C3_RUNTIME_EVIDENCE_ASSERTION_IDS,
+  );
   for (const migrationPath of PREREQUISITE_MIGRATIONS) {
     assert.equal(fs.existsSync(path.join(WORKSPACE_ROOT, migrationPath)), true, migrationPath);
   }
@@ -723,7 +782,7 @@ test("S236P expiry matrix covers exact boundaries, missing metadata, cleanup, an
   assert.doesNotMatch(producer, /with aligned as \(\s*update public\.s236p_owner_private_objects/);
 });
 
-test("closed S233A, S236P, and C2R-C-P adapters bind exact migrations and reject unsupported sets", () => {
+test("closed runtime-evidence adapters bind exact migrations and reject unsupported sets", () => {
   const directory = fs.mkdtempSync(path.join(WORKSPACE_ROOT, "runtime-producer-git-test-"));
   execFileSync("git", ["init", "--quiet"], { cwd: directory });
   execFileSync("git", ["config", "user.name", "Runtime Evidence Test"], { cwd: directory });
@@ -759,7 +818,12 @@ test("closed S233A, S236P, and C2R-C-P adapters bind exact migrations and reject
     C2R_C_L_FIXTURE_SQL,
     "utf8",
   );
-  execFileSync("git", ["add", migrationPath, ...S236P_MIGRATION_PATHS, C2R_C_P_MIGRATION_PATH, C2R_C_T_MIGRATION_PATH, C2R_C_L_MIGRATION_PATH], {
+  fs.writeFileSync(
+    path.join(directory, WCV_C3_MIGRATION_PATH),
+    WCV_C3_FIXTURE_SQL,
+    "utf8",
+  );
+  execFileSync("git", ["add", migrationPath, ...S236P_MIGRATION_PATHS, C2R_C_P_MIGRATION_PATH, C2R_C_T_MIGRATION_PATH, C2R_C_L_MIGRATION_PATH, WCV_C3_MIGRATION_PATH], {
     cwd: directory,
   });
   execFileSync("git", ["commit", "--quiet", "-m", "fixture"], { cwd: directory });
@@ -847,6 +911,27 @@ test("closed S233A, S236P, and C2R-C-P adapters bind exact migrations and reject
       [{
         path: C2R_C_L_MIGRATION_PATH,
         sha256: sha256(Buffer.from(C2R_C_L_FIXTURE_SQL)),
+      }],
+    );
+    const wcvC3Target = resolveTargetMigration(
+      {
+        changedFiles: [WCV_C3_MIGRATION_PATH],
+        changedFilesTruncated: false,
+      },
+      headSha,
+    );
+    assert.equal(wcvC3Target.adapter, "wcv-c3");
+    assert.equal(wcvC3Target.practicePrerequisite.path, C2R_C_P_MIGRATION_PATH);
+    assert.equal(wcvC3Target.theoryPrerequisite.path, C2R_C_T_MIGRATION_PATH);
+    assert.equal(wcvC3Target.lawPrerequisite.path, C2R_C_L_MIGRATION_PATH);
+    assert.deepEqual(
+      wcvC3Target.migrations.map(({ path: migrationPathValue, sha256 }) => ({
+        path: migrationPathValue,
+        sha256,
+      })),
+      [{
+        path: WCV_C3_MIGRATION_PATH,
+        sha256: sha256(Buffer.from(WCV_C3_FIXTURE_SQL)),
       }],
     );
     assert.throws(

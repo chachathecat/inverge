@@ -129,6 +129,8 @@ const defaultTestFiles = [
   "tests/wcv-c2r-runtime-preflight.test.mjs",
   "tests/c2r-c-l-law-runtime-contract.test.mjs",
   "tests/c2r-c-l-law-authority.test.mjs",
+  "tests/wcv-c3-durable-learning-contract.test.mjs",
+  "tests/wcv-c3-durable-learning-authority.test.mjs",
   "tests/dabangil-unified-product-multisurface-launch-authority.test.mjs",
   "tests/owner-alpha-three-subject-practice-adapter-contract.test.mjs",
   "tests/owner-alpha-explanation-ladder-v1.test.mjs",
