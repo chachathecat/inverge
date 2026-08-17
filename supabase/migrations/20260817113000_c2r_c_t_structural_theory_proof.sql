@@ -8,7 +8,8 @@ alter table public.wcv_c2_trusted_repair_sessions
   drop constraint if exists wcv_c2_trusted_repair_sessions_contract_version_check,
   drop constraint if exists wcv_c2_trusted_repair_sessions_fixture_version_check,
   drop constraint if exists wcv_c2_trusted_repair_sessions_rubric_version_check,
-  drop constraint if exists wcv_c2_trusted_repair_sessions_validator_version_check;
+  drop constraint if exists wcv_c2_trusted_repair_sessions_validator_version_check,
+  drop constraint if exists wcv_c2_trusted_repair_sessions_subject_binding_check;
 
 alter table public.wcv_c2_trusted_repair_sessions
   add constraint wcv_c2_trusted_repair_sessions_subject_binding_check check (
@@ -196,6 +197,14 @@ begin
               or predicate.value - array['predicateId', 'polarity'] <> '{}'::jsonb
               or predicate.value ->> 'polarity' not in ('ASSERTED', 'NEGATED')
           )
+      )
+      or exists (
+        select 1
+        from jsonb_array_elements(v_claim -> 'clauses') as clause(value),
+          jsonb_array_elements(clause.value -> 'predicates') as predicate(value)
+        where clause.value ->> 'scopeId' = 'theory-target:synthetic-income-approach'
+          and predicate.value ->> 'predicateId' = 'converts_expected_income_to_value'
+          and predicate.value ->> 'polarity' = 'NEGATED'
       )
       or not exists (
         select 1

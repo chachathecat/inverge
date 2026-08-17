@@ -193,6 +193,20 @@ const COMMAND_SPECS = Object.freeze({
     "sql_query_body_secret",
     { queryId: "verify_migrations", queryDescription: "schema existence predicates" },
   ),
+  theory_migration_replay_psql: commandSpec(
+    "first_fresh_database_verification",
+    "theory_migration_replay_psql",
+    "replay Theory migration on the first database",
+    "sql_query_body_secret",
+    { queryId: "theory_migration_replay", queryDescription: "complete Theory migration replay" },
+  ),
+  theory_subject_binding_count_psql: commandSpec(
+    "first_fresh_database_verification",
+    "theory_subject_binding_count_psql",
+    "verify one replayed Theory subject-binding constraint",
+    "sql_query_body_secret",
+    { queryId: "theory_subject_binding_count", queryDescription: "named constraint count" },
+  ),
   verify_security_contract_psql: commandSpec(
     "first_fresh_database_verification",
     "verify_security_contract_psql",
@@ -979,6 +993,25 @@ function verifyMigrationsApplied(databaseContainer, specification) {
   }
 }
 
+function verifyTheoryMigrationReplay(databaseContainer) {
+  if (!THEORY_RUNTIME) return;
+  databaseQuery(
+    databaseContainer,
+    COMMAND_SPECS.theory_migration_replay_psql,
+    fs.readFileSync(THEORY_MIGRATION_PATH, "utf8"),
+  );
+  const constraintCount = databaseQuery(
+    databaseContainer,
+    COMMAND_SPECS.theory_subject_binding_count_psql,
+    `select count(*) from pg_constraint
+     where conrelid='public.wcv_c2_trusted_repair_sessions'::regclass
+       and conname='wcv_c2_trusted_repair_sessions_subject_binding_check';`,
+  );
+  if (constraintCount !== "1") {
+    throw new Error("Theory migration replay did not retain exactly one subject-binding constraint");
+  }
+}
+
 function verifyDatabaseSecurityContract(databaseContainer, specification) {
   const result = databaseQuery(
     databaseContainer,
@@ -1169,15 +1202,165 @@ function sanitizedBrowserFailureLocations(result) {
   return locations.slice(-5);
 }
 
-function browserFailureFromResult(executable, commandArgs, specification, result) {
+const THEORY_DIAGNOSTIC_KEYS = Object.freeze([
+  "postState",
+  "preState",
+  "proofEvaluationState",
+  "proofReasonCodeIds",
+  "recordVersion",
+  "responseStatus",
+  "safeErrorCode",
+  "theoryStructuredConfirmationExisted",
+]);
+const THEORY_DIAGNOSTIC_STATES = new Set([
+  "start",
+  "editable_capture_draft",
+  "revision_confirmed",
+  "prediction_committed",
+  "independent_attempt_committed",
+  "self_diagnosis_committed",
+  "diagnosed",
+  "exposure_committed",
+  "repair_submitted",
+  "verified",
+  "partial",
+  "blocked",
+]);
+const THEORY_DIAGNOSTIC_PROOF_STATES = new Set([
+  "PASS",
+  "PARTIAL",
+  "AMBIGUOUS",
+  "BLOCKED",
+  "UNSUPPORTED",
+]);
+const THEORY_DIAGNOSTIC_ERROR_CODES = new Set([
+  "invalid_input",
+  "not_found",
+  "stale_record",
+  "invalid_transition",
+  "temporarily_unavailable",
+]);
+
+function validateTheoryConfirmationDiagnostic(value) {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    throw new Error("Theory confirmation diagnostic is not an object");
+  }
+  const keys = Object.keys(value).sort();
+  if (JSON.stringify(keys) !== JSON.stringify(THEORY_DIAGNOSTIC_KEYS)) {
+    throw new Error("Theory confirmation diagnostic fields are not exact");
+  }
+  if (!THEORY_DIAGNOSTIC_STATES.has(value.preState)) {
+    throw new Error("Theory confirmation diagnostic pre-state is invalid");
+  }
+  if (
+    !Number.isInteger(value.responseStatus) ||
+    value.responseStatus < 100 ||
+    value.responseStatus > 599
+  ) {
+    throw new Error("Theory confirmation diagnostic response status is invalid");
+  }
+  if (
+    value.safeErrorCode !== null &&
+    !THEORY_DIAGNOSTIC_ERROR_CODES.has(value.safeErrorCode)
+  ) {
+    throw new Error("Theory confirmation diagnostic error code is invalid");
+  }
+  if (
+    value.postState !== null &&
+    !THEORY_DIAGNOSTIC_STATES.has(value.postState)
+  ) {
+    throw new Error("Theory confirmation diagnostic post-state is invalid");
+  }
+  if (
+    value.proofEvaluationState !== null &&
+    !THEORY_DIAGNOSTIC_PROOF_STATES.has(value.proofEvaluationState)
+  ) {
+    throw new Error("Theory confirmation diagnostic proof state is invalid");
+  }
+  if (
+    !Array.isArray(value.proofReasonCodeIds) ||
+    value.proofReasonCodeIds.length > 16 ||
+    value.proofReasonCodeIds.some(
+      (reason) =>
+        typeof reason !== "string" ||
+        reason.length > 120 ||
+        !/^[a-z0-9_:-]+$/.test(reason),
+    )
+  ) {
+    throw new Error("Theory confirmation diagnostic proof reasons are invalid");
+  }
+  if (
+    value.recordVersion !== null &&
+    (!Number.isInteger(value.recordVersion) || value.recordVersion < 1)
+  ) {
+    throw new Error("Theory confirmation diagnostic record version is invalid");
+  }
+  if (typeof value.theoryStructuredConfirmationExisted !== "boolean") {
+    throw new Error("Theory confirmation diagnostic confirmation flag is invalid");
+  }
+  return value;
+}
+
+function theoryConfirmationDiagnostics(value, requireComplete) {
+  if (
+    !value ||
+    typeof value !== "object" ||
+    !Array.isArray(value.finalTheoryConfirmations) ||
+    value.finalTheoryConfirmations.length < 1 ||
+    value.finalTheoryConfirmations.length > 3
+  ) {
+    throw new Error("Theory confirmation diagnostic inventory is invalid");
+  }
+  const diagnostics = value.finalTheoryConfirmations.map(
+    validateTheoryConfirmationDiagnostic,
+  );
+  if (requireComplete) {
+    if (diagnostics.length !== 3) {
+      throw new Error("Theory confirmation diagnostic inventory is incomplete");
+    }
+    for (const diagnostic of diagnostics) {
+      if (
+        diagnostic.preState !== "repair_submitted" ||
+        diagnostic.responseStatus !== 200 ||
+        diagnostic.safeErrorCode !== null ||
+        diagnostic.postState !== "verified" ||
+        diagnostic.proofEvaluationState !== "PASS" ||
+        diagnostic.proofReasonCodeIds.length !== 0 ||
+        diagnostic.recordVersion === null ||
+        diagnostic.theoryStructuredConfirmationExisted !== true
+      ) {
+        throw new Error("Theory confirmation diagnostic did not prove exact success");
+      }
+    }
+  }
+  return diagnostics;
+}
+
+function browserFailureFromResult(
+  executable,
+  commandArgs,
+  specification,
+  result,
+  browserEvidencePath,
+) {
   const spec = validateCommandSpec(specification);
   if (spec.sensitivityPolicy !== "browser_assertion_locations_only") {
     throw new Error("browser failure command has an invalid sensitivity policy");
   }
   const locations = sanitizedBrowserFailureLocations(result);
-  const stderr = locations.length
+  let safeDiagnostic = "";
+  if (THEORY_RUNTIME && fs.existsSync(browserEvidencePath)) {
+    try {
+      const evidence = JSON.parse(fs.readFileSync(browserEvidencePath, "utf8"));
+      const diagnostics = theoryConfirmationDiagnostics(evidence, false);
+      safeDiagnostic = `; final_theory_confirmation=${JSON.stringify(diagnostics.at(-1))}`;
+    } catch {
+      safeDiagnostic = "; final_theory_confirmation=unavailable_or_invalid";
+    }
+  }
+  const stderr = (locations.length
     ? `browser assertions failed at sanitized assertion line(s) ${locations.join(",")}`
-    : "browser assertions failed with no safe assertion location";
+    : "browser assertions failed with no safe assertion location") + safeDiagnostic;
   return sanitizedCommandFailure(
     executable,
     commandArgs,
@@ -1212,7 +1395,13 @@ function runBrowserSuite(input) {
     },
   );
   if (result.status !== 0) {
-    throw browserFailureFromResult(executable, commandArgs, specification, result);
+    throw browserFailureFromResult(
+      executable,
+      commandArgs,
+      specification,
+      result,
+      input.browserEvidencePath,
+    );
   }
 }
 
@@ -1551,11 +1740,15 @@ async function runFinalRuntime() {
     };
     const { databaseContainer } = stackIdentity;
     verifyMigrationsApplied(databaseContainer, COMMAND_SPECS.verify_migrations_psql);
+    verifyTheoryMigrationReplay(databaseContainer);
     verifyDatabaseSecurityContract(
       databaseContainer,
       COMMAND_SPECS.verify_security_contract_psql,
     );
     assertions.push({ id: "first_fresh_empty_state_migrations", result: "passed" });
+    if (THEORY_RUNTIME) {
+      assertions.push({ id: "theory_migration_replay_safe", result: "passed" });
+    }
     assertions.push({ id: "forced_rls_and_exact_grants", result: "passed" });
     assertions.push({ id: "minimum_local_services_healthy", result: "passed" });
 
@@ -1624,6 +1817,13 @@ async function runFinalRuntime() {
       throw new Error("C2 browser suite produced no metadata evidence");
     }
     browserEvidence = JSON.parse(fs.readFileSync(browserEvidencePath, "utf8"));
+    if (THEORY_RUNTIME) {
+      theoryConfirmationDiagnostics(browserEvidence, true);
+      assertions.push({
+        id: "theory_final_confirmation_metadata_safe",
+        result: "passed",
+      });
+    }
     verifyPersistedRuntime(databaseContainer);
     assertions.push({
       id: THEORY_RUNTIME
@@ -1753,6 +1953,7 @@ async function runFinalRuntime() {
       authenticatedUsers: 2,
       syntheticSubjects: 1,
       freshDatabaseApplications: 2,
+      theoryMigrationReplays: THEORY_RUNTIME ? 1 : 0,
       inputModes: 5,
       repairPaths: 6,
       continuationCommands: 3,

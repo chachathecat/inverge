@@ -16,6 +16,45 @@ const emailB = process.env.WCV_C2_USER_B_EMAIL ?? "";
 const passwordB = process.env.WCV_C2_USER_B_PASSWORD ?? "";
 const evidencePath = process.env.WCV_C2_BROWSER_EVIDENCE_PATH ?? "";
 const recoverySessionId = process.env.WCV_C2_RECOVERY_SESSION_ID ?? "";
+const trustedRepairStates = new Set([
+  "start",
+  "editable_capture_draft",
+  "revision_confirmed",
+  "prediction_committed",
+  "independent_attempt_committed",
+  "self_diagnosis_committed",
+  "diagnosed",
+  "exposure_committed",
+  "repair_submitted",
+  "verified",
+  "partial",
+  "blocked",
+]);
+const proofEvaluationStates = new Set([
+  "PASS",
+  "PARTIAL",
+  "AMBIGUOUS",
+  "BLOCKED",
+  "UNSUPPORTED",
+]);
+const safeErrorCodes = new Set([
+  "invalid_input",
+  "not_found",
+  "stale_record",
+  "invalid_transition",
+  "temporarily_unavailable",
+]);
+type TheoryConfirmationDiagnostic = Readonly<{
+  preState: string;
+  responseStatus: number;
+  safeErrorCode: string | null;
+  postState: string | null;
+  proofEvaluationState: string | null;
+  proofReasonCodeIds: readonly string[];
+  recordVersion: number | null;
+  theoryStructuredConfirmationExisted: boolean;
+}>;
+const finalTheoryConfirmations: TheoryConfirmationDiagnostic[] = [];
 
 const inputModes = [
   "TYPED_TEXT",
@@ -74,6 +113,88 @@ async function activate(page: Page, keyboardOnly = false) {
   }
 }
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function metadataString(value: unknown, allowed: ReadonlySet<string>) {
+  return typeof value === "string" && allowed.has(value) ? value : null;
+}
+
+function proofReasonCodeIds(value: unknown) {
+  if (!Array.isArray(value) || value.length > 16) return [];
+  return value.filter(
+    (item): item is string =>
+      typeof item === "string" &&
+      item.length <= 120 &&
+      /^[a-z0-9_:-]+$/.test(item),
+  );
+}
+
+function writeConfirmationDiagnostics() {
+  if (!evidencePath) return;
+  writeFileSync(
+    evidencePath,
+    `${JSON.stringify({ finalTheoryConfirmations }, null, 2)}\n`,
+    { mode: 0o600 },
+  );
+}
+
+async function captureFinalTheoryConfirmation(
+  page: Page,
+  keyboardOnly: boolean,
+) {
+  const preState =
+    (await page
+      .locator("[data-trusted-repair-state]")
+      .getAttribute("data-trusted-repair-state")) ?? "";
+  const theoryStructuredConfirmationExisted =
+    (await page.getByLabel("필수 술어 극성").count()) === 1;
+  const responsePromise = page.waitForResponse((response) => {
+    if (
+      response.request().method() !== "POST" ||
+      new URL(response.url()).pathname !== "/api/review-os/trusted-repair"
+    ) {
+      return false;
+    }
+    try {
+      return response.request().postDataJSON()?.action === "confirm_theory_claim";
+    } catch {
+      return false;
+    }
+  });
+  await activate(page, keyboardOnly);
+  const response = await responsePromise;
+  const rawBody: unknown = await response.json().catch(() => null);
+  const body = isRecord(rawBody) ? rawBody : null;
+  const view = body && isRecord(body.view) ? body.view : null;
+  const session = view && isRecord(view.session) ? view.session : null;
+  const proofEvaluation =
+    session && isRecord(session.proofEvaluation)
+      ? session.proofEvaluation
+      : null;
+  const diagnostic: TheoryConfirmationDiagnostic = {
+    preState,
+    responseStatus: response.status(),
+    safeErrorCode: metadataString(body?.error, safeErrorCodes),
+    postState: metadataString(session?.state, trustedRepairStates),
+    proofEvaluationState: metadataString(
+      proofEvaluation?.state,
+      proofEvaluationStates,
+    ),
+    proofReasonCodeIds: proofReasonCodeIds(proofEvaluation?.reasonCodes),
+    recordVersion:
+      Number.isInteger(session?.recordVersion) &&
+      Number(session?.recordVersion) > 0
+        ? Number(session?.recordVersion)
+        : null,
+    theoryStructuredConfirmationExisted,
+  };
+  finalTheoryConfirmations.push(diagnostic);
+  writeConfirmationDiagnostics();
+  return diagnostic;
+}
+
 async function apiCommand(
   context: BrowserContext,
   action: string,
@@ -96,10 +217,16 @@ function theoryClaim(
       targetScopeId: string;
       requiredPredicates: readonly string[];
       forbiddenPredicates: readonly string[];
+      acceptableAlternatives: readonly (readonly string[])[];
       counterexampleScopes: readonly string[];
     };
   },
-  disposition: "pass" | "negated" | "cross_target" = "pass",
+  disposition:
+    | "pass"
+    | "negated"
+    | "cross_target"
+    | "negated_with_alternative"
+    | "arbitrary_mixed" = "pass",
 ) {
   const confirmation = view.theoryStructuredConfirmation;
   const scopeId =
@@ -119,8 +246,32 @@ function theoryClaim(
         predicates: [
           {
             predicateId: confirmation.requiredPredicates[0],
-            polarity: disposition === "negated" ? "NEGATED" : "ASSERTED",
+            polarity:
+              disposition === "negated" ||
+              disposition === "negated_with_alternative"
+                ? "NEGATED"
+                : "ASSERTED",
           },
+          ...(disposition === "negated_with_alternative"
+            ? [
+                {
+                  predicateId: confirmation.acceptableAlternatives[0][0],
+                  polarity: "ASSERTED",
+                },
+              ]
+            : []),
+          ...(disposition === "arbitrary_mixed"
+            ? [
+                {
+                  predicateId: "synthetic_supporting_predicate",
+                  polarity: "ASSERTED",
+                },
+                {
+                  predicateId: "synthetic_supporting_predicate",
+                  polarity: "NEGATED",
+                },
+              ]
+            : []),
         ],
       },
       {
@@ -228,7 +379,17 @@ async function completeTheoryJourney(
   await expectState(page, "repair_submitted");
   await expect(page.getByLabel("필수 술어 극성")).toHaveValue("ASSERTED");
   await expect(page.getByLabel("금지 술어 극성")).toHaveValue("NEGATED");
-  await activate(page, keyboardOnly);
+  const confirmation = await captureFinalTheoryConfirmation(page, keyboardOnly);
+  expect(confirmation).toMatchObject({
+    preState: "repair_submitted",
+    responseStatus: 200,
+    safeErrorCode: null,
+    postState: "verified",
+    proofEvaluationState: "PASS",
+    proofReasonCodeIds: [],
+    theoryStructuredConfirmationExisted: true,
+  });
+  expect(confirmation.recordVersion).toBeGreaterThan(0);
   await expectState(page, "verified");
   await expect(page.getByLabel("이론술어 검증 상태")).toContainText("PASS");
   expect([...foreignHosts]).toEqual([]);
@@ -270,6 +431,38 @@ test("Theory browser-to-Postgres vertical, bounded retry, idempotency, and tenan
     inputMode: "TYPED_TEXT",
   });
   expect(practiceDenied.response.status()).toBe(404);
+
+  const negationPrecedence = await progressToRepairSubmitted(owner);
+  const negationPrecedenceResult = await apiCommand(
+    owner,
+    "confirm_theory_claim",
+    {
+      sessionId: negationPrecedence.session.sessionId,
+      expectedVersion: negationPrecedence.session.recordVersion,
+      claim: theoryClaim(negationPrecedence, "negated_with_alternative"),
+    },
+  );
+  expect(negationPrecedenceResult.response.status()).toBe(200);
+  expect(negationPrecedenceResult.body.view.session.state).toBe("partial");
+  expect(
+    negationPrecedenceResult.body.view.session.proofEvaluation.state,
+  ).toBe("PARTIAL");
+
+  const arbitraryMixed = await progressToRepairSubmitted(owner);
+  const arbitraryMixedResult = await apiCommand(
+    owner,
+    "confirm_theory_claim",
+    {
+      sessionId: arbitraryMixed.session.sessionId,
+      expectedVersion: arbitraryMixed.session.recordVersion,
+      claim: theoryClaim(arbitraryMixed, "arbitrary_mixed"),
+    },
+  );
+  expect(arbitraryMixedResult.response.status()).toBe(200);
+  expect(arbitraryMixedResult.body.view.session.state).toBe("partial");
+  expect(arbitraryMixedResult.body.view.session.proofEvaluation.state).toBe(
+    "AMBIGUOUS",
+  );
 
   const startCommandId = randomUUID();
   const duplicateStart = await Promise.all([
@@ -337,6 +530,7 @@ test("Theory browser-to-Postgres vertical, bounded retry, idempotency, and tenan
 
   timings.sort((left, right) => left - right);
   const evidence = {
+    finalTheoryConfirmations,
     subjectRuns: [
       {
         subject: "appraisal_theory",

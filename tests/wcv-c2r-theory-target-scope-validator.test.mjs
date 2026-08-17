@@ -235,6 +235,24 @@ test("[C2R-C-T-R05] exact target assertion passes; negated required predicate is
   assert.equal(negated.state, "PARTIAL");
   assert.equal(negated.verified, false);
   assert.ok(negated.reasonCodes.includes("required_predicate_negated"));
+
+  const negatedWithAlternative = claimInput();
+  negatedWithAlternative.clauses[0].predicates = [
+    {
+      predicateId: anchor().requiredPredicates[0],
+      polarity: "NEGATED",
+    },
+    {
+      predicateId: anchor().acceptableAlternatives[0][0],
+      polarity: "ASSERTED",
+    },
+  ];
+  const alternativeCannotOverride = evaluate(negatedWithAlternative);
+  assert.equal(alternativeCannotOverride.state, "PARTIAL");
+  assert.equal(alternativeCannotOverride.verified, false);
+  assert.deepEqual(alternativeCannotOverride.reasonCodes, [
+    "required_predicate_negated",
+  ]);
 });
 
 test("[C2R-C-T-R13/R16] same-target mixed polarity stays ambiguous across clause boundaries", () => {
@@ -273,6 +291,37 @@ test("[C2R-C-T-R13/R16] same-target mixed polarity stays ambiguous across clause
     ],
   });
   assert.equal(evaluate(counterexampleCannotErase).state, "AMBIGUOUS");
+
+  const counterexampleDoesNotContaminate = claimInput();
+  counterexampleDoesNotContaminate.clauses.push({
+    clauseIndex: 3,
+    scopeResolution: "EXACT",
+    scopeId: anchor().counterexampleScopes[0],
+    predicates: [
+      {
+        predicateId: anchor().requiredPredicates[0],
+        polarity: "NEGATED",
+      },
+    ],
+  });
+  assert.equal(evaluate(counterexampleDoesNotContaminate).state, "PASS");
+
+  const arbitraryTargetPredicate = claimInput();
+  arbitraryTargetPredicate.clauses[0].predicates.push(
+    {
+      predicateId: "synthetic_supporting_predicate",
+      polarity: "ASSERTED",
+    },
+    {
+      predicateId: "synthetic_supporting_predicate",
+      polarity: "NEGATED",
+    },
+  );
+  const arbitraryMixed = evaluate(arbitraryTargetPredicate);
+  assert.equal(arbitraryMixed.state, "AMBIGUOUS");
+  assert.deepEqual(arbitraryMixed.reasonCodes, [
+    "same_target_mixed_polarity:synthetic_supporting_predicate",
+  ]);
 });
 
 test("[C2R-C-T-R18] clause and occurrence overflow cannot be truncated into PASS", () => {
@@ -348,7 +397,59 @@ test("unresolved anaphora and unscoped assertions are ambiguous; forbidden asser
     predicateId: anchor().forbiddenPredicates[0],
     polarity: "NEGATED",
   });
-  assert.equal(evaluate(forbidden).state, "BLOCKED");
+  assert.equal(evaluate(forbidden).state, "AMBIGUOUS");
+});
+
+test("Theory planning preserves fail-closed dispositions instead of relying on SQL rejection", () => {
+  for (const { input, expectedState } of [
+    {
+      input: (() => {
+        const value = claimInput();
+        value.clauses[0].predicates = [
+          {
+            predicateId: anchor().requiredPredicates[0],
+            polarity: "NEGATED",
+          },
+          {
+            predicateId: anchor().acceptableAlternatives[0][0],
+            polarity: "ASSERTED",
+          },
+        ];
+        return value;
+      })(),
+      expectedState: "PARTIAL",
+    },
+    {
+      input: (() => {
+        const value = claimInput();
+        value.clauses[0].predicates.push(
+          {
+            predicateId: "synthetic_supporting_predicate",
+            polarity: "ASSERTED",
+          },
+          {
+            predicateId: "synthetic_supporting_predicate",
+            polarity: "NEGATED",
+          },
+        );
+        return value;
+      })(),
+      expectedState: "AMBIGUOUS",
+    },
+  ]) {
+    const aggregate = repairSubmitted();
+    input.sourceRevisionId = aggregate.session.confirmedRevisionId;
+    const plan = planTrustedRepairTheoryClaimConfirmation({
+      aggregate,
+      fixture: fixture(),
+      sourceBinding: SYNTHETIC_THEORY_SOURCE_BINDING,
+      claim: claim(input),
+    });
+    assert.equal(plan.nextState, "partial");
+    assert.equal(plan.outcome, "partial");
+    assert.equal(plan.stateData.proofEvaluation.state, expectedState);
+    assert.equal(plan.stateData.proofEvaluation.verified, false);
+  }
 });
 
 test("free-form evidence remains candidate-only until the exact structured Theory commitment passes", () => {

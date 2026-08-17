@@ -280,12 +280,32 @@ export function validateTheoryPredicateClaim(input: {
         clause.scopeId === input.anchor.targetScopeId,
     )
     .flatMap((clause) => clause.predicates);
+  const targetPolarities = new Map<string, Set<"ASSERTED" | "NEGATED">>();
+  for (const predicate of targetPredicates) {
+    const values =
+      targetPolarities.get(predicate.predicateId) ??
+      new Set<"ASSERTED" | "NEGATED">();
+    values.add(predicate.polarity);
+    targetPolarities.set(predicate.predicateId, values);
+  }
   const polarities = (predicateId: string) =>
-    new Set(
-      targetPredicates
-        .filter((predicate) => predicate.predicateId === predicateId)
-        .map((predicate) => predicate.polarity),
-    );
+    targetPolarities.get(predicateId) ?? new Set<"ASSERTED" | "NEGATED">();
+  const mixed = [...targetPolarities.entries()]
+    .filter(([, values]) => values.has("ASSERTED") && values.has("NEGATED"))
+    .map(([predicateId]) => predicateId)
+    .sort();
+  if (mixed.length > 0) {
+    return {
+      state: "AMBIGUOUS",
+      verified: false,
+      validatorId: input.anchor.deterministicValidatorId,
+      anchorId: input.anchor.anchorId,
+      anchorVersionId: input.anchor.anchorVersionId,
+      sourceRevisionId: input.expectedSourceRevisionId,
+      targetScopeId: input.anchor.targetScopeId,
+      reasonCodes: mixed.map((value) => `same_target_mixed_polarity:${value}`),
+    };
+  }
   const forbidden = input.anchor.forbiddenPredicates.flatMap((predicateId) => {
     const values = polarities(predicateId);
     return values.has("ASSERTED") ? [predicateId] : [];
@@ -302,23 +322,19 @@ export function validateTheoryPredicateClaim(input: {
       reasonCodes: forbidden.map((value) => `forbidden_predicate_asserted:${value}`),
     };
   }
-  const mixed = [
-    ...input.anchor.requiredPredicates,
-    ...input.anchor.acceptableAlternatives.flat(),
-  ].filter((predicateId) => {
-    const values = polarities(predicateId);
-    return values.has("ASSERTED") && values.has("NEGATED");
-  });
-  if (mixed.length > 0) {
+  const requiredNegated = input.anchor.requiredPredicates.some((predicateId) =>
+    polarities(predicateId).has("NEGATED"),
+  );
+  if (requiredNegated) {
     return {
-      state: "AMBIGUOUS",
+      state: "PARTIAL",
       verified: false,
       validatorId: input.anchor.deterministicValidatorId,
       anchorId: input.anchor.anchorId,
       anchorVersionId: input.anchor.anchorVersionId,
       sourceRevisionId: input.expectedSourceRevisionId,
       targetScopeId: input.anchor.targetScopeId,
-      reasonCodes: mixed.map((value) => `same_target_mixed_polarity:${value}`),
+      reasonCodes: ["required_predicate_negated"],
     };
   }
   const requiredSatisfied = input.anchor.requiredPredicates.every((predicateId) =>
@@ -339,9 +355,6 @@ export function validateTheoryPredicateClaim(input: {
       reasonCodes: [],
     };
   }
-  const requiredNegated = input.anchor.requiredPredicates.some((predicateId) =>
-    polarities(predicateId).has("NEGATED"),
-  );
   const crossTargetOnly =
     targetPredicates.length === 0 &&
     input.claim.clauses.some(
@@ -360,9 +373,7 @@ export function validateTheoryPredicateClaim(input: {
     reasonCodes: [
       crossTargetOnly
         ? "cross_target_evidence_cannot_satisfy_target"
-        : requiredNegated
-          ? "required_predicate_negated"
-          : "required_target_predicate_missing",
+        : "required_target_predicate_missing",
     ],
   };
 }

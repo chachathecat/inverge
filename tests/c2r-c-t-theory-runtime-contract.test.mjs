@@ -25,6 +25,18 @@ test("C2R-C-T persistence adds exact Theory bindings without weakening Practice"
   assert.match(sql, /\) > 64/);
   assert.match(sql, /scopeResolution' is distinct from 'EXACT'/);
   assert.match(sql, /count\(distinct predicate\.value ->> 'polarity'\) > 1/);
+  assert.match(
+    sql,
+    /drop constraint if exists wcv_c2_trusted_repair_sessions_subject_binding_check;[\s\S]*add constraint wcv_c2_trusted_repair_sessions_subject_binding_check/,
+  );
+  assert.match(
+    sql,
+    /predicate\.value ->> 'predicateId' = 'converts_expected_income_to_value'[\s\S]*predicate\.value ->> 'polarity' = 'NEGATED'[\s\S]*or not exists/,
+  );
+  assert.match(
+    sql,
+    /scopeId' = 'theory-target:synthetic-income-approach'[\s\S]*group by predicate\.value ->> 'predicateId'[\s\S]*count\(distinct predicate\.value ->> 'polarity'\) > 1/,
+  );
   assert.match(sql, /WCV_C2_STRUCTURED_THEORY_PROOF_REQUIRED/);
   assert.match(sql, /WCV_C2_CAS_CONFLICT/);
   assert.match(sql, /pg_advisory_xact_lock/);
@@ -85,6 +97,12 @@ test("C2R-C-T exact-head runtime workflow is fork-safe and credential-free", () 
   assert.doesNotMatch(workflow, /pull_request_target|persist-credentials: true|SUPABASE_ACCESS_TOKEN/);
   assert.match(verifier, /THEORY_RUNTIME/);
   assert.match(verifier, /\[PRACTICE_MIGRATION_PATH, THEORY_MIGRATION_PATH\]/);
+  assert.match(verifier, /theory_migration_replay_psql/);
+  assert.match(verifier, /fs\.readFileSync\(THEORY_MIGRATION_PATH, "utf8"\)/);
+  assert.match(verifier, /theory_subject_binding_count_psql/);
+  assert.match(verifier, /theory_migration_replay_safe/);
+  assert.match(verifier, /validateTheoryConfirmationDiagnostic/);
+  assert.match(verifier, /theory_final_confirmation_metadata_safe/);
   assert.match(
     verifier,
     /source\.replace\(expected, `project_id = "\$\{PROJECT_ID\}"`\)/,
@@ -131,6 +149,21 @@ test("C2R-C-T browser contract covers the complete bounded Theory outcome", () =
   assert.match(e2e, /createPartial/);
   assert.match(e2e, /duplicateStart/);
   assert.match(e2e, /practiceDenied/);
+  assert.match(e2e, /page\.waitForResponse/);
+  for (const field of [
+    "preState",
+    "responseStatus",
+    "safeErrorCode",
+    "postState",
+    "proofEvaluationState",
+    "proofReasonCodeIds",
+    "recordVersion",
+    "theoryStructuredConfirmationExisted",
+  ]) {
+    assert.match(e2e, new RegExp(field));
+  }
+  assert.match(e2e, /negated_with_alternative/);
+  assert.match(e2e, /arbitrary_mixed/);
   assert.match(e2e, /cross-user|tenant isolation/i);
   assert.match(e2e, /restart recovery/i);
   assert.match(e2e, /foreignHosts/);
