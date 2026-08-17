@@ -1,14 +1,11 @@
 import "server-only";
 
 import {
-  TRUSTED_REPAIR_CONTRACT_VERSION,
-  TRUSTED_REPAIR_FIXTURE_VERSION,
-  TRUSTED_REPAIR_POLICY_VERSION,
-  TRUSTED_REPAIR_RUBRIC_VERSION,
   TRUSTED_REPAIR_STEP_GUIDANCE,
-  TRUSTED_REPAIR_VALIDATOR_VERSION,
   TrustedRepairContractError,
+  trustedRepairBindingProfile,
   type PracticeCalculationClaimV2Input,
+  type TheoryPredicateClaimV1Input,
   type TrustedRepairAggregate,
   type TrustedRepairContinuation,
   type TrustedRepairFixture,
@@ -18,7 +15,9 @@ import {
 import {
   initialTrustedRepairStateData,
   buildPracticeCalculationClaim,
+  buildTheoryPredicateClaim,
   planTrustedRepairStructuredClaimConfirmation,
+  planTrustedRepairTheoryClaimConfirmation,
   planTrustedRepairContinuation,
   planTrustedRepairDiagnosis,
   planTrustedRepairExposure,
@@ -30,6 +29,7 @@ import {
   planTrustedRepairSubmission,
   selectTrustedRepairScaffoldExposure,
   renderPracticeCalculationClaim,
+  renderTheoryPredicateClaim,
   trustedRepairAggregateForRelease,
   trustedRepairPartialRetryAvailable,
   trustedRepairSubmissionCount,
@@ -124,8 +124,16 @@ export function trustedRepairView(
   const repairSubmissionCount = trustedRepairSubmissionCount(releaseAggregate);
   const immediatePartialRetryAvailable =
     trustedRepairPartialRetryAvailable(releaseAggregate);
-  const practiceAnchor = fixture.anchors[0]?.calculationRelation ?? null;
+  const practiceAnchor = fixture.anchors.find(
+    (anchor) => "calculationRelation" in anchor,
+  );
+  const theoryAnchor = fixture.anchors.find(
+    (anchor) => "scopedPredicate" in anchor,
+  );
   const structuredClaim = releaseAggregate.session.stateData.structuredClaim;
+  const bindingProfile = trustedRepairBindingProfile(
+    releaseAggregate.session.subject,
+  );
   const guidance =
     releaseAggregate.session.state === "partial" &&
     !immediatePartialRetryAvailable
@@ -138,7 +146,7 @@ export function trustedRepairView(
             .state as keyof typeof TRUSTED_REPAIR_STEP_GUIDANCE
         ] ?? null;
   return {
-    contractVersion: TRUSTED_REPAIR_CONTRACT_VERSION,
+    contractVersion: bindingProfile.contractVersion,
     session: {
       sessionId: releaseAggregate.session.sessionId,
       fixtureId: releaseAggregate.session.fixtureId,
@@ -221,7 +229,8 @@ export function trustedRepairView(
       sourceStatus: source.sourceStatus,
       versionStatus: source.versionStatus,
       blockerCount: source.blockerCount,
-      practiceOnly: true,
+      practiceOnly: releaseAggregate.session.subject === "appraisal_practical",
+      subjectBoundary: releaseAggregate.session.subject,
       exactRightsBindingValidated: sourceBindingCurrent,
     },
     editableCaptureDraft:
@@ -232,20 +241,43 @@ export function trustedRepairView(
     structuredConfirmation:
       releaseAggregate.session.state === "repair_submitted" &&
       releaseAggregate.session.confirmedRevisionId &&
-      practiceAnchor
+      practiceAnchor && "calculationRelation" in practiceAnchor
         ? {
             sourceRevisionId: releaseAggregate.session.confirmedRevisionId,
-            anchorId: practiceAnchor.anchorId,
-            anchorVersionId: practiceAnchor.anchorVersionId,
-            operator: practiceAnchor.operator,
-            operandOrder: practiceAnchor.operandOrder,
-            unit: practiceAnchor.units,
-            sign: practiceAnchor.sign,
+            anchorId: practiceAnchor.calculationRelation.anchorId,
+            anchorVersionId:
+              practiceAnchor.calculationRelation.anchorVersionId,
+            operator: practiceAnchor.calculationRelation.operator,
+            operandOrder: practiceAnchor.calculationRelation.operandOrder,
+            unit: practiceAnchor.calculationRelation.units,
+            sign: practiceAnchor.calculationRelation.sign,
             rounding: {
-              mode: practiceAnchor.rounding.mode,
-              scale: practiceAnchor.rounding.scale,
+              mode: practiceAnchor.calculationRelation.rounding.mode,
+              scale: practiceAnchor.calculationRelation.rounding.scale,
               required: false as const,
             },
+            confirmationModes: [
+              "EXTRACTED_THEN_EDITED",
+              "MANUAL_STRUCTURED",
+            ] as const,
+          }
+        : null,
+    theoryStructuredConfirmation:
+      releaseAggregate.session.state === "repair_submitted" &&
+      releaseAggregate.session.confirmedRevisionId &&
+      theoryAnchor &&
+      "scopedPredicate" in theoryAnchor
+        ? {
+            sourceRevisionId: releaseAggregate.session.confirmedRevisionId,
+            anchorId: theoryAnchor.scopedPredicate.anchorId,
+            anchorVersionId: theoryAnchor.scopedPredicate.anchorVersionId,
+            targetScopeId: theoryAnchor.scopedPredicate.targetScopeId,
+            requiredPredicates: theoryAnchor.scopedPredicate.requiredPredicates,
+            forbiddenPredicates: theoryAnchor.scopedPredicate.forbiddenPredicates,
+            acceptableAlternatives:
+              theoryAnchor.scopedPredicate.acceptableAlternatives,
+            counterexampleScopes:
+              theoryAnchor.scopedPredicate.counterexampleScopes,
             confirmationModes: [
               "EXTRACTED_THEN_EDITED",
               "MANUAL_STRUCTURED",
@@ -255,7 +287,9 @@ export function trustedRepairView(
     canonicalClaimSentence:
       structuredClaim &&
       releaseAggregate.session.stateData.proofEvaluation?.verified === true
-        ? renderPracticeCalculationClaim(structuredClaim)
+        ? "grossIncome" in structuredClaim
+          ? renderPracticeCalculationClaim(structuredClaim)
+          : renderTheoryPredicateClaim(structuredClaim)
         : null,
     claimBoundary: {
       sameSessionCriterionOnly: true,
@@ -270,8 +304,18 @@ export function trustedRepairView(
 
 export type TrustedRepairView = ReturnType<typeof trustedRepairView>;
 
-export function createTrustedRepairService(authenticatedUserId: string) {
+export function createTrustedRepairService(
+  authenticatedUserId: string,
+  authorizedSubjects: readonly TrustedRepairSubject[],
+) {
   const repository = createTrustedRepairRepository(authenticatedUserId);
+  const authorized = new Set(authorizedSubjects);
+
+  function requireAuthorizedSubject(subject: TrustedRepairSubject) {
+    if (!authorized.has(subject)) {
+      throw new TrustedRepairContractError("not_found");
+    }
+  }
 
   async function expectedAggregate(input: {
     sessionId: string;
@@ -279,6 +323,7 @@ export function createTrustedRepairService(authenticatedUserId: string) {
     commandId: string;
   }) {
     const aggregate = await repository.load(input.sessionId);
+    requireAuthorizedSubject(aggregate.session.subject);
     if (aggregate.session.recordVersion !== input.expectedVersion) {
       const replayed = await repository.replayMatches({
         sessionId: input.sessionId,
@@ -315,6 +360,7 @@ export function createTrustedRepairService(authenticatedUserId: string) {
       inputMode: TrustedRepairInputMode;
       commandId: string;
     }) {
+      requireAuthorizedSubject(input.subject);
       const occurredAt = nowIso();
       const selection = trustedRepairBankFirstSelection({
         subject: input.subject,
@@ -334,6 +380,7 @@ export function createTrustedRepairService(authenticatedUserId: string) {
         throw new TrustedRepairContractError("rights_blocked");
       }
       const currentSourceBinding = resolveTrustedRepairSourceBinding(fixture);
+      const bindingProfile = trustedRepairBindingProfile(fixture.subject);
       const sessionId = crypto.randomUUID();
       const artifactId = crypto.randomUUID();
       const session = {
@@ -349,15 +396,15 @@ export function createTrustedRepairService(authenticatedUserId: string) {
         assistanceLevel: 0,
         independentAttemptBeforeHelp: false,
         bindings: {
-          contractVersion: TRUSTED_REPAIR_CONTRACT_VERSION,
-          fixtureVersion: TRUSTED_REPAIR_FIXTURE_VERSION,
+          contractVersion: bindingProfile.contractVersion,
+          fixtureVersion: bindingProfile.fixtureVersion,
           sourceVersion: trustedRepairSourceVersion(
             fixture,
             currentSourceBinding,
           ),
-          rubricVersion: TRUSTED_REPAIR_RUBRIC_VERSION,
-          policyVersion: TRUSTED_REPAIR_POLICY_VERSION,
-          validatorVersion: TRUSTED_REPAIR_VALIDATOR_VERSION,
+          rubricVersion: bindingProfile.rubricVersion,
+          policyVersion: bindingProfile.policyVersion,
+          validatorVersion: bindingProfile.validatorVersion,
         },
         stateData: initialTrustedRepairStateData(input.inputMode),
         createdAt: occurredAt,
@@ -375,11 +422,17 @@ export function createTrustedRepairService(authenticatedUserId: string) {
         },
         commandId: input.commandId,
       });
+      requireAuthorizedSubject(aggregate.session.subject);
+      if (aggregate.session.subject !== input.subject) {
+        throw new TrustedRepairContractError("not_found");
+      }
       return trustedRepairView(aggregate, occurredAt);
     },
     async load(sessionId: string) {
       const evaluatedAt = nowIso();
-      return trustedRepairView(await repository.load(sessionId), evaluatedAt);
+      const aggregate = await repository.load(sessionId);
+      requireAuthorizedSubject(aggregate.session.subject);
+      return trustedRepairView(aggregate, evaluatedAt);
     },
     confirmRevision(input: {
       sessionId: string;
@@ -480,6 +533,26 @@ export function createTrustedRepairService(authenticatedUserId: string) {
       });
       return transition(input, (aggregate, fixture) =>
         planTrustedRepairStructuredClaimConfirmation({
+          aggregate,
+          fixture,
+          sourceBinding: resolveTrustedRepairSourceBinding(fixture),
+          claim,
+        }),
+      );
+    },
+    confirmTheoryClaim(input: {
+      sessionId: string;
+      expectedVersion: number;
+      commandId: string;
+      claim: TheoryPredicateClaimV1Input;
+    }) {
+      const learnerConfirmedAt = nowIso();
+      const claim = buildTheoryPredicateClaim({
+        claim: input.claim,
+        learnerConfirmedAt,
+      });
+      return transition(input, (aggregate, fixture) =>
+        planTrustedRepairTheoryClaimConfirmation({
           aggregate,
           fixture,
           sourceBinding: resolveTrustedRepairSourceBinding(fixture),

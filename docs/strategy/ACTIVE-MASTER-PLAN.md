@@ -73,12 +73,15 @@ scope. The later 2026-08-15 C2R-A decision
 owns the completed C2R-A source contract and its post-A selector. The still
 later C2R-B decision owns the typed proof architecture and post-B selector.
 The 2026-08-17 C2R-C-P decision owns the complete Practice runtime candidate
-and post-P selector: C2R-C-T/#703 is authorized but unstarted after the
-validated PR #756 merge and receipt. Issue #714 stays open for C3/C4/C6.
+and post-P selector. The typed-proof and structural decisions own the complete
+Theory delta and post-T selector: C2R-C-L/#703 is authorized but unstarted
+after the validated C2R-C-T merge and receipt. Issue #714 stays open for
+C3/C4/C6.
 
 The canonical current tuple is
-`WCV-C2 / C2 / #717 / C2R-C-T / #703 / authorized_unstarted`. C2R-B installs
-no runtime; C2R-C-P installs only the default-off Owner-only Practice runtime.
+`WCV-C2 / C2 / #717 / C2R-C-L / #703 / authorized_unstarted`. C2R-B installs
+no runtime; C2R-C-P and C2R-C-T install independently default-off Owner-only
+Practice and Theory runtimes.
 
 ## Mandatory V13 follow-up — Memory Cue & Annotation Layer
 
@@ -214,10 +217,11 @@ The final public target is separately defined by the subordinate ULC-0
 amendment as the integrated first- and second-round product on Web,
 iOS/iPadOS and Android. That future target does not activate first-round,
 native, instructor or public runtime now. The exact current repository
-selection is WCV-C2/C2/#717/C2R-C-T/#703, authorized but unstarted. C2R-A/#702
-and C2R-B/#714 are completed source-only predecessors and C2R-C-P is the
-completed default-off Practice runtime predecessor under merge-and-receipt
-semantics; no Production or learner activation follows.
+selection is WCV-C2/C2/#717/C2R-C-L/#703, authorized but unstarted. C2R-A/#702
+and C2R-B/#714 are completed source-only predecessors, while C2R-C-P and
+C2R-C-T are completed default-off Practice and Theory runtime predecessors
+under merge-and-receipt semantics; no Production or learner activation
+follows.
 
 The Portable Professional Exam Core is an internal architecture contract only. It does
 not authorize:

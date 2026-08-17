@@ -9,11 +9,40 @@ export const TRUSTED_REPAIR_POLICY_VERSION =
 export const TRUSTED_REPAIR_VALIDATOR_VERSION =
   "validator:practice-calculation-claim@2" as const;
 export const TRUSTED_REPAIR_FLAG = "WCV_C2R_C_P_PRACTICE_ENABLED" as const;
+export const TRUSTED_REPAIR_THEORY_CONTRACT_VERSION =
+  "wcv_c2r_c_t_structured_theory_proof.v1" as const;
+export const TRUSTED_REPAIR_THEORY_FIXTURE_VERSION =
+  "wcv_c2r_c_t_theory_rights_safe_fixtures.2026-08-17.v1" as const;
+export const TRUSTED_REPAIR_THEORY_RUBRIC_VERSION =
+  "wcv_c2r_c_t_theory_target_scope_rubric.v1" as const;
+export const TRUSTED_REPAIR_THEORY_VALIDATOR_VERSION =
+  "validator:theory-scoped-predicate@1" as const;
+export const TRUSTED_REPAIR_THEORY_FLAG =
+  "WCV_C2R_C_T_THEORY_ENABLED" as const;
 
 export const TRUSTED_REPAIR_SUBJECTS = [
   "appraisal_practical",
+  "appraisal_theory",
 ] as const;
 export type TrustedRepairSubject = (typeof TRUSTED_REPAIR_SUBJECTS)[number];
+
+export function trustedRepairBindingProfile(subject: TrustedRepairSubject) {
+  return subject === "appraisal_practical"
+    ? {
+        contractVersion: TRUSTED_REPAIR_CONTRACT_VERSION,
+        fixtureVersion: TRUSTED_REPAIR_FIXTURE_VERSION,
+        rubricVersion: TRUSTED_REPAIR_RUBRIC_VERSION,
+        policyVersion: TRUSTED_REPAIR_POLICY_VERSION,
+        validatorVersion: TRUSTED_REPAIR_VALIDATOR_VERSION,
+      }
+    : {
+        contractVersion: TRUSTED_REPAIR_THEORY_CONTRACT_VERSION,
+        fixtureVersion: TRUSTED_REPAIR_THEORY_FIXTURE_VERSION,
+        rubricVersion: TRUSTED_REPAIR_THEORY_RUBRIC_VERSION,
+        policyVersion: TRUSTED_REPAIR_POLICY_VERSION,
+        validatorVersion: TRUSTED_REPAIR_THEORY_VALIDATOR_VERSION,
+      };
+}
 
 export const TRUSTED_REPAIR_INPUT_MODES = [
   "TYPED_TEXT",
@@ -163,8 +192,8 @@ export const TRUSTED_REPAIR_STEP_GUIDANCE = {
     nextActionKo: "보지 않고 복구 답안을 다시 쓰세요.",
   },
   repair_submitted: {
-    learningPurposeKo: "자유서술과 분리된 닫힌 계산관계를 학습자가 직접 확정한다.",
-    nextActionKo: "총수익·운영비·결과·부호·반올림 필드를 확인하세요.",
+    learningPurposeKo: "자유서술과 분리된 닫힌 과목 증명을 학습자가 직접 확정한다.",
+    nextActionKo: "과목별 구조화 증명 필드를 직접 확인하세요.",
   },
   partial: {
     learningPurposeKo: "남은 한 기준을 같은 세션과 수정본에 묶어 다시 복구한다.",
@@ -307,12 +336,95 @@ export type PracticeCalculationClaimV2Input = Readonly<{
 export type PracticeCalculationClaimV2 = PracticeCalculationClaimV2Input &
   Readonly<{ learnerConfirmedAt: string }>;
 
+export const THEORY_PROOF_EVALUATION_STATES = [
+  "PASS",
+  "PARTIAL",
+  "AMBIGUOUS",
+  "UNSUPPORTED",
+  "BLOCKED",
+  "STALE",
+] as const;
+export type TheoryProofEvaluationState =
+  (typeof THEORY_PROOF_EVALUATION_STATES)[number];
+
+export type ScopedPredicateAnchorV1 = Readonly<{
+  anchorKind: "THEORY_SCOPED_PREDICATE";
+  anchorId: "repair-anchor:theory:synthetic-income-approach";
+  anchorVersionId: "repair-anchor:theory:synthetic-income-approach@1";
+  targetScopeId: "theory-target:synthetic-income-approach";
+  acceptedTargetAliases: readonly ["income approach", "synthetic income method"];
+  requiredPredicates: readonly ["converts_expected_income_to_value"];
+  forbiddenPredicates: readonly ["uses_only_historical_cost"];
+  acceptableAlternatives: readonly [
+    readonly ["capitalizes_expected_income"],
+    readonly ["discounts_expected_cash_flow"],
+  ];
+  counterexampleScopes: readonly ["theory-target:synthetic-cost-approach"];
+  negationPolicy: "EXPLICIT_POLARITY";
+  mixedPolarityPolicy: "FAIL_CLOSED";
+  anaphoraPolicy: "EXACT_TARGET_RESOLUTION_REQUIRED";
+  overflowPolicy: Readonly<{
+    maxClauses: 24;
+    maxPredicateOccurrences: 64;
+    result: "UNSUPPORTED";
+  }>;
+  deterministicValidatorId: "validator:theory-scoped-predicate@1";
+}>;
+
+export const THEORY_CLAIM_CONFIRMATION_MODES = [
+  "EXTRACTED_THEN_EDITED",
+  "MANUAL_STRUCTURED",
+] as const;
+export type TheoryClaimConfirmationMode =
+  (typeof THEORY_CLAIM_CONFIRMATION_MODES)[number];
+export const THEORY_SCOPE_RESOLUTIONS = [
+  "EXACT",
+  "UNRESOLVED_ANAPHORA",
+  "UNSCOPED",
+] as const;
+export type TheoryScopeResolution =
+  (typeof THEORY_SCOPE_RESOLUTIONS)[number];
+export const THEORY_PREDICATE_POLARITIES = ["ASSERTED", "NEGATED"] as const;
+export type TheoryPredicatePolarity =
+  (typeof THEORY_PREDICATE_POLARITIES)[number];
+
+export type TheoryPredicateAssertionV1 = Readonly<{
+  predicateId: string;
+  polarity: TheoryPredicatePolarity;
+}>;
+export type TheoryPredicateClauseV1 = Readonly<{
+  clauseIndex: number;
+  scopeResolution: TheoryScopeResolution;
+  scopeId: string | null;
+  predicates: readonly TheoryPredicateAssertionV1[];
+}>;
+export type TheoryPredicateClaimV1Input = Readonly<{
+  sourceRevisionId: string;
+  anchorId: ScopedPredicateAnchorV1["anchorId"];
+  anchorVersionId: ScopedPredicateAnchorV1["anchorVersionId"];
+  targetScopeId: ScopedPredicateAnchorV1["targetScopeId"];
+  clauses: readonly TheoryPredicateClauseV1[];
+  confirmationMode: TheoryClaimConfirmationMode;
+}>;
+export type TheoryPredicateClaimV1 = TheoryPredicateClaimV1Input &
+  Readonly<{ learnerConfirmedAt: string }>;
+
 export type TrustedRepairPracticeAnchor = Readonly<{
   anchorId: string;
   labelKo: string;
   weight: number;
   calculationRelation: CalculationRelationAnchorV1;
 }>;
+
+export type TrustedRepairTheoryAnchor = Readonly<{
+  anchorId: string;
+  labelKo: string;
+  weight: number;
+  scopedPredicate: ScopedPredicateAnchorV1;
+}>;
+export type TrustedRepairAnchor =
+  | TrustedRepairPracticeAnchor
+  | TrustedRepairTheoryAnchor;
 
 export type TrustedRepairFixture = Readonly<{
   fixtureId: string;
@@ -325,7 +437,7 @@ export type TrustedRepairFixture = Readonly<{
   expectedOutcome: "verified" | "blocked" | "uncertain";
   prompt: string;
   editableDrafts: Readonly<Record<TrustedRepairInputMode, string>>;
-  anchors: readonly TrustedRepairPracticeAnchor[];
+  anchors: readonly TrustedRepairAnchor[];
   scaffoldByAnchor: Readonly<Record<string, string>>;
   guidedSolutionByAnchor: Readonly<Record<string, string>>;
   successCriterionKo: string;
@@ -351,13 +463,42 @@ export type TrustedRepairGapCandidate = Readonly<{
 }>;
 
 export type TrustedRepairBindings = Readonly<{
-  contractVersion: typeof TRUSTED_REPAIR_CONTRACT_VERSION;
-  fixtureVersion: typeof TRUSTED_REPAIR_FIXTURE_VERSION;
+  contractVersion:
+    | typeof TRUSTED_REPAIR_CONTRACT_VERSION
+    | typeof TRUSTED_REPAIR_THEORY_CONTRACT_VERSION;
+  fixtureVersion:
+    | typeof TRUSTED_REPAIR_FIXTURE_VERSION
+    | typeof TRUSTED_REPAIR_THEORY_FIXTURE_VERSION;
   sourceVersion: string;
-  rubricVersion: typeof TRUSTED_REPAIR_RUBRIC_VERSION;
+  rubricVersion:
+    | typeof TRUSTED_REPAIR_RUBRIC_VERSION
+    | typeof TRUSTED_REPAIR_THEORY_RUBRIC_VERSION;
   policyVersion: typeof TRUSTED_REPAIR_POLICY_VERSION;
-  validatorVersion: typeof TRUSTED_REPAIR_VALIDATOR_VERSION;
+  validatorVersion:
+    | typeof TRUSTED_REPAIR_VALIDATOR_VERSION
+    | typeof TRUSTED_REPAIR_THEORY_VALIDATOR_VERSION;
 }>;
+
+export type TrustedRepairProofEvaluation =
+  | Readonly<{
+      state: PracticeProofEvaluationState;
+      verified: boolean;
+      validatorId: "validator:practice-calculation-claim@2";
+      anchorId: CalculationRelationAnchorV1["anchorId"];
+      anchorVersionId: CalculationRelationAnchorV1["anchorVersionId"];
+      sourceRevisionId: string;
+      reasonCodes: readonly string[];
+    }>
+  | Readonly<{
+      state: TheoryProofEvaluationState;
+      verified: boolean;
+      validatorId: "validator:theory-scoped-predicate@1";
+      anchorId: ScopedPredicateAnchorV1["anchorId"];
+      anchorVersionId: ScopedPredicateAnchorV1["anchorVersionId"];
+      sourceRevisionId: string;
+      targetScopeId: ScopedPredicateAnchorV1["targetScopeId"];
+      reasonCodes: readonly string[];
+    }>;
 
 export type TrustedRepairStateData = Readonly<{
   inputMode: TrustedRepairInputMode;
@@ -369,16 +510,8 @@ export type TrustedRepairStateData = Readonly<{
   repairNeed: "required" | "optional" | "blocked" | null;
   repairPath: TrustedRepairPath | null;
   continuation: TrustedRepairContinuation | null;
-  structuredClaim: PracticeCalculationClaimV2 | null;
-  proofEvaluation: Readonly<{
-    state: PracticeProofEvaluationState;
-    verified: boolean;
-    validatorId: "validator:practice-calculation-claim@2";
-    anchorId: CalculationRelationAnchorV1["anchorId"];
-    anchorVersionId: CalculationRelationAnchorV1["anchorVersionId"];
-    sourceRevisionId: string;
-    reasonCodes: readonly string[];
-  }> | null;
+  structuredClaim: PracticeCalculationClaimV2 | TheoryPredicateClaimV1 | null;
+  proofEvaluation: TrustedRepairProofEvaluation | null;
   resultReasonCodes: readonly string[];
 }>;
 
@@ -497,8 +630,7 @@ export function isTrustedRepairOutcome(
 }
 
 export function trustedRepairSubjectLabel(subject: TrustedRepairSubject) {
-  void subject;
-  return "감정평가실무";
+  return subject === "appraisal_practical" ? "감정평가실무" : "감정평가이론";
 }
 
 export function exactObject(
@@ -741,4 +873,112 @@ export function parsePracticeCalculationClaimV2(
   value: unknown,
 ): PracticeCalculationClaimV2 {
   return parsePracticeClaimCore(value, true) as PracticeCalculationClaimV2;
+}
+
+function parseTheoryClaimCore(value: unknown, includeConfirmationTime: boolean) {
+  const keys = [
+    "sourceRevisionId",
+    "anchorId",
+    "anchorVersionId",
+    "targetScopeId",
+    "clauses",
+    "confirmationMode",
+    ...(includeConfirmationTime ? ["learnerConfirmedAt"] : []),
+  ];
+  const record = exactObject(value, keys);
+  if (
+    Object.keys(record).length !== keys.length ||
+    !Array.isArray(record.clauses) ||
+    record.clauses.length < 1 ||
+    record.clauses.length > 128 ||
+    !THEORY_CLAIM_CONFIRMATION_MODES.includes(
+      record.confirmationMode as TheoryClaimConfirmationMode,
+    )
+  ) {
+    throw new TrustedRepairContractError("invalid_input");
+  }
+  const clauseIndexes = new Set<number>();
+  const clauses = record.clauses.map((value, index) => {
+    const clause = exactObject(value, [
+      "clauseIndex",
+      "scopeResolution",
+      "scopeId",
+      "predicates",
+    ]);
+    if (
+      Object.keys(clause).length !== 4 ||
+      !Number.isSafeInteger(clause.clauseIndex) ||
+      Number(clause.clauseIndex) !== index + 1 ||
+      clauseIndexes.has(Number(clause.clauseIndex)) ||
+      !THEORY_SCOPE_RESOLUTIONS.includes(
+        clause.scopeResolution as TheoryScopeResolution,
+      ) ||
+      !Array.isArray(clause.predicates) ||
+      clause.predicates.length < 1 ||
+      clause.predicates.length > 128
+    ) {
+      throw new TrustedRepairContractError("invalid_input");
+    }
+    clauseIndexes.add(Number(clause.clauseIndex));
+    const scopeId =
+      clause.scopeId === null
+        ? null
+        : requiredTrustedRepairText(clause.scopeId, 160);
+    if (
+      (clause.scopeResolution === "EXACT" && scopeId === null) ||
+      (clause.scopeResolution !== "EXACT" && scopeId !== null)
+    ) {
+      throw new TrustedRepairContractError("invalid_input");
+    }
+    const predicates = clause.predicates.map((value) => {
+      const predicate = exactObject(value, ["predicateId", "polarity"]);
+      if (
+        Object.keys(predicate).length !== 2 ||
+        !THEORY_PREDICATE_POLARITIES.includes(
+          predicate.polarity as TheoryPredicatePolarity,
+        )
+      ) {
+        throw new TrustedRepairContractError("invalid_input");
+      }
+      return {
+        predicateId: requiredTrustedRepairText(predicate.predicateId, 160),
+        polarity: predicate.polarity as TheoryPredicatePolarity,
+      };
+    });
+    return {
+      clauseIndex: Number(clause.clauseIndex),
+      scopeResolution: clause.scopeResolution as TheoryScopeResolution,
+      scopeId,
+      predicates,
+    };
+  });
+  const parsed = {
+    sourceRevisionId: requiredTrustedRepairUuid(record.sourceRevisionId),
+    anchorId: requiredTrustedRepairText(record.anchorId, 160),
+    anchorVersionId: requiredTrustedRepairText(record.anchorVersionId, 180),
+    targetScopeId: requiredTrustedRepairText(record.targetScopeId, 160),
+    clauses,
+    confirmationMode: record.confirmationMode as TheoryClaimConfirmationMode,
+  };
+  if (!includeConfirmationTime) return parsed;
+  const learnerConfirmedAt = requiredTrustedRepairText(
+    record.learnerConfirmedAt,
+    64,
+  );
+  if (!Number.isFinite(Date.parse(learnerConfirmedAt))) {
+    throw new TrustedRepairContractError("invalid_input");
+  }
+  return { ...parsed, learnerConfirmedAt };
+}
+
+export function parseTheoryPredicateClaimV1Input(
+  value: unknown,
+): TheoryPredicateClaimV1Input {
+  return parseTheoryClaimCore(value, false) as TheoryPredicateClaimV1Input;
+}
+
+export function parseTheoryPredicateClaimV1(
+  value: unknown,
+): TheoryPredicateClaimV1 {
+  return parseTheoryClaimCore(value, true) as TheoryPredicateClaimV1;
 }

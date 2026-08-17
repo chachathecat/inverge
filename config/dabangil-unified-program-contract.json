@@ -155,7 +155,7 @@
     },
     "soleNextImplementationItem": "WCV-C2",
     "soleNextImplementationCampaign": "C2",
-    "soleNextReplacementStage": "C2R-C-T",
+    "soleNextReplacementStage": "C2R-C-L",
     "soleNextReplacementStageIssue": 703,
     "structuralRecoveryTrackerIssue": 717,
     "wcvC2Complete": false,
@@ -1028,14 +1028,14 @@
       "trackerIssue": 717,
       "authorityDecision": "docs/decisions/2026-08-14-wcv-c2-structural-recovery.md",
       "regressionMatrix": "docs/qa/wcv-c2-replacement-regression-matrix.md",
-      "status": "c2r_a_b_and_c_p_complete_c2r_c_t_authorized_unstarted",
+      "status": "c2r_a_b_c_p_and_c_t_complete_c2r_c_l_authorized_unstarted",
       "wcvC2Complete": false,
       "authorityGraph": {
         "roadmapItemId": "WCV-C2",
         "campaignId": "C2",
         "recoveryTrackerIssue": 717,
         "structuralAuthorityPr": 718,
-        "currentReplacementStageId": "C2R-C-T",
+        "currentReplacementStageId": "C2R-C-L",
         "currentReplacementStageIssue": 703,
         "replacementStageChain": [
           "C2R-A",
@@ -1077,10 +1077,10 @@
         "initialRowStatus": "uncovered",
         "allRowsRemainUncoveredInAuthorityPr718": true,
         "effectiveUncoveredRowCountBeforeC2RCPMerge": 21,
-        "postMergeUncoveredRowCount": 10,
-        "activeCandidateCoveringPr": 756,
-        "activeCandidateStage": "C2R-C-P",
-        "activeCandidateRows": [1, 2, 4, 6, 8, 9, 10, 11, 12, 14, 19],
+        "postMergeUncoveredRowCount": 5,
+        "activeCandidateCoveringPr": 762,
+        "activeCandidateStage": "C2R-C-T",
+        "activeCandidateRows": [5, 13, 16, 18, 20],
         "candidateStatus": "candidate_coverage_pending_exact_merge",
         "receiptPolicyId": "github_exact_head_pinned_squash_merge_v1",
         "repositoryCandidateDeclaration": {
@@ -1329,7 +1329,13 @@
           "dependencies": [
             "C2R-C-P"
           ],
-          "state": "authorized_unstarted",
+          "state": "complete_theory_runtime",
+          "contract": "config/dabangil-c2r-c-t-structural-theory-proof-v1.json",
+          "coveringPr": 762,
+          "focusedTests": [
+            "tests/wcv-c2r-theory-target-scope-validator.test.mjs",
+            "tests/c2r-c-t-theory-runtime-contract.test.mjs"
+          ],
           "requiredChangedLayers": [
             "TYPED_THEORY_TARGET_SCOPED_PREDICATE_VALIDATOR",
             "THEORY_GOLDEN_AND_OWNER_GOLD_FIXTURES",
@@ -1372,7 +1378,7 @@
           "dependencies": [
             "C2R-C-T"
           ],
-          "state": "queued_dependency_blocked",
+          "state": "authorized_unstarted",
           "requiredChangedLayers": [
             "EXACT_LAW_SOURCE_ANCHOR_LOCATOR_EFFECTIVE_VERSION_APPLICABLE_DATE_VALIDATOR",
             "LAW_GOLDEN_AND_OWNER_GOLD_FIXTURES",
@@ -1524,7 +1530,7 @@
         "dependencies": [
           "WCV-C1"
         ],
-        "state": "c2r_a_b_and_c_p_complete_c2r_c_t_authorized_unstarted",
+        "state": "c2r_a_b_c_p_and_c_t_complete_c2r_c_l_authorized_unstarted",
         "wcvC2Complete": false,
         "terminalDonorPr": 716,
         "terminalDonorMerged": false,
@@ -1711,7 +1717,7 @@
     "soleNextImplementationCampaign": "C2",
     "soleNextImplementationLeadIssue": 717,
     "soleNextImplementationTrackerIssue": 717,
-    "soleNextReplacementStage": "C2R-C-T",
+    "soleNextReplacementStage": "C2R-C-L",
     "soleNextReplacementStageIssue": 703,
     "laterCampaignsQueued": [
       "C3",
@@ -1763,7 +1769,7 @@
     "soleNextImplementationCampaignId": "C2",
     "soleNextImplementationLeadIssue": 717,
     "soleNextImplementationTrackerIssue": 717,
-    "soleNextReplacementStageId": "C2R-C-T",
+    "soleNextReplacementStageId": "C2R-C-L",
     "soleNextReplacementStageIssue": 703,
     "primaryStatusesUsed": [
       "completed",
