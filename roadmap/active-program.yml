@@ -456,6 +456,7 @@ items:
     status: completed
     executionState: complete_after_expected_head_merge_and_validated_receipt
     leadIssue: 706
+    coveringPr: 765
     includedIssues: [706, 707, 708]
     crossVerticalAcceptanceTracker: 714
     terminalReplacementDependency: C2R-C-L

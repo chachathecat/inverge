@@ -8,6 +8,7 @@ const read = (path) => readFile(new URL(path, root), "utf8");
 test("WCV-C3 is one complete #706/#707/#708 vertical and remains default-off", async () => {
   const contract = JSON.parse(await read("config/dabangil-wcv-c3-durable-learning-daily-command-v1.json"));
   assert.equal(contract.stage, "WCV-C3");
+  assert.equal(contract.coveringPr, 765);
   assert.deepEqual(contract.jointIssues, [706, 707, 708]);
   assert.equal(contract.proofObjects.length, 9);
   assert.deepEqual(contract.subjects, ["appraisal_practical", "appraisal_theory", "appraisal_law"]);
@@ -31,7 +32,7 @@ test("WCV-C3 completion leaves no dependency-ready successor while S241A is inco
     read("AGENTS.md"),
   ]);
   assert.match(roadmap, /soleNextImplementationItem: null/);
-  assert.match(roadmap, /- id: WCV-C3[\s\S]*?status: completed[\s\S]*?issue714CompletedAllocation: C3/);
+  assert.match(roadmap, /- id: WCV-C3[\s\S]*?status: completed[\s\S]*?coveringPr: 765[\s\S]*?issue714CompletedAllocation: C3/);
   assert.match(roadmap, /- id: ULC-M1[\s\S]*?dependencies: \[WCV-C3, S241A\]/);
   assert.equal(unified.launchConvergenceAmendment.soleNextImplementationItem, null);
   assert.equal(unified.launchConvergenceAmendment.wcvC3Complete, true);

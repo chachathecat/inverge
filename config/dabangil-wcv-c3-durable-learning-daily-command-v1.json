@@ -6,7 +6,7 @@
   "jointIssues": [706, 707, 708],
   "status": "implementation_candidate",
   "candidateRepresentsPostMergeState": true,
-  "coveringPr": null,
+  "coveringPr": 765,
   "postMergeState": "complete_durable_learning_and_daily_command_vertical",
   "postReceiptNextRoadmapItem": null,
   "postReceiptNoDependencyReadyReason": "ULC-M1 additionally requires completed S241A",
