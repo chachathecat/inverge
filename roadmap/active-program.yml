@@ -9,13 +9,13 @@ program:
   mergeProducingDeliverySlotCount: 1
   globalMergeProducingWriterLimit: 1
   wipLimitDoesNotAuthorizeWriterCount: true
-  campaignOverlay: C3
+  campaignOverlay: null
   structuralRecoveryOverlayId: WCV-C2R-STRUCTURAL-RECOVERY
   campaignLockGroup: wcv-vertical-campaign
-  soleNextImplementationItem: WCV-C3
-  soleNextImplementationCampaign: C3
-  soleNextImplementationLeadIssue: 706
-  soleNextImplementationTrackerIssue: 706
+  soleNextImplementationItem: null
+  soleNextImplementationCampaign: null
+  soleNextImplementationLeadIssue: null
+  soleNextImplementationTrackerIssue: null
   soleNextReplacementStage: null
   soleNextReplacementStageIssue: null
   soleNextReplacementStageDecision: docs/decisions/2026-08-14-wcv-c2-structural-recovery.md
@@ -29,6 +29,7 @@ program:
   terminalDonorPr: 716
   terminalDonorMerged: false
   wcvC2Complete: true
+  wcvC3Complete: true
   replacementStageAutomaticStartAllowed: false
   githubNativeNonProductionContinuationAllowed: true
   githubNativeDeliveryDecision: docs/decisions/2026-08-16-owner-github-native-delivery-control.md
@@ -452,16 +453,21 @@ items:
     priority: 31.13
   - id: WCV-C3
     title: C3 Durable Learning and Daily Command Vertical
-    status: queued
-    executionState: authorized_unstarted_after_validated_terminal_c2r_c_l_receipt
+    status: completed
+    executionState: complete_after_expected_head_merge_and_validated_receipt
     leadIssue: 706
+    coveringPr: null
     includedIssues: [706, 707, 708]
     crossVerticalAcceptanceTracker: 714
     terminalReplacementDependency: C2R-C-L
-    selected: true
+    selected: false
     started: false
     githubNativeAutomaticContinuationAllowed: true
     automaticStartAllowed: false
+    completionContract: config/dabangil-wcv-c3-durable-learning-daily-command-v1.json
+    focusedTests: [tests/wcv-c3-durable-learning-contract.test.mjs, tests/wcv-c3-durable-learning-authority.test.mjs]
+    issue714CompletedAllocation: C3
+    issue714RemainingAllocationsPreserved: [C4, C6]
     dependencies: [WCV-C2]
     lockGroup: wcv-vertical-campaign
     risk: high
@@ -731,7 +737,10 @@ items:
     approvalExpiresAt: 2026-08-09T14:59:59.000Z
   - id: S236B
     title: First-Round Capture and OCR Benchmark Contracts
-    status: queued
+    status: blocked
+    executionState: blocked_draft_pr_660_nonqualifying_no_automatic_continuation
+    blockedPr: 660
+    blockedReason: current_candidate_is_nonqualifying_and_forbids_automatic_additional_ocr_work
     dependencies: [S235B, S234R]
     lockGroup: first-capture-benchmark
     risk: high

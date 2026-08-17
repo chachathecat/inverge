@@ -8,9 +8,10 @@
   `config/dabangil-unified-product-multisurface-launch-v1.json`
 - Installation-time implementation authority (historical 2026-08-14 state):
   WCV-C2 / C2 / C2R-A / #702
-- Current repository selector represented after terminal PR #764's exact-head
-  merge and validated #717 receipt: WCV-C3 / C3 / #706 /
-  authorized_unstarted
+- Current candidate after terminal PR #764's exact-head merge and validated
+  #717 receipt: WCV-C3 / C3 / #706 / complete only after its own protected
+  merge and validated receipt; no dependency-ready successor because ULC-M1
+  additionally requires S241A
 - Current activation: none
 
 ## 1. Product convergence
@@ -204,9 +205,10 @@ to `apps/web`.
 
 ## 7. Complete-vertical dependency graph
 
-WCV-C3 is the first authorized-unstarted dependency-ready non-Production item
-after the validated terminal C2R-C-L receipt. Later items remain queued,
-unselected and unstarted. Terminal C2R-C-L is the entry gate.
+WCV-C3 became the first dependency-ready non-Production item after the
+validated terminal C2R-C-L receipt. Its current candidate represents complete
+state only after protected merge and validated receipt. Later items remain
+queued, unselected and unstarted; ULC-M1 is still blocked on S241A.
 
 | Order | Item | Complete outcome | Sequence dependency and operational prerequisite |
 |---:|---|---|---|
@@ -228,8 +230,9 @@ The two authenticated-acceptance prerequisites are independent: `S241A`
 is consumed by `ULC-M1`, and `S238B` is consumed by `ULC-F1`. Neither
 acceptance evidence nor mastery substitutes or transfers between tracks.
 
-The roadmap runner continues selecting only WCV-C2 metadata. ULC-0 is not an
-active campaign and consumes no writer slot. No framework-only, API-only,
+After the WCV-C3 candidate's protected merge and validated receipt, the
+roadmap runner selects no item because ULC-M1 still lacks S241A. ULC-0 is not
+an active campaign and consumes no writer slot. No framework-only, API-only,
 persistence-only, UI-only, or QA-only mandatory PR may appear between these
 outcomes.
 
@@ -350,11 +353,12 @@ ULC-0 source validation must prove:
 - one ULC-0 lead issue (#719);
 - exact preservation of the WCV-C2R object, roadmap block, and 21-row matrix;
 - exact preserved installation-time selection WCV-C2/C2/C2R-A/#702;
-- exact post-receipt repository selector WCV-C3/C3/#706/authorized_unstarted,
-  with WCV-C2 completion requiring PR #764's expected-head merge and validated
-  #717 receipt;
+- exact historical post-C2 receipt selector WCV-C3/C3/#706/authorized_unstarted
+  and current candidate completion only after WCV-C3's protected merge and
+  receipt;
 - unique future IDs and resolved dependencies;
-- no selected or started ULC stage; WCV-C3 is selected but unstarted;
+- no selected or started ULC stage and no dependency-ready successor after
+  WCV-C3 because S241A remains incomplete;
 - no O4W/C5/C6 dependency on free ULC-L1;
 - the separate paid path still requires all three and a later authorization;
 - exactly three public/student surfaces;

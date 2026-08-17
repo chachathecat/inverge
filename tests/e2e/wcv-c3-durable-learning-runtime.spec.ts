@@ -1,0 +1,298 @@
+import AxeBuilder from "@axe-core/playwright";
+import { expect, test, type Browser, type BrowserContext, type Page } from "@playwright/test";
+import { randomUUID } from "node:crypto";
+import { writeFileSync } from "node:fs";
+import {
+  expectedCommitmentForFixture,
+  type DurableLearningFixtureStage,
+} from "../../lib/review-os/durable-learning-fixtures";
+import type { DurableLearningView } from "../../lib/review-os/durable-learning-server";
+import type { TrustedRepairView } from "../../lib/review-os/trusted-repair-server";
+
+const baseURL = process.env.E2E_BASE_URL ?? "";
+const emailA = process.env.WCV_C3_USER_A_EMAIL ?? "";
+const passwordA = process.env.WCV_C3_USER_A_PASSWORD ?? "";
+const emailB = process.env.WCV_C3_USER_B_EMAIL ?? "";
+const passwordB = process.env.WCV_C3_USER_B_PASSWORD ?? "";
+const transientEvidencePath = process.env.WCV_C3_TRANSIENT_EVIDENCE_PATH ?? "";
+const recoveryCaseId = process.env.WCV_C3_RECOVERY_CASE_ID ?? "";
+
+const SUBJECTS = ["appraisal_practical", "appraisal_theory", "appraisal_law"] as const;
+type Subject = (typeof SUBJECTS)[number];
+
+function requireRuntime() {
+  if (!baseURL || !emailA || !passwordA || !emailB || !passwordB) {
+    throw new Error("WCV-C3 browser runtime environment is incomplete");
+  }
+  if (!new Set(["127.0.0.1", "localhost", "::1"]).has(new URL(baseURL).hostname)) {
+    throw new Error("WCV-C3 browser runtime refused a non-local target");
+  }
+}
+
+async function login(context: BrowserContext, email = emailA, password = passwordA) {
+  const response = await context.request.post("/api/auth/sign-in", {
+    data: { email, password, mode: "second" },
+  });
+  expect(response.status()).toBe(200);
+}
+
+async function contextFor(browser: Browser, viewport = { width: 390, height: 844 }, email = emailA, password = passwordA) {
+  const context = await browser.newContext({ baseURL, viewport });
+  await login(context, email, password);
+  return context;
+}
+
+async function trustedCommand(context: BrowserContext, action: string, fields: Record<string, unknown>) {
+  const response = await context.request.post("/api/review-os/trusted-repair", {
+    data: { action, commandId: randomUUID(), ...fields },
+  });
+  const body = await response.json();
+  expect(response.status(), `${action}:${body?.error ?? "unknown"}`).toBe(200);
+  return body.view as TrustedRepairView;
+}
+
+async function c3Command(context: BrowserContext, action: string, view: DurableLearningView, fields: Record<string, unknown> = {}) {
+  const response = await context.request.post("/api/review-os/durable-learning", {
+    data: {
+      action,
+      caseId: view.case.caseId,
+      expectedVersion: view.case.recordVersion,
+      commandId: randomUUID(),
+      ...fields,
+    },
+  });
+  const body = await response.json();
+  expect(response.status(), `${action}:${body?.error ?? "unknown"}`).toBe(200);
+  return body.view as DurableLearningView;
+}
+
+function practiceClaim(view: TrustedRepairView) {
+  const confirmation = view.structuredConfirmation;
+  if (!confirmation) throw new Error("Practice structured confirmation is unavailable");
+  return {
+    sourceRevisionId: confirmation.sourceRevisionId,
+    anchorId: confirmation.anchorId,
+    anchorVersionId: confirmation.anchorVersionId,
+    grossIncome: { value: 120000000, unit: confirmation.unit },
+    operatingExpense: { value: 20000000, unit: confirmation.unit },
+    operator: confirmation.operator,
+    operandOrder: confirmation.operandOrder,
+    result: { value: 100000000, unit: confirmation.unit },
+    sign: confirmation.sign,
+    rounding: confirmation.rounding,
+    confirmationMode: "MANUAL_STRUCTURED",
+  };
+}
+
+function theoryClaim(view: TrustedRepairView) {
+  const confirmation = view.theoryStructuredConfirmation;
+  if (!confirmation) throw new Error("Theory structured confirmation is unavailable");
+  return {
+    sourceRevisionId: confirmation.sourceRevisionId,
+    anchorId: confirmation.anchorId,
+    anchorVersionId: confirmation.anchorVersionId,
+    targetScopeId: confirmation.targetScopeId,
+    clauses: [
+      { clauseIndex: 1, scopeResolution: "EXACT", scopeId: confirmation.targetScopeId, predicates: [{ predicateId: confirmation.requiredPredicates[0], polarity: "ASSERTED" }] },
+      { clauseIndex: 2, scopeResolution: "EXACT", scopeId: confirmation.targetScopeId, predicates: [{ predicateId: confirmation.forbiddenPredicates[0], polarity: "NEGATED" }] },
+    ],
+    confirmationMode: "MANUAL_STRUCTURED",
+  };
+}
+
+function lawClaim(view: TrustedRepairView) {
+  const confirmation = view.lawStructuredConfirmation;
+  if (!confirmation) throw new Error("Law structured confirmation is unavailable");
+  return {
+    sourceRevisionId: confirmation.sourceRevisionId,
+    anchorId: confirmation.anchorId,
+    anchorVersionId: confirmation.anchorVersionId,
+    lawSourceBindingId: confirmation.lawSourceBindingId,
+    sourceId: confirmation.sourceId,
+    sourceVersionId: confirmation.sourceVersionId,
+    lawAnchorId: confirmation.lawAnchorId,
+    lawAnchorVersionId: confirmation.lawAnchorVersionId,
+    exactLocator: confirmation.exactLocator,
+    exactVersionIdentity: confirmation.exactVersionIdentity,
+    effectiveFrom: confirmation.effectiveFrom,
+    effectiveTo: confirmation.effectiveTo,
+    applicableAsOf: confirmation.applicableAsOf,
+    currentLawApplicability: confirmation.currentLawApplicability,
+    blockerState: confirmation.blockerState,
+    confirmationMode: "MANUAL_STRUCTURED",
+  };
+}
+
+async function createVerifiedSource(context: BrowserContext, subject: Subject) {
+  let view = await trustedCommand(context, "start", { subject, inputMode: "TYPED_TEXT" });
+  const transition = async (action: string, fields: Record<string, unknown> = {}) => {
+    view = await trustedCommand(context, action, { sessionId: view.session.sessionId, expectedVersion: view.session.recordVersion, ...fields });
+  };
+  await transition("confirm_revision", { body: `합성 ${subject} 확정 수정본` });
+  await transition("commit_prediction", { prediction: "likely_partial", confidence: "medium" });
+  await transition("commit_attempt", { body: "도움 전 독립 시도에서 정확한 과목 결합을 구성한다." });
+  await transition("commit_self_diagnosis", { selfDiagnosisCode: "typed_binding_required" });
+  await transition("diagnose");
+  await transition("request_scaffold");
+  await transition("submit_repair", { body: "최소 도움 뒤 정확한 과목 결합을 다시 구성한다." });
+  const action = subject === "appraisal_practical" ? "confirm_claim" : subject === "appraisal_theory" ? "confirm_theory_claim" : "confirm_law_claim";
+  const claim = subject === "appraisal_practical" ? practiceClaim(view) : subject === "appraisal_theory" ? theoryClaim(view) : lawClaim(view);
+  await transition(action, { claim });
+  expect(view.session.state).toBe("verified");
+  return view.session.sessionId as string;
+}
+
+function c3Commitment(subject: Subject, stage: DurableLearningFixtureStage, wrong = false) {
+  const expected = expectedCommitmentForFixture(subject, stage);
+  if (!wrong) return expected;
+  if (expected.kind === "PRACTICE_CALCULATION") return { ...expected, result: expected.result + 1 };
+  if (expected.kind === "THEORY_PREDICATE") return { ...expected, polarity: "NEGATIVE" as const };
+  return { ...expected, exactLocator: `${expected.exactLocator}-wrong` };
+}
+
+async function fillCommitment(
+  page: Page,
+  subject: Subject,
+  stage: DurableLearningFixtureStage,
+  omitClosedZero = false,
+) {
+  const commitment = expectedCommitmentForFixture(subject, stage);
+  if (commitment.kind === "PRACTICE_CALCULATION") {
+    await page.getByLabel("계산 앵커 ID").fill(commitment.anchorId);
+    await page.getByLabel("총수익").fill(String(commitment.grossIncome));
+    await page.getByLabel("운영비").fill(String(commitment.operatingExpense));
+    await page.getByLabel("계산 결과").fill(String(commitment.result));
+    await page.getByLabel("연산자").selectOption(commitment.operator);
+    await page.getByLabel("단위").selectOption(commitment.unit);
+    await page.getByLabel("부호").selectOption(commitment.sign);
+    await page.getByLabel("반올림").selectOption(commitment.rounding);
+  } else if (commitment.kind === "THEORY_PREDICATE") {
+    await page.getByLabel("이론 앵커 ID").fill(commitment.anchorId);
+    await page.getByLabel("정확한 목표 범위 ID").fill(commitment.targetScopeId);
+    await page.getByLabel("필수 술어 ID").fill(commitment.requiredPredicate);
+    await page.getByLabel("필수 술어 극성").selectOption(commitment.polarity);
+    if (!omitClosedZero) {
+      await page.getByLabel("금지 술어 주장 여부").selectOption(String(commitment.forbiddenPredicateAsserted));
+    }
+  } else {
+    const values: Record<string, string> = {
+      "복구 앵커 ID": commitment.anchorId,
+      "법령 출처 ID": commitment.sourceId,
+      "법령 출처 버전 ID": commitment.sourceVersionId,
+      "법령 앵커 ID": commitment.lawAnchorId,
+      "법령 앵커 버전 ID": commitment.lawAnchorVersionId,
+      "정확 위치": commitment.exactLocator,
+      "적용 기준일": commitment.applicableAsOf,
+      ...(omitClosedZero ? {} : { "열린 차단 근거 수": String(commitment.blockerCount) }),
+    };
+    for (const [label, value] of Object.entries(values)) await page.getByLabel(label).fill(value);
+    await page.getByLabel("현재성").selectOption(commitment.currentness);
+  }
+}
+
+async function completeC3Ui(page: Page, sourceSessionId: string, subject: Subject, keyboardOnly: boolean) {
+  const foreignHosts = new Set<string>();
+  page.on("request", (request) => {
+    const url = new URL(request.url());
+    if (url.origin !== new URL(baseURL).origin) foreignHosts.add(url.host);
+  });
+  await page.goto(`/app/durable-learning?sourceSessionId=${sourceSessionId}`);
+  await expect(page.locator("[data-wcv-c3-durable-learning]")).toBeVisible();
+  const axe = await new AxeBuilder({ page }).analyze();
+  expect(axe.violations.filter((item) => item.impact === "serious" || item.impact === "critical")).toEqual([]);
+  const activate = async () => {
+    const button = page.locator("[data-primary-action]");
+    if (keyboardOnly) { await button.focus(); await page.keyboard.press("Enter"); } else await button.click();
+  };
+  await activate();
+  for (const { stage, state } of [
+    { stage: "D1", state: "D1_REPRODUCED" },
+    { stage: "D7", state: "D7_TRANSFER_OBSERVED" },
+    { stage: "TIMED", state: "TIMED_RECURRENCE_CONFIRMED" },
+  ] as const) {
+    await activate();
+    await page.getByLabel("보지 않고 작성한 독립 답안").fill(`비공개 ${subject} 독립 답안`);
+    const omitClosedZero = stage === "D1" && subject !== "appraisal_practical";
+    await fillCommitment(page, subject, stage, omitClosedZero);
+    if (omitClosedZero) {
+      await expect(page.locator("[data-primary-action]")).toBeDisabled();
+      if (subject === "appraisal_theory") {
+        await page.getByLabel("금지 술어 주장 여부").selectOption("false");
+      } else {
+        await page.getByLabel("열린 차단 근거 수").fill("0");
+      }
+    }
+    await activate();
+    await expect(page.getByText(state === "D1_REPRODUCED" ? /D\+1 독립 재현/ : state === "D7_TRANSFER_OBSERVED" ? /D\+7 전이 확인/ : /시간제한 재발 검사 확인/)).toBeVisible();
+  }
+  await activate();
+  await expect(page.getByText("현재 안정 후보", { exact: true })).toBeVisible();
+  expect([...foreignHosts]).toEqual([]);
+  return new URL(page.url()).searchParams.get("caseId") as string;
+}
+
+test("WCV-C3 three-subject browser, Postgres, plan, privacy and reopen chain", async ({ browser }) => {
+  requireRuntime();
+  test.skip(Boolean(recoveryCaseId), "normal acceptance is omitted during restart restoration");
+  const viewports = [{ width: 390, height: 844 }, { width: 768, height: 900 }, { width: 1440, height: 900 }];
+  const caseIds: string[] = [];
+  for (let index = 0; index < SUBJECTS.length; index += 1) {
+    const context = await contextFor(browser, viewports[index]);
+    const sourceSessionId = await createVerifiedSource(context, SUBJECTS[index]);
+    const page = await context.newPage();
+    const caseId = await completeC3Ui(page, sourceSessionId, SUBJECTS[index], index === 0);
+    caseIds.push(caseId);
+    await context.close();
+  }
+
+  const owner = await contextFor(browser);
+  let practice = (await owner.request.get(`/api/review-os/durable-learning?caseId=${caseIds[0]}`)).json().then((body) => body.view);
+  practice = await practice;
+  for (const availableMinutes of [30, 60, 90, 180, 600, 720]) {
+    practice = await c3Command(owner, "build_plan", practice, { availableMinutes, recoveryMode: availableMinutes === 30 ? "MINIMUM_MAINTENANCE" : "NORMAL", fixedCommitments: availableMinutes >= 60 ? [{ commitmentId: randomUUID(), label: "MANUAL_COMMITMENT", minutes: 30 }] : [] });
+    expect(practice.latestPlan.coreOutcomes.length).toBeLessThanOrEqual(3);
+  }
+  practice = await c3Command(owner, "decide_plan", practice, {
+    decision: "EDITED",
+    reason: "available_minutes_changed",
+    availableMinutes: 90,
+    recoveryMode: "MINIMUM_MAINTENANCE",
+    fixedCommitments: [{ commitmentId: randomUUID(), label: "MANUAL_COMMITMENT", minutes: 15 }],
+  });
+  expect(practice.latestPlan.availableMinutes).toBe(90);
+  expect(practice.latestPlan.fixedCommitments[0].minutes).toBe(15);
+  expect(practice.latestPlan.decision).toBe("EDITED");
+  expect(practice.case.state).toBe("CURRENTLY_CLEAR");
+  practice = await c3Command(owner, "prepare_attempt", practice);
+  practice = await c3Command(owner, "record_evidence", practice, { body: "후속 독립 실패", commitment: c3Commitment("appraisal_practical", "RECURRENCE", true) });
+  expect(practice.case.state).toBe("REOPENED");
+
+  const foreign = await contextFor(browser, { width: 390, height: 844 }, emailB, passwordB);
+  const denied = await foreign.request.get(`/api/review-os/durable-learning?caseId=${caseIds[1]}`);
+  expect(denied.status()).toBe(404);
+  await foreign.close();
+
+  const exportResponse = await owner.request.post("/api/review-os/durable-learning", { data: { action: "export", caseId: caseIds[2], expectedVersion: 8 } });
+  expect(exportResponse.status()).toBe(200);
+  expect((await exportResponse.json()).exportBundle.privateArtifacts).toHaveLength(3);
+  const law = await (await owner.request.get(`/api/review-os/durable-learning?caseId=${caseIds[2]}`)).json();
+  const deleted = await owner.request.post("/api/review-os/durable-learning", { data: { action: "delete", caseId: caseIds[2], expectedVersion: law.view.case.recordVersion, commandId: randomUUID() } });
+  expect(deleted.status()).toBe(200);
+  expect((await owner.request.get(`/api/review-os/durable-learning?caseId=${caseIds[2]}`)).status()).toBe(404);
+
+  if (transientEvidencePath) writeFileSync(transientEvidencePath, `${JSON.stringify({ recoveryCaseId: caseIds[1], counts: { completedSubjects: 3, deletedCases: 1, reopenedCases: 1 } })}\n`, { mode: 0o600 });
+  await owner.close();
+});
+
+test("WCV-C3 process restart restores exact private case", async ({ browser }) => {
+  requireRuntime();
+  test.skip(!recoveryCaseId, "restart restoration runs only after the server restart");
+  const owner = await contextFor(browser);
+  const response = await owner.request.get(`/api/review-os/durable-learning?caseId=${recoveryCaseId}`);
+  expect(response.status()).toBe(200);
+  const body = await response.json();
+  expect(body.view.case.state).toBe("CURRENTLY_CLEAR");
+  expect(body.view.ledger.artifacts).toHaveLength(3);
+  expect((body.view as DurableLearningView).ledger.events.every((event) => event.payload.containsBody === false)).toBe(true);
+  await owner.close();
+});

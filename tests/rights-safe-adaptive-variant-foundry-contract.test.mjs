@@ -967,9 +967,9 @@ test("C2RA-AUTH-010 retains the A transition after terminal Law completion", asy
     unified.wcvCampaignOverlay.c2StructuralRecovery.replacementStages[0].ownedPathsExactly,
     EXPECTED_OWNED_PATHS,
   );
-  assert.match(roadmap, /soleNextImplementationItem: WCV-C3/);
+  assert.match(roadmap, /soleNextImplementationItem: null/);
   assert.match(roadmap, /soleNextReplacementStage: null/);
-  assert.match(agents, /WCV-C3 \/ C3 \/ #706 \/ authorized_unstarted/);
+  assert.match(agents, /WCV-C3\/C3\/#706 is the complete durable-learning and daily-command\s+candidate/);
   assert.equal(Object.values(contract.authorizationBoundary).every((value) => value === false), true);
   assert.equal(contract.decision.runtimeReadinessEstablished, false);
   assert.equal(contract.successor.c2rACompletionEffectiveOnlyAfterExpectedHeadPinnedMergeAndValidatedReceipt, true);

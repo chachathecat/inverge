@@ -80,8 +80,8 @@ test("canonical contract records exact O3A and lean O4V decisions without starti
 
   assert.match(constitution, /S235A and S235B are completed without Golden execution or first-round runtime/i);
   assert.match(unified, /O3A and lean O4V are completed\s+as exact Owner decisions/i);
-  assert.match(unified, /S236B remains queued,\s+CPF-1 and S236P remain\s+factually blocked/i);
-  assert.match(unified, /S236A remains queued with S236P as its unmet dependency/i);
+  assert.match(unified, /S236B is blocked by\s+Draft PR #660[\s\S]+CPF-1 and S236P remain factually blocked/i);
+  assert.match(unified, /S236A\s+remains queued with S236P as its unmet dependency/i);
   assert.match(unified, /O4V does not itself create a\s+resource or start S236P/i);
   assert.match(unified, /Runner selection is metadata-only/i);
   assert.match(constitution, /OR-Tools CP-SAT is an optional\s+metadata-only ExecutionBlock placement adapter/i);
