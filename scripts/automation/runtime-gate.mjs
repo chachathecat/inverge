@@ -18,6 +18,8 @@ export const C2R_C_T_RUNTIME_EVIDENCE_PRODUCER_VERSION =
   "c2r-c-t.postgres.theory-trusted-repair.v1";
 export const C2R_C_L_RUNTIME_EVIDENCE_PRODUCER_VERSION =
   "c2r-c-l.postgres.law-trusted-repair.v1";
+export const WCV_C3_RUNTIME_EVIDENCE_PRODUCER_VERSION =
+  "wcv-c3.postgres.durable-learning.v1";
 export const RUNTIME_EVIDENCE_ASSERTION_IDS = Object.freeze([
   "migration_prerequisites_and_target_applied",
   "learner_rls_two_user_isolation",
@@ -96,12 +98,28 @@ export const C2R_C_L_RUNTIME_EVIDENCE_ASSERTION_IDS = Object.freeze([
   "practice_and_theory_rows_preserved_by_law_delta",
   "cleanup_complete",
 ]);
+export const WCV_C3_RUNTIME_EVIDENCE_ASSERTION_IDS = Object.freeze([
+  "c2_prerequisites_and_c3_delta_applied",
+  "forced_rls_all_c3_tables",
+  "authenticated_direct_read_denied",
+  "service_only_rpc_execution",
+  "verified_c2_source_required",
+  "idempotent_case_create_by_source",
+  "attempt_event_and_private_artifact_atomic",
+  "projection_bodyless",
+  "stale_cas_rejected",
+  "learner_delete_receipt_and_cascade",
+  "c2_source_preserved",
+  "cleanup_complete",
+]);
 const C2R_C_P_MIGRATION_PATH =
   "supabase/migrations/20260817090000_c2r_c_p_structured_practice_proof.sql";
 const C2R_C_T_MIGRATION_PATH =
   "supabase/migrations/20260817113000_c2r_c_t_structural_theory_proof.sql";
 const C2R_C_L_MIGRATION_PATH =
   "supabase/migrations/20260817170000_c2r_c_l_exact_law_applicability.sql";
+const WCV_C3_MIGRATION_PATH =
+  "supabase/migrations/20260817190000_wcv_c3_durable_learning_daily_command.sql";
 const S236P_MIGRATION_PATHS = Object.freeze([
   "supabase/migrations/20260730025332_s236p_lean_owner_private.sql",
   "supabase/migrations/20260730060233_s236p_owner_private_lifecycle_hardening.sql",
@@ -350,6 +368,24 @@ function expectedRuntimeContract(riskResult, headSha) {
     ]];
     markerError =
       "C2R-C-L Law migration does not match the supported adapter contract.";
+  } else if (
+    migrations.length === 1 &&
+    migrations[0].path === WCV_C3_MIGRATION_PATH
+  ) {
+    assertionIds = WCV_C3_RUNTIME_EVIDENCE_ASSERTION_IDS;
+    producerVersion = WCV_C3_RUNTIME_EVIDENCE_PRODUCER_VERSION;
+    markerSets = [[
+      "public.wcv_c3_gap_closure_cases",
+      "public.wcv_c3_private_attempt_artifacts",
+      "public.wcv_c3_evidence_events",
+      "public.wcv_c3_create_gap_closure_case_v1",
+      "public.wcv_c3_apply_transition_v1",
+      "public.wcv_c3_delete_owned_case_v1",
+      "alter table public.wcv_c3_gap_closure_cases force row level security",
+      "containsBody",
+    ]];
+    markerError =
+      "WCV-C3 durable-learning migration does not match the supported adapter contract.";
   } else {
     throw new Error(
       "no closed runtime-evidence adapter supports this runtime-sensitive change set.",

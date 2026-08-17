@@ -208,7 +208,7 @@ test("roadmap docs distinguish the S234 snapshot from current lean O4V-reconcile
   assert.match(unified, /O3A and lean O4V are completed\s+as exact Owner decisions/i);
   assert.match(
     unified,
-    /S236B remains queued,\s+CPF-1 and S236P remain\s+factually blocked/i,
+    /S236B is blocked by\s+Draft PR #660[\s\S]+CPF-1 and S236P remain factually blocked/i,
   );
   assert.match(unified, /O4V does not itself create a\s+resource or start S236P/i);
 });

@@ -1,0 +1,351 @@
+#!/usr/bin/env node
+
+import crypto from "node:crypto";
+import fs from "node:fs";
+import path from "node:path";
+import process from "node:process";
+import { spawn, spawnSync } from "node:child_process";
+import { fileURLToPath } from "node:url";
+
+const MODULE_PATH = fileURLToPath(import.meta.url);
+const ROOT = path.resolve(path.dirname(MODULE_PATH), "../..");
+const PROJECT_ID = "wcv-c3-durable-runtime";
+const cleanupOnly = process.argv.includes("--cleanup");
+const requireComplete = process.argv.includes("--require-complete");
+const migrations = [
+  "supabase/migrations/20260817090000_c2r_c_p_structured_practice_proof.sql",
+  "supabase/migrations/20260817113000_c2r_c_t_structural_theory_proof.sql",
+  "supabase/migrations/20260817170000_c2r_c_l_exact_law_applicability.sql",
+  "supabase/migrations/20260817190000_wcv_c3_durable_learning_daily_command.sql",
+].map((value) => path.join(ROOT, value));
+const workdir = path.resolve(
+  process.env.WCV_C3_SUPABASE_WORKDIR ?? path.join(ROOT, ".agent-factory/wcv-c3-supabase-runtime"),
+);
+const allowedRoot = path.resolve(process.env.RUNNER_TEMP ?? path.join(ROOT, ".agent-factory"));
+const evidencePath = path.resolve(
+  process.env.WCV_C3_RUNTIME_EVIDENCE_PATH ?? path.join(ROOT, ".agent-factory/wcv-c3-runtime-evidence.json"),
+);
+const transientPath = path.join(path.dirname(evidencePath), "wcv-c3-private-restart.json");
+const excludedServices = ["realtime", "storage-api", "imgproxy", "mailpit", "postgres-meta", "studio", "edge-runtime", "logflare", "vector", "supavisor"];
+const npxExecutable = process.platform === "win32" ? "npx.cmd" : "npx";
+
+function assertBoundedWorkdir() {
+  if (workdir === allowedRoot || !workdir.startsWith(`${allowedRoot}${path.sep}`)) {
+    throw new Error("WCV-C3 runtime workdir is outside the bounded temporary root");
+  }
+}
+
+function command(executable, args, label, options = {}) {
+  const result = spawnSync(executable, args, {
+    cwd: options.cwd ?? ROOT,
+    env: options.env ?? process.env,
+    encoding: "utf8",
+    stdio: options.capture ? "pipe" : "ignore",
+    maxBuffer: 4 * 1024 * 1024,
+    timeout: options.timeout ?? 900_000,
+  });
+  if (result.status !== 0 && !options.allowFailure) {
+    throw new Error(`${label} failed with exit ${result.status ?? "unknown"}`);
+  }
+  return result;
+}
+
+function redactedBrowserDiagnostic(value, input) {
+  let safe = String(value ?? "");
+  for (const secret of [input.userA.email, input.userA.password, input.userB.email, input.userB.password]) {
+    if (secret) safe = safe.split(secret).join("[redacted]");
+  }
+  safe = safe
+    .replace(/[\w.+-]+@localhost\.test/gi, "[redacted-email]")
+    .replace(/eyJ[A-Za-z0-9_-]{20,}\.[A-Za-z0-9_-]{20,}\.[A-Za-z0-9_-]{10,}/g, "[redacted-token]")
+    .replace(/비공개[^\r\n]*/g, "[private-synthetic-body-redacted]")
+    .replace(/후속 독립 실패/g, "[private-synthetic-body-redacted]");
+  return safe.slice(-12_000);
+}
+
+function supabase(args, label, options = {}) {
+  return command(npxExecutable, ["--no-install", "supabase", ...args], label, options);
+}
+
+function docker(args, label, options = {}) {
+  return command("docker", args, label, { capture: true, ...options });
+}
+
+function resources() {
+  const names = (kind) => {
+    const args = kind === "container" ? ["ps", "--all", "--format", "{{.Names}}"] : [kind, "ls", "--format", "{{.Name}}"];
+    return (docker(args, `${kind} inventory`).stdout ?? "").split(/\r?\n/).filter((name) => name.includes(PROJECT_ID));
+  };
+  return { containers: names("container"), volumes: names("volume"), networks: names("network") };
+}
+
+function cleanup() {
+  assertBoundedWorkdir();
+  if (fs.existsSync(path.join(workdir, "supabase/config.toml"))) {
+    supabase(["stop", "--workdir", workdir, "--project-id", PROJECT_ID, "--no-backup", "--yes"], "local Supabase stop", { allowFailure: true });
+  }
+  const remaining = resources();
+  fs.rmSync(workdir, { recursive: true, force: true });
+  fs.rmSync(transientPath, { force: true });
+  if (requireComplete && Object.values(remaining).some((entries) => entries.length > 0)) {
+    throw new Error("WCV-C3 local runtime cleanup was incomplete");
+  }
+  return remaining;
+}
+
+function prepare() {
+  assertBoundedWorkdir();
+  fs.rmSync(workdir, { recursive: true, force: true });
+  fs.mkdirSync(workdir, { recursive: true });
+  fs.cpSync(path.join(ROOT, "tests/runtime/wcv-c2-supabase/supabase"), path.join(workdir, "supabase"), { recursive: true });
+  const configPath = path.join(workdir, "supabase/config.toml");
+  const source = fs.readFileSync(configPath, "utf8");
+  const marker = 'project_id = "c2r-c-p-practice-repair"';
+  if (source.split(marker).length !== 2) throw new Error("local Supabase project marker is not exact");
+  fs.writeFileSync(configPath, source.replace(marker, `project_id = "${PROJECT_ID}"`), { mode: 0o600 });
+  for (const migration of migrations) {
+    fs.copyFileSync(migration, path.join(workdir, "supabase/migrations", path.basename(migration)));
+  }
+}
+
+function parseStatus(output) {
+  const start = output.indexOf("{");
+  const end = output.lastIndexOf("}");
+  if (start < 0 || end <= start) throw new Error("local Supabase status did not return JSON");
+  return JSON.parse(output.slice(start, end + 1));
+}
+
+function statusValue(status, candidates) {
+  for (const candidate of candidates) {
+    if (typeof status[candidate] === "string" && status[candidate]) return status[candidate];
+  }
+  throw new Error("local Supabase status omitted a required value");
+}
+
+async function identity(apiUrl, anonKey, suffix) {
+  const email = `wcv-c3-${suffix}-${crypto.randomBytes(8).toString("hex")}@localhost.test`;
+  const password = `WcvC3!${crypto.randomBytes(18).toString("base64url")}9a`;
+  const response = await fetch(`${apiUrl}/auth/v1/signup`, {
+    method: "POST",
+    headers: { apikey: anonKey, Authorization: `Bearer ${anonKey}`, "Content-Type": "application/json" },
+    body: JSON.stringify({ email, password }),
+  });
+  const body = await response.json();
+  if (response.status !== 200 || typeof body?.access_token !== "string" || typeof body?.user?.id !== "string") {
+    throw new Error("local synthetic identity creation failed");
+  }
+  process.stdout.write(`::add-mask::${email}\n::add-mask::${password}\n::add-mask::${body.access_token}\n`);
+  return { email, password, userId: body.user.id, accessToken: body.access_token };
+}
+
+function databaseContainer() {
+  const values = (docker(["ps", "--format", "{{.Names}}"], "active container inventory").stdout ?? "").split(/\r?\n/);
+  const found = values.find((value) => value.startsWith("supabase_db_") && value.includes(PROJECT_ID));
+  if (!found) throw new Error("local database container is missing");
+  return found;
+}
+
+function sql(container, query, label) {
+  return (docker(["exec", container, "psql", "--username", "postgres", "--dbname", "postgres", "--no-psqlrc", "--tuples-only", "--no-align", "--set", "ON_ERROR_STOP=1", "--command", query], label).stdout ?? "").trim();
+}
+
+function nextEnvironment(input) {
+  const owners = `${input.userA.email},${input.userB.email}`;
+  return {
+    ...process.env,
+    CI: "true",
+    NEXT_PUBLIC_SUPABASE_URL: input.apiUrl,
+    NEXT_PUBLIC_SUPABASE_ANON_KEY: input.anonKey,
+    SUPABASE_SERVICE_ROLE_KEY: input.serviceRoleKey,
+    ALPHA_ADMIN_EMAILS: owners,
+    WCV_C2R_C_P_OWNER_EMAILS: owners,
+    WCV_C2R_C_P_PRACTICE_ENABLED: "true",
+    WCV_C2R_C_T_OWNER_EMAILS: owners,
+    WCV_C2R_C_T_THEORY_ENABLED: "true",
+    WCV_C2R_C_L_OWNER_EMAILS: owners,
+    WCV_C2R_C_L_LAW_ENABLED: "true",
+    WCV_C3_OWNER_EMAILS: owners,
+    WCV_C3_DURABLE_LEARNING_ENABLED: input.enabled ? "true" : "false",
+    WCV_C3_SYNTHETIC_RUNTIME: "true",
+    NEXT_TELEMETRY_DISABLED: "1",
+  };
+}
+
+async function startNext(input) {
+  const port = 3123;
+  const baseUrl = `http://127.0.0.1:${port}`;
+  const handle = spawn(process.execPath, [path.join(ROOT, "node_modules/next/dist/bin/next"), "dev", "--hostname", "127.0.0.1", "--port", String(port)], {
+    cwd: ROOT,
+    env: nextEnvironment(input),
+    stdio: "ignore",
+  });
+  const deadline = Date.now() + 120_000;
+  while (Date.now() < deadline) {
+    if (handle.exitCode !== null) throw new Error("local Next server exited before readiness");
+    try {
+      const response = await fetch(`${baseUrl}/login`, { redirect: "manual" });
+      if (response.status >= 200 && response.status < 500) return { handle, baseUrl };
+    } catch {}
+    await new Promise((resolve) => setTimeout(resolve, 500));
+  }
+  handle.kill("SIGKILL");
+  throw new Error("local Next server readiness timed out");
+}
+
+async function stopNext(server) {
+  if (!server || server.handle.exitCode !== null) return;
+  server.handle.kill("SIGTERM");
+  await Promise.race([new Promise((resolve) => server.handle.once("exit", resolve)), new Promise((resolve) => setTimeout(resolve, 10_000))]);
+  if (server.handle.exitCode === null) server.handle.kill("SIGKILL");
+}
+
+function runBrowser(server, input, recoveryCaseId = "") {
+  const startedAt = Date.now();
+  const result = command(process.execPath, [path.join(ROOT, "node_modules/@playwright/test/cli.js"), "test", "--config=tests/e2e/wcv-c3-playwright.config.ts", ...(recoveryCaseId ? ["--grep", "process restart restores"] : ["--grep-invert", "process restart restores"])], "WCV-C3 browser acceptance", {
+    capture: true,
+    env: {
+      ...process.env,
+      E2E_BASE_URL: server.baseUrl,
+      WCV_C3_USER_A_EMAIL: input.userA.email,
+      WCV_C3_USER_A_PASSWORD: input.userA.password,
+      WCV_C3_USER_B_EMAIL: input.userB.email,
+      WCV_C3_USER_B_PASSWORD: input.userB.password,
+      WCV_C3_TRANSIENT_EVIDENCE_PATH: transientPath,
+      ...(recoveryCaseId ? { WCV_C3_RECOVERY_CASE_ID: recoveryCaseId } : {}),
+    },
+    allowFailure: true,
+  });
+  if (result.status !== 0) {
+    process.stderr.write(`WCV-C3 browser acceptance diagnostic (${Date.now() - startedAt}ms)\n`);
+    process.stderr.write(redactedBrowserDiagnostic(`${result.stdout ?? ""}\n${result.stderr ?? ""}`, input));
+    throw new Error("WCV-C3 browser acceptance failed");
+  }
+}
+
+async function verifyDefaultOff(input, container) {
+  const before = sql(container, "select count(*) from public.wcv_c3_gap_closure_cases;", "default-off count before");
+  const server = await startNext({ ...input, enabled: false });
+  try {
+    const response = await fetch(`${server.baseUrl}/api/review-os/durable-learning`, { method: "POST", headers: { "Content-Type": "application/json" }, body: "{not-json" });
+    if (response.status !== 404 || (await response.json())?.error !== "not_found") {
+      throw new Error("WCV-C3 default-off API did not fail before parsing");
+    }
+  } finally {
+    await stopNext(server);
+  }
+  const after = sql(container, "select count(*) from public.wcv_c3_gap_closure_cases;", "default-off count after");
+  if (before !== after) throw new Error("WCV-C3 default-off request wrote state");
+}
+
+async function runRuntime() {
+  assertBoundedWorkdir();
+  const headSha = process.env.PR_HEAD_SHA ?? "";
+  if (!/^[0-9a-f]{40}$/.test(headSha)) throw new Error("PR_HEAD_SHA is missing or invalid");
+  const currentHead = command("git", ["rev-parse", "HEAD"], "exact-head lookup", { capture: true }).stdout.trim();
+  if (currentHead !== headSha) throw new Error("runtime checkout is not the exact PR head");
+  if (command("git", ["status", "--porcelain"], "clean-worktree start gate", { capture: true }).stdout.trim()) {
+    throw new Error("runtime checkout is not clean at start");
+  }
+  const version = supabase(["--version"], "Supabase CLI version", { capture: true }).stdout.trim();
+  if (version !== "2.114.0") throw new Error("Supabase CLI version is not locked to 2.114.0");
+  cleanup();
+  prepare();
+  fs.mkdirSync(path.dirname(evidencePath), { recursive: true, mode: 0o700 });
+  fs.rmSync(evidencePath, { force: true });
+  let server = null;
+  let finalCleanup;
+  try {
+    supabase(["start", "--workdir", workdir, "--exclude", excludedServices.join(","), "--output", "json", "--yes"], "first fresh local Supabase start");
+    const statusResult = supabase(["status", "--workdir", workdir, "--output", "json"], "local Supabase status", { capture: true });
+    const status = parseStatus(statusResult.stdout);
+    const apiUrl = statusValue(status, ["API_URL", "api_url"]);
+    const anonKey = statusValue(status, ["ANON_KEY", "anon_key", "PUBLISHABLE_KEY", "publishable_key"]);
+    const serviceRoleKey = statusValue(status, ["SERVICE_ROLE_KEY", "service_role_key", "SECRET_KEY", "secret_key"]);
+    process.stdout.write(`::add-mask::${anonKey}\n::add-mask::${serviceRoleKey}\n`);
+    const container = databaseContainer();
+    const schema = sql(container, `select concat_ws('|',
+      (to_regclass('public.wcv_c3_gap_closure_cases') is not null)::text,
+      (to_regclass('public.wcv_c3_private_attempt_artifacts') is not null)::text,
+      (to_regclass('public.wcv_c3_evidence_events') is not null)::text,
+      (to_regprocedure('public.wcv_c3_load_gap_closure_case_v1(uuid,uuid)') is not null)::text,
+      (select provolatile = 's' from pg_catalog.pg_proc where oid = to_regprocedure('public.wcv_c3_load_gap_closure_case_v1(uuid,uuid)'))::text,
+      (to_regprocedure('public.wcv_c3_apply_transition_v1(uuid,uuid,uuid,bigint,text,text,jsonb,jsonb,jsonb)') is not null)::text,
+      (select count(*) from pg_class c join pg_namespace n on n.oid=c.relnamespace where n.nspname='public' and c.relname like 'wcv_c3_%' and c.relkind='r' and c.relrowsecurity and c.relforcerowsecurity),
+      has_table_privilege('authenticated','public.wcv_c3_gap_closure_cases','SELECT')::text,
+      has_function_privilege('authenticated','public.wcv_c3_load_gap_closure_case_v1(uuid,uuid)','EXECUTE')::text,
+      has_function_privilege('authenticated','public.wcv_c3_create_gap_closure_case_v1(jsonb,jsonb,uuid)','EXECUTE')::text,
+      has_function_privilege('service_role','public.wcv_c3_load_gap_closure_case_v1(uuid,uuid)','EXECUTE')::text,
+      has_function_privilege('service_role','public.wcv_c3_create_gap_closure_case_v1(jsonb,jsonb,uuid)','EXECUTE')::text);`, "WCV-C3 schema and grants");
+    if (schema !== "true|true|true|true|true|true|5|false|false|false|true|true") throw new Error("WCV-C3 schema, stable aggregate read, forced RLS, or grants are not exact");
+    sql(container, fs.readFileSync(migrations.at(-1), "utf8"), "WCV-C3 migration replay");
+
+    const userA = await identity(apiUrl, anonKey, "a");
+    const userB = await identity(apiUrl, anonKey, "b");
+    const input = { apiUrl, anonKey, serviceRoleKey, userA, userB };
+    const direct = await fetch(`${apiUrl}/rest/v1/wcv_c3_gap_closure_cases?select=id`, { headers: { apikey: anonKey, Authorization: `Bearer ${userA.accessToken}` } });
+    if (![401, 403].includes(direct.status)) throw new Error("authenticated direct C3 table access was not denied");
+    await verifyDefaultOff(input, container);
+
+    server = await startNext({ ...input, enabled: true });
+    runBrowser(server, input);
+    const transient = JSON.parse(fs.readFileSync(transientPath, "utf8"));
+    if (!/^[0-9a-f-]{36}$/.test(transient.recoveryCaseId) || transient.counts.completedSubjects !== 3) {
+      throw new Error("transient browser evidence is incomplete");
+    }
+    await stopNext(server);
+    server = null;
+    server = await startNext({ ...input, enabled: true });
+    runBrowser(server, input, transient.recoveryCaseId);
+    await stopNext(server);
+    server = null;
+
+    const invariants = sql(container, `select concat_ws('|',
+      (select count(*) from public.wcv_c3_gap_closure_cases),
+      (select count(*) from public.wcv_c3_private_attempt_artifacts),
+      (select count(*) from public.wcv_c3_deletion_receipts),
+      (select count(*) from public.wcv_c3_gap_closure_cases where state='CURRENTLY_CLEAR'),
+      (select count(*) from public.wcv_c3_gap_closure_cases where state='REOPENED'),
+      (select count(*) from public.wcv_c3_evidence_events where payload::text ~* '"(rawBody|learnerText|answerBody|ocrBody|noteBody|credential|token|secret|password)"[[:space:]]*:'),
+      (select count(*) from public.wcv_c3_evidence_events where payload->>'containsBody' is distinct from 'false'),
+      (select count(*) from public.wcv_c3_private_attempt_artifacts where immutable is not true));`, "persisted C3 invariants");
+    if (invariants !== "2|7|1|1|1|0|0|0") throw new Error("persisted WCV-C3 runtime invariants failed");
+
+    const evidence = {
+      schemaVersion: "wcv_c3_durable_learning_runtime_evidence.v1",
+      headSha,
+      runId: process.env.GITHUB_RUN_ID ?? "local",
+      runAttempt: process.env.GITHUB_RUN_ATTEMPT ?? "1",
+      migrations: migrations.map((file) => ({ identity: path.basename(file, ".sql"), sha256: crypto.createHash("sha256").update(fs.readFileSync(file)).digest("hex") })),
+      assertions: ["exact_head", "two_fresh_authenticated_identities", "default_off_before_parse", "forced_rls_service_only", "stable_transactional_aggregate_read", "migration_replay", "three_subject_browser_chain", "responsive_390_768_1440", "keyboard_and_axe", "private_body_projection_separation", "cross_user_denial", "export_delete", "process_restart_restore", "reopen_after_later_failure", "bounded_daily_plan"],
+      counts: { completedSubjects: 3, persistedCases: 2, privateArtifacts: 7, deletionReceipts: 1 },
+      remoteSupabaseUsed: false,
+      repositorySecretsUsed: false,
+      rawBodiesIncluded: false,
+      privateIdentifiersIncluded: false,
+      screenshotsIncluded: false,
+      tracesIncluded: false,
+      productionUsed: false,
+    };
+    fs.writeFileSync(evidencePath, `${JSON.stringify(evidence, null, 2)}\n`, { mode: 0o600 });
+    fs.rmSync(transientPath, { force: true });
+    if (command("git", ["rev-parse", "HEAD"], "final exact-head lookup", { capture: true }).stdout.trim() !== headSha) throw new Error("runtime head changed");
+    if (command("git", ["status", "--porcelain"], "clean-worktree final gate", { capture: true }).stdout.trim()) {
+      throw new Error("runtime checkout is not clean after verification");
+    }
+  } finally {
+    await stopNext(server);
+    finalCleanup = cleanup();
+  }
+  if (Object.values(finalCleanup).some((entries) => entries.length > 0)) throw new Error("final WCV-C3 cleanup left resources");
+  process.stdout.write("wcv-c3-durable-learning-runtime: pass\n");
+}
+
+if (cleanupOnly) {
+  cleanup();
+  process.stdout.write("wcv-c3-runtime-cleanup: pass\n");
+} else {
+  runRuntime().catch((error) => {
+    process.stderr.write(`${error instanceof Error ? error.message : "WCV-C3 runtime failed"}\n`);
+    process.exitCode = 1;
+  });
+}

@@ -277,7 +277,7 @@ test("watch_snapshot writes safe generated artifacts even when ignored input has
   assertNoUnsafeArtifactText(outputDir);
 });
 
-test("dispatcher rejects blocked roadmap targets and keeps S236A unavailable", () => {
+test("dispatcher rejects all blocked roadmap targets and keeps S236A unavailable", () => {
   const blockedS225OutputDir = tempDir("af006-blocked-s225");
   const blockedS225 = runDispatcher([
     "--mode",
@@ -324,13 +324,13 @@ test("dispatcher rejects blocked roadmap targets and keeps S236A unavailable", (
     `${blockedS236P.stdout}\n${blockedS236P.stderr}`,
     /S236P[\s\S]*(?:ready|blocked|dependency)/i,
   );
-  assert.equal(result.status, 0, result.stderr);
-  assert.match(result.stdout, /"reportOnly": true/);
+  assert.notEqual(result.status, 0);
+  assert.match(`${result.stdout}\n${result.stderr}`, /S236B[\s\S]*(?:ready|blocked|dependency)/i);
   assert.match(summary, /AF006 v1: read-only\/report-only/);
   assert.match(summary, /No branches, commits, pushes, PR updates/);
   assert.match(docs, /read-only\/report-only/);
-  assert.match(docs, /blocked S225\/S236P targets must fail closed/i);
-  assert.match(docs, /only ready item is S236B/i);
+  assert.match(docs, /explicit blocked\s+S236B, S225, and S236P targets fail closed/i);
+  assert.match(docs, /There is no ready item after WCV-C3 completion/i);
   assert.match(docs, /one-shot\s+atomic closeout failed and is non-rerunnable/i);
   assert.match(docs, /independent five-count closure is unavailable/i);
   assert.match(docs, /canonical\s+cross-surface canary is incomplete/i);

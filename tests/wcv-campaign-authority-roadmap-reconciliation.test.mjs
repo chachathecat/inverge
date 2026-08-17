@@ -182,7 +182,7 @@ test("preserves the C1 decision and installs the later C2R source-contract bound
   );
 });
 
-test("reconciles two truthful blocked reservations with one delivery slot", async () => {
+test("preserves two control-plane reservations while three truthful blockers exhaust WIP", async () => {
   const roadmapSource = await text("roadmap/active-program.yml");
   const roadmap = parseRoadmap(roadmapSource);
   const plan = createRoadmapRunnerPlanFromYamlAt(
@@ -196,13 +196,13 @@ test("reconciles two truthful blocked reservations with one delivery slot", asyn
   assert.equal(roadmap.program.globalMergeProducingWriterLimit, 1);
   assert.equal(roadmap.program.wipLimitDoesNotAuthorizeWriterCount, true);
   assert.equal(plan.wipLimit, 3);
-  assert.equal(plan.wipOccupiedCount, 2);
-  assert.equal(plan.availableSlots, 1);
+  assert.equal(plan.wipOccupiedCount, 3);
+  assert.equal(plan.availableSlots, 0);
   assert.equal(plan.globalMergeProducingWriterLimit, 1);
   assert.equal(plan.activeWriterCount, 0);
   assert.equal(plan.availableWriterSlots, 1);
-  assert.equal(plan.selectionSlots, 1);
-  assert.deepEqual(plan.selectedItemIds, ["WCV-C3"]);
+  assert.equal(plan.selectionSlots, 0);
+  assert.deepEqual(plan.selectedItemIds, []);
 });
 
 test("preserves CPF-1 and S236P factual blocked states without bypass", async () => {
@@ -227,7 +227,7 @@ test("preserves CPF-1 and S236P factual blocked states without bypass", async ()
   assert.equal(unified.wcvCampaignOverlay.legacyFactualGates.S236P.bypassAllowed, false);
 });
 
-test("keeps WCV-C2 complete and selects WCV-C3 under the same campaign graph", async () => {
+test("keeps WCV-C2 and WCV-C3 complete with no dependency-ready successor", async () => {
   const [roadmapSource, unified] = await Promise.all([
     text("roadmap/active-program.yml"),
     json("config/dabangil-unified-program-contract.json"),
@@ -237,24 +237,25 @@ test("keeps WCV-C2 complete and selects WCV-C3 under the same campaign graph", a
   const selectedCampaigns = campaigns.filter(
     (campaign) => campaign.id === unified.wcvCampaignOverlay.soleNextImplementationCampaign,
   );
-  const c3 = selectedCampaigns[0];
+  const c3 = campaigns.find((campaign) => campaign.id === "C3");
   const c2 = campaigns.find((campaign) => campaign.id === "C2");
 
-  assert.equal(selectedCampaigns.length, 1);
-  assert.equal(unified.wcvCampaignOverlay.soleNextImplementationCampaign, "C3");
-  assert.equal(roadmap.program.campaignOverlay, "C3");
-  assert.equal(roadmap.program.soleNextImplementationItem, "WCV-C3");
-  assert.equal(roadmap.program.soleNextImplementationCampaign, "C3");
-  assert.equal(roadmap.program.soleNextImplementationLeadIssue, 706);
-  assert.equal(roadmap.program.soleNextImplementationTrackerIssue, 706);
+  assert.equal(selectedCampaigns.length, 0);
+  assert.equal(unified.wcvCampaignOverlay.soleNextImplementationCampaign, null);
+  assert.equal(roadmap.program.campaignOverlay, null);
+  assert.equal(roadmap.program.soleNextImplementationItem, null);
+  assert.equal(roadmap.program.soleNextImplementationCampaign, null);
+  assert.equal(roadmap.program.soleNextImplementationLeadIssue, null);
+  assert.equal(roadmap.program.soleNextImplementationTrackerIssue, null);
   assert.equal(roadmap.program.soleNextReplacementStage, null);
   assert.equal(roadmap.program.soleNextReplacementStageIssue, null);
   assert.equal(roadmap.program.structuralRecoveryTrackerIssue, 717);
   assert.equal(roadmap.program.wcvC2Complete, true);
+  assert.equal(roadmap.program.wcvC3Complete, true);
   assert.equal(roadmap.program.replacementStageAutomaticStartAllowed, false);
   assert.equal(c3.leadIssue, 706);
   assert.deepEqual(c3.includedIssues, [706, 707, 708]);
-  assert.equal(c3.state, "authorized_unstarted_after_validated_terminal_c2r_c_l_receipt");
+  assert.equal(c3.state, "complete_after_expected_head_merge_and_validated_receipt");
   assert.equal(c3.githubNativeAutomaticContinuationAllowed, true);
   assert.equal(c2.leadIssue, 717);
   assert.deepEqual(c2.includedIssues, [702, 714, 703, 704, 705]);
@@ -283,7 +284,7 @@ test("keeps WCV-C2 complete and selects WCV-C3 under the same campaign graph", a
       roadmapSource,
       new Date("2026-08-14T08:00:00.000Z"),
     ).selectedItemIds,
-    ["WCV-C3"],
+    [],
   );
 });
 
@@ -293,7 +294,7 @@ test("installs the exact C1 through C6 dependency graph", async () => {
     "WCV-0": { status: "completed", dependencies: ["S234R"] },
     "WCV-C1": { status: "completed", dependencies: ["WCV-0"] },
     "WCV-C2": { status: "completed", dependencies: ["WCV-C1"] },
-    "WCV-C3": { status: "queued", dependencies: ["WCV-C2"] },
+    "WCV-C3": { status: "completed", dependencies: ["WCV-C2"] },
     "WCV-C4": { status: "queued", dependencies: ["ULC-I1"] },
     O4W: { status: "queued", dependencies: ["ULC-L1"] },
     "WCV-C5": { status: "queued", dependencies: ["WCV-C4", "O4W"] },
