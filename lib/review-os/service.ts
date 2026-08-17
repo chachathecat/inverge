@@ -64,12 +64,12 @@ import type {
   AdminAlphaFeed,
   AdminBetaFunnel,
   FeedbackItemInput,
+  LearningNoteListItem,
   LearningSignalEventInput,
   LearningSignalSummary,
   ReviewQueueCard,
   StudyProfile,
   TodayFocus,
-  UsageEventRecord,
   UsageSummary,
   WeeklyPlan,
   WeeklyPlanTask,
@@ -856,14 +856,58 @@ export class ReviewOsService {
     return reviewOsRepository.listLearningSignalEvents(userId, mode, limit);
   }
 
+  async listWrongAnswerItemsForAgenda(
+    userId: string,
+    email: string | null,
+    examName: string,
+    limit = 80,
+  ) {
+    const access = await this.ensureAccess(userId, email);
+    const historyDays = getEntitlementLimit(
+      access.entitlementTier,
+    ).historyDays;
+    const cutoffIso = historyDays
+      ? new Date(Date.now() - historyDays * 86_400_000).toISOString()
+      : null;
+    const items = await reviewOsRepository.listWrongAnswerItemsForAgenda(
+      userId,
+      examName,
+      cutoffIso,
+      Math.max(limit + 20, limit),
+    );
+    return items
+      .filter((item) => !item.smokeSeed)
+      .slice(0, limit)
+      .map((item) => ({
+        id: item.id,
+        examName: item.examName,
+        subjectLabel: item.subjectLabel,
+        createdAt: item.createdAt,
+        createdFromCapture: item.createdFromCapture,
+      }));
+  }
+
   async listReviewQueueForAgenda(
     userId: string,
     email: string | null,
+    examName: string,
     limit = 30,
-  ): Promise<ReviewQueueCard[]> {
+  ) {
     await this.ensureAccess(userId, email);
-    const queue = await reviewOsRepository.listReviewQueue(userId, limit);
-    return queue.filter((item) => !isSmokeSeedQueueItem(item));
+    const queue = await reviewOsRepository.listReviewQueueForAgenda(
+      userId,
+      examName,
+      limit,
+    );
+    return queue
+      .filter((item) => !item.smokeSeed)
+      .map((item) => ({
+        queueId: item.queueId,
+        itemId: item.itemId,
+        examName: item.examName,
+        subjectLabel: item.subjectLabel,
+        dueAt: item.dueAt,
+      }));
   }
 
   async listLearningAgendaUsageEvents(
@@ -871,9 +915,9 @@ export class ReviewOsService {
     email: string | null,
     sinceIso: string,
     limit = 120,
-  ): Promise<UsageEventRecord[]> {
+  ) {
     await this.ensureAccess(userId, email);
-    return reviewOsRepository.listRecentUsageEventsByNames(
+    return reviewOsRepository.listUsageEventsForLearningAgenda(
       userId,
       [
         "capture_saved",
@@ -1771,6 +1815,43 @@ export class ReviewOsService {
             .slice(0, limit);
         }),
     );
+  }
+
+  async listLearningNoteItems(
+    userId: string,
+    email: string | null,
+    mode: AppraisalMode,
+    limit = 60,
+  ): Promise<LearningNoteListItem[]> {
+    const access = await this.ensureAccess(userId, email);
+    const requestedLimit = Math.max(0, Math.floor(limit));
+    if (requestedLimit === 0) return [];
+
+    const historyDays = getEntitlementLimit(
+      access.entitlementTier,
+    ).historyDays;
+    const cutoffIso = historyDays
+      ? new Date(Date.now() - historyDays * 86_400_000).toISOString()
+      : null;
+    const candidates = await reviewOsRepository.listLearningNoteCandidates(
+      userId,
+      getModeLabel(mode),
+      cutoffIso,
+      Math.max(requestedLimit + 20, requestedLimit),
+    );
+    return candidates
+      .filter((item) => !isSmokeSeedItem(item))
+      .slice(0, requestedLimit)
+      .map((item) => ({
+        id: item.id,
+        examName: item.examName,
+        subjectLabel: item.subjectLabel,
+        problemTitle: item.problemTitle,
+        problemIdentifier: item.problemIdentifier,
+        userReasonPreset: item.userReasonPreset,
+        derivedPayload: item.derivedPayload,
+        createdAt: item.createdAt,
+      }));
   }
 
   getWrongAnswerDetail(

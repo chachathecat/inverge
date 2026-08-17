@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 
+import { isFastOwnerPreviewDeployment } from "@/lib/preview/fast-owner-preview";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { createOptionalSupabaseRouteHandlerClient } from "@/lib/supabase/route-handler";
 
@@ -16,6 +17,10 @@ function parseCredentials(body: unknown) {
 export const dynamic = "force-dynamic";
 
 export async function POST(request: Request) {
+  if (isFastOwnerPreviewDeployment()) {
+    return NextResponse.json({ ok: false, error: "not_found" }, { status: 404 });
+  }
+
   const credentials = parseCredentials(await request.json().catch(() => null));
   if (!credentials) {
     return NextResponse.json({ ok: false, error: "missing-fields" }, { status: 400 });

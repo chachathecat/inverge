@@ -5,6 +5,7 @@ import {
   getServerSessionUser,
   type InvergeServerSession,
 } from "@/lib/auth/session";
+import { isFastOwnerPreviewDeployment } from "@/lib/preview/fast-owner-preview";
 
 import { OWNER_ALPHA_PRACTICE_FLAG } from "./owner-alpha-practice-contract";
 
@@ -17,7 +18,10 @@ export class OwnerAlphaPracticeAccessError extends Error {
 }
 
 export function isOwnerAlphaPracticeEnabled() {
-  return process.env[OWNER_ALPHA_PRACTICE_FLAG] === "true";
+  return (
+    process.env[OWNER_ALPHA_PRACTICE_FLAG] === "true" ||
+    isFastOwnerPreviewDeployment()
+  );
 }
 
 export async function requireOwnerAlphaPracticeAccess(): Promise<

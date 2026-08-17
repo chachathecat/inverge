@@ -299,6 +299,8 @@ export function LearningAgendaClient({ mode, initialEvents }: LearningAgendaClie
     useState<ModeScopedLocalBetaNotesReadOutcome>(() =>
       createCheckingLocalBetaNotesReadOutcome(mode),
     );
+  const [foldedThisWeekOpen, setFoldedThisWeekOpen] = useState(false);
+  const [historyOpen, setHistoryOpen] = useState(false);
   const localRead = selectLocalBetaNotesReadOutcomeForMode(storedLocalRead, mode);
   const isOnline = useSyncExternalStore(
     subscribeToConnection,
@@ -475,18 +477,28 @@ export function LearningAgendaClient({ mode, initialEvents }: LearningAgendaClie
               {foldedThisWeek.length > 0 ? (
                 mode === "second" ? (
                   <div className="mt-4" data-s230-dense-timeline-disclosure>
-                    <V3QuietDisclosure summary={`이번 주 앞선 기록 ${foldedThisWeek.length}개 보기`}>
-                      <TimelineList events={foldedThisWeek} mode="second" label="이번 주 앞선 학습 기록" />
+                    <V3QuietDisclosure
+                      summary={`이번 주 앞선 기록 ${foldedThisWeek.length}개 보기`}
+                      onToggle={(event) => setFoldedThisWeekOpen(event.currentTarget.open)}
+                    >
+                      {foldedThisWeekOpen ? (
+                        <TimelineList events={foldedThisWeek} mode="second" label="이번 주 앞선 학습 기록" />
+                      ) : null}
                     </V3QuietDisclosure>
                   </div>
                 ) : (
-                  <details className="mt-4 rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-subtle)] p-3" data-s230-dense-timeline-disclosure>
+                  <details className="mt-4 rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-subtle)] p-3"
+                    data-s230-dense-timeline-disclosure
+                    onToggle={(event) => setFoldedThisWeekOpen(event.currentTarget.open)}
+                  >
                     <summary className="flex min-h-11 cursor-pointer items-center rounded-[var(--radius-sm)] text-sm font-semibold text-[var(--foreground-strong)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)]">
                       이번 주 앞선 기록 {foldedThisWeek.length}개 보기
                     </summary>
-                    <div className="mt-4">
-                      <TimelineList events={foldedThisWeek} mode="first" label="이번 주 앞선 학습 기록" />
-                    </div>
+                    {foldedThisWeekOpen ? (
+                      <div className="mt-4">
+                        <TimelineList events={foldedThisWeek} mode="first" label="이번 주 앞선 학습 기록" />
+                      </div>
+                    ) : null}
                   </details>
                 )
               ) : null}
@@ -498,20 +510,29 @@ export function LearningAgendaClient({ mode, initialEvents }: LearningAgendaClie
                   <V3QuietDisclosure
                     summary={`이전 회복 기록 · ${timeline.history.length}개`}
                     helper="최근 90일 안에 저장된 이전 기록입니다."
+                    onToggle={(event) => setHistoryOpen(event.currentTarget.open)}
                   >
-                    <TimelineList events={[...timeline.history].reverse()} mode="second" label="이전 학습 회복 기록" />
+                    {historyOpen ? (
+                      <TimelineList events={[...timeline.history].reverse()} mode="second" label="이전 학습 회복 기록" />
+                    ) : null}
                   </V3QuietDisclosure>
                 </div>
               ) : (
-                <details className="rounded-[var(--radius-lg)] border border-[var(--border-subtle)] bg-[var(--bg-surface)] p-4 sm:p-5" data-s230-secondary-history>
+                <details
+                  className="rounded-[var(--radius-lg)] border border-[var(--border-subtle)] bg-[var(--bg-surface)] p-4 sm:p-5"
+                  data-s230-secondary-history
+                  onToggle={(event) => setHistoryOpen(event.currentTarget.open)}
+                >
                   <summary className="flex min-h-11 cursor-pointer items-center justify-between gap-3 rounded-[var(--radius-sm)] text-sm font-semibold text-[var(--foreground-strong)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)]">
                     <span>이전 회복 기록</span>
                     <span className="text-xs font-medium text-[var(--muted)]">{timeline.history.length}개</span>
                   </summary>
                   <p className="mt-2 text-xs leading-5 text-[var(--muted)]">최근 90일 안에 저장된 이전 기록입니다.</p>
-                  <div className="mt-5">
-                    <TimelineList events={[...timeline.history].reverse()} mode="first" label="이전 학습 회복 기록" />
-                  </div>
+                  {historyOpen ? (
+                    <div className="mt-5">
+                      <TimelineList events={[...timeline.history].reverse()} mode="first" label="이전 학습 회복 기록" />
+                    </div>
+                  ) : null}
                 </details>
               )
             ) : null}

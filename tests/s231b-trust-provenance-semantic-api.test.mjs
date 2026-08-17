@@ -198,8 +198,13 @@ test("S231B runtime fixtures and deployment proof are preview-only and metadata-
   assert.match(runtimeSupport, /maxRedirects: 0/);
   assert.match(appLayout, /isMetadataOnlyTrustAcceptance/);
   assert.match(appLayout, /data-private-account-usage/);
-  assert.match(appLayout, /includeProfile: !isMetadataOnlyTrustAcceptance/);
-  assert.match(appLayout, /includeUsage: !isMetadataOnlyTrustAcceptance/);
+  assert.match(appLayout, /includeProfile: false/);
+  assert.match(appLayout, /includeUsage: false/);
+  assert.match(appLayout, /<Suspense fallback=\{null\}>/);
+  assert.match(
+    appLayout,
+    /session\.userId && !isMetadataOnlyTrustAcceptance/,
+  );
   assert.match(serverContext, /options\.includeProfile !== false/);
   assert.match(serverContext, /options\.includeUsage !== false/);
   assert.match(runtimeSpec, /privateAccountTelemetryAbsent: true/);

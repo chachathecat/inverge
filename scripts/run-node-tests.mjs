@@ -112,6 +112,8 @@ const defaultTestFiles = [
   "tests/practice-calculation-unit-registry.test.mjs",
   "tests/s235a-owner-private-golden-3-readiness.test.mjs",
   "tests/s234r-owner-dogfood-private-plane-schedule-amendment.test.mjs",
+  "tests/fast-owner-preview-boundary.test.mjs",
+  "tests/fast-owner-preview-read-performance.test.mjs",
   "tests/owner-alpha-universal-practice-loop-v0.test.mjs",
   "tests/v12-t0-cpf1-persistence-sink-inventory.test.mjs",
   "tests/appraiser-second-world-class-vertical-contract.test.mjs",

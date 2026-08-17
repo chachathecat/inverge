@@ -1,0 +1,520 @@
+name: FAST OWNER PREVIEW Runtime
+
+on:
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened]
+
+permissions:
+  actions: read
+  contents: read
+  deployments: read
+  pull-requests: read
+
+jobs:
+  fast-owner-preview-runtime:
+    name: exact-head owner-only Preview
+    if: >-
+      github.event.pull_request.head.ref == 'agent/fast-owner-preview' &&
+      github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    concurrency:
+      group: fast-owner-preview-runtime-${{ github.event.pull_request.number }}
+      cancel-in-progress: true
+    env:
+      CI: "true"
+      PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+      PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+      OWNER_ALPHA_RUNTIME_EVIDENCE_PATH: ${{ github.workspace }}/.agent-factory/owner-alpha-runtime-evidence.json
+      FAST_OWNER_PREVIEW_EVIDENCE_PATH: ${{ github.workspace }}/.agent-factory/fast-owner-preview-runtime.json
+
+    steps:
+      - name: Check out exact PR head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+
+      - name: Verify exact checkout
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "${PR_HEAD_SHA}"
+          [[ "${PR_BASE_SHA}" =~ ^[0-9a-f]{40}$ ]]
+          [[ "${PR_HEAD_SHA}" =~ ^[0-9a-f]{40}$ ]]
+          git cat-file -e "${PR_BASE_SHA}^{commit}"
+          git diff --quiet "${PR_BASE_SHA}" "${PR_HEAD_SHA}" -- \
+            .github/workflows/runtime-gate.yml \
+            scripts/automation/produce-runtime-evidence.mjs \
+            scripts/automation/runtime-gate.mjs \
+            scripts/automation/runtime-risk-contract.mjs \
+            tests/agent-factory-runtime-gate.test.mjs
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Discover protected exact-head Preview
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERCEL_AUTOMATION_BYPASS_SECRET: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}
+        run: |
+          set -euo pipefail
+          test -n "${VERCEL_AUTOMATION_BYPASS_SECRET:-}"
+
+          pull_request="$(gh api -X GET "/repos/${GITHUB_REPOSITORY}/pulls/${{ github.event.pull_request.number }}")"
+          PULL_REQUEST="${pull_request}" EXPECTED_SHA="${PR_HEAD_SHA}" node --input-type=module -e '
+            const value = JSON.parse(process.env.PULL_REQUEST ?? "{}");
+            const body = value.body ?? "";
+            if (
+              value.state !== "open" ||
+              value.draft !== true ||
+              value.merged_at !== null ||
+              value.auto_merge !== null ||
+              value.base?.ref !== "main" ||
+              value.head?.ref !== "agent/fast-owner-preview" ||
+              value.head?.sha !== process.env.EXPECTED_SHA ||
+              !/- \[x\] Blocked/.test(body) ||
+              /- \[x\] (?:Auto-merge candidate|Human approval required)/.test(body)
+            ) process.exit(1);
+          '
+
+          exact_head_ready=0
+          deadline=$((SECONDS + 900))
+          while [ "${SECONDS}" -lt "${deadline}" ]; do
+            deployments="$(gh api -X GET "/repos/${GITHUB_REPOSITORY}/deployments?sha=${PR_HEAD_SHA}&per_page=20")" || deployments="[]"
+            mapfile -t deployment_ids < <(
+              DEPLOYMENTS="${deployments}" EXPECTED_SHA="${PR_HEAD_SHA}" node --input-type=module -e '
+                const values = JSON.parse(process.env.DEPLOYMENTS ?? "[]");
+                if (values.some((value) => value?.production_environment === true)) process.exit(1);
+                for (const value of values) {
+                  if (
+                    value?.id &&
+                    value.sha === process.env.EXPECTED_SHA &&
+                    value.ref === process.env.EXPECTED_SHA &&
+                    value.environment === "Preview" &&
+                    value.production_environment === false
+                  ) process.stdout.write(String(value.id) + "\n");
+                }
+              '
+            )
+
+            for deployment_id in "${deployment_ids[@]}"; do
+              statuses="$(gh api -X GET "/repos/${GITHUB_REPOSITORY}/deployments/${deployment_id}/statuses?per_page=20")" || statuses="[]"
+              preview_url="$(
+                STATUSES="${statuses}" node --input-type=module -e '
+                  const values = JSON.parse(process.env.STATUSES ?? "[]");
+                  const latest = values[0];
+                  if (latest?.state !== "success" || latest?.environment !== "Preview") process.exit(0);
+                  const raw = latest.environment_url ?? latest.target_url ?? "";
+                  if (!raw) process.exit(0);
+                  const url = new URL(raw);
+                  if (
+                    url.protocol !== "https:" ||
+                    url.username ||
+                    url.password ||
+                    url.port ||
+                    url.search ||
+                    url.hash ||
+                    !/^inverge-[a-z0-9-]+-chachathecats-projects\.vercel\.app$/i.test(url.hostname)
+                  ) process.exit(1);
+                  process.stdout.write(url.origin);
+                '
+              )"
+              if [ -z "${preview_url}" ]; then continue; fi
+
+              header_path="$(mktemp)"
+              unauthenticated_status="$(
+                curl --silent --show-error --output /dev/null --dump-header "${header_path}" \
+                  --write-out '%{http_code}' --connect-timeout 5 --max-time 15 \
+                  "${preview_url}/api/runtime/version"
+              )" || unauthenticated_status="000"
+              if [ "${unauthenticated_status}" != "302" ] || ! HEADER_PATH="${header_path}" node --input-type=module -e '
+                  import { readFileSync } from "node:fs";
+                  const lines = readFileSync(process.env.HEADER_PATH, "utf8").split(/\r?\n/);
+                  const location = lines.find((line) => /^location:/i.test(line))?.slice(9).trim() ?? "";
+                  const server = lines.find((line) => /^server:/i.test(line))?.slice(7).trim() ?? "";
+                  const vercelId = lines.find((line) => /^x-vercel-id:/i.test(line))?.slice(12).trim() ?? "";
+                  const url = new URL(location);
+                  if (
+                    url.origin !== "https://vercel.com" ||
+                    url.pathname !== "/sso-api" ||
+                    server !== "Vercel" ||
+                    !vercelId
+                  ) process.exit(1);
+                '; then
+                rm -f "${header_path}"
+                continue
+              fi
+              rm -f "${header_path}"
+
+              body_path="$(mktemp)"
+              bypass_status="$(
+                curl --silent --show-error --output "${body_path}" --write-out '%{http_code}' \
+                  --connect-timeout 5 --max-time 15 \
+                  --header "x-vercel-protection-bypass: ${VERCEL_AUTOMATION_BYPASS_SECRET}" \
+                  "${preview_url}/api/runtime/version"
+              )" || bypass_status="000"
+              if [ "${bypass_status}" = "200" ] && BODY_PATH="${body_path}" EXPECTED_SHA="${PR_HEAD_SHA}" node --input-type=module -e '
+                  import { readFileSync } from "node:fs";
+                  const payload = JSON.parse(readFileSync(process.env.BODY_PATH, "utf8"));
+                  if (payload.ready !== true || payload.deploymentSha !== process.env.EXPECTED_SHA) process.exit(1);
+                '; then
+                echo "FAST_OWNER_PREVIEW_URL=${preview_url}" >> "${GITHUB_ENV}"
+                echo "FAST_OWNER_PREVIEW_DEPLOYMENT_ID=${deployment_id}" >> "${GITHUB_ENV}"
+                exact_head_ready=1
+                rm -f "${body_path}"
+                break
+              fi
+              rm -f "${body_path}"
+            done
+
+            if [ "${exact_head_ready}" = "1" ]; then break; fi
+            sleep 10
+          done
+          test "${exact_head_ready}" = "1"
+
+      - name: Verify central Runtime Gate remains fail-closed
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          gate_run_id=""
+          deadline=$((SECONDS + 300))
+          while [ "${SECONDS}" -lt "${deadline}" ]; do
+            gate_run_id="$(
+              gh api -X GET \
+                "/repos/${GITHUB_REPOSITORY}/actions/runs?head_sha=${PR_HEAD_SHA}&event=pull_request&per_page=100" |
+                jq --raw-output --arg sha "${PR_HEAD_SHA}" '
+                  [
+                    .workflow_runs[] |
+                    select(
+                      .name == "Runtime Gate" and
+                      .head_sha == $sha and
+                      .event == "pull_request"
+                    )
+                  ] as $matching |
+                  if any($matching[]; .conclusion == "success") then
+                    error("central Runtime Gate unexpectedly passed")
+                  elif (
+                    [
+                      $matching[] |
+                      select(.status == "completed" and .conclusion == "failure")
+                    ] | length
+                  ) == 1 then
+                    (
+                      [
+                        $matching[] |
+                        select(.status == "completed" and .conclusion == "failure")
+                      ][0].id
+                    )
+                  else
+                    ""
+                  end
+                '
+            )"
+            if [ -n "${gate_run_id}" ]; then break; fi
+            sleep 10
+          done
+          test -n "${gate_run_id}"
+          echo "FAST_OWNER_PREVIEW_CENTRAL_GATE_RUN_ID=${gate_run_id}" >> "${GITHUB_ENV}"
+
+      - name: Verify remote Owner-only boundaries
+        shell: bash
+        env:
+          VERCEL_AUTOMATION_BYPASS_SECRET: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}
+        run: |
+          set -euo pipefail
+          test -n "${FAST_OWNER_PREVIEW_URL:-}"
+
+          status_body="$(mktemp)"
+          status="$(
+            curl --silent --show-error --output "${status_body}" --write-out '%{http_code}' \
+              --connect-timeout 5 --max-time 30 \
+              --header "x-vercel-protection-bypass: ${VERCEL_AUTOMATION_BYPASS_SECRET}" \
+              "${FAST_OWNER_PREVIEW_URL}/api/preview/fast-owner-status"
+          )"
+          test "${status}" = "200"
+          BODY_PATH="${status_body}" EXPECTED_SHA="${PR_HEAD_SHA}" node --input-type=module -e '
+            import { readFileSync } from "node:fs";
+            const payload = JSON.parse(readFileSync(process.env.BODY_PATH, "utf8"));
+            const expected = new Set([
+              "exactPreviewBranch", "deploymentShaBound", "supabaseProjectBound",
+              "supabaseAnonConfigured", "supabaseAdminConfigured",
+              "ownerAllowlistExactlyOne", "aiProviderConfigured",
+              "selectedDeploymentIsPreview"
+            ]);
+            if (payload.ready !== true || payload.deploymentSha !== process.env.EXPECTED_SHA) process.exit(1);
+            if (!payload.checks || Object.keys(payload.checks).length !== expected.size) process.exit(1);
+            for (const key of expected) if (payload.checks[key] !== true) process.exit(1);
+          '
+          rm -f "${status_body}"
+
+          owner_status="$(
+            curl --silent --show-error --output /dev/null --write-out '%{http_code}' \
+              --connect-timeout 5 --max-time 15 \
+              --header "x-vercel-protection-bypass: ${VERCEL_AUTOMATION_BYPASS_SECRET}" \
+              "${FAST_OWNER_PREVIEW_URL}/problem-snap?ownerAlpha=universal-practice-v0"
+          )"
+          test "${owner_status}" = "404"
+
+          login_status="$(
+            curl --silent --show-error --output /dev/null --write-out '%{http_code}' \
+              --connect-timeout 5 --max-time 15 \
+              --header "x-vercel-protection-bypass: ${VERCEL_AUTOMATION_BYPASS_SECRET}" \
+              "${FAST_OWNER_PREVIEW_URL}/login?returnTo=%2Fproblem-snap%3FownerAlpha%3Duniversal-practice-v0"
+          )"
+          test "${login_status}" = "200"
+
+          for route in \
+            "/api/auth/sign-up" \
+            "/api/inverge/checkout" \
+            "/api/inverge/subscription"
+          do
+            body_path="$(mktemp)"
+            mutation_status="$(
+              curl --silent --show-error --output "${body_path}" --write-out '%{http_code}' \
+                --connect-timeout 5 --max-time 15 --request POST \
+                --header "content-type: application/json" \
+                --header "x-vercel-protection-bypass: ${VERCEL_AUTOMATION_BYPASS_SECRET}" \
+                --data '{' \
+                "${FAST_OWNER_PREVIEW_URL}${route}"
+            )"
+            test "${mutation_status}" = "404"
+            BODY_PATH="${body_path}" node --input-type=module -e '
+              import { readFileSync } from "node:fs";
+              const payload = JSON.parse(readFileSync(process.env.BODY_PATH, "utf8"));
+              if (payload.ok !== false || payload.error !== "not_found") process.exit(1);
+            '
+            rm -f "${body_path}"
+          done
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run focused Owner Preview contracts
+        run: >-
+          npm run test --
+          tests/fast-owner-preview-boundary.test.mjs
+          tests/owner-alpha-universal-practice-loop-v0.test.mjs
+          tests/owner-alpha-three-subject-practice-adapter-contract.test.mjs
+          tests/owner-alpha-explanation-ladder-v1.test.mjs
+          --workers=1
+
+      - name: Verify exact-head learner RLS in isolated Postgres
+        env:
+          GITHUB_RUN_ID: ${{ github.run_id }}
+          GITHUB_RUN_ATTEMPT: ${{ github.run_attempt }}
+        run: node scripts/automation/verify-owner-alpha-practice-runtime.mjs
+
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: Verify exact Preview-branch UI activation
+        env:
+          OWNER_ALPHA_RUNTIME_E2E: "1"
+          DEV_SMOKE_AUTH: "true"
+          OWNER_ALPHA_UNIVERSAL_PRACTICE_ENABLED: "false"
+          ALPHA_ADMIN_EMAILS: codex-smoke@localhost.test
+          E2E_BASE_URL: ""
+          VERCEL_ENV: preview
+          VERCEL_GIT_COMMIT_REF: agent/fast-owner-preview
+          VERCEL_GIT_COMMIT_SHA: ${{ github.event.pull_request.head.sha }}
+        run: >-
+          npx playwright test
+          tests/e2e/owner-alpha-universal-practice-runtime.spec.ts
+          --config=playwright.owner-alpha.config.ts
+          --project=owner-alpha-chromium
+          --workers=1
+
+      - name: Build and validate metadata-only evidence
+        shell: bash
+        run: |
+          set -euo pipefail
+          OWNER_EVIDENCE_PATH="${OWNER_ALPHA_RUNTIME_EVIDENCE_PATH}" \
+          OUTPUT_PATH="${FAST_OWNER_PREVIEW_EVIDENCE_PATH}" \
+          EXPECTED_SHA="${PR_HEAD_SHA}" \
+          DEPLOYMENT_ID="${FAST_OWNER_PREVIEW_DEPLOYMENT_ID}" \
+          CENTRAL_GATE_RUN_ID="${FAST_OWNER_PREVIEW_CENTRAL_GATE_RUN_ID}" \
+          node --input-type=module -e '
+            import { readFileSync, writeFileSync } from "node:fs";
+            const owner = JSON.parse(readFileSync(process.env.OWNER_EVIDENCE_PATH, "utf8"));
+            const expectedAssertions = new Set([
+              "exact_head_checkout",
+              "current_native_and_s233a_migrations_applied",
+              "seven_table_owner_rls_insert",
+              "three_subject_ids_share_native_rls_tables",
+              "three_subject_ladder_metadata_projection",
+              "two_user_cross_read_denied",
+              "seven_table_cross_user_update_denied",
+              "cross_user_insert_denied",
+              "anonymous_read_denied",
+              "cleanup_complete"
+            ]);
+            const expectedBodyCounts = new Set([
+              "learner", "problem", "reference", "provider", "credential"
+            ]);
+            const bodyCounts = owner.dataBoundary?.persistedBodyCounts ?? {};
+            if (
+              owner.schemaVersion !== "owner_alpha_practice_runtime.v1" ||
+              owner.status !== "verified" ||
+              owner.pullRequestHeadSha !== process.env.EXPECTED_SHA ||
+              !Array.isArray(owner.assertions) ||
+              owner.assertions.length !== expectedAssertions.size ||
+              new Set(owner.assertions.map((item) => item?.id)).size !==
+                expectedAssertions.size ||
+              !owner.assertions.every(
+                (item) => item?.passed === true && expectedAssertions.has(item?.id)
+              ) ||
+              owner.isolatedEnvironment?.networkExposure !== "none" ||
+              owner.isolatedEnvironment?.syntheticUserCount !== 2 ||
+              owner.isolatedEnvironment?.syntheticSubjectCount !== 3 ||
+              owner.dataBoundary?.metadataOnly !== true ||
+              owner.dataBoundary?.rowBodiesPersisted !== false ||
+              owner.dataBoundary?.learnerTextPersisted !== false ||
+              owner.dataBoundary?.providerBodiesPersisted !== false ||
+              owner.dataBoundary?.problemBodiesPersisted !== false ||
+              owner.dataBoundary?.referenceBodiesPersisted !== false ||
+              owner.dataBoundary?.credentialMaterialPersisted !== false ||
+              Object.keys(bodyCounts).length !== expectedBodyCounts.size ||
+              !Object.entries(bodyCounts).every(
+                ([key, value]) => expectedBodyCounts.has(key) && value === 0
+              )
+            ) throw new Error("Owner Alpha runtime evidence mismatch");
+            const evidence = {
+              schemaVersion: "fast_owner_preview_runtime.v1",
+              result: "pass",
+              runnerSha: process.env.EXPECTED_SHA,
+              targetDeploymentSha: process.env.EXPECTED_SHA,
+              observedDeploymentSha: process.env.EXPECTED_SHA,
+              deploymentId: process.env.DEPLOYMENT_ID,
+              centralRuntimeGateRunId: process.env.CENTRAL_GATE_RUN_ID,
+              deploymentEnvironment: "Preview",
+              productionEnvironment: false,
+              centralRuntimeGateFailClosed: true,
+              vercelSsoProtected: true,
+              environmentBindingReady: true,
+              ownerPageWithoutAppAuthStatus: 404,
+              loginStatus: 200,
+              signupMutationStatus: 404,
+              checkoutMutationStatus: 404,
+              subscriptionMutationStatus: 404,
+              ownerRlsVerified: true,
+              ownerRlsAssertionCount: 10,
+              localPreviewBranchActivationVerified: true,
+              credentialsCaptured: false,
+              emailCaptured: false,
+              rawLearnerContentCaptured: false,
+              urlCaptured: false,
+              domCaptured: false,
+              screenshotCaptured: false,
+              traceCaptured: false,
+              videoCaptured: false
+            };
+            for (const value of Object.values(evidence)) {
+              if (value !== null && typeof value === "object") throw new Error("Nested evidence is forbidden");
+            }
+            const raw = JSON.stringify(evidence);
+            if (/@[a-z0-9.-]+\.[a-z]{2,}/i.test(raw) || /https?:\/\//i.test(raw)) {
+              throw new Error("Sensitive identifier in evidence");
+            }
+            writeFileSync(process.env.OUTPUT_PATH, `${JSON.stringify(evidence, null, 2)}\n`);
+          '
+
+      - name: Recheck exact deployment SHA
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERCEL_AUTOMATION_BYPASS_SECRET: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}
+        run: |
+          set -euo pipefail
+          pull_request="$(gh api -X GET "/repos/${GITHUB_REPOSITORY}/pulls/${{ github.event.pull_request.number }}")"
+          deployments="$(gh api -X GET "/repos/${GITHUB_REPOSITORY}/deployments?sha=${PR_HEAD_SHA}&per_page=20")"
+          EXPECTED_GATE_RUN_ID="${FAST_OWNER_PREVIEW_CENTRAL_GATE_RUN_ID}"
+          gate_run_state="$(
+            gh api -X GET \
+              "/repos/${GITHUB_REPOSITORY}/actions/runs?head_sha=${PR_HEAD_SHA}&event=pull_request&per_page=100" |
+              jq --raw-output \
+                --arg sha "${PR_HEAD_SHA}" \
+                --arg id "${EXPECTED_GATE_RUN_ID}" '
+                  [
+                    .workflow_runs[] |
+                    select(
+                      .name == "Runtime Gate" and
+                      .head_sha == $sha and
+                      .event == "pull_request"
+                    )
+                  ] as $matching |
+                  if (
+                    ($matching | length) == 1 and
+                    ($matching[0].id | tostring) == $id and
+                    $matching[0].status == "completed" and
+                    $matching[0].conclusion == "failure"
+                  ) then
+                    "valid"
+                  else
+                    "invalid"
+                  end
+                '
+          )"
+          test "${gate_run_state}" = "valid"
+          PULL_REQUEST="${pull_request}" \
+          DEPLOYMENTS="${deployments}" \
+          EXPECTED_SHA="${PR_HEAD_SHA}" \
+          EXPECTED_DEPLOYMENT_ID="${FAST_OWNER_PREVIEW_DEPLOYMENT_ID}" \
+          node --input-type=module -e '
+            const pullRequest = JSON.parse(process.env.PULL_REQUEST ?? "{}");
+            const body = pullRequest.body ?? "";
+            if (
+              pullRequest.state !== "open" ||
+              pullRequest.draft !== true ||
+              pullRequest.merged_at !== null ||
+              pullRequest.auto_merge !== null ||
+              pullRequest.base?.ref !== "main" ||
+              pullRequest.head?.ref !== "agent/fast-owner-preview" ||
+              pullRequest.head?.sha !== process.env.EXPECTED_SHA ||
+              !/- \[x\] Blocked/.test(body) ||
+              /- \[x\] (?:Auto-merge candidate|Human approval required)/.test(body)
+            ) process.exit(1);
+
+            const deployments = JSON.parse(process.env.DEPLOYMENTS ?? "[]");
+            if (deployments.some((value) => value?.production_environment === true)) process.exit(1);
+            const expectedDeployment = deployments.filter(
+              (value) =>
+                String(value?.id) === process.env.EXPECTED_DEPLOYMENT_ID &&
+                value.sha === process.env.EXPECTED_SHA &&
+                value.ref === process.env.EXPECTED_SHA &&
+                value.environment === "Preview" &&
+                value.production_environment === false
+            );
+            if (expectedDeployment.length !== 1) process.exit(1);
+          '
+
+          body_path="$(mktemp)"
+          status="$(
+            curl --silent --show-error --output "${body_path}" --write-out '%{http_code}' \
+              --connect-timeout 5 --max-time 15 \
+              --header "x-vercel-protection-bypass: ${VERCEL_AUTOMATION_BYPASS_SECRET}" \
+              "${FAST_OWNER_PREVIEW_URL}/api/runtime/version"
+          )"
+          test "${status}" = "200"
+          BODY_PATH="${body_path}" EXPECTED_SHA="${PR_HEAD_SHA}" node --input-type=module -e '
+            import { readFileSync } from "node:fs";
+            const payload = JSON.parse(readFileSync(process.env.BODY_PATH, "utf8"));
+            if (payload.ready !== true || payload.deploymentSha !== process.env.EXPECTED_SHA) process.exit(1);
+          '
+          rm -f "${body_path}"
+          test "$(git rev-parse HEAD)" = "${PR_HEAD_SHA}"
+
+      - name: Upload FAST OWNER PREVIEW evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: fast-owner-preview-runtime-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ env.FAST_OWNER_PREVIEW_EVIDENCE_PATH }}
+          if-no-files-found: error
+          include-hidden-files: true
+          retention-days: 7

@@ -268,6 +268,24 @@ export type WrongAnswerItemRecord = WrongAnswerItemInput & {
   updatedAt: string;
 };
 
+export type LearningNoteListItem = Pick<
+  WrongAnswerItemRecord,
+  | "id"
+  | "examName"
+  | "subjectLabel"
+  | "problemTitle"
+  | "problemIdentifier"
+  | "userReasonPreset"
+  | "derivedPayload"
+  | "createdAt"
+>;
+
+export type LearningNoteReadCandidate = LearningNoteListItem &
+  Pick<
+    WrongAnswerItemRecord,
+    "sourceLabel" | "rawQuestionText" | "rawAnswerText"
+  >;
+
 export type WrongAnswerNoteRecord = {
   id: string;
   wrongAnswerItemId: string;
