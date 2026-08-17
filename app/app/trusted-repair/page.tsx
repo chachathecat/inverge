@@ -6,16 +6,19 @@ import {
   requireTrustedRepairAccess,
 } from "@/lib/review-os/trusted-repair-access";
 import type { TrustedRepairSubject } from "@/lib/review-os/trusted-repair-contract";
+import { isDurableLearningOwner } from "@/lib/review-os/durable-learning-access";
 
 export const dynamic = "force-dynamic";
 
 export default async function TrustedRepairPage() {
   let ownerScope: string;
   let availableSubjects: readonly TrustedRepairSubject[];
+  let durableLearningEnabled = false;
   try {
     const access = await requireTrustedRepairAccess();
     ownerScope = access.userId;
     availableSubjects = access.trustedRepairSubjects;
+    durableLearningEnabled = isDurableLearningOwner(access.email);
   } catch (error) {
     if (isTrustedRepairAccessError(error)) {
       notFound();
@@ -26,6 +29,7 @@ export default async function TrustedRepairPage() {
     <TrustedRepairLoop
       ownerScope={ownerScope}
       availableSubjects={availableSubjects}
+      durableLearningEnabled={durableLearningEnabled}
     />
   );
 }
