@@ -3984,7 +3984,7 @@ test("docs, evidence, roadmap, and post-merge safe state preserve queued boundar
   assert.doesNotMatch(evidence, /No asset was downloaded/i);
 
   assert.equal(roadmapStatus("S235B"), "completed");
-  assert.equal(roadmapStatus("S236B"), "queued");
+  assert.equal(roadmapStatus("S236B"), "blocked");
   assert.equal(roadmapStatus("O3B"), "queued");
   assert.equal(contract.postMergeSafeState.S236B, "queued_not_started");
   assert.equal(contract.postMergeSafeState.O3B, "queued_unapproved");

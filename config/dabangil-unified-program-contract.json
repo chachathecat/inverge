@@ -153,14 +153,15 @@
         "WCV-C6"
       ]
     },
-    "soleNextImplementationItem": "WCV-C3",
-    "soleNextImplementationCampaign": "C3",
-    "soleNextImplementationLeadIssue": 706,
-    "soleNextImplementationTrackerIssue": 706,
+    "soleNextImplementationItem": null,
+    "soleNextImplementationCampaign": null,
+    "soleNextImplementationLeadIssue": null,
+    "soleNextImplementationTrackerIssue": null,
     "soleNextReplacementStage": null,
     "soleNextReplacementStageIssue": null,
     "structuralRecoveryTrackerIssue": 717,
     "wcvC2Complete": true,
+    "wcvC3Complete": true,
     "runtimeAuthorized": false,
     "firstRoundRuntimeAuthorized": false,
     "mobileRuntimeAuthorized": false,
@@ -1579,8 +1580,14 @@
         "dependencies": [
           "WCV-C2"
         ],
-        "state": "authorized_unstarted_after_validated_terminal_c2r_c_l_receipt",
+        "state": "complete_after_expected_head_merge_and_validated_receipt",
         "terminalReplacementDependency": "C2R-C-L",
+        "completionContract": "config/dabangil-wcv-c3-durable-learning-daily-command-v1.json",
+        "completedIssue714Allocation": "C3",
+        "remainingIssue714Allocations": [
+          "C4",
+          "C6"
+        ],
         "automaticStartAllowed": false,
         "githubNativeAutomaticContinuationAllowed": true
       },
@@ -1725,9 +1732,9 @@
       "operative": false,
       "preservedAsHistory": true
     },
-    "soleNextImplementationCampaign": "C3",
-    "soleNextImplementationLeadIssue": 706,
-    "soleNextImplementationTrackerIssue": 706,
+    "soleNextImplementationCampaign": null,
+    "soleNextImplementationLeadIssue": null,
+    "soleNextImplementationTrackerIssue": null,
     "soleNextReplacementStage": null,
     "soleNextReplacementStageIssue": null,
     "laterCampaignsQueued": [
@@ -1775,10 +1782,10 @@
     "globalMergeProducingWriterLimit": 1,
     "wipLimitDoesNotAuthorizeWriterCount": true,
     "campaignLockGroup": "wcv-vertical-campaign",
-    "soleNextImplementationItemId": "WCV-C3",
-    "soleNextImplementationCampaignId": "C3",
-    "soleNextImplementationLeadIssue": 706,
-    "soleNextImplementationTrackerIssue": 706,
+    "soleNextImplementationItemId": null,
+    "soleNextImplementationCampaignId": null,
+    "soleNextImplementationLeadIssue": null,
+    "soleNextImplementationTrackerIssue": null,
     "soleNextReplacementStageId": null,
     "soleNextReplacementStageIssue": null,
     "primaryStatusesUsed": [

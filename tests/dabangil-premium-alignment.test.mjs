@@ -289,7 +289,7 @@ test("O3A and lean O4V stay completed while blocked S236P keeps S236A unstarted"
   assert.equal(roadmap.byId.get("S236A").status, "queued");
   assert.equal(roadmap.byId.get("S236A").executionState, "unstarted");
   assert.deepEqual(roadmap.byId.get("S236A").dependencies, ["O3A", "S236P"]);
-  assert.equal(roadmap.byId.get("S236B").status, "queued");
+  assert.equal(roadmap.byId.get("S236B").status, "blocked");
   assert.deepEqual(roadmap.byId.get("S236B").dependencies, ["S235B", "S234R"]);
   assert.equal(roadmap.byId.get("O3B").status, "queued");
   assert.deepEqual(roadmap.byId.get("O3B").dependencies, ["S236B"]);

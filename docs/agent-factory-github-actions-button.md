@@ -15,8 +15,8 @@ AF009 metadata mutation is intentionally separate in `Agent Factory Mutate` and 
 ## Inputs
 
 - `mode`: `plan_only`, `watch_snapshot`, `watch_live`, `doctor_pr_body`, `doctor_pr_body_live`, `repair_plan`, `repair_plan_live`, `merge_plan`, or `merge_plan_live`.
-- `target`: `auto`, a roadmap item id such as `S225` (a currently blocked
-  example) or `S236B` (a currently ready example), a PR number such as `461`,
+- `target`: `auto`, a roadmap item id such as `S225` or `S236B` (both currently
+  blocked examples), a PR number such as `461`,
   or a sanitized fixture path.
 - `pr_number`: required for `watch_live`, `doctor_pr_body_live`, `repair_plan_live`, and `merge_plan_live`; leave empty for non-live modes.
 - `max_tasks`: `1` or `2`; applies to `plan_only`.
@@ -29,10 +29,11 @@ track and visual/home dependencies. After the exact 2026-07-29 O3A and
 2026-07-30 lean O4V decision, S236P remains blocked because its one-shot
 atomic closeout failed and is non-rerunnable. HTTP acceptance is incomplete,
 the independent five-count closure is unavailable, and the canonical
-cross-surface canary is incomplete. The only ready item is S236B; automatic
-plan-only selection reports S236B. Use `auto` or `S236B` for current plan-only
-inspection.
-Completed O3A/O4V targets and blocked S225/S236P targets must fail closed.
+cross-surface canary is incomplete. S236B is also blocked because Draft PR
+#660 remains nonqualifying and explicitly forbids automatic additional OCR
+work. There is no ready item after WCV-C3 completion; automatic plan-only
+selection reports no task. Completed O3A/O4V targets and explicit blocked
+S236B, S225, and S236P targets fail closed.
 Selection does not start S236B, resume S236P, start S236A, or
 mutate blocked Draft PR #660.
 

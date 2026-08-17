@@ -31,7 +31,7 @@ function matrixRows(source) {
   );
 }
 
-test("C2R-C-L candidate represents terminal WCV-C2 completion and selects WCV-C3 only after receipt", async () => {
+test("C2R-C-L remains terminal while the WCV-C3 candidate represents post-merge completion", async () => {
   const [stage, unified, launch, roadmap, agents] = await Promise.all([
     json(CONTRACT),
     json("config/dabangil-unified-program-contract.json"),
@@ -55,24 +55,27 @@ test("C2R-C-L candidate represents terminal WCV-C2 completion and selects WCV-C3
   assert.equal(stages.get("C2R-C-L").state, "complete_law_runtime");
   assert.equal(stages.get("C2R-C-L").coveringPr, 764);
 
-  assert.equal(unified.launchConvergenceAmendment.soleNextImplementationItem, "WCV-C3");
-  assert.equal(unified.launchConvergenceAmendment.soleNextImplementationCampaign, "C3");
+  assert.equal(unified.launchConvergenceAmendment.soleNextImplementationItem, null);
+  assert.equal(unified.launchConvergenceAmendment.soleNextImplementationCampaign, null);
   assert.equal(unified.launchConvergenceAmendment.soleNextReplacementStage, null);
-  assert.equal(unified.wcvCampaignOverlay.soleNextImplementationCampaign, "C3");
-  assert.equal(unified.wcvCampaignOverlay.soleNextImplementationLeadIssue, 706);
+  assert.equal(unified.wcvCampaignOverlay.soleNextImplementationCampaign, null);
+  assert.equal(unified.wcvCampaignOverlay.soleNextImplementationLeadIssue, null);
   assert.equal(unified.wcvCampaignOverlay.soleNextReplacementStage, null);
-  assert.equal(unified.roadmapContract.soleNextImplementationItemId, "WCV-C3");
-  assert.equal(unified.roadmapContract.soleNextImplementationCampaignId, "C3");
-  assert.equal(unified.roadmapContract.soleNextImplementationLeadIssue, 706);
+  assert.equal(unified.roadmapContract.soleNextImplementationItemId, null);
+  assert.equal(unified.roadmapContract.soleNextImplementationCampaignId, null);
+  assert.equal(unified.roadmapContract.soleNextImplementationLeadIssue, null);
   assert.equal(unified.roadmapContract.soleNextReplacementStageId, null);
   assert.equal(launch.preservedCurrentAuthority.completedTerminalReplacementStageId, "C2R-C-L");
-  assert.equal(launch.preservedCurrentAuthority.nextRoadmapItemId, "WCV-C3");
-  assert.equal(launch.preservedCurrentAuthority.nextCampaignId, "C3");
-  assert.equal(launch.preservedCurrentAuthority.nextLeadIssue, 706);
-  assert.match(roadmap, /soleNextImplementationItem: WCV-C3/);
+  assert.equal(launch.preservedCurrentAuthority.roadmapItemId, "WCV-C3");
+  assert.equal(launch.preservedCurrentAuthority.campaignId, "C3");
+  assert.equal(launch.preservedCurrentAuthority.recoveryTrackerIssue, 706);
+  assert.equal(launch.preservedCurrentAuthority.nextRoadmapItemId, null);
+  assert.equal(launch.preservedCurrentAuthority.nextCampaignId, null);
+  assert.equal(launch.preservedCurrentAuthority.nextLeadIssue, null);
+  assert.match(roadmap, /soleNextImplementationItem: null/);
   assert.match(roadmap, /c2rCLState: complete_law_runtime/);
   assert.match(roadmap, /c2rCLCoveringPr: 764/);
-  assert.match(agents, /WCV-C3 \/ C3 \/ #706 \/ authorized_unstarted/);
+  assert.match(agents, /WCV-C3\/C3\/#706 is the complete durable-learning and daily-command\s+candidate/);
   assert.match(agents, /only after fresh exact-[\s\S]+validated Tracker #717 receipt/);
 });
 

@@ -31,7 +31,7 @@ function matrixRows(source) {
   );
 }
 
-test("C2R-C-T remains complete after terminal Law selects WCV-C3", async () => {
+test("C2R-C-T remains complete through the WCV-C3 completion candidate", async () => {
   const [stage, unified, launch, roadmap, agents] = await Promise.all([
     json(CONTRACT),
     json("config/dabangil-unified-program-contract.json"),
@@ -55,11 +55,11 @@ test("C2R-C-T remains complete after terminal Law selects WCV-C3", async () => {
   assert.equal(stages.get("C2R-C-L").state, "complete_law_runtime");
   assert.deepEqual(stages.get("C2R-C-L").dependencies, ["C2R-C-T"]);
   assert.equal(stage.stage.postMergeNextStage, "C2R-C-L");
-  assert.match(roadmap, /soleNextImplementationItem: WCV-C3/);
+  assert.match(roadmap, /soleNextImplementationItem: null/);
   assert.match(roadmap, /soleNextReplacementStage: null/);
   assert.match(roadmap, /c2rCTState: complete_theory_runtime/);
   assert.match(roadmap, /c2rCLState: complete_law_runtime/);
-  assert.match(agents, /WCV-C3 \/ C3 \/ #706 \/ authorized_unstarted/);
+  assert.match(agents, /WCV-C3\/C3\/#706 is the complete durable-learning and daily-command\s+candidate/);
 });
 
 test("C2R-C-T preserves exactly five PR 762 Theory declarations", async () => {

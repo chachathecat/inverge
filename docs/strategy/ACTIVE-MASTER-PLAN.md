@@ -74,13 +74,13 @@ owns the completed C2R-A source contract and its post-A selector. The still
 later C2R-B decision owns the typed proof architecture and post-B selector.
 The 2026-08-17 C2R-C-P decision owns the complete Practice runtime candidate
 and post-P selector. The typed-proof and structural decisions own the complete
-Theory and Law deltas. PR #762 completed Theory; terminal candidate PR #764
-represents C2R-C-L/WCV-C2 completion only after its expected-head merge and
-validated receipt, then selects WCV-C3/C3/#706. Issue #714 stays open for
-C3/C4/C6.
+Theory and Law deltas. PR #762 completed Theory and PR #764 completed
+C2R-C-L/WCV-C2 after its expected-head merge and validated receipt. The
+current WCV-C3/C3/#706 candidate completes Issue #714 allocation C3 only after
+its own protected merge and receipt; C4/C6 remain open.
 
-The canonical post-receipt tuple is
-`WCV-C3 / C3 / #706 / authorized_unstarted`. C2R-B installs no runtime;
+After the WCV-C3 receipt there is no dependency-ready successor because
+ULC-M1 additionally requires S241A. C2R-B installs no runtime;
 C2R-C-P, C2R-C-T and C2R-C-L install independently default-off Owner-only
 Practice, Theory and Law runtimes.
 
@@ -217,8 +217,9 @@ three subjects.
 The final public target is separately defined by the subordinate ULC-0
 amendment as the integrated first- and second-round product on Web,
 iOS/iPadOS and Android. That future target does not activate first-round,
-native, instructor or public runtime now. Candidate PR #764 represents the
-post-receipt repository selection WCV-C3/C3/#706, authorized but unstarted.
+native, instructor or public runtime now. PR #764 authorized WCV-C3/C3/#706;
+the current candidate represents its completion only after protected merge
+and receipt, after which ULC-M1 remains blocked on S241A.
 C2R-A/#702 and C2R-B/#714 are completed source-only predecessors, while
 C2R-C-P, C2R-C-T and C2R-C-L are completed default-off Practice, Theory and
 Law runtime predecessors under merge-and-receipt semantics; no Production or
