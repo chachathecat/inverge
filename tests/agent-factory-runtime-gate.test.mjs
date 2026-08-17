@@ -1010,3 +1010,13 @@ test("producer grants the synthetic service role access to the isolated extensio
   );
   assert.equal((bootstrap.match(/grant usage on schema extensions to service_role;/g) ?? []).length, 1);
 });
+
+test("WCV-C3 runtime setup verifies only the intended C2 source", () => {
+  const producer = readTextFileSync(path.join(WORKSPACE_ROOT, "scripts/automation/produce-runtime-evidence.mjs"));
+  const setup = producer.match(
+    /update public\.wcv_c2_trusted_repair_sessions[\s\S]*?"WCV-C3 verified C2 source setup"/,
+  )?.[0] ?? "";
+
+  assert.match(setup, /where id=\$\{sqlLiteral\(C2R_C_P_SESSION_A\)\}::uuid/);
+  assert.match(setup, /and user_id=\$\{sqlLiteral\(USER_A\)\}::uuid/);
+});

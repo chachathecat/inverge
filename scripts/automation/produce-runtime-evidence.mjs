@@ -3395,7 +3395,9 @@ function runWcvC3DatabaseAssertions(containerName, targetMigration) {
               verified: true,
             },
             resultReasonCodes: ["synthetic_verified_source"],
-          })};
+          })}
+      where id=${sqlLiteral(C2R_C_P_SESSION_A)}::uuid
+        and user_id=${sqlLiteral(USER_A)}::uuid;
       commit;`,
     "WCV-C3 verified C2 source setup",
   );
