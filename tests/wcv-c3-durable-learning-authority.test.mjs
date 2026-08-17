@@ -110,6 +110,13 @@ test("WCV-C3 API/UI and exact-head runtime enforce trusted timing and metadata s
   assert.match(server, /inputContext: fixture\.inputContext/);
   assert.match(ui, /learnerResponseFieldsComplete/);
   assert.match(ui, /data-wcv-c3-input-context/);
+  assert.match(ui, /preserveAttemptDraft/);
+  assert.match(ui, /next\.attempt\?\.attemptId === currentAttemptId/);
+  assert.match(ui, /data-wcv-c3-result-note/);
+  assert.match(ui, /왜 틀렸는가/);
+  assert.match(ui, /실패한 기준/);
+  assert.match(ui, /다음 행동 1개/);
+  assert.match(ui, /다음 검토/);
   assert.match(ui, /forbiddenPredicateAsserted: explicitBoolean/);
   assert.match(ui, /blockerCount: explicitNumber/);
   assert.match(ui, /decision: "EDITED"[\s\S]*\.\.\.currentPlanFields\(\)/);
@@ -138,6 +145,9 @@ test("WCV-C3 API/UI and exact-head runtime enforce trusted timing and metadata s
   assert.match(browser, /activate\("prepare_attempt", \/독립 시도 시작\//);
   assert.match(browser, /activate\("record_evidence", "독립 시도 제출 및 검증"\)/);
   assert.match(browser, /activate\("evaluate_currently_clear", \/현재 안정 확인\//);
+  assert.match(browser, /responseFor\("build_plan"\)/);
+  assert.match(browser, /toHaveValue\(answerBody\)/);
+  assert.match(browser, /data-wcv-c3-result-note/);
   assert.doesNotMatch(browser, /expectedCommitmentForFixture/);
   assert.match(browser, /cross-user|denied/);
   assert.match(await read("tests/e2e/wcv-c3-playwright.config.ts"), /timeout: 600_000/);

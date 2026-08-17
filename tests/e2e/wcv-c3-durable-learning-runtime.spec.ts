@@ -215,23 +215,27 @@ async function completeC3Ui(page: Page, sourceSessionId: string, subject: Subjec
   await expect(page.locator("[data-wcv-c3-durable-learning]")).toBeVisible();
   const axe = await new AxeBuilder({ page }).analyze();
   expect(axe.violations.filter((item) => item.impact === "serious" || item.impact === "critical")).toEqual([]);
-  const activate = async (action: string, label: string | RegExp) => {
-    const button = page.locator("[data-primary-action]");
-    await expect(button).toHaveText(label);
-    const responsePromise = page.waitForResponse((response) => {
-      if (response.request().method() !== "POST") return false;
-      if (new URL(response.url()).pathname !== "/api/review-os/durable-learning") return false;
-      try {
-        return response.request().postDataJSON()?.action === action;
-      } catch {
-        return false;
-      }
-    });
-    if (keyboardOnly) { await button.focus(); await page.keyboard.press("Enter"); } else await button.click();
+  const responseFor = (action: string) => page.waitForResponse((response) => {
+    if (response.request().method() !== "POST") return false;
+    if (new URL(response.url()).pathname !== "/api/review-os/durable-learning") return false;
+    try {
+      return response.request().postDataJSON()?.action === action;
+    } catch {
+      return false;
+    }
+  });
+  const requireSuccessfulResponse = async (action: string, responsePromise: ReturnType<typeof responseFor>) => {
     const response = await responsePromise;
     const payload = await response.json();
     expect(response.status(), `${action}:${payload?.error ?? "unknown"}`).toBe(200);
     expect(payload?.ok, `${action}:${payload?.error ?? "unknown"}`).toBe(true);
+  };
+  const activate = async (action: string, label: string | RegExp) => {
+    const button = page.locator("[data-primary-action]");
+    await expect(button).toHaveText(label);
+    const responsePromise = responseFor(action);
+    if (keyboardOnly) { await button.focus(); await page.keyboard.press("Enter"); } else await button.click();
+    await requireSuccessfulResponse(action, responsePromise);
   };
   await activate("start", "검증된 C2 복구에서 시작");
   for (const { stage, state } of [
@@ -242,7 +246,8 @@ async function completeC3Ui(page: Page, sourceSessionId: string, subject: Subjec
     await activate("prepare_attempt", /독립 시도 시작/);
     const answer = page.getByLabel("보지 않고 작성한 독립 답안");
     await expect(answer).toBeVisible();
-    await answer.fill(`비공개 ${subject} 독립 답안`);
+    const answerBody = `비공개 ${subject} 독립 답안`;
+    await answer.fill(answerBody);
     const omitClosedZero = stage === "D1" && subject !== "appraisal_practical";
     await fillLearnerResponse(page, subject, stage, omitClosedZero);
     if (omitClosedZero) {
@@ -252,6 +257,18 @@ async function completeC3Ui(page: Page, sourceSessionId: string, subject: Subjec
       } else {
         await page.getByLabel("열린 차단 근거 수").fill("0");
       }
+    }
+    if (stage === "D1" && subject === "appraisal_practical") {
+      await page.getByText("Today / Full-Day 계획과 내 기록").click();
+      const planResponse = responseFor("build_plan");
+      await page.getByRole("button", { name: "근거 우선 계획 만들기" }).click();
+      await requireSuccessfulResponse("build_plan", planResponse);
+      await expect(answer).toHaveValue(answerBody);
+      await expect(page.getByLabel("계산 결과")).toHaveValue("100000000");
+      await expect(page.getByLabel("연산자")).toHaveValue("SUBTRACT");
+      await expect(page.getByLabel("단위")).toHaveValue("KRW_PER_YEAR");
+      await expect(page.getByLabel("부호")).toHaveValue("POSITIVE");
+      await expect(page.getByLabel("반올림")).toHaveValue("NONE");
     }
     await activate("record_evidence", "독립 시도 제출 및 검증");
     await expect(page.getByText(state === "D1_REPRODUCED" ? /D\+1 독립 재현/ : state === "D7_TRANSFER_OBSERVED" ? /D\+7 전이 확인/ : /시간제한 재발 검사 확인/)).toBeVisible();
@@ -297,6 +314,16 @@ test("WCV-C3 three-subject browser, Postgres, plan, privacy and reopen chain", a
   practice = await c3Command(owner, "prepare_attempt", practice);
   practice = await c3Command(owner, "record_evidence", practice, { body: "후속 독립 실패", learnerResponse: c3LearnerResponse("appraisal_practical", "RECURRENCE", true) });
   expect(practice.case.state).toBe("REOPENED");
+  const feedbackPage = await owner.newPage();
+  await feedbackPage.goto(`/app/durable-learning?caseId=${practice.case.caseId}`);
+  const resultNote = feedbackPage.locator("[data-wcv-c3-result-note]");
+  await expect(resultNote).toBeVisible();
+  await expect(resultNote).toContainText("가장 큰 간극 1개");
+  await expect(resultNote).toContainText("왜 틀렸는가");
+  await expect(resultNote).toContainText("실패한 기준");
+  await expect(resultNote).toContainText("다음 행동 1개");
+  await expect(resultNote).toContainText("다음 검토");
+  await feedbackPage.close();
 
   const foreign = await contextFor(browser, { width: 390, height: 844 }, emailB, passwordB);
   const denied = await foreign.request.get(`/api/review-os/durable-learning?caseId=${caseIds[1]}`);
