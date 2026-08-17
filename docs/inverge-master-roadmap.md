@@ -35,9 +35,10 @@ The current implementation authority is WCV-C2, campaign C2, Tracker #717,
 the exact five-stage C2R chain, one merge-producing writer and GitHub-native
 protected non-Production continuation. C2R-A/#702 and C2R-B/#714 are complete
 source-only, C2R-C-P/#703 is
-the complete Practice runtime stage under merge-and-receipt semantics, and
-C2R-C-T/#703 is the current authorized and unstarted stage. ULC-0 implements
-nothing.
+the complete Practice runtime stage under merge-and-receipt semantics,
+C2R-C-T/#703 is the complete Theory runtime stage under the same semantics,
+and C2R-C-L/#703 is the current authorized and unstarted stage. ULC-0
+implements nothing.
 
 The later 2026-08-15 C2R-B decision owns this exact post-B selector and typed
 proof architecture. The C2R-A decision still owns the A rights-safe source
@@ -125,9 +126,9 @@ Tracker #717 owns the exact serial recovery graph:
 The formal identities remain separate: roadmap item `WCV-C2`, campaign ID
 `C2`, recovery tracker #717, completed source-only stages `C2R-A` for Issue
 #702 and `C2R-B` for Issue #714, completed Practice stage `C2R-C-P`, and
-current authorized but unstarted stage `C2R-C-T` for Issue #703. The canonical
-tuple is
-`WCV-C2 / C2 / #717 / C2R-C-T / #703 / authorized_unstarted`.
+completed Theory stage `C2R-C-T`, with current authorized but unstarted stage
+`C2R-C-L` for Issue #703. The canonical tuple is
+`WCV-C2 / C2 / #717 / C2R-C-L / #703 / authorized_unstarted`.
 
 The sequence is terminally serial. C2R-A and C2R-B are independently complete
 source-contract outcomes and are not parallel. C2R-C-P, C2R-C-T and C2R-C-L
@@ -719,5 +720,6 @@ the shared runtime substrate may first land only within C2R-C-P.
 Only Issue #714 allocation C2 is complete. Issue #714 stays open for C3, C4
 and C6. The expected-head-pinned merge and validated #717 receipt authorize
 C2R-C-P/#703, whose protected PR #756 merge and validated receipt select
-C2R-C-T/#703 as the next authorized-but-unstarted stage without Production or
+C2R-C-T/#703. The complete Theory merge and validated receipt then select
+C2R-C-L/#703 as the next authorized-but-unstarted stage without Production or
 learner activation.

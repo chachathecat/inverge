@@ -16,15 +16,34 @@ const SOURCE_WORKDIR = path.join(
   REPOSITORY_ROOT,
   "tests/runtime/wcv-c2-supabase",
 );
-const C2_MIGRATION_PATH = path.join(
+const PRACTICE_MIGRATION_PATH = path.join(
   REPOSITORY_ROOT,
   "supabase/migrations/20260817090000_c2r_c_p_structured_practice_proof.sql",
 );
+const THEORY_MIGRATION_PATH = path.join(
+  REPOSITORY_ROOT,
+  "supabase/migrations/20260817113000_c2r_c_t_structural_theory_proof.sql",
+);
+const THEORY_RUNTIME = process.env.C2R_RUNTIME_SUBJECT === "appraisal_theory";
+const RUNTIME_SUBJECT = THEORY_RUNTIME
+  ? "appraisal_theory"
+  : "appraisal_practical";
+const C2_MIGRATION_PATHS = THEORY_RUNTIME
+  ? [PRACTICE_MIGRATION_PATH, THEORY_MIGRATION_PATH]
+  : [PRACTICE_MIGRATION_PATH];
 const BROWSER_CONFIG_PATH = path.join(
   REPOSITORY_ROOT,
   "tests/e2e/c2r-c-p-playwright.config.ts",
 );
-const PROJECT_ID = "c2r-c-p-practice-repair";
+const BROWSER_SPEC_PATH = path.join(
+  REPOSITORY_ROOT,
+  THEORY_RUNTIME
+    ? "tests/e2e/c2r-c-t-theory-trusted-repair-runtime.spec.ts"
+    : "tests/e2e/c2r-c-p-practice-trusted-repair-runtime.spec.ts",
+);
+const PROJECT_ID = THEORY_RUNTIME
+  ? "c2r-c-t-theory-repair"
+  : "c2r-c-p-practice-repair";
 const EXPECTED_CLI_VERSION = "2.114.0";
 const EXCLUDED_SERVICES = [
   "realtime",
@@ -636,8 +655,17 @@ function supabase(commandArgs, options = {}) {
 
 function runtimeRoot() {
   const root = path.resolve(
-    process.env.C2R_C_P_SUPABASE_WORKDIR ??
-      path.join(REPOSITORY_ROOT, ".agent-factory/c2r-c-p-supabase-runtime"),
+    process.env[
+      THEORY_RUNTIME
+        ? "C2R_C_T_SUPABASE_WORKDIR"
+        : "C2R_C_P_SUPABASE_WORKDIR"
+    ] ??
+      path.join(
+        REPOSITORY_ROOT,
+        THEORY_RUNTIME
+          ? ".agent-factory/c2r-c-t-supabase-runtime"
+          : ".agent-factory/c2r-c-p-supabase-runtime",
+      ),
   );
   const allowedRoot = path.resolve(
     process.env.RUNNER_TEMP ?? path.join(REPOSITORY_ROOT, ".agent-factory"),
@@ -654,10 +682,12 @@ function prepareRuntimeWorkdir(root) {
   fs.cpSync(path.join(SOURCE_WORKDIR, "supabase"), path.join(root, "supabase"), {
     recursive: true,
   });
-  fs.copyFileSync(
-    C2_MIGRATION_PATH,
-    path.join(root, "supabase/migrations", path.basename(C2_MIGRATION_PATH)),
-  );
+  for (const migrationPath of C2_MIGRATION_PATHS) {
+    fs.copyFileSync(
+      migrationPath,
+      path.join(root, "supabase/migrations", path.basename(migrationPath)),
+    );
+  }
 }
 
 function localSourceFiles() {
@@ -670,13 +700,7 @@ function localSourceFiles() {
     }
   };
   visit(path.join(SOURCE_WORKDIR, "supabase"));
-  files.push(C2_MIGRATION_PATH, BROWSER_CONFIG_PATH);
-  files.push(
-    path.join(
-      REPOSITORY_ROOT,
-      "tests/e2e/c2r-c-p-practice-trusted-repair-runtime.spec.ts",
-    ),
-  );
+  files.push(...C2_MIGRATION_PATHS, BROWSER_CONFIG_PATH, BROWSER_SPEC_PATH);
   return files.sort();
 }
 
@@ -695,7 +719,7 @@ function migrationMetadata() {
   const files = [
     ...fs.readdirSync(path.join(SOURCE_WORKDIR, "supabase/migrations"))
       .map((name) => path.join(SOURCE_WORKDIR, "supabase/migrations", name)),
-    C2_MIGRATION_PATH,
+    ...C2_MIGRATION_PATHS,
   ];
   return files
     .filter((file) => /^\d{14}_[a-z0-9_]+\.sql$/.test(path.basename(file)))
@@ -943,7 +967,11 @@ function nextEnvironment(input) {
     SUPABASE_SERVICE_ROLE_KEY: input.serviceRoleKey,
     ALPHA_ADMIN_EMAILS: `${input.userA.email},${input.userB.email}`,
     WCV_C2R_C_P_OWNER_EMAILS: `${input.userA.email},${input.userB.email}`,
-    WCV_C2R_C_P_PRACTICE_ENABLED: input.enabled ? "true" : "false",
+    WCV_C2R_C_P_PRACTICE_ENABLED:
+      !THEORY_RUNTIME && input.enabled ? "true" : "false",
+    WCV_C2R_C_T_OWNER_EMAILS: `${input.userA.email},${input.userB.email}`,
+    WCV_C2R_C_T_THEORY_ENABLED:
+      THEORY_RUNTIME && input.enabled ? "true" : "false",
     NEXT_TELEMETRY_DISABLED: "1",
   };
 }
@@ -1090,8 +1118,11 @@ function playwrightEnvironment(input) {
 function sanitizedBrowserFailureLocations(result) {
   const output = `${result.stdout ?? ""}\n${result.stderr ?? ""}`;
   const locations = [];
+  const escapedSpec = path
+    .basename(BROWSER_SPEC_PATH)
+    .replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
   for (const match of output.matchAll(
-    /c2r-c-p-practice-trusted-repair-runtime\.spec\.ts:(\d+):\d+/g,
+    new RegExp(`${escapedSpec}:(\\d+):\\d+`, "g"),
   )) {
     if (!locations.includes(match[1])) locations.push(match[1]);
   }
@@ -1127,6 +1158,7 @@ function runBrowserSuite(input) {
   const commandArgs = [
     path.join(REPOSITORY_ROOT, "node_modules/@playwright/test/cli.js"),
     "test",
+    BROWSER_SPEC_PATH,
     `--config=${BROWSER_CONFIG_PATH}`,
     ...grepArgs,
   ];
@@ -1207,6 +1239,80 @@ async function verifyDirectRls(input) {
 }
 
 function verifyPersistedRuntime(databaseContainer) {
+  if (THEORY_RUNTIME) {
+    const assertionIds = [
+      "sessions_present",
+      "private_artifacts_present",
+      "exposure_events_present",
+      "command_receipts_present",
+      "exposure_revision_binding_closed",
+      "theory_only_sessions",
+      "verified_requires_target_scoped_predicate_pass",
+      "private_artifacts_immutable",
+      "corrected_partial_retry_verified",
+      "second_failed_retry_remains_partial",
+      "partial_retry_artifact_limit_enforced",
+    ];
+    const result = databaseQuery(
+      databaseContainer,
+      COMMAND_SPECS.verify_persisted_runtime_psql,
+      `select concat_ws('|',
+        (select (count(*) > 0)::text from public.wcv_c2_trusted_repair_sessions),
+        (select (count(*) > 0)::text from public.wcv_c2_trusted_repair_private_artifacts),
+        (select (count(*) > 0)::text from public.wcv_c2_trusted_repair_exposure_events),
+        (select (count(*) > 0)::text from public.wcv_c2_trusted_repair_command_receipts),
+        (select (count(*) = 0)::text from public.wcv_c2_trusted_repair_exposure_events e
+          left join public.wcv_c2_trusted_repair_private_artifacts a
+            on a.id=e.revision_id and a.session_id=e.session_id and a.user_id=e.user_id
+          where a.id is null),
+        (select (count(*) = 0)::text from public.wcv_c2_trusted_repair_sessions
+          where subject <> 'appraisal_theory'),
+        (select (count(*) = 0)::text from public.wcv_c2_trusted_repair_sessions
+          where state='verified' and (
+            jsonb_typeof(state_data->'structuredClaim') is distinct from 'object'
+            or state_data->'structuredClaim'->>'sourceRevisionId'
+              is distinct from confirmed_revision_id::text
+            or state_data->'structuredClaim'->>'targetScopeId'
+              is distinct from 'theory-target:synthetic-income-approach'
+            or state_data->'proofEvaluation'->>'state' is distinct from 'PASS'
+            or state_data->'proofEvaluation'->>'validatorId'
+              is distinct from 'validator:theory-scoped-predicate@1'
+            or state_data->'proofEvaluation'->>'targetScopeId'
+              is distinct from 'theory-target:synthetic-income-approach'
+          )),
+        (select (count(*) = 0)::text from public.wcv_c2_trusted_repair_private_artifacts where immutable is not true),
+        (select exists(
+          select 1 from public.wcv_c2_trusted_repair_sessions s
+          where s.state='verified' and (
+            select count(*) from public.wcv_c2_trusted_repair_private_artifacts a
+            where a.session_id=s.id and a.user_id=s.user_id
+              and a.artifact_kind='repair_submission'
+          )=2
+        )::text),
+        (select exists(
+          select 1 from public.wcv_c2_trusted_repair_sessions s
+          where s.state='partial' and (
+            select count(*) from public.wcv_c2_trusted_repair_private_artifacts a
+            where a.session_id=s.id and a.user_id=s.user_id
+              and a.artifact_kind='repair_submission'
+          )=2
+        )::text),
+        (select (not exists(
+          select 1 from public.wcv_c2_trusted_repair_private_artifacts a
+          where a.artifact_kind='repair_submission'
+          group by a.session_id, a.user_id having count(*) > 2
+        ))::text)
+      );`,
+    );
+    const values = result.split("|");
+    const failed = assertionIds.filter((_, index) => values[index] !== "true");
+    if (failed.length > 0 || values.length !== assertionIds.length) {
+      throw new Error(
+        `persisted C2 Theory runtime invariants failed: ${failed.join(",") || "shape"}`,
+      );
+    }
+    return;
+  }
   const assertionIds = [
     "sessions_present",
     "private_artifacts_present",
@@ -1316,16 +1422,30 @@ async function runFinalRuntime() {
   const runId = required(process.env.GITHUB_RUN_ID, "GITHUB_RUN_ID", /^\d+$/);
   const runAttempt = required(process.env.GITHUB_RUN_ATTEMPT, "GITHUB_RUN_ATTEMPT", /^\d+$/);
   const evidencePath = path.resolve(
-    process.env.C2R_C_P_RUNTIME_EVIDENCE_PATH ??
-      path.join(REPOSITORY_ROOT, ".agent-factory/c2r-c-p-practice-runtime-evidence.json"),
+    process.env[
+      THEORY_RUNTIME
+        ? "C2R_C_T_RUNTIME_EVIDENCE_PATH"
+        : "C2R_C_P_RUNTIME_EVIDENCE_PATH"
+    ] ??
+      path.join(
+        REPOSITORY_ROOT,
+        THEORY_RUNTIME
+          ? ".agent-factory/c2r-c-t-theory-runtime-evidence.json"
+          : ".agent-factory/c2r-c-p-practice-runtime-evidence.json",
+      ),
   );
   const browserEvidencePath = path.join(
     path.dirname(evidencePath),
-    "c2r-c-p-browser-metadata.json",
+    THEORY_RUNTIME
+      ? "c2r-c-t-browser-metadata.json"
+      : "c2r-c-p-browser-metadata.json",
   );
   const root = runtimeRoot();
   const migrations = migrationMetadata();
-  if (migrations.length !== 2) throw new Error("C2 final migration inventory is not exact");
+  const expectedMigrationCount = THEORY_RUNTIME ? 3 : 2;
+  if (migrations.length !== expectedMigrationCount) {
+    throw new Error("C2 final migration inventory is not exact");
+  }
   verifyExactHead(headSha);
   verifyLocalOnlySource();
   const cliVersion = supabase(["--version"], {
@@ -1465,7 +1585,12 @@ async function runFinalRuntime() {
     }
     browserEvidence = JSON.parse(fs.readFileSync(browserEvidencePath, "utf8"));
     verifyPersistedRuntime(databaseContainer);
-    assertions.push({ id: "practice_actual_browser_to_postgres_chain", result: "passed" });
+    assertions.push({
+      id: THEORY_RUNTIME
+        ? "theory_actual_browser_to_postgres_chain"
+        : "practice_actual_browser_to_postgres_chain",
+      result: "passed",
+    });
     assertions.push({ id: "cas_replay_and_exposure_failure_zero_help", result: "passed" });
     assertions.push({ id: "responsive_keyboard_axe_and_input_modes", result: "passed" });
     assertions.push({ id: "new_browser_exact_user_recovery", result: "passed" });
@@ -1476,7 +1601,7 @@ async function runFinalRuntime() {
         databaseContainer,
         COMMAND_SPECS.recovery_session_lookup_psql,
         `select id::text from public.wcv_c2_trusted_repair_sessions
-         where user_id='${userA.userId}'::uuid and state='partial'
+         where user_id='${userA.userId}'::uuid and subject='${RUNTIME_SUBJECT}' and state='partial'
          order by updated_at desc limit 1;`,
       ),
       "bodyless recovery session id",
@@ -1566,8 +1691,12 @@ async function runFinalRuntime() {
   assertions.push({ id: "exact_head_unchanged", result: "passed" });
 
   const evidence = {
-    schemaVersion: "c2r_c_p_practice_trusted_repair_runtime_evidence.v1",
-    phase: "complete_practice_trusted_repair_vertical",
+    schemaVersion: THEORY_RUNTIME
+      ? "c2r_c_t_theory_trusted_repair_runtime_evidence.v1"
+      : "c2r_c_p_practice_trusted_repair_runtime_evidence.v1",
+    phase: THEORY_RUNTIME
+      ? "complete_theory_trusted_repair_vertical"
+      : "complete_practice_trusted_repair_vertical",
     headSha,
     runId,
     runAttempt,
@@ -1606,7 +1735,11 @@ async function runFinalRuntime() {
     mode: 0o600,
   });
   fs.rmSync(browserEvidencePath, { force: true });
-  process.stdout.write("c2r-c-p-practice-trusted-repair-runtime: pass\n");
+  process.stdout.write(
+    THEORY_RUNTIME
+      ? "c2r-c-t-theory-trusted-repair-runtime: pass\n"
+      : "c2r-c-p-practice-trusted-repair-runtime: pass\n",
+  );
 }
 
 async function main() {
@@ -1616,7 +1749,11 @@ async function main() {
       prepareRuntimeWorkdir(root);
     }
     cleanup(root, requireCompleteCleanup);
-    process.stdout.write("c2r-c-p-local-stack-cleanup: pass\n");
+    process.stdout.write(
+      THEORY_RUNTIME
+        ? "c2r-c-t-local-stack-cleanup: pass\n"
+        : "c2r-c-p-local-stack-cleanup: pass\n",
+    );
     return;
   }
   await runFinalRuntime();

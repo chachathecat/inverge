@@ -135,13 +135,14 @@ non-Production continuation after its protected foundation merge validates.
 The authority-graph identifiers are distinct: roadmap item `WCV-C2`, campaign
 ID `C2`, recovery tracker #717, completed source-only stages `C2R-A` for Issue
 #702 and `C2R-B` for Issue #714, completed Practice runtime stage `C2R-C-P`
-for Issue #703, and current authorized-but-unstarted stage `C2R-C-T` for Issue
-#703. The canonical tuple is
-`WCV-C2 / C2 / #717 / C2R-C-T / #703 / authorized_unstarted`. C2R-C-T may
-start only after the expected-head-pinned C2R-C-P merge and validated #717
-receipt; an issue state or issue closure cannot substitute for a replacement-
-stage merge. C2R-B completes only the Issue #714 allocation for campaign C2
-and leaves Issue #714 open with its C3, C4 and C6 allocations preserved.
+for Issue #703, completed Theory runtime stage `C2R-C-T` for Issue #703, and
+current authorized-but-unstarted stage `C2R-C-L` for Issue #703. The canonical
+tuple is `WCV-C2 / C2 / #717 / C2R-C-L / #703 / authorized_unstarted`.
+C2R-C-L may start only after the expected-head-pinned C2R-C-T merge and
+validated #717 receipt; an issue state or issue closure cannot substitute for
+a replacement-stage merge. C2R-B completes only the Issue #714 allocation for
+campaign C2 and leaves Issue #714 open with its C3, C4 and C6 allocations
+preserved.
 
 ## C2R-A rights-safe source firewall
 
@@ -209,15 +210,34 @@ any structured-field mismatch and binding drift fail closed. A canonical
 sentence rendered from the accepted object is output, never input authority.
 Theory/Law runtime is not included.
 
-The PR #756 candidate represents its post-merge state: C2R-C-P is complete
-only after exact-head checks, final actionable P0/P1/P2 `0/0/0`, an expected-
-head-pinned squash merge and a validated Tracker #717 receipt. Matrix rows 1,
-2, 4, 6, 8, 9, 10, 11, 12, 14 and 19 are
-`candidate_coverage_pending_exact_merge` until then; the other 10 rows remain
-uncovered. C2R-C-T/#703 is the post-merge authorized-but-unstarted selector.
-Neither C2R-C-P nor C2R-C-T may close #703, #704 or #705, and no Production,
-remote Supabase apply, learner activation or rights-unclear operation is
-authorized.
+PR #756 merged by expected-head-pinned squash with a validated Tracker #717
+receipt, so C2R-C-P and its 11 candidate regression rows are complete. The
+Practice flag remains independently default-off and its rollback does not
+depend on Theory or Law. Neither C2R-C-P nor C2R-C-T may close #703, #704 or
+#705, and no Production, remote Supabase apply, learner activation or rights-
+unclear operation is authorized.
+
+## C2R-C-T Theory trusted-repair runtime
+
+C2R-C-T/#703 installs the Owner-only, default-off Theory delta in
+`config/dabangil-c2r-c-t-structural-theory-proof-v1.json`. It binds the exact
+`ScopedPredicateAnchorV1`, seven rights-safe Theory fixtures, Golden and
+Owner-Gold candidates, and a closed `TheoryPredicateClaimV1` to the shared
+episode and forced-RLS/CAS substrate. Free-form text remains candidate and
+diagnostic evidence only. Only the server-validated structured claim may
+create same-session `verified`; cross-target support is unsupported,
+same-target mixed polarity and unresolved scope are ambiguous, a negated
+required predicate is partial, an asserted forbidden predicate is blocked,
+and clause or predicate-occurrence overflow is unsupported.
+
+The C2R-C-T candidate represents its post-merge state: after exact-head
+checks, final actionable P0/P1/P2 `0/0/0`, an expected-head-pinned squash merge
+and a validated Tracker #717 receipt, C2R-C-T is complete and matrix rows 5,
+13, 16, 18 and 20 become covered. C2R-C-L/#703 is then the authorized-but-
+unstarted selector. Theory has its own `WCV_C2R_C_T_THEORY_ENABLED` kill switch;
+disabling or rolling it back does not require disabling or reverting Practice.
+Law runtime, Production, remote Supabase apply, learner activation, payment,
+live providers and rights-unclear content remain unauthorized.
 
 ## Product scope (Owner O1R amendment on 2026-07-26)
 

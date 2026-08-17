@@ -1,0 +1,179 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "contractId": "dabangil.c2r_c_t.structural_theory_proof.v1",
+  "version": "1.0.0",
+  "stage": {
+    "roadmapItemId": "WCV-C2",
+    "campaignId": "C2",
+    "trackerIssue": 717,
+    "stageId": "C2R-C-T",
+    "leadIssue": 703,
+    "contributionIssues": [704, 705],
+    "predecessors": ["C2R-A", "C2R-B", "C2R-C-P"],
+    "candidateRepresentsPostMergeState": true,
+    "postMergeState": "complete_theory_runtime",
+    "postMergeNextStage": "C2R-C-L",
+    "postMergeNextIssue": 703
+  },
+  "subjectBoundary": {
+    "implementedSubjectsExactly": ["appraisal_practical", "appraisal_theory"],
+    "newSubjectExactly": "appraisal_theory",
+    "deferredSubjectsExactly": ["appraisal_compensation_law"],
+    "lawRuntimeExists": false,
+    "genericChatExists": false
+  },
+  "theoryProof": {
+    "type": "ScopedPredicateAnchorV1",
+    "anchorKind": "THEORY_SCOPED_PREDICATE",
+    "anchorId": "repair-anchor:theory:synthetic-income-approach",
+    "anchorVersionId": "repair-anchor:theory:synthetic-income-approach@1",
+    "targetScopeId": "theory-target:synthetic-income-approach",
+    "acceptedTargetAliases": ["income approach", "synthetic income method"],
+    "requiredPredicates": ["converts_expected_income_to_value"],
+    "forbiddenPredicates": ["uses_only_historical_cost"],
+    "acceptableAlternatives": [
+      ["capitalizes_expected_income"],
+      ["discounts_expected_cash_flow"]
+    ],
+    "counterexampleScopes": ["theory-target:synthetic-cost-approach"],
+    "negationPolicy": "EXPLICIT_POLARITY",
+    "mixedPolarityPolicy": "FAIL_CLOSED",
+    "anaphoraPolicy": "EXACT_TARGET_RESOLUTION_REQUIRED",
+    "overflowPolicy": {
+      "maxClauses": 24,
+      "maxPredicateOccurrences": 64,
+      "result": "UNSUPPORTED"
+    },
+    "deterministicValidatorId": "validator:theory-scoped-predicate@1",
+    "resultPolicy": {
+      "crossTargetEvidence": "UNSUPPORTED",
+      "sameTargetMixedPolarity": "AMBIGUOUS",
+      "requiredPredicateNegated": "PARTIAL",
+      "forbiddenPredicateAsserted": "BLOCKED",
+      "forbiddenPredicateMixedPolarity": "BLOCKED",
+      "unresolvedAnaphora": "AMBIGUOUS",
+      "unscopedAssertion": "AMBIGUOUS",
+      "overflow": "UNSUPPORTED"
+    },
+    "canonicalVerificationAuthority": "server_validated_TheoryPredicateClaimV1_only",
+    "freeFormTextAuthority": "independent_attempt_candidate_diagnosis_gap_ranking_scaffold_only",
+    "freeFormTextCanCreateVerified": false,
+    "closedClaimSchema": {
+      "exactUnknownAndDuplicateFieldRejection": true,
+      "sourceRevisionId": "uuid_current_confirmed_revision_only",
+      "anchorIdentity": ["anchorId", "anchorVersionId"],
+      "targetScopeId": "exact_anchor_target_scope",
+      "clauses": {
+        "maximumAcceptedForFailClosedEvaluation": 128,
+        "fields": ["clauseIndex", "scopeResolution", "scopeId", "predicates"],
+        "scopeResolution": ["EXACT", "UNRESOLVED_ANAPHORA", "UNSCOPED"],
+        "predicateFields": ["predicateId", "polarity"],
+        "polarity": ["ASSERTED", "NEGATED"]
+      },
+      "confirmationMode": ["EXTRACTED_THEN_EDITED", "MANUAL_STRUCTURED"],
+      "learnerConfirmedAt": "server_generated_iso_8601"
+    },
+    "onlyExactStructuredPassCreatesVerified": true,
+    "clientSuppliedVerifiedPassMasteryTransferRejected": true,
+    "canonicalSentenceIsOutputOnly": true
+  },
+  "completeOutcomeLayers": {
+    "contractAndMachineValidation": [
+      "config/dabangil-c2r-c-t-structural-theory-proof-v1.json",
+      "lib/review-os/trusted-repair-contract.ts",
+      "lib/review-os/trusted-repair-engine.ts"
+    ],
+    "goldenAndOwnerGoldFixtures": ["lib/review-os/trusted-repair-fixtures.ts"],
+    "persistenceForcedRlsServerCas": [
+      "supabase/migrations/20260817113000_c2r_c_t_structural_theory_proof.sql",
+      "lib/review-os/trusted-repair-repository.ts",
+      "lib/review-os/trusted-repair-server.ts"
+    ],
+    "api": ["app/api/review-os/trusted-repair/route.ts"],
+    "learnerUi": [
+      "app/app/trusted-repair/page.tsx",
+      "components/review-os/trusted-repair-loop.tsx"
+    ],
+    "runtimeEvidence": [
+      ".github/workflows/c2r-c-t-theory-trusted-repair-runtime.yml",
+      "scripts/automation/verify-c2r-c-p-practice-runtime.mjs",
+      "tests/e2e/c2r-c-t-theory-trusted-repair-runtime.spec.ts"
+    ],
+    "safeDeferredBoundary": {
+      "lawRuntime": false,
+      "liveModelRoute": false,
+      "generalPurposeChat": false,
+      "payment": false,
+      "production": false
+    },
+    "independentRollback": {
+      "killSwitch": "WCV_C2R_C_T_THEORY_ENABLED",
+      "defaultEnabled": false,
+      "requiresDisablingOrRevertingPractice": false,
+      "practiceKillSwitch": "WCV_C2R_C_P_PRACTICE_ENABLED",
+      "destructiveRollbackAuthorized": false,
+      "forwardOnlyProcedureDocumented": true
+    }
+  },
+  "regressionCoverageCandidate": {
+    "receiptPolicy": "github_exact_head_pinned_squash_merge_v1",
+    "directRows": [5, 13, 16, 18, 20],
+    "inheritedCommonRows": [1, 4, 6, 8, 11, 14],
+    "testPath": "tests/wcv-c2r-theory-target-scope-validator.test.mjs",
+    "effectiveOnlyAfterExpectedHeadMergeAndTrackerReceipt": true
+  },
+  "activationBoundary": {
+    "ownerOnlyNonProduction": true,
+    "flagDefault": false,
+    "productionAuthorized": false,
+    "realLearnerAuthorized": false,
+    "providerAuthorized": false,
+    "paymentAuthorized": false,
+    "remoteMigrationApplyAuthorized": false
+  },
+  "ownedPathManifest": [
+    ".env.example",
+    ".github/workflows/c2r-c-t-theory-trusted-repair-runtime.yml",
+    "AGENTS.md",
+    "app/api/review-os/trusted-repair/route.ts",
+    "app/app/trusted-repair/page.tsx",
+    "components/review-os/trusted-repair-loop.tsx",
+    "config/dabangil-c2r-c-t-structural-theory-proof-v1.json",
+    "config/dabangil-unified-product-multisurface-launch-v1.json",
+    "config/dabangil-unified-program-contract.json",
+    "docs/dabangil-unified-program-contract.md",
+    "docs/inverge-master-roadmap.md",
+    "docs/qa/c2r-c-t-structural-theory-proof-validation.md",
+    "docs/qa/wcv-c2-replacement-regression-matrix.md",
+    "docs/strategy/ACTIVE-MASTER-PLAN.md",
+    "docs/strategy/dabangil-unified-product-multisurface-launch-v1-2026-08-14.md",
+    "lib/review-os/trusted-repair-access.ts",
+    "lib/review-os/trusted-repair-contract.ts",
+    "lib/review-os/trusted-repair-engine.ts",
+    "lib/review-os/trusted-repair-fixtures.ts",
+    "lib/review-os/trusted-repair-repository.ts",
+    "lib/review-os/trusted-repair-server.ts",
+    "lib/review-os/trusted-repair-source-binding.ts",
+    "roadmap/active-program.yml",
+    "scripts/automation/produce-runtime-evidence.mjs",
+    "scripts/automation/runtime-gate.mjs",
+    "scripts/automation/verify-c2r-c-p-practice-runtime.mjs",
+    "scripts/run-node-tests.mjs",
+    "supabase/migrations/20260817113000_c2r_c_t_structural_theory_proof.sql",
+    "tests/agent-factory-runtime-gate.test.mjs",
+    "tests/c2r-c-p-practice-runtime-contract.test.mjs",
+    "tests/c2r-c-p-practice-structured-proof.test.mjs",
+    "tests/c2r-c-p-practice-authority.test.mjs",
+    "tests/c2r-c-t-theory-authority.test.mjs",
+    "tests/c2r-c-t-theory-runtime-contract.test.mjs",
+    "tests/dabangil-unified-product-multisurface-launch-authority.test.mjs",
+    "tests/e2e/c2r-c-t-theory-trusted-repair-runtime.spec.ts",
+    "tests/foundation-continuous-security-automation.test.mjs",
+    "tests/github-native-delivery-control.test.mjs",
+    "tests/rights-safe-adaptive-variant-foundry-contract.test.mjs",
+    "tests/s232f2-access-availability.test.mjs",
+    "tests/wcv-c2r-structural-recovery-authority.test.mjs",
+    "tests/wcv-c2r-theory-target-scope-validator.test.mjs",
+    "tests/wcv-campaign-authority-roadmap-reconciliation.test.mjs"
+  ]
+}
