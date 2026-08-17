@@ -2,13 +2,16 @@ import {
   TRUSTED_REPAIR_DENIED_RIGHTS_CLASSES,
   TRUSTED_REPAIR_ELIGIBLE_RIGHTS_CLASSES,
   TRUSTED_REPAIR_FIXTURE_VERSION,
+  TRUSTED_REPAIR_THEORY_FIXTURE_VERSION,
   TRUSTED_REPAIR_INPUT_MODES,
   type TrustedRepairBank,
   type TrustedRepairFixture,
   type TrustedRepairFixtureKind,
   type TrustedRepairInputMode,
   type TrustedRepairRightsClass,
+  type TrustedRepairAnchor,
   type TrustedRepairPracticeAnchor,
+  type TrustedRepairTheoryAnchor,
   type TrustedRepairScarcityEvent,
   type TrustedRepairSubject,
 } from "./trusted-repair-contract";
@@ -18,7 +21,7 @@ type BaseFixture = Readonly<{
   slug: string;
   labelKo: string;
   canonicalPrompt: string;
-  anchors: readonly TrustedRepairPracticeAnchor[];
+  anchors: readonly TrustedRepairAnchor[];
   scaffoldByAnchor: Readonly<Record<string, string>>;
   guidedSolutionByAnchor: Readonly<Record<string, string>>;
   successCriterionKo: string;
@@ -51,6 +54,37 @@ const PRACTICE_ANCHORS = [
   },
 ] as const satisfies readonly TrustedRepairPracticeAnchor[];
 
+const THEORY_ANCHORS = [
+  {
+    anchorId: "repair-anchor:theory:synthetic-income-approach",
+    labelKo: "수익방식의 기대수익-가치 전환 술어",
+    weight: 400,
+    scopedPredicate: {
+      anchorKind: "THEORY_SCOPED_PREDICATE",
+      anchorId: "repair-anchor:theory:synthetic-income-approach",
+      anchorVersionId: "repair-anchor:theory:synthetic-income-approach@1",
+      targetScopeId: "theory-target:synthetic-income-approach",
+      acceptedTargetAliases: ["income approach", "synthetic income method"],
+      requiredPredicates: ["converts_expected_income_to_value"],
+      forbiddenPredicates: ["uses_only_historical_cost"],
+      acceptableAlternatives: [
+        ["capitalizes_expected_income"],
+        ["discounts_expected_cash_flow"],
+      ],
+      counterexampleScopes: ["theory-target:synthetic-cost-approach"],
+      negationPolicy: "EXPLICIT_POLARITY",
+      mixedPolarityPolicy: "FAIL_CLOSED",
+      anaphoraPolicy: "EXACT_TARGET_RESOLUTION_REQUIRED",
+      overflowPolicy: {
+        maxClauses: 24,
+        maxPredicateOccurrences: 64,
+        result: "UNSUPPORTED",
+      },
+      deterministicValidatorId: "validator:theory-scoped-predicate@1",
+    },
+  },
+] as const satisfies readonly TrustedRepairTheoryAnchor[];
+
 const BASE_FIXTURES = [
   {
     subject: "appraisal_practical",
@@ -72,6 +106,31 @@ const BASE_FIXTURES = [
     sourceBinding: {
       sourceType: "synthetic",
       sourceId: "inverge-synthetic-practice-valuation-v1",
+      sourceAnchorId: null,
+      requiredStatus: "synthetic_fixture",
+    },
+    expectedOutcome: "verified",
+  },
+  {
+    subject: "appraisal_theory",
+    slug: "theory",
+    labelKo: "이론 · 수익방식 목표범위 술어",
+    canonicalPrompt:
+      "Inverge 합성 이론 사례에서 수익방식은 기대수익을 가치로 전환한다. 역사적 원가만을 사용하는 합성 원가방식 반례와 구분하여, 수익방식의 목표 범위와 술어의 극성을 설명하라.",
+    anchors: THEORY_ANCHORS,
+    scaffoldByAnchor: {
+      "repair-anchor:theory:synthetic-income-approach":
+        "목표를 수익방식으로 고정하고, 기대수익을 가치로 전환한다는 술어를 긍정으로 직접 연결하세요. 역사적 원가만 사용한다는 술어는 수익방식에 적용되지 않음을 구분하세요.",
+    },
+    guidedSolutionByAnchor: {
+      "repair-anchor:theory:synthetic-income-approach":
+        "가이드: 수익방식은 기대수익을 가치로 전환합니다. 역사적 원가만을 사용한다는 술어는 별도의 합성 원가방식 반례이며 수익방식의 근거가 아닙니다. 목표 범위와 각 술어의 긍정·부정을 자신의 문장으로 다시 구분하세요.",
+    },
+    successCriterionKo:
+      "수익방식 목표 범위에서 기대수익을 가치로 전환한다는 필수 술어를 긍정하고, 역사적 원가만 사용한다는 금지 술어를 긍정하지 않은 닫힌 범위 증명을 같은 세션에서 구성한다.",
+    sourceBinding: {
+      sourceType: "synthetic",
+      sourceId: "inverge-synthetic-theory-income-approach-v1",
       sourceAnchorId: null,
       requiredStatus: "synthetic_fixture",
     },
@@ -123,9 +182,14 @@ function editableDrafts(
 }
 
 function rightsManifest(base: BaseFixture, kind: TrustedRepairFixtureKind) {
+  const stage = base.subject === "appraisal_practical" ? "c2r-c-p" : "c2r-c-t";
+  const fixtureVersion =
+    base.subject === "appraisal_practical"
+      ? TRUSTED_REPAIR_FIXTURE_VERSION
+      : TRUSTED_REPAIR_THEORY_FIXTURE_VERSION;
   return {
-    manifestId: `rights-manifest:c2r-c-p:${base.slug}:${kind}`,
-    manifestVersionId: `rights-manifest:c2r-c-p:${base.slug}:${kind}@1`,
+    manifestId: `rights-manifest:${stage}:${base.slug}:${kind}`,
+    manifestVersionId: `rights-manifest:${stage}:${base.slug}:${kind}@1`,
     sourceClass: "INVERGE_ORIGINAL",
     rightsHolder: "Inverge",
     permittedPurposes: ["OWNER_TEST_ONLY"],
@@ -134,8 +198,8 @@ function rightsManifest(base: BaseFixture, kind: TrustedRepairFixtureKind) {
     validUntil: "2036-08-17T00:00:00.000+09:00",
     status: "ACTIVE",
     provenance: [
-      "owner-c2r-c-p-stage-authorization-2026-08-16",
-      TRUSTED_REPAIR_FIXTURE_VERSION,
+      `owner-${stage}-stage-authorization-2026-08-17`,
+      fixtureVersion,
       `${base.slug}-${kind}`,
     ],
   } as const;
@@ -143,15 +207,16 @@ function rightsManifest(base: BaseFixture, kind: TrustedRepairFixtureKind) {
 
 function sourceDecision(base: BaseFixture, kind: TrustedRepairFixtureKind) {
   const manifest = rightsManifest(base, kind);
+  const stage = base.subject === "appraisal_practical" ? "c2r-c-p" : "c2r-c-t";
   return {
-    decisionId: `source-decision:c2r-c-p:${base.slug}:${kind}`,
+    decisionId: `source-decision:${stage}:${base.slug}:${kind}`,
     sourceClass: manifest.sourceClass,
     purpose: "OWNER_TEST_ONLY",
     decision: "CONDITIONALLY_ELIGIBLE",
     denialCodes: [],
     decidedAt: "2026-08-17T00:00:00.000+09:00",
     policyVersion: "dabangil.c2r_a.rights_safe_adaptive_variant_foundry.v1",
-    decisionBasisChecksum: `sha256:synthetic-${base.slug}-${kind}-c2r-c-p-v1`,
+    decisionBasisChecksum: `sha256:synthetic-${base.slug}-${kind}-${stage}-v1`,
     rightsManifestId: manifest.manifestId,
     rightsManifestVersionId: manifest.manifestVersionId,
     rightsEvaluatedAt: "2026-08-17T00:00:00.000+09:00",
@@ -222,16 +287,31 @@ export function validateTrustedRepairPracticeAnchor(
   return { valid: reasons.length === 0, reasons } as const;
 }
 
+export function validateTrustedRepairTheoryAnchor(
+  anchor: TrustedRepairTheoryAnchor,
+) {
+  const reasons: string[] = [];
+  if (anchor.anchorId !== anchor.scopedPredicate.anchorId) {
+    reasons.push("scoped_predicate_anchor_id_mismatch");
+  }
+  if (anchor.scopedPredicate.anchorKind !== "THEORY_SCOPED_PREDICATE") {
+    reasons.push("scoped_predicate_kind_invalid");
+  }
+  return { valid: reasons.length === 0, reasons } as const;
+}
+
 export function validateTrustedRepairFixtureEligibility(
   fixture: TrustedRepairFixture,
   evaluatedAt = new Date().toISOString(),
 ) {
   const manifest = fixture.rights;
-  const practiceAnchorReasons = fixture.anchors.flatMap((anchor) =>
-    validateTrustedRepairPracticeAnchor(anchor).reasons.map(
-      (reason) => `${anchor.anchorId}:${reason}`,
-    ),
-  );
+  const anchorReasons = fixture.anchors.flatMap((anchor) => {
+    const result =
+      "calculationRelation" in anchor
+        ? validateTrustedRepairPracticeAnchor(anchor)
+        : validateTrustedRepairTheoryAnchor(anchor);
+    return result.reasons.map((reason) => `${anchor.anchorId}:${reason}`);
+  });
   const rightsAllowed = (
     TRUSTED_REPAIR_ELIGIBLE_RIGHTS_CLASSES as readonly TrustedRepairRightsClass[]
   ).includes(manifest.sourceClass);
@@ -267,13 +347,13 @@ export function validateTrustedRepairFixtureEligibility(
       !rightsDenied &&
       decision.decision === "CONDITIONALLY_ELIGIBLE" &&
       exactRightsBinding &&
-      practiceAnchorReasons.length === 0 &&
+      anchorReasons.length === 0 &&
       fixture.releaseState === "AUTOMATED_CHECKED",
     reasons: [
       ...(rightsAllowed ? [] : ["rights_class_not_eligible"]),
       ...(rightsDenied ? ["rights_class_denied"] : []),
       ...(exactRightsBinding ? [] : ["exact_rights_manifest_binding_invalid"]),
-      ...practiceAnchorReasons,
+      ...anchorReasons,
     ],
   } as const;
 }
@@ -306,6 +386,12 @@ const GOLD_FAMILIES = [
     "연간 순수익 차감 관계",
     "repair-anchor:practice:synthetic-net-income",
   ],
+  [
+    "theory-income-approach-scope",
+    "appraisal_theory",
+    "수익방식 기대수익-가치 술어",
+    "repair-anchor:theory:synthetic-income-approach",
+  ],
 ] as const satisfies readonly (readonly [
   string,
   TrustedRepairSubject,
@@ -322,9 +408,13 @@ export const TRUSTED_REPAIR_GOLD_CANDIDATES: readonly TrustedRepairGoldCandidate
       sampleIndex,
       goldTier: sampleIndex === 1 ? ("GOLDEN" as const) : ("OWNER_GOLD" as const),
       answerSample:
-        sampleIndex === 1
-          ? "연간 총수익은 120,000,000원/년, 연간 운영비는 20,000,000원/년이다. 120,000,000 - 20,000,000 = 100,000,000원/년이고 연간 순수익은 100,000,000원/년으로 양의 부호이며 반올림 없음."
-          : "총수익 120,000,000원, 운영비 20,000,000원, 순수익 100,000,000원.",
+        subject === "appraisal_practical"
+          ? sampleIndex === 1
+            ? "연간 총수익은 120,000,000원/년, 연간 운영비는 20,000,000원/년이다. 120,000,000 - 20,000,000 = 100,000,000원/년이고 연간 순수익은 100,000,000원/년으로 양의 부호이며 반올림 없음."
+            : "총수익 120,000,000원, 운영비 20,000,000원, 순수익 100,000,000원."
+          : sampleIndex === 1
+            ? "수익방식은 기대수익을 가치로 전환한다. 역사적 원가만 사용한다는 술어는 합성 원가방식 반례에 속한다."
+            : "수익방식과 원가방식은 모두 가치를 설명한다.",
       expectedPrimaryGap: `${anchorId}:missing-or-unsupported`,
       acceptableAlternativeGaps: [
         `${anchorId}:partial`,
@@ -345,7 +435,7 @@ export const TRUSTED_REPAIR_GOLD_CANDIDATES: readonly TrustedRepairGoldCandidate
       expectedProofEvaluation:
         sampleIndex === 1 ? ("PASS" as const) : ("UNSUPPORTED" as const),
       adjudicationState: "OWNER_AUTHORIZED_SYNTHETIC_STAGE_FIXTURE" as const,
-      rightsManifestId: `rights-manifest:c2r-c-p:gold:${familyId}:${sampleIndex}`,
+      rightsManifestId: `rights-manifest:${subject === "appraisal_practical" ? "c2r-c-p" : "c2r-c-t"}:gold:${familyId}:${sampleIndex}`,
     })),
   );
 
@@ -392,11 +482,11 @@ export function trustedRepairBankFirstSelection(input: {
 export function assertTrustedRepairFixtureInventory(
   evaluatedAt = new Date().toISOString(),
 ) {
-  if (TRUSTED_REPAIR_FIXTURES.length !== 7) {
-    throw new Error("practice trusted-repair fixture inventory must contain 7 items");
+  if (TRUSTED_REPAIR_FIXTURES.length !== 14) {
+    throw new Error("trusted-repair fixture inventory must contain 14 items");
   }
-  if (TRUSTED_REPAIR_GOLD_CANDIDATES.length !== 2) {
-    throw new Error("practice trusted-repair Gold inventory must contain 2 candidates");
+  if (TRUSTED_REPAIR_GOLD_CANDIDATES.length !== 4) {
+    throw new Error("trusted-repair Gold inventory must contain 4 candidates");
   }
   for (const fixture of TRUSTED_REPAIR_FIXTURES) {
     if (

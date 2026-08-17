@@ -194,7 +194,7 @@ test("[C2R-C-P-R11] API and learner shell remain Owner-only default-off", () => 
   assert.match(loop, /view\.session\.state === "diagnosed" \|\|/);
   assert.match(
     read("app/app/trusted-repair/page.tsx"),
-    /<TrustedRepairLoop ownerScope=\{ownerScope\} \/>/,
+    /<TrustedRepairLoop[\s\S]*?ownerScope=\{ownerScope\}[\s\S]*?availableSubjects=\{availableSubjects\}/,
   );
   assert.doesNotMatch(loop, /sessionStorage[\s\S]*TextEncoder|SHA-256/);
   assert.match(loop, /clearDurablePendingCommand\(\)/);

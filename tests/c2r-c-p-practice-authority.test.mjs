@@ -38,7 +38,7 @@ function matrixRows(source) {
   );
 }
 
-test("C2R-C-P authority selects only C2R-C-T after protected Practice completion", async () => {
+test("C2R-C-P stays complete while protected Theory selects C2R-C-L", async () => {
   const [unified, launch, roadmap, agents] = await Promise.all([
     json("config/dabangil-unified-program-contract.json"),
     json("config/dabangil-unified-product-multisurface-launch-v1.json"),
@@ -54,19 +54,20 @@ test("C2R-C-P authority selects only C2R-C-T after protected Practice completion
     unified.roadmapContract.soleNextReplacementStageId,
     launch.preservedCurrentAuthority.currentReplacementStageId,
   ];
-  assert.deepEqual(current, Array(current.length).fill("C2R-C-T"));
+  assert.deepEqual(current, Array(current.length).fill("C2R-C-L"));
   assert.equal(stages.get("C2R-C-P").state, "complete_practice_runtime");
   assert.equal(stages.get("C2R-C-P").coveringPr, 756);
-  assert.equal(stages.get("C2R-C-T").state, "authorized_unstarted");
-  assert.equal(stages.get("C2R-C-L").state, "queued_dependency_blocked");
-  assert.match(roadmap, /soleNextReplacementStage: C2R-C-T/);
+  assert.equal(stages.get("C2R-C-T").state, "complete_theory_runtime");
+  assert.equal(stages.get("C2R-C-T").coveringPr, 762);
+  assert.equal(stages.get("C2R-C-L").state, "authorized_unstarted");
+  assert.match(roadmap, /soleNextReplacementStage: C2R-C-L/);
   assert.match(roadmap, /c2rCPState: complete_practice_runtime/);
-  assert.match(roadmap, /c2rCTState: authorized_unstarted/);
-  assert.match(agents, /WCV-C2 \/ C2 \/ #717 \/ C2R-C-T \/ #703 \/ authorized_unstarted/);
+  assert.match(roadmap, /c2rCTState: complete_theory_runtime/);
+  assert.match(agents, /WCV-C2 \/ C2 \/ #717 \/ C2R-C-L \/ #703 \/ authorized_unstarted/);
   assert.ok(agents.indexOf(DECISION) < agents.indexOf("docs/decisions/2026-08-15-owner-c2r-b-typed-proof-obligations.md"));
 });
 
-test("C2R-C-P declares exactly 11 non-effective PR 756 regression candidates", async () => {
+test("C2R-C-P preserves exactly its 11 PR 756 regression declarations", async () => {
   const [source, unified] = await Promise.all([
     text(MATRIX),
     json("config/dabangil-unified-program-contract.json"),
@@ -76,8 +77,6 @@ test("C2R-C-P declares exactly 11 non-effective PR 756 regression candidates", a
   for (const [number, cells] of rows) {
     const candidate = CANDIDATES.get(number);
     if (!candidate) {
-      assert.equal(cells[8], "`uncovered`");
-      assert.equal(cells[10], "`none` |");
       continue;
     }
     const [assertionId, path, inherited] = candidate;
@@ -104,11 +103,11 @@ test("C2R-C-P declares exactly 11 non-effective PR 756 regression candidates", a
     assert.equal("reviewedHeadSha" in declaration, false);
     assert.equal("mergeCommitSha" in declaration, false);
   }
-  const coverage = unified.wcvCampaignOverlay.c2StructuralRecovery.coverageProtocol;
-  assert.equal(coverage.activeCandidateCoveringPr, 756);
-  assert.deepEqual(coverage.activeCandidateRows, [...CANDIDATES.keys()]);
-  assert.equal(coverage.postMergeUncoveredRowCount, 10);
-  assert.equal(coverage.repositoryCandidateDeclaration.candidateDeclarationAloneCreatesEffectiveCoverage, false);
+  const practice = unified.wcvCampaignOverlay.c2StructuralRecovery.replacementStages.find(
+    (stage) => stage.id === "C2R-C-P",
+  );
+  assert.deepEqual(practice.directRegressionRows, [...CANDIDATES.keys()]);
+  assert.equal(practice.coveringPr, 756);
 });
 
 test("C2R-C-P preserves terminal issue and Production gates", async () => {

@@ -19,6 +19,7 @@ type ApiAction =
   | "request_scaffold"
   | "submit_repair"
   | "confirm_claim"
+  | "confirm_theory_claim"
   | "continue";
 
 type PendingCommand = {
@@ -33,7 +34,7 @@ type DurablePendingCommand = PendingCommand & {
 const PENDING_COMMAND_STORAGE_KEY =
   "inverge:c2r-c-p:pending-command:v1";
 const START_FINGERPRINT_PATTERN =
-  /^\{"action":"start","subject":"appraisal_practical","inputMode":"(?:TYPED_TEXT|EDITABLE_PHOTO_OCR|EDITABLE_PDF_OCR|EDITABLE_VOICE_TRANSCRIPTION|STRUCTURED_SELECTION)"\}$/u;
+  /^\{"action":"start","subject":"(?:appraisal_practical|appraisal_theory)","inputMode":"(?:TYPED_TEXT|EDITABLE_PHOTO_OCR|EDITABLE_PDF_OCR|EDITABLE_VOICE_TRANSCRIPTION|STRUCTURED_SELECTION)"\}$/u;
 const UUID_PATTERN =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/iu;
 
@@ -92,6 +93,7 @@ function clearDurablePendingCommand() {
 
 const SUBJECTS: readonly { value: Subject; label: string }[] = [
   { value: "appraisal_practical", label: "감정평가실무" },
+  { value: "appraisal_theory", label: "감정평가이론" },
 ];
 
 const INPUT_MODES: readonly { value: InputMode; label: string }[] = [
@@ -128,7 +130,7 @@ function stateHeading(state: string) {
     self_diagnosis_committed: "독립 시도를 기준 앵커와 대조합니다",
     diagnosed: "가장 중요한 복구 지점이 정해졌습니다",
     exposure_committed: "가장 작은 도움만 열었습니다",
-    repair_submitted: "계산관계를 구조화해 직접 확인하세요",
+    repair_submitted: "증명 필드를 구조화해 직접 확인하세요",
     verified: "같은 세션 기준을 다시 구성했습니다",
     partial: "일부 기준은 아직 남아 있습니다",
     guided: "가이드 모드로 마쳤습니다",
@@ -140,11 +142,19 @@ function stateHeading(state: string) {
   return headings[state] ?? "신뢰 복구";
 }
 
-export function TrustedRepairLoop({ ownerScope }: { ownerScope: string }) {
+export function TrustedRepairLoop({
+  ownerScope,
+  availableSubjects,
+}: {
+  ownerScope: string;
+  availableSubjects: readonly Subject[];
+}) {
   const searchParams = useSearchParams();
   const initialSessionId = searchParams.get("sessionId");
   const [view, setView] = useState<TrustedRepairView | null>(null);
-  const [subject, setSubject] = useState<Subject>("appraisal_practical");
+  const [subject, setSubject] = useState<Subject>(
+    availableSubjects[0] ?? "appraisal_practical",
+  );
   const [inputMode, setInputMode] = useState<InputMode>("TYPED_TEXT");
   const [draft, setDraft] = useState("");
   const [attempt, setAttempt] = useState("");
@@ -152,6 +162,10 @@ export function TrustedRepairLoop({ ownerScope }: { ownerScope: string }) {
   const [grossIncome, setGrossIncome] = useState("");
   const [operatingExpense, setOperatingExpense] = useState("");
   const [resultValue, setResultValue] = useState("");
+  const [requiredTheoryPolarity, setRequiredTheoryPolarity] =
+    useState<"ASSERTED" | "NEGATED">("ASSERTED");
+  const [forbiddenTheoryPolarity, setForbiddenTheoryPolarity] =
+    useState<"ASSERTED" | "NEGATED">("NEGATED");
   const [prediction, setPrediction] = useState("likely_partial");
   const [confidence, setConfidence] = useState("medium");
   const [selfDiagnosis, setSelfDiagnosis] = useState("missing_core_reason");
@@ -161,6 +175,7 @@ export function TrustedRepairLoop({ ownerScope }: { ownerScope: string }) {
 
   function acceptView(next: TrustedRepairView) {
     setView(next);
+    setSubject(next.session.subject);
     setDraft(next.editableCaptureDraft ?? "");
     setAttempt("");
     setRepair("");
@@ -279,6 +294,42 @@ export function TrustedRepairLoop({ ownerScope }: { ownerScope: string }) {
     };
   }
 
+  function structuredTheoryClaim() {
+    const confirmation = view?.theoryStructuredConfirmation;
+    if (!confirmation) return null;
+    return {
+      sourceRevisionId: confirmation.sourceRevisionId,
+      anchorId: confirmation.anchorId,
+      anchorVersionId: confirmation.anchorVersionId,
+      targetScopeId: confirmation.targetScopeId,
+      clauses: [
+        {
+          clauseIndex: 1,
+          scopeResolution: "EXACT" as const,
+          scopeId: confirmation.targetScopeId,
+          predicates: [
+            {
+              predicateId: confirmation.requiredPredicates[0],
+              polarity: requiredTheoryPolarity,
+            },
+          ],
+        },
+        {
+          clauseIndex: 2,
+          scopeResolution: "EXACT" as const,
+          scopeId: confirmation.targetScopeId,
+          predicates: [
+            {
+              predicateId: confirmation.forbiddenPredicates[0],
+              polarity: forbiddenTheoryPolarity,
+            },
+          ],
+        },
+      ],
+      confirmationMode: "MANUAL_STRUCTURED" as const,
+    };
+  }
+
   const primary = (() => {
     if (!view) {
       return {
@@ -316,10 +367,14 @@ export function TrustedRepairLoop({ ownerScope }: { ownerScope: string }) {
       return { label: "가이드로 전환", run: () => command("continue", { continuation: "SWITCH_TO_GUIDED" }), disabled: false };
     }
     if (state === "repair_submitted") {
-      const claim = structuredClaim();
+      const theory = view.session.subject === "appraisal_theory";
+      const claim = theory ? structuredTheoryClaim() : structuredClaim();
       return {
-        label: "구조화 계산관계 확정",
-        run: () => command("confirm_claim", { claim }),
+        label: theory ? "구조화 이론술어 확정" : "구조화 계산관계 확정",
+        run: () =>
+          command(theory ? "confirm_theory_claim" : "confirm_claim", {
+            claim,
+          }),
         disabled: claim === null,
       };
     }
@@ -343,12 +398,26 @@ export function TrustedRepairLoop({ ownerScope }: { ownerScope: string }) {
   const terminal = view ? TERMINAL_STATES.has(view.session.state) : false;
 
   return (
-    <div className="mx-auto w-full max-w-3xl space-y-5" data-c2r-c-p-practice-trusted-repair>
+    <div
+      className="mx-auto w-full max-w-3xl space-y-5"
+      data-c2r-c-p-practice-trusted-repair={
+        view?.session.subject === "appraisal_theory" ? undefined : ""
+      }
+      data-c2r-c-t-theory-trusted-repair={
+        view?.session.subject === "appraisal_theory" ? "" : undefined
+      }
+    >
       <header className="space-y-2">
         <p className="v3-type-caption text-[var(--color-text-brand)]">Owner 전용 · 합성 fixture · 기본 비활성</p>
-        <h1 className="v3-type-heading-1 text-[var(--color-text-primary)]">실무 계산관계 신뢰 복구</h1>
+        <h1 className="v3-type-heading-1 text-[var(--color-text-primary)]">
+          {subject === "appraisal_theory"
+            ? "이론 목표범위 술어 신뢰 복구"
+            : "실무 계산관계 신뢰 복구"}
+        </h1>
         <p className="v3-type-body text-[var(--color-text-secondary)]">
-          독립 시도 뒤에 가장 작은 도움을 열고, 피연산자·연산자·결과·단위·부호·반올림을 하나의 계산관계로 다시 확인합니다.
+          {subject === "appraisal_theory"
+            ? "독립 시도 뒤에 가장 작은 도움을 열고, 정확한 목표 범위 안에서 필수·금지 술어와 극성을 다시 확인합니다."
+            : "독립 시도 뒤에 가장 작은 도움을 열고, 피연산자·연산자·결과·단위·부호·반올림을 하나의 계산관계로 다시 확인합니다."}
         </p>
       </header>
 
@@ -371,7 +440,9 @@ export function TrustedRepairLoop({ ownerScope }: { ownerScope: string }) {
             <label className="space-y-2">
               <span className="v3-type-label-strong">과목</span>
               <select value={subject} onChange={(event) => setSubject(event.target.value as Subject)} className="min-h-12 w-full rounded-lg border border-[var(--color-border-default)] bg-white px-3">
-                {SUBJECTS.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}
+                {SUBJECTS.filter((item) =>
+                  availableSubjects.includes(item.value),
+                ).map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}
               </select>
             </label>
             <label className="space-y-2">
@@ -437,8 +508,8 @@ export function TrustedRepairLoop({ ownerScope }: { ownerScope: string }) {
             ) : null}
 
             {view.session.proofEvaluation ? (
-              <section className="rounded-lg border border-[var(--color-border-default)] p-3" aria-label="계산관계 검증 상태">
-                <p className="v3-type-label-strong">계산관계 검증: {view.session.proofEvaluation.state}</p>
+              <section className="rounded-lg border border-[var(--color-border-default)] p-3" aria-label={view.session.subject === "appraisal_theory" ? "이론술어 검증 상태" : "계산관계 검증 상태"}>
+                <p className="v3-type-label-strong">{view.session.subject === "appraisal_theory" ? "이론술어 검증" : "계산관계 검증"}: {view.session.proofEvaluation.state}</p>
                 <p className="mt-1 text-sm text-[var(--color-text-secondary)]">
                   {view.session.proofEvaluation.validatorId} · {view.session.proofEvaluation.anchorVersionId}
                 </p>
@@ -479,6 +550,52 @@ export function TrustedRepairLoop({ ownerScope }: { ownerScope: string }) {
                   <div><dt className="inline font-medium">부호:</dt> <dd className="inline">양수</dd></div>
                   <div><dt className="inline font-medium">반올림:</dt> <dd className="inline">HALF_UP · 0자리 · 불필요</dd></div>
                 </dl>
+              </fieldset>
+            ) : null}
+
+            {view.session.state === "repair_submitted" && view.theoryStructuredConfirmation ? (
+              <fieldset className="space-y-3 rounded-lg border border-[var(--color-border-focus)] p-4">
+                <legend className="px-1 v3-type-label-strong">직접 확인하는 목표범위 술어</legend>
+                <p className="text-sm text-[var(--color-text-secondary)]">
+                  자유서술은 후보 근거일 뿐입니다. 목표 범위와 두 술어의 극성을 닫힌 필드로 직접 확인해야 같은 세션 검증이 가능합니다.
+                </p>
+                <dl className="grid gap-1 text-sm text-[var(--color-text-secondary)]">
+                  <div><dt className="inline font-medium">목표 범위:</dt> <dd className="inline">{view.theoryStructuredConfirmation.targetScopeId}</dd></div>
+                  <div><dt className="inline font-medium">필수 술어:</dt> <dd className="inline">{view.theoryStructuredConfirmation.requiredPredicates[0]}</dd></div>
+                  <div><dt className="inline font-medium">금지 술어:</dt> <dd className="inline">{view.theoryStructuredConfirmation.forbiddenPredicates[0]}</dd></div>
+                </dl>
+                <label className="block space-y-1">
+                  <span className="text-sm font-medium">필수 술어 극성</span>
+                  <select
+                    aria-label="필수 술어 극성"
+                    value={requiredTheoryPolarity}
+                    onChange={(event) =>
+                      setRequiredTheoryPolarity(
+                        event.target.value as "ASSERTED" | "NEGATED",
+                      )
+                    }
+                    className="min-h-11 w-full rounded-md border bg-transparent px-3"
+                  >
+                    <option value="ASSERTED">긍정</option>
+                    <option value="NEGATED">부정</option>
+                  </select>
+                </label>
+                <label className="block space-y-1">
+                  <span className="text-sm font-medium">금지 술어 극성</span>
+                  <select
+                    aria-label="금지 술어 극성"
+                    value={forbiddenTheoryPolarity}
+                    onChange={(event) =>
+                      setForbiddenTheoryPolarity(
+                        event.target.value as "ASSERTED" | "NEGATED",
+                      )
+                    }
+                    className="min-h-11 w-full rounded-md border bg-transparent px-3"
+                  >
+                    <option value="NEGATED">부정</option>
+                    <option value="ASSERTED">긍정</option>
+                  </select>
+                </label>
               </fieldset>
             ) : null}
 
