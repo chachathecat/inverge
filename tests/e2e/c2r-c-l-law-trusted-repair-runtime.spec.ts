@@ -160,6 +160,7 @@ async function expectState(page: Page, state: string) {
 
 async function activate(page: Page, keyboardOnly = false) {
   const button = page.locator("[data-primary-action]");
+  await expect(button).toHaveCount(1);
   if (keyboardOnly) {
     await button.focus();
     await page.keyboard.press("Enter");
@@ -203,13 +204,18 @@ async function completeLawJourney(
   await activate(page, keyboardOnly);
   await expectState(page, "editable_capture_draft");
   await activate(page, keyboardOnly);
+  await expectState(page, "revision_confirmed");
   await activate(page, keyboardOnly);
+  await expectState(page, "prediction_committed");
   await page.getByLabel("도움 전 독립 시도").fill(candidateText);
   await activate(page, keyboardOnly);
+  await expectState(page, "independent_attempt_committed");
   await activate(page, keyboardOnly);
+  await expectState(page, "self_diagnosis_committed");
   await activate(page, keyboardOnly);
   await expectState(page, "diagnosed");
   await activate(page, keyboardOnly);
+  await expectState(page, "exposure_committed");
   await page.getByLabel("복구 답안").fill(repairedText);
   await activate(page, keyboardOnly);
   await expectState(page, "repair_submitted");
