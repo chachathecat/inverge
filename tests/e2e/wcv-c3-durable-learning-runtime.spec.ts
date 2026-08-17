@@ -215,18 +215,34 @@ async function completeC3Ui(page: Page, sourceSessionId: string, subject: Subjec
   await expect(page.locator("[data-wcv-c3-durable-learning]")).toBeVisible();
   const axe = await new AxeBuilder({ page }).analyze();
   expect(axe.violations.filter((item) => item.impact === "serious" || item.impact === "critical")).toEqual([]);
-  const activate = async () => {
+  const activate = async (action: string, label: string | RegExp) => {
     const button = page.locator("[data-primary-action]");
+    await expect(button).toHaveText(label);
+    const responsePromise = page.waitForResponse((response) => {
+      if (response.request().method() !== "POST") return false;
+      if (new URL(response.url()).pathname !== "/api/review-os/durable-learning") return false;
+      try {
+        return response.request().postDataJSON()?.action === action;
+      } catch {
+        return false;
+      }
+    });
     if (keyboardOnly) { await button.focus(); await page.keyboard.press("Enter"); } else await button.click();
+    const response = await responsePromise;
+    const payload = await response.json();
+    expect(response.status(), `${action}:${payload?.error ?? "unknown"}`).toBe(200);
+    expect(payload?.ok, `${action}:${payload?.error ?? "unknown"}`).toBe(true);
   };
-  await activate();
+  await activate("start", "검증된 C2 복구에서 시작");
   for (const { stage, state } of [
     { stage: "D1", state: "D1_REPRODUCED" },
     { stage: "D7", state: "D7_TRANSFER_OBSERVED" },
     { stage: "TIMED", state: "TIMED_RECURRENCE_CONFIRMED" },
   ] as const) {
-    await activate();
-    await page.getByLabel("보지 않고 작성한 독립 답안").fill(`비공개 ${subject} 독립 답안`);
+    await activate("prepare_attempt", /독립 시도 시작/);
+    const answer = page.getByLabel("보지 않고 작성한 독립 답안");
+    await expect(answer).toBeVisible();
+    await answer.fill(`비공개 ${subject} 독립 답안`);
     const omitClosedZero = stage === "D1" && subject !== "appraisal_practical";
     await fillLearnerResponse(page, subject, stage, omitClosedZero);
     if (omitClosedZero) {
@@ -237,10 +253,10 @@ async function completeC3Ui(page: Page, sourceSessionId: string, subject: Subjec
         await page.getByLabel("열린 차단 근거 수").fill("0");
       }
     }
-    await activate();
+    await activate("record_evidence", "독립 시도 제출 및 검증");
     await expect(page.getByText(state === "D1_REPRODUCED" ? /D\+1 독립 재현/ : state === "D7_TRANSFER_OBSERVED" ? /D\+7 전이 확인/ : /시간제한 재발 검사 확인/)).toBeVisible();
   }
-  await activate();
+  await activate("evaluate_currently_clear", /현재 안정 확인/);
   await expect(page.getByText("현재 안정 후보", { exact: true })).toBeVisible();
   expect([...foreignHosts]).toEqual([]);
   return new URL(page.url()).searchParams.get("caseId") as string;

@@ -132,6 +132,12 @@ test("WCV-C3 API/UI and exact-head runtime enforce trusted timing and metadata s
   assert.match(browser, /width: 1440/);
   assert.match(browser, /new AxeBuilder/);
   assert.match(browser, /fillLearnerResponse/);
+  assert.match(browser, /waitForResponse/);
+  assert.match(browser, /postDataJSON\(\)\?\.action === action/);
+  assert.match(browser, /activate\("start", "검증된 C2 복구에서 시작"\)/);
+  assert.match(browser, /activate\("prepare_attempt", \/독립 시도 시작\//);
+  assert.match(browser, /activate\("record_evidence", "독립 시도 제출 및 검증"\)/);
+  assert.match(browser, /activate\("evaluate_currently_clear", \/현재 안정 확인\//);
   assert.doesNotMatch(browser, /expectedCommitmentForFixture/);
   assert.match(browser, /cross-user|denied/);
   assert.match(await read("tests/e2e/wcv-c3-playwright.config.ts"), /timeout: 600_000/);
