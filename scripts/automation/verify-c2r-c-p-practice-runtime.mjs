@@ -35,6 +35,12 @@ const BROWSER_CONFIG_PATH = path.join(
   REPOSITORY_ROOT,
   "tests/e2e/c2r-c-p-playwright.config.ts",
 );
+const BROWSER_RUNTIME_CONFIG_PATH = THEORY_RUNTIME
+  ? path.join(
+      path.dirname(BROWSER_CONFIG_PATH),
+      ".c2r-c-t-playwright.runtime.config.ts",
+    )
+  : BROWSER_CONFIG_PATH;
 const BROWSER_SPEC_PATH = path.join(
   REPOSITORY_ROOT,
   THEORY_RUNTIME
@@ -694,6 +700,20 @@ function prepareRuntimeWorkdir(root) {
       source.replace(expected, `project_id = "${PROJECT_ID}"`),
       { encoding: "utf8", mode: 0o600 },
     );
+    const browserConfigSource = fs.readFileSync(BROWSER_CONFIG_PATH, "utf8");
+    const practiceMatch =
+      'testMatch: "c2r-c-p-practice-trusted-repair-runtime.spec.ts"';
+    if (browserConfigSource.split(practiceMatch).length !== 2) {
+      throw new Error("C2 browser runtime test match source is not exact");
+    }
+    fs.writeFileSync(
+      BROWSER_RUNTIME_CONFIG_PATH,
+      browserConfigSource.replace(
+        practiceMatch,
+        'testMatch: "c2r-c-t-theory-trusted-repair-runtime.spec.ts"',
+      ),
+      { encoding: "utf8", mode: 0o600 },
+    );
   }
   for (const migrationPath of C2_MIGRATION_PATHS) {
     fs.copyFileSync(
@@ -790,17 +810,24 @@ function cleanup(root, requireComplete, dependencies = {}) {
   const stopStackFn = dependencies.stopStackFn ?? stopStack;
   const assertNoDockerResourcesFn =
     dependencies.assertNoDockerResourcesFn ?? assertNoDockerResources;
-  if (fs.existsSync(path.join(root, "supabase/config.toml"))) {
-    // The verifier normally removes the stack itself. A second workflow-level
-    // cleanup must therefore be idempotent: the CLI may report no running
-    // project, while the resource assertion below remains authoritative.
-    stopStackFn(root, COMMAND_SPECS.cleanup_only_supabase_stop, true);
+  let snapshot;
+  try {
+    if (fs.existsSync(path.join(root, "supabase/config.toml"))) {
+      // The verifier normally removes the stack itself. A second workflow-level
+      // cleanup must therefore be idempotent: the CLI may report no running
+      // project, while the resource assertion below remains authoritative.
+      stopStackFn(root, COMMAND_SPECS.cleanup_only_supabase_stop, true);
+    }
+    snapshot = assertNoDockerResourcesFn(
+      "local Supabase cleanup",
+      CLEANUP_ONLY_RESOURCE_SPECS,
+    );
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+    if (THEORY_RUNTIME) {
+      fs.rmSync(BROWSER_RUNTIME_CONFIG_PATH, { force: true });
+    }
   }
-  const snapshot = assertNoDockerResourcesFn(
-    "local Supabase cleanup",
-    CLEANUP_ONLY_RESOURCE_SPECS,
-  );
-  fs.rmSync(root, { recursive: true, force: true });
   if (requireComplete && (snapshot.containers.length || snapshot.volumes.length || snapshot.networks.length)) {
     throw new Error("complete C2 cleanup was not established");
   }
@@ -1172,7 +1199,7 @@ function runBrowserSuite(input) {
     path.join(REPOSITORY_ROOT, "node_modules/@playwright/test/cli.js"),
     "test",
     BROWSER_SPEC_PATH,
-    `--config=${BROWSER_CONFIG_PATH}`,
+    `--config=${BROWSER_RUNTIME_CONFIG_PATH}`,
     ...grepArgs,
   ];
   const result = run(
@@ -1695,6 +1722,10 @@ async function runFinalRuntime() {
       fs.rmSync(root, { recursive: true, force: true });
     } catch (cleanupError) {
       runtimeError = cleanupError;
+    } finally {
+      if (THEORY_RUNTIME) {
+        fs.rmSync(BROWSER_RUNTIME_CONFIG_PATH, { force: true });
+      }
     }
   }
 

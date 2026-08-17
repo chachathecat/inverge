@@ -90,6 +90,22 @@ test("C2R-C-T exact-head runtime workflow is fork-safe and credential-free", () 
     /source\.replace\(expected, `project_id = "\$\{PROJECT_ID\}"`\)/,
   );
   assert.match(verifier, /source\.split\(expected\)\.length !== 2/);
+  assert.match(
+    verifier,
+    /\.c2r-c-t-playwright\.runtime\.config\.ts/,
+  );
+  assert.match(
+    verifier,
+    /browserConfigSource\.replace\([\s\S]*c2r-c-t-theory-trusted-repair-runtime\.spec\.ts/,
+  );
+  assert.match(
+    verifier,
+    /--config=\$\{BROWSER_RUNTIME_CONFIG_PATH\}/,
+  );
+  assert.match(
+    verifier,
+    /fs\.rmSync\(BROWSER_RUNTIME_CONFIG_PATH, \{ force: true \}\)/,
+  );
   assert.match(verifier, /c2r-c-t-theory-trusted-repair-runtime\.spec\.ts/);
   assert.match(verifier, /remoteSupabaseUsed: false/);
   assert.match(verifier, /repositorySecretsUsed: false/);
