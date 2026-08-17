@@ -309,8 +309,10 @@ export function planDurableEvidence(input: {
     subject: input.aggregate.caseRecord.subject,
     stage,
     evaluatedAt: occurredAt,
+    attemptOrdinal: prepared.attemptOrdinal,
   });
   if (
+    prepared.attemptOrdinal !== fixture.attemptOrdinal ||
     prepared.assignment.itemId !== fixture.itemId ||
     prepared.assignment.itemRevisionId !== fixture.itemRevisionId ||
     prepared.assignment.itemFamilyId !== fixture.itemFamilyId ||
@@ -527,10 +529,13 @@ export function planAttemptPreparation(input: {
     throw new DurableLearningContractError("not_eligible");
   }
   const stage = nextDurableFixtureStage(input.aggregate);
+  const attemptOrdinal =
+    input.aggregate.artifacts.filter((artifact) => artifact.stage === stage).length + 1;
   const fixture = durableFixtureFor({
     subject: input.aggregate.caseRecord.subject,
     stage,
     evaluatedAt: occurredAt,
+    attemptOrdinal,
   });
   const previouslyPresented = input.aggregate.events.some(
     (event) => event.itemId === fixture.itemId,
@@ -568,6 +573,7 @@ export function planAttemptPreparation(input: {
     attemptId,
     artifactId: randomUUID(),
     stage,
+    attemptOrdinal,
     prePresentation,
     assignment,
     trustedStartedAt: occurredAt,

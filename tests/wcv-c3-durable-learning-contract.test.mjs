@@ -100,9 +100,10 @@ function initial(subject) {
 function successfulStage(aggregate, prepareAt, submitAt) {
   const prepared = apply(aggregate, planAttemptPreparation({ aggregate, occurredAt: prepareAt }));
   const stage = prepared.caseRecord.stateData.activeAttempt.stage;
+  const attemptOrdinal = prepared.caseRecord.stateData.activeAttempt.attemptOrdinal;
   return apply(prepared, planDurableEvidence({
     aggregate: prepared,
-    commitment: expectedCommitmentForFixture(prepared.caseRecord.subject, stage),
+    commitment: expectedCommitmentForFixture(prepared.caseRecord.subject, stage, attemptOrdinal),
     body: "독립 답안 본문은 비공개 artifact에만 저장됩니다.",
     occurredAt: submitAt,
   }));
@@ -118,6 +119,21 @@ test("WCV-C3 binds a distinct typed proof to every subject and stage fixture", (
       assert.equal(durableCommitmentPasses(fixture, commitments[index]), true);
       assert.equal(durableCommitmentPasses(fixture, commitments[(index + 1) % commitments.length]), false);
       assert.match(fixture.prompt, new RegExp(commitments[index].anchorId.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
+      if (stage !== "D1") {
+        const retry = durableFixtureFor({
+          subject,
+          stage,
+          evaluatedAt: "2026-08-17T00:00:00.000Z",
+          attemptOrdinal: 2,
+        });
+        assert.notEqual(retry.itemId, fixture.itemId);
+        assert.notEqual(retry.itemFamilyId, fixture.itemFamilyId);
+        assert.equal(durableCommitmentPasses(retry, commitments[index]), false);
+        assert.equal(
+          durableCommitmentPasses(retry, expectedCommitmentForFixture(subject, stage, 2)),
+          true,
+        );
+      }
     });
   }
 });
@@ -221,6 +237,76 @@ test("WCV-C3 rejects a same-surface or pre-exposed transfer assignment and prese
   assert.equal(timeout.caseRecord.state, "D7_TRANSFER_OBSERVED");
   assert.equal(timeout.events.at(-1).outcome, "TIMEOUT");
   assert.equal(timeout.events.at(-1).payload.timedAttempt.late, true);
+});
+
+test("WCV-C3 gives a failed D+7 attempt a fresh deterministic unseen retry", () => {
+  let aggregate = initial("appraisal_practical");
+  aggregate = successfulStage(aggregate, "2026-08-18T00:00:01.000Z", "2026-08-18T00:02:01.000Z");
+  const firstPrepared = apply(aggregate, planAttemptPreparation({ aggregate, occurredAt: "2026-08-24T00:00:01.000Z" }));
+  const firstAttempt = firstPrepared.caseRecord.stateData.activeAttempt;
+  const wrong = { ...expectedCommitmentForFixture("appraisal_practical", "D7"), result: 1 };
+  aggregate = apply(firstPrepared, planDurableEvidence({
+    aggregate: firstPrepared,
+    commitment: wrong,
+    body: "first D+7 attempt fails",
+    occurredAt: "2026-08-24T00:02:01.000Z",
+  }));
+  assert.equal(aggregate.caseRecord.state, "D1_REPRODUCED");
+
+  const retryPrepared = apply(aggregate, planAttemptPreparation({ aggregate, occurredAt: "2026-08-24T00:03:01.000Z" }));
+  const retryAttempt = retryPrepared.caseRecord.stateData.activeAttempt;
+  const retryFixture = durableFixtureFor({
+    subject: "appraisal_practical",
+    stage: "D7",
+    evaluatedAt: "2026-08-24T00:03:01.000Z",
+    attemptOrdinal: 2,
+  });
+  assert.equal(retryAttempt.attemptOrdinal, 2);
+  assert.notEqual(retryAttempt.assignment.itemId, firstAttempt.assignment.itemId);
+  assert.notEqual(retryAttempt.assignment.itemFamilyId, firstAttempt.assignment.itemFamilyId);
+  assert.equal(retryAttempt.prePresentation.unseen, true);
+  assert.equal(
+    durableCommitmentPasses(retryFixture, expectedCommitmentForFixture("appraisal_practical", "D7")),
+    false,
+  );
+  aggregate = apply(retryPrepared, planDurableEvidence({
+    aggregate: retryPrepared,
+    commitment: expectedCommitmentForFixture("appraisal_practical", "D7", 2),
+    body: "fresh D+7 retry succeeds",
+    occurredAt: "2026-08-24T00:05:01.000Z",
+  }));
+  assert.equal(aggregate.caseRecord.state, "D7_TRANSFER_OBSERVED");
+});
+
+test("WCV-C3 gives a timed-out attempt a fresh deterministic timed retry", () => {
+  let aggregate = initial("appraisal_theory");
+  aggregate = successfulStage(aggregate, "2026-08-18T00:00:01.000Z", "2026-08-18T00:02:01.000Z");
+  aggregate = successfulStage(aggregate, "2026-08-24T00:00:01.000Z", "2026-08-24T00:02:01.000Z");
+  const firstPrepared = apply(aggregate, planAttemptPreparation({ aggregate, occurredAt: "2026-08-24T00:03:00.000Z" }));
+  const firstAttempt = firstPrepared.caseRecord.stateData.activeAttempt;
+  aggregate = apply(firstPrepared, planDurableEvidence({
+    aggregate: firstPrepared,
+    commitment: expectedCommitmentForFixture("appraisal_theory", "TIMED"),
+    body: "late timed response",
+    occurredAt: "2026-08-24T00:33:01.000Z",
+  }));
+  assert.equal(aggregate.caseRecord.state, "D7_TRANSFER_OBSERVED");
+
+  const retryPrepared = apply(aggregate, planAttemptPreparation({ aggregate, occurredAt: "2026-08-24T00:34:00.000Z" }));
+  const retryAttempt = retryPrepared.caseRecord.stateData.activeAttempt;
+  assert.equal(retryAttempt.attemptOrdinal, 2);
+  assert.notEqual(retryAttempt.assignment.itemId, firstAttempt.assignment.itemId);
+  assert.notEqual(retryAttempt.assignment.itemFamilyId, firstAttempt.assignment.itemFamilyId);
+  assert.equal(retryAttempt.prePresentation.unseen, true);
+  aggregate = apply(retryPrepared, planDurableEvidence({
+    aggregate: retryPrepared,
+    commitment: expectedCommitmentForFixture("appraisal_theory", "TIMED", 2),
+    body: "fresh timed retry succeeds",
+    occurredAt: "2026-08-24T00:49:00.000Z",
+  }));
+  assert.equal(aggregate.caseRecord.state, "TIMED_RECURRENCE_CONFIRMED");
+  assert.equal(aggregate.events.at(-1).payload.timedAttempt.elapsedSeconds, 900);
+  assert.equal(aggregate.events.at(-1).payload.timedAttempt.late, false);
 });
 
 test("WCV-C3 later qualifying independent failure reopens currently-clear evidence", () => {

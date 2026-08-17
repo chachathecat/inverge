@@ -13,6 +13,7 @@ export type DurableLearningFixtureStage = "D1" | "D7" | "TIMED" | "RECURRENCE";
 
 export type DurableLearningFixture = Readonly<{
   stage: DurableLearningFixtureStage;
+  attemptOrdinal: number;
   fixture: TrustedRepairFixture;
   prompt: string;
   expectedCommitment: DurableSubjectCommitmentV1;
@@ -101,11 +102,66 @@ const STAGE_PROOFS = {
   },
 } as const satisfies Record<TrustedRepairSubject, Record<DurableLearningFixtureStage, StageProof>>;
 
+function stageProofForAttempt(
+  subject: TrustedRepairSubject,
+  stage: DurableLearningFixtureStage,
+  attemptOrdinal: number,
+): StageProof {
+  if (!Number.isSafeInteger(attemptOrdinal) || attemptOrdinal < 1) {
+    throw new Error("durable-learning:invalid-attempt-ordinal");
+  }
+  const base = STAGE_PROOFS[subject][stage];
+  if (attemptOrdinal === 1 || stage === "D1") return base;
+  const retry = `retry-${attemptOrdinal}`;
+  if (base.expectedCommitment.kind === "PRACTICE_CALCULATION") {
+    const shift = (attemptOrdinal - 1) % 1000;
+    const grossIncome = base.expectedCommitment.grossIncome + shift * 1_000_000;
+    const operatingExpense = base.expectedCommitment.operatingExpense + shift * 100_000;
+    const expectedCommitment = {
+      ...base.expectedCommitment,
+      anchorId: `${base.expectedCommitment.anchorId}:${retry}`,
+      grossIncome,
+      operatingExpense,
+      result: grossIncome - operatingExpense,
+    } as const;
+    return {
+      expectedCommitment,
+      prompt: `새 합성 재시도 ${attemptOrdinal}: 앵커 ${expectedCommitment.anchorId}에서 연간 총수익 ${grossIncome}원과 연간 운영비 ${operatingExpense}원의 차감 결과·원/년 단위·양의 부호·반올림 없음을 닫힌 계산 관계로 구성하라.`,
+    };
+  }
+  if (base.expectedCommitment.kind === "THEORY_PREDICATE") {
+    const expectedCommitment = {
+      ...base.expectedCommitment,
+      anchorId: `${base.expectedCommitment.anchorId}:${retry}`,
+      targetScopeId: `${base.expectedCommitment.targetScopeId}:${retry}`,
+      requiredPredicate: `${base.expectedCommitment.requiredPredicate}_${retry.replace("-", "_")}`,
+    } as const;
+    return {
+      expectedCommitment,
+      prompt: `새 합성 재시도 ${attemptOrdinal}: 앵커 ${expectedCommitment.anchorId}, 목표 ${expectedCommitment.targetScopeId}에서 ${expectedCommitment.requiredPredicate}를 긍정하고 금지 술어를 주장하지 않았음을 닫힌 범위로 구성하라.`,
+    };
+  }
+  const expectedCommitment = {
+    ...base.expectedCommitment,
+    anchorId: `${base.expectedCommitment.anchorId}:${retry}`,
+    sourceVersionId: `${base.expectedCommitment.sourceVersionId}:${retry}`,
+    lawAnchorId: `${base.expectedCommitment.lawAnchorId}:${retry}`,
+    lawAnchorVersionId: `${base.expectedCommitment.lawAnchorVersionId}:${retry}`,
+    exactLocator: `${base.expectedCommitment.exactLocator} synthetic ${retry}`,
+  } as const;
+  return {
+    expectedCommitment,
+    prompt: `새 합성 재시도 ${attemptOrdinal}: ${expectedCommitment.anchorId}을 ${expectedCommitment.sourceVersionId}, ${expectedCommitment.lawAnchorVersionId}, ${expectedCommitment.exactLocator}, 적용일 ${expectedCommitment.applicableAsOf}, APPLICABLE_CURRENT, 차단 근거 0개에 정확히 결합하라.`,
+  };
+}
+
 export function durableFixtureFor(input: {
   subject: TrustedRepairSubject;
   stage: DurableLearningFixtureStage;
   evaluatedAt: string;
+  attemptOrdinal?: number;
 }): DurableLearningFixture {
+  const attemptOrdinal = input.attemptOrdinal ?? 1;
   const kind = KIND_BY_STAGE[input.stage];
   const fixture = TRUSTED_REPAIR_FIXTURES.find(
     (candidate) => candidate.subject === input.subject && candidate.kind === kind,
@@ -113,23 +169,28 @@ export function durableFixtureFor(input: {
   if (!fixture || !validateTrustedRepairFixtureEligibility(fixture, input.evaluatedAt).eligible) {
     throw new Error(`durable-learning:fixture-unavailable:${input.subject}:${input.stage}`);
   }
-  const stageProof = STAGE_PROOFS[input.subject][input.stage];
+  const stageProof = stageProofForAttempt(input.subject, input.stage, attemptOrdinal);
   const subjectSlug = input.subject.replace("appraisal_", "");
+  const attemptSuffix = input.stage === "D1" || attemptOrdinal === 1
+    ? ""
+    : `:attempt-${attemptOrdinal}`;
+  const baseItemFamilyId =
+    input.stage === "D1"
+      ? `wcv-c3:family:${subjectSlug}:d0-same-item`
+      : input.stage === "D7"
+        ? `wcv-c3:family:${subjectSlug}:transfer-a`
+        : input.stage === "TIMED"
+          ? `wcv-c3:family:${subjectSlug}:timed-integration`
+          : `wcv-c3:family:${subjectSlug}:transfer-b`;
   return {
     stage: input.stage,
+    attemptOrdinal,
     fixture,
     prompt: stageProof.prompt,
     expectedCommitment: stageProof.expectedCommitment,
-    itemId: `wcv-c3:item:${subjectSlug}:${kind}`,
-    itemRevisionId: `wcv-c3:item:${subjectSlug}:${kind}@2`,
-    itemFamilyId:
-      input.stage === "D1"
-        ? `wcv-c3:family:${subjectSlug}:d0-same-item`
-        : input.stage === "D7"
-          ? `wcv-c3:family:${subjectSlug}:transfer-a`
-          : input.stage === "TIMED"
-            ? `wcv-c3:family:${subjectSlug}:timed-integration`
-            : `wcv-c3:family:${subjectSlug}:transfer-b`,
+    itemId: `wcv-c3:item:${subjectSlug}:${kind}${attemptSuffix}`,
+    itemRevisionId: `wcv-c3:item:${subjectSlug}:${kind}@2${attemptSuffix}`,
+    itemFamilyId: `${baseItemFamilyId}${attemptSuffix}`,
     transferDistance: DISTANCE_BY_STAGE[input.stage],
     representation: "TYPED_STRUCTURED",
     timeLimitSeconds: input.stage === "TIMED" ? 1800 : null,
@@ -151,8 +212,9 @@ export function nextDurableFixtureStage(
 export function expectedCommitmentForFixture(
   subject: TrustedRepairSubject,
   stage: DurableLearningFixtureStage,
+  attemptOrdinal = 1,
 ): DurableSubjectCommitmentV1 {
-  return STAGE_PROOFS[subject][stage].expectedCommitment;
+  return stageProofForAttempt(subject, stage, attemptOrdinal).expectedCommitment;
 }
 
 export function durableCommitmentPasses(

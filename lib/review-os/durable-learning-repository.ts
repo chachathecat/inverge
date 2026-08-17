@@ -100,6 +100,8 @@ function stateDataValue(value: unknown): DurableLearningStateData {
       typeof active.attemptId !== "string" ||
       typeof active.artifactId !== "string" ||
       !["D1", "D7", "TIMED", "RECURRENCE"].includes(String(active.stage)) ||
+      !Number.isSafeInteger(active.attemptOrdinal) ||
+      Number(active.attemptOrdinal) < 1 ||
       typeof active.trustedStartedAt !== "string" ||
       !active.prePresentation ||
       !active.assignment

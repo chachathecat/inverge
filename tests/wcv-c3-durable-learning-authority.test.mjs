@@ -13,6 +13,8 @@ test("WCV-C3 is one complete #706/#707/#708 vertical and remains default-off", a
   assert.equal(contract.stageBoundProof.fixtureReleaseVersion, "dabangil.wcv_c3.rights_safe_transfer_fixtures.2026-08-17.v2");
   assert.equal(contract.stageBoundProof.crossStageCommitmentReusePasses, false);
   assert.equal(contract.stageBoundProof.omittedClosedBooleanOrZeroPasses, false);
+  assert.equal(contract.stageBoundProof.freshRetryVariantAfterNonD1Failure, true);
+  assert.equal(contract.stageBoundProof.retryVariantsRemainRightsSafeSynthetic, true);
   assert.equal(contract.stageBoundProof.untimedRecurrenceEvent, "RECURRENCE_RECONFIRMED");
   assert.deepEqual(contract.jointIssues, [706, 707, 708]);
   assert.equal(contract.proofObjects.length, 9);
@@ -101,6 +103,8 @@ test("WCV-C3 API/UI and exact-head runtime enforce trusted timing and metadata s
   assert.match(env, /WCV_C3_DURABLE_LEARNING_ENABLED=false/);
   assert.match(env, /WCV_C3_SYNTHETIC_RUNTIME=false/);
   assert.match(qa, /remote Supabase or repository secrets/);
+  assert.match(qa, /2026-08-11-owner-accelerated-vertical-slice-authority-roadmap-reconciliation/);
+  assert.match(qa, /2026-08-16-owner-github-native-delivery-control/);
   assert.match(workflow, /test "\$\(git rev-parse HEAD\)" = "\$\{PR_HEAD_SHA\}"/);
   assert.match(workflow, /git diff --exit-code -- package\.json package-lock\.json/);
   assert.doesNotMatch(workflow, /pull_request_target|persist-credentials: true|SUPABASE_ACCESS_TOKEN/);

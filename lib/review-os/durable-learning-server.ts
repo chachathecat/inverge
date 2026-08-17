@@ -77,6 +77,7 @@ export function durableLearningView(
         subject: aggregate.caseRecord.subject,
         stage: active.stage,
         evaluatedAt,
+        attemptOrdinal: active.attemptOrdinal,
       })
     : null;
   const nextAction =
@@ -109,6 +110,7 @@ export function durableLearningView(
       ? {
           attemptId: active.attemptId,
           stage: active.stage,
+          attemptOrdinal: active.attemptOrdinal,
           trustedStartedAt: active.trustedStartedAt,
           transferDistance: active.assignment.transferDistance,
           itemFamilyId: active.assignment.itemFamilyId,

@@ -12,6 +12,7 @@ preserving C4/C6. It selects no successor: ULC-M1 remains blocked on S241A.
 - The D0 configuration and source record version are frozen before C3 evidence begins.
 - The server persists the rights-checked assignment and trusted start time before releasing each prompt.
 - D+1, D+7, timed and later-recurrence evidence use separate eligible item families and separate changed typed commitments. D+7, timed and recurrence evidence must be unseen before commit; a commitment from another stage fails.
+- A failed D+7, timed or later-recurrence attempt consumes that synthetic variant. The next attempt deterministically receives a new rights-safe synthetic item, family, prompt and typed commitment; a consumed item can never strand the case or become unseen again.
 - Free text, generic token presence, an omitted Boolean, or an omitted zero-valued field never creates proof. Every exact subject commitment field must be explicitly supplied and pass.
 - `CURRENTLY_CLEAR` is reopenable, not permanent mastery. A later qualifying independent failure produces `REOPENED`.
 - A successful untimed follow-up is recorded as `RECURRENCE_RECONFIRMED`, never as timed evidence.
@@ -36,3 +37,5 @@ The exact-head remote acceptance lane must additionally exercise 390, 768 and 14
 ## Activation and rollback
 
 `WCV_C3_DURABLE_LEARNING_ENABLED` is false by default and requires the authenticated email in both `ALPHA_ADMIN_EMAILS` and `WCV_C3_OWNER_EMAILS`. `WCV_C3_SYNTHETIC_RUNTIME` is honored only with `CI=true` and never when `VERCEL_ENV=production`. No remote migration application, Production activation, real learner, provider, payment or destructive rollback is authorized. Disable the C3 flag for forward-only rollback; WCV-C2 remains intact.
+
+Human source-change authority for this non-Production migration is the complete-runtime-vertical rule in `docs/decisions/2026-08-11-owner-accelerated-vertical-slice-authority-roadmap-reconciliation.md` together with the dependency-ready continuation authority in `docs/decisions/2026-08-16-owner-github-native-delivery-control.md`. The latter keeps Production migration, RLS or Storage application behind an explicit Owner stop gate. This PR creates source only and performs no remote or Production apply.

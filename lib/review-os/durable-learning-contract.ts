@@ -248,6 +248,7 @@ export type PreparedAttemptV1 = Readonly<{
   attemptId: string;
   artifactId: string;
   stage: "D1" | "D7" | "TIMED" | "RECURRENCE";
+  attemptOrdinal: number;
   prePresentation: PrePresentationEligibilitySnapshotV1;
   assignment: VariantAssignmentV1;
   trustedStartedAt: string;

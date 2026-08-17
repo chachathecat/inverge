@@ -26,6 +26,8 @@
     "stages": ["D1", "D7", "TIMED", "RECURRENCE"],
     "crossStageCommitmentReusePasses": false,
     "omittedClosedBooleanOrZeroPasses": false,
+    "freshRetryVariantAfterNonD1Failure": true,
+    "retryVariantsRemainRightsSafeSynthetic": true,
     "untimedRecurrenceEvent": "RECURRENCE_RECONFIRMED"
   },
   "proofObjects": [
