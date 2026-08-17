@@ -1,0 +1,140 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "contractId": "dabangil.c2r_c_l.structural_law_proof.v1",
+  "version": "1.0.0",
+  "stage": {
+    "roadmapItemId": "WCV-C2",
+    "campaignId": "C2",
+    "trackerIssue": 717,
+    "implementationIssue": 763,
+    "coveringPr": 764,
+    "stageId": "C2R-C-L",
+    "leadIssue": 703,
+    "terminalIssues": [703, 704, 705, 717],
+    "predecessors": ["C2R-A", "C2R-B", "C2R-C-P", "C2R-C-T"],
+    "candidateRepresentsPostMergeState": true,
+    "postMergeState": "complete_law_runtime_and_terminal_wcv_c2",
+    "postReceiptNextRoadmapItem": "WCV-C3",
+    "postReceiptNextCampaign": "C3",
+    "postReceiptNextIssue": 706
+  },
+  "subjectBoundary": {
+    "implementedSubjectsExactly": [
+      "appraisal_practical",
+      "appraisal_theory",
+      "appraisal_law"
+    ],
+    "newSubjectExactly": "appraisal_law",
+    "genericChatExists": false,
+    "productionActivationExists": false
+  },
+  "lawProof": {
+    "type": "LawApplicabilityAnchorV1",
+    "anchorKind": "LAW_EXACT_APPLICABILITY",
+    "anchorId": "repair-anchor:law:synthetic-article-10",
+    "anchorVersionId": "repair-anchor:law:synthetic-article-10@1",
+    "lawSourceBindingId": "law-binding:synthetic-official-act:article-10",
+    "sourceId": "law-source:synthetic-official-act",
+    "sourceVersionId": "law-source:synthetic-official-act@2026-01-01",
+    "lawAnchorId": "law-anchor:synthetic-official-act:article-10",
+    "lawAnchorVersionId": "law-anchor:synthetic-official-act:article-10@2026-01-01",
+    "exactLocator": "Article 10",
+    "exactVersionIdentity": "2026-01-01",
+    "effectiveFrom": "2026-01-01",
+    "effectiveTo": null,
+    "applicableAsOf": "2026-08-15",
+    "currentLawApplicability": "APPLICABLE_CURRENT",
+    "blockerPolicy": {
+      "onlyUniqueReferencedOpenBlockingCount": true,
+      "resolvedCounts": false,
+      "warningCounts": false,
+      "unknownReferenceFailsClosed": true,
+      "requiredBlockerCount": 0
+    },
+    "deterministicValidatorId": "validator:law-exact-applicability@1",
+    "sourceAndAnchorStatusesIndependentlyRequired": "VERIFIED_CURRENT",
+    "sourceRevisionDriftResult": "STALE",
+    "canonicalVerificationAuthority": "server_validated_LawApplicabilityClaimV1_only",
+    "freeFormTextAuthority": "independent_attempt_candidate_diagnosis_gap_ranking_scaffold_only",
+    "freeFormTextCanCreateVerified": false,
+    "onlyExactStructuredPassCreatesVerified": true,
+    "clientSuppliedVerifiedPassMasteryTransferRejected": true
+  },
+  "completeOutcomeLayers": {
+    "contractAndMachineValidation": [
+      "config/dabangil-c2r-c-l-exact-law-applicability-v1.json",
+      "config/dabangil-c2r-c-l-structural-law-proof-v1.json",
+      "lib/review-os/law-source-version-registry.ts",
+      "lib/review-os/trusted-repair-contract.ts",
+      "lib/review-os/trusted-repair-engine.ts"
+    ],
+    "goldenAndOwnerGoldFixtures": ["lib/review-os/trusted-repair-fixtures.ts"],
+    "persistenceForcedRlsServerCas": [
+      "supabase/migrations/20260817170000_c2r_c_l_exact_law_applicability.sql",
+      "lib/review-os/trusted-repair-repository.ts",
+      "lib/review-os/trusted-repair-server.ts"
+    ],
+    "api": ["app/api/review-os/trusted-repair/route.ts"],
+    "learnerUi": [
+      "app/app/trusted-repair/page.tsx",
+      "components/review-os/trusted-repair-loop.tsx"
+    ],
+    "runtimeEvidence": [
+      ".github/workflows/c2r-c-l-law-trusted-repair-runtime.yml",
+      "scripts/automation/verify-c2r-c-p-practice-runtime.mjs",
+      "tests/e2e/c2r-c-l-law-trusted-repair-runtime.spec.ts"
+    ],
+    "safeDeferredBoundary": {
+      "liveOfficialLawIngestion": false,
+      "liveModelRoute": false,
+      "generalPurposeChat": false,
+      "payment": false,
+      "production": false
+    },
+    "independentRollback": {
+      "killSwitch": "WCV_C2R_C_L_LAW_ENABLED",
+      "defaultEnabled": false,
+      "requiresDisablingOrRevertingPractice": false,
+      "requiresDisablingOrRevertingTheory": false,
+      "destructiveRollbackAuthorized": false,
+      "forwardOnlyProcedureDocumented": true
+    }
+  },
+  "regressionCoverageCandidate": {
+    "receiptPolicy": "github_exact_head_pinned_squash_merge_v1",
+    "directRows": [3, 7, 15, 17, 21],
+    "inheritedCommonRows": [1, 4, 6, 8, 11, 14],
+    "assertionIds": [
+      "C2R-C-L-R03",
+      "C2R-C-L-R07",
+      "C2R-C-L-R15",
+      "C2R-C-L-R17",
+      "C2R-C-L-R21"
+    ],
+    "testPaths": [
+      "tests/wcv-c2r-law-exact-version-validator.test.mjs",
+      "tests/wcv-c2r-runtime-preflight.test.mjs",
+      "tests/c2r-c-l-law-authority.test.mjs"
+    ],
+    "effectiveOnlyAfterExpectedHeadMergeAndTrackerReceipt": true
+  },
+  "terminalCloseout": {
+    "receiptVersion": "MergeCoverageReceiptV1",
+    "receiptTrackerIssue": 717,
+    "receiptPublishedOnlyAfterMerge": true,
+    "all21RowsRequireEffectiveCoverage": true,
+    "closeAfterValidatedReceipt": [703, 704, 705, 717],
+    "unblockAfterValidatedReceipt": 706,
+    "issue714RemainsOpen": true,
+    "issue714AllocationsPreserved": ["C3", "C4", "C6"]
+  },
+  "activationBoundary": {
+    "ownerOnlyNonProduction": true,
+    "flagDefault": false,
+    "productionAuthorized": false,
+    "realLearnerAuthorized": false,
+    "providerAuthorized": false,
+    "paymentAuthorized": false,
+    "remoteMigrationApplyAuthorized": false
+  }
+}

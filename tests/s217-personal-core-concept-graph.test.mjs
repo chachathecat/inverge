@@ -252,6 +252,6 @@ test("S217 docs, source, roadmap, runner, and safe derived keys are wired", asyn
   assert.deepEqual(s225?.missingDependencies, ["O4D", "WCV-C6"]);
   assert.equal(plan.wipOccupiedCount, 2);
   assert.equal(plan.availableSlots, 1);
-  assert.deepEqual(plan.readyItemIds, ["WCV-C2", "S236B"]);
-  assert.deepEqual(plan.selectedItemIds, ["WCV-C2"]);
+  assert.deepEqual(plan.readyItemIds, ["WCV-C3", "S236B"]);
+  assert.deepEqual(plan.selectedItemIds, ["WCV-C3"]);
 });

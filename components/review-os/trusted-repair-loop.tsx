@@ -20,6 +20,7 @@ type ApiAction =
   | "submit_repair"
   | "confirm_claim"
   | "confirm_theory_claim"
+  | "confirm_law_claim"
   | "continue";
 
 type PendingCommand = {
@@ -34,7 +35,7 @@ type DurablePendingCommand = PendingCommand & {
 const PENDING_COMMAND_STORAGE_KEY =
   "inverge:c2r-c-p:pending-command:v1";
 const START_FINGERPRINT_PATTERN =
-  /^\{"action":"start","subject":"(?:appraisal_practical|appraisal_theory)","inputMode":"(?:TYPED_TEXT|EDITABLE_PHOTO_OCR|EDITABLE_PDF_OCR|EDITABLE_VOICE_TRANSCRIPTION|STRUCTURED_SELECTION)"\}$/u;
+  /^\{"action":"start","subject":"(?:appraisal_practical|appraisal_theory|appraisal_law)","inputMode":"(?:TYPED_TEXT|EDITABLE_PHOTO_OCR|EDITABLE_PDF_OCR|EDITABLE_VOICE_TRANSCRIPTION|STRUCTURED_SELECTION)"\}$/u;
 const UUID_PATTERN =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/iu;
 
@@ -94,6 +95,7 @@ function clearDurablePendingCommand() {
 const SUBJECTS: readonly { value: Subject; label: string }[] = [
   { value: "appraisal_practical", label: "감정평가실무" },
   { value: "appraisal_theory", label: "감정평가이론" },
+  { value: "appraisal_law", label: "감정평가 및 보상법규" },
 ];
 
 const INPUT_MODES: readonly { value: InputMode; label: string }[] = [
@@ -330,6 +332,29 @@ export function TrustedRepairLoop({
     };
   }
 
+  function structuredLawClaim() {
+    const confirmation = view?.lawStructuredConfirmation;
+    if (!confirmation) return null;
+    return {
+      sourceRevisionId: confirmation.sourceRevisionId,
+      anchorId: confirmation.anchorId,
+      anchorVersionId: confirmation.anchorVersionId,
+      lawSourceBindingId: confirmation.lawSourceBindingId,
+      sourceId: confirmation.sourceId,
+      sourceVersionId: confirmation.sourceVersionId,
+      lawAnchorId: confirmation.lawAnchorId,
+      lawAnchorVersionId: confirmation.lawAnchorVersionId,
+      exactLocator: confirmation.exactLocator,
+      exactVersionIdentity: confirmation.exactVersionIdentity,
+      effectiveFrom: confirmation.effectiveFrom,
+      effectiveTo: confirmation.effectiveTo,
+      applicableAsOf: confirmation.applicableAsOf,
+      currentLawApplicability: confirmation.currentLawApplicability,
+      blockerState: confirmation.blockerState,
+      confirmationMode: "MANUAL_STRUCTURED" as const,
+    };
+  }
+
   const primary = (() => {
     if (!view) {
       return {
@@ -368,11 +393,20 @@ export function TrustedRepairLoop({
     }
     if (state === "repair_submitted") {
       const theory = view.session.subject === "appraisal_theory";
-      const claim = theory ? structuredTheoryClaim() : structuredClaim();
+      const law = view.session.subject === "appraisal_law";
+      const claim = law
+        ? structuredLawClaim()
+        : theory
+          ? structuredTheoryClaim()
+          : structuredClaim();
       return {
-        label: theory ? "구조화 이론술어 확정" : "구조화 계산관계 확정",
+        label: law
+          ? "구조화 법규적용 결합 확정"
+          : theory
+            ? "구조화 이론술어 확정"
+            : "구조화 계산관계 확정",
         run: () =>
-          command(theory ? "confirm_theory_claim" : "confirm_claim", {
+          command(law ? "confirm_law_claim" : theory ? "confirm_theory_claim" : "confirm_claim", {
             claim,
           }),
         disabled: claim === null,
@@ -401,21 +435,28 @@ export function TrustedRepairLoop({
     <div
       className="mx-auto w-full max-w-3xl space-y-5"
       data-c2r-c-p-practice-trusted-repair={
-        view?.session.subject === "appraisal_theory" ? undefined : ""
+        view?.session.subject === "appraisal_practical" ? "" : undefined
       }
       data-c2r-c-t-theory-trusted-repair={
         view?.session.subject === "appraisal_theory" ? "" : undefined
+      }
+      data-c2r-c-l-law-trusted-repair={
+        view?.session.subject === "appraisal_law" ? "" : undefined
       }
     >
       <header className="space-y-2">
         <p className="v3-type-caption text-[var(--color-text-brand)]">Owner 전용 · 합성 fixture · 기본 비활성</p>
         <h1 className="v3-type-heading-1 text-[var(--color-text-primary)]">
-          {subject === "appraisal_theory"
+          {subject === "appraisal_law"
+            ? "법규 정확 적용가능성 신뢰 복구"
+            : subject === "appraisal_theory"
             ? "이론 목표범위 술어 신뢰 복구"
             : "실무 계산관계 신뢰 복구"}
         </h1>
         <p className="v3-type-body text-[var(--color-text-secondary)]">
-          {subject === "appraisal_theory"
+          {subject === "appraisal_law"
+            ? "독립 시도 뒤에 가장 작은 도움을 열고, 정확한 출처·버전·조문 위치·효력기간·적용일·현재성·차단 근거를 하나의 결합으로 다시 확인합니다."
+            : subject === "appraisal_theory"
             ? "독립 시도 뒤에 가장 작은 도움을 열고, 정확한 목표 범위 안에서 필수·금지 술어와 극성을 다시 확인합니다."
             : "독립 시도 뒤에 가장 작은 도움을 열고, 피연산자·연산자·결과·단위·부호·반올림을 하나의 계산관계로 다시 확인합니다."}
         </p>
@@ -508,8 +549,8 @@ export function TrustedRepairLoop({
             ) : null}
 
             {view.session.proofEvaluation ? (
-              <section className="rounded-lg border border-[var(--color-border-default)] p-3" aria-label={view.session.subject === "appraisal_theory" ? "이론술어 검증 상태" : "계산관계 검증 상태"}>
-                <p className="v3-type-label-strong">{view.session.subject === "appraisal_theory" ? "이론술어 검증" : "계산관계 검증"}: {view.session.proofEvaluation.state}</p>
+              <section className="rounded-lg border border-[var(--color-border-default)] p-3" aria-label={view.session.subject === "appraisal_law" ? "법규적용 검증 상태" : view.session.subject === "appraisal_theory" ? "이론술어 검증 상태" : "계산관계 검증 상태"}>
+                <p className="v3-type-label-strong">{view.session.subject === "appraisal_law" ? "법규적용 검증" : view.session.subject === "appraisal_theory" ? "이론술어 검증" : "계산관계 검증"}: {view.session.proofEvaluation.state}</p>
                 <p className="mt-1 text-sm text-[var(--color-text-secondary)]">
                   {view.session.proofEvaluation.validatorId} · {view.session.proofEvaluation.anchorVersionId}
                 </p>
@@ -596,6 +637,25 @@ export function TrustedRepairLoop({
                     <option value="ASSERTED">긍정</option>
                   </select>
                 </label>
+              </fieldset>
+            ) : null}
+
+            {view.session.state === "repair_submitted" && view.lawStructuredConfirmation ? (
+              <fieldset className="space-y-3 rounded-lg border border-[var(--color-border-focus)] p-4">
+                <legend className="px-1 v3-type-label-strong">직접 확인하는 정확 법규적용 결합</legend>
+                <p className="text-sm text-[var(--color-text-secondary)]">
+                  자유서술이나 상태 라벨만으로는 검증되지 않습니다. 아래 출처·버전·앵커·위치·효력기간·적용일·현재성·차단 근거를 하나의 닫힌 결합으로 확인합니다.
+                </p>
+                <dl className="grid gap-1 text-sm text-[var(--color-text-secondary)]">
+                  <div><dt className="inline font-medium">출처:</dt> <dd className="inline">{view.lawStructuredConfirmation.sourceId}</dd></div>
+                  <div><dt className="inline font-medium">출처 버전:</dt> <dd className="inline">{view.lawStructuredConfirmation.sourceVersionId}</dd></div>
+                  <div><dt className="inline font-medium">앵커:</dt> <dd className="inline">{view.lawStructuredConfirmation.lawAnchorVersionId}</dd></div>
+                  <div><dt className="inline font-medium">정확 위치:</dt> <dd className="inline">{view.lawStructuredConfirmation.exactLocator}</dd></div>
+                  <div><dt className="inline font-medium">효력 시작:</dt> <dd className="inline">{view.lawStructuredConfirmation.effectiveFrom}</dd></div>
+                  <div><dt className="inline font-medium">적용 기준일:</dt> <dd className="inline">{view.lawStructuredConfirmation.applicableAsOf}</dd></div>
+                  <div><dt className="inline font-medium">현재성:</dt> <dd className="inline">{view.lawStructuredConfirmation.currentLawApplicability}</dd></div>
+                  <div><dt className="inline font-medium">열린 차단 근거:</dt> <dd className="inline">{view.lawStructuredConfirmation.blockerState.blockerCount}개</dd></div>
+                </dl>
               </fieldset>
             ) : null}
 

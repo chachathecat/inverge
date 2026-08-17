@@ -451,12 +451,12 @@ test("keeps Phase E metadata-only and preserves the current product authority tu
     live_service_called: false,
     dependency_graph_changed: false,
   });
-  assert.match(roadmap, /soleNextImplementationItem:\s*WCV-C2/);
-  assert.match(roadmap, /currentReplacementStage:\s*C2R-C-L/);
-  assert.match(roadmap, /currentReplacementStageIssue:\s*703/);
+  assert.match(roadmap, /soleNextImplementationItem:\s*WCV-C3/);
+  assert.match(roadmap, /currentReplacementStage:\s*null/);
+  assert.match(roadmap, /currentReplacementStageIssue:\s*null/);
   assert.match(roadmap, /c2rCPState:\s*complete_practice_runtime/);
   assert.match(roadmap, /c2rCTState:\s*complete_theory_runtime/);
-  assert.match(roadmap, /c2rCLState:\s*authorized_unstarted/);
+  assert.match(roadmap, /c2rCLState:\s*complete_law_runtime/);
   for (const exception of policy.exceptions) {
     const source = await readJson(exception.source_contract);
     assert.equal(source.contract_id, "foundation-development-toolchain-security-v1");

@@ -12,6 +12,7 @@ import {
   isTrustedRepairSubject,
   parseJsonRejectingDuplicateKeys,
   parsePracticeCalculationClaimV2Input,
+  parseLawApplicabilityClaimV1Input,
   parseTheoryPredicateClaimV1Input,
   requiredTrustedRepairText,
   requiredTrustedRepairUuid,
@@ -207,6 +208,18 @@ export async function POST(request: Request) {
       view = await service.confirmTheoryClaim({
         ...commonTransition(record),
         claim: parseTheoryPredicateClaimV1Input(record.claim),
+      });
+    } else if (action === "confirm_law_claim") {
+      const record = exactObject(raw, [
+        "action",
+        "sessionId",
+        "expectedVersion",
+        "commandId",
+        "claim",
+      ]);
+      view = await service.confirmLawClaim({
+        ...commonTransition(record),
+        claim: parseLawApplicabilityClaimV1Input(record.claim),
       });
     } else if (action === "continue") {
       const record = exactObject(raw, [

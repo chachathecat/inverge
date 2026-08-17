@@ -69,11 +69,15 @@ test("automatic continuation remains bounded to authorized non-Production work",
   assert.match(decision, /rights-unclear content operation/);
   assert.match(decision, /destructive or irreversible data operation/);
 
-  assert.match(roadmap, /currentReplacementStage: C2R-C-L/);
-  assert.match(roadmap, /currentReplacementStageIssue: 703/);
+  assert.match(roadmap, /soleNextImplementationItem: WCV-C3/);
+  assert.match(roadmap, /soleNextImplementationCampaign: C3/);
+  assert.match(roadmap, /soleNextImplementationLeadIssue: 706/);
+  assert.match(roadmap, /currentReplacementStage: null/);
+  assert.match(roadmap, /currentReplacementStageIssue: null/);
   assert.match(roadmap, /c2rCPState: complete_practice_runtime/);
   assert.match(roadmap, /c2rCTState: complete_theory_runtime/);
-  assert.match(roadmap, /c2rCLState: authorized_unstarted/);
+  assert.match(roadmap, /c2rCLState: complete_law_runtime/);
+  assert.match(roadmap, /executionState: authorized_unstarted_after_validated_terminal_c2r_c_l_receipt/);
 });
 
 test("focused delivery-control test is registered in the default runner", async () => {

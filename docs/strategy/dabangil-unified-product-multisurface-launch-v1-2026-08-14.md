@@ -8,9 +8,9 @@
   `config/dabangil-unified-product-multisurface-launch-v1.json`
 - Installation-time implementation authority (historical 2026-08-14 state):
   WCV-C2 / C2 / C2R-A / #702
-- Current repository selector after the later exact C2R-C-T completion:
-  WCV-C2 / C2 / #717 / C2R-C-L / #703 / authorized_unstarted; operational
-  start still requires the validated terminal C2R-C-T merge and receipt
+- Current repository selector represented after terminal PR #764's exact-head
+  merge and validated #717 receipt: WCV-C3 / C3 / #706 /
+  authorized_unstarted
 - Current activation: none
 
 ## 1. Product convergence
@@ -204,8 +204,9 @@ to `apps/web`.
 
 ## 7. Complete-vertical dependency graph
 
-Every item is queued, unselected, unstarted, and `automaticStartAllowed:
-false`. Terminal C2R-C-L is the entry gate.
+WCV-C3 is the first authorized-unstarted dependency-ready non-Production item
+after the validated terminal C2R-C-L receipt. Later items remain queued,
+unselected and unstarted. Terminal C2R-C-L is the entry gate.
 
 | Order | Item | Complete outcome | Sequence dependency and operational prerequisite |
 |---:|---|---|---|
@@ -349,11 +350,11 @@ ULC-0 source validation must prove:
 - one ULC-0 lead issue (#719);
 - exact preservation of the WCV-C2R object, roadmap block, and 21-row matrix;
 - exact preserved installation-time selection WCV-C2/C2/C2R-A/#702;
-- exact current repository selector
-  WCV-C2/C2/#717/C2R-C-L/#703/authorized_unstarted, with C2R-C-L requiring the
-  validated terminal C2R-C-T merge and receipt;
+- exact post-receipt repository selector WCV-C3/C3/#706/authorized_unstarted,
+  with WCV-C2 completion requiring PR #764's expected-head merge and validated
+  #717 receipt;
 - unique future IDs and resolved dependencies;
-- no selected or started ULC stage;
+- no selected or started ULC stage; WCV-C3 is selected but unstarted;
 - no O4W/C5/C6 dependency on free ULC-L1;
 - the separate paid path still requires all three and a later authorization;
 - exactly three public/student surfaces;

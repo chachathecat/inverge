@@ -31,14 +31,13 @@ Student surfaces are exactly Web, iOS/iPadOS and Android. The complete
 instructor authoring/review workbench is Web-primary. Student apps consume
 only assigned work and approved feedback.
 
-The current implementation authority is WCV-C2, campaign C2, Tracker #717,
-the exact five-stage C2R chain, one merge-producing writer and GitHub-native
-protected non-Production continuation. C2R-A/#702 and C2R-B/#714 are complete
-source-only, C2R-C-P/#703 is
-the complete Practice runtime stage under merge-and-receipt semantics,
-C2R-C-T/#703 is the complete Theory runtime stage under the same semantics,
-and C2R-C-L/#703 is the current authorized and unstarted stage. ULC-0
-implements nothing.
+The current candidate completes WCV-C2/C2/Tracker #717's exact five-stage C2R
+chain under expected-head merge-and-receipt semantics, with one merge-
+producing writer and GitHub-native protected non-Production continuation.
+C2R-A/#702 and C2R-B/#714 are complete source-only; C2R-C-P, C2R-C-T and
+terminal C2R-C-L/#703 are the complete Practice, Theory and Law runtime
+stages. After PR #764's protected merge and validated receipt, WCV-C3/C3/#706
+is the authorized and unstarted selector. ULC-0 implements nothing.
 
 The later 2026-08-15 C2R-B decision owns this exact post-B selector and typed
 proof architecture. The C2R-A decision still owns the A rights-safe source
@@ -123,12 +122,13 @@ Tracker #717 owns the exact serial recovery graph:
 
 `C2R-A/#702 → C2R-B/#714 → C2R-C-P → C2R-C-T → C2R-C-L`
 
-The formal identities remain separate: roadmap item `WCV-C2`, campaign ID
-`C2`, recovery tracker #717, completed source-only stages `C2R-A` for Issue
-#702 and `C2R-B` for Issue #714, completed Practice stage `C2R-C-P`, and
-completed Theory stage `C2R-C-T`, with current authorized but unstarted stage
-`C2R-C-L` for Issue #703. The canonical tuple is
-`WCV-C2 / C2 / #717 / C2R-C-L / #703 / authorized_unstarted`.
+The formal identities remain separate: completed roadmap item `WCV-C2`,
+completed campaign ID `C2`, recovery tracker #717, completed source-only
+stages `C2R-A` for Issue #702 and `C2R-B` for Issue #714, and completed
+Practice, Theory and Law stages `C2R-C-P`, `C2R-C-T` and `C2R-C-L` for Issue
+#703. The post-receipt current selector is roadmap item `WCV-C3`, campaign
+`C3`, lead Issue #706. The canonical tuple is
+`WCV-C3 / C3 / #706 / authorized_unstarted`.
 
 The sequence is terminally serial. C2R-A and C2R-B are independently complete
 source-contract outcomes and are not parallel. C2R-C-P, C2R-C-T and C2R-C-L
@@ -718,8 +718,8 @@ is installed. Practice, Theory and Law remain complete successor verticals;
 the shared runtime substrate may first land only within C2R-C-P.
 
 Only Issue #714 allocation C2 is complete. Issue #714 stays open for C3, C4
-and C6. The expected-head-pinned merge and validated #717 receipt authorize
-C2R-C-P/#703, whose protected PR #756 merge and validated receipt select
-C2R-C-T/#703. The complete Theory merge and validated receipt then select
-C2R-C-L/#703 as the next authorized-but-unstarted stage without Production or
-learner activation.
+and C6. The expected-head-pinned merge and validated #717 receipt authorized
+C2R-C-P/#703; protected PR #756 and PR #762 then completed Practice and Theory
+in order. Candidate PR #764 completes terminal C2R-C-L/#703 only after its
+expected-head-pinned merge and validated receipt, then selects WCV-C3/C3/#706
+as authorized but unstarted without Production or learner activation.

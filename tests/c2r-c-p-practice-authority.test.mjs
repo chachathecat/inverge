@@ -38,7 +38,7 @@ function matrixRows(source) {
   );
 }
 
-test("C2R-C-P stays complete while protected Theory selects C2R-C-L", async () => {
+test("C2R-C-P stays complete through terminal Law and WCV-C3 selection", async () => {
   const [unified, launch, roadmap, agents] = await Promise.all([
     json("config/dabangil-unified-program-contract.json"),
     json("config/dabangil-unified-product-multisurface-launch-v1.json"),
@@ -54,16 +54,18 @@ test("C2R-C-P stays complete while protected Theory selects C2R-C-L", async () =
     unified.roadmapContract.soleNextReplacementStageId,
     launch.preservedCurrentAuthority.currentReplacementStageId,
   ];
-  assert.deepEqual(current, Array(current.length).fill("C2R-C-L"));
+  assert.deepEqual(current, Array(current.length).fill(null));
   assert.equal(stages.get("C2R-C-P").state, "complete_practice_runtime");
   assert.equal(stages.get("C2R-C-P").coveringPr, 756);
   assert.equal(stages.get("C2R-C-T").state, "complete_theory_runtime");
   assert.equal(stages.get("C2R-C-T").coveringPr, 762);
-  assert.equal(stages.get("C2R-C-L").state, "authorized_unstarted");
-  assert.match(roadmap, /soleNextReplacementStage: C2R-C-L/);
+  assert.equal(stages.get("C2R-C-L").state, "complete_law_runtime");
+  assert.equal(stages.get("C2R-C-L").coveringPr, 764);
+  assert.match(roadmap, /soleNextImplementationItem: WCV-C3/);
+  assert.match(roadmap, /soleNextReplacementStage: null/);
   assert.match(roadmap, /c2rCPState: complete_practice_runtime/);
   assert.match(roadmap, /c2rCTState: complete_theory_runtime/);
-  assert.match(agents, /WCV-C2 \/ C2 \/ #717 \/ C2R-C-L \/ #703 \/ authorized_unstarted/);
+  assert.match(agents, /WCV-C3 \/ C3 \/ #706 \/ authorized_unstarted/);
   assert.ok(agents.indexOf(DECISION) < agents.indexOf("docs/decisions/2026-08-15-owner-c2r-b-typed-proof-obligations.md"));
 });
 

@@ -24,32 +24,48 @@ const THEORY_MIGRATION_PATH = path.join(
   REPOSITORY_ROOT,
   "supabase/migrations/20260817113000_c2r_c_t_structural_theory_proof.sql",
 );
+const LAW_MIGRATION_PATH = path.join(
+  REPOSITORY_ROOT,
+  "supabase/migrations/20260817170000_c2r_c_l_exact_law_applicability.sql",
+);
 const THEORY_RUNTIME = process.env.C2R_RUNTIME_SUBJECT === "appraisal_theory";
-const RUNTIME_SUBJECT = THEORY_RUNTIME
-  ? "appraisal_theory"
-  : "appraisal_practical";
-const C2_MIGRATION_PATHS = THEORY_RUNTIME
-  ? [PRACTICE_MIGRATION_PATH, THEORY_MIGRATION_PATH]
-  : [PRACTICE_MIGRATION_PATH];
+const LAW_RUNTIME = process.env.C2R_RUNTIME_SUBJECT === "appraisal_law";
+const EXTENDED_RUNTIME = THEORY_RUNTIME || LAW_RUNTIME;
+const RUNTIME_SUBJECT = LAW_RUNTIME
+  ? "appraisal_law"
+  : THEORY_RUNTIME
+    ? "appraisal_theory"
+    : "appraisal_practical";
+const C2_MIGRATION_PATHS = LAW_RUNTIME
+  ? [PRACTICE_MIGRATION_PATH, THEORY_MIGRATION_PATH, LAW_MIGRATION_PATH]
+  : THEORY_RUNTIME
+    ? [PRACTICE_MIGRATION_PATH, THEORY_MIGRATION_PATH]
+    : [PRACTICE_MIGRATION_PATH];
 const BROWSER_CONFIG_PATH = path.join(
   REPOSITORY_ROOT,
   "tests/e2e/c2r-c-p-playwright.config.ts",
 );
-const BROWSER_RUNTIME_CONFIG_PATH = THEORY_RUNTIME
+const BROWSER_RUNTIME_CONFIG_PATH = EXTENDED_RUNTIME
   ? path.join(
       path.dirname(BROWSER_CONFIG_PATH),
-      ".c2r-c-t-playwright.runtime.config.ts",
+      LAW_RUNTIME
+        ? ".c2r-c-l-playwright.runtime.config.ts"
+        : ".c2r-c-t-playwright.runtime.config.ts",
     )
   : BROWSER_CONFIG_PATH;
 const BROWSER_SPEC_PATH = path.join(
   REPOSITORY_ROOT,
-  THEORY_RUNTIME
-    ? "tests/e2e/c2r-c-t-theory-trusted-repair-runtime.spec.ts"
+  LAW_RUNTIME
+    ? "tests/e2e/c2r-c-l-law-trusted-repair-runtime.spec.ts"
+    : THEORY_RUNTIME
+      ? "tests/e2e/c2r-c-t-theory-trusted-repair-runtime.spec.ts"
     : "tests/e2e/c2r-c-p-practice-trusted-repair-runtime.spec.ts",
 );
-const PROJECT_ID = THEORY_RUNTIME
-  ? "c2r-c-t-theory-repair"
-  : "c2r-c-p-practice-repair";
+const PROJECT_ID = LAW_RUNTIME
+  ? "c2r-c-l-law-repair"
+  : THEORY_RUNTIME
+    ? "c2r-c-t-theory-repair"
+    : "c2r-c-p-practice-repair";
 const EXPECTED_CLI_VERSION = "2.114.0";
 const EXCLUDED_SERVICES = [
   "realtime",
@@ -207,6 +223,20 @@ const COMMAND_SPECS = Object.freeze({
     "sql_query_body_secret",
     { queryId: "theory_subject_binding_count", queryDescription: "named constraint count" },
   ),
+  law_migration_replay_psql: commandSpec(
+    "first_fresh_database_verification",
+    "law_migration_replay_psql",
+    "replay Law migration on the first database",
+    "sql_query_body_secret",
+    { queryId: "law_migration_replay", queryDescription: "complete Law migration replay" },
+  ),
+  law_subject_binding_count_psql: commandSpec(
+    "first_fresh_database_verification",
+    "law_subject_binding_count_psql",
+    "verify one replayed Law subject-binding constraint and trigger",
+    "sql_query_body_secret",
+    { queryId: "law_subject_binding_count", queryDescription: "named constraint and trigger count" },
+  ),
   verify_security_contract_psql: commandSpec(
     "first_fresh_database_verification",
     "verify_security_contract_psql",
@@ -268,6 +298,18 @@ const COMMAND_SPECS = Object.freeze({
     "cross_subject_start_replay",
     "browser_cross_subject_theory",
     "Practice-disabled cross-subject replay denial",
+    "browser_assertion_locations_only",
+  ),
+  next_cross_subject_law_start: commandSpec(
+    "cross_subject_start_replay",
+    "next_cross_subject_law_start",
+    "Law-only cross-subject replay local Next server",
+    "local_server_metadata_only",
+  ),
+  browser_cross_subject_law: commandSpec(
+    "cross_subject_start_replay",
+    "browser_cross_subject_law",
+    "Practice-disabled Law cross-subject replay denial",
     "browser_assertion_locations_only",
   ),
   next_initial_start: commandSpec(
@@ -712,14 +754,18 @@ function supabase(commandArgs, options = {}) {
 function runtimeRoot() {
   const root = path.resolve(
     process.env[
-      THEORY_RUNTIME
-        ? "C2R_C_T_SUPABASE_WORKDIR"
-        : "C2R_C_P_SUPABASE_WORKDIR"
+      LAW_RUNTIME
+        ? "C2R_C_L_SUPABASE_WORKDIR"
+        : THEORY_RUNTIME
+          ? "C2R_C_T_SUPABASE_WORKDIR"
+          : "C2R_C_P_SUPABASE_WORKDIR"
     ] ??
       path.join(
         REPOSITORY_ROOT,
-        THEORY_RUNTIME
-          ? ".agent-factory/c2r-c-t-supabase-runtime"
+        LAW_RUNTIME
+          ? ".agent-factory/c2r-c-l-supabase-runtime"
+          : THEORY_RUNTIME
+            ? ".agent-factory/c2r-c-t-supabase-runtime"
           : ".agent-factory/c2r-c-p-supabase-runtime",
       ),
   );
@@ -738,7 +784,7 @@ function prepareRuntimeWorkdir(root) {
   fs.cpSync(path.join(SOURCE_WORKDIR, "supabase"), path.join(root, "supabase"), {
     recursive: true,
   });
-  if (THEORY_RUNTIME) {
+  if (EXTENDED_RUNTIME) {
     const configPath = path.join(root, "supabase/config.toml");
     const source = fs.readFileSync(configPath, "utf8");
     const expected = 'project_id = "c2r-c-p-practice-repair"';
@@ -760,7 +806,9 @@ function prepareRuntimeWorkdir(root) {
       BROWSER_RUNTIME_CONFIG_PATH,
       browserConfigSource.replace(
         practiceMatch,
-        'testMatch: "c2r-c-t-theory-trusted-repair-runtime.spec.ts"',
+        LAW_RUNTIME
+          ? 'testMatch: "c2r-c-l-law-trusted-repair-runtime.spec.ts"'
+          : 'testMatch: "c2r-c-t-theory-trusted-repair-runtime.spec.ts"',
       ),
       { encoding: "utf8", mode: 0o600 },
     );
@@ -874,7 +922,7 @@ function cleanup(root, requireComplete, dependencies = {}) {
     );
   } finally {
     fs.rmSync(root, { recursive: true, force: true });
-    if (THEORY_RUNTIME) {
+    if (EXTENDED_RUNTIME) {
       fs.rmSync(BROWSER_RUNTIME_CONFIG_PATH, { force: true });
     }
   }
@@ -1030,21 +1078,32 @@ function verifyMigrationsApplied(databaseContainer, specification) {
 }
 
 function verifyTheoryMigrationReplay(databaseContainer) {
-  if (!THEORY_RUNTIME) return;
-  databaseQuery(
-    databaseContainer,
-    COMMAND_SPECS.theory_migration_replay_psql,
-    fs.readFileSync(THEORY_MIGRATION_PATH, "utf8"),
-  );
+  if (!EXTENDED_RUNTIME) return;
+  const migrationPath = LAW_RUNTIME ? LAW_MIGRATION_PATH : THEORY_MIGRATION_PATH;
+  const replaySpec = LAW_RUNTIME
+    ? COMMAND_SPECS.law_migration_replay_psql
+    : COMMAND_SPECS.theory_migration_replay_psql;
+  const countSpec = LAW_RUNTIME
+    ? COMMAND_SPECS.law_subject_binding_count_psql
+    : COMMAND_SPECS.theory_subject_binding_count_psql;
+  databaseQuery(databaseContainer, replaySpec, fs.readFileSync(migrationPath, "utf8"));
   const constraintCount = databaseQuery(
     databaseContainer,
-    COMMAND_SPECS.theory_subject_binding_count_psql,
-    `select count(*) from pg_constraint
-     where conrelid='public.wcv_c2_trusted_repair_sessions'::regclass
-       and conname='wcv_c2_trusted_repair_sessions_subject_binding_check';`,
+    countSpec,
+    LAW_RUNTIME
+      ? `select concat_ws('|',
+          (select count(*) from pg_constraint
+           where conrelid='public.wcv_c2_trusted_repair_sessions'::regclass
+             and conname='wcv_c2_trusted_repair_sessions_subject_binding_check'),
+          (select count(*) from pg_trigger
+           where tgrelid='public.wcv_c2_trusted_repair_sessions'::regclass
+             and tgname='wcv_c2_validate_exact_law_proof_v1' and not tgisinternal));`
+      : `select count(*) from pg_constraint
+         where conrelid='public.wcv_c2_trusted_repair_sessions'::regclass
+           and conname='wcv_c2_trusted_repair_sessions_subject_binding_check';`,
   );
-  if (constraintCount !== "1") {
-    throw new Error("Theory migration replay did not retain exactly one subject-binding constraint");
+  if (constraintCount !== (LAW_RUNTIME ? "1|1" : "1")) {
+    throw new Error("extended migration replay did not retain its exact binding guards");
   }
 }
 
@@ -1070,8 +1129,9 @@ function verifyDatabaseSecurityContract(databaseContainer, specification) {
 
 function nextEnvironment(input) {
   const enabledSubjects =
-    input.enabledSubjects ?? (THEORY_RUNTIME ? "theory" : "practice");
-  if (!["practice", "theory", "both"].includes(enabledSubjects)) {
+    input.enabledSubjects ??
+    (LAW_RUNTIME ? "law" : THEORY_RUNTIME ? "theory" : "practice");
+  if (!["practice", "theory", "law", "both", "all"].includes(enabledSubjects)) {
     throw new Error("local Next server subject mode is invalid");
   }
   return {
@@ -1087,7 +1147,12 @@ function nextEnvironment(input) {
         : "false",
     WCV_C2R_C_T_OWNER_EMAILS: `${input.userA.email},${input.userB.email}`,
     WCV_C2R_C_T_THEORY_ENABLED:
-      input.enabled && ["theory", "both"].includes(enabledSubjects)
+      input.enabled && ["theory", "both", "all"].includes(enabledSubjects)
+        ? "true"
+        : "false",
+    WCV_C2R_C_L_OWNER_EMAILS: `${input.userA.email},${input.userB.email}`,
+    WCV_C2R_C_L_LAW_ENABLED:
+      input.enabled && ["law", "both", "all"].includes(enabledSubjects)
         ? "true"
         : "false",
     NEXT_TELEMETRY_DISABLED: "1",
@@ -1236,6 +1301,8 @@ function playwrightEnvironment(input) {
             input.crossSubjectReplayPhase,
           WCV_C2_CROSS_SUBJECT_THEORY_COMMAND_ID:
             input.crossSubjectTheoryCommandId,
+          WCV_C2_CROSS_SUBJECT_LAW_COMMAND_ID:
+            input.crossSubjectLawCommandId,
           WCV_C2_CROSS_SUBJECT_PRACTICE_COMMAND_ID:
             input.crossSubjectPracticeCommandId,
         }
@@ -1391,6 +1458,79 @@ function theoryConfirmationDiagnostics(value, requireComplete) {
   return diagnostics;
 }
 
+const LAW_DIAGNOSTIC_KEYS = Object.freeze([
+  "lawStructuredConfirmationExisted",
+  "postState",
+  "preState",
+  "proofEvaluationState",
+  "proofReasonCodeIds",
+  "recordVersion",
+  "responseStatus",
+  "safeErrorCode",
+]);
+
+function validateLawConfirmationDiagnostic(value) {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    throw new Error("Law confirmation diagnostic is not an object");
+  }
+  if (
+    JSON.stringify(Object.keys(value).sort()) !==
+    JSON.stringify(LAW_DIAGNOSTIC_KEYS)
+  ) {
+    throw new Error("Law confirmation diagnostic fields are not exact");
+  }
+  if (
+    !THEORY_DIAGNOSTIC_STATES.has(value.preState) ||
+    !THEORY_DIAGNOSTIC_STATES.has(value.postState) ||
+    value.responseStatus !== 200 ||
+    value.safeErrorCode !== null ||
+    !THEORY_DIAGNOSTIC_PROOF_STATES.has(value.proofEvaluationState) ||
+    !Array.isArray(value.proofReasonCodeIds) ||
+    value.proofReasonCodeIds.some(
+      (reason) =>
+        typeof reason !== "string" || !/^[a-z0-9_:-]+$/.test(reason),
+    ) ||
+    !Number.isInteger(value.recordVersion) ||
+    value.recordVersion < 1 ||
+    typeof value.lawStructuredConfirmationExisted !== "boolean"
+  ) {
+    throw new Error("Law confirmation diagnostic values are invalid");
+  }
+  return value;
+}
+
+function lawConfirmationDiagnostics(value, requireComplete) {
+  if (
+    !value ||
+    typeof value !== "object" ||
+    !Array.isArray(value.finalLawConfirmations) ||
+    value.finalLawConfirmations.length < 1 ||
+    value.finalLawConfirmations.length > 3
+  ) {
+    throw new Error("Law confirmation diagnostic inventory is invalid");
+  }
+  const diagnostics = value.finalLawConfirmations.map(
+    validateLawConfirmationDiagnostic,
+  );
+  if (requireComplete) {
+    if (diagnostics.length !== 3) {
+      throw new Error("Law confirmation diagnostic inventory is incomplete");
+    }
+    for (const diagnostic of diagnostics) {
+      if (
+        diagnostic.preState !== "repair_submitted" ||
+        diagnostic.postState !== "verified" ||
+        diagnostic.proofEvaluationState !== "PASS" ||
+        diagnostic.proofReasonCodeIds.length !== 0 ||
+        diagnostic.lawStructuredConfirmationExisted !== true
+      ) {
+        throw new Error("Law confirmation diagnostic did not prove exact success");
+      }
+    }
+  }
+  return diagnostics;
+}
+
 function browserFailureFromResult(
   executable,
   commandArgs,
@@ -1404,13 +1544,15 @@ function browserFailureFromResult(
   }
   const locations = sanitizedBrowserFailureLocations(result);
   let safeDiagnostic = "";
-  if (THEORY_RUNTIME && fs.existsSync(browserEvidencePath)) {
+  if (EXTENDED_RUNTIME && fs.existsSync(browserEvidencePath)) {
     try {
       const evidence = JSON.parse(fs.readFileSync(browserEvidencePath, "utf8"));
-      const diagnostics = theoryConfirmationDiagnostics(evidence, false);
-      safeDiagnostic = `; final_theory_confirmation=${JSON.stringify(diagnostics.at(-1))}`;
+      const diagnostics = LAW_RUNTIME
+        ? lawConfirmationDiagnostics(evidence, false)
+        : theoryConfirmationDiagnostics(evidence, false);
+      safeDiagnostic = `; final_subject_confirmation=${JSON.stringify(diagnostics.at(-1))}`;
     } catch {
-      safeDiagnostic = "; final_theory_confirmation=unavailable_or_invalid";
+      safeDiagnostic = "; final_subject_confirmation=unavailable_or_invalid";
     }
   }
   const stderr = (locations.length
@@ -1461,8 +1603,8 @@ function runBrowserSuite(input) {
 }
 
 function runCrossSubjectReplayBrowser(input) {
-  if (!THEORY_RUNTIME) {
-    throw new Error("cross-subject replay browser checks require the Theory runtime");
+  if (!EXTENDED_RUNTIME) {
+    throw new Error("cross-subject replay browser checks require an extended runtime");
   }
   const executable = process.execPath;
   const commandArgs = [
@@ -1552,6 +1694,87 @@ async function verifyDirectRls(input) {
 }
 
 function verifyPersistedRuntime(databaseContainer) {
+  if (LAW_RUNTIME) {
+    const assertionIds = [
+      "sessions_present",
+      "private_artifacts_present",
+      "exposure_events_present",
+      "command_receipts_present",
+      "exposure_revision_binding_closed",
+      "law_only_sessions",
+      "verified_requires_exact_law_pass",
+      "private_artifacts_immutable",
+      "corrected_partial_retry_verified",
+      "second_failed_retry_remains_partial",
+      "partial_retry_artifact_limit_enforced",
+    ];
+    const result = databaseQuery(
+      databaseContainer,
+      COMMAND_SPECS.verify_persisted_runtime_psql,
+      `select concat_ws('|',
+        (select (count(*) > 0)::text from public.wcv_c2_trusted_repair_sessions),
+        (select (count(*) > 0)::text from public.wcv_c2_trusted_repair_private_artifacts),
+        (select (count(*) > 0)::text from public.wcv_c2_trusted_repair_exposure_events),
+        (select (count(*) > 0)::text from public.wcv_c2_trusted_repair_command_receipts),
+        (select (count(*) = 0)::text from public.wcv_c2_trusted_repair_exposure_events e
+          left join public.wcv_c2_trusted_repair_private_artifacts a
+            on a.id=e.revision_id and a.session_id=e.session_id and a.user_id=e.user_id
+          where a.id is null),
+        (select (count(*) = 0)::text from public.wcv_c2_trusted_repair_sessions
+          where subject <> 'appraisal_law'),
+        (select (count(*) = 0)::text from public.wcv_c2_trusted_repair_sessions
+          where state='verified' and (
+            state_data->'structuredClaim'->>'sourceRevisionId'
+              is distinct from confirmed_revision_id::text
+            or state_data->'structuredClaim'->>'sourceVersionId'
+              is distinct from 'law-source:synthetic-official-act@2026-01-01'
+            or state_data->'structuredClaim'->>'lawAnchorVersionId'
+              is distinct from 'law-anchor:synthetic-official-act:article-10@2026-01-01'
+            or state_data->'structuredClaim'->>'exactLocator'
+              is distinct from 'Article 10'
+            or state_data->'structuredClaim'->>'applicableAsOf'
+              is distinct from '2026-08-15'
+            or state_data->'structuredClaim'->>'currentLawApplicability'
+              is distinct from 'APPLICABLE_CURRENT'
+            or state_data->'structuredClaim'->'blockerState'
+              is distinct from '{"openBlockingReferenceIds":[],"blockerCount":0}'::jsonb
+            or state_data->'proofEvaluation'->>'state' is distinct from 'PASS'
+            or state_data->'proofEvaluation'->>'validatorId'
+              is distinct from 'validator:law-exact-applicability@1'
+          )),
+        (select (count(*) = 0)::text from public.wcv_c2_trusted_repair_private_artifacts where immutable is not true),
+        (select exists(
+          select 1 from public.wcv_c2_trusted_repair_sessions s
+          where s.state='verified' and (
+            select count(*) from public.wcv_c2_trusted_repair_private_artifacts a
+            where a.session_id=s.id and a.user_id=s.user_id
+              and a.artifact_kind='repair_submission'
+          )=2
+        )::text),
+        (select exists(
+          select 1 from public.wcv_c2_trusted_repair_sessions s
+          where s.state='partial' and (
+            select count(*) from public.wcv_c2_trusted_repair_private_artifacts a
+            where a.session_id=s.id and a.user_id=s.user_id
+              and a.artifact_kind='repair_submission'
+          )=2
+        )::text),
+        (select (count(*) = 0)::text
+          from public.wcv_c2_trusted_repair_sessions s
+          where (select count(*) from public.wcv_c2_trusted_repair_private_artifacts a
+                 where a.session_id=s.id and a.user_id=s.user_id
+                   and a.artifact_kind='repair_submission') > 2)
+      );`,
+    );
+    const values = result.split("|");
+    const failed = assertionIds.filter((_, index) => values[index] !== "true");
+    if (failed.length > 0 || values.length !== assertionIds.length) {
+      throw new Error(
+        `persisted Law runtime invariants failed: ${failed.join(",") || "shape"}`,
+      );
+    }
+    return;
+  }
   if (THEORY_RUNTIME) {
     const assertionIds = [
       "sessions_present",
@@ -1736,26 +1959,32 @@ async function runFinalRuntime() {
   const runAttempt = required(process.env.GITHUB_RUN_ATTEMPT, "GITHUB_RUN_ATTEMPT", /^\d+$/);
   const evidencePath = path.resolve(
     process.env[
-      THEORY_RUNTIME
-        ? "C2R_C_T_RUNTIME_EVIDENCE_PATH"
-        : "C2R_C_P_RUNTIME_EVIDENCE_PATH"
+      LAW_RUNTIME
+        ? "C2R_C_L_RUNTIME_EVIDENCE_PATH"
+        : THEORY_RUNTIME
+          ? "C2R_C_T_RUNTIME_EVIDENCE_PATH"
+          : "C2R_C_P_RUNTIME_EVIDENCE_PATH"
     ] ??
       path.join(
         REPOSITORY_ROOT,
-        THEORY_RUNTIME
-          ? ".agent-factory/c2r-c-t-theory-runtime-evidence.json"
+        LAW_RUNTIME
+          ? ".agent-factory/c2r-c-l-law-runtime-evidence.json"
+          : THEORY_RUNTIME
+            ? ".agent-factory/c2r-c-t-theory-runtime-evidence.json"
           : ".agent-factory/c2r-c-p-practice-runtime-evidence.json",
       ),
   );
   const browserEvidencePath = path.join(
     path.dirname(evidencePath),
-    THEORY_RUNTIME
-      ? "c2r-c-t-browser-metadata.json"
+    LAW_RUNTIME
+      ? "c2r-c-l-browser-metadata.json"
+      : THEORY_RUNTIME
+        ? "c2r-c-t-browser-metadata.json"
       : "c2r-c-p-browser-metadata.json",
   );
   const root = runtimeRoot();
   const migrations = migrationMetadata();
-  const expectedMigrationCount = THEORY_RUNTIME ? 3 : 2;
+  const expectedMigrationCount = LAW_RUNTIME ? 4 : THEORY_RUNTIME ? 3 : 2;
   if (migrations.length !== expectedMigrationCount) {
     throw new Error("C2 final migration inventory is not exact");
   }
@@ -1830,8 +2059,13 @@ async function runFinalRuntime() {
       COMMAND_SPECS.verify_security_contract_psql,
     );
     assertions.push({ id: "first_fresh_empty_state_migrations", result: "passed" });
-    if (THEORY_RUNTIME) {
-      assertions.push({ id: "theory_migration_replay_safe", result: "passed" });
+    if (EXTENDED_RUNTIME) {
+      assertions.push({
+        id: LAW_RUNTIME
+          ? "law_migration_replay_safe"
+          : "theory_migration_replay_safe",
+        result: "passed",
+      });
     }
     assertions.push({ id: "forced_rls_and_exact_grants", result: "passed" });
     assertions.push({ id: "minimum_local_services_healthy", result: "passed" });
@@ -1886,9 +2120,10 @@ async function runFinalRuntime() {
     await verifyFlagOffBeforeBodyParsing(nextInput, databaseContainer);
     assertions.push({ id: "default_off_before_parse_and_write", result: "passed" });
 
-    const crossSubjectReplay = THEORY_RUNTIME
+    const crossSubjectReplay = EXTENDED_RUNTIME
       ? {
           theoryCommandId: crypto.randomUUID(),
+          lawCommandId: crypto.randomUUID(),
           practiceCommandId: crypto.randomUUID(),
         }
       : null;
@@ -1907,17 +2142,22 @@ async function runFinalRuntime() {
       throw new Error("C2 browser suite produced no metadata evidence");
     }
     browserEvidence = JSON.parse(fs.readFileSync(browserEvidencePath, "utf8"));
-    if (THEORY_RUNTIME) {
-      theoryConfirmationDiagnostics(browserEvidence, true);
+    if (EXTENDED_RUNTIME) {
+      if (LAW_RUNTIME) lawConfirmationDiagnostics(browserEvidence, true);
+      else theoryConfirmationDiagnostics(browserEvidence, true);
       assertions.push({
-        id: "theory_final_confirmation_metadata_safe",
+        id: LAW_RUNTIME
+          ? "law_final_confirmation_metadata_safe"
+          : "theory_final_confirmation_metadata_safe",
         result: "passed",
       });
     }
     verifyPersistedRuntime(databaseContainer);
     assertions.push({
-      id: THEORY_RUNTIME
-        ? "theory_actual_browser_to_postgres_chain"
+      id: LAW_RUNTIME
+        ? "law_actual_browser_to_postgres_chain"
+        : THEORY_RUNTIME
+          ? "theory_actual_browser_to_postgres_chain"
         : "practice_actual_browser_to_postgres_chain",
       result: "passed",
     });
@@ -1968,6 +2208,7 @@ async function runFinalRuntime() {
         browserEvidencePath,
         crossSubjectReplayPhase: "seed",
         crossSubjectTheoryCommandId: crossSubjectReplay.theoryCommandId,
+        crossSubjectLawCommandId: crossSubjectReplay.lawCommandId,
         crossSubjectPracticeCommandId: crossSubjectReplay.practiceCommandId,
         testName: "cross-subject start replay seed",
         commandSpec: COMMAND_SPECS.browser_cross_subject_seed,
@@ -1988,8 +2229,11 @@ async function runFinalRuntime() {
         browserEvidencePath,
         crossSubjectReplayPhase: "verify_practice",
         crossSubjectTheoryCommandId: crossSubjectReplay.theoryCommandId,
+        crossSubjectLawCommandId: crossSubjectReplay.lawCommandId,
         crossSubjectPracticeCommandId: crossSubjectReplay.practiceCommandId,
-        testName: "cross-subject start replay is denied with Theory disabled",
+        testName: LAW_RUNTIME
+          ? "cross-subject start replay is denied with Law disabled"
+          : "cross-subject start replay is denied with Theory disabled",
         commandSpec: COMMAND_SPECS.browser_cross_subject_practice,
       });
       await stopNext(server);
@@ -1998,19 +2242,24 @@ async function runFinalRuntime() {
       server = await startNext({
         ...nextInput,
         enabled: true,
-        enabledSubjects: "theory",
-        commandSpec: COMMAND_SPECS.next_cross_subject_theory_start,
+        enabledSubjects: LAW_RUNTIME ? "law" : "theory",
+        commandSpec: LAW_RUNTIME
+          ? COMMAND_SPECS.next_cross_subject_law_start
+          : COMMAND_SPECS.next_cross_subject_theory_start,
       });
       runCrossSubjectReplayBrowser({
         baseUrl: server.baseUrl,
         userA,
         userB,
         browserEvidencePath,
-        crossSubjectReplayPhase: "verify_theory",
+        crossSubjectReplayPhase: LAW_RUNTIME ? "verify_law" : "verify_theory",
         crossSubjectTheoryCommandId: crossSubjectReplay.theoryCommandId,
+        crossSubjectLawCommandId: crossSubjectReplay.lawCommandId,
         crossSubjectPracticeCommandId: crossSubjectReplay.practiceCommandId,
         testName: "cross-subject start replay is denied with Practice disabled",
-        commandSpec: COMMAND_SPECS.browser_cross_subject_theory,
+        commandSpec: LAW_RUNTIME
+          ? COMMAND_SPECS.browser_cross_subject_law
+          : COMMAND_SPECS.browser_cross_subject_theory,
       });
       await stopNext(server);
       server = null;
@@ -2079,7 +2328,7 @@ async function runFinalRuntime() {
     } catch (cleanupError) {
       runtimeError = cleanupError;
     } finally {
-      if (THEORY_RUNTIME) {
+      if (EXTENDED_RUNTIME) {
         fs.rmSync(BROWSER_RUNTIME_CONFIG_PATH, { force: true });
       }
     }
@@ -2091,11 +2340,15 @@ async function runFinalRuntime() {
   assertions.push({ id: "exact_head_unchanged", result: "passed" });
 
   const evidence = {
-    schemaVersion: THEORY_RUNTIME
-      ? "c2r_c_t_theory_trusted_repair_runtime_evidence.v1"
+    schemaVersion: LAW_RUNTIME
+      ? "c2r_c_l_law_trusted_repair_runtime_evidence.v1"
+      : THEORY_RUNTIME
+        ? "c2r_c_t_theory_trusted_repair_runtime_evidence.v1"
       : "c2r_c_p_practice_trusted_repair_runtime_evidence.v1",
-    phase: THEORY_RUNTIME
-      ? "complete_theory_trusted_repair_vertical"
+    phase: LAW_RUNTIME
+      ? "complete_law_trusted_repair_vertical"
+      : THEORY_RUNTIME
+        ? "complete_theory_trusted_repair_vertical"
       : "complete_practice_trusted_repair_vertical",
     headSha,
     runId,
@@ -2136,8 +2389,10 @@ async function runFinalRuntime() {
   });
   fs.rmSync(browserEvidencePath, { force: true });
   process.stdout.write(
-    THEORY_RUNTIME
-      ? "c2r-c-t-theory-trusted-repair-runtime: pass\n"
+    LAW_RUNTIME
+      ? "c2r-c-l-law-trusted-repair-runtime: pass\n"
+      : THEORY_RUNTIME
+        ? "c2r-c-t-theory-trusted-repair-runtime: pass\n"
       : "c2r-c-p-practice-trusted-repair-runtime: pass\n",
   );
 }
@@ -2150,8 +2405,10 @@ async function main() {
     }
     cleanup(root, requireCompleteCleanup);
     process.stdout.write(
-      THEORY_RUNTIME
-        ? "c2r-c-t-local-stack-cleanup: pass\n"
+      LAW_RUNTIME
+        ? "c2r-c-l-local-stack-cleanup: pass\n"
+        : THEORY_RUNTIME
+          ? "c2r-c-t-local-stack-cleanup: pass\n"
         : "c2r-c-p-local-stack-cleanup: pass\n",
     );
     return;

@@ -16,6 +16,8 @@ export const C2R_C_P_RUNTIME_EVIDENCE_PRODUCER_VERSION =
   "c2r-c-p.postgres.practice-trusted-repair.v2";
 export const C2R_C_T_RUNTIME_EVIDENCE_PRODUCER_VERSION =
   "c2r-c-t.postgres.theory-trusted-repair.v1";
+export const C2R_C_L_RUNTIME_EVIDENCE_PRODUCER_VERSION =
+  "c2r-c-l.postgres.law-trusted-repair.v1";
 export const RUNTIME_EVIDENCE_ASSERTION_IDS = Object.freeze([
   "migration_prerequisites_and_target_applied",
   "learner_rls_two_user_isolation",
@@ -79,10 +81,27 @@ export const C2R_C_T_RUNTIME_EVIDENCE_ASSERTION_IDS = Object.freeze([
   "practice_rows_preserved_by_theory_delta",
   "cleanup_complete",
 ]);
+export const C2R_C_L_RUNTIME_EVIDENCE_ASSERTION_IDS = Object.freeze([
+  "law_delta_migration_applied",
+  "practice_theory_and_law_subject_bindings_exact",
+  "law_exact_proof_trigger_installed",
+  "forced_rls_all_tables_preserved",
+  "authenticated_session_read_denied",
+  "anonymous_read_denied",
+  "authenticated_private_body_read_denied",
+  "authenticated_direct_mutation_denied",
+  "service_only_rpc_execution",
+  "idempotent_law_create_replay_no_duplicate_work",
+  "unverified_law_transition_rejected",
+  "practice_and_theory_rows_preserved_by_law_delta",
+  "cleanup_complete",
+]);
 const C2R_C_P_MIGRATION_PATH =
   "supabase/migrations/20260817090000_c2r_c_p_structured_practice_proof.sql";
 const C2R_C_T_MIGRATION_PATH =
   "supabase/migrations/20260817113000_c2r_c_t_structural_theory_proof.sql";
+const C2R_C_L_MIGRATION_PATH =
+  "supabase/migrations/20260817170000_c2r_c_l_exact_law_applicability.sql";
 const S236P_MIGRATION_PATHS = Object.freeze([
   "supabase/migrations/20260730025332_s236p_lean_owner_private.sql",
   "supabase/migrations/20260730060233_s236p_owner_private_lifecycle_hardening.sql",
@@ -315,6 +334,22 @@ function expectedRuntimeContract(riskResult, headSha) {
     ]];
     markerError =
       "C2R-C-T Theory migration does not match the supported adapter contract.";
+  } else if (
+    migrations.length === 1 &&
+    migrations[0].path === C2R_C_L_MIGRATION_PATH
+  ) {
+    assertionIds = C2R_C_L_RUNTIME_EVIDENCE_ASSERTION_IDS;
+    producerVersion = C2R_C_L_RUNTIME_EVIDENCE_PRODUCER_VERSION;
+    markerSets = [[
+      "subject = 'appraisal_law'",
+      "validator:law-exact-applicability@1",
+      "law-source:synthetic-official-act@2026-01-01",
+      "law-anchor:synthetic-official-act:article-10@2026-01-01",
+      "WCV_C2_STRUCTURED_LAW_PROOF_REQUIRED",
+      "wcv_c2_validate_exact_law_proof_v1",
+    ]];
+    markerError =
+      "C2R-C-L Law migration does not match the supported adapter contract.";
   } else {
     throw new Error(
       "no closed runtime-evidence adapter supports this runtime-sensitive change set.",

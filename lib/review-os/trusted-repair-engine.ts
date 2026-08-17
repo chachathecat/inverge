@@ -3,6 +3,10 @@ import {
   TrustedRepairContractError,
   trustedRepairBindingProfile,
   type CalculationRelationAnchorV1,
+  type LawApplicabilityAnchorV1,
+  type LawApplicabilityClaimV1,
+  type LawApplicabilityClaimV1Input,
+  type LawProofEvaluationState,
   type PracticeCalculationClaimV2,
   type PracticeCalculationClaimV2Input,
   type PracticeProofEvaluationState,
@@ -22,14 +26,34 @@ import {
   type TrustedRepairTransitionPlan,
 } from "./trusted-repair-contract";
 
-export type TrustedRepairSourceBindingState = Readonly<{
-  bindingVersion: "synthetic_fixture";
-  sourceStatus: "synthetic_fixture";
-  versionStatus: "synthetic_fixture";
-  currentLawStatus: "not_applicable_practice" | "not_applicable_theory";
-  sourceAnchorId: string | null;
-  blockerCount: 0;
-}>;
+export type TrustedRepairSourceBindingState =
+  | Readonly<{
+      bindingVersion: "synthetic_fixture";
+      sourceStatus: "synthetic_fixture";
+      versionStatus: "synthetic_fixture";
+      currentLawStatus: "not_applicable_practice" | "not_applicable_theory";
+      sourceAnchorId: null;
+      blockerCount: 0;
+    }>
+  | Readonly<{
+      bindingVersion: "dabangil.c2r_c_l.exact_law_applicability.v1";
+      sourceStatus: "VERIFIED_CURRENT";
+      versionStatus: "VERIFIED_CURRENT";
+      currentLawStatus: "APPLICABLE_CURRENT";
+      sourceAnchorId: "law-anchor:synthetic-official-act:article-10";
+      blockerCount: number;
+      openBlockingReferenceIds: readonly string[];
+      lawSourceBindingId: "law-binding:synthetic-official-act:article-10";
+      sourceId: "law-source:synthetic-official-act";
+      sourceVersionId: "law-source:synthetic-official-act@2026-01-01";
+      lawAnchorVersionId: "law-anchor:synthetic-official-act:article-10@2026-01-01";
+      anchorStatus: "VERIFIED_CURRENT";
+      exactLocator: "Article 10";
+      exactVersionIdentity: "2026-01-01";
+      effectiveFrom: "2026-01-01";
+      effectiveTo: null;
+      applicableAsOf: "2026-08-15";
+    }>;
 
 export const SYNTHETIC_SOURCE_BINDING: TrustedRepairSourceBindingState = {
   bindingVersion: "synthetic_fixture",
@@ -101,6 +125,16 @@ function practiceRelationAnchor(fixture: TrustedRepairFixture) {
 function theoryPredicateAnchor(fixture: TrustedRepairFixture) {
   const anchors = fixture.anchors.flatMap((entry) =>
     "scopedPredicate" in entry ? [entry.scopedPredicate] : [],
+  );
+  if (anchors.length !== 1) {
+    throw new TrustedRepairContractError("invalid_transition");
+  }
+  return anchors[0];
+}
+
+function lawApplicabilityAnchor(fixture: TrustedRepairFixture) {
+  const anchors = fixture.anchors.flatMap((entry) =>
+    "lawApplicability" in entry ? [entry.lawApplicability] : [],
   );
   if (anchors.length !== 1) {
     throw new TrustedRepairContractError("invalid_transition");
@@ -408,6 +442,206 @@ export function renderTheoryPredicateClaim(claim: TheoryPredicateClaimV1) {
   return `수익방식의 목표 범위에서 확인된 술어: ${asserted.join(", ")}.`;
 }
 
+export type LawApplicabilityClaimEvaluation = Readonly<{
+  state: LawProofEvaluationState;
+  verified: boolean;
+  validatorId: "validator:law-exact-applicability@1";
+  anchorId: LawApplicabilityAnchorV1["anchorId"];
+  anchorVersionId: LawApplicabilityAnchorV1["anchorVersionId"];
+  sourceRevisionId: string;
+  lawSourceBindingId: LawApplicabilityAnchorV1["lawSourceBindingId"];
+  sourceId: LawApplicabilityAnchorV1["sourceId"];
+  sourceVersionId: LawApplicabilityAnchorV1["sourceVersionId"];
+  lawAnchorId: LawApplicabilityAnchorV1["lawAnchorId"];
+  lawAnchorVersionId: LawApplicabilityAnchorV1["lawAnchorVersionId"];
+  exactLocator: LawApplicabilityAnchorV1["exactLocator"];
+  exactVersionIdentity: LawApplicabilityAnchorV1["exactVersionIdentity"];
+  applicableAsOf: LawApplicabilityAnchorV1["applicableAsOf"];
+  reasonCodes: readonly string[];
+}>;
+
+export function validateLawApplicabilityClaim(input: {
+  claim: LawApplicabilityClaimV1;
+  anchor: LawApplicabilityAnchorV1;
+  expectedSourceRevisionId: string;
+  sourceBinding: TrustedRepairSourceBindingState;
+}): LawApplicabilityClaimEvaluation {
+  const reasons: string[] = [];
+  if (input.claim.sourceRevisionId !== input.expectedSourceRevisionId) {
+    reasons.push("source_revision_mismatch");
+  }
+  const exactPairs = [
+    ["anchor_identity_mismatch", input.claim.anchorId, input.anchor.anchorId],
+    [
+      "anchor_version_mismatch",
+      input.claim.anchorVersionId,
+      input.anchor.anchorVersionId,
+    ],
+    [
+      "law_source_binding_mismatch",
+      input.claim.lawSourceBindingId,
+      input.anchor.lawSourceBindingId,
+    ],
+    ["source_identity_mismatch", input.claim.sourceId, input.anchor.sourceId],
+    [
+      "source_version_mismatch",
+      input.claim.sourceVersionId,
+      input.anchor.sourceVersionId,
+    ],
+    [
+      "law_anchor_identity_mismatch",
+      input.claim.lawAnchorId,
+      input.anchor.lawAnchorId,
+    ],
+    [
+      "law_anchor_version_mismatch",
+      input.claim.lawAnchorVersionId,
+      input.anchor.lawAnchorVersionId,
+    ],
+    ["exact_locator_mismatch", input.claim.exactLocator, input.anchor.exactLocator],
+    [
+      "exact_version_identity_mismatch",
+      input.claim.exactVersionIdentity,
+      input.anchor.exactVersionIdentity,
+    ],
+    [
+      "effective_from_mismatch",
+      input.claim.effectiveFrom,
+      input.anchor.effectiveFrom,
+    ],
+    [
+      "applicable_date_mismatch",
+      input.claim.applicableAsOf,
+      input.anchor.applicableAsOf,
+    ],
+    [
+      "current_law_applicability_mismatch",
+      input.claim.currentLawApplicability,
+      input.anchor.currentLawApplicability,
+    ],
+  ] as const;
+  for (const [reason, actual, expected] of exactPairs) {
+    if (actual !== expected) reasons.push(reason);
+  }
+  if (input.claim.effectiveTo !== input.anchor.effectiveTo) {
+    reasons.push("effective_to_mismatch");
+  }
+  const claimedOpenBlockers = [...input.claim.blockerState.openBlockingReferenceIds]
+    .sort();
+  if (
+    input.claim.blockerState.blockerCount !== claimedOpenBlockers.length ||
+    input.claim.blockerState.blockerCount !== input.anchor.blockerState.blockerCount ||
+    JSON.stringify(claimedOpenBlockers) !==
+      JSON.stringify([...input.anchor.blockerState.openBlockingReferenceIds].sort())
+  ) {
+    reasons.push("blocking_reference_state_mismatch");
+  }
+  if (
+    input.sourceBinding.bindingVersion !==
+      "dabangil.c2r_c_l.exact_law_applicability.v1"
+  ) {
+    reasons.push("law_binding_unresolved");
+  } else {
+    const livePairs = [
+      ["live_source_not_current", input.sourceBinding.sourceStatus, "VERIFIED_CURRENT"],
+      ["live_version_not_current", input.sourceBinding.versionStatus, "VERIFIED_CURRENT"],
+      ["live_anchor_not_current", input.sourceBinding.anchorStatus, "VERIFIED_CURRENT"],
+      [
+        "live_applicability_not_current",
+        input.sourceBinding.currentLawStatus,
+        "APPLICABLE_CURRENT",
+      ],
+      [
+        "live_binding_identity_mismatch",
+        input.sourceBinding.lawSourceBindingId,
+        input.anchor.lawSourceBindingId,
+      ],
+      ["live_source_identity_mismatch", input.sourceBinding.sourceId, input.anchor.sourceId],
+      [
+        "live_source_version_mismatch",
+        input.sourceBinding.sourceVersionId,
+        input.anchor.sourceVersionId,
+      ],
+      [
+        "live_anchor_identity_mismatch",
+        input.sourceBinding.sourceAnchorId,
+        input.anchor.lawAnchorId,
+      ],
+      [
+        "live_anchor_version_mismatch",
+        input.sourceBinding.lawAnchorVersionId,
+        input.anchor.lawAnchorVersionId,
+      ],
+      ["live_locator_mismatch", input.sourceBinding.exactLocator, input.anchor.exactLocator],
+      [
+        "live_version_identity_mismatch",
+        input.sourceBinding.exactVersionIdentity,
+        input.anchor.exactVersionIdentity,
+      ],
+      [
+        "live_effective_from_mismatch",
+        input.sourceBinding.effectiveFrom,
+        input.anchor.effectiveFrom,
+      ],
+      [
+        "live_applicable_date_mismatch",
+        input.sourceBinding.applicableAsOf,
+        input.anchor.applicableAsOf,
+      ],
+    ] as const;
+    for (const [reason, actual, expected] of livePairs) {
+      if (actual !== expected) reasons.push(reason);
+    }
+    if (
+      input.sourceBinding.effectiveTo !== input.anchor.effectiveTo ||
+      input.sourceBinding.blockerCount !== 0 ||
+      input.sourceBinding.openBlockingReferenceIds.length !== 0
+    ) {
+      reasons.push("live_open_blocker_or_window_mismatch");
+    }
+  }
+  if (!Number.isFinite(Date.parse(input.claim.learnerConfirmedAt))) {
+    reasons.push("confirmation_time_invalid");
+  }
+  const state: LawProofEvaluationState = reasons.includes(
+    "source_revision_mismatch",
+  )
+    ? "STALE"
+    : reasons.some((reason) => reason.startsWith("live_") || reason === "law_binding_unresolved")
+      ? "BLOCKED"
+      : reasons.length > 0
+        ? "UNSUPPORTED"
+        : "PASS";
+  return {
+    state,
+    verified: state === "PASS",
+    validatorId: input.anchor.deterministicValidatorId,
+    anchorId: input.anchor.anchorId,
+    anchorVersionId: input.anchor.anchorVersionId,
+    sourceRevisionId: input.expectedSourceRevisionId,
+    lawSourceBindingId: input.anchor.lawSourceBindingId,
+    sourceId: input.anchor.sourceId,
+    sourceVersionId: input.anchor.sourceVersionId,
+    lawAnchorId: input.anchor.lawAnchorId,
+    lawAnchorVersionId: input.anchor.lawAnchorVersionId,
+    exactLocator: input.anchor.exactLocator,
+    exactVersionIdentity: input.anchor.exactVersionIdentity,
+    applicableAsOf: input.anchor.applicableAsOf,
+    reasonCodes: reasons,
+  };
+}
+
+export function buildLawApplicabilityClaim(input: {
+  claim: LawApplicabilityClaimV1Input;
+  learnerConfirmedAt: string;
+}): LawApplicabilityClaimV1 {
+  return { ...input.claim, learnerConfirmedAt: input.learnerConfirmedAt };
+}
+
+export function renderLawApplicabilityClaim(claim: LawApplicabilityClaimV1) {
+  return `${claim.sourceVersionId}의 ${claim.exactLocator}는 ${claim.applicableAsOf} 현재 적용 가능하며, 열린 차단 근거는 0개입니다.`;
+}
+
 function persistedProofEvaluation(
   evaluation: PracticeCalculationClaimEvaluation,
 ): NonNullable<TrustedRepairStateData["proofEvaluation"]> {
@@ -435,6 +669,12 @@ function persistedTheoryProofEvaluation(
     targetScopeId: evaluation.targetScopeId,
     reasonCodes: evaluation.reasonCodes,
   };
+}
+
+function persistedLawProofEvaluation(
+  evaluation: LawApplicabilityClaimEvaluation,
+): NonNullable<TrustedRepairStateData["proofEvaluation"]> {
+  return { ...evaluation };
 }
 
 export function latestTrustedRepairArtifact(
@@ -723,7 +963,9 @@ export function diagnoseTrustedRepairAttempt(input: {
       ? "가장 먼저 떠오르는 근거를 한 문장으로 직접 적으세요."
       : input.fixture.subject === "appraisal_theory"
         ? "보지 않고 다시 구성한 뒤 목표 범위와 필수·금지 술어의 극성을 직접 확인하세요."
-        : "보지 않고 다시 구성한 뒤 계산관계의 각 필드를 직접 확인하세요.",
+        : input.fixture.subject === "appraisal_law"
+          ? "보지 않고 다시 구성한 뒤 출처·버전·앵커·위치·효력기간·적용일·현재성·차단 근거를 직접 확인하세요."
+          : "보지 않고 다시 구성한 뒤 계산관계의 각 필드를 직접 확인하세요.",
     successCriterionKo: input.fixture.successCriterionKo,
   };
   return {
@@ -941,6 +1183,58 @@ export function planTrustedRepairTheoryClaimConfirmation(input: {
         ? ["same_session_structured_theory_claim_passed"]
         : ["same_session_structured_theory_claim_not_yet_passed"]),
       "free_form_evidence_was_candidate_only",
+      "no_mastery_transfer_stability_score_or_pass_claim",
+    ],
+  });
+  return { ...plan, outcome: nextState };
+}
+
+export function planTrustedRepairLawClaimConfirmation(input: {
+  aggregate: TrustedRepairAggregate;
+  fixture: TrustedRepairFixture;
+  sourceBinding: TrustedRepairSourceBindingState;
+  claim: LawApplicabilityClaimV1;
+}) {
+  guardState(input.aggregate, "repair_submitted");
+  if (input.aggregate.session.subject !== "appraisal_law") {
+    throw new TrustedRepairContractError("invalid_transition");
+  }
+  if (!trustedRepairSourceBindingMatches(input)) {
+    return planTrustedRepairSourceBindingDrift(input.aggregate);
+  }
+  const revisionId = input.aggregate.session.confirmedRevisionId;
+  if (!revisionId || input.claim.sourceRevisionId !== revisionId) {
+    return planTrustedRepairSourceBindingDrift(input.aggregate);
+  }
+  const evaluation = validateLawApplicabilityClaim({
+    claim: input.claim,
+    anchor: lawApplicabilityAnchor(input.fixture),
+    expectedSourceRevisionId: revisionId,
+    sourceBinding: input.sourceBinding,
+  });
+  const independentBoundaryPassed =
+    input.aggregate.session.independentAttemptBeforeHelp &&
+    input.aggregate.exposures.every(
+      (exposure) => exposure.scaffoldKind !== "guided_solution",
+    );
+  const nextState =
+    independentBoundaryPassed && evaluation.state === "PASS"
+      ? ("verified" as const)
+      : independentBoundaryPassed
+        ? ("partial" as const)
+        : ("guided" as const);
+  const plan = basePlan(input.aggregate, nextState, {
+    ...input.aggregate.session.stateData,
+    continuation: "VERIFY_AND_CONTINUE",
+    structuredClaim: input.claim,
+    proofEvaluation: persistedLawProofEvaluation(evaluation),
+    resultReasonCodes: [
+      ...input.aggregate.session.stateData.resultReasonCodes,
+      ...(evaluation.state === "PASS"
+        ? ["same_session_structured_law_claim_passed"]
+        : ["same_session_structured_law_claim_not_yet_passed"]),
+      "free_form_evidence_was_candidate_only",
+      "exact_source_anchor_version_locator_and_applicability_required",
       "no_mastery_transfer_stability_score_or_pass_claim",
     ],
   });

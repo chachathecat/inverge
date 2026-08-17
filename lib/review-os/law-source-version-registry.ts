@@ -1205,3 +1205,179 @@ export function loadLawSourceVersionReport(config: LawSourceVersionRegistryConfi
   }
   return expected;
 }
+
+export type TrustedRepairLawBlockerRecord = Readonly<{
+  blockerId: string;
+  status: "open" | "resolved";
+  severity: "blocking" | "warning";
+}>;
+
+export type TrustedRepairLawApplicabilitySnapshot = Readonly<{
+  contractVersion: "dabangil.c2r_c_l.exact_law_applicability.v1";
+  lawSourceBindingId: "law-binding:synthetic-official-act:article-10";
+  sourceId: "law-source:synthetic-official-act";
+  sourceVersionId: "law-source:synthetic-official-act@2026-01-01";
+  sourceStatus: "VERIFIED_CURRENT";
+  lawAnchorId: "law-anchor:synthetic-official-act:article-10";
+  lawAnchorVersionId: "law-anchor:synthetic-official-act:article-10@2026-01-01";
+  anchorStatus: "VERIFIED_CURRENT";
+  exactLocator: "Article 10";
+  exactVersionIdentity: "2026-01-01";
+  effectiveFrom: "2026-01-01";
+  effectiveTo: null;
+  applicableAsOf: "2026-08-15";
+  currentLawApplicability: "APPLICABLE_CURRENT";
+  referencedBlockerIds: readonly string[];
+  blockerCatalog: readonly TrustedRepairLawBlockerRecord[];
+  metadataOnly: true;
+  containsRawContent: false;
+}>;
+
+const TRUSTED_REPAIR_LAW_REGISTRY_PATH =
+  "config/dabangil-c2r-c-l-exact-law-applicability-v1.json";
+
+function exactKeys(
+  value: unknown,
+  keys: readonly string[],
+  sourceName: string,
+): Record<string, unknown> {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    throw new Error(`${sourceName} must be an object`);
+  }
+  const record = value as Record<string, unknown>;
+  const actual = Object.keys(record).sort();
+  const expected = [...keys].sort();
+  if (JSON.stringify(actual) !== JSON.stringify(expected)) {
+    throw new Error(`${sourceName} has unknown or missing fields`);
+  }
+  return record;
+}
+
+export function validateTrustedRepairLawApplicabilitySnapshot(
+  value: unknown,
+): TrustedRepairLawApplicabilitySnapshot {
+  const record = exactKeys(
+    value,
+    [
+      "contractVersion",
+      "lawSourceBindingId",
+      "sourceId",
+      "sourceVersionId",
+      "sourceStatus",
+      "lawAnchorId",
+      "lawAnchorVersionId",
+      "anchorStatus",
+      "exactLocator",
+      "exactVersionIdentity",
+      "effectiveFrom",
+      "effectiveTo",
+      "applicableAsOf",
+      "currentLawApplicability",
+      "referencedBlockerIds",
+      "blockerCatalog",
+      "metadataOnly",
+      "containsRawContent",
+    ],
+    "trusted-repair Law snapshot",
+  );
+  const exactValues = {
+    contractVersion: "dabangil.c2r_c_l.exact_law_applicability.v1",
+    lawSourceBindingId: "law-binding:synthetic-official-act:article-10",
+    sourceId: "law-source:synthetic-official-act",
+    sourceVersionId: "law-source:synthetic-official-act@2026-01-01",
+    sourceStatus: "VERIFIED_CURRENT",
+    lawAnchorId: "law-anchor:synthetic-official-act:article-10",
+    lawAnchorVersionId:
+      "law-anchor:synthetic-official-act:article-10@2026-01-01",
+    anchorStatus: "VERIFIED_CURRENT",
+    exactLocator: "Article 10",
+    exactVersionIdentity: "2026-01-01",
+    effectiveFrom: "2026-01-01",
+    effectiveTo: null,
+    applicableAsOf: "2026-08-15",
+    currentLawApplicability: "APPLICABLE_CURRENT",
+    metadataOnly: true,
+    containsRawContent: false,
+  } as const;
+  for (const [key, expected] of Object.entries(exactValues)) {
+    if (record[key] !== expected) {
+      throw new Error(`trusted-repair Law snapshot ${key} is not exact`);
+    }
+  }
+  if (
+    !Array.isArray(record.referencedBlockerIds) ||
+    !Array.isArray(record.blockerCatalog)
+  ) {
+    throw new Error("trusted-repair Law blocker collections must be arrays");
+  }
+  const blockerCatalog = record.blockerCatalog.map((entry, index) => {
+    const blocker = exactKeys(
+      entry,
+      ["blockerId", "status", "severity"],
+      `trusted-repair Law blocker ${index}`,
+    );
+    if (
+      typeof blocker.blockerId !== "string" ||
+      !blocker.blockerId ||
+      !["open", "resolved"].includes(String(blocker.status)) ||
+      !["blocking", "warning"].includes(String(blocker.severity))
+    ) {
+      throw new Error(`trusted-repair Law blocker ${index} is invalid`);
+    }
+    return blocker as TrustedRepairLawBlockerRecord;
+  });
+  const blockerById = new Map<string, TrustedRepairLawBlockerRecord>();
+  for (const blocker of blockerCatalog) {
+    if (blockerById.has(blocker.blockerId)) {
+      throw new Error("trusted-repair Law blocker IDs must be unique");
+    }
+    blockerById.set(blocker.blockerId, blocker);
+  }
+  const referencedBlockerIds = record.referencedBlockerIds.map((entry) => {
+    if (typeof entry !== "string" || !entry) {
+      throw new Error("trusted-repair Law blocker reference is invalid");
+    }
+    if (!blockerById.has(entry)) {
+      throw new Error(`trusted-repair Law blocker reference is unknown: ${entry}`);
+    }
+    return entry;
+  });
+  if (new Set(referencedBlockerIds).size !== referencedBlockerIds.length) {
+    throw new Error("trusted-repair Law blocker references must be unique");
+  }
+  const effectiveFrom = Date.parse(`${record.effectiveFrom}T00:00:00.000Z`);
+  const applicableAsOf = Date.parse(`${record.applicableAsOf}T00:00:00.000Z`);
+  if (!Number.isFinite(effectiveFrom) || !Number.isFinite(applicableAsOf) || applicableAsOf < effectiveFrom) {
+    throw new Error("trusted-repair Law applicability window is invalid");
+  }
+  return {
+    ...exactValues,
+    referencedBlockerIds,
+    blockerCatalog,
+  };
+}
+
+export function trustedRepairLawOpenBlockingReferenceIds(
+  snapshot: TrustedRepairLawApplicabilitySnapshot,
+) {
+  const blockerById = new Map(
+    snapshot.blockerCatalog.map((blocker) => [blocker.blockerId, blocker]),
+  );
+  return [...new Set(snapshot.referencedBlockerIds)]
+    .filter((blockerId) => {
+      const blocker = blockerById.get(blockerId);
+      if (!blocker) {
+        throw new Error(`trusted-repair Law blocker reference is unknown: ${blockerId}`);
+      }
+      return blocker.status === "open" && blocker.severity === "blocking";
+    })
+    .sort();
+}
+
+export function loadTrustedRepairLawApplicabilitySnapshot(
+  registryPath = TRUSTED_REPAIR_LAW_REGISTRY_PATH,
+) {
+  return validateTrustedRepairLawApplicabilitySnapshot(
+    readJsonFile(resolveRepoPath(registryPath, TRUSTED_REPAIR_LAW_REGISTRY_PATH)),
+  );
+}

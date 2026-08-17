@@ -74,14 +74,15 @@ owns the completed C2R-A source contract and its post-A selector. The still
 later C2R-B decision owns the typed proof architecture and post-B selector.
 The 2026-08-17 C2R-C-P decision owns the complete Practice runtime candidate
 and post-P selector. The typed-proof and structural decisions own the complete
-Theory delta and post-T selector: C2R-C-L/#703 is authorized but unstarted
-after the validated C2R-C-T merge and receipt. Issue #714 stays open for
+Theory and Law deltas. PR #762 completed Theory; terminal candidate PR #764
+represents C2R-C-L/WCV-C2 completion only after its expected-head merge and
+validated receipt, then selects WCV-C3/C3/#706. Issue #714 stays open for
 C3/C4/C6.
 
-The canonical current tuple is
-`WCV-C2 / C2 / #717 / C2R-C-L / #703 / authorized_unstarted`. C2R-B installs
-no runtime; C2R-C-P and C2R-C-T install independently default-off Owner-only
-Practice and Theory runtimes.
+The canonical post-receipt tuple is
+`WCV-C3 / C3 / #706 / authorized_unstarted`. C2R-B installs no runtime;
+C2R-C-P, C2R-C-T and C2R-C-L install independently default-off Owner-only
+Practice, Theory and Law runtimes.
 
 ## Mandatory V13 follow-up — Memory Cue & Annotation Layer
 
@@ -216,12 +217,12 @@ three subjects.
 The final public target is separately defined by the subordinate ULC-0
 amendment as the integrated first- and second-round product on Web,
 iOS/iPadOS and Android. That future target does not activate first-round,
-native, instructor or public runtime now. The exact current repository
-selection is WCV-C2/C2/#717/C2R-C-L/#703, authorized but unstarted. C2R-A/#702
-and C2R-B/#714 are completed source-only predecessors, while C2R-C-P and
-C2R-C-T are completed default-off Practice and Theory runtime predecessors
-under merge-and-receipt semantics; no Production or learner activation
-follows.
+native, instructor or public runtime now. Candidate PR #764 represents the
+post-receipt repository selection WCV-C3/C3/#706, authorized but unstarted.
+C2R-A/#702 and C2R-B/#714 are completed source-only predecessors, while
+C2R-C-P, C2R-C-T and C2R-C-L are completed default-off Practice, Theory and
+Law runtime predecessors under merge-and-receipt semantics; no Production or
+learner activation follows.
 
 The Portable Professional Exam Core is an internal architecture contract only. It does
 not authorize:
