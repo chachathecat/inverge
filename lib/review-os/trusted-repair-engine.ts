@@ -294,18 +294,6 @@ export function validateTheoryPredicateClaim(input: {
     .filter(([, values]) => values.has("ASSERTED") && values.has("NEGATED"))
     .map(([predicateId]) => predicateId)
     .sort();
-  if (mixed.length > 0) {
-    return {
-      state: "AMBIGUOUS",
-      verified: false,
-      validatorId: input.anchor.deterministicValidatorId,
-      anchorId: input.anchor.anchorId,
-      anchorVersionId: input.anchor.anchorVersionId,
-      sourceRevisionId: input.expectedSourceRevisionId,
-      targetScopeId: input.anchor.targetScopeId,
-      reasonCodes: mixed.map((value) => `same_target_mixed_polarity:${value}`),
-    };
-  }
   const forbidden = input.anchor.forbiddenPredicates.flatMap((predicateId) => {
     const values = polarities(predicateId);
     return values.has("ASSERTED") ? [predicateId] : [];
@@ -320,6 +308,18 @@ export function validateTheoryPredicateClaim(input: {
       sourceRevisionId: input.expectedSourceRevisionId,
       targetScopeId: input.anchor.targetScopeId,
       reasonCodes: forbidden.map((value) => `forbidden_predicate_asserted:${value}`),
+    };
+  }
+  if (mixed.length > 0) {
+    return {
+      state: "AMBIGUOUS",
+      verified: false,
+      validatorId: input.anchor.deterministicValidatorId,
+      anchorId: input.anchor.anchorId,
+      anchorVersionId: input.anchor.anchorVersionId,
+      sourceRevisionId: input.expectedSourceRevisionId,
+      targetScopeId: input.anchor.targetScopeId,
+      reasonCodes: mixed.map((value) => `same_target_mixed_polarity:${value}`),
     };
   }
   const requiredNegated = input.anchor.requiredPredicates.some((predicateId) =>
@@ -355,13 +355,27 @@ export function validateTheoryPredicateClaim(input: {
       reasonCodes: [],
     };
   }
+  const supportPredicateIds = new Set<string>([
+    ...input.anchor.requiredPredicates,
+    ...input.anchor.acceptableAlternatives.flat(),
+  ]);
+  const targetHasAssertedSupport = targetPredicates.some(
+    (predicate) =>
+      supportPredicateIds.has(predicate.predicateId) &&
+      predicate.polarity === "ASSERTED",
+  );
+  const crossTargetHasAssertedSupport = input.claim.clauses.some(
+    (clause) =>
+      clause.scopeResolution === "EXACT" &&
+      clause.scopeId !== input.anchor.targetScopeId &&
+      clause.predicates.some(
+        (predicate) =>
+          supportPredicateIds.has(predicate.predicateId) &&
+          predicate.polarity === "ASSERTED",
+      ),
+  );
   const crossTargetOnly =
-    targetPredicates.length === 0 &&
-    input.claim.clauses.some(
-      (clause) =>
-        clause.scopeResolution === "EXACT" &&
-        clause.scopeId !== input.anchor.targetScopeId,
-    );
+    !targetHasAssertedSupport && crossTargetHasAssertedSupport;
   return {
     state: crossTargetOnly ? "UNSUPPORTED" : "PARTIAL",
     verified: false,

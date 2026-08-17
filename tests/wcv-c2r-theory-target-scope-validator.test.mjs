@@ -370,6 +370,46 @@ test("[C2R-C-T-R20] another scope cannot supply the target predicate", () => {
     },
   ];
   assert.equal(evaluate(input).state, "UNSUPPORTED");
+
+  for (const supportPredicateId of [
+    anchor().requiredPredicates[0],
+    anchor().acceptableAlternatives[0][0],
+  ]) {
+    const targetFillerCannotMaskCrossTargetSupport = claimInput();
+    targetFillerCannotMaskCrossTargetSupport.clauses = [
+      {
+        clauseIndex: 1,
+        scopeResolution: "EXACT",
+        scopeId: anchor().targetScopeId,
+        predicates: [
+          {
+            predicateId: anchor().forbiddenPredicates[0],
+            polarity: "NEGATED",
+          },
+          {
+            predicateId: "synthetic_target_filler",
+            polarity: "ASSERTED",
+          },
+        ],
+      },
+      {
+        clauseIndex: 2,
+        scopeResolution: "EXACT",
+        scopeId: anchor().counterexampleScopes[0],
+        predicates: [
+          {
+            predicateId: supportPredicateId,
+            polarity: "ASSERTED",
+          },
+        ],
+      },
+    ];
+    const result = evaluate(targetFillerCannotMaskCrossTargetSupport);
+    assert.equal(result.state, "UNSUPPORTED");
+    assert.deepEqual(result.reasonCodes, [
+      "cross_target_evidence_cannot_satisfy_target",
+    ]);
+  }
 });
 
 test("unresolved anaphora and unscoped assertions are ambiguous; forbidden assertion blocks", () => {
@@ -397,7 +437,11 @@ test("unresolved anaphora and unscoped assertions are ambiguous; forbidden asser
     predicateId: anchor().forbiddenPredicates[0],
     polarity: "NEGATED",
   });
-  assert.equal(evaluate(forbidden).state, "AMBIGUOUS");
+  const forbiddenMixed = evaluate(forbidden);
+  assert.equal(forbiddenMixed.state, "BLOCKED");
+  assert.deepEqual(forbiddenMixed.reasonCodes, [
+    `forbidden_predicate_asserted:${anchor().forbiddenPredicates[0]}`,
+  ]);
 });
 
 test("Theory planning preserves fail-closed dispositions instead of relying on SQL rejection", () => {

@@ -485,6 +485,80 @@ test("Theory browser-to-Postgres vertical, bounded retry, idempotency, and tenan
     "AMBIGUOUS",
   );
 
+  const forbiddenMixed = await progressToRepairSubmitted(owner);
+  const forbiddenMixedClaim = theoryClaim(forbiddenMixed);
+  forbiddenMixedClaim.clauses[1].predicates.push({
+    predicateId:
+      forbiddenMixed.theoryStructuredConfirmation.forbiddenPredicates[0],
+    polarity: "ASSERTED",
+  });
+  const forbiddenMixedResult = await apiCommand(
+    owner,
+    "confirm_theory_claim",
+    {
+      sessionId: forbiddenMixed.session.sessionId,
+      expectedVersion: forbiddenMixed.session.recordVersion,
+      claim: forbiddenMixedClaim,
+    },
+  );
+  expect(forbiddenMixedResult.response.status()).toBe(200);
+  expect(forbiddenMixedResult.body.view.session.state).toBe("partial");
+  expect(forbiddenMixedResult.body.view.session.proofEvaluation.state).toBe(
+    "BLOCKED",
+  );
+
+  const crossTargetWithFiller = await progressToRepairSubmitted(owner);
+  const crossTargetWithFillerClaim = theoryClaim(crossTargetWithFiller);
+  crossTargetWithFillerClaim.clauses = [
+    {
+      clauseIndex: 1,
+      scopeResolution: "EXACT",
+      scopeId:
+        crossTargetWithFiller.theoryStructuredConfirmation.targetScopeId,
+      predicates: [
+        {
+          predicateId:
+            crossTargetWithFiller.theoryStructuredConfirmation
+              .forbiddenPredicates[0],
+          polarity: "NEGATED",
+        },
+        {
+          predicateId: "synthetic_target_filler",
+          polarity: "ASSERTED",
+        },
+      ],
+    },
+    {
+      clauseIndex: 2,
+      scopeResolution: "EXACT",
+      scopeId:
+        crossTargetWithFiller.theoryStructuredConfirmation
+          .counterexampleScopes[0],
+      predicates: [
+        {
+          predicateId:
+            crossTargetWithFiller.theoryStructuredConfirmation
+              .requiredPredicates[0],
+          polarity: "ASSERTED",
+        },
+      ],
+    },
+  ];
+  const crossTargetWithFillerResult = await apiCommand(
+    owner,
+    "confirm_theory_claim",
+    {
+      sessionId: crossTargetWithFiller.session.sessionId,
+      expectedVersion: crossTargetWithFiller.session.recordVersion,
+      claim: crossTargetWithFillerClaim,
+    },
+  );
+  expect(crossTargetWithFillerResult.response.status()).toBe(200);
+  expect(crossTargetWithFillerResult.body.view.session.state).toBe("partial");
+  expect(
+    crossTargetWithFillerResult.body.view.session.proofEvaluation.state,
+  ).toBe("UNSUPPORTED");
+
   const startCommandId = randomUUID();
   const duplicateStart = await Promise.all([
     apiCommand(
