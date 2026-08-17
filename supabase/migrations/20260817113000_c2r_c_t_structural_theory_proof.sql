@@ -67,6 +67,20 @@ declare
   v_next_version bigint;
   v_subject text;
   v_claim jsonb;
+  v_proof jsonb;
+  v_clause jsonb;
+  v_predicate jsonb;
+  v_clause_ordinal integer;
+  v_occurrence_count integer;
+  v_predicate_id text;
+  v_polarity text;
+  v_existing_polarity text;
+  v_target_polarities jsonb;
+  v_required_asserted boolean;
+  v_required_negated boolean;
+  v_alternative_asserted boolean;
+  v_forbidden_asserted boolean;
+  v_mixed_polarity boolean;
 begin
   perform pg_catalog.pg_advisory_xact_lock(
     pg_catalog.hashtextextended(
@@ -151,7 +165,8 @@ begin
 
   if p_next_state = 'verified' and v_subject = 'appraisal_theory' then
     v_claim := p_state_data -> 'structuredClaim';
-    if jsonb_typeof(v_claim) <> 'object'
+    v_proof := p_state_data -> 'proofEvaluation';
+    if jsonb_typeof(v_claim) is distinct from 'object'
       or v_claim - array[
         'sourceRevisionId', 'anchorId', 'anchorVersionId', 'targetScopeId',
         'clauses', 'confirmationMode', 'learnerConfirmedAt'
@@ -166,80 +181,112 @@ begin
       or v_claim ->> 'confirmationMode'
         not in ('EXTRACTED_THEN_EDITED', 'MANUAL_STRUCTURED')
       or (v_claim ->> 'learnerConfirmedAt')::timestamptz is null
-      or jsonb_typeof(v_claim -> 'clauses') <> 'array'
+      or jsonb_typeof(v_claim -> 'clauses') is distinct from 'array'
       or jsonb_array_length(v_claim -> 'clauses') not between 1 and 24
-      or (
-        select pg_catalog.coalesce(pg_catalog.sum(
-          jsonb_array_length(clause.value -> 'predicates')
-        ), 0)
-        from jsonb_array_elements(v_claim -> 'clauses') as clause(value)
-      ) > 64
-      or exists (
-        select 1
-        from jsonb_array_elements(v_claim -> 'clauses') with ordinality
-          as clause(value, ordinal)
-        where jsonb_typeof(clause.value) <> 'object'
-          or clause.value - array[
-            'clauseIndex', 'scopeResolution', 'scopeId', 'predicates'
-          ] <> '{}'::jsonb
-          or (clause.value ->> 'clauseIndex')::integer <> clause.ordinal
-          or clause.value ->> 'scopeResolution' is distinct from 'EXACT'
-          or clause.value ->> 'scopeId' not in (
-            'theory-target:synthetic-income-approach',
-            'theory-target:synthetic-cost-approach'
-          )
-          or jsonb_typeof(clause.value -> 'predicates') <> 'array'
-          or jsonb_array_length(clause.value -> 'predicates') < 1
-          or exists (
-            select 1
-            from jsonb_array_elements(clause.value -> 'predicates') as predicate(value)
-            where jsonb_typeof(predicate.value) <> 'object'
-              or predicate.value - array['predicateId', 'polarity'] <> '{}'::jsonb
-              or predicate.value ->> 'polarity' not in ('ASSERTED', 'NEGATED')
-          )
-      )
-      or exists (
-        select 1
-        from jsonb_array_elements(v_claim -> 'clauses') as clause(value),
-          jsonb_array_elements(clause.value -> 'predicates') as predicate(value)
-        where clause.value ->> 'scopeId' = 'theory-target:synthetic-income-approach'
-          and predicate.value ->> 'predicateId' = 'converts_expected_income_to_value'
-          and predicate.value ->> 'polarity' = 'NEGATED'
-      )
-      or not exists (
-        select 1
-        from jsonb_array_elements(v_claim -> 'clauses') as clause(value),
-          jsonb_array_elements(clause.value -> 'predicates') as predicate(value)
-        where clause.value ->> 'scopeId' = 'theory-target:synthetic-income-approach'
-          and predicate.value ->> 'predicateId' in (
-            'converts_expected_income_to_value',
+    then
+      raise exception 'WCV_C2_STRUCTURED_THEORY_PROOF_REQUIRED';
+    end if;
+
+    v_clause_ordinal := 0;
+    v_occurrence_count := 0;
+    v_target_polarities := '{}'::jsonb;
+    v_required_asserted := false;
+    v_required_negated := false;
+    v_alternative_asserted := false;
+    v_forbidden_asserted := false;
+    v_mixed_polarity := false;
+
+    for v_clause in
+      select value from jsonb_array_elements(v_claim -> 'clauses')
+    loop
+      v_clause_ordinal := v_clause_ordinal + 1;
+      if jsonb_typeof(v_clause) is distinct from 'object'
+        or v_clause - array[
+          'clauseIndex', 'scopeResolution', 'scopeId', 'predicates'
+        ] <> '{}'::jsonb
+        or v_clause ->> 'clauseIndex' is distinct from v_clause_ordinal::text
+        or v_clause ->> 'scopeResolution' is distinct from 'EXACT'
+        or v_clause ->> 'scopeId' not in (
+          'theory-target:synthetic-income-approach',
+          'theory-target:synthetic-cost-approach'
+        )
+        or jsonb_typeof(v_clause -> 'predicates') is distinct from 'array'
+        or jsonb_array_length(v_clause -> 'predicates') < 1
+      then
+        raise exception 'WCV_C2_STRUCTURED_THEORY_PROOF_REQUIRED';
+      end if;
+
+      for v_predicate in
+        select value from jsonb_array_elements(v_clause -> 'predicates')
+      loop
+        if jsonb_typeof(v_predicate) is distinct from 'object'
+          or v_predicate - array['predicateId', 'polarity'] <> '{}'::jsonb
+          or nullif(v_predicate ->> 'predicateId', '') is null
+          or v_predicate ->> 'polarity' not in ('ASSERTED', 'NEGATED')
+        then
+          raise exception 'WCV_C2_STRUCTURED_THEORY_PROOF_REQUIRED';
+        end if;
+
+        v_occurrence_count := v_occurrence_count + 1;
+        if v_occurrence_count > 64 then
+          raise exception 'WCV_C2_STRUCTURED_THEORY_PROOF_REQUIRED';
+        end if;
+
+        if v_clause ->> 'scopeId' = 'theory-target:synthetic-income-approach' then
+          v_predicate_id := v_predicate ->> 'predicateId';
+          v_polarity := v_predicate ->> 'polarity';
+          v_existing_polarity := v_target_polarities ->> v_predicate_id;
+          if v_existing_polarity is null then
+            v_target_polarities := jsonb_set(
+              v_target_polarities,
+              array[v_predicate_id],
+              to_jsonb(v_polarity),
+              true
+            );
+          elsif v_existing_polarity <> v_polarity then
+            v_mixed_polarity := true;
+          end if;
+
+          if v_predicate_id = 'converts_expected_income_to_value' then
+            v_required_asserted := v_required_asserted or v_polarity = 'ASSERTED';
+            v_required_negated := v_required_negated or v_polarity = 'NEGATED';
+          elsif v_predicate_id in (
             'capitalizes_expected_income',
             'discounts_expected_cash_flow'
-          )
-          and predicate.value ->> 'polarity' = 'ASSERTED'
-      )
-      or exists (
-        select 1
-        from jsonb_array_elements(v_claim -> 'clauses') as clause(value),
-          jsonb_array_elements(clause.value -> 'predicates') as predicate(value)
-        where clause.value ->> 'scopeId' = 'theory-target:synthetic-income-approach'
-          and predicate.value ->> 'predicateId' = 'uses_only_historical_cost'
-          and predicate.value ->> 'polarity' = 'ASSERTED'
-      )
-      or exists (
-        select 1
-        from jsonb_array_elements(v_claim -> 'clauses') as clause(value),
-          jsonb_array_elements(clause.value -> 'predicates') as predicate(value)
-        where clause.value ->> 'scopeId' = 'theory-target:synthetic-income-approach'
-        group by predicate.value ->> 'predicateId'
-        having pg_catalog.count(distinct predicate.value ->> 'polarity') > 1
-      )
-      or p_state_data -> 'proofEvaluation' ->> 'state' is distinct from 'PASS'
-      or p_state_data -> 'proofEvaluation' ->> 'validatorId'
+          ) and v_polarity = 'ASSERTED' then
+            v_alternative_asserted := true;
+          elsif v_predicate_id = 'uses_only_historical_cost'
+            and v_polarity = 'ASSERTED'
+          then
+            v_forbidden_asserted := true;
+          end if;
+        end if;
+      end loop;
+    end loop;
+
+    if v_required_negated
+      or v_mixed_polarity
+      or v_forbidden_asserted
+      or not (v_required_asserted or v_alternative_asserted)
+      or jsonb_typeof(v_proof) is distinct from 'object'
+      or v_proof - array[
+        'state', 'verified', 'validatorId', 'anchorId', 'anchorVersionId',
+        'sourceRevisionId', 'targetScopeId', 'reasonCodes'
+      ] <> '{}'::jsonb
+      or v_proof ->> 'state' is distinct from 'PASS'
+      or v_proof ->> 'validatorId'
         is distinct from 'validator:theory-scoped-predicate@1'
-      or p_state_data -> 'proofEvaluation' ->> 'targetScopeId'
+      or v_proof ->> 'anchorId'
+        is distinct from 'repair-anchor:theory:synthetic-income-approach'
+      or v_proof ->> 'anchorVersionId'
+        is distinct from 'repair-anchor:theory:synthetic-income-approach@1'
+      or v_proof ->> 'sourceRevisionId'
+        is distinct from p_confirmed_revision_id::text
+      or v_proof ->> 'targetScopeId'
         is distinct from 'theory-target:synthetic-income-approach'
-      or (p_state_data -> 'proofEvaluation' ->> 'verified')::boolean is distinct from true
+      or (v_proof ->> 'verified')::boolean is distinct from true
+      or jsonb_typeof(v_proof -> 'reasonCodes') is distinct from 'array'
+      or jsonb_array_length(v_proof -> 'reasonCodes') <> 0
     then
       raise exception 'WCV_C2_STRUCTURED_THEORY_PROOF_REQUIRED';
     end if;

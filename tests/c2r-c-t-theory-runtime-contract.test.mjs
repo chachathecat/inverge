@@ -22,21 +22,28 @@ test("C2R-C-T persistence adds exact Theory bindings without weakening Practice"
   assert.match(sql, /repair-anchor:theory:synthetic-income-approach@1/);
   assert.match(sql, /theory-target:synthetic-income-approach/);
   assert.match(sql, /jsonb_array_length\(v_claim -> 'clauses'\) not between 1 and 24/);
-  assert.match(sql, /\) > 64/);
+  assert.match(sql, /v_occurrence_count > 64/);
   assert.match(sql, /scopeResolution' is distinct from 'EXACT'/);
-  assert.match(sql, /count\(distinct predicate\.value ->> 'polarity'\) > 1/);
+  assert.match(sql, /v_target_polarities ->> v_predicate_id/);
+  assert.match(sql, /v_existing_polarity <> v_polarity/);
   assert.match(
     sql,
     /drop constraint if exists wcv_c2_trusted_repair_sessions_subject_binding_check;[\s\S]*add constraint wcv_c2_trusted_repair_sessions_subject_binding_check/,
   );
   assert.match(
     sql,
-    /predicate\.value ->> 'predicateId' = 'converts_expected_income_to_value'[\s\S]*predicate\.value ->> 'polarity' = 'NEGATED'[\s\S]*or not exists/,
+    /v_required_asserted := v_required_asserted or v_polarity = 'ASSERTED'[\s\S]*v_required_negated := v_required_negated or v_polarity = 'NEGATED'/,
   );
   assert.match(
     sql,
-    /scopeId' = 'theory-target:synthetic-income-approach'[\s\S]*group by predicate\.value ->> 'predicateId'[\s\S]*count\(distinct predicate\.value ->> 'polarity'\) > 1/,
+    /if v_clause ->> 'scopeId' = 'theory-target:synthetic-income-approach'[\s\S]*v_existing_polarity <> v_polarity[\s\S]*v_mixed_polarity := true/,
   );
+  assert.match(
+    sql,
+    /if v_required_negated[\s\S]*or v_mixed_polarity[\s\S]*or v_forbidden_asserted[\s\S]*or not \(v_required_asserted or v_alternative_asserted\)/,
+  );
+  assert.match(sql, /jsonb_typeof\(v_proof -> 'reasonCodes'\) is distinct from 'array'/);
+  assert.match(sql, /jsonb_array_length\(v_proof -> 'reasonCodes'\) <> 0/);
   assert.match(sql, /WCV_C2_STRUCTURED_THEORY_PROOF_REQUIRED/);
   assert.match(sql, /WCV_C2_CAS_CONFLICT/);
   assert.match(sql, /pg_advisory_xact_lock/);
