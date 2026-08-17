@@ -11,6 +11,7 @@ preserving C4/C6. It selects no successor: ULC-M1 remains blocked on S241A.
 - A terminal verified C2 Practice, Theory or Law session is the only D0 source.
 - The D0 configuration and source record version are frozen before C3 evidence begins.
 - The server persists the rights-checked assignment and trusted start time before releasing each prompt.
+- Released prompts contain only the problem scenario. Exact expected anchors, results, target scopes, predicates, polarity, legal source/version/locator/currentness/blocker values and retry bindings stay server-side until commit; the learner cannot transcribe a disclosed proof into durable evidence.
 - D+1, D+7, timed and later-recurrence evidence use separate eligible item families and separate changed typed commitments. D+7, timed and recurrence evidence must be unseen before commit; a commitment from another stage fails.
 - A failed D+7, timed or later-recurrence attempt consumes that synthetic variant. The next attempt deterministically receives a new rights-safe synthetic item, family, prompt and typed commitment; a consumed item can never strand the case or become unseen again.
 - Free text, generic token presence, an omitted Boolean, or an omitted zero-valued field never creates proof. Every exact subject commitment field must be explicitly supplied and pass.

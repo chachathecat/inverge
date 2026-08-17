@@ -26,6 +26,7 @@
     "stages": ["D1", "D7", "TIMED", "RECURRENCE"],
     "crossStageCommitmentReusePasses": false,
     "omittedClosedBooleanOrZeroPasses": false,
+    "expectedProofValuesHiddenUntilCommit": true,
     "freshRetryVariantAfterNonD1Failure": true,
     "retryVariantsRemainRightsSafeSynthetic": true,
     "untimedRecurrenceEvent": "RECURRENCE_RECONFIRMED"

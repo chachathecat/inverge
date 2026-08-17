@@ -13,6 +13,7 @@ test("WCV-C3 is one complete #706/#707/#708 vertical and remains default-off", a
   assert.equal(contract.stageBoundProof.fixtureReleaseVersion, "dabangil.wcv_c3.rights_safe_transfer_fixtures.2026-08-17.v2");
   assert.equal(contract.stageBoundProof.crossStageCommitmentReusePasses, false);
   assert.equal(contract.stageBoundProof.omittedClosedBooleanOrZeroPasses, false);
+  assert.equal(contract.stageBoundProof.expectedProofValuesHiddenUntilCommit, true);
   assert.equal(contract.stageBoundProof.freshRetryVariantAfterNonD1Failure, true);
   assert.equal(contract.stageBoundProof.retryVariantsRemainRightsSafeSynthetic, true);
   assert.equal(contract.stageBoundProof.untimedRecurrenceEvent, "RECURRENCE_RECONFIRMED");
@@ -89,6 +90,7 @@ test("WCV-C3 API/UI and exact-head runtime enforce trusted timing and metadata s
   assert.match(engine, /trustedStartedAt/);
   assert.match(engine, /elapsedSeconds < fixture\.minimumElapsedSeconds/);
   assert.match(engine, /durableCommitmentPasses\(fixture, input\.commitment\)/);
+  assert.doesNotMatch(server, /expectedCommitment/);
   assert.match(engine, /RECURRENCE_RECONFIRMED/);
   assert.match(engine, /replacementApplied: Boolean\(input\.replacement\)/);
   assert.match(engine, /snapshot\.digest === digest\(preimage\)/);

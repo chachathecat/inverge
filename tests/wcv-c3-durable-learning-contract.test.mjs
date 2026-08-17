@@ -109,7 +109,42 @@ function successfulStage(aggregate, prepareAt, submitAt) {
   }));
 }
 
-test("WCV-C3 binds a distinct typed proof to every subject and stage fixture", () => {
+function assertPromptHidesExpectedProof(fixture) {
+  const commitment = fixture.expectedCommitment;
+  const forbiddenValues = [commitment.anchorId];
+  if (commitment.kind === "PRACTICE_CALCULATION") {
+    forbiddenValues.push(
+      String(commitment.result),
+      commitment.operator,
+      commitment.unit,
+      commitment.sign,
+      commitment.rounding,
+    );
+  } else if (commitment.kind === "THEORY_PREDICATE") {
+    forbiddenValues.push(
+      commitment.targetScopeId,
+      commitment.requiredPredicate,
+      String(commitment.forbiddenPredicateAsserted),
+      commitment.polarity,
+    );
+  } else {
+    forbiddenValues.push(
+      commitment.sourceId,
+      commitment.sourceVersionId,
+      commitment.lawAnchorId,
+      commitment.lawAnchorVersionId,
+      commitment.exactLocator,
+      commitment.applicableAsOf,
+      commitment.currentness,
+      String(commitment.blockerCount),
+    );
+  }
+  for (const value of forbiddenValues) {
+    assert.equal(fixture.prompt.includes(value), false, `prompt disclosed expected value: ${value}`);
+  }
+}
+
+test("WCV-C3 hides and binds a distinct typed proof for every subject and stage fixture", () => {
   for (const subject of ["appraisal_practical", "appraisal_theory", "appraisal_law"]) {
     const stages = ["D1", "D7", "TIMED", "RECURRENCE"];
     const commitments = stages.map((stage) => expectedCommitmentForFixture(subject, stage));
@@ -118,7 +153,7 @@ test("WCV-C3 binds a distinct typed proof to every subject and stage fixture", (
       const fixture = durableFixtureFor({ subject, stage, evaluatedAt: "2026-08-17T00:00:00.000Z" });
       assert.equal(durableCommitmentPasses(fixture, commitments[index]), true);
       assert.equal(durableCommitmentPasses(fixture, commitments[(index + 1) % commitments.length]), false);
-      assert.match(fixture.prompt, new RegExp(commitments[index].anchorId.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
+      assertPromptHidesExpectedProof(fixture);
       if (stage !== "D1") {
         const retry = durableFixtureFor({
           subject,
@@ -128,6 +163,7 @@ test("WCV-C3 binds a distinct typed proof to every subject and stage fixture", (
         });
         assert.notEqual(retry.itemId, fixture.itemId);
         assert.notEqual(retry.itemFamilyId, fixture.itemFamilyId);
+        assertPromptHidesExpectedProof(retry);
         assert.equal(durableCommitmentPasses(retry, commitments[index]), false);
         assert.equal(
           durableCommitmentPasses(retry, expectedCommitmentForFixture(subject, stage, 2)),
