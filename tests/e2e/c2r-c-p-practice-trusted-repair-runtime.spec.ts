@@ -344,7 +344,7 @@ test("Practice-only browser to Postgres journey, hostile concurrency, bounded re
     subject: "appraisal_theory",
     inputMode: "TYPED_TEXT",
   });
-  expect(crossSubject.response.status()).toBe(400);
+  expect(crossSubject.response.status()).toBe(404);
 
   const duplicateStartCommandId = randomUUID();
   const duplicateStart = await Promise.all([

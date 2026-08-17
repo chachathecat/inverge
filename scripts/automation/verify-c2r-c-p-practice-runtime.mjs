@@ -682,6 +682,19 @@ function prepareRuntimeWorkdir(root) {
   fs.cpSync(path.join(SOURCE_WORKDIR, "supabase"), path.join(root, "supabase"), {
     recursive: true,
   });
+  if (THEORY_RUNTIME) {
+    const configPath = path.join(root, "supabase/config.toml");
+    const source = fs.readFileSync(configPath, "utf8");
+    const expected = 'project_id = "c2r-c-p-practice-repair"';
+    if (source.split(expected).length !== 2) {
+      throw new Error("C2 runtime project identity source is not exact");
+    }
+    fs.writeFileSync(
+      configPath,
+      source.replace(expected, `project_id = "${PROJECT_ID}"`),
+      { encoding: "utf8", mode: 0o600 },
+    );
+  }
   for (const migrationPath of C2_MIGRATION_PATHS) {
     fs.copyFileSync(
       migrationPath,

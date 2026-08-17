@@ -85,6 +85,11 @@ test("C2R-C-T exact-head runtime workflow is fork-safe and credential-free", () 
   assert.doesNotMatch(workflow, /pull_request_target|persist-credentials: true|SUPABASE_ACCESS_TOKEN/);
   assert.match(verifier, /THEORY_RUNTIME/);
   assert.match(verifier, /\[PRACTICE_MIGRATION_PATH, THEORY_MIGRATION_PATH\]/);
+  assert.match(
+    verifier,
+    /source\.replace\(expected, `project_id = "\$\{PROJECT_ID\}"`\)/,
+  );
+  assert.match(verifier, /source\.split\(expected\)\.length !== 2/);
   assert.match(verifier, /c2r-c-t-theory-trusted-repair-runtime\.spec\.ts/);
   assert.match(verifier, /remoteSupabaseUsed: false/);
   assert.match(verifier, /repositorySecretsUsed: false/);
