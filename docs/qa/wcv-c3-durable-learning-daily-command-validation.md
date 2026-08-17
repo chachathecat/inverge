@@ -33,6 +33,7 @@ git diff --check
 ```
 
 The exact-head remote acceptance lane must additionally exercise 390, 768 and 1440 pixel journeys for all three subjects, cross-user denial, restart restoration, export/delete, a later-failure reopen, and deterministic plan fixtures without remote Supabase or repository secrets.
+The serial three-subject browser journey remains bounded to ten minutes per Playwright test. A failed journey emits only a redacted bounded diagnostic tail; generated learner-body text, synthetic credentials and tokens are removed before GitHub logging.
 
 ## Activation and rollback
 

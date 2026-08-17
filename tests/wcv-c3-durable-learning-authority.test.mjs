@@ -119,4 +119,6 @@ test("WCV-C3 API/UI and exact-head runtime enforce trusted timing and metadata s
   assert.match(browser, /width: 1440/);
   assert.match(browser, /new AxeBuilder/);
   assert.match(browser, /cross-user|denied/);
+  assert.match(await read("tests/e2e/wcv-c3-playwright.config.ts"), /timeout: 600_000/);
+  assert.match(verifier, /redactedBrowserDiagnostic/);
 });

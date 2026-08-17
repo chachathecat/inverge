@@ -41,12 +41,26 @@ function command(executable, args, label, options = {}) {
     env: options.env ?? process.env,
     encoding: "utf8",
     stdio: options.capture ? "pipe" : "ignore",
+    maxBuffer: 4 * 1024 * 1024,
     timeout: options.timeout ?? 900_000,
   });
   if (result.status !== 0 && !options.allowFailure) {
     throw new Error(`${label} failed with exit ${result.status ?? "unknown"}`);
   }
   return result;
+}
+
+function redactedBrowserDiagnostic(value, input) {
+  let safe = String(value ?? "");
+  for (const secret of [input.userA.email, input.userA.password, input.userB.email, input.userB.password]) {
+    if (secret) safe = safe.split(secret).join("[redacted]");
+  }
+  safe = safe
+    .replace(/[\w.+-]+@localhost\.test/gi, "[redacted-email]")
+    .replace(/eyJ[A-Za-z0-9_-]{20,}\.[A-Za-z0-9_-]{20,}\.[A-Za-z0-9_-]{10,}/g, "[redacted-token]")
+    .replace(/비공개[^\r\n]*/g, "[private-synthetic-body-redacted]")
+    .replace(/후속 독립 실패/g, "[private-synthetic-body-redacted]");
+  return safe.slice(-12_000);
 }
 
 function supabase(args, label, options = {}) {
@@ -186,7 +200,9 @@ async function stopNext(server) {
 }
 
 function runBrowser(server, input, recoveryCaseId = "") {
+  const startedAt = Date.now();
   const result = command(process.execPath, [path.join(ROOT, "node_modules/@playwright/test/cli.js"), "test", "--config=tests/e2e/wcv-c3-playwright.config.ts", ...(recoveryCaseId ? ["--grep", "process restart restores"] : ["--grep-invert", "process restart restores"])], "WCV-C3 browser acceptance", {
+    capture: true,
     env: {
       ...process.env,
       E2E_BASE_URL: server.baseUrl,
@@ -197,8 +213,13 @@ function runBrowser(server, input, recoveryCaseId = "") {
       WCV_C3_TRANSIENT_EVIDENCE_PATH: transientPath,
       ...(recoveryCaseId ? { WCV_C3_RECOVERY_CASE_ID: recoveryCaseId } : {}),
     },
+    allowFailure: true,
   });
-  if (result.status !== 0) throw new Error("WCV-C3 browser acceptance failed");
+  if (result.status !== 0) {
+    process.stderr.write(`WCV-C3 browser acceptance diagnostic (${Date.now() - startedAt}ms)\n`);
+    process.stderr.write(redactedBrowserDiagnostic(`${result.stdout ?? ""}\n${result.stderr ?? ""}`, input));
+    throw new Error("WCV-C3 browser acceptance failed");
+  }
 }
 
 async function verifyDefaultOff(input, container) {

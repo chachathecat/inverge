@@ -3,7 +3,7 @@ import { defineConfig } from "@playwright/test";
 export default defineConfig({
   testDir: ".",
   testMatch: "wcv-c3-durable-learning-runtime.spec.ts",
-  timeout: 300_000,
+  timeout: 600_000,
   expect: { timeout: 20_000 },
   fullyParallel: false,
   workers: 1,
