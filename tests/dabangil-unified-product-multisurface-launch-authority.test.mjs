@@ -147,8 +147,8 @@ function currentAuthorityTuple(section) {
     roadmapItem: /\bwcv c2\b/.test(normalized) ? "WCV-C2" : null,
     campaign: /\bcampaign c2\b/.test(normalized) ? "C2" : null,
     trackerIssue: /\btracker issue 717\b/.test(normalized) ? 717 : null,
-    currentStage: /\bc2r c p(?: for)? issue 703\b/.test(normalized) ? "C2R-C-P" : null,
-    currentStageIssue: /\bc2r c p(?: for)? issue 703\b/.test(normalized) ? 703 : null,
+    currentStage: /\bc2r c t(?: for)? issue 703\b/.test(normalized) ? "C2R-C-T" : null,
+    currentStageIssue: /\bc2r c t(?: for)? issue 703\b/.test(normalized) ? 703 : null,
   };
 }
 
@@ -379,7 +379,6 @@ test("requires the complete free-limited public 1.0 module set", async () => {
     assert.ok(flat.includes(capability), capability);
   }
 });
-
 test("separates free launch from paid, efficacy and commercial claims", async () => {
   const [launch, unified] = await Promise.all([
     json(CONTRACT),
@@ -523,7 +522,7 @@ test("preserves the exact WCV-C2R graph, roadmap block and 21-row matrix", async
   ]);
 });
 
-test("keeps C2R-C-P as the sole unstarted selection after terminal A and B", async () => {
+test("keeps C2R-C-T as the sole unstarted selection after terminal Practice", async () => {
   const [
     launch,
     unified,
@@ -556,7 +555,7 @@ test("keeps C2R-C-P as the sole unstarted selection after terminal A and B", asy
     roadmapItem: "WCV-C2",
     campaign: "C2",
     trackerIssue: 717,
-    currentStage: "C2R-C-P",
+    currentStage: "C2R-C-T",
     currentStageIssue: 703,
   };
   const currentStageMirrors = {
@@ -613,18 +612,18 @@ test("keeps C2R-C-P as the sole unstarted selection after terminal A and B", asy
   assert.equal(roadmap.program.soleNextImplementationCampaign, "C2");
   assert.equal(roadmap.program.soleNextImplementationLeadIssue, 717);
   assert.equal(roadmap.program.soleNextImplementationTrackerIssue, 717);
-  assert.equal(roadmap.program.soleNextReplacementStage, "C2R-C-P");
+  assert.equal(roadmap.program.soleNextReplacementStage, "C2R-C-T");
   assert.equal(roadmap.program.soleNextReplacementStageIssue, 703);
   assert.equal(roadmap.program.globalMergeProducingWriterLimit, 1);
   assert.equal(roadmap.program.replacementStageAutomaticStartAllowed, false);
   assert.equal(unified.roadmapContract.soleNextImplementationItemId, "WCV-C2");
   assert.equal(unified.roadmapContract.soleNextImplementationCampaignId, "C2");
-  assert.equal(unified.roadmapContract.soleNextReplacementStageId, "C2R-C-P");
+  assert.equal(unified.roadmapContract.soleNextReplacementStageId, "C2R-C-T");
   assert.equal(unified.roadmapContract.soleNextReplacementStageIssue, 703);
   assert.equal(preserved.currentReplacementStageState, "authorized_unstarted");
   assert.equal(
     preserved.currentSelectorDecision,
-    "docs/decisions/2026-08-15-owner-c2r-b-typed-proof-obligations.md",
+    "docs/decisions/2026-08-17-owner-c2r-c-p-structural-practice-proof-recovery.md",
   );
   assert.equal(
     preserved.structuralChainDecision,
@@ -640,16 +639,16 @@ test("keeps C2R-C-P as the sole unstarted selection after terminal A and B", asy
   assert.deepEqual(preserved.c2rBRemainingIssue714Allocations, ["C3", "C4", "C6"]);
   assert.match(
     unifiedMarkdown,
-    /completed source-only stages\s+C2R-A for Issue #702 and C2R-B for Issue #714, and current authorized but\s+unstarted replacement stage C2R-C-P for Issue #703/,
+    /completed source-only stages\s+C2R-A for Issue #702 and C2R-B for Issue #714, completed Practice stage\s+C2R-C-P for Issue #703, and current authorized but unstarted replacement\s+stage C2R-C-T for Issue #703/,
   );
   assert.match(unifiedMarkdown, /post-merge next stage is C2R-B\/#714, authorized but unstarted/);
   assert.match(
     activeMasterPlan,
-    /exact current repository\s+selection is WCV-C2\/C2\/#717\/C2R-C-P\/#703/,
+    /exact current repository\s+selection is WCV-C2\/C2\/#717\/C2R-C-T\/#703/,
   );
   assert.match(
     launchStrategy,
-    /Current repository selector after the later exact C2R-B supersession:/,
+    /Current repository selector after the later exact C2R-C-P supersession:/,
   );
 
   const staleFixtures = [

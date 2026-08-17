@@ -14,6 +14,7 @@ type LearnerShellProps = {
   email: string | null;
   children: ReactNode;
   rightSlot?: ReactNode;
+  trustedRepairEnabled?: boolean;
 };
 
 type LearnerNavItem = {
@@ -61,12 +62,25 @@ const LEARNER_NAV_ITEMS: readonly LearnerNavItem[] = [
   },
 ] as const;
 
+const TRUSTED_REPAIR_NAV_ITEM: LearnerNavItem = {
+  href: "/app/trusted-repair",
+  label: "실무 신뢰 복구",
+  mobileLabel: "실무 복구",
+  preserveMode: true,
+  analyticsAction: "practice_trusted_repair",
+};
+
 function matchesLearnerNavPath(pathname: string, item: LearnerNavItem) {
   const activeHrefs = item.activeHrefs ?? [item.href];
   return activeHrefs.some((activeHref) => pathname === activeHref || (activeHref !== "/app" && pathname.startsWith(`${activeHref}/`)));
 }
 
-export function LearnerShell({ email, children, rightSlot }: LearnerShellProps) {
+export function LearnerShell({
+  email,
+  children,
+  rightSlot,
+  trustedRepairEnabled = false,
+}: LearnerShellProps) {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   // The authenticated learner shell intentionally exposes only the second-round Answer Road OS.
@@ -177,6 +191,39 @@ export function LearnerShell({ email, children, rightSlot }: LearnerShellProps) 
                 </Link>
               );
             })}
+            {trustedRepairEnabled ? (
+              <Link
+                href={`${TRUSTED_REPAIR_NAV_ITEM.href}?mode=${currentMode}`}
+                onClick={() => {
+                  pushLocalLearnerAnalyticsEvent({
+                    event: "learner_navigation",
+                    surface: "learner_shell",
+                    route: TRUSTED_REPAIR_NAV_ITEM.href,
+                    mode: currentMode,
+                    action: TRUSTED_REPAIR_NAV_ITEM.analyticsAction,
+                    status: "clicked",
+                  });
+                }}
+                aria-current={
+                  matchesLearnerNavPath(pathname, TRUSTED_REPAIR_NAV_ITEM)
+                    ? "page"
+                    : undefined
+                }
+                className={cn(
+                  "v3-type-label inline-flex min-h-11 shrink-0 items-center justify-center rounded-[var(--v3-radius-control)] border px-3 text-center transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--color-background-canvas)]",
+                  matchesLearnerNavPath(pathname, TRUSTED_REPAIR_NAV_ITEM)
+                    ? "border-[var(--color-border-focus)] bg-[var(--color-background-brand-soft)] text-[var(--color-text-brand)]"
+                    : "border-transparent bg-transparent text-[var(--color-text-secondary)] hover:bg-[var(--color-background-surface)] hover:text-[var(--color-text-primary)]",
+                )}
+              >
+                <span className="md:hidden">
+                  {TRUSTED_REPAIR_NAV_ITEM.mobileLabel}
+                </span>
+                <span className="hidden md:inline">
+                  {TRUSTED_REPAIR_NAV_ITEM.label}
+                </span>
+              </Link>
+            ) : null}
           </nav>
 
           <div className="v3-type-caption flex flex-wrap items-center justify-between gap-2 text-[var(--color-text-secondary)]" data-s224v-learner-mode-entry="second-only">

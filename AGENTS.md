@@ -5,6 +5,12 @@
 Use this authority order when sources conflict:
 
 1. a dated Owner decision for the exact decision it owns, currently
+   `docs/decisions/2026-08-17-owner-c2r-c-p-structural-practice-proof-recovery.md`
+   for the exact complete Practice trusted-repair runtime vertical, its 11
+   candidate regression rows in PR #756, and the post-merge current-stage
+   selector transition to C2R-C-T/#703; this decision becomes repository
+   authority only after its expected-head-pinned squash merge and validated
+   #717 receipt,
    `docs/decisions/2026-08-16-owner-github-native-delivery-control.md`
    for PR #743 terminal unmerged disposition, GitHub-native delivery
    authority, bounded correction/replacement/replanning, protected squash
@@ -128,11 +134,12 @@ non-Production continuation after its protected foundation merge validates.
 
 The authority-graph identifiers are distinct: roadmap item `WCV-C2`, campaign
 ID `C2`, recovery tracker #717, completed source-only stages `C2R-A` for Issue
-#702 and `C2R-B` for Issue #714, and current authorized-but-unstarted stage
-`C2R-C-P` for Issue #703. The canonical tuple is
-`WCV-C2 / C2 / #717 / C2R-C-P / #703 / authorized_unstarted`. C2R-C-P may
-start only after terminal validated merges and receipts for both C2R-A and
-C2R-B; an issue state or issue closure cannot substitute for a replacement-
+#702 and `C2R-B` for Issue #714, completed Practice runtime stage `C2R-C-P`
+for Issue #703, and current authorized-but-unstarted stage `C2R-C-T` for Issue
+#703. The canonical tuple is
+`WCV-C2 / C2 / #717 / C2R-C-T / #703 / authorized_unstarted`. C2R-C-T may
+start only after the expected-head-pinned C2R-C-P merge and validated #717
+receipt; an issue state or issue closure cannot substitute for a replacement-
 stage merge. C2R-B completes only the Issue #714 allocation for campaign C2
 and leaves Issue #714 open with its C3, C4 and C6 allocations preserved.
 
@@ -181,9 +188,36 @@ The future Tutor episode interface and its typed/photo/PDF/voice/structured
 private modes, prediction/self-diagnosis order, smallest-scaffold rule, three
 continuation commands and no-shortcut invariants are frozen source contracts,
 not runtime. Only Issue #714 allocation C2 is complete. Issue #714 stays open;
-C3, C4 and C6 remain preserved. C2R-C-P is authorized but unstarted, the
-common runtime substrate may first land only inside that complete Practice
-vertical, and no runtime or activation is authorized.
+C3, C4 and C6 remain preserved. C2R-C-P later lands the common runtime
+substrate only inside its complete Practice vertical; this source contract
+alone authorizes no runtime or activation.
+
+## C2R-C-P Practice trusted-repair runtime
+
+C2R-C-P/#703 installs the Owner-only, default-off Practice vertical in
+`config/dabangil-c2r-c-p-structural-practice-proof-v2.json`. It binds one exact
+`CalculationRelationAnchorV1`, seven rights-safe Practice fixtures, two
+adjudicated Gold tiers, prediction and self-diagnosis before help, the
+smallest-scaffold rule, three continuations, one bounded partial retry,
+forced-RLS persistence, server-only mutation, idempotency/CAS, API, learner
+UI, exact-head isolated PostgreSQL/browser evidence and independent rollback.
+Free-form text, OCR and transcription are candidate evidence only and can
+never create `verified`. Same-session verification requires one exact
+server-validated `PracticeCalculationClaimV2` bound to the current revision,
+anchor and versions. Unknown or duplicate fields, client-supplied proof state,
+any structured-field mismatch and binding drift fail closed. A canonical
+sentence rendered from the accepted object is output, never input authority.
+Theory/Law runtime is not included.
+
+The PR #756 candidate represents its post-merge state: C2R-C-P is complete
+only after exact-head checks, final actionable P0/P1/P2 `0/0/0`, an expected-
+head-pinned squash merge and a validated Tracker #717 receipt. Matrix rows 1,
+2, 4, 6, 8, 9, 10, 11, 12, 14 and 19 are
+`candidate_coverage_pending_exact_merge` until then; the other 10 rows remain
+uncovered. C2R-C-T/#703 is the post-merge authorized-but-unstarted selector.
+Neither C2R-C-P nor C2R-C-T may close #703, #704 or #705, and no Production,
+remote Supabase apply, learner activation or rights-unclear operation is
+authorized.
 
 ## Product scope (Owner O1R amendment on 2026-07-26)
 
