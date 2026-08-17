@@ -721,7 +721,9 @@ export function diagnoseTrustedRepairAttempt(input: {
     counterEvidence: ["canonical_structured_commitment_not_yet_confirmed"],
     repairActionKo: insufficient
       ? "가장 먼저 떠오르는 근거를 한 문장으로 직접 적으세요."
-      : "보지 않고 다시 구성한 뒤 계산관계의 각 필드를 직접 확인하세요.",
+      : input.fixture.subject === "appraisal_theory"
+        ? "보지 않고 다시 구성한 뒤 목표 범위와 필수·금지 술어의 극성을 직접 확인하세요."
+        : "보지 않고 다시 구성한 뒤 계산관계의 각 필드를 직접 확인하세요.",
     successCriterionKo: input.fixture.successCriterionKo,
   };
   return {

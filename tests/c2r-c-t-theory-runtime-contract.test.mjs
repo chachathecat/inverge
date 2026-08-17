@@ -2,6 +2,11 @@ import assert from "node:assert/strict";
 import path from "node:path";
 import test from "node:test";
 
+import {
+  diagnoseTrustedRepairAttempt,
+  initialTrustedRepairStateData,
+} from "../lib/review-os/trusted-repair-engine.ts";
+import { trustedRepairCanonicalFixture } from "../lib/review-os/trusted-repair-fixtures.ts";
 import { readTextFileSync } from "./platform-text.mjs";
 
 const ROOT = process.cwd();
@@ -11,6 +16,32 @@ const MIGRATION =
 const WORKFLOW =
   ".github/workflows/c2r-c-t-theory-trusted-repair-runtime.yml";
 const VERIFIER = "scripts/automation/verify-c2r-c-p-practice-runtime.mjs";
+
+test("C2R-C-T diagnosis guidance is Theory-specific without weakening Practice", () => {
+  const stateData = initialTrustedRepairStateData("TYPED_TEXT");
+  const attemptText =
+    "수익방식의 목표 범위에서 기대수익을 가치로 전환하는 술어를 설명했습니다.";
+  const theory = diagnoseTrustedRepairAttempt({
+    fixture: trustedRepairCanonicalFixture("appraisal_theory"),
+    attemptText,
+    stateData,
+  });
+  const practice = diagnoseTrustedRepairAttempt({
+    fixture: trustedRepairCanonicalFixture("appraisal_practical"),
+    attemptText,
+    stateData,
+  });
+
+  assert.equal(
+    theory.primary.repairActionKo,
+    "보지 않고 다시 구성한 뒤 목표 범위와 필수·금지 술어의 극성을 직접 확인하세요.",
+  );
+  assert.doesNotMatch(theory.primary.repairActionKo, /계산관계/);
+  assert.equal(
+    practice.primary.repairActionKo,
+    "보지 않고 다시 구성한 뒤 계산관계의 각 필드를 직접 확인하세요.",
+  );
+});
 
 test("C2R-C-T persistence adds exact Theory bindings without weakening Practice", () => {
   const sql = read(MIGRATION);
