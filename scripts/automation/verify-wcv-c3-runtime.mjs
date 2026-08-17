@@ -339,7 +339,7 @@ async function runRuntime() {
       runId: process.env.GITHUB_RUN_ID ?? "local",
       runAttempt: process.env.GITHUB_RUN_ATTEMPT ?? "1",
       migrations: migrations.map((file) => ({ identity: path.basename(file, ".sql"), sha256: crypto.createHash("sha256").update(fs.readFileSync(file)).digest("hex") })),
-      assertions: ["exact_head", "two_fresh_authenticated_identities", "default_off_before_parse", "forced_rls_service_only", "stable_transactional_aggregate_read", "migration_replay", "three_subject_browser_chain", "responsive_390_768_1440", "keyboard_and_axe", "private_body_projection_separation", "cross_user_denial", "export_delete", "process_restart_restore", "real_time_waiting_action", "c3_only_navigation_kill_switch", "reopen_after_later_failure", "bounded_daily_plan"],
+      assertions: ["exact_head", "two_fresh_authenticated_identities", "default_off_before_parse", "forced_rls_service_only", "stable_transactional_aggregate_read", "migration_replay", "three_subject_browser_chain", "responsive_390_768_1440", "keyboard_and_axe", "private_body_projection_separation", "cross_user_denial", "export_delete", "process_restart_restore", "real_time_waiting_action", "waiting_plan_substitutes_eligible_audit", "c3_only_navigation_kill_switch", "reopen_after_later_failure", "bounded_daily_plan"],
       counts: { completedSubjects: 3, persistedCases: 2, privateArtifacts: 7, deletionReceipts: 1 },
       remoteSupabaseUsed: false,
       repositorySecretsUsed: false,

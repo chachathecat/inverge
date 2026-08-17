@@ -5,6 +5,7 @@ import {
   buildDeterministicFullDayPlan,
   createGapClosureCase,
   frozenD0MatchesCurrent,
+  isBeforeDurableEligibility,
   planAttemptPreparation,
   planCurrentlyClear,
   planDurableEvidence,
@@ -490,4 +491,29 @@ test("WCV-C3 deterministic planner is bounded, non-overlapping and never mutates
   assert.notEqual(edited.stateData.latestPlan.planId, proposed.caseRecord.stateData.latestPlan.planId);
   assert.equal(edited.event.payload.replacementApplied, true);
   assert.throws(() => planFullDayDecision({ aggregate: proposed, decision: "EDITED", reason: "available_minutes_changed", occurredAt: "2026-08-17T01:03:00.000Z" }), /invalid_input/);
+});
+
+test("WCV-C3 planning substitutes an eligible audit until the exact attempt boundary", () => {
+  const aggregate = initial("appraisal_practical");
+  const waiting = buildDeterministicFullDayPlan({
+    aggregate,
+    availableMinutes: 60,
+    recoveryMode: "NORMAL",
+    fixedCommitments: [],
+    occurredAt: "2026-08-17T12:00:00.000Z",
+  });
+  assert.deepEqual(waiting.coreOutcomes.map((outcome) => outcome.kind), ["EVIDENCE_AUDIT"]);
+  assert.equal(waiting.coreOutcomes[0].reasonCode, "wcv_c3_waiting_evidence_audit");
+  assert.deepEqual(waiting.deferredReasonCodes, ["next_eligible_at_not_reached"]);
+  assert.equal(waiting.immediatePrimaryOutcomeId, waiting.coreOutcomes[0].outcomeId);
+  assert.equal(isBeforeDurableEligibility("2026-08-18T00:00:00.000Z", aggregate.caseRecord.stateData.nextEligibleAt), false);
+  const exactBoundary = buildDeterministicFullDayPlan({
+    aggregate,
+    availableMinutes: 60,
+    recoveryMode: "NORMAL",
+    fixedCommitments: [],
+    occurredAt: aggregate.caseRecord.stateData.nextEligibleAt,
+  });
+  assert.deepEqual(exactBoundary.coreOutcomes.map((outcome) => outcome.kind), ["D1_REPRODUCTION"]);
+  assert.deepEqual(exactBoundary.deferredReasonCodes, []);
 });

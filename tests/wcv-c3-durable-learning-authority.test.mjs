@@ -102,13 +102,15 @@ test("WCV-C3 API/UI and exact-head runtime enforce trusted timing and metadata s
   assert.doesNotMatch(route, /elapsedSeconds|startedAt/);
   assert.match(server, /process\.env\.CI === "true"/);
   assert.match(server, /process\.env\.VERCEL_ENV !== "production"/);
-  assert.match(server, /evaluatedAtMs < nextEligibleAtMs/);
+  assert.match(server, /isBeforeDurableEligibility\([\s\S]*?evaluatedAt,[\s\S]*?nextEligibleAt/);
   assert.match(server, /"WAIT_FOR_ELIGIBILITY"/);
   assert.match(engine, /trustedStartedAt/);
   assert.match(engine, /elapsedSeconds < fixture\.minimumElapsedSeconds/);
   assert.match(engine, /durableCommitmentPasses\(fixture, input\.commitment\)/);
   assert.doesNotMatch(server, /expectedCommitment/);
   assert.match(engine, /RECURRENCE_RECONFIRMED/);
+  assert.match(engine, /next_eligible_at_not_reached/);
+  assert.match(engine, /outcomeTemplate\(input\.aggregate, waitingForEligibility\)/);
   assert.match(engine, /replacementApplied: Boolean\(input\.replacement\)/);
   assert.match(engine, /snapshot\.digest === digest\(preimage\)/);
   assert.match(engine, /snapshot\.contentReleaseVersion === DURABLE_LEARNING_FIXTURE_VERSION/);
@@ -150,6 +152,7 @@ test("WCV-C3 API/UI and exact-head runtime enforce trusted timing and metadata s
   assert.match(verifier, /repositorySecretsUsed: false/);
   assert.match(verifier, /process_restart_restore/);
   assert.match(verifier, /real_time_waiting_action/);
+  assert.match(verifier, /waiting_plan_substitutes_eligible_audit/);
   assert.match(verifier, /c3_only_navigation_kill_switch/);
   assert.match(browser, /width: 390/);
   assert.match(browser, /width: 768/);
@@ -166,6 +169,8 @@ test("WCV-C3 API/UI and exact-head runtime enforce trusted timing and metadata s
   assert.match(browser, /toHaveValue\(answerBody\)/);
   assert.match(browser, /data-wcv-c3-result-note/);
   assert.match(browser, /nextAction\)\.toBe\("WAIT_FOR_ELIGIBILITY"\)/);
+  assert.match(browser, /coreOutcomes\.map\(\(outcome\) => outcome\.kind\)\)\.toEqual\(\["EVIDENCE_AUDIT"\]\)/);
+  assert.match(browser, /next_eligible_at_not_reached/);
   assert.match(browser, /a\[href="\/app\/trusted-repair"\]/);
   assert.doesNotMatch(browser, /expectedCommitmentForFixture/);
   assert.match(browser, /cross-user|denied/);

@@ -363,7 +363,16 @@ test("WCV-C3 real-time waiting and C3-only navigation honor independent gates", 
   const response = await owner.request.get(`/api/review-os/durable-learning?caseId=${recoveryCaseId}`);
   expect(response.status()).toBe(200);
   const body = await response.json();
-  expect((body.view as DurableLearningView).case.nextAction).toBe("WAIT_FOR_ELIGIBILITY");
+  let view = body.view as DurableLearningView;
+  expect(view.case.nextAction).toBe("WAIT_FOR_ELIGIBILITY");
+  view = await c3Command(owner, "build_plan", view, {
+    availableMinutes: 60,
+    recoveryMode: "NORMAL",
+    fixedCommitments: [],
+  });
+  expect(view.latestPlan?.coreOutcomes.map((outcome) => outcome.kind)).toEqual(["EVIDENCE_AUDIT"]);
+  expect(view.latestPlan?.deferredReasonCodes).toContain("next_eligible_at_not_reached");
+  expect(view.latestPlan?.immediatePrimaryOutcomeId).toBe(view.latestPlan?.coreOutcomes[0]?.outcomeId);
   const page = await owner.newPage();
   await page.goto(`/app/durable-learning?caseId=${recoveryCaseId}`);
   const primary = page.locator("[data-primary-action]");

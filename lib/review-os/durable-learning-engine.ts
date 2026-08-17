@@ -57,6 +57,20 @@ function requireValidDate(value: string) {
   return new Date(value).toISOString();
 }
 
+export function isBeforeDurableEligibility(
+  occurredAt: string,
+  nextEligibleAt: string | null,
+) {
+  if (nextEligibleAt === null) return false;
+  const occurredAtMs = Date.parse(occurredAt);
+  const nextEligibleAtMs = Date.parse(nextEligibleAt);
+  return (
+    !Number.isFinite(occurredAtMs) ||
+    !Number.isFinite(nextEligibleAtMs) ||
+    occurredAtMs < nextEligibleAtMs
+  );
+}
+
 function latestConfirmedRevisionId(aggregate: TrustedRepairAggregate) {
   const revisionId = aggregate.session.confirmedRevisionId;
   if (!revisionId) throw new DurableLearningContractError("not_eligible");
@@ -295,7 +309,7 @@ export function planDurableEvidence(input: {
   const occurredAt = requireValidDate(input.occurredAt);
   ensureEvidenceState(input.aggregate.caseRecord.state);
   const nextEligibleAt = input.aggregate.caseRecord.stateData.nextEligibleAt;
-  if (nextEligibleAt && Date.parse(occurredAt) < Date.parse(nextEligibleAt)) {
+  if (isBeforeDurableEligibility(occurredAt, nextEligibleAt)) {
     throw new DurableLearningContractError("not_eligible");
   }
   if (input.body.trim().length < 1 || input.body.length > 12000) {
@@ -525,7 +539,7 @@ export function planAttemptPreparation(input: {
     throw new DurableLearningContractError("invalid_state");
   }
   const nextEligibleAt = input.aggregate.caseRecord.stateData.nextEligibleAt;
-  if (nextEligibleAt && Date.parse(occurredAt) < Date.parse(nextEligibleAt)) {
+  if (isBeforeDurableEligibility(occurredAt, nextEligibleAt)) {
     throw new DurableLearningContractError("not_eligible");
   }
   const stage = nextDurableFixtureStage(input.aggregate);
@@ -703,10 +717,13 @@ export function planConfigurationStale(input: {
 
 function outcomeTemplate(
   aggregate: DurableLearningAggregate,
+  substituteEvidenceAudit = false,
 ): Omit<CoreOutcomeV1, "outcomeId" | "rank"> {
   const state = aggregate.caseRecord.state;
   const kind =
-    state === "REPAIR_VERIFIED_SAME_SESSION"
+    substituteEvidenceAudit
+      ? "EVIDENCE_AUDIT"
+      : state === "REPAIR_VERIFIED_SAME_SESSION"
       ? "D1_REPRODUCTION"
       : state === "D1_REPRODUCED"
         ? "D7_TRANSFER"
@@ -720,10 +737,14 @@ function outcomeTemplate(
   return {
     subject: aggregate.caseRecord.subject,
     kind,
-    reasonCode: `wcv_c3_${kind.toLowerCase()}`,
+    reasonCode: substituteEvidenceAudit
+      ? "wcv_c3_waiting_evidence_audit"
+      : `wcv_c3_${kind.toLowerCase()}`,
     evidenceEventIds: aggregate.events.slice(-3).map((event) => event.eventId),
     successCriterionKo:
-      kind === "D1_REPRODUCTION"
+      substituteEvidenceAudit
+        ? "다음 독립 시도 전까지 기존 근거와 다음 가능 시점을 확인한다."
+        : kind === "D1_REPRODUCTION"
         ? "동일 답안을 보지 않고 다음 날 핵심 결합을 다시 구성한다."
         : kind === "D7_TRANSFER"
           ? "봉인된 다른 표면의 문항에서 같은 앵커를 독립 적용한다."
@@ -764,10 +785,17 @@ export function buildDeterministicFullDayPlan(input: {
     });
     cursor += commitment.minutes;
   }
-  const template = outcomeTemplate(input.aggregate);
+  const waitingForEligibility = isBeforeDurableEligibility(
+    occurredAt,
+    input.aggregate.caseRecord.stateData.nextEligibleAt,
+  );
+  const template = outcomeTemplate(input.aggregate, waitingForEligibility);
   const maintenanceMinutes = input.recoveryMode === "MINIMUM_MAINTENANCE" ? Math.min(30, template.estimatedMinutes) : template.estimatedMinutes;
   const outcomes: CoreOutcomeV1[] = [];
   const deferredReasonCodes: string[] = [];
+  if (waitingForEligibility) {
+    deferredReasonCodes.push("next_eligible_at_not_reached");
+  }
   if (cursor + maintenanceMinutes <= input.availableMinutes) {
     const outcomeId = randomUUID();
     outcomes.push({ ...template, outcomeId, rank: 1, estimatedMinutes: maintenanceMinutes });
@@ -786,6 +814,7 @@ export function buildDeterministicFullDayPlan(input: {
   if (
     input.recoveryMode === "NORMAL" &&
     ["REPEATING", "RECURRED"].includes(input.aggregate.caseRecord.stateData.recurringSignature.status) &&
+    !outcomes.some((outcome) => outcome.kind === "EVIDENCE_AUDIT") &&
     cursor + 30 <= input.availableMinutes &&
     outcomes.length < 3
   ) {

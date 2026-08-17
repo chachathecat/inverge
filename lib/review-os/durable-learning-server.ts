@@ -13,6 +13,7 @@ import {
 import {
   createGapClosureCase,
   frozenD0MatchesCurrent,
+  isBeforeDurableEligibility,
   planAttemptPreparation,
   planConfigurationStale,
   planCurrentlyClear,
@@ -89,13 +90,10 @@ export function durableLearningView(
 ) {
   const active = aggregate.caseRecord.stateData.activeAttempt;
   const nextEligibleAt = aggregate.caseRecord.stateData.nextEligibleAt;
-  const evaluatedAtMs = Date.parse(evaluatedAt);
-  const nextEligibleAtMs = nextEligibleAt === null ? null : Date.parse(nextEligibleAt);
-  const waitingForEligibility =
-    nextEligibleAtMs !== null &&
-    (!Number.isFinite(evaluatedAtMs) ||
-      !Number.isFinite(nextEligibleAtMs) ||
-      evaluatedAtMs < nextEligibleAtMs);
+  const waitingForEligibility = isBeforeDurableEligibility(
+    evaluatedAt,
+    nextEligibleAt,
+  );
   const fixture = active
     ? durableFixtureFor({
         subject: aggregate.caseRecord.subject,
