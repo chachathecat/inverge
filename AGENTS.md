@@ -136,13 +136,13 @@ The authority-graph identifiers are distinct: completed roadmap item `WCV-C2`,
 completed campaign `C2`, recovery tracker #717, completed source-only stages
 `C2R-A` for Issue #702 and `C2R-B` for Issue #714, and completed Practice,
 Theory and Law runtime stages `C2R-C-P`, `C2R-C-T` and `C2R-C-L` for Issue
-#703. The next dependency-ready non-Production selector represented after the
-terminal expected-head-pinned merge and validated #717 receipt is roadmap item
-`WCV-C3`, campaign `C3`, lead Issue #706, authorized but unstarted. The
-canonical tuple is `WCV-C3 / C3 / #706 / authorized_unstarted`. An issue state
-or issue closure cannot substitute for a replacement-stage merge or receipt.
-C2R-B completes only the Issue #714 allocation for campaign C2 and leaves
-Issue #714 open with its C3, C4 and C6 allocations preserved.
+#703. WCV-C3/C3/#706 is the complete durable-learning and daily-command
+candidate only after its expected-head-pinned merge and validated receipt.
+That merge completes Issue #714 allocation C3 while preserving C4 and C6.
+There is then no authorized automatic successor: ULC-M1 remains blocked on
+its independent S241A dependency, and queued report-only S236B cannot start
+while Draft PR #660 remains nonqualifying. An issue state or issue closure
+cannot substitute for a required merge or receipt.
 
 ## C2R-A rights-safe source firewall
 
@@ -256,6 +256,29 @@ authorized_unstarted`; Issue #714 remains open for C3/C4/C6. Law has its own
 `WCV_C2R_C_L_LAW_ENABLED` kill switch and rolls back without disabling or
 reverting Practice or Theory. Production, remote Supabase apply, learner
 activation, payment, live providers and rights-unclear content remain
+unauthorized.
+
+## WCV-C3 durable learning and daily command
+
+WCV-C3/#706 installs the default-off Owner-only non-Production vertical in
+`config/dabangil-wcv-c3-durable-learning-daily-command-v1.json`. A terminal
+verified C2 Practice, Theory or Law repair freezes one D0 configuration before
+the server persists each rights-checked assignment and trusted start time.
+D+1 reproduction, sealed D+7 transfer and timed recurrence require distinct
+eligible families and exact typed subject commitments. Same-session repair,
+generic text presence, assistance and plan decisions cannot create durable
+clearance or mastery. `CURRENTLY_CLEAR` is explicitly reopenable after a later
+qualifying independent failure.
+
+Private attempt bodies stay in the forced-RLS private ledger while evidence
+projections are bodyless. Today/Full-Day remains deterministic, accepts only
+30–720 available minutes, preserves fixed commitments, emits at most three
+CoreOutcomes and records accept/edit/reject without changing evidence state.
+The candidate represents its post-merge state only after exact-head checks,
+protected squash merge and validated receipt. Then WCV-C3 and Issue #714
+allocation C3 are complete, Issue #714 remains open for C4/C6, and no next
+item is dependency-ready because ULC-M1 also requires S241A. Production,
+remote Supabase apply, real learners, payment and activation remain
 unauthorized.
 
 ## Product scope (Owner O1R amendment on 2026-07-26)

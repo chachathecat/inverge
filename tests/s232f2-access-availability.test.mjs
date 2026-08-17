@@ -200,7 +200,10 @@ test("S232F.2 every data-bearing app page gates a fresh access result before dow
     "app/app/notes/page.tsx",
     "app/app/today/page.tsx",
   ].sort();
-  const specializedGuardPages = ["app/app/trusted-repair/page.tsx"].sort();
+  const specializedGuardPages = [
+    "app/app/durable-learning/page.tsx",
+    "app/app/trusted-repair/page.tsx",
+  ].sort();
   const allPages = collectPageFiles("app/app").sort();
 
   assert.deepEqual(

@@ -197,7 +197,7 @@ review/correction cycles are prohibited.
 |---|---:|---|---|---|
 | C1 | #713 | #713 | completed source-only on reconciliation merge | authority and roadmap reconciliation; runtime mutation zero |
 | C2 | #717 | #702, #714, #703, #704, #705 | terminal Law candidate #764; complete only after expected-head merge and validated receipt | C2R-A through C2R-C-L: two source contracts and three complete subject runtime verticals |
-| C3 | #706 | #706–#708 | authorized unstarted after validated terminal C2R-C-L receipt | frozen D+1, sealed D+7, recurrence/reopening, Ledger, recurring deduction and Today/Full-Day |
+| C3 | #706 | #706–#708 | complete only after expected-head merge and validated receipt | frozen D+1, sealed D+7, recurrence/reopening, Ledger, recurring deduction and Today/Full-Day |
 | C4 | #709 | #709–#710 | queued behind ULC-I1 and the complete ULC pre-proof chain | Owner proof, red-team, baseline and invitation-only commercial readiness; no activation |
 | C5 | #711 | #711 | queued behind C4 and unapproved O4W exact cohort gate after ULC-L1 | frozen paid cohort with real delayed-evidence windows |
 | C6 | #712 | #712 | queued behind C5 | verified-bank and bodyless calibration flywheel |
@@ -206,11 +206,13 @@ Issue #701 remains the parent program. The exact identifiers are completed
 roadmap item `WCV-C2`, completed campaign `C2`, recovery tracker #717,
 completed source-only stages C2R-A for Issue #702 and C2R-B for Issue #714,
 and completed Practice, Theory and Law stages C2R-C-P, C2R-C-T and C2R-C-L
-for Issue #703 under expected-head-merge-and-receipt semantics. The current
-dependency-ready non-Production selector is roadmap item `WCV-C3`, campaign
-`C3`, lead Issue #706, authorized but unstarted. Issue #714 remains open: only
-its C2 allocation is complete, while C3, C4 and C6 remain preserved. The
-canonical tuple is `WCV-C3 / C3 / #706 / authorized_unstarted`.
+for Issue #703 under expected-head-merge-and-receipt semantics. WCV-C3/C3 and
+lead Issue #706 become complete only after this candidate's expected-head
+merge and validated receipt. Issue #714 remains open: its C2 and C3
+allocations are complete while C4 and C6 remain preserved. No successor
+product stage is dependency-ready because ULC-M1 additionally requires
+completed S241A; queued S236B remains a report-only non-product control lane
+and no stage starts automatically.
 
 `launchConvergenceAmendment`, `wcvCampaignOverlay`, `roadmapContract`, the ULC
 preserved-current-authority mirror and active roadmap must expose one identical
@@ -343,10 +345,11 @@ semantics, C2R-A/#702 and C2R-B/#714 are complete source-only, and C2R-C-P,
 C2R-C-T and terminal C2R-C-L for Issue #703 are the complete Practice, Theory
 and Law runtime stages. Candidate PR #764 represents WCV-C2 completion only
 after its expected-head-pinned merge and validated receipt, at which point
-roadmap item WCV-C3, campaign C3, lead Issue #706 is authorized but unstarted.
-Issue #714 remains open for
-C3/C4/C6. The later GitHub-native delivery decision controls protected non-
-Production continuation.
+roadmap item WCV-C3, campaign C3 and lead Issue #706 became authorized. The
+WCV-C3 candidate now represents completion only after its own protected merge
+and validated receipt. Issue #714 then remains open for C4/C6. ULC-M1 remains
+blocked on S241A. The later GitHub-native delivery decision controls protected
+non-Production continuation.
 
 ### Free-limited and paid routes
 
@@ -1182,11 +1185,13 @@ Primary statuses use only runner-supported values. Future gated work is
 `queued` with unmet dependencies; it is not marked `blocked` or
 `human_decision`, because those values consume WIP.
 
-`program.wipLimit` is three. Two slots are occupied by the truthful blocked
-CPF-1 and S236P control-plane items, leaving one merge-producing delivery
-slot. The separate global merge-producing writer limit is exactly one, so WIP
-three never authorizes parallel writers. Shared source-of-truth, schema,
-auth/RLS, billing, runtime and other control-plane mutations are serialized.
+`program.wipLimit` is three. CPF-1 and S236P occupy the two truthful blocked
+control-plane reservations, leaving one merge-producing delivery slot. Queued
+S236B consumes no mutation WIP; its report-only selection is not start
+authority while Draft PR #660 remains nonqualifying. The separate global
+merge-producing writer limit is exactly one, so WIP three never authorizes
+parallel writers. Shared source-of-truth, schema, auth/RLS, billing, runtime
+and other control-plane mutations are serialized.
 
 The runner still supports only one flat exact-string `lockGroup`; it has no
 hierarchical or multi-lock ownership model, cross-run reservation, distributed
@@ -1211,9 +1216,10 @@ The S234 reset snapshot contained exactly:
 S234R, S235A, and S235B are completed as source/contract evidence. The current
 authority is `roadmap/active-program.yml`; this contract deliberately does
 not mirror its dynamic ready-item list.
-O3A and lean O4V are completed as exact Owner decisions; S236B remains queued,
-CPF-1 and S236P remain
-factually blocked, and S236A remains queued with S236P as its unmet dependency.
+O3A and lean O4V are completed as exact Owner decisions. S236B remains queued
+and report-only; Draft PR #660 is nonqualifying and explicitly prohibits
+automatic additional OCR work. CPF-1 and S236P remain factually blocked, and
+S236A remains queued with S236P as its unmet dependency.
 The machine mirror pins the WCV campaign graph and structural-recovery chain,
 not the unrelated dynamic ready list. Runner selection is metadata-only: it
 does not start, reserve, provision, author, or execute work. After C1, the
@@ -1223,8 +1229,10 @@ is still required to start C2R-C-P. No later replacement stage can auto-start
 or bypass its terminal predecessor.
 
 PR #660 remains Draft and blocked. Its current exploratory OCR evidence does
-not establish S236B. Any continuation must reconcile onto amended main and
-regenerate exact-head evidence.
+not establish S236B, and its own contract prohibits automatic additional OCR
+work. Its queued selector result is report-only. Any continuation requires a
+distinct live authorization, reconciliation onto amended main, and regenerated
+exact-head evidence.
 
 ## 14. Brand and home
 
@@ -1281,12 +1289,13 @@ continuation commands and no-shortcut semantics. It implements no runtime.
 The three successor stages remain complete subject outcomes, and their common
 runtime substrate may first land only inside C2R-C-P.
 
-After terminal B merge and receipt, #714 remains open with C3/C4/C6 preserved.
+After terminal B merge and receipt, #714 remained open with C3/C4/C6 preserved.
 PR #756 supplied the complete default-off Owner-only Practice runtime and 11
 exact matrix declarations; PR #762 supplied the complete default-off Owner-
-only Theory runtime and five direct declarations. Candidate PR #764 supplies
-the terminal default-off Owner-only Law runtime and the final five direct
-declarations. After its protected merge and validated receipt, the current
-tuple is `WCV-C3 / C3 / #706 / authorized_unstarted`; only then may
-#703/#704/#705/#717 close. Issue state cannot replace any required stage merge
-or receipt, and no Production or learner activation begins.
+only Theory runtime and five direct declarations. PR #764 supplied the
+terminal default-off Owner-only Law runtime and final five direct declarations.
+Its protected merge and receipt permitted #703/#704/#705/#717 closure and
+authorized WCV-C3. The WCV-C3 candidate is complete only after its own
+protected merge and validated receipt; it completes #714 allocation C3 while
+preserving C4/C6. No Production or learner activation begins, and ULC-M1
+remains blocked on S241A.

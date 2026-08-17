@@ -10,9 +10,28 @@ import {
   isTrustedRepairOwner,
   requireTrustedRepairAccess,
 } from "@/lib/review-os/trusted-repair-access";
+import { requireDurableLearningAccess } from "@/lib/review-os/durable-learning-access";
 
 export default async function ReviewOsLayout({ children }: { children: ReactNode }) {
   const currentPath = (await headers()).get("x-inverge-current-path") ?? "";
+  if (currentPath.startsWith("/app/durable-learning")) {
+    let session;
+    try {
+      session = await requireDurableLearningAccess();
+    } catch {
+      notFound();
+    }
+    return (
+      <ReviewOsAppShell
+        email={session.email}
+        trustedRepairEnabled={
+          isTrustedRepairEnabled() && isTrustedRepairOwner(session.email)
+        }
+      >
+        {children}
+      </ReviewOsAppShell>
+    );
+  }
   if (currentPath.startsWith("/app/trusted-repair")) {
     let session;
     try {

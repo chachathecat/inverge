@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
+import Link from "next/link";
 
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -147,9 +148,11 @@ function stateHeading(state: string) {
 export function TrustedRepairLoop({
   ownerScope,
   availableSubjects,
+  durableLearningEnabled,
 }: {
   ownerScope: string;
   availableSubjects: readonly Subject[];
+  durableLearningEnabled: boolean;
 }) {
   const searchParams = useSearchParams();
   const initialSessionId = searchParams.get("sessionId");
@@ -664,6 +667,14 @@ export function TrustedRepairLoop({
                 <p className="font-medium">결과: {view.session.outcome ?? view.session.state}</p>
                 <p className="text-sm text-[var(--color-text-secondary)]">이 결과는 같은 세션의 한 기준에만 적용됩니다. 숙달·전이·안정성·점수·합격을 주장하지 않습니다.</p>
                 {view.canonicalClaimSentence ? <p className="text-sm">{view.canonicalClaimSentence}</p> : null}
+                {durableLearningEnabled && view.session.state === "verified" ? (
+                  <Link
+                    href={`/app/durable-learning?sourceSessionId=${encodeURIComponent(view.session.sessionId)}`}
+                    className="inline-flex min-h-11 items-center font-medium text-[var(--color-text-brand)] underline underline-offset-4"
+                  >
+                    D+1 · D+7 · 시간제한 내구성 검증으로 이어가기
+                  </Link>
+                ) : null}
               </div>
             ) : null}
           </div>
