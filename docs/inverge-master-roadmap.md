@@ -32,10 +32,12 @@ instructor authoring/review workbench is Web-primary. Student apps consume
 only assigned work and approved feedback.
 
 The current implementation authority is WCV-C2, campaign C2, Tracker #717,
-the exact five-stage C2R chain, one merge-producing writer and no automatic
-start. C2R-A/#702 is represented as complete source-only under merge-and-receipt
-semantics; C2R-B/#714 is also complete source-only, while C2R-C-P/#703 is the
-current authorized and unstarted stage. ULC-0 implements nothing.
+the exact five-stage C2R chain, one merge-producing writer and GitHub-native
+protected non-Production continuation. C2R-A/#702 and C2R-B/#714 are complete
+source-only, C2R-C-P/#703 is
+the complete Practice runtime stage under merge-and-receipt semantics, and
+C2R-C-T/#703 is the current authorized and unstarted stage. ULC-0 implements
+nothing.
 
 The later 2026-08-15 C2R-B decision owns this exact post-B selector and typed
 proof architecture. The C2R-A decision still owns the A rights-safe source
@@ -122,9 +124,10 @@ Tracker #717 owns the exact serial recovery graph:
 
 The formal identities remain separate: roadmap item `WCV-C2`, campaign ID
 `C2`, recovery tracker #717, completed source-only stages `C2R-A` for Issue
-#702 and `C2R-B` for Issue #714, and current authorized but unstarted stage
-`C2R-C-P` for Issue #703. The canonical tuple is
-`WCV-C2 / C2 / #717 / C2R-C-P / #703 / authorized_unstarted`.
+#702 and `C2R-B` for Issue #714, completed Practice stage `C2R-C-P`, and
+current authorized but unstarted stage `C2R-C-T` for Issue #703. The canonical
+tuple is
+`WCV-C2 / C2 / #717 / C2R-C-T / #703 / authorized_unstarted`.
 
 The sequence is terminally serial. C2R-A and C2R-B are independently complete
 source-contract outcomes and are not parallel. C2R-C-P, C2R-C-T and C2R-C-L
@@ -137,8 +140,10 @@ C2R-C-P, not as a separate foundation.
 C2R-C-P and C2R-C-T may record #703/#704/#705 acceptance contributions but
 cannot close those issues. Only terminal C2R-C-L may complete #703, #704,
 #705 and WCV-C2; #706 remains blocked until that merge. Common regressions
-first covered in Practice remain mandatory for Theory and Law. No stage starts
-automatically. Exactly one merge-producing writer remains permitted.
+first covered in Practice remain mandatory for Theory and Law. The later
+GitHub-native delivery decision permits only protected dependency-ready
+non-Production continuation. Exactly one merge-producing writer remains
+permitted.
 
 C2R-C-P requires terminal validated merges of both C2R-A and C2R-B; issue
 state or closure cannot substitute for either stage merge. C2R-B completes
@@ -713,4 +718,6 @@ the shared runtime substrate may first land only within C2R-C-P.
 
 Only Issue #714 allocation C2 is complete. Issue #714 stays open for C3, C4
 and C6. The expected-head-pinned merge and validated #717 receipt authorize
-C2R-C-P/#703 as unstarted; they do not start or activate it.
+C2R-C-P/#703, whose protected PR #756 merge and validated receipt select
+C2R-C-T/#703 as the next authorized-but-unstarted stage without Production or
+learner activation.

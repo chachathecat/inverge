@@ -1,12 +1,31 @@
 import type { ReactNode } from "react";
 import { headers } from "next/headers";
+import { notFound } from "next/navigation";
 
 import { ReviewOsAppShell } from "@/components/review-os/app-shell";
 import { ReviewOsAccessState } from "@/components/review-os/review-os-access-state";
 import { getReviewOsServerContext } from "@/lib/review-os/server";
+import {
+  isTrustedRepairEnabled,
+  isTrustedRepairOwner,
+  requireTrustedRepairAccess,
+} from "@/lib/review-os/trusted-repair-access";
 
 export default async function ReviewOsLayout({ children }: { children: ReactNode }) {
   const currentPath = (await headers()).get("x-inverge-current-path") ?? "";
+  if (currentPath.startsWith("/app/trusted-repair")) {
+    let session;
+    try {
+      session = await requireTrustedRepairAccess();
+    } catch {
+      notFound();
+    }
+    return (
+      <ReviewOsAppShell email={session.email} trustedRepairEnabled>
+        {children}
+      </ReviewOsAppShell>
+    );
+  }
   const isMetadataOnlyTrustAcceptance = currentPath.startsWith(
     "/app/acceptance/trust-provenance/",
   );
@@ -22,6 +41,9 @@ export default async function ReviewOsLayout({ children }: { children: ReactNode
   return (
     <ReviewOsAppShell
       email={session.email}
+      trustedRepairEnabled={
+        isTrustedRepairEnabled() && isTrustedRepairOwner(session.email)
+      }
       rightSlot={
         usage && !isMetadataOnlyTrustAcceptance ? (
           <div

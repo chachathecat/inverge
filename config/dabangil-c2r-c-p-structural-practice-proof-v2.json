@@ -1,0 +1,311 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "contractId": "dabangil.c2r_c_p.structural_practice_proof.v2",
+  "version": "2.0.0",
+  "stage": {
+    "roadmapItemId": "WCV-C2",
+    "campaignId": "C2",
+    "trackerIssue": 717,
+    "stageId": "C2R-C-P",
+    "leadIssue": 703,
+    "contributionIssues": [
+      704,
+      705
+    ],
+    "predecessors": [
+      "C2R-A",
+      "C2R-B"
+    ],
+    "candidateRepresentsPostMergeState": true,
+    "postMergeState": "complete_practice_runtime",
+    "postMergeNextStage": "C2R-C-T",
+    "postMergeNextIssue": 703
+  },
+  "subjectBoundary": {
+    "implementedSubjectsExactly": [
+      "appraisal_practical"
+    ],
+    "deferredSubjectsExactly": [
+      "appraisal_theory",
+      "appraisal_compensation_law"
+    ],
+    "deferredSubjectRuntimeExists": false,
+    "genericChatExists": false
+  },
+  "practiceProof": {
+    "type": "CalculationRelationAnchorV1",
+    "anchorKind": "PRACTICE_CALCULATION_RELATION",
+    "anchorId": "repair-anchor:practice:synthetic-net-income",
+    "anchorVersionId": "repair-anchor:practice:synthetic-net-income@1",
+    "operandRoles": [
+      {
+        "role": "gross_income",
+        "value": 120000000,
+        "unit": "KRW_PER_YEAR"
+      },
+      {
+        "role": "operating_expense",
+        "value": 20000000,
+        "unit": "KRW_PER_YEAR"
+      }
+    ],
+    "operator": "SUBTRACT",
+    "operandOrder": [
+      "gross_income",
+      "operating_expense"
+    ],
+    "result": {
+      "value": 100000000,
+      "unit": "KRW_PER_YEAR"
+    },
+    "units": "KRW_PER_YEAR",
+    "sign": "POSITIVE",
+    "rounding": {
+      "mode": "HALF_UP",
+      "scale": 0
+    },
+    "supportedTransformation": "DIRECT_ORDERED",
+    "deterministicValidatorId": "validator:practice-calculation-claim@2",
+    "disconnectedNumericPresenceResult": "UNSUPPORTED",
+    "substringNumericMatchAllowed": false,
+    "onlyPassCreatesVerified": true,
+    "canonicalVerificationAuthority": "server_validated_PracticeCalculationClaimV2_only",
+    "freeFormTextAuthority": "candidate_extraction_diagnosis_gap_ranking_scaffold_only",
+    "freeFormTextCanCreateVerified": false,
+    "parserCompletenessRequired": false,
+    "denylistVocabularyIsVerificationGate": false,
+    "closedClaimSchema": {
+      "exactUnknownAndDuplicateFieldRejection": true,
+      "sourceRevisionId": "uuid_current_confirmed_revision_only",
+      "anchorIdentity": [
+        "anchorId",
+        "anchorVersionId"
+      ],
+      "grossIncome": {
+        "value": "safe_integer",
+        "unit": "KRW_PER_YEAR"
+      },
+      "operatingExpense": {
+        "value": "safe_integer",
+        "unit": "KRW_PER_YEAR"
+      },
+      "operator": "SUBTRACT",
+      "operandOrder": [
+        "gross_income",
+        "operating_expense"
+      ],
+      "result": {
+        "value": "safe_integer",
+        "unit": "KRW_PER_YEAR"
+      },
+      "sign": "POSITIVE",
+      "rounding": {
+        "mode": "HALF_UP",
+        "scale": 0,
+        "required": false
+      },
+      "confirmationMode": [
+        "EXTRACTED_THEN_EDITED",
+        "MANUAL_STRUCTURED"
+      ],
+      "learnerConfirmedAt": "server_generated_iso_8601"
+    },
+    "onlyExactStructuredPassCreatesVerified": true,
+    "clientSuppliedVerifiedPassMasteryTransferRejected": true,
+    "canonicalSentenceIsOutputOnly": true
+  },
+  "rightsBoundary": {
+    "sourceClass": "INVERGE_ORIGINAL",
+    "purpose": "OWNER_TEST_ONLY",
+    "exactActiveRightsManifestBindingRequiredBeforeFixtureUse": true,
+    "revalidatedAtEveryFixtureUse": true,
+    "rawLearnerBodyTrainingAllowed": false,
+    "sharedLearnerBodyReuseAllowed": false,
+    "thirdPartyBodyUsed": false,
+    "deniedClassesFailClosed": [
+      "USER_PRIVATE_ONLY",
+      "ACADEMY_OR_COMMERCIAL_TEXTBOOK",
+      "RIGHTS_UNKNOWN",
+      "BLOCKED"
+    ]
+  },
+  "episode": {
+    "phases": [
+      "CAPTURE_REVISION",
+      "METACOGNITIVE_PREDICTION",
+      "INDEPENDENT_COMMIT",
+      "LEARNER_SELF_DIAGNOSIS",
+      "SERVER_DIAGNOSIS",
+      "REPAIR_PATH_SELECTION",
+      "SMALLEST_SCAFFOLD",
+      "INDEPENDENT_RECONSTRUCTION",
+      "STRUCTURED_CALCULATION_CONFIRMATION",
+      "DETERMINISTIC_SERVER_VERIFICATION",
+      "CONTINUATION_DECISION"
+    ],
+    "inputModes": [
+      "TYPED_TEXT",
+      "EDITABLE_PHOTO_OCR",
+      "EDITABLE_PDF_OCR",
+      "EDITABLE_VOICE_TRANSCRIPTION",
+      "STRUCTURED_SELECTION"
+    ],
+    "continuations": [
+      "VERIFY_AND_CONTINUE",
+      "DEFER_FOR_NOW",
+      "SWITCH_TO_GUIDED"
+    ],
+    "predictionAndSelfDiagnosisBeforeServerDiagnosis": true,
+    "exposureCommitBeforeHelpBytes": true,
+    "firstScaffoldAssistanceLevel": 1,
+    "guidedAssistanceLevel": 3,
+    "guidedCreatesIndependentCredit": false,
+    "sameSessionCreatesMasteryTransferOrStability": false,
+    "freeFormReconstructionCreatesVerified": false,
+    "prefillAutomaticallyConfirmed": false,
+    "ambiguousExtractionLeavesFieldsEmpty": true
+  },
+  "completeOutcomeLayers": {
+    "contractAndMachineValidation": [
+      "config/dabangil-c2r-c-p-structural-practice-proof-v2.json",
+      "lib/review-os/trusted-repair-contract.ts",
+      "lib/review-os/trusted-repair-engine.ts"
+    ],
+    "goldenAndOwnerGoldFixtures": [
+      "lib/review-os/trusted-repair-fixtures.ts"
+    ],
+    "persistenceForcedRlsServerCas": [
+      "supabase/migrations/20260817090000_c2r_c_p_structured_practice_proof.sql",
+      "lib/review-os/trusted-repair-repository.ts",
+      "lib/review-os/trusted-repair-server.ts"
+    ],
+    "api": [
+      "app/api/review-os/trusted-repair/route.ts"
+    ],
+    "learnerUi": [
+      "app/app/trusted-repair/page.tsx",
+      "components/review-os/trusted-repair-loop.tsx"
+    ],
+    "runtimeEvidence": [
+      ".github/workflows/c2r-c-p-practice-trusted-repair-runtime.yml",
+      "scripts/automation/verify-c2r-c-p-practice-runtime.mjs",
+      "tests/e2e/c2r-c-p-practice-trusted-repair-runtime.spec.ts"
+    ],
+    "safeDeferredBoundary": {
+      "theoryRuntime": false,
+      "lawRuntime": false,
+      "liveModelRoute": false,
+      "generalPurposeChat": false,
+      "payment": false,
+      "production": false
+    },
+    "independentRollback": {
+      "killSwitch": "WCV_C2R_C_P_PRACTICE_ENABLED",
+      "defaultEnabled": false,
+      "requiresRevertingTheoryOrLaw": false,
+      "destructiveRollbackAuthorized": false,
+      "forwardOnlyProcedureDocumented": true
+    }
+  },
+  "regressionCoverageCandidate": {
+    "receiptPolicy": "github_exact_head_pinned_squash_merge_v1",
+    "rows": [
+      1,
+      2,
+      4,
+      6,
+      8,
+      9,
+      10,
+      11,
+      12,
+      14,
+      19
+    ],
+    "effectiveOnlyAfterExpectedHeadMergeAndTrackerReceipt": true
+  },
+  "activationBoundary": {
+    "ownerOnlyNonProduction": true,
+    "flagDefault": false,
+    "productionAuthorized": false,
+    "realLearnerAuthorized": false,
+    "providerAuthorized": false,
+    "paymentAuthorized": false,
+    "remoteMigrationApplyAuthorized": false
+  },
+  "hostileMatrix": {
+    "donorPrRange": [
+      745,
+      755
+    ],
+    "categories": [
+      "denials",
+      "signs",
+      "rounding",
+      "role_unit_operator",
+      "ascii_unicode_minus",
+      "full_width_compatibility",
+      "whitespace",
+      "mixed_punctuation",
+      "ascii_curly_korean_quotes",
+      "matched_unmatched_nested_wrappers",
+      "repeated_contradictory_free_form_claims",
+      "single_double_negation",
+      "structured_field_mutation",
+      "binding_drift",
+      "duplicate_replay"
+    ],
+    "invariant": "free_form_variation_never_changes_structured_proof_outcome"
+  },
+  "ownedPathManifest": [
+    ".env.example",
+    ".github/workflows/c2r-c-p-practice-trusted-repair-runtime.yml",
+    "AGENTS.md",
+    "app/api/review-os/trusted-repair/route.ts",
+    "app/app/layout.tsx",
+    "app/app/trusted-repair/page.tsx",
+    "components/learner/learner-ui.tsx",
+    "components/review-os/app-shell.tsx",
+    "components/review-os/trusted-repair-loop.tsx",
+    "config/dabangil-c2r-c-p-structural-practice-proof-v2.json",
+    "config/dabangil-unified-product-multisurface-launch-v1.json",
+    "config/dabangil-unified-program-contract.json",
+    "docs/dabangil-unified-program-contract.md",
+    "docs/decisions/2026-08-17-owner-c2r-c-p-structural-practice-proof-recovery.md",
+    "docs/inverge-master-roadmap.md",
+    "docs/qa/c2r-c-p-structural-practice-proof-validation.md",
+    "docs/qa/wcv-c2-replacement-regression-matrix.md",
+    "docs/strategy/ACTIVE-MASTER-PLAN.md",
+    "docs/strategy/dabangil-unified-product-multisurface-launch-v1-2026-08-14.md",
+    "lib/review-os/trusted-repair-access.ts",
+    "lib/review-os/trusted-repair-contract.ts",
+    "lib/review-os/trusted-repair-engine.ts",
+    "lib/review-os/trusted-repair-fixtures.ts",
+    "lib/review-os/trusted-repair-owner-allowlist.ts",
+    "lib/review-os/trusted-repair-repository.ts",
+    "lib/review-os/trusted-repair-server.ts",
+    "lib/review-os/trusted-repair-source-binding.ts",
+    "roadmap/active-program.yml",
+    "scripts/automation/produce-runtime-evidence.mjs",
+    "scripts/automation/runtime-gate.mjs",
+    "scripts/automation/verify-c2r-c-p-practice-runtime.mjs",
+    "scripts/run-node-tests.mjs",
+    "supabase/migrations/20260817090000_c2r_c_p_structured_practice_proof.sql",
+    "tests/agent-factory-runtime-gate.test.mjs",
+    "tests/c2r-b-typed-subject-proof-contract.test.mjs",
+    "tests/c2r-c-p-practice-authority.test.mjs",
+    "tests/c2r-c-p-practice-runtime-contract.test.mjs",
+    "tests/c2r-c-p-practice-structured-proof.test.mjs",
+    "tests/dabangil-unified-product-multisurface-launch-authority.test.mjs",
+    "tests/e2e/c2r-c-p-playwright.config.ts",
+    "tests/e2e/c2r-c-p-practice-trusted-repair-runtime.spec.ts",
+    "tests/foundation-continuous-security-automation.test.mjs",
+    "tests/github-native-delivery-control.test.mjs",
+    "tests/rights-safe-adaptive-variant-foundry-contract.test.mjs",
+    "tests/runtime/wcv-c2-supabase/supabase/config.toml",
+    "tests/runtime/wcv-c2-supabase/supabase/migrations/20260812005618_wcv_c2_preflight_tenant_probe.sql",
+    "tests/s232f2-access-availability.test.mjs",
+    "tests/wcv-c2r-structural-recovery-authority.test.mjs",
+    "tests/wcv-campaign-authority-roadmap-reconciliation.test.mjs"
+  ]
+}

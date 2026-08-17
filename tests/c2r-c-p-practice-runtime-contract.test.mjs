@@ -1,0 +1,374 @@
+import assert from "node:assert/strict";
+import fs from "node:fs";
+import path from "node:path";
+import test from "node:test";
+
+import {
+  COMMAND_SPECS,
+  DIAGNOSTIC_MAX_CHARS,
+  DIAGNOSTIC_MAX_LINES,
+  boundedSanitizedExcerpt,
+  sanitizeDiagnosticText,
+  sanitizedBrowserFailureLocations,
+} from "../scripts/automation/verify-c2r-c-p-practice-runtime.mjs";
+import {
+  isTrustedRepairOwnerEmail,
+  parseTrustedRepairOwnerEmails,
+} from "../lib/review-os/trusted-repair-owner-allowlist.ts";
+import { readTextFileSync } from "./platform-text.mjs";
+
+const ROOT = process.cwd();
+const read = (relativePath) =>
+  readTextFileSync(path.join(ROOT, relativePath));
+
+const MIGRATION =
+  "supabase/migrations/20260817090000_c2r_c_p_structured_practice_proof.sql";
+const WORKFLOW =
+  ".github/workflows/c2r-c-p-practice-trusted-repair-runtime.yml";
+const VERIFIER = "scripts/automation/verify-c2r-c-p-practice-runtime.mjs";
+
+test("[C2R-C-P-R01] Practice persistence is forced-RLS, CAS/idempotent, and runtime-gated", () => {
+  const sql = read(MIGRATION);
+  for (const table of [
+    "wcv_c2_trusted_repair_sessions",
+    "wcv_c2_trusted_repair_private_artifacts",
+    "wcv_c2_trusted_repair_exposure_events",
+    "wcv_c2_trusted_repair_command_receipts",
+    "wcv_c2_trusted_repair_scarcity_events",
+  ]) {
+    assert.match(sql, new RegExp(`alter table public\\.${table} enable row level security`));
+    assert.match(sql, new RegExp(`alter table public\\.${table} force row level security`));
+    assert.match(sql, new RegExp(`revoke all on table public\\.${table}`));
+  }
+  assert.match(sql, /subject text not null check \(subject = 'appraisal_practical'\)/);
+  assert.doesNotMatch(sql, /subject in \([^)]*appraisal_theory/i);
+  assert.match(sql, /contract_version = 'wcv_c2r_c_p_structured_practice_proof\.v2'/);
+  assert.match(sql, /validator_version = 'validator:practice-calculation-claim@2'/);
+  assert.match(sql, /'structuredClaim'/);
+  assert.match(sql, /WCV_C2_STRUCTURED_PROOF_REQUIRED/);
+  assert.match(sql, /'validator:practice-calculation-claim@2'/);
+  assert.match(sql, /WCV_C2_CAS_CONFLICT/);
+  assert.match(sql, /wcv_c2_trusted_repair_command_receipts/);
+  assert.match(sql, /primary key \(user_id, command_id\)/);
+  assert.doesNotMatch(sql, /command_id uuid primary key/);
+  const transitionStart = sql.indexOf(
+    "create or replace function public.wcv_c2_apply_trusted_repair_transition_v1",
+  );
+  const createSql = sql.slice(0, transitionStart);
+  const transitionSql = sql.slice(transitionStart);
+  const createCommandLock = createSql.indexOf(
+    "pg_catalog.pg_advisory_xact_lock",
+  );
+  const createReceiptLookup = createSql.indexOf(
+    "from public.wcv_c2_trusted_repair_command_receipts as receipt",
+  );
+  assert.ok(createCommandLock > 0 && createReceiptLookup > createCommandLock);
+  assert.match(
+    createSql,
+    /v_user_id::text \|\| ':' \|\| p_command_id::text/,
+  );
+  const transitionCommandLock = transitionSql.indexOf(
+    "pg_catalog.pg_advisory_xact_lock",
+  );
+  const transitionReceiptLookup = transitionSql.indexOf(
+    "from public.wcv_c2_trusted_repair_command_receipts as receipt",
+  );
+  const sessionLock = transitionSql.indexOf(
+    "for update",
+    transitionReceiptLookup,
+  );
+  assert.ok(
+    transitionCommandLock > 0 &&
+      transitionReceiptLookup > transitionCommandLock,
+  );
+  assert.ok(sessionLock > transitionReceiptLookup);
+  assert.match(
+    transitionSql,
+    /p_user_id::text \|\| ':' \|\| p_session_id::text \|\| ':' \|\| p_command_id::text/,
+  );
+  assert.match(
+    sql,
+    /revoke all on function public\.wcv_c2_create_trusted_repair_session_v1\([\s\S]*?from public, anon, authenticated;/,
+  );
+  assert.match(
+    sql,
+    /grant execute on function public\.wcv_c2_create_trusted_repair_session_v1\([\s\S]*?to service_role;/,
+  );
+  assert.doesNotMatch(
+    sql,
+    /grant (?:select|insert|update|delete)[^;]*wcv_c2_trusted_repair_private_artifacts[^;]*authenticated/i,
+  );
+  assert.doesNotMatch(
+    sql,
+    /grant (?:select|insert|update|delete)[^;]*wcv_c2_trusted_repair_sessions[^;]*authenticated/i,
+  );
+  assert.doesNotMatch(
+    sql,
+    /create policy[^;]*wcv c2 own bodyless session read[^;]*authenticated/is,
+  );
+  assert.match(
+    read(VERIFIER),
+    /authenticated canonical session read[\s\S]*?expectStatus\([\s\S]*?\[401, 403\]/,
+  );
+  const runtimeEvidenceProducer = read(
+    "scripts/automation/produce-runtime-evidence.mjs",
+  );
+  const runtimeGate = read("scripts/automation/runtime-gate.mjs");
+  for (const source of [runtimeEvidenceProducer, runtimeGate]) {
+    assert.match(source, /authenticated_session_read_denied/);
+    assert.doesNotMatch(source, /learner_session_two_user_isolation/);
+    assert.match(source, /c2r-c-p\.postgres\.practice-trusted-repair\.v2/);
+  }
+  assert.match(
+    runtimeEvidenceProducer,
+    /assertSqlDenied\([\s\S]*?USER_A[\s\S]*?wcv_c2_trusted_repair_sessions[\s\S]*?authenticated owner session read denial assertion/,
+  );
+  assert.match(
+    runtimeEvidenceProducer,
+    /assertSqlDenied\([\s\S]*?USER_B[\s\S]*?wcv_c2_trusted_repair_sessions[\s\S]*?authenticated cross-user session read denial assertion/,
+  );
+  const exposureInsert = sql.indexOf(
+    "insert into public.wcv_c2_trusted_repair_exposure_events",
+  );
+  const sessionUpdate = sql.indexOf(
+    "update public.wcv_c2_trusted_repair_sessions as session",
+  );
+  assert.ok(exposureInsert > 0 && sessionUpdate > exposureInsert);
+});
+
+test("[C2R-C-P-R11] API and learner shell remain Owner-only default-off", () => {
+  const route = read("app/api/review-os/trusted-repair/route.ts");
+  assert.ok(
+    route.indexOf("await requireTrustedRepairAccess()") <
+      route.indexOf("parseJsonRejectingDuplicateKeys(await request.text())"),
+  );
+  assert.match(route, /Cache-Control": "private, no-store, max-age=0"/);
+  assert.match(route, /Vary: "Cookie"/);
+  assert.match(route, /exactObject\(raw, \["action", "subject", "inputMode", "commandId"\]\)/);
+  assert.match(route, /isTrustedRepairSubject/);
+  assert.doesNotMatch(route, /referenceAnswer|officialAnswer|mastery=true/i);
+
+  const access = read("lib/review-os/trusted-repair-access.ts");
+  assert.match(access, /process\.env\[TRUSTED_REPAIR_FLAG\] === "true"/);
+  assert.match(access, /process\.env\.ALPHA_ADMIN_EMAILS/);
+  assert.match(access, /process\.env\.WCV_C2R_C_P_OWNER_EMAILS/);
+  assert.doesNotMatch(access, /isAllowedAdminEmail/);
+  assert.ok(
+    access.indexOf("if (!isTrustedRepairEnabled())") <
+      access.indexOf("getServerSessionUser()"),
+  );
+  assert.match(
+    read(".env.example"),
+    /WCV_C2R_C_P_PRACTICE_ENABLED=false/,
+  );
+  assert.match(read(".env.example"), /WCV_C2R_C_P_OWNER_EMAILS=/);
+  assert.match(
+    read(".env.example"),
+    /explicitly present in both\s*# ALPHA_ADMIN_EMAILS and this feature-local Owner allowlist/,
+  );
+  assert.match(
+    read("app/app/layout.tsx"),
+    /isTrustedRepairEnabled\(\) && isTrustedRepairOwner\(session\.email\)/,
+  );
+  assert.match(
+    read("components/learner/learner-ui.tsx"),
+    /trustedRepairEnabled \? \(/,
+  );
+  const loop = read("components/review-os/trusted-repair-loop.tsx");
+  assert.match(loop, /useRef<PendingCommand \| null>\(null\)/);
+  assert.match(
+    loop,
+    /durablePending\?\.fingerprint === fingerprint/,
+  );
+  assert.match(loop, /responseWasDefinitive/);
+  assert.match(loop, /responseWasDefinitive = response\.status < 500/);
+  assert.match(loop, /window\.sessionStorage\.setItem/);
+  assert.match(loop, /window\.sessionStorage\.getItem/);
+  assert.match(
+    loop,
+    /action === "start" \? readDurablePendingCommand\(ownerScope\) : null/,
+  );
+  assert.match(loop, /if \(action === "start"\) \{/);
+  assert.match(loop, /record\.ownerScope === ownerScope/);
+  assert.match(loop, /JSON\.stringify\(\{ \.\.\.command, ownerScope \}/);
+  assert.match(loop, /view\.session\.state === "diagnosed" \|\|/);
+  assert.match(
+    read("app/app/trusted-repair/page.tsx"),
+    /<TrustedRepairLoop ownerScope=\{ownerScope\} \/>/,
+  );
+  assert.doesNotMatch(loop, /sessionStorage[\s\S]*TextEncoder|SHA-256/);
+  assert.match(loop, /clearDurablePendingCommand\(\)/);
+});
+
+test("trusted repair owner access fails closed without an explicit allowlist", () => {
+  assert.deepEqual(parseTrustedRepairOwnerEmails(undefined), []);
+  assert.deepEqual(parseTrustedRepairOwnerEmails(" ,  "), []);
+  assert.equal(isTrustedRepairOwnerEmail("owner@example.test", undefined), false);
+  assert.equal(isTrustedRepairOwnerEmail("owner@example.test", ""), false);
+  assert.equal(isTrustedRepairOwnerEmail(null, "owner@example.test"), false);
+  assert.equal(
+    isTrustedRepairOwnerEmail(
+      "OWNER@example.test",
+      " second@example.test, owner@example.test ",
+    ),
+    true,
+  );
+  assert.equal(
+    isTrustedRepairOwnerEmail(
+      "learner@example.test",
+      "owner@example.test",
+    ),
+    false,
+  );
+});
+
+test("[C2R-C-P-R08/R11/R14] workflow is fork-safe, shell-complete, and credential-free", () => {
+  const workflow = read(WORKFLOW);
+  assert.match(workflow, /pull_request:\s*\n\s*branches: \[main\]/);
+  assert.match(workflow, /ref: \$\{\{ github\.event\.pull_request\.head\.sha \}\}/);
+  assert.match(workflow, /persist-credentials: false/);
+  assert.match(workflow, /test "\$\(git rev-parse HEAD\)" = "\$\{PR_HEAD_SHA\}"/);
+  assert.match(workflow, /npm ci/);
+  assert.match(workflow, /playwright install -- --with-deps chromium/);
+  assert.match(workflow, /node scripts\/automation\/verify-c2r-c-p-practice-runtime\.mjs/);
+  assert.match(workflow, /--cleanup\s+--require-complete/);
+  assert.match(workflow, /git diff --exit-code -- package\.json package-lock\.json/);
+  assert.match(workflow, /actions\/upload-artifact@v4/);
+  assert.match(workflow, /if: success\(\)/);
+  assert.doesNotMatch(workflow, /github\.event\.pull_request\.head\.repo\.full_name/);
+  assert.doesNotMatch(workflow, /pull_request_target|persist-credentials: true|SUPABASE_ACCESS_TOKEN/);
+
+  const verifier = read(VERIFIER);
+  assert.match(verifier, /EXPECTED_CLI_VERSION = "2\.114\.0"/);
+  assert.match(verifier, /remoteSupabaseUsed: false/);
+  assert.match(verifier, /repositorySecretsUsed: false/);
+  assert.match(verifier, /liveProvidersUsed: false/);
+  assert.match(verifier, /syntheticSubjects: 1/);
+  assert.match(verifier, /practice_actual_browser_to_postgres_chain/);
+  assert.match(verifier, /state_data->'proofEvaluation'->>'state'/);
+  assert.match(verifier, /is distinct from 'PASS'/);
+  assert.match(verifier, /const executable = process\.execPath/);
+  for (const cliEntry of [
+    "node_modules/supabase/dist/supabase.js",
+    "node_modules/next/dist/bin/next",
+    "node_modules/@playwright/test/cli.js",
+  ]) {
+    assert.match(verifier, new RegExp(cliEntry.replace(/[./@]/g, "\\$&")));
+  }
+  assert.doesNotMatch(verifier, /node_modules\/.bin\/(?:supabase|next|playwright)/);
+  assert.doesNotMatch(verifier, /appraisal_compensation_law|three_subject_actual/);
+});
+
+test("required runtime-gate has an exact closed C2R-C-P migration adapter", () => {
+  const producer = read("scripts/automation/produce-runtime-evidence.mjs");
+  const gate = read("scripts/automation/runtime-gate.mjs");
+  for (const source of [producer, gate]) {
+    assert.match(source, /20260817090000_c2r_c_p_structured_practice_proof\.sql/);
+    assert.match(source, /c2r-c-p\.postgres\.practice-trusted-repair\.v2/);
+    assert.match(source, /practice_only_subject_constraint/);
+    assert.match(source, /free_form_transition_excludes_structured_proof/);
+    assert.match(source, /exposure_and_state_transition_atomic/);
+  }
+  assert.match(producer, /runC2RCPDatabaseAssertions/);
+  assert.match(producer, /anonymous_read_denied/);
+  assert.match(producer, /authenticated_private_body_read_denied/);
+  assert.match(producer, /stale_cas_transition_rejected/);
+});
+
+test("bodyless Practice bank scarcity is persisted before the request is denied", () => {
+  const server = read("lib/review-os/trusted-repair-server.ts");
+  const repository = read("lib/review-os/trusted-repair-repository.ts");
+  const scarcityBranch = server.slice(
+    server.indexOf('if (selection.kind !== "selected")'),
+    server.indexOf("const fixture = selection.fixture"),
+  );
+  assert.match(
+    scarcityBranch,
+    /await repository\.recordScarcity\(selection\.event\);[\s\S]*throw new TrustedRepairContractError\("rights_blocked"\)/,
+  );
+  assert.match(repository, /async recordScarcity\(event: TrustedRepairScarcityEvent\)/);
+  assert.match(repository, /\.from\("wcv_c2_trusted_repair_scarcity_events"\)/);
+  assert.match(repository, /id: event\.eventId/);
+  assert.match(repository, /contains_body: event\.containsBody/);
+});
+
+test("guided exposure returns and labels distinct level-three content", () => {
+  const server = read("lib/review-os/trusted-repair-server.ts");
+  const client = read("components/review-os/trusted-repair-loop.tsx");
+  assert.match(server, /const committedScaffold = scaffoldFor\(releaseAggregate, fixture\)/);
+  assert.match(server, /sourceBindingCurrent && committedScaffold !== null/);
+  assert.match(
+    server,
+    /answerBearingCriteriaVisible[\s\S]*?successCriterionKo: fixture\.successCriterionKo/,
+  );
+  assert.match(
+    server,
+    /answerBearingCriteriaVisible[\s\S]*?successCriterionKo: candidate\.successCriterionKo/,
+  );
+  assert.match(server, /scaffold: committedScaffold/);
+  assert.match(server, /scaffoldKind: matchingExposure\.scaffoldKind/);
+  assert.match(server, /trustedRepairScaffoldText/);
+  assert.match(client, /view\.scaffold\.kind === "guided_solution"/);
+  assert.match(client, /"가이드 풀이"/u);
+});
+
+test("runtime evidence surfaces contain no remote project command and diagnostics redact secrets", () => {
+  for (const relativePath of [
+    WORKFLOW,
+    "tests/runtime/wcv-c2-supabase/supabase/config.toml",
+    "tests/e2e/c2r-c-p-practice-trusted-repair-runtime.spec.ts",
+  ]) {
+    const source = read(relativePath);
+    assert.doesNotMatch(source, /supabase\s+(?:login|link)|--linked|supabase\s+db\s+(?:push|pull|dump)/i);
+    assert.doesNotMatch(source, /https?:\/\/[a-z0-9-]+\.supabase\.co/i);
+  }
+  assert.match(read(VERIFIER), /FORBIDDEN_LOCAL_SOURCE/);
+  assert.match(read(VERIFIER), /supabase\\s\+\(\?:login\|link\)/);
+
+  const sensitiveDiagnostic =
+    "SUPABASE_SERVICE_ROLE_KEY=secret https://demo.supabase.co Authorization: Bearer abc.def.ghi\n".repeat(80);
+  const sanitized = sanitizeDiagnosticText(sensitiveDiagnostic);
+  assert.doesNotMatch(sanitized, /=secret(?:\s|$)|demo\.supabase\.co|abc\.def\.ghi/);
+  const bounded = boundedSanitizedExcerpt(sensitiveDiagnostic);
+  assert.ok(bounded.length <= DIAGNOSTIC_MAX_CHARS);
+  assert.ok(bounded.split(/\r?\n/).length <= DIAGNOSTIC_MAX_LINES);
+  assert.deepEqual(
+    sanitizedBrowserFailureLocations({
+      stdout: "tests/e2e/c2r-c-p-practice-trusted-repair-runtime.spec.ts:123:9\n",
+      stderr: "tests/e2e/c2r-c-p-practice-trusted-repair-runtime.spec.ts:127:4\n",
+    }),
+    ["123", "127"],
+  );
+  assert.equal(COMMAND_SPECS.browser_acceptance.sensitivityPolicy, "browser_assertion_locations_only");
+});
+
+test("C2R-C-P stage config declares complete Practice layers and no Theory/Law runtime", () => {
+  const configPath = path.join(
+    ROOT,
+    "config/dabangil-c2r-c-p-structural-practice-proof-v2.json",
+  );
+  const contract = JSON.parse(fs.readFileSync(configPath, "utf8"));
+  assert.equal(contract.stage.stageId, "C2R-C-P");
+  assert.equal(contract.stage.leadIssue, 703);
+  assert.deepEqual(contract.subjectBoundary.implementedSubjectsExactly, [
+    "appraisal_practical",
+  ]);
+  assert.deepEqual(contract.subjectBoundary.deferredSubjectsExactly, [
+    "appraisal_theory",
+    "appraisal_compensation_law",
+  ]);
+  assert.equal(contract.subjectBoundary.deferredSubjectRuntimeExists, false);
+  assert.equal(contract.practiceProof.type, "CalculationRelationAnchorV1");
+  assert.equal(contract.practiceProof.onlyExactStructuredPassCreatesVerified, true);
+  assert.equal(contract.practiceProof.freeFormTextCanCreateVerified, false);
+  assert.equal(contract.practiceProof.canonicalVerificationAuthority, "server_validated_PracticeCalculationClaimV2_only");
+  assert.equal(
+    contract.completeOutcomeLayers.independentRollback.killSwitch,
+    "WCV_C2R_C_P_PRACTICE_ENABLED",
+  );
+  assert.equal(contract.activationBoundary.productionAuthorized, false);
+  assert.equal(contract.activationBoundary.remoteMigrationApplyAuthorized, false);
+  assert.deepEqual(contract.regressionCoverageCandidate.rows, [
+    1, 2, 4, 6, 8, 9, 10, 11, 12, 14, 19,
+  ]);
+});
