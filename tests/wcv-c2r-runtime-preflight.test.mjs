@@ -5,7 +5,7 @@ import test from "node:test";
 const root = new URL("../", import.meta.url);
 const read = (file) => readFile(new URL(file, root), "utf8");
 
-test("a Law-registry-only PR triggers exact fork-safe C2R-C-L runtime evidence", async () => {
+test("[C2R-C-L-R07] a Law-registry-only PR triggers exact fork-safe C2R-C-L runtime evidence", async () => {
   const [workflow, risk, gate, producer] = await Promise.all([
     read(".github/workflows/c2r-c-l-law-trusted-repair-runtime.yml"),
     read("scripts/automation/runtime-risk-contract.mjs"),

@@ -140,7 +140,8 @@ test("C2R-C-T exact-head runtime workflow is fork-safe and credential-free", () 
   assert.match(verifier, /THEORY_RUNTIME/);
   assert.match(verifier, /\[PRACTICE_MIGRATION_PATH, THEORY_MIGRATION_PATH\]/);
   assert.match(verifier, /theory_migration_replay_psql/);
-  assert.match(verifier, /fs\.readFileSync\(THEORY_MIGRATION_PATH, "utf8"\)/);
+  assert.match(verifier, /const migrationPath = LAW_RUNTIME \? LAW_MIGRATION_PATH : THEORY_MIGRATION_PATH/);
+  assert.match(verifier, /fs\.readFileSync\(migrationPath, "utf8"\)/);
   assert.match(verifier, /theory_subject_binding_count_psql/);
   assert.match(verifier, /theory_migration_replay_safe/);
   assert.match(verifier, /validateTheoryConfirmationDiagnostic/);
@@ -148,7 +149,7 @@ test("C2R-C-T exact-head runtime workflow is fork-safe and credential-free", () 
   assert.match(verifier, /cross_subject_start_replay_fails_closed/);
   assert.match(verifier, /enabledSubjects: "both"/);
   assert.match(verifier, /enabledSubjects: "practice"/);
-  assert.match(verifier, /enabledSubjects: "theory"/);
+  assert.match(verifier, /enabledSubjects: LAW_RUNTIME \? "law" : "theory"/);
   assert.match(
     verifier,
     /source\.replace\(expected, `project_id = "\$\{PROJECT_ID\}"`\)/,

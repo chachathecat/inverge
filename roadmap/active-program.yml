@@ -9,15 +9,15 @@ program:
   mergeProducingDeliverySlotCount: 1
   globalMergeProducingWriterLimit: 1
   wipLimitDoesNotAuthorizeWriterCount: true
-  campaignOverlay: C2
+  campaignOverlay: C3
   structuralRecoveryOverlayId: WCV-C2R-STRUCTURAL-RECOVERY
   campaignLockGroup: wcv-vertical-campaign
-  soleNextImplementationItem: WCV-C2
-  soleNextImplementationCampaign: C2
-  soleNextImplementationLeadIssue: 717
-  soleNextImplementationTrackerIssue: 717
-  soleNextReplacementStage: C2R-C-L
-  soleNextReplacementStageIssue: 703
+  soleNextImplementationItem: WCV-C3
+  soleNextImplementationCampaign: C3
+  soleNextImplementationLeadIssue: 706
+  soleNextImplementationTrackerIssue: 706
+  soleNextReplacementStage: null
+  soleNextReplacementStageIssue: null
   soleNextReplacementStageDecision: docs/decisions/2026-08-14-wcv-c2-structural-recovery.md
   structuralRecoveryChainDecision: docs/decisions/2026-08-14-wcv-c2-structural-recovery.md
   c2rBOperationalStartRequiresValidatedC2rAReceipt: true
@@ -28,7 +28,7 @@ program:
   structuralRecoveryTrackerIssue: 717
   terminalDonorPr: 716
   terminalDonorMerged: false
-  wcvC2Complete: false
+  wcvC2Complete: true
   replacementStageAutomaticStartAllowed: false
   githubNativeNonProductionContinuationAllowed: true
   githubNativeDeliveryDecision: docs/decisions/2026-08-16-owner-github-native-delivery-control.md
@@ -361,8 +361,8 @@ items:
     priority: 31.12
   - id: WCV-C2
     title: C2 First Trusted Repair Structural Recovery
-    status: queued
-    executionState: c2r_a_b_c_p_and_c_t_complete_c2r_c_l_authorized_unstarted
+    status: completed
+    executionState: complete_after_expected_head_merge_and_validated_terminal_receipt
     campaignId: C2
     leadIssue: 717
     includedIssues: [702, 714, 703, 704, 705]
@@ -372,10 +372,10 @@ items:
     terminalDonorMerged: false
     terminalDonorReadOnly: true
     terminalDonorEvidencePromotedToMain: false
-    wcvC2Complete: false
+    wcvC2Complete: true
     reviewFindingCount: 21
-    uncoveredReviewFindingCount: 5
-    coverageCandidateState: practice_covered_theory_candidate_pending_exact_merge
+    uncoveredReviewFindingCount: 0
+    coverageCandidateState: practice_theory_covered_law_candidate_pending_exact_merge
     coverageReceiptPolicyId: github_exact_head_pinned_squash_merge_v1
     coverageReceiptVersion: MergeCoverageReceiptV1
     coverageMergeExpectedHeadPinned: true
@@ -383,8 +383,9 @@ items:
     coverageSuccessorRepositoryPrRequired: false
     terminalIssueClosureRequiresValidatedCoverageReceipt: true
     replacementStages: [C2R-A, C2R-B, C2R-C-P, C2R-C-T, C2R-C-L]
-    currentReplacementStage: C2R-C-L
-    currentReplacementStageIssue: 703
+    currentReplacementStage: null
+    currentReplacementStageIssue: null
+    completedTerminalReplacementStage: C2R-C-L
     c2rAState: complete_source_only
     c2rAIssue: 702
     c2rADirectRegressionRows: []
@@ -417,8 +418,12 @@ items:
     c2rCTContract: config/dabangil-c2r-c-t-structural-theory-proof-v1.json
     c2rCTFocusedTests: [tests/wcv-c2r-theory-target-scope-validator.test.mjs, tests/c2r-c-t-theory-runtime-contract.test.mjs]
     c2rCTCandidateRegressionRows: [5, 13, 16, 18, 20]
-    c2rCLState: authorized_unstarted
+    c2rCLState: complete_law_runtime
     c2rCLStartRequiresValidatedTerminalStages: [C2R-C-T]
+    c2rCLContract: config/dabangil-c2r-c-l-structural-law-proof-v1.json
+    c2rCLFocusedTests: [tests/wcv-c2r-law-exact-version-validator.test.mjs, tests/c2r-c-l-law-runtime-contract.test.mjs, tests/c2r-c-l-law-authority.test.mjs]
+    c2rCLCoveringPr: 764
+    c2rCLCandidateRegressionRows: [3, 7, 15, 17, 21]
     independentlyCompleteSourceContractStages: [C2R-A, C2R-B]
     completeLearnerVisibleRuntimeStages: [C2R-C-P, C2R-C-T, C2R-C-L]
     commonRuntimeSubstrateFirstStage: C2R-C-P
@@ -448,11 +453,14 @@ items:
   - id: WCV-C3
     title: C3 Durable Learning and Daily Command Vertical
     status: queued
-    executionState: blocked_until_terminal_c2r_c_l_merge
+    executionState: authorized_unstarted_after_validated_terminal_c2r_c_l_receipt
     leadIssue: 706
     includedIssues: [706, 707, 708]
     crossVerticalAcceptanceTracker: 714
     terminalReplacementDependency: C2R-C-L
+    selected: true
+    started: false
+    githubNativeAutomaticContinuationAllowed: true
     automaticStartAllowed: false
     dependencies: [WCV-C2]
     lockGroup: wcv-vertical-campaign

@@ -7,6 +7,7 @@
     "campaignId": "C2",
     "trackerIssue": 717,
     "implementationIssue": 763,
+    "coveringPr": 764,
     "stageId": "C2R-C-L",
     "leadIssue": 703,
     "terminalIssues": [703, 704, 705, 717],
@@ -103,9 +104,17 @@
     "receiptPolicy": "github_exact_head_pinned_squash_merge_v1",
     "directRows": [3, 7, 15, 17, 21],
     "inheritedCommonRows": [1, 4, 6, 8, 11, 14],
+    "assertionIds": [
+      "C2R-C-L-R03",
+      "C2R-C-L-R07",
+      "C2R-C-L-R15",
+      "C2R-C-L-R17",
+      "C2R-C-L-R21"
+    ],
     "testPaths": [
       "tests/wcv-c2r-law-exact-version-validator.test.mjs",
-      "tests/wcv-c2r-runtime-preflight.test.mjs"
+      "tests/wcv-c2r-runtime-preflight.test.mjs",
+      "tests/c2r-c-l-law-authority.test.mjs"
     ],
     "effectiveOnlyAfterExpectedHeadMergeAndTrackerReceipt": true
   },

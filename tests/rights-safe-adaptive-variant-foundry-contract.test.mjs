@@ -933,21 +933,21 @@ test("C2RA-GAP-005 through C2RA-STATE-008 preserve ordered gates and lineage", a
   assert.equal(contract.disputeRetirementAndLineage.retirementDoesNotEraseAuditLineage, true);
 });
 
-test("C2RA-MATRIX-009 remains rowless after later Practice and Theory candidates", async () => {
+test("C2RA-MATRIX-009 remains rowless after Practice, Theory and Law candidates", async () => {
   const [contract, matrix] = await Promise.all([json(CONTRACT), text("docs/qa/wcv-c2-replacement-regression-matrix.md")]);
   const rows = matrix.split(/\r?\n/).filter((line) => /^\| \d+ \|/.test(line));
   assert.equal(rows.length, 21);
-  assert.equal(rows.filter((row) => row.includes(' | `uncovered` |')).length, 5);
+  assert.equal(rows.filter((row) => row.includes(' | `uncovered` |')).length, 0);
   assert.equal(
     rows.filter((row) => row.includes(' | `candidate_coverage_pending_exact_merge` |')).length,
-    16,
+    21,
   );
   assert.equal(rows.some((row) => row.includes('C2R-A')), false);
   assert.deepEqual(contract.regressionMatrix.directRowsAssignedToC2RA, []);
   assert.deepEqual(contract.regressionMatrix.rowsChangedByC2RA, []);
 });
 
-test("C2RA-AUTH-010 retains the A transition after later B, Practice, and Theory completion", async () => {
+test("C2RA-AUTH-010 retains the A transition after terminal Law completion", async () => {
   const [contract, unified, roadmap, agents, decision, qa] = await Promise.all([
     json(CONTRACT),
     json("config/dabangil-unified-program-contract.json"),
@@ -960,16 +960,16 @@ test("C2RA-AUTH-010 retains the A transition after later B, Practice, and Theory
   assert.equal(unified.wcvCampaignOverlay.c2StructuralRecovery.replacementStages[1].state, "complete_source_only");
   assert.equal(unified.wcvCampaignOverlay.c2StructuralRecovery.replacementStages[2].state, "complete_practice_runtime");
   assert.equal(unified.wcvCampaignOverlay.c2StructuralRecovery.replacementStages[3].state, "complete_theory_runtime");
-  assert.equal(unified.wcvCampaignOverlay.c2StructuralRecovery.replacementStages[4].state, "authorized_unstarted");
-  assert.equal(unified.wcvCampaignOverlay.soleNextReplacementStage, "C2R-C-L");
-  assert.equal(unified.wcvCampaignOverlay.soleNextReplacementStageIssue, 703);
+  assert.equal(unified.wcvCampaignOverlay.c2StructuralRecovery.replacementStages[4].state, "complete_law_runtime");
+  assert.equal(unified.wcvCampaignOverlay.soleNextReplacementStage, null);
+  assert.equal(unified.wcvCampaignOverlay.soleNextReplacementStageIssue, null);
   assert.deepEqual(
     unified.wcvCampaignOverlay.c2StructuralRecovery.replacementStages[0].ownedPathsExactly,
     EXPECTED_OWNED_PATHS,
   );
-  assert.match(roadmap, /soleNextReplacementStage: C2R-C-L/);
-  assert.match(roadmap, /soleNextReplacementStageIssue: 703/);
-  assert.match(agents, /current authorized-but-unstarted stage `C2R-C-L` for Issue #703/);
+  assert.match(roadmap, /soleNextImplementationItem: WCV-C3/);
+  assert.match(roadmap, /soleNextReplacementStage: null/);
+  assert.match(agents, /WCV-C3 \/ C3 \/ #706 \/ authorized_unstarted/);
   assert.equal(Object.values(contract.authorizationBoundary).every((value) => value === false), true);
   assert.equal(contract.decision.runtimeReadinessEstablished, false);
   assert.equal(contract.successor.c2rACompletionEffectiveOnlyAfterExpectedHeadPinnedMergeAndValidatedReceipt, true);

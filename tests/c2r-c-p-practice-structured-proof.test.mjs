@@ -181,10 +181,11 @@ function exactClaim(aggregate) {
   });
 }
 
-test("C2R-C-P structural lineage freezes Practice-only v2 proof authority", () => {
+test("C2R-C-P structural lineage freezes Practice v2 within the registered subject authority", () => {
   assert.deepEqual(TRUSTED_REPAIR_SUBJECTS, [
     "appraisal_practical",
     "appraisal_theory",
+    "appraisal_law",
   ]);
   assert.equal(TRUSTED_REPAIR_CONTRACT_VERSION, "wcv_c2r_c_p_structured_practice_proof.v2");
   assert.equal(TRUSTED_REPAIR_VALIDATOR_VERSION, "validator:practice-calculation-claim@2");

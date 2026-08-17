@@ -132,17 +132,17 @@ WCV-C2 and unblock #706. The 2026-08-16 GitHub-native delivery decision
 supersedes the earlier no-auto-start rule only for dependency-ready authorized
 non-Production continuation after its protected foundation merge validates.
 
-The authority-graph identifiers are distinct: roadmap item `WCV-C2`, campaign
-ID `C2`, recovery tracker #717, completed source-only stages `C2R-A` for Issue
-#702 and `C2R-B` for Issue #714, completed Practice runtime stage `C2R-C-P`
-for Issue #703, completed Theory runtime stage `C2R-C-T` for Issue #703, and
-current authorized-but-unstarted stage `C2R-C-L` for Issue #703. The canonical
-tuple is `WCV-C2 / C2 / #717 / C2R-C-L / #703 / authorized_unstarted`.
-C2R-C-L may start only after the expected-head-pinned C2R-C-T merge and
-validated #717 receipt; an issue state or issue closure cannot substitute for
-a replacement-stage merge. C2R-B completes only the Issue #714 allocation for
-campaign C2 and leaves Issue #714 open with its C3, C4 and C6 allocations
-preserved.
+The authority-graph identifiers are distinct: completed roadmap item `WCV-C2`,
+completed campaign `C2`, recovery tracker #717, completed source-only stages
+`C2R-A` for Issue #702 and `C2R-B` for Issue #714, and completed Practice,
+Theory and Law runtime stages `C2R-C-P`, `C2R-C-T` and `C2R-C-L` for Issue
+#703. The next dependency-ready non-Production selector represented after the
+terminal expected-head-pinned merge and validated #717 receipt is roadmap item
+`WCV-C3`, campaign `C3`, lead Issue #706, authorized but unstarted. The
+canonical tuple is `WCV-C3 / C3 / #706 / authorized_unstarted`. An issue state
+or issue closure cannot substitute for a replacement-stage merge or receipt.
+C2R-B completes only the Issue #714 allocation for campaign C2 and leaves
+Issue #714 open with its C3, C4 and C6 allocations preserved.
 
 ## C2R-A rights-safe source firewall
 
@@ -230,14 +230,33 @@ same-target mixed polarity and unresolved scope are ambiguous, a negated
 required predicate is partial, an asserted forbidden predicate is blocked,
 and clause or predicate-occurrence overflow is unsupported.
 
-The C2R-C-T candidate represents its post-merge state: after exact-head
-checks, final actionable P0/P1/P2 `0/0/0`, an expected-head-pinned squash merge
-and a validated Tracker #717 receipt, C2R-C-T is complete and matrix rows 5,
-13, 16, 18 and 20 become covered. C2R-C-L/#703 is then the authorized-but-
-unstarted selector. Theory has its own `WCV_C2R_C_T_THEORY_ENABLED` kill switch;
-disabling or rolling it back does not require disabling or reverting Practice.
-Law runtime, Production, remote Supabase apply, learner activation, payment,
-live providers and rights-unclear content remain unauthorized.
+PR #762 merged by expected-head-pinned squash with a validated Tracker #717
+receipt, so C2R-C-T and its five direct regression rows are complete. Theory
+has its own `WCV_C2R_C_T_THEORY_ENABLED` kill switch; disabling or rolling it
+back does not require disabling or reverting Practice.
+
+## C2R-C-L Law trusted-repair runtime
+
+C2R-C-L/#703 installs the Owner-only, default-off terminal Law vertical in
+`config/dabangil-c2r-c-l-structural-law-proof-v1.json`. It binds the exact
+`LawApplicabilityAnchorV1`, rights-safe synthetic Law fixtures, Golden and
+Owner-Gold candidates, and a closed `LawApplicabilityClaimV1` to the shared
+episode and forced-RLS/CAS substrate. Verification requires the exact source,
+source version, anchor, anchor version, locator, effective window, applicable
+date, currentness and zero unique referenced open blocking issues. Missing,
+unknown, stale, mismatched, unresolved or cross-subject binding fails closed;
+free-form text remains candidate and diagnostic evidence only.
+
+The PR #764 candidate represents its post-merge state: only after fresh exact-
+head checks, final actionable P0/P1/P2 `0/0/0`, expected-head-pinned squash
+merge and a validated Tracker #717 receipt do C2R-C-L, WCV-C2 and matrix rows
+3, 7, 15, 17 and 21 become complete. The same validated receipt then permits
+closure of #703/#704/#705/#717 and selects `WCV-C3 / C3 / #706 /
+authorized_unstarted`; Issue #714 remains open for C3/C4/C6. Law has its own
+`WCV_C2R_C_L_LAW_ENABLED` kill switch and rolls back without disabling or
+reverting Practice or Theory. Production, remote Supabase apply, learner
+activation, payment, live providers and rights-unclear content remain
+unauthorized.
 
 ## Product scope (Owner O1R amendment on 2026-07-26)
 

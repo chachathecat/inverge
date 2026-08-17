@@ -144,11 +144,11 @@ function staleCurrentStageAssertions(source) {
 function currentAuthorityTuple(section) {
   const normalized = normalizeAuthorityProse(section.body);
   return {
-    roadmapItem: /\bwcv c2\b/.test(normalized) ? "WCV-C2" : null,
-    campaign: /\bcampaign c2\b/.test(normalized) ? "C2" : null,
-    trackerIssue: /\btracker issue 717\b/.test(normalized) ? 717 : null,
-    currentStage: /\bc2r c l(?: for)? issue 703\b/.test(normalized) ? "C2R-C-L" : null,
-    currentStageIssue: /\bc2r c l(?: for)? issue 703\b/.test(normalized) ? 703 : null,
+    roadmapItem: /\bwcv c3\b/.test(normalized) ? "WCV-C3" : null,
+    campaign: /\bcampaign c3\b/.test(normalized) ? "C3" : null,
+    trackerIssue: /\b(?:lead|tracker) issue 706\b/.test(normalized) ? 706 : null,
+    currentStage: null,
+    currentStageIssue: null,
   };
 }
 
@@ -156,6 +156,7 @@ function scalar(value) {
   const trimmed = value.trim();
   if (trimmed === "true") return true;
   if (trimmed === "false") return false;
+  if (trimmed === "null") return null;
   if (/^-?\d+(?:\.\d+)?$/.test(trimmed)) return Number(trimmed);
   if (trimmed.startsWith("[") && trimmed.endsWith("]")) {
     const body = trimmed.slice(1, -1).trim();
@@ -522,7 +523,7 @@ test("preserves the exact WCV-C2R graph, roadmap block and 21-row matrix", async
   ]);
 });
 
-test("keeps C2R-C-L as the sole unstarted selection after terminal Theory", async () => {
+test("selects WCV-C3 after terminal Law while preserving the completed recovery graph", async () => {
   const [
     launch,
     unified,
@@ -548,15 +549,15 @@ test("keeps C2R-C-L as the sole unstarted selection after terminal Theory", asyn
   const preserved = launch.preservedCurrentAuthority;
   const authorityGraph =
     unified.wcvCampaignOverlay.c2StructuralRecovery.authorityGraph;
-  const c2Campaign = unified.wcvCampaignOverlay.campaigns.find(
-    (campaign) => campaign.id === "C2",
+  const c3Campaign = unified.wcvCampaignOverlay.campaigns.find(
+    (campaign) => campaign.id === "C3",
   );
   const expectedCurrentStage = {
-    roadmapItem: "WCV-C2",
-    campaign: "C2",
-    trackerIssue: 717,
-    currentStage: "C2R-C-L",
-    currentStageIssue: 703,
+    roadmapItem: "WCV-C3",
+    campaign: "C3",
+    trackerIssue: 706,
+    currentStage: null,
+    currentStageIssue: null,
   };
   const currentStageMirrors = {
     activeRoadmap: {
@@ -574,7 +575,7 @@ test("keeps C2R-C-L as the sole unstarted selection after terminal Theory", asyn
       currentStageIssue: unified.roadmapContract.soleNextReplacementStageIssue,
     },
     wcvCampaignOverlay: {
-      roadmapItem: c2Campaign.roadmapItemId,
+      roadmapItem: c3Campaign.roadmapItemId,
       campaign: unified.wcvCampaignOverlay.soleNextImplementationCampaign,
       trackerIssue: unified.wcvCampaignOverlay.soleNextImplementationTrackerIssue,
       currentStage: unified.wcvCampaignOverlay.soleNextReplacementStage,
@@ -583,7 +584,7 @@ test("keeps C2R-C-L as the sole unstarted selection after terminal Theory", asyn
     launchConvergenceAmendment: {
       roadmapItem: unified.launchConvergenceAmendment.soleNextImplementationItem,
       campaign: unified.launchConvergenceAmendment.soleNextImplementationCampaign,
-      trackerIssue: unified.launchConvergenceAmendment.structuralRecoveryTrackerIssue,
+      trackerIssue: unified.launchConvergenceAmendment.soleNextImplementationTrackerIssue,
       currentStage: unified.launchConvergenceAmendment.soleNextReplacementStage,
       currentStageIssue:
         unified.launchConvergenceAmendment.soleNextReplacementStageIssue,
@@ -595,32 +596,29 @@ test("keeps C2R-C-L as the sole unstarted selection after terminal Theory", asyn
       currentStage: preserved.currentReplacementStageId,
       currentStageIssue: preserved.currentReplacementStageIssue,
     },
-    authorityGraph: {
-      roadmapItem: authorityGraph.roadmapItemId,
-      campaign: authorityGraph.campaignId,
-      trackerIssue: authorityGraph.recoveryTrackerIssue,
-      currentStage: authorityGraph.currentReplacementStageId,
-      currentStageIssue: authorityGraph.currentReplacementStageIssue,
-    },
   };
 
   for (const [mirror, tuple] of Object.entries(currentStageMirrors)) {
     assert.deepEqual(tuple, expectedCurrentStage, mirror);
   }
 
-  assert.equal(roadmap.program.soleNextImplementationItem, "WCV-C2");
-  assert.equal(roadmap.program.soleNextImplementationCampaign, "C2");
-  assert.equal(roadmap.program.soleNextImplementationLeadIssue, 717);
-  assert.equal(roadmap.program.soleNextImplementationTrackerIssue, 717);
-  assert.equal(roadmap.program.soleNextReplacementStage, "C2R-C-L");
-  assert.equal(roadmap.program.soleNextReplacementStageIssue, 703);
+  assert.equal(authorityGraph.roadmapItemId, "WCV-C2");
+  assert.equal(authorityGraph.campaignId, "C2");
+  assert.equal(authorityGraph.recoveryTrackerIssue, 717);
+  assert.equal(authorityGraph.completedTerminalReplacementStageId, "C2R-C-L");
+  assert.equal(roadmap.program.soleNextImplementationItem, "WCV-C3");
+  assert.equal(roadmap.program.soleNextImplementationCampaign, "C3");
+  assert.equal(roadmap.program.soleNextImplementationLeadIssue, 706);
+  assert.equal(roadmap.program.soleNextImplementationTrackerIssue, 706);
+  assert.equal(roadmap.program.soleNextReplacementStage, null);
+  assert.equal(roadmap.program.soleNextReplacementStageIssue, null);
   assert.equal(roadmap.program.globalMergeProducingWriterLimit, 1);
   assert.equal(roadmap.program.replacementStageAutomaticStartAllowed, false);
-  assert.equal(unified.roadmapContract.soleNextImplementationItemId, "WCV-C2");
-  assert.equal(unified.roadmapContract.soleNextImplementationCampaignId, "C2");
-  assert.equal(unified.roadmapContract.soleNextReplacementStageId, "C2R-C-L");
-  assert.equal(unified.roadmapContract.soleNextReplacementStageIssue, 703);
-  assert.equal(preserved.currentReplacementStageState, "authorized_unstarted");
+  assert.equal(unified.roadmapContract.soleNextImplementationItemId, "WCV-C3");
+  assert.equal(unified.roadmapContract.soleNextImplementationCampaignId, "C3");
+  assert.equal(unified.roadmapContract.soleNextReplacementStageId, null);
+  assert.equal(unified.roadmapContract.soleNextReplacementStageIssue, null);
+  assert.equal(preserved.currentReplacementStageState, "complete_chain_no_current_replacement_stage");
   assert.equal(
     preserved.currentSelectorDecision,
     "docs/decisions/2026-08-14-wcv-c2-structural-recovery.md",
@@ -639,16 +637,16 @@ test("keeps C2R-C-L as the sole unstarted selection after terminal Theory", asyn
   assert.deepEqual(preserved.c2rBRemainingIssue714Allocations, ["C3", "C4", "C6"]);
   assert.match(
     unifiedMarkdown,
-    /completed source-only stages\s+C2R-A for Issue #702 and C2R-B for Issue #714, completed Practice stage\s+C2R-C-P and completed Theory stage C2R-C-T for Issue #703, and current\s+authorized but unstarted replacement stage C2R-C-L for Issue #703/,
+    /current\s+dependency-ready non-Production selector is roadmap item `WCV-C3`, campaign\s+`C3`, lead Issue #706, authorized but unstarted/,
   );
   assert.match(unifiedMarkdown, /post-merge next stage is C2R-B\/#714, authorized but unstarted/);
   assert.match(
     activeMasterPlan,
-    /exact current repository\s+selection is WCV-C2\/C2\/#717\/C2R-C-L\/#703/,
+    /post-receipt repository selection WCV-C3\/C3\/#706, authorized but unstarted/,
   );
   assert.match(
     launchStrategy,
-    /Current repository selector after the later exact C2R-C-T completion:/,
+    /Current repository selector represented after terminal PR #764's exact-head/,
   );
 
   const staleFixtures = [
@@ -692,7 +690,7 @@ test("keeps C2R-C-L as the sole unstarted selection after terminal Theory", asyn
   }
   assert.equal(plan.globalMergeProducingWriterLimit, 1);
   assert.equal(plan.activeWriterCount, 0);
-  assert.deepEqual(plan.selectedItemIds, ["WCV-C2"]);
+  assert.deepEqual(plan.selectedItemIds, ["WCV-C3"]);
 });
 
 test("installs a unique, resolved and fully gated complete-vertical sequence", async () => {

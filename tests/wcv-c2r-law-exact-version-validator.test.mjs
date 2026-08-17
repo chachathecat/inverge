@@ -82,7 +82,7 @@ function claim(overrides = {}) {
   };
 }
 
-test("Law verifies only one exact current zero-blocker applicability binding", () => {
+test("[C2R-C-L-R21] Law verifies only one exact current zero-blocker applicability binding", () => {
   const result = validateLawApplicabilityClaim({
     claim: claim(),
     anchor,
@@ -95,7 +95,7 @@ test("Law verifies only one exact current zero-blocker applicability binding", (
   assert.equal(result.validatorId, "validator:law-exact-applicability@1");
 });
 
-test("a source revision change stales Law proof instead of carrying verification", () => {
+test("[C2R-C-L-R03] a source revision change stales Law proof instead of carrying verification", () => {
   const result = validateLawApplicabilityClaim({
     claim: claim({
       sourceRevisionId: "22222222-2222-4222-8222-222222222222",
@@ -130,7 +130,7 @@ for (const [field, value, reason] of [
   });
 }
 
-test("source-level current state cannot release an unverified selected anchor", () => {
+test("[C2R-C-L-R17] source-level current state cannot release an unverified selected anchor", () => {
   const result = validateLawApplicabilityClaim({
     claim: claim(),
     anchor,
@@ -142,7 +142,7 @@ test("source-level current state cannot release an unverified selected anchor", 
   assert.ok(result.reasonCodes.includes("live_anchor_not_current"));
 });
 
-test("only unique referenced open and blocking blockers count", () => {
+test("[C2R-C-L-R15] only unique referenced open and blocking blockers count", () => {
   const candidate = structuredClone(config);
   candidate.blockerCatalog.push(
     { blockerId: "law-blocker:open-blocking", status: "open", severity: "blocking" },

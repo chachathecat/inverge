@@ -31,7 +31,7 @@ function matrixRows(source) {
   );
 }
 
-test("C2R-C-T post-merge authority selects only authorized-unstarted Law", async () => {
+test("C2R-C-T remains complete after terminal Law selects WCV-C3", async () => {
   const [stage, unified, launch, roadmap, agents] = await Promise.all([
     json(CONTRACT),
     json("config/dabangil-unified-program-contract.json"),
@@ -48,20 +48,21 @@ test("C2R-C-T post-merge authority selects only authorized-unstarted Law", async
     unified.roadmapContract.soleNextReplacementStageId,
     launch.preservedCurrentAuthority.currentReplacementStageId,
   ];
-  assert.deepEqual(current, Array(current.length).fill("C2R-C-L"));
-  assert.equal(recovery.status, "c2r_a_b_c_p_and_c_t_complete_c2r_c_l_authorized_unstarted");
+  assert.deepEqual(current, Array(current.length).fill(null));
+  assert.equal(recovery.status, "complete_after_expected_head_merge_and_validated_terminal_receipt");
   assert.equal(stages.get("C2R-C-T").state, "complete_theory_runtime");
   assert.equal(stages.get("C2R-C-T").coveringPr, 762);
-  assert.equal(stages.get("C2R-C-L").state, "authorized_unstarted");
+  assert.equal(stages.get("C2R-C-L").state, "complete_law_runtime");
   assert.deepEqual(stages.get("C2R-C-L").dependencies, ["C2R-C-T"]);
   assert.equal(stage.stage.postMergeNextStage, "C2R-C-L");
-  assert.match(roadmap, /soleNextReplacementStage: C2R-C-L/);
+  assert.match(roadmap, /soleNextImplementationItem: WCV-C3/);
+  assert.match(roadmap, /soleNextReplacementStage: null/);
   assert.match(roadmap, /c2rCTState: complete_theory_runtime/);
-  assert.match(roadmap, /c2rCLState: authorized_unstarted/);
-  assert.match(agents, /WCV-C2 \/ C2 \/ #717 \/ C2R-C-L \/ #703 \/ authorized_unstarted/);
+  assert.match(roadmap, /c2rCLState: complete_law_runtime/);
+  assert.match(agents, /WCV-C3 \/ C3 \/ #706 \/ authorized_unstarted/);
 });
 
-test("C2R-C-T declares exactly five non-effective PR 762 Theory candidates", async () => {
+test("C2R-C-T preserves exactly five PR 762 Theory declarations", async () => {
   const [stage, source, unified] = await Promise.all([
     json(CONTRACT),
     text(MATRIX),
@@ -98,10 +99,10 @@ test("C2R-C-T declares exactly five non-effective PR 762 Theory candidates", asy
   assert.deepEqual(stage.regressionCoverageCandidate.directRows, [...THEORY_ROWS.keys()]);
   assert.deepEqual(stage.regressionCoverageCandidate.inheritedCommonRows, [1, 4, 6, 8, 11, 14]);
   const coverage = unified.wcvCampaignOverlay.c2StructuralRecovery.coverageProtocol;
-  assert.equal(coverage.activeCandidateCoveringPr, 762);
-  assert.equal(coverage.activeCandidateStage, "C2R-C-T");
-  assert.deepEqual(coverage.activeCandidateRows, [...THEORY_ROWS.keys()]);
-  assert.equal(coverage.postMergeUncoveredRowCount, 5);
+  assert.equal(coverage.activeCandidateCoveringPr, 764);
+  assert.equal(coverage.activeCandidateStage, "C2R-C-L");
+  assert.deepEqual(coverage.activeCandidateRows, [3, 7, 15, 17, 21]);
+  assert.equal(coverage.postMergeUncoveredRowCount, 0);
   assert.equal(coverage.repositoryCandidateDeclaration.candidateDeclarationAloneCreatesEffectiveCoverage, false);
 });
 

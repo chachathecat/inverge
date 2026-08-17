@@ -2077,7 +2077,7 @@ test("unsupported pseudo-statuses stay unknown and cannot encode future gates", 
   assert.equal(byId(plan, "S101").readinessStatus, "unknown");
 });
 
-test("live blockers reserve two slots while the sole delivery slot selects WCV-C2", () => {
+test("live blockers reserve two slots while the sole delivery slot selects WCV-C3", () => {
   const source = readFileSync("roadmap/active-program.yml", "utf8");
   const evaluatedAt = new Date(
     LIVE_PRE_EXPIRY_EVALUATED_AT,
@@ -2109,8 +2109,8 @@ test("live blockers reserve two slots while the sole delivery slot selects WCV-C
   assert.equal(plan.activeWriterCount, 0);
   assert.equal(plan.availableWriterSlots, 1);
   assert.equal(plan.selectionSlots, 1);
-  assert.deepEqual(plan.readyItemIds, ["WCV-C2", "S236B"]);
-  assert.deepEqual(plan.selectedItemIds, ["WCV-C2"]);
+  assert.deepEqual(plan.readyItemIds, ["WCV-C3", "S236B"]);
+  assert.deepEqual(plan.selectedItemIds, ["WCV-C3"]);
   assert.deepEqual(
     postMerge.selected.map((entry) => entry.id),
     plan.selectedItemIds,
@@ -2135,10 +2135,16 @@ test("live blockers reserve two slots while the sole delivery slot selects WCV-C
   assert.equal(wcvC1.readinessStatus, "completed");
 
   const wcvC2 = byId(plan, "WCV-C2");
-  assert.equal(wcvC2.status, "queued");
-  assert.equal(wcvC2.readinessStatus, "ready");
+  assert.equal(wcvC2.status, "completed");
+  assert.equal(wcvC2.readinessStatus, "completed");
   assert.deepEqual(wcvC2.dependencies, ["WCV-C1"]);
   assert.equal(wcvC2.lockGroup, "wcv-vertical-campaign");
+
+  const wcvC3 = byId(plan, "WCV-C3");
+  assert.equal(wcvC3.status, "queued");
+  assert.equal(wcvC3.readinessStatus, "ready");
+  assert.deepEqual(wcvC3.dependencies, ["WCV-C2"]);
+  assert.equal(wcvC3.lockGroup, "wcv-vertical-campaign");
 
   const o3a = byId(plan, "O3A");
   assert.equal(o3a.status, "completed");
@@ -2240,9 +2246,9 @@ test("global writer cap survives either or both blocker clearances across lock g
     assert.equal(plan.activeWriterCount, 0);
     assert.equal(plan.availableWriterSlots, 1);
     assert.equal(plan.selectionSlots, 1);
-    assert.ok(plan.readyItemIds.includes("WCV-C2"));
+    assert.ok(plan.readyItemIds.includes("WCV-C3"));
     assert.ok(plan.readyItemIds.includes("S236B"));
-    assert.deepEqual(plan.selectedItemIds, ["WCV-C2"]);
+    assert.deepEqual(plan.selectedItemIds, ["WCV-C3"]);
     assertRunnerSelectorParity(plan, selector);
   }
 });
@@ -2697,8 +2703,8 @@ test("live TypeScript runner and post-merge selector agree without starting work
     assertRunnerSelectorParity(plan, postMerge);
     assert.equal(plan.wipOccupiedCount, 2);
     assert.equal(plan.availableSlots, 1);
-    assert.deepEqual(plan.readyItemIds, ["WCV-C2", "S236B"]);
-    assert.deepEqual(plan.selectedItemIds, ["WCV-C2"]);
+    assert.deepEqual(plan.readyItemIds, ["WCV-C3", "S236B"]);
+    assert.deepEqual(plan.selectedItemIds, ["WCV-C3"]);
     assert.deepEqual(postMerge.active, []);
   } finally {
     rmSync(directory, { recursive: true, force: true });
