@@ -10,6 +10,7 @@ import {
   planCurrentlyClear,
   planDurableEvidence,
   planFullDayDecision,
+  planFullDayProposal,
 } from "../lib/review-os/durable-learning-engine.ts";
 import {
   bindDurableLearnerResponse,
@@ -110,6 +111,90 @@ function successfulStage(aggregate, prepareAt, submitAt) {
     body: "독립 답안 본문은 비공개 artifact에만 저장됩니다.",
     occurredAt: submitAt,
   }));
+}
+
+function wrongCommitment(subject, stage, attemptOrdinal = 1) {
+  const expected = expectedCommitmentForFixture(subject, stage, attemptOrdinal);
+  if (expected.kind === "PRACTICE_CALCULATION") {
+    return { ...expected, result: expected.result + 1 };
+  }
+  if (expected.kind === "THEORY_PREDICATE") {
+    return { ...expected, polarity: expected.polarity === "POSITIVE" ? "NEGATIVE" : "POSITIVE" };
+  }
+  return { ...expected, currentness: "STALE" };
+}
+
+function assertReviewOutputs(aggregate, expectedOutcome) {
+  const event = aggregate.events.at(-1);
+  const output = event.payload.reviewOutput;
+  const review = aggregate.caseRecord.stateData.latestReviewOutcome;
+  assert.equal(event.outcome, expectedOutcome);
+  assert.equal(output.reviewOutcomeId, review.reviewOutcomeId);
+  assert.equal(output.learningGapSignal.signalId, review.learningGapSignalId);
+  assert.equal(output.conceptStateSignal.signalId, review.conceptStateSignalId);
+  assert.equal(output.failureNoteId, review.failureNoteId);
+  assert.equal(output.containsFailureNoteBody, false);
+  assert.deepEqual(review.binding, output.learningGapSignal.binding);
+  assert.deepEqual(review.binding, output.conceptStateSignal.binding);
+  assert.equal(review.binding.caseId, aggregate.caseRecord.caseId);
+  assert.equal(review.binding.caseRecordVersion, aggregate.caseRecord.recordVersion);
+  assert.equal(review.binding.userId, USER_ID);
+  assert.equal(review.binding.sourceSessionId, aggregate.caseRecord.sourceSessionId);
+  assert.equal(review.binding.sourceConfirmedRevisionId, aggregate.caseRecord.stateData.frozenD0.sourceRevisionId);
+  assert.equal(review.binding.sourcePrimaryGapId, aggregate.caseRecord.stateData.sourcePrimaryGapId);
+  assert.equal(review.binding.evidenceEventId, event.eventId);
+  assert.equal(review.binding.attemptId, event.attemptId);
+  assert.equal(review.binding.privateArtifactId, event.artifactId);
+  assert.equal(review.binding.itemId, event.itemId);
+  assert.equal(review.binding.itemRevisionId, event.payload.assignment.itemRevisionId);
+  assert.equal(review.binding.itemFamilyId, event.itemFamilyId);
+  assert.equal(review.binding.validatorVersion, aggregate.caseRecord.stateData.frozenD0.validatorVersion);
+  assert.equal(review.binding.sourceVersion, aggregate.caseRecord.stateData.frozenD0.problemSourceVersion);
+  for (const signal of [output.learningGapSignal, output.conceptStateSignal]) {
+    assert.equal(signal.evidenceContributionOnly, true);
+    assert.equal(signal.createsVerified, false);
+    assert.equal(signal.createsMastery, false);
+    assert.equal(signal.createsCurrentlyClear, false);
+    assert.equal(signal.createsReadiness, false);
+    assert.equal(signal.changesScore, false);
+    assert.equal(signal.containsBody, false);
+    assert.equal(signal.reconstructive, false);
+    assert.equal(signal.failureNoteBodyIncluded, false);
+  }
+  assert.equal(output.conceptStateSignal.canonicalConceptStateChanged, false);
+  assert.doesNotMatch(JSON.stringify(output), /독립 답안 본문은 비공개|"(?:rawBody|answerBody|ocrBody|noteBody)"/i);
+  const matchingNotes = aggregate.caseRecord.stateData.failureNotes.filter(
+    (note) => note.noteId === review.failureNoteId,
+  );
+  if (expectedOutcome === "SUCCESS") {
+    assert.equal(review.failureNoteId, null);
+    assert.equal(matchingNotes.length, 0);
+  } else {
+    assert.equal(matchingNotes.length, 1);
+    assert.equal(matchingNotes[0].binding.evidenceEventId, event.eventId);
+    assert.equal(matchingNotes[0].sourceMaterialInEntry, false);
+    assert.equal(matchingNotes[0].containsAttemptBody, false);
+  }
+}
+
+function beforeStage(subject, stage) {
+  let aggregate = initial(subject);
+  if (stage === "D1") return aggregate;
+  aggregate = successfulStage(aggregate, "2026-08-18T00:00:01.000Z", "2026-08-18T00:02:01.000Z");
+  if (stage === "D7") return aggregate;
+  aggregate = successfulStage(aggregate, "2026-08-24T00:00:01.000Z", "2026-08-24T00:02:01.000Z");
+  if (stage === "TIMED") return aggregate;
+  aggregate = successfulStage(aggregate, "2026-08-24T00:03:00.000Z", "2026-08-24T00:18:00.000Z");
+  return apply(aggregate, planCurrentlyClear({ aggregate, occurredAt: "2026-08-24T00:18:01.000Z" }));
+}
+
+function stageTimes(stage) {
+  return {
+    D1: ["2026-08-18T00:00:01.000Z", "2026-08-18T00:02:01.000Z"],
+    D7: ["2026-08-24T00:03:01.000Z", "2026-08-24T00:05:01.000Z"],
+    TIMED: ["2026-08-24T00:03:00.000Z", "2026-08-24T00:18:00.000Z"],
+    RECURRENCE: ["2026-08-31T00:18:02.000Z", "2026-08-31T00:20:02.000Z"],
+  }[stage];
 }
 
 function learnerResponseForExpected(commitment) {
@@ -274,6 +359,47 @@ for (const subject of ["appraisal_practical", "appraisal_theory", "appraisal_law
   });
 }
 
+test("WCV-C3 emits closed body-free review outputs for every subject and terminal stage", () => {
+  for (const subject of ["appraisal_practical", "appraisal_theory", "appraisal_law"]) {
+    for (const stage of ["D1", "D7", "TIMED", "RECURRENCE"]) {
+      const base = beforeStage(subject, stage);
+      const [prepareAt, submitAt] = stageTimes(stage);
+
+      const successPrepared = apply(
+        base,
+        planAttemptPreparation({ aggregate: base, occurredAt: prepareAt }),
+      );
+      const success = apply(
+        successPrepared,
+        planDurableEvidence({
+          aggregate: successPrepared,
+          commitment: expectedCommitmentForFixture(subject, stage),
+          body: `private-success-${subject}-${stage}`,
+          occurredAt: submitAt,
+        }),
+      );
+      assertReviewOutputs(success, "SUCCESS");
+
+      const failurePrepared = apply(
+        base,
+        planAttemptPreparation({ aggregate: base, occurredAt: prepareAt }),
+      );
+      const priorFailureNoteCount = failurePrepared.caseRecord.stateData.failureNotes.length;
+      const failure = apply(
+        failurePrepared,
+        planDurableEvidence({
+          aggregate: failurePrepared,
+          commitment: wrongCommitment(subject, stage),
+          body: `private-failure-${subject}-${stage}`,
+          occurredAt: submitAt,
+        }),
+      );
+      assertReviewOutputs(failure, "FAILURE");
+      assert.equal(failure.caseRecord.stateData.failureNotes.length, priorFailureNoteCount + 1);
+    }
+  }
+});
+
 test("WCV-C3 rejects an instant submission and preserves explicit typed failure", () => {
   const aggregate = initial("appraisal_practical");
   const prepared = apply(aggregate, planAttemptPreparation({ aggregate, occurredAt: "2026-08-18T00:00:01.000Z" }));
@@ -354,6 +480,7 @@ test("WCV-C3 rejects a same-surface or pre-exposed transfer assignment and prese
   assert.equal(timeout.caseRecord.state, "D7_TRANSFER_OBSERVED");
   assert.equal(timeout.events.at(-1).outcome, "TIMEOUT");
   assert.equal(timeout.events.at(-1).payload.timedAttempt.late, true);
+  assertReviewOutputs(timeout, "TIMEOUT");
 });
 
 test("WCV-C3 gives a failed D+7 attempt a fresh deterministic unseen retry", () => {
@@ -473,7 +600,8 @@ test("WCV-C3 deterministic planner is bounded, non-overlapping and never mutates
   const proposed = { ...aggregate, caseRecord: { ...aggregate.caseRecord, recordVersion: aggregate.caseRecord.recordVersion + 1, stateData: { ...aggregate.caseRecord.stateData, latestPlan: buildDeterministicFullDayPlan({ aggregate, availableMinutes: 180, recoveryMode: "NORMAL", fixedCommitments: [], occurredAt: "2026-08-17T01:00:00.000Z" }) } } };
   const decision = planFullDayDecision({ aggregate: proposed, decision: "REJECTED", reason: "deferred_by_learner", occurredAt: "2026-08-17T01:01:00.000Z" });
   assert.equal(decision.nextState, aggregate.caseRecord.state);
-  assert.match(decision.stateData.resultReasonCodes[0], /without_mastery_change/);
+  assert.match(decision.stateData.plannerStatus.reasonCodes[0], /without_mastery_change/);
+  assert.deepEqual(decision.stateData.resultReasonCodes, aggregate.caseRecord.stateData.resultReasonCodes);
   const edited = planFullDayDecision({
     aggregate: proposed,
     decision: "EDITED",
@@ -491,6 +619,96 @@ test("WCV-C3 deterministic planner is bounded, non-overlapping and never mutates
   assert.notEqual(edited.stateData.latestPlan.planId, proposed.caseRecord.stateData.latestPlan.planId);
   assert.equal(edited.event.payload.replacementApplied, true);
   assert.throws(() => planFullDayDecision({ aggregate: proposed, decision: "EDITED", reason: "available_minutes_changed", occurredAt: "2026-08-17T01:03:00.000Z" }), /invalid_input/);
+});
+
+test("WCV-C3 planner proposal and decisions preserve the durable failed-review outcome", () => {
+  const base = initial("appraisal_law");
+  const prepared = apply(
+    base,
+    planAttemptPreparation({ aggregate: base, occurredAt: "2026-08-18T00:00:01.000Z" }),
+  );
+  let aggregate = apply(
+    prepared,
+    planDurableEvidence({
+      aggregate: prepared,
+      commitment: wrongCommitment("appraisal_law", "D1"),
+      body: "private failure body",
+      occurredAt: "2026-08-18T00:02:01.000Z",
+    }),
+  );
+  const preserved = {
+    latestReviewOutcome: structuredClone(aggregate.caseRecord.stateData.latestReviewOutcome),
+    failureNotes: structuredClone(aggregate.caseRecord.stateData.failureNotes),
+    resultReasonCodes: structuredClone(aggregate.caseRecord.stateData.resultReasonCodes),
+    recurringSignature: structuredClone(aggregate.caseRecord.stateData.recurringSignature),
+  };
+  const eligibilityRefreshed = apply(
+    aggregate,
+    planAttemptPreparation({
+      aggregate,
+      occurredAt: "2026-08-18T00:03:00.000Z",
+    }),
+  );
+  assert.deepEqual(
+    eligibilityRefreshed.caseRecord.stateData.latestReviewOutcome,
+    preserved.latestReviewOutcome,
+  );
+  assert.deepEqual(eligibilityRefreshed.caseRecord.stateData.failureNotes, preserved.failureNotes);
+
+  aggregate = apply(
+    aggregate,
+    planFullDayProposal({
+      aggregate,
+      availableMinutes: 60,
+      recoveryMode: "NORMAL",
+      fixedCommitments: [],
+      occurredAt: "2026-08-18T00:03:01.000Z",
+    }),
+  );
+  assert.deepEqual(aggregate.caseRecord.stateData.latestReviewOutcome, preserved.latestReviewOutcome);
+  assert.deepEqual(aggregate.caseRecord.stateData.failureNotes, preserved.failureNotes);
+  assert.deepEqual(aggregate.caseRecord.stateData.resultReasonCodes, preserved.resultReasonCodes);
+  assert.deepEqual(aggregate.caseRecord.stateData.recurringSignature, preserved.recurringSignature);
+
+  for (const [decision, reason] of [
+    ["ACCEPTED", "accepted_as_proposed"],
+    ["REJECTED", "deferred_by_learner"],
+  ]) {
+    const decided = apply(
+      aggregate,
+      planFullDayDecision({
+        aggregate,
+        decision,
+        reason,
+        occurredAt: "2026-08-18T00:04:01.000Z",
+      }),
+    );
+    assert.deepEqual(decided.caseRecord.stateData.latestReviewOutcome, preserved.latestReviewOutcome);
+    assert.deepEqual(decided.caseRecord.stateData.failureNotes, preserved.failureNotes);
+    assert.deepEqual(decided.caseRecord.stateData.resultReasonCodes, preserved.resultReasonCodes);
+    assert.deepEqual(decided.caseRecord.stateData.recurringSignature, preserved.recurringSignature);
+    assert.deepEqual(
+      JSON.parse(JSON.stringify(decided.caseRecord.stateData.latestReviewOutcome)),
+      preserved.latestReviewOutcome,
+    );
+  }
+
+  const edited = apply(
+    aggregate,
+    planFullDayDecision({
+      aggregate,
+      decision: "EDITED",
+      reason: "available_minutes_changed",
+      replacement: {
+        availableMinutes: 90,
+        recoveryMode: "MINIMUM_MAINTENANCE",
+        fixedCommitments: [],
+      },
+      occurredAt: "2026-08-18T00:05:01.000Z",
+    }),
+  );
+  assert.deepEqual(edited.caseRecord.stateData.latestReviewOutcome, preserved.latestReviewOutcome);
+  assert.deepEqual(edited.caseRecord.stateData.failureNotes, preserved.failureNotes);
 });
 
 test("WCV-C3 planning substitutes an eligible audit until the exact attempt boundary", () => {

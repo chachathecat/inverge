@@ -60,22 +60,15 @@ function labelForState(state: DurableLearningView["case"]["state"]) {
 }
 
 function failureNoteFor(view: DurableLearningView) {
-  const timedOut = view.case.resultReasonCodes.includes("trusted_timer_timeout_preserved");
-  const rejected = view.case.resultReasonCodes.includes("typed_proof_rejected");
-  if (!timedOut && !rejected) return null;
-  const failedCriterion = {
-    appraisal_practical: "총수익과 운영비의 순서, 연산자, 결과, 단위, 부호와 반올림을 한 계산 관계로 맞춰야 합니다.",
-    appraisal_theory: "제시된 목표 범위 안에서 핵심 관계의 의미와 극성을 구분하고 금지 관계를 주장하지 않아야 합니다.",
-    appraisal_law: "제시된 출처·버전·조문·효력기간·적용 기준일을 함께 확인하고 현재성과 열린 차단 근거 수를 판단해야 합니다.",
-  }[view.case.subject];
+  const outcome = view.latestReviewOutcome;
+  const note = view.latestFailureNote;
+  if (!outcome || !note || outcome.failureNoteId !== note.noteId) return null;
   return {
-    title: timedOut ? "제한시간 근거 미충족" : "과목별 증명 불일치",
-    why: timedOut
-      ? "신뢰된 제한시간 안에 제출되지 않아 이번 답안은 독립 근거로 인정되지 않았습니다."
-      : "제출한 닫힌 과목별 판단이 서버의 봉인된 구조 검증을 통과하지 못했습니다.",
-    failedCriterion,
-    nextAction: "위 기준을 적용해 새 독립 시도를 시작하고 답안 본문과 과목별 판단을 다시 제출하세요.",
-    nextReview: view.case.nextEligibleAt ?? "즉시 독립 재시도 준비 가능",
+    title: outcome.biggestGap.learnerFacingSummaryKo,
+    why: note.whyWrong.explanationKo,
+    failedCriterion: note.correctPrinciple.explanationKo,
+    nextAction: outcome.nextAction.instructionKo,
+    nextReview: note.nextReview.scheduledAt ?? "즉시 독립 재시도 준비 가능",
   };
 }
 

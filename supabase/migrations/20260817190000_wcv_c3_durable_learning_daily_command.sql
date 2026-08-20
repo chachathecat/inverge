@@ -39,8 +39,27 @@ create table if not exists public.wcv_c3_gap_closure_cases (
       'recurringSignature',
       'latestPlan',
       'planDecisionHistory',
+      'latestReviewOutcome',
+      'failureNotes',
+      'plannerStatus',
       'resultReasonCodes'
     ] = '{}'::jsonb
+    and state_data ?& array[
+      'frozenD0',
+      'sourcePrimaryGapId',
+      'nextEligibleAt',
+      'activeAttempt',
+      'recurringSignature',
+      'latestPlan',
+      'planDecisionHistory',
+      'latestReviewOutcome',
+      'failureNotes',
+      'plannerStatus',
+      'resultReasonCodes'
+    ]
+    and pg_catalog.jsonb_typeof(state_data -> 'failureNotes') = 'array'
+    and pg_catalog.jsonb_typeof(state_data -> 'plannerStatus') = 'object'
+    and pg_catalog.jsonb_typeof(state_data -> 'latestReviewOutcome') in ('object', 'null')
     and state_data::text !~* '"(rawBody|learnerText|answerBody|ocrBody|noteBody|credential|token|secret|password)"[[:space:]]*:'
   ),
   created_at timestamptz not null default statement_timestamp(),
@@ -383,7 +402,19 @@ as $$
 declare
   v_current_version bigint;
   v_current_state text;
+  v_current_state_data jsonb;
+  v_source_session_id uuid;
+  v_subject text;
   v_next_version bigint;
+  v_event_type text;
+  v_outcome text;
+  v_event_id uuid;
+  v_review_output jsonb;
+  v_review_outcome jsonb;
+  v_gap_signal jsonb;
+  v_concept_signal jsonb;
+  v_failure_note_id text;
+  v_matching_failure_note_count integer;
 begin
   perform pg_catalog.pg_advisory_xact_lock(
     pg_catalog.hashtextextended(
@@ -404,8 +435,18 @@ begin
     return;
   end if;
 
-  select candidate.record_version, candidate.state
-  into v_current_version, v_current_state
+  select
+    candidate.record_version,
+    candidate.state,
+    candidate.state_data,
+    candidate.source_session_id,
+    candidate.subject
+  into
+    v_current_version,
+    v_current_state,
+    v_current_state_data,
+    v_source_session_id,
+    v_subject
   from public.wcv_c3_gap_closure_cases as candidate
   where candidate.id = p_case_id and candidate.user_id = p_user_id
   for update;
@@ -419,8 +460,15 @@ begin
       'frozenD0', 'sourcePrimaryGapId', 'nextEligibleAt',
       'activeAttempt',
       'recurringSignature', 'latestPlan', 'planDecisionHistory',
+      'latestReviewOutcome', 'failureNotes', 'plannerStatus',
       'resultReasonCodes'
     ] <> '{}'::jsonb
+    or not p_state_data ?& array[
+      'frozenD0', 'sourcePrimaryGapId', 'nextEligibleAt',
+      'activeAttempt', 'recurringSignature', 'latestPlan',
+      'planDecisionHistory', 'latestReviewOutcome', 'failureNotes',
+      'plannerStatus', 'resultReasonCodes'
+    ]
   then
     raise exception 'WCV_C3_INVALID_STATE_DATA';
   end if;
@@ -431,6 +479,345 @@ begin
     ] <> '{}'::jsonb
   then
     raise exception 'WCV_C3_INVALID_EVENT_SHAPE';
+  end if;
+
+  v_event_type := p_event ->> 'eventType';
+  v_outcome := p_event ->> 'outcome';
+  v_event_id := (p_event ->> 'eventId')::uuid;
+
+  if v_event_type not in (
+    'D1_REPRODUCED',
+    'D7_TRANSFER_OBSERVED',
+    'TIMED_RECURRENCE_CONFIRMED',
+    'RECURRENCE_RECONFIRMED',
+    'INDEPENDENT_FAILURE_RECORDED'
+  ) and (
+    p_state_data -> 'latestReviewOutcome' is distinct from v_current_state_data -> 'latestReviewOutcome'
+    or p_state_data -> 'failureNotes' is distinct from v_current_state_data -> 'failureNotes'
+  ) then
+    raise exception 'WCV_C3_REVIEW_STATE_CHANGE_REQUIRES_TERMINAL_EVENT';
+  end if;
+
+  if v_event_type in ('PLAN_PROPOSED', 'PLAN_DECISION_RECORDED') then
+    if p_artifact is not null
+      or p_next_state <> v_current_state
+      or p_state_data -> 'frozenD0' is distinct from v_current_state_data -> 'frozenD0'
+      or p_state_data -> 'sourcePrimaryGapId' is distinct from v_current_state_data -> 'sourcePrimaryGapId'
+      or p_state_data -> 'latestReviewOutcome' is distinct from v_current_state_data -> 'latestReviewOutcome'
+      or p_state_data -> 'failureNotes' is distinct from v_current_state_data -> 'failureNotes'
+      or p_state_data -> 'resultReasonCodes' is distinct from v_current_state_data -> 'resultReasonCodes'
+      or p_state_data -> 'recurringSignature' is distinct from v_current_state_data -> 'recurringSignature'
+      or p_state_data -> 'nextEligibleAt' is distinct from v_current_state_data -> 'nextEligibleAt'
+      or p_state_data -> 'activeAttempt' is distinct from v_current_state_data -> 'activeAttempt'
+      or (
+        v_event_type = 'PLAN_PROPOSED'
+        and p_state_data -> 'planDecisionHistory'
+          is distinct from v_current_state_data -> 'planDecisionHistory'
+      )
+    then
+      raise exception 'WCV_C3_PLAN_REVIEW_STATE_SEPARATION_REQUIRED';
+    end if;
+  end if;
+
+  if v_event_type in (
+    'D1_REPRODUCED',
+    'D7_TRANSFER_OBSERVED',
+    'TIMED_RECURRENCE_CONFIRMED',
+    'RECURRENCE_RECONFIRMED',
+    'INDEPENDENT_FAILURE_RECORDED'
+  ) then
+    v_review_output := p_event -> 'payload' -> 'reviewOutput';
+    v_review_outcome := p_state_data -> 'latestReviewOutcome';
+    v_gap_signal := v_review_output -> 'learningGapSignal';
+    v_concept_signal := v_review_output -> 'conceptStateSignal';
+    v_failure_note_id := v_review_outcome ->> 'failureNoteId';
+
+    if p_artifact is null
+      or pg_catalog.jsonb_typeof(v_review_output) <> 'object'
+      or pg_catalog.jsonb_typeof(v_review_outcome) <> 'object'
+      or pg_catalog.jsonb_typeof(v_gap_signal) <> 'object'
+      or pg_catalog.jsonb_typeof(v_concept_signal) <> 'object'
+      or pg_catalog.jsonb_typeof(p_state_data -> 'failureNotes') <> 'array'
+      or v_review_output - array[
+        'reviewOutcomeId', 'learningGapSignal', 'conceptStateSignal',
+        'failureNoteId', 'containsFailureNoteBody'
+      ] <> '{}'::jsonb
+      or not coalesce(v_review_output ?& array[
+        'reviewOutcomeId', 'learningGapSignal', 'conceptStateSignal',
+        'failureNoteId', 'containsFailureNoteBody'
+      ], false)
+      or v_review_outcome - array[
+        'reviewOutcomeId', 'version', 'binding', 'outcome', 'reasonCodes',
+        'biggestGap', 'nextAction', 'failureNoteId', 'learningGapSignalId',
+        'conceptStateSignalId', 'occurredAt', 'containsBody',
+        'sharedSignalsBodyless', 'failureNotePrivate'
+      ] <> '{}'::jsonb
+      or not coalesce(v_review_outcome ?& array[
+        'reviewOutcomeId', 'version', 'binding', 'outcome', 'reasonCodes',
+        'biggestGap', 'nextAction', 'failureNoteId', 'learningGapSignalId',
+        'conceptStateSignalId', 'occurredAt', 'containsBody',
+        'sharedSignalsBodyless', 'failureNotePrivate'
+      ], false)
+      or v_gap_signal - array[
+        'signalId', 'version', 'binding', 'outcome', 'reasonCodes', 'gapCode',
+        'evidenceContributionOnly', 'createsVerified', 'createsMastery',
+        'createsCurrentlyClear', 'createsReadiness', 'changesScore',
+        'containsBody', 'reconstructive', 'failureNoteBodyIncluded', 'occurredAt'
+      ] <> '{}'::jsonb
+      or not coalesce(v_gap_signal ?& array[
+        'signalId', 'version', 'binding', 'outcome', 'reasonCodes', 'gapCode',
+        'evidenceContributionOnly', 'createsVerified', 'createsMastery',
+        'createsCurrentlyClear', 'createsReadiness', 'changesScore',
+        'containsBody', 'reconstructive', 'failureNoteBodyIncluded', 'occurredAt'
+      ], false)
+      or v_concept_signal - array[
+        'signalId', 'version', 'binding', 'learningGapSignalId', 'failureNoteId',
+        'candidateState', 'evidenceKind', 'evidenceContributionOnly',
+        'canonicalConceptStateChanged', 'createsVerified', 'createsMastery',
+        'createsCurrentlyClear', 'createsReadiness', 'changesScore',
+        'containsBody', 'reconstructive', 'failureNoteBodyIncluded', 'occurredAt'
+      ] <> '{}'::jsonb
+      or not coalesce(v_concept_signal ?& array[
+        'signalId', 'version', 'binding', 'learningGapSignalId', 'failureNoteId',
+        'candidateState', 'evidenceKind', 'evidenceContributionOnly',
+        'canonicalConceptStateChanged', 'createsVerified', 'createsMastery',
+        'createsCurrentlyClear', 'createsReadiness', 'changesScore',
+        'containsBody', 'reconstructive', 'failureNoteBodyIncluded', 'occurredAt'
+      ], false)
+      or v_review_outcome -> 'binding' - array[
+        'caseId', 'caseRecordVersion', 'userId', 'subject', 'sourceSessionId',
+        'sourceSessionRecordVersion', 'sourceConfirmedRevisionId',
+        'sourcePrimaryGapId', 'stage', 'attemptId', 'privateArtifactId',
+        'itemId', 'itemRevisionId', 'itemFamilyId', 'evidenceEventId',
+        'proofAnchorId', 'contractVersion', 'policyVersion', 'validatorVersion',
+        'sourceVersion', 'fixtureVersion'
+      ] <> '{}'::jsonb
+      or not coalesce((v_review_outcome -> 'binding') ?& array[
+        'caseId', 'caseRecordVersion', 'userId', 'subject', 'sourceSessionId',
+        'sourceSessionRecordVersion', 'sourceConfirmedRevisionId',
+        'sourcePrimaryGapId', 'stage', 'attemptId', 'privateArtifactId',
+        'itemId', 'itemRevisionId', 'itemFamilyId', 'evidenceEventId',
+        'proofAnchorId', 'contractVersion', 'policyVersion', 'validatorVersion',
+        'sourceVersion', 'fixtureVersion'
+      ], false)
+      or pg_catalog.jsonb_typeof(v_review_outcome -> 'biggestGap') is distinct from 'object'
+      or v_review_outcome -> 'biggestGap' - array[
+        'gapId', 'sourceSessionId', 'sourceConfirmedRevisionId',
+        'summaryCode', 'learnerFacingSummaryKo'
+      ] <> '{}'::jsonb
+      or not coalesce((v_review_outcome -> 'biggestGap') ?& array[
+        'gapId', 'sourceSessionId', 'sourceConfirmedRevisionId',
+        'summaryCode', 'learnerFacingSummaryKo'
+      ], false)
+      or v_review_outcome -> 'biggestGap' ->> 'gapId'
+        is distinct from v_review_outcome -> 'binding' ->> 'sourcePrimaryGapId'
+      or v_review_outcome -> 'biggestGap' ->> 'sourceSessionId'
+        is distinct from v_review_outcome -> 'binding' ->> 'sourceSessionId'
+      or v_review_outcome -> 'biggestGap' ->> 'sourceConfirmedRevisionId'
+        is distinct from v_review_outcome -> 'binding' ->> 'sourceConfirmedRevisionId'
+      or nullif(v_review_outcome -> 'biggestGap' ->> 'summaryCode', '') is null
+      or nullif(v_review_outcome -> 'biggestGap' ->> 'learnerFacingSummaryKo', '') is null
+      or pg_catalog.jsonb_typeof(v_review_outcome -> 'nextAction') is distinct from 'object'
+      or v_review_outcome -> 'nextAction' - array['action', 'instructionKo'] <> '{}'::jsonb
+      or not coalesce(
+        (v_review_outcome -> 'nextAction') ?& array['action', 'instructionKo'],
+        false
+      )
+      or not coalesce(v_review_outcome -> 'nextAction' ->> 'action' in (
+        'PREPARE_INDEPENDENT_RETRY', 'WAIT_FOR_NEXT_REVIEW', 'EVALUATE_CURRENTLY_CLEAR'
+      ), false)
+      or (
+        v_outcome = 'SUCCESS'
+        and v_review_outcome -> 'nextAction' ->> 'action' = 'PREPARE_INDEPENDENT_RETRY'
+      )
+      or (
+        v_outcome <> 'SUCCESS'
+        and v_review_outcome -> 'nextAction' ->> 'action'
+          is distinct from 'PREPARE_INDEPENDENT_RETRY'
+      )
+      or nullif(v_review_outcome -> 'nextAction' ->> 'instructionKo', '') is null
+      or nullif(v_review_output ->> 'reviewOutcomeId', '') is null
+      or nullif(v_review_outcome ->> 'reviewOutcomeId', '') is null
+      or nullif(v_review_outcome ->> 'learningGapSignalId', '') is null
+      or nullif(v_review_outcome ->> 'conceptStateSignalId', '') is null
+      or nullif(v_review_outcome ->> 'occurredAt', '') is null
+      or nullif(v_gap_signal ->> 'signalId', '') is null
+      or nullif(v_concept_signal ->> 'signalId', '') is null
+      or not coalesce(v_outcome in ('SUCCESS', 'PARTIAL', 'BLANK', 'TIMEOUT', 'FAILURE'), false)
+      or v_review_output ->> 'reviewOutcomeId' is distinct from v_review_outcome ->> 'reviewOutcomeId'
+      or v_review_output ->> 'failureNoteId' is distinct from v_failure_note_id
+      or (v_review_output ->> 'containsFailureNoteBody')::boolean is distinct from false
+      or v_review_outcome ->> 'version' is distinct from 'dabangil.wcv_c3.durable_review_outcome.v1'
+      or (v_review_outcome ->> 'containsBody')::boolean is distinct from false
+      or (v_review_outcome ->> 'sharedSignalsBodyless')::boolean is distinct from true
+      or (v_review_outcome ->> 'failureNotePrivate')::boolean is distinct from true
+      or v_review_outcome ->> 'outcome' is distinct from v_outcome
+      or pg_catalog.jsonb_typeof(v_review_outcome -> 'reasonCodes') is distinct from 'array'
+      or pg_catalog.jsonb_array_length(v_review_outcome -> 'reasonCodes') is distinct from 1
+      or v_review_outcome -> 'reasonCodes' is distinct from v_gap_signal -> 'reasonCodes'
+      or not coalesce(v_review_outcome -> 'reasonCodes' ->> 0 in (
+        'd1_qualified_independent_success',
+        'd7_qualified_independent_success',
+        'timed_qualified_independent_success',
+        'recurrence_qualified_independent_success',
+        'trusted_timer_timeout_preserved',
+        'typed_proof_rejected'
+      ), false)
+      or (
+        v_outcome = 'SUCCESS'
+        and v_review_outcome -> 'reasonCodes' ->> 0 is distinct from
+          pg_catalog.lower(p_artifact ->> 'stage') || '_qualified_independent_success'
+      )
+      or (
+        v_outcome = 'TIMEOUT'
+        and v_review_outcome -> 'reasonCodes' ->> 0 is distinct from 'trusted_timer_timeout_preserved'
+      )
+      or (
+        v_outcome not in ('SUCCESS', 'TIMEOUT')
+        and v_review_outcome -> 'reasonCodes' ->> 0 is distinct from 'typed_proof_rejected'
+      )
+      or v_review_outcome ->> 'learningGapSignalId' is distinct from v_gap_signal ->> 'signalId'
+      or v_review_outcome ->> 'conceptStateSignalId' is distinct from v_concept_signal ->> 'signalId'
+      or v_review_outcome ->> 'occurredAt' is distinct from p_event ->> 'occurredAt'
+      or v_gap_signal ->> 'occurredAt' is distinct from p_event ->> 'occurredAt'
+      or v_concept_signal ->> 'occurredAt' is distinct from p_event ->> 'occurredAt'
+      or v_gap_signal ->> 'version' is distinct from 'dabangil.wcv_c3.safe_learning_gap_signal.v1'
+      or v_concept_signal ->> 'version' is distinct from 's217.personal_core_concept_graph.v1'
+      or v_gap_signal ->> 'outcome' is distinct from v_outcome
+      or v_gap_signal ->> 'gapCode' is distinct from 'C2_PRIMARY_GAP'
+      or v_concept_signal ->> 'learningGapSignalId' is distinct from v_gap_signal ->> 'signalId'
+      or v_concept_signal ->> 'failureNoteId' is distinct from v_failure_note_id
+      or v_concept_signal ->> 'evidenceKind' is distinct from
+        case when v_outcome = 'SUCCESS' then 'RECOVERY_EVIDENCE' else 'FAILURE_EVIDENCE' end
+      or (v_outcome = 'SUCCESS' and v_concept_signal ->> 'candidateState' is distinct from 'recovering')
+      or (
+        v_outcome <> 'SUCCESS'
+        and not coalesce(v_concept_signal ->> 'candidateState' in ('wrong', 'recurring'), false)
+      )
+      or (v_gap_signal ->> 'evidenceContributionOnly')::boolean is distinct from true
+      or (v_concept_signal ->> 'evidenceContributionOnly')::boolean is distinct from true
+      or (v_gap_signal ->> 'createsVerified')::boolean is distinct from false
+      or (v_gap_signal ->> 'createsMastery')::boolean is distinct from false
+      or (v_gap_signal ->> 'createsCurrentlyClear')::boolean is distinct from false
+      or (v_gap_signal ->> 'createsReadiness')::boolean is distinct from false
+      or (v_gap_signal ->> 'changesScore')::boolean is distinct from false
+      or (v_gap_signal ->> 'containsBody')::boolean is distinct from false
+      or (v_gap_signal ->> 'reconstructive')::boolean is distinct from false
+      or (v_gap_signal ->> 'failureNoteBodyIncluded')::boolean is distinct from false
+      or (v_concept_signal ->> 'canonicalConceptStateChanged')::boolean is distinct from false
+      or (v_concept_signal ->> 'createsVerified')::boolean is distinct from false
+      or (v_concept_signal ->> 'createsMastery')::boolean is distinct from false
+      or (v_concept_signal ->> 'createsCurrentlyClear')::boolean is distinct from false
+      or (v_concept_signal ->> 'createsReadiness')::boolean is distinct from false
+      or (v_concept_signal ->> 'changesScore')::boolean is distinct from false
+      or (v_concept_signal ->> 'containsBody')::boolean is distinct from false
+      or (v_concept_signal ->> 'reconstructive')::boolean is distinct from false
+      or (v_concept_signal ->> 'failureNoteBodyIncluded')::boolean is distinct from false
+    then
+      raise exception 'WCV_C3_REQUIRED_REVIEW_OUTPUT_INVALID';
+    end if;
+
+    if v_review_outcome -> 'binding' is distinct from v_gap_signal -> 'binding'
+      or v_review_outcome -> 'binding' is distinct from v_concept_signal -> 'binding'
+      or v_review_outcome -> 'binding' ->> 'caseId' is distinct from p_case_id::text
+      or v_review_outcome -> 'binding' ->> 'userId' is distinct from p_user_id::text
+      or (v_review_outcome -> 'binding' ->> 'caseRecordVersion')::bigint is distinct from v_current_version + 1
+      or v_review_outcome -> 'binding' ->> 'subject' is distinct from v_subject
+      or v_review_outcome -> 'binding' ->> 'sourceSessionId' is distinct from v_source_session_id::text
+      or v_review_outcome -> 'binding' ->> 'sourceSessionRecordVersion'
+        is distinct from p_state_data -> 'frozenD0' ->> 'sourceSessionRecordVersion'
+      or v_review_outcome -> 'binding' ->> 'sourceConfirmedRevisionId'
+        is distinct from p_state_data -> 'frozenD0' ->> 'sourceRevisionId'
+      or v_review_outcome -> 'binding' ->> 'sourcePrimaryGapId'
+        is distinct from p_state_data ->> 'sourcePrimaryGapId'
+      or v_review_outcome -> 'binding' ->> 'stage' is distinct from p_artifact ->> 'stage'
+      or v_review_outcome -> 'binding' ->> 'attemptId' is distinct from p_event ->> 'attemptId'
+      or v_review_outcome -> 'binding' ->> 'privateArtifactId' is distinct from p_event ->> 'artifactId'
+      or v_review_outcome -> 'binding' ->> 'itemId' is distinct from p_event ->> 'itemId'
+      or v_review_outcome -> 'binding' ->> 'itemRevisionId'
+        is distinct from p_event -> 'payload' -> 'assignment' ->> 'itemRevisionId'
+      or v_review_outcome -> 'binding' ->> 'itemFamilyId' is distinct from p_event ->> 'itemFamilyId'
+      or v_review_outcome -> 'binding' ->> 'evidenceEventId' is distinct from v_event_id::text
+      or v_review_outcome -> 'binding' ->> 'proofAnchorId'
+        is distinct from p_event -> 'payload' ->> 'proofAnchorId'
+      or v_review_outcome -> 'binding' ->> 'contractVersion'
+        is distinct from 'dabangil.wcv_c3.durable_learning_daily_command.v1'
+      or v_review_outcome -> 'binding' ->> 'policyVersion'
+        is distinct from 'dabangil.wcv_c3.evidence_qualification.v1'
+      or v_review_outcome -> 'binding' ->> 'validatorVersion'
+        is distinct from p_state_data -> 'frozenD0' ->> 'validatorVersion'
+      or v_review_outcome -> 'binding' ->> 'sourceVersion'
+        is distinct from p_state_data -> 'frozenD0' ->> 'problemSourceVersion'
+      or v_review_outcome -> 'binding' ->> 'fixtureVersion'
+        is distinct from p_state_data -> 'frozenD0' ->> 'contentReleaseVersion'
+    then
+      raise exception 'WCV_C3_REVIEW_SOURCE_BINDING_MISMATCH';
+    end if;
+
+    if v_outcome = 'SUCCESS' then
+      if v_failure_note_id is not null
+        or p_state_data -> 'failureNotes' is distinct from v_current_state_data -> 'failureNotes'
+      then
+        raise exception 'WCV_C3_SUCCESS_MUST_NOT_CREATE_FAILURE_NOTE';
+      end if;
+    else
+      select pg_catalog.count(*)::integer
+      into v_matching_failure_note_count
+      from pg_catalog.jsonb_array_elements(p_state_data -> 'failureNotes') as note(value)
+      where note.value ->> 'noteId' = v_failure_note_id
+        and note.value - array[
+          'noteId', 'version', 'binding', 'outcome', 'reasonCodes', 'status',
+          'visibility', 'whyWrong', 'correctPrinciple', 'immediateFix',
+          'recurrence', 'nextReview', 'sourceMaterialInEntry',
+          'containsAttemptBody', 'createdAt'
+        ] = '{}'::jsonb
+        and note.value ?& array[
+          'noteId', 'version', 'binding', 'outcome', 'reasonCodes', 'status',
+          'visibility', 'whyWrong', 'correctPrinciple', 'immediateFix',
+          'recurrence', 'nextReview', 'sourceMaterialInEntry',
+          'containsAttemptBody', 'createdAt'
+        ]
+        and note.value ->> 'version' = 's216.error_notebook_gap_taxonomy.v1'
+        and note.value ->> 'outcome' = v_outcome
+        and note.value -> 'reasonCodes' = v_review_outcome -> 'reasonCodes'
+        and note.value -> 'binding' = v_review_outcome -> 'binding'
+        and note.value ->> 'status' = 'ready'
+        and note.value ->> 'visibility' = 'LEARNER_PRIVATE_DERIVED'
+        and note.value ->> 'createdAt' = p_event ->> 'occurredAt'
+        and note.value -> 'whyWrong' - array['reasonCode', 'explanationKo'] = '{}'::jsonb
+        and note.value -> 'whyWrong' ?& array['reasonCode', 'explanationKo']
+        and nullif(note.value -> 'whyWrong' ->> 'reasonCode', '') is not null
+        and nullif(note.value -> 'whyWrong' ->> 'explanationKo', '') is not null
+        and note.value -> 'correctPrinciple' - array['principleCode', 'explanationKo'] = '{}'::jsonb
+        and note.value -> 'correctPrinciple' ?& array['principleCode', 'explanationKo']
+        and nullif(note.value -> 'correctPrinciple' ->> 'principleCode', '') is not null
+        and nullif(note.value -> 'correctPrinciple' ->> 'explanationKo', '') is not null
+        and note.value -> 'immediateFix' - array['action', 'instructionKo'] = '{}'::jsonb
+        and note.value -> 'immediateFix' ?& array['action', 'instructionKo']
+        and note.value -> 'immediateFix' ->> 'action' in ('retry', 'rewrite', 'recalculate')
+        and nullif(note.value -> 'immediateFix' ->> 'instructionKo', '') is not null
+        and note.value -> 'recurrence' - array[
+          'status', 'eligibleFailureCount', 'distinctFailureFamilyCount'
+        ] = '{}'::jsonb
+        and note.value -> 'recurrence' ?& array[
+          'status', 'eligibleFailureCount', 'distinctFailureFamilyCount'
+        ]
+        and note.value -> 'nextReview' - array['scheduledAt', 'instructionKo'] = '{}'::jsonb
+        and note.value -> 'nextReview' ?& array['scheduledAt', 'instructionKo']
+        and nullif(note.value -> 'nextReview' ->> 'instructionKo', '') is not null
+        and (note.value ->> 'sourceMaterialInEntry')::boolean is false
+        and (note.value ->> 'containsAttemptBody')::boolean is false;
+      if v_failure_note_id is null
+        or v_matching_failure_note_count <> 1
+        or pg_catalog.jsonb_array_length(p_state_data -> 'failureNotes')
+          <> pg_catalog.jsonb_array_length(v_current_state_data -> 'failureNotes') + 1
+        or (p_state_data -> 'failureNotes') - (
+          pg_catalog.jsonb_array_length(p_state_data -> 'failureNotes') - 1
+        ) is distinct from v_current_state_data -> 'failureNotes'
+      then
+        raise exception 'WCV_C3_FAILURE_NOTE_REQUIRED';
+      end if;
+    end if;
   end if;
 
   if p_artifact is not null then

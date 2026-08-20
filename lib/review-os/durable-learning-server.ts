@@ -102,6 +102,12 @@ export function durableLearningView(
         attemptOrdinal: active.attemptOrdinal,
       })
     : null;
+  const latestReviewOutcome = aggregate.caseRecord.stateData.latestReviewOutcome;
+  const latestFailureNote = latestReviewOutcome?.failureNoteId
+    ? aggregate.caseRecord.stateData.failureNotes.find(
+        (note) => note.noteId === latestReviewOutcome.failureNoteId,
+      ) ?? null
+    : null;
   const nextAction =
     aggregate.caseRecord.state === "STALE" ||
     aggregate.caseRecord.state === "DEFERRED" ||
@@ -154,7 +160,10 @@ export function durableLearningView(
         }
       : null,
     recurringDeduction: aggregate.caseRecord.stateData.recurringSignature,
+    latestReviewOutcome,
+    latestFailureNote,
     latestPlan: aggregate.caseRecord.stateData.latestPlan,
+    plannerStatus: aggregate.caseRecord.stateData.plannerStatus,
     planDecisionHistory: aggregate.caseRecord.stateData.planDecisionHistory,
     ledger: {
       artifacts: aggregate.artifacts.map((artifact) => ({
@@ -183,6 +192,8 @@ export function durableLearningView(
       currentlyClearIsPermanent: false,
       laterIndependentFailureReopens: true,
       planDecisionChangesMastery: false,
+      learningGapSignalChangesMastery: false,
+      conceptStateSignalChangesCanonicalState: false,
     },
   } as const;
 }

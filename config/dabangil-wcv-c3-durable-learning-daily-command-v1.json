@@ -46,7 +46,12 @@
     "TransferOutcomeV1",
     "RecurrenceOutcomeV1",
     "EvidenceReopenEventV1",
-    "GapClosureCaseV1"
+    "GapClosureCaseV1",
+    "DurableReviewSourceBindingV1",
+    "DurableReviewOutcomeV1",
+    "DurableLearningGapSignalV1",
+    "DurableConceptStateEvidenceSignalV1",
+    "DurableFailureNoteV1"
   ],
   "subjects": [
     "appraisal_practical",
@@ -60,7 +65,22 @@
     "fixedCommitmentsPreserved": true,
     "minimumMaintenanceMode": true,
     "learnerDecisions": ["ACCEPTED", "EDITED", "REJECTED"],
-    "decisionAloneChangesMastery": false
+    "decisionAloneChangesMastery": false,
+    "reviewOutcomeSeparatedFromPlannerStatus": true,
+    "plannerCannotOverwriteReviewFeedback": true
+  },
+  "reviewOutputs": {
+    "version": "dabangil.wcv_c3.durable_review_outcome.v1",
+    "terminalStages": ["D1", "D7", "TIMED", "RECURRENCE"],
+    "successAndNonSuccessEmitSafeLearningGapSignal": true,
+    "successAndNonSuccessEmitConceptStateEvidenceSignal": true,
+    "nonSuccessEmitsExactlyOneFailureNote": true,
+    "failureNoteVersion": "s216.error_notebook_gap_taxonomy.v1",
+    "conceptSignalVersion": "s217.personal_core_concept_graph.v1",
+    "signalsAreBodylessEvidenceContributionsOnly": true,
+    "signalsCreateCanonicalState": false,
+    "allOutputsCommitInExistingTransitionRpc": true,
+    "exportDeleteRestoreCoveredByCaseAndEventAggregate": true
   },
   "privacy": {
     "rawBodiesSeparatedFromProjection": true,

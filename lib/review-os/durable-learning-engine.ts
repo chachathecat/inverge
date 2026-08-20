@@ -4,17 +4,27 @@ import type { TrustedRepairAggregate } from "./trusted-repair-contract";
 import {
   DURABLE_LEARNING_CONTRACT_VERSION,
   DURABLE_LEARNING_FIXTURE_VERSION,
+  DURABLE_LEARNING_GAP_SIGNAL_VERSION,
   DURABLE_LEARNING_PLANNER_VERSION,
   DURABLE_LEARNING_POLICY_VERSION,
+  DURABLE_CONCEPT_STATE_SIGNAL_VERSION,
+  DURABLE_FAILURE_NOTE_VERSION,
+  DURABLE_REVIEW_OUTCOME_VERSION,
   DurableLearningContractError,
   type CoreOutcomeV1,
   type DailyPlanDecision,
   type DailyPlanReasonCode,
+  type DurableConceptStateEvidenceSignalV1,
   type DurableEvidenceEvent,
+  type DurableFailureNoteV1,
+  type DurableLearningGapSignalV1,
   type DurableLearningAggregate,
   type DurableLearningState,
   type DurableLearningStateData,
   type DurableLearningTransitionPlan,
+  type DurableReviewOutcomeV1,
+  type DurableReviewReasonCode,
+  type DurableReviewSourceBindingV1,
   type DurableSubjectCommitmentV1,
   type FixedCommitmentV1,
   type FrozenD0ConfigurationSnapshotV1,
@@ -253,6 +263,14 @@ export function createGapClosureCase(input: {
       recurringSignature: placeholderSignature,
       latestPlan: null,
       planDecisionHistory: [],
+      latestReviewOutcome: null,
+      failureNotes: [],
+      plannerStatus: {
+        latestPlanId: null,
+        decision: null,
+        reasonCodes: [],
+        updatedAt: null,
+      },
       resultReasonCodes: ["same_session_repair_is_not_durable_clearance"],
     },
     createdAt: occurredAt,
@@ -298,6 +316,213 @@ function eventWithOwner(
     caseId: aggregate.caseRecord.caseId,
     userId: aggregate.caseRecord.userId,
   };
+}
+
+function reviewFeedback(input: {
+  subject: GapClosureCaseV1["subject"];
+  outcome: "SUCCESS" | "TIMEOUT" | "FAILURE";
+}) {
+  const failedCriterion = {
+    appraisal_practical:
+      "총수익과 운영비의 순서, 연산자, 결과, 단위, 부호와 반올림을 한 계산 관계로 맞춰야 합니다.",
+    appraisal_theory:
+      "제시된 목표 범위 안에서 핵심 관계의 의미와 극성을 구분하고 금지 관계를 주장하지 않아야 합니다.",
+    appraisal_law:
+      "제시된 출처·버전·조문·효력기간·적용 기준일을 함께 확인하고 현재성과 열린 차단 근거 수를 판단해야 합니다.",
+  }[input.subject];
+  if (input.outcome === "SUCCESS") {
+    return {
+      summaryCode: "source_gap_recovery_evidence_recorded",
+      summaryKo: "현재 간극에 대한 독립 복구 근거가 기록되었으며 다음 지연 검토가 남아 있습니다.",
+      whyWrongCode: "not_applicable_success",
+      whyWrongKo: "이번 독립 검토는 구조 검증을 통과했습니다.",
+      principleCode: "preserve_independent_delayed_review_sequence",
+      principleKo: "같은 세션 성공과 지연된 독립 재현·전이·재발 근거를 분리해 누적합니다.",
+    } as const;
+  }
+  const timedOut = input.outcome === "TIMEOUT";
+  return {
+    summaryCode: timedOut ? "trusted_timer_timeout_preserved" : "typed_proof_rejected",
+    summaryKo: timedOut ? "제한시간 근거 미충족" : "과목별 증명 불일치",
+    whyWrongCode: timedOut ? "trusted_timer_timeout_preserved" : "typed_proof_rejected",
+    whyWrongKo: timedOut
+      ? "신뢰된 제한시간 안에 제출되지 않아 이번 답안은 독립 근거로 인정되지 않았습니다."
+      : "제출한 닫힌 과목별 판단이 서버의 봉인된 구조 검증을 통과하지 못했습니다.",
+    principleCode: `restore_${input.subject}_typed_binding`,
+    principleKo: failedCriterion,
+  } as const;
+}
+
+function buildDurableReviewOutputs(input: {
+  aggregate: DurableLearningAggregate;
+  stage: "D1" | "D7" | "TIMED" | "RECURRENCE";
+  attemptId: string;
+  artifactId: string;
+  itemId: string;
+  itemRevisionId: string;
+  itemFamilyId: string;
+  evidenceEventId: string;
+  proofAnchorId: string;
+  outcome: "SUCCESS" | "TIMEOUT" | "FAILURE";
+  reasonCodes: readonly DurableReviewReasonCode[];
+  nextState: DurableLearningState;
+  nextEligibleAt: string | null;
+  recurringSignature: RecurringDeductionSignatureV1;
+  occurredAt: string;
+}) {
+  const frozen = input.aggregate.caseRecord.stateData.frozenD0;
+  const binding: DurableReviewSourceBindingV1 = {
+    caseId: input.aggregate.caseRecord.caseId,
+    caseRecordVersion: input.aggregate.caseRecord.recordVersion + 1,
+    userId: input.aggregate.caseRecord.userId,
+    subject: input.aggregate.caseRecord.subject,
+    sourceSessionId: input.aggregate.caseRecord.sourceSessionId,
+    sourceSessionRecordVersion: frozen.sourceSessionRecordVersion,
+    sourceConfirmedRevisionId: frozen.sourceRevisionId,
+    sourcePrimaryGapId: input.aggregate.caseRecord.stateData.sourcePrimaryGapId,
+    stage: input.stage,
+    attemptId: input.attemptId,
+    privateArtifactId: input.artifactId,
+    itemId: input.itemId,
+    itemRevisionId: input.itemRevisionId,
+    itemFamilyId: input.itemFamilyId,
+    evidenceEventId: input.evidenceEventId,
+    proofAnchorId: input.proofAnchorId,
+    contractVersion: DURABLE_LEARNING_CONTRACT_VERSION,
+    policyVersion: DURABLE_LEARNING_POLICY_VERSION,
+    validatorVersion: frozen.validatorVersion,
+    sourceVersion: frozen.problemSourceVersion,
+    fixtureVersion: frozen.contentReleaseVersion,
+  };
+  const failureNoteId = input.outcome === "SUCCESS" ? null : randomUUID();
+  const learningGapSignalId = randomUUID();
+  const conceptStateSignalId = randomUUID();
+  const feedback = reviewFeedback({
+    subject: input.aggregate.caseRecord.subject,
+    outcome: input.outcome,
+  });
+  const scheduledNextReviewAt =
+    input.nextEligibleAt && Date.parse(input.nextEligibleAt) > Date.parse(input.occurredAt)
+      ? input.nextEligibleAt
+      : null;
+  const learningGapSignal: DurableLearningGapSignalV1 = {
+    signalId: learningGapSignalId,
+    version: DURABLE_LEARNING_GAP_SIGNAL_VERSION,
+    binding,
+    outcome: input.outcome,
+    reasonCodes: input.reasonCodes,
+    gapCode: "C2_PRIMARY_GAP",
+    evidenceContributionOnly: true,
+    createsVerified: false,
+    createsMastery: false,
+    createsCurrentlyClear: false,
+    createsReadiness: false,
+    changesScore: false,
+    containsBody: false,
+    reconstructive: false,
+    failureNoteBodyIncluded: false,
+    occurredAt: input.occurredAt,
+  };
+  const conceptStateSignal: DurableConceptStateEvidenceSignalV1 = {
+    signalId: conceptStateSignalId,
+    version: DURABLE_CONCEPT_STATE_SIGNAL_VERSION,
+    binding,
+    learningGapSignalId,
+    failureNoteId,
+    candidateState:
+      input.outcome === "SUCCESS"
+        ? "recovering"
+        : ["REPEATING", "RECURRED"].includes(input.recurringSignature.status)
+          ? "recurring"
+          : "wrong",
+    evidenceKind: input.outcome === "SUCCESS" ? "RECOVERY_EVIDENCE" : "FAILURE_EVIDENCE",
+    evidenceContributionOnly: true,
+    canonicalConceptStateChanged: false,
+    createsVerified: false,
+    createsMastery: false,
+    createsCurrentlyClear: false,
+    createsReadiness: false,
+    changesScore: false,
+    containsBody: false,
+    reconstructive: false,
+    failureNoteBodyIncluded: false,
+    occurredAt: input.occurredAt,
+  };
+  const nextAction: DurableReviewOutcomeV1["nextAction"] =
+    input.outcome !== "SUCCESS"
+      ? {
+          action: "PREPARE_INDEPENDENT_RETRY",
+          instructionKo: "위 기준을 적용해 새 독립 시도를 시작하고 답안 본문과 과목별 판단을 다시 제출하세요.",
+        }
+      : input.nextState === "TIMED_RECURRENCE_CONFIRMED"
+        ? {
+            action: "EVALUATE_CURRENTLY_CLEAR",
+            instructionKo: "D+1·D+7·시간제한 근거를 함께 확인해 현재 안정 후보 여부를 평가하세요.",
+          }
+        : {
+            action: "WAIT_FOR_NEXT_REVIEW",
+            instructionKo: "다음 가능 시점에 다른 문항군에서 독립 검토를 이어가세요.",
+          };
+  const reviewOutcome: DurableReviewOutcomeV1 = {
+    reviewOutcomeId: randomUUID(),
+    version: DURABLE_REVIEW_OUTCOME_VERSION,
+    binding,
+    outcome: input.outcome,
+    reasonCodes: input.reasonCodes,
+    biggestGap: {
+      gapId: binding.sourcePrimaryGapId,
+      sourceSessionId: binding.sourceSessionId,
+      sourceConfirmedRevisionId: binding.sourceConfirmedRevisionId,
+      summaryCode: feedback.summaryCode,
+      learnerFacingSummaryKo: feedback.summaryKo,
+    },
+    nextAction,
+    failureNoteId,
+    learningGapSignalId,
+    conceptStateSignalId,
+    occurredAt: input.occurredAt,
+    containsBody: false,
+    sharedSignalsBodyless: true,
+    failureNotePrivate: true,
+  };
+  const failureNote: DurableFailureNoteV1 | null = failureNoteId
+    ? {
+        noteId: failureNoteId,
+        version: DURABLE_FAILURE_NOTE_VERSION,
+        binding,
+        outcome: input.outcome as Exclude<typeof input.outcome, "SUCCESS">,
+        reasonCodes: input.reasonCodes,
+        status: "ready",
+        visibility: "LEARNER_PRIVATE_DERIVED",
+        whyWrong: {
+          reasonCode: feedback.whyWrongCode,
+          explanationKo: feedback.whyWrongKo,
+        },
+        correctPrinciple: {
+          principleCode: feedback.principleCode,
+          explanationKo: feedback.principleKo,
+        },
+        immediateFix: {
+          action: input.aggregate.caseRecord.subject === "appraisal_practical" ? "recalculate" : "rewrite",
+          instructionKo: nextAction.instructionKo,
+        },
+        recurrence: {
+          status: input.recurringSignature.status,
+          eligibleFailureCount: input.recurringSignature.eligibleFailureCount,
+          distinctFailureFamilyCount: input.recurringSignature.distinctFailureFamilyCount,
+        },
+        nextReview: {
+          scheduledAt: scheduledNextReviewAt,
+          instructionKo: scheduledNextReviewAt
+            ? "예약된 가능 시점에 새 독립 문항으로 다시 검토하세요."
+            : "즉시 새 독립 문항으로 다시 검토할 수 있습니다.",
+        },
+        sourceMaterialInEntry: false,
+        containsAttemptBody: false,
+        createdAt: input.occurredAt,
+      }
+    : null;
+  return { reviewOutcome, learningGapSignal, conceptStateSignal, failureNote };
 }
 
 export function planDurableEvidence(input: {
@@ -462,28 +687,6 @@ export function planDurableEvidence(input: {
           occurredAt,
         }
       : null;
-  const event: Omit<DurableEvidenceEvent, "caseId" | "userId"> = {
-    eventId: randomUUID(),
-    eventType,
-    attemptId,
-    artifactId,
-    itemId: fixture.itemId,
-    itemFamilyId: fixture.itemFamilyId,
-    transferDistance: fixture.transferDistance,
-    outcome,
-    payload: {
-      prePresentation,
-      assignment,
-      qualification,
-      transferOutcome,
-      recurrenceOutcome,
-      timedAttempt,
-      reopenEvent,
-      commitmentKind: input.commitment.kind,
-      containsBody: false,
-    },
-    occurredAt,
-  };
   const nextEligible =
     outcome !== "SUCCESS"
       ? nextState === "REOPENED"
@@ -496,6 +699,40 @@ export function planDurableEvidence(input: {
           : stage === "TIMED"
             ? null
             : addDays(occurredAt, 7);
+  const successReasonCode: DurableReviewReasonCode = ({
+    D1: "d1_qualified_independent_success",
+    D7: "d7_qualified_independent_success",
+    TIMED: "timed_qualified_independent_success",
+    RECURRENCE: "recurrence_qualified_independent_success",
+  } as const)[stage];
+  const reasonCodes: readonly DurableReviewReasonCode[] =
+    outcome === "SUCCESS"
+      ? [successReasonCode]
+      : [timedOut ? "trusted_timer_timeout_preserved" : "typed_proof_rejected"];
+  const eventId = randomUUID();
+  const evidencePayloadBase = {
+    prePresentation,
+    assignment,
+    qualification,
+    transferOutcome,
+    recurrenceOutcome,
+    timedAttempt,
+    reopenEvent,
+    commitmentKind: input.commitment.kind,
+    proofAnchorId: input.commitment.anchorId,
+  } as const;
+  const signatureEvent: Omit<DurableEvidenceEvent, "caseId" | "userId"> = {
+    eventId,
+    eventType,
+    attemptId,
+    artifactId,
+    itemId: fixture.itemId,
+    itemFamilyId: fixture.itemFamilyId,
+    transferDistance: fixture.transferDistance,
+    outcome,
+    payload: { ...evidencePayloadBase, containsBody: false },
+    occurredAt,
+  };
   const provisionalCase: GapClosureCaseV1 = {
     ...input.aggregate.caseRecord,
     state: nextState,
@@ -503,17 +740,52 @@ export function planDurableEvidence(input: {
       ...input.aggregate.caseRecord.stateData,
       nextEligibleAt: nextEligible,
       activeAttempt: null,
-      resultReasonCodes:
-        outcome === "SUCCESS"
-          ? [`${stage.toLowerCase()}_qualified_independent_success`]
-          : [timedOut ? "trusted_timer_timeout_preserved" : "typed_proof_rejected"],
+      resultReasonCodes: reasonCodes,
     },
   };
-  const stateData = withSignature({
+  const signedStateData = withSignature({
     caseRecord: provisionalCase,
-    events: [...input.aggregate.events, eventWithOwner(input.aggregate, event)],
+    events: [...input.aggregate.events, eventWithOwner(input.aggregate, signatureEvent)],
     stateData: provisionalCase.stateData,
   });
+  const outputs = buildDurableReviewOutputs({
+    aggregate: input.aggregate,
+    stage,
+    attemptId,
+    artifactId,
+    itemId: fixture.itemId,
+    itemRevisionId: fixture.itemRevisionId,
+    itemFamilyId: fixture.itemFamilyId,
+    evidenceEventId: eventId,
+    proofAnchorId: input.commitment.anchorId,
+    outcome,
+    reasonCodes,
+    nextState,
+    nextEligibleAt: nextEligible,
+    recurringSignature: signedStateData.recurringSignature,
+    occurredAt,
+  });
+  const event: Omit<DurableEvidenceEvent, "caseId" | "userId"> = {
+    ...signatureEvent,
+    payload: {
+      ...evidencePayloadBase,
+      reviewOutput: {
+        reviewOutcomeId: outputs.reviewOutcome.reviewOutcomeId,
+        learningGapSignal: outputs.learningGapSignal,
+        conceptStateSignal: outputs.conceptStateSignal,
+        failureNoteId: outputs.failureNote?.noteId ?? null,
+        containsFailureNoteBody: false,
+      },
+      containsBody: false,
+    },
+  };
+  const stateData: DurableLearningStateData = {
+    ...signedStateData,
+    latestReviewOutcome: outputs.reviewOutcome,
+    failureNotes: outputs.failureNote
+      ? [...signedStateData.failureNotes, outputs.failureNote]
+      : signedStateData.failureNotes,
+  };
   return {
     expectedState: priorState,
     nextState,
@@ -893,7 +1165,12 @@ export function planFullDayProposal(input: {
     stateData: {
       ...input.aggregate.caseRecord.stateData,
       latestPlan: plan,
-      resultReasonCodes: ["deterministic_evidence_priority_plan_proposed"],
+      plannerStatus: {
+        latestPlanId: plan.planId,
+        decision: plan.decision,
+        reasonCodes: ["deterministic_evidence_priority_plan_proposed"],
+        updatedAt: plan.proposedAt,
+      },
     },
     artifact: null,
     event,
@@ -978,7 +1255,12 @@ export function planFullDayDecision(input: {
         ...input.aggregate.caseRecord.stateData.planDecisionHistory,
         { decision: input.decision, reason: input.reason, occurredAt },
       ],
-      resultReasonCodes: ["learner_plan_decision_recorded_without_mastery_change"],
+      plannerStatus: {
+        latestPlanId: plan.planId,
+        decision: plan.decision,
+        reasonCodes: ["learner_plan_decision_recorded_without_mastery_change"],
+        updatedAt: occurredAt,
+      },
     },
     artifact: null,
     event,

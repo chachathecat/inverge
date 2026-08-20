@@ -244,6 +244,124 @@ async function verifyDefaultOff(input, container) {
   if (before !== after) throw new Error("WCV-C3 default-off request wrote state");
 }
 
+function verifyReviewOutputRollback(container) {
+  sql(container, `do $wcv_c3_atomic$
+declare
+  candidate record;
+  before_artifacts bigint;
+  before_events bigint;
+  before_version bigint;
+  source_event record;
+  source_artifact record;
+  attempt_id uuid := pg_catalog.gen_random_uuid();
+  artifact_id uuid := pg_catalog.gen_random_uuid();
+begin
+  select id, user_id, state, record_version, state_data
+  into candidate
+  from public.wcv_c3_gap_closure_cases
+  order by created_at
+  limit 1;
+  select count(*) into before_artifacts
+  from public.wcv_c3_private_attempt_artifacts
+  where case_id = candidate.id and user_id = candidate.user_id;
+  select count(*) into before_events
+  from public.wcv_c3_evidence_events
+  where case_id = candidate.id and user_id = candidate.user_id;
+  before_version := candidate.record_version;
+
+  begin
+    perform * from public.wcv_c3_apply_transition_v1(
+      candidate.id,
+      candidate.user_id,
+      pg_catalog.gen_random_uuid(),
+      candidate.record_version,
+      candidate.state,
+      candidate.state,
+      candidate.state_data,
+      pg_catalog.jsonb_build_object(
+        'artifactId', artifact_id,
+        'attemptId', attempt_id,
+        'stage', 'D1',
+        'body', 'atomic-output-failure',
+        'createdAt', pg_catalog.statement_timestamp()
+      ),
+      pg_catalog.jsonb_build_object(
+        'eventId', pg_catalog.gen_random_uuid(),
+        'eventType', 'INDEPENDENT_FAILURE_RECORDED',
+        'attemptId', attempt_id,
+        'artifactId', artifact_id,
+        'itemId', 'atomic-output-failure-item',
+        'itemFamilyId', 'atomic-output-failure-family',
+        'transferDistance', 'NEAR_TRANSFER',
+        'outcome', 'FAILURE',
+        'payload', pg_catalog.jsonb_build_object('containsBody', false),
+        'occurredAt', pg_catalog.statement_timestamp()
+      )
+    );
+    raise exception 'WCV_C3_ATOMIC_FAILURE_INJECTION_DID_NOT_FAIL';
+  exception when others then
+    if sqlerrm not like '%WCV_C3_REQUIRED_REVIEW_OUTPUT_INVALID%' then
+      raise;
+    end if;
+  end;
+
+  select * into source_event
+  from public.wcv_c3_evidence_events
+  where id = (
+    candidate.state_data -> 'latestReviewOutcome' -> 'binding' ->> 'evidenceEventId'
+  )::uuid;
+  select * into source_artifact
+  from public.wcv_c3_private_attempt_artifacts
+  where id = (
+    candidate.state_data -> 'latestReviewOutcome' -> 'binding' ->> 'privateArtifactId'
+  )::uuid;
+
+  begin
+    perform * from public.wcv_c3_apply_transition_v1(
+      candidate.id,
+      candidate.user_id,
+      pg_catalog.gen_random_uuid(),
+      candidate.record_version,
+      candidate.state,
+      candidate.state,
+      candidate.state_data,
+      pg_catalog.jsonb_build_object(
+        'artifactId', source_artifact.id,
+        'attemptId', source_artifact.attempt_id,
+        'stage', source_artifact.stage,
+        'body', source_artifact.body,
+        'createdAt', source_artifact.created_at
+      ),
+      pg_catalog.jsonb_build_object(
+        'eventId', source_event.id,
+        'eventType', source_event.event_type,
+        'attemptId', source_event.attempt_id,
+        'artifactId', source_event.artifact_id,
+        'itemId', source_event.item_id,
+        'itemFamilyId', source_event.item_family_id,
+        'transferDistance', source_event.transfer_distance,
+        'outcome', source_event.outcome,
+        'payload', source_event.payload,
+        'occurredAt', source_event.occurred_at
+      )
+    );
+    raise exception 'WCV_C3_BINDING_MISMATCH_INJECTION_DID_NOT_FAIL';
+  exception when others then
+    if sqlerrm not like '%WCV_C3_REVIEW_SOURCE_BINDING_MISMATCH%' then
+      raise;
+    end if;
+  end;
+
+  if (select count(*) from public.wcv_c3_private_attempt_artifacts where case_id = candidate.id and user_id = candidate.user_id) <> before_artifacts
+    or (select count(*) from public.wcv_c3_evidence_events where case_id = candidate.id and user_id = candidate.user_id) <> before_events
+    or (select record_version from public.wcv_c3_gap_closure_cases where id = candidate.id and user_id = candidate.user_id) <> before_version
+  then
+    raise exception 'WCV_C3_ATOMIC_OUTPUT_FAILURE_LEFT_PARTIAL_STATE';
+  end if;
+end
+$wcv_c3_atomic$;`, "atomic review-output rollback");
+}
+
 async function runRuntime() {
   assertBoundedWorkdir();
   const headSha = process.env.PR_HEAD_SHA ?? "";
@@ -295,6 +413,7 @@ async function runRuntime() {
 
     server = await startNext({ ...input, enabled: true });
     runBrowser(server, input);
+    verifyReviewOutputRollback(container);
     const transient = JSON.parse(fs.readFileSync(transientPath, "utf8"));
     if (!/^[0-9a-f-]{36}$/.test(transient.recoveryCaseId) || transient.counts.completedSubjects !== 3) {
       throw new Error("transient browser evidence is incomplete");
@@ -330,8 +449,16 @@ async function runRuntime() {
       (select count(*) from public.wcv_c3_gap_closure_cases where state='REOPENED'),
       (select count(*) from public.wcv_c3_evidence_events where payload::text ~* '"(rawBody|learnerText|answerBody|ocrBody|noteBody|credential|token|secret|password)"[[:space:]]*:'),
       (select count(*) from public.wcv_c3_evidence_events where payload->>'containsBody' is distinct from 'false'),
-      (select count(*) from public.wcv_c3_private_attempt_artifacts where immutable is not true));`, "persisted C3 invariants");
-    if (invariants !== "2|7|1|1|1|0|0|0") throw new Error("persisted WCV-C3 runtime invariants failed");
+      (select count(*) from public.wcv_c3_private_attempt_artifacts where immutable is not true),
+      (select count(*) from public.wcv_c3_evidence_events
+        where event_type in ('D1_REPRODUCED','D7_TRANSFER_OBSERVED','TIMED_RECURRENCE_CONFIRMED','RECURRENCE_RECONFIRMED','INDEPENDENT_FAILURE_RECORDED')
+          and pg_catalog.jsonb_typeof(payload->'reviewOutput') is distinct from 'object'),
+      (select count(*) from public.wcv_c3_evidence_events
+        where payload::text ~* '"(explanationKo|instructionKo|learnerFacingSummaryKo)"[[:space:]]*:'),
+      (select coalesce(sum(pg_catalog.jsonb_array_length(state_data->'failureNotes')), 0) from public.wcv_c3_gap_closure_cases),
+      (select count(*) from public.wcv_c3_gap_closure_cases where pg_catalog.jsonb_typeof(state_data->'latestReviewOutcome') = 'object'));
+      `, "persisted C3 invariants");
+    if (invariants !== "2|7|1|1|1|0|0|0|0|0|1|2") throw new Error("persisted WCV-C3 runtime invariants failed");
 
     const evidence = {
       schemaVersion: "wcv_c3_durable_learning_runtime_evidence.v1",
@@ -339,7 +466,7 @@ async function runRuntime() {
       runId: process.env.GITHUB_RUN_ID ?? "local",
       runAttempt: process.env.GITHUB_RUN_ATTEMPT ?? "1",
       migrations: migrations.map((file) => ({ identity: path.basename(file, ".sql"), sha256: crypto.createHash("sha256").update(fs.readFileSync(file)).digest("hex") })),
-      assertions: ["exact_head", "two_fresh_authenticated_identities", "default_off_before_parse", "forced_rls_service_only", "stable_transactional_aggregate_read", "migration_replay", "three_subject_browser_chain", "responsive_390_768_1440", "keyboard_and_axe", "private_body_projection_separation", "cross_user_denial", "export_delete", "process_restart_restore", "real_time_waiting_action", "waiting_plan_substitutes_eligible_audit", "c3_only_navigation_kill_switch", "reopen_after_later_failure", "bounded_daily_plan"],
+      assertions: ["exact_head", "two_fresh_authenticated_identities", "default_off_before_parse", "forced_rls_service_only", "stable_transactional_aggregate_read", "migration_replay", "three_subject_browser_chain", "responsive_390_768_1440", "keyboard_and_axe", "private_body_projection_separation", "review_outputs_all_subjects", "bodyless_learning_gap_and_concept_signals", "source_bound_private_failure_note", "atomic_review_output_rollback", "source_binding_mismatch_rollback", "idempotent_review_output_replay", "planner_review_state_separation", "cross_user_denial", "export_delete", "process_restart_restore", "second_browser_restore", "real_time_waiting_action", "waiting_plan_substitutes_eligible_audit", "c3_only_navigation_kill_switch", "reopen_after_later_failure", "bounded_daily_plan"],
       counts: { completedSubjects: 3, persistedCases: 2, privateArtifacts: 7, deletionReceipts: 1 },
       remoteSupabaseUsed: false,
       repositorySecretsUsed: false,

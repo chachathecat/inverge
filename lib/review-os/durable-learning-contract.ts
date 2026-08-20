@@ -8,6 +8,14 @@ export const DURABLE_LEARNING_PLANNER_VERSION =
   "dabangil.wcv_c3.deterministic_full_day.v1" as const;
 export const DURABLE_LEARNING_FIXTURE_VERSION =
   "dabangil.wcv_c3.rights_safe_transfer_fixtures.2026-08-17.v2" as const;
+export const DURABLE_REVIEW_OUTCOME_VERSION =
+  "dabangil.wcv_c3.durable_review_outcome.v1" as const;
+export const DURABLE_LEARNING_GAP_SIGNAL_VERSION =
+  "dabangil.wcv_c3.safe_learning_gap_signal.v1" as const;
+export const DURABLE_FAILURE_NOTE_VERSION =
+  "s216.error_notebook_gap_taxonomy.v1" as const;
+export const DURABLE_CONCEPT_STATE_SIGNAL_VERSION =
+  "s217.personal_core_concept_graph.v1" as const;
 export const DURABLE_LEARNING_FLAG =
   "WCV_C3_DURABLE_LEARNING_ENABLED" as const;
 export const DURABLE_LEARNING_OWNER_EMAILS =
@@ -253,6 +261,143 @@ export type DurablePrivateAttemptArtifact = Readonly<{
   createdAt: string;
 }>;
 
+export type DurableReviewSourceBindingV1 = Readonly<{
+  caseId: string;
+  caseRecordVersion: number;
+  userId: string;
+  subject: TrustedRepairSubject;
+  sourceSessionId: string;
+  sourceSessionRecordVersion: number;
+  sourceConfirmedRevisionId: string;
+  sourcePrimaryGapId: string;
+  stage: DurablePrivateAttemptArtifact["stage"];
+  attemptId: string;
+  privateArtifactId: string;
+  itemId: string;
+  itemRevisionId: string;
+  itemFamilyId: string;
+  evidenceEventId: string;
+  proofAnchorId: string;
+  contractVersion: typeof DURABLE_LEARNING_CONTRACT_VERSION;
+  policyVersion: typeof DURABLE_LEARNING_POLICY_VERSION;
+  validatorVersion: string;
+  sourceVersion: string;
+  fixtureVersion: string;
+}>;
+
+export const DURABLE_REVIEW_REASON_CODES = [
+  "d1_qualified_independent_success",
+  "d7_qualified_independent_success",
+  "timed_qualified_independent_success",
+  "recurrence_qualified_independent_success",
+  "trusted_timer_timeout_preserved",
+  "typed_proof_rejected",
+] as const;
+
+export type DurableReviewReasonCode = (typeof DURABLE_REVIEW_REASON_CODES)[number];
+
+export type DurableLearningGapSignalV1 = Readonly<{
+  signalId: string;
+  version: typeof DURABLE_LEARNING_GAP_SIGNAL_VERSION;
+  binding: DurableReviewSourceBindingV1;
+  outcome: IndependentAttemptQualificationV1["outcome"];
+  reasonCodes: readonly DurableReviewReasonCode[];
+  gapCode: "C2_PRIMARY_GAP";
+  evidenceContributionOnly: true;
+  createsVerified: false;
+  createsMastery: false;
+  createsCurrentlyClear: false;
+  createsReadiness: false;
+  changesScore: false;
+  containsBody: false;
+  reconstructive: false;
+  failureNoteBodyIncluded: false;
+  occurredAt: string;
+}>;
+
+export type DurableConceptStateEvidenceSignalV1 = Readonly<{
+  signalId: string;
+  version: typeof DURABLE_CONCEPT_STATE_SIGNAL_VERSION;
+  binding: DurableReviewSourceBindingV1;
+  learningGapSignalId: string;
+  failureNoteId: string | null;
+  candidateState: "wrong" | "recurring" | "recovering";
+  evidenceKind: "FAILURE_EVIDENCE" | "RECOVERY_EVIDENCE";
+  evidenceContributionOnly: true;
+  canonicalConceptStateChanged: false;
+  createsVerified: false;
+  createsMastery: false;
+  createsCurrentlyClear: false;
+  createsReadiness: false;
+  changesScore: false;
+  containsBody: false;
+  reconstructive: false;
+  failureNoteBodyIncluded: false;
+  occurredAt: string;
+}>;
+
+export type DurableFailureNoteV1 = Readonly<{
+  noteId: string;
+  version: typeof DURABLE_FAILURE_NOTE_VERSION;
+  binding: DurableReviewSourceBindingV1;
+  outcome: Exclude<IndependentAttemptQualificationV1["outcome"], "SUCCESS">;
+  reasonCodes: readonly DurableReviewReasonCode[];
+  status: "ready";
+  visibility: "LEARNER_PRIVATE_DERIVED";
+  whyWrong: Readonly<{ reasonCode: string; explanationKo: string }>;
+  correctPrinciple: Readonly<{ principleCode: string; explanationKo: string }>;
+  immediateFix: Readonly<{
+    action: "retry" | "rewrite" | "recalculate";
+    instructionKo: string;
+  }>;
+  recurrence: Readonly<{
+    status: RecurringDeductionStatus;
+    eligibleFailureCount: number;
+    distinctFailureFamilyCount: number;
+  }>;
+  nextReview: Readonly<{
+    scheduledAt: string | null;
+    instructionKo: string;
+  }>;
+  sourceMaterialInEntry: false;
+  containsAttemptBody: false;
+  createdAt: string;
+}>;
+
+export type DurableReviewOutcomeV1 = Readonly<{
+  reviewOutcomeId: string;
+  version: typeof DURABLE_REVIEW_OUTCOME_VERSION;
+  binding: DurableReviewSourceBindingV1;
+  outcome: IndependentAttemptQualificationV1["outcome"];
+  reasonCodes: readonly DurableReviewReasonCode[];
+  biggestGap: Readonly<{
+    gapId: string;
+    sourceSessionId: string;
+    sourceConfirmedRevisionId: string;
+    summaryCode: string;
+    learnerFacingSummaryKo: string;
+  }>;
+  nextAction: Readonly<{
+    action: "PREPARE_INDEPENDENT_RETRY" | "WAIT_FOR_NEXT_REVIEW" | "EVALUATE_CURRENTLY_CLEAR";
+    instructionKo: string;
+  }>;
+  failureNoteId: string | null;
+  learningGapSignalId: string;
+  conceptStateSignalId: string;
+  occurredAt: string;
+  containsBody: false;
+  sharedSignalsBodyless: true;
+  failureNotePrivate: true;
+}>;
+
+export type DurableReviewOutputProjectionV1 = Readonly<{
+  reviewOutcomeId: string;
+  learningGapSignal: DurableLearningGapSignalV1;
+  conceptStateSignal: DurableConceptStateEvidenceSignalV1;
+  failureNoteId: string | null;
+  containsFailureNoteBody: false;
+}>;
+
 export type DurableEvidencePayloadV1 = Readonly<{
   prePresentation: PrePresentationEligibilitySnapshotV1;
   assignment: VariantAssignmentV1;
@@ -262,6 +407,8 @@ export type DurableEvidencePayloadV1 = Readonly<{
   timedAttempt: TimedFullSolutionAttemptV1 | null;
   reopenEvent: EvidenceReopenEventV1 | null;
   commitmentKind: DurableSubjectCommitmentV1["kind"];
+  proofAnchorId: string;
+  reviewOutput: DurableReviewOutputProjectionV1;
   containsBody: false;
 }>;
 
@@ -363,6 +510,14 @@ export type DurableLearningStateData = Readonly<{
     reason: DailyPlanReasonCode;
     occurredAt: string;
   }>[];
+  latestReviewOutcome: DurableReviewOutcomeV1 | null;
+  failureNotes: readonly DurableFailureNoteV1[];
+  plannerStatus: Readonly<{
+    latestPlanId: string | null;
+    decision: DailyPlanDecision | null;
+    reasonCodes: readonly string[];
+    updatedAt: string | null;
+  }>;
   resultReasonCodes: readonly string[];
 }>;
 

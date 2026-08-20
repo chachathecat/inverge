@@ -3,6 +3,7 @@ import { expect, test, type Browser, type BrowserContext, type Page } from "@pla
 import { randomUUID } from "node:crypto";
 import { writeFileSync } from "node:fs";
 import type { DurableLearningFixtureStage } from "../../lib/review-os/durable-learning-fixtures";
+import type { DurableReviewOutputProjectionV1 } from "../../lib/review-os/durable-learning-contract";
 import type { DurableLearningView } from "../../lib/review-os/durable-learning-server";
 import type { TrustedRepairView } from "../../lib/review-os/trusted-repair-server";
 
@@ -62,6 +63,44 @@ async function c3Command(context: BrowserContext, action: string, view: DurableL
   const body = await response.json();
   expect(response.status(), `${action}:${body?.error ?? "unknown"}`).toBe(200);
   return body.view as DurableLearningView;
+}
+
+function assertRuntimeReviewOutputs(view: DurableLearningView, expectedOutcome: "SUCCESS" | "FAILURE" | "TIMEOUT") {
+  const review = view.latestReviewOutcome;
+  expect(review).not.toBeNull();
+  const event = view.ledger.events.find(
+    (candidate) => candidate.eventId === review?.binding.evidenceEventId,
+  );
+  expect(event?.outcome).toBe(expectedOutcome);
+  const output = event?.payload.reviewOutput as DurableReviewOutputProjectionV1;
+  expect(output.reviewOutcomeId).toBe(review?.reviewOutcomeId);
+  expect(output.learningGapSignal.signalId).toBe(review?.learningGapSignalId);
+  expect(output.conceptStateSignal.signalId).toBe(review?.conceptStateSignalId);
+  expect(output.failureNoteId).toBe(review?.failureNoteId);
+  expect(output.containsFailureNoteBody).toBe(false);
+  for (const signal of [output.learningGapSignal, output.conceptStateSignal]) {
+    expect(signal.binding).toEqual(review?.binding);
+    expect(signal.evidenceContributionOnly).toBe(true);
+    expect(signal.createsVerified).toBe(false);
+    expect(signal.createsMastery).toBe(false);
+    expect(signal.createsCurrentlyClear).toBe(false);
+    expect(signal.createsReadiness).toBe(false);
+    expect(signal.changesScore).toBe(false);
+    expect(signal.containsBody).toBe(false);
+    expect(signal.reconstructive).toBe(false);
+    expect(signal.failureNoteBodyIncluded).toBe(false);
+  }
+  expect(output.conceptStateSignal.canonicalConceptStateChanged).toBe(false);
+  expect(JSON.stringify(output)).not.toMatch(/private-|비공개|후속 독립 실패|"(?:rawBody|answerBody|ocrBody|noteBody)"/i);
+  if (expectedOutcome === "SUCCESS") {
+    expect(view.latestFailureNote).toBeNull();
+    expect(review?.failureNoteId).toBeNull();
+  } else {
+    expect(view.latestFailureNote?.noteId).toBe(review?.failureNoteId);
+    expect(view.latestFailureNote?.binding).toEqual(review?.binding);
+    expect(view.latestFailureNote?.sourceMaterialInEntry).toBe(false);
+    expect(view.latestFailureNote?.containsAttemptBody).toBe(false);
+  }
 }
 
 function practiceClaim(view: TrustedRepairView) {
@@ -230,13 +269,14 @@ async function completeC3Ui(page: Page, sourceSessionId: string, subject: Subjec
     const payload = await response.json();
     expect(response.status(), `${action}:${payload?.error ?? "unknown"}`).toBe(200);
     expect(payload?.ok, `${action}:${payload?.error ?? "unknown"}`).toBe(true);
+    return payload;
   };
   const activate = async (action: string, label: string | RegExp) => {
     const button = page.locator("[data-primary-action]");
     await expect(button).toHaveText(label);
     const responsePromise = responseFor(action);
     if (keyboardOnly) { await button.focus(); await page.keyboard.press("Enter"); } else await button.click();
-    await requireSuccessfulResponse(action, responsePromise);
+    return requireSuccessfulResponse(action, responsePromise);
   };
   await activate("start", "검증된 C2 복구에서 시작");
   for (const { stage, state } of [
@@ -271,7 +311,8 @@ async function completeC3Ui(page: Page, sourceSessionId: string, subject: Subjec
       await expect(page.getByLabel("부호")).toHaveValue("POSITIVE");
       await expect(page.getByLabel("반올림")).toHaveValue("NONE");
     }
-    await activate("record_evidence", "독립 시도 제출 및 검증");
+    const submitted = await activate("record_evidence", "독립 시도 제출 및 검증");
+    assertRuntimeReviewOutputs(submitted.view as DurableLearningView, "SUCCESS");
     await expect(page.getByText(state === "D1_REPRODUCED" ? /D\+1 독립 재현/ : state === "D7_TRANSFER_OBSERVED" ? /D\+7 전이 확인/ : /시간제한 재발 검사 확인/)).toBeVisible();
   }
   await activate("evaluate_currently_clear", /현재 안정 확인/);
@@ -313,8 +354,61 @@ test("WCV-C3 three-subject browser, Postgres, plan, privacy and reopen chain", a
   expect(practice.latestPlan.decision).toBe("EDITED");
   expect(practice.case.state).toBe("CURRENTLY_CLEAR");
   practice = await c3Command(owner, "prepare_attempt", practice);
-  practice = await c3Command(owner, "record_evidence", practice, { body: "후속 독립 실패", learnerResponse: c3LearnerResponse("appraisal_practical", "RECURRENCE", true) });
+  const failureCommandId = randomUUID();
+  const failureRequest = {
+    action: "record_evidence",
+    caseId: practice.case.caseId,
+    expectedVersion: practice.case.recordVersion,
+    commandId: failureCommandId,
+    body: "후속 독립 실패",
+    learnerResponse: c3LearnerResponse("appraisal_practical", "RECURRENCE", true),
+  };
+  const firstFailureResponse = await owner.request.post("/api/review-os/durable-learning", {
+    data: failureRequest,
+  });
+  expect(firstFailureResponse.status()).toBe(200);
+  practice = (await firstFailureResponse.json()).view as DurableLearningView;
+  const replayedFailureResponse = await owner.request.post("/api/review-os/durable-learning", {
+    data: failureRequest,
+  });
+  expect(replayedFailureResponse.status()).toBe(200);
+  const replayedFailure = (await replayedFailureResponse.json()).view as DurableLearningView;
+  expect(replayedFailure.case.recordVersion).toBe(practice.case.recordVersion);
+  expect(replayedFailure.ledger.artifacts).toHaveLength(practice.ledger.artifacts.length);
+  expect(replayedFailure.ledger.events).toHaveLength(practice.ledger.events.length);
+  expect(replayedFailure.latestReviewOutcome).toEqual(practice.latestReviewOutcome);
+  expect(replayedFailure.latestFailureNote).toEqual(practice.latestFailureNote);
   expect(practice.case.state).toBe("REOPENED");
+  assertRuntimeReviewOutputs(practice, "FAILURE");
+  const preservedReview = structuredClone(practice.latestReviewOutcome);
+  const preservedFailureNote = structuredClone(practice.latestFailureNote);
+  for (const decision of ["ACCEPTED", "EDITED", "REJECTED"] as const) {
+    practice = await c3Command(owner, "build_plan", practice, {
+      availableMinutes: 90,
+      recoveryMode: "NORMAL",
+      fixedCommitments: [],
+    });
+    expect(practice.latestReviewOutcome).toEqual(preservedReview);
+    expect(practice.latestFailureNote).toEqual(preservedFailureNote);
+    practice = await c3Command(owner, "decide_plan", practice, {
+      decision,
+      reason:
+        decision === "ACCEPTED"
+          ? "accepted_as_proposed"
+          : decision === "EDITED"
+            ? "available_minutes_changed"
+            : "deferred_by_learner",
+      ...(decision === "EDITED"
+        ? {
+            availableMinutes: 60,
+            recoveryMode: "MINIMUM_MAINTENANCE",
+            fixedCommitments: [],
+          }
+        : {}),
+    });
+    expect(practice.latestReviewOutcome).toEqual(preservedReview);
+    expect(practice.latestFailureNote).toEqual(preservedFailureNote);
+  }
   const feedbackPage = await owner.newPage();
   await feedbackPage.goto(`/app/durable-learning?caseId=${practice.case.caseId}`);
   const resultNote = feedbackPage.locator("[data-wcv-c3-result-note]");
@@ -326,20 +420,55 @@ test("WCV-C3 three-subject browser, Postgres, plan, privacy and reopen chain", a
   await expect(resultNote).toContainText("다음 검토");
   await feedbackPage.close();
 
+  const secondOwner = await contextFor(browser);
+  const secondBrowserResponse = await secondOwner.request.get(
+    `/api/review-os/durable-learning?caseId=${practice.case.caseId}`,
+  );
+  expect(secondBrowserResponse.status()).toBe(200);
+  const secondBrowserView = (await secondBrowserResponse.json()).view as DurableLearningView;
+  expect(secondBrowserView.latestReviewOutcome).toEqual(preservedReview);
+  expect(secondBrowserView.latestFailureNote).toEqual(preservedFailureNote);
+  await secondOwner.close();
+
   const foreign = await contextFor(browser, { width: 390, height: 844 }, emailB, passwordB);
   const denied = await foreign.request.get(`/api/review-os/durable-learning?caseId=${caseIds[1]}`);
   expect(denied.status()).toBe(404);
   await foreign.close();
 
+  const practiceExportResponse = await owner.request.post("/api/review-os/durable-learning", {
+    data: {
+      action: "export",
+      caseId: practice.case.caseId,
+      expectedVersion: practice.case.recordVersion,
+    },
+  });
+  expect(practiceExportResponse.status()).toBe(200);
+  const practiceExport = (await practiceExportResponse.json()).exportBundle;
+  expect(practiceExport.caseRecord.stateData.latestReviewOutcome).toEqual(preservedReview);
+  expect(practiceExport.caseRecord.stateData.failureNotes).toContainEqual(preservedFailureNote);
+  expect(
+    practiceExport.evidenceEvents.find(
+      (event: { id?: string; eventId?: string }) =>
+        (event.id ?? event.eventId) === preservedReview?.binding.evidenceEventId,
+    )?.payload.reviewOutput.containsFailureNoteBody,
+  ).toBe(false);
+
   const exportResponse = await owner.request.post("/api/review-os/durable-learning", { data: { action: "export", caseId: caseIds[2], expectedVersion: 8 } });
   expect(exportResponse.status()).toBe(200);
   expect((await exportResponse.json()).exportBundle.privateArtifacts).toHaveLength(3);
-  const law = await (await owner.request.get(`/api/review-os/durable-learning?caseId=${caseIds[2]}`)).json();
-  const deleted = await owner.request.post("/api/review-os/durable-learning", { data: { action: "delete", caseId: caseIds[2], expectedVersion: law.view.case.recordVersion, commandId: randomUUID() } });
+  const lawBody = await (await owner.request.get(`/api/review-os/durable-learning?caseId=${caseIds[2]}`)).json();
+  let law = lawBody.view as DurableLearningView;
+  law = await c3Command(owner, "prepare_attempt", law);
+  law = await c3Command(owner, "record_evidence", law, {
+    body: "비공개 삭제 경계 법규 실패",
+    learnerResponse: c3LearnerResponse("appraisal_law", "RECURRENCE", true),
+  });
+  assertRuntimeReviewOutputs(law, "FAILURE");
+  const deleted = await owner.request.post("/api/review-os/durable-learning", { data: { action: "delete", caseId: caseIds[2], expectedVersion: law.case.recordVersion, commandId: randomUUID() } });
   expect(deleted.status()).toBe(200);
   expect((await owner.request.get(`/api/review-os/durable-learning?caseId=${caseIds[2]}`)).status()).toBe(404);
 
-  if (transientEvidencePath) writeFileSync(transientEvidencePath, `${JSON.stringify({ recoveryCaseId: caseIds[1], counts: { completedSubjects: 3, deletedCases: 1, reopenedCases: 1 } })}\n`, { mode: 0o600 });
+  if (transientEvidencePath) writeFileSync(transientEvidencePath, `${JSON.stringify({ recoveryCaseId: practice.case.caseId, counts: { completedSubjects: 3, deletedCases: 1, reopenedCases: 1 } })}\n`, { mode: 0o600 });
   await owner.close();
 });
 
@@ -350,8 +479,11 @@ test("WCV-C3 process restart restores exact private case", async ({ browser }) =
   const response = await owner.request.get(`/api/review-os/durable-learning?caseId=${recoveryCaseId}`);
   expect(response.status()).toBe(200);
   const body = await response.json();
-  expect(body.view.case.state).toBe("CURRENTLY_CLEAR");
-  expect(body.view.ledger.artifacts).toHaveLength(3);
+  expect(body.view.case.state).toBe("REOPENED");
+  expect(body.view.ledger.artifacts).toHaveLength(4);
+  expect(body.view.latestReviewOutcome?.failureNoteId).toBe(body.view.latestFailureNote?.noteId);
+  expect(body.view.latestReviewOutcome?.nextAction.action).toBe("PREPARE_INDEPENDENT_RETRY");
+  assertRuntimeReviewOutputs(body.view as DurableLearningView, "FAILURE");
   expect((body.view as DurableLearningView).ledger.events.every((event) => event.payload.containsBody === false)).toBe(true);
   await owner.close();
 });

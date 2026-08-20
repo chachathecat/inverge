@@ -21,6 +21,12 @@ nonqualifying Draft PR #660.
 - `CURRENTLY_CLEAR` is reopenable, not permanent mastery. A later qualifying independent failure produces `REOPENED`.
 - A successful untimed follow-up is recorded as `RECURRENCE_RECONFIRMED`, never as timed evidence.
 - Private answer bodies remain in the private artifact table. Projection events contain `containsBody: false` and no answer body.
+- Every terminal D1, D7, timed, or recurrence submission atomically records a closed latest review outcome plus bodyless safe learning-gap and concept-state evidence signals. These signals are evidence contributions only and cannot create verified, mastery, currently-clear, readiness, or score effects.
+- Every non-success terminal submission records exactly one learner-private, source-bound `s216.error_notebook_gap_taxonomy.v1` failure note with why-wrong, correct-principle, immediate-fix, recurrence, and next-review fields. Success records no failure note.
+- The pre-existing S216 builder depends on the older S206/released-review contract, while the S217 graph mutates through a separate RPC; neither can join the WCV-C3 transition atomically. WCV-C3 therefore owns the smallest closed compatible note/signal projections, preserves their semantic versions, and explicitly leaves canonical S217 concept state unchanged rather than creating a second weakness, graph, or mastery authority.
+- The review outcome binds the exact source session and confirmed revision, source primary gap, case and review-time record version, user, subject, attempt, private artifact, stage, item/revision/family, evidence event, proof anchor, policy, validator, contract, fixture, and source versions.
+- Review feedback is separate from planner status. Plan proposal, accept, edit, reject, automatic eligibility refresh, reload, export, and process/browser restore cannot replace the latest review outcome, failure note, biggest gap, or next action.
+- Artifact, evidence event, case transition, recurring signature, review outcome, two safe signals, and any required failure note share the existing fail-closed `wcv_c3_apply_transition_v1` transaction. A missing or mismatched downstream output aborts the whole transition; command receipts and CAS prevent replay and duplicate-tab duplication.
 - Today/Full-Day accepts 30–720 available minutes, preserves fixed commitments, emits at most three CoreOutcomes, supports minimum maintenance, and records accept/edit/reject without changing mastery. `EDITED` atomically rebuilds from the learner-visible availability, recovery mode and fixed commitments before recording the decision.
 
 ## Required automated evidence
@@ -36,7 +42,7 @@ npm.cmd run build
 git diff --check
 ```
 
-The exact-head remote acceptance lane must additionally exercise 390, 768 and 1440 pixel journeys for all three subjects, cross-user denial, restart restoration, export/delete, a later-failure reopen, and deterministic plan fixtures without remote Supabase or repository secrets.
+The exact-head remote acceptance lane must additionally exercise 390, 768 and 1440 pixel journeys for all three subjects, cross-user denial, restart restoration, export/delete, a later-failure reopen, preservation of failed-review feedback across plan proposal/decisions and a second browser, required output source bindings, and deterministic plan fixtures without remote Supabase or repository secrets.
 The serial three-subject browser journey remains bounded to ten minutes per Playwright test. A failed journey emits only a redacted bounded diagnostic tail; generated learner-body text, synthetic credentials and tokens are removed before GitHub logging.
 
 ## Activation and rollback
