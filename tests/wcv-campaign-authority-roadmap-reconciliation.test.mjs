@@ -246,16 +246,16 @@ test("keeps WCV-C2 complete and selects WCV-C3 under the same campaign graph", a
   assert.equal(roadmap.program.soleNextImplementationItem, "WCV-C3");
   assert.equal(roadmap.program.soleNextImplementationCampaign, "C3");
   assert.equal(roadmap.program.soleNextImplementationLeadIssue, 706);
-  assert.equal(roadmap.program.soleNextImplementationTrackerIssue, 706);
-  assert.equal(roadmap.program.soleNextReplacementStage, null);
-  assert.equal(roadmap.program.soleNextReplacementStageIssue, null);
-  assert.equal(roadmap.program.structuralRecoveryTrackerIssue, 717);
+  assert.equal(roadmap.program.soleNextImplementationTrackerIssue, 781);
+  assert.equal(roadmap.program.soleNextReplacementStage, "C3R-P");
+  assert.equal(roadmap.program.soleNextReplacementStageIssue, 706);
+  assert.equal(roadmap.program.structuralRecoveryTrackerIssue, 781);
   assert.equal(roadmap.program.wcvC2Complete, true);
   assert.equal(roadmap.program.replacementStageAutomaticStartAllowed, false);
   assert.equal(c3.leadIssue, 706);
   assert.deepEqual(c3.includedIssues, [706, 707, 708]);
-  assert.equal(c3.state, "authorized_unstarted_after_validated_terminal_c2r_c_l_receipt");
-  assert.equal(c3.githubNativeAutomaticContinuationAllowed, true);
+  assert.equal(c3.state, "structural_recovery_c3r_p_authorized_unstarted");
+  assert.equal(c3.githubNativeAutomaticContinuationAllowed, false);
   assert.equal(c2.leadIssue, 717);
   assert.deepEqual(c2.includedIssues, [702, 714, 703, 704, 705]);
   assert.equal(
@@ -267,11 +267,15 @@ test("keeps WCV-C2 complete and selects WCV-C3 under the same campaign graph", a
   assert.equal(c2.automaticStartAllowed, false);
   assert.equal(
     unified.wcvCampaignOverlay.soleNextReplacementStage,
-    unified.wcvCampaignOverlay.c2StructuralRecovery.authorityGraph.currentReplacementStageId,
+    unified.wcvCampaignOverlay.c3StructuralRecovery.currentReplacementStage,
   );
   assert.equal(
     unified.wcvCampaignOverlay.soleNextReplacementStageIssue,
-    unified.wcvCampaignOverlay.c2StructuralRecovery.authorityGraph.currentReplacementStageIssue,
+    unified.wcvCampaignOverlay.c3StructuralRecovery.currentReplacementStageIssue,
+  );
+  assert.equal(
+    unified.wcvCampaignOverlay.c2StructuralRecovery.authorityGraph.currentReplacementStageId,
+    null,
   );
   assert.deepEqual(unified.wcvCampaignOverlay.laterCampaignsQueued, ["C4", "C5", "C6"]);
   assert.equal(

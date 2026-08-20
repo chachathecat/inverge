@@ -197,7 +197,7 @@ review/correction cycles are prohibited.
 |---|---:|---|---|---|
 | C1 | #713 | #713 | completed source-only on reconciliation merge | authority and roadmap reconciliation; runtime mutation zero |
 | C2 | #717 | #702, #714, #703, #704, #705 | terminal Law candidate #764; complete only after expected-head merge and validated receipt | C2R-A through C2R-C-L: two source contracts and three complete subject runtime verticals |
-| C3 | #706 | #706–#708 | authorized unstarted after validated terminal C2R-C-L receipt | frozen D+1, sealed D+7, recurrence/reopening, Ledger, recurring deduction and Today/Full-Day |
+| C3 | #781 recovery tracker; #706 implementation lead | #706–#708 | C3R-P authorized unstarted after source-authority merge and validated receipt | serial Practice/common substrate, Theory and Law durable-learning outcomes; only C3R-L closes WCV-C3 |
 | C4 | #709 | #709–#710 | queued behind ULC-I1 and the complete ULC pre-proof chain | Owner proof, red-team, baseline and invitation-only commercial readiness; no activation |
 | C5 | #711 | #711 | queued behind C4 and unapproved O4W exact cohort gate after ULC-L1 | frozen paid cohort with real delayed-evidence windows |
 | C6 | #712 | #712 | queued behind C5 | verified-bank and bodyless calibration flywheel |
@@ -206,11 +206,13 @@ Issue #701 remains the parent program. The exact identifiers are completed
 roadmap item `WCV-C2`, completed campaign `C2`, recovery tracker #717,
 completed source-only stages C2R-A for Issue #702 and C2R-B for Issue #714,
 and completed Practice, Theory and Law stages C2R-C-P, C2R-C-T and C2R-C-L
-for Issue #703 under expected-head-merge-and-receipt semantics. The current
-dependency-ready non-Production selector is roadmap item `WCV-C3`, campaign
-`C3`, lead Issue #706, authorized but unstarted. Issue #714 remains open: only
-its C2 allocation is complete, while C3, C4 and C6 remain preserved. The
-canonical tuple is `WCV-C3 / C3 / #706 / authorized_unstarted`.
+for Issue #703 under expected-head-merge-and-receipt semantics. PR #770 and
+PR #780 are terminal read-only WCV-C3 donors. Tracker #781 owns their source-
+only structural recovery. The current post-authority selector is roadmap item
+`WCV-C3`, campaign `C3`, recovery Tracker #781, stage `C3R-P`, lead Issue
+#706, authorized but unstarted. Issue #714 remains open: only its C2
+allocation is complete, while C3, C4 and C6 remain preserved. The canonical
+tuple is `WCV-C3 / C3 / #781 / C3R-P / #706 / authorized_unstarted`.
 
 `launchConvergenceAmendment`, `wcvCampaignOverlay`, `roadmapContract`, the ULC
 preserved-current-authority mirror and active roadmap must expose one identical
@@ -323,6 +325,48 @@ merge and validated receipt selected C2R-C-T, and C2R-C-T's protected merge
 and validated receipt selected terminal C2R-C-L. PR #764 represents the
 post-receipt WCV-C3/#706 authorized-unstarted selector.
 
+### WCV-C3R serial structural recovery
+
+The 2026-08-20 Owner decision supersedes the exhausted full-sized WCV-C3
+delivery shape only. PR #770 and PR #780 remain closed, Draft, unmerged and
+read-only. Tracker #781 installs the strict chain:
+
+| Order | Stage | Subject | State after source authority | Dependency | Terminal authority |
+|---:|---|---|---|---|---|
+| 1 | C3R-P | Practice and common durable substrate | authorized unstarted | protected source-authority merge and validated receipt | may contribute to #706/#707/#708; no closure |
+| 2 | C3R-T | complete Theory durable-learning delta | dependency-blocked unstarted | validated terminal C3R-P merge and receipt | may contribute to #706/#707/#708; no closure |
+| 3 | C3R-L | complete Law delta and WCV-C3 closeout | dependency-blocked unstarted | validated terminal C3R-P and C3R-T merges and receipts | alone closes #706/#707/#708/#781, completes Issue #714 allocation C3 and advances the selector |
+
+Issue state or closure cannot satisfy any stage dependency. C3R-P includes
+complete migration-history reconciliation, common forced-RLS and service-only
+substrate, durable Practice review, bodyless signals, source-bound failure
+note, planner/review separation, D+1/sealed-D+7/timed/reopen behavior, Ledger,
+Review Queue, Today/Full-Day, restore/export/delete and exact Practice browser-
+to-Postgres evidence. C3R-T and C3R-L add the same complete durable outcome for
+their subjects and roll back independently.
+
+The closed `MigrationHistoryCompatibilityManifestV1` in
+`config/dabangil-wcv-c3-structural-recovery-v1.json` inventories every
+live-main migration plus the donor-only WCV migration. It preserves the
+current duplicate, mixed-width and dependency-inverted history as blocking
+truth while declaring a unique fourteen-digit dependency-ordered canonical
+proposal. The proposal is not mutation authority. `UNKNOWN` or
+`KNOWN_APPLIED` remote status blocks silent rename or repair and requires a
+separate explicit Owner gate and exact history plan.
+
+No `migration repair`, `db push`, linked reset, remote SQL or remote schema
+mutation is authorized. Embedded PostgreSQL compilation is diagnostic only.
+Every runtime stage requires two fresh isolated Supabase reset/replay cycles.
+C3R-P must install one closed runtime-evidence adapter for the exact recovery
+set plus common Practice paths; Theory and Law may extend it only with their
+exact subject-protected paths. An unregistered path, incomplete closure,
+missing reset, absent metadata-only artifact, stale head, remote Supabase use
+or cleanup failure fails closed.
+
+This source-authority merge leaves C3R-P `authorized_unstarted`; it starts no
+runtime. WCV-C3, #706, #707, #708, #714 and #781 remain open. Only C3R-L may
+publish the terminal WCV-C3 receipt. Issue #714 then remains open for C4/C6.
+
 ## 2B. Unified product and multisurface launch convergence
 
 The 2026-08-14 ULC-0 decision is a mandatory subordinate V13 launch
@@ -337,16 +381,17 @@ consume tenant-authorized assignments and approved feedback.
 
 ### Preserved current authority
 
-ULC-0 preserves the five-stage WCV-C2/C2 recovery chain, Tracker #717, the
-21-row regression matrix and the one-writer limit. Under merge-and-receipt
-semantics, C2R-A/#702 and C2R-B/#714 are complete source-only, and C2R-C-P,
-C2R-C-T and terminal C2R-C-L for Issue #703 are the complete Practice, Theory
-and Law runtime stages. Candidate PR #764 represents WCV-C2 completion only
-after its expected-head-pinned merge and validated receipt, at which point
-roadmap item WCV-C3, campaign C3, lead Issue #706 is authorized but unstarted.
-Issue #714 remains open for
-C3/C4/C6. The later GitHub-native delivery decision controls protected non-
-Production continuation.
+ULC-0 preserves the completed five-stage WCV-C2/C2 recovery chain, Tracker
+#717, the 21-row regression matrix and the one-writer limit. The later WCV-C3
+source authority preserves PR #770/#780 as donors. Current roadmap item
+`WCV-C3`, campaign `C3`, recovery Tracker Issue #781, replacement stage
+`C3R-P`, and stage lead Issue #706 form the exact authorized-unstarted tuple.
+Under merge-and-
+receipt semantics, C2R-A/#702 and C2R-B/#714 are complete source-only, and
+C2R-C-P, C2R-C-T and terminal C2R-C-L for Issue #703 are the complete
+Practice, Theory and Law runtime stages. Issue #714 remains open for C3/C4/C6.
+The GitHub-native delivery decision controls protected non-Production
+continuation, but the WCV-C3 source-authority merge starts no runtime stage.
 
 ### Free-limited and paid routes
 
@@ -394,7 +439,8 @@ O4D: [S245C, S242V]
 S225: [O4D, WCV-C6]
 ```
 
-WCV-C3 retains `terminalReplacementDependency: C2R-C-L` while its active
+WCV-C3 retains completed `terminalReplacementDependency: C2R-C-L`, adds
+Tracker #781 and the current `C3R-P` replacement stage, while its active
 roadmap dependency remains the WCV-C2 umbrella. WCV-C5 intentionally retains
 both direct dependencies even though O4W is downstream of ULC-L1.
 O4D authority and WCV-C6 terminal paid evidence are non-substitutable S225
@@ -1286,7 +1332,10 @@ PR #756 supplied the complete default-off Owner-only Practice runtime and 11
 exact matrix declarations; PR #762 supplied the complete default-off Owner-
 only Theory runtime and five direct declarations. Candidate PR #764 supplies
 the terminal default-off Owner-only Law runtime and the final five direct
-declarations. After its protected merge and validated receipt, the current
-tuple is `WCV-C3 / C3 / #706 / authorized_unstarted`; only then may
-#703/#704/#705/#717 close. Issue state cannot replace any required stage merge
-or receipt, and no Production or learner activation begins.
+declarations. After its protected merge and validated receipt, the historical
+next tuple was `WCV-C3 / C3 / #706 / authorized_unstarted`; only then could
+#703/#704/#705/#717 close. The later source-only WCV-C3 structural-recovery
+authority replaces that full-sized delivery shape with the current tuple
+`WCV-C3 / C3 / #781 / C3R-P / #706 / authorized_unstarted`. Issue state
+cannot replace any required stage merge or receipt, and no Production or
+learner activation begins.

@@ -301,15 +301,17 @@ test("resolves roadmap, campaign, tracker and current-stage authority without al
   assert.equal(campaignMatches.length, 1);
   assert.equal(campaignMatches[0].roadmapItemId, "WCV-C3");
   assert.equal(campaignMatches[0].leadIssue, 706);
-  assert.equal(overlay.soleNextImplementationTrackerIssue, 706);
-  assert.equal(overlay.soleNextReplacementStage, graph.currentReplacementStageId);
-  assert.equal(overlay.soleNextReplacementStageIssue, graph.currentReplacementStageIssue);
+  assert.equal(overlay.soleNextImplementationTrackerIssue, 781);
+  assert.equal(overlay.soleNextReplacementStage, "C3R-P");
+  assert.equal(overlay.soleNextReplacementStageIssue, 706);
   assert.equal(roadmap.program.campaignOverlay, "C3");
   assert.equal(roadmap.program.soleNextImplementationCampaign, "C3");
   assert.equal(roadmap.program.soleNextImplementationItem, "WCV-C3");
-  assert.equal(roadmap.program.soleNextImplementationTrackerIssue, 706);
-  assert.equal(roadmap.program.soleNextReplacementStage, graph.currentReplacementStageId);
-  assert.equal(roadmap.program.soleNextReplacementStageIssue, graph.currentReplacementStageIssue);
+  assert.equal(roadmap.program.soleNextImplementationTrackerIssue, 781);
+  assert.equal(roadmap.program.soleNextReplacementStage, "C3R-P");
+  assert.equal(roadmap.program.soleNextReplacementStageIssue, 706);
+  assert.equal(graph.currentReplacementStageId, null);
+  assert.equal(graph.currentReplacementStageIssue, null);
   assert.equal(new Set(stageIds).size, stageIds.length);
   for (const [index, stage] of stages.entries()) {
     for (const dependency of stage.dependencies) {
@@ -417,10 +419,10 @@ test("uses terminal replacement-stage merges and preserves open #714 allocations
   assert.equal(rules.issue705ClosureRequiresTerminalReplacementStage, "C2R-C-L");
   assert.equal(rules.issue706RequiresTerminalIssue, 705);
   assert.equal(rules.issue706RequiresTerminalReplacementStage, "C2R-C-L");
-  assert.equal(c3.state, "authorized_unstarted_after_validated_terminal_c2r_c_l_receipt");
+  assert.equal(c3.state, "structural_recovery_c3r_p_authorized_unstarted");
   assert.equal(c3.terminalReplacementDependency, "C2R-C-L");
   assert.equal(c3.automaticStartAllowed, false);
-  assert.equal(c3.githubNativeAutomaticContinuationAllowed, true);
+  assert.equal(c3.githubNativeAutomaticContinuationAllowed, false);
 });
 
 test("keeps roadmap selection metadata-only with one writer and no stage auto-start", async () => {
@@ -438,11 +440,11 @@ test("keeps roadmap selection metadata-only with one writer and no stage auto-st
   assert.equal(roadmap.program.soleNextImplementationItem, "WCV-C3");
   assert.equal(roadmap.program.soleNextImplementationCampaign, "C3");
   assert.equal(roadmap.program.soleNextImplementationLeadIssue, 706);
-  assert.equal(roadmap.program.soleNextImplementationTrackerIssue, 706);
-  assert.equal(roadmap.program.soleNextReplacementStage, null);
-  assert.equal(roadmap.program.soleNextReplacementStageIssue, null);
-  assert.equal(roadmap.program.structuralRecoveryTrackerIssue, 717);
-  assert.equal(roadmap.program.terminalDonorPr, 716);
+  assert.equal(roadmap.program.soleNextImplementationTrackerIssue, 781);
+  assert.equal(roadmap.program.soleNextReplacementStage, "C3R-P");
+  assert.equal(roadmap.program.soleNextReplacementStageIssue, 706);
+  assert.equal(roadmap.program.structuralRecoveryTrackerIssue, 781);
+  assert.equal(roadmap.program.terminalDonorPr, 780);
   assert.equal(roadmap.program.terminalDonorMerged, false);
   assert.equal(roadmap.program.wcvC2Complete, true);
   assert.equal(roadmap.program.replacementStageAutomaticStartAllowed, false);
@@ -492,7 +494,7 @@ test("keeps roadmap selection metadata-only with one writer and no stage auto-st
   assert.equal(c2.coverageLiveGithubReceiptValidationRequired, true);
   assert.equal(c2.coverageSuccessorRepositoryPrRequired, false);
   assert.equal(c2.terminalIssueClosureRequiresValidatedCoverageReceipt, true);
-  assert.equal(c3.executionState, "authorized_unstarted_after_validated_terminal_c2r_c_l_receipt");
+  assert.equal(c3.executionState, "structural_recovery_c3r_p_authorized_unstarted");
   assert.equal(c3.terminalReplacementDependency, "C2R-C-L");
   assert.equal(c3.automaticStartAllowed, false);
   assert.equal(c3.selected, true);
@@ -509,9 +511,9 @@ test("keeps roadmap selection metadata-only with one writer and no stage auto-st
   const roadmapContract = (await json("config/dabangil-unified-program-contract.json"))
     .roadmapContract;
   assert.equal(roadmapContract.soleNextImplementationCampaignId, "C3");
-  assert.equal(roadmapContract.soleNextImplementationTrackerIssue, 706);
-  assert.equal(roadmapContract.soleNextReplacementStageId, null);
-  assert.equal(roadmapContract.soleNextReplacementStageIssue, null);
+  assert.equal(roadmapContract.soleNextImplementationTrackerIssue, 781);
+  assert.equal(roadmapContract.soleNextReplacementStageId, "C3R-P");
+  assert.equal(roadmapContract.soleNextReplacementStageIssue, 706);
 });
 
 test("keeps all 21 donor findings with Practice, Theory and Law candidates", async () => {
@@ -861,7 +863,7 @@ test("keeps V13 and WCV 1.0.8 while denying every activation class", async () =>
   assert.match(decision, /WCV 1\.0\.8 remains subordinate/);
   assert.match(contract, /structural-recovery records preserve their original\s+`automaticStartAllowed: false` fact/);
   assert.match(contract, /GitHub-native\s+delivery decision authorizes automatic continuation/);
-  assert.match(roadmap, /GitHub-native\s+protected non-Production continuation/);
+  assert.match(roadmap, /GitHub-native\s+protected non-Production\s+continuation/);
 });
 
 test("registers the structural recovery authority test exactly once", async () => {
