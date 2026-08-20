@@ -26,6 +26,13 @@ export const EXTENSION_REGISTRY_V1 = Object.freeze([
       }),
       Object.freeze({
         kind: "function",
+        identifier: "digest",
+        schema: null,
+        pattern: String.raw`\bdigest\s*\(`,
+        requireUnqualified: true,
+      }),
+      Object.freeze({
+        kind: "function",
         identifier: "extensions.digest",
         schema: "extensions",
         pattern: String.raw`\bextensions\s*\.\s*digest\s*\(`,
@@ -72,6 +79,26 @@ export const EXTERNAL_FUNCTION_REGISTRY_V1 = Object.freeze([
       manifestRequired: false,
     }),
   ),
+]);
+
+export const CLOSED_QUALIFIED_DATABASE_SCHEMAS_V1 = Object.freeze([
+  "auth",
+  "extensions",
+  "pg_catalog",
+  "public",
+  "storage",
+]);
+
+export const EXACT_PREDECESSOR_OVERRIDES_V1 = Object.freeze([
+  Object.freeze({
+    currentFilename:
+      "20260730065744_s236p_owner_private_authenticated_download_info.sql",
+    policyIdentity: "storage.objects::s236p owner private select",
+  }),
+  Object.freeze({
+    currentFilename: "20260730151052_s236p_owner_private_expiry_read_gate.sql",
+    policyIdentity: "storage.objects::s236p owner private select",
+  }),
 ]);
 
 function sha256(value) {
@@ -290,6 +317,15 @@ function countMatches(sql, pattern) {
   return [...sql.matchAll(new RegExp(pattern, "giu"))].length;
 }
 
+function countDetectorMatches(sql, detector) {
+  const matches = [...sql.matchAll(new RegExp(detector.pattern, "giu"))];
+  if (!detector.requireUnqualified) return matches.length;
+  return matches.filter((match) => {
+    const prefix = sql.slice(0, match.index).trimEnd();
+    return !prefix.endsWith(".");
+  }).length;
+}
+
 export function deriveRequiredExtensionUses(sql) {
   const dependencySql = maskSqlNonExecutableText(sql, {
     maskDollarQuotedBodies: false,
@@ -299,7 +335,7 @@ export function deriveRequiredExtensionUses(sql) {
   for (const extension of EXTENSION_REGISTRY_V1) {
     const grouped = new Map();
     for (const detector of extension.useDetectors) {
-      const occurrences = countMatches(dependencySql, detector.pattern);
+      const occurrences = countDetectorMatches(dependencySql, detector);
       if (occurrences === 0) continue;
       const key = detector.schema ?? "<unqualified>";
       const current = grouped.get(key) ?? {
@@ -454,6 +490,87 @@ export function deriveDatabaseObjectReferences(sql, availableObjects) {
   );
 }
 
+function deriveQualifiedIndexOperationIdentifiers(sql) {
+  const executable = maskSqlNonExecutableText(sql, {
+    maskDollarQuotedBodies: true,
+  });
+  const qualifiedIdentifier = String.raw`${IDENTIFIER_SOURCE}\s*\.\s*${IDENTIFIER_SOURCE}`;
+  const patterns = [
+    new RegExp(
+      String.raw`\bcreate\s+(?:unique\s+)?index\s+(?:concurrently\s+)?(?:if\s+not\s+exists\s+)?(${qualifiedIdentifier})`,
+      "giu",
+    ),
+    new RegExp(
+      String.raw`\bdrop\s+index\s+(?:concurrently\s+)?(?:if\s+exists\s+)?(${qualifiedIdentifier})`,
+      "giu",
+    ),
+  ];
+  return new Set(
+    patterns.flatMap((pattern) =>
+      [...executable.matchAll(pattern)].map((match) =>
+        match[1]
+          .split(".")
+          .map((part) => normalizeIdentifier(part.trim()))
+          .join("."),
+      ),
+    ),
+  );
+}
+
+export function deriveQualifiedDatabaseIdentifiers(
+  sql,
+  closedQualifiedDatabaseSchemas,
+) {
+  const dependencySql = maskSqlNonExecutableText(sql, {
+    maskDollarQuotedBodies: false,
+  });
+  const closedSchemas = new Set(closedQualifiedDatabaseSchemas);
+  const qualifiedPattern = new RegExp(
+    String.raw`\b(${IDENTIFIER_SOURCE})\s*\.\s*(${IDENTIFIER_SOURCE})`,
+    "giu",
+  );
+  const identifiers = [];
+  for (const match of dependencySql.matchAll(qualifiedPattern)) {
+    const schema = normalizeIdentifier(match[1]);
+    if (!closedSchemas.has(schema)) continue;
+    identifiers.push(`${schema}.${normalizeIdentifier(match[2])}`);
+  }
+  return [...new Set(identifiers)].sort();
+}
+
+function assertRegisteredQualifiedDatabaseIdentifiers(
+  sql,
+  registeredObjects,
+  closedQualifiedDatabaseSchemas,
+) {
+  const registeredIdentifiers = new Set(
+    registeredObjects.map((object) => object.identifier),
+  );
+  for (const entry of EXTERNAL_FUNCTION_REGISTRY_V1) {
+    registeredIdentifiers.add(`${entry.schema}.${entry.name}`);
+  }
+  for (const extension of EXTENSION_REGISTRY_V1) {
+    for (const detector of extension.useDetectors) {
+      if (detector.schema) registeredIdentifiers.add(detector.identifier);
+    }
+  }
+  const indexStatementTargets = deriveQualifiedIndexOperationIdentifiers(sql);
+  for (const identifier of deriveQualifiedDatabaseIdentifiers(
+    sql,
+    closedQualifiedDatabaseSchemas,
+  )) {
+    if (
+      !registeredIdentifiers.has(identifier) &&
+      !indexStatementTargets.has(identifier)
+    ) {
+      throw new MigrationDependencyClosureError(
+        "UNREGISTERED_QUALIFIED_DATABASE_OBJECT",
+        identifier,
+      );
+    }
+  }
+}
+
 function indexEnvironmentExtensions(environmentRequiredExtensions) {
   const indexed = new Map();
   const registeredNames = new Set(
@@ -490,12 +607,79 @@ function indexEnvironmentExtensions(environmentRequiredExtensions) {
   return indexed;
 }
 
+function indexExactPredecessorOverrides(
+  exactPredecessorOverrides,
+  records,
+  sqlByFilename,
+) {
+  const indexed = new Map();
+  const byFilename = new Map(
+    records.map((record) => [record.currentFilename, record]),
+  );
+
+  for (const override of exactPredecessorOverrides) {
+    const keys = Object.keys(override).sort();
+    if (
+      !exactEqual(keys, ["currentFilename", "policyIdentity"]) ||
+      indexed.has(override.currentFilename)
+    ) {
+      throw new MigrationDependencyClosureError(
+        "INVALID_EXACT_PREDECESSOR_OVERRIDE",
+        override.currentFilename,
+      );
+    }
+    const target = byFilename.get(override.currentFilename);
+    const sql = sqlByFilename.get(override.currentFilename);
+    if (!target || typeof sql !== "string") {
+      throw new MigrationDependencyClosureError(
+        "INVALID_EXACT_PREDECESSOR_OVERRIDE_TARGET",
+        override.currentFilename,
+      );
+    }
+    const policyOperations = derivePolicyOperationIdentities(sql);
+    if (!policyOperations.includes(override.policyIdentity)) {
+      throw new MigrationDependencyClosureError(
+        "EXACT_PREDECESSOR_OVERRIDE_WITHOUT_SQL_EVIDENCE",
+        override.currentFilename,
+      );
+    }
+    indexed.set(override.currentFilename, override);
+  }
+
+  return indexed;
+}
+
+export function derivePolicyOperationIdentities(sql) {
+  const executable = maskSqlNonExecutableText(sql, {
+    maskDollarQuotedBodies: true,
+  });
+  const qualifiedIdentifier = String.raw`${IDENTIFIER_SOURCE}\s*\.\s*${IDENTIFIER_SOURCE}`;
+  const pattern = new RegExp(
+    String.raw`\b(?:create|alter|drop)\s+policy\s+(?:if\s+exists\s+)?(${IDENTIFIER_SOURCE})\s+on\s+(${qualifiedIdentifier})`,
+    "giu",
+  );
+  return [
+    ...new Set(
+      [...executable.matchAll(pattern)].map((match) => {
+        const policyName = normalizeIdentifier(match[1]);
+        const tableIdentifier = match[2]
+          .split(".")
+          .map((part) => normalizeIdentifier(part.trim()))
+          .join(".");
+        return `${tableIdentifier}::${policyName}`;
+      }),
+    ),
+  ];
+}
+
 export function deriveMigrationDependencyClosure(
   records,
   sqlByFilename,
   {
     environmentRequiredExtensions = [],
     externalDatabaseObjects = [],
+    closedQualifiedDatabaseSchemas = CLOSED_QUALIFIED_DATABASE_SCHEMAS_V1,
+    exactPredecessorOverrides = [],
   } = {},
 ) {
   const priorProducers = new Map();
@@ -508,6 +692,21 @@ export function deriveMigrationDependencyClosure(
       object,
     ]),
   );
+  const objectOrigins = new Map(
+    externalDatabaseObjects.map((object) => [
+      `${object.kind}:${object.identifier}`,
+      new Set(),
+    ]),
+  );
+  const recordOrder = new Map(
+    records.map((record) => [record.currentFilename, record.freshHistoryOrder]),
+  );
+  const predecessorOverrides = indexExactPredecessorOverrides(
+    exactPredecessorOverrides,
+    records,
+    sqlByFilename,
+  );
+  const latestPolicyProducers = new Map();
   const results = [];
 
   for (const record of [...records].sort((left, right) => left.freshHistoryOrder - right.freshHistoryOrder)) {
@@ -567,9 +766,48 @@ export function deriveMigrationDependencyClosure(
 
     const externalFunctions = deriveExternalFunctionDependencies(sql);
     const producedObjects = deriveProducedDatabaseObjects(sql);
+    assertRegisteredQualifiedDatabaseIdentifiers(
+      sql,
+      [...availableObjects.values(), ...producedObjects],
+      closedQualifiedDatabaseSchemas,
+    );
     const referencedDatabaseObjects = deriveDatabaseObjectReferences(
       sql,
       [...availableObjects.values()],
+    );
+    const derivedPredecessorSet = new Set();
+    for (const object of referencedDatabaseObjects) {
+      for (const origin of
+        objectOrigins.get(`${object.kind}:${object.identifier}`) ?? []) {
+        derivedPredecessorSet.add(origin);
+      }
+    }
+    const policyOperations = derivePolicyOperationIdentities(sql);
+    const override = predecessorOverrides.get(record.currentFilename);
+    if (override) {
+      const previousPolicyProducer = latestPolicyProducers.get(
+        override.policyIdentity,
+      );
+      if (!previousPolicyProducer) {
+        throw new MigrationDependencyClosureError(
+          "EXACT_PREDECESSOR_OVERRIDE_WITHOUT_PRIOR_POLICY_SQL",
+          override.currentFilename,
+        );
+      }
+      derivedPredecessorSet.clear();
+      for (const object of referencedDatabaseObjects) {
+        const origins = [
+          ...(objectOrigins.get(`${object.kind}:${object.identifier}`) ?? []),
+        ];
+        const latestOrigin = origins.sort(
+          (left, right) => recordOrder.get(right) - recordOrder.get(left),
+        )[0];
+        if (latestOrigin) derivedPredecessorSet.add(latestOrigin);
+      }
+      derivedPredecessorSet.add(previousPolicyProducer);
+    }
+    const exactDependencyPredecessors = [...derivedPredecessorSet].sort(
+      (left, right) => recordOrder.get(left) - recordOrder.get(right),
     );
     results.push({
       currentFilename: record.currentFilename,
@@ -586,6 +824,7 @@ export function deriveMigrationDependencyClosure(
       externalFunctions,
       producedObjects,
       referencedDatabaseObjects,
+      exactDependencyPredecessors,
     });
 
     for (const extension of createdExtensions) {
@@ -598,10 +837,23 @@ export function deriveMigrationDependencyClosure(
       priorProducers.set(extension.name, list);
     }
     for (const object of record.drops ?? []) {
-      availableObjects.delete(`${object.kind}:${object.identifier}`);
+      const key = `${object.kind}:${object.identifier}`;
+      availableObjects.delete(key);
+      objectOrigins.delete(key);
     }
     for (const object of producedObjects) {
-      availableObjects.set(`${object.kind}:${object.identifier}`, object);
+      const key = `${object.kind}:${object.identifier}`;
+      availableObjects.set(key, object);
+      objectOrigins.set(key, new Set([record.currentFilename]));
+    }
+    for (const object of record.modifies ?? []) {
+      const key = `${object.kind}:${object.identifier}`;
+      const origins = objectOrigins.get(key) ?? new Set();
+      origins.add(record.currentFilename);
+      objectOrigins.set(key, origins);
+    }
+    for (const policyIdentity of policyOperations) {
+      latestPolicyProducers.set(policyIdentity, record.currentFilename);
     }
   }
 
@@ -609,11 +861,39 @@ export function deriveMigrationDependencyClosure(
 }
 
 export function validateMigrationDependencyClosure(manifest, sqlByFilename) {
+  if (
+    !exactEqual(
+      manifest.migrationDependencyClosureV1.closedQualifiedDatabaseSchemas,
+      CLOSED_QUALIFIED_DATABASE_SCHEMAS_V1,
+    )
+  ) {
+    throw new MigrationDependencyClosureError(
+      "INVALID_CLOSED_QUALIFIED_DATABASE_SCHEMA_REGISTRY",
+      JSON.stringify(
+        manifest.migrationDependencyClosureV1.closedQualifiedDatabaseSchemas,
+      ),
+    );
+  }
+  if (
+    !exactEqual(
+      manifest.migrationDependencyClosureV1.exactPredecessorOverrides,
+      EXACT_PREDECESSOR_OVERRIDES_V1,
+    )
+  ) {
+    throw new MigrationDependencyClosureError(
+      "INVALID_EXACT_PREDECESSOR_OVERRIDE_REGISTRY",
+      JSON.stringify(manifest.migrationDependencyClosureV1.exactPredecessorOverrides),
+    );
+  }
   const liveRecords = manifest.records.filter((record) => record.presentOnLiveMain);
   const derived = deriveMigrationDependencyClosure(liveRecords, sqlByFilename, {
     environmentRequiredExtensions:
       manifest.migrationDependencyClosureV1.environmentRequiredExtensions,
     externalDatabaseObjects: manifest.externalDatabaseObjects,
+    closedQualifiedDatabaseSchemas:
+      manifest.migrationDependencyClosureV1.closedQualifiedDatabaseSchemas,
+    exactPredecessorOverrides:
+      manifest.migrationDependencyClosureV1.exactPredecessorOverrides,
   });
   const byFilename = new Map(derived.map((entry) => [entry.currentFilename, entry]));
   const externalRegistry = new Set(
@@ -630,6 +910,11 @@ export function validateMigrationDependencyClosure(manifest, sqlByFilename) {
         "extensionDependencyPredecessors",
         record.extensionDependencyPredecessors,
         actual.extensionDependencyPredecessors,
+      ],
+      [
+        "exactDependencyPredecessors",
+        record.exactDependencyPredecessors,
+        actual.exactDependencyPredecessors,
       ],
     ];
     for (const [field, declared, sqlDerived] of comparisons) {

@@ -47,15 +47,22 @@ head, tree, donor, issue, writer or ruleset conflict invalidates publication.
 10. comments and ordinary strings cannot create false extension evidence;
 11. missing, extra, wrong-schema, wrong-producer and out-of-order dependency
    mutations fail closed;
-12. `auth.uid` and equivalent external functions remain SQL-derived and
+12. unqualified `digest` creates a predecessor-satisfied `pgcrypto`
+   dependency without double-counting `extensions.digest`;
+13. unregistered schema-qualified references fail closed even when absent
+   from the declared object inventory;
+14. every `exactDependencyPredecessors` value is independently derived from
+   object provenance, except the two closed S236P policy-order overrides whose
+   current and prior policy-operation SQL is also validated;
+15. `auth.uid` and equivalent external functions remain SQL-derived and
    bidirectionally compared;
-13. `UNKNOWN` and `KNOWN_APPLIED` states block silent rename;
-14. remote migration mutation requires a separate Owner gate;
-15. runtime-adapter path closure and both reset cycles are mandatory;
-16. one merge-producing writer remains enforced;
-17. Production, payment and external learner remain unauthorized;
-18. V13 remains the sole active master; and
-19. no successor runtime is started by this source-only Work.
+16. `UNKNOWN` and `KNOWN_APPLIED` states block silent rename;
+17. remote migration mutation requires a separate Owner gate;
+18. runtime-adapter path closure and both reset cycles are mandatory;
+19. one merge-producing writer remains enforced;
+20. Production, payment and external learner remain unauthorized;
+21. V13 remains the sole active master; and
+22. no successor runtime is started by this source-only Work.
 
 ## Migration-history proof boundary
 
@@ -84,10 +91,15 @@ multiple statements, `IF NOT EXISTS`, `SCHEMA` and `WITH SCHEMA`, and
 fingerprints canonical UTF-8/LF SQL plus each exact declaration. An unknown
 extension, prohibited `pgvector` alias, malformed declaration, unresolved
 use, wrong schema, wrong producer or consumer-before-producer state fails
-closed. References to every closed prior or external database object are also
+closed. Unqualified `digest` and qualified `extensions.digest` are separate
+`pgcrypto` evidence buckets. References to every closed prior or external database object are also
 derived from SQL and compared with the combined consumed, modified and dropped
 manifest set in both directions; a removed relation dependency or an invented
 edge therefore fails without relying on the declaration as its own evidence.
+Unregistered qualified references fail closed. Exact dependency predecessors
+are derived from object-provenance lineage; the two S236P policy replacements
+are the sole closed overrides and require exact current and prior policy-
+operation SQL evidence.
 
 The live-main result is six executable declarations in five migrations:
 `pgcrypto` in `20260422_inverge_service_core.sql`,

@@ -227,10 +227,15 @@ quoted identifiers, mixed keyword casing, multiple declarations, `IF NOT
 EXISTS`, `SCHEMA` and `WITH SCHEMA`, and fails closed on an unknown or
 ambiguous declaration. SQL-derived created extensions, required extension
 uses, exact schemas and exact producers must equal the manifest in both
-directions. The same analyzer derives every reference to the closed set of
-prior repository objects and external database objects, and compares that set
-against the combined consumed, modified and dropped manifest objects in both
-directions.
+directions. Unqualified `digest` is a `pgcrypto` dependency and a qualified
+`extensions.digest` call is counted only in its qualified dependency bucket.
+The same analyzer derives every reference to the closed set of prior
+repository objects and external database objects, independently derives each
+record's exact dependency predecessors from object provenance, and compares
+those results in both directions. The only two policy-ordering overrides are
+closed by exact migration, policy identity, current policy SQL and prior
+policy-operation SQL evidence. An undeclared or unregistered qualified dependency fails
+closed rather than disappearing from comparison.
 
 The live SQL contains six executable declarations across five migrations.
 The exact canonical names are `pgcrypto` and `vector`; `pgvector` is not a

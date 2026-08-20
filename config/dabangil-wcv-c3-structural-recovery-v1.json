@@ -1129,8 +1129,25 @@
         "sqlEvidenceScope": "LIVE_MAIN_SQL_EXACT",
         "sqlSha256": "03dce727ac9bca1ab290556583c33593c3ae6ee544b0c90cc8ff7e05aea6e29d",
         "createdExtensions": [],
-        "requiredExtensions": [],
-        "extensionDependencyPredecessors": []
+        "requiredExtensions": [
+          {
+            "name": "pgcrypto",
+            "schema": null,
+            "evidence": [
+              {
+                "kind": "function",
+                "identifier": "digest",
+                "occurrences": 1
+              }
+            ],
+            "satisfaction": "PREDECESSOR_MIGRATION",
+            "producerMigration": "20260615_legal_grounding.sql",
+            "producerFreshHistoryOrder": 10
+          }
+        ],
+        "extensionDependencyPredecessors": [
+          "20260615_legal_grounding.sql"
+        ]
       },
       {
         "currentFilename": "20260615_legal_retrieval.sql",
@@ -2149,6 +2166,7 @@
           "prohibitedAliases": [],
           "sqlUseEvidence": [
             "gen_random_uuid",
+            "digest",
             "extensions.digest"
           ]
         },
@@ -2191,6 +2209,7 @@
       "exactComparisonRules": {
         "sqlDerivedCreatedExtensionsEqualManifest": true,
         "sqlDerivedRequiredExtensionUsesEqualManifest": true,
+        "sqlDerivedExactDependencyPredecessorsEqualManifest": true,
         "missingManifestEntryFails": true,
         "extraManifestEntryFails": true,
         "wrongExtensionSchemaFails": true,
@@ -2199,6 +2218,7 @@
         "externalFunctionsComparedBothDirections": true,
         "producedObjectsComparedBySqlClassAndIdentity": true,
         "referencedDatabaseObjectsComparedBothDirections": true,
+        "unregisteredQualifiedDatabaseObjectsFail": true,
         "declaredEdgesRequireSqlOrClosedRegistryEvidence": true,
         "unknownDependencyClassMarksManifestIncomplete": true,
         "incompleteManifestBlocksSourceAuthorityAcceptance": true
@@ -2209,7 +2229,24 @@
         "pgcrypto",
         "vector"
       ],
-      "environmentRequiredExtensions": []
+      "environmentRequiredExtensions": [],
+      "closedQualifiedDatabaseSchemas": [
+        "auth",
+        "extensions",
+        "pg_catalog",
+        "public",
+        "storage"
+      ],
+      "exactPredecessorOverrides": [
+        {
+          "currentFilename": "20260730065744_s236p_owner_private_authenticated_download_info.sql",
+          "policyIdentity": "storage.objects::s236p owner private select"
+        },
+        {
+          "currentFilename": "20260730151052_s236p_owner_private_expiry_read_gate.sql",
+          "policyIdentity": "storage.objects::s236p owner private select"
+        }
+      ]
     }
   },
   "runtimeEvidenceAdapterAuthority": {

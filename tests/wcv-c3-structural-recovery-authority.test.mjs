@@ -8,6 +8,7 @@ import {
   MigrationDependencyClosureError,
   deriveMigrationDependencyClosure,
   deriveProducedDatabaseObjects,
+  deriveRequiredExtensionUses,
   extractCreateExtensions,
   loadLiveMigrationSql,
   validateMigrationDependencyClosure,
@@ -446,6 +447,9 @@ test("derives and exactly validates the closed live-main migration dependency in
   const concept = byName.get(
     "20260623_personal_concept_graph_atomic_transition.sql",
   );
+  const legalIdentity = byName.get(
+    "20260615_legal_article_chunk_identity.sql",
+  );
 
   assert.deepEqual(summary, {
     manifestVersion: "MigrationDependencyClosureV1",
@@ -481,12 +485,90 @@ test("derives and exactly validates the closed live-main migration dependency in
     ),
     true,
   );
+  assert.deepEqual(legalIdentity.requiredExtensions, [
+    {
+      name: "pgcrypto",
+      schema: null,
+      evidence: [{ kind: "function", identifier: "digest", occurrences: 1 }],
+      satisfaction: "PREDECESSOR_MIGRATION",
+      producerMigration: legal.currentFilename,
+      producerFreshHistoryOrder: legal.freshHistoryOrder,
+    },
+  ]);
+  assert.deepEqual(legalIdentity.extensionDependencyPredecessors, [
+    legal.currentFilename,
+  ]);
   for (const record of manifest.records.filter((entry) => entry.presentOnLiveMain)) {
     assert.match(record.sqlSha256, /^[a-f0-9]{64}$/);
     assert.ok(Array.isArray(record.createdExtensions));
     assert.ok(Array.isArray(record.requiredExtensions));
     assert.ok(Array.isArray(record.extensionDependencyPredecessors));
   }
+});
+
+test("detects unqualified digest without double-counting extensions.digest", () => {
+  assert.deepEqual(
+    deriveRequiredExtensionUses(`
+      select digest('plain', 'sha256');
+      select extensions.digest('qualified', 'sha256');
+      select 'digest(';
+      -- digest('commented', 'sha256');
+    `),
+    [
+      {
+        name: "pgcrypto",
+        schema: null,
+        evidence: [{ kind: "function", identifier: "digest", occurrences: 1 }],
+      },
+      {
+        name: "pgcrypto",
+        schema: "extensions",
+        evidence: [
+          {
+            kind: "function",
+            identifier: "extensions.digest",
+            occurrences: 1,
+          },
+        ],
+      },
+    ],
+  );
+});
+
+test("fails closed on an unregistered qualified database reference", () => {
+  const record = {
+    currentFilename: "20260101000000_unknown_reference.sql",
+    presentOnLiveMain: true,
+    freshHistoryOrder: 1,
+    drops: [],
+    modifies: [],
+  };
+
+  assertClosureFailure(
+    () =>
+      deriveMigrationDependencyClosure(
+        [record],
+        new Map([
+          [
+            record.currentFilename,
+            "select * from public.unregistered_dependency;",
+          ],
+        ]),
+      ),
+    "UNREGISTERED_QUALIFIED_DATABASE_OBJECT",
+  );
+  assert.deepEqual(
+    deriveMigrationDependencyClosure(
+      [record],
+      new Map([
+        [
+          record.currentFilename,
+          "select 'public.unregistered_dependency'; -- public.also_ignored\n",
+        ],
+      ]),
+    )[0].referencedDatabaseObjects,
+    [],
+  );
 });
 
 test("parses executable CREATE EXTENSION forms and ignores comments and strings", () => {
@@ -660,6 +742,43 @@ test("fails closed under dependency-class mutations", async (context) => {
       "MANIFEST_SQL_MISMATCH",
     ],
     [
+      "unqualified digest dependency deletion",
+      (candidate) => {
+        const identity = byName(candidate).get(
+          "20260615_legal_article_chunk_identity.sql",
+        );
+        identity.requiredExtensions = [];
+        identity.extensionDependencyPredecessors = [];
+      },
+      "MANIFEST_SQL_MISMATCH",
+    ],
+    [
+      "exact dependency predecessor deletion",
+      (candidate) => {
+        byName(candidate)
+          .get("20260423_inverge_service_role_grants.sql")
+          .exactDependencyPredecessors.shift();
+      },
+      "MANIFEST_SQL_MISMATCH",
+    ],
+    [
+      "policy predecessor override deletion",
+      (candidate) => {
+        candidate.migrationDependencyClosureV1.exactPredecessorOverrides.shift();
+      },
+      "INVALID_EXACT_PREDECESSOR_OVERRIDE_REGISTRY",
+    ],
+    [
+      "closed qualified schema deletion",
+      (candidate) => {
+        candidate.migrationDependencyClosureV1.closedQualifiedDatabaseSchemas =
+          candidate.migrationDependencyClosureV1.closedQualifiedDatabaseSchemas.filter(
+            (schema) => schema !== "public",
+          );
+      },
+      "INVALID_CLOSED_QUALIFIED_DATABASE_SCHEMA_REGISTRY",
+    ],
+    [
       "auth.uid deletion",
       (candidate) => {
         const core = byName(candidate).get("20260422_inverge_service_core.sql");
@@ -703,7 +822,7 @@ test("fails closed under dependency-class mutations", async (context) => {
         byName(candidate).get("20260423_inverge_service_role_grants.sql").freshHistoryOrder =
           0;
       },
-      "DATABASE_OBJECT_SQL_MISMATCH",
+      "UNREGISTERED_QUALIFIED_DATABASE_OBJECT",
     ],
   ];
 

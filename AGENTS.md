@@ -305,10 +305,14 @@ runtime stage requires two fresh isolated Supabase reset/replay cycles.
 
 `MigrationDependencyClosureV1` derives executable `CREATE EXTENSION`
 declarations, required extension uses, exact extension schema, external
-functions and produced database object classes from migration SQL and compares
-both directions against the manifest. Comments and ordinary strings do not
-count. Missing, extra, wrong-kind, wrong-schema, wrong-producer, out-of-order,
-unregistered or ambiguous dependencies fail closed. The canonical pgvector
+functions, produced database object classes and exact dependency predecessors
+from migration SQL and compares both directions against the manifest. The two
+S236P policy-order exceptions use a closed override registry that itself
+requires exact current and prior policy-operation SQL evidence. Comments and
+ordinary strings do not count. Unqualified `digest` is a `pgcrypto` use and is
+not double-counted when schema-qualified as `extensions.digest`. Missing,
+extra, wrong-kind, wrong-schema, wrong-producer, out-of-order, unregistered
+qualified or ambiguous dependencies fail closed. The canonical pgvector
 extension identity is `vector`, never `pgvector`.
 
 C3R-P must install one closed runtime-evidence adapter for the exact recovery
