@@ -48,7 +48,7 @@ test("C2R-C-T remains complete after terminal Law selects WCV-C3", async () => {
     unified.roadmapContract.soleNextReplacementStageId,
     launch.preservedCurrentAuthority.currentReplacementStageId,
   ];
-  assert.deepEqual(current, Array(current.length).fill(null));
+  assert.deepEqual(current, ["C3R-P", null, "C3R-P", "C3R-P", "C3R-P"]);
   assert.equal(recovery.status, "complete_after_expected_head_merge_and_validated_terminal_receipt");
   assert.equal(stages.get("C2R-C-T").state, "complete_theory_runtime");
   assert.equal(stages.get("C2R-C-T").coveringPr, 762);
@@ -56,10 +56,10 @@ test("C2R-C-T remains complete after terminal Law selects WCV-C3", async () => {
   assert.deepEqual(stages.get("C2R-C-L").dependencies, ["C2R-C-T"]);
   assert.equal(stage.stage.postMergeNextStage, "C2R-C-L");
   assert.match(roadmap, /soleNextImplementationItem: WCV-C3/);
-  assert.match(roadmap, /soleNextReplacementStage: null/);
+  assert.match(roadmap, /soleNextReplacementStage: C3R-P/);
   assert.match(roadmap, /c2rCTState: complete_theory_runtime/);
   assert.match(roadmap, /c2rCLState: complete_law_runtime/);
-  assert.match(agents, /WCV-C3 \/ C3 \/ #706 \/ authorized_unstarted/);
+  assert.match(agents, /WCV-C3 \/ C3 \/ #781 \/ C3R-P \/ #706 \/ authorized_unstarted/);
 });
 
 test("C2R-C-T preserves exactly five PR 762 Theory declarations", async () => {

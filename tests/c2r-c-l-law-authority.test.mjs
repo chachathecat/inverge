@@ -57,14 +57,14 @@ test("C2R-C-L candidate represents terminal WCV-C2 completion and selects WCV-C3
 
   assert.equal(unified.launchConvergenceAmendment.soleNextImplementationItem, "WCV-C3");
   assert.equal(unified.launchConvergenceAmendment.soleNextImplementationCampaign, "C3");
-  assert.equal(unified.launchConvergenceAmendment.soleNextReplacementStage, null);
+  assert.equal(unified.launchConvergenceAmendment.soleNextReplacementStage, "C3R-P");
   assert.equal(unified.wcvCampaignOverlay.soleNextImplementationCampaign, "C3");
   assert.equal(unified.wcvCampaignOverlay.soleNextImplementationLeadIssue, 706);
-  assert.equal(unified.wcvCampaignOverlay.soleNextReplacementStage, null);
+  assert.equal(unified.wcvCampaignOverlay.soleNextReplacementStage, "C3R-P");
   assert.equal(unified.roadmapContract.soleNextImplementationItemId, "WCV-C3");
   assert.equal(unified.roadmapContract.soleNextImplementationCampaignId, "C3");
   assert.equal(unified.roadmapContract.soleNextImplementationLeadIssue, 706);
-  assert.equal(unified.roadmapContract.soleNextReplacementStageId, null);
+  assert.equal(unified.roadmapContract.soleNextReplacementStageId, "C3R-P");
   assert.equal(launch.preservedCurrentAuthority.completedTerminalReplacementStageId, "C2R-C-L");
   assert.equal(launch.preservedCurrentAuthority.nextRoadmapItemId, "WCV-C3");
   assert.equal(launch.preservedCurrentAuthority.nextCampaignId, "C3");
@@ -72,7 +72,7 @@ test("C2R-C-L candidate represents terminal WCV-C2 completion and selects WCV-C3
   assert.match(roadmap, /soleNextImplementationItem: WCV-C3/);
   assert.match(roadmap, /c2rCLState: complete_law_runtime/);
   assert.match(roadmap, /c2rCLCoveringPr: 764/);
-  assert.match(agents, /WCV-C3 \/ C3 \/ #706 \/ authorized_unstarted/);
+  assert.match(agents, /WCV-C3 \/ C3 \/ #781 \/ C3R-P \/ #706 \/ authorized_unstarted/);
   assert.match(agents, /only after fresh exact-[\s\S]+validated Tracker #717 receipt/);
 });
 

@@ -911,7 +911,7 @@ test("C2RA-PRECEDENCE-013 registers one exact later supersession and preserves t
   ]);
   assert.match(
     roadmap,
-    /soleNextReplacementStageDecision: docs\/decisions\/2026-08-14-wcv-c2-structural-recovery\.md/,
+    /soleNextReplacementStageDecision: docs\/decisions\/2026-08-20-owner-wcv-c3-structural-recovery\.md/,
   );
   assert.match(roadmap, /c2rBOperationalStartRequiresIssue702Closure: true/);
 });
@@ -961,15 +961,15 @@ test("C2RA-AUTH-010 retains the A transition after terminal Law completion", asy
   assert.equal(unified.wcvCampaignOverlay.c2StructuralRecovery.replacementStages[2].state, "complete_practice_runtime");
   assert.equal(unified.wcvCampaignOverlay.c2StructuralRecovery.replacementStages[3].state, "complete_theory_runtime");
   assert.equal(unified.wcvCampaignOverlay.c2StructuralRecovery.replacementStages[4].state, "complete_law_runtime");
-  assert.equal(unified.wcvCampaignOverlay.soleNextReplacementStage, null);
-  assert.equal(unified.wcvCampaignOverlay.soleNextReplacementStageIssue, null);
+  assert.equal(unified.wcvCampaignOverlay.soleNextReplacementStage, "C3R-P");
+  assert.equal(unified.wcvCampaignOverlay.soleNextReplacementStageIssue, 706);
   assert.deepEqual(
     unified.wcvCampaignOverlay.c2StructuralRecovery.replacementStages[0].ownedPathsExactly,
     EXPECTED_OWNED_PATHS,
   );
   assert.match(roadmap, /soleNextImplementationItem: WCV-C3/);
-  assert.match(roadmap, /soleNextReplacementStage: null/);
-  assert.match(agents, /WCV-C3 \/ C3 \/ #706 \/ authorized_unstarted/);
+  assert.match(roadmap, /soleNextReplacementStage: C3R-P/);
+  assert.match(agents, /WCV-C3 \/ C3 \/ #781 \/ C3R-P \/ #706 \/ authorized_unstarted/);
   assert.equal(Object.values(contract.authorizationBoundary).every((value) => value === false), true);
   assert.equal(contract.decision.runtimeReadinessEstablished, false);
   assert.equal(contract.successor.c2rACompletionEffectiveOnlyAfterExpectedHeadPinnedMergeAndValidatedReceipt, true);

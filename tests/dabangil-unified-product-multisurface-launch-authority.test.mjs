@@ -146,9 +146,9 @@ function currentAuthorityTuple(section) {
   return {
     roadmapItem: /\bwcv c3\b/.test(normalized) ? "WCV-C3" : null,
     campaign: /\bcampaign c3\b/.test(normalized) ? "C3" : null,
-    trackerIssue: /\b(?:lead|tracker) issue 706\b/.test(normalized) ? 706 : null,
-    currentStage: null,
-    currentStageIssue: null,
+    trackerIssue: /\b(?:recovery )?tracker issue 781\b/.test(normalized) ? 781 : null,
+    currentStage: /\breplacement stage c3r p\b/.test(normalized) ? "C3R-P" : null,
+    currentStageIssue: /\bstage lead issue 706\b/.test(normalized) ? 706 : null,
   };
 }
 
@@ -521,6 +521,11 @@ test("preserves the exact WCV-C2R graph, roadmap block and 21-row matrix", async
     "C2R-C-T",
     "C2R-C-L",
   ]);
+  assert.deepEqual(preserved.wcvC3ReplacementStageChain, [
+    "C3R-P",
+    "C3R-T",
+    "C3R-L",
+  ]);
 });
 
 test("selects WCV-C3 after terminal Law while preserving the completed recovery graph", async () => {
@@ -555,9 +560,9 @@ test("selects WCV-C3 after terminal Law while preserving the completed recovery 
   const expectedCurrentStage = {
     roadmapItem: "WCV-C3",
     campaign: "C3",
-    trackerIssue: 706,
-    currentStage: null,
-    currentStageIssue: null,
+    trackerIssue: 781,
+    currentStage: "C3R-P",
+    currentStageIssue: 706,
   };
   const currentStageMirrors = {
     activeRoadmap: {
@@ -609,19 +614,19 @@ test("selects WCV-C3 after terminal Law while preserving the completed recovery 
   assert.equal(roadmap.program.soleNextImplementationItem, "WCV-C3");
   assert.equal(roadmap.program.soleNextImplementationCampaign, "C3");
   assert.equal(roadmap.program.soleNextImplementationLeadIssue, 706);
-  assert.equal(roadmap.program.soleNextImplementationTrackerIssue, 706);
-  assert.equal(roadmap.program.soleNextReplacementStage, null);
-  assert.equal(roadmap.program.soleNextReplacementStageIssue, null);
+  assert.equal(roadmap.program.soleNextImplementationTrackerIssue, 781);
+  assert.equal(roadmap.program.soleNextReplacementStage, "C3R-P");
+  assert.equal(roadmap.program.soleNextReplacementStageIssue, 706);
   assert.equal(roadmap.program.globalMergeProducingWriterLimit, 1);
   assert.equal(roadmap.program.replacementStageAutomaticStartAllowed, false);
   assert.equal(unified.roadmapContract.soleNextImplementationItemId, "WCV-C3");
   assert.equal(unified.roadmapContract.soleNextImplementationCampaignId, "C3");
-  assert.equal(unified.roadmapContract.soleNextReplacementStageId, null);
-  assert.equal(unified.roadmapContract.soleNextReplacementStageIssue, null);
-  assert.equal(preserved.currentReplacementStageState, "complete_chain_no_current_replacement_stage");
+  assert.equal(unified.roadmapContract.soleNextReplacementStageId, "C3R-P");
+  assert.equal(unified.roadmapContract.soleNextReplacementStageIssue, 706);
+  assert.equal(preserved.currentReplacementStageState, "authorized_unstarted");
   assert.equal(
     preserved.currentSelectorDecision,
-    "docs/decisions/2026-08-14-wcv-c2-structural-recovery.md",
+    "docs/decisions/2026-08-20-owner-wcv-c3-structural-recovery.md",
   );
   assert.equal(
     preserved.structuralChainDecision,
@@ -637,16 +642,16 @@ test("selects WCV-C3 after terminal Law while preserving the completed recovery 
   assert.deepEqual(preserved.c2rBRemainingIssue714Allocations, ["C3", "C4", "C6"]);
   assert.match(
     unifiedMarkdown,
-    /current\s+dependency-ready non-Production selector is roadmap item `WCV-C3`, campaign\s+`C3`, lead Issue #706, authorized but unstarted/,
+    /current tuple\s+`WCV-C3 \/ C3 \/ #781 \/ C3R-P \/ #706 \/ authorized_unstarted`/,
   );
   assert.match(unifiedMarkdown, /post-merge next stage is C2R-B\/#714, authorized but unstarted/);
   assert.match(
     activeMasterPlan,
-    /post-receipt repository selection WCV-C3\/C3\/#706, authorized but unstarted/,
+    /repository selection is\s+`WCV-C3 \/ C3 \/ #781 \/ C3R-P \/ #706 \/ authorized_unstarted`/,
   );
   assert.match(
     launchStrategy,
-    /Current repository selector represented after terminal PR #764's exact-head/,
+    /Current repository selector under the later WCV-C3R source authority/,
   );
 
   const staleFixtures = [

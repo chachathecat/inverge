@@ -1,0 +1,2304 @@
+{
+  "contractId": "dabangil.wcv_c3_structural_recovery.v1",
+  "contractVersion": "1.0.0",
+  "decision": {
+    "decisionId": "owner_wcv_c3r_structural_recovery_2026_08_20",
+    "decisionRecord": "docs/decisions/2026-08-20-owner-wcv-c3-structural-recovery.md",
+    "decisionDateKst": "2026-08-20",
+    "repository": "chachathecat/inverge",
+    "roadmapItemId": "WCV-C3",
+    "campaignId": "C3",
+    "recoveryTrackerIssue": 781,
+    "leadImplementationIssue": 706,
+    "includedIssues": [
+      706,
+      707,
+      708
+    ],
+    "crossVerticalAcceptanceTrackerIssue": 714,
+    "sourceOnlyAuthority": true,
+    "repositoryAuthorityEffectiveOn": "expected_head_pinned_squash_merge_and_validated_github_receipt",
+    "structuralReductionAfterTwoCleanReplans": true,
+    "thirdCleanReplan": false,
+    "runtimeStartedByThisWork": false
+  },
+  "authorityGraph": {
+    "activeMasterPlan": "docs/strategy/dabangil-professional-exam-reasoning-os-final-master-plan-v13-2026-08-06.md",
+    "activeMasterPlanId": "V13",
+    "subordinateExecutionStandard": "config/dabangil-appraiser-second-world-class-vertical-v1.json@1.0.8",
+    "currentRoadmapItemId": "WCV-C3",
+    "currentCampaignId": "C3",
+    "currentRecoveryTrackerIssue": 781,
+    "currentReplacementStageId": "C3R-P",
+    "currentReplacementStageIssue": 706,
+    "currentReplacementStageState": "authorized_unstarted",
+    "replacementStageChain": [
+      "C3R-P",
+      "C3R-T",
+      "C3R-L"
+    ],
+    "exactlyOneCurrentReplacementStageRequired": true,
+    "issueStateMaySubstituteForStageMergeOrReceipt": false,
+    "sourceAuthorityMergeAutomaticallyStartsRuntime": false,
+    "successorRuntimeStarted": false
+  },
+  "terminalDonors": [
+    {
+      "pr": 770,
+      "state": "closed_draft_unmerged",
+      "head": "41fbc60cbebf5463ead483462e5bd92b797c82c4",
+      "tree": "e7d035d5735e600bf970054666da0b57f05f1abb",
+      "base": "ffdd3dcc2398dd27b991eee0be34f832da0a65b5",
+      "readOnly": true,
+      "merged": false,
+      "evidencePromoted": false,
+      "terminalComment": "https://github.com/chachathecat/inverge/pull/770#issuecomment-5353752697"
+    },
+    {
+      "pr": 780,
+      "state": "closed_draft_unmerged",
+      "head": "a28c1983a5264f21ed35ab48a465cd9198a46e5b",
+      "tree": "e589b0e55f93d70df4ef5c0d335d74e4242f91ce",
+      "base": "ffdd3dcc2398dd27b991eee0be34f832da0a65b5",
+      "sourceCorrectionsUsed": 2,
+      "sourceCorrectionsMaximum": 2,
+      "formalReviewsUsed": 0,
+      "formalReviewsMaximum": 3,
+      "centralRuntimeRun": 32358691451,
+      "centralRuntimeConclusion": "failure",
+      "centralRuntimeArtifactCount": 0,
+      "dedicatedRuntimeRun": 32358691469,
+      "dedicatedRuntimeConclusion": "failure",
+      "dedicatedRuntimeArtifactCount": 0,
+      "readOnly": true,
+      "merged": false,
+      "evidencePromoted": false,
+      "terminalComment": "https://github.com/chachathecat/inverge/pull/780#issuecomment-5354652667"
+    },
+    {
+      "pr": 782,
+      "state": "closed_unmerged",
+      "draft": false,
+      "head": "e3609843850ba1f2ce64c291d9b4daae964d2f65",
+      "tree": "20e0f9235b71c3427ee184bf7e02f22f46633ef6",
+      "base": "ffdd3dcc2398dd27b991eee0be34f832da0a65b5",
+      "sourceCorrectionsUsed": 2,
+      "sourceCorrectionsMaximum": 2,
+      "formalReviewsUsed": 2,
+      "formalReviewsMaximum": 3,
+      "finalReviewRestId": 4982731766,
+      "finalReviewGraphqlId": "PRR_kwDOSMHn8M8AAAABKP5z9g",
+      "finalActionableP0P1P2": [0, 0, 1],
+      "currentActionableReviewComment": 3821578964,
+      "readOnly": true,
+      "merged": false,
+      "evidencePromoted": false
+    }
+  ],
+  "donorPolicy": {
+    "reopenAllowed": false,
+    "branchMutationAllowed": false,
+    "cherryPickAllowed": false,
+    "historicalThreadMutationAllowed": false,
+    "historicalCiOrRuntimePromotionAllowed": false,
+    "gitHistoryCopyAllowed": false,
+    "safeBehaviorMustBeReconstructedFromRefreshedMain": true,
+    "everyDonorFindingMustBeIndependentlyProved": true
+  },
+  "knownBlockers": [
+    {
+      "id": "JSONB_ARROW_MINUS_GROUPING_EIGHT",
+      "count": 8,
+      "state": "donor_regression_invariant",
+      "requirement": "group every nested extraction before jsonb key subtraction"
+    },
+    {
+      "id": "IS_DISTINCT_FROM_CASE_GROUPING",
+      "count": 1,
+      "state": "donor_regression_invariant",
+      "requirement": "group the complete CASE expression before IS DISTINCT FROM comparison"
+    },
+    {
+      "id": "RECURSIVE_CTE_MULTIPLE_RECURSIVE_TERMS",
+      "count": 1,
+      "state": "present_on_live_main",
+      "path": "supabase/migrations/20260608_create_personal_learning_states.sql"
+    },
+    {
+      "id": "DUPLICATE_SAME_DAY_MIGRATION_VERSION",
+      "count": 4,
+      "state": "present_on_live_main",
+      "versionToken": "20260615"
+    },
+    {
+      "id": "MIXED_WIDTH_MIGRATION_VERSIONS",
+      "state": "present_on_live_main",
+      "currentWidths": [
+        8,
+        12,
+        14
+      ]
+    },
+    {
+      "id": "LEGAL_CONSUMER_BEFORE_PRODUCER",
+      "state": "present_on_live_main",
+      "consumer": "supabase/migrations/20260615_legal_article_chunk_identity.sql",
+      "producer": "supabase/migrations/20260615_legal_grounding.sql"
+    },
+    {
+      "id": "CONCEPT_RPC_BOUNDARY_BEFORE_FUNCTION_PRODUCER",
+      "state": "present_on_live_main",
+      "consumer": "supabase/migrations/202606232130_personal_concept_graph_rpc_only_write_boundary.sql",
+      "producer": "supabase/migrations/20260623_personal_concept_graph_atomic_transition.sql",
+      "failedSqlState": "42883"
+    },
+    {
+      "id": "CENTRAL_RUNTIME_ADAPTER_PATH_SET_NOT_CLOSED",
+      "state": "terminal_donor_failure",
+      "run": 32358691451,
+      "artifactCount": 0
+    },
+    {
+      "id": "NO_SUCCESSFUL_TWO_CYCLE_FRESH_HISTORY_PROOF",
+      "state": "blocking",
+      "requiredByStage": "C3R-P"
+    },
+    {
+      "id": "EXTERNAL_FUNCTION_SQL_DERIVATION_AUTH_UID",
+      "state": "donor_regression_invariant",
+      "terminalDonorPr": 782,
+      "reviewComment": 3821461959,
+      "requirement": "derive auth.uid and equivalent external functions from migration SQL and compare both directions"
+    },
+    {
+      "id": "CREATE_EXTENSION_DEPENDENCY_CLOSURE",
+      "state": "terminal_donor_p2_root_corrected_by_this_clean_replacement",
+      "terminalDonorPr": 782,
+      "reviewComment": 3821578964,
+      "requirement": "derive every executable CREATE EXTENSION declaration and required extension use from migration SQL with exact schema, producer and ordering comparison"
+    }
+  ],
+  "replacementStages": [
+    {
+      "id": "C3R-P",
+      "order": 1,
+      "subject": "PRACTICE",
+      "state": "authorized_unstarted",
+      "dependencies": [],
+      "startRequiresStructuralAuthorityMergeAndValidatedReceipt": true,
+      "issueStateMaySatisfyDependency": false,
+      "outcomeType": "independently_deployable_practice_learner_outcome_with_common_durable_substrate",
+      "issueAcceptanceContributions": [
+        706,
+        707,
+        708
+      ],
+      "issueClosureAllowed": false,
+      "terminalWcvC3CompletionAllowed": false,
+      "requiredOutcome": [
+        "COMPLETE_MIGRATION_HISTORY_RECONCILIATION",
+        "FRESH_HISTORY_SUPABASE_REPRODUCIBILITY",
+        "COMMON_FORCED_RLS_PERSISTENCE",
+        "SERVICE_ONLY_RPC_AND_REPOSITORY",
+        "COMPLETE_PRACTICE_DURABLE_REVIEW",
+        "BODYLESS_LEARNING_GAP_SIGNAL",
+        "BODYLESS_CONCEPT_STATE_EVIDENCE_SIGNAL",
+        "SOURCE_BOUND_LEARNER_PRIVATE_FAILURE_NOTE",
+        "PLANNER_REVIEW_STATE_SEPARATION",
+        "D_PLUS_1_SEALED_D_PLUS_7_TIMED_RECURRENCE_AND_REOPEN",
+        "LEDGER_REVIEW_QUEUE_TODAY_FULL_DAY_COMMON_BEHAVIOR",
+        "RESTORE_EXPORT_DELETE",
+        "EXACT_PRACTICE_BROWSER_TO_POSTGRES_EVIDENCE",
+        "TWO_FRESH_ISOLATED_RESET_REPLAY_CYCLES",
+        "INDEPENDENT_ROLLBACK"
+      ]
+    },
+    {
+      "id": "C3R-T",
+      "order": 2,
+      "subject": "THEORY",
+      "state": "dependency_blocked_unstarted",
+      "dependencies": [
+        "C3R-P"
+      ],
+      "dependencyEvidence": "validated_terminal_merge_and_receipt",
+      "issueStateMaySatisfyDependency": false,
+      "outcomeType": "independently_deployable_theory_durable_learning_delta",
+      "issueAcceptanceContributions": [
+        706,
+        707,
+        708
+      ],
+      "issueClosureAllowed": false,
+      "terminalWcvC3CompletionAllowed": false,
+      "requiredOutcome": [
+        "EXACT_TARGET_SCOPE_THEORY_PROOF",
+        "D_PLUS_1_SEALED_D_PLUS_7_TIMED_RECURRENCE_AND_REOPEN",
+        "THEORY_REVIEW_OUTPUTS",
+        "RESTORE_EXPORT_DELETE",
+        "EXACT_THEORY_BROWSER_TO_POSTGRES_EVIDENCE",
+        "TWO_FRESH_ISOLATED_RESET_REPLAY_CYCLES",
+        "ROLLBACK_INDEPENDENT_OF_PRACTICE"
+      ]
+    },
+    {
+      "id": "C3R-L",
+      "order": 3,
+      "subject": "LAW",
+      "state": "dependency_blocked_unstarted",
+      "dependencies": [
+        "C3R-P",
+        "C3R-T"
+      ],
+      "dependencyEvidence": "validated_terminal_merges_and_receipts_for_c3r_p_and_c3r_t",
+      "issueStateMaySatisfyDependency": false,
+      "outcomeType": "independently_deployable_law_durable_learning_delta_and_terminal_wcv_c3_closeout",
+      "issueAcceptanceContributions": [
+        706,
+        707,
+        708
+      ],
+      "issueClosureAllowed": true,
+      "terminalClosureIssues": [
+        706,
+        707,
+        708,
+        781
+      ],
+      "terminalWcvC3CompletionAllowed": true,
+      "terminalReceiptPublisher": true,
+      "completesIssue714Allocation": "C3",
+      "issue714ClosureAllowed": false,
+      "issue714AllocationsPreservedAfterCompletion": [
+        "C4",
+        "C6"
+      ],
+      "requiredOutcome": [
+        "EXACT_SOURCE_VERSION_ANCHOR_EFFECTIVE_DATE_APPLICABILITY",
+        "D_PLUS_1_SEALED_D_PLUS_7_TIMED_RECURRENCE_AND_REOPEN",
+        "LAW_REVIEW_OUTPUTS",
+        "RESTORE_EXPORT_DELETE",
+        "EXACT_LAW_BROWSER_TO_POSTGRES_EVIDENCE",
+        "TWO_FRESH_ISOLATED_RESET_REPLAY_CYCLES",
+        "ROLLBACK_INDEPENDENT_OF_PRACTICE_AND_THEORY",
+        "TERMINAL_WCV_C3_RECEIPT"
+      ]
+    }
+  ],
+  "issueAllocation": {
+    "706": "frozen D0, D+1 reproduction, sealed D+7 transfer, timed recurrence and reopen",
+    "707": "forced-RLS Personal Study Ledger, bodyless evidence projections, source-bound failure note, restore, export and delete",
+    "708": "deterministic Today and Full-Day, Review Queue, planner/review separation, at most three CoreOutcomes and evidence-neutral accept/edit/reject",
+    "stageRule": "C3R-P owns common substrate and Practice; C3R-T adds Theory; C3R-L adds Law and alone closes the allocation",
+    "recoveryTrackerClosureStage": "C3R-L",
+    "issue714C3AllocationClosureStage": "C3R-L"
+  },
+  "migrationHistoryCompatibilityManifestV1": {
+    "closedDatabaseObjectKinds": [
+      "table",
+      "view",
+      "sequence",
+      "function",
+      "type"
+    ],
+    "repositoryProducedTypeIdentifiers": [],
+    "externalDatabaseObjects": [
+      {
+        "kind": "table",
+        "identifier": "auth.users"
+      },
+      {
+        "kind": "function",
+        "identifier": "auth.uid"
+      },
+      {
+        "kind": "table",
+        "identifier": "storage.objects"
+      },
+      {
+        "kind": "table",
+        "identifier": "storage.buckets"
+      },
+      {
+        "kind": "function",
+        "identifier": "storage.allow_any_operation"
+      },
+      {
+        "kind": "function",
+        "identifier": "storage.allow_only_operation"
+      }
+    ],
+    "objectReferenceFormat": "{kind,identifier}; identifiers are exact schema-qualified database object names",
+    "manifestVersion": "MigrationHistoryCompatibilityManifestV1",
+    "liveMainSha": "ffdd3dcc2398dd27b991eee0be34f832da0a65b5",
+    "liveMainTree": "178e8d2e80236030805441344064f30af68b0a94",
+    "liveMainMigrationCount": 25,
+    "donorOnlyMigrationCount": 1,
+    "currentVersionWidthCounts": {
+      "8": 16,
+      "12": 1,
+      "14": 8
+    },
+    "currentDuplicateVersionTokens": [
+      "20260615"
+    ],
+    "remoteApplicationStatusEnum": [
+      "KNOWN_APPLIED",
+      "KNOWN_UNAPPLIED",
+      "LOCAL_ONLY",
+      "UNKNOWN"
+    ],
+    "freshCurrentRemoteLedgerReadPerformed": false,
+    "freshCurrentRemoteLedgerReadAuthorized": false,
+    "knownUnappliedRecordCount": 0,
+    "canonicalProposalIsMutationAuthority": false,
+    "liveMainLexicalInventory": [
+      "20260422_inverge_service_core.sql",
+      "20260423_inverge_service_role_grants.sql",
+      "20260424_review_os_alpha.sql",
+      "20260426_review_os_study_logs.sql",
+      "20260427_study_logs_taxonomy_candidates.sql",
+      "20260429_learning_signal_events.sql",
+      "20260430_exam_archive.sql",
+      "20260605_create_personal_concept_nodes.sql",
+      "20260608_create_personal_learning_states.sql",
+      "20260615_legal_article_chunk_identity.sql",
+      "20260615_legal_grounding.sql",
+      "20260615_legal_grounding_guard.sql",
+      "20260615_legal_retrieval.sql",
+      "20260616_legal_grounding_guard_service_role_grant.sql",
+      "20260622_mobile_pwa_web_push_reminder.sql",
+      "202606232130_personal_concept_graph_rpc_only_write_boundary.sql",
+      "20260623_personal_concept_graph_atomic_transition.sql",
+      "20260721060237_s233a_answer_review_persistence.sql",
+      "20260730025332_s236p_lean_owner_private.sql",
+      "20260730060233_s236p_owner_private_lifecycle_hardening.sql",
+      "20260730065744_s236p_owner_private_authenticated_download_info.sql",
+      "20260730151052_s236p_owner_private_expiry_read_gate.sql",
+      "20260817090000_c2r_c_p_structured_practice_proof.sql",
+      "20260817113000_c2r_c_t_structural_theory_proof.sql",
+      "20260817170000_c2r_c_l_exact_law_applicability.sql"
+    ],
+    "records": [
+      {
+        "currentFilename": "20260422_inverge_service_core.sql",
+        "presentOnLiveMain": true,
+        "currentVersionToken": "20260422",
+        "canonicalProposedVersionToken": "20260422090000",
+        "exactDependencyPredecessors": [],
+        "consumes": [
+          {
+            "kind": "table",
+            "identifier": "auth.users"
+          },
+          {
+            "kind": "function",
+            "identifier": "auth.uid"
+          }
+        ],
+        "produces": [
+          {
+            "kind": "table",
+            "identifier": "public.profiles"
+          },
+          {
+            "kind": "table",
+            "identifier": "public.research_participation"
+          },
+          {
+            "kind": "table",
+            "identifier": "public.exam_sessions"
+          },
+          {
+            "kind": "table",
+            "identifier": "public.answer_submissions"
+          },
+          {
+            "kind": "table",
+            "identifier": "public.rewrite_submissions"
+          },
+          {
+            "kind": "table",
+            "identifier": "public.diagnosis_results"
+          },
+          {
+            "kind": "table",
+            "identifier": "public.review_queue_items"
+          },
+          {
+            "kind": "table",
+            "identifier": "public.coaching_seeds"
+          },
+          {
+            "kind": "table",
+            "identifier": "public.problem_uploads"
+          },
+          {
+            "kind": "table",
+            "identifier": "public.derived_problem_features"
+          },
+          {
+            "kind": "table",
+            "identifier": "public.derived_answer_features"
+          },
+          {
+            "kind": "table",
+            "identifier": "public.subscriptions"
+          },
+          {
+            "kind": "table",
+            "identifier": "public.checkout_sessions"
+          }
+        ],
+        "freshHistoryOrder": 1,
+        "remoteApplicationStatus": "UNKNOWN",
+        "filenameMutationEligibleInThisWork": false,
+        "futureFilenameMutationEligibility": "BLOCKED_PENDING_OWNER_RECONCILIATION",
+        "remoteHistoryRepairRequirement": "SEPARATE_OWNER_GATE_IF_CANONICALIZED",
+        "ownerGateRequired": true,
+        "rollbackOrForwardCompatibilityStrategy": "preserve current filename and fail closed pending exact remote reconciliation",
+        "sqlEvidenceScope": "LIVE_MAIN_SQL_EXACT",
+        "sqlSha256": "7203fc06b5f76ffe28b6f9440515f93b46019f344820adf5744067ded377bbbf",
+        "createdExtensions": [
+          {
+            "name": "pgcrypto",
+            "schema": null,
+            "schemaSource": "SQL_UNSPECIFIED",
+            "ifNotExists": true,
+            "statementOrdinal": 1,
+            "statementSha256": "36eb05857bdd72fb5e3e0dbfa0fbd2939dd609e2c2f0accd1c80bacc6ef21094"
+          }
+        ],
+        "requiredExtensions": [
+          {
+            "name": "pgcrypto",
+            "schema": null,
+            "evidence": [
+              {
+                "kind": "function",
+                "identifier": "gen_random_uuid",
+                "occurrences": 3
+              }
+            ],
+            "satisfaction": "CURRENT_MIGRATION_CREATE",
+            "producerMigration": "20260422_inverge_service_core.sql",
+            "producerFreshHistoryOrder": 1
+          }
+        ],
+        "extensionDependencyPredecessors": []
+      },
+      {
+        "currentFilename": "20260423_inverge_service_role_grants.sql",
+        "presentOnLiveMain": true,
+        "currentVersionToken": "20260423",
+        "canonicalProposedVersionToken": "20260423090000",
+        "exactDependencyPredecessors": [
+          "20260422_inverge_service_core.sql"
+        ],
+        "consumes": [
+          {
+            "kind": "table",
+            "identifier": "public.profiles"
+          },
+          {
+            "kind": "table",
+            "identifier": "public.research_participation"
+          },
+          {
+            "kind": "table",
+            "identifier": "public.exam_sessions"
+          },
+          {
+            "kind": "table",
+            "identifier": "public.answer_submissions"
+          },
+          {
+            "kind": "table",
+            "identifier": "public.rewrite_submissions"
+          },
+          {
+            "kind": "table",
+            "identifier": "public.diagnosis_results"
+          },
+          {
+            "kind": "table",
+            "identifier": "public.review_queue_items"
+          },
+          {
+            "kind": "table",
+            "identifier": "public.coaching_seeds"
+          },
+          {
+            "kind": "table",
+            "identifier": "public.problem_uploads"
+          },
+          {
+            "kind": "table",
+            "identifier": "public.derived_problem_features"
+          },
+          {
+            "kind": "table",
+            "identifier": "public.derived_answer_features"
+          },
+          {
+            "kind": "table",
+            "identifier": "public.subscriptions"
+          },
+          {
+            "kind": "table",
+            "identifier": "public.checkout_sessions"
+          }
+        ],
+        "produces": [],
+        "grantEffects": [
+          "service_role:public.profiles",
+          "service_role:public.research_participation",
+          "service_role:public.exam_sessions",
+          "service_role:public.answer_submissions",
+          "service_role:public.rewrite_submissions",
+          "service_role:public.diagnosis_results",
+          "service_role:public.review_queue_items",
+          "service_role:public.coaching_seeds",
+          "service_role:public.problem_uploads",
+          "service_role:public.derived_problem_features",
+          "service_role:public.derived_answer_features",
+          "service_role:public.subscriptions",
+          "service_role:public.checkout_sessions"
+        ],
+        "freshHistoryOrder": 2,
+        "remoteApplicationStatus": "UNKNOWN",
+        "filenameMutationEligibleInThisWork": false,
+        "futureFilenameMutationEligibility": "BLOCKED_PENDING_OWNER_RECONCILIATION",
+        "remoteHistoryRepairRequirement": "SEPARATE_OWNER_GATE_IF_CANONICALIZED",
+        "ownerGateRequired": true,
+        "rollbackOrForwardCompatibilityStrategy": "preserve current filename and grants pending exact remote reconciliation",
+        "sqlEvidenceScope": "LIVE_MAIN_SQL_EXACT",
+        "sqlSha256": "3bd8cd68ed43c21d637f7558cebd56ddf9d7b4a5148f1f6dc8b7107058424683",
+        "createdExtensions": [],
+        "requiredExtensions": [],
+        "extensionDependencyPredecessors": []
+      },
+      {
+        "currentFilename": "20260424_review_os_alpha.sql",
+        "presentOnLiveMain": true,
+        "currentVersionToken": "20260424",
+        "canonicalProposedVersionToken": "20260424090000",
+        "exactDependencyPredecessors": [
+          "20260422_inverge_service_core.sql"
+        ],
+        "consumes": [
+          {
+            "kind": "table",
+            "identifier": "public.profiles"
+          },
+          {
+            "kind": "table",
+            "identifier": "auth.users"
+          },
+          {
+            "kind": "function",
+            "identifier": "auth.uid"
+          }
+        ],
+        "produces": [
+          {
+            "kind": "table",
+            "identifier": "public.study_profiles"
+          },
+          {
+            "kind": "table",
+            "identifier": "public.wrong_answer_items"
+          },
+          {
+            "kind": "table",
+            "identifier": "public.wrong_answer_notes"
+          },
+          {
+            "kind": "table",
+            "identifier": "public.wrong_answer_tags"
+          },
+          {
+            "kind": "table",
+            "identifier": "public.recurrence_features"
+          },
+          {
+            "kind": "table",
+            "identifier": "public.weekly_learning_summaries"
+          },
+          {
+            "kind": "table",
+            "identifier": "public.action_seeds"
+          },
+          {
+            "kind": "table",
+            "identifier": "public.usage_events"
+          },
+          {
+            "kind": "table",
+            "identifier": "public.feedback_items"
+          }
+        ],
+        "modifies": [
+          {
+            "kind": "table",
+            "identifier": "public.profiles"
+          }
+        ],
+        "freshHistoryOrder": 3,
+        "remoteApplicationStatus": "UNKNOWN",
+        "filenameMutationEligibleInThisWork": false,
+        "futureFilenameMutationEligibility": "BLOCKED_PENDING_OWNER_RECONCILIATION",
+        "remoteHistoryRepairRequirement": "SEPARATE_OWNER_GATE_IF_CANONICALIZED",
+        "ownerGateRequired": true,
+        "rollbackOrForwardCompatibilityStrategy": "preserve current filename and fail closed pending exact remote reconciliation",
+        "sqlEvidenceScope": "LIVE_MAIN_SQL_EXACT",
+        "sqlSha256": "dc3a7d90509eb949cb5a7ef7bd871706fa90ab902261e815aee293018be86960",
+        "createdExtensions": [],
+        "requiredExtensions": [
+          {
+            "name": "pgcrypto",
+            "schema": null,
+            "evidence": [
+              {
+                "kind": "function",
+                "identifier": "gen_random_uuid",
+                "occurrences": 8
+              }
+            ],
+            "satisfaction": "PREDECESSOR_MIGRATION",
+            "producerMigration": "20260422_inverge_service_core.sql",
+            "producerFreshHistoryOrder": 1
+          }
+        ],
+        "extensionDependencyPredecessors": [
+          "20260422_inverge_service_core.sql"
+        ]
+      },
+      {
+        "currentFilename": "20260426_review_os_study_logs.sql",
+        "presentOnLiveMain": true,
+        "currentVersionToken": "20260426",
+        "canonicalProposedVersionToken": "20260426090000",
+        "exactDependencyPredecessors": [],
+        "consumes": [
+          {
+            "kind": "table",
+            "identifier": "auth.users"
+          },
+          {
+            "kind": "function",
+            "identifier": "auth.uid"
+          }
+        ],
+        "produces": [
+          {
+            "kind": "table",
+            "identifier": "public.study_logs"
+          }
+        ],
+        "freshHistoryOrder": 4,
+        "remoteApplicationStatus": "UNKNOWN",
+        "filenameMutationEligibleInThisWork": false,
+        "futureFilenameMutationEligibility": "BLOCKED_PENDING_OWNER_RECONCILIATION",
+        "remoteHistoryRepairRequirement": "SEPARATE_OWNER_GATE_IF_CANONICALIZED",
+        "ownerGateRequired": true,
+        "rollbackOrForwardCompatibilityStrategy": "preserve current filename and fail closed pending exact remote reconciliation",
+        "sqlEvidenceScope": "LIVE_MAIN_SQL_EXACT",
+        "sqlSha256": "c079b4f3891b4ca20b5151852090ea44913bf06a11bfd8efa954cd7f2a039bec",
+        "createdExtensions": [],
+        "requiredExtensions": [
+          {
+            "name": "pgcrypto",
+            "schema": null,
+            "evidence": [
+              {
+                "kind": "function",
+                "identifier": "gen_random_uuid",
+                "occurrences": 1
+              }
+            ],
+            "satisfaction": "PREDECESSOR_MIGRATION",
+            "producerMigration": "20260422_inverge_service_core.sql",
+            "producerFreshHistoryOrder": 1
+          }
+        ],
+        "extensionDependencyPredecessors": [
+          "20260422_inverge_service_core.sql"
+        ]
+      },
+      {
+        "currentFilename": "20260427_study_logs_taxonomy_candidates.sql",
+        "presentOnLiveMain": true,
+        "currentVersionToken": "20260427",
+        "canonicalProposedVersionToken": "20260427090000",
+        "exactDependencyPredecessors": [
+          "20260426_review_os_study_logs.sql"
+        ],
+        "consumes": [
+          {
+            "kind": "table",
+            "identifier": "public.study_logs"
+          }
+        ],
+        "produces": [],
+        "modifies": [
+          {
+            "kind": "table",
+            "identifier": "public.study_logs"
+          }
+        ],
+        "columnEffects": [
+          "public.study_logs.taxonomy_node_id",
+          "public.study_logs.taxonomy_candidates",
+          "public.study_logs.taxonomy_classification_status",
+          "public.study_logs.taxonomy_classification_confidence"
+        ],
+        "constraintEffects": [
+          "public.study_logs::study_logs_taxonomy_classification_status_check",
+          "public.study_logs::study_logs_taxonomy_classification_confidence_check"
+        ],
+        "freshHistoryOrder": 5,
+        "remoteApplicationStatus": "UNKNOWN",
+        "filenameMutationEligibleInThisWork": false,
+        "futureFilenameMutationEligibility": "BLOCKED_PENDING_OWNER_RECONCILIATION",
+        "remoteHistoryRepairRequirement": "SEPARATE_OWNER_GATE_IF_CANONICALIZED",
+        "ownerGateRequired": true,
+        "rollbackOrForwardCompatibilityStrategy": "preserve current filename and fail closed pending exact remote reconciliation",
+        "sqlEvidenceScope": "LIVE_MAIN_SQL_EXACT",
+        "sqlSha256": "dc1e0a72409c50ff5550897ac26c504da3f5831ca47f76250ac83a22b35a71d0",
+        "createdExtensions": [],
+        "requiredExtensions": [],
+        "extensionDependencyPredecessors": []
+      },
+      {
+        "currentFilename": "20260429_learning_signal_events.sql",
+        "presentOnLiveMain": true,
+        "currentVersionToken": "20260429",
+        "canonicalProposedVersionToken": "20260429090000",
+        "exactDependencyPredecessors": [],
+        "consumes": [
+          {
+            "kind": "table",
+            "identifier": "auth.users"
+          },
+          {
+            "kind": "function",
+            "identifier": "auth.uid"
+          }
+        ],
+        "produces": [
+          {
+            "kind": "table",
+            "identifier": "public.learning_signal_events"
+          }
+        ],
+        "freshHistoryOrder": 6,
+        "remoteApplicationStatus": "UNKNOWN",
+        "filenameMutationEligibleInThisWork": false,
+        "futureFilenameMutationEligibility": "BLOCKED_PENDING_OWNER_RECONCILIATION",
+        "remoteHistoryRepairRequirement": "SEPARATE_OWNER_GATE_IF_CANONICALIZED",
+        "ownerGateRequired": true,
+        "rollbackOrForwardCompatibilityStrategy": "preserve current filename and fail closed pending exact remote reconciliation",
+        "sqlEvidenceScope": "LIVE_MAIN_SQL_EXACT",
+        "sqlSha256": "53b3e70b86a7339e06667aebed5e72758fb7f59c15c5c7ad9a809187a76cb8ec",
+        "createdExtensions": [],
+        "requiredExtensions": [],
+        "extensionDependencyPredecessors": []
+      },
+      {
+        "currentFilename": "20260430_exam_archive.sql",
+        "presentOnLiveMain": true,
+        "currentVersionToken": "20260430",
+        "canonicalProposedVersionToken": "20260430090000",
+        "exactDependencyPredecessors": [],
+        "consumes": [],
+        "produces": [
+          {
+            "kind": "table",
+            "identifier": "public.exams"
+          },
+          {
+            "kind": "table",
+            "identifier": "public.questions"
+          },
+          {
+            "kind": "table",
+            "identifier": "public.answers"
+          }
+        ],
+        "freshHistoryOrder": 7,
+        "remoteApplicationStatus": "UNKNOWN",
+        "filenameMutationEligibleInThisWork": false,
+        "futureFilenameMutationEligibility": "BLOCKED_PENDING_OWNER_RECONCILIATION",
+        "remoteHistoryRepairRequirement": "SEPARATE_OWNER_GATE_IF_CANONICALIZED",
+        "ownerGateRequired": true,
+        "rollbackOrForwardCompatibilityStrategy": "preserve current filename and fail closed pending exact remote reconciliation",
+        "sqlEvidenceScope": "LIVE_MAIN_SQL_EXACT",
+        "sqlSha256": "a540f24d8be0d9cef7f35321dc97989147f1fdca67a7b1328c5b594160a8acdd",
+        "createdExtensions": [],
+        "requiredExtensions": [
+          {
+            "name": "pgcrypto",
+            "schema": null,
+            "evidence": [
+              {
+                "kind": "function",
+                "identifier": "gen_random_uuid",
+                "occurrences": 3
+              }
+            ],
+            "satisfaction": "PREDECESSOR_MIGRATION",
+            "producerMigration": "20260422_inverge_service_core.sql",
+            "producerFreshHistoryOrder": 1
+          }
+        ],
+        "extensionDependencyPredecessors": [
+          "20260422_inverge_service_core.sql"
+        ]
+      },
+      {
+        "currentFilename": "20260605_create_personal_concept_nodes.sql",
+        "presentOnLiveMain": true,
+        "currentVersionToken": "20260605",
+        "canonicalProposedVersionToken": "20260605090000",
+        "exactDependencyPredecessors": [],
+        "consumes": [
+          {
+            "kind": "table",
+            "identifier": "auth.users"
+          },
+          {
+            "kind": "function",
+            "identifier": "auth.uid"
+          }
+        ],
+        "produces": [
+          {
+            "kind": "table",
+            "identifier": "public.personal_concept_nodes"
+          }
+        ],
+        "freshHistoryOrder": 8,
+        "remoteApplicationStatus": "KNOWN_APPLIED",
+        "remoteStatusEvidence": [
+          "docs/qa/personal-concept-graph-atomic-transition-v1.md",
+          "docs/qa/personal-concept-graph-runtime-rls-smoke.md"
+        ],
+        "filenameMutationEligibleInThisWork": false,
+        "futureFilenameMutationEligibility": "OWNER_GATE_BLOCKED_ALREADY_APPLIED",
+        "remoteHistoryRepairRequirement": "SEPARATE_OWNER_GATE_REQUIRED",
+        "ownerGateRequired": true,
+        "rollbackOrForwardCompatibilityStrategy": "forward-only compatibility under an Owner-approved exact history plan",
+        "sqlEvidenceScope": "LIVE_MAIN_SQL_EXACT",
+        "sqlSha256": "fce87dbb71c2e72792c0a53f840c9c41fe620856c34d208e36c9ac5bcbdd8b61",
+        "createdExtensions": [
+          {
+            "name": "pgcrypto",
+            "schema": null,
+            "schemaSource": "SQL_UNSPECIFIED",
+            "ifNotExists": true,
+            "statementOrdinal": 1,
+            "statementSha256": "36eb05857bdd72fb5e3e0dbfa0fbd2939dd609e2c2f0accd1c80bacc6ef21094"
+          }
+        ],
+        "requiredExtensions": [
+          {
+            "name": "pgcrypto",
+            "schema": null,
+            "evidence": [
+              {
+                "kind": "function",
+                "identifier": "gen_random_uuid",
+                "occurrences": 1
+              }
+            ],
+            "satisfaction": "CURRENT_MIGRATION_CREATE",
+            "producerMigration": "20260605_create_personal_concept_nodes.sql",
+            "producerFreshHistoryOrder": 8
+          }
+        ],
+        "extensionDependencyPredecessors": []
+      },
+      {
+        "currentFilename": "20260608_create_personal_learning_states.sql",
+        "presentOnLiveMain": true,
+        "currentVersionToken": "20260608",
+        "canonicalProposedVersionToken": "20260608090000",
+        "exactDependencyPredecessors": [],
+        "consumes": [
+          {
+            "kind": "table",
+            "identifier": "auth.users"
+          },
+          {
+            "kind": "function",
+            "identifier": "auth.uid"
+          }
+        ],
+        "dataShapeDependencies": [
+          "nested jsonb metadata"
+        ],
+        "produces": [
+          {
+            "kind": "function",
+            "identifier": "public.personal_learning_state_metadata_has_forbidden_key"
+          },
+          {
+            "kind": "table",
+            "identifier": "public.personal_learning_states"
+          }
+        ],
+        "freshHistoryOrder": 9,
+        "remoteApplicationStatus": "UNKNOWN",
+        "remoteStatusEvidence": [
+          "docs/qa/mobile-pwa-web-push-reminder-v1.md records historical unapplied state only; current state remains unknown"
+        ],
+        "filenameMutationEligibleInThisWork": false,
+        "futureFilenameMutationEligibility": "BLOCKED_PENDING_OWNER_RECONCILIATION",
+        "remoteHistoryRepairRequirement": "SEPARATE_OWNER_GATE_IF_CANONICALIZED_OR_REWRITTEN",
+        "ownerGateRequired": true,
+        "rollbackOrForwardCompatibilityStrategy": "preserve current filename; reconcile whether a forward-only plan can coexist with mandatory fresh-history replay",
+        "sqlEvidenceScope": "LIVE_MAIN_SQL_EXACT",
+        "sqlSha256": "13f290748149a6d1ede1b3894ca9bce3d3f79e198015918e5a4159b6c1c2b968",
+        "createdExtensions": [
+          {
+            "name": "pgcrypto",
+            "schema": null,
+            "schemaSource": "SQL_UNSPECIFIED",
+            "ifNotExists": true,
+            "statementOrdinal": 1,
+            "statementSha256": "36eb05857bdd72fb5e3e0dbfa0fbd2939dd609e2c2f0accd1c80bacc6ef21094"
+          }
+        ],
+        "requiredExtensions": [
+          {
+            "name": "pgcrypto",
+            "schema": null,
+            "evidence": [
+              {
+                "kind": "function",
+                "identifier": "gen_random_uuid",
+                "occurrences": 1
+              }
+            ],
+            "satisfaction": "CURRENT_MIGRATION_CREATE",
+            "producerMigration": "20260608_create_personal_learning_states.sql",
+            "producerFreshHistoryOrder": 9
+          }
+        ],
+        "extensionDependencyPredecessors": []
+      },
+      {
+        "currentFilename": "20260615_legal_grounding.sql",
+        "presentOnLiveMain": true,
+        "currentVersionToken": "20260615",
+        "canonicalProposedVersionToken": "20260615090000",
+        "exactDependencyPredecessors": [],
+        "consumes": [
+          {
+            "kind": "function",
+            "identifier": "auth.uid"
+          }
+        ],
+        "produces": [
+          {
+            "kind": "table",
+            "identifier": "public.legal_sources"
+          },
+          {
+            "kind": "table",
+            "identifier": "public.legal_versions"
+          },
+          {
+            "kind": "table",
+            "identifier": "public.legal_article_chunks"
+          },
+          {
+            "kind": "table",
+            "identifier": "public.legal_concept_nodes"
+          },
+          {
+            "kind": "table",
+            "identifier": "public.legal_concept_anchors"
+          },
+          {
+            "kind": "table",
+            "identifier": "public.legal_sync_runs"
+          }
+        ],
+        "freshHistoryOrder": 10,
+        "remoteApplicationStatus": "UNKNOWN",
+        "remoteStatusEvidence": [
+          "PR #780 donor proposal only; no fresh remote ledger read"
+        ],
+        "filenameMutationEligibleInThisWork": false,
+        "futureFilenameMutationEligibility": "BLOCKED_PENDING_OWNER_RECONCILIATION",
+        "remoteHistoryRepairRequirement": "SEPARATE_OWNER_GATE_IF_CANONICALIZED",
+        "ownerGateRequired": true,
+        "rollbackOrForwardCompatibilityStrategy": "canonical token is proposal metadata only; preserve current file until exact reconciliation",
+        "sqlEvidenceScope": "LIVE_MAIN_SQL_EXACT",
+        "sqlSha256": "fb585b9c2d96edfd696d2f03e0d4fc427597c7759ee6ab96de5a3dddf29d237e",
+        "createdExtensions": [
+          {
+            "name": "pgcrypto",
+            "schema": null,
+            "schemaSource": "SQL_UNSPECIFIED",
+            "ifNotExists": true,
+            "statementOrdinal": 1,
+            "statementSha256": "36eb05857bdd72fb5e3e0dbfa0fbd2939dd609e2c2f0accd1c80bacc6ef21094"
+          },
+          {
+            "name": "vector",
+            "schema": null,
+            "schemaSource": "SQL_UNSPECIFIED",
+            "ifNotExists": true,
+            "statementOrdinal": 2,
+            "statementSha256": "5a4faad169cc849f8babf231d9758fc3fafb1cdb3e909754f21896fca4129c56"
+          }
+        ],
+        "requiredExtensions": [
+          {
+            "name": "pgcrypto",
+            "schema": null,
+            "evidence": [
+              {
+                "kind": "function",
+                "identifier": "gen_random_uuid",
+                "occurrences": 6
+              }
+            ],
+            "satisfaction": "CURRENT_MIGRATION_CREATE",
+            "producerMigration": "20260615_legal_grounding.sql",
+            "producerFreshHistoryOrder": 10
+          },
+          {
+            "name": "vector",
+            "schema": null,
+            "evidence": [
+              {
+                "kind": "type",
+                "identifier": "vector",
+                "occurrences": 1
+              }
+            ],
+            "satisfaction": "CURRENT_MIGRATION_CREATE",
+            "producerMigration": "20260615_legal_grounding.sql",
+            "producerFreshHistoryOrder": 10
+          }
+        ],
+        "extensionDependencyPredecessors": []
+      },
+      {
+        "currentFilename": "20260615_legal_article_chunk_identity.sql",
+        "presentOnLiveMain": true,
+        "currentVersionToken": "20260615",
+        "canonicalProposedVersionToken": "20260615100000",
+        "exactDependencyPredecessors": [
+          "20260615_legal_grounding.sql"
+        ],
+        "consumes": [
+          {
+            "kind": "table",
+            "identifier": "public.legal_article_chunks"
+          }
+        ],
+        "produces": [],
+        "modifies": [
+          {
+            "kind": "table",
+            "identifier": "public.legal_article_chunks"
+          }
+        ],
+        "columnEffects": [
+          "public.legal_article_chunks.article_key"
+        ],
+        "constraintEffects": [
+          "public.legal_article_chunks::legal_article_chunks_version_article_key_unique",
+          "public.legal_article_chunks::legal_article_chunks_article_key_not_empty_check"
+        ],
+        "freshHistoryOrder": 11,
+        "remoteApplicationStatus": "UNKNOWN",
+        "remoteStatusEvidence": [
+          "PR #780 donor proposal only; no fresh remote ledger read"
+        ],
+        "filenameMutationEligibleInThisWork": false,
+        "futureFilenameMutationEligibility": "BLOCKED_PENDING_OWNER_RECONCILIATION",
+        "remoteHistoryRepairRequirement": "SEPARATE_OWNER_GATE_IF_CANONICALIZED",
+        "ownerGateRequired": true,
+        "rollbackOrForwardCompatibilityStrategy": "producer must precede consumer in the Owner-approved plan",
+        "sqlEvidenceScope": "LIVE_MAIN_SQL_EXACT",
+        "sqlSha256": "03dce727ac9bca1ab290556583c33593c3ae6ee544b0c90cc8ff7e05aea6e29d",
+        "createdExtensions": [],
+        "requiredExtensions": [],
+        "extensionDependencyPredecessors": []
+      },
+      {
+        "currentFilename": "20260615_legal_retrieval.sql",
+        "presentOnLiveMain": true,
+        "currentVersionToken": "20260615",
+        "canonicalProposedVersionToken": "20260615110000",
+        "exactDependencyPredecessors": [
+          "20260615_legal_grounding.sql",
+          "20260615_legal_article_chunk_identity.sql"
+        ],
+        "consumes": [
+          {
+            "kind": "table",
+            "identifier": "public.legal_article_chunks"
+          },
+          {
+            "kind": "table",
+            "identifier": "public.legal_versions"
+          }
+        ],
+        "columnDependencies": [
+          "public.legal_article_chunks.article_key"
+        ],
+        "produces": [
+          {
+            "kind": "function",
+            "identifier": "public.search_legal_chunks_keyword"
+          }
+        ],
+        "freshHistoryOrder": 12,
+        "remoteApplicationStatus": "UNKNOWN",
+        "remoteStatusEvidence": [
+          "PR #780 donor proposal only; no fresh remote ledger read"
+        ],
+        "filenameMutationEligibleInThisWork": false,
+        "futureFilenameMutationEligibility": "BLOCKED_PENDING_OWNER_RECONCILIATION",
+        "remoteHistoryRepairRequirement": "SEPARATE_OWNER_GATE_IF_CANONICALIZED",
+        "ownerGateRequired": true,
+        "rollbackOrForwardCompatibilityStrategy": "producer and identity migrations must precede retrieval",
+        "sqlEvidenceScope": "LIVE_MAIN_SQL_EXACT",
+        "sqlSha256": "d1ec08d0e3082e224c8da95c412636d83a0d4183df3a1ec4a1432f795b0154cc",
+        "createdExtensions": [],
+        "requiredExtensions": [],
+        "extensionDependencyPredecessors": []
+      },
+      {
+        "currentFilename": "20260615_legal_grounding_guard.sql",
+        "presentOnLiveMain": true,
+        "currentVersionToken": "20260615",
+        "canonicalProposedVersionToken": "20260615120000",
+        "exactDependencyPredecessors": [
+          "20260615_legal_grounding.sql",
+          "20260615_legal_article_chunk_identity.sql"
+        ],
+        "consumes": [
+          {
+            "kind": "table",
+            "identifier": "public.legal_concept_nodes"
+          },
+          {
+            "kind": "table",
+            "identifier": "public.legal_concept_anchors"
+          },
+          {
+            "kind": "table",
+            "identifier": "public.legal_article_chunks"
+          },
+          {
+            "kind": "table",
+            "identifier": "public.legal_versions"
+          }
+        ],
+        "columnDependencies": [
+          "public.legal_article_chunks.article_key"
+        ],
+        "produces": [
+          {
+            "kind": "function",
+            "identifier": "public.get_legal_concept_source_anchors"
+          }
+        ],
+        "freshHistoryOrder": 13,
+        "remoteApplicationStatus": "UNKNOWN",
+        "remoteStatusEvidence": [
+          "PR #780 donor proposal only; no fresh remote ledger read"
+        ],
+        "filenameMutationEligibleInThisWork": false,
+        "futureFilenameMutationEligibility": "BLOCKED_PENDING_OWNER_RECONCILIATION",
+        "remoteHistoryRepairRequirement": "SEPARATE_OWNER_GATE_IF_CANONICALIZED",
+        "ownerGateRequired": true,
+        "rollbackOrForwardCompatibilityStrategy": "producer and identity migrations must precede grounding guard",
+        "sqlEvidenceScope": "LIVE_MAIN_SQL_EXACT",
+        "sqlSha256": "436e741f78efc14fa7decd2c6f8c3eadf31f5acd4590df98c3eaad988493b642",
+        "createdExtensions": [],
+        "requiredExtensions": [],
+        "extensionDependencyPredecessors": []
+      },
+      {
+        "currentFilename": "20260616_legal_grounding_guard_service_role_grant.sql",
+        "presentOnLiveMain": true,
+        "currentVersionToken": "20260616",
+        "canonicalProposedVersionToken": "20260616100000",
+        "exactDependencyPredecessors": [
+          "20260615_legal_grounding_guard.sql"
+        ],
+        "consumes": [
+          {
+            "kind": "function",
+            "identifier": "public.get_legal_concept_source_anchors"
+          }
+        ],
+        "produces": [],
+        "grantEffects": [
+          "service_role:execute:public.get_legal_concept_source_anchors"
+        ],
+        "freshHistoryOrder": 14,
+        "remoteApplicationStatus": "UNKNOWN",
+        "remoteStatusEvidence": [
+          "historical unapplied evidence is stale; no fresh remote ledger read"
+        ],
+        "filenameMutationEligibleInThisWork": false,
+        "futureFilenameMutationEligibility": "BLOCKED_PENDING_OWNER_RECONCILIATION",
+        "remoteHistoryRepairRequirement": "SEPARATE_OWNER_GATE_IF_CANONICALIZED",
+        "ownerGateRequired": true,
+        "rollbackOrForwardCompatibilityStrategy": "guard function must precede its grant",
+        "sqlEvidenceScope": "LIVE_MAIN_SQL_EXACT",
+        "sqlSha256": "25e358828f3953b3cf793f7eeb645c816156e8bb89f5b7899d3c075de9594e13",
+        "createdExtensions": [],
+        "requiredExtensions": [],
+        "extensionDependencyPredecessors": []
+      },
+      {
+        "currentFilename": "20260622_mobile_pwa_web_push_reminder.sql",
+        "presentOnLiveMain": true,
+        "currentVersionToken": "20260622",
+        "canonicalProposedVersionToken": "20260622090000",
+        "exactDependencyPredecessors": [],
+        "consumes": [
+          {
+            "kind": "table",
+            "identifier": "auth.users"
+          },
+          {
+            "kind": "function",
+            "identifier": "auth.uid"
+          }
+        ],
+        "produces": [
+          {
+            "kind": "table",
+            "identifier": "public.push_subscriptions"
+          },
+          {
+            "kind": "table",
+            "identifier": "public.notification_preferences"
+          },
+          {
+            "kind": "table",
+            "identifier": "public.notification_deliveries"
+          }
+        ],
+        "freshHistoryOrder": 15,
+        "remoteApplicationStatus": "KNOWN_APPLIED",
+        "remoteStatusEvidence": [
+          "docs/qa/mobile-pwa-web-push-reminder-v1.md"
+        ],
+        "filenameMutationEligibleInThisWork": false,
+        "futureFilenameMutationEligibility": "OWNER_GATE_BLOCKED_ALREADY_APPLIED",
+        "remoteHistoryRepairRequirement": "SEPARATE_OWNER_GATE_REQUIRED",
+        "ownerGateRequired": true,
+        "rollbackOrForwardCompatibilityStrategy": "forward-only compatibility under an Owner-approved exact history plan",
+        "sqlEvidenceScope": "LIVE_MAIN_SQL_EXACT",
+        "sqlSha256": "3788b39e1cfd1de6496484bf1bcdd3bce62aba56280d6fd5a625dba61a398bf7",
+        "createdExtensions": [],
+        "requiredExtensions": [
+          {
+            "name": "pgcrypto",
+            "schema": null,
+            "evidence": [
+              {
+                "kind": "function",
+                "identifier": "gen_random_uuid",
+                "occurrences": 2
+              }
+            ],
+            "satisfaction": "PREDECESSOR_MIGRATION",
+            "producerMigration": "20260615_legal_grounding.sql",
+            "producerFreshHistoryOrder": 10
+          }
+        ],
+        "extensionDependencyPredecessors": [
+          "20260615_legal_grounding.sql"
+        ]
+      },
+      {
+        "currentFilename": "20260623_personal_concept_graph_atomic_transition.sql",
+        "presentOnLiveMain": true,
+        "currentVersionToken": "20260623",
+        "canonicalProposedVersionToken": "20260623120000",
+        "exactDependencyPredecessors": [
+          "20260605_create_personal_concept_nodes.sql"
+        ],
+        "consumes": [
+          {
+            "kind": "table",
+            "identifier": "public.personal_concept_nodes"
+          },
+          {
+            "kind": "table",
+            "identifier": "auth.users"
+          },
+          {
+            "kind": "function",
+            "identifier": "auth.uid"
+          }
+        ],
+        "produces": [
+          {
+            "kind": "table",
+            "identifier": "public.personal_concept_transition_events"
+          },
+          {
+            "kind": "function",
+            "identifier": "public.transition_personal_concept_node_v1"
+          }
+        ],
+        "freshHistoryOrder": 16,
+        "remoteApplicationStatus": "KNOWN_APPLIED",
+        "remoteStatusEvidence": [
+          "docs/qa/personal-concept-graph-atomic-transition-v1.md",
+          "docs/qa/personal-concept-graph-runtime-rls-smoke.md"
+        ],
+        "filenameMutationEligibleInThisWork": false,
+        "futureFilenameMutationEligibility": "OWNER_GATE_BLOCKED_ALREADY_APPLIED",
+        "remoteHistoryRepairRequirement": "SEPARATE_OWNER_GATE_REQUIRED",
+        "ownerGateRequired": true,
+        "rollbackOrForwardCompatibilityStrategy": "forward-only compatibility; producer must remain semantically before RPC boundary",
+        "sqlEvidenceScope": "LIVE_MAIN_SQL_EXACT",
+        "sqlSha256": "8f33722533a46dfa2784bc3140f2d9c07172260106265e49daabbf549ff9519c",
+        "createdExtensions": [
+          {
+            "name": "pgcrypto",
+            "schema": "extensions",
+            "schemaSource": "SQL_EXPLICIT",
+            "ifNotExists": true,
+            "statementOrdinal": 1,
+            "statementSha256": "a893bf0e2199c764b486fe96d0b49e9d5451d1a645c6d03aa8ffc3ce27522529"
+          }
+        ],
+        "requiredExtensions": [
+          {
+            "name": "pgcrypto",
+            "schema": null,
+            "evidence": [
+              {
+                "kind": "function",
+                "identifier": "gen_random_uuid",
+                "occurrences": 1
+              }
+            ],
+            "satisfaction": "CURRENT_MIGRATION_CREATE",
+            "producerMigration": "20260623_personal_concept_graph_atomic_transition.sql",
+            "producerFreshHistoryOrder": 16
+          },
+          {
+            "name": "pgcrypto",
+            "schema": "extensions",
+            "evidence": [
+              {
+                "kind": "function",
+                "identifier": "extensions.digest",
+                "occurrences": 1
+              }
+            ],
+            "satisfaction": "CURRENT_MIGRATION_CREATE",
+            "producerMigration": "20260623_personal_concept_graph_atomic_transition.sql",
+            "producerFreshHistoryOrder": 16
+          }
+        ],
+        "extensionDependencyPredecessors": []
+      },
+      {
+        "currentFilename": "202606232130_personal_concept_graph_rpc_only_write_boundary.sql",
+        "presentOnLiveMain": true,
+        "currentVersionToken": "202606232130",
+        "canonicalProposedVersionToken": "20260623213000",
+        "exactDependencyPredecessors": [
+          "20260605_create_personal_concept_nodes.sql",
+          "20260623_personal_concept_graph_atomic_transition.sql"
+        ],
+        "consumes": [
+          {
+            "kind": "table",
+            "identifier": "public.personal_concept_nodes"
+          },
+          {
+            "kind": "function",
+            "identifier": "public.transition_personal_concept_node_v1"
+          }
+        ],
+        "produces": [],
+        "grantEffects": [
+          "authenticated:select,delete:public.personal_concept_nodes",
+          "authenticated:execute:public.transition_personal_concept_node_v1"
+        ],
+        "revokeEffects": [
+          "authenticated:insert,update:public.personal_concept_nodes",
+          "public,anon:execute:public.transition_personal_concept_node_v1"
+        ],
+        "policyEffects": [
+          "drop:public.personal_concept_nodes::personal_concept_nodes_insert_own",
+          "drop:public.personal_concept_nodes::personal_concept_nodes_update_own"
+        ],
+        "freshHistoryOrder": 17,
+        "remoteApplicationStatus": "KNOWN_APPLIED",
+        "remoteStatusEvidence": [
+          "docs/qa/personal-concept-graph-atomic-transition-v1.md",
+          "docs/qa/personal-concept-graph-runtime-rls-smoke.md"
+        ],
+        "filenameMutationEligibleInThisWork": false,
+        "futureFilenameMutationEligibility": "OWNER_GATE_BLOCKED_ALREADY_APPLIED",
+        "remoteHistoryRepairRequirement": "SEPARATE_OWNER_GATE_REQUIRED",
+        "ownerGateRequired": true,
+        "rollbackOrForwardCompatibilityStrategy": "forward-only compatibility under an Owner-approved exact history plan",
+        "sqlEvidenceScope": "LIVE_MAIN_SQL_EXACT",
+        "sqlSha256": "57b2aa59f96f3ea294a7d7e0c46350c5c3cb330c53a301a2d57634f2f54a0a57",
+        "createdExtensions": [],
+        "requiredExtensions": [],
+        "extensionDependencyPredecessors": []
+      },
+      {
+        "currentFilename": "20260721060237_s233a_answer_review_persistence.sql",
+        "presentOnLiveMain": true,
+        "currentVersionToken": "20260721060237",
+        "canonicalProposedVersionToken": "20260721060237",
+        "exactDependencyPredecessors": [
+          "20260422_inverge_service_core.sql",
+          "20260424_review_os_alpha.sql",
+          "20260623_personal_concept_graph_atomic_transition.sql"
+        ],
+        "consumes": [
+          {
+            "kind": "table",
+            "identifier": "public.review_queue_items"
+          },
+          {
+            "kind": "table",
+            "identifier": "public.action_seeds"
+          },
+          {
+            "kind": "function",
+            "identifier": "public.transition_personal_concept_node_v1"
+          },
+          {
+            "kind": "table",
+            "identifier": "auth.users"
+          },
+          {
+            "kind": "function",
+            "identifier": "auth.uid"
+          }
+        ],
+        "produces": [
+          {
+            "kind": "table",
+            "identifier": "public.s233a_answer_reviews"
+          },
+          {
+            "kind": "table",
+            "identifier": "public.s233a_answer_review_revisions"
+          },
+          {
+            "kind": "table",
+            "identifier": "public.s233a_evidence_state_records"
+          },
+          {
+            "kind": "function",
+            "identifier": "public.claim_s233a_answer_review_v1"
+          },
+          {
+            "kind": "function",
+            "identifier": "public.transition_s233a_answer_review_v1"
+          }
+        ],
+        "freshHistoryOrder": 18,
+        "remoteApplicationStatus": "UNKNOWN",
+        "filenameMutationEligibleInThisWork": false,
+        "futureFilenameMutationEligibility": "NOT_NEEDED_CANONICAL_TOKEN_ALREADY_VALID",
+        "remoteHistoryRepairRequirement": "OWNER_GATE_REQUIRED_FOR_ANY_REMOTE_HISTORY_CHANGE; NONE_NEEDED_IF_FILENAME_AND_LEDGER_REMAIN_UNCHANGED",
+        "ownerGateRequired": true,
+        "rollbackOrForwardCompatibilityStrategy": "preserve forward migration and replay after all predecessors",
+        "sqlEvidenceScope": "LIVE_MAIN_SQL_EXACT",
+        "sqlSha256": "07f8d60f6eb15f96647463ad4bbfa18f463296e801d0c77d732ffd1720890e75",
+        "createdExtensions": [],
+        "requiredExtensions": [
+          {
+            "name": "pgcrypto",
+            "schema": "extensions",
+            "evidence": [
+              {
+                "kind": "function",
+                "identifier": "extensions.digest",
+                "occurrences": 4
+              }
+            ],
+            "satisfaction": "PREDECESSOR_MIGRATION",
+            "producerMigration": "20260623_personal_concept_graph_atomic_transition.sql",
+            "producerFreshHistoryOrder": 16
+          }
+        ],
+        "extensionDependencyPredecessors": [
+          "20260623_personal_concept_graph_atomic_transition.sql"
+        ]
+      },
+      {
+        "currentFilename": "20260730025332_s236p_lean_owner_private.sql",
+        "presentOnLiveMain": true,
+        "currentVersionToken": "20260730025332",
+        "canonicalProposedVersionToken": "20260730025332",
+        "exactDependencyPredecessors": [],
+        "consumes": [
+          {
+            "kind": "table",
+            "identifier": "auth.users"
+          },
+          {
+            "kind": "function",
+            "identifier": "auth.uid"
+          },
+          {
+            "kind": "table",
+            "identifier": "storage.objects"
+          },
+          {
+            "kind": "table",
+            "identifier": "storage.buckets"
+          }
+        ],
+        "produces": [
+          {
+            "kind": "table",
+            "identifier": "public.s236p_owner_private_objects"
+          },
+          {
+            "kind": "table",
+            "identifier": "public.s236p_owner_private_events"
+          },
+          {
+            "kind": "function",
+            "identifier": "public.s236p_set_object_lifecycle_v1"
+          },
+          {
+            "kind": "function",
+            "identifier": "public.s236p_set_event_lifecycle_v1"
+          },
+          {
+            "kind": "function",
+            "identifier": "public.s236p_guard_object_update_v1"
+          },
+          {
+            "kind": "function",
+            "identifier": "public.s236p_authorize_signed_url_v1"
+          },
+          {
+            "kind": "function",
+            "identifier": "public.s236p_expired_object_paths_v1"
+          }
+        ],
+        "freshHistoryOrder": 19,
+        "remoteApplicationStatus": "KNOWN_APPLIED",
+        "remoteStatusEvidence": [
+          "docs/qa/s236p-lean-owner-private-acceptance.md"
+        ],
+        "filenameMutationEligibleInThisWork": false,
+        "futureFilenameMutationEligibility": "NOT_ELIGIBLE_ALREADY_APPLIED",
+        "remoteHistoryRepairRequirement": "SEPARATE_OWNER_GATE_REQUIRED_FOR_ANY_CHANGE",
+        "ownerGateRequired": true,
+        "rollbackOrForwardCompatibilityStrategy": "never rename, replay or repair outside exact Owner authority",
+        "sqlEvidenceScope": "LIVE_MAIN_SQL_EXACT",
+        "sqlSha256": "476ef1b0d6a100fb6e4803b812b049b44252ca5f25301d3f781cee8827b1545b",
+        "createdExtensions": [],
+        "requiredExtensions": [
+          {
+            "name": "pgcrypto",
+            "schema": null,
+            "evidence": [
+              {
+                "kind": "function",
+                "identifier": "gen_random_uuid",
+                "occurrences": 2
+              }
+            ],
+            "satisfaction": "PREDECESSOR_MIGRATION",
+            "producerMigration": "20260623_personal_concept_graph_atomic_transition.sql",
+            "producerFreshHistoryOrder": 16
+          }
+        ],
+        "extensionDependencyPredecessors": [
+          "20260623_personal_concept_graph_atomic_transition.sql"
+        ]
+      },
+      {
+        "currentFilename": "20260730060233_s236p_owner_private_lifecycle_hardening.sql",
+        "presentOnLiveMain": true,
+        "currentVersionToken": "20260730060233",
+        "canonicalProposedVersionToken": "20260730060233",
+        "exactDependencyPredecessors": [
+          "20260730025332_s236p_lean_owner_private.sql"
+        ],
+        "consumes": [
+          {
+            "kind": "table",
+            "identifier": "public.s236p_owner_private_objects"
+          },
+          {
+            "kind": "table",
+            "identifier": "public.s236p_owner_private_events"
+          },
+          {
+            "kind": "function",
+            "identifier": "public.s236p_set_object_lifecycle_v1"
+          },
+          {
+            "kind": "function",
+            "identifier": "public.s236p_set_event_lifecycle_v1"
+          },
+          {
+            "kind": "function",
+            "identifier": "public.s236p_guard_object_update_v1"
+          },
+          {
+            "kind": "function",
+            "identifier": "public.s236p_authorize_signed_url_v1"
+          },
+          {
+            "kind": "function",
+            "identifier": "auth.uid"
+          },
+          {
+            "kind": "table",
+            "identifier": "storage.objects"
+          },
+          {
+            "kind": "table",
+            "identifier": "storage.buckets"
+          },
+          {
+            "kind": "function",
+            "identifier": "storage.allow_any_operation"
+          },
+          {
+            "kind": "function",
+            "identifier": "storage.allow_only_operation"
+          }
+        ],
+        "produces": [
+          {
+            "kind": "function",
+            "identifier": "public.s236p_set_object_lifecycle_v1"
+          },
+          {
+            "kind": "function",
+            "identifier": "public.s236p_guard_object_update_v1"
+          }
+        ],
+        "modifies": [
+          {
+            "kind": "table",
+            "identifier": "public.s236p_owner_private_objects"
+          }
+        ],
+        "drops": [
+          {
+            "kind": "table",
+            "identifier": "public.s236p_owner_private_events"
+          },
+          {
+            "kind": "function",
+            "identifier": "public.s236p_set_event_lifecycle_v1"
+          },
+          {
+            "kind": "function",
+            "identifier": "public.s236p_authorize_signed_url_v1"
+          }
+        ],
+        "policyEffects": [
+          "replace:storage.objects::s236p owner private select",
+          "replace:storage.objects::s236p owner private insert",
+          "drop:storage.objects::s236p owner private update",
+          "replace:storage.objects::s236p owner private delete"
+        ],
+        "freshHistoryOrder": 20,
+        "remoteApplicationStatus": "KNOWN_APPLIED",
+        "remoteStatusEvidence": [
+          "docs/qa/s236p-lean-owner-private-acceptance.md"
+        ],
+        "filenameMutationEligibleInThisWork": false,
+        "futureFilenameMutationEligibility": "NOT_ELIGIBLE_ALREADY_APPLIED",
+        "remoteHistoryRepairRequirement": "SEPARATE_OWNER_GATE_REQUIRED_FOR_ANY_CHANGE",
+        "ownerGateRequired": true,
+        "rollbackOrForwardCompatibilityStrategy": "never rename, replay or repair outside exact Owner authority",
+        "sqlEvidenceScope": "LIVE_MAIN_SQL_EXACT",
+        "sqlSha256": "e20440dfa0d880ad591b8c9fdff287cd66fcdbbe4f96f07a549a730fd8920de1",
+        "createdExtensions": [],
+        "requiredExtensions": [],
+        "extensionDependencyPredecessors": []
+      },
+      {
+        "currentFilename": "20260730065744_s236p_owner_private_authenticated_download_info.sql",
+        "presentOnLiveMain": true,
+        "currentVersionToken": "20260730065744",
+        "canonicalProposedVersionToken": "20260730065744",
+        "exactDependencyPredecessors": [
+          "20260730060233_s236p_owner_private_lifecycle_hardening.sql"
+        ],
+        "consumes": [
+          {
+            "kind": "function",
+            "identifier": "auth.uid"
+          },
+          {
+            "kind": "table",
+            "identifier": "storage.objects"
+          },
+          {
+            "kind": "function",
+            "identifier": "storage.allow_any_operation"
+          }
+        ],
+        "policyDependencies": [
+          "storage.objects::s236p owner private select"
+        ],
+        "produces": [],
+        "policyEffects": [
+          "replace:storage.objects::s236p owner private select"
+        ],
+        "freshHistoryOrder": 21,
+        "remoteApplicationStatus": "KNOWN_APPLIED",
+        "remoteStatusEvidence": [
+          "docs/qa/s236p-lean-owner-private-acceptance.md"
+        ],
+        "filenameMutationEligibleInThisWork": false,
+        "futureFilenameMutationEligibility": "NOT_ELIGIBLE_ALREADY_APPLIED",
+        "remoteHistoryRepairRequirement": "SEPARATE_OWNER_GATE_REQUIRED_FOR_ANY_CHANGE",
+        "ownerGateRequired": true,
+        "rollbackOrForwardCompatibilityStrategy": "never rename, replay or repair outside exact Owner authority",
+        "sqlEvidenceScope": "LIVE_MAIN_SQL_EXACT",
+        "sqlSha256": "632cc7ee563aa29a573425e396f6f539e35a3c8834955ba66ccd01723bb3cbcb",
+        "createdExtensions": [],
+        "requiredExtensions": [],
+        "extensionDependencyPredecessors": []
+      },
+      {
+        "currentFilename": "20260730151052_s236p_owner_private_expiry_read_gate.sql",
+        "presentOnLiveMain": true,
+        "currentVersionToken": "20260730151052",
+        "canonicalProposedVersionToken": "20260730151052",
+        "exactDependencyPredecessors": [
+          "20260730060233_s236p_owner_private_lifecycle_hardening.sql",
+          "20260730065744_s236p_owner_private_authenticated_download_info.sql"
+        ],
+        "consumes": [
+          {
+            "kind": "function",
+            "identifier": "auth.uid"
+          },
+          {
+            "kind": "table",
+            "identifier": "storage.objects"
+          },
+          {
+            "kind": "table",
+            "identifier": "public.s236p_owner_private_objects"
+          },
+          {
+            "kind": "function",
+            "identifier": "storage.allow_any_operation"
+          }
+        ],
+        "policyDependencies": [
+          "storage.objects::s236p owner private select"
+        ],
+        "produces": [],
+        "policyEffects": [
+          "alter:storage.objects::s236p owner private select"
+        ],
+        "freshHistoryOrder": 22,
+        "remoteApplicationStatus": "KNOWN_APPLIED",
+        "remoteStatusEvidence": [
+          "docs/qa/s236p-lean-owner-private-acceptance.md"
+        ],
+        "filenameMutationEligibleInThisWork": false,
+        "futureFilenameMutationEligibility": "NOT_ELIGIBLE_ALREADY_APPLIED",
+        "remoteHistoryRepairRequirement": "SEPARATE_OWNER_GATE_REQUIRED_FOR_ANY_CHANGE",
+        "ownerGateRequired": true,
+        "rollbackOrForwardCompatibilityStrategy": "never rename, replay or repair outside exact Owner authority",
+        "sqlEvidenceScope": "LIVE_MAIN_SQL_EXACT",
+        "sqlSha256": "416fa80acea48bf4d170661a4f5259632b4d9e3fd740007bd65cbf1ded6103f1",
+        "createdExtensions": [],
+        "requiredExtensions": [],
+        "extensionDependencyPredecessors": []
+      },
+      {
+        "currentFilename": "20260817090000_c2r_c_p_structured_practice_proof.sql",
+        "presentOnLiveMain": true,
+        "currentVersionToken": "20260817090000",
+        "canonicalProposedVersionToken": "20260817090000",
+        "exactDependencyPredecessors": [],
+        "consumes": [
+          {
+            "kind": "table",
+            "identifier": "auth.users"
+          }
+        ],
+        "produces": [
+          {
+            "kind": "table",
+            "identifier": "public.wcv_c2_trusted_repair_sessions"
+          },
+          {
+            "kind": "table",
+            "identifier": "public.wcv_c2_trusted_repair_private_artifacts"
+          },
+          {
+            "kind": "table",
+            "identifier": "public.wcv_c2_trusted_repair_exposure_events"
+          },
+          {
+            "kind": "table",
+            "identifier": "public.wcv_c2_trusted_repair_command_receipts"
+          },
+          {
+            "kind": "table",
+            "identifier": "public.wcv_c2_trusted_repair_scarcity_events"
+          },
+          {
+            "kind": "function",
+            "identifier": "public.wcv_c2_create_trusted_repair_session_v1"
+          },
+          {
+            "kind": "function",
+            "identifier": "public.wcv_c2_apply_trusted_repair_transition_v1"
+          }
+        ],
+        "freshHistoryOrder": 23,
+        "remoteApplicationStatus": "LOCAL_ONLY",
+        "remoteStatusEvidence": [
+          "PR #756 isolated local Supabase evidence and explicit no-remote-apply boundary"
+        ],
+        "filenameMutationEligibleInThisWork": false,
+        "futureFilenameMutationEligibility": "NOT_NEEDED_CANONICAL_TOKEN_ALREADY_VALID",
+        "remoteHistoryRepairRequirement": "NONE",
+        "ownerGateRequired": false,
+        "rollbackOrForwardCompatibilityStrategy": "preserve merged filename and prove on isolated fresh replay",
+        "sqlEvidenceScope": "LIVE_MAIN_SQL_EXACT",
+        "sqlSha256": "012041613e99df02a2933364d5b5f78d92d8b20a1b67a837ca1f2c4eb7640e74",
+        "createdExtensions": [],
+        "requiredExtensions": [],
+        "extensionDependencyPredecessors": []
+      },
+      {
+        "currentFilename": "20260817113000_c2r_c_t_structural_theory_proof.sql",
+        "presentOnLiveMain": true,
+        "currentVersionToken": "20260817113000",
+        "canonicalProposedVersionToken": "20260817113000",
+        "exactDependencyPredecessors": [
+          "20260817090000_c2r_c_p_structured_practice_proof.sql"
+        ],
+        "consumes": [
+          {
+            "kind": "table",
+            "identifier": "public.wcv_c2_trusted_repair_sessions"
+          },
+          {
+            "kind": "table",
+            "identifier": "public.wcv_c2_trusted_repair_private_artifacts"
+          },
+          {
+            "kind": "table",
+            "identifier": "public.wcv_c2_trusted_repair_exposure_events"
+          },
+          {
+            "kind": "table",
+            "identifier": "public.wcv_c2_trusted_repair_command_receipts"
+          },
+          {
+            "kind": "table",
+            "identifier": "public.wcv_c2_trusted_repair_scarcity_events"
+          },
+          {
+            "kind": "function",
+            "identifier": "public.wcv_c2_apply_trusted_repair_transition_v1"
+          }
+        ],
+        "produces": [
+          {
+            "kind": "function",
+            "identifier": "public.wcv_c2_apply_trusted_repair_transition_v1"
+          }
+        ],
+        "modifies": [
+          {
+            "kind": "table",
+            "identifier": "public.wcv_c2_trusted_repair_sessions"
+          },
+          {
+            "kind": "table",
+            "identifier": "public.wcv_c2_trusted_repair_scarcity_events"
+          }
+        ],
+        "freshHistoryOrder": 24,
+        "remoteApplicationStatus": "LOCAL_ONLY",
+        "remoteStatusEvidence": [
+          "PR #762 isolated local Supabase evidence and explicit no-remote-apply boundary"
+        ],
+        "filenameMutationEligibleInThisWork": false,
+        "futureFilenameMutationEligibility": "NOT_NEEDED_CANONICAL_TOKEN_ALREADY_VALID",
+        "remoteHistoryRepairRequirement": "NONE",
+        "ownerGateRequired": false,
+        "rollbackOrForwardCompatibilityStrategy": "preserve merged filename and prove on isolated fresh replay",
+        "sqlEvidenceScope": "LIVE_MAIN_SQL_EXACT",
+        "sqlSha256": "819275ebda058f1a9001871ece18efca466323db9306adb7b637d01d2dc25e08",
+        "createdExtensions": [],
+        "requiredExtensions": [],
+        "extensionDependencyPredecessors": []
+      },
+      {
+        "currentFilename": "20260817170000_c2r_c_l_exact_law_applicability.sql",
+        "presentOnLiveMain": true,
+        "currentVersionToken": "20260817170000",
+        "canonicalProposedVersionToken": "20260817170000",
+        "exactDependencyPredecessors": [
+          "20260817090000_c2r_c_p_structured_practice_proof.sql",
+          "20260817113000_c2r_c_t_structural_theory_proof.sql"
+        ],
+        "consumes": [
+          {
+            "kind": "table",
+            "identifier": "public.wcv_c2_trusted_repair_sessions"
+          },
+          {
+            "kind": "table",
+            "identifier": "public.wcv_c2_trusted_repair_scarcity_events"
+          }
+        ],
+        "produces": [
+          {
+            "kind": "function",
+            "identifier": "public.wcv_c2_validate_exact_law_proof_v1"
+          }
+        ],
+        "modifies": [
+          {
+            "kind": "table",
+            "identifier": "public.wcv_c2_trusted_repair_sessions"
+          },
+          {
+            "kind": "table",
+            "identifier": "public.wcv_c2_trusted_repair_scarcity_events"
+          }
+        ],
+        "triggerEffects": [
+          "public.wcv_c2_trusted_repair_sessions::wcv_c2_validate_exact_law_proof_v1"
+        ],
+        "freshHistoryOrder": 25,
+        "remoteApplicationStatus": "LOCAL_ONLY",
+        "remoteStatusEvidence": [
+          "PR #764 isolated local Supabase evidence and explicit no-remote-apply boundary"
+        ],
+        "filenameMutationEligibleInThisWork": false,
+        "futureFilenameMutationEligibility": "NOT_NEEDED_CANONICAL_TOKEN_ALREADY_VALID",
+        "remoteHistoryRepairRequirement": "NONE",
+        "ownerGateRequired": false,
+        "rollbackOrForwardCompatibilityStrategy": "preserve merged filename and prove on isolated fresh replay",
+        "sqlEvidenceScope": "LIVE_MAIN_SQL_EXACT",
+        "sqlSha256": "a850e29ec2a94e7b5bb1f99c8157b99afc590e1dcb22c45f2e57f1c5b4323075",
+        "createdExtensions": [],
+        "requiredExtensions": [],
+        "extensionDependencyPredecessors": []
+      },
+      {
+        "currentFilename": "20260817190000_wcv_c3_durable_learning_daily_command.sql",
+        "presentOnLiveMain": false,
+        "donorOnly": true,
+        "currentVersionToken": "20260817190000",
+        "canonicalProposedVersionToken": "20260817190000",
+        "exactDependencyPredecessors": [
+          "20260817090000_c2r_c_p_structured_practice_proof.sql",
+          "20260817113000_c2r_c_t_structural_theory_proof.sql",
+          "20260817170000_c2r_c_l_exact_law_applicability.sql"
+        ],
+        "consumes": [
+          {
+            "kind": "table",
+            "identifier": "public.wcv_c2_trusted_repair_sessions"
+          },
+          {
+            "kind": "table",
+            "identifier": "auth.users"
+          }
+        ],
+        "produces": [
+          {
+            "kind": "table",
+            "identifier": "public.wcv_c3_gap_closure_cases"
+          },
+          {
+            "kind": "table",
+            "identifier": "public.wcv_c3_private_attempt_artifacts"
+          },
+          {
+            "kind": "table",
+            "identifier": "public.wcv_c3_evidence_events"
+          },
+          {
+            "kind": "table",
+            "identifier": "public.wcv_c3_command_receipts"
+          },
+          {
+            "kind": "table",
+            "identifier": "public.wcv_c3_deletion_receipts"
+          },
+          {
+            "kind": "function",
+            "identifier": "public.wcv_c3_load_gap_closure_case_v1"
+          },
+          {
+            "kind": "function",
+            "identifier": "public.wcv_c3_create_gap_closure_case_v1"
+          },
+          {
+            "kind": "function",
+            "identifier": "public.wcv_c3_apply_transition_v1"
+          },
+          {
+            "kind": "function",
+            "identifier": "public.wcv_c3_delete_owned_case_v1"
+          }
+        ],
+        "freshHistoryOrder": 26,
+        "remoteApplicationStatus": "LOCAL_ONLY",
+        "remoteStatusEvidence": [
+          "PR #780 closed unmerged terminal receipt; no remote apply"
+        ],
+        "filenameMutationEligibleInThisWork": false,
+        "futureFilenameMutationEligibility": "DONOR_FILE_MUST_NOT_BE_COPIED",
+        "remoteHistoryRepairRequirement": "NONE",
+        "ownerGateRequired": false,
+        "rollbackOrForwardCompatibilityStrategy": "reconstruct reviewed-safe behavior from refreshed main inside C3R-P; copy no donor history",
+        "sqlEvidenceScope": "TERMINAL_DONOR_METADATA_ONLY",
+        "sqlSourceDonor": {
+          "pullRequest": 780,
+          "commit": "a28c1983a5264f21ed35ab48a465cd9198a46e5b",
+          "gitBlobSha1": "a6f37566384e06378ec2b12b9091ba9297c350cf"
+        },
+        "sqlSha256": "0ffcadb9ab927d81a8163a3c2e5ceb6a18acb8666dd0461e33a9dd21df3db003",
+        "createdExtensions": [],
+        "requiredExtensions": [],
+        "extensionDependencyPredecessors": []
+      }
+    ],
+    "hardRules": {
+      "canonicalVersionWidth": 14,
+      "canonicalVersionTokensMustBeUnique": true,
+      "canonicalRecordsMustFollowFreshHistoryOrder": true,
+      "consumerBeforeProducerAllowed": false,
+      "freshHistoryResetMustApplyEveryLiveMainMigration": true,
+      "freshHistoryResetMustApplyEveryStageOwnedMigrationInOrder": true,
+      "unknownRemoteStatusAllowsSilentRename": false,
+      "unknownRemoteStatusAllowsRemoteRepair": false,
+      "knownAppliedVersionAllowsRewriteWithoutOwnerGate": false,
+      "migrationRepairAuthorizedByThisWork": false,
+      "dbPushAuthorizedByThisWork": false,
+      "linkedResetAuthorizedByThisWork": false,
+      "remoteSqlAuthorizedByThisWork": false,
+      "remoteSchemaMutationAuthorizedByThisWork": false,
+      "embeddedPostgresCompilationEstablishesSupabaseResetGate": false,
+      "freshIsolatedResetReplayCyclesRequiredPerRuntimeStage": 2
+    },
+    "repositoryProducedViewIdentifiers": [],
+    "repositoryProducedSequenceIdentifiers": [],
+    "migrationDependencyClosureV1": {
+      "manifestVersion": "MigrationDependencyClosureV1",
+      "analyzerModule": "scripts/automation/wcv-c3r-migration-dependency-closure.mjs",
+      "sqlSourceRoot": "supabase/migrations",
+      "sqlFingerprintCanonicalization": "UTF8_LF_SHA256",
+      "closedDependencyClasses": [
+        "relation",
+        "view",
+        "sequence",
+        "type",
+        "function",
+        "external_schema_function",
+        "extension",
+        "extension_schema",
+        "producer_consumer_order"
+      ],
+      "parserContract": {
+        "recognizesCreateExtensionForms": [
+          "CREATE EXTENSION name",
+          "CREATE EXTENSION IF NOT EXISTS name",
+          "CREATE EXTENSION name SCHEMA schema",
+          "CREATE EXTENSION name WITH SCHEMA schema"
+        ],
+        "mixedKeywordCasingAccepted": true,
+        "quotedIdentifiersAccepted": true,
+        "multipleStatementsAccepted": true,
+        "commentsIgnored": true,
+        "ordinaryStringLiteralsIgnored": true,
+        "dollarQuotedBodiesIgnoredForCreateExtension": true,
+        "unrecognizedOrAmbiguousDeclarationFailsClosed": true
+      },
+      "extensionRegistry": [
+        {
+          "canonicalName": "pgcrypto",
+          "prohibitedAliases": [],
+          "sqlUseEvidence": [
+            "gen_random_uuid",
+            "extensions.digest"
+          ]
+        },
+        {
+          "canonicalName": "vector",
+          "prohibitedAliases": [
+            "pgvector"
+          ],
+          "sqlUseEvidence": [
+            "vector(type)"
+          ]
+        }
+      ],
+      "externalFunctionRegistry": [
+        {
+          "identifier": "auth.uid",
+          "dependencyMode": "PER_MIGRATION_MANIFEST"
+        },
+        {
+          "identifier": "storage.allow_any_operation",
+          "dependencyMode": "PER_MIGRATION_MANIFEST"
+        },
+        {
+          "identifier": "storage.allow_only_operation",
+          "dependencyMode": "PER_MIGRATION_MANIFEST"
+        },
+        {
+          "identifierPrefix": "pg_catalog.",
+          "dependencyMode": "CLOSED_POSTGRES_BUILTIN_REGISTRY",
+          "identifiers": [
+            "pg_catalog.current_setting",
+            "pg_catalog.hashtextextended",
+            "pg_catalog.jsonb_set",
+            "pg_catalog.pg_advisory_xact_lock",
+            "pg_catalog.set_config",
+            "pg_catalog.to_jsonb"
+          ]
+        }
+      ],
+      "exactComparisonRules": {
+        "sqlDerivedCreatedExtensionsEqualManifest": true,
+        "sqlDerivedRequiredExtensionUsesEqualManifest": true,
+        "missingManifestEntryFails": true,
+        "extraManifestEntryFails": true,
+        "wrongExtensionSchemaFails": true,
+        "wrongProducerFails": true,
+        "consumerBeforeProducerFails": true,
+        "externalFunctionsComparedBothDirections": true,
+        "producedObjectsComparedBySqlClassAndIdentity": true,
+        "referencedDatabaseObjectsComparedBothDirections": true,
+        "declaredEdgesRequireSqlOrClosedRegistryEvidence": true,
+        "unknownDependencyClassMarksManifestIncomplete": true,
+        "incompleteManifestBlocksSourceAuthorityAcceptance": true
+      },
+      "liveMainExecutableCreateExtensionStatementCount": 6,
+      "liveMainCreateExtensionMigrationCount": 5,
+      "canonicalExtensionNames": [
+        "pgcrypto",
+        "vector"
+      ],
+      "environmentRequiredExtensions": []
+    }
+  },
+  "runtimeEvidenceAdapterAuthority": {
+    "adapterInstalledByStage": "C3R-P",
+    "adapterStateInThisSourceWork": "required_not_installed",
+    "closedPathSetRequired": true,
+    "migrationHistoryRecoveryBaselineExactPaths": [
+      "supabase/migrations/20260605_create_personal_concept_nodes.sql",
+      "supabase/migrations/20260608_create_personal_learning_states.sql",
+      "supabase/migrations/20260615_legal_grounding.sql",
+      "supabase/migrations/20260615_legal_article_chunk_identity.sql",
+      "supabase/migrations/20260615_legal_retrieval.sql",
+      "supabase/migrations/20260615_legal_grounding_guard.sql",
+      "supabase/migrations/20260616_legal_grounding_guard_service_role_grant.sql",
+      "supabase/migrations/20260623_personal_concept_graph_atomic_transition.sql",
+      "supabase/migrations/202606232130_personal_concept_graph_rpc_only_write_boundary.sql"
+    ],
+    "commonPracticeSubstrateBaselineExactPaths": [
+      "supabase/migrations/20260817090000_c2r_c_p_structured_practice_proof.sql"
+    ],
+    "stageOwnedProtectedPathsMustBeEnumeratedWithoutGlobAtStageStart": true,
+    "theoryExtensionMayAddOnlyExactTheoryProtectedPaths": true,
+    "lawExtensionMayAddOnlyExactLawProtectedPaths": true,
+    "failClosedOn": [
+      "UNREGISTERED_MIGRATION_SENSITIVE_PATH",
+      "INCOMPLETE_PATH_CLOSURE",
+      "MISSING_FRESH_RESET_REPLAY_CYCLE_1",
+      "MISSING_FRESH_RESET_REPLAY_CYCLE_2",
+      "ABSENT_METADATA_ONLY_ARTIFACT",
+      "EXACT_HEAD_MISMATCH",
+      "REMOTE_SUPABASE_USE",
+      "CLEANUP_FAILURE"
+    ]
+  },
+  "deliveryControl": {
+    "oneMergeProducingWriter": true,
+    "ordinaryNonForcePushOnly": true,
+    "draftPrRequired": true,
+    "autoMergeAllowed": false,
+    "maximumSourceCorrectionsPerPr": 2,
+    "maximumExactHeadFormalReviewsPerPr": 3,
+    "requiredFinalActionableP0P1P2": [
+      0,
+      0,
+      0
+    ],
+    "allReviewThreadsResolvedBeforeMerge": true,
+    "mergeMethod": "squash",
+    "expectedHeadPinned": true,
+    "liveGithubReceiptValidationRequired": true,
+    "sourceAuthorityIssueLink": {
+      "mode": "REFERENCE_ONLY",
+      "repository": "chachathecat/inverge",
+      "baseRef": "main",
+      "baseSha": "ffdd3dcc2398dd27b991eee0be34f832da0a65b5",
+      "headRef": "codex/wcv-c3r-sql-dependency-clean-replacement",
+      "headRepository": "chachathecat/inverge",
+      "pullRequestTitle": "[WCV-C3R] Install serial structural recovery authority — clean replacement",
+      "trackerIssue": 781,
+      "requiredReferenceLine": "Refs #781",
+      "requiredDispositionLine": "- Tracker disposition: remains open; closure authority: C3R-L",
+      "closingKeywordsAllowed": false,
+      "exceptionAppliesOnlyWhenExactLinesPresent": true,
+      "fullGithubClosingKeywordFamilyBlocked": true,
+      "terminalClosureStage": "C3R-L"
+    },
+    "requiredChecks": [
+      "pr-contract",
+      "risk-classifier",
+      "runtime-gate",
+      "fast-ci",
+      "full-ci",
+      "full-ci-windows",
+      "Learner Loop Health",
+      "security-audit-sbom",
+      "Vercel"
+    ]
+  },
+  "activationBoundary": {
+    "runtimeAuthorizedByThisWork": false,
+    "productionAuthorized": false,
+    "remoteSupabaseApplyAuthorized": false,
+    "paymentAuthorized": false,
+    "externalLearnerAuthorized": false,
+    "realLearnerAuthorized": false,
+    "providerAuthorized": false,
+    "secretOrEnvironmentMutationAuthorized": false,
+    "publicReleaseAuthorized": false,
+    "rightsUnclearContentAuthorized": false,
+    "successorRuntimeStarted": false
+  }
+}

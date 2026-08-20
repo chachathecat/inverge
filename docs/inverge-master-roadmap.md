@@ -4,6 +4,10 @@
 - 상세 제품 기준: `docs/inverge-second-round-final-product-spec.md`
 - 실행 상태와 의존성 기준: `roadmap/active-program.yml`
 - Current exact-scope authority:
+  `docs/decisions/2026-08-20-owner-wcv-c3-structural-recovery.md` for the
+  terminal read-only disposition of PR #770/#780/#782, Tracker #781, migration-
+  history compatibility, and the exact serial `C3R-P → C3R-T → C3R-L`
+  replacement chain,
   `docs/decisions/2026-08-14-owner-unified-product-multisurface-launch.md`
   for the final integrated 1·2차 public product, future Web/iOS/Android and
   instructor surfaces, free-limited public route, separate paid/evidence
@@ -31,13 +35,14 @@ Student surfaces are exactly Web, iOS/iPadOS and Android. The complete
 instructor authoring/review workbench is Web-primary. Student apps consume
 only assigned work and approved feedback.
 
-The current candidate completes WCV-C2/C2/Tracker #717's exact five-stage C2R
-chain under expected-head merge-and-receipt semantics, with one merge-
-producing writer and GitHub-native protected non-Production continuation.
-C2R-A/#702 and C2R-B/#714 are complete source-only; C2R-C-P, C2R-C-T and
-terminal C2R-C-L/#703 are the complete Practice, Theory and Law runtime
-stages. After PR #764's protected merge and validated receipt, WCV-C3/C3/#706
-is the authorized and unstarted selector. ULC-0 implements nothing.
+WCV-C2/C2/Tracker #717's five-stage C2R chain is complete under expected-head
+merge-and-receipt semantics with GitHub-native protected non-Production
+continuation. The two later full-sized WCV-C3 candidates, PR
+#770 and PR #780, are terminal closed Drafts and unmerged. Tracker #781 now
+owns the structurally reduced serial chain `C3R-P → C3R-T → C3R-L`; the
+current selector is `WCV-C3 / C3 / #781 / C3R-P / #706 /
+authorized_unstarted`. This source authority starts no runtime. ULC-0
+implements nothing.
 
 The later 2026-08-15 C2R-B decision owns this exact post-B selector and typed
 proof architecture. The C2R-A decision still owns the A rights-safe source
@@ -110,6 +115,29 @@ This is source authority only. It installs no dependency, native project,
 runtime, learner, instructor, provider, payment, store, deployment or
 Production state.
 
+## 2026-08-20 WCV-C3 Structural Recovery
+
+PR #770, PR #780 and PR #782 remain terminal closed, unmerged and read-only.
+Their source, reviews, checks and runtime runs are donor history only. Tracker
+#781 owns the exact serial replacement chain:
+
+`C3R-P → C3R-T → C3R-L`
+
+C3R-P is the only current stage and remains authorized but unstarted after
+this source authority merges and its GitHub receipt validates. It owns the
+complete Practice durable-learning outcome plus migration-history
+reconciliation and the common forced-RLS, evidence, Ledger, Review Queue,
+Today and Full-Day substrate. C3R-T is blocked on the validated terminal
+C3R-P merge and receipt; C3R-L is blocked on both predecessors.
+
+Only terminal C3R-L may complete WCV-C3, close #706/#707/#708/#781, complete
+Issue #714 allocation C3 while preserving C4/C6 and keeping #714 open, or
+advance the program selector. Each runtime stage must use a closed exact-path
+runtime-evidence adapter and pass two fresh isolated Supabase reset/replay
+cycles. The migration compatibility manifest is planning authority only:
+unknown or already-applied history cannot be silently renamed, rewritten or
+repaired, and this source Work performs no migration or remote Supabase action.
+
 ## 2026-08-14 WCV-C2 Structural Recovery
 
 PR #716 is closed Draft and unmerged at head
@@ -126,9 +154,10 @@ The formal identities remain separate: completed roadmap item `WCV-C2`,
 completed campaign ID `C2`, recovery tracker #717, completed source-only
 stages `C2R-A` for Issue #702 and `C2R-B` for Issue #714, and completed
 Practice, Theory and Law stages `C2R-C-P`, `C2R-C-T` and `C2R-C-L` for Issue
-#703. The post-receipt current selector is roadmap item `WCV-C3`, campaign
-`C3`, lead Issue #706. The canonical tuple is
-`WCV-C3 / C3 / #706 / authorized_unstarted`.
+#703. Its historical post-receipt selector was roadmap item `WCV-C3`, campaign
+`C3`, lead Issue #706. After the terminal full-sized WCV-C3 donors, the current
+canonical tuple is
+`WCV-C3 / C3 / #781 / C3R-P / #706 / authorized_unstarted`.
 
 The sequence is terminally serial. C2R-A and C2R-B are independently complete
 source-contract outcomes and are not parallel. C2R-C-P, C2R-C-T and C2R-C-L
@@ -721,5 +750,7 @@ Only Issue #714 allocation C2 is complete. Issue #714 stays open for C3, C4
 and C6. The expected-head-pinned merge and validated #717 receipt authorized
 C2R-C-P/#703; protected PR #756 and PR #762 then completed Practice and Theory
 in order. Candidate PR #764 completes terminal C2R-C-L/#703 only after its
-expected-head-pinned merge and validated receipt, then selects WCV-C3/C3/#706
-as authorized but unstarted without Production or learner activation.
+expected-head-pinned merge and validated receipt, then historically selected
+WCV-C3/C3/#706. The later WCV-C3R source authority selects Tracker #781 and
+C3R-P/#706 as authorized but unstarted without Production or learner
+activation.
