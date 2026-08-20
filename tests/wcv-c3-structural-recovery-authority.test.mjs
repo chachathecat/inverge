@@ -533,6 +533,30 @@ test("detects unqualified digest without double-counting extensions.digest", () 
       },
     ],
   );
+  assert.deepEqual(
+    deriveRequiredExtensionUses(`
+      select "digest"('plain', 'sha256');
+      select "extensions"."digest"('qualified', 'sha256');
+    `),
+    [
+      {
+        name: "pgcrypto",
+        schema: null,
+        evidence: [{ kind: "function", identifier: "digest", occurrences: 1 }],
+      },
+      {
+        name: "pgcrypto",
+        schema: "extensions",
+        evidence: [
+          {
+            kind: "function",
+            identifier: "extensions.digest",
+            occurrences: 1,
+          },
+        ],
+      },
+    ],
+  );
 });
 
 test("fails closed on an unregistered qualified database reference", () => {
@@ -544,19 +568,19 @@ test("fails closed on an unregistered qualified database reference", () => {
     modifies: [],
   };
 
-  assertClosureFailure(
-    () =>
-      deriveMigrationDependencyClosure(
-        [record],
-        new Map([
-          [
-            record.currentFilename,
-            "select * from public.unregistered_dependency;",
-          ],
-        ]),
-      ),
-    "UNREGISTERED_QUALIFIED_DATABASE_OBJECT",
-  );
+  for (const sql of [
+    "select * from public.unregistered_dependency;",
+    'select * from "public"."unregistered_dependency";',
+  ]) {
+    assertClosureFailure(
+      () =>
+        deriveMigrationDependencyClosure(
+          [record],
+          new Map([[record.currentFilename, sql]]),
+        ),
+      "UNREGISTERED_QUALIFIED_DATABASE_OBJECT",
+    );
+  }
   assert.deepEqual(
     deriveMigrationDependencyClosure(
       [record],
@@ -569,6 +593,49 @@ test("fails closed on an unregistered qualified database reference", () => {
     )[0].referencedDatabaseObjects,
     [],
   );
+});
+
+test("derives known quoted object and external-function dependencies", () => {
+  const records = [
+    {
+      currentFilename: "20260101000000_quoted_producer.sql",
+      presentOnLiveMain: true,
+      freshHistoryOrder: 1,
+      drops: [],
+      modifies: [],
+    },
+    {
+      currentFilename: "20260101000001_quoted_consumer.sql",
+      presentOnLiveMain: true,
+      freshHistoryOrder: 2,
+      drops: [],
+      modifies: [],
+    },
+  ];
+  const [, consumer] = deriveMigrationDependencyClosure(
+    records,
+    new Map([
+      [records[0].currentFilename, "create table public.known_dependency (id uuid);"],
+      [
+        records[1].currentFilename,
+        'select "auth"."uid"(), * from "public"."known_dependency";',
+      ],
+    ]),
+    {
+      externalDatabaseObjects: [
+        { kind: "function", identifier: "auth.uid" },
+      ],
+    },
+  );
+
+  assert.deepEqual(consumer.referencedDatabaseObjects, [
+    { kind: "function", identifier: "auth.uid" },
+    { kind: "table", identifier: "public.known_dependency" },
+  ]);
+  assert.deepEqual(consumer.exactDependencyPredecessors, [
+    records[0].currentFilename,
+  ]);
+  assert.equal(consumer.externalFunctions[0].identifier, "auth.uid");
 });
 
 test("parses executable CREATE EXTENSION forms and ignores comments and strings", () => {

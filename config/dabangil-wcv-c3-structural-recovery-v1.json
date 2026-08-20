@@ -2219,6 +2219,7 @@
         "producedObjectsComparedBySqlClassAndIdentity": true,
         "referencedDatabaseObjectsComparedBothDirections": true,
         "unregisteredQualifiedDatabaseObjectsFail": true,
+        "quotedQualifiedDatabaseIdentifiersAccepted": true,
         "declaredEdgesRequireSqlOrClosedRegistryEvidence": true,
         "unknownDependencyClassMarksManifestIncomplete": true,
         "incompleteManifestBlocksSourceAuthorityAcceptance": true

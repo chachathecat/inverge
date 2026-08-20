@@ -22,20 +22,21 @@ export const EXTENSION_REGISTRY_V1 = Object.freeze([
         kind: "function",
         identifier: "gen_random_uuid",
         schema: null,
-        pattern: String.raw`(?<![A-Za-z0-9_.$"])gen_random_uuid\s*\(`,
+        pattern: String.raw`(?<![A-Za-z0-9_.$"])(?:gen_random_uuid|"gen_random_uuid")\s*\(`,
+        requireUnqualified: true,
       }),
       Object.freeze({
         kind: "function",
         identifier: "digest",
         schema: null,
-        pattern: String.raw`\bdigest\s*\(`,
+        pattern: String.raw`(?<![A-Za-z0-9_$"])(?:digest|"digest")\s*\(`,
         requireUnqualified: true,
       }),
       Object.freeze({
         kind: "function",
         identifier: "extensions.digest",
         schema: "extensions",
-        pattern: String.raw`\bextensions\s*\.\s*digest\s*\(`,
+        pattern: String.raw`(?<![A-Za-z0-9_$"])(?:extensions|"extensions")\s*\.\s*(?:digest|"digest")\s*\(`,
       }),
     ]),
   }),
@@ -47,7 +48,8 @@ export const EXTENSION_REGISTRY_V1 = Object.freeze([
         kind: "type",
         identifier: "vector",
         schema: null,
-        pattern: String.raw`(?<![A-Za-z0-9_.$"])vector\s*\(\s*\d+\s*\)`,
+        pattern: String.raw`(?<![A-Za-z0-9_.$"])(?:vector|"vector")\s*\(\s*\d+\s*\)`,
+        requireUnqualified: true,
       }),
     ]),
   }),
@@ -254,6 +256,16 @@ function normalizeIdentifier(identifier) {
   return identifier.toLowerCase();
 }
 
+function escapeRegex(value) {
+  return value.replaceAll(/[.*+?^${}()|[\]\\]/gu, "\\$&");
+}
+
+function exactSqlIdentifierPattern(identifier) {
+  const unquoted = escapeRegex(identifier);
+  const quoted = escapeRegex(identifier.replaceAll('"', '""'));
+  return String.raw`(?:${unquoted}|"${quoted}")`;
+}
+
 function extensionRegistryEntry(name) {
   const normalized = name.toLowerCase();
   for (const extension of EXTENSION_REGISTRY_V1) {
@@ -363,7 +375,7 @@ export function deriveExternalFunctionDependencies(sql) {
   const dependencies = [];
 
   for (const entry of EXTERNAL_FUNCTION_REGISTRY_V1) {
-    const pattern = String.raw`\b${entry.schema}\s*\.\s*${entry.name}\s*\(`;
+    const pattern = String.raw`(?<![A-Za-z0-9_$"])${exactSqlIdentifierPattern(entry.schema)}\s*\.\s*${exactSqlIdentifierPattern(entry.name)}\s*\(`;
     const occurrences = countMatches(dependencySql, pattern);
     if (occurrences > 0) {
       dependencies.push({
@@ -376,7 +388,7 @@ export function deriveExternalFunctionDependencies(sql) {
   }
 
   const schemaCallPattern = new RegExp(
-    String.raw`\b(${IDENTIFIER_SOURCE})\s*\.\s*(${IDENTIFIER_SOURCE})\s*\(`,
+    String.raw`(?<![A-Za-z0-9_$"])(${IDENTIFIER_SOURCE})\s*\.\s*(${IDENTIFIER_SOURCE})(?![A-Za-z0-9_$"])\s*\(`,
     "giu",
   );
   for (const match of dependencySql.matchAll(schemaCallPattern)) {
@@ -477,9 +489,10 @@ function evidenceSqlForObject(sql, identifier) {
       identifier,
     );
   }
-  const escapePattern = (value) => value.replaceAll(/[.*+?^${}()|[\]\\]/gu, "\\$&");
+  const schemaPattern = exactSqlIdentifierPattern(schema);
+  const namePattern = exactSqlIdentifierPattern(name);
   return new RegExp(
-    String.raw`(?<![A-Za-z0-9_$"])${escapePattern(schema)}\s*\.\s*${escapePattern(name)}(?![A-Za-z0-9_$"])`,
+    String.raw`(?<![A-Za-z0-9_$"])${schemaPattern}\s*\.\s*${namePattern}(?![A-Za-z0-9_$"])`,
     "iu",
   ).test(dependencySql);
 }
@@ -526,7 +539,7 @@ export function deriveQualifiedDatabaseIdentifiers(
   });
   const closedSchemas = new Set(closedQualifiedDatabaseSchemas);
   const qualifiedPattern = new RegExp(
-    String.raw`\b(${IDENTIFIER_SOURCE})\s*\.\s*(${IDENTIFIER_SOURCE})`,
+    String.raw`(?<![A-Za-z0-9_$"])(${IDENTIFIER_SOURCE})\s*\.\s*(${IDENTIFIER_SOURCE})(?![A-Za-z0-9_$"])`,
     "giu",
   );
   const identifiers = [];

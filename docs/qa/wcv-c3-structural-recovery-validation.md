@@ -50,7 +50,7 @@ head, tree, donor, issue, writer or ruleset conflict invalidates publication.
 12. unqualified `digest` creates a predecessor-satisfied `pgcrypto`
    dependency without double-counting `extensions.digest`;
 13. unregistered schema-qualified references fail closed even when absent
-   from the declared object inventory;
+   from the declared object inventory, including quoted identifiers;
 14. every `exactDependencyPredecessors` value is independently derived from
    object provenance, except the two closed S236P policy-order overrides whose
    current and prior policy-operation SQL is also validated;
@@ -96,7 +96,8 @@ closed. Unqualified `digest` and qualified `extensions.digest` are separate
 derived from SQL and compared with the combined consumed, modified and dropped
 manifest set in both directions; a removed relation dependency or an invented
 edge therefore fails without relying on the declaration as its own evidence.
-Unregistered qualified references fail closed. Exact dependency predecessors
+Unregistered qualified references fail closed in unquoted and quoted
+PostgreSQL identifier forms. Exact dependency predecessors
 are derived from object-provenance lineage; the two S236P policy replacements
 are the sole closed overrides and require exact current and prior policy-
 operation SQL evidence.

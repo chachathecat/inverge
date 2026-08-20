@@ -312,7 +312,8 @@ requires exact current and prior policy-operation SQL evidence. Comments and
 ordinary strings do not count. Unqualified `digest` is a `pgcrypto` use and is
 not double-counted when schema-qualified as `extensions.digest`. Missing,
 extra, wrong-kind, wrong-schema, wrong-producer, out-of-order, unregistered
-qualified or ambiguous dependencies fail closed. The canonical pgvector
+qualified or ambiguous dependencies fail closed, including valid PostgreSQL
+quoted-identifier forms. The canonical pgvector
 extension identity is `vector`, never `pgvector`.
 
 C3R-P must install one closed runtime-evidence adapter for the exact recovery

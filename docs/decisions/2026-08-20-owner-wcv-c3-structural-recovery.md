@@ -235,7 +235,8 @@ record's exact dependency predecessors from object provenance, and compares
 those results in both directions. The only two policy-ordering overrides are
 closed by exact migration, policy identity, current policy SQL and prior
 policy-operation SQL evidence. An undeclared or unregistered qualified dependency fails
-closed rather than disappearing from comparison.
+closed rather than disappearing from comparison, including when its schema or
+object name uses PostgreSQL quoted-identifier syntax.
 
 The live SQL contains six executable declarations across five migrations.
 The exact canonical names are `pgcrypto` and `vector`; `pgvector` is not a
