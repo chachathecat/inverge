@@ -7,6 +7,7 @@ import process from "node:process";
 import { execFileSync, spawnSync } from "node:child_process";
 import { pathToFileURL } from "node:url";
 import { runtimeRequiredPathRecords } from "./runtime-risk-contract.mjs";
+import { formatMigrationFailureDiagnostic } from "./wcv-c3-migration-diagnostics.mjs";
 
 export const SCHEMA_VERSION = "inverge.runtime_evidence.v2";
 export const PRODUCER_VERSION = "s233r.postgres.s233a.v1";
@@ -17,6 +18,8 @@ export const C2R_C_T_PRODUCER_VERSION =
   "c2r-c-t.postgres.theory-trusted-repair.v1";
 export const C2R_C_L_PRODUCER_VERSION =
   "c2r-c-l.postgres.law-trusted-repair.v1";
+export const WCV_C3_PRODUCER_VERSION =
+  "wcv-c3.postgres.durable-learning.v1";
 export const POSTGRES_IMAGE = "postgres:15.8-bookworm";
 export const ASSERTION_IDS = Object.freeze([
   "migration_prerequisites_and_target_applied",
@@ -96,12 +99,28 @@ export const C2R_C_L_ASSERTION_IDS = Object.freeze([
   "practice_and_theory_rows_preserved_by_law_delta",
   "cleanup_complete",
 ]);
+export const WCV_C3_ASSERTION_IDS = Object.freeze([
+  "c2_prerequisites_and_c3_delta_applied",
+  "forced_rls_all_c3_tables",
+  "authenticated_direct_read_denied",
+  "service_only_rpc_execution",
+  "verified_c2_source_required",
+  "idempotent_case_create_by_source",
+  "attempt_event_and_private_artifact_atomic",
+  "projection_bodyless",
+  "stale_cas_rejected",
+  "learner_delete_receipt_and_cascade",
+  "c2_source_preserved",
+  "cleanup_complete",
+]);
 export const C2R_C_P_MIGRATION_PATH =
   "supabase/migrations/20260817090000_c2r_c_p_structured_practice_proof.sql";
 export const C2R_C_T_MIGRATION_PATH =
   "supabase/migrations/20260817113000_c2r_c_t_structural_theory_proof.sql";
 export const C2R_C_L_MIGRATION_PATH =
   "supabase/migrations/20260817170000_c2r_c_l_exact_law_applicability.sql";
+export const WCV_C3_MIGRATION_PATH =
+  "supabase/migrations/20260817190000_wcv_c3_durable_learning_daily_command.sql";
 export const S236P_MIGRATION_PATHS = Object.freeze([
   "supabase/migrations/20260730025332_s236p_lean_owner_private.sql",
   "supabase/migrations/20260730060233_s236p_owner_private_lifecycle_hardening.sql",
@@ -188,6 +207,20 @@ const C2R_C_P_STALE_COMMAND_A = "c8888888-8888-4888-8888-888888888888";
 const C2R_C_P_ATOMIC_COMMAND_A = "c9999999-9999-4999-8999-999999999999";
 const C2R_C_P_EXPOSURE_A = "caaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
 const C2R_C_P_MISSING_REVISION = "cbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb";
+const WCV_C3_CASE_A = "d1111111-1111-4111-8111-111111111111";
+const WCV_C3_CASE_B = "d2222222-2222-4222-8222-222222222222";
+const WCV_C3_ATTEMPT_A = "d3333333-3333-4333-8333-333333333333";
+const WCV_C3_ARTIFACT_A = "d4444444-4444-4444-8444-444444444444";
+const WCV_C3_EVENT_D0_A = "d5555555-5555-4555-8555-555555555555";
+const WCV_C3_EVENT_PREPARED_A = "d6666666-6666-4666-8666-666666666666";
+const WCV_C3_EVENT_D1_A = "d7777777-7777-4777-8777-777777777777";
+const WCV_C3_CREATE_COMMAND_A = "d8888888-8888-4888-8888-888888888888";
+const WCV_C3_CREATE_COMMAND_REPLAY = "d9999999-9999-4999-8999-999999999999";
+const WCV_C3_PREPARE_COMMAND_A = "daaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
+const WCV_C3_EVIDENCE_COMMAND_A = "dbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb";
+const WCV_C3_STALE_COMMAND_A = "dccccccc-cccc-4ccc-8ccc-cccccccccccc";
+const WCV_C3_DELETE_COMMAND_A = "dddddddd-dddd-4ddd-8ddd-dddddddddddd";
+const WCV_C3_BLOCKED_COMMAND_B = "deeeeeee-eeee-4eee-8eee-eeeeeeeeeeee";
 
 function sha256(value) {
   return crypto.createHash("sha256").update(value).digest("hex");
@@ -315,15 +348,24 @@ function psql(containerName, sql, { allowFailure = false } = {}) {
       "--dbname",
       "postgres",
     ],
-    { input: sql },
+    { input: `\\set VERBOSITY verbose\n${sql}` },
   );
   if (!allowFailure && result.status !== 0) throw new Error("isolated Postgres statement failed.");
   return result;
 }
 
-function applySql(containerName, sql, label) {
+function applySql(containerName, sql, label, migrationDiagnostic = null) {
   const result = psql(containerName, sql, { allowFailure: true });
-  if (result.status !== 0) throw new Error(`${label} failed to apply.`);
+  if (result.status !== 0) {
+    if (migrationDiagnostic) {
+      throw new Error(formatMigrationFailureDiagnostic({
+        ...migrationDiagnostic,
+        stdout: result.stdout,
+        stderr: result.stderr,
+      }));
+    }
+    throw new Error(`${label} failed to apply.`);
+  }
 }
 
 function scalar(containerName, sql, label) {
@@ -563,6 +605,23 @@ export function resolveTargetMigration(riskResult, headSha) {
     ]];
     markerError =
       "C2R-C-L Law migration does not match the supported adapter contract.";
+  } else if (
+    migrationPaths.length === 1 &&
+    migrationPaths[0] === WCV_C3_MIGRATION_PATH
+  ) {
+    adapter = "wcv-c3";
+    markerSets = [[
+      "public.wcv_c3_gap_closure_cases",
+      "public.wcv_c3_private_attempt_artifacts",
+      "public.wcv_c3_evidence_events",
+      "public.wcv_c3_create_gap_closure_case_v1",
+      "public.wcv_c3_apply_transition_v1",
+      "public.wcv_c3_delete_owned_case_v1",
+      "alter table public.wcv_c3_gap_closure_cases force row level security",
+      "containsBody",
+    ]];
+    markerError =
+      "WCV-C3 durable-learning migration does not match the supported adapter contract.";
   } else {
     throw new Error("no closed runtime-evidence adapter supports this runtime-sensitive change set.");
   }
@@ -582,7 +641,11 @@ export function resolveTargetMigration(riskResult, headSha) {
   if (adapter === "s233a") {
     return { adapter, ...migrations[0], migrations };
   }
-  if (adapter === "c2r-c-t" || adapter === "c2r-c-l") {
+  if (
+    adapter === "c2r-c-t" ||
+    adapter === "c2r-c-l" ||
+    adapter === "wcv-c3"
+  ) {
     const practicePrerequisiteContent = gitBlob(
       headSha,
       C2R_C_P_MIGRATION_PATH,
@@ -596,12 +659,12 @@ export function resolveTargetMigration(riskResult, headSha) {
         sha256: sha256(practicePrerequisiteContent),
       },
     };
-    if (adapter === "c2r-c-l") {
+    if (adapter === "c2r-c-l" || adapter === "wcv-c3") {
       const theoryPrerequisiteContent = gitBlob(
         headSha,
         C2R_C_T_MIGRATION_PATH,
       );
-      return {
+      const extendedResult = {
         ...result,
         theoryPrerequisite: {
           content: theoryPrerequisiteContent,
@@ -609,6 +672,21 @@ export function resolveTargetMigration(riskResult, headSha) {
           sha256: sha256(theoryPrerequisiteContent),
         },
       };
+      if (adapter === "wcv-c3") {
+        const lawPrerequisiteContent = gitBlob(
+          headSha,
+          C2R_C_L_MIGRATION_PATH,
+        );
+        return {
+          ...extendedResult,
+          lawPrerequisite: {
+            content: lawPrerequisiteContent,
+            path: C2R_C_L_MIGRATION_PATH,
+            sha256: sha256(lawPrerequisiteContent),
+          },
+        };
+      }
+      return extendedResult;
     }
     return result;
   }
@@ -638,6 +716,12 @@ function evidenceContract(targetMigration) {
     return {
       assertionIds: C2R_C_L_ASSERTION_IDS,
       producerVersion: C2R_C_L_PRODUCER_VERSION,
+    };
+  }
+  if (targetMigration.adapter === "wcv-c3") {
+    return {
+      assertionIds: WCV_C3_ASSERTION_IDS,
+      producerVersion: WCV_C3_PRODUCER_VERSION,
     };
   }
   return {
@@ -2737,6 +2821,10 @@ function runC2RCTDatabaseAssertions(containerName, targetMigration) {
     containerName,
     targetMigration.practicePrerequisite.content,
     "C2R-C-P Practice prerequisite migration",
+    {
+      migrationFilename: targetMigration.practicePrerequisite.path,
+      statementIdentifier: "c2r_c_p_migration_apply",
+    },
   );
   applySql(
     containerName,
@@ -2957,6 +3045,10 @@ function runC2RCLDatabaseAssertions(containerName, targetMigration) {
     containerName,
     targetMigration.theoryPrerequisite.content,
     "C2R-C-T Theory prerequisite migration",
+    {
+      migrationFilename: targetMigration.theoryPrerequisite.path,
+      statementIdentifier: "c2r_c_t_migration_apply",
+    },
   );
   applySql(containerName, lawMigration.content, "C2R-C-L Law delta migration");
   passedAssertions.add("law_delta_migration_applied");
@@ -3127,6 +3219,467 @@ function runC2RCLDatabaseAssertions(containerName, targetMigration) {
   return passedAssertions;
 }
 
+function wcvC3StateData({ activeAttempt = null } = {}) {
+  return {
+    frozenD0: {
+      sourceSessionId: C2R_C_P_SESSION_A,
+      sourceFixtureId: "wcv-c2-practice-net-income",
+      sourceFixtureVersion:
+        "wcv_c2r_c_p_practice_rights_safe_fixtures.2026-08-17.v1",
+      subject: "appraisal_practical",
+      sourceState: "verified",
+      sourceOutcome: "verified",
+      proofVerified: true,
+      capturedAt: "2026-08-17T00:05:00.000Z",
+    },
+    sourcePrimaryGapId: "practice-net-income-relation",
+    nextEligibleAt: "2026-08-18T00:05:00.000Z",
+    activeAttempt,
+    recurringSignature: null,
+    latestPlan: null,
+    planDecisionHistory: [],
+    resultReasonCodes: [],
+  };
+}
+
+function wcvC3CasePayload({
+  caseId = WCV_C3_CASE_A,
+  userId = USER_A,
+  sourceSessionId = C2R_C_P_SESSION_A,
+} = {}) {
+  return {
+    caseId,
+    userId,
+    sourceSessionId,
+    subject: "appraisal_practical",
+    state: "REPAIR_VERIFIED_SAME_SESSION",
+    recordVersion: 1,
+    contractVersion: "dabangil.wcv_c3.durable_learning_daily_command.v1",
+    policyVersion: "dabangil.wcv_c3.evidence_qualification.v1",
+    stateData: wcvC3StateData(),
+    createdAt: "2026-08-17T00:05:00.000Z",
+    updatedAt: "2026-08-17T00:05:00.000Z",
+  };
+}
+
+function wcvC3EventPayload({
+  eventId,
+  eventType,
+  attemptId = null,
+  artifactId = null,
+  itemId = null,
+  itemFamilyId = null,
+  transferDistance = null,
+  outcome = null,
+  occurredAt,
+}) {
+  return {
+    eventId,
+    eventType,
+    attemptId,
+    artifactId,
+    itemId,
+    itemFamilyId,
+    transferDistance,
+    outcome,
+    payload: {
+      containsBody: false,
+      contractVersion: "dabangil.wcv_c3.durable_learning_daily_command.v1",
+      synthetic: true,
+    },
+    occurredAt,
+  };
+}
+
+function wcvC3CreateSql({ caseRecord, event, commandId }) {
+  return `
+    begin;
+    set local role service_role;
+    select concat_ws(':', out_case_id::text, out_record_version::text, out_state, replayed::text)
+      from public.wcv_c3_create_gap_closure_case_v1(
+        ${jsonLiteral(caseRecord)}, ${jsonLiteral(event)}, ${sqlLiteral(commandId)}::uuid
+      );
+    commit;
+  `;
+}
+
+function wcvC3TransitionSql({
+  commandId,
+  expectedVersion,
+  expectedState,
+  nextState,
+  stateData,
+  artifact,
+  event,
+}) {
+  return `
+    begin;
+    set local role service_role;
+    select concat_ws(':', out_record_version::text, out_state, replayed::text)
+      from public.wcv_c3_apply_transition_v1(
+        ${sqlLiteral(WCV_C3_CASE_A)}::uuid,
+        ${sqlLiteral(USER_A)}::uuid,
+        ${sqlLiteral(commandId)}::uuid,
+        ${expectedVersion},
+        ${sqlLiteral(expectedState)},
+        ${sqlLiteral(nextState)},
+        ${jsonLiteral(stateData)},
+        ${artifact === null ? "null::jsonb" : jsonLiteral(artifact)},
+        ${jsonLiteral(event)}
+      );
+    commit;
+  `;
+}
+
+function runWcvC3DatabaseAssertions(containerName, targetMigration) {
+  const passedAssertions = new Set();
+  const migration = targetMigration.migrations[0];
+  applySql(containerName, bootstrapSql(), "isolated Supabase role bootstrap");
+  applySql(
+    containerName,
+    targetMigration.practicePrerequisite.content,
+    "C2R-C-P Practice prerequisite migration",
+    {
+      migrationFilename: targetMigration.practicePrerequisite.path,
+      statementIdentifier: "c2r_c_p_migration_apply",
+    },
+  );
+  applySql(
+    containerName,
+    targetMigration.theoryPrerequisite.content,
+    "C2R-C-T Theory prerequisite migration",
+    {
+      migrationFilename: targetMigration.theoryPrerequisite.path,
+      statementIdentifier: "c2r_c_t_migration_apply",
+    },
+  );
+  applySql(
+    containerName,
+    targetMigration.lawPrerequisite.content,
+    "C2R-C-L Law prerequisite migration",
+    {
+      migrationFilename: targetMigration.lawPrerequisite.path,
+      statementIdentifier: "c2r_c_l_migration_apply",
+    },
+  );
+  applySql(
+    containerName,
+    migration.content,
+    "WCV-C3 durable-learning migration",
+    {
+      migrationFilename: migration.path,
+      statementIdentifier: "public.wcv_c3_apply_transition_v1",
+    },
+  );
+  passedAssertions.add("c2_prerequisites_and_c3_delta_applied");
+
+  assertScalar(
+    containerName,
+    `select count(*)::text from pg_class
+      where relname in (
+        'wcv_c3_gap_closure_cases',
+        'wcv_c3_private_attempt_artifacts',
+        'wcv_c3_evidence_events',
+        'wcv_c3_command_receipts',
+        'wcv_c3_deletion_receipts'
+      ) and relkind='r' and relrowsecurity and relforcerowsecurity;`,
+    "5",
+    "WCV-C3 forced RLS assertion",
+  );
+  passedAssertions.add("forced_rls_all_c3_tables");
+
+  const sourceA = c2rCPSessionPayload({
+    sessionId: C2R_C_P_SESSION_A,
+    userId: USER_A,
+  });
+  const sourceB = c2rCPSessionPayload({
+    sessionId: C2R_C_P_SESSION_B,
+    userId: USER_B,
+  });
+  assertScalar(
+    containerName,
+    c2rCPCreateSql({
+      session: sourceA,
+      artifact: c2rCPArtifactPayload(C2R_C_P_ARTIFACT_A),
+      commandId: C2R_C_P_CREATE_COMMAND_A,
+    }),
+    `${C2R_C_P_SESSION_A}:1:editable_capture_draft:false`,
+    "WCV-C3 source A creation assertion",
+  );
+  assertScalar(
+    containerName,
+    c2rCPCreateSql({
+      session: sourceB,
+      artifact: c2rCPArtifactPayload(C2R_C_P_ARTIFACT_B),
+      commandId: C2R_C_P_CREATE_COMMAND_B,
+    }),
+    `${C2R_C_P_SESSION_B}:1:editable_capture_draft:false`,
+    "WCV-C3 source B creation assertion",
+  );
+  applySql(
+    containerName,
+    `begin;
+      set local role service_role;
+      update public.wcv_c2_trusted_repair_sessions
+      set state='verified', outcome='verified', record_version=2,
+          confirmed_revision_id=${sqlLiteral(C2R_C_P_ARTIFACT_A)}::uuid,
+          primary_gap_id='practice-net-income-relation',
+          state_data=${jsonLiteral({
+            ...sourceA.stateData,
+            structuredClaim: { synthetic: true },
+            proofEvaluation: {
+              state: "PASS",
+              validatorId: "validator:practice-calculation-claim@2",
+              verified: true,
+            },
+            resultReasonCodes: ["synthetic_verified_source"],
+          })}
+      where id=${sqlLiteral(C2R_C_P_SESSION_A)}::uuid
+        and user_id=${sqlLiteral(USER_A)}::uuid;
+      commit;`,
+    "WCV-C3 verified C2 source setup",
+  );
+
+  const d0Event = wcvC3EventPayload({
+    eventId: WCV_C3_EVENT_D0_A,
+    eventType: "D0_FROZEN",
+    occurredAt: "2026-08-17T00:05:00.000Z",
+  });
+  const caseA = wcvC3CasePayload();
+  const blockedCase = wcvC3CasePayload({
+    caseId: WCV_C3_CASE_B,
+    userId: USER_B,
+    sourceSessionId: C2R_C_P_SESSION_B,
+  });
+  assertSqlDenied(
+    containerName,
+    wcvC3CreateSql({
+      caseRecord: blockedCase,
+      event: {
+        ...d0Event,
+        eventId: "dfffffff-ffff-4fff-8fff-ffffffffffff",
+      },
+      commandId: WCV_C3_BLOCKED_COMMAND_B,
+    }),
+    /WCV_C3_VERIFIED_D0_REQUIRED/i,
+    "WCV-C3 unverified source denial assertion",
+  );
+  passedAssertions.add("verified_c2_source_required");
+
+  assertSqlDenied(
+    containerName,
+    authenticatedContext(
+      USER_A,
+      "select count(*) from public.wcv_c3_gap_closure_cases;",
+    ),
+    /permission denied/i,
+    "WCV-C3 authenticated direct read denial assertion",
+  );
+  passedAssertions.add("authenticated_direct_read_denied");
+  assertSqlDenied(
+    containerName,
+    authenticatedContext(
+      USER_A,
+      `select * from public.wcv_c3_create_gap_closure_case_v1(
+        '{}'::jsonb, '{}'::jsonb, ${sqlLiteral(WCV_C3_CREATE_COMMAND_A)}::uuid
+      );`,
+    ),
+    /permission denied/i,
+    "WCV-C3 authenticated RPC denial assertion",
+  );
+  passedAssertions.add("service_only_rpc_execution");
+
+  assertScalar(
+    containerName,
+    wcvC3CreateSql({
+      caseRecord: caseA,
+      event: d0Event,
+      commandId: WCV_C3_CREATE_COMMAND_A,
+    }),
+    `${WCV_C3_CASE_A}:1:REPAIR_VERIFIED_SAME_SESSION:false`,
+    "WCV-C3 case creation assertion",
+  );
+  assertScalar(
+    containerName,
+    wcvC3CreateSql({
+      caseRecord: caseA,
+      event: d0Event,
+      commandId: WCV_C3_CREATE_COMMAND_A,
+    }),
+    `${WCV_C3_CASE_A}:1:REPAIR_VERIFIED_SAME_SESSION:true`,
+    "WCV-C3 command replay assertion",
+  );
+  assertScalar(
+    containerName,
+    wcvC3CreateSql({
+      caseRecord: { ...caseA, caseId: WCV_C3_CASE_B },
+      event: { ...d0Event, eventId: "d0000000-0000-4000-8000-000000000000" },
+      commandId: WCV_C3_CREATE_COMMAND_REPLAY,
+    }),
+    `${WCV_C3_CASE_A}:1:REPAIR_VERIFIED_SAME_SESSION:true`,
+    "WCV-C3 source-idempotent replay assertion",
+  );
+  assertScalar(
+    containerName,
+    `select concat_ws(':',
+      (select count(*) from public.wcv_c3_gap_closure_cases),
+      (select count(*) from public.wcv_c3_evidence_events),
+      (select count(*) from public.wcv_c3_command_receipts));`,
+    "1:1:2",
+    "WCV-C3 idempotent case cardinality assertion",
+  );
+  passedAssertions.add("idempotent_case_create_by_source");
+
+  const activeAttempt = {
+    attemptId: WCV_C3_ATTEMPT_A,
+    stage: "D1",
+    itemId: "wcv-c3-practice-d1-item",
+    itemFamilyId: "wcv-c3-practice-net-income-family",
+    transferDistance: "NEAR_TRANSFER",
+    preparedAt: "2026-08-18T00:05:00.000Z",
+    trustedStartedAt: "2026-08-18T00:05:00.000Z",
+  };
+  const preparedEvent = wcvC3EventPayload({
+    eventId: WCV_C3_EVENT_PREPARED_A,
+    eventType: "ATTEMPT_PREPARED",
+    attemptId: WCV_C3_ATTEMPT_A,
+    itemId: activeAttempt.itemId,
+    itemFamilyId: activeAttempt.itemFamilyId,
+    transferDistance: activeAttempt.transferDistance,
+    occurredAt: activeAttempt.preparedAt,
+  });
+  assertScalar(
+    containerName,
+    wcvC3TransitionSql({
+      commandId: WCV_C3_PREPARE_COMMAND_A,
+      expectedVersion: 1,
+      expectedState: "REPAIR_VERIFIED_SAME_SESSION",
+      nextState: "REPAIR_VERIFIED_SAME_SESSION",
+      stateData: wcvC3StateData({ activeAttempt }),
+      artifact: null,
+      event: preparedEvent,
+    }),
+    "2:REPAIR_VERIFIED_SAME_SESSION:false",
+    "WCV-C3 prepared attempt assertion",
+  );
+
+  const artifact = {
+    artifactId: WCV_C3_ARTIFACT_A,
+    attemptId: WCV_C3_ATTEMPT_A,
+    stage: "D1",
+    body: "synthetic learner answer for isolated runtime validation",
+    createdAt: "2026-08-18T00:06:00.000Z",
+  };
+  const d1Event = wcvC3EventPayload({
+    eventId: WCV_C3_EVENT_D1_A,
+    eventType: "D1_REPRODUCED",
+    attemptId: WCV_C3_ATTEMPT_A,
+    artifactId: WCV_C3_ARTIFACT_A,
+    itemId: activeAttempt.itemId,
+    itemFamilyId: activeAttempt.itemFamilyId,
+    transferDistance: activeAttempt.transferDistance,
+    outcome: "SUCCESS",
+    occurredAt: artifact.createdAt,
+  });
+  assertScalar(
+    containerName,
+    wcvC3TransitionSql({
+      commandId: WCV_C3_EVIDENCE_COMMAND_A,
+      expectedVersion: 2,
+      expectedState: "REPAIR_VERIFIED_SAME_SESSION",
+      nextState: "D1_REPRODUCED",
+      stateData: wcvC3StateData(),
+      artifact,
+      event: d1Event,
+    }),
+    "3:D1_REPRODUCED:false",
+    "WCV-C3 atomic D1 evidence assertion",
+  );
+  assertScalar(
+    containerName,
+    `select concat_ws(':',
+      (select count(*) from public.wcv_c3_private_attempt_artifacts
+        where attempt_id=${sqlLiteral(WCV_C3_ATTEMPT_A)}::uuid),
+      (select count(*) from public.wcv_c3_evidence_events
+        where attempt_id=${sqlLiteral(WCV_C3_ATTEMPT_A)}::uuid),
+      (select count(*) from public.wcv_c3_evidence_events
+        where payload @> '{"containsBody":false}'::jsonb
+          and payload::text !~* 'rawBody|learnerText|answerBody|ocrBody|noteBody'));
+    `,
+    "1:2:3",
+    "WCV-C3 artifact event and bodyless projection assertion",
+  );
+  passedAssertions.add("attempt_event_and_private_artifact_atomic");
+  passedAssertions.add("projection_bodyless");
+
+  assertSqlDenied(
+    containerName,
+    wcvC3TransitionSql({
+      commandId: WCV_C3_STALE_COMMAND_A,
+      expectedVersion: 2,
+      expectedState: "REPAIR_VERIFIED_SAME_SESSION",
+      nextState: "D1_REPRODUCED",
+      stateData: wcvC3StateData(),
+      artifact: null,
+      event: { ...d1Event, eventId: "d1234567-1234-4123-8123-123456789012" },
+    }),
+    /WCV_C3_CAS_CONFLICT/i,
+    "WCV-C3 stale CAS assertion",
+  );
+  passedAssertions.add("stale_cas_rejected");
+
+  assertScalar(
+    containerName,
+    `begin;
+      set local role service_role;
+      select concat_ws(':', deleted::text, replayed::text)
+        from public.wcv_c3_delete_owned_case_v1(
+          ${sqlLiteral(WCV_C3_CASE_A)}::uuid,
+          ${sqlLiteral(USER_A)}::uuid,
+          ${sqlLiteral(WCV_C3_DELETE_COMMAND_A)}::uuid,
+          3
+        );
+      commit;`,
+    "true:false",
+    "WCV-C3 learner deletion assertion",
+  );
+  assertScalar(
+    containerName,
+    `select concat_ws(':',
+      (select count(*) from public.wcv_c3_gap_closure_cases),
+      (select count(*) from public.wcv_c3_private_attempt_artifacts),
+      (select count(*) from public.wcv_c3_evidence_events),
+      (select count(*) from public.wcv_c3_command_receipts),
+      (select count(*) from public.wcv_c3_deletion_receipts),
+      (select count(*) from public.wcv_c2_trusted_repair_sessions));`,
+    "0:0:0:0:1:2",
+    "WCV-C3 deletion cascade and C2 preservation assertion",
+  );
+  passedAssertions.add("learner_delete_receipt_and_cascade");
+  passedAssertions.add("c2_source_preserved");
+
+  applySql(
+    containerName,
+    `begin;
+      delete from public.wcv_c3_deletion_receipts;
+      delete from public.wcv_c2_trusted_repair_sessions;
+      commit;`,
+    "WCV-C3 synthetic cleanup",
+  );
+  assertScalar(
+    containerName,
+    `select concat_ws(':',
+      (select count(*) from public.wcv_c3_deletion_receipts),
+      (select count(*) from public.wcv_c2_trusted_repair_sessions),
+      (select count(*) from public.wcv_c2_trusted_repair_private_artifacts),
+      (select count(*) from public.wcv_c2_trusted_repair_command_receipts));`,
+    "0:0:0:0",
+    "WCV-C3 cleanup assertion",
+  );
+  passedAssertions.add("cleanup_complete");
+  return passedAssertions;
+}
+
 function runDatabaseAssertions(containerName, targetMigration) {
   if (targetMigration.adapter === "s236p") {
     return runS236PDatabaseAssertions(containerName, targetMigration);
@@ -3139,6 +3692,9 @@ function runDatabaseAssertions(containerName, targetMigration) {
   }
   if (targetMigration.adapter === "c2r-c-l") {
     return runC2RCLDatabaseAssertions(containerName, targetMigration);
+  }
+  if (targetMigration.adapter === "wcv-c3") {
+    return runWcvC3DatabaseAssertions(containerName, targetMigration);
   }
   return runS233ADatabaseAssertions(containerName, targetMigration);
 }

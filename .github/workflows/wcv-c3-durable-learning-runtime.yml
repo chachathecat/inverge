@@ -1,0 +1,98 @@
+name: WCV-C3 Durable Learning Runtime
+
+on:
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened]
+    paths:
+      - ".github/workflows/wcv-c3-durable-learning-runtime.yml"
+      - "app/api/review-os/durable-learning/**"
+      - "app/app/durable-learning/**"
+      - "app/app/layout.tsx"
+      - "app/app/trusted-repair/page.tsx"
+      - "components/review-os/durable-learning-command.tsx"
+      - "components/review-os/trusted-repair-loop.tsx"
+      - "config/dabangil-wcv-c3-durable-learning-daily-command-v1.json"
+      - "docs/qa/wcv-c3-durable-learning-daily-command-validation.md"
+      - "lib/review-os/durable-learning-*.ts"
+      - "lib/review-os/trusted-repair-*.ts"
+      - "scripts/automation/verify-wcv-c3-runtime.mjs"
+      - "scripts/automation/wcv-c3-migration-diagnostics.mjs"
+      - "supabase/migrations/**"
+      - "tests/e2e/wcv-c3-*"
+      - "tests/wcv-c3-*.test.mjs"
+
+permissions:
+  contents: read
+
+jobs:
+  wcv-c3-durable-learning-runtime:
+    name: wcv-c3-durable-learning-runtime
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    concurrency:
+      group: wcv-c3-runtime-${{ github.event.pull_request.number }}
+      cancel-in-progress: true
+    env:
+      CI: "true"
+      DO_NOT_TRACK: "1"
+      SUPABASE_TELEMETRY_DISABLED: "1"
+      PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+      WCV_C3_RUNTIME_EVIDENCE_PATH: ${{ github.workspace }}/.agent-factory/wcv-c3-runtime-evidence.json
+
+    steps:
+      - name: Check out exact PR head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Verify exact checkout
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "${PR_HEAD_SHA}"
+          [[ "${PR_HEAD_SHA}" =~ ^[0-9a-f]{40}$ ]]
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install locked dependencies
+        run: npm ci
+
+      - name: Install bounded Chromium runtime
+        run: npm exec playwright install -- --with-deps chromium
+
+      - name: Run exact-head isolated WCV-C3 browser-to-Postgres gate
+        env:
+          WCV_C3_SUPABASE_WORKDIR: ${{ runner.temp }}/wcv-c3-supabase-${{ github.run_id }}-${{ github.run_attempt }}
+          GITHUB_RUN_ID: ${{ github.run_id }}
+          GITHUB_RUN_ATTEMPT: ${{ github.run_attempt }}
+        run: node scripts/automation/verify-wcv-c3-runtime.mjs
+
+      - name: Unconditionally remove local Supabase state
+        if: always()
+        env:
+          WCV_C3_SUPABASE_WORKDIR: ${{ runner.temp }}/wcv-c3-supabase-${{ github.run_id }}-${{ github.run_attempt }}
+        run: node scripts/automation/verify-wcv-c3-runtime.mjs --cleanup --require-complete
+
+      - name: Recheck exact head and dependency declarations
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "${PR_HEAD_SHA}"
+          git diff --exit-code -- package.json package-lock.json
+
+      - name: Upload metadata-only runtime evidence
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: wcv-c3-runtime-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ env.WCV_C3_RUNTIME_EVIDENCE_PATH }}
+          if-no-files-found: error
+          include-hidden-files: true
+          retention-days: 7

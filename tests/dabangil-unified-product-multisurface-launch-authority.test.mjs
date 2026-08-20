@@ -523,7 +523,7 @@ test("preserves the exact WCV-C2R graph, roadmap block and 21-row matrix", async
   ]);
 });
 
-test("selects WCV-C3 after terminal Law while preserving the completed recovery graph", async () => {
+test("records WCV-C3 completion and no dependency-ready successor product stage", async () => {
   const [
     launch,
     unified,
@@ -553,9 +553,9 @@ test("selects WCV-C3 after terminal Law while preserving the completed recovery 
     (campaign) => campaign.id === "C3",
   );
   const expectedCurrentStage = {
-    roadmapItem: "WCV-C3",
-    campaign: "C3",
-    trackerIssue: 706,
+    roadmapItem: null,
+    campaign: null,
+    trackerIssue: null,
     currentStage: null,
     currentStageIssue: null,
   };
@@ -575,7 +575,7 @@ test("selects WCV-C3 after terminal Law while preserving the completed recovery 
       currentStageIssue: unified.roadmapContract.soleNextReplacementStageIssue,
     },
     wcvCampaignOverlay: {
-      roadmapItem: c3Campaign.roadmapItemId,
+      roadmapItem: null,
       campaign: unified.wcvCampaignOverlay.soleNextImplementationCampaign,
       trackerIssue: unified.wcvCampaignOverlay.soleNextImplementationTrackerIssue,
       currentStage: unified.wcvCampaignOverlay.soleNextReplacementStage,
@@ -589,13 +589,6 @@ test("selects WCV-C3 after terminal Law while preserving the completed recovery 
       currentStageIssue:
         unified.launchConvergenceAmendment.soleNextReplacementStageIssue,
     },
-    preservedCurrentAuthority: {
-      roadmapItem: preserved.roadmapItemId,
-      campaign: preserved.campaignId,
-      trackerIssue: preserved.recoveryTrackerIssue,
-      currentStage: preserved.currentReplacementStageId,
-      currentStageIssue: preserved.currentReplacementStageIssue,
-    },
   };
 
   for (const [mirror, tuple] of Object.entries(currentStageMirrors)) {
@@ -606,19 +599,26 @@ test("selects WCV-C3 after terminal Law while preserving the completed recovery 
   assert.equal(authorityGraph.campaignId, "C2");
   assert.equal(authorityGraph.recoveryTrackerIssue, 717);
   assert.equal(authorityGraph.completedTerminalReplacementStageId, "C2R-C-L");
-  assert.equal(roadmap.program.soleNextImplementationItem, "WCV-C3");
-  assert.equal(roadmap.program.soleNextImplementationCampaign, "C3");
-  assert.equal(roadmap.program.soleNextImplementationLeadIssue, 706);
-  assert.equal(roadmap.program.soleNextImplementationTrackerIssue, 706);
+  assert.equal(c3Campaign.state, "complete_after_expected_head_merge_and_validated_receipt");
+  assert.equal(roadmap.program.wcvC3Complete, true);
+  assert.equal(roadmap.program.soleNextImplementationItem, null);
+  assert.equal(roadmap.program.soleNextImplementationCampaign, null);
+  assert.equal(roadmap.program.soleNextImplementationLeadIssue, null);
+  assert.equal(roadmap.program.soleNextImplementationTrackerIssue, null);
   assert.equal(roadmap.program.soleNextReplacementStage, null);
   assert.equal(roadmap.program.soleNextReplacementStageIssue, null);
   assert.equal(roadmap.program.globalMergeProducingWriterLimit, 1);
   assert.equal(roadmap.program.replacementStageAutomaticStartAllowed, false);
-  assert.equal(unified.roadmapContract.soleNextImplementationItemId, "WCV-C3");
-  assert.equal(unified.roadmapContract.soleNextImplementationCampaignId, "C3");
+  assert.equal(unified.roadmapContract.soleNextImplementationItemId, null);
+  assert.equal(unified.roadmapContract.soleNextImplementationCampaignId, null);
   assert.equal(unified.roadmapContract.soleNextReplacementStageId, null);
   assert.equal(unified.roadmapContract.soleNextReplacementStageIssue, null);
   assert.equal(preserved.currentReplacementStageState, "complete_chain_no_current_replacement_stage");
+  assert.equal(preserved.roadmapItemId, "WCV-C3");
+  assert.equal(preserved.campaignId, "C3");
+  assert.equal(preserved.recoveryTrackerIssue, 706);
+  assert.equal(preserved.nextRoadmapItemId, null);
+  assert.equal(preserved.wcvC3State, "complete_after_expected_head_merge_and_validated_receipt");
   assert.equal(
     preserved.currentSelectorDecision,
     "docs/decisions/2026-08-14-wcv-c2-structural-recovery.md",
@@ -635,18 +635,15 @@ test("selects WCV-C3 after terminal Law while preserving the completed recovery 
   assert.equal(preserved.c2rBCompletedIssue714Allocation, "C2");
   assert.equal(preserved.c2rBIssue714ClosureAllowed, false);
   assert.deepEqual(preserved.c2rBRemainingIssue714Allocations, ["C3", "C4", "C6"]);
-  assert.match(
-    unifiedMarkdown,
-    /current\s+dependency-ready non-Production selector is roadmap item `WCV-C3`, campaign\s+`C3`, lead Issue #706, authorized but unstarted/,
-  );
+  assert.match(unifiedMarkdown, /No successor\s+product stage is dependency-ready because ULC-M1 additionally requires\s+completed S241A/);
   assert.match(unifiedMarkdown, /post-merge next stage is C2R-B\/#714, authorized but unstarted/);
   assert.match(
     activeMasterPlan,
-    /post-receipt repository selection WCV-C3\/C3\/#706, authorized but unstarted/,
+    /current WCV-C3\/C3\/#706 candidate completes Issue #714 allocation C3 only after\s+its own protected merge and receipt/,
   );
   assert.match(
     launchStrategy,
-    /Current repository selector represented after terminal PR #764's exact-head/,
+    /Current candidate after terminal PR #764's exact-head merge and validated/,
   );
 
   const staleFixtures = [
@@ -686,11 +683,22 @@ test("selects WCV-C3 after terminal Law while preserving the completed recovery 
   );
   assert.ok(currentAuthoritySections.length > 0);
   for (const { path, section } of currentAuthoritySections) {
-    assert.deepEqual(currentAuthorityTuple(section), expectedCurrentStage, `${path}:${section.heading}`);
+    const expected = /\bpreserved current authority\b/.test(
+      normalizeAuthorityProse(section.heading),
+    )
+      ? {
+          roadmapItem: "WCV-C3",
+          campaign: "C3",
+          trackerIssue: 706,
+          currentStage: null,
+          currentStageIssue: null,
+        }
+      : expectedCurrentStage;
+    assert.deepEqual(currentAuthorityTuple(section), expected, `${path}:${section.heading}`);
   }
   assert.equal(plan.globalMergeProducingWriterLimit, 1);
   assert.equal(plan.activeWriterCount, 0);
-  assert.deepEqual(plan.selectedItemIds, ["WCV-C3"]);
+  assert.deepEqual(plan.selectedItemIds, ["S236B"]);
 });
 
 test("installs a unique, resolved and fully gated complete-vertical sequence", async () => {

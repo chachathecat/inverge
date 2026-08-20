@@ -31,13 +31,14 @@ Student surfaces are exactly Web, iOS/iPadOS and Android. The complete
 instructor authoring/review workbench is Web-primary. Student apps consume
 only assigned work and approved feedback.
 
-The current candidate completes WCV-C2/C2/Tracker #717's exact five-stage C2R
-chain under expected-head merge-and-receipt semantics, with one merge-
-producing writer and GitHub-native protected non-Production continuation.
-C2R-A/#702 and C2R-B/#714 are complete source-only; C2R-C-P, C2R-C-T and
-terminal C2R-C-L/#703 are the complete Practice, Theory and Law runtime
-stages. After PR #764's protected merge and validated receipt, WCV-C3/C3/#706
-is the authorized and unstarted selector. ULC-0 implements nothing.
+WCV-C2/C2/Tracker #717's exact five-stage C2R chain is complete under
+expected-head merge-and-receipt semantics. C2R-A/#702 and C2R-B/#714 are
+complete source-only; C2R-C-P, C2R-C-T and terminal C2R-C-L/#703 are the
+complete Practice, Theory and Law runtime stages. The current WCV-C3/C3/#706
+candidate completes durable evidence and daily command only after its own
+protected merge and validated receipt. No successor product stage is
+dependency-ready because ULC-M1 also requires S241A. Queued S236B remains a
+report-only non-product control lane. ULC-0 implements nothing.
 
 The later 2026-08-15 C2R-B decision owns this exact post-B selector and typed
 proof architecture. The C2R-A decision still owns the A rights-safe source
@@ -126,9 +127,10 @@ The formal identities remain separate: completed roadmap item `WCV-C2`,
 completed campaign ID `C2`, recovery tracker #717, completed source-only
 stages `C2R-A` for Issue #702 and `C2R-B` for Issue #714, and completed
 Practice, Theory and Law stages `C2R-C-P`, `C2R-C-T` and `C2R-C-L` for Issue
-#703. The post-receipt current selector is roadmap item `WCV-C3`, campaign
-`C3`, lead Issue #706. The canonical tuple is
-`WCV-C3 / C3 / #706 / authorized_unstarted`.
+#703. WCV-C3/C3 and lead Issue #706 become complete only after this candidate's
+protected merge and validated receipt. Issue #714 allocation C3 completes
+with it, while C4/C6 remain open. There is no post-receipt dependency-ready
+selector because ULC-M1 additionally requires completed S241A.
 
 The sequence is terminally serial. C2R-A and C2R-B are independently complete
 source-contract outcomes and are not parallel. C2R-C-P, C2R-C-T and C2R-C-L
@@ -625,11 +627,12 @@ Capture-to-Note and Capture-to-Plan remain the learner-loop quality standard: le
 
 The S234 reset snapshot is historical. The near roadmap follows
 `roadmap/active-program.yml`. S234, S235A, S235B,
-the S234R amendment, and exact O3A Owner decision are complete. S236B and O4V
-are ready in metadata only. O4V remains a pending Owner decision; S236P waits
-for O4V; S236A remains queued with S236P as its sole unmet dependency. O3A
-authorizes no immediate operation, and selection does not start work. PR #660
-remains a blocked S236B Draft and is not benchmark acceptance. First-round
+the S234R amendment, and exact O3A and O4V Owner decisions are complete. S236B
+remains queued and report-only because Draft PR #660 remains nonqualifying and
+explicitly forbids automatic additional OCR work. S236P remains factually
+blocked, and S236A remains queued with S236P as its sole unmet dependency. O3A authorizes no
+immediate operation, and selection does not start work. PR #660 is not
+benchmark acceptance. First-round
 runtime, Founding Beta waves, both-track, Academy, shared-signal activation,
 and S225 remain queued behind their own unmet dependencies and Owner gates.
 
@@ -717,9 +720,13 @@ artifacts, three continuation commands and no-shortcut semantics. No runtime
 is installed. Practice, Theory and Law remain complete successor verticals;
 the shared runtime substrate may first land only within C2R-C-P.
 
-Only Issue #714 allocation C2 is complete. Issue #714 stays open for C3, C4
-and C6. The expected-head-pinned merge and validated #717 receipt authorized
-C2R-C-P/#703; protected PR #756 and PR #762 then completed Practice and Theory
-in order. Candidate PR #764 completes terminal C2R-C-L/#703 only after its
-expected-head-pinned merge and validated receipt, then selects WCV-C3/C3/#706
-as authorized but unstarted without Production or learner activation.
+Issue #714 allocations C2 and C3 are complete while C4 and C6 remain open. The
+expected-head-pinned merge and validated #717 receipt authorized C2R-C-P/#703;
+protected PR #756 and PR #762 then completed Practice and Theory in order. PR
+#764 completed terminal C2R-C-L/#703 through its expected-head-pinned merge and
+validated receipt, then selected WCV-C3/C3/#706. The WCV-C3 candidate now
+represents completion only after its own protected merge and validated receipt;
+there is no dependency-ready successor product stage because ULC-M1 also
+requires S241A. Queued S236B remains report-only and cannot start from Draft
+PR #660.
+No Production or learner activation is authorized.

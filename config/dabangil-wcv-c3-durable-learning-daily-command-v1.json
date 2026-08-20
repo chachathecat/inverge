@@ -1,0 +1,127 @@
+{
+  "contractId": "dabangil.wcv_c3.durable_learning_daily_command.v1",
+  "stage": "WCV-C3",
+  "campaign": "C3",
+  "trackerIssue": 706,
+  "jointIssues": [706, 707, 708],
+  "status": "implementation_candidate",
+  "candidateRepresentsPostMergeState": true,
+  "coveringPr": null,
+  "postMergeState": "complete_durable_learning_and_daily_command_vertical",
+  "postReceiptNextRoadmapItem": null,
+  "postReceiptNoDependencyReadyReason": "ULC-M1 additionally requires completed S241A",
+  "completedIssue714Allocation": "C3",
+  "remainingIssue714Allocations": ["C4", "C6"],
+  "learnerOutcome": "One verified same-session repair progresses through frozen D+1 reproduction, sealed D+7 transfer, timed recurrence, reopenable currently-clear evidence, a private Personal Study Ledger, and deterministic Today/Full-Day command.",
+  "evidenceSequence": [
+    "REPAIR_VERIFIED_SAME_SESSION",
+    "D1_REPRODUCED",
+    "D7_TRANSFER_OBSERVED",
+    "TIMED_RECURRENCE_CONFIRMED",
+    "CURRENTLY_CLEAR"
+  ],
+  "stageBoundProof": {
+    "required": true,
+    "fixtureReleaseVersion": "dabangil.wcv_c3.rights_safe_transfer_fixtures.2026-08-17.v2",
+    "stages": ["D1", "D7", "TIMED", "RECURRENCE"],
+    "crossStageCommitmentReusePasses": false,
+    "omittedClosedBooleanOrZeroPasses": false,
+    "expectedJudgmentNotDisclosedBeforeCommit": true,
+    "expectedTheoryOptionNotMarkedBeforeCommit": true,
+    "problemAndSourceContextExposedBeforeCommit": true,
+    "neutralTheoryOptionsMarkExpected": false,
+    "serverBindsNonAnswerInputContext": true,
+    "learnerSubmissionAcceptsOnlyAnswerFields": true,
+    "browserExpectedFixtureImport": false,
+    "freshRetryVariantAfterNonD1Failure": true,
+    "retryVariantsRemainRightsSafeSynthetic": true,
+    "untimedRecurrenceEvent": "RECURRENCE_RECONFIRMED"
+  },
+  "proofObjects": [
+    "FrozenD0ConfigurationSnapshotV1",
+    "IndependentAttemptQualificationV1",
+    "PrePresentationEligibilitySnapshotV1",
+    "VariantAssignmentV1",
+    "TimedFullSolutionAttemptV1",
+    "TransferOutcomeV1",
+    "RecurrenceOutcomeV1",
+    "EvidenceReopenEventV1",
+    "GapClosureCaseV1",
+    "DurableReviewSourceBindingV1",
+    "DurableReviewOutcomeV1",
+    "DurableLearningGapSignalV1",
+    "DurableConceptStateEvidenceSignalV1",
+    "DurableFailureNoteV1"
+  ],
+  "subjects": [
+    "appraisal_practical",
+    "appraisal_theory",
+    "appraisal_law"
+  ],
+  "planner": {
+    "availableMinutesMinimum": 30,
+    "availableMinutesMaximum": 720,
+    "coreOutcomeMaximum": 3,
+    "fixedCommitmentsPreserved": true,
+    "minimumMaintenanceMode": true,
+    "learnerDecisions": ["ACCEPTED", "EDITED", "REJECTED"],
+    "decisionAloneChangesMastery": false,
+    "reviewOutcomeSeparatedFromPlannerStatus": true,
+    "plannerCannotOverwriteReviewFeedback": true
+  },
+  "reviewOutputs": {
+    "version": "dabangil.wcv_c3.durable_review_outcome.v1",
+    "terminalStages": ["D1", "D7", "TIMED", "RECURRENCE"],
+    "successAndNonSuccessEmitSafeLearningGapSignal": true,
+    "successAndNonSuccessEmitConceptStateEvidenceSignal": true,
+    "nonSuccessEmitsExactlyOneFailureNote": true,
+    "failureNoteVersion": "s216.error_notebook_gap_taxonomy.v1",
+    "conceptSignalVersion": "s217.personal_core_concept_graph.v1",
+    "signalsAreBodylessEvidenceContributionsOnly": true,
+    "signalsCreateCanonicalState": false,
+    "allOutputsCommitInExistingTransitionRpc": true,
+    "exportDeleteRestoreCoveredByCaseAndEventAggregate": true
+  },
+  "privacy": {
+    "rawBodiesSeparatedFromProjection": true,
+    "forcedRls": true,
+    "serviceRoleOnly": true,
+    "learnerExport": true,
+    "learnerDelete": true,
+    "deletionReceiptRetained": true
+  },
+  "migrationRecovery": {
+    "completeHistoryFreshStart": true,
+    "completeHistoryResetCount": 2,
+    "secondReplayUsesNewlyRemovedLocalVolume": true,
+    "targetMigrationReplay": true,
+    "nestedJsonbDeletionRequiresExplicitParentheses": true,
+    "failureDiagnosticFields": [
+      "migrationFilename",
+      "statementIdentifier",
+      "sqlstate",
+      "errorClass",
+      "boundedMessage"
+    ],
+    "failureDiagnosticIncludesSqlBody": false,
+    "remoteSupabaseUsed": false
+  },
+  "activationBoundary": {
+    "killSwitch": "WCV_C3_DURABLE_LEARNING_ENABLED",
+    "flagDefault": false,
+    "ownerAllowlist": "WCV_C3_OWNER_EMAILS",
+    "ownerOnlyNonProduction": true,
+    "hardProductionDeny": true,
+    "syntheticClockRequiresCi": true,
+    "productionAuthorized": false,
+    "realLearnerAuthorized": false,
+    "paymentAuthorized": false,
+    "remoteMigrationApplyAuthorized": false
+  },
+  "rollback": {
+    "forwardOnly": true,
+    "disableFlagFirst": true,
+    "requiresRevertingWcvC2": false,
+    "destructiveRollbackAuthorized": false
+  }
+}

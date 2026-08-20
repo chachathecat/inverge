@@ -451,7 +451,7 @@ test("keeps Phase E metadata-only and preserves the current product authority tu
     live_service_called: false,
     dependency_graph_changed: false,
   });
-  assert.match(roadmap, /soleNextImplementationItem:\s*WCV-C3/);
+  assert.match(roadmap, /soleNextImplementationItem:\s*null/);
   assert.match(roadmap, /currentReplacementStage:\s*null/);
   assert.match(roadmap, /currentReplacementStageIssue:\s*null/);
   assert.match(roadmap, /c2rCPState:\s*complete_practice_runtime/);
