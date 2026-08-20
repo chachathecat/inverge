@@ -1,3 +1,4 @@
+-- Canonical timestamp 2/4: follows the legal grounding table creation.
 alter table public.legal_article_chunks
   add column if not exists article_key text;
 

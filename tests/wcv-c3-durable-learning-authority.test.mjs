@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { readFile } from "node:fs/promises";
+import { readFile, readdir } from "node:fs/promises";
 import test from "node:test";
 
 const root = new URL("../", import.meta.url);
@@ -119,6 +119,33 @@ test("WCV-C3 persistence separates bodies, forces RLS and exposes only service R
   assert.match(sql, /references public\.wcv_c3_private_attempt_artifacts\(id, case_id, user_id\)[\s\S]*on delete cascade/);
   assert.doesNotMatch(sql, /grant execute[\s\S]*to authenticated/i);
   assert.doesNotMatch(sql, /truncate table|drop table/i);
+});
+
+test("complete migration history has unique dependency-ordered versions", async () => {
+  const migrationNames = (await readdir(new URL("supabase/migrations/", root)))
+    .filter((name) => name.endsWith(".sql"))
+    .sort();
+  const versions = migrationNames.map((name) => {
+    const match = /^(\d+)_/.exec(name);
+    assert.ok(match, `migration filename is not versioned: ${name}`);
+    return match[1];
+  });
+  assert.equal(new Set(versions).size, versions.length);
+  assert.deepEqual(
+    migrationNames.filter((name) => name.includes("legal_") && name.startsWith("2026061")),
+    [
+      "20260615090000_legal_grounding.sql",
+      "20260615100000_legal_article_chunk_identity.sql",
+      "20260615110000_legal_retrieval.sql",
+      "20260615120000_legal_grounding_guard.sql",
+      "20260616100000_legal_grounding_guard_service_role_grant.sql",
+    ],
+  );
+  const learningStateMigration = await read(
+    "supabase/migrations/20260608_create_personal_learning_states.sql",
+  );
+  assert.equal((learningStateMigration.match(/\bfrom walk\b/g) ?? []).length, 2);
+  assert.match(learningStateMigration, /cross join lateral \([\s\S]*?jsonb_each[\s\S]*?union all[\s\S]*?jsonb_array_elements/);
 });
 
 test("WCV-C3 API/UI and exact-head runtime enforce trusted timing and metadata safety", async () => {

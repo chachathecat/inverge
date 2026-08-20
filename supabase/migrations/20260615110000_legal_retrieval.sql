@@ -1,4 +1,5 @@
 -- Legal retrieval v1
+-- Canonical timestamp 3/4: requires the article identity delta.
 -- Authenticated read-only keyword retrieval over current official law article chunks.
 
 create or replace function public.search_legal_chunks_keyword(

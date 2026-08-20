@@ -1,4 +1,5 @@
 -- Legal grounding guard v1
+-- Canonical timestamp 4/4: requires the article identity delta.
 -- Authenticated read-only concept source anchor lookup for future legal explanation gating.
 
 create or replace function public.get_legal_concept_source_anchors(

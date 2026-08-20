@@ -1,4 +1,5 @@
 -- Legal grounding source corpus v1
+-- Canonical timestamp 1/4: creates the legal tables before dependent deltas.
 -- Official law source anchors only. Client writes are intentionally disabled.
 
 create extension if not exists "pgcrypto";

@@ -1,4 +1,5 @@
 -- Legal grounding guard v1
+-- Canonical timestamp: follows creation of the guarded function.
 -- Preserve operator-only write-path support via service role for concept anchor lookups.
 
 revoke all on function public.get_legal_concept_source_anchors(text, text, integer) from public;

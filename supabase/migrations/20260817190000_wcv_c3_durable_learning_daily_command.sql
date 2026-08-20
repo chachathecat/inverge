@@ -692,8 +692,9 @@ begin
       or v_gap_signal ->> 'gapCode' is distinct from 'C2_PRIMARY_GAP'
       or v_concept_signal ->> 'learningGapSignalId' is distinct from v_gap_signal ->> 'signalId'
       or v_concept_signal ->> 'failureNoteId' is distinct from v_failure_note_id
-      or v_concept_signal ->> 'evidenceKind' is distinct from
+      or v_concept_signal ->> 'evidenceKind' is distinct from (
         case when v_outcome = 'SUCCESS' then 'RECOVERY_EVIDENCE' else 'FAILURE_EVIDENCE' end
+      )
       or (v_outcome = 'SUCCESS' and v_concept_signal ->> 'candidateState' is distinct from 'recovering')
       or (
         v_outcome <> 'SUCCESS'
