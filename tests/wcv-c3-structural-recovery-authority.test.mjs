@@ -424,6 +424,23 @@ test("keeps one writer, V13 supremacy and every activation boundary closed", asy
   for (const [key, value] of Object.entries(recovery.activationBoundary)) {
     assert.equal(value, false, key);
   }
+  assert.deepEqual(recovery.deliveryControl.sourceAuthorityIssueLink, {
+    mode: "REFERENCE_ONLY",
+    repository: "chachathecat/inverge",
+    baseRef: "main",
+    baseSha: "ffdd3dcc2398dd27b991eee0be34f832da0a65b5",
+    headRef: "codex/wcv-c3r-structural-recovery-authority",
+    headRepository: "chachathecat/inverge",
+    pullRequestTitle: "[WCV-C3R] Install serial structural recovery authority",
+    trackerIssue: 781,
+    requiredReferenceLine: "Refs #781",
+    requiredDispositionLine:
+      "- Tracker disposition: remains open; closure authority: C3R-L",
+    closingKeywordsAllowed: false,
+    exceptionAppliesOnlyWhenExactLinesPresent: true,
+    fullGithubClosingKeywordFamilyBlocked: true,
+    terminalClosureStage: "C3R-L",
+  });
 });
 
 test("mirrors tracker 781 and C3R-P without changing the terminal C2 graph", async () => {
@@ -482,6 +499,8 @@ test("registers the focused test once and keeps the source-only owned path bound
   assert.ok(ownedPaths.includes(CONTRACT));
   assert.ok(ownedPaths.includes(VALIDATION));
   assert.ok(ownedPaths.includes(FOCUSED_TEST));
+  assert.ok(ownedPaths.includes("scripts/automation/validate-pr-contract.mjs"));
+  assert.ok(ownedPaths.includes("tests/agent-factory-contract-validation.test.mjs"));
   for (const path of ownedPaths) {
     assert.doesNotMatch(path, /^(?:app|components|lib\/review-os|supabase|\.github\/workflows)\//);
     assert.doesNotMatch(path, /(?:^|\/)(?:package\.json|[^/]*lock[^/]*)$/);

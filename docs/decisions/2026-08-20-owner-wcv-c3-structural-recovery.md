@@ -257,6 +257,22 @@ independent verification, mergeability is clean, and one fresh exact-head
 Codex review reports actionable P0/P1/P2 `0/0/0`. The merge is squash-only and
 pinned to the reviewed expected head.
 
+The source-authority PR links Tracker #781 with `Refs #781` and the exact
+machine-validated disposition `- Tracker disposition: remains open; closure
+authority: C3R-L`. It contains no `Closes` or `Fixes` keyword. The PR Contract
+validator permits this exact contract-backed reference-only form and no broad
+exception: a missing exact reference, a missing exact disposition, or any
+GitHub closing keyword fails closed. The exception is also bound to repository
+`chachathecat/inverge`, base `main` at
+`ffdd3dcc2398dd27b991eee0be34f832da0a65b5`, head
+`codex/wcv-c3r-structural-recovery-authority` in the same repository, and title
+`[WCV-C3R] Install serial structural recovery authority`; an unrelated or
+same-named fork PR cannot claim it, and a later PR cannot replay it after the
+base advances. Same-repository, qualified-repository,
+full-URL, colon and case-insensitive closing-reference syntax all fail closed.
+This narrow rule preserves the required open tracker after the source-authority
+merge; only terminal C3R-L may close #781.
+
 If this source-only recovery PR exhausts either budget, it closes unmerged,
 remains read-only, starts no C3R-P runtime, and reports the exact conflict. No
 stage boundary or migration-history gate may be weakened.
@@ -304,6 +320,8 @@ This source authority owns exactly these paths:
 19. `tests/rights-safe-adaptive-variant-foundry-contract.test.mjs`
 20. `tests/wcv-c2r-structural-recovery-authority.test.mjs`
 21. `tests/wcv-campaign-authority-roadmap-reconciliation.test.mjs`
+22. `scripts/automation/validate-pr-contract.mjs`
+23. `tests/agent-factory-contract-validation.test.mjs`
 
 No path outside this manifest may change. In particular, no `app/`,
 `components/`, `lib/review-os/`, `supabase/`, `.github/workflows/`, package or

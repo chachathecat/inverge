@@ -110,6 +110,20 @@ formal exact-head Codex review must report actionable P0/P1/P2 `0/0/0`.
 Every new-PR thread must be independently verified and resolved. Merge is
 squash-only and pinned to the reviewed expected head.
 
+Because #781 is a long-lived recovery tracker, the source-authority PR uses
+the contract-backed `Refs #781` form plus the exact disposition line
+`- Tracker disposition: remains open; closure authority: C3R-L`. The PR
+Contract validator must accept that exact pair only when zero `Closes` or
+other GitHub closing-keyword variants are present and the repository, base
+`main` at `ffdd3dcc2398dd27b991eee0be34f832da0a65b5`, same-repository head
+and PR title exactly match the source-authority tuple. The base-SHA binding
+prevents a later lookalike PR from replaying the exception after `main`
+advances.
+Same-repository, qualified-repository, full-URL, colon and case-insensitive
+closing references are all blocked. Missing or altered scope/reference/
+disposition text fails closed; unrelated PRs retain the normal exactly-one-
+closing-reference rule.
+
 If the source PR exhausts two source corrections or three exact-head reviews,
 close it unmerged, retain it read-only, do not start C3R-P, and report the
 authority conflict.

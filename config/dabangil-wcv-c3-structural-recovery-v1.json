@@ -992,6 +992,22 @@
     "mergeMethod": "squash",
     "expectedHeadPinned": true,
     "liveGithubReceiptValidationRequired": true,
+    "sourceAuthorityIssueLink": {
+      "mode": "REFERENCE_ONLY",
+      "repository": "chachathecat/inverge",
+      "baseRef": "main",
+      "baseSha": "ffdd3dcc2398dd27b991eee0be34f832da0a65b5",
+      "headRef": "codex/wcv-c3r-structural-recovery-authority",
+      "headRepository": "chachathecat/inverge",
+      "pullRequestTitle": "[WCV-C3R] Install serial structural recovery authority",
+      "trackerIssue": 781,
+      "requiredReferenceLine": "Refs #781",
+      "requiredDispositionLine": "- Tracker disposition: remains open; closure authority: C3R-L",
+      "closingKeywordsAllowed": false,
+      "exceptionAppliesOnlyWhenExactLinesPresent": true,
+      "fullGithubClosingKeywordFamilyBlocked": true,
+      "terminalClosureStage": "C3R-L"
+    },
     "requiredChecks": ["pr-contract", "risk-classifier", "runtime-gate", "fast-ci", "full-ci", "full-ci-windows", "Learner Loop Health", "security-audit-sbom", "Vercel"]
   },
   "activationBoundary": {
