@@ -204,12 +204,25 @@ test("requires every migration consumer to follow its exact producers", async ()
   const manifest = recovery.migrationHistoryCompatibilityManifestV1;
   const records = manifest.records;
   const byName = new Map(records.map((record) => [record.currentFilename, record]));
-  const externalObjects = new Set(["auth.users", "storage.objects", "storage.buckets"]);
+  const externalObjects = new Set(
+    manifest.externalDatabaseObjects.map((object) => object.identifier),
+  );
   const availableObjects = new Map();
   const exactObjectName = /^(auth|public|storage)\.[a-z0-9_]+$/;
 
   assert.deepEqual(manifest.closedDatabaseObjectKinds, ["table", "function", "type"]);
   assert.deepEqual(manifest.repositoryProducedTypeIdentifiers, []);
+  assert.deepEqual(
+    manifest.externalDatabaseObjects,
+    [
+      { kind: "table", identifier: "auth.users" },
+      { kind: "function", identifier: "auth.uid" },
+      { kind: "table", identifier: "storage.objects" },
+      { kind: "table", identifier: "storage.buckets" },
+      { kind: "function", identifier: "storage.allow_any_operation" },
+      { kind: "function", identifier: "storage.allow_only_operation" },
+    ],
+  );
 
   for (const record of records) {
     for (const predecessor of record.exactDependencyPredecessors) {
@@ -272,7 +285,7 @@ test("requires every migration consumer to follow its exact producers", async ()
   );
   assert.deepEqual(
     identifiers(byName.get("20260424_review_os_alpha.sql").consumes),
-    ["auth.users", "public.profiles"],
+    ["auth.uid", "auth.users", "public.profiles"],
   );
   assert.deepEqual(
     identifiers(byName.get("20260424_review_os_alpha.sql").modifies),
@@ -282,7 +295,7 @@ test("requires every migration consumer to follow its exact producers", async ()
     identifiers(
       byName.get("20260623_personal_concept_graph_atomic_transition.sql").consumes,
     ),
-    ["auth.users", "public.personal_concept_nodes"],
+    ["auth.uid", "auth.users", "public.personal_concept_nodes"],
   );
   assert.deepEqual(
     identifiers(
@@ -302,7 +315,7 @@ test("requires every migration consumer to follow its exact producers", async ()
     identifiers(
       byName.get("20260730025332_s236p_lean_owner_private.sql").consumes,
     ),
-    ["auth.users", "storage.buckets", "storage.objects"],
+    ["auth.uid", "auth.users", "storage.buckets", "storage.objects"],
   );
   assert.deepEqual(
     identifiers(
@@ -347,6 +360,34 @@ test("requires every migration consumer to follow its exact producers", async ()
     ),
     ["auth.users", "public.wcv_c2_trusted_repair_sessions"],
   );
+});
+
+test("matches every live-main external function call to the closed manifest", async () => {
+  const recovery = await json(CONTRACT);
+  const manifest = recovery.migrationHistoryCompatibilityManifestV1;
+  const externalTables = new Set(["auth.users", "storage.objects", "storage.buckets"]);
+  const externalFunctionPattern = /\b(?:auth|storage)\.[a-z0-9_]+\s*\(/g;
+
+  for (const record of manifest.records.filter((entry) => entry.presentOnLiveMain)) {
+    const sql = await text(`supabase/migrations/${record.currentFilename}`);
+    const expected = [
+      ...new Set(
+        [...sql.matchAll(externalFunctionPattern)]
+          .map((match) => match[0].replace(/\s*\($/, ""))
+          .filter((identifier) => !externalTables.has(identifier)),
+      ),
+    ].sort();
+    const declared = record.consumes
+      .filter(
+        (object) =>
+          object.kind === "function" &&
+          /^(?:auth|storage)\./.test(object.identifier),
+      )
+      .map((object) => object.identifier)
+      .sort();
+
+    assert.deepEqual(declared, expected, record.currentFilename);
+  }
 });
 
 test("blocks silent rename or repair for unknown and applied remote history", async () => {

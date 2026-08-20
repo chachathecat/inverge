@@ -204,6 +204,11 @@ consumed and produced objects, fresh-history order, conservative remote
 status, filename-mutation eligibility, repair/Owner-gate requirement, and
 rollback or forward-compatibility strategy.
 
+Consumed objects include exact typed external schema dependencies. Every
+live-main call to `auth.uid`, `storage.allow_any_operation` or
+`storage.allow_only_operation` must appear as a function in that migration's
+`consumes` list; checking only previously declared objects is not closure.
+
 Current live-main history is intentionally recorded as defective: 16
 eight-digit versions, one twelve-digit version, eight fourteen-digit versions,
 and a four-way collision at `20260615`. The canonical proposal is a planning

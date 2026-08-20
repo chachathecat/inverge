@@ -57,6 +57,14 @@ migration. It deliberately distinguishes:
 - conservative remote application state; and
 - mutation authority.
 
+The closed object inventory includes schema-qualified external tables and
+functions, not only repository-produced objects. In particular, every
+live-main migration call to `auth.uid`, `storage.allow_any_operation` or
+`storage.allow_only_operation` must have a matching typed `consumes` entry.
+The focused test derives those external function calls from each SQL file and
+requires exact equality with the manifest, so an omitted dependency cannot be
+hidden by checking only objects that were already declared.
+
 The canonical proposal does not rename a file or mutate migration history.
 For an `UNKNOWN` or `KNOWN_APPLIED` record, `filenameMutationEligibleInThisWork`
 must remain false and the Owner-gate requirement must remain true. Repository
