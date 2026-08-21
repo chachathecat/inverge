@@ -1580,6 +1580,13 @@
         ]
       },
       "stageReceiptType": "C3RStageMergeReceiptV1",
+      "perSubjectIssueEvidenceRequiredForEveryStageExactly": [
+        706,
+        707,
+        708
+      ],
+      "perSubjectIssueEvidenceInventoryAuthority": "config/dabangil-wcv-c3r-a1-serial-program-authority-v1.json#issueAllocation.issues[].requiredForEachSubjectExactly",
+      "stageReceiptMustProveEveryBoundInventoryItemExactlyOnce": true,
       "issueOrBranchOrCandidateStateMaySubstituteForStageReceipt": false,
       "closedUnmergedPrMaySubstituteForStageReceipt": false,
       "candidateTestsMaySubstituteForResultingMainReceipt": false,

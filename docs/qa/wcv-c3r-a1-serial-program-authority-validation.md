@@ -80,6 +80,13 @@ C3R-L may complete WCV-C3, close #706/#707/#708/#781, complete #714 allocation
 C3, advance the active selector or publish the terminal receipt. C4 and C6
 allocations remain open.
 
+The receipt audit also dereferences every C3R-P/T/L stage binding for #706,
+#707 and #708 to the exact corresponding `requiredForEachSubjectExactly`
+inventory. The closed receipt requires a stage/subject/issue/evidence-key/
+runtime-evidence-ref entry for every bound item exactly once. Missing, unknown,
+duplicate, cross-stage, cross-subject and mismatched entries fail closed, so an
+inherited common substrate cannot erase Theory- or Law-specific evidence.
+
 The roadmap keeps WCV-C3 as the queued, selected and unstarted campaign
 envelope. Additive C3R fields select only C3R-P as the post-A1 runtime stage;
 the generic completed-C2 replacement fields remain historical and unchanged.
@@ -131,10 +138,11 @@ future self-identity would be self-referential.
 
 The pre-publication source freeze completed with:
 
-- focused C3R-A1: `15/15` pass;
+- focused C3R-A1: `16/16` pass, including exact per-subject receipt-inventory
+  binding and hostile omission/mismatch cases;
 - affected roadmap, unified-program, GitHub-delivery, WCV campaign, A0 and
-  C2R authority set: `152/152` pass;
-- full default Node suite: pass, exit `0`;
+  C2R authority set: `228/228` pass;
+- full default Node suite: `1495/1495` pass, exit `0`;
 - typecheck: pass;
 - lint: pass with `0` errors and 11 pre-existing warnings outside the A1
   changed paths;

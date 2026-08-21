@@ -185,8 +185,12 @@ Every later runtime stage requires one live-GitHub-validated
 `C3RStageMergeReceiptV1` binding its PR, base, reviewed head/tree, pinned
 squash merge, resulting main SHA/tree, exact-head checks, formal review,
 actionable `0/0/0`, zero unresolved actionable threads, runtime evidence,
-bodyless metadata artifacts, default-off feature state and zero remote
-mutation. Candidate-head tests and tracker prose are never resulting-main
+per-subject issue evidence, bodyless metadata artifacts, default-off feature
+state and zero remote mutation. Every C3R-P/T/L receipt binds #706/#707/#708
+to the exact corresponding `requiredForEachSubjectExactly` inventories and
+proves every item exactly once for its own stage and subject; missing,
+unknown, duplicate, cross-stage, cross-subject or mismatched entries invalidate
+the receipt. Candidate-head tests and tracker prose are never resulting-main
 receipt authority.
 
 C3R-P owns the A0-governed migration-history reconciliation, common durable

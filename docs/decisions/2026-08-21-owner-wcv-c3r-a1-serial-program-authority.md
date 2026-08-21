@@ -94,8 +94,8 @@ Every runtime stage must later supply one live-GitHub-validated
 `C3RStageMergeReceiptV1`. Its exact fields are stage, PR, base SHA, reviewed
 head/tree, squash merge SHA, resulting main SHA/tree, passed exact-head
 checks, formal review ID, actionable counts, unresolved actionable threads,
-runtime evidence refs, metadata-only artifact refs, default-off state and
-remote mutation count.
+runtime evidence refs, per-subject issue-evidence entries, metadata-only
+artifact refs, default-off state and remote mutation count.
 
 A valid receipt requires the reviewed head to be the pinned squash input; all
 base/head/tree/resulting-main identities to match; exact-head checks to pass;
@@ -104,6 +104,14 @@ the formal review to be anchored to that head; actionable counts to be
 runtime evidence to be present; metadata artifacts to contain no raw learner
 body; the feature to remain default-off; and the merge to remain unreverted on
 main.
+
+Every C3R-P, C3R-T and C3R-L receipt must bind #706, #707 and #708 to the
+corresponding exact `requiredForEachSubjectExactly` inventory in the machine
+contract. Its per-subject issue-evidence entries bind stage, subject, issue,
+evidence key and runtime-evidence ref and cover every bound inventory item
+exactly once. A missing, unknown, duplicate, cross-stage, cross-subject or
+mismatched entry invalidates the receipt. Inherited common substrate never
+waives a Theory- or Law-specific proof obligation.
 
 Issue state or closure, branch existence, a closed-unmerged PR, candidate-head
 tests, donor CI or tracker text alone never satisfies a dependency.

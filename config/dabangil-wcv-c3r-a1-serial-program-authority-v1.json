@@ -109,6 +109,7 @@
       "actionableCounts",
       "unresolvedActionableThreads",
       "runtimeEvidenceRefs",
+      "perSubjectIssueEvidence",
       "metadataOnlyArtifactRefs",
       "featureDefaultOff",
       "remoteMutationCount"
@@ -118,6 +119,23 @@
       "p1",
       "p2"
     ],
+    "perSubjectIssueEvidenceShape": {
+      "requiredIssueBindingsExactly": [
+        706,
+        707,
+        708
+      ],
+      "receiptEntryRequiredFieldsExactly": [
+        "stage",
+        "subject",
+        "issue",
+        "evidenceKey",
+        "runtimeEvidenceRef"
+      ],
+      "inventoryAuthority": "serialProgram.stages[].requiredPerSubjectIssueEvidenceBindingsExactly -> issueAllocation.issues[].requiredForEachSubjectExactly",
+      "receiptMustCoverEveryBoundIssueInventoryItemExactlyOnce": true,
+      "missingUnknownDuplicateCrossStageCrossSubjectOrMismatchedEvidenceInvalidatesReceipt": true
+    },
     "validReceiptRequires": {
       "pullRequestMerged": true,
       "expectedReviewedHeadPinnedToSquashMerge": true,
@@ -133,6 +151,7 @@
       "featureDefaultOff": true,
       "remoteMutationCountExactly": 0,
       "runtimeEvidenceRefsNonEmpty": true,
+      "perSubjectIssueEvidenceMatchesStageBindingsExactly": true,
       "metadataOnlyArtifactRefsContainNoRawLearnerBody": true,
       "mergePresentOnUnrevertedMain": true
     },
@@ -204,6 +223,21 @@
           "RESTORE_EXPORT_DELETE",
           "EXACT_PRACTICE_BROWSER_TO_POSTGRES_RUNTIME_EVIDENCE"
         ],
+        "requiredPerSubjectIssueEvidenceBindingsExactly": [
+          {
+            "issue": 706,
+            "requiredInventoryRef": "issueAllocation.issues.706.requiredForEachSubjectExactly"
+          },
+          {
+            "issue": 707,
+            "requiredInventoryRef": "issueAllocation.issues.707.requiredForEachSubjectExactly"
+          },
+          {
+            "issue": 708,
+            "requiredInventoryRef": "issueAllocation.issues.708.requiredForEachSubjectExactly"
+          }
+        ],
+        "stageReceiptMustProveEveryBoundInventoryItemExactlyOnce": true,
         "issueEvidenceContributions": [
           706,
           707,
@@ -236,6 +270,21 @@
           "EXACT_THEORY_BROWSER_TO_POSTGRES_RUNTIME_EVIDENCE",
           "TWO_FRESH_ISOLATED_RESET_REPLAY_CYCLES_THROUGH_VALIDATED_ADAPTER"
         ],
+        "requiredPerSubjectIssueEvidenceBindingsExactly": [
+          {
+            "issue": 706,
+            "requiredInventoryRef": "issueAllocation.issues.706.requiredForEachSubjectExactly"
+          },
+          {
+            "issue": 707,
+            "requiredInventoryRef": "issueAllocation.issues.707.requiredForEachSubjectExactly"
+          },
+          {
+            "issue": 708,
+            "requiredInventoryRef": "issueAllocation.issues.708.requiredForEachSubjectExactly"
+          }
+        ],
+        "stageReceiptMustProveEveryBoundInventoryItemExactlyOnce": true,
         "issueEvidenceContributions": [
           706,
           707,
@@ -270,6 +319,21 @@
           "TWO_FRESH_ISOLATED_RESET_REPLAY_CYCLES_THROUGH_VALIDATED_ADAPTER",
           "TERMINAL_WCV_C3_CLOSEOUT"
         ],
+        "requiredPerSubjectIssueEvidenceBindingsExactly": [
+          {
+            "issue": 706,
+            "requiredInventoryRef": "issueAllocation.issues.706.requiredForEachSubjectExactly"
+          },
+          {
+            "issue": 707,
+            "requiredInventoryRef": "issueAllocation.issues.707.requiredForEachSubjectExactly"
+          },
+          {
+            "issue": 708,
+            "requiredInventoryRef": "issueAllocation.issues.708.requiredForEachSubjectExactly"
+          }
+        ],
+        "stageReceiptMustProveEveryBoundInventoryItemExactlyOnce": true,
         "issueEvidenceContributions": [
           706,
           707,

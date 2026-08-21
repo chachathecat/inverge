@@ -48,9 +48,51 @@ const EXACT_STAGE_RECEIPT_FIELDS = [
   "actionableCounts",
   "unresolvedActionableThreads",
   "runtimeEvidenceRefs",
+  "perSubjectIssueEvidence",
   "metadataOnlyArtifactRefs",
   "featureDefaultOff",
   "remoteMutationCount",
+];
+
+const EXACT_PER_SUBJECT_ISSUE_EVIDENCE = {
+  706: [
+    "FROZEN_D0",
+    "D_PLUS_1_UNAIDED_RECONSTRUCTION",
+    "SEALED_NON_SAME_SURFACE_D_PLUS_7_TRANSFER",
+    "TIMED_RECURRENCE",
+    "LATER_FAILURE_REOPEN",
+  ],
+  707: [
+    "LEARNER_PRIVATE_FORCED_RLS_LEDGER",
+    "EXACT_SOURCE_ATTEMPT_ARTIFACT_ITEM_BINDING",
+    "BODYLESS_RECURRING_DEDUCTION_EVIDENCE_PROJECTION",
+    "SOURCE_BOUND_FAILURE_NOTES",
+    "RESTORE_EXPORT_DELETE",
+  ],
+  708: [
+    "DETERMINISTIC_REVIEW_QUEUE",
+    "TODAY_AND_FULL_DAY",
+    "CORE_OUTCOME_MAXIMUM_3",
+    "PLANNER_REVIEW_STATE_SEPARATION",
+    "ACCEPT_EDIT_REJECT_WITHOUT_EVIDENCE_MUTATION",
+    "STALE_PLAN_REJECTION_AND_ELIGIBILITY_REFRESH",
+  ],
+};
+
+const EXACT_PER_SUBJECT_ISSUE_EVIDENCE_BINDINGS = [706, 707, 708].map(
+  (issue) => ({
+    issue,
+    requiredInventoryRef:
+      `issueAllocation.issues.${issue}.requiredForEachSubjectExactly`,
+  }),
+);
+
+const EXACT_PER_SUBJECT_RECEIPT_ENTRY_FIELDS = [
+  "stage",
+  "subject",
+  "issue",
+  "evidenceKey",
+  "runtimeEvidenceRef",
 ];
 
 const EXACT_OWNED_PATHS = [
@@ -91,6 +133,30 @@ function validateAuthority(candidate) {
   }
   if (receipt.a0ManifestDuplicatedIntoA1 !== false) {
     errors.push("A0_DUPLICATION");
+  }
+
+  const stageReceipt = candidate.c3rStageMergeReceiptV1 ?? {};
+  if (!same(stageReceipt.requiredFieldsExactly, EXACT_STAGE_RECEIPT_FIELDS)) {
+    errors.push("STAGE_RECEIPT_FIELDS");
+  }
+  const issueEvidenceShape = stageReceipt.perSubjectIssueEvidenceShape ?? {};
+  if (!same(issueEvidenceShape.requiredIssueBindingsExactly, [706, 707, 708])) {
+    errors.push("STAGE_RECEIPT_ISSUE_BINDINGS");
+  }
+  if (!same(
+    issueEvidenceShape.receiptEntryRequiredFieldsExactly,
+    EXACT_PER_SUBJECT_RECEIPT_ENTRY_FIELDS,
+  )) {
+    errors.push("STAGE_RECEIPT_ISSUE_ENTRY_FIELDS");
+  }
+  if (issueEvidenceShape.receiptMustCoverEveryBoundIssueInventoryItemExactlyOnce !== true) {
+    errors.push("STAGE_RECEIPT_EXACT_COVERAGE");
+  }
+  if (issueEvidenceShape.missingUnknownDuplicateCrossStageCrossSubjectOrMismatchedEvidenceInvalidatesReceipt !== true) {
+    errors.push("STAGE_RECEIPT_ISSUE_FAIL_CLOSED");
+  }
+  if (stageReceipt.validReceiptRequires?.perSubjectIssueEvidenceMatchesStageBindingsExactly !== true) {
+    errors.push("STAGE_RECEIPT_MATCH_GATE");
   }
 
   const program = candidate.serialProgram ?? {};
@@ -152,6 +218,22 @@ function validateAuthority(candidate) {
   }
 
   const allocation = candidate.issueAllocation?.issues ?? {};
+  for (const [issue, inventory] of Object.entries(EXACT_PER_SUBJECT_ISSUE_EVIDENCE)) {
+    if (!same(allocation[issue]?.requiredForEachSubjectExactly, inventory)) {
+      errors.push(`ISSUE_${issue}_SUBJECT_INVENTORY`);
+    }
+  }
+  for (const stage of [practice, theory, law]) {
+    if (!same(
+      stage.requiredPerSubjectIssueEvidenceBindingsExactly,
+      EXACT_PER_SUBJECT_ISSUE_EVIDENCE_BINDINGS,
+    )) {
+      errors.push(`${stage.stage ?? "UNKNOWN"}_SUBJECT_BINDINGS`);
+    }
+    if (stage.stageReceiptMustProveEveryBoundInventoryItemExactlyOnce !== true) {
+      errors.push(`${stage.stage ?? "UNKNOWN"}_SUBJECT_RECEIPT_GATE`);
+    }
+  }
   for (const issue of ["706", "707", "708", "781"]) {
     if (allocation[issue]?.closureStage !== "C3R-L") {
       errors.push(`ISSUE_${issue}_CLOSURE`);
@@ -351,9 +433,44 @@ test("runtime stages use one closed merge-receipt type", () => {
   });
   assert.equal(receipt.validReceiptRequires.unresolvedActionableThreadsExactly, 0);
   assert.equal(receipt.validReceiptRequires.remoteMutationCountExactly, 0);
+  assert.deepEqual(receipt.perSubjectIssueEvidenceShape.requiredIssueBindingsExactly, [
+    706,
+    707,
+    708,
+  ]);
+  assert.deepEqual(
+    receipt.perSubjectIssueEvidenceShape.receiptEntryRequiredFieldsExactly,
+    EXACT_PER_SUBJECT_RECEIPT_ENTRY_FIELDS,
+  );
+  assert.equal(
+    receipt.perSubjectIssueEvidenceShape
+      .receiptMustCoverEveryBoundIssueInventoryItemExactlyOnce,
+    true,
+  );
   assert.ok(receipt.invalidSubstitutes.includes("ISSUE_STATE"));
   assert.ok(receipt.invalidSubstitutes.includes("CLOSED_UNMERGED_PULL_REQUEST"));
   assert.ok(receipt.invalidSubstitutes.includes("CANDIDATE_HEAD_TESTS"));
+});
+
+test("every subject stage receipt must prove the exact #706/#707/#708 inventory", () => {
+  for (const [issue, inventory] of Object.entries(EXACT_PER_SUBJECT_ISSUE_EVIDENCE)) {
+    assert.deepEqual(
+      contract.issueAllocation.issues[issue].requiredForEachSubjectExactly,
+      inventory,
+    );
+  }
+  for (const stage of contract.serialProgram.stages) {
+    assert.deepEqual(
+      stage.requiredPerSubjectIssueEvidenceBindingsExactly,
+      EXACT_PER_SUBJECT_ISSUE_EVIDENCE_BINDINGS,
+      stage.stage,
+    );
+    assert.equal(
+      stage.stageReceiptMustProveEveryBoundInventoryItemExactlyOnce,
+      true,
+      stage.stage,
+    );
+  }
 });
 
 test("A1 installs the strict Practice to Theory to Law receipt graph", () => {
@@ -474,6 +591,16 @@ test("roadmap and canonical mirrors expose the same unstarted C3R-P selector", a
     "C3R-L",
   ]);
   assert.equal(unified.wcvCampaignOverlay.soleNextC3rStage, "C3R-P");
+  assert.deepEqual(
+    unified.wcvCampaignOverlay.c3SerialProgram
+      .perSubjectIssueEvidenceRequiredForEveryStageExactly,
+    [706, 707, 708],
+  );
+  assert.equal(
+    unified.wcvCampaignOverlay.c3SerialProgram
+      .stageReceiptMustProveEveryBoundInventoryItemExactlyOnce,
+    true,
+  );
   assert.equal(unified.roadmapContract.soleNextC3rStageId, "C3R-P");
   assert.equal(unified.launchConvergenceAmendment.soleNextC3rStage, "C3R-P");
 });
@@ -524,6 +651,10 @@ test("hostile stage-graph and gate mutations fail closed", () => {
     (candidate) => { candidate.serialProgram.stages[2].validatedReceiptDependencies = ["C3R-T"]; },
     (candidate) => { candidate.serialProgram.stages[0].mayCloseGovernedIssues = true; },
     (candidate) => { candidate.serialProgram.stages[1].mayCloseGovernedIssues = true; },
+    (candidate) => { candidate.serialProgram.stages[1].requiredPerSubjectIssueEvidenceBindingsExactly = []; },
+    (candidate) => { candidate.serialProgram.stages[2].stageReceiptMustProveEveryBoundInventoryItemExactlyOnce = false; },
+    (candidate) => { candidate.issueAllocation.issues["706"].requiredForEachSubjectExactly.shift(); },
+    (candidate) => { candidate.c3rStageMergeReceiptV1.requiredFieldsExactly = EXACT_STAGE_RECEIPT_FIELDS.filter((field) => field !== "perSubjectIssueEvidence"); },
     (candidate) => { candidate.serialProgram.postMergeSelector.wcvC3State = "complete"; },
     (candidate) => { candidate.serialProgram.postMergeSelector.runtimeStarted = true; },
     (candidate) => { candidate.serialProgram.dependencyAuthority.issueStateMaySatisfyDependency = true; },

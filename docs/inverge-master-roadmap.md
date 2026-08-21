@@ -80,8 +80,11 @@ Issue state or closure, branch state, candidate code/tests, a closed-unmerged
 PR, donor CI or tracker text never satisfies a dependency. Each runtime
 receipt binds the exact base, reviewed head/tree, pinned squash merge,
 resulting main SHA/tree, exact-head checks, formal review, actionable
-`0/0/0`, zero unresolved actionable threads, runtime evidence, default-off
-state and zero remote mutation.
+`0/0/0`, zero unresolved actionable threads, runtime evidence, exact per-
+subject #706/#707/#708 issue-evidence coverage, default-off state and zero
+remote mutation. Every Practice, Theory and Law receipt must prove every item
+in its bound `requiredForEachSubjectExactly` inventories exactly once for its
+own stage and subject; inherited substrate cannot waive that proof.
 
 Practice and Theory may contribute evidence but close nothing. Only C3R-L may
 complete WCV-C3, close #706/#707/#708/#781, complete Issue #714 allocation C3

@@ -355,8 +355,13 @@ C3R-P and C3R-T merge receipts.
 Every runtime dependency uses the closed `C3RStageMergeReceiptV1`: live merged
 PR, exact base/reviewed head/tree, pinned squash and resulting main identity,
 passed exact-head checks, a formal review anchored to that head, actionable
-`0/0/0`, zero unresolved actionable threads, runtime evidence, bodyless
-metadata artifacts, default-off state and zero remote mutation. Issue state,
+`0/0/0`, zero unresolved actionable threads, runtime evidence, exact per-
+subject #706/#707/#708 issue-evidence coverage, bodyless metadata artifacts,
+default-off state and zero remote mutation. Each Practice, Theory and Law
+receipt must cover every item in the corresponding
+`requiredForEachSubjectExactly` inventories exactly once for its own stage and
+subject; missing, unknown, duplicate or mismatched evidence invalidates the
+receipt. Issue state,
 issue closure, branch state, candidate code/tests, closed-unmerged PRs, donor
 CI and tracker prose cannot substitute.
 
