@@ -143,6 +143,14 @@ reset/replay receipts, and exact-head central and dedicated runtime evidence.
 The path closure is the exact non-empty set of seven repair/rename sources and
 targets plus the sole append path. The schema/RPC/RLS inventory is the exact
 non-empty SQL-derived object projection, not a caller-supplied placeholder.
+Every newly produced durable-learning table must have both exact
+`ENABLE ROW LEVEL SECURITY` and the separate PostgreSQL
+`FORCE ROW LEVEL SECURITY` operation. Ordinary RLS enablement alone is
+insufficient. The concept-boundary evidence must contain exactly the
+`public.transition_personal_concept_node_v1(text, text, text, text, text,
+text, text, text, integer, timestamptz)` execute boundary: revoke from
+`public` and `anon`, grant only to `authenticated`, and no unsafe extra
+grantee. Evidence for another RPC cannot substitute.
 The A0 analyzer must derive a zero-failure dependency closure over the actual
 repaired/appended SQL inventory before the receipt can validate.
 
@@ -160,10 +168,12 @@ That one append must combine both purposes:
 - final concept-graph RPC-boundary reassertion; and
 - C3R-P durable-learning schema/RPC/RLS installation.
 
-A second migration, an empty path or object inventory, comment-only repair,
-unbound replay object, one replay, embedded PostgreSQL compile, donor result or
-overlay outside the active chain is insufficient. The receipt grants no remote
-apply or migration-history repair authority.
+A second migration, ordinary-but-not-forced RLS, a wrong RPC target or
+grantee, an empty path or object inventory, comment-only repair, unbound replay
+object, one replay, embedded PostgreSQL compile, donor result or overlay
+outside the active chain is insufficient. `purposeExactly` is part of the
+closed required receipt-field inventory. The receipt grants no remote apply or
+migration-history repair authority.
 
 ## Historical test transition
 

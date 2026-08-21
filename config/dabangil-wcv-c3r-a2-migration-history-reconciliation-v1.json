@@ -1646,6 +1646,7 @@
       "receiptId",
       "receiptType",
       "a2AuthorityId",
+      "purposeExactly",
       "version",
       "filename",
       "sqlDigest",
@@ -1668,6 +1669,36 @@
       "remoteApplicationAuthorized",
       "migrationHistoryRepairAuthorized"
     ],
+    "newlyProducedTablesRequireEnabledAndForcedRls": true,
+    "requiredConceptRpcBoundary": {
+      "functionIdentifier": "public.transition_personal_concept_node_v1",
+      "argumentTypesExactly": [
+        "text",
+        "text",
+        "text",
+        "text",
+        "text",
+        "text",
+        "text",
+        "text",
+        "integer",
+        "timestamptz"
+      ],
+      "executePrivilegesExactly": [
+        {
+          "operation": "GRANT",
+          "grantee": "authenticated"
+        },
+        {
+          "operation": "REVOKE",
+          "grantee": "anon"
+        },
+        {
+          "operation": "REVOKE",
+          "grantee": "public"
+        }
+      ]
+    },
     "isolatedReplayReceiptType": "SupabaseIsolatedMigrationReplayReceiptV1",
     "isolatedReplayRequiredFieldsExactly": [
       "receiptId",

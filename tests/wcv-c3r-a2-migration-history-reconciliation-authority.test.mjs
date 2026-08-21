@@ -185,6 +185,7 @@ create table if not exists public.c3r_p_learning_documents (
   metadata jsonb not null default '{}'::jsonb
 );
 alter table public.c3r_p_learning_documents enable row level security;
+alter table public.c3r_p_learning_documents force row level security;
 create policy "c3r_p_learning_documents_select_own"
   on public.c3r_p_learning_documents for select to authenticated
   using (auth.uid() is not null and user_id = auth.uid());
@@ -255,6 +256,29 @@ grant execute on function public.transition_personal_concept_node_v1(
     return receipt;
   });
   return { sql, repairs, append };
+}
+
+function rebindAppendFixture(fixture) {
+  const appendSql = fixture.sql.get(fixture.append.filename);
+  fixture.append.sqlDigest = sha256(appendSql);
+  fixture.append.migrationInventoryDigest = deriveMigrationInventoryDigest(fixture.sql);
+  fixture.append.migrationInventoryCount = fixture.sql.size;
+  const closure = deriveCheckpointClosureEvidence(
+    contract,
+    a0Manifest,
+    fixture.sql,
+    fixture.repairs,
+    fixture.append,
+  );
+  fixture.append.dependencyClosureDigest = closure.dependencyClosureDigest;
+  fixture.append.schemaRpcRlsObjectInventory = closure.schemaRpcRlsObjectInventory;
+  fixture.append.schemaRpcRlsObjectInventoryDigest = closure.schemaRpcRlsObjectInventoryDigest;
+  for (const replay of fixture.append.isolatedReplayReceipts) {
+    replay.migrationInventoryDigest = fixture.append.migrationInventoryDigest;
+    replay.dependencyClosureDigest = fixture.append.dependencyClosureDigest;
+    replay.executedMigrationCount = fixture.sql.size;
+    replay.receiptDigest = deriveReplayReceiptDigest(replay);
+  }
 }
 
 test("A2 contract validates as the current append-aware source authority", () => {
@@ -473,6 +497,49 @@ test("empty migration path closure and schema RPC RLS inventory fail", async () 
   schemaFixture.append.schemaRpcRlsObjectInventory = [];
   schemaFixture.append.schemaRpcRlsObjectInventoryDigest = sha256("[]");
   assert.ok(validateMigrationInventoryAuthorityV2(contract, a0Manifest, schemaFixture.sql, { repairReceipts: schemaFixture.repairs, appendReceipts: [schemaFixture.append] }).some((error) => error.startsWith("APPEND_RECEIPT_")));
+});
+
+test("append authority lists purposeExactly as a required receipt field", () => {
+  assert.ok(contract.c3rpAppendReceiptV1.requiredFieldsExactly.includes("purposeExactly"));
+  const mutated = structuredClone(contract);
+  mutated.c3rpAppendReceiptV1.requiredFieldsExactly = mutated.c3rpAppendReceiptV1.requiredFieldsExactly
+    .filter((field) => field !== "purposeExactly");
+  assert.ok(validateA2AuthorityContract(mutated, a0Manifest).includes("APPEND_REQUIRED_FIELDS"));
+});
+
+test("ordinary RLS enable without FORCE ROW LEVEL SECURITY fails", async () => {
+  const fixture = await checkpointFixture();
+  const appendSql = fixture.sql.get(fixture.append.filename)
+    .replace("alter table public.c3r_p_learning_documents force row level security;\n", "");
+  fixture.sql.set(fixture.append.filename, appendSql);
+  rebindAppendFixture(fixture);
+  assert.ok(validateMigrationInventoryAuthorityV2(contract, a0Manifest, fixture.sql, { repairReceipts: fixture.repairs, appendReceipts: [fixture.append] }).includes("APPEND_FORCED_RLS_BOUNDARY"));
+});
+
+test("concept RPC boundary requires the exact function signature and safe grantees", async () => {
+  const fixture = await checkpointFixture();
+  const appendSql = fixture.sql.get(fixture.append.filename).replace(
+    /(grant\s+execute\s+on\s+function\s+public\.transition_personal_concept_node_v1\([\s\S]*?\)\s+to\s+)authenticated;/u,
+    "$1public;",
+  );
+  fixture.sql.set(fixture.append.filename, appendSql);
+  rebindAppendFixture(fixture);
+  assert.ok(validateMigrationInventoryAuthorityV2(contract, a0Manifest, fixture.sql, { repairReceipts: fixture.repairs, appendReceipts: [fixture.append] }).includes("APPEND_EXACT_CONCEPT_RPC_BOUNDARY"));
+});
+
+test("commented boundary SQL cannot satisfy forced RLS or exact RPC evidence", async () => {
+  const fixture = await checkpointFixture();
+  const appendSql = fixture.sql.get(fixture.append.filename)
+    .replace("alter table public.c3r_p_learning_documents force row level security;", "-- alter table public.c3r_p_learning_documents force row level security;")
+    .replace(
+      /(grant\s+execute\s+on\s+function\s+public\.transition_personal_concept_node_v1\([\s\S]*?\)\s+to\s+)authenticated;/u,
+      "$1public;\n/* grant execute on function public.transition_personal_concept_node_v1(text, text, text, text, text, text, text, text, integer, timestamptz) to authenticated; */",
+    );
+  fixture.sql.set(fixture.append.filename, appendSql);
+  rebindAppendFixture(fixture);
+  const errors = validateMigrationInventoryAuthorityV2(contract, a0Manifest, fixture.sql, { repairReceipts: fixture.repairs, appendReceipts: [fixture.append] });
+  assert.ok(errors.includes("APPEND_FORCED_RLS_BOUNDARY"));
+  assert.ok(errors.includes("APPEND_EXACT_CONCEPT_RPC_BOUNDARY"));
 });
 
 test("comment-only checkpoint changes cannot bypass A0 consumer-before-producer closure", async () => {

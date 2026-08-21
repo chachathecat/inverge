@@ -98,12 +98,12 @@ extension/external-function closure on the unchanged baseline.
 
 | Validation | Result |
 |---|---|
-| Focused A2 hostile suite | PASS, 54/54 after review correction |
-| A0 historical direct regression | PASS in exact A0+A1+A2 run, 107/107 total |
-| A1 serial-program regression | PASS in exact A0+A1+A2 run, 107/107 total |
-| Affected authority/mirror suites | PASS, 176/176 |
+| Focused A2 hostile suite | PASS, 58/58 after review corrections |
+| A0 historical direct regression | PASS in exact A0+A1+A2 run, 111/111 total |
+| A1 serial-program regression | PASS in exact A0+A1+A2 run, 111/111 total |
+| Affected authority/mirror suites | PASS, 180/180 |
 | PR-contract validation | PASS against the exact planned Draft PR body and pinned A2 scope |
-| Full default Node suite | PASS, 1,512/1,512 |
+| Full default Node suite | PASS, 1,516/1,516 |
 | Typecheck | PASS |
 | Lint | PASS, zero errors; 11 existing warnings in untouched files |
 | Production build | PASS; one existing Turbopack trace warning from untouched runtime code |
@@ -131,6 +131,25 @@ canonical replay receipts bind exact head/tree/inventory/closure plus output,
 schema, environment, timestamp and zero-mutation evidence. Comment-only
 boundary changes, copied replay evidence and empty inventories have explicit
 hostile regressions.
+
+Review cycle 2 was anchored to head
+`8443a45b5f0e7d7f8b8dc3cbcb520a972c1cb0dc` by formal review
+`4991476697`. It reported two actionable P1 findings and one actionable P2:
+
+- ordinary RLS enablement could satisfy the required forced-RLS boundary;
+- any RPC execute privilege could substitute for the exact concept RPC
+  boundary and safe grantees; and
+- `purposeExactly` was omitted from the closed required-field inventory.
+
+Source correction 2 distinguishes and requires the separate PostgreSQL
+`ENABLE ROW LEVEL SECURITY` and `FORCE ROW LEVEL SECURITY` operations for
+every newly produced table. It derives complete function signature,
+operation and grantee evidence and requires the exact transition RPC revokes
+from `public`/`anon` plus the grant only to `authenticated`. The immutable
+required-field schema now includes `purposeExactly`. All three findings have
+dedicated hostile regressions; the SQL evidence derivation also excludes
+comments, strings and dollar-quoted bodies so inert text cannot satisfy the
+boundary.
 
 ## Boundaries
 

@@ -2,6 +2,7 @@ import { createHash } from "node:crypto";
 import {
   deriveMigrationDependencyClosure,
   loadLiveMigrationSql,
+  tokenizePostgresSql,
   validateMigrationDependencyClosure,
 } from "./wcv-c3r-a0-migration-dependency-closure.mjs";
 
@@ -40,6 +41,55 @@ export const REMOTE_CONTINUITY_TREATMENT_V2 = Object.freeze([
   "FUTURE_FORWARD_RECONCILIATION_OWNER_GATE",
   "REMOTE_DEPLOY_BLOCKED",
 ]);
+
+const APPEND_RECEIPT_REQUIRED_FIELDS = Object.freeze([
+  "receiptId",
+  "receiptType",
+  "a2AuthorityId",
+  "purposeExactly",
+  "version",
+  "filename",
+  "sqlDigest",
+  "dependencyPredecessors",
+  "candidateHeadSha",
+  "candidateTreeSha",
+  "candidateHeadTreeBinding",
+  "migrationInventoryDigest",
+  "migrationInventoryCount",
+  "dependencyClosureDigest",
+  "migrationSensitivePathClosure",
+  "migrationSensitivePathClosureDigest",
+  "schemaRpcRlsObjectInventory",
+  "schemaRpcRlsObjectInventoryDigest",
+  "isolatedReplayReceipts",
+  "exactHeadCentralEvidence",
+  "centralEvidenceArtifactSha256",
+  "exactHeadDedicatedRuntimeEvidence",
+  "dedicatedRuntimeEvidenceArtifactSha256",
+  "remoteApplicationAuthorized",
+  "migrationHistoryRepairAuthorized",
+]);
+
+const REQUIRED_CONCEPT_RPC_BOUNDARY = Object.freeze({
+  functionIdentifier: "public.transition_personal_concept_node_v1",
+  argumentTypesExactly: Object.freeze([
+    "text",
+    "text",
+    "text",
+    "text",
+    "text",
+    "text",
+    "text",
+    "text",
+    "integer",
+    "timestamptz",
+  ]),
+  executePrivilegesExactly: Object.freeze([
+    Object.freeze({ operation: "GRANT", grantee: "authenticated" }),
+    Object.freeze({ operation: "REVOKE", grantee: "anon" }),
+    Object.freeze({ operation: "REVOKE", grantee: "public" }),
+  ]),
+});
 
 export const A0_HISTORICAL_RECEIPT_V1 = Object.freeze({
   pullRequest: 785,
@@ -333,6 +383,15 @@ export function validateA2AuthorityContract(contract, a0Manifest) {
   if (pathClosure.length !== 14 || new Set(pathClosure).size !== 14 || pathClosure.filter((entry) => entry.includes("<C3R_P_APPEND_FILENAME>")).length !== 1 || pathClosure.some((entry) => !entry.startsWith("supabase/migrations/"))) {
     errors.push("APPEND_REQUIRED_PATH_CLOSURE");
   }
+  if (!same(appendAuthority.requiredFieldsExactly, APPEND_RECEIPT_REQUIRED_FIELDS)) {
+    errors.push("APPEND_REQUIRED_FIELDS");
+  }
+  if (appendAuthority.newlyProducedTablesRequireEnabledAndForcedRls !== true) {
+    errors.push("APPEND_FORCED_RLS_AUTHORITY");
+  }
+  if (!same(appendAuthority.requiredConceptRpcBoundary, REQUIRED_CONCEPT_RPC_BOUNDARY)) {
+    errors.push("APPEND_CONCEPT_RPC_BOUNDARY_AUTHORITY");
+  }
   for (const field of [
     "checkpointDependencyClosureMustUseA0Analyzer",
     "replayReceiptMustBindExactHeadTreeInventoryClosureAndResultDigests",
@@ -382,7 +441,26 @@ function normalizeSimpleIdentifier(identifier) {
   return identifier.split(".").map((component) => component.replace(/^"|"$/gu, "").toLowerCase()).join(".");
 }
 
+function normalizeSqlType(type) {
+  return type.trim().replace(/\s+/gu, " ").toLowerCase();
+}
+
 function deriveSqlBoundaryInventory(derivedAppend, appendSql) {
+  const nonExecutableTokenTypes = new Set([
+    "ORDINARY_STRING",
+    "ESCAPE_STRING",
+    "DOLLAR_QUOTED_BODY",
+    "LINE_COMMENT",
+    "BLOCK_COMMENT",
+  ]);
+  const executableSql = [...appendSql];
+  for (const token of tokenizePostgresSql(appendSql)) {
+    if (!nonExecutableTokenTypes.has(token.type)) continue;
+    for (let index = token.start; index < token.end; index += 1) {
+      if (executableSql[index] !== "\n" && executableSql[index] !== "\r") executableSql[index] = " ";
+    }
+  }
+  const executableBoundarySql = executableSql.join("");
   const inventory = [];
   for (const [role, objects] of [
     ["PRODUCES", derivedAppend.producedObjects],
@@ -391,15 +469,43 @@ function deriveSqlBoundaryInventory(derivedAppend, appendSql) {
   ]) {
     for (const object of objects) inventory.push({ role, ...object });
   }
-  for (const match of appendSql.matchAll(/\balter\s+table\s+(?:if\s+exists\s+)?((?:"[^"]+"|[a-z_][a-z0-9_$]*)(?:\.(?:"[^"]+"|[a-z_][a-z0-9_$]*))?)\s+(?:force\s+)?enable\s+row\s+level\s+security\b/giu)) {
+  for (const match of executableBoundarySql.matchAll(/\balter\s+table\s+(?:if\s+exists\s+)?(?:only\s+)?((?:"[^"]+"|[a-z_][a-z0-9_$]*)(?:\.(?:"[^"]+"|[a-z_][a-z0-9_$]*))?)\s+enable\s+row\s+level\s+security\b/giu)) {
     inventory.push({ role: "RLS_ENABLED", kind: "table", identifier: normalizeSimpleIdentifier(match[1]) });
   }
-  for (const match of appendSql.matchAll(/\b(?:grant|revoke)\s+execute\s+on\s+function\s+((?:"[^"]+"|[a-z_][a-z0-9_$]*)(?:\.(?:"[^"]+"|[a-z_][a-z0-9_$]*))?)/giu)) {
-    inventory.push({ role: "RPC_BOUNDARY_TARGET", kind: "function", identifier: normalizeSimpleIdentifier(match[1]) });
+  for (const match of executableBoundarySql.matchAll(/\balter\s+table\s+(?:if\s+exists\s+)?(?:only\s+)?((?:"[^"]+"|[a-z_][a-z0-9_$]*)(?:\.(?:"[^"]+"|[a-z_][a-z0-9_$]*))?)\s+force\s+row\s+level\s+security\b/giu)) {
+    inventory.push({ role: "RLS_FORCED", kind: "table", identifier: normalizeSimpleIdentifier(match[1]) });
+  }
+  for (const match of executableBoundarySql.matchAll(/\b(grant|revoke)\s+execute\s+on\s+function\s+((?:"[^"]+"|[a-z_][a-z0-9_$]*)(?:\.(?:"[^"]+"|[a-z_][a-z0-9_$]*))?)\s*\(([^)]*)\)\s+(to|from)\s+([^;]+);/giu)) {
+    const operation = match[1].toUpperCase();
+    const direction = match[4].toUpperCase();
+    if ((operation === "GRANT" && direction !== "TO") || (operation === "REVOKE" && direction !== "FROM")) continue;
+    const argumentTypes = match[3].split(",").map(normalizeSqlType).filter(Boolean);
+    for (const grantee of match[5].split(",").map((entry) => normalizeSimpleIdentifier(entry.trim())).filter(Boolean)) {
+      inventory.push({
+        role: "RPC_EXECUTE_PRIVILEGE",
+        kind: "function",
+        identifier: normalizeSimpleIdentifier(match[2]),
+        argumentTypes,
+        operation,
+        grantee,
+      });
+    }
   }
   return [...new Map(inventory
-    .map((entry) => [`${entry.role}:${entry.kind}:${entry.identifier}`, entry])).values()]
-    .sort((left, right) => `${left.role}:${left.kind}:${left.identifier}`.localeCompare(`${right.role}:${right.kind}:${right.identifier}`));
+    .map((entry) => [canonicalJson(entry), entry])).values()]
+    .sort((left, right) => canonicalJson(left).localeCompare(canonicalJson(right)));
+}
+
+function expectedConceptRpcBoundaryInventory(contract) {
+  const boundary = contract.c3rpAppendReceiptV1.requiredConceptRpcBoundary;
+  return boundary.executePrivilegesExactly.map(({ operation, grantee }) => ({
+    role: "RPC_EXECUTE_PRIVILEGE",
+    kind: "function",
+    identifier: boundary.functionIdentifier,
+    argumentTypes: boundary.argumentTypesExactly,
+    operation,
+    grantee,
+  })).sort((left, right) => canonicalJson(left).localeCompare(canonicalJson(right)));
 }
 
 function expectedMigrationSensitivePathClosure(contract, appendFilename) {
@@ -585,9 +691,29 @@ export function validateMigrationInventoryAuthorityV2(contract, a0Manifest, sqlB
         errors.push("CHECKPOINT_DERIVED_MIGRATION_COUNT");
       }
       if (append) {
-        const requiredRoles = new Set(closureEvidence.schemaRpcRlsObjectInventory.map((entry) => entry.role));
-        if (!same(append.schemaRpcRlsObjectInventory, closureEvidence.schemaRpcRlsObjectInventory) || append.schemaRpcRlsObjectInventoryDigest !== closureEvidence.schemaRpcRlsObjectInventoryDigest || !["PRODUCES", "RLS_ENABLED", "RPC_BOUNDARY_TARGET"].every((role) => requiredRoles.has(role))) {
+        const boundaryInventory = closureEvidence.schemaRpcRlsObjectInventory;
+        if (!same(append.schemaRpcRlsObjectInventory, boundaryInventory) || append.schemaRpcRlsObjectInventoryDigest !== closureEvidence.schemaRpcRlsObjectInventoryDigest) {
           errors.push("APPEND_SCHEMA_RPC_RLS_INVENTORY");
+        }
+        const producedTables = boundaryInventory
+          .filter((entry) => entry.role === "PRODUCES" && entry.kind === "table")
+          .map((entry) => entry.identifier);
+        const rlsEnabled = new Set(boundaryInventory
+          .filter((entry) => entry.role === "RLS_ENABLED" && entry.kind === "table")
+          .map((entry) => entry.identifier));
+        const rlsForced = new Set(boundaryInventory
+          .filter((entry) => entry.role === "RLS_FORCED" && entry.kind === "table")
+          .map((entry) => entry.identifier));
+        if (producedTables.length === 0 || producedTables.some((identifier) => !rlsEnabled.has(identifier) || !rlsForced.has(identifier))) {
+          errors.push("APPEND_FORCED_RLS_BOUNDARY");
+        }
+        const expectedRpcBoundary = expectedConceptRpcBoundaryInventory(contract);
+        const actualRpcBoundary = boundaryInventory.filter((entry) =>
+          entry.role === "RPC_EXECUTE_PRIVILEGE" &&
+          entry.identifier === contract.c3rpAppendReceiptV1.requiredConceptRpcBoundary.functionIdentifier,
+        );
+        if (!same(actualRpcBoundary, expectedRpcBoundary)) {
+          errors.push("APPEND_EXACT_CONCEPT_RPC_BOUNDARY");
         }
         if (append.dependencyClosureDigest !== closureEvidence.dependencyClosureDigest) {
           errors.push("APPEND_DEPENDENCY_CLOSURE_DIGEST");
