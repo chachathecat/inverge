@@ -342,6 +342,7 @@ const CLOSED_EXACT_COMPARISON_RULES_V1 = Object.freeze({
   sqlDerivedCreatedExtensionsEqualManifest: true,
   sqlDerivedRequiredExtensionUsesEqualManifest: true,
   sqlDerivedExactDependencyPredecessorsEqualManifest: true,
+  loadedLiveSqlFilenamesEqualManifestLiveRecords: true,
   missingManifestEntryFails: true,
   extraManifestEntryFails: true,
   wrongExtensionSchemaFails: true,
@@ -5357,6 +5358,16 @@ export function validateMigrationDependencyClosure(manifest, sqlByFilename) {
   const liveRecords = manifest.records.filter(
     (record) => record.presentOnLiveMain,
   );
+  const manifestLiveFilenames = liveRecords
+    .map((record) => record.currentFilename)
+    .sort();
+  const loadedLiveFilenames = [...sqlByFilename.keys()].sort();
+  if (!exactEqual(manifestLiveFilenames, loadedLiveFilenames)) {
+    throw new MigrationDependencyClosureError(
+      "MIGRATION_SQL_MANIFEST_FILENAME_SET_MISMATCH",
+      JSON.stringify({ manifestLiveFilenames, loadedLiveFilenames }),
+    );
+  }
   const derived = deriveMigrationDependencyClosure(liveRecords, sqlByFilename, {
     environmentRequiredExtensions:
       closure.environmentRequiredExtensions,

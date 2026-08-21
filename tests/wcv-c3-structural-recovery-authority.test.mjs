@@ -546,6 +546,23 @@ test("derives and exactly validates the closed live-main migration dependency in
   }
 });
 
+test("fails closed when loaded live migration filenames diverge from the manifest", async () => {
+  const { manifest, sqlByFilename } = await dependencyClosureFixture();
+  const extraSql = new Map(sqlByFilename);
+  extraSql.set("20260821000000_unmanifested_live_migration.sql", "select 1;\n");
+  assertClosureFailure(
+    () => validateMigrationDependencyClosure(manifest, extraSql),
+    "MIGRATION_SQL_MANIFEST_FILENAME_SET_MISMATCH",
+  );
+
+  const omittedSql = new Map(sqlByFilename);
+  omittedSql.delete(manifest.liveMainLexicalInventory[0]);
+  assertClosureFailure(
+    () => validateMigrationDependencyClosure(manifest, omittedSql),
+    "MIGRATION_SQL_MANIFEST_FILENAME_SET_MISMATCH",
+  );
+});
+
 test("detects unqualified digest without double-counting extensions.digest", () => {
   assert.deepEqual(
     deriveRequiredExtensionUses(`

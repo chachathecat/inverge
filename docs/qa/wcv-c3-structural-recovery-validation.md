@@ -83,6 +83,12 @@ migration. It deliberately distinguishes:
 - conservative remote application state; and
 - mutation authority.
 
+Before deriving any dependency, the standalone validator requires exact set
+equality between the loaded live `.sql` filenames and the manifest records
+marked `presentOnLiveMain`. An added, omitted, duplicated or substituted live
+migration filename therefore fails closed instead of being excluded from the
+reported migration count.
+
 The closed object inventory includes schema-qualified external tables and
 functions, not only repository-produced objects. In particular, every
 live-main migration call to `auth.uid`, `storage.allow_any_operation` or

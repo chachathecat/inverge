@@ -2391,6 +2391,7 @@
         "sqlDerivedCreatedExtensionsEqualManifest": true,
         "sqlDerivedRequiredExtensionUsesEqualManifest": true,
         "sqlDerivedExactDependencyPredecessorsEqualManifest": true,
+        "loadedLiveSqlFilenamesEqualManifestLiveRecords": true,
         "missingManifestEntryFails": true,
         "extraManifestEntryFails": true,
         "wrongExtensionSchemaFails": true,
