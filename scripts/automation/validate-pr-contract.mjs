@@ -33,6 +33,17 @@ const C3R_A0_SOURCE_AUTHORITY_SCOPE = Object.freeze({
   pullRequestTitle:
     "[WCV-C3R-A0] Install PostgreSQL migration dependency authority",
 });
+const C3R_A1_CONTRACT_PATH =
+  "config/dabangil-wcv-c3r-a1-serial-program-authority-v1.json";
+const C3R_A1_SOURCE_AUTHORITY_SCOPE = Object.freeze({
+  repository: "chachathecat/inverge",
+  baseRef: "main",
+  baseSha: "3a7047cf4c7fc68247137bafbca2434abdadbc7f",
+  headRef: "codex/wcv-c3r-a1-serial-program-authority",
+  headRepository: "chachathecat/inverge",
+  pullRequestTitle:
+    "[WCV-C3R-A1] Install serial Practice/Theory/Law program authority",
+});
 const GITHUB_CLOSING_KEYWORD_PATTERN = new RegExp(
   String.raw`\b(?:close(?:s|d)?|fix(?:es|ed)?|resolve(?:s|d)?)(?:\s*:\s*|\s+)(?:#\d+|[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+#\d+|https:\/\/github\.com\/[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+\/(?:issues|pull)\/\d+)\b`,
   "gi",
@@ -112,12 +123,61 @@ function matchesExactC3rA0Scope(context) {
   );
 }
 
+function readC3rA1SourceAuthorityIssueLinks() {
+  if (!fs.existsSync(C3R_A1_CONTRACT_PATH)) return null;
+  try {
+    const contract = JSON.parse(
+      fs.readFileSync(C3R_A1_CONTRACT_PATH, "utf8"),
+    );
+    return contract?.deliveryControl?.referenceOnlyIssueLinks ?? null;
+  } catch {
+    return null;
+  }
+}
+
+function matchesExactC3rA1Scope(context) {
+  return Object.entries(C3R_A1_SOURCE_AUTHORITY_SCOPE).every(
+    ([key, value]) => context?.[key] === value,
+  );
+}
+
 function validateIssueLink(body, errors, context) {
   const issueLinks = [...body.matchAll(/\b(?:Closes|Fixes)\s+#(\d+)\b/gi)];
   const allGithubClosingLinks = [
     ...body.matchAll(GITHUB_CLOSING_KEYWORD_PATTERN),
   ];
   const sourceAuthority = readC3rA0SourceAuthorityIssueLink();
+
+  if (matchesExactC3rA1Scope(context)) {
+    const a1Authority = readC3rA1SourceAuthorityIssueLinks();
+    const requiredReferenceLines = a1Authority?.requiredReferenceLinesExactly;
+    const requiredDispositionLine = a1Authority?.requiredDispositionLine;
+    const bodyLines = body.split(/\r?\n/u).map((line) => line.trim());
+    const actualReferenceLines = bodyLines.filter((line) => /^Refs #\d+$/u.test(line));
+    const exactDispositionCount = bodyLines.filter(
+      (line) => line === requiredDispositionLine,
+    ).length;
+    const contractScopeMatches = Object.entries(
+      C3R_A1_SOURCE_AUTHORITY_SCOPE,
+    ).every(([key, value]) => a1Authority?.[key] === value);
+
+    if (
+      !contractScopeMatches ||
+      a1Authority?.mode !== "REFERENCE_ONLY" ||
+      !Array.isArray(requiredReferenceLines) ||
+      JSON.stringify(actualReferenceLines) !== JSON.stringify(requiredReferenceLines) ||
+      exactDispositionCount !== 1 ||
+      a1Authority?.closingKeywordsAllowed !== false ||
+      a1Authority?.exceptionAppliesOnlyWhenExactLinesPresent !== true ||
+      a1Authority?.fullGithubClosingKeywordFamilyBlocked !== true ||
+      allGithubClosingLinks.length !== 0
+    ) {
+      errors.push(
+        "C3R-A1 reference-only linking requires its five exact issue references, exact open disposition, exact pinned PR scope, and zero issue-closing keywords.",
+      );
+    }
+    return;
+  }
 
   if (matchesExactC3rA0Scope(context)) {
     const requiredReferenceLine = sourceAuthority?.requiredReferenceLine;

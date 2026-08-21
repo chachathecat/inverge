@@ -1,0 +1,480 @@
+{
+  "contractId": "dabangil_wcv_c3r_a1_serial_program_authority_v1",
+  "contractVersion": "1.0.0",
+  "authority": {
+    "decisionId": "owner_wcv_c3r_a1_serial_program_authority_2026_08_21",
+    "decisionRecord": "docs/decisions/2026-08-21-owner-wcv-c3r-a1-serial-program-authority.md",
+    "decisionDateKst": "2026-08-21",
+    "repository": "chachathecat/inverge",
+    "roadmapItemId": "WCV-C3",
+    "campaignId": "C3",
+    "leadIssue": 706,
+    "recoveryTrackerIssue": 781,
+    "authorityStage": "C3R-A1",
+    "authorityScope": "C3R_A1_INDEPENDENT_SOURCE_ONLY_SERIAL_PROGRAM_AUTHORITY",
+    "repositoryAuthorityEffectiveOn": "EXPECTED_HEAD_PINNED_SQUASH_MERGE_AND_VALIDATED_GITHUB_RECEIPT",
+    "reconciledBaseSha": "3a7047cf4c7fc68247137bafbca2434abdadbc7f",
+    "reconciledBaseTree": "543f8dfb5fdd026c1361e1a502376945912e6c5c",
+    "programSelectorInstalledByThisWork": true,
+    "runtimeInstalledByThisWork": false,
+    "migrationMutationAuthorized": false,
+    "wcvC3CompletedByThisWork": false,
+    "successorRuntimeStartedByThisWork": false
+  },
+  "c3rA0ValidatedReceiptV1": {
+    "receiptType": "C3RA0ValidatedReceiptV1",
+    "pullRequest": 785,
+    "reviewedHead": "f7f959368525f8a5895026f1361f6e13fd6226e0",
+    "reviewedTree": "543f8dfb5fdd026c1361e1a502376945912e6c5c",
+    "squashMergeSha": "3a7047cf4c7fc68247137bafbca2434abdadbc7f",
+    "resultingMainSha": "3a7047cf4c7fc68247137bafbca2434abdadbc7f",
+    "resultingMainTree": "543f8dfb5fdd026c1361e1a502376945912e6c5c",
+    "requiredChecksPassed": true,
+    "requiredCheckContexts": [
+      "pr-contract",
+      "risk-classifier",
+      "runtime-gate",
+      "fast-ci",
+      "full-ci",
+      "full-ci-windows",
+      "Learner Loop Health",
+      "security-audit-sbom",
+      "Vercel"
+    ],
+    "actionableCounts": {
+      "p0": 0,
+      "p1": 0,
+      "p2": 0
+    },
+    "unresolvedActionableThreads": 0,
+    "sourceCorrectionsConsumed": 2,
+    "sourceCorrectionsMaximum": 2,
+    "formalExactHeadReviewsConsumed": 2,
+    "formalExactHeadReviewsMaximum": 3,
+    "finalCleanReviewArtifact": {
+      "kind": "GITHUB_ISSUE_COMMENT",
+      "databaseId": 5364991468,
+      "reviewedHead": "f7f959368525f8a5895026f1361f6e13fd6226e0",
+      "result": "NO_MAJOR_ISSUES_ACTIONABLE_0_0_0"
+    },
+    "authorityDecisionRef": "docs/decisions/2026-08-21-owner-wcv-c3r-a0-migration-dependency-authority.md",
+    "authorityManifestRef": "config/dabangil-wcv-c3r-a0-migration-dependency-authority-v1.json",
+    "analyzerRef": "scripts/automation/wcv-c3r-a0-migration-dependency-closure.mjs",
+    "immutableUpstreamBindings": {
+      "authorityDecision": {
+        "gitBlob": "8996f6c61f6cf0c5f7c908e97437a2f24bc65f8f",
+        "sha256": "f3be7b829539fa51c9037a58f05ed5a7c3fccbfcae28b3bb7b716330865b2ba6"
+      },
+      "authorityManifest": {
+        "gitBlob": "49916703d0a144647d6abce8cc98971042a35e1c",
+        "sha256": "e6e6d741d47732137860c0efc5c0dddc6b75e54fbd0ed6f2b1bcbe88e9f9d8e9"
+      },
+      "analyzer": {
+        "gitBlob": "23ba3b9f2af452b250cea0cbbbc5f135e8643b2d",
+        "sha256": "85751e62c300465b205f5e6d19357261af892a0072e06de2c4322258290fa6ec"
+      },
+      "focusedTest": {
+        "ref": "tests/wcv-c3r-a0-migration-dependency-authority.test.mjs",
+        "gitBlob": "04c5e3254ac03712a0fde27ef068329299305c40",
+        "sha256": "fa7e388a0f785b41661ac4fff342de7afe9dc05e03dee0e7afb0d3548bc6daaa"
+      }
+    },
+    "liveGitHubRemainsDeliveryAuthority": true,
+    "repositoryReceiptBindingIsIndependentProofSystem": false,
+    "candidatePrStateMaySubstitute": false,
+    "issue781StateMaySubstitute": false,
+    "historicalDonorCiMaySubstitute": false,
+    "revertedOrMismatchedMergeInvalidatesReceipt": true,
+    "manifestOrAnalyzerDigestDriftFailsClosed": true,
+    "a0ManifestDuplicatedIntoA1": false
+  },
+  "c3rStageMergeReceiptV1": {
+    "receiptType": "C3RStageMergeReceiptV1",
+    "closedStageEnum": [
+      "C3R-P",
+      "C3R-T",
+      "C3R-L"
+    ],
+    "requiredFieldsExactly": [
+      "stage",
+      "pullRequest",
+      "baseSha",
+      "reviewedHead",
+      "reviewedTree",
+      "squashMergeSha",
+      "resultingMainSha",
+      "resultingMainTree",
+      "exactHeadChecksPassed",
+      "formalReviewId",
+      "actionableCounts",
+      "unresolvedActionableThreads",
+      "runtimeEvidenceRefs",
+      "metadataOnlyArtifactRefs",
+      "featureDefaultOff",
+      "remoteMutationCount"
+    ],
+    "actionableCountsShape": [
+      "p0",
+      "p1",
+      "p2"
+    ],
+    "validReceiptRequires": {
+      "pullRequestMerged": true,
+      "expectedReviewedHeadPinnedToSquashMerge": true,
+      "baseHeadTreeAndResultingMainIdentityMatch": true,
+      "exactHeadChecksPassed": true,
+      "formalReviewAnchoredToReviewedHead": true,
+      "actionableCountsExactly": {
+        "p0": 0,
+        "p1": 0,
+        "p2": 0
+      },
+      "unresolvedActionableThreadsExactly": 0,
+      "featureDefaultOff": true,
+      "remoteMutationCountExactly": 0,
+      "runtimeEvidenceRefsNonEmpty": true,
+      "metadataOnlyArtifactRefsContainNoRawLearnerBody": true,
+      "mergePresentOnUnrevertedMain": true
+    },
+    "invalidSubstitutes": [
+      "ISSUE_STATE",
+      "ISSUE_CLOSURE",
+      "BRANCH_EXISTENCE",
+      "CLOSED_UNMERGED_PULL_REQUEST",
+      "CANDIDATE_HEAD_TESTS",
+      "DONOR_CI",
+      "TRACKER_TEXT_ALONE"
+    ]
+  },
+  "serialProgram": {
+    "programId": "WCV-C3R",
+    "authorityStage": "C3R-A1",
+    "strictStageOrder": [
+      "C3R-P",
+      "C3R-T",
+      "C3R-L"
+    ],
+    "preMergeState": {
+      "c3rA0": "installed",
+      "c3rA1": "dependency_ready_unstarted",
+      "c3rP": "proposed_unstarted_not_repository_authorized",
+      "c3rT": "blocked",
+      "c3rL": "blocked",
+      "wcvC3": "incomplete"
+    },
+    "postMergeSelector": {
+      "roadmapItemId": "WCV-C3",
+      "campaignId": "C3",
+      "leadIssue": 706,
+      "stage": "C3R-P",
+      "stageState": "authorized_unstarted",
+      "wcvC3State": "incomplete",
+      "runtimeStarted": false
+    },
+    "stages": [
+      {
+        "order": 1,
+        "stage": "C3R-P",
+        "subject": "PRACTICE",
+        "stateAfterA1Merge": "authorized_unstarted",
+        "validatedReceiptDependencies": [
+          "C3R-A1"
+        ],
+        "ownsCommonDurableSubstrate": true,
+        "completeLearnerOutcome": true,
+        "scopeExactly": [
+          "A0_GOVERNED_MIGRATION_HISTORY_RECONCILIATION",
+          "LOCAL_AND_FRESH_HISTORY_COMPATIBILITY",
+          "TWO_FRESH_ISOLATED_SUPABASE_RESET_REPLAY_CYCLES",
+          "CLOSED_C3R_P_RUNTIME_EVIDENCE_ADAPTER",
+          "COMMON_DURABLE_PERSISTENCE",
+          "FORCED_RLS_AND_SERVICE_ONLY_RPC_REPOSITORY",
+          "COMPLETE_PRACTICE_REVIEW_OUTCOME",
+          "BODYLESS_LEARNING_GAP_SIGNAL",
+          "BODYLESS_CONCEPT_STATE_EVIDENCE_SIGNAL",
+          "SOURCE_BOUND_LEARNER_PRIVATE_FAILURE_NOTE",
+          "PLANNER_REVIEW_STATE_SEPARATION",
+          "D_PLUS_1",
+          "SEALED_D_PLUS_7_TRANSFER",
+          "TIMED_RECURRENCE",
+          "LATER_FAILURE_REOPEN",
+          "PERSONAL_STUDY_LEDGER_COMMON_SUBSTRATE",
+          "REVIEW_QUEUE",
+          "TODAY_AND_FULL_DAY_COMMON_SUBSTRATE",
+          "RESTORE_EXPORT_DELETE",
+          "EXACT_PRACTICE_BROWSER_TO_POSTGRES_RUNTIME_EVIDENCE"
+        ],
+        "issueEvidenceContributions": [
+          706,
+          707,
+          708,
+          "714:C3"
+        ],
+        "mayCloseGovernedIssues": false,
+        "mayCompleteWcvC3": false,
+        "mayClaimOtherSubjects": false
+      },
+      {
+        "order": 2,
+        "stage": "C3R-T",
+        "subject": "THEORY",
+        "stateAfterA1Merge": "blocked",
+        "validatedReceiptDependencies": [
+          "C3R-P"
+        ],
+        "ownsCommonDurableSubstrate": false,
+        "completeLearnerOutcome": true,
+        "scopeExactly": [
+          "COMPLETE_THEORY_TARGET_SCOPE_PROOF",
+          "EXACT_CONTRADICTION_AND_POLARITY_HANDLING",
+          "D_PLUS_1",
+          "SEALED_D_PLUS_7_TRANSFER",
+          "TIMED_RECURRENCE",
+          "DURABLE_REVIEW_OUTPUTS",
+          "PLANNER_REVIEW_PRESERVATION",
+          "RESTORE_EXPORT_DELETE",
+          "EXACT_THEORY_BROWSER_TO_POSTGRES_RUNTIME_EVIDENCE",
+          "TWO_FRESH_ISOLATED_RESET_REPLAY_CYCLES_THROUGH_VALIDATED_ADAPTER"
+        ],
+        "issueEvidenceContributions": [
+          706,
+          707,
+          708,
+          "714:C3"
+        ],
+        "mayCloseGovernedIssues": false,
+        "mayCompleteWcvC3": false,
+        "mayClaimOtherSubjects": false
+      },
+      {
+        "order": 3,
+        "stage": "C3R-L",
+        "subject": "LAW",
+        "stateAfterA1Merge": "blocked",
+        "validatedReceiptDependencies": [
+          "C3R-P",
+          "C3R-T"
+        ],
+        "ownsCommonDurableSubstrate": false,
+        "completeLearnerOutcome": true,
+        "scopeExactly": [
+          "EXACT_STATUTE_SOURCE_VERSION_ANCHOR_LOCATOR_BINDING",
+          "EFFECTIVE_WINDOW_AND_APPLICABLE_DATE_PROOF",
+          "CURRENTNESS_AND_CONFLICT_HANDLING",
+          "D_PLUS_1",
+          "SEALED_D_PLUS_7_TRANSFER",
+          "TIMED_RECURRENCE",
+          "DURABLE_REVIEW_OUTPUTS",
+          "RESTORE_EXPORT_DELETE",
+          "EXACT_LAW_BROWSER_TO_POSTGRES_RUNTIME_EVIDENCE",
+          "TWO_FRESH_ISOLATED_RESET_REPLAY_CYCLES_THROUGH_VALIDATED_ADAPTER",
+          "TERMINAL_WCV_C3_CLOSEOUT"
+        ],
+        "issueEvidenceContributions": [
+          706,
+          707,
+          708,
+          "714:C3"
+        ],
+        "mayCloseGovernedIssues": true,
+        "mayCompleteWcvC3": true,
+        "mayClaimOtherSubjects": false
+      }
+    ],
+    "dependencyAuthority": {
+      "validatedStageMergeReceiptsRequired": true,
+      "issueStateMaySatisfyDependency": false,
+      "issueClosureMaySatisfyDependency": false,
+      "branchStateMaySatisfyDependency": false,
+      "candidateCodeMaySatisfyDependency": false,
+      "candidateTestsMaySatisfyDependency": false,
+      "closedUnmergedPrMaySatisfyDependency": false,
+      "revertedReceiptMaySatisfyDependency": false
+    },
+    "terminalAuthority": {
+      "onlyStage": "C3R-L",
+      "mayCompleteWcvC3": true,
+      "mayCompleteIssue714Allocation": "C3",
+      "mayCloseIssues": [
+        706,
+        707,
+        708,
+        781
+      ],
+      "mayAdvanceActiveProgramSelector": true,
+      "mayPublishTerminalWcvC3Receipt": true
+    }
+  },
+  "issueAllocation": {
+    "perSubjectIndependenceRequired": true,
+    "singleSubjectOrSinglePathMayCloseIssue": false,
+    "issues": {
+      "706": {
+        "requiredForEachSubjectExactly": [
+          "FROZEN_D0",
+          "D_PLUS_1_UNAIDED_RECONSTRUCTION",
+          "SEALED_NON_SAME_SURFACE_D_PLUS_7_TRANSFER",
+          "TIMED_RECURRENCE",
+          "LATER_FAILURE_REOPEN"
+        ],
+        "closureStage": "C3R-L"
+      },
+      "707": {
+        "requiredForEachSubjectExactly": [
+          "LEARNER_PRIVATE_FORCED_RLS_LEDGER",
+          "EXACT_SOURCE_ATTEMPT_ARTIFACT_ITEM_BINDING",
+          "BODYLESS_RECURRING_DEDUCTION_EVIDENCE_PROJECTION",
+          "SOURCE_BOUND_FAILURE_NOTES",
+          "RESTORE_EXPORT_DELETE"
+        ],
+        "closureStage": "C3R-L"
+      },
+      "708": {
+        "requiredForEachSubjectExactly": [
+          "DETERMINISTIC_REVIEW_QUEUE",
+          "TODAY_AND_FULL_DAY",
+          "CORE_OUTCOME_MAXIMUM_3",
+          "PLANNER_REVIEW_STATE_SEPARATION",
+          "ACCEPT_EDIT_REJECT_WITHOUT_EVIDENCE_MUTATION",
+          "STALE_PLAN_REJECTION_AND_ELIGIBILITY_REFRESH"
+        ],
+        "closureStage": "C3R-L"
+      },
+      "714": {
+        "stateAfterA1Merge": "open",
+        "allocationC3CompletionStage": "C3R-L",
+        "preservedOpenAllocations": [
+          "C4",
+          "C6"
+        ],
+        "issueClosureAuthorizedByA1": false
+      },
+      "781": {
+        "stateAfterA1Merge": "open",
+        "closureStage": "C3R-L"
+      }
+    }
+  },
+  "programBoundary": {
+    "activeMasterPlan": "V13",
+    "activeMasterCount": 1,
+    "wcvBehaviorStandardVersion": "1.0.8",
+    "wcvBehaviorStandardRelationship": "SUBORDINATE_TO_V13",
+    "firstRoundAuthorized": false,
+    "mobileAuthorized": false,
+    "instructorAuthorized": false,
+    "issue776ProductizationAuthorized": false,
+    "automaticSuccessorRuntimeStartAllowed": false
+  },
+  "activationBoundary": {
+    "runtimeImplementationAuthorized": false,
+    "migrationFileMutationAuthorized": false,
+    "localSupabaseApplyAuthorized": false,
+    "remoteSupabaseApplyAuthorized": false,
+    "rlsImplementationAuthorized": false,
+    "storageImplementationAuthorized": false,
+    "apiImplementationAuthorized": false,
+    "learnerUiImplementationAuthorized": false,
+    "productionAuthorized": false,
+    "paymentAuthorized": false,
+    "providerAuthorized": false,
+    "learnerActivationAuthorized": false,
+    "remoteMutationCount": 0,
+    "successorRuntimeStarted": 0
+  },
+  "deliveryControl": {
+    "mergeProducingWriterLimit": 1,
+    "writingBranchLimit": 1,
+    "writingPrLimit": 1,
+    "mutationWriterLimit": 1,
+    "autoMergeAllowed": false,
+    "mergeMethod": "SQUASH_ONLY_EXPECTED_HEAD_PINNED",
+    "sourceCorrectionsMaximum": 2,
+    "exactHeadFormalReviewsMaximum": 3,
+    "requiredFinalActionableCounts": {
+      "p0": 0,
+      "p1": 0,
+      "p2": 0
+    },
+    "requiredUnresolvedActionableThreads": 0,
+    "referenceOnlyIssueLinks": {
+      "mode": "REFERENCE_ONLY",
+      "repository": "chachathecat/inverge",
+      "baseRef": "main",
+      "baseSha": "3a7047cf4c7fc68247137bafbca2434abdadbc7f",
+      "headRef": "codex/wcv-c3r-a1-serial-program-authority",
+      "headRepository": "chachathecat/inverge",
+      "pullRequestTitle": "[WCV-C3R-A1] Install serial Practice/Theory/Law program authority",
+      "requiredReferenceLinesExactly": [
+        "Refs #781",
+        "Refs #706",
+        "Refs #707",
+        "Refs #708",
+        "Refs #714"
+      ],
+      "requiredDispositionLine": "- Issue disposition: #706/#707/#708/#714/#781 remain open; closure authority: C3R-L",
+      "closingKeywordsAllowed": false,
+      "exceptionAppliesOnlyWhenExactLinesPresent": true,
+      "fullGithubClosingKeywordFamilyBlocked": true
+    }
+  },
+  "packageIdentity": {
+    "packageJsonGitBlob": "33a8d29b52ac225c6e957c71fce1f28f2eaba16d",
+    "packageLockJsonGitBlob": "70f85fb69c39aa73cf572082c4d38eb426c0b398",
+    "packageMutationAuthorized": false
+  },
+  "historicalDonors": {
+    "pullRequests": [
+      770,
+      780,
+      782,
+      783,
+      784
+    ],
+    "state": "HISTORICAL_READ_ONLY_NOT_CURRENT_EVIDENCE",
+    "maySatisfyStageDependency": false
+  },
+  "postMergeState": {
+    "c3rA0": "installed",
+    "c3rA1": "installed",
+    "c3rP": "authorized_unstarted",
+    "c3rT": "blocked_on_validated_c3r_p_merge_receipt",
+    "c3rL": "blocked_on_validated_c3r_p_and_c3r_t_merge_receipts",
+    "wcvC3": "incomplete",
+    "governedIssues": {
+      "706": "open",
+      "707": "open",
+      "708": "open",
+      "714": "open",
+      "781": "open"
+    },
+    "successorRuntimeStarted": 0
+  },
+  "ownedPaths": [
+    "AGENTS.md",
+    "roadmap/active-program.yml",
+    "config/dabangil-unified-program-contract.json",
+    "docs/dabangil-unified-program-contract.md",
+    "docs/inverge-master-roadmap.md",
+    "docs/decisions/2026-08-21-owner-wcv-c3r-a1-serial-program-authority.md",
+    "config/dabangil-wcv-c3r-a1-serial-program-authority-v1.json",
+    "docs/qa/wcv-c3r-a1-serial-program-authority-validation.md",
+    "scripts/automation/validate-pr-contract.mjs",
+    "tests/wcv-c3r-a1-serial-program-authority.test.mjs",
+    "scripts/run-node-tests.mjs"
+  ],
+  "forbiddenPathPrefixes": [
+    "supabase/migrations/",
+    ".github/workflows/",
+    "app/",
+    "components/",
+    "lib/review-os/"
+  ],
+  "forbiddenExactPaths": [
+    "scripts/automation/wcv-c3r-a0-migration-dependency-closure.mjs",
+    "config/dabangil-wcv-c3r-a0-migration-dependency-authority-v1.json",
+    "tests/wcv-c3r-a0-migration-dependency-authority.test.mjs",
+    "package.json",
+    "package-lock.json"
+  ]
+}

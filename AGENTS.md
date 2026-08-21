@@ -5,6 +5,13 @@
 Use this authority order when sources conflict:
 
 1. a dated Owner decision for the exact decision it owns, currently
+   `docs/decisions/2026-08-21-owner-wcv-c3r-a1-serial-program-authority.md`
+   for the independently complete C3R-A1 source-only serial program authority,
+   its exact PR #785/C3R-A0 receipt consumption, the strict
+   `C3R-P → C3R-T → C3R-L` merge-receipt chain, and the post-merge C3R-P
+   `authorized_unstarted` selector; it installs no runtime and becomes
+   repository authority only after its expected-head-pinned squash merge and
+   validated GitHub receipt,
    `docs/decisions/2026-08-21-owner-wcv-c3r-a0-migration-dependency-authority.md`
    for the independently complete C3R-A0 PostgreSQL migration-dependency
    authority only; it installs no program selector or runtime and becomes
@@ -148,6 +155,55 @@ canonical tuple is `WCV-C3 / C3 / #706 / authorized_unstarted`. An issue state
 or issue closure cannot substitute for a replacement-stage merge or receipt.
 C2R-B completes only the Issue #714 allocation for campaign C2 and leaves
 Issue #714 open with its C3, C4 and C6 allocations preserved.
+
+For WCV-C3 recovery only, C3R-A0 is the installed immutable PostgreSQL
+migration-dependency authority and C3R-A1 is the independently complete
+source-only serial-program authority. After C3R-A1's expected-head-pinned
+merge and validated GitHub receipt, the exact runtime order is
+`C3R-P → C3R-T → C3R-L`: C3R-P alone is `authorized_unstarted`, C3R-T is
+blocked on a validated C3R-P merge receipt, and C3R-L is blocked on validated
+C3R-P and C3R-T merge receipts. Issue state, issue closure, branch state,
+candidate code/tests and closed-unmerged PRs cannot satisfy any stage
+dependency. Only C3R-L may complete WCV-C3, complete Issue #714 allocation C3
+while preserving C4/C6, close #706/#707/#708/#781, advance the program
+selector or publish the terminal WCV-C3 receipt. A1 starts no runtime and
+leaves WCV-C3 incomplete.
+
+## C3R-A1 WCV-C3 serial program authority
+
+C3R-A1 consumes the exact validated C3R-A0 receipt for PR #785: reviewed head
+`f7f959368525f8a5895026f1361f6e13fd6226e0`, reviewed tree
+`543f8dfb5fdd026c1361e1a502376945912e6c5c`, squash/resulting-main SHA
+`3a7047cf4c7fc68247137bafbca2434abdadbc7f`, resulting tree
+`543f8dfb5fdd026c1361e1a502376945912e6c5c`, passed required checks,
+actionable P0/P1/P2 `0/0/0` and zero unresolved actionable threads. The A0
+decision, manifest, analyzer and focused test are immutable upstream bindings;
+digest drift or a reverted/mismatched merge fails closed. A1 references A0
+and may not duplicate, reinterpret or weaken its analyzer.
+
+Every later runtime stage requires one live-GitHub-validated
+`C3RStageMergeReceiptV1` binding its PR, base, reviewed head/tree, pinned
+squash merge, resulting main SHA/tree, exact-head checks, formal review,
+actionable `0/0/0`, zero unresolved actionable threads, runtime evidence,
+bodyless metadata artifacts, default-off feature state and zero remote
+mutation. Candidate-head tests and tracker prose are never resulting-main
+receipt authority.
+
+C3R-P owns the A0-governed migration-history reconciliation, common durable
+persistence, forced-RLS/service-only substrate, complete Practice review,
+bodyless gap/concept signals, learner-private failure note, D+1, sealed D+7,
+timed recurrence, reopen, Personal Study Ledger, Review Queue, Today/Full-Day,
+restore/export/delete, two isolated reset/replay cycles and exact Practice
+browser-to-Postgres evidence. C3R-T adds only the complete Theory delta and
+inherits the validated substrate. C3R-L adds only the complete Law delta and
+terminal closeout. Each subject must independently prove the #706/#707/#708
+acceptance inventory. Practice and Theory may contribute evidence but close
+nothing.
+
+The A1 flag state is authority-only: runtime implementation, migration-file
+mutation, local or remote Supabase apply, RLS, Storage, API, learner UI,
+Production, payment, provider, learner activation, first-round, mobile,
+instructor and #776 work remain unauthorized. C3R-P does not start in A1.
 
 ## C2R-A rights-safe source firewall
 

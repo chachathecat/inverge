@@ -43,6 +43,33 @@
     "productionAuthorized": false,
     "replacementStageAutomaticStartAllowed": false
   },
+  "c3SerialProgramDecision": {
+    "id": "owner_wcv_c3r_a1_serial_program_authority_2026_08_21",
+    "status": "approved_candidate_source_contract_only",
+    "decisionDateKst": "2026-08-21",
+    "decisionRecord": "docs/decisions/2026-08-21-owner-wcv-c3r-a1-serial-program-authority.md",
+    "contract": "config/dabangil-wcv-c3r-a1-serial-program-authority-v1.json",
+    "roadmapItemId": "WCV-C3",
+    "campaignId": "C3",
+    "leadIssue": 706,
+    "recoveryTrackerIssue": 781,
+    "c3rA0ValidatedReceiptPr": 785,
+    "strictStageOrder": [
+      "C3R-P",
+      "C3R-T",
+      "C3R-L"
+    ],
+    "postMergeAuthorizedStage": "C3R-P",
+    "postMergeAuthorizedStageState": "authorized_unstarted",
+    "wcvC3Complete": false,
+    "runtimeAuthorized": false,
+    "migrationMutationAuthorized": false,
+    "remoteSupabaseAuthorized": false,
+    "learnerActivationAuthorized": false,
+    "paymentActivationAuthorized": false,
+    "productionAuthorized": false,
+    "automaticRuntimeStartAllowed": false
+  },
   "launchConvergenceAmendment": {
     "id": "owner_ulc_0_unified_product_multisurface_launch_2026_08_14",
     "status": "approved_source_contract_only",
@@ -159,6 +186,10 @@
     "soleNextImplementationTrackerIssue": 706,
     "soleNextReplacementStage": null,
     "soleNextReplacementStageIssue": null,
+    "soleNextC3rStage": "C3R-P",
+    "soleNextC3rStageIssue": 706,
+    "soleNextC3rStageState": "authorized_unstarted_after_validated_c3r_a1_merge_receipt",
+    "c3rRuntimeStarted": false,
     "structuralRecoveryTrackerIssue": 717,
     "wcvC2Complete": true,
     "runtimeAuthorized": false,
@@ -1509,6 +1540,76 @@
         "runtimeReadinessEstablished": false
       }
     },
+    "c3SerialProgram": {
+      "authorityDecision": "docs/decisions/2026-08-21-owner-wcv-c3r-a1-serial-program-authority.md",
+      "machineContract": "config/dabangil-wcv-c3r-a1-serial-program-authority-v1.json",
+      "authorityStage": "C3R-A1",
+      "repositoryAuthorityEffectiveOn": "EXPECTED_HEAD_PINNED_SQUASH_MERGE_AND_VALIDATED_GITHUB_RECEIPT",
+      "c3rA0Receipt": {
+        "pullRequest": 785,
+        "reviewedHead": "f7f959368525f8a5895026f1361f6e13fd6226e0",
+        "reviewedTree": "543f8dfb5fdd026c1361e1a502376945912e6c5c",
+        "squashMergeSha": "3a7047cf4c7fc68247137bafbca2434abdadbc7f",
+        "resultingMainTree": "543f8dfb5fdd026c1361e1a502376945912e6c5c",
+        "requiredChecksPassed": true,
+        "actionableP0P1P2": [
+          0,
+          0,
+          0
+        ],
+        "unresolvedActionableThreads": 0,
+        "immutableManifestAndAnalyzerBindingsRequired": true
+      },
+      "strictStageOrder": [
+        "C3R-P",
+        "C3R-T",
+        "C3R-L"
+      ],
+      "postMergeCurrentStage": "C3R-P",
+      "postMergeCurrentStageState": "authorized_unstarted",
+      "stageReceiptDependencies": {
+        "C3R-P": [
+          "C3R-A1"
+        ],
+        "C3R-T": [
+          "C3R-P"
+        ],
+        "C3R-L": [
+          "C3R-P",
+          "C3R-T"
+        ]
+      },
+      "stageReceiptType": "C3RStageMergeReceiptV1",
+      "issueOrBranchOrCandidateStateMaySubstituteForStageReceipt": false,
+      "closedUnmergedPrMaySubstituteForStageReceipt": false,
+      "candidateTestsMaySubstituteForResultingMainReceipt": false,
+      "commonDurableSubstrateStage": "C3R-P",
+      "completeSubjectOutcomeStages": {
+        "PRACTICE": "C3R-P",
+        "THEORY": "C3R-T",
+        "LAW": "C3R-L"
+      },
+      "terminalStage": "C3R-L",
+      "terminalStageOnlyMayCompleteWcvC3": true,
+      "terminalStageOnlyMayCloseIssues": [
+        706,
+        707,
+        708,
+        781
+      ],
+      "issue714AllocationC3CompletionStage": "C3R-L",
+      "issue714PreservedAllocations": [
+        "C4",
+        "C6"
+      ],
+      "wcvC3Complete": false,
+      "runtimeStarted": false,
+      "remoteMutationCount": 0,
+      "productionAuthorized": false,
+      "paymentAuthorized": false,
+      "learnerActivationAuthorized": false,
+      "automaticRuntimeStartAllowed": false
+    },
     "campaigns": [
       {
         "id": "C1",
@@ -1581,6 +1682,19 @@
         ],
         "state": "authorized_unstarted_after_validated_terminal_c2r_c_l_receipt",
         "terminalReplacementDependency": "C2R-C-L",
+        "c3rA0State": "installed",
+        "c3rA1State": "installed_after_expected_head_pinned_merge_and_validated_receipt",
+        "c3rA1Contract": "config/dabangil-wcv-c3r-a1-serial-program-authority-v1.json",
+        "c3rStrictStageOrder": [
+          "C3R-P",
+          "C3R-T",
+          "C3R-L"
+        ],
+        "currentAuthorizedRuntimeStage": "C3R-P",
+        "currentAuthorizedRuntimeStageState": "authorized_unstarted",
+        "runtimeStarted": false,
+        "wcvC3Complete": false,
+        "terminalClosureStage": "C3R-L",
         "automaticStartAllowed": false,
         "githubNativeAutomaticContinuationAllowed": true
       },
@@ -1730,6 +1844,9 @@
     "soleNextImplementationTrackerIssue": 706,
     "soleNextReplacementStage": null,
     "soleNextReplacementStageIssue": null,
+    "soleNextC3rStage": "C3R-P",
+    "soleNextC3rStageIssue": 706,
+    "soleNextC3rStageState": "authorized_unstarted_after_validated_c3r_a1_merge_receipt",
     "laterCampaignsQueued": [
       "C4",
       "C5",
@@ -1781,6 +1898,11 @@
     "soleNextImplementationTrackerIssue": 706,
     "soleNextReplacementStageId": null,
     "soleNextReplacementStageIssue": null,
+    "soleNextC3rStageId": "C3R-P",
+    "soleNextC3rStageIssue": 706,
+    "soleNextC3rStageState": "authorized_unstarted_after_validated_c3r_a1_merge_receipt",
+    "c3rA1Decision": "docs/decisions/2026-08-21-owner-wcv-c3r-a1-serial-program-authority.md",
+    "c3rSuccessorRuntimeStarted": false,
     "primaryStatusesUsed": [
       "completed",
       "blocked",

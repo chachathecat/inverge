@@ -4,6 +4,10 @@
 - 상세 제품 기준: `docs/inverge-second-round-final-product-spec.md`
 - 실행 상태와 의존성 기준: `roadmap/active-program.yml`
 - Current exact-scope authority:
+  `docs/decisions/2026-08-21-owner-wcv-c3r-a1-serial-program-authority.md`
+  for the source-only WCV-C3 recovery program and C3R-P post-merge selector,
+  `docs/decisions/2026-08-21-owner-wcv-c3r-a0-migration-dependency-authority.md`
+  for the immutable upstream PostgreSQL migration-dependency authority,
   `docs/decisions/2026-08-14-owner-unified-product-multisurface-launch.md`
   for the final integrated 1·2차 public product, future Web/iOS/Android and
   instructor surfaces, free-limited public route, separate paid/evidence
@@ -31,18 +35,59 @@ Student surfaces are exactly Web, iOS/iPadOS and Android. The complete
 instructor authoring/review workbench is Web-primary. Student apps consume
 only assigned work and approved feedback.
 
-The current candidate completes WCV-C2/C2/Tracker #717's exact five-stage C2R
+The completed WCV-C2/C2/Tracker #717 campaign used the exact five-stage C2R
 chain under expected-head merge-and-receipt semantics, with one merge-
 producing writer and GitHub-native protected non-Production continuation.
 C2R-A/#702 and C2R-B/#714 are complete source-only; C2R-C-P, C2R-C-T and
 terminal C2R-C-L/#703 are the complete Practice, Theory and Law runtime
-stages. After PR #764's protected merge and validated receipt, WCV-C3/C3/#706
-is the authorized and unstarted selector. ULC-0 implements nothing.
+stages. PR #764's protected merge and validated receipt selected the
+WCV-C3/C3/#706 envelope as authorized and unstarted. PR #785 then installed
+the immutable C3R-A0 migration-dependency authority. C3R-A1 installs the
+source-only internal runtime-stage selector described below. ULC-0 implements
+nothing.
 
 The later 2026-08-15 C2R-B decision owns this exact post-B selector and typed
 proof architecture. The C2R-A decision still owns the A rights-safe source
 contract and its historical post-A selector. The 2026-08-14 structural
 decision owns the five-stage chain and unaffected recovery scope.
+
+## 2026-08-21 WCV-C3R Serial Program Authority
+
+C3R-A1 consumes the exact PR #785 receipt: reviewed head
+`f7f959368525f8a5895026f1361f6e13fd6226e0`, reviewed/resulting tree
+`543f8dfb5fdd026c1361e1a502376945912e6c5c`, squash/resulting-main SHA
+`3a7047cf4c7fc68247137bafbca2434abdadbc7f`, passed required checks,
+actionable P0/P1/P2 `0/0/0` and zero unresolved actionable threads. The A0
+decision, manifest, analyzer and focused test remain immutable upstream
+bindings. A reverted or mismatched receipt or digest drift fails closed; A1
+does not duplicate the A0 analyzer.
+
+After A1's expected-head-pinned squash merge and validated receipt, the exact
+serial runtime-stage order is:
+
+`C3R-P → C3R-T → C3R-L`
+
+C3R-P alone becomes `authorized_unstarted`. It owns A0-governed migration-
+history reconciliation, the common durable forced-RLS/service-only substrate,
+the complete Practice outcome, D+1, sealed D+7, timed recurrence, reopen,
+Personal Study Ledger, Review Queue, Today/Full-Day, restore/export/delete,
+two isolated reset/replay cycles and exact browser-to-Postgres evidence.
+C3R-T is the complete Theory delta and requires a validated C3R-P merge
+receipt. C3R-L is the complete Law delta and requires validated C3R-P and
+C3R-T merge receipts.
+
+Issue state or closure, branch state, candidate code/tests, a closed-unmerged
+PR, donor CI or tracker text never satisfies a dependency. Each runtime
+receipt binds the exact base, reviewed head/tree, pinned squash merge,
+resulting main SHA/tree, exact-head checks, formal review, actionable
+`0/0/0`, zero unresolved actionable threads, runtime evidence, default-off
+state and zero remote mutation.
+
+Practice and Theory may contribute evidence but close nothing. Only C3R-L may
+complete WCV-C3, close #706/#707/#708/#781, complete Issue #714 allocation C3
+while preserving C4/C6, advance the selector or publish the terminal receipt.
+A1 starts no runtime, completes no WCV-C3 state, closes no issue and authorizes
+no migration apply, Production, payment or learner activation.
 
 The future free-limited public ULC-L1 route requires Today, Review Queue,
 five first-round MCQ subjects, three second-round Trusted Repair subjects,

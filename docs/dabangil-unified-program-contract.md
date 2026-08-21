@@ -2,6 +2,10 @@
 
 - Contract version: `dabangil.unified_program.v4`
 - Current exact-scope Owner decisions:
+  `docs/decisions/2026-08-21-owner-wcv-c3r-a1-serial-program-authority.md`
+  for the source-only C3R-A1 serial program and post-merge C3R-P selector,
+  `docs/decisions/2026-08-21-owner-wcv-c3r-a0-migration-dependency-authority.md`
+  for the immutable upstream PostgreSQL migration-dependency authority,
   `docs/decisions/2026-08-14-owner-unified-product-multisurface-launch.md`
   for the final public product, future Web/iOS/Android and instructor
   surfaces, free-limited launch, separate paid/evidence route, and coordinated
@@ -321,9 +325,53 @@ campaign-C2 lead record, not a replacement-stage ID or Issue #702. Standalone
 and C2R-B. Their terminal evidence authorized C2R-C-P; C2R-C-P's protected
 merge and validated receipt selected C2R-C-T, and C2R-C-T's protected merge
 and validated receipt selected terminal C2R-C-L. PR #764 represents the
-post-receipt WCV-C3/#706 authorized-unstarted selector.
+post-receipt WCV-C3/#706 authorized-unstarted envelope.
 
-## 2B. Unified product and multisurface launch convergence
+## 2B. WCV-C3R source-only serial program authority
+
+PR #785 installed C3R-A0 at squash/main SHA
+`3a7047cf4c7fc68247137bafbca2434abdadbc7f`, tree
+`543f8dfb5fdd026c1361e1a502376945912e6c5c`, from reviewed head
+`f7f959368525f8a5895026f1361f6e13fd6226e0` with passed required checks,
+actionable P0/P1/P2 `0/0/0` and zero unresolved actionable threads. C3R-A1
+binds that exact receipt and immutable A0 decision/manifest/analyzer digests;
+a reverted or mismatched merge or digest drift fails closed. A1 does not copy
+or reinterpret the 25-file migration authority.
+
+After A1's own expected-head-pinned squash merge and validated GitHub receipt,
+the exact WCV-C3 runtime order is:
+
+`C3R-P → C3R-T → C3R-L`
+
+C3R-P alone is `authorized_unstarted`. It owns the A0-governed migration-
+history reconciliation, common durable/forced-RLS/service-only substrate,
+complete Practice outcome, D+1/sealed-D+7/recurrence/reopen, Personal Study
+Ledger, Review Queue, Today/Full-Day, restore/export/delete, two isolated
+reset/replay cycles and exact Practice browser-to-Postgres evidence. C3R-T is
+the complete Theory-only delta and remains blocked on a validated C3R-P merge
+receipt. C3R-L is the complete Law-only delta and remains blocked on validated
+C3R-P and C3R-T merge receipts.
+
+Every runtime dependency uses the closed `C3RStageMergeReceiptV1`: live merged
+PR, exact base/reviewed head/tree, pinned squash and resulting main identity,
+passed exact-head checks, a formal review anchored to that head, actionable
+`0/0/0`, zero unresolved actionable threads, runtime evidence, bodyless
+metadata artifacts, default-off state and zero remote mutation. Issue state,
+issue closure, branch state, candidate code/tests, closed-unmerged PRs, donor
+CI and tracker prose cannot substitute.
+
+Only C3R-L may complete WCV-C3, close #706/#707/#708/#781, complete Issue
+#714 allocation C3 while preserving C4 and C6, advance the selector or publish
+the terminal receipt. Every subject independently proves its #706 delayed-
+evidence sequence, #707 forced-RLS ledger/bodyless projection/restore-export-
+delete boundary and #708 deterministic Review Queue/Today/Full-Day/planner-
+separation boundary. A single subject or path closes nothing.
+
+A1 starts no runtime. WCV-C3 remains incomplete; #706/#707/#708/#714/#781
+remain open; remote Supabase mutation, Production, payment, learner activation
+and successor-runtime-start counts remain zero.
+
+## 2C. Unified product and multisurface launch convergence
 
 The 2026-08-14 ULC-0 decision is a mandatory subordinate V13 launch
 amendment led by Issue #719. It is not V14, V13.1, another active master or
