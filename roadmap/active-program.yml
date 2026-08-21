@@ -11,6 +11,7 @@ program:
   wipLimitDoesNotAuthorizeWriterCount: true
   campaignOverlay: C3
   structuralRecoveryOverlayId: WCV-C2R-STRUCTURAL-RECOVERY
+  c3StructuralRecoveryOverlayId: WCV-C3R-SERIAL-PROGRAM
   campaignLockGroup: wcv-vertical-campaign
   soleNextImplementationItem: WCV-C3
   soleNextImplementationCampaign: C3
@@ -19,6 +20,18 @@ program:
   soleNextReplacementStage: null
   soleNextReplacementStageIssue: null
   soleNextReplacementStageDecision: docs/decisions/2026-08-14-wcv-c2-structural-recovery.md
+  c3rA0State: installed
+  c3rA0Authority: docs/decisions/2026-08-21-owner-wcv-c3r-a0-migration-dependency-authority.md
+  c3rA0CoveringPr: 785
+  c3rA0MergeSha: 3a7047cf4c7fc68247137bafbca2434abdadbc7f
+  c3rA1State: installed_after_expected_head_pinned_merge_and_validated_receipt
+  c3rA1Authority: docs/decisions/2026-08-21-owner-wcv-c3r-a1-serial-program-authority.md
+  c3rStrictStageOrder: [C3R-P, C3R-T, C3R-L]
+  soleNextC3rStage: C3R-P
+  soleNextC3rStageIssue: 706
+  soleNextC3rStageState: authorized_unstarted_after_validated_c3r_a1_merge_receipt
+  c3rRuntimeAutomaticStartAllowed: false
+  c3rSuccessorRuntimeStarted: false
   structuralRecoveryChainDecision: docs/decisions/2026-08-14-wcv-c2-structural-recovery.md
   c2rBOperationalStartRequiresValidatedC2rAReceipt: true
   c2rBOperationalStartRequiresIssue702Closure: true
@@ -460,6 +473,30 @@ items:
     terminalReplacementDependency: C2R-C-L
     selected: true
     started: false
+    c3rA0State: installed
+    c3rA0ValidatedReceiptPr: 785
+    c3rA1State: installed_after_expected_head_pinned_merge_and_validated_receipt
+    c3rA1Contract: config/dabangil-wcv-c3r-a1-serial-program-authority-v1.json
+    c3rStrictStageOrder: [C3R-P, C3R-T, C3R-L]
+    currentAuthorizedRuntimeStage: C3R-P
+    currentAuthorizedRuntimeStageState: authorized_unstarted
+    c3rPStartRequiresValidatedStageReceipts: [C3R-A1]
+    c3rTStartRequiresValidatedStageReceipts: [C3R-P]
+    c3rLStartRequiresValidatedStageReceipts: [C3R-P, C3R-T]
+    issueStateMaySubstituteForStageReceipt: false
+    closedUnmergedPrMaySubstituteForStageReceipt: false
+    candidateTestsMaySubstituteForResultingMainReceipt: false
+    c3rPStarted: false
+    c3rTStarted: false
+    c3rLStarted: false
+    wcvC3Complete: false
+    issueClosureStage: C3R-L
+    issue714C3CompletionStage: C3R-L
+    issue714RemainingAllocationsPreserved: [C4, C6]
+    remoteSupabaseMutationAuthorized: false
+    productionAuthorized: false
+    paymentAuthorized: false
+    learnerActivationAuthorized: false
     githubNativeAutomaticContinuationAllowed: true
     automaticStartAllowed: false
     dependencies: [WCV-C2]
