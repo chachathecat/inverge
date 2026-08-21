@@ -221,7 +221,11 @@ order, with exact source/object bindings. Protected tables must end enabled,
 forced and policy-present with only authenticated privileges; protected
 functions must end with exactly authenticated EXECUTE. Later weakening,
 broad grants, quoted-case substitution, inert lexical evidence and
-unsupported dynamic security DDL fail closed.
+unsupported dynamic security DDL fail closed. Role/user-scoped default
+privileges fail closed rather than sharing one creator's state. Dynamic
+security DDL in mutable repair/append SQL fails even when the protected name
+is assembled from fragments, and policy roles are derived only from
+executable masked SQL.
 
 Remote migration-history repair, db push, linked reset, remote SQL, remote
 schema mutation and application remain separately Owner-gated and

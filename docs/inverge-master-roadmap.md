@@ -125,6 +125,10 @@ tables must finish enabled/forced and protected objects may retain only their
 declared authenticated privileges; later weakening and unsupported dynamic
 security DDL fail closed.
 
+The evaluator also fails closed on role/user-scoped default privileges,
+fragment-assembled dynamic security DDL in mutable migrations and policy-role
+clauses that exist only in comments or other non-executable lexical regions.
+
 After A2's validated protected merge, C3R-P requires A0+A1+A2 receipts and is
 dependency-ready but unstarted. The P→T→L order is unchanged, C3R-T/L remain
 blocked, WCV-C3 remains incomplete, all governed issues remain open and this

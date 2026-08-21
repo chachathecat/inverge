@@ -505,7 +505,7 @@ function parsePolicyStatement(statement) {
   const create = new RegExp(`^\\s*create\\s+policy\\s+(${SQL_IDENTIFIER_COMPONENT})\\s+on\\s+(${SQL_QUALIFIED_IDENTIFIER})`, "iu").exec(statement.masked);
   if (!create) return null;
   const command = /\bfor\s+(select|insert|update|delete|all)\b/iu.exec(statement.masked)?.[1]?.toUpperCase() ?? "ALL";
-  const rolesSource = /\bto\s+([\s\S]*?)(?=\busing\s*\(|\bwith\s+check\s*\(|;|$)/iu.exec(statement.source)?.[1] ?? "public";
+  const rolesSource = /\bto\s+([\s\S]*?)(?=\busing\s*\(|\bwith\s+check\s*\(|;|$)/iu.exec(statement.masked)?.[1] ?? "public";
   return {
     table: canonicalSqlIdentifier(create[2], "public"),
     name: canonicalSqlIdentifier(create[1]),
@@ -927,7 +927,17 @@ export function validateA2AuthorityContract(contract, a0Manifest) {
   if (!same(finalSecurityAuthority.privilegeOperationsExactly, ["GRANT", "REVOKE"])) errors.push("FINAL_SECURITY_PRIVILEGE_OPERATIONS");
   if (!same(finalSecurityAuthority.nonExecutableEvidenceClassesExactly, ["LINE_COMMENT", "BLOCK_COMMENT", "ORDINARY_STRING", "ESCAPE_STRING", "DOLLAR_QUOTED_BODY"])) errors.push("FINAL_SECURITY_LEXICAL_BOUNDARY");
   if (!same(finalSecurityAuthority.forbiddenFinalGranteesExactly, ["public", "anon"]) || !same(finalSecurityAuthority.safeFinalGranteesExactly, ["authenticated"])) errors.push("FINAL_SECURITY_GRANTEE_BOUNDARY");
-  for (const field of ["orderedFinalStateRequired", "unsupportedDynamicSecurityDdlFailsClosed", "quotedIdentifierCaseSensitive", "everyProtectedTableRlsEnabledAndForced", "finalPolicySetDeclaredByAppendReceipt"]) {
+  for (const field of [
+    "orderedFinalStateRequired",
+    "unsupportedDynamicSecurityDdlFailsClosed",
+    "mutableMigrationDynamicSecurityDdlFailsClosedWithoutResolvedTarget",
+    "immutableA0DynamicSecurityDdlMayBeIgnoredOnlyWithExactSourceAndNoProtectedIdentifier",
+    "roleOrUserScopedDefaultPrivilegesFailClosed",
+    "policyRolesDerivedFromExecutableMaskedSql",
+    "quotedIdentifierCaseSensitive",
+    "everyProtectedTableRlsEnabledAndForced",
+    "finalPolicySetDeclaredByAppendReceipt",
+  ]) {
     if (finalSecurityAuthority[field] !== true) errors.push(`FINAL_SECURITY_${field}`);
   }
   for (const field of [
@@ -1044,7 +1054,7 @@ function parseSecurityPolicyMutation(statement) {
   }
   const altered = new RegExp(`^\\s*alter\\s+policy\\s+(${SQL_IDENTIFIER_COMPONENT})\\s+on\\s+(${SQL_QUALIFIED_IDENTIFIER})`, "iu").exec(statement.masked);
   if (!altered) return null;
-  const rolesSource = /\bto\s+([\s\S]*?)(?=\busing\s*\(|\bwith\s+check\s*\(|;|$)/iu.exec(statement.source)?.[1] ?? null;
+  const rolesSource = /\bto\s+([\s\S]*?)(?=\busing\s*\(|\bwith\s+check\s*\(|;|$)/iu.exec(statement.masked)?.[1] ?? null;
   return {
     operation: "ALTER_POLICY",
     table: canonicalSqlIdentifier(altered[2], "public"),
@@ -1080,6 +1090,11 @@ function deriveProtectedObjectsFromCheckpoint(projectedRecords, derived, sqlByFi
     tables: protectedTables,
     functions: [...new Map(protectedFunctions.map((entry) => [functionSecurityKey(entry.identifier, entry.argumentTypes), entry])).values()]
       .sort((left, right) => functionSecurityKey(left.identifier, left.argumentTypes).localeCompare(functionSecurityKey(right.identifier, right.argumentTypes))),
+    mutableSecurityMigrationFilenames: [
+      learningFilename,
+      "202606232130_personal_concept_graph_rpc_only_write_boundary.sql",
+      appendDerived?.currentFilename,
+    ].filter(Boolean).sort(),
   };
 }
 
@@ -1105,6 +1120,9 @@ export function deriveMigrationFinalSecurityState(sequence, protectedObjects) {
   const operationTrace = [];
   const diagnostics = [];
   const defaultTablePrivileges = new Map();
+  const mutableSecurityMigrationFilenames = new Set(
+    protectedObjects.mutableSecurityMigrationFilenames ?? sequence.map((migration) => migration.filename),
+  );
 
   const recordOperation = (migration, statement, objectIdentity, operationKind, beforeState, afterState) => {
     operationTrace.push({
@@ -1135,10 +1153,23 @@ export function deriveMigrationFinalSecurityState(sequence, protectedObjects) {
     for (const statement of splitTopLevelStatements(migration.sql)) {
       let protectedSecurityOperationRecognized = false;
       const lowerSource = statement.source.toLowerCase();
-      const mentionsProtectedObject = [...protectedTableSet, ...[...protectedFunctionMap.values()].map((entry) => entry.identifier)]
-        .some((identity) => lowerSource.includes(identity.toLowerCase()));
-      if (/^\s*(?:do|execute)\b/iu.test(statement.masked) && mentionsProtectedObject && /\b(?:row\s+level\s+security|policy|grant|revoke)\b/iu.test(statement.source)) {
+      const protectedIdentities = [...protectedTableSet, ...[...protectedFunctionMap.values()].map((entry) => entry.identifier)];
+      const mentionsProtectedObject = protectedIdentities.some((identity) => lowerSource.includes(identity.toLowerCase()));
+      const mentionsProtectedUnqualifiedIdentifier = protectedIdentities.some((identity) =>
+        lowerSource.includes(identity.split(".").at(-1).toLowerCase()));
+      const dynamicSecurityDdl = /^\s*(?:do|execute)\b/iu.test(statement.masked) &&
+        /\b(?:row\s+level\s+security|policy|grant|revoke|alter\s+default\s+privileges)\b/iu.test(statement.source);
+      if (dynamicSecurityDdl && (
+        mutableSecurityMigrationFilenames.has(migration.filename) ||
+        mentionsProtectedObject ||
+        mentionsProtectedUnqualifiedIdentifier ||
+        /\balter\s+default\s+privileges\b/iu.test(statement.source)
+      )) {
         addUnsupported(migration, statement, "UNSUPPORTED_DYNAMIC_SECURITY_DDL");
+        continue;
+      }
+      if (/^\s*alter\s+default\s+privileges\s+for\s+(?:role|user)\b/iu.test(statement.masked)) {
+        addUnsupported(migration, statement, "UNSUPPORTED_ROLE_SCOPED_DEFAULT_PRIVILEGES", "DEFAULT_TABLE_PRIVILEGES:public");
         continue;
       }
       if (/^\s*(?:grant|revoke)\b[\s\S]*\bon\s+all\s+(?:tables|functions)\s+in\s+schema\s+public\b/iu.test(statement.masked) || /^\s*alter\s+default\s+privileges\b[\s\S]*\bon\s+functions\b/iu.test(statement.masked)) {
@@ -1146,7 +1177,7 @@ export function deriveMigrationFinalSecurityState(sequence, protectedObjects) {
         continue;
       }
 
-      const defaultTablePrivilege = new RegExp(`^\\s*alter\\s+default\\s+privileges(?:\\s+for\\s+role\\s+[^;]+?)?(?:\\s+in\\s+schema\\s+(${SQL_IDENTIFIER_COMPONENT}))?\\s+(grant|revoke)\\s+([a-z,\\s]+?)\\s+on\\s+tables\\s+(to|from)\\s+([^;]+)`, "iu").exec(statement.masked);
+      const defaultTablePrivilege = new RegExp(`^\\s*alter\\s+default\\s+privileges(?:\\s+in\\s+schema\\s+(${SQL_IDENTIFIER_COMPONENT}))?\\s+(grant|revoke)\\s+([a-z,\\s]+?)\\s+on\\s+tables\\s+(to|from)\\s+([^;]+)`, "iu").exec(statement.masked);
       if (defaultTablePrivilege && (!defaultTablePrivilege[1] || canonicalSqlIdentifier(defaultTablePrivilege[1]) === "public")) {
         const operation = defaultTablePrivilege[2].toUpperCase();
         const direction = defaultTablePrivilege[4].toUpperCase();

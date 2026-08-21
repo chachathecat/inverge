@@ -2217,6 +2217,10 @@
       ],
       "orderedFinalStateRequired": true,
       "unsupportedDynamicSecurityDdlFailsClosed": true,
+      "mutableMigrationDynamicSecurityDdlFailsClosedWithoutResolvedTarget": true,
+      "immutableA0DynamicSecurityDdlMayBeIgnoredOnlyWithExactSourceAndNoProtectedIdentifier": true,
+      "roleOrUserScopedDefaultPrivilegesFailClosed": true,
+      "policyRolesDerivedFromExecutableMaskedSql": true,
       "quotedIdentifierCaseSensitive": true,
       "everyProtectedTableRlsEnabledAndForced": true,
       "finalPolicySetDeclaredByAppendReceipt": true

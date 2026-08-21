@@ -142,8 +142,8 @@ baseline inventory projection, bidirectional comparison, canonical sequence
 construction, inherited default table privileges and explicit final-state
 validation. It then replayed hostile cases for erased semantics, digest
 rebinding, later RLS weakening, policy removal, unsafe/broad grants, inherited
-`service_role`, inert lexical evidence and dynamic SQL. Result: PASS; no
-actionable P0/P1/P2 finding.
+`service_role`, role-scoped defaults, fragment-assembled dynamic SQL and
+commented policy roles. The post-correction re-audit result is PASS.
 
 ### Independent authority/continuity hostile audit
 
@@ -160,12 +160,12 @@ P0/P1/P2 finding remains.
 
 | Validation | Result |
 |---|---|
-| Focused A2 hostile suite | PASS, 80/80 clean-replan hostile tests |
-| A0 historical direct regression | PASS in exact A0+A1+A2 run, 133/133 total |
-| A1 serial-program regression | PASS in exact A0+A1+A2 run, 133/133 total |
-| Affected authority/mirror suites | PASS, 218/218 |
+| Focused A2 hostile suite | PASS, 83/83 after clean-replan source correction 1 |
+| A0 historical direct regression | PASS in exact A0+A1+A2 run, 136/136 total |
+| A1 serial-program regression | PASS in exact A0+A1+A2 run, 136/136 total |
+| Affected authority/mirror suites | PASS, 221/221 |
 | PR-contract validation | PASS against the exact planned Draft PR body and pinned A2 scope |
-| Full default Node suite | PASS, 1,538/1,538 |
+| Full default Node suite | PASS, 1,541/1,541 |
 | Typecheck | PASS |
 | Lint | PASS, zero errors; 11 existing warnings in untouched files |
 | Production build | PASS; one existing Turbopack trace warning from untouched runtime code |
@@ -191,7 +191,28 @@ reviewed-safe package path-by-path from refreshed main and closes both roots
 with the two independent authorities described above. Historical #790 threads
 remain untouched.
 
-Review cycle 1 was anchored to head
+PR #791 clean-replan review cycle 1 was anchored to initial head
+`b7334d2701972bcb0716f1d3f08e98701efec2f3` by formal review
+`4992562825`. It reported two actionable P1 findings and one actionable P2:
+
+- comment `3829644713`: default privileges for another creator role were
+  incorrectly collapsed into the current executor's state;
+- comment `3829644720`: fragment-assembled dynamic security DDL could evade a
+  literal fully qualified protected-object check; and
+- comment `3829644731`: a commented policy `TO authenticated` clause could be
+  parsed as executable and hide PostgreSQL's default `PUBLIC` role.
+
+Clean-replan source correction 1 fails closed on every `ALTER DEFAULT
+PRIVILEGES FOR ROLE/USER` form rather than merging role namespaces. It rejects
+all dynamic security DDL in mutable repair/append migrations even without a
+resolved target, also rejecting protected unqualified identifiers and dynamic
+default-privilege changes outside that boundary. Exact immutable A0 dynamic
+statements remain ignorable only behind the already validated exact source
+binding and an absence of protected identifiers/default-privilege mutation.
+CREATE/ALTER POLICY roles are now derived from executable masked SQL. Dedicated
+hostile tests reproduce all three findings.
+
+PR #790 donor review cycle 1 was anchored to head
 `d759f03b2e44cde3639c8acba9c0fb35712a719f` by formal review
 `4991176384`. It reported three actionable P1 findings and no P0/P2:
 
@@ -208,7 +229,7 @@ schema, environment, timestamp and zero-mutation evidence. Comment-only
 boundary changes, copied replay evidence and empty inventories have explicit
 hostile regressions.
 
-Review cycle 2 was anchored to head
+PR #790 donor review cycle 2 was anchored to head
 `8443a45b5f0e7d7f8b8dc3cbcb520a972c1cb0dc` by formal review
 `4991476697`. It reported two actionable P1 findings and one actionable P2:
 

@@ -791,6 +791,18 @@ test("broad schema and default-function privilege mutations fail closed", async 
   }
 });
 
+test("role-scoped default privilege mutations fail closed instead of sharing executor state", async () => {
+  const fixture = await checkpointFixture();
+  fixture.sql.set(fixture.append.filename, fixture.sql.get(fixture.append.filename).replace(
+    "create table if not exists public.c3r_p_learning_documents",
+    `alter default privileges for role another_creator in schema public revoke all on tables from service_role;
+create table if not exists public.c3r_p_learning_documents`,
+  ));
+  rebindAppendFixture(fixture);
+  const errors = validateMigrationInventoryAuthorityV2(contract, a0Manifest, fixture.sql, { repairReceipts: fixture.repairs, appendReceipts: [fixture.append] });
+  assert.ok(errors.includes("FINAL_SECURITY_UNSUPPORTED_DIAGNOSTIC"), errors.join(","));
+});
+
 test("a policy created and later dropped is absent and fails final policy closure", async () => {
   const fixture = await checkpointFixture();
   fixture.sql.set(fixture.append.filename, `${fixture.sql.get(fixture.append.filename)}\ndrop policy "c3r_p_learning_documents_select_own" on public.c3r_p_learning_documents;\n`);
@@ -809,6 +821,28 @@ do $$ begin execute 'alter table public.c3r_p_learning_documents disable row lev
   assert.ok(errors.includes("FINAL_SECURITY_UNSUPPORTED_DIAGNOSTIC"), errors.join(","));
 });
 
+test("dynamic security DDL assembled without a literal protected identifier fails closed", async () => {
+  const fixture = await checkpointFixture();
+  fixture.sql.set(fixture.append.filename, `${fixture.sql.get(fixture.append.filename)}
+do $$ begin execute 'alter table ' || 'public' || '.' || 'c3r_p_learning_' || 'documents disable row level security'; end $$;
+`);
+  rebindAppendFixture(fixture);
+  const errors = validateMigrationInventoryAuthorityV2(contract, a0Manifest, fixture.sql, { repairReceipts: fixture.repairs, appendReceipts: [fixture.append] });
+  assert.ok(errors.includes("FINAL_SECURITY_UNSUPPORTED_DIAGNOSTIC"), errors.join(","));
+});
+
+test("commented policy role clauses remain inert and default to public", async () => {
+  const fixture = await checkpointFixture();
+  fixture.sql.set(fixture.append.filename, fixture.sql.get(fixture.append.filename).replace(
+    "on public.c3r_p_learning_documents for select to authenticated",
+    `on public.c3r_p_learning_documents for select
+  -- to authenticated`,
+  ));
+  rebindAppendFixture(fixture);
+  const errors = validateMigrationInventoryAuthorityV2(contract, a0Manifest, fixture.sql, { repairReceipts: fixture.repairs, appendReceipts: [fixture.append] });
+  assert.ok(errors.includes("FINAL_SECURITY_POLICY_ROLE_public.c3r_p_learning_documents"), errors.join(","));
+});
+
 test("exact final safe state and ordered replay are deterministic", async () => {
   const fixture = await checkpointFixture();
   assert.deepEqual(validateMigrationFinalSecurityState(fixture.append.migrationFinalSecurityState), []);
@@ -816,6 +850,15 @@ test("exact final safe state and ordered replay are deterministic", async () => 
   const second = deriveCheckpointClosureEvidence(contract, a0Manifest, fixture.sql, fixture.repairs, fixture.append).migrationFinalSecurityState;
   assert.deepEqual(second, first);
   assert.equal(first.finalTables.every((table) => table.rlsEnabled && table.rlsForced), true);
+  for (const operation of first.operationTrace) {
+    assert.deepEqual(
+      Object.keys(operation).sort(),
+      [...contract.c3rpAppendReceiptV1.migrationFinalSecurityStateV1.operationBindingsExactly].sort(),
+    );
+    assert.equal(Number.isInteger(operation.canonicalMigrationOrder), true);
+    assert.equal(Number.isInteger(operation.statementOrdinal), true);
+    assert.equal(operation.sourceSpan.end > operation.sourceSpan.start, true);
+  }
 });
 
 test("comment-only checkpoint changes cannot bypass A0 consumer-before-producer closure", async () => {

@@ -206,6 +206,16 @@ state. Quoted identifiers retain PostgreSQL case identity. Dynamic or
 unsupported protected-object security DDL produces a typed fail-closed
 diagnostic.
 
+Default privileges are never collapsed across creator roles: `FOR ROLE` and
+`FOR USER` forms fail closed because the evaluator does not model their
+separate PostgreSQL namespaces. Dynamic security DDL in any mutable repair or
+append migration fails even when the target name is assembled from fragments.
+An immutable A0 dynamic statement may be ignored only while its exact source
+binding is intact and neither a protected qualified/unqualified identifier nor
+default-privilege mutation is present. Policy roles are derived only from
+executable masked SQL, so a commented `TO authenticated` clause cannot replace
+PostgreSQL's default `PUBLIC` policy role.
+
 For every protected private table, only the computed final state counts: the
 table exists, RLS is enabled and forced, the declared final policy set remains
 present with only `authenticated`, and no final table privilege grantee other

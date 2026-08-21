@@ -378,6 +378,12 @@ presence and fails. Comments/strings/inert dollar bodies do not count, quoted
 case stays distinct, and unsupported dynamic protected-object DDL fails
 closed.
 
+Role/user-scoped default privileges fail closed instead of being collapsed
+into one executor namespace. Mutable repair/append dynamic security DDL fails
+even when it assembles the target from fragments. Policy roles are read only
+from executable masked SQL, so comments cannot fabricate an authenticated
+restriction over PostgreSQL's default `PUBLIC` role.
+
 After A2's expected-head-pinned merge and validated receipt, C3R-P requires
 valid A0, A1 and A2 receipts and is
 `dependency_ready_unstarted_after_validated_a2_receipt`. A2 is an explicit
