@@ -781,6 +781,10 @@ test("inherited default table privileges are effective until explicitly revoked"
 test("broad schema and default-function privilege mutations fail closed", async () => {
   for (const statement of [
     "grant select on all tables in schema public to public;",
+    "grant select on all tables in schema \"public\" to anon;",
+    "grant select on all tables in schema private, public to anon;",
+    "grant execute on all routines in schema public to anon;",
+    "revoke execute on all functions in schema private, \"public\" from authenticated;",
     "alter default privileges in schema public grant execute on functions to public;",
   ]) {
     const fixture = await checkpointFixture();

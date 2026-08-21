@@ -214,7 +214,10 @@ An immutable A0 dynamic statement may be ignored only while its exact source
 binding is intact and neither a protected qualified/unqualified identifier nor
 default-privilege mutation is present. Policy roles are derived only from
 executable masked SQL, so a commented `TO authenticated` clause cannot replace
-PostgreSQL's default `PUBLIC` policy role.
+PostgreSQL's default `PUBLIC` policy role. Every direct `GRANT` or `REVOKE` on
+all tables, functions or routines fails closed before per-object evaluation,
+independent of quoted schema spelling or a schema's position in a multi-schema
+list; these broad forms cannot disappear from the derived final state.
 
 For every protected private table, only the computed final state counts: the
 table exists, RLS is enabled and forced, the declared final policy set remains

@@ -132,6 +132,9 @@ Protected tables finish enabled and forced with only authenticated safe state;
 protected functions finish with exactly authenticated EXECUTE. Later
 weakening, later broad grants, quoted-case substitution, policy removal,
 comments/strings/inert dollar bodies and unsupported dynamic DDL fail closed.
+Direct grants or revokes on all tables, functions or routines also fail closed
+for quoted and multi-schema forms rather than relying on a literal first
+`public` schema match.
 
 ### Independent PostgreSQL semantic/security hostile audit
 
@@ -143,7 +146,8 @@ construction, inherited default table privileges and explicit final-state
 validation. It then replayed hostile cases for erased semantics, digest
 rebinding, later RLS weakening, policy removal, unsafe/broad grants, inherited
 `service_role`, role-scoped defaults, fragment-assembled dynamic SQL and
-commented policy roles. The post-correction re-audit result is PASS.
+commented policy roles, quoted and multi-schema broad table/function grants,
+and `ALL ROUTINES` grants. The post-correction-2 re-audit result is PASS.
 
 ### Independent authority/continuity hostile audit
 
@@ -160,7 +164,7 @@ P0/P1/P2 finding remains.
 
 | Validation | Result |
 |---|---|
-| Focused A2 hostile suite | PASS, 83/83 after clean-replan source correction 1 |
+| Focused A2 hostile suite | PASS, 83/83 after clean-replan source correction 2 |
 | A0 historical direct regression | PASS in exact A0+A1+A2 run, 136/136 total |
 | A1 serial-program regression | PASS in exact A0+A1+A2 run, 136/136 total |
 | Affected authority/mirror suites | PASS, 221/221 |
@@ -211,6 +215,15 @@ statements remain ignorable only behind the already validated exact source
 binding and an absence of protected identifiers/default-privilege mutation.
 CREATE/ALTER POLICY roles are now derived from executable masked SQL. Dedicated
 hostile tests reproduce all three findings.
+
+PR #791 clean-replan review cycle 2 was anchored to correction head
+`cf59cdc2e8047e806c2c1db9b338b6966bdf14e4` by formal review
+`4992726260`. Comment `3829776827` reported one actionable P1: quoted-public,
+multi-schema and `ALL ROUTINES` broad privilege forms could bypass the narrow
+literal-public matcher. Clean-replan source correction 2 rejects every direct
+`GRANT` or `REVOKE` on all tables, functions or routines before per-object
+state derivation. Dedicated hostile rows cover quoted `public`, a non-first
+`public` schema, `ALL ROUTINES` and multi-schema function revocation.
 
 PR #790 donor review cycle 1 was anchored to head
 `d759f03b2e44cde3639c8acba9c0fb35712a719f` by formal review

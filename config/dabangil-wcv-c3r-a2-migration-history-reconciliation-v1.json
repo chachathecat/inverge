@@ -2221,6 +2221,7 @@
       "immutableA0DynamicSecurityDdlMayBeIgnoredOnlyWithExactSourceAndNoProtectedIdentifier": true,
       "roleOrUserScopedDefaultPrivilegesFailClosed": true,
       "policyRolesDerivedFromExecutableMaskedSql": true,
+      "allTableFunctionRoutineSchemaPrivilegesFailClosed": true,
       "quotedIdentifierCaseSensitive": true,
       "everyProtectedTableRlsEnabledAndForced": true,
       "finalPolicySetDeclaredByAppendReceipt": true

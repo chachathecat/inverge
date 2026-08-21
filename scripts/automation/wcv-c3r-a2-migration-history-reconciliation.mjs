@@ -934,6 +934,7 @@ export function validateA2AuthorityContract(contract, a0Manifest) {
     "immutableA0DynamicSecurityDdlMayBeIgnoredOnlyWithExactSourceAndNoProtectedIdentifier",
     "roleOrUserScopedDefaultPrivilegesFailClosed",
     "policyRolesDerivedFromExecutableMaskedSql",
+    "allTableFunctionRoutineSchemaPrivilegesFailClosed",
     "quotedIdentifierCaseSensitive",
     "everyProtectedTableRlsEnabledAndForced",
     "finalPolicySetDeclaredByAppendReceipt",
@@ -1172,7 +1173,7 @@ export function deriveMigrationFinalSecurityState(sequence, protectedObjects) {
         addUnsupported(migration, statement, "UNSUPPORTED_ROLE_SCOPED_DEFAULT_PRIVILEGES", "DEFAULT_TABLE_PRIVILEGES:public");
         continue;
       }
-      if (/^\s*(?:grant|revoke)\b[\s\S]*\bon\s+all\s+(?:tables|functions)\s+in\s+schema\s+public\b/iu.test(statement.masked) || /^\s*alter\s+default\s+privileges\b[\s\S]*\bon\s+functions\b/iu.test(statement.masked)) {
+      if (/^\s*(?:grant|revoke)\b[\s\S]*\bon\s+all\s+(?:tables|functions|routines)\b/iu.test(statement.masked) || /^\s*alter\s+default\s+privileges\b[\s\S]*\bon\s+functions\b/iu.test(statement.masked)) {
         addUnsupported(migration, statement, "UNSUPPORTED_BROAD_SECURITY_PRIVILEGE_DDL");
         continue;
       }
