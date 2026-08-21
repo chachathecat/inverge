@@ -1,5 +1,6 @@
 import { createHash } from "node:crypto";
 import {
+  deriveMigrationDependencyClosure,
   loadLiveMigrationSql,
   validateMigrationDependencyClosure,
 } from "./wcv-c3r-a0-migration-dependency-closure.mjs";
@@ -327,6 +328,27 @@ export function validateA2AuthorityContract(contract, a0Manifest) {
   }
   if (contract.exactReconciliationDecisions?.conceptGraph?.forwardBoundaryAppendRequired !== true) errors.push("CONCEPT_FORWARD_BOUNDARY");
 
+  const appendAuthority = contract.c3rpAppendReceiptV1 ?? {};
+  const pathClosure = appendAuthority.requiredMigrationSensitivePathClosureExactly ?? [];
+  if (pathClosure.length !== 14 || new Set(pathClosure).size !== 14 || pathClosure.filter((entry) => entry.includes("<C3R_P_APPEND_FILENAME>")).length !== 1 || pathClosure.some((entry) => !entry.startsWith("supabase/migrations/"))) {
+    errors.push("APPEND_REQUIRED_PATH_CLOSURE");
+  }
+  for (const field of [
+    "checkpointDependencyClosureMustUseA0Analyzer",
+    "replayReceiptMustBindExactHeadTreeInventoryClosureAndResultDigests",
+  ]) {
+    if (appendAuthority[field] !== true) errors.push(`APPEND_${field}`);
+  }
+  for (const field of [
+    "emptyMigrationSensitivePathClosureAllowed",
+    "emptySchemaRpcRlsObjectInventoryAllowed",
+  ]) {
+    if (appendAuthority[field] !== false) errors.push(`APPEND_${field}`);
+  }
+  if (appendAuthority.isolatedReplayReceiptType !== "SupabaseIsolatedMigrationReplayReceiptV1" || !same(appendAuthority.isolatedReplayRequiredFieldsExactly, [...REPLAY_RECEIPT_DIGEST_FIELDS, "receiptDigest"])) {
+    errors.push("APPEND_REPLAY_RECEIPT_SCHEMA");
+  }
+
   if (!same(contract.serialProgram?.strictStageOrder, ["C3R-P", "C3R-T", "C3R-L"])) errors.push("SERIAL_ORDER");
   if (!same(contract.serialProgram?.c3rPRequiresValidatedReceipts, ["C3R-A0", "C3R-A1", "C3R-A2"])) errors.push("P_RECEIPTS");
   if (contract.serialProgram?.c3rPState !== "dependency_ready_unstarted_after_validated_a2_receipt") errors.push("P_STATE");
@@ -350,10 +372,128 @@ function filenameVersion(filename) {
   return filename.match(/^(\d+)_/u)?.[1] ?? null;
 }
 
-function validateReplayReceipts(receipts) {
-  return Array.isArray(receipts) && receipts.length === 2 &&
-    new Set(receipts.map((receipt) => receipt.receiptId)).size === 2 &&
-    receipts.every((receipt) => receipt.engine === "EXACT_ISOLATED_SUPABASE_RESET_REPLAY" && receipt.linkedRemote === false && receipt.success === true);
+export function deriveMigrationInventoryDigest(sqlByFilename) {
+  return sha256(canonicalJson([...sqlByFilename]
+    .map(([filename, sql]) => ({ filename, sqlSha256: digestSql(sql) }))
+    .sort((left, right) => left.filename.localeCompare(right.filename))));
+}
+
+function normalizeSimpleIdentifier(identifier) {
+  return identifier.split(".").map((component) => component.replace(/^"|"$/gu, "").toLowerCase()).join(".");
+}
+
+function deriveSqlBoundaryInventory(derivedAppend, appendSql) {
+  const inventory = [];
+  for (const [role, objects] of [
+    ["PRODUCES", derivedAppend.producedObjects],
+    ["MODIFIES", derivedAppend.modifiedObjects],
+    ["DROPS", derivedAppend.droppedObjects],
+  ]) {
+    for (const object of objects) inventory.push({ role, ...object });
+  }
+  for (const match of appendSql.matchAll(/\balter\s+table\s+(?:if\s+exists\s+)?((?:"[^"]+"|[a-z_][a-z0-9_$]*)(?:\.(?:"[^"]+"|[a-z_][a-z0-9_$]*))?)\s+(?:force\s+)?enable\s+row\s+level\s+security\b/giu)) {
+    inventory.push({ role: "RLS_ENABLED", kind: "table", identifier: normalizeSimpleIdentifier(match[1]) });
+  }
+  for (const match of appendSql.matchAll(/\b(?:grant|revoke)\s+execute\s+on\s+function\s+((?:"[^"]+"|[a-z_][a-z0-9_$]*)(?:\.(?:"[^"]+"|[a-z_][a-z0-9_$]*))?)/giu)) {
+    inventory.push({ role: "RPC_BOUNDARY_TARGET", kind: "function", identifier: normalizeSimpleIdentifier(match[1]) });
+  }
+  return [...new Map(inventory
+    .map((entry) => [`${entry.role}:${entry.kind}:${entry.identifier}`, entry])).values()]
+    .sort((left, right) => `${left.role}:${left.kind}:${left.identifier}`.localeCompare(`${right.role}:${right.kind}:${right.identifier}`));
+}
+
+function expectedMigrationSensitivePathClosure(contract, appendFilename) {
+  return contract.c3rpAppendReceiptV1.requiredMigrationSensitivePathClosureExactly
+    .map((entry) => entry.replace("<C3R_P_APPEND_FILENAME>", appendFilename));
+}
+
+export function deriveCheckpointClosureEvidence(contract, a0Manifest, sqlByFilename, repairReceipts, appendReceipt) {
+  const repairsByFrom = new Map(repairReceipts.map((receipt) => [receipt.fromFilename, receipt]));
+  const projectedRecords = contract.migrationRecordReconciliationsV2
+    .map((plan) => ({
+      currentFilename: repairsByFrom.get(plan.currentFilename)?.toFilename ?? plan.currentFilename,
+      freshHistoryOrder: plan.exactProposedFreshHistoryOrder,
+      presentOnLiveMain: true,
+    }));
+  if (appendReceipt) {
+    projectedRecords.push({
+      currentFilename: appendReceipt.filename,
+      freshHistoryOrder: projectedRecords.length + 1,
+      presentOnLiveMain: true,
+    });
+  }
+  const derived = deriveMigrationDependencyClosure(projectedRecords, sqlByFilename, {
+    environmentRequiredExtensions: a0Manifest.migrationDependencyClosureV1.environmentRequiredExtensions,
+    externalDatabaseObjects: a0Manifest.externalDatabaseObjects,
+    closedQualifiedDatabaseSchemas: a0Manifest.migrationDependencyClosureV1.closedQualifiedDatabaseSchemas,
+    exactPredecessorOverrides: a0Manifest.migrationDependencyClosureV1.exactPredecessorOverrides,
+  });
+  const appendDerived = appendReceipt
+    ? derived.find((entry) => entry.currentFilename === appendReceipt.filename)
+    : null;
+  if (appendReceipt && !appendDerived) throw new Error("APPEND_NOT_IN_DERIVED_CLOSURE");
+  const schemaRpcRlsObjectInventory = appendReceipt
+    ? deriveSqlBoundaryInventory(appendDerived, sqlByFilename.get(appendReceipt.filename))
+    : [];
+  return {
+    dependencyClosureDigest: sha256(canonicalJson(derived)),
+    derivedMigrationCount: derived.length,
+    schemaRpcRlsObjectInventory,
+    schemaRpcRlsObjectInventoryDigest: sha256(canonicalJson(schemaRpcRlsObjectInventory)),
+  };
+}
+
+const REPLAY_RECEIPT_DIGEST_FIELDS = Object.freeze([
+  "receiptId",
+  "receiptType",
+  "cycle",
+  "engine",
+  "candidateHeadSha",
+  "candidateTreeSha",
+  "migrationInventoryDigest",
+  "dependencyClosureDigest",
+  "executedMigrationCount",
+  "executionOutputDigest",
+  "schemaStateDigest",
+  "isolatedEnvironmentFingerprint",
+  "startedAtUtc",
+  "finishedAtUtc",
+  "freshDatabase",
+  "linkedRemote",
+  "success",
+  "remoteMutationCount",
+  "learnerPrivateBodyCount",
+]);
+
+export function deriveReplayReceiptDigest(receipt) {
+  return sha256(canonicalJson(Object.fromEntries(
+    REPLAY_RECEIPT_DIGEST_FIELDS.map((field) => [field, receipt[field]]),
+  )));
+}
+
+function validateReplayReceipts(receipts, binding) {
+  if (!Array.isArray(receipts) || receipts.length !== 2 ||
+    new Set(receipts.map((receipt) => receipt.receiptId)).size !== 2 ||
+    !same(receipts.map((receipt) => receipt.cycle), [1, 2])) return false;
+  return receipts.every((receipt) => {
+    const started = Date.parse(receipt.startedAtUtc);
+    const finished = Date.parse(receipt.finishedAtUtc);
+    return receipt.receiptType === "SupabaseIsolatedMigrationReplayReceiptV1" &&
+      receipt.engine === "EXACT_ISOLATED_SUPABASE_RESET_REPLAY" &&
+      receipt.candidateHeadSha === binding.candidateHeadSha &&
+      receipt.candidateTreeSha === binding.candidateTreeSha &&
+      receipt.migrationInventoryDigest === binding.migrationInventoryDigest &&
+      receipt.dependencyClosureDigest === binding.dependencyClosureDigest &&
+      receipt.executedMigrationCount === binding.executedMigrationCount &&
+      /^[0-9a-f]{64}$/u.test(receipt.executionOutputDigest ?? "") &&
+      /^[0-9a-f]{64}$/u.test(receipt.schemaStateDigest ?? "") &&
+      /^[0-9a-f]{64}$/u.test(receipt.isolatedEnvironmentFingerprint ?? "") &&
+      Number.isFinite(started) && Number.isFinite(finished) && finished >= started &&
+      receipt.freshDatabase === true && receipt.linkedRemote === false &&
+      receipt.success === true && receipt.remoteMutationCount === 0 &&
+      receipt.learnerPrivateBodyCount === 0 &&
+      receipt.receiptDigest === deriveReplayReceiptDigest(receipt);
+  });
 }
 
 export function validateMigrationInventoryAuthorityV2(contract, a0Manifest, sqlByFilename, receiptBundle = {}) {
@@ -391,6 +531,7 @@ export function validateMigrationInventoryAuthorityV2(contract, a0Manifest, sqlB
     expected.set(receipt.toFilename, receipt.toSqlDigest);
   }
   const appendIds = new Set();
+  const actualInventoryDigest = deriveMigrationInventoryDigest(sqlByFilename);
   for (const receipt of appends) {
     if (appendIds.has(receipt.receiptId)) {
       errors.push("APPEND_DUPLICATE_RECEIPT");
@@ -400,7 +541,8 @@ export function validateMigrationInventoryAuthorityV2(contract, a0Manifest, sqlB
     const version = filenameVersion(receipt.filename);
     const priorVersions = [...expected.keys()].map(filenameVersion).filter(Boolean);
     const maxPrior = priorVersions.sort().at(-1);
-    if (receipt.receiptType !== "C3RPAppendReceiptV1" || receipt.a2AuthorityId !== contract.contractId || !same(receipt.purposeExactly, contract.c3rpAppendReceiptV1.requiredPurposeExactly) || !/^\d{14}_[a-z0-9_]+\.sql$/u.test(receipt.filename ?? "") || receipt.version !== version || version <= maxPrior || receipt.remoteApplicationAuthorized !== false || receipt.migrationHistoryRepairAuthorized !== false || !same(receipt.dependencyPredecessors, contract.c3rpAppendReceiptV1.requiredDependencyPredecessorsExactly) || !validateReplayReceipts(receipt.isolatedReplayReceipts) || receipt.exactHeadCentralEvidence !== true || receipt.exactHeadDedicatedRuntimeEvidence !== true || !Array.isArray(receipt.migrationSensitivePathClosure) || !Array.isArray(receipt.schemaRpcRlsObjectInventory)) {
+    const expectedPathClosure = expectedMigrationSensitivePathClosure(contract, receipt.filename);
+    if (receipt.receiptType !== "C3RPAppendReceiptV1" || receipt.a2AuthorityId !== contract.contractId || !same(receipt.purposeExactly, contract.c3rpAppendReceiptV1.requiredPurposeExactly) || !/^\d{14}_[a-z0-9_]+\.sql$/u.test(receipt.filename ?? "") || receipt.version !== version || version <= maxPrior || receipt.remoteApplicationAuthorized !== false || receipt.migrationHistoryRepairAuthorized !== false || !same(receipt.dependencyPredecessors, contract.c3rpAppendReceiptV1.requiredDependencyPredecessorsExactly) || !/^[0-9a-f]{40}$/u.test(receipt.candidateHeadSha ?? "") || !/^[0-9a-f]{40}$/u.test(receipt.candidateTreeSha ?? "") || receipt.candidateHeadTreeBinding !== sha256(`${receipt.candidateHeadSha}:${receipt.candidateTreeSha}`) || receipt.migrationInventoryDigest !== actualInventoryDigest || receipt.migrationInventoryCount !== sqlByFilename.size || !same(receipt.migrationSensitivePathClosure, expectedPathClosure) || expectedPathClosure.length === 0 || receipt.migrationSensitivePathClosureDigest !== sha256(canonicalJson(expectedPathClosure)) || !Array.isArray(receipt.schemaRpcRlsObjectInventory) || receipt.schemaRpcRlsObjectInventory.length === 0 || receipt.schemaRpcRlsObjectInventoryDigest !== sha256(canonicalJson(receipt.schemaRpcRlsObjectInventory)) || !Array.isArray(receipt.isolatedReplayReceipts) || receipt.isolatedReplayReceipts.length !== 2 || receipt.exactHeadCentralEvidence !== true || !/^[0-9a-f]{64}$/u.test(receipt.centralEvidenceArtifactSha256 ?? "") || receipt.exactHeadDedicatedRuntimeEvidence !== true || !/^[0-9a-f]{64}$/u.test(receipt.dedicatedRuntimeEvidenceArtifactSha256 ?? "")) {
       errors.push(`APPEND_RECEIPT_${receipt.receiptId ?? "UNKNOWN"}`);
       continue;
     }
@@ -427,6 +569,50 @@ export function validateMigrationInventoryAuthorityV2(contract, a0Manifest, sqlB
       validateMigrationDependencyClosure(a0Manifest, sqlByFilename);
     } catch (error) {
       errors.push(`A0_HISTORICAL_REPLAY_${error.code ?? "FAILED"}`);
+    }
+  }
+  if ((repairs.length > 0 || appends.length > 0) && errors.length === 0) {
+    try {
+      const append = appends[0] ?? null;
+      const closureEvidence = deriveCheckpointClosureEvidence(
+        contract,
+        a0Manifest,
+        sqlByFilename,
+        repairs,
+        append,
+      );
+      if (closureEvidence.derivedMigrationCount !== sqlByFilename.size) {
+        errors.push("CHECKPOINT_DERIVED_MIGRATION_COUNT");
+      }
+      if (append) {
+        const requiredRoles = new Set(closureEvidence.schemaRpcRlsObjectInventory.map((entry) => entry.role));
+        if (!same(append.schemaRpcRlsObjectInventory, closureEvidence.schemaRpcRlsObjectInventory) || append.schemaRpcRlsObjectInventoryDigest !== closureEvidence.schemaRpcRlsObjectInventoryDigest || !["PRODUCES", "RLS_ENABLED", "RPC_BOUNDARY_TARGET"].every((role) => requiredRoles.has(role))) {
+          errors.push("APPEND_SCHEMA_RPC_RLS_INVENTORY");
+        }
+        if (append.dependencyClosureDigest !== closureEvidence.dependencyClosureDigest) {
+          errors.push("APPEND_DEPENDENCY_CLOSURE_DIGEST");
+        }
+        if (!validateReplayReceipts(append.isolatedReplayReceipts, {
+          candidateHeadSha: append.candidateHeadSha,
+          candidateTreeSha: append.candidateTreeSha,
+          migrationInventoryDigest: actualInventoryDigest,
+          dependencyClosureDigest: closureEvidence.dependencyClosureDigest,
+          executedMigrationCount: sqlByFilename.size,
+        })) {
+          errors.push("APPEND_REPLAY_RECEIPTS");
+        }
+      }
+      const learningReceipt = repairs.find((receipt) => receipt.fromFilename === "20260608_create_personal_learning_states.sql");
+      if (learningReceipt) {
+        const repairedSql = sqlByFilename.get(learningReceipt.toFilename) ?? "";
+        const allWalkReferences = repairedSql.match(/\bfrom\s+walk\b/giu)?.length ?? 0;
+        const recursiveTermReferences = Math.max(allWalkReferences - 1, 0);
+        if (recursiveTermReferences !== 1 || learningReceipt.implementationEvidence?.recursiveTermCount !== 1) {
+          errors.push("CHECKPOINT_42P19_RECURSIVE_STRUCTURE");
+        }
+      }
+    } catch (error) {
+      errors.push(`CHECKPOINT_DEPENDENCY_CLOSURE_${error.code ?? error.message ?? "FAILED"}`);
     }
   }
   return errors;

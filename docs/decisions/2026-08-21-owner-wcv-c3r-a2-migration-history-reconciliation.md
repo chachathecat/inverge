@@ -140,15 +140,30 @@ time unique 14-digit version greater than `20260817170000`, its filename and
 SQL digest, every exact canonical predecessor, migration-sensitive path
 closure, schema/RPC/RLS inventory, two distinct exact isolated Supabase
 reset/replay receipts, and exact-head central and dedicated runtime evidence.
+The path closure is the exact non-empty set of seven repair/rename sources and
+targets plus the sole append path. The schema/RPC/RLS inventory is the exact
+non-empty SQL-derived object projection, not a caller-supplied placeholder.
+The A0 analyzer must derive a zero-failure dependency closure over the actual
+repaired/appended SQL inventory before the receipt can validate.
+
+Each replay receipt binds the candidate head and tree, actual ordered
+migration-inventory digest and count, A0-derived dependency-closure digest,
+execution-output digest, resulting schema-state digest, isolated-environment
+fingerprint, ordered cycle number, start/finish timestamps and a canonical
+receipt digest. Both cycles require a fresh database, the exact Supabase
+engine, successful execution, zero linked-remote use, zero remote mutation and
+zero learner/private-body reads. Evidence copied from another head, tree,
+inventory or closure fails even when its internal digest is recomputed.
 
 That one append must combine both purposes:
 
 - final concept-graph RPC-boundary reassertion; and
 - C3R-P durable-learning schema/RPC/RLS installation.
 
-A second migration is not authorized. One replay, an embedded PostgreSQL
-compile, a donor result or an overlay outside the active chain is insufficient.
-The receipt grants no remote apply or migration-history repair authority.
+A second migration, an empty path or object inventory, comment-only repair,
+unbound replay object, one replay, embedded PostgreSQL compile, donor result or
+overlay outside the active chain is insufficient. The receipt grants no remote
+apply or migration-history repair authority.
 
 ## Historical test transition
 

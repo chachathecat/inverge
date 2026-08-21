@@ -98,12 +98,12 @@ extension/external-function closure on the unchanged baseline.
 
 | Validation | Result |
 |---|---|
-| Focused A2 hostile suite | PASS, 51/51 |
-| A0 historical direct regression | PASS in exact A0+A1+A2 run, 104/104 total |
-| A1 serial-program regression | PASS in exact A0+A1+A2 run, 104/104 total |
-| Affected authority/mirror suites | PASS, 173/173 |
+| Focused A2 hostile suite | PASS, 54/54 after review correction |
+| A0 historical direct regression | PASS in exact A0+A1+A2 run, 107/107 total |
+| A1 serial-program regression | PASS in exact A0+A1+A2 run, 107/107 total |
+| Affected authority/mirror suites | PASS, 176/176 |
 | PR-contract validation | PASS against the exact planned Draft PR body and pinned A2 scope |
-| Full default Node suite | PASS, 1,509/1,509 |
+| Full default Node suite | PASS, 1,512/1,512 |
 | Typecheck | PASS |
 | Lint | PASS, zero errors; 11 existing warnings in untouched files |
 | Production build | PASS; one existing Turbopack trace warning from untouched runtime code |
@@ -112,6 +112,25 @@ extension/external-function closure on the unchanged baseline.
 | Forbidden paths unchanged | PASS, migrations/runtime/package/lock/A0/A1 immutable artifacts have zero diff |
 | A0 byte identity | PASS, exact git blobs and SHA-256 values |
 | Deterministic receipt replay | PASS in focused suite |
+
+## Exact-head review correction ledger
+
+Review cycle 1 was anchored to head
+`d759f03b2e44cde3639c8acba9c0fb35712a719f` by formal review
+`4991176384`. It reported three actionable P1 findings and no P0/P2:
+
+- repaired/appended checkpoint SQL did not run the A0 dependency closure;
+- empty migration-path and schema/RPC/RLS inventories were accepted; and
+- replay receipts were not bound to exact head/tree/inventory/closure/result
+  evidence.
+
+Source correction 1 makes all three fail closed. The actual repaired/appended
+inventory now runs the immutable A0 analyzer's dependency derivation, exact
+non-empty path and SQL-derived object inventories are digest-bound, and both
+canonical replay receipts bind exact head/tree/inventory/closure plus output,
+schema, environment, timestamp and zero-mutation evidence. Comment-only
+boundary changes, copied replay evidence and empty inventories have explicit
+hostile regressions.
 
 ## Boundaries
 

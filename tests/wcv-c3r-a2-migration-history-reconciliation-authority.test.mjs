@@ -10,6 +10,9 @@ import {
   EXACT_LEDGER_ABSENT_FILES_V1,
   EXACT_REMOTE_LEDGER_RECORDS_V1,
   deriveA0BaselineInventoryDigest,
+  deriveCheckpointClosureEvidence,
+  deriveMigrationInventoryDigest,
+  deriveReplayReceiptDigest,
   loadCurrentInventory,
   sha256,
   validateA2AuthorityContract,
@@ -123,11 +126,37 @@ async function checkpointFixture() {
     let nextSql = originalSql;
     const evidence = {};
     if (filename === "20260608_create_personal_learning_states.sql") {
-      nextSql = `${originalSql}\n-- test fixture: one valid recursive structure receipt\n`;
+      nextSql = originalSql.replace(/\r\n?/gu, "\n").replace(
+        /  with recursive walk\(key, child\) as \(\n[\s\S]*?\n  \)\n  (?=select exists)/u,
+        `  with recursive walk(key, child) as (
+    select null::text as key, value as child
+    union all
+    select expanded.key, expanded.child
+    from walk
+    cross join lateral (
+      select entries.key, entries.value as child
+      from jsonb_each(
+        case when jsonb_typeof(walk.child) = 'object' then walk.child else '{}'::jsonb end
+      ) as entries(key, value)
+      union all
+      select null::text as key, elements.value as child
+      from jsonb_array_elements(
+        case when jsonb_typeof(walk.child) = 'array' then walk.child else '[]'::jsonb end
+      ) as elements(value)
+    ) as expanded(key, child)
+  )
+  `,
+      );
       evidence.resolvedFailureCode = "42P19";
+      evidence.recursiveTermCount = 1;
     }
     if (filename === "202606232130_personal_concept_graph_rpc_only_write_boundary.sql") {
-      nextSql = `${originalSql}\n-- test fixture: compatibility-safe before producer\n`;
+      nextSql = `-- Compatibility-safe early boundary fixture.
+revoke insert, update on table public.personal_concept_nodes from authenticated;
+grant select, delete on table public.personal_concept_nodes to authenticated;
+drop policy if exists "personal_concept_nodes_insert_own" on public.personal_concept_nodes;
+drop policy if exists "personal_concept_nodes_update_own" on public.personal_concept_nodes;
+`;
       evidence.compatibilitySafeBeforeProducer = true;
       evidence.unsafeGrantBeforeProducer = false;
     }
@@ -149,7 +178,28 @@ async function checkpointFixture() {
       remoteMutationAuthorized: false,
     });
   }
-  const appendSql = "-- sole C3R-P durable learning and boundary finalization fixture\nselect 1;\n";
+  const appendSql = `-- Sole C3R-P durable-learning and boundary-finalization fixture.
+create table if not exists public.c3r_p_learning_documents (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references auth.users(id) on delete cascade,
+  metadata jsonb not null default '{}'::jsonb
+);
+alter table public.c3r_p_learning_documents enable row level security;
+create policy "c3r_p_learning_documents_select_own"
+  on public.c3r_p_learning_documents for select to authenticated
+  using (auth.uid() is not null and user_id = auth.uid());
+create or replace function public.c3r_p_append_learning_document_v1(p_document_id uuid)
+returns void language plpgsql security definer set search_path = public, pg_temp
+as $$ begin perform 1; end $$;
+revoke execute on function public.c3r_p_append_learning_document_v1(uuid) from public, anon;
+grant execute on function public.c3r_p_append_learning_document_v1(uuid) to authenticated;
+revoke execute on function public.transition_personal_concept_node_v1(
+  text, text, text, text, text, text, text, text, integer, timestamptz
+) from public, anon;
+grant execute on function public.transition_personal_concept_node_v1(
+  text, text, text, text, text, text, text, text, integer, timestamptz
+) to authenticated;
+`;
   const append = {
     receiptId: "c3r-p-append:test",
     receiptType: "C3RPAppendReceiptV1",
@@ -159,18 +209,51 @@ async function checkpointFixture() {
     filename: "20260821170000_c3r_p_durable_learning_and_boundary.sql",
     sqlDigest: sha256(appendSql),
     dependencyPredecessors: contract.c3rpAppendReceiptV1.requiredDependencyPredecessorsExactly,
-    migrationSensitivePathClosure: ["supabase/migrations/20260821170000_c3r_p_durable_learning_and_boundary.sql"],
-    schemaRpcRlsObjectInventory: ["public.c3r_fixture"],
-    isolatedReplayReceipts: [
-      { receiptId: "replay-1", engine: "EXACT_ISOLATED_SUPABASE_RESET_REPLAY", linkedRemote: false, success: true },
-      { receiptId: "replay-2", engine: "EXACT_ISOLATED_SUPABASE_RESET_REPLAY", linkedRemote: false, success: true },
-    ],
+    candidateHeadSha: "1".repeat(40),
+    candidateTreeSha: "2".repeat(40),
     exactHeadCentralEvidence: true,
+    centralEvidenceArtifactSha256: sha256("central-evidence"),
     exactHeadDedicatedRuntimeEvidence: true,
+    dedicatedRuntimeEvidenceArtifactSha256: sha256("dedicated-runtime-evidence"),
     remoteApplicationAuthorized: false,
     migrationHistoryRepairAuthorized: false,
   };
+  append.candidateHeadTreeBinding = sha256(`${append.candidateHeadSha}:${append.candidateTreeSha}`);
   sql.set(append.filename, appendSql);
+  append.migrationInventoryDigest = deriveMigrationInventoryDigest(sql);
+  append.migrationInventoryCount = sql.size;
+  append.migrationSensitivePathClosure = contract.c3rpAppendReceiptV1.requiredMigrationSensitivePathClosureExactly
+    .map((entry) => entry.replace("<C3R_P_APPEND_FILENAME>", append.filename));
+  append.migrationSensitivePathClosureDigest = sha256(JSON.stringify(append.migrationSensitivePathClosure));
+  const closure = deriveCheckpointClosureEvidence(contract, a0Manifest, sql, repairs, append);
+  append.dependencyClosureDigest = closure.dependencyClosureDigest;
+  append.schemaRpcRlsObjectInventory = closure.schemaRpcRlsObjectInventory;
+  append.schemaRpcRlsObjectInventoryDigest = closure.schemaRpcRlsObjectInventoryDigest;
+  append.isolatedReplayReceipts = [1, 2].map((cycle) => {
+    const receipt = {
+      receiptId: `replay-${cycle}`,
+      receiptType: "SupabaseIsolatedMigrationReplayReceiptV1",
+      cycle,
+      engine: "EXACT_ISOLATED_SUPABASE_RESET_REPLAY",
+      candidateHeadSha: append.candidateHeadSha,
+      candidateTreeSha: append.candidateTreeSha,
+      migrationInventoryDigest: append.migrationInventoryDigest,
+      dependencyClosureDigest: append.dependencyClosureDigest,
+      executedMigrationCount: sql.size,
+      executionOutputDigest: sha256(`execution-output-${cycle}`),
+      schemaStateDigest: sha256(`schema-state-${cycle}`),
+      isolatedEnvironmentFingerprint: sha256(`isolated-environment-${cycle}`),
+      startedAtUtc: `2026-08-21T0${cycle}:00:00.000Z`,
+      finishedAtUtc: `2026-08-21T0${cycle}:05:00.000Z`,
+      freshDatabase: true,
+      linkedRemote: false,
+      success: true,
+      remoteMutationCount: 0,
+      learnerPrivateBodyCount: 0,
+    };
+    receipt.receiptDigest = deriveReplayReceiptDigest(receipt);
+    return receipt;
+  });
   return { sql, repairs, append };
 }
 
@@ -370,6 +453,43 @@ test("diagnostic embedded PostgreSQL cannot satisfy exact Supabase replay", asyn
   const fixture = await checkpointFixture();
   fixture.append.isolatedReplayReceipts[0].engine = "EMBEDDED_POSTGRES_DIAGNOSTIC";
   assert.notDeepEqual(validateMigrationInventoryAuthorityV2(contract, a0Manifest, fixture.sql, { repairReceipts: fixture.repairs, appendReceipts: [fixture.append] }), []);
+});
+
+test("replay receipts cannot be copied from another head even with a recomputed receipt digest", async () => {
+  const fixture = await checkpointFixture();
+  const replay = fixture.append.isolatedReplayReceipts[0];
+  replay.candidateHeadSha = "3".repeat(40);
+  replay.receiptDigest = deriveReplayReceiptDigest(replay);
+  assert.ok(validateMigrationInventoryAuthorityV2(contract, a0Manifest, fixture.sql, { repairReceipts: fixture.repairs, appendReceipts: [fixture.append] }).includes("APPEND_REPLAY_RECEIPTS"));
+});
+
+test("empty migration path closure and schema RPC RLS inventory fail", async () => {
+  const pathFixture = await checkpointFixture();
+  pathFixture.append.migrationSensitivePathClosure = [];
+  pathFixture.append.migrationSensitivePathClosureDigest = sha256("[]");
+  assert.ok(validateMigrationInventoryAuthorityV2(contract, a0Manifest, pathFixture.sql, { repairReceipts: pathFixture.repairs, appendReceipts: [pathFixture.append] }).some((error) => error.startsWith("APPEND_RECEIPT_")));
+
+  const schemaFixture = await checkpointFixture();
+  schemaFixture.append.schemaRpcRlsObjectInventory = [];
+  schemaFixture.append.schemaRpcRlsObjectInventoryDigest = sha256("[]");
+  assert.ok(validateMigrationInventoryAuthorityV2(contract, a0Manifest, schemaFixture.sql, { repairReceipts: schemaFixture.repairs, appendReceipts: [schemaFixture.append] }).some((error) => error.startsWith("APPEND_RECEIPT_")));
+});
+
+test("comment-only checkpoint changes cannot bypass A0 consumer-before-producer closure", async () => {
+  const fixture = await checkpointFixture();
+  const boundary = "202606232130_personal_concept_graph_rpc_only_write_boundary.sql";
+  const current = await loadCurrentInventory(repositoryRoot);
+  const unsafeSql = `${current.get(boundary)}\n-- forged compatibility claim only\n`;
+  fixture.sql.set(boundary, unsafeSql);
+  const repair = fixture.repairs.find((entry) => entry.fromFilename === boundary);
+  repair.toSqlDigest = sha256(unsafeSql.replace(/\r\n?/gu, "\n"));
+  fixture.append.migrationInventoryDigest = deriveMigrationInventoryDigest(fixture.sql);
+  for (const replay of fixture.append.isolatedReplayReceipts) {
+    replay.migrationInventoryDigest = fixture.append.migrationInventoryDigest;
+    replay.receiptDigest = deriveReplayReceiptDigest(replay);
+  }
+  const errors = validateMigrationInventoryAuthorityV2(contract, a0Manifest, fixture.sql, { repairReceipts: fixture.repairs, appendReceipts: [fixture.append] });
+  assert.ok(errors.some((error) => error.startsWith("CHECKPOINT_DEPENDENCY_CLOSURE_")), errors.join(","));
 });
 
 test("remote migration repair remains unauthorized", () => {
