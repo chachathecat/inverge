@@ -1,0 +1,1810 @@
+{
+  "contractId": "dabangil.wcv.c3r.a2.migration-history-reconciliation",
+  "contractVersion": "1.0.0",
+  "authority": {
+    "stage": "C3R-A2",
+    "decisionDateKst": "2026-08-21",
+    "kind": "SOURCE_ONLY_APPEND_AWARE_MIGRATION_AUTHORITY",
+    "repositoryAuthorityEffectiveOn": "EXPECTED_HEAD_PINNED_SQUASH_MERGE_AND_VALIDATED_GITHUB_RECEIPT",
+    "preservesA0HistoricalReceipt": true,
+    "preservesA1SerialProgramReceipt": true,
+    "narrowlySupersedesA0LiveCurrentExact25Forever": true,
+    "doesNotSupersedeA0HistoricalEvidence": true,
+    "doesNotReorderC3rStages": true,
+    "runtimeInstalledByThisWork": false
+  },
+  "a0HistoricalReceiptV1": {
+    "receiptType": "A0HistoricalReceiptV1",
+    "pullRequest": 785,
+    "reviewedHead": "f7f959368525f8a5895026f1361f6e13fd6226e0",
+    "reviewedTree": "543f8dfb5fdd026c1361e1a502376945912e6c5c",
+    "squashMergeSha": "3a7047cf4c7fc68247137bafbca2434abdadbc7f",
+    "resultingMainSha": "3a7047cf4c7fc68247137bafbca2434abdadbc7f",
+    "resultingMainTree": "543f8dfb5fdd026c1361e1a502376945912e6c5c",
+    "actionableCounts": {
+      "p0": 0,
+      "p1": 0,
+      "p2": 0
+    },
+    "unresolvedActionableThreads": 0,
+    "finalCleanReviewArtifact": {
+      "kind": "GITHUB_ISSUE_COMMENT",
+      "databaseId": 5364991468,
+      "reviewedHead": "f7f959368525f8a5895026f1361f6e13fd6226e0"
+    },
+    "immutableArtifacts": {
+      "decision": {
+        "ref": "docs/decisions/2026-08-21-owner-wcv-c3r-a0-migration-dependency-authority.md",
+        "gitBlob": "8996f6c61f6cf0c5f7c908e97437a2f24bc65f8f",
+        "sha256": "f3be7b829539fa51c9037a58f05ed5a7c3fccbfcae28b3bb7b716330865b2ba6"
+      },
+      "manifest": {
+        "ref": "config/dabangil-wcv-c3r-a0-migration-dependency-authority-v1.json",
+        "gitBlob": "49916703d0a144647d6abce8cc98971042a35e1c",
+        "sha256": "e6e6d741d47732137860c0efc5c0dddc6b75e54fbd0ed6f2b1bcbe88e9f9d8e9"
+      },
+      "analyzer": {
+        "ref": "scripts/automation/wcv-c3r-a0-migration-dependency-closure.mjs",
+        "gitBlob": "23ba3b9f2af452b250cea0cbbbc5f135e8643b2d",
+        "sha256": "85751e62c300465b205f5e6d19357261af892a0072e06de2c4322258290fa6ec"
+      },
+      "focusedTest": {
+        "ref": "tests/wcv-c3r-a0-migration-dependency-authority.test.mjs",
+        "gitBlob": "04c5e3254ac03712a0fde27ef068329299305c40",
+        "sha256": "fa7e388a0f785b41661ac4fff342de7afe9dc05e03dee0e7afb0d3548bc6daaa"
+      }
+    },
+    "baselineInventoryRef": "config/dabangil-wcv-c3r-a0-migration-dependency-authority-v1.json#migrationHistoryCompatibilityManifestV1.records",
+    "baselineInventoryFilesExactly": [
+      {
+        "currentFilename": "20260422_inverge_service_core.sql",
+        "currentVersionToken": "20260422",
+        "sqlSha256": "7203fc06b5f76ffe28b6f9440515f93b46019f344820adf5744067ded377bbbf"
+      },
+      {
+        "currentFilename": "20260423_inverge_service_role_grants.sql",
+        "currentVersionToken": "20260423",
+        "sqlSha256": "3bd8cd68ed43c21d637f7558cebd56ddf9d7b4a5148f1f6dc8b7107058424683"
+      },
+      {
+        "currentFilename": "20260424_review_os_alpha.sql",
+        "currentVersionToken": "20260424",
+        "sqlSha256": "dc3a7d90509eb949cb5a7ef7bd871706fa90ab902261e815aee293018be86960"
+      },
+      {
+        "currentFilename": "20260426_review_os_study_logs.sql",
+        "currentVersionToken": "20260426",
+        "sqlSha256": "c079b4f3891b4ca20b5151852090ea44913bf06a11bfd8efa954cd7f2a039bec"
+      },
+      {
+        "currentFilename": "20260427_study_logs_taxonomy_candidates.sql",
+        "currentVersionToken": "20260427",
+        "sqlSha256": "dc1e0a72409c50ff5550897ac26c504da3f5831ca47f76250ac83a22b35a71d0"
+      },
+      {
+        "currentFilename": "20260429_learning_signal_events.sql",
+        "currentVersionToken": "20260429",
+        "sqlSha256": "53b3e70b86a7339e06667aebed5e72758fb7f59c15c5c7ad9a809187a76cb8ec"
+      },
+      {
+        "currentFilename": "20260430_exam_archive.sql",
+        "currentVersionToken": "20260430",
+        "sqlSha256": "a540f24d8be0d9cef7f35321dc97989147f1fdca67a7b1328c5b594160a8acdd"
+      },
+      {
+        "currentFilename": "20260605_create_personal_concept_nodes.sql",
+        "currentVersionToken": "20260605",
+        "sqlSha256": "fce87dbb71c2e72792c0a53f840c9c41fe620856c34d208e36c9ac5bcbdd8b61"
+      },
+      {
+        "currentFilename": "20260608_create_personal_learning_states.sql",
+        "currentVersionToken": "20260608",
+        "sqlSha256": "13f290748149a6d1ede1b3894ca9bce3d3f79e198015918e5a4159b6c1c2b968"
+      },
+      {
+        "currentFilename": "20260615_legal_grounding.sql",
+        "currentVersionToken": "20260615",
+        "sqlSha256": "fb585b9c2d96edfd696d2f03e0d4fc427597c7759ee6ab96de5a3dddf29d237e"
+      },
+      {
+        "currentFilename": "20260615_legal_article_chunk_identity.sql",
+        "currentVersionToken": "20260615",
+        "sqlSha256": "03dce727ac9bca1ab290556583c33593c3ae6ee544b0c90cc8ff7e05aea6e29d"
+      },
+      {
+        "currentFilename": "20260615_legal_retrieval.sql",
+        "currentVersionToken": "20260615",
+        "sqlSha256": "d1ec08d0e3082e224c8da95c412636d83a0d4183df3a1ec4a1432f795b0154cc"
+      },
+      {
+        "currentFilename": "20260615_legal_grounding_guard.sql",
+        "currentVersionToken": "20260615",
+        "sqlSha256": "436e741f78efc14fa7decd2c6f8c3eadf31f5acd4590df98c3eaad988493b642"
+      },
+      {
+        "currentFilename": "20260616_legal_grounding_guard_service_role_grant.sql",
+        "currentVersionToken": "20260616",
+        "sqlSha256": "25e358828f3953b3cf793f7eeb645c816156e8bb89f5b7899d3c075de9594e13"
+      },
+      {
+        "currentFilename": "20260622_mobile_pwa_web_push_reminder.sql",
+        "currentVersionToken": "20260622",
+        "sqlSha256": "3788b39e1cfd1de6496484bf1bcdd3bce62aba56280d6fd5a625dba61a398bf7"
+      },
+      {
+        "currentFilename": "20260623_personal_concept_graph_atomic_transition.sql",
+        "currentVersionToken": "20260623",
+        "sqlSha256": "8f33722533a46dfa2784bc3140f2d9c07172260106265e49daabbf549ff9519c"
+      },
+      {
+        "currentFilename": "202606232130_personal_concept_graph_rpc_only_write_boundary.sql",
+        "currentVersionToken": "202606232130",
+        "sqlSha256": "57b2aa59f96f3ea294a7d7e0c46350c5c3cb330c53a301a2d57634f2f54a0a57"
+      },
+      {
+        "currentFilename": "20260721060237_s233a_answer_review_persistence.sql",
+        "currentVersionToken": "20260721060237",
+        "sqlSha256": "07f8d60f6eb15f96647463ad4bbfa18f463296e801d0c77d732ffd1720890e75"
+      },
+      {
+        "currentFilename": "20260730025332_s236p_lean_owner_private.sql",
+        "currentVersionToken": "20260730025332",
+        "sqlSha256": "476ef1b0d6a100fb6e4803b812b049b44252ca5f25301d3f781cee8827b1545b"
+      },
+      {
+        "currentFilename": "20260730060233_s236p_owner_private_lifecycle_hardening.sql",
+        "currentVersionToken": "20260730060233",
+        "sqlSha256": "e20440dfa0d880ad591b8c9fdff287cd66fcdbbe4f96f07a549a730fd8920de1"
+      },
+      {
+        "currentFilename": "20260730065744_s236p_owner_private_authenticated_download_info.sql",
+        "currentVersionToken": "20260730065744",
+        "sqlSha256": "632cc7ee563aa29a573425e396f6f539e35a3c8834955ba66ccd01723bb3cbcb"
+      },
+      {
+        "currentFilename": "20260730151052_s236p_owner_private_expiry_read_gate.sql",
+        "currentVersionToken": "20260730151052",
+        "sqlSha256": "416fa80acea48bf4d170661a4f5259632b4d9e3fd740007bd65cbf1ded6103f1"
+      },
+      {
+        "currentFilename": "20260817090000_c2r_c_p_structured_practice_proof.sql",
+        "currentVersionToken": "20260817090000",
+        "sqlSha256": "012041613e99df02a2933364d5b5f78d92d8b20a1b67a837ca1f2c4eb7640e74"
+      },
+      {
+        "currentFilename": "20260817113000_c2r_c_t_structural_theory_proof.sql",
+        "currentVersionToken": "20260817113000",
+        "sqlSha256": "819275ebda058f1a9001871ece18efca466323db9306adb7b637d01d2dc25e08"
+      },
+      {
+        "currentFilename": "20260817170000_c2r_c_l_exact_law_applicability.sql",
+        "currentVersionToken": "20260817170000",
+        "sqlSha256": "a850e29ec2a94e7b5bb1f99c8157b99afc590e1dcb22c45f2e57f1c5b4323075"
+      }
+    ],
+    "baselineInventoryDigestAlgorithm": "SHA256_UTF8_CANONICAL_JSON_V1",
+    "baselineInventoryDigestPreimageDomain": "A0 manifest records in declared order projected to currentFilename,currentVersionToken,sqlSha256,exactDependencyPredecessors,freshHistoryOrder; arrays preserve order; object keys sort lexicographically; JSON is minified",
+    "baselineInventoryDigest": "7a3f3e550da98bdeb65a7c6e1539a8dcb019f081017d076cef7ddef2ab7e4006",
+    "historicalReceiptRemainsValid": true,
+    "soleLiveCurrentInventoryAuthorityAfterA2": false
+  },
+  "a1HistoricalProgramReceiptV1": {
+    "receiptType": "A1HistoricalProgramReceiptV1",
+    "pullRequest": 786,
+    "baseSha": "3a7047cf4c7fc68247137bafbca2434abdadbc7f",
+    "reviewedHead": "ff9dfbebea182d647daa84a349fcc50610f0ed1b",
+    "reviewedTree": "3c48da6fe991d8c02e3991e0a571b3b12139932c",
+    "squashMergeSha": "54afffcc539981ded65591f1f027171343bfce40",
+    "resultingMainSha": "54afffcc539981ded65591f1f027171343bfce40",
+    "resultingMainTree": "3c48da6fe991d8c02e3991e0a571b3b12139932c",
+    "actionableCounts": {
+      "p0": 0,
+      "p1": 0,
+      "p2": 0
+    },
+    "unresolvedActionableThreads": 0,
+    "finalCleanReviewArtifact": {
+      "kind": "GITHUB_ISSUE_COMMENT",
+      "databaseId": 5365845668,
+      "reviewedHead": "ff9dfbebea182d647daa84a349fcc50610f0ed1b"
+    },
+    "requiredChecksPassed": true,
+    "strictStageOrder": [
+      "C3R-P",
+      "C3R-T",
+      "C3R-L"
+    ],
+    "governedIssuesRemainOpen": [
+      706,
+      707,
+      708,
+      714,
+      781
+    ],
+    "immutableArtifacts": {
+      "decision": {
+        "ref": "docs/decisions/2026-08-21-owner-wcv-c3r-a1-serial-program-authority.md",
+        "gitBlob": "21fc829df76c51dfa8a891f927fd79267e195e8f",
+        "sha256": "f7fc2722aa2afaa799994b3c7273b4511500e3f2d2fa45cb421396f56f114758"
+      },
+      "contract": {
+        "ref": "config/dabangil-wcv-c3r-a1-serial-program-authority-v1.json",
+        "gitBlob": "4b8efb14ef58e7940c457c925f972f995066c677",
+        "sha256": "4219924c4ee7e36f6d0005c53660a76b32fbf82dae9fbf218b46d1f7e1397823"
+      },
+      "validation": {
+        "ref": "docs/qa/wcv-c3r-a1-serial-program-authority-validation.md",
+        "gitBlob": "a73f235664a422adf9a247401f585b5bb55b587f",
+        "sha256": "c152b5c4fb1cc80d0c1813a6740d467caf067aeda4b0ffc220586598ae775f70"
+      },
+      "focusedTest": {
+        "ref": "tests/wcv-c3r-a1-serial-program-authority.test.mjs",
+        "gitBlob": "45db6d4def9f2530dedad28966bf6dd40fdacdcf",
+        "sha256": "01cf1d99fdbc41d7063961ae21d8834e25c538a209bbccba543ca33f87fa4882"
+      }
+    }
+  },
+  "remoteMigrationLedgerReceiptV1": {
+    "receiptType": "RemoteMigrationLedgerReceiptV1",
+    "logicalProjectName": "inverge-beta",
+    "environmentClass": "NON_PRODUCTION_BETA",
+    "projectHealthObserved": "ACTIVE_HEALTHY",
+    "nonSecretProjectFingerprintScheme": "SHA256_UTF8_SUPABASE_PROJECT_REF_V1",
+    "nonSecretProjectFingerprint": "5a58c1e637d9cacb4bc8a71c377a57c4c7863ef9e87a6dfc3597bc83e56770d4",
+    "observedAtUtc": "2026-08-21T07:17:37.805066Z",
+    "observedAtKst": "2026-08-21T16:17:37.805066+09:00",
+    "provenance": "LIVE_READ_ONLY",
+    "toolQueryProvenance": [
+      "mcp__codex_apps__supabase_list_projects",
+      "mcp__codex_apps__supabase_get_project",
+      "mcp__codex_apps__supabase_list_migrations",
+      "mcp__codex_apps__supabase_execute_sql:SELECT_ONLY:supabase_migrations.schema_migrations:jsonb_agg_order_by_version_name"
+    ],
+    "orderedRecords": [
+      {
+        "version": "20260422",
+        "name": "inverge_service_core"
+      },
+      {
+        "version": "20260423",
+        "name": "inverge_service_role_grants"
+      },
+      {
+        "version": "20260424",
+        "name": "review_os_alpha"
+      },
+      {
+        "version": "20260426",
+        "name": "review_os_study_logs"
+      },
+      {
+        "version": "20260427",
+        "name": "study_logs_taxonomy_candidates"
+      },
+      {
+        "version": "20260429",
+        "name": "learning_signal_events"
+      },
+      {
+        "version": "20260430",
+        "name": "exam_archive"
+      },
+      {
+        "version": "20260605",
+        "name": "create_personal_concept_nodes"
+      },
+      {
+        "version": "20260622",
+        "name": "mobile_pwa_web_push_reminder"
+      },
+      {
+        "version": "20260623",
+        "name": "personal_concept_graph_atomic_transition"
+      },
+      {
+        "version": "202606232130",
+        "name": "personal_concept_graph_rpc_only_write_boundary"
+      },
+      {
+        "version": "20260730025332",
+        "name": "s236p_lean_owner_private"
+      },
+      {
+        "version": "20260730060233",
+        "name": "s236p_owner_private_lifecycle_hardening"
+      },
+      {
+        "version": "20260730065744",
+        "name": "s236p_owner_private_authenticated_download_info"
+      },
+      {
+        "version": "20260730151052",
+        "name": "s236p_owner_private_expiry_read_gate"
+      }
+    ],
+    "exactCount": 15,
+    "receiptDigestMethod": "SHA256_POSTGRES_JSONB_TEXT_JSONB_AGG_BUILD_OBJECT_ORDER_BY_VERSION_NAME",
+    "receiptDigest": "45bcc29f8a21eb53e153e6d106250883ae843daa1057869390fd92cabc2a35c4",
+    "remoteMutationCount": 0,
+    "learnerPrivateBodyCount": 0,
+    "rawCredentialStored": false
+  },
+  "remoteSchemaMetadataReceiptV1": {
+    "receiptType": "RemoteSchemaMetadataReceiptV1",
+    "provenance": "LIVE_READ_ONLY",
+    "observationWindowUtc": {
+      "relations": "2026-08-21T07:18:07.719574Z",
+      "functions": "2026-08-21T07:18:26.733723Z",
+      "extensions": "2026-08-21T07:18:36.763633Z"
+    },
+    "toolQueryProvenance": [
+      "mcp__codex_apps__supabase_list_extensions",
+      "mcp__codex_apps__supabase_execute_sql:SELECT_ONLY:pg_catalog+information_schema:49_target_relations",
+      "mcp__codex_apps__supabase_execute_sql:SELECT_ONLY:pg_catalog:14_target_functions"
+    ],
+    "relationSummary": {
+      "targeted": 49,
+      "present": 39,
+      "absent": 10,
+      "presenceProjectionSha256": "3bfdbf802d875c0d919cd364c7d7041bba6ff265a09eed1b517f4816723962cb",
+      "orderedMetadataSha256": "4cc6bf679d983c68990fd2012b71b337dc39b82f1a2565157cd9a15a3dd69234"
+    },
+    "functionSummary": {
+      "targeted": 14,
+      "present": 6,
+      "absent": 8,
+      "presenceProjectionSha256": "36d799965a4c8f48ff1f89bd2a3fe794a1cf6ea2c7d34488f2406f3c3e9d726b",
+      "orderedMetadataSha256": "37eae9e3aa0119f523cef5ad755d801b531136afb79e004a0e3f9ea6eaff9a29"
+    },
+    "relationPresenceExactly": [
+      {
+        "objectIdentifier": "public.action_seeds",
+        "objectKind": "relation",
+        "presenceState": "PRESENT"
+      },
+      {
+        "objectIdentifier": "public.answer_submissions",
+        "objectKind": "relation",
+        "presenceState": "PRESENT"
+      },
+      {
+        "objectIdentifier": "public.answers",
+        "objectKind": "relation",
+        "presenceState": "PRESENT"
+      },
+      {
+        "objectIdentifier": "public.checkout_sessions",
+        "objectKind": "relation",
+        "presenceState": "PRESENT"
+      },
+      {
+        "objectIdentifier": "public.coaching_seeds",
+        "objectKind": "relation",
+        "presenceState": "PRESENT"
+      },
+      {
+        "objectIdentifier": "public.derived_answer_features",
+        "objectKind": "relation",
+        "presenceState": "PRESENT"
+      },
+      {
+        "objectIdentifier": "public.derived_problem_features",
+        "objectKind": "relation",
+        "presenceState": "PRESENT"
+      },
+      {
+        "objectIdentifier": "public.diagnosis_results",
+        "objectKind": "relation",
+        "presenceState": "PRESENT"
+      },
+      {
+        "objectIdentifier": "public.exam_sessions",
+        "objectKind": "relation",
+        "presenceState": "PRESENT"
+      },
+      {
+        "objectIdentifier": "public.exams",
+        "objectKind": "relation",
+        "presenceState": "PRESENT"
+      },
+      {
+        "objectIdentifier": "public.feedback_items",
+        "objectKind": "relation",
+        "presenceState": "PRESENT"
+      },
+      {
+        "objectIdentifier": "public.learning_signal_events",
+        "objectKind": "relation",
+        "presenceState": "PRESENT"
+      },
+      {
+        "objectIdentifier": "public.legal_article_chunks",
+        "objectKind": "relation",
+        "presenceState": "PRESENT"
+      },
+      {
+        "objectIdentifier": "public.legal_concept_anchors",
+        "objectKind": "relation",
+        "presenceState": "PRESENT"
+      },
+      {
+        "objectIdentifier": "public.legal_concept_nodes",
+        "objectKind": "relation",
+        "presenceState": "PRESENT"
+      },
+      {
+        "objectIdentifier": "public.legal_sources",
+        "objectKind": "relation",
+        "presenceState": "PRESENT"
+      },
+      {
+        "objectIdentifier": "public.legal_sync_runs",
+        "objectKind": "relation",
+        "presenceState": "PRESENT"
+      },
+      {
+        "objectIdentifier": "public.legal_versions",
+        "objectKind": "relation",
+        "presenceState": "PRESENT"
+      },
+      {
+        "objectIdentifier": "public.notification_deliveries",
+        "objectKind": "relation",
+        "presenceState": "PRESENT"
+      },
+      {
+        "objectIdentifier": "public.notification_preferences",
+        "objectKind": "relation",
+        "presenceState": "PRESENT"
+      },
+      {
+        "objectIdentifier": "public.personal_concept_nodes",
+        "objectKind": "relation",
+        "presenceState": "PRESENT"
+      },
+      {
+        "objectIdentifier": "public.personal_concept_transition_events",
+        "objectKind": "relation",
+        "presenceState": "PRESENT"
+      },
+      {
+        "objectIdentifier": "public.problem_uploads",
+        "objectKind": "relation",
+        "presenceState": "PRESENT"
+      },
+      {
+        "objectIdentifier": "public.profiles",
+        "objectKind": "relation",
+        "presenceState": "PRESENT"
+      },
+      {
+        "objectIdentifier": "public.push_subscriptions",
+        "objectKind": "relation",
+        "presenceState": "PRESENT"
+      },
+      {
+        "objectIdentifier": "public.questions",
+        "objectKind": "relation",
+        "presenceState": "PRESENT"
+      },
+      {
+        "objectIdentifier": "public.recurrence_features",
+        "objectKind": "relation",
+        "presenceState": "PRESENT"
+      },
+      {
+        "objectIdentifier": "public.research_participation",
+        "objectKind": "relation",
+        "presenceState": "PRESENT"
+      },
+      {
+        "objectIdentifier": "public.review_queue_items",
+        "objectKind": "relation",
+        "presenceState": "PRESENT"
+      },
+      {
+        "objectIdentifier": "public.rewrite_submissions",
+        "objectKind": "relation",
+        "presenceState": "PRESENT"
+      },
+      {
+        "objectIdentifier": "public.s236p_owner_private_objects",
+        "objectKind": "relation",
+        "presenceState": "PRESENT"
+      },
+      {
+        "objectIdentifier": "public.study_logs",
+        "objectKind": "relation",
+        "presenceState": "PRESENT"
+      },
+      {
+        "objectIdentifier": "public.study_profiles",
+        "objectKind": "relation",
+        "presenceState": "PRESENT"
+      },
+      {
+        "objectIdentifier": "public.subscriptions",
+        "objectKind": "relation",
+        "presenceState": "PRESENT"
+      },
+      {
+        "objectIdentifier": "public.usage_events",
+        "objectKind": "relation",
+        "presenceState": "PRESENT"
+      },
+      {
+        "objectIdentifier": "public.weekly_learning_summaries",
+        "objectKind": "relation",
+        "presenceState": "PRESENT"
+      },
+      {
+        "objectIdentifier": "public.wrong_answer_items",
+        "objectKind": "relation",
+        "presenceState": "PRESENT"
+      },
+      {
+        "objectIdentifier": "public.wrong_answer_notes",
+        "objectKind": "relation",
+        "presenceState": "PRESENT"
+      },
+      {
+        "objectIdentifier": "public.wrong_answer_tags",
+        "objectKind": "relation",
+        "presenceState": "PRESENT"
+      },
+      {
+        "objectIdentifier": "public.personal_learning_states",
+        "objectKind": "relation",
+        "presenceState": "ABSENT"
+      },
+      {
+        "objectIdentifier": "public.s233a_answer_reviews",
+        "objectKind": "relation",
+        "presenceState": "ABSENT"
+      },
+      {
+        "objectIdentifier": "public.s233a_answer_review_revisions",
+        "objectKind": "relation",
+        "presenceState": "ABSENT"
+      },
+      {
+        "objectIdentifier": "public.s233a_evidence_state_records",
+        "objectKind": "relation",
+        "presenceState": "ABSENT"
+      },
+      {
+        "objectIdentifier": "public.s236p_owner_private_events",
+        "objectKind": "relation",
+        "presenceState": "ABSENT"
+      },
+      {
+        "objectIdentifier": "public.wcv_c2_trusted_repair_sessions",
+        "objectKind": "relation",
+        "presenceState": "ABSENT"
+      },
+      {
+        "objectIdentifier": "public.wcv_c2_trusted_repair_private_artifacts",
+        "objectKind": "relation",
+        "presenceState": "ABSENT"
+      },
+      {
+        "objectIdentifier": "public.wcv_c2_trusted_repair_exposure_events",
+        "objectKind": "relation",
+        "presenceState": "ABSENT"
+      },
+      {
+        "objectIdentifier": "public.wcv_c2_trusted_repair_command_receipts",
+        "objectKind": "relation",
+        "presenceState": "ABSENT"
+      },
+      {
+        "objectIdentifier": "public.wcv_c2_trusted_repair_scarcity_events",
+        "objectKind": "relation",
+        "presenceState": "ABSENT"
+      }
+    ],
+    "functionPresenceExactly": [
+      {
+        "objectIdentifier": "public.transition_personal_concept_node_v1",
+        "objectKind": "function",
+        "presenceState": "PRESENT"
+      },
+      {
+        "objectIdentifier": "public.search_legal_chunks_keyword",
+        "objectKind": "function",
+        "presenceState": "PRESENT"
+      },
+      {
+        "objectIdentifier": "public.get_legal_concept_source_anchors",
+        "objectKind": "function",
+        "presenceState": "PRESENT"
+      },
+      {
+        "objectIdentifier": "public.s236p_set_object_lifecycle_v1",
+        "objectKind": "function",
+        "presenceState": "PRESENT"
+      },
+      {
+        "objectIdentifier": "public.s236p_guard_object_update_v1",
+        "objectKind": "function",
+        "presenceState": "PRESENT"
+      },
+      {
+        "objectIdentifier": "public.s236p_expired_object_paths_v1",
+        "objectKind": "function",
+        "presenceState": "PRESENT"
+      },
+      {
+        "objectIdentifier": "public.personal_learning_state_metadata_has_forbidden_key",
+        "objectKind": "function",
+        "presenceState": "ABSENT"
+      },
+      {
+        "objectIdentifier": "public.claim_s233a_answer_review_v1",
+        "objectKind": "function",
+        "presenceState": "ABSENT"
+      },
+      {
+        "objectIdentifier": "public.transition_s233a_answer_review_v1",
+        "objectKind": "function",
+        "presenceState": "ABSENT"
+      },
+      {
+        "objectIdentifier": "public.s236p_set_event_lifecycle_v1",
+        "objectKind": "function",
+        "presenceState": "ABSENT"
+      },
+      {
+        "objectIdentifier": "public.s236p_authorize_signed_url_v1",
+        "objectKind": "function",
+        "presenceState": "ABSENT"
+      },
+      {
+        "objectIdentifier": "public.wcv_c2_apply_trusted_repair_transition_v1",
+        "objectKind": "function",
+        "presenceState": "ABSENT"
+      },
+      {
+        "objectIdentifier": "public.wcv_c2_create_trusted_repair_session_v1",
+        "objectKind": "function",
+        "presenceState": "ABSENT"
+      },
+      {
+        "objectIdentifier": "public.wcv_c2_validate_exact_law_proof_v1",
+        "objectKind": "function",
+        "presenceState": "ABSENT"
+      }
+    ],
+    "selectedMaterialObservations": [
+      {
+        "objectIdentifier": "public.personal_learning_states",
+        "objectKind": "table",
+        "presenceState": "ABSENT",
+        "rlsEnabled": false,
+        "rlsForced": false,
+        "definitionFingerprint": null
+      },
+      {
+        "objectIdentifier": "public.personal_concept_nodes",
+        "objectKind": "table",
+        "presenceState": "PRESENT",
+        "rlsEnabled": true,
+        "rlsForced": false,
+        "definitionFingerprint": "226957fe7c0ce25c64827367c24b72e0/cc59e559b7f1c55d032a078f87bded0b/a48169389aaddcda3decf822b9d08ed8/84d526ef81ad37ffab3162c688949c3d/7a5db3d773f08efb802eb3fd9819a307"
+      },
+      {
+        "objectIdentifier": "public.personal_concept_transition_events",
+        "objectKind": "table",
+        "presenceState": "PRESENT",
+        "rlsEnabled": true,
+        "rlsForced": false,
+        "definitionFingerprint": "c04b06c8413154412471c42c156a0aa6/3542302b9023dac51f327d60bb87c1f8/7a0bf35ab2c2e2f697da9552f172c56c/7ed46dcd05bae91bd3194f16554058c5/1c2357e317183c2d9b7bcaac11b97da1"
+      },
+      {
+        "objectIdentifier": "public.legal_sources",
+        "objectKind": "table",
+        "presenceState": "PRESENT",
+        "rlsEnabled": true,
+        "rlsForced": false,
+        "definitionFingerprint": "c7231be95a794c5feafac0c6bc38e321/c49e8a2083f97e5cecd0ba3635e5af49/ff400affdef7a37919b6fcd38831137e/bace65459520f41495b5d34586b2ecc4/5e322d59066d67e04e27cc5c0c9df6d9"
+      },
+      {
+        "objectIdentifier": "public.legal_versions",
+        "objectKind": "table",
+        "presenceState": "PRESENT",
+        "rlsEnabled": true,
+        "rlsForced": false,
+        "definitionFingerprint": "792225422d424ac1230d6179749d0ad9/bd559c0238d3c99b79832b6583bfe77c/999334729ddb2f86a5c503f418c35108/010d8dd1b89691acdaa4aed8cf88e9c0/5e322d59066d67e04e27cc5c0c9df6d9"
+      },
+      {
+        "objectIdentifier": "public.legal_article_chunks",
+        "objectKind": "table",
+        "presenceState": "PRESENT",
+        "rlsEnabled": true,
+        "rlsForced": false,
+        "definitionFingerprint": "3b7efd9a0c4599d5663c61ba72ad4269/fc52dd79a7869b16b045617f0770b277/b3a1fd8438d73bb9d3b0d86fce6b1ad9/5940cf34c11974934e687b274316dd04/5e322d59066d67e04e27cc5c0c9df6d9"
+      },
+      {
+        "objectIdentifier": "public.legal_concept_nodes",
+        "objectKind": "table",
+        "presenceState": "PRESENT",
+        "rlsEnabled": true,
+        "rlsForced": false,
+        "definitionFingerprint": "7979954a84e7077547efb17005383a82/bf907f2217a502d534e03bb815f35e30/e3c00dd702e878e788e59a2dfaa93f2e/b21fa1f0d2f807f87a2f22cebff1bb1d/5e322d59066d67e04e27cc5c0c9df6d9"
+      },
+      {
+        "objectIdentifier": "public.legal_concept_anchors",
+        "objectKind": "table",
+        "presenceState": "PRESENT",
+        "rlsEnabled": true,
+        "rlsForced": false,
+        "definitionFingerprint": "0e91c62e6ee706a95b0090663444c20a/e664774706b16a0ff112cce536b98e8e/f380316f05261b4952c8eaca21b7a5d8/a4444f0075d39207d98623553bbeb2f3/5e322d59066d67e04e27cc5c0c9df6d9"
+      },
+      {
+        "objectIdentifier": "public.s236p_owner_private_objects",
+        "objectKind": "table",
+        "presenceState": "PRESENT",
+        "rlsEnabled": true,
+        "rlsForced": true,
+        "definitionFingerprint": "975d3d96878868a681afeaf3e788947d/071993aac7df08c606961a323d1087a8/f334c172090dd729233d380144a27cbf/21bc2a3035b375077b94c939cb6b4bcb/36350cf357559f8e22d6a5aaf240e123"
+      },
+      {
+        "objectIdentifier": "public.transition_personal_concept_node_v1",
+        "objectKind": "function",
+        "presenceState": "PRESENT",
+        "exactSignature": "p_event_id text, p_exam_mode text, p_subject_id text, p_unit_id text, p_task_type text, p_result text, p_confidence text, p_due_bucket text, p_recent_miss_count integer, p_occurred_at timestamp with time zone",
+        "definitionFingerprint": "0aa7d76598c8167a4293a6ac097b2bfb",
+        "aclFingerprint": "5fc13192159b7c60c3a808895ae2c2c8"
+      }
+    ],
+    "selectedMaterialObservationsSha256": "17f79a7519bae955eb10241e85983d75894d0fa9b0b6a787917a63e496d2f7ab",
+    "extensions": [
+      {
+        "name": "pgcrypto",
+        "schema": "extensions",
+        "installedVersion": "1.3"
+      },
+      {
+        "name": "vector",
+        "schema": "public",
+        "installedVersion": "0.8.0"
+      }
+    ],
+    "extensionRowsSha256": "4e4fbcb0d5b1dbeb52aacdde0c000355377903161ef38ad7d26cdaabfa53b0e6",
+    "receiptDigestPreimage": "RemoteSchemaMetadataReceiptV1|relations:4cc6bf679d983c68990fd2012b71b337dc39b82f1a2565157cd9a15a3dd69234|functions:37eae9e3aa0119f523cef5ad755d801b531136afb79e004a0e3f9ea6eaff9a29|extensions:4e4fbcb0d5b1dbeb52aacdde0c000355377903161ef38ad7d26cdaabfa53b0e6",
+    "receiptDigest": "cbe27ce7e921f310e6ec7d0f243060cc919e2bfd8bc8299cacac43d88f15aabd",
+    "objectPresenceEstablishesMigrationEquivalence": false,
+    "remoteMutationCount": 0,
+    "learnerPrivateBodyCount": 0,
+    "secretCount": 0
+  },
+  "closedEnums": {
+    "migrationLedgerStatusV2": [
+      "LEDGER_APPLIED",
+      "LEDGER_ABSENT"
+    ],
+    "migrationSchemaStatusV2": [
+      "SCHEMA_MATCH_VERIFIED",
+      "SCHEMA_PRESENT_UNVERIFIED",
+      "SCHEMA_PARTIAL",
+      "SCHEMA_ABSENT",
+      "SCHEMA_UNASSESSED"
+    ],
+    "migrationSourceTreatmentV2": [
+      "PRESERVE",
+      "REPAIR_IN_PLACE_FOR_FRESH_HISTORY",
+      "REPLACE_WITH_COMPATIBILITY_STUB",
+      "SUPERSEDE_BY_FORWARD_RECONCILIATION",
+      "RETIRE_FROM_ACTIVE_CHAIN_WITH_EXACT_ALIAS_RECEIPT"
+    ],
+    "migrationFilenameTreatmentV2": [
+      "PRESERVE_VERSION",
+      "RENAME_LEDGER_ABSENT_TO_UNIQUE_14_DIGIT_VERSION",
+      "PRESERVE_APPLIED_VERSION_WITH_COMPATIBILITY_BEHAVIOR",
+      "HISTORICAL_ALIAS_PLUS_CANONICAL_VERSION"
+    ],
+    "remoteContinuityTreatmentV2": [
+      "NO_REMOTE_ACTION_REQUIRED",
+      "EXACT_SCHEMA_EQUIVALENCE_REQUIRED",
+      "FUTURE_HISTORY_REPAIR_OWNER_GATE",
+      "FUTURE_FORWARD_RECONCILIATION_OWNER_GATE",
+      "REMOTE_DEPLOY_BLOCKED"
+    ]
+  },
+  "migrationRecordReconciliationsV2": [
+    {
+      "currentFilename": "20260422_inverge_service_core.sql",
+      "currentVersionToken": "20260422",
+      "currentSqlDigest": "7203fc06b5f76ffe28b6f9440515f93b46019f344820adf5744067ded377bbbf",
+      "a0BaselineBinding": "A0:20260422_inverge_service_core.sql:7203fc06b5f76ffe28b6f9440515f93b46019f344820adf5744067ded377bbbf",
+      "ledgerStatus": "LEDGER_APPLIED",
+      "schemaStatus": "SCHEMA_PRESENT_UNVERIFIED",
+      "freshHistoryStatus": {
+        "syntax": "UNVERIFIED",
+        "dependencyOrder": "UNVERIFIED",
+        "exactFailureCode": null,
+        "exactFailureClass": null,
+        "exactRepairRequirement": "EXACT_TWO_CYCLE_ISOLATED_SUPABASE_REPLAY_REQUIRED_AT_C3R_P_MIGRATION_CHECKPOINT"
+      },
+      "sourceTreatment": "PRESERVE",
+      "filenameTreatment": "PRESERVE_VERSION",
+      "proposedCanonicalFilename": "20260422_inverge_service_core.sql",
+      "exactProposedFreshHistoryOrder": 1,
+      "remoteContinuityTreatment": "NO_REMOTE_ACTION_REQUIRED",
+      "exactOwnerGateRequirement": "NONE_FOR_PRESERVING_THE_EXISTING_REMOTE_LEDGER_ROW",
+      "rollbackForwardStrategy": "PRESERVE_APPLIED_VERSION_AND_SOURCE; NO_HISTORY_REWRITE",
+      "evidenceRefs": [
+        "A0_BASELINE:20260422_inverge_service_core.sql",
+        "REMOTE_LEDGER_RECEIPT:2026-08-21T07:17:37.805066Z",
+        "REMOTE_SCHEMA_RECEIPT:cbe27ce7e921f310e6ec7d0f243060cc919e2bfd8bc8299cacac43d88f15aabd"
+      ],
+      "currentAuthorityStatus": "A0_BASELINE_BOUND_A2_RECONCILIATION_PLAN"
+    },
+    {
+      "currentFilename": "20260423_inverge_service_role_grants.sql",
+      "currentVersionToken": "20260423",
+      "currentSqlDigest": "3bd8cd68ed43c21d637f7558cebd56ddf9d7b4a5148f1f6dc8b7107058424683",
+      "a0BaselineBinding": "A0:20260423_inverge_service_role_grants.sql:3bd8cd68ed43c21d637f7558cebd56ddf9d7b4a5148f1f6dc8b7107058424683",
+      "ledgerStatus": "LEDGER_APPLIED",
+      "schemaStatus": "SCHEMA_PRESENT_UNVERIFIED",
+      "freshHistoryStatus": {
+        "syntax": "UNVERIFIED",
+        "dependencyOrder": "UNVERIFIED",
+        "exactFailureCode": null,
+        "exactFailureClass": null,
+        "exactRepairRequirement": "EXACT_TWO_CYCLE_ISOLATED_SUPABASE_REPLAY_REQUIRED_AT_C3R_P_MIGRATION_CHECKPOINT"
+      },
+      "sourceTreatment": "PRESERVE",
+      "filenameTreatment": "PRESERVE_VERSION",
+      "proposedCanonicalFilename": "20260423_inverge_service_role_grants.sql",
+      "exactProposedFreshHistoryOrder": 2,
+      "remoteContinuityTreatment": "NO_REMOTE_ACTION_REQUIRED",
+      "exactOwnerGateRequirement": "NONE_FOR_PRESERVING_THE_EXISTING_REMOTE_LEDGER_ROW",
+      "rollbackForwardStrategy": "PRESERVE_APPLIED_VERSION_AND_SOURCE; NO_HISTORY_REWRITE",
+      "evidenceRefs": [
+        "A0_BASELINE:20260423_inverge_service_role_grants.sql",
+        "REMOTE_LEDGER_RECEIPT:2026-08-21T07:17:37.805066Z",
+        "REMOTE_SCHEMA_RECEIPT:cbe27ce7e921f310e6ec7d0f243060cc919e2bfd8bc8299cacac43d88f15aabd"
+      ],
+      "currentAuthorityStatus": "A0_BASELINE_BOUND_A2_RECONCILIATION_PLAN"
+    },
+    {
+      "currentFilename": "20260424_review_os_alpha.sql",
+      "currentVersionToken": "20260424",
+      "currentSqlDigest": "dc3a7d90509eb949cb5a7ef7bd871706fa90ab902261e815aee293018be86960",
+      "a0BaselineBinding": "A0:20260424_review_os_alpha.sql:dc3a7d90509eb949cb5a7ef7bd871706fa90ab902261e815aee293018be86960",
+      "ledgerStatus": "LEDGER_APPLIED",
+      "schemaStatus": "SCHEMA_PRESENT_UNVERIFIED",
+      "freshHistoryStatus": {
+        "syntax": "UNVERIFIED",
+        "dependencyOrder": "UNVERIFIED",
+        "exactFailureCode": null,
+        "exactFailureClass": null,
+        "exactRepairRequirement": "EXACT_TWO_CYCLE_ISOLATED_SUPABASE_REPLAY_REQUIRED_AT_C3R_P_MIGRATION_CHECKPOINT"
+      },
+      "sourceTreatment": "PRESERVE",
+      "filenameTreatment": "PRESERVE_VERSION",
+      "proposedCanonicalFilename": "20260424_review_os_alpha.sql",
+      "exactProposedFreshHistoryOrder": 3,
+      "remoteContinuityTreatment": "NO_REMOTE_ACTION_REQUIRED",
+      "exactOwnerGateRequirement": "NONE_FOR_PRESERVING_THE_EXISTING_REMOTE_LEDGER_ROW",
+      "rollbackForwardStrategy": "PRESERVE_APPLIED_VERSION_AND_SOURCE; NO_HISTORY_REWRITE",
+      "evidenceRefs": [
+        "A0_BASELINE:20260424_review_os_alpha.sql",
+        "REMOTE_LEDGER_RECEIPT:2026-08-21T07:17:37.805066Z",
+        "REMOTE_SCHEMA_RECEIPT:cbe27ce7e921f310e6ec7d0f243060cc919e2bfd8bc8299cacac43d88f15aabd"
+      ],
+      "currentAuthorityStatus": "A0_BASELINE_BOUND_A2_RECONCILIATION_PLAN"
+    },
+    {
+      "currentFilename": "20260426_review_os_study_logs.sql",
+      "currentVersionToken": "20260426",
+      "currentSqlDigest": "c079b4f3891b4ca20b5151852090ea44913bf06a11bfd8efa954cd7f2a039bec",
+      "a0BaselineBinding": "A0:20260426_review_os_study_logs.sql:c079b4f3891b4ca20b5151852090ea44913bf06a11bfd8efa954cd7f2a039bec",
+      "ledgerStatus": "LEDGER_APPLIED",
+      "schemaStatus": "SCHEMA_PRESENT_UNVERIFIED",
+      "freshHistoryStatus": {
+        "syntax": "UNVERIFIED",
+        "dependencyOrder": "UNVERIFIED",
+        "exactFailureCode": null,
+        "exactFailureClass": null,
+        "exactRepairRequirement": "EXACT_TWO_CYCLE_ISOLATED_SUPABASE_REPLAY_REQUIRED_AT_C3R_P_MIGRATION_CHECKPOINT"
+      },
+      "sourceTreatment": "PRESERVE",
+      "filenameTreatment": "PRESERVE_VERSION",
+      "proposedCanonicalFilename": "20260426_review_os_study_logs.sql",
+      "exactProposedFreshHistoryOrder": 4,
+      "remoteContinuityTreatment": "NO_REMOTE_ACTION_REQUIRED",
+      "exactOwnerGateRequirement": "NONE_FOR_PRESERVING_THE_EXISTING_REMOTE_LEDGER_ROW",
+      "rollbackForwardStrategy": "PRESERVE_APPLIED_VERSION_AND_SOURCE; NO_HISTORY_REWRITE",
+      "evidenceRefs": [
+        "A0_BASELINE:20260426_review_os_study_logs.sql",
+        "REMOTE_LEDGER_RECEIPT:2026-08-21T07:17:37.805066Z",
+        "REMOTE_SCHEMA_RECEIPT:cbe27ce7e921f310e6ec7d0f243060cc919e2bfd8bc8299cacac43d88f15aabd"
+      ],
+      "currentAuthorityStatus": "A0_BASELINE_BOUND_A2_RECONCILIATION_PLAN"
+    },
+    {
+      "currentFilename": "20260427_study_logs_taxonomy_candidates.sql",
+      "currentVersionToken": "20260427",
+      "currentSqlDigest": "dc1e0a72409c50ff5550897ac26c504da3f5831ca47f76250ac83a22b35a71d0",
+      "a0BaselineBinding": "A0:20260427_study_logs_taxonomy_candidates.sql:dc1e0a72409c50ff5550897ac26c504da3f5831ca47f76250ac83a22b35a71d0",
+      "ledgerStatus": "LEDGER_APPLIED",
+      "schemaStatus": "SCHEMA_PRESENT_UNVERIFIED",
+      "freshHistoryStatus": {
+        "syntax": "UNVERIFIED",
+        "dependencyOrder": "UNVERIFIED",
+        "exactFailureCode": null,
+        "exactFailureClass": null,
+        "exactRepairRequirement": "EXACT_TWO_CYCLE_ISOLATED_SUPABASE_REPLAY_REQUIRED_AT_C3R_P_MIGRATION_CHECKPOINT"
+      },
+      "sourceTreatment": "PRESERVE",
+      "filenameTreatment": "PRESERVE_VERSION",
+      "proposedCanonicalFilename": "20260427_study_logs_taxonomy_candidates.sql",
+      "exactProposedFreshHistoryOrder": 5,
+      "remoteContinuityTreatment": "NO_REMOTE_ACTION_REQUIRED",
+      "exactOwnerGateRequirement": "NONE_FOR_PRESERVING_THE_EXISTING_REMOTE_LEDGER_ROW",
+      "rollbackForwardStrategy": "PRESERVE_APPLIED_VERSION_AND_SOURCE; NO_HISTORY_REWRITE",
+      "evidenceRefs": [
+        "A0_BASELINE:20260427_study_logs_taxonomy_candidates.sql",
+        "REMOTE_LEDGER_RECEIPT:2026-08-21T07:17:37.805066Z",
+        "REMOTE_SCHEMA_RECEIPT:cbe27ce7e921f310e6ec7d0f243060cc919e2bfd8bc8299cacac43d88f15aabd"
+      ],
+      "currentAuthorityStatus": "A0_BASELINE_BOUND_A2_RECONCILIATION_PLAN"
+    },
+    {
+      "currentFilename": "20260429_learning_signal_events.sql",
+      "currentVersionToken": "20260429",
+      "currentSqlDigest": "53b3e70b86a7339e06667aebed5e72758fb7f59c15c5c7ad9a809187a76cb8ec",
+      "a0BaselineBinding": "A0:20260429_learning_signal_events.sql:53b3e70b86a7339e06667aebed5e72758fb7f59c15c5c7ad9a809187a76cb8ec",
+      "ledgerStatus": "LEDGER_APPLIED",
+      "schemaStatus": "SCHEMA_PRESENT_UNVERIFIED",
+      "freshHistoryStatus": {
+        "syntax": "UNVERIFIED",
+        "dependencyOrder": "UNVERIFIED",
+        "exactFailureCode": null,
+        "exactFailureClass": null,
+        "exactRepairRequirement": "EXACT_TWO_CYCLE_ISOLATED_SUPABASE_REPLAY_REQUIRED_AT_C3R_P_MIGRATION_CHECKPOINT"
+      },
+      "sourceTreatment": "PRESERVE",
+      "filenameTreatment": "PRESERVE_VERSION",
+      "proposedCanonicalFilename": "20260429_learning_signal_events.sql",
+      "exactProposedFreshHistoryOrder": 6,
+      "remoteContinuityTreatment": "NO_REMOTE_ACTION_REQUIRED",
+      "exactOwnerGateRequirement": "NONE_FOR_PRESERVING_THE_EXISTING_REMOTE_LEDGER_ROW",
+      "rollbackForwardStrategy": "PRESERVE_APPLIED_VERSION_AND_SOURCE; NO_HISTORY_REWRITE",
+      "evidenceRefs": [
+        "A0_BASELINE:20260429_learning_signal_events.sql",
+        "REMOTE_LEDGER_RECEIPT:2026-08-21T07:17:37.805066Z",
+        "REMOTE_SCHEMA_RECEIPT:cbe27ce7e921f310e6ec7d0f243060cc919e2bfd8bc8299cacac43d88f15aabd"
+      ],
+      "currentAuthorityStatus": "A0_BASELINE_BOUND_A2_RECONCILIATION_PLAN"
+    },
+    {
+      "currentFilename": "20260430_exam_archive.sql",
+      "currentVersionToken": "20260430",
+      "currentSqlDigest": "a540f24d8be0d9cef7f35321dc97989147f1fdca67a7b1328c5b594160a8acdd",
+      "a0BaselineBinding": "A0:20260430_exam_archive.sql:a540f24d8be0d9cef7f35321dc97989147f1fdca67a7b1328c5b594160a8acdd",
+      "ledgerStatus": "LEDGER_APPLIED",
+      "schemaStatus": "SCHEMA_PRESENT_UNVERIFIED",
+      "freshHistoryStatus": {
+        "syntax": "UNVERIFIED",
+        "dependencyOrder": "UNVERIFIED",
+        "exactFailureCode": null,
+        "exactFailureClass": null,
+        "exactRepairRequirement": "EXACT_TWO_CYCLE_ISOLATED_SUPABASE_REPLAY_REQUIRED_AT_C3R_P_MIGRATION_CHECKPOINT"
+      },
+      "sourceTreatment": "PRESERVE",
+      "filenameTreatment": "PRESERVE_VERSION",
+      "proposedCanonicalFilename": "20260430_exam_archive.sql",
+      "exactProposedFreshHistoryOrder": 7,
+      "remoteContinuityTreatment": "NO_REMOTE_ACTION_REQUIRED",
+      "exactOwnerGateRequirement": "NONE_FOR_PRESERVING_THE_EXISTING_REMOTE_LEDGER_ROW",
+      "rollbackForwardStrategy": "PRESERVE_APPLIED_VERSION_AND_SOURCE; NO_HISTORY_REWRITE",
+      "evidenceRefs": [
+        "A0_BASELINE:20260430_exam_archive.sql",
+        "REMOTE_LEDGER_RECEIPT:2026-08-21T07:17:37.805066Z",
+        "REMOTE_SCHEMA_RECEIPT:cbe27ce7e921f310e6ec7d0f243060cc919e2bfd8bc8299cacac43d88f15aabd"
+      ],
+      "currentAuthorityStatus": "A0_BASELINE_BOUND_A2_RECONCILIATION_PLAN"
+    },
+    {
+      "currentFilename": "20260605_create_personal_concept_nodes.sql",
+      "currentVersionToken": "20260605",
+      "currentSqlDigest": "fce87dbb71c2e72792c0a53f840c9c41fe620856c34d208e36c9ac5bcbdd8b61",
+      "a0BaselineBinding": "A0:20260605_create_personal_concept_nodes.sql:fce87dbb71c2e72792c0a53f840c9c41fe620856c34d208e36c9ac5bcbdd8b61",
+      "ledgerStatus": "LEDGER_APPLIED",
+      "schemaStatus": "SCHEMA_PRESENT_UNVERIFIED",
+      "freshHistoryStatus": {
+        "syntax": "UNVERIFIED",
+        "dependencyOrder": "UNVERIFIED",
+        "exactFailureCode": null,
+        "exactFailureClass": null,
+        "exactRepairRequirement": "EXACT_TWO_CYCLE_ISOLATED_SUPABASE_REPLAY_REQUIRED_AT_C3R_P_MIGRATION_CHECKPOINT"
+      },
+      "sourceTreatment": "PRESERVE",
+      "filenameTreatment": "PRESERVE_VERSION",
+      "proposedCanonicalFilename": "20260605_create_personal_concept_nodes.sql",
+      "exactProposedFreshHistoryOrder": 8,
+      "remoteContinuityTreatment": "NO_REMOTE_ACTION_REQUIRED",
+      "exactOwnerGateRequirement": "NONE_FOR_PRESERVING_THE_EXISTING_REMOTE_LEDGER_ROW",
+      "rollbackForwardStrategy": "PRESERVE_APPLIED_VERSION_AND_SOURCE; NO_HISTORY_REWRITE",
+      "evidenceRefs": [
+        "A0_BASELINE:20260605_create_personal_concept_nodes.sql",
+        "REMOTE_LEDGER_RECEIPT:2026-08-21T07:17:37.805066Z",
+        "REMOTE_SCHEMA_RECEIPT:cbe27ce7e921f310e6ec7d0f243060cc919e2bfd8bc8299cacac43d88f15aabd"
+      ],
+      "currentAuthorityStatus": "A0_BASELINE_BOUND_A2_RECONCILIATION_PLAN"
+    },
+    {
+      "currentFilename": "20260608_create_personal_learning_states.sql",
+      "currentVersionToken": "20260608",
+      "currentSqlDigest": "13f290748149a6d1ede1b3894ca9bce3d3f79e198015918e5a4159b6c1c2b968",
+      "a0BaselineBinding": "A0:20260608_create_personal_learning_states.sql:13f290748149a6d1ede1b3894ca9bce3d3f79e198015918e5a4159b6c1c2b968",
+      "ledgerStatus": "LEDGER_ABSENT",
+      "schemaStatus": "SCHEMA_ABSENT",
+      "freshHistoryStatus": {
+        "syntax": "FAIL",
+        "dependencyOrder": "UNVERIFIED",
+        "exactFailureCode": "42P19",
+        "exactFailureClass": "INVALID_RECURSION_MULTIPLE_RECURSIVE_TERMS",
+        "exactRepairRequirement": "REPLACE_WITH_ONE_POSTGRESQL_VALID_RECURSIVE_STRUCTURE_PRESERVING_RESULT_AND_RLS_BOUNDARY_THEN_PROVE_TWO_EXACT_ISOLATED_SUPABASE_REPLAYS"
+      },
+      "sourceTreatment": "REPAIR_IN_PLACE_FOR_FRESH_HISTORY",
+      "filenameTreatment": "RENAME_LEDGER_ABSENT_TO_UNIQUE_14_DIGIT_VERSION",
+      "proposedCanonicalFilename": "20260608090000_create_personal_learning_states.sql",
+      "exactProposedFreshHistoryOrder": 9,
+      "remoteContinuityTreatment": "FUTURE_FORWARD_RECONCILIATION_OWNER_GATE",
+      "exactOwnerGateRequirement": "OWNER_GATED_FORWARD_RECONCILIATION_REQUIRED_BEFORE_ANY_REMOTE_DEPLOY",
+      "rollbackForwardStrategy": "LOCAL_REPAIR_AND_RENAME_AT_C3R_P_CHECKPOINT; REMOTE_FORWARD_RECONCILIATION_ONLY",
+      "evidenceRefs": [
+        "A0_BASELINE:20260608_create_personal_learning_states.sql",
+        "REMOTE_LEDGER_RECEIPT:2026-08-21T07:17:37.805066Z",
+        "REMOTE_SCHEMA_RECEIPT:cbe27ce7e921f310e6ec7d0f243060cc919e2bfd8bc8299cacac43d88f15aabd"
+      ],
+      "currentAuthorityStatus": "A0_BASELINE_BOUND_A2_RECONCILIATION_PLAN"
+    },
+    {
+      "currentFilename": "20260615_legal_grounding.sql",
+      "currentVersionToken": "20260615",
+      "currentSqlDigest": "fb585b9c2d96edfd696d2f03e0d4fc427597c7759ee6ab96de5a3dddf29d237e",
+      "a0BaselineBinding": "A0:20260615_legal_grounding.sql:fb585b9c2d96edfd696d2f03e0d4fc427597c7759ee6ab96de5a3dddf29d237e",
+      "ledgerStatus": "LEDGER_ABSENT",
+      "schemaStatus": "SCHEMA_PRESENT_UNVERIFIED",
+      "freshHistoryStatus": {
+        "syntax": "UNVERIFIED",
+        "dependencyOrder": "FAIL",
+        "exactFailureCode": "DUPLICATE_VERSION_AND_LEXICAL_PRODUCER_CONSUMER_ORDER",
+        "exactFailureClass": "LEGAL_FAMILY_CANONICAL_ORDER_DEFECT",
+        "exactRepairRequirement": "RENAME_LEDGER_ABSENT_FILES_TO_THE_EXACT_UNIQUE_14_DIGIT_CANONICAL_ORDER_AND_PROVE_TWO_EXACT_ISOLATED_SUPABASE_REPLAYS"
+      },
+      "sourceTreatment": "PRESERVE",
+      "filenameTreatment": "RENAME_LEDGER_ABSENT_TO_UNIQUE_14_DIGIT_VERSION",
+      "proposedCanonicalFilename": "20260615090000_legal_grounding.sql",
+      "exactProposedFreshHistoryOrder": 10,
+      "remoteContinuityTreatment": "EXACT_SCHEMA_EQUIVALENCE_REQUIRED",
+      "exactOwnerGateRequirement": "OWNER_PACKET_MUST_CHOOSE_EXACT_EQUIVALENCE_HISTORY_REPAIR_OR_REVIEWED_FORWARD_RECONCILIATION_BEFORE_REMOTE_DEPLOY",
+      "rollbackForwardStrategy": "LOCAL_CANONICAL_RENAME_ONLY; REMOTE_EQUIVALENCE_OR_FORWARD_PATH_REMAINS_OWNER_GATED",
+      "evidenceRefs": [
+        "A0_BASELINE:20260615_legal_grounding.sql",
+        "REMOTE_LEDGER_RECEIPT:2026-08-21T07:17:37.805066Z",
+        "REMOTE_SCHEMA_RECEIPT:cbe27ce7e921f310e6ec7d0f243060cc919e2bfd8bc8299cacac43d88f15aabd"
+      ],
+      "currentAuthorityStatus": "A0_BASELINE_BOUND_A2_RECONCILIATION_PLAN"
+    },
+    {
+      "currentFilename": "20260615_legal_article_chunk_identity.sql",
+      "currentVersionToken": "20260615",
+      "currentSqlDigest": "03dce727ac9bca1ab290556583c33593c3ae6ee544b0c90cc8ff7e05aea6e29d",
+      "a0BaselineBinding": "A0:20260615_legal_article_chunk_identity.sql:03dce727ac9bca1ab290556583c33593c3ae6ee544b0c90cc8ff7e05aea6e29d",
+      "ledgerStatus": "LEDGER_ABSENT",
+      "schemaStatus": "SCHEMA_PRESENT_UNVERIFIED",
+      "freshHistoryStatus": {
+        "syntax": "UNVERIFIED",
+        "dependencyOrder": "FAIL",
+        "exactFailureCode": "DUPLICATE_VERSION_AND_LEXICAL_PRODUCER_CONSUMER_ORDER",
+        "exactFailureClass": "LEGAL_FAMILY_CANONICAL_ORDER_DEFECT",
+        "exactRepairRequirement": "RENAME_LEDGER_ABSENT_FILES_TO_THE_EXACT_UNIQUE_14_DIGIT_CANONICAL_ORDER_AND_PROVE_TWO_EXACT_ISOLATED_SUPABASE_REPLAYS"
+      },
+      "sourceTreatment": "PRESERVE",
+      "filenameTreatment": "RENAME_LEDGER_ABSENT_TO_UNIQUE_14_DIGIT_VERSION",
+      "proposedCanonicalFilename": "20260615100000_legal_article_chunk_identity.sql",
+      "exactProposedFreshHistoryOrder": 11,
+      "remoteContinuityTreatment": "EXACT_SCHEMA_EQUIVALENCE_REQUIRED",
+      "exactOwnerGateRequirement": "OWNER_PACKET_MUST_CHOOSE_EXACT_EQUIVALENCE_HISTORY_REPAIR_OR_REVIEWED_FORWARD_RECONCILIATION_BEFORE_REMOTE_DEPLOY",
+      "rollbackForwardStrategy": "LOCAL_CANONICAL_RENAME_ONLY; REMOTE_EQUIVALENCE_OR_FORWARD_PATH_REMAINS_OWNER_GATED",
+      "evidenceRefs": [
+        "A0_BASELINE:20260615_legal_article_chunk_identity.sql",
+        "REMOTE_LEDGER_RECEIPT:2026-08-21T07:17:37.805066Z",
+        "REMOTE_SCHEMA_RECEIPT:cbe27ce7e921f310e6ec7d0f243060cc919e2bfd8bc8299cacac43d88f15aabd"
+      ],
+      "currentAuthorityStatus": "A0_BASELINE_BOUND_A2_RECONCILIATION_PLAN"
+    },
+    {
+      "currentFilename": "20260615_legal_retrieval.sql",
+      "currentVersionToken": "20260615",
+      "currentSqlDigest": "d1ec08d0e3082e224c8da95c412636d83a0d4183df3a1ec4a1432f795b0154cc",
+      "a0BaselineBinding": "A0:20260615_legal_retrieval.sql:d1ec08d0e3082e224c8da95c412636d83a0d4183df3a1ec4a1432f795b0154cc",
+      "ledgerStatus": "LEDGER_ABSENT",
+      "schemaStatus": "SCHEMA_PRESENT_UNVERIFIED",
+      "freshHistoryStatus": {
+        "syntax": "UNVERIFIED",
+        "dependencyOrder": "FAIL",
+        "exactFailureCode": "DUPLICATE_VERSION_AND_LEXICAL_PRODUCER_CONSUMER_ORDER",
+        "exactFailureClass": "LEGAL_FAMILY_CANONICAL_ORDER_DEFECT",
+        "exactRepairRequirement": "RENAME_LEDGER_ABSENT_FILES_TO_THE_EXACT_UNIQUE_14_DIGIT_CANONICAL_ORDER_AND_PROVE_TWO_EXACT_ISOLATED_SUPABASE_REPLAYS"
+      },
+      "sourceTreatment": "PRESERVE",
+      "filenameTreatment": "RENAME_LEDGER_ABSENT_TO_UNIQUE_14_DIGIT_VERSION",
+      "proposedCanonicalFilename": "20260615110000_legal_retrieval.sql",
+      "exactProposedFreshHistoryOrder": 12,
+      "remoteContinuityTreatment": "EXACT_SCHEMA_EQUIVALENCE_REQUIRED",
+      "exactOwnerGateRequirement": "OWNER_PACKET_MUST_CHOOSE_EXACT_EQUIVALENCE_HISTORY_REPAIR_OR_REVIEWED_FORWARD_RECONCILIATION_BEFORE_REMOTE_DEPLOY",
+      "rollbackForwardStrategy": "LOCAL_CANONICAL_RENAME_ONLY; REMOTE_EQUIVALENCE_OR_FORWARD_PATH_REMAINS_OWNER_GATED",
+      "evidenceRefs": [
+        "A0_BASELINE:20260615_legal_retrieval.sql",
+        "REMOTE_LEDGER_RECEIPT:2026-08-21T07:17:37.805066Z",
+        "REMOTE_SCHEMA_RECEIPT:cbe27ce7e921f310e6ec7d0f243060cc919e2bfd8bc8299cacac43d88f15aabd"
+      ],
+      "currentAuthorityStatus": "A0_BASELINE_BOUND_A2_RECONCILIATION_PLAN"
+    },
+    {
+      "currentFilename": "20260615_legal_grounding_guard.sql",
+      "currentVersionToken": "20260615",
+      "currentSqlDigest": "436e741f78efc14fa7decd2c6f8c3eadf31f5acd4590df98c3eaad988493b642",
+      "a0BaselineBinding": "A0:20260615_legal_grounding_guard.sql:436e741f78efc14fa7decd2c6f8c3eadf31f5acd4590df98c3eaad988493b642",
+      "ledgerStatus": "LEDGER_ABSENT",
+      "schemaStatus": "SCHEMA_PRESENT_UNVERIFIED",
+      "freshHistoryStatus": {
+        "syntax": "UNVERIFIED",
+        "dependencyOrder": "FAIL",
+        "exactFailureCode": "DUPLICATE_VERSION_AND_LEXICAL_PRODUCER_CONSUMER_ORDER",
+        "exactFailureClass": "LEGAL_FAMILY_CANONICAL_ORDER_DEFECT",
+        "exactRepairRequirement": "RENAME_LEDGER_ABSENT_FILES_TO_THE_EXACT_UNIQUE_14_DIGIT_CANONICAL_ORDER_AND_PROVE_TWO_EXACT_ISOLATED_SUPABASE_REPLAYS"
+      },
+      "sourceTreatment": "PRESERVE",
+      "filenameTreatment": "RENAME_LEDGER_ABSENT_TO_UNIQUE_14_DIGIT_VERSION",
+      "proposedCanonicalFilename": "20260615120000_legal_grounding_guard.sql",
+      "exactProposedFreshHistoryOrder": 13,
+      "remoteContinuityTreatment": "EXACT_SCHEMA_EQUIVALENCE_REQUIRED",
+      "exactOwnerGateRequirement": "OWNER_PACKET_MUST_CHOOSE_EXACT_EQUIVALENCE_HISTORY_REPAIR_OR_REVIEWED_FORWARD_RECONCILIATION_BEFORE_REMOTE_DEPLOY",
+      "rollbackForwardStrategy": "LOCAL_CANONICAL_RENAME_ONLY; REMOTE_EQUIVALENCE_OR_FORWARD_PATH_REMAINS_OWNER_GATED",
+      "evidenceRefs": [
+        "A0_BASELINE:20260615_legal_grounding_guard.sql",
+        "REMOTE_LEDGER_RECEIPT:2026-08-21T07:17:37.805066Z",
+        "REMOTE_SCHEMA_RECEIPT:cbe27ce7e921f310e6ec7d0f243060cc919e2bfd8bc8299cacac43d88f15aabd"
+      ],
+      "currentAuthorityStatus": "A0_BASELINE_BOUND_A2_RECONCILIATION_PLAN"
+    },
+    {
+      "currentFilename": "20260616_legal_grounding_guard_service_role_grant.sql",
+      "currentVersionToken": "20260616",
+      "currentSqlDigest": "25e358828f3953b3cf793f7eeb645c816156e8bb89f5b7899d3c075de9594e13",
+      "a0BaselineBinding": "A0:20260616_legal_grounding_guard_service_role_grant.sql:25e358828f3953b3cf793f7eeb645c816156e8bb89f5b7899d3c075de9594e13",
+      "ledgerStatus": "LEDGER_ABSENT",
+      "schemaStatus": "SCHEMA_PRESENT_UNVERIFIED",
+      "freshHistoryStatus": {
+        "syntax": "UNVERIFIED",
+        "dependencyOrder": "FAIL",
+        "exactFailureCode": "DUPLICATE_VERSION_AND_LEXICAL_PRODUCER_CONSUMER_ORDER",
+        "exactFailureClass": "LEGAL_FAMILY_CANONICAL_ORDER_DEFECT",
+        "exactRepairRequirement": "RENAME_LEDGER_ABSENT_FILES_TO_THE_EXACT_UNIQUE_14_DIGIT_CANONICAL_ORDER_AND_PROVE_TWO_EXACT_ISOLATED_SUPABASE_REPLAYS"
+      },
+      "sourceTreatment": "PRESERVE",
+      "filenameTreatment": "RENAME_LEDGER_ABSENT_TO_UNIQUE_14_DIGIT_VERSION",
+      "proposedCanonicalFilename": "20260616100000_legal_grounding_guard_service_role_grant.sql",
+      "exactProposedFreshHistoryOrder": 14,
+      "remoteContinuityTreatment": "EXACT_SCHEMA_EQUIVALENCE_REQUIRED",
+      "exactOwnerGateRequirement": "OWNER_PACKET_MUST_CHOOSE_EXACT_EQUIVALENCE_HISTORY_REPAIR_OR_REVIEWED_FORWARD_RECONCILIATION_BEFORE_REMOTE_DEPLOY",
+      "rollbackForwardStrategy": "LOCAL_CANONICAL_RENAME_ONLY; REMOTE_EQUIVALENCE_OR_FORWARD_PATH_REMAINS_OWNER_GATED",
+      "evidenceRefs": [
+        "A0_BASELINE:20260616_legal_grounding_guard_service_role_grant.sql",
+        "REMOTE_LEDGER_RECEIPT:2026-08-21T07:17:37.805066Z",
+        "REMOTE_SCHEMA_RECEIPT:cbe27ce7e921f310e6ec7d0f243060cc919e2bfd8bc8299cacac43d88f15aabd"
+      ],
+      "currentAuthorityStatus": "A0_BASELINE_BOUND_A2_RECONCILIATION_PLAN"
+    },
+    {
+      "currentFilename": "20260622_mobile_pwa_web_push_reminder.sql",
+      "currentVersionToken": "20260622",
+      "currentSqlDigest": "3788b39e1cfd1de6496484bf1bcdd3bce62aba56280d6fd5a625dba61a398bf7",
+      "a0BaselineBinding": "A0:20260622_mobile_pwa_web_push_reminder.sql:3788b39e1cfd1de6496484bf1bcdd3bce62aba56280d6fd5a625dba61a398bf7",
+      "ledgerStatus": "LEDGER_APPLIED",
+      "schemaStatus": "SCHEMA_PRESENT_UNVERIFIED",
+      "freshHistoryStatus": {
+        "syntax": "UNVERIFIED",
+        "dependencyOrder": "UNVERIFIED",
+        "exactFailureCode": null,
+        "exactFailureClass": null,
+        "exactRepairRequirement": "EXACT_TWO_CYCLE_ISOLATED_SUPABASE_REPLAY_REQUIRED_AT_C3R_P_MIGRATION_CHECKPOINT"
+      },
+      "sourceTreatment": "PRESERVE",
+      "filenameTreatment": "PRESERVE_VERSION",
+      "proposedCanonicalFilename": "20260622_mobile_pwa_web_push_reminder.sql",
+      "exactProposedFreshHistoryOrder": 15,
+      "remoteContinuityTreatment": "NO_REMOTE_ACTION_REQUIRED",
+      "exactOwnerGateRequirement": "NONE_FOR_PRESERVING_THE_EXISTING_REMOTE_LEDGER_ROW",
+      "rollbackForwardStrategy": "PRESERVE_APPLIED_VERSION_AND_SOURCE; NO_HISTORY_REWRITE",
+      "evidenceRefs": [
+        "A0_BASELINE:20260622_mobile_pwa_web_push_reminder.sql",
+        "REMOTE_LEDGER_RECEIPT:2026-08-21T07:17:37.805066Z",
+        "REMOTE_SCHEMA_RECEIPT:cbe27ce7e921f310e6ec7d0f243060cc919e2bfd8bc8299cacac43d88f15aabd"
+      ],
+      "currentAuthorityStatus": "A0_BASELINE_BOUND_A2_RECONCILIATION_PLAN"
+    },
+    {
+      "currentFilename": "20260623_personal_concept_graph_atomic_transition.sql",
+      "currentVersionToken": "20260623",
+      "currentSqlDigest": "8f33722533a46dfa2784bc3140f2d9c07172260106265e49daabbf549ff9519c",
+      "a0BaselineBinding": "A0:20260623_personal_concept_graph_atomic_transition.sql:8f33722533a46dfa2784bc3140f2d9c07172260106265e49daabbf549ff9519c",
+      "ledgerStatus": "LEDGER_APPLIED",
+      "schemaStatus": "SCHEMA_PRESENT_UNVERIFIED",
+      "freshHistoryStatus": {
+        "syntax": "UNVERIFIED",
+        "dependencyOrder": "FAIL",
+        "exactFailureCode": "LEXICAL_ORDER_INVERSION",
+        "exactFailureClass": "PRODUCER_SORTS_AFTER_APPLIED_BOUNDARY_CONSUMER",
+        "exactRepairRequirement": "PRESERVE_THE_APPLIED_PRODUCER_VERSION_AND_PROVE_COMPATIBILITY_STEP_PRODUCER_THEN_SOLE_FORWARD_APPEND_ORDER_ON_TWO_EXACT_REPLAYS"
+      },
+      "sourceTreatment": "PRESERVE",
+      "filenameTreatment": "PRESERVE_VERSION",
+      "proposedCanonicalFilename": "20260623_personal_concept_graph_atomic_transition.sql",
+      "exactProposedFreshHistoryOrder": 17,
+      "remoteContinuityTreatment": "NO_REMOTE_ACTION_REQUIRED",
+      "exactOwnerGateRequirement": "NONE_FOR_PRESERVING_THE_EXISTING_REMOTE_LEDGER_ROW",
+      "rollbackForwardStrategy": "PRESERVE_APPLIED_VERSION_AND_SOURCE; NO_HISTORY_REWRITE",
+      "evidenceRefs": [
+        "A0_BASELINE:20260623_personal_concept_graph_atomic_transition.sql",
+        "REMOTE_LEDGER_RECEIPT:2026-08-21T07:17:37.805066Z",
+        "REMOTE_SCHEMA_RECEIPT:cbe27ce7e921f310e6ec7d0f243060cc919e2bfd8bc8299cacac43d88f15aabd"
+      ],
+      "currentAuthorityStatus": "A0_BASELINE_BOUND_A2_RECONCILIATION_PLAN"
+    },
+    {
+      "currentFilename": "202606232130_personal_concept_graph_rpc_only_write_boundary.sql",
+      "currentVersionToken": "202606232130",
+      "currentSqlDigest": "57b2aa59f96f3ea294a7d7e0c46350c5c3cb330c53a301a2d57634f2f54a0a57",
+      "a0BaselineBinding": "A0:202606232130_personal_concept_graph_rpc_only_write_boundary.sql:57b2aa59f96f3ea294a7d7e0c46350c5c3cb330c53a301a2d57634f2f54a0a57",
+      "ledgerStatus": "LEDGER_APPLIED",
+      "schemaStatus": "SCHEMA_PRESENT_UNVERIFIED",
+      "freshHistoryStatus": {
+        "syntax": "UNVERIFIED",
+        "dependencyOrder": "FAIL",
+        "exactFailureCode": "42883",
+        "exactFailureClass": "UNDEFINED_FUNCTION_CONSUMER_BEFORE_PRODUCER",
+        "exactRepairRequirement": "MAKE_THE_APPLIED_EARLY_BOUNDARY_A_COMPATIBILITY_SAFE_NO_UNSAFE_GRANT_STEP_THEN_REASSERT_THE_FINAL_BOUNDARY_INSIDE_THE_SOLE_LATER_C3R_P_APPEND"
+      },
+      "sourceTreatment": "REPLACE_WITH_COMPATIBILITY_STUB",
+      "filenameTreatment": "PRESERVE_APPLIED_VERSION_WITH_COMPATIBILITY_BEHAVIOR",
+      "proposedCanonicalFilename": "202606232130_personal_concept_graph_rpc_only_write_boundary.sql",
+      "exactProposedFreshHistoryOrder": 16,
+      "remoteContinuityTreatment": "NO_REMOTE_ACTION_REQUIRED",
+      "exactOwnerGateRequirement": "NONE_FOR_PRESERVING_THE_EXISTING_REMOTE_LEDGER_ROW",
+      "rollbackForwardStrategy": "PRESERVE_APPLIED_VERSION; COMPATIBILITY_SAFE_LOCAL_STEP; SOLE_LATER_C3R_P_APPEND_REASSERTS_FINAL_BOUNDARY_AND_DURABLE_SCHEMA",
+      "evidenceRefs": [
+        "A0_BASELINE:202606232130_personal_concept_graph_rpc_only_write_boundary.sql",
+        "REMOTE_LEDGER_RECEIPT:2026-08-21T07:17:37.805066Z",
+        "REMOTE_SCHEMA_RECEIPT:cbe27ce7e921f310e6ec7d0f243060cc919e2bfd8bc8299cacac43d88f15aabd"
+      ],
+      "currentAuthorityStatus": "A0_BASELINE_BOUND_A2_RECONCILIATION_PLAN"
+    },
+    {
+      "currentFilename": "20260721060237_s233a_answer_review_persistence.sql",
+      "currentVersionToken": "20260721060237",
+      "currentSqlDigest": "07f8d60f6eb15f96647463ad4bbfa18f463296e801d0c77d732ffd1720890e75",
+      "a0BaselineBinding": "A0:20260721060237_s233a_answer_review_persistence.sql:07f8d60f6eb15f96647463ad4bbfa18f463296e801d0c77d732ffd1720890e75",
+      "ledgerStatus": "LEDGER_ABSENT",
+      "schemaStatus": "SCHEMA_ABSENT",
+      "freshHistoryStatus": {
+        "syntax": "UNVERIFIED",
+        "dependencyOrder": "UNVERIFIED",
+        "exactFailureCode": null,
+        "exactFailureClass": null,
+        "exactRepairRequirement": "EXACT_TWO_CYCLE_ISOLATED_SUPABASE_REPLAY_REQUIRED_AT_C3R_P_MIGRATION_CHECKPOINT"
+      },
+      "sourceTreatment": "PRESERVE",
+      "filenameTreatment": "PRESERVE_VERSION",
+      "proposedCanonicalFilename": "20260721060237_s233a_answer_review_persistence.sql",
+      "exactProposedFreshHistoryOrder": 18,
+      "remoteContinuityTreatment": "REMOTE_DEPLOY_BLOCKED",
+      "exactOwnerGateRequirement": "SEPARATE_PER_RECORD_REMOTE_CONTINUITY_PACKET_REQUIRED_BEFORE_REMOTE_DEPLOY",
+      "rollbackForwardStrategy": "PRESERVE_LOCAL_SOURCE; BLOCK_REMOTE_DEPLOY_PENDING_CONTINUITY_PACKET",
+      "evidenceRefs": [
+        "A0_BASELINE:20260721060237_s233a_answer_review_persistence.sql",
+        "REMOTE_LEDGER_RECEIPT:2026-08-21T07:17:37.805066Z",
+        "REMOTE_SCHEMA_RECEIPT:cbe27ce7e921f310e6ec7d0f243060cc919e2bfd8bc8299cacac43d88f15aabd"
+      ],
+      "currentAuthorityStatus": "A0_BASELINE_BOUND_A2_RECONCILIATION_PLAN"
+    },
+    {
+      "currentFilename": "20260730025332_s236p_lean_owner_private.sql",
+      "currentVersionToken": "20260730025332",
+      "currentSqlDigest": "476ef1b0d6a100fb6e4803b812b049b44252ca5f25301d3f781cee8827b1545b",
+      "a0BaselineBinding": "A0:20260730025332_s236p_lean_owner_private.sql:476ef1b0d6a100fb6e4803b812b049b44252ca5f25301d3f781cee8827b1545b",
+      "ledgerStatus": "LEDGER_APPLIED",
+      "schemaStatus": "SCHEMA_PRESENT_UNVERIFIED",
+      "freshHistoryStatus": {
+        "syntax": "UNVERIFIED",
+        "dependencyOrder": "UNVERIFIED",
+        "exactFailureCode": null,
+        "exactFailureClass": null,
+        "exactRepairRequirement": "EXACT_TWO_CYCLE_ISOLATED_SUPABASE_REPLAY_REQUIRED_AT_C3R_P_MIGRATION_CHECKPOINT"
+      },
+      "sourceTreatment": "PRESERVE",
+      "filenameTreatment": "PRESERVE_VERSION",
+      "proposedCanonicalFilename": "20260730025332_s236p_lean_owner_private.sql",
+      "exactProposedFreshHistoryOrder": 19,
+      "remoteContinuityTreatment": "NO_REMOTE_ACTION_REQUIRED",
+      "exactOwnerGateRequirement": "NONE_FOR_PRESERVING_THE_EXISTING_REMOTE_LEDGER_ROW",
+      "rollbackForwardStrategy": "PRESERVE_APPLIED_VERSION_AND_SOURCE; NO_HISTORY_REWRITE",
+      "evidenceRefs": [
+        "A0_BASELINE:20260730025332_s236p_lean_owner_private.sql",
+        "REMOTE_LEDGER_RECEIPT:2026-08-21T07:17:37.805066Z",
+        "REMOTE_SCHEMA_RECEIPT:cbe27ce7e921f310e6ec7d0f243060cc919e2bfd8bc8299cacac43d88f15aabd"
+      ],
+      "currentAuthorityStatus": "A0_BASELINE_BOUND_A2_RECONCILIATION_PLAN"
+    },
+    {
+      "currentFilename": "20260730060233_s236p_owner_private_lifecycle_hardening.sql",
+      "currentVersionToken": "20260730060233",
+      "currentSqlDigest": "e20440dfa0d880ad591b8c9fdff287cd66fcdbbe4f96f07a549a730fd8920de1",
+      "a0BaselineBinding": "A0:20260730060233_s236p_owner_private_lifecycle_hardening.sql:e20440dfa0d880ad591b8c9fdff287cd66fcdbbe4f96f07a549a730fd8920de1",
+      "ledgerStatus": "LEDGER_APPLIED",
+      "schemaStatus": "SCHEMA_PRESENT_UNVERIFIED",
+      "freshHistoryStatus": {
+        "syntax": "UNVERIFIED",
+        "dependencyOrder": "UNVERIFIED",
+        "exactFailureCode": null,
+        "exactFailureClass": null,
+        "exactRepairRequirement": "EXACT_TWO_CYCLE_ISOLATED_SUPABASE_REPLAY_REQUIRED_AT_C3R_P_MIGRATION_CHECKPOINT"
+      },
+      "sourceTreatment": "PRESERVE",
+      "filenameTreatment": "PRESERVE_VERSION",
+      "proposedCanonicalFilename": "20260730060233_s236p_owner_private_lifecycle_hardening.sql",
+      "exactProposedFreshHistoryOrder": 20,
+      "remoteContinuityTreatment": "NO_REMOTE_ACTION_REQUIRED",
+      "exactOwnerGateRequirement": "NONE_FOR_PRESERVING_THE_EXISTING_REMOTE_LEDGER_ROW",
+      "rollbackForwardStrategy": "PRESERVE_APPLIED_VERSION_AND_SOURCE; NO_HISTORY_REWRITE",
+      "evidenceRefs": [
+        "A0_BASELINE:20260730060233_s236p_owner_private_lifecycle_hardening.sql",
+        "REMOTE_LEDGER_RECEIPT:2026-08-21T07:17:37.805066Z",
+        "REMOTE_SCHEMA_RECEIPT:cbe27ce7e921f310e6ec7d0f243060cc919e2bfd8bc8299cacac43d88f15aabd"
+      ],
+      "currentAuthorityStatus": "A0_BASELINE_BOUND_A2_RECONCILIATION_PLAN"
+    },
+    {
+      "currentFilename": "20260730065744_s236p_owner_private_authenticated_download_info.sql",
+      "currentVersionToken": "20260730065744",
+      "currentSqlDigest": "632cc7ee563aa29a573425e396f6f539e35a3c8834955ba66ccd01723bb3cbcb",
+      "a0BaselineBinding": "A0:20260730065744_s236p_owner_private_authenticated_download_info.sql:632cc7ee563aa29a573425e396f6f539e35a3c8834955ba66ccd01723bb3cbcb",
+      "ledgerStatus": "LEDGER_APPLIED",
+      "schemaStatus": "SCHEMA_PRESENT_UNVERIFIED",
+      "freshHistoryStatus": {
+        "syntax": "UNVERIFIED",
+        "dependencyOrder": "UNVERIFIED",
+        "exactFailureCode": null,
+        "exactFailureClass": null,
+        "exactRepairRequirement": "EXACT_TWO_CYCLE_ISOLATED_SUPABASE_REPLAY_REQUIRED_AT_C3R_P_MIGRATION_CHECKPOINT"
+      },
+      "sourceTreatment": "PRESERVE",
+      "filenameTreatment": "PRESERVE_VERSION",
+      "proposedCanonicalFilename": "20260730065744_s236p_owner_private_authenticated_download_info.sql",
+      "exactProposedFreshHistoryOrder": 21,
+      "remoteContinuityTreatment": "NO_REMOTE_ACTION_REQUIRED",
+      "exactOwnerGateRequirement": "NONE_FOR_PRESERVING_THE_EXISTING_REMOTE_LEDGER_ROW",
+      "rollbackForwardStrategy": "PRESERVE_APPLIED_VERSION_AND_SOURCE; NO_HISTORY_REWRITE",
+      "evidenceRefs": [
+        "A0_BASELINE:20260730065744_s236p_owner_private_authenticated_download_info.sql",
+        "REMOTE_LEDGER_RECEIPT:2026-08-21T07:17:37.805066Z",
+        "REMOTE_SCHEMA_RECEIPT:cbe27ce7e921f310e6ec7d0f243060cc919e2bfd8bc8299cacac43d88f15aabd"
+      ],
+      "currentAuthorityStatus": "A0_BASELINE_BOUND_A2_RECONCILIATION_PLAN"
+    },
+    {
+      "currentFilename": "20260730151052_s236p_owner_private_expiry_read_gate.sql",
+      "currentVersionToken": "20260730151052",
+      "currentSqlDigest": "416fa80acea48bf4d170661a4f5259632b4d9e3fd740007bd65cbf1ded6103f1",
+      "a0BaselineBinding": "A0:20260730151052_s236p_owner_private_expiry_read_gate.sql:416fa80acea48bf4d170661a4f5259632b4d9e3fd740007bd65cbf1ded6103f1",
+      "ledgerStatus": "LEDGER_APPLIED",
+      "schemaStatus": "SCHEMA_PRESENT_UNVERIFIED",
+      "freshHistoryStatus": {
+        "syntax": "UNVERIFIED",
+        "dependencyOrder": "UNVERIFIED",
+        "exactFailureCode": null,
+        "exactFailureClass": null,
+        "exactRepairRequirement": "EXACT_TWO_CYCLE_ISOLATED_SUPABASE_REPLAY_REQUIRED_AT_C3R_P_MIGRATION_CHECKPOINT"
+      },
+      "sourceTreatment": "PRESERVE",
+      "filenameTreatment": "PRESERVE_VERSION",
+      "proposedCanonicalFilename": "20260730151052_s236p_owner_private_expiry_read_gate.sql",
+      "exactProposedFreshHistoryOrder": 22,
+      "remoteContinuityTreatment": "NO_REMOTE_ACTION_REQUIRED",
+      "exactOwnerGateRequirement": "NONE_FOR_PRESERVING_THE_EXISTING_REMOTE_LEDGER_ROW",
+      "rollbackForwardStrategy": "PRESERVE_APPLIED_VERSION_AND_SOURCE; NO_HISTORY_REWRITE",
+      "evidenceRefs": [
+        "A0_BASELINE:20260730151052_s236p_owner_private_expiry_read_gate.sql",
+        "REMOTE_LEDGER_RECEIPT:2026-08-21T07:17:37.805066Z",
+        "REMOTE_SCHEMA_RECEIPT:cbe27ce7e921f310e6ec7d0f243060cc919e2bfd8bc8299cacac43d88f15aabd"
+      ],
+      "currentAuthorityStatus": "A0_BASELINE_BOUND_A2_RECONCILIATION_PLAN"
+    },
+    {
+      "currentFilename": "20260817090000_c2r_c_p_structured_practice_proof.sql",
+      "currentVersionToken": "20260817090000",
+      "currentSqlDigest": "012041613e99df02a2933364d5b5f78d92d8b20a1b67a837ca1f2c4eb7640e74",
+      "a0BaselineBinding": "A0:20260817090000_c2r_c_p_structured_practice_proof.sql:012041613e99df02a2933364d5b5f78d92d8b20a1b67a837ca1f2c4eb7640e74",
+      "ledgerStatus": "LEDGER_ABSENT",
+      "schemaStatus": "SCHEMA_ABSENT",
+      "freshHistoryStatus": {
+        "syntax": "UNVERIFIED",
+        "dependencyOrder": "UNVERIFIED",
+        "exactFailureCode": null,
+        "exactFailureClass": null,
+        "exactRepairRequirement": "EXACT_TWO_CYCLE_ISOLATED_SUPABASE_REPLAY_REQUIRED_AT_C3R_P_MIGRATION_CHECKPOINT"
+      },
+      "sourceTreatment": "PRESERVE",
+      "filenameTreatment": "PRESERVE_VERSION",
+      "proposedCanonicalFilename": "20260817090000_c2r_c_p_structured_practice_proof.sql",
+      "exactProposedFreshHistoryOrder": 23,
+      "remoteContinuityTreatment": "REMOTE_DEPLOY_BLOCKED",
+      "exactOwnerGateRequirement": "SEPARATE_PER_RECORD_REMOTE_CONTINUITY_PACKET_REQUIRED_BEFORE_REMOTE_DEPLOY",
+      "rollbackForwardStrategy": "PRESERVE_LOCAL_SOURCE; BLOCK_REMOTE_DEPLOY_PENDING_CONTINUITY_PACKET",
+      "evidenceRefs": [
+        "A0_BASELINE:20260817090000_c2r_c_p_structured_practice_proof.sql",
+        "REMOTE_LEDGER_RECEIPT:2026-08-21T07:17:37.805066Z",
+        "REMOTE_SCHEMA_RECEIPT:cbe27ce7e921f310e6ec7d0f243060cc919e2bfd8bc8299cacac43d88f15aabd"
+      ],
+      "currentAuthorityStatus": "A0_BASELINE_BOUND_A2_RECONCILIATION_PLAN"
+    },
+    {
+      "currentFilename": "20260817113000_c2r_c_t_structural_theory_proof.sql",
+      "currentVersionToken": "20260817113000",
+      "currentSqlDigest": "819275ebda058f1a9001871ece18efca466323db9306adb7b637d01d2dc25e08",
+      "a0BaselineBinding": "A0:20260817113000_c2r_c_t_structural_theory_proof.sql:819275ebda058f1a9001871ece18efca466323db9306adb7b637d01d2dc25e08",
+      "ledgerStatus": "LEDGER_ABSENT",
+      "schemaStatus": "SCHEMA_ABSENT",
+      "freshHistoryStatus": {
+        "syntax": "UNVERIFIED",
+        "dependencyOrder": "UNVERIFIED",
+        "exactFailureCode": null,
+        "exactFailureClass": null,
+        "exactRepairRequirement": "EXACT_TWO_CYCLE_ISOLATED_SUPABASE_REPLAY_REQUIRED_AT_C3R_P_MIGRATION_CHECKPOINT"
+      },
+      "sourceTreatment": "PRESERVE",
+      "filenameTreatment": "PRESERVE_VERSION",
+      "proposedCanonicalFilename": "20260817113000_c2r_c_t_structural_theory_proof.sql",
+      "exactProposedFreshHistoryOrder": 24,
+      "remoteContinuityTreatment": "REMOTE_DEPLOY_BLOCKED",
+      "exactOwnerGateRequirement": "SEPARATE_PER_RECORD_REMOTE_CONTINUITY_PACKET_REQUIRED_BEFORE_REMOTE_DEPLOY",
+      "rollbackForwardStrategy": "PRESERVE_LOCAL_SOURCE; BLOCK_REMOTE_DEPLOY_PENDING_CONTINUITY_PACKET",
+      "evidenceRefs": [
+        "A0_BASELINE:20260817113000_c2r_c_t_structural_theory_proof.sql",
+        "REMOTE_LEDGER_RECEIPT:2026-08-21T07:17:37.805066Z",
+        "REMOTE_SCHEMA_RECEIPT:cbe27ce7e921f310e6ec7d0f243060cc919e2bfd8bc8299cacac43d88f15aabd"
+      ],
+      "currentAuthorityStatus": "A0_BASELINE_BOUND_A2_RECONCILIATION_PLAN"
+    },
+    {
+      "currentFilename": "20260817170000_c2r_c_l_exact_law_applicability.sql",
+      "currentVersionToken": "20260817170000",
+      "currentSqlDigest": "a850e29ec2a94e7b5bb1f99c8157b99afc590e1dcb22c45f2e57f1c5b4323075",
+      "a0BaselineBinding": "A0:20260817170000_c2r_c_l_exact_law_applicability.sql:a850e29ec2a94e7b5bb1f99c8157b99afc590e1dcb22c45f2e57f1c5b4323075",
+      "ledgerStatus": "LEDGER_ABSENT",
+      "schemaStatus": "SCHEMA_ABSENT",
+      "freshHistoryStatus": {
+        "syntax": "UNVERIFIED",
+        "dependencyOrder": "UNVERIFIED",
+        "exactFailureCode": null,
+        "exactFailureClass": null,
+        "exactRepairRequirement": "EXACT_TWO_CYCLE_ISOLATED_SUPABASE_REPLAY_REQUIRED_AT_C3R_P_MIGRATION_CHECKPOINT"
+      },
+      "sourceTreatment": "PRESERVE",
+      "filenameTreatment": "PRESERVE_VERSION",
+      "proposedCanonicalFilename": "20260817170000_c2r_c_l_exact_law_applicability.sql",
+      "exactProposedFreshHistoryOrder": 25,
+      "remoteContinuityTreatment": "REMOTE_DEPLOY_BLOCKED",
+      "exactOwnerGateRequirement": "SEPARATE_PER_RECORD_REMOTE_CONTINUITY_PACKET_REQUIRED_BEFORE_REMOTE_DEPLOY",
+      "rollbackForwardStrategy": "PRESERVE_LOCAL_SOURCE; BLOCK_REMOTE_DEPLOY_PENDING_CONTINUITY_PACKET",
+      "evidenceRefs": [
+        "A0_BASELINE:20260817170000_c2r_c_l_exact_law_applicability.sql",
+        "REMOTE_LEDGER_RECEIPT:2026-08-21T07:17:37.805066Z",
+        "REMOTE_SCHEMA_RECEIPT:cbe27ce7e921f310e6ec7d0f243060cc919e2bfd8bc8299cacac43d88f15aabd"
+      ],
+      "currentAuthorityStatus": "A0_BASELINE_BOUND_A2_RECONCILIATION_PLAN"
+    }
+  ],
+  "exactReconciliationDecisions": {
+    "personalLearningStates": {
+      "implementationStage": "C3R-P_MIGRATION_CHECKPOINT",
+      "sqlState": "42P19",
+      "proposedCanonicalFilename": "20260608090000_create_personal_learning_states.sql"
+    },
+    "legalFamily": {
+      "currentFilesExactly": [
+        "20260615_legal_grounding.sql",
+        "20260615_legal_article_chunk_identity.sql",
+        "20260615_legal_retrieval.sql",
+        "20260615_legal_grounding_guard.sql",
+        "20260616_legal_grounding_guard_service_role_grant.sql"
+      ],
+      "canonicalOrderExactly": [
+        "20260615090000_legal_grounding.sql",
+        "20260615100000_legal_article_chunk_identity.sql",
+        "20260615110000_legal_retrieval.sql",
+        "20260615120000_legal_grounding_guard.sql",
+        "20260616100000_legal_grounding_guard_service_role_grant.sql"
+      ],
+      "automaticSqlReexecutionAllowed": false,
+      "automaticHistoryRepairAllowed": false,
+      "remoteDeployBlocked": true
+    },
+    "conceptGraph": {
+      "appliedVersionsPreservedExactly": [
+        "20260623",
+        "202606232130"
+      ],
+      "earlyCompatibilityStepRequired": true,
+      "producerRemainsLaterUnderActualLexicalOrder": true,
+      "forwardBoundaryAppendRequired": true,
+      "forwardBoundaryAndDurableLearningMustShareSoleC3rPAppend": true,
+      "rejectedAlternatives": [
+        "SILENT_RENAME_APPLIED_VERSION",
+        "PRETEND_CURRENT_LEXICAL_ORDER_IS_VALID",
+        "SKIP_EITHER_MIGRATION",
+        "NON_CHAIN_OVERLAY"
+      ]
+    }
+  },
+  "migrationInventoryAuthorityV2": {
+    "authorityType": "MigrationInventoryAuthorityV2",
+    "formula": "A0_HISTORICAL_BASELINE_PLUS_VALID_A2_REPAIR_RENAME_RECEIPTS_PLUS_VALID_VERSIONED_APPEND_RECEIPTS_MINUS_EXACT_RETIRED_ALIAS_RECEIPTS",
+    "phases": [
+      "BASELINE_KNOWN_BLOCKED",
+      "C3R_P_MIGRATION_CHECKPOINT"
+    ],
+    "baselineKnownBlockedAcceptsOnly": [
+      "42P19_PERSONAL_LEARNING_RECURSION",
+      "LEGAL_DUPLICATE_VERSION_AND_ORDER",
+      "42883_CONCEPT_BOUNDARY_ORDER"
+    ],
+    "migrationCheckpointRequiresZeroActiveChainFailures": true,
+    "registeredRepairReceipts": [],
+    "registeredAppendReceipts": [],
+    "registeredRetiredAliasReceipts": [],
+    "unregisteredAdditionalFileFails": true,
+    "unregisteredMissingFileFails": true,
+    "unauthorizedRenameFails": true,
+    "unauthorizedContentChangeFails": true,
+    "duplicateCanonicalVersionFails": true,
+    "consumerBeforeProducerFailsAtCheckpoint": true,
+    "missingAppendReceiptFails": true,
+    "a0HistoricalReceiptDriftFails": true,
+    "remoteMutationSeparatelyGated": true
+  },
+  "c3rpAppendReceiptV1": {
+    "receiptType": "C3RPAppendReceiptV1",
+    "exactlyOneNewMigrationAllowed": true,
+    "requiredPurposeExactly": [
+      "CONCEPT_GRAPH_RPC_BOUNDARY_FORWARD_REASSERTION",
+      "C3R_P_DURABLE_LEARNING_SCHEMA_RPC_RLS"
+    ],
+    "versionFormat": "UNIQUE_14_DIGIT_PUBLICATION_TIME",
+    "versionMustBeGreaterThan": "20260817170000",
+    "requiredRepairPlanFilesExactly": [
+      "20260608_create_personal_learning_states.sql",
+      "20260615_legal_grounding.sql",
+      "20260615_legal_article_chunk_identity.sql",
+      "20260615_legal_retrieval.sql",
+      "20260615_legal_grounding_guard.sql",
+      "20260616_legal_grounding_guard_service_role_grant.sql",
+      "202606232130_personal_concept_graph_rpc_only_write_boundary.sql"
+    ],
+    "requiredDependencyPredecessorsExactly": [
+      "20260422_inverge_service_core.sql",
+      "20260423_inverge_service_role_grants.sql",
+      "20260424_review_os_alpha.sql",
+      "20260426_review_os_study_logs.sql",
+      "20260427_study_logs_taxonomy_candidates.sql",
+      "20260429_learning_signal_events.sql",
+      "20260430_exam_archive.sql",
+      "20260605_create_personal_concept_nodes.sql",
+      "20260608090000_create_personal_learning_states.sql",
+      "20260615090000_legal_grounding.sql",
+      "20260615100000_legal_article_chunk_identity.sql",
+      "20260615110000_legal_retrieval.sql",
+      "20260615120000_legal_grounding_guard.sql",
+      "20260616100000_legal_grounding_guard_service_role_grant.sql",
+      "20260622_mobile_pwa_web_push_reminder.sql",
+      "202606232130_personal_concept_graph_rpc_only_write_boundary.sql",
+      "20260623_personal_concept_graph_atomic_transition.sql",
+      "20260721060237_s233a_answer_review_persistence.sql",
+      "20260730025332_s236p_lean_owner_private.sql",
+      "20260730060233_s236p_owner_private_lifecycle_hardening.sql",
+      "20260730065744_s236p_owner_private_authenticated_download_info.sql",
+      "20260730151052_s236p_owner_private_expiry_read_gate.sql",
+      "20260817090000_c2r_c_p_structured_practice_proof.sql",
+      "20260817113000_c2r_c_t_structural_theory_proof.sql",
+      "20260817170000_c2r_c_l_exact_law_applicability.sql"
+    ],
+    "requiredFieldsExactly": [
+      "receiptId",
+      "receiptType",
+      "a2AuthorityId",
+      "version",
+      "filename",
+      "sqlDigest",
+      "dependencyPredecessors",
+      "migrationSensitivePathClosure",
+      "schemaRpcRlsObjectInventory",
+      "isolatedReplayReceipts",
+      "exactHeadCentralEvidence",
+      "exactHeadDedicatedRuntimeEvidence",
+      "remoteApplicationAuthorized",
+      "migrationHistoryRepairAuthorized"
+    ],
+    "isolatedReplayReceiptCountExactly": 2,
+    "exactReplayEngine": "EXACT_ISOLATED_SUPABASE_RESET_REPLAY",
+    "diagnosticEmbeddedPostgresMaySatisfy": false,
+    "remoteApplicationAuthority": false,
+    "automaticHistoryRepairAuthority": false,
+    "secondMigrationAllowed": false
+  },
+  "a0HistoricalTestTransition": {
+    "immutableTestRef": "tests/wcv-c3r-a0-migration-dependency-authority.test.mjs",
+    "immutableTestBlob": "04c5e3254ac03712a0fde27ef068329299305c40",
+    "runnerRegistry": "HISTORICAL_ONLY_TESTS",
+    "activeDefaultExecution": false,
+    "explicitReason": "A0_IS_IMMUTABLE_HISTORICAL_BASELINE_AND_A2_OWNS_APPEND_AWARE_CURRENT_INVENTORY",
+    "a2CoverageMapRequired": true,
+    "coveredInvariantFamiliesExactly": [
+      "RECEIPT",
+      "BLOB",
+      "BASELINE_INVENTORY",
+      "DEPENDENCY",
+      "IDENTIFIER",
+      "EXTENSION",
+      "EXTERNAL_FUNCTION",
+      "EXTERNAL_DATABASE_OBJECT",
+      "FILENAME",
+      "OCCURRENCE",
+      "SCOPE",
+      "PR_CONTRACT"
+    ],
+    "coveredHistoricalTestNamesExactly": [
+      "live C3R-A0 manifest validates all 25 migration filenames and SQL closure",
+      "DROP INDEX exclusion retains a later same-named function dependency",
+      "closure canonicalizes CRLF and CR before deriving token-span evidence",
+      "quoted index and function identities retain distinct exact occurrences",
+      "index targets exclude only their exact source spans",
+      "same-name relation and function occurrences in one CREATE INDEX statement remain visible",
+      "same-name occurrence in another statement remains visible",
+      "multiple DROP INDEX targets exclude only their own occurrences",
+      "index-target and function-call statement order does not change closure",
+      "unquoted PostgreSQL identifiers fold ASCII case to lowercase",
+      "quoted PostgreSQL identifier case remains exact",
+      "dots inside quoted identifier components remain atomic",
+      "doubled quotes decode without changing quoted identity",
+      "comments and strings create no false dependency occurrences",
+      "unsupported identifier syntax fails closed with a typed diagnostic",
+      "unqualified digest maps to pgcrypto without double-counting qualified digest",
+      "live extension derivation is exactly pgcrypto and vector",
+      "extension and explicit schema tokens have closed occurrence roles",
+      "auth.uid is SQL-derived as a manifest-required external function",
+      "code-owned external database-object registry rejects manifest self-authorization",
+      "unknown qualified relations and functions fail closed",
+      "live migration filename-set mismatch fails",
+      "removing a manifest record fails",
+      "adding a synthetic manifest record fails",
+      "changing an exact predecessor fails bidirectional SQL comparison",
+      "consumer before producer fails closed",
+      "UNKNOWN remote status blocks silent rename and repair",
+      "every exclusion entry carries statement, span, role, kind, and components",
+      "identity-wide index suppression mutation fails occurrence evidence",
+      "analyzer contains no semantic-name-only index exclusion authority",
+      "terminal donors remain metadata-only and are not current migration evidence",
+      "A0 installs no program selector, runtime, migration mutation, or activation",
+      "A0 owns exactly seven paths, is top-level authority, and is registered once",
+      "exact pinned A0 PR accepts Refs #781 while preserving the open tracker",
+      "A0 reference-only exception rejects closing keywords and missing disposition",
+      "A0 reference-only exception is pinned against branch, title, base, and fork replay",
+      "unrelated PRs retain the ordinary exact-one closing-reference rule"
+    ],
+    "silentlySkipped": false
+  },
+  "serialProgram": {
+    "strictStageOrder": [
+      "C3R-P",
+      "C3R-T",
+      "C3R-L"
+    ],
+    "c3rPRequiresValidatedReceipts": [
+      "C3R-A0",
+      "C3R-A1",
+      "C3R-A2"
+    ],
+    "c3rPState": "dependency_ready_unstarted_after_validated_a2_receipt",
+    "c3rTState": "blocked_on_validated_c3r_p_receipt",
+    "c3rLState": "blocked_on_validated_c3r_p_and_c3r_t_receipts",
+    "wcvC3State": "incomplete",
+    "issueStateMaySubstituteForA2Receipt": false,
+    "unmergedA2PrMaySubstituteForA2Receipt": false
+  },
+  "deliveryControl": {
+    "mergeProducingWriterLimit": 1,
+    "sourceCorrectionsMaximum": 2,
+    "formalExactHeadReviewsMaximum": 3,
+    "autoMerge": false,
+    "referenceOnlyIssueLinks": {
+      "mode": "REFERENCE_ONLY",
+      "repository": "chachathecat/inverge",
+      "baseRef": "main",
+      "baseSha": "54afffcc539981ded65591f1f027171343bfce40",
+      "headRef": "codex/wcv-c3r-a2-migration-history-reconciliation",
+      "headRepository": "chachathecat/inverge",
+      "pullRequestTitle": "[WCV-C3R-A2] Install append-aware migration history reconciliation authority",
+      "requiredReferenceLinesExactly": [
+        "Refs #781",
+        "Refs #706",
+        "Refs #707",
+        "Refs #708",
+        "Refs #714"
+      ],
+      "requiredDispositionLine": "- Issue disposition: #706/#707/#708/#714/#781 remain open; C3R-P remains unstarted",
+      "closingKeywordsAllowed": false,
+      "exceptionAppliesOnlyWhenExactLinesPresent": true,
+      "fullGithubClosingKeywordFamilyBlocked": true
+    }
+  },
+  "activationBoundary": {
+    "migrationFileMutationPerformed": false,
+    "remoteMigrationHistoryRepairAuthorized": false,
+    "remoteDbPushAuthorized": false,
+    "linkedResetAuthorized": false,
+    "remoteSqlMutationAuthorized": false,
+    "runtimeImplementationAuthorized": false,
+    "productionAuthorized": false,
+    "paymentAuthorized": false,
+    "providerAuthorized": false,
+    "learnerActivationAuthorized": false,
+    "remoteMutationCount": 0,
+    "successorRuntimeStarted": 0
+  },
+  "packageIdentity": {
+    "packageJsonGitBlob": "33a8d29b52ac225c6e957c71fce1f28f2eaba16d",
+    "packageLockJsonGitBlob": "70f85fb69c39aa73cf572082c4d38eb426c0b398",
+    "packageMutationAuthorized": false
+  },
+  "ownedPaths": [
+    "docs/decisions/2026-08-21-owner-wcv-c3r-a2-migration-history-reconciliation.md",
+    "config/dabangil-wcv-c3r-a2-migration-history-reconciliation-v1.json",
+    "docs/qa/wcv-c3r-a2-migration-history-reconciliation-validation.md",
+    "scripts/automation/wcv-c3r-a2-migration-history-reconciliation.mjs",
+    "tests/wcv-c3r-a2-migration-history-reconciliation-authority.test.mjs",
+    "AGENTS.md",
+    "roadmap/active-program.yml",
+    "config/dabangil-unified-program-contract.json",
+    "docs/dabangil-unified-program-contract.md",
+    "docs/inverge-master-roadmap.md",
+    "scripts/automation/validate-pr-contract.mjs",
+    "scripts/run-node-tests.mjs"
+  ],
+  "forbiddenPathPrefixes": [
+    "supabase/migrations/",
+    "app/",
+    "components/",
+    "lib/review-os/",
+    ".github/workflows/"
+  ],
+  "forbiddenExactPaths": [
+    "package.json",
+    "package-lock.json",
+    "docs/decisions/2026-08-21-owner-wcv-c3r-a0-migration-dependency-authority.md",
+    "config/dabangil-wcv-c3r-a0-migration-dependency-authority-v1.json",
+    "scripts/automation/wcv-c3r-a0-migration-dependency-closure.mjs",
+    "tests/wcv-c3r-a0-migration-dependency-authority.test.mjs",
+    "docs/decisions/2026-08-21-owner-wcv-c3r-a1-serial-program-authority.md",
+    "config/dabangil-wcv-c3r-a1-serial-program-authority-v1.json",
+    "docs/qa/wcv-c3r-a1-serial-program-authority-validation.md",
+    "tests/wcv-c3r-a1-serial-program-authority.test.mjs"
+  ]
+}

@@ -4,6 +4,9 @@
 - 상세 제품 기준: `docs/inverge-second-round-final-product-spec.md`
 - 실행 상태와 의존성 기준: `roadmap/active-program.yml`
 - Current exact-scope authority:
+  `docs/decisions/2026-08-21-owner-wcv-c3r-a2-migration-history-reconciliation.md`
+  for the source-only current append-aware migration-history authority and
+  dependency-ready/unstarted C3R-P selector,
   `docs/decisions/2026-08-21-owner-wcv-c3r-a1-serial-program-authority.md`
   for the source-only WCV-C3 recovery program and C3R-P post-merge selector,
   `docs/decisions/2026-08-21-owner-wcv-c3r-a0-migration-dependency-authority.md`
@@ -91,6 +94,29 @@ complete WCV-C3, close #706/#707/#708/#781, complete Issue #714 allocation C3
 while preserving C4/C6, advance the selector or publish the terminal receipt.
 A1 starts no runtime, completes no WCV-C3 state, closes no issue and authorizes
 no migration apply, Production, payment or learner activation.
+
+## 2026-08-21 WCV-C3R Append-Aware Migration-History Authority
+
+C3R-A2 preserves A0 as the immutable 25-file historical baseline and A1 as
+the immutable serial-program receipt. Its fresh `LIVE_READ_ONLY`
+`inverge-beta` receipt replaces A0's combined ambiguous status with two exact
+axes: 15 `LEDGER_APPLIED` plus ten `LEDGER_ABSENT`, and 20
+`SCHEMA_PRESENT_UNVERIFIED` plus five `SCHEMA_ABSENT`. No presence-only
+observation establishes migration equivalence.
+
+The current inventory is the A0 baseline plus exact registered repairs,
+renames and versioned appends minus exact retired aliases. The known-blocked
+baseline records `42P19`, the duplicate/legal-order defect and the `42883`
+concept-boundary lexical inversion. C3R-P must clear those blockers at its
+migration checkpoint, prove two exact isolated Supabase replays, then use one
+new 14-digit append greater than `20260817170000` for both final RPC-boundary
+reassertion and durable-learning schema/RPC/RLS work. Remote history repair,
+remote apply and linked reset remain separate Owner gates.
+
+After A2's validated protected merge, C3R-P requires A0+A1+A2 receipts and is
+dependency-ready but unstarted. The P→T→L order is unchanged, C3R-T/L remain
+blocked, WCV-C3 remains incomplete, all governed issues remain open and this
+Work stops without starting a successor.
 
 The future free-limited public ULC-L1 route requires Today, Review Queue,
 five first-round MCQ subjects, three second-round Trusted Repair subjects,

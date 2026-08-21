@@ -1,6 +1,15 @@
 import { spawnSync } from "node:child_process";
 import { existsSync } from "node:fs";
 
+// Preserved byte-exact historical suites whose old live-directory assertions
+// are superseded by a later append-aware authority. They remain directly
+// runnable and are covered by the active successor suite, but are not part of
+// the default current-inventory execution list.
+const HISTORICAL_ONLY_TESTS = Object.freeze([
+  "tests/wcv-c3r-a0-migration-dependency-authority.test.mjs",
+]);
+void HISTORICAL_ONLY_TESTS;
+
 const defaultTestFiles = [
   "tests/closed-beta-golden-flow-routes.test.mjs",
   "tests/learner-loop-production-gap-audit.test.mjs",
@@ -116,8 +125,8 @@ const defaultTestFiles = [
   "tests/v12-t0-cpf1-persistence-sink-inventory.test.mjs",
   "tests/appraiser-second-world-class-vertical-contract.test.mjs",
   "tests/wcv-campaign-authority-roadmap-reconciliation.test.mjs",
-  "tests/wcv-c3r-a0-migration-dependency-authority.test.mjs",
   "tests/wcv-c3r-a1-serial-program-authority.test.mjs",
+  "tests/wcv-c3r-a2-migration-history-reconciliation-authority.test.mjs",
   "tests/wcv-c2r-structural-recovery-authority.test.mjs",
   "tests/rights-safe-adaptive-variant-foundry-contract.test.mjs",
   "tests/c2r-b-typed-subject-proof-contract.test.mjs",
