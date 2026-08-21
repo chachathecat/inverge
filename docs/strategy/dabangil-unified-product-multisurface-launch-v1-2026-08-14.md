@@ -8,9 +8,8 @@
   `config/dabangil-unified-product-multisurface-launch-v1.json`
 - Installation-time implementation authority (historical 2026-08-14 state):
   WCV-C2 / C2 / C2R-A / #702
-- Current repository selector represented after terminal PR #764's exact-head
-  merge and validated #717 receipt: WCV-C3 / C3 / #706 /
-  authorized_unstarted
+- Current repository selector under the later WCV-C3R source authority:
+  WCV-C3 / C3 / #781 / C3R-P / #706 / authorized_unstarted
 - Current activation: none
 
 ## 1. Product convergence
@@ -204,9 +203,12 @@ to `apps/web`.
 
 ## 7. Complete-vertical dependency graph
 
-WCV-C3 is the first authorized-unstarted dependency-ready non-Production item
-after the validated terminal C2R-C-L receipt. Later items remain queued,
-unselected and unstarted. Terminal C2R-C-L is the entry gate.
+WCV-C3 remains the first selected non-Production roadmap item after terminal
+C2R-C-L, but its full-sized PR #770/#780 candidates and source-authority
+PRs #782/#783 are terminal unmerged
+donors. Tracker #781 now selects C3R-P as authorized but unstarted; C3R-T and
+C3R-L remain dependency-blocked. This source authority does not start C3R-P.
+Later ULC items remain queued, unselected and unstarted.
 
 | Order | Item | Complete outcome | Sequence dependency and operational prerequisite |
 |---:|---|---|---|
@@ -350,11 +352,11 @@ ULC-0 source validation must prove:
 - one ULC-0 lead issue (#719);
 - exact preservation of the WCV-C2R object, roadmap block, and 21-row matrix;
 - exact preserved installation-time selection WCV-C2/C2/C2R-A/#702;
-- exact post-receipt repository selector WCV-C3/C3/#706/authorized_unstarted,
-  with WCV-C2 completion requiring PR #764's expected-head merge and validated
-  #717 receipt;
+- exact current repository selector
+  WCV-C3/C3/#781/C3R-P/#706/authorized_unstarted, while preserving terminal
+  WCV-C2 completion and the validated #717 receipt;
 - unique future IDs and resolved dependencies;
-- no selected or started ULC stage; WCV-C3 is selected but unstarted;
+- no selected or started ULC stage; WCV-C3/C3R-P is selected but unstarted;
 - no O4W/C5/C6 dependency on free ULC-L1;
 - the separate paid path still requires all three and a later authorization;
 - exactly three public/student surfaces;
@@ -370,7 +372,7 @@ contract is documented in
 
 ## 15. Authority-only boundary
 
-ULC-0 changes source authority only. It performs no C2R-A, WCV-C3, native,
+ULC-0 changes source authority only. It performs no C2R-A, WCV-C3R, native,
 first-round, instructor, provider, content, migration, payment, store,
 deployment, or Production work. It adds no package or lockfile. It establishes
 no technical readiness, market readiness, efficacy, or public availability.

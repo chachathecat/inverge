@@ -5,6 +5,14 @@
 Use this authority order when sources conflict:
 
 1. a dated Owner decision for the exact decision it owns, currently
+   `docs/decisions/2026-08-20-owner-wcv-c3-structural-recovery.md`
+   for PR #770/#780/#782/#783 terminal donor preservation, Tracker #781, the exact
+   `C3R-P → C3R-T → C3R-L` migration-safe replacement chain, the closed
+   `MigrationHistoryCompatibilityManifestV1`, the post-merge selector
+   `C3R-P/#706/authorized_unstarted`, and the rule that only C3R-L may close
+   WCV-C3/#706/#707/#708/#781 or complete Issue #714 allocation C3; this
+   decision becomes repository authority only after its expected-head-pinned
+   squash merge and validated GitHub receipt,
    `docs/decisions/2026-08-17-owner-c2r-c-p-structural-practice-proof-recovery.md`
    for the exact complete Practice trusted-repair runtime vertical, its 11
    candidate regression rows in PR #756, and the post-merge current-stage
@@ -108,7 +116,7 @@ user invitation, rights-unclear content, unresolved privacy/legal operation,
 public release or domain promotion, destructive or irreversible data action,
 or material product-scope change.
 
-V13 is the sole active master plan. The Appraiser Second World-Class Vertical
+V13 remains the sole active master plan. The Appraiser Second World-Class Vertical
 Execution Standard `1.0.8` is a subordinate V13 execution standard only. It
 does not create a second active master or a second mastery authority.
 
@@ -136,13 +144,13 @@ The authority-graph identifiers are distinct: completed roadmap item `WCV-C2`,
 completed campaign `C2`, recovery tracker #717, completed source-only stages
 `C2R-A` for Issue #702 and `C2R-B` for Issue #714, and completed Practice,
 Theory and Law runtime stages `C2R-C-P`, `C2R-C-T` and `C2R-C-L` for Issue
-#703. The next dependency-ready non-Production selector represented after the
-terminal expected-head-pinned merge and validated #717 receipt is roadmap item
-`WCV-C3`, campaign `C3`, lead Issue #706, authorized but unstarted. The
-canonical tuple is `WCV-C3 / C3 / #706 / authorized_unstarted`. An issue state
+#703. WCV-C3 remains the current roadmap item and C3 the current campaign, but
+its exhausted full-sized candidates are replaced under Tracker #781 by the
+strict serial chain `C3R-P → C3R-T → C3R-L`. The current post-authority selector
+is `WCV-C3 / C3 / #781 / C3R-P / #706 / authorized_unstarted`. An issue state
 or issue closure cannot substitute for a replacement-stage merge or receipt.
-C2R-B completes only the Issue #714 allocation for campaign C2 and leaves
-Issue #714 open with its C3, C4 and C6 allocations preserved.
+Only terminal C3R-L may complete WCV-C3, close #706/#707/#708/#781, or complete
+Issue #714 allocation C3; Issue #714 then remains open for C4 and C6.
 
 ## C2R-A rights-safe source firewall
 
@@ -257,6 +265,100 @@ authorized_unstarted`; Issue #714 remains open for C3/C4/C6. Law has its own
 reverting Practice or Theory. Production, remote Supabase apply, learner
 activation, payment, live providers and rights-unclear content remain
 unauthorized.
+
+## WCV-C3 structural recovery
+
+PR #770 and PR #780 are closed, Draft, unmerged and read-only donors. PR #782
+is also closed, unmerged and read-only at head
+`e3609843850ba1f2ce64c291d9b4daae964d2f65`, tree
+`20e0f9235b71c3427ee184bf7e02f22f46633ef6`, after source corrections `2/2`,
+formal reviews `2/3` and final actionable P0/P1/P2 `0/0/1`. Its remaining
+review comment `3821578964` requires SQL-derived `CREATE EXTENSION`, schema,
+use and producer closure. The earlier `auth.uid` correction remains a
+regression obligation. PR #780 ended at head
+`a28c1983a5264f21ed35ab48a465cd9198a46e5b`, tree
+`e589b0e55f93d70df4ef5c0d335d74e4242f91ce`, after source corrections `2/2`
+and formal reviews `0/3`. Its central Runtime Gate run `32358691451` and
+dedicated WCV-C3 run `32358691469` both failed with artifact count zero. No
+donor branch, commit, review thread, CI result or runtime artifact is promoted
+or mutated.
+
+PR #783 is the closed, unmerged and read-only first clean replan for PR #782's
+mandatory migration-dependency root at head
+`7298b147d5f61e9d2eaa915b6b9c05354124add5`, tree
+`e47605343bfdad7d44737756f56e9f555d089e94`, after source corrections `2/2`,
+formal reviews `3/3` and final actionable P0/P1/P2 `0/0/1`. Its remaining
+thread `PRRT_kwDOSMHn8M6a4MON` and comment `3823315579` require exact
+PostgreSQL quoted-identifier case semantics. The installing source-authority
+Work is clean replan `2/2` for this dependency-closure root, is reconstructed
+from refreshed `main`, does not mutate or promote a donor, and is not a third
+clean replan. If it terminally exhausts with a mandatory finding, no third
+full-sized replan is allowed: structurally reduce from refreshed `main` into
+independently complete `C3R-A0` dependency authority, then only after its
+validated receipt `C3R-A1` serial program authority. C3R-P remains unstarted.
+
+Tracker #781 installs the source-only WCV-C3 structural recovery contract in
+`config/dabangil-wcv-c3-structural-recovery-v1.json`. The exact order is
+`C3R-P → C3R-T → C3R-L`. C3R-P is the only current stage and remains
+`authorized_unstarted`; this source-authority merge does not start it. C3R-P
+must deliver the complete Practice outcome plus migration-history
+reconciliation and common durable substrate. C3R-T then delivers the complete
+Theory delta. C3R-L then delivers the complete Law delta and alone may complete
+WCV-C3, close #706/#707/#708/#781, complete Issue #714 allocation C3 while
+preserving C4/C6, advance the selector and publish the terminal receipt.
+
+`MigrationHistoryCompatibilityManifestV1` records all 25 live-main migrations
+and the donor-only WCV migration, including current and canonical proposed
+tokens, exact dependencies, consumed/produced objects, remote status and
+mutation gates. The current duplicate, mixed-width and dependency-inverted
+history is a blocking fact, not silently repaired. `UNKNOWN` or
+`KNOWN_APPLIED` status forbids rename or repair without a separate explicit
+Owner gate and exact reconciliation plan. No `migration repair`, `db push`,
+linked reset, remote SQL or remote schema mutation is authorized. Every later
+runtime stage requires two fresh isolated Supabase reset/replay cycles.
+
+`MigrationDependencyClosureV1` uses one bounded `PostgresIdentifierLexerV1`
+before deriving executable `CREATE EXTENSION`
+declarations, required extension uses, exact extension schema, external
+functions, produced database object classes and exact dependency predecessors
+from migration SQL and compares both directions against the manifest. The
+analyzer derives `consumes`, `modifies` and `drops` independently, preserves
+database-object kind while matching exact identity, and binds the closed
+dependency classes, parser contract, extension registry, external-function
+registry and comparison rules byte-for-byte to the machine manifest. The two
+S236P policy-order exceptions use a closed override registry that itself
+requires exact current and prior policy-operation SQL evidence. Unquoted ASCII
+identifiers fold to lowercase; quoted identifiers decode doubled quotes and
+preserve exact case, and qualified components normalize independently. Quoted
+payloads, comments, ordinary/escape strings and scalar dollar bodies do not
+count. Only grammar-established executable `sql` or `plpgsql`
+DO/function/procedure dollar bodies are scanned; other declared languages are
+non-executable for this analyzer, and a function/procedure dollar body without
+an exact language fails as ambiguous. Unsupported identifier forms fail
+explicitly. Statement-aware type positions recognize bare, qualified, array,
+typmod, cast-source/target, routine parameter/return, table/composite column,
+domain and PL/pgSQL declaration uses of `vector` without treating a column
+name, default expression or ordinary alias as a type. COPY/VACUUM/ANALYZE/
+CLUSTER/TRUNCATE, GRANT/REVOKE target lists, `ONLY`, `INHERITS`, trigger and
+rule relation positions are parsed before call/type classification. Produced-
+object closure includes temporary table/view forms, domains and procedures;
+multi-target drops enumerate every target, while object rename/set-schema
+transitions drop the old identity and produce the new identity with new
+provenance. Unqualified
+`digest` is a `pgcrypto` use and is not double-counted when schema-qualified as
+`extensions.digest`; a current-migration declaration must precede its use. Missing,
+extra, wrong-kind, wrong-schema, wrong-producer, out-of-order, unregistered
+qualified or ambiguous dependencies fail closed, including valid PostgreSQL
+quoted-identifier forms. The canonical pgvector
+extension identity is `vector`, never `pgvector`.
+
+C3R-P must install one closed runtime-evidence adapter for the exact recovery
+path set plus common Practice substrate. It fails closed on an unregistered
+migration-sensitive path, incomplete path closure, either missing reset,
+absent metadata-only artifact, exact-head mismatch, remote Supabase use or
+cleanup failure. C3R-T and C3R-L may extend it only with their exact
+subject-protected paths. Production, remote Supabase apply, payment, providers,
+external or real learners and successor runtime remain unauthorized.
 
 ## Product scope (Owner O1R amendment on 2026-07-26)
 

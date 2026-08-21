@@ -10,25 +10,27 @@ program:
   globalMergeProducingWriterLimit: 1
   wipLimitDoesNotAuthorizeWriterCount: true
   campaignOverlay: C3
-  structuralRecoveryOverlayId: WCV-C2R-STRUCTURAL-RECOVERY
+  structuralRecoveryOverlayId: WCV-C3R-STRUCTURAL-RECOVERY
   campaignLockGroup: wcv-vertical-campaign
   soleNextImplementationItem: WCV-C3
   soleNextImplementationCampaign: C3
   soleNextImplementationLeadIssue: 706
-  soleNextImplementationTrackerIssue: 706
-  soleNextReplacementStage: null
-  soleNextReplacementStageIssue: null
-  soleNextReplacementStageDecision: docs/decisions/2026-08-14-wcv-c2-structural-recovery.md
-  structuralRecoveryChainDecision: docs/decisions/2026-08-14-wcv-c2-structural-recovery.md
+  soleNextImplementationTrackerIssue: 781
+  soleNextReplacementStage: C3R-P
+  soleNextReplacementStageIssue: 706
+  soleNextReplacementStageDecision: docs/decisions/2026-08-20-owner-wcv-c3-structural-recovery.md
+  structuralRecoveryChainDecision: docs/decisions/2026-08-20-owner-wcv-c3-structural-recovery.md
   c2rBOperationalStartRequiresValidatedC2rAReceipt: true
   c2rBOperationalStartRequiresIssue702Closure: true
   c2rCPOperationalStartRequiresValidatedTerminalStages: [C2R-A, C2R-B]
   c2rCPOperationalStartRequiresValidatedC2rBReceipt: true
   crossVerticalAcceptanceTrackerIssue: 714
-  structuralRecoveryTrackerIssue: 717
-  terminalDonorPr: 716
+  structuralRecoveryTrackerIssue: 781
+  terminalDonorPr: 783
+  terminalDonorPrs: [770, 780, 782, 783]
   terminalDonorMerged: false
   wcvC2Complete: true
+  wcvC3Complete: false
   replacementStageAutomaticStartAllowed: false
   githubNativeNonProductionContinuationAllowed: true
   githubNativeDeliveryDecision: docs/decisions/2026-08-16-owner-github-native-delivery-control.md
@@ -451,16 +453,48 @@ items:
     risk: high
     priority: 31.13
   - id: WCV-C3
-    title: C3 Durable Learning and Daily Command Vertical
+    title: C3 Durable Learning and Daily Command Structural Recovery
     status: queued
-    executionState: authorized_unstarted_after_validated_terminal_c2r_c_l_receipt
+    executionState: structural_recovery_c3r_p_authorized_unstarted
     leadIssue: 706
     includedIssues: [706, 707, 708]
     crossVerticalAcceptanceTracker: 714
+    structuralRecoveryTracker: 781
+    structuralRecoveryDecision: docs/decisions/2026-08-20-owner-wcv-c3-structural-recovery.md
+    structuralRecoveryContract: config/dabangil-wcv-c3-structural-recovery-v1.json
+    terminalDonorPrs: [770, 780, 782, 783]
+    terminalDonorsReadOnly: true
+    terminalDonorsMerged: false
+    donorEvidencePromotedToMain: false
+    dependencyClosureRootCleanReplanOrdinal: 2
+    dependencyClosureRootCleanReplanMaximum: 2
+    thirdFullSizedCleanReplanAllowed: false
     terminalReplacementDependency: C2R-C-L
+    replacementStages: [C3R-P, C3R-T, C3R-L]
+    currentReplacementStage: C3R-P
+    currentReplacementStageIssue: 706
+    c3rPState: authorized_unstarted
+    c3rPStartRequiresValidatedStructuralAuthorityMergeReceipt: true
+    c3rTState: dependency_blocked_unstarted
+    c3rTStartRequiresValidatedTerminalStages: [C3R-P]
+    c3rLState: dependency_blocked_unstarted
+    c3rLStartRequiresValidatedTerminalStages: [C3R-P, C3R-T]
+    issueStateMaySubstituteForStageMerge: false
+    intermediateSubjectStagesMayCloseIssues706To708: false
+    issue706ClosureStage: C3R-L
+    issue707ClosureStage: C3R-L
+    issue708ClosureStage: C3R-L
+    tracker781ClosureStage: C3R-L
+    terminalWcvC3CompletionStage: C3R-L
+    issue714C3AllocationCompletionStage: C3R-L
+    issue714MustRemainOpenAfterC3RL: true
+    issue714RemainingAllocationsAfterC3: [C4, C6]
+    freshIsolatedResetReplayCyclesRequiredPerRuntimeStage: 2
+    migrationHistoryCompatibilityManifest: MigrationHistoryCompatibilityManifestV1
+    runtimeEvidenceAdapterFirstStage: C3R-P
     selected: true
     started: false
-    githubNativeAutomaticContinuationAllowed: true
+    githubNativeAutomaticContinuationAllowed: false
     automaticStartAllowed: false
     dependencies: [WCV-C2]
     lockGroup: wcv-vertical-campaign

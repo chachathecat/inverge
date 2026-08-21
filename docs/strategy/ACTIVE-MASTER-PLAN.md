@@ -72,17 +72,27 @@ and original no-auto-start authority unchanged for historical structural
 scope. The later 2026-08-15 C2R-A decision
 owns the completed C2R-A source contract and its post-A selector. The still
 later C2R-B decision owns the typed proof architecture and post-B selector.
-The 2026-08-17 C2R-C-P decision owns the complete Practice runtime candidate
-and post-P selector. The typed-proof and structural decisions own the complete
-Theory and Law deltas. PR #762 completed Theory; terminal candidate PR #764
-represents C2R-C-L/WCV-C2 completion only after its expected-head merge and
-validated receipt, then selects WCV-C3/C3/#706. Issue #714 stays open for
-C3/C4/C6.
+The 2026-08-17 C2R-C-P decision owns the complete Practice runtime and its
+historical post-P selector. The typed-proof and structural decisions own the
+complete Theory and Law deltas. PR #762 and PR #764 completed Theory and Law;
+the later full-sized WCV-C3 PR #770/#780 candidates and source-authority PRs
+#782/#783 are terminal closed
+and unmerged. The 2026-08-20 WCV-C3R decision now owns Tracker #781 and the
+serial `C3R-P → C3R-T → C3R-L` recovery. Issue #714 stays open for C3/C4/C6.
 
-The canonical post-receipt tuple is
-`WCV-C3 / C3 / #706 / authorized_unstarted`. C2R-B installs no runtime;
+The canonical post-authority tuple is
+`WCV-C3 / C3 / #781 / C3R-P / #706 / authorized_unstarted`. C2R-B installs no runtime;
 C2R-C-P, C2R-C-T and C2R-C-L install independently default-off Owner-only
 Practice, Theory and Law runtimes.
+
+The exact source authority and machine contract are:
+
+- `docs/decisions/2026-08-20-owner-wcv-c3-structural-recovery.md`
+- `config/dabangil-wcv-c3-structural-recovery-v1.json`
+
+The source-authority merge does not automatically start C3R-P. Only terminal
+C3R-L may complete WCV-C3, close #706/#707/#708/#781 or complete Issue #714
+allocation C3 while preserving C4/C6 and keeping #714 open.
 
 ## Mandatory V13 follow-up — Memory Cue & Annotation Layer
 
@@ -217,12 +227,13 @@ three subjects.
 The final public target is separately defined by the subordinate ULC-0
 amendment as the integrated first- and second-round product on Web,
 iOS/iPadOS and Android. That future target does not activate first-round,
-native, instructor or public runtime now. Candidate PR #764 represents the
-post-receipt repository selection WCV-C3/C3/#706, authorized but unstarted.
+native, instructor or public runtime now. The repository selection is
+`WCV-C3 / C3 / #781 / C3R-P / #706 / authorized_unstarted`.
 C2R-A/#702 and C2R-B/#714 are completed source-only predecessors, while
 C2R-C-P, C2R-C-T and C2R-C-L are completed default-off Practice, Theory and
-Law runtime predecessors under merge-and-receipt semantics; no Production or
-learner activation follows.
+Law runtime predecessors under merge-and-receipt semantics. PR #770/#780/#782/#783 are
+terminal unmerged donors; no Production, remote Supabase or learner activation
+follows the recovery source authority.
 
 The Portable Professional Exam Core is an internal architecture contract only. It does
 not authorize:

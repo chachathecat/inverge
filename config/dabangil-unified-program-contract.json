@@ -43,6 +43,28 @@
     "productionAuthorized": false,
     "replacementStageAutomaticStartAllowed": false
   },
+  "wcvC3StructuralRecoveryDecision": {
+    "id": "owner_wcv_c3r_structural_recovery_2026_08_20",
+    "status": "approved_candidate_source_contract_only",
+    "decisionDateKst": "2026-08-20",
+    "decisionRecord": "docs/decisions/2026-08-20-owner-wcv-c3-structural-recovery.md",
+    "contract": "config/dabangil-wcv-c3-structural-recovery-v1.json",
+    "validation": "docs/qa/wcv-c3-structural-recovery-validation.md",
+    "focusedTest": "tests/wcv-c3-structural-recovery-authority.test.mjs",
+    "recoveryTrackerIssue": 781,
+    "terminalDonorPrs": [770, 780, 782, 783],
+    "replacementChain": ["C3R-P", "C3R-T", "C3R-L"],
+    "currentReplacementStage": "C3R-P",
+    "currentReplacementStageIssue": 706,
+    "currentReplacementStageState": "authorized_unstarted",
+    "wcvC3Complete": false,
+    "runtimeAuthorized": false,
+    "remoteSupabaseAuthorized": false,
+    "learnerActivationAuthorized": false,
+    "paymentActivationAuthorized": false,
+    "productionAuthorized": false,
+    "sourceAuthorityMergeAutomaticallyStartsRuntime": false
+  },
   "launchConvergenceAmendment": {
     "id": "owner_ulc_0_unified_product_multisurface_launch_2026_08_14",
     "status": "approved_source_contract_only",
@@ -156,11 +178,14 @@
     "soleNextImplementationItem": "WCV-C3",
     "soleNextImplementationCampaign": "C3",
     "soleNextImplementationLeadIssue": 706,
-    "soleNextImplementationTrackerIssue": 706,
-    "soleNextReplacementStage": null,
-    "soleNextReplacementStageIssue": null,
-    "structuralRecoveryTrackerIssue": 717,
+    "soleNextImplementationTrackerIssue": 781,
+    "soleNextReplacementStage": "C3R-P",
+    "soleNextReplacementStageIssue": 706,
+    "structuralRecoveryTrackerIssue": 781,
+    "wcvC3RecoveryTrackerIssue": 781,
+    "wcvC3CurrentReplacementStage": "C3R-P",
     "wcvC2Complete": true,
+    "wcvC3Complete": false,
     "runtimeAuthorized": false,
     "firstRoundRuntimeAuthorized": false,
     "mobileRuntimeAuthorized": false,
@@ -1509,6 +1534,67 @@
         "runtimeReadinessEstablished": false
       }
     },
+    "c3StructuralRecovery": {
+      "trackerIssue": 781,
+      "roadmapItemId": "WCV-C3",
+      "campaignId": "C3",
+      "leadIssue": 706,
+      "includedIssues": [706, 707, 708],
+      "terminalDonorPrs": [770, 780, 782, 783],
+      "terminalDonorsReadOnly": true,
+      "terminalDonorsMerged": false,
+      "donorEvidencePromoted": false,
+      "decisionRecord": "docs/decisions/2026-08-20-owner-wcv-c3-structural-recovery.md",
+      "contract": "config/dabangil-wcv-c3-structural-recovery-v1.json",
+      "migrationHistoryCompatibilityManifest": "MigrationHistoryCompatibilityManifestV1",
+      "replacementStages": [
+        {
+          "order": 1,
+          "id": "C3R-P",
+          "issue": 706,
+          "subject": "PRACTICE",
+          "state": "authorized_unstarted",
+          "dependencies": [],
+          "startRequiresStructuralAuthorityMergeAndValidatedReceipt": true,
+          "issueStateMaySatisfyDependency": false,
+          "issueClosureAllowed": false,
+          "terminalWcvC3CompletionAllowed": false
+        },
+        {
+          "order": 2,
+          "id": "C3R-T",
+          "issue": 706,
+          "subject": "THEORY",
+          "state": "dependency_blocked_unstarted",
+          "dependencies": ["C3R-P"],
+          "issueStateMaySatisfyDependency": false,
+          "issueClosureAllowed": false,
+          "terminalWcvC3CompletionAllowed": false
+        },
+        {
+          "order": 3,
+          "id": "C3R-L",
+          "issue": 706,
+          "subject": "LAW",
+          "state": "dependency_blocked_unstarted",
+          "dependencies": ["C3R-P", "C3R-T"],
+          "issueStateMaySatisfyDependency": false,
+          "issueClosureAllowed": true,
+          "terminalClosureIssues": [706, 707, 708, 781],
+          "terminalWcvC3CompletionAllowed": true,
+          "completesIssue714Allocation": "C3",
+          "issue714ClosureAllowed": false,
+          "issue714AllocationsPreserved": ["C4", "C6"]
+        }
+      ],
+      "currentReplacementStage": "C3R-P",
+      "currentReplacementStageIssue": 706,
+      "exactlyOneCurrentReplacementStage": true,
+      "oneMergeProducingWriter": true,
+      "freshIsolatedResetReplayCyclesRequiredPerRuntimeStage": 2,
+      "sourceAuthorityMergeAutomaticallyStartsRuntime": false,
+      "successorRuntimeStarted": false
+    },
     "campaigns": [
       {
         "id": "C1",
@@ -1569,7 +1655,7 @@
       {
         "id": "C3",
         "roadmapItemId": "WCV-C3",
-        "name": "Durable Learning and Daily Command Vertical",
+        "name": "Durable Learning and Daily Command Structural Recovery",
         "leadIssue": 706,
         "includedIssues": [
           706,
@@ -1579,10 +1665,14 @@
         "dependencies": [
           "WCV-C2"
         ],
-        "state": "authorized_unstarted_after_validated_terminal_c2r_c_l_receipt",
+        "state": "structural_recovery_c3r_p_authorized_unstarted",
         "terminalReplacementDependency": "C2R-C-L",
+        "structuralRecoveryTrackerIssue": 781,
+        "replacementChain": ["C3R-P", "C3R-T", "C3R-L"],
+        "currentReplacementStage": "C3R-P",
+        "currentReplacementStageIssue": 706,
         "automaticStartAllowed": false,
-        "githubNativeAutomaticContinuationAllowed": true
+        "githubNativeAutomaticContinuationAllowed": false
       },
       {
         "id": "C4",
@@ -1727,9 +1817,9 @@
     },
     "soleNextImplementationCampaign": "C3",
     "soleNextImplementationLeadIssue": 706,
-    "soleNextImplementationTrackerIssue": 706,
-    "soleNextReplacementStage": null,
-    "soleNextReplacementStageIssue": null,
+    "soleNextImplementationTrackerIssue": 781,
+    "soleNextReplacementStage": "C3R-P",
+    "soleNextReplacementStageIssue": 706,
     "laterCampaignsQueued": [
       "C4",
       "C5",
@@ -1778,9 +1868,9 @@
     "soleNextImplementationItemId": "WCV-C3",
     "soleNextImplementationCampaignId": "C3",
     "soleNextImplementationLeadIssue": 706,
-    "soleNextImplementationTrackerIssue": 706,
-    "soleNextReplacementStageId": null,
-    "soleNextReplacementStageIssue": null,
+    "soleNextImplementationTrackerIssue": 781,
+    "soleNextReplacementStageId": "C3R-P",
+    "soleNextReplacementStageIssue": 706,
     "primaryStatusesUsed": [
       "completed",
       "blocked",
@@ -1883,7 +1973,9 @@
     "launchConvergencePaymentActivationAuthorized": false,
     "selectionAutomaticallyStartsWork": false,
     "replacementStageAutomaticStartAllowed": false,
-    "structuralRecoveryTrackerIssue": 717
+    "structuralRecoveryTrackerIssue": 781,
+    "wcvC3StructuralRecoveryTrackerIssue": 781,
+    "wcvC3StructuralRecoveryContract": "config/dabangil-wcv-c3-structural-recovery-v1.json"
   },
   "brand": {
     "mineralCobalt": "#4653A6",
