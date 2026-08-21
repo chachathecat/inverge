@@ -2,6 +2,9 @@
 
 - Contract version: `dabangil.unified_program.v4`
 - Current exact-scope Owner decisions:
+  `docs/decisions/2026-08-21-owner-wcv-c3r-a2-migration-history-reconciliation.md`
+  for the source-only current append-aware migration-history authority and
+  post-receipt dependency-ready/unstarted C3R-P selector,
   `docs/decisions/2026-08-21-owner-wcv-c3r-a1-serial-program-authority.md`
   for the source-only C3R-A1 serial program and post-merge C3R-P selector,
   `docs/decisions/2026-08-21-owner-wcv-c3r-a0-migration-dependency-authority.md`
@@ -327,6 +330,61 @@ merge and validated receipt selected C2R-C-T, and C2R-C-T's protected merge
 and validated receipt selected terminal C2R-C-L. PR #764 represents the
 post-receipt WCV-C3/#706 authorized-unstarted envelope.
 
+## 2B.1. WCV-C3R semantic-preserving append-aware migration-history authority
+
+C3R-A2 preserves PR #785/A0 as the immutable 25-file historical baseline and
+PR #786/A1 as the immutable `C3R-P → C3R-T → C3R-L` serial-program receipt.
+It narrowly replaces only A0's live-current exact-25-forever interpretation.
+Current inventory authority is `MigrationInventoryAuthorityV2`: the A0
+baseline plus exact registered repair/rename and versioned append receipts,
+minus exact retired-alias receipts. Every unregistered addition, omission,
+rename, content change, duplicate version or missing receipt fails closed.
+
+The fresh `LIVE_READ_ONLY` `inverge-beta` ledger contains exactly 15 ordered
+records and leaves exactly ten baseline files ledger-absent. The independent
+schema receipt classifies 20 records `SCHEMA_PRESENT_UNVERIFIED` and five
+`SCHEMA_ABSENT`; it establishes zero exact migration equivalences. Object
+presence never creates ledger application, and ledger absence never creates
+schema absence. Both receipts recorded zero remote mutation, zero learner or
+private bodies and zero secrets.
+
+The baseline-known-blocked phase binds `42P19` for the invalid recursive
+personal-learning CTE, duplicate/legal producer-order defects and `42883` for
+the applied RPC boundary sorting before its producer. The future C3R-P
+migration checkpoint must repair/rename the personal-learning file, rename
+the five ledger-absent legal files into the exact unique producer → identity
+→ retrieval → guard → grant order, and turn the applied early RPC boundary
+into a compatibility-safe step without renaming either applied concept-graph
+version. Only after zero active-chain failures and two exact isolated
+Supabase replays may one new publication-time 14-digit C3R-P migration append.
+That sole append combines the final RPC-boundary reassertion and the durable-
+learning schema/RPC/RLS work. It is not remote-application authority.
+
+The `20260608` repair is additionally closed by
+`PersonalLearningMigrationSemanticInventoryV1`, derived from the baseline SQL
+and compared bidirectionally against the future repair. It fixes the exact
+extension, forbidden-key function behavior, 20-column table, constraints,
+indexes, authenticated CRUD grant, four policies and baseline RLS state. Only
+the authorized filename, single-recursive-term implementation and separately
+declared FORCE-RLS/privilege hardening may differ.
+
+`MigrationFinalSecurityStateV1` evaluates the repaired canonical sequence in
+statement order. It binds every RLS, policy and table/function privilege
+operation to migration/statement/span/object and its before/after state.
+Protected tables must finish RLS-enabled and forced with the declared safe
+policy/privilege state; protected functions must finish with exactly
+authenticated EXECUTE. Later weakening or unsafe grant wins over earlier
+presence and fails. Comments/strings/inert dollar bodies do not count, quoted
+case stays distinct, and unsupported dynamic protected-object DDL fails
+closed.
+
+After A2's expected-head-pinned merge and validated receipt, C3R-P requires
+valid A0, A1 and A2 receipts and is
+`dependency_ready_unstarted_after_validated_a2_receipt`. A2 is an explicit
+stop-after-receipt Work: it starts no runtime, closes no issue, leaves C3R-T/L
+blocked and authorizes no remote repair, db push, linked reset, remote SQL,
+Production, payment, provider or learner activation.
+
 ## 2B. WCV-C3R source-only serial program authority
 
 PR #785 installed C3R-A0 at squash/main SHA
@@ -343,7 +401,9 @@ the exact WCV-C3 runtime order is:
 
 `C3R-P → C3R-T → C3R-L`
 
-C3R-P alone is `authorized_unstarted`. It owns the A0-governed migration-
+C3R-P alone was selected `authorized_unstarted` by the historical A1 receipt;
+current operational readiness additionally requires the validated A2 receipt.
+It owns the A2-governed migration-
 history reconciliation, common durable/forced-RLS/service-only substrate,
 complete Practice outcome, D+1/sealed-D+7/recurrence/reopen, Personal Study
 Ledger, Review Queue, Today/Full-Day, restore/export/delete, two isolated

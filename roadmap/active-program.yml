@@ -26,10 +26,15 @@ program:
   c3rA0MergeSha: 3a7047cf4c7fc68247137bafbca2434abdadbc7f
   c3rA1State: installed_after_expected_head_pinned_merge_and_validated_receipt
   c3rA1Authority: docs/decisions/2026-08-21-owner-wcv-c3r-a1-serial-program-authority.md
+  c3rA2State: installed_current_semantic_preserving_append_aware_migration_authority_after_validated_receipt
+  c3rA2PersonalLearningSemanticInventory: PersonalLearningMigrationSemanticInventoryV1
+  c3rA2FinalSecurityStateAuthority: MigrationFinalSecurityStateV1
+  c3rA2Authority: docs/decisions/2026-08-21-owner-wcv-c3r-a2-migration-history-reconciliation.md
+  c3rA2Contract: config/dabangil-wcv-c3r-a2-migration-history-reconciliation-v1.json
   c3rStrictStageOrder: [C3R-P, C3R-T, C3R-L]
   soleNextC3rStage: C3R-P
   soleNextC3rStageIssue: 706
-  soleNextC3rStageState: authorized_unstarted_after_validated_c3r_a1_merge_receipt
+  soleNextC3rStageState: dependency_ready_unstarted_after_validated_c3r_a2_merge_receipt
   c3rRuntimeAutomaticStartAllowed: false
   c3rSuccessorRuntimeStarted: false
   structuralRecoveryChainDecision: docs/decisions/2026-08-14-wcv-c2-structural-recovery.md
@@ -477,10 +482,17 @@ items:
     c3rA0ValidatedReceiptPr: 785
     c3rA1State: installed_after_expected_head_pinned_merge_and_validated_receipt
     c3rA1Contract: config/dabangil-wcv-c3r-a1-serial-program-authority-v1.json
+    c3rA2State: installed_current_semantic_preserving_append_aware_migration_authority_after_validated_receipt
+    c3rA2PersonalLearningSemanticInventory: PersonalLearningMigrationSemanticInventoryV1
+    c3rA2FinalSecurityStateAuthority: MigrationFinalSecurityStateV1
+    c3rA2Contract: config/dabangil-wcv-c3r-a2-migration-history-reconciliation-v1.json
+    migrationInventoryAuthority: C3R-A2
+    a0InventoryRole: immutable_historical_baseline
     c3rStrictStageOrder: [C3R-P, C3R-T, C3R-L]
     currentAuthorizedRuntimeStage: C3R-P
     currentAuthorizedRuntimeStageState: authorized_unstarted
-    c3rPStartRequiresValidatedStageReceipts: [C3R-A1]
+    currentDependencyState: dependency_ready_unstarted_after_validated_c3r_a2_merge_receipt
+    c3rPStartRequiresValidatedStageReceipts: [C3R-A0, C3R-A1, C3R-A2]
     c3rTStartRequiresValidatedStageReceipts: [C3R-P]
     c3rLStartRequiresValidatedStageReceipts: [C3R-P, C3R-T]
     issueStateMaySubstituteForStageReceipt: false

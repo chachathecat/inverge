@@ -5,6 +5,14 @@
 Use this authority order when sources conflict:
 
 1. a dated Owner decision for the exact decision it owns, currently
+   `docs/decisions/2026-08-21-owner-wcv-c3r-a2-migration-history-reconciliation.md`
+   for the independently complete source-only C3R-A2 append-aware migration-
+   history authority, the fresh read-only `inverge-beta` ledger/schema
+   receipts, the exact 25-record two-axis reconciliation, the narrow A0/A1
+   supersession, and the post-merge C3R-P
+   `dependency_ready_unstarted_after_validated_a2_receipt` selector; it
+   mutates no migration or remote state and becomes repository authority only
+   after its expected-head-pinned squash merge and validated GitHub receipt,
    `docs/decisions/2026-08-21-owner-wcv-c3r-a1-serial-program-authority.md`
    for the independently complete C3R-A1 source-only serial program authority,
    its exact PR #785/C3R-A0 receipt consumption, the strict
@@ -156,18 +164,71 @@ or issue closure cannot substitute for a replacement-stage merge or receipt.
 C2R-B completes only the Issue #714 allocation for campaign C2 and leaves
 Issue #714 open with its C3, C4 and C6 allocations preserved.
 
-For WCV-C3 recovery only, C3R-A0 is the installed immutable PostgreSQL
-migration-dependency authority and C3R-A1 is the independently complete
-source-only serial-program authority. After C3R-A1's expected-head-pinned
-merge and validated GitHub receipt, the exact runtime order is
-`C3R-P → C3R-T → C3R-L`: C3R-P alone is `authorized_unstarted`, C3R-T is
+For WCV-C3 recovery only, C3R-A0 is the installed immutable historical
+PostgreSQL migration baseline, C3R-A1 is the installed immutable source-only
+serial-program receipt, and C3R-A2 is the current append-aware migration-
+history authority. After C3R-A2's expected-head-pinned merge and validated
+GitHub receipt, the exact runtime order remains
+`C3R-P → C3R-T → C3R-L`: C3R-P alone is
+`dependency_ready_unstarted_after_validated_a2_receipt`, C3R-T is
 blocked on a validated C3R-P merge receipt, and C3R-L is blocked on validated
 C3R-P and C3R-T merge receipts. Issue state, issue closure, branch state,
 candidate code/tests and closed-unmerged PRs cannot satisfy any stage
 dependency. Only C3R-L may complete WCV-C3, complete Issue #714 allocation C3
 while preserving C4/C6, close #706/#707/#708/#781, advance the program
-selector or publish the terminal WCV-C3 receipt. A1 starts no runtime and
+selector or publish the terminal WCV-C3 receipt. A2 starts no runtime and
 leaves WCV-C3 incomplete.
+
+## C3R-A2 semantic-preserving append-aware migration-history authority
+
+C3R-A2 preserves the exact PR #785/A0 and PR #786/A1 receipts and their
+immutable artifacts. A0 remains the 25-file historical baseline and A1
+remains the strict `C3R-P → C3R-T → C3R-L` serial-program receipt. A2 alone
+supersedes A0's former live-current exact-25-forever interpretation with
+`MigrationInventoryAuthorityV2`: the A0 baseline plus exact registered repair,
+rename and versioned append receipts minus exact retired-alias receipts.
+Unregistered additions, omissions, renames or content changes, duplicate
+canonical versions, missing receipts and receipt drift fail closed.
+
+The fresh `LIVE_READ_ONLY` `inverge-beta` receipt observed 15 exact applied
+ledger rows and ten exact ledger-absent baseline files with zero mutation,
+zero learner/private bodies and zero secrets. Ledger and schema are separate
+axes. The schema receipt classifies 20 records `SCHEMA_PRESENT_UNVERIFIED` and
+five `SCHEMA_ABSENT`; no record is `SCHEMA_MATCH_VERIFIED`. Presence never
+proves migration equivalence, and ledger absence never proves schema absence.
+
+The baseline-known-blocked phase preserves the exact `42P19` personal-
+learning recursion failure, the duplicate/legal producer-order defects and
+the `42883` concept-boundary consumer-before-producer failure. At the future
+C3R-P migration checkpoint, the personal-learning migration is repaired and
+renamed, the five ledger-absent legal files receive their exact unique 14-
+digit canonical order, and the applied early RPC boundary becomes a
+compatibility-safe step without renaming its version. The sole new C3R-P
+append must combine the later RPC-boundary reassertion with the durable-
+learning schema/RPC/RLS work, use one publication-time unique 14-digit
+version greater than `20260817170000`, and bind two exact isolated Supabase
+replays. A diagnostic embedded PostgreSQL compile is not a replay receipt.
+
+The personal-learning repair is governed by the closed SQL-derived
+`PersonalLearningMigrationSemanticInventoryV1`. Baseline and repair are
+compared bidirectionally across the exact extension, forbidden-key function
+behavior, 20-column table, constraints, indexes, authenticated CRUD grant,
+four policies and historical RLS state. Only the exact filename, the exact
+authorized one-recursive-term implementation, FORCE RLS and explicit
+privilege hardening may differ. `MigrationFinalSecurityStateV1` then evaluates
+RLS, policy and table/function privilege mutations in canonical statement
+order, with exact source/object bindings. Protected tables must end enabled,
+forced and policy-present with only authenticated privileges; protected
+functions must end with exactly authenticated EXECUTE. Later weakening,
+broad grants, quoted-case substitution, inert lexical evidence and
+unsupported dynamic security DDL fail closed.
+
+Remote migration-history repair, db push, linked reset, remote SQL, remote
+schema mutation and application remain separately Owner-gated and
+unauthorized. This A2 Work is an explicit stop-after-receipt exception to
+automatic continuation: C3R-P becomes dependency-ready but remains unstarted;
+C3R-T/L remain blocked, WCV-C3 remains incomplete, every governed issue
+remains open, and successor-runtime-start remains zero.
 
 ## C3R-A1 WCV-C3 serial program authority
 
