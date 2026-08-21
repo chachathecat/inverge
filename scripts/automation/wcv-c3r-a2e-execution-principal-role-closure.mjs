@@ -1,3 +1,4 @@
+import { Buffer } from "node:buffer";
 import { createHash } from "node:crypto";
 
 export const POSTGRES_SECURITY_SEMANTICS_PROFILE_V1 = Object.freeze({
@@ -55,6 +56,10 @@ export const POSTGRES_SECURITY_SEMANTICS_PROFILE_V1 = Object.freeze({
     "PER_MEMBERSHIP_INHERIT_OR_SET_OPTIONS",
     "DYNAMIC_ROLE_MEMBERSHIP",
     "LARGE_OBJECT_DEFAULT_PRIVILEGES",
+    "CREATE_SCHEMA_AUTHORIZATION",
+    "OVERLENGTH_ROLE_OR_OBJECT_IDENTIFIER",
+    "DYNAMIC_SECURITY_PRINCIPAL_MUTATION",
+    "BROAD_OR_DYNAMIC_PROTECTED_OBJECT_MUTATION",
   ]),
   unknownOrMismatchedServerVersion: "FAIL_CLOSED",
 });
@@ -81,6 +86,7 @@ const SEQUENCE_PRIVILEGES = Object.freeze(["USAGE", "SELECT", "UPDATE"]);
 const FUNCTION_PRIVILEGES = Object.freeze(["EXECUTE"]);
 const TYPE_PRIVILEGES = Object.freeze(["USAGE"]);
 const SCHEMA_PRIVILEGES = Object.freeze(["USAGE", "CREATE"]);
+const MAX_POSTGRES_IDENTIFIER_BYTES = 63;
 
 export function canonicalJson(value) {
   if (Array.isArray(value)) return "[" + value.map(canonicalJson).join(",") + "]";
@@ -301,10 +307,12 @@ function decodeIdentifier(raw) {
   const value = String(raw || "").trim();
   if (/^"(?:[^"]|"")*"$/u.test(value)) {
     const decoded = value.slice(1, -1).replace(/""/gu, '"');
+    if (Buffer.byteLength(decoded, "utf8") > MAX_POSTGRES_IDENTIFIER_BYTES) return null;
     return { decodedIdentifierValue: decoded, quoted: true, canonicalIdentity: decoded };
   }
   if (/^[A-Za-z_][A-Za-z0-9_$]*$/u.test(value)) {
     const decoded = value.toLowerCase();
+    if (Buffer.byteLength(decoded, "utf8") > MAX_POSTGRES_IDENTIFIER_BYTES) return null;
     return { decodedIdentifierValue: decoded, quoted: false, canonicalIdentity: decoded };
   }
   return null;
@@ -362,7 +370,7 @@ function roleIdentityEvidence(raw, statement, relativeStart) {
 }
 
 function addRoleEvidence(context, raw, statement, searchFrom) {
-  const offset = statement.source.indexOf(raw, searchFrom || 0);
+  const offset = statement.masked.indexOf(raw, searchFrom || 0);
   const evidence = roleIdentityEvidence(raw, statement, Math.max(0, offset));
   if (evidence) context.roleIdentities.push(evidence);
   return evidence;
@@ -394,7 +402,16 @@ function activeMembershipEdges(events) {
   const current = new Map();
   for (const event of events) {
     const key = membershipKey(event.grantedRole, event.memberRole);
-    if (event.grantRevokeState === "GRANTED") current.set(key, event);
+    if (event.grantRevokeState === "GRANTED") {
+      const previous = current.get(key);
+      current.set(key, previous?.adminOption && !event.adminOption
+        ? Object.assign({}, event, {
+            adminOption: true,
+            adminOptionPreservedFromStatementOrdinal: previous.statementOrdinal,
+            adminOptionPreservedFromSourceSpan: previous.exactSourceSpan,
+          })
+        : event);
+    }
     if (event.grantRevokeState === "REVOKED") current.delete(key);
     if (event.grantRevokeState === "ADMIN_REVOKED" && current.has(key)) {
       current.set(key, Object.assign({}, current.get(key), {
@@ -675,7 +692,7 @@ function parseRoleList(context, raw, statement) {
     } else {
       results.push(evidence.exactCanonicalIdentity);
     }
-    cursor = Math.max(cursor, statement.source.indexOf(entry, cursor) + entry.length);
+    cursor = Math.max(cursor, statement.masked.indexOf(entry, cursor) + entry.length);
   }
   return results;
 }
@@ -901,8 +918,13 @@ function parseDefaultPrivileges(context, statement) {
     : [context.currentUser];
   const schemas = schemasRaw
     ? splitTopLevelComma(schemasRaw).map(function (entry) {
-      return canonicalObjectIdentity(entry, null);
-    })
+      const identity = decodeIdentifier(entry);
+      if (!identity) {
+        addDiagnostic(context, "UNSUPPORTED_OR_DYNAMIC_SCHEMA_IDENTITY", statement, entry);
+        return null;
+      }
+      return identity.canonicalIdentity;
+    }).filter(Boolean)
     : [null];
   const grantees = parseRoleList(context, mutation[3], statement);
   const privileges = expandPrivileges(mutation[1], objectClass);
@@ -969,19 +991,21 @@ function parseDefaultPrivileges(context, statement) {
 
 function applicableCreationAcl(context, creator, schema, objectClass) {
   const global = ensureGlobalDefaults(context, creator, objectClass);
-  const result = cloneAcl(global.acl);
+  const directAcl = cloneAcl(global.acl);
   const schemaState = context.defaultPrivileges.get(
     defaultPrivilegeKey(creator, "SCHEMA", schema, objectClass),
   );
   if (schemaState) {
     for (const entry of schemaState.acl.entries()) {
-      if (!result.has(entry[0])) result.set(entry[0], new Set());
-      for (const privilege of entry[1]) result.get(entry[0]).add(privilege);
+      if (!directAcl.has(entry[0])) directAcl.set(entry[0], new Set());
+      for (const privilege of entry[1]) directAcl.get(entry[0]).add(privilege);
     }
   }
-  result.set(creator, new Set(privilegeUniverse(objectClass)));
+  const resultingInitialAcl = cloneAcl(directAcl);
+  resultingInitialAcl.set(creator, new Set(privilegeUniverse(objectClass)));
   return {
-    acl: result,
+    acl: directAcl,
+    resultingInitialAcl,
     globalDefaults: aclProjection(global.acl),
     schemaDefaults: schemaState ? aclProjection(schemaState.acl) : [],
   };
@@ -993,6 +1017,16 @@ function protectedObjectDefinition(context, kind, identity) {
 
 function parseCreateObject(context, statement) {
   const masked = statement.masked.replace(/;\s*$/u, "").trim();
+  const createSchemaAuthorization = new RegExp(
+    "^CREATE\\s+SCHEMA\\s+(?:IF\\s+NOT\\s+EXISTS\\s+)?(?:(?:" +
+      IDENTIFIER_SOURCE + ")\\s+)?AUTHORIZATION\\b",
+    "iu",
+  );
+  if (createSchemaAuthorization.test(masked)) {
+    addDiagnostic(context, "UNSUPPORTED_CREATE_SCHEMA_AUTHORIZATION", statement, masked);
+    return true;
+  }
+
   let match = new RegExp(
     "^CREATE\\s+(TABLE|SEQUENCE|TYPE|SCHEMA)\\s+(?:IF\\s+NOT\\s+EXISTS\\s+)?(" +
       QUALIFIED_IDENTIFIER_SOURCE + ")",
@@ -1066,7 +1100,7 @@ function parseCreateObject(context, statement) {
     applicableGlobalDefaultsForCreator: defaults.globalDefaults,
     applicableSchemaDefaultsForCreator: defaults.schemaDefaults,
     directPrivileges: aclProjection(defaults.acl),
-    resultingInitialPrivilegeState: aclProjection(defaults.acl),
+    resultingInitialPrivilegeState: aclProjection(defaults.resultingInitialAcl),
     unsupportedOrDynamic: false,
   });
   return true;
@@ -1239,6 +1273,7 @@ function parsePolicyMutation(context, statement) {
     const roleMatch = /\bTO\s+([\s\S]*?)(?=\s+USING\s*\(|\s+WITH\s+CHECK\s*\(|$)/iu.exec(masked);
     if (roleMatch) {
       const roles = parseRoleList(context, roleMatch[1], statement);
+      roles.forEach(function (role) { knownRole(context, role, statement); });
       state.policies.get(name).roles = roles.slice().sort();
     }
     return true;
@@ -1248,8 +1283,7 @@ function parsePolicyMutation(context, statement) {
 }
 
 function securitySensitiveDynamic(statement) {
-  if (!/^\s*(?:DO|EXECUTE|PREPARE|CALL)\b/iu.test(statement.masked)) return false;
-  return /\b(?:GRANT|REVOKE|SET\s+ROLE|ALTER\s+DEFAULT\s+PRIVILEGES|CREATE\s+ROLE|ALTER\s+ROLE|DROP\s+ROLE|OWNER\s+TO)\b/iu.test(statement.source);
+  return /^\s*(?:DO|EXECUTE|PREPARE|CALL)\b/iu.test(statement.masked);
 }
 
 function isSecuritySensitive(statement) {
@@ -1261,17 +1295,14 @@ function effectivePrivilegeClosure(context, state, principal) {
   const edges = activeMembershipEdges(context.membershipEvents).map(function (edge) {
     return Object.assign({}, edge, { active: true });
   });
-  const reachability = computeRoleReachabilityV1(
-    principal,
-    Array.from(context.roleStates.values()),
-    edges,
-  );
+  const roleStateEntries = Array.from(context.roleStates.values());
+  const reachability = computeRoleReachabilityV1(principal, roleStateEntries, edges);
   const abilityRoles = new Set();
   for (const entry of reachability.inheritedPrivilegeReachability) abilityRoles.add(entry.role);
   for (const assumed of reachability.setRoleReachability) {
     const assumedReachability = computeRoleReachabilityV1(
       assumed.role,
-      Array.from(context.roleStates.values()),
+      roleStateEntries,
       edges,
     );
     for (const entry of assumedReachability.inheritedPrivilegeReachability) abilityRoles.add(entry.role);
@@ -1290,15 +1321,34 @@ function effectivePrivilegeClosure(context, state, principal) {
     return { name: policy.name, command: policy.command, roles: policy.roles.slice() };
   }).sort(function (left, right) { return left.name.localeCompare(right.name); });
 
+  const inheritedRoles = new Set(reachability.inheritedPrivilegeReachability.map(function (entry) {
+    return entry.role;
+  }));
   const setRoles = reachability.setRoleReachability.map(function (entry) { return entry.role; });
-  const ownerPath = setRoles.includes(state.ownerRole);
+  const transitionedSetRoles = setRoles.filter(function (role) { return role !== principal; });
+  const ownerPath = abilityRoles.has(state.ownerRole);
   const superuserPath = setRoles.some(function (role) {
     return context.roleStates.get(role)?.superuser;
   });
   const bypassRlsPath = setRoles.some(function (role) {
     return context.roleStates.get(role)?.bypassRls;
   });
-  const rlsBypass = superuserPath || bypassRlsPath || (ownerPath && !state.forceRls);
+  const ownerPathViaMembershipOrSetRole = state.ownerRole !== principal &&
+    (inheritedRoles.has(state.ownerRole) || transitionedSetRoles.includes(state.ownerRole));
+  const superuserPathViaSetRole = transitionedSetRoles.some(function (role) {
+    return context.roleStates.get(role)?.superuser;
+  });
+  const bypassRlsPathViaSetRole = transitionedSetRoles.some(function (role) {
+    return context.roleStates.get(role)?.bypassRls;
+  });
+  if (ownerPath || superuserPath) {
+    for (const privilege of privilegeUniverse(objectClassFromKind(state.kind))) {
+      privileges.add(privilege);
+    }
+  }
+  const rlsBypass = state.kind === "table"
+    ? !state.rlsEnabled || superuserPath || bypassRlsPath || (ownerPath && !state.forceRls)
+    : false;
 
   return {
     principal,
@@ -1307,13 +1357,14 @@ function effectivePrivilegeClosure(context, state, principal) {
     inheritedPrivilegeRoles: reachability.inheritedPrivilegeReachability,
     setRoleReachability: reachability.setRoleReachability,
     ownerCapabilities: ownerPath,
+    ownerPathViaMembershipOrSetRole,
     superuserStateReachable: superuserPath,
+    superuserPathViaSetRole,
     bypassRlsStateReachable: bypassRlsPath,
+    bypassRlsPathViaSetRole,
     applicablePolicyRoleMembership: policyApplicability,
     finalEffectivePrivileges: Array.from(privileges).sort(),
-    finalAbilityToAssumeAnotherPrincipal: setRoles.filter(function (role) {
-      return role !== principal;
-    }).sort(),
+    finalAbilityToAssumeAnotherPrincipal: transitionedSetRoles.slice().sort(),
     rlsBypass,
   };
 }
@@ -1393,15 +1444,23 @@ function validateObjectExpectation(context, state, definition, closure) {
   }
 
   for (const result of closure) {
-    if (expectation.forbidOwnerPathForApplicationPrincipals && result.ownerCapabilities) {
+    const isProtectedApplicationPrincipal =
+      PROTECTED_APPLICATION_PRINCIPALS_V1.includes(result.principal);
+    const forbiddenOwnerPath = isProtectedApplicationPrincipal &&
+      result.ownerPathViaMembershipOrSetRole;
+    if (forbiddenOwnerPath ||
+        (expectation.forbidOwnerPathForApplicationPrincipals && result.ownerCapabilities)) {
       context.validationErrors.push({
         code: "APPLICATION_PRINCIPAL_OWNER_PATH",
         objectIdentity: state.identity,
         principal: result.principal,
       });
     }
-    if (expectation.forbidSuperuserOrBypassRlsPath &&
-        (result.superuserStateReachable || result.bypassRlsStateReachable)) {
+    const forbiddenElevatedTransition = isProtectedApplicationPrincipal &&
+      (result.superuserPathViaSetRole || result.bypassRlsPathViaSetRole);
+    if (forbiddenElevatedTransition ||
+        (expectation.forbidSuperuserOrBypassRlsPath &&
+          (result.superuserStateReachable || result.bypassRlsStateReachable))) {
       context.validationErrors.push({
         code: "APPLICATION_PRINCIPAL_SUPERUSER_OR_BYPASSRLS_PATH",
         objectIdentity: state.identity,
@@ -1499,6 +1558,19 @@ export function deriveExecutionPrincipalRoleClosureV1(input) {
     }
   }
 
+  const defaultSchemaInput = input.defaultSchema || "public";
+  const defaultSchemaIdentity = decodeIdentifier(defaultSchemaInput);
+  const defaultSchema = defaultSchemaIdentity?.canonicalIdentity || null;
+  if (!defaultSchemaIdentity) {
+    diagnostics.push({
+      code: "UNKNOWN_OR_DYNAMIC_DEFAULT_SCHEMA",
+      severity: "ERROR",
+      statementOrdinal: 0,
+      sourceSpan: null,
+      detail: defaultSchemaInput,
+    });
+  }
+
   const initialExecutorIdentity = decodeIdentifier(input.initialMigrationExecutor);
   const initialMigrationExecutor = initialExecutorIdentity?.canonicalIdentity;
   if (!initialMigrationExecutor || !roleStates.has(initialMigrationExecutor)) {
@@ -1516,7 +1588,7 @@ export function deriveExecutionPrincipalRoleClosureV1(input) {
     const kind = objectKindFromKeyword(definition.kind);
     const identity = canonicalObjectIdentity(
       definition.identity,
-      kind === "schema" ? null : (input.defaultSchema || "public"),
+      kind === "schema" ? null : defaultSchema,
     );
     if (!identity) {
       diagnostics.push({
@@ -1534,13 +1606,53 @@ export function deriveExecutionPrincipalRoleClosureV1(input) {
     }));
   }
 
-  const protectedPrincipals = (input.protectedPrincipals || PROTECTED_APPLICATION_PRINCIPALS_V1)
-    .map(function (role) { return decodeIdentifier(role)?.canonicalIdentity; })
-    .filter(Boolean);
+  const requestedProtectedPrincipalInputs =
+    input.protectedPrincipals ?? PROTECTED_APPLICATION_PRINCIPALS_V1;
+  const requestedProtectedPrincipals = [];
+  for (const role of requestedProtectedPrincipalInputs) {
+    const identity = decodeIdentifier(role);
+    if (!identity) {
+      diagnostics.push({
+        code: "INVALID_PROTECTED_APPLICATION_PRINCIPAL",
+        severity: "ERROR",
+        statementOrdinal: 0,
+        sourceSpan: null,
+        detail: role,
+      });
+      continue;
+    }
+    requestedProtectedPrincipals.push(identity.canonicalIdentity);
+  }
+  const requestedProtectedPrincipalSet = new Set(requestedProtectedPrincipals);
+  for (const requiredRole of PROTECTED_APPLICATION_PRINCIPALS_V1) {
+    if (!requestedProtectedPrincipalSet.has(requiredRole)) {
+      diagnostics.push({
+        code: "PROTECTED_APPLICATION_PRINCIPAL_MISSING",
+        severity: "ERROR",
+        statementOrdinal: 0,
+        sourceSpan: null,
+        detail: requiredRole,
+      });
+    }
+  }
+  const protectedPrincipals = Array.from(new Set(
+    PROTECTED_APPLICATION_PRINCIPALS_V1.concat(requestedProtectedPrincipals),
+  )).sort();
+  for (const protectedPrincipal of protectedPrincipals) {
+    if (!roleStates.has(protectedPrincipal)) {
+      diagnostics.push({
+        code: "UNKNOWN_PROTECTED_APPLICATION_PRINCIPAL",
+        severity: "ERROR",
+        statementOrdinal: 0,
+        sourceSpan: null,
+        detail: protectedPrincipal,
+      });
+    }
+  }
 
   const context = {
     programSource,
-    defaultSchema: input.defaultSchema || "public",
+    defaultSchema,
     roleStates,
     protectedObjects,
     protectedPrincipals,
@@ -1559,10 +1671,16 @@ export function deriveExecutionPrincipalRoleClosureV1(input) {
     validationErrors: [],
   };
 
+  const initialMembershipKeys = new Set();
   for (const edge of input.initialMembershipEdges || []) {
     const granted = decodeIdentifier(edge.grantedRole)?.canonicalIdentity;
     const member = decodeIdentifier(edge.memberRole)?.canonicalIdentity;
-    if (!granted || !member || !roleStates.has(granted) || !roleStates.has(member)) {
+    const grantor = decodeIdentifier(
+      edge.grantorRole || initialMigrationExecutor,
+    )?.canonicalIdentity;
+    if (!granted || !member || !grantor ||
+        !roleStates.has(granted) || !roleStates.has(member) || !roleStates.has(grantor) ||
+        granted === "public" || member === "public" || grantor === "public") {
       diagnostics.push({
         code: "INVALID_INITIAL_MEMBERSHIP_EDGE",
         severity: "ERROR",
@@ -1572,11 +1690,23 @@ export function deriveExecutionPrincipalRoleClosureV1(input) {
       });
       continue;
     }
+    const key = membershipKey(granted, member);
+    if (initialMembershipKeys.has(key)) {
+      diagnostics.push({
+        code: "DUPLICATE_INITIAL_MEMBERSHIP_EDGE",
+        severity: "ERROR",
+        statementOrdinal: 0,
+        sourceSpan: null,
+        detail: clone(edge),
+      });
+      continue;
+    }
+    initialMembershipKeys.add(key);
     context.membershipEvents.push({
       roleMembershipEdgeV1: "RoleMembershipEdgeV1",
       grantedRole: granted,
       memberRole: member,
-      grantorRole: decodeIdentifier(edge.grantorRole || initialMigrationExecutor)?.canonicalIdentity,
+      grantorRole: grantor,
       adminOption: Boolean(edge.adminOption),
       inheritOption: edge.inheritOption !== false,
       setOption: edge.setOption !== false,
@@ -1586,6 +1716,17 @@ export function deriveExecutionPrincipalRoleClosureV1(input) {
       exactSourceSpan: null,
       versionSemanticsProfile: POSTGRES_SECURITY_SEMANTICS_PROFILE_V1.profileId,
       provenance: "INITIAL_MEMBERSHIP_CONTRACT",
+    });
+  }
+  if (detectCycle(activeMembershipEdges(context.membershipEvents).map(function (edge) {
+    return Object.assign({}, edge, { active: true });
+  }))) {
+    diagnostics.push({
+      code: "INITIAL_ROLE_MEMBERSHIP_CYCLE",
+      severity: "ERROR",
+      statementOrdinal: 0,
+      sourceSpan: null,
+      detail: null,
     });
   }
 
@@ -1628,8 +1769,22 @@ export function deriveExecutionPrincipalRoleClosureV1(input) {
   const finalEdges = activeMembershipEdges(context.membershipEvents).map(function (edge) {
     return Object.assign({}, edge, { active: true });
   });
-  for (const rule of input.forbiddenApplicationRoleTransitions ||
-      FORBIDDEN_APPLICATION_ROLE_TRANSITIONS_V1) {
+  const configuredForbiddenTransitions =
+    input.forbiddenApplicationRoleTransitions ?? FORBIDDEN_APPLICATION_ROLE_TRANSITIONS_V1;
+  const effectiveForbiddenTransitions = [];
+  const forbiddenTransitionKeys = new Set();
+  for (const rule of FORBIDDEN_APPLICATION_ROLE_TRANSITIONS_V1.concat(
+    configuredForbiddenTransitions,
+  )) {
+    const from = decodeIdentifier(rule.from)?.canonicalIdentity;
+    const to = decodeIdentifier(rule.to)?.canonicalIdentity;
+    const key = String(from) + "->" + String(to);
+    if (!forbiddenTransitionKeys.has(key)) {
+      forbiddenTransitionKeys.add(key);
+      effectiveForbiddenTransitions.push(clone(rule));
+    }
+  }
+  for (const rule of effectiveForbiddenTransitions) {
     const from = decodeIdentifier(rule.from)?.canonicalIdentity;
     const to = decodeIdentifier(rule.to)?.canonicalIdentity;
     if (!from || !to || !roleStates.has(from) || !roleStates.has(to)) {
@@ -1663,12 +1818,14 @@ export function deriveExecutionPrincipalRoleClosureV1(input) {
     sql: programSource,
     serverVersionNum,
     initialMigrationExecutor: input.initialMigrationExecutor,
-    defaultSchema: input.defaultSchema || "public",
+    defaultSchema: defaultSchemaInput,
     initialRoleStates: clone(input.initialRoleStates || []),
     initialMembershipEdges: clone(input.initialMembershipEdges || []),
-    protectedPrincipals: clone(input.protectedPrincipals || PROTECTED_APPLICATION_PRINCIPALS_V1),
+    protectedPrincipals: clone(
+      input.protectedPrincipals ?? PROTECTED_APPLICATION_PRINCIPALS_V1,
+    ),
     forbiddenApplicationRoleTransitions: clone(
-      input.forbiddenApplicationRoleTransitions || FORBIDDEN_APPLICATION_ROLE_TRANSITIONS_V1,
+      input.forbiddenApplicationRoleTransitions ?? FORBIDDEN_APPLICATION_ROLE_TRANSITIONS_V1,
     ),
     protectedObjects: clone(input.protectedObjects || []),
   };
@@ -1684,6 +1841,7 @@ export function deriveExecutionPrincipalRoleClosureV1(input) {
     }),
     roleMembershipStatementHistory: context.membershipEvents,
     finalRoleMembershipEdges: finalEdges,
+    effectiveForbiddenApplicationRoleTransitions: effectiveForbiddenTransitions,
     sessionPrincipalTransitions: context.sessionTransitions,
     finalSessionPrincipalState: {
       sessionPrincipalStateV1: "SessionPrincipalStateV1",
@@ -1706,10 +1864,17 @@ export function deriveExecutionPrincipalRoleClosureV1(input) {
 }
 
 export function validateExecutionPrincipalRoleClosureReceiptV1(receipt, expected) {
+  const errors = [];
+  if (!receipt || typeof receipt !== "object" || Array.isArray(receipt)) {
+    return {
+      valid: false,
+      errors: ["RECEIPT_OBJECT_REQUIRED"],
+      derivedDigest: null,
+    };
+  }
   const candidate = clone(receipt);
   const claimed = candidate.receiptDigest;
   delete candidate.receiptDigest;
-  const errors = [];
   const derived = sha256(canonicalJson(candidate));
   if (claimed !== derived) errors.push("RECEIPT_DIGEST_MISMATCH");
   if (candidate.receiptType !== "C3RA2EExecutionPrincipalRoleClosureReceiptV1") {
@@ -1746,7 +1911,17 @@ export function validateExecutionPrincipalRoleClosureReceiptV1(receipt, expected
       errors.push("CURRENT_PRINCIPAL_REPLAY_MISMATCH");
     }
   }
-  if (expected) {
+
+  if (!expected || typeof expected !== "object" || Array.isArray(expected)) {
+    errors.push("EXPECTED_RECEIPT_BINDING_REQUIRED");
+  } else {
+    for (const field of ["receiptDigest", "analysisInputDigest", "programSha256"]) {
+      if (!Object.prototype.hasOwnProperty.call(expected, field) || !expected[field]) {
+        errors.push("EXPECTED_" + field.replace(/[A-Z]/gu, function (value) {
+          return "_" + value;
+        }).toUpperCase() + "_REQUIRED");
+      }
+    }
     if (expected.receiptDigest && expected.receiptDigest !== claimed) {
       errors.push("EXPECTED_RECEIPT_DIGEST_MISMATCH");
     }
@@ -1767,17 +1942,24 @@ export function validateExecutionPrincipalRoleClosureReceiptV1(receipt, expected
 export function validateC3rA2eMergedMainReceiptV1(receipt, expected) {
   const errors = [];
   const required = [
-    "authorityStage", "pullRequest", "baseSha", "expectedHead", "reviewedHead", "reviewedTree",
-    "squashMergeSha", "resultingMainSha", "resultingMainTree", "exactHeadChecksPassed",
-    "formalReviewId", "actionableCounts", "unresolvedActionableThreads",
-    "artifactDigests", "remoteMutationCount",
+    "authorityStage", "pullRequest", "baseSha", "baseTree", "expectedHead",
+    "reviewedHead", "reviewedTree", "squashMergeSha", "resultingMainSha",
+    "resultingMainTree", "exactHeadChecksPassed", "formalReviewId",
+    "formalReviewHead", "actionableCounts", "unresolvedActionableThreads",
+    "artifactDigests", "remoteMutationCount", "merged",
   ];
+  const fieldLabel = function (field) {
+    return field.replace(/[A-Z]/gu, function (value) { return "_" + value; }).toUpperCase();
+  };
   for (const field of required) {
     if (!Object.prototype.hasOwnProperty.call(receipt || {}, field)) {
-      errors.push("MISSING_" + field.toUpperCase());
+      errors.push("MISSING_" + fieldLabel(field));
     }
   }
   if (receipt?.authorityStage !== "C3R-A2E") errors.push("WRONG_AUTHORITY_STAGE");
+  if (!Number.isInteger(receipt?.pullRequest) || receipt.pullRequest <= 0) {
+    errors.push("INVALID_PULL_REQUEST_IDENTITY");
+  }
   if (receipt?.pullRequest === 790 || receipt?.pullRequest === 791) {
     errors.push("TERMINAL_DONOR_PR_CANNOT_SUBSTITUTE");
   }
@@ -1788,14 +1970,47 @@ export function validateC3rA2eMergedMainReceiptV1(receipt, expected) {
   }
   if (receipt?.unresolvedActionableThreads !== 0) errors.push("UNRESOLVED_ACTIONABLE_THREADS");
   if (receipt?.remoteMutationCount !== 0) errors.push("REMOTE_MUTATION_NOT_ZERO");
-  if (receipt?.reviewedHead !== receipt?.expectedHead || receipt?.squashMergeSha !== receipt?.resultingMainSha) {
-    errors.push("EXPECTED_HEAD_OR_SQUASH_BINDING_MISMATCH");
+  if (receipt?.reviewedHead !== receipt?.expectedHead ||
+      receipt?.formalReviewHead !== receipt?.reviewedHead) {
+    errors.push("EXPECTED_HEAD_OR_FORMAL_REVIEW_BINDING_MISMATCH");
   }
-  if (expected) {
-    if (receipt?.baseSha !== expected.baseSha) errors.push("BASE_SHA_MISMATCH");
-    if (!same(receipt?.artifactDigests, expected.artifactDigests)) {
-      errors.push("ARTIFACT_DIGEST_MISMATCH");
+  if (receipt?.reviewedTree !== receipt?.resultingMainTree) {
+    errors.push("REVIEWED_AND_RESULTING_TREE_MISMATCH");
+  }
+  if (receipt?.squashMergeSha !== receipt?.resultingMainSha) {
+    errors.push("SQUASH_AND_RESULTING_MAIN_SHA_MISMATCH");
+  }
+  for (const field of [
+    "baseSha", "baseTree", "expectedHead", "reviewedHead", "reviewedTree",
+    "squashMergeSha", "resultingMainSha", "resultingMainTree", "formalReviewHead",
+  ]) {
+    if (typeof receipt?.[field] !== "string" || !/^[a-f0-9]{40}$/u.test(receipt[field])) {
+      errors.push("INVALID_" + fieldLabel(field));
+    }
+  }
+  if (!Number.isInteger(receipt?.formalReviewId) || receipt.formalReviewId <= 0) {
+    errors.push("INVALID_FORMAL_REVIEW_ID");
+  }
+
+  if (!expected || typeof expected !== "object" || Array.isArray(expected)) {
+    errors.push("EXPECTED_MERGED_MAIN_RECEIPT_BINDING_REQUIRED");
+  } else {
+    const requiredExpectedIdentityFields = [
+      "authorityStage", "pullRequest", "baseSha", "baseTree", "expectedHead",
+      "reviewedHead", "reviewedTree", "squashMergeSha", "resultingMainSha",
+      "resultingMainTree", "formalReviewId", "formalReviewHead",
+    ];
+    for (const field of requiredExpectedIdentityFields) {
+      if (!Object.prototype.hasOwnProperty.call(expected, field)) {
+        errors.push("EXPECTED_" + fieldLabel(field) + "_REQUIRED");
+      }
+    }
+    for (const [field, value] of Object.entries(expected)) {
+      if (!same(receipt?.[field], value)) {
+        errors.push("EXPECTED_" + fieldLabel(field) + "_MISMATCH");
+      }
     }
   }
   return { valid: errors.length === 0, errors };
 }
+

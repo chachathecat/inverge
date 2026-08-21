@@ -65,6 +65,20 @@ The full Node runner includes the focused suite and the immutable A0/A1 regressi
 26. C3R-A2 remains blocked/unstarted and C3R-P remains blocked/unstarted.
 27. Remote, Production, payment, provider, and learner mutation remains zero.
 
+## Exact-head formal-review regressions
+
+Review `4995458963` is reproduced by focused hostile cases for all five actionable threads:
+
+| Thread | Required regression |
+| --- | --- |
+| `PRRT_kwDOSMHn8M6bOace` | Both named and name-omitted `CREATE SCHEMA ... AUTHORIZATION ...` fail closed; ordinary quoted schema creation retains the current creator/owner. |
+| `PRRT_kwDOSMHn8M6bOacj` | `ALTER POLICY ... TO unknown_role` emits `UNKNOWN_ROLE_IDENTITY` and cannot be accepted. |
+| `PRRT_kwDOSMHn8M6bOacm` | A tampered closure with a recomputed self-digest fails the independently pinned expected receipt digest. |
+| `PRRT_kwDOSMHn8M6bOacn` | PR, base SHA/tree, head, reviewed/resulting tree, squash/resulting SHA, formal-review ID, and formal-review head mismatches are rejected. |
+| `PRRT_kwDOSMHn8M6bOacr` | A repeated plain membership grant preserves existing ADMIN OPTION until an exact admin-option revoke. |
+
+Additional correction-boundary tests reject narrowed protected-principal and forbidden-transition inputs, unknown initial grantors, initial cycles, overlength identifiers, dynamic DO/EXECUTE/PREPARE/CALL principal changes, invalid default schemas, and protected paths to owners, superusers, or BYPASSRLS roles. Direct/default ACL evidence remains separate from implicit owner capabilities.
+
 ## Exact-head gate
 
 All of these exact current-head checks must be terminal-success before any later Ready consideration:

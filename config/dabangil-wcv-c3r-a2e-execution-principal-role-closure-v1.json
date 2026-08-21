@@ -295,12 +295,19 @@
       "creatorDefaultsInheritedThroughMembership": false
     },
     "unsupportedSecuritySensitiveForms": [
-      "CREATE ROLE",
-      "ALTER ROLE",
-      "DROP ROLE",
-      "DYNAMIC_ROLE_MEMBERSHIP",
+      "SET LOCAL ROLE",
+      "SET SESSION AUTHORIZATION",
+      "RESET SESSION AUTHORIZATION",
+      "STRING_OR_DYNAMIC_ROLE_TARGET",
+      "CREATE_ROLE",
+      "ALTER_ROLE",
+      "DROP_ROLE",
       "PER_MEMBERSHIP_INHERIT_OR_SET_OPTIONS",
+      "DYNAMIC_ROLE_MEMBERSHIP",
       "LARGE_OBJECT_DEFAULT_PRIVILEGES",
+      "CREATE_SCHEMA_AUTHORIZATION",
+      "OVERLENGTH_ROLE_OR_OBJECT_IDENTIFIER",
+      "DYNAMIC_SECURITY_PRINCIPAL_MUTATION",
       "BROAD_OR_DYNAMIC_PROTECTED_OBJECT_MUTATION"
     ],
     "unknownOrMismatchedServerVersion": "FAIL_CLOSED"
@@ -356,12 +363,14 @@
     "SessionPrincipalStateV1": {
       "requiredFields": [
         "sessionUser",
-        "currentUser",
         "initialMigrationExecutor",
+        "currentUserBefore",
+        "currentUserAfter",
         "transactionSessionRoleScope",
         "exactSetRoleTarget",
+        "restorationForm",
         "statementOrdinal",
-        "beforeAndAfterState"
+        "exactSourceSpan"
       ],
       "statementOrdered": true,
       "guessedPrincipalForbidden": true
@@ -404,8 +413,11 @@
         "inheritedPrivilegeRoles",
         "setRoleReachability",
         "ownerCapabilities",
+        "ownerPathViaMembershipOrSetRole",
         "superuserStateReachable",
+        "superuserPathViaSetRole",
         "bypassRlsStateReachable",
+        "bypassRlsPathViaSetRole",
         "applicablePolicyRoleMembership",
         "finalEffectivePrivileges",
         "finalAbilityToAssumeAnotherPrincipal",
@@ -491,13 +503,43 @@
       "ROLE_GRAPH_REPLAY",
       "CURRENT_PRINCIPAL_TRANSITION_REPLAY",
       "PINNED_ANALYSIS_INPUT_DIGEST",
-      "PINNED_PROGRAM_DIGEST"
+      "PINNED_PROGRAM_DIGEST",
+      "PINNED_EXPECTED_RECEIPT_DIGEST"
     ],
     "mergedMainReceiptType": "C3RA2EMergedMainReceiptV1",
     "terminalDonorPrsCannotSubstitute": [
       790,
       791
-    ]
+    ],
+    "independentExpectedDerivedReceiptBindingRequired": [
+      "receiptDigest",
+      "analysisInputDigest",
+      "programSha256"
+    ],
+    "mergedMainRequiredBindings": [
+      "authorityStage",
+      "pullRequest",
+      "baseSha",
+      "baseTree",
+      "expectedHead",
+      "reviewedHead",
+      "reviewedTree",
+      "squashMergeSha",
+      "resultingMainSha",
+      "resultingMainTree",
+      "exactHeadChecksPassed",
+      "formalReviewId",
+      "formalReviewHead",
+      "actionableCounts",
+      "unresolvedActionableThreads",
+      "artifactDigests",
+      "remoteMutationCount",
+      "merged"
+    ],
+    "mergedMainExpectedIdentityBindingRequired": true,
+    "reviewedAndResultingTreeMustMatch": true,
+    "formalReviewHeadMustMatchExpectedReviewedHead": true,
+    "squashMergeShaMustMatchResultingMainSha": true
   },
   "executionStates": {
     "c3rA0": "INSTALLED_IMMUTABLE_HISTORICAL_BASELINE",

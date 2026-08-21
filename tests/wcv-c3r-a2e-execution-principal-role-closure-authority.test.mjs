@@ -86,6 +86,14 @@ function rebindDigest(receipt) {
   return receipt;
 }
 
+function expectedDerivedReceiptBinding(receipt) {
+  return {
+    receiptDigest: receipt.receiptDigest,
+    analysisInputDigest: receipt.analysisInputDigest,
+    programSha256: receipt.programSha256,
+  };
+}
+
 async function gitBlobSha(relativePath) {
   const content = await readFile(path.join(repositoryRoot, relativePath));
   return createHash("sha1")
@@ -231,6 +239,20 @@ test("large-object default ACL syntax fails closed under the PostgreSQL 15 profi
   );
   assert.equal(receipt.accepted, false);
   assert.ok(codes(receipt).includes("UNSUPPORTED_ALTER_DEFAULT_PRIVILEGES"));
+});
+
+test("protected-principal and forbidden-transition inputs cannot narrow the live application boundary", () => {
+  const receipt = derive("GRANT authenticated TO anon;", {
+    protectedPrincipals: [],
+    forbiddenApplicationRoleTransitions: [],
+  });
+  assert.equal(receipt.accepted, false);
+  assert.ok(codes(receipt).includes("PROTECTED_APPLICATION_PRINCIPAL_MISSING"));
+  assert.ok(codes(receipt).includes("FORBIDDEN_APPLICATION_ROLE_REACHABILITY"));
+  assert.deepEqual(
+    receipt.effectiveForbiddenApplicationRoleTransitions,
+    FORBIDDEN_APPLICATION_ROLE_TRANSITIONS_V1,
+  );
 });
 
 test("terminal P1 3829907873: GRANT authenticated TO anon is rejected as unsafe", () => {
@@ -388,6 +410,28 @@ test("PostgreSQL 15 WITH ADMIN OPTION and ADMIN OPTION revoke stay distinct", ()
   );
 });
 
+test("a duplicate plain GRANT preserves an existing PostgreSQL 15 ADMIN OPTION", () => {
+  const preserved = derive([
+    "GRANT other_creator TO migration_executor WITH ADMIN OPTION;",
+    "GRANT other_creator TO migration_executor;",
+  ].join("\n"));
+  assert.equal(preserved.accepted, true);
+  assert.equal(preserved.roleMembershipStatementHistory.length, 2);
+  assert.equal(preserved.finalRoleMembershipEdges[0].adminOption, true);
+  assert.equal(
+    preserved.finalRoleMembershipEdges[0].adminOptionPreservedFromStatementOrdinal,
+    1,
+  );
+
+  const revoked = derive([
+    "GRANT other_creator TO migration_executor WITH ADMIN OPTION;",
+    "GRANT other_creator TO migration_executor;",
+    "REVOKE ADMIN OPTION FOR other_creator FROM migration_executor;",
+  ].join("\n"));
+  assert.equal(revoked.accepted, true);
+  assert.equal(revoked.finalRoleMembershipEdges[0].adminOption, false);
+});
+
 test("role membership text in comments and strings creates no edge", () => {
   const receipt = derive([
     "-- GRANT authenticated TO anon;",
@@ -414,6 +458,33 @@ test("unknown and PUBLIC role-membership targets fail closed", () => {
   const publicMembership = derive("GRANT authenticated TO PUBLIC;");
   assert.equal(publicMembership.accepted, false);
   assert.ok(codes(publicMembership).includes("PUBLIC_ROLE_MEMBERSHIP_FORBIDDEN"));
+});
+
+test("unknown initial grantors and initial membership cycles fail closed", () => {
+  const unknownGrantor = derive("", {
+    initialMembershipEdges: [{
+      grantedRole: "other_creator",
+      memberRole: "authenticated",
+      grantorRole: "ghost",
+    }],
+  });
+  assert.equal(unknownGrantor.accepted, false);
+  assert.ok(codes(unknownGrantor).includes("INVALID_INITIAL_MEMBERSHIP_EDGE"));
+
+  const cycle = derive("", {
+    initialMembershipEdges: [
+      { grantedRole: "other_creator", memberRole: "authenticated" },
+      { grantedRole: "authenticated", memberRole: "other_creator" },
+    ],
+  });
+  assert.equal(cycle.accepted, false);
+  assert.ok(codes(cycle).includes("INITIAL_ROLE_MEMBERSHIP_CYCLE"));
+});
+
+test("overlength PostgreSQL identifiers fail closed instead of creating false identities", () => {
+  const receipt = derive("GRANT " + "a".repeat(64) + " TO anon;");
+  assert.equal(receipt.accepted, false);
+  assert.ok(codes(receipt).includes("UNSUPPORTED_OR_DYNAMIC_ROLE_IDENTITY"));
 });
 
 test("quoted case-different role identities stay distinct", () => {
@@ -443,6 +514,25 @@ test("executable CREATE, ALTER, and DROP ROLE forms fail closed", () => {
     assert.equal(receipt.accepted, false);
     assert.ok(codes(receipt).includes("UNSUPPORTED_EXECUTABLE_ROLE_DDL"));
   }
+});
+
+test("CREATE SCHEMA AUTHORIZATION fails closed before creator or owner evidence is emitted", () => {
+  const named = derive("CREATE SCHEMA private AUTHORIZATION authenticated;", {
+    protectedObjects: [{ kind: "schema", identity: "private", expectation: {} }],
+  });
+  assert.equal(named.accepted, false);
+  assert.ok(codes(named).includes("UNSUPPORTED_CREATE_SCHEMA_AUTHORIZATION"));
+  assert.deepEqual(named.objectCreationPrincipalEvidence, []);
+
+  const nameOmitted = derive("CREATE SCHEMA AUTHORIZATION authenticated;");
+  assert.equal(nameOmitted.accepted, false);
+  assert.ok(codes(nameOmitted).includes("UNSUPPORTED_CREATE_SCHEMA_AUTHORIZATION"));
+
+  const quotedName = derive('CREATE SCHEMA "authorization";', {
+    protectedObjects: [{ kind: "schema", identity: '"authorization"', expectation: {} }],
+  });
+  assert.equal(quotedName.accepted, true);
+  assert.equal(quotedName.objectCreationPrincipalEvidence[0].resultingOwnerRole, "migration_executor");
 });
 
 test("ALTER DEFAULT PRIVILEGES FOR ROLE changes only that creator namespace", () => {
@@ -579,6 +669,26 @@ test("global and schema defaults remain separate and schema REVOKE cannot erase 
   );
 });
 
+test("dynamic schema default namespaces fail closed and never collapse into global defaults", () => {
+  const receipt = derive([
+    "ALTER DEFAULT PRIVILEGES GRANT SELECT ON TABLES TO anon;",
+    "ALTER DEFAULT PRIVILEGES IN SCHEMA current_schema() REVOKE SELECT ON TABLES FROM anon;",
+    "CREATE TABLE public.dynamic_schema_probe(id int);",
+  ].join("\n"), {
+    protectedObjects: [{
+      kind: "table",
+      identity: "public.dynamic_schema_probe",
+      expectation: { effectivePrivilegesExactly: { anon: ["SELECT"] } },
+    }],
+  });
+  assert.equal(receipt.accepted, false);
+  assert.ok(codes(receipt).includes("UNSUPPORTED_OR_DYNAMIC_SCHEMA_IDENTITY"));
+  assert.deepEqual(
+    objectClosure(receipt, "public.dynamic_schema_probe", "anon").finalEffectivePrivileges,
+    ["SELECT"],
+  );
+});
+
 test("policy TO authenticated applies through role-membership closure", () => {
   const receipt = derive([
     "CREATE TABLE public.policy_probe(id int);",
@@ -600,6 +710,22 @@ test("policy TO authenticated applies through role-membership closure", () => {
   assert.deepEqual(anon.finalEffectivePrivileges, ["SELECT"]);
   assert.deepEqual(anon.applicablePolicyRoleMembership.map((entry) => entry.name), ["auth_only"]);
   assert.deepEqual(anon.finalAbilityToAssumeAnotherPrincipal, ["authenticated"]);
+});
+
+test("ALTER POLICY rejects an unknown role before installing policy applicability", () => {
+  const receipt = derive([
+    "CREATE TABLE public.policy_alter_probe(id int);",
+    "CREATE POLICY policy_alter ON public.policy_alter_probe TO authenticated USING (true);",
+    "ALTER POLICY policy_alter ON public.policy_alter_probe TO ghost;",
+  ].join("\n"), {
+    protectedObjects: [{
+      kind: "table",
+      identity: "public.policy_alter_probe",
+      expectation: {},
+    }],
+  });
+  assert.equal(receipt.accepted, false);
+  assert.ok(codes(receipt).includes("UNKNOWN_ROLE_IDENTITY"));
 });
 
 test("anon cannot inherit or assume authenticated-only table and function access", () => {
@@ -631,8 +757,6 @@ test("membership paths to owner, superuser, and BYPASSRLS roles fail the final g
     "GRANT super_role TO anon;",
     "GRANT bypass_role TO anon;",
   ].join("\n"), {
-    protectedPrincipals: ["anon"],
-    forbiddenApplicationRoleTransitions: [],
     protectedObjects: [{
       kind: "table",
       identity: "public.bypass_probe",
@@ -640,22 +764,23 @@ test("membership paths to owner, superuser, and BYPASSRLS roles fail the final g
         rlsEnabled: true,
         forceRls: true,
         ownerRole: "owner_role",
-        forbidOwnerPathForApplicationPrincipals: true,
-        forbidSuperuserOrBypassRlsPath: true,
       },
     }],
   });
   const anon = objectClosure(receipt, "public.bypass_probe", "anon");
   assert.equal(receipt.accepted, false);
   assert.equal(anon.ownerCapabilities, true);
+  assert.equal(anon.ownerPathViaMembershipOrSetRole, true);
   assert.equal(anon.superuserStateReachable, true);
+  assert.equal(anon.superuserPathViaSetRole, true);
   assert.equal(anon.bypassRlsStateReachable, true);
+  assert.equal(anon.bypassRlsPathViaSetRole, true);
   assert.equal(anon.rlsBypass, true);
   assert.ok(codes(receipt).includes("APPLICATION_PRINCIPAL_OWNER_PATH"));
   assert.ok(codes(receipt).includes("APPLICATION_PRINCIPAL_SUPERUSER_OR_BYPASSRLS_PATH"));
 });
 
-test("FORCE RLS removes owner-only bypass while retaining exact owner evidence", () => {
+test("FORCE RLS removes owner-only RLS bypass but never legitimizes the owner transition", () => {
   const sqlPrefix = [
     "CREATE TABLE public.owner_probe(id int);",
     "ALTER TABLE public.owner_probe ENABLE ROW LEVEL SECURITY;",
@@ -663,8 +788,6 @@ test("FORCE RLS removes owner-only bypass while retaining exact owner evidence",
     "GRANT owner_role TO anon;",
   ];
   const withoutForce = derive(sqlPrefix.join("\n"), {
-    protectedPrincipals: ["anon"],
-    forbiddenApplicationRoleTransitions: [],
     protectedObjects: [{ kind: "table", identity: "public.owner_probe", expectation: {} }],
   });
   const withForce = derive([
@@ -672,8 +795,6 @@ test("FORCE RLS removes owner-only bypass while retaining exact owner evidence",
     "ALTER TABLE public.owner_probe FORCE ROW LEVEL SECURITY;",
     ...sqlPrefix.slice(2),
   ].join("\n"), {
-    protectedPrincipals: ["anon"],
-    forbiddenApplicationRoleTransitions: [],
     protectedObjects: [{
       kind: "table",
       identity: "public.owner_probe",
@@ -683,7 +804,40 @@ test("FORCE RLS removes owner-only bypass while retaining exact owner evidence",
   assert.equal(objectClosure(withoutForce, "public.owner_probe", "anon").rlsBypass, true);
   assert.equal(objectClosure(withForce, "public.owner_probe", "anon").ownerCapabilities, true);
   assert.equal(objectClosure(withForce, "public.owner_probe", "anon").rlsBypass, false);
-  assert.equal(withForce.accepted, true);
+  assert.equal(withoutForce.accepted, false);
+  assert.equal(withForce.accepted, false);
+  assert.ok(codes(withForce).includes("APPLICATION_PRINCIPAL_OWNER_PATH"));
+});
+
+test("owner changes replace implicit owner privileges and superuser closure remains exact", () => {
+  const receipt = derive([
+    "SET ROLE other_creator;",
+    "CREATE TABLE public.owner_change_probe(id int);",
+    "RESET ROLE;",
+    "ALTER TABLE public.owner_change_probe OWNER TO owner_role;",
+  ].join("\n"), {
+    protectedPrincipals: [
+      "anon", "authenticated", "service_role", "other_creator", "owner_role",
+    ],
+    protectedObjects: [{
+      kind: "table",
+      identity: "public.owner_change_probe",
+      expectation: { ownerRole: "owner_role" },
+    }],
+  });
+  assert.equal(receipt.accepted, true);
+  assert.deepEqual(
+    objectClosure(receipt, "public.owner_change_probe", "other_creator").finalEffectivePrivileges,
+    [],
+  );
+  assert.deepEqual(
+    objectClosure(receipt, "public.owner_change_probe", "owner_role").finalEffectivePrivileges,
+    ["DELETE", "INSERT", "REFERENCES", "SELECT", "TRIGGER", "TRUNCATE", "UPDATE"],
+  );
+  assert.equal(
+    objectClosure(receipt, "public.owner_change_probe", "anon").rlsBypass,
+    true,
+  );
 });
 
 test("SET LOCAL ROLE and session-authorization semantics fail closed", () => {
@@ -724,10 +878,30 @@ test("every membership identity and principal transition carries exact statement
   }
 });
 
+test("role evidence spans point to executable identities rather than matching comment text", () => {
+  const sql = "GRANT /* authenticated */ authenticated TO anon;";
+  const receipt = derive(sql);
+  const evidence = receipt.roleIdentityEvidence.find(
+    (entry) => entry.exactCanonicalIdentity === "authenticated",
+  );
+  assert.ok(evidence);
+  assert.equal(evidence.sourceSpan.start, sql.lastIndexOf("authenticated"));
+  assert.equal(
+    sql.slice(evidence.sourceSpan.start, evidence.sourceSpan.end),
+    "authenticated",
+  );
+});
+
 test("receipt digest rebinding cannot hide role-graph mismatch", () => {
   const original = derive("");
   assert.equal(original.accepted, true);
-  assert.equal(validateExecutionPrincipalRoleClosureReceiptV1(original).valid, true);
+  assert.equal(
+    validateExecutionPrincipalRoleClosureReceiptV1(
+      original,
+      expectedDerivedReceiptBinding(original),
+    ).valid,
+    true,
+  );
 
   const tampered = structuredClone(original);
   tampered.finalRoleMembershipEdges.push({
@@ -737,9 +911,13 @@ test("receipt digest rebinding cannot hide role-graph mismatch", () => {
     grantRevokeState: "GRANTED",
   });
   rebindDigest(tampered);
-  const result = validateExecutionPrincipalRoleClosureReceiptV1(tampered);
+  const result = validateExecutionPrincipalRoleClosureReceiptV1(
+    tampered,
+    expectedDerivedReceiptBinding(original),
+  );
   assert.equal(result.valid, false);
   assert.ok(result.errors.includes("ROLE_GRAPH_REPLAY_MISMATCH"));
+  assert.ok(result.errors.includes("EXPECTED_RECEIPT_DIGEST_MISMATCH"));
 });
 
 test("receipt digest rebinding cannot hide current-principal mismatch", () => {
@@ -751,13 +929,37 @@ test("receipt digest rebinding cannot hide current-principal mismatch", () => {
   const tampered = structuredClone(original);
   tampered.finalSessionPrincipalState.currentUser = "other_creator";
   rebindDigest(tampered);
-  const result = validateExecutionPrincipalRoleClosureReceiptV1(tampered, {
-    receiptDigest: original.receiptDigest,
-    analysisInputDigest: original.analysisInputDigest,
-    programSha256: original.programSha256,
-  });
+  const result = validateExecutionPrincipalRoleClosureReceiptV1(
+    tampered,
+    expectedDerivedReceiptBinding(original),
+  );
   assert.equal(result.valid, false);
   assert.ok(result.errors.includes("CURRENT_PRINCIPAL_REPLAY_MISMATCH"));
+  assert.ok(result.errors.includes("EXPECTED_RECEIPT_DIGEST_MISMATCH"));
+});
+
+test("independent expected digest binding covers creator, policy, default-ACL, and closure fields", () => {
+  const original = derive("CREATE TABLE public.receipt_probe(id int);", {
+    protectedObjects: [{
+      kind: "table",
+      identity: "public.receipt_probe",
+      expectation: {},
+    }],
+  });
+  assert.equal(original.accepted, true);
+  assert.equal(
+    validateExecutionPrincipalRoleClosureReceiptV1(original).valid,
+    false,
+  );
+  const tampered = structuredClone(original);
+  tampered.objectCreationPrincipalEvidence[0].resultingOwnerRole = "anon";
+  tampered.effectiveFinalSecurityState[0].ownerRole = "anon";
+  rebindDigest(tampered);
+  const result = validateExecutionPrincipalRoleClosureReceiptV1(
+    tampered,
+    expectedDerivedReceiptBinding(original),
+  );
+  assert.equal(result.valid, false);
   assert.ok(result.errors.includes("EXPECTED_RECEIPT_DIGEST_MISMATCH"));
 });
 
@@ -766,6 +968,7 @@ test("PR 790 and PR 791 candidate evidence cannot substitute for a merged-main A
     authorityStage: "C3R-A2E",
     pullRequest: 791,
     baseSha: manifest.liveBaseline.mainSha,
+    baseTree: manifest.liveBaseline.mainTree,
     expectedHead: manifest.terminalDonors.c3rA2CleanReplan.finalHead,
     reviewedHead: manifest.terminalDonors.c3rA2CleanReplan.finalHead,
     reviewedTree: manifest.terminalDonors.c3rA2CleanReplan.finalTree,
@@ -774,6 +977,7 @@ test("PR 790 and PR 791 candidate evidence cannot substitute for a merged-main A
     resultingMainTree: null,
     exactHeadChecksPassed: false,
     formalReviewId: 4992901306,
+    formalReviewHead: manifest.terminalDonors.c3rA2CleanReplan.finalHead,
     actionableCounts: { p0: 0, p1: 2, p2: 0 },
     unresolvedActionableThreads: 2,
     artifactDigests: {},
@@ -789,6 +993,71 @@ test("PR 790 and PR 791 candidate evidence cannot substitute for a merged-main A
     assert.ok(result.errors.includes("TERMINAL_DONOR_PR_CANNOT_SUBSTITUTE"));
     assert.ok(result.errors.includes("MERGED_MAIN_RECEIPT_REQUIRED"));
   }
+});
+
+test("merged-main receipt pins every PR, head, tree, merge, and review identity", () => {
+  const valid = {
+    authorityStage: "C3R-A2E",
+    pullRequest: 792,
+    baseSha: manifest.liveBaseline.mainSha,
+    baseTree: manifest.liveBaseline.mainTree,
+    expectedHead: "a".repeat(40),
+    reviewedHead: "a".repeat(40),
+    reviewedTree: "b".repeat(40),
+    squashMergeSha: "c".repeat(40),
+    resultingMainSha: "c".repeat(40),
+    resultingMainTree: "b".repeat(40),
+    exactHeadChecksPassed: true,
+    formalReviewId: 4995458963,
+    formalReviewHead: "a".repeat(40),
+    actionableCounts: { p0: 0, p1: 0, p2: 0 },
+    unresolvedActionableThreads: 0,
+    artifactDigests: { analyzer: "d".repeat(64) },
+    remoteMutationCount: 0,
+    merged: true,
+  };
+  const expected = structuredClone(valid);
+  assert.equal(validateC3rA2eMergedMainReceiptV1(valid, expected).valid, true);
+  assert.ok(
+    validateC3rA2eMergedMainReceiptV1(
+      { ...valid, pullRequest: 793 },
+      expected,
+    ).errors.includes("EXPECTED_PULL_REQUEST_MISMATCH"),
+  );
+  const wrongTree = {
+    ...valid,
+    reviewedTree: "e".repeat(40),
+  };
+  const wrongTreeResult = validateC3rA2eMergedMainReceiptV1(wrongTree, expected);
+  assert.ok(wrongTreeResult.errors.includes("EXPECTED_REVIEWED_TREE_MISMATCH"));
+  assert.ok(wrongTreeResult.errors.includes("REVIEWED_AND_RESULTING_TREE_MISMATCH"));
+  assert.ok(
+    validateC3rA2eMergedMainReceiptV1(
+      { ...valid, formalReviewId: valid.formalReviewId + 1 },
+      expected,
+    ).errors.includes("EXPECTED_FORMAL_REVIEW_ID_MISMATCH"),
+  );
+  const wrongReviewHead = {
+    ...valid,
+    formalReviewHead: "f".repeat(40),
+  };
+  const wrongReviewHeadResult = validateC3rA2eMergedMainReceiptV1(
+    wrongReviewHead,
+    expected,
+  );
+  assert.ok(
+    wrongReviewHeadResult.errors.includes(
+      "EXPECTED_HEAD_OR_FORMAL_REVIEW_BINDING_MISMATCH",
+    ),
+  );
+  assert.ok(
+    wrongReviewHeadResult.errors.includes("EXPECTED_FORMAL_REVIEW_HEAD_MISMATCH"),
+  );
+  assert.ok(
+    validateC3rA2eMergedMainReceiptV1(valid).errors.includes(
+      "EXPECTED_MERGED_MAIN_RECEIPT_BINDING_REQUIRED",
+    ),
+  );
 });
 
 test("all 25 live migrations have deterministic statement-ordered role-sensitive inventory", async () => {

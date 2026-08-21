@@ -67,6 +67,18 @@ Every receipt binds the canonical analysis input, program source, statement-orde
 
 PR #790/#791 evidence is explicitly invalid as a merged-main A2E receipt.
 
+## Exact-head review hardening
+
+The first A2E exact-head formal review (review `4995458963`) identified five bounded closure defects. The authority closes them together because each affects the same execution-principal/receipt trust root:
+
+- `PRRT_kwDOSMHn8M6bOace`: `CREATE SCHEMA ... AUTHORIZATION ...` fails closed instead of assigning the current principal as the owner;
+- `PRRT_kwDOSMHn8M6bOacj`: every role named by `ALTER POLICY ... TO ...` must resolve in the closed role contract;
+- `PRRT_kwDOSMHn8M6bOacm`: a derived receipt requires an independent expected `receiptDigest`, `analysisInputDigest`, and `programSha256`; recomputing a self-digest cannot rebind authority;
+- `PRRT_kwDOSMHn8M6bOacn`: a merged-main receipt requires an independent expected binding for PR, base SHA/tree, expected/reviewed/formal-review head, reviewed/resulting tree, squash/resulting-main SHA, and review identity;
+- `PRRT_kwDOSMHn8M6bOacr`: a duplicate membership `GRANT` without `WITH ADMIN OPTION` preserves an already-active ADMIN option until an exact `REVOKE ADMIN OPTION FOR`.
+
+The same correction hardens overlength identifiers, dynamic principal-changing statements, default-schema identity, initial membership grantors/cycles, protected-principal boundary narrowing, owner/superuser/BYPASSRLS paths, and statement/source-span provenance. These are fail-closed refinements of A2E, not a C3R-A2 reconciliation or runtime start.
+
 ## Source-only and activation boundary
 
 This package modifies no migration, workflow, package file, learner runtime, application, API, UI, provider, deployment, or environment path. It performs no database operation, Supabase operation, migration repair, Production activation, payment activation, provider activation, or learner activation.
