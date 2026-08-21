@@ -745,6 +745,88 @@ test("folds only unquoted qualified-name components and preserves quoted case", 
   }
 });
 
+test("preserves dots inside canonical quoted identifier components", () => {
+  const dottedSchema = {
+    kind: "table",
+    identifier: '"tenant.v1".items',
+  };
+  const dottedName = {
+    kind: "table",
+    identifier: 'tenant."v1.items"',
+  };
+  const escapedQuote = {
+    kind: "table",
+    identifier: '"tenant""v1".items',
+  };
+  const available = [dottedSchema, dottedName, escapedQuote];
+
+  assert.deepEqual(
+    deriveProducedDatabaseObjects(`
+      create table "tenant.v1"."items" (id integer);
+      create table "tenant"."v1.items" (id integer);
+      create table "tenant""v1"."items" (id integer);
+    `),
+    available,
+  );
+  for (const [sql, expected] of [
+    ['select * from "tenant.v1"."items";', dottedSchema],
+    ['select * from "tenant"."v1.items";', dottedName],
+    ['select * from "tenant""v1"."items";', escapedQuote],
+  ]) {
+    assert.deepEqual(
+      deriveDatabaseObjectReferences(sql, available),
+      [expected],
+      sql,
+    );
+  }
+  assert.deepEqual(
+    deriveDatabaseObjectReferences('select * from "tenant.v1"."items";', [
+      { kind: "table", identifier: '"tenant.v1"."items"' },
+    ]),
+    [dottedSchema],
+  );
+  assert.deepEqual(
+    deriveDatabaseObjectReferences('select * from "tenant.v1"."items";', [
+      dottedSchema,
+      { kind: "table", identifier: '"tenant.v1"."items"' },
+    ]),
+    [dottedSchema],
+  );
+  assert.deepEqual(
+    deriveExternalFunctionDependencies(
+      'select "tenant.v1"."step"();',
+      ['"tenant.v1"."step"'],
+    ),
+    [],
+  );
+
+  const producer = "20260101000000_dotted_identifier_producer.sql";
+  const consumer = "20260101000001_dotted_identifier_consumer.sql";
+  const [, derivedConsumer] = deriveMigrationDependencyClosure(
+    [
+      { currentFilename: producer, presentOnLiveMain: true, freshHistoryOrder: 1 },
+      { currentFilename: consumer, presentOnLiveMain: true, freshHistoryOrder: 2 },
+    ],
+    new Map([
+      [
+        producer,
+        `create table "tenant.v1"."items" (id integer);
+         create table "tenant"."v1.items" (id integer);`,
+      ],
+      [
+        consumer,
+        `select * from "tenant.v1"."items";
+         select * from "tenant"."v1.items";`,
+      ],
+    ]),
+  );
+  assert.deepEqual(derivedConsumer.referencedDatabaseObjects, [
+    dottedSchema,
+    dottedName,
+  ]);
+  assert.deepEqual(derivedConsumer.exactDependencyPredecessors, [producer]);
+});
+
 test("keeps escaped quoted identity and fails closed on unsupported identifiers", () => {
   const escaped = tokenizePostgresSql('select * from "weird""schema"."item";')
     .filter((token) => token.type === "QUOTED_IDENTIFIER")
@@ -2878,7 +2960,7 @@ test("orders ALTER and multi-target DROP FOREIGN TABLE as table transitions", ()
   );
 });
 
-test("fails closed on transient create-drop and ambiguous quoted rename components", () => {
+test("fails closed on transient create-drop and preserves quoted rename components", () => {
   const singleRecord = (currentFilename) => ({
     currentFilename,
     presentOnLiveMain: true,
@@ -2896,24 +2978,60 @@ test("fails closed on transient create-drop and ambiguous quoted rename componen
     "CURRENT_MIGRATION_CREATE_DROP_UNSUPPORTED",
   );
 
-  for (const [filename, sql] of [
-    [
-      "20260101000000_quoted_rename.sql",
-      'create table public.old_name (id bigint); alter table public.old_name rename to "new.name";',
-    ],
-    [
-      "20260101000000_quoted_schema.sql",
-      'create table public.old_name (id bigint); alter table public.old_name set schema "new.schema";',
-    ],
+  for (const scenario of [
+    {
+      stem: "quoted_rename",
+      sourceSql: "create table public.old_name (id bigint);",
+      transitionSql:
+        'alter table public.old_name rename to "new.name";',
+      oldIdentifier: "public.old_name",
+      newIdentifier: 'public."new.name"',
+      consumerSql: 'select * from public."new.name";',
+    },
+    {
+      stem: "quoted_schema",
+      sourceSql: "create table public.old_name (id bigint);",
+      transitionSql:
+        'alter table public.old_name set schema "new.schema";',
+      oldIdentifier: "public.old_name",
+      newIdentifier: '"new.schema".old_name',
+      consumerSql: 'select * from "new.schema".old_name;',
+    },
   ]) {
-    assertClosureFailure(
-      () =>
-        deriveMigrationDependencyClosure(
-          [singleRecord(filename)],
-          new Map([[filename, sql]]),
-        ),
-      "UNSUPPORTED_IDENTIFIER_FORM",
-    );
+    const source = `20260101000000_${scenario.stem}_source.sql`;
+    const transition = `20260101000001_${scenario.stem}_transition.sql`;
+    const consumer = `20260101000002_${scenario.stem}_consumer.sql`;
+    const [, derivedTransition, derivedConsumer] =
+      deriveMigrationDependencyClosure(
+        [
+          { currentFilename: source, presentOnLiveMain: true, freshHistoryOrder: 1 },
+          {
+            currentFilename: transition,
+            presentOnLiveMain: true,
+            freshHistoryOrder: 2,
+          },
+          {
+            currentFilename: consumer,
+            presentOnLiveMain: true,
+            freshHistoryOrder: 3,
+          },
+        ],
+        new Map([
+          [source, scenario.sourceSql],
+          [transition, scenario.transitionSql],
+          [consumer, scenario.consumerSql],
+        ]),
+      );
+    assert.deepEqual(derivedTransition.droppedObjects, [
+      { kind: "table", identifier: scenario.oldIdentifier },
+    ]);
+    assert.deepEqual(derivedTransition.producedObjects, [
+      { kind: "table", identifier: scenario.newIdentifier },
+    ]);
+    assert.deepEqual(derivedConsumer.referencedDatabaseObjects, [
+      { kind: "table", identifier: scenario.newIdentifier },
+    ]);
+    assert.deepEqual(derivedConsumer.exactDependencyPredecessors, [transition]);
   }
 });
 

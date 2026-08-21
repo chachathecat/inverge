@@ -95,7 +95,11 @@ hidden by checking only objects that were already declared.
 deterministic `MigrationDependencyClosureV1` implementation. Its lexer emits
 distinct quoted/unquoted identifier tokens, folds only unquoted ASCII names,
 decodes doubled quotes, keeps quoted payloads atomic, and compares qualified
-components independently. Unsupported Unicode-escape and non-ASCII unquoted
+components independently. Its canonical object identity re-quotes every
+component that cannot retain the same PostgreSQL identity unquoted, so a dot
+inside a component remains distinct from the dot between components (for
+example, `"tenant.v1".items` is not `tenant."v1.items"`). Unsupported
+Unicode-escape and non-ASCII unquoted
 forms fail closed. It excludes line/block comments, ordinary/escape strings
 and scalar dollar values, while scanning only grammar-established executable
 `sql` or `plpgsql` `DO`, function and procedure bodies. Identifier and legacy

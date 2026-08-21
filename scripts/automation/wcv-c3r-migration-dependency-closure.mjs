@@ -144,6 +144,8 @@ const CLOSED_PARSER_CONTRACT_V1 = Object.freeze({
   quotedIdentifierNormalization:
     "REMOVE_DELIMITERS_DECODE_DOUBLED_QUOTES_PRESERVE_EXACT_CASE",
   qualifiedComponentsNormalizedIndependently: true,
+  qualifiedIdentifierSerialization:
+    "POSTGRES_COMPONENT_QUOTING_PRESERVES_DOT_PAYLOADS",
   quotedIdentifierPayloadNeverRescanned: true,
   unsupportedIdentifierDiagnostic: "UNSUPPORTED_IDENTIFIER_FORM",
   unicodeEscapedIdentifiersSupported: false,
@@ -420,6 +422,13 @@ function foldAsciiIdentifier(value) {
       code >= 65 && code <= 90 ? String.fromCharCode(code + 32) : character;
   }
   return folded;
+}
+
+function containsUppercaseAscii(value) {
+  return [...value].some((character) => {
+    const code = character.charCodeAt(0);
+    return code >= 65 && code <= 90;
+  });
 }
 
 function dollarQuoteDelimiterAt(sql, index) {
@@ -1208,6 +1217,17 @@ function qualifiedIdentifierAt(tokens, index) {
 }
 
 function manifestIdentifierComponents(identifier) {
+  if (identifier.includes('"')) {
+    const tokens = tokenizePostgresSql(identifier);
+    const reference = qualifiedIdentifierAt(tokens, 0);
+    if (reference && reference.nextIndex === tokens.length) {
+      return [reference.schema, reference.name];
+    }
+    throw new MigrationDependencyClosureError(
+      "INVALID_DATABASE_OBJECT_IDENTIFIER",
+      identifier,
+    );
+  }
   const parts = identifier.split(".");
   if (parts.length !== 2 || parts.some((part) => part.length === 0)) {
     throw new MigrationDependencyClosureError(
@@ -1215,12 +1235,28 @@ function manifestIdentifierComponents(identifier) {
       identifier,
     );
   }
-  return parts;
+  return parts.map((value) => {
+    const quoted =
+      containsUppercaseAscii(value) ||
+      !isUnquotedIdentifierStart(value[0]) ||
+      [...value.slice(1)].some(
+        (character) => !isUnquotedIdentifierContinue(character),
+      );
+    return {
+      type: quoted ? "QUOTED_IDENTIFIER" : "UNQUOTED_IDENTIFIER",
+      value,
+      quoted,
+      raw: value,
+    };
+  });
 }
 
 function qualifiedMatchesManifestIdentifier(reference, identifier) {
   const [schema, name] = manifestIdentifierComponents(identifier);
-  return reference.schema.value === schema && reference.name.value === name;
+  return (
+    reference.schema.value === schema.value &&
+    reference.name.value === name.value
+  );
 }
 
 function qualifiedSemanticKey(reference) {
@@ -1237,27 +1273,27 @@ function displayQualifiedIdentifier(reference) {
   return `${displayIdentifierComponent(reference.schema)}.${displayIdentifierComponent(reference.name)}`;
 }
 
-function manifestIdentifierFromQualified(reference) {
-  if (
-    reference.schema.value.includes(".") ||
-    reference.name.value.includes(".")
-  ) {
-    throw new MigrationDependencyClosureError(
-      "UNSUPPORTED_IDENTIFIER_FORM",
-      `DOT_INSIDE_QUALIFIED_COMPONENT:${displayQualifiedIdentifier(reference)}`,
-    );
-  }
-  return `${reference.schema.value}.${reference.name.value}`;
+function canonicalManifestIdentifierComponent(component) {
+  const canBeUnquoted =
+    !containsUppercaseAscii(component.value) &&
+    isUnquotedIdentifierStart(component.value[0]) &&
+    [...component.value.slice(1)].every(isUnquotedIdentifierContinue);
+  return canBeUnquoted
+    ? component.value
+    : `"${component.value.replaceAll('"', '""')}"`;
 }
 
-function manifestIdentifierComponentFromToken(token, context) {
-  if (!isIdentifierToken(token) || token.value.includes(".")) {
-    throw new MigrationDependencyClosureError(
-      "UNSUPPORTED_IDENTIFIER_FORM",
-      `${context}:${token?.raw ?? "missing identifier"}`,
-    );
-  }
-  return token.value;
+function manifestIdentifierFromComponents(schema, name) {
+  return `${canonicalManifestIdentifierComponent(schema)}.${canonicalManifestIdentifierComponent(name)}`;
+}
+
+function manifestIdentifierFromQualified(reference) {
+  return manifestIdentifierFromComponents(reference.schema, reference.name);
+}
+
+function canonicalManifestIdentifier(identifier) {
+  const [schema, name] = manifestIdentifierComponents(identifier);
+  return manifestIdentifierFromComponents(schema, name);
 }
 
 function qualifiedOccurrences(sql, { includeExecutableDollarBodies = true } = {}) {
@@ -3249,7 +3285,9 @@ function isParenthesizedRelationContext(occurrence) {
 }
 
 export function deriveExternalFunctionDependencies(sql, internalFunctions = []) {
-  const internalFunctionIdentifiers = new Set(internalFunctions);
+  const internalFunctionIdentifiers = new Set(
+    internalFunctions.map(canonicalManifestIdentifier),
+  );
   const counts = new Map();
   for (const occurrence of qualifiedOccurrences(sql)) {
     if (
@@ -3439,7 +3477,10 @@ export function deriveProducedDatabaseObjects(sql) {
 
 function canonicalObjects(objects) {
   return [...objects]
-    .map(({ kind, identifier }) => ({ kind, identifier }))
+    .map(({ kind, identifier }) => ({
+      kind,
+      identifier: canonicalManifestIdentifier(identifier),
+    }))
     .filter(
       (object, index, all) =>
         all.findIndex(
@@ -4086,9 +4127,10 @@ function matchingTypedObjects(occurrence, availableObjects) {
 
 export function deriveDatabaseObjectReferences(sql, availableObjects) {
   const occurrences = qualifiedOccurrences(sql);
+  const available = canonicalObjects(availableObjects);
   return canonicalObjects(
     occurrences.flatMap((occurrence) =>
-      matchingTypedObjects(occurrence, availableObjects),
+      matchingTypedObjects(occurrence, available),
     ),
   );
 }
@@ -4186,10 +4228,7 @@ function schemaObjectOperationsAt(tokens, index) {
         const [schema] = manifestIdentifierComponents(object.identifier);
         replacement = {
           kind,
-          identifier: `${schema}.${manifestIdentifierComponentFromToken(
-            newName,
-            "RENAME_TARGET",
-          )}`,
+          identifier: manifestIdentifierFromComponents(schema, newName),
         };
         cursor += 3;
       } else if (isKeyword(tokens[cursor], "set") && isKeyword(tokens[cursor + 1], "schema")) {
@@ -4203,10 +4242,7 @@ function schemaObjectOperationsAt(tokens, index) {
         const [, name] = manifestIdentifierComponents(object.identifier);
         replacement = {
           kind,
-          identifier: `${manifestIdentifierComponentFromToken(
-            newSchema,
-            "SET_SCHEMA_TARGET",
-          )}.${name}`,
+          identifier: manifestIdentifierFromComponents(newSchema, name),
         };
         cursor += 3;
       }
@@ -5013,19 +5049,20 @@ export function deriveMigrationDependencyClosure(
   const environmentExtensions = indexEnvironmentExtensions(
     environmentRequiredExtensions,
   );
+  const canonicalExternalObjects = canonicalObjects(externalDatabaseObjects);
   const availableObjects = new Map(
-    externalDatabaseObjects.map((object) => [
+    canonicalExternalObjects.map((object) => [
       `${object.kind}:${object.identifier}`,
       object,
     ]),
   );
   const availableRoutineSignatures = new Map(
-    externalDatabaseObjects
+    canonicalExternalObjects
       .filter((object) => object.kind === "function")
       .map((object) => [object.identifier, null]),
   );
   const objectOrigins = new Map(
-    externalDatabaseObjects.map((object) => [
+    canonicalExternalObjects.map((object) => [
       `${object.kind}:${object.identifier}`,
       new Set(),
     ]),

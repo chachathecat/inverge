@@ -2197,6 +2197,7 @@
         "unquotedIdentifierNormalization": "POSTGRES_ASCII_LOWERCASE_FOLD",
         "quotedIdentifierNormalization": "REMOVE_DELIMITERS_DECODE_DOUBLED_QUOTES_PRESERVE_EXACT_CASE",
         "qualifiedComponentsNormalizedIndependently": true,
+        "qualifiedIdentifierSerialization": "POSTGRES_COMPONENT_QUOTING_PRESERVES_DOT_PAYLOADS",
         "quotedIdentifierPayloadNeverRescanned": true,
         "unsupportedIdentifierDiagnostic": "UNSUPPORTED_IDENTIFIER_FORM",
         "unicodeEscapedIdentifiersSupported": false,
