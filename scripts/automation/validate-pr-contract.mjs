@@ -22,6 +22,22 @@ const MERGE_RECOMMENDATIONS = [
   "Blocked",
 ];
 
+const C3R_A0_CONTRACT_PATH =
+  "config/dabangil-wcv-c3r-a0-migration-dependency-authority-v1.json";
+const C3R_A0_SOURCE_AUTHORITY_SCOPE = Object.freeze({
+  repository: "chachathecat/inverge",
+  baseRef: "main",
+  baseSha: "ffdd3dcc2398dd27b991eee0be34f832da0a65b5",
+  headRef: "codex/wcv-c3r-a0-migration-dependency-authority",
+  headRepository: "chachathecat/inverge",
+  pullRequestTitle:
+    "[WCV-C3R-A0] Install PostgreSQL migration dependency authority",
+});
+const GITHUB_CLOSING_KEYWORD_PATTERN = new RegExp(
+  String.raw`\b(?:close(?:s|d)?|fix(?:es|ed)?|resolve(?:s|d)?)(?:\s*:\s*|\s+)(?:#\d+|[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+#\d+|https:\/\/github\.com\/[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+\/(?:issues|pull)\/\d+)\b`,
+  "gi",
+);
+
 function fail(message) {
   console.error(`validate-pr-contract: ${message}`);
   process.exitCode = 1;
@@ -31,14 +47,22 @@ function escapeRegExp(value) {
   return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
-function readPullRequestBody() {
+function readPullRequestContext() {
   const eventPath = process.env.GITHUB_EVENT_PATH;
 
   if (eventPath && fs.existsSync(eventPath)) {
     try {
       const event = JSON.parse(fs.readFileSync(eventPath, "utf8"));
       if (typeof event?.pull_request?.body === "string") {
-        return event.pull_request.body;
+        return {
+          body: event.pull_request.body,
+          repository: event?.repository?.full_name ?? null,
+          baseRef: event.pull_request?.base?.ref ?? null,
+          baseSha: event.pull_request?.base?.sha ?? null,
+          headRef: event.pull_request?.head?.ref ?? null,
+          headRepository: event.pull_request?.head?.repo?.full_name ?? null,
+          pullRequestTitle: event.pull_request?.title ?? null,
+        };
       }
     } catch {
       fail("GITHUB_EVENT_PATH could not be parsed as a pull-request event.");
@@ -47,7 +71,15 @@ function readPullRequestBody() {
   }
 
   if (typeof process.env.PR_BODY === "string") {
-    return process.env.PR_BODY;
+    return {
+      body: process.env.PR_BODY,
+      repository: null,
+      baseRef: null,
+      baseSha: null,
+      headRef: null,
+      headRepository: null,
+      pullRequestTitle: null,
+    };
   }
 
   return null;
@@ -62,8 +94,62 @@ function validateHeadings(body, errors) {
   }
 }
 
-function validateIssueLink(body, errors) {
+function readC3rA0SourceAuthorityIssueLink() {
+  if (!fs.existsSync(C3R_A0_CONTRACT_PATH)) return null;
+  try {
+    const contract = JSON.parse(
+      fs.readFileSync(C3R_A0_CONTRACT_PATH, "utf8"),
+    );
+    return contract?.deliveryControl?.sourceAuthorityIssueLink ?? null;
+  } catch {
+    return null;
+  }
+}
+
+function matchesExactC3rA0Scope(context) {
+  return Object.entries(C3R_A0_SOURCE_AUTHORITY_SCOPE).every(
+    ([key, value]) => context?.[key] === value,
+  );
+}
+
+function validateIssueLink(body, errors, context) {
   const issueLinks = [...body.matchAll(/\b(?:Closes|Fixes)\s+#(\d+)\b/gi)];
+  const allGithubClosingLinks = [
+    ...body.matchAll(GITHUB_CLOSING_KEYWORD_PATTERN),
+  ];
+  const sourceAuthority = readC3rA0SourceAuthorityIssueLink();
+
+  if (matchesExactC3rA0Scope(context)) {
+    const requiredReferenceLine = sourceAuthority?.requiredReferenceLine;
+    const requiredDispositionLine = sourceAuthority?.requiredDispositionLine;
+    const bodyLines = body.split(/\r?\n/u).map((line) => line.trim());
+    const exactReferenceCount = bodyLines.filter(
+      (line) => line === requiredReferenceLine,
+    ).length;
+    const exactDispositionCount = bodyLines.filter(
+      (line) => line === requiredDispositionLine,
+    ).length;
+    const contractScopeMatches = Object.entries(
+      C3R_A0_SOURCE_AUTHORITY_SCOPE,
+    ).every(([key, value]) => sourceAuthority?.[key] === value);
+
+    if (
+      !contractScopeMatches ||
+      sourceAuthority?.mode !== "REFERENCE_ONLY" ||
+      sourceAuthority?.trackerIssue !== 781 ||
+      sourceAuthority?.closingKeywordsAllowed !== false ||
+      sourceAuthority?.exceptionAppliesOnlyWhenExactLinesPresent !== true ||
+      sourceAuthority?.fullGithubClosingKeywordFamilyBlocked !== true ||
+      exactReferenceCount !== 1 ||
+      exactDispositionCount !== 1 ||
+      allGithubClosingLinks.length !== 0
+    ) {
+      errors.push(
+        "C3R-A0 reference-only linking requires its exact tracker reference, exact open disposition, exact pinned PR scope, and zero issue-closing keywords.",
+      );
+    }
+    return;
+  }
 
   if (issueLinks.length !== 1) {
     errors.push(
@@ -105,7 +191,8 @@ function validateMergeRecommendation(body, errors) {
 }
 
 function main() {
-  const body = readPullRequestBody();
+  const context = readPullRequestContext();
+  const body = context?.body;
 
   if (process.exitCode) return;
 
@@ -115,7 +202,7 @@ function main() {
   }
 
   const errors = [];
-  validateIssueLink(body, errors);
+  validateIssueLink(body, errors, context);
   validateHeadings(body, errors);
   validateRisk(body, errors);
   validateMergeRecommendation(body, errors);

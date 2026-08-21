@@ -116,6 +116,7 @@ const defaultTestFiles = [
   "tests/v12-t0-cpf1-persistence-sink-inventory.test.mjs",
   "tests/appraiser-second-world-class-vertical-contract.test.mjs",
   "tests/wcv-campaign-authority-roadmap-reconciliation.test.mjs",
+  "tests/wcv-c3r-a0-migration-dependency-authority.test.mjs",
   "tests/wcv-c2r-structural-recovery-authority.test.mjs",
   "tests/rights-safe-adaptive-variant-foundry-contract.test.mjs",
   "tests/c2r-b-typed-subject-proof-contract.test.mjs",

@@ -5,6 +5,11 @@
 Use this authority order when sources conflict:
 
 1. a dated Owner decision for the exact decision it owns, currently
+   `docs/decisions/2026-08-21-owner-wcv-c3r-a0-migration-dependency-authority.md`
+   for the independently complete C3R-A0 PostgreSQL migration-dependency
+   authority only; it installs no program selector or runtime and becomes
+   repository authority only after its expected-head-pinned squash merge and
+   validated GitHub receipt,
    `docs/decisions/2026-08-17-owner-c2r-c-p-structural-practice-proof-recovery.md`
    for the exact complete Practice trusted-repair runtime vertical, its 11
    candidate regression rows in PR #756, and the post-merge current-stage
