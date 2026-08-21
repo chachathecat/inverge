@@ -1114,7 +1114,13 @@
         "postMergeUncoveredRowCount": 0,
         "activeCandidateCoveringPr": 764,
         "activeCandidateStage": "C2R-C-L",
-        "activeCandidateRows": [3, 7, 15, 17, 21],
+        "activeCandidateRows": [
+          3,
+          7,
+          15,
+          17,
+          21
+        ],
         "candidateStatus": "candidate_coverage_pending_exact_merge",
         "receiptPolicyId": "github_exact_head_pinned_squash_merge_v1",
         "repositoryCandidateDeclaration": {
@@ -2138,5 +2144,38 @@
     ],
     "runtimeReadinessEstablished": false,
     "automaticStartAllowed": false
+  },
+  "c3ExecutionPrincipalRoleClosureDecision": {
+    "authority": "C3R-A2E",
+    "contract": "config/dabangil-wcv-c3r-a2e-execution-principal-role-closure-v1.json",
+    "decision": "docs/decisions/2026-08-21-owner-wcv-c3r-a2e-execution-principal-role-closure.md",
+    "semanticsProfile": "postgresql_15_8_execution_principal_role_closure_v1",
+    "currentState": "UNINSTALLED_UNTIL_VALIDATED_MERGED_MAIN_RECEIPT",
+    "installedUpstream": [
+      "C3R-A0",
+      "C3R-A1"
+    ],
+    "historicalTerminalDonors": [
+      790,
+      791
+    ],
+    "donorAncestryReuseAllowed": false,
+    "effectiveSuccessorStates": {
+      "c3rA2": "DEPENDENCY_BLOCKED_UNSTARTED_PENDING_VALIDATED_A2E_RECEIPT",
+      "c3rP": "BLOCKED_UNSTARTED_PENDING_VALIDATED_A2_RECEIPT",
+      "c3rT": "BLOCKED",
+      "c3rL": "BLOCKED",
+      "wcvC3": "INCOMPLETE"
+    },
+    "remainingA2CleanReplanConsumed": false,
+    "successorRuntimeStarted": false,
+    "connectorRulesetClassification": "CONNECTOR_RULESET_UNOBSERVABLE",
+    "readyAuthorized": false,
+    "mergeAuthorized": false,
+    "remoteMutationCount": 0,
+    "productionActivationCount": 0,
+    "paymentActivationCount": 0,
+    "providerActivationCount": 0,
+    "learnerActivationCount": 0
   }
 }

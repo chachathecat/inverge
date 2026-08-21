@@ -1,0 +1,649 @@
+{
+  "contractId": "dabangil-wcv-c3r-a2e-execution-principal-role-closure-v1",
+  "contractVersion": "1.0.0",
+  "authority": {
+    "stage": "C3R-A2E",
+    "title": "PostgreSQL execution-principal and role-closure authority",
+    "decisionDate": "2026-08-21",
+    "structuralReductionOf": "C3R-A2",
+    "independentlyComplete": true,
+    "sourceOnly": true,
+    "installationRule": "INSTALLED_ONLY_BY_VALIDATED_MERGED_MAIN_RECEIPT",
+    "currentCandidateState": "UNINSTALLED_DRAFT_CANDIDATE",
+    "remainingA2CleanReplanConsumed": false,
+    "successorStarted": false
+  },
+  "liveBaseline": {
+    "repository": "chachathecat/inverge",
+    "defaultBranch": "main",
+    "mainSha": "54afffcc539981ded65591f1f027171343bfce40",
+    "mainTree": "3c48da6fe991d8c02e3991e0a571b3b12139932c",
+    "mainProtected": true,
+    "migrationCount": 25,
+    "migrations": [
+      {
+        "path": "supabase/migrations/20260422_inverge_service_core.sql",
+        "gitBlobSha": "c43b54082e51df5933d14a59cc68553611dbf18c"
+      },
+      {
+        "path": "supabase/migrations/20260423_inverge_service_role_grants.sql",
+        "gitBlobSha": "04c0170befa93a51e56d0f431ca17ffa388b30f1"
+      },
+      {
+        "path": "supabase/migrations/20260424_review_os_alpha.sql",
+        "gitBlobSha": "b9ee4b134fe6e64bf0a62df2af5cfb0b9bd614b4"
+      },
+      {
+        "path": "supabase/migrations/20260426_review_os_study_logs.sql",
+        "gitBlobSha": "37a589fd6ce76cb9b4d7fc963a932f6b663589be"
+      },
+      {
+        "path": "supabase/migrations/20260427_study_logs_taxonomy_candidates.sql",
+        "gitBlobSha": "2f4dc97496871777f5eac9afb4e1ea564213e012"
+      },
+      {
+        "path": "supabase/migrations/20260429_learning_signal_events.sql",
+        "gitBlobSha": "50690be53d69a7b6d0e028560b7fa6252ea32a7e"
+      },
+      {
+        "path": "supabase/migrations/20260430_exam_archive.sql",
+        "gitBlobSha": "ce6dbfb6d7f032f6f07af54d82710f654281ca3d"
+      },
+      {
+        "path": "supabase/migrations/20260605_create_personal_concept_nodes.sql",
+        "gitBlobSha": "5caa619abf2568b2122e985b483fcc86d0f5f06a"
+      },
+      {
+        "path": "supabase/migrations/20260608_create_personal_learning_states.sql",
+        "gitBlobSha": "ca91420e3d2c4ca41a5c0f5683d97b15a7ca8af1"
+      },
+      {
+        "path": "supabase/migrations/20260615_legal_article_chunk_identity.sql",
+        "gitBlobSha": "0d20d7f175d8f93a2215fcb141f17996395c5597"
+      },
+      {
+        "path": "supabase/migrations/20260615_legal_grounding_guard.sql",
+        "gitBlobSha": "5971e1b961a7d096510902fdc40b04310a053ade"
+      },
+      {
+        "path": "supabase/migrations/20260615_legal_grounding.sql",
+        "gitBlobSha": "160955292b0caf8c4dea01b47b52340ba2242acc"
+      },
+      {
+        "path": "supabase/migrations/20260615_legal_retrieval.sql",
+        "gitBlobSha": "6821a0a694f9d5b737ac104270826371980eb431"
+      },
+      {
+        "path": "supabase/migrations/20260616_legal_grounding_guard_service_role_grant.sql",
+        "gitBlobSha": "f960965c3c3d058486b1edf12e8b0639c15d7f7a"
+      },
+      {
+        "path": "supabase/migrations/20260622_mobile_pwa_web_push_reminder.sql",
+        "gitBlobSha": "068d7a0685243f721af9f9760acc5c5555c24471"
+      },
+      {
+        "path": "supabase/migrations/20260623_personal_concept_graph_atomic_transition.sql",
+        "gitBlobSha": "f039f29293a1baa840b764d3f6a62362a3620b71"
+      },
+      {
+        "path": "supabase/migrations/202606232130_personal_concept_graph_rpc_only_write_boundary.sql",
+        "gitBlobSha": "c2f28006e399a9241c9556c14c042e67646be887"
+      },
+      {
+        "path": "supabase/migrations/20260721060237_s233a_answer_review_persistence.sql",
+        "gitBlobSha": "a6b7ab9f8a4c02b275c554c6f6faa980fff97694"
+      },
+      {
+        "path": "supabase/migrations/20260730025332_s236p_lean_owner_private.sql",
+        "gitBlobSha": "24daf5f60e9ded267820724a113ea8f15baca923"
+      },
+      {
+        "path": "supabase/migrations/20260730060233_s236p_owner_private_lifecycle_hardening.sql",
+        "gitBlobSha": "bc51b271b8c3631e40855bda690c4927bf2d614f"
+      },
+      {
+        "path": "supabase/migrations/20260730065744_s236p_owner_private_authenticated_download_info.sql",
+        "gitBlobSha": "8b756778dfa91620cf5c89cf7a370d28ab1f998a"
+      },
+      {
+        "path": "supabase/migrations/20260730151052_s236p_owner_private_expiry_read_gate.sql",
+        "gitBlobSha": "f1a756b3f5c433a7cb64c9e3fe22098ce4ac73cc"
+      },
+      {
+        "path": "supabase/migrations/20260817090000_c2r_c_p_structured_practice_proof.sql",
+        "gitBlobSha": "cd62e80131d8c047f9a122e0a394093920fcd909"
+      },
+      {
+        "path": "supabase/migrations/20260817113000_c2r_c_t_structural_theory_proof.sql",
+        "gitBlobSha": "cdb8f5ee91f57e244e34a8c21f409681639894a4"
+      },
+      {
+        "path": "supabase/migrations/20260817170000_c2r_c_l_exact_law_applicability.sql",
+        "gitBlobSha": "9284a2295f8bd77f04f78ea3de97027e6c01a1ee"
+      }
+    ],
+    "roleSensitiveSqlInventoryV1": {
+      "migrationCount": 25,
+      "roleSensitiveStatementCount": 301,
+      "digest": "fa98a29a31e7baa359bf32a11ea5ece68457139ced4e4bd0e60b84ee2821a758",
+      "operationKindCounts": {
+        "ALTER_DEFAULT_PRIVILEGES": 2,
+        "FUNCTION_SECURITY_DEFINER": 1,
+        "FUNCTION_SECURITY_INVOKER": 15,
+        "OBJECT_PRIVILEGE_GRANT": 84,
+        "OBJECT_PRIVILEGE_REVOKE": 41,
+        "POLICY_ALTER": 1,
+        "POLICY_CREATE": 55,
+        "POLICY_DROP": 46,
+        "RLS_ENABLE": 49,
+        "RLS_FORCE": 7
+      },
+      "executableRoleMembershipStatementCount": 0,
+      "executablePrincipalTransitionStatementCount": 0,
+      "exactStatementAndSourceSpanEvidenceRequired": true
+    }
+  },
+  "validatedUpstreamReceipts": {
+    "c3rA0": {
+      "pullRequest": 785,
+      "reviewedHead": "f7f959368525f8a5895026f1361f6e13fd6226e0",
+      "reviewedTree": "543f8dfb5fdd026c1361e1a502376945912e6c5c",
+      "squashMergeSha": "3a7047cf4c7fc68247137bafbca2434abdadbc7f",
+      "resultingMainSha": "3a7047cf4c7fc68247137bafbca2434abdadbc7f",
+      "resultingMainTree": "543f8dfb5fdd026c1361e1a502376945912e6c5c",
+      "actionableCounts": {
+        "p0": 0,
+        "p1": 0,
+        "p2": 0
+      },
+      "unresolvedActionableThreads": 0,
+      "merged": true,
+      "unreverted": true
+    },
+    "c3rA1": {
+      "pullRequest": 786,
+      "reviewedHead": "ff9dfbebea182d647daa84a349fcc50610f0ed1b",
+      "reviewedTree": "3c48da6fe991d8c02e3991e0a571b3b12139932c",
+      "squashMergeSha": "54afffcc539981ded65591f1f027171343bfce40",
+      "resultingMainSha": "54afffcc539981ded65591f1f027171343bfce40",
+      "resultingMainTree": "3c48da6fe991d8c02e3991e0a571b3b12139932c",
+      "actionableCounts": {
+        "p0": 0,
+        "p1": 0,
+        "p2": 0
+      },
+      "unresolvedActionableThreads": 0,
+      "merged": true,
+      "unreverted": true,
+      "immutableHistoricalSelector": [
+        "C3R-P",
+        "C3R-T",
+        "C3R-L"
+      ]
+    }
+  },
+  "terminalDonors": {
+    "c3rA2FirstCandidate": {
+      "pullRequest": 790,
+      "state": "CLOSED_UNMERGED_READ_ONLY",
+      "finalHead": "12c5e6e6f92275db2d5429b3e8c1c3fd2648f72a",
+      "finalTree": "5544277009b94738e542257644e49ccac1073b56",
+      "finalReview": 4991671874,
+      "merge": null,
+      "substitutionAllowed": false
+    },
+    "c3rA2CleanReplan": {
+      "pullRequest": 791,
+      "state": "CLOSED_UNMERGED_READ_ONLY",
+      "baseSha": "54afffcc539981ded65591f1f027171343bfce40",
+      "initialHead": "b7334d2701972bcb0716f1d3f08e98701efec2f3",
+      "initialTree": "8ef039b3e6c48d962bc2b1855b6d5091e29e099e",
+      "finalHead": "bb02eaebaf1dce580c9d68a18b9fbaacfdf6d6d5",
+      "finalTree": "3f919df372ce0d82c595f3f59e751ca6e6674d3a",
+      "finalReview": 4992901306,
+      "actionableCounts": {
+        "p0": 0,
+        "p1": 2,
+        "p2": 0
+      },
+      "unresolvedThreads": [
+        {
+          "thread": "PRRT_kwDOSMHn8M6bI_dm",
+          "comment": 3829907873,
+          "root": "ROLE_MEMBERSHIP_PRIVILEGE_CLOSURE"
+        },
+        {
+          "thread": "PRRT_kwDOSMHn8M6bI_dx",
+          "comment": 3829907886,
+          "root": "SET_ROLE_CREATOR_SCOPED_DEFAULT_PRIVILEGES"
+        }
+      ],
+      "merge": null,
+      "substitutionAllowed": false,
+      "ancestryReuseAllowed": false
+    }
+  },
+  "postgresSecuritySemanticsProfileV1": {
+    "profileId": "postgresql_15_8_execution_principal_role_closure_v1",
+    "postgresMajor": 15,
+    "minimumServerVersionNum": 150008,
+    "maximumServerVersionNumExclusive": 160000,
+    "repositoryValidationImage": "postgres:15.8-bookworm",
+    "engineContract": "postgresql_15",
+    "sourceDocumentationVersion": "PostgreSQL 15 documentation; major-15 semantics; retrieved 2026-08-22",
+    "sourceDocumentationUrls": [
+      "https://www.postgresql.org/docs/15/sql-grant.html",
+      "https://www.postgresql.org/docs/15/sql-revoke.html",
+      "https://www.postgresql.org/docs/15/role-membership.html",
+      "https://www.postgresql.org/docs/15/role-attributes.html",
+      "https://www.postgresql.org/docs/15/sql-set-role.html",
+      "https://www.postgresql.org/docs/15/sql-alterdefaultprivileges.html",
+      "https://www.postgresql.org/docs/15/ddl-rowsecurity.html"
+    ],
+    "membershipSyntax": {
+      "supported": [
+        "GRANT role_name [, ...] TO role_name [, ...]",
+        "GRANT role_name [, ...] TO role_name [, ...] WITH ADMIN OPTION",
+        "REVOKE role_name [, ...] FROM role_name [, ...]",
+        "REVOKE ADMIN OPTION FOR role_name [, ...] FROM role_name [, ...]",
+        "GRANTED BY role_name"
+      ],
+      "omittedOptions": {
+        "adminOption": false,
+        "inheritOption": true,
+        "setOption": true
+      },
+      "inheritAndSetAreRoleAttributesInPostgres15": true,
+      "perMembershipInheritOrSetOptionsSupported": false
+    },
+    "principalTransitions": {
+      "supported": [
+        "SET ROLE identifier",
+        "SET SESSION ROLE identifier",
+        "SET ROLE NONE",
+        "RESET ROLE"
+      ],
+      "resetRoleAssumption": "NO_NONDEFAULT_CONNECTION_TIME_ROLE_SETTING_IN_BOUNDED_INPUT",
+      "unsupportedFailClosed": [
+        "SET LOCAL ROLE",
+        "SET SESSION AUTHORIZATION",
+        "RESET SESSION AUTHORIZATION",
+        "STRING_OR_DYNAMIC_ROLE_TARGET"
+      ]
+    },
+    "defaultPrivilegeForms": {
+      "supportedObjectClasses": [
+        "TABLES",
+        "SEQUENCES",
+        "FUNCTIONS_ROUTINES",
+        "TYPES",
+        "SCHEMAS"
+      ],
+      "closedObjectClassEnum": [
+        "TABLES",
+        "SEQUENCES",
+        "FUNCTIONS_ROUTINES",
+        "TYPES",
+        "SCHEMAS",
+        "LARGE_OBJECTS"
+      ],
+      "largeObjectsSupportedInPostgres15": false,
+      "unsupportedLargeObjectFormFailsClosed": true,
+      "globalAndSchemaScopesDistinct": true,
+      "perSchemaPrivilegesAddToGlobal": true,
+      "perSchemaRevokeCannotEraseGlobal": true,
+      "creatorDefaultsInheritedThroughMembership": false
+    },
+    "unsupportedSecuritySensitiveForms": [
+      "CREATE ROLE",
+      "ALTER ROLE",
+      "DROP ROLE",
+      "DYNAMIC_ROLE_MEMBERSHIP",
+      "PER_MEMBERSHIP_INHERIT_OR_SET_OPTIONS",
+      "LARGE_OBJECT_DEFAULT_PRIVILEGES",
+      "BROAD_OR_DYNAMIC_PROTECTED_OBJECT_MUTATION"
+    ],
+    "unknownOrMismatchedServerVersion": "FAIL_CLOSED"
+  },
+  "schemas": {
+    "RoleIdentityV1": {
+      "requiredFields": [
+        "decodedIdentifierValue",
+        "quoted",
+        "exactCanonicalIdentity",
+        "sourceSpan",
+        "statementOrdinal"
+      ],
+      "unquotedFolding": "ASCII_LOWERCASE_POSTGRES_IDENTIFIER_FOLDING",
+      "quotedPreservation": "EXACT_WITH_DOUBLED_QUOTES_DECODED",
+      "commentsAndStringsAreNonExecutable": true
+    },
+    "RoleStateV1": {
+      "requiredFields": [
+        "roleIdentity",
+        "login",
+        "superuser",
+        "inherit",
+        "bypassRls",
+        "createRole",
+        "dropped",
+        "active",
+        "provenance"
+      ],
+      "executableCreateAlterDropRole": "FAIL_CLOSED"
+    },
+    "RoleMembershipEdgeV1": {
+      "requiredFields": [
+        "grantedRole",
+        "memberRole",
+        "grantorRole",
+        "adminOption",
+        "inheritOption",
+        "setOption",
+        "grantRevokeState",
+        "statementOrdinal",
+        "exactSourceSpan",
+        "versionSemanticsProfile",
+        "provenance"
+      ],
+      "statementOrdered": true,
+      "separateReachability": [
+        "INHERIT",
+        "SET_ROLE",
+        "ADMINISTRATION"
+      ]
+    },
+    "SessionPrincipalStateV1": {
+      "requiredFields": [
+        "sessionUser",
+        "currentUser",
+        "initialMigrationExecutor",
+        "transactionSessionRoleScope",
+        "exactSetRoleTarget",
+        "statementOrdinal",
+        "beforeAndAfterState"
+      ],
+      "statementOrdered": true,
+      "guessedPrincipalForbidden": true
+    },
+    "CreatorScopedDefaultPrivilegeStateV1": {
+      "keyFields": [
+        "creatorRole",
+        "scopeKind",
+        "exactSchemaIdentity",
+        "objectClass"
+      ],
+      "valueFields": [
+        "grantee",
+        "exactPrivilegeSet",
+        "statementOrder",
+        "provenance"
+      ],
+      "oneGlobalMapForbidden": true
+    },
+    "ObjectCreationPrincipalEvidenceV1": {
+      "requiredFields": [
+        "exactObjectIdentity",
+        "objectKind",
+        "statementOrdinal",
+        "exactSourceSpan",
+        "currentCreatorRole",
+        "resultingOwnerRole",
+        "schemaIdentity",
+        "applicableGlobalDefaultsForCreator",
+        "applicableSchemaDefaultsForCreator",
+        "directPrivileges",
+        "resultingInitialPrivilegeState",
+        "unsupportedOrDynamic"
+      ]
+    },
+    "EffectivePrincipalPrivilegeClosureV1": {
+      "requiredFields": [
+        "directObjectPrivileges",
+        "publicPrivileges",
+        "inheritedPrivilegeRoles",
+        "setRoleReachability",
+        "ownerCapabilities",
+        "superuserStateReachable",
+        "bypassRlsStateReachable",
+        "applicablePolicyRoleMembership",
+        "finalEffectivePrivileges",
+        "finalAbilityToAssumeAnotherPrincipal",
+        "rlsBypass"
+      ]
+    }
+  },
+  "principalContract": {
+    "applicationPrincipalsExactly": [
+      "anon",
+      "authenticated",
+      "service_role"
+    ],
+    "trustedAdministrativePrincipalsExactly": [
+      "migration_executor"
+    ],
+    "initialRoleStates": [
+      {
+        "role": "anon",
+        "login": true,
+        "superuser": false,
+        "inherit": true,
+        "bypassRls": false,
+        "createRole": false
+      },
+      {
+        "role": "authenticated",
+        "login": false,
+        "superuser": false,
+        "inherit": true,
+        "bypassRls": false,
+        "createRole": false
+      },
+      {
+        "role": "service_role",
+        "login": true,
+        "superuser": false,
+        "inherit": true,
+        "bypassRls": true,
+        "createRole": false
+      },
+      {
+        "role": "migration_executor",
+        "login": true,
+        "superuser": true,
+        "inherit": true,
+        "bypassRls": true,
+        "createRole": true
+      }
+    ],
+    "trustedAdministrativeRolesNeverApplicationReachable": true,
+    "forbiddenApplicationRoleTransitions": [
+      {
+        "from": "anon",
+        "to": "authenticated"
+      },
+      {
+        "from": "anon",
+        "to": "service_role"
+      },
+      {
+        "from": "authenticated",
+        "to": "service_role"
+      }
+    ],
+    "unknownRoleEdgeOrPrincipalMutation": "FAIL_CLOSED"
+  },
+  "receiptContract": {
+    "receiptType": "C3RA2EExecutionPrincipalRoleClosureReceiptV1",
+    "deterministicReplayRequired": true,
+    "requiredBindings": [
+      "analysisInputDigest",
+      "programSha256",
+      "receiptDigest",
+      "roleMembershipStatementHistory",
+      "finalRoleMembershipEdges",
+      "sessionPrincipalTransitions",
+      "finalSessionPrincipalState",
+      "objectCreationPrincipalEvidence",
+      "effectiveFinalSecurityState"
+    ],
+    "digestRebindingDefense": [
+      "ROLE_GRAPH_REPLAY",
+      "CURRENT_PRINCIPAL_TRANSITION_REPLAY",
+      "PINNED_ANALYSIS_INPUT_DIGEST",
+      "PINNED_PROGRAM_DIGEST"
+    ],
+    "mergedMainReceiptType": "C3RA2EMergedMainReceiptV1",
+    "terminalDonorPrsCannotSubstitute": [
+      790,
+      791
+    ]
+  },
+  "executionStates": {
+    "c3rA0": "INSTALLED_IMMUTABLE_HISTORICAL_BASELINE",
+    "c3rA1": "INSTALLED_IMMUTABLE_SERIAL_PROGRAM_AUTHORITY",
+    "c3rA2e": "UNINSTALLED_UNTIL_VALIDATED_MERGED_MAIN_RECEIPT",
+    "c3rA2": "DEPENDENCY_BLOCKED_UNSTARTED_PENDING_VALIDATED_A2E_RECEIPT",
+    "c3rP": "BLOCKED_UNSTARTED_PENDING_VALIDATED_A2_RECEIPT",
+    "c3rT": "BLOCKED",
+    "c3rL": "BLOCKED",
+    "wcvC3": "INCOMPLETE",
+    "secondA2CleanReplanStarted": false,
+    "successorRuntimeStarted": false
+  },
+  "nonMutationBoundary": {
+    "migrationHistoryRepairCount": 0,
+    "remoteSupabaseMutationCount": 0,
+    "productionActivationCount": 0,
+    "paymentActivationCount": 0,
+    "providerActivationCount": 0,
+    "learnerActivationCount": 0,
+    "databaseDdlOrDmlCount": 0,
+    "migrationsModified": 0,
+    "learnerRuntimeModified": 0
+  },
+  "deliveryControl": {
+    "repository": "chachathecat/inverge",
+    "baseRef": "main",
+    "baseSha": "54afffcc539981ded65591f1f027171343bfce40",
+    "headRef": "codex/wcv-c3r-a2e-execution-principal-role-closure",
+    "headRepository": "chachathecat/inverge",
+    "pullRequestTitle": "[WCV-C3R-A2E] Install PostgreSQL execution-principal and role-closure authority",
+    "draftOnlyUnderCurrentConnectorFallback": true,
+    "connectorRulesetClassification": "CONNECTOR_RULESET_UNOBSERVABLE",
+    "mainProtectedObserved": true,
+    "readyAuthorized": false,
+    "mergeAuthorized": false,
+    "autoMerge": false,
+    "maximumSourceCorrections": 2,
+    "maximumExactHeadFormalReviews": 3,
+    "ordinaryNonRewritingCommitsOnly": true,
+    "referenceOnlyIssueLinks": {
+      "mode": "REFERENCE_ONLY",
+      "requiredReferenceLinesExactly": [
+        "Refs #781",
+        "Refs #706",
+        "Refs #707",
+        "Refs #708",
+        "Refs #714"
+      ],
+      "requiredDispositionLine": "Governed issues remain open.",
+      "closingKeywordsAllowed": false,
+      "exceptionAppliesOnlyWhenExactLinesPresent": true,
+      "fullGithubClosingKeywordFamilyBlocked": true,
+      "repository": "chachathecat/inverge",
+      "baseRef": "main",
+      "baseSha": "54afffcc539981ded65591f1f027171343bfce40",
+      "headRef": "codex/wcv-c3r-a2e-execution-principal-role-closure",
+      "headRepository": "chachathecat/inverge",
+      "pullRequestTitle": "[WCV-C3R-A2E] Install PostgreSQL execution-principal and role-closure authority"
+    },
+    "exactHeadRequiredChecks": [
+      "PR Contract",
+      "Risk Gate",
+      "Runtime Gate",
+      "Fast CI",
+      "Full CI",
+      "Learner Loop Health",
+      "Vercel"
+    ],
+    "missingStalePendingCancelledSkippedNeutralTimedOutOrFailingCheck": "HARD_STOP",
+    "mergeRequires": "TRUSTED_LIVE_RULESET_RECEIPT_OR_SEPARATE_OWNER_EXACT_HEAD_FALLBACK_AUTHORIZATION"
+  },
+  "validationMatrix": {
+    "focusedAuthoritySuite": "tests/wcv-c3r-a2e-execution-principal-role-closure-authority.test.mjs",
+    "roleMembershipHostileSuite": "same focused authority suite",
+    "principalDefaultAclSuite": "same focused authority suite",
+    "policyPrivilegeRlsClosureSuite": "same focused authority suite",
+    "a0Regression": "tests/wcv-c3r-a0-migration-dependency-authority.test.mjs",
+    "a1Regression": "tests/wcv-c3r-a1-serial-program-authority.test.mjs",
+    "fullNodeSuite": "scripts/run-node-tests.mjs",
+    "prContract": "scripts/automation/validate-pr-contract.mjs",
+    "exactHeadNativeChecks": [
+      "PR Contract",
+      "Risk Gate",
+      "Runtime Gate",
+      "Fast CI",
+      "Full CI",
+      "Learner Loop Health",
+      "Vercel"
+    ]
+  },
+  "immutableBlobProof": {
+    "packageJson": "33a8d29b52ac225c6e957c71fce1f28f2eaba16d",
+    "packageLockJson": "70f85fb69c39aa73cf572082c4d38eb426c0b398",
+    "a0Decision": "8996f6c61f6cf0c5f7c908e97437a2f24bc65f8f",
+    "a0Manifest": "49916703d0a144647d6abce8cc98971042a35e1c",
+    "a0Analyzer": "23ba3b9f2af452b250cea0cbbbc5f135e8643b2d",
+    "a0Test": "04c5e3254ac03712a0fde27ef068329299305c40",
+    "a1Decision": "21fc829df76c51dfa8a891f927fd79267e195e8f",
+    "a1Manifest": "4b8efb14ef58e7940c457c925f972f995066c677",
+    "a1Test": "45db6d4def9f2530dedad28966bf6dd40fdacdcf"
+  },
+  "ownedPathsExactly": [
+    "AGENTS.md",
+    "roadmap/active-program.yml",
+    "config/dabangil-unified-program-contract.json",
+    "docs/dabangil-unified-program-contract.md",
+    "docs/inverge-master-roadmap.md",
+    "docs/decisions/2026-08-21-owner-wcv-c3r-a2e-execution-principal-role-closure.md",
+    "config/dabangil-wcv-c3r-a2e-execution-principal-role-closure-v1.json",
+    "docs/qa/wcv-c3r-a2e-execution-principal-role-closure-validation.md",
+    "scripts/automation/wcv-c3r-a2e-execution-principal-role-closure.mjs",
+    "tests/wcv-c3r-a2e-execution-principal-role-closure-authority.test.mjs",
+    "scripts/automation/validate-pr-contract.mjs",
+    "scripts/run-node-tests.mjs"
+  ],
+  "changedPathReasonsExactly": {
+    "AGENTS.md": "Declare the conditional C3R-A2E source authority and keep C3R-A2/C3R-P blocked.",
+    "roadmap/active-program.yml": "Mirror the A2E dependency overlay without changing the immutable A1 historical receipt.",
+    "config/dabangil-unified-program-contract.json": "Add the machine-readable A2E execution-principal and role-closure authority.",
+    "docs/dabangil-unified-program-contract.md": "Mirror the A2E authority and blocked successor state for human readers.",
+    "docs/inverge-master-roadmap.md": "Record A2E as the only current structural reduction and preserve strict successor order.",
+    "docs/decisions/2026-08-21-owner-wcv-c3r-a2e-execution-principal-role-closure.md": "Install the Owner decision for the independently complete A2E authority.",
+    "config/dabangil-wcv-c3r-a2e-execution-principal-role-closure-v1.json": "Pin the versioned role, principal, creator-default, receipt, and delivery contract.",
+    "docs/qa/wcv-c3r-a2e-execution-principal-role-closure-validation.md": "Map every required hostile proof to repository-native validation.",
+    "scripts/automation/wcv-c3r-a2e-execution-principal-role-closure.mjs": "Implement deterministic PostgreSQL 15 execution-principal and role-closure analysis.",
+    "tests/wcv-c3r-a2e-execution-principal-role-closure-authority.test.mjs": "Prove the two terminal P1 regressions and all bounded hostile semantics.",
+    "scripts/automation/validate-pr-contract.mjs": "Allow only the exact A2E reference-only Draft PR scope.",
+    "scripts/run-node-tests.mjs": "Include the A2E authority suite in the full repository Node run."
+  },
+  "forbiddenPathPrefixes": [
+    "supabase/migrations/",
+    ".github/workflows/",
+    "app/",
+    "components/",
+    "lib/review-os/"
+  ],
+  "forbiddenExactPaths": [
+    "package.json",
+    "package-lock.json"
+  ],
+  "governedIssues": {
+    "706": "OPEN",
+    "707": "OPEN",
+    "708": "OPEN",
+    "714": "OPEN",
+    "781": "OPEN"
+  }
+}

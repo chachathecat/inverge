@@ -1343,3 +1343,26 @@ declarations. After its protected merge and validated receipt, the current
 tuple is `WCV-C3 / C3 / #706 / authorized_unstarted`; only then may
 #703/#704/#705/#717 close. Issue state cannot replace any required stage merge
 or receipt, and no Production or learner activation begins.
+
+## 2026-08-21 C3R-A2E execution-principal and role-closure authority
+
+C3R-A2E is the independent PostgreSQL 15.8 execution-principal reduction
+selected after terminal PR #791. It installs no remaining A2 reconciliation
+and no runtime. It closes exact role identities, ordered membership,
+independent INHERIT/SET reachability, SET/RESET ROLE state, creator-specific
+global/schema default ACLs, CREATE-time creator/owner evidence, and final
+policy/privilege/RLS closure.
+
+Its current conditional state is
+`UNINSTALLED_UNTIL_VALIDATED_MERGED_MAIN_RECEIPT`. Therefore C3R-A2 remains
+`DEPENDENCY_BLOCKED_UNSTARTED_PENDING_VALIDATED_A2E_RECEIPT`, C3R-P remains
+`BLOCKED_UNSTARTED_PENDING_VALIDATED_A2_RECEIPT`, C3R-T/C3R-L remain
+`BLOCKED`, and WCV-C3 remains `INCOMPLETE`. The immutable A1 historical
+selector is preserved as receipt evidence but cannot bypass this later
+effective dependency gate.
+
+PR #790/#791 remain closed/unmerged and cannot supply commits, ancestry, or a
+merged-main receipt. Under `CONNECTOR_RULESET_UNOBSERVABLE`, this candidate
+is Draft-only: Ready and merge require a readable trusted ruleset receipt or
+separate Owner authorization pinned to the frozen reviewed exact head. Remote,
+Production, payment, provider, learner, and successor activation remain zero.

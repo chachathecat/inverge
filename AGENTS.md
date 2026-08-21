@@ -5,6 +5,11 @@
 Use this authority order when sources conflict:
 
 1. a dated Owner decision for the exact decision it owns, currently
+   `docs/decisions/2026-08-21-owner-wcv-c3r-a2e-execution-principal-role-closure.md`
+   for the independently complete C3R-A2E PostgreSQL 15.8 execution-principal
+   and role-closure source authority, the later effective A2E/A2 dependency
+   gate, and the rule that its Draft candidate becomes repository authority
+   only after a validated merged-main receipt,
    `docs/decisions/2026-08-21-owner-wcv-c3r-a1-serial-program-authority.md`
    for the independently complete C3R-A1 source-only serial program authority,
    its exact PR #785/C3R-A0 receipt consumption, the strict
@@ -168,6 +173,38 @@ dependency. Only C3R-L may complete WCV-C3, complete Issue #714 allocation C3
 while preserving C4/C6, close #706/#707/#708/#781, advance the program
 selector or publish the terminal WCV-C3 receipt. A1 starts no runtime and
 leaves WCV-C3 incomplete.
+
+## C3R-A2E WCV-C3 execution-principal and role-closure authority
+
+The later A2E Owner decision is the only current C3R structural-reduction
+authority. It consumes neither the remaining full A2 clean replan nor any
+successor stage. C3R-A0 and C3R-A1 remain immutable historical receipts; PR
+#790 and PR #791 remain closed, unmerged, read-only donors whose commits,
+ancestry, and threads cannot be reused.
+
+C3R-A2E is source-only and version-bound to PostgreSQL 15.8 under the
+`postgresql_15_8_execution_principal_role_closure_v1` profile. It owns exact
+role identity, statement-ordered membership, separate INHERIT and SET ROLE
+reachability, current-principal transitions, creator-scoped global/schema
+default ACLs, object creator/owner evidence, and effective
+policy/privilege/RLS closure. Unknown roles, versions, dynamic security SQL,
+unsupported principal changes, executable role DDL, and PostgreSQL-major
+mismatch fail closed.
+
+The effective state is:
+
+- C3R-A2E: `UNINSTALLED_UNTIL_VALIDATED_MERGED_MAIN_RECEIPT`;
+- C3R-A2: `DEPENDENCY_BLOCKED_UNSTARTED_PENDING_VALIDATED_A2E_RECEIPT`;
+- C3R-P: `BLOCKED_UNSTARTED_PENDING_VALIDATED_A2_RECEIPT`;
+- C3R-T and C3R-L: `BLOCKED`;
+- WCV-C3: `INCOMPLETE`;
+- second A2 clean replan and successor runtime started: false.
+
+The current connector classification is
+`CONNECTOR_RULESET_UNOBSERVABLE`. It authorizes only an exact-main branch,
+ordinary non-rewriting commits, one Draft PR, and Draft metadata updates.
+Ready, merge, auto-merge, bypass, ruleset mutation, Production, remote
+Supabase, payment, provider, and learner activation remain unauthorized.
 
 ## C3R-A1 WCV-C3 serial program authority
 

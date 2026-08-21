@@ -1102,3 +1102,27 @@ items:
     lockGroup: unified-terminal-acceptance
     risk: high
     priority: 74
+
+# C3R-A2E is a conditional source authority layered after the immutable A1
+# historical selector. It does not mutate the A1 receipt or start a successor.
+c3r_a2e_execution_principal_role_closure:
+  authority: C3R-A2E
+  semanticsProfile: postgresql_15_8_execution_principal_role_closure_v1
+  state: UNINSTALLED_UNTIL_VALIDATED_MERGED_MAIN_RECEIPT
+  c3rA0State: INSTALLED_IMMUTABLE_HISTORICAL_BASELINE
+  c3rA1State: INSTALLED_IMMUTABLE_SERIAL_PROGRAM_AUTHORITY
+  c3rA2State: DEPENDENCY_BLOCKED_UNSTARTED_PENDING_VALIDATED_A2E_RECEIPT
+  c3rPState: BLOCKED_UNSTARTED_PENDING_VALIDATED_A2_RECEIPT
+  c3rTState: BLOCKED
+  c3rLState: BLOCKED
+  wcvC3State: INCOMPLETE
+  secondA2CleanReplanStarted: false
+  successorRuntimeStarted: false
+  connectorRulesetClassification: CONNECTOR_RULESET_UNOBSERVABLE
+  readyAuthorized: false
+  mergeAuthorized: false
+  remoteMutationCount: 0
+  productionActivationCount: 0
+  paymentActivationCount: 0
+  providerActivationCount: 0
+  learnerActivationCount: 0

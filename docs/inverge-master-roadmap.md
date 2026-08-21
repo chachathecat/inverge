@@ -771,3 +771,23 @@ C2R-C-P/#703; protected PR #756 and PR #762 then completed Practice and Theory
 in order. Candidate PR #764 completes terminal C2R-C-L/#703 only after its
 expected-head-pinned merge and validated receipt, then selects WCV-C3/C3/#706
 as authorized but unstarted without Production or learner activation.
+
+## 2026-08-21 WCV-C3 C3R-A2E execution-principal reduction
+
+C3R-A2E is the sole current merge-producing C3R source candidate and the
+smallest independent reduction of the terminal PR #791 blocker. It is pinned
+to PostgreSQL 15.8 and proves role identity, ordered membership, separate
+INHERIT/SET reachability, creator-scoped defaults, CREATE-time creator/owner,
+and effective policy/privilege/RLS closure. It does not reuse PR #790/#791
+ancestry and does not consume the remaining full A2 clean replan.
+
+Current state: C3R-A2E
+`UNINSTALLED_UNTIL_VALIDATED_MERGED_MAIN_RECEIPT`; C3R-A2
+`DEPENDENCY_BLOCKED_UNSTARTED_PENDING_VALIDATED_A2E_RECEIPT`; C3R-P
+`BLOCKED_UNSTARTED_PENDING_VALIDATED_A2_RECEIPT`; C3R-T and C3R-L
+`BLOCKED`; WCV-C3 `INCOMPLETE`. No migration, runtime, remote database,
+Production, payment, provider, learner, or successor work starts here.
+
+The connector ruleset is `CONNECTOR_RULESET_UNOBSERVABLE`. Draft
+publication and ordinary commits are permitted, but Ready, merge, auto-merge,
+and bypass are not authorized without the later exact-head Owner gate.
