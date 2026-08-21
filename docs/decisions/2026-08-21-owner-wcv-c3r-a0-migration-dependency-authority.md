@@ -67,6 +67,11 @@ statement ordinal
 + independently normalized identifier components
 ```
 
+Migration SQL is decoded as UTF-8 and every CRLF or bare-CR line ending is
+normalized to LF before any tokenization, span, object, dependency or digest
+derivation. Token spans and their evidence commitments are therefore identical
+across Windows and Linux checkouts.
+
 Roles are `index_target`, `relation_reference`, `function_call`,
 `function_definition`, `type_reference`, `extension_name`,
 `schema_reference`, `column_reference` and `other_closed_role`. Object kinds

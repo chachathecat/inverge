@@ -254,12 +254,12 @@
         "identifierOccurrenceEvidence": {
           "modelVersion": "SqlIdentifierOccurrenceV1",
           "occurrenceCount": 97,
-          "canonicalSha256": "1b07f6d13eeb202b7f7ecb96925981ed5ee3cb8a3dab09669716b02a92772b2d",
+          "canonicalSha256": "eded545124213f6655304654fbd58a7df9f03c08c587793f7f6025cbb1d5e16b",
           "exclusionOccurrences": [
             {
               "statementOrdinal": 19,
-              "tokenStart": 6786,
-              "tokenEnd": 6813,
+              "tokenStart": 6603,
+              "tokenEnd": 6630,
               "role": "index_target",
               "objectKind": "index",
               "normalizedComponents": [
@@ -271,8 +271,8 @@
             },
             {
               "statementOrdinal": 20,
-              "tokenStart": 6903,
-              "tokenEnd": 6935,
+              "tokenStart": 6719,
+              "tokenEnd": 6751,
               "role": "index_target",
               "objectKind": "index",
               "normalizedComponents": [
@@ -284,8 +284,8 @@
             },
             {
               "statementOrdinal": 21,
-              "tokenStart": 7030,
-              "tokenEnd": 7063,
+              "tokenStart": 6845,
+              "tokenEnd": 6878,
               "role": "index_target",
               "objectKind": "index",
               "normalizedComponents": [
@@ -297,8 +297,8 @@
             },
             {
               "statementOrdinal": 22,
-              "tokenStart": 7159,
-              "tokenEnd": 7190,
+              "tokenStart": 6973,
+              "tokenEnd": 7004,
               "role": "index_target",
               "objectKind": "index",
               "normalizedComponents": [
@@ -310,8 +310,8 @@
             },
             {
               "statementOrdinal": 23,
-              "tokenStart": 7284,
-              "tokenEnd": 7316,
+              "tokenStart": 7097,
+              "tokenEnd": 7129,
               "role": "index_target",
               "objectKind": "index",
               "normalizedComponents": [
@@ -323,8 +323,8 @@
             },
             {
               "statementOrdinal": 24,
-              "tokenStart": 7411,
-              "tokenEnd": 7439,
+              "tokenStart": 7223,
+              "tokenEnd": 7251,
               "role": "index_target",
               "objectKind": "index",
               "normalizedComponents": [
@@ -432,7 +432,7 @@
         "identifierOccurrenceEvidence": {
           "modelVersion": "SqlIdentifierOccurrenceV1",
           "occurrenceCount": 13,
-          "canonicalSha256": "b32eadd0616cf91ca90096a62b5269ac8e575f7494748b467ae5bdee56e23563",
+          "canonicalSha256": "dd6b17a40c95011b3e316f225f5b8beb5d6e4e0a4353e576b4cbf558a9689e3f",
           "exclusionOccurrences": []
         }
       },
@@ -535,12 +535,12 @@
         "identifierOccurrenceEvidence": {
           "modelVersion": "SqlIdentifierOccurrenceV1",
           "occurrenceCount": 80,
-          "canonicalSha256": "bbce056460002bbb95285c91a7069a0261461480afa797393d05164e6f1a8b75",
+          "canonicalSha256": "6e3c81cffe449a6b8f78100ea5d0785c9b82b6db9f970429c321a9e4afe7644e",
           "exclusionOccurrences": [
             {
               "statementOrdinal": 4,
-              "tokenStart": 1538,
-              "tokenEnd": 1572,
+              "tokenStart": 1497,
+              "tokenEnd": 1531,
               "role": "index_target",
               "objectKind": "index",
               "normalizedComponents": [
@@ -552,8 +552,8 @@
             },
             {
               "statementOrdinal": 5,
-              "tokenStart": 1656,
-              "tokenEnd": 1691,
+              "tokenStart": 1613,
+              "tokenEnd": 1648,
               "role": "index_target",
               "objectKind": "index",
               "normalizedComponents": [
@@ -565,8 +565,8 @@
             },
             {
               "statementOrdinal": 8,
-              "tokenStart": 2691,
-              "tokenEnd": 2717,
+              "tokenStart": 2622,
+              "tokenEnd": 2648,
               "role": "index_target",
               "objectKind": "index",
               "normalizedComponents": [
@@ -578,8 +578,8 @@
             },
             {
               "statementOrdinal": 12,
-              "tokenStart": 4393,
-              "tokenEnd": 4422,
+              "tokenStart": 4282,
+              "tokenEnd": 4311,
               "role": "index_target",
               "objectKind": "index",
               "normalizedComponents": [
@@ -591,8 +591,8 @@
             },
             {
               "statementOrdinal": 14,
-              "tokenStart": 4854,
-              "tokenEnd": 4883,
+              "tokenStart": 4730,
+              "tokenEnd": 4759,
               "role": "index_target",
               "objectKind": "index",
               "normalizedComponents": [
@@ -604,8 +604,8 @@
             },
             {
               "statementOrdinal": 16,
-              "tokenStart": 5297,
-              "tokenEnd": 5328,
+              "tokenStart": 5161,
+              "tokenEnd": 5192,
               "role": "index_target",
               "objectKind": "index",
               "normalizedComponents": [
@@ -674,12 +674,12 @@
         "identifierOccurrenceEvidence": {
           "modelVersion": "SqlIdentifierOccurrenceV1",
           "occurrenceCount": 9,
-          "canonicalSha256": "94beee26edeb18e2c5949dfc024a322df268a82bfa9c47ff6c22970a6527985b",
+          "canonicalSha256": "f3e3cbb80d4e2adcee4a5e7480b2f19b675cd514c7deb0dc0a42cc8ccf15a556",
           "exclusionOccurrences": [
             {
               "statementOrdinal": 2,
-              "tokenStart": 575,
-              "tokenEnd": 602,
+              "tokenStart": 558,
+              "tokenEnd": 585,
               "role": "index_target",
               "objectKind": "index",
               "normalizedComponents": [
@@ -739,7 +739,7 @@
         "identifierOccurrenceEvidence": {
           "modelVersion": "SqlIdentifierOccurrenceV1",
           "occurrenceCount": 5,
-          "canonicalSha256": "b15605fa71a0175bd95c7ab4252f0a7dd37bc2bd8040cceb87ac22e1b56ec5e1",
+          "canonicalSha256": "167c57537d2a23acc03e25dc9dad9825f35208fbf00741b664de2c77d38f47f0",
           "exclusionOccurrences": []
         }
       },
@@ -782,12 +782,12 @@
         "identifierOccurrenceEvidence": {
           "modelVersion": "SqlIdentifierOccurrenceV1",
           "occurrenceCount": 11,
-          "canonicalSha256": "b48c90263d3dc1a00e4371d5062032b09e8b1e0640f588f593340d7c280e8a18",
+          "canonicalSha256": "362f895817babe26b3dd71cdfe1010d902b87a7d4446d946baaae2ff2f770058",
           "exclusionOccurrences": [
             {
               "statementOrdinal": 2,
-              "tokenStart": 593,
-              "tokenEnd": 632,
+              "tokenStart": 579,
+              "tokenEnd": 618,
               "role": "index_target",
               "objectKind": "index",
               "normalizedComponents": [
@@ -855,12 +855,12 @@
         "identifierOccurrenceEvidence": {
           "modelVersion": "SqlIdentifierOccurrenceV1",
           "occurrenceCount": 29,
-          "canonicalSha256": "24e017f35de172ff3fec2869e9cba409da0dc87cf2c2cca4b3cb68538b2417e7",
+          "canonicalSha256": "a69e96aa97a85c74f179b26b713ee1781a6277d417b0b92a8b6312d97afd1965",
           "exclusionOccurrences": [
             {
               "statementOrdinal": 4,
-              "tokenStart": 1173,
-              "tokenEnd": 1187,
+              "tokenStart": 1144,
+              "tokenEnd": 1158,
               "role": "index_target",
               "objectKind": "index",
               "normalizedComponents": [
@@ -872,8 +872,8 @@
             },
             {
               "statementOrdinal": 5,
-              "tokenStart": 1262,
-              "tokenEnd": 1280,
+              "tokenStart": 1232,
+              "tokenEnd": 1250,
               "role": "index_target",
               "objectKind": "index",
               "normalizedComponents": [
@@ -885,8 +885,8 @@
             },
             {
               "statementOrdinal": 6,
-              "tokenStart": 1356,
-              "tokenEnd": 1376,
+              "tokenStart": 1325,
+              "tokenEnd": 1345,
               "role": "index_target",
               "objectKind": "index",
               "normalizedComponents": [
@@ -898,8 +898,8 @@
             },
             {
               "statementOrdinal": 21,
-              "tokenStart": 2863,
-              "tokenEnd": 2891,
+              "tokenStart": 2795,
+              "tokenEnd": 2823,
               "role": "index_target",
               "objectKind": "index",
               "normalizedComponents": [
@@ -911,8 +911,8 @@
             },
             {
               "statementOrdinal": 22,
-              "tokenStart": 2979,
-              "tokenEnd": 3003,
+              "tokenStart": 2910,
+              "tokenEnd": 2934,
               "role": "index_target",
               "objectKind": "index",
               "normalizedComponents": [
@@ -992,12 +992,12 @@
         "identifierOccurrenceEvidence": {
           "modelVersion": "SqlIdentifierOccurrenceV1",
           "occurrenceCount": 33,
-          "canonicalSha256": "d16955e9dcf477e11b5ab02c66918221fdc64acac30a4704b7459b3a860c38b4",
+          "canonicalSha256": "d942b726c4cde14c2754d798f9728655eef9eeba14402ca8f5e2bb2e7f62ef46",
           "exclusionOccurrences": [
             {
               "statementOrdinal": 3,
-              "tokenStart": 2063,
-              "tokenEnd": 2097,
+              "tokenStart": 2017,
+              "tokenEnd": 2051,
               "role": "index_target",
               "objectKind": "index",
               "normalizedComponents": [
@@ -1009,8 +1009,8 @@
             },
             {
               "statementOrdinal": 4,
-              "tokenStart": 2175,
-              "tokenEnd": 2216,
+              "tokenStart": 2126,
+              "tokenEnd": 2167,
               "role": "index_target",
               "objectKind": "index",
               "normalizedComponents": [
@@ -1022,8 +1022,8 @@
             },
             {
               "statementOrdinal": 5,
-              "tokenStart": 2305,
-              "tokenEnd": 2348,
+              "tokenStart": 2253,
+              "tokenEnd": 2296,
               "role": "index_target",
               "objectKind": "index",
               "normalizedComponents": [
@@ -1035,8 +1035,8 @@
             },
             {
               "statementOrdinal": 6,
-              "tokenStart": 2439,
-              "tokenEnd": 2476,
+              "tokenStart": 2384,
+              "tokenEnd": 2421,
               "role": "index_target",
               "objectKind": "index",
               "normalizedComponents": [
@@ -1048,8 +1048,8 @@
             },
             {
               "statementOrdinal": 7,
-              "tokenStart": 2561,
-              "tokenEnd": 2614,
+              "tokenStart": 2503,
+              "tokenEnd": 2556,
               "role": "index_target",
               "objectKind": "index",
               "normalizedComponents": [
@@ -1733,12 +1733,12 @@
         "identifierOccurrenceEvidence": {
           "modelVersion": "SqlIdentifierOccurrenceV1",
           "occurrenceCount": 49,
-          "canonicalSha256": "1e8c377e576dffce300db0780d1b678ae566555862439c7d7c7d48f02e0f9ba0",
+          "canonicalSha256": "ba7eb099b827263b98dc8eac8715ee77ed70602f7e544176f84e349b728893de",
           "exclusionOccurrences": [
             {
               "statementOrdinal": 4,
-              "tokenStart": 2118,
-              "tokenEnd": 2148,
+              "tokenStart": 2071,
+              "tokenEnd": 2101,
               "role": "index_target",
               "objectKind": "index",
               "normalizedComponents": [
@@ -1750,8 +1750,8 @@
             },
             {
               "statementOrdinal": 5,
-              "tokenStart": 2216,
-              "tokenEnd": 2246,
+              "tokenStart": 2168,
+              "tokenEnd": 2198,
               "role": "index_target",
               "objectKind": "index",
               "normalizedComponents": [
@@ -1763,8 +1763,8 @@
             },
             {
               "statementOrdinal": 6,
-              "tokenStart": 2367,
-              "tokenEnd": 2403,
+              "tokenStart": 2318,
+              "tokenEnd": 2354,
               "role": "index_target",
               "objectKind": "index",
               "normalizedComponents": [
@@ -1776,8 +1776,8 @@
             },
             {
               "statementOrdinal": 7,
-              "tokenStart": 2513,
-              "tokenEnd": 2553,
+              "tokenStart": 2463,
+              "tokenEnd": 2503,
               "role": "index_target",
               "objectKind": "index",
               "normalizedComponents": [
@@ -1789,8 +1789,8 @@
             },
             {
               "statementOrdinal": 8,
-              "tokenStart": 2643,
-              "tokenEnd": 2691,
+              "tokenStart": 2592,
+              "tokenEnd": 2640,
               "role": "index_target",
               "objectKind": "index",
               "normalizedComponents": [
@@ -1894,12 +1894,12 @@
         "identifierOccurrenceEvidence": {
           "modelVersion": "SqlIdentifierOccurrenceV1",
           "occurrenceCount": 142,
-          "canonicalSha256": "17251985385a629b44ec6e025e0eadc7851ee7b7cf44a27fcfb0292e65938a09",
+          "canonicalSha256": "58f5561d61d2cca3ea34625e2e990ee83edd170951045a7f2ae12707993a9dcf",
           "exclusionOccurrences": [
             {
               "statementOrdinal": 3,
-              "tokenStart": 1690,
-              "tokenEnd": 1736,
+              "tokenStart": 1654,
+              "tokenEnd": 1700,
               "role": "index_target",
               "objectKind": "index",
               "normalizedComponents": [
@@ -1911,8 +1911,8 @@
             },
             {
               "statementOrdinal": 4,
-              "tokenStart": 1826,
-              "tokenEnd": 1877,
+              "tokenStart": 1787,
+              "tokenEnd": 1838,
               "role": "index_target",
               "objectKind": "index",
               "normalizedComponents": [
@@ -1924,8 +1924,8 @@
             },
             {
               "statementOrdinal": 5,
-              "tokenStart": 1999,
-              "tokenEnd": 2053,
+              "tokenStart": 1957,
+              "tokenEnd": 2011,
               "role": "index_target",
               "objectKind": "index",
               "normalizedComponents": [
@@ -1991,7 +1991,7 @@
         "identifierOccurrenceEvidence": {
           "modelVersion": "SqlIdentifierOccurrenceV1",
           "occurrenceCount": 7,
-          "canonicalSha256": "af4e58b3f8e81d29a5e8322607fee5310292cedbd80863f32d2aae166fac0049",
+          "canonicalSha256": "83ccdf344dd8ce549fb2474cb73fd219a1d4c9da913cef7df6af93a0e69d63a2",
           "exclusionOccurrences": []
         }
       },
@@ -2083,12 +2083,12 @@
         "identifierOccurrenceEvidence": {
           "modelVersion": "SqlIdentifierOccurrenceV1",
           "occurrenceCount": 105,
-          "canonicalSha256": "827272914a2df317ee817d340e6b47a79e936412ddd5e036ce1f8d2aa2297032",
+          "canonicalSha256": "41cc7442531a974744d56c8f06f0feaf92d1fcc37ff7b640af6ef8be018d70e0",
           "exclusionOccurrences": [
             {
               "statementOrdinal": 4,
-              "tokenStart": 4209,
-              "tokenEnd": 4246,
+              "tokenStart": 4130,
+              "tokenEnd": 4167,
               "role": "index_target",
               "objectKind": "index",
               "normalizedComponents": [
@@ -2100,8 +2100,8 @@
             },
             {
               "statementOrdinal": 5,
-              "tokenStart": 4337,
-              "tokenEnd": 4382,
+              "tokenStart": 4256,
+              "tokenEnd": 4301,
               "role": "index_target",
               "objectKind": "index",
               "normalizedComponents": [
@@ -2113,8 +2113,8 @@
             },
             {
               "statementOrdinal": 6,
-              "tokenStart": 4497,
-              "tokenEnd": 4541,
+              "tokenStart": 4414,
+              "tokenEnd": 4458,
               "role": "index_target",
               "objectKind": "index",
               "normalizedComponents": [
@@ -2825,6 +2825,7 @@
       ],
       "parserContract": {
         "lexerVersion": "PostgresIdentifierLexerV1",
+        "sqlInputCanonicalization": "UTF8_DECODE_THEN_CRLF_OR_CR_TO_LF_BEFORE_ANY_DERIVATION",
         "tokenClasses": [
           "UNQUOTED_IDENTIFIER",
           "QUOTED_IDENTIFIER",

@@ -200,6 +200,27 @@ test("DROP INDEX exclusion retains a later same-named function dependency", () =
   );
 });
 
+test("closure canonicalizes CRLF and CR before deriving token-span evidence", () => {
+  const lfSql = [
+    "DROP INDEX public.same_name;",
+    "SELECT public.same_name();",
+  ].join("\n");
+  const externalObjects = [
+    { kind: "function", identifier: "public.same_name" },
+  ];
+  const lf = deriveSynthetic(lfSql, externalObjects);
+  const crlf = deriveSynthetic(lfSql.replaceAll("\n", "\r\n"), externalObjects);
+  const cr = deriveSynthetic(lfSql.replaceAll("\n", "\r"), externalObjects);
+
+  assert.deepEqual(crlf, lf);
+  assert.deepEqual(cr, lf);
+  assert.equal(
+    manifest.migrationDependencyClosureV1.parserContract
+      .sqlInputCanonicalization,
+    "UTF8_DECODE_THEN_CRLF_OR_CR_TO_LF_BEFORE_ANY_DERIVATION",
+  );
+});
+
 test("quoted index and function identities retain distinct exact occurrences", () => {
   const sql =
     'DROP INDEX "Public"."Same.Name"; SELECT "Public"."Same.Name"();';

@@ -162,6 +162,8 @@ const CLOSED_DEPENDENCY_CLASSES_V1 = Object.freeze([
 
 const CLOSED_PARSER_CONTRACT_V1 = Object.freeze({
   lexerVersion: "PostgresIdentifierLexerV1",
+  sqlInputCanonicalization:
+    "UTF8_DECODE_THEN_CRLF_OR_CR_TO_LF_BEFORE_ANY_DERIVATION",
   tokenClasses: POSTGRES_SQL_TOKEN_KINDS_V1,
   unquotedIdentifierNormalization: "POSTGRES_ASCII_LOWERCASE_FOLD",
   quotedIdentifierNormalization:
@@ -427,9 +429,14 @@ const EXECUTABLE_TOKEN_TYPES = new Set([
   "OPERATOR",
 ]);
 
+function canonicalUtf8Lf(value) {
+  return value.replaceAll("\r\n", "\n").replaceAll("\r", "\n");
+}
+
 function sha256(value) {
-  const canonicalUtf8Lf = value.replaceAll("\r\n", "\n").replaceAll("\r", "\n");
-  return createHash("sha256").update(canonicalUtf8Lf, "utf8").digest("hex");
+  return createHash("sha256")
+    .update(canonicalUtf8Lf(value), "utf8")
+    .digest("hex");
 }
 
 function isAsciiLetter(character) {
@@ -5353,6 +5360,12 @@ export function deriveMigrationDependencyClosure(
     exactPredecessorOverrides = [],
   } = {},
 ) {
+  const canonicalSqlByFilename = new Map(
+    [...sqlByFilename].map(([filename, sql]) => [
+      filename,
+      typeof sql === "string" ? canonicalUtf8Lf(sql) : sql,
+    ]),
+  );
   const priorProducers = new Map();
   const environmentExtensions = indexEnvironmentExtensions(
     environmentRequiredExtensions,
@@ -5381,7 +5394,7 @@ export function deriveMigrationDependencyClosure(
   const predecessorOverrides = indexExactPredecessorOverrides(
     exactPredecessorOverrides,
     records,
-    sqlByFilename,
+    canonicalSqlByFilename,
   );
   const latestPolicyProducers = new Map();
   const results = [];
@@ -5390,7 +5403,7 @@ export function deriveMigrationDependencyClosure(
     (left, right) => left.freshHistoryOrder - right.freshHistoryOrder,
   )) {
     if (!record.presentOnLiveMain) continue;
-    const sql = sqlByFilename.get(record.currentFilename);
+    const sql = canonicalSqlByFilename.get(record.currentFilename);
     if (typeof sql !== "string") {
       throw new MigrationDependencyClosureError(
         "MISSING_MIGRATION_SQL",
