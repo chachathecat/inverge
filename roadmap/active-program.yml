@@ -26,6 +26,26 @@ program:
   c3rA0MergeSha: 3a7047cf4c7fc68247137bafbca2434abdadbc7f
   c3rA1State: installed_after_expected_head_pinned_merge_and_validated_receipt
   c3rA1Authority: docs/decisions/2026-08-21-owner-wcv-c3r-a1-serial-program-authority.md
+  c3rA2eAuthority: docs/decisions/2026-08-21-owner-wcv-c3r-a2e-execution-principal-role-closure.md
+  c3rA2eSemanticsProfile: postgresql_15_8_execution_principal_role_closure_v1
+  c3rA2eState: UNINSTALLED_UNTIL_VALIDATED_MERGED_MAIN_RECEIPT
+  c3rA2State: DEPENDENCY_BLOCKED_UNSTARTED_PENDING_VALIDATED_A2E_RECEIPT
+  c3rPEffectiveState: BLOCKED_UNSTARTED_PENDING_VALIDATED_A2_RECEIPT
+  c3rTEffectiveState: BLOCKED
+  c3rLEffectiveState: BLOCKED
+  wcvC3EffectiveState: INCOMPLETE
+  c3rA1HistoricalSelectorPreserved: C3R-P
+  c3rA1HistoricalSelectorEffective: false
+  c3rCurrentSourceAuthorityCandidate: C3R-A2E
+  c3rA2SecondCleanReplanStarted: false
+  c3rA2eConnectorRulesetClassification: CONNECTOR_RULESET_UNOBSERVABLE
+  c3rA2eReadyAuthorized: false
+  c3rA2eMergeAuthorized: false
+  c3rA2eRemoteMutationCount: 0
+  c3rA2eProductionActivationCount: 0
+  c3rA2ePaymentActivationCount: 0
+  c3rA2eProviderActivationCount: 0
+  c3rA2eLearnerActivationCount: 0
   c3rStrictStageOrder: [C3R-P, C3R-T, C3R-L]
   soleNextC3rStage: C3R-P
   soleNextC3rStageIssue: 706
@@ -1102,27 +1122,3 @@ items:
     lockGroup: unified-terminal-acceptance
     risk: high
     priority: 74
-
-# C3R-A2E is a conditional source authority layered after the immutable A1
-# historical selector. It does not mutate the A1 receipt or start a successor.
-c3r_a2e_execution_principal_role_closure:
-  authority: C3R-A2E
-  semanticsProfile: postgresql_15_8_execution_principal_role_closure_v1
-  state: UNINSTALLED_UNTIL_VALIDATED_MERGED_MAIN_RECEIPT
-  c3rA0State: INSTALLED_IMMUTABLE_HISTORICAL_BASELINE
-  c3rA1State: INSTALLED_IMMUTABLE_SERIAL_PROGRAM_AUTHORITY
-  c3rA2State: DEPENDENCY_BLOCKED_UNSTARTED_PENDING_VALIDATED_A2E_RECEIPT
-  c3rPState: BLOCKED_UNSTARTED_PENDING_VALIDATED_A2_RECEIPT
-  c3rTState: BLOCKED
-  c3rLState: BLOCKED
-  wcvC3State: INCOMPLETE
-  secondA2CleanReplanStarted: false
-  successorRuntimeStarted: false
-  connectorRulesetClassification: CONNECTOR_RULESET_UNOBSERVABLE
-  readyAuthorized: false
-  mergeAuthorized: false
-  remoteMutationCount: 0
-  productionActivationCount: 0
-  paymentActivationCount: 0
-  providerActivationCount: 0
-  learnerActivationCount: 0

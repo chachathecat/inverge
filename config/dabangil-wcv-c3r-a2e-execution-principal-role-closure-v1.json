@@ -125,7 +125,7 @@
     "roleSensitiveSqlInventoryV1": {
       "migrationCount": 25,
       "roleSensitiveStatementCount": 301,
-      "digest": "fa98a29a31e7baa359bf32a11ea5ece68457139ced4e4bd0e60b84ee2821a758",
+      "digest": "a57860d45dc7650fb7bcd4ac2a1da4a55ec097a54fb085bad54752393404f7af",
       "operationKindCounts": {
         "ALTER_DEFAULT_PRIVILEGES": 2,
         "FUNCTION_SECURITY_DEFINER": 1,

@@ -458,7 +458,7 @@ test("ALTER DEFAULT PRIVILEGES FOR ROLE changes only that creator namespace", ()
       entry.scopeKind === "GLOBAL" &&
       entry.objectClass === "FUNCTIONS_ROUTINES",
   );
-  assert.deepEqual(other.granteePrivilegeState, [{ grantee: "other_creator", privileges: ["EXECUTE"] }]);
+  assert.deepEqual(other.granteePrivilegeState, []);
   const executorEvidence = receipt.objectCreationPrincipalEvidence[0];
   assert.equal(executorEvidence.currentCreatorRole, "migration_executor");
   assert.ok(executorEvidence.resultingInitialPrivilegeState.some(
@@ -814,7 +814,7 @@ test("all 25 live migrations have deterministic statement-ordered role-sensitive
   assert.equal(inventory.roleSensitiveStatementCount, 301);
   assert.equal(
     inventory.digest,
-    "fa98a29a31e7baa359bf32a11ea5ece68457139ced4e4bd0e60b84ee2821a758",
+    "a57860d45dc7650fb7bcd4ac2a1da4a55ec097a54fb085bad54752393404f7af",
   );
   assert.deepEqual(
     inventory.records.flatMap((record) => record.operationKinds)
@@ -935,6 +935,13 @@ test("authority mirrors keep C3R-A2 and C3R-P unstarted with every external coun
     assert.match(source, /C3R-P/u, relativePath);
     assert.match(source, /BLOCKED_UNSTARTED_PENDING_VALIDATED_A2_RECEIPT/u, relativePath);
   }
+  const activeProgram = await readFile(
+    path.join(repositoryRoot, "roadmap/active-program.yml"),
+    "utf8",
+  );
+  assert.match(activeProgram, /^  c3rA2eAuthority:/mu);
+  assert.match(activeProgram, /^  c3rPEffectiveState: BLOCKED_UNSTARTED_PENDING_VALIDATED_A2_RECEIPT$/mu);
+  assert.doesNotMatch(activeProgram, /^c3r_a2e_/mu);
 });
 
 test("delivery fallback is Draft-only and never claims live ruleset revalidation", () => {

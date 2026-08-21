@@ -1114,13 +1114,7 @@
         "postMergeUncoveredRowCount": 0,
         "activeCandidateCoveringPr": 764,
         "activeCandidateStage": "C2R-C-L",
-        "activeCandidateRows": [
-          3,
-          7,
-          15,
-          17,
-          21
-        ],
+        "activeCandidateRows": [3, 7, 15, 17, 21],
         "candidateStatus": "candidate_coverage_pending_exact_merge",
         "receiptPolicyId": "github_exact_head_pinned_squash_merge_v1",
         "repositoryCandidateDeclaration": {

@@ -30,7 +30,7 @@ The full Node runner includes the focused suite and the immutable A0/A1 regressi
 | Creator state/default ACL | FOR ROLE, SET/RESET/NONE, before/after object creators, non-inherited defaults, global/schema additive tests |
 | Privilege/policy/RLS closure | authenticated-only table/function, policy role membership, owner/superuser/BYPASSRLS, FORCE RLS tests |
 | Receipt replay | role-graph and principal-chain rebinding tests; terminal donor substitution tests |
-| Baseline inventory | all 25 migrations, 301 role-sensitive statements, exact statement/source spans, digest `fa98a29a31e7baa359bf32a11ea5ece68457139ced4e4bd0e60b84ee2821a758` |
+| Baseline inventory | all 25 migrations, 301 role-sensitive statements, exact statement/source spans, digest `a57860d45dc7650fb7bcd4ac2a1da4a55ec097a54fb085bad54752393404f7af` |
 | Immutable upstream | A0/A1 exact Git blob checks plus their native regression suites |
 | Mirrors/delivery | authority mirror state, path reasons, forbidden paths, package/lock Git blobs, exact A2E PR-contract tests |
 | Non-mutation | zero remote/database/Production/payment/provider/learner counts and successor-unstarted assertions |
