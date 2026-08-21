@@ -35,11 +35,11 @@ jobs:
           throw new Error("Missing S232H.1 authenticated acceptance marker"); }'
 
       - name: Check out exact PR head
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           ref: ${{ github.event.pull_request.head.sha }}
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: 22
           cache: npm
@@ -156,7 +156,7 @@ jobs:
           test "${#screenshots[@]}" -eq 3
 
       - name: Upload synthetic visual evidence
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: s232h1-shared-v3-shell-${{ github.event.pull_request.head.sha }}
           path: |
