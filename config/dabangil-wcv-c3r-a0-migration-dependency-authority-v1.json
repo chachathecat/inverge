@@ -3076,6 +3076,32 @@
           ]
         }
       ],
+      "externalDatabaseObjectRegistry": [
+        {
+          "kind": "table",
+          "identifier": "auth.users"
+        },
+        {
+          "kind": "function",
+          "identifier": "auth.uid"
+        },
+        {
+          "kind": "table",
+          "identifier": "storage.objects"
+        },
+        {
+          "kind": "table",
+          "identifier": "storage.buckets"
+        },
+        {
+          "kind": "function",
+          "identifier": "storage.allow_any_operation"
+        },
+        {
+          "kind": "function",
+          "identifier": "storage.allow_only_operation"
+        }
+      ],
       "exactComparisonRules": {
         "sqlDerivedCreatedExtensionsEqualManifest": true,
         "sqlDerivedRequiredExtensionUsesEqualManifest": true,
@@ -3087,6 +3113,7 @@
         "wrongProducerFails": true,
         "consumerBeforeProducerFails": true,
         "externalFunctionsComparedBothDirections": true,
+        "manifestExternalDatabaseObjectsEqualCodeOwnedRegistry": true,
         "producedObjectsComparedBySqlClassAndIdentity": true,
         "referencedDatabaseObjectsComparedBothDirections": true,
         "modifiedDatabaseObjectsComparedBothDirections": true,

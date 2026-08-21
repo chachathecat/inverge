@@ -126,6 +126,21 @@ export const EXTERNAL_FUNCTION_REGISTRY_V1 = Object.freeze([
   ),
 ]);
 
+export const EXTERNAL_DATABASE_OBJECT_REGISTRY_V1 = Object.freeze([
+  Object.freeze({ kind: "table", identifier: "auth.users" }),
+  Object.freeze({ kind: "function", identifier: "auth.uid" }),
+  Object.freeze({ kind: "table", identifier: "storage.objects" }),
+  Object.freeze({ kind: "table", identifier: "storage.buckets" }),
+  Object.freeze({
+    kind: "function",
+    identifier: "storage.allow_any_operation",
+  }),
+  Object.freeze({
+    kind: "function",
+    identifier: "storage.allow_only_operation",
+  }),
+]);
+
 export const CLOSED_QUALIFIED_DATABASE_SCHEMAS_V1 = Object.freeze([
   "auth",
   "extensions",
@@ -388,6 +403,7 @@ const CLOSED_EXACT_COMPARISON_RULES_V1 = Object.freeze({
   wrongProducerFails: true,
   consumerBeforeProducerFails: true,
   externalFunctionsComparedBothDirections: true,
+  manifestExternalDatabaseObjectsEqualCodeOwnedRegistry: true,
   producedObjectsComparedBySqlClassAndIdentity: true,
   referencedDatabaseObjectsComparedBothDirections: true,
   modifiedDatabaseObjectsComparedBothDirections: true,
@@ -5857,6 +5873,10 @@ export function validateMigrationDependencyClosure(manifest, sqlByFilename) {
       "externalFunctionRegistry",
       CLOSED_EXTERNAL_FUNCTION_MANIFEST_REGISTRY_V1,
     ],
+    [
+      "externalDatabaseObjectRegistry",
+      EXTERNAL_DATABASE_OBJECT_REGISTRY_V1,
+    ],
     ["exactComparisonRules", CLOSED_EXACT_COMPARISON_RULES_V1],
   ];
   for (const [field, expected] of closedBindings) {
@@ -5866,6 +5886,17 @@ export function validateMigrationDependencyClosure(manifest, sqlByFilename) {
         field,
       );
     }
+  }
+  if (
+    !exactEqual(
+      manifest.externalDatabaseObjects,
+      EXTERNAL_DATABASE_OBJECT_REGISTRY_V1,
+    )
+  ) {
+    throw new MigrationDependencyClosureError(
+      "INVALID_EXTERNAL_DATABASE_OBJECT_REGISTRY",
+      JSON.stringify(manifest.externalDatabaseObjects),
+    );
   }
   if (
     !exactEqual(

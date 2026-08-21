@@ -116,6 +116,14 @@ evidence fail closed. `pgcrypto` and `vector` are the canonical extension
 identities; `pgvector` is prohibited as an alias. Unqualified `digest` maps to
 `pgcrypto` and is not double-counted as `extensions.digest`.
 
+The complete external database-object list is a code-owned closed registry of
+`auth.users`, `auth.uid`, `storage.objects`, `storage.buckets`,
+`storage.allow_any_operation` and `storage.allow_only_operation`, each with its
+exact object kind. The manifest and its analyzer-contract mirror must equal
+that registry byte-for-byte before any external object seeds dependency state;
+a missing, extra, reordered, renamed, wrong-kind or extra-field entry fails
+closed.
+
 `UNKNOWN` and `KNOWN_APPLIED` forbid silent filename mutation or history
 repair and require a separate Owner gate. The canonical proposal is planning
 authority, not mutation authority. C3R-A0 authorizes no `migration repair`,

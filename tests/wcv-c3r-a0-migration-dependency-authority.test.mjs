@@ -437,6 +437,47 @@ test("auth.uid is SQL-derived as a manifest-required external function", () => {
   ]);
 });
 
+test("code-owned external database-object registry rejects manifest self-authorization", () => {
+  const fabricated = clone(manifest);
+  fabricated.externalDatabaseObjects.push({
+    kind: "table",
+    identifier: "public.fabricated_external",
+  });
+  expectClosureCode(
+    () => validateMigrationDependencyClosure(fabricated, liveSql),
+    "INVALID_EXTERNAL_DATABASE_OBJECT_REGISTRY",
+  );
+
+  for (const mutate of [
+    (candidate) => candidate.externalDatabaseObjects.pop(),
+    (candidate) => {
+      candidate.externalDatabaseObjects[0].kind = "function";
+    },
+    (candidate) => candidate.externalDatabaseObjects.reverse(),
+    (candidate) => {
+      candidate.externalDatabaseObjects[0].untrusted = true;
+    },
+  ]) {
+    const candidate = clone(manifest);
+    mutate(candidate);
+    expectClosureCode(
+      () => validateMigrationDependencyClosure(candidate, liveSql),
+      "INVALID_EXTERNAL_DATABASE_OBJECT_REGISTRY",
+    );
+  }
+
+  const mirroredFabrication = clone(manifest);
+  mirroredFabrication.migrationDependencyClosureV1
+    .externalDatabaseObjectRegistry.push({
+      kind: "table",
+      identifier: "public.fabricated_external",
+    });
+  expectClosureCode(
+    () => validateMigrationDependencyClosure(mirroredFabrication, liveSql),
+    "INVALID_CLOSED_ANALYZER_CONTRACT",
+  );
+});
+
 test("unknown qualified relations and functions fail closed", () => {
   expectClosureCode(
     () => deriveSynthetic("SELECT * FROM public.unregistered_dependency;"),
