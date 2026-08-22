@@ -44,6 +44,27 @@ const C3R_A1_SOURCE_AUTHORITY_SCOPE = Object.freeze({
   pullRequestTitle:
     "[WCV-C3R-A1] Install serial Practice/Theory/Law program authority",
 });
+const PRE_C3R_P_ORACLE_CONTRACT_PATH =
+  "config/dabangil-wcv-c3-pre-p-postgresql-security-state-oracle-v1.json";
+const PRE_C3R_P_ORACLE_SOURCE_SCOPE = Object.freeze({
+  repository: "chachathecat/inverge",
+  baseRef: "main",
+  baseSha: "54afffcc539981ded65591f1f027171343bfce40",
+  headRef: "codex/wcv-c3-pre-p-postgresql-oracle-clean-replacement",
+  headRepository: "chachathecat/inverge",
+  pullRequestTitle:
+    "[WCV-C3 PRE-P] Install PostgreSQL 15.8 security-state oracle tooling — clean replacement",
+  isDraft: true,
+});
+const PRE_C3R_P_ORACLE_REFERENCE_LINES = Object.freeze([
+  "Refs #706",
+  "Refs #707",
+  "Refs #708",
+  "Refs #714",
+  "Refs #781",
+]);
+const PRE_C3R_P_ORACLE_DISPOSITION =
+  "All referenced issues remain open; this support-tooling Draft closes none.";
 const GITHUB_CLOSING_KEYWORD_PATTERN = new RegExp(
   String.raw`\b(?:close(?:s|d)?|fix(?:es|ed)?|resolve(?:s|d)?)(?:\s*:\s*|\s+)(?:#\d+|[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+#\d+|https:\/\/github\.com\/[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+\/(?:issues|pull)\/\d+)\b`,
   "gi",
@@ -73,6 +94,7 @@ function readPullRequestContext() {
           headRef: event.pull_request?.head?.ref ?? null,
           headRepository: event.pull_request?.head?.repo?.full_name ?? null,
           pullRequestTitle: event.pull_request?.title ?? null,
+          isDraft: event.pull_request?.draft === true,
         };
       }
     } catch {
@@ -90,6 +112,7 @@ function readPullRequestContext() {
       headRef: null,
       headRepository: null,
       pullRequestTitle: null,
+      isDraft: null,
     };
   }
 
@@ -141,12 +164,72 @@ function matchesExactC3rA1Scope(context) {
   );
 }
 
+function readPreC3rPOracleReferenceAuthority() {
+  if (!fs.existsSync(PRE_C3R_P_ORACLE_CONTRACT_PATH)) return null;
+  try {
+    const contract = JSON.parse(
+      fs.readFileSync(PRE_C3R_P_ORACLE_CONTRACT_PATH, "utf8"),
+    );
+    return contract?.deliveryControl ?? null;
+  } catch {
+    return null;
+  }
+}
+
+function matchesExactPreC3rPOracleScope(context) {
+  return Object.entries(PRE_C3R_P_ORACLE_SOURCE_SCOPE).every(
+    ([key, value]) => context?.[key] === value,
+  );
+}
+
+function isPreC3rPOracleCandidate(context) {
+  return context?.repository === PRE_C3R_P_ORACLE_SOURCE_SCOPE.repository &&
+    context?.headRef === PRE_C3R_P_ORACLE_SOURCE_SCOPE.headRef;
+}
+
 function validateIssueLink(body, errors, context) {
   const issueLinks = [...body.matchAll(/\b(?:Closes|Fixes)\s+#(\d+)\b/gi)];
   const allGithubClosingLinks = [
     ...body.matchAll(GITHUB_CLOSING_KEYWORD_PATTERN),
   ];
   const sourceAuthority = readC3rA0SourceAuthorityIssueLink();
+
+  if (isPreC3rPOracleCandidate(context)) {
+    const deliveryControl = readPreC3rPOracleReferenceAuthority();
+    const referenceAuthority = deliveryControl?.referenceOnlyIssueLinks;
+    const bodyLines = body.split(/\r?\n/u).map((line) => line.trim());
+    const actualReferenceLines = bodyLines.filter((line) => /^Refs #\d+$/u.test(line));
+    const exactDispositionCount = bodyLines.filter(
+      (line) => line === PRE_C3R_P_ORACLE_DISPOSITION,
+    ).length;
+    const contextScopeMatches = matchesExactPreC3rPOracleScope(context);
+    const contractScopeMatches = Object.entries(
+      PRE_C3R_P_ORACLE_SOURCE_SCOPE,
+    ).every(([key, value]) => {
+      if (key === "isDraft") return deliveryControl?.draftRequired === value;
+      return deliveryControl?.[key] === value;
+    });
+
+    if (
+      !contextScopeMatches ||
+      !contractScopeMatches ||
+      referenceAuthority?.mode !== "REFERENCE_ONLY" ||
+      JSON.stringify(referenceAuthority?.requiredReferenceLinesExactly) !==
+        JSON.stringify(PRE_C3R_P_ORACLE_REFERENCE_LINES) ||
+      referenceAuthority?.requiredDispositionLine !== PRE_C3R_P_ORACLE_DISPOSITION ||
+      JSON.stringify(actualReferenceLines) !== JSON.stringify(PRE_C3R_P_ORACLE_REFERENCE_LINES) ||
+      exactDispositionCount !== 1 ||
+      referenceAuthority?.closingKeywordsAllowed !== false ||
+      referenceAuthority?.exceptionAppliesOnlyWhenExactLinesPresent !== true ||
+      referenceAuthority?.fullGithubClosingKeywordFamilyBlocked !== true ||
+      allGithubClosingLinks.length !== 0
+    ) {
+      errors.push(
+        "PRE-C3R-P oracle reference-only linking requires its five exact issue references, exact open disposition, exact pinned Draft scope, and zero issue-closing keywords.",
+      );
+    }
+    return;
+  }
 
   if (matchesExactC3rA1Scope(context)) {
     const a1Authority = readC3rA1SourceAuthorityIssueLinks();

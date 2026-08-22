@@ -7,6 +7,10 @@ import process from "node:process";
 import { execFileSync, spawnSync } from "node:child_process";
 import { pathToFileURL } from "node:url";
 import { runtimeRequiredPathRecords } from "./runtime-risk-contract.mjs";
+import {
+  isOracleRiskCandidate,
+  producePostgresSecurityOracleEvidence,
+} from "./wcv-c3-pre-p-postgresql-security-state-oracle.mjs";
 
 export const SCHEMA_VERSION = "inverge.runtime_evidence.v2";
 export const PRODUCER_VERSION = "s233r.postgres.s233a.v1";
@@ -3200,6 +3204,15 @@ function produce(riskFile) {
   const context = executionContext();
   const { bytes: riskBytes, value: riskResult } = readJsonWithBytes(riskFile, "risk classification");
   if (riskResult.runtimeEvidenceRequired !== true) throw new Error("runtime evidence was not requested.");
+  if (isOracleRiskCandidate(riskResult)) {
+    producePostgresSecurityOracleEvidence({
+      context,
+      evidencePath: process.env.RUNTIME_EVIDENCE_PATH,
+      riskBytes,
+      riskResult,
+    });
+    return;
+  }
   const migration = resolveTargetMigration(riskResult, context.headSha);
   let cleanupComplete = false;
   let passedAssertions;
