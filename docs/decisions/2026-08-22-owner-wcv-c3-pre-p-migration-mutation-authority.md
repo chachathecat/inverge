@@ -186,13 +186,27 @@ for remote application.
 
 The machine contract installs `C3RPMigrationMutationReceiptV1` as subordinate
 evidence for, never a substitute for, the existing `C3RStageMergeReceiptV1`.
-Its closed 17-field envelope binds the exact authority decision/contract
-digests, C3R-P PR/base/head/tree, seven old/new path and SQL evidence records,
+Its closed 18-field envelope binds the exact authority decision/contract
+digests, a separate `C3RPMigrationMutationAuthorityMergeReceiptV1`, C3R-P
+PR/base/head/tree, seven old/new path and SQL evidence records,
 18 unchanged records, one append, the 26-file effective inventory, exact
 dependency/order closure, two distinct reset/replay receipts,
 `server_version_num = 150008`, the merged oracle, full canonical final schema/
 relation/routine/policy/ACL/owner/RLS/FORCE-RLS state, the exact Practice
 runtime receipt, metadata-only artifacts, cleanup and zero remote mutation.
+
+The authority-merge receipt is a closed, domain-digested record for this exact
+authority PR #795. A separate live-GitHub verifier must prove its reconciled
+base, reviewed head/tree, expected-head-pinned squash/resulting-main SHA/tree,
+passed required native checks, actionable P0/P1/P2 `0/0/0`, zero unresolved
+actionable threads, exact decision/contract digests, zero migration-file
+changes and zero remote mutation. The C3R-P base SHA/tree must equal that
+validated resulting-main SHA/tree exactly. Both the authority decision and
+machine contract must already exist with identical bytes at that C3R-P base
+and remain identical at the C3R-P candidate head. A pre-authority base,
+unmerged authority candidate, descendant substituted for the exact authority
+result, candidate-introduced permission or self-attested merge receipt fails
+closed.
 
 Receipt validation resolves the declared base and candidate head/tree as real
 Git objects, requires the base to contain the exact A0 25-file inventory,

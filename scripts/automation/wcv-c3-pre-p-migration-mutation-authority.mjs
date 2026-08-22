@@ -24,7 +24,7 @@ const SHA256 = /^[0-9a-f]{64}$/u;
 const GIT_BLOB = /^[0-9a-f]{40}$/u;
 const COMMIT_SHA = /^[0-9a-f]{40}$/u;
 const EXPECTED_CONTRACT_CANONICAL_SHA256 =
-  "d1c82cecaeeffb0b92dc0f3cfc4995775a4a9c67fdf9d06d44273c9470f56e44";
+  "f55361efc31280137407f02da7fbaf62c4eb46993c7576592a45ffba8523d4c1";
 const EXPECTED_RECONCILED_BASE_SHA =
   "5965ddb0202c5f9effb531824d4d95f775abecc1";
 const EXPECTED_RECONCILED_BASE_TREE =
@@ -1442,7 +1442,13 @@ function assertEvidenceShape(evidence, receiptSchema, location) {
   }
 }
 
-async function validateAuthorityBinding(receipt, contract, repositoryRoot, candidateHead) {
+async function validateAuthorityBinding(
+  receipt,
+  contract,
+  repositoryRoot,
+  authorityResultingMain,
+  candidateHead,
+) {
   const binding = receipt.authorityBinding;
   if (
     binding.decisionRef !== contract.authority.decisionRecord ||
@@ -1450,25 +1456,148 @@ async function validateAuthorityBinding(receipt, contract, repositoryRoot, candi
   ) {
     fail("RECEIPT_AUTHORITY_REF", "decision or contract ref differs");
   }
-  const decisionBytes = gitPathBytes(
+  const baseDecisionBytes = gitPathBytes(
+    repositoryRoot,
+    authorityResultingMain,
+    binding.decisionRef,
+  );
+  const baseContractBytes = gitPathBytes(
+    repositoryRoot,
+    authorityResultingMain,
+    binding.contractRef,
+  );
+  const candidateDecisionBytes = gitPathBytes(
     repositoryRoot,
     candidateHead,
     binding.decisionRef,
   );
-  const contractBytes = gitPathBytes(
+  const candidateContractBytes = gitPathBytes(
     repositoryRoot,
     candidateHead,
     binding.contractRef,
   );
-  if (binding.decisionSha256 !== sha256(decisionBytes)) {
+  if (
+    binding.decisionSha256 !== sha256(baseDecisionBytes) ||
+    !baseDecisionBytes.equals(candidateDecisionBytes)
+  ) {
     fail("RECEIPT_DECISION_DIGEST", binding.decisionRef);
   }
-  if (binding.contractSha256 !== sha256(contractBytes)) {
+  if (
+    binding.contractSha256 !== sha256(baseContractBytes) ||
+    !baseContractBytes.equals(candidateContractBytes)
+  ) {
     fail("RECEIPT_CONTRACT_DIGEST", binding.contractRef);
   }
-  const installedContract = parseJsonRejectDuplicateKeys(contractBytes.toString("utf8"));
+  const installedContract = parseJsonRejectDuplicateKeys(
+    baseContractBytes.toString("utf8"),
+  );
   if (!same(installedContract, contract)) {
-    fail("RECEIPT_CONTRACT_OBJECT_DRIFT", "candidate-head contract differs");
+    fail(
+      "RECEIPT_CONTRACT_OBJECT_DRIFT",
+      "validated authority resulting-main contract differs",
+    );
+  }
+}
+
+function authorityMergeReceiptDigest(authorityMergeReceipt) {
+  const copy = structuredClone(authorityMergeReceipt);
+  delete copy.receiptDigest;
+  return domainDigest(
+    "C3R_P_MIGRATION_MUTATION_AUTHORITY_MERGE_RECEIPT_V1",
+    copy,
+  );
+}
+
+async function validateAuthorityMergeReceipt(
+  receipt,
+  contract,
+  repositoryRoot,
+  authorityMergeReceiptVerifier,
+) {
+  const authorityReceipt = receipt.authorityMergeReceipt;
+  const head = receipt.c3rPHeadBinding;
+  if (
+    authorityReceipt.receiptType !==
+      contract.c3rPMigrationMutationReceiptV1.authorityMergeReceiptTypeExactly ||
+    authorityReceipt.repository !== "chachathecat/inverge" ||
+    authorityReceipt.authorityPullRequest !==
+      contract.c3rPMigrationMutationReceiptV1.authorityPullRequestExactly ||
+    authorityReceipt.reconciledBaseSha !== contract.authority.reconciledBaseSha ||
+    authorityReceipt.reconciledBaseTree !== contract.authority.reconciledBaseTree ||
+    !COMMIT_SHA.test(authorityReceipt.reviewedHead) ||
+    !COMMIT_SHA.test(authorityReceipt.reviewedTree) ||
+    !COMMIT_SHA.test(authorityReceipt.squashMergeCommit) ||
+    !COMMIT_SHA.test(authorityReceipt.resultingMainSha) ||
+    !COMMIT_SHA.test(authorityReceipt.resultingMainTree) ||
+    authorityReceipt.squashMergeCommit !== authorityReceipt.resultingMainSha ||
+    authorityReceipt.decisionRef !== contract.authority.decisionRecord ||
+    authorityReceipt.contractRef !== CONTRACT_PATH ||
+    authorityReceipt.decisionSha256 !== receipt.authorityBinding.decisionSha256 ||
+    authorityReceipt.contractSha256 !== receipt.authorityBinding.contractSha256 ||
+    authorityReceipt.expectedHeadPinnedSquashMerge !== true ||
+    authorityReceipt.requiredNativeChecksPassed !== true ||
+    !same(authorityReceipt.formalReviewActionableP0P1P2, [0, 0, 0]) ||
+    authorityReceipt.unresolvedActionableThreadCount !== 0 ||
+    authorityReceipt.authorityReceiptValidated !== true ||
+    authorityReceipt.migrationFileChangeCount !== 0 ||
+    authorityReceipt.remoteMutationCount !== 0
+  ) {
+    fail(
+      "RECEIPT_AUTHORITY_MERGE_BINDING",
+      "authority merge receipt is not the exact validated PR #795 outcome",
+    );
+  }
+  for (const [value, code, label] of [
+    [authorityReceipt.decisionSha256, "RECEIPT_AUTHORITY_MERGE_DECISION_SHA", "decision"],
+    [authorityReceipt.contractSha256, "RECEIPT_AUTHORITY_MERGE_CONTRACT_SHA", "contract"],
+  ]) {
+    assertSha256(value, code, label);
+  }
+  if (authorityReceipt.receiptDigest !== authorityMergeReceiptDigest(authorityReceipt)) {
+    fail(
+      "RECEIPT_AUTHORITY_MERGE_DIGEST",
+      "authority merge receipt digest differs",
+    );
+  }
+  if (
+    head.baseSha !== authorityReceipt.resultingMainSha ||
+    head.baseTree !== authorityReceipt.resultingMainTree
+  ) {
+    fail(
+      "RECEIPT_AUTHORITY_MERGE_BASE_BINDING",
+      "C3R-P base must equal the validated authority resulting main SHA/tree",
+    );
+  }
+  const resolvedAuthorityMain = gitCommitTree(
+    repositoryRoot,
+    authorityReceipt.resultingMainSha,
+  );
+  if (
+    resolvedAuthorityMain.commit !== authorityReceipt.resultingMainSha ||
+    resolvedAuthorityMain.tree !== authorityReceipt.resultingMainTree
+  ) {
+    fail(
+      "RECEIPT_AUTHORITY_MERGE_GIT_OBJECT",
+      "authority resulting-main SHA/tree differs from Git",
+    );
+  }
+  if (typeof authorityMergeReceiptVerifier !== "function") {
+    fail(
+      "RECEIPT_AUTHORITY_MERGE_VERIFIER_REQUIRED",
+      "the prior authority merge requires independent live GitHub verification",
+    );
+  }
+  const independentlyVerified = await authorityMergeReceiptVerifier({
+    authorityMergeReceipt: structuredClone(authorityReceipt),
+    receipt: structuredClone(receipt),
+    contract: structuredClone(contract),
+    repositoryRoot,
+  });
+  if (!same(independentlyVerified, authorityReceipt)) {
+    fail(
+      "RECEIPT_AUTHORITY_MERGE_VERIFIER_MISMATCH",
+      "independent authority merge evidence differs from the closed receipt",
+    );
   }
 }
 
@@ -1550,6 +1679,7 @@ export async function validateC3rPMigrationMutationReceipt(
   contract,
   {
     repositoryRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", ".."),
+    authorityMergeReceiptVerifier,
     evidenceVerifier,
   } = {},
 ) {
@@ -1558,7 +1688,7 @@ export async function validateC3rPMigrationMutationReceipt(
   if (receipt.receiptType !== "C3RPMigrationMutationReceiptV1") {
     fail("RECEIPT_TYPE", "unexpected receipt type");
   }
-  for (const field of ["authorityBinding", "c3rPHeadBinding", "unchangedPathClosure", "append", "effectiveInventory", "dependencyAndOrderingClosure", "postgresOracleBinding", "finalDatabaseState", "practiceRuntimeReceipt", "dataBoundary", "cleanup", "remoteContinuity"]) {
+  for (const field of ["authorityBinding", "authorityMergeReceipt", "c3rPHeadBinding", "unchangedPathClosure", "append", "effectiveInventory", "dependencyAndOrderingClosure", "postgresOracleBinding", "finalDatabaseState", "practiceRuntimeReceipt", "dataBoundary", "cleanup", "remoteContinuity"]) {
     assertExactKeys(
       receipt[field],
       schema.nestedRequiredFieldsExactly[field],
@@ -1585,10 +1715,17 @@ export async function validateC3rPMigrationMutationReceipt(
   if (head.headTreeBindingSha256 !== expectedHeadTreeBinding) {
     fail("RECEIPT_HEAD_TREE_BINDING", "head/tree digest differs");
   }
+  await validateAuthorityMergeReceipt(
+    receipt,
+    contract,
+    repositoryRoot,
+    authorityMergeReceiptVerifier,
+  );
   await validateAuthorityBinding(
     receipt,
     contract,
     repositoryRoot,
+    receipt.authorityMergeReceipt.resultingMainSha,
     head.candidateHead,
   );
 
@@ -2105,6 +2242,8 @@ export async function validateC3rPMigrationMutationReceipt(
   }
   return {
     receiptType: receipt.receiptType,
+    authorityPullRequest: receipt.authorityMergeReceipt.authorityPullRequest,
+    authorityResultingMainSha: receipt.authorityMergeReceipt.resultingMainSha,
     existingPathOperationCount: receipt.existingPathOperations.length,
     unchangedPathCount: unchanged.count,
     effectiveMigrationCount: inventory.count,

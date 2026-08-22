@@ -423,6 +423,12 @@ exact dependency closure, two independently addressed fresh reset/replays,
 PostgreSQL `server_version_num = 150008`, the merged oracle, full canonical
 catalog/ACL/owner/policy/RLS/FORCE-RLS state, exact Practice evidence,
 metadata-only artifacts, cleanup and zero remote mutation.
+It separately requires an independently live-GitHub-validated closed
+`C3RPMigrationMutationAuthorityMergeReceiptV1` for exact PR #795. The C3R-P
+base SHA/tree must equal that receipt's expected-head-pinned resulting-main
+SHA/tree, and the authority decision/contract must already exist unchanged at
+the base and remain unchanged at the C3R-P head. An unmerged,
+candidate-introduced or self-attested authority fails closed.
 
 The six renamed `UNKNOWN` histories require later separate remote
 reconciliation. The `KNOWN_APPLIED` concept-boundary remote ledger identity

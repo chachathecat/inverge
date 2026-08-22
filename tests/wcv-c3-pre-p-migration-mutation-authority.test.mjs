@@ -133,6 +133,16 @@ function signReceipt(receipt) {
   return receipt;
 }
 
+function signAuthorityMergeReceipt(receipt) {
+  const unsigned = clone(receipt);
+  delete unsigned.receiptDigest;
+  receipt.receiptDigest = domainDigest(
+    "C3R_P_MIGRATION_MUTATION_AUTHORITY_MERGE_RECEIPT_V1",
+    unsigned,
+  );
+  return receipt;
+}
+
 function fixtureGit(fixtureRoot, args) {
   const result = spawnSync("git", args, {
     cwd: fixtureRoot,
@@ -352,6 +362,10 @@ async function trustedEvidenceVerifier({ receipt }) {
   };
 }
 
+async function trustedAuthorityMergeReceiptVerifier({ authorityMergeReceipt }) {
+  return clone(authorityMergeReceipt);
+}
+
 async function validReceipt() {
   const schema = contract.c3rPMigrationMutationReceiptV1;
   const head = futureFixture.head;
@@ -510,6 +524,31 @@ async function validReceipt() {
         "config/dabangil-wcv-c3-pre-p-migration-mutation-authority-v1.json",
       contractSha256: sha256(await readFile(contractPath)),
     },
+    authorityMergeReceipt: signAuthorityMergeReceipt({
+      receiptType: "C3RPMigrationMutationAuthorityMergeReceiptV1",
+      repository: "chachathecat/inverge",
+      authorityPullRequest: 795,
+      reconciledBaseSha: contract.authority.reconciledBaseSha,
+      reconciledBaseTree: contract.authority.reconciledBaseTree,
+      reviewedHead: "a".repeat(40),
+      reviewedTree: "b".repeat(40),
+      squashMergeCommit: futureFixture.baseSha,
+      resultingMainSha: futureFixture.baseSha,
+      resultingMainTree: futureFixture.baseTree,
+      decisionRef: contract.authority.decisionRecord,
+      decisionSha256: sha256(await readFile(decisionPath)),
+      contractRef:
+        "config/dabangil-wcv-c3-pre-p-migration-mutation-authority-v1.json",
+      contractSha256: sha256(await readFile(contractPath)),
+      expectedHeadPinnedSquashMerge: true,
+      requiredNativeChecksPassed: true,
+      formalReviewActionableP0P1P2: [0, 0, 0],
+      unresolvedActionableThreadCount: 0,
+      authorityReceiptValidated: true,
+      migrationFileChangeCount: 0,
+      remoteMutationCount: 0,
+      receiptDigest: "",
+    }),
     c3rPHeadBinding: {
       repository: "chachathecat/inverge",
       stage: "C3R-P",
@@ -695,6 +734,7 @@ async function expectReceiptCode(mutator, code) {
   await assert.rejects(
     validateC3rPMigrationMutationReceipt(receipt, contract, {
       repositoryRoot: futureFixture.fixtureRoot,
+      authorityMergeReceiptVerifier: trustedAuthorityMergeReceiptVerifier,
       evidenceVerifier: trustedEvidenceVerifier,
     }),
     (error) =>
@@ -964,11 +1004,14 @@ test("accepts a completely closed future migration receipt", async () => {
     contract,
     {
       repositoryRoot: futureFixture.fixtureRoot,
+      authorityMergeReceiptVerifier: trustedAuthorityMergeReceiptVerifier,
       evidenceVerifier: trustedEvidenceVerifier,
     },
   );
   assert.deepEqual(result, {
     receiptType: "C3RPMigrationMutationReceiptV1",
+    authorityPullRequest: 795,
+    authorityResultingMainSha: futureFixture.baseSha,
     existingPathOperationCount: 7,
     unchangedPathCount: 18,
     effectiveMigrationCount: 26,
@@ -995,6 +1038,7 @@ test("raw receipt parsing rejects a nested duplicate key", async () => {
   await assert.rejects(
     validateC3rPMigrationMutationReceiptSource(source, contract, {
       repositoryRoot: futureFixture.fixtureRoot,
+      authorityMergeReceiptVerifier: trustedAuthorityMergeReceiptVerifier,
       evidenceVerifier: trustedEvidenceVerifier,
     }),
     (error) => error.code === "DUPLICATE_JSON_KEY",
@@ -1005,9 +1049,66 @@ test("receipt refuses self-attested evidence without an independent verifier", a
   await assert.rejects(
     validateC3rPMigrationMutationReceipt(await validReceipt(), contract, {
       repositoryRoot: futureFixture.fixtureRoot,
+      authorityMergeReceiptVerifier: trustedAuthorityMergeReceiptVerifier,
     }),
     (error) =>
       error.code === "RECEIPT_INDEPENDENT_EVIDENCE_VERIFIER_REQUIRED",
+  );
+});
+
+test("receipt requires independent validation of the prior authority merge", async () => {
+  await assert.rejects(
+    validateC3rPMigrationMutationReceipt(await validReceipt(), contract, {
+      repositoryRoot: futureFixture.fixtureRoot,
+      evidenceVerifier: trustedEvidenceVerifier,
+    }),
+    (error) => error.code === "RECEIPT_AUTHORITY_MERGE_VERIFIER_REQUIRED",
+  );
+});
+
+test("receipt binds C3R-P base exactly to validated authority resulting main", async () => {
+  await expectReceiptCode(
+    (receipt) => {
+      receipt.authorityMergeReceipt.resultingMainSha = "c".repeat(40);
+      receipt.authorityMergeReceipt.squashMergeCommit = "c".repeat(40);
+      receipt.authorityMergeReceipt.receiptDigest = domainDigest(
+        "C3R_P_MIGRATION_MUTATION_AUTHORITY_MERGE_RECEIPT_V1",
+        Object.fromEntries(
+          Object.entries(receipt.authorityMergeReceipt).filter(
+            ([key]) => key !== "receiptDigest",
+          ),
+        ),
+      );
+    },
+    "RECEIPT_AUTHORITY_MERGE_BASE_BINDING",
+  );
+});
+
+test("receipt rejects authority merge review drift and verifier mismatch", async () => {
+  await expectReceiptCode(
+    (receipt) => {
+      receipt.authorityMergeReceipt.formalReviewActionableP0P1P2 = [0, 1, 0];
+      receipt.authorityMergeReceipt.receiptDigest = domainDigest(
+        "C3R_P_MIGRATION_MUTATION_AUTHORITY_MERGE_RECEIPT_V1",
+        Object.fromEntries(
+          Object.entries(receipt.authorityMergeReceipt).filter(
+            ([key]) => key !== "receiptDigest",
+          ),
+        ),
+      );
+    },
+    "RECEIPT_AUTHORITY_MERGE_BINDING",
+  );
+  await assert.rejects(
+    validateC3rPMigrationMutationReceipt(await validReceipt(), contract, {
+      repositoryRoot: futureFixture.fixtureRoot,
+      authorityMergeReceiptVerifier: async ({ authorityMergeReceipt }) => ({
+        ...authorityMergeReceipt,
+        authorityReceiptValidated: false,
+      }),
+      evidenceVerifier: trustedEvidenceVerifier,
+    }),
+    (error) => error.code === "RECEIPT_AUTHORITY_MERGE_VERIFIER_MISMATCH",
   );
 });
 
@@ -1233,6 +1334,7 @@ test("independent full-catalog evidence rejects a self-consistent omission", asy
   await assert.rejects(
     validateC3rPMigrationMutationReceipt(receipt, contract, {
       repositoryRoot: futureFixture.fixtureRoot,
+      authorityMergeReceiptVerifier: trustedAuthorityMergeReceiptVerifier,
       evidenceVerifier: trustedEvidenceVerifier,
     }),
     (error) => error.code === "RECEIPT_INDEPENDENT_EVIDENCE_MISMATCH",
@@ -1285,6 +1387,7 @@ test("receipt rejects broken artifact cross-links and verifier evidence", async 
   await assert.rejects(
     validateC3rPMigrationMutationReceipt(await validReceipt(), contract, {
       repositoryRoot: futureFixture.fixtureRoot,
+      authorityMergeReceiptVerifier: trustedAuthorityMergeReceiptVerifier,
       evidenceVerifier: async (context) => ({
         ...(await trustedEvidenceVerifier(context)),
         requiredNativeChecksPassed: false,
@@ -1332,6 +1435,12 @@ test("authority mirrors preserve PRE-P as a non-stage without selector drift", a
   assert.equal(top.effectiveMigrationCount, 26);
   assert.equal(overlay.isC3rStage, false);
   assert.equal(overlay.frozenAppendPath, frozenAppend);
+  assert.equal(
+    overlay.authorityMergeReceiptType,
+    "C3RPMigrationMutationAuthorityMergeReceiptV1",
+  );
+  assert.equal(overlay.authorityMergeReceiptPullRequest, 795);
+  assert.equal(overlay.c3rPBaseMustEqualValidatedAuthorityResultingMain, true);
   assert.equal(overlay.remoteOperationAuthorizationCount, 0);
   const expectedMirroredOperations =
     contract.authorizedExistingPathOperations.records.map((operation) => {
@@ -1371,7 +1480,7 @@ test("authority mirrors preserve PRE-P as a non-stage without selector drift", a
     ),
     [
       "aa8850fdafe31cdaee19ddd71e83221aaf344743f46ca5a05a5c6751be9c8b60",
-      "d32e840c4d327112318cb60985aba0b3af8bd638855287881a15999806de00d9",
+      "f136ebbc933f7a02b9327f89ee80cb59baf8cb4fd7af898c0128996d653dd612",
       "5f68571348ae9046381b1c303f4f77b8ff2aa0d48666df27a9c7d9e03e517916",
       "d736b3cb5220cc47be081ff71f70c50fd38ce486e85c1edebe7363fbaf92681f",
     ],

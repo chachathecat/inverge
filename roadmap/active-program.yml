@@ -493,6 +493,11 @@ items:
     c3rPrePMigrationMutationAuthorityState: installed_after_expected_head_pinned_merge_and_validated_receipt
     c3rPrePMigrationMutationAuthorityContract: config/dabangil-wcv-c3-pre-p-migration-mutation-authority-v1.json
     c3rPrePMigrationMutationAuthorityContractId: C3RPMigrationMutationAuthorityV1
+    c3rPrePMigrationMutationAuthorityReceiptType: C3RPMigrationMutationAuthorityMergeReceiptV1
+    c3rPrePMigrationMutationAuthorityReceiptPr: 795
+    c3rPrePMigrationMutationAuthorityReceiptIndependentLiveGitHubVerificationRequired: true
+    c3rPBaseMustEqualValidatedPrePAuthorityResultingMain: true
+    c3rPrePAuthorityFilesMustExistUnchangedAtC3rPBaseAndHead: true
     c3rPrePMigrationMutationAuthorityIsStage: false
     c3rPrePMigrationMutationPerformedByAuthorityWork: false
     c3rPrePMigrationMutationExistingPathOperationCount: 7

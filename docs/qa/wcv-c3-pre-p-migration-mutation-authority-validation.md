@@ -64,7 +64,7 @@ legal rename records require byte-for-byte current/future equality.
 
 ## Closed receipt validation
 
-`C3RPMigrationMutationReceiptV1` has exactly 17 top-level fields. The focused
+`C3RPMigrationMutationReceiptV1` has exactly 18 top-level fields. The focused
 validator rejects duplicate JSON keys and exact-key mismatches at every
 governed nested object. It requires seven ordered operations, 18 exact
 unchanged records, one nonempty append, 26 exact effective records, full
@@ -74,6 +74,17 @@ canonical final catalog records, complete Practice evidence, the five exact
 metadata artifact kinds, complete cleanup and eleven zero-valued remote
 continuity counters. Its domain-separated receipt digest covers the entire
 closed object except the digest field itself.
+
+One field is the separately domain-digested closed
+`C3RPMigrationMutationAuthorityMergeReceiptV1` for exact authority PR #795.
+An independent live-GitHub verifier must reproduce its reconciled base,
+reviewed head/tree, pinned squash/resulting-main SHA/tree, exact authority
+digests, passed checks, clean `0/0/0` formal review, zero unresolved actionable
+threads, zero migration changes and zero remote mutation. The C3R-P base must
+equal the verified authority resulting-main SHA/tree; the authority decision
+and contract must already exist byte-identically at that base and stay
+unchanged at the C3R-P head. Missing verification, a pre-authority base,
+candidate-introduced authority or any receipt/verifier mismatch fails closed.
 
 The validator also resolves the receipt base/head/tree in Git, compares all
 25 base and 26 candidate SQL blobs, re-runs the immutable A0 dependency

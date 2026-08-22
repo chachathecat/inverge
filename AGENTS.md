@@ -253,6 +253,12 @@ dependency closure, two resets, PostgreSQL `server_version_num = 150008`,
 merged oracle, full final canonical catalog/ACL/owner/policy/RLS/FORCE-RLS
 state, Practice runtime evidence, metadata-only artifacts, cleanup and zero
 remote mutation. It cannot replace `C3RStageMergeReceiptV1`.
+It also requires an independently live-GitHub-validated closed authority-merge
+receipt for exact PR #795 and requires the C3R-P base SHA/tree to equal that
+receipt's expected-head-pinned resulting-main SHA/tree. The authority decision
+and contract must already exist byte-identically at that base and remain
+unchanged at the C3R-P head; an unmerged or candidate-introduced authority
+fails closed.
 
 Six renamed histories are `UNKNOWN` and require a later separate remote
 reconciliation packet. The `KNOWN_APPLIED` personal-concept remote ledger
