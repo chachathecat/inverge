@@ -25,6 +25,10 @@ const GIT_BLOB = /^[0-9a-f]{40}$/u;
 const COMMIT_SHA = /^[0-9a-f]{40}$/u;
 const EXPECTED_CONTRACT_CANONICAL_SHA256 =
   "d1c82cecaeeffb0b92dc0f3cfc4995775a4a9c67fdf9d06d44273c9470f56e44";
+const EXPECTED_RECONCILED_BASE_SHA =
+  "5965ddb0202c5f9effb531824d4d95f775abecc1";
+const EXPECTED_RECONCILED_BASE_TREE =
+  "bcb1017b980a5175e45265080ba25bc4b25c51ff";
 
 const TOP_LEVEL_FIELDS = Object.freeze([
   "schemaVersion",
@@ -309,6 +313,137 @@ function gitCommitTree(repositoryRoot, commit) {
   return { commit: resolvedCommit, tree };
 }
 
+function gitObjectExists(repositoryRoot, object) {
+  const result = spawnSync("git", ["cat-file", "-e", object], {
+    cwd: repositoryRoot,
+    encoding: "utf8",
+  });
+  if (result.error) {
+    fail("GIT_READ_FAILED", result.error.message);
+  }
+  return result.status === 0;
+}
+
+export function validateGitHubShallowPullRequestEvidence({
+  contract,
+  eventPayload,
+  currentCommit,
+  currentCommitObject,
+  githubSha,
+}) {
+  const pullRequest = eventPayload?.pull_request;
+  const references = contract.deliveryControl.referenceOnlyIssueLinks;
+  const parents = currentCommitObject
+    .split(/\r?\n/u)
+    .filter((line) => line.startsWith("parent "))
+    .map((line) => line.slice("parent ".length));
+  if (
+    eventPayload?.repository?.full_name !== contract.authority.repository ||
+    pullRequest?.base?.repo?.full_name !== contract.authority.repository ||
+    pullRequest?.head?.repo?.full_name !== references.headRepository ||
+    pullRequest?.base?.ref !== references.baseRef ||
+    pullRequest?.base?.sha !== contract.authority.reconciledBaseSha ||
+    pullRequest?.head?.ref !== references.headRef ||
+    !COMMIT_SHA.test(pullRequest?.head?.sha ?? "") ||
+    pullRequest?.changed_files !== contract.ownedPaths.length ||
+    currentCommit !== githubSha ||
+    parents.length !== 2 ||
+    parents[0] !== contract.authority.reconciledBaseSha ||
+    parents[1] !== pullRequest.head.sha
+  ) {
+    fail(
+      "AUTHORITY_SHALLOW_BASE_EVIDENCE",
+      "GitHub pull-request event, merge parents or changed-file count differs",
+    );
+  }
+  return {
+    commit: contract.authority.reconciledBaseSha,
+    tree: contract.authority.reconciledBaseTree,
+    gitHistoryAvailable: false,
+    verificationMode: "github_pull_request_shallow_event",
+  };
+}
+
+async function resolveAuthorityBaseBinding(repositoryRoot, contract) {
+  if (
+    contract.authority.reconciledBaseSha !== EXPECTED_RECONCILED_BASE_SHA ||
+    contract.authority.reconciledBaseTree !== EXPECTED_RECONCILED_BASE_TREE ||
+    contract.deliveryControl.referenceOnlyIssueLinks.baseSha !==
+      EXPECTED_RECONCILED_BASE_SHA
+  ) {
+    fail("AUTHORITY_BASE_BINDING", "reconciled base SHA/tree differs");
+  }
+  let verificationMode = "local_git_object";
+  if (!gitObjectExists(repositoryRoot, `${EXPECTED_RECONCILED_BASE_SHA}^{commit}`)) {
+    if (
+      git(repositoryRoot, ["rev-parse", "--is-shallow-repository"]) !== "true" ||
+      process.env.GITHUB_ACTIONS !== "true" ||
+      process.env.GITHUB_EVENT_NAME !== "pull_request" ||
+      process.env.GITHUB_HEAD_REF !==
+        contract.deliveryControl.referenceOnlyIssueLinks.headRef ||
+      !process.env.GITHUB_EVENT_PATH ||
+      !process.env.GITHUB_SHA
+    ) {
+      fail(
+        "AUTHORITY_BASE_OBJECT_MISSING",
+        "pinned base object is unavailable outside an exact GitHub shallow PR checkout",
+      );
+    }
+    const eventPayload = parseJsonRejectDuplicateKeys(
+      await readFile(process.env.GITHUB_EVENT_PATH, "utf8"),
+    );
+    const currentCommit = git(repositoryRoot, ["rev-parse", "HEAD^{commit}"]);
+    const currentCommitObject = git(repositoryRoot, ["cat-file", "commit", currentCommit]);
+    validateGitHubShallowPullRequestEvidence({
+      contract,
+      eventPayload,
+      currentCommit,
+      currentCommitObject,
+      githubSha: process.env.GITHUB_SHA,
+    });
+    const originUrl = git(repositoryRoot, ["remote", "get-url", "origin"])
+      .replace(/\.git\/?$/u, "")
+      .replace(/\/$/u, "");
+    if (
+      originUrl !== `https://github.com/${contract.authority.repository}` &&
+      originUrl !== `git@github.com:${contract.authority.repository}` &&
+      originUrl !== `ssh://git@github.com/${contract.authority.repository}`
+    ) {
+      fail("AUTHORITY_SHALLOW_ORIGIN", "origin is not the exact authority repository");
+    }
+    const fetchResult = spawnSync(
+      "git",
+      [
+        "fetch",
+        "--no-tags",
+        "--depth=1",
+        "origin",
+        EXPECTED_RECONCILED_BASE_SHA,
+      ],
+      { cwd: repositoryRoot, encoding: "utf8", maxBuffer: 64 * 1024 * 1024 },
+    );
+    if (
+      fetchResult.status !== 0 ||
+      !gitObjectExists(repositoryRoot, `${EXPECTED_RECONCILED_BASE_SHA}^{commit}`)
+    ) {
+      fail(
+        "AUTHORITY_PINNED_BASE_FETCH_FAILED",
+        String(fetchResult.stderr).trim(),
+      );
+    }
+    verificationMode = "github_pull_request_shallow_exact_base_fetch";
+  }
+  const resolved = gitCommitTree(repositoryRoot, EXPECTED_RECONCILED_BASE_SHA);
+  if (resolved.tree !== EXPECTED_RECONCILED_BASE_TREE) {
+    fail("AUTHORITY_BASE_BINDING", "reconciled base SHA/tree differs");
+  }
+  return {
+    ...resolved,
+    gitHistoryAvailable: true,
+    verificationMode,
+  };
+}
+
 function gitPathBytes(repositoryRoot, commit, relativePath) {
   return git(repositoryRoot, ["show", `${commit}:${relativePath}`], { binary: true });
 }
@@ -324,10 +459,10 @@ function gitMigrationPaths(repositoryRoot, commit) {
   ]).filter((entry) => entry.endsWith(".sql"));
 }
 
-function currentAuthorityChangedPaths(repositoryRoot, baseSha) {
+export function currentAuthorityChangedPaths(repositoryRoot, baseSha) {
   const paths = new Set();
   for (const args of [
-    ["diff", "--name-only", `${baseSha}...HEAD`],
+    ["diff", "--name-only", baseSha, "HEAD"],
     ["diff", "--name-only"],
     ["diff", "--name-only", "--cached"],
     ["ls-files", "--others", "--exclude-standard"],
@@ -1100,17 +1235,11 @@ export async function validateAuthorityContract(
   if (!same(contract.ownedPaths, OWNED_PATHS)) {
     fail("OWNED_PATH_CLOSURE", "owned path manifest differs");
   }
-  const authorityBase = gitCommitTree(
-    repositoryRoot,
-    contract.authority.reconciledBaseSha,
-  );
+  const authorityBase = await resolveAuthorityBaseBinding(repositoryRoot, contract);
   if (
-    authorityBase.commit !== contract.authority.reconciledBaseSha ||
-    authorityBase.tree !== contract.authority.reconciledBaseTree
+    isExactAuthorityCandidateContext(repositoryRoot, contract) &&
+    authorityBase.gitHistoryAvailable
   ) {
-    fail("AUTHORITY_BASE_BINDING", "reconciled base SHA/tree differs");
-  }
-  if (isExactAuthorityCandidateContext(repositoryRoot, contract)) {
     validateExactAuthorityChangedPaths(
       currentAuthorityChangedPaths(repositoryRoot, authorityBase.commit),
       contract,

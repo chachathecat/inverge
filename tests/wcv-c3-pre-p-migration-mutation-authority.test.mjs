@@ -6,11 +6,12 @@ import { readFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import test from "node:test";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 
 import {
   C3RPMigrationMutationAuthorityError,
   canonicalJson,
+  currentAuthorityChangedPaths,
   deriveCandidateDependencyRecords,
   evidenceForBytes,
   parseJsonRejectDuplicateKeys,
@@ -21,6 +22,7 @@ import {
   validateC3rPMigrationMutationReceipt,
   validateC3rPMigrationMutationReceiptSource,
   validateExactAuthorityChangedPaths,
+  validateGitHubShallowPullRequestEvidence,
 } from "../scripts/automation/wcv-c3-pre-p-migration-mutation-authority.mjs";
 
 const repositoryRoot = path.resolve(
@@ -827,6 +829,133 @@ test("exact 12-path diff enforcement is scoped only to this authority candidate"
     ),
     false,
   );
+});
+
+test("accepts the pinned base through exact GitHub shallow PR evidence", () => {
+  const headSha = "ce8520d6fbd70b1bd3f92510485343d553aa8627";
+  const mergeSha = "487460a69de97562c3f26e9703f6bfe8cf853b23";
+  const eventPayload = {
+    repository: { full_name: "chachathecat/inverge" },
+    pull_request: {
+      base: {
+        ref: "main",
+        sha: contract.authority.reconciledBaseSha,
+        repo: { full_name: "chachathecat/inverge" },
+      },
+      head: {
+        ref: "codex/wcv-c3-pre-p-migration-mutation-authority",
+        sha: headSha,
+        repo: { full_name: "chachathecat/inverge" },
+      },
+      changed_files: contract.ownedPaths.length,
+    },
+  };
+  const result = validateGitHubShallowPullRequestEvidence({
+    contract,
+    eventPayload,
+    currentCommit: mergeSha,
+    currentCommitObject:
+      `tree 186a4871925de726b55fb4d6f9f573592f1498d7\n` +
+      `parent ${contract.authority.reconciledBaseSha}\n` +
+      `parent ${headSha}\n`,
+    githubSha: mergeSha,
+  });
+  assert.deepEqual(result, {
+    commit: contract.authority.reconciledBaseSha,
+    tree: contract.authority.reconciledBaseTree,
+    gitHistoryAvailable: false,
+    verificationMode: "github_pull_request_shallow_event",
+  });
+});
+
+test("rejects incomplete GitHub shallow PR base evidence", () => {
+  const headSha = "ce8520d6fbd70b1bd3f92510485343d553aa8627";
+  const mergeSha = "487460a69de97562c3f26e9703f6bfe8cf853b23";
+  assert.throws(
+    () =>
+      validateGitHubShallowPullRequestEvidence({
+        contract,
+        eventPayload: {
+          repository: { full_name: "chachathecat/inverge" },
+          pull_request: {
+            base: {
+              ref: "main",
+              sha: contract.authority.reconciledBaseSha,
+              repo: { full_name: "chachathecat/inverge" },
+            },
+            head: {
+              ref: "codex/wcv-c3-pre-p-migration-mutation-authority",
+              sha: headSha,
+              repo: { full_name: "chachathecat/inverge" },
+            },
+            changed_files: contract.ownedPaths.length + 1,
+          },
+        },
+        currentCommit: mergeSha,
+        currentCommitObject:
+          `tree 186a4871925de726b55fb4d6f9f573592f1498d7\n` +
+          `parent ${contract.authority.reconciledBaseSha}\n` +
+          `parent ${headSha}\n`,
+        githubSha: mergeSha,
+      }),
+    (error) => error.code === "AUTHORITY_SHALLOW_BASE_EVIDENCE",
+  );
+});
+
+test("derives the exact path diff after a pinned-base fetch into a genuine shallow merge checkout", () => {
+  const fixtureRoot = fs.mkdtempSync(
+    path.join(os.tmpdir(), "inverge-c3r-pre-p-shallow-"),
+  );
+  const sourceRoot = path.join(fixtureRoot, "source");
+  const remoteRoot = path.join(fixtureRoot, "remote.git");
+  const checkoutRoot = path.join(fixtureRoot, "checkout");
+  try {
+    fs.mkdirSync(sourceRoot, { recursive: true });
+    fixtureGit(sourceRoot, ["init", "-b", "main"]);
+    fixtureGit(sourceRoot, ["config", "user.name", "Shallow Fixture"]);
+    fixtureGit(sourceRoot, ["config", "user.email", "fixture@example.invalid"]);
+    fs.writeFileSync(path.join(sourceRoot, "owned.txt"), "base\n", "utf8");
+    fs.writeFileSync(path.join(sourceRoot, "stable.txt"), "stable\n", "utf8");
+    fixtureGit(sourceRoot, ["add", "."]);
+    fixtureGit(sourceRoot, ["commit", "-m", "base"]);
+    const baseSha = fixtureGit(sourceRoot, ["rev-parse", "HEAD"]);
+    fixtureGit(sourceRoot, ["switch", "-c", "candidate"]);
+    fs.writeFileSync(path.join(sourceRoot, "owned.txt"), "candidate\n", "utf8");
+    fixtureGit(sourceRoot, ["add", "owned.txt"]);
+    fixtureGit(sourceRoot, ["commit", "-m", "candidate"]);
+    fixtureGit(sourceRoot, ["switch", "main"]);
+    fixtureGit(sourceRoot, ["merge", "--no-ff", "candidate", "-m", "merge"]);
+    fixtureGit(fixtureRoot, ["clone", "--bare", sourceRoot, remoteRoot]);
+    fixtureGit(fixtureRoot, [
+      "clone",
+      "--depth=1",
+      "--branch",
+      "main",
+      pathToFileURL(remoteRoot).href,
+      checkoutRoot,
+    ]);
+    assert.equal(
+      fixtureGit(checkoutRoot, ["rev-parse", "--is-shallow-repository"]),
+      "true",
+    );
+    const beforeFetch = spawnSync("git", ["cat-file", "-e", `${baseSha}^{commit}`], {
+      cwd: checkoutRoot,
+      encoding: "utf8",
+    });
+    assert.notEqual(beforeFetch.status, 0);
+    fixtureGit(checkoutRoot, [
+      "fetch",
+      "--no-tags",
+      "--depth=1",
+      "origin",
+      baseSha,
+    ]);
+    assert.deepEqual(currentAuthorityChangedPaths(checkoutRoot, baseSha), [
+      "owned.txt",
+    ]);
+  } finally {
+    fs.rmSync(fixtureRoot, { recursive: true, force: true });
+  }
 });
 
 test("accepts a completely closed future migration receipt", async () => {
