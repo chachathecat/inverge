@@ -1,0 +1,118 @@
+{
+  "schemaVersion": "dabangil.wcv_c3_pre_p.postgresql_security_state_oracle_manifest.v1",
+  "status": "support_tooling_only",
+  "authorityBoundary": {
+    "canonicalStage": null,
+    "consumesStageSelector": false,
+    "installsStage": false,
+    "soleNextC3rStage": "C3R-P",
+    "c3rP": "authorized_unstarted_after_validated_c3r_a1_merge_receipt",
+    "c3rT": "blocked_pending_validated_c3r_p_merge_receipt",
+    "c3rL": "blocked_pending_validated_c3r_p_and_c3r_t_merge_receipts",
+    "c3rRuntimeAutomaticStartAllowed": false,
+    "c3rSuccessorRuntimeStarted": false,
+    "wcvC3Complete": false
+  },
+  "deliveryControl": {
+    "repository": "chachathecat/inverge",
+    "baseRef": "main",
+    "baseSha": "54afffcc539981ded65591f1f027171343bfce40",
+    "baseTree": "3c48da6fe991d8c02e3991e0a571b3b12139932c",
+    "headRef": "codex/wcv-c3-pre-p-postgresql-security-state-oracle",
+    "headRepository": "chachathecat/inverge",
+    "pullRequestTitle": "[WCV-C3 PRE-P] Add PostgreSQL 15.8 security-state oracle tooling",
+    "draftRequired": true,
+    "referenceOnlyIssueLinks": {
+      "mode": "REFERENCE_ONLY",
+      "requiredReferenceLinesExactly": [
+        "Refs #706",
+        "Refs #707",
+        "Refs #708",
+        "Refs #714",
+        "Refs #781"
+      ],
+      "requiredDispositionLine": "All referenced issues remain open; this support-tooling Draft closes none.",
+      "closingKeywordsAllowed": false,
+      "fullGithubClosingKeywordFamilyBlocked": true,
+      "exceptionAppliesOnlyWhenExactLinesPresent": true
+    }
+  },
+  "runtime": {
+    "image": "postgres@sha256:eb3747f5d0a92195ca486d2f15d9a4ee5e9461b0332fe87fbc59069490a5c659",
+    "imageDigest": "eb3747f5d0a92195ca486d2f15d9a4ee5e9461b0332fe87fbc59069490a5c659",
+    "platform": "linux/amd64",
+    "networkMode": "none",
+    "hostAuthMethod": "trust",
+    "serverVersionNum": 150008,
+    "containerNameTemplate": "inverge-runtime-{githubRunId}-{githubRunAttempt}",
+    "databaseStorage": "disposable_tmpfs",
+    "tmpfsDestination": "/var/lib/postgresql/data",
+    "tmpfsMountCount": 1,
+    "tmpfsOptions": "rw,noexec,nosuid,nodev,size=536870912",
+    "bindOrVolumeMountCount": 0,
+    "repositoryCredentialsMounted": false,
+    "cloudCredentialsMounted": false,
+    "learnerOrPrivateDataMounted": false,
+    "remoteDatabaseMutationAllowed": false,
+    "supabaseContactAllowed": false,
+    "productionMutationAllowed": false
+  },
+  "membershipInputContract": {
+    "exactFields": [
+      "grantedRole",
+      "memberRole",
+      "grantorRole",
+      "adminOption"
+    ],
+    "unknownFieldsRejectedBeforeExecution": true,
+    "inheritanceSource": "member_role_attribute",
+    "setRoleReachabilitySource": "actual_postgresql_session"
+  },
+  "sourceIdentity": {
+    "securityAuthority": [
+      "fixture_id_or_repository_path",
+      "exact_utf8_byte_sha256",
+      "ordered_execution_step",
+      "pre_catalog_snapshot_digest",
+      "post_catalog_snapshot_digest"
+    ],
+    "parserLocationIsAuthority": false,
+    "postgresqlExecutionAndCatalogStateAreAuthority": true
+  },
+  "dynamicSql": {
+    "mode": "closed_fixture_only",
+    "supportedFixtureIds": [
+      "dynamic_explicit_policy"
+    ],
+    "arbitraryOpaqueBodies": "unsupported"
+  },
+  "snapshotCollections": [
+    "roles",
+    "memberships",
+    "defaultAcls",
+    "namespaces",
+    "relations",
+    "routines",
+    "types",
+    "policies"
+  ],
+  "artifactDigestKeys": [
+    "canonicalPostSnapshots",
+    "canonicalPreSnapshots",
+    "dockerImage",
+    "fixtureSet",
+    "focusedOracleTestSource",
+    "nativeProducerSource",
+    "nativeRuntimeGateSource",
+    "oracleEvidence",
+    "oracleManifest",
+    "oracleProducerSource",
+    "pullRequestHeadIdentity",
+    "qaValidationSource",
+    "runtimeInvocation",
+    "serverVersionNum",
+    "zeroNetworkDeclaration",
+    "zeroRemoteMutationDeclaration"
+  ],
+  "fixtureSetSha256": "6fd8734608981d2fbb630367ca34fd3c84c5bb10e955de75d779d5a08a3d72dd"
+}
