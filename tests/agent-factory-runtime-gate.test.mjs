@@ -42,6 +42,14 @@ import {
 import {
   readTextFileSync,
 } from "./platform-text.mjs";
+import {
+  ORACLE_ALLOWED_CHANGED_PATHS,
+  ORACLE_RUNTIME_REQUIRED_PATHS,
+  assertClosedOracleChangeSet,
+} from "../scripts/automation/wcv-c3-pre-p-postgresql-security-state-oracle.mjs";
+import {
+  runtimeRequiredPathRecords,
+} from "../scripts/automation/runtime-risk-contract.mjs";
 
 const WORKSPACE_ROOT = process.cwd();
 const SCRIPT = path.resolve(WORKSPACE_ROOT, "scripts/automation/runtime-gate.mjs");
@@ -924,4 +932,39 @@ test("producer grants the synthetic service role access to the isolated extensio
     /create extension pgcrypto with schema extensions;\s+grant usage on schema extensions to service_role;/,
   );
   assert.equal((bootstrap.match(/grant usage on schema extensions to service_role;/g) ?? []).length, 1);
+});
+
+test("PostgreSQL security-state oracle is a closed native adapter without changing the workflow", () => {
+  const producer = readTextFileSync(path.join(WORKSPACE_ROOT, "scripts/automation/produce-runtime-evidence.mjs"));
+  const gate = readTextFileSync(path.join(WORKSPACE_ROOT, "scripts/automation/runtime-gate.mjs"));
+  const workflow = readTextFileSync(WORKFLOW);
+  const risk = {
+    runtimeEvidenceRequired: true,
+    runtimeReasons: ORACLE_RUNTIME_REQUIRED_PATHS.map((filePath) => ({
+      path: filePath,
+      pattern: filePath,
+    })),
+    changedFiles: [...ORACLE_ALLOWED_CHANGED_PATHS],
+    changedFilesTruncated: false,
+  };
+  assert.equal(assertClosedOracleChangeSet(risk), true);
+  assert.deepEqual(
+    runtimeRequiredPathRecords(risk.changedFiles)
+      .filter(({ path: filePath }) => ORACLE_RUNTIME_REQUIRED_PATHS.includes(filePath))
+      .map(({ path: filePath }) => filePath)
+      .sort(),
+    ORACLE_RUNTIME_REQUIRED_PATHS,
+  );
+  assert.ok(
+    producer.indexOf("isOracleRiskCandidate(riskResult)") <
+      producer.indexOf("resolveTargetMigration(riskResult, context.headSha)"),
+  );
+  assert.ok(
+    gate.indexOf("isOracleRiskCandidate(riskResult)") <
+      gate.indexOf('assertExactKeys(evidence, TOP_LEVEL_KEYS, "runtime evidence")'),
+  );
+  assert.equal(
+    crypto.createHash("sha256").update(workflow).digest("hex"),
+    "529a28f0c644867acd0177e939bb768c708c7e8eb402fd0ae8e46646b0f6e90e",
+  );
 });
