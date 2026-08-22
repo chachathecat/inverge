@@ -1,0 +1,1110 @@
+{
+  "schemaVersion": "dabangil.wcv_c3.pre_c3r_p.migration_mutation_authority.v1",
+  "contractId": "C3RPMigrationMutationAuthorityV1",
+  "contractVersion": "1.0.0",
+  "status": "owner_approved_candidate_source_only_authority",
+  "authority": {
+    "decisionId": "owner_wcv_c3_pre_p_migration_mutation_authority_2026_08_22",
+    "decisionRecord": "docs/decisions/2026-08-22-owner-wcv-c3-pre-p-migration-mutation-authority.md",
+    "decisionDateKst": "2026-08-22",
+    "repository": "chachathecat/inverge",
+    "reconciledBaseSha": "5965ddb0202c5f9effb531824d4d95f775abecc1",
+    "reconciledBaseTree": "bcb1017b980a5175e45265080ba25bc4b25c51ff",
+    "authorityKind": "SOURCE_ONLY_CONTROL_PLANE_BRIDGE",
+    "isC3rStage": false,
+    "canonicalStageInserted": false,
+    "consumesOrAdvancesStageSelector": false,
+    "repositoryAuthorityEffectiveOn": "EXPECTED_HEAD_PINNED_SQUASH_MERGE_AND_VALIDATED_GITHUB_RECEIPT",
+    "migrationFileMutationPerformedByThisWork": false,
+    "exactProspectiveC3rPSourceOperationsAuthorizedAfterValidatedAuthorityReceipt": true,
+    "runtimeImplementationAuthorizedByThisWork": false,
+    "c3rPStartedByThisWork": false,
+    "remoteOperationAuthorizationCount": 0,
+    "successorRuntimeStartedByThisWork": false
+  },
+  "immutableUpstreamAuthority": {
+    "c3rA0ValidatedReceipt": {
+      "pullRequest": 785,
+      "reviewedHead": "f7f959368525f8a5895026f1361f6e13fd6226e0",
+      "reviewedTree": "543f8dfb5fdd026c1361e1a502376945912e6c5c",
+      "squashMergeSha": "3a7047cf4c7fc68247137bafbca2434abdadbc7f",
+      "resultingMainSha": "3a7047cf4c7fc68247137bafbca2434abdadbc7f",
+      "resultingMainTree": "543f8dfb5fdd026c1361e1a502376945912e6c5c",
+      "requiredChecksPassed": true,
+      "actionableCounts": {
+        "p0": 0,
+        "p1": 0,
+        "p2": 0
+      },
+      "unresolvedActionableThreads": 0
+    },
+    "c3rA0Artifacts": {
+      "decision": {
+        "path": "docs/decisions/2026-08-21-owner-wcv-c3r-a0-migration-dependency-authority.md",
+        "gitBlob": "8996f6c61f6cf0c5f7c908e97437a2f24bc65f8f",
+        "sha256": "f3be7b829539fa51c9037a58f05ed5a7c3fccbfcae28b3bb7b716330865b2ba6"
+      },
+      "manifest": {
+        "path": "config/dabangil-wcv-c3r-a0-migration-dependency-authority-v1.json",
+        "gitBlob": "49916703d0a144647d6abce8cc98971042a35e1c",
+        "sha256": "e6e6d741d47732137860c0efc5c0dddc6b75e54fbd0ed6f2b1bcbe88e9f9d8e9"
+      },
+      "analyzer": {
+        "path": "scripts/automation/wcv-c3r-a0-migration-dependency-closure.mjs",
+        "gitBlob": "23ba3b9f2af452b250cea0cbbbc5f135e8643b2d",
+        "sha256": "85751e62c300465b205f5e6d19357261af892a0072e06de2c4322258290fa6ec"
+      },
+      "focusedTest": {
+        "path": "tests/wcv-c3r-a0-migration-dependency-authority.test.mjs",
+        "gitBlob": "04c5e3254ac03712a0fde27ef068329299305c40",
+        "sha256": "fa7e388a0f785b41661ac4fff342de7afe9dc05e03dee0e7afb0d3548bc6daaa"
+      }
+    },
+    "c3rA1ValidatedReceipt": {
+      "pullRequest": 786,
+      "baseSha": "3a7047cf4c7fc68247137bafbca2434abdadbc7f",
+      "reviewedHead": "ff9dfbebea182d647daa84a349fcc50610f0ed1b",
+      "reviewedTree": "3c48da6fe991d8c02e3991e0a571b3b12139932c",
+      "squashMergeSha": "54afffcc539981ded65591f1f027171343bfce40",
+      "resultingMainSha": "54afffcc539981ded65591f1f027171343bfce40",
+      "resultingMainTree": "3c48da6fe991d8c02e3991e0a571b3b12139932c",
+      "requiredChecksPassed": true,
+      "formalReviewId": 5365845668,
+      "actionableCounts": {
+        "p0": 0,
+        "p1": 0,
+        "p2": 0
+      },
+      "unresolvedActionableThreads": 0
+    },
+    "c3rA1Artifacts": {
+      "decision": {
+        "path": "docs/decisions/2026-08-21-owner-wcv-c3r-a1-serial-program-authority.md",
+        "gitBlob": "21fc829df76c51dfa8a891f927fd79267e195e8f",
+        "sha256": "f7fc2722aa2afaa799994b3c7273b4511500e3f2d2fa45cb421396f56f114758"
+      },
+      "contract": {
+        "path": "config/dabangil-wcv-c3r-a1-serial-program-authority-v1.json",
+        "gitBlob": "4b8efb14ef58e7940c457c925f972f995066c677",
+        "sha256": "4219924c4ee7e36f6d0005c53660a76b32fbf82dae9fbf218b46d1f7e1397823"
+      },
+      "validation": {
+        "path": "docs/qa/wcv-c3r-a1-serial-program-authority-validation.md",
+        "gitBlob": "a73f235664a422adf9a247401f585b5bb55b587f",
+        "sha256": "c152b5c4fb1cc80d0c1813a6740d467caf067aeda4b0ffc220586598ae775f70"
+      },
+      "focusedTest": {
+        "path": "tests/wcv-c3r-a1-serial-program-authority.test.mjs",
+        "gitBlob": "45db6d4def9f2530dedad28966bf6dd40fdacdcf",
+        "sha256": "01cf1d99fdbc41d7063961ae21d8834e25c538a209bbccba543ca33f87fa4882"
+      }
+    },
+    "postgresqlOracleValidatedReceipt": {
+      "pullRequest": 794,
+      "baseSha": "54afffcc539981ded65591f1f027171343bfce40",
+      "reviewedHead": "10fb2b88746cbdf58b514390023ad3668527c871",
+      "reviewedTree": "bcb1017b980a5175e45265080ba25bc4b25c51ff",
+      "squashMergeSha": "5965ddb0202c5f9effb531824d4d95f775abecc1",
+      "resultingMainSha": "5965ddb0202c5f9effb531824d4d95f775abecc1",
+      "resultingMainTree": "bcb1017b980a5175e45265080ba25bc4b25c51ff",
+      "formalReviewId": 5000065404,
+      "runtimeGateRunId": 32570953881,
+      "runtimeArtifactId": 9475302162,
+      "runtimeArtifactSha256": "2be37ac692fcc51c7fde97c75a184e6e15d47c1ac42f08551e5a4fd8003a5c1b",
+      "requiredChecksPassed": true,
+      "actionableCounts": {
+        "p0": 0,
+        "p1": 0,
+        "p2": 0
+      },
+      "unresolvedActionableThreads": 0,
+      "serverVersionNum": 150008,
+      "fixtureCount": 61,
+      "fixtureSetSha256": "c9d375bfb68104457179a993a4ed5dfc80600b7bf0f4e2b93f3fb2562fc6ac0b"
+    },
+    "postgresqlOracleArtifacts": {
+      "manifest": {
+        "path": "config/dabangil-wcv-c3-pre-p-postgresql-security-state-oracle-v1.json",
+        "gitBlob": "9bdc0d4ffb0329399aba733aeeaba6024d10125d",
+        "sha256": "212b79314c822f4dd039e3c05667235ec04c5eb58d7a1186059282b7fdc75b03"
+      },
+      "validation": {
+        "path": "docs/qa/wcv-c3-pre-p-postgresql-security-state-oracle-validation.md",
+        "gitBlob": "ca587730ba8a12db63d89141b08ead5ce46f0299",
+        "sha256": "122e8c67f41443b2d39c4809290da82c5e51d33450fe7602fd060779388ee896"
+      },
+      "oracle": {
+        "path": "scripts/automation/wcv-c3-pre-p-postgresql-security-state-oracle.mjs",
+        "gitBlob": "0e98b4c250aaed30b5379c862d100c4318ddb111",
+        "sha256": "eb5558ec6e22649de9955b3f0ffb798caff637a05fc66ec8d67dce21a263f43b"
+      },
+      "focusedTest": {
+        "path": "tests/wcv-c3-pre-p-postgresql-security-state-oracle.test.mjs",
+        "gitBlob": "bf4d858a293dde12a04b82e3bd5be3b7c79ba9c8",
+        "sha256": "61c0fdef19efcda4aa6c3dc9aaae965fa19aea7ae73185f8a1f2edffebe6dcf4"
+      }
+    },
+    "a0RemainsHistoricalBaselineAuthority": true,
+    "a0RemainsDependencyAndOccurrenceAuthority": true,
+    "a0RemainsAuthorityForEveryUnlistedMigration": true,
+    "narrowSupersessionAppliesOnlyToAuthorizedOperationsAndAppend": true,
+    "a0ArtifactsMayBeEditedByThisWork": false,
+    "a1ArtifactsMayBeEditedByThisWork": false,
+    "oracleArtifactsMayBeEditedByThisWork": false
+  },
+  "currentMigrationBaseline": {
+    "authority": "C3R_A0_IMMUTABLE_25_FILE_HISTORICAL_BASELINE",
+    "baseSha": "5965ddb0202c5f9effb531824d4d95f775abecc1",
+    "baseTree": "bcb1017b980a5175e45265080ba25bc4b25c51ff",
+    "fileCount": 25,
+    "rawDigestAlgorithm": "SHA256_RAW_GIT_BLOB_BYTES",
+    "canonicalDigestAlgorithm": "SHA256_UTF8_WITH_CRLF_AND_CR_NORMALIZED_TO_LF",
+    "utf8Decoding": "FATAL_NO_BOM",
+    "lineCountDefinition": "CANONICAL_LOGICAL_LINES_EXCLUDING_TRAILING_EMPTY_SEGMENT",
+    "allFilesLfOnlyWithTrailingLf": true,
+    "records": [
+      {
+        "path": "supabase/migrations/20260422_inverge_service_core.sql",
+        "gitBlob": "c43b54082e51df5933d14a59cc68553611dbf18c",
+        "rawSha256": "7203fc06b5f76ffe28b6f9440515f93b46019f344820adf5744067ded377bbbf",
+        "byteCount": 10039,
+        "lineCount": 242,
+        "canonicalUtf8LfSha256": "7203fc06b5f76ffe28b6f9440515f93b46019f344820adf5744067ded377bbbf"
+      },
+      {
+        "path": "supabase/migrations/20260423_inverge_service_role_grants.sql",
+        "gitBlob": "04c0170befa93a51e56d0f431ca17ffa388b30f1",
+        "rawSha256": "3bd8cd68ed43c21d637f7558cebd56ddf9d7b4a5148f1f6dc8b7107058424683",
+        "byteCount": 2035,
+        "lineCount": 27,
+        "canonicalUtf8LfSha256": "3bd8cd68ed43c21d637f7558cebd56ddf9d7b4a5148f1f6dc8b7107058424683"
+      },
+      {
+        "path": "supabase/migrations/20260424_review_os_alpha.sql",
+        "gitBlob": "b9ee4b134fe6e64bf0a62df2af5cfb0b9bd614b4",
+        "rawSha256": "dc3a7d90509eb949cb5a7ef7bd871706fa90ab902261e815aee293018be86960",
+        "byteCount": 8850,
+        "lineCount": 213,
+        "canonicalUtf8LfSha256": "dc3a7d90509eb949cb5a7ef7bd871706fa90ab902261e815aee293018be86960"
+      },
+      {
+        "path": "supabase/migrations/20260426_review_os_study_logs.sql",
+        "gitBlob": "37a589fd6ce76cb9b4d7fc963a932f6b663589be",
+        "rawSha256": "c079b4f3891b4ca20b5151852090ea44913bf06a11bfd8efa954cd7f2a039bec",
+        "byteCount": 991,
+        "lineCount": 28,
+        "canonicalUtf8LfSha256": "c079b4f3891b4ca20b5151852090ea44913bf06a11bfd8efa954cd7f2a039bec"
+      },
+      {
+        "path": "supabase/migrations/20260427_study_logs_taxonomy_candidates.sql",
+        "gitBlob": "2f4dc97496871777f5eac9afb4e1ea564213e012",
+        "rawSha256": "dc1e0a72409c50ff5550897ac26c504da3f5831ca47f76250ac83a22b35a71d0",
+        "byteCount": 1044,
+        "lineCount": 24,
+        "canonicalUtf8LfSha256": "dc1e0a72409c50ff5550897ac26c504da3f5831ca47f76250ac83a22b35a71d0"
+      },
+      {
+        "path": "supabase/migrations/20260429_learning_signal_events.sql",
+        "gitBlob": "50690be53d69a7b6d0e028560b7fa6252ea32a7e",
+        "rawSha256": "53b3e70b86a7339e06667aebed5e72758fb7f59c15c5c7ad9a809187a76cb8ec",
+        "byteCount": 1226,
+        "lineCount": 30,
+        "canonicalUtf8LfSha256": "53b3e70b86a7339e06667aebed5e72758fb7f59c15c5c7ad9a809187a76cb8ec"
+      },
+      {
+        "path": "supabase/migrations/20260430_exam_archive.sql",
+        "gitBlob": "ce6dbfb6d7f032f6f07af54d82710f654281ca3d",
+        "rawSha256": "a540f24d8be0d9cef7f35321dc97989147f1fdca67a7b1328c5b594160a8acdd",
+        "byteCount": 2984,
+        "lineCount": 70,
+        "canonicalUtf8LfSha256": "a540f24d8be0d9cef7f35321dc97989147f1fdca67a7b1328c5b594160a8acdd"
+      },
+      {
+        "path": "supabase/migrations/20260605_create_personal_concept_nodes.sql",
+        "gitBlob": "5caa619abf2568b2122e985b483fcc86d0f5f06a",
+        "rawSha256": "fce87dbb71c2e72792c0a53f840c9c41fe620856c34d208e36c9ac5bcbdd8b61",
+        "byteCount": 4000,
+        "lineCount": 97,
+        "canonicalUtf8LfSha256": "fce87dbb71c2e72792c0a53f840c9c41fe620856c34d208e36c9ac5bcbdd8b61"
+      },
+      {
+        "path": "supabase/migrations/20260608_create_personal_learning_states.sql",
+        "gitBlob": "ca91420e3d2c4ca41a5c0f5683d97b15a7ca8af1",
+        "rawSha256": "13f290748149a6d1ede1b3894ca9bce3d3f79e198015918e5a4159b6c1c2b968",
+        "byteCount": 4892,
+        "lineCount": 123,
+        "canonicalUtf8LfSha256": "13f290748149a6d1ede1b3894ca9bce3d3f79e198015918e5a4159b6c1c2b968"
+      },
+      {
+        "path": "supabase/migrations/20260615_legal_grounding.sql",
+        "gitBlob": "160955292b0caf8c4dea01b47b52340ba2242acc",
+        "rawSha256": "fb585b9c2d96edfd696d2f03e0d4fc427597c7759ee6ab96de5a3dddf29d237e",
+        "byteCount": 10816,
+        "lineCount": 259,
+        "canonicalUtf8LfSha256": "fb585b9c2d96edfd696d2f03e0d4fc427597c7759ee6ab96de5a3dddf29d237e"
+      },
+      {
+        "path": "supabase/migrations/20260615_legal_article_chunk_identity.sql",
+        "gitBlob": "0d20d7f175d8f93a2215fcb141f17996395c5597",
+        "rawSha256": "03dce727ac9bca1ab290556583c33593c3ae6ee544b0c90cc8ff7e05aea6e29d",
+        "byteCount": 953,
+        "lineCount": 26,
+        "canonicalUtf8LfSha256": "03dce727ac9bca1ab290556583c33593c3ae6ee544b0c90cc8ff7e05aea6e29d"
+      },
+      {
+        "path": "supabase/migrations/20260615_legal_retrieval.sql",
+        "gitBlob": "6821a0a694f9d5b737ac104270826371980eb431",
+        "rawSha256": "d1ec08d0e3082e224c8da95c412636d83a0d4183df3a1ec4a1432f795b0154cc",
+        "byteCount": 4000,
+        "lineCount": 119,
+        "canonicalUtf8LfSha256": "d1ec08d0e3082e224c8da95c412636d83a0d4183df3a1ec4a1432f795b0154cc"
+      },
+      {
+        "path": "supabase/migrations/20260615_legal_grounding_guard.sql",
+        "gitBlob": "5971e1b961a7d096510902fdc40b04310a053ade",
+        "rawSha256": "436e741f78efc14fa7decd2c6f8c3eadf31f5acd4590df98c3eaad988493b642",
+        "byteCount": 3249,
+        "lineCount": 104,
+        "canonicalUtf8LfSha256": "436e741f78efc14fa7decd2c6f8c3eadf31f5acd4590df98c3eaad988493b642"
+      },
+      {
+        "path": "supabase/migrations/20260616_legal_grounding_guard_service_role_grant.sql",
+        "gitBlob": "f960965c3c3d058486b1edf12e8b0639c15d7f7a",
+        "rawSha256": "25e358828f3953b3cf793f7eeb645c816156e8bb89f5b7899d3c075de9594e13",
+        "byteCount": 415,
+        "lineCount": 6,
+        "canonicalUtf8LfSha256": "25e358828f3953b3cf793f7eeb645c816156e8bb89f5b7899d3c075de9594e13"
+      },
+      {
+        "path": "supabase/migrations/20260622_mobile_pwa_web_push_reminder.sql",
+        "gitBlob": "068d7a0685243f721af9f9760acc5c5555c24471",
+        "rawSha256": "3788b39e1cfd1de6496484bf1bcdd3bce62aba56280d6fd5a625dba61a398bf7",
+        "byteCount": 5391,
+        "lineCount": 107,
+        "canonicalUtf8LfSha256": "3788b39e1cfd1de6496484bf1bcdd3bce62aba56280d6fd5a625dba61a398bf7"
+      },
+      {
+        "path": "supabase/migrations/20260623_personal_concept_graph_atomic_transition.sql",
+        "gitBlob": "f039f29293a1baa840b764d3f6a62362a3620b71",
+        "rawSha256": "8f33722533a46dfa2784bc3140f2d9c07172260106265e49daabbf549ff9519c",
+        "byteCount": 18424,
+        "lineCount": 498,
+        "canonicalUtf8LfSha256": "8f33722533a46dfa2784bc3140f2d9c07172260106265e49daabbf549ff9519c"
+      },
+      {
+        "path": "supabase/migrations/202606232130_personal_concept_graph_rpc_only_write_boundary.sql",
+        "gitBlob": "c2f28006e399a9241c9556c14c042e67646be887",
+        "rawSha256": "57b2aa59f96f3ea294a7d7e0c46350c5c3cb330c53a301a2d57634f2f54a0a57",
+        "byteCount": 1120,
+        "lineCount": 23,
+        "canonicalUtf8LfSha256": "57b2aa59f96f3ea294a7d7e0c46350c5c3cb330c53a301a2d57634f2f54a0a57"
+      },
+      {
+        "path": "supabase/migrations/20260721060237_s233a_answer_review_persistence.sql",
+        "gitBlob": "a6b7ab9f8a4c02b275c554c6f6faa980fff97694",
+        "rawSha256": "07f8d60f6eb15f96647463ad4bbfa18f463296e801d0c77d732ffd1720890e75",
+        "byteCount": 21609,
+        "lineCount": 444,
+        "canonicalUtf8LfSha256": "07f8d60f6eb15f96647463ad4bbfa18f463296e801d0c77d732ffd1720890e75"
+      },
+      {
+        "path": "supabase/migrations/20260730025332_s236p_lean_owner_private.sql",
+        "gitBlob": "24daf5f60e9ded267820724a113ea8f15baca923",
+        "rawSha256": "476ef1b0d6a100fb6e4803b812b049b44252ca5f25301d3f781cee8827b1545b",
+        "byteCount": 21073,
+        "lineCount": 636,
+        "canonicalUtf8LfSha256": "476ef1b0d6a100fb6e4803b812b049b44252ca5f25301d3f781cee8827b1545b"
+      },
+      {
+        "path": "supabase/migrations/20260730060233_s236p_owner_private_lifecycle_hardening.sql",
+        "gitBlob": "bc51b271b8c3631e40855bda690c4927bf2d614f",
+        "rawSha256": "e20440dfa0d880ad591b8c9fdff287cd66fcdbbe4f96f07a549a730fd8920de1",
+        "byteCount": 13691,
+        "lineCount": 419,
+        "canonicalUtf8LfSha256": "e20440dfa0d880ad591b8c9fdff287cd66fcdbbe4f96f07a549a730fd8920de1"
+      },
+      {
+        "path": "supabase/migrations/20260730065744_s236p_owner_private_authenticated_download_info.sql",
+        "gitBlob": "8b756778dfa91620cf5c89cf7a370d28ab1f998a",
+        "rawSha256": "632cc7ee563aa29a573425e396f6f539e35a3c8834955ba66ccd01723bb3cbcb",
+        "byteCount": 1068,
+        "lineCount": 30,
+        "canonicalUtf8LfSha256": "632cc7ee563aa29a573425e396f6f539e35a3c8834955ba66ccd01723bb3cbcb"
+      },
+      {
+        "path": "supabase/migrations/20260730151052_s236p_owner_private_expiry_read_gate.sql",
+        "gitBlob": "f1a756b3f5c433a7cb64c9e3fe22098ce4ac73cc",
+        "rawSha256": "416fa80acea48bf4d170661a4f5259632b4d9e3fd740007bd65cbf1ded6103f1",
+        "byteCount": 2705,
+        "lineCount": 64,
+        "canonicalUtf8LfSha256": "416fa80acea48bf4d170661a4f5259632b4d9e3fd740007bd65cbf1ded6103f1"
+      },
+      {
+        "path": "supabase/migrations/20260817090000_c2r_c_p_structured_practice_proof.sql",
+        "gitBlob": "cd62e80131d8c047f9a122e0a394093920fcd909",
+        "rawSha256": "012041613e99df02a2933364d5b5f78d92d8b20a1b67a837ca1f2c4eb7640e74",
+        "byteCount": 21978,
+        "lineCount": 706,
+        "canonicalUtf8LfSha256": "012041613e99df02a2933364d5b5f78d92d8b20a1b67a837ca1f2c4eb7640e74"
+      },
+      {
+        "path": "supabase/migrations/20260817113000_c2r_c_t_structural_theory_proof.sql",
+        "gitBlob": "cdb8f5ee91f57e244e34a8c21f409681639894a4",
+        "rawSha256": "819275ebda058f1a9001871ece18efca466323db9306adb7b637d01d2dc25e08",
+        "byteCount": 16059,
+        "lineCount": 396,
+        "canonicalUtf8LfSha256": "819275ebda058f1a9001871ece18efca466323db9306adb7b637d01d2dc25e08"
+      },
+      {
+        "path": "supabase/migrations/20260817170000_c2r_c_l_exact_law_applicability.sql",
+        "gitBlob": "9284a2295f8bd77f04f78ea3de97027e6c01a1ee",
+        "rawSha256": "a850e29ec2a94e7b5bb1f99c8157b99afc590e1dcb22c45f2e57f1c5b4323075",
+        "byteCount": 6631,
+        "lineCount": 126,
+        "canonicalUtf8LfSha256": "a850e29ec2a94e7b5bb1f99c8157b99afc590e1dcb22c45f2e57f1c5b4323075"
+      }
+    ]
+  },
+  "authorizedExistingPathOperations": {
+    "operationCountExactly": 7,
+    "renameCountExactly": 6,
+    "contentRepairCountExactly": 2,
+    "renameOnlyCountExactly": 5,
+    "inPlaceRepairCountExactly": 1,
+    "deleteCountExactly": 0,
+    "records": [
+      {
+        "operationId": "PERSONAL_LEARNING_STATE_RENAME_AND_RECURSIVE_CTE_REPAIR",
+        "operationKind": "RENAME_AND_EXACT_CONTENT_REPAIR",
+        "currentPath": "supabase/migrations/20260608_create_personal_learning_states.sql",
+        "futurePath": "supabase/migrations/20260608090000_create_personal_learning_states.sql",
+        "remoteClassification": "UNKNOWN",
+        "currentEvidence": {
+          "gitBlob": "ca91420e3d2c4ca41a5c0f5683d97b15a7ca8af1",
+          "rawSha256": "13f290748149a6d1ede1b3894ca9bce3d3f79e198015918e5a4159b6c1c2b968",
+          "byteCount": 4892,
+          "lineCount": 123,
+          "canonicalUtf8LfSha256": "13f290748149a6d1ede1b3894ca9bce3d3f79e198015918e5a4159b6c1c2b968"
+        },
+        "futureEvidence": {
+          "gitBlob": "bd305ec8c4e55510f9faeded7cf2594513e71055",
+          "rawSha256": "957fb9810283086e75ce34689b3eee2c2d3be4373dc341056630db716457b815",
+          "byteCount": 4991,
+          "lineCount": 125,
+          "canonicalUtf8LfSha256": "957fb9810283086e75ce34689b3eee2c2d3be4373dc341056630db716457b815"
+        },
+        "permittedTransformation": "REPLACE_ONLY_MULTIPLE_RECURSIVE_ARMS_WITH_ONE_LATERAL_UNION_RECURSIVE_TERM",
+        "semanticInvariantsExactly": [
+          "ONE_POSTGRESQL_15_8_VALID_RECURSIVE_TERM",
+          "INTENDED_OBJECT_AND_ARRAY_KEY_TRAVERSAL_PRESERVED",
+          "FORBIDDEN_KEY_REGEX_AND_BEHAVIOR_NOT_WIDENED",
+          "EXTENSION_FUNCTION_IDENTITY_SIGNATURE_RETURN_LANGUAGE_VOLATILITY_UNCHANGED",
+          "TABLE_SHAPE_CONSTRAINTS_INDEXES_GRANTS_POLICIES_UNCHANGED",
+          "HISTORICAL_RLS_ENABLED_AND_NOT_FORCED_UNCHANGED_UNTIL_SEPARATELY_DECLARED_APPEND_HARDENING"
+        ],
+        "remoteReconciliationPacketRequiredBeforeDeploymentDecision": true,
+        "sourceLocalFreshHistoryOnly": true,
+        "futureDerivation": {
+          "method": "REPLACE_EXACT_SINGLE_OCCURRENCE_CANONICAL_UTF8_LF_SEGMENT",
+          "oldSegmentBase64": "ICB3aXRoIHJlY3Vyc2l2ZSB3YWxrKGtleSwgY2hpbGQpIGFzICgKICAgIHNlbGVjdCBudWxsOjp0ZXh0IGFzIGtleSwgdmFsdWUgYXMgY2hpbGQKICAgIHVuaW9uIGFsbAogICAgc2VsZWN0IGVudHJpZXMua2V5LCBlbnRyaWVzLnZhbHVlCiAgICBmcm9tIHdhbGsKICAgIGNyb3NzIGpvaW4gbGF0ZXJhbCBqc29uYl9lYWNoKAogICAgICBjYXNlIHdoZW4ganNvbmJfdHlwZW9mKHdhbGsuY2hpbGQpID0gJ29iamVjdCcgdGhlbiB3YWxrLmNoaWxkIGVsc2UgJ3t9Jzo6anNvbmIgZW5kCiAgICApIGFzIGVudHJpZXMoa2V5LCB2YWx1ZSkKICAgIHVuaW9uIGFsbAogICAgc2VsZWN0IG51bGw6OnRleHQgYXMga2V5LCBlbGVtZW50cy52YWx1ZQogICAgZnJvbSB3YWxrCiAgICBjcm9zcyBqb2luIGxhdGVyYWwganNvbmJfYXJyYXlfZWxlbWVudHMoCiAgICAgIGNhc2Ugd2hlbiBqc29uYl90eXBlb2Yod2Fsay5jaGlsZCkgPSAnYXJyYXknIHRoZW4gd2Fsay5jaGlsZCBlbHNlICdbXSc6Ompzb25iIGVuZAogICAgKSBhcyBlbGVtZW50cyh2YWx1ZSkKICApCg==",
+          "replacementSegmentBase64": "ICB3aXRoIHJlY3Vyc2l2ZSB3YWxrKGtleSwgY2hpbGQpIGFzICgKICAgIHNlbGVjdCBudWxsOjp0ZXh0IGFzIGtleSwgdmFsdWUgYXMgY2hpbGQKICAgIHVuaW9uIGFsbAogICAgc2VsZWN0IGVudHJpZXMua2V5LCBlbnRyaWVzLnZhbHVlCiAgICBmcm9tIHdhbGsKICAgIGNyb3NzIGpvaW4gbGF0ZXJhbCAoCiAgICAgIHNlbGVjdCBvYmplY3RfZW50cmllcy5rZXksIG9iamVjdF9lbnRyaWVzLnZhbHVlCiAgICAgIGZyb20ganNvbmJfZWFjaCgKICAgICAgICBjYXNlIHdoZW4ganNvbmJfdHlwZW9mKHdhbGsuY2hpbGQpID0gJ29iamVjdCcgdGhlbiB3YWxrLmNoaWxkIGVsc2UgJ3t9Jzo6anNvbmIgZW5kCiAgICAgICkgYXMgb2JqZWN0X2VudHJpZXMoa2V5LCB2YWx1ZSkKICAgICAgdW5pb24gYWxsCiAgICAgIHNlbGVjdCBudWxsOjp0ZXh0IGFzIGtleSwgYXJyYXlfZW50cmllcy52YWx1ZQogICAgICBmcm9tIGpzb25iX2FycmF5X2VsZW1lbnRzKAogICAgICAgIGNhc2Ugd2hlbiBqc29uYl90eXBlb2Yod2Fsay5jaGlsZCkgPSAnYXJyYXknIHRoZW4gd2Fsay5jaGlsZCBlbHNlICdbXSc6Ompzb25iIGVuZAogICAgICApIGFzIGFycmF5X2VudHJpZXModmFsdWUpCiAgICApIGFzIGVudHJpZXMoa2V5LCB2YWx1ZSkKICApCg==",
+          "oldSegmentSha256": "4f05da76d509957a1840ed82390c24170dd5873a1373ad867648a4e0b0e47399",
+          "replacementSegmentSha256": "ad63500c792da1cdc545a97c4ed7f23e54f3972609270c7b6da3998f8d7fbcbb"
+        }
+      },
+      {
+        "operationId": "LEGAL_GROUNDING_RENAME",
+        "operationKind": "RENAME_ONLY",
+        "currentPath": "supabase/migrations/20260615_legal_grounding.sql",
+        "futurePath": "supabase/migrations/20260615090000_legal_grounding.sql",
+        "remoteClassification": "UNKNOWN",
+        "currentEvidence": {
+          "gitBlob": "160955292b0caf8c4dea01b47b52340ba2242acc",
+          "rawSha256": "fb585b9c2d96edfd696d2f03e0d4fc427597c7759ee6ab96de5a3dddf29d237e",
+          "byteCount": 10816,
+          "lineCount": 259,
+          "canonicalUtf8LfSha256": "fb585b9c2d96edfd696d2f03e0d4fc427597c7759ee6ab96de5a3dddf29d237e"
+        },
+        "futureEvidence": {
+          "gitBlob": "160955292b0caf8c4dea01b47b52340ba2242acc",
+          "rawSha256": "fb585b9c2d96edfd696d2f03e0d4fc427597c7759ee6ab96de5a3dddf29d237e",
+          "byteCount": 10816,
+          "lineCount": 259,
+          "canonicalUtf8LfSha256": "fb585b9c2d96edfd696d2f03e0d4fc427597c7759ee6ab96de5a3dddf29d237e"
+        },
+        "futureCanonicalBytesMustEqualCurrentExactly": true,
+        "remoteReconciliationPacketRequiredBeforeDeploymentDecision": true,
+        "sourceLocalFreshHistoryOnly": true
+      },
+      {
+        "operationId": "LEGAL_ARTICLE_IDENTITY_RENAME",
+        "operationKind": "RENAME_ONLY",
+        "currentPath": "supabase/migrations/20260615_legal_article_chunk_identity.sql",
+        "futurePath": "supabase/migrations/20260615100000_legal_article_chunk_identity.sql",
+        "remoteClassification": "UNKNOWN",
+        "currentEvidence": {
+          "gitBlob": "0d20d7f175d8f93a2215fcb141f17996395c5597",
+          "rawSha256": "03dce727ac9bca1ab290556583c33593c3ae6ee544b0c90cc8ff7e05aea6e29d",
+          "byteCount": 953,
+          "lineCount": 26,
+          "canonicalUtf8LfSha256": "03dce727ac9bca1ab290556583c33593c3ae6ee544b0c90cc8ff7e05aea6e29d"
+        },
+        "futureEvidence": {
+          "gitBlob": "0d20d7f175d8f93a2215fcb141f17996395c5597",
+          "rawSha256": "03dce727ac9bca1ab290556583c33593c3ae6ee544b0c90cc8ff7e05aea6e29d",
+          "byteCount": 953,
+          "lineCount": 26,
+          "canonicalUtf8LfSha256": "03dce727ac9bca1ab290556583c33593c3ae6ee544b0c90cc8ff7e05aea6e29d"
+        },
+        "futureCanonicalBytesMustEqualCurrentExactly": true,
+        "remoteReconciliationPacketRequiredBeforeDeploymentDecision": true,
+        "sourceLocalFreshHistoryOnly": true
+      },
+      {
+        "operationId": "LEGAL_RETRIEVAL_RENAME",
+        "operationKind": "RENAME_ONLY",
+        "currentPath": "supabase/migrations/20260615_legal_retrieval.sql",
+        "futurePath": "supabase/migrations/20260615110000_legal_retrieval.sql",
+        "remoteClassification": "UNKNOWN",
+        "currentEvidence": {
+          "gitBlob": "6821a0a694f9d5b737ac104270826371980eb431",
+          "rawSha256": "d1ec08d0e3082e224c8da95c412636d83a0d4183df3a1ec4a1432f795b0154cc",
+          "byteCount": 4000,
+          "lineCount": 119,
+          "canonicalUtf8LfSha256": "d1ec08d0e3082e224c8da95c412636d83a0d4183df3a1ec4a1432f795b0154cc"
+        },
+        "futureEvidence": {
+          "gitBlob": "6821a0a694f9d5b737ac104270826371980eb431",
+          "rawSha256": "d1ec08d0e3082e224c8da95c412636d83a0d4183df3a1ec4a1432f795b0154cc",
+          "byteCount": 4000,
+          "lineCount": 119,
+          "canonicalUtf8LfSha256": "d1ec08d0e3082e224c8da95c412636d83a0d4183df3a1ec4a1432f795b0154cc"
+        },
+        "futureCanonicalBytesMustEqualCurrentExactly": true,
+        "remoteReconciliationPacketRequiredBeforeDeploymentDecision": true,
+        "sourceLocalFreshHistoryOnly": true
+      },
+      {
+        "operationId": "LEGAL_GROUNDING_GUARD_RENAME",
+        "operationKind": "RENAME_ONLY",
+        "currentPath": "supabase/migrations/20260615_legal_grounding_guard.sql",
+        "futurePath": "supabase/migrations/20260615120000_legal_grounding_guard.sql",
+        "remoteClassification": "UNKNOWN",
+        "currentEvidence": {
+          "gitBlob": "5971e1b961a7d096510902fdc40b04310a053ade",
+          "rawSha256": "436e741f78efc14fa7decd2c6f8c3eadf31f5acd4590df98c3eaad988493b642",
+          "byteCount": 3249,
+          "lineCount": 104,
+          "canonicalUtf8LfSha256": "436e741f78efc14fa7decd2c6f8c3eadf31f5acd4590df98c3eaad988493b642"
+        },
+        "futureEvidence": {
+          "gitBlob": "5971e1b961a7d096510902fdc40b04310a053ade",
+          "rawSha256": "436e741f78efc14fa7decd2c6f8c3eadf31f5acd4590df98c3eaad988493b642",
+          "byteCount": 3249,
+          "lineCount": 104,
+          "canonicalUtf8LfSha256": "436e741f78efc14fa7decd2c6f8c3eadf31f5acd4590df98c3eaad988493b642"
+        },
+        "futureCanonicalBytesMustEqualCurrentExactly": true,
+        "remoteReconciliationPacketRequiredBeforeDeploymentDecision": true,
+        "sourceLocalFreshHistoryOnly": true
+      },
+      {
+        "operationId": "LEGAL_GUARD_SERVICE_ROLE_GRANT_RENAME",
+        "operationKind": "RENAME_ONLY",
+        "currentPath": "supabase/migrations/20260616_legal_grounding_guard_service_role_grant.sql",
+        "futurePath": "supabase/migrations/20260616100000_legal_grounding_guard_service_role_grant.sql",
+        "remoteClassification": "UNKNOWN",
+        "currentEvidence": {
+          "gitBlob": "f960965c3c3d058486b1edf12e8b0639c15d7f7a",
+          "rawSha256": "25e358828f3953b3cf793f7eeb645c816156e8bb89f5b7899d3c075de9594e13",
+          "byteCount": 415,
+          "lineCount": 6,
+          "canonicalUtf8LfSha256": "25e358828f3953b3cf793f7eeb645c816156e8bb89f5b7899d3c075de9594e13"
+        },
+        "futureEvidence": {
+          "gitBlob": "f960965c3c3d058486b1edf12e8b0639c15d7f7a",
+          "rawSha256": "25e358828f3953b3cf793f7eeb645c816156e8bb89f5b7899d3c075de9594e13",
+          "byteCount": 415,
+          "lineCount": 6,
+          "canonicalUtf8LfSha256": "25e358828f3953b3cf793f7eeb645c816156e8bb89f5b7899d3c075de9594e13"
+        },
+        "futureCanonicalBytesMustEqualCurrentExactly": true,
+        "remoteReconciliationPacketRequiredBeforeDeploymentDecision": true,
+        "sourceLocalFreshHistoryOnly": true
+      },
+      {
+        "operationId": "PERSONAL_CONCEPT_EARLY_BOUNDARY_COMPATIBILITY_REPAIR",
+        "operationKind": "IN_PLACE_EXACT_CONTENT_REPAIR",
+        "currentPath": "supabase/migrations/202606232130_personal_concept_graph_rpc_only_write_boundary.sql",
+        "futurePath": "supabase/migrations/202606232130_personal_concept_graph_rpc_only_write_boundary.sql",
+        "remoteClassification": "KNOWN_APPLIED",
+        "currentEvidence": {
+          "gitBlob": "c2f28006e399a9241c9556c14c042e67646be887",
+          "rawSha256": "57b2aa59f96f3ea294a7d7e0c46350c5c3cb330c53a301a2d57634f2f54a0a57",
+          "byteCount": 1120,
+          "lineCount": 23,
+          "canonicalUtf8LfSha256": "57b2aa59f96f3ea294a7d7e0c46350c5c3cb330c53a301a2d57634f2f54a0a57"
+        },
+        "futureEvidence": {
+          "gitBlob": "301b713c16880807e21a11b770f7575e3701e312",
+          "rawSha256": "f5feb973cbc25cd8392158daf4f4c58227a776266f8b4f196c1f253eda39ee92",
+          "byteCount": 829,
+          "lineCount": 14,
+          "canonicalUtf8LfSha256": "f5feb973cbc25cd8392158daf4f4c58227a776266f8b4f196c1f253eda39ee92"
+        },
+        "futureCanonicalUtf8LfBase64": "LS0gUGVyc29uYWwgQ29uY2VwdCBHcmFwaCBlYXJseSB3cml0ZS1ib3VuZGFyeSBjb21wYXRpYmlsaXR5IHYxLgotLSBGcmVzaC1oaXN0b3J5IHJlcGxheSByZWFjaGVzIHRoaXMgZmlsZSBiZWZvcmUgdGhlIHRyYW5zaXRpb24tZnVuY3Rpb24gcHJvZHVjZXIuCi0tIFRoaXMgc3RlcCByZW1vdmVzIGRpcmVjdCBhdXRoZW50aWNhdGVkIHdyaXRlcyBidXQgZG9lcyBub3QgaW5zdGFsbCBvciBjbGFpbSB0aGUKLS0gZmluYWwgUlBDLW9ubHkgZnVuY3Rpb24gcHJpdmlsZWdlIGJvdW5kYXJ5LiBUaGUgc29sZSBsYXRlciBDM1ItUCBhcHBlbmQgbXVzdAotLSByZWFzc2VydCB0aGF0IGJvdW5kYXJ5IGFmdGVyIHRoZSBwcm9kdWNlciBleGlzdHMuCgpyZXZva2UgaW5zZXJ0LCB1cGRhdGUgb24gdGFibGUgcHVibGljLnBlcnNvbmFsX2NvbmNlcHRfbm9kZXMgZnJvbSBhdXRoZW50aWNhdGVkOwoKLS0gUHJlc2VydmUgZHVyYWJsZSByZWFkcyBhbmQgdXNlci1vd25lZCBjbGVhbnVwL2RlbGV0aW9uOyBuZWl0aGVyIHBlcm1pc3Npb24gaXMKLS0gYSBkaXJlY3QgY29uY2VwdC1zdGF0ZSB3cml0ZSBwYXRoLgpncmFudCBzZWxlY3QsIGRlbGV0ZSBvbiB0YWJsZSBwdWJsaWMucGVyc29uYWxfY29uY2VwdF9ub2RlcyB0byBhdXRoZW50aWNhdGVkOwoKZHJvcCBwb2xpY3kgaWYgZXhpc3RzICJwZXJzb25hbF9jb25jZXB0X25vZGVzX2luc2VydF9vd24iIG9uIHB1YmxpYy5wZXJzb25hbF9jb25jZXB0X25vZGVzOwpkcm9wIHBvbGljeSBpZiBleGlzdHMgInBlcnNvbmFsX2NvbmNlcHRfbm9kZXNfdXBkYXRlX293biIgb24gcHVibGljLnBlcnNvbmFsX2NvbmNlcHRfbm9kZXM7Cg==",
+        "permittedTransformation": "REMOVE_PRE_PRODUCER_FUNCTION_ACL_REFERENCES_AND_RETAIN_ONLY_SAFE_TABLE_POLICY_COMPATIBILITY_STEP",
+        "semanticInvariantsExactly": [
+          "CURRENT_LEDGER_FILENAME_IDENTITY_PRESERVED",
+          "SAFE_WHEN_TRANSITION_FUNCTION_PRODUCER_HAS_NOT_EXECUTED",
+          "NO_PUBLIC_ANON_OR_AUTHENTICATED_DIRECT_WRITE_GRANT",
+          "DURABLE_AUTHENTICATED_SELECT_AND_DELETE_PRESERVED",
+          "FINAL_RPC_ONLY_FUNCTION_PRIVILEGE_BOUNDARY_NOT_CLAIMED",
+          "SOLE_C3R_P_APPEND_MUST_REASSERT_FINAL_RPC_ONLY_BOUNDARY_AFTER_PRODUCER"
+        ],
+        "finalAppendTransitionFunctionIdentityExactly": "public.transition_personal_concept_node_v1(text,text,text,text,text,text,text,text,integer,timestamptz)",
+        "finalAppendTransitionFunctionCatalogIdentityExactly": "public.transition_personal_concept_node_v1(text,text,text,text,text,text,text,text,integer,timestamp with time zone)",
+        "finalAppendTransitionFunctionAclStatementsExactly": [
+          "REVOKE_EXECUTE_FROM_PUBLIC",
+          "REVOKE_EXECUTE_FROM_ANON",
+          "GRANT_EXECUTE_TO_AUTHENTICATED"
+        ],
+        "finalAppendTransitionFunctionExplicitGranteesExactly": [
+          "authenticated"
+        ],
+        "historicalRemoteLedgerIdentityMustRemainUntouched": true,
+        "repairedHistoricalSourceMayBeReplayedRemotely": false,
+        "remoteHistoryTableMutationAuthorized": false,
+        "sourceLocalFreshHistoryOnly": true
+      }
+    ]
+  },
+  "frozenAppendAuthority": {
+    "appendCountExactly": 1,
+    "path": "supabase/migrations/20260822120000_c3r_p_practice_common_durable_substrate.sql",
+    "version": "20260822120000",
+    "versionFormat": "EXACT_14_DIGIT",
+    "versionMustBeGreaterThan": "20260817170000",
+    "pathAbsentAtAuthorityBase": true,
+    "migrationFileCreatedByThisWork": false,
+    "purposeExactly": [
+      "C3R_P_PRACTICE_COMMON_DURABLE_SUBSTRATE",
+      "C3R_P_DURABLE_SCHEMA_AND_SERVICE_ONLY_RPC_BOUNDARY",
+      "FORCED_RLS",
+      "PRACTICE_COMMON_DURABLE_LEARNING_PERSISTENCE",
+      "FINAL_PERSONAL_CONCEPT_RPC_ONLY_BOUNDARY_REASSERTION"
+    ],
+    "newDurableRelationAclGranteesAllowedExactly": [
+      "service_role"
+    ],
+    "newDurablePolicyRolesExactly": [
+      "service_role"
+    ],
+    "newDurableRoutineAclGranteesExactly": [
+      "service_role"
+    ],
+    "multiObjectPrivilegeStatementsAuthorized": false,
+    "executableRoutineBodyScopeExactly": "PRACTICE_COMMON_ONLY",
+    "forbiddenCrossSubjectBodyMarkersExactly": [
+      "theory",
+      "law",
+      "legal",
+      "이론",
+      "법규",
+      "법령"
+    ],
+    "dynamicSqlInAppendRoutineBodiesAuthorized": false,
+    "appendRoutineBodiesMustBeDollarQuotedExactly": true,
+    "appendRoutineBodyLanguagesAllowedExactly": [
+      "sql",
+      "plpgsql"
+    ],
+    "destructiveDropAuthorized": false,
+    "theoryOutcomeAuthorized": false,
+    "lawOutcomeAuthorized": false,
+    "futureSqlSha256AtAuthorityTime": null,
+    "futureReceiptRequiresNonemptySqlSha256": true,
+    "futureReceiptRequiresExactCandidateHeadPin": true,
+    "futureReceiptRequiresTwoFreshIsolatedResetReplayCycles": true,
+    "futureReceiptRequiresMergedPostgresqlOracle": true,
+    "secondAppendAllowed": false,
+    "remoteApplicationAuthorized": false,
+    "remoteMigrationHistoryRepairAuthorized": false
+  },
+  "effectiveMigrationInventoryAuthority": {
+    "formula": "A0_25_MINUS_6_OLD_RENAME_PATHS_PLUS_6_NEW_RENAME_PATHS_WITH_1_IN_PLACE_DIGEST_REPLACEMENT_NET_ZERO_PLUS_1_FROZEN_APPEND",
+    "baselineCount": 25,
+    "renamedOldPathRemovalCount": 6,
+    "renamedNewPathAdditionCount": 6,
+    "inPlaceRepairNetCount": 0,
+    "appendAdditionCount": 1,
+    "deleteCount": 0,
+    "expectedEffectiveCount": 26,
+    "orderingRule": "SUPABASE_FILENAME_LEXICOGRAPHIC",
+    "unchangedPathsExactly": [
+      "supabase/migrations/20260422_inverge_service_core.sql",
+      "supabase/migrations/20260423_inverge_service_role_grants.sql",
+      "supabase/migrations/20260424_review_os_alpha.sql",
+      "supabase/migrations/20260426_review_os_study_logs.sql",
+      "supabase/migrations/20260427_study_logs_taxonomy_candidates.sql",
+      "supabase/migrations/20260429_learning_signal_events.sql",
+      "supabase/migrations/20260430_exam_archive.sql",
+      "supabase/migrations/20260605_create_personal_concept_nodes.sql",
+      "supabase/migrations/20260622_mobile_pwa_web_push_reminder.sql",
+      "supabase/migrations/20260623_personal_concept_graph_atomic_transition.sql",
+      "supabase/migrations/20260721060237_s233a_answer_review_persistence.sql",
+      "supabase/migrations/20260730025332_s236p_lean_owner_private.sql",
+      "supabase/migrations/20260730060233_s236p_owner_private_lifecycle_hardening.sql",
+      "supabase/migrations/20260730065744_s236p_owner_private_authenticated_download_info.sql",
+      "supabase/migrations/20260730151052_s236p_owner_private_expiry_read_gate.sql",
+      "supabase/migrations/20260817090000_c2r_c_p_structured_practice_proof.sql",
+      "supabase/migrations/20260817113000_c2r_c_t_structural_theory_proof.sql",
+      "supabase/migrations/20260817170000_c2r_c_l_exact_law_applicability.sql"
+    ],
+    "effectivePathsExactly": [
+      "supabase/migrations/20260422_inverge_service_core.sql",
+      "supabase/migrations/20260423_inverge_service_role_grants.sql",
+      "supabase/migrations/20260424_review_os_alpha.sql",
+      "supabase/migrations/20260426_review_os_study_logs.sql",
+      "supabase/migrations/20260427_study_logs_taxonomy_candidates.sql",
+      "supabase/migrations/20260429_learning_signal_events.sql",
+      "supabase/migrations/20260430_exam_archive.sql",
+      "supabase/migrations/20260605_create_personal_concept_nodes.sql",
+      "supabase/migrations/20260608090000_create_personal_learning_states.sql",
+      "supabase/migrations/20260615090000_legal_grounding.sql",
+      "supabase/migrations/20260615100000_legal_article_chunk_identity.sql",
+      "supabase/migrations/20260615110000_legal_retrieval.sql",
+      "supabase/migrations/20260615120000_legal_grounding_guard.sql",
+      "supabase/migrations/20260616100000_legal_grounding_guard_service_role_grant.sql",
+      "supabase/migrations/20260622_mobile_pwa_web_push_reminder.sql",
+      "supabase/migrations/202606232130_personal_concept_graph_rpc_only_write_boundary.sql",
+      "supabase/migrations/20260623_personal_concept_graph_atomic_transition.sql",
+      "supabase/migrations/20260721060237_s233a_answer_review_persistence.sql",
+      "supabase/migrations/20260730025332_s236p_lean_owner_private.sql",
+      "supabase/migrations/20260730060233_s236p_owner_private_lifecycle_hardening.sql",
+      "supabase/migrations/20260730065744_s236p_owner_private_authenticated_download_info.sql",
+      "supabase/migrations/20260730151052_s236p_owner_private_expiry_read_gate.sql",
+      "supabase/migrations/20260817090000_c2r_c_p_structured_practice_proof.sql",
+      "supabase/migrations/20260817113000_c2r_c_t_structural_theory_proof.sql",
+      "supabase/migrations/20260817170000_c2r_c_l_exact_law_applicability.sql",
+      "supabase/migrations/20260822120000_c3r_p_practice_common_durable_substrate.sql"
+    ],
+    "appendRequiredDependencyPredecessorsExactly": [
+      "supabase/migrations/20260422_inverge_service_core.sql",
+      "supabase/migrations/20260423_inverge_service_role_grants.sql",
+      "supabase/migrations/20260424_review_os_alpha.sql",
+      "supabase/migrations/20260426_review_os_study_logs.sql",
+      "supabase/migrations/20260427_study_logs_taxonomy_candidates.sql",
+      "supabase/migrations/20260429_learning_signal_events.sql",
+      "supabase/migrations/20260430_exam_archive.sql",
+      "supabase/migrations/20260605_create_personal_concept_nodes.sql",
+      "supabase/migrations/20260608090000_create_personal_learning_states.sql",
+      "supabase/migrations/20260615090000_legal_grounding.sql",
+      "supabase/migrations/20260615100000_legal_article_chunk_identity.sql",
+      "supabase/migrations/20260615110000_legal_retrieval.sql",
+      "supabase/migrations/20260615120000_legal_grounding_guard.sql",
+      "supabase/migrations/20260616100000_legal_grounding_guard_service_role_grant.sql",
+      "supabase/migrations/20260622_mobile_pwa_web_push_reminder.sql",
+      "supabase/migrations/202606232130_personal_concept_graph_rpc_only_write_boundary.sql",
+      "supabase/migrations/20260623_personal_concept_graph_atomic_transition.sql",
+      "supabase/migrations/20260721060237_s233a_answer_review_persistence.sql",
+      "supabase/migrations/20260730025332_s236p_lean_owner_private.sql",
+      "supabase/migrations/20260730060233_s236p_owner_private_lifecycle_hardening.sql",
+      "supabase/migrations/20260730065744_s236p_owner_private_authenticated_download_info.sql",
+      "supabase/migrations/20260730151052_s236p_owner_private_expiry_read_gate.sql",
+      "supabase/migrations/20260817090000_c2r_c_p_structured_practice_proof.sql",
+      "supabase/migrations/20260817113000_c2r_c_t_structural_theory_proof.sql",
+      "supabase/migrations/20260817170000_c2r_c_l_exact_law_applicability.sql"
+    ],
+    "conceptEarlyBoundaryPredecessorsExactly": [
+      "supabase/migrations/20260605_create_personal_concept_nodes.sql"
+    ],
+    "unlistedFilenameOrContentMutationFailsClosed": true,
+    "missingOrExtraPathFailsClosed": true,
+    "secondAppendFailsClosed": true
+  },
+  "remoteContinuityBoundary": {
+    "authorizationScope": "REPOSITORY_SOURCE_AND_FRESH_ISOLATED_C3R_P_VALIDATION_ONLY",
+    "unknownRenameRemoteReconciliationPacketRequired": true,
+    "knownAppliedHistoricalRemoteLedgerIdentityUntouched": true,
+    "knownAppliedRepairedOldHistoryRemoteReplayAllowed": false,
+    "soleForwardAppendMustReassertFinalBoundary": true,
+    "soleForwardAppendRemoteApplicationOwnerGated": true,
+    "supabaseLinkAuthorized": false,
+    "supabaseDbPushAuthorized": false,
+    "supabaseMigrationRepairAuthorized": false,
+    "supabaseLinkedResetAuthorized": false,
+    "remoteSqlAuthorized": false,
+    "remoteMigrationHistoryInsertionAuthorized": false,
+    "remoteMigrationHistoryDeletionAuthorized": false,
+    "remoteSchemaMutationAuthorized": false,
+    "productionMutationAuthorized": false,
+    "remoteOperationAuthorizationCount": 0,
+    "remoteMutationCount": 0
+  },
+  "c3rPMigrationMutationReceiptV1": {
+    "receiptType": "C3RPMigrationMutationReceiptV1",
+    "subordinateEvidenceForC3RStageMergeReceiptV1": true,
+    "maySubstituteForC3RStageMergeReceiptV1": false,
+    "requiredFieldsExactly": [
+      "receiptType",
+      "authorityBinding",
+      "c3rPHeadBinding",
+      "existingPathOperations",
+      "unchangedPathClosure",
+      "append",
+      "effectiveInventory",
+      "dependencyAndOrderingClosure",
+      "isolatedResetReplayReceipts",
+      "postgresOracleBinding",
+      "finalDatabaseState",
+      "practiceRuntimeReceipt",
+      "metadataOnlyArtifactRefs",
+      "dataBoundary",
+      "cleanup",
+      "remoteContinuity",
+      "receiptDigest"
+    ],
+    "nestedRequiredFieldsExactly": {
+      "authorityBinding": [
+        "decisionRef",
+        "decisionSha256",
+        "contractRef",
+        "contractSha256"
+      ],
+      "c3rPHeadBinding": [
+        "repository",
+        "stage",
+        "pullRequest",
+        "baseSha",
+        "baseTree",
+        "candidateHead",
+        "candidateTree",
+        "headTreeBindingSha256"
+      ],
+      "operation": [
+        "operationId",
+        "operationKind",
+        "currentPath",
+        "futurePath",
+        "remoteClassification",
+        "currentEvidence",
+        "futureEvidence",
+        "transformationProofSha256"
+      ],
+      "evidence": [
+        "gitBlob",
+        "rawSha256",
+        "byteCount",
+        "lineCount",
+        "canonicalUtf8LfSha256"
+      ],
+      "unchangedPathClosure": [
+        "count",
+        "records",
+        "closureDigest"
+      ],
+      "unchangedRecord": [
+        "path",
+        "evidence"
+      ],
+      "append": [
+        "path",
+        "version",
+        "purposeExactly",
+        "evidence",
+        "dependencyPredecessors",
+        "remoteApplicationAuthorized",
+        "migrationHistoryRepairAuthorized"
+      ],
+      "effectiveInventory": [
+        "count",
+        "records",
+        "inventoryDigest",
+        "renamedOldPathsRemoved",
+        "renamedNewPathsAdded",
+        "inPlaceRepairedPaths",
+        "appendPathsAdded",
+        "unmatchedDeletionCount",
+        "secondAppendCount"
+      ],
+      "effectiveInventoryRecord": [
+        "path",
+        "evidence"
+      ],
+      "dependencyAndOrderingClosure": [
+        "a0AnalyzerBinding",
+        "orderedPaths",
+        "records",
+        "closureDigest",
+        "sourceDerivedRecords",
+        "sourceDerivedClosureDigest",
+        "duplicateVersionCount",
+        "missingDependencyCount",
+        "unknownDependencyCount",
+        "cycleCount",
+        "orderingErrorCount",
+        "unsupportedOperationCount"
+      ],
+      "dependencyRecord": [
+        "path",
+        "predecessors"
+      ],
+      "resetReplay": [
+        "receiptId",
+        "cycle",
+        "artifactRef",
+        "candidateHead",
+        "candidateTree",
+        "inventoryDigest",
+        "dependencyClosureDigest",
+        "executedMigrationCount",
+        "serverVersionNum",
+        "freshDatabase",
+        "linkedRemote",
+        "success",
+        "cleanupComplete",
+        "metadataOnly",
+        "remoteMutationCount",
+        "receiptDigest"
+      ],
+      "postgresOracleBinding": [
+        "pullRequest",
+        "resultingMainSha",
+        "resultingMainTree",
+        "manifestGitBlob",
+        "manifestSha256",
+        "fixtureCount",
+        "fixtureSetSha256",
+        "serverVersionNum",
+        "runtimeArtifactSha256",
+        "candidateRuntimeArtifactRef",
+        "candidateRuntimeArtifactSha256"
+      ],
+      "finalDatabaseState": [
+        "catalogScope",
+        "catalogQueryManifestSha256",
+        "schemas",
+        "relations",
+        "routines",
+        "policies",
+        "recordCounts",
+        "identityClosureDigest",
+        "collectionDigests",
+        "rootDigest",
+        "sourceDerivedExpectedStateDigest",
+        "resetCycleStateDigests",
+        "laterDisableRlsOperationCount",
+        "laterNoForceRlsOperationCount"
+      ],
+      "schemaState": [
+        "identity",
+        "owner",
+        "acl"
+      ],
+      "relationState": [
+        "identity",
+        "kind",
+        "owner",
+        "acl",
+        "rlsEnabled",
+        "rlsForced",
+        "columnClosureSha256",
+        "constraintClosureSha256",
+        "indexClosureSha256",
+        "triggerClosureSha256"
+      ],
+      "routineState": [
+        "identity",
+        "identityArguments",
+        "resultType",
+        "language",
+        "volatility",
+        "securityDefiner",
+        "owner",
+        "acl",
+        "definitionSha256"
+      ],
+      "policyState": [
+        "relationIdentity",
+        "name",
+        "permissive",
+        "command",
+        "roles",
+        "usingExpressionSha256",
+        "withCheckExpressionSha256"
+      ],
+      "practiceRuntimeReceipt": [
+        "receiptType",
+        "stage",
+        "subject",
+        "candidateHead",
+        "candidateTree",
+        "practiceEvidenceRefs",
+        "browserToPostgresEvidenceRef",
+        "perSubjectIssueEvidence",
+        "evidenceDigest",
+        "featureDefaultOff",
+        "metadataOnly",
+        "remoteMutationCount"
+      ],
+      "metadataArtifact": [
+        "kind",
+        "ref",
+        "sha256"
+      ],
+      "dataBoundary": [
+        "metadataOnly",
+        "containsSqlBytes",
+        "containsCatalogBodies",
+        "containsLearnerPrivateBodies",
+        "containsRawAnswers",
+        "containsOcr",
+        "containsSecrets",
+        "containsCredentials",
+        "containsContainerIdentifiers",
+        "containsRawErrorText",
+        "containsTimestamps"
+      ],
+      "cleanup": [
+        "complete",
+        "residualIsolatedResourceCount",
+        "residualCredentialCount",
+        "evidenceSha256"
+      ],
+      "remoteContinuity": [
+        "authorizationCount",
+        "supabaseContactCount",
+        "supabaseLinkCount",
+        "supabasePushCount",
+        "supabaseRepairCount",
+        "linkedResetCount",
+        "remoteSqlCount",
+        "migrationHistoryMutationCount",
+        "remoteSchemaMutationCount",
+        "productionMutationCount",
+        "totalRemoteMutationCount"
+      ]
+    },
+    "isolatedResetReplayReceiptCountExactly": 2,
+    "isolatedResetReplayCyclesExactly": [
+      1,
+      2
+    ],
+    "effectiveMigrationCountExactly": 26,
+    "postgresqlServerVersionNumExactly": 150008,
+    "finalStateMustContainFullCanonicalCatalogRecords": true,
+    "finalStateDigestOnlyClaimAllowed": false,
+    "independentVerifierMustReturnFullCanonicalCatalogRecords": true,
+    "appendCreatedRoutineIdentityArgumentsMustBeSourceDerivedAndExact": true,
+    "unrelatedHistoricalRelationOwnerAndRlsStateMustRemainExactNotForcedByThisAuthority": true,
+    "candidateGitObjectsAndAll26SqlBlobsMustBeValidated": true,
+    "sourceDerivedDependencyClosureMustBeValidated": true,
+    "independentLivePrAndArtifactEvidenceVerifierRequired": true,
+    "everyProtectedProducedTableMustEndRlsEnabledAndForced": true,
+    "laterDisableOrNoForceOperationFailsClosed": true,
+    "practiceSubjectIssueInventoryAuthority": "config/dabangil-wcv-c3r-a1-serial-program-authority-v1.json#issueAllocation.issues[706,707,708].requiredForEachSubjectExactly",
+    "metadataArtifactKindsExactly": [
+      "RESET_REPLAY_1",
+      "RESET_REPLAY_2",
+      "POSTGRESQL_ORACLE",
+      "FINAL_DATABASE_STATE",
+      "PRACTICE_RUNTIME"
+    ],
+    "missingUnknownDuplicateExtraOrMismatchedFieldFailsClosed": true,
+    "receiptDigestAlgorithm": "SHA256_DOMAIN_C3R_P_MIGRATION_MUTATION_RECEIPT_V1_CANONICAL_JSON"
+  },
+  "stageState": {
+    "strictStageOrder": [
+      "C3R-P",
+      "C3R-T",
+      "C3R-L"
+    ],
+    "soleNextC3rStage": "C3R-P",
+    "c3rP": "authorized_unstarted",
+    "c3rT": "blocked_pending_validated_c3r_p_merge_receipt",
+    "c3rL": "blocked_pending_validated_c3r_p_and_c3r_t_merge_receipts",
+    "c3rRuntimeAutomaticStartAllowed": false,
+    "c3rSuccessorRuntimeStarted": false,
+    "wcvC3Complete": false,
+    "governedIssues": {
+      "706": "open",
+      "707": "open",
+      "708": "open",
+      "714": "open",
+      "781": "open"
+    }
+  },
+  "deliveryControl": {
+    "mergeProducingWriterLimit": 1,
+    "sourceCorrectionsMaximum": 2,
+    "exactHeadFormalReviewsMaximum": 3,
+    "autoMergeAllowed": false,
+    "readyTransitionAuthorized": false,
+    "mergeAuthorizedByThisWork": false,
+    "referenceOnlyIssueLinks": {
+      "mode": "REFERENCE_ONLY",
+      "repository": "chachathecat/inverge",
+      "baseRef": "main",
+      "baseSha": "5965ddb0202c5f9effb531824d4d95f775abecc1",
+      "headRef": "codex/wcv-c3-pre-p-migration-mutation-authority",
+      "headRepository": "chachathecat/inverge",
+      "pullRequestTitle": "[WCV-C3 PRE-P] Authorize exact C3R-P migration reconciliation",
+      "draftRequired": true,
+      "requiredReferenceLinesExactly": [
+        "Refs #706",
+        "Refs #707",
+        "Refs #708",
+        "Refs #714",
+        "Refs #781"
+      ],
+      "requiredDispositionLine": "- Issue disposition: #706/#707/#708/#714/#781 remain open; PRE-C3R-P authority closes none",
+      "closingKeywordsAllowed": false,
+      "exceptionAppliesOnlyWhenExactLinesPresent": true,
+      "fullGithubClosingKeywordFamilyBlocked": true
+    }
+  },
+  "packageIdentity": {
+    "packageJsonGitBlob": "33a8d29b52ac225c6e957c71fce1f28f2eaba16d",
+    "packageLockJsonGitBlob": "70f85fb69c39aa73cf572082c4d38eb426c0b398",
+    "packageMutationAuthorized": false
+  },
+  "localDockerClassification": "LOCAL_DOCKER_NOT_REQUIRED_SOURCE_ONLY_AUTHORITY",
+  "ownedPaths": [
+    "docs/decisions/2026-08-22-owner-wcv-c3-pre-p-migration-mutation-authority.md",
+    "config/dabangil-wcv-c3-pre-p-migration-mutation-authority-v1.json",
+    "docs/qa/wcv-c3-pre-p-migration-mutation-authority-validation.md",
+    "scripts/automation/wcv-c3-pre-p-migration-mutation-authority.mjs",
+    "tests/wcv-c3-pre-p-migration-mutation-authority.test.mjs",
+    "AGENTS.md",
+    "roadmap/active-program.yml",
+    "config/dabangil-unified-program-contract.json",
+    "docs/dabangil-unified-program-contract.md",
+    "docs/inverge-master-roadmap.md",
+    "scripts/automation/validate-pr-contract.mjs",
+    "scripts/run-node-tests.mjs"
+  ],
+  "forbiddenPathPrefixes": [
+    "supabase/migrations/",
+    "app/",
+    "components/",
+    "lib/review-os/",
+    ".github/workflows/"
+  ],
+  "forbiddenExactPaths": [
+    "package.json",
+    "package-lock.json",
+    "docs/decisions/2026-08-21-owner-wcv-c3r-a0-migration-dependency-authority.md",
+    "config/dabangil-wcv-c3r-a0-migration-dependency-authority-v1.json",
+    "scripts/automation/wcv-c3r-a0-migration-dependency-closure.mjs",
+    "tests/wcv-c3r-a0-migration-dependency-authority.test.mjs",
+    "docs/decisions/2026-08-21-owner-wcv-c3r-a1-serial-program-authority.md",
+    "config/dabangil-wcv-c3r-a1-serial-program-authority-v1.json",
+    "docs/qa/wcv-c3r-a1-serial-program-authority-validation.md",
+    "tests/wcv-c3r-a1-serial-program-authority.test.mjs",
+    "config/dabangil-wcv-c3-pre-p-postgresql-security-state-oracle-v1.json",
+    "docs/qa/wcv-c3-pre-p-postgresql-security-state-oracle-validation.md",
+    "scripts/automation/wcv-c3-pre-p-postgresql-security-state-oracle.mjs",
+    "tests/wcv-c3-pre-p-postgresql-security-state-oracle.test.mjs"
+  ]
+}

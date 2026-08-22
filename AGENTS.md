@@ -5,6 +5,14 @@
 Use this authority order when sources conflict:
 
 1. a dated Owner decision for the exact decision it owns, currently
+   `docs/decisions/2026-08-22-owner-wcv-c3-pre-p-migration-mutation-authority.md`
+   for the source-only `C3RPMigrationMutationAuthorityV1`, the exact seven
+   prospective existing-path transformations, sole frozen C3R-P append,
+   26-file effective inventory, closed future receipt and zero-remote boundary;
+   it is not a C3R stage, changes no selector, mutates no migration or runtime
+   in its authority Work, narrowly supersedes C3R-A0 only for the listed future
+   C3R-P operations, and becomes repository authority only after its expected-
+   head-pinned squash merge and validated GitHub receipt,
    `docs/decisions/2026-08-21-owner-wcv-c3r-a1-serial-program-authority.md`
    for the independently complete C3R-A1 source-only serial program authority,
    its exact PR #785/C3R-A0 receipt consumption, the strict
@@ -208,6 +216,53 @@ The A1 flag state is authority-only: runtime implementation, migration-file
 mutation, local or remote Supabase apply, RLS, Storage, API, learner UI,
 Production, payment, provider, learner activation, first-round, mobile,
 instructor and #776 work remain unauthorized. C3R-P does not start in A1.
+
+## PRE-C3R-P exact migration-mutation authority
+
+`C3RPMigrationMutationAuthorityV1` is a source-only control-plane bridge, not
+C3R-A2, A2E or another stage. It preserves C3R-A0 as immutable historical
+25-file baseline, dependency and occurrence authority and supersedes A0 only
+for seven exact prospective C3R-P operations after this decision's expected-
+head-pinned merge and validated receipt: six exact renames, the pinned
+PostgreSQL-15.8 recursive-CTE content repair within the personal-learning
+rename, and the pinned in-place fresh-history compatibility repair for the
+`KNOWN_APPLIED` personal-concept early boundary. The five legal renames must
+preserve canonical SQL bytes exactly. Every unlisted path and digest remains
+unchanged.
+
+The sole authorized append path is
+`supabase/migrations/20260822120000_c3r_p_practice_common_durable_substrate.sql`.
+It is not created by the authority Work. A later exact C3R-P head must pin its
+nonempty digest and prove it through two fresh isolated reset/replay cycles and
+the merged PostgreSQL 15.8 oracle. The closed effective inventory is exactly
+the A0 baseline minus six old rename paths plus six new rename paths, the
+preserved concept-boundary path with its pinned replacement digest and this one
+append: 26 files. A second append, delete, unlisted rename or content change
+fails closed.
+
+Every new C3R-P durable relation, policy and routine in that append is
+service-role-only. Separately, the existing personal-concept transition RPC
+must end with EXECUTE revoked from PUBLIC and anon and granted only to
+authenticated for its exact ten-argument identity. Extra public/learner
+grants, non-service new policies, omitted final catalog ACL state and
+destructive drops fail closed.
+
+The subordinate `C3RPMigrationMutationReceiptV1` binds the exact authority,
+C3R-P head, seven operations, 18 unchanged paths, one append, 26-file inventory,
+dependency closure, two resets, PostgreSQL `server_version_num = 150008`,
+merged oracle, full final canonical catalog/ACL/owner/policy/RLS/FORCE-RLS
+state, Practice runtime evidence, metadata-only artifacts, cleanup and zero
+remote mutation. It cannot replace `C3RStageMergeReceiptV1`.
+
+Six renamed histories are `UNKNOWN` and require a later separate remote
+reconciliation packet. The `KNOWN_APPLIED` personal-concept remote ledger
+identity remains untouched; repaired old history is never replayed remotely,
+and only the sole forward append may later reassert the final boundary under a
+separate Owner gate. This authority grants no Supabase link/push/repair, linked
+reset, remote SQL/history/schema or Production mutation. It mutates no
+migration, starts no runtime, closes no issue and leaves C3R-P
+`authorized_unstarted`, C3R-T/C3R-L blocked, successor started false and WCV-C3
+incomplete.
 
 ## C2R-A rights-safe source firewall
 

@@ -70,6 +70,35 @@
     "productionAuthorized": false,
     "automaticRuntimeStartAllowed": false
   },
+  "c3PrePMigrationMutationAuthorityDecision": {
+    "id": "owner_wcv_c3_pre_p_migration_mutation_authority_2026_08_22",
+    "status": "approved_candidate_source_only_authority",
+    "decisionDateKst": "2026-08-22",
+    "decisionRecord": "docs/decisions/2026-08-22-owner-wcv-c3-pre-p-migration-mutation-authority.md",
+    "contract": "config/dabangil-wcv-c3-pre-p-migration-mutation-authority-v1.json",
+    "authorityContractId": "C3RPMigrationMutationAuthorityV1",
+    "isC3rStage": false,
+    "stageSelectorChangeCount": 0,
+    "currentMigrationCount": 25,
+    "authorizedExistingPathOperationCount": 7,
+    "renameCount": 6,
+    "contentRepairCount": 2,
+    "frozenAppendPath": "supabase/migrations/20260822120000_c3r_p_practice_common_durable_substrate.sql",
+    "effectiveMigrationCount": 26,
+    "newC3rPDurableAclGranteesExactly": [
+      "service_role"
+    ],
+    "personalConceptTransitionAclExactly": [
+      "REVOKE_EXECUTE_FROM_PUBLIC",
+      "REVOKE_EXECUTE_FROM_ANON",
+      "GRANT_EXECUTE_TO_AUTHENTICATED"
+    ],
+    "migrationFileMutationPerformedByAuthorityWork": false,
+    "runtimeAuthorized": false,
+    "remoteOperationAuthorizationCount": 0,
+    "productionAuthorized": false,
+    "automaticRuntimeStartAllowed": false
+  },
   "launchConvergenceAmendment": {
     "id": "owner_ulc_0_unified_product_multisurface_launch_2026_08_14",
     "status": "approved_source_contract_only",
@@ -1617,6 +1646,100 @@
       "learnerActivationAuthorized": false,
       "automaticRuntimeStartAllowed": false
     },
+    "c3PrePMigrationMutationAuthority": {
+      "authorityDecision": "docs/decisions/2026-08-22-owner-wcv-c3-pre-p-migration-mutation-authority.md",
+      "machineContract": "config/dabangil-wcv-c3-pre-p-migration-mutation-authority-v1.json",
+      "authorityContractId": "C3RPMigrationMutationAuthorityV1",
+      "repositoryAuthorityEffectiveOn": "EXPECTED_HEAD_PINNED_SQUASH_MERGE_AND_VALIDATED_GITHUB_RECEIPT",
+      "isC3rStage": false,
+      "canonicalStageInserted": false,
+      "consumesOrAdvancesStageSelector": false,
+      "a0HistoricalBaselineRemainsImmutable": true,
+      "a0UnlistedMigrationAuthorityPreserved": true,
+      "currentMigrationCount": 25,
+      "authorizedOperations": [
+        {
+          "currentPath": "supabase/migrations/20260608_create_personal_learning_states.sql",
+          "futurePath": "supabase/migrations/20260608090000_create_personal_learning_states.sql",
+          "operation": "RENAME_AND_EXACT_CONTENT_REPAIR",
+          "remoteClassification": "UNKNOWN",
+          "currentSha256": "13f290748149a6d1ede1b3894ca9bce3d3f79e198015918e5a4159b6c1c2b968",
+          "futureSha256": "957fb9810283086e75ce34689b3eee2c2d3be4373dc341056630db716457b815"
+        },
+        {
+          "currentPath": "supabase/migrations/20260615_legal_grounding.sql",
+          "futurePath": "supabase/migrations/20260615090000_legal_grounding.sql",
+          "operation": "RENAME_ONLY_BYTES_UNCHANGED",
+          "remoteClassification": "UNKNOWN",
+          "sha256": "fb585b9c2d96edfd696d2f03e0d4fc427597c7759ee6ab96de5a3dddf29d237e"
+        },
+        {
+          "currentPath": "supabase/migrations/20260615_legal_article_chunk_identity.sql",
+          "futurePath": "supabase/migrations/20260615100000_legal_article_chunk_identity.sql",
+          "operation": "RENAME_ONLY_BYTES_UNCHANGED",
+          "remoteClassification": "UNKNOWN",
+          "sha256": "03dce727ac9bca1ab290556583c33593c3ae6ee544b0c90cc8ff7e05aea6e29d"
+        },
+        {
+          "currentPath": "supabase/migrations/20260615_legal_retrieval.sql",
+          "futurePath": "supabase/migrations/20260615110000_legal_retrieval.sql",
+          "operation": "RENAME_ONLY_BYTES_UNCHANGED",
+          "remoteClassification": "UNKNOWN",
+          "sha256": "d1ec08d0e3082e224c8da95c412636d83a0d4183df3a1ec4a1432f795b0154cc"
+        },
+        {
+          "currentPath": "supabase/migrations/20260615_legal_grounding_guard.sql",
+          "futurePath": "supabase/migrations/20260615120000_legal_grounding_guard.sql",
+          "operation": "RENAME_ONLY_BYTES_UNCHANGED",
+          "remoteClassification": "UNKNOWN",
+          "sha256": "436e741f78efc14fa7decd2c6f8c3eadf31f5acd4590df98c3eaad988493b642"
+        },
+        {
+          "currentPath": "supabase/migrations/20260616_legal_grounding_guard_service_role_grant.sql",
+          "futurePath": "supabase/migrations/20260616100000_legal_grounding_guard_service_role_grant.sql",
+          "operation": "RENAME_ONLY_BYTES_UNCHANGED",
+          "remoteClassification": "UNKNOWN",
+          "sha256": "25e358828f3953b3cf793f7eeb645c816156e8bb89f5b7899d3c075de9594e13"
+        },
+        {
+          "currentPath": "supabase/migrations/202606232130_personal_concept_graph_rpc_only_write_boundary.sql",
+          "futurePath": "supabase/migrations/202606232130_personal_concept_graph_rpc_only_write_boundary.sql",
+          "operation": "EXACT_IN_PLACE_FRESH_HISTORY_COMPATIBILITY_REPAIR",
+          "remoteClassification": "KNOWN_APPLIED",
+          "currentSha256": "57b2aa59f96f3ea294a7d7e0c46350c5c3cb330c53a301a2d57634f2f54a0a57",
+          "futureSha256": "f5feb973cbc25cd8392158daf4f4c58227a776266f8b4f196c1f253eda39ee92"
+        }
+      ],
+      "authorizedExistingPathOperationCount": 7,
+      "renameCount": 6,
+      "contentRepairCount": 2,
+      "unchangedPathCount": 18,
+      "frozenAppendPath": "supabase/migrations/20260822120000_c3r_p_practice_common_durable_substrate.sql",
+      "secondAppendAllowed": false,
+      "effectiveMigrationCount": 26,
+      "newC3rPDurableAclGranteesExactly": [
+        "service_role"
+      ],
+      "personalConceptTransitionAclExactly": [
+        "REVOKE_EXECUTE_FROM_PUBLIC",
+        "REVOKE_EXECUTE_FROM_ANON",
+        "GRANT_EXECUTE_TO_AUTHENTICATED"
+      ],
+      "receiptType": "C3RPMigrationMutationReceiptV1",
+      "receiptSubordinateTo": "C3RStageMergeReceiptV1",
+      "postgresqlServerVersionNum": 150008,
+      "isolatedResetReplayReceiptCount": 2,
+      "unknownRemoteReconciliationPacketCountRequired": 6,
+      "knownAppliedOldHistoryRemoteReplayAllowed": false,
+      "migrationFileMutationPerformedByAuthorityWork": false,
+      "remoteOperationAuthorizationCount": 0,
+      "runtimeStarted": false,
+      "c3rPState": "authorized_unstarted",
+      "c3rTState": "blocked_pending_validated_c3r_p_merge_receipt",
+      "c3rLState": "blocked_pending_validated_c3r_p_and_c3r_t_merge_receipts",
+      "wcvC3Complete": false,
+      "successorRuntimeStarted": false
+    },
     "campaigns": [
       {
         "id": "C1",
@@ -1692,6 +1815,14 @@
         "c3rA0State": "installed",
         "c3rA1State": "installed_after_expected_head_pinned_merge_and_validated_receipt",
         "c3rA1Contract": "config/dabangil-wcv-c3r-a1-serial-program-authority-v1.json",
+        "c3rPrePMigrationMutationAuthorityState": "installed_after_expected_head_pinned_merge_and_validated_receipt",
+        "c3rPrePMigrationMutationAuthorityContract": "config/dabangil-wcv-c3-pre-p-migration-mutation-authority-v1.json",
+        "c3rPrePMigrationMutationAuthorityIsStage": false,
+        "c3rPrePMigrationMutationPerformedByAuthorityWork": false,
+        "c3rPrePMigrationMutationExistingPathOperationCount": 7,
+        "c3rPrePMigrationMutationFrozenAppend": "supabase/migrations/20260822120000_c3r_p_practice_common_durable_substrate.sql",
+        "c3rPrePMigrationMutationEffectiveInventoryCount": 26,
+        "c3rPrePMigrationMutationRemoteAuthorizationCount": 0,
         "c3rStrictStageOrder": [
           "C3R-P",
           "C3R-T",
@@ -1909,6 +2040,13 @@
     "soleNextC3rStageIssue": 706,
     "soleNextC3rStageState": "authorized_unstarted_after_validated_c3r_a1_merge_receipt",
     "c3rA1Decision": "docs/decisions/2026-08-21-owner-wcv-c3r-a1-serial-program-authority.md",
+    "c3rPrePMigrationMutationAuthorityDecision": "docs/decisions/2026-08-22-owner-wcv-c3-pre-p-migration-mutation-authority.md",
+    "c3rPrePMigrationMutationAuthorityContract": "config/dabangil-wcv-c3-pre-p-migration-mutation-authority-v1.json",
+    "c3rPrePMigrationMutationAuthorityIsStage": false,
+    "c3rPrePMigrationMutationStageSelectorChangeCount": 0,
+    "c3rPrePMigrationMutationFrozenAppend": "supabase/migrations/20260822120000_c3r_p_practice_common_durable_substrate.sql",
+    "c3rPrePMigrationMutationEffectiveInventoryCount": 26,
+    "c3rPrePMigrationMutationRemoteAuthorizationCount": 0,
     "c3rSuccessorRuntimeStarted": false,
     "primaryStatusesUsed": [
       "completed",

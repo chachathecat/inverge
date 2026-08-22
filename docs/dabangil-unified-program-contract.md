@@ -2,6 +2,10 @@
 
 - Contract version: `dabangil.unified_program.v4`
 - Current exact-scope Owner decisions:
+  `docs/decisions/2026-08-22-owner-wcv-c3-pre-p-migration-mutation-authority.md`
+  for the exact source-only PRE-C3R-P migration-mutation bridge, seven
+  prospective existing-path operations, one frozen append and zero-remote
+  boundary,
   `docs/decisions/2026-08-21-owner-wcv-c3r-a1-serial-program-authority.md`
   for the source-only C3R-A1 serial program and post-merge C3R-P selector,
   `docs/decisions/2026-08-21-owner-wcv-c3r-a0-migration-dependency-authority.md`
@@ -375,6 +379,59 @@ separation boundary. A single subject or path closes nothing.
 A1 starts no runtime. WCV-C3 remains incomplete; #706/#707/#708/#714/#781
 remain open; remote Supabase mutation, Production, payment, learner activation
 and successor-runtime-start counts remain zero.
+
+### 2B.1 PRE-C3R-P exact migration-mutation authority
+
+The 2026-08-22 Owner decision installs
+`C3RPMigrationMutationAuthorityV1` only after its expected-head-pinned squash
+merge and validated GitHub receipt. It is a source-only control-plane bridge,
+not C3R-A2, A2E or another C3R stage. It changes no selector, starts no
+runtime, closes no issue and mutates no migration in its authority Work.
+
+C3R-A0 remains the immutable 25-file historical baseline and dependency/
+occurrence authority. The PRE-P decision narrowly supersedes it only for the
+later C3R-P candidate's seven exact existing-path operations: the personal-
+learning migration's rename plus pinned PostgreSQL-15.8 recursive-CTE repair,
+five byte-identical legal renames, and the pinned in-place fresh-history
+compatibility repair of the `KNOWN_APPLIED` personal-concept early boundary.
+Every other path and digest stays unchanged.
+
+The one frozen future append is
+`supabase/migrations/20260822120000_c3r_p_practice_common_durable_substrate.sql`.
+It is not created by the authority Work. A later C3R-P head must pin its
+nonempty SQL digest and use it for the Practice/common durable schema,
+service-only RPC boundary, forced RLS, durable-learning persistence and final
+personal-concept RPC-only boundary reassertion, with no Theory or Law outcome.
+A second append fails closed.
+
+The two privilege boundaries are distinct and closed: every new C3R-P durable
+relation, policy and routine is service-role-only, while the existing exact
+ten-argument personal-concept transition RPC revokes EXECUTE from PUBLIC and
+anon and grants EXECUTE only to authenticated. Extra grantees, non-service new
+policies, missing final catalog ACL evidence and destructive drops fail closed.
+
+The exact effective inventory formula is A0's 25 paths minus six old rename
+paths, plus six exact replacement paths, plus the one append, while the in-
+place concept path remains present with its pinned replacement digest and all
+other 18 paths remain byte-identical. The result is exactly 26 files; no
+delete or unlisted operation is allowed.
+
+The future closed `C3RPMigrationMutationReceiptV1` is subordinate to, and
+cannot replace, `C3RStageMergeReceiptV1`. It binds the authority and C3R-P
+head, all seven operations, 18 unchanged paths, one append, 26-file inventory,
+exact dependency closure, two independently addressed fresh reset/replays,
+PostgreSQL `server_version_num = 150008`, the merged oracle, full canonical
+catalog/ACL/owner/policy/RLS/FORCE-RLS state, exact Practice evidence,
+metadata-only artifacts, cleanup and zero remote mutation.
+
+The six renamed `UNKNOWN` histories require later separate remote
+reconciliation. The `KNOWN_APPLIED` concept-boundary remote ledger identity
+is untouched, repaired old history is never replayed remotely, and the sole
+forward append remains separately Owner-gated for any remote application.
+Supabase link/push/repair, linked reset, remote SQL/history/schema and
+Production mutation remain unauthorized. C3R-P stays
+`authorized_unstarted`; C3R-T and C3R-L remain blocked; WCV-C3 stays
+incomplete and successor runtime started remains false.
 
 ## 2C. Unified product and multisurface launch convergence
 
