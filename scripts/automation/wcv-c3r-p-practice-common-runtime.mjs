@@ -723,10 +723,10 @@ function assertExternalMigrationSubstrate(container) {
     (to_regclass('storage.objects') is not null)::text,
     (to_regprocedure('storage.allow_only_operation(text)') is not null)::text,
     (to_regprocedure('storage.allow_any_operation(text[])') is not null)::text,
-    (select relrowsecurity from pg_class where oid = 'storage.objects'::regclass)
+    (select relrowsecurity::text from pg_class where oid = 'storage.objects'::regclass)
   );`, "C3R-P external Supabase substrate preflight");
   if (value !== "true|true|true|true|true|true|true") {
-    throw new Error("C3R-P external Supabase substrate is incomplete before replay.");
+    throw new Error(`C3R-P external Supabase substrate is incomplete before replay (${value}).`);
   }
 }
 

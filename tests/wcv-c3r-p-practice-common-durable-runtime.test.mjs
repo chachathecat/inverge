@@ -175,6 +175,7 @@ test("dedicated cycles start isolated Supabase first and transactionally apply a
   assert.match(runtimeSource, /function assertExternalMigrationSubstrate\(container\)/);
   assert.match(runtimeSource, /storage\.allow_only_operation\(text\)/);
   assert.match(runtimeSource, /storage\.allow_any_operation\(text\[\]\)/);
+  assert.match(runtimeSource, /select relrowsecurity::text from pg_class/);
   assert.match(runtimeSource, /function applyExactMigrationHistory\(cycleRoot, container\)/);
   assert.match(runtimeSource, /names\.length !== 26/);
   assert.match(runtimeSource, /psql\(container, `begin;\\n\$\{sql\}\\ncommit;\\n`/);
