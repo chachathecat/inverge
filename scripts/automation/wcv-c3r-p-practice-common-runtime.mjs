@@ -641,11 +641,13 @@ function run(command, args, options = {}) {
     stdio: options.input === undefined ? ["ignore", "pipe", "pipe"] : ["pipe", "pipe", "pipe"],
   });
   if (result.status !== 0) {
-    const stderr = options.reportStderr === true
-      ? result.stderr.trim().replaceAll(/\r?\n/g, " | ").slice(-2_000)
+    const diagnostic = options.reportOutput === true
+      ? `${result.stdout}\n${result.stderr}`.trim().replaceAll(/\r?\n/g, " | ").slice(-2_000)
+      : options.reportStderr === true
+        ? result.stderr.trim().replaceAll(/\r?\n/g, " | ").slice(-2_000)
       : "";
     throw new Error(`${options.label ?? command} failed (${result.status ?? "spawn"})${
-      stderr ? `: ${stderr}` : "."
+      diagnostic ? `: ${diagnostic}` : "."
     }`);
   }
   return result.stdout.trim();
@@ -833,7 +835,6 @@ async function stopNext(server) {
 
 function runBrowser(repositoryRoot, baseUrl, identities, browserEvidencePath, restoreOnly) {
   run(process.execPath, [path.join(repositoryRoot, "node_modules/@playwright/test/cli.js"), "test",
-    path.join(repositoryRoot, "tests/e2e/wcv-c3r-p-practice-common-runtime.spec.ts"),
     `--config=${path.join(repositoryRoot, "tests/e2e/wcv-c3r-p-playwright.config.ts")}`], {
     cwd: repositoryRoot,
     env: {
@@ -847,6 +848,7 @@ function runBrowser(repositoryRoot, baseUrl, identities, browserEvidencePath, re
       C3R_P_RESTORE_ONLY: restoreOnly ? "true" : "false",
     },
     label: restoreOnly ? "C3R-P restart browser verification" : "C3R-P browser journey",
+    reportOutput: true,
   });
 }
 

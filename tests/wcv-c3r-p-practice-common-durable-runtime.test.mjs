@@ -190,6 +190,16 @@ test("dedicated cycles start isolated Supabase first and transactionally apply a
   );
 });
 
+test("dedicated browser runner uses the pinned exact-match config without an absolute positional filter", () => {
+  const browserRunner = runtimeSource.slice(
+    runtimeSource.indexOf("function runBrowser"),
+    runtimeSource.indexOf("async function runDedicatedCycle"),
+  );
+  assert.match(browserRunner, /wcv-c3r-p-playwright\.config\.ts/);
+  assert.match(browserRunner, /reportOutput: true/);
+  assert.doesNotMatch(browserRunner, /wcv-c3r-p-practice-common-runtime\.spec\.ts/);
+});
+
 test("verified attempts bind to learner-entered structured values and server-rendered bodies", () => {
   assert.match(componentSource, /practiceClaim\(structuredCalculation\)/);
   assert.match(componentSource, /data-testid="c3r-p-gross-income"/);
