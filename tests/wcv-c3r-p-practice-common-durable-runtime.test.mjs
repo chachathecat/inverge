@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import crypto from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
-import { execFileSync } from "node:child_process";
+import { execFileSync, spawnSync } from "node:child_process";
 
 import {
   C3R_P_APPEND_PATH,
@@ -150,7 +150,7 @@ test("PRACTICE_RUNTIME verifier rejects arbitrary, missing, unrelated and self-a
 
 test("frozen path manifest is unique, package identity is unchanged, and candidate diff closes exactly", () => {
   const manifest = contract.pathManifest.changedPathsExactly;
-  assert.equal(manifest.length, 35);
+  assert.equal(manifest.length, 37);
   assert.equal(new Set(manifest).size, manifest.length);
   for (const file of manifest) assert.equal(fs.existsSync(path.join(root, file)), true, file);
   assert.equal(execFileSync("git", ["hash-object", "package.json"], { cwd: root, encoding: "utf8" }).trim(),
@@ -158,9 +158,14 @@ test("frozen path manifest is unique, package identity is unchanged, and candida
   assert.equal(execFileSync("git", ["hash-object", "package-lock.json"], { cwd: root, encoding: "utf8" }).trim(),
     contract.packageIdentity.packageLockJsonGitBlob);
   const head = execFileSync("git", ["rev-parse", "HEAD"], { cwd: root, encoding: "utf8" }).trim();
-  if (head !== contract.authority.baseSha) {
+  const baseAvailable = spawnSync(
+    "git", ["cat-file", "-e", `${contract.authority.baseSha}^{commit}`], { cwd: root },
+  ).status === 0;
+  if (head !== contract.authority.baseSha && baseAvailable) {
     const changed = execFileSync("git", ["diff", "--name-only", `${contract.authority.baseSha}...HEAD`],
       { cwd: root, encoding: "utf8" }).trim().split(/\r?\n/).filter(Boolean).sort();
     assert.deepEqual(changed, [...manifest].sort());
+  } else if (head !== contract.authority.baseSha) {
+    assert.equal(process.env.CI, "true", "the pinned base must exist outside a shallow CI checkout");
   }
 });

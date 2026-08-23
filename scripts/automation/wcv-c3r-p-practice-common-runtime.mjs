@@ -383,7 +383,8 @@ export function validateC3RPNativeEvidence(evidence, { riskResult, riskBytes }, 
 }
 
 const NATIVE_BOOTSTRAP_SQL = `
-create extension if not exists pgcrypto;
+create schema if not exists extensions;
+create extension if not exists pgcrypto with schema extensions;
 create schema if not exists auth;
 do $$ begin create role anon noinherit; exception when duplicate_object then null; end $$;
 do $$ begin create role authenticated noinherit; exception when duplicate_object then null; end $$;
@@ -392,6 +393,7 @@ create table if not exists auth.users (id uuid primary key);
 create or replace function auth.uid() returns uuid language sql stable set search_path=''
 as $$ select nullif(current_setting('request.jwt.claim.sub', true), '')::uuid $$;
 grant usage on schema public, auth to anon, authenticated, service_role;
+grant usage on schema extensions to service_role;
 create table if not exists public.personal_concept_nodes (id uuid primary key default gen_random_uuid());
 create or replace function public.transition_personal_concept_node_v1(
   text, text, text, text, text, text, text, text, integer, timestamptz
@@ -412,11 +414,13 @@ function removeNativeContainer(name) {
   return inspected.status !== 0;
 }
 
-function nativePsql(name, sql, allowFailure = false) {
+function nativePsql(name, sql, allowFailure = false, stage = "assertion") {
   const result = nativeDocker(["exec", "--interactive", name, "psql", "--no-psqlrc", "--quiet",
     "--tuples-only", "--no-align", "--set", "ON_ERROR_STOP=1", "--username", "postgres",
     "--dbname", "postgres"], { input: sql });
-  if (!allowFailure && result.status !== 0) throw new Error("C3R-P native PostgreSQL assertion failed.");
+  if (!allowFailure && result.status !== 0) {
+    throw new Error(`C3R-P native PostgreSQL ${stage} failed.`);
+  }
   return result;
 }
 
@@ -439,9 +443,9 @@ function nativeCycle(name, appendSql, cycle) {
   let cleanup = false;
   try {
     startNativeContainer(name);
-    nativePsql(name, "show server_version_num;\n");
-    nativePsql(name, NATIVE_BOOTSTRAP_SQL);
-    nativePsql(name, appendSql);
+    nativePsql(name, "show server_version_num;\n", false, "server-version assertion");
+    nativePsql(name, NATIVE_BOOTSTRAP_SQL, false, "bootstrap");
+    nativePsql(name, appendSql, false, "append application");
     const catalog = nativePsql(name, `select concat_ws('|', current_setting('server_version_num'),
       (select count(*) from pg_class c join pg_namespace n on n.oid=c.relnamespace
        where n.nspname='public' and c.relname like 'c3r_p_%' and c.relkind='r'
@@ -451,7 +455,7 @@ function nativeCycle(name, appendSql, cycle) {
       has_table_privilege('authenticated','public.c3r_p_learning_records','INSERT'),
       has_function_privilege('authenticated','public.c3r_p_apply_learning_command_v1(uuid,uuid,bigint,text,jsonb)','EXECUTE'),
       has_function_privilege('service_role','public.c3r_p_apply_learning_command_v1(uuid,uuid,bigint,text,jsonb)','EXECUTE'));
-    `).stdout.trim();
+    `, false, "catalog assertion").stdout.trim();
     if (catalog !== "150008|9|PRACTICE|false|false|true") {
       throw new Error("C3R-P native catalog contract failed.");
     }
@@ -470,7 +474,8 @@ function nativeCycle(name, appendSql, cycle) {
       select public.c3r_p_apply_learning_command_v1('${userId}','${commandId}',0,'start','${payload}'::jsonb)->>'status';
       select public.c3r_p_apply_learning_command_v1('${userId}','${commandId}',0,'start','${payload}'::jsonb)->>'status';
       reset role;`;
-    const commandLines = nativePsql(name, command).stdout.split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
+    const commandLines = nativePsql(name, command, false, "service command").stdout
+      .split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
     if (commandLines.join("|") !== "applied|applied") {
       throw new Error("C3R-P native service command idempotency failed.");
     }
@@ -478,7 +483,8 @@ function nativeCycle(name, appendSql, cycle) {
       set local request.jwt.claim.sub='${userId}';
       insert into public.c3r_p_learning_records(id,user_id,source_id,problem_id,revision_id,item_id,
         artifact_id,initial_surface_id,prediction,confidence,d0_basis)
-      values (gen_random_uuid(),'${userId}','x','x','x','x','x','x','likely_partial','medium','{}');`, true);
+      values (gen_random_uuid(),'${userId}','x','x','x','x','x','x','likely_partial','medium','{}');`,
+    true, "authenticated direct mutation");
     if (direct.status === 0 || !/permission denied/i.test(`${direct.stderr}\n${direct.stdout}`)) {
       throw new Error("C3R-P native authenticated direct mutation did not fail closed.");
     }

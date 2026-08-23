@@ -197,6 +197,8 @@
       "tests/legal-grounding-guard.test.mjs",
       "tests/legal-retrieval.test.mjs",
       "tests/legal-source-ingest.test.mjs",
+      "tests/personal-concept-graph-atomic-transition.test.mjs",
+      "tests/personal-concept-graph-schema-migration.test.mjs",
       "tests/s232f2-access-availability.test.mjs",
       "tests/e2e/wcv-c3r-p-playwright.config.ts",
       "tests/e2e/wcv-c3r-p-practice-common-runtime.spec.ts",

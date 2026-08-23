@@ -400,7 +400,7 @@ stable
 security invoker
 set search_path = ''
 as $$
-  select encode(digest(convert_to(coalesce(string_agg(
+  select encode(extensions.digest(convert_to(coalesce(string_agg(
     concat_ws(':', g.id::text, g.state::text,
       case
         when r.state in ('D0_OPEN', 'FEEDBACK_COMMITTED', 'REPAIRED') then g.d1_due_at::text
@@ -427,7 +427,7 @@ stable
 security invoker
 set search_path = ''
 as $$
-  select encode(digest(convert_to(coalesce(string_agg(
+  select encode(extensions.digest(convert_to(coalesce(string_agg(
     concat_ws(':', r.id::text, r.record_version::text, r.state::text,
       coalesce(g.state::text, 'NONE'), coalesce(g.reopen_count::text, '0')),
     ',' order by r.id), ''), 'UTF8'), 'sha256'), 'hex')
@@ -469,7 +469,9 @@ begin
     or p_action is null or p_action = '' then
     raise exception 'C3R_P_INVALID_INPUT' using errcode = '22023';
   end if;
-  v_request_sha := encode(digest(convert_to(p_action || chr(0) || p_payload::text, 'UTF8'), 'sha256'), 'hex');
+  v_request_sha := encode(extensions.digest(
+    convert_to(p_action || chr(31) || p_payload::text, 'UTF8'), 'sha256'
+  ), 'hex');
   select * into v_receipt
   from public.c3r_p_command_receipts
   where user_id = p_user_id and command_id = p_command_id;
@@ -775,7 +777,7 @@ begin
   if jsonb_typeof(p_blocks) <> 'array' or p_available_minutes not between 1 and 1440 then
     raise exception 'C3R_P_INVALID_PLAN' using errcode = '22023';
   end if;
-  v_request_sha := encode(digest(convert_to(concat_ws(chr(0),
+  v_request_sha := encode(extensions.digest(convert_to(concat_ws(chr(31),
     p_plan_id::text, p_plan_kind::text, p_available_minutes::text,
     p_as_of::text, p_blocks::text), 'UTF8'), 'sha256'), 'hex');
   select * into v_receipt from public.c3r_p_command_receipts
@@ -869,7 +871,7 @@ begin
   if current_user <> 'service_role' then
     raise exception 'C3R_P_SERVICE_ROLE_REQUIRED' using errcode = '42501';
   end if;
-  v_request_sha := encode(digest(convert_to(concat_ws(chr(0), p_plan_id::text,
+  v_request_sha := encode(extensions.digest(convert_to(concat_ws(chr(31), p_plan_id::text,
     p_expected_version::text, p_decision, p_as_of::text,
     coalesce(p_blocks::text, '')), 'UTF8'), 'sha256'), 'hex');
   select * into v_receipt from public.c3r_p_command_receipts
