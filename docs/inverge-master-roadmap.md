@@ -4,6 +4,8 @@
 - 상세 제품 기준: `docs/inverge-second-round-final-product-spec.md`
 - 실행 상태와 의존성 기준: `roadmap/active-program.yml`
 - Current exact-scope authority:
+  `docs/decisions/2026-08-22-owner-wcv-c3-pre-p-migration-mutation-authority.md`
+  for the minimal exact source-only C3R-P migration-operation bridge,
   `docs/decisions/2026-08-21-owner-wcv-c3r-a1-serial-program-authority.md`
   for the source-only WCV-C3 recovery program and C3R-P post-merge selector,
   `docs/decisions/2026-08-21-owner-wcv-c3r-a0-migration-dependency-authority.md`
@@ -91,6 +93,23 @@ complete WCV-C3, close #706/#707/#708/#781, complete Issue #714 allocation C3
 while preserving C4/C6, advance the selector or publish the terminal receipt.
 A1 starts no runtime, completes no WCV-C3 state, closes no issue and authorizes
 no migration apply, Production, payment or learner activation.
+
+## 2026-08-22 PRE-C3R-P Minimal Migration-Mutation Authority
+
+The final PRE-C3R-P bridge authorizes exactly seven future existing-path
+operations: six renames, of which five preserve bytes and one includes the
+pinned PostgreSQL-15.8 personal-learning recursive-CTE repair, plus one pinned
+in-place fresh-history compatibility repair. The only append is
+`supabase/migrations/20260822120000_c3r_p_practice_common_durable_substrate.sql`.
+The effective inventory is exactly 26 files with 18 unchanged paths.
+
+This source-only Work changes no migration and installs no parser, oracle,
+runtime or runtime-evidence system. Its small future binding is subordinate to
+the existing `C3RStageMergeReceiptV1`. The later C3R-P candidate owns the two
+isolated reset/replay cycles, PostgreSQL 15.8 proof, database-enforced Practice
+identity, actual Practice evidence and exact evidence cross-bindings, metadata-
+only artifacts and zero Theory/Law and remote/Supabase/Production mutation.
+C3R-P remains `authorized_unstarted`; C3R-T/L remain receipt-blocked.
 
 The future free-limited public ULC-L1 route requires Today, Review Queue,
 five first-round MCQ subjects, three second-round Trusted Repair subjects,

@@ -70,6 +70,22 @@
     "productionAuthorized": false,
     "automaticRuntimeStartAllowed": false
   },
+  "preC3rPMinimalMigrationMutationAuthority": {
+    "id": "C3RPMigrationMutationAuthorityV1",
+    "status": "installed_after_expected_head_pinned_merge_and_validated_receipt",
+    "decisionRecord": "docs/decisions/2026-08-22-owner-wcv-c3-pre-p-migration-mutation-authority.md",
+    "machineContract": "config/dabangil-wcv-c3-pre-p-migration-mutation-authority-v1.json",
+    "authorityKind": "source_only_control_plane_bridge_not_c3r_stage",
+    "reconciledBaseSha": "5965ddb0202c5f9effb531824d4d95f775abecc1",
+    "reconciledBaseTree": "bcb1017b980a5175e45265080ba25bc4b25c51ff",
+    "authorizedExistingPathOperationCount": 7,
+    "authorizedAppendCount": 1,
+    "expectedEffectiveMigrationCount": 26,
+    "migrationFilesChangedByAuthorityWork": 0,
+    "runtimeStarted": false,
+    "remoteMutationAuthorizationCount": 0,
+    "remoteMutationCount": 0
+  },
   "launchConvergenceAmendment": {
     "id": "owner_ulc_0_unified_product_multisurface_launch_2026_08_14",
     "status": "approved_source_contract_only",
@@ -1617,6 +1633,22 @@
       "learnerActivationAuthorized": false,
       "automaticRuntimeStartAllowed": false
     },
+    "preC3rPMinimalMigrationMutationAuthority": {
+      "authorityId": "C3RPMigrationMutationAuthorityV1",
+      "authorityDecision": "docs/decisions/2026-08-22-owner-wcv-c3-pre-p-migration-mutation-authority.md",
+      "machineContract": "config/dabangil-wcv-c3-pre-p-migration-mutation-authority-v1.json",
+      "isC3rStage": false,
+      "authorizedExistingPathOperationCount": 7,
+      "authorizedAppendPath": "supabase/migrations/20260822120000_c3r_p_practice_common_durable_substrate.sql",
+      "expectedEffectiveMigrationCount": 26,
+      "migrationFilesChangedByAuthorityWork": 0,
+      "futureBindingIsRuntimeReceipt": false,
+      "stageReceiptAuthority": "C3RStageMergeReceiptV1",
+      "c3rPState": "authorized_unstarted",
+      "c3rTState": "blocked_pending_validated_c3r_p_merge_receipt",
+      "c3rLState": "blocked_pending_validated_c3r_p_and_c3r_t_merge_receipts",
+      "remoteMutationCount": 0
+    },
     "campaigns": [
       {
         "id": "C1",
@@ -1692,6 +1724,8 @@
         "c3rA0State": "installed",
         "c3rA1State": "installed_after_expected_head_pinned_merge_and_validated_receipt",
         "c3rA1Contract": "config/dabangil-wcv-c3r-a1-serial-program-authority-v1.json",
+        "preC3rPMinimalMigrationMutationAuthorityState": "installed_after_expected_head_pinned_merge_and_validated_receipt",
+        "preC3rPMinimalMigrationMutationAuthorityContract": "config/dabangil-wcv-c3-pre-p-migration-mutation-authority-v1.json",
         "c3rStrictStageOrder": [
           "C3R-P",
           "C3R-T",

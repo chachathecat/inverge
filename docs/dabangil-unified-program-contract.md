@@ -376,7 +376,38 @@ A1 starts no runtime. WCV-C3 remains incomplete; #706/#707/#708/#714/#781
 remain open; remote Supabase mutation, Production, payment, learner activation
 and successor-runtime-start counts remain zero.
 
-## 2C. Unified product and multisurface launch convergence
+## 2C. PRE-C3R-P minimal exact migration-mutation authority
+
+`C3RPMigrationMutationAuthorityV1` is the final source-only permission bridge
+before C3R-P. It is not a C3R stage and changes no selector. It authorizes six
+exact future renames—five with identical SQL bytes and one with the pinned
+PostgreSQL-15.8 personal-learning recursive-CTE repair—plus the pinned in-place
+fresh-history compatibility repair of the known-applied personal-concept early
+boundary. It authorizes no other existing-path mutation.
+
+The only future append is
+`supabase/migrations/20260822120000_c3r_p_practice_common_durable_substrate.sql`.
+The closed inventory is A0 25 minus six old rename paths plus six new paths,
+the in-place repair net zero and one append: exactly 26 files, with 18 paths
+unchanged. This authority Work changes zero migration files and creates no
+parser, oracle, runtime or future runtime-evidence engine.
+
+The small future C3R-P binding pins the authority decision and contract
+digests, validated authority resulting-main SHA/tree, seven operation
+identities and future digests, append path and candidate SQL digest, effective-
+inventory digest and remote mutation count zero. It is not a runtime receipt;
+the existing `C3RStageMergeReceiptV1` remains the sole stage receipt authority.
+C3R-P must independently prove the PostgreSQL 15.8 oracle, two isolated
+reset/replay cycles, closed database-enforced Practice identity, actual
+Practice evidence and exact evidence cross-bindings, metadata-only artifacts,
+zero Theory/Law scope and zero remote/Supabase/Production mutation.
+
+The six renamed histories remain remote-`UNKNOWN` and require a separate
+reconciliation packet. Repaired known-applied history is never replayed
+remotely. C3R-P remains `authorized_unstarted`; C3R-T and C3R-L remain receipt-
+blocked and WCV-C3 remains incomplete.
+
+## 2D. Unified product and multisurface launch convergence
 
 The 2026-08-14 ULC-0 decision is a mandatory subordinate V13 launch
 amendment led by Issue #719. It is not V14, V13.1, another active master or
