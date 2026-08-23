@@ -170,6 +170,9 @@ test("dedicated cycles start isolated Supabase first and transactionally apply a
     runtimeSource.indexOf("];", runtimeSource.indexOf("const EXCLUDED_SUPABASE_SERVICES")) + 2,
   );
   assert.doesNotMatch(excludedServices, /storage-api/);
+  assert.match(runtimeSource, /function installExternalMigrationFunctions\(container\)/);
+  assert.match(runtimeSource, /create function storage\.allow_only_operation\(expected text\)/);
+  assert.match(runtimeSource, /create function storage\.allow_any_operation\(expected text\[\]\)/);
   assert.match(runtimeSource, /function assertExternalMigrationSubstrate\(container\)/);
   assert.match(runtimeSource, /storage\.allow_only_operation\(text\)/);
   assert.match(runtimeSource, /storage\.allow_any_operation\(text\[\]\)/);
@@ -180,6 +183,11 @@ test("dedicated cycles start isolated Supabase first and transactionally apply a
   assert.match(runtimeSource, /150008\|9\|PRACTICE\|f\|f\|t/);
   assert.match(runtimeSource, /150008\|9\|1\|1\|f\|f\|f\|t\|t\|postgres/);
   assert.match(runtimeSource, /append recovery reapplication/);
+  assert.ok(
+    runtimeSource.indexOf("installExternalMigrationFunctions(databaseContainer)") <
+      runtimeSource.indexOf("assertExternalMigrationSubstrate(databaseContainer)"),
+    "missing A0 external functions must be installed before the closed preflight",
+  );
   assert.ok(
     runtimeSource.indexOf("assertExternalMigrationSubstrate(databaseContainer)") <
       runtimeSource.indexOf("applyExactMigrationHistory(cycleRoot, databaseContainer)"),

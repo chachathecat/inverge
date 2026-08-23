@@ -708,6 +708,50 @@ function psql(container, sql, label = "C3R-P database assertion") {
     "--username", "postgres", "--dbname", "postgres"], { input: sql, label });
 }
 
+function installExternalMigrationFunctions(container) {
+  const base = psql(container, `select concat_ws('|',
+    (to_regclass('auth.users') is not null)::text,
+    (to_regprocedure('auth.uid()') is not null)::text,
+    (to_regclass('storage.buckets') is not null)::text,
+    (to_regclass('storage.objects') is not null)::text,
+    (select relrowsecurity from pg_class where oid = 'storage.objects'::regclass)
+  );`, "C3R-P external Supabase base substrate preflight");
+  if (base !== "true|true|true|true|true") {
+    throw new Error("C3R-P external Supabase base substrate is incomplete before adapter install.");
+  }
+  const missing = psql(container, `select concat_ws('|',
+    (to_regprocedure('storage.allow_only_operation(text)') is null)::text,
+    (to_regprocedure('storage.allow_any_operation(text[])') is null)::text
+  );`, "C3R-P external migration-function discovery").split("|");
+  const statements = [];
+  if (missing[0] === "true") {
+    statements.push(`create function storage.allow_only_operation(expected text)
+      returns boolean language sql stable set search_path = '' as $$
+        select coalesce(
+          nullif(pg_catalog.current_setting('request.headers', true), ''), '{}'
+        )::jsonb ->> 'x-supabase-storage-operation' = expected
+      $$;`);
+  }
+  if (missing[1] === "true") {
+    statements.push(`create function storage.allow_any_operation(expected text[])
+      returns boolean language sql stable set search_path = '' as $$
+        select (
+          coalesce(
+            nullif(pg_catalog.current_setting('request.headers', true), ''), '{}'
+          )::jsonb ->> 'x-supabase-storage-operation'
+        ) = any(expected)
+      $$;`);
+  }
+  if (statements.length > 0) {
+    psql(container, `${statements.join("\n")}
+      grant execute on function storage.allow_only_operation(text)
+        to anon, authenticated, service_role;
+      grant execute on function storage.allow_any_operation(text[])
+        to anon, authenticated, service_role;`,
+    "C3R-P A0 external migration-function adapter install");
+  }
+}
+
 function assertExternalMigrationSubstrate(container) {
   const value = psql(container, `select concat_ws('|',
     (to_regclass('auth.users') is not null)::text,
@@ -862,6 +906,7 @@ async function runDedicatedCycle(input) {
     const serviceRoleKey = statusValue(status,
       ["SERVICE_ROLE_KEY", "service_role_key", "SECRET_KEY", "secret_key"]);
     const databaseContainer = `supabase_db_${projectId}`;
+    installExternalMigrationFunctions(databaseContainer);
     assertExternalMigrationSubstrate(databaseContainer);
     applyExactMigrationHistory(cycleRoot, databaseContainer);
     databaseSecurity(databaseContainer);
