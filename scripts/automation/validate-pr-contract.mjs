@@ -44,6 +44,27 @@ const C3R_A1_SOURCE_AUTHORITY_SCOPE = Object.freeze({
   pullRequestTitle:
     "[WCV-C3R-A1] Install serial Practice/Theory/Law program authority",
 });
+const PRE_C3R_P_MIGRATION_AUTHORITY_CONTRACT_PATH =
+  "config/dabangil-wcv-c3-pre-p-migration-mutation-authority-v1.json";
+const PRE_C3R_P_MIGRATION_AUTHORITY_SOURCE_SCOPE = Object.freeze({
+  repository: "chachathecat/inverge",
+  baseRef: "main",
+  baseSha: "5965ddb0202c5f9effb531824d4d95f775abecc1",
+  headRef: "codex/wcv-c3-pre-p-migration-mutation-authority",
+  headRepository: "chachathecat/inverge",
+  pullRequestTitle:
+    "[WCV-C3 PRE-P] Authorize exact C3R-P migration reconciliation",
+  isDraft: true,
+});
+const PRE_C3R_P_MIGRATION_AUTHORITY_REFERENCE_LINES = Object.freeze([
+  "Refs #706",
+  "Refs #707",
+  "Refs #708",
+  "Refs #714",
+  "Refs #781",
+]);
+const PRE_C3R_P_MIGRATION_AUTHORITY_DISPOSITION =
+  "- Issue disposition: #706/#707/#708/#714/#781 remain open; PRE-C3R-P authority closes none";
 const PRE_C3R_P_ORACLE_CONTRACT_PATH =
   "config/dabangil-wcv-c3-pre-p-postgresql-security-state-oracle-v1.json";
 const PRE_C3R_P_ORACLE_SOURCE_SCOPE = Object.freeze({
@@ -95,6 +116,7 @@ function readPullRequestContext() {
           headRepository: event.pull_request?.head?.repo?.full_name ?? null,
           pullRequestTitle: event.pull_request?.title ?? null,
           isDraft: event.pull_request?.draft === true,
+          autoMergeEnabled: event.pull_request?.auto_merge != null,
         };
       }
     } catch {
@@ -113,6 +135,7 @@ function readPullRequestContext() {
       headRepository: null,
       pullRequestTitle: null,
       isDraft: null,
+      autoMergeEnabled: null,
     };
   }
 
@@ -164,6 +187,31 @@ function matchesExactC3rA1Scope(context) {
   );
 }
 
+function readPreC3rPMigrationAuthorityReferenceAuthority() {
+  if (!fs.existsSync(PRE_C3R_P_MIGRATION_AUTHORITY_CONTRACT_PATH)) return null;
+  try {
+    const contract = JSON.parse(
+      fs.readFileSync(PRE_C3R_P_MIGRATION_AUTHORITY_CONTRACT_PATH, "utf8"),
+    );
+    return contract?.deliveryControl?.referenceOnlyIssueLinks ?? null;
+  } catch {
+    return null;
+  }
+}
+
+function matchesExactPreC3rPMigrationAuthorityScope(context) {
+  return Object.entries(PRE_C3R_P_MIGRATION_AUTHORITY_SOURCE_SCOPE).every(
+    ([key, value]) => context?.[key] === value,
+  );
+}
+
+function isPreC3rPMigrationAuthorityCandidate(context) {
+  return context?.repository ===
+      PRE_C3R_P_MIGRATION_AUTHORITY_SOURCE_SCOPE.repository &&
+    context?.headRef ===
+      PRE_C3R_P_MIGRATION_AUTHORITY_SOURCE_SCOPE.headRef;
+}
+
 function readPreC3rPOracleReferenceAuthority() {
   if (!fs.existsSync(PRE_C3R_P_ORACLE_CONTRACT_PATH)) return null;
   try {
@@ -193,6 +241,51 @@ function validateIssueLink(body, errors, context) {
     ...body.matchAll(GITHUB_CLOSING_KEYWORD_PATTERN),
   ];
   const sourceAuthority = readC3rA0SourceAuthorityIssueLink();
+
+  if (isPreC3rPMigrationAuthorityCandidate(context)) {
+    const referenceAuthority =
+      readPreC3rPMigrationAuthorityReferenceAuthority();
+    const bodyLines = body.split(/\r?\n/u).map((line) => line.trim());
+    const actualReferenceLines = bodyLines.filter((line) => /^Refs #\d+$/u.test(line));
+    const exactDispositionCount = bodyLines.filter(
+      (line) => line === PRE_C3R_P_MIGRATION_AUTHORITY_DISPOSITION,
+    ).length;
+    const contextScopeMatches =
+      matchesExactPreC3rPMigrationAuthorityScope(context);
+    const contractScopeMatches = Object.entries(
+      PRE_C3R_P_MIGRATION_AUTHORITY_SOURCE_SCOPE,
+    ).every(([key, value]) => {
+      if (key === "isDraft") return referenceAuthority?.draftRequired === value;
+      return referenceAuthority?.[key] === value;
+    });
+
+    if (
+      !contextScopeMatches ||
+      !contractScopeMatches ||
+      referenceAuthority?.mode !== "REFERENCE_ONLY" ||
+      JSON.stringify(referenceAuthority?.requiredReferenceLinesExactly) !==
+        JSON.stringify(PRE_C3R_P_MIGRATION_AUTHORITY_REFERENCE_LINES) ||
+      referenceAuthority?.requiredDispositionLine !==
+        PRE_C3R_P_MIGRATION_AUTHORITY_DISPOSITION ||
+      JSON.stringify(actualReferenceLines) !==
+        JSON.stringify(PRE_C3R_P_MIGRATION_AUTHORITY_REFERENCE_LINES) ||
+      exactDispositionCount !== 1 ||
+      referenceAuthority?.closingKeywordsAllowed !== false ||
+      referenceAuthority?.exceptionAppliesOnlyWhenExactLinesPresent !== true ||
+      referenceAuthority?.fullGithubClosingKeywordFamilyBlocked !== true ||
+      allGithubClosingLinks.length !== 0
+    ) {
+      errors.push(
+        "PRE-C3R-P migration authority reference-only linking requires its five exact issue references, exact open disposition, exact pinned Draft scope, and zero issue-closing keywords.",
+      );
+    }
+    if (context?.autoMergeEnabled !== false) {
+      errors.push(
+        "PRE-C3R-P migration authority requires native pull_request.auto_merge to be null.",
+      );
+    }
+    return;
+  }
 
   if (isPreC3rPOracleCandidate(context)) {
     const deliveryControl = readPreC3rPOracleReferenceAuthority();
@@ -307,7 +400,7 @@ function validateRisk(body, errors) {
   }
 }
 
-function validateMergeRecommendation(body, errors) {
+function validateMergeRecommendation(body, errors, context) {
   const recommendationPattern = /^\s*-\s*\[([ xX])\]\s*(Auto-merge candidate|Human approval required|Blocked)\s*$/gim;
   const matches = [...body.matchAll(recommendationPattern)];
   const byLabel = new Map();
@@ -331,6 +424,14 @@ function validateMergeRecommendation(body, errors) {
   if (checkedCount !== 1) {
     errors.push("exactly one merge recommendation checkbox must be checked.");
   }
+  if (
+    isPreC3rPMigrationAuthorityCandidate(context) &&
+    byLabel.get("Human approval required") !== true
+  ) {
+    errors.push(
+      "PRE-C3R-P migration authority must select Human approval required.",
+    );
+  }
 }
 
 function main() {
@@ -348,7 +449,7 @@ function main() {
   validateIssueLink(body, errors, context);
   validateHeadings(body, errors);
   validateRisk(body, errors);
-  validateMergeRecommendation(body, errors);
+  validateMergeRecommendation(body, errors, context);
 
   if (errors.length > 0) {
     for (const error of errors) console.error(`- ${error}`);

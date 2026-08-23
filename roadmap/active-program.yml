@@ -26,6 +26,19 @@ program:
   c3rA0MergeSha: 3a7047cf4c7fc68247137bafbca2434abdadbc7f
   c3rA1State: installed_after_expected_head_pinned_merge_and_validated_receipt
   c3rA1Authority: docs/decisions/2026-08-21-owner-wcv-c3r-a1-serial-program-authority.md
+  c3rPrePMigrationMutationAuthorityState: installed_after_expected_head_pinned_merge_and_validated_receipt
+  c3rPrePMigrationMutationAuthority: docs/decisions/2026-08-22-owner-wcv-c3-pre-p-migration-mutation-authority.md
+  c3rPrePMigrationMutationContract: config/dabangil-wcv-c3-pre-p-migration-mutation-authority-v1.json
+  c3rPrePMigrationMutationAuthorityContractId: C3RPMigrationMutationAuthorityV1
+  c3rPrePMigrationMutationAuthorityIsStage: false
+  c3rPrePMigrationMutationStageSelectorChangeCount: 0
+  c3rPrePMigrationMutationExistingPathOperationCount: 7
+  c3rPrePMigrationMutationFrozenAppend: supabase/migrations/20260822120000_c3r_p_practice_common_durable_substrate.sql
+  c3rPrePMigrationMutationEffectiveInventoryCount: 26
+  c3rPrePNewDurableAclGranteesExactly: [service_role]
+  c3rPrePPersonalConceptTransitionAclExactly: [REVOKE_EXECUTE_FROM_PUBLIC, REVOKE_EXECUTE_FROM_ANON, GRANT_EXECUTE_TO_AUTHENTICATED]
+  c3rPrePMigrationMutationRemoteAuthorizationCount: 0
+  c3rPrePMigrationMutationPerformedByAuthorityWork: false
   c3rStrictStageOrder: [C3R-P, C3R-T, C3R-L]
   soleNextC3rStage: C3R-P
   soleNextC3rStageIssue: 706
@@ -477,6 +490,22 @@ items:
     c3rA0ValidatedReceiptPr: 785
     c3rA1State: installed_after_expected_head_pinned_merge_and_validated_receipt
     c3rA1Contract: config/dabangil-wcv-c3r-a1-serial-program-authority-v1.json
+    c3rPrePMigrationMutationAuthorityState: installed_after_expected_head_pinned_merge_and_validated_receipt
+    c3rPrePMigrationMutationAuthorityContract: config/dabangil-wcv-c3-pre-p-migration-mutation-authority-v1.json
+    c3rPrePMigrationMutationAuthorityContractId: C3RPMigrationMutationAuthorityV1
+    c3rPrePMigrationMutationAuthorityReceiptType: C3RPMigrationMutationAuthorityMergeReceiptV1
+    c3rPrePMigrationMutationAuthorityReceiptPr: 795
+    c3rPrePMigrationMutationAuthorityReceiptIndependentLiveGitHubVerificationRequired: true
+    c3rPBaseMustEqualValidatedPrePAuthorityResultingMain: true
+    c3rPrePAuthorityFilesMustExistUnchangedAtC3rPBaseAndHead: true
+    c3rPrePMigrationMutationAuthorityIsStage: false
+    c3rPrePMigrationMutationPerformedByAuthorityWork: false
+    c3rPrePMigrationMutationExistingPathOperationCount: 7
+    c3rPrePMigrationMutationFrozenAppend: supabase/migrations/20260822120000_c3r_p_practice_common_durable_substrate.sql
+    c3rPrePMigrationMutationEffectiveInventoryCount: 26
+    c3rPrePNewDurableAclGranteesExactly: [service_role]
+    c3rPrePPersonalConceptTransitionAclExactly: [REVOKE_EXECUTE_FROM_PUBLIC, REVOKE_EXECUTE_FROM_ANON, GRANT_EXECUTE_TO_AUTHENTICATED]
+    c3rPrePMigrationMutationRemoteAuthorizationCount: 0
     c3rStrictStageOrder: [C3R-P, C3R-T, C3R-L]
     currentAuthorizedRuntimeStage: C3R-P
     currentAuthorizedRuntimeStageState: authorized_unstarted

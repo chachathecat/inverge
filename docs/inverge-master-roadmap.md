@@ -4,6 +4,9 @@
 - 상세 제품 기준: `docs/inverge-second-round-final-product-spec.md`
 - 실행 상태와 의존성 기준: `roadmap/active-program.yml`
 - Current exact-scope authority:
+  `docs/decisions/2026-08-22-owner-wcv-c3-pre-p-migration-mutation-authority.md`
+  for the exact source-only PRE-C3R-P migration-mutation authority, one frozen
+  append and zero-remote boundary,
   `docs/decisions/2026-08-21-owner-wcv-c3r-a1-serial-program-authority.md`
   for the source-only WCV-C3 recovery program and C3R-P post-merge selector,
   `docs/decisions/2026-08-21-owner-wcv-c3r-a0-migration-dependency-authority.md`
@@ -91,6 +94,49 @@ complete WCV-C3, close #706/#707/#708/#781, complete Issue #714 allocation C3
 while preserving C4/C6, advance the selector or publish the terminal receipt.
 A1 starts no runtime, completes no WCV-C3 state, closes no issue and authorizes
 no migration apply, Production, payment or learner activation.
+
+## 2026-08-22 PRE-C3R-P Exact Migration-Mutation Authority
+
+`C3RPMigrationMutationAuthorityV1` is a source-only bridge, not a C3R stage.
+It preserves the installed C3R-A0 25-file baseline and the C3R-A1 serial graph
+while granting a later complete C3R-P candidate exactly seven prospective
+existing-path operations: six renames, including the pinned personal-learning
+PostgreSQL-15.8 recursive-CTE repair, plus the pinned in-place fresh-history
+compatibility repair of the `KNOWN_APPLIED` personal-concept early boundary.
+The five legal rename bodies remain byte-identical. All unlisted migrations
+remain governed by A0.
+
+The sole frozen append is
+`supabase/migrations/20260822120000_c3r_p_practice_common_durable_substrate.sql`.
+The authority Work does not create it. The closed effective formula produces
+exactly 26 files: A0's 25, six old rename paths exchanged for six new paths,
+the preserved in-place repaired concept path and exactly one append. No delete
+or second append is allowed.
+
+The append's newly created durable relations, policies and routines are
+service-role-only. The existing exact ten-argument personal-concept transition
+RPC separately ends with PUBLIC and anon EXECUTE revoked and authenticated as
+its sole explicit grantee. Unsafe extra grants, non-service new policies,
+missing final ACL catalog evidence and destructive drops fail closed.
+
+The future `C3RPMigrationMutationReceiptV1` binds exact old/new byte evidence,
+18 unchanged paths, dependency closure, two fresh isolated reset/replays,
+PostgreSQL `150008`, the merged oracle, complete canonical final database
+security state, exact Practice runtime evidence, metadata-only artifacts,
+cleanup and zero remote mutation. It is subordinate to the required
+`C3RStageMergeReceiptV1`.
+It also binds a separately verified closed authority-merge receipt for exact
+PR #795: C3R-P must branch from that expected-head-pinned resulting-main
+SHA/tree, with identical authority decision/contract bytes already installed
+there and preserved at its candidate head. An unmerged or
+candidate-introduced authority does not satisfy this dependency.
+
+Six `UNKNOWN` renamed histories require a later remote-reconciliation packet.
+The `KNOWN_APPLIED` historical ledger remains untouched and repaired old
+history cannot be replayed remotely. This bridge grants no remote action and
+does not change `C3R-P → C3R-T → C3R-L`: P remains
+`authorized_unstarted`, T/L remain receipt-blocked, WCV-C3 remains incomplete,
+all governed issues remain open and successor runtime started remains false.
 
 The future free-limited public ULC-L1 route requires Today, Review Queue,
 five first-round MCQ subjects, three second-round Trusted Repair subjects,
