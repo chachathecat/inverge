@@ -164,13 +164,16 @@ test("sole append closes subject, ownership, RLS, RPC, CAS and durable outcome b
 
 test("dedicated cycles start isolated Supabase first and transactionally apply all 26 migrations", () => {
   assert.match(runtimeSource, /c3r-p-migrations/);
-  assert.match(runtimeSource, /\[storage\]\\nenabled = true/);
+  assert.match(runtimeSource, /\[storage\]\\nenabled = false/);
   const excludedServices = runtimeSource.slice(
     runtimeSource.indexOf("const EXCLUDED_SUPABASE_SERVICES"),
     runtimeSource.indexOf("];", runtimeSource.indexOf("const EXCLUDED_SUPABASE_SERVICES")) + 2,
   );
-  assert.doesNotMatch(excludedServices, /storage-api/);
-  assert.match(runtimeSource, /function installExternalMigrationFunctions\(container\)/);
+  assert.match(excludedServices, /storage-api/);
+  assert.match(runtimeSource, /function installExternalMigrationSubstrate\(container\)/);
+  assert.match(runtimeSource, /create table if not exists storage\.buckets/);
+  assert.match(runtimeSource, /create table if not exists storage\.objects/);
+  assert.match(runtimeSource, /alter table storage\.objects enable row level security/);
   assert.match(runtimeSource, /create function storage\.allow_only_operation\(expected text\)/);
   assert.match(runtimeSource, /create function storage\.allow_any_operation\(expected text\[\]\)/);
   assert.match(runtimeSource, /function assertExternalMigrationSubstrate\(container\)/);
@@ -184,9 +187,9 @@ test("dedicated cycles start isolated Supabase first and transactionally apply a
   assert.match(runtimeSource, /150008\|9\|1\|1\|f\|f\|f\|t\|t\|postgres/);
   assert.match(runtimeSource, /append recovery reapplication/);
   assert.ok(
-    runtimeSource.indexOf("installExternalMigrationFunctions(databaseContainer)") <
+    runtimeSource.indexOf("installExternalMigrationSubstrate(databaseContainer)") <
       runtimeSource.indexOf("assertExternalMigrationSubstrate(databaseContainer)"),
-    "missing A0 external functions must be installed before the closed preflight",
+    "missing A0 external objects must be installed before the closed preflight",
   );
   assert.ok(
     runtimeSource.indexOf("assertExternalMigrationSubstrate(databaseContainer)") <
