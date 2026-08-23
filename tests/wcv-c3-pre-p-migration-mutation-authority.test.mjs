@@ -952,6 +952,81 @@ test("routine-body mutation scope ignores comments and strings and allows append
   );
 });
 
+test("append source rejects encoded and newline-concatenated literals at every routine depth", () => {
+  const source = futureFixture.appendBytes.toString("utf8");
+  const withBody = (body) =>
+    Buffer.from(
+      source.replace(
+        "as $$ select payload $$;",
+        () => `as $$ ${body} $$;`,
+      ),
+      "utf8",
+    );
+  const withTopLevel = (body) => Buffer.from(`${source}\n${body};\n`, "utf8");
+  const encodedBodies = [
+    String.raw`select U&'\0074heory'`,
+    String.raw`select u&'\+000074heory'`,
+    String.raw`select U&'!0074heory' UESCAPE '!'`,
+    String.raw`select U&"\0074heory"`,
+    String.raw`select E'\164heory'`,
+    String.raw`select E'\x74heory'`,
+    "select 'the'\n'ory'",
+  ];
+  for (const body of encodedBodies) {
+    assert.throws(
+      () => validateAppendSemanticSource(withTopLevel(body), contract),
+      (error) => error.code === "RECEIPT_APPEND_ENCODED_LITERAL",
+      `top-level ${body} must fail closed`,
+    );
+    assert.throws(
+      () => validateAppendSemanticSource(withBody(body), contract),
+      (error) => error.code === "RECEIPT_APPEND_ENCODED_LITERAL",
+      `${body} must fail closed`,
+    );
+    assert.throws(
+      () =>
+        validateAppendSemanticSource(
+          withBody(`select $nested$ ${body} $nested$`),
+          contract,
+        ),
+      (error) => error.code === "RECEIPT_APPEND_ENCODED_LITERAL",
+      `nested ${body} must fail closed`,
+    );
+  }
+});
+
+test("append source keeps comments and ordinary strings on the existing marker boundary", () => {
+  const source = futureFixture.appendBytes.toString("utf8");
+  const withBody = (body) =>
+    Buffer.from(
+      source.replace(
+        "as $$ select payload $$;",
+        () => `as $$ ${body} $$;`,
+      ),
+      "utf8",
+    );
+  assert.doesNotThrow(() =>
+    validateAppendSemanticSource(
+      Buffer.from(`${source}\n-- U&'\\0074heory' UESCAPE '!'\n/* U&"\\0074heory" E'\\164heory' */\n`),
+      contract,
+    ),
+  );
+  assert.doesNotThrow(() =>
+    validateAppendSemanticSource(
+      withBody(String.raw`select 'practice';
+        select '\0070ractice';
+        -- U&'\0074heory' UESCAPE '!'
+        /* U&"\0074heory" E'\164heory' E'\x74heory' */
+        select payload`),
+      contract,
+    ),
+  );
+  assert.throws(
+    () => validateAppendSemanticSource(withBody("select 'theory'"), contract),
+    (error) => error.code === "RECEIPT_APPEND_CROSS_SUBJECT_BODY",
+  );
+});
+
 test("rejects duplicate JSON keys before parsing", () => {
   assert.throws(
     () => parseJsonRejectDuplicateKeys('{"a":1,"a":2}'),
@@ -1374,7 +1449,7 @@ test("append source rejects trailing unsafe grants, policies, and missing exact 
     ],
     [
       `${source}\ncreate function public.c3r_p_practice_escape_probe() returns integer language sql as E'select count(*) from public.legal_sources';\n`,
-      "RECEIPT_APPEND_ROUTINE_BODY_ENCODING",
+      "RECEIPT_APPEND_ENCODED_LITERAL",
     ],
     [
       `${source}\ncreate table public.c3r_p_practice_legal_link (id uuid references public.legal_sources(id));\n`,

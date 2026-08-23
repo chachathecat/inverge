@@ -640,8 +640,64 @@ const EXECUTABLE_SQL_TOKEN_TYPES = new Set([
   "OPERATOR",
 ]);
 
+function tokenizeAppendSql(sql) {
+  try {
+    return tokenizePostgresSql(sql);
+  } catch (error) {
+    if (
+      error?.code === "UNSUPPORTED_IDENTIFIER_FORM" &&
+      error.message.includes("UNICODE_ESCAPED_IDENTIFIER")
+    ) {
+      fail(
+        "RECEIPT_APPEND_ENCODED_LITERAL",
+        `Unicode escape quoted identifiers are forbidden: ${error.message}`,
+      );
+    }
+    throw error;
+  }
+}
+
+function validateAppendEncodedLiteralBoundary(sql, tokens) {
+  for (let index = 0; index < tokens.length; index += 1) {
+    const token = tokens[index];
+    if (token.type === "ESCAPE_STRING") {
+      fail(
+        "RECEIPT_APPEND_ENCODED_LITERAL",
+        `Unicode and C-style escape strings are forbidden at offset ${token.start}`,
+      );
+    }
+    if (
+      token.type === "UNQUOTED_IDENTIFIER" &&
+      token.value === "uescape"
+    ) {
+      fail(
+        "RECEIPT_APPEND_ENCODED_LITERAL",
+        `UESCAPE is forbidden at offset ${token.start}`,
+      );
+    }
+    if (token.type !== "ORDINARY_STRING") continue;
+    let nextIndex = index + 1;
+    while (
+      tokens[nextIndex]?.type === "LINE_COMMENT" ||
+      tokens[nextIndex]?.type === "BLOCK_COMMENT"
+    ) {
+      nextIndex += 1;
+    }
+    const next = tokens[nextIndex];
+    if (
+      next?.type === "ORDINARY_STRING" &&
+      /\r?\n/u.test(sql.slice(token.end, next.start))
+    ) {
+      fail(
+        "RECEIPT_APPEND_ENCODED_LITERAL",
+        `newline-concatenated string literals are forbidden at offsets ${token.start}-${next.end}`,
+      );
+    }
+  }
+}
+
 function topLevelExecutableSql(sql) {
-  return tokenizePostgresSql(sql)
+  return tokenizeAppendSql(sql)
     .filter((token) => EXECUTABLE_SQL_TOKEN_TYPES.has(token.type))
     .map((token) => token.value)
     .join(" ")
@@ -935,7 +991,8 @@ function validateAppendExecutableBodyScope(sql, contract, createdRelations) {
     fail("RECEIPT_APPEND_BODY_SCOPE_AUTHORITY_DRIFT", "routine-body boundary differs");
   }
   const createdRelationSet = new Set(createdRelations);
-  const outerTokens = tokenizePostgresSql(sql);
+  const outerTokens = tokenizeAppendSql(sql);
+  validateAppendEncodedLiteralBoundary(sql, outerTokens);
   const statements = [];
   let start = 0;
   for (let index = 0; index <= outerTokens.length; index += 1) {
@@ -1011,7 +1068,8 @@ function validateAppendExecutableBodyScope(sql, contract, createdRelations) {
   }
   while (pending.length > 0) {
     const body = pending.pop();
-    const tokens = tokenizePostgresSql(body);
+    const tokens = tokenizeAppendSql(body);
+    validateAppendEncodedLiteralBoundary(body, tokens);
     const executableTokens = tokens.filter((token) =>
       EXECUTABLE_SQL_TOKEN_TYPES.has(token.type),
     );
