@@ -788,10 +788,91 @@ function appendRoutineBodyDmlTarget(tokens, verbIndex, verb) {
   return normalizeSqlIdentity(`${schema.value}.${relation.value}`);
 }
 
+function isSqlKeyword(token, keyword) {
+  return token?.type === "UNQUOTED_IDENTIFIER" && token.value === keyword;
+}
+
+function sqlTokenDepths(tokens) {
+  const depths = [];
+  let depth = 0;
+  for (const token of tokens) {
+    if (token.type === "CLOSE_PUNCTUATION") depth -= 1;
+    depths.push(depth);
+    if (token.type === "OPEN_PUNCTUATION") depth += 1;
+  }
+  return depths;
+}
+
+function appendRoutineOnConflictAction(tokens, doIndex, depths) {
+  const action = tokens[doIndex + 1];
+  if (!isSqlKeyword(action, "update") && !isSqlKeyword(action, "nothing")) {
+    return null;
+  }
+  const actionDepth = depths[doIndex];
+  let conflictIndex = -1;
+  for (let index = doIndex - 1; index >= 0; index -= 1) {
+    if (depths[index] < actionDepth) break;
+    if (depths[index] !== actionDepth) continue;
+    if (tokens[index].type === "PUNCTUATION" && tokens[index].value === ";") {
+      break;
+    }
+    if (
+      isSqlKeyword(tokens[index], "conflict") &&
+      depths[index - 1] === actionDepth &&
+      isSqlKeyword(tokens[index - 1], "on")
+    ) {
+      conflictIndex = index;
+      break;
+    }
+  }
+  if (conflictIndex < 0) return null;
+  for (let index = conflictIndex - 2; index >= 0; index -= 1) {
+    if (depths[index] < actionDepth) break;
+    if (depths[index] !== actionDepth) continue;
+    if (tokens[index].type === "PUNCTUATION" && tokens[index].value === ";") {
+      break;
+    }
+    if (isSqlKeyword(tokens[index], "insert")) {
+      return {
+        action: action.value,
+        insertIndex: index,
+        updateIndex: action.value === "update" ? doIndex + 1 : null,
+      };
+    }
+  }
+  return null;
+}
+
 function validateAppendRoutineBodyMutationScope(tokens, createdRelationSet) {
+  const depths = sqlTokenDepths(tokens);
+  const onConflictUpdateIndexes = new Set();
   for (let index = 0; index < tokens.length; index += 1) {
     const token = tokens[index];
     if (token.type !== "UNQUOTED_IDENTIFIER") continue;
+    if (token.value === "do") {
+      const conflictAction = appendRoutineOnConflictAction(
+        tokens,
+        index,
+        depths,
+      );
+      if (conflictAction !== null) {
+        const target = appendRoutineBodyDmlTarget(
+          tokens,
+          conflictAction.insertIndex,
+          "insert",
+        );
+        if (!createdRelationSet.has(target)) {
+          fail(
+            "RECEIPT_APPEND_ROUTINE_BODY_HISTORICAL_DML",
+            `ON CONFLICT ${conflictAction.action.toUpperCase()} target is not append-created: ${target}`,
+          );
+        }
+        if (conflictAction.updateIndex !== null) {
+          onConflictUpdateIndexes.add(conflictAction.updateIndex);
+        }
+        continue;
+      }
+    }
     if (APPEND_ROUTINE_BODY_FORBIDDEN_STATEMENTS.has(token.value)) {
       fail(
         "RECEIPT_APPEND_ROUTINE_BODY_DDL",
@@ -799,6 +880,12 @@ function validateAppendRoutineBodyMutationScope(tokens, createdRelationSet) {
       );
     }
     if (!["insert", "update", "delete", "merge"].includes(token.value)) {
+      continue;
+    }
+    if (
+      token.value === "update" &&
+      onConflictUpdateIndexes.has(index)
+    ) {
       continue;
     }
     const target = appendRoutineBodyDmlTarget(tokens, index, token.value);

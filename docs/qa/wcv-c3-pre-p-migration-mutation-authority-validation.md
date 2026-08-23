@@ -112,7 +112,9 @@ The clean-replacement boundary also rejects direct and CTE-nested historical
 unresolved or unqualified targets, `MERGE`, and body-level DDL/control
 statements. Exact static `INSERT`/`UPDATE`/`DELETE` may target only relations
 created by the same append. Mutation words in comments and ordinary string
-literals remain non-executable controls.
+literals remain non-executable controls. Exact same-depth append-created
+`INSERT ... ON CONFLICT DO UPDATE/NOTHING` clauses pass, while unattached or
+procedural `DO` and historical-target upserts fail closed.
 Outer executable identifiers and values use the same marker scan, including
 `law_*`, `theory_*`, `legal_*` and foreign-key targets.
 The verifier must independently return the complete canonical catalog records;

@@ -252,7 +252,9 @@ exact schema-qualified relation created by that append; unresolved,
 unqualified or historical targets fail closed at every CTE/statement depth.
 Dynamic EXECUTE, MERGE and body-level CREATE/ALTER/DROP/TRUNCATE/COPY/GRANT/
 REVOKE/CALL/DO remain forbidden, while comments and ordinary strings create no
-mutation authority.
+mutation authority. An exact `INSERT ... ON CONFLICT DO UPDATE/NOTHING` clause
+is not a standalone `DO`: it inherits and revalidates the same append-created
+INSERT target, and creates no separate historical-relation authority.
 
 The subordinate `C3RPMigrationMutationReceiptV1` binds the exact authority,
 C3R-P head, seven operations, 18 unchanged paths, one append, 26-file inventory,

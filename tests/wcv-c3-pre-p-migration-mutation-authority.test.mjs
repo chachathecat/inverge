@@ -895,12 +895,15 @@ test("routine-body mutation scope rejects DDL, MERGE, and unresolved targets", (
   for (const body of [
     "delete from personal_concept_nodes returning payload",
     "with changed as (update only set payload = payload returning *) select payload",
+    "do update set payload = payload",
   ]) {
     assert.throws(
       () => validateAppendSemanticSource(Buffer.from(withBody(body)), contract),
       (error) =>
-        error.code ===
-        "RECEIPT_APPEND_ROUTINE_BODY_DML_TARGET_UNRESOLVED",
+        body.startsWith("do ")
+          ? error.code === "RECEIPT_APPEND_ROUTINE_BODY_DDL"
+          : error.code ===
+            "RECEIPT_APPEND_ROUTINE_BODY_DML_TARGET_UNRESOLVED",
       `${body} must fail closed`,
     );
   }
@@ -927,6 +930,8 @@ test("routine-body mutation scope ignores comments and strings and allows append
   );
   for (const body of [
     "insert into public.c3r_p_practice_state (id, payload) values (gen_random_uuid(), payload) returning payload",
+    "insert into public.c3r_p_practice_state (id, payload) values (gen_random_uuid(), payload) on conflict (id) do update set payload = excluded.payload returning payload",
+    "insert into public.c3r_p_practice_state (id, payload) values (gen_random_uuid(), payload) on conflict (id) do nothing returning payload",
     "update public.c3r_p_practice_state set payload = payload returning payload",
     "delete from public.c3r_p_practice_state where false returning payload",
   ]) {
@@ -935,6 +940,16 @@ test("routine-body mutation scope ignores comments and strings and allows append
       `${body} must be accepted for the append-created relation`,
     );
   }
+  assert.throws(
+    () =>
+      validateAppendSemanticSource(
+        withBody(
+          "insert into public.personal_concept_nodes (id) values (gen_random_uuid()) on conflict (id) do update set id = excluded.id returning payload",
+        ),
+        contract,
+      ),
+    (error) => error.code === "RECEIPT_APPEND_ROUTINE_BODY_HISTORICAL_DML",
+  );
 });
 
 test("rejects duplicate JSON keys before parsing", () => {

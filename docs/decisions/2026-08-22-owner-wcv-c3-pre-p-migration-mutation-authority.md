@@ -255,7 +255,9 @@ unqualified, historical or otherwise pre-existing target fails closed at any
 statement or CTE nesting depth. `MERGE` and body-level `CREATE`, `ALTER`,
 `DROP`, `TRUNCATE`, `COPY`, `GRANT`, `REVOKE`, `CALL` and `DO` are forbidden.
 Mutation words appearing only inside comments or ordinary string literals do
-not create executable authority.
+not create executable authority. An exact same-depth `INSERT ... ON CONFLICT
+DO UPDATE/NOTHING` clause is not a standalone `DO`; its action inherits and
+revalidates the INSERT's append-created relation target.
 The same token-level marker boundary covers the complete outer executable SQL,
 including underscore-delimited object names, foreign-key targets and static
 values.
