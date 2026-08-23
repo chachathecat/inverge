@@ -11,7 +11,8 @@ Local Docker: `LOCAL_DOCKER_NOT_REQUIRED_SOURCE_ONLY_AUTHORITY`
 - Protected base SHA: `5965ddb0202c5f9effb531824d4d95f775abecc1`
 - Protected base tree: `bcb1017b980a5175e45265080ba25bc4b25c51ff`
 - Merged and unreverted: PRs #785, #786 and #794
-- Closed unmerged and read-only: PRs #770, #780, #790, #791, #792 and #793
+- Closed unmerged and read-only: PRs #770, #780, #790, #791, #792, #793 and
+  donor PR #795
 - Open issues: #706, #707, #708, #714 and #781
 - Initial C3R-P branch/PR count: zero
 - Overlapping WCV-C3 merge-producing writer count: zero
@@ -76,7 +77,7 @@ continuity counters. Its domain-separated receipt digest covers the entire
 closed object except the digest field itself.
 
 One field is the separately domain-digested closed
-`C3RPMigrationMutationAuthorityMergeReceiptV1` for exact authority PR #795.
+`C3RPMigrationMutationAuthorityMergeReceiptV1` for exact authority PR #796.
 An independent live-GitHub verifier must reproduce its reconciled base,
 reviewed head/tree, pinned squash/resulting-main SHA/tree, exact authority
 digests, passed checks, clean `0/0/0` formal review, zero unresolved actionable

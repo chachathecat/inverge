@@ -50,10 +50,11 @@ const PRE_C3R_P_MIGRATION_AUTHORITY_SOURCE_SCOPE = Object.freeze({
   repository: "chachathecat/inverge",
   baseRef: "main",
   baseSha: "5965ddb0202c5f9effb531824d4d95f775abecc1",
-  headRef: "codex/wcv-c3-pre-p-migration-mutation-authority",
+  headRef:
+    "codex/wcv-c3-pre-p-migration-mutation-authority-clean-replacement",
   headRepository: "chachathecat/inverge",
   pullRequestTitle:
-    "[WCV-C3 PRE-P] Authorize exact C3R-P migration reconciliation",
+    "[WCV-C3 PRE-P] Authorize exact C3R-P migration reconciliation — clean replacement",
   isDraft: true,
 });
 const PRE_C3R_P_MIGRATION_AUTHORITY_REFERENCE_LINES = Object.freeze([

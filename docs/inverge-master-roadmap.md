@@ -126,7 +126,7 @@ security state, exact Practice runtime evidence, metadata-only artifacts,
 cleanup and zero remote mutation. It is subordinate to the required
 `C3RStageMergeReceiptV1`.
 It also binds a separately verified closed authority-merge receipt for exact
-PR #795: C3R-P must branch from that expected-head-pinned resulting-main
+PR #796: C3R-P must branch from that expected-head-pinned resulting-main
 SHA/tree, with identical authority decision/contract bytes already installed
 there and preserved at its candidate head. An unmerged or
 candidate-introduced authority does not satisfy this dependency.

@@ -1727,7 +1727,7 @@
       ],
       "receiptType": "C3RPMigrationMutationReceiptV1",
       "authorityMergeReceiptType": "C3RPMigrationMutationAuthorityMergeReceiptV1",
-      "authorityMergeReceiptPullRequest": 795,
+      "authorityMergeReceiptPullRequest": 796,
       "authorityMergeReceiptIndependentLiveGitHubVerificationRequired": true,
       "c3rPBaseMustEqualValidatedAuthorityResultingMain": true,
       "authorityFilesMustExistUnchangedAtC3rPBaseAndHead": true,

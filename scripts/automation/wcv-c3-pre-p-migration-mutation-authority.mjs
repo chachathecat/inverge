@@ -24,7 +24,7 @@ const SHA256 = /^[0-9a-f]{64}$/u;
 const GIT_BLOB = /^[0-9a-f]{40}$/u;
 const COMMIT_SHA = /^[0-9a-f]{40}$/u;
 const EXPECTED_CONTRACT_CANONICAL_SHA256 =
-  "54f826a90efc91c3ecd0d58d4e5cc56800499f149e0202351e5cf37d37f9c44c";
+  "0c0ee3d96d455dff9bb58548c8e3655ad75beb2ade541cb4774bf3fe04467245";
 const EXPECTED_RECONCILED_BASE_SHA =
   "5965ddb0202c5f9effb531824d4d95f775abecc1";
 const EXPECTED_RECONCILED_BASE_TREE =
@@ -1664,7 +1664,7 @@ async function validateAuthorityMergeReceipt(
   ) {
     fail(
       "RECEIPT_AUTHORITY_MERGE_BINDING",
-      "authority merge receipt is not the exact validated PR #795 outcome",
+      "authority merge receipt is not the exact validated PR #796 outcome",
     );
   }
   for (const [value, code, label] of [

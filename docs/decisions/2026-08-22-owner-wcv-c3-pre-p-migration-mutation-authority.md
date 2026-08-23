@@ -196,7 +196,7 @@ relation/routine/policy/ACL/owner/RLS/FORCE-RLS state, the exact Practice
 runtime receipt, metadata-only artifacts, cleanup and zero remote mutation.
 
 The authority-merge receipt is a closed, domain-digested record for this exact
-authority PR #795. A separate live-GitHub verifier must prove its reconciled
+authority PR #796. A separate live-GitHub verifier must prove its reconciled
 base, reviewed head/tree, expected-head-pinned squash/resulting-main SHA/tree,
 passed required native checks, actionable P0/P1/P2 `0/0/0`, zero unresolved
 actionable threads, exact decision/contract digests, zero migration-file

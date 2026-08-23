@@ -424,7 +424,7 @@ PostgreSQL `server_version_num = 150008`, the merged oracle, full canonical
 catalog/ACL/owner/policy/RLS/FORCE-RLS state, exact Practice evidence,
 metadata-only artifacts, cleanup and zero remote mutation.
 It separately requires an independently live-GitHub-validated closed
-`C3RPMigrationMutationAuthorityMergeReceiptV1` for exact PR #795. The C3R-P
+`C3RPMigrationMutationAuthorityMergeReceiptV1` for exact PR #796. The C3R-P
 base SHA/tree must equal that receipt's expected-head-pinned resulting-main
 SHA/tree, and the authority decision/contract must already exist unchanged at
 the base and remain unchanged at the C3R-P head. An unmerged,

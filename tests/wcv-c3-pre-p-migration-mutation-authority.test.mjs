@@ -527,7 +527,7 @@ async function validReceipt() {
     authorityMergeReceipt: signAuthorityMergeReceipt({
       receiptType: "C3RPMigrationMutationAuthorityMergeReceiptV1",
       repository: "chachathecat/inverge",
-      authorityPullRequest: 795,
+      authorityPullRequest: 796,
       reconciledBaseSha: contract.authority.reconciledBaseSha,
       reconciledBaseTree: contract.authority.reconciledBaseTree,
       reviewedHead: "a".repeat(40),
@@ -996,7 +996,7 @@ test("rejects an actual changed path outside the frozen 12-path manifest", () =>
 
 test("exact 12-path diff enforcement is scoped only to this authority candidate", () => {
   const authorityBranch =
-    "codex/wcv-c3-pre-p-migration-mutation-authority";
+    "codex/wcv-c3-pre-p-migration-mutation-authority-clean-replacement";
   assert.equal(
     shouldEnforceExactAuthorityChangedPaths(
       { currentBranch: authorityBranch },
@@ -1032,7 +1032,7 @@ test("accepts the pinned base through exact GitHub shallow PR evidence", () => {
         repo: { full_name: "chachathecat/inverge" },
       },
       head: {
-        ref: "codex/wcv-c3-pre-p-migration-mutation-authority",
+        ref: "codex/wcv-c3-pre-p-migration-mutation-authority-clean-replacement",
         sha: headSha,
         repo: { full_name: "chachathecat/inverge" },
       },
@@ -1073,7 +1073,7 @@ test("rejects incomplete GitHub shallow PR base evidence", () => {
               repo: { full_name: "chachathecat/inverge" },
             },
             head: {
-              ref: "codex/wcv-c3-pre-p-migration-mutation-authority",
+              ref: "codex/wcv-c3-pre-p-migration-mutation-authority-clean-replacement",
               sha: headSha,
               repo: { full_name: "chachathecat/inverge" },
             },
@@ -1159,7 +1159,7 @@ test("accepts a completely closed future migration receipt", async () => {
   );
   assert.deepEqual(result, {
     receiptType: "C3RPMigrationMutationReceiptV1",
-    authorityPullRequest: 795,
+    authorityPullRequest: 796,
     authorityResultingMainSha: futureFixture.baseSha,
     existingPathOperationCount: 7,
     unchangedPathCount: 18,
@@ -1588,7 +1588,7 @@ test("authority mirrors preserve PRE-P as a non-stage without selector drift", a
     overlay.authorityMergeReceiptType,
     "C3RPMigrationMutationAuthorityMergeReceiptV1",
   );
-  assert.equal(overlay.authorityMergeReceiptPullRequest, 795);
+  assert.equal(overlay.authorityMergeReceiptPullRequest, 796);
   assert.equal(overlay.c3rPBaseMustEqualValidatedAuthorityResultingMain, true);
   assert.equal(overlay.remoteOperationAuthorizationCount, 0);
   const expectedMirroredOperations =
@@ -1629,7 +1629,7 @@ test("authority mirrors preserve PRE-P as a non-stage without selector drift", a
     ),
     [
       "aa8850fdafe31cdaee19ddd71e83221aaf344743f46ca5a05a5c6751be9c8b60",
-      "f136ebbc933f7a02b9327f89ee80cb59baf8cb4fd7af898c0128996d653dd612",
+      "a8a115343dd123ba55ef381213e906592896cd8e77c7577fd0e9d56ed002674b",
       "5f68571348ae9046381b1c303f4f77b8ff2aa0d48666df27a9c7d9e03e517916",
       "d736b3cb5220cc47be081ff71f70c50fd38ce486e85c1edebe7363fbaf92681f",
     ],
@@ -1697,10 +1697,11 @@ function prEvent(body = prBody(), draft = true) {
       body,
       draft,
       head: {
-        ref: "codex/wcv-c3-pre-p-migration-mutation-authority",
+        ref: "codex/wcv-c3-pre-p-migration-mutation-authority-clean-replacement",
         repo: { full_name: "chachathecat/inverge" },
       },
-      title: "[WCV-C3 PRE-P] Authorize exact C3R-P migration reconciliation",
+      title:
+        "[WCV-C3 PRE-P] Authorize exact C3R-P migration reconciliation — clean replacement",
       auto_merge: null,
     },
   };
