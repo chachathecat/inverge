@@ -40,6 +40,41 @@ test("minimal authority validates exact base, seven bindings, one append and clo
   const result = await validateMinimalAuthority({ repositoryRoot, contractPath });
   assert.deepEqual(result, { ok: true, errors: [] });
 
+  const shallowEvent = {
+    repository: { full_name: "chachathecat/inverge" },
+    pull_request: {
+      draft: true,
+      title:
+        "[WCV-C3 PRE-P] Authorize exact C3R-P migration operations — minimal bridge",
+      base: {
+        ref: "main",
+        sha: "5965ddb0202c5f9effb531824d4d95f775abecc1",
+      },
+      head: {
+        ref: "codex/wcv-c3-pre-p-minimal-migration-mutation-authority",
+        sha: "f882e26649a4b538b2efed6c575ced3d3580ca9c",
+        repo: { full_name: "chachathecat/inverge" },
+      },
+    },
+  };
+  const shallow = validateMinimalAuthorityContract(contract, repositoryRoot, {
+    forceShallow: true,
+    githubEvent: shallowEvent,
+  });
+  assert.ok(
+    shallow.errors.every((error) => error === "SHALLOW_WORKTREE_DIRTY"),
+    shallow.errors.join(", "),
+  );
+
+  const wrongShallowBase = clone(shallowEvent);
+  wrongShallowBase.pull_request.base.sha = "0".repeat(40);
+  const rejectedShallow = validateMinimalAuthorityContract(
+    contract,
+    repositoryRoot,
+    { forceShallow: true, githubEvent: wrongShallowBase },
+  );
+  assert.ok(rejectedShallow.errors.includes("SHALLOW_PR_CONTEXT"));
+
   const extraEnvelope = clone(contract);
   extraEnvelope.futureRuntimeEnvelope = {};
   expectError(extraEnvelope, "TOP_LEVEL_KEYS");

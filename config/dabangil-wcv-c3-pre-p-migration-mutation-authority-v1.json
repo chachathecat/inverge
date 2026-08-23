@@ -11,6 +11,7 @@
     "isC3rStage": false,
     "reconciledBaseSha": "5965ddb0202c5f9effb531824d4d95f775abecc1",
     "reconciledBaseTree": "bcb1017b980a5175e45265080ba25bc4b25c51ff",
+    "reconciledBaseMigrationTree": "19f2cc2671b07027c000ec90b0e99b34eec5c109",
     "effectiveOn": "EXPECTED_HEAD_PINNED_SQUASH_MERGE_AND_VALIDATED_GITHUB_RECEIPT",
     "migrationFilesChangedByThisWork": 0,
     "runtimeInstalledByThisWork": false,

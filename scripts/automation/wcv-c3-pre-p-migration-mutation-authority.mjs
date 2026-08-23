@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 
 import { createHash } from "node:crypto";
+import { readFileSync } from "node:fs";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 import process from "node:process";
@@ -9,6 +10,7 @@ import { fileURLToPath } from "node:url";
 
 const BASE_SHA = "5965ddb0202c5f9effb531824d4d95f775abecc1";
 const BASE_TREE = "bcb1017b980a5175e45265080ba25bc4b25c51ff";
+const BASE_MIGRATION_TREE = "19f2cc2671b07027c000ec90b0e99b34eec5c109";
 const APPEND_PATH =
   "supabase/migrations/20260822120000_c3r_p_practice_common_durable_substrate.sql";
 
@@ -197,6 +199,35 @@ function gitBytes(repositoryRoot, objectSpec) {
   return git(repositoryRoot, ["cat-file", "blob", objectSpec], null);
 }
 
+function gitObjectExists(repositoryRoot, objectSpec) {
+  return spawnSync("git", ["cat-file", "-e", objectSpec], {
+    cwd: repositoryRoot,
+  }).status === 0;
+}
+
+function readGithubEvent() {
+  const eventPath = process.env.GITHUB_EVENT_PATH;
+  if (!eventPath) return null;
+  try {
+    return JSON.parse(readFileSync(eventPath, "utf8"));
+  } catch {
+    return null;
+  }
+}
+
+function matchesExactShallowPullRequestContext(event, contract) {
+  const pullRequest = event?.pull_request;
+  const delivery = contract.deliveryControl ?? {};
+  return event?.repository?.full_name === delivery.repository &&
+    pullRequest?.base?.ref === delivery.baseRef &&
+    pullRequest?.base?.sha === BASE_SHA &&
+    pullRequest?.head?.ref === delivery.headRef &&
+    pullRequest?.head?.repo?.full_name === delivery.headRepository &&
+    pullRequest?.title === delivery.pullRequestTitle &&
+    pullRequest?.draft === true &&
+    /^[0-9a-f]{40}$/u.test(pullRequest?.head?.sha ?? "");
+}
+
 function sha256(bytes) {
   return createHash("sha256").update(bytes).digest("hex");
 }
@@ -272,9 +303,16 @@ function repositoryChangedPaths(repositoryRoot) {
   return sorted(new Set([...committed, ...status]));
 }
 
-export function validateMinimalAuthorityContract(contract, repositoryRoot) {
+export function validateMinimalAuthorityContract(
+  contract,
+  repositoryRoot,
+  { forceShallow = false, githubEvent = readGithubEvent() } = {},
+) {
   const errors = [];
   const add = (code) => errors.push(code);
+  const baseObjectAvailable = !forceShallow &&
+    gitObjectExists(repositoryRoot, `${BASE_SHA}^{commit}`);
+  const sourceRef = baseObjectAvailable ? BASE_SHA : "HEAD";
 
   if (!same(Object.keys(contract), EXACT_TOP_LEVEL_KEYS)) add("TOP_LEVEL_KEYS");
 
@@ -286,7 +324,8 @@ export function validateMinimalAuthorityContract(contract, repositoryRoot) {
   }
   if (
     contract.authority?.reconciledBaseSha !== BASE_SHA ||
-    contract.authority?.reconciledBaseTree !== BASE_TREE
+    contract.authority?.reconciledBaseTree !== BASE_TREE ||
+    contract.authority?.reconciledBaseMigrationTree !== BASE_MIGRATION_TREE
   ) {
     add("BASE_IDENTITY");
   }
@@ -299,18 +338,33 @@ export function validateMinimalAuthorityContract(contract, repositoryRoot) {
     add("SOURCE_ONLY_BOUNDARY");
   }
 
-  try {
-    if (gitText(repositoryRoot, ["rev-parse", `${BASE_SHA}^{tree}`]) !== BASE_TREE) {
-      add("BASE_TREE");
+  if (baseObjectAvailable) {
+    try {
+      if (gitText(repositoryRoot, ["rev-parse", `${BASE_SHA}^{tree}`]) !== BASE_TREE) {
+        add("BASE_TREE");
+      }
+      const ancestor = spawnSync(
+        "git",
+        ["merge-base", "--is-ancestor", BASE_SHA, "HEAD"],
+        { cwd: repositoryRoot },
+      );
+      if (ancestor.status !== 0) add("BASE_ANCESTRY");
+    } catch {
+      add("BASE_GIT_OBJECT");
     }
-    const ancestor = spawnSync(
-      "git",
-      ["merge-base", "--is-ancestor", BASE_SHA, "HEAD"],
-      { cwd: repositoryRoot },
-    );
-    if (ancestor.status !== 0) add("BASE_ANCESTRY");
+  } else if (!matchesExactShallowPullRequestContext(githubEvent, contract)) {
+    add("SHALLOW_PR_CONTEXT");
+  }
+
+  try {
+    if (
+      gitText(repositoryRoot, ["rev-parse", `${sourceRef}:supabase/migrations`]) !==
+      BASE_MIGRATION_TREE
+    ) {
+      add("MIGRATION_TREE");
+    }
   } catch {
-    add("BASE_GIT_OBJECT");
+    add("MIGRATION_TREE_GIT_OBJECT");
   }
 
   const upstream = contract.immutableUpstream ?? {};
@@ -337,7 +391,7 @@ export function validateMinimalAuthorityContract(contract, repositoryRoot) {
     }
     for (const [artifactIndex, artifact] of (receipt.artifacts ?? []).entries()) {
       try {
-        const bytes = gitBytes(repositoryRoot, `${BASE_SHA}:${artifact.path}`);
+        const bytes = gitBytes(repositoryRoot, `${sourceRef}:${artifact.path}`);
         if (
           gitBlob(bytes) !== artifact.gitBlob ||
           sha256(bytes) !== artifact.sha256
@@ -388,7 +442,7 @@ export function validateMinimalAuthorityContract(contract, repositoryRoot) {
     try {
       const currentBytes = gitBytes(
         repositoryRoot,
-        `${BASE_SHA}:${expected.currentPath}`,
+        `${sourceRef}:${expected.currentPath}`,
       );
       const currentEvidence = evidence(currentBytes);
       const futureBytes = deriveFutureBytes(record, currentBytes);
@@ -424,7 +478,7 @@ export function validateMinimalAuthorityContract(contract, repositoryRoot) {
   try {
     const appendAtBase = spawnSync(
       "git",
-      ["cat-file", "-e", `${BASE_SHA}:${APPEND_PATH}`],
+      ["cat-file", "-e", `${sourceRef}:${APPEND_PATH}`],
       { cwd: repositoryRoot },
     );
     if (appendAtBase.status === 0) add("APPEND_PRESENT_AT_BASE");
@@ -437,7 +491,7 @@ export function validateMinimalAuthorityContract(contract, repositoryRoot) {
       "ls-tree",
       "-r",
       "--name-only",
-      BASE_SHA,
+      sourceRef,
       "supabase/migrations",
     ])
       .split(/\r?\n/u)
@@ -520,9 +574,9 @@ export function validateMinimalAuthorityContract(contract, repositoryRoot) {
 
   try {
     if (
-      gitText(repositoryRoot, ["rev-parse", `${BASE_SHA}:package.json`]) !==
+      gitText(repositoryRoot, ["rev-parse", `${sourceRef}:package.json`]) !==
         contract.packageIdentity?.packageJsonGitBlob ||
-      gitText(repositoryRoot, ["rev-parse", `${BASE_SHA}:package-lock.json`]) !==
+      gitText(repositoryRoot, ["rev-parse", `${sourceRef}:package-lock.json`]) !==
         contract.packageIdentity?.packageLockJsonGitBlob ||
       contract.packageIdentity?.packageMutationAuthorized !== false
     ) {
@@ -534,16 +588,32 @@ export function validateMinimalAuthorityContract(contract, repositoryRoot) {
 
   if (!same(contract.ownedPaths, EXACT_OWNED_PATHS)) add("OWNED_PATH_MANIFEST");
   try {
-    const changedPaths = repositoryChangedPaths(repositoryRoot);
-    if (!same(changedPaths, sorted(EXACT_OWNED_PATHS))) add("OWNED_PATH_CLOSURE");
-    if (changedPaths.some((value) => value.startsWith("supabase/migrations/"))) {
-      add("MIGRATION_DIFF");
-    }
-    if (
-      changedPaths.includes("package.json") ||
-      changedPaths.includes("package-lock.json")
-    ) {
-      add("PACKAGE_DIFF");
+    if (baseObjectAvailable) {
+      const changedPaths = repositoryChangedPaths(repositoryRoot);
+      if (!same(changedPaths, sorted(EXACT_OWNED_PATHS))) {
+        add("OWNED_PATH_CLOSURE");
+      }
+      if (changedPaths.some((value) => value.startsWith("supabase/migrations/"))) {
+        add("MIGRATION_DIFF");
+      }
+      if (
+        changedPaths.includes("package.json") ||
+        changedPaths.includes("package-lock.json")
+      ) {
+        add("PACKAGE_DIFF");
+      }
+    } else {
+      const worktreeStatus = gitText(repositoryRoot, [
+        "status",
+        "--porcelain=v1",
+        "--untracked-files=all",
+      ]);
+      if (worktreeStatus !== "") add("SHALLOW_WORKTREE_DIRTY");
+      for (const ownedPath of EXACT_OWNED_PATHS) {
+        if (!gitObjectExists(repositoryRoot, `HEAD:${ownedPath}`)) {
+          add(`SHALLOW_OWNED_PATH:${ownedPath}`);
+        }
+      }
     }
   } catch {
     add("DIFF_CLOSURE");
