@@ -47,7 +47,9 @@ function diskInventory() {
     .filter((name) => /^\d{8,14}_[a-z0-9_]+\.sql$/.test(name)).sort()
     .map((name) => ({
       path: `supabase/migrations/${name}`,
-      sha256: sha256(fs.readFileSync(path.join(root, "supabase/migrations", name))),
+      sha256: sha256(Buffer.from(fs.readFileSync(
+        path.join(root, "supabase/migrations", name), "utf8",
+      ).replace(/\r\n/g, "\n"), "utf8")),
     }));
 }
 
@@ -97,7 +99,7 @@ test("C3R-P applies the exact seven operations and one 26th append", () => {
   assert.equal(binding.operationBindings.length, 7);
   assert.equal(binding.appendPath, C3R_P_APPEND_PATH);
   assert.equal(binding.candidateSqlSha256,
-    sha256(fs.readFileSync(path.join(root, C3R_P_APPEND_PATH))));
+    sha256(Buffer.from(sql.replace(/\r\n/g, "\n"), "utf8")));
   assert.equal(binding.effectiveInventorySha256,
     sha256(Buffer.from(canonicalJson(inventory), "utf8")));
   assert.ok(inventory.some((entry) => entry.path === C3R_P_APPEND_PATH && entry.sha256.length === 64));
