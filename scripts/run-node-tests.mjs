@@ -120,6 +120,7 @@ const defaultTestFiles = [
   "tests/wcv-c3r-a1-serial-program-authority.test.mjs",
   "tests/wcv-c3-pre-p-postgresql-security-state-oracle.test.mjs",
   "tests/wcv-c3-pre-p-migration-mutation-authority.test.mjs",
+  "tests/wcv-c3r-p-practice-common-durable-runtime.test.mjs",
   "tests/wcv-c2r-structural-recovery-authority.test.mjs",
   "tests/rights-safe-adaptive-variant-foundry-contract.test.mjs",
   "tests/c2r-b-typed-subject-proof-contract.test.mjs",
@@ -195,7 +196,25 @@ for (let index = 0; index < rawArgs.length; index += 1) {
   }
 }
 
-const testFiles = requestedFiles.length > 0 ? requestedFiles : defaultTestFiles;
+// C3R-A0 and the PRE-C3R-P bridge intentionally validate their immutable
+// historical 25-file/source-only candidate trees. Once the authority-bound
+// C3R-P effective inventory exists, their live-tree assertions are superseded
+// only for the seven authorized operations. Keep both immutable tests directly
+// runnable and registered above, while the C3R-P focused test becomes the
+// default live-tree authority for the 26-file inventory.
+const historicalPreRuntimeTests = new Set([
+  "tests/wcv-c3r-a0-migration-dependency-authority.test.mjs",
+  "tests/wcv-c3-pre-p-migration-mutation-authority.test.mjs",
+]);
+const c3rPEffectiveInventoryExists = existsSync(
+  "config/dabangil-wcv-c3r-p-practice-common-durable-runtime-v1.json",
+) && existsSync(
+  "supabase/migrations/20260822120000_c3r_p_practice_common_durable_substrate.sql",
+);
+const effectiveDefaultTestFiles = c3rPEffectiveInventoryExists
+  ? defaultTestFiles.filter((file) => !historicalPreRuntimeTests.has(file))
+  : defaultTestFiles;
+const testFiles = requestedFiles.length > 0 ? requestedFiles : effectiveDefaultTestFiles;
 const missingFiles = testFiles.filter((file) => !existsSync(file));
 
 if (missingFiles.length > 0) {

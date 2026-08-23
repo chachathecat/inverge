@@ -19,8 +19,8 @@ import { serializeUnknownLegalIngestError } from "../lib/legal/legal-error-seria
 import { extractArticleChunks } from "../lib/legal/parse-law-xml.ts";
 
 const seedPath = "reference_corpus/legal/appraiser/legal_sources.seed.json";
-const migrationPath = "supabase/migrations/20260615_legal_grounding.sql";
-const articleIdentityMigrationPath = "supabase/migrations/20260615_legal_article_chunk_identity.sql";
+const migrationPath = "supabase/migrations/20260615090000_legal_grounding.sql";
+const articleIdentityMigrationPath = "supabase/migrations/20260615100000_legal_article_chunk_identity.sql";
 const docsPath = "docs/inverge-legal-source-ingest.md";
 const testRunnerPath = "scripts/run-node-tests.mjs";
 const packagePath = "package.json";

@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { existsSync } from "node:fs";
 import { readFile } from "node:fs/promises";
 
-const migrationPath = "supabase/migrations/20260616_legal_grounding_guard_service_role_grant.sql";
+const migrationPath = "supabase/migrations/20260616100000_legal_grounding_guard_service_role_grant.sql";
 const examplePath = "reference_corpus/legal/appraiser/legal_anchor_verification_decisions.example.json";
 const scriptPath = "scripts/legal/apply-legal-anchor-verification.ts";
 const docsPath = "docs/inverge-legal-anchor-verification-apply.md";
