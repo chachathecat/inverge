@@ -456,7 +456,7 @@ function nativeCycle(name, appendSql, cycle) {
       has_function_privilege('authenticated','public.c3r_p_apply_learning_command_v1(uuid,uuid,bigint,text,jsonb)','EXECUTE'),
       has_function_privilege('service_role','public.c3r_p_apply_learning_command_v1(uuid,uuid,bigint,text,jsonb)','EXECUTE'));
     `, false, "catalog assertion").stdout.trim();
-    if (catalog !== "150008|9|PRACTICE|false|false|true") {
+    if (catalog !== "150008|9|PRACTICE|f|f|t") {
       throw new Error("C3R-P native catalog contract failed.");
     }
     const userId = `11111111-1111-4111-8111-11111111111${cycle}`;
@@ -571,6 +571,7 @@ function statusValue(status, names) {
 function prepareCycle(repositoryRoot, cycleRoot, projectId) {
   fs.rmSync(cycleRoot, { recursive: true, force: true });
   fs.mkdirSync(path.join(cycleRoot, "supabase/migrations"), { recursive: true });
+  fs.mkdirSync(path.join(cycleRoot, "c3r-p-migrations"), { recursive: true });
   const sourceConfig = fs.readFileSync(
     path.join(repositoryRoot, "tests/runtime/wcv-c2-supabase/supabase/config.toml"), "utf8",
   );
@@ -584,10 +585,11 @@ function prepareCycle(repositoryRoot, cycleRoot, projectId) {
   for (const name of fs.readdirSync(path.join(repositoryRoot, "supabase/migrations")).sort()) {
     if (/^\d{8,14}_[a-z0-9_]+\.sql$/.test(name)) {
       fs.copyFileSync(path.join(repositoryRoot, "supabase/migrations", name),
-        path.join(cycleRoot, "supabase/migrations", name));
+        path.join(cycleRoot, "c3r-p-migrations", name));
     }
   }
-  if (fs.readdirSync(path.join(cycleRoot, "supabase/migrations")).length !== 26) {
+  if (fs.readdirSync(path.join(cycleRoot, "supabase/migrations")).length !== 0 ||
+    fs.readdirSync(path.join(cycleRoot, "c3r-p-migrations")).length !== 26) {
     throw new Error("C3R-P cycle did not receive the exact 26 migrations.");
   }
 }
@@ -600,10 +602,23 @@ function stopSupabase(repositoryRoot, cycleRoot) {
   });
 }
 
-function psql(container, sql) {
+function psql(container, sql, label = "C3R-P database assertion") {
   return run("docker", ["exec", "--interactive", container, "psql", "--no-psqlrc",
     "--quiet", "--tuples-only", "--no-align", "--set", "ON_ERROR_STOP=1",
-    "--username", "postgres", "--dbname", "postgres"], { input: sql, label: "C3R-P database assertion" });
+    "--username", "postgres", "--dbname", "postgres"], { input: sql, label });
+}
+
+function applyExactMigrationHistory(cycleRoot, container) {
+  const migrationRoot = path.join(cycleRoot, "c3r-p-migrations");
+  const names = fs.readdirSync(migrationRoot).sort();
+  if (names.length !== 26 || names.some((name) => !/^\d{8,14}_[a-z0-9_]+\.sql$/.test(name))) {
+    throw new Error("C3R-P exact migration history is invalid before application.");
+  }
+  for (const name of names) {
+    const sql = fs.readFileSync(path.join(migrationRoot, name), "utf8");
+    psql(container, `begin;\n${sql}\ncommit;\n`, `C3R-P migration ${name}`);
+  }
+  psql(container, "notify pgrst, 'reload schema';\n", "C3R-P PostgREST schema reload");
 }
 
 async function createIdentity(apiUrl, anonKey, label) {
@@ -656,7 +671,7 @@ function databaseSecurity(container) {
     (select rolbypassrls from pg_roles where rolname='service_role'),
     (select pg_get_userbyid(relowner) from pg_class where oid='public.c3r_p_learning_records'::regclass)
   );`);
-  if (value !== "150008|9|1|1|false|false|false|true|true|postgres") {
+  if (value !== "150008|9|1|1|f|f|f|t|t|postgres") {
     throw new Error("C3R-P catalog, grants, RLS, subject, owner, or PostgreSQL version is invalid.");
   }
 }
@@ -732,6 +747,7 @@ async function runDedicatedCycle(input) {
     const serviceRoleKey = statusValue(status,
       ["SERVICE_ROLE_KEY", "service_role_key", "SECRET_KEY", "secret_key"]);
     const databaseContainer = `supabase_db_${projectId}`;
+    applyExactMigrationHistory(cycleRoot, databaseContainer);
     databaseSecurity(databaseContainer);
     const identities = [await createIdentity(apiUrl, anonKey, `a-${input.cycle}`),
       await createIdentity(apiUrl, anonKey, `b-${input.cycle}`)];

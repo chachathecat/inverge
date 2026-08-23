@@ -15,6 +15,8 @@ const root = path.resolve(import.meta.dirname, "..");
 const contract = JSON.parse(fs.readFileSync(path.join(root,
   "config/dabangil-wcv-c3r-p-practice-common-durable-runtime-v1.json"), "utf8"));
 const sql = fs.readFileSync(path.join(root, C3R_P_APPEND_PATH), "utf8");
+const runtimeSource = fs.readFileSync(path.join(root,
+  "scripts/automation/wcv-c3r-p-practice-common-runtime.mjs"), "utf8");
 
 function sha256(bytes) {
   return crypto.createHash("sha256").update(bytes).digest("hex");
@@ -120,6 +122,16 @@ test("sole append closes subject, ownership, RLS, RPC, CAS and durable outcome b
   ]) assert.ok(sql.includes(marker), marker);
   assert.match(sql, /v_core_count > 3 or v_minutes > p_available_minutes/);
   assert.match(sql, /v_core_count > 3 or v_minutes > v_plan\.available_minutes/);
+});
+
+test("dedicated cycles start isolated Supabase first and transactionally apply all 26 migrations", () => {
+  assert.match(runtimeSource, /c3r-p-migrations/);
+  assert.match(runtimeSource, /function applyExactMigrationHistory\(cycleRoot, container\)/);
+  assert.match(runtimeSource, /names\.length !== 26/);
+  assert.match(runtimeSource, /psql\(container, `begin;\\n\$\{sql\}\\ncommit;\\n`/);
+  assert.match(runtimeSource, /notify pgrst, 'reload schema'/);
+  assert.match(runtimeSource, /150008\|9\|PRACTICE\|f\|f\|t/);
+  assert.match(runtimeSource, /150008\|9\|1\|1\|f\|f\|f\|t\|t\|postgres/);
 });
 
 test("PRACTICE_RUNTIME verifier reproduces every required binding", () => {
