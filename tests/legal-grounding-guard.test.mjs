@@ -5,7 +5,7 @@ import { readFile } from "node:fs/promises";
 
 import { evaluateLegalGroundingGuard } from "../lib/legal/legal-grounded-explanation-guard.ts";
 
-const migrationPath = "supabase/migrations/20260615_legal_grounding_guard.sql";
+const migrationPath = "supabase/migrations/20260615120000_legal_grounding_guard.sql";
 const helperPath = "lib/legal/legal-concept-source-anchors.ts";
 const docsPath = "docs/inverge-legal-grounding-guard.md";
 const testRunnerPath = "scripts/run-node-tests.mjs";

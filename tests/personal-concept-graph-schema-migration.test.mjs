@@ -4,6 +4,8 @@ import { readFile } from "node:fs/promises";
 
 const migrationPath = "supabase/migrations/20260605_create_personal_concept_nodes.sql";
 const rpcOnlyBoundaryMigrationPath = "supabase/migrations/202606232130_personal_concept_graph_rpc_only_write_boundary.sql";
+const c3rPBoundaryReassertionPath =
+  "supabase/migrations/20260822120000_c3r_p_practice_common_durable_substrate.sql";
 
 const requiredColumns = [
   "id uuid primary key",
@@ -117,10 +119,11 @@ test("RPC-only boundary migration revokes direct authenticated insert and update
 });
 
 test("RPC-only boundary migration preserves authenticated RPC execute and revokes anon/public execute", async () => {
-  const normalized = normalize(await readRpcOnlyBoundaryMigration());
+  const earlyBoundary = normalize(await readRpcOnlyBoundaryMigration());
+  const normalized = normalize(await readFile(c3rPBoundaryReassertionPath, "utf8"));
 
-  assert.match(normalized, /revoke execute on function public\.transition_personal_concept_node_v1\([^)]*timestamptz[^)]*\) from public/);
-  assert.match(normalized, /revoke execute on function public\.transition_personal_concept_node_v1\([^)]*timestamptz[^)]*\) from anon/);
+  assert.doesNotMatch(earlyBoundary, /transition_personal_concept_node_v1/);
+  assert.match(normalized, /revoke execute on function public\.transition_personal_concept_node_v1\([^)]*timestamptz[^)]*\) from public, anon/);
   assert.match(normalized, /grant execute on function public\.transition_personal_concept_node_v1\([^)]*timestamptz[^)]*\) to authenticated/);
 });
 

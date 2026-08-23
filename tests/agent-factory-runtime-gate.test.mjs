@@ -50,6 +50,11 @@ import {
 import {
   runtimeRequiredPathRecords,
 } from "../scripts/automation/runtime-risk-contract.mjs";
+import {
+  C3R_P_APPEND_PATH,
+  C3R_P_CONTRACT_PATH,
+  isC3RPRiskCandidate,
+} from "../scripts/automation/wcv-c3r-p-practice-common-runtime.mjs";
 
 const WORKSPACE_ROOT = process.cwd();
 const SCRIPT = path.resolve(WORKSPACE_ROOT, "scripts/automation/runtime-gate.mjs");
@@ -967,4 +972,17 @@ test("PostgreSQL security-state oracle is a closed native adapter without changi
     crypto.createHash("sha256").update(workflow).digest("hex"),
     "529a28f0c644867acd0177e939bb768c708c7e8eb402fd0ae8e46646b0f6e90e",
   );
+});
+
+test("C3R-P exact append and contract select the closed runtime adapter", () => {
+  const candidate = {
+    changedFiles: [C3R_P_APPEND_PATH, C3R_P_CONTRACT_PATH],
+    changedFilesTruncated: false,
+    runtimeEvidenceRequired: true,
+  };
+  assert.equal(isC3RPRiskCandidate(candidate), true);
+  assert.equal(isC3RPRiskCandidate({ ...candidate, changedFiles: [C3R_P_APPEND_PATH] }), false);
+  const reasons = runtimeRequiredPathRecords(candidate.changedFiles);
+  assert.deepEqual(reasons.map((reason) => reason.path).sort(),
+    [C3R_P_APPEND_PATH, C3R_P_CONTRACT_PATH].sort());
 });
