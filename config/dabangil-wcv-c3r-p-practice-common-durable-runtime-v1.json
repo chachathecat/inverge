@@ -9,7 +9,7 @@
     "subject": "PRACTICE",
     "baseSha": "342d3795c8ea51aeb6f94751a5db913a9dbfcffd",
     "baseTree": "1ed5a3a103cd9994c395a61ab81c36db4366e687",
-    "headRef": "codex/wcv-c3r-p-runtime-first-clean-replan-1",
+    "headRef": "codex/wcv-c3r-p-runtime-first-clean-replan-2",
     "pullRequestTitle": "[WCV-C3R-P] Deliver runtime-first Practice durable-learning clean replan",
     "authorityDecisionRef": "docs/decisions/2026-08-22-owner-wcv-c3-pre-p-migration-mutation-authority.md",
     "authorityDecisionGitBlob": "eaa71770136eca3aa2f6509e025397b3a42cb477",

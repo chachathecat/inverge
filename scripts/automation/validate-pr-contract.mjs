@@ -92,7 +92,7 @@ const C3R_P_RUNTIME_SCOPE = Object.freeze({
   repository: "chachathecat/inverge",
   baseRef: "main",
   baseSha: "342d3795c8ea51aeb6f94751a5db913a9dbfcffd",
-  headRef: "codex/wcv-c3r-p-runtime-first-clean-replan-1",
+  headRef: "codex/wcv-c3r-p-runtime-first-clean-replan-2",
   headRepository: "chachathecat/inverge",
   pullRequestTitle: "[WCV-C3R-P] Deliver runtime-first Practice durable-learning clean replan",
   isDraft: true,

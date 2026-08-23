@@ -169,7 +169,7 @@ function runC3rP(body, overrides = {}) {
       title: "[WCV-C3R-P] Deliver runtime-first Practice durable-learning clean replan",
       base: { ref: "main", sha: "342d3795c8ea51aeb6f94751a5db913a9dbfcffd" },
       head: {
-        ref: "codex/wcv-c3r-p-runtime-first-clean-replan-1",
+        ref: "codex/wcv-c3r-p-runtime-first-clean-replan-2",
         repo: { full_name: "chachathecat/inverge" },
       },
       ...overrides,
