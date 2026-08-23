@@ -26,6 +26,10 @@ program:
   c3rA0MergeSha: 3a7047cf4c7fc68247137bafbca2434abdadbc7f
   c3rA1State: installed_after_expected_head_pinned_merge_and_validated_receipt
   c3rA1Authority: docs/decisions/2026-08-21-owner-wcv-c3r-a1-serial-program-authority.md
+  preC3rPMinimalMigrationMutationAuthorityState: installed_after_expected_head_pinned_merge_and_validated_receipt
+  preC3rPMinimalMigrationMutationAuthority: docs/decisions/2026-08-22-owner-wcv-c3-pre-p-migration-mutation-authority.md
+  preC3rPMigrationFilesChangedByAuthorityWork: 0
+  preC3rPRemoteMutationAuthorizationCount: 0
   c3rStrictStageOrder: [C3R-P, C3R-T, C3R-L]
   soleNextC3rStage: C3R-P
   soleNextC3rStageIssue: 706
@@ -477,6 +481,12 @@ items:
     c3rA0ValidatedReceiptPr: 785
     c3rA1State: installed_after_expected_head_pinned_merge_and_validated_receipt
     c3rA1Contract: config/dabangil-wcv-c3r-a1-serial-program-authority-v1.json
+    preC3rPMinimalMigrationMutationAuthorityState: installed_after_expected_head_pinned_merge_and_validated_receipt
+    preC3rPMinimalMigrationMutationAuthorityContract: config/dabangil-wcv-c3-pre-p-migration-mutation-authority-v1.json
+    authorizedExistingMigrationOperations: 7
+    authorizedFutureMigrationAppendCount: 1
+    expectedFutureEffectiveMigrationCount: 26
+    migrationFilesChangedByAuthorityWork: 0
     c3rStrictStageOrder: [C3R-P, C3R-T, C3R-L]
     currentAuthorizedRuntimeStage: C3R-P
     currentAuthorizedRuntimeStageState: authorized_unstarted

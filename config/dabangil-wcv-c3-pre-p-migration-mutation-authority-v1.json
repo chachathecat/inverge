@@ -1,0 +1,464 @@
+{
+  "schemaVersion": "dabangil.wcv_c3.pre_c3r_p.minimal_migration_mutation_authority.v1",
+  "contractId": "C3RPMigrationMutationAuthorityV1",
+  "contractVersion": "1.0.0",
+  "status": "candidate_effective_only_after_expected_head_pinned_squash_merge_and_validated_github_receipt",
+  "authority": {
+    "decisionId": "owner_wcv_c3_pre_p_minimal_migration_mutation_authority_2026_08_22",
+    "decisionPath": "docs/decisions/2026-08-22-owner-wcv-c3-pre-p-migration-mutation-authority.md",
+    "repository": "chachathecat/inverge",
+    "kind": "SOURCE_ONLY_CONTROL_PLANE_BRIDGE",
+    "isC3rStage": false,
+    "reconciledBaseSha": "5965ddb0202c5f9effb531824d4d95f775abecc1",
+    "reconciledBaseTree": "bcb1017b980a5175e45265080ba25bc4b25c51ff",
+    "reconciledBaseMigrationTree": "19f2cc2671b07027c000ec90b0e99b34eec5c109",
+    "effectiveOn": "EXPECTED_HEAD_PINNED_SQUASH_MERGE_AND_VALIDATED_GITHUB_RECEIPT",
+    "migrationFilesChangedByThisWork": 0,
+    "runtimeInstalledByThisWork": false,
+    "parserInstalledByThisWork": false,
+    "oracleInstalledByThisWork": false
+  },
+  "immutableUpstream": {
+    "c3rA0": {
+      "pullRequest": 785,
+      "reviewedHead": "f7f959368525f8a5895026f1361f6e13fd6226e0",
+      "reviewedTree": "543f8dfb5fdd026c1361e1a502376945912e6c5c",
+      "resultingMainSha": "3a7047cf4c7fc68247137bafbca2434abdadbc7f",
+      "resultingMainTree": "543f8dfb5fdd026c1361e1a502376945912e6c5c",
+      "requiredChecksPassed": true,
+      "actionableP0P1P2": [0, 0, 0],
+      "unresolvedActionableThreads": 0,
+      "artifacts": [
+        {
+          "path": "docs/decisions/2026-08-21-owner-wcv-c3r-a0-migration-dependency-authority.md",
+          "gitBlob": "8996f6c61f6cf0c5f7c908e97437a2f24bc65f8f",
+          "sha256": "f3be7b829539fa51c9037a58f05ed5a7c3fccbfcae28b3bb7b716330865b2ba6"
+        },
+        {
+          "path": "config/dabangil-wcv-c3r-a0-migration-dependency-authority-v1.json",
+          "gitBlob": "49916703d0a144647d6abce8cc98971042a35e1c",
+          "sha256": "e6e6d741d47732137860c0efc5c0dddc6b75e54fbd0ed6f2b1bcbe88e9f9d8e9"
+        },
+        {
+          "path": "scripts/automation/wcv-c3r-a0-migration-dependency-closure.mjs",
+          "gitBlob": "23ba3b9f2af452b250cea0cbbbc5f135e8643b2d",
+          "sha256": "85751e62c300465b205f5e6d19357261af892a0072e06de2c4322258290fa6ec"
+        },
+        {
+          "path": "tests/wcv-c3r-a0-migration-dependency-authority.test.mjs",
+          "gitBlob": "04c5e3254ac03712a0fde27ef068329299305c40",
+          "sha256": "fa7e388a0f785b41661ac4fff342de7afe9dc05e03dee0e7afb0d3548bc6daaa"
+        }
+      ]
+    },
+    "c3rA1": {
+      "pullRequest": 786,
+      "reviewedHead": "ff9dfbebea182d647daa84a349fcc50610f0ed1b",
+      "reviewedTree": "3c48da6fe991d8c02e3991e0a571b3b12139932c",
+      "resultingMainSha": "54afffcc539981ded65591f1f027171343bfce40",
+      "resultingMainTree": "3c48da6fe991d8c02e3991e0a571b3b12139932c",
+      "requiredChecksPassed": true,
+      "actionableP0P1P2": [0, 0, 0],
+      "unresolvedActionableThreads": 0,
+      "artifacts": [
+        {
+          "path": "docs/decisions/2026-08-21-owner-wcv-c3r-a1-serial-program-authority.md",
+          "gitBlob": "21fc829df76c51dfa8a891f927fd79267e195e8f",
+          "sha256": "f7fc2722aa2afaa799994b3c7273b4511500e3f2d2fa45cb421396f56f114758"
+        },
+        {
+          "path": "config/dabangil-wcv-c3r-a1-serial-program-authority-v1.json",
+          "gitBlob": "4b8efb14ef58e7940c457c925f972f995066c677",
+          "sha256": "4219924c4ee7e36f6d0005c53660a76b32fbf82dae9fbf218b46d1f7e1397823"
+        },
+        {
+          "path": "docs/qa/wcv-c3r-a1-serial-program-authority-validation.md",
+          "gitBlob": "a73f235664a422adf9a247401f585b5bb55b587f",
+          "sha256": "c152b5c4fb1cc80d0c1813a6740d467caf067aeda4b0ffc220586598ae775f70"
+        },
+        {
+          "path": "tests/wcv-c3r-a1-serial-program-authority.test.mjs",
+          "gitBlob": "45db6d4def9f2530dedad28966bf6dd40fdacdcf",
+          "sha256": "01cf1d99fdbc41d7063961ae21d8834e25c538a209bbccba543ca33f87fa4882"
+        }
+      ]
+    },
+    "postgresql158Oracle": {
+      "pullRequest": 794,
+      "reviewedHead": "10fb2b88746cbdf58b514390023ad3668527c871",
+      "reviewedTree": "bcb1017b980a5175e45265080ba25bc4b25c51ff",
+      "resultingMainSha": "5965ddb0202c5f9effb531824d4d95f775abecc1",
+      "resultingMainTree": "bcb1017b980a5175e45265080ba25bc4b25c51ff",
+      "serverVersionNum": 150008,
+      "requiredChecksPassed": true,
+      "actionableP0P1P2": [0, 0, 0],
+      "unresolvedActionableThreads": 0,
+      "artifacts": [
+        {
+          "path": "config/dabangil-wcv-c3-pre-p-postgresql-security-state-oracle-v1.json",
+          "gitBlob": "9bdc0d4ffb0329399aba733aeeaba6024d10125d",
+          "sha256": "212b79314c822f4dd039e3c05667235ec04c5eb58d7a1186059282b7fdc75b03"
+        },
+        {
+          "path": "scripts/automation/wcv-c3-pre-p-postgresql-security-state-oracle.mjs",
+          "gitBlob": "0e98b4c250aaed30b5379c862d100c4318ddb111",
+          "sha256": "eb5558ec6e22649de9955b3f0ffb798caff637a05fc66ec8d67dce21a263f43b"
+        },
+        {
+          "path": "docs/qa/wcv-c3-pre-p-postgresql-security-state-oracle-validation.md",
+          "gitBlob": "ca587730ba8a12db63d89141b08ead5ce46f0299",
+          "sha256": "122e8c67f41443b2d39c4809290da82c5e51d33450fe7602fd060779388ee896"
+        },
+        {
+          "path": "tests/wcv-c3-pre-p-postgresql-security-state-oracle.test.mjs",
+          "gitBlob": "bf4d858a293dde12a04b82e3bd5be3b7c79ba9c8",
+          "sha256": "61c0fdef19efcda4aa6c3dc9aaae965fa19aea7ae73185f8a1f2edffebe6dcf4"
+        }
+      ]
+    },
+    "artifactsEditableByThisWork": false
+  },
+  "operations": {
+    "countExactly": 7,
+    "renameCountExactly": 6,
+    "contentRepairCountExactly": 2,
+    "renameOnlyCountExactly": 5,
+    "inPlaceRepairCountExactly": 1,
+    "records": [
+      {
+        "operationId": "PERSONAL_LEARNING_STATE_RENAME_AND_RECURSIVE_CTE_REPAIR",
+        "operationKind": "RENAME_AND_EXACT_CONTENT_REPAIR",
+        "currentPath": "supabase/migrations/20260608_create_personal_learning_states.sql",
+        "futurePath": "supabase/migrations/20260608090000_create_personal_learning_states.sql",
+        "remoteClassification": "UNKNOWN",
+        "currentEvidence": {
+          "gitBlob": "ca91420e3d2c4ca41a5c0f5683d97b15a7ca8af1",
+          "rawSha256": "13f290748149a6d1ede1b3894ca9bce3d3f79e198015918e5a4159b6c1c2b968",
+          "byteCount": 4892,
+          "lineCount": 123,
+          "canonicalUtf8LfSha256": "13f290748149a6d1ede1b3894ca9bce3d3f79e198015918e5a4159b6c1c2b968"
+        },
+        "futureEvidence": {
+          "gitBlob": "bd305ec8c4e55510f9faeded7cf2594513e71055",
+          "rawSha256": "957fb9810283086e75ce34689b3eee2c2d3be4373dc341056630db716457b815",
+          "byteCount": 4991,
+          "lineCount": 125,
+          "canonicalUtf8LfSha256": "957fb9810283086e75ce34689b3eee2c2d3be4373dc341056630db716457b815"
+        },
+        "exactRepair": {
+          "method": "REPLACE_EXACT_SINGLE_CANONICAL_UTF8_LF_SEGMENT",
+          "oldSegmentBase64": "ICB3aXRoIHJlY3Vyc2l2ZSB3YWxrKGtleSwgY2hpbGQpIGFzICgKICAgIHNlbGVjdCBudWxsOjp0ZXh0IGFzIGtleSwgdmFsdWUgYXMgY2hpbGQKICAgIHVuaW9uIGFsbAogICAgc2VsZWN0IGVudHJpZXMua2V5LCBlbnRyaWVzLnZhbHVlCiAgICBmcm9tIHdhbGsKICAgIGNyb3NzIGpvaW4gbGF0ZXJhbCBqc29uYl9lYWNoKAogICAgICBjYXNlIHdoZW4ganNvbmJfdHlwZW9mKHdhbGsuY2hpbGQpID0gJ29iamVjdCcgdGhlbiB3YWxrLmNoaWxkIGVsc2UgJ3t9Jzo6anNvbmIgZW5kCiAgICApIGFzIGVudHJpZXMoa2V5LCB2YWx1ZSkKICAgIHVuaW9uIGFsbAogICAgc2VsZWN0IG51bGw6OnRleHQgYXMga2V5LCBlbGVtZW50cy52YWx1ZQogICAgZnJvbSB3YWxrCiAgICBjcm9zcyBqb2luIGxhdGVyYWwganNvbmJfYXJyYXlfZWxlbWVudHMoCiAgICAgIGNhc2Ugd2hlbiBqc29uYl90eXBlb2Yod2Fsay5jaGlsZCkgPSAnYXJyYXknIHRoZW4gd2Fsay5jaGlsZCBlbHNlICdbXSc6Ompzb25iIGVuZAogICAgKSBhcyBlbGVtZW50cyh2YWx1ZSkKICApCg==",
+          "replacementSegmentBase64": "ICB3aXRoIHJlY3Vyc2l2ZSB3YWxrKGtleSwgY2hpbGQpIGFzICgKICAgIHNlbGVjdCBudWxsOjp0ZXh0IGFzIGtleSwgdmFsdWUgYXMgY2hpbGQKICAgIHVuaW9uIGFsbAogICAgc2VsZWN0IGVudHJpZXMua2V5LCBlbnRyaWVzLnZhbHVlCiAgICBmcm9tIHdhbGsKICAgIGNyb3NzIGpvaW4gbGF0ZXJhbCAoCiAgICAgIHNlbGVjdCBvYmplY3RfZW50cmllcy5rZXksIG9iamVjdF9lbnRyaWVzLnZhbHVlCiAgICAgIGZyb20ganNvbmJfZWFjaCgKICAgICAgICBjYXNlIHdoZW4ganNvbmJfdHlwZW9mKHdhbGsuY2hpbGQpID0gJ29iamVjdCcgdGhlbiB3YWxrLmNoaWxkIGVsc2UgJ3t9Jzo6anNvbmIgZW5kCiAgICAgICkgYXMgb2JqZWN0X2VudHJpZXMoa2V5LCB2YWx1ZSkKICAgICAgdW5pb24gYWxsCiAgICAgIHNlbGVjdCBudWxsOjp0ZXh0IGFzIGtleSwgYXJyYXlfZW50cmllcy52YWx1ZQogICAgICBmcm9tIGpzb25iX2FycmF5X2VsZW1lbnRzKAogICAgICAgIGNhc2Ugd2hlbiBqc29uYl90eXBlb2Yod2Fsay5jaGlsZCkgPSAnYXJyYXknIHRoZW4gd2Fsay5jaGlsZCBlbHNlICdbXSc6Ompzb25iIGVuZAogICAgICApIGFzIGFycmF5X2VudHJpZXModmFsdWUpCiAgICApIGFzIGVudHJpZXMoa2V5LCB2YWx1ZSkKICApCg==",
+          "oldSegmentSha256": "4f05da76d509957a1840ed82390c24170dd5873a1373ad867648a4e0b0e47399",
+          "replacementSegmentSha256": "ad63500c792da1cdc545a97c4ed7f23e54f3972609270c7b6da3998f8d7fbcbb"
+        }
+      },
+      {
+        "operationId": "LEGAL_GROUNDING_RENAME",
+        "operationKind": "RENAME_ONLY",
+        "currentPath": "supabase/migrations/20260615_legal_grounding.sql",
+        "futurePath": "supabase/migrations/20260615090000_legal_grounding.sql",
+        "remoteClassification": "UNKNOWN",
+        "currentEvidence": {
+          "gitBlob": "160955292b0caf8c4dea01b47b52340ba2242acc",
+          "rawSha256": "fb585b9c2d96edfd696d2f03e0d4fc427597c7759ee6ab96de5a3dddf29d237e",
+          "byteCount": 10816,
+          "lineCount": 259,
+          "canonicalUtf8LfSha256": "fb585b9c2d96edfd696d2f03e0d4fc427597c7759ee6ab96de5a3dddf29d237e"
+        },
+        "futureEvidence": {
+          "gitBlob": "160955292b0caf8c4dea01b47b52340ba2242acc",
+          "rawSha256": "fb585b9c2d96edfd696d2f03e0d4fc427597c7759ee6ab96de5a3dddf29d237e",
+          "byteCount": 10816,
+          "lineCount": 259,
+          "canonicalUtf8LfSha256": "fb585b9c2d96edfd696d2f03e0d4fc427597c7759ee6ab96de5a3dddf29d237e"
+        },
+        "futureBytesEqualCurrentExactly": true
+      },
+      {
+        "operationId": "LEGAL_ARTICLE_IDENTITY_RENAME",
+        "operationKind": "RENAME_ONLY",
+        "currentPath": "supabase/migrations/20260615_legal_article_chunk_identity.sql",
+        "futurePath": "supabase/migrations/20260615100000_legal_article_chunk_identity.sql",
+        "remoteClassification": "UNKNOWN",
+        "currentEvidence": {
+          "gitBlob": "0d20d7f175d8f93a2215fcb141f17996395c5597",
+          "rawSha256": "03dce727ac9bca1ab290556583c33593c3ae6ee544b0c90cc8ff7e05aea6e29d",
+          "byteCount": 953,
+          "lineCount": 26,
+          "canonicalUtf8LfSha256": "03dce727ac9bca1ab290556583c33593c3ae6ee544b0c90cc8ff7e05aea6e29d"
+        },
+        "futureEvidence": {
+          "gitBlob": "0d20d7f175d8f93a2215fcb141f17996395c5597",
+          "rawSha256": "03dce727ac9bca1ab290556583c33593c3ae6ee544b0c90cc8ff7e05aea6e29d",
+          "byteCount": 953,
+          "lineCount": 26,
+          "canonicalUtf8LfSha256": "03dce727ac9bca1ab290556583c33593c3ae6ee544b0c90cc8ff7e05aea6e29d"
+        },
+        "futureBytesEqualCurrentExactly": true
+      },
+      {
+        "operationId": "LEGAL_RETRIEVAL_RENAME",
+        "operationKind": "RENAME_ONLY",
+        "currentPath": "supabase/migrations/20260615_legal_retrieval.sql",
+        "futurePath": "supabase/migrations/20260615110000_legal_retrieval.sql",
+        "remoteClassification": "UNKNOWN",
+        "currentEvidence": {
+          "gitBlob": "6821a0a694f9d5b737ac104270826371980eb431",
+          "rawSha256": "d1ec08d0e3082e224c8da95c412636d83a0d4183df3a1ec4a1432f795b0154cc",
+          "byteCount": 4000,
+          "lineCount": 119,
+          "canonicalUtf8LfSha256": "d1ec08d0e3082e224c8da95c412636d83a0d4183df3a1ec4a1432f795b0154cc"
+        },
+        "futureEvidence": {
+          "gitBlob": "6821a0a694f9d5b737ac104270826371980eb431",
+          "rawSha256": "d1ec08d0e3082e224c8da95c412636d83a0d4183df3a1ec4a1432f795b0154cc",
+          "byteCount": 4000,
+          "lineCount": 119,
+          "canonicalUtf8LfSha256": "d1ec08d0e3082e224c8da95c412636d83a0d4183df3a1ec4a1432f795b0154cc"
+        },
+        "futureBytesEqualCurrentExactly": true
+      },
+      {
+        "operationId": "LEGAL_GROUNDING_GUARD_RENAME",
+        "operationKind": "RENAME_ONLY",
+        "currentPath": "supabase/migrations/20260615_legal_grounding_guard.sql",
+        "futurePath": "supabase/migrations/20260615120000_legal_grounding_guard.sql",
+        "remoteClassification": "UNKNOWN",
+        "currentEvidence": {
+          "gitBlob": "5971e1b961a7d096510902fdc40b04310a053ade",
+          "rawSha256": "436e741f78efc14fa7decd2c6f8c3eadf31f5acd4590df98c3eaad988493b642",
+          "byteCount": 3249,
+          "lineCount": 104,
+          "canonicalUtf8LfSha256": "436e741f78efc14fa7decd2c6f8c3eadf31f5acd4590df98c3eaad988493b642"
+        },
+        "futureEvidence": {
+          "gitBlob": "5971e1b961a7d096510902fdc40b04310a053ade",
+          "rawSha256": "436e741f78efc14fa7decd2c6f8c3eadf31f5acd4590df98c3eaad988493b642",
+          "byteCount": 3249,
+          "lineCount": 104,
+          "canonicalUtf8LfSha256": "436e741f78efc14fa7decd2c6f8c3eadf31f5acd4590df98c3eaad988493b642"
+        },
+        "futureBytesEqualCurrentExactly": true
+      },
+      {
+        "operationId": "LEGAL_GUARD_SERVICE_ROLE_GRANT_RENAME",
+        "operationKind": "RENAME_ONLY",
+        "currentPath": "supabase/migrations/20260616_legal_grounding_guard_service_role_grant.sql",
+        "futurePath": "supabase/migrations/20260616100000_legal_grounding_guard_service_role_grant.sql",
+        "remoteClassification": "UNKNOWN",
+        "currentEvidence": {
+          "gitBlob": "f960965c3c3d058486b1edf12e8b0639c15d7f7a",
+          "rawSha256": "25e358828f3953b3cf793f7eeb645c816156e8bb89f5b7899d3c075de9594e13",
+          "byteCount": 415,
+          "lineCount": 6,
+          "canonicalUtf8LfSha256": "25e358828f3953b3cf793f7eeb645c816156e8bb89f5b7899d3c075de9594e13"
+        },
+        "futureEvidence": {
+          "gitBlob": "f960965c3c3d058486b1edf12e8b0639c15d7f7a",
+          "rawSha256": "25e358828f3953b3cf793f7eeb645c816156e8bb89f5b7899d3c075de9594e13",
+          "byteCount": 415,
+          "lineCount": 6,
+          "canonicalUtf8LfSha256": "25e358828f3953b3cf793f7eeb645c816156e8bb89f5b7899d3c075de9594e13"
+        },
+        "futureBytesEqualCurrentExactly": true
+      },
+      {
+        "operationId": "PERSONAL_CONCEPT_EARLY_BOUNDARY_COMPATIBILITY_REPAIR",
+        "operationKind": "IN_PLACE_EXACT_CONTENT_REPAIR",
+        "currentPath": "supabase/migrations/202606232130_personal_concept_graph_rpc_only_write_boundary.sql",
+        "futurePath": "supabase/migrations/202606232130_personal_concept_graph_rpc_only_write_boundary.sql",
+        "remoteClassification": "KNOWN_APPLIED",
+        "currentEvidence": {
+          "gitBlob": "c2f28006e399a9241c9556c14c042e67646be887",
+          "rawSha256": "57b2aa59f96f3ea294a7d7e0c46350c5c3cb330c53a301a2d57634f2f54a0a57",
+          "byteCount": 1120,
+          "lineCount": 23,
+          "canonicalUtf8LfSha256": "57b2aa59f96f3ea294a7d7e0c46350c5c3cb330c53a301a2d57634f2f54a0a57"
+        },
+        "futureEvidence": {
+          "gitBlob": "301b713c16880807e21a11b770f7575e3701e312",
+          "rawSha256": "f5feb973cbc25cd8392158daf4f4c58227a776266f8b4f196c1f253eda39ee92",
+          "byteCount": 829,
+          "lineCount": 14,
+          "canonicalUtf8LfSha256": "f5feb973cbc25cd8392158daf4f4c58227a776266f8b4f196c1f253eda39ee92"
+        },
+        "exactFutureCanonicalUtf8LfBase64": "LS0gUGVyc29uYWwgQ29uY2VwdCBHcmFwaCBlYXJseSB3cml0ZS1ib3VuZGFyeSBjb21wYXRpYmlsaXR5IHYxLgotLSBGcmVzaC1oaXN0b3J5IHJlcGxheSByZWFjaGVzIHRoaXMgZmlsZSBiZWZvcmUgdGhlIHRyYW5zaXRpb24tZnVuY3Rpb24gcHJvZHVjZXIuCi0tIFRoaXMgc3RlcCByZW1vdmVzIGRpcmVjdCBhdXRoZW50aWNhdGVkIHdyaXRlcyBidXQgZG9lcyBub3QgaW5zdGFsbCBvciBjbGFpbSB0aGUKLS0gZmluYWwgUlBDLW9ubHkgZnVuY3Rpb24gcHJpdmlsZWdlIGJvdW5kYXJ5LiBUaGUgc29sZSBsYXRlciBDM1ItUCBhcHBlbmQgbXVzdAotLSByZWFzc2VydCB0aGF0IGJvdW5kYXJ5IGFmdGVyIHRoZSBwcm9kdWNlciBleGlzdHMuCgpyZXZva2UgaW5zZXJ0LCB1cGRhdGUgb24gdGFibGUgcHVibGljLnBlcnNvbmFsX2NvbmNlcHRfbm9kZXMgZnJvbSBhdXRoZW50aWNhdGVkOwoKLS0gUHJlc2VydmUgZHVyYWJsZSByZWFkcyBhbmQgdXNlci1vd25lZCBjbGVhbnVwL2RlbGV0aW9uOyBuZWl0aGVyIHBlcm1pc3Npb24gaXMKLS0gYSBkaXJlY3QgY29uY2VwdC1zdGF0ZSB3cml0ZSBwYXRoLgpncmFudCBzZWxlY3QsIGRlbGV0ZSBvbiB0YWJsZSBwdWJsaWMucGVyc29uYWxfY29uY2VwdF9ub2RlcyB0byBhdXRoZW50aWNhdGVkOwoKZHJvcCBwb2xpY3kgaWYgZXhpc3RzICJwZXJzb25hbF9jb25jZXB0X25vZGVzX2luc2VydF9vd24iIG9uIHB1YmxpYy5wZXJzb25hbF9jb25jZXB0X25vZGVzOwpkcm9wIHBvbGljeSBpZiBleGlzdHMgInBlcnNvbmFsX2NvbmNlcHRfbm9kZXNfdXBkYXRlX293biIgb24gcHVibGljLnBlcnNvbmFsX2NvbmNlcHRfbm9kZXM7Cg=="
+      }
+    ]
+  },
+  "append": {
+    "countExactly": 1,
+    "pathExactly": "supabase/migrations/20260822120000_c3r_p_practice_common_durable_substrate.sql",
+    "absentAtAuthorityBase": true,
+    "createdByThisWork": false,
+    "candidateSqlSha256AtAuthorityTime": null,
+    "secondAppendAllowed": false
+  },
+  "effectiveInventory": {
+    "formula": "A0_25_MINUS_6_OLD_RENAME_PATHS_PLUS_6_NEW_RENAME_PATHS_WITH_1_IN_PLACE_DIGEST_REPLACEMENT_NET_ZERO_PLUS_1_APPEND",
+    "baselineCount": 25,
+    "removedRenamePaths": 6,
+    "addedRenamePaths": 6,
+    "inPlaceNetCount": 0,
+    "appendCount": 1,
+    "expectedCount": 26,
+    "unchangedPathsExactly": [
+      "supabase/migrations/20260422_inverge_service_core.sql",
+      "supabase/migrations/20260423_inverge_service_role_grants.sql",
+      "supabase/migrations/20260424_review_os_alpha.sql",
+      "supabase/migrations/20260426_review_os_study_logs.sql",
+      "supabase/migrations/20260427_study_logs_taxonomy_candidates.sql",
+      "supabase/migrations/20260429_learning_signal_events.sql",
+      "supabase/migrations/20260430_exam_archive.sql",
+      "supabase/migrations/20260605_create_personal_concept_nodes.sql",
+      "supabase/migrations/20260622_mobile_pwa_web_push_reminder.sql",
+      "supabase/migrations/20260623_personal_concept_graph_atomic_transition.sql",
+      "supabase/migrations/20260721060237_s233a_answer_review_persistence.sql",
+      "supabase/migrations/20260730025332_s236p_lean_owner_private.sql",
+      "supabase/migrations/20260730060233_s236p_owner_private_lifecycle_hardening.sql",
+      "supabase/migrations/20260730065744_s236p_owner_private_authenticated_download_info.sql",
+      "supabase/migrations/20260730151052_s236p_owner_private_expiry_read_gate.sql",
+      "supabase/migrations/20260817090000_c2r_c_p_structured_practice_proof.sql",
+      "supabase/migrations/20260817113000_c2r_c_t_structural_theory_proof.sql",
+      "supabase/migrations/20260817170000_c2r_c_l_exact_law_applicability.sql"
+    ],
+    "effectivePathsExactly": [
+      "supabase/migrations/20260422_inverge_service_core.sql",
+      "supabase/migrations/20260423_inverge_service_role_grants.sql",
+      "supabase/migrations/20260424_review_os_alpha.sql",
+      "supabase/migrations/20260426_review_os_study_logs.sql",
+      "supabase/migrations/20260427_study_logs_taxonomy_candidates.sql",
+      "supabase/migrations/20260429_learning_signal_events.sql",
+      "supabase/migrations/20260430_exam_archive.sql",
+      "supabase/migrations/20260605_create_personal_concept_nodes.sql",
+      "supabase/migrations/20260608090000_create_personal_learning_states.sql",
+      "supabase/migrations/20260615090000_legal_grounding.sql",
+      "supabase/migrations/20260615100000_legal_article_chunk_identity.sql",
+      "supabase/migrations/20260615110000_legal_retrieval.sql",
+      "supabase/migrations/20260615120000_legal_grounding_guard.sql",
+      "supabase/migrations/20260616100000_legal_grounding_guard_service_role_grant.sql",
+      "supabase/migrations/20260622_mobile_pwa_web_push_reminder.sql",
+      "supabase/migrations/202606232130_personal_concept_graph_rpc_only_write_boundary.sql",
+      "supabase/migrations/20260623_personal_concept_graph_atomic_transition.sql",
+      "supabase/migrations/20260721060237_s233a_answer_review_persistence.sql",
+      "supabase/migrations/20260730025332_s236p_lean_owner_private.sql",
+      "supabase/migrations/20260730060233_s236p_owner_private_lifecycle_hardening.sql",
+      "supabase/migrations/20260730065744_s236p_owner_private_authenticated_download_info.sql",
+      "supabase/migrations/20260730151052_s236p_owner_private_expiry_read_gate.sql",
+      "supabase/migrations/20260817090000_c2r_c_p_structured_practice_proof.sql",
+      "supabase/migrations/20260817113000_c2r_c_t_structural_theory_proof.sql",
+      "supabase/migrations/20260817170000_c2r_c_l_exact_law_applicability.sql",
+      "supabase/migrations/20260822120000_c3r_p_practice_common_durable_substrate.sql"
+    ],
+    "futureDigestSerialization": "LEXICOGRAPHIC_PATH_NUL_GIT_BLOB_NUL_RAW_SHA256_NUL_BYTE_COUNT_NUL_LINE_COUNT_NUL_CANONICAL_UTF8_LF_SHA256_LF",
+    "futureDigestAlgorithm": "SHA-256"
+  },
+  "remoteContinuity": {
+    "unknownRenameReconciliationPacketRequired": true,
+    "knownAppliedLedgerIdentityMustRemainUntouched": true,
+    "repairedKnownAppliedHistoryMayBeReplayedRemotely": false,
+    "onlyForwardAppendMayLaterReassertFinalBoundaryUnderSeparateOwnerGate": true,
+    "supabaseLinkAuthorized": false,
+    "supabaseDbPushAuthorized": false,
+    "supabaseMigrationRepairAuthorized": false,
+    "linkedResetAuthorized": false,
+    "remoteSqlAuthorized": false,
+    "remoteHistoryMutationAuthorized": false,
+    "remoteSchemaMutationAuthorized": false,
+    "productionMutationAuthorized": false,
+    "remoteOperationAuthorizationCount": 0,
+    "remoteMutationCount": 0
+  },
+  "stageState": {
+    "strictOrder": [
+      "C3R-P",
+      "C3R-T",
+      "C3R-L"
+    ],
+    "c3rP": "authorized_unstarted",
+    "c3rT": "blocked_pending_validated_c3r_p_merge_receipt",
+    "c3rL": "blocked_pending_validated_c3r_p_and_c3r_t_merge_receipts",
+    "runtimeStarted": false,
+    "wcvC3Complete": false
+  },
+  "futureC3rPMigrationAuthorityBindingV1": {
+    "purpose": "SMALL_SOURCE_OPERATION_BINDING_SUBORDINATE_TO_C3R_STAGE_MERGE_RECEIPT_V1",
+    "isRuntimeReceipt": false,
+    "maySubstituteForC3RStageMergeReceiptV1": false,
+    "requiredFieldsExactly": [
+      "authorityDecisionSha256",
+      "authorityContractSha256",
+      "validatedAuthorityResultingMainSha",
+      "validatedAuthorityResultingMainTree",
+      "operationBindings",
+      "appendPath",
+      "candidateSqlSha256",
+      "effectiveInventorySha256",
+      "remoteMutationCount"
+    ],
+    "operationBindingFieldsExactly": [
+      "operationId",
+      "futureGitBlob",
+      "futureRawSha256",
+      "futureCanonicalUtf8LfSha256"
+    ],
+    "operationIdsExactly": [
+      "PERSONAL_LEARNING_STATE_RENAME_AND_RECURSIVE_CTE_REPAIR",
+      "LEGAL_GROUNDING_RENAME",
+      "LEGAL_ARTICLE_IDENTITY_RENAME",
+      "LEGAL_RETRIEVAL_RENAME",
+      "LEGAL_GROUNDING_GUARD_RENAME",
+      "LEGAL_GUARD_SERVICE_ROLE_GRANT_RENAME",
+      "PERSONAL_CONCEPT_EARLY_BOUNDARY_COMPATIBILITY_REPAIR"
+    ],
+    "authorityDecisionAndContractMustExistAtBaseAndRemainByteIdenticalAtHead": true,
+    "c3rPBaseMustDescendFromValidatedAuthoritySquashMerge": true,
+    "candidateSqlSha256MustBeNonempty": true,
+    "remoteMutationCountExactly": 0
+  },
+  "packageIdentity": {
+    "packageJsonGitBlob": "33a8d29b52ac225c6e957c71fce1f28f2eaba16d",
+    "packageLockJsonGitBlob": "70f85fb69c39aa73cf572082c4d38eb426c0b398",
+    "packageMutationAuthorized": false
+  },
+  "deliveryControl": {
+    "repository": "chachathecat/inverge",
+    "baseRef": "main",
+    "baseSha": "5965ddb0202c5f9effb531824d4d95f775abecc1",
+    "headRef": "codex/wcv-c3-pre-p-minimal-migration-mutation-authority",
+    "headRepository": "chachathecat/inverge",
+    "pullRequestTitle": "[WCV-C3 PRE-P] Authorize exact C3R-P migration operations — minimal bridge",
+    "draftRequired": true,
+    "autoMergeAllowed": false,
+    "readyTransitionAllowed": false,
+    "mergeAuthorizedByThisWork": false,
+    "sourceCorrectionMaximum": 1,
+    "formalReviewMaximum": 2,
+    "referenceOnlyIssueLinks": {
+      "requiredReferenceLinesExactly": [
+        "Refs #706",
+        "Refs #707",
+        "Refs #708",
+        "Refs #714",
+        "Refs #781"
+      ],
+      "requiredDispositionLine": "All referenced issues remain open; this minimal source-only Draft closes none.",
+      "closingKeywordsAllowed": false
+    }
+  },
+  "ownedPaths": [
+    "AGENTS.md",
+    "config/dabangil-unified-program-contract.json",
+    "config/dabangil-wcv-c3-pre-p-migration-mutation-authority-v1.json",
+    "docs/dabangil-unified-program-contract.md",
+    "docs/decisions/2026-08-22-owner-wcv-c3-pre-p-migration-mutation-authority.md",
+    "docs/inverge-master-roadmap.md",
+    "docs/qa/wcv-c3-pre-p-migration-mutation-authority-validation.md",
+    "roadmap/active-program.yml",
+    "scripts/automation/validate-pr-contract.mjs",
+    "scripts/automation/wcv-c3-pre-p-migration-mutation-authority.mjs",
+    "scripts/run-node-tests.mjs",
+    "tests/wcv-c3-pre-p-migration-mutation-authority.test.mjs"
+  ]
+}

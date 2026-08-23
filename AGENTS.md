@@ -5,6 +5,14 @@
 Use this authority order when sources conflict:
 
 1. a dated Owner decision for the exact decision it owns, currently
+   `docs/decisions/2026-08-22-owner-wcv-c3-pre-p-migration-mutation-authority.md`
+   for the minimal source-only `C3RPMigrationMutationAuthorityV1`, the exact
+   seven prospective existing-path transformations, sole frozen C3R-P append,
+   26-file effective inventory, closed future binding and zero-remote
+   boundary; it is not a C3R stage, changes no selector, mutates no migration
+   or runtime in its authority Work, narrowly supersedes C3R-A0 only for the
+   listed future C3R-P operations, and becomes repository authority only after
+   its expected-head-pinned squash merge and validated GitHub receipt,
    `docs/decisions/2026-08-21-owner-wcv-c3r-a1-serial-program-authority.md`
    for the independently complete C3R-A1 source-only serial program authority,
    its exact PR #785/C3R-A0 receipt consumption, the strict
@@ -208,6 +216,55 @@ The A1 flag state is authority-only: runtime implementation, migration-file
 mutation, local or remote Supabase apply, RLS, Storage, API, learner UI,
 Production, payment, provider, learner activation, first-round, mobile,
 instructor and #776 work remain unauthorized. C3R-P does not start in A1.
+
+## PRE-C3R-P minimal exact migration-mutation authority
+
+`C3RPMigrationMutationAuthorityV1` is a source-only control-plane bridge, not
+C3R-A2, A2E or another stage. It preserves C3R-A0 as the immutable historical
+25-file baseline, dependency and occurrence authority and supersedes A0 only
+for seven exact prospective C3R-P operations after this decision's expected-
+head-pinned merge and validated receipt: six exact renames, including the
+pinned PostgreSQL-15.8 recursive-CTE repair within the personal-learning
+rename, and the pinned in-place fresh-history compatibility repair for the
+`KNOWN_APPLIED` personal-concept early boundary. The five legal renames must
+preserve canonical SQL bytes exactly. Every unlisted path and digest remains
+unchanged.
+
+The sole authorized append path is
+`supabase/migrations/20260822120000_c3r_p_practice_common_durable_substrate.sql`.
+It is not created by the authority Work. The closed effective inventory is the
+A0 baseline minus six old rename paths plus six new rename paths, the preserved
+concept-boundary path with its pinned replacement digest and this one append:
+exactly 26 files. A second append, delete, unlisted rename or content change
+fails closed.
+
+The later C3R-P candidate must bind the authority decision and contract
+digests, the validated authority resulting-main SHA/tree, all seven operation
+identities and future digests, the append path and nonempty candidate SQL
+digest, the effective-inventory digest and remote mutation count zero. This
+small source binding is not a runtime receipt and cannot replace the existing
+`C3RStageMergeReceiptV1`. The C3R-P base must descend from the validated
+authority squash merge, and the authority artifacts must exist byte-identically
+at that base and head.
+
+C3R-P must prove two fresh isolated reset/replay cycles, PostgreSQL 15.8 oracle
+success, database-enforced Practice ownership for every subject-bearing
+record, zero Theory/Law scope, actual Practice runtime evidence, exact
+`PRACTICE_RUNTIME` cross-bindings for all evidence references, metadata-only
+artifacts and zero remote/Supabase/Production mutation. The PR #796 P1 is
+mandatory acceptance evidence. Practice scope is enforced by schema identity,
+closed subject constraints, changed-path scope and actual runtime evidence,
+not by a computed-string source-token filter.
+
+Six renamed histories are `UNKNOWN` and require a later separate remote
+reconciliation packet. The `KNOWN_APPLIED` personal-concept remote ledger
+identity remains untouched; repaired old history is never replayed remotely,
+and only the sole forward append may later reassert the final boundary under a
+separate Owner gate. This authority grants no Supabase link, push, repair,
+linked reset, remote SQL/history/schema or Production mutation. It mutates no
+migration, starts no runtime, closes no issue and leaves C3R-P
+`authorized_unstarted`, C3R-T/C3R-L blocked, successor started false and
+WCV-C3 incomplete.
 
 ## C2R-A rights-safe source firewall
 

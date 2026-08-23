@@ -65,6 +65,27 @@ const PRE_C3R_P_ORACLE_REFERENCE_LINES = Object.freeze([
 ]);
 const PRE_C3R_P_ORACLE_DISPOSITION =
   "All referenced issues remain open; this support-tooling Draft closes none.";
+const PRE_C3R_P_MINIMAL_AUTHORITY_CONTRACT_PATH =
+  "config/dabangil-wcv-c3-pre-p-migration-mutation-authority-v1.json";
+const PRE_C3R_P_MINIMAL_AUTHORITY_SCOPE = Object.freeze({
+  repository: "chachathecat/inverge",
+  baseRef: "main",
+  baseSha: "5965ddb0202c5f9effb531824d4d95f775abecc1",
+  headRef: "codex/wcv-c3-pre-p-minimal-migration-mutation-authority",
+  headRepository: "chachathecat/inverge",
+  pullRequestTitle:
+    "[WCV-C3 PRE-P] Authorize exact C3R-P migration operations — minimal bridge",
+  isDraft: true,
+});
+const PRE_C3R_P_MINIMAL_AUTHORITY_REFERENCE_LINES = Object.freeze([
+  "Refs #706",
+  "Refs #707",
+  "Refs #708",
+  "Refs #714",
+  "Refs #781",
+]);
+const PRE_C3R_P_MINIMAL_AUTHORITY_DISPOSITION =
+  "All referenced issues remain open; this minimal source-only Draft closes none.";
 const GITHUB_CLOSING_KEYWORD_PATTERN = new RegExp(
   String.raw`\b(?:close(?:s|d)?|fix(?:es|ed)?|resolve(?:s|d)?)(?:\s*:\s*|\s+)(?:#\d+|[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+#\d+|https:\/\/github\.com\/[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+\/(?:issues|pull)\/\d+)\b`,
   "gi",
@@ -187,12 +208,70 @@ function isPreC3rPOracleCandidate(context) {
     context?.headRef === PRE_C3R_P_ORACLE_SOURCE_SCOPE.headRef;
 }
 
+function readPreC3rPMinimalAuthorityDeliveryControl() {
+  if (!fs.existsSync(PRE_C3R_P_MINIMAL_AUTHORITY_CONTRACT_PATH)) return null;
+  try {
+    const contract = JSON.parse(
+      fs.readFileSync(PRE_C3R_P_MINIMAL_AUTHORITY_CONTRACT_PATH, "utf8"),
+    );
+    return contract?.deliveryControl ?? null;
+  } catch {
+    return null;
+  }
+}
+
+function matchesExactPreC3rPMinimalAuthorityScope(context) {
+  return Object.entries(PRE_C3R_P_MINIMAL_AUTHORITY_SCOPE).every(
+    ([key, value]) => context?.[key] === value,
+  );
+}
+
+function isPreC3rPMinimalAuthorityCandidate(context) {
+  return context?.repository === PRE_C3R_P_MINIMAL_AUTHORITY_SCOPE.repository &&
+    context?.headRef === PRE_C3R_P_MINIMAL_AUTHORITY_SCOPE.headRef;
+}
+
 function validateIssueLink(body, errors, context) {
   const issueLinks = [...body.matchAll(/\b(?:Closes|Fixes)\s+#(\d+)\b/gi)];
   const allGithubClosingLinks = [
     ...body.matchAll(GITHUB_CLOSING_KEYWORD_PATTERN),
   ];
   const sourceAuthority = readC3rA0SourceAuthorityIssueLink();
+
+  if (isPreC3rPMinimalAuthorityCandidate(context)) {
+    const deliveryControl = readPreC3rPMinimalAuthorityDeliveryControl();
+    const referenceAuthority = deliveryControl?.referenceOnlyIssueLinks;
+    const bodyLines = body.split(/\r?\n/u).map((line) => line.trim());
+    const actualReferenceLines = bodyLines.filter((line) => /^Refs #\d+$/u.test(line));
+    const exactDispositionCount = bodyLines.filter(
+      (line) => line === PRE_C3R_P_MINIMAL_AUTHORITY_DISPOSITION,
+    ).length;
+    const contractScopeMatches = Object.entries(
+      PRE_C3R_P_MINIMAL_AUTHORITY_SCOPE,
+    ).every(([key, value]) => {
+      if (key === "isDraft") return deliveryControl?.draftRequired === value;
+      return deliveryControl?.[key] === value;
+    });
+
+    if (
+      !matchesExactPreC3rPMinimalAuthorityScope(context) ||
+      !contractScopeMatches ||
+      JSON.stringify(referenceAuthority?.requiredReferenceLinesExactly) !==
+        JSON.stringify(PRE_C3R_P_MINIMAL_AUTHORITY_REFERENCE_LINES) ||
+      referenceAuthority?.requiredDispositionLine !==
+        PRE_C3R_P_MINIMAL_AUTHORITY_DISPOSITION ||
+      JSON.stringify(actualReferenceLines) !==
+        JSON.stringify(PRE_C3R_P_MINIMAL_AUTHORITY_REFERENCE_LINES) ||
+      exactDispositionCount !== 1 ||
+      referenceAuthority?.closingKeywordsAllowed !== false ||
+      allGithubClosingLinks.length !== 0
+    ) {
+      errors.push(
+        "PRE-C3R-P minimal authority reference-only linking requires its five exact issue references, exact open disposition, pinned Draft scope, and zero issue-closing keywords.",
+      );
+    }
+    return;
+  }
 
   if (isPreC3rPOracleCandidate(context)) {
     const deliveryControl = readPreC3rPOracleReferenceAuthority();
