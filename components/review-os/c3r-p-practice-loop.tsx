@@ -38,13 +38,21 @@ function numericField(value: string) {
   return Number.isFinite(parsed) && parsed >= 0 ? parsed : null;
 }
 
-function practiceClaim(fields: StructuredCalculationInput): C3RPPracticeClaimInput | null {
+function practiceClaim(
+  fields: StructuredCalculationInput,
+  sourceRevisionId: string | undefined,
+): C3RPPracticeClaimInput | null {
   const grossIncome = numericField(fields.grossIncome);
   const operatingExpense = numericField(fields.operatingExpense);
   const result = numericField(fields.result);
-  if (grossIncome === null || operatingExpense === null || result === null) return null;
+  if (
+    !sourceRevisionId ||
+    grossIncome === null ||
+    operatingExpense === null ||
+    result === null
+  ) return null;
   return {
-    sourceRevisionId: "inverge-synthetic-practice-valuation-v1@1",
+    sourceRevisionId,
     anchorId: "repair-anchor:practice:synthetic-net-income",
     anchorVersionId: "repair-anchor:practice:synthetic-net-income@1",
     grossIncome: { value: grossIncome, unit: "KRW_PER_YEAR" },
@@ -185,7 +193,7 @@ export function C3RPPracticeLoop({
 
   async function repair() {
     if (!record) return;
-    const claim = practiceClaim(structuredCalculation);
+    const claim = practiceClaim(structuredCalculation, view?.source.revisionId);
     if (!claim) {
       setError("structured_claim_required");
       return;
@@ -210,7 +218,7 @@ export function C3RPPracticeLoop({
       | "record_later_failure",
   ) {
     if (!record) return;
-    const claim = practiceClaim(structuredCalculation);
+    const claim = practiceClaim(structuredCalculation, view?.source.revisionId);
     if (!claim) {
       setError("structured_claim_required");
       return;

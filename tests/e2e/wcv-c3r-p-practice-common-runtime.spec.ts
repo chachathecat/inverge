@@ -1,4 +1,5 @@
 import { expect, test, type Browser, type BrowserContext, type Page } from "@playwright/test";
+import { randomUUID } from "node:crypto";
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname } from "node:path";
 
@@ -17,6 +18,8 @@ const entryOnly = process.env.C3R_P_ENTRY_ONLY === "true";
 const entryActor = process.env.C3R_P_ENTRY_ACTOR ?? "owner";
 const expectedEntryClassification =
   process.env.C3R_P_ENTRY_EXPECTATION ?? "C3R_P_ENTRY_VERIFIED";
+const C3R_P_SOURCE_REVISION_ID = "26a4f3bd-ddf3-4215-9fdf-d83453122ce1";
+const MISMATCHED_SOURCE_REVISION_ID = "d2889575-35e6-4e31-9ed7-e27ae55d7e8d";
 
 const ENTRY_CLASSIFICATIONS = [
   "C3R_P_ENTRY_AUTH_SESSION_NOT_VISIBLE",
@@ -326,6 +329,25 @@ async function fillStructuredCalculation(
   await page.getByTestId("c3r-p-result").fill(result);
 }
 
+function practiceClaim(
+  sourceRevisionId: string,
+  result = 100_000_000,
+) {
+  return {
+    sourceRevisionId,
+    anchorId: "repair-anchor:practice:synthetic-net-income",
+    anchorVersionId: "repair-anchor:practice:synthetic-net-income@1",
+    grossIncome: { value: 120_000_000, unit: "KRW_PER_YEAR" },
+    operatingExpense: { value: 20_000_000, unit: "KRW_PER_YEAR" },
+    operator: "SUBTRACT",
+    operandOrder: ["gross_income", "operating_expense"],
+    result: { value: result, unit: "KRW_PER_YEAR" },
+    sign: "POSITIVE",
+    rounding: { mode: "HALF_UP", scale: 0, required: false },
+    confirmationMode: "MANUAL_STRUCTURED",
+  };
+}
+
 test("exact Practice browser-to-Postgres durable loop", async ({ browser }) => {
   requireLocalRuntime();
   if (restoreOnly) {
@@ -469,13 +491,92 @@ test("exact Practice browser-to-Postgres durable loop", async ({ browser }) => {
     .click();
   await expectState(page, "FEEDBACK_COMMITTED");
   await expect(page.getByText("가장 큰 간극 1개:")).toBeVisible();
+
+  const committedResponse = await context.request.get(
+    `/api/review-os/c3r-p?recordId=${recordId}`,
+  );
+  expect(committedResponse.status()).toBe(200);
+  const committed = await committedResponse.json();
+  expect(committed.view.source.revisionId).toBe(C3R_P_SOURCE_REVISION_ID);
+  expect(committed.view.restored.record.state).toBe("FEEDBACK_COMMITTED");
+  const committedVersion = committed.view.restored.record.record_version;
+
+  const incorrectCalculation = await context.request.post(
+    "/api/review-os/c3r-p",
+    {
+      data: {
+        action: "submit_repair",
+        commandId: randomUUID(),
+        recordId,
+        expectedVersion: committedVersion,
+        attemptId: randomUUID(),
+        claim: practiceClaim(C3R_P_SOURCE_REVISION_ID, 90_000_000),
+        evidenceStep: "feedback",
+      },
+    },
+  );
+  expect(incorrectCalculation.status()).toBe(409);
+  expect(await incorrectCalculation.json()).toEqual({
+    ok: false,
+    error: "invalid_transition",
+  });
+
+  const mismatchedRevision = await context.request.post(
+    "/api/review-os/c3r-p",
+    {
+      data: {
+        action: "submit_repair",
+        commandId: randomUUID(),
+        recordId,
+        expectedVersion: committedVersion,
+        attemptId: randomUUID(),
+        claim: practiceClaim(MISMATCHED_SOURCE_REVISION_ID),
+        evidenceStep: "feedback",
+      },
+    },
+  );
+  expect(mismatchedRevision.status()).toBe(409);
+  expect(await mismatchedRevision.json()).toEqual({
+    ok: false,
+    error: "invalid_transition",
+  });
+
+  const afterRejectedRepairs = await context.request.get(
+    `/api/review-os/c3r-p?recordId=${recordId}`,
+  );
+  expect(afterRejectedRepairs.status()).toBe(200);
+  const afterRejected = await afterRejectedRepairs.json();
+  expect(afterRejected.view.restored.record.state).toBe("FEEDBACK_COMMITTED");
+  expect(afterRejected.view.restored.record.record_version).toBe(committedVersion);
+
   await fillStructuredCalculation(page);
+  const submitRepairResponsePromise = page.waitForResponse((response) => {
+    const request = response.request();
+    return (
+      new URL(response.url()).pathname === "/api/review-os/c3r-p" &&
+      request.method() === "POST" &&
+      request.postDataJSON()?.action === "submit_repair"
+    );
+  });
   await page
     .getByRole("button", {
       name: "내가 입력한 구조화 계산으로 수리 저장",
     })
     .click();
+  const submitRepairResponse = await submitRepairResponsePromise;
+  expect(submitRepairResponse.status()).toBe(200);
+  const submittedRepair = await submitRepairResponse.json();
+  expect(submittedRepair.ok).toBe(true);
+  expect(submittedRepair.view.source.revisionId).toBe(C3R_P_SOURCE_REVISION_ID);
+  expect(submittedRepair.view.restored.record.state).toBe("REPAIRED");
   await expectState(page, "REPAIRED");
+
+  const persistedRepairResponse = await context.request.get(
+    `/api/review-os/c3r-p?recordId=${recordId}`,
+  );
+  expect(persistedRepairResponse.status()).toBe(200);
+  const persistedRepair = await persistedRepairResponse.json();
+  expect(persistedRepair.view.restored.record.state).toBe("REPAIRED");
 
   await page
     .getByRole("button", {

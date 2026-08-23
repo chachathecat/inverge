@@ -6,6 +6,15 @@ import os from "node:os";
 import path from "node:path";
 import { execFileSync, spawnSync } from "node:child_process";
 
+import { parsePracticeCalculationClaimV2Input } from
+  "../lib/review-os/trusted-repair-contract.ts";
+import {
+  buildPracticeCalculationClaim,
+  validatePracticeCalculationClaim,
+} from "../lib/review-os/trusted-repair-engine.ts";
+import { trustedRepairCanonicalFixture } from
+  "../lib/review-os/trusted-repair-fixtures.ts";
+
 import {
   C3R_P_APPEND_PATH,
   createC3RPEntryDiagnosticLog,
@@ -39,9 +48,31 @@ const productionAccessBlobs = Object.freeze({
   "app/api/review-os/c3r-p/route.ts": "aa900106481b7c3eab2a9474639ffc2fec008417",
   "lib/review-os/c3r-p-service.ts": "4d9e06497cdf762792290237d7fd73806b0d1289",
   "lib/review-os/c3r-p-repository.ts": "21da20f69472c1b74208a40ec3889add8790d1ff",
-  "lib/review-os/c3r-p-engine.ts": "511959f02ef7f0e537296e9864239043f272c8cf",
-  "components/review-os/c3r-p-practice-loop.tsx": "f008c6cd87e0759f70151fc70d8f666f9440bb2a",
+  "lib/review-os/c3r-p-engine.ts": "255462ab212006ed97936f0ec4ce5687c09aca65",
+  "components/review-os/c3r-p-practice-loop.tsx": "cfdc5c59b87f386f1b04430b74b88f0a820b356d",
 });
+
+const FORMER_C3R_P_SOURCE_REVISION_ID =
+  "inverge-synthetic-practice-valuation-v1@1";
+const C3R_P_SOURCE_REVISION_ID = "26a4f3bd-ddf3-4215-9fdf-d83453122ce1";
+const MISMATCHED_C3R_P_SOURCE_REVISION_ID =
+  "d2889575-35e6-4e31-9ed7-e27ae55d7e8d";
+
+function exactPracticeClaim(sourceRevisionId) {
+  return {
+    sourceRevisionId,
+    anchorId: "repair-anchor:practice:synthetic-net-income",
+    anchorVersionId: "repair-anchor:practice:synthetic-net-income@1",
+    grossIncome: { value: 120_000_000, unit: "KRW_PER_YEAR" },
+    operatingExpense: { value: 20_000_000, unit: "KRW_PER_YEAR" },
+    operator: "SUBTRACT",
+    operandOrder: ["gross_income", "operating_expense"],
+    result: { value: 100_000_000, unit: "KRW_PER_YEAR" },
+    sign: "POSITIVE",
+    rounding: { mode: "HALF_UP", scale: 0, required: false },
+    confirmationMode: "MANUAL_STRUCTURED",
+  };
+}
 
 function sha256(bytes) {
   return crypto.createHash("sha256").update(bytes).digest("hex");
@@ -128,6 +159,55 @@ function sampleEntryReceipt() {
     cookies: [{ name: "sb-local-auth-token", domain: "127.0.0.1", path: "/" }],
   };
 }
+
+test("C3R-P rejects the former non-UUID revision and parses its exact fixed UUID claim", () => {
+  assert.match(engineSource,
+    /revisionId: "26a4f3bd-ddf3-4215-9fdf-d83453122ce1"/u);
+  assert.match(engineSource,
+    /function c3rPSourceView\(\)[\s\S]*\.\.\.C3R_P_SOURCE/u);
+  assert.match(engineSource,
+    /expectedSourceRevisionId: C3R_P_SOURCE\.revisionId/u);
+  assert.doesNotMatch(componentSource,
+    /(?:inverge-synthetic-practice-valuation-v1@1|26a4f3bd-ddf3-4215-9fdf-d83453122ce1)/u);
+  assert.match(componentSource,
+    /practiceClaim\(structuredCalculation, view\?\.source\.revisionId\)/u);
+  assert.throws(
+    () => parsePracticeCalculationClaimV2Input(
+      exactPracticeClaim(FORMER_C3R_P_SOURCE_REVISION_ID),
+    ),
+    /invalid_input/u,
+  );
+  const exactClaim = exactPracticeClaim(C3R_P_SOURCE_REVISION_ID);
+  assert.deepEqual(parsePracticeCalculationClaimV2Input(exactClaim), exactClaim);
+});
+
+test("C3R-P exact revision passes evaluation while mismatch and incorrect calculation fail closed", () => {
+  const fixture = trustedRepairCanonicalFixture("appraisal_practical");
+  const anchor = fixture.anchors[0].calculationRelation;
+  const evaluate = (claimInput) => validatePracticeCalculationClaim({
+    claim: buildPracticeCalculationClaim({
+      claim: parsePracticeCalculationClaimV2Input(claimInput),
+      learnerConfirmedAt: "2026-08-24T00:00:00.000Z",
+    }),
+    anchor,
+    expectedSourceRevisionId: C3R_P_SOURCE_REVISION_ID,
+  });
+  const exact = evaluate(exactPracticeClaim(C3R_P_SOURCE_REVISION_ID));
+  assert.equal(exact.state, "PASS");
+  assert.equal(exact.verified, true);
+
+  const mismatch = evaluate(
+    exactPracticeClaim(MISMATCHED_C3R_P_SOURCE_REVISION_ID),
+  );
+  assert.equal(mismatch.verified, false);
+  assert.ok(mismatch.reasonCodes.includes("source_revision_mismatch"));
+
+  const incorrect = exactPracticeClaim(C3R_P_SOURCE_REVISION_ID);
+  incorrect.result.value = 90_000_000;
+  const incorrectEvaluation = evaluate(incorrect);
+  assert.equal(incorrectEvaluation.verified, false);
+  assert.ok(incorrectEvaluation.reasonCodes.includes("result_value_mismatch"));
+});
 
 test("C3R-P applies the exact seven operations and one 26th append", () => {
   const inventory = diskInventory();
@@ -401,7 +481,8 @@ test("failure diagnostics upload before unconditional cleanup and verified entry
 });
 
 test("verified attempts bind to learner-entered structured values and server-rendered bodies", () => {
-  assert.match(componentSource, /practiceClaim\(structuredCalculation\)/);
+  assert.match(componentSource,
+    /practiceClaim\(structuredCalculation, view\?\.source\.revisionId\)/);
   assert.match(componentSource, /data-testid="c3r-p-gross-income"/);
   assert.match(componentSource, /data-testid="c3r-p-operating-expense"/);
   assert.match(componentSource, /data-testid="c3r-p-result"/);

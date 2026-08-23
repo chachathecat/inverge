@@ -22,7 +22,7 @@ import {
 export const C3R_P_SOURCE = Object.freeze({
   sourceId: "inverge-synthetic-practice-valuation-v1",
   problemId: "c3r-p:practice:annual-net-income",
-  revisionId: "inverge-synthetic-practice-valuation-v1@1",
+  revisionId: "26a4f3bd-ddf3-4215-9fdf-d83453122ce1",
   itemId: "c3r-p:practice:annual-net-income:d0",
   transferItemId: "c3r-p:practice:annual-net-income:d7-transfer",
   artifactId: "c3r-p:practice:annual-net-income:artifact-v1",
