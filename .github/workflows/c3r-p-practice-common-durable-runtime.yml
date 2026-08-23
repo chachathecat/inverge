@@ -73,6 +73,26 @@ jobs:
           C3R_P_SUPABASE_WORKDIR: ${{ runner.temp }}/c3r-p-runtime-${{ github.run_id }}-${{ github.run_attempt }}
         run: node scripts/automation/wcv-c3r-p-practice-common-runtime.mjs --dedicated
 
+      - name: Upload bounded entry failure diagnostic
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: c3r-p-entry-failure-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/c3r-p-runtime-${{ github.run_id }}-${{ github.run_attempt }}/entry-diagnostics/failure-*
+          if-no-files-found: ignore
+          include-hidden-files: true
+          retention-days: 1
+
+      - name: Upload verified entry metadata
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: c3r-p-entry-metadata-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/c3r-p-runtime-${{ github.run_id }}-${{ github.run_attempt }}/entry-diagnostics/entry-proof-*.json
+          if-no-files-found: error
+          include-hidden-files: true
+          retention-days: 7
+
       - name: Unconditionally remove local runtime resources
         if: always()
         env:

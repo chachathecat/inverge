@@ -29,6 +29,37 @@ export const C3R_P_NATIVE_SCHEMA_VERSION =
 
 const SHA40 = /^[0-9a-f]{40}$/;
 const SHA64 = /^[0-9a-f]{64}$/;
+const ENTRY_CLASSIFICATIONS = Object.freeze([
+  "C3R_P_ENTRY_AUTH_SESSION_NOT_VISIBLE",
+  "C3R_P_ENTRY_GENERIC_APP_ACCESS_DENIED",
+  "C3R_P_ENTRY_C3R_ACCESS_GATE_DENIED",
+  "C3R_P_ENTRY_NOT_FOUND",
+  "C3R_P_ENTRY_CLIENT_API_TIMEOUT",
+  "C3R_P_ENTRY_NEXT_RENDER_ERROR",
+  "C3R_P_ENTRY_VERIFIED",
+]);
+const ENTRY_RECEIPT_KEYS = Object.freeze([
+  "schemaVersion",
+  "artifactKind",
+  "classification",
+  "loginResponseStatus",
+  "browserSessionVisible",
+  "gotoStatus",
+  "gotoFailureCategory",
+  "finalPathname",
+  "reachedLogin",
+  "notFoundSurface",
+  "genericReviewOsAccessState",
+  "c3rPLoadingSurface",
+  "c3rPRuntimeMarker",
+  "apiStatus",
+  "apiErrorCode",
+  "browserConsoleErrorCategories",
+  "pageErrorCategories",
+  "requestFailures",
+  "cookies",
+]);
+const ENTRY_DIAGNOSTIC_MAX_BYTES = 64 * 1024;
 const RUNTIME_ARTIFACT_KEYS = Object.freeze([
   "schemaVersion",
   "producerVersion",
@@ -62,6 +93,133 @@ function canonicalJson(value) {
 
 export function sha256(value) {
   return crypto.createHash("sha256").update(value).digest("hex");
+}
+
+function capUtf8Tail(value, maximumBytes) {
+  const bytes = Buffer.from(value, "utf8");
+  if (bytes.length <= maximumBytes) return value;
+  return bytes.subarray(bytes.length - maximumBytes).toString("utf8").replace(/^\uFFFD+/, "");
+}
+
+export function redactC3RPEntryDiagnosticText(value, secretValues = []) {
+  let redacted = String(value);
+  for (const secret of secretValues) {
+    if (typeof secret === "string" && secret.length >= 4) {
+      redacted = redacted.replaceAll(secret, "[REDACTED]");
+    }
+  }
+  return redacted
+    .replace(/\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b/gi, "[REDACTED_EMAIL]")
+    .replace(/\beyJ[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}\b/g,
+      "[REDACTED_JWT]")
+    .replace(/((?:cookie|set-cookie)\s*:\s*)[^\r\n]*/gi, "$1[REDACTED]")
+    .replace(/((?:authorization|cookie|set-cookie|password|api[_-]?key|secret)\s*[:=]\s*)[^\s,;]+/gi,
+      "$1[REDACTED]")
+    .replace(/((?:token|key|password|code)=)[^&\s]+/gi, "$1[REDACTED]")
+    .replace(/\bBearer\s+[A-Za-z0-9._~+/=-]{8,}\b/gi, "Bearer [REDACTED]");
+}
+
+export function createC3RPEntryDiagnosticLog(
+  filePath,
+  secretValues = [],
+  maximumBytes = ENTRY_DIAGNOSTIC_MAX_BYTES,
+) {
+  if (!Number.isSafeInteger(maximumBytes) || maximumBytes < 1) {
+    throw new Error("C3R-P diagnostic log byte cap is invalid.");
+  }
+  fs.mkdirSync(path.dirname(filePath), { recursive: true });
+  fs.writeFileSync(filePath, "", { mode: 0o600 });
+  let pendingRaw = "";
+  let retained = "";
+  let finished = false;
+  const flush = (force = false) => {
+    const retainForBoundary = force ? 0 : 1_024;
+    if (pendingRaw.length <= retainForBoundary && !force) return;
+    const splitAt = Math.max(0, pendingRaw.length - retainForBoundary);
+    retained = capUtf8Tail(
+      retained + redactC3RPEntryDiagnosticText(pendingRaw.slice(0, splitAt), secretValues),
+      maximumBytes,
+    );
+    pendingRaw = pendingRaw.slice(splitAt);
+    fs.writeFileSync(filePath, retained, { mode: 0o600 });
+  };
+  return {
+    append(chunk) {
+      if (finished) return;
+      pendingRaw += Buffer.isBuffer(chunk) ? chunk.toString("utf8") : String(chunk);
+      flush(false);
+    },
+    finish() {
+      if (finished) return;
+      finished = true;
+      flush(true);
+    },
+  };
+}
+
+function metadataCategory(value) {
+  return typeof value === "string" && /^[A-Z][A-Z0-9_]{0,63}$/.test(value);
+}
+
+export function validateC3RPEntryReceipt(receipt) {
+  exactKeys(receipt, ENTRY_RECEIPT_KEYS, "C3R-P entry receipt");
+  if (receipt.schemaVersion !== "inverge.c3r_p.entry_metadata.v1" ||
+    receipt.artifactKind !== "C3R_P_ENTRY_METADATA" ||
+    !ENTRY_CLASSIFICATIONS.includes(receipt.classification)) {
+    throw new Error("C3R-P entry receipt identity is invalid.");
+  }
+  for (const status of [receipt.loginResponseStatus, receipt.gotoStatus, receipt.apiStatus]) {
+    if (status !== null && (!Number.isSafeInteger(status) || status < 100 || status > 599)) {
+      throw new Error("C3R-P entry receipt status is invalid.");
+    }
+  }
+  if (typeof receipt.finalPathname !== "string" || !receipt.finalPathname.startsWith("/") ||
+    receipt.finalPathname.includes("?") || receipt.finalPathname.length > 256) {
+    throw new Error("C3R-P entry receipt pathname is invalid.");
+  }
+  for (const key of [
+    "browserSessionVisible", "reachedLogin", "notFoundSurface", "genericReviewOsAccessState",
+    "c3rPLoadingSurface", "c3rPRuntimeMarker",
+  ]) {
+    if (typeof receipt[key] !== "boolean") throw new Error(`C3R-P entry receipt ${key} is invalid.`);
+  }
+  if (receipt.gotoFailureCategory !== null && !metadataCategory(receipt.gotoFailureCategory)) {
+    throw new Error("C3R-P entry receipt navigation category is invalid.");
+  }
+  if (receipt.apiErrorCode !== null &&
+    (typeof receipt.apiErrorCode !== "string" || !/^[a-z0-9_-]{1,64}$/.test(receipt.apiErrorCode))) {
+    throw new Error("C3R-P entry receipt API error code is invalid.");
+  }
+  for (const categories of [receipt.browserConsoleErrorCategories, receipt.pageErrorCategories]) {
+    if (!Array.isArray(categories) || categories.length > 20 || !categories.every(metadataCategory)) {
+      throw new Error("C3R-P entry receipt browser category is invalid.");
+    }
+  }
+  if (!Array.isArray(receipt.requestFailures) || receipt.requestFailures.length > 20) {
+    throw new Error("C3R-P entry receipt request failures are invalid.");
+  }
+  for (const failure of receipt.requestFailures) {
+    exactKeys(failure, ["pathname", "category"], "C3R-P entry request failure");
+    if (typeof failure.pathname !== "string" || failure.pathname.includes("?") ||
+      failure.pathname.length > 256 || !metadataCategory(failure.category)) {
+      throw new Error("C3R-P entry request failure metadata is invalid.");
+    }
+  }
+  if (!Array.isArray(receipt.cookies) || receipt.cookies.length > 32) {
+    throw new Error("C3R-P entry receipt cookie metadata is invalid.");
+  }
+  for (const cookie of receipt.cookies) {
+    exactKeys(cookie, ["name", "domain", "path"], "C3R-P entry cookie metadata");
+    if (![cookie.name, cookie.domain, cookie.path].every((item) =>
+      typeof item === "string" && item.length > 0 && item.length <= 256)) {
+      throw new Error("C3R-P entry cookie metadata value is invalid.");
+    }
+  }
+  const serialized = JSON.stringify(receipt);
+  if (/@|\beyJ[A-Za-z0-9_-]{10,}\.|password|cookieValue|learnerBody/i.test(serialized)) {
+    throw new Error("C3R-P entry receipt contains prohibited private or credential data.");
+  }
+  return { classification: receipt.classification, finalPathname: receipt.finalPathname };
 }
 
 function exactKeys(value, keys, label) {
@@ -813,27 +971,41 @@ async function waitForServer(baseUrl, child) {
   throw new Error("local Next server readiness timed out.");
 }
 
-async function startNext(repositoryRoot, port, env) {
+async function startNext(repositoryRoot, port, env, diagnosticPath, secretValues) {
+  const diagnostic = createC3RPEntryDiagnosticLog(diagnosticPath, secretValues);
   const child = spawn(process.execPath, [path.join(repositoryRoot, "node_modules/next/dist/bin/next"),
     "dev", "--hostname", "127.0.0.1", "--port", String(port)], {
-    cwd: repositoryRoot, env: { ...process.env, ...env, NEXT_TELEMETRY_DISABLED: "1" }, stdio: "ignore",
+    cwd: repositoryRoot,
+    env: { ...process.env, ...env, NEXT_TELEMETRY_DISABLED: "1" },
+    stdio: ["ignore", "pipe", "pipe"],
   });
+  child.stdout.on("data", (chunk) => diagnostic.append(chunk));
+  child.stderr.on("data", (chunk) => diagnostic.append(chunk));
   const baseUrl = `http://127.0.0.1:${port}`;
-  await waitForServer(baseUrl, child);
-  return { child, baseUrl };
+  try {
+    await waitForServer(baseUrl, child);
+    return { child, baseUrl, diagnostic, diagnosticPath };
+  } catch (error) {
+    if (child.exitCode === null) child.kill("SIGTERM");
+    diagnostic.finish();
+    throw error;
+  }
 }
 
 async function stopNext(server) {
-  if (!server || server.child.exitCode !== null) return;
-  server.child.kill("SIGTERM");
-  await Promise.race([
-    new Promise((resolve) => server.child.once("exit", resolve)),
-    new Promise((resolve) => setTimeout(resolve, 10_000)),
-  ]);
-  if (server.child.exitCode === null) server.child.kill("SIGKILL");
+  if (!server) return;
+  if (server.child.exitCode === null) {
+    server.child.kill("SIGTERM");
+    await Promise.race([
+      new Promise((resolve) => server.child.once("exit", resolve)),
+      new Promise((resolve) => setTimeout(resolve, 10_000)),
+    ]);
+    if (server.child.exitCode === null) server.child.kill("SIGKILL");
+  }
+  server.diagnostic.finish();
 }
 
-function runBrowser(repositoryRoot, baseUrl, identities, browserEvidencePath, restoreOnly) {
+function runBrowser(repositoryRoot, baseUrl, identities, browserEvidencePath, options) {
   run(process.execPath, [path.join(repositoryRoot, "node_modules/@playwright/test/cli.js"), "test",
     `--config=${path.join(repositoryRoot, "tests/e2e/wcv-c3r-p-playwright.config.ts")}`], {
     cwd: repositoryRoot,
@@ -844,17 +1016,106 @@ function runBrowser(repositoryRoot, baseUrl, identities, browserEvidencePath, re
       C3R_P_USER_A_PASSWORD: identities[0].password,
       C3R_P_USER_B_EMAIL: identities[1].email,
       C3R_P_USER_B_PASSWORD: identities[1].password,
+      C3R_P_USER_C_EMAIL: identities[2].email,
+      C3R_P_USER_C_PASSWORD: identities[2].password,
       C3R_P_BROWSER_EVIDENCE_PATH: browserEvidencePath,
-      C3R_P_RESTORE_ONLY: restoreOnly ? "true" : "false",
+      C3R_P_RESTORE_ONLY: options.restoreOnly ? "true" : "false",
+      C3R_P_ENTRY_ONLY: options.entryOnly ? "true" : "false",
+      C3R_P_ENTRY_ACTOR: options.entryActor,
+      C3R_P_ENTRY_EXPECTATION: options.expectedClassification,
+      C3R_P_ENTRY_EVIDENCE_PATH: options.entryEvidencePath,
+      C3R_P_PLAYWRIGHT_CONTEXT_PATH: options.playwrightContextPath,
     },
-    label: restoreOnly ? "C3R-P restart browser verification" : "C3R-P browser journey",
+    label: options.label,
     reportOutput: true,
   });
+}
+
+function entryDiagnosticPaths(diagnosticRoot, cycle, label, nextDiagnosticPath) {
+  const prefix = `cycle-${cycle}-${label}`;
+  return {
+    receipt: path.join(diagnosticRoot, `entry-proof-${prefix}.json`),
+    playwright: path.join(diagnosticRoot, `playwright-entry-${prefix}.json`),
+    next: nextDiagnosticPath,
+    failureReceipt: path.join(diagnosticRoot, `failure-entry-receipt-${prefix}.json`),
+    failurePlaywright: path.join(diagnosticRoot, `failure-playwright-context-${prefix}.json`),
+    failureNext: path.join(diagnosticRoot, `failure-next-${prefix}.log`),
+  };
+}
+
+function readEntryReceipt(filePath) {
+  if (!fs.existsSync(filePath)) return null;
+  const receipt = JSON.parse(fs.readFileSync(filePath, "utf8"));
+  validateC3RPEntryReceipt(receipt);
+  return receipt;
+}
+
+function preserveEntryFailure(paths) {
+  for (const [source, destination] of [
+    [paths.receipt, paths.failureReceipt],
+    [paths.playwright, paths.failurePlaywright],
+    [paths.next, paths.failureNext],
+  ]) {
+    if (fs.existsSync(source)) fs.renameSync(source, destination);
+  }
+}
+
+function discardEntryContext(paths, discardNext = false) {
+  fs.rmSync(paths.playwright, { force: true });
+  if (discardNext) fs.rmSync(paths.next, { force: true });
+}
+
+async function runEntryProbe(input) {
+  const paths = entryDiagnosticPaths(
+    input.diagnosticRoot,
+    input.cycle,
+    input.label,
+    input.server.diagnosticPath,
+  );
+  try {
+    runBrowser(
+      input.repositoryRoot,
+      input.server.baseUrl,
+      input.identities,
+      input.browserEvidencePath,
+      {
+        restoreOnly: false,
+        entryOnly: input.entryOnly,
+        entryActor: input.entryActor,
+        expectedClassification: input.expectedClassification,
+        entryEvidencePath: paths.receipt,
+        playwrightContextPath: paths.playwright,
+        label: `C3R-P ${input.label} entry probe`,
+      },
+    );
+    const receipt = readEntryReceipt(paths.receipt);
+    if (!receipt || receipt.classification !== input.expectedClassification) {
+      throw new Error(`C3R-P ${input.label} entry receipt is missing or mismatched.`);
+    }
+    discardEntryContext(paths, false);
+    return receipt;
+  } catch (error) {
+    await stopNext(input.server);
+    const receipt = readEntryReceipt(paths.receipt);
+    if (!receipt || receipt.classification !== input.expectedClassification) {
+      preserveEntryFailure(paths);
+    } else {
+      discardEntryContext(paths, true);
+    }
+    throw error;
+  }
+}
+
+async function stopAndDiscardNext(server) {
+  if (!server) return;
+  await stopNext(server);
+  fs.rmSync(server.diagnosticPath, { force: true });
 }
 
 async function runDedicatedCycle(input) {
   const projectId = `c3r-p-cycle-${input.cycle}-${input.runId}-${input.runAttempt}`;
   const cycleRoot = path.join(input.runtimeRoot, `cycle-${input.cycle}`);
+  const diagnosticRoot = path.join(input.runtimeRoot, "entry-diagnostics");
   const browserEvidencePath = path.join(cycleRoot, "browser-metadata.json");
   let server;
   let oracle;
@@ -874,31 +1135,93 @@ async function runDedicatedCycle(input) {
     assertExternalMigrationSubstrate(databaseContainer);
     applyExactMigrationHistory(cycleRoot, databaseContainer);
     databaseSecurity(databaseContainer);
-    const identities = [await createIdentity(apiUrl, anonKey, `a-${input.cycle}`),
-      await createIdentity(apiUrl, anonKey, `b-${input.cycle}`)];
+    const identities = [
+      await createIdentity(apiUrl, anonKey, `a-${input.cycle}`),
+      await createIdentity(apiUrl, anonKey, `b-${input.cycle}`),
+      await createIdentity(apiUrl, anonKey, `non-owner-${input.cycle}`),
+    ];
     await verifyDirectBoundaries(apiUrl, anonKey, identities[0]);
     const nextEnv = {
       NEXT_PUBLIC_SUPABASE_URL: apiUrl,
       NEXT_PUBLIC_SUPABASE_ANON_KEY: anonKey,
       SUPABASE_SERVICE_ROLE_KEY: serviceRoleKey,
-      ALPHA_ADMIN_EMAILS: identities.map((identity) => identity.email).join(","),
-      WCV_C3R_P_OWNER_EMAILS: identities.map((identity) => identity.email).join(","),
+      ALPHA_ADMIN_EMAILS: identities.slice(0, 2).map((identity) => identity.email).join(","),
+      WCV_C3R_P_OWNER_EMAILS: identities.slice(0, 2).map((identity) => identity.email).join(","),
       WCV_C3R_P_PRACTICE_ENABLED: "true",
       C3R_P_LOCAL_EVIDENCE_MODE: "true",
       VERCEL_ENV: "preview",
     };
-    server = await startNext(input.repositoryRoot, 3110 + input.cycle, nextEnv);
-    runBrowser(input.repositoryRoot, server.baseUrl, identities, browserEvidencePath, false);
-    await stopNext(server);
-    server = await startNext(input.repositoryRoot, 3110 + input.cycle, nextEnv);
-    runBrowser(input.repositoryRoot, server.baseUrl, identities, browserEvidencePath, true);
+    const secretValues = [apiUrl, anonKey, serviceRoleKey,
+      ...identities.flatMap((identity) => [identity.email, identity.password, identity.accessToken])];
+    const startFor = (label, env = nextEnv) => startNext(
+      input.repositoryRoot,
+      3110 + input.cycle,
+      env,
+      path.join(diagnosticRoot, `next-cycle-${input.cycle}-${label}.log`),
+      secretValues,
+    );
+    const probe = (label, expectedClassification, entryActor, entryOnly = true) => runEntryProbe({
+      repositoryRoot: input.repositoryRoot,
+      server,
+      identities,
+      browserEvidencePath,
+      diagnosticRoot,
+      cycle: input.cycle,
+      label,
+      expectedClassification,
+      entryActor,
+      entryOnly,
+    });
+
+    server = await startFor("normal-entry");
+    await probe("owner-positive", "C3R_P_ENTRY_VERIFIED", "owner");
+    if (input.cycle === 1) {
+      await probe("unauthenticated-negative", "C3R_P_ENTRY_AUTH_SESSION_NOT_VISIBLE", "unauthenticated");
+      await probe("non-owner-negative", "C3R_P_ENTRY_C3R_ACCESS_GATE_DENIED", "non_owner");
+    }
+    await stopAndDiscardNext(server);
+    server = null;
+
+    if (input.cycle === 1) {
+      server = await startFor("feature-off", { ...nextEnv, WCV_C3R_P_PRACTICE_ENABLED: "false" });
+      await probe("feature-off-negative", "C3R_P_ENTRY_C3R_ACCESS_GATE_DENIED", "owner");
+      await stopAndDiscardNext(server);
+      server = null;
+
+      server = await startFor("production-denied", { ...nextEnv, VERCEL_ENV: "production" });
+      await probe("production-negative", "C3R_P_ENTRY_C3R_ACCESS_GATE_DENIED", "owner");
+      await stopAndDiscardNext(server);
+      server = null;
+    }
+
+    server = await startFor("journey");
+    await probe("journey", "C3R_P_ENTRY_VERIFIED", "owner", false);
+    await stopAndDiscardNext(server);
+    server = null;
+
+    server = await startFor("restart-restore");
+    const restorePaths = entryDiagnosticPaths(
+      diagnosticRoot,
+      input.cycle,
+      "restart-restore",
+      server.diagnosticPath,
+    );
+    runBrowser(input.repositoryRoot, server.baseUrl, identities, browserEvidencePath, {
+      restoreOnly: true,
+      entryOnly: false,
+      entryActor: "owner",
+      expectedClassification: "C3R_P_ENTRY_VERIFIED",
+      entryEvidencePath: restorePaths.receipt,
+      playwrightContextPath: restorePaths.playwright,
+      label: "C3R-P restart browser verification",
+    });
     const browserEvidence = JSON.parse(fs.readFileSync(browserEvidencePath, "utf8"));
     if (browserEvidence.browserToPostgres !== true || browserEvidence.restartRestore !== true ||
       browserEvidence.crossUserDenied !== true || browserEvidence.exportDelete !== true ||
       browserEvidence.rawLearnerBodyInEvidence !== false || browserEvidence.providerCalls !== 0) {
       throw new Error(`C3R-P browser evidence cycle ${input.cycle} is incomplete.`);
     }
-    await stopNext(server);
+    await stopAndDiscardNext(server);
     server = null;
     stopSupabase(input.repositoryRoot, cycleRoot);
     const oraclePath = path.join(cycleRoot, "oracle-metadata.json");
@@ -927,7 +1250,7 @@ async function runDedicatedCycle(input) {
       cleanup: "complete",
     };
   } finally {
-    await stopNext(server);
+    await stopAndDiscardNext(server);
     stopSupabase(input.repositoryRoot, cycleRoot);
     fs.rmSync(cycleRoot, { recursive: true, force: true });
   }
@@ -950,44 +1273,40 @@ async function runDedicated() {
   fs.rmSync(runtimeRoot, { recursive: true, force: true });
   fs.mkdirSync(runtimeRoot, { recursive: true });
   const cycles = [];
-  try {
-    for (let cycle = 1; cycle <= 2; cycle += 1) {
-      cycles.push(await runDedicatedCycle({
-        cycle, repositoryRoot, runtimeRoot, headSha, runId, runAttempt,
-      }));
-    }
-    const appendBytes = execFileSync("git", ["show", `${headSha}:${C3R_P_APPEND_PATH}`], {
-      cwd: repositoryRoot, encoding: "buffer",
-    });
-    const artifact = createPracticeRuntimeArtifact({
-      candidateHead: headSha,
-      candidateTree: headTree,
-      migrationInventory: migrations,
-      appendIdentity: {
-        path: C3R_P_APPEND_PATH,
-        gitBlob: git(repositoryRoot, ["rev-parse", `${headSha}:${C3R_P_APPEND_PATH}`]),
-        sha256: sha256(appendBytes),
-      },
-      resetReplayCycles: cycles,
-      oracle: { status: "verified", serverVersionNum: ORACLE_SERVER_VERSION_NUM, cycleEvidenceCount: 2 },
-      security: {
-        rls: "enabled_and_forced",
-        anonymous: "denied",
-        authenticatedDirectMutation: "denied",
-        crossUser: "denied_both_directions",
-        serviceOnlyMutation: "verified",
-        subjectIdentity: "PRACTICE_ONLY",
-      },
-    }, repositoryRoot);
-    validatePracticeRuntimeArtifact(artifact, repositoryRoot);
-    const evidencePath = process.env.C3R_P_RUNTIME_EVIDENCE_PATH;
-    if (!evidencePath) throw new Error("C3R_P_RUNTIME_EVIDENCE_PATH is not set.");
-    fs.mkdirSync(path.dirname(path.resolve(evidencePath)), { recursive: true });
-    fs.writeFileSync(path.resolve(evidencePath), `${JSON.stringify(artifact, null, 2)}\n`, { mode: 0o600 });
-    console.log(JSON.stringify({ status: "verified", artifactSha256: artifact.artifactSha256 }));
-  } finally {
-    fs.rmSync(runtimeRoot, { recursive: true, force: true });
+  for (let cycle = 1; cycle <= 2; cycle += 1) {
+    cycles.push(await runDedicatedCycle({
+      cycle, repositoryRoot, runtimeRoot, headSha, runId, runAttempt,
+    }));
   }
+  const appendBytes = execFileSync("git", ["show", `${headSha}:${C3R_P_APPEND_PATH}`], {
+    cwd: repositoryRoot, encoding: "buffer",
+  });
+  const artifact = createPracticeRuntimeArtifact({
+    candidateHead: headSha,
+    candidateTree: headTree,
+    migrationInventory: migrations,
+    appendIdentity: {
+      path: C3R_P_APPEND_PATH,
+      gitBlob: git(repositoryRoot, ["rev-parse", `${headSha}:${C3R_P_APPEND_PATH}`]),
+      sha256: sha256(appendBytes),
+    },
+    resetReplayCycles: cycles,
+    oracle: { status: "verified", serverVersionNum: ORACLE_SERVER_VERSION_NUM, cycleEvidenceCount: 2 },
+    security: {
+      rls: "enabled_and_forced",
+      anonymous: "denied",
+      authenticatedDirectMutation: "denied",
+      crossUser: "denied_both_directions",
+      serviceOnlyMutation: "verified",
+      subjectIdentity: "PRACTICE_ONLY",
+    },
+  }, repositoryRoot);
+  validatePracticeRuntimeArtifact(artifact, repositoryRoot);
+  const evidencePath = process.env.C3R_P_RUNTIME_EVIDENCE_PATH;
+  if (!evidencePath) throw new Error("C3R_P_RUNTIME_EVIDENCE_PATH is not set.");
+  fs.mkdirSync(path.dirname(path.resolve(evidencePath)), { recursive: true });
+  fs.writeFileSync(path.resolve(evidencePath), `${JSON.stringify(artifact, null, 2)}\n`, { mode: 0o600 });
+  console.log(JSON.stringify({ status: "verified", artifactSha256: artifact.artifactSha256 }));
 }
 
 function cleanupDedicated() {

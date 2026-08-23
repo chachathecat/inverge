@@ -2,12 +2,16 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import crypto from "node:crypto";
 import fs from "node:fs";
+import os from "node:os";
 import path from "node:path";
 import { execFileSync, spawnSync } from "node:child_process";
 
 import {
   C3R_P_APPEND_PATH,
+  createC3RPEntryDiagnosticLog,
   createPracticeRuntimeArtifact,
+  redactC3RPEntryDiagnosticText,
+  validateC3RPEntryReceipt,
   validatePracticeRuntimeArtifact,
 } from "../scripts/automation/wcv-c3r-p-practice-common-runtime.mjs";
 
@@ -24,6 +28,8 @@ const componentSource = fs.readFileSync(path.join(root,
   "components/review-os/c3r-p-practice-loop.tsx"), "utf8");
 const browserSource = fs.readFileSync(path.join(root,
   "tests/e2e/wcv-c3r-p-practice-common-runtime.spec.ts"), "utf8");
+const workflowSource = fs.readFileSync(path.join(root,
+  ".github/workflows/c3r-p-practice-common-durable-runtime.yml"), "utf8");
 
 function sha256(bytes) {
   return crypto.createHash("sha256").update(bytes).digest("hex");
@@ -85,6 +91,30 @@ function sampleArtifact() {
       subjectIdentity: "PRACTICE_ONLY",
     },
   }, root);
+}
+
+function sampleEntryReceipt() {
+  return {
+    schemaVersion: "inverge.c3r_p.entry_metadata.v1",
+    artifactKind: "C3R_P_ENTRY_METADATA",
+    classification: "C3R_P_ENTRY_VERIFIED",
+    loginResponseStatus: 200,
+    browserSessionVisible: true,
+    gotoStatus: 200,
+    gotoFailureCategory: null,
+    finalPathname: "/app/c3r-p",
+    reachedLogin: false,
+    notFoundSurface: false,
+    genericReviewOsAccessState: false,
+    c3rPLoadingSurface: true,
+    c3rPRuntimeMarker: true,
+    apiStatus: 200,
+    apiErrorCode: null,
+    browserConsoleErrorCategories: [],
+    pageErrorCategories: [],
+    requestFailures: [{ pathname: "/_next/static/chunk.js", category: "CONNECTION" }],
+    cookies: [{ name: "sb-local-auth-token", domain: "127.0.0.1", path: "/" }],
+  };
 }
 
 test("C3R-P applies the exact seven operations and one 26th append", () => {
@@ -198,6 +228,60 @@ test("dedicated browser runner uses the pinned exact-match config without an abs
   assert.match(browserRunner, /wcv-c3r-p-playwright\.config\.ts/);
   assert.match(browserRunner, /reportOutput: true/);
   assert.doesNotMatch(browserRunner, /wcv-c3r-p-practice-common-runtime\.spec\.ts/);
+});
+
+test("entry diagnostics retain one exact metadata-only classification", () => {
+  const receipt = sampleEntryReceipt();
+  assert.deepEqual(validateC3RPEntryReceipt(receipt), {
+    classification: "C3R_P_ENTRY_VERIFIED",
+    finalPathname: "/app/c3r-p",
+  });
+  const privateReceipt = clone(receipt);
+  privateReceipt.cookies[0].value = "secret";
+  assert.throws(() => validateC3RPEntryReceipt(privateReceipt));
+  const queryReceipt = clone(receipt);
+  queryReceipt.finalPathname = "/app/c3r-p?recordId=private";
+  assert.throws(() => validateC3RPEntryReceipt(queryReceipt));
+  assert.match(browserSource, /C3R_P_ENTRY_AUTH_SESSION_NOT_VISIBLE/);
+  assert.match(browserSource, /C3R_P_ENTRY_GENERIC_APP_ACCESS_DENIED/);
+  assert.match(browserSource, /C3R_P_ENTRY_C3R_ACCESS_GATE_DENIED/);
+  assert.match(browserSource, /C3R_P_ENTRY_NOT_FOUND/);
+  assert.match(browserSource, /C3R_P_ENTRY_CLIENT_API_TIMEOUT/);
+  assert.match(browserSource, /C3R_P_ENTRY_NEXT_RENDER_ERROR/);
+  assert.match(browserSource, /C3R_P_ENTRY_VERIFIED/);
+});
+
+test("Next diagnostics are bounded and redact split credentials and learner identities", () => {
+  const temporaryRoot = fs.mkdtempSync(path.join(os.tmpdir(), "c3r-p-entry-"));
+  try {
+    const logPath = path.join(temporaryRoot, "next.log");
+    const secret = "super-secret-api-key";
+    const log = createC3RPEntryDiagnosticLog(logPath, [secret], 512);
+    log.append(`email=learner@example.invalid password=hunter2 ${secret.slice(0, 8)}`);
+    log.append(`${secret.slice(8)} Bearer eyJabcdefghij.abcdefghijk.abcdefghijkl ${"x".repeat(1_000)}`);
+    log.finish();
+    const bytes = fs.readFileSync(logPath);
+    const text = bytes.toString("utf8");
+    assert.ok(bytes.length <= 512);
+    assert.doesNotMatch(text, /learner@example\.invalid|hunter2|super-secret-api-key|eyJabcdefghij/);
+    assert.doesNotMatch(redactC3RPEntryDiagnosticText(
+      "cookie: first=value; second=other password=p email=user@example.invalid",
+    ), /first=value|second=other|password=p|user@example\.invalid/);
+  } finally {
+    fs.rmSync(temporaryRoot, { recursive: true, force: true });
+  }
+});
+
+test("failure diagnostics upload before unconditional cleanup and verified entry remains separate", () => {
+  const failureUpload = workflowSource.indexOf("Upload bounded entry failure diagnostic");
+  const verifiedUpload = workflowSource.indexOf("Upload verified entry metadata");
+  const cleanup = workflowSource.indexOf("Unconditionally remove local runtime resources");
+  assert.ok(failureUpload > 0 && failureUpload < cleanup);
+  assert.ok(verifiedUpload > failureUpload && verifiedUpload < cleanup);
+  assert.match(workflowSource, /entry-diagnostics\/failure-\*/);
+  assert.match(workflowSource, /retention-days: 1/);
+  assert.match(runtimeSource, /stdio: \["ignore", "pipe", "pipe"\]/);
+  assert.match(runtimeSource, /ENTRY_DIAGNOSTIC_MAX_BYTES = 64 \* 1024/);
 });
 
 test("verified attempts bind to learner-entered structured values and server-rendered bodies", () => {
