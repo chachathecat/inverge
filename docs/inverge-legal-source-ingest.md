@@ -76,7 +76,7 @@ Every seed item remains metadata-only and starts with `needsOfficialVerification
 
 ## Update Strategy
 
-1. Apply `supabase/migrations/20260615_legal_grounding.sql`.
+1. Apply `supabase/migrations/20260615090000_legal_grounding.sql`.
 2. Keep `LAW_OPEN_API_OC`, `NEXT_PUBLIC_SUPABASE_URL`, and `SUPABASE_SERVICE_ROLE_KEY` in the local/server environment only.
 3. Run:
 

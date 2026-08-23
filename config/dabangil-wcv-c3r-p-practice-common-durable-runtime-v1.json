@@ -1,0 +1,220 @@
+{
+  "schemaVersion": "dabangil.wcv_c3r_p.practice_common_durable_runtime.v1",
+  "contractId": "dabangil_wcv_c3r_p_practice_common_durable_runtime_v1",
+  "contractVersion": "1.0.0",
+  "status": "candidate_effective_only_after_expected_head_pinned_squash_merge_and_validated_github_receipt",
+  "authority": {
+    "repository": "chachathecat/inverge",
+    "stage": "C3R-P",
+    "subject": "PRACTICE",
+    "baseSha": "342d3795c8ea51aeb6f94751a5db913a9dbfcffd",
+    "baseTree": "1ed5a3a103cd9994c395a61ab81c36db4366e687",
+    "headRef": "codex/wcv-c3r-p-practice-common-durable-runtime",
+    "pullRequestTitle": "[WCV-C3R-P] Deliver Practice and common durable-learning substrate",
+    "authorityDecisionRef": "docs/decisions/2026-08-22-owner-wcv-c3-pre-p-migration-mutation-authority.md",
+    "authorityDecisionGitBlob": "eaa71770136eca3aa2f6509e025397b3a42cb477",
+    "authorityDecisionSha256": "ada71632db7767cde579560bb68293702d9a6846ad02d5f60e9a99e3d1554dfb",
+    "authorityContractRef": "config/dabangil-wcv-c3-pre-p-migration-mutation-authority-v1.json",
+    "authorityContractGitBlob": "e0140daf02e1de9c8cb6d533e45e754e72b78195",
+    "authorityContractSha256": "ae910ab83629c38889e0a877a7c3e5e3fc2385a75e64b90efed791eacf91a3bb",
+    "validatedAuthorityPullRequest": 797,
+    "validatedAuthorityReviewedHead": "c5b471b93ff9916e1f63b024d953580570518428",
+    "validatedAuthorityReviewedTree": "1ed5a3a103cd9994c395a61ab81c36db4366e687",
+    "validatedAuthorityResultingMainSha": "342d3795c8ea51aeb6f94751a5db913a9dbfcffd",
+    "validatedAuthorityResultingMainTree": "1ed5a3a103cd9994c395a61ab81c36db4366e687",
+    "usesExistingReceiptAuthority": "C3RStageMergeReceiptV1",
+    "createsGeneralReceiptSystem": false
+  },
+  "migrationAuthorityBinding": {
+    "operationBindings": [
+      {
+        "operationId": "PERSONAL_LEARNING_STATE_RENAME_AND_RECURSIVE_CTE_REPAIR",
+        "currentPath": "supabase/migrations/20260608_create_personal_learning_states.sql",
+        "futurePath": "supabase/migrations/20260608090000_create_personal_learning_states.sql",
+        "futureGitBlob": "bd305ec8c4e55510f9faeded7cf2594513e71055",
+        "futureRawSha256": "957fb9810283086e75ce34689b3eee2c2d3be4373dc341056630db716457b815",
+        "futureCanonicalUtf8LfSha256": "957fb9810283086e75ce34689b3eee2c2d3be4373dc341056630db716457b815"
+      },
+      {
+        "operationId": "LEGAL_GROUNDING_RENAME",
+        "currentPath": "supabase/migrations/20260615_legal_grounding.sql",
+        "futurePath": "supabase/migrations/20260615090000_legal_grounding.sql",
+        "futureGitBlob": "160955292b0caf8c4dea01b47b52340ba2242acc",
+        "futureRawSha256": "fb585b9c2d96edfd696d2f03e0d4fc427597c7759ee6ab96de5a3dddf29d237e",
+        "futureCanonicalUtf8LfSha256": "fb585b9c2d96edfd696d2f03e0d4fc427597c7759ee6ab96de5a3dddf29d237e"
+      },
+      {
+        "operationId": "LEGAL_ARTICLE_IDENTITY_RENAME",
+        "currentPath": "supabase/migrations/20260615_legal_article_chunk_identity.sql",
+        "futurePath": "supabase/migrations/20260615100000_legal_article_chunk_identity.sql",
+        "futureGitBlob": "0d20d7f175d8f93a2215fcb141f17996395c5597",
+        "futureRawSha256": "03dce727ac9bca1ab290556583c33593c3ae6ee544b0c90cc8ff7e05aea6e29d",
+        "futureCanonicalUtf8LfSha256": "03dce727ac9bca1ab290556583c33593c3ae6ee544b0c90cc8ff7e05aea6e29d"
+      },
+      {
+        "operationId": "LEGAL_RETRIEVAL_RENAME",
+        "currentPath": "supabase/migrations/20260615_legal_retrieval.sql",
+        "futurePath": "supabase/migrations/20260615110000_legal_retrieval.sql",
+        "futureGitBlob": "6821a0a694f9d5b737ac104270826371980eb431",
+        "futureRawSha256": "d1ec08d0e3082e224c8da95c412636d83a0d4183df3a1ec4a1432f795b0154cc",
+        "futureCanonicalUtf8LfSha256": "d1ec08d0e3082e224c8da95c412636d83a0d4183df3a1ec4a1432f795b0154cc"
+      },
+      {
+        "operationId": "LEGAL_GROUNDING_GUARD_RENAME",
+        "currentPath": "supabase/migrations/20260615_legal_grounding_guard.sql",
+        "futurePath": "supabase/migrations/20260615120000_legal_grounding_guard.sql",
+        "futureGitBlob": "5971e1b961a7d096510902fdc40b04310a053ade",
+        "futureRawSha256": "436e741f78efc14fa7decd2c6f8c3eadf31f5acd4590df98c3eaad988493b642",
+        "futureCanonicalUtf8LfSha256": "436e741f78efc14fa7decd2c6f8c3eadf31f5acd4590df98c3eaad988493b642"
+      },
+      {
+        "operationId": "LEGAL_GUARD_SERVICE_ROLE_GRANT_RENAME",
+        "currentPath": "supabase/migrations/20260616_legal_grounding_guard_service_role_grant.sql",
+        "futurePath": "supabase/migrations/20260616100000_legal_grounding_guard_service_role_grant.sql",
+        "futureGitBlob": "f960965c3c3d058486b1edf12e8b0639c15d7f7a",
+        "futureRawSha256": "25e358828f3953b3cf793f7eeb645c816156e8bb89f5b7899d3c075de9594e13",
+        "futureCanonicalUtf8LfSha256": "25e358828f3953b3cf793f7eeb645c816156e8bb89f5b7899d3c075de9594e13"
+      },
+      {
+        "operationId": "PERSONAL_CONCEPT_EARLY_BOUNDARY_COMPATIBILITY_REPAIR",
+        "currentPath": "supabase/migrations/202606232130_personal_concept_graph_rpc_only_write_boundary.sql",
+        "futurePath": "supabase/migrations/202606232130_personal_concept_graph_rpc_only_write_boundary.sql",
+        "futureGitBlob": "301b713c16880807e21a11b770f7575e3701e312",
+        "futureRawSha256": "f5feb973cbc25cd8392158daf4f4c58227a776266f8b4f196c1f253eda39ee92",
+        "futureCanonicalUtf8LfSha256": "f5feb973cbc25cd8392158daf4f4c58227a776266f8b4f196c1f253eda39ee92"
+      }
+    ],
+    "appendPath": "supabase/migrations/20260822120000_c3r_p_practice_common_durable_substrate.sql",
+    "effectiveInventoryCount": 26,
+    "remoteMutationCount": 0
+  },
+  "practiceRuntimeArtifact": {
+    "artifactKind": "PRACTICE_RUNTIME",
+    "artifactRef": "PRACTICE_RUNTIME:c3r-p-practice-common-durable-runtime-v1",
+    "browserToPostgresEvidenceRef": "PRACTICE_RUNTIME:c3r-p-practice-common-durable-runtime-v1#browser-to-postgres",
+    "practiceEvidenceRefs": [
+      "PRACTICE_RUNTIME:c3r-p-practice-common-durable-runtime-v1#706:FROZEN_D0",
+      "PRACTICE_RUNTIME:c3r-p-practice-common-durable-runtime-v1#706:D_PLUS_1_UNAIDED_RECONSTRUCTION",
+      "PRACTICE_RUNTIME:c3r-p-practice-common-durable-runtime-v1#706:SEALED_NON_SAME_SURFACE_D_PLUS_7_TRANSFER",
+      "PRACTICE_RUNTIME:c3r-p-practice-common-durable-runtime-v1#706:TIMED_RECURRENCE",
+      "PRACTICE_RUNTIME:c3r-p-practice-common-durable-runtime-v1#706:LATER_FAILURE_REOPEN",
+      "PRACTICE_RUNTIME:c3r-p-practice-common-durable-runtime-v1#707:LEARNER_PRIVATE_FORCED_RLS_LEDGER",
+      "PRACTICE_RUNTIME:c3r-p-practice-common-durable-runtime-v1#707:EXACT_SOURCE_ATTEMPT_ARTIFACT_ITEM_BINDING",
+      "PRACTICE_RUNTIME:c3r-p-practice-common-durable-runtime-v1#707:BODYLESS_RECURRING_DEDUCTION_EVIDENCE_PROJECTION",
+      "PRACTICE_RUNTIME:c3r-p-practice-common-durable-runtime-v1#707:SOURCE_BOUND_FAILURE_NOTES",
+      "PRACTICE_RUNTIME:c3r-p-practice-common-durable-runtime-v1#707:RESTORE_EXPORT_DELETE",
+      "PRACTICE_RUNTIME:c3r-p-practice-common-durable-runtime-v1#708:DETERMINISTIC_REVIEW_QUEUE",
+      "PRACTICE_RUNTIME:c3r-p-practice-common-durable-runtime-v1#708:TODAY_AND_FULL_DAY",
+      "PRACTICE_RUNTIME:c3r-p-practice-common-durable-runtime-v1#708:CORE_OUTCOME_MAXIMUM_3",
+      "PRACTICE_RUNTIME:c3r-p-practice-common-durable-runtime-v1#708:PLANNER_REVIEW_STATE_SEPARATION",
+      "PRACTICE_RUNTIME:c3r-p-practice-common-durable-runtime-v1#708:ACCEPT_EDIT_REJECT_WITHOUT_EVIDENCE_MUTATION",
+      "PRACTICE_RUNTIME:c3r-p-practice-common-durable-runtime-v1#708:STALE_PLAN_REJECTION_AND_ELIGIBILITY_REFRESH"
+    ],
+    "perItemRuntimeEvidenceRefsEqualPracticeEvidenceRefsExactly": true,
+    "independentVerifierMustReproduce": [
+      "artifactRef",
+      "artifactSha256",
+      "practiceEvidenceRefs",
+      "browserToPostgresEvidenceRef",
+      "perItemRuntimeEvidenceRefs",
+      "candidateHead",
+      "candidateTree",
+      "practiceEvidenceDigest"
+    ],
+    "arbitraryOrUnboundReferencesFailClosed": true,
+    "metadataOnly": true
+  },
+  "runtimeBoundary": {
+    "subjectEnumExactly": ["PRACTICE"],
+    "resetReplayCycleCount": 2,
+    "postgresqlServerVersionNum": 150008,
+    "featureFlag": "WCV_C3R_P_PRACTICE_ENABLED",
+    "featureDefaultOff": true,
+    "ownerAllowlistEnvironment": "WCV_C3R_P_OWNER_EMAILS",
+    "productionDenied": true,
+    "providerCallsAllowed": false,
+    "remoteSupabaseMutationCount": 0,
+    "productionMutationCount": 0,
+    "theoryRuntimeIncluded": false,
+    "lawRuntimeIncluded": false,
+    "automaticC3rTStart": false
+  },
+  "deliveryControl": {
+    "draftRequired": true,
+    "autoMergeAllowed": false,
+    "readyTransitionAllowed": false,
+    "mergeAuthorizedByThisWork": false,
+    "sourceCorrectionMaximum": 2,
+    "formalReviewMaximum": 3,
+    "requiredReferenceLinesExactly": [
+      "Refs #706",
+      "Refs #707",
+      "Refs #708",
+      "Refs #714",
+      "Refs #781"
+    ],
+    "requiredDispositionLine": "All referenced issues remain open; C3R-P closes none and does not start C3R-T.",
+    "closingKeywordsAllowed": false
+  },
+  "pathManifest": {
+    "removedRenameSourcesExactly": [
+      "supabase/migrations/20260608_create_personal_learning_states.sql",
+      "supabase/migrations/20260615_legal_article_chunk_identity.sql",
+      "supabase/migrations/20260615_legal_grounding.sql",
+      "supabase/migrations/20260615_legal_grounding_guard.sql",
+      "supabase/migrations/20260615_legal_retrieval.sql",
+      "supabase/migrations/20260616_legal_grounding_guard_service_role_grant.sql"
+    ],
+    "changedPathsExactly": [
+      ".github/workflows/c3r-p-practice-common-durable-runtime.yml",
+      "app/api/review-os/c3r-p/route.ts",
+      "app/app/c3r-p/page.tsx",
+      "components/review-os/c3r-p-practice-loop.tsx",
+      "config/dabangil-wcv-c3r-p-practice-common-durable-runtime-v1.json",
+      "docs/qa/wcv-c3r-p-practice-common-durable-runtime-validation.md",
+      "docs/inverge-legal-source-ingest.md",
+      "lib/review-os/c3r-p-contract.ts",
+      "lib/review-os/c3r-p-engine.ts",
+      "lib/review-os/c3r-p-repository.ts",
+      "lib/review-os/c3r-p-service.ts",
+      "scripts/automation/produce-runtime-evidence.mjs",
+      "scripts/automation/runtime-gate.mjs",
+      "scripts/automation/runtime-risk-contract.mjs",
+      "scripts/automation/validate-pr-contract.mjs",
+      "scripts/automation/wcv-c3r-p-practice-common-runtime.mjs",
+      "scripts/run-node-tests.mjs",
+      "supabase/migrations/20260608090000_create_personal_learning_states.sql",
+      "supabase/migrations/20260615090000_legal_grounding.sql",
+      "supabase/migrations/20260615100000_legal_article_chunk_identity.sql",
+      "supabase/migrations/20260615110000_legal_retrieval.sql",
+      "supabase/migrations/20260615120000_legal_grounding_guard.sql",
+      "supabase/migrations/20260616100000_legal_grounding_guard_service_role_grant.sql",
+      "supabase/migrations/202606232130_personal_concept_graph_rpc_only_write_boundary.sql",
+      "supabase/migrations/20260822120000_c3r_p_practice_common_durable_substrate.sql",
+      "tests/agent-factory-contract-validation.test.mjs",
+      "tests/agent-factory-runtime-gate.test.mjs",
+      "tests/legal-anchor-verification-apply.test.mjs",
+      "tests/legal-grounding-guard.test.mjs",
+      "tests/legal-retrieval.test.mjs",
+      "tests/legal-source-ingest.test.mjs",
+      "tests/s232f2-access-availability.test.mjs",
+      "tests/e2e/wcv-c3r-p-playwright.config.ts",
+      "tests/e2e/wcv-c3r-p-practice-common-runtime.spec.ts",
+      "tests/wcv-c3r-p-practice-common-durable-runtime.test.mjs"
+    ]
+  },
+  "packageIdentity": {
+    "packageJsonGitBlob": "33a8d29b52ac225c6e957c71fce1f28f2eaba16d",
+    "packageLockJsonGitBlob": "70f85fb69c39aa73cf572082c4d38eb426c0b398",
+    "packageMutationAuthorized": false
+  },
+  "postMergeState": {
+    "c3rP": "complete_only_after_validated_expected_head_pinned_merge_receipt",
+    "c3rT": "blocked_until_validated_c3r_p_merge_receipt_then_authorized_unstarted",
+    "c3rL": "blocked_on_validated_c3r_p_and_c3r_t_merge_receipts",
+    "wcvC3": "incomplete",
+    "governedIssuesRemainOpen": [706, 707, 708, 714, 781],
+    "successorStarted": false,
+    "remoteMutationCount": 0
+  }
+}

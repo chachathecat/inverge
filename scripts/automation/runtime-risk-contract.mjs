@@ -10,6 +10,10 @@ export const POSTGRES_SECURITY_ORACLE_RUNTIME_PATHS = Object.freeze([
 export const RUNTIME_REQUIRED_PATTERNS = Object.freeze([
   ...POSTGRES_SECURITY_ORACLE_RUNTIME_PATHS,
   "supabase/migrations/**",
+  "config/dabangil-wcv-c3r-p-practice-common-durable-runtime-v1.json",
+  "scripts/automation/wcv-c3r-p-practice-common-runtime.mjs",
+  "app/api/review-os/c3r-p/**",
+  "lib/review-os/c3r-p-*.ts",
   "app/api/auth/**",
   "lib/auth/**",
   "middleware.ts",

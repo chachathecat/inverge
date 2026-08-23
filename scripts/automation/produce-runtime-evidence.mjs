@@ -11,6 +11,10 @@ import {
   isOracleRiskCandidate,
   producePostgresSecurityOracleEvidence,
 } from "./wcv-c3-pre-p-postgresql-security-state-oracle.mjs";
+import {
+  isC3RPRiskCandidate,
+  produceC3RPNativeEvidence,
+} from "./wcv-c3r-p-practice-common-runtime.mjs";
 
 export const SCHEMA_VERSION = "inverge.runtime_evidence.v2";
 export const PRODUCER_VERSION = "s233r.postgres.s233a.v1";
@@ -3206,6 +3210,15 @@ function produce(riskFile) {
   if (riskResult.runtimeEvidenceRequired !== true) throw new Error("runtime evidence was not requested.");
   if (isOracleRiskCandidate(riskResult)) {
     producePostgresSecurityOracleEvidence({
+      context,
+      evidencePath: process.env.RUNTIME_EVIDENCE_PATH,
+      riskBytes,
+      riskResult,
+    });
+    return;
+  }
+  if (isC3RPRiskCandidate(riskResult)) {
+    produceC3RPNativeEvidence({
       context,
       evidencePath: process.env.RUNTIME_EVIDENCE_PATH,
       riskBytes,

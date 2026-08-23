@@ -86,6 +86,22 @@ const PRE_C3R_P_MINIMAL_AUTHORITY_REFERENCE_LINES = Object.freeze([
 ]);
 const PRE_C3R_P_MINIMAL_AUTHORITY_DISPOSITION =
   "All referenced issues remain open; this minimal source-only Draft closes none.";
+const C3R_P_RUNTIME_CONTRACT_PATH =
+  "config/dabangil-wcv-c3r-p-practice-common-durable-runtime-v1.json";
+const C3R_P_RUNTIME_SCOPE = Object.freeze({
+  repository: "chachathecat/inverge",
+  baseRef: "main",
+  baseSha: "342d3795c8ea51aeb6f94751a5db913a9dbfcffd",
+  headRef: "codex/wcv-c3r-p-practice-common-durable-runtime",
+  headRepository: "chachathecat/inverge",
+  pullRequestTitle: "[WCV-C3R-P] Deliver Practice and common durable-learning substrate",
+  isDraft: true,
+});
+const C3R_P_RUNTIME_REFERENCE_LINES = Object.freeze([
+  "Refs #706", "Refs #707", "Refs #708", "Refs #714", "Refs #781",
+]);
+const C3R_P_RUNTIME_DISPOSITION =
+  "All referenced issues remain open; C3R-P closes none and does not start C3R-T.";
 const GITHUB_CLOSING_KEYWORD_PATTERN = new RegExp(
   String.raw`\b(?:close(?:s|d)?|fix(?:es|ed)?|resolve(?:s|d)?)(?:\s*:\s*|\s+)(?:#\d+|[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+#\d+|https:\/\/github\.com\/[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+\/(?:issues|pull)\/\d+)\b`,
   "gi",
@@ -231,12 +247,49 @@ function isPreC3rPMinimalAuthorityCandidate(context) {
     context?.headRef === PRE_C3R_P_MINIMAL_AUTHORITY_SCOPE.headRef;
 }
 
+function readC3rPRuntimeContract() {
+  if (!fs.existsSync(C3R_P_RUNTIME_CONTRACT_PATH)) return null;
+  try { return JSON.parse(fs.readFileSync(C3R_P_RUNTIME_CONTRACT_PATH, "utf8")); }
+  catch { return null; }
+}
+
+function isC3rPRuntimeCandidate(context) {
+  return context?.repository === C3R_P_RUNTIME_SCOPE.repository &&
+    context?.headRef === C3R_P_RUNTIME_SCOPE.headRef;
+}
+
 function validateIssueLink(body, errors, context) {
   const issueLinks = [...body.matchAll(/\b(?:Closes|Fixes)\s+#(\d+)\b/gi)];
   const allGithubClosingLinks = [
     ...body.matchAll(GITHUB_CLOSING_KEYWORD_PATTERN),
   ];
   const sourceAuthority = readC3rA0SourceAuthorityIssueLink();
+
+  if (isC3rPRuntimeCandidate(context)) {
+    const contract = readC3rPRuntimeContract();
+    const bodyLines = body.split(/\r?\n/u).map((line) => line.trim());
+    const actualReferenceLines = bodyLines.filter((line) => /^Refs #\d+$/u.test(line));
+    const dispositionCount = bodyLines.filter((line) => line === C3R_P_RUNTIME_DISPOSITION).length;
+    const scopeMatches = Object.entries(C3R_P_RUNTIME_SCOPE).every(
+      ([key, value]) => context?.[key] === value,
+    );
+    if (!scopeMatches || contract?.authority?.repository !== C3R_P_RUNTIME_SCOPE.repository ||
+      contract?.authority?.baseSha !== C3R_P_RUNTIME_SCOPE.baseSha ||
+      contract?.authority?.headRef !== C3R_P_RUNTIME_SCOPE.headRef ||
+      contract?.authority?.pullRequestTitle !== C3R_P_RUNTIME_SCOPE.pullRequestTitle ||
+      contract?.deliveryControl?.draftRequired !== true ||
+      contract?.deliveryControl?.closingKeywordsAllowed !== false ||
+      JSON.stringify(contract?.deliveryControl?.requiredReferenceLinesExactly) !==
+        JSON.stringify(C3R_P_RUNTIME_REFERENCE_LINES) ||
+      contract?.deliveryControl?.requiredDispositionLine !== C3R_P_RUNTIME_DISPOSITION ||
+      JSON.stringify(actualReferenceLines) !== JSON.stringify(C3R_P_RUNTIME_REFERENCE_LINES) ||
+      dispositionCount !== 1 || allGithubClosingLinks.length !== 0) {
+      errors.push(
+        "C3R-P reference-only linking requires its exact five issue references, open disposition, pinned Draft scope, and zero issue-closing keywords.",
+      );
+    }
+    return;
+  }
 
   if (isPreC3rPMinimalAuthorityCandidate(context)) {
     const deliveryControl = readPreC3rPMinimalAuthorityDeliveryControl();

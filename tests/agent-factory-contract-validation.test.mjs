@@ -106,3 +106,84 @@ test("more than one checked merge recommendation fails", () => {
   }));
   assert.notEqual(result.status, 0);
 });
+
+const c3rPReferenceBody = `## Goal
+
+Deliver the default-off Practice durable-learning vertical.
+
+Refs #706
+Refs #707
+Refs #708
+Refs #714
+Refs #781
+
+All referenced issues remain open; C3R-P closes none and does not start C3R-T.
+
+## Non-goals
+
+No Theory, Law, remote mutation, activation, Ready transition, or merge.
+
+## Risk classification
+
+- Risk: [high]
+
+## Data boundary
+
+Learner-private forced-RLS data; shared evidence is metadata-only.
+
+## Schema / API / environment changes
+
+One authorized append and default-off Owner-only API/UI.
+
+## Tests and evidence
+
+Focused Practice, migration, security and binding tests.
+
+## Runtime evidence
+
+Two fresh browser-to-Postgres cycles and installed PostgreSQL 15.8 oracle.
+
+## Rollout and rollback
+
+Forward-only schema, independent kill switch, no destructive data rollback.
+
+## Remaining risks
+
+Draft remains unmerged and all issues remain open.
+
+## Merge recommendation
+
+- [ ] Auto-merge candidate
+- [ ] Human approval required
+- [x] Blocked
+`;
+
+function runC3rP(body, overrides = {}) {
+  const directory = fs.mkdtempSync(path.join(os.tmpdir(), "inverge-c3r-p-contract-"));
+  const eventPath = path.join(directory, "event.json");
+  fs.writeFileSync(eventPath, JSON.stringify({
+    repository: { full_name: "chachathecat/inverge" },
+    pull_request: {
+      body,
+      draft: true,
+      title: "[WCV-C3R-P] Deliver Practice and common durable-learning substrate",
+      base: { ref: "main", sha: "342d3795c8ea51aeb6f94751a5db913a9dbfcffd" },
+      head: {
+        ref: "codex/wcv-c3r-p-practice-common-durable-runtime",
+        repo: { full_name: "chachathecat/inverge" },
+      },
+      ...overrides,
+    },
+  }), "utf8");
+  return spawnSync(process.execPath, [SCRIPT], {
+    encoding: "utf8",
+    env: { ...process.env, GITHUB_EVENT_PATH: eventPath, PR_BODY: "" },
+  });
+}
+
+test("C3R-P exact Draft permits only its five reference-only issue links", () => {
+  const valid = runC3rP(c3rPReferenceBody);
+  assert.equal(valid.status, 0, valid.stderr);
+  assert.notEqual(runC3rP(c3rPReferenceBody.replace("Refs #706", "Closes #706")).status, 0);
+  assert.notEqual(runC3rP(c3rPReferenceBody, { draft: false }).status, 0);
+});

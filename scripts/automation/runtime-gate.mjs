@@ -11,6 +11,10 @@ import {
   isOracleRiskCandidate,
   validatePostgresSecurityOracleEvidence,
 } from "./wcv-c3-pre-p-postgresql-security-state-oracle.mjs";
+import {
+  isC3RPRiskCandidate,
+  validateC3RPNativeEvidence,
+} from "./wcv-c3r-p-practice-common-runtime.mjs";
 
 export const RUNTIME_EVIDENCE_SCHEMA_VERSION = "inverge.runtime_evidence.v2";
 export const RUNTIME_EVIDENCE_PRODUCER_VERSION = "s233r.postgres.s233a.v1";
@@ -378,6 +382,10 @@ function expectedRuntimeContract(riskResult, headSha) {
 export function validateRuntimeEvidence(evidence, { riskResult, riskBytes }) {
   if (isOracleRiskCandidate(riskResult)) {
     validatePostgresSecurityOracleEvidence(evidence, { riskResult, riskBytes });
+    return;
+  }
+  if (isC3RPRiskCandidate(riskResult)) {
+    validateC3RPNativeEvidence(evidence, { riskResult, riskBytes });
     return;
   }
   assertExactKeys(evidence, TOP_LEVEL_KEYS, "runtime evidence");

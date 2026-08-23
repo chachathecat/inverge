@@ -5,7 +5,7 @@ import { readFile } from "node:fs/promises";
 
 import { requireLegalSourceAnchors } from "../lib/legal/legal-grounding-policy.ts";
 
-const migrationPath = "supabase/migrations/20260615_legal_retrieval.sql";
+const migrationPath = "supabase/migrations/20260615110000_legal_retrieval.sql";
 const docsPath = "docs/inverge-legal-retrieval.md";
 const retrievalHelperPath = "lib/legal/legal-retrieval.ts";
 const groundingPolicyPath = "lib/legal/legal-grounding-policy.ts";
