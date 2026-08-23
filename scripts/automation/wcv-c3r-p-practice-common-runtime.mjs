@@ -1145,6 +1145,7 @@ async function runDedicatedCycle(input) {
       NEXT_PUBLIC_SUPABASE_URL: apiUrl,
       NEXT_PUBLIC_SUPABASE_ANON_KEY: anonKey,
       SUPABASE_SERVICE_ROLE_KEY: serviceRoleKey,
+      ALPHA_INVITE_EMAILS: identities.map((identity) => identity.email).join(","),
       ALPHA_ADMIN_EMAILS: identities.slice(0, 2).map((identity) => identity.email).join(","),
       WCV_C3R_P_OWNER_EMAILS: identities.slice(0, 2).map((identity) => identity.email).join(","),
       WCV_C3R_P_PRACTICE_ENABLED: "true",

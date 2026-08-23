@@ -282,6 +282,10 @@ test("failure diagnostics upload before unconditional cleanup and verified entry
   assert.match(workflowSource, /retention-days: 1/);
   assert.match(runtimeSource, /stdio: \["ignore", "pipe", "pipe"\]/);
   assert.match(runtimeSource, /ENTRY_DIAGNOSTIC_MAX_BYTES = 64 \* 1024/);
+  assert.match(runtimeSource,
+    /ALPHA_INVITE_EMAILS: identities\.map\(\(identity\) => identity\.email\)\.join\(","\)/);
+  assert.match(runtimeSource,
+    /WCV_C3R_P_OWNER_EMAILS: identities\.slice\(0, 2\)/);
 });
 
 test("verified attempts bind to learner-entered structured values and server-rendered bodies", () => {
