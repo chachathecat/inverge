@@ -29,6 +29,13 @@ export const C3R_P_NATIVE_SCHEMA_VERSION =
 
 const SHA40 = /^[0-9a-f]{40}$/;
 const SHA64 = /^[0-9a-f]{64}$/;
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const DISPOSABLE_PROFILE_CONTAINER = /^supabase_db_c3r-p-cycle-[12]-\d+-\d+$/;
+const DISPOSABLE_PROFILE_EMAILS = Object.freeze([
+  /^c3r-p-a-[12]-[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}@example\.invalid$/i,
+  /^c3r-p-b-[12]-[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}@example\.invalid$/i,
+  /^c3r-p-non-owner-[12]-[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}@example\.invalid$/i,
+]);
 const ENTRY_CLASSIFICATIONS = Object.freeze([
   "C3R_P_ENTRY_AUTH_SESSION_NOT_VISIBLE",
   "C3R_P_ENTRY_GENERIC_APP_ACCESS_DENIED",
@@ -875,6 +882,71 @@ function psql(container, sql, label = "C3R-P database assertion") {
   });
 }
 
+export function seedDisposableReviewOsProfiles(container, identities, executePsql = psql) {
+  if (!DISPOSABLE_PROFILE_CONTAINER.test(container) || typeof executePsql !== "function" ||
+    !Array.isArray(identities) || identities.length !== 3) {
+    throw new Error("C3R-P disposable profile fixture boundary is invalid.");
+  }
+  const payload = identities.map((identity, index) => {
+    if (!identity || typeof identity !== "object" || !UUID.test(identity.userId) ||
+      typeof identity.email !== "string" || !DISPOSABLE_PROFILE_EMAILS[index].test(identity.email)) {
+      throw new Error("C3R-P disposable profile fixture identity is invalid.");
+    }
+    return { user_id: identity.userId.toLowerCase(), email: identity.email.toLowerCase() };
+  });
+  if (new Set(payload.map((identity) => identity.user_id)).size !== 3 ||
+    new Set(payload.map((identity) => identity.email)).size !== 3) {
+    throw new Error("C3R-P disposable profile fixture identities are not unique.");
+  }
+  const payloadBase64 = Buffer.from(JSON.stringify(payload), "utf8").toString("base64");
+  const result = executePsql(container, `with fixture as (
+    select input.user_id::uuid as user_id, input.email
+    from jsonb_to_recordset(
+      convert_from(decode('${payloadBase64}', 'base64'), 'utf8')::jsonb
+    ) as input(user_id text, email text)
+  ), bound_fixture as (
+    select fixture.user_id, fixture.email
+    from fixture
+    join auth.users as auth_user
+      on auth_user.id = fixture.user_id and auth_user.email = fixture.email
+  ), upserted as (
+    insert into public.profiles as profile (
+      user_id, email, invite_status, entitlement_tier, updated_at
+    )
+    select user_id, email, 'active', 'free_trial', statement_timestamp()
+    from bound_fixture
+    on conflict (user_id) do update set
+      email = excluded.email,
+      invite_status = 'active',
+      entitlement_tier = 'free_trial',
+      updated_at = statement_timestamp()
+    returning profile.user_id, profile.invite_status, profile.entitlement_tier
+  )
+  select concat_ws('|',
+    (select count(*) from upserted),
+    (select count(*) from upserted where invite_status = 'active'),
+    (select count(*) from upserted where entitlement_tier = 'free_trial'),
+    (select count(*) from upserted
+      where not exists (select 1 from fixture where fixture.user_id = upserted.user_id))
+  );`, "C3R-P disposable Review OS profile fixture");
+  if (!/^\d+\|\d+\|\d+\|\d+$/.test(result)) {
+    throw new Error("C3R-P disposable profile fixture receipt is invalid.");
+  }
+  const [matchedRowCount, activeRowCount, freeTrialRowCount, unrelatedRowMutationCount] =
+    result.split("|").map(Number);
+  const receipt = Object.freeze({
+    matchedRowCount,
+    activeRowCount,
+    freeTrialRowCount,
+    unrelatedRowMutationCount,
+  });
+  if (matchedRowCount !== 3 || activeRowCount !== 3 || freeTrialRowCount !== 3 ||
+    unrelatedRowMutationCount !== 0) {
+    throw new Error("C3R-P disposable profile fixture assertion failed.");
+  }
+  return receipt;
+}
+
 function assertExternalMigrationSubstrate(container) {
   const value = psql(container, `select concat_ws('|',
     (to_regclass('auth.users') is not null)::text,
@@ -1140,6 +1212,7 @@ async function runDedicatedCycle(input) {
       await createIdentity(apiUrl, anonKey, `b-${input.cycle}`),
       await createIdentity(apiUrl, anonKey, `non-owner-${input.cycle}`),
     ];
+    seedDisposableReviewOsProfiles(databaseContainer, identities);
     await verifyDirectBoundaries(apiUrl, anonKey, identities[0]);
     const nextEnv = {
       NEXT_PUBLIC_SUPABASE_URL: apiUrl,
@@ -1161,10 +1234,16 @@ async function runDedicatedCycle(input) {
       path.join(diagnosticRoot, `next-cycle-${input.cycle}-${label}.log`),
       secretValues,
     );
-    const probe = (label, expectedClassification, entryActor, entryOnly = true) => runEntryProbe({
+    const probe = (
+      label,
+      expectedClassification,
+      entryActor,
+      entryOnly = true,
+      probeIdentities = identities,
+    ) => runEntryProbe({
       repositoryRoot: input.repositoryRoot,
       server,
-      identities,
+      identities: probeIdentities,
       browserEvidencePath,
       diagnosticRoot,
       cycle: input.cycle,
@@ -1175,7 +1254,9 @@ async function runDedicatedCycle(input) {
     });
 
     server = await startFor("normal-entry");
-    await probe("owner-positive", "C3R_P_ENTRY_VERIFIED", "owner");
+    await probe("owner-a-positive", "C3R_P_ENTRY_VERIFIED", "owner");
+    await probe("owner-b-positive", "C3R_P_ENTRY_VERIFIED", "owner", true,
+      [identities[1], identities[0], identities[2]]);
     if (input.cycle === 1) {
       await probe("unauthenticated-negative", "C3R_P_ENTRY_AUTH_SESSION_NOT_VISIBLE", "unauthenticated");
       await probe("non-owner-negative", "C3R_P_ENTRY_C3R_ACCESS_GATE_DENIED", "non_owner");

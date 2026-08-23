@@ -11,6 +11,7 @@ import {
   createC3RPEntryDiagnosticLog,
   createPracticeRuntimeArtifact,
   redactC3RPEntryDiagnosticText,
+  seedDisposableReviewOsProfiles,
   validateC3RPEntryReceipt,
   validatePracticeRuntimeArtifact,
 } from "../scripts/automation/wcv-c3r-p-practice-common-runtime.mjs";
@@ -30,6 +31,17 @@ const browserSource = fs.readFileSync(path.join(root,
   "tests/e2e/wcv-c3r-p-practice-common-runtime.spec.ts"), "utf8");
 const workflowSource = fs.readFileSync(path.join(root,
   ".github/workflows/c3r-p-practice-common-durable-runtime.yml"), "utf8");
+const productionAccessBlobs = Object.freeze({
+  "lib/review-os/repository.ts": "f7f20117c5e3acb14eeb331d8f45a9b97d66c8c2",
+  "lib/review-os/server.ts": "429085a06c3104aa66c49b272738d53f00318d8a",
+  "app/app/layout.tsx": "215ec312e2102d39332eeb47e2cc3b446ad78d19",
+  "app/app/c3r-p/page.tsx": "1183828115a8a0ef0fb04c5d9c0e42a8ae5bd240",
+  "app/api/review-os/c3r-p/route.ts": "aa900106481b7c3eab2a9474639ffc2fec008417",
+  "lib/review-os/c3r-p-service.ts": "4d9e06497cdf762792290237d7fd73806b0d1289",
+  "lib/review-os/c3r-p-repository.ts": "21da20f69472c1b74208a40ec3889add8790d1ff",
+  "lib/review-os/c3r-p-engine.ts": "511959f02ef7f0e537296e9864239043f272c8cf",
+  "components/review-os/c3r-p-practice-loop.tsx": "f008c6cd87e0759f70151fc70d8f666f9440bb2a",
+});
 
 function sha256(bytes) {
   return crypto.createHash("sha256").update(bytes).digest("hex");
@@ -228,6 +240,106 @@ test("dedicated browser runner uses the pinned exact-match config without an abs
   assert.match(browserRunner, /wcv-c3r-p-playwright\.config\.ts/);
   assert.match(browserRunner, /reportOutput: true/);
   assert.doesNotMatch(browserRunner, /wcv-c3r-p-practice-common-runtime\.spec\.ts/);
+});
+
+test("disposable Review OS profiles upsert exactly three active free-trial Auth identities", () => {
+  const identities = [
+    { userId: "10000000-0000-4000-8000-000000000001", email: "c3r-p-a-1-aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa@example.invalid" },
+    { userId: "20000000-0000-4000-8000-000000000002", email: "c3r-p-b-1-bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb@example.invalid" },
+    { userId: "30000000-0000-4000-8000-000000000003", email: "c3r-p-non-owner-1-cccccccc-cccc-4ccc-8ccc-cccccccccccc@example.invalid" },
+  ];
+  let captured;
+  const receipt = seedDisposableReviewOsProfiles(
+    "supabase_db_c3r-p-cycle-1-123-1",
+    identities,
+    (container, fixtureSql, label) => {
+      captured = { container, fixtureSql, label };
+      return "3|3|3|0";
+    },
+  );
+  assert.deepEqual(receipt, {
+    matchedRowCount: 3,
+    activeRowCount: 3,
+    freeTrialRowCount: 3,
+    unrelatedRowMutationCount: 0,
+  });
+  assert.equal(Object.isFrozen(receipt), true);
+  assert.match(captured.fixtureSql, /jsonb_to_recordset/);
+  assert.match(captured.fixtureSql, /join auth\.users as auth_user/);
+  assert.match(captured.fixtureSql, /insert into public\.profiles as profile/);
+  assert.match(captured.fixtureSql, /select user_id, email, 'active', 'free_trial', statement_timestamp\(\)/);
+  assert.match(captured.fixtureSql, /on conflict \(user_id\) do update set[\s\S]*invite_status = 'active'/);
+  assert.match(captured.fixtureSql, /entitlement_tier = 'free_trial'/);
+  assert.doesNotMatch(captured.fixtureSql, /display_name\s*=|created_at\s*=/);
+  for (const identity of identities) {
+    assert.doesNotMatch(captured.fixtureSql, new RegExp(identity.userId, "i"));
+    assert.doesNotMatch(captured.fixtureSql, new RegExp(identity.email.replaceAll(".", "\\."), "i"));
+  }
+  const encodedPayload = captured.fixtureSql.match(/decode\('([^']+)', 'base64'\)/)?.[1];
+  assert.ok(encodedPayload);
+  assert.deepEqual(JSON.parse(Buffer.from(encodedPayload, "base64").toString("utf8")),
+    identities.map((identity) => ({ user_id: identity.userId, email: identity.email })));
+});
+
+test("profile provisioning follows Auth creation and precedes every Next or browser entry", () => {
+  const identitiesCreated = runtimeSource.indexOf("const identities = [");
+  const fixtureSeeded = runtimeSource.indexOf(
+    "seedDisposableReviewOsProfiles(databaseContainer, identities)",
+  );
+  const firstNextStart = runtimeSource.indexOf('server = await startFor("normal-entry")');
+  assert.ok(identitiesCreated > 0 && identitiesCreated < fixtureSeeded);
+  assert.ok(fixtureSeeded < firstNextStart);
+  assert.match(runtimeSource,
+    /ALPHA_INVITE_EMAILS: identities\.map\(\(identity\) => identity\.email\)\.join\(","\)/);
+  assert.match(runtimeSource,
+    /ALPHA_ADMIN_EMAILS: identities\.slice\(0, 2\)\.map\(\(identity\) => identity\.email\)\.join\(","\)/);
+  assert.match(runtimeSource,
+    /WCV_C3R_P_OWNER_EMAILS: identities\.slice\(0, 2\)\.map\(\(identity\) => identity\.email\)\.join\(","\)/);
+  assert.match(runtimeSource,
+    /createIdentity\(apiUrl, anonKey, `non-owner-\$\{input\.cycle\}`\)/);
+  assert.match(runtimeSource,
+    /probe\("owner-a-positive", "C3R_P_ENTRY_VERIFIED", "owner"\)/);
+  assert.match(runtimeSource,
+    /probe\("owner-b-positive", "C3R_P_ENTRY_VERIFIED", "owner", true,[\s\S]*identities\[1\], identities\[0\], identities\[2\]/);
+});
+
+test("disposable profile fixture rejects non-local, non-UUID, duplicate and incomplete boundaries", () => {
+  const identities = [
+    { userId: "10000000-0000-4000-8000-000000000001", email: "c3r-p-a-1-aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa@example.invalid" },
+    { userId: "20000000-0000-4000-8000-000000000002", email: "c3r-p-b-1-bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb@example.invalid" },
+    { userId: "30000000-0000-4000-8000-000000000003", email: "c3r-p-non-owner-1-cccccccc-cccc-4ccc-8ccc-cccccccccccc@example.invalid" },
+  ];
+  const execute = () => "3|3|3|0";
+  assert.throws(() => seedDisposableReviewOsProfiles("remote-database", identities, execute));
+  assert.throws(() => seedDisposableReviewOsProfiles(
+    "supabase_db_c3r-p-cycle-1-123-1",
+    [{ ...identities[0], userId: "not-a-uuid" }, identities[1], identities[2]],
+    execute,
+  ));
+  assert.throws(() => seedDisposableReviewOsProfiles(
+    "supabase_db_c3r-p-cycle-1-123-1",
+    [identities[0], identities[1], { ...identities[2], userId: identities[0].userId }],
+    execute,
+  ));
+  assert.throws(() => seedDisposableReviewOsProfiles(
+    "supabase_db_c3r-p-cycle-1-123-1", identities.slice(0, 2), execute,
+  ));
+  assert.throws(() => seedDisposableReviewOsProfiles(
+    "supabase_db_c3r-p-cycle-1-123-1", identities, () => "3|2|3|0",
+  ));
+});
+
+test("disposable fixture leaves production access code and frozen identities unchanged", () => {
+  for (const [file, expectedBlob] of Object.entries(productionAccessBlobs)) {
+    assert.equal(execFileSync("git", ["hash-object", file], { cwd: root, encoding: "utf8" }).trim(),
+      expectedBlob, file);
+  }
+  assert.equal(execFileSync("git", ["hash-object", "package.json"], { cwd: root, encoding: "utf8" }).trim(),
+    contract.packageIdentity.packageJsonGitBlob);
+  assert.equal(execFileSync("git", ["hash-object", "package-lock.json"], { cwd: root, encoding: "utf8" }).trim(),
+    contract.packageIdentity.packageLockJsonGitBlob);
+  assert.equal(sha256(Buffer.from(canonicalJson(diskInventory()), "utf8")),
+    contract.migrationAuthorityBinding.effectiveInventorySha256);
 });
 
 test("entry diagnostics retain one exact metadata-only classification", () => {
