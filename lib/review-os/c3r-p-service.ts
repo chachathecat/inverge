@@ -134,10 +134,27 @@ export function createC3RPService(authenticatedUserId: string) {
       resolvedRecordId ? repository.restore(resolvedRecordId) : Promise.resolve(null),
       repository.dashboard(asOf),
     ]);
-    const currentPlan = dashboard.plans.find((plan) =>
-      !["REJECTED", "STALE"].includes(plan.state) &&
-      (!resolvedRecordId || plan.blocks.some((block) => block.recordId === resolvedRecordId)),
-    ) ?? null;
+    const currentReviewPhase = restored?.record.state === "REPAIRED"
+      ? "D1"
+      : restored?.record.state === "D1_COMPLETE"
+        ? "D7_TRANSFER"
+        : restored?.record.state === "D7_COMPLETE"
+          ? "RECURRENCE"
+          : restored?.record.state === "REOPENED"
+            ? "REOPENED_REVIEW"
+            : null;
+    const currentPlan = resolvedRecordId && restored?.record.primary_gap_id &&
+      currentReviewPhase
+      ? dashboard.plans.find((plan) =>
+          !["REJECTED", "STALE"].includes(plan.state) &&
+          plan.blocks.some((block) =>
+            block.recordId === resolvedRecordId &&
+            block.gapId === restored.record.primary_gap_id &&
+            block.reviewPhase === currentReviewPhase &&
+            block.executionState === "PENDING",
+          ),
+        ) ?? null
+      : null;
     return {
       source: c3rPSourceView(),
       restored,

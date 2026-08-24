@@ -48,7 +48,7 @@ const productionAccessBlobs = Object.freeze({
   "app/app/layout.tsx": "215ec312e2102d39332eeb47e2cc3b446ad78d19",
   "app/app/c3r-p/page.tsx": "1183828115a8a0ef0fb04c5d9c0e42a8ae5bd240",
   "app/api/review-os/c3r-p/route.ts": "e4723d6fe303dcdeb73d099e67a6311640b25c09",
-  "lib/review-os/c3r-p-service.ts": "bd2cdd64ebf46027b4b9a36705f7047ee950335f",
+  "lib/review-os/c3r-p-service.ts": "576fdda0d3d276f4c943c04ddd025dccd542785b",
   "lib/review-os/c3r-p-repository.ts": "990f19f94458685782a49cfea6f00553a2a542f0",
   "lib/review-os/c3r-p-engine.ts": "351047c5b5ed7463ec7aac96baad389b5a3a92d9",
   "components/review-os/c3r-p-practice-loop.tsx": "45b9d19adc83a93cdce1649e0eac9a0d9045890c",
@@ -465,6 +465,9 @@ test("every planned independent review phase completes only a current pending pl
     /v_candidate_plan_blocks <> 1[\s\S]*v_resolved_plan_block_id/);
   assert.match(sql,
     /v_plan\.eligibility_digest <>\s*public\.c3r_p_eligibility_digest_v1\(p_user_id, v_now\)/);
+  assert.match(serviceSource,
+    /block\.recordId === resolvedRecordId[\s\S]*block\.gapId === restored\.record\.primary_gap_id[\s\S]*block\.reviewPhase === currentReviewPhase[\s\S]*block\.executionState === "PENDING"/);
+  assert.match(browserSource, /completedPriorPhasePlanIgnored: true/);
   assert.match(sql,
     /v_plan\.review_state_digest <>\s*public\.c3r_p_review_state_digest_v1\(p_user_id\)/);
   assert.match(sql,

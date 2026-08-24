@@ -1180,6 +1180,7 @@ test("exact Practice browser-to-Postgres durable loop", async ({ browser }) => {
     `/api/review-os/c3r-p?recordId=${recordId}`,
   );
   const completedD1Plan = await completedD1PlanResponse.json();
+  expect(completedD1Plan.view.currentPlan).toBeNull();
   expect(completedD1Plan.view.dashboard.plans).toEqual(expect.arrayContaining([
     expect.objectContaining({
       planId: d1Plan.planId,
@@ -1353,6 +1354,39 @@ test("exact Practice browser-to-Postgres durable loop", async ({ browser }) => {
   await expect(secondPage.getByTestId("c3r-p-transfer-prompt")).not.toContainText(
     "120,000,000원",
   );
+
+  let planlessD7Request: Record<string, unknown> | null = null;
+  const capturePlanlessD7 = async (route: Route) => {
+    const payload = route.request().postDataJSON();
+    if (payload?.action === "complete_d7_transfer") {
+      planlessD7Request = payload;
+      await route.fulfill({
+        status: 409,
+        contentType: "application/json",
+        body: JSON.stringify({ ok: false, error: "invalid_transition" }),
+      });
+      return;
+    }
+    await route.fallback();
+  };
+  await secondPage.route(c3rPApiUrl, capturePlanlessD7);
+  await fillStructuredCalculation(
+    secondPage,
+    "120000000",
+    "150000000",
+    "30000000",
+  );
+  await secondPage
+    .getByRole("button", { name: "제시된 D+7 전이 과업 제출" })
+    .click();
+  await expect.poll(() => planlessD7Request).not.toBeNull();
+  expect(planlessD7Request).toMatchObject({
+    action: "complete_d7_transfer",
+    planBlockId: null,
+    planId: null,
+    planVersion: null,
+  });
+  await secondPage.unroute(c3rPApiUrl, capturePlanlessD7);
 
   const presentedViewResponse = await context.request.get(
     `/api/review-os/c3r-p?recordId=${recordId}`,
@@ -2025,10 +2059,14 @@ test("exact Practice browser-to-Postgres durable loop", async ({ browser }) => {
     state: "REOPENED",
     reopen_count: 2,
   });
-  expect(reopenedAgain.view.currentPlan.blocks).toEqual(expect.arrayContaining([
+  expect(reopenedAgain.view.currentPlan).toBeNull();
+  expect(reopenedAgain.view.dashboard.plans).toEqual(expect.arrayContaining([
     expect.objectContaining({
-      blockId: fullDayBlockId,
-      executionState: "COMPLETE",
+      planId: fullDayPlanId,
+      blocks: [expect.objectContaining({
+        blockId: fullDayBlockId,
+        executionState: "COMPLETE",
+      })],
     }),
   ]));
   const completedBlockReuse = await context.request.post(
@@ -2177,6 +2215,7 @@ test("exact Practice browser-to-Postgres durable loop", async ({ browser }) => {
       laterFailureReopensAgain: true,
       completedPlanBlockReuseDenied: true,
       completedPlanBlockNotResent: true,
+      completedPriorPhasePlanIgnored: true,
       deterministicPlanner: true,
       stateMachineMatrixPairs: 112,
       stateMachineMatrixResult: "passed",

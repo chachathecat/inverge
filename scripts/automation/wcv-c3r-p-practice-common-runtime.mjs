@@ -1322,6 +1322,7 @@ async function runDedicatedCycle(input) {
       browserEvidence.laterFailureReopensAgain !== true ||
       browserEvidence.completedPlanBlockReuseDenied !== true ||
       browserEvidence.completedPlanBlockNotResent !== true ||
+      browserEvidence.completedPriorPhasePlanIgnored !== true ||
       browserEvidence.assistanceExportedExactlyOnce !== true ||
       browserEvidence.todayAndFullDayBlocksExported !== true ||
       browserEvidence.editedPlanBlocksExportFinalValues !== true ||
