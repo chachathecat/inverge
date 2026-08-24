@@ -226,6 +226,10 @@ export function createC3RPService(authenticatedUserId: string) {
   return {
     view,
 
+    viewAtEvidenceStep(recordId: string | null, evidenceStep: string) {
+      return view(recordId, now(evidenceStep));
+    },
+
     async start(input: {
       commandId: string;
       recordId: string;

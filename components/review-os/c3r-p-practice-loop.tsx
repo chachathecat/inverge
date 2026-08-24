@@ -8,6 +8,7 @@ import {
   C3R_P_PRIMARY_ANCHOR_VERSION_ID,
   C3R_P_TRANSFER_ANCHOR_ID,
   C3R_P_TRANSFER_ANCHOR_VERSION_ID,
+  c3rPCurrentQueueItem,
   type C3RPPlanBlockInput,
   type C3RPPracticeClaimInput,
   type C3RPView,
@@ -107,9 +108,23 @@ export function C3RPPracticeLoop({
   const gap = restored?.gaps[0] ?? null;
   const transferTask = restored?.transferTask ?? null;
   const currentPlan = view?.currentPlan ?? null;
-  const d1Eligible = view?.dashboard.queue.some((item) =>
-    item.recordId === record?.id && item.reviewPhase === "D1" && item.eligible,
-  ) ?? false;
+  const queueItem = (reviewPhase: "D1" | "D7_TRANSFER" | "RECURRENCE" | "REOPENED_REVIEW") =>
+    c3rPCurrentQueueItem({
+      queue: view?.dashboard.queue ?? [],
+      recordId: record?.id,
+      recordState: record?.state,
+      gapId: gap?.id,
+      gapState: gap?.state,
+      reviewPhase,
+    });
+  const d1QueueItem = queueItem("D1");
+  const d7QueueItem = queueItem("D7_TRANSFER");
+  const recurrenceQueueItem = queueItem("RECURRENCE");
+  const reopenedQueueItem = queueItem("REOPENED_REVIEW");
+  const d1Eligible = d1QueueItem?.eligible === true;
+  const d7Eligible = d7QueueItem?.eligible === true;
+  const recurrenceEligible = recurrenceQueueItem?.eligible === true;
+  const reopenedEligible = reopenedQueueItem?.eligible === true;
   const currentReviewPhase = record?.state === "REPAIRED"
     ? "D1"
     : record?.state === "D1_COMPLETE"
@@ -531,8 +546,24 @@ export function C3RPPracticeLoop({
 
         {record?.state === "D1_COMPLETE" && transferTask ? (
           <div className="mt-5 grid gap-3" data-testid="c3r-p-transfer-task" data-transfer-task-state={transferTask.state}>
+            {!d7Eligible ? (
+              <p
+                id="c3r-p-d7-eligibility"
+                role="status"
+                data-testid="c3r-p-d7-eligibility"
+                className="rounded-xl bg-slate-50 p-3 text-sm"
+              >
+                D+7 전이 과업은 서버 Review Queue 예정 시각
+                {d7QueueItem?.dueAt ? ` ${d7QueueItem.dueAt}` : ""} 이후에 열립니다.
+              </p>
+            ) : null}
             {transferTask.state === "SEALED" ? (
-              <button disabled={pending} onClick={() => void presentD7TransferTask()} className="w-full rounded-xl border px-4 py-3 font-semibold disabled:opacity-50">
+              <button
+                disabled={pending || !d7Eligible}
+                aria-describedby={!d7Eligible ? "c3r-p-d7-eligibility" : undefined}
+                onClick={() => void presentD7TransferTask()}
+                className="w-full rounded-xl border px-4 py-3 font-semibold disabled:opacity-50"
+              >
                 D+7 전이 과업 열기
               </button>
             ) : (
@@ -543,7 +574,12 @@ export function C3RPPracticeLoop({
                 <p className="text-xs text-[var(--color-text-secondary)]">
                   전이 과업 ID {transferTask.taskId} · 원래 D0 문항과 다른 문항·화면
                 </p>
-                <button disabled={pending} onClick={() => void review("complete_d7_transfer")} className="w-full rounded-xl bg-[var(--color-action-primary)] px-4 py-3 font-semibold text-white disabled:opacity-50">
+                <button
+                  disabled={pending || !d7Eligible}
+                  aria-describedby={!d7Eligible ? "c3r-p-d7-eligibility" : undefined}
+                  onClick={() => void review("complete_d7_transfer")}
+                  className="w-full rounded-xl bg-[var(--color-action-primary)] px-4 py-3 font-semibold text-white disabled:opacity-50"
+                >
                   제시된 D+7 전이 과업 제출
                 </button>
               </>
@@ -552,9 +588,27 @@ export function C3RPPracticeLoop({
         ) : null}
 
         {record?.state === "D7_COMPLETE" ? (
-          <button disabled={pending} onClick={() => void review("complete_recurrence")} className="mt-5 w-full rounded-xl bg-[var(--color-action-primary)] px-4 py-3 font-semibold text-white disabled:opacity-50">
-            시간 기반 재출현 독립 수행 완료
-          </button>
+          <div className="mt-5 grid gap-3">
+            {!recurrenceEligible ? (
+              <p
+                id="c3r-p-recurrence-eligibility"
+                role="status"
+                data-testid="c3r-p-recurrence-eligibility"
+                className="rounded-xl bg-slate-50 p-3 text-sm"
+              >
+                시간 기반 재출현은 서버 Review Queue 예정 시각
+                {recurrenceQueueItem?.dueAt ? ` ${recurrenceQueueItem.dueAt}` : ""} 이후에 실행할 수 있습니다.
+              </p>
+            ) : null}
+            <button
+              disabled={pending || !recurrenceEligible}
+              aria-describedby={!recurrenceEligible ? "c3r-p-recurrence-eligibility" : undefined}
+              onClick={() => void review("complete_recurrence")}
+              className="w-full rounded-xl bg-[var(--color-action-primary)] px-4 py-3 font-semibold text-white disabled:opacity-50"
+            >
+              시간 기반 재출현 독립 수행 완료
+            </button>
+          </div>
         ) : null}
 
         {record?.state === "CLOSED" ? (
@@ -569,7 +623,7 @@ export function C3RPPracticeLoop({
         {record?.state === "REOPENED" ? (
           <div className="mt-5 grid gap-3">
             <p className="rounded-xl bg-amber-50 p-4 text-sm">이전 종료가 취소되고 Review Queue에 즉시 다시 등록되었습니다.</p>
-            <button disabled={pending} onClick={() => void review("complete_reopened_review")} className="w-full rounded-xl bg-[var(--color-action-primary)] px-4 py-3 font-semibold text-white disabled:opacity-50">
+            <button disabled={pending || !reopenedEligible} onClick={() => void review("complete_reopened_review")} className="w-full rounded-xl bg-[var(--color-action-primary)] px-4 py-3 font-semibold text-white disabled:opacity-50">
               다시 열린 복습을 독립 수행으로 완료
             </button>
           </div>

@@ -212,6 +212,29 @@ export type C3RPView = Readonly<{
   currentPlan: C3RPPersistedPlan | null;
 }>;
 
+export function c3rPCurrentQueueItem(input: Readonly<{
+  queue: readonly C3RPQueueItem[];
+  recordId: string | null | undefined;
+  recordState: C3RPRecordState | null | undefined;
+  gapId: string | null | undefined;
+  gapState: C3RPGap["state"] | null | undefined;
+  reviewPhase: C3RPQueueItem["reviewPhase"];
+}>) {
+  if (
+    !input.recordId ||
+    !input.recordState ||
+    !input.gapId ||
+    !input.gapState
+  ) return null;
+  return input.queue.find((item) =>
+    item.recordId === input.recordId &&
+    item.gapId === input.gapId &&
+    item.state === input.recordState &&
+    item.gapState === input.gapState &&
+    item.reviewPhase === input.reviewPhase
+  ) ?? null;
+}
+
 export class C3RPError extends Error {
   readonly code:
     | "feature_disabled"

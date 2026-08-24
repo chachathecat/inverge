@@ -381,7 +381,8 @@ export function validatePracticeRuntimeArtifact(artifact, repositoryRoot = proce
       "migrationCount", "serverVersionNum", "browserToPostgres", "restartRestore",
       "exportDelete", "reopenedCompletion", "planBlockCompletion",
       "completeLearnerExport", "transferTaskClosure", "planBlockStateClosure",
-      "assistedD1History", "stateMachineMatrixPairs", "stateMachineMatrixResult",
+      "assistedD1History", "delayedReviewEligibility", "stateMachineMatrixPairs",
+      "stateMachineMatrixResult",
       "oracleEvidenceSha256", "cleanup",
     ], `reset/replay cycle ${index + 1}`);
     if (cycle.cycle !== index + 1 || cycle.migrationCount !== 26 ||
@@ -390,7 +391,8 @@ export function validatePracticeRuntimeArtifact(artifact, repositoryRoot = proce
       cycle.exportDelete !== true || cycle.reopenedCompletion !== true ||
       cycle.planBlockCompletion !== true || cycle.completeLearnerExport !== true ||
       cycle.transferTaskClosure !== true || cycle.planBlockStateClosure !== true ||
-      cycle.assistedD1History !== true || cycle.stateMachineMatrixPairs !== 112 ||
+      cycle.assistedD1History !== true || cycle.delayedReviewEligibility !== true ||
+      cycle.stateMachineMatrixPairs !== 112 ||
       cycle.stateMachineMatrixResult !== "passed" ||
       cycle.cleanup !== "complete" ||
       !SHA64.test(cycle.oracleEvidenceSha256)) {
@@ -1343,6 +1345,16 @@ async function runDedicatedCycle(input) {
       browserEvidence.assistedD1AssistanceEventPersisted !== true ||
       browserEvidence.assistedD1LedgerPersisted !== true ||
       browserEvidence.assistedD1RestoredAfterRefresh !== true ||
+      browserEvidence.delayedD7ControlGated !== true ||
+      browserEvidence.d7PreDueInteractionSuppressed !== true ||
+      browserEvidence.d7CanonicalEligibilityAtDue !== true ||
+      browserEvidence.recurrenceControlGated !== true ||
+      browserEvidence.recurrencePreDueInteractionSuppressed !== true ||
+      browserEvidence.recurrenceCanonicalEligibilityAtDue !== true ||
+      browserEvidence.eligibilityRefreshAndSecondBrowser !== true ||
+      browserEvidence.foreignQueueCannotEnable !== true ||
+      browserEvidence.staleTerminalQueueCannotEnable !== true ||
+      browserEvidence.earlyDelayedCommandsFailClosed !== true ||
       browserEvidence.stateMachineMatrixPairs !== 112 ||
       browserEvidence.stateMachineMatrixResult !== "passed" ||
       browserEvidence.rawLearnerBodyInEvidence !== false || browserEvidence.providerCalls !== 0) {
@@ -1379,6 +1391,7 @@ async function runDedicatedCycle(input) {
       transferTaskClosure: true,
       planBlockStateClosure: true,
       assistedD1History: true,
+      delayedReviewEligibility: true,
       stateMachineMatrixPairs: 112,
       stateMachineMatrixResult: "passed",
       oracleEvidenceSha256: oracle.sha256,

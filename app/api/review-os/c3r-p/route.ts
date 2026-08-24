@@ -107,9 +107,17 @@ function planBlocks(value: unknown) {
 export async function GET(request: Request) {
   try {
     const access = await requireC3RPAccess();
-    const recordIdValue = new URL(request.url).searchParams.get("recordId");
+    const searchParams = new URL(request.url).searchParams;
+    const recordIdValue = searchParams.get("recordId");
     const recordId = recordIdValue ? c3rPRequiredUuid(recordIdValue) : null;
-    const view = await createC3RPService(access.userId).view(recordId);
+    const evidenceStepValue = searchParams.get("evidenceStep");
+    const service = createC3RPService(access.userId);
+    const view = evidenceStepValue
+      ? await service.viewAtEvidenceStep(
+          recordId,
+          optionalEvidenceStep(evidenceStepValue) ?? "",
+        )
+      : await service.view(recordId);
     return response({ ok: true, view });
   } catch (error) {
     return errorResponse(error);

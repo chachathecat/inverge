@@ -14,6 +14,8 @@ import {
 } from "../lib/review-os/trusted-repair-engine.ts";
 import { trustedRepairCanonicalFixture } from
   "../lib/review-os/trusted-repair-fixtures.ts";
+import { c3rPCurrentQueueItem } from
+  "../lib/review-os/c3r-p-contract.ts";
 
 import {
   C3R_P_APPEND_PATH,
@@ -45,11 +47,11 @@ const productionAccessBlobs = Object.freeze({
   "lib/review-os/server.ts": "429085a06c3104aa66c49b272738d53f00318d8a",
   "app/app/layout.tsx": "215ec312e2102d39332eeb47e2cc3b446ad78d19",
   "app/app/c3r-p/page.tsx": "1183828115a8a0ef0fb04c5d9c0e42a8ae5bd240",
-  "app/api/review-os/c3r-p/route.ts": "f5296e848c6a77edb8dde30a317ba8c21bffbe57",
-  "lib/review-os/c3r-p-service.ts": "59862898505cefc61e9ad2b5bc3f352625297a68",
+  "app/api/review-os/c3r-p/route.ts": "e4723d6fe303dcdeb73d099e67a6311640b25c09",
+  "lib/review-os/c3r-p-service.ts": "825e45af897c69de29ae619fefeafb7ee0ce3da9",
   "lib/review-os/c3r-p-repository.ts": "990f19f94458685782a49cfea6f00553a2a542f0",
   "lib/review-os/c3r-p-engine.ts": "351047c5b5ed7463ec7aac96baad389b5a3a92d9",
-  "components/review-os/c3r-p-practice-loop.tsx": "e5a8309192ddb016008cf81c7b9e01ce91da4ecc",
+  "components/review-os/c3r-p-practice-loop.tsx": "547fe2416c7e76b072d275820d4e9da6fcca672a",
 });
 
 const FORMER_C3R_P_SOURCE_REVISION_ID =
@@ -165,6 +167,7 @@ function sampleArtifact() {
       transferTaskClosure: true,
       planBlockStateClosure: true,
       assistedD1History: true,
+      delayedReviewEligibility: true,
       stateMachineMatrixPairs: 112,
       stateMachineMatrixResult: "passed",
       oracleEvidenceSha256: String(cycle).repeat(64),
@@ -312,6 +315,40 @@ test("closed C3R-P state/action matrix classifies and executes all 112 base pair
     /r\.state in \('REPAIRED', 'D1_COMPLETE', 'D7_COMPLETE', 'REOPENED'\)/);
   assert.doesNotMatch(sql,
     /r\.state in \('D0_OPEN', 'FEEDBACK_COMMITTED', 'REPAIRED'\)/);
+});
+
+test("delayed UI eligibility requires the exact current record, gap, state and phase", () => {
+  const current = {
+    recordId: "00000000-0000-4000-8000-000000000001",
+    gapId: "00000000-0000-4000-8000-000000000002",
+    state: "D1_COMPLETE",
+    gapState: "OPEN",
+    reviewPhase: "D7_TRANSFER",
+    dueAt: "2026-08-30T00:05:00.000Z",
+    eligible: false,
+  };
+  const eligible = { ...current, eligible: true };
+  const input = {
+    recordId: current.recordId,
+    recordState: current.state,
+    gapId: current.gapId,
+    gapState: current.gapState,
+    reviewPhase: current.reviewPhase,
+  };
+  assert.equal(c3rPCurrentQueueItem({ queue: [current], ...input })?.eligible, false);
+  assert.equal(c3rPCurrentQueueItem({ queue: [eligible], ...input }), eligible);
+  assert.equal(c3rPCurrentQueueItem({
+    queue: [{ ...eligible, recordId: "00000000-0000-4000-8000-000000000003" }],
+    ...input,
+  }), null);
+  assert.equal(c3rPCurrentQueueItem({
+    queue: [{ ...eligible, state: "CLOSED" }],
+    ...input,
+  }), null);
+  assert.equal(c3rPCurrentQueueItem({
+    queue: [{ ...eligible, reviewPhase: "RECURRENCE" }],
+    ...input,
+  }), null);
 });
 
 test("C3R-P applies the exact seven operations and one 26th append", () => {
@@ -729,6 +766,32 @@ test("D+7 uses one persisted sealed task that is presented and exactly bound bef
   assert.match(browserSource, /fabricatedTransferTaskDenied: true/);
   assert.match(browserSource, /transferTaskRestoredAfterRefresh: true/);
   assert.match(browserSource, /transferTaskExportedMetadataOnly: true/);
+});
+
+test("delayed D+7 and recurrence controls use only canonical current queue eligibility", () => {
+  assert.match(componentSource,
+    /c3rPCurrentQueueItem\([\s\S]*recordId: record\?\.id[\s\S]*recordState: record\?\.state[\s\S]*gapId: gap\?\.id[\s\S]*gapState: gap\?\.state/);
+  assert.match(componentSource,
+    /disabled=\{pending \|\| !d7Eligible\}[\s\S]*D\+7 전이 과업 열기/);
+  assert.match(componentSource,
+    /disabled=\{pending \|\| !recurrenceEligible\}[\s\S]*시간 기반 재출현 독립 수행 완료/);
+  assert.match(componentSource, /data-testid="c3r-p-d7-eligibility"/);
+  assert.match(componentSource, /data-testid="c3r-p-recurrence-eligibility"/);
+  assert.doesNotMatch(componentSource, /Date\.now\(\)/);
+  assert.match(routeSource,
+    /searchParams\.get\("evidenceStep"\)[\s\S]*viewAtEvidenceStep/);
+  assert.match(serviceSource,
+    /viewAtEvidenceStep\(recordId: string \| null, evidenceStep: string\)[\s\S]*view\(recordId, now\(evidenceStep\)\)/);
+  for (const flag of [
+    "delayedD7ControlGated", "d7PreDueInteractionSuppressed",
+    "d7CanonicalEligibilityAtDue", "recurrenceControlGated",
+    "recurrencePreDueInteractionSuppressed", "recurrenceCanonicalEligibilityAtDue",
+    "eligibilityRefreshAndSecondBrowser", "foreignQueueCannotEnable",
+    "staleTerminalQueueCannotEnable", "earlyDelayedCommandsFailClosed",
+  ]) {
+    assert.match(browserSource, new RegExp(`${flag}: true`));
+    assert.match(runtimeSource, new RegExp(`browserEvidence\\.${flag} !== true`));
+  }
 });
 
 test("plans and destructive-result UI are restored from successful server state", () => {

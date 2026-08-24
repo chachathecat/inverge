@@ -99,6 +99,28 @@ async function contextFor(browser: Browser, email: string, password: string) {
   return context;
 }
 
+function dashboardEvidenceStepRoute(evidenceStep: "d7" | "recurrence") {
+  return async (route: Route) => {
+    const request = route.request();
+    const url = new URL(request.url());
+    if (
+      request.method() === "GET" &&
+      url.pathname === "/api/review-os/c3r-p"
+    ) {
+      url.searchParams.set("evidenceStep", evidenceStep);
+      await route.continue({ url: url.toString() });
+      return;
+    }
+    await route.continue();
+  };
+}
+
+async function settleBrowserEvents(page: Page) {
+  await page.evaluate(() => new Promise<void>((resolve) => {
+    requestAnimationFrame(() => requestAnimationFrame(() => resolve()));
+  }));
+}
+
 function browserErrorCategory(message: string) {
   if (/hydration/i.test(message)) return "HYDRATION";
   if (/chunk|module/i.test(message)) return "MODULE_LOAD";
@@ -960,6 +982,16 @@ test("exact Practice browser-to-Postgres durable loop", async ({ browser }) => {
     state: "SEALED",
     prompt: null,
   });
+  expect(sealedTransfer.view.dashboard.queue).toEqual(expect.arrayContaining([
+    expect.objectContaining({
+      recordId,
+      gapId: sealedTransfer.view.restored.gaps[0].id,
+      state: "D1_COMPLETE",
+      gapState: "OPEN",
+      reviewPhase: "D7_TRANSFER",
+      eligible: false,
+    }),
+  ]));
   const transferTaskId = sealedTransfer.view.restored.transferTask.taskId;
   const transferItemId = sealedTransfer.view.restored.transferTask.itemId;
   const transferSurfaceId = sealedTransfer.view.restored.transferTask.surfaceId;
@@ -967,6 +999,89 @@ test("exact Practice browser-to-Postgres durable loop", async ({ browser }) => {
   expect(transferSurfaceId).not.toBe(
     sealedTransfer.view.restored.record.initial_surface_id,
   );
+
+  const prematureD7Presentation = await context.request.post(
+    "/api/review-os/c3r-p",
+    { data: {
+      action: "present_d7_transfer_task",
+      commandId: randomUUID(),
+      recordId,
+      expectedVersion: sealedTransfer.view.restored.record.record_version,
+      transferTaskId,
+      evidenceStep: "d1Fresh",
+    } },
+  );
+  expect(prematureD7Presentation.status()).toBe(409);
+  expect(await prematureD7Presentation.json()).toEqual({
+    ok: false,
+    error: "invalid_transition",
+  });
+
+  const earlyD7Requests: string[] = [];
+  const foreignQueueRecordId = randomUUID();
+  const preDueD7Route = async (route: Route) => {
+    const request = route.request();
+    const url = new URL(request.url());
+    const action = request.method() === "POST"
+      ? request.postDataJSON()?.action
+      : null;
+    if (["present_d7_transfer_task", "complete_d7_transfer"].includes(action)) {
+      earlyD7Requests.push(action);
+      await route.abort();
+      return;
+    }
+    if (request.method() === "GET" && url.pathname === "/api/review-os/c3r-p") {
+      const response = await route.fetch();
+      const body = await response.json();
+      body.view.dashboard.queue.push(
+        {
+          recordId: foreignQueueRecordId,
+          gapId: randomUUID(),
+          state: "D1_COMPLETE",
+          gapState: "OPEN",
+          reviewPhase: "D7_TRANSFER",
+          dueAt: "2026-08-23T00:00:00.000Z",
+          eligible: true,
+        },
+        {
+          recordId,
+          gapId: sealedTransfer.view.restored.gaps[0].id,
+          state: "CLOSED",
+          gapState: "OPEN",
+          reviewPhase: "D7_TRANSFER",
+          dueAt: "2026-08-23T00:00:00.000Z",
+          eligible: true,
+        },
+      );
+      await route.fulfill({ response, json: body });
+      return;
+    }
+    await route.continue();
+  };
+  await page.route("**/api/review-os/c3r-p", preDueD7Route);
+  await page.reload();
+  const preDueD7Button = page.getByRole("button", {
+    name: "D+7 전이 과업 열기",
+  });
+  await expect(preDueD7Button).toBeDisabled();
+  await expect(page.getByTestId("c3r-p-d7-eligibility")).toContainText(
+    sealedTransfer.view.restored.gaps[0].d7_due_at,
+  );
+  await expect(page.getByTestId("c3r-p-transfer-prompt")).toHaveCount(0);
+  await preDueD7Button.evaluate((element) => {
+    element.click();
+    element.dispatchEvent(new KeyboardEvent("keydown", {
+      bubbles: true,
+      key: "Enter",
+    }));
+    element.dispatchEvent(new KeyboardEvent("keyup", {
+      bubbles: true,
+      key: "Enter",
+    }));
+  });
+  await settleBrowserEvents(page);
+  expect(earlyD7Requests).toEqual([]);
+  await page.unroute("**/api/review-os/c3r-p", preDueD7Route);
 
   const secondBrowser = await contextFor(
     browser,
@@ -981,6 +1096,30 @@ test("exact Practice browser-to-Postgres durable loop", async ({ browser }) => {
     "SEALED",
   );
   await expect(secondPage.getByTestId("c3r-p-transfer-prompt")).toHaveCount(0);
+  await expect(secondPage.getByRole("button", {
+    name: "D+7 전이 과업 열기",
+  })).toBeDisabled();
+  await secondPage.reload();
+  await expect(secondPage.getByRole("button", {
+    name: "D+7 전이 과업 열기",
+  })).toBeDisabled();
+
+  const d7EvidenceRouteA = dashboardEvidenceStepRoute("d7");
+  const d7EvidenceRouteB = dashboardEvidenceStepRoute("d7");
+  await page.route("**/api/review-os/c3r-p", d7EvidenceRouteA);
+  await secondPage.route("**/api/review-os/c3r-p", d7EvidenceRouteB);
+  await Promise.all([page.reload(), secondPage.reload()]);
+  await expect(page.getByRole("button", {
+    name: "D+7 전이 과업 열기",
+  })).toBeEnabled();
+  await expect(secondPage.getByRole("button", {
+    name: "D+7 전이 과업 열기",
+  })).toBeEnabled();
+  await expect(secondPage.getByTestId("c3r-p-d7-eligibility")).toHaveCount(0);
+  await secondPage.reload();
+  await expect(secondPage.getByRole("button", {
+    name: "D+7 전이 과업 열기",
+  })).toBeEnabled();
   const presentResponsePromise = secondPage.waitForResponse((response) =>
     response.request().postDataJSON()?.action === "present_d7_transfer_task",
   );
@@ -1128,6 +1267,84 @@ test("exact Practice browser-to-Postgres durable loop", async ({ browser }) => {
       })],
     }),
   ]));
+  expect(transferred.view.dashboard.queue).toEqual(expect.arrayContaining([
+    expect.objectContaining({
+      recordId,
+      gapId: transferred.view.restored.gaps[0].id,
+      state: "D7_COMPLETE",
+      gapState: "OPEN",
+      reviewPhase: "RECURRENCE",
+      eligible: false,
+    }),
+  ]));
+  await expect(secondPage.getByTestId("c3r-p-recurrence-eligibility")).toContainText(
+    transferred.view.restored.gaps[0].recurrence_due_at,
+  );
+  const preDueRecurrenceButton = secondPage.getByRole("button", {
+    name: "시간 기반 재출현 독립 수행 완료",
+  });
+  await expect(preDueRecurrenceButton).toBeDisabled();
+
+  const prematureRecurrence = await context.request.post(
+    "/api/review-os/c3r-p",
+    { data: {
+      action: "complete_recurrence",
+      commandId: randomUUID(),
+      recordId,
+      expectedVersion: transferred.view.restored.record.record_version,
+      attemptId: randomUUID(),
+      claim: practiceClaim(C3R_P_SOURCE_REVISION_ID),
+      planBlockId: null,
+      planId: null,
+      planVersion: null,
+      evidenceStep: "d7",
+    } },
+  );
+  expect(prematureRecurrence.status()).toBe(409);
+
+  const earlyRecurrenceRequests: string[] = [];
+  const preDueRecurrenceRoute = async (route: Route) => {
+    const request = route.request();
+    if (
+      request.method() === "POST" &&
+      request.postDataJSON()?.action === "complete_recurrence"
+    ) {
+      earlyRecurrenceRequests.push("complete_recurrence");
+      await route.abort();
+      return;
+    }
+    await route.continue();
+  };
+  await secondPage.route("**/api/review-os/c3r-p", preDueRecurrenceRoute);
+  await preDueRecurrenceButton.evaluate((element) => {
+    element.click();
+    element.dispatchEvent(new KeyboardEvent("keydown", {
+      bubbles: true,
+      key: "Enter",
+    }));
+    element.dispatchEvent(new KeyboardEvent("keyup", {
+      bubbles: true,
+      key: "Enter",
+    }));
+  });
+  await settleBrowserEvents(secondPage);
+  expect(earlyRecurrenceRequests).toEqual([]);
+  await secondPage.unroute("**/api/review-os/c3r-p", preDueRecurrenceRoute);
+
+  await page.unroute("**/api/review-os/c3r-p", d7EvidenceRouteA);
+  await secondPage.unroute("**/api/review-os/c3r-p", d7EvidenceRouteB);
+  const recurrenceEvidenceRouteA = dashboardEvidenceStepRoute("recurrence");
+  const recurrenceEvidenceRouteB = dashboardEvidenceStepRoute("recurrence");
+  await page.route("**/api/review-os/c3r-p", recurrenceEvidenceRouteA);
+  await secondPage.route("**/api/review-os/c3r-p", recurrenceEvidenceRouteB);
+  await Promise.all([page.reload(), secondPage.reload()]);
+  await expect(page.getByRole("button", {
+    name: "시간 기반 재출현 독립 수행 완료",
+  })).toBeEnabled();
+  await expect(secondPage.getByRole("button", {
+    name: "시간 기반 재출현 독립 수행 완료",
+  })).toBeEnabled();
+  await expect(secondPage.getByTestId("c3r-p-recurrence-eligibility")).toHaveCount(0);
 
   const recurrencePlan = await createAcceptedPlan(
     context,
@@ -1138,6 +1355,9 @@ test("exact Practice browser-to-Postgres durable loop", async ({ browser }) => {
   expect(recurrencePlan.blocks[0]).toMatchObject({ reviewPhase: "RECURRENCE" });
   await secondPage.reload();
   await expectState(secondPage, "D7_COMPLETE");
+  await expect(secondPage.getByRole("button", {
+    name: "시간 기반 재출현 독립 수행 완료",
+  })).toBeEnabled();
   await fillStructuredCalculation(secondPage);
   await secondPage
     .getByRole("button", { name: "시간 기반 재출현 독립 수행 완료" })
@@ -1695,6 +1915,16 @@ test("exact Practice browser-to-Postgres durable loop", async ({ browser }) => {
       d1Unaided: true,
       d7DifferentItemAndSurface: true,
       sealedTransferTaskPersisted: true,
+      delayedD7ControlGated: true,
+      d7PreDueInteractionSuppressed: true,
+      d7CanonicalEligibilityAtDue: true,
+      recurrenceControlGated: true,
+      recurrencePreDueInteractionSuppressed: true,
+      recurrenceCanonicalEligibilityAtDue: true,
+      eligibilityRefreshAndSecondBrowser: true,
+      foreignQueueCannotEnable: true,
+      staleTerminalQueueCannotEnable: true,
+      earlyDelayedCommandsFailClosed: true,
       transferTaskPresentedBeforeSubmission: true,
       originalTaskReuseDenied: true,
       originalAnchorVersionReuseDenied: true,
