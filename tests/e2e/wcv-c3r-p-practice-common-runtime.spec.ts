@@ -433,6 +433,7 @@ test("exact Practice browser-to-Postgres durable loop", async ({ browser }) => {
       },
     });
     await expect(pageA.getByRole("status")).toHaveText("삭제 완료");
+    await expect(pageA).toHaveURL(/\/app\/c3r-p$/u);
     const deleted = await contextA.request.get(
       `/api/review-os/c3r-p?recordId=${prior.recordId}`,
     );

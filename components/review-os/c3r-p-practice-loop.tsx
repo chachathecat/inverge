@@ -20,6 +20,7 @@ type ApiResult = {
 };
 
 const apiPath = "/api/review-os/c3r-p";
+const C3R_P_DELETE_COMPLETE_HISTORY_KEY = "__dabangilC3RPDeleteComplete";
 
 function id() {
   return window.crypto.randomUUID();
@@ -144,6 +145,17 @@ export function C3RPPracticeLoop({
     return () => {
       active = false;
     };
+  }, [initialRecordId]);
+
+  useEffect(() => {
+    const historyState = window.history.state;
+    if (
+      historyState &&
+      typeof historyState === "object" &&
+      historyState[C3R_P_DELETE_COMPLETE_HISTORY_KEY] === true
+    ) {
+      queueMicrotask(() => setExportStatus("삭제 완료"));
+    }
   }, [initialRecordId]);
 
   const phaseLabel = useMemo(() => {
@@ -296,7 +308,20 @@ export function C3RPPracticeLoop({
     if (!window.confirm("C3R-P 실무 학습 기록을 삭제할까요? 이 작업은 되돌릴 수 없습니다.")) return;
     const data = await request({ action: "delete" });
     if (!data.ok) return;
-    window.history.replaceState(null, "", "/app/c3r-p");
+    if (data.result?.status !== "deleted") {
+      setError("temporarily_unavailable");
+      return;
+    }
+    const historyState = window.history.state;
+    const nextHistoryState =
+      historyState && typeof historyState === "object" && !Array.isArray(historyState)
+        ? { ...historyState }
+        : {};
+    window.history.replaceState(
+      { ...nextHistoryState, [C3R_P_DELETE_COMPLETE_HISTORY_KEY]: true },
+      "",
+      "/app/c3r-p",
+    );
     setView((current) => current ? { ...current, restored: null, currentPlan: null } : current);
     setExportStatus("삭제 완료");
   }
