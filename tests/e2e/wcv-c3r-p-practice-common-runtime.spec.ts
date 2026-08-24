@@ -775,11 +775,16 @@ test("exact Practice browser-to-Postgres durable loop", async ({ browser }) => {
   const staleD1Plan = await createAcceptedPlan(context, recordId, "TODAY", "d1");
   expect(staleD1Plan.blocks[0]).toMatchObject({ reviewPhase: "D1" });
 
+  const assistedD1ResponsePromise = page.waitForResponse((response) =>
+    response.request().postDataJSON()?.action === "record_assisted_review",
+  );
   await page
     .getByRole("button", {
       name: "도움을 사용한 D+1 기록(독립 성공 아님)",
     })
     .click();
+  const assistedD1Response = await assistedD1ResponsePromise;
+  expect(assistedD1Response.status()).toBe(200);
   await expectState(page, "REPAIRED");
   const assistedHistoryResponse = await context.request.get(
     `/api/review-os/c3r-p?recordId=${recordId}`,
