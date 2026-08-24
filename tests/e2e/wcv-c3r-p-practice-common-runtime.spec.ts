@@ -613,7 +613,59 @@ test("exact Practice browser-to-Postgres durable loop", async ({ browser }) => {
     .getByRole("button", { name: "입력한 후속 실패로 간극 다시 열기" })
     .click();
   await expectState(secondPage, "REOPENED");
+  const createPlanRequestPromise = secondPage.waitForRequest((request) =>
+    new URL(request.url()).pathname === "/api/review-os/c3r-p" &&
+    request.method() === "POST" &&
+    request.postDataJSON()?.action === "create_plan",
+  );
+  const createPlanResponsePromise = secondPage.waitForResponse((response) => {
+    const request = response.request();
+    return (
+      new URL(response.url()).pathname === "/api/review-os/c3r-p" &&
+      request.method() === "POST" &&
+      request.postDataJSON()?.action === "create_plan"
+    );
+  });
   await secondPage.getByRole("button", { name: "Today 90분" }).click();
+  const createPlanRequest = await createPlanRequestPromise;
+  expect(createPlanRequest.postDataJSON()).toMatchObject({
+    action: "create_plan",
+    kind: "TODAY",
+    availableMinutes: 90,
+    evidenceStep: "plan",
+  });
+  const createPlanResponse = await createPlanResponsePromise;
+  const createPlanBody = await createPlanResponse.json();
+  expect(
+    createPlanResponse.status(),
+    JSON.stringify({
+      status: createPlanResponse.status(),
+      error:
+        createPlanBody && typeof createPlanBody.error === "string"
+          ? createPlanBody.error
+          : "none",
+    }),
+  ).toBe(200);
+  expect(createPlanBody).toMatchObject({
+    ok: true,
+    view: {
+      currentPlan: {
+        planKind: "TODAY",
+        state: "PROPOSED",
+        recordVersion: 1,
+      },
+    },
+  });
+  expect(createPlanBody.view.currentPlan.blocks.length).toBeGreaterThan(0);
+  expect(createPlanBody.view.dashboard.plans).toEqual(
+    expect.arrayContaining([
+      expect.objectContaining({
+        planId: createPlanBody.view.currentPlan.planId,
+        state: "PROPOSED",
+        recordVersion: 1,
+      }),
+    ]),
+  );
   await expect(secondPage.getByText("계획 상태: PROPOSED")).toBeVisible();
   await expect(secondPage.getByText("dayComplete: false")).toBeVisible();
   await secondPage.getByRole("button", { name: "편집" }).click();
