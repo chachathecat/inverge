@@ -2,10 +2,11 @@
 
 import { useEffect, useMemo, useState } from "react";
 
-import type {
-  C3RPPlanBlockInput,
-  C3RPPracticeClaimInput,
-  C3RPView,
+import {
+  C3R_P_PLAN_COMPLETION_ACTIONS,
+  type C3RPPlanBlockInput,
+  type C3RPPracticeClaimInput,
+  type C3RPView,
 } from "@/lib/review-os/c3r-p-contract";
 
 type ApiResult = {
@@ -235,9 +236,11 @@ export function C3RPPracticeLoop({
             : gap && gap.reopen_count > 0
               ? "reopenAgain"
               : "reopen";
-    const planBlockId = currentPlan && ["ACCEPTED", "EDITED"].includes(currentPlan.state)
+    const planBlockId = currentPlan && ["ACCEPTED", "EDITED"].includes(currentPlan.state) &&
+      currentPlan.eligibilityDigest === view?.dashboard.eligibilityDigest
       ? currentPlan.blocks.find((block) =>
-          block.recordId === record.id && block.gapId === gap?.id,
+          block.recordId === record.id && block.gapId === gap?.id &&
+          block.executionState === "PENDING",
         )?.blockId ?? null
       : null;
     await request({
@@ -248,7 +251,7 @@ export function C3RPPracticeLoop({
       attemptId: id(),
       claim,
       evidenceStep,
-      ...(action === "complete_reopened_review" ? { planBlockId } : {}),
+      ...(C3R_P_PLAN_COMPLETION_ACTIONS.has(action) ? { planBlockId } : {}),
     });
   }
 

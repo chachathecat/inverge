@@ -45,11 +45,11 @@ const productionAccessBlobs = Object.freeze({
   "lib/review-os/server.ts": "429085a06c3104aa66c49b272738d53f00318d8a",
   "app/app/layout.tsx": "215ec312e2102d39332eeb47e2cc3b446ad78d19",
   "app/app/c3r-p/page.tsx": "1183828115a8a0ef0fb04c5d9c0e42a8ae5bd240",
-  "app/api/review-os/c3r-p/route.ts": "be9252386a884cc601b819165394a00ae667d0d3",
-  "lib/review-os/c3r-p-service.ts": "61fde8b8c01008325712d458ab8d090b7fa08f74",
-  "lib/review-os/c3r-p-repository.ts": "f4d6adcf02c9429cfd606e5b52c49284bf163d87",
+  "app/api/review-os/c3r-p/route.ts": "fd64b2ea3915e0d564bec762c96a8a4dd081c506",
+  "lib/review-os/c3r-p-service.ts": "ed732441f059ebf4bf2b241fdccc1d661674bc71",
+  "lib/review-os/c3r-p-repository.ts": "370346582c11a2e890a844fb4c5e654f81cd7659",
   "lib/review-os/c3r-p-engine.ts": "2c6cbc01ed77fd556bc8d3ee064da196183d13df",
-  "components/review-os/c3r-p-practice-loop.tsx": "14597ff604221939d35188d2c924d982eeddf60b",
+  "components/review-os/c3r-p-practice-loop.tsx": "49573941af6fa818ad2e6b00694a6e5e503ac1fd",
 });
 
 const FORMER_C3R_P_SOURCE_REVISION_ID =
@@ -294,14 +294,14 @@ test("reopened Practice completion is an atomic independent retry and exact plan
   assert.match(sql,
     /p_action = 'complete_reopened_review'[\s\S]*'INDEPENDENT_SUCCESS'/);
   assert.match(sql,
-    /update public\.c3r_p_learning_gaps set state = 'CLOSED'[\s\S]*complete_reopened_review/);
+    /complete_reopened_review[\s\S]*update public\.c3r_p_learning_gaps set state = 'CLOSED'/);
   assert.match(sql,
     /update public\.c3r_p_plan_blocks[\s\S]*execution_state = 'COMPLETE'[\s\S]*p_payload ->> 'planBlockId'/);
   assert.match(sql, /'REOPENED_COMPLETED'/);
   assert.match(serviceSource,
-    /complete_reopened_review[\s\S]*planBlockId: input\.planBlockId \?\? null/);
+    /PLAN_COMPLETION_ACTIONS\.has\(input\.action\)[\s\S]*planBlockId: input\.planBlockId \?\? null/);
   assert.match(routeSource,
-    /action === "complete_reopened_review"[\s\S]*planBlockId/);
+    /PLAN_COMPLETION_ACTIONS\.has\(action\)[\s\S]*planBlockId/);
   assert.match(componentSource,
     /record\?\.state === "REOPENED"[\s\S]*다시 열린 복습을 독립 수행으로 완료/);
   assert.match(browserSource, /assistedRetryDenied: true/);
@@ -311,6 +311,29 @@ test("reopened Practice completion is an atomic independent retry and exact plan
   assert.match(browserSource, /crossUserRetryDenied: true/);
   assert.match(browserSource, /unrelatedPlanBlockUnchanged: true/);
   assert.match(browserSource, /laterFailureReopensAgain: true/);
+});
+
+test("every planned independent review phase completes only a current pending plan block", () => {
+  assert.match(sql,
+    /p_action in \('complete_d1', 'complete_d7_transfer',\s*'complete_recurrence', 'complete_reopened_review'\)[\s\S]*'planBlockId'/);
+  assert.match(sql,
+    /from public\.c3r_p_plan_blocks b[\s\S]*b\.execution_state = 'PENDING'/);
+  assert.match(sql,
+    /not exists \([\s\S]*from public\.c3r_p_plans newer[\s\S]*newer\.generated_at/);
+  assert.match(sql,
+    /newer\.generated_at = p\.generated_at and newer\.id < p\.id/);
+  assert.match(sql,
+    /v_plan\.eligibility_digest <>\s*public\.c3r_p_eligibility_digest_v1\(p_user_id, v_now\)/);
+  assert.match(sql,
+    /update public\.c3r_p_plans[\s\S]*eligibility_digest = public\.c3r_p_eligibility_digest_v1\(p_user_id, v_now\)/);
+  assert.match(serviceSource,
+    /PLAN_COMPLETION_ACTIONS\.has\(input\.action\)[\s\S]*planBlockId: input\.planBlockId \?\? null/);
+  assert.match(routeSource,
+    /PLAN_COMPLETION_ACTIONS\.has\(action\)[\s\S]*"planBlockId"/);
+  assert.match(componentSource,
+    /block\.executionState === "PENDING"[\s\S]*PLAN_COMPLETION_ACTIONS\.has\(action\)/);
+  assert.match(browserSource, /completedPlanBlockReuseDenied: true/);
+  assert.match(browserSource, /completedPlanBlockNotResent: true/);
 });
 
 test("learner export deterministically includes owned assistance events and final plan blocks", () => {

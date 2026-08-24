@@ -87,6 +87,7 @@ function persistedPlan(value: unknown): C3RPPersistedPlan {
     planId: stringValue(row.planId),
     planKind: planKind as C3RPPersistedPlan["planKind"],
     recordVersion: integerValue(row.recordVersion),
+    eligibilityDigest: stringValue(row.eligibilityDigest),
     state: state as C3RPPersistedPlan["state"],
     blocks: arrayValue(row.blocks).map(planBlock),
     dayComplete: booleanValue(row.dayComplete),

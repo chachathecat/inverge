@@ -1,4 +1,11 @@
-import { expect, test, type Browser, type BrowserContext, type Page } from "@playwright/test";
+import {
+  expect,
+  test,
+  type Browser,
+  type BrowserContext,
+  type Page,
+  type Route,
+} from "@playwright/test";
 import { randomUUID } from "node:crypto";
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname } from "node:path";
@@ -1018,6 +1025,59 @@ test("exact Practice browser-to-Postgres durable loop", async ({ browser }) => {
       executionState: "COMPLETE",
     }),
   ]));
+  const completedBlockReuse = await context.request.post(
+    "/api/review-os/c3r-p",
+    {
+      data: {
+        action: "complete_reopened_review",
+        commandId: randomUUID(),
+        recordId,
+        expectedVersion: reopenedAgain.view.restored.record.record_version,
+        attemptId: randomUUID(),
+        claim: practiceClaim(C3R_P_SOURCE_REVISION_ID),
+        planBlockId: fullDayBlockId,
+        evidenceStep: "reopenComplete",
+      },
+    },
+  );
+  expect(completedBlockReuse.status()).toBe(409);
+  const afterCompletedBlockReuse = await context.request.get(
+    `/api/review-os/c3r-p?recordId=${recordId}`,
+  );
+  expect((await afterCompletedBlockReuse.json()).view.restored.record).toMatchObject({
+    state: "REOPENED",
+    record_version: reopenedAgain.view.restored.record.record_version,
+  });
+
+  let retryWithoutCompletedBlock: Record<string, unknown> | null = null;
+  const rejectFinalRetry = async (route: Route) => {
+    const payload = route.request().postDataJSON();
+    if (payload?.action === "complete_reopened_review") {
+      retryWithoutCompletedBlock = payload;
+      await route.fulfill({
+        status: 409,
+        contentType: "application/json",
+        body: JSON.stringify({ ok: false, error: "invalid_transition" }),
+      });
+      return;
+    }
+    await route.continue();
+  };
+  await secondPage.route("**/api/review-os/c3r-p", rejectFinalRetry);
+  await fillStructuredCalculation(secondPage);
+  await secondPage.getByRole("button", {
+    name: "다시 열린 복습을 독립 수행으로 완료",
+  }).click();
+  await expect.poll(() => retryWithoutCompletedBlock).not.toBeNull();
+  expect(retryWithoutCompletedBlock).toMatchObject({
+    action: "complete_reopened_review",
+    planBlockId: null,
+  });
+  await expect(secondPage.getByRole("alert")).toContainText(
+    "invalid_transition",
+  );
+  await secondPage.unroute("**/api/review-os/c3r-p", rejectFinalRetry);
+  await expectState(secondPage, "REOPENED");
   await contextB.close();
   expect(foreignHosts.size).toBe(0);
   await secondBrowser.close();
@@ -1053,6 +1113,8 @@ test("exact Practice browser-to-Postgres durable loop", async ({ browser }) => {
       crossUserRetryDenied: true,
       unrelatedPlanBlockUnchanged: true,
       laterFailureReopensAgain: true,
+      completedPlanBlockReuseDenied: true,
+      completedPlanBlockNotResent: true,
       deterministicPlanner: true,
       providerCalls: 0,
     })}\n`,

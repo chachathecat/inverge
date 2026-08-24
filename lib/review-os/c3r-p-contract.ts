@@ -9,6 +9,16 @@ export const C3R_P_BROWSER_EVIDENCE_REF =
 export const C3R_P_VALIDATOR_ID =
   "validator:practice-calculation-claim@2" as const;
 
+const C3R_P_PLAN_COMPLETION_ACTION_LIST = [
+  "complete_d1",
+  "complete_d7_transfer",
+  "complete_recurrence",
+  "complete_reopened_review",
+] as const;
+
+export const C3R_P_PLAN_COMPLETION_ACTIONS: ReadonlySet<string> =
+  new Set(C3R_P_PLAN_COMPLETION_ACTION_LIST);
+
 export const C3R_P_RECORD_STATES = [
   "D0_OPEN",
   "FEEDBACK_COMMITTED",
@@ -137,6 +147,7 @@ export type C3RPPersistedPlan = Readonly<{
   planId: string;
   planKind: "TODAY" | "FULL_DAY";
   recordVersion: number;
+  eligibilityDigest: string;
   state: "PROPOSED" | "ACCEPTED" | "EDITED" | "REJECTED" | "STALE";
   blocks: readonly C3RPPlanBlock[];
   dayComplete: boolean;

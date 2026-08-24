@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 
 import {
+  C3R_P_PLAN_COMPLETION_ACTIONS,
   C3RPError,
   c3rPExactObject,
   c3rPRequiredText,
@@ -196,9 +197,6 @@ export async function POST(request: Request) {
 
     if ([
       "record_assisted_review",
-      "complete_d1",
-      "complete_d7_transfer",
-      "complete_recurrence",
       "record_later_failure",
     ].includes(action)) {
       const row = c3rPExactObject(raw, [
@@ -214,14 +212,14 @@ export async function POST(request: Request) {
       return response({ ok: true, view });
     }
 
-    if (action === "complete_reopened_review") {
+    if (C3R_P_PLAN_COMPLETION_ACTIONS.has(action)) {
       const row = c3rPExactObject(raw, [
         "action", "commandId", "recordId", "expectedVersion", "attemptId",
         "claim", "planBlockId", "evidenceStep",
       ]);
       const view = await service.applyReview({
         ...common(row),
-        action,
+        action: action as Parameters<typeof service.applyReview>[0]["action"],
         attemptId: c3rPRequiredUuid(row.attemptId),
         claim: parsePracticeCalculationClaimV2Input(row.claim),
         planBlockId: row.planBlockId === null

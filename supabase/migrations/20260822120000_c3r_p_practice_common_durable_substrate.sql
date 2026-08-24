@@ -469,6 +469,7 @@ as $$
 declare
   v_receipt public.c3r_p_command_receipts%rowtype;
   v_record public.c3r_p_learning_records%rowtype;
+  v_plan public.c3r_p_plans%rowtype;
   v_record_id uuid;
   v_attempt_id uuid;
   v_gap_id uuid;
@@ -659,7 +660,8 @@ begin
       'record_assisted_review', 'complete_d1', 'complete_d7_transfer',
       'complete_recurrence', 'complete_reopened_review', 'record_later_failure'
     ) then
-      if p_action = 'complete_reopened_review' then
+      if p_action in ('complete_d1', 'complete_d7_transfer',
+        'complete_recurrence', 'complete_reopened_review') then
         perform public.c3r_p_require_exact_keys_v1(p_payload, array[
           'attemptBody', 'attemptId', 'configurationDigest', 'itemId', 'occurredAt',
           'planBlockId', 'proofDigest', 'recordId', 'surfaceId', 'validatorId'
@@ -712,6 +714,34 @@ begin
         and p_payload ->> 'itemId' <> v_record.item_id then
         raise exception 'C3R_P_ATTEMPT_ITEM_MISMATCH' using errcode = '23514';
       end if;
+      if p_action in ('complete_d1', 'complete_d7_transfer',
+        'complete_recurrence', 'complete_reopened_review')
+        and p_payload ->> 'planBlockId' is not null then
+        select p.* into v_plan
+        from public.c3r_p_plan_blocks b
+        join public.c3r_p_plans p
+          on p.id = b.plan_id and p.user_id = b.user_id
+        where b.id = (p_payload ->> 'planBlockId')::uuid
+          and b.user_id = p_user_id
+          and b.record_id = v_record.id
+          and b.gap_id = v_record.primary_gap_id
+          and b.execution_state = 'PENDING'
+          and p.state in ('ACCEPTED', 'EDITED')
+          and not exists (
+            select 1 from public.c3r_p_plans newer
+            where newer.user_id = p.user_id
+              and (newer.generated_at > p.generated_at
+                or (newer.generated_at = p.generated_at and newer.id < p.id))
+          )
+        for update of p, b;
+        if not found then
+          raise exception 'C3R_P_PLAN_BLOCK_NOT_CURRENT' using errcode = '23514';
+        end if;
+        if v_plan.eligibility_digest <>
+          public.c3r_p_eligibility_digest_v1(p_user_id, v_now) then
+          raise exception 'C3R_P_PLAN_BLOCK_STALE' using errcode = '23514';
+        end if;
+      end if;
       insert into public.c3r_p_attempts (
         id, record_id, user_id, source_id, problem_id, revision_id, item_id,
         artifact_id, surface_id, phase, outcome, assistance_level, body,
@@ -746,27 +776,28 @@ begin
           where id = v_record.primary_gap_id
             and user_id = p_user_id
             and record_id = v_record.id;
-          if p_action = 'complete_reopened_review'
-            and p_payload ->> 'planBlockId' is not null then
-            update public.c3r_p_plan_blocks b set execution_state = 'COMPLETE'
-            from public.c3r_p_plans p
-            where b.id = (p_payload ->> 'planBlockId')::uuid
-              and b.user_id = p_user_id
-              and b.record_id = v_record.id
-              and b.gap_id = v_record.primary_gap_id
-              and p.id = b.plan_id
-              and p.user_id = b.user_id
-              and p.state in ('ACCEPTED', 'EDITED');
-            get diagnostics v_completed_plan_blocks = row_count;
-            if v_completed_plan_blocks <> 1 then
-              raise exception 'C3R_P_PLAN_BLOCK_NOT_CURRENT' using errcode = '23514';
-            end if;
-          end if;
         elsif p_action = 'record_later_failure' then
           update public.c3r_p_learning_gaps set state = 'REOPENED',
             reopen_count = reopen_count + 1, reopened_at = v_now,
             recurrence_due_at = v_now, updated_at = v_now
           where id = v_record.primary_gap_id;
+        end if;
+        if v_plan.id is not null then
+          update public.c3r_p_plan_blocks set execution_state = 'COMPLETE'
+          where id = (p_payload ->> 'planBlockId')::uuid
+            and user_id = p_user_id
+            and plan_id = v_plan.id
+            and execution_state = 'PENDING';
+          get diagnostics v_completed_plan_blocks = row_count;
+          if v_completed_plan_blocks <> 1 then
+            raise exception 'C3R_P_PLAN_BLOCK_NOT_CURRENT' using errcode = '23514';
+          end if;
+          update public.c3r_p_plans set
+            eligibility_digest = public.c3r_p_eligibility_digest_v1(p_user_id, v_now),
+            review_state_digest = public.c3r_p_review_state_digest_v1(p_user_id),
+            record_version = record_version + 1,
+            updated_at = v_now
+          where id = v_plan.id and user_id = p_user_id;
         end if;
         insert into public.c3r_p_ledger_entries (
           id, record_id, gap_id, attempt_id, user_id, entry_kind,
@@ -1099,6 +1130,7 @@ begin
       'planId', p.id,
       'planKind', p.plan_kind,
       'recordVersion', p.record_version,
+      'eligibilityDigest', p.eligibility_digest,
       'state', p.state,
       'blocks', coalesce((select jsonb_agg(jsonb_build_object(
         'blockId', b.id,

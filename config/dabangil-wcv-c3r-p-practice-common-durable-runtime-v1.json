@@ -1,7 +1,7 @@
 {
   "schemaVersion": "dabangil.wcv_c3r_p.practice_common_durable_runtime.v1",
   "contractId": "dabangil_wcv_c3r_p_practice_common_durable_runtime_v1",
-  "contractVersion": "1.0.1",
+  "contractVersion": "1.0.2",
   "status": "candidate_effective_only_after_expected_head_pinned_squash_merge_and_validated_github_receipt",
   "authority": {
     "repository": "chachathecat/inverge",
@@ -75,8 +75,8 @@
       }
     ],
     "appendPath": "supabase/migrations/20260822120000_c3r_p_practice_common_durable_substrate.sql",
-    "candidateSqlSha256": "fb9f9b3106bae6d43922a1ffc8d39e6c3d42738a50559728621398a7ba70de2c",
-    "effectiveInventorySha256": "e4a33d347063ced54985e73421d9ac603af51a39d303647b1dd050edf3d985ba",
+    "candidateSqlSha256": "c9da96e39e3ecdb0f469ad0d8c6f8ca74a8b342b2fe670dfac9932846f71a20f",
+    "effectiveInventorySha256": "8d938e9711e4bf6a453f388400bbaeeaa8bf03b693a685095fc6ddfbfef05fc2",
     "remoteMutationCount": 0
   },
   "practiceRuntimeArtifact": {

@@ -7,6 +7,7 @@ import { getServerSessionUser, type InvergeServerSession } from "@/lib/auth/sess
 import {
   C3R_P_FEATURE_FLAG,
   C3R_P_OWNER_ALLOWLIST,
+  C3R_P_PLAN_COMPLETION_ACTIONS,
   C3R_P_RUNTIME_ARTIFACT_REF,
   C3R_P_VALIDATOR_ID,
   C3RPError,
@@ -192,7 +193,7 @@ export function createC3RPService(authenticatedUserId: string) {
         occurredAt,
         validatorId: C3R_P_VALIDATOR_ID,
         proofDigest: proof.proofDigest,
-        ...(input.action === "complete_reopened_review"
+        ...(C3R_P_PLAN_COMPLETION_ACTIONS.has(input.action)
           ? { planBlockId: input.planBlockId ?? null }
           : {}),
       },
@@ -343,6 +344,8 @@ export function createC3RPService(authenticatedUserId: string) {
           planId: input.planId,
           planKind: input.kind,
           recordVersion: result.recordVersion,
+          eligibilityDigest:
+            result.eligibilityDigest ?? dashboard.eligibilityDigest,
           state: result.state,
           blocks: planned.blocks.map((block) => ({
             ...block,

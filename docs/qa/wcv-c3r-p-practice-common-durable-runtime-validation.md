@@ -32,6 +32,8 @@ The clean design also resolves every terminal #798 review finding before runtime
 - the D+7 attempt keeps the record/source/revision/artifact ownership binding while using server-owned primary/transfer surface identities and a database-checked distinct transfer item;
 - the append guards its added foreign key and replaces same-name policies, and the native evidence path reapplies it;
 - dashboard reads return persisted plans with blocks and rebuild `currentPlan` after navigation or restart;
+- every plan-backed independent D+1, D+7, recurrence or reopened completion consumes only the latest learner-owned `PENDING` block whose eligibility digest still matches, advances the plan snapshot, and leaves unrelated blocks unchanged;
+- a completed block is never reused after a later reopen, and the UI omits a completed or stale block association so the later independent retry remains available;
 - export/delete success UI is reached only after a successful server response, with a hostile browser failure case proving failed deletion leaves the record visible.
 
 ## Practice outcome evidence
