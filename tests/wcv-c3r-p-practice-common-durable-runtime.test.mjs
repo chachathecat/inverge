@@ -51,7 +51,7 @@ const productionAccessBlobs = Object.freeze({
   "lib/review-os/c3r-p-service.ts": "825e45af897c69de29ae619fefeafb7ee0ce3da9",
   "lib/review-os/c3r-p-repository.ts": "990f19f94458685782a49cfea6f00553a2a542f0",
   "lib/review-os/c3r-p-engine.ts": "351047c5b5ed7463ec7aac96baad389b5a3a92d9",
-  "components/review-os/c3r-p-practice-loop.tsx": "df4c725942f5369b359bbc507c4a6ee02f90d9b9",
+  "components/review-os/c3r-p-practice-loop.tsx": "547fe2416c7e76b072d275820d4e9da6fcca672a",
 });
 
 const FORMER_C3R_P_SOURCE_REVISION_ID =
@@ -775,6 +775,8 @@ test("delayed D+7 and recurrence controls use only canonical current queue eligi
     /disabled=\{pending \|\| !d7Eligible\}[\s\S]*D\+7 전이 과업 열기/);
   assert.match(componentSource,
     /disabled=\{pending \|\| !recurrenceEligible\}[\s\S]*시간 기반 재출현 독립 수행 완료/);
+  assert.match(componentSource,
+    /const reopenedQueueItem = queueItem\("REOPENED_REVIEW"\)[\s\S]*disabled=\{pending \|\| !reopenedEligible\}[\s\S]*다시 열린 복습을 독립 수행으로 완료/);
   assert.match(componentSource, /data-testid="c3r-p-d7-eligibility"/);
   assert.match(componentSource, /data-testid="c3r-p-recurrence-eligibility"/);
   assert.doesNotMatch(componentSource, /Date\.now\(\)/);

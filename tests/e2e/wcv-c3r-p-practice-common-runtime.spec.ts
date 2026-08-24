@@ -100,7 +100,9 @@ async function contextFor(browser: Browser, email: string, password: string) {
   return context;
 }
 
-function dashboardEvidenceStepRoute(evidenceStep: "d7" | "recurrence") {
+function dashboardEvidenceStepRoute(
+  evidenceStep: "d7" | "recurrence" | "reopenComplete",
+) {
   return async (route: Route) => {
     const request = route.request();
     const url = new URL(request.url());
@@ -1731,6 +1733,8 @@ test("exact Practice browser-to-Postgres durable loop", async ({ browser }) => {
   );
   expect(fullDayBlock).toBeTruthy();
   const fullDayBlockId = fullDayBlock!.blockId;
+  const reopenedEvidenceRoute = dashboardEvidenceStepRoute("reopenComplete");
+  await secondPage.route(c3rPApiUrl, reopenedEvidenceRoute);
   await secondPage.reload();
   await expect(secondPage.getByText("계획 상태: ACCEPTED")).toBeVisible();
 
