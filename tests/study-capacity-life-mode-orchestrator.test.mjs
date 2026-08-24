@@ -11,8 +11,18 @@ import {
   replanStudyDay,
 } from "../lib/review-os/study-capacity-life-mode-orchestrator.ts";
 
+/** @typedef {import("../lib/review-os/study-capacity-life-mode-orchestrator.ts").LearnerConstraintProfileV1} LearnerConstraintProfileV1 */
+/** @typedef {import("../lib/review-os/study-capacity-life-mode-orchestrator.ts").DayAvailabilityV1} DayAvailabilityV1 */
+/** @typedef {import("../lib/review-os/study-capacity-life-mode-orchestrator.ts").StudyTaskCandidateV1} StudyTaskCandidateV1 */
+/** @typedef {import("../lib/review-os/study-capacity-life-mode-orchestrator.ts").CapacityHistoryDayV1} CapacityHistoryDayV1 */
+/** @typedef {import("../lib/review-os/study-capacity-life-mode-orchestrator.ts").ExamModeV1} ExamModeV1 */
+
 const policyVersion = "dabangil.study_capacity_life_mode_orchestrator.v1";
 
+/**
+ * @param {Partial<LearnerConstraintProfileV1>} [overrides]
+ * @returns {LearnerConstraintProfileV1}
+ */
 function profile(overrides = {}) {
   return {
     lifeMode: "full_time_study",
@@ -24,6 +34,10 @@ function profile(overrides = {}) {
   };
 }
 
+/**
+ * @param {Partial<DayAvailabilityV1>} [overrides]
+ * @returns {DayAvailabilityV1}
+ */
 function availability(overrides = {}) {
   return {
     date: "2026-08-24",
@@ -38,6 +52,11 @@ function availability(overrides = {}) {
   };
 }
 
+/**
+ * @param {string} id
+ * @param {Partial<StudyTaskCandidateV1>} [overrides]
+ * @returns {StudyTaskCandidateV1}
+ */
 function task(id, overrides = {}) {
   return {
     id,
@@ -54,6 +73,7 @@ function task(id, overrides = {}) {
   };
 }
 
+/** @returns {StudyTaskCandidateV1[]} */
 function fullDayCandidates() {
   return [
     task("timed-first", {
@@ -128,7 +148,6 @@ function fullDayCandidates() {
 test("capacity bands are independent from employment labels", () => {
   assert.equal(classifyCapacityBand(180), "compressed_90_180");
   assert.equal(classifyCapacityBand(600), "full_day_600_720");
-
   const fullTimeRecovery = buildCapacityEnvelope({
     profile: profile({ lifeMode: "full_time_study", phase: "recovery" }),
     declaredActiveMinutes: 180,
@@ -137,18 +156,12 @@ test("capacity bands are independent from employment labels", () => {
     profile: profile({ lifeMode: "full_time_employed" }),
     declaredActiveMinutes: 600,
   });
-
   assert.equal(fullTimeRecovery.capacityBand, "compressed_90_180");
   assert.equal(employedWeekend.capacityBand, "full_day_600_720");
 });
 
 test("full-time 600-minute day preserves max-three outcomes and many execution blocks", () => {
-  const plan = buildStudyDayPlan({
-    profile: profile(),
-    availability: availability(),
-    candidates: fullDayCandidates(),
-  });
-
+  const plan = buildStudyDayPlan({ profile: profile(), availability: availability(), candidates: fullDayCandidates() });
   assert.ok(plan.coreOutcomes.length <= 3);
   assert.ok(plan.executionBlocks.length > 3);
   assert.ok(plan.plannedActiveMinutes <= plan.capacity.schedulableActiveMinutes);
@@ -172,7 +185,6 @@ test("full-time 720-minute fixture stays bounded and protects non-high-load time
     }),
     candidates: fullDayCandidates(),
   });
-
   assert.equal(plan.capacity.capacityBand, "full_day_600_720");
   assert.ok(plan.capacity.highLoadBudgetMinutes < plan.capacity.schedulableActiveMinutes);
   assert.ok(plan.capacity.mediumLoadBudgetMinutes > 0);
@@ -208,19 +220,15 @@ test("employed weekday moves a long timed task to the weekend instead of pretend
       }),
     ],
   });
-
   assert.ok(plan.coreOutcomes.length <= 2);
   assert.ok(!plan.executionBlocks.some((block) => block.candidateId === "long-timed"));
-  assert.deepEqual(
-    plan.deferredTasks.find((entry) => entry.candidateId === "long-timed"),
-    {
-      candidateId: "long-timed",
-      title: "과제 long-timed",
-      reason: "move_long_task_to_weekend",
-      nextEligibleDayKind: "weekend",
-      metadataOnly: true,
-    },
-  );
+  assert.deepEqual(plan.deferredTasks.find((entry) => entry.candidateId === "long-timed"), {
+    candidateId: "long-timed",
+    title: "과제 long-timed",
+    reason: "move_long_task_to_weekend",
+    nextEligibleDayKind: "weekend",
+    metadataOnly: true,
+  });
 });
 
 test("employed weekend can schedule the long timed task when a continuous window exists", () => {
@@ -251,7 +259,6 @@ test("employed weekend can schedule the long timed task when a continuous window
       }),
     ],
   });
-
   assert.ok(plan.executionBlocks.some((block) => block.candidateId === "long-timed"));
   assert.ok(plan.coreOutcomes.length <= 3);
 });
@@ -292,13 +299,12 @@ test("working-mode weekly plan defers the long task on weekday and consumes it o
     requiredMinimumMinutes: 120,
     requiredMaximumMinutes: 240,
   });
-
   assert.ok(!week.dayPlans[0].executionBlocks.some((block) => block.candidateId === "long-timed"));
   assert.ok(week.dayPlans[1].executionBlocks.some((block) => block.candidateId === "long-timed"));
   assert.ok(!week.remainingTaskIds.includes("long-timed"));
 });
 
-test("shift commute window admits a safe guided recall but rejects desk-dependent work", () => {
+test("shift commute window admits safe guided recall but rejects desk-dependent work", () => {
   const plan = buildStudyDayPlan({
     profile: profile({ lifeMode: "shift_or_irregular_work", scheduleVolatility: "high" }),
     availability: availability({
@@ -334,12 +340,12 @@ test("shift commute window admits a safe guided recall but rejects desk-dependen
       }),
     ],
   });
-
   assert.ok(plan.executionBlocks.some((block) => block.candidateId === "audio-recall"));
   assert.equal(plan.deferredTasks.find((entry) => entry.candidateId === "visual-calculation")?.reason, "environment_incompatible");
 });
 
 test("fourteen-day capacity calibration excludes app interaction and provider waiting", () => {
+  /** @type {CapacityHistoryDayV1[]} */
   const history = Array.from({ length: 14 }, (_, index) => ({
     date: `2026-08-${String(index + 1).padStart(2, "0")}`,
     plannedActiveMinutes: 180,
@@ -353,7 +359,6 @@ test("fourteen-day capacity calibration excludes app interaction and provider wa
     declaredActiveMinutes: 180,
     history,
   });
-
   assert.equal(envelope.evidenceLevel, "evidence_supported_14d");
   assert.equal(envelope.historyDaysUsed, 14);
   assert.ok(envelope.effectiveActiveMinutes <= 126);
@@ -361,6 +366,7 @@ test("fourteen-day capacity calibration excludes app interaction and provider wa
 });
 
 test("fatigue evidence reduces capacity without shame or diagnosis", () => {
+  /** @type {CapacityHistoryDayV1[]} */
   const history = Array.from({ length: 10 }, (_, index) => ({
     date: `2026-08-${String(index + 1).padStart(2, "0")}`,
     plannedActiveMinutes: 360,
@@ -368,11 +374,7 @@ test("fatigue evidence reduces capacity without shame or diagnosis", () => {
     fatigueSelfReport: index < 5 ? 5 : 3,
     lateSessionErrorDelta: index < 5 ? 0.2 : 0,
   }));
-  const envelope = buildCapacityEnvelope({
-    profile: profile(),
-    declaredActiveMinutes: 360,
-    history,
-  });
+  const envelope = buildCapacityEnvelope({ profile: profile(), declaredActiveMinutes: 360, history });
   assert.ok(envelope.derivationReasons.includes("fatigue-or-late-error-guardrail-applied"));
   assert.ok(envelope.effectiveActiveMinutes < 360);
   assert.doesNotMatch(JSON.stringify(envelope), /게으름|의지 부족|진단|불합격/i);
@@ -391,7 +393,6 @@ test("plan gap reports schedule feasibility and never invents pass probability",
       task("required-b", { estimatedMinutes: 60, requiredness: "required", prioritySignals: ["coverage_gap", "exam_urgency"] }),
     ],
   });
-
   assert.ok(plan.planGap);
   assert.equal(plan.planGap?.claimBoundary, "schedule_feasibility_only_not_pass_probability");
   assert.ok((plan.planGap?.shortfallMinutes ?? 0) > 0);
@@ -446,7 +447,6 @@ test("overtime replan keeps, defers or drops exactly once and never clones backl
     candidates,
     reason: "overtime",
   });
-
   assert.equal(replanned.backlogCloneCount, 0);
   assert.equal(new Set(replanned.decisions.map((entry) => entry.candidateId)).size, replanned.decisions.length);
   assert.ok(replanned.decisions.some((entry) => entry.decision === "keep"));
@@ -465,7 +465,6 @@ test("AI drill generation is capped by the next 48 hours and verified bank is pr
   assert.equal(bankFirst.maximumNewItems, 8);
   assert.equal(bankFirst.readinessEligible, false);
   assert.equal(bankFirst.crossUserReuseEligible, false);
-
   const exhausted = buildPersonalDrillBudget({
     next48hAvailableDrillMinutes: 60,
     pendingDrillMinutes: 60,
@@ -477,7 +476,9 @@ test("AI drill generation is capped by the next 48 hours and verified bank is pr
 });
 
 test("first, second and both modes are accepted without changing mastery", () => {
-  for (const examMode of ["first", "second", "both"]) {
+  /** @type {ExamModeV1[]} */
+  const examModes = ["first", "second", "both"];
+  for (const examMode of examModes) {
     const plan = buildStudyDayPlan({
       profile: profile({ examMode }),
       availability: availability({
@@ -492,11 +493,7 @@ test("first, second and both modes are accepted without changing mastery", () =>
 });
 
 test("same input produces the same deterministic plan digest", () => {
-  const input = {
-    profile: profile(),
-    availability: availability(),
-    candidates: fullDayCandidates(),
-  };
+  const input = { profile: profile(), availability: availability(), candidates: fullDayCandidates() };
   const first = buildStudyDayPlan(input);
   const second = buildStudyDayPlan(input);
   assert.equal(first.deterministicPlanDigest, second.deterministicPlanDigest);
@@ -522,12 +519,8 @@ test("invalid and overlapping windows fail closed", () => {
   assert.throws(() => classifyCapacityBand(29), /invalid-capacity-minutes/);
 });
 
-test("learner-facing outputs contain no raw body fields, shame copy, guarantees or pass probabilities", () => {
-  const plan = buildStudyDayPlan({
-    profile: profile(),
-    availability: availability(),
-    candidates: fullDayCandidates(),
-  });
+test("outputs contain no raw body fields, shame copy, guarantees or pass probabilities", () => {
+  const plan = buildStudyDayPlan({ profile: profile(), availability: availability(), candidates: fullDayCandidates() });
   const serialized = JSON.stringify(plan);
   assert.doesNotMatch(serialized, /rawOcrText|problemText|questionText|userAnswer|answerText|sourceText/i);
   assert.doesNotMatch(serialized, /게으름|의지\s*부족|실패자|불합격\s*확정|합격\s*보장|합격\s*확률/i);
