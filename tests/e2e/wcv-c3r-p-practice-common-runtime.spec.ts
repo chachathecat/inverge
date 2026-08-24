@@ -579,7 +579,7 @@ test("exact Practice browser-to-Postgres durable loop", async ({ browser }) => {
       ok: true,
       result: {
         deletedRecords: 1,
-        deletedPlans: 7,
+        deletedPlans: 8,
         status: "deleted",
       },
     });
