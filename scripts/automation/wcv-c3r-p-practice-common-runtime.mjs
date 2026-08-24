@@ -725,7 +725,7 @@ function nativeCycle(name, appendSql, cycle) {
       has_function_privilege('authenticated','public.c3r_p_apply_learning_command_v1(uuid,uuid,bigint,text,jsonb)','EXECUTE'),
       has_function_privilege('service_role','public.c3r_p_apply_learning_command_v1(uuid,uuid,bigint,text,jsonb)','EXECUTE'));
     `, false, "catalog assertion").stdout.trim();
-    if (catalog !== "150008|9|PRACTICE|f|f|t") {
+    if (catalog !== "150008|10|PRACTICE|f|f|t") {
       throw new Error("C3R-P native catalog contract failed.");
     }
     const userId = `11111111-1111-4111-8111-11111111111${cycle}`;
@@ -1033,7 +1033,7 @@ function databaseSecurity(container) {
     (select rolbypassrls from pg_roles where rolname='service_role'),
     (select pg_get_userbyid(relowner) from pg_class where oid='public.c3r_p_learning_records'::regclass)
   );`);
-  if (value !== "150008|9|1|1|f|f|f|t|t|postgres") {
+  if (value !== "150008|10|1|1|f|f|f|t|t|postgres") {
     throw new Error("C3R-P catalog, grants, RLS, subject, owner, or PostgreSQL version is invalid.");
   }
 }

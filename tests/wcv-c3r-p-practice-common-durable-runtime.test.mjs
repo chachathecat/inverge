@@ -508,8 +508,8 @@ test("dedicated cycles start isolated Supabase first and transactionally apply a
   assert.match(runtimeSource, /names\.length !== 26/);
   assert.match(runtimeSource, /psql\(container, `begin;\\n\$\{sql\}\\ncommit;\\n`/);
   assert.match(runtimeSource, /notify pgrst, 'reload schema'/);
-  assert.match(runtimeSource, /150008\|9\|PRACTICE\|f\|f\|t/);
-  assert.match(runtimeSource, /150008\|9\|1\|1\|f\|f\|f\|t\|t\|postgres/);
+  assert.match(runtimeSource, /150008\|10\|PRACTICE\|f\|f\|t/);
+  assert.match(runtimeSource, /150008\|10\|1\|1\|f\|f\|f\|t\|t\|postgres/);
   assert.match(runtimeSource, /append recovery reapplication/);
   assert.ok(
     runtimeSource.indexOf("assertExternalMigrationSubstrate(databaseContainer)") <
