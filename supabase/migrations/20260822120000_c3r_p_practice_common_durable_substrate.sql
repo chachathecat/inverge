@@ -946,6 +946,23 @@ begin
           or p_payload ->> 'planVersion' is not null then
           raise exception 'C3R_P_PLAN_BLOCK_NOT_CURRENT' using errcode = '23514';
         end if;
+        update public.c3r_p_plans proposed set
+          state = 'STALE',
+          terminal_reason = 'ELIGIBILITY_CHANGED',
+          record_version = proposed.record_version + 1,
+          updated_at = v_now
+        where proposed.user_id = p_user_id
+          and proposed.state = 'PROPOSED'
+          and proposed.terminal_reason is null
+          and exists (
+            select 1 from public.c3r_p_plan_blocks pending
+            where pending.user_id = p_user_id
+              and pending.plan_id = proposed.id
+              and pending.record_id = v_record.id
+              and pending.gap_id = v_record.primary_gap_id
+              and pending.review_phase = v_phase
+              and pending.execution_state = 'PENDING'
+          );
       end if;
       insert into public.c3r_p_attempts (
         id, record_id, user_id, source_id, problem_id, revision_id, item_id,

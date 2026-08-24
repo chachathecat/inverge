@@ -171,6 +171,7 @@ function sampleArtifact() {
       planProjectionClosure: true,
       deleteMutationSerialization: true,
       deleteWinsBothLockOrders: true,
+      proposedPlanTerminalization: true,
       assistedD1History: true,
       assistedD1Rescheduling: true,
       delayedReviewEligibility: true,
@@ -493,6 +494,11 @@ test("every planned independent review phase completes only a current pending pl
   assert.match(browserSource, /wrongPlanBindingDenied: true/);
   assert.match(browserSource, /ambiguousPlanBlocksDenied: true/);
   assert.match(browserSource, /planlessCompletionAllowedWithoutActivePlan: true/);
+  assert.match(sql,
+    /update public\.c3r_p_plans proposed set[\s\S]*state = 'STALE'[\s\S]*terminal_reason = 'ELIGIBILITY_CHANGED'[\s\S]*proposed\.state = 'PROPOSED'[\s\S]*pending\.review_phase = v_phase/);
+  assert.match(browserSource, /proposedPlanTerminalizedOnReviewAdvance: true/);
+  assert.match(runtimeSource,
+    /browserEvidence\.proposedPlanTerminalizedOnReviewAdvance !== true/);
   assert.match(browserSource, /staleReviewStateDigestDenied: true/);
   assert.match(sql,
     /c3r_p_review_state_digest_v1[\s\S]*select count\(\*\)::text from public\.c3r_p_attempts/);
@@ -813,6 +819,19 @@ test("failure diagnostics upload before unconditional cleanup and verified entry
     /ALPHA_INVITE_EMAILS: identities\.map\(\(identity\) => identity\.email\)\.join\(","\)/);
   assert.match(runtimeSource,
     /WCV_C3R_P_OWNER_EMAILS: identities\.slice\(0, 2\)/);
+});
+
+test("dedicated C3R-P evidence triggers on every directly imported shared trusted-repair dependency", () => {
+  for (const dependency of [
+    "trusted-repair-contract",
+    "trusted-repair-engine",
+    "trusted-repair-fixtures",
+  ]) {
+    assert.match(engineSource, new RegExp(`from "\\./${dependency}"`));
+    assert.ok(workflowSource.includes(
+      `- "lib/review-os/${dependency}.ts"`,
+    ), dependency);
+  }
 });
 
 test("verified attempts bind to learner-entered structured values and server-rendered bodies", () => {

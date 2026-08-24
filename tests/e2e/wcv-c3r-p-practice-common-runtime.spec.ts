@@ -1944,6 +1944,33 @@ test("exact Practice browser-to-Postgres durable loop", async ({ browser }) => {
   });
   expect(foreignRepair.status()).toBe(200);
   const foreignRepairBody = await foreignRepair.json();
+  const foreignProposedPlanId = randomUUID();
+  const foreignProposedPlanResponse = await contextB.request.post(
+    "/api/review-os/c3r-p",
+    { data: {
+      action: "create_plan",
+      commandId: randomUUID(),
+      recordId: foreignRecordId,
+      planId: foreignProposedPlanId,
+      kind: "TODAY",
+      availableMinutes: 90,
+      evidenceStep: "d1",
+    } },
+  );
+  expect(foreignProposedPlanResponse.status()).toBe(200);
+  const foreignProposedPlan = await foreignProposedPlanResponse.json();
+  expect(foreignProposedPlan.view.currentPlan).toMatchObject({
+    planId: foreignProposedPlanId,
+    state: "PROPOSED",
+    completionState: "ACTIONABLE",
+    terminalReason: null,
+    blocks: [expect.objectContaining({
+      reviewPhase: "D1",
+      executionState: "PENDING",
+    })],
+  });
+  const foreignProposedBlockId =
+    foreignProposedPlan.view.currentPlan.blocks[0].blockId;
   const planlessCompletion = await contextB.request.post(
     "/api/review-os/c3r-p",
     { data: {
@@ -1960,9 +1987,24 @@ test("exact Practice browser-to-Postgres durable loop", async ({ browser }) => {
     } },
   );
   expect(planlessCompletion.status()).toBe(200);
-  expect((await planlessCompletion.json()).view.restored.record.state).toBe(
-    "D1_COMPLETE",
-  );
+  const planlessCompletionBody = await planlessCompletion.json();
+  expect(planlessCompletionBody.view.restored.record.state).toBe("D1_COMPLETE");
+  expect(planlessCompletionBody.view.currentPlan).toBeNull();
+  expect(planlessCompletionBody.view.planHistory).toEqual(expect.arrayContaining([
+    expect.objectContaining({
+      planId: foreignProposedPlanId,
+      state: "STALE",
+      completionState: "TERMINAL_INCOMPLETE",
+      terminalReason: "ELIGIBILITY_CHANGED",
+      recordVersion: foreignProposedPlan.view.currentPlan.recordVersion + 1,
+      blocks: [expect.objectContaining({
+        blockId: foreignProposedBlockId,
+        reviewPhase: "D1",
+        executionState: "PENDING",
+      })],
+      dayComplete: false,
+    }),
+  ]));
 
   const assistedRetry = await context.request.post("/api/review-os/c3r-p", {
     data: {
@@ -2548,6 +2590,7 @@ test("exact Practice browser-to-Postgres durable loop", async ({ browser }) => {
       unrelatedPlanBlockPreserved: true,
       dayCompleteRecomputedHonestly: true,
       planlessCompletionAllowedWithoutActivePlan: true,
+      proposedPlanTerminalizedOnReviewAdvance: true,
       completeLearnerExport: true,
       assistedRetryDenied: true,
       incorrectRetryDenied: true,

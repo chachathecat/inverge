@@ -401,6 +401,7 @@ export function validatePracticeRuntimeArtifact(artifact, repositoryRoot = proce
       "exportDelete", "reopenedCompletion", "planBlockCompletion",
       "completeLearnerExport", "transferTaskClosure", "planBlockStateClosure",
       "planProjectionClosure", "deleteMutationSerialization", "deleteWinsBothLockOrders",
+      "proposedPlanTerminalization",
       "assistedD1History", "assistedD1Rescheduling", "delayedReviewEligibility",
       "stateMachineMatrixPairs",
       "stateMachineMatrixResult",
@@ -414,6 +415,7 @@ export function validatePracticeRuntimeArtifact(artifact, repositoryRoot = proce
       cycle.transferTaskClosure !== true || cycle.planBlockStateClosure !== true ||
       cycle.planProjectionClosure !== true || cycle.deleteMutationSerialization !== true ||
       cycle.deleteWinsBothLockOrders !== true ||
+      cycle.proposedPlanTerminalization !== true ||
       cycle.assistedD1History !== true || cycle.assistedD1Rescheduling !== true ||
       cycle.delayedReviewEligibility !== true ||
       cycle.stateMachineMatrixPairs !== 112 ||
@@ -1377,6 +1379,7 @@ async function runDedicatedCycle(input) {
       browserEvidence.wrongPlanBindingDenied !== true ||
       browserEvidence.ambiguousPlanBlocksDenied !== true ||
       browserEvidence.planlessCompletionAllowedWithoutActivePlan !== true ||
+      browserEvidence.proposedPlanTerminalizedOnReviewAdvance !== true ||
       browserEvidence.staleReviewStateDigestDenied !== true ||
       browserEvidence.unrelatedPlanBlockPreserved !== true ||
       browserEvidence.dayCompleteRecomputedHonestly !== true ||
@@ -1441,6 +1444,7 @@ async function runDedicatedCycle(input) {
       planProjectionClosure: true,
       deleteMutationSerialization: true,
       deleteWinsBothLockOrders: true,
+      proposedPlanTerminalization: true,
       assistedD1History: true,
       assistedD1Rescheduling: true,
       delayedReviewEligibility: true,
