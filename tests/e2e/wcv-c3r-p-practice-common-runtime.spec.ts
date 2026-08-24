@@ -401,9 +401,9 @@ test("exact Practice browser-to-Postgres durable loop", async ({ browser }) => {
     await pageA
       .getByRole("button", { name: "내 C3R-P 데이터 삭제" })
       .click();
-    await expect(pageA.getByRole("alert")).toContainText(
-      "temporarily_unavailable",
-    );
+    await expect(
+      pageA.getByRole("alert").filter({ hasText: "temporarily_unavailable" }),
+    ).toContainText("temporarily_unavailable");
     await expect(pageA.getByTestId("c3r-p-ledger")).toBeVisible();
     await expect(pageA.getByRole("status")).not.toHaveText("삭제 완료");
 
