@@ -151,12 +151,16 @@ function databaseScalar(sql: string) {
   }).trim();
 }
 
+function advisoryWaiterCount() {
+  return Number(databaseScalar(
+    "select count(*) from pg_catalog.pg_locks " +
+    "where locktype = 'advisory' and not granted;\n",
+  ));
+}
+
 async function waitForAdvisoryWaiters(minimum: number) {
   for (let attempt = 0; attempt < 100; attempt += 1) {
-    const count = Number(databaseScalar(
-      "select count(*) from pg_catalog.pg_locks " +
-      "where locktype = 'advisory' and not granted;\n",
-    ));
+    const count = advisoryWaiterCount();
     if (Number.isSafeInteger(count) && count >= minimum) return;
     await new Promise((resolve) => setTimeout(resolve, 50));
   }
@@ -751,41 +755,53 @@ test("exact Practice browser-to-Postgres durable loop", async ({ browser }) => {
       `select id from auth.users where email = '${escapedEmail}';\n`,
     );
     expect(ownerUserId).toMatch(/^[0-9a-f-]{36}$/i);
-    const waiterBaseline = Number(databaseScalar(
-      "select count(*) from pg_catalog.pg_locks " +
-      "where locktype = 'advisory' and not granted;\n",
-    ));
+    const seededRecordId = randomUUID();
+    const seededStart = await concurrentContext.request.post(
+      "/api/review-os/c3r-p",
+      { data: {
+        action: "start",
+        commandId: randomUUID(),
+        recordId: seededRecordId,
+        attemptId: randomUUID(),
+        attemptBody: "삭제 순서 검증을 위한 독립 브라우저의 첫 시도입니다.",
+        prediction: "likely_partial",
+        confidence: "medium",
+        evidenceStep: "d0",
+      } },
+    );
+    expect(seededStart.status()).toBe(200);
+    const waiterBaseline = advisoryWaiterCount();
     expect(Number.isSafeInteger(waiterBaseline)).toBe(true);
     const lockHolder = await holdLearnerMutationLock(ownerUserId);
     let lockReleased = false;
     try {
-      const concurrentRecordId = randomUUID();
-      const concurrentStart = concurrentContext.request.post(
+      const concurrentDelete = contextA.request.post(
+        "/api/review-os/c3r-p",
+        { data: { action: "delete" } },
+      );
+      await waitForAdvisoryWaiters(waiterBaseline + 1);
+      const rejectedStart = await concurrentContext.request.post(
         "/api/review-os/c3r-p",
         { data: {
           action: "start",
           commandId: randomUUID(),
-          recordId: concurrentRecordId,
+          recordId: randomUUID(),
           attemptId: randomUUID(),
-          attemptBody: "삭제와 경쟁하는 독립 브라우저의 첫 시도입니다.",
+          attemptBody: "이미 대기 중인 삭제 뒤에는 생성되지 않아야 합니다.",
           prediction: "likely_partial",
           confidence: "medium",
           evidenceStep: "d0",
         } },
       );
-      await waitForAdvisoryWaiters(waiterBaseline + 1);
-      const concurrentDelete = contextA.request.post(
-        "/api/review-os/c3r-p",
-        { data: { action: "delete" } },
-      );
-      await waitForAdvisoryWaiters(waiterBaseline + 2);
+      expect(rejectedStart.status()).toBe(409);
+      expect(await rejectedStart.json()).toEqual({
+        ok: false,
+        error: "invalid_transition",
+      });
+      expect(advisoryWaiterCount()).toBe(waiterBaseline + 1);
       await lockHolder.release();
       lockReleased = true;
-      const [startResult, deleteResult] = await Promise.all([
-        concurrentStart,
-        concurrentDelete,
-      ]);
-      expect([200, 404]).toContain(startResult.status());
+      const deleteResult = await concurrentDelete;
       expect(deleteResult.status()).toBe(200);
       expect(await deleteResult.json()).toMatchObject({
         ok: true,
@@ -836,6 +852,7 @@ test("exact Practice browser-to-Postgres durable loop", async ({ browser }) => {
         emptyExportCollectionsAreArrays: true,
         deleteRemovesExportedData: true,
         deleteMutationSerialization: true,
+        deleteWinsBothLockOrders: true,
         planHistoryRestartRestored: true,
         planHistoryExportedAndDeleted: true,
         rawLearnerBodyInEvidence: false,

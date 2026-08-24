@@ -170,6 +170,7 @@ function sampleArtifact() {
       planBlockStateClosure: true,
       planProjectionClosure: true,
       deleteMutationSerialization: true,
+      deleteWinsBothLockOrders: true,
       assistedD1History: true,
       assistedD1Rescheduling: true,
       delayedReviewEligibility: true,
@@ -528,8 +529,8 @@ test("learner export deterministically includes owned assistance events and fina
   assert.equal(contract.practiceRuntimeArtifact.metadataOnly, true);
 });
 
-test("learner deletion serializes every mutation before destructive counts and writes", () => {
-  const functionBoundaries = [
+test("learner deletion wins both lock orders and mutations fail closed instead of queueing", () => {
+  const mutationBoundaries = [
     [
       "create or replace function public.c3r_p_apply_learning_command_v1",
       "create or replace function public.c3r_p_create_plan_v1",
@@ -545,33 +546,45 @@ test("learner deletion serializes every mutation before destructive counts and w
       "create or replace function public.c3r_p_find_record_v1",
       "from public.c3r_p_command_receipts",
     ],
-    [
-      "create or replace function public.c3r_p_delete_learner_data_v1",
-      "do $$",
-      "select count(*) into v_records",
-    ],
   ];
-  const lockPattern = /pg_catalog\.pg_advisory_xact_lock\([\s\S]*?pg_catalog\.hashtextextended\('c3r-p-learner:' \|\| p_user_id::text, 0\)[\s\S]*?\);/g;
-  assert.equal(sql.match(lockPattern)?.length, 4);
-  for (const [startMarker, endMarker, firstMutationMarker] of functionBoundaries) {
+  const tryLockPattern = /pg_catalog\.pg_try_advisory_xact_lock\([\s\S]*?pg_catalog\.hashtextextended\('c3r-p-learner:' \|\| p_user_id::text, 0\)[\s\S]*?\)/g;
+  assert.equal(sql.match(tryLockPattern)?.length, 3);
+  for (const [startMarker, endMarker, firstMutationMarker] of mutationBoundaries) {
     const start = sql.indexOf(startMarker);
     const end = sql.indexOf(endMarker, start + startMarker.length);
     assert.ok(start >= 0 && end > start, startMarker);
     const functionSource = sql.slice(start, end);
-    const lockMatches = functionSource.match(lockPattern) ?? [];
+    const lockMatches = functionSource.match(tryLockPattern) ?? [];
     assert.equal(lockMatches.length, 1, startMarker);
+    assert.match(functionSource, /C3R_P_LEARNER_MUTATION_BUSY[\s\S]*55P03/);
     assert.ok(
-      functionSource.indexOf("pg_catalog.pg_advisory_xact_lock") <
+      functionSource.indexOf("pg_catalog.pg_try_advisory_xact_lock") <
         functionSource.indexOf(firstMutationMarker),
       startMarker,
     );
   }
+  const deleteFunction = sql.slice(
+    sql.indexOf("create or replace function public.c3r_p_delete_learner_data_v1"),
+    sql.indexOf("do $$", sql.indexOf("create or replace function public.c3r_p_delete_learner_data_v1")),
+  );
+  const blockingLockPattern = /pg_catalog\.pg_advisory_xact_lock\([\s\S]*?pg_catalog\.hashtextextended\('c3r-p-learner:' \|\| p_user_id::text, 0\)[\s\S]*?\);/g;
+  assert.equal(deleteFunction.match(blockingLockPattern)?.length, 1);
+  assert.doesNotMatch(deleteFunction, /pg_try_advisory_xact_lock/);
+  assert.ok(
+    deleteFunction.indexOf("pg_catalog.pg_advisory_xact_lock") <
+      deleteFunction.indexOf("select count(*) into v_records"),
+  );
   assert.match(browserSource, /holdLearnerMutationLock\(ownerUserId\)/);
   assert.match(browserSource, /waitForAdvisoryWaiters\(waiterBaseline \+ 1\)/);
-  assert.match(browserSource, /waitForAdvisoryWaiters\(waiterBaseline \+ 2\)/);
+  assert.doesNotMatch(browserSource, /waitForAdvisoryWaiters\(waiterBaseline \+ 2\)/);
+  assert.match(browserSource, /expect\(rejectedStart\.status\(\)\)\.toBe\(409\)/);
+  assert.match(browserSource, /expect\(advisoryWaiterCount\(\)\)\.toBe\(waiterBaseline \+ 1\)/);
   assert.match(browserSource, /deleteMutationSerialization: true/);
+  assert.match(browserSource, /deleteWinsBothLockOrders: true/);
   assert.match(runtimeSource, /browserEvidence\.deleteMutationSerialization !== true/);
+  assert.match(runtimeSource, /browserEvidence\.deleteWinsBothLockOrders !== true/);
   assert.match(runtimeSource, /deleteMutationSerialization: true/);
+  assert.match(runtimeSource, /deleteWinsBothLockOrders: true/);
 });
 
 test("assisted D+1 atomically appends an exact event and bodyless learner ledger history", () => {

@@ -400,7 +400,7 @@ export function validatePracticeRuntimeArtifact(artifact, repositoryRoot = proce
       "migrationCount", "serverVersionNum", "browserToPostgres", "restartRestore",
       "exportDelete", "reopenedCompletion", "planBlockCompletion",
       "completeLearnerExport", "transferTaskClosure", "planBlockStateClosure",
-      "planProjectionClosure", "deleteMutationSerialization",
+      "planProjectionClosure", "deleteMutationSerialization", "deleteWinsBothLockOrders",
       "assistedD1History", "assistedD1Rescheduling", "delayedReviewEligibility",
       "stateMachineMatrixPairs",
       "stateMachineMatrixResult",
@@ -413,6 +413,7 @@ export function validatePracticeRuntimeArtifact(artifact, repositoryRoot = proce
       cycle.planBlockCompletion !== true || cycle.completeLearnerExport !== true ||
       cycle.transferTaskClosure !== true || cycle.planBlockStateClosure !== true ||
       cycle.planProjectionClosure !== true || cycle.deleteMutationSerialization !== true ||
+      cycle.deleteWinsBothLockOrders !== true ||
       cycle.assistedD1History !== true || cycle.assistedD1Rescheduling !== true ||
       cycle.delayedReviewEligibility !== true ||
       cycle.stateMachineMatrixPairs !== 112 ||
@@ -1361,6 +1362,7 @@ async function runDedicatedCycle(input) {
       browserEvidence.emptyExportCollectionsAreArrays !== true ||
       browserEvidence.deleteRemovesExportedData !== true ||
       browserEvidence.deleteMutationSerialization !== true ||
+      browserEvidence.deleteWinsBothLockOrders !== true ||
       browserEvidence.planHistoryRestartRestored !== true ||
       browserEvidence.planHistoryExportedAndDeleted !== true ||
       browserEvidence.sealedTransferTaskPersisted !== true ||
@@ -1438,6 +1440,7 @@ async function runDedicatedCycle(input) {
       planBlockStateClosure: true,
       planProjectionClosure: true,
       deleteMutationSerialization: true,
+      deleteWinsBothLockOrders: true,
       assistedD1History: true,
       assistedD1Rescheduling: true,
       delayedReviewEligibility: true,
