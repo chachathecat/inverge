@@ -379,12 +379,15 @@ export function validatePracticeRuntimeArtifact(artifact, repositoryRoot = proce
     exactKeys(cycle, [
       "cycle", "receiptId", "databaseIdentity", "containerIdentity", "volumeIdentity",
       "migrationCount", "serverVersionNum", "browserToPostgres", "restartRestore",
-      "exportDelete", "oracleEvidenceSha256", "cleanup",
+      "exportDelete", "reopenedCompletion", "planBlockCompletion",
+      "completeLearnerExport", "oracleEvidenceSha256", "cleanup",
     ], `reset/replay cycle ${index + 1}`);
     if (cycle.cycle !== index + 1 || cycle.migrationCount !== 26 ||
       cycle.serverVersionNum !== ORACLE_SERVER_VERSION_NUM ||
       cycle.browserToPostgres !== true || cycle.restartRestore !== true ||
-      cycle.exportDelete !== true || cycle.cleanup !== "complete" ||
+      cycle.exportDelete !== true || cycle.reopenedCompletion !== true ||
+      cycle.planBlockCompletion !== true || cycle.completeLearnerExport !== true ||
+      cycle.cleanup !== "complete" ||
       !SHA64.test(cycle.oracleEvidenceSha256)) {
       throw new Error(`reset/replay cycle ${index + 1} is incomplete.`);
     }
@@ -1300,6 +1303,20 @@ async function runDedicatedCycle(input) {
     const browserEvidence = JSON.parse(fs.readFileSync(browserEvidencePath, "utf8"));
     if (browserEvidence.browserToPostgres !== true || browserEvidence.restartRestore !== true ||
       browserEvidence.crossUserDenied !== true || browserEvidence.exportDelete !== true ||
+      browserEvidence.reopenedCompletion !== true || browserEvidence.planBlockCompletion !== true ||
+      browserEvidence.completeLearnerExport !== true ||
+      browserEvidence.assistedRetryDenied !== true || browserEvidence.incorrectRetryDenied !== true ||
+      browserEvidence.staleRetryDenied !== true ||
+      browserEvidence.duplicateRetryIdempotent !== true ||
+      browserEvidence.crossUserRetryDenied !== true ||
+      browserEvidence.unrelatedPlanBlockUnchanged !== true ||
+      browserEvidence.laterFailureReopensAgain !== true ||
+      browserEvidence.assistanceExportedExactlyOnce !== true ||
+      browserEvidence.todayAndFullDayBlocksExported !== true ||
+      browserEvidence.editedPlanBlocksExportFinalValues !== true ||
+      browserEvidence.crossUserExportRowsAbsent !== true ||
+      browserEvidence.emptyExportCollectionsAreArrays !== true ||
+      browserEvidence.deleteRemovesExportedData !== true ||
       browserEvidence.rawLearnerBodyInEvidence !== false || browserEvidence.providerCalls !== 0) {
       throw new Error(`C3R-P browser evidence cycle ${input.cycle} is incomplete.`);
     }
@@ -1328,6 +1345,9 @@ async function runDedicatedCycle(input) {
       browserToPostgres: true,
       restartRestore: true,
       exportDelete: true,
+      reopenedCompletion: true,
+      planBlockCompletion: true,
+      completeLearnerExport: true,
       oracleEvidenceSha256: oracle.sha256,
       cleanup: "complete",
     };

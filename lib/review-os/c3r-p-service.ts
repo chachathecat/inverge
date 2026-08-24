@@ -10,7 +10,7 @@ import {
   C3R_P_RUNTIME_ARTIFACT_REF,
   C3R_P_VALIDATOR_ID,
   C3RPError,
-  type C3RPPlanBlock,
+  type C3RPPlanBlockInput,
   type C3RPPracticeClaimInput,
   type C3RPView,
 } from "./c3r-p-contract";
@@ -32,6 +32,10 @@ const EVIDENCE_TIMES = Object.freeze({
   recurrence: "2026-09-02T00:06:00.000Z",
   reopen: "2026-09-03T00:06:00.000Z",
   plan: "2026-09-03T00:07:00.000Z",
+  planToday: "2026-09-03T00:07:00.000Z",
+  planFullDay: "2026-09-03T00:08:00.000Z",
+  reopenComplete: "2026-09-03T00:09:00.000Z",
+  reopenAgain: "2026-09-03T00:10:00.000Z",
 });
 const PRIMARY_SURFACE_ID = "server:practice-primary-v1" as const;
 const TRANSFER_SURFACE_ID = "server:practice-transfer-v1" as const;
@@ -149,12 +153,14 @@ export function createC3RPService(authenticatedUserId: string) {
       | "complete_d1"
       | "complete_d7_transfer"
       | "complete_recurrence"
+      | "complete_reopened_review"
       | "record_later_failure";
     recordId: string;
     expectedVersion: number;
     commandId: string;
     attemptId: string;
     claim: C3RPPracticeClaimInput;
+    planBlockId?: string | null;
     evidenceStep?: string;
   }) {
     const occurredAt = now(input.evidenceStep);
@@ -186,6 +192,9 @@ export function createC3RPService(authenticatedUserId: string) {
         occurredAt,
         validatorId: C3R_P_VALIDATOR_ID,
         proofDigest: proof.proofDigest,
+        ...(input.action === "complete_reopened_review"
+          ? { planBlockId: input.planBlockId ?? null }
+          : {}),
       },
     });
     return afterCommand(input.recordId, occurredAt);
@@ -335,7 +344,10 @@ export function createC3RPService(authenticatedUserId: string) {
           planKind: input.kind,
           recordVersion: result.recordVersion,
           state: result.state,
-          blocks: planned.blocks,
+          blocks: planned.blocks.map((block) => ({
+            ...block,
+            executionState: "PENDING" as const,
+          })),
           dayComplete: planned.dayComplete && !planned.supportWorkRemaining,
         },
       } satisfies C3RPView;
@@ -347,7 +359,7 @@ export function createC3RPService(authenticatedUserId: string) {
       planId: string;
       expectedVersion: number;
       decision: "ACCEPT" | "EDIT" | "REJECT";
-      blocks: readonly C3RPPlanBlock[] | null;
+      blocks: readonly C3RPPlanBlockInput[] | null;
       evidenceStep?: string;
     }) {
       const asOf = now(input.evidenceStep);

@@ -258,7 +258,7 @@ create table if not exists public.c3r_p_ledger_entries (
   subject public.c3r_p_subject not null default 'PRACTICE',
   entry_kind text not null check (entry_kind in (
     'D0_FROZEN', 'GAP_OPENED', 'REPAIR_RECORDED', 'D1_RECONSTRUCTED',
-    'D7_TRANSFERRED', 'RECURRENCE_COMPLETED', 'GAP_REOPENED'
+    'D7_TRANSFERRED', 'RECURRENCE_COMPLETED', 'GAP_REOPENED', 'REOPENED_COMPLETED'
   )),
   evidence_ref text not null,
   projection jsonb not null,
@@ -478,6 +478,7 @@ declare
   v_phase public.c3r_p_review_phase;
   v_outcome public.c3r_p_attempt_outcome;
   v_entry_kind text;
+  v_completed_plan_blocks integer;
 begin
   if current_user <> 'service_role' then
     raise exception 'C3R_P_SERVICE_ROLE_REQUIRED' using errcode = '42501';
@@ -656,12 +657,19 @@ begin
       );
     elsif p_action in (
       'record_assisted_review', 'complete_d1', 'complete_d7_transfer',
-      'complete_recurrence', 'record_later_failure'
+      'complete_recurrence', 'complete_reopened_review', 'record_later_failure'
     ) then
-      perform public.c3r_p_require_exact_keys_v1(p_payload, array[
-        'attemptBody', 'attemptId', 'configurationDigest', 'itemId', 'occurredAt',
-        'proofDigest', 'recordId', 'surfaceId', 'validatorId'
-      ]);
+      if p_action = 'complete_reopened_review' then
+        perform public.c3r_p_require_exact_keys_v1(p_payload, array[
+          'attemptBody', 'attemptId', 'configurationDigest', 'itemId', 'occurredAt',
+          'planBlockId', 'proofDigest', 'recordId', 'surfaceId', 'validatorId'
+        ]);
+      else
+        perform public.c3r_p_require_exact_keys_v1(p_payload, array[
+          'attemptBody', 'attemptId', 'configurationDigest', 'itemId', 'occurredAt',
+          'proofDigest', 'recordId', 'surfaceId', 'validatorId'
+        ]);
+      end if;
       if p_payload ->> 'validatorId' <> 'validator:practice-calculation-claim@2' then
         raise exception 'C3R_P_STRUCTURED_PROOF_REQUIRED' using errcode = '23514';
       end if;
@@ -688,6 +696,11 @@ begin
         v_phase := 'RECURRENCE'; v_outcome := 'INDEPENDENT_SUCCESS'; v_entry_kind := 'RECURRENCE_COMPLETED';
         if v_record.state <> 'D7_COMPLETE' or v_now < v_record.recurrence_due_at then
           raise exception 'C3R_P_RECURRENCE_NOT_ELIGIBLE' using errcode = '23514';
+        end if;
+      elsif p_action = 'complete_reopened_review' then
+        v_phase := 'RECURRENCE'; v_outcome := 'INDEPENDENT_SUCCESS'; v_entry_kind := 'REOPENED_COMPLETED';
+        if v_record.state <> 'REOPENED' then
+          raise exception 'C3R_P_REOPENED_COMPLETION_NOT_ELIGIBLE' using errcode = '23514';
         end if;
       else
         v_phase := 'RECURRENCE'; v_outcome := 'FAILURE'; v_entry_kind := 'GAP_REOPENED';
@@ -722,13 +735,33 @@ begin
             when 'complete_d1' then 'D1_COMPLETE'::public.c3r_p_record_state
             when 'complete_d7_transfer' then 'D7_COMPLETE'::public.c3r_p_record_state
             when 'complete_recurrence' then 'CLOSED'::public.c3r_p_record_state
+            when 'complete_reopened_review' then 'CLOSED'::public.c3r_p_record_state
             else 'REOPENED'::public.c3r_p_record_state end,
           record_version = record_version + 1,
           updated_at = v_now
         where id = v_record.id returning * into v_record;
-        if p_action = 'complete_recurrence' then
+        if p_action in ('complete_recurrence', 'complete_reopened_review') then
           update public.c3r_p_learning_gaps set state = 'CLOSED', closed_at = v_now,
-            updated_at = v_now where id = v_record.primary_gap_id;
+            updated_at = v_now
+          where id = v_record.primary_gap_id
+            and user_id = p_user_id
+            and record_id = v_record.id;
+          if p_action = 'complete_reopened_review'
+            and p_payload ->> 'planBlockId' is not null then
+            update public.c3r_p_plan_blocks b set execution_state = 'COMPLETE'
+            from public.c3r_p_plans p
+            where b.id = (p_payload ->> 'planBlockId')::uuid
+              and b.user_id = p_user_id
+              and b.record_id = v_record.id
+              and b.gap_id = v_record.primary_gap_id
+              and p.id = b.plan_id
+              and p.user_id = b.user_id
+              and p.state in ('ACCEPTED', 'EDITED');
+            get diagnostics v_completed_plan_blocks = row_count;
+            if v_completed_plan_blocks <> 1 then
+              raise exception 'C3R_P_PLAN_BLOCK_NOT_CURRENT' using errcode = '23514';
+            end if;
+          end if;
         elsif p_action = 'record_later_failure' then
           update public.c3r_p_learning_gaps set state = 'REOPENED',
             reopen_count = reopen_count + 1, reopened_at = v_now,
@@ -745,10 +778,12 @@ begin
             when 'D1_RECONSTRUCTED' then 'PRACTICE_RUNTIME:c3r-p-practice-common-durable-runtime-v1#706:D_PLUS_1_UNAIDED_RECONSTRUCTION'
             when 'D7_TRANSFERRED' then 'PRACTICE_RUNTIME:c3r-p-practice-common-durable-runtime-v1#706:SEALED_NON_SAME_SURFACE_D_PLUS_7_TRANSFER'
             when 'RECURRENCE_COMPLETED' then 'PRACTICE_RUNTIME:c3r-p-practice-common-durable-runtime-v1#706:TIMED_RECURRENCE'
+            when 'REOPENED_COMPLETED' then 'PRACTICE_RUNTIME:c3r-p-practice-common-durable-runtime-v1#706:POST_REOPEN_INDEPENDENT_COMPLETION'
             else 'PRACTICE_RUNTIME:c3r-p-practice-common-durable-runtime-v1#706:LATER_FAILURE_REOPEN'
           end,
           jsonb_build_object('phase', v_phase, 'outcome', v_outcome,
-            'itemId', p_payload ->> 'itemId', 'surfaceId', p_payload ->> 'surfaceId'), v_now
+            'itemId', p_payload ->> 'itemId', 'surfaceId', p_payload ->> 'surfaceId',
+            'planBlockId', p_payload ->> 'planBlockId'), v_now
         );
       end if;
     else
@@ -1071,7 +1106,8 @@ begin
         'recordId', b.record_id,
         'gapId', b.gap_id,
         'ordinal', b.ordinal,
-        'minutes', b.minutes
+        'minutes', b.minutes,
+        'executionState', b.execution_state
       ) order by b.ordinal)
         from public.c3r_p_plan_blocks b
         where b.user_id = p_user_id and b.plan_id = p.id), '[]'::jsonb),
@@ -1106,6 +1142,8 @@ begin
       from public.c3r_p_learning_records r where r.user_id = p_user_id), '[]'::jsonb),
     'attempts', coalesce((select jsonb_agg(to_jsonb(a) order by a.occurred_at)
       from public.c3r_p_attempts a where a.user_id = p_user_id), '[]'::jsonb),
+    'assistanceEvents', coalesce((select jsonb_agg(to_jsonb(e) order by e.committed_at, e.id)
+      from public.c3r_p_assistance_events e where e.user_id = p_user_id), '[]'::jsonb),
     'failureNotes', coalesce((select jsonb_agg(to_jsonb(n) order by n.created_at)
       from public.c3r_p_failure_notes n where n.user_id = p_user_id), '[]'::jsonb),
     'gaps', coalesce((select jsonb_agg(to_jsonb(g) order by g.created_at)
@@ -1113,7 +1151,9 @@ begin
     'ledger', coalesce((select jsonb_agg(to_jsonb(l) order by l.occurred_at)
       from public.c3r_p_ledger_entries l where l.user_id = p_user_id), '[]'::jsonb),
     'plans', coalesce((select jsonb_agg(to_jsonb(p) order by p.generated_at)
-      from public.c3r_p_plans p where p.user_id = p_user_id), '[]'::jsonb)
+      from public.c3r_p_plans p where p.user_id = p_user_id), '[]'::jsonb),
+    'planBlocks', coalesce((select jsonb_agg(to_jsonb(b) order by b.plan_id, b.ordinal, b.id)
+      from public.c3r_p_plan_blocks b where b.user_id = p_user_id), '[]'::jsonb)
   );
 end;
 $$;

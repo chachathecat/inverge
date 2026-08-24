@@ -359,13 +359,19 @@ test("exact Practice browser-to-Postgres durable loop", async ({ browser }) => {
     await expect(pageA.getByTestId("c3r-p-ledger")).toContainText(
       "LATER_FAILURE_REOPEN",
     );
+    await expect(pageA.getByTestId("c3r-p-ledger")).toContainText(
+      "REOPENED_COMPLETED",
+    );
 
     const contextB = await contextFor(browser, emailB, passwordB);
     const denial = await contextB.request.get(
       `/api/review-os/c3r-p?recordId=${prior.recordId}`,
     );
     expect(denial.status()).toBe(404);
-    await contextB.close();
+    const foreignRecord = await contextB.request.get(
+      `/api/review-os/c3r-p?recordId=${prior.foreignRecordId}`,
+    );
+    expect(foreignRecord.status()).toBe(200);
 
     const exportResponse = await contextA.request.post(
       "/api/review-os/c3r-p",
@@ -374,7 +380,58 @@ test("exact Practice browser-to-Postgres durable loop", async ({ browser }) => {
     expect(exportResponse.status()).toBe(200);
     const exported = await exportResponse.json();
     expect(exported.ok).toBe(true);
-    expect(JSON.stringify(exported)).not.toContain(emailA);
+    const learnerExport = exported.export;
+    for (const collection of [
+      "records", "attempts", "assistanceEvents", "failureNotes", "gaps",
+      "ledger", "plans", "planBlocks",
+    ]) {
+      expect(Array.isArray(learnerExport[collection]), collection).toBe(true);
+    }
+    const assistanceEvents = learnerExport.assistanceEvents.filter(
+      (event: { record_id: string }) => event.record_id === prior.recordId,
+    );
+    expect(assistanceEvents).toHaveLength(1);
+    expect(assistanceEvents[0]).toMatchObject({
+      record_id: prior.recordId,
+      gap_id: prior.gapId,
+    });
+    const todayBlocks = learnerExport.planBlocks.filter(
+      (block: { plan_id: string }) => block.plan_id === prior.todayPlanId,
+    );
+    const fullDayBlocks = learnerExport.planBlocks.filter(
+      (block: { plan_id: string }) => block.plan_id === prior.fullDayPlanId,
+    );
+    expect(todayBlocks).toEqual([expect.objectContaining({
+      id: prior.editedTodayBlockId,
+      record_id: prior.recordId,
+      gap_id: prior.gapId,
+      minutes: 25,
+      execution_state: "PENDING",
+    })]);
+    expect(fullDayBlocks).toEqual([expect.objectContaining({
+      id: prior.fullDayBlockId,
+      record_id: prior.recordId,
+      gap_id: prior.gapId,
+      execution_state: "COMPLETE",
+    })]);
+    expect(learnerExport.planBlocks).not.toEqual(expect.arrayContaining([
+      expect.objectContaining({ id: prior.initialTodayBlockId }),
+    ]));
+    expect(learnerExport.plans).toEqual(expect.arrayContaining([
+      expect.objectContaining({ id: prior.todayPlanId, plan_kind: "TODAY" }),
+      expect.objectContaining({ id: prior.fullDayPlanId, plan_kind: "FULL_DAY" }),
+    ]));
+    expect(learnerExport.attempts.filter(
+      (attempt: { id: string }) => attempt.id === prior.completionAttemptId,
+    )).toHaveLength(1);
+    expect(learnerExport.ledger.filter(
+      (entry: { entry_kind: string }) => entry.entry_kind === "REOPENED_COMPLETED",
+    )).toHaveLength(1);
+    const serializedExport = JSON.stringify(exported);
+    expect(serializedExport).not.toContain(emailA);
+    expect(serializedExport).not.toContain(emailB);
+    expect(serializedExport).not.toContain(prior.foreignRecordId);
+    expect(serializedExport).not.toContain(prior.foreignAssistanceEventId);
 
     let denyDeleteOnce = true;
     await pageA.route("**/api/review-os/c3r-p", async (route) => {
@@ -428,7 +485,7 @@ test("exact Practice browser-to-Postgres durable loop", async ({ browser }) => {
       ok: true,
       result: {
         deletedRecords: 1,
-        deletedPlans: 1,
+        deletedPlans: 2,
         status: "deleted",
       },
     });
@@ -438,6 +495,23 @@ test("exact Practice browser-to-Postgres durable loop", async ({ browser }) => {
       `/api/review-os/c3r-p?recordId=${prior.recordId}`,
     );
     expect(deleted.status()).toBe(404);
+    const emptyExportResponse = await contextA.request.post(
+      "/api/review-os/c3r-p",
+      { data: { action: "export" } },
+    );
+    expect(emptyExportResponse.status()).toBe(200);
+    const emptyExport = (await emptyExportResponse.json()).export;
+    for (const collection of [
+      "records", "attempts", "assistanceEvents", "failureNotes", "gaps",
+      "ledger", "plans", "planBlocks",
+    ]) {
+      expect(emptyExport[collection]).toEqual([]);
+    }
+    const unaffectedForeignRecord = await contextB.request.get(
+      `/api/review-os/c3r-p?recordId=${prior.foreignRecordId}`,
+    );
+    expect(unaffectedForeignRecord.status()).toBe(200);
+    await contextB.close();
     await contextA.close();
     writeFileSync(
       evidencePath,
@@ -446,6 +520,12 @@ test("exact Practice browser-to-Postgres durable loop", async ({ browser }) => {
         restartRestore: true,
         crossUserDenied: true,
         exportDelete: true,
+        assistanceExportedExactlyOnce: true,
+        todayAndFullDayBlocksExported: true,
+        editedPlanBlocksExportFinalValues: true,
+        crossUserExportRowsAbsent: true,
+        emptyExportCollectionsAreArrays: true,
+        deleteRemovesExportedData: true,
         rawLearnerBodyInEvidence: false,
       })}\n`,
       "utf8",
@@ -634,6 +714,105 @@ test("exact Practice browser-to-Postgres durable loop", async ({ browser }) => {
     .getByRole("button", { name: "입력한 후속 실패로 간극 다시 열기" })
     .click();
   await expectState(secondPage, "REOPENED");
+  const reopenedResponse = await context.request.get(
+    `/api/review-os/c3r-p?recordId=${recordId}`,
+  );
+  expect(reopenedResponse.status()).toBe(200);
+  const reopened = await reopenedResponse.json();
+  const reopenedVersion = reopened.view.restored.record.record_version;
+  const gapId = reopened.view.restored.gaps[0].id;
+
+  const contextB = await contextFor(browser, emailB, passwordB);
+  const foreignRecordId = randomUUID();
+  const foreignStart = await contextB.request.post("/api/review-os/c3r-p", {
+    data: {
+      action: "start",
+      commandId: randomUUID(),
+      recordId: foreignRecordId,
+      attemptId: randomUUID(),
+      attemptBody: "다른 학습자의 독립된 첫 시도입니다.",
+      prediction: "likely_partial",
+      confidence: "medium",
+      evidenceStep: "d0",
+    },
+  });
+  expect(foreignStart.status()).toBe(200);
+  const foreignAssistanceEventId = randomUUID();
+  const foreignFeedback = await contextB.request.post("/api/review-os/c3r-p", {
+    data: {
+      action: "commit_feedback",
+      commandId: randomUUID(),
+      recordId: foreignRecordId,
+      expectedVersion: 1,
+      gapId: randomUUID(),
+      failureNoteId: randomUUID(),
+      assistanceEventId: foreignAssistanceEventId,
+      failureNote: "다른 학습자에게만 속하는 실패 메모입니다.",
+      evidenceStep: "feedback",
+    },
+  });
+  expect(foreignFeedback.status()).toBe(200);
+
+  const assistedRetry = await context.request.post("/api/review-os/c3r-p", {
+    data: {
+      action: "record_assisted_review",
+      commandId: randomUUID(),
+      recordId,
+      expectedVersion: reopenedVersion,
+      attemptId: randomUUID(),
+      claim: practiceClaim(C3R_P_SOURCE_REVISION_ID),
+      evidenceStep: "reopenComplete",
+    },
+  });
+  expect(assistedRetry.status()).toBe(409);
+  const incorrectRetry = await context.request.post("/api/review-os/c3r-p", {
+    data: {
+      action: "complete_reopened_review",
+      commandId: randomUUID(),
+      recordId,
+      expectedVersion: reopenedVersion,
+      attemptId: randomUUID(),
+      claim: practiceClaim(C3R_P_SOURCE_REVISION_ID, 90_000_000),
+      planBlockId: null,
+      evidenceStep: "reopenComplete",
+    },
+  });
+  expect(incorrectRetry.status()).toBe(409);
+  const staleRetry = await context.request.post("/api/review-os/c3r-p", {
+    data: {
+      action: "complete_reopened_review",
+      commandId: randomUUID(),
+      recordId,
+      expectedVersion: reopenedVersion - 1,
+      attemptId: randomUUID(),
+      claim: practiceClaim(C3R_P_SOURCE_REVISION_ID),
+      planBlockId: null,
+      evidenceStep: "reopenComplete",
+    },
+  });
+  expect(staleRetry.status()).toBe(409);
+  const crossUserRetry = await contextB.request.post("/api/review-os/c3r-p", {
+    data: {
+      action: "complete_reopened_review",
+      commandId: randomUUID(),
+      recordId,
+      expectedVersion: reopenedVersion,
+      attemptId: randomUUID(),
+      claim: practiceClaim(C3R_P_SOURCE_REVISION_ID),
+      planBlockId: null,
+      evidenceStep: "reopenComplete",
+    },
+  });
+  expect(crossUserRetry.status()).toBe(404);
+  const afterHostileRetries = await context.request.get(
+    `/api/review-os/c3r-p?recordId=${recordId}`,
+  );
+  const afterHostileRetryBody = await afterHostileRetries.json();
+  expect(afterHostileRetryBody.view.restored.record).toMatchObject({
+    state: "REOPENED",
+    record_version: reopenedVersion,
+  });
+
   const createPlanRequestPromise = secondPage.waitForRequest((request) =>
     new URL(request.url()).pathname === "/api/review-os/c3r-p" &&
     request.method() === "POST" &&
@@ -654,7 +833,7 @@ test("exact Practice browser-to-Postgres durable loop", async ({ browser }) => {
     recordId,
     kind: "TODAY",
     availableMinutes: 90,
-    evidenceStep: "plan",
+    evidenceStep: "planToday",
   });
   const createPlanResponse = await createPlanResponsePromise;
   const createPlanBody = await createPlanResponse.json();
@@ -685,6 +864,9 @@ test("exact Practice browser-to-Postgres durable loop", async ({ browser }) => {
     },
   });
   expect(createPlanBody.view.currentPlan.blocks.length).toBeGreaterThan(0);
+  expect(createPlanBody.view.currentPlan.blocks[0].executionState).toBe("PENDING");
+  const todayPlanId = createPlanBody.view.currentPlan.planId;
+  const initialTodayBlockId = createPlanBody.view.currentPlan.blocks[0].blockId;
   expect(createPlanBody.view.dashboard.plans).toEqual(
     expect.arrayContaining([
       expect.objectContaining({
@@ -707,7 +889,8 @@ test("exact Practice browser-to-Postgres durable loop", async ({ browser }) => {
   await secondPage.getByRole("button", { name: "편집" }).click();
   const editPlanResponse = await editPlanResponsePromise;
   expect(editPlanResponse.status()).toBe(200);
-  expect(await editPlanResponse.json()).toMatchObject({
+  const editPlanBody = await editPlanResponse.json();
+  expect(editPlanBody).toMatchObject({
     ok: true,
     view: {
       restored: {
@@ -723,11 +906,119 @@ test("exact Practice browser-to-Postgres durable loop", async ({ browser }) => {
       },
     },
   });
+  const editedTodayBlock = editPlanBody.view.currentPlan.blocks[0];
+  expect(editedTodayBlock).toMatchObject({
+    minutes: 25,
+    executionState: "PENDING",
+  });
+  expect(editedTodayBlock.blockId).not.toBe(initialTodayBlockId);
   await expect(secondPage.getByText("계획 상태: EDITED")).toBeVisible();
+
+  const fullDayResponsePromise = secondPage.waitForResponse((response) =>
+    response.request().postDataJSON()?.action === "create_plan",
+  );
+  await secondPage.getByRole("button", { name: "Full-Day 240분" }).click();
+  const fullDayResponse = await fullDayResponsePromise;
+  expect(fullDayResponse.status()).toBe(200);
+  const fullDayBody = await fullDayResponse.json();
+  expect(fullDayBody.view.currentPlan).toMatchObject({
+    planKind: "FULL_DAY",
+    state: "PROPOSED",
+  });
+  const fullDayPlanId = fullDayBody.view.currentPlan.planId;
+  const fullDayBlockId = fullDayBody.view.currentPlan.blocks[0].blockId;
+  const acceptPlanResponsePromise = secondPage.waitForResponse((response) =>
+    response.request().postDataJSON()?.action === "decide_plan",
+  );
+  await secondPage.getByRole("button", { name: "수락" }).click();
+  const acceptPlanResponse = await acceptPlanResponsePromise;
+  expect(acceptPlanResponse.status()).toBe(200);
+  const acceptedPlan = await acceptPlanResponse.json();
+  expect(acceptedPlan.view.currentPlan).toMatchObject({
+    planId: fullDayPlanId,
+    state: "ACCEPTED",
+    blocks: [expect.objectContaining({
+      blockId: fullDayBlockId,
+      executionState: "PENDING",
+    })],
+  });
+
+  await fillStructuredCalculation(secondPage);
+  const completionRequestPromise = secondPage.waitForRequest((request) =>
+    request.postDataJSON()?.action === "complete_reopened_review",
+  );
+  const completionResponsePromise = secondPage.waitForResponse((response) =>
+    response.request().postDataJSON()?.action === "complete_reopened_review",
+  );
+  await secondPage.getByRole("button", {
+    name: "다시 열린 복습을 독립 수행으로 완료",
+  }).click();
+  const completionRequest = await completionRequestPromise;
+  const completionPayload = completionRequest.postDataJSON();
+  expect(completionPayload).toMatchObject({
+    action: "complete_reopened_review",
+    recordId,
+    expectedVersion: reopenedVersion,
+    planBlockId: fullDayBlockId,
+    evidenceStep: "reopenComplete",
+  });
+  const completionAttemptId = completionPayload.attemptId;
+  const completionResponse = await completionResponsePromise;
+  expect(completionResponse.status()).toBe(200);
+  const completionBody = await completionResponse.json();
+  expect(completionBody.view.restored.record.state).toBe("CLOSED");
+  expect(completionBody.view.restored.gaps[0].state).toBe("CLOSED");
+  expect(completionBody.view.dashboard.queue).not.toEqual(expect.arrayContaining([
+    expect.objectContaining({ recordId }),
+  ]));
+  expect(completionBody.view.currentPlan).toMatchObject({
+    planId: fullDayPlanId,
+    dayComplete: true,
+    blocks: [expect.objectContaining({
+      blockId: fullDayBlockId,
+      executionState: "COMPLETE",
+    })],
+  });
+  await expectState(secondPage, "CLOSED");
+  await expect(secondPage.getByTestId("c3r-p-queue-count")).toHaveText(
+    "실행 가능한 Review Queue: 0개",
+  );
+  await expect(secondPage.getByText(/CORE_OUTCOME · 30분 · COMPLETE/u)).toBeVisible();
+  await expect(secondPage.getByText("dayComplete: true")).toBeVisible();
+
+  const duplicateCompletion = await context.request.post(
+    "/api/review-os/c3r-p",
+    { data: completionPayload },
+  );
+  expect(duplicateCompletion.status()).toBe(200);
+  expect((await duplicateCompletion.json()).view.restored.record.state).toBe("CLOSED");
+
   await secondPage.reload();
+  await expectState(secondPage, "CLOSED");
+  await expect(secondPage.getByTestId("c3r-p-ledger")).toContainText(
+    "REOPENED_COMPLETED",
+  );
+  await expect(secondPage.getByText(/CORE_OUTCOME · 30분 · COMPLETE/u)).toBeVisible();
+  await fillStructuredCalculation(secondPage, "90000000");
+  await secondPage
+    .getByRole("button", { name: "입력한 후속 실패로 간극 다시 열기" })
+    .click();
   await expectState(secondPage, "REOPENED");
-  await expect(secondPage.getByTestId("c3r-p-ledger")).toBeVisible();
-  await expect(secondPage.getByText("계획 상태: EDITED")).toBeVisible();
+  const reopenedAgainResponse = await context.request.get(
+    `/api/review-os/c3r-p?recordId=${recordId}`,
+  );
+  const reopenedAgain = await reopenedAgainResponse.json();
+  expect(reopenedAgain.view.restored.gaps[0]).toMatchObject({
+    state: "REOPENED",
+    reopen_count: 2,
+  });
+  expect(reopenedAgain.view.currentPlan.blocks).toEqual(expect.arrayContaining([
+    expect.objectContaining({
+      blockId: fullDayBlockId,
+      executionState: "COMPLETE",
+    }),
+  ]));
+  await contextB.close();
   expect(foreignHosts.size).toBe(0);
   await secondBrowser.close();
   await context.close();
@@ -736,6 +1027,15 @@ test("exact Practice browser-to-Postgres durable loop", async ({ browser }) => {
     evidencePath,
     `${JSON.stringify({
       recordId,
+      gapId,
+      foreignRecordId,
+      foreignAssistanceEventId,
+      todayPlanId,
+      initialTodayBlockId,
+      editedTodayBlockId: editedTodayBlock.blockId,
+      fullDayPlanId,
+      fullDayBlockId,
+      completionAttemptId,
       browserToPostgres: true,
       secondBrowserRestore: true,
       assistedNotIndependent: true,
@@ -743,6 +1043,16 @@ test("exact Practice browser-to-Postgres durable loop", async ({ browser }) => {
       d7DifferentItemAndSurface: true,
       timedRecurrence: true,
       laterFailureReopen: true,
+      reopenedCompletion: true,
+      planBlockCompletion: true,
+      completeLearnerExport: true,
+      assistedRetryDenied: true,
+      incorrectRetryDenied: true,
+      staleRetryDenied: true,
+      duplicateRetryIdempotent: true,
+      crossUserRetryDenied: true,
+      unrelatedPlanBlockUnchanged: true,
+      laterFailureReopensAgain: true,
       deterministicPlanner: true,
       providerCalls: 0,
     })}\n`,

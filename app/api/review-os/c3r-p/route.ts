@@ -5,7 +5,7 @@ import {
   c3rPExactObject,
   c3rPRequiredText,
   c3rPRequiredUuid,
-  type C3RPPlanBlock,
+  type C3RPPlanBlockInput,
 } from "@/lib/review-os/c3r-p-contract";
 import {
   createC3RPService,
@@ -87,12 +87,12 @@ function planBlocks(value: unknown) {
     }
     return {
       blockId: c3rPRequiredUuid(row.blockId),
-      blockKind: row.blockKind as C3RPPlanBlock["blockKind"],
+      blockKind: row.blockKind as C3RPPlanBlockInput["blockKind"],
       recordId: c3rPRequiredUuid(row.recordId),
       gapId: c3rPRequiredUuid(row.gapId),
       ordinal: requiredInteger(row.ordinal, 1),
       minutes: requiredInteger(row.minutes, 1),
-    } satisfies C3RPPlanBlock;
+    } satisfies C3RPPlanBlockInput;
   });
 }
 
@@ -135,6 +135,7 @@ export async function POST(request: Request) {
       "assistanceEventId",
       "failureNote",
       "claim",
+      "planBlockId",
       "planId",
       "kind",
       "availableMinutes",
@@ -209,6 +210,23 @@ export async function POST(request: Request) {
         action: action as Parameters<typeof service.applyReview>[0]["action"],
         attemptId: c3rPRequiredUuid(row.attemptId),
         claim: parsePracticeCalculationClaimV2Input(row.claim),
+      });
+      return response({ ok: true, view });
+    }
+
+    if (action === "complete_reopened_review") {
+      const row = c3rPExactObject(raw, [
+        "action", "commandId", "recordId", "expectedVersion", "attemptId",
+        "claim", "planBlockId", "evidenceStep",
+      ]);
+      const view = await service.applyReview({
+        ...common(row),
+        action,
+        attemptId: c3rPRequiredUuid(row.attemptId),
+        claim: parsePracticeCalculationClaimV2Input(row.claim),
+        planBlockId: row.planBlockId === null
+          ? null
+          : c3rPRequiredUuid(row.planBlockId),
       });
       return response({ ok: true, view });
     }

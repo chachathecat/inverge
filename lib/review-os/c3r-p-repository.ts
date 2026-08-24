@@ -8,6 +8,7 @@ import {
   type C3RPCommandResult,
   type C3RPDashboard,
   type C3RPPlanBlock,
+  type C3RPPlanBlockInput,
   type C3RPPersistedPlan,
   type C3RPRestoredRecord,
 } from "./c3r-p-contract";
@@ -53,8 +54,11 @@ function booleanValue(value: unknown) {
 function planBlock(value: unknown): C3RPPlanBlock {
   const row = objectValue(value);
   const blockKind = stringValue(row.blockKind);
+  const executionState = stringValue(row.executionState);
   if (!(["CORE_OUTCOME", "SUPPORT"] as const).includes(
     blockKind as C3RPPlanBlock["blockKind"],
+  ) || !(["PENDING", "COMPLETE"] as const).includes(
+    executionState as C3RPPlanBlock["executionState"],
   )) {
     throw new C3RPError("temporarily_unavailable");
   }
@@ -65,6 +69,7 @@ function planBlock(value: unknown): C3RPPlanBlock {
     gapId: stringValue(row.gapId),
     ordinal: integerValue(row.ordinal),
     minutes: integerValue(row.minutes),
+    executionState: executionState as C3RPPlanBlock["executionState"],
   };
 }
 
@@ -201,7 +206,7 @@ export function createC3RPRepository(authenticatedUserId: string) {
       kind: "TODAY" | "FULL_DAY";
       availableMinutes: number;
       asOf: string;
-      blocks: readonly C3RPPlanBlock[];
+      blocks: readonly C3RPPlanBlockInput[];
     }) {
       const result = await adminClient().rpc("c3r_p_create_plan_v1", {
         p_user_id: authenticatedUserId,
@@ -222,7 +227,7 @@ export function createC3RPRepository(authenticatedUserId: string) {
       expectedVersion: number;
       decision: "ACCEPT" | "EDIT" | "REJECT";
       asOf: string;
-      blocks: readonly C3RPPlanBlock[] | null;
+      blocks: readonly C3RPPlanBlockInput[] | null;
     }) {
       const result = await adminClient().rpc("c3r_p_decide_plan_v1", {
         p_user_id: authenticatedUserId,

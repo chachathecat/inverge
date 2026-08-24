@@ -38,9 +38,9 @@ The clean design also resolves every terminal #798 review finding before runtime
 
 | Issue | Evidence | Exact runtime binding |
 | --- | --- | --- |
-| #706 | Frozen D0; assisted success excluded; D+1 unaided reconstruction; sealed different-item/different-surface D+7; recurrence; later-failure reopen | `PRACTICE_RUNTIME:c3r-p-practice-common-durable-runtime-v1#706:*` |
-| #707 | Forced-RLS private ledger; exact source/attempt/artifact/item identity; bodyless projection; private failure note; restore/export/delete | `PRACTICE_RUNTIME:c3r-p-practice-common-durable-runtime-v1#707:*` |
-| #708 | Deterministic Review Queue, Today and Full-Day inside the validated 30–720 minute envelope; CoreOutcome maximum three; support blocks within available time; evidence/planner separation; accept/edit/reject; stale eligibility | `PRACTICE_RUNTIME:c3r-p-practice-common-durable-runtime-v1#708:*` |
+| #706 | Frozen D0; assisted success excluded; D+1 unaided reconstruction; sealed different-item/different-surface D+7; recurrence; later-failure reopen; independent post-reopen completion and later re-reopen | `PRACTICE_RUNTIME:c3r-p-practice-common-durable-runtime-v1#706:*` |
+| #707 | Forced-RLS private ledger; exact source/attempt/artifact/item identity; bodyless projection; private failure note; complete learner-owned assistance/plan-block export; restore/export/delete | `PRACTICE_RUNTIME:c3r-p-practice-common-durable-runtime-v1#707:*` |
+| #708 | Deterministic Review Queue, Today and Full-Day inside the validated 30–720 minute envelope; CoreOutcome maximum three; support blocks within available time; evidence/planner separation; accept/edit/reject; exact current-plan block completion; stale eligibility | `PRACTICE_RUNTIME:c3r-p-practice-common-durable-runtime-v1#708:*` |
 
 The independent verifier recomputes the artifact SHA-256 and Practice evidence digest and returns the exact artifact reference, every Practice reference, browser-to-Postgres reference, every per-item runtime reference, candidate head/tree and digest. Missing, duplicated, reordered, arbitrary, unrelated or self-attested references fail closed. This directly resolves the mandatory acceptance defect preserved from PR #796 without treating that donor artifact or CI as current authority.
 

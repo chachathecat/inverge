@@ -1,7 +1,7 @@
 {
   "schemaVersion": "dabangil.wcv_c3r_p.practice_common_durable_runtime.v1",
   "contractId": "dabangil_wcv_c3r_p_practice_common_durable_runtime_v1",
-  "contractVersion": "1.0.0",
+  "contractVersion": "1.0.1",
   "status": "candidate_effective_only_after_expected_head_pinned_squash_merge_and_validated_github_receipt",
   "authority": {
     "repository": "chachathecat/inverge",
@@ -75,8 +75,8 @@
       }
     ],
     "appendPath": "supabase/migrations/20260822120000_c3r_p_practice_common_durable_substrate.sql",
-    "candidateSqlSha256": "bae3db032d215b5d17b78fec694e7a6caddcddc9608be403317caf6badde61ca",
-    "effectiveInventorySha256": "a1a42ccb309be92b42aa07462bb39f571f39abb1e98a8d54314e88867d83cb7a",
+    "candidateSqlSha256": "fb9f9b3106bae6d43922a1ffc8d39e6c3d42738a50559728621398a7ba70de2c",
+    "effectiveInventorySha256": "e4a33d347063ced54985e73421d9ac603af51a39d303647b1dd050edf3d985ba",
     "remoteMutationCount": 0
   },
   "practiceRuntimeArtifact": {
@@ -89,13 +89,16 @@
       "PRACTICE_RUNTIME:c3r-p-practice-common-durable-runtime-v1#706:SEALED_NON_SAME_SURFACE_D_PLUS_7_TRANSFER",
       "PRACTICE_RUNTIME:c3r-p-practice-common-durable-runtime-v1#706:TIMED_RECURRENCE",
       "PRACTICE_RUNTIME:c3r-p-practice-common-durable-runtime-v1#706:LATER_FAILURE_REOPEN",
+      "PRACTICE_RUNTIME:c3r-p-practice-common-durable-runtime-v1#706:POST_REOPEN_INDEPENDENT_COMPLETION",
       "PRACTICE_RUNTIME:c3r-p-practice-common-durable-runtime-v1#707:LEARNER_PRIVATE_FORCED_RLS_LEDGER",
       "PRACTICE_RUNTIME:c3r-p-practice-common-durable-runtime-v1#707:EXACT_SOURCE_ATTEMPT_ARTIFACT_ITEM_BINDING",
       "PRACTICE_RUNTIME:c3r-p-practice-common-durable-runtime-v1#707:BODYLESS_RECURRING_DEDUCTION_EVIDENCE_PROJECTION",
       "PRACTICE_RUNTIME:c3r-p-practice-common-durable-runtime-v1#707:SOURCE_BOUND_FAILURE_NOTES",
       "PRACTICE_RUNTIME:c3r-p-practice-common-durable-runtime-v1#707:RESTORE_EXPORT_DELETE",
+      "PRACTICE_RUNTIME:c3r-p-practice-common-durable-runtime-v1#707:COMPLETE_ASSISTANCE_PLAN_BLOCK_EXPORT",
       "PRACTICE_RUNTIME:c3r-p-practice-common-durable-runtime-v1#708:DETERMINISTIC_REVIEW_QUEUE",
       "PRACTICE_RUNTIME:c3r-p-practice-common-durable-runtime-v1#708:TODAY_AND_FULL_DAY",
+      "PRACTICE_RUNTIME:c3r-p-practice-common-durable-runtime-v1#708:CURRENT_PLAN_BLOCK_COMPLETION",
       "PRACTICE_RUNTIME:c3r-p-practice-common-durable-runtime-v1#708:CORE_OUTCOME_MAXIMUM_3",
       "PRACTICE_RUNTIME:c3r-p-practice-common-durable-runtime-v1#708:PLANNER_REVIEW_STATE_SEPARATION",
       "PRACTICE_RUNTIME:c3r-p-practice-common-durable-runtime-v1#708:ACCEPT_EDIT_REJECT_WITHOUT_EVIDENCE_MUTATION",

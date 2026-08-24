@@ -120,13 +120,17 @@ export type C3RPQueueItem = Readonly<{
   eligible: boolean;
 }>;
 
-export type C3RPPlanBlock = Readonly<{
+export type C3RPPlanBlockInput = Readonly<{
   blockId: string;
   blockKind: "CORE_OUTCOME" | "SUPPORT";
   recordId: string;
   gapId: string;
   ordinal: number;
   minutes: number;
+}>;
+
+export type C3RPPlanBlock = C3RPPlanBlockInput & Readonly<{
+  executionState: "PENDING" | "COMPLETE";
 }>;
 
 export type C3RPPersistedPlan = Readonly<{

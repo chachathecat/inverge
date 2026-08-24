@@ -16,7 +16,7 @@ import {
   C3R_P_RUNTIME_ARTIFACT_REF,
   C3RPError,
   type C3RPDashboard,
-  type C3RPPlanBlock,
+  type C3RPPlanBlockInput,
 } from "./c3r-p-contract";
 
 export const C3R_P_SOURCE = Object.freeze({
@@ -114,7 +114,7 @@ export function buildC3RPPlan(input: {
       left.dueAt.localeCompare(right.dueAt) ||
       left.recordId.localeCompare(right.recordId),
     );
-  const blocks: C3RPPlanBlock[] = [];
+  const blocks: C3RPPlanBlockInput[] = [];
   let remaining = input.availableMinutes;
   for (let index = 0; index < eligible.length && remaining > 0; index += 1) {
     const minutes = Math.min(index < 3 ? 30 : 15, remaining);

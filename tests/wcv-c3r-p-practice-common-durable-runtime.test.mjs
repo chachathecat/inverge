@@ -45,11 +45,11 @@ const productionAccessBlobs = Object.freeze({
   "lib/review-os/server.ts": "429085a06c3104aa66c49b272738d53f00318d8a",
   "app/app/layout.tsx": "215ec312e2102d39332eeb47e2cc3b446ad78d19",
   "app/app/c3r-p/page.tsx": "1183828115a8a0ef0fb04c5d9c0e42a8ae5bd240",
-  "app/api/review-os/c3r-p/route.ts": "66270009fef5d2d55e263414b3aed1f1eec436d5",
-  "lib/review-os/c3r-p-service.ts": "3700fe86c9a14f423c7d27f5f66385f43b41c603",
-  "lib/review-os/c3r-p-repository.ts": "21da20f69472c1b74208a40ec3889add8790d1ff",
-  "lib/review-os/c3r-p-engine.ts": "255462ab212006ed97936f0ec4ce5687c09aca65",
-  "components/review-os/c3r-p-practice-loop.tsx": "9da1754fb65f8488e8c67317f0c09ea44708cbf5",
+  "app/api/review-os/c3r-p/route.ts": "be9252386a884cc601b819165394a00ae667d0d3",
+  "lib/review-os/c3r-p-service.ts": "61fde8b8c01008325712d458ab8d090b7fa08f74",
+  "lib/review-os/c3r-p-repository.ts": "f4d6adcf02c9429cfd606e5b52c49284bf163d87",
+  "lib/review-os/c3r-p-engine.ts": "2c6cbc01ed77fd556bc8d3ee064da196183d13df",
+  "components/review-os/c3r-p-practice-loop.tsx": "14597ff604221939d35188d2c924d982eeddf60b",
 });
 
 const FORMER_C3R_P_SOURCE_REVISION_ID =
@@ -121,6 +121,9 @@ function sampleArtifact() {
       browserToPostgres: true,
       restartRestore: true,
       exportDelete: true,
+      reopenedCompletion: true,
+      planBlockCompletion: true,
+      completeLearnerExport: true,
       oracleEvidenceSha256: String(cycle).repeat(64),
       cleanup: "complete",
     })),
@@ -282,6 +285,54 @@ test("sole append closes subject, ownership, RLS, RPC, CAS and durable outcome b
   assert.match(sql, /p_action <> 'complete_d7_transfer'[\s\S]*C3R_P_ATTEMPT_ITEM_MISMATCH/);
   assert.match(sql, /c3r_p_attempts_record_binding_fk foreign key \(\s*user_id, record_id, source_id, problem_id, revision_id, artifact_id/);
   assert.match(sql, /'planId', p\.id[\s\S]*'blocks'[\s\S]*'dayComplete'/);
+});
+
+test("reopened Practice completion is an atomic independent retry and exact plan-block transition", () => {
+  assert.match(sql, /p_action = 'complete_reopened_review'/);
+  assert.match(sql,
+    /p_action = 'complete_reopened_review'[\s\S]*v_record\.state <> 'REOPENED'/);
+  assert.match(sql,
+    /p_action = 'complete_reopened_review'[\s\S]*'INDEPENDENT_SUCCESS'/);
+  assert.match(sql,
+    /update public\.c3r_p_learning_gaps set state = 'CLOSED'[\s\S]*complete_reopened_review/);
+  assert.match(sql,
+    /update public\.c3r_p_plan_blocks[\s\S]*execution_state = 'COMPLETE'[\s\S]*p_payload ->> 'planBlockId'/);
+  assert.match(sql, /'REOPENED_COMPLETED'/);
+  assert.match(serviceSource,
+    /complete_reopened_review[\s\S]*planBlockId: input\.planBlockId \?\? null/);
+  assert.match(routeSource,
+    /action === "complete_reopened_review"[\s\S]*planBlockId/);
+  assert.match(componentSource,
+    /record\?\.state === "REOPENED"[\s\S]*다시 열린 복습을 독립 수행으로 완료/);
+  assert.match(browserSource, /assistedRetryDenied: true/);
+  assert.match(browserSource, /incorrectRetryDenied: true/);
+  assert.match(browserSource, /staleRetryDenied: true/);
+  assert.match(browserSource, /duplicateRetryIdempotent: true/);
+  assert.match(browserSource, /crossUserRetryDenied: true/);
+  assert.match(browserSource, /unrelatedPlanBlockUnchanged: true/);
+  assert.match(browserSource, /laterFailureReopensAgain: true/);
+});
+
+test("learner export deterministically includes owned assistance events and final plan blocks", () => {
+  const exportFunction = sql.slice(
+    sql.indexOf("create or replace function public.c3r_p_export_learner_data_v1"),
+    sql.indexOf("create or replace function public.c3r_p_delete_learner_data_v1"),
+  );
+  assert.match(exportFunction,
+    /'assistanceEvents'[\s\S]*from public\.c3r_p_assistance_events e[\s\S]*e\.user_id = p_user_id/);
+  assert.match(exportFunction,
+    /jsonb_agg\(to_jsonb\(e\) order by e\.committed_at, e\.id\)/);
+  assert.match(exportFunction,
+    /'planBlocks'[\s\S]*from public\.c3r_p_plan_blocks b[\s\S]*b\.user_id = p_user_id/);
+  assert.match(exportFunction,
+    /jsonb_agg\(to_jsonb\(b\) order by b\.plan_id, b\.ordinal, b\.id\)/);
+  assert.match(browserSource, /assistanceExportedExactlyOnce: true/);
+  assert.match(browserSource, /todayAndFullDayBlocksExported: true/);
+  assert.match(browserSource, /editedPlanBlocksExportFinalValues: true/);
+  assert.match(browserSource, /crossUserExportRowsAbsent: true/);
+  assert.match(browserSource, /emptyExportCollectionsAreArrays: true/);
+  assert.match(browserSource, /deleteRemovesExportedData: true/);
+  assert.equal(contract.practiceRuntimeArtifact.metadataOnly, true);
 });
 
 test("dedicated cycles start isolated Supabase first and transactionally apply all 26 migrations", () => {
