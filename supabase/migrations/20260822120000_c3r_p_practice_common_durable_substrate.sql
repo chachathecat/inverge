@@ -1119,6 +1119,18 @@ begin
   end if;
   v_eligibility := public.c3r_p_eligibility_digest_v1(p_user_id, p_as_of);
   v_review := public.c3r_p_review_state_digest_v1(p_user_id);
+  update public.c3r_p_plans prior set
+    state = 'STALE',
+    record_version = prior.record_version + 1,
+    updated_at = p_as_of
+  where prior.user_id = p_user_id
+    and prior.state in ('PROPOSED', 'ACCEPTED', 'EDITED')
+    and exists (
+      select 1 from public.c3r_p_plan_blocks pending
+      where pending.user_id = p_user_id
+        and pending.plan_id = prior.id
+        and pending.execution_state = 'PENDING'
+    );
   insert into public.c3r_p_plans (
     id, user_id, plan_kind, available_minutes, eligibility_digest,
     review_state_digest, generated_at, updated_at

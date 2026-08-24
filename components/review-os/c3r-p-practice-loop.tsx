@@ -4,6 +4,10 @@ import { useEffect, useMemo, useState } from "react";
 
 import {
   C3R_P_PLAN_COMPLETION_ACTIONS,
+  C3R_P_PRIMARY_ANCHOR_ID,
+  C3R_P_PRIMARY_ANCHOR_VERSION_ID,
+  C3R_P_TRANSFER_ANCHOR_ID,
+  C3R_P_TRANSFER_ANCHOR_VERSION_ID,
   type C3RPPlanBlockInput,
   type C3RPPracticeClaimInput,
   type C3RPView,
@@ -42,6 +46,7 @@ function numericField(value: string) {
 function practiceClaim(
   fields: StructuredCalculationInput,
   sourceRevisionId: string | undefined,
+  transferTask = false,
 ): C3RPPracticeClaimInput | null {
   const grossIncome = numericField(fields.grossIncome);
   const operatingExpense = numericField(fields.operatingExpense);
@@ -54,8 +59,10 @@ function practiceClaim(
   ) return null;
   return {
     sourceRevisionId,
-    anchorId: "repair-anchor:practice:synthetic-net-income",
-    anchorVersionId: "repair-anchor:practice:synthetic-net-income@1",
+    anchorId: transferTask ? C3R_P_TRANSFER_ANCHOR_ID : C3R_P_PRIMARY_ANCHOR_ID,
+    anchorVersionId: transferTask
+      ? C3R_P_TRANSFER_ANCHOR_VERSION_ID
+      : C3R_P_PRIMARY_ANCHOR_VERSION_ID,
     grossIncome: { value: grossIncome, unit: "KRW_PER_YEAR" },
     operatingExpense: { value: operatingExpense, unit: "KRW_PER_YEAR" },
     operator: "SUBTRACT",
@@ -238,6 +245,7 @@ export function C3RPPracticeLoop({
       action === "complete_d7_transfer"
         ? transferTask?.revisionId
         : view?.source.revisionId,
+      action === "complete_d7_transfer",
     );
     if (!claim) {
       setError("structured_claim_required");

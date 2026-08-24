@@ -10,13 +10,17 @@ import {
 import { trustedRepairCanonicalFixture } from "./trusted-repair-fixtures";
 import type {
   CalculationRelationAnchorV1,
+  PracticeCalculationClaimV2,
   PracticeCalculationClaimV2Input,
 } from "./trusted-repair-contract";
 import {
+  C3R_P_TRANSFER_ANCHOR_ID,
+  C3R_P_TRANSFER_ANCHOR_VERSION_ID,
   C3R_P_RUNTIME_ARTIFACT_REF,
   C3RPError,
   type C3RPDashboard,
   type C3RPPlanBlockInput,
+  type C3RPPracticeClaimInput,
 } from "./c3r-p-contract";
 
 export const C3R_P_SOURCE = Object.freeze({
@@ -29,6 +33,8 @@ export const C3R_P_SOURCE = Object.freeze({
 });
 
 export const C3R_P_TRANSFER_TASK = Object.freeze({
+  anchorId: C3R_P_TRANSFER_ANCHOR_ID,
+  anchorVersionId: C3R_P_TRANSFER_ANCHOR_VERSION_ID,
   itemId: "c3r-p:practice:annual-net-income:d7-transfer-v1",
   surfaceId: "server:practice-transfer-v1",
   prompt:
@@ -38,7 +44,14 @@ export const C3R_P_TRANSFER_TASK = Object.freeze({
   result: 120_000_000,
 });
 
-function practiceAnchor(transfer = false) {
+type C3RPVersionedCalculationAnchor = Omit<
+  CalculationRelationAnchorV1,
+  "anchorVersionId"
+> & Readonly<{
+  anchorVersionId: C3RPPracticeClaimInput["anchorVersionId"];
+}>;
+
+function practiceAnchor(transfer = false): C3RPVersionedCalculationAnchor {
   const fixture = trustedRepairCanonicalFixture("appraisal_practical");
   const anchor = fixture.anchors[0];
   if (!anchor || !("calculationRelation" in anchor)) {
@@ -48,6 +61,8 @@ function practiceAnchor(transfer = false) {
   if (!transfer) return relation;
   return {
     ...relation,
+    anchorId: C3R_P_TRANSFER_TASK.anchorId,
+    anchorVersionId: C3R_P_TRANSFER_TASK.anchorVersionId,
     operandRoles: [
       {
         role: "gross_income",
@@ -64,7 +79,7 @@ function practiceAnchor(transfer = false) {
       value: C3R_P_TRANSFER_TASK.result,
       unit: "KRW_PER_YEAR",
     },
-  } satisfies CalculationRelationAnchorV1;
+  } satisfies C3RPVersionedCalculationAnchor;
 }
 
 export function c3rPSourceView() {
@@ -94,17 +109,18 @@ export function c3rPSha256(value: unknown) {
 }
 
 export function evaluateC3RPPracticeClaim(input: {
-  claim: PracticeCalculationClaimV2Input;
+  claim: C3RPPracticeClaimInput;
   confirmedAt: string;
   transferTask?: boolean;
 }) {
   const claim = buildPracticeCalculationClaim({
-    claim: input.claim,
+    claim: input.claim as PracticeCalculationClaimV2Input,
     learnerConfirmedAt: input.confirmedAt,
-  });
+  }) as PracticeCalculationClaimV2 & C3RPPracticeClaimInput;
+  const anchor = practiceAnchor(input.transferTask === true);
   const evaluation = validatePracticeCalculationClaim({
-    claim,
-    anchor: practiceAnchor(input.transferTask === true),
+    claim: claim as PracticeCalculationClaimV2,
+    anchor: anchor as CalculationRelationAnchorV1,
     expectedSourceRevisionId: C3R_P_SOURCE.revisionId,
   });
   return {

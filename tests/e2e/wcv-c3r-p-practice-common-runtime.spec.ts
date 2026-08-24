@@ -27,6 +27,13 @@ const expectedEntryClassification =
   process.env.C3R_P_ENTRY_EXPECTATION ?? "C3R_P_ENTRY_VERIFIED";
 const C3R_P_SOURCE_REVISION_ID = "26a4f3bd-ddf3-4215-9fdf-d83453122ce1";
 const MISMATCHED_SOURCE_REVISION_ID = "d2889575-35e6-4e31-9ed7-e27ae55d7e8d";
+const C3R_P_PRIMARY_ANCHOR_ID = "repair-anchor:practice:synthetic-net-income";
+const C3R_P_PRIMARY_ANCHOR_VERSION_ID =
+  "repair-anchor:practice:synthetic-net-income@1";
+const C3R_P_TRANSFER_ANCHOR_ID =
+  C3R_P_PRIMARY_ANCHOR_ID;
+const C3R_P_TRANSFER_ANCHOR_VERSION_ID =
+  "repair-anchor:practice:synthetic-net-income@d7-transfer-v1";
 
 const ENTRY_CLASSIFICATIONS = [
   "C3R_P_ENTRY_AUTH_SESSION_NOT_VISIBLE",
@@ -343,11 +350,14 @@ function practiceClaim(
   result = 100_000_000,
   grossIncome = 120_000_000,
   operatingExpense = 20_000_000,
+  transferTask = false,
 ) {
   return {
     sourceRevisionId,
-    anchorId: "repair-anchor:practice:synthetic-net-income",
-    anchorVersionId: "repair-anchor:practice:synthetic-net-income@1",
+    anchorId: transferTask ? C3R_P_TRANSFER_ANCHOR_ID : C3R_P_PRIMARY_ANCHOR_ID,
+    anchorVersionId: transferTask
+      ? C3R_P_TRANSFER_ANCHOR_VERSION_ID
+      : C3R_P_PRIMARY_ANCHOR_VERSION_ID,
     grossIncome: { value: grossIncome, unit: "KRW_PER_YEAR" },
     operatingExpense: { value: operatingExpense, unit: "KRW_PER_YEAR" },
     operator: "SUBTRACT",
@@ -579,7 +589,7 @@ test("exact Practice browser-to-Postgres durable loop", async ({ browser }) => {
       ok: true,
       result: {
         deletedRecords: 1,
-        deletedPlans: 8,
+        deletedPlans: 9,
         status: "deleted",
       },
     });
@@ -802,8 +812,8 @@ test("exact Practice browser-to-Postgres durable loop", async ({ browser }) => {
   await page.goto("/app/c3r-p");
   await expectState(page, "REPAIRED");
   await expect(page.getByRole("button", { name: "첫 시도와 확신을 고정하기" })).toHaveCount(0);
-  const staleD1Plan = await createAcceptedPlan(context, recordId, "TODAY", "d1");
-  expect(staleD1Plan.blocks[0]).toMatchObject({ reviewPhase: "D1" });
+  const supersededD1Plan = await createAcceptedPlan(context, recordId, "TODAY", "d1");
+  expect(supersededD1Plan.blocks[0]).toMatchObject({ reviewPhase: "D1" });
   const rejectedD1PlanId = randomUUID();
   const proposedD1PlanResponse = await context.request.post(
     "/api/review-os/c3r-p",
@@ -823,6 +833,17 @@ test("exact Practice browser-to-Postgres durable loop", async ({ browser }) => {
     planId: rejectedD1PlanId,
     state: "PROPOSED",
   });
+  expect(proposedD1Plan.view.dashboard.plans).toEqual(expect.arrayContaining([
+    expect.objectContaining({
+      planId: supersededD1Plan.planId,
+      state: "STALE",
+      blocks: [expect.objectContaining({
+        blockId: supersededD1Plan.blocks[0].blockId,
+        executionState: "PENDING",
+      })],
+      dayComplete: false,
+    }),
+  ]));
   const rejectedD1PlanResponse = await context.request.post(
     "/api/review-os/c3r-p",
     { data: {
@@ -838,10 +859,14 @@ test("exact Practice browser-to-Postgres durable loop", async ({ browser }) => {
   );
   expect(rejectedD1PlanResponse.status()).toBe(200);
   const rejectedD1Plan = await rejectedD1PlanResponse.json();
-  expect(rejectedD1Plan.view.currentPlan).toMatchObject({
-    planId: staleD1Plan.planId,
-    state: "ACCEPTED",
-  });
+  expect(rejectedD1Plan.view.currentPlan).toBeNull();
+  const staleD1Plan = await createAcceptedPlan(
+    context,
+    recordId,
+    "TODAY",
+    "d1Fresh",
+  );
+  expect(staleD1Plan.blocks[0]).toMatchObject({ reviewPhase: "D1" });
   await page.goto("/app/c3r-p");
   await expectState(page, "REPAIRED");
   await fillStructuredCalculation(page);
@@ -998,6 +1023,26 @@ test("exact Practice browser-to-Postgres durable loop", async ({ browser }) => {
     } },
   );
   expect(originalAnswerReuse.status()).toBe(409);
+  const reusedOriginalAnchorVersion = await context.request.post(
+    "/api/review-os/c3r-p",
+    { data: {
+      action: "complete_d7_transfer",
+      commandId: randomUUID(),
+      recordId,
+      expectedVersion: d1Version,
+      attemptId: randomUUID(),
+      claim: practiceClaim(
+        C3R_P_SOURCE_REVISION_ID,
+        120_000_000,
+        150_000_000,
+        30_000_000,
+      ),
+      transferTaskId,
+      planBlockId: null,
+      evidenceStep: "d7",
+    } },
+  );
+  expect(reusedOriginalAnchorVersion.status()).toBe(409);
   const fabricatedTransfer = await context.request.post(
     "/api/review-os/c3r-p",
     { data: {
@@ -1006,7 +1051,13 @@ test("exact Practice browser-to-Postgres durable loop", async ({ browser }) => {
       recordId,
       expectedVersion: d1Version,
       attemptId: randomUUID(),
-      claim: practiceClaim(C3R_P_SOURCE_REVISION_ID, 120_000_000, 150_000_000, 30_000_000),
+      claim: practiceClaim(
+        C3R_P_SOURCE_REVISION_ID,
+        120_000_000,
+        150_000_000,
+        30_000_000,
+        true,
+      ),
       transferTaskId: randomUUID(),
       planBlockId: null,
       evidenceStep: "d7",
@@ -1042,6 +1093,8 @@ test("exact Practice browser-to-Postgres durable loop", async ({ browser }) => {
   expect(transferSubmit.postDataJSON()).toMatchObject({
     transferTaskId,
     claim: {
+      anchorId: C3R_P_TRANSFER_ANCHOR_ID,
+      anchorVersionId: C3R_P_TRANSFER_ANCHOR_VERSION_ID,
       grossIncome: { value: 150_000_000 },
       operatingExpense: { value: 30_000_000 },
       result: { value: 120_000_000 },
@@ -1637,12 +1690,14 @@ test("exact Practice browser-to-Postgres durable loop", async ({ browser }) => {
       assistedD1RestoredAfterRefresh: true,
       assistedD1PrematureDenied: true,
       baseRouteRestoredExistingRecord: true,
-      terminalPlanFallsBackToActive: true,
+      terminalPlanDoesNotReviveSuperseded: true,
+      priorActivePlanSuperseded: true,
       d1Unaided: true,
       d7DifferentItemAndSurface: true,
       sealedTransferTaskPersisted: true,
       transferTaskPresentedBeforeSubmission: true,
       originalTaskReuseDenied: true,
+      originalAnchorVersionReuseDenied: true,
       fabricatedTransferTaskDenied: true,
       transferTaskRestoredAfterRefresh: true,
       transferTaskExportedMetadataOnly: true,

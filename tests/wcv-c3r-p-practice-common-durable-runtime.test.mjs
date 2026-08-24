@@ -48,8 +48,8 @@ const productionAccessBlobs = Object.freeze({
   "app/api/review-os/c3r-p/route.ts": "f5296e848c6a77edb8dde30a317ba8c21bffbe57",
   "lib/review-os/c3r-p-service.ts": "59862898505cefc61e9ad2b5bc3f352625297a68",
   "lib/review-os/c3r-p-repository.ts": "990f19f94458685782a49cfea6f00553a2a542f0",
-  "lib/review-os/c3r-p-engine.ts": "db1d8b45bf6e65f247dd5e38aba38dc1535c3dda",
-  "components/review-os/c3r-p-practice-loop.tsx": "168355a88ef17366e35e02940589fd6939f6b4f7",
+  "lib/review-os/c3r-p-engine.ts": "351047c5b5ed7463ec7aac96baad389b5a3a92d9",
+  "components/review-os/c3r-p-practice-loop.tsx": "e5a8309192ddb016008cf81c7b9e01ce91da4ecc",
 });
 
 const FORMER_C3R_P_SOURCE_REVISION_ID =
@@ -716,11 +716,16 @@ test("D+7 uses one persisted sealed task that is presented and exactly bound bef
   assert.match(sql,
     /phase = 'D7_TRANSFER'::public\.c3r_p_review_phase[\s\S]*transfer_task_id is not null/);
   assert.match(engineSource, /c3rPTransferTaskId/);
+  assert.match(engineSource,
+    /anchorId: C3R_P_TRANSFER_TASK\.anchorId[\s\S]*anchorVersionId: C3R_P_TRANSFER_TASK\.anchorVersionId/);
+  assert.match(engineSource,
+    /anchorId: C3R_P_TRANSFER_ANCHOR_ID[\s\S]*anchorVersionId: C3R_P_TRANSFER_ANCHOR_VERSION_ID/);
   assert.match(engineSource, /grossIncome: 150_000_000/);
   assert.match(engineSource, /result: 120_000_000/);
   assert.match(componentSource, /data-testid="c3r-p-transfer-prompt"/);
   assert.match(componentSource, /제시된 D\+7 전이 과업 제출/);
   assert.match(browserSource, /originalTaskReuseDenied: true/);
+  assert.match(browserSource, /originalAnchorVersionReuseDenied: true/);
   assert.match(browserSource, /fabricatedTransferTaskDenied: true/);
   assert.match(browserSource, /transferTaskRestoredAfterRefresh: true/);
   assert.match(browserSource, /transferTaskExportedMetadataOnly: true/);
@@ -738,6 +743,8 @@ test("plans and destructive-result UI are restored from successful server state"
     /recordId \?\? await repository\.findRecordId\(C3R_P_SOURCE\)/);
   assert.match(serviceSource,
     /dashboard\.plans\.find\(\(plan\) =>[\s\S]*!\["REJECTED", "STALE"\]\.includes\(plan\.state\)/);
+  assert.match(sql,
+    /update public\.c3r_p_plans prior set[\s\S]*state = 'STALE'[\s\S]*prior\.state in \('PROPOSED', 'ACCEPTED', 'EDITED'\)[\s\S]*pending\.execution_state = 'PENDING'[\s\S]*insert into public\.c3r_p_plans/);
   assert.match(serviceSource,
     /async createPlan[\s\S]*\.\.\.\(await view\(input\.recordId, asOf\)\)/);
   assert.match(serviceSource,
@@ -753,7 +760,8 @@ test("plans and destructive-result UI are restored from successful server state"
     /{error \? \([\s\S]*\) : null}\s*{exportStatus \? <p className="text-sm" role="status">{exportStatus}<\/p> : null}\s*<section/);
   assert.match(browserSource, /계획 상태: EDITED/);
   assert.match(browserSource, /baseRouteRestoredExistingRecord: true/);
-  assert.match(browserSource, /terminalPlanFallsBackToActive: true/);
+  assert.match(browserSource, /terminalPlanDoesNotReviveSuperseded: true/);
+  assert.match(browserSource, /priorActivePlanSuperseded: true/);
   assert.match(browserSource, /temporarily_unavailable[\s\S]*c3r-p-ledger/);
 });
 

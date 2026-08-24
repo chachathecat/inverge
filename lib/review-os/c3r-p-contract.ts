@@ -8,6 +8,14 @@ export const C3R_P_BROWSER_EVIDENCE_REF =
   `${C3R_P_RUNTIME_ARTIFACT_REF}#browser-to-postgres` as const;
 export const C3R_P_VALIDATOR_ID =
   "validator:practice-calculation-claim@2" as const;
+export const C3R_P_PRIMARY_ANCHOR_ID =
+  "repair-anchor:practice:synthetic-net-income" as const;
+export const C3R_P_PRIMARY_ANCHOR_VERSION_ID =
+  "repair-anchor:practice:synthetic-net-income@1" as const;
+export const C3R_P_TRANSFER_ANCHOR_ID =
+  C3R_P_PRIMARY_ANCHOR_ID;
+export const C3R_P_TRANSFER_ANCHOR_VERSION_ID =
+  "repair-anchor:practice:synthetic-net-income@d7-transfer-v1" as const;
 
 const C3R_P_PLAN_COMPLETION_ACTION_LIST = [
   "complete_d1",
@@ -30,7 +38,14 @@ export const C3R_P_RECORD_STATES = [
 ] as const;
 
 export type C3RPRecordState = (typeof C3R_P_RECORD_STATES)[number];
-export type C3RPPracticeClaimInput = PracticeCalculationClaimV2Input;
+export type C3RPPracticeClaimInput = Omit<
+  PracticeCalculationClaimV2Input,
+  "anchorVersionId"
+> & Readonly<{
+  anchorVersionId:
+    | typeof C3R_P_PRIMARY_ANCHOR_VERSION_ID
+    | typeof C3R_P_TRANSFER_ANCHOR_VERSION_ID;
+}>;
 
 export type C3RPCommandResult = Readonly<{
   recordId?: string;
