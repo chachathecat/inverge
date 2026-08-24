@@ -101,7 +101,9 @@ test("max-three outcomes and many execution blocks are preserved exactly", () =>
 test("active study excludes app interaction and provider wait", () => {
   assert.ok(config.policy.studyTimeExclusions.includes("app_interaction"));
   assert.ok(config.policy.studyTimeExclusions.includes("provider_wait"));
-  assert.match(engine, /actualActiveMinutes\) - app - wait/);
+  assert.match(engine, /actualActiveMinutes/);
+  assert.match(engine, /appInteractionMinutes/);
+  assert.match(engine, /providerWaitMinutes/);
   assert.match(qa, /app interaction\/provider wait excluded/);
 });
 
@@ -111,9 +113,9 @@ test("learning integrity blocks schedule completion from becoming mastery or rea
   assert.equal(config.policy.sameSurfaceRetryDoesNotCountAsTransfer, true);
   assert.equal(config.policy.personalGenerationReadinessEligible, false);
   assert.equal(config.policy.personalGenerationCrossUserReuseEligible, false);
-  assert.match(engine, /masteryMutationAllowed: false/);
-  assert.match(engine, /readinessEligible: false/);
-  assert.match(engine, /crossUserReuseEligible: false/);
+  assert.match(engine, /masteryMutationAllowed\s*:\s*false/);
+  assert.match(engine, /readinessEligible\s*:\s*false/);
+  assert.match(engine, /crossUserReuseEligible\s*:\s*false/);
 });
 
 test("plan gap is a scheduling feasibility projection, never pass probability", () => {
