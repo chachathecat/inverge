@@ -844,6 +844,7 @@ test("exact Practice browser-to-Postgres durable loop", async ({ browser }) => {
   });
   await page.goto("/app/c3r-p");
   await expectState(page, "REPAIRED");
+  await fillStructuredCalculation(page);
 
   const assistedD1ResponsePromise = page.waitForResponse((response) =>
     response.request().postDataJSON()?.action === "record_assisted_review",
