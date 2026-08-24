@@ -411,9 +411,27 @@ test("exact Practice browser-to-Postgres durable loop", async ({ browser }) => {
 
     await pageA.unroute("**/api/review-os/c3r-p");
     pageA.once("dialog", (dialog) => dialog.accept());
+    const deleteResponsePromise = pageA.waitForResponse((response) => {
+      const request = response.request();
+      return (
+        new URL(response.url()).pathname === "/api/review-os/c3r-p" &&
+        request.method() === "POST" &&
+        request.postDataJSON()?.action === "delete"
+      );
+    });
     await pageA
       .getByRole("button", { name: "내 C3R-P 데이터 삭제" })
       .click();
+    const deleteResponse = await deleteResponsePromise;
+    expect(deleteResponse.status()).toBe(200);
+    expect(await deleteResponse.json()).toMatchObject({
+      ok: true,
+      result: {
+        deletedRecords: 1,
+        deletedPlans: 1,
+        status: "deleted",
+      },
+    });
     await expect(pageA.getByRole("status")).toHaveText("삭제 완료");
     const deleted = await contextA.request.get(
       `/api/review-os/c3r-p?recordId=${prior.recordId}`,
