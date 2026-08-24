@@ -46,7 +46,7 @@ const productionAccessBlobs = Object.freeze({
   "app/app/layout.tsx": "215ec312e2102d39332eeb47e2cc3b446ad78d19",
   "app/app/c3r-p/page.tsx": "1183828115a8a0ef0fb04c5d9c0e42a8ae5bd240",
   "app/api/review-os/c3r-p/route.ts": "f5296e848c6a77edb8dde30a317ba8c21bffbe57",
-  "lib/review-os/c3r-p-service.ts": "7d899a55f79cbb5b2430090bf67d7547518b5302",
+  "lib/review-os/c3r-p-service.ts": "2082b031c4d96a39d38de79da92fcd0deff03b9a",
   "lib/review-os/c3r-p-repository.ts": "624c57c908e83d92535591472fae95c68fc2be7b",
   "lib/review-os/c3r-p-engine.ts": "db1d8b45bf6e65f247dd5e38aba38dc1535c3dda",
   "components/review-os/c3r-p-practice-loop.tsx": "71b2c9e5c8bd7cc828a7324f0edad2d2f284b400",
@@ -444,7 +444,9 @@ test("every planned independent review phase completes only a current pending pl
   assert.match(browserSource, /wrongPlanBindingDenied: true/);
   assert.match(browserSource, /ambiguousPlanBlocksDenied: true/);
   assert.match(browserSource, /planlessCompletionAllowedWithoutActivePlan: true/);
-  assert.match(browserSource, /staleEligibilityDigestDenied: true/);
+  assert.match(browserSource, /staleReviewStateDigestDenied: true/);
+  assert.match(sql,
+    /c3r_p_review_state_digest_v1[\s\S]*select count\(\*\)::text from public\.c3r_p_attempts/);
   assert.match(browserSource, /unrelatedPlanBlockPreserved: true/);
   assert.match(browserSource, /dayCompleteRecomputedHonestly: true/);
 });

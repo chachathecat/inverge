@@ -469,6 +469,9 @@ test("exact Practice browser-to-Postgres durable loop", async ({ browser }) => {
     const fullDayBlocks = learnerExport.planBlocks.filter(
       (block: { plan_id: string }) => block.plan_id === prior.fullDayPlanId,
     );
+    const supersededFullDayBlocks = learnerExport.planBlocks.filter(
+      (block: { plan_id: string }) => block.plan_id === prior.staleFullDayPlanId,
+    );
     expect(todayBlocks).toEqual([expect.objectContaining({
       id: prior.editedTodayBlockId,
       record_id: prior.recordId,
@@ -476,21 +479,20 @@ test("exact Practice browser-to-Postgres durable loop", async ({ browser }) => {
       minutes: 25,
       execution_state: "PENDING",
     })]);
-    expect(fullDayBlocks).toEqual(expect.arrayContaining([
-      expect.objectContaining({
-        id: prior.fullDayBlockId,
-        record_id: prior.recordId,
-        gap_id: prior.gapId,
-        review_phase: "REOPENED_REVIEW",
-        execution_state: "COMPLETE",
-      }),
-      expect.objectContaining({
-        id: prior.unrelatedFullDayBlockId,
-        record_id: prior.laterDueRecordId,
-        review_phase: "D1",
-        execution_state: "PENDING",
-      }),
-    ]));
+    expect(fullDayBlocks).toEqual([expect.objectContaining({
+      id: prior.fullDayBlockId,
+      record_id: prior.recordId,
+      gap_id: prior.gapId,
+      review_phase: "REOPENED_REVIEW",
+      execution_state: "COMPLETE",
+    })]);
+    expect(supersededFullDayBlocks).toEqual([expect.objectContaining({
+      id: prior.staleFullDayBlockId,
+      record_id: prior.recordId,
+      gap_id: prior.gapId,
+      review_phase: "REOPENED_REVIEW",
+      execution_state: "PENDING",
+    })]);
     expect(learnerExport.planBlocks).not.toEqual(expect.arrayContaining([
       expect.objectContaining({ id: prior.initialTodayBlockId }),
     ]));
@@ -576,8 +578,8 @@ test("exact Practice browser-to-Postgres durable loop", async ({ browser }) => {
     expect(await deleteResponse.json()).toMatchObject({
       ok: true,
       result: {
-        deletedRecords: 2,
-        deletedPlans: 6,
+        deletedRecords: 1,
+        deletedPlans: 7,
         status: "deleted",
       },
     });
@@ -770,6 +772,8 @@ test("exact Practice browser-to-Postgres durable loop", async ({ browser }) => {
   expect(persistedRepairResponse.status()).toBe(200);
   const persistedRepair = await persistedRepairResponse.json();
   expect(persistedRepair.view.restored.record.state).toBe("REPAIRED");
+  const staleD1Plan = await createAcceptedPlan(context, recordId, "TODAY", "d1");
+  expect(staleD1Plan.blocks[0]).toMatchObject({ reviewPhase: "D1" });
 
   await page
     .getByRole("button", {
@@ -806,8 +810,24 @@ test("exact Practice browser-to-Postgres durable loop", async ({ browser }) => {
   await page.reload();
   await expectState(page, "REPAIRED");
   await expect(page.getByTestId("c3r-p-ledger")).toContainText("D1_ASSISTED");
+  const staleReviewStateCompletion = await context.request.post(
+    "/api/review-os/c3r-p",
+    { data: {
+      action: "complete_d1",
+      commandId: randomUUID(),
+      recordId,
+      expectedVersion: persistedRepair.view.restored.record.record_version,
+      attemptId: randomUUID(),
+      claim: practiceClaim(C3R_P_SOURCE_REVISION_ID),
+      planBlockId: staleD1Plan.blocks[0].blockId,
+      planId: staleD1Plan.planId,
+      planVersion: staleD1Plan.recordVersion,
+      evidenceStep: "d1",
+    } },
+  );
+  expect(staleReviewStateCompletion.status()).toBe(409);
   await fillStructuredCalculation(page);
-  const d1Plan = await createAcceptedPlan(context, recordId, "TODAY", "d1");
+  const d1Plan = await createAcceptedPlan(context, recordId, "TODAY", "d1Fresh");
   expect(d1Plan.blocks[0]).toMatchObject({ reviewPhase: "D1" });
   await page.reload();
   await fillStructuredCalculation(page);
@@ -1349,63 +1369,6 @@ test("exact Practice browser-to-Postgres durable loop", async ({ browser }) => {
   );
   expect(ambiguousEdit.status()).toBe(409);
 
-  const laterDueRecordId = randomUUID();
-  const laterDueStart = await context.request.post("/api/review-os/c3r-p", {
-    data: {
-      action: "start",
-      commandId: randomUUID(),
-      recordId: laterDueRecordId,
-      attemptId: randomUUID(),
-      attemptBody: "계획 수락 뒤 새로 도래한 별도 실무 복습입니다.",
-      prediction: "likely_partial",
-      confidence: "medium",
-      evidenceStep: "d0",
-    },
-  });
-  const laterDueStarted = await laterDueStart.json();
-  const laterDueFeedback = await context.request.post("/api/review-os/c3r-p", {
-    data: {
-      action: "commit_feedback",
-      commandId: randomUUID(),
-      recordId: laterDueRecordId,
-      expectedVersion: laterDueStarted.view.restored.record.record_version,
-      gapId: randomUUID(),
-      failureNoteId: randomUUID(),
-      assistanceEventId: randomUUID(),
-      failureNote: "수락 뒤 도래해 기존 계획의 적격성 digest를 바꾸는 간극입니다.",
-      evidenceStep: "feedback",
-    },
-  });
-  const laterDueFeedbackBody = await laterDueFeedback.json();
-  const laterDueRepair = await context.request.post("/api/review-os/c3r-p", {
-    data: {
-      action: "submit_repair",
-      commandId: randomUUID(),
-      recordId: laterDueRecordId,
-      expectedVersion: laterDueFeedbackBody.view.restored.record.record_version,
-      attemptId: randomUUID(),
-      claim: practiceClaim(C3R_P_SOURCE_REVISION_ID),
-      evidenceStep: "feedback",
-    },
-  });
-  expect(laterDueRepair.status()).toBe(200);
-  const staleEligibilityCompletion = await context.request.post(
-    "/api/review-os/c3r-p",
-    { data: {
-      action: "complete_reopened_review",
-      commandId: randomUUID(),
-      recordId,
-      expectedVersion: reopenedVersion,
-      attemptId: randomUUID(),
-      claim: practiceClaim(C3R_P_SOURCE_REVISION_ID),
-      planBlockId: staleFullDayBlockId,
-      planId: staleFullDayPlanId,
-      planVersion: acceptedPlan.view.currentPlan.recordVersion,
-      evidenceStep: "reopenComplete",
-    } },
-  );
-  expect(staleEligibilityCompletion.status()).toBe(409);
-
   const replacementFullDayPlan = await createAcceptedPlan(
     context,
     recordId,
@@ -1416,11 +1379,7 @@ test("exact Practice browser-to-Postgres durable loop", async ({ browser }) => {
   const fullDayBlock = replacementFullDayPlan.blocks.find(
     (block: { recordId: string }) => block.recordId === recordId,
   );
-  const unrelatedFullDayBlock = replacementFullDayPlan.blocks.find(
-    (block: { recordId: string }) => block.recordId === laterDueRecordId,
-  );
   expect(fullDayBlock).toBeTruthy();
-  expect(unrelatedFullDayBlock).toBeTruthy();
   const fullDayBlockId = fullDayBlock!.blockId;
   await secondPage.reload();
   await expect(secondPage.getByText("계획 상태: ACCEPTED")).toBeVisible();
@@ -1455,24 +1414,27 @@ test("exact Practice browser-to-Postgres durable loop", async ({ browser }) => {
   ]));
   expect(completionBody.view.currentPlan).toMatchObject({
     planId: fullDayPlanId,
-    dayComplete: false,
-    blocks: expect.arrayContaining([
-      expect.objectContaining({
-        blockId: fullDayBlockId,
-        executionState: "COMPLETE",
-      }),
-      expect.objectContaining({
-        blockId: unrelatedFullDayBlock!.blockId,
-        executionState: "PENDING",
-      }),
-    ]),
+    dayComplete: true,
+    blocks: [expect.objectContaining({
+      blockId: fullDayBlockId,
+      executionState: "COMPLETE",
+    })],
   });
+  expect(completionBody.view.dashboard.plans).toEqual(expect.arrayContaining([
+    expect.objectContaining({
+      planId: staleFullDayPlanId,
+      blocks: [expect.objectContaining({
+        blockId: staleFullDayBlockId,
+        executionState: "PENDING",
+      })],
+    }),
+  ]));
   await expectState(secondPage, "CLOSED");
   await expect(secondPage.getByTestId("c3r-p-queue-count")).toHaveText(
-    "실행 가능한 Review Queue: 1개",
+    "실행 가능한 Review Queue: 0개",
   );
   await expect(secondPage.getByText(/CORE_OUTCOME · REOPENED_REVIEW · 30분 · COMPLETE/u)).toBeVisible();
-  await expect(secondPage.getByText("dayComplete: false")).toBeVisible();
+  await expect(secondPage.getByText("dayComplete: true")).toBeVisible();
 
   const duplicateCompletion = await context.request.post(
     "/api/review-os/c3r-p",
@@ -1574,10 +1536,12 @@ test("exact Practice browser-to-Postgres durable loop", async ({ browser }) => {
       todayPlanId,
       initialTodayBlockId,
       editedTodayBlockId: editedTodayBlock.blockId,
+      staleFullDayPlanId,
+      staleFullDayBlockId,
       fullDayPlanId,
       fullDayBlockId,
-      unrelatedFullDayBlockId: unrelatedFullDayBlock!.blockId,
-      laterDueRecordId,
+      staleD1PlanId: staleD1Plan.planId,
+      staleD1PlanBlockId: staleD1Plan.blocks[0].blockId,
       d1PlanId: d1Plan.planId,
       d1PlanBlockId: d1Plan.blocks[0].blockId,
       d7PlanId: d7Plan.planId,
@@ -1612,7 +1576,7 @@ test("exact Practice browser-to-Postgres durable loop", async ({ browser }) => {
       stalePlanVersionDenied: true,
       wrongPlanBindingDenied: true,
       ambiguousPlanBlocksDenied: true,
-      staleEligibilityDigestDenied: true,
+      staleReviewStateDigestDenied: true,
       unrelatedPlanBlockPreserved: true,
       dayCompleteRecomputedHonestly: true,
       planlessCompletionAllowedWithoutActivePlan: true,

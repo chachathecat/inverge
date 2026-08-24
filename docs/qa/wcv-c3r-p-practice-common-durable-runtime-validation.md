@@ -56,7 +56,7 @@ Raw attempts and failure notes remain in private tables and the learner export o
 
 The dedicated workflow performs two serial but independently fresh cycles. Each cycle uses a distinct work directory, Supabase project identity, database container/volume, synthetic row state and receipt identity. It copies and applies all 26 migrations in order, requires PostgreSQL `server_version_num = 150008`, verifies the final catalog/security state, executes the complete learner journey through Chromium → Next.js → service-only RPC → PostgreSQL, restarts Next.js, restores from a new session, verifies cross-user denial, exports and deletes, stops the stack, invokes the installed immutable PostgreSQL 15.8 oracle in its own zero-network disposable container, and removes the entire cycle directory.
 
-The native `Runtime Gate` separately executes the sole append twice against the installed digest-pinned PostgreSQL 15.8 image with fresh zero-network/tmpfs containers. It verifies the exact 26-file head inventory, closed Practice subject enum, all nine forced-RLS tables, grants, service-only command success, idempotent replay, direct-mutation denial and complete cleanup. This native adapter is not a second oracle or a second receipt system.
+The native `Runtime Gate` separately executes the sole append twice against the installed digest-pinned PostgreSQL 15.8 image with fresh zero-network/tmpfs containers. It verifies the exact 26-file head inventory, closed Practice subject enum, all ten forced-RLS tables, grants, service-only command success, idempotent replay, direct-mutation denial and complete cleanup. This native adapter is not a second oracle or a second receipt system.
 
 ## Rollback
 

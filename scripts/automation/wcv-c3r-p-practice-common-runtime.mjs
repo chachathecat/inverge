@@ -1336,7 +1336,7 @@ async function runDedicatedCycle(input) {
       browserEvidence.wrongPlanBindingDenied !== true ||
       browserEvidence.ambiguousPlanBlocksDenied !== true ||
       browserEvidence.planlessCompletionAllowedWithoutActivePlan !== true ||
-      browserEvidence.staleEligibilityDigestDenied !== true ||
+      browserEvidence.staleReviewStateDigestDenied !== true ||
       browserEvidence.unrelatedPlanBlockPreserved !== true ||
       browserEvidence.dayCompleteRecomputedHonestly !== true ||
       browserEvidence.assistedD1AttemptPersisted !== true ||

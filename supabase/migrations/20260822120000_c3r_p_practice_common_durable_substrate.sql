@@ -526,7 +526,9 @@ set search_path = ''
 as $$
   select encode(extensions.digest(convert_to(coalesce(string_agg(
     concat_ws(':', r.id::text, r.record_version::text, r.state::text,
-      coalesce(g.state::text, 'NONE'), coalesce(g.reopen_count::text, '0')),
+      coalesce(g.state::text, 'NONE'), coalesce(g.reopen_count::text, '0'),
+      (select count(*)::text from public.c3r_p_attempts a
+        where a.user_id = r.user_id and a.record_id = r.id)),
     ',' order by r.id), ''), 'UTF8'), 'sha256'), 'hex')
   from public.c3r_p_learning_records r
   left join public.c3r_p_learning_gaps g
