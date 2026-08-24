@@ -20,6 +20,15 @@ export const C3R_P_CONTRACT_PATH =
   "config/dabangil-wcv-c3r-p-practice-common-durable-runtime-v1.json";
 export const C3R_P_APPEND_PATH =
   "supabase/migrations/20260822120000_c3r_p_practice_common_durable_substrate.sql";
+export const C3R_P_AUTHORIZED_EXISTING_MIGRATION_PATHS = Object.freeze([
+  "supabase/migrations/20260608090000_create_personal_learning_states.sql",
+  "supabase/migrations/20260615090000_legal_grounding.sql",
+  "supabase/migrations/20260615100000_legal_article_chunk_identity.sql",
+  "supabase/migrations/20260615110000_legal_retrieval.sql",
+  "supabase/migrations/20260615120000_legal_grounding_guard.sql",
+  "supabase/migrations/20260616100000_legal_grounding_guard_service_role_grant.sql",
+  "supabase/migrations/202606232130_personal_concept_graph_rpc_only_write_boundary.sql",
+]);
 const C3R_P_MIGRATION_AUTHORITY_PATH =
   "config/dabangil-wcv-c3-pre-p-migration-mutation-authority-v1.json";
 export const C3R_P_RUNTIME_SCHEMA_VERSION =
@@ -30,6 +39,7 @@ export const C3R_P_NATIVE_SCHEMA_VERSION =
   "inverge.runtime_evidence.c3r_p.v1";
 export const C3R_P_RUNTIME_REQUIRED_PATTERNS = Object.freeze([
   C3R_P_CONTRACT_PATH,
+  ...C3R_P_AUTHORIZED_EXISTING_MIGRATION_PATHS,
   C3R_P_APPEND_PATH,
   "scripts/automation/wcv-c3r-p-practice-common-runtime.mjs",
   "app/api/review-os/c3r-p/**",

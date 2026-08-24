@@ -52,6 +52,7 @@ import {
 } from "../scripts/automation/runtime-risk-contract.mjs";
 import {
   C3R_P_APPEND_PATH,
+  C3R_P_AUTHORIZED_EXISTING_MIGRATION_PATHS,
   C3R_P_CONTRACT_PATH,
   C3R_P_RUNTIME_REQUIRED_PATTERNS,
   isC3RPRiskCandidate,
@@ -977,7 +978,11 @@ test("PostgreSQL security-state oracle is a closed native adapter without changi
 
 test("C3R-P runtime path family selects the closed adapter for code-only changes", () => {
   const candidate = {
-    changedFiles: [C3R_P_APPEND_PATH, C3R_P_CONTRACT_PATH],
+    changedFiles: [
+      C3R_P_APPEND_PATH,
+      C3R_P_CONTRACT_PATH,
+      ...C3R_P_AUTHORIZED_EXISTING_MIGRATION_PATHS,
+    ],
     changedFilesTruncated: false,
     runtimeEvidenceRequired: true,
   };
@@ -1006,6 +1011,7 @@ test("C3R-P runtime path family selects the closed adapter for code-only changes
   assert.equal(isC3RPRiskCandidate({ ...candidate, changedFiles: null }), false);
   assert.deepEqual(C3R_P_RUNTIME_REQUIRED_PATTERNS, [
     C3R_P_CONTRACT_PATH,
+    ...C3R_P_AUTHORIZED_EXISTING_MIGRATION_PATHS,
     C3R_P_APPEND_PATH,
     "scripts/automation/wcv-c3r-p-practice-common-runtime.mjs",
     "app/api/review-os/c3r-p/**",
@@ -1013,7 +1019,11 @@ test("C3R-P runtime path family selects the closed adapter for code-only changes
   ]);
   const reasons = runtimeRequiredPathRecords(candidate.changedFiles);
   assert.deepEqual(reasons.map((reason) => reason.path).sort(),
-    [C3R_P_APPEND_PATH, C3R_P_CONTRACT_PATH].sort());
+    [
+      C3R_P_APPEND_PATH,
+      C3R_P_CONTRACT_PATH,
+      ...C3R_P_AUTHORIZED_EXISTING_MIGRATION_PATHS,
+    ].sort());
   const producer = readTextFileSync(path.join(
     WORKSPACE_ROOT, "scripts/automation/produce-runtime-evidence.mjs",
   ));
