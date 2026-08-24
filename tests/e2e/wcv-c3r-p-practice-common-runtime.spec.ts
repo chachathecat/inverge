@@ -2028,9 +2028,7 @@ test("exact Practice browser-to-Postgres durable loop", async ({ browser }) => {
     }),
   ]));
   await expectState(secondPage, "CLOSED");
-  await expect(secondPage.getByTestId("c3r-p-queue-count")).toHaveText(
-    "실행 가능한 Review Queue: 0개",
-  );
+  await expect(secondPage.getByTestId("c3r-p-planner")).toHaveCount(0);
   await expect(secondPage.getByText(/CORE_OUTCOME · REOPENED_REVIEW · 30분 · COMPLETE/u)).toBeVisible();
   await expect(secondPage.getByText("dayComplete: true")).toBeVisible();
 
