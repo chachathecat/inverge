@@ -1073,9 +1073,9 @@ test("exact Practice browser-to-Postgres durable loop", async ({ browser }) => {
     action: "complete_reopened_review",
     planBlockId: null,
   });
-  await expect(secondPage.getByRole("alert")).toContainText(
-    "invalid_transition",
-  );
+  await expect(
+    secondPage.getByRole("alert").filter({ hasText: "invalid_transition" }),
+  ).toContainText("invalid_transition");
   await secondPage.unroute("**/api/review-os/c3r-p", rejectFinalRetry);
   await expectState(secondPage, "REOPENED");
   await contextB.close();
