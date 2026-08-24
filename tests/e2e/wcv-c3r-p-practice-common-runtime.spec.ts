@@ -772,8 +772,78 @@ test("exact Practice browser-to-Postgres durable loop", async ({ browser }) => {
   expect(persistedRepairResponse.status()).toBe(200);
   const persistedRepair = await persistedRepairResponse.json();
   expect(persistedRepair.view.restored.record.state).toBe("REPAIRED");
+  const prematureAssistedD1 = await context.request.post(
+    "/api/review-os/c3r-p",
+    { data: {
+      action: "record_assisted_review",
+      commandId: randomUUID(),
+      recordId,
+      expectedVersion: persistedRepair.view.restored.record.record_version,
+      attemptId: randomUUID(),
+      claim: practiceClaim(C3R_P_SOURCE_REVISION_ID),
+      evidenceStep: "feedback",
+    } },
+  );
+  expect(prematureAssistedD1.status()).toBe(409);
+  expect(await prematureAssistedD1.json()).toEqual({
+    ok: false,
+    error: "invalid_transition",
+  });
+  const afterPrematureAssistedD1 = await context.request.get(
+    `/api/review-os/c3r-p?recordId=${recordId}`,
+  );
+  expect((await afterPrematureAssistedD1.json()).view.restored).toMatchObject({
+    record: {
+      state: "REPAIRED",
+      record_version: persistedRepair.view.restored.record.record_version,
+    },
+    assistanceEvents: [expect.objectContaining({ assistance_kind: "BIGGEST_GAP" })],
+  });
+  await page.goto("/app/c3r-p");
+  await expectState(page, "REPAIRED");
+  await expect(page.getByRole("button", { name: "첫 시도와 확신을 고정하기" })).toHaveCount(0);
   const staleD1Plan = await createAcceptedPlan(context, recordId, "TODAY", "d1");
   expect(staleD1Plan.blocks[0]).toMatchObject({ reviewPhase: "D1" });
+  const rejectedD1PlanId = randomUUID();
+  const proposedD1PlanResponse = await context.request.post(
+    "/api/review-os/c3r-p",
+    { data: {
+      action: "create_plan",
+      commandId: randomUUID(),
+      recordId,
+      planId: rejectedD1PlanId,
+      kind: "TODAY",
+      availableMinutes: 90,
+      evidenceStep: "d1Fresh",
+    } },
+  );
+  expect(proposedD1PlanResponse.status()).toBe(200);
+  const proposedD1Plan = await proposedD1PlanResponse.json();
+  expect(proposedD1Plan.view.currentPlan).toMatchObject({
+    planId: rejectedD1PlanId,
+    state: "PROPOSED",
+  });
+  const rejectedD1PlanResponse = await context.request.post(
+    "/api/review-os/c3r-p",
+    { data: {
+      action: "decide_plan",
+      commandId: randomUUID(),
+      recordId,
+      planId: rejectedD1PlanId,
+      expectedVersion: proposedD1Plan.view.currentPlan.recordVersion,
+      decision: "REJECT",
+      blocks: null,
+      evidenceStep: "d1Fresh",
+    } },
+  );
+  expect(rejectedD1PlanResponse.status()).toBe(200);
+  const rejectedD1Plan = await rejectedD1PlanResponse.json();
+  expect(rejectedD1Plan.view.currentPlan).toMatchObject({
+    planId: staleD1Plan.planId,
+    state: "ACCEPTED",
+  });
+  await page.goto("/app/c3r-p");
+  await expectState(page, "REPAIRED");
 
   const assistedD1ResponsePromise = page.waitForResponse((response) =>
     response.request().postDataJSON()?.action === "record_assisted_review",
@@ -1564,6 +1634,9 @@ test("exact Practice browser-to-Postgres durable loop", async ({ browser }) => {
       assistedD1AssistanceEventPersisted: true,
       assistedD1LedgerPersisted: true,
       assistedD1RestoredAfterRefresh: true,
+      assistedD1PrematureDenied: true,
+      baseRouteRestoredExistingRecord: true,
+      terminalPlanFallsBackToActive: true,
       d1Unaided: true,
       d7DifferentItemAndSurface: true,
       sealedTransferTaskPersisted: true,

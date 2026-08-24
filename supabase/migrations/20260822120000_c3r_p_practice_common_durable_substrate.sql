@@ -809,8 +809,8 @@ begin
       v_now := (p_payload ->> 'occurredAt')::timestamptz;
       if p_action = 'record_assisted_review' then
         v_phase := 'D1'; v_outcome := 'ASSISTED_SUCCESS';
-        if v_record.state <> 'REPAIRED' then
-          raise exception 'C3R_P_INVALID_TRANSITION' using errcode = '23514';
+        if v_record.state <> 'REPAIRED' or v_now < v_record.d1_due_at then
+          raise exception 'C3R_P_D1_NOT_ELIGIBLE' using errcode = '23514';
         end if;
       elsif p_action = 'complete_d1' then
         v_phase := 'D1'; v_outcome := 'INDEPENDENT_SUCCESS'; v_entry_kind := 'D1_RECONSTRUCTED';
@@ -1313,6 +1313,38 @@ begin
 end;
 $$;
 
+create or replace function public.c3r_p_find_record_v1(
+  p_user_id uuid,
+  p_source_id text,
+  p_problem_id text,
+  p_revision_id text,
+  p_item_id text,
+  p_artifact_id text
+)
+returns uuid
+language plpgsql
+stable
+security invoker
+set search_path = ''
+as $$
+declare
+  v_record_id uuid;
+begin
+  if current_user <> 'service_role' then
+    raise exception 'C3R_P_SERVICE_ROLE_REQUIRED' using errcode = '42501';
+  end if;
+  select r.id into v_record_id
+  from public.c3r_p_learning_records r
+  where r.user_id = p_user_id
+    and r.source_id = p_source_id
+    and r.problem_id = p_problem_id
+    and r.revision_id = p_revision_id
+    and r.item_id = p_item_id
+    and r.artifact_id = p_artifact_id;
+  return v_record_id;
+end;
+$$;
+
 create or replace function public.c3r_p_restore_record_v1(
   p_user_id uuid,
   p_record_id uuid
@@ -1556,6 +1588,7 @@ revoke all on function public.c3r_p_review_state_digest_v1(uuid) from public, an
 revoke all on function public.c3r_p_apply_learning_command_v1(uuid, uuid, bigint, text, jsonb) from public, anon, authenticated;
 revoke all on function public.c3r_p_create_plan_v1(uuid, uuid, uuid, public.c3r_p_plan_kind, integer, timestamptz, jsonb) from public, anon, authenticated;
 revoke all on function public.c3r_p_decide_plan_v1(uuid, uuid, uuid, bigint, text, timestamptz, jsonb) from public, anon, authenticated;
+revoke all on function public.c3r_p_find_record_v1(uuid, text, text, text, text, text) from public, anon, authenticated;
 revoke all on function public.c3r_p_restore_record_v1(uuid, uuid) from public, anon, authenticated;
 revoke all on function public.c3r_p_load_dashboard_v1(uuid, timestamptz) from public, anon, authenticated;
 revoke all on function public.c3r_p_export_learner_data_v1(uuid) from public, anon, authenticated;
@@ -1568,6 +1601,7 @@ grant execute on function public.c3r_p_review_state_digest_v1(uuid) to service_r
 grant execute on function public.c3r_p_apply_learning_command_v1(uuid, uuid, bigint, text, jsonb) to service_role;
 grant execute on function public.c3r_p_create_plan_v1(uuid, uuid, uuid, public.c3r_p_plan_kind, integer, timestamptz, jsonb) to service_role;
 grant execute on function public.c3r_p_decide_plan_v1(uuid, uuid, uuid, bigint, text, timestamptz, jsonb) to service_role;
+grant execute on function public.c3r_p_find_record_v1(uuid, text, text, text, text, text) to service_role;
 grant execute on function public.c3r_p_restore_record_v1(uuid, uuid) to service_role;
 grant execute on function public.c3r_p_load_dashboard_v1(uuid, timestamptz) to service_role;
 grant execute on function public.c3r_p_export_learner_data_v1(uuid) to service_role;

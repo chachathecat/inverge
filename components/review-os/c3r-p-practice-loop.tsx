@@ -100,6 +100,9 @@ export function C3RPPracticeLoop({
   const gap = restored?.gaps[0] ?? null;
   const transferTask = restored?.transferTask ?? null;
   const currentPlan = view?.currentPlan ?? null;
+  const d1Eligible = view?.dashboard.queue.some((item) =>
+    item.recordId === record?.id && item.reviewPhase === "D1" && item.eligible,
+  ) ?? false;
   const currentReviewPhase = record?.state === "REPAIRED"
     ? "D1"
     : record?.state === "D1_COMPLETE"
@@ -509,10 +512,10 @@ export function C3RPPracticeLoop({
         {record?.state === "REPAIRED" ? (
           <div className="mt-5 grid gap-3">
             <p className="rounded-xl bg-slate-50 p-3 text-sm">D+1은 도움 없이 다시 구성해야 독립 성공으로 기록됩니다.</p>
-            <button disabled={pending} onClick={() => void review("record_assisted_review")} className="rounded-xl border px-4 py-3 font-semibold disabled:opacity-50">
+            <button disabled={pending || !d1Eligible} onClick={() => void review("record_assisted_review")} className="rounded-xl border px-4 py-3 font-semibold disabled:opacity-50">
               도움을 사용한 D+1 기록(독립 성공 아님)
             </button>
-            <button disabled={pending} onClick={() => void review("complete_d1")} className="rounded-xl bg-[var(--color-action-primary)] px-4 py-3 font-semibold text-white disabled:opacity-50">
+            <button disabled={pending || !d1Eligible} onClick={() => void review("complete_d1")} className="rounded-xl bg-[var(--color-action-primary)] px-4 py-3 font-semibold text-white disabled:opacity-50">
               D+1 무도움 재구성 완료
             </button>
           </div>

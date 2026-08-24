@@ -128,16 +128,15 @@ export function createC3RPService(authenticatedUserId: string) {
   const repository = createC3RPRepository(authenticatedUserId);
 
   async function view(recordId: string | null, asOf = now()): Promise<C3RPView> {
+    const resolvedRecordId = recordId ?? await repository.findRecordId(C3R_P_SOURCE);
     const [restored, dashboard] = await Promise.all([
-      recordId ? repository.restore(recordId) : Promise.resolve(null),
+      resolvedRecordId ? repository.restore(resolvedRecordId) : Promise.resolve(null),
       repository.dashboard(asOf),
     ]);
-    const latestPlan = dashboard.plans.find((plan) =>
-      !recordId || plan.blocks.some((block) => block.recordId === recordId),
+    const currentPlan = dashboard.plans.find((plan) =>
+      !["REJECTED", "STALE"].includes(plan.state) &&
+      (!resolvedRecordId || plan.blocks.some((block) => block.recordId === resolvedRecordId)),
     ) ?? null;
-    const currentPlan = latestPlan && !["REJECTED", "STALE"].includes(latestPlan.state)
-      ? latestPlan
-      : null;
     return {
       source: c3rPSourceView(),
       restored,

@@ -46,10 +46,10 @@ const productionAccessBlobs = Object.freeze({
   "app/app/layout.tsx": "215ec312e2102d39332eeb47e2cc3b446ad78d19",
   "app/app/c3r-p/page.tsx": "1183828115a8a0ef0fb04c5d9c0e42a8ae5bd240",
   "app/api/review-os/c3r-p/route.ts": "f5296e848c6a77edb8dde30a317ba8c21bffbe57",
-  "lib/review-os/c3r-p-service.ts": "2082b031c4d96a39d38de79da92fcd0deff03b9a",
-  "lib/review-os/c3r-p-repository.ts": "624c57c908e83d92535591472fae95c68fc2be7b",
+  "lib/review-os/c3r-p-service.ts": "59862898505cefc61e9ad2b5bc3f352625297a68",
+  "lib/review-os/c3r-p-repository.ts": "990f19f94458685782a49cfea6f00553a2a542f0",
   "lib/review-os/c3r-p-engine.ts": "db1d8b45bf6e65f247dd5e38aba38dc1535c3dda",
-  "components/review-os/c3r-p-practice-loop.tsx": "71b2c9e5c8bd7cc828a7324f0edad2d2f284b400",
+  "components/review-os/c3r-p-practice-loop.tsx": "168355a88ef17366e35e02940589fd6939f6b4f7",
 });
 
 const FORMER_C3R_P_SOURCE_REVISION_ID =
@@ -378,7 +378,8 @@ test("sole append closes subject, ownership, RLS, RPC, CAS and durable outcome b
     "revoke all on table", "grant select on table", "to service_role",
     "C3R_P_SERVICE_ROLE_REQUIRED", "C3R_P_IDEMPOTENCY_CONFLICT", "C3R_P_CAS_CONFLICT",
     "ASSISTED_SUCCESS", "D1_COMPLETE", "D7_COMPLETE", "RECURRENCE", "REOPENED",
-    "c3r_p_restore_record_v1", "c3r_p_export_learner_data_v1", "c3r_p_delete_learner_data_v1",
+    "c3r_p_find_record_v1", "c3r_p_restore_record_v1",
+    "c3r_p_export_learner_data_v1", "c3r_p_delete_learner_data_v1",
   ]) assert.ok(sql.includes(marker), marker);
   assert.match(sql, /v_core_count > 3 or v_minutes > p_available_minutes/);
   assert.match(sql, /v_core_count > 3 or v_minutes > v_plan\.available_minutes/);
@@ -480,6 +481,8 @@ test("learner export deterministically includes owned assistance events and fina
 
 test("assisted D+1 atomically appends an exact event and bodyless learner ledger history", () => {
   assert.match(sql,
+    /p_action = 'record_assisted_review'[\s\S]*v_now < v_record\.d1_due_at[\s\S]*C3R_P_D1_NOT_ELIGIBLE/);
+  assert.match(sql,
     /p_action = 'record_assisted_review'[\s\S]*insert into public\.c3r_p_assistance_events[\s\S]*'SMALLEST_SCAFFOLD'/);
   assert.match(sql,
     /p_action = 'record_assisted_review'[\s\S]*insert into public\.c3r_p_ledger_entries[\s\S]*'D1_ASSISTED'/);
@@ -490,6 +493,7 @@ test("assisted D+1 atomically appends an exact event and bodyless learner ledger
   assert.match(browserSource, /assistedD1AssistanceEventPersisted: true/);
   assert.match(browserSource, /assistedD1LedgerPersisted: true/);
   assert.match(browserSource, /assistedD1RestoredAfterRefresh: true/);
+  assert.match(browserSource, /assistedD1PrematureDenied: true/);
 });
 
 test("dedicated cycles start isolated Supabase first and transactionally apply all 26 migrations", () => {
@@ -728,8 +732,12 @@ test("plans and destructive-result UI are restored from successful server state"
   assert.match(serviceSource, /const FROZEN_CONFIGURATION = Object\.freeze/);
   assert.match(serviceSource, /configurationDigest: FROZEN_CONFIGURATION_DIGEST/g);
   assert.match(engineSource, /input\.availableMinutes < 30[\s\S]*input\.availableMinutes > 720/);
-  assert.match(serviceSource, /const latestPlan = dashboard\.plans\.find/);
-  assert.match(serviceSource, /\["REJECTED", "STALE"\]\.includes\(latestPlan\.state\)/);
+  assert.match(sql,
+    /create or replace function public\.c3r_p_find_record_v1[\s\S]*r\.user_id = p_user_id[\s\S]*r\.source_id = p_source_id[\s\S]*r\.problem_id = p_problem_id[\s\S]*r\.revision_id = p_revision_id[\s\S]*r\.item_id = p_item_id[\s\S]*r\.artifact_id = p_artifact_id/);
+  assert.match(serviceSource,
+    /recordId \?\? await repository\.findRecordId\(C3R_P_SOURCE\)/);
+  assert.match(serviceSource,
+    /dashboard\.plans\.find\(\(plan\) =>[\s\S]*!\["REJECTED", "STALE"\]\.includes\(plan\.state\)/);
   assert.match(serviceSource,
     /async createPlan[\s\S]*\.\.\.\(await view\(input\.recordId, asOf\)\)/);
   assert.match(serviceSource,
@@ -744,6 +752,8 @@ test("plans and destructive-result UI are restored from successful server state"
   assert.match(componentSource,
     /{error \? \([\s\S]*\) : null}\s*{exportStatus \? <p className="text-sm" role="status">{exportStatus}<\/p> : null}\s*<section/);
   assert.match(browserSource, /계획 상태: EDITED/);
+  assert.match(browserSource, /baseRouteRestoredExistingRecord: true/);
+  assert.match(browserSource, /terminalPlanFallsBackToActive: true/);
   assert.match(browserSource, /temporarily_unavailable[\s\S]*c3r-p-ledger/);
 });
 

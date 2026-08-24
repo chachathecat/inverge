@@ -196,6 +196,26 @@ export function createC3RPRepository(authenticatedUserId: string) {
       return restoredRecord(result.data);
     },
 
+    async findRecordId(input: {
+      sourceId: string;
+      problemId: string;
+      revisionId: string;
+      itemId: string;
+      artifactId: string;
+    }) {
+      const result = await adminClient().rpc("c3r_p_find_record_v1", {
+        p_user_id: authenticatedUserId,
+        p_source_id: input.sourceId,
+        p_problem_id: input.problemId,
+        p_revision_id: input.revisionId,
+        p_item_id: input.itemId,
+        p_artifact_id: input.artifactId,
+      });
+      if (result.error) rpcError(result.error);
+      if (result.data === null) return null;
+      return stringValue(result.data);
+    },
+
     async dashboard(asOf: string) {
       const result = await adminClient().rpc("c3r_p_load_dashboard_v1", {
         p_user_id: authenticatedUserId,
