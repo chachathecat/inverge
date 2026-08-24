@@ -34,6 +34,7 @@ const C3R_P_TRANSFER_ANCHOR_ID =
   C3R_P_PRIMARY_ANCHOR_ID;
 const C3R_P_TRANSFER_ANCHOR_VERSION_ID =
   "repair-anchor:practice:synthetic-net-income@d7-transfer-v1";
+const c3rPApiUrl = (url: URL) => url.pathname === "/api/review-os/c3r-p";
 
 const ENTRY_CLASSIFICATIONS = [
   "C3R_P_ENTRY_AUTH_SESSION_NOT_VISIBLE",
@@ -560,7 +561,7 @@ test("exact Practice browser-to-Postgres durable loop", async ({ browser }) => {
     expect(serializedExport).not.toContain(prior.foreignAssistanceEventId);
 
     let denyDeleteOnce = true;
-    await pageA.route("**/api/review-os/c3r-p", async (route) => {
+    await pageA.route(c3rPApiUrl, async (route) => {
       const request = route.request();
       if (
         denyDeleteOnce &&
@@ -592,7 +593,7 @@ test("exact Practice browser-to-Postgres durable loop", async ({ browser }) => {
       pageA.getByRole("status").filter({ hasText: "삭제 완료" }),
     ).toHaveCount(0);
 
-    await pageA.unroute("**/api/review-os/c3r-p");
+    await pageA.unroute(c3rPApiUrl);
     pageA.once("dialog", (dialog) => dialog.accept());
     const deleteResponsePromise = pageA.waitForResponse((response) => {
       const request = response.request();
@@ -1058,7 +1059,7 @@ test("exact Practice browser-to-Postgres durable loop", async ({ browser }) => {
     }
     await route.continue();
   };
-  await page.route("**/api/review-os/c3r-p", preDueD7Route);
+  await page.route(c3rPApiUrl, preDueD7Route);
   await page.reload();
   const preDueD7Button = page.getByRole("button", {
     name: "D+7 전이 과업 열기",
@@ -1081,7 +1082,7 @@ test("exact Practice browser-to-Postgres durable loop", async ({ browser }) => {
   });
   await settleBrowserEvents(page);
   expect(earlyD7Requests).toEqual([]);
-  await page.unroute("**/api/review-os/c3r-p", preDueD7Route);
+  await page.unroute(c3rPApiUrl, preDueD7Route);
 
   const secondBrowser = await contextFor(
     browser,
@@ -1106,8 +1107,8 @@ test("exact Practice browser-to-Postgres durable loop", async ({ browser }) => {
 
   const d7EvidenceRouteA = dashboardEvidenceStepRoute("d7");
   const d7EvidenceRouteB = dashboardEvidenceStepRoute("d7");
-  await page.route("**/api/review-os/c3r-p", d7EvidenceRouteA);
-  await secondPage.route("**/api/review-os/c3r-p", d7EvidenceRouteB);
+  await page.route(c3rPApiUrl, d7EvidenceRouteA);
+  await secondPage.route(c3rPApiUrl, d7EvidenceRouteB);
   await Promise.all([page.reload(), secondPage.reload()]);
   await expect(page.getByRole("button", {
     name: "D+7 전이 과업 열기",
@@ -1315,7 +1316,7 @@ test("exact Practice browser-to-Postgres durable loop", async ({ browser }) => {
     }
     await route.continue();
   };
-  await secondPage.route("**/api/review-os/c3r-p", preDueRecurrenceRoute);
+  await secondPage.route(c3rPApiUrl, preDueRecurrenceRoute);
   await preDueRecurrenceButton.evaluate((element) => {
     element.click();
     element.dispatchEvent(new KeyboardEvent("keydown", {
@@ -1329,14 +1330,14 @@ test("exact Practice browser-to-Postgres durable loop", async ({ browser }) => {
   });
   await settleBrowserEvents(secondPage);
   expect(earlyRecurrenceRequests).toEqual([]);
-  await secondPage.unroute("**/api/review-os/c3r-p", preDueRecurrenceRoute);
+  await secondPage.unroute(c3rPApiUrl, preDueRecurrenceRoute);
 
-  await page.unroute("**/api/review-os/c3r-p", d7EvidenceRouteA);
-  await secondPage.unroute("**/api/review-os/c3r-p", d7EvidenceRouteB);
+  await page.unroute(c3rPApiUrl, d7EvidenceRouteA);
+  await secondPage.unroute(c3rPApiUrl, d7EvidenceRouteB);
   const recurrenceEvidenceRouteA = dashboardEvidenceStepRoute("recurrence");
   const recurrenceEvidenceRouteB = dashboardEvidenceStepRoute("recurrence");
-  await page.route("**/api/review-os/c3r-p", recurrenceEvidenceRouteA);
-  await secondPage.route("**/api/review-os/c3r-p", recurrenceEvidenceRouteB);
+  await page.route(c3rPApiUrl, recurrenceEvidenceRouteA);
+  await secondPage.route(c3rPApiUrl, recurrenceEvidenceRouteB);
   await Promise.all([page.reload(), secondPage.reload()]);
   await expect(page.getByRole("button", {
     name: "시간 기반 재출현 독립 수행 완료",
@@ -1855,7 +1856,7 @@ test("exact Practice browser-to-Postgres durable loop", async ({ browser }) => {
     }
     await route.continue();
   };
-  await secondPage.route("**/api/review-os/c3r-p", rejectFinalRetry);
+  await secondPage.route(c3rPApiUrl, rejectFinalRetry);
   await fillStructuredCalculation(secondPage);
   await secondPage.getByRole("button", {
     name: "다시 열린 복습을 독립 수행으로 완료",
@@ -1868,7 +1869,7 @@ test("exact Practice browser-to-Postgres durable loop", async ({ browser }) => {
   await expect(
     secondPage.getByRole("alert").filter({ hasText: "invalid_transition" }),
   ).toContainText("invalid_transition");
-  await secondPage.unroute("**/api/review-os/c3r-p", rejectFinalRetry);
+  await secondPage.unroute(c3rPApiUrl, rejectFinalRetry);
   await expectState(secondPage, "REOPENED");
   await contextB.close();
   expect(foreignHosts.size).toBe(0);
