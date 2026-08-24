@@ -2009,15 +2009,16 @@ test("exact Practice browser-to-Postgres durable loop", async ({ browser }) => {
   expect(completionBody.view.dashboard.queue).not.toEqual(expect.arrayContaining([
     expect.objectContaining({ recordId }),
   ]));
-  expect(completionBody.view.currentPlan).toMatchObject({
-    planId: fullDayPlanId,
-    dayComplete: true,
-    blocks: [expect.objectContaining({
-      blockId: fullDayBlockId,
-      executionState: "COMPLETE",
-    })],
-  });
+  expect(completionBody.view.currentPlan).toBeNull();
   expect(completionBody.view.dashboard.plans).toEqual(expect.arrayContaining([
+    expect.objectContaining({
+      planId: fullDayPlanId,
+      dayComplete: true,
+      blocks: [expect.objectContaining({
+        blockId: fullDayBlockId,
+        executionState: "COMPLETE",
+      })],
+    }),
     expect.objectContaining({
       planId: staleFullDayPlanId,
       blocks: [expect.objectContaining({
