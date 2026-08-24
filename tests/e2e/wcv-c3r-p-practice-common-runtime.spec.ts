@@ -630,6 +630,7 @@ test("exact Practice browser-to-Postgres durable loop", async ({ browser }) => {
   const createPlanRequest = await createPlanRequestPromise;
   expect(createPlanRequest.postDataJSON()).toMatchObject({
     action: "create_plan",
+    recordId,
     kind: "TODAY",
     availableMinutes: 90,
     evidenceStep: "plan",
@@ -649,6 +650,12 @@ test("exact Practice browser-to-Postgres durable loop", async ({ browser }) => {
   expect(createPlanBody).toMatchObject({
     ok: true,
     view: {
+      restored: {
+        record: {
+          id: recordId,
+          state: "REOPENED",
+        },
+      },
       currentPlan: {
         planKind: "TODAY",
         state: "PROPOSED",
@@ -668,7 +675,33 @@ test("exact Practice browser-to-Postgres durable loop", async ({ browser }) => {
   );
   await expect(secondPage.getByText("계획 상태: PROPOSED")).toBeVisible();
   await expect(secondPage.getByText("dayComplete: false")).toBeVisible();
+  const editPlanResponsePromise = secondPage.waitForResponse((response) => {
+    const request = response.request();
+    return (
+      new URL(response.url()).pathname === "/api/review-os/c3r-p" &&
+      request.method() === "POST" &&
+      request.postDataJSON()?.action === "decide_plan"
+    );
+  });
   await secondPage.getByRole("button", { name: "편집" }).click();
+  const editPlanResponse = await editPlanResponsePromise;
+  expect(editPlanResponse.status()).toBe(200);
+  expect(await editPlanResponse.json()).toMatchObject({
+    ok: true,
+    view: {
+      restored: {
+        record: {
+          id: recordId,
+          state: "REOPENED",
+        },
+      },
+      currentPlan: {
+        planId: createPlanBody.view.currentPlan.planId,
+        state: "EDITED",
+        recordVersion: 2,
+      },
+    },
+  });
   await expect(secondPage.getByText("계획 상태: EDITED")).toBeVisible();
   await secondPage.reload();
   await expectState(secondPage, "REOPENED");

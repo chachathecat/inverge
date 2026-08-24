@@ -45,11 +45,11 @@ const productionAccessBlobs = Object.freeze({
   "lib/review-os/server.ts": "429085a06c3104aa66c49b272738d53f00318d8a",
   "app/app/layout.tsx": "215ec312e2102d39332eeb47e2cc3b446ad78d19",
   "app/app/c3r-p/page.tsx": "1183828115a8a0ef0fb04c5d9c0e42a8ae5bd240",
-  "app/api/review-os/c3r-p/route.ts": "aa900106481b7c3eab2a9474639ffc2fec008417",
-  "lib/review-os/c3r-p-service.ts": "4d9e06497cdf762792290237d7fd73806b0d1289",
+  "app/api/review-os/c3r-p/route.ts": "66270009fef5d2d55e263414b3aed1f1eec436d5",
+  "lib/review-os/c3r-p-service.ts": "3700fe86c9a14f423c7d27f5f66385f43b41c603",
   "lib/review-os/c3r-p-repository.ts": "21da20f69472c1b74208a40ec3889add8790d1ff",
   "lib/review-os/c3r-p-engine.ts": "255462ab212006ed97936f0ec4ce5687c09aca65",
-  "components/review-os/c3r-p-practice-loop.tsx": "cfdc5c59b87f386f1b04430b74b88f0a820b356d",
+  "components/review-os/c3r-p-practice-loop.tsx": "8a20281c606b67fd6316df0aef074b3ac466703c",
 });
 
 const FORMER_C3R_P_SOURCE_REVISION_ID =
@@ -502,7 +502,14 @@ test("plans and destructive-result UI are restored from successful server state"
   assert.match(engineSource, /input\.availableMinutes < 30[\s\S]*input\.availableMinutes > 720/);
   assert.match(serviceSource, /const latestPlan = dashboard\.plans\.find/);
   assert.match(serviceSource, /\["REJECTED", "STALE"\]\.includes\(latestPlan\.state\)/);
-  assert.match(serviceSource, /await repository\.decidePlan[\s\S]*return view\(null, asOf\)/);
+  assert.match(serviceSource,
+    /async createPlan[\s\S]*\.\.\.\(await view\(input\.recordId, asOf\)\)/);
+  assert.match(serviceSource,
+    /await repository\.decidePlan[\s\S]*return view\(input\.recordId, asOf\)/);
+  assert.match(componentSource,
+    /action: "create_plan",[\s\S]*recordId: record\.id/);
+  assert.match(componentSource,
+    /action: "decide_plan",[\s\S]*recordId: record\.id/);
   assert.match(componentSource, /const data = await request\(\{ action: "delete" \}\);\s*if \(!data\.ok\) return;/);
   assert.match(browserSource, /계획 상태: EDITED/);
   assert.match(browserSource, /temporarily_unavailable[\s\S]*c3r-p-ledger/);

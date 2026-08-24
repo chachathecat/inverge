@@ -242,9 +242,11 @@ export function C3RPPracticeLoop({
   }
 
   async function createPlan(kind: "TODAY" | "FULL_DAY") {
+    if (!record) return;
     await request({
       action: "create_plan",
       commandId: id(),
+      recordId: record.id,
       planId: id(),
       kind,
       availableMinutes: kind === "TODAY" ? 90 : 240,
@@ -253,7 +255,7 @@ export function C3RPPracticeLoop({
   }
 
   async function decidePlan(decision: "ACCEPT" | "EDIT" | "REJECT") {
-    if (!currentPlan) return;
+    if (!currentPlan || !record) return;
     const blocks: readonly C3RPPlanBlock[] | null =
       decision === "EDIT"
         ? currentPlan.blocks.map((block, index) => ({
@@ -266,6 +268,7 @@ export function C3RPPracticeLoop({
     await request({
       action: "decide_plan",
       commandId: id(),
+      recordId: record.id,
       planId: currentPlan.planId,
       expectedVersion: currentPlan.recordVersion,
       decision,

@@ -215,13 +215,15 @@ export async function POST(request: Request) {
 
     if (action === "create_plan") {
       const row = c3rPExactObject(raw, [
-        "action", "commandId", "planId", "kind", "availableMinutes", "evidenceStep",
+        "action", "commandId", "recordId", "planId", "kind", "availableMinutes",
+        "evidenceStep",
       ]);
       if (!["TODAY", "FULL_DAY"].includes(String(row.kind))) {
         throw new C3RPError("invalid_input");
       }
       const view = await service.createPlan({
         commandId: c3rPRequiredUuid(row.commandId),
+        recordId: c3rPRequiredUuid(row.recordId),
         planId: c3rPRequiredUuid(row.planId),
         kind: row.kind as "TODAY" | "FULL_DAY",
         availableMinutes: requiredInteger(row.availableMinutes, 30, 720),
@@ -232,14 +234,15 @@ export async function POST(request: Request) {
 
     if (action === "decide_plan") {
       const row = c3rPExactObject(raw, [
-        "action", "commandId", "planId", "expectedVersion", "decision",
-        "blocks", "evidenceStep",
+        "action", "commandId", "recordId", "planId", "expectedVersion",
+        "decision", "blocks", "evidenceStep",
       ]);
       if (!["ACCEPT", "EDIT", "REJECT"].includes(String(row.decision))) {
         throw new C3RPError("invalid_input");
       }
       const view = await service.decidePlan({
         commandId: c3rPRequiredUuid(row.commandId),
+        recordId: c3rPRequiredUuid(row.recordId),
         planId: c3rPRequiredUuid(row.planId),
         expectedVersion: requiredInteger(row.expectedVersion, 1),
         decision: row.decision as "ACCEPT" | "EDIT" | "REJECT",

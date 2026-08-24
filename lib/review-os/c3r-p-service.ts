@@ -304,6 +304,7 @@ export function createC3RPService(authenticatedUserId: string) {
 
     async createPlan(input: {
       commandId: string;
+      recordId: string;
       planId: string;
       kind: "TODAY" | "FULL_DAY";
       availableMinutes: number;
@@ -328,7 +329,7 @@ export function createC3RPService(authenticatedUserId: string) {
         throw new C3RPError("invalid_transition");
       }
       return {
-        ...(await view(null, asOf)),
+        ...(await view(input.recordId, asOf)),
         currentPlan: {
           planId: input.planId,
           planKind: input.kind,
@@ -342,6 +343,7 @@ export function createC3RPService(authenticatedUserId: string) {
 
     async decidePlan(input: {
       commandId: string;
+      recordId: string;
       planId: string;
       expectedVersion: number;
       decision: "ACCEPT" | "EDIT" | "REJECT";
@@ -350,7 +352,7 @@ export function createC3RPService(authenticatedUserId: string) {
     }) {
       const asOf = now(input.evidenceStep);
       await repository.decidePlan({ ...input, asOf });
-      return view(null, asOf);
+      return view(input.recordId, asOf);
     },
 
     exportData: () => repository.exportData(),
