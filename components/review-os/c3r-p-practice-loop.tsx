@@ -20,7 +20,7 @@ type ApiResult = {
 };
 
 const apiPath = "/api/review-os/c3r-p";
-const C3R_P_DELETE_COMPLETE_HISTORY_KEY = "__dabangilC3RPDeleteComplete";
+const C3R_P_DELETE_COMPLETE_SESSION_KEY = "dabangil:c3r-p:delete-complete";
 
 function id() {
   return window.crypto.randomUUID();
@@ -148,12 +148,8 @@ export function C3RPPracticeLoop({
   }, [initialRecordId]);
 
   useEffect(() => {
-    const historyState = window.history.state;
-    if (
-      historyState &&
-      typeof historyState === "object" &&
-      historyState[C3R_P_DELETE_COMPLETE_HISTORY_KEY] === true
-    ) {
+    if (window.sessionStorage.getItem(C3R_P_DELETE_COMPLETE_SESSION_KEY) === "true") {
+      window.sessionStorage.removeItem(C3R_P_DELETE_COMPLETE_SESSION_KEY);
       queueMicrotask(() => setExportStatus("삭제 완료"));
     }
   }, [initialRecordId]);
@@ -312,16 +308,8 @@ export function C3RPPracticeLoop({
       setError("temporarily_unavailable");
       return;
     }
-    const historyState = window.history.state;
-    const nextHistoryState =
-      historyState && typeof historyState === "object" && !Array.isArray(historyState)
-        ? { ...historyState }
-        : {};
-    window.history.replaceState(
-      { ...nextHistoryState, [C3R_P_DELETE_COMPLETE_HISTORY_KEY]: true },
-      "",
-      "/app/c3r-p",
-    );
+    window.sessionStorage.setItem(C3R_P_DELETE_COMPLETE_SESSION_KEY, "true");
+    window.history.replaceState(null, "", "/app/c3r-p");
     setView((current) => current ? { ...current, restored: null, currentPlan: null } : current);
     setExportStatus("삭제 완료");
   }

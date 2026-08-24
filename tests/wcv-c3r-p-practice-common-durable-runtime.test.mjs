@@ -49,7 +49,7 @@ const productionAccessBlobs = Object.freeze({
   "lib/review-os/c3r-p-service.ts": "3700fe86c9a14f423c7d27f5f66385f43b41c603",
   "lib/review-os/c3r-p-repository.ts": "21da20f69472c1b74208a40ec3889add8790d1ff",
   "lib/review-os/c3r-p-engine.ts": "255462ab212006ed97936f0ec4ce5687c09aca65",
-  "components/review-os/c3r-p-practice-loop.tsx": "368c334f08b92e8a150b95543ebeadd817acc23c",
+  "components/review-os/c3r-p-practice-loop.tsx": "f6d04571d13ac49e53d02da5ea65d0634fe27639",
 });
 
 const FORMER_C3R_P_SOURCE_REVISION_ID =
@@ -514,9 +514,9 @@ test("plans and destructive-result UI are restored from successful server state"
   assert.match(componentSource,
     /data\.result\?\.status !== "deleted"[\s\S]*setError\("temporarily_unavailable"\)/);
   assert.match(componentSource,
-    /C3R_P_DELETE_COMPLETE_HISTORY_KEY[\s\S]*window\.history\.replaceState/);
+    /sessionStorage\.setItem\(C3R_P_DELETE_COMPLETE_SESSION_KEY, "true"\)[\s\S]*window\.history\.replaceState/);
   assert.match(componentSource,
-    /historyState\[C3R_P_DELETE_COMPLETE_HISTORY_KEY\] === true[\s\S]*setExportStatus\("삭제 완료"\)/);
+    /sessionStorage\.getItem\(C3R_P_DELETE_COMPLETE_SESSION_KEY\) === "true"[\s\S]*sessionStorage\.removeItem\(C3R_P_DELETE_COMPLETE_SESSION_KEY\)[\s\S]*setExportStatus\("삭제 완료"\)/);
   assert.match(browserSource, /계획 상태: EDITED/);
   assert.match(browserSource, /temporarily_unavailable[\s\S]*c3r-p-ledger/);
 });
