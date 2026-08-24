@@ -169,6 +169,7 @@ function sampleArtifact() {
       transferTaskClosure: true,
       planBlockStateClosure: true,
       planProjectionClosure: true,
+      deleteMutationSerialization: true,
       assistedD1History: true,
       assistedD1Rescheduling: true,
       delayedReviewEligibility: true,
@@ -525,6 +526,52 @@ test("learner export deterministically includes owned assistance events and fina
   assert.match(browserSource, /emptyExportCollectionsAreArrays: true/);
   assert.match(browserSource, /deleteRemovesExportedData: true/);
   assert.equal(contract.practiceRuntimeArtifact.metadataOnly, true);
+});
+
+test("learner deletion serializes every mutation before destructive counts and writes", () => {
+  const functionBoundaries = [
+    [
+      "create or replace function public.c3r_p_apply_learning_command_v1",
+      "create or replace function public.c3r_p_create_plan_v1",
+      "from public.c3r_p_command_receipts",
+    ],
+    [
+      "create or replace function public.c3r_p_create_plan_v1",
+      "create or replace function public.c3r_p_decide_plan_v1",
+      "from public.c3r_p_command_receipts",
+    ],
+    [
+      "create or replace function public.c3r_p_decide_plan_v1",
+      "create or replace function public.c3r_p_find_record_v1",
+      "from public.c3r_p_command_receipts",
+    ],
+    [
+      "create or replace function public.c3r_p_delete_learner_data_v1",
+      "do $$",
+      "select count(*) into v_records",
+    ],
+  ];
+  const lockPattern = /pg_catalog\.pg_advisory_xact_lock\([\s\S]*?pg_catalog\.hashtextextended\('c3r-p-learner:' \|\| p_user_id::text, 0\)[\s\S]*?\);/g;
+  assert.equal(sql.match(lockPattern)?.length, 4);
+  for (const [startMarker, endMarker, firstMutationMarker] of functionBoundaries) {
+    const start = sql.indexOf(startMarker);
+    const end = sql.indexOf(endMarker, start + startMarker.length);
+    assert.ok(start >= 0 && end > start, startMarker);
+    const functionSource = sql.slice(start, end);
+    const lockMatches = functionSource.match(lockPattern) ?? [];
+    assert.equal(lockMatches.length, 1, startMarker);
+    assert.ok(
+      functionSource.indexOf("pg_catalog.pg_advisory_xact_lock") <
+        functionSource.indexOf(firstMutationMarker),
+      startMarker,
+    );
+  }
+  assert.match(browserSource, /holdLearnerMutationLock\(ownerUserId\)/);
+  assert.match(browserSource, /waitForAdvisoryWaiters\(waiterBaseline \+ 1\)/);
+  assert.match(browserSource, /waitForAdvisoryWaiters\(waiterBaseline \+ 2\)/);
+  assert.match(browserSource, /deleteMutationSerialization: true/);
+  assert.match(runtimeSource, /browserEvidence\.deleteMutationSerialization !== true/);
+  assert.match(runtimeSource, /deleteMutationSerialization: true/);
 });
 
 test("assisted D+1 atomically appends an exact event and bodyless learner ledger history", () => {

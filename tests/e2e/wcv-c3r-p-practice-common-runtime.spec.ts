@@ -7,6 +7,7 @@ import {
   type Route,
 } from "@playwright/test";
 import { randomUUID } from "node:crypto";
+import { execFileSync, spawn } from "node:child_process";
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname } from "node:path";
 
@@ -20,6 +21,7 @@ const passwordC = process.env.C3R_P_USER_C_PASSWORD ?? "";
 const evidencePath = process.env.C3R_P_BROWSER_EVIDENCE_PATH ?? "";
 const entryEvidencePath = process.env.C3R_P_ENTRY_EVIDENCE_PATH ?? "";
 const playwrightContextPath = process.env.C3R_P_PLAYWRIGHT_CONTEXT_PATH ?? "";
+const databaseContainer = process.env.C3R_P_DATABASE_CONTAINER ?? "";
 const restoreOnly = process.env.C3R_P_RESTORE_ONLY === "true";
 const entryOnly = process.env.C3R_P_ENTRY_ONLY === "true";
 const entryActor = process.env.C3R_P_ENTRY_ACTOR ?? "owner";
@@ -35,6 +37,7 @@ const C3R_P_TRANSFER_ANCHOR_ID =
 const C3R_P_TRANSFER_ANCHOR_VERSION_ID =
   "repair-anchor:practice:synthetic-net-income@d7-transfer-v1";
 const c3rPApiUrl = (url: URL) => url.pathname === "/api/review-os/c3r-p";
+const DATABASE_CONTAINER = /^supabase_db_c3r-p-cycle-[12]-\d+-\d+$/;
 
 const ENTRY_CLASSIFICATIONS = [
   "C3R_P_ENTRY_AUTH_SESSION_NOT_VISIBLE",
@@ -127,6 +130,82 @@ async function settleBrowserEvents(page: Page) {
   await page.evaluate(() => new Promise<void>((resolve) => {
     requestAnimationFrame(() => requestAnimationFrame(() => resolve()));
   }));
+}
+
+function databasePsqlArgs() {
+  if (!DATABASE_CONTAINER.test(databaseContainer)) {
+    throw new Error("C3R-P database container boundary is invalid");
+  }
+  return [
+    "exec", "--interactive", databaseContainer, "psql", "--no-psqlrc", "--quiet",
+    "--tuples-only", "--no-align", "--set", "ON_ERROR_STOP=1",
+    "--username", "postgres", "--dbname", "postgres",
+  ];
+}
+
+function databaseScalar(sql: string) {
+  return execFileSync("docker", databasePsqlArgs(), {
+    input: sql,
+    encoding: "utf8",
+    timeout: 10_000,
+  }).trim();
+}
+
+async function waitForAdvisoryWaiters(minimum: number) {
+  for (let attempt = 0; attempt < 100; attempt += 1) {
+    const count = Number(databaseScalar(
+      "select count(*) from pg_catalog.pg_locks " +
+      "where locktype = 'advisory' and not granted;\n",
+    ));
+    if (Number.isSafeInteger(count) && count >= minimum) return;
+    await new Promise((resolve) => setTimeout(resolve, 50));
+  }
+  throw new Error("C3R-P advisory lock waiters did not reach the required count");
+}
+
+async function holdLearnerMutationLock(userId: string) {
+  if (!/^[0-9a-f-]{36}$/i.test(userId)) {
+    throw new Error("C3R-P learner lock identity is invalid");
+  }
+  const child = spawn("docker", databasePsqlArgs(), {
+    stdio: ["pipe", "pipe", "pipe"],
+  });
+  let output = "";
+  child.stdout.setEncoding("utf8");
+  child.stdout.on("data", (chunk) => { output += chunk; });
+  child.stdin.write(`begin;
+select pg_catalog.pg_advisory_xact_lock(
+  pg_catalog.hashtextextended('c3r-p-learner:' || '${userId}'::uuid::text, 0)
+);
+select 'C3R_P_LOCK_HELD';
+`);
+  for (let attempt = 0; attempt < 100 && !output.includes("C3R_P_LOCK_HELD"); attempt += 1) {
+    if (child.exitCode !== null) {
+      throw new Error("C3R-P learner lock holder exited before acquiring the lock");
+    }
+    await new Promise((resolve) => setTimeout(resolve, 50));
+  }
+  if (!output.includes("C3R_P_LOCK_HELD")) {
+    child.kill();
+    throw new Error("C3R-P learner lock holder did not acquire the lock");
+  }
+  return {
+    async release() {
+      child.stdin.end("commit;\n\\q\n");
+      if (child.exitCode !== null) return;
+      await new Promise<void>((resolve, reject) => {
+        const timeout = setTimeout(() => {
+          child.kill();
+          reject(new Error("C3R-P learner lock holder did not exit"));
+        }, 10_000);
+        child.once("exit", (code) => {
+          clearTimeout(timeout);
+          if (code === 0) resolve();
+          else reject(new Error("C3R-P learner lock holder failed"));
+        });
+      });
+    },
+  };
 }
 
 function browserErrorCategory(message: string) {
@@ -665,6 +744,78 @@ test("exact Practice browser-to-Postgres durable loop", async ({ browser }) => {
     ]) {
       expect(emptyExport[collection]).toEqual([]);
     }
+
+    const concurrentContext = await contextFor(browser, emailA, passwordA);
+    const escapedEmail = emailA.replaceAll("'", "''");
+    const ownerUserId = databaseScalar(
+      `select id from auth.users where email = '${escapedEmail}';\n`,
+    );
+    expect(ownerUserId).toMatch(/^[0-9a-f-]{36}$/i);
+    const waiterBaseline = Number(databaseScalar(
+      "select count(*) from pg_catalog.pg_locks " +
+      "where locktype = 'advisory' and not granted;\n",
+    ));
+    expect(Number.isSafeInteger(waiterBaseline)).toBe(true);
+    const lockHolder = await holdLearnerMutationLock(ownerUserId);
+    let lockReleased = false;
+    try {
+      const concurrentRecordId = randomUUID();
+      const concurrentStart = concurrentContext.request.post(
+        "/api/review-os/c3r-p",
+        { data: {
+          action: "start",
+          commandId: randomUUID(),
+          recordId: concurrentRecordId,
+          attemptId: randomUUID(),
+          attemptBody: "삭제와 경쟁하는 독립 브라우저의 첫 시도입니다.",
+          prediction: "likely_partial",
+          confidence: "medium",
+          evidenceStep: "d0",
+        } },
+      );
+      await waitForAdvisoryWaiters(waiterBaseline + 1);
+      const concurrentDelete = contextA.request.post(
+        "/api/review-os/c3r-p",
+        { data: { action: "delete" } },
+      );
+      await waitForAdvisoryWaiters(waiterBaseline + 2);
+      await lockHolder.release();
+      lockReleased = true;
+      const [startResult, deleteResult] = await Promise.all([
+        concurrentStart,
+        concurrentDelete,
+      ]);
+      expect([200, 404]).toContain(startResult.status());
+      expect(deleteResult.status()).toBe(200);
+      expect(await deleteResult.json()).toMatchObject({
+        ok: true,
+        result: {
+          deletedRecords: 1,
+          deletedPlans: 0,
+          status: "deleted",
+        },
+      });
+      const postRaceExportResponse = await contextA.request.post(
+        "/api/review-os/c3r-p",
+        { data: { action: "export" } },
+      );
+      expect(postRaceExportResponse.status()).toBe(200);
+      const postRaceExport = (await postRaceExportResponse.json()).export;
+      for (const collection of [
+        "records", "attempts", "assistanceEvents", "failureNotes", "gaps",
+        "ledger", "plans", "planBlocks", "transferTasks", "commandReceipts",
+      ]) {
+        expect(postRaceExport[collection]).toEqual([]);
+      }
+      expect(databaseScalar(`select concat_ws('|',
+        (select count(*) from public.c3r_p_learning_records where user_id = '${ownerUserId}'),
+        (select count(*) from public.c3r_p_command_receipts where user_id = '${ownerUserId}')
+      );\n`)).toBe("0|0");
+    } finally {
+      if (!lockReleased) await lockHolder.release();
+      await concurrentContext.close();
+    }
+
     const unaffectedForeignRecord = await contextB.request.get(
       `/api/review-os/c3r-p?recordId=${prior.foreignRecordId}`,
     );
@@ -684,6 +835,7 @@ test("exact Practice browser-to-Postgres durable loop", async ({ browser }) => {
         crossUserExportRowsAbsent: true,
         emptyExportCollectionsAreArrays: true,
         deleteRemovesExportedData: true,
+        deleteMutationSerialization: true,
         planHistoryRestartRestored: true,
         planHistoryExportedAndDeleted: true,
         rawLearnerBodyInEvidence: false,

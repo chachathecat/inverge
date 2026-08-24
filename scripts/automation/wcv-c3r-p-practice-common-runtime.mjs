@@ -400,7 +400,7 @@ export function validatePracticeRuntimeArtifact(artifact, repositoryRoot = proce
       "migrationCount", "serverVersionNum", "browserToPostgres", "restartRestore",
       "exportDelete", "reopenedCompletion", "planBlockCompletion",
       "completeLearnerExport", "transferTaskClosure", "planBlockStateClosure",
-      "planProjectionClosure",
+      "planProjectionClosure", "deleteMutationSerialization",
       "assistedD1History", "assistedD1Rescheduling", "delayedReviewEligibility",
       "stateMachineMatrixPairs",
       "stateMachineMatrixResult",
@@ -412,7 +412,7 @@ export function validatePracticeRuntimeArtifact(artifact, repositoryRoot = proce
       cycle.exportDelete !== true || cycle.reopenedCompletion !== true ||
       cycle.planBlockCompletion !== true || cycle.completeLearnerExport !== true ||
       cycle.transferTaskClosure !== true || cycle.planBlockStateClosure !== true ||
-      cycle.planProjectionClosure !== true ||
+      cycle.planProjectionClosure !== true || cycle.deleteMutationSerialization !== true ||
       cycle.assistedD1History !== true || cycle.assistedD1Rescheduling !== true ||
       cycle.delayedReviewEligibility !== true ||
       cycle.stateMachineMatrixPairs !== 112 ||
@@ -1134,6 +1134,7 @@ function runBrowser(repositoryRoot, baseUrl, identities, browserEvidencePath, op
       C3R_P_ENTRY_EXPECTATION: options.expectedClassification,
       C3R_P_ENTRY_EVIDENCE_PATH: options.entryEvidencePath,
       C3R_P_PLAYWRIGHT_CONTEXT_PATH: options.playwrightContextPath,
+      C3R_P_DATABASE_CONTAINER: options.databaseContainer ?? "",
     },
     label: options.label,
     reportOutput: true,
@@ -1332,6 +1333,7 @@ async function runDedicatedCycle(input) {
       expectedClassification: "C3R_P_ENTRY_VERIFIED",
       entryEvidencePath: restorePaths.receipt,
       playwrightContextPath: restorePaths.playwright,
+      databaseContainer,
       label: "C3R-P restart browser verification",
     });
     const browserEvidence = JSON.parse(fs.readFileSync(browserEvidencePath, "utf8"));
@@ -1358,6 +1360,7 @@ async function runDedicatedCycle(input) {
       browserEvidence.crossUserExportRowsAbsent !== true ||
       browserEvidence.emptyExportCollectionsAreArrays !== true ||
       browserEvidence.deleteRemovesExportedData !== true ||
+      browserEvidence.deleteMutationSerialization !== true ||
       browserEvidence.planHistoryRestartRestored !== true ||
       browserEvidence.planHistoryExportedAndDeleted !== true ||
       browserEvidence.sealedTransferTaskPersisted !== true ||
@@ -1434,6 +1437,7 @@ async function runDedicatedCycle(input) {
       transferTaskClosure: true,
       planBlockStateClosure: true,
       planProjectionClosure: true,
+      deleteMutationSerialization: true,
       assistedD1History: true,
       assistedD1Rescheduling: true,
       delayedReviewEligibility: true,

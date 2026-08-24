@@ -585,6 +585,9 @@ begin
     or p_action is null or p_action = '' then
     raise exception 'C3R_P_INVALID_INPUT' using errcode = '22023';
   end if;
+  perform pg_catalog.pg_advisory_xact_lock(
+    pg_catalog.hashtextextended('c3r-p-learner:' || p_user_id::text, 0)
+  );
   v_request_sha := encode(extensions.digest(
     convert_to(p_action || chr(31) || p_payload::text, 'UTF8'), 'sha256'
   ), 'hex');
@@ -1169,6 +1172,12 @@ begin
   if current_user <> 'service_role' then
     raise exception 'C3R_P_SERVICE_ROLE_REQUIRED' using errcode = '42501';
   end if;
+  if p_user_id is null then
+    raise exception 'C3R_P_INVALID_PLAN' using errcode = '22023';
+  end if;
+  perform pg_catalog.pg_advisory_xact_lock(
+    pg_catalog.hashtextextended('c3r-p-learner:' || p_user_id::text, 0)
+  );
   if jsonb_typeof(p_blocks) <> 'array' or jsonb_array_length(p_blocks) = 0
     or p_available_minutes not between 30 and 720 then
     raise exception 'C3R_P_INVALID_PLAN' using errcode = '22023';
@@ -1297,6 +1306,12 @@ begin
   if current_user <> 'service_role' then
     raise exception 'C3R_P_SERVICE_ROLE_REQUIRED' using errcode = '42501';
   end if;
+  if p_user_id is null then
+    raise exception 'C3R_P_INVALID_PLAN' using errcode = '22023';
+  end if;
+  perform pg_catalog.pg_advisory_xact_lock(
+    pg_catalog.hashtextextended('c3r-p-learner:' || p_user_id::text, 0)
+  );
   v_request_sha := encode(extensions.digest(convert_to(concat_ws(chr(31), p_plan_id::text,
     p_expected_version::text, p_decision, p_as_of::text,
     coalesce(p_blocks::text, '')), 'UTF8'), 'sha256'), 'hex');
@@ -1649,6 +1664,12 @@ begin
   if current_user <> 'service_role' then
     raise exception 'C3R_P_SERVICE_ROLE_REQUIRED' using errcode = '42501';
   end if;
+  if p_user_id is null then
+    raise exception 'C3R_P_INVALID_INPUT' using errcode = '22023';
+  end if;
+  perform pg_catalog.pg_advisory_xact_lock(
+    pg_catalog.hashtextextended('c3r-p-learner:' || p_user_id::text, 0)
+  );
   select count(*) into v_records from public.c3r_p_learning_records where user_id = p_user_id;
   select count(*) into v_plans from public.c3r_p_plans where user_id = p_user_id;
   delete from public.c3r_p_plans where user_id = p_user_id;
