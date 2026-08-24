@@ -75,8 +75,8 @@
       }
     ],
     "appendPath": "supabase/migrations/20260822120000_c3r_p_practice_common_durable_substrate.sql",
-    "candidateSqlSha256": "67dd5f34c117617d3614381eabc8fd4c5b07d968d7443c7f37e97e40b50cc0ba",
-    "effectiveInventorySha256": "5c20d9490d9322d8fd70c8a3e784188194a9f07d953e593b9bec4e0ca95d48ec",
+    "candidateSqlSha256": "171857cc1de8f1ab6fc753995f458f25df7046e24ac48ea5e5940162ed146c42",
+    "effectiveInventorySha256": "b6158cbeadc646fa9d4e231cfb5c98ede6639cbf480c908702c01bddb240a820",
     "remoteMutationCount": 0
   },
   "practiceRuntimeArtifact": {

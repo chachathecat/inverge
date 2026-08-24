@@ -48,10 +48,10 @@ const productionAccessBlobs = Object.freeze({
   "app/app/layout.tsx": "215ec312e2102d39332eeb47e2cc3b446ad78d19",
   "app/app/c3r-p/page.tsx": "1183828115a8a0ef0fb04c5d9c0e42a8ae5bd240",
   "app/api/review-os/c3r-p/route.ts": "e4723d6fe303dcdeb73d099e67a6311640b25c09",
-  "lib/review-os/c3r-p-service.ts": "825e45af897c69de29ae619fefeafb7ee0ce3da9",
+  "lib/review-os/c3r-p-service.ts": "bd2cdd64ebf46027b4b9a36705f7047ee950335f",
   "lib/review-os/c3r-p-repository.ts": "990f19f94458685782a49cfea6f00553a2a542f0",
   "lib/review-os/c3r-p-engine.ts": "351047c5b5ed7463ec7aac96baad389b5a3a92d9",
-  "components/review-os/c3r-p-practice-loop.tsx": "547fe2416c7e76b072d275820d4e9da6fcca672a",
+  "components/review-os/c3r-p-practice-loop.tsx": "45b9d19adc83a93cdce1649e0eac9a0d9045890c",
 });
 
 const FORMER_C3R_P_SOURCE_REVISION_ID =
@@ -167,6 +167,7 @@ function sampleArtifact() {
       transferTaskClosure: true,
       planBlockStateClosure: true,
       assistedD1History: true,
+      assistedD1Rescheduling: true,
       delayedReviewEligibility: true,
       stateMachineMatrixPairs: 112,
       stateMachineMatrixResult: "passed",
@@ -525,12 +526,27 @@ test("assisted D+1 atomically appends an exact event and bodyless learner ledger
     /p_action = 'record_assisted_review'[\s\S]*insert into public\.c3r_p_ledger_entries[\s\S]*'D1_ASSISTED'/);
   assert.match(sql,
     /'sourceId', v_record\.source_id[\s\S]*'revisionId', v_record\.revision_id[\s\S]*'itemId', v_record\.item_id/);
+  assert.match(sql,
+    /v_next_d1_due_at := v_now \+ interval '1 day'[\s\S]*d1_due_at = v_next_d1_due_at[\s\S]*record_version = record_version \+ 1/);
+  assert.match(sql,
+    /update public\.c3r_p_learning_gaps set[\s\S]*d1_due_at = v_next_d1_due_at[\s\S]*C3R_P_GAP_BINDING_MISMATCH/);
+  assert.match(sql,
+    /update public\.c3r_p_plans prior set[\s\S]*state = 'STALE'[\s\S]*pending\.review_phase = 'D1'/);
   assert.match(sql, /c3r_p_assistance_events_attempt_owner_fk/);
+  assert.match(componentSource,
+    /data-testid="c3r-p-d1-eligibility"[\s\S]*d1QueueItem\?\.dueAt/);
   assert.match(browserSource, /assistedD1AttemptPersisted: true/);
   assert.match(browserSource, /assistedD1AssistanceEventPersisted: true/);
   assert.match(browserSource, /assistedD1LedgerPersisted: true/);
   assert.match(browserSource, /assistedD1RestoredAfterRefresh: true/);
   assert.match(browserSource, /assistedD1PrematureDenied: true/);
+  assert.match(browserSource, /assistedD1Rescheduling: true/);
+  assert.match(browserSource, /assistedD1ImmediateCompletionDenied: true/);
+  assert.match(browserSource, /assistedD1RefreshAndSecondBrowser: true/);
+  assert.match(browserSource, /assistedD1DuplicateIdempotent: true/);
+  assert.match(browserSource, /assistedD1CrossUserDenied: true/);
+  assert.match(browserSource, /assistedD1PriorPlanStaled: true/);
+  assert.match(browserSource, /assistedD1LaterIndependentSucceeded: true/);
 });
 
 test("dedicated cycles start isolated Supabase first and transactionally apply all 26 migrations", () => {

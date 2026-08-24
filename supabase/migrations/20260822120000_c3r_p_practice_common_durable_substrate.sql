@@ -551,6 +551,7 @@ as $$
 declare
   v_receipt public.c3r_p_command_receipts%rowtype;
   v_record public.c3r_p_learning_records%rowtype;
+  v_gap public.c3r_p_learning_gaps%rowtype;
   v_plan public.c3r_p_plans%rowtype;
   v_transfer_task public.c3r_p_transfer_tasks%rowtype;
   v_record_id uuid;
@@ -565,6 +566,8 @@ declare
   v_completed_plan_blocks integer;
   v_candidate_plan_blocks integer;
   v_resolved_plan_block_id uuid;
+  v_next_d1_due_at timestamptz;
+  v_updated_rows integer;
 begin
   if current_user <> 'service_role' then
     raise exception 'C3R_P_SERVICE_ROLE_REQUIRED' using errcode = '42501';
@@ -812,6 +815,20 @@ begin
         if v_record.state <> 'REPAIRED' or v_now < v_record.d1_due_at then
           raise exception 'C3R_P_D1_NOT_ELIGIBLE' using errcode = '23514';
         end if;
+        select * into v_gap from public.c3r_p_learning_gaps
+        where id = v_record.primary_gap_id
+          and user_id = p_user_id
+          and record_id = v_record.id
+          and source_id = v_record.source_id
+          and problem_id = v_record.problem_id
+          and revision_id = v_record.revision_id
+          and item_id = v_record.item_id
+          and artifact_id = v_record.artifact_id
+          and state in ('OPEN', 'REOPENED')
+        for update;
+        if not found then
+          raise exception 'C3R_P_GAP_BINDING_MISMATCH' using errcode = '23514';
+        end if;
       elsif p_action = 'complete_d1' then
         v_phase := 'D1'; v_outcome := 'INDEPENDENT_SUCCESS'; v_entry_kind := 'D1_RECONSTRUCTED';
         if v_record.state <> 'REPAIRED' or v_now < v_record.d1_due_at then
@@ -953,6 +970,48 @@ begin
             'itemId', v_record.item_id
           ), v_now
         );
+        v_next_d1_due_at := v_now + interval '1 day';
+        update public.c3r_p_learning_records set
+          d1_due_at = v_next_d1_due_at,
+          record_version = record_version + 1,
+          updated_at = v_now
+        where id = v_record.id
+          and user_id = p_user_id
+          and state = 'REPAIRED'
+        returning * into v_record;
+        if not found then
+          raise exception 'C3R_P_CAS_CONFLICT' using errcode = '40001';
+        end if;
+        update public.c3r_p_learning_gaps set
+          d1_due_at = v_next_d1_due_at,
+          updated_at = v_now
+        where id = v_gap.id
+          and user_id = p_user_id
+          and record_id = v_record.id
+          and source_id = v_record.source_id
+          and problem_id = v_record.problem_id
+          and revision_id = v_record.revision_id
+          and item_id = v_record.item_id
+          and artifact_id = v_record.artifact_id;
+        get diagnostics v_updated_rows = row_count;
+        if v_updated_rows <> 1 then
+          raise exception 'C3R_P_GAP_BINDING_MISMATCH' using errcode = '23514';
+        end if;
+        update public.c3r_p_plans prior set
+          state = 'STALE',
+          record_version = prior.record_version + 1,
+          updated_at = v_now
+        where prior.user_id = p_user_id
+          and prior.state in ('PROPOSED', 'ACCEPTED', 'EDITED')
+          and exists (
+            select 1 from public.c3r_p_plan_blocks pending
+            where pending.user_id = p_user_id
+              and pending.plan_id = prior.id
+              and pending.record_id = v_record.id
+              and pending.gap_id = v_gap.id
+              and pending.review_phase = 'D1'
+              and pending.execution_state = 'PENDING'
+          );
         v_response := jsonb_build_object('recordId', v_record.id,
           'recordVersion', v_record.record_version, 'state', v_record.state,
           'status', 'assisted_not_independent');

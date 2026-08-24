@@ -101,7 +101,12 @@ async function contextFor(browser: Browser, email: string, password: string) {
 }
 
 function dashboardEvidenceStepRoute(
-  evidenceStep: "d7" | "recurrence" | "reopenComplete",
+  evidenceStep:
+    | "d1Fresh"
+    | "d1Rescheduled"
+    | "d7"
+    | "recurrence"
+    | "reopenComplete",
 ) {
   return async (route: Route) => {
     const request = route.request();
@@ -906,18 +911,63 @@ test("exact Practice browser-to-Postgres durable loop", async ({ browser }) => {
     .click();
   const assistedD1Response = await assistedD1ResponsePromise;
   expect(assistedD1Response.status()).toBe(200);
+  const assistedD1Payload = assistedD1Response.request().postDataJSON();
+  expect(assistedD1Payload).toMatchObject({
+    action: "record_assisted_review",
+    recordId,
+    expectedVersion: persistedRepair.view.restored.record.record_version,
+    evidenceStep: "d1Fresh",
+  });
+  const assistedD1AttemptId = assistedD1Payload.attemptId as string;
   await expectState(page, "REPAIRED");
   const assistedHistoryResponse = await context.request.get(
-    `/api/review-os/c3r-p?recordId=${recordId}`,
+    `/api/review-os/c3r-p?recordId=${recordId}&evidenceStep=d1Fresh`,
   );
   const assistedHistory = await assistedHistoryResponse.json();
   expect(assistedHistory.view.restored.record).toMatchObject({
     state: "REPAIRED",
-    record_version: persistedRepair.view.restored.record.record_version,
+    record_version: persistedRepair.view.restored.record.record_version + 1,
   });
+  const assistedRecord = assistedHistory.view.restored.record;
+  const assistedGap = assistedHistory.view.restored.gaps[0];
+  expect(new Date(assistedRecord.d1_due_at).toISOString()).toBe(
+    "2026-08-25T00:08:00.000Z",
+  );
+  expect(assistedGap.d1_due_at).toBe(assistedRecord.d1_due_at);
+  expect(assistedRecord.d1_due_at).not.toBe(
+    persistedRepair.view.restored.record.d1_due_at,
+  );
+  expect(assistedHistory.view.dashboard.queue).toEqual(expect.arrayContaining([
+    expect.objectContaining({
+      recordId,
+      gapId: assistedGap.id,
+      state: "REPAIRED",
+      gapState: "OPEN",
+      reviewPhase: "D1",
+      dueAt: assistedRecord.d1_due_at,
+      eligible: false,
+    }),
+  ]));
+  expect(assistedHistory.view.currentPlan).toBeNull();
+  expect(assistedHistory.view.dashboard.plans).toEqual(expect.arrayContaining([
+    expect.objectContaining({
+      planId: staleD1Plan.planId,
+      state: "STALE",
+      recordVersion: staleD1Plan.recordVersion + 1,
+      blocks: [expect.objectContaining({
+        blockId: staleD1Plan.blocks[0].blockId,
+        reviewPhase: "D1",
+        executionState: "PENDING",
+      })],
+    }),
+  ]));
+  expect(assistedHistory.view.restored.attempts.filter(
+    (attempt: { id: string }) => attempt.id === assistedD1AttemptId,
+  )).toHaveLength(1);
   expect(assistedHistory.view.restored.assistanceEvents).toEqual(
     expect.arrayContaining([
       expect.objectContaining({
+        attempt_id: assistedD1AttemptId,
         assistance_kind: "SMALLEST_SCAFFOLD",
         assistance_level: 1,
         record_id: recordId,
@@ -930,30 +980,193 @@ test("exact Practice browser-to-Postgres durable loop", async ({ browser }) => {
   );
   expect(assistedHistory.view.restored.ledger).toEqual(
     expect.arrayContaining([
-      expect.objectContaining({ entry_kind: "D1_ASSISTED", contains_body: false }),
+      expect.objectContaining({
+        attempt_id: assistedD1AttemptId,
+        entry_kind: "D1_ASSISTED",
+        contains_body: false,
+      }),
     ]),
   );
+
+  const immediateIndependentD1 = await context.request.post(
+    "/api/review-os/c3r-p",
+    { data: {
+      action: "complete_d1",
+      commandId: randomUUID(),
+      recordId,
+      expectedVersion: assistedRecord.record_version,
+      attemptId: randomUUID(),
+      claim: practiceClaim(C3R_P_SOURCE_REVISION_ID),
+      planBlockId: null,
+      planId: null,
+      planVersion: null,
+      evidenceStep: "d1Fresh",
+    } },
+  );
+  expect(immediateIndependentD1.status()).toBe(409);
+
+  const earlyD1Requests: string[] = [];
+  const preDueD1Route = async (route: Route) => {
+    const request = route.request();
+    const url = new URL(request.url());
+    if (
+      request.method() === "POST" &&
+      request.postDataJSON()?.action === "complete_d1"
+    ) {
+      earlyD1Requests.push("complete_d1");
+      await route.abort();
+      return;
+    }
+    if (request.method() === "GET" && url.pathname === "/api/review-os/c3r-p") {
+      url.searchParams.set("evidenceStep", "d1Fresh");
+      await route.continue({ url: url.toString() });
+      return;
+    }
+    await route.continue();
+  };
+  await page.route(c3rPApiUrl, preDueD1Route);
+  const assistedButton = page.getByRole("button", {
+    name: "도움을 사용한 D+1 기록(독립 성공 아님)",
+  });
+  const independentD1Button = page.getByRole("button", {
+    name: "D+1 무도움 재구성 완료",
+  });
+  await expect(assistedButton).toBeDisabled();
+  await expect(independentD1Button).toBeDisabled();
+  await expect(page.getByTestId("c3r-p-d1-eligibility")).toContainText(
+    assistedRecord.d1_due_at,
+  );
+  await independentD1Button.evaluate((element) => {
+    element.click();
+    element.dispatchEvent(new KeyboardEvent("keydown", {
+      bubbles: true,
+      key: "Enter",
+    }));
+    element.dispatchEvent(new KeyboardEvent("keyup", {
+      bubbles: true,
+      key: "Enter",
+    }));
+  });
+  await settleBrowserEvents(page);
+  expect(earlyD1Requests).toEqual([]);
   await page.reload();
   await expectState(page, "REPAIRED");
   await expect(page.getByTestId("c3r-p-ledger")).toContainText("D1_ASSISTED");
+  await expect(assistedButton).toBeDisabled();
+  await expect(independentD1Button).toBeDisabled();
+  await expect(page.getByTestId("c3r-p-d1-eligibility")).toContainText(
+    assistedRecord.d1_due_at,
+  );
+
+  const secondBrowser = await contextFor(browser, emailA, passwordA);
+  const secondPage = await secondBrowser.newPage();
+  const secondPreDueD1Route = dashboardEvidenceStepRoute("d1Fresh");
+  await secondPage.route(c3rPApiUrl, secondPreDueD1Route);
+  await secondPage.goto(`/app/c3r-p?recordId=${recordId}`);
+  await expectState(secondPage, "REPAIRED");
+  await expect(secondPage.getByRole("button", {
+    name: "도움을 사용한 D+1 기록(독립 성공 아님)",
+  })).toBeDisabled();
+  await expect(secondPage.getByRole("button", {
+    name: "D+1 무도움 재구성 완료",
+  })).toBeDisabled();
+  await expect(secondPage.getByTestId("c3r-p-d1-eligibility")).toContainText(
+    assistedRecord.d1_due_at,
+  );
+  await secondPage.reload();
+  await expect(secondPage.getByRole("button", {
+    name: "D+1 무도움 재구성 완료",
+  })).toBeDisabled();
+
+  const duplicateAssistedD1 = await context.request.post(
+    "/api/review-os/c3r-p",
+    { data: assistedD1Payload },
+  );
+  expect(duplicateAssistedD1.status()).toBe(200);
+  const afterDuplicateResponse = await context.request.get(
+    `/api/review-os/c3r-p?recordId=${recordId}&evidenceStep=d1Fresh`,
+  );
+  const afterDuplicate = await afterDuplicateResponse.json();
+  expect(afterDuplicate.view.restored.record).toMatchObject({
+    state: "REPAIRED",
+    record_version: assistedRecord.record_version,
+    d1_due_at: assistedRecord.d1_due_at,
+  });
+  expect(afterDuplicate.view.restored.attempts.filter(
+    (attempt: { id: string }) => attempt.id === assistedD1AttemptId,
+  )).toHaveLength(1);
+  expect(afterDuplicate.view.restored.assistanceEvents.filter(
+    (event: { attempt_id: string }) => event.attempt_id === assistedD1AttemptId,
+  )).toHaveLength(1);
+  expect(afterDuplicate.view.restored.ledger.filter(
+    (entry: { attempt_id: string }) => entry.attempt_id === assistedD1AttemptId,
+  )).toHaveLength(1);
+
+  const staleAssistedD1 = await context.request.post(
+    "/api/review-os/c3r-p",
+    { data: {
+      ...assistedD1Payload,
+      commandId: randomUUID(),
+      attemptId: randomUUID(),
+      expectedVersion: persistedRepair.view.restored.record.record_version,
+      evidenceStep: "d1Rescheduled",
+    } },
+  );
+  expect(staleAssistedD1.status()).toBe(409);
+  const assistedCrossUserContext = await contextFor(browser, emailB, passwordB);
+  const crossUserAssistedD1 = await assistedCrossUserContext.request.post(
+    "/api/review-os/c3r-p",
+    { data: {
+      ...assistedD1Payload,
+      commandId: randomUUID(),
+      attemptId: randomUUID(),
+      expectedVersion: assistedRecord.record_version,
+      evidenceStep: "d1Rescheduled",
+    } },
+  );
+  expect(crossUserAssistedD1.status()).toBe(404);
+  await assistedCrossUserContext.close();
+
   const staleReviewStateCompletion = await context.request.post(
     "/api/review-os/c3r-p",
     { data: {
       action: "complete_d1",
       commandId: randomUUID(),
       recordId,
-      expectedVersion: persistedRepair.view.restored.record.record_version,
+      expectedVersion: assistedRecord.record_version,
       attemptId: randomUUID(),
       claim: practiceClaim(C3R_P_SOURCE_REVISION_ID),
       planBlockId: staleD1Plan.blocks[0].blockId,
       planId: staleD1Plan.planId,
       planVersion: staleD1Plan.recordVersion,
-      evidenceStep: "d1",
+      evidenceStep: "d1Rescheduled",
     } },
   );
   expect(staleReviewStateCompletion.status()).toBe(409);
+
+  await page.unroute(c3rPApiUrl, preDueD1Route);
+  await secondPage.unroute(c3rPApiUrl, secondPreDueD1Route);
+  const d1RescheduledRouteA = dashboardEvidenceStepRoute("d1Rescheduled");
+  const d1RescheduledRouteB = dashboardEvidenceStepRoute("d1Rescheduled");
+  await page.route(c3rPApiUrl, d1RescheduledRouteA);
+  await secondPage.route(c3rPApiUrl, d1RescheduledRouteB);
+  await Promise.all([page.reload(), secondPage.reload()]);
+  await expect(assistedButton).toBeEnabled();
+  await expect(independentD1Button).toBeEnabled();
+  await expect(secondPage.getByRole("button", {
+    name: "도움을 사용한 D+1 기록(독립 성공 아님)",
+  })).toBeEnabled();
+  await expect(secondPage.getByRole("button", {
+    name: "D+1 무도움 재구성 완료",
+  })).toBeEnabled();
+  await expect(page.getByTestId("c3r-p-d1-eligibility")).toHaveCount(0);
   await fillStructuredCalculation(page);
-  const d1Plan = await createAcceptedPlan(context, recordId, "TODAY", "d1Fresh");
+  const d1Plan = await createAcceptedPlan(
+    context,
+    recordId,
+    "TODAY",
+    "d1Rescheduled",
+  );
   expect(d1Plan.blocks[0]).toMatchObject({ reviewPhase: "D1" });
   await page.reload();
   await fillStructuredCalculation(page);
@@ -961,6 +1174,8 @@ test("exact Practice browser-to-Postgres durable loop", async ({ browser }) => {
     .getByRole("button", { name: "D+1 무도움 재구성 완료" })
     .click();
   await expectState(page, "D1_COMPLETE");
+  await page.unroute(c3rPApiUrl, d1RescheduledRouteA);
+  await secondPage.unroute(c3rPApiUrl, d1RescheduledRouteB);
   const completedD1PlanResponse = await context.request.get(
     `/api/review-os/c3r-p?recordId=${recordId}`,
   );
@@ -1086,12 +1301,6 @@ test("exact Practice browser-to-Postgres durable loop", async ({ browser }) => {
   expect(earlyD7Requests).toEqual([]);
   await page.unroute(c3rPApiUrl, preDueD7Route);
 
-  const secondBrowser = await contextFor(
-    browser,
-    emailA,
-    passwordA,
-  );
-  const secondPage = await secondBrowser.newPage();
   await secondPage.goto(`/app/c3r-p?recordId=${recordId}`);
   await expectState(secondPage, "D1_COMPLETE");
   await expect(secondPage.getByTestId("c3r-p-transfer-task")).toHaveAttribute(
@@ -1914,6 +2123,15 @@ test("exact Practice browser-to-Postgres durable loop", async ({ browser }) => {
       assistedD1LedgerPersisted: true,
       assistedD1RestoredAfterRefresh: true,
       assistedD1PrematureDenied: true,
+      assistedD1Rescheduling: true,
+      assistedD1ImmediateCompletionDenied: true,
+      assistedD1UiSuppressed: true,
+      assistedD1RefreshAndSecondBrowser: true,
+      assistedD1DuplicateIdempotent: true,
+      assistedD1StaleVersionDenied: true,
+      assistedD1CrossUserDenied: true,
+      assistedD1PriorPlanStaled: true,
+      assistedD1LaterIndependentSucceeded: true,
       baseRouteRestoredExistingRecord: true,
       terminalPlanDoesNotReviveSuperseded: true,
       priorActivePlanSuperseded: true,

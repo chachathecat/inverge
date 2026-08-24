@@ -266,8 +266,10 @@ export function C3RPPracticeLoop({
       setError("structured_claim_required");
       return;
     }
-    const evidenceStep = action === "record_assisted_review" || action === "complete_d1"
-      ? "d1"
+    const evidenceStep = action === "record_assisted_review"
+      ? "d1Fresh"
+      : action === "complete_d1"
+        ? "d1Rescheduled"
       : action === "complete_d7_transfer"
         ? "d7"
         : action === "complete_recurrence"
@@ -535,10 +537,21 @@ export function C3RPPracticeLoop({
         {record?.state === "REPAIRED" ? (
           <div className="mt-5 grid gap-3">
             <p className="rounded-xl bg-slate-50 p-3 text-sm">D+1은 도움 없이 다시 구성해야 독립 성공으로 기록됩니다.</p>
-            <button disabled={pending || !d1Eligible} onClick={() => void review("record_assisted_review")} className="rounded-xl border px-4 py-3 font-semibold disabled:opacity-50">
+            {!d1Eligible ? (
+              <p
+                id="c3r-p-d1-eligibility"
+                role="status"
+                data-testid="c3r-p-d1-eligibility"
+                className="rounded-xl bg-slate-50 p-3 text-sm"
+              >
+                다음 D+1 독립 복습은 서버 Review Queue 예정 시각
+                {d1QueueItem?.dueAt ? ` ${d1QueueItem.dueAt}` : ""} 이후에 열립니다.
+              </p>
+            ) : null}
+            <button disabled={pending || !d1Eligible} aria-describedby={!d1Eligible ? "c3r-p-d1-eligibility" : undefined} onClick={() => void review("record_assisted_review")} className="rounded-xl border px-4 py-3 font-semibold disabled:opacity-50">
               도움을 사용한 D+1 기록(독립 성공 아님)
             </button>
-            <button disabled={pending || !d1Eligible} onClick={() => void review("complete_d1")} className="rounded-xl bg-[var(--color-action-primary)] px-4 py-3 font-semibold text-white disabled:opacity-50">
+            <button disabled={pending || !d1Eligible} aria-describedby={!d1Eligible ? "c3r-p-d1-eligibility" : undefined} onClick={() => void review("complete_d1")} className="rounded-xl bg-[var(--color-action-primary)] px-4 py-3 font-semibold text-white disabled:opacity-50">
               D+1 무도움 재구성 완료
             </button>
           </div>

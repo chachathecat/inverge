@@ -381,7 +381,8 @@ export function validatePracticeRuntimeArtifact(artifact, repositoryRoot = proce
       "migrationCount", "serverVersionNum", "browserToPostgres", "restartRestore",
       "exportDelete", "reopenedCompletion", "planBlockCompletion",
       "completeLearnerExport", "transferTaskClosure", "planBlockStateClosure",
-      "assistedD1History", "delayedReviewEligibility", "stateMachineMatrixPairs",
+      "assistedD1History", "assistedD1Rescheduling", "delayedReviewEligibility",
+      "stateMachineMatrixPairs",
       "stateMachineMatrixResult",
       "oracleEvidenceSha256", "cleanup",
     ], `reset/replay cycle ${index + 1}`);
@@ -391,7 +392,8 @@ export function validatePracticeRuntimeArtifact(artifact, repositoryRoot = proce
       cycle.exportDelete !== true || cycle.reopenedCompletion !== true ||
       cycle.planBlockCompletion !== true || cycle.completeLearnerExport !== true ||
       cycle.transferTaskClosure !== true || cycle.planBlockStateClosure !== true ||
-      cycle.assistedD1History !== true || cycle.delayedReviewEligibility !== true ||
+      cycle.assistedD1History !== true || cycle.assistedD1Rescheduling !== true ||
+      cycle.delayedReviewEligibility !== true ||
       cycle.stateMachineMatrixPairs !== 112 ||
       cycle.stateMachineMatrixResult !== "passed" ||
       cycle.cleanup !== "complete" ||
@@ -1345,6 +1347,15 @@ async function runDedicatedCycle(input) {
       browserEvidence.assistedD1AssistanceEventPersisted !== true ||
       browserEvidence.assistedD1LedgerPersisted !== true ||
       browserEvidence.assistedD1RestoredAfterRefresh !== true ||
+      browserEvidence.assistedD1Rescheduling !== true ||
+      browserEvidence.assistedD1ImmediateCompletionDenied !== true ||
+      browserEvidence.assistedD1UiSuppressed !== true ||
+      browserEvidence.assistedD1RefreshAndSecondBrowser !== true ||
+      browserEvidence.assistedD1DuplicateIdempotent !== true ||
+      browserEvidence.assistedD1StaleVersionDenied !== true ||
+      browserEvidence.assistedD1CrossUserDenied !== true ||
+      browserEvidence.assistedD1PriorPlanStaled !== true ||
+      browserEvidence.assistedD1LaterIndependentSucceeded !== true ||
       browserEvidence.delayedD7ControlGated !== true ||
       browserEvidence.d7PreDueInteractionSuppressed !== true ||
       browserEvidence.d7CanonicalEligibilityAtDue !== true ||
@@ -1391,6 +1402,7 @@ async function runDedicatedCycle(input) {
       transferTaskClosure: true,
       planBlockStateClosure: true,
       assistedD1History: true,
+      assistedD1Rescheduling: true,
       delayedReviewEligibility: true,
       stateMachineMatrixPairs: 112,
       stateMachineMatrixResult: "passed",
