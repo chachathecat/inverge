@@ -405,7 +405,9 @@ test("exact Practice browser-to-Postgres durable loop", async ({ browser }) => {
       pageA.getByRole("alert").filter({ hasText: "temporarily_unavailable" }),
     ).toContainText("temporarily_unavailable");
     await expect(pageA.getByTestId("c3r-p-ledger")).toBeVisible();
-    await expect(pageA.getByRole("status")).not.toHaveText("삭제 완료");
+    await expect(
+      pageA.getByRole("status").filter({ hasText: "삭제 완료" }),
+    ).toHaveCount(0);
 
     await pageA.unroute("**/api/review-os/c3r-p");
     pageA.once("dialog", (dialog) => dialog.accept());
