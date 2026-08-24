@@ -871,7 +871,7 @@ test("current plans and terminal plan history are closed database projections", 
   assert.match(sql,
     /v_plan\.terminal_reason is not null[\s\S]*C3R_P_PLAN_TERMINAL/);
   assert.match(sql,
-    /'terminalReason', p\.terminal_reason[\s\S]*'generatedAt', p\.generated_at[\s\S]*'updatedAt', p\.updated_at[\s\S]*'completionState'/);
+    /'terminalReason', p\.terminal_reason[\s\S]*'generatedAt', p\.generated_at[\s\S]*'updatedAt', p\.updated_at[\s\S]*'completionState', case[\s\S]*else 'ACTIONABLE'\s+end\s+\) order by p\.generated_at/);
   assert.match(repositorySource,
     /completionState === "ACTIONABLE"[\s\S]*terminalReason !== null[\s\S]*blocks\.some\(\(block\) => block\.executionState === "PENDING"\)/);
   assert.match(repositorySource,

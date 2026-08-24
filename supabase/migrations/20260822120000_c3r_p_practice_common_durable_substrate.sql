@@ -1572,7 +1572,7 @@ begin
         when p.terminal_reason = 'COMPLETED' then 'COMPLETED'
         when p.terminal_reason is not null then 'TERMINAL_INCOMPLETE'
         else 'ACTIONABLE'
-      )
+      end
     ) order by p.generated_at desc, p.id)
       from public.c3r_p_plans p where p.user_id = p_user_id), '[]'::jsonb)
   );
