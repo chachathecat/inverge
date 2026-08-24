@@ -17,10 +17,12 @@ import {
 } from "./c3r-p-contract";
 import {
   C3R_P_SOURCE,
+  C3R_P_TRANSFER_TASK,
   buildC3RPPlan,
   c3rPBiggestGap,
   c3rPSha256,
   c3rPSourceView,
+  c3rPTransferTaskId,
   evaluateC3RPPracticeClaim,
 } from "./c3r-p-engine";
 import { createC3RPRepository } from "./c3r-p-repository";
@@ -39,7 +41,6 @@ const EVIDENCE_TIMES = Object.freeze({
   reopenAgain: "2026-09-03T00:10:00.000Z",
 });
 const PRIMARY_SURFACE_ID = "server:practice-primary-v1" as const;
-const TRANSFER_SURFACE_ID = "server:practice-transfer-v1" as const;
 const FROZEN_CONFIGURATION = Object.freeze({
   answerReviewPolicyVersion: "c3r-p-practice-review@1",
   assistancePolicyVersion: "c3r-p-smallest-scaffold@1",
@@ -162,12 +163,23 @@ export function createC3RPService(authenticatedUserId: string) {
     attemptId: string;
     claim: C3RPPracticeClaimInput;
     planBlockId?: string | null;
+    planId?: string | null;
+    planVersion?: number | null;
+    transferTaskId?: string;
     evidenceStep?: string;
   }) {
     const occurredAt = now(input.evidenceStep);
+    const expectedTransferTaskId = c3rPTransferTaskId(input.recordId);
+    if (
+      input.action === "complete_d7_transfer" &&
+      input.transferTaskId !== expectedTransferTaskId
+    ) {
+      throw new C3RPError("invalid_transition");
+    }
     const proof = evaluateC3RPPracticeClaim({
       claim: input.claim,
       confirmedAt: occurredAt,
+      transferTask: input.action === "complete_d7_transfer",
     });
     if (input.action === "record_later_failure") {
       if (proof.evaluation.verified) throw new C3RPError("invalid_transition");
@@ -184,17 +196,27 @@ export function createC3RPService(authenticatedUserId: string) {
         attemptBody: proof.canonicalSentence,
         itemId:
           input.action === "complete_d7_transfer"
-            ? C3R_P_SOURCE.transferItemId
+            ? C3R_P_TRANSFER_TASK.itemId
             : C3R_P_SOURCE.itemId,
         surfaceId: input.action === "complete_d7_transfer"
-          ? TRANSFER_SURFACE_ID
+          ? C3R_P_TRANSFER_TASK.surfaceId
           : PRIMARY_SURFACE_ID,
         configurationDigest: FROZEN_CONFIGURATION_DIGEST,
         occurredAt,
         validatorId: C3R_P_VALIDATOR_ID,
         proofDigest: proof.proofDigest,
+        ...(input.action === "complete_d1"
+          ? { transferTaskId: expectedTransferTaskId }
+          : {}),
+        ...(input.action === "complete_d7_transfer"
+          ? { transferTaskId: input.transferTaskId }
+          : {}),
         ...(C3R_P_PLAN_COMPLETION_ACTIONS.has(input.action)
-          ? { planBlockId: input.planBlockId ?? null }
+          ? {
+              planBlockId: input.planBlockId ?? null,
+              planId: input.planId ?? null,
+              planVersion: input.planVersion ?? null,
+            }
           : {}),
       },
     });
@@ -311,6 +333,32 @@ export function createC3RPService(authenticatedUserId: string) {
     },
 
     applyReview,
+
+    async presentD7TransferTask(input: {
+      commandId: string;
+      recordId: string;
+      expectedVersion: number;
+      transferTaskId: string;
+      evidenceStep?: string;
+    }) {
+      const occurredAt = now(input.evidenceStep);
+      const expectedTransferTaskId = c3rPTransferTaskId(input.recordId);
+      if (input.transferTaskId !== expectedTransferTaskId) {
+        throw new C3RPError("invalid_transition");
+      }
+      await repository.applyLearningCommand({
+        commandId: input.commandId,
+        expectedVersion: input.expectedVersion,
+        action: "present_d7_transfer_task",
+        payload: {
+          recordId: input.recordId,
+          transferTaskId: input.transferTaskId,
+          configurationDigest: FROZEN_CONFIGURATION_DIGEST,
+          occurredAt,
+        },
+      });
+      return afterCommand(input.recordId, occurredAt);
+    },
 
     async createPlan(input: {
       commandId: string;

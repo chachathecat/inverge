@@ -80,10 +80,16 @@ function planBlocks(value: unknown) {
       "blockKind",
       "recordId",
       "gapId",
+      "reviewPhase",
       "ordinal",
       "minutes",
     ]);
     if (!["CORE_OUTCOME", "SUPPORT"].includes(String(row.blockKind))) {
+      throw new C3RPError("invalid_input");
+    }
+    if (!["D1", "D7_TRANSFER", "RECURRENCE", "REOPENED_REVIEW"].includes(
+      String(row.reviewPhase),
+    )) {
       throw new C3RPError("invalid_input");
     }
     return {
@@ -91,6 +97,7 @@ function planBlocks(value: unknown) {
       blockKind: row.blockKind as C3RPPlanBlockInput["blockKind"],
       recordId: c3rPRequiredUuid(row.recordId),
       gapId: c3rPRequiredUuid(row.gapId),
+      reviewPhase: row.reviewPhase as C3RPPlanBlockInput["reviewPhase"],
       ordinal: requiredInteger(row.ordinal, 1),
       minutes: requiredInteger(row.minutes, 1),
     } satisfies C3RPPlanBlockInput;
@@ -132,12 +139,14 @@ export async function POST(request: Request) {
       "confidence",
       "evidenceStep",
       "gapId",
+      "transferTaskId",
       "failureNoteId",
       "assistanceEventId",
       "failureNote",
       "claim",
       "planBlockId",
       "planId",
+      "planVersion",
       "kind",
       "availableMinutes",
       "decision",
@@ -212,19 +221,53 @@ export async function POST(request: Request) {
       return response({ ok: true, view });
     }
 
+    if (action === "present_d7_transfer_task") {
+      const row = c3rPExactObject(raw, [
+        "action", "commandId", "recordId", "expectedVersion",
+        "transferTaskId", "evidenceStep",
+      ]);
+      const view = await service.presentD7TransferTask({
+        ...common(row),
+        transferTaskId: c3rPRequiredUuid(row.transferTaskId),
+      });
+      return response({ ok: true, view });
+    }
+
     if (C3R_P_PLAN_COMPLETION_ACTIONS.has(action)) {
       const row = c3rPExactObject(raw, [
         "action", "commandId", "recordId", "expectedVersion", "attemptId",
-        "claim", "planBlockId", "evidenceStep",
-      ]);
+        "claim", "planBlockId", "planId", "planVersion", "transferTaskId",
+        "evidenceStep",
+      ].filter((key) => Object.prototype.hasOwnProperty.call(raw as object, key)));
+      if (
+        action === "complete_d7_transfer" &&
+        !Object.prototype.hasOwnProperty.call(row, "transferTaskId")
+      ) {
+        throw new C3RPError("invalid_input");
+      }
+      if (
+        action !== "complete_d7_transfer" &&
+        Object.prototype.hasOwnProperty.call(row, "transferTaskId")
+      ) {
+        throw new C3RPError("invalid_input");
+      }
       const view = await service.applyReview({
         ...common(row),
         action: action as Parameters<typeof service.applyReview>[0]["action"],
         attemptId: c3rPRequiredUuid(row.attemptId),
         claim: parsePracticeCalculationClaimV2Input(row.claim),
-        planBlockId: row.planBlockId === null
+        planBlockId: row.planBlockId === null || row.planBlockId === undefined
           ? null
           : c3rPRequiredUuid(row.planBlockId),
+        planId: row.planId === null || row.planId === undefined
+          ? null
+          : c3rPRequiredUuid(row.planId),
+        planVersion: row.planVersion === null || row.planVersion === undefined
+          ? null
+          : requiredInteger(row.planVersion, 1),
+        ...(action === "complete_d7_transfer"
+          ? { transferTaskId: c3rPRequiredUuid(row.transferTaskId) }
+          : {}),
       });
       return response({ ok: true, view });
     }

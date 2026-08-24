@@ -380,13 +380,18 @@ export function validatePracticeRuntimeArtifact(artifact, repositoryRoot = proce
       "cycle", "receiptId", "databaseIdentity", "containerIdentity", "volumeIdentity",
       "migrationCount", "serverVersionNum", "browserToPostgres", "restartRestore",
       "exportDelete", "reopenedCompletion", "planBlockCompletion",
-      "completeLearnerExport", "oracleEvidenceSha256", "cleanup",
+      "completeLearnerExport", "transferTaskClosure", "planBlockStateClosure",
+      "assistedD1History", "stateMachineMatrixPairs", "stateMachineMatrixResult",
+      "oracleEvidenceSha256", "cleanup",
     ], `reset/replay cycle ${index + 1}`);
     if (cycle.cycle !== index + 1 || cycle.migrationCount !== 26 ||
       cycle.serverVersionNum !== ORACLE_SERVER_VERSION_NUM ||
       cycle.browserToPostgres !== true || cycle.restartRestore !== true ||
       cycle.exportDelete !== true || cycle.reopenedCompletion !== true ||
       cycle.planBlockCompletion !== true || cycle.completeLearnerExport !== true ||
+      cycle.transferTaskClosure !== true || cycle.planBlockStateClosure !== true ||
+      cycle.assistedD1History !== true || cycle.stateMachineMatrixPairs !== 112 ||
+      cycle.stateMachineMatrixResult !== "passed" ||
       cycle.cleanup !== "complete" ||
       !SHA64.test(cycle.oracleEvidenceSha256)) {
       throw new Error(`reset/replay cycle ${index + 1} is incomplete.`);
@@ -1319,6 +1324,27 @@ async function runDedicatedCycle(input) {
       browserEvidence.crossUserExportRowsAbsent !== true ||
       browserEvidence.emptyExportCollectionsAreArrays !== true ||
       browserEvidence.deleteRemovesExportedData !== true ||
+      browserEvidence.sealedTransferTaskPersisted !== true ||
+      browserEvidence.transferTaskPresentedBeforeSubmission !== true ||
+      browserEvidence.originalTaskReuseDenied !== true ||
+      browserEvidence.fabricatedTransferTaskDenied !== true ||
+      browserEvidence.transferTaskRestoredAfterRefresh !== true ||
+      browserEvidence.transferTaskExportedMetadataOnly !== true ||
+      browserEvidence.everyReviewPhasePlanBlockCompleted !== true ||
+      browserEvidence.missingCurrentPlanBlockDenied !== true ||
+      browserEvidence.stalePlanVersionDenied !== true ||
+      browserEvidence.wrongPlanBindingDenied !== true ||
+      browserEvidence.ambiguousPlanBlocksDenied !== true ||
+      browserEvidence.planlessCompletionAllowedWithoutActivePlan !== true ||
+      browserEvidence.staleEligibilityDigestDenied !== true ||
+      browserEvidence.unrelatedPlanBlockPreserved !== true ||
+      browserEvidence.dayCompleteRecomputedHonestly !== true ||
+      browserEvidence.assistedD1AttemptPersisted !== true ||
+      browserEvidence.assistedD1AssistanceEventPersisted !== true ||
+      browserEvidence.assistedD1LedgerPersisted !== true ||
+      browserEvidence.assistedD1RestoredAfterRefresh !== true ||
+      browserEvidence.stateMachineMatrixPairs !== 112 ||
+      browserEvidence.stateMachineMatrixResult !== "passed" ||
       browserEvidence.rawLearnerBodyInEvidence !== false || browserEvidence.providerCalls !== 0) {
       throw new Error(`C3R-P browser evidence cycle ${input.cycle} is incomplete.`);
     }
@@ -1350,6 +1376,11 @@ async function runDedicatedCycle(input) {
       reopenedCompletion: true,
       planBlockCompletion: true,
       completeLearnerExport: true,
+      transferTaskClosure: true,
+      planBlockStateClosure: true,
+      assistedD1History: true,
+      stateMachineMatrixPairs: 112,
+      stateMachineMatrixResult: "passed",
       oracleEvidenceSha256: oracle.sha256,
       cleanup: "complete",
     };

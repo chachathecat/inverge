@@ -67,6 +67,7 @@ function planBlock(value: unknown): C3RPPlanBlock {
     blockKind: blockKind as C3RPPlanBlock["blockKind"],
     recordId: stringValue(row.recordId),
     gapId: stringValue(row.gapId),
+    reviewPhase: stringValue(row.reviewPhase) as C3RPPlanBlock["reviewPhase"],
     ordinal: integerValue(row.ordinal),
     minutes: integerValue(row.minutes),
     executionState: executionState as C3RPPlanBlock["executionState"],
@@ -146,6 +147,9 @@ function restoredRecord(value: unknown): C3RPRestoredRecord {
   return {
     record: record as C3RPRestoredRecord["record"],
     attempts: arrayValue(row.attempts) as C3RPRestoredRecord["attempts"],
+    transferTask: row.transferTask === null
+      ? null
+      : objectValue(row.transferTask) as C3RPRestoredRecord["transferTask"],
     assistanceEvents: arrayValue(row.assistanceEvents) as C3RPRestoredRecord["assistanceEvents"],
     gaps: arrayValue(row.gaps) as C3RPRestoredRecord["gaps"],
     failureNotes: arrayValue(row.failureNotes) as C3RPRestoredRecord["failureNotes"],

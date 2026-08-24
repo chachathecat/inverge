@@ -98,7 +98,17 @@ export function C3RPPracticeLoop({
   const restored = view?.restored ?? null;
   const record = restored?.record ?? null;
   const gap = restored?.gaps[0] ?? null;
+  const transferTask = restored?.transferTask ?? null;
   const currentPlan = view?.currentPlan ?? null;
+  const currentReviewPhase = record?.state === "REPAIRED"
+    ? "D1"
+    : record?.state === "D1_COMPLETE"
+      ? "D7_TRANSFER"
+      : record?.state === "D7_COMPLETE"
+        ? "RECURRENCE"
+        : record?.state === "REOPENED"
+          ? "REOPENED_REVIEW"
+          : undefined;
 
   async function request(body: Record<string, unknown>): Promise<ApiResult> {
     setPending(true);
@@ -220,7 +230,12 @@ export function C3RPPracticeLoop({
       | "record_later_failure",
   ) {
     if (!record) return;
-    const claim = practiceClaim(structuredCalculation, view?.source.revisionId);
+    const claim = practiceClaim(
+      structuredCalculation,
+      action === "complete_d7_transfer"
+        ? transferTask?.revisionId
+        : view?.source.revisionId,
+    );
     if (!claim) {
       setError("structured_claim_required");
       return;
@@ -236,10 +251,13 @@ export function C3RPPracticeLoop({
             : gap && gap.reopen_count > 0
               ? "reopenAgain"
               : "reopen";
-    const planBlockId = currentPlan && ["ACCEPTED", "EDITED"].includes(currentPlan.state) &&
-      currentPlan.eligibilityDigest === view?.dashboard.eligibilityDigest
-      ? currentPlan.blocks.find((block) =>
+    const activePlan = currentPlan && ["ACCEPTED", "EDITED"].includes(currentPlan.state)
+      ? currentPlan
+      : null;
+    const planBlockId = activePlan
+      ? activePlan.blocks.find((block) =>
           block.recordId === record.id && block.gapId === gap?.id &&
+          block.reviewPhase === currentReviewPhase &&
           block.executionState === "PENDING",
         )?.blockId ?? null
       : null;
@@ -251,8 +269,32 @@ export function C3RPPracticeLoop({
       attemptId: id(),
       claim,
       evidenceStep,
+      ...(action === "complete_d7_transfer"
+        ? { transferTaskId: transferTask?.taskId }
+        : {}),
       ...(C3R_P_PLAN_COMPLETION_ACTIONS.has(action) ? { planBlockId } : {}),
+      ...(C3R_P_PLAN_COMPLETION_ACTIONS.has(action)
+        ? {
+            planId: activePlan?.planId ?? null,
+            planVersion: activePlan?.recordVersion ?? null,
+          }
+        : {}),
     });
+  }
+
+  async function presentD7TransferTask() {
+    if (!record || !transferTask) return;
+    const data = await request({
+      action: "present_d7_transfer_task",
+      commandId: id(),
+      recordId: record.id,
+      expectedVersion: record.record_version,
+      transferTaskId: transferTask.taskId,
+      evidenceStep: "d7",
+    });
+    if (data.ok) {
+      setStructuredCalculation({ grossIncome: "", operatingExpense: "", result: "" });
+    }
   }
 
   async function createPlan(kind: "TODAY" | "FULL_DAY") {
@@ -276,6 +318,7 @@ export function C3RPPracticeLoop({
             blockKind: block.blockKind,
             recordId: block.recordId,
             gapId: block.gapId,
+            reviewPhase: block.reviewPhase,
             blockId: id(),
             ordinal: index + 1,
             minutes: Math.max(10, block.minutes - 5),
@@ -475,10 +518,26 @@ export function C3RPPracticeLoop({
           </div>
         ) : null}
 
-        {record?.state === "D1_COMPLETE" ? (
-          <button disabled={pending} onClick={() => void review("complete_d7_transfer")} className="mt-5 w-full rounded-xl bg-[var(--color-action-primary)] px-4 py-3 font-semibold text-white disabled:opacity-50">
-            다른 문항·다른 화면에서 봉인된 D+7 전이 완료
-          </button>
+        {record?.state === "D1_COMPLETE" && transferTask ? (
+          <div className="mt-5 grid gap-3" data-testid="c3r-p-transfer-task" data-transfer-task-state={transferTask.state}>
+            {transferTask.state === "SEALED" ? (
+              <button disabled={pending} onClick={() => void presentD7TransferTask()} className="w-full rounded-xl border px-4 py-3 font-semibold disabled:opacity-50">
+                D+7 전이 과업 열기
+              </button>
+            ) : (
+              <>
+                <p className="rounded-xl bg-slate-50 p-4 text-sm" data-testid="c3r-p-transfer-prompt">
+                  {transferTask.prompt}
+                </p>
+                <p className="text-xs text-[var(--color-text-secondary)]">
+                  전이 과업 ID {transferTask.taskId} · 원래 D0 문항과 다른 문항·화면
+                </p>
+                <button disabled={pending} onClick={() => void review("complete_d7_transfer")} className="w-full rounded-xl bg-[var(--color-action-primary)] px-4 py-3 font-semibold text-white disabled:opacity-50">
+                  제시된 D+7 전이 과업 제출
+                </button>
+              </>
+            )}
+          </div>
         ) : null}
 
         {record?.state === "D7_COMPLETE" ? (
@@ -528,12 +587,15 @@ export function C3RPPracticeLoop({
         </section>
       ) : null}
 
-      {record && (record.state === "REOPENED" || currentPlan) ? (
+      {record && (
+        view?.dashboard.queue.some((item) => item.recordId === record.id && item.eligible) ||
+        currentPlan
+      ) ? (
         <section className="grid gap-3 rounded-2xl border border-[var(--color-border-default)] bg-white p-5 shadow-sm" data-testid="c3r-p-planner">
           <h2 className="text-lg font-semibold">Review Queue · Today · Full-Day</h2>
           <p className="text-sm">실행 가능한 항목만 계획에 들어가며 CoreOutcome은 최대 3개입니다.</p>
           <p className="text-sm" data-testid="c3r-p-queue-count">실행 가능한 Review Queue: {view?.dashboard.queue.filter((item) => item.eligible).length ?? 0}개</p>
-          {record.state === "REOPENED" ? (
+          {view?.dashboard.queue.some((item) => item.recordId === record.id && item.eligible) ? (
             <div className="grid grid-cols-2 gap-3">
               <button disabled={pending} onClick={() => void createPlan("TODAY")} className="rounded-xl border px-4 py-3 font-semibold">Today 90분</button>
               <button disabled={pending} onClick={() => void createPlan("FULL_DAY")} className="rounded-xl border px-4 py-3 font-semibold">Full-Day 240분</button>
@@ -543,7 +605,7 @@ export function C3RPPracticeLoop({
             <div className="grid gap-3 rounded-xl bg-slate-50 p-4">
               <p className="font-semibold">계획 상태: {currentPlan.state}</p>
               <ul className="text-sm">
-                {currentPlan.blocks.map((block) => <li key={block.blockId}>{block.ordinal}. {block.blockKind} · {block.minutes}분 · {block.executionState}</li>)}
+                {currentPlan.blocks.map((block) => <li key={block.blockId}>{block.ordinal}. {block.blockKind} · {block.reviewPhase} · {block.minutes}분 · {block.executionState}</li>)}
               </ul>
               <p className="text-sm">dayComplete: {String(currentPlan.dayComplete)}</p>
               <div className="grid grid-cols-3 gap-2">

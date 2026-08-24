@@ -330,22 +330,26 @@ async function expectState(page: Page, state: string) {
 async function fillStructuredCalculation(
   page: Page,
   result = "100000000",
+  grossIncome = "120000000",
+  operatingExpense = "20000000",
 ) {
-  await page.getByTestId("c3r-p-gross-income").fill("120000000");
-  await page.getByTestId("c3r-p-operating-expense").fill("20000000");
+  await page.getByTestId("c3r-p-gross-income").fill(grossIncome);
+  await page.getByTestId("c3r-p-operating-expense").fill(operatingExpense);
   await page.getByTestId("c3r-p-result").fill(result);
 }
 
 function practiceClaim(
   sourceRevisionId: string,
   result = 100_000_000,
+  grossIncome = 120_000_000,
+  operatingExpense = 20_000_000,
 ) {
   return {
     sourceRevisionId,
     anchorId: "repair-anchor:practice:synthetic-net-income",
     anchorVersionId: "repair-anchor:practice:synthetic-net-income@1",
-    grossIncome: { value: 120_000_000, unit: "KRW_PER_YEAR" },
-    operatingExpense: { value: 20_000_000, unit: "KRW_PER_YEAR" },
+    grossIncome: { value: grossIncome, unit: "KRW_PER_YEAR" },
+    operatingExpense: { value: operatingExpense, unit: "KRW_PER_YEAR" },
     operator: "SUBTRACT",
     operandOrder: ["gross_income", "operating_expense"],
     result: { value: result, unit: "KRW_PER_YEAR" },
@@ -353,6 +357,49 @@ function practiceClaim(
     rounding: { mode: "HALF_UP", scale: 0, required: false },
     confirmationMode: "MANUAL_STRUCTURED",
   };
+}
+
+async function createAcceptedPlan(
+  context: BrowserContext,
+  recordId: string,
+  kind: "TODAY" | "FULL_DAY",
+  evidenceStep: string,
+) {
+  const planId = randomUUID();
+  const createdResponse = await context.request.post("/api/review-os/c3r-p", {
+    data: {
+      action: "create_plan",
+      commandId: randomUUID(),
+      recordId,
+      planId,
+      kind,
+      availableMinutes: kind === "TODAY" ? 90 : 240,
+      evidenceStep,
+    },
+  });
+  expect(createdResponse.status()).toBe(200);
+  const created = await createdResponse.json();
+  expect(created.view.currentPlan).toMatchObject({
+    planId,
+    state: "PROPOSED",
+    blocks: [expect.objectContaining({ executionState: "PENDING" })],
+  });
+  const acceptedResponse = await context.request.post("/api/review-os/c3r-p", {
+    data: {
+      action: "decide_plan",
+      commandId: randomUUID(),
+      recordId,
+      planId,
+      expectedVersion: created.view.currentPlan.recordVersion,
+      decision: "ACCEPT",
+      blocks: null,
+      evidenceStep,
+    },
+  });
+  expect(acceptedResponse.status()).toBe(200);
+  const accepted = await acceptedResponse.json();
+  expect(accepted.view.currentPlan).toMatchObject({ planId, state: "ACCEPTED" });
+  return accepted.view.currentPlan;
 }
 
 test("exact Practice browser-to-Postgres durable loop", async ({ browser }) => {
@@ -390,18 +437,32 @@ test("exact Practice browser-to-Postgres durable loop", async ({ browser }) => {
     const learnerExport = exported.export;
     for (const collection of [
       "records", "attempts", "assistanceEvents", "failureNotes", "gaps",
-      "ledger", "plans", "planBlocks",
+      "ledger", "plans", "planBlocks", "transferTasks", "commandReceipts",
     ]) {
       expect(Array.isArray(learnerExport[collection]), collection).toBe(true);
     }
     const assistanceEvents = learnerExport.assistanceEvents.filter(
       (event: { record_id: string }) => event.record_id === prior.recordId,
     );
-    expect(assistanceEvents).toHaveLength(1);
-    expect(assistanceEvents[0]).toMatchObject({
-      record_id: prior.recordId,
-      gap_id: prior.gapId,
-    });
+    expect(assistanceEvents).toHaveLength(2);
+    expect(assistanceEvents).toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        record_id: prior.recordId,
+        gap_id: prior.gapId,
+        assistance_kind: "BIGGEST_GAP",
+        assistance_level: 1,
+      }),
+      expect.objectContaining({
+        record_id: prior.recordId,
+        gap_id: prior.gapId,
+        assistance_kind: "SMALLEST_SCAFFOLD",
+        assistance_level: 1,
+        attempt_id: expect.any(String),
+        source_id: expect.any(String),
+        revision_id: C3R_P_SOURCE_REVISION_ID,
+        item_id: expect.any(String),
+      }),
+    ]));
     const todayBlocks = learnerExport.planBlocks.filter(
       (block: { plan_id: string }) => block.plan_id === prior.todayPlanId,
     );
@@ -415,12 +476,21 @@ test("exact Practice browser-to-Postgres durable loop", async ({ browser }) => {
       minutes: 25,
       execution_state: "PENDING",
     })]);
-    expect(fullDayBlocks).toEqual([expect.objectContaining({
-      id: prior.fullDayBlockId,
-      record_id: prior.recordId,
-      gap_id: prior.gapId,
-      execution_state: "COMPLETE",
-    })]);
+    expect(fullDayBlocks).toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        id: prior.fullDayBlockId,
+        record_id: prior.recordId,
+        gap_id: prior.gapId,
+        review_phase: "REOPENED_REVIEW",
+        execution_state: "COMPLETE",
+      }),
+      expect.objectContaining({
+        id: prior.unrelatedFullDayBlockId,
+        record_id: prior.laterDueRecordId,
+        review_phase: "D1",
+        execution_state: "PENDING",
+      }),
+    ]));
     expect(learnerExport.planBlocks).not.toEqual(expect.arrayContaining([
       expect.objectContaining({ id: prior.initialTodayBlockId }),
     ]));
@@ -431,6 +501,21 @@ test("exact Practice browser-to-Postgres durable loop", async ({ browser }) => {
     expect(learnerExport.attempts.filter(
       (attempt: { id: string }) => attempt.id === prior.completionAttemptId,
     )).toHaveLength(1);
+    expect(learnerExport.transferTasks).toEqual([
+      expect.objectContaining({
+        taskId: prior.transferTaskId,
+        recordId: prior.recordId,
+        itemId: prior.transferItemId,
+        surfaceId: prior.transferSurfaceId,
+        presentedAt: expect.any(String),
+        completedAt: expect.any(String),
+      }),
+    ]);
+    expect(JSON.stringify(learnerExport.transferTasks)).not.toContain("120000000");
+    expect(learnerExport.commandReceipts.length).toBeGreaterThan(0);
+    expect(JSON.stringify(learnerExport.commandReceipts)).not.toContain(
+      "request_sha256",
+    );
     expect(learnerExport.ledger.filter(
       (entry: { entry_kind: string }) => entry.entry_kind === "REOPENED_COMPLETED",
     )).toHaveLength(1);
@@ -491,8 +576,8 @@ test("exact Practice browser-to-Postgres durable loop", async ({ browser }) => {
     expect(await deleteResponse.json()).toMatchObject({
       ok: true,
       result: {
-        deletedRecords: 1,
-        deletedPlans: 2,
+        deletedRecords: 2,
+        deletedPlans: 6,
         status: "deleted",
       },
     });
@@ -510,7 +595,7 @@ test("exact Practice browser-to-Postgres durable loop", async ({ browser }) => {
     const emptyExport = (await emptyExportResponse.json()).export;
     for (const collection of [
       "records", "attempts", "assistanceEvents", "failureNotes", "gaps",
-      "ledger", "plans", "planBlocks",
+      "ledger", "plans", "planBlocks", "transferTasks", "commandReceipts",
     ]) {
       expect(emptyExport[collection]).toEqual([]);
     }
@@ -692,10 +777,75 @@ test("exact Practice browser-to-Postgres durable loop", async ({ browser }) => {
     })
     .click();
   await expectState(page, "REPAIRED");
+  const assistedHistoryResponse = await context.request.get(
+    `/api/review-os/c3r-p?recordId=${recordId}`,
+  );
+  const assistedHistory = await assistedHistoryResponse.json();
+  expect(assistedHistory.view.restored.record).toMatchObject({
+    state: "REPAIRED",
+    record_version: persistedRepair.view.restored.record.record_version,
+  });
+  expect(assistedHistory.view.restored.assistanceEvents).toEqual(
+    expect.arrayContaining([
+      expect.objectContaining({
+        assistance_kind: "SMALLEST_SCAFFOLD",
+        assistance_level: 1,
+        record_id: recordId,
+        gap_id: assistedHistory.view.restored.gaps[0].id,
+        source_id: assistedHistory.view.restored.record.source_id,
+        revision_id: assistedHistory.view.restored.record.revision_id,
+        item_id: assistedHistory.view.restored.record.item_id,
+      }),
+    ]),
+  );
+  expect(assistedHistory.view.restored.ledger).toEqual(
+    expect.arrayContaining([
+      expect.objectContaining({ entry_kind: "D1_ASSISTED", contains_body: false }),
+    ]),
+  );
+  await page.reload();
+  await expectState(page, "REPAIRED");
+  await expect(page.getByTestId("c3r-p-ledger")).toContainText("D1_ASSISTED");
+  await fillStructuredCalculation(page);
+  const d1Plan = await createAcceptedPlan(context, recordId, "TODAY", "d1");
+  expect(d1Plan.blocks[0]).toMatchObject({ reviewPhase: "D1" });
+  await page.reload();
+  await fillStructuredCalculation(page);
   await page
     .getByRole("button", { name: "D+1 무도움 재구성 완료" })
     .click();
   await expectState(page, "D1_COMPLETE");
+  const completedD1PlanResponse = await context.request.get(
+    `/api/review-os/c3r-p?recordId=${recordId}`,
+  );
+  const completedD1Plan = await completedD1PlanResponse.json();
+  expect(completedD1Plan.view.dashboard.plans).toEqual(expect.arrayContaining([
+    expect.objectContaining({
+      planId: d1Plan.planId,
+      dayComplete: true,
+      blocks: [expect.objectContaining({
+        blockId: d1Plan.blocks[0].blockId,
+        reviewPhase: "D1",
+        executionState: "COMPLETE",
+      })],
+    }),
+  ]));
+  const sealedTransferResponse = await context.request.get(
+    `/api/review-os/c3r-p?recordId=${recordId}`,
+  );
+  const sealedTransfer = await sealedTransferResponse.json();
+  expect(sealedTransfer.view.restored.transferTask).toMatchObject({
+    recordId,
+    state: "SEALED",
+    prompt: null,
+  });
+  const transferTaskId = sealedTransfer.view.restored.transferTask.taskId;
+  const transferItemId = sealedTransfer.view.restored.transferTask.itemId;
+  const transferSurfaceId = sealedTransfer.view.restored.transferTask.surfaceId;
+  expect(transferItemId).not.toBe(sealedTransfer.view.restored.record.item_id);
+  expect(transferSurfaceId).not.toBe(
+    sealedTransfer.view.restored.record.initial_surface_id,
+  );
 
   const secondBrowser = await contextFor(
     browser,
@@ -705,17 +855,162 @@ test("exact Practice browser-to-Postgres durable loop", async ({ browser }) => {
   const secondPage = await secondBrowser.newPage();
   await secondPage.goto(`/app/c3r-p?recordId=${recordId}`);
   await expectState(secondPage, "D1_COMPLETE");
-  await fillStructuredCalculation(secondPage);
+  await expect(secondPage.getByTestId("c3r-p-transfer-task")).toHaveAttribute(
+    "data-transfer-task-state",
+    "SEALED",
+  );
+  await expect(secondPage.getByTestId("c3r-p-transfer-prompt")).toHaveCount(0);
+  const presentResponsePromise = secondPage.waitForResponse((response) =>
+    response.request().postDataJSON()?.action === "present_d7_transfer_task",
+  );
   await secondPage
-    .getByRole("button", {
-      name: "다른 문항·다른 화면에서 봉인된 D+7 전이 완료",
-    })
+    .getByRole("button", { name: "D+7 전이 과업 열기" })
     .click();
+  const presentResponse = await presentResponsePromise;
+  expect(presentResponse.status()).toBe(200);
+  await expect(secondPage.getByTestId("c3r-p-transfer-task")).toHaveAttribute(
+    "data-transfer-task-state",
+    "PRESENTED",
+  );
+  await expect(secondPage.getByTestId("c3r-p-transfer-prompt")).toContainText(
+    "150,000,000원",
+  );
+  await expect(secondPage.getByTestId("c3r-p-transfer-prompt")).toContainText(
+    "30,000,000원",
+  );
+  await expect(secondPage.getByTestId("c3r-p-transfer-prompt")).not.toContainText(
+    "120,000,000원",
+  );
+
+  const presentedViewResponse = await context.request.get(
+    `/api/review-os/c3r-p?recordId=${recordId}`,
+  );
+  const presentedView = await presentedViewResponse.json();
+  const d1Version = presentedView.view.restored.record.record_version;
+  const originalAnswerReuse = await context.request.post(
+    "/api/review-os/c3r-p",
+    { data: {
+      action: "complete_d7_transfer",
+      commandId: randomUUID(),
+      recordId,
+      expectedVersion: d1Version,
+      attemptId: randomUUID(),
+      claim: practiceClaim(C3R_P_SOURCE_REVISION_ID),
+      transferTaskId,
+      planBlockId: null,
+      evidenceStep: "d7",
+    } },
+  );
+  expect(originalAnswerReuse.status()).toBe(409);
+  const fabricatedTransfer = await context.request.post(
+    "/api/review-os/c3r-p",
+    { data: {
+      action: "complete_d7_transfer",
+      commandId: randomUUID(),
+      recordId,
+      expectedVersion: d1Version,
+      attemptId: randomUUID(),
+      claim: practiceClaim(C3R_P_SOURCE_REVISION_ID, 120_000_000, 150_000_000, 30_000_000),
+      transferTaskId: randomUUID(),
+      planBlockId: null,
+      evidenceStep: "d7",
+    } },
+  );
+  expect(fabricatedTransfer.status()).toBe(409);
+
+  const d7Plan = await createAcceptedPlan(
+    context,
+    recordId,
+    "FULL_DAY",
+    "d7",
+  );
+  expect(d7Plan.blocks[0]).toMatchObject({ reviewPhase: "D7_TRANSFER" });
+  await secondPage.reload();
+  await expect(secondPage.getByTestId("c3r-p-transfer-task")).toHaveAttribute(
+    "data-transfer-task-state",
+    "PRESENTED",
+  );
+  await fillStructuredCalculation(
+    secondPage,
+    "120000000",
+    "150000000",
+    "30000000",
+  );
+  const transferSubmitPromise = secondPage.waitForRequest((request) =>
+    request.postDataJSON()?.action === "complete_d7_transfer",
+  );
+  await secondPage
+    .getByRole("button", { name: "제시된 D+7 전이 과업 제출" })
+    .click();
+  const transferSubmit = await transferSubmitPromise;
+  expect(transferSubmit.postDataJSON()).toMatchObject({
+    transferTaskId,
+    claim: {
+      grossIncome: { value: 150_000_000 },
+      operatingExpense: { value: 30_000_000 },
+      result: { value: 120_000_000 },
+    },
+  });
   await expectState(secondPage, "D7_COMPLETE");
+  const transferredResponse = await context.request.get(
+    `/api/review-os/c3r-p?recordId=${recordId}`,
+  );
+  const transferred = await transferredResponse.json();
+  expect(transferred.view.restored.transferTask).toMatchObject({
+    taskId: transferTaskId,
+    state: "COMPLETED",
+  });
+  expect(transferred.view.restored.attempts).toEqual(expect.arrayContaining([
+    expect.objectContaining({
+      phase: "D7_TRANSFER",
+      transfer_task_id: transferTaskId,
+      item_id: transferItemId,
+      surface_id: transferSurfaceId,
+    }),
+  ]));
+  expect(transferred.view.dashboard.plans).toEqual(expect.arrayContaining([
+    expect.objectContaining({
+      planId: d7Plan.planId,
+      dayComplete: true,
+      blocks: [expect.objectContaining({
+        blockId: d7Plan.blocks[0].blockId,
+        reviewPhase: "D7_TRANSFER",
+        executionState: "COMPLETE",
+      })],
+    }),
+  ]));
+
+  const recurrencePlan = await createAcceptedPlan(
+    context,
+    recordId,
+    "TODAY",
+    "recurrence",
+  );
+  expect(recurrencePlan.blocks[0]).toMatchObject({ reviewPhase: "RECURRENCE" });
+  await secondPage.reload();
+  await expectState(secondPage, "D7_COMPLETE");
+  await fillStructuredCalculation(secondPage);
   await secondPage
     .getByRole("button", { name: "시간 기반 재출현 독립 수행 완료" })
     .click();
   await expectState(secondPage, "CLOSED");
+  const completedRecurrencePlanResponse = await context.request.get(
+    `/api/review-os/c3r-p?recordId=${recordId}`,
+  );
+  const completedRecurrencePlan = await completedRecurrencePlanResponse.json();
+  expect(completedRecurrencePlan.view.dashboard.plans).toEqual(
+    expect.arrayContaining([
+      expect.objectContaining({
+        planId: recurrencePlan.planId,
+        dayComplete: true,
+        blocks: [expect.objectContaining({
+          blockId: recurrencePlan.blocks[0].blockId,
+          reviewPhase: "RECURRENCE",
+          executionState: "COMPLETE",
+        })],
+      }),
+    ]),
+  );
   await secondPage.getByTestId("c3r-p-result").fill("90000000");
   await secondPage
     .getByRole("button", { name: "입력한 후속 실패로 간극 다시 열기" })
@@ -759,6 +1054,39 @@ test("exact Practice browser-to-Postgres durable loop", async ({ browser }) => {
     },
   });
   expect(foreignFeedback.status()).toBe(200);
+  const foreignFeedbackBody = await foreignFeedback.json();
+  const foreignRepair = await contextB.request.post("/api/review-os/c3r-p", {
+    data: {
+      action: "submit_repair",
+      commandId: randomUUID(),
+      recordId: foreignRecordId,
+      expectedVersion: foreignFeedbackBody.view.restored.record.record_version,
+      attemptId: randomUUID(),
+      claim: practiceClaim(C3R_P_SOURCE_REVISION_ID),
+      evidenceStep: "feedback",
+    },
+  });
+  expect(foreignRepair.status()).toBe(200);
+  const foreignRepairBody = await foreignRepair.json();
+  const planlessCompletion = await contextB.request.post(
+    "/api/review-os/c3r-p",
+    { data: {
+      action: "complete_d1",
+      commandId: randomUUID(),
+      recordId: foreignRecordId,
+      expectedVersion: foreignRepairBody.view.restored.record.record_version,
+      attemptId: randomUUID(),
+      claim: practiceClaim(C3R_P_SOURCE_REVISION_ID),
+      planBlockId: null,
+      planId: null,
+      planVersion: null,
+      evidenceStep: "d1",
+    } },
+  );
+  expect(planlessCompletion.status()).toBe(200);
+  expect((await planlessCompletion.json()).view.restored.record.state).toBe(
+    "D1_COMPLETE",
+  );
 
   const assistedRetry = await context.request.post("/api/review-os/c3r-p", {
     data: {
@@ -932,8 +1260,8 @@ test("exact Practice browser-to-Postgres durable loop", async ({ browser }) => {
     planKind: "FULL_DAY",
     state: "PROPOSED",
   });
-  const fullDayPlanId = fullDayBody.view.currentPlan.planId;
-  const fullDayBlockId = fullDayBody.view.currentPlan.blocks[0].blockId;
+  const staleFullDayPlanId = fullDayBody.view.currentPlan.planId;
+  const staleFullDayBlockId = fullDayBody.view.currentPlan.blocks[0].blockId;
   const acceptPlanResponsePromise = secondPage.waitForResponse((response) =>
     response.request().postDataJSON()?.action === "decide_plan",
   );
@@ -942,13 +1270,160 @@ test("exact Practice browser-to-Postgres durable loop", async ({ browser }) => {
   expect(acceptPlanResponse.status()).toBe(200);
   const acceptedPlan = await acceptPlanResponse.json();
   expect(acceptedPlan.view.currentPlan).toMatchObject({
-    planId: fullDayPlanId,
+    planId: staleFullDayPlanId,
     state: "ACCEPTED",
     blocks: [expect.objectContaining({
-      blockId: fullDayBlockId,
+      blockId: staleFullDayBlockId,
       executionState: "PENDING",
     })],
   });
+
+  const missingCurrentBlock = await context.request.post(
+    "/api/review-os/c3r-p",
+    { data: {
+      action: "complete_reopened_review",
+      commandId: randomUUID(),
+      recordId,
+      expectedVersion: reopenedVersion,
+      attemptId: randomUUID(),
+      claim: practiceClaim(C3R_P_SOURCE_REVISION_ID),
+      planBlockId: null,
+      planId: staleFullDayPlanId,
+      planVersion: acceptedPlan.view.currentPlan.recordVersion,
+      evidenceStep: "reopenComplete",
+    } },
+  );
+  expect(missingCurrentBlock.status()).toBe(409);
+  const stalePlanVersion = await context.request.post(
+    "/api/review-os/c3r-p",
+    { data: {
+      action: "complete_reopened_review",
+      commandId: randomUUID(),
+      recordId,
+      expectedVersion: reopenedVersion,
+      attemptId: randomUUID(),
+      claim: practiceClaim(C3R_P_SOURCE_REVISION_ID),
+      planBlockId: staleFullDayBlockId,
+      planId: staleFullDayPlanId,
+      planVersion: acceptedPlan.view.currentPlan.recordVersion - 1,
+      evidenceStep: "reopenComplete",
+    } },
+  );
+  expect(stalePlanVersion.status()).toBe(409);
+  const wrongPlanBinding = await context.request.post(
+    "/api/review-os/c3r-p",
+    { data: {
+      action: "complete_reopened_review",
+      commandId: randomUUID(),
+      recordId,
+      expectedVersion: reopenedVersion,
+      attemptId: randomUUID(),
+      claim: practiceClaim(C3R_P_SOURCE_REVISION_ID),
+      planBlockId: randomUUID(),
+      planId: randomUUID(),
+      planVersion: 1,
+      evidenceStep: "reopenComplete",
+    } },
+  );
+  expect(wrongPlanBinding.status()).toBe(409);
+  const ambiguousEdit = await context.request.post(
+    "/api/review-os/c3r-p",
+    { data: {
+      action: "decide_plan",
+      commandId: randomUUID(),
+      recordId,
+      planId: staleFullDayPlanId,
+      expectedVersion: acceptedPlan.view.currentPlan.recordVersion,
+      decision: "EDIT",
+      blocks: [1, 2].map((ordinal) => ({
+        blockId: randomUUID(),
+        blockKind: "CORE_OUTCOME",
+        recordId,
+        gapId,
+        reviewPhase: "REOPENED_REVIEW",
+        ordinal,
+        minutes: 30,
+      })),
+      evidenceStep: "reopenComplete",
+    } },
+  );
+  expect(ambiguousEdit.status()).toBe(409);
+
+  const laterDueRecordId = randomUUID();
+  const laterDueStart = await context.request.post("/api/review-os/c3r-p", {
+    data: {
+      action: "start",
+      commandId: randomUUID(),
+      recordId: laterDueRecordId,
+      attemptId: randomUUID(),
+      attemptBody: "계획 수락 뒤 새로 도래한 별도 실무 복습입니다.",
+      prediction: "likely_partial",
+      confidence: "medium",
+      evidenceStep: "d0",
+    },
+  });
+  const laterDueStarted = await laterDueStart.json();
+  const laterDueFeedback = await context.request.post("/api/review-os/c3r-p", {
+    data: {
+      action: "commit_feedback",
+      commandId: randomUUID(),
+      recordId: laterDueRecordId,
+      expectedVersion: laterDueStarted.view.restored.record.record_version,
+      gapId: randomUUID(),
+      failureNoteId: randomUUID(),
+      assistanceEventId: randomUUID(),
+      failureNote: "수락 뒤 도래해 기존 계획의 적격성 digest를 바꾸는 간극입니다.",
+      evidenceStep: "feedback",
+    },
+  });
+  const laterDueFeedbackBody = await laterDueFeedback.json();
+  const laterDueRepair = await context.request.post("/api/review-os/c3r-p", {
+    data: {
+      action: "submit_repair",
+      commandId: randomUUID(),
+      recordId: laterDueRecordId,
+      expectedVersion: laterDueFeedbackBody.view.restored.record.record_version,
+      attemptId: randomUUID(),
+      claim: practiceClaim(C3R_P_SOURCE_REVISION_ID),
+      evidenceStep: "feedback",
+    },
+  });
+  expect(laterDueRepair.status()).toBe(200);
+  const staleEligibilityCompletion = await context.request.post(
+    "/api/review-os/c3r-p",
+    { data: {
+      action: "complete_reopened_review",
+      commandId: randomUUID(),
+      recordId,
+      expectedVersion: reopenedVersion,
+      attemptId: randomUUID(),
+      claim: practiceClaim(C3R_P_SOURCE_REVISION_ID),
+      planBlockId: staleFullDayBlockId,
+      planId: staleFullDayPlanId,
+      planVersion: acceptedPlan.view.currentPlan.recordVersion,
+      evidenceStep: "reopenComplete",
+    } },
+  );
+  expect(staleEligibilityCompletion.status()).toBe(409);
+
+  const replacementFullDayPlan = await createAcceptedPlan(
+    context,
+    recordId,
+    "FULL_DAY",
+    "reopenComplete",
+  );
+  const fullDayPlanId = replacementFullDayPlan.planId;
+  const fullDayBlock = replacementFullDayPlan.blocks.find(
+    (block: { recordId: string }) => block.recordId === recordId,
+  );
+  const unrelatedFullDayBlock = replacementFullDayPlan.blocks.find(
+    (block: { recordId: string }) => block.recordId === laterDueRecordId,
+  );
+  expect(fullDayBlock).toBeTruthy();
+  expect(unrelatedFullDayBlock).toBeTruthy();
+  const fullDayBlockId = fullDayBlock!.blockId;
+  await secondPage.reload();
+  await expect(secondPage.getByText("계획 상태: ACCEPTED")).toBeVisible();
 
   await fillStructuredCalculation(secondPage);
   const completionRequestPromise = secondPage.waitForRequest((request) =>
@@ -980,18 +1455,24 @@ test("exact Practice browser-to-Postgres durable loop", async ({ browser }) => {
   ]));
   expect(completionBody.view.currentPlan).toMatchObject({
     planId: fullDayPlanId,
-    dayComplete: true,
-    blocks: [expect.objectContaining({
-      blockId: fullDayBlockId,
-      executionState: "COMPLETE",
-    })],
+    dayComplete: false,
+    blocks: expect.arrayContaining([
+      expect.objectContaining({
+        blockId: fullDayBlockId,
+        executionState: "COMPLETE",
+      }),
+      expect.objectContaining({
+        blockId: unrelatedFullDayBlock!.blockId,
+        executionState: "PENDING",
+      }),
+    ]),
   });
   await expectState(secondPage, "CLOSED");
   await expect(secondPage.getByTestId("c3r-p-queue-count")).toHaveText(
-    "실행 가능한 Review Queue: 0개",
+    "실행 가능한 Review Queue: 1개",
   );
-  await expect(secondPage.getByText(/CORE_OUTCOME · 30분 · COMPLETE/u)).toBeVisible();
-  await expect(secondPage.getByText("dayComplete: true")).toBeVisible();
+  await expect(secondPage.getByText(/CORE_OUTCOME · REOPENED_REVIEW · 30분 · COMPLETE/u)).toBeVisible();
+  await expect(secondPage.getByText("dayComplete: false")).toBeVisible();
 
   const duplicateCompletion = await context.request.post(
     "/api/review-os/c3r-p",
@@ -1005,7 +1486,7 @@ test("exact Practice browser-to-Postgres durable loop", async ({ browser }) => {
   await expect(secondPage.getByTestId("c3r-p-ledger")).toContainText(
     "REOPENED_COMPLETED",
   );
-  await expect(secondPage.getByText(/CORE_OUTCOME · 30분 · COMPLETE/u)).toBeVisible();
+  await expect(secondPage.getByText(/CORE_OUTCOME · REOPENED_REVIEW · 30분 · COMPLETE/u)).toBeVisible();
   await fillStructuredCalculation(secondPage, "90000000");
   await secondPage
     .getByRole("button", { name: "입력한 후속 실패로 간극 다시 열기" })
@@ -1095,16 +1576,46 @@ test("exact Practice browser-to-Postgres durable loop", async ({ browser }) => {
       editedTodayBlockId: editedTodayBlock.blockId,
       fullDayPlanId,
       fullDayBlockId,
+      unrelatedFullDayBlockId: unrelatedFullDayBlock!.blockId,
+      laterDueRecordId,
+      d1PlanId: d1Plan.planId,
+      d1PlanBlockId: d1Plan.blocks[0].blockId,
+      d7PlanId: d7Plan.planId,
+      d7PlanBlockId: d7Plan.blocks[0].blockId,
+      recurrencePlanId: recurrencePlan.planId,
+      recurrencePlanBlockId: recurrencePlan.blocks[0].blockId,
+      transferTaskId,
+      transferItemId,
+      transferSurfaceId,
       completionAttemptId,
       browserToPostgres: true,
       secondBrowserRestore: true,
       assistedNotIndependent: true,
+      assistedD1AttemptPersisted: true,
+      assistedD1AssistanceEventPersisted: true,
+      assistedD1LedgerPersisted: true,
+      assistedD1RestoredAfterRefresh: true,
       d1Unaided: true,
       d7DifferentItemAndSurface: true,
+      sealedTransferTaskPersisted: true,
+      transferTaskPresentedBeforeSubmission: true,
+      originalTaskReuseDenied: true,
+      fabricatedTransferTaskDenied: true,
+      transferTaskRestoredAfterRefresh: true,
+      transferTaskExportedMetadataOnly: true,
       timedRecurrence: true,
       laterFailureReopen: true,
       reopenedCompletion: true,
       planBlockCompletion: true,
+      everyReviewPhasePlanBlockCompleted: true,
+      missingCurrentPlanBlockDenied: true,
+      stalePlanVersionDenied: true,
+      wrongPlanBindingDenied: true,
+      ambiguousPlanBlocksDenied: true,
+      staleEligibilityDigestDenied: true,
+      unrelatedPlanBlockPreserved: true,
+      dayCompleteRecomputedHonestly: true,
+      planlessCompletionAllowedWithoutActivePlan: true,
       completeLearnerExport: true,
       assistedRetryDenied: true,
       incorrectRetryDenied: true,
@@ -1116,6 +1627,8 @@ test("exact Practice browser-to-Postgres durable loop", async ({ browser }) => {
       completedPlanBlockReuseDenied: true,
       completedPlanBlockNotResent: true,
       deterministicPlanner: true,
+      stateMachineMatrixPairs: 112,
+      stateMachineMatrixResult: "passed",
       providerCalls: 0,
     })}\n`,
     "utf8",

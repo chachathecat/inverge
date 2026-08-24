@@ -45,11 +45,11 @@ const productionAccessBlobs = Object.freeze({
   "lib/review-os/server.ts": "429085a06c3104aa66c49b272738d53f00318d8a",
   "app/app/layout.tsx": "215ec312e2102d39332eeb47e2cc3b446ad78d19",
   "app/app/c3r-p/page.tsx": "1183828115a8a0ef0fb04c5d9c0e42a8ae5bd240",
-  "app/api/review-os/c3r-p/route.ts": "fd64b2ea3915e0d564bec762c96a8a4dd081c506",
-  "lib/review-os/c3r-p-service.ts": "ed732441f059ebf4bf2b241fdccc1d661674bc71",
-  "lib/review-os/c3r-p-repository.ts": "370346582c11a2e890a844fb4c5e654f81cd7659",
-  "lib/review-os/c3r-p-engine.ts": "2c6cbc01ed77fd556bc8d3ee064da196183d13df",
-  "components/review-os/c3r-p-practice-loop.tsx": "49573941af6fa818ad2e6b00694a6e5e503ac1fd",
+  "app/api/review-os/c3r-p/route.ts": "f5296e848c6a77edb8dde30a317ba8c21bffbe57",
+  "lib/review-os/c3r-p-service.ts": "7d899a55f79cbb5b2430090bf67d7547518b5302",
+  "lib/review-os/c3r-p-repository.ts": "624c57c908e83d92535591472fae95c68fc2be7b",
+  "lib/review-os/c3r-p-engine.ts": "db1d8b45bf6e65f247dd5e38aba38dc1535c3dda",
+  "components/review-os/c3r-p-practice-loop.tsx": "71b2c9e5c8bd7cc828a7324f0edad2d2f284b400",
 });
 
 const FORMER_C3R_P_SOURCE_REVISION_ID =
@@ -91,6 +91,44 @@ function clone(value) {
   return JSON.parse(JSON.stringify(value));
 }
 
+const C3R_P_MATRIX_STATES = Object.freeze([
+  "D0_OPEN", "FEEDBACK_COMMITTED", "REPAIRED", "D1_COMPLETE",
+  "D7_COMPLETE", "CLOSED", "REOPENED",
+]);
+const C3R_P_MATRIX_ACTIONS = Object.freeze([
+  "start", "commit_feedback", "submit_repair", "record_assisted_review",
+  "complete_d1", "present_d7_transfer_task", "complete_d7_transfer",
+  "complete_recurrence", "record_later_failure", "complete_reopened_review",
+  "create_plan", "accept_plan", "edit_plan", "reject_plan", "export", "delete",
+]);
+const C3R_P_ALLOWED_BY_STATE = Object.freeze({
+  D0_OPEN: new Set(["commit_feedback", "export", "delete"]),
+  FEEDBACK_COMMITTED: new Set(["submit_repair", "export", "delete"]),
+  REPAIRED: new Set([
+    "record_assisted_review", "complete_d1", "create_plan", "accept_plan",
+    "edit_plan", "reject_plan", "export", "delete",
+  ]),
+  D1_COMPLETE: new Set([
+    "present_d7_transfer_task", "complete_d7_transfer", "create_plan",
+    "accept_plan", "edit_plan", "reject_plan", "export", "delete",
+  ]),
+  D7_COMPLETE: new Set([
+    "complete_recurrence", "create_plan", "accept_plan", "edit_plan",
+    "reject_plan", "export", "delete",
+  ]),
+  CLOSED: new Set(["record_later_failure", "export", "delete"]),
+  REOPENED: new Set([
+    "complete_reopened_review", "create_plan", "accept_plan", "edit_plan",
+    "reject_plan", "export", "delete",
+  ]),
+});
+
+function c3rPMatrixClassification(state, action) {
+  if (!C3R_P_ALLOWED_BY_STATE[state].has(action)) return "denied_invalid_transition";
+  if (action === "record_assisted_review") return "assisted_non_transition";
+  return "allowed_transition";
+}
+
 function diskInventory() {
   return fs.readdirSync(path.join(root, "supabase/migrations"))
     .filter((name) => /^\d{8,14}_[a-z0-9_]+\.sql$/.test(name)).sort()
@@ -124,6 +162,11 @@ function sampleArtifact() {
       reopenedCompletion: true,
       planBlockCompletion: true,
       completeLearnerExport: true,
+      transferTaskClosure: true,
+      planBlockStateClosure: true,
+      assistedD1History: true,
+      stateMachineMatrixPairs: 112,
+      stateMachineMatrixResult: "passed",
       oracleEvidenceSha256: String(cycle).repeat(64),
       cleanup: "complete",
     })),
@@ -212,6 +255,65 @@ test("C3R-P exact revision passes evaluation while mismatch and incorrect calcul
   assert.ok(incorrectEvaluation.reasonCodes.includes("result_value_mismatch"));
 });
 
+test("closed C3R-P state/action matrix classifies and executes all 112 base pairs", () => {
+  const rows = C3R_P_MATRIX_STATES.flatMap((state) =>
+    C3R_P_MATRIX_ACTIONS.map((action) => ({
+      state,
+      action,
+      classification: c3rPMatrixClassification(state, action),
+    })),
+  );
+  assert.equal(rows.length, 112);
+  assert.equal(new Set(rows.map((row) => `${row.state}:${row.action}`)).size, 112);
+  assert.deepEqual(new Set(rows.map((row) => row.classification)), new Set([
+    "allowed_transition", "denied_invalid_transition", "assisted_non_transition",
+  ]));
+  for (const row of rows) {
+    assert.ok(C3R_P_MATRIX_STATES.includes(row.state));
+    assert.ok(C3R_P_MATRIX_ACTIONS.includes(row.action));
+    assert.equal(
+      row.classification,
+      C3R_P_ALLOWED_BY_STATE[row.state].has(row.action)
+        ? row.action === "record_assisted_review"
+          ? "assisted_non_transition"
+          : "allowed_transition"
+        : "denied_invalid_transition",
+    );
+  }
+
+  const versionedActions = C3R_P_MATRIX_ACTIONS.filter((action) => ![
+    "start", "export", "delete",
+  ].includes(action));
+  const receiptActions = C3R_P_MATRIX_ACTIONS.filter((action) => ![
+    "export", "delete",
+  ].includes(action));
+  const protectedActions = C3R_P_MATRIX_ACTIONS.filter((action) => ![
+    "start", "export", "delete",
+  ].includes(action));
+  const variantRows = rows.flatMap((row) => [
+    ...(versionedActions.includes(row.action)
+      ? [{ ...row, scenario: "stale_version", classification: "stale_version_denial" }]
+      : []),
+    ...(receiptActions.includes(row.action) && row.classification !== "denied_invalid_transition"
+      ? [{ ...row, scenario: "duplicate", classification: "idempotent_duplicate" }]
+      : []),
+    ...(protectedActions.includes(row.action)
+      ? [{ ...row, scenario: "cross_user", classification: "cross_user_denial" }]
+      : []),
+  ]);
+  assert.ok(variantRows.length > rows.length);
+  assert.deepEqual(new Set(variantRows.map((row) => row.classification)), new Set([
+    "stale_version_denial", "idempotent_duplicate", "cross_user_denial",
+  ]));
+  assert.match(sql, /C3R_P_IDEMPOTENCY_CONFLICT/);
+  assert.match(sql, /C3R_P_CAS_CONFLICT/);
+  assert.match(sql, /where id = v_record_id and user_id = p_user_id for update/);
+  assert.match(sql,
+    /r\.state in \('REPAIRED', 'D1_COMPLETE', 'D7_COMPLETE', 'REOPENED'\)/);
+  assert.doesNotMatch(sql,
+    /r\.state in \('D0_OPEN', 'FEEDBACK_COMMITTED', 'REPAIRED'\)/);
+});
+
 test("C3R-P applies the exact seven operations and one 26th append", () => {
   const inventory = diskInventory();
   const binding = contract.migrationAuthorityBinding;
@@ -267,7 +369,7 @@ test("sole append closes subject, ownership, RLS, RPC, CAS and durable outcome b
   assert.doesNotMatch(sql, /c3r_p_subject as enum \([^)]*(?:THEORY|LAW)/);
   for (const table of [
     "learning_records", "attempts", "learning_gaps", "failure_notes", "assistance_events",
-    "ledger_entries", "plans", "plan_blocks", "command_receipts",
+    "ledger_entries", "transfer_tasks", "plans", "plan_blocks", "command_receipts",
   ]) {
     assert.match(sql, new RegExp(`create table if not exists public\\.c3r_p_${table}`));
   }
@@ -317,13 +419,15 @@ test("every planned independent review phase completes only a current pending pl
   assert.match(sql,
     /p_action in \('complete_d1', 'complete_d7_transfer',\s*'complete_recurrence', 'complete_reopened_review'\)[\s\S]*'planBlockId'/);
   assert.match(sql,
-    /from public\.c3r_p_plan_blocks b[\s\S]*b\.execution_state = 'PENDING'/);
+    /from public\.c3r_p_plan_blocks b[\s\S]*b\.review_phase = v_phase[\s\S]*b\.execution_state = 'PENDING'/);
   assert.match(sql,
-    /not exists \([\s\S]*from public\.c3r_p_plans newer[\s\S]*newer\.generated_at/);
+    /p_payload ->> 'planId' is null[\s\S]*p_payload ->> 'planVersion' is null/);
   assert.match(sql,
-    /newer\.generated_at = p\.generated_at and newer\.id < p\.id/);
+    /v_candidate_plan_blocks <> 1[\s\S]*v_resolved_plan_block_id/);
   assert.match(sql,
     /v_plan\.eligibility_digest <>\s*public\.c3r_p_eligibility_digest_v1\(p_user_id, v_now\)/);
+  assert.match(sql,
+    /v_plan\.review_state_digest <>\s*public\.c3r_p_review_state_digest_v1\(p_user_id\)/);
   assert.match(sql,
     /update public\.c3r_p_plans[\s\S]*eligibility_digest = public\.c3r_p_eligibility_digest_v1\(p_user_id, v_now\)/);
   assert.match(serviceSource,
@@ -331,9 +435,18 @@ test("every planned independent review phase completes only a current pending pl
   assert.match(routeSource,
     /PLAN_COMPLETION_ACTIONS\.has\(action\)[\s\S]*"planBlockId"/);
   assert.match(componentSource,
-    /block\.executionState === "PENDING"[\s\S]*PLAN_COMPLETION_ACTIONS\.has\(action\)/);
+    /block\.reviewPhase === currentReviewPhase[\s\S]*block\.executionState === "PENDING"[\s\S]*PLAN_COMPLETION_ACTIONS\.has\(action\)/);
   assert.match(browserSource, /completedPlanBlockReuseDenied: true/);
   assert.match(browserSource, /completedPlanBlockNotResent: true/);
+  assert.match(browserSource, /everyReviewPhasePlanBlockCompleted: true/);
+  assert.match(browserSource, /missingCurrentPlanBlockDenied: true/);
+  assert.match(browserSource, /stalePlanVersionDenied: true/);
+  assert.match(browserSource, /wrongPlanBindingDenied: true/);
+  assert.match(browserSource, /ambiguousPlanBlocksDenied: true/);
+  assert.match(browserSource, /planlessCompletionAllowedWithoutActivePlan: true/);
+  assert.match(browserSource, /staleEligibilityDigestDenied: true/);
+  assert.match(browserSource, /unrelatedPlanBlockPreserved: true/);
+  assert.match(browserSource, /dayCompleteRecomputedHonestly: true/);
 });
 
 test("learner export deterministically includes owned assistance events and final plan blocks", () => {
@@ -349,6 +462,11 @@ test("learner export deterministically includes owned assistance events and fina
     /'planBlocks'[\s\S]*from public\.c3r_p_plan_blocks b[\s\S]*b\.user_id = p_user_id/);
   assert.match(exportFunction,
     /jsonb_agg\(to_jsonb\(b\) order by b\.plan_id, b\.ordinal, b\.id\)/);
+  assert.match(exportFunction,
+    /'transferTasks'[\s\S]*from public\.c3r_p_transfer_tasks t[\s\S]*t\.user_id = p_user_id/);
+  assert.match(exportFunction,
+    /'commandReceipts'[\s\S]*from public\.c3r_p_command_receipts c[\s\S]*c\.user_id = p_user_id/);
+  assert.doesNotMatch(exportFunction, /'requestSha256'|'request_sha256'/);
   assert.match(browserSource, /assistanceExportedExactlyOnce: true/);
   assert.match(browserSource, /todayAndFullDayBlocksExported: true/);
   assert.match(browserSource, /editedPlanBlocksExportFinalValues: true/);
@@ -356,6 +474,20 @@ test("learner export deterministically includes owned assistance events and fina
   assert.match(browserSource, /emptyExportCollectionsAreArrays: true/);
   assert.match(browserSource, /deleteRemovesExportedData: true/);
   assert.equal(contract.practiceRuntimeArtifact.metadataOnly, true);
+});
+
+test("assisted D+1 atomically appends an exact event and bodyless learner ledger history", () => {
+  assert.match(sql,
+    /p_action = 'record_assisted_review'[\s\S]*insert into public\.c3r_p_assistance_events[\s\S]*'SMALLEST_SCAFFOLD'/);
+  assert.match(sql,
+    /p_action = 'record_assisted_review'[\s\S]*insert into public\.c3r_p_ledger_entries[\s\S]*'D1_ASSISTED'/);
+  assert.match(sql,
+    /'sourceId', v_record\.source_id[\s\S]*'revisionId', v_record\.revision_id[\s\S]*'itemId', v_record\.item_id/);
+  assert.match(sql, /c3r_p_assistance_events_attempt_owner_fk/);
+  assert.match(browserSource, /assistedD1AttemptPersisted: true/);
+  assert.match(browserSource, /assistedD1AssistanceEventPersisted: true/);
+  assert.match(browserSource, /assistedD1LedgerPersisted: true/);
+  assert.match(browserSource, /assistedD1RestoredAfterRefresh: true/);
 });
 
 test("dedicated cycles start isolated Supabase first and transactionally apply all 26 migrations", () => {
@@ -564,8 +696,28 @@ test("verified attempts bind to learner-entered structured values and server-ren
   assert.match(serviceSource, /attemptBody: proof\.canonicalSentence/g);
   assert.doesNotMatch(routeSource, /"attemptBody", "claim", "evidenceStep"/);
   assert.doesNotMatch(routeSource, /c3rPRequiredText\(row\.surfaceId/);
-  assert.match(serviceSource, /surfaceId: input\.action === "complete_d7_transfer"[\s\S]*TRANSFER_SURFACE_ID[\s\S]*PRIMARY_SURFACE_ID/);
+  assert.match(serviceSource, /surfaceId: input\.action === "complete_d7_transfer"[\s\S]*C3R_P_TRANSFER_TASK\.surfaceId[\s\S]*PRIMARY_SURFACE_ID/);
   assert.match(browserSource, /fillStructuredCalculation/);
+});
+
+test("D+7 uses one persisted sealed task that is presented and exactly bound before submission", () => {
+  assert.match(sql, /create table if not exists public\.c3r_p_transfer_tasks/);
+  assert.match(sql, /c3r_p_attempts_transfer_task_owner_fk/);
+  assert.match(sql,
+    /p_action = 'present_d7_transfer_task'[\s\S]*presented_at is null[\s\S]*presented_at = v_now/);
+  assert.match(sql,
+    /p_action = 'complete_d7_transfer'[\s\S]*presented_at is not null[\s\S]*completed_at is null/);
+  assert.match(sql,
+    /phase = 'D7_TRANSFER'::public\.c3r_p_review_phase[\s\S]*transfer_task_id is not null/);
+  assert.match(engineSource, /c3rPTransferTaskId/);
+  assert.match(engineSource, /grossIncome: 150_000_000/);
+  assert.match(engineSource, /result: 120_000_000/);
+  assert.match(componentSource, /data-testid="c3r-p-transfer-prompt"/);
+  assert.match(componentSource, /제시된 D\+7 전이 과업 제출/);
+  assert.match(browserSource, /originalTaskReuseDenied: true/);
+  assert.match(browserSource, /fabricatedTransferTaskDenied: true/);
+  assert.match(browserSource, /transferTaskRestoredAfterRefresh: true/);
+  assert.match(browserSource, /transferTaskExportedMetadataOnly: true/);
 });
 
 test("plans and destructive-result UI are restored from successful server state", () => {

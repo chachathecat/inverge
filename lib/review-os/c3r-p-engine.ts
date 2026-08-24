@@ -24,18 +24,47 @@ export const C3R_P_SOURCE = Object.freeze({
   problemId: "c3r-p:practice:annual-net-income",
   revisionId: "26a4f3bd-ddf3-4215-9fdf-d83453122ce1",
   itemId: "c3r-p:practice:annual-net-income:d0",
-  transferItemId: "c3r-p:practice:annual-net-income:d7-transfer",
   artifactId: "c3r-p:practice:annual-net-income:artifact-v1",
   gapId: "repair-anchor:practice:synthetic-net-income",
 });
 
-function practiceAnchor() {
+export const C3R_P_TRANSFER_TASK = Object.freeze({
+  itemId: "c3r-p:practice:annual-net-income:d7-transfer-v1",
+  surfaceId: "server:practice-transfer-v1",
+  prompt:
+    "별도 전이 과업: 연간 총수익 150,000,000원과 연간 운영비 30,000,000원을 사용해 연간 순수익을 직접 계산하세요. 결과와 단위를 제출하기 전에는 정답을 공개하지 않습니다.",
+  grossIncome: 150_000_000,
+  operatingExpense: 30_000_000,
+  result: 120_000_000,
+});
+
+function practiceAnchor(transfer = false) {
   const fixture = trustedRepairCanonicalFixture("appraisal_practical");
   const anchor = fixture.anchors[0];
   if (!anchor || !("calculationRelation" in anchor)) {
     throw new C3RPError("temporarily_unavailable");
   }
-  return anchor.calculationRelation as CalculationRelationAnchorV1;
+  const relation = anchor.calculationRelation as CalculationRelationAnchorV1;
+  if (!transfer) return relation;
+  return {
+    ...relation,
+    operandRoles: [
+      {
+        role: "gross_income",
+        value: C3R_P_TRANSFER_TASK.grossIncome,
+        unit: "KRW_PER_YEAR",
+      },
+      {
+        role: "operating_expense",
+        value: C3R_P_TRANSFER_TASK.operatingExpense,
+        unit: "KRW_PER_YEAR",
+      },
+    ],
+    result: {
+      value: C3R_P_TRANSFER_TASK.result,
+      unit: "KRW_PER_YEAR",
+    },
+  } satisfies CalculationRelationAnchorV1;
 }
 
 export function c3rPSourceView() {
@@ -67,6 +96,7 @@ export function c3rPSha256(value: unknown) {
 export function evaluateC3RPPracticeClaim(input: {
   claim: PracticeCalculationClaimV2Input;
   confirmedAt: string;
+  transferTask?: boolean;
 }) {
   const claim = buildPracticeCalculationClaim({
     claim: input.claim,
@@ -74,7 +104,7 @@ export function evaluateC3RPPracticeClaim(input: {
   });
   const evaluation = validatePracticeCalculationClaim({
     claim,
-    anchor: practiceAnchor(),
+    anchor: practiceAnchor(input.transferTask === true),
     expectedSourceRevisionId: C3R_P_SOURCE.revisionId,
   });
   return {
@@ -83,6 +113,18 @@ export function evaluateC3RPPracticeClaim(input: {
     proofDigest: c3rPSha256({ claim, evaluation }),
     canonicalSentence: renderPracticeCalculationClaim(claim),
   };
+}
+
+export function c3rPTransferTaskId(recordId: string) {
+  const bytes = crypto
+    .createHash("sha256")
+    .update(`c3r-p-transfer-task-v1:${recordId}`)
+    .digest()
+    .subarray(0, 16);
+  bytes[6] = (bytes[6] & 0x0f) | 0x50;
+  bytes[8] = (bytes[8] & 0x3f) | 0x80;
+  const hex = bytes.toString("hex");
+  return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
 }
 
 export function c3rPBiggestGap(initialAttempt: string) {
@@ -123,6 +165,7 @@ export function buildC3RPPlan(input: {
       blockKind: index < 3 ? "CORE_OUTCOME" : "SUPPORT",
       recordId: eligible[index].recordId,
       gapId: eligible[index].gapId,
+      reviewPhase: eligible[index].reviewPhase,
       ordinal: index + 1,
       minutes,
     });

@@ -72,13 +72,30 @@ export type C3RPAttempt = Readonly<{
   record_id: string;
   item_id: string;
   surface_id: string;
-  phase: "D0" | "D1" | "D7_TRANSFER" | "RECURRENCE";
+  phase: "D0" | "D1" | "D7_TRANSFER" | "RECURRENCE" | "REOPENED_REVIEW";
   outcome: "FAILURE" | "ASSISTED_SUCCESS" | "INDEPENDENT_SUCCESS";
   assistance_level: number;
+  transfer_task_id: string | null;
   body: string;
   validator_id: string | null;
   proof_state: string | null;
   occurred_at: string;
+}>;
+
+export type C3RPTransferTask = Readonly<{
+  taskId: string;
+  recordId: string;
+  sourceId: string;
+  problemId: string;
+  revisionId: string;
+  itemId: string;
+  artifactId: string;
+  surfaceId: string;
+  eligibleAt: string;
+  presentedAt: string | null;
+  completedAt: string | null;
+  state: "SEALED" | "PRESENTED" | "COMPLETED";
+  prompt: string | null;
 }>;
 
 export type C3RPGap = Readonly<{
@@ -114,6 +131,7 @@ export type C3RPLedgerEntry = Readonly<{
 export type C3RPRestoredRecord = Readonly<{
   record: C3RPRecord;
   attempts: readonly C3RPAttempt[];
+  transferTask: C3RPTransferTask | null;
   assistanceEvents: readonly Readonly<Record<string, unknown>>[];
   gaps: readonly C3RPGap[];
   failureNotes: readonly C3RPFailureNote[];
@@ -125,6 +143,7 @@ export type C3RPQueueItem = Readonly<{
   gapId: string;
   state: C3RPRecordState;
   gapState: "OPEN" | "REOPENED";
+  reviewPhase: "D1" | "D7_TRANSFER" | "RECURRENCE" | "REOPENED_REVIEW";
   conceptId: string;
   dueAt: string;
   eligible: boolean;
@@ -135,6 +154,7 @@ export type C3RPPlanBlockInput = Readonly<{
   blockKind: "CORE_OUTCOME" | "SUPPORT";
   recordId: string;
   gapId: string;
+  reviewPhase: C3RPQueueItem["reviewPhase"];
   ordinal: number;
   minutes: number;
 }>;
