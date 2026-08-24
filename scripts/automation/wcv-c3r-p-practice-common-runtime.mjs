@@ -6,6 +6,8 @@ import path from "node:path";
 import process from "node:process";
 import { execFileSync, spawn, spawnSync } from "node:child_process";
 import { pathToFileURL } from "node:url";
+import { firstMatchingGlob } from "./glob-match.mjs";
+import { runtimeRequiredPathRecords } from "./runtime-risk-contract.mjs";
 import {
   ORACLE_ALLOWED_CHANGED_PATHS,
   ORACLE_IMAGE,
@@ -26,6 +28,13 @@ export const C3R_P_RUNTIME_PRODUCER_VERSION =
   "wcv-c3r-p.practice-common-durable-runtime.v1";
 export const C3R_P_NATIVE_SCHEMA_VERSION =
   "inverge.runtime_evidence.c3r_p.v1";
+export const C3R_P_RUNTIME_REQUIRED_PATTERNS = Object.freeze([
+  C3R_P_CONTRACT_PATH,
+  C3R_P_APPEND_PATH,
+  "scripts/automation/wcv-c3r-p-practice-common-runtime.mjs",
+  "app/api/review-os/c3r-p/**",
+  "lib/review-os/c3r-p-*.ts",
+]);
 
 const SHA40 = /^[0-9a-f]{40}$/;
 const SHA64 = /^[0-9a-f]{64}$/;
@@ -445,9 +454,13 @@ export function validatePracticeRuntimeArtifact(artifact, repositoryRoot = proce
 }
 
 export function isC3RPRiskCandidate(riskResult) {
-  return Array.isArray(riskResult?.changedFiles) &&
-    riskResult.changedFiles.includes(C3R_P_APPEND_PATH) &&
-    riskResult.changedFiles.includes(C3R_P_CONTRACT_PATH);
+  if (riskResult?.changedFilesTruncated !== false ||
+    !Array.isArray(riskResult.changedFiles)) return false;
+  const runtimeRequiredPaths = runtimeRequiredPathRecords(riskResult.changedFiles)
+    .map(({ path: file }) => file);
+  return runtimeRequiredPaths.length > 0 && runtimeRequiredPaths.every(
+    (file) => firstMatchingGlob(C3R_P_RUNTIME_REQUIRED_PATTERNS, file) !== null,
+  );
 }
 
 function git(repositoryRoot, args) {

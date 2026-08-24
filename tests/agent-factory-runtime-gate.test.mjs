@@ -53,6 +53,7 @@ import {
 import {
   C3R_P_APPEND_PATH,
   C3R_P_CONTRACT_PATH,
+  C3R_P_RUNTIME_REQUIRED_PATTERNS,
   isC3RPRiskCandidate,
 } from "../scripts/automation/wcv-c3r-p-practice-common-runtime.mjs";
 
@@ -974,15 +975,50 @@ test("PostgreSQL security-state oracle is a closed native adapter without changi
   );
 });
 
-test("C3R-P exact append and contract select the closed runtime adapter", () => {
+test("C3R-P runtime path family selects the closed adapter for code-only changes", () => {
   const candidate = {
     changedFiles: [C3R_P_APPEND_PATH, C3R_P_CONTRACT_PATH],
     changedFilesTruncated: false,
     runtimeEvidenceRequired: true,
   };
   assert.equal(isC3RPRiskCandidate(candidate), true);
-  assert.equal(isC3RPRiskCandidate({ ...candidate, changedFiles: [C3R_P_APPEND_PATH] }), false);
+  for (const changedFiles of [
+    [C3R_P_APPEND_PATH],
+    [C3R_P_CONTRACT_PATH],
+    ["scripts/automation/wcv-c3r-p-practice-common-runtime.mjs"],
+    ["app/api/review-os/c3r-p/route.ts"],
+    ["lib/review-os/c3r-p-service.ts"],
+    ["lib/review-os/c3r-p-repository.ts", "docs/readme.md"],
+  ]) {
+    assert.equal(isC3RPRiskCandidate({ ...candidate, changedFiles }), true,
+      changedFiles.join(","));
+  }
+  for (const changedFiles of [
+    ["app/api/auth/session/route.ts"],
+    ["supabase/migrations/20260825000000_unrelated.sql"],
+    ["app/api/review-os/c3r-p/route.ts", "app/api/auth/session/route.ts"],
+    ["lib/review-os/c3r-p-service.ts", "supabase/migrations/20260825000000_unrelated.sql"],
+  ]) {
+    assert.equal(isC3RPRiskCandidate({ ...candidate, changedFiles }), false,
+      changedFiles.join(","));
+  }
+  assert.equal(isC3RPRiskCandidate({ ...candidate, changedFilesTruncated: true }), false);
+  assert.equal(isC3RPRiskCandidate({ ...candidate, changedFiles: null }), false);
+  assert.deepEqual(C3R_P_RUNTIME_REQUIRED_PATTERNS, [
+    C3R_P_CONTRACT_PATH,
+    C3R_P_APPEND_PATH,
+    "scripts/automation/wcv-c3r-p-practice-common-runtime.mjs",
+    "app/api/review-os/c3r-p/**",
+    "lib/review-os/c3r-p-*.ts",
+  ]);
   const reasons = runtimeRequiredPathRecords(candidate.changedFiles);
   assert.deepEqual(reasons.map((reason) => reason.path).sort(),
     [C3R_P_APPEND_PATH, C3R_P_CONTRACT_PATH].sort());
+  const producer = readTextFileSync(path.join(
+    WORKSPACE_ROOT, "scripts/automation/produce-runtime-evidence.mjs",
+  ));
+  assert.ok(
+    producer.indexOf("isC3RPRiskCandidate(riskResult)") <
+      producer.indexOf("resolveTargetMigration(riskResult, context.headSha)"),
+  );
 });
