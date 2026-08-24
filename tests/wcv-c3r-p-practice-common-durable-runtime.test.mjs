@@ -51,7 +51,7 @@ const productionAccessBlobs = Object.freeze({
   "lib/review-os/c3r-p-service.ts": "825e45af897c69de29ae619fefeafb7ee0ce3da9",
   "lib/review-os/c3r-p-repository.ts": "990f19f94458685782a49cfea6f00553a2a542f0",
   "lib/review-os/c3r-p-engine.ts": "351047c5b5ed7463ec7aac96baad389b5a3a92d9",
-  "components/review-os/c3r-p-practice-loop.tsx": "547fe2416c7e76b072d275820d4e9da6fcca672a",
+  "components/review-os/c3r-p-practice-loop.tsx": "df4c725942f5369b359bbc507c4a6ee02f90d9b9",
 });
 
 const FORMER_C3R_P_SOURCE_REVISION_ID =

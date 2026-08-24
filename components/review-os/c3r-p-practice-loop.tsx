@@ -108,7 +108,7 @@ export function C3RPPracticeLoop({
   const gap = restored?.gaps[0] ?? null;
   const transferTask = restored?.transferTask ?? null;
   const currentPlan = view?.currentPlan ?? null;
-  const queueItem = (reviewPhase: "D1" | "D7_TRANSFER" | "RECURRENCE" | "REOPENED_REVIEW") =>
+  const queueItem = (reviewPhase: "D1" | "D7_TRANSFER" | "RECURRENCE") =>
     c3rPCurrentQueueItem({
       queue: view?.dashboard.queue ?? [],
       recordId: record?.id,
@@ -120,11 +120,9 @@ export function C3RPPracticeLoop({
   const d1QueueItem = queueItem("D1");
   const d7QueueItem = queueItem("D7_TRANSFER");
   const recurrenceQueueItem = queueItem("RECURRENCE");
-  const reopenedQueueItem = queueItem("REOPENED_REVIEW");
   const d1Eligible = d1QueueItem?.eligible === true;
   const d7Eligible = d7QueueItem?.eligible === true;
   const recurrenceEligible = recurrenceQueueItem?.eligible === true;
-  const reopenedEligible = reopenedQueueItem?.eligible === true;
   const currentReviewPhase = record?.state === "REPAIRED"
     ? "D1"
     : record?.state === "D1_COMPLETE"
@@ -623,7 +621,7 @@ export function C3RPPracticeLoop({
         {record?.state === "REOPENED" ? (
           <div className="mt-5 grid gap-3">
             <p className="rounded-xl bg-amber-50 p-4 text-sm">이전 종료가 취소되고 Review Queue에 즉시 다시 등록되었습니다.</p>
-            <button disabled={pending || !reopenedEligible} onClick={() => void review("complete_reopened_review")} className="w-full rounded-xl bg-[var(--color-action-primary)] px-4 py-3 font-semibold text-white disabled:opacity-50">
+            <button disabled={pending} onClick={() => void review("complete_reopened_review")} className="w-full rounded-xl bg-[var(--color-action-primary)] px-4 py-3 font-semibold text-white disabled:opacity-50">
               다시 열린 복습을 독립 수행으로 완료
             </button>
           </div>
