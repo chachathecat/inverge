@@ -1925,8 +1925,9 @@ test("exact Practice browser-to-Postgres durable loop", async ({ browser }) => {
       terminalReason: "COMPLETED",
     }),
   ]));
-  await expect(secondPage.getByText("계획 상태: PROPOSED")).toBeVisible();
-  await expect(secondPage.getByText("dayComplete: false")).toBeVisible();
+  const actionablePlanner = secondPage.getByTestId("c3r-p-planner");
+  await expect(actionablePlanner.getByText("계획 상태: PROPOSED")).toBeVisible();
+  await expect(actionablePlanner.getByText("dayComplete: false")).toBeVisible();
   const editPlanResponsePromise = secondPage.waitForResponse((response) => {
     const request = response.request();
     return (
@@ -1963,7 +1964,7 @@ test("exact Practice browser-to-Postgres durable loop", async ({ browser }) => {
     executionState: "PENDING",
   });
   expect(editedTodayBlock.blockId).not.toBe(initialTodayBlockId);
-  await expect(secondPage.getByText("계획 상태: EDITED")).toBeVisible();
+  await expect(actionablePlanner.getByText("계획 상태: EDITED")).toBeVisible();
 
   const fullDayResponsePromise = secondPage.waitForResponse((response) =>
     response.request().postDataJSON()?.action === "create_plan",
@@ -2084,7 +2085,7 @@ test("exact Practice browser-to-Postgres durable loop", async ({ browser }) => {
   const reopenedEvidenceRoute = dashboardEvidenceStepRoute("reopenComplete");
   await secondPage.route(c3rPApiUrl, reopenedEvidenceRoute);
   await secondPage.reload();
-  await expect(secondPage.getByText("계획 상태: ACCEPTED")).toBeVisible();
+  await expect(actionablePlanner.getByText("계획 상태: ACCEPTED")).toBeVisible();
 
   await fillStructuredCalculation(secondPage);
   const completionRequestPromise = secondPage.waitForRequest((request) =>
