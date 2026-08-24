@@ -456,6 +456,13 @@ test("exact Practice browser-to-Postgres durable loop", async ({ browser }) => {
     await expect(pageA.getByTestId("c3r-p-ledger")).toContainText(
       "REOPENED_COMPLETED",
     );
+    const restartPlanHistory = pageA.getByTestId("c3r-p-plan-history");
+    await expect(restartPlanHistory).toBeVisible();
+    await expect(restartPlanHistory).not.toHaveAttribute("open", "");
+    await restartPlanHistory.locator("summary").click();
+    await expect(
+      restartPlanHistory.locator(`[data-plan-id="${prior.fullDayPlanId}"]`),
+    ).toContainText("완료 상태 COMPLETED · 종료 사유 COMPLETED");
 
     const contextB = await contextFor(browser, emailB, passwordB);
     const denial = await contextB.request.get(
@@ -537,8 +544,23 @@ test("exact Practice browser-to-Postgres durable loop", async ({ browser }) => {
       expect.objectContaining({ id: prior.initialTodayBlockId }),
     ]));
     expect(learnerExport.plans).toEqual(expect.arrayContaining([
-      expect.objectContaining({ id: prior.todayPlanId, plan_kind: "TODAY" }),
-      expect.objectContaining({ id: prior.fullDayPlanId, plan_kind: "FULL_DAY" }),
+      expect.objectContaining({
+        id: prior.todayPlanId,
+        plan_kind: "TODAY",
+        state: "STALE",
+        terminal_reason: "SUPERSEDED",
+      }),
+      expect.objectContaining({
+        id: prior.fullDayPlanId,
+        plan_kind: "FULL_DAY",
+        terminal_reason: "COMPLETED",
+      }),
+      expect.objectContaining({
+        id: prior.staleFullDayPlanId,
+        plan_kind: "FULL_DAY",
+        state: "STALE",
+        terminal_reason: "SUPERSEDED",
+      }),
     ]));
     expect(learnerExport.attempts.filter(
       (attempt: { id: string }) => attempt.id === prior.completionAttemptId,
@@ -596,6 +618,7 @@ test("exact Practice browser-to-Postgres durable loop", async ({ browser }) => {
       pageA.getByRole("alert").filter({ hasText: "temporarily_unavailable" }),
     ).toContainText("temporarily_unavailable");
     await expect(pageA.getByTestId("c3r-p-ledger")).toBeVisible();
+    await expect(pageA.getByTestId("c3r-p-plan-history")).toBeVisible();
     await expect(
       pageA.getByRole("status").filter({ hasText: "삭제 완료" }),
     ).toHaveCount(0);
@@ -625,6 +648,7 @@ test("exact Practice browser-to-Postgres durable loop", async ({ browser }) => {
     });
     await expect(pageA.getByRole("status")).toHaveText("삭제 완료");
     await expect(pageA).toHaveURL(/\/app\/c3r-p$/u);
+    await expect(pageA.getByTestId("c3r-p-plan-history")).toHaveCount(0);
     const deleted = await contextA.request.get(
       `/api/review-os/c3r-p?recordId=${prior.recordId}`,
     );
@@ -660,6 +684,8 @@ test("exact Practice browser-to-Postgres durable loop", async ({ browser }) => {
         crossUserExportRowsAbsent: true,
         emptyExportCollectionsAreArrays: true,
         deleteRemovesExportedData: true,
+        planHistoryRestartRestored: true,
+        planHistoryExportedAndDeleted: true,
         rawLearnerBodyInEvidence: false,
       })}\n`,
       "utf8",
@@ -706,6 +732,14 @@ test("exact Practice browser-to-Postgres durable loop", async ({ browser }) => {
   expect(receipt.c3rPRuntimeMarker).toBe(true);
   expect(receipt.apiStatus).toBe(200);
   await expectState(page, "UNSTARTED");
+  const emptyPlanProjectionResponse = await context.request.get(
+    "/api/review-os/c3r-p",
+  );
+  expect(emptyPlanProjectionResponse.status()).toBe(200);
+  const emptyPlanProjection = await emptyPlanProjectionResponse.json();
+  expect(emptyPlanProjection.view.currentPlan).toBeNull();
+  expect(emptyPlanProjection.view.planHistory).toEqual([]);
+  expect(Object.hasOwn(emptyPlanProjection.view.dashboard, "plans")).toBe(false);
 
   const foreignHosts = new Set<string>();
   page.on("request", (request) => {
@@ -863,10 +897,12 @@ test("exact Practice browser-to-Postgres durable loop", async ({ browser }) => {
     planId: rejectedD1PlanId,
     state: "PROPOSED",
   });
-  expect(proposedD1Plan.view.dashboard.plans).toEqual(expect.arrayContaining([
+  expect(proposedD1Plan.view.planHistory).toEqual(expect.arrayContaining([
     expect.objectContaining({
       planId: supersededD1Plan.planId,
       state: "STALE",
+      completionState: "TERMINAL_INCOMPLETE",
+      terminalReason: "SUPERSEDED",
       blocks: [expect.objectContaining({
         blockId: supersededD1Plan.blocks[0].blockId,
         executionState: "PENDING",
@@ -890,6 +926,54 @@ test("exact Practice browser-to-Postgres durable loop", async ({ browser }) => {
   expect(rejectedD1PlanResponse.status()).toBe(200);
   const rejectedD1Plan = await rejectedD1PlanResponse.json();
   expect(rejectedD1Plan.view.currentPlan).toBeNull();
+  const rejectedD1History = rejectedD1Plan.view.planHistory.find(
+    (plan: { planId: string }) => plan.planId === rejectedD1PlanId,
+  );
+  expect(rejectedD1History).toMatchObject({
+    planId: rejectedD1PlanId,
+    state: "REJECTED",
+    completionState: "TERMINAL_INCOMPLETE",
+    terminalReason: "REJECTED",
+    dayComplete: false,
+  });
+  const supersededAfterRejectedReplacement = rejectedD1Plan.view.planHistory.find(
+    (plan: { planId: string }) => plan.planId === supersededD1Plan.planId,
+  );
+  if (!supersededAfterRejectedReplacement) {
+    throw new Error("Superseded replacement plan was not projected into plan history.");
+  }
+  const reviveSupersededPlan = await context.request.post(
+    "/api/review-os/c3r-p",
+    { data: {
+      action: "decide_plan",
+      commandId: randomUUID(),
+      recordId,
+      planId: supersededD1Plan.planId,
+      expectedVersion: supersededAfterRejectedReplacement.recordVersion,
+      decision: "ACCEPT",
+      blocks: null,
+      evidenceStep: "d1Fresh",
+    } },
+  );
+  expect(reviveSupersededPlan.status()).toBe(409);
+  const afterReviveSupersededPlan = await context.request.get(
+    `/api/review-os/c3r-p?recordId=${recordId}&evidenceStep=d1Fresh`,
+  );
+  const afterReviveSuperseded = await afterReviveSupersededPlan.json();
+  expect(afterReviveSuperseded.view.currentPlan).toBeNull();
+  expect(afterReviveSuperseded.view.planHistory).toEqual(expect.arrayContaining([
+    expect.objectContaining({
+      planId: supersededD1Plan.planId,
+      state: "STALE",
+      terminalReason: "SUPERSEDED",
+      recordVersion: supersededAfterRejectedReplacement.recordVersion,
+    }),
+    expect.objectContaining({
+      planId: rejectedD1PlanId,
+      state: "REJECTED",
+      terminalReason: "REJECTED",
+    }),
+  ]));
   const staleD1Plan = await createAcceptedPlan(
     context,
     recordId,
@@ -949,10 +1033,12 @@ test("exact Practice browser-to-Postgres durable loop", async ({ browser }) => {
     }),
   ]));
   expect(assistedHistory.view.currentPlan).toBeNull();
-  expect(assistedHistory.view.dashboard.plans).toEqual(expect.arrayContaining([
+  expect(assistedHistory.view.planHistory).toEqual(expect.arrayContaining([
     expect.objectContaining({
       planId: staleD1Plan.planId,
       state: "STALE",
+      completionState: "TERMINAL_INCOMPLETE",
+      terminalReason: "ELIGIBILITY_CHANGED",
       recordVersion: staleD1Plan.recordVersion + 1,
       blocks: [expect.objectContaining({
         blockId: staleD1Plan.blocks[0].blockId,
@@ -1181,9 +1267,11 @@ test("exact Practice browser-to-Postgres durable loop", async ({ browser }) => {
   );
   const completedD1Plan = await completedD1PlanResponse.json();
   expect(completedD1Plan.view.currentPlan).toBeNull();
-  expect(completedD1Plan.view.dashboard.plans).toEqual(expect.arrayContaining([
+  expect(completedD1Plan.view.planHistory).toEqual(expect.arrayContaining([
     expect.objectContaining({
       planId: d1Plan.planId,
+      completionState: "COMPLETED",
+      terminalReason: "COMPLETED",
       dayComplete: true,
       blocks: [expect.objectContaining({
         blockId: d1Plan.blocks[0].blockId,
@@ -1502,9 +1590,11 @@ test("exact Practice browser-to-Postgres durable loop", async ({ browser }) => {
       surface_id: transferSurfaceId,
     }),
   ]));
-  expect(transferred.view.dashboard.plans).toEqual(expect.arrayContaining([
+  expect(transferred.view.planHistory).toEqual(expect.arrayContaining([
     expect.objectContaining({
       planId: d7Plan.planId,
+      completionState: "COMPLETED",
+      terminalReason: "COMPLETED",
       dayComplete: true,
       blocks: [expect.objectContaining({
         blockId: d7Plan.blocks[0].blockId,
@@ -1613,10 +1703,12 @@ test("exact Practice browser-to-Postgres durable loop", async ({ browser }) => {
     `/api/review-os/c3r-p?recordId=${recordId}`,
   );
   const completedRecurrencePlan = await completedRecurrencePlanResponse.json();
-  expect(completedRecurrencePlan.view.dashboard.plans).toEqual(
+  expect(completedRecurrencePlan.view.planHistory).toEqual(
     expect.arrayContaining([
       expect.objectContaining({
         planId: recurrencePlan.planId,
+        completionState: "COMPLETED",
+        terminalReason: "COMPLETED",
         dayComplete: true,
         blocks: [expect.objectContaining({
           blockId: recurrencePlan.blocks[0].blockId,
@@ -1815,17 +1907,24 @@ test("exact Practice browser-to-Postgres durable loop", async ({ browser }) => {
   });
   expect(createPlanBody.view.currentPlan.blocks.length).toBeGreaterThan(0);
   expect(createPlanBody.view.currentPlan.blocks[0].executionState).toBe("PENDING");
+  expect(createPlanBody.view.currentPlan).toMatchObject({
+    completionState: "ACTIONABLE",
+    terminalReason: null,
+    dayComplete: false,
+  });
+  expect(Object.hasOwn(createPlanBody.view.dashboard, "plans")).toBe(false);
   const todayPlanId = createPlanBody.view.currentPlan.planId;
   const initialTodayBlockId = createPlanBody.view.currentPlan.blocks[0].blockId;
-  expect(createPlanBody.view.dashboard.plans).toEqual(
-    expect.arrayContaining([
-      expect.objectContaining({
-        planId: createPlanBody.view.currentPlan.planId,
-        state: "PROPOSED",
-        recordVersion: 1,
-      }),
-    ]),
-  );
+  expect(createPlanBody.view.planHistory).not.toEqual(expect.arrayContaining([
+    expect.objectContaining({ planId: todayPlanId }),
+  ]));
+  expect(createPlanBody.view.planHistory).toEqual(expect.arrayContaining([
+    expect.objectContaining({
+      planId: recurrencePlan.planId,
+      completionState: "COMPLETED",
+      terminalReason: "COMPLETED",
+    }),
+  ]));
   await expect(secondPage.getByText("계획 상태: PROPOSED")).toBeVisible();
   await expect(secondPage.getByText("dayComplete: false")).toBeVisible();
   const editPlanResponsePromise = secondPage.waitForResponse((response) => {
@@ -1853,6 +1952,8 @@ test("exact Practice browser-to-Postgres durable loop", async ({ browser }) => {
         planId: createPlanBody.view.currentPlan.planId,
         state: "EDITED",
         recordVersion: 2,
+        completionState: "ACTIONABLE",
+        terminalReason: null,
       },
     },
   });
@@ -1874,6 +1975,8 @@ test("exact Practice browser-to-Postgres durable loop", async ({ browser }) => {
   expect(fullDayBody.view.currentPlan).toMatchObject({
     planKind: "FULL_DAY",
     state: "PROPOSED",
+    completionState: "ACTIONABLE",
+    terminalReason: null,
   });
   const staleFullDayPlanId = fullDayBody.view.currentPlan.planId;
   const staleFullDayBlockId = fullDayBody.view.currentPlan.blocks[0].blockId;
@@ -1887,6 +1990,8 @@ test("exact Practice browser-to-Postgres durable loop", async ({ browser }) => {
   expect(acceptedPlan.view.currentPlan).toMatchObject({
     planId: staleFullDayPlanId,
     state: "ACCEPTED",
+    completionState: "ACTIONABLE",
+    terminalReason: null,
     blocks: [expect.objectContaining({
       blockId: staleFullDayBlockId,
       executionState: "PENDING",
@@ -2010,9 +2115,11 @@ test("exact Practice browser-to-Postgres durable loop", async ({ browser }) => {
     expect.objectContaining({ recordId }),
   ]));
   expect(completionBody.view.currentPlan).toBeNull();
-  expect(completionBody.view.dashboard.plans).toEqual(expect.arrayContaining([
+  expect(completionBody.view.planHistory).toEqual(expect.arrayContaining([
     expect.objectContaining({
       planId: fullDayPlanId,
+      completionState: "COMPLETED",
+      terminalReason: "COMPLETED",
       dayComplete: true,
       blocks: [expect.objectContaining({
         blockId: fullDayBlockId,
@@ -2021,16 +2128,45 @@ test("exact Practice browser-to-Postgres durable loop", async ({ browser }) => {
     }),
     expect.objectContaining({
       planId: staleFullDayPlanId,
+      state: "STALE",
+      completionState: "TERMINAL_INCOMPLETE",
+      terminalReason: "SUPERSEDED",
       blocks: [expect.objectContaining({
         blockId: staleFullDayBlockId,
         executionState: "PENDING",
       })],
     }),
   ]));
+  const expectedPlanHistoryOrder = [...completionBody.view.planHistory]
+    .sort((
+      left: { updatedAt: string; generatedAt: string; planId: string },
+      right: { updatedAt: string; generatedAt: string; planId: string },
+    ) =>
+      right.updatedAt.localeCompare(left.updatedAt) ||
+      right.generatedAt.localeCompare(left.generatedAt) ||
+      left.planId.localeCompare(right.planId));
+  expect(completionBody.view.planHistory.map(
+    (plan: { planId: string }) => plan.planId,
+  )).toEqual(expectedPlanHistoryOrder.map(
+    (plan: { planId: string }) => plan.planId,
+  ));
   await expectState(secondPage, "CLOSED");
   await expect(secondPage.getByTestId("c3r-p-planner")).toHaveCount(0);
-  await expect(secondPage.getByText(/CORE_OUTCOME · REOPENED_REVIEW · 30분 · COMPLETE/u)).toBeVisible();
-  await expect(secondPage.getByText("dayComplete: true")).toBeVisible();
+  const completedPlanHistory = secondPage.getByTestId("c3r-p-plan-history");
+  await expect(completedPlanHistory).toBeVisible();
+  await expect(completedPlanHistory).not.toHaveAttribute("open", "");
+  await completedPlanHistory.locator("summary").click();
+  const completedReopenedHistoryItem = completedPlanHistory.locator(
+    `[data-plan-id="${fullDayPlanId}"]`,
+  );
+  await expect(completedReopenedHistoryItem).toContainText(
+    "완료 상태 COMPLETED · 종료 사유 COMPLETED",
+  );
+  await expect(completedReopenedHistoryItem).toContainText(
+    "CORE_OUTCOME · REOPENED_REVIEW · 30분 · COMPLETE",
+  );
+  await expect(completedReopenedHistoryItem).toContainText("dayComplete: true");
+  await expect(completedReopenedHistoryItem.getByRole("button")).toHaveCount(0);
 
   const duplicateCompletion = await context.request.post(
     "/api/review-os/c3r-p",
@@ -2038,13 +2174,49 @@ test("exact Practice browser-to-Postgres durable loop", async ({ browser }) => {
   );
   expect(duplicateCompletion.status()).toBe(200);
   expect((await duplicateCompletion.json()).view.restored.record.state).toBe("CLOSED");
+  const completedPlanProjection = completionBody.view.planHistory.find(
+    (plan: { planId: string }) => plan.planId === fullDayPlanId,
+  );
+  expect(completedPlanProjection).toBeTruthy();
+  const reviveCompletedPlan = await context.request.post(
+    "/api/review-os/c3r-p",
+    { data: {
+      action: "decide_plan",
+      commandId: randomUUID(),
+      recordId,
+      planId: fullDayPlanId,
+      expectedVersion: completedPlanProjection.recordVersion,
+      decision: "ACCEPT",
+      blocks: null,
+      evidenceStep: "reopenAgain",
+    } },
+  );
+  expect(reviveCompletedPlan.status()).toBe(409);
+  const afterReviveCompletedPlan = await context.request.get(
+    `/api/review-os/c3r-p?recordId=${recordId}`,
+  );
+  const afterCompletedRevival = await afterReviveCompletedPlan.json();
+  expect(afterCompletedRevival.view.currentPlan).toBeNull();
+  expect(afterCompletedRevival.view.planHistory).toEqual(expect.arrayContaining([
+    expect.objectContaining({
+      planId: fullDayPlanId,
+      recordVersion: completedPlanProjection.recordVersion,
+      completionState: "COMPLETED",
+      terminalReason: "COMPLETED",
+    }),
+  ]));
 
   await secondPage.reload();
   await expectState(secondPage, "CLOSED");
   await expect(secondPage.getByTestId("c3r-p-ledger")).toContainText(
     "REOPENED_COMPLETED",
   );
-  await expect(secondPage.getByText(/CORE_OUTCOME · REOPENED_REVIEW · 30분 · COMPLETE/u)).toBeVisible();
+  const restoredPlanHistory = secondPage.getByTestId("c3r-p-plan-history");
+  await expect(restoredPlanHistory).not.toHaveAttribute("open", "");
+  await restoredPlanHistory.locator("summary").click();
+  await expect(
+    restoredPlanHistory.locator(`[data-plan-id="${fullDayPlanId}"]`),
+  ).toContainText("CORE_OUTCOME · REOPENED_REVIEW · 30분 · COMPLETE");
   await fillStructuredCalculation(secondPage, "90000000");
   await secondPage
     .getByRole("button", { name: "입력한 후속 실패로 간극 다시 열기" })
@@ -2059,9 +2231,11 @@ test("exact Practice browser-to-Postgres durable loop", async ({ browser }) => {
     reopen_count: 2,
   });
   expect(reopenedAgain.view.currentPlan).toBeNull();
-  expect(reopenedAgain.view.dashboard.plans).toEqual(expect.arrayContaining([
+  expect(reopenedAgain.view.planHistory).toEqual(expect.arrayContaining([
     expect.objectContaining({
       planId: fullDayPlanId,
+      completionState: "COMPLETED",
+      terminalReason: "COMPLETED",
       blocks: [expect.objectContaining({
         blockId: fullDayBlockId,
         executionState: "COMPLETE",
@@ -2215,6 +2389,10 @@ test("exact Practice browser-to-Postgres durable loop", async ({ browser }) => {
       completedPlanBlockReuseDenied: true,
       completedPlanBlockNotResent: true,
       completedPriorPhasePlanIgnored: true,
+      currentPlanHistorySeparated: true,
+      deterministicPlanHistory: true,
+      terminalPlanCannotReactivate: true,
+      completedPlanHistoryVisible: true,
       deterministicPlanner: true,
       stateMachineMatrixPairs: 112,
       stateMachineMatrixResult: "passed",

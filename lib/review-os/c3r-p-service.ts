@@ -13,6 +13,7 @@ import {
   C3RPError,
   type C3RPPlanBlockInput,
   type C3RPPracticeClaimInput,
+  type C3RPPersistedPlan,
   type C3RPView,
 } from "./c3r-p-contract";
 import {
@@ -125,6 +126,17 @@ function requirePass(input: {
   return proof;
 }
 
+function compareCurrentPlans(left: C3RPPersistedPlan, right: C3RPPersistedPlan) {
+  return right.generatedAt.localeCompare(left.generatedAt) ||
+    left.planId.localeCompare(right.planId);
+}
+
+function comparePlanHistory(left: C3RPPersistedPlan, right: C3RPPersistedPlan) {
+  return right.updatedAt.localeCompare(left.updatedAt) ||
+    right.generatedAt.localeCompare(left.generatedAt) ||
+    left.planId.localeCompare(right.planId);
+}
+
 export function createC3RPService(authenticatedUserId: string) {
   const repository = createC3RPRepository(authenticatedUserId);
 
@@ -143,10 +155,13 @@ export function createC3RPService(authenticatedUserId: string) {
           : restored?.record.state === "REOPENED"
             ? "REOPENED_REVIEW"
             : null;
+    const { plans, ...dashboardProjection } = dashboard;
     const currentPlan = resolvedRecordId && restored?.record.primary_gap_id &&
       currentReviewPhase
-      ? dashboard.plans.find((plan) =>
-          !["REJECTED", "STALE"].includes(plan.state) &&
+      ? [...plans].sort(compareCurrentPlans).find((plan) =>
+          plan.completionState === "ACTIONABLE" &&
+          plan.terminalReason === null &&
+          ["PROPOSED", "ACCEPTED", "EDITED"].includes(plan.state) &&
           plan.blocks.some((block) =>
             block.recordId === resolvedRecordId &&
             block.gapId === restored.record.primary_gap_id &&
@@ -158,8 +173,11 @@ export function createC3RPService(authenticatedUserId: string) {
     return {
       source: c3rPSourceView(),
       restored,
-      dashboard,
+      dashboard: dashboardProjection,
       currentPlan,
+      planHistory: plans
+        .filter((plan) => plan.terminalReason !== null)
+        .sort(comparePlanHistory),
     };
   }
 
@@ -408,22 +426,15 @@ export function createC3RPService(authenticatedUserId: string) {
       if (result.state !== "PROPOSED") {
         throw new C3RPError("invalid_transition");
       }
-      return {
-        ...(await view(input.recordId, asOf)),
-        currentPlan: {
-          planId: input.planId,
-          planKind: input.kind,
-          recordVersion: result.recordVersion,
-          eligibilityDigest:
-            result.eligibilityDigest ?? dashboard.eligibilityDigest,
-          state: result.state,
-          blocks: planned.blocks.map((block) => ({
-            ...block,
-            executionState: "PENDING" as const,
-          })),
-          dayComplete: planned.dayComplete && !planned.supportWorkRemaining,
-        },
-      } satisfies C3RPView;
+      const projected = await view(input.recordId, asOf);
+      if (
+        projected.currentPlan?.planId !== input.planId ||
+        projected.currentPlan.state !== "PROPOSED" ||
+        projected.currentPlan.recordVersion !== result.recordVersion
+      ) {
+        throw new C3RPError("temporarily_unavailable");
+      }
+      return projected;
     },
 
     async decidePlan(input: {

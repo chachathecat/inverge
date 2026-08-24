@@ -350,6 +350,9 @@ create table if not exists public.c3r_p_plans (
   subject public.c3r_p_subject not null default 'PRACTICE',
   plan_kind public.c3r_p_plan_kind not null,
   state public.c3r_p_plan_state not null default 'PROPOSED',
+  terminal_reason text check (terminal_reason in (
+    'COMPLETED', 'REJECTED', 'SUPERSEDED', 'ELIGIBILITY_CHANGED'
+  )),
   record_version bigint not null default 1 check (record_version > 0),
   available_minutes integer not null check (available_minutes between 30 and 720),
   eligibility_digest text not null check (eligibility_digest ~ '^[0-9a-f]{64}$'),
@@ -357,6 +360,12 @@ create table if not exists public.c3r_p_plans (
   generated_at timestamptz not null,
   updated_at timestamptz not null,
   constraint c3r_p_plans_practice_only check (subject = 'PRACTICE'::public.c3r_p_subject),
+  constraint c3r_p_plans_terminal_state_closed check (
+    (terminal_reason is null and state in ('PROPOSED', 'ACCEPTED', 'EDITED'))
+    or (terminal_reason = 'COMPLETED' and state in ('ACCEPTED', 'EDITED'))
+    or (terminal_reason = 'REJECTED' and state = 'REJECTED')
+    or (terminal_reason in ('SUPERSEDED', 'ELIGIBILITY_CHANGED') and state = 'STALE')
+  ),
   unique (user_id, id)
 );
 
@@ -887,6 +896,7 @@ begin
         from public.c3r_p_plans p
         where p.user_id = p_user_id
           and p.state in ('ACCEPTED', 'EDITED')
+          and p.terminal_reason is null
           and exists (
             select 1 from public.c3r_p_plan_blocks relevant
             where relevant.user_id = p_user_id
@@ -894,6 +904,7 @@ begin
               and relevant.record_id = v_record.id
               and relevant.gap_id = v_record.primary_gap_id
               and relevant.review_phase = v_phase
+              and relevant.execution_state = 'PENDING'
           )
         order by p.generated_at desc, p.id
         limit 1
@@ -999,6 +1010,7 @@ begin
         end if;
         update public.c3r_p_plans prior set
           state = 'STALE',
+          terminal_reason = 'ELIGIBILITY_CHANGED',
           record_version = prior.record_version + 1,
           updated_at = v_now
         where prior.user_id = p_user_id
@@ -1072,6 +1084,15 @@ begin
           update public.c3r_p_plans set
             eligibility_digest = public.c3r_p_eligibility_digest_v1(p_user_id, v_now),
             review_state_digest = public.c3r_p_review_state_digest_v1(p_user_id),
+            terminal_reason = case
+              when not exists (
+                select 1 from public.c3r_p_plan_blocks pending
+                where pending.user_id = p_user_id
+                  and pending.plan_id = v_plan.id
+                  and pending.execution_state = 'PENDING'
+              ) then 'COMPLETED'
+              else null
+            end,
             record_version = record_version + 1,
             updated_at = v_now
           where id = v_plan.id and user_id = p_user_id;
@@ -1180,6 +1201,7 @@ begin
   v_review := public.c3r_p_review_state_digest_v1(p_user_id);
   update public.c3r_p_plans prior set
     state = 'STALE',
+    terminal_reason = 'SUPERSEDED',
     record_version = prior.record_version + 1,
     updated_at = p_as_of
   where prior.user_id = p_user_id
@@ -1292,10 +1314,15 @@ begin
   if v_plan.record_version <> p_expected_version then
     raise exception 'C3R_P_CAS_CONFLICT' using errcode = '40001';
   end if;
+  if v_plan.state not in ('PROPOSED', 'ACCEPTED', 'EDITED')
+    or v_plan.terminal_reason is not null then
+    raise exception 'C3R_P_PLAN_TERMINAL' using errcode = '23514';
+  end if;
   v_actual_eligibility := public.c3r_p_eligibility_digest_v1(p_user_id, p_as_of);
   if v_actual_eligibility <> v_plan.eligibility_digest
     or public.c3r_p_review_state_digest_v1(p_user_id) <> v_plan.review_state_digest then
     update public.c3r_p_plans set state = 'STALE',
+      terminal_reason = 'ELIGIBILITY_CHANGED',
       record_version = record_version + 1, updated_at = p_as_of
     where id = p_plan_id returning * into v_plan;
     v_response := jsonb_build_object('planId', p_plan_id,
@@ -1366,6 +1393,9 @@ begin
         when 'ACCEPT' then 'ACCEPTED'::public.c3r_p_plan_state
         when 'EDIT' then 'EDITED'::public.c3r_p_plan_state
         else 'REJECTED'::public.c3r_p_plan_state end,
+      terminal_reason = case p_decision
+        when 'REJECT' then 'REJECTED'
+        else null end,
       record_version = record_version + 1, updated_at = p_as_of
     where id = p_plan_id returning * into v_plan;
     v_response := jsonb_build_object('planId', p_plan_id,
@@ -1516,6 +1546,9 @@ begin
       'recordVersion', p.record_version,
       'eligibilityDigest', p.eligibility_digest,
       'state', p.state,
+      'terminalReason', p.terminal_reason,
+      'generatedAt', p.generated_at,
+      'updatedAt', p.updated_at,
       'blocks', coalesce((select jsonb_agg(jsonb_build_object(
         'blockId', b.id,
         'blockKind', b.block_kind,
@@ -1534,6 +1567,11 @@ begin
         and not exists (select 1 from public.c3r_p_plan_blocks b
           where b.user_id = p_user_id and b.plan_id = p.id
             and b.execution_state <> 'COMPLETE')
+      ),
+      'completionState', case
+        when p.terminal_reason = 'COMPLETED' then 'COMPLETED'
+        when p.terminal_reason is not null then 'TERMINAL_INCOMPLETE'
+        else 'ACTIONABLE'
       )
     ) order by p.generated_at desc, p.id)
       from public.c3r_p_plans p where p.user_id = p_user_id), '[]'::jsonb)

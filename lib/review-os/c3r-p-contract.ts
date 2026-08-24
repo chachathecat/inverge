@@ -178,6 +178,17 @@ export type C3RPPlanBlock = C3RPPlanBlockInput & Readonly<{
   executionState: "PENDING" | "COMPLETE";
 }>;
 
+export type C3RPPlanCompletionState =
+  | "ACTIONABLE"
+  | "COMPLETED"
+  | "TERMINAL_INCOMPLETE";
+
+export type C3RPPlanTerminalReason =
+  | "COMPLETED"
+  | "REJECTED"
+  | "SUPERSEDED"
+  | "ELIGIBILITY_CHANGED";
+
 export type C3RPPersistedPlan = Readonly<{
   planId: string;
   planKind: "TODAY" | "FULL_DAY";
@@ -185,7 +196,11 @@ export type C3RPPersistedPlan = Readonly<{
   eligibilityDigest: string;
   state: "PROPOSED" | "ACCEPTED" | "EDITED" | "REJECTED" | "STALE";
   blocks: readonly C3RPPlanBlock[];
+  completionState: C3RPPlanCompletionState;
   dayComplete: boolean;
+  terminalReason: C3RPPlanTerminalReason | null;
+  generatedAt: string;
+  updatedAt: string;
 }>;
 
 export type C3RPDashboard = Readonly<{
@@ -193,7 +208,6 @@ export type C3RPDashboard = Readonly<{
   reviewStateDigest: string;
   queue: readonly C3RPQueueItem[];
   ledger: readonly C3RPLedgerEntry[];
-  plans: readonly C3RPPersistedPlan[];
 }>;
 
 export type C3RPView = Readonly<{
@@ -210,6 +224,7 @@ export type C3RPView = Readonly<{
   restored: C3RPRestoredRecord | null;
   dashboard: C3RPDashboard;
   currentPlan: C3RPPersistedPlan | null;
+  planHistory: readonly C3RPPersistedPlan[];
 }>;
 
 export function c3rPCurrentQueueItem(input: Readonly<{

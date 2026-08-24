@@ -34,6 +34,8 @@ const sql = fs.readFileSync(path.join(root, C3R_P_APPEND_PATH), "utf8");
 const runtimeSource = fs.readFileSync(path.join(root,
   "scripts/automation/wcv-c3r-p-practice-common-runtime.mjs"), "utf8");
 const serviceSource = fs.readFileSync(path.join(root, "lib/review-os/c3r-p-service.ts"), "utf8");
+const repositorySource = fs.readFileSync(path.join(root,
+  "lib/review-os/c3r-p-repository.ts"), "utf8");
 const engineSource = fs.readFileSync(path.join(root, "lib/review-os/c3r-p-engine.ts"), "utf8");
 const routeSource = fs.readFileSync(path.join(root, "app/api/review-os/c3r-p/route.ts"), "utf8");
 const componentSource = fs.readFileSync(path.join(root,
@@ -48,10 +50,10 @@ const productionAccessBlobs = Object.freeze({
   "app/app/layout.tsx": "215ec312e2102d39332eeb47e2cc3b446ad78d19",
   "app/app/c3r-p/page.tsx": "1183828115a8a0ef0fb04c5d9c0e42a8ae5bd240",
   "app/api/review-os/c3r-p/route.ts": "e4723d6fe303dcdeb73d099e67a6311640b25c09",
-  "lib/review-os/c3r-p-service.ts": "576fdda0d3d276f4c943c04ddd025dccd542785b",
-  "lib/review-os/c3r-p-repository.ts": "990f19f94458685782a49cfea6f00553a2a542f0",
+  "lib/review-os/c3r-p-service.ts": "5923cd57c2cf1d00aea258d930495a48ac1dc516",
+  "lib/review-os/c3r-p-repository.ts": "c9fceb98d4a6f9dd9a2eb89f7f612fb60b0d41c8",
   "lib/review-os/c3r-p-engine.ts": "351047c5b5ed7463ec7aac96baad389b5a3a92d9",
-  "components/review-os/c3r-p-practice-loop.tsx": "45b9d19adc83a93cdce1649e0eac9a0d9045890c",
+  "components/review-os/c3r-p-practice-loop.tsx": "0a7897389de1a57968c10d95dedb0b7204774cd1",
 });
 
 const FORMER_C3R_P_SOURCE_REVISION_ID =
@@ -166,6 +168,7 @@ function sampleArtifact() {
       completeLearnerExport: true,
       transferTaskClosure: true,
       planBlockStateClosure: true,
+      planProjectionClosure: true,
       assistedD1History: true,
       assistedD1Rescheduling: true,
       delayedReviewEligibility: true,
@@ -460,6 +463,8 @@ test("every planned independent review phase completes only a current pending pl
   assert.match(sql,
     /from public\.c3r_p_plan_blocks b[\s\S]*b\.review_phase = v_phase[\s\S]*b\.execution_state = 'PENDING'/);
   assert.match(sql,
+    /from public\.c3r_p_plans p[\s\S]*p\.terminal_reason is null[\s\S]*relevant\.execution_state = 'PENDING'/);
+  assert.match(sql,
     /p_payload ->> 'planId' is null[\s\S]*p_payload ->> 'planVersion' is null/);
   assert.match(sql,
     /v_candidate_plan_blocks <> 1[\s\S]*v_resolved_plan_block_id/);
@@ -491,6 +496,8 @@ test("every planned independent review phase completes only a current pending pl
     /c3r_p_review_state_digest_v1[\s\S]*select count\(\*\)::text from public\.c3r_p_attempts/);
   assert.match(browserSource, /unrelatedPlanBlockPreserved: true/);
   assert.match(browserSource, /dayCompleteRecomputedHonestly: true/);
+  assert.match(sql,
+    /update public\.c3r_p_plan_blocks set execution_state = 'COMPLETE'[\s\S]*terminal_reason = case[\s\S]*then 'COMPLETED'/);
 });
 
 test("learner export deterministically includes owned assistance events and final plan blocks", () => {
@@ -826,11 +833,17 @@ test("plans and destructive-result UI are restored from successful server state"
   assert.match(serviceSource,
     /recordId \?\? await repository\.findRecordId\(C3R_P_SOURCE\)/);
   assert.match(serviceSource,
-    /dashboard\.plans\.find\(\(plan\) =>[\s\S]*!\["REJECTED", "STALE"\]\.includes\(plan\.state\)/);
+    /const \{ plans, \.\.\.dashboardProjection \} = dashboard/);
+  assert.match(serviceSource,
+    /plan\.completionState === "ACTIONABLE"[\s\S]*plan\.terminalReason === null[\s\S]*block\.executionState === "PENDING"/);
+  assert.match(serviceSource,
+    /planHistory: plans[\s\S]*filter\(\(plan\) => plan\.terminalReason !== null\)[\s\S]*sort\(comparePlanHistory\)/);
+  assert.match(serviceSource,
+    /right\.updatedAt\.localeCompare\(left\.updatedAt\)[\s\S]*right\.generatedAt\.localeCompare\(left\.generatedAt\)[\s\S]*left\.planId\.localeCompare\(right\.planId\)/);
   assert.match(sql,
     /update public\.c3r_p_plans prior set[\s\S]*state = 'STALE'[\s\S]*prior\.state in \('PROPOSED', 'ACCEPTED', 'EDITED'\)[\s\S]*pending\.execution_state = 'PENDING'[\s\S]*insert into public\.c3r_p_plans/);
   assert.match(serviceSource,
-    /async createPlan[\s\S]*\.\.\.\(await view\(input\.recordId, asOf\)\)/);
+    /async createPlan[\s\S]*const projected = await view\(input\.recordId, asOf\)[\s\S]*projected\.currentPlan\?\.planId !== input\.planId[\s\S]*return projected/);
   assert.match(serviceSource,
     /await repository\.decidePlan[\s\S]*return view\(input\.recordId, asOf\)/);
   assert.match(componentSource,
@@ -847,6 +860,39 @@ test("plans and destructive-result UI are restored from successful server state"
   assert.match(browserSource, /terminalPlanDoesNotReviveSuperseded: true/);
   assert.match(browserSource, /priorActivePlanSuperseded: true/);
   assert.match(browserSource, /temporarily_unavailable[\s\S]*c3r-p-ledger/);
+});
+
+test("current plans and terminal plan history are closed database projections", () => {
+  assert.match(sql, /constraint c3r_p_plans_terminal_state_closed check/);
+  assert.match(sql,
+    /terminal_reason = 'COMPLETED'[\s\S]*terminal_reason = 'REJECTED'[\s\S]*terminal_reason in \('SUPERSEDED', 'ELIGIBILITY_CHANGED'\)/);
+  assert.match(sql,
+    /update public\.c3r_p_plans prior set[\s\S]*terminal_reason = 'SUPERSEDED'[\s\S]*insert into public\.c3r_p_plans/);
+  assert.match(sql,
+    /v_plan\.terminal_reason is not null[\s\S]*C3R_P_PLAN_TERMINAL/);
+  assert.match(sql,
+    /'terminalReason', p\.terminal_reason[\s\S]*'generatedAt', p\.generated_at[\s\S]*'updatedAt', p\.updated_at[\s\S]*'completionState'/);
+  assert.match(repositorySource,
+    /completionState === "ACTIONABLE"[\s\S]*terminalReason !== null[\s\S]*blocks\.some\(\(block\) => block\.executionState === "PENDING"\)/);
+  assert.match(repositorySource,
+    /completionState === "COMPLETED"[\s\S]*terminalReason !== "COMPLETED"[\s\S]*blocks\.some\(\(block\) => block\.executionState !== "COMPLETE"\)/);
+  assert.match(repositorySource,
+    /completionState === "TERMINAL_INCOMPLETE"[\s\S]*terminalReason === "COMPLETED"[\s\S]*!terminalState/);
+  assert.match(componentSource,
+    /<details[\s\S]*data-testid="c3r-p-plan-history"[\s\S]*지난 계획 \(\{planHistory\.length\}\)[\s\S]*data-plan-id=\{plan\.planId\}/);
+  const historyStart = componentSource.indexOf('data-testid="c3r-p-plan-history"');
+  const historyEnd = componentSource.indexOf("</details>", historyStart);
+  assert.ok(historyStart >= 0 && historyEnd > historyStart);
+  assert.doesNotMatch(componentSource.slice(historyStart, historyEnd), /<button/);
+  for (const flag of [
+    "currentPlanHistorySeparated", "deterministicPlanHistory",
+    "terminalPlanCannotReactivate", "completedPlanHistoryVisible",
+    "planHistoryRestartRestored", "planHistoryExportedAndDeleted",
+  ]) {
+    assert.match(browserSource, new RegExp(`${flag}: true`));
+    assert.match(runtimeSource, new RegExp(`browserEvidence\\.${flag} !== true`));
+  }
+  assert.match(runtimeSource, /planProjectionClosure: true/);
 });
 
 test("PRACTICE_RUNTIME verifier reproduces every required binding", () => {

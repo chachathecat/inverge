@@ -9,11 +9,16 @@ import {
   type C3RPDashboard,
   type C3RPPlanBlock,
   type C3RPPlanBlockInput,
+  type C3RPPlanCompletionState,
+  type C3RPPlanTerminalReason,
   type C3RPPersistedPlan,
   type C3RPRestoredRecord,
 } from "./c3r-p-contract";
 
 type JsonRecord = Record<string, unknown>;
+type C3RPDashboardSnapshot = C3RPDashboard & Readonly<{
+  plans: readonly C3RPPersistedPlan[];
+}>;
 
 function adminClient() {
   const client = createSupabaseAdminClient();
@@ -78,10 +83,40 @@ function persistedPlan(value: unknown): C3RPPersistedPlan {
   const row = objectValue(value);
   const planKind = stringValue(row.planKind);
   const state = stringValue(row.state);
+  const completionState = stringValue(row.completionState);
+  const terminalReason = row.terminalReason === null
+    ? null
+    : stringValue(row.terminalReason);
   if (!(["TODAY", "FULL_DAY"] as const).includes(planKind as C3RPPersistedPlan["planKind"]) ||
     !(["PROPOSED", "ACCEPTED", "EDITED", "REJECTED", "STALE"] as const).includes(
       state as C3RPPersistedPlan["state"],
-    )) {
+    ) || !(["ACTIONABLE", "COMPLETED", "TERMINAL_INCOMPLETE"] as const).includes(
+      completionState as C3RPPlanCompletionState,
+    ) || (terminalReason !== null && !([
+      "COMPLETED",
+      "REJECTED",
+      "SUPERSEDED",
+      "ELIGIBILITY_CHANGED",
+    ] as const).includes(terminalReason as C3RPPlanTerminalReason))) {
+    throw new C3RPError("temporarily_unavailable");
+  }
+  const blocks = arrayValue(row.blocks).map(planBlock);
+  const dayComplete = booleanValue(row.dayComplete);
+  const terminalState = state === "REJECTED" || state === "STALE";
+  if (
+    (completionState === "ACTIONABLE" && (
+      terminalReason !== null || dayComplete || terminalState ||
+      !blocks.some((block) => block.executionState === "PENDING")
+    )) ||
+    (completionState === "COMPLETED" && (
+      terminalReason !== "COMPLETED" || !dayComplete || terminalState ||
+      blocks.some((block) => block.executionState !== "COMPLETE")
+    )) ||
+    (completionState === "TERMINAL_INCOMPLETE" && (
+      terminalReason === null || terminalReason === "COMPLETED" ||
+      !terminalState || dayComplete
+    ))
+  ) {
     throw new C3RPError("temporarily_unavailable");
   }
   return {
@@ -90,8 +125,12 @@ function persistedPlan(value: unknown): C3RPPersistedPlan {
     recordVersion: integerValue(row.recordVersion),
     eligibilityDigest: stringValue(row.eligibilityDigest),
     state: state as C3RPPersistedPlan["state"],
-    blocks: arrayValue(row.blocks).map(planBlock),
-    dayComplete: booleanValue(row.dayComplete),
+    blocks,
+    completionState: completionState as C3RPPlanCompletionState,
+    dayComplete,
+    terminalReason: terminalReason as C3RPPlanTerminalReason | null,
+    generatedAt: stringValue(row.generatedAt),
+    updatedAt: stringValue(row.updatedAt),
   };
 }
 
@@ -157,7 +196,7 @@ function restoredRecord(value: unknown): C3RPRestoredRecord {
   };
 }
 
-function dashboard(value: unknown): C3RPDashboard {
+function dashboard(value: unknown): C3RPDashboardSnapshot {
   const row = objectValue(value);
   return {
     eligibilityDigest: stringValue(row.eligibilityDigest),

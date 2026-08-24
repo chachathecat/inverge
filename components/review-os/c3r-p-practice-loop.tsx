@@ -108,6 +108,7 @@ export function C3RPPracticeLoop({
   const gap = restored?.gaps[0] ?? null;
   const transferTask = restored?.transferTask ?? null;
   const currentPlan = view?.currentPlan ?? null;
+  const planHistory = view?.planHistory ?? [];
   const queueItem = (reviewPhase: "D1" | "D7_TRANSFER" | "RECURRENCE" | "REOPENED_REVIEW") =>
     c3rPCurrentQueueItem({
       queue: view?.dashboard.queue ?? [],
@@ -388,7 +389,15 @@ export function C3RPPracticeLoop({
       return;
     }
     window.history.replaceState(null, "", "/app/c3r-p");
-    setView((current) => current ? { ...current, restored: null, currentPlan: null } : current);
+    setView((current) => current
+      ? {
+          ...current,
+          restored: null,
+          dashboard: { ...current.dashboard, queue: [], ledger: [] },
+          currentPlan: null,
+          planHistory: [],
+        }
+      : current);
     setExportStatus("삭제 완료");
   }
 
@@ -694,6 +703,42 @@ export function C3RPPracticeLoop({
             </div>
           ) : null}
         </section>
+      ) : null}
+
+      {record && planHistory.length > 0 ? (
+        <details
+          className="rounded-2xl border border-[var(--color-border-default)] bg-white p-5 shadow-sm"
+          data-testid="c3r-p-plan-history"
+        >
+          <summary className="cursor-pointer font-semibold">
+            지난 계획 ({planHistory.length})
+          </summary>
+          <ol className="mt-4 grid gap-3">
+            {planHistory.map((plan) => (
+              <li
+                key={plan.planId}
+                className="grid gap-2 rounded-xl bg-slate-50 p-4"
+                data-testid="c3r-p-plan-history-item"
+                data-plan-id={plan.planId}
+              >
+                <p className="font-semibold">
+                  지난 계획 · {plan.planKind} · {plan.state}
+                </p>
+                <p className="text-sm">
+                  계획 버전 {plan.recordVersion} · 완료 상태 {plan.completionState} · 종료 사유 {plan.terminalReason}
+                </p>
+                <ul className="text-sm">
+                  {plan.blocks.map((block) => (
+                    <li key={block.blockId}>
+                      {block.ordinal}. {block.blockKind} · {block.reviewPhase} · {block.minutes}분 · {block.executionState}
+                    </li>
+                  ))}
+                </ul>
+                <p className="text-sm">dayComplete: {String(plan.dayComplete)}</p>
+              </li>
+            ))}
+          </ol>
+        </details>
       ) : null}
 
       {record ? (

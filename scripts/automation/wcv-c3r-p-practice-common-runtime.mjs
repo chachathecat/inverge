@@ -381,6 +381,7 @@ export function validatePracticeRuntimeArtifact(artifact, repositoryRoot = proce
       "migrationCount", "serverVersionNum", "browserToPostgres", "restartRestore",
       "exportDelete", "reopenedCompletion", "planBlockCompletion",
       "completeLearnerExport", "transferTaskClosure", "planBlockStateClosure",
+      "planProjectionClosure",
       "assistedD1History", "assistedD1Rescheduling", "delayedReviewEligibility",
       "stateMachineMatrixPairs",
       "stateMachineMatrixResult",
@@ -392,6 +393,7 @@ export function validatePracticeRuntimeArtifact(artifact, repositoryRoot = proce
       cycle.exportDelete !== true || cycle.reopenedCompletion !== true ||
       cycle.planBlockCompletion !== true || cycle.completeLearnerExport !== true ||
       cycle.transferTaskClosure !== true || cycle.planBlockStateClosure !== true ||
+      cycle.planProjectionClosure !== true ||
       cycle.assistedD1History !== true || cycle.assistedD1Rescheduling !== true ||
       cycle.delayedReviewEligibility !== true ||
       cycle.stateMachineMatrixPairs !== 112 ||
@@ -1323,12 +1325,18 @@ async function runDedicatedCycle(input) {
       browserEvidence.completedPlanBlockReuseDenied !== true ||
       browserEvidence.completedPlanBlockNotResent !== true ||
       browserEvidence.completedPriorPhasePlanIgnored !== true ||
+      browserEvidence.currentPlanHistorySeparated !== true ||
+      browserEvidence.deterministicPlanHistory !== true ||
+      browserEvidence.terminalPlanCannotReactivate !== true ||
+      browserEvidence.completedPlanHistoryVisible !== true ||
       browserEvidence.assistanceExportedExactlyOnce !== true ||
       browserEvidence.todayAndFullDayBlocksExported !== true ||
       browserEvidence.editedPlanBlocksExportFinalValues !== true ||
       browserEvidence.crossUserExportRowsAbsent !== true ||
       browserEvidence.emptyExportCollectionsAreArrays !== true ||
       browserEvidence.deleteRemovesExportedData !== true ||
+      browserEvidence.planHistoryRestartRestored !== true ||
+      browserEvidence.planHistoryExportedAndDeleted !== true ||
       browserEvidence.sealedTransferTaskPersisted !== true ||
       browserEvidence.transferTaskPresentedBeforeSubmission !== true ||
       browserEvidence.originalTaskReuseDenied !== true ||
@@ -1402,6 +1410,7 @@ async function runDedicatedCycle(input) {
       completeLearnerExport: true,
       transferTaskClosure: true,
       planBlockStateClosure: true,
+      planProjectionClosure: true,
       assistedD1History: true,
       assistedD1Rescheduling: true,
       delayedReviewEligibility: true,
