@@ -20,7 +20,6 @@ type ApiResult = {
 };
 
 const apiPath = "/api/review-os/c3r-p";
-const C3R_P_DELETE_COMPLETE_SESSION_KEY = "dabangil:c3r-p:delete-complete";
 
 function id() {
   return window.crypto.randomUUID();
@@ -145,13 +144,6 @@ export function C3RPPracticeLoop({
     return () => {
       active = false;
     };
-  }, [initialRecordId]);
-
-  useEffect(() => {
-    if (window.sessionStorage.getItem(C3R_P_DELETE_COMPLETE_SESSION_KEY) === "true") {
-      window.sessionStorage.removeItem(C3R_P_DELETE_COMPLETE_SESSION_KEY);
-      queueMicrotask(() => setExportStatus("삭제 완료"));
-    }
   }, [initialRecordId]);
 
   const phaseLabel = useMemo(() => {
@@ -308,7 +300,6 @@ export function C3RPPracticeLoop({
       setError("temporarily_unavailable");
       return;
     }
-    window.sessionStorage.setItem(C3R_P_DELETE_COMPLETE_SESSION_KEY, "true");
     window.history.replaceState(null, "", "/app/c3r-p");
     setView((current) => current ? { ...current, restored: null, currentPlan: null } : current);
     setExportStatus("삭제 완료");
@@ -337,6 +328,8 @@ export function C3RPPracticeLoop({
           요청을 완료하지 못했습니다: {error}
         </p>
       ) : null}
+
+      {exportStatus ? <p className="text-sm" role="status">{exportStatus}</p> : null}
 
       <section className="rounded-2xl border border-[var(--color-border-default)] bg-white p-5 shadow-sm">
         <p className="text-xs font-semibold uppercase tracking-wide text-[var(--color-text-tertiary)]">현재 한 가지 과업</p>
@@ -547,7 +540,6 @@ export function C3RPPracticeLoop({
             <button disabled={pending} onClick={() => void exportData()} className="rounded-xl border px-4 py-3 font-semibold">내 데이터 내보내기</button>
             <button disabled={pending} onClick={() => void deleteData()} className="rounded-xl border border-red-300 px-4 py-3 font-semibold text-red-700">내 C3R-P 데이터 삭제</button>
           </div>
-          {exportStatus ? <p className="text-sm" role="status">{exportStatus}</p> : null}
         </section>
       ) : null}
     </main>
