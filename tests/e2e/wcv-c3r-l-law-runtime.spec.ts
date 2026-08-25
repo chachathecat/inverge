@@ -700,9 +700,10 @@ test("C3R-L initial load errors support retry and stale-bookmark recovery", asyn
     markBrowserFailureStage("LOAD_RETRY_ROUTE_INSTALLED");
     await page.goto("/app/c3r-l");
     markBrowserFailureStage("LOAD_RETRY_NAVIGATION_COMPLETE");
-    await expect(page.getByTestId("c3r-l-load-error")).toBeVisible();
+    const loadError = page.getByTestId("c3r-l-load-error");
+    await expect(loadError).toBeVisible();
     markBrowserFailureStage("LOAD_RETRY_ERROR_SURFACE_VISIBLE");
-    await expect(page.getByRole("alert")).toContainText("temporarily_unavailable");
+    await expect(loadError.getByRole("alert")).toContainText("temporarily_unavailable");
     markBrowserFailureStage("LOAD_RETRY_ERROR_TEXT_VISIBLE");
     failInitialLoads = false;
     markBrowserFailureStage("LOAD_RETRY_RELEASED");
@@ -715,8 +716,9 @@ test("C3R-L initial load errors support retry and stale-bookmark recovery", asyn
     const missingRecordId = randomUUID();
     markBrowserFailureStage("STALE_BOOKMARK_INITIAL");
     await page.goto(`/app/c3r-l?recordId=${missingRecordId}`);
-    await expect(page.getByTestId("c3r-l-load-error")).toBeVisible();
-    await expect(page.getByRole("alert")).toContainText("not_found");
+    const staleBookmarkError = page.getByTestId("c3r-l-load-error");
+    await expect(staleBookmarkError).toBeVisible();
+    await expect(staleBookmarkError.getByRole("alert")).toContainText("not_found");
     markBrowserFailureStage("STALE_BOOKMARK_ERROR_VISIBLE");
     await page.getByRole("button", { name: "기본 법규 학습으로 돌아가기" }).click();
     await expect(page.getByTestId("c3r-l-runtime")).toBeVisible();
