@@ -26,10 +26,12 @@ import {
   classifyC3RLBrowserFailureStage,
   classifyC3RLNextFailureDiagnostic,
   classifyC3RLNativeServiceAssertions,
+  classifyC3RLPlaywrightFailureDiagnostic,
   createC3RLNativeEvidence,
   createLawRuntimeArtifact,
   isC3RLRiskCandidate,
   readC3RLBrowserFailureStage,
+  selectC3RLBrowserFailureClassification,
   validateLawRuntimeArtifact,
 } from "../scripts/automation/wcv-c3r-p-practice-common-runtime.mjs";
 import { runtimeRequiredPathRecords } from
@@ -474,6 +476,18 @@ test("Law browser failures disclose only a closed Next or exact stage classifica
   assert.equal(classifyC3RLNextFailureDiagnostic(
     "Failed to compile: Module not found",
   ), "C3R_L_NEXT_COMPILE_FAILURE");
+  assert.equal(classifyC3RLPlaywrightFailureDiagnostic(
+    "Test timeout of 180000ms exceeded while private body was redacted",
+  ), "C3R_L_PLAYWRIGHT_TEST_TIMEOUT");
+  assert.equal(classifyC3RLPlaywrightFailureDiagnostic(
+    "Error: expect(received).toBe(expected)",
+  ), "C3R_L_PLAYWRIGHT_ASSERTION_FAILURE");
+  assert.equal(classifyC3RLPlaywrightFailureDiagnostic(
+    "C3R-L journey browser verification failed (spawn)",
+  ), "C3R_L_PLAYWRIGHT_PROCESS_TERMINATED");
+  assert.equal(classifyC3RLPlaywrightFailureDiagnostic(
+    "unknown learner-private diagnostic",
+  ), "C3R_L_PLAYWRIGHT_FAILURE_UNCLASSIFIED");
   assert.equal(classifyC3RLBrowserFailureStage({
     schemaVersion: "inverge.c3r_l.browser_failure_stage.v1",
     mode: "journey",
@@ -494,6 +508,40 @@ test("Law browser failures disclose only a closed Next or exact stage classifica
       "C3R_L_BROWSER_STAGE_INVALID");
   } finally {
     fs.rmSync(markerRoot, { recursive: true, force: true });
+  }
+  const selectionCases = [
+    {
+      stageClassification: "C3R_L_BROWSER_JOURNEY_COMPLETE",
+      nextClassification: "C3R_L_NEXT_FAILURE_UNCLASSIFIED",
+      playwrightClassification: "C3R_L_PLAYWRIGHT_TEST_TIMEOUT",
+      expected: "C3R_L_PLAYWRIGHT_TEST_TIMEOUT",
+    },
+    {
+      stageClassification: "C3R_L_BROWSER_JOURNEY_REOPEN",
+      nextClassification: "C3R_L_API_TEMPORARILY_UNAVAILABLE",
+      playwrightClassification: "C3R_L_PLAYWRIGHT_ASSERTION_FAILURE",
+      expected: "C3R_L_BROWSER_JOURNEY_REOPEN",
+    },
+    {
+      stageClassification: "C3R_L_BROWSER_STAGE_INVALID",
+      nextClassification: "C3R_L_NEXT_COMPILE_FAILURE",
+      playwrightClassification: "C3R_L_PLAYWRIGHT_FAILURE_UNCLASSIFIED",
+      expected: "C3R_L_NEXT_COMPILE_FAILURE",
+    },
+    {
+      stageClassification: "C3R_L_BROWSER_STAGE_MISSING",
+      nextClassification: "C3R_L_NEXT_FAILURE_UNCLASSIFIED",
+      playwrightClassification: "C3R_L_PLAYWRIGHT_FAILURE_UNCLASSIFIED",
+      expected: "C3R_L_BROWSER_STAGE_MISSING",
+    },
+  ];
+  for (const selectionCase of selectionCases) {
+    assert.equal(selectC3RLBrowserFailureClassification({
+      browserMode: "journey",
+      stageClassification: selectionCase.stageClassification,
+      nextClassification: selectionCase.nextClassification,
+      playwrightClassification: selectionCase.playwrightClassification,
+    }), selectionCase.expected);
   }
 });
 
