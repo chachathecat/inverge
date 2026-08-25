@@ -645,10 +645,13 @@ async function assertBlankLawReconstruction(
   const handler = lawEvidenceStepRoute(evidenceStep);
   await page.route("**/api/review-os/c3r-l*", handler);
   await page.goto(`/app/c3r-l?recordId=${recordId}`);
-  const fields = await page.getByTestId("c3r-l-reconstruction-fields")
-    .locator("input, select").all();
-  expect(fields.length).toBeGreaterThan(0);
-  for (const field of fields) await expect(field).toHaveValue("");
+  const reconstruction = page.getByTestId("c3r-l-reconstruction-fields");
+  await expect(reconstruction).toBeVisible();
+  const fields = reconstruction.locator("input, select");
+  await expect(fields).toHaveCount(15);
+  for (let index = 0; index < 15; index += 1) {
+    await expect(fields.nth(index)).toHaveValue("");
+  }
   if (expectedReference) {
     await expect(page.getByTestId("c3r-l-direct-repair-reference")).toBeVisible();
   } else {

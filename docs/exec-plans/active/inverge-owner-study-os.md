@@ -38,8 +38,8 @@
 
 ## Current blocker
 
-- Draft PR #823 runs Law first, then proves complete all-direction P/T/L deletion preservation; exact-head CI is pending; remote Supabase/Production mutation remains zero
+- Draft PR #823 exact-head Law feedback API passed; the UI check raced asynchronous reconstruction rendering by calling locator `.all()` before a visibility wait; final correction repairs the wait with a regression; remote Supabase/Production mutation remains zero
 
 ## Next exact action
 
-- commit and push the PR #823 log correction, then inspect exact-head dedicated CI and request fresh formal review
+- commit and push PR #823 final correction, then inspect exact-head dedicated CI and request fresh formal review
