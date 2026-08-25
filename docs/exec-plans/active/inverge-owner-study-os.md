@@ -16,7 +16,7 @@
 
 ## Branches and PRs
 
-- Lane A Law browser-root replacement: `codex/owner-study-lane-a-c3r-l-browser-root`; PR not opened; worktree `.agent-factory/worktrees/owner-study-lane-a-c3r-l-browser-root`; base `75f3ce787d31047c2bceacc2ef752c0bfdfb23cc`
+- Lane A Law browser-root replacement: `codex/owner-study-lane-a-c3r-l-browser-root`; Draft PR #828; head `29cb2ab8c6d5ee804319c34b159135dc2bf1e8b9`; tree `333562a281bf5169c2598d815da8b3bdd2c57e9b`; worktree `.agent-factory/worktrees/owner-study-lane-a-c3r-l-browser-root`; base `75f3ce787d31047c2bceacc2ef752c0bfdfb23cc`
 - Superseded Lane A PR #827: closed unmerged after the two-correction limit and an exact-head Law journey failure at the prior terminal stage marker
 - Lane B: `codex/owner-study-lane-b-first-stage-kernel`; Draft PR #813; parked
 - Lane C: `codex/owner-study-lane-c-question-foundry`; Draft PR #810; parked
@@ -39,8 +39,8 @@
 
 ## Current blocker
 
-- No ordinary blocker; the clean replacement adds bounded recovery and terminal-close stage classifications to reproduce the first exact Law browser root; remote Supabase/Production mutation remains zero
+- PR #828 exact-head CI/runtime and fresh formal review are pending; remote Supabase/Production mutation remains zero
 
 ## Next exact action
 
-- run focused tests, typecheck, changed-file lint and diff checks; commit, push, and open the clean diagnostic replacement Draft PR
+- inspect PR #828 exact-head Law browser evidence, reproduce and repair the first classified root if any, then complete exact-head CI and fresh formal review
