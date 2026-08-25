@@ -57,6 +57,7 @@ const runtimeProducerSource = read("scripts/automation/produce-runtime-evidence.
 const runtimeGateSource = read("scripts/automation/runtime-gate.mjs");
 const workflowSource = read(".github/workflows/c3r-l-law-durable-learning-delta.yml");
 const lawE2eSource = read("tests/e2e/wcv-c3r-l-law-runtime.spec.ts");
+const lawPlaywrightConfigSource = read("tests/e2e/wcv-c3r-l-playwright.config.ts");
 
 const fixture = trustedRepairCanonicalFixture("appraisal_law");
 const anchor = fixture.anchors[0].lawApplicability;
@@ -418,6 +419,7 @@ test("Law native evidence runs before generic adapters and cleans up uncondition
 });
 
 test("the dedicated browser fixture covers the full Law vertical and P/T isolation", () => {
+  assert.match(lawPlaywrightConfigSource, /fullyParallel: false,[\s\S]*workers: 1,[\s\S]*retries: 0,[\s\S]*maxFailures: 1/);
   assert.match(lawE2eSource,
     /initial load errors support retry and stale-bookmark recovery[\s\S]*LOAD_RETRY_INITIAL[\s\S]*status: 503[\s\S]*LOAD_RETRY_ERROR_VISIBLE[\s\S]*다시 시도[\s\S]*LOAD_RETRY_COMPLETE[\s\S]*missingRecordId[\s\S]*STALE_BOOKMARK_ERROR_VISIBLE[\s\S]*기본 법규 학습으로 돌아가기[\s\S]*new URL\(page\.url\(\)\)\.search[\s\S]*STALE_BOOKMARK_RECOVERY_COMPLETE/);
   assert.match(lawE2eSource,
