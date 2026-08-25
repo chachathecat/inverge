@@ -23,7 +23,7 @@
 
 ## Lane ownership
 
-- Lane A repair: this log, the C3R-T migration recovery runbook, and its focused static test
+- Lane A repair: this log, the C3R-T migration recovery runbook, and the existing C3R-T manifest/test seam
 - Lane A Law: no mutation until the C3R-T receipt validates
 - Lane B and Lane C: parked/read-only
 - migrations, shared auth/RLS, packages/locks, common durable substrate, global mirrors, shared test registration, `AGENTS.md`, and `scripts/run-node-tests.mjs`: no current mutation
