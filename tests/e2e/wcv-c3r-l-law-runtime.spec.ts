@@ -28,7 +28,14 @@ const DATABASE_CONTAINER = /^supabase_db_c3r-l-cycle-[12]-\d+-\d+$/u;
 const BROWSER_FAILURE_STAGE_SCHEMA_VERSION = "inverge.c3r_l.browser_failure_stage.v1";
 const BROWSER_FAILURE_STAGES = {
   journey: [
-    "INITIAL_RUNTIME", "PRACTICE_START", "THEORY_COMPATIBILITY", "THEORY_START", "LAW_START", "PRACTICE_COMPATIBILITY",
+    "INITIAL_RUNTIME", "PRACTICE_START", "THEORY_COMPATIBILITY",
+    "THEORY_COMPAT_START", "THEORY_COMPAT_FEEDBACK", "THEORY_COMPAT_REJECTED_REPAIR",
+    "THEORY_COMPAT_REPAIR", "THEORY_COMPAT_ASSISTED", "THEORY_COMPAT_D1_PLAN",
+    "THEORY_COMPAT_D1_COMPLETE", "THEORY_COMPAT_D7_PLAN", "THEORY_COMPAT_D7_PRESENT",
+    "THEORY_COMPAT_D7_COMPLETE", "THEORY_COMPAT_RECURRENCE", "THEORY_COMPAT_REOPEN",
+    "THEORY_COMPAT_REOPEN_COMPLETE", "THEORY_COMPAT_RESTORE", "THEORY_COMPAT_EXPORT",
+    "THEORY_COMPAT_DELETE", "THEORY_COMPAT_ISOLATION", "THEORY_START", "LAW_START",
+    "PRACTICE_COMPATIBILITY",
     "FEEDBACK", "DIRECT_RPC_DENIALS", "REPAIR_REPLAY", "EARLY_D1_UI",
     "ASSISTED_REVIEW", "D1_PLAN_COMPLETE", "EARLY_D7_UI", "D7_PLAN_COMPLETE",
     "EARLY_RECURRENCE_UI", "RECURRENCE", "TERMINAL_PLAN_UI", "REOPEN",
@@ -446,17 +453,20 @@ async function exerciseTheoryCompatibility(
   coexistingPracticeRecordId: string,
 ) {
   const recordId = randomUUID();
+  markBrowserFailureStage("THEORY_COMPAT_START");
   let body = await postTheory(request, {
     action: "start", commandId: randomUUID(), recordId, attemptId: randomUUID(),
     attemptBody: "수익방식의 목표 범위와 필수 술어를 다시 고정한다.",
     prediction: "likely_partial", confidence: "medium", evidenceStep: "d0",
   });
+  markBrowserFailureStage("THEORY_COMPAT_FEEDBACK");
   body = await postTheory(request, {
     action: "commit_feedback", commandId: randomUUID(), recordId,
     expectedVersion: body.view?.restored?.record.record_version,
     gapId: randomUUID(), failureNoteId: randomUUID(), assistanceEventId: randomUUID(),
     failureNote: "목표 범위와 금지 술어를 함께 고정하지 못했다.", evidenceStep: "feedback",
   });
+  markBrowserFailureStage("THEORY_COMPAT_REJECTED_REPAIR");
   const rejected = await request.post("/api/review-os/c3r-t", { data: {
     action: "submit_repair", commandId: randomUUID(), recordId,
     expectedVersion: body.view?.restored?.record.record_version,
@@ -464,50 +474,60 @@ async function exerciseTheoryCompatibility(
   }});
   expect(rejected.status()).toBe(409);
   expect(await rejected.json()).toEqual({ ok: false, error: "invalid_transition" });
+  markBrowserFailureStage("THEORY_COMPAT_REPAIR");
   body = await postTheory(request, {
     action: "submit_repair", commandId: randomUUID(), recordId,
     expectedVersion: body.view?.restored?.record.record_version,
     attemptId: randomUUID(), claim: theoryClaim(), evidenceStep: "feedback",
   });
+  markBrowserFailureStage("THEORY_COMPAT_ASSISTED");
   body = await postTheory(request, {
     action: "record_assisted_review", commandId: randomUUID(), recordId,
     expectedVersion: body.view?.restored?.record.record_version,
     attemptId: randomUUID(), claim: theoryClaim(), evidenceStep: "d1",
   });
+  markBrowserFailureStage("THEORY_COMPAT_D1_PLAN");
   body = await createAcceptedTheoryPlan(request, recordId, "TODAY", "d1Rescheduled");
   if (!body.view) throw new Error("Theory D+1 plan view is missing");
+  markBrowserFailureStage("THEORY_COMPAT_D1_COMPLETE");
   body = await postTheory(request, {
     action: "complete_d1", commandId: randomUUID(), recordId,
     expectedVersion: body.view.restored?.record.record_version,
     attemptId: randomUUID(), claim: theoryClaim(), ...lawPlanInput(body.view),
     evidenceStep: "d1Rescheduled",
   });
+  markBrowserFailureStage("THEORY_COMPAT_D7_PLAN");
   body = await createAcceptedTheoryPlan(request, recordId, "FULL_DAY", "d7");
   const transferTaskId = body.view?.restored?.transferTask?.taskId;
   if (!transferTaskId) throw new Error("Theory transfer task is missing");
+  markBrowserFailureStage("THEORY_COMPAT_D7_PRESENT");
   body = await postTheory(request, {
     action: "present_d7_transfer_task", commandId: randomUUID(), recordId,
     expectedVersion: body.view?.restored?.record.record_version,
     transferTaskId, evidenceStep: "d7",
   });
   if (!body.view) throw new Error("Theory D+7 view is missing");
+  markBrowserFailureStage("THEORY_COMPAT_D7_COMPLETE");
   body = await postTheory(request, {
     action: "complete_d7_transfer", commandId: randomUUID(), recordId,
     expectedVersion: body.view.restored?.record.record_version,
     attemptId: randomUUID(), claim: theoryClaim(), transferTaskId,
     ...lawPlanInput(body.view), evidenceStep: "d7",
   });
+  markBrowserFailureStage("THEORY_COMPAT_RECURRENCE");
   body = await postTheory(request, {
     action: "complete_recurrence", commandId: randomUUID(), recordId,
     expectedVersion: body.view?.restored?.record.record_version,
     attemptId: randomUUID(), claim: theoryClaim(), planBlockId: null,
     planId: null, planVersion: null, evidenceStep: "recurrence",
   });
+  markBrowserFailureStage("THEORY_COMPAT_REOPEN");
   body = await postTheory(request, {
     action: "record_later_failure", commandId: randomUUID(), recordId,
     expectedVersion: body.view?.restored?.record.record_version,
     attemptId: randomUUID(), claim: theoryClaim(true), evidenceStep: "reopen",
   });
+  markBrowserFailureStage("THEORY_COMPAT_REOPEN_COMPLETE");
   body = await postTheory(request, {
     action: "complete_reopened_review", commandId: randomUUID(), recordId,
     expectedVersion: body.view?.restored?.record.record_version,
@@ -515,11 +535,13 @@ async function exerciseTheoryCompatibility(
     planId: null, planVersion: null, evidenceStep: "reopenComplete",
   });
   expect(body.view?.restored?.record.state).toBe("CLOSED");
+  markBrowserFailureStage("THEORY_COMPAT_RESTORE");
   const restored = await request.get(
     `/api/review-os/c3r-t?recordId=${recordId}&evidenceStep=reopenComplete`,
   );
   expect(restored.status()).toBe(200);
   expect((await restored.json() as ApiBody).view?.restored?.record.state).toBe("CLOSED");
+  markBrowserFailureStage("THEORY_COMPAT_EXPORT");
   const exported = await postTheory(request, { action: "export" });
   expect(exported.export?.subject).toBe("THEORY");
   for (const collection of ["records", "attempts", "plans"] as const) {
@@ -529,8 +551,10 @@ async function exerciseTheoryCompatibility(
       .toBe(true);
   }
   expect(JSON.stringify(exported.export)).not.toContain(coexistingLawRecordId);
+  markBrowserFailureStage("THEORY_COMPAT_DELETE");
   await postTheory(request, { action: "delete" });
   expect((await request.get(`/api/review-os/c3r-t?recordId=${recordId}`)).status()).toBe(404);
+  markBrowserFailureStage("THEORY_COMPAT_ISOLATION");
   const preservedLaw = await request.get(`/api/review-os/c3r-l?recordId=${coexistingLawRecordId}`);
   expect(preservedLaw.status()).toBe(200);
   expect((await preservedLaw.json() as ApiBody).view?.restored?.record.state).toBe("D0_OPEN");
