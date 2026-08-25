@@ -1,0 +1,226 @@
+{
+  "schemaVersion": "dabangil.question_foundry.v1",
+  "contractId": "QUESTION_FOUNDRY_V1",
+  "contractVersion": "dabangil.question_foundry.v1",
+  "status": "source_implemented_offline_default_off",
+  "parallelExecutionBinding": {
+    "amendmentId": "PARALLEL_EXECUTION_V1",
+    "laneId": "LANE_C_QUESTION_FOUNDRY",
+    "deliverable": "QUESTION_FOUNDRY_V1",
+    "sharedBaseSha": "cad8b98e4f13a2fe50d82ffd983616adc70eb75a",
+    "sharedBaseTree": "dae1e5d7a2d7138f2e793f50e08f721ece354472",
+    "amendmentPullRequest": 808,
+    "amendmentResultingMainValidated": true,
+    "branch": "codex/owner-study-lane-c-question-foundry",
+    "mergeProducing": true,
+    "integrationAfter": [
+      "LANE_A_SECOND_STAGE:WCV-C3_FOUNDATION_FREEZE",
+      "LANE_B_FIRST_STAGE_KERNEL:STUDY_CAPACITY_RUNTIME_BRIDGE"
+    ],
+    "mergeAuthorizedNow": false
+  },
+  "contracts": {
+    "questionBlueprint": "QuestionBlueprintV1",
+    "answerSpecification": "AnswerSpecificationV1",
+    "auditRun": "AuditRunV1",
+    "sourceRegistry": "question_foundry.trusted_source_registry.v1",
+    "closedSchemas": true,
+    "missingUnknownDuplicateUnresolvedOrMismatchedBindingFailsClosed": true,
+    "solutionMustExistBeforeCandidateGeneration": true,
+    "candidateMinimum": 2,
+    "optionCountExactly": 5,
+    "independentBlindSolverMinimum": 2,
+    "blindSolverAnswerOrExplanationExposureAllowed": false,
+    "generatorMayJudgeOrApproveOwnItem": false,
+    "generatorJudgeAndAllBlindSolverIdentitiesMustBePairwiseDisjoint": true,
+    "candidateAndOptionOrderPermutationMinimumEach": 2
+  },
+  "validationOrderExactly": [
+    "CLOSED_SCHEMA_AND_IDENTITY",
+    "PRE_BLUEPRINT_RIGHTS_AND_SOURCE_BINDING",
+    "SOLUTION_FIRST_ANSWER_SPECIFICATION",
+    "MULTIPLE_QUARANTINED_CANDIDATES",
+    "CANDIDATE_AND_OPTION_PERMUTATION",
+    "DETERMINISTIC_CALCULATION_AND_SOURCE_EFFECTIVE_VERSION",
+    "RIGHTS_SIMILARITY_AND_RECONSTRUCTION_FIREWALL",
+    "TWO_INDEPENDENT_BLIND_SOLVERS",
+    "INDEPENDENT_ANONYMIZED_JUDGE",
+    "AMBIGUITY_MULTIPLE_ANSWER_DISTRACTOR_AND_CLUE_REVIEW",
+    "SELF_PREFERENCE_ORDER_BIAS_STABILITY_AND_JUDGE_DRIFT_META_AUDITS",
+    "DETERMINISTIC_FAIL_CLOSED_RELEASE_DECISION",
+    "IMMUTABLE_AUDIT_RUN"
+  ],
+  "rightsAndSourceBoundary": {
+    "conditionallyEligibleSourceClassesExactly": [
+      "INVERGE_ORIGINAL",
+      "RIGHTS_CLEARED_OFFICIAL",
+      "CONTRACTED_EXPERT_ORIGINAL",
+      "CLEARED_DETERMINISTIC_TEMPLATE"
+    ],
+    "hardDeniedSourceClassesExactly": [
+      "USER_PRIVATE_ONLY",
+      "ACADEMY_OR_COMMERCIAL_TEXTBOOK",
+      "RIGHTS_UNKNOWN",
+      "BLOCKED"
+    ],
+    "requiredPurposesByTier": {
+      "PERSONAL_LEARNING_USABLE": [
+        "QUESTION_BLUEPRINT_EXTRACTION",
+        "QUESTION_GENERATION_CONTEXT",
+        "PERSONAL_LEARNING_BANK"
+      ],
+      "TRANSFER_VERIFIED": [
+        "QUESTION_BLUEPRINT_EXTRACTION",
+        "QUESTION_GENERATION_CONTEXT",
+        "PERSONAL_LEARNING_BANK",
+        "TRANSFER_BANK"
+      ],
+      "MEASUREMENT_CALIBRATED": [
+        "QUESTION_BLUEPRINT_EXTRACTION",
+        "QUESTION_GENERATION_CONTEXT",
+        "PERSONAL_LEARNING_BANK",
+        "TRANSFER_BANK",
+        "MEASUREMENT_BANK"
+      ]
+    },
+    "rightsManifestAndVersionRequiredBeforeBlueprint": true,
+    "rightsAndSourceRevalidatedAtEveryReleaseTier": true,
+    "sourceClassPurposeTerritoryStatusAndEffectiveWindowMustMatch": true,
+    "privateUploadMayEnterSharedBlueprint": false,
+    "privateUploadMayEnterSharedGenerationContext": false,
+    "privateUploadMayEnterPublicOrCrossUserBank": false,
+    "privateUploadMayEnterModelTraining": false,
+    "academyOrTextbookMayEnterSharedBlueprint": false,
+    "academyOrTextbookMayEnterSharedGenerationContext": false,
+    "academyOrTextbookMayEnterPublicOrCrossUserBank": false,
+    "academyOrTextbookMayEnterModelTraining": false,
+    "rawLearnerOrAcademyBodyMayEnterAudit": false,
+    "similarityReferenceCorpusRequiresEligibleRightsBinding": true,
+    "similarityCorpusDigestBindsEveryReferenceBodyDigest": true,
+    "similarityReviewIsRecomputedFromExactCorpusAtRelease": true,
+    "nearCopyReconstructionOrProtectedExplanationSequenceBlocksRelease": true
+  },
+  "releasePolicy": {
+    "tiersExactly": [
+      "QUARANTINED",
+      "PERSONAL_LEARNING_USABLE",
+      "TRANSFER_VERIFIED",
+      "MEASUREMENT_CALIBRATED",
+      "DISPUTED",
+      "RETIRED"
+    ],
+    "aiOnlyMaximumTier": "PERSONAL_LEARNING_USABLE",
+    "personalLearningUsableRequires": [
+      "ALL_BASE_VALIDATORS_PASS",
+      "TWO_DISTINCT_BLIND_SOLVERS_CONVERGE_ON_ONE_ANSWER",
+      "AT_LEAST_ONE_NON_GENERATOR_JUDGE_APPROVES",
+      "ALL_FOUR_META_AUDITS_PASS"
+    ],
+    "transferVerifiedRequiresInAddition": [
+      "OWNER_ADJUDICATION_APPROVED",
+      "SEALED_BEFORE_EVALUATION",
+      "TWO_DISTINCT_INDEPENDENT_TRANSFER_EVALUATORS",
+      "TWO_DISTINCT_TRANSFER_VARIANTS",
+      "ALL_OUTCOMES_CORRECT",
+      "NO_PRE_EVALUATION_ANSWER_EXPOSURE",
+      "TRANSFER_BANK_RIGHTS_PURPOSE"
+    ],
+    "measurementCalibratedRequiresInAddition": [
+      "ACTUAL_OWNER_RUNTIME_RESPONSE_RECEIPT",
+      "EXACT_RECEIPT_RESOLVES_ONCE_IN_TRUSTED_LOCAL_OWNER_RUNTIME_EXPORT",
+      "PINNED_EXPORT_CONTENT_AND_REGISTRY_DIGESTS_MATCH_TRUSTED_RUNTIME_VALIDATOR_BINDING",
+      "MINIMUM_30_UNIQUE_OWNER_RESPONSES",
+      "MINIMUM_3_DISTINCT_OWNER_SESSIONS",
+      "NO_RESPONSE_BODIES_IN_RECEIPT",
+      "MEASUREMENT_BANK_RIGHTS_PURPOSE"
+    ],
+    "syntheticSimulatedAiOrMetadataOnlyResponsesMaySatisfyMeasurement": false,
+    "missingEvidenceReleasesToQuarantineOnly": true,
+    "learnerMasteryClaimAllowed": false,
+    "qualityEfficacyCalibrationOrScoreClaimEstablishedByThisSourceContract": false
+  },
+  "metaAudits": {
+    "requiredExactly": [
+      "SELF_PREFERENCE",
+      "ORDER_BIAS",
+      "REPEATED_STABILITY",
+      "JUDGE_DRIFT"
+    ],
+    "selfPreferenceRequiresAnonymizedCandidatesAndZeroGeneratorEvaluatorOverlap": true,
+    "orderBiasRequiresAtLeastTwoDistinctPermutationsAndStableWinner": true,
+    "repeatedStabilityRequiresAtLeastThreeDistinctRunsWithOneWinnerAnswerAndDecision": true,
+    "judgeDriftRequiresPinnedFixtureDigestAndBoundedDisagreement": true,
+    "auditClaimMaySubstituteForDerivedCheck": false
+  },
+  "bankFirstGenerationOnGap": {
+    "orderExactly": [
+      "SEARCH_ASSIGNABLE_EXACT_BANK_MATCH",
+      "RETURN_MATCH_WITH_ZERO_GENERATION",
+      "EMIT_BODYLESS_SCARCITY_EVENT_ON_GAP",
+      "REQUIRE_EXPLICIT_OFFLINE_GENERATION_ON_GAP_AUTHORITY",
+      "GENERATE_MULTIPLE_CANDIDATES_OFFLINE",
+      "KEEP_ALL_GENERATED_CANDIDATES_QUARANTINED"
+    ],
+    "realtimeGenerationAllowed": false,
+    "networkOrProviderGenerationAllowed": false,
+    "generationWhileEligibleBankMatchExists": false,
+    "generatedBatchMustValidateAndExactlyMatchRequestedSubjectSkillDifficultyAndFamily": true,
+    "scarcityEventContainsBody": false
+  },
+  "lifecycle": {
+    "quarantineBeforeRelease": true,
+    "disputeBlocksNewAssignmentImmediately": true,
+    "revisionRequiresNewArtifactAndCandidateIdentity": true,
+    "revisionPreservesParentLineage": true,
+    "retirementIsTerminal": true,
+    "retirementDeletesAuditLineage": false,
+    "optimisticRevisionCheckRequired": true,
+    "inPlaceOverwriteAllowed": false
+  },
+  "audit": {
+    "immutable": true,
+    "canonicalSha256Bound": true,
+    "everyStepInputDigestMustEqualThePriorStepOutputDigest": true,
+    "firstAndTerminalStepDigestsMustBindExactAuditInputAndOutput": true,
+    "releaseArtifactRecomputesDecisionAndRequiresExactEvidenceDecisionAuditAndTimeBinding": true,
+    "disputeRevisionAndRetirementRequireExactSingleStepOwnerAuditBindings": true,
+    "solutionFirstSequenceRequired": true,
+    "allActorsStepsVersionsAndDigestsBound": true,
+    "rawPrivateBodiesStored": false,
+    "providerCalls": 0,
+    "remoteMutations": 0,
+    "productionMutations": 0
+  },
+  "activationBoundary": {
+    "sourceOnly": true,
+    "offlineOnly": true,
+    "featureDefaultOff": true,
+    "runtimeAuthorized": false,
+    "learnerActivationAuthorized": false,
+    "externalLearnerActivationAuthorized": false,
+    "publicActivationAuthorized": false,
+    "paymentActivationAuthorized": false,
+    "providerCallAuthorized": false,
+    "networkCallAuthorized": false,
+    "remoteSupabaseMutationAuthorized": false,
+    "productionMutationAuthorized": false,
+    "migrationAuthorized": false,
+    "authOrRlsMutationAuthorized": false,
+    "dependencyMutationAuthorized": false,
+    "modelTrainingAuthorized": false,
+    "qualityClaimAuthorized": false,
+    "calibrationClaimAuthorized": false,
+    "learningEfficacyClaimAuthorized": false
+  },
+  "ownedPathsExactly": [
+    "config/dabangil-question-foundry-v1.json",
+    "lib/question-foundry/audit-run.ts",
+    "lib/question-foundry/contracts.ts",
+    "lib/question-foundry/generation.ts",
+    "lib/question-foundry/index.ts",
+    "lib/question-foundry/release-policy.ts",
+    "lib/question-foundry/validation.ts",
+    "scripts/offline/question-foundry-v1.mjs",
+    "tests/question-foundry-v1.test.mjs"
+  ]
+}
