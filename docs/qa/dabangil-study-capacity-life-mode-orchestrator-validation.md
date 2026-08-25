@@ -63,6 +63,10 @@ Changed TypeScript must also pass the repository `npm run typecheck`, changed-fi
 | overtime 180→60 | unchanged candidate scope required; every candidate kept/deferred/dropped exactly once; backlog clone count exactly zero |
 | AI drill budget | verified bank match gives personal generation budget/items `0/0`; only a bank gap can use remaining 48-hour capacity |
 | first/second/both | all accepted; schedule output cannot mutate mastery |
+| single exam mode | every candidate has `examTrack`; a foreign track is classified `exam_mode_excluded` before priority allocation, does not inflate Plan Gap and terminates weekly carryover after explicit evidence |
+| combined exam distance | equal required candidates use the explicit target-date distance weight only for today/future dates within the 180-day horizon; past dates contribute zero |
+| combined exam protection | only a required first-track `pass_risk` or required second-track `timed_evidence_missing|unseen_transfer_due` binding can activate the explicit floor; the same comparator governs placement and CoreOutcome identity, and an unmet first floor reports `pass_risk` in Plan Gap |
+| recovery new study | non-required `new_study` is deferred before window placement; required work remains eligible |
 | invalid windows | overlap and out-of-range minutes fail closed |
 | narrow/protected/empty windows | weekly available capacity is bounded to usable nonprotected minutes, including zero |
 | high-load continuity | high interruption denied; unsplittable over-limit work deferred; split work is atomic and bounded by `maxParts` |
@@ -99,6 +103,11 @@ candidate_count_over_256_accepted = 0
 budget_impossible_exhaustive_placement_search = 0
 generated_plan_gap_rejected_by_replan_range = 0
 week_plan_dates_outside_one_seven_day_interval = 0
+candidate_without_exam_track_accepted = 0
+single_mode_foreign_track_scheduled = 0
+unbound_or_optional_exam_protection_accepted = 0
+single_mode_exam_protection_accepted = 0
+recovery_nonrequired_new_study_scheduled = 0
 personal_generation_to_readiness = 0
 personal_generation_to_cross_user_reuse = 0
 raw_body_in_plan = 0

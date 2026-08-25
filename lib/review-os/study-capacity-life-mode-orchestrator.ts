@@ -1,5 +1,7 @@
 export type LifeModeV1 = "full_time_study" | "full_time_employed" | "part_time_employed" | "shift_or_irregular_work" | "leave_or_transition" | "caregiving_constrained" | "health_constrained" | "custom";
 export type ExamModeV1 = "first" | "second" | "both";
+export type ExamTrackV1 = "first" | "second";
+export type ExamProtectionV1 = "first_pass_risk_floor" | "second_output_continuity_floor";
 export type StudyPhaseV1 = "foundation" | "coverage" | "consolidation" | "timed_integration" | "final_sprint" | "recovery";
 export type CapacityBandV1 = "micro_30_90" | "compressed_90_180" | "standard_180_360" | "intensive_360_600" | "full_day_600_720";
 export type ScheduleVolatilityV1 = "low" | "medium" | "high";
@@ -9,8 +11,8 @@ export type TaskRequirednessV1 = "required" | "core_candidate" | "support" | "op
 export type TaskKindV1 = "due_review" | "independent_problem_solving" | "timed_set" | "timed_answer_writing" | "rewrite_recalculate" | "lecture" | "textbook_reading" | "memorization" | "guided_study" | "microdrill" | "capture_triage" | "mock_set" | "manual";
 export type EnvironmentV1 = "desk" | "library" | "office_break" | "commute_public_transit" | "walking" | "custom";
 export type TaskPrioritySignalV1 = "due_review" | "high_confidence_wrong" | "pass_risk" | "exam_urgency" | "unseen_transfer_due" | "timed_evidence_missing" | "repeated_error" | "coverage_gap" | "recent_absence" | "learner_pinned" | "stable_support" | "new_study";
-export type DeferralReasonV1 = "capacity_exhausted" | "cognitive_load_budget_exhausted" | "continuous_window_missing" | "move_long_task_to_weekend" | "environment_incompatible" | "protected_window_conflict" | "optional_scope_dropped" | "recovery_mode" | "not_selected_by_priority";
-export type PlanGapReasonV1 = "due_review_overload" | "coverage_gap" | "timed_evidence_missing" | "external_commitment" | "recent_absence" | "exam_urgency";
+export type DeferralReasonV1 = "capacity_exhausted" | "cognitive_load_budget_exhausted" | "continuous_window_missing" | "move_long_task_to_weekend" | "environment_incompatible" | "protected_window_conflict" | "optional_scope_dropped" | "recovery_mode" | "exam_mode_excluded" | "not_selected_by_priority";
+export type PlanGapReasonV1 = "due_review_overload" | "coverage_gap" | "pass_risk" | "timed_evidence_missing" | "external_commitment" | "recent_absence" | "exam_urgency";
 export type PlanGapChoiceV1 = "drop_low_value_scope" | "shorten_support_tasks" | "move_long_task_to_weekend" | "increase_capacity" | "defer_noncritical_scope" | "change_target_timeline";
 export type CapacityEvidenceLevelV1 = "declared_only" | "calibrating_7d" | "evidence_supported_14d";
 
@@ -19,7 +21,7 @@ export type DayAvailabilityV1 = { date: string; dayKind: DayKindV1; declaredActi
 export type CapacityHistoryDayV1 = { date: string; plannedActiveMinutes: number; actualActiveMinutes: number; appInteractionMinutes?: number; providerWaitMinutes?: number; highLoadPlannedMinutes?: number; highLoadCompletedMinutes?: number; replanCount?: number; fatigueSelfReport?: 1 | 2 | 3 | 4 | 5; lateSessionErrorDelta?: number };
 export type LearnerConstraintProfileV1 = { lifeMode: LifeModeV1; examMode: ExamModeV1; phase: StudyPhaseV1; scheduleVolatility: ScheduleVolatilityV1; targetExamDates?: { first?: string; second?: string }; policyVersion: string };
 export type CapacityEnvelopeV1 = { declaredActiveMinutes: number; effectiveActiveMinutes: number; schedulableActiveMinutes: number; capacityBand: CapacityBandV1; evidenceLevel: CapacityEvidenceLevelV1; historyDaysUsed: number; highLoadBudgetMinutes: number; mediumLoadBudgetMinutes: number; lowLoadBudgetMinutes: number; recoveryBudgetMinutes: number; unallocatedBufferMinutes: number; maxContinuousHighLoadMinutes: number; derivationReasons: string[]; policyVersion: string };
-export type StudyTaskCandidateV1 = { id: string; title: string; subject: string; taskKind: TaskKindV1; cognitiveLoad: CognitiveLoadV1; requiredness: TaskRequirednessV1; estimatedMinutes: number; minimumContinuousMinutes?: number; splittable?: boolean; maxParts?: number; allowedEnvironments?: EnvironmentV1[]; requiresDesk?: boolean; requiresCalculator?: boolean; requiresDesktop?: boolean; prioritySignals: TaskPrioritySignalV1[]; basePriority: number; outcomeKey?: string; sourceRef?: string; metadataOnly?: true };
+export type StudyTaskCandidateV1 = { id: string; title: string; subject: string; examTrack: ExamTrackV1; examProtection?: ExamProtectionV1; taskKind: TaskKindV1; cognitiveLoad: CognitiveLoadV1; requiredness: TaskRequirednessV1; estimatedMinutes: number; minimumContinuousMinutes?: number; splittable?: boolean; maxParts?: number; allowedEnvironments?: EnvironmentV1[]; requiresDesk?: boolean; requiresCalculator?: boolean; requiresDesktop?: boolean; prioritySignals: TaskPrioritySignalV1[]; basePriority: number; outcomeKey?: string; sourceRef?: string; metadataOnly?: true };
 export type ExecutionBlockV1 = { blockId: string; candidateId: string | null; outcomeKey: string | null; title: string; subject: string | null; taskKind: TaskKindV1 | "recovery_buffer"; cognitiveLoad: CognitiveLoadV1; startMinute: number; endMinute: number; activeMinutes: number; windowId: string; requiredness: TaskRequirednessV1 | "buffer"; countsTowardActiveStudy: boolean; selectionReasons: string[]; metadataOnly: true };
 export type CoreOutcomeV1 = { outcomeId: string; title: string; blockIds: string[]; estimatedMinutes: number; reason: string; metadataOnly: true };
 export type DeferredTaskV1 = { candidateId: string; title: string; reason: DeferralReasonV1; nextEligibleDayKind?: DayKindV1; metadataOnly: true };
@@ -38,10 +40,14 @@ const MAX_CANDIDATES_PER_PLAN = 256;
 const MAX_SEVEN_DAY_MINUTES = 5_040;
 const MAX_WINDOWS_PER_DAY = 24;
 const MAX_SPLIT_PARTS = 12;
+const EXAM_DISTANCE_HORIZON_DAYS = 180;
+const EXAM_PROTECTION_PRIORITY_BONUS = 50_000;
 const DAY_MS = 86_400_000;
 
 const LIFE_MODES = ["full_time_study", "full_time_employed", "part_time_employed", "shift_or_irregular_work", "leave_or_transition", "caregiving_constrained", "health_constrained", "custom"] as const;
 const EXAM_MODES = ["first", "second", "both"] as const;
+const EXAM_TRACKS = ["first", "second"] as const;
+const EXAM_PROTECTIONS = ["first_pass_risk_floor", "second_output_continuity_floor"] as const;
 const STUDY_PHASES = ["foundation", "coverage", "consolidation", "timed_integration", "final_sprint", "recovery"] as const;
 const VOLATILITY = ["low", "medium", "high"] as const;
 const DAY_KINDS = ["weekday", "weekend", "holiday", "recovery"] as const;
@@ -53,8 +59,8 @@ const INTERRUPTIBILITY = ["low", "medium", "high"] as const;
 const PRIORITY_SIGNALS = ["due_review", "high_confidence_wrong", "pass_risk", "exam_urgency", "unseen_transfer_due", "timed_evidence_missing", "repeated_error", "coverage_gap", "recent_absence", "learner_pinned", "stable_support", "new_study"] as const;
 const CAPACITY_BANDS = ["micro_30_90", "compressed_90_180", "standard_180_360", "intensive_360_600", "full_day_600_720"] as const;
 const EVIDENCE_LEVELS = ["declared_only", "calibrating_7d", "evidence_supported_14d"] as const;
-const DEFERRAL_REASONS = ["capacity_exhausted", "cognitive_load_budget_exhausted", "continuous_window_missing", "move_long_task_to_weekend", "environment_incompatible", "protected_window_conflict", "optional_scope_dropped", "recovery_mode", "not_selected_by_priority"] as const;
-const PLAN_GAP_REASONS = ["due_review_overload", "coverage_gap", "timed_evidence_missing", "external_commitment", "recent_absence", "exam_urgency"] as const;
+const DEFERRAL_REASONS = ["capacity_exhausted", "cognitive_load_budget_exhausted", "continuous_window_missing", "move_long_task_to_weekend", "environment_incompatible", "protected_window_conflict", "optional_scope_dropped", "recovery_mode", "exam_mode_excluded", "not_selected_by_priority"] as const;
+const PLAN_GAP_REASONS = ["due_review_overload", "coverage_gap", "pass_risk", "timed_evidence_missing", "external_commitment", "recent_absence", "exam_urgency"] as const;
 const PLAN_GAP_CHOICES = ["drop_low_value_scope", "shorten_support_tasks", "move_long_task_to_weekend", "increase_capacity", "defer_noncritical_scope", "change_target_timeline"] as const;
 const REPLAN_REASONS = ["overtime", "illness", "family_commitment", "energy_drop", "custom"] as const;
 const PROHIBITED_COPY = [/하루\s*10시간.*합격/i, /10시간.*합격\s*조건/i, /합격\s*확률/i, /합격\s*보장/i, /의지\s*부족/i, /게으름/i, /실패자/i, /불합격\s*확정/i, /지금\s*안\s*하면\s*끝/i, /streak/i, /casino/i, /gacha/i];
@@ -296,10 +302,11 @@ function validateAvailability(availability: DayAvailabilityV1) {
 }
 
 function validateCandidate(candidate: StudyTaskCandidateV1) {
-  exactKeys("candidate", candidate, ["id", "title", "subject", "taskKind", "cognitiveLoad", "requiredness", "estimatedMinutes", "minimumContinuousMinutes", "splittable", "maxParts", "allowedEnvironments", "requiresDesk", "requiresCalculator", "requiresDesktop", "prioritySignals", "basePriority", "outcomeKey", "sourceRef", "metadataOnly"]);
+  exactKeys("candidate", candidate, ["id", "title", "subject", "examTrack", "examProtection", "taskKind", "cognitiveLoad", "requiredness", "estimatedMinutes", "minimumContinuousMinutes", "splittable", "maxParts", "allowedEnvironments", "requiresDesk", "requiresCalculator", "requiresDesktop", "prioritySignals", "basePriority", "outcomeKey", "sourceRef", "metadataOnly"]);
   requiredText("candidate-id", candidate.id, 128);
   requiredText(`candidate-title:${candidate.id}`, candidate.title, 256);
   requiredText(`candidate-subject:${candidate.id}`, candidate.subject, 128);
+  enumValue("candidate-exam-track", candidate.examTrack, EXAM_TRACKS);
   enumValue("candidate-task-kind", candidate.taskKind, TASK_KINDS);
   enumValue("candidate-cognitive-load", candidate.cognitiveLoad, COGNITIVE_LOADS);
   enumValue("candidate-requiredness", candidate.requiredness, REQUIREDNESS);
@@ -316,6 +323,12 @@ function validateCandidate(candidate: StudyTaskCandidateV1) {
     if (value !== undefined && typeof value !== "boolean") throw new Error(`invalid-candidate-${name}:${candidate.id}`);
   }
   uniqueEnumArray("candidate-priority-signal", candidate.prioritySignals, PRIORITY_SIGNALS);
+  if (candidate.examProtection !== undefined) {
+    enumValue("candidate-exam-protection", candidate.examProtection, EXAM_PROTECTIONS);
+    if (candidate.requiredness !== "required") throw new Error(`exam-protection-requires-required:${candidate.id}`);
+    if (candidate.examProtection === "first_pass_risk_floor" && (candidate.examTrack !== "first" || !candidate.prioritySignals.includes("pass_risk"))) throw new Error(`invalid-first-pass-risk-floor:${candidate.id}`);
+    if (candidate.examProtection === "second_output_continuity_floor" && (candidate.examTrack !== "second" || !candidate.prioritySignals.some((signal) => signal === "timed_evidence_missing" || signal === "unseen_transfer_due"))) throw new Error(`invalid-second-output-continuity-floor:${candidate.id}`);
+  }
   if (candidate.outcomeKey !== undefined) requiredText(`candidate-outcome-key:${candidate.id}`, candidate.outcomeKey, 128);
   if (candidate.sourceRef !== undefined) requiredText(`candidate-source-ref:${candidate.id}`, candidate.sourceRef, 512);
   if (candidate.metadataOnly !== undefined && candidate.metadataOnly !== true) throw new Error(`candidate-metadata-only-required:${candidate.id}`);
@@ -325,8 +338,33 @@ function score(candidate: StudyTaskCandidateV1) {
   return candidate.basePriority + REQUIRED[candidate.requiredness] + candidate.prioritySignals.reduce((sum, signal) => sum + SIGNAL[signal], 0);
 }
 
+function matchesExamMode(profile: LearnerConstraintProfileV1, candidate: StudyTaskCandidateV1) {
+  return profile.examMode === "both" || profile.examMode === candidate.examTrack;
+}
+
+function examDistanceBonus(profile: LearnerConstraintProfileV1, availability: DayAvailabilityV1, candidate: StudyTaskCandidateV1) {
+  if (profile.examMode !== "both") return 0;
+  const targetDate = profile.targetExamDates?.[candidate.examTrack];
+  if (targetDate === undefined) return 0;
+  const daysUntilTarget = dateOrdinal(`${candidate.examTrack}-exam-date`, targetDate) - dateOrdinal("study-date", availability.date);
+  if (daysUntilTarget < 0) return 0;
+  return Math.max(0, EXAM_DISTANCE_HORIZON_DAYS - Math.min(EXAM_DISTANCE_HORIZON_DAYS, daysUntilTarget));
+}
+
+function examPriorityScore(profile: LearnerConstraintProfileV1, availability: DayAvailabilityV1, candidate: StudyTaskCandidateV1) {
+  const protectionBonus = profile.examMode === "both" && candidate.examProtection !== undefined ? EXAM_PROTECTION_PRIORITY_BONUS : 0;
+  return protectionBonus + examDistanceBonus(profile, availability, candidate);
+}
+
+function examSelectionReasons(profile: LearnerConstraintProfileV1, availability: DayAvailabilityV1, candidate: StudyTaskCandidateV1) {
+  const reasons = [`exam-mode:${profile.examMode}`, `exam-track:${candidate.examTrack}`];
+  if (profile.examMode === "both" && candidate.examProtection !== undefined) reasons.push(`exam-protection:${candidate.examProtection}`);
+  if (examDistanceBonus(profile, availability, candidate) > 0) reasons.push(`exam-distance-weight:${candidate.examTrack}`);
+  return reasons;
+}
+
 function compareCandidatesForDay(profile: LearnerConstraintProfileV1, availability: DayAvailabilityV1, left: StudyTaskCandidateV1, right: StudyTaskCandidateV1) {
-  const scoreDifference = score(right) - score(left);
+  const scoreDifference = score(right) + examPriorityScore(profile, availability, right) - score(left) - examPriorityScore(profile, availability, left);
   if (scoreDifference !== 0) return scoreDifference;
   if (profile.lifeMode === "full_time_employed") {
     const leftLong = left.estimatedMinutes >= 100 ? 1 : 0;
@@ -570,6 +608,7 @@ function buildPlanGap(envelope: CapacityEnvelopeV1, candidates: StudyTaskCandida
   const reasons: PlanGapReasonV1[] = [];
   if (missing.some((candidate) => candidate.prioritySignals.includes("due_review"))) reasons.push("due_review_overload");
   if (missing.some((candidate) => candidate.prioritySignals.includes("coverage_gap"))) reasons.push("coverage_gap");
+  if (missing.some((candidate) => candidate.prioritySignals.includes("pass_risk"))) reasons.push("pass_risk");
   if (missing.some((candidate) => candidate.prioritySignals.includes("timed_evidence_missing"))) reasons.push("timed_evidence_missing");
   if ((availability.externalCommitmentMinutes ?? 0) > 0) reasons.push("external_commitment");
   if (missing.some((candidate) => candidate.prioritySignals.includes("recent_absence"))) reasons.push("recent_absence");
@@ -590,9 +629,10 @@ export function buildStudyDayPlan(input: { profile: LearnerConstraintProfileV1; 
   let requiredPlanMinutes = 0;
   for (const candidate of input.candidates) {
     validateCandidate(candidate);
+    if (input.profile.examMode !== "both" && candidate.examProtection !== undefined) throw new Error(`exam-protection-requires-both-mode:${candidate.id}`);
     if (candidateIds.has(candidate.id)) throw new Error(`duplicate-candidate-id:${candidate.id}`);
     candidateIds.add(candidate.id);
-    if (candidate.requiredness === "required") requiredPlanMinutes += candidate.estimatedMinutes;
+    if (matchesExamMode(input.profile, candidate) && candidate.requiredness === "required") requiredPlanMinutes += candidate.estimatedMinutes;
   }
   if (requiredPlanMinutes > MAX_SEVEN_DAY_MINUTES) throw new Error(`required-plan-minutes-exceed-seven-day-bound:${requiredPlanMinutes}`);
   const derivedEnvelope = buildCapacityEnvelope({ profile: input.profile, declaredActiveMinutes: input.availability.declaredActiveMinutes, asOfDate: input.availability.date, history: input.capacityHistory, recoveryOverrideMinutes: input.recoveryOverrideMinutes });
@@ -601,10 +641,15 @@ export function buildStudyDayPlan(input: { profile: LearnerConstraintProfileV1; 
   const used: Record<CognitiveLoadV1, number> = { high: 0, medium: 0, low: 0, recovery: 0 };
   const budgets: Record<CognitiveLoadV1, number> = { high: envelope.highLoadBudgetMinutes, medium: envelope.mediumLoadBudgetMinutes, low: envelope.lowLoadBudgetMinutes, recovery: envelope.recoveryBudgetMinutes };
   const blocks: ExecutionBlockV1[] = [];
-  const deferred: DeferredTaskV1[] = [];
+  const eligibleCandidates = input.candidates.filter((candidate) => matchesExamMode(input.profile, candidate));
+  const deferred: DeferredTaskV1[] = input.candidates.filter((candidate) => !matchesExamMode(input.profile, candidate)).map((candidate) => ({ candidateId: candidate.id, title: candidate.title, reason: "exam_mode_excluded", metadataOnly: true }));
   const scheduled = new Set<string>();
-  const ordered = [...input.candidates].sort((left, right) => compareCandidatesForDay(input.profile, input.availability, left, right));
+  const ordered = [...eligibleCandidates].sort((left, right) => compareCandidatesForDay(input.profile, input.availability, left, right));
   for (const candidate of ordered) {
+    if (input.profile.phase === "recovery" && candidate.requiredness !== "required" && candidate.prioritySignals.includes("new_study")) {
+      deferred.push({ candidateId: candidate.id, title: candidate.title, reason: "recovery_mode", metadataOnly: true });
+      continue;
+    }
     const loadExceeded = used[candidate.cognitiveLoad] + candidate.estimatedMinutes > budgets[candidate.cognitiveLoad];
     const plannedMinutes = blocks.reduce((sum, block) => sum + block.activeMinutes, 0);
     const activeExceeded = plannedMinutes + candidate.estimatedMinutes > envelope.schedulableActiveMinutes;
@@ -636,7 +681,7 @@ export function buildStudyDayPlan(input: { profile: LearnerConstraintProfileV1; 
         windowId: part.state.w.id,
         requiredness: candidate.requiredness,
         countsTowardActiveStudy: true,
-        selectionReasons: uniq([`requiredness:${candidate.requiredness}`, ...candidate.prioritySignals.map((signal) => `priority:${signal}`), `life-mode:${input.profile.lifeMode}`, `day-kind:${input.availability.dayKind}`]),
+        selectionReasons: uniq([`requiredness:${candidate.requiredness}`, ...candidate.prioritySignals.map((signal) => `priority:${signal}`), ...examSelectionReasons(input.profile, input.availability, candidate), `life-mode:${input.profile.lifeMode}`, `day-kind:${input.availability.dayKind}`]),
         metadataOnly: true,
       });
     });
@@ -644,7 +689,7 @@ export function buildStudyDayPlan(input: { profile: LearnerConstraintProfileV1; 
   blocks.sort((left, right) => left.startMinute - right.startMinute || left.blockId.localeCompare(right.blockId));
   const candidateMap = new Map(input.candidates.map((candidate) => [candidate.id, candidate]));
   const groups = new Map<string, ExecutionBlockV1[]>();
-  for (const block of [...blocks].sort((left, right) => score(candidateMap.get(right.candidateId!)!) - score(candidateMap.get(left.candidateId!)!))) {
+  for (const block of [...blocks].sort((left, right) => compareCandidatesForDay(input.profile, input.availability, candidateMap.get(left.candidateId!)!, candidateMap.get(right.candidateId!)!) || left.blockId.localeCompare(right.blockId))) {
     if (block.requiredness === "support" || block.requiredness === "optional") continue;
     const key = block.outcomeKey ?? block.blockId;
     if (!groups.has(key)) groups.set(key, []);
@@ -655,7 +700,7 @@ export function buildStudyDayPlan(input: { profile: LearnerConstraintProfileV1; 
     title: groupBlocks[0].title,
     blockIds: groupBlocks.map((block) => block.blockId),
     estimatedMinutes: groupBlocks.reduce((sum, block) => sum + block.activeMinutes, 0),
-    reason: groupBlocks[0].selectionReasons.filter((reason) => reason.startsWith("priority:")).slice(0, 2).join(", ") || "highest-value-executable-outcome",
+    reason: groupBlocks[0].selectionReasons.filter((reason) => reason.startsWith("priority:") || reason.startsWith("exam-protection:") || reason.startsWith("exam-distance-weight:")).slice(0, 3).join(", ") || "highest-value-executable-outcome",
     metadataOnly: true,
   }));
   if (outcomes.length > MAX_CORE_OUTCOMES) throw new Error("core-outcome-limit-violated");
@@ -669,7 +714,7 @@ export function buildStudyDayPlan(input: { profile: LearnerConstraintProfileV1; 
     coreOutcomes: outcomes,
     executionBlocks: blocks,
     deferredTasks: deferred,
-    planGap: buildPlanGap(envelope, input.candidates, scheduled, input.availability),
+    planGap: buildPlanGap(envelope, eligibleCandidates, scheduled, input.availability),
     plannedActiveMinutes,
     completionMeaning: "block_completion_is_not_mastery",
     masteryMutationAllowed: false,
@@ -720,7 +765,8 @@ export function buildStudyWeekPlan(input: { profile: LearnerConstraintProfileV1;
     const plan = buildStudyDayPlan({ profile: input.profile, availability: day, candidates, capacityHistory: input.capacityHistory });
     plans.push(plan);
     const completed = new Set(plan.executionBlocks.map((block) => block.candidateId).filter((candidateId): candidateId is string => Boolean(candidateId)));
-    remaining = remaining.filter((candidate) => !completed.has(candidate.id));
+    const modeExcluded = new Set(plan.deferredTasks.filter((entry) => entry.reason === "exam_mode_excluded").map((entry) => entry.candidateId));
+    remaining = remaining.filter((candidate) => !completed.has(candidate.id) && !modeExcluded.has(candidate.id));
   }
   const weeklyAvailableMinutes = plans.reduce((sum, plan) => sum + plan.capacity.schedulableActiveMinutes, 0);
   const weeklyPlannedMinutes = plans.reduce((sum, plan) => sum + plan.plannedActiveMinutes, 0);

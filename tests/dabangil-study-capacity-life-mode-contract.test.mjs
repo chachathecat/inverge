@@ -87,12 +87,26 @@ test("changed-path manifest is exact, unique and has zero PR #800 runtime overla
 
 test("contract separates life mode, daily capacity, exam mode and study phase", () => {
   assert.deepEqual(config.supported.examModes, ["first", "second", "both"]);
+  assert.deepEqual(config.supported.candidateExamTracks, ["first", "second"]);
+  assert.deepEqual(config.supported.examProtections, ["first_pass_risk_floor", "second_output_continuity_floor"]);
   assert.ok(config.supported.lifeModes.includes("full_time_study"));
   assert.ok(config.supported.lifeModes.includes("full_time_employed"));
   assert.ok(config.supported.lifeModes.includes("shift_or_irregular_work"));
   assert.ok(config.supported.studyPhases.includes("recovery"));
   assert.equal(config.policy.capacityBandCanChangeDaily, true);
   assert.equal(config.policy.lifeModeIsNotEffortOrAbilityRating, true);
+  assert.equal(config.policy.candidateExamTrackRequired, true);
+  assert.equal(config.policy.singleExamModeExcludesForeignTrackBeforeAllocation, true);
+  assert.equal(config.policy.combinedExamUsesTargetDateDistanceWeight, true);
+  assert.equal(config.policy.combinedExamProtectionRequiresRequiredEvidenceBinding, true);
+  assert.equal(config.policy.examProtectionAllowedOnlyInCombinedMode, true);
+  assert.equal(config.policy.examDistanceWeightHorizonDays, 180);
+  assert.equal(config.policy.examProtectionPriorityBonus, 50000);
+  assert.equal(config.policy.recoveryDefersNonrequiredNewStudyBeforePlacement, true);
+  assert.equal(config.modePolicies.combinedExam.pastTargetDateWeight, 0);
+  assert.equal(config.modePolicies.combinedExam.priorityComparatorAlsoSelectsCoreOutcomes, true);
+  assert.equal(config.modePolicies.combinedExam.singleModeExclusionsAreTerminalForWeeklyCarryover, true);
+  assert.ok(config.planGap.reasonCodes.includes("pass_risk"));
   assert.match(product, /생활형태가 곧 능력은 아니다/);
   assert.match(product, /전업도 회복일에는 compressed mode/);
   assert.match(product, /직장병행도 주말에는 intensive mode/);
@@ -210,6 +224,14 @@ test("focused fixture matrix covers full-time, employed, shift, both, replan and
     "deterministic_replay",
     "required_plan_gap_bound",
     "week_date_interval_bound",
+    "single_exam_mode_track_exclusion",
+    "both_mode_distance_weight",
+    "both_mode_evidence_bound_protection",
+    "both_mode_core_outcome_protection",
+    "past_exam_target_zero_weight",
+    "single_exam_mode_weekly_terminal_exclusion",
+    "protected_pass_risk_plan_gap",
+    "recovery_new_study_preplacement_deferral",
   ]) {
     assert.ok(fixtures.has(fixture), `missing fixture: ${fixture}`);
   }

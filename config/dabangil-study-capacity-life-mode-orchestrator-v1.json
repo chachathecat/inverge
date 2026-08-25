@@ -22,6 +22,14 @@
     "maximumCandidatesPerPlan": 256,
     "maximumRequiredPlanMinutes": 5040,
     "weekPlanDatesMustFitOneSevenDayInterval": true,
+    "candidateExamTrackRequired": true,
+    "singleExamModeExcludesForeignTrackBeforeAllocation": true,
+    "combinedExamUsesTargetDateDistanceWeight": true,
+    "combinedExamProtectionRequiresRequiredEvidenceBinding": true,
+    "examProtectionAllowedOnlyInCombinedMode": true,
+    "examDistanceWeightHorizonDays": 180,
+    "examProtectionPriorityBonus": 50000,
+    "recoveryDefersNonrequiredNewStudyBeforePlacement": true,
     "capacityHistoryMaximumDays": 28,
     "capacityHistoryRequiresExplicitAsOfDate": true,
     "capacityHistoryRequiresDistinctPriorDates": true,
@@ -71,6 +79,8 @@
       "custom"
     ],
     "examModes": ["first", "second", "both"],
+    "candidateExamTracks": ["first", "second"],
+    "examProtections": ["first_pass_risk_floor", "second_output_continuity_floor"],
     "studyPhases": [
       "foundation",
       "coverage",
@@ -111,9 +121,19 @@
     },
     "recovery": {
       "maximumCoreOutcomes": 1,
+      "nonrequiredNewStudyDeferredBeforePlacement": true,
       "optionalScopeMayBeDropped": true,
       "backlogCloneCount": 0,
       "noShameCopy": true
+    },
+    "combinedExam": {
+      "targetDateDistanceWeightHorizonDays": 180,
+      "pastTargetDateWeight": 0,
+      "firstPassRiskFloorRequires": ["required", "first", "pass_risk"],
+      "secondOutputContinuityFloorRequiresOneOf": ["timed_evidence_missing", "unseen_transfer_due"],
+      "foreignTrackExclusionAppliesOnlyToSingleTrackModes": true,
+      "priorityComparatorAlsoSelectsCoreOutcomes": true,
+      "singleModeExclusionsAreTerminalForWeeklyCarryover": true
     }
   },
   "priorityOrder": [
@@ -134,6 +154,7 @@
     "reasonCodes": [
       "due_review_overload",
       "coverage_gap",
+      "pass_risk",
       "timed_evidence_missing",
       "external_commitment",
       "recent_absence",
@@ -170,7 +191,15 @@
     "hostile_input_fail_closed",
     "replan_scope_exactly_once",
     "required_plan_gap_bound",
-    "week_date_interval_bound"
+    "week_date_interval_bound",
+    "single_exam_mode_track_exclusion",
+    "both_mode_distance_weight",
+    "both_mode_evidence_bound_protection",
+    "both_mode_core_outcome_protection",
+    "past_exam_target_zero_weight",
+    "single_exam_mode_weekly_terminal_exclusion",
+    "protected_pass_risk_plan_gap",
+    "recovery_new_study_preplacement_deferral"
   ],
   "forbiddenClaims": [
     "ten_hours_is_an_official_pass_condition",

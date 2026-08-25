@@ -57,6 +57,12 @@ type LifeModeV1 =
 
 type ExamModeV1 = "first" | "second" | "both";
 
+type ExamTrackV1 = "first" | "second";
+
+type ExamProtectionV1 =
+  | "first_pass_risk_floor"
+  | "second_output_continuity_floor";
+
 type StudyPhaseV1 =
   | "foundation"
   | "coverage"
@@ -70,6 +76,8 @@ type StudyPhaseV1 =
 
 - `lifeMode`는 노력·실력·가격·진지함 평가에 사용하지 않는다.
 - capacity band는 매일 바뀔 수 있다.
+- 모든 candidate는 `examTrack`을 명시하고, 단일 시험모드는 다른 track을 allocation 전에 제외한다.
+- 동차 보호선은 required candidate의 evidence signal에 결속된 `examProtection`만 허용한다.
 - 선택적 피로·일정정보는 learner-private이며 의학적 진단에 사용하지 않는다.
 - 회사명·직업·소득은 필요하지 않다.
 
@@ -158,7 +166,7 @@ high-load 과제는 high-interruption window에 배치하지 않고, capacity ba
 ### 6.4 회복
 
 - CoreOutcome은 0~1개다.
-- 새 학습을 자동 누적하지 않는다.
+- required가 아닌 `new_study`는 window 배치 전에 defer하여 새 학습을 자동 누적하지 않는다.
 - optional scope는 drop할 수 있다.
 - keep/defer/drop을 명시하고 backlog clone은 0이다.
 
@@ -174,11 +182,13 @@ high-load 과제는 high-interruption window에 배치하지 않고, capacity ba
 
 ### 동차
 
-1차와 2차를 매일 모두 조금씩 강제하지 않는다. 시험까지 거리와 evidence에 따라 비중을 바꾸되 2차 output continuity floor 또는 1차 과락위험 보호선을 명시한다.
+1차와 2차를 매일 모두 조금씩 강제하지 않는다. 명시된 미래 목표 시험일까지 180일 안에서 가까운 track을 가중하고 이미 지난 목표일은 가중하지 않는다. required candidate에 결속된 `first_pass_risk_floor + pass_risk` 또는 `second_output_continuity_floor + timed_evidence_missing|unseen_transfer_due`만 50,000점 보호 우선순위를 갖는다. 같은 exam-aware comparator가 당일 배치와 CoreOutcome 선택에 모두 적용된다. 단일 track에서 제외된 foreign-track candidate는 당일 `exam_mode_excluded` evidence를 남기되 주간 carryover나 미완료 사유로 다시 계산하지 않는다. 잘못된 track, optional 보호선 또는 evidence 없는 보호선은 fail closed한다.
 
 ## 8. 계획 완주 가능성은 합격확률과 분리 — Plan Gap
 
 `PlanGapV1`은 일정상 부족을 정직하게 보여준다.
+
+보호된 1차 `pass_risk`가 배치되지 못하면 Plan Gap은 일반 `coverage_gap`으로 축약하지 않고 `pass_risk`를 그대로 보고한다.
 
 ```text
 forecast capacity
@@ -303,6 +313,8 @@ tests/dabangil-study-capacity-life-mode-contract.test.mjs
 - cognitive-load budgets;
 - deterministic daily/weekly allocation;
 - full-time/employed/shift/recovery policies;
+- explicit candidate exam-track eligibility, target-date weighting and evidence-bound combined-exam protection;
+- pre-placement recovery deferral for non-required new study;
 - Plan Gap;
 - replan without backlog cloning;
 - 48-hour drill budget;

@@ -66,9 +66,11 @@ The source vertical must provide:
 - fatigue/error guardrails without medical diagnosis or shame copy;
 - environment-aware study windows, usable nonprotected-window capacity bounds and protected-window rejection;
 - deterministic task ranking and allocation;
+- exact candidate exam-track identity, terminal weekly single-mode foreign-track exclusion, future-only 180-day combined-exam distance weighting, one allocation/CoreOutcome comparator and evidence-bound required protection floors;
+- pre-placement recovery deferral for non-required new study;
 - high-interruption rejection for high-load work, max-continuous enforcement, atomic bounded splitting and employed-weekend routing;
 - max-three CoreOutcomes with more than three ExecutionBlocks when capacity permits;
-- arithmetically exact `PlanGapV1` and usable-window-bounded weekly feasibility projections without pass prediction;
+- arithmetically exact `PlanGapV1`, including an unmet protected `pass_risk` reason, and usable-window-bounded weekly feasibility projections without pass prediction;
 - bounded replan decisions that classify the unchanged candidate scope exactly once with no backlog cloning;
 - verified-bank-first personal drills with zero new-generation budget while a match exists, then 48-hour-capacity-bounded personal generation only on a gap;
 - no mastery mutation from schedule generation or block completion;

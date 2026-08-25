@@ -62,6 +62,7 @@ function task(id, overrides = {}) {
     id,
     title: `과제 ${id}`,
     subject: "회계학",
+    examTrack: "first",
     taskKind: "independent_problem_solving",
     cognitiveLoad: "high",
     requiredness: "core_candidate",
@@ -160,6 +161,23 @@ test("capacity bands are independent from employment labels", () => {
   });
   assert.equal(fullTimeRecovery.capacityBand, "compressed_90_180");
   assert.equal(employedWeekend.capacityBand, "full_day_600_720");
+});
+
+test("recovery defers non-required new study before placement", () => {
+  const plan = buildStudyDayPlan({
+    profile: profile({ phase: "recovery" }),
+    availability: availability({
+      declaredActiveMinutes: 60,
+      windows: [{ id: "recovery-window", startMinute: 600, endMinute: 660, environment: "desk", interruptibility: "low" }],
+    }),
+    candidates: [
+      task("optional-new-study", { taskKind: "lecture", cognitiveLoad: "low", requiredness: "optional", estimatedMinutes: 10, prioritySignals: ["new_study"] }),
+      task("required-new-study", { taskKind: "lecture", cognitiveLoad: "low", requiredness: "required", estimatedMinutes: 10, prioritySignals: ["new_study"] }),
+    ],
+  });
+
+  assert.ok(plan.executionBlocks.some((block) => block.candidateId === "required-new-study"));
+  assert.equal(plan.deferredTasks.find((entry) => entry.candidateId === "optional-new-study")?.reason, "recovery_mode");
 });
 
 test("full-time 600-minute day preserves max-three outcomes and many execution blocks", () => {
@@ -554,7 +572,7 @@ test("AI drill generation is capped by the next 48 hours and verified bank is pr
   assert.equal(exhausted.maximumNewItems, 0);
 });
 
-test("first, second and both modes are accepted without changing mastery", () => {
+test("first, second and both modes schedule only candidates with explicit track identity", () => {
   /** @type {ExamModeV1[]} */
   const examModes = ["first", "second", "both"];
   for (const examMode of examModes) {
@@ -564,11 +582,169 @@ test("first, second and both modes are accepted without changing mastery", () =>
         declaredActiveMinutes: 90,
         windows: [{ id: `window-${examMode}`, startMinute: 600, endMinute: 690, environment: "desk", interruptibility: "low" }],
       }),
-      candidates: [task(`task-${examMode}`, { estimatedMinutes: 25, cognitiveLoad: "medium", requiredness: "required", prioritySignals: ["due_review"] })],
+      candidates: [task(`task-${examMode}`, { examTrack: examMode === "second" ? "second" : "first", estimatedMinutes: 25, cognitiveLoad: "medium", requiredness: "required", prioritySignals: ["due_review"] })],
     });
     assert.equal(plan.profile.examMode, examMode);
+    assert.equal(plan.executionBlocks[0]?.candidateId, `task-${examMode}`);
     assert.equal(plan.masteryMutationAllowed, false);
   }
+});
+
+test("single-track modes exclude foreign-track work before priority allocation", () => {
+  const plan = buildStudyDayPlan({
+    profile: profile({ examMode: "second" }),
+    availability: availability({
+      declaredActiveMinutes: 90,
+      windows: [{ id: "single-track-window", startMinute: 600, endMinute: 690, environment: "desk", interruptibility: "low" }],
+    }),
+    candidates: [
+      task("first-higher-score", { examTrack: "first", cognitiveLoad: "medium", requiredness: "required", estimatedMinutes: 20, basePriority: 10_000 }),
+      task("second-lower-score", { examTrack: "second", cognitiveLoad: "medium", requiredness: "required", estimatedMinutes: 20, basePriority: 0 }),
+    ],
+  });
+
+  assert.equal(plan.executionBlocks[0]?.candidateId, "second-lower-score");
+  assert.equal(plan.deferredTasks.find((entry) => entry.candidateId === "first-higher-score")?.reason, "exam_mode_excluded");
+  assert.equal(plan.planGap, null);
+});
+
+test("single-track exclusion is explicit once and terminal for weekly carryover", () => {
+  const week = buildStudyWeekPlan({
+    profile: profile({ examMode: "second" }),
+    days: [availability({
+      declaredActiveMinutes: 90,
+      windows: [{ id: "weekly-single-track-window", startMinute: 600, endMinute: 690, environment: "desk", interruptibility: "low" }],
+    })],
+    candidates: [
+      task("weekly-first-foreign", { examTrack: "first", cognitiveLoad: "medium", requiredness: "required", estimatedMinutes: 20 }),
+      task("weekly-second-eligible", { examTrack: "second", cognitiveLoad: "medium", requiredness: "required", estimatedMinutes: 20 }),
+    ],
+    requiredMinimumMinutes: 0,
+    requiredMaximumMinutes: 90,
+  });
+
+  assert.equal(week.dayPlans[0].deferredTasks.find((entry) => entry.candidateId === "weekly-first-foreign")?.reason, "exam_mode_excluded");
+  assert.deepEqual(week.remainingTaskIds, []);
+  assert.ok(!week.feasibility.reasons.includes("candidate-scope-remains-after-week-allocation"));
+});
+
+test("both mode uses exam distance and explicit evidence-bound continuity protection", () => {
+  const limitedAvailability = availability({
+    date: "2026-08-25",
+    declaredActiveMinutes: 90,
+    windows: [{ id: "both-mode-window", startMinute: 600, endMinute: 690, environment: "desk", interruptibility: "low" }],
+  });
+  const equalTrackCandidates = [
+    task("first-near", { examTrack: "first", cognitiveLoad: "medium", requiredness: "required", estimatedMinutes: 20, basePriority: 0 }),
+    task("second-far", { examTrack: "second", cognitiveLoad: "medium", requiredness: "required", estimatedMinutes: 20, basePriority: 0 }),
+  ];
+  const distanceWeighted = buildStudyDayPlan({
+    profile: profile({ examMode: "both", targetExamDates: { first: "2026-08-30", second: "2027-06-01" } }),
+    availability: limitedAvailability,
+    candidates: equalTrackCandidates,
+  });
+  assert.equal(distanceWeighted.executionBlocks[0]?.candidateId, "first-near");
+  assert.ok(distanceWeighted.executionBlocks[0]?.selectionReasons.includes("exam-distance-weight:first"));
+
+  const continuityProtected = buildStudyDayPlan({
+    profile: profile({ examMode: "both" }),
+    availability: limitedAvailability,
+    candidates: [
+      task("first-high-base", { examTrack: "first", cognitiveLoad: "medium", requiredness: "required", estimatedMinutes: 20, basePriority: 10_000 }),
+      task("second-output-floor", {
+        examTrack: "second",
+        examProtection: "second_output_continuity_floor",
+        cognitiveLoad: "medium",
+        requiredness: "required",
+        estimatedMinutes: 20,
+        prioritySignals: ["timed_evidence_missing"],
+        basePriority: 0,
+      }),
+    ],
+  });
+  assert.equal(continuityProtected.executionBlocks[0]?.candidateId, "second-output-floor");
+  assert.ok(continuityProtected.executionBlocks[0]?.selectionReasons.includes("exam-protection:second_output_continuity_floor"));
+});
+
+test("both mode gives past target dates zero weight", () => {
+  const plan = buildStudyDayPlan({
+    profile: profile({ examMode: "both", targetExamDates: { first: "2026-08-24", second: "2026-08-30" } }),
+    availability: availability({
+      date: "2026-08-25",
+      declaredActiveMinutes: 90,
+      windows: [{ id: "past-target-window", startMinute: 600, endMinute: 690, environment: "desk", interruptibility: "low" }],
+    }),
+    candidates: [
+      task("first-past-target", { examTrack: "first", cognitiveLoad: "medium", requiredness: "required", estimatedMinutes: 20, basePriority: 0 }),
+      task("second-future-target", { examTrack: "second", cognitiveLoad: "medium", requiredness: "required", estimatedMinutes: 20, basePriority: 0 }),
+    ],
+  });
+
+  assert.equal(plan.executionBlocks[0]?.candidateId, "second-future-target");
+  assert.ok(!plan.executionBlocks.some((block) => block.candidateId === "first-past-target"));
+  assert.ok(!plan.deferredTasks.some((entry) => entry.reason === "exam_mode_excluded"));
+});
+
+test("exam-aware priority also selects the sole core outcome", () => {
+  const plan = buildStudyDayPlan({
+    profile: profile({ examMode: "both" }),
+    availability: availability({
+      declaredActiveMinutes: 90,
+      windows: [{ id: "core-outcome-window", startMinute: 600, endMinute: 690, environment: "desk", interruptibility: "low" }],
+    }),
+    candidates: [
+      task("first-unprotected-core", { examTrack: "first", cognitiveLoad: "low", requiredness: "required", estimatedMinutes: 20, basePriority: 10_000 }),
+      task("second-protected-core", {
+        examTrack: "second",
+        examProtection: "second_output_continuity_floor",
+        cognitiveLoad: "medium",
+        requiredness: "required",
+        estimatedMinutes: 20,
+        prioritySignals: ["timed_evidence_missing"],
+        basePriority: 0,
+      }),
+    ],
+  });
+
+  assert.equal(plan.executionBlocks.length, 2);
+  assert.equal(plan.coreOutcomes.length, 1);
+  assert.equal(plan.coreOutcomes[0].title, "과제 second-protected-core");
+  assert.ok(plan.coreOutcomes[0].blockIds.some((blockId) => blockId.includes("second-protected-core")));
+  assert.match(plan.coreOutcomes[0].reason, /exam-protection:second_output_continuity_floor/);
+});
+
+test("an unmet protected first-track pass risk remains explicit in Plan Gap", () => {
+  const plan = buildStudyDayPlan({
+    profile: profile({ examMode: "both" }),
+    availability: availability({
+      declaredActiveMinutes: 90,
+      windows: [{ id: "protected-gap-window", startMinute: 600, endMinute: 690, environment: "desk", interruptibility: "low" }],
+    }),
+    candidates: [
+      task("first-pass-risk-floor", {
+        examTrack: "first",
+        examProtection: "first_pass_risk_floor",
+        cognitiveLoad: "medium",
+        requiredness: "required",
+        estimatedMinutes: 20,
+        prioritySignals: ["pass_risk"],
+        basePriority: 0,
+      }),
+      task("second-output-floor-wins", {
+        examTrack: "second",
+        examProtection: "second_output_continuity_floor",
+        cognitiveLoad: "medium",
+        requiredness: "required",
+        estimatedMinutes: 20,
+        prioritySignals: ["unseen_transfer_due"],
+        basePriority: 0,
+      }),
+    ],
+  });
+
+  assert.equal(plan.executionBlocks[0]?.candidateId, "second-output-floor-wins");
+  assert.ok(plan.planGap?.reasons.includes("pass_risk"));
+  assert.ok(!plan.planGap?.reasons.includes("coverage_gap"));
 });
 
 test("same input produces the same deterministic plan digest", () => {
@@ -869,6 +1045,11 @@ test("hostile, unknown, duplicate and non-finite inputs fail closed", () => {
     { ...task("task-kind"), taskKind: "bogus" },
     { ...task("load"), cognitiveLoad: "bogus" },
     { ...task("requiredness"), requiredness: "bogus" },
+    { ...task("exam-track"), examTrack: "bogus" },
+    { ...task("cross-track-protection"), examTrack: "first", examProtection: "second_output_continuity_floor", requiredness: "required", prioritySignals: ["timed_evidence_missing"] },
+    { ...task("optional-protection"), examProtection: "first_pass_risk_floor", requiredness: "optional", prioritySignals: ["pass_risk"] },
+    { ...task("unbound-protection"), examProtection: "first_pass_risk_floor", requiredness: "required", prioritySignals: ["new_study"] },
+    { ...task("single-mode-protection"), examProtection: "first_pass_risk_floor", requiredness: "required", prioritySignals: ["pass_risk"] },
     { ...task("signal"), prioritySignals: ["bogus"] },
     { ...task("duplicate-signal"), prioritySignals: ["due_review", "due_review"] },
     { ...task("nan"), basePriority: Number.NaN },
