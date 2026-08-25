@@ -21,6 +21,8 @@ import {
   C3R_T_ENUM_MIGRATION_PATH,
   C3R_T_INTEGRATION_MIGRATION_PATH,
   C3R_T_RUNTIME_PRODUCER_VERSION,
+  boundedNativePostgresDiagnostic,
+  c3rTNativePrerequisiteClosure,
   createC3RTNativeEvidence,
   createTheoryRuntimeArtifact,
   isC3RPRiskCandidate,
@@ -435,6 +437,16 @@ test("generic runtime gate has a closed exact-head C3R-T native adapter", () => 
       cwd: adapterRepository,
       encoding: "utf8",
     }).trim();
+    fs.copyFileSync(
+      path.join(root, C3R_T_INTEGRATION_MIGRATION_PATH),
+      path.join(adapterRepository, C3R_T_INTEGRATION_MIGRATION_PATH),
+    );
+    gitFixture(["add", "--", C3R_T_INTEGRATION_MIGRATION_PATH]);
+    gitFixture([
+      "-c", "user.name=C3R-T Runtime Fixture",
+      "-c", "user.email=c3r-t-runtime@example.invalid",
+      "commit", "--quiet", "-m", "candidate migration fixture",
+    ]);
     const headSha = gitFixture(["rev-parse", "HEAD"]);
     const headTree = gitFixture(["rev-parse", "HEAD^{tree}"]);
     const commitEnvironment = {
@@ -504,6 +516,7 @@ test("generic runtime gate has a closed exact-head C3R-T native adapter", () => 
       subjectLabels: ["PRACTICE", "THEORY"],
       theoryStartIdempotent: true,
       practiceStartIdempotentPreserved: true,
+      practiceWrapperArgumentNamesPreserved: true,
       crossTargetValidatorUnsupported: true,
       crossSubjectInsertDenied: true,
       authenticatedTableInsertDenied: true,
@@ -517,6 +530,7 @@ test("generic runtime gate has a closed exact-head C3R-T native adapter", () => 
       runAttempt: 2,
       riskBytes,
       practiceBase,
+      prerequisiteClosure: c3rTNativePrerequisiteClosure(),
       theoryDelta,
       cycles: [cycle(1), cycle(2)],
     });
@@ -546,6 +560,13 @@ test("generic runtime gate has a closed exact-head C3R-T native adapter", () => 
     }, { riskResult, riskBytes }, adapterRepository), /Practice base or Theory delta/u);
     assert.throws(() => validateC3RTNativeEvidence({
       ...evidence,
+      prerequisiteClosure: {
+        ...evidence.prerequisiteClosure,
+        inheritedInventoryExecuted: true,
+      },
+    }, { riskResult, riskBytes }, adapterRepository), /prerequisite closure is invalid/u);
+    assert.throws(() => validateC3RTNativeEvidence({
+      ...evidence,
       theoryDelta: [theoryDelta[0], theoryDelta[0]],
     }, { riskResult, riskBytes }, adapterRepository), /Practice base or Theory delta/u);
     assert.throws(() => validateC3RTNativeEvidence({
@@ -559,6 +580,10 @@ test("generic runtime gate has a closed exact-head C3R-T native adapter", () => 
     assert.throws(() => validateC3RTNativeEvidence({
       ...evidence,
       cycles: [{ ...cycle(1), forcedRlsTables: forcedRlsTables.slice(1) }, cycle(2)],
+    }, { riskResult, riskBytes }, adapterRepository), /native cycle 1 is invalid/u);
+    assert.throws(() => validateC3RTNativeEvidence({
+      ...evidence,
+      cycles: [{ ...cycle(1), practiceWrapperArgumentNamesPreserved: false }, cycle(2)],
     }, { riskResult, riskBytes }, adapterRepository), /native cycle 1 is invalid/u);
     assert.throws(() => validateC3RTNativeEvidence({
       ...evidence,
@@ -622,6 +647,23 @@ test("generic runtime gate has a closed exact-head C3R-T native adapter", () => 
     status: 1, stdout: "", stderr: "Cannot connect to the Docker daemon",
   }), false);
   assert.equal(isNativeContainerVerifiedAbsent({ status: 0, stdout: "[]", stderr: "" }), false);
+  const boundedDiagnostic = boundedNativePostgresDiagnostic({
+    stderr: "NOTICE: ignored\u0000\n" +
+      "ERROR: cannot change name of input parameter p_user_id " +
+      "11111111-1111-4111-8111-111111111111 owner@example.invalid " +
+      "https://example.invalid/private\n" +
+      "HINT: synthetic-private-answer authorization: Bearer abcdefghijklmnop " +
+      "password=private-password secret=private-secret\n" +
+      "DETAIL: raw row body\nCONTEXT: select raw_private_body\n" +
+      `ERROR: ${"x".repeat(5_000)}`,
+    stdout: "",
+  });
+  assert.match(boundedDiagnostic, /cannot change name of input parameter p_user_id/u);
+  assert.ok(Buffer.byteLength(boundedDiagnostic, "utf8") <= 2_048);
+  assert.doesNotMatch(boundedDiagnostic,
+    /NOTICE|DETAIL|CONTEXT|raw row|raw_private|example\.invalid|11111111|abcdefghijklmnop|private-password|private-secret|synthetic-private/u);
+  assert.match(boundedDiagnostic,
+    /\[uuid\]|\[REDACTED_EMAIL\]|\[url\]|\[private\]|\[REDACTED\]|password=\[REDACTED\]|secret=\[REDACTED\]/u);
 });
 
 test("dedicated Theory cycles bind identity relations before legacy Practice receipt replay", () => {
@@ -635,7 +677,7 @@ test("dedicated Theory cycles bind identity relations before legacy Practice rec
     "seedTheoryIdentityRelations(databaseContainer, identities)",
   );
   const legacyReceiptSeeded = cycleSource.indexOf(
-    "applyTheoryMigrationHistory(cycleRoot, databaseContainer, identities[0])",
+    "const practiceWrapperArgumentNamesPreserved = applyTheoryMigrationHistory(",
   );
   assert.ok(baseApplied >= 0 && baseApplied < identitiesCreated);
   assert.ok(identitiesCreated < identityRelationsSeeded);
@@ -649,6 +691,42 @@ test("dedicated Theory cycles bind identity relations before legacy Practice rec
   assert.doesNotMatch(identityFixtureSource, /public\.users/u);
   assert.match(runtimeSource,
     /seedLegacyPracticePlannerReceipts\(container, identity\)[\s\S]*userId: identity\.userId\.toLowerCase\(\)/u);
+  assert.match(runtimeSource,
+    /practiceWrapperArgumentsBefore[\s\S]*practiceWrapperArgumentsAfter[\s\S]*practiceWrapperArgumentsAfter !== practiceWrapperArgumentsBefore/u);
+  const requiredPracticeWrapperSignatures = [
+    /c3r_p_find_record_v1\(\s*p_user_id uuid,\s*p_source_id text,\s*p_problem_id text,\s*p_revision_id text,\s*p_item_id text,\s*p_artifact_id text\s*\)/u,
+    /c3r_p_restore_record_v1\(p_user_id uuid, p_record_id uuid\)/u,
+    /c3r_p_load_dashboard_v1\(\s*p_user_id uuid,\s*p_as_of timestamptz\s*\)/u,
+    /c3r_p_export_learner_data_v1\(p_user_id uuid\)/u,
+    /c3r_p_delete_learner_data_v1\(p_user_id uuid\)/u,
+  ];
+  for (const signature of requiredPracticeWrapperSignatures) {
+    assert.match(integrationSql, signature);
+  }
+  const exactPracticeWrapperCatalog = [
+    ["public.c3r_p_apply_learning_command_v1(uuid,uuid,bigint,text,jsonb)",
+      "p_user_id,p_command_id,p_expected_version,p_action,p_payload"],
+    ["public.c3r_p_create_plan_v1(uuid,uuid,uuid,public.c3r_p_plan_kind,integer,timestamptz,jsonb)",
+      "p_user_id,p_command_id,p_plan_id,p_plan_kind,p_available_minutes,p_as_of,p_blocks"],
+    ["public.c3r_p_decide_plan_v1(uuid,uuid,uuid,bigint,text,timestamptz,jsonb)",
+      "p_user_id,p_command_id,p_plan_id,p_expected_version,p_decision,p_as_of,p_blocks"],
+    ["public.c3r_p_delete_learner_data_v1(uuid)", "p_user_id"],
+    ["public.c3r_p_eligibility_digest_v1(uuid,timestamptz)", "p_user_id,p_as_of"],
+    ["public.c3r_p_export_learner_data_v1(uuid)", "p_user_id"],
+    ["public.c3r_p_find_record_v1(uuid,text,text,text,text,text)",
+      "p_user_id,p_source_id,p_problem_id,p_revision_id,p_item_id,p_artifact_id"],
+    ["public.c3r_p_load_dashboard_v1(uuid,timestamptz)", "p_user_id,p_as_of"],
+    ["public.c3r_p_restore_record_v1(uuid,uuid)", "p_user_id,p_record_id"],
+    ["public.c3r_p_review_state_digest_v1(uuid)", "p_user_id"],
+  ];
+  assert.equal((runtimeSource.match(/signature:\s*"public\.c3r_p_/gu) ?? []).length,
+    exactPracticeWrapperCatalog.length);
+  for (const [signature, names] of exactPracticeWrapperCatalog) {
+    assert.ok(runtimeSource.includes(signature));
+    assert.ok(runtimeSource.includes(`"${names}"`));
+  }
+  assert.doesNotMatch(integrationSql,
+    /create or replace function public\.c3r_p_(?:find_record|restore_record|load_dashboard|export_learner_data|delete_learner_data)_v1\((?:uuid|uuid,)/u);
 });
 
 test("THEORY_RUNTIME artifact closes two exact-head PG15.8 cycles and rejects drift", () => {
@@ -667,6 +745,7 @@ test("THEORY_RUNTIME artifact closes two exact-head PG15.8 cycles and rejects dr
     hostileDirectRpcDenied: true,
     legacyPracticePlannerReceiptReplay: true,
     practiceCompatibilityPreserved: true,
+    practiceWrapperArgumentNamesPreserved: true,
     cleanup: "complete",
   });
   const artifactRepository = fs.mkdtempSync(path.join(os.tmpdir(), "c3r-t-artifact-"));

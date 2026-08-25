@@ -794,6 +794,7 @@ function nativeEvidenceKeys() {
 
 const C3R_T_NATIVE_ASSERTION_IDS = Object.freeze([
   "validated_c3r_p_inventory_inherited",
+  "exact_synthetic_prerequisite_closure",
   "exact_two_theory_migrations_bound",
   "exact_three_repository_files_applied_per_cycle",
   "postgresql_15_8",
@@ -802,6 +803,7 @@ const C3R_T_NATIVE_ASSERTION_IDS = Object.freeze([
   "practice_and_theory_enum_labels",
   "theory_start_idempotency",
   "practice_start_idempotency_preserved",
+  "practice_wrapper_argument_names_preserved",
   "cross_target_validator_unsupported",
   "cross_subject_insert_denied",
   "authenticated_table_insert_denied",
@@ -820,13 +822,79 @@ const C3R_T_FORCED_RLS_TABLES = Object.freeze([
   "c3r_p_plans",
   "c3r_p_transfer_tasks",
 ]);
+const C3R_P_PRACTICE_WRAPPER_ARGUMENTS = Object.freeze([
+  Object.freeze({
+    signature: "public.c3r_p_apply_learning_command_v1(uuid,uuid,bigint,text,jsonb)",
+    names: "p_user_id,p_command_id,p_expected_version,p_action,p_payload",
+  }),
+  Object.freeze({
+    signature:
+      "public.c3r_p_create_plan_v1(uuid,uuid,uuid,public.c3r_p_plan_kind,integer,timestamptz,jsonb)",
+    names:
+      "p_user_id,p_command_id,p_plan_id,p_plan_kind,p_available_minutes,p_as_of,p_blocks",
+  }),
+  Object.freeze({
+    signature:
+      "public.c3r_p_decide_plan_v1(uuid,uuid,uuid,bigint,text,timestamptz,jsonb)",
+    names:
+      "p_user_id,p_command_id,p_plan_id,p_expected_version,p_decision,p_as_of,p_blocks",
+  }),
+  Object.freeze({
+    signature: "public.c3r_p_delete_learner_data_v1(uuid)",
+    names: "p_user_id",
+  }),
+  Object.freeze({
+    signature: "public.c3r_p_eligibility_digest_v1(uuid,timestamptz)",
+    names: "p_user_id,p_as_of",
+  }),
+  Object.freeze({
+    signature: "public.c3r_p_export_learner_data_v1(uuid)",
+    names: "p_user_id",
+  }),
+  Object.freeze({
+    signature: "public.c3r_p_find_record_v1(uuid,text,text,text,text,text)",
+    names: "p_user_id,p_source_id,p_problem_id,p_revision_id,p_item_id,p_artifact_id",
+  }),
+  Object.freeze({
+    signature: "public.c3r_p_load_dashboard_v1(uuid,timestamptz)",
+    names: "p_user_id,p_as_of",
+  }),
+  Object.freeze({
+    signature: "public.c3r_p_restore_record_v1(uuid,uuid)",
+    names: "p_user_id,p_record_id",
+  }),
+  Object.freeze({
+    signature: "public.c3r_p_review_state_digest_v1(uuid)",
+    names: "p_user_id",
+  }),
+]);
+const C3R_P_PRACTICE_WRAPPER_ARGUMENT_CATALOG =
+  `${C3R_P_PRACTICE_WRAPPER_ARGUMENTS.length}#${C3R_P_PRACTICE_WRAPPER_ARGUMENTS
+    .map(({ signature, names }) => `${signature.slice("public.".length).split("(")[0]}:${names}`)
+    .join("|")}`;
+
+function practiceWrapperArgumentCatalogSql() {
+  const signatures = C3R_P_PRACTICE_WRAPPER_ARGUMENTS
+    .map(({ signature }) => `to_regprocedure('${signature}')`).join(",");
+  return `select concat_ws('#', count(*)::text, coalesce(string_agg(
+    concat(p.proname, ':', array_to_string(p.proargnames, ',')),
+    '|' order by p.proname), ''))
+  from pg_proc p where p.oid = any(array[${signatures}]);`;
+}
+
+function assertPracticeWrapperArgumentCatalog(value, stage) {
+  if (value !== C3R_P_PRACTICE_WRAPPER_ARGUMENT_CATALOG) {
+    throw new Error(`C3R-T Practice wrapper argument catalog changed during ${stage}.`);
+  }
+  return true;
+}
 
 function theoryNativeEvidenceKeys() {
   return [
     "schemaVersion", "producerVersion", "status", "sourceLevelOnly", "verifiedAt",
     "pullRequestHeadSha", "pullRequestHeadTree", "githubRunId", "githubRunAttempt",
-    "riskFileSha256", "practiceBase", "theoryDelta", "cycles", "assertions", "cleanup",
-    "dataBoundary",
+    "riskFileSha256", "practiceBase", "prerequisiteClosure", "theoryDelta", "cycles",
+    "assertions", "cleanup", "dataBoundary",
   ];
 }
 
@@ -843,6 +911,7 @@ export function createC3RTNativeEvidence(input) {
     githubRunAttempt: input.runAttempt,
     riskFileSha256: sha256(input.riskBytes),
     practiceBase: input.practiceBase,
+    prerequisiteClosure: input.prerequisiteClosure,
     theoryDelta: input.theoryDelta,
     cycles: input.cycles,
     assertions: C3R_T_NATIVE_ASSERTION_IDS.map((id) => ({ id, passed: true })),
@@ -919,6 +988,13 @@ export function validateC3RTNativeEvidence(evidence, { riskResult, riskBytes },
     canonicalJson(evidence.theoryDelta) !== canonicalJson(expectedTheoryDelta)) {
     throw new Error("C3R-T native evidence Practice base or Theory delta identity is invalid.");
   }
+  exactKeys(evidence.prerequisiteClosure, [
+    "schemaVersion", "bootstrapSha256", "inheritedInventoryExecuted",
+  ], "C3R-T native prerequisite closure");
+  if (canonicalJson(evidence.prerequisiteClosure) !==
+    canonicalJson(c3rTNativePrerequisiteClosure())) {
+    throw new Error("C3R-T native prerequisite closure is invalid.");
+  }
   if (!Array.isArray(evidence.cycles) || evidence.cycles.length !== 2) {
     throw new Error("C3R-T native evidence requires exactly two cycles.");
   }
@@ -927,6 +1003,7 @@ export function validateC3RTNativeEvidence(evidence, { riskResult, riskBytes },
       "cycle", "databaseIdentity", "containerIdentity", "serverVersionNum",
       "appliedRepositoryFilesExactly", "forcedRlsTables", "subjectLabels",
       "theoryStartIdempotent", "practiceStartIdempotentPreserved",
+      "practiceWrapperArgumentNamesPreserved",
       "crossTargetValidatorUnsupported", "crossSubjectInsertDenied",
       "authenticatedTableInsertDenied", "authenticatedValidatorExecuteDenied", "cleanup",
     ], `C3R-T native cycle ${index + 1}`);
@@ -942,6 +1019,7 @@ export function validateC3RTNativeEvidence(evidence, { riskResult, riskBytes },
       canonicalJson(cycle.forcedRlsTables) !== canonicalJson(C3R_T_FORCED_RLS_TABLES) ||
       canonicalJson(cycle.subjectLabels) !== canonicalJson(["PRACTICE", "THEORY"]) ||
       cycle.theoryStartIdempotent !== true || cycle.practiceStartIdempotentPreserved !== true ||
+      cycle.practiceWrapperArgumentNamesPreserved !== true ||
       cycle.crossTargetValidatorUnsupported !== true || cycle.crossSubjectInsertDenied !== true ||
       cycle.authenticatedTableInsertDenied !== true ||
       cycle.authenticatedValidatorExecuteDenied !== true || cycle.cleanup !== "complete") {
@@ -1057,6 +1135,14 @@ create or replace function public.transition_personal_concept_node_v1(
 ) returns jsonb language sql as $$ select '{}'::jsonb $$;
 `;
 
+export function c3rTNativePrerequisiteClosure() {
+  return {
+    schemaVersion: "c3r-t-native-prerequisite.v1",
+    bootstrapSha256: sha256(Buffer.from(NATIVE_BOOTSTRAP_SQL, "utf8")),
+    inheritedInventoryExecuted: false,
+  };
+}
+
 function nativeDocker(args, options = {}) {
   return spawnSync("docker", args, {
     encoding: "utf8", maxBuffer: 32 * 1024 * 1024,
@@ -1076,12 +1162,39 @@ function removeNativeContainer(name) {
   return isNativeContainerVerifiedAbsent(nativeDocker(["inspect", name]));
 }
 
+export function boundedNativePostgresDiagnostic(result) {
+  const source = result?.stderr || result?.stdout || "";
+  const sourceWithoutBearerCredentials = String(source).replace(
+    /\bBearer\s+[A-Za-z0-9._~+/=-]{8,}\b/giu,
+    "Bearer [REDACTED]",
+  );
+  const diagnostic = redactC3RPEntryDiagnosticText(sourceWithoutBearerCredentials)
+    .replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/gu, "")
+    .split(/\r?\n/u)
+    .map((line) => line.replace(/\x1b\[[0-9;]*m/gu, "").trim())
+    .filter((line) => /^(?:ERROR|HINT):/iu.test(line))
+    .slice(0, 8)
+    .map((line) => line.slice(0, 256))
+    .join(" | ")
+    .replace(/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/giu,
+      "[uuid]")
+    .replace(/https?:\/\/[^\s|]+/giu, "[url]")
+    .replace(/synthetic-private-[a-z0-9_-]+/giu, "[private]");
+  const bytes = Buffer.from(diagnostic, "utf8");
+  const bounded = bytes.length <= 2_048
+    ? diagnostic
+    : bytes.subarray(0, 2_048).toString("utf8").replace(/\uFFFD+$/u, "");
+  return bounded || "no bounded PostgreSQL ERROR/HINT diagnostic";
+}
+
 function nativePsql(name, sql, allowFailure = false, stage = "assertion") {
   const result = nativeDocker(["exec", "--interactive", name, "psql", "--no-psqlrc", "--quiet",
     "--tuples-only", "--no-align", "--set", "ON_ERROR_STOP=1", "--username", "postgres",
     "--dbname", "postgres"], { input: sql });
   if (!allowFailure && result.status !== 0) {
-    throw new Error(`C3R-P native PostgreSQL ${stage} failed.`);
+    const status = Number.isInteger(result.status) ? result.status : "spawn_error";
+    throw new Error(`C3R-P native PostgreSQL ${stage} failed (${status}): ${
+      boundedNativePostgresDiagnostic(result)}`);
   }
   return result;
 }
@@ -1166,8 +1279,25 @@ function nativeTheoryCycle(name, databaseIdentity, sql, cycle) {
     nativePsql(name, "show server_version_num;\n", false, "Theory server-version assertion");
     nativePsql(name, NATIVE_BOOTSTRAP_SQL, false, "Theory bootstrap");
     nativePsql(name, sql.append, false, "Practice substrate application");
+    const practiceWrapperArgumentsBefore = nativePsql(
+      name,
+      practiceWrapperArgumentCatalogSql(),
+      false,
+      "pre-Theory Practice wrapper argument catalog",
+    ).stdout.trim();
+    assertPracticeWrapperArgumentCatalog(practiceWrapperArgumentsBefore, "native pre-migration");
     nativePsql(name, sql.enum, false, "Theory enum migration application");
     nativePsql(name, sql.integration, false, "Theory integration migration application");
+    const practiceWrapperArgumentsAfter = nativePsql(
+      name,
+      practiceWrapperArgumentCatalogSql(),
+      false,
+      "post-Theory Practice wrapper argument catalog",
+    ).stdout.trim();
+    assertPracticeWrapperArgumentCatalog(practiceWrapperArgumentsAfter, "native post-migration");
+    if (practiceWrapperArgumentsAfter !== practiceWrapperArgumentsBefore) {
+      throw new Error("C3R-T native Practice wrapper argument names changed across migration.");
+    }
     const catalog = nativePsql(name, `select concat_ws('|',
       current_setting('server_version_num'),
       (select string_agg(concat(c.relname, ':', c.relrowsecurity::text, ':',
@@ -1327,6 +1457,7 @@ function nativeTheoryCycle(name, databaseIdentity, sql, cycle) {
       subjectLabels: ["PRACTICE", "THEORY"],
       theoryStartIdempotent: true,
       practiceStartIdempotentPreserved: true,
+      practiceWrapperArgumentNamesPreserved: true,
       crossTargetValidatorUnsupported: true,
       crossSubjectInsertDenied: true,
       authenticatedTableInsertDenied: true,
@@ -1394,6 +1525,7 @@ export function produceC3RTNativeEvidence({ context, evidencePath, riskBytes, ri
       appendPath: C3R_P_APPEND_PATH,
       appendSha256: appendIdentity.sha256,
     },
+    prerequisiteClosure: c3rTNativePrerequisiteClosure(),
     theoryDelta: migrations,
     cycles,
   });
@@ -1720,13 +1852,29 @@ function applyTheoryMigrationHistory(cycleRoot, container, legacyPracticeIdentit
     container,
     legacyPracticeIdentity,
   );
+  const practiceWrapperArgumentsBefore = psql(
+    container,
+    practiceWrapperArgumentCatalogSql(),
+    "C3R-T pre-migration Practice wrapper argument catalog",
+  );
+  assertPracticeWrapperArgumentCatalog(practiceWrapperArgumentsBefore, "dedicated pre-migration");
   const migrationRoot = path.join(cycleRoot, "c3r-t-migrations");
   for (const name of fs.readdirSync(migrationRoot).sort()) {
     const sql = fs.readFileSync(path.join(migrationRoot, name), "utf8");
     psql(container, `begin;\n${sql}\ncommit;\n`, `C3R-T migration ${name}`);
   }
+  const practiceWrapperArgumentsAfter = psql(
+    container,
+    practiceWrapperArgumentCatalogSql(),
+    "C3R-T post-migration Practice wrapper argument catalog",
+  );
+  assertPracticeWrapperArgumentCatalog(practiceWrapperArgumentsAfter, "dedicated post-migration");
+  if (practiceWrapperArgumentsAfter !== practiceWrapperArgumentsBefore) {
+    throw new Error("C3R-T Practice wrapper argument names changed across migration.");
+  }
   psql(container, "notify pgrst, 'reload schema';\n", "C3R-T PostgREST schema reload");
   assertLegacyPracticePlannerReceiptReplay(container, legacyPracticePlannerReceipts);
+  return true;
 }
 
 async function createIdentity(apiUrl, anonKey, label) {
@@ -2362,7 +2510,11 @@ async function runTheoryDedicatedCycle(input) {
       await createTheoryIdentity(apiUrl, anonKey, `non-owner-${input.cycle}`),
     ];
     seedTheoryIdentityRelations(databaseContainer, identities);
-    applyTheoryMigrationHistory(cycleRoot, databaseContainer, identities[0]);
+    const practiceWrapperArgumentNamesPreserved = applyTheoryMigrationHistory(
+      cycleRoot,
+      databaseContainer,
+      identities[0],
+    );
     theoryDatabaseSecurity(databaseContainer);
     await verifyDirectBoundaries(apiUrl, anonKey, identities[0]);
     const nextEnv = {
@@ -2437,6 +2589,7 @@ async function runTheoryDedicatedCycle(input) {
       hostileDirectRpcDenied: true,
       legacyPracticePlannerReceiptReplay: true,
       practiceCompatibilityPreserved: practiceCompatibilityEvidence.practiceVertical,
+      practiceWrapperArgumentNamesPreserved,
       cleanup: "complete",
     };
   } finally {
@@ -2555,7 +2708,8 @@ export function validateTheoryRuntimeArtifact(artifact, repositoryRoot = process
       "cycle", "receiptId", "databaseIdentity", "containerIdentity", "migrationCount",
       "serverVersionNum", "browserEvidenceSha256", "practiceCompatibilityEvidenceSha256",
       "browserToPostgres", "restartRestore", "restoreExportDelete", "hostileDirectRpcDenied",
-      "legacyPracticePlannerReceiptReplay", "practiceCompatibilityPreserved", "cleanup",
+      "legacyPracticePlannerReceiptReplay", "practiceCompatibilityPreserved",
+      "practiceWrapperArgumentNamesPreserved", "cleanup",
     ], `THEORY_RUNTIME reset/replay cycle ${index + 1}`);
     const identityMatch = new RegExp(`^c3r-t-cycle-${index + 1}-(\\d+)-(\\d+)$`, "u")
       .exec(cycle.databaseIdentity);
@@ -2567,7 +2721,8 @@ export function validateTheoryRuntimeArtifact(artifact, repositoryRoot = process
       cycle.browserToPostgres !== true || cycle.restartRestore !== true ||
       cycle.restoreExportDelete !== true || cycle.hostileDirectRpcDenied !== true ||
       cycle.legacyPracticePlannerReceiptReplay !== true ||
-      cycle.practiceCompatibilityPreserved !== true || cycle.cleanup !== "complete") {
+      cycle.practiceCompatibilityPreserved !== true ||
+      cycle.practiceWrapperArgumentNamesPreserved !== true || cycle.cleanup !== "complete") {
       throw new Error(`THEORY_RUNTIME reset/replay cycle ${index + 1} is invalid.`);
     }
     const currentExecutionIdentity = `${identityMatch[1]}:${identityMatch[2]}`;
