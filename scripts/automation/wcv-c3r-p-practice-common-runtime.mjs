@@ -495,7 +495,6 @@ export function assertC3RPGitAncestor(
 ) {
   const spawnGit = options.spawnGit ?? spawnSync;
   const wait = options.wait ?? waitForGitAncestryRetry;
-  const statuses = [];
   for (const delayMs of GIT_ANCESTRY_RETRY_DELAYS_MS) {
     wait(delayMs);
     const result = spawnGit("git", ["merge-base", "--is-ancestor", ancestorSha, descendantSha], {
@@ -503,9 +502,17 @@ export function assertC3RPGitAncestor(
       stdio: "ignore",
     });
     if (result.status === 0) return;
-    statuses.push(result.status);
   }
-  if (statuses.every((status) => status === 1)) {
+  const reachability = spawnGit(
+    "git",
+    ["rev-list", "--max-count=1", ancestorSha, "--not", descendantSha],
+    {
+      cwd: repositoryRoot,
+      encoding: "utf8",
+    },
+  );
+  if (reachability.status === 0 && typeof reachability.stdout === "string") {
+    if (reachability.stdout.trim() === "") return;
     throw new Error("C3R-P head does not descend from the validated authority merge.");
   }
   throw new Error("C3R-P Git ancestry verification was unavailable after 3 attempts.");

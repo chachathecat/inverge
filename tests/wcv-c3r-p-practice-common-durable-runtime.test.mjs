@@ -1070,25 +1070,90 @@ test("C3R-P ancestry verification recovers from bounded transient Git subprocess
 });
 
 test("C3R-P ancestry verification fails closed after three true non-ancestor results", () => {
-  let attempts = 0;
+  let mergeBaseAttempts = 0;
+  let reachabilityAttempts = 0;
   assert.throws(() => assertC3RPGitAncestor(root, contract.authority.baseSha, "head", {
-    spawnGit() {
-      attempts += 1;
-      return { status: 1 };
+    spawnGit(command, args, options) {
+      if (args[0] === "merge-base") {
+        mergeBaseAttempts += 1;
+        return { status: 1 };
+      }
+      reachabilityAttempts += 1;
+      assert.equal(command, "git");
+      assert.deepEqual(args,
+        ["rev-list", "--max-count=1", contract.authority.baseSha, "--not", "head"]);
+      assert.deepEqual(options, { cwd: root, encoding: "utf8" });
+      return { status: 0, stdout: `${contract.authority.baseSha}\n` };
     },
     wait() {},
   }), /does not descend from the validated authority merge/);
-  assert.equal(attempts, 3);
+  assert.equal(mergeBaseAttempts, 3);
+  assert.equal(reachabilityAttempts, 1);
 });
 
-test("C3R-P ancestry verification fails closed when Git remains unavailable", () => {
-  let attempts = 0;
+test("C3R-P ancestry verification accepts an exact independent reachability proof", () => {
+  let mergeBaseAttempts = 0;
+  let reachabilityAttempts = 0;
+  assert.doesNotThrow(() => assertC3RPGitAncestor(root, contract.authority.baseSha, "head", {
+    spawnGit(command, args, options) {
+      if (args[0] === "merge-base") {
+        mergeBaseAttempts += 1;
+        return { status: 1 };
+      }
+      reachabilityAttempts += 1;
+      assert.equal(command, "git");
+      assert.deepEqual(args,
+        ["rev-list", "--max-count=1", contract.authority.baseSha, "--not", "head"]);
+      assert.deepEqual(options, { cwd: root, encoding: "utf8" });
+      return { status: 0, stdout: "\n" };
+    },
+    wait() {},
+  }));
+  assert.equal(mergeBaseAttempts, 3);
+  assert.equal(reachabilityAttempts, 1);
+});
+
+test("C3R-P ancestry verification accepts reachability after mixed primary failures", () => {
+  const primary = [{ status: null }, { status: 128 }, { status: 1 }];
+  let reachabilityAttempts = 0;
+  assert.doesNotThrow(() => assertC3RPGitAncestor(root, contract.authority.baseSha, "head", {
+    spawnGit(_command, args) {
+      if (args[0] === "merge-base") return primary.shift();
+      reachabilityAttempts += 1;
+      return { status: 0, stdout: "" };
+    },
+    wait() {},
+  }));
+  assert.equal(reachabilityAttempts, 1);
+});
+
+test("C3R-P ancestry verification fails closed when both Git proofs remain unavailable", () => {
+  let mergeBaseAttempts = 0;
+  let reachabilityAttempts = 0;
   assert.throws(() => assertC3RPGitAncestor(root, contract.authority.baseSha, "head", {
-    spawnGit() {
-      attempts += 1;
-      return { status: null };
+    spawnGit(_command, args) {
+      if (args[0] === "merge-base") {
+        mergeBaseAttempts += 1;
+        return { status: null };
+      }
+      reachabilityAttempts += 1;
+      return { status: null, stdout: null };
     },
     wait() {},
   }), /Git ancestry verification was unavailable after 3 attempts/);
-  assert.equal(attempts, 3);
+  assert.equal(mergeBaseAttempts, 3);
+  assert.equal(reachabilityAttempts, 1);
+});
+
+test("C3R-P ancestry verification rejects a status-zero reachability result without output", () => {
+  let reachabilityAttempts = 0;
+  assert.throws(() => assertC3RPGitAncestor(root, contract.authority.baseSha, "head", {
+    spawnGit(_command, args) {
+      if (args[0] === "merge-base") return { status: 1 };
+      reachabilityAttempts += 1;
+      return { status: 0, stdout: null };
+    },
+    wait() {},
+  }), /Git ancestry verification was unavailable after 3 attempts/);
+  assert.equal(reachabilityAttempts, 1);
 });
