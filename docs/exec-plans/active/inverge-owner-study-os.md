@@ -16,7 +16,7 @@
 
 ## Branches and PRs
 
-- Lane A Law recovery: `codex/owner-study-lane-a-c3r-l-recovery`; PR not opened; worktree `.agent-factory/worktrees/owner-study-lane-a-c3r-l-recovery`; base `75f3ce787d31047c2bceacc2ef752c0bfdfb23cc`
+- Lane A Law recovery: `codex/owner-study-lane-a-c3r-l-recovery`; Draft PR #826; worktree `.agent-factory/worktrees/owner-study-lane-a-c3r-l-recovery`; base `75f3ce787d31047c2bceacc2ef752c0bfdfb23cc`
 - Superseded Lane A PR #825: closed unmerged after the two-correction limit exposed a mandatory migration-recovery P1
 - Lane B: `codex/owner-study-lane-b-first-stage-kernel`; Draft PR #813; parked
 - Lane C: `codex/owner-study-lane-c-question-foundry`; Draft PR #810; parked
@@ -39,8 +39,8 @@
 
 ## Current blocker
 
-- No ordinary blocker: the clean replacement preserves unconditional Law evidence and adds Owner-gated, data-preserving migration recovery instructions; focused 102/102 passed; remote Supabase/Production mutation remains zero
+- Draft PR #826 exact-head CI and fresh formal review are pending; focused 102/102 passed; remote Supabase/Production mutation remains zero
 
 ## Next exact action
 
-- run typecheck, changed-file lint, and diff checks; commit and push the clean replacement; open one Draft PR
+- push the PR #826 program-log synchronization, inspect exact-head CI, then request fresh formal review
