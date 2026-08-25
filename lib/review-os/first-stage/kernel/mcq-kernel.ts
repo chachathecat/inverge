@@ -10,6 +10,7 @@ import {
   requiredSafeInteger,
   requiredUtcInstant,
   type Attempt,
+  type AttemptEvaluation,
   type AttemptEvaluationDecision,
   type ConceptBinding,
   type ConceptOperationalState,
@@ -273,8 +274,14 @@ export function presentAttemptQuestion(
 
 function reviewPriority(decision: AttemptEvaluationDecision) {
   if (decision === "incorrect" || decision === "unanswered") return "high" as const;
-  if (decision === "withheld") return "critical" as const;
+  if (decision === "unavailable" || decision === "withheld") return "critical" as const;
   return "normal" as const;
+}
+
+function isReviewedEvaluation(
+  evaluation: AttemptEvaluation,
+): evaluation is Extract<AttemptEvaluation, { decision: "correct" | "incorrect" | "unanswered" }> {
+  return evaluation.decision !== "unavailable" && evaluation.decision !== "withheld";
 }
 
 function conceptKey(binding: ConceptBinding) {
@@ -376,8 +383,9 @@ export function submitAnswer(
     evaluationInput,
     adapter.evaluateSubmission(evaluationInput),
   );
+  const reviewedEvaluation = isReviewedEvaluation(evaluation);
 
-  const initialReviewTaskId = attempt.kind === "initial"
+  const initialReviewTaskId = attempt.kind === "initial" && reviewedEvaluation
     ? uniqueId(state, row.reviewTaskId)
     : null;
   if (attempt.kind === "independent_retry" && row.reviewTaskId !== attempt.reviewTaskId) {
@@ -393,6 +401,14 @@ export function submitAnswer(
   const attempts = replaceAt(state.attempts, attemptIndex, evaluatedAttempt);
 
   if (attempt.kind === "initial") {
+    if (!isReviewedEvaluation(evaluation)) {
+      return Object.freeze({
+        ...state,
+        revision: state.revision + 1,
+        examCycle: cycleAfterInitialEvaluation(state, attempts, submission.submittedAt),
+        attempts,
+      });
+    }
     const reviewTaskId = initialReviewTaskId!;
     const dueAt = addMs(submission.submittedAt, evaluation.reviewAfterMs);
     const task: ReviewTask = Object.freeze({
@@ -435,6 +451,24 @@ export function submitAnswer(
   const taskIndex = state.reviewTasks.findIndex((item) => item.reviewTaskId === attempt.reviewTaskId);
   if (taskIndex < 0 || state.reviewTasks[taskIndex].status !== "retry_active") {
     throw new FirstStageKernelError("invalid_transition");
+  }
+  if (!isReviewedEvaluation(evaluation)) {
+    const task = Object.freeze({
+      ...state.reviewTasks[taskIndex],
+      status: "pending" as const,
+    });
+    const completedRetry = Object.freeze({
+      ...retry,
+      completedAt: submission.submittedAt,
+      outcome: "failed" as const,
+    });
+    return Object.freeze({
+      ...state,
+      revision: state.revision + 1,
+      attempts,
+      reviewTasks: replaceAt(state.reviewTasks, taskIndex, task),
+      independentRetries: replaceAt(state.independentRetries, retryIndex, completedRetry),
+    });
   }
   if (
     JSON.stringify(evaluation.conceptBindings.map(receiptConceptKey)) !==

@@ -5,6 +5,10 @@ import path from "node:path";
 import test from "node:test";
 
 import {
+  CHOICE_IDS,
+  CONFIDENCE_VALUES,
+  ERROR_CAUSES,
+  FIRST_STAGE_SUBJECT_IDS,
   FirstStageKernelError,
   beginAttempt,
   beginIndependentRetry,
@@ -111,7 +115,7 @@ function makeAdapter(options = {}) {
       const conceptId = retryConcept
         ? "accounting-unrelated-concept"
         : conceptIdFor(input.questionReference.questionId);
-      const withheld = decision === "withheld";
+      const unreviewed = decision === "unavailable" || decision === "withheld";
       const evidenceEnvelope = {
         schemaVersion: "first_stage.attempt_evidence_envelope.v1",
         attemptId: input.attempt.attemptId,
@@ -121,39 +125,45 @@ function makeAdapter(options = {}) {
         subjectId: input.questionReference.subjectId,
         adapterId: this.adapterId,
         adapterVersion: this.adapterVersion,
-        officialKeyReference: withheld ? null : evidenceReference("official-key-receipt", "1"),
-        choiceSetReference: withheld ? null : evidenceReference("choice-set-receipt", "2"),
+        officialKeyReference: unreviewed ? null : evidenceReference("official-key-receipt", "1"),
+        choiceSetReference: unreviewed ? null : evidenceReference("choice-set-receipt", "2"),
         sourceReference: evidenceReference("source-receipt", "3"),
         versionDecisionReference: evidenceReference("version-decision-receipt", "4"),
         rightsDecisionReference: evidenceReference("rights-decision-receipt", "5"),
         reviewedFeedback: {
           schemaVersion: "first_stage.reviewed_feedback_evidence.v1",
-          state: withheld ? "withheld_rights_or_version" : "reviewed_available",
-          receiptReference: withheld ? null : evidenceReference("reviewed-feedback-receipt", "6"),
-          reviewerIdentity: withheld ? null : "owner-approved-reviewer-1",
-          reviewerClass: withheld ? null : "owner_approved_personal_feedback_reviewer",
+          state: decision === "unavailable"
+            ? "not_emitted_unavailable"
+            : decision === "withheld" ? "withheld_rights_or_version" : "reviewed_available",
+          receiptReference: unreviewed ? null : evidenceReference("reviewed-feedback-receipt", "6"),
+          reviewerIdentity: unreviewed ? null : "owner-approved-reviewer-1",
+          reviewerClass: unreviewed ? null : "owner_approved_personal_feedback_reviewer",
           modelAlone: false,
         },
       };
       options.mutateEvidence?.(evidenceEnvelope, input);
-      return {
+      const evaluation = {
         schemaVersion: "first_stage.attempt_evaluation.v1",
         decision,
         errorCause: decision === "incorrect" ? "C" : null,
-        conceptBindings: [{
+        conceptBindings: unreviewed ? null : [{
           schemaVersion: "first_stage.concept_binding.v1",
           conceptId,
           conceptVersion: "v1",
           subjectId: "accounting",
           role: "primary",
         }],
-        biggestGapCode: decision === "correct" ? "confirm_later" : "concept_gap",
-        nextActionCode: decision === "correct" ? "independent_retry_later" : "review_then_retry",
-        retryDisposition: decision === "incorrect" ? "retry_now" : "review_then_retry",
-        reviewAfterMs: decision === "incorrect" ? 0 : 60_000,
+        biggestGapCode: unreviewed ? null : decision === "correct" ? "confirm_later" : "concept_gap",
+        nextActionCode: unreviewed ? null : decision === "correct"
+          ? "independent_retry_later" : "review_then_retry",
+        retryDisposition: unreviewed ? null : decision === "incorrect"
+          ? "retry_now" : "review_then_retry",
+        reviewAfterMs: unreviewed ? null : decision === "incorrect" ? 0 : 60_000,
         evaluationPolicyVersion: "test-accounting-evaluation-v1",
         evidenceEnvelope,
       };
+      options.mutateEvaluation?.(evaluation, input);
+      return evaluation;
     },
     buildIndependentRetry(input) {
       const number = input.priorRetries.length + 1;
@@ -242,6 +252,28 @@ function expectKernelCode(fn, code) {
 }
 
 test("freezes one exact SubjectAdapter descriptor and Lane B path manifest", () => {
+  function assertDeepFrozen(value) {
+    if (value === null || typeof value !== "object") return;
+    assert.equal(Object.isFrozen(value), true);
+    for (const nested of Object.values(value)) assertDeepFrozen(nested);
+  }
+  const digestBeforeMutationAttempts = digest(SUBJECT_ADAPTER_V1_INTERFACE_DESCRIPTOR);
+  assertDeepFrozen(SUBJECT_ADAPTER_V1_INTERFACE_DESCRIPTOR);
+  for (const vocabulary of [
+    FIRST_STAGE_SUBJECT_IDS,
+    CHOICE_IDS,
+    CONFIDENCE_VALUES,
+    ERROR_CAUSES,
+  ]) assertDeepFrozen(vocabulary);
+  assert.throws(() => {
+    SUBJECT_ADAPTER_V1_INTERFACE_DESCRIPTOR.methods[0].name = "mutated";
+  }, TypeError);
+  assert.throws(() => {
+    SUBJECT_ADAPTER_V1_INTERFACE_DESCRIPTOR.invariants.push("mutated");
+  }, TypeError);
+  assert.throws(() => { FIRST_STAGE_SUBJECT_IDS[0] = "mutated"; }, TypeError);
+  assert.throws(() => { CHOICE_IDS.push(6); }, TypeError);
+  assert.equal(digest(SUBJECT_ADAPTER_V1_INTERFACE_DESCRIPTOR), digestBeforeMutationAttempts);
   assert.deepEqual(contract.subjectAdapterFreeze.interfaceDescriptor, SUBJECT_ADAPTER_V1_INTERFACE_DESCRIPTOR);
   assert.equal(digest(SUBJECT_ADAPTER_V1_INTERFACE_DESCRIPTOR), SUBJECT_ADAPTER_V1_INTERFACE_DIGEST);
   assert.equal(contract.subjectAdapterFreeze.interfaceDigest, SUBJECT_ADAPTER_V1_INTERFACE_DIGEST);
@@ -258,6 +290,7 @@ test("freezes one exact SubjectAdapter descriptor and Lane B path manifest", () 
     "lib/review-os/first-stage/subject-adapter/index.ts",
     "lib/review-os/first-stage/subject-adapter/subject-adapter.ts",
     "tests/first-stage-common-mcq-kernel.test.mjs",
+    "tests/s232f2-access-availability.test.mjs",
   ]);
 });
 
@@ -641,6 +674,21 @@ test("binds reviewed feedback/key/source evidence and withholds without emitting
   expectKernelCode(() => submit(started(illegalWithheldRegistry, "illegal-withheld"),
     illegalWithheldRegistry, "illegal-withheld"), "adapter_mismatch");
 
+  const leakedWithheldRegistry = createSubjectAdapterRegistry([makeAdapter({
+    forceDecision: () => "withheld",
+    mutateEvaluation: (value) => {
+      value.conceptBindings = [{
+        schemaVersion: "first_stage.concept_binding.v1",
+        conceptId: "leaked-reviewed-concept",
+        conceptVersion: "v1",
+        subjectId: "accounting",
+        role: "primary",
+      }];
+    },
+  })]);
+  expectKernelCode(() => submit(started(leakedWithheldRegistry, "leaked-withheld"),
+    leakedWithheldRegistry, "leaked-withheld"), "adapter_mismatch");
+
   const withheldRegistry = createSubjectAdapterRegistry([makeAdapter({
     forceDecision: () => "withheld",
   })]);
@@ -657,6 +705,34 @@ test("binds reviewed feedback/key/source evidence and withholds without emitting
     reviewerClass: null,
     modelAlone: false,
   });
+  assert.equal(evaluation.errorCause, null);
+  assert.equal(evaluation.conceptBindings, null);
+  assert.equal(evaluation.biggestGapCode, null);
+  assert.equal(evaluation.nextActionCode, null);
+  assert.equal(evaluation.retryDisposition, null);
+  assert.equal(evaluation.reviewAfterMs, null);
+  assert.equal(withheld.attempts[0].reviewTaskId, null);
+  assert.deepEqual(withheld.reviewTasks, []);
+  assert.deepEqual(withheld.conceptStates, []);
+  assert.deepEqual(withheld.independentRetries, []);
+  assert.deepEqual(buildTodayQueue(withheld, {
+    trustedGeneratedAt: "2026-08-25T00:00:02.000Z",
+  }).items.map((item) => item.kind), ["new_question"]);
+
+  const unavailableRegistry = createSubjectAdapterRegistry([makeAdapter({
+    forceDecision: () => "unavailable",
+  })]);
+  const unavailable = submit(started(unavailableRegistry, "unavailable"),
+    unavailableRegistry, "unavailable");
+  assert.equal(unavailable.attempts[0].evaluation.decision, "unavailable");
+  assert.equal(unavailable.attempts[0].evaluation.conceptBindings, null);
+  assert.equal(
+    unavailable.attempts[0].evaluation.evidenceEnvelope.reviewedFeedback.state,
+    "not_emitted_unavailable",
+  );
+  assert.deepEqual(unavailable.reviewTasks, []);
+  assert.deepEqual(unavailable.conceptStates, []);
+  assert.deepEqual(unavailable.independentRetries, []);
 });
 
 test("keeps API/UI Owner-only, default-off, no-store, adapter-empty, and non-activating", () => {

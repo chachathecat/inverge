@@ -5,20 +5,20 @@ export const FIRST_STAGE_FEATURE_FLAG =
 export const FIRST_STAGE_OWNER_ALLOWLIST =
   "INVERGE_OWNER_FIRST_STAGE_EMAILS" as const;
 
-export const FIRST_STAGE_SUBJECT_IDS = [
+export const FIRST_STAGE_SUBJECT_IDS = Object.freeze([
   "civil_law",
   "economics_principles",
   "real_estate_principles",
   "appraiser_related_law",
   "accounting",
-] as const;
+] as const);
 export type FirstStageSubjectId = (typeof FIRST_STAGE_SUBJECT_IDS)[number];
 
-export const CHOICE_IDS = [1, 2, 3, 4, 5] as const;
+export const CHOICE_IDS = Object.freeze([1, 2, 3, 4, 5] as const);
 export type ChoiceId = (typeof CHOICE_IDS)[number];
-export const CONFIDENCE_VALUES = ["low", "medium", "high"] as const;
+export const CONFIDENCE_VALUES = Object.freeze(["low", "medium", "high"] as const);
 export type Confidence = (typeof CONFIDENCE_VALUES)[number];
-export const ERROR_CAUSES = ["K", "C", "A", "R", "T", "G"] as const;
+export const ERROR_CAUSES = Object.freeze(["K", "C", "A", "R", "T", "G"] as const);
 export type ErrorCause = (typeof ERROR_CAUSES)[number];
 
 export type ElapsedTimeBucket =
@@ -82,6 +82,7 @@ export type AttemptEvaluationDecision =
   | "correct"
   | "incorrect"
   | "unanswered"
+  | "unavailable"
   | "withheld";
 export type RetryDisposition =
   | "retry_now"
@@ -135,9 +136,9 @@ export type AttemptEvidenceEnvelope = Readonly<{
   reviewedFeedback: ReviewedFeedbackEvidence;
 }>;
 
-export type AttemptEvaluation = Readonly<{
+type ReviewedAttemptEvaluation = Readonly<{
   schemaVersion: "first_stage.attempt_evaluation.v1";
-  decision: AttemptEvaluationDecision;
+  decision: Exclude<AttemptEvaluationDecision, "unavailable" | "withheld">;
   errorCause: ErrorCause | null;
   conceptBindings: readonly ConceptBinding[];
   biggestGapCode: string;
@@ -147,6 +148,21 @@ export type AttemptEvaluation = Readonly<{
   evaluationPolicyVersion: string;
   evidenceEnvelope: AttemptEvidenceEnvelope;
 }>;
+
+type UnreviewedAttemptEvaluation = Readonly<{
+  schemaVersion: "first_stage.attempt_evaluation.v1";
+  decision: "unavailable" | "withheld";
+  errorCause: null;
+  conceptBindings: null;
+  biggestGapCode: null;
+  nextActionCode: null;
+  retryDisposition: null;
+  reviewAfterMs: null;
+  evaluationPolicyVersion: string;
+  evidenceEnvelope: AttemptEvidenceEnvelope;
+}>;
+
+export type AttemptEvaluation = ReviewedAttemptEvaluation | UnreviewedAttemptEvaluation;
 
 export type Attempt = Readonly<{
   schemaVersion: "first_stage.attempt.v1";
