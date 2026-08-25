@@ -16,7 +16,7 @@
 
 ## Branches and PRs
 
-- Lane A Law replan 1: `codex/owner-study-lane-a-c3r-l-replan-1`; Draft PR #822; diagnostic head `1ee2c040b3e817c0f8875d9a6dc1e8f7d4635afa`; worktree `.agent-factory/worktrees/owner-study-lane-a-c3r-l-replan-1`; base `75f3ce787d31047c2bceacc2ef752c0bfdfb23cc`
+- Lane A Law replan 2: `codex/owner-study-lane-a-c3r-l-replan-2`; PR pending; worktree `.agent-factory/worktrees/owner-study-lane-a-c3r-l-replan-2`; base `75f3ce787d31047c2bceacc2ef752c0bfdfb23cc`
 - Lane B: `codex/owner-study-lane-b-first-stage-kernel`; Draft PR #813; parked
 - Lane C: `codex/owner-study-lane-c-question-foundry`; Draft PR #810; parked
 
@@ -38,8 +38,8 @@
 
 ## Current blocker
 
-- PR #822 isolated PR #821's coarse failure to `THEORY_COMPAT_D1_COMPLETE`: a stale nonexistent plan-helper symbol; final correction repairs it with a regression; remote Supabase/Production mutation remains zero
+- PR #822 closed unmerged after its final correction closed Theory D+1 and exposed the downstream Law feedback sequence root; clean replan 2 runs Law first, then proves complete all-direction P/T/L deletion preservation; remote Supabase/Production mutation remains zero
 
 ## Next exact action
 
-- commit and push PR #822 final correction, then inspect exact-head dedicated CI and request fresh formal review
+- validate the replan-2 head, push it, open one Draft replacement PR, and inspect exact-head dedicated CI

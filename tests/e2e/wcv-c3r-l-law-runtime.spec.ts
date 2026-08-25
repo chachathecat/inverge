@@ -28,19 +28,19 @@ const DATABASE_CONTAINER = /^supabase_db_c3r-l-cycle-[12]-\d+-\d+$/u;
 const BROWSER_FAILURE_STAGE_SCHEMA_VERSION = "inverge.c3r_l.browser_failure_stage.v1";
 const BROWSER_FAILURE_STAGES = {
   journey: [
-    "INITIAL_RUNTIME", "PRACTICE_START", "THEORY_COMPATIBILITY",
+    "INITIAL_RUNTIME", "LAW_START", "FEEDBACK_COMMIT", "FEEDBACK_UI",
+    "DIRECT_RPC_DENIALS", "REPAIR_REPLAY", "EARLY_D1_UI", "ASSISTED_REVIEW",
+    "D1_PLAN_COMPLETE", "EARLY_D7_UI", "D7_PLAN_COMPLETE", "EARLY_RECURRENCE_UI",
+    "RECURRENCE", "TERMINAL_PLAN_UI", "REOPEN", "EARLY_REOPEN_UI",
+    "REOPEN_COMPLETE", "PRACTICE_COMPAT_THEORY_START", "PRACTICE_COMPATIBILITY",
+    "PRACTICE_START", "THEORY_COMPATIBILITY",
     "THEORY_COMPAT_START", "THEORY_COMPAT_FEEDBACK", "THEORY_COMPAT_REJECTED_REPAIR",
     "THEORY_COMPAT_REPAIR", "THEORY_COMPAT_ASSISTED", "THEORY_COMPAT_D1_PLAN",
     "THEORY_COMPAT_D1_COMPLETE", "THEORY_COMPAT_D7_PLAN", "THEORY_COMPAT_D7_PRESENT",
     "THEORY_COMPAT_D7_COMPLETE", "THEORY_COMPAT_RECURRENCE", "THEORY_COMPAT_REOPEN",
     "THEORY_COMPAT_REOPEN_COMPLETE", "THEORY_COMPAT_RESTORE", "THEORY_COMPAT_EXPORT",
-    "THEORY_COMPAT_DELETE", "THEORY_COMPAT_ISOLATION", "THEORY_START", "LAW_START",
-    "PRACTICE_COMPATIBILITY",
-    "FEEDBACK", "DIRECT_RPC_DENIALS", "REPAIR_REPLAY", "EARLY_D1_UI",
-    "ASSISTED_REVIEW", "D1_PLAN_COMPLETE", "EARLY_D7_UI", "D7_PLAN_COMPLETE",
-    "EARLY_RECURRENCE_UI", "RECURRENCE", "TERMINAL_PLAN_UI", "REOPEN",
-    "EARLY_REOPEN_UI", "REOPEN_COMPLETE", "ISOLATION", "PERSISTENCE_EVIDENCE",
-    "COMPLETE",
+    "THEORY_COMPAT_DELETE", "THEORY_COMPAT_ISOLATION", "THEORY_START", "ISOLATION",
+    "PERSISTENCE_EVIDENCE", "COMPLETE",
   ],
   restore: ["RESTORE_LOAD", "EXPORT", "DELETE_ISOLATION", "COMPLETE"],
   feature_off: ["ACCESS_GATE", "COMPLETE"],
@@ -289,6 +289,8 @@ async function createAcceptedPracticePlan(
 async function exercisePracticeCompatibility(
   request: APIRequestContext,
   coexistingLawRecordId: string,
+  coexistingTheoryRecordId: string,
+  expectedLawAttemptCount: number,
 ) {
   const recordId = randomUUID();
   let body = await postPractice(request, {
@@ -370,16 +372,35 @@ async function exercisePracticeCompatibility(
     expect((rows as Array<Record<string, unknown>>).every((row) => row.subject === "PRACTICE"))
       .toBe(true);
   }
-  expect(JSON.stringify(exported.export)).not.toContain(coexistingLawRecordId);
+  const serializedExport = JSON.stringify(exported.export);
+  expect(serializedExport).not.toContain(coexistingLawRecordId);
+  expect(serializedExport).not.toContain(coexistingTheoryRecordId);
   await postPractice(request, { action: "delete" });
   expect((await request.get(`/api/review-os/c3r-p?recordId=${recordId}`)).status()).toBe(404);
   const preservedLaw = await request.get(
     `/api/review-os/c3r-l?recordId=${coexistingLawRecordId}`,
   );
   expect(preservedLaw.status()).toBe(200);
-  expect((await preservedLaw.json() as ApiBody).view?.restored?.record.state).toBe("D0_OPEN");
-  expect(databaseScalar(`select count(*) from public.c3r_p_learning_records
-    where id='${coexistingLawRecordId}'::uuid and subject='LAW';`)).toBe("1");
+  const preservedLawBody = await preservedLaw.json() as ApiBody;
+  expect(preservedLawBody.view?.restored?.record.state).toBe("CLOSED");
+  expect(preservedLawBody.view?.restored?.attempts).toHaveLength(expectedLawAttemptCount);
+  const preservedTheory = await request.get(
+    `/api/review-os/c3r-t?recordId=${coexistingTheoryRecordId}`,
+  );
+  expect(preservedTheory.status()).toBe(200);
+  const preservedTheoryBody = await preservedTheory.json() as ApiBody;
+  expect(preservedTheoryBody.view?.restored?.record.state).toBe("D0_OPEN");
+  expect(preservedTheoryBody.view?.restored?.attempts).toHaveLength(1);
+  expect(databaseScalar(`select concat_ws('|',
+    (select count(*) from public.c3r_p_learning_records
+      where id='${coexistingLawRecordId}'::uuid and subject='LAW'),
+    (select count(*) from public.c3r_p_attempts
+      where record_id='${coexistingLawRecordId}'::uuid and subject='LAW'),
+    (select count(*) from public.c3r_p_learning_records
+      where id='${coexistingTheoryRecordId}'::uuid and subject='THEORY'),
+    (select count(*) from public.c3r_p_attempts
+      where record_id='${coexistingTheoryRecordId}'::uuid and subject='THEORY')
+  );`)).toBe(`1|${expectedLawAttemptCount}|1|1`);
   writePracticeCompatibilityEvidence({
     schemaVersion: "inverge.c3r_l.practice_compatibility_metadata.v1",
     browserToPostgres: true,
@@ -392,8 +413,10 @@ async function exercisePracticeCompatibility(
     restoreDashboard: true,
     completeLearnerExport: true,
     practiceExportExcludesLaw: true,
+    practiceExportExcludesTheory: true,
     delete: true,
     practiceDeletePreservesLaw: true,
+    practiceDeletePreservesTheory: true,
     negativeValidatorDenied: true,
     rawLearnerBodyInEvidence: false,
     providerCalls: 0,
@@ -451,6 +474,7 @@ async function exerciseTheoryCompatibility(
   request: APIRequestContext,
   coexistingLawRecordId: string,
   coexistingPracticeRecordId: string,
+  expectedLawAttemptCount: number,
 ) {
   const recordId = randomUUID();
   markBrowserFailureStage("THEORY_COMPAT_START");
@@ -550,20 +574,34 @@ async function exerciseTheoryCompatibility(
     expect((rows as Array<Record<string, unknown>>).every((row) => row.subject === "THEORY"))
       .toBe(true);
   }
-  expect(JSON.stringify(exported.export)).not.toContain(coexistingLawRecordId);
+  const serializedExport = JSON.stringify(exported.export);
+  expect(serializedExport).not.toContain(coexistingLawRecordId);
+  expect(serializedExport).not.toContain(coexistingPracticeRecordId);
   markBrowserFailureStage("THEORY_COMPAT_DELETE");
   await postTheory(request, { action: "delete" });
   expect((await request.get(`/api/review-os/c3r-t?recordId=${recordId}`)).status()).toBe(404);
   markBrowserFailureStage("THEORY_COMPAT_ISOLATION");
   const preservedLaw = await request.get(`/api/review-os/c3r-l?recordId=${coexistingLawRecordId}`);
   expect(preservedLaw.status()).toBe(200);
-  expect((await preservedLaw.json() as ApiBody).view?.restored?.record.state).toBe("D0_OPEN");
+  const preservedLawBody = await preservedLaw.json() as ApiBody;
+  expect(preservedLawBody.view?.restored?.record.state).toBe("CLOSED");
+  expect(preservedLawBody.view?.restored?.attempts).toHaveLength(expectedLawAttemptCount);
   const preservedPractice = await request.get(
     `/api/review-os/c3r-p?recordId=${coexistingPracticeRecordId}`,
   );
   expect(preservedPractice.status()).toBe(200);
-  expect((await preservedPractice.json() as PracticeApiBody).view?.restored?.record.state)
-    .toBe("D0_OPEN");
+  const preservedPracticeBody = await preservedPractice.json() as PracticeApiBody;
+  expect(preservedPracticeBody.view?.restored?.record.state).toBe("D0_OPEN");
+  expect(databaseScalar(`select concat_ws('|',
+    (select count(*) from public.c3r_p_learning_records
+      where id='${coexistingLawRecordId}'::uuid and subject='LAW'),
+    (select count(*) from public.c3r_p_attempts
+      where record_id='${coexistingLawRecordId}'::uuid and subject='LAW'),
+    (select count(*) from public.c3r_p_learning_records
+      where id='${coexistingPracticeRecordId}'::uuid and subject='PRACTICE'),
+    (select count(*) from public.c3r_p_attempts
+      where record_id='${coexistingPracticeRecordId}'::uuid and subject='PRACTICE')
+  );`)).toBe(`1|${expectedLawAttemptCount}|1|1`);
   return recordId;
 }
 
@@ -645,8 +683,6 @@ test("C3R-L Owner Law journey reaches Postgres and remains isolated", async ({ b
   await page.goto("/app/c3r-l");
   await expect(page.getByTestId("c3r-l-runtime")).toBeVisible();
 
-  const practiceRecordId = randomUUID();
-  const theoryRecordId = randomUUID();
   markBrowserFailureStage("LAW_START");
   const recordId = randomUUID();
   const startCommandId = randomUUID();
@@ -657,29 +693,7 @@ test("C3R-L Owner Law journey reaches Postgres and remains isolated", async ({ b
   };
   let body = await post(owner.request, startPayload);
   expect(body.view?.restored?.record.state).toBe("D0_OPEN");
-  markBrowserFailureStage("PRACTICE_COMPATIBILITY");
-  await exercisePracticeCompatibility(owner.request, recordId);
-  markBrowserFailureStage("PRACTICE_START");
-  await owner.request.post("/api/review-os/c3r-p", { data: {
-    action: "start", commandId: randomUUID(), recordId: practiceRecordId,
-    attemptId: randomUUID(), attemptBody: "연간 순수익 계산을 다시 시작한다.",
-    prediction: "likely_partial", confidence: "medium", evidenceStep: "d0",
-  }}).then((response) => expect(response.status()).toBe(200));
-  markBrowserFailureStage("THEORY_COMPATIBILITY");
-  const theoryCompatibilityRecordId = await exerciseTheoryCompatibility(
-    owner.request,
-    recordId,
-    practiceRecordId,
-  );
-  markBrowserFailureStage("THEORY_START");
-  await owner.request.post("/api/review-os/c3r-t", { data: {
-    action: "start", commandId: randomUUID(), recordId: theoryRecordId,
-    attemptId: randomUUID(),
-    attemptBody: "수익방식의 목표 범위와 필수 술어를 다시 고정한다.",
-    prediction: "likely_partial", confidence: "medium", evidenceStep: "d0",
-  }}).then((response) => expect(response.status()).toBe(200));
-
-  markBrowserFailureStage("FEEDBACK");
+  markBrowserFailureStage("FEEDBACK_COMMIT");
   const feedback = await post(owner.request, {
     action: "commit_feedback", commandId: randomUUID(), recordId,
     expectedVersion: body.view?.restored?.record.record_version,
@@ -691,6 +705,7 @@ test("C3R-L Owner Law journey reaches Postgres and remains isolated", async ({ b
   const record = body.view?.restored?.record;
   expect(record?.state).toBe("FEEDBACK_COMMITTED");
   if (!record) throw new Error("C3R-L feedback record is missing");
+  markBrowserFailureStage("FEEDBACK_UI");
   await assertBlankLawReconstruction(page, recordId, "feedback", true, "구조화 재작성 제출");
   markBrowserFailureStage("DIRECT_RPC_DENIALS");
   const configurationDigest = databaseScalar(
@@ -848,6 +863,46 @@ test("C3R-L Owner Law journey reaches Postgres and remains isolated", async ({ b
     planBlockId: null, planId: null, planVersion: null, evidenceStep: "reopenComplete",
   });
   expect(body.view?.restored?.record.state).toBe("CLOSED");
+
+  const lawAttemptCount = body.view?.restored?.attempts.length ?? 0;
+  expect(lawAttemptCount).toBe(8);
+  markBrowserFailureStage("PRACTICE_COMPAT_THEORY_START");
+  const practiceCompatibilityTheoryRecordId = randomUUID();
+  await postTheory(owner.request, {
+    action: "start", commandId: randomUUID(), recordId: practiceCompatibilityTheoryRecordId,
+    attemptId: randomUUID(),
+    attemptBody: "수익방식의 목표 범위와 필수 술어를 다시 고정한다.",
+    prediction: "likely_partial", confidence: "medium", evidenceStep: "d0",
+  });
+  markBrowserFailureStage("PRACTICE_COMPATIBILITY");
+  await exercisePracticeCompatibility(
+    owner.request,
+    recordId,
+    practiceCompatibilityTheoryRecordId,
+    lawAttemptCount,
+  );
+  markBrowserFailureStage("PRACTICE_START");
+  const practiceRecordId = randomUUID();
+  await postPractice(owner.request, {
+    action: "start", commandId: randomUUID(), recordId: practiceRecordId,
+    attemptId: randomUUID(), attemptBody: "연간 순수익 계산을 다시 시작한다.",
+    prediction: "likely_partial", confidence: "medium", evidenceStep: "d0",
+  });
+  markBrowserFailureStage("THEORY_COMPATIBILITY");
+  const theoryCompatibilityRecordId = await exerciseTheoryCompatibility(
+    owner.request,
+    recordId,
+    practiceRecordId,
+    lawAttemptCount,
+  );
+  markBrowserFailureStage("THEORY_START");
+  const theoryRecordId = randomUUID();
+  await postTheory(owner.request, {
+    action: "start", commandId: randomUUID(), recordId: theoryRecordId,
+    attemptId: randomUUID(),
+    attemptBody: "수익방식의 목표 범위와 필수 술어를 다시 고정한다.",
+    prediction: "likely_partial", confidence: "medium", evidenceStep: "d0",
+  });
 
   markBrowserFailureStage("ISOLATION");
   const otherUserId = databaseScalar(

@@ -2846,17 +2846,18 @@ const C3R_L_BROWSER_FAILURE_STAGE_SCHEMA_VERSION =
   "inverge.c3r_l.browser_failure_stage.v1";
 const C3R_L_BROWSER_FAILURE_STAGES = Object.freeze({
   journey: Object.freeze([
-    "INITIAL_RUNTIME", "PRACTICE_START", "THEORY_COMPATIBILITY",
+    "INITIAL_RUNTIME", "LAW_START", "FEEDBACK_COMMIT", "FEEDBACK_UI",
+    "DIRECT_RPC_DENIALS", "REPAIR_REPLAY", "EARLY_D1_UI", "ASSISTED_REVIEW",
+    "D1_PLAN_COMPLETE", "EARLY_D7_UI", "D7_PLAN_COMPLETE", "EARLY_RECURRENCE_UI",
+    "RECURRENCE", "TERMINAL_PLAN_UI", "REOPEN", "EARLY_REOPEN_UI",
+    "REOPEN_COMPLETE", "PRACTICE_COMPAT_THEORY_START", "PRACTICE_COMPATIBILITY",
+    "PRACTICE_START", "THEORY_COMPATIBILITY",
     "THEORY_COMPAT_START", "THEORY_COMPAT_FEEDBACK", "THEORY_COMPAT_REJECTED_REPAIR",
     "THEORY_COMPAT_REPAIR", "THEORY_COMPAT_ASSISTED", "THEORY_COMPAT_D1_PLAN",
     "THEORY_COMPAT_D1_COMPLETE", "THEORY_COMPAT_D7_PLAN", "THEORY_COMPAT_D7_PRESENT",
     "THEORY_COMPAT_D7_COMPLETE", "THEORY_COMPAT_RECURRENCE", "THEORY_COMPAT_REOPEN",
     "THEORY_COMPAT_REOPEN_COMPLETE", "THEORY_COMPAT_RESTORE", "THEORY_COMPAT_EXPORT",
-    "THEORY_COMPAT_DELETE", "THEORY_COMPAT_ISOLATION", "THEORY_START", "LAW_START",
-    "PRACTICE_COMPATIBILITY", "FEEDBACK", "DIRECT_RPC_DENIALS", "REPAIR_REPLAY",
-    "EARLY_D1_UI", "ASSISTED_REVIEW", "D1_PLAN_COMPLETE", "EARLY_D7_UI",
-    "D7_PLAN_COMPLETE", "EARLY_RECURRENCE_UI", "RECURRENCE", "TERMINAL_PLAN_UI",
-    "REOPEN", "EARLY_REOPEN_UI", "REOPEN_COMPLETE", "ISOLATION",
+    "THEORY_COMPAT_DELETE", "THEORY_COMPAT_ISOLATION", "THEORY_START", "ISOLATION",
     "PERSISTENCE_EVIDENCE", "COMPLETE",
   ]),
   restore: Object.freeze(["RESTORE_LOAD", "EXPORT", "DELETE_ISOLATION", "COMPLETE"]),
@@ -3555,8 +3556,8 @@ const C3R_L_BROWSER_EVIDENCE_KEYS = Object.freeze([
 const C3R_L_PRACTICE_COMPATIBILITY_ASSERTIONS = Object.freeze([
   "browserToPostgres", "practiceVertical", "plannerCreateDecide", "d1", "d7",
   "recurrence", "reopen", "restoreDashboard", "completeLearnerExport",
-  "practiceExportExcludesLaw", "delete", "practiceDeletePreservesLaw",
-  "negativeValidatorDenied",
+  "practiceExportExcludesLaw", "practiceExportExcludesTheory", "delete",
+  "practiceDeletePreservesLaw", "practiceDeletePreservesTheory", "negativeValidatorDenied",
 ]);
 
 function validateLawBrowserEvidence(evidence) {
@@ -3694,7 +3695,9 @@ async function runLawDedicatedCycle(input) {
       restoreExportDelete: true,
       hostileDirectRpcDenied: true,
       legacyPracticePlannerReceiptReplay: true,
-      practiceCompatibilityPreserved: practiceCompatibilityEvidence.practiceVertical,
+      practiceCompatibilityPreserved: practiceCompatibilityEvidence.practiceVertical &&
+        practiceCompatibilityEvidence.practiceDeletePreservesLaw &&
+        practiceCompatibilityEvidence.practiceDeletePreservesTheory,
       theoryCompatibilityPreserved: browserEvidence.theoryDurableCompatibility &&
         browserEvidence.theoryDeletePreservesPracticeAndLaw &&
         browserEvidence.lawDeletePreservesTheory,
