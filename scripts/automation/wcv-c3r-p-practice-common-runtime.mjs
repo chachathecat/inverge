@@ -20,6 +20,17 @@ export const C3R_P_CONTRACT_PATH =
   "config/dabangil-wcv-c3r-p-practice-common-durable-runtime-v1.json";
 export const C3R_P_APPEND_PATH =
   "supabase/migrations/20260822120000_c3r_p_practice_common_durable_substrate.sql";
+export const C3R_T_ENUM_MIGRATION_PATH =
+  "supabase/migrations/20260825054823_c3r_t_theory_durable_learning_delta.sql";
+export const C3R_T_INTEGRATION_MIGRATION_PATH =
+  "supabase/migrations/20260825055252_c3r_t_theory_common_substrate_integration.sql";
+// The validated PR #800 squash result is the immutable Practice inventory
+// boundary. Successor stages may append migrations, while every path that
+// existed at this boundary must still be present with its validated bytes.
+export const C3R_P_VALIDATED_RESULTING_MAIN_SHA =
+  "71fd878a7369c25a153bc90389347039684c501f";
+export const C3R_P_VALIDATED_RESULTING_MAIN_TREE =
+  "f6fb7bc1d1613a8431a4bbdfe155eea9d9f5303c";
 export const C3R_P_AUTHORIZED_EXISTING_MIGRATION_PATHS = Object.freeze([
   "supabase/migrations/20260608090000_create_personal_learning_states.sql",
   "supabase/migrations/20260615090000_legal_grounding.sql",
@@ -593,13 +604,43 @@ export function assertC3RPGitAncestor(
   throw new Error("C3R-P head does not descend from the validated authority merge.");
 }
 
+export function c3rPReceiptBoundaryRef(repositoryRoot, headSha = "HEAD") {
+  const resolvedHead = git(repositoryRoot, [
+    "--no-replace-objects", "rev-parse", "--verify", `${headSha}^{commit}`,
+  ]);
+  if (!isC3RPGitAncestor(
+    repositoryRoot,
+    C3R_P_VALIDATED_RESULTING_MAIN_SHA,
+    resolvedHead,
+  )) {
+    return { inventoryRef: resolvedHead, contentRef: resolvedHead };
+  }
+  const boundaryTree = git(repositoryRoot, [
+    "--no-replace-objects", "rev-parse", "--verify",
+    `${C3R_P_VALIDATED_RESULTING_MAIN_SHA}^{tree}`,
+  ]);
+  if (boundaryTree !== C3R_P_VALIDATED_RESULTING_MAIN_TREE) {
+    throw new Error("validated C3R-P resulting-main tree is unavailable or mismatched.");
+  }
+  return {
+    inventoryRef: C3R_P_VALIDATED_RESULTING_MAIN_SHA,
+    contentRef: resolvedHead,
+  };
+}
+
 export function exactMigrationInventory(repositoryRoot, headSha = "HEAD") {
-  const names = git(repositoryRoot, ["ls-tree", "-r", "--name-only", headSha, "--", "supabase/migrations"])
+  const { inventoryRef, contentRef } = c3rPReceiptBoundaryRef(repositoryRoot, headSha);
+  const names = git(repositoryRoot, [
+    "--no-replace-objects", "ls-tree", "-r", "--name-only", inventoryRef,
+    "--", "supabase/migrations",
+  ])
     .split(/\r?\n/).filter((name) => /^supabase\/migrations\/\d{8,14}_[a-z0-9_]+\.sql$/.test(name));
   if (names.length !== 26) throw new Error("effective migration inventory must contain exactly 26 paths.");
   return names.map((migrationPath) => ({
     path: migrationPath,
-    sha256: sha256(Buffer.from(execFileSync("git", ["show", `${headSha}:${migrationPath}`], {
+    sha256: sha256(Buffer.from(execFileSync("git", [
+      "--no-replace-objects", "show", `${contentRef}:${migrationPath}`,
+    ], {
       cwd: repositoryRoot,
       encoding: "buffer",
       maxBuffer: 32 * 1024 * 1024,
@@ -943,6 +984,16 @@ function boundedRuntimeRoot(repositoryRoot) {
   return root;
 }
 
+function boundedTheoryRuntimeRoot(repositoryRoot) {
+  const root = path.resolve(process.env.C3R_T_SUPABASE_WORKDIR ??
+    path.join(repositoryRoot, ".agent-factory/c3r-t-runtime"));
+  const boundary = path.resolve(process.env.RUNNER_TEMP ?? path.join(repositoryRoot, ".agent-factory"));
+  if (root === boundary || !root.startsWith(`${boundary}${path.sep}`)) {
+    throw new Error("C3R-T runtime workdir is outside the bounded temporary root.");
+  }
+  return root;
+}
+
 function run(command, args, options = {}) {
   const result = spawnSync(command, args, {
     cwd: options.cwd,
@@ -1001,11 +1052,10 @@ function prepareCycle(repositoryRoot, cycleRoot, projectId) {
     throw new Error("C3R-P local Supabase config could not be pinned.");
   }
   fs.writeFileSync(path.join(cycleRoot, "supabase/config.toml"), config, { mode: 0o600 });
-  for (const name of fs.readdirSync(path.join(repositoryRoot, "supabase/migrations")).sort()) {
-    if (/^\d{8,14}_[a-z0-9_]+\.sql$/.test(name)) {
-      fs.copyFileSync(path.join(repositoryRoot, "supabase/migrations", name),
-        path.join(cycleRoot, "c3r-p-migrations", name));
-    }
+  for (const entry of exactMigrationInventory(repositoryRoot)) {
+    const name = path.basename(entry.path);
+    fs.copyFileSync(path.join(repositoryRoot, entry.path),
+      path.join(cycleRoot, "c3r-p-migrations", name));
   }
   if (fs.readdirSync(path.join(cycleRoot, "supabase/migrations")).length !== 0 ||
     fs.readdirSync(path.join(cycleRoot, "c3r-p-migrations")).length !== 26) {
@@ -1122,6 +1172,96 @@ function applyExactMigrationHistory(cycleRoot, container) {
   psql(container, "notify pgrst, 'reload schema';\n", "C3R-P PostgREST schema reload");
 }
 
+function prepareTheoryCycle(repositoryRoot, cycleRoot, projectId) {
+  prepareCycle(repositoryRoot, cycleRoot, projectId);
+  const migrationRoot = path.join(cycleRoot, "c3r-t-migrations");
+  fs.mkdirSync(migrationRoot, { recursive: true });
+  for (const migrationPath of [C3R_T_ENUM_MIGRATION_PATH, C3R_T_INTEGRATION_MIGRATION_PATH]) {
+    fs.copyFileSync(path.join(repositoryRoot, migrationPath),
+      path.join(migrationRoot, path.basename(migrationPath)));
+  }
+  const names = fs.readdirSync(migrationRoot).sort();
+  if (names.length !== 2 || names[0] !== path.basename(C3R_T_ENUM_MIGRATION_PATH) ||
+    names[1] !== path.basename(C3R_T_INTEGRATION_MIGRATION_PATH)) {
+    throw new Error("C3R-T cycle did not receive the exact two forward migrations.");
+  }
+}
+
+function seedLegacyPracticePlannerReceipts(container) {
+  const fixture = {
+    userId: crypto.randomUUID(),
+    createCommandId: crypto.randomUUID(),
+    decideCommandId: crypto.randomUUID(),
+    planId: crypto.randomUUID(),
+    asOf: "2026-08-25T00:00:00.000Z",
+    blocks: [{
+      blockId: crypto.randomUUID(), blockKind: "CORE_OUTCOME",
+      recordId: crypto.randomUUID(), gapId: crypto.randomUUID(),
+      reviewPhase: "D1", ordinal: 1, minutes: 30,
+    }],
+  };
+  const blocksBase64 = Buffer.from(JSON.stringify(fixture.blocks), "utf8").toString("base64");
+  psql(container, `with inputs as (
+    select '${fixture.userId}'::uuid as user_id,
+      '${fixture.createCommandId}'::uuid as create_command_id,
+      '${fixture.decideCommandId}'::uuid as decide_command_id,
+      '${fixture.planId}'::uuid as plan_id,
+      '${fixture.asOf}'::timestamptz as as_of,
+      convert_from(decode('${blocksBase64}', 'base64'), 'UTF8')::jsonb as blocks
+  ) insert into public.c3r_p_command_receipts (
+    command_id, user_id, action, request_sha256, aggregate_id,
+    resulting_version, response_metadata
+  ) select create_command_id, user_id, 'create_plan',
+      encode(extensions.digest(convert_to(concat_ws(chr(31), plan_id::text,
+        'TODAY', '30', as_of::text, blocks::text), 'UTF8'), 'sha256'), 'hex'),
+      plan_id, 1, jsonb_build_object('planId', plan_id, 'recordVersion', 1,
+        'state', 'PROPOSED', 'status', 'applied')
+    from inputs
+  union all
+  select decide_command_id, user_id, 'decide_plan',
+      encode(extensions.digest(convert_to(concat_ws(chr(31), plan_id::text,
+        '1', 'ACCEPT', as_of::text, ''), 'UTF8'), 'sha256'), 'hex'),
+      plan_id, 1, jsonb_build_object('planId', plan_id, 'recordVersion', 1,
+        'state', 'ACCEPTED', 'status', 'applied')
+    from inputs;`, "C3R-T legacy Practice planner receipt fixture");
+  return fixture;
+}
+
+function assertLegacyPracticePlannerReceiptReplay(container, fixture) {
+  const blocksBase64 = Buffer.from(JSON.stringify(fixture.blocks), "utf8").toString("base64");
+  const result = psql(container, `begin;
+    set local role service_role;
+    select concat_ws('|',
+      (public.c3r_p_create_plan_v1(
+        '${fixture.userId}'::uuid, '${fixture.createCommandId}'::uuid,
+        '${fixture.planId}'::uuid, 'TODAY', 30, '${fixture.asOf}'::timestamptz,
+        convert_from(decode('${blocksBase64}', 'base64'), 'UTF8')::jsonb
+      ) ->> 'status'),
+      (public.c3r_p_decide_plan_v1(
+        '${fixture.userId}'::uuid, '${fixture.decideCommandId}'::uuid,
+        '${fixture.planId}'::uuid, 1, 'ACCEPT', '${fixture.asOf}'::timestamptz, null
+      ) ->> 'status'),
+      (select count(*)::text from public.c3r_p_command_receipts
+        where user_id='${fixture.userId}'::uuid and subject='PRACTICE')
+    );
+    commit;`, "C3R-T post-migration legacy Practice planner receipt replay");
+  if (result !== "applied|applied|2") {
+    throw new Error("C3R-T changed a legacy Practice planner idempotency hash.");
+  }
+}
+
+function applyTheoryMigrationHistory(cycleRoot, container) {
+  applyExactMigrationHistory(cycleRoot, container);
+  const legacyPracticePlannerReceipts = seedLegacyPracticePlannerReceipts(container);
+  const migrationRoot = path.join(cycleRoot, "c3r-t-migrations");
+  for (const name of fs.readdirSync(migrationRoot).sort()) {
+    const sql = fs.readFileSync(path.join(migrationRoot, name), "utf8");
+    psql(container, `begin;\n${sql}\ncommit;\n`, `C3R-T migration ${name}`);
+  }
+  psql(container, "notify pgrst, 'reload schema';\n", "C3R-T PostgREST schema reload");
+  assertLegacyPracticePlannerReceiptReplay(container, legacyPracticePlannerReceipts);
+}
+
 async function createIdentity(apiUrl, anonKey, label) {
   const email = `c3r-p-${label}-${crypto.randomUUID()}@example.invalid`;
   const password = `C3rP!${crypto.randomBytes(14).toString("hex")}aA1`;
@@ -1134,6 +1274,53 @@ async function createIdentity(apiUrl, anonKey, label) {
   const body = await response.json();
   if (!body?.user?.id || !body?.access_token) throw new Error("local synthetic Auth response is incomplete.");
   return { email, password, userId: body.user.id, accessToken: body.access_token };
+}
+
+async function createTheoryIdentity(apiUrl, anonKey, label) {
+  const email = `c3r-t-${label}-${crypto.randomUUID()}@example.invalid`;
+  const password = `C3rT!${crypto.randomBytes(14).toString("hex")}aA1`;
+  const response = await fetch(`${apiUrl}/auth/v1/signup`, {
+    method: "POST",
+    headers: { apikey: anonKey, "Content-Type": "application/json" },
+    body: JSON.stringify({ email, password }),
+  });
+  if (!response.ok) throw new Error("local synthetic Theory Auth identity creation failed.");
+  const body = await response.json();
+  if (!body?.user?.id || !body?.access_token) {
+    throw new Error("local synthetic Theory Auth response is incomplete.");
+  }
+  return { email, password, userId: body.user.id, accessToken: body.access_token };
+}
+
+function seedTheoryProfiles(container, identities) {
+  if (!/^supabase_db_c3r-t-cycle-[12]-\d+-\d+$/.test(container) ||
+    !Array.isArray(identities) || identities.length !== 3 ||
+    identities.some((identity) => !UUID.test(identity.userId) ||
+      !/^c3r-t-[a-z0-9-]+-[0-9a-f-]{36}@example\.invalid$/i.test(identity.email))) {
+    throw new Error("C3R-T disposable profile fixture boundary is invalid.");
+  }
+  const payload = identities.map((identity) => ({
+    user_id: identity.userId.toLowerCase(), email: identity.email.toLowerCase(),
+  }));
+  const payloadBase64 = Buffer.from(JSON.stringify(payload), "utf8").toString("base64");
+  const result = psql(container, `with fixture as (
+    select input.user_id::uuid as user_id, input.email
+    from jsonb_to_recordset(
+      convert_from(decode('${payloadBase64}', 'base64'), 'utf8')::jsonb
+    ) as input(user_id text, email text)
+  ), upserted as (
+    insert into public.profiles as profile (
+      user_id, email, invite_status, entitlement_tier, updated_at
+    ) select user_id, email, 'active', 'free_trial', statement_timestamp()
+      from fixture
+    on conflict (user_id) do update set
+      email=excluded.email, invite_status='active', entitlement_tier='free_trial',
+      updated_at=statement_timestamp()
+    returning profile.user_id
+  ) select concat_ws('|', (select count(*) from upserted),
+    (select count(*) from upserted where user_id in (select user_id from fixture)));`,
+  "C3R-T disposable Review OS profile fixture");
+  if (result !== "3|3") throw new Error("C3R-T disposable profile fixture assertion failed.");
 }
 
 async function verifyDirectBoundaries(apiUrl, anonKey, user) {
@@ -1174,6 +1361,36 @@ function databaseSecurity(container) {
   );`);
   if (value !== "150008|10|1|1|f|f|f|t|t|postgres") {
     throw new Error("C3R-P catalog, grants, RLS, subject, owner, or PostgreSQL version is invalid.");
+  }
+}
+
+function theoryDatabaseSecurity(container) {
+  const value = psql(container, `select concat_ws('|',
+    current_setting('server_version_num'),
+    (select count(*) from pg_class c join pg_namespace n on n.oid=c.relnamespace
+      where n.nspname='public' and c.relname like 'c3r_p_%' and c.relkind='r'
+        and c.relrowsecurity and c.relforcerowsecurity),
+    (select count(*) from pg_enum e join pg_type t on t.oid=e.enumtypid
+      where t.typname='c3r_p_subject'),
+    has_table_privilege('authenticated','public.c3r_p_learning_records','INSERT'),
+    has_function_privilege('authenticated',
+      'public.c3r_t_apply_learning_command_v1(uuid,uuid,bigint,text,jsonb)','EXECUTE'),
+    has_function_privilege('service_role',
+      'public.c3r_t_apply_learning_command_v1(uuid,uuid,bigint,text,jsonb)','EXECUTE'),
+    has_function_privilege('service_role',
+      'public.c3r_t_validate_theory_claim_v1(jsonb,text,timestamptz)','EXECUTE'),
+    (select count(*) from information_schema.columns where table_schema='public'
+      and table_name='c3r_p_attempts'
+      and column_name in ('proof_claim','proof_evaluation','proof_reason_codes')),
+    (to_regprocedure(
+      'public.c3r_p_apply_learning_command_practice_legacy_v1(uuid,uuid,bigint,text,jsonb)')
+      is not null)::text,
+    (select rolbypassrls from pg_roles where rolname='service_role'),
+    (select pg_get_userbyid(relowner) from pg_class
+      where oid='public.c3r_p_learning_records'::regclass)
+  );`, "C3R-T database security assertion");
+  if (value !== "150008|10|2|f|f|t|t|3|true|t|postgres") {
+    throw new Error("C3R-T catalog, grants, RLS, subject, proof, or PostgreSQL version is invalid.");
   }
 }
 
@@ -1247,6 +1464,30 @@ function runBrowser(repositoryRoot, baseUrl, identities, browserEvidencePath, op
       C3R_P_DATABASE_CONTAINER: options.databaseContainer ?? "",
     },
     label: options.label,
+    reportOutput: true,
+  });
+}
+
+function runTheoryBrowser(repositoryRoot, baseUrl, identities, browserEvidencePath,
+  practiceCompatibilityEvidencePath, databaseContainer, browserMode) {
+  run(process.execPath, [path.join(repositoryRoot, "node_modules/@playwright/test/cli.js"), "test",
+    `--config=${path.join(repositoryRoot, "tests/e2e/wcv-c3r-t-playwright.config.ts")}`], {
+    cwd: repositoryRoot,
+    env: {
+      ...process.env,
+      E2E_BASE_URL: baseUrl,
+      C3R_T_OWNER_EMAIL: identities[0].email,
+      C3R_T_OWNER_PASSWORD: identities[0].password,
+      C3R_T_OTHER_OWNER_EMAIL: identities[1].email,
+      C3R_T_OTHER_OWNER_PASSWORD: identities[1].password,
+      C3R_T_NON_OWNER_EMAIL: identities[2].email,
+      C3R_T_NON_OWNER_PASSWORD: identities[2].password,
+      C3R_T_BROWSER_EVIDENCE_PATH: browserEvidencePath,
+      C3R_T_PRACTICE_COMPATIBILITY_EVIDENCE_PATH: practiceCompatibilityEvidencePath,
+      C3R_T_DATABASE_CONTAINER: databaseContainer,
+      C3R_T_BROWSER_MODE: browserMode,
+    },
+    label: `C3R-T ${browserMode} browser verification`,
     reportOutput: true,
   });
 }
@@ -1567,6 +1808,380 @@ async function runDedicatedCycle(input) {
   }
 }
 
+const C3R_T_BROWSER_ASSERTIONS = Object.freeze([
+  "browserToPostgres", "directRpcForgedProofDenied", "directRpcCrossTargetPassDenied",
+  "nonEvidenceRetryIdempotent", "theoryProofClaimEvaluationPersisted",
+  "exactFailureStateReasonPersisted", "todayAndFullDay", "d1AssistanceRescheduled",
+  "earlyD1UiSuppressed", "earlyD7UiSuppressed", "earlyRecurrenceUiSuppressed",
+  "earlyReopenedUiSuppressed", "preDuePlanUiSuppressed", "terminalPlanUiSuppressed",
+  "sealedD7Transfer", "timedRecurrence", "laterFailureReopen",
+  "postReopenIndependentCompletion", "crossUserTheoryRestoreCamouflaged",
+  "crossSubjectPracticeRestoreCamouflaged", "ownerOnly", "restartRestore",
+  "completeLearnerExport", "theoryDeletePreservesPractice", "restoreExportDelete",
+]);
+const C3R_T_BROWSER_EVIDENCE_KEYS = Object.freeze([
+  "schemaVersion", ...C3R_T_BROWSER_ASSERTIONS, "rawLearnerBodyInEvidence", "providerCalls",
+  "cleanupReady",
+]);
+const C3R_T_PRACTICE_COMPATIBILITY_ASSERTIONS = Object.freeze([
+  "browserToPostgres", "practiceVertical", "plannerCreateDecide", "d1", "d7",
+  "recurrence", "reopen", "restoreDashboard", "completeLearnerExport", "delete",
+  "negativeValidatorDenied", "practiceExportExcludesTheory", "practiceDeletePreservesTheory",
+]);
+
+function validateTheoryBrowserEvidence(evidence) {
+  exactKeys(evidence, C3R_T_BROWSER_EVIDENCE_KEYS, "C3R-T browser evidence");
+  if (!evidence || typeof evidence !== "object" || evidence.schemaVersion !==
+      "inverge.c3r_t.browser_metadata.v1" || evidence.rawLearnerBodyInEvidence !== false ||
+    evidence.providerCalls !== 0 || C3R_T_BROWSER_ASSERTIONS.some((key) => evidence[key] !== true) ||
+    evidence.cleanupReady !== true) {
+    throw new Error("C3R-T browser-to-Postgres evidence is incomplete or non-metadata-only.");
+  }
+  return evidence;
+}
+
+function validateTheoryPracticeCompatibilityEvidence(evidence) {
+  exactKeys(evidence, [
+    "schemaVersion", ...C3R_T_PRACTICE_COMPATIBILITY_ASSERTIONS,
+    "rawLearnerBodyInEvidence", "providerCalls",
+  ], "C3R-T Practice compatibility evidence");
+  if (evidence.schemaVersion !== "inverge.c3r_t.practice_compatibility_metadata.v1" ||
+    evidence.rawLearnerBodyInEvidence !== false || evidence.providerCalls !== 0 ||
+    C3R_T_PRACTICE_COMPATIBILITY_ASSERTIONS.some((key) => evidence[key] !== true)) {
+    throw new Error("C3R-T Practice compatibility evidence is incomplete or non-metadata-only.");
+  }
+  return evidence;
+}
+
+async function runTheoryDedicatedCycle(input) {
+  const projectId = `c3r-t-cycle-${input.cycle}-${input.runId}-${input.runAttempt}`;
+  const cycleRoot = path.join(input.runtimeRoot, `cycle-${input.cycle}`);
+  const browserEvidencePath = path.join(cycleRoot, "browser-metadata.json");
+  const practiceCompatibilityEvidencePath = path.join(
+    cycleRoot,
+    "practice-compatibility-metadata.json",
+  );
+  let server;
+  try {
+    prepareTheoryCycle(input.repositoryRoot, cycleRoot, projectId);
+    supabase(input.repositoryRoot, ["start", "--workdir", cycleRoot, "--exclude",
+      EXCLUDED_SUPABASE_SERVICES.join(","), "--output", "json", "--yes"], {
+      label: `C3R-T Supabase cycle ${input.cycle} start`,
+    });
+    const status = parseStatus(supabase(input.repositoryRoot,
+      ["status", "--workdir", cycleRoot, "--output", "json"], {
+        label: "C3R-T Supabase status",
+      }));
+    const apiUrl = statusValue(status, ["API_URL", "api_url"]);
+    const anonKey = statusValue(status,
+      ["ANON_KEY", "anon_key", "PUBLISHABLE_KEY", "publishable_key"]);
+    const serviceRoleKey = statusValue(status,
+      ["SERVICE_ROLE_KEY", "service_role_key", "SECRET_KEY", "secret_key"]);
+    const databaseContainer = `supabase_db_${projectId}`;
+    assertExternalMigrationSubstrate(databaseContainer);
+    applyTheoryMigrationHistory(cycleRoot, databaseContainer);
+    theoryDatabaseSecurity(databaseContainer);
+    const identities = [
+      await createTheoryIdentity(apiUrl, anonKey, `owner-a-${input.cycle}`),
+      await createTheoryIdentity(apiUrl, anonKey, `owner-b-${input.cycle}`),
+      await createTheoryIdentity(apiUrl, anonKey, `non-owner-${input.cycle}`),
+    ];
+    seedTheoryProfiles(databaseContainer, identities);
+    await verifyDirectBoundaries(apiUrl, anonKey, identities[0]);
+    const nextEnv = {
+      NEXT_PUBLIC_SUPABASE_URL: apiUrl,
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: anonKey,
+      SUPABASE_SERVICE_ROLE_KEY: serviceRoleKey,
+      ALPHA_INVITE_EMAILS: identities.map((identity) => identity.email).join(","),
+      ALPHA_ADMIN_EMAILS: identities.slice(0, 2).map((identity) => identity.email).join(","),
+      WCV_C3R_P_OWNER_EMAILS: identities.slice(0, 2).map((identity) => identity.email).join(","),
+      WCV_C3R_T_OWNER_EMAILS: identities.slice(0, 2).map((identity) => identity.email).join(","),
+      WCV_C3R_P_PRACTICE_ENABLED: "true",
+      WCV_C3R_T_THEORY_ENABLED: "true",
+      C3R_P_LOCAL_EVIDENCE_MODE: "true",
+      C3R_T_LOCAL_EVIDENCE_MODE: "true",
+      VERCEL_ENV: "preview",
+    };
+    const secretValues = [apiUrl, anonKey, serviceRoleKey,
+      ...identities.flatMap((identity) => [identity.email, identity.password, identity.accessToken])];
+    const startFor = (label, env = nextEnv) => startNext(
+      input.repositoryRoot,
+      3210 + input.cycle,
+      env,
+      path.join(cycleRoot, `next-${label}.log`),
+      secretValues,
+    );
+
+    server = await startFor("journey");
+    runTheoryBrowser(input.repositoryRoot, server.baseUrl, identities,
+      browserEvidencePath, practiceCompatibilityEvidencePath, databaseContainer, "journey");
+    await stopAndDiscardNext(server);
+    server = null;
+
+    server = await startFor("restart-restore");
+    runTheoryBrowser(input.repositoryRoot, server.baseUrl, identities,
+      browserEvidencePath, practiceCompatibilityEvidencePath, databaseContainer, "restore");
+    await stopAndDiscardNext(server);
+    server = null;
+
+    if (input.cycle === 1) {
+      server = await startFor("feature-off", { ...nextEnv, WCV_C3R_T_THEORY_ENABLED: "false" });
+      runTheoryBrowser(input.repositoryRoot, server.baseUrl, identities,
+        browserEvidencePath, practiceCompatibilityEvidencePath, databaseContainer, "feature_off");
+      await stopAndDiscardNext(server);
+      server = null;
+      server = await startFor("production-denied", { ...nextEnv, VERCEL_ENV: "production" });
+      runTheoryBrowser(input.repositoryRoot, server.baseUrl, identities,
+        browserEvidencePath, practiceCompatibilityEvidencePath, databaseContainer, "production_denied");
+      await stopAndDiscardNext(server);
+      server = null;
+    }
+    const browserEvidence = validateTheoryBrowserEvidence(
+      JSON.parse(fs.readFileSync(browserEvidencePath, "utf8")),
+    );
+    const practiceCompatibilityEvidence = validateTheoryPracticeCompatibilityEvidence(
+      JSON.parse(fs.readFileSync(practiceCompatibilityEvidencePath, "utf8")),
+    );
+    return {
+      cycle: input.cycle,
+      receiptId: crypto.randomUUID(),
+      databaseIdentity: projectId,
+      containerIdentity: databaseContainer,
+      migrationCount: 28,
+      serverVersionNum: ORACLE_SERVER_VERSION_NUM,
+      browserEvidenceSha256: sha256(Buffer.from(canonicalJson(browserEvidence), "utf8")),
+      practiceCompatibilityEvidenceSha256: sha256(Buffer.from(
+        canonicalJson(practiceCompatibilityEvidence),
+        "utf8",
+      )),
+      browserToPostgres: true,
+      restartRestore: true,
+      restoreExportDelete: true,
+      hostileDirectRpcDenied: true,
+      legacyPracticePlannerReceiptReplay: true,
+      practiceCompatibilityPreserved: practiceCompatibilityEvidence.practiceVertical,
+      cleanup: "complete",
+    };
+  } finally {
+    await stopAndDiscardNext(server);
+    stopSupabase(input.repositoryRoot, cycleRoot);
+    fs.rmSync(cycleRoot, { recursive: true, force: true });
+  }
+}
+
+export function createTheoryRuntimeArtifact(input) {
+  const base = {
+    schemaVersion: "inverge.wcv_c3r_t.theory_runtime.v1",
+    artifactKind: "THEORY_RUNTIME",
+    artifactRef: "THEORY_RUNTIME:c3r-t-theory-durable-learning-v1",
+    browserToPostgresEvidenceRef:
+      "THEORY_RUNTIME:c3r-t-theory-durable-learning-v1#browser-to-postgres",
+    practiceCompatibilityEvidenceRef:
+      "THEORY_RUNTIME:c3r-t-theory-durable-learning-v1#practice-compatibility",
+    candidateHead: input.candidateHead,
+    candidateTree: input.candidateTree,
+    migrationIdentities: input.migrationIdentities,
+    resetReplayCycles: input.resetReplayCycles,
+    security: {
+      rls: "enabled_and_forced",
+      serviceOnlyMutation: "verified",
+      crossUser: "denied_both_directions",
+      subjectIdentity: "PRACTICE_AND_THEORY_CLOSED",
+      databaseAuthoritativeTheoryProof: true,
+    },
+    featureBoundary: {
+      defaultOff: true, ownerOnly: true, productionDenied: true,
+    },
+    mutationBoundary: {
+      remoteSupabase: 0, production: 0, providerCalls: 0,
+    },
+  };
+  return { ...base, artifactSha256: sha256(Buffer.from(canonicalJson(base), "utf8")) };
+}
+
+function theoryHeadMigrationIdentities(repositoryRoot, headSha) {
+  return [C3R_T_ENUM_MIGRATION_PATH, C3R_T_INTEGRATION_MIGRATION_PATH]
+    .map((migrationPath) => {
+      const committedBytes = execFileSync("git", [
+        "--no-replace-objects", "show", `${headSha}:${migrationPath}`,
+      ], { cwd: repositoryRoot });
+      const diskBytes = fs.readFileSync(path.join(repositoryRoot, migrationPath));
+      if (!diskBytes.equals(committedBytes)) {
+        throw new Error(`C3R-T migration worktree bytes drifted from ${headSha}:${migrationPath}.`);
+      }
+      return { path: migrationPath, sha256: sha256(committedBytes) };
+    });
+}
+
+export function validateTheoryRuntimeArtifact(artifact, repositoryRoot = process.cwd()) {
+  exactKeys(artifact, [
+    "schemaVersion", "artifactKind", "artifactRef", "browserToPostgresEvidenceRef",
+    "practiceCompatibilityEvidenceRef", "candidateHead", "candidateTree",
+    "migrationIdentities", "resetReplayCycles", "security", "featureBoundary",
+    "mutationBoundary", "artifactSha256",
+  ], "THEORY_RUNTIME artifact");
+  if (
+    artifact.schemaVersion !== "inverge.wcv_c3r_t.theory_runtime.v1" ||
+    artifact.artifactKind !== "THEORY_RUNTIME" ||
+    artifact.artifactRef !== "THEORY_RUNTIME:c3r-t-theory-durable-learning-v1" ||
+    artifact.browserToPostgresEvidenceRef !==
+      "THEORY_RUNTIME:c3r-t-theory-durable-learning-v1#browser-to-postgres" ||
+    artifact.practiceCompatibilityEvidenceRef !==
+      "THEORY_RUNTIME:c3r-t-theory-durable-learning-v1#practice-compatibility" ||
+    !SHA40.test(artifact.candidateHead) || !SHA40.test(artifact.candidateTree) ||
+    !SHA64.test(artifact.artifactSha256)) {
+    throw new Error("THEORY_RUNTIME artifact is invalid.");
+  }
+  const resolvedCandidateHead = git(repositoryRoot, [
+    "--no-replace-objects", "rev-parse", "--verify", `${artifact.candidateHead}^{commit}`,
+  ]);
+  const resolvedCandidateTree = git(repositoryRoot, [
+    "--no-replace-objects", "rev-parse", "--verify", `${resolvedCandidateHead}^{tree}`,
+  ]);
+  if (resolvedCandidateHead !== artifact.candidateHead ||
+    resolvedCandidateTree !== artifact.candidateTree) {
+    throw new Error("THEORY_RUNTIME artifact candidate head/tree Git objects are mismatched.");
+  }
+  if (process.env.PR_HEAD_SHA) {
+    const expectedHead = process.env.PR_HEAD_SHA.toLowerCase();
+    if (artifact.candidateHead !== expectedHead || git(repositoryRoot, [
+      "--no-replace-objects", "rev-parse", "--verify", "HEAD^{commit}",
+    ]) !== expectedHead) {
+      throw new Error("THEORY_RUNTIME artifact is not bound to the exact checked-out head/tree.");
+    }
+  }
+  if (!Array.isArray(artifact.migrationIdentities) ||
+    artifact.migrationIdentities.length !== 2) {
+    throw new Error("THEORY_RUNTIME migration identities are invalid.");
+  }
+  const exactMigrationPaths = [C3R_T_ENUM_MIGRATION_PATH, C3R_T_INTEGRATION_MIGRATION_PATH];
+  for (const [index, identity] of artifact.migrationIdentities.entries()) {
+    exactKeys(identity, ["path", "sha256"], `THEORY_RUNTIME migration identity ${index + 1}`);
+    const expectedPath = exactMigrationPaths[index];
+    const committedBytes = execFileSync("git", [
+      "--no-replace-objects", "show", `${resolvedCandidateHead}:${expectedPath}`,
+    ], { cwd: repositoryRoot });
+    const diskBytes = fs.readFileSync(path.join(repositoryRoot, expectedPath));
+    if (identity.path !== expectedPath || identity.sha256 !== sha256(committedBytes) ||
+      !diskBytes.equals(committedBytes)) {
+      throw new Error("THEORY_RUNTIME migration identities do not match the closed ordered head files.");
+    }
+  }
+  if (new Set(artifact.migrationIdentities.map((identity) => identity.path)).size !== 2 ||
+    !Array.isArray(artifact.resetReplayCycles) || artifact.resetReplayCycles.length !== 2) {
+    throw new Error("THEORY_RUNTIME artifact is invalid.");
+  }
+  const cycleIdentityKeys = ["receiptId", "databaseIdentity", "containerIdentity"];
+  let executionIdentity = null;
+  for (const [index, cycle] of artifact.resetReplayCycles.entries()) {
+    exactKeys(cycle, [
+      "cycle", "receiptId", "databaseIdentity", "containerIdentity", "migrationCount",
+      "serverVersionNum", "browserEvidenceSha256", "practiceCompatibilityEvidenceSha256",
+      "browserToPostgres", "restartRestore", "restoreExportDelete", "hostileDirectRpcDenied",
+      "legacyPracticePlannerReceiptReplay", "practiceCompatibilityPreserved", "cleanup",
+    ], `THEORY_RUNTIME reset/replay cycle ${index + 1}`);
+    const identityMatch = new RegExp(`^c3r-t-cycle-${index + 1}-(\\d+)-(\\d+)$`, "u")
+      .exec(cycle.databaseIdentity);
+    if (cycle.cycle !== index + 1 || cycle.migrationCount !== 28 ||
+      cycle.serverVersionNum !== ORACLE_SERVER_VERSION_NUM || !UUID.test(cycle.receiptId) ||
+      !SHA64.test(cycle.browserEvidenceSha256) ||
+      !SHA64.test(cycle.practiceCompatibilityEvidenceSha256) || !identityMatch ||
+      cycle.containerIdentity !== `supabase_db_${cycle.databaseIdentity}` ||
+      cycle.browserToPostgres !== true || cycle.restartRestore !== true ||
+      cycle.restoreExportDelete !== true || cycle.hostileDirectRpcDenied !== true ||
+      cycle.legacyPracticePlannerReceiptReplay !== true ||
+      cycle.practiceCompatibilityPreserved !== true || cycle.cleanup !== "complete") {
+      throw new Error(`THEORY_RUNTIME reset/replay cycle ${index + 1} is invalid.`);
+    }
+    const currentExecutionIdentity = `${identityMatch[1]}:${identityMatch[2]}`;
+    executionIdentity ??= currentExecutionIdentity;
+    if (executionIdentity !== currentExecutionIdentity) {
+      throw new Error("THEORY_RUNTIME reset/replay cycles do not share one execution identity.");
+    }
+  }
+  for (const key of cycleIdentityKeys) {
+    if (artifact.resetReplayCycles[0][key] === artifact.resetReplayCycles[1][key]) {
+      throw new Error(`THEORY_RUNTIME reset/replay cycles reused ${key}.`);
+    }
+  }
+  exactKeys(artifact.security, [
+    "rls", "serviceOnlyMutation", "crossUser", "subjectIdentity",
+    "databaseAuthoritativeTheoryProof",
+  ], "THEORY_RUNTIME security");
+  exactKeys(artifact.featureBoundary, [
+    "defaultOff", "ownerOnly", "productionDenied",
+  ], "THEORY_RUNTIME feature boundary");
+  exactKeys(artifact.mutationBoundary, [
+    "remoteSupabase", "production", "providerCalls",
+  ], "THEORY_RUNTIME mutation boundary");
+  if (artifact.security.rls !== "enabled_and_forced" ||
+    artifact.security.serviceOnlyMutation !== "verified" ||
+    artifact.security.crossUser !== "denied_both_directions" ||
+    artifact.security.subjectIdentity !== "PRACTICE_AND_THEORY_CLOSED" ||
+    artifact.security.databaseAuthoritativeTheoryProof !== true ||
+    artifact.featureBoundary.defaultOff !== true || artifact.featureBoundary.ownerOnly !== true ||
+    artifact.featureBoundary.productionDenied !== true ||
+    canonicalJson(artifact.mutationBoundary) !== canonicalJson({
+      remoteSupabase: 0, production: 0, providerCalls: 0,
+    })) {
+    throw new Error("THEORY_RUNTIME artifact is invalid.");
+  }
+  const { artifactSha256, ...base } = artifact;
+  if (sha256(Buffer.from(canonicalJson(base), "utf8")) !== artifactSha256) {
+    throw new Error("THEORY_RUNTIME artifact digest is invalid.");
+  }
+  return artifact;
+}
+
+async function runTheoryDedicated() {
+  const repositoryRoot = process.cwd();
+  const headSha = (process.env.PR_HEAD_SHA ?? "").toLowerCase();
+  const runId = process.env.GITHUB_RUN_ID ?? "";
+  const runAttempt = Number(process.env.GITHUB_RUN_ATTEMPT ?? "");
+  if (!SHA40.test(headSha) || !/^\d+$/.test(runId) ||
+    !Number.isSafeInteger(runAttempt) || runAttempt < 1) {
+    throw new Error("C3R-T exact-head GitHub execution context is invalid.");
+  }
+  if (git(repositoryRoot, ["rev-parse", "HEAD"]) !== headSha) {
+    throw new Error("C3R-T workflow checkout is not the exact PR head.");
+  }
+  validateC3RPMigrationAuthorityBinding(repositoryRoot, headSha);
+  const migrationIdentities = theoryHeadMigrationIdentities(repositoryRoot, headSha);
+  const runtimeRoot = boundedTheoryRuntimeRoot(repositoryRoot);
+  fs.rmSync(runtimeRoot, { recursive: true, force: true });
+  fs.mkdirSync(runtimeRoot, { recursive: true });
+  const cycles = [];
+  for (let cycle = 1; cycle <= 2; cycle += 1) {
+    cycles.push(await runTheoryDedicatedCycle({
+      cycle, repositoryRoot, runtimeRoot, headSha, runId, runAttempt,
+    }));
+  }
+  const artifact = createTheoryRuntimeArtifact({
+    candidateHead: headSha,
+    candidateTree: git(repositoryRoot, ["show", "-s", "--format=%T", headSha]),
+    migrationIdentities,
+    resetReplayCycles: cycles,
+  });
+  validateTheoryRuntimeArtifact(artifact);
+  const evidencePath = process.env.C3R_T_RUNTIME_EVIDENCE_PATH;
+  if (!evidencePath) throw new Error("C3R_T_RUNTIME_EVIDENCE_PATH is not set.");
+  fs.mkdirSync(path.dirname(path.resolve(evidencePath)), { recursive: true });
+  fs.writeFileSync(path.resolve(evidencePath), `${JSON.stringify(artifact, null, 2)}\n`, {
+    mode: 0o600,
+  });
+  console.log(JSON.stringify({ status: "verified", artifactSha256: artifact.artifactSha256 }));
+}
+
+function cleanupTheoryDedicated() {
+  const repositoryRoot = process.cwd();
+  const root = boundedTheoryRuntimeRoot(repositoryRoot);
+  for (const cycle of [1, 2]) {
+    stopSupabase(repositoryRoot, path.join(root, `cycle-${cycle}`));
+  }
+  fs.rmSync(root, { recursive: true, force: true });
+  console.log(JSON.stringify({ cleanup: "complete" }));
+}
+
 async function runDedicated() {
   const repositoryRoot = process.cwd();
   const headSha = (process.env.PR_HEAD_SHA ?? "").toLowerCase();
@@ -1635,7 +2250,16 @@ function fail(message) {
 
 if (process.argv[1] && import.meta.url === pathToFileURL(path.resolve(process.argv[1])).href) {
   try {
-    if (process.argv.includes("--dedicated")) {
+    if (process.argv.includes("--c3r-t-dedicated")) {
+      await runTheoryDedicated();
+    } else if (process.argv.includes("--c3r-t-cleanup")) {
+      cleanupTheoryDedicated();
+    } else if (process.argv.includes("--verify-c3r-t-artifact")) {
+      const artifactPath = process.env.C3R_T_RUNTIME_EVIDENCE_PATH;
+      if (!artifactPath) throw new Error("C3R_T_RUNTIME_EVIDENCE_PATH is not set.");
+      validateTheoryRuntimeArtifact(JSON.parse(fs.readFileSync(artifactPath, "utf8")));
+      console.log(JSON.stringify({ status: "verified" }));
+    } else if (process.argv.includes("--dedicated")) {
       await runDedicated();
     } else if (process.argv.includes("--cleanup")) {
       cleanupDedicated();

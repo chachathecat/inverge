@@ -1,0 +1,733 @@
+import {
+  expect,
+  test,
+  type APIRequestContext,
+  type BrowserContext,
+  type Page,
+  type Route,
+} from "@playwright/test";
+import { execFileSync, spawnSync } from "node:child_process";
+import { randomUUID } from "node:crypto";
+import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { dirname } from "node:path";
+
+const baseURL = process.env.E2E_BASE_URL ?? "";
+const ownerEmail = process.env.C3R_T_OWNER_EMAIL ?? "";
+const ownerPassword = process.env.C3R_T_OWNER_PASSWORD ?? "";
+const otherOwnerEmail = process.env.C3R_T_OTHER_OWNER_EMAIL ?? "";
+const otherOwnerPassword = process.env.C3R_T_OTHER_OWNER_PASSWORD ?? "";
+const nonOwnerEmail = process.env.C3R_T_NON_OWNER_EMAIL ?? "";
+const nonOwnerPassword = process.env.C3R_T_NON_OWNER_PASSWORD ?? "";
+const evidencePath = process.env.C3R_T_BROWSER_EVIDENCE_PATH ?? "";
+const practiceCompatibilityEvidencePath =
+  process.env.C3R_T_PRACTICE_COMPATIBILITY_EVIDENCE_PATH ?? "";
+const databaseContainer = process.env.C3R_T_DATABASE_CONTAINER ?? "";
+const mode = process.env.C3R_T_BROWSER_MODE ?? "journey";
+const DATABASE_CONTAINER = /^supabase_db_c3r-t-cycle-[12]-\d+-\d+$/u;
+
+type RuntimeView = {
+  restored: null | {
+    record: { id: string; state: string; record_version: number };
+    attempts: Array<Record<string, unknown>>;
+    transferTask: null | { taskId: string; state: string; prompt: string | null };
+  };
+  currentPlan: null | {
+    planId: string;
+    recordVersion: number;
+    state: string;
+    blocks: Array<{ blockId: string; executionState: string }>;
+  };
+};
+
+type ApiBody = { ok: boolean; view?: RuntimeView; export?: Record<string, unknown> };
+
+type PracticeRuntimeView = {
+  restored: null | {
+    record: { id: string; state: string; record_version: number };
+    transferTask: null | { taskId: string; state: string };
+  };
+  currentPlan: null | {
+    planId: string;
+    recordVersion: number;
+    state: string;
+    blocks: Array<{ blockId: string; executionState: string }>;
+  };
+  dashboard: { queue: Array<Record<string, unknown>> };
+};
+
+type PracticeApiBody = {
+  ok: boolean;
+  error?: string;
+  view?: PracticeRuntimeView;
+  export?: Record<string, unknown>;
+  result?: Record<string, unknown>;
+};
+
+function requireRuntime() {
+  for (const value of [
+    baseURL, ownerEmail, ownerPassword, otherOwnerEmail, otherOwnerPassword,
+    nonOwnerEmail, nonOwnerPassword, evidencePath, practiceCompatibilityEvidencePath,
+  ]) {
+    if (!value) throw new Error("C3R-T browser runtime environment is incomplete");
+  }
+  if (!DATABASE_CONTAINER.test(databaseContainer)) {
+    throw new Error("C3R-T database container boundary is invalid");
+  }
+  if (!["journey", "restore", "feature_off", "production_denied"].includes(mode)) {
+    throw new Error("C3R-T browser mode is invalid");
+  }
+  if (!['127.0.0.1', 'localhost', '::1'].includes(new URL(baseURL).hostname)) {
+    throw new Error("C3R-T browser runtime refused a non-local target");
+  }
+}
+
+async function login(context: BrowserContext, email: string, password: string) {
+  const response = await context.request.post("/api/auth/sign-in", {
+    data: { email, password, mode: "second" },
+  });
+  expect(response.status()).toBe(200);
+}
+
+async function post(request: APIRequestContext, data: Record<string, unknown>) {
+  const response = await request.post("/api/review-os/c3r-t", { data });
+  const body = await response.json() as ApiBody;
+  expect(response.status(), JSON.stringify(body)).toBe(200);
+  expect(body.ok).toBe(true);
+  return body;
+}
+
+function passClaim() {
+  return {
+    sourceRevisionId: "b8e6d6e9-8c0c-4b54-9c1e-608d33245001",
+    anchorId: "repair-anchor:theory:synthetic-income-approach",
+    anchorVersionId: "repair-anchor:theory:synthetic-income-approach@1",
+    targetScopeId: "theory-target:synthetic-income-approach",
+    clauses: [{
+      clauseIndex: 1,
+      scopeResolution: "EXACT",
+      scopeId: "theory-target:synthetic-income-approach",
+      predicates: [
+        { predicateId: "converts_expected_income_to_value", polarity: "ASSERTED" },
+        { predicateId: "uses_only_historical_cost", polarity: "NEGATED" },
+      ],
+    }],
+    confirmationMode: "MANUAL_STRUCTURED",
+  };
+}
+
+function failedClaim() {
+  const claim = passClaim();
+  return {
+    ...claim,
+    clauses: [{
+      ...claim.clauses[0],
+      predicates: [
+        { predicateId: "converts_expected_income_to_value", polarity: "ASSERTED" },
+        { predicateId: "uses_only_historical_cost", polarity: "ASSERTED" },
+      ],
+    }],
+  };
+}
+
+function crossTargetClaim() {
+  const claim = passClaim();
+  return {
+    ...claim,
+    clauses: [{
+      ...claim.clauses[0],
+      scopeId: "theory-target:synthetic-cost-approach",
+      predicates: [{
+        predicateId: "converts_expected_income_to_value",
+        polarity: "ASSERTED",
+      }],
+    }],
+  };
+}
+
+function psqlArgs() {
+  return [
+    "exec", "--interactive", databaseContainer, "psql", "--no-psqlrc", "--quiet",
+    "--tuples-only", "--no-align", "--set", "ON_ERROR_STOP=1",
+    "--username", "postgres", "--dbname", "postgres",
+  ];
+}
+
+function databaseScalar(sql: string) {
+  return execFileSync("docker", psqlArgs(), {
+    input: sql,
+    encoding: "utf8",
+    timeout: 15_000,
+  }).trim();
+}
+
+function directRpcFailure(sql: string, marker: RegExp) {
+  const result = spawnSync("docker", psqlArgs(), {
+    input: `begin;\nset local role service_role;\n${sql}\ncommit;\n`,
+    encoding: "utf8",
+    timeout: 15_000,
+  });
+  expect(result.status).not.toBe(0);
+  expect(`${result.stdout}\n${result.stderr}`).toMatch(marker);
+}
+
+function encodedJson(value: unknown) {
+  return Buffer.from(JSON.stringify(value), "utf8").toString("base64");
+}
+
+function rpcSql(input: {
+  userId: string;
+  commandId: string;
+  expectedVersion: number;
+  action: string;
+  payload: Record<string, unknown>;
+}) {
+  return `select public.c3r_t_apply_learning_command_v1(
+    '${input.userId}'::uuid, '${input.commandId}'::uuid, ${input.expectedVersion},
+    '${input.action}', convert_from(decode('${encodedJson(input.payload)}', 'base64'), 'UTF8')::jsonb
+  );`;
+}
+
+function writeEvidence(value: Record<string, unknown>) {
+  mkdirSync(dirname(evidencePath), { recursive: true });
+  writeFileSync(evidencePath, `${JSON.stringify(value, null, 2)}\n`, { mode: 0o600 });
+}
+
+function writePracticeCompatibilityEvidence(value: Record<string, unknown>) {
+  mkdirSync(dirname(practiceCompatibilityEvidencePath), { recursive: true });
+  writeFileSync(
+    practiceCompatibilityEvidencePath,
+    `${JSON.stringify(value, null, 2)}\n`,
+    { mode: 0o600 },
+  );
+}
+
+function practiceClaim(result = 100_000_000, transferTask = false) {
+  return {
+    sourceRevisionId: "26a4f3bd-ddf3-4215-9fdf-d83453122ce1",
+    anchorId: "repair-anchor:practice:synthetic-net-income",
+    anchorVersionId: transferTask
+      ? "repair-anchor:practice:synthetic-net-income@d7-transfer-v1"
+      : "repair-anchor:practice:synthetic-net-income@1",
+    grossIncome: { value: transferTask ? 150_000_000 : 120_000_000, unit: "KRW_PER_YEAR" },
+    operatingExpense: { value: transferTask ? 30_000_000 : 20_000_000,
+      unit: "KRW_PER_YEAR" },
+    operator: "SUBTRACT",
+    operandOrder: ["gross_income", "operating_expense"],
+    result: { value: transferTask ? 120_000_000 : result, unit: "KRW_PER_YEAR" },
+    sign: "POSITIVE",
+    rounding: { mode: "HALF_UP", scale: 0, required: false },
+    confirmationMode: "MANUAL_STRUCTURED",
+  };
+}
+
+async function postPractice(request: APIRequestContext, data: Record<string, unknown>) {
+  const response = await request.post("/api/review-os/c3r-p", { data });
+  const body = await response.json() as PracticeApiBody;
+  expect(response.status(), JSON.stringify(body)).toBe(200);
+  expect(body.ok).toBe(true);
+  return body;
+}
+
+function practicePlanInput(view: PracticeRuntimeView) {
+  const block = view.currentPlan?.blocks.find((item) => item.executionState === "PENDING");
+  return {
+    planBlockId: block?.blockId ?? null,
+    planId: view.currentPlan?.planId ?? null,
+    planVersion: view.currentPlan?.recordVersion ?? null,
+  };
+}
+
+async function createAcceptedPracticePlan(
+  request: APIRequestContext,
+  recordId: string,
+  kind: "TODAY" | "FULL_DAY",
+  evidenceStep: string,
+) {
+  let body = await postPractice(request, {
+    action: "create_plan", commandId: randomUUID(), recordId, planId: randomUUID(), kind,
+    availableMinutes: kind === "TODAY" ? 90 : 180, evidenceStep,
+  });
+  expect(body.view?.currentPlan?.state).toBe("PROPOSED");
+  body = await postPractice(request, {
+    action: "decide_plan", commandId: randomUUID(), recordId,
+    planId: body.view?.currentPlan?.planId,
+    expectedVersion: body.view?.currentPlan?.recordVersion,
+    decision: "ACCEPT", blocks: null, evidenceStep,
+  });
+  expect(body.view?.currentPlan?.state).toBe("ACCEPTED");
+  return body;
+}
+
+async function exercisePracticeCompatibility(
+  request: APIRequestContext,
+  coexistingTheoryRecordId: string,
+) {
+  const recordId = randomUUID();
+  let body = await postPractice(request, {
+    action: "start", commandId: randomUUID(), recordId, attemptId: randomUUID(),
+    attemptBody: "총수익에서 운영비를 차감해 순수익을 계산한다.",
+    prediction: "likely_partial", confidence: "medium", evidenceStep: "d0",
+  });
+  body = await postPractice(request, {
+    action: "commit_feedback", commandId: randomUUID(), recordId,
+    expectedVersion: body.view?.restored?.record.record_version,
+    gapId: randomUUID(), failureNoteId: randomUUID(), assistanceEventId: randomUUID(),
+    failureNote: "차감 관계와 단위를 함께 고정하지 못했다.", evidenceStep: "feedback",
+  });
+  const rejected = await request.post("/api/review-os/c3r-p", { data: {
+    action: "submit_repair", commandId: randomUUID(), recordId,
+    expectedVersion: body.view?.restored?.record.record_version,
+    attemptId: randomUUID(), claim: practiceClaim(90_000_000), evidenceStep: "feedback",
+  }});
+  expect(rejected.status()).toBe(409);
+  expect(await rejected.json()).toEqual({ ok: false, error: "invalid_transition" });
+  body = await postPractice(request, {
+    action: "submit_repair", commandId: randomUUID(), recordId,
+    expectedVersion: body.view?.restored?.record.record_version,
+    attemptId: randomUUID(), claim: practiceClaim(), evidenceStep: "feedback",
+  });
+  body = await createAcceptedPracticePlan(request, recordId, "TODAY", "d1");
+  if (!body.view) throw new Error("Practice D+1 plan view is missing");
+  body = await postPractice(request, {
+    action: "complete_d1", commandId: randomUUID(), recordId,
+    expectedVersion: body.view.restored?.record.record_version,
+    attemptId: randomUUID(), claim: practiceClaim(), ...practicePlanInput(body.view),
+    evidenceStep: "d1",
+  });
+  body = await createAcceptedPracticePlan(request, recordId, "FULL_DAY", "d7");
+  const transferTaskId = body.view?.restored?.transferTask?.taskId;
+  if (!transferTaskId) throw new Error("Practice transfer task is missing");
+  body = await postPractice(request, {
+    action: "present_d7_transfer_task", commandId: randomUUID(), recordId,
+    expectedVersion: body.view?.restored?.record.record_version,
+    transferTaskId, evidenceStep: "d7",
+  });
+  if (!body.view) throw new Error("Practice D+7 view is missing");
+  body = await postPractice(request, {
+    action: "complete_d7_transfer", commandId: randomUUID(), recordId,
+    expectedVersion: body.view.restored?.record.record_version,
+    attemptId: randomUUID(), claim: practiceClaim(100_000_000, true), transferTaskId,
+    ...practicePlanInput(body.view), evidenceStep: "d7",
+  });
+  body = await postPractice(request, {
+    action: "complete_recurrence", commandId: randomUUID(), recordId,
+    expectedVersion: body.view?.restored?.record.record_version,
+    attemptId: randomUUID(), claim: practiceClaim(), planBlockId: null,
+    planId: null, planVersion: null, evidenceStep: "recurrence",
+  });
+  body = await postPractice(request, {
+    action: "record_later_failure", commandId: randomUUID(), recordId,
+    expectedVersion: body.view?.restored?.record.record_version,
+    attemptId: randomUUID(), claim: practiceClaim(90_000_000), evidenceStep: "reopen",
+  });
+  body = await postPractice(request, {
+    action: "complete_reopened_review", commandId: randomUUID(), recordId,
+    expectedVersion: body.view?.restored?.record.record_version,
+    attemptId: randomUUID(), claim: practiceClaim(), planBlockId: null,
+    planId: null, planVersion: null, evidenceStep: "reopenComplete",
+  });
+  expect(body.view?.restored?.record.state).toBe("CLOSED");
+  const restored = await request.get(
+    `/api/review-os/c3r-p?recordId=${recordId}&evidenceStep=reopenComplete`,
+  );
+  expect(restored.status()).toBe(200);
+  const restoredBody = await restored.json() as PracticeApiBody;
+  expect(restoredBody.view?.restored?.record.state).toBe("CLOSED");
+  expect(Array.isArray(restoredBody.view?.dashboard.queue)).toBe(true);
+  const exported = await postPractice(request, { action: "export" });
+  expect(exported.export?.subject).toBe("PRACTICE");
+  for (const collection of ["records", "attempts", "plans"] as const) {
+    const rows = exported.export?.[collection];
+    expect(Array.isArray(rows)).toBe(true);
+    expect((rows as Array<Record<string, unknown>>).every((row) => row.subject === "PRACTICE"))
+      .toBe(true);
+  }
+  expect(JSON.stringify(exported.export)).not.toContain(coexistingTheoryRecordId);
+  await postPractice(request, { action: "delete" });
+  expect((await request.get(`/api/review-os/c3r-p?recordId=${recordId}`)).status()).toBe(404);
+  const preservedTheory = await request.get(
+    `/api/review-os/c3r-t?recordId=${coexistingTheoryRecordId}`,
+  );
+  expect(preservedTheory.status()).toBe(200);
+  expect((await preservedTheory.json() as ApiBody).view?.restored?.record.state).toBe("D0_OPEN");
+  expect(databaseScalar(`select count(*) from public.c3r_p_learning_records
+    where id='${coexistingTheoryRecordId}'::uuid and subject='THEORY';`)).toBe("1");
+  writePracticeCompatibilityEvidence({
+    schemaVersion: "inverge.c3r_t.practice_compatibility_metadata.v1",
+    browserToPostgres: true,
+    practiceVertical: true,
+    plannerCreateDecide: true,
+    d1: true,
+    d7: true,
+    recurrence: true,
+    reopen: true,
+    restoreDashboard: true,
+    completeLearnerExport: true,
+    practiceExportExcludesTheory: true,
+    delete: true,
+    practiceDeletePreservesTheory: true,
+    negativeValidatorDenied: true,
+    rawLearnerBodyInEvidence: false,
+    providerCalls: 0,
+  });
+}
+
+function theoryEvidenceStepRoute(evidenceStep: string) {
+  return async (route: Route) => {
+    const request = route.request();
+    const url = new URL(request.url());
+    if (request.method() === "GET" && url.pathname === "/api/review-os/c3r-t") {
+      url.searchParams.set("evidenceStep", evidenceStep);
+      await route.continue({ url: url.toString() });
+      return;
+    }
+    await route.continue();
+  };
+}
+
+async function assertTheoryControlsDisabled(
+  page: Page,
+  recordId: string,
+  evidenceStep: string,
+  buttonNames: readonly string[],
+  eligibilityTestId: string | null,
+) {
+  const handler = theoryEvidenceStepRoute(evidenceStep);
+  await page.route("**/api/review-os/c3r-t*", handler);
+  await page.goto(`/app/c3r-t?recordId=${recordId}`);
+  for (const name of buttonNames) {
+    await expect(page.getByRole("button", { name })).toBeDisabled();
+  }
+  if (eligibilityTestId) await expect(page.getByTestId(eligibilityTestId)).toBeVisible();
+  await page.unroute("**/api/review-os/c3r-t*", handler);
+}
+
+function currentPlanInput(view: RuntimeView) {
+  const block = view.currentPlan?.blocks.find((item) => item.executionState === "PENDING");
+  return {
+    planBlockId: block?.blockId ?? null,
+    planId: view.currentPlan?.planId ?? null,
+    planVersion: view.currentPlan?.recordVersion ?? null,
+  };
+}
+
+test.beforeEach(() => requireRuntime());
+
+test("C3R-T Owner Theory journey reaches Postgres and remains isolated", async ({ browser }) => {
+  test.skip(mode !== "journey", "journey mode only");
+  const owner = await browser.newContext({ baseURL });
+  const otherOwner = await browser.newContext({ baseURL });
+  const nonOwner = await browser.newContext({ baseURL });
+  await login(owner, ownerEmail, ownerPassword);
+  await login(otherOwner, otherOwnerEmail, otherOwnerPassword);
+  await login(nonOwner, nonOwnerEmail, nonOwnerPassword);
+
+  const page = await owner.newPage();
+  await page.goto("/app/c3r-t");
+  await expect(page.getByTestId("c3r-t-runtime")).toBeVisible();
+
+  const practiceRecordId = randomUUID();
+  await owner.request.post("/api/review-os/c3r-p", { data: {
+    action: "start", commandId: randomUUID(), recordId: practiceRecordId,
+    attemptId: randomUUID(), attemptBody: "연간 순수익 계산을 먼저 시도한다.",
+    prediction: "likely_partial", confidence: "medium", evidenceStep: "d0",
+  }}).then((response) => expect(response.status()).toBe(200));
+
+  const recordId = randomUUID();
+  const startCommandId = randomUUID();
+  const startPayload = {
+    action: "start", commandId: startCommandId, recordId, attemptId: randomUUID(),
+    attemptBody: "수익방식은 기대수익을 가치로 바꾸는 방법이라고 생각한다.",
+    prediction: "likely_partial", confidence: "medium", evidenceStep: "d0",
+  };
+  let body = await post(owner.request, startPayload);
+  expect(body.view?.restored?.record.state).toBe("D0_OPEN");
+  await exercisePracticeCompatibility(owner.request, recordId);
+  await owner.request.post("/api/review-os/c3r-p", { data: {
+    action: "start", commandId: randomUUID(), recordId: practiceRecordId,
+    attemptId: randomUUID(), attemptBody: "연간 순수익 계산을 다시 시작한다.",
+    prediction: "likely_partial", confidence: "medium", evidenceStep: "d0",
+  }}).then((response) => expect(response.status()).toBe(200));
+
+  const feedback = await post(owner.request, {
+    action: "commit_feedback", commandId: randomUUID(), recordId,
+    expectedVersion: body.view?.restored?.record.record_version,
+    gapId: randomUUID(), failureNoteId: randomUUID(), assistanceEventId: randomUUID(),
+    failureNote: "목표 범위와 금지 술어의 극성을 함께 고정하지 못했다.",
+    evidenceStep: "feedback",
+  });
+  body = feedback;
+  const record = body.view?.restored?.record;
+  expect(record?.state).toBe("FEEDBACK_COMMITTED");
+  if (!record) throw new Error("C3R-T feedback record is missing");
+  const configurationDigest = databaseScalar(
+    `select configuration_digest from public.c3r_p_learning_records where id='${recordId}'::uuid;`,
+  );
+  const ownerUserId = databaseScalar(
+    `select user_id from public.c3r_p_learning_records where id='${recordId}'::uuid;`,
+  );
+  const basePayload = {
+    recordId, attemptId: randomUUID(), claim: passClaim(),
+    configurationDigest, occurredAt: "2026-08-25T00:06:00.000Z",
+  };
+  directRpcFailure(rpcSql({
+    userId: ownerUserId,
+    commandId: randomUUID(), expectedVersion: record.record_version, action: "submit_repair",
+    payload: { ...basePayload, proofState: "PASS", proofDigest: "a".repeat(64),
+      validatorId: "validator:theory-scoped-predicate@1", attemptBody: "forged" },
+  }), /C3R_P_INVALID_INPUT|C3R_T_INVALID_INPUT/u);
+  directRpcFailure(rpcSql({
+    userId: ownerUserId,
+    commandId: randomUUID(), expectedVersion: record.record_version, action: "submit_repair",
+    payload: { ...basePayload, attemptId: randomUUID(), claim: crossTargetClaim() },
+  }), /C3R_T_STRUCTURED_PROOF_REQUIRED/u);
+
+  const repairCommandId = randomUUID();
+  const repairPayload = {
+    action: "submit_repair", commandId: repairCommandId, recordId,
+    expectedVersion: record.record_version, attemptId: randomUUID(), claim: passClaim(),
+  };
+  body = await post(owner.request, repairPayload);
+  expect(body.view?.restored?.record.state).toBe("REPAIRED");
+  await new Promise((resolve) => setTimeout(resolve, 25));
+  const replay = await post(owner.request, repairPayload);
+  expect(replay.view?.restored?.record.record_version)
+    .toBe(body.view?.restored?.record.record_version);
+  expect(replay.view?.restored?.attempts.length).toBe(body.view?.restored?.attempts.length);
+  await assertTheoryControlsDisabled(
+    page,
+    recordId,
+    "feedback",
+    ["도움받아 복습", "D+1 독립 재구성", "Today 계획", "Full-Day 계획"],
+    "c3r-t-d1-eligibility",
+  );
+
+  body = await post(owner.request, {
+    action: "record_assisted_review", commandId: randomUUID(), recordId,
+    expectedVersion: body.view?.restored?.record.record_version,
+    attemptId: randomUUID(), claim: passClaim(), evidenceStep: "d1",
+  });
+  expect(body.view?.restored?.record.state).toBe("REPAIRED");
+
+  body = await post(owner.request, {
+    action: "create_plan", commandId: randomUUID(), recordId, planId: randomUUID(),
+    kind: "TODAY", availableMinutes: 90, evidenceStep: "d1Rescheduled",
+  });
+  expect(body.view?.currentPlan?.state).toBe("PROPOSED");
+  body = await post(owner.request, {
+    action: "decide_plan", commandId: randomUUID(), recordId,
+    planId: body.view?.currentPlan?.planId,
+    expectedVersion: body.view?.currentPlan?.recordVersion,
+    decision: "ACCEPT", blocks: null, evidenceStep: "d1Rescheduled",
+  });
+  body = await post(owner.request, {
+    action: "complete_d1", commandId: randomUUID(), recordId,
+    expectedVersion: body.view?.restored?.record.record_version,
+    attemptId: randomUUID(), claim: passClaim(), ...currentPlanInput(body.view!),
+    evidenceStep: "d1Rescheduled",
+  });
+  expect(body.view?.restored?.record.state).toBe("D1_COMPLETE");
+  await assertTheoryControlsDisabled(
+    page,
+    recordId,
+    "d1Fresh",
+    ["D+7 전이 과업 열기", "Today 계획", "Full-Day 계획"],
+    "c3r-t-d7-eligibility",
+  );
+
+  body = await post(owner.request, {
+    action: "create_plan", commandId: randomUUID(), recordId, planId: randomUUID(),
+    kind: "FULL_DAY", availableMinutes: 180, evidenceStep: "d7",
+  });
+  body = await post(owner.request, {
+    action: "decide_plan", commandId: randomUUID(), recordId,
+    planId: body.view?.currentPlan?.planId,
+    expectedVersion: body.view?.currentPlan?.recordVersion,
+    decision: "ACCEPT", blocks: null, evidenceStep: "d7",
+  });
+  const transferTaskId = body.view?.restored?.transferTask?.taskId;
+  if (!transferTaskId) throw new Error("C3R-T sealed transfer task is missing");
+  body = await post(owner.request, {
+    action: "present_d7_transfer_task", commandId: randomUUID(), recordId,
+    expectedVersion: body.view?.restored?.record.record_version,
+    transferTaskId, evidenceStep: "d7",
+  });
+  expect(body.view?.restored?.transferTask?.state).toBe("PRESENTED");
+  body = await post(owner.request, {
+    action: "complete_d7_transfer", commandId: randomUUID(), recordId,
+    expectedVersion: body.view?.restored?.record.record_version,
+    attemptId: randomUUID(), claim: passClaim(), transferTaskId,
+    ...currentPlanInput(body.view!), evidenceStep: "d7",
+  });
+  expect(body.view?.restored?.record.state).toBe("D7_COMPLETE");
+  await assertTheoryControlsDisabled(
+    page,
+    recordId,
+    "d7",
+    ["시간 제한 재현 완료", "Today 계획", "Full-Day 계획"],
+    "c3r-t-recurrence-eligibility",
+  );
+  body = await post(owner.request, {
+    action: "complete_recurrence", commandId: randomUUID(), recordId,
+    expectedVersion: body.view?.restored?.record.record_version,
+    attemptId: randomUUID(), claim: passClaim(),
+    planBlockId: null, planId: null, planVersion: null, evidenceStep: "recurrence",
+  });
+  expect(body.view?.restored?.record.state).toBe("CLOSED");
+  await assertTheoryControlsDisabled(
+    page,
+    recordId,
+    "recurrence",
+    ["Today 계획", "Full-Day 계획"],
+    "c3r-t-plan-eligibility",
+  );
+  body = await post(owner.request, {
+    action: "record_later_failure", commandId: randomUUID(), recordId,
+    expectedVersion: body.view?.restored?.record.record_version,
+    attemptId: randomUUID(), claim: failedClaim(), evidenceStep: "reopen",
+  });
+  expect(body.view?.restored?.record.state).toBe("REOPENED");
+  await assertTheoryControlsDisabled(
+    page,
+    recordId,
+    "d7",
+    ["재개 복습 독립 완료", "Today 계획", "Full-Day 계획"],
+    "c3r-t-reopened-eligibility",
+  );
+  body = await post(owner.request, {
+    action: "complete_reopened_review", commandId: randomUUID(), recordId,
+    expectedVersion: body.view?.restored?.record.record_version,
+    attemptId: randomUUID(), claim: passClaim(),
+    planBlockId: null, planId: null, planVersion: null, evidenceStep: "reopenComplete",
+  });
+  expect(body.view?.restored?.record.state).toBe("CLOSED");
+
+  const otherUserId = databaseScalar(
+    `select id from auth.users where lower(email)=lower('${otherOwnerEmail.replaceAll("'", "''")}');`,
+  );
+  directRpcFailure(
+    `select public.c3r_t_restore_record_v1('${otherUserId}'::uuid, '${recordId}'::uuid);`,
+    /C3R_T_NOT_FOUND/u,
+  );
+  directRpcFailure(
+    `select public.c3r_p_restore_record_v1('${ownerUserId}'::uuid, '${recordId}'::uuid);`,
+    /C3R_P_NOT_FOUND/u,
+  );
+  const otherResponse = await otherOwner.request.get(`/api/review-os/c3r-t?recordId=${recordId}`);
+  expect(otherResponse.status()).toBe(404);
+  const nonOwnerResponse = await nonOwner.request.get(`/api/review-os/c3r-t?recordId=${recordId}`);
+  expect(nonOwnerResponse.status()).toBe(404);
+  const anonymous = await browser.newContext({ baseURL });
+  expect((await anonymous.request.get(`/api/review-os/c3r-t?recordId=${recordId}`)).status()).toBe(404);
+  await anonymous.close();
+
+  const persisted = databaseScalar(`select concat_ws('|',
+    (select count(*) from public.c3r_p_learning_records where id='${recordId}'::uuid and subject='THEORY'),
+    (select count(*) from public.c3r_p_attempts where record_id='${recordId}'::uuid and validator_id is not null),
+    (select count(*) from public.c3r_p_attempts where record_id='${recordId}'::uuid
+      and proof_claim is not null and proof_evaluation is not null
+      and proof_evaluation->>'state'=proof_state
+      and proof_evaluation->'reasonCodes'=proof_reason_codes
+      and proof_digest=encode(extensions.digest(convert_to(jsonb_build_object(
+        'claim', proof_claim, 'evaluation', proof_evaluation)::text, 'UTF8'), 'sha256'), 'hex')),
+    (select count(*) from public.c3r_p_attempts where record_id='${recordId}'::uuid
+      and proof_state='BLOCKED' and proof_reason_codes ? 'forbidden_predicate_asserted:uses_only_historical_cost'),
+    (select count(*) from public.c3r_p_learning_records where id='${practiceRecordId}'::uuid and subject='PRACTICE')
+  );`);
+  expect(persisted).toBe("1|7|7|1|1");
+  writeEvidence({
+    schemaVersion: "inverge.c3r_t.browser_metadata.v1",
+    recordId,
+    practiceRecordId,
+    browserToPostgres: true,
+    directRpcForgedProofDenied: true,
+    directRpcCrossTargetPassDenied: true,
+    nonEvidenceRetryIdempotent: true,
+    theoryProofClaimEvaluationPersisted: true,
+    exactFailureStateReasonPersisted: true,
+    todayAndFullDay: true,
+    d1AssistanceRescheduled: true,
+    earlyD1UiSuppressed: true,
+    earlyD7UiSuppressed: true,
+    earlyRecurrenceUiSuppressed: true,
+    earlyReopenedUiSuppressed: true,
+    preDuePlanUiSuppressed: true,
+    terminalPlanUiSuppressed: true,
+    sealedD7Transfer: true,
+    timedRecurrence: true,
+    laterFailureReopen: true,
+    postReopenIndependentCompletion: true,
+    crossUserTheoryRestoreCamouflaged: true,
+    crossSubjectPracticeRestoreCamouflaged: true,
+    ownerOnly: true,
+    rawLearnerBodyInEvidence: false,
+    providerCalls: 0,
+  });
+  await owner.close();
+  await otherOwner.close();
+  await nonOwner.close();
+});
+
+test("C3R-T restart restore, export and subject-isolated delete are durable", async ({ browser }) => {
+  test.skip(mode !== "restore", "restore mode only");
+  const prior = JSON.parse(readFileSync(evidencePath, "utf8")) as Record<string, unknown>;
+  const recordId = String(prior.recordId ?? "");
+  const practiceRecordId = String(prior.practiceRecordId ?? "");
+  expect(recordId).toMatch(/^[0-9a-f-]{36}$/u);
+  const owner = await browser.newContext({ baseURL });
+  await login(owner, ownerEmail, ownerPassword);
+  const restored = await owner.request.get(`/api/review-os/c3r-t?recordId=${recordId}`);
+  expect(restored.status()).toBe(200);
+  const restoredBody = await restored.json() as ApiBody;
+  expect(restoredBody.view?.restored?.record.state).toBe("CLOSED");
+  expect(restoredBody.view?.restored?.attempts.some((attempt) =>
+    attempt.proof_state === "BLOCKED" && Array.isArray(attempt.proof_reason_codes))).toBe(true);
+  const exported = await post(owner.request, { action: "export" });
+  expect(exported.export?.subject).toBe("THEORY");
+  for (const collection of ["records", "attempts", "plans"] as const) {
+    const rows = exported.export?.[collection];
+    expect(Array.isArray(rows)).toBe(true);
+    expect((rows as Array<Record<string, unknown>>).every((row) => row.subject === "THEORY"))
+      .toBe(true);
+  }
+  const receipts = exported.export?.commandReceipts as Array<Record<string, unknown>>;
+  expect(Array.isArray(receipts)).toBe(true);
+  expect(receipts.length).toBeGreaterThan(0);
+  const knownTheoryAggregates = new Set([
+    ...((exported.export?.records ?? []) as Array<Record<string, unknown>>).map((row) => row.id),
+    ...((exported.export?.plans ?? []) as Array<Record<string, unknown>>).map((row) => row.id),
+  ]);
+  expect(receipts.every((receipt) => receipt.subject === "THEORY" &&
+    knownTheoryAggregates.has(receipt.aggregateId))).toBe(true);
+  const serializedExport = JSON.stringify(exported.export);
+  expect(serializedExport).not.toContain(practiceRecordId);
+  expect(serializedExport).not.toMatch(/request_?sha256|requestSha256/u);
+  await post(owner.request, { action: "delete" });
+  expect(databaseScalar(`select concat_ws('|',
+    (select count(*) from public.c3r_p_learning_records where id='${recordId}'::uuid),
+    (select count(*) from public.c3r_p_attempts where record_id='${recordId}'::uuid),
+    (select count(*) from public.c3r_p_learning_records where id='${practiceRecordId}'::uuid and subject='PRACTICE')
+  );`)).toBe("0|0|1");
+  expect((await owner.request.get(`/api/review-os/c3r-t?recordId=${recordId}`)).status()).toBe(404);
+  writeEvidence({
+    ...prior,
+    recordId: undefined,
+    practiceRecordId: undefined,
+    restartRestore: true,
+    completeLearnerExport: true,
+    theoryDeletePreservesPractice: true,
+    restoreExportDelete: true,
+    cleanupReady: true,
+  });
+  await owner.close();
+});
+
+test("C3R-T default-off and Production gates fail as not-found", async ({ browser }) => {
+  test.skip(!["feature_off", "production_denied"].includes(mode), "gate mode only");
+  const owner = await browser.newContext({ baseURL });
+  await login(owner, ownerEmail, ownerPassword);
+  const response = await owner.request.get("/api/review-os/c3r-t");
+  expect(response.status()).toBe(404);
+  expect(await response.json()).toEqual({ ok: false, error: "not_found" });
+  await owner.close();
+});
