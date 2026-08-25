@@ -515,9 +515,8 @@ test("the exact 20-path envelope remains sorted, unique, and migration-bounded",
   assert.match(workflowSource, /--c3r-l-dedicated/);
   assert.match(workflowSource, /--verify-c3r-l-artifact/);
   assert.match(workflowSource,
-    /"config\/dabangil-c2r-c-l-exact-law-applicability-v1\.json"/);
-  assert.match(workflowSource, /"lib\/review-os\/law-source-version-registry\.ts"/);
-  assert.match(workflowSource, /"lib\/review-os\/trusted-repair-source-binding\.ts"/);
+    /pull_request:\r?\n    branches: \[main\]\r?\n    types: \[opened, synchronize, reopened\]\r?\n\r?\npermissions:/u);
+  assert.doesNotMatch(workflowSource, /\r?\n    paths:\r?\n/u);
   assert.doesNotMatch(workflowSource, /supabase link|supabase db push|--linked/);
 });
 
