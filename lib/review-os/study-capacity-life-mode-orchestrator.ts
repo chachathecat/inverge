@@ -324,6 +324,16 @@ function score(candidate: StudyTaskCandidateV1) {
   return candidate.basePriority + REQUIRED[candidate.requiredness] + candidate.prioritySignals.reduce((sum, signal) => sum + SIGNAL[signal], 0);
 }
 
+function compareCandidatesForDay(profile: LearnerConstraintProfileV1, availability: DayAvailabilityV1, left: StudyTaskCandidateV1, right: StudyTaskCandidateV1) {
+  if (profile.lifeMode === "full_time_employed") {
+    const leftLong = left.estimatedMinutes >= 100 ? 1 : 0;
+    const rightLong = right.estimatedMinutes >= 100 ? 1 : 0;
+    if (availability.dayKind === "weekend" && leftLong !== rightLong) return rightLong - leftLong;
+    if (availability.dayKind === "weekday" && leftLong !== rightLong) return leftLong - rightLong;
+  }
+  return score(right) - score(left) || left.estimatedMinutes - right.estimatedMinutes || left.id.localeCompare(right.id);
+}
+
 function compatible(candidate: StudyTaskCandidateV1, window: StudyWindowV1, allowProtected = false) {
   if (window.protected && !allowProtected) return false;
   if (candidate.cognitiveLoad === "high" && window.interruptibility === "high") return false;
@@ -392,7 +402,8 @@ function materializeSplitParts(candidate: StudyTaskCandidateV1, selected: { stat
       const { state } = selected[index];
       const duration = durations[index];
       const latestStart = state.w.endMinute - duration;
-      for (let start = state.cursor; start <= latestStart; start += 1) {
+      const earliestStart = parts.reduce((start, part) => part.state === state ? Math.max(start, part.end + 1) : start, state.cursor);
+      for (let start = earliestStart; start <= latestStart; start += 1) {
         const part = { state, start, end: start + duration };
         if (highLoadRunExceeds(blocks, [...parts, part], maxContinuousHighLoadMinutes)) continue;
         parts.push(part);
@@ -439,26 +450,62 @@ function chooseSplitStates(candidate: StudyTaskCandidateV1, states: WindowState[
     .map((state) => ({ state, capacity: Math.min(state.w.endMinute - state.cursor, candidate.cognitiveLoad === "high" ? maxContinuousHighLoadMinutes : candidate.estimatedMinutes) }))
     .filter(({ capacity }) => capacity >= minimum)
     .sort((left, right) => compareEligibleWindows(candidate, left.state, right.state) || left.capacity - right.capacity);
-  const selected: typeof eligible = [];
-  let answer: PlannedPart[] | null = null;
-  const search = (start: number, parts: number, capacity: number) => {
-    if (answer) return;
-    if (capacity >= candidate.estimatedMinutes && candidate.estimatedMinutes >= parts * minimum) {
-      const plannedParts = materializeSplitParts(candidate, selected, minimum, blocks, maxContinuousHighLoadMinutes);
-      if (plannedParts) {
-        answer = plannedParts;
-        return;
+  const options = eligible.map(({ state, capacity }) => {
+    const available = state.w.endMinute - state.cursor;
+    const maximumStateParts = candidate.cognitiveLoad === "high"
+      ? Math.min(maxParts, Math.floor((available + 1) / (minimum + 1)))
+      : 1;
+    const stateOptions = [{ count: 0, capacities: [] as number[], totalCapacity: 0 }];
+    for (let count = 1; count <= maximumStateParts; count += 1) {
+      const totalCapacity = candidate.cognitiveLoad === "high"
+        ? Math.min(candidate.estimatedMinutes, available - (count - 1), count * maxContinuousHighLoadMinutes)
+        : capacity;
+      if (totalCapacity < count * minimum) continue;
+      const capacities = Array.from({ length: count }, () => minimum);
+      let remaining = totalCapacity - count * minimum;
+      for (let index = 0; index < capacities.length && remaining > 0; index += 1) {
+        const maximum = candidate.cognitiveLoad === "high" ? maxContinuousHighLoadMinutes : capacity;
+        const addition = Math.min(remaining, maximum - capacities[index]);
+        capacities[index] += addition;
+        remaining -= addition;
+      }
+      stateOptions.push({ count, capacities, totalCapacity });
+    }
+    return stateOptions;
+  });
+  const suffixCapacity = Array.from({ length: eligible.length + 1 }, () => Array.from({ length: maxParts + 1 }, () => Number.NEGATIVE_INFINITY));
+  suffixCapacity[eligible.length][0] = 0;
+  for (let stateIndex = eligible.length - 1; stateIndex >= 0; stateIndex -= 1) {
+    for (let parts = 0; parts <= maxParts; parts += 1) {
+      for (const option of options[stateIndex]) {
+        if (option.count > parts || !Number.isFinite(suffixCapacity[stateIndex + 1][parts - option.count])) continue;
+        suffixCapacity[stateIndex][parts] = Math.max(suffixCapacity[stateIndex][parts], option.totalCapacity + suffixCapacity[stateIndex + 1][parts - option.count]);
       }
     }
-    if (parts >= maxParts) return;
-    for (let index = start; index < eligible.length; index += 1) {
-      selected.push(eligible[index]);
-      search(index + 1, parts + 1, capacity + eligible[index].capacity);
-      selected.pop();
+  }
+  const selected: typeof eligible = [];
+  let answer: PlannedPart[] | null = null;
+  const search = (stateIndex: number, remainingParts: number, capacity: number) => {
+    if (answer) return;
+    if (capacity + suffixCapacity[stateIndex][remainingParts] < candidate.estimatedMinutes) return;
+    if (stateIndex === eligible.length) {
+      if (remainingParts !== 0 || capacity < candidate.estimatedMinutes) return;
+      const plannedParts = materializeSplitParts(candidate, selected, minimum, blocks, maxContinuousHighLoadMinutes);
+      if (plannedParts) answer = plannedParts;
+      return;
+    }
+    for (const option of [...options[stateIndex]].reverse()) {
+      if (option.count > remainingParts) continue;
+      for (const partCapacity of option.capacities) selected.push({ state: eligible[stateIndex].state, capacity: partCapacity });
+      search(stateIndex + 1, remainingParts - option.count, capacity + option.totalCapacity);
+      selected.splice(selected.length - option.count, option.count);
       if (answer) return;
     }
   };
-  search(0, 0, 0);
+  for (let parts = 1; parts <= maxParts && !answer; parts += 1) {
+    if (candidate.estimatedMinutes < parts * minimum || suffixCapacity[0][parts] < candidate.estimatedMinutes) continue;
+    search(0, parts, 0);
+  }
   return answer;
 }
 
@@ -489,7 +536,12 @@ function hasStructuralPlacement(candidate: StudyTaskCandidateV1, states: WindowS
   const maximumParts = candidate.maxParts ?? 2;
   const capacities = states
     .filter(({ w }) => compatible(candidate, w))
-    .map(({ w, cursor }) => Math.min(w.endMinute - cursor, candidate.cognitiveLoad === "high" ? maxContinuousHighLoadMinutes : candidate.estimatedMinutes))
+    .flatMap(({ w, cursor }) => {
+      const available = w.endMinute - cursor;
+      if (candidate.cognitiveLoad !== "high") return [Math.min(available, candidate.estimatedMinutes)];
+      const possibleParts = Math.min(maximumParts, Math.floor((available + 1) / (minimum + 1)));
+      return Array.from({ length: possibleParts }, (_, index) => Math.min(maxContinuousHighLoadMinutes, available - index * (minimum + 1)));
+    })
     .filter((capacity) => capacity >= minimum)
     .sort((left, right) => right - left)
     .slice(0, maximumParts);
@@ -545,7 +597,7 @@ export function buildStudyDayPlan(input: { profile: LearnerConstraintProfileV1; 
   const blocks: ExecutionBlockV1[] = [];
   const deferred: DeferredTaskV1[] = [];
   const scheduled = new Set<string>();
-  const ordered = [...input.candidates].sort((left, right) => score(right) - score(left) || left.estimatedMinutes - right.estimatedMinutes || left.id.localeCompare(right.id));
+  const ordered = [...input.candidates].sort((left, right) => compareCandidatesForDay(input.profile, input.availability, left, right));
   for (const candidate of ordered) {
     const loadExceeded = used[candidate.cognitiveLoad] + candidate.estimatedMinutes > budgets[candidate.cognitiveLoad];
     const plannedMinutes = blocks.reduce((sum, block) => sum + block.activeMinutes, 0);
@@ -656,15 +708,7 @@ export function buildStudyWeekPlan(input: { profile: LearnerConstraintProfileV1;
   let remaining = [...input.candidates];
   const plans: StudyDayPlanV1[] = [];
   for (const day of [...input.days].sort((left, right) => left.date.localeCompare(right.date))) {
-    const candidates = [...remaining].sort((left, right) => {
-      if (input.profile.lifeMode === "full_time_employed") {
-        const leftLong = left.estimatedMinutes >= 100 ? 1 : 0;
-        const rightLong = right.estimatedMinutes >= 100 ? 1 : 0;
-        if (day.dayKind === "weekend" && leftLong !== rightLong) return rightLong - leftLong;
-        if (day.dayKind === "weekday" && leftLong !== rightLong) return leftLong - rightLong;
-      }
-      return score(right) - score(left);
-    });
+    const candidates = [...remaining].sort((left, right) => compareCandidatesForDay(input.profile, day, left, right));
     const plan = buildStudyDayPlan({ profile: input.profile, availability: day, candidates, capacityHistory: input.capacityHistory });
     plans.push(plan);
     const completed = new Set(plan.executionBlocks.map((block) => block.candidateId).filter((candidateId): candidateId is string => Boolean(candidateId)));

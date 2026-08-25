@@ -306,6 +306,28 @@ test("working-mode weekly plan defers the long task on weekday and consumes it o
   assert.ok(!week.remainingTaskIds.includes("long-timed"));
 });
 
+test("employed weekend priority survives daily allocation when equal-score work exceeds the load budget", () => {
+  const week = buildStudyWeekPlan({
+    profile: profile({ lifeMode: "full_time_employed", scheduleVolatility: "medium" }),
+    days: [availability({
+      date: "2026-08-29",
+      dayKind: "weekend",
+      declaredActiveMinutes: 300,
+      windows: [{ id: "weekend", startMinute: 540, endMinute: 840, environment: "library", interruptibility: "low" }],
+    })],
+    candidates: [
+      task("weekend-long", { estimatedMinutes: 100, minimumContinuousMinutes: 100 }),
+      task("weekend-short", { estimatedMinutes: 60 }),
+    ],
+    requiredMinimumMinutes: 100,
+    requiredMaximumMinutes: 160,
+  });
+  const scheduled = week.dayPlans[0].executionBlocks.map((block) => block.candidateId);
+  assert.ok(scheduled.includes("weekend-long"));
+  assert.ok(!scheduled.includes("weekend-short"));
+  assert.deepEqual(week.remainingTaskIds, ["weekend-short"]);
+});
+
 test("shift commute window admits safe guided recall but rejects desk-dependent work", () => {
   const plan = buildStudyDayPlan({
     profile: profile({ lifeMode: "shift_or_irregular_work", scheduleVolatility: "high" }),
@@ -720,6 +742,67 @@ test("continuous high-load limits and atomic split bounds are enforced", () => {
   });
   assert.equal(touchingSplit.executionBlocks.length, 0);
   assert.equal(touchingSplit.deferredTasks.length, 1);
+});
+
+test("splittable high-load work can use one eligible window with a real break between bounded parts", () => {
+  const plan = buildStudyDayPlan({
+    profile: profile(),
+    availability: availability({
+      declaredActiveMinutes: 600,
+      windows: [
+        { id: "single-eligible", startMinute: 480, endMinute: 720, environment: "library", interruptibility: "low" },
+        { id: "capacity-only", startMinute: 780, endMinute: 1140, environment: "desk", interruptibility: "low" },
+      ],
+    }),
+    candidates: [task("single-window-split", {
+      estimatedMinutes: 150,
+      minimumContinuousMinutes: 60,
+      splittable: true,
+      maxParts: 2,
+      allowedEnvironments: ["library"],
+      requiredness: "required",
+    })],
+  });
+  const blocks = plan.executionBlocks.filter((block) => block.candidateId === "single-window-split");
+  assert.equal(blocks.length, 2);
+  assert.equal(blocks.reduce((sum, block) => sum + block.activeMinutes, 0), 150);
+  assert.ok(blocks.every((block) => block.windowId === "single-eligible"));
+  assert.ok(blocks.every((block) => block.activeMinutes >= 60));
+  assert.ok(blocks.every((block) => block.activeMinutes <= plan.capacity.maxContinuousHighLoadMinutes));
+  assert.ok(blocks[1].startMinute > blocks[0].endMinute);
+});
+
+test("maximum-part split search stays bounded while using distinct constrained windows", () => {
+  const startedAt = Date.now();
+  const plan = buildStudyDayPlan({
+    profile: profile(),
+    availability: availability({
+      declaredActiveMinutes: 720,
+      windows: [
+        ...Array.from({ length: 12 }, (_, index) => ({
+          id: `constrained-${index}`,
+          startMinute: index * 30,
+          endMinute: index * 30 + 25,
+          environment: "library",
+          interruptibility: "low",
+        })),
+        { id: "capacity-only", startMinute: 360, endMinute: 720, environment: "desk", interruptibility: "low" },
+      ],
+    }),
+    candidates: [task("max-parts-distinct", {
+      estimatedMinutes: 280,
+      minimumContinuousMinutes: 1,
+      splittable: true,
+      maxParts: 12,
+      allowedEnvironments: ["library"],
+      requiredness: "required",
+    })],
+  });
+  const blocks = plan.executionBlocks.filter((block) => block.candidateId === "max-parts-distinct");
+  assert.equal(blocks.length, 12);
+  assert.equal(new Set(blocks.map((block) => block.windowId)).size, 12);
+  assert.equal(blocks.reduce((sum, block) => sum + block.activeMinutes, 0), 280);
+  assert.ok(Date.now() - startedAt < 1000, "capacity-aware split search must remain bounded");
 });
 
 test("high-load work never enters high interruption and prefers low over medium interruption", () => {
