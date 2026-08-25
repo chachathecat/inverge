@@ -16,7 +16,7 @@
 
 ## Branches and PRs
 
-- Lane A repair: `codex/c3r-t-postmerge-index-catalog-repair`; worktree `.agent-factory/worktrees/owner-study-c3r-t-index-repair`; base `64b7e3655e4fc78646aa4281abc6855d180f209b`; Issue #819; no PR yet
+- Lane A repair: `codex/c3r-t-postmerge-index-catalog-repair`; worktree `.agent-factory/worktrees/owner-study-c3r-t-index-repair`; base `64b7e3655e4fc78646aa4281abc6855d180f209b`; Draft PR #820 / Issue #819
 - Lane A Law: `codex/owner-study-lane-a-c3r-l`; worktree `.agent-factory/worktrees/owner-study-lane-a-c3r-l`; parked with uncommitted local scaffold at `64b7e3655e4fc78646aa4281abc6855d180f209b`
 - Lane B: `codex/owner-study-lane-b-first-stage-kernel`; Draft PR #813; parked
 - Lane C: `codex/owner-study-lane-c-question-foundry`; Draft PR #810; integration-held
