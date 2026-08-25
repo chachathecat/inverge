@@ -180,30 +180,9 @@ alter table public.c3r_p_command_receipts add constraint c3r_command_receipts_su
   check (subject in ('PRACTICE'::public.c3r_p_subject, 'THEORY'::public.c3r_p_subject,
     'LAW'::public.c3r_p_subject));
 
--- A child row cannot cross-bind subjects even when the learner is the same.
-alter table public.c3r_p_learning_records
-  drop constraint if exists c3r_learning_records_subject_owner_uq,
-  drop constraint if exists c3r_learning_records_subject_source_uq,
-  drop constraint if exists c3r_learning_records_subject_item_uq,
-  add constraint c3r_learning_records_subject_owner_uq unique (user_id, id, subject),
-  add constraint c3r_learning_records_subject_source_uq unique (
-    user_id, id, subject, source_id, problem_id, revision_id, artifact_id
-  ),
-  add constraint c3r_learning_records_subject_item_uq unique (
-    user_id, id, subject, source_id, problem_id, revision_id, item_id, artifact_id
-  );
-alter table public.c3r_p_attempts
-  drop constraint if exists c3r_attempts_subject_owner_uq,
-  add constraint c3r_attempts_subject_owner_uq unique (user_id, record_id, id, subject);
-alter table public.c3r_p_learning_gaps
-  drop constraint if exists c3r_gaps_subject_owner_uq,
-  add constraint c3r_gaps_subject_owner_uq unique (user_id, record_id, id, subject);
-alter table public.c3r_p_transfer_tasks
-  drop constraint if exists c3r_transfer_subject_owner_uq,
-  add constraint c3r_transfer_subject_owner_uq unique (user_id, record_id, id, subject);
-alter table public.c3r_p_plans
-  drop constraint if exists c3r_plans_subject_owner_uq,
-  add constraint c3r_plans_subject_owner_uq unique (user_id, id, subject);
+-- C3R-T already installed the exact subject-aware unique identities. Preserve
+-- their catalog objects because the predecessor composite foreign keys depend
+-- on those constraint identities; the new enum label needs no unique-key DDL.
 
 alter table public.c3r_p_attempts
   drop constraint if exists c3r_p_attempts_record_binding_fk,

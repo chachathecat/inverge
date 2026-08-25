@@ -198,6 +198,8 @@ test("the enum migration is isolated and the integration closes P/T/L identities
   assert.match(integrationSql, /LAW_RUNTIME:c3r-l-law-durable-learning-v1/);
   assert.match(integrationSql,
     /c3r-l:law:synthetic-article-10-applicability:d7-transfer-v1/);
+  assert.doesNotMatch(integrationSql,
+    /drop constraint if exists c3r_(?:learning_records|attempts|gaps|transfer|plans)_[a-z_]*uq/);
   assert.doesNotMatch(integrationSql, /c3r_lransfer/);
 });
 
