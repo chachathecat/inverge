@@ -480,6 +480,37 @@ function git(repositoryRoot, args) {
   return execFileSync("git", args, { cwd: repositoryRoot, encoding: "utf8" }).trim();
 }
 
+const GIT_ANCESTRY_RETRY_DELAYS_MS = Object.freeze([0, 100, 250]);
+
+function waitForGitAncestryRetry(delayMs) {
+  if (delayMs <= 0) return;
+  Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, delayMs);
+}
+
+export function assertC3RPGitAncestor(
+  repositoryRoot,
+  ancestorSha,
+  descendantSha,
+  options = {},
+) {
+  const spawnGit = options.spawnGit ?? spawnSync;
+  const wait = options.wait ?? waitForGitAncestryRetry;
+  const statuses = [];
+  for (const delayMs of GIT_ANCESTRY_RETRY_DELAYS_MS) {
+    wait(delayMs);
+    const result = spawnGit("git", ["merge-base", "--is-ancestor", ancestorSha, descendantSha], {
+      cwd: repositoryRoot,
+      stdio: "ignore",
+    });
+    if (result.status === 0) return;
+    statuses.push(result.status);
+  }
+  if (statuses.every((status) => status === 1)) {
+    throw new Error("C3R-P head does not descend from the validated authority merge.");
+  }
+  throw new Error("C3R-P Git ancestry verification was unavailable after 3 attempts.");
+}
+
 export function exactMigrationInventory(repositoryRoot, headSha = "HEAD") {
   const names = git(repositoryRoot, ["ls-tree", "-r", "--name-only", headSha, "--", "supabase/migrations"])
     .split(/\r?\n/).filter((name) => /^supabase\/migrations\/\d{8,14}_[a-z0-9_]+\.sql$/.test(name));
@@ -559,13 +590,7 @@ export function validateC3RPMigrationAuthorityBinding(
     sha256(Buffer.from(canonicalJson(inventory), "utf8")) !== binding.effectiveInventorySha256) {
     throw new Error("C3R-P append or effective inventory digest is invalid.");
   }
-  if (spawnSync("git", ["merge-base", "--is-ancestor",
-    binding.validatedAuthorityResultingMainSha, headSha], {
-    cwd: repositoryRoot,
-    stdio: "ignore",
-  }).status !== 0) {
-    throw new Error("C3R-P head does not descend from the validated authority merge.");
-  }
+  assertC3RPGitAncestor(repositoryRoot, binding.validatedAuthorityResultingMainSha, headSha);
   for (const [artifactPath, expectedSha256] of [
     [authority.authorityDecisionRef, authority.authorityDecisionSha256],
     [authority.authorityContractRef, authority.authorityContractSha256],

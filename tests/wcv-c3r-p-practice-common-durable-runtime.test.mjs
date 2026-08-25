@@ -19,6 +19,7 @@ import { c3rPCurrentQueueItem } from
 
 import {
   C3R_P_APPEND_PATH,
+  assertC3RPGitAncestor,
   createC3RPEntryDiagnosticLog,
   createPracticeRuntimeArtifact,
   redactC3RPEntryDiagnosticText,
@@ -1043,4 +1044,51 @@ test("frozen path manifest is unique, package identity is unchanged, and candida
   } else if (candidateBoundary !== contract.authority.baseSha) {
     assert.equal(process.env.CI, "true", "the pinned base must exist outside a shallow CI checkout");
   }
+});
+
+test("C3R-P ancestry verification recovers from bounded transient Git subprocess failures", () => {
+  const results = [{ status: null }, { status: 128 }, { status: 0 }];
+  const waits = [];
+  const calls = [];
+  assert.doesNotThrow(() => assertC3RPGitAncestor(root, contract.authority.baseSha, "head", {
+    spawnGit(command, args, options) {
+      calls.push({ command, args, options });
+      return results.shift();
+    },
+    wait(delayMs) {
+      waits.push(delayMs);
+    },
+  }));
+  assert.deepEqual(waits, [0, 100, 250]);
+  assert.equal(calls.length, 3);
+  for (const call of calls) {
+    assert.equal(call.command, "git");
+    assert.deepEqual(call.args,
+      ["merge-base", "--is-ancestor", contract.authority.baseSha, "head"]);
+    assert.deepEqual(call.options, { cwd: root, stdio: "ignore" });
+  }
+});
+
+test("C3R-P ancestry verification fails closed after three true non-ancestor results", () => {
+  let attempts = 0;
+  assert.throws(() => assertC3RPGitAncestor(root, contract.authority.baseSha, "head", {
+    spawnGit() {
+      attempts += 1;
+      return { status: 1 };
+    },
+    wait() {},
+  }), /does not descend from the validated authority merge/);
+  assert.equal(attempts, 3);
+});
+
+test("C3R-P ancestry verification fails closed when Git remains unavailable", () => {
+  let attempts = 0;
+  assert.throws(() => assertC3RPGitAncestor(root, contract.authority.baseSha, "head", {
+    spawnGit() {
+      attempts += 1;
+      return { status: null };
+    },
+    wait() {},
+  }), /Git ancestry verification was unavailable after 3 attempts/);
+  assert.equal(attempts, 3);
 });
