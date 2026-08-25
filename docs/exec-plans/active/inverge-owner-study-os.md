@@ -16,7 +16,7 @@
 
 ## Branches and PRs
 
-- Lane A Law: `codex/owner-study-lane-a-c3r-l`; Draft PR #821; pre-correction head `4e376be`; worktree `.agent-factory/worktrees/owner-study-lane-a-c3r-l`; base `75f3ce787d31047c2bceacc2ef752c0bfdfb23cc`
+- Lane A Law: `codex/owner-study-lane-a-c3r-l`; Draft PR #821; correction-1 head `d0fc7274f053b1006fb0446d18903539dd4842a2`; worktree `.agent-factory/worktrees/owner-study-lane-a-c3r-l`; base `75f3ce787d31047c2bceacc2ef752c0bfdfb23cc`
 - Lane B: `codex/owner-study-lane-b-first-stage-kernel`; Draft PR #813; parked
 - Lane C: `codex/owner-study-lane-c-question-foundry`; Draft PR #810; parked
 
@@ -38,8 +38,8 @@
 
 ## Current blocker
 
-- PR #821 Runtime Gate unique-constraint dependency root is repaired with a regression; exact-head correction CI is pending; remote Supabase/Production mutation remains zero
+- PR #821 correction 1 repaired the Runtime Gate unique-constraint root; correction 2 repairs the two remaining review roots by requiring fresh Law reconstruction and exercising the inherited Theory vertical; exact-head CI is pending; remote Supabase/Production mutation remains zero
 
 ## Next exact action
 
-- commit and push correction 1, then inspect PR #821 exact-head CI and repair its first in-scope root failure
+- commit and push final correction 2, then inspect PR #821 exact-head CI and request fresh exact-head formal review
