@@ -16,7 +16,8 @@
 
 ## Branches and PRs
 
-- Lane A Law trigger closure: `codex/owner-study-lane-a-c3r-l-trigger-closure`; Draft PR #825; candidate head `fd118891e43c946327fc5faa0743d55de9c70de7`; worktree `.agent-factory/worktrees/owner-study-lane-a-c3r-l-trigger-closure`; base `75f3ce787d31047c2bceacc2ef752c0bfdfb23cc`
+- Lane A Law recovery: `codex/owner-study-lane-a-c3r-l-recovery`; PR not opened; worktree `.agent-factory/worktrees/owner-study-lane-a-c3r-l-recovery`; base `75f3ce787d31047c2bceacc2ef752c0bfdfb23cc`
+- Superseded Lane A PR #825: closed unmerged after the two-correction limit exposed a mandatory migration-recovery P1
 - Lane B: `codex/owner-study-lane-b-first-stage-kernel`; Draft PR #813; parked
 - Lane C: `codex/owner-study-lane-c-question-foundry`; Draft PR #810; parked
 
@@ -38,8 +39,8 @@
 
 ## Current blocker
 
-- Draft PR #825 closes the complete three-path Law source-binding trigger set; exact-head CI is pending; remote Supabase/Production mutation remains zero
+- No ordinary blocker: the clean replacement preserves unconditional Law evidence and adds Owner-gated, data-preserving migration recovery instructions; focused 102/102 passed; remote Supabase/Production mutation remains zero
 
 ## Next exact action
 
-- commit and push the PR #825 log correction, then inspect exact-head CI and request fresh formal review
+- run typecheck, changed-file lint, and diff checks; commit and push the clean replacement; open one Draft PR
