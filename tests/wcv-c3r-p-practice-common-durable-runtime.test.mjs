@@ -19,8 +19,10 @@ import { c3rPCurrentQueueItem } from
 
 import {
   C3R_P_APPEND_PATH,
+  assertC3RPGitAncestor,
   createC3RPEntryDiagnosticLog,
   createPracticeRuntimeArtifact,
+  isC3RPGitAncestor,
   redactC3RPEntryDiagnosticText,
   seedDisposableReviewOsProfiles,
   validateC3RPEntryReceipt,
@@ -44,6 +46,8 @@ const browserSource = fs.readFileSync(path.join(root,
   "tests/e2e/wcv-c3r-p-practice-common-runtime.spec.ts"), "utf8");
 const workflowSource = fs.readFileSync(path.join(root,
   ".github/workflows/c3r-p-practice-common-durable-runtime.yml"), "utf8");
+const fullCiWorkflowSource = fs.readFileSync(path.join(root,
+  ".github/workflows/ci-full.yml"), "utf8");
 const productionAccessBlobs = Object.freeze({
   "lib/review-os/repository.ts": "f7f20117c5e3acb14eeb331d8f45a9b97d66c8c2",
   "lib/review-os/server.ts": "429085a06c3104aa66c49b272738d53f00318d8a",
@@ -61,6 +65,19 @@ const FORMER_C3R_P_SOURCE_REVISION_ID =
 const C3R_P_SOURCE_REVISION_ID = "26a4f3bd-ddf3-4215-9fdf-d83453122ce1";
 const MISMATCHED_C3R_P_SOURCE_REVISION_ID =
   "d2889575-35e6-4e31-9ed7-e27ae55d7e8d";
+// Regression-only anchor for the validated PR #800 squash result. Live GitHub
+// remains the merge-receipt authority; these values prevent later descendants
+// from being mistaken for the original C3R-P candidate diff.
+const C3R_P_VALIDATED_RESULTING_MAIN_SHA =
+  "71fd878a7369c25a153bc90389347039684c501f";
+const C3R_P_VALIDATED_RESULTING_MAIN_TREE =
+  "f6fb7bc1d1613a8431a4bbdfe155eea9d9f5303c";
+
+function mockCommitResolution(args) {
+  if (args[1] !== "rev-parse") return null;
+  const value = args[3].replace(/\^\{commit\}$/, "");
+  return { status: 0, stdout: `${value}\n` };
+}
 
 function exactPracticeClaim(sourceRevisionId) {
   return {
@@ -89,6 +106,47 @@ function canonicalJson(value) {
       `${JSON.stringify(key)}:${canonicalJson(value[key])}`).join(",")}}`;
   }
   return JSON.stringify(value);
+}
+
+function manifestBoundaryChangedPaths(
+  repositoryRoot,
+  headRef,
+  validatedResultSha,
+  validatedResultTree,
+  baseSha,
+) {
+  const head = execFileSync(
+    "git",
+    ["--no-replace-objects", "rev-parse", "--verify", `${headRef}^{commit}`],
+    { cwd: repositoryRoot, encoding: "utf8" },
+  ).trim();
+  const headDescendsFromValidatedResult = isC3RPGitAncestor(
+    repositoryRoot,
+    validatedResultSha,
+    head,
+  );
+  const boundary = headDescendsFromValidatedResult ? validatedResultSha : head;
+  const boundaryTree = execFileSync(
+    "git",
+    ["--no-replace-objects", "rev-parse", "--verify", `${boundary}^{tree}`],
+    { cwd: repositoryRoot, encoding: "utf8" },
+  ).trim();
+  if (headDescendsFromValidatedResult) {
+    assert.equal(boundaryTree, validatedResultTree);
+  }
+  assert.equal(isC3RPGitAncestor(repositoryRoot, baseSha, boundary), true,
+    "the manifest boundary must descend from the pinned C3R-P base");
+  const baseTree = execFileSync(
+    "git",
+    ["--no-replace-objects", "rev-parse", "--verify", `${baseSha}^{tree}`],
+    { cwd: repositoryRoot, encoding: "utf8" },
+  ).trim();
+  return execFileSync(
+    "git",
+    ["--no-replace-objects", "diff", "--no-ext-diff", "--find-renames=50%", "--name-only",
+      baseTree, boundaryTree, "--"],
+    { cwd: repositoryRoot, encoding: "utf8" },
+  ).trim().split(/\r?\n/).filter(Boolean).sort();
 }
 
 function clone(value) {
@@ -834,6 +892,11 @@ test("dedicated C3R-P evidence triggers on every directly imported shared truste
   }
 });
 
+test("required full-suite checkouts retain the historical objects used by the frozen manifest", () => {
+  assert.equal((fullCiWorkflowSource.match(/uses: actions\/checkout@v4/g) ?? []).length, 2);
+  assert.equal((fullCiWorkflowSource.match(/fetch-depth: 0/g) ?? []).length, 2);
+});
+
 test("verified attempts bind to learner-entered structured values and server-rendered bodies", () => {
   assert.match(componentSource,
     /practiceClaim\(structuredCalculation, view\?\.source\.revisionId\)/);
@@ -1009,15 +1072,295 @@ test("frozen path manifest is unique, package identity is unchanged, and candida
     contract.packageIdentity.packageJsonGitBlob);
   assert.equal(execFileSync("git", ["hash-object", "package-lock.json"], { cwd: root, encoding: "utf8" }).trim(),
     contract.packageIdentity.packageLockJsonGitBlob);
-  const head = execFileSync("git", ["rev-parse", "HEAD"], { cwd: root, encoding: "utf8" }).trim();
-  const baseAvailable = spawnSync(
-    "git", ["cat-file", "-e", `${contract.authority.baseSha}^{commit}`], { cwd: root },
-  ).status === 0;
-  if (head !== contract.authority.baseSha && baseAvailable) {
-    const changed = execFileSync("git", ["diff", "--name-only", `${contract.authority.baseSha}...HEAD`],
-      { cwd: root, encoding: "utf8" }).trim().split(/\r?\n/).filter(Boolean).sort();
-    assert.deepEqual(changed, [...manifest].sort());
-  } else if (head !== contract.authority.baseSha) {
-    assert.equal(process.env.CI, "true", "the pinned base must exist outside a shallow CI checkout");
+  const changed = manifestBoundaryChangedPaths(
+    root,
+    "HEAD",
+    C3R_P_VALIDATED_RESULTING_MAIN_SHA,
+    C3R_P_VALIDATED_RESULTING_MAIN_TREE,
+    contract.authority.baseSha,
+  );
+  assert.deepEqual(changed, [...manifest].sort());
+});
+
+test("C3R-P ancestry verification recovers from bounded transient primary failures", () => {
+  const results = [{ status: null }, { status: 128 }, { status: 0 }];
+  const waits = [];
+  const calls = [];
+  assert.doesNotThrow(() => assertC3RPGitAncestor(
+    root, contract.authority.baseSha, C3R_P_VALIDATED_RESULTING_MAIN_SHA, {
+      spawnGit(command, args, options) {
+        calls.push({ command, args, options });
+        const resolution = mockCommitResolution(args);
+        if (resolution) return resolution;
+        return results.shift();
+      },
+      wait(delayMs) { waits.push(delayMs); },
+    },
+  ));
+  assert.deepEqual(waits, [0, 100, 250]);
+  assert.equal(calls.filter((call) => call.args[1] === "rev-parse").length, 2);
+  assert.equal(calls.filter((call) => call.args[1] === "merge-base").length, 3);
+  assert.equal(calls.filter((call) => call.args[1] === "cat-file").length, 0);
+});
+
+test("C3R-P ancestry verification traverses raw commit parents across a shallow graph view", () => {
+  const middle = "b".repeat(40);
+  const descendant = "c".repeat(40);
+  const tree = "d".repeat(40);
+  const calls = [];
+  const objects = new Map([
+    [descendant, `tree ${tree}\nparent ${middle}\nauthor Test <test@example.invalid> 0 +0000\ncommitter Test <test@example.invalid> 0 +0000\n\ndescendant\n`],
+    [middle, `tree ${tree}\nparent ${contract.authority.baseSha}\nauthor Test <test@example.invalid> 0 +0000\ncommitter Test <test@example.invalid> 0 +0000\n\nmiddle\n`],
+    [contract.authority.baseSha,
+      `tree ${tree}\nauthor Test <test@example.invalid> 0 +0000\ncommitter Test <test@example.invalid> 0 +0000\n\nauthority\n`],
+  ]);
+  assert.doesNotThrow(() => assertC3RPGitAncestor(root, contract.authority.baseSha, descendant, {
+    spawnGit(command, args, options) {
+      calls.push({ command, args, options });
+      const resolution = mockCommitResolution(args);
+      if (resolution) return resolution;
+      if (args[1] === "merge-base") return { status: 1 };
+      if (args[2] === "-t") return { status: 0, stdout: "commit\n" };
+      return { status: 0, stdout: objects.get(args[3]) };
+    },
+    wait() {},
+  }));
+  assert.equal(calls.filter((call) => call.args[1] === "merge-base").length, 3);
+  assert.deepEqual(calls.filter((call) => call.args[1] === "cat-file").map((call) => call.args), [
+    ["--no-replace-objects", "cat-file", "-t", descendant],
+    ["--no-replace-objects", "cat-file", "-p", descendant],
+    ["--no-replace-objects", "cat-file", "-t", middle],
+    ["--no-replace-objects", "cat-file", "-p", middle],
+    ["--no-replace-objects", "cat-file", "-t", contract.authority.baseSha],
+    ["--no-replace-objects", "cat-file", "-p", contract.authority.baseSha],
+  ]);
+  assert.deepEqual(calls.at(-1).options,
+    { cwd: root, encoding: "utf8", maxBuffer: 1024 * 1024 });
+});
+
+test("C3R-P raw commit ancestry proof rejects true non-ancestry", () => {
+  const descendant = "c".repeat(40);
+  const tree = "d".repeat(40);
+  assert.throws(() => assertC3RPGitAncestor(root, contract.authority.baseSha, descendant, {
+    spawnGit(_command, args) {
+      const resolution = mockCommitResolution(args);
+      if (resolution) return resolution;
+      if (args[1] === "merge-base") return { status: 1 };
+      if (args[2] === "-t") return { status: 0, stdout: "commit\n" };
+      return { status: 0, stdout:
+        `tree ${tree}\nauthor Test <test@example.invalid> 0 +0000\ncommitter Test <test@example.invalid> 0 +0000\n\nparent ${contract.authority.baseSha}\n` };
+    },
+    wait() {},
+  }), /does not descend from the validated authority merge/);
+});
+
+test("C3R-P raw commit ancestry proof follows every merge parent", () => {
+  const descendant = "c".repeat(40);
+  const unrelated = "e".repeat(40);
+  const tree = "d".repeat(40);
+  const visited = [];
+  assert.doesNotThrow(() => assertC3RPGitAncestor(root, contract.authority.baseSha, descendant, {
+    spawnGit(_command, args) {
+      const resolution = mockCommitResolution(args);
+      if (resolution) return resolution;
+      if (args[1] === "merge-base") return { status: 1 };
+      if (args[2] === "-t") return { status: 0, stdout: "commit\n" };
+      visited.push(args[3]);
+      if (args[3] === descendant) {
+        return { status: 0, stdout:
+          `tree ${tree}\nparent ${unrelated}\nparent ${contract.authority.baseSha}\nauthor Test <test@example.invalid> 0 +0000\ncommitter Test <test@example.invalid> 0 +0000\n\nmerge\n` };
+      }
+      return { status: 0, stdout:
+        `tree ${tree}\nauthor Test <test@example.invalid> 0 +0000\ncommitter Test <test@example.invalid> 0 +0000\n\nauthority\n` };
+    },
+    wait() {},
+  }));
+  assert.deepEqual(visited, [descendant, contract.authority.baseSha]);
+});
+
+test("C3R-P raw commit ancestry proof deduplicates repeated fan-in parents before enqueue", () => {
+  const descendant = "c".repeat(40);
+  const shared = "e".repeat(40);
+  const tree = "d".repeat(40);
+  const visited = [];
+  assert.equal(isC3RPGitAncestor(root, contract.authority.baseSha, descendant, {
+    spawnGit(_command, args) {
+      const resolution = mockCommitResolution(args);
+      if (resolution) return resolution;
+      if (args[1] === "merge-base") return { status: 1 };
+      if (args[2] === "-t") return { status: 0, stdout: "commit\n" };
+      visited.push(args[3]);
+      if (args[3] === descendant) {
+        return { status: 0, stdout:
+          `tree ${tree}\n${`parent ${shared}\n`.repeat(10_001)}author Test <test@example.invalid> 0 +0000\ncommitter Test <test@example.invalid> 0 +0000\n\nfan-in\n` };
+      }
+      return { status: 0, stdout:
+        `tree ${tree}\nauthor Test <test@example.invalid> 0 +0000\ncommitter Test <test@example.invalid> 0 +0000\n\nshared\n` };
+    },
+    wait() {},
+  }), false);
+  assert.deepEqual(visited, [descendant, shared]);
+});
+
+test("C3R-P raw commit ancestry proof validates an equal ancestor and descendant object", () => {
+  const commit = "c".repeat(40);
+  const tree = "d".repeat(40);
+  const rawCalls = [];
+  assert.doesNotThrow(() => assertC3RPGitAncestor(root, commit, commit, {
+    spawnGit(_command, args) {
+      const resolution = mockCommitResolution(args);
+      if (resolution) return resolution;
+      if (args[1] === "merge-base") return { status: 1 };
+      rawCalls.push(args);
+      if (args[2] === "-t") return { status: 0, stdout: "commit\n" };
+      return { status: 0, stdout:
+        `tree ${tree}\nauthor Test <test@example.invalid> 0 +0000\ncommitter Test <test@example.invalid> 0 +0000\n\nsame\n` };
+    },
+    wait() {},
+  }));
+  assert.deepEqual(rawCalls.map((args) => args[2]), ["-t", "-p"]);
+});
+
+test("C3R-P raw commit ancestry proof fails closed on missing or malformed objects", () => {
+  const descendant = "c".repeat(40);
+  for (const rawResult of [
+    { type: { status: 128, stdout: "" } },
+    { type: { status: 0, stdout: null } },
+    { type: { status: 0, stdout: "blob\n" } },
+    { type: { status: 0, stdout: "commit\n" }, object: { status: 0, stdout: null } },
+    { type: { status: 0, stdout: "commit\n" }, object: { status: 0, stdout: "tree invalid\n" } },
+    { type: { status: 0, stdout: "commit\n" }, object: { status: 0, stdout:
+      `tree ${"d".repeat(40)}\nparent invalid\n\nmessage\n` } },
+    { type: { status: 0, stdout: "commit\n" }, object: { status: 0, stdout:
+      `tree ${"d".repeat(40)}\nparent ${"A".repeat(40)}\n\nmessage\n` } },
+  ]) {
+    assert.throws(() => assertC3RPGitAncestor(root, contract.authority.baseSha, descendant, {
+      spawnGit(_command, args) {
+        const resolution = mockCommitResolution(args);
+        if (resolution) return resolution;
+        if (args[1] === "merge-base") return { status: 1 };
+        return args[2] === "-t" ? rawResult.type : rawResult.object;
+      },
+      wait() {},
+    }), /raw commit ancestry proof was (?:unavailable|malformed)/);
+  }
+});
+
+test("C3R-P raw commit ancestry proof fails closed at its traversal bound", () => {
+  const ancestor = "a".repeat(40);
+  const descendant = (10_001).toString(16).padStart(40, "0");
+  const tree = "d".repeat(40);
+  assert.throws(() => assertC3RPGitAncestor(root, ancestor, descendant, {
+    spawnGit(_command, args) {
+      const resolution = mockCommitResolution(args);
+      if (resolution) return resolution;
+      if (args[1] === "merge-base") return { status: 1 };
+      if (args[2] === "-t") return { status: 0, stdout: "commit\n" };
+      const current = Number.parseInt(args[3], 16);
+      const parent = (current - 1).toString(16).padStart(40, "0");
+      return { status: 0, stdout:
+        `tree ${tree}\nparent ${parent}\nauthor Test <test@example.invalid> 0 +0000\ncommitter Test <test@example.invalid> 0 +0000\n\nchain\n` };
+    },
+    wait() {},
+  }), /exceeded its bounded traversal/);
+});
+
+test("C3R-P ancestry verification rejects invalid commit identities", () => {
+  assert.throws(() => assertC3RPGitAncestor(root, "invalid", "c".repeat(40)),
+    /Git ancestry identity is invalid/);
+});
+
+test("C3R-P raw ancestry ignores an isolated shallow boundary while revision walking does not", () => {
+  const repository = fs.mkdtempSync(path.join(os.tmpdir(), "c3r-p-raw-ancestry-"));
+  try {
+    execFileSync("git", ["init", "--quiet"], { cwd: repository });
+    execFileSync("git", ["config", "user.name", "C3R-P Ancestry Test"], { cwd: repository });
+    execFileSync("git", ["config", "user.email", "c3r-p-ancestry@example.invalid"], { cwd: repository });
+    execFileSync("git", ["config", "core.autocrlf", "false"], { cwd: repository });
+    const commits = [];
+    for (const label of ["a", "b", "c"]) {
+      fs.writeFileSync(path.join(repository, "state.txt"), `${label}\n`, "utf8");
+      execFileSync("git", ["add", "state.txt"], { cwd: repository });
+      execFileSync("git", ["commit", "--quiet", "-m", label], { cwd: repository });
+      commits.push(execFileSync("git", ["rev-parse", "HEAD"],
+        { cwd: repository, encoding: "utf8" }).trim());
+    }
+    fs.writeFileSync(path.join(repository, ".git", "shallow"), `${commits[1]}\n`, "utf8");
+    assert.equal(spawnSync("git", ["--no-replace-objects", "merge-base", "--is-ancestor",
+      commits[0], commits[2]], { cwd: repository }).status, 1);
+    assert.doesNotThrow(() => assertC3RPGitAncestor(repository, commits[0], commits[2]));
+  } finally {
+    fs.rmSync(repository, { recursive: true, force: true });
+  }
+});
+
+test("C3R-P manifest boundary stays pinned across an isolated shallow graph view", () => {
+  const repository = fs.mkdtempSync(path.join(os.tmpdir(), "c3r-p-manifest-boundary-"));
+  try {
+    execFileSync("git", ["init", "--quiet"], { cwd: repository });
+    execFileSync("git", ["config", "user.name", "C3R-P Manifest Test"], { cwd: repository });
+    execFileSync("git", ["config", "user.email", "c3r-p-manifest@example.invalid"],
+      { cwd: repository });
+    execFileSync("git", ["config", "core.autocrlf", "false"], { cwd: repository });
+    fs.writeFileSync(path.join(repository, "base.txt"), "base\n", "utf8");
+    execFileSync("git", ["add", "base.txt"], { cwd: repository });
+    execFileSync("git", ["commit", "--quiet", "-m", "base"], { cwd: repository });
+    const base = execFileSync("git", ["rev-parse", "HEAD"],
+      { cwd: repository, encoding: "utf8" }).trim();
+    fs.writeFileSync(path.join(repository, "validated.txt"), "validated\n", "utf8");
+    execFileSync("git", ["add", "validated.txt"], { cwd: repository });
+    execFileSync("git", ["commit", "--quiet", "-m", "validated"], { cwd: repository });
+    const validated = execFileSync("git", ["rev-parse", "HEAD"],
+      { cwd: repository, encoding: "utf8" }).trim();
+    const validatedTree = execFileSync("git", ["rev-parse", "HEAD^{tree}"],
+      { cwd: repository, encoding: "utf8" }).trim();
+    fs.writeFileSync(path.join(repository, "head-only.txt"), "head\n", "utf8");
+    execFileSync("git", ["add", "head-only.txt"], { cwd: repository });
+    execFileSync("git", ["commit", "--quiet", "-m", "head"], { cwd: repository });
+    const head = execFileSync("git", ["rev-parse", "HEAD"],
+      { cwd: repository, encoding: "utf8" }).trim();
+    fs.writeFileSync(path.join(repository, ".git", "shallow"), `${head}\n`, "utf8");
+    assert.equal(spawnSync("git", ["--no-replace-objects", "merge-base", "--is-ancestor",
+      validated, head], { cwd: repository }).status, 1);
+    assert.deepEqual(manifestBoundaryChangedPaths(
+      repository, head, validated, validatedTree, base,
+    ), ["validated.txt"]);
+  } finally {
+    fs.rmSync(repository, { recursive: true, force: true });
+  }
+});
+
+test("C3R-P manifest boundary fails closed when a pinned commit object is omitted", () => {
+  const repository = fs.mkdtempSync(path.join(os.tmpdir(), "c3r-p-manifest-object-"));
+  try {
+    execFileSync("git", ["init", "--quiet"], { cwd: repository });
+    execFileSync("git", ["config", "user.name", "C3R-P Manifest Test"], { cwd: repository });
+    execFileSync("git", ["config", "user.email", "c3r-p-manifest@example.invalid"],
+      { cwd: repository });
+    execFileSync("git", ["config", "core.autocrlf", "false"], { cwd: repository });
+    fs.writeFileSync(path.join(repository, "base.txt"), "base\n", "utf8");
+    execFileSync("git", ["add", "base.txt"], { cwd: repository });
+    execFileSync("git", ["commit", "--quiet", "-m", "base"], { cwd: repository });
+    const base = execFileSync("git", ["rev-parse", "HEAD"],
+      { cwd: repository, encoding: "utf8" }).trim();
+    fs.writeFileSync(path.join(repository, "validated.txt"), "validated\n", "utf8");
+    execFileSync("git", ["add", "validated.txt"], { cwd: repository });
+    execFileSync("git", ["commit", "--quiet", "-m", "validated"], { cwd: repository });
+    const validated = execFileSync("git", ["rev-parse", "HEAD"],
+      { cwd: repository, encoding: "utf8" }).trim();
+    const validatedTree = execFileSync("git", ["rev-parse", "HEAD^{tree}"],
+      { cwd: repository, encoding: "utf8" }).trim();
+    fs.writeFileSync(path.join(repository, "head.txt"), "head\n", "utf8");
+    execFileSync("git", ["add", "head.txt"], { cwd: repository });
+    execFileSync("git", ["commit", "--quiet", "-m", "head"], { cwd: repository });
+    const omittedObject = path.join(repository, ".git", "objects",
+      validated.slice(0, 2), validated.slice(2));
+    assert.equal(fs.existsSync(omittedObject), true);
+    fs.rmSync(omittedObject);
+    assert.throws(() => manifestBoundaryChangedPaths(
+      repository, "HEAD", validated, validatedTree, base,
+    ), /Git ancestry identity was unavailable/);
+  } finally {
+    fs.rmSync(repository, { recursive: true, force: true });
   }
 });

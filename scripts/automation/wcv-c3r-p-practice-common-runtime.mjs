@@ -480,6 +480,119 @@ function git(repositoryRoot, args) {
   return execFileSync("git", args, { cwd: repositoryRoot, encoding: "utf8" }).trim();
 }
 
+const GIT_ANCESTRY_RETRY_DELAYS_MS = Object.freeze([0, 100, 250]);
+const GIT_ANCESTRY_MAX_RAW_COMMITS = 10_000;
+
+function waitForGitAncestryRetry(delayMs) {
+  if (delayMs <= 0) return;
+  Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, delayMs);
+}
+
+function resolveRawCommitOid(spawnGit, repositoryRoot, value) {
+  if (value !== "HEAD" && !SHA40.test(value)) {
+    throw new Error("C3R-P Git ancestry identity is invalid.");
+  }
+  const result = spawnGit(
+    "git",
+    ["--no-replace-objects", "rev-parse", "--verify", `${value}^{commit}`],
+    { cwd: repositoryRoot, encoding: "utf8", maxBuffer: 1024 * 1024 },
+  );
+  if (result.status !== 0 || typeof result.stdout !== "string") {
+    throw new Error("C3R-P Git ancestry identity was unavailable.");
+  }
+  const resolved = result.stdout.trim();
+  if (!SHA40.test(resolved) || (value !== "HEAD" && resolved !== value)) {
+    throw new Error("C3R-P Git ancestry identity was unavailable.");
+  }
+  return resolved;
+}
+
+function rawCommitParents(spawnGit, repositoryRoot, commitSha) {
+  const type = spawnGit("git", ["--no-replace-objects", "cat-file", "-t", commitSha], {
+    cwd: repositoryRoot,
+    encoding: "utf8",
+    maxBuffer: 1024 * 1024,
+  });
+  if (type.status !== 0 || typeof type.stdout !== "string" || type.stdout.trim() !== "commit") {
+    throw new Error("C3R-P raw commit ancestry proof was unavailable.");
+  }
+  const object = spawnGit("git", ["--no-replace-objects", "cat-file", "-p", commitSha], {
+    cwd: repositoryRoot,
+    encoding: "utf8",
+    maxBuffer: 1024 * 1024,
+  });
+  if (object.status !== 0 || typeof object.stdout !== "string") {
+    throw new Error("C3R-P raw commit ancestry proof was unavailable.");
+  }
+  const headerEnd = object.stdout.search(/\r?\n\r?\n/);
+  if (headerEnd < 0) throw new Error("C3R-P raw commit ancestry proof was malformed.");
+  const header = object.stdout.slice(0, headerEnd).split(/\r?\n/);
+  if (!/^tree [0-9a-f]{40}$/.test(header[0] ?? "")) {
+    throw new Error("C3R-P raw commit ancestry proof was malformed.");
+  }
+  const parents = [];
+  let index = 1;
+  while (index < header.length && header[index].startsWith("parent ")) {
+    const line = header[index];
+    const match = line.match(/^parent ([0-9a-f]{40})$/);
+    if (!match) throw new Error("C3R-P raw commit ancestry proof was malformed.");
+    parents.push(match[1]);
+    index += 1;
+  }
+  if (header.slice(index).some((line) => /^parent(?:\s|$)/.test(line))) {
+    throw new Error("C3R-P raw commit ancestry proof was malformed.");
+  }
+  return parents;
+}
+
+export function isC3RPGitAncestor(
+  repositoryRoot,
+  ancestorSha,
+  descendantSha,
+  options = {},
+) {
+  const spawnGit = options.spawnGit ?? spawnSync;
+  const wait = options.wait ?? waitForGitAncestryRetry;
+  const resolvedAncestor = resolveRawCommitOid(spawnGit, repositoryRoot, ancestorSha);
+  const resolvedDescendant = resolveRawCommitOid(spawnGit, repositoryRoot, descendantSha);
+  for (const delayMs of GIT_ANCESTRY_RETRY_DELAYS_MS) {
+    wait(delayMs);
+    const result = spawnGit(
+      "git",
+      ["--no-replace-objects", "merge-base", "--is-ancestor", resolvedAncestor, resolvedDescendant],
+      { cwd: repositoryRoot, stdio: "ignore" },
+    );
+    if (result.status === 0) return true;
+  }
+
+  const pending = [resolvedDescendant];
+  const discovered = new Set(pending);
+  while (pending.length > 0) {
+    const current = pending.pop();
+    const parents = rawCommitParents(spawnGit, repositoryRoot, current);
+    if (current === resolvedAncestor) return true;
+    for (const parent of parents) {
+      if (discovered.has(parent)) continue;
+      if (discovered.size >= GIT_ANCESTRY_MAX_RAW_COMMITS) {
+        throw new Error("C3R-P raw commit ancestry proof exceeded its bounded traversal.");
+      }
+      discovered.add(parent);
+      pending.push(parent);
+    }
+  }
+  return false;
+}
+
+export function assertC3RPGitAncestor(
+  repositoryRoot,
+  ancestorSha,
+  descendantSha,
+  options = {},
+) {
+  if (isC3RPGitAncestor(repositoryRoot, ancestorSha, descendantSha, options)) return;
+  throw new Error("C3R-P head does not descend from the validated authority merge.");
+}
+
 export function exactMigrationInventory(repositoryRoot, headSha = "HEAD") {
   const names = git(repositoryRoot, ["ls-tree", "-r", "--name-only", headSha, "--", "supabase/migrations"])
     .split(/\r?\n/).filter((name) => /^supabase\/migrations\/\d{8,14}_[a-z0-9_]+\.sql$/.test(name));
@@ -559,13 +672,7 @@ export function validateC3RPMigrationAuthorityBinding(
     sha256(Buffer.from(canonicalJson(inventory), "utf8")) !== binding.effectiveInventorySha256) {
     throw new Error("C3R-P append or effective inventory digest is invalid.");
   }
-  if (spawnSync("git", ["merge-base", "--is-ancestor",
-    binding.validatedAuthorityResultingMainSha, headSha], {
-    cwd: repositoryRoot,
-    stdio: "ignore",
-  }).status !== 0) {
-    throw new Error("C3R-P head does not descend from the validated authority merge.");
-  }
+  assertC3RPGitAncestor(repositoryRoot, binding.validatedAuthorityResultingMainSha, headSha);
   for (const [artifactPath, expectedSha256] of [
     [authority.authorityDecisionRef, authority.authorityDecisionSha256],
     [authority.authorityContractRef, authority.authorityContractSha256],
