@@ -16,7 +16,7 @@
 
 ## Branches and PRs
 
-- Lane A Law trigger closure: `codex/owner-study-lane-a-c3r-l-trigger-closure`; PR pending; worktree `.agent-factory/worktrees/owner-study-lane-a-c3r-l-trigger-closure`; base `75f3ce787d31047c2bceacc2ef752c0bfdfb23cc`
+- Lane A Law trigger closure: `codex/owner-study-lane-a-c3r-l-trigger-closure`; Draft PR #825; candidate head `fd118891e43c946327fc5faa0743d55de9c70de7`; worktree `.agent-factory/worktrees/owner-study-lane-a-c3r-l-trigger-closure`; base `75f3ce787d31047c2bceacc2ef752c0bfdfb23cc`
 - Lane B: `codex/owner-study-lane-b-first-stage-kernel`; Draft PR #813; parked
 - Lane C: `codex/owner-study-lane-c-question-foundry`; Draft PR #810; parked
 
@@ -38,8 +38,8 @@
 
 ## Current blocker
 
-- PR #824 closed unmerged after its final correction omitted the Law registry's exact currentness/blocker JSON trigger; replacement closes the complete three-path source-binding trigger set; remote Supabase/Production mutation remains zero
+- Draft PR #825 closes the complete three-path Law source-binding trigger set; exact-head CI is pending; remote Supabase/Production mutation remains zero
 
 ## Next exact action
 
-- validate the complete Law source-binding trigger closure, commit the exact 20-path replacement, push, and open one Draft PR
+- commit and push the PR #825 log correction, then inspect exact-head CI and request fresh formal review
