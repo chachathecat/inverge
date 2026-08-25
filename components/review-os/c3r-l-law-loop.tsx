@@ -78,6 +78,8 @@ export function C3RLLawLoop({ initialRecordId }: { initialRecordId: string | nul
   const [view, setView] = useState<C3RLView | null>(null);
   const [pending, setPending] = useState(false);
   const [status, setStatus] = useState<string | null>(null);
+  const [requestedRecordId, setRequestedRecordId] = useState(initialRecordId);
+  const [initialLoadRevision, setInitialLoadRevision] = useState(0);
   const [attemptBody, setAttemptBody] = useState("");
   const [failureNote, setFailureNote] = useState("");
   const [prediction, setPrediction] = useState<"likely_success" | "likely_partial" | "likely_blocked">("likely_partial");
@@ -109,7 +111,7 @@ export function C3RLLawLoop({ initialRecordId }: { initialRecordId: string | nul
 
   useEffect(() => {
     let cancelled = false;
-    const query = initialRecordId ? `?recordId=${encodeURIComponent(initialRecordId)}` : "";
+    const query = requestedRecordId ? `?recordId=${encodeURIComponent(requestedRecordId)}` : "";
     void fetch(`${apiPath}${query}`, { cache: "no-store" })
       .then(async (response) => response.json() as Promise<ApiResult>)
       .then((data) => {
@@ -121,7 +123,7 @@ export function C3RLLawLoop({ initialRecordId }: { initialRecordId: string | nul
         if (!cancelled) setStatus("잠시 후 다시 시도하세요.");
       });
     return () => { cancelled = true; };
-  }, [initialRecordId]);
+  }, [initialLoadRevision, requestedRecordId]);
 
   const restored = view?.restored ?? null;
   const record = restored?.record ?? null;
@@ -298,7 +300,28 @@ export function C3RLLawLoop({ initialRecordId }: { initialRecordId: string | nul
     }
   }
 
-  if (!view) return <main className="mx-auto max-w-3xl p-6" data-testid="c3r-l-loading">법규 학습 상태를 불러오는 중입니다.</main>;
+  if (!view) return status ? (
+    <main className="mx-auto grid max-w-3xl gap-3 p-6" data-testid="c3r-l-load-error">
+      <p role="alert" className="rounded-lg border border-amber-300 p-3">{status}</p>
+      <button type="button" className="rounded-xl bg-slate-900 px-4 py-3 font-semibold text-white"
+        onClick={() => { setStatus(null); setInitialLoadRevision((revision) => revision + 1); }}>
+        다시 시도
+      </button>
+      <button type="button" className="rounded-xl border border-slate-400 px-4 py-3 font-semibold"
+        onClick={() => {
+          window.history.replaceState(null, "", "/app/c3r-l");
+          setStatus(null);
+          setRequestedRecordId(null);
+          setInitialLoadRevision((revision) => revision + 1);
+        }}>
+        기본 법규 학습으로 돌아가기
+      </button>
+    </main>
+  ) : (
+    <main className="mx-auto max-w-3xl p-6" data-testid="c3r-l-loading">
+      법규 학습 상태를 불러오는 중입니다.
+    </main>
+  );
 
   return (
     <main className="mx-auto grid max-w-3xl gap-6 p-6" data-testid="c3r-l-runtime">
