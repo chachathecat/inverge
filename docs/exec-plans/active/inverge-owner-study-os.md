@@ -42,8 +42,8 @@
 
 ## Current blocker
 
-- Draft PR #831 correction 1 pins its cleanup-only unit fixture under GitHub `RUNNER_TEMP`; the reproduced exact contract command passes 110/110 and review is `0/0/0`; exact-head rerun is pending; remote Supabase/Production mutation remains zero
+- Draft PR #831 correction 1 is exact-head green; correction 2 is the final allowed source correction and updates only this stale program log; merge remains blocked until correction-2 exact-head checks/review are clean, after which only exact high-risk Owner approval remains; remote Supabase/Production mutation remains zero
 
 ## Next exact action
 
-- commit and push correction 1, then inspect the exact-head CI/runtime rerun
+- push correction 2; while its exact-head checks/review run, inspect them; when clean, issue the exact Owner merge packet without further source mutation
