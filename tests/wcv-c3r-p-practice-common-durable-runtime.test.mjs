@@ -6,6 +6,11 @@ import os from "node:os";
 import path from "node:path";
 import { execFileSync, spawnSync } from "node:child_process";
 
+// The validated Practice substrate is the default live-tree authority. Its
+// successor Theory delta is imported here so the unchanged central test runner
+// executes the C3R-T regressions without modifying scripts/run-node-tests.mjs.
+import "./wcv-c3r-t-theory-durable-learning-delta.test.mjs";
+
 import { parsePracticeCalculationClaimV2Input } from
   "../lib/review-os/trusted-repair-contract.ts";
 import {
@@ -19,9 +24,12 @@ import { c3rPCurrentQueueItem } from
 
 import {
   C3R_P_APPEND_PATH,
+  C3R_P_VALIDATED_RESULTING_MAIN_SHA,
+  C3R_P_VALIDATED_RESULTING_MAIN_TREE,
   assertC3RPGitAncestor,
   createC3RPEntryDiagnosticLog,
   createPracticeRuntimeArtifact,
+  exactMigrationInventory,
   isC3RPGitAncestor,
   redactC3RPEntryDiagnosticText,
   seedDisposableReviewOsProfiles,
@@ -68,11 +76,6 @@ const MISMATCHED_C3R_P_SOURCE_REVISION_ID =
 // Regression-only anchor for the validated PR #800 squash result. Live GitHub
 // remains the merge-receipt authority; these values prevent later descendants
 // from being mistaken for the original C3R-P candidate diff.
-const C3R_P_VALIDATED_RESULTING_MAIN_SHA =
-  "71fd878a7369c25a153bc90389347039684c501f";
-const C3R_P_VALIDATED_RESULTING_MAIN_TREE =
-  "f6fb7bc1d1613a8431a4bbdfe155eea9d9f5303c";
-
 function mockCommitResolution(args) {
   if (args[1] !== "rev-parse") return null;
   const value = args[3].replace(/\^\{commit\}$/, "");
@@ -203,7 +206,7 @@ function diskInventory() {
 }
 
 function sampleArtifact() {
-  const inventory = diskInventory();
+  const inventory = exactMigrationInventory(root);
   const append = inventory.find((entry) => entry.path === C3R_P_APPEND_PATH);
   return createPracticeRuntimeArtifact({
     candidateHead: process.env.PR_HEAD_SHA?.toLowerCase() ?? "a".repeat(40),
@@ -417,9 +420,12 @@ test("delayed UI eligibility requires the exact current record, gap, state and p
 });
 
 test("C3R-P applies the exact seven operations and one 26th append", () => {
-  const inventory = diskInventory();
+  const inventory = exactMigrationInventory(root);
+  const descendantInventory = diskInventory();
   const binding = contract.migrationAuthorityBinding;
   assert.equal(inventory.length, 26);
+  assert.ok(descendantInventory.length >= inventory.length);
+  assert.deepEqual(descendantInventory.slice(0, inventory.length), inventory);
   assert.deepEqual(Object.keys(binding).sort(), [
     "appendPath", "authorityContractSha256", "authorityDecisionSha256", "candidateSqlSha256",
     "effectiveInventorySha256", "operationBindings", "remoteMutationCount",
@@ -817,7 +823,7 @@ test("disposable fixture leaves production access code and frozen identities unc
     contract.packageIdentity.packageJsonGitBlob);
   assert.equal(execFileSync("git", ["hash-object", "package-lock.json"], { cwd: root, encoding: "utf8" }).trim(),
     contract.packageIdentity.packageLockJsonGitBlob);
-  assert.equal(sha256(Buffer.from(canonicalJson(diskInventory()), "utf8")),
+  assert.equal(sha256(Buffer.from(canonicalJson(exactMigrationInventory(root)), "utf8")),
     contract.migrationAuthorityBinding.effectiveInventorySha256);
 });
 
