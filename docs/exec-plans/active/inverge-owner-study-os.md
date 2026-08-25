@@ -39,8 +39,8 @@
 
 ## Current blocker
 
-- Draft PR #826 exact-head CI and fresh formal review are pending; focused 102/102 passed; remote Supabase/Production mutation remains zero
+- Exact-head high-risk Owner merge approval is the remaining gate for Draft PR #826; focused 102/102, required and specialized CI, independent `0/0/0`, GitHub Codex review, and zero threads passed before this final log synchronization; remote Supabase/Production mutation remains zero
 
 ## Next exact action
 
-- push the PR #826 program-log synchronization, inspect exact-head CI, then request fresh formal review
+- push this final program-log synchronization; require the new exact-head CI and fresh `0/0/0` review to pass, then issue the exact-head Owner merge packet
