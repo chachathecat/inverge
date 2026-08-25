@@ -10,6 +10,7 @@ import {
 } from "@/lib/review-os/c3r-l-contract";
 import { createC3RLService, requireC3RLAccess } from "@/lib/review-os/c3r-l-service";
 import {
+  TrustedRepairContractError,
   parseJsonRejectingDuplicateKeys,
   parseLawApplicabilityClaimV1Input,
 } from "@/lib/review-os/trusted-repair-contract";
@@ -27,6 +28,12 @@ function response(body: unknown, status = 200) {
   return NextResponse.json(body, { status, headers: HEADERS });
 }
 function errorResponse(error: unknown) {
+  if (error instanceof TrustedRepairContractError) {
+    if (error.code === "invalid_input") {
+      return response({ ok: false, error: "invalid_input" }, 400);
+    }
+    return response({ ok: false, error: "temporarily_unavailable" }, 503);
+  }
   if (error instanceof C3RLError) {
     if (["feature_disabled", "production_denied", "auth_required", "owner_required", "not_found"].includes(error.code)) {
       return response({ ok: false, error: "not_found" }, 404);
