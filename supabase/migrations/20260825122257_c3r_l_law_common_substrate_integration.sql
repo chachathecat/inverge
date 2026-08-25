@@ -1142,10 +1142,12 @@ begin
     'state', v_state, 'verified', v_state = 'PASS',
     'validatorId', 'validator:law-exact-applicability@1',
     'reasonCodes', to_jsonb(v_reasons),
-    'canonicalSentence', concat(
+    'canonicalSentence', case when v_state = 'PASS' then concat(
       p_claim ->> 'sourceVersionId', '의 ', p_claim ->> 'exactLocator', '는 ',
       p_claim ->> 'applicableAsOf', ' 현재 적용 가능하며, 열린 차단 근거는 ',
-      p_claim #>> '{blockerState,blockerCount}', '개입니다.'),
+      p_claim #>> '{blockerState,blockerCount}', '개입니다.')
+      else concat('법규 적용 결합 검증 ', v_state,
+        ': 현재 적용 가능성을 확인하지 못했습니다.') end,
     'proofDigest', encode(extensions.digest(convert_to(jsonb_build_object(
       'claim', v_claim, 'evaluation', v_evaluation)::text, 'UTF8'), 'sha256'), 'hex'));
 exception when invalid_text_representation or numeric_value_out_of_range then
