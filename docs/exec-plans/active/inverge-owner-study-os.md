@@ -16,7 +16,8 @@
 
 ## Branches and PRs
 
-- Lane A Law retry-checkpoint replacement: `codex/owner-study-lane-a-c3r-l-retry-checkpoint`; Draft PR #830; worktree `.agent-factory/worktrees/owner-study-lane-a-c3r-l-retry-checkpoint`; base `75f3ce787d31047c2bceacc2ef752c0bfdfb23cc`
+- Lane A Law cleanup-closure replacement: `codex/owner-study-lane-a-c3r-l-cleanup-closure`; Draft PR #831; worktree `.agent-factory/worktrees/owner-study-lane-a-c3r-l-cleanup-closure`; base `75f3ce787d31047c2bceacc2ef752c0bfdfb23cc`
+- Superseded Lane A PR #830: closed unmerged after the two-correction limit; exact-head checks passed, but final review found cleanup could claim completion after a failed local Supabase stop
 - Superseded Lane A PR #829: closed unmerged after the two-correction limit; exact-head Law run remained at `LOAD_RETRY_INITIAL`
 - Superseded Lane A PR #828: closed unmerged after the two-correction limit; exact-head Law run reached the later journey `COMPLETE` marker but the overall Playwright run retained an earlier assertion failure
 - Superseded Lane A PR #827: closed unmerged after the two-correction limit and an exact-head Law journey failure at the prior terminal stage marker
@@ -41,8 +42,8 @@
 
 ## Current blocker
 
-- PR #830 reached `LOAD_RETRY_ERROR_SURFACE_VISIBLE`; the final correction scopes error-text assertions to the Law error surface instead of the ambiguous page-level Next.js route-announcer role; remote Supabase/Production mutation remains zero
+- Draft PR #831 exact-head CI/runtime is pending; local cleanup and Practice/Theory/Law/access regressions pass 127/127 and fresh review is `0/0/0`; remote Supabase/Production mutation remains zero
 
 ## Next exact action
 
-- run focused checks, commit and push the scoped-alert repair, then require clean exact-head CI/runtime and fresh formal review
+- commit and push the fail-closed cleanup candidate, open Draft PR #831, then inspect its exact-head CI/runtime

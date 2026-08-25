@@ -2202,6 +2202,60 @@ function stopSupabase(repositoryRoot, cycleRoot) {
   });
 }
 
+const C3R_L_LOCAL_PROJECT_ID = /^c3r-l-cycle-[12]-\d+-\d+$/u;
+
+export function cleanupLawSupabaseCycle(input) {
+  if (!input || typeof input !== "object" ||
+    typeof input.repositoryRoot !== "string" || typeof input.cycleRoot !== "string" ||
+    typeof input.expectedProjectId !== "string" ||
+    !C3R_L_LOCAL_PROJECT_ID.test(input.expectedProjectId)) {
+    throw new Error("C3R_L_CLEANUP_IDENTITY_INVALID");
+  }
+  const execute = input.execute ?? spawnSync;
+  if (typeof execute !== "function") throw new Error("C3R_L_CLEANUP_EXECUTOR_INVALID");
+  const configPath = path.join(input.cycleRoot, "supabase/config.toml");
+  if (fs.existsSync(configPath)) {
+    const configuredId = /^project_id = "([^"]+)"$/mu
+      .exec(fs.readFileSync(configPath, "utf8"))?.[1];
+    if (configuredId !== input.expectedProjectId) {
+      throw new Error("C3R_L_CLEANUP_IDENTITY_MISMATCH");
+    }
+    try {
+      execute(process.execPath, [
+        path.join(input.repositoryRoot, "node_modules/supabase/dist/supabase.js"),
+        "stop", "--workdir", input.cycleRoot, "--no-backup",
+      ], {
+        encoding: "utf8", stdio: ["ignore", "pipe", "pipe"], timeout: 120_000,
+      });
+    } catch {
+      // Exact container absence below is the cleanup authority and supports idempotent retries.
+    }
+  }
+
+  let containerResult = null;
+  try {
+    containerResult = execute("docker", ["ps", "--all", "--format", "{{.Names}}"], {
+      encoding: "utf8", stdio: ["ignore", "pipe", "pipe"], timeout: 30_000,
+    });
+  } catch {
+    // An unavailable inventory cannot prove cleanup.
+  }
+  if (containerResult?.status !== 0 || containerResult.error || containerResult.signal ||
+    typeof containerResult.stdout !== "string") {
+    throw new Error("C3R_L_CLEANUP_CONTAINER_INVENTORY_UNVERIFIED");
+  }
+  const projectSuffix = `_${input.expectedProjectId}`;
+  const remainingContainers = containerResult.stdout
+    .split(/\r?\n/u)
+    .map((name) => name.trim())
+    .filter((name) => name.startsWith("supabase_") && name.endsWith(projectSuffix));
+  if (remainingContainers.length !== 0) {
+    throw new Error("C3R_L_CLEANUP_PROJECT_CONTAINERS_REMAIN");
+  }
+  fs.rmSync(input.cycleRoot, { recursive: true, force: true });
+  return input.expectedProjectId;
+}
+
 function psql(container, sql, label = "C3R-P database assertion") {
   return run("docker", ["exec", "--interactive", container, "psql", "--no-psqlrc",
     "--quiet", "--tuples-only", "--no-align", "--set", "ON_ERROR_STOP=1",
@@ -3636,6 +3690,7 @@ async function runLawDedicatedCycle(input) {
     "practice-compatibility-metadata.json",
   );
   let server;
+  let completedCycle;
   try {
     prepareLawCycle(input.repositoryRoot, cycleRoot, projectId);
     supabase(input.repositoryRoot, ["start", "--workdir", cycleRoot, "--exclude",
@@ -3721,7 +3776,7 @@ async function runLawDedicatedCycle(input) {
     const practiceCompatibilityEvidence = validateLawPracticeCompatibilityEvidence(
       JSON.parse(fs.readFileSync(practiceCompatibilityEvidencePath, "utf8")),
     );
-    return {
+    completedCycle = {
       cycle: input.cycle,
       receiptId: crypto.randomUUID(),
       databaseIdentity: projectId,
@@ -3749,13 +3804,16 @@ async function runLawDedicatedCycle(input) {
       theoryWrapperArgumentNamesPreserved:
         migrationResult.theoryWrapperArgumentNamesPreserved,
       lawPostgrestArgumentNamesBound: migrationResult.lawPostgrestArgumentNamesBound,
-      cleanup: "complete",
     };
   } finally {
     await stopAndDiscardNext(server);
-    stopSupabase(input.repositoryRoot, cycleRoot);
-    fs.rmSync(cycleRoot, { recursive: true, force: true });
+    cleanupLawSupabaseCycle({
+      repositoryRoot: input.repositoryRoot,
+      cycleRoot,
+      expectedProjectId: projectId,
+    });
   }
+  return { ...completedCycle, cleanup: "complete" };
 }
 
 export function createTheoryRuntimeArtifact(input) {
@@ -4138,14 +4196,34 @@ async function runLawDedicated() {
   console.log(JSON.stringify({ status: "verified", artifactSha256: artifact.artifactSha256 }));
 }
 
-function cleanupLawDedicated() {
-  const repositoryRoot = process.cwd();
+export function cleanupLawDedicated(input = {}) {
+  const repositoryRoot = input.repositoryRoot ?? process.cwd();
+  const runId = input.runId ?? process.env.GITHUB_RUN_ID ?? "";
+  const runAttempt = Number(input.runAttempt ?? process.env.GITHUB_RUN_ATTEMPT ?? "");
+  const cleanupCycle = input.cleanupCycle ?? cleanupLawSupabaseCycle;
+  const writeOutput = input.writeOutput ?? ((value) => console.log(JSON.stringify(value)));
+  if (!/^\d+$/.test(runId) || !Number.isSafeInteger(runAttempt) || runAttempt < 1 ||
+    typeof cleanupCycle !== "function" || typeof writeOutput !== "function") {
+    throw new Error("C3R_L_CLEANUP_EXECUTION_CONTEXT_INVALID");
+  }
   const root = boundedLawRuntimeRoot(repositoryRoot);
+  const failedCycles = [];
   for (const cycle of [1, 2]) {
-    stopSupabase(repositoryRoot, path.join(root, `cycle-${cycle}`));
+    try {
+      cleanupCycle({
+        repositoryRoot,
+        cycleRoot: path.join(root, `cycle-${cycle}`),
+        expectedProjectId: `c3r-l-cycle-${cycle}-${runId}-${runAttempt}`,
+      });
+    } catch {
+      failedCycles.push(cycle);
+    }
+  }
+  if (failedCycles.length !== 0) {
+    throw new Error(`C3R_L_CLEANUP_INCOMPLETE_CYCLES_${failedCycles.join("_")}`);
   }
   fs.rmSync(root, { recursive: true, force: true });
-  console.log(JSON.stringify({ cleanup: "complete" }));
+  writeOutput({ cleanup: "complete" });
 }
 
 async function runTheoryDedicated() {
