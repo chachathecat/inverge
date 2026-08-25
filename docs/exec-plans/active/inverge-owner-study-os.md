@@ -16,7 +16,7 @@
 
 ## Branches and PRs
 
-- Lane A Law assertion-root replacement: `codex/owner-study-lane-a-c3r-l-assertion-root`; PR not opened; worktree `.agent-factory/worktrees/owner-study-lane-a-c3r-l-assertion-root`; base `75f3ce787d31047c2bceacc2ef752c0bfdfb23cc`
+- Lane A Law assertion-root replacement: `codex/owner-study-lane-a-c3r-l-assertion-root`; Draft PR #829; worktree `.agent-factory/worktrees/owner-study-lane-a-c3r-l-assertion-root`; base `75f3ce787d31047c2bceacc2ef752c0bfdfb23cc`
 - Superseded Lane A PR #828: closed unmerged after the two-correction limit; exact-head Law run reached the later journey `COMPLETE` marker but the overall Playwright run retained an earlier assertion failure
 - Superseded Lane A PR #827: closed unmerged after the two-correction limit and an exact-head Law journey failure at the prior terminal stage marker
 - Lane B: `codex/owner-study-lane-b-first-stage-kernel`; Draft PR #813; parked
@@ -40,8 +40,8 @@
 
 ## Current blocker
 
-- The shared stage file allowed a later passing journey test to overwrite an earlier assertion failure; the clean replacement stops at the first Playwright failure so the first exact stage remains authoritative; remote Supabase/Production mutation remains zero
+- PR #829 exact-head PostgreSQL/browser CI must expose or clear the first preserved Law assertion stage; remote Supabase/Production mutation remains zero
 
 ## Next exact action
 
-- run focused checks, commit and push the fail-fast replacement, open one Draft PR, then inspect the first exact Law browser stage
+- inspect PR #829 exact-head Law browser evidence, repair the first preserved assertion root if any, then complete exact-head CI and fresh formal review
