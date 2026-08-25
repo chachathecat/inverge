@@ -38,7 +38,8 @@
     "lib/review-os/first-stage/kernel/today-queue.ts",
     "lib/review-os/first-stage/subject-adapter/index.ts",
     "lib/review-os/first-stage/subject-adapter/subject-adapter.ts",
-    "tests/first-stage-common-mcq-kernel.test.mjs"
+    "tests/first-stage-common-mcq-kernel.test.mjs",
+    "tests/s232f2-access-availability.test.mjs"
   ],
   "domainContract": {
     "denyUnknownFields": true,
@@ -114,9 +115,21 @@
     "attempt": {
       "kinds": ["initial", "independent_retry"],
       "states": ["in_progress", "evaluated"],
+      "evaluationDecisionsExactly": [
+        "correct",
+        "incorrect",
+        "unanswered",
+        "unavailable",
+        "withheld"
+      ],
       "maximumSimultaneousInProgress": 1,
       "initialAssistance": "none",
-      "serverAdapterIsSoleEvaluationAuthority": true
+      "serverAdapterIsSoleEvaluationAuthority": true,
+      "withheldOrUnavailableReviewedLearningFieldsAreNull": true,
+      "withheldOrUnavailableRecordsAttemptOnly": true,
+      "withheldOrUnavailableCreatesReviewTask": false,
+      "withheldOrUnavailableCreatesConceptState": false,
+      "withheldOrUnavailableCreatesRetryQueueItem": false
     },
     "attemptEvidenceEnvelope": {
       "bodyless": true,
@@ -144,7 +157,7 @@
         "review_then_retry",
         "review_before_new_variant"
       ],
-      "everyInitialEvaluationCreatesExactlyOneReviewTask": true,
+      "everyReviewedInitialEvaluationCreatesExactlyOneReviewTask": true,
       "retryNowRequiresZeroReviewAfterMs": true,
       "deferredRetryRequiresPositiveReviewAfterMs": true,
       "retryCannotStartBeforeDueAt": true,
@@ -192,7 +205,7 @@
   "subjectAdapterFreeze": {
     "schemaVersion": "dabangil.first_stage.subject_adapter.v1",
     "interfaceDigestAlgorithm": "sha256_over_recursively_key_sorted_utf8_json",
-    "interfaceDigest": "54c5c44daccc5cf0584bd329cd94db1affe14c8f75c0a9d118340b8dc7e43667",
+    "interfaceDigest": "3ab5255ae09124d8c1f242cf2e5806e71392123613cdcd9aef403adc97ad2ba1",
     "interfaceDescriptor": {
       "schemaVersion": "dabangil.first_stage.subject_adapter.v1",
       "interfaceName": "SubjectAdapterV1",
@@ -307,6 +320,13 @@
           "evaluationPolicyVersion",
           "evidenceEnvelope"
         ],
+        "AttemptEvaluationDecision": [
+          "correct",
+          "incorrect",
+          "unanswered",
+          "unavailable",
+          "withheld"
+        ],
         "AttemptEvidenceEnvelope": [
           "schemaVersion",
           "attemptId",
@@ -349,8 +369,10 @@
         "nonwithheld_evaluation_requires_key_choice_source_version_rights_and_reviewed_feedback_receipts",
         "reviewed_feedback_requires_named_owner_authorized_human_or_owner_approved_reviewer_and_model_alone_false",
         "withheld_or_unavailable_feedback_has_no_receipt_or_reviewer",
+        "withheld_or_unavailable_evaluation_has_null_error_cause_concepts_gap_action_retry_and_review_schedule",
+        "withheld_or_unavailable_attempt_records_no_review_task_concept_state_or_retry_queue",
         "evaluation_is_deterministic_for_exact_adapter_version_reference_attempt_submission",
-        "evaluation_has_exactly_one_primary_concept_and_no_duplicate_concept_binding",
+        "reviewed_evaluation_has_exactly_one_primary_concept_and_no_duplicate_concept_binding",
         "independent_retry_stays_in_subject_and_cannot_reuse_the_same_question_identity",
         "unknown_missing_cross_subject_or_stale_binding_fails_closed",
         "adapter_makes_no_mastery_efficacy_calibration_or_official_result_claim"
