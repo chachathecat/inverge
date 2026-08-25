@@ -16,8 +16,8 @@
 
 ## Branches and PRs
 
-- Lane A Law invalid-input repair: `codex/owner-study-lane-a-c3r-l-invalid-input`; Draft PR #827; worktree `.agent-factory/worktrees/owner-study-lane-a-c3r-l-invalid-input`; base `75f3ce787d31047c2bceacc2ef752c0bfdfb23cc`
-- Superseded Lane A PR #826: closed unmerged after the two-correction limit exposed a Law API `TrustedRepairContractError` P2
+- Lane A Law browser-root replacement: `codex/owner-study-lane-a-c3r-l-browser-root`; PR not opened; worktree `.agent-factory/worktrees/owner-study-lane-a-c3r-l-browser-root`; base `75f3ce787d31047c2bceacc2ef752c0bfdfb23cc`
+- Superseded Lane A PR #827: closed unmerged after the two-correction limit and an exact-head Law journey failure at the prior terminal stage marker
 - Lane B: `codex/owner-study-lane-b-first-stage-kernel`; Draft PR #813; parked
 - Lane C: `codex/owner-study-lane-c-question-foundry`; Draft PR #810; parked
 
@@ -39,8 +39,8 @@
 
 ## Current blocker
 
-- Exact-head CI/runtime and fresh formal review are pending for Draft PR #827; after they pass, the high-risk Owner merge approval is the remaining gate; remote Supabase/Production mutation remains zero
+- No ordinary blocker; the clean replacement adds bounded recovery and terminal-close stage classifications to reproduce the first exact Law browser root; remote Supabase/Production mutation remains zero
 
 ## Next exact action
 
-- push this log synchronization, inspect exact-head CI/runtime, obtain fresh actionable `0/0/0` review with zero threads, then issue the exact-head Owner merge packet
+- run focused tests, typecheck, changed-file lint and diff checks; commit, push, and open the clean diagnostic replacement Draft PR
