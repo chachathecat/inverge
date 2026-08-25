@@ -1,0 +1,125 @@
+name: C3R-P Practice Common Durable Runtime
+
+on:
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened]
+    paths:
+      - ".github/workflows/c3r-p-practice-common-durable-runtime.yml"
+      - "app/api/review-os/c3r-p/**"
+      - "app/app/c3r-p/**"
+      - "components/review-os/c3r-p-practice-loop.tsx"
+      - "config/dabangil-wcv-c3r-p-practice-common-durable-runtime-v1.json"
+      - "lib/review-os/c3r-p-*.ts"
+      - "lib/review-os/trusted-repair-contract.ts"
+      - "lib/review-os/trusted-repair-engine.ts"
+      - "lib/review-os/trusted-repair-fixtures.ts"
+      - "scripts/automation/wcv-c3r-p-practice-common-runtime.mjs"
+      - "supabase/migrations/**"
+      - "tests/e2e/wcv-c3r-p-*.ts"
+      - "tests/wcv-c3r-p-practice-common-durable-runtime.test.mjs"
+
+permissions:
+  contents: read
+
+jobs:
+  c3r-p-practice-common-durable-runtime:
+    name: c3r-p-practice-common-durable-runtime
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    concurrency:
+      group: c3r-p-practice-runtime-${{ github.event.pull_request.number }}
+      cancel-in-progress: true
+    env:
+      CI: "true"
+      DO_NOT_TRACK: "1"
+      SUPABASE_TELEMETRY_DISABLED: "1"
+      PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+      C3R_P_RUNTIME_EVIDENCE_PATH: ${{ github.workspace }}/.agent-factory/c3r-p-practice-runtime-evidence.json
+
+    steps:
+      - name: Check out exact PR head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Verify exact checkout
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "${PR_HEAD_SHA}"
+          [[ "${PR_HEAD_SHA}" =~ ^[0-9a-f]{40}$ ]]
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install locked dependencies
+        run: npm ci
+
+      - name: Verify exact migration, path, and artifact bindings
+        run: >-
+          node --experimental-strip-types --loader ./tests/ts-extension-loader.mjs
+          --test --test-concurrency=1
+          tests/wcv-c3r-p-practice-common-durable-runtime.test.mjs
+
+      - name: Install bounded Chromium runtime
+        run: npm exec playwright install -- --with-deps chromium
+
+      - name: Run two fresh exact-head reset/replay cycles
+        env:
+          GITHUB_RUN_ID: ${{ github.run_id }}
+          GITHUB_RUN_ATTEMPT: ${{ github.run_attempt }}
+          C3R_P_SUPABASE_WORKDIR: ${{ runner.temp }}/c3r-p-runtime-${{ github.run_id }}-${{ github.run_attempt }}
+        run: node scripts/automation/wcv-c3r-p-practice-common-runtime.mjs --dedicated
+
+      - name: Upload bounded entry failure diagnostic
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: c3r-p-entry-failure-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/c3r-p-runtime-${{ github.run_id }}-${{ github.run_attempt }}/entry-diagnostics/failure-*
+          if-no-files-found: ignore
+          include-hidden-files: true
+          retention-days: 1
+
+      - name: Upload verified entry metadata
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: c3r-p-entry-metadata-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/c3r-p-runtime-${{ github.run_id }}-${{ github.run_attempt }}/entry-diagnostics/entry-proof-*.json
+          if-no-files-found: error
+          include-hidden-files: true
+          retention-days: 7
+
+      - name: Unconditionally remove local runtime resources
+        if: always()
+        env:
+          C3R_P_SUPABASE_WORKDIR: ${{ runner.temp }}/c3r-p-runtime-${{ github.run_id }}-${{ github.run_attempt }}
+        run: node scripts/automation/wcv-c3r-p-practice-common-runtime.mjs --cleanup
+
+      - name: Verify metadata-only PRACTICE_RUNTIME artifact
+        if: success()
+        run: node scripts/automation/wcv-c3r-p-practice-common-runtime.mjs --verify-artifact
+
+      - name: Recheck exact head and immutable dependency declarations
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "${PR_HEAD_SHA}"
+          git diff --exit-code -- package.json package-lock.json
+
+      - name: Upload metadata-only exact-head evidence
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: c3r-p-practice-runtime-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ env.C3R_P_RUNTIME_EVIDENCE_PATH }}
+          if-no-files-found: error
+          include-hidden-files: true
+          retention-days: 7

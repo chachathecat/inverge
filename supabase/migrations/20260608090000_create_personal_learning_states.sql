@@ -13,15 +13,17 @@ as $$
     union all
     select entries.key, entries.value
     from walk
-    cross join lateral jsonb_each(
-      case when jsonb_typeof(walk.child) = 'object' then walk.child else '{}'::jsonb end
+    cross join lateral (
+      select object_entries.key, object_entries.value
+      from jsonb_each(
+        case when jsonb_typeof(walk.child) = 'object' then walk.child else '{}'::jsonb end
+      ) as object_entries(key, value)
+      union all
+      select null::text as key, array_entries.value
+      from jsonb_array_elements(
+        case when jsonb_typeof(walk.child) = 'array' then walk.child else '[]'::jsonb end
+      ) as array_entries(value)
     ) as entries(key, value)
-    union all
-    select null::text as key, elements.value
-    from walk
-    cross join lateral jsonb_array_elements(
-      case when jsonb_typeof(walk.child) = 'array' then walk.child else '[]'::jsonb end
-    ) as elements(value)
   )
   select exists (
     select 1
