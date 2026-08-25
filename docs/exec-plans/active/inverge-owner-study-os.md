@@ -41,8 +41,8 @@
 
 ## Current blocker
 
-- PR #830 exact-head PostgreSQL/browser CI must expose or clear the first retry checkpoint; remote Supabase/Production mutation remains zero
+- PR #830 reached `LOAD_RETRY_ERROR_SURFACE_VISIBLE`; the final correction scopes error-text assertions to the Law error surface instead of the ambiguous page-level Next.js route-announcer role; remote Supabase/Production mutation remains zero
 
 ## Next exact action
 
-- inspect PR #830 exact-head retry checkpoint, repair the first exact operation if any, then complete exact-head CI and fresh formal review
+- run focused checks, commit and push the scoped-alert repair, then require clean exact-head CI/runtime and fresh formal review
