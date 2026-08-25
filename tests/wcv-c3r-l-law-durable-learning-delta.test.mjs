@@ -27,6 +27,8 @@ import {
   classifyC3RLNextFailureDiagnostic,
   classifyC3RLNativeServiceAssertions,
   classifyC3RLPlaywrightFailureDiagnostic,
+  cleanupLawDedicated,
+  cleanupLawSupabaseCycle,
   createC3RLNativeEvidence,
   createLawRuntimeArtifact,
   isC3RLRiskCandidate,
@@ -416,6 +418,149 @@ test("Law native evidence runs before generic adapters and cleans up uncondition
   assert.match(runtimeSource,
     /PRACTICE,THEORY,LAW\|f\|f\|t/);
   assert.match(runtimeSource, /assertLawPostgrestArgumentCatalog/);
+});
+
+test("Law cleanup fails closed and retains its retry identity", () => {
+  const temporaryRoot = fs.mkdtempSync(path.join(os.tmpdir(), "c3r-l-cleanup-"));
+  const cycleRoot = path.join(temporaryRoot, "cycle-1");
+  const configPath = path.join(cycleRoot, "supabase/config.toml");
+  const projectId = "c3r-l-cycle-1-32879003712-1";
+  const writeConfig = (configuredId = projectId) => {
+    fs.mkdirSync(path.dirname(configPath), { recursive: true });
+    fs.writeFileSync(configPath, `project_id = "${configuredId}"\n`, { mode: 0o600 });
+  };
+  const executor = ({ stopStatus = 0, containers = [], containerStatus = 0,
+    containerSignal = null, containerStdout } = {}) => {
+    const calls = [];
+    const execute = (command, args) => {
+      calls.push({ command, args });
+      return command === "docker"
+        ? {
+          status: containerStatus,
+          stdout: containerStdout ??
+            `${containers.join("\n")}${containers.length > 0 ? "\n" : ""}`,
+          stderr: "super-secret-inventory-stderr",
+          signal: containerSignal,
+        }
+        : {
+          status: stopStatus,
+          stdout: "super-secret-stop-stdout",
+          stderr: "super-secret-stop-stderr",
+          signal: null,
+        };
+    };
+    return { calls, execute };
+  };
+  const cleanup = (execute) => cleanupLawSupabaseCycle({
+    repositoryRoot: root, cycleRoot, expectedProjectId: projectId, execute,
+  });
+
+  try {
+    writeConfig();
+    const remaining = executor({
+      stopStatus: 1,
+      containers: [`supabase_db_${projectId}`, `supabase_auth_${projectId}`],
+    });
+    assert.throws(() => cleanup(remaining.execute),
+      /C3R_L_CLEANUP_PROJECT_CONTAINERS_REMAIN/u);
+    assert.equal(fs.existsSync(configPath), true);
+
+    const inventoryFailure = executor({ containerStatus: 1,
+      containerStdout: "super-secret-inventory-stdout" });
+    let inventoryError;
+    try { cleanup(inventoryFailure.execute); } catch (error) { inventoryError = error; }
+    assert.match(inventoryError?.message ?? "", /C3R_L_CLEANUP_CONTAINER_INVENTORY_UNVERIFIED/u);
+    assert.doesNotMatch(inventoryError?.message ?? "", /super-secret/u);
+    assert.equal(fs.existsSync(configPath), true);
+
+    const signaledInventory = executor({ containerSignal: "SIGTERM" });
+    assert.throws(() => cleanup(signaledInventory.execute),
+      /C3R_L_CLEANUP_CONTAINER_INVENTORY_UNVERIFIED/u);
+    assert.equal(fs.existsSync(configPath), true);
+
+    fs.writeFileSync(configPath, 'project_id = "c3r-t-cycle-1-32879003712-1"\n');
+    const wrongIdentity = executor();
+    assert.throws(() => cleanup(wrongIdentity.execute), /C3R_L_CLEANUP_IDENTITY_MISMATCH/u);
+    assert.equal(wrongIdentity.calls.length, 0);
+
+    writeConfig();
+    const successful = executor({ stopStatus: 1, containers: [
+      "supabase_db_unrelated-project",
+      "supabase_db_c3r-l-cycle-1-32879003712-10",
+    ] });
+    assert.equal(cleanup(successful.execute), projectId);
+    assert.equal(fs.existsSync(cycleRoot), false);
+
+    fs.mkdirSync(cycleRoot, { recursive: true });
+    const missingConfig = executor();
+    assert.equal(cleanup(missingConfig.execute), projectId);
+    assert.equal(missingConfig.calls.some((call) => call.command === "docker"), true);
+    assert.equal(missingConfig.calls.some((call) => call.command !== "docker"), false);
+    assert.equal(fs.existsSync(cycleRoot), false);
+
+    fs.mkdirSync(cycleRoot, { recursive: true });
+    const missingConfigRemaining = executor({ containers: [`supabase_db_${projectId}`] });
+    assert.throws(() => cleanup(missingConfigRemaining.execute),
+      /C3R_L_CLEANUP_PROJECT_CONTAINERS_REMAIN/u);
+    assert.equal(fs.existsSync(cycleRoot), true);
+  } finally {
+    fs.rmSync(temporaryRoot, { recursive: true, force: true });
+  }
+});
+
+test("Law cleanup-only attempts both exact cycles and reports success only after both pass", () => {
+  const temporaryRoot = fs.mkdtempSync(path.join(os.tmpdir(), "c3r-l-cleanup-only-"));
+  const calls = [];
+  const outputs = [];
+  try {
+    assert.throws(() => cleanupLawDedicated({
+      repositoryRoot: temporaryRoot,
+      runId: "32879003712",
+      runAttempt: 1,
+      cleanupCycle: (input) => {
+        calls.push(input.expectedProjectId);
+        if (input.expectedProjectId.includes("cycle-1")) throw new Error("closed failure");
+      },
+      writeOutput: (value) => outputs.push(value),
+    }), /C3R_L_CLEANUP_INCOMPLETE_CYCLES_1/u);
+    assert.deepEqual(calls, [
+      "c3r-l-cycle-1-32879003712-1",
+      "c3r-l-cycle-2-32879003712-1",
+    ]);
+    assert.deepEqual(outputs, []);
+
+    calls.length = 0;
+    cleanupLawDedicated({
+      repositoryRoot: temporaryRoot,
+      runId: "32879003712",
+      runAttempt: 1,
+      cleanupCycle: (input) => calls.push(input.expectedProjectId),
+      writeOutput: (value) => outputs.push(value),
+    });
+    assert.equal(calls.length, 2);
+    assert.deepEqual(outputs, [{ cleanup: "complete" }]);
+  } finally {
+    fs.rmSync(temporaryRoot, { recursive: true, force: true });
+  }
+});
+
+test("Law evidence cannot claim cleanup before stop and absence verification", () => {
+  const lawCycle = runtimeSource.slice(
+    runtimeSource.indexOf("async function runLawDedicatedCycle"),
+    runtimeSource.indexOf("export function createTheoryRuntimeArtifact"),
+  );
+  assert.ok(lawCycle.indexOf("cleanupLawSupabaseCycle({") <
+    lawCycle.indexOf('return { ...completedCycle, cleanup: "complete" }'));
+  assert.match(lawCycle,
+    /cleanupLawSupabaseCycle\(\{[\s\S]*expectedProjectId: projectId[\s\S]*return \{ \.\.\.completedCycle, cleanup: "complete" \}/u);
+  const cleanupOnly = runtimeSource.slice(
+    runtimeSource.indexOf("export function cleanupLawDedicated"),
+    runtimeSource.indexOf("async function runTheoryDedicated()"),
+  );
+  assert.match(cleanupOnly,
+    /for \(const cycle of \[1, 2\]\)[\s\S]*expectedProjectId: `c3r-l-cycle-\$\{cycle\}-\$\{runId\}-\$\{runAttempt\}`[\s\S]*failedCycles\.length[\s\S]*fs\.rmSync\(root,[\s\S]*cleanup: "complete"/u);
+  assert.doesNotMatch(cleanupOnly,
+    /supabase\([^\n]*"start"|prepareLawCycle|applyExactMigrationHistory|runLawBrowser/u);
 });
 
 test("the dedicated browser fixture covers the full Law vertical and P/T isolation", () => {
