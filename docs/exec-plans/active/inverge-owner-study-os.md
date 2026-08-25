@@ -16,7 +16,7 @@
 
 ## Branches and PRs
 
-- Lane A Law browser-root replacement: `codex/owner-study-lane-a-c3r-l-browser-root`; Draft PR #828; head `29cb2ab8c6d5ee804319c34b159135dc2bf1e8b9`; tree `333562a281bf5169c2598d815da8b3bdd2c57e9b`; worktree `.agent-factory/worktrees/owner-study-lane-a-c3r-l-browser-root`; base `75f3ce787d31047c2bceacc2ef752c0bfdfb23cc`
+- Lane A Law browser-root replacement: `codex/owner-study-lane-a-c3r-l-browser-root`; Draft PR #828; worktree `.agent-factory/worktrees/owner-study-lane-a-c3r-l-browser-root`; base `75f3ce787d31047c2bceacc2ef752c0bfdfb23cc`
 - Superseded Lane A PR #827: closed unmerged after the two-correction limit and an exact-head Law journey failure at the prior terminal stage marker
 - Lane B: `codex/owner-study-lane-b-first-stage-kernel`; Draft PR #813; parked
 - Lane C: `codex/owner-study-lane-c-question-foundry`; Draft PR #810; parked
@@ -39,8 +39,8 @@
 
 ## Current blocker
 
-- PR #828 exact-head CI/runtime and fresh formal review are pending; remote Supabase/Production mutation remains zero
+- PR #828 exact-head Law journey exits nonzero only after the closed `COMPLETE` stage; the final bounded correction classifies the Playwright runner root without learner data; remote Supabase/Production mutation remains zero
 
 ## Next exact action
 
-- inspect PR #828 exact-head Law browser evidence, reproduce and repair the first classified root if any, then complete exact-head CI and fresh formal review
+- commit and push the final closed runner diagnostic, inspect its exact-head category, and either validate the repaired candidate or close exhausted PR #828 and repair that exact root in a clean replacement

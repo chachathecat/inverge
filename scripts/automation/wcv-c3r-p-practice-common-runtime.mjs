@@ -2842,6 +2842,30 @@ export function classifyC3RLNextFailureDiagnostic(value) {
   return "C3R_L_NEXT_FAILURE_UNCLASSIFIED";
 }
 
+export function classifyC3RLPlaywrightFailureDiagnostic(value) {
+  const diagnostic = redactC3RPEntryDiagnosticText(String(value))
+    .replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/gu, "");
+  if (/Test timeout of \d+ms exceeded|Timeout of \d+ms exceeded/iu.test(diagnostic)) {
+    return "C3R_L_PLAYWRIGHT_TEST_TIMEOUT";
+  }
+  if (/No tests found|did not expect test\(\) to be called here/iu.test(diagnostic)) {
+    return "C3R_L_PLAYWRIGHT_TEST_DISCOVERY_FAILURE";
+  }
+  if (/playwright\.config|Cannot find module|SyntaxError|TypeError:.*config/iu.test(diagnostic)) {
+    return "C3R_L_PLAYWRIGHT_CONFIG_FAILURE";
+  }
+  if (/expect\(|Expected:|Received:|expect\.to/iu.test(diagnostic)) {
+    return "C3R_L_PLAYWRIGHT_ASSERTION_FAILURE";
+  }
+  if (/failed \(spawn\)|signal (?:SIGTERM|SIGKILL)|ERR_CHILD_PROCESS/iu.test(diagnostic)) {
+    return "C3R_L_PLAYWRIGHT_PROCESS_TERMINATED";
+  }
+  if (/\b(?:1|one) failed\b|worker process exited unexpectedly/iu.test(diagnostic)) {
+    return "C3R_L_PLAYWRIGHT_WORKER_FAILURE";
+  }
+  return "C3R_L_PLAYWRIGHT_FAILURE_UNCLASSIFIED";
+}
+
 const C3R_L_BROWSER_FAILURE_STAGE_SCHEMA_VERSION =
   "inverge.c3r_l.browser_failure_stage.v1";
 const C3R_L_BROWSER_FAILURE_STAGES = Object.freeze({
@@ -2895,6 +2919,19 @@ export function readC3RLBrowserFailureStage(filePath, expectedMode) {
   }
 }
 
+export function selectC3RLBrowserFailureClassification(input) {
+  const stagePrefix = `C3R_L_BROWSER_${input.browserMode.toUpperCase()}_`;
+  if (input.stageClassification === `${stagePrefix}COMPLETE`) {
+    return input.playwrightClassification;
+  }
+  if (input.stageClassification.startsWith(stagePrefix)) {
+    return input.stageClassification;
+  }
+  return input.nextClassification === "C3R_L_NEXT_FAILURE_UNCLASSIFIED"
+    ? input.stageClassification
+    : input.nextClassification;
+}
+
 async function runLawBrowserWithClosedDiagnostic(input) {
   try {
     runLawBrowser(
@@ -2907,7 +2944,7 @@ async function runLawBrowserWithClosedDiagnostic(input) {
       input.browserMode,
       input.failureStagePath,
     );
-  } catch {
+  } catch (error) {
     await stopNext(input.server);
     const diagnostic = fs.existsSync(input.server.diagnosticPath)
       ? fs.readFileSync(input.server.diagnosticPath, "utf8")
@@ -2917,12 +2954,13 @@ async function runLawBrowserWithClosedDiagnostic(input) {
       input.failureStagePath,
       input.browserMode,
     );
-    const classification = stageClassification.startsWith(
-      `C3R_L_BROWSER_${input.browserMode.toUpperCase()}_`,
-    ) ? stageClassification
-      : nextClassification === "C3R_L_NEXT_FAILURE_UNCLASSIFIED"
-        ? stageClassification
-        : nextClassification;
+    const playwrightClassification = classifyC3RLPlaywrightFailureDiagnostic(error);
+    const classification = selectC3RLBrowserFailureClassification({
+      browserMode: input.browserMode,
+      stageClassification,
+      nextClassification,
+      playwrightClassification,
+    });
     throw new Error(`C3R-L ${input.browserMode} browser verification failed: ${classification}.`);
   }
 }
