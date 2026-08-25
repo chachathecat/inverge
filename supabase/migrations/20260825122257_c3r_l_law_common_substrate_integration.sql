@@ -2,6 +2,28 @@
 -- Forward-only extension of the validated C3R-P common durable substrate.
 -- The historical C3R-P migration remains immutable; this migration performs
 -- no linked, remote Supabase, Production, provider, payment, or activation work.
+--
+-- PRE-APPLY ROLLBACK: do not apply this migration. Keep
+-- WCV_C3R_L_LAW_ENABLED=false and revert only the unmerged source candidate
+-- through the protected Git process; preserve the installed Practice/Theory
+-- database and perform no schema or learner-data mutation.
+--
+-- POST-APPLY FORWARD RECOVERY: on partial apply, failure, or catalog drift,
+-- immediately keep WCV_C3R_L_LAW_ENABLED=false and halt the rollout. Retain
+-- the LAW enum label, preserve all learner rows, and never edit, replay, or
+-- destructively reverse either historical Law migration. Capture read-only
+-- catalog evidence for the subject enum, every c3r_p_* constraint and index,
+-- shared and subject RPC definitions/argument names, forced RLS/policies, and
+-- exact grants without secrets or learner-private bodies. Then use only one
+-- route under a separate exact Owner gate: restore a verified
+-- pre-apply backup, or add a new forward-only repair migration. That repair
+-- must keep Law disabled and data intact; restore predecessor-compatible
+-- Practice/Theory constraints, functions, argument names, RLS, and
+-- service-only grants; leave the LAW label and any Law rows inert; and pass
+-- two fresh local PostgreSQL 15.8 reset/replay cycles plus the Practice and
+-- Theory isolation/export/delete regressions before any separately authorized
+-- remote/Production operation. No instruction here authorizes remote repair,
+-- destructive deletion, security weakening, or activation.
 
 -- Widen only the installed common rows. Defaults stay PRACTICE so the existing
 -- Practice wrappers are behavior-identical unless a caller uses the new,
