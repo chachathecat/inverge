@@ -249,6 +249,16 @@ export function c3rLCompletionPlanBinding(input: Readonly<{
   };
 }
 
+export function c3rLDeletedView(view: C3RLView): C3RLView {
+  return {
+    ...view,
+    restored: null,
+    dashboard: { ...view.dashboard, queue: [], ledger: [] },
+    currentPlan: null,
+    planHistory: [],
+  };
+}
+
 export function c3rLCurrentQueueItem(input: Readonly<{
   queue: readonly C3RLQueueItem[];
   recordId: string | null | undefined;

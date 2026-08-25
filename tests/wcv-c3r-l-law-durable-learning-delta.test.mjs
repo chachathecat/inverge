@@ -17,7 +17,7 @@ import {
 } from "../lib/review-os/trusted-repair-engine.ts";
 import { trustedRepairCanonicalFixture } from
   "../lib/review-os/trusted-repair-fixtures.ts";
-import { c3rLCompletionPlanBinding } from
+import { c3rLCompletionPlanBinding, c3rLDeletedView } from
   "../lib/review-os/c3r-l-contract.ts";
 import {
   C3R_L_ENUM_MIGRATION_PATH,
@@ -406,6 +406,33 @@ test("completion binds only accepted or edited Today and Full-Day plans", () => 
     plan: { ...plan, state: "ACCEPTED" } }), emptyBinding);
   assert.match(componentSource,
     /c3rLCompletionPlanBinding\([\s\S]*plan: view\?\.currentPlan[\s\S]*completionPlanBinding/);
+});
+
+test("successful deletion clears every Law projection and private client draft", () => {
+  const source = { sourceId: "law-source:synthetic-official-act" };
+  const deleted = c3rLDeletedView({
+    source,
+    restored: { record: { id: "record" } },
+    dashboard: {
+      eligibilityDigest: "a".repeat(64),
+      reviewStateDigest: "b".repeat(64),
+      queue: [{ recordId: "record" }],
+      ledger: [{ id: "ledger" }],
+    },
+    currentPlan: { planId: "plan" },
+    planHistory: [{ planId: "history" }],
+  });
+
+  assert.equal(deleted.source, source);
+  assert.equal(deleted.restored, null);
+  assert.deepEqual(deleted.dashboard.queue, []);
+  assert.deepEqual(deleted.dashboard.ledger, []);
+  assert.equal(deleted.dashboard.eligibilityDigest, "a".repeat(64));
+  assert.equal(deleted.dashboard.reviewStateDigest, "b".repeat(64));
+  assert.equal(deleted.currentPlan, null);
+  assert.deepEqual(deleted.planHistory, []);
+  assert.match(componentSource,
+    /status === "deleted"[\s\S]*c3rLDeletedView\(current\)[\s\S]*setRequestedRecordId\(null\)[\s\S]*resetLawReconstruction\(\)[\s\S]*setAttemptBody\(""\)[\s\S]*setFailureNote\(""\)[\s\S]*setAvailableMinutes\(90\)[\s\S]*setPrediction\("likely_partial"\)[\s\S]*setConfidence\("medium"\)/);
 });
 
 test("Today/Full-Day and durable review transitions remain deterministic", () => {

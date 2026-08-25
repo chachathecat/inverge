@@ -12,6 +12,7 @@ import {
   C3R_L_SOURCE_VERSION_ID,
   c3rLCompletionPlanBinding,
   c3rLCurrentQueueItem,
+  c3rLDeletedView,
   type C3RLPlanBlockInput,
   type C3RLView,
 } from "@/lib/review-os/c3r-l-contract";
@@ -295,7 +296,14 @@ export function C3RLLawLoop({ initialRecordId }: { initialRecordId: string | nul
     if (!window.confirm("내 C3R-L 법규 학습 데이터만 삭제할까요? 실무·이론 데이터는 유지됩니다.")) return;
     const data = await request({ action: "delete" });
     if (data.result?.status === "deleted") {
-      setView((current) => current ? { ...current, restored: null, currentPlan: null } : current);
+      setView((current) => current ? c3rLDeletedView(current) : current);
+      setRequestedRecordId(null);
+      resetLawReconstruction();
+      setAttemptBody("");
+      setFailureNote("");
+      setAvailableMinutes(90);
+      setPrediction("likely_partial");
+      setConfidence("medium");
       window.history.replaceState(null, "", "/app/c3r-l");
     }
   }

@@ -43,8 +43,8 @@
 
 ## Current blocker
 
-- Draft PR #832 root repair is locally clean: Law 23/23 and inherited Practice/Theory/Law/access 129/129 passed with typecheck, changed-file lint, and diff check; correction 1 is docs-only PR-log synchronization; remote Supabase/Production mutation remains zero
+- Draft PR #832 correction 1 was exact-head green; correction 2 is the final allowed source correction, clears every Law queue/ledger/plan projection plus private local drafts after deletion, and is locally clean at Law 24/24 plus inherited 131/131, typecheck, lint, and diff check; remote Supabase/Production mutation remains zero
 
 ## Next exact action
 
-- push correction 1; while its exact-head checks/runtime and fresh review run, inspect them; repair any in-scope defect within the remaining single correction slot or issue the exact Owner merge packet when clean
+- commit/push correction 2 and inspect its exact-head checks/review; close exhausted #832 for a clean replacement if any source defect remains, otherwise issue the exact Owner merge packet without further source mutation
