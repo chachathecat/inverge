@@ -417,7 +417,7 @@ test("Law native evidence runs before generic adapters and cleans up uncondition
 
 test("the dedicated browser fixture covers the full Law vertical and P/T isolation", () => {
   assert.match(lawE2eSource,
-    /initial load errors support retry and stale-bookmark recovery[\s\S]*status: 503[\s\S]*다시 시도[\s\S]*c3r-l-runtime[\s\S]*missingRecordId[\s\S]*기본 법규 학습으로 돌아가기[\s\S]*new URL\(page\.url\(\)\)\.search/);
+    /initial load errors support retry and stale-bookmark recovery[\s\S]*LOAD_RETRY_INITIAL[\s\S]*status: 503[\s\S]*LOAD_RETRY_ERROR_VISIBLE[\s\S]*다시 시도[\s\S]*LOAD_RETRY_COMPLETE[\s\S]*missingRecordId[\s\S]*STALE_BOOKMARK_ERROR_VISIBLE[\s\S]*기본 법규 학습으로 돌아가기[\s\S]*new URL\(page\.url\(\)\)\.search[\s\S]*STALE_BOOKMARK_RECOVERY_COMPLETE/);
   assert.match(lawE2eSource,
     /C3R-L Owner Law journey reaches Postgres and remains isolated/);
   assert.match(lawE2eSource, /action: "submit_repair"/);
@@ -477,8 +477,8 @@ test("Law browser failures disclose only a closed Next or exact stage classifica
   assert.equal(classifyC3RLBrowserFailureStage({
     schemaVersion: "inverge.c3r_l.browser_failure_stage.v1",
     mode: "journey",
-    stage: "LAW_START",
-  }, "journey"), "C3R_L_BROWSER_JOURNEY_LAW_START");
+    stage: "LOAD_RETRY_ERROR_VISIBLE",
+  }, "journey"), "C3R_L_BROWSER_JOURNEY_LOAD_RETRY_ERROR_VISIBLE");
   assert.equal(classifyC3RLBrowserFailureStage({
     schemaVersion: "inverge.c3r_l.browser_failure_stage.v1",
     mode: "journey",
