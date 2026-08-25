@@ -281,6 +281,8 @@ test("Postgres independently parses and persists exact Law proof metadata", () =
   assert.match(validator, /openBlockingReferenceIds[\s\S]*count\(distinct value\)/);
   assert.match(validator, /source_revision_mismatch[\s\S]*STALE/);
   assert.match(validator, /exact_locator_mismatch[\s\S]*UNSUPPORTED/);
+  assert.match(validator,
+    /'canonicalSentence', case when v_state = 'PASS' then concat\([\s\S]*else concat\('법규 적용 결합 검증 ', v_state,[\s\S]*현재 적용 가능성을 확인하지 못했습니다/);
   assert.match(validator, /'claim', v_claim, 'evaluation', v_evaluation/);
   assert.match(validator, /extensions\.digest/);
   assert.match(integrationSql,
@@ -338,6 +340,12 @@ test("Owner-only/default-off UI and API expose exact Law confirmation only", () 
     /complete_d1[\s\S]*!reconstructionReady[\s\S]*complete_d7_transfer[\s\S]*!reconstructionReady[\s\S]*complete_recurrence[\s\S]*!reconstructionReady/);
   assert.match(componentSource,
     /record\.state === "FEEDBACK_COMMITTED"[\s\S]*c3r-l-direct-repair-reference[\s\S]*이후 독립 복습에서는 숨겨집니다/);
+  assert.match(componentSource,
+    /if \(!view\) return status \?[\s\S]*data-testid="c3r-l-load-error"[\s\S]*role="alert"[\s\S]*setInitialLoadRevision\(\(revision\) => revision \+ 1\)/);
+  assert.match(componentSource,
+    /useEffect\(\(\) => \{[\s\S]*requestedRecordId[\s\S]*\}, \[initialLoadRevision, requestedRecordId\]\)/);
+  assert.match(componentSource,
+    /setRequestedRecordId\(null\)[\s\S]*기본 법규 학습으로 돌아가기/);
   assert.doesNotMatch(componentSource,
     /anchorId:\s*C3R_L_ANCHOR_ID|sourceVersionId:\s*C3R_L_SOURCE_VERSION_ID|exactLocator:\s*"Article 10"/);
   assert.doesNotMatch(componentSource, /scopeResolution|requiredPolarity|forbiddenPolarity/);
@@ -408,6 +416,8 @@ test("Law native evidence runs before generic adapters and cleans up uncondition
 });
 
 test("the dedicated browser fixture covers the full Law vertical and P/T isolation", () => {
+  assert.match(lawE2eSource,
+    /initial load errors support retry and stale-bookmark recovery[\s\S]*status: 503[\s\S]*다시 시도[\s\S]*c3r-l-runtime[\s\S]*missingRecordId[\s\S]*기본 법규 학습으로 돌아가기[\s\S]*new URL\(page\.url\(\)\)\.search/);
   assert.match(lawE2eSource,
     /C3R-L Owner Law journey reaches Postgres and remains isolated/);
   assert.match(lawE2eSource, /action: "submit_repair"/);

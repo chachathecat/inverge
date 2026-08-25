@@ -672,6 +672,46 @@ function currentPlanInput(view: RuntimeView) {
 
 test.beforeEach(() => requireRuntime());
 
+test("C3R-L initial load errors support retry and stale-bookmark recovery", async ({ browser }) => {
+  test.skip(mode !== "journey", "journey mode only");
+  const owner = await browser.newContext({ baseURL });
+  try {
+    await login(owner, ownerEmail, ownerPassword);
+    const page = await owner.newPage();
+    let failFirstGet = true;
+    const transientFailure = async (route: Route) => {
+      if (failFirstGet && route.request().method() === "GET") {
+        failFirstGet = false;
+        await route.fulfill({
+          status: 503,
+          contentType: "application/json",
+          body: JSON.stringify({ ok: false, error: "temporarily_unavailable" }),
+        });
+        return;
+      }
+      await route.continue();
+    };
+    await page.route("**/api/review-os/c3r-l*", transientFailure);
+    await page.goto("/app/c3r-l");
+    await expect(page.getByTestId("c3r-l-load-error")).toBeVisible();
+    await expect(page.getByRole("alert")).toContainText("temporarily_unavailable");
+    await page.getByRole("button", { name: "다시 시도", exact: true }).click();
+    await expect(page.getByTestId("c3r-l-runtime")).toBeVisible();
+    await page.unroute("**/api/review-os/c3r-l*", transientFailure);
+
+    const missingRecordId = randomUUID();
+    await page.goto(`/app/c3r-l?recordId=${missingRecordId}`);
+    await expect(page.getByTestId("c3r-l-load-error")).toBeVisible();
+    await expect(page.getByRole("alert")).toContainText("not_found");
+    await page.getByRole("button", { name: "기본 법규 학습으로 돌아가기" }).click();
+    await expect(page.getByTestId("c3r-l-runtime")).toBeVisible();
+    await expect.poll(() => new URL(page.url()).pathname).toBe("/app/c3r-l");
+    await expect.poll(() => new URL(page.url()).search).toBe("");
+  } finally {
+    await owner.close();
+  }
+});
+
 test("C3R-L Owner Law journey reaches Postgres and remains isolated", async ({ browser }) => {
   test.skip(mode !== "journey", "journey mode only");
   const owner = await browser.newContext({ baseURL });
@@ -850,6 +890,12 @@ test("C3R-L Owner Law journey reaches Postgres and remains isolated", async ({ b
     attemptId: randomUUID(), claim: failedClaim(), evidenceStep: "reopen",
   });
   expect(body.view?.restored?.record.state).toBe("REOPENED");
+  const failedAttempt = body.view?.restored?.attempts.find((attempt) =>
+    attempt.proof_state === "UNSUPPORTED");
+  expect(failedAttempt?.body).toBe(
+    "법규 적용 결합 검증 UNSUPPORTED: 현재 적용 가능성을 확인하지 못했습니다.",
+  );
+  expect(String(failedAttempt?.body)).not.toContain("현재 적용 가능하며");
   markBrowserFailureStage("EARLY_REOPEN_UI");
   await assertLawControlsDisabled(
     page,
@@ -940,10 +986,14 @@ test("C3R-L Owner Law journey reaches Postgres and remains isolated", async ({ b
         'claim', proof_claim, 'evaluation', proof_evaluation)::text, 'UTF8'), 'sha256'), 'hex')),
     (select count(*) from public.c3r_p_attempts where record_id='${recordId}'::uuid
       and proof_state='UNSUPPORTED' and proof_reason_codes ? 'exact_locator_mismatch'),
+    (select count(*) from public.c3r_p_attempts where record_id='${recordId}'::uuid
+      and proof_state='UNSUPPORTED'
+      and body='법규 적용 결합 검증 UNSUPPORTED: 현재 적용 가능성을 확인하지 못했습니다.'
+      and body not like '%현재 적용 가능하며%'),
     (select count(*) from public.c3r_p_learning_records where id='${practiceRecordId}'::uuid and subject='PRACTICE'),
     (select count(*) from public.c3r_p_learning_records where id='${theoryRecordId}'::uuid and subject='THEORY')
   );`);
-  expect(persisted).toBe("1|7|7|1|1|1");
+  expect(persisted).toBe("1|7|7|1|1|1|1");
   writeEvidence({
     schemaVersion: "inverge.c3r_l.browser_metadata.v1",
     recordId,
@@ -997,8 +1047,11 @@ test("C3R-L restart restore, export and subject-isolated delete are durable", as
   expect(restored.status()).toBe(200);
   const restoredBody = await restored.json() as ApiBody;
   expect(restoredBody.view?.restored?.record.state).toBe("CLOSED");
-  expect(restoredBody.view?.restored?.attempts.some((attempt) =>
-      attempt.proof_state === "UNSUPPORTED" && Array.isArray(attempt.proof_reason_codes))).toBe(true);
+  const restoredFailure = restoredBody.view?.restored?.attempts.find((attempt) =>
+    attempt.proof_state === "UNSUPPORTED" && Array.isArray(attempt.proof_reason_codes));
+  expect(restoredFailure?.body).toBe(
+    "법규 적용 결합 검증 UNSUPPORTED: 현재 적용 가능성을 확인하지 못했습니다.",
+  );
   markBrowserFailureStage("EXPORT");
   const exported = await post(owner.request, { action: "export" });
   expect(exported.export?.subject).toBe("LAW");
@@ -1018,6 +1071,13 @@ test("C3R-L restart restore, export and subject-isolated delete are durable", as
   expect(receipts.every((receipt) => receipt.subject === "LAW" &&
     knownLawAggregates.has(receipt.aggregateId))).toBe(true);
   const serializedExport = JSON.stringify(exported.export);
+  const exportedFailure = (exported.export?.attempts as Array<Record<string, unknown>>).find(
+    (attempt) => attempt.proof_state === "UNSUPPORTED",
+  );
+  expect(exportedFailure?.body).toBe(
+    "법규 적용 결합 검증 UNSUPPORTED: 현재 적용 가능성을 확인하지 못했습니다.",
+  );
+  expect(String(exportedFailure?.body)).not.toContain("현재 적용 가능하며");
   expect(serializedExport).not.toContain(practiceRecordId);
   expect(serializedExport).not.toContain(theoryRecordId);
   expect(serializedExport).not.toContain(theoryCompatibilityRecordId);
