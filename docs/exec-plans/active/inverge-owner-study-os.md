@@ -15,7 +15,7 @@
 
 ## Branches and PRs
 
-- Lane A: `codex/owner-study-lane-a-c3r-t`; worktree `.agent-factory/worktrees/owner-study-lane-a`; base `cad8b98e4f13a2fe50d82ffd983616adc70eb75a`; PR pending
+- Lane A: `codex/owner-study-lane-a-c3r-t`; worktree `.agent-factory/worktrees/owner-study-lane-a`; base `cad8b98e4f13a2fe50d82ffd983616adc70eb75a`; Draft PR #815; exact-head CI pending after this log receipt
 - Lane B: `codex/owner-study-lane-b-first-stage-kernel`; worktree `.agent-factory/worktrees/owner-study-lane-b`; base `cad8b98e4f13a2fe50d82ffd983616adc70eb75a`; Draft PR #813 correction-trigger head `9e0b8306809a40302953328924efcfe7678e91f8`; tree `ef74ee83cd17192f306749b21a8699b1e0231fe8`; local full/focused/typecheck/lint/build/diff clean; Draft integration-held and lane parked; required CI and final review pending
 - Lane C: `codex/owner-study-lane-c-question-foundry`; worktree `.agent-factory/worktrees/owner-study-lane-c`; base `cad8b98e4f13a2fe50d82ffd983616adc70eb75a`; Draft PR #810 head `c7a3fd818259b088acd8caf0e5cb6efed4c8becb`; tree `1ab32f16cad5154fe89274cde2ce678ea363c47c`; all required checks successful; formal review `0/0/0`, zero threads; integration-held
 - frozen read-only M1 donor: `codex/wcv-c3r-t-theory-durable-learning-delta`; worktree `.agent-factory/worktrees/c3r-t`; base `c269d8fa489dc1ac77ef77d203dadffc0e4e73e5`; no PR
@@ -36,8 +36,8 @@
 
 ## Current blocker
 
-- none; the approved 18-path Lane A candidate is locally clean and ready for its first ordinary commit
+- Draft PR #815 exact-head required CI and two-cycle PostgreSQL 15.8 browser-to-database runtime evidence are pending
 
 ## Next exact action
 
-- stage the exact 18-path manifest, run the cached diff/path checks, commit, push, and open the C3R-T Draft PR
+- commit and push this PR #815 log receipt, then inspect exact-head checks and repair the first in-scope failure
