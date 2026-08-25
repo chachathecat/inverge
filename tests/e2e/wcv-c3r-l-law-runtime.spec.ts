@@ -682,10 +682,9 @@ test("C3R-L initial load errors support retry and stale-bookmark recovery", asyn
     await login(owner, ownerEmail, ownerPassword);
     const page = await owner.newPage();
     markBrowserFailureStage("LOAD_RETRY_INITIAL");
-    let failFirstGet = true;
+    let failInitialLoads = true;
     const transientFailure = async (route: Route) => {
-      if (failFirstGet && route.request().method() === "GET") {
-        failFirstGet = false;
+      if (failInitialLoads && route.request().method() === "GET") {
         await route.fulfill({
           status: 503,
           contentType: "application/json",
@@ -699,6 +698,7 @@ test("C3R-L initial load errors support retry and stale-bookmark recovery", asyn
     await page.goto("/app/c3r-l");
     await expect(page.getByTestId("c3r-l-load-error")).toBeVisible();
     await expect(page.getByRole("alert")).toContainText("temporarily_unavailable");
+    failInitialLoads = false;
     markBrowserFailureStage("LOAD_RETRY_ERROR_VISIBLE");
     await page.getByRole("button", { name: "다시 시도", exact: true }).click();
     await expect(page.getByTestId("c3r-l-runtime")).toBeVisible();

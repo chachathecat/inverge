@@ -40,8 +40,8 @@
 
 ## Current blocker
 
-- PR #829 exact-head PostgreSQL/browser CI must expose or clear the first preserved Law assertion stage; remote Supabase/Production mutation remains zero
+- PR #829 preserved `LOAD_RETRY_INITIAL`: a one-shot route failure could be consumed by React development's duplicate initial effect; the final correction holds all initial GETs failed until the error UI is observed, then releases retry; remote Supabase/Production mutation remains zero
 
 ## Next exact action
 
-- inspect PR #829 exact-head Law browser evidence, repair the first preserved assertion root if any, then complete exact-head CI and fresh formal review
+- run focused checks, commit and push the bounded retry-harness repair, then require clean exact-head CI/runtime and fresh formal review
