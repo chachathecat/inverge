@@ -25,6 +25,7 @@ import {
 export const QUESTION_FOUNDRY_MINIMUM_OWNER_RESPONSES_FOR_MEASUREMENT = 30;
 export const QUESTION_FOUNDRY_MINIMUM_OWNER_SESSIONS_FOR_MEASUREMENT = 3;
 const SHA256 = /^[a-f0-9]{64}$/u;
+const SAFE_ID = /^[A-Za-z0-9][A-Za-z0-9._:/@-]{0,199}$/u;
 
 function isIsoInstant(value: unknown): value is string {
   if (typeof value !== "string") return false;
@@ -460,7 +461,7 @@ export function createQuestionBankArtifact(input: Readonly<{
   auditRun: AuditRunV1;
   occurredAt: string;
 }>): QuestionBankArtifactV1 {
-  if (!isNonemptyString(input.artifactId)) {
+  if (!isNonemptyString(input.artifactId) || !SAFE_ID.test(input.artifactId)) {
     throw new Error("artifact-id-required");
   }
   const recomputedDecision = evaluateQuestionRelease(
@@ -567,6 +568,9 @@ export function reviseQuestionBankArtifact(input: Readonly<{
   }
   if (input.newArtifactId === input.artifact.artifactId || input.newCandidateId === input.artifact.candidateId) {
     throw new Error("revision-must-create-new-artifact-and-candidate-identity");
+  }
+  if (!SAFE_ID.test(input.newArtifactId) || !SAFE_ID.test(input.newCandidateId)) {
+    throw new Error("revision-artifact-and-candidate-identities-invalid");
   }
   const outputArtifact = {
     ...input.artifact,

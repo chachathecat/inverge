@@ -932,6 +932,18 @@ test("dispute, revision and retirement are immutable, lineage-preserving and sta
     revisedAuditId,
     revisedAt,
   );
+  assert.throws(
+    () =>
+      reviseQuestionBankArtifact({
+        artifact: disputed,
+        expectedRevision: 2,
+        newArtifactId: "",
+        newCandidateId: " ",
+        auditRun: revisedAudit,
+        occurredAt: revisedAt,
+      }),
+    /identities-invalid/,
+  );
   const revised = reviseQuestionBankArtifact({
     artifact: disputed,
     expectedRevision: 2,
@@ -1091,6 +1103,62 @@ test("AuditRunV1 is immutable, canonical, solution-first and rejects role or dig
   assert.ok(
     validateAuditRun(disconnected).errors.some((error) => error.includes("DIGEST_CHAIN_BROKEN")),
   );
+
+  const injectedTopLevel = clone(run);
+  injectedTopLevel.privateAcademyBody = "raw private academy content must never enter provenance";
+  assert.equal(injectedTopLevel.auditDigest, run.auditDigest);
+  assert.ok(validateAuditRun(injectedTopLevel).errors.includes("AUDIT_RUN_SCHEMA_NOT_CLOSED"));
+
+  const injectedActor = clone(run);
+  injectedActor.actors[0].rawPrivateBody = "private learner body";
+  assert.ok(
+    validateAuditRun(injectedActor).errors.some((error) => error.includes("ACTOR_SCHEMA_NOT_CLOSED")),
+  );
+  const injectedStep = clone(run);
+  injectedStep.steps[0].academyBody = "commercial textbook body";
+  assert.ok(
+    validateAuditRun(injectedStep).errors.some((error) => error.includes("STEP_SCHEMA_NOT_CLOSED")),
+  );
+  assert.throws(
+    () =>
+      createAuditRun({
+        auditRunId: "audit-raw-body-rejected",
+        input: auditInput,
+        output: auditOutput,
+        actors: [{ ...actors[0], rawPrivateBody: "private learner body" }],
+        steps,
+        startedAt: "2026-08-25T00:00:00.000Z",
+        completedAt: "2026-08-25T00:12:00.000Z",
+      }),
+    /actor-schema-must-be-closed/,
+  );
+  assert.throws(
+    () =>
+      createAuditRun({
+        auditRunId: "audit-raw-step-rejected",
+        input: auditInput,
+        output: auditOutput,
+        actors,
+        steps: [{ ...steps[0], academyBody: "commercial textbook body" }, ...steps.slice(1)],
+        startedAt: "2026-08-25T00:00:00.000Z",
+        completedAt: "2026-08-25T00:12:00.000Z",
+      }),
+    /step-schema-must-be-closed/,
+  );
+
+  for (const [expectedCode, mutate] of [
+    ["AUDIT_RUN_ID_INVALID", (value) => { value.auditRunId = ""; }],
+    ["AUDIT_ACTOR_IDENTITY_INVALID", (value) => { value.actors[0].actorId = ""; }],
+    ["AUDIT_ACTOR_IDENTITY_INVALID", (value) => { value.actors[0].version = ""; }],
+    ["AUDIT_STEP_IDENTITY_INVALID", (value) => { value.steps[0].stepId = ""; }],
+  ]) {
+    const invalidIdentity = clone(run);
+    mutate(invalidIdentity);
+    assert.ok(
+      validateAuditRun(invalidIdentity).errors.some((error) => error.includes(expectedCode)),
+      expectedCode,
+    );
+  }
 });
 
 test("bank artifact release is bound to exact evidence, decision, immutable audit and time", () => {
@@ -1109,6 +1177,10 @@ test("bank artifact release is bound to exact evidence, decision, immutable audi
   const artifact = createQuestionBankArtifact(input);
   assert.equal(artifact.auditRunId, auditRun.auditRunId);
   assert.equal(artifact.releaseTier, decision.releasedTier);
+  assert.throws(
+    () => createQuestionBankArtifact({ ...input, artifactId: "" }),
+    /artifact-id-required/,
+  );
 
   const forgedDecision = clone(decision);
   forgedDecision.evidenceDigest = DIGEST_B;

@@ -185,6 +185,9 @@
   },
   "audit": {
     "immutable": true,
+    "topLevelActorAndStepSchemasClosed": true,
+    "unknownRawPrivateOrAcademyBodyFieldsRejected": true,
+    "auditAndLifecycleIdentitiesMustBeNonemptySafeIds": true,
     "canonicalSha256Bound": true,
     "everyStepInputDigestMustEqualThePriorStepOutputDigest": true,
     "firstAndTerminalStepDigestsMustBindExactAuditInputAndOutput": true,

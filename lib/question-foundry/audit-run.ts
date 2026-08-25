@@ -9,6 +9,59 @@ import {
 import { canonicalDigest } from "./validation";
 
 const SHA256 = /^[a-f0-9]{64}$/u;
+const SAFE_ID = /^[A-Za-z0-9][A-Za-z0-9._:/@-]{0,199}$/u;
+const AUDIT_RUN_KEYS = [
+  "schemaVersion",
+  "auditRunId",
+  "contractVersion",
+  "inputDigest",
+  "outputDigest",
+  "actors",
+  "steps",
+  "startedAt",
+  "completedAt",
+  "offline",
+  "providerCalls",
+  "remoteMutations",
+  "productionMutations",
+  "rawPrivateBodiesStored",
+  "auditDigest",
+] as const;
+const AUDIT_ACTOR_KEYS = ["actorId", "role", "version"] as const;
+const AUDIT_STEP_KEYS = [
+  "stepId",
+  "kind",
+  "actorId",
+  "occurredAt",
+  "inputDigest",
+  "outputDigest",
+] as const;
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function closedKeysValid(value: unknown, allowed: readonly string[]) {
+  return (
+    isRecord(value) &&
+    Object.keys(value).length === allowed.length &&
+    allowed.every((key) => Object.prototype.hasOwnProperty.call(value, key))
+  );
+}
+
+function assertClosedCreateInput(input: Readonly<{
+  auditRunId: string;
+  actors: readonly AuditActorV1[];
+  steps: readonly AuditStepV1[];
+}>) {
+  if (!SAFE_ID.test(input.auditRunId)) throw new Error("invalid-audit-run-id");
+  if (input.actors.some((actor) => !closedKeysValid(actor, AUDIT_ACTOR_KEYS))) {
+    throw new Error("audit-actor-schema-must-be-closed");
+  }
+  if (input.steps.some((step) => !closedKeysValid(step, AUDIT_STEP_KEYS))) {
+    throw new Error("audit-step-schema-must-be-closed");
+  }
+}
 
 function deepFreeze<T>(value: T): T {
   if (value && typeof value === "object" && !Object.isFrozen(value)) {
@@ -51,14 +104,26 @@ export function createAuditRun(input: Readonly<{
   startedAt: string;
   completedAt: string;
 }>): AuditRunV1 {
+  assertClosedCreateInput(input);
   const withoutDigest = deepFreeze({
     schemaVersion: AUDIT_RUN_VERSION,
     auditRunId: input.auditRunId,
     contractVersion: QUESTION_FOUNDRY_CONTRACT_VERSION,
     inputDigest: canonicalDigest(input.input),
     outputDigest: canonicalDigest(input.output),
-    actors: input.actors.map((actor) => ({ ...actor })),
-    steps: input.steps.map((step) => ({ ...step })),
+    actors: input.actors.map((actor) => ({
+      actorId: actor.actorId,
+      role: actor.role,
+      version: actor.version,
+    })),
+    steps: input.steps.map((step) => ({
+      stepId: step.stepId,
+      kind: step.kind,
+      actorId: step.actorId,
+      occurredAt: step.occurredAt,
+      inputDigest: step.inputDigest,
+      outputDigest: step.outputDigest,
+    })),
     startedAt: input.startedAt,
     completedAt: input.completedAt,
     offline: true as const,
@@ -98,8 +163,10 @@ const ALLOWED_ROLES_BY_STEP: Readonly<Record<AuditStepV1["kind"], readonly Audit
 export function validateAuditRun(run: AuditRunV1): QuestionFoundryValidationResult {
   const errors: string[] = [];
   try {
+    if (!closedKeysValid(run, AUDIT_RUN_KEYS)) errors.push("AUDIT_RUN_SCHEMA_NOT_CLOSED");
     if (run.schemaVersion !== AUDIT_RUN_VERSION) errors.push("AUDIT_VERSION_INVALID");
     if (run.contractVersion !== QUESTION_FOUNDRY_CONTRACT_VERSION) errors.push("AUDIT_CONTRACT_INVALID");
+    if (!SAFE_ID.test(run.auditRunId)) errors.push("AUDIT_RUN_ID_INVALID");
     if (![run.inputDigest, run.outputDigest, run.auditDigest].every((digest) => SHA256.test(digest))) {
       errors.push("AUDIT_DIGEST_INVALID");
     }
@@ -122,6 +189,17 @@ export function validateAuditRun(run: AuditRunV1): QuestionFoundryValidationResu
     if (run.actors.length === 0 || new Set(run.actors.map((actor) => actor.actorId)).size !== run.actors.length) {
       errors.push("AUDIT_ACTORS_MUST_HAVE_UNIQUE_IDENTITIES");
     }
+    for (const [actorIndex, actor] of run.actors.entries()) {
+      if (!closedKeysValid(actor, AUDIT_ACTOR_KEYS)) {
+        errors.push(`AUDIT_ACTOR_SCHEMA_NOT_CLOSED:${actorIndex}`);
+      }
+      if (!SAFE_ID.test(actor.actorId) || !SAFE_ID.test(actor.version)) {
+        errors.push(`AUDIT_ACTOR_IDENTITY_INVALID:${actorIndex}`);
+      }
+      if (!["GENERATOR", "BLIND_SOLVER", "JUDGE", "OWNER", "DETERMINISTIC_VALIDATOR"].includes(actor.role)) {
+        errors.push(`AUDIT_ACTOR_ROLE_INVALID:${actorIndex}`);
+      }
+    }
     const actorsById = new Map(run.actors.map((actor) => [actor.actorId, actor]));
     const generatorIds = new Set(
       run.actors.filter((actor) => actor.role === "GENERATOR").map((actor) => actor.actorId),
@@ -131,6 +209,12 @@ export function validateAuditRun(run: AuditRunV1): QuestionFoundryValidationResu
     }
     let previousAt = Number.NEGATIVE_INFINITY;
     for (const [stepIndex, step] of run.steps.entries()) {
+      if (!closedKeysValid(step, AUDIT_STEP_KEYS)) {
+        errors.push(`AUDIT_STEP_SCHEMA_NOT_CLOSED:${stepIndex}`);
+      }
+      if (!SAFE_ID.test(step.stepId) || !SAFE_ID.test(step.actorId)) {
+        errors.push(`AUDIT_STEP_IDENTITY_INVALID:${stepIndex}`);
+      }
       const actor = actorsById.get(step.actorId);
       if (!actor) {
         errors.push(`AUDIT_STEP_ACTOR_UNRESOLVED:${step.stepId}`);
