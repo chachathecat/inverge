@@ -2203,7 +2203,7 @@ function runBrowser(repositoryRoot, baseUrl, identities, browserEvidencePath, op
 }
 
 function runTheoryBrowser(repositoryRoot, baseUrl, identities, browserEvidencePath,
-  practiceCompatibilityEvidencePath, databaseContainer, browserMode) {
+  practiceCompatibilityEvidencePath, databaseContainer, browserMode, failureStagePath) {
   run(process.execPath, [path.join(repositoryRoot, "node_modules/@playwright/test/cli.js"), "test",
     `--config=${path.join(repositoryRoot, "tests/e2e/wcv-c3r-t-playwright.config.ts")}`], {
     cwd: repositoryRoot,
@@ -2220,6 +2220,7 @@ function runTheoryBrowser(repositoryRoot, baseUrl, identities, browserEvidencePa
       C3R_T_PRACTICE_COMPATIBILITY_EVIDENCE_PATH: practiceCompatibilityEvidencePath,
       C3R_T_DATABASE_CONTAINER: databaseContainer,
       C3R_T_BROWSER_MODE: browserMode,
+      C3R_T_BROWSER_FAILURE_STAGE_PATH: failureStagePath,
     },
     label: `C3R-T ${browserMode} browser verification`,
     reportOutput: true,
@@ -2244,6 +2245,69 @@ export function classifyC3RTNextFailureDiagnostic(value) {
   return "C3R_T_NEXT_FAILURE_UNCLASSIFIED";
 }
 
+const C3R_T_BROWSER_FAILURE_STAGE_SCHEMA_VERSION =
+  "inverge.c3r_t.browser_failure_stage.v1";
+const C3R_T_BROWSER_FAILURE_STAGES = Object.freeze({
+  journey: Object.freeze([
+    "INITIAL_RUNTIME",
+    "PRACTICE_START",
+    "THEORY_START",
+    "PRACTICE_COMPATIBILITY",
+    "FEEDBACK",
+    "DIRECT_RPC_DENIALS",
+    "REPAIR_REPLAY",
+    "EARLY_D1_UI",
+    "ASSISTED_REVIEW",
+    "D1_PLAN_COMPLETE",
+    "EARLY_D7_UI",
+    "D7_PLAN_COMPLETE",
+    "EARLY_RECURRENCE_UI",
+    "RECURRENCE",
+    "TERMINAL_PLAN_UI",
+    "REOPEN",
+    "EARLY_REOPEN_UI",
+    "REOPEN_COMPLETE",
+    "ISOLATION",
+    "PERSISTENCE_EVIDENCE",
+    "COMPLETE",
+  ]),
+  restore: Object.freeze([
+    "RESTORE_LOAD",
+    "EXPORT",
+    "DELETE_ISOLATION",
+    "COMPLETE",
+  ]),
+  feature_off: Object.freeze(["ACCESS_GATE", "COMPLETE"]),
+  production_denied: Object.freeze(["ACCESS_GATE", "COMPLETE"]),
+});
+
+export function classifyC3RTBrowserFailureStage(value, expectedMode) {
+  try {
+    exactKeys(value, ["schemaVersion", "mode", "stage"], "C3R-T browser failure stage");
+    if (value.schemaVersion !== C3R_T_BROWSER_FAILURE_STAGE_SCHEMA_VERSION ||
+      value.mode !== expectedMode ||
+      !Object.hasOwn(C3R_T_BROWSER_FAILURE_STAGES, expectedMode) ||
+      !C3R_T_BROWSER_FAILURE_STAGES[expectedMode].includes(value.stage)) {
+      return "C3R_T_BROWSER_STAGE_INVALID";
+    }
+    return `C3R_T_BROWSER_${expectedMode.toUpperCase()}_${value.stage}`;
+  } catch {
+    return "C3R_T_BROWSER_STAGE_INVALID";
+  }
+}
+
+export function readC3RTBrowserFailureStage(filePath, expectedMode) {
+  if (!fs.existsSync(filePath)) return "C3R_T_BROWSER_STAGE_MISSING";
+  try {
+    return classifyC3RTBrowserFailureStage(
+      JSON.parse(fs.readFileSync(filePath, "utf8")),
+      expectedMode,
+    );
+  } catch {
+    return "C3R_T_BROWSER_STAGE_INVALID";
+  }
+}
+
 async function runTheoryBrowserWithClosedDiagnostic(input) {
   try {
     runTheoryBrowser(
@@ -2254,13 +2318,24 @@ async function runTheoryBrowserWithClosedDiagnostic(input) {
       input.practiceCompatibilityEvidencePath,
       input.databaseContainer,
       input.browserMode,
+      input.failureStagePath,
     );
   } catch {
     await stopNext(input.server);
     const diagnostic = fs.existsSync(input.server.diagnosticPath)
       ? fs.readFileSync(input.server.diagnosticPath, "utf8")
       : "";
-    const classification = classifyC3RTNextFailureDiagnostic(diagnostic);
+    const nextClassification = classifyC3RTNextFailureDiagnostic(diagnostic);
+    const stageClassification = readC3RTBrowserFailureStage(
+      input.failureStagePath,
+      input.browserMode,
+    );
+    const classification = stageClassification.startsWith(
+      `C3R_T_BROWSER_${input.browserMode.toUpperCase()}_`,
+    ) ? stageClassification
+      : nextClassification === "C3R_T_NEXT_FAILURE_UNCLASSIFIED"
+        ? stageClassification
+        : nextClassification;
     throw new Error(`C3R-T ${input.browserMode} browser verification failed: ${classification}.`);
   }
 }
@@ -2697,6 +2772,7 @@ async function runTheoryDedicatedCycle(input) {
     await runTheoryBrowserWithClosedDiagnostic({
       repositoryRoot: input.repositoryRoot, server, identities, browserEvidencePath,
       practiceCompatibilityEvidencePath, databaseContainer, browserMode: "journey",
+      failureStagePath: path.join(cycleRoot, "browser-stage-journey.json"),
     });
     await stopAndDiscardNext(server);
     server = null;
@@ -2705,6 +2781,7 @@ async function runTheoryDedicatedCycle(input) {
     await runTheoryBrowserWithClosedDiagnostic({
       repositoryRoot: input.repositoryRoot, server, identities, browserEvidencePath,
       practiceCompatibilityEvidencePath, databaseContainer, browserMode: "restore",
+      failureStagePath: path.join(cycleRoot, "browser-stage-restore.json"),
     });
     await stopAndDiscardNext(server);
     server = null;
@@ -2714,6 +2791,7 @@ async function runTheoryDedicatedCycle(input) {
       await runTheoryBrowserWithClosedDiagnostic({
         repositoryRoot: input.repositoryRoot, server, identities, browserEvidencePath,
         practiceCompatibilityEvidencePath, databaseContainer, browserMode: "feature_off",
+        failureStagePath: path.join(cycleRoot, "browser-stage-feature_off.json"),
       });
       await stopAndDiscardNext(server);
       server = null;
@@ -2721,6 +2799,7 @@ async function runTheoryDedicatedCycle(input) {
       await runTheoryBrowserWithClosedDiagnostic({
         repositoryRoot: input.repositoryRoot, server, identities, browserEvidencePath,
         practiceCompatibilityEvidencePath, databaseContainer, browserMode: "production_denied",
+        failureStagePath: path.join(cycleRoot, "browser-stage-production_denied.json"),
       });
       await stopAndDiscardNext(server);
       server = null;

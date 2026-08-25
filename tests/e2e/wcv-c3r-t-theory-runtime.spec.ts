@@ -9,7 +9,7 @@ import {
 import { execFileSync, spawnSync } from "node:child_process";
 import { randomUUID } from "node:crypto";
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
-import { dirname } from "node:path";
+import { basename, dirname } from "node:path";
 
 const baseURL = process.env.E2E_BASE_URL ?? "";
 const ownerEmail = process.env.C3R_T_OWNER_EMAIL ?? "";
@@ -23,7 +23,24 @@ const practiceCompatibilityEvidencePath =
   process.env.C3R_T_PRACTICE_COMPATIBILITY_EVIDENCE_PATH ?? "";
 const databaseContainer = process.env.C3R_T_DATABASE_CONTAINER ?? "";
 const mode = process.env.C3R_T_BROWSER_MODE ?? "journey";
+const browserFailureStagePath = process.env.C3R_T_BROWSER_FAILURE_STAGE_PATH ?? "";
 const DATABASE_CONTAINER = /^supabase_db_c3r-t-cycle-[12]-\d+-\d+$/u;
+const BROWSER_FAILURE_STAGE_SCHEMA_VERSION = "inverge.c3r_t.browser_failure_stage.v1";
+const BROWSER_FAILURE_STAGES = {
+  journey: [
+    "INITIAL_RUNTIME", "PRACTICE_START", "THEORY_START", "PRACTICE_COMPATIBILITY",
+    "FEEDBACK", "DIRECT_RPC_DENIALS", "REPAIR_REPLAY", "EARLY_D1_UI",
+    "ASSISTED_REVIEW", "D1_PLAN_COMPLETE", "EARLY_D7_UI", "D7_PLAN_COMPLETE",
+    "EARLY_RECURRENCE_UI", "RECURRENCE", "TERMINAL_PLAN_UI", "REOPEN",
+    "EARLY_REOPEN_UI", "REOPEN_COMPLETE", "ISOLATION", "PERSISTENCE_EVIDENCE",
+    "COMPLETE",
+  ],
+  restore: ["RESTORE_LOAD", "EXPORT", "DELETE_ISOLATION", "COMPLETE"],
+  feature_off: ["ACCESS_GATE", "COMPLETE"],
+  production_denied: ["ACCESS_GATE", "COMPLETE"],
+} as const;
+type BrowserMode = keyof typeof BROWSER_FAILURE_STAGES;
+type BrowserFailureStage = (typeof BROWSER_FAILURE_STAGES)[BrowserMode][number];
 
 type RuntimeView = {
   restored: null | {
@@ -67,6 +84,7 @@ function requireRuntime() {
   for (const value of [
     baseURL, ownerEmail, ownerPassword, otherOwnerEmail, otherOwnerPassword,
     nonOwnerEmail, nonOwnerPassword, evidencePath, practiceCompatibilityEvidencePath,
+    browserFailureStagePath,
   ]) {
     if (!value) throw new Error("C3R-T browser runtime environment is incomplete");
   }
@@ -76,9 +94,23 @@ function requireRuntime() {
   if (!["journey", "restore", "feature_off", "production_denied"].includes(mode)) {
     throw new Error("C3R-T browser mode is invalid");
   }
+  if (dirname(browserFailureStagePath) !== dirname(evidencePath) ||
+    basename(browserFailureStagePath) !== `browser-stage-${mode}.json`) {
+    throw new Error("C3R-T browser failure-stage path is invalid");
+  }
   if (!['127.0.0.1', 'localhost', '::1'].includes(new URL(baseURL).hostname)) {
     throw new Error("C3R-T browser runtime refused a non-local target");
   }
+}
+
+function markBrowserFailureStage(stage: BrowserFailureStage) {
+  const stages = BROWSER_FAILURE_STAGES[mode as BrowserMode] as readonly string[];
+  if (!stages.includes(stage)) throw new Error("C3R-T browser failure stage is invalid");
+  writeFileSync(browserFailureStagePath, `${JSON.stringify({
+    schemaVersion: BROWSER_FAILURE_STAGE_SCHEMA_VERSION,
+    mode,
+    stage,
+  })}\n`, { mode: 0o600 });
 }
 
 async function login(context: BrowserContext, email: string, password: string) {
@@ -423,16 +455,12 @@ test("C3R-T Owner Theory journey reaches Postgres and remains isolated", async (
   await login(nonOwner, nonOwnerEmail, nonOwnerPassword);
 
   const page = await owner.newPage();
+  markBrowserFailureStage("INITIAL_RUNTIME");
   await page.goto("/app/c3r-t");
   await expect(page.getByTestId("c3r-t-runtime")).toBeVisible();
 
   const practiceRecordId = randomUUID();
-  await owner.request.post("/api/review-os/c3r-p", { data: {
-    action: "start", commandId: randomUUID(), recordId: practiceRecordId,
-    attemptId: randomUUID(), attemptBody: "연간 순수익 계산을 먼저 시도한다.",
-    prediction: "likely_partial", confidence: "medium", evidenceStep: "d0",
-  }}).then((response) => expect(response.status()).toBe(200));
-
+  markBrowserFailureStage("THEORY_START");
   const recordId = randomUUID();
   const startCommandId = randomUUID();
   const startPayload = {
@@ -442,13 +470,16 @@ test("C3R-T Owner Theory journey reaches Postgres and remains isolated", async (
   };
   let body = await post(owner.request, startPayload);
   expect(body.view?.restored?.record.state).toBe("D0_OPEN");
+  markBrowserFailureStage("PRACTICE_COMPATIBILITY");
   await exercisePracticeCompatibility(owner.request, recordId);
+  markBrowserFailureStage("PRACTICE_START");
   await owner.request.post("/api/review-os/c3r-p", { data: {
     action: "start", commandId: randomUUID(), recordId: practiceRecordId,
     attemptId: randomUUID(), attemptBody: "연간 순수익 계산을 다시 시작한다.",
     prediction: "likely_partial", confidence: "medium", evidenceStep: "d0",
   }}).then((response) => expect(response.status()).toBe(200));
 
+  markBrowserFailureStage("FEEDBACK");
   const feedback = await post(owner.request, {
     action: "commit_feedback", commandId: randomUUID(), recordId,
     expectedVersion: body.view?.restored?.record.record_version,
@@ -460,6 +491,7 @@ test("C3R-T Owner Theory journey reaches Postgres and remains isolated", async (
   const record = body.view?.restored?.record;
   expect(record?.state).toBe("FEEDBACK_COMMITTED");
   if (!record) throw new Error("C3R-T feedback record is missing");
+  markBrowserFailureStage("DIRECT_RPC_DENIALS");
   const configurationDigest = databaseScalar(
     `select configuration_digest from public.c3r_p_learning_records where id='${recordId}'::uuid;`,
   );
@@ -482,10 +514,12 @@ test("C3R-T Owner Theory journey reaches Postgres and remains isolated", async (
     payload: { ...basePayload, attemptId: randomUUID(), claim: crossTargetClaim() },
   }), /C3R_T_STRUCTURED_PROOF_REQUIRED/u);
 
+  markBrowserFailureStage("REPAIR_REPLAY");
   const repairCommandId = randomUUID();
   const repairPayload = {
     action: "submit_repair", commandId: repairCommandId, recordId,
     expectedVersion: record.record_version, attemptId: randomUUID(), claim: passClaim(),
+    evidenceStep: "feedback",
   };
   body = await post(owner.request, repairPayload);
   expect(body.view?.restored?.record.state).toBe("REPAIRED");
@@ -494,6 +528,7 @@ test("C3R-T Owner Theory journey reaches Postgres and remains isolated", async (
   expect(replay.view?.restored?.record.record_version)
     .toBe(body.view?.restored?.record.record_version);
   expect(replay.view?.restored?.attempts.length).toBe(body.view?.restored?.attempts.length);
+  markBrowserFailureStage("EARLY_D1_UI");
   await assertTheoryControlsDisabled(
     page,
     recordId,
@@ -502,6 +537,7 @@ test("C3R-T Owner Theory journey reaches Postgres and remains isolated", async (
     "c3r-t-d1-eligibility",
   );
 
+  markBrowserFailureStage("ASSISTED_REVIEW");
   body = await post(owner.request, {
     action: "record_assisted_review", commandId: randomUUID(), recordId,
     expectedVersion: body.view?.restored?.record.record_version,
@@ -509,6 +545,7 @@ test("C3R-T Owner Theory journey reaches Postgres and remains isolated", async (
   });
   expect(body.view?.restored?.record.state).toBe("REPAIRED");
 
+  markBrowserFailureStage("D1_PLAN_COMPLETE");
   body = await post(owner.request, {
     action: "create_plan", commandId: randomUUID(), recordId, planId: randomUUID(),
     kind: "TODAY", availableMinutes: 90, evidenceStep: "d1Rescheduled",
@@ -527,6 +564,7 @@ test("C3R-T Owner Theory journey reaches Postgres and remains isolated", async (
     evidenceStep: "d1Rescheduled",
   });
   expect(body.view?.restored?.record.state).toBe("D1_COMPLETE");
+  markBrowserFailureStage("EARLY_D7_UI");
   await assertTheoryControlsDisabled(
     page,
     recordId,
@@ -535,6 +573,7 @@ test("C3R-T Owner Theory journey reaches Postgres and remains isolated", async (
     "c3r-t-d7-eligibility",
   );
 
+  markBrowserFailureStage("D7_PLAN_COMPLETE");
   body = await post(owner.request, {
     action: "create_plan", commandId: randomUUID(), recordId, planId: randomUUID(),
     kind: "FULL_DAY", availableMinutes: 180, evidenceStep: "d7",
@@ -560,6 +599,7 @@ test("C3R-T Owner Theory journey reaches Postgres and remains isolated", async (
     ...currentPlanInput(body.view!), evidenceStep: "d7",
   });
   expect(body.view?.restored?.record.state).toBe("D7_COMPLETE");
+  markBrowserFailureStage("EARLY_RECURRENCE_UI");
   await assertTheoryControlsDisabled(
     page,
     recordId,
@@ -567,6 +607,7 @@ test("C3R-T Owner Theory journey reaches Postgres and remains isolated", async (
     ["시간 제한 재현 완료", "Today 계획", "Full-Day 계획"],
     "c3r-t-recurrence-eligibility",
   );
+  markBrowserFailureStage("RECURRENCE");
   body = await post(owner.request, {
     action: "complete_recurrence", commandId: randomUUID(), recordId,
     expectedVersion: body.view?.restored?.record.record_version,
@@ -574,6 +615,7 @@ test("C3R-T Owner Theory journey reaches Postgres and remains isolated", async (
     planBlockId: null, planId: null, planVersion: null, evidenceStep: "recurrence",
   });
   expect(body.view?.restored?.record.state).toBe("CLOSED");
+  markBrowserFailureStage("TERMINAL_PLAN_UI");
   await assertTheoryControlsDisabled(
     page,
     recordId,
@@ -581,12 +623,14 @@ test("C3R-T Owner Theory journey reaches Postgres and remains isolated", async (
     ["Today 계획", "Full-Day 계획"],
     "c3r-t-plan-eligibility",
   );
+  markBrowserFailureStage("REOPEN");
   body = await post(owner.request, {
     action: "record_later_failure", commandId: randomUUID(), recordId,
     expectedVersion: body.view?.restored?.record.record_version,
     attemptId: randomUUID(), claim: failedClaim(), evidenceStep: "reopen",
   });
   expect(body.view?.restored?.record.state).toBe("REOPENED");
+  markBrowserFailureStage("EARLY_REOPEN_UI");
   await assertTheoryControlsDisabled(
     page,
     recordId,
@@ -594,6 +638,7 @@ test("C3R-T Owner Theory journey reaches Postgres and remains isolated", async (
     ["재개 복습 독립 완료", "Today 계획", "Full-Day 계획"],
     "c3r-t-reopened-eligibility",
   );
+  markBrowserFailureStage("REOPEN_COMPLETE");
   body = await post(owner.request, {
     action: "complete_reopened_review", commandId: randomUUID(), recordId,
     expectedVersion: body.view?.restored?.record.record_version,
@@ -602,6 +647,7 @@ test("C3R-T Owner Theory journey reaches Postgres and remains isolated", async (
   });
   expect(body.view?.restored?.record.state).toBe("CLOSED");
 
+  markBrowserFailureStage("ISOLATION");
   const otherUserId = databaseScalar(
     `select id from auth.users where lower(email)=lower('${otherOwnerEmail.replaceAll("'", "''")}');`,
   );
@@ -621,6 +667,7 @@ test("C3R-T Owner Theory journey reaches Postgres and remains isolated", async (
   expect((await anonymous.request.get(`/api/review-os/c3r-t?recordId=${recordId}`)).status()).toBe(404);
   await anonymous.close();
 
+  markBrowserFailureStage("PERSISTENCE_EVIDENCE");
   const persisted = databaseScalar(`select concat_ws('|',
     (select count(*) from public.c3r_p_learning_records where id='${recordId}'::uuid and subject='THEORY'),
     (select count(*) from public.c3r_p_attempts where record_id='${recordId}'::uuid and validator_id is not null),
@@ -663,6 +710,7 @@ test("C3R-T Owner Theory journey reaches Postgres and remains isolated", async (
     rawLearnerBodyInEvidence: false,
     providerCalls: 0,
   });
+  markBrowserFailureStage("COMPLETE");
   await owner.close();
   await otherOwner.close();
   await nonOwner.close();
@@ -670,6 +718,7 @@ test("C3R-T Owner Theory journey reaches Postgres and remains isolated", async (
 
 test("C3R-T restart restore, export and subject-isolated delete are durable", async ({ browser }) => {
   test.skip(mode !== "restore", "restore mode only");
+  markBrowserFailureStage("RESTORE_LOAD");
   const prior = JSON.parse(readFileSync(evidencePath, "utf8")) as Record<string, unknown>;
   const recordId = String(prior.recordId ?? "");
   const practiceRecordId = String(prior.practiceRecordId ?? "");
@@ -682,6 +731,7 @@ test("C3R-T restart restore, export and subject-isolated delete are durable", as
   expect(restoredBody.view?.restored?.record.state).toBe("CLOSED");
   expect(restoredBody.view?.restored?.attempts.some((attempt) =>
     attempt.proof_state === "BLOCKED" && Array.isArray(attempt.proof_reason_codes))).toBe(true);
+  markBrowserFailureStage("EXPORT");
   const exported = await post(owner.request, { action: "export" });
   expect(exported.export?.subject).toBe("THEORY");
   for (const collection of ["records", "attempts", "plans"] as const) {
@@ -702,6 +752,7 @@ test("C3R-T restart restore, export and subject-isolated delete are durable", as
   const serializedExport = JSON.stringify(exported.export);
   expect(serializedExport).not.toContain(practiceRecordId);
   expect(serializedExport).not.toMatch(/request_?sha256|requestSha256/u);
+  markBrowserFailureStage("DELETE_ISOLATION");
   await post(owner.request, { action: "delete" });
   expect(databaseScalar(`select concat_ws('|',
     (select count(*) from public.c3r_p_learning_records where id='${recordId}'::uuid),
@@ -719,15 +770,18 @@ test("C3R-T restart restore, export and subject-isolated delete are durable", as
     restoreExportDelete: true,
     cleanupReady: true,
   });
+  markBrowserFailureStage("COMPLETE");
   await owner.close();
 });
 
 test("C3R-T default-off and Production gates fail as not-found", async ({ browser }) => {
   test.skip(!["feature_off", "production_denied"].includes(mode), "gate mode only");
+  markBrowserFailureStage("ACCESS_GATE");
   const owner = await browser.newContext({ baseURL });
   await login(owner, ownerEmail, ownerPassword);
   const response = await owner.request.get("/api/review-os/c3r-t");
   expect(response.status()).toBe(404);
   expect(await response.json()).toEqual({ ok: false, error: "not_found" });
+  markBrowserFailureStage("COMPLETE");
   await owner.close();
 });

@@ -22,6 +22,7 @@ import {
   C3R_T_INTEGRATION_MIGRATION_PATH,
   C3R_T_RUNTIME_PRODUCER_VERSION,
   boundedNativePostgresDiagnostic,
+  classifyC3RTBrowserFailureStage,
   c3rTNativePrerequisiteClosure,
   classifyC3RTNextFailureDiagnostic,
   classifyC3RTNativeServiceAssertions,
@@ -30,6 +31,7 @@ import {
   isC3RPRiskCandidate,
   isC3RTRiskCandidate,
   isNativeContainerVerifiedAbsent,
+  readC3RTBrowserFailureStage,
   validateC3RPMigrationAuthorityBinding,
   validateC3RTNativeEvidence,
   validateTheoryRuntimeArtifact,
@@ -58,6 +60,7 @@ const runtimeSource = read("scripts/automation/wcv-c3r-p-practice-common-runtime
 const runtimeProducerSource = read("scripts/automation/produce-runtime-evidence.mjs");
 const runtimeGateSource = read("scripts/automation/runtime-gate.mjs");
 const workflowSource = read(".github/workflows/c3r-t-theory-durable-learning-delta.yml");
+const theoryE2eSource = read("tests/e2e/wcv-c3r-t-theory-runtime.spec.ts");
 const practiceSql = read(
   "supabase/migrations/20260822120000_c3r_p_practice_common_durable_substrate.sql",
 );
@@ -831,7 +834,7 @@ test("dedicated Theory cycles bind identity relations before legacy Practice rec
     /assertTheoryPostgrestArgumentCatalog[\s\S]*Theory PostgREST wrapper argument catalog/u);
 });
 
-test("Theory browser failures surface only closed Next classifications", () => {
+test("Theory browser failures surface only closed Next or exact stage classifications", () => {
   assert.equal(classifyC3RTNextFailureDiagnostic(
     "GET /api/review-os/c3r-t 503 in 42ms",
   ), "C3R_T_API_TEMPORARILY_UNAVAILABLE");
@@ -848,10 +851,76 @@ test("Theory browser failures surface only closed Next classifications", () => {
   const classification = classifyC3RTNextFailureDiagnostic(raw);
   assert.equal(classification, "C3R_T_NEXT_FAILURE_UNCLASSIFIED");
   assert.doesNotMatch(classification, /example\.invalid|private-secret|raw-private/u);
+  assert.equal(classifyC3RTBrowserFailureStage({
+    schemaVersion: "inverge.c3r_t.browser_failure_stage.v1",
+    mode: "journey",
+    stage: "PRACTICE_COMPATIBILITY",
+  }, "journey"), "C3R_T_BROWSER_JOURNEY_PRACTICE_COMPATIBILITY");
+  for (const invalid of [
+    undefined,
+    {},
+    { schemaVersion: "inverge.c3r_t.browser_failure_stage.v1",
+      mode: "journey", stage: "PRACTICE_COMPATIBILITY", extra: true },
+    { schemaVersion: "inverge.c3r_t.browser_failure_stage.v0",
+      mode: "journey", stage: "PRACTICE_COMPATIBILITY" },
+    { schemaVersion: "inverge.c3r_t.browser_failure_stage.v1",
+      mode: "restore", stage: "PRACTICE_COMPATIBILITY" },
+    { schemaVersion: "inverge.c3r_t.browser_failure_stage.v1",
+      mode: "journey", stage: "PRIVATE_BODY" },
+  ]) {
+    const invalidClassification = classifyC3RTBrowserFailureStage(invalid, "journey");
+    assert.equal(invalidClassification, "C3R_T_BROWSER_STAGE_INVALID");
+    assert.doesNotMatch(invalidClassification, /PRIVATE_BODY|private|path|example/u);
+  }
+  const markerRoot = fs.mkdtempSync(path.join(os.tmpdir(), "c3r-t-browser-stage-"));
+  try {
+    const missingMarker = path.join(markerRoot, "missing.json");
+    assert.equal(readC3RTBrowserFailureStage(missingMarker, "journey"),
+      "C3R_T_BROWSER_STAGE_MISSING");
+    const invalidMarker = path.join(markerRoot, "invalid.json");
+    fs.writeFileSync(invalidMarker, "{not-json", { mode: 0o600 });
+    assert.equal(readC3RTBrowserFailureStage(invalidMarker, "journey"),
+      "C3R_T_BROWSER_STAGE_INVALID");
+  } finally {
+    fs.rmSync(markerRoot, { recursive: true, force: true });
+  }
   assert.match(runtimeSource,
-    /catch \{[\s\S]*classifyC3RTNextFailureDiagnostic\(diagnostic\)[\s\S]*browser verification failed: \$\{classification\}/u);
+    /catch \{[\s\S]*classifyC3RTNextFailureDiagnostic\(diagnostic\)[\s\S]*readC3RTBrowserFailureStage\(\s*input\.failureStagePath,\s*input\.browserMode,?\s*\)[\s\S]*browser verification failed: \$\{classification\}/u);
   assert.doesNotMatch(runtimeSource,
     /browser verification failed: \$\{(?:diagnostic|error|input\.server\.diagnosticPath)\}/u);
+  assert.match(theoryE2eSource,
+    /C3R_T_BROWSER_FAILURE_STAGE_PATH[\s\S]*browser-stage-\$\{mode\}\.json[\s\S]*markBrowserFailureStage/u);
+  assert.doesNotMatch(runtimeSource,
+    /browser verification failed: \$\{(?:input\.failureStagePath|failureStage|value)\}/u);
+});
+
+test("Theory browser fixture preserves the Practice natural-key invariant", () => {
+  const journeyStart = theoryE2eSource.indexOf(
+    'test("C3R-T Owner Theory journey reaches Postgres and remains isolated"',
+  );
+  const compatibility = theoryE2eSource.indexOf(
+    "await exercisePracticeCompatibility(owner.request, recordId);",
+    journeyStart,
+  );
+  const preservedPracticeStart = theoryE2eSource.indexOf(
+    'markBrowserFailureStage("PRACTICE_START")',
+    compatibility,
+  );
+  assert.ok(journeyStart >= 0 && compatibility > journeyStart &&
+    preservedPracticeStart > compatibility);
+  assert.doesNotMatch(
+    theoryE2eSource.slice(journeyStart, compatibility),
+    /owner\.request\.post\("\/api\/review-os\/c3r-p"[\s\S]*action: "start"/u,
+  );
+  assert.match(practiceSql,
+    /unique \(user_id, source_id, problem_id, revision_id, item_id, artifact_id\)/u);
+  const droppedConstraints = [...integrationSql.matchAll(
+    /drop constraint if exists ([a-z0-9_]+)/giu,
+  )].map((match) => match[1]);
+  assert.ok(droppedConstraints.length > 0);
+  assert.equal(droppedConstraints.some((name) => /_user_id_|_key$/u.test(name)), false);
+  assert.match(theoryE2eSource,
+    /const repairPayload = \{[\s\S]*action: "submit_repair"[\s\S]*evidenceStep: "feedback"[\s\S]*body = await post\(owner\.request, repairPayload\)[\s\S]*const replay = await post\(owner\.request, repairPayload\)/u);
 });
 
 test("THEORY_RUNTIME artifact closes two exact-head PG15.8 cycles and rejects drift", () => {
