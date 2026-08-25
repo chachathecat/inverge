@@ -378,6 +378,7 @@ export function evaluateQuestionRelease(
       );
     }
     if (requestedTier === "MEASUREMENT_CALIBRATED") {
+      errors.push("MEASUREMENT_RUNTIME_AUTHORITY_NOT_INSTALLED");
       validateOwnerResponseEvidence(bundle, trustContext, errors);
       errors.push(
         ...validateTrustedSourceBindings(bundle.batch.blueprint.sourceBindings, bundle.trustedSources, [
@@ -438,9 +439,13 @@ function assertLifecycleAudit(
   }
   const occurredAtEpoch = Date.parse(occurredAt);
   if (
+    !isIsoInstant(inputArtifact.createdAt) ||
+    !isIsoInstant(inputArtifact.updatedAt) ||
     !Number.isFinite(occurredAtEpoch) ||
     new Date(occurredAtEpoch).toISOString() !== occurredAt ||
-    occurredAtEpoch < Date.parse(auditRun.completedAt)
+    occurredAtEpoch < Date.parse(auditRun.completedAt) ||
+    occurredAtEpoch < Date.parse(inputArtifact.createdAt) ||
+    occurredAtEpoch < Date.parse(inputArtifact.updatedAt)
   ) {
     throw new Error("lifecycle-time-must-follow-audit");
   }
@@ -455,6 +460,9 @@ export function createQuestionBankArtifact(input: Readonly<{
   auditRun: AuditRunV1;
   occurredAt: string;
 }>): QuestionBankArtifactV1 {
+  if (!isNonemptyString(input.artifactId)) {
+    throw new Error("artifact-id-required");
+  }
   const recomputedDecision = evaluateQuestionRelease(
     input.bundle,
     input.requestedTier,
@@ -486,9 +494,9 @@ export function createQuestionBankArtifact(input: Readonly<{
   if (
     !Number.isFinite(occurredAtEpoch) ||
     new Date(occurredAtEpoch).toISOString() !== input.occurredAt ||
-    occurredAtEpoch < Date.parse(input.auditRun.completedAt)
+    input.occurredAt !== input.auditRun.completedAt
   ) {
-    throw new Error("artifact-time-must-follow-release-audit");
+    throw new Error("artifact-time-must-equal-release-audit-completion");
   }
   const blueprint = input.bundle.batch.blueprint;
   return deepFreeze({

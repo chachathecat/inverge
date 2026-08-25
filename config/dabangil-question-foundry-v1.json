@@ -96,6 +96,7 @@
     "academyOrTextbookMayEnterModelTraining": false,
     "rawLearnerOrAcademyBodyMayEnterAudit": false,
     "similarityReferenceCorpusRequiresEligibleRightsBinding": true,
+    "similarityReferenceRequiresExactTrustedSourceIdVersionAndContentDigest": true,
     "similarityCorpusDigestBindsEveryReferenceBodyDigest": true,
     "similarityReviewIsRecomputedFromExactCorpusAtRelease": true,
     "nearCopyReconstructionOrProtectedExplanationSequenceBlocksRelease": true
@@ -135,6 +136,9 @@
       "MEASUREMENT_BANK_RIGHTS_PURPOSE"
     ],
     "syntheticSimulatedAiOrMetadataOnlyResponsesMaySatisfyMeasurement": false,
+    "measurementRuntimeAuthorityInstalled": false,
+    "measurementCalibratedReleaseAllowedInThisSourceOnlyStage": false,
+    "measurementUnavailableReasonCode": "MEASUREMENT_RUNTIME_AUTHORITY_NOT_INSTALLED",
     "missingEvidenceReleasesToQuarantineOnly": true,
     "learnerMasteryClaimAllowed": false,
     "qualityEfficacyCalibrationOrScoreClaimEstablishedByThisSourceContract": false
@@ -164,6 +168,7 @@
     "realtimeGenerationAllowed": false,
     "networkOrProviderGenerationAllowed": false,
     "generationWhileEligibleBankMatchExists": false,
+    "bankItemRequiresExactReleaseEnvelopeRevalidation": true,
     "generatedBatchMustValidateAndExactlyMatchRequestedSubjectSkillDifficultyAndFamily": true,
     "scarcityEventContainsBody": false
   },
@@ -175,6 +180,7 @@
     "retirementIsTerminal": true,
     "retirementDeletesAuditLineage": false,
     "optimisticRevisionCheckRequired": true,
+    "lifecycleTimestampsMustBeMonotonic": true,
     "inPlaceOverwriteAllowed": false
   },
   "audit": {
@@ -183,6 +189,7 @@
     "everyStepInputDigestMustEqualThePriorStepOutputDigest": true,
     "firstAndTerminalStepDigestsMustBindExactAuditInputAndOutput": true,
     "releaseArtifactRecomputesDecisionAndRequiresExactEvidenceDecisionAuditAndTimeBinding": true,
+    "releaseArtifactCreationTimeEqualsAuditCompletionTime": true,
     "disputeRevisionAndRetirementRequireExactSingleStepOwnerAuditBindings": true,
     "solutionFirstSequenceRequired": true,
     "allActorsStepsVersionsAndDigestsBound": true,

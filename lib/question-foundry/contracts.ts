@@ -228,9 +228,12 @@ export type JudgeReviewV1 = Readonly<{
 
 export type SimilarityReferenceV1 = Readonly<{
   referenceId: string;
+  sourceId: string;
+  sourceVersionId: string;
   sourceClass: QuestionFoundrySourceClass;
   rightsManifestId: string;
   rightsManifestVersionId: string;
+  contentDigest: string;
   body: string;
 }>;
 
@@ -441,6 +444,15 @@ export type QuestionBankArtifactV1 = Readonly<{
   auditRunId: string;
   createdAt: string;
   updatedAt: string;
+}>;
+
+export type QuestionBankReleaseEnvelopeV1 = Readonly<{
+  artifact: QuestionBankArtifactV1;
+  bundle: ReleaseEvidenceBundleV1;
+  requestedTier: QuestionFoundryReleasableTier;
+  decision: ReleaseDecisionV1;
+  trustContext: ReleaseTrustContextV1;
+  auditRun: AuditRunV1;
 }>;
 
 export type BankSelectionRequestV1 = Readonly<{

@@ -724,6 +724,25 @@ export function buildSimilarityFirewallReview(
       reconstructionRiskDetected = true;
       continue;
     }
+    const sourceVersion = resolveUnique(
+      registry.sourceVersions,
+      (entry) =>
+        entry.sourceId === reference.sourceId &&
+        entry.sourceVersionId === reference.sourceVersionId,
+    );
+    const sourceVersionValid =
+      sourceVersion !== null &&
+      sourceVersion.sourceClass === reference.sourceClass &&
+      sourceVersion.rightsManifestId === reference.rightsManifestId &&
+      sourceVersion.rightsManifestVersionId === reference.rightsManifestVersionId &&
+      sourceVersion.contentDigest === reference.contentDigest &&
+      reference.contentDigest === canonicalDigest(reference.body) &&
+      sourceVersion.status === "CURRENT" &&
+      isIsoInstant(sourceVersion.effectiveFrom) &&
+      isIsoInstant(sourceVersion.effectiveUntil) &&
+      isIsoInstant(registry.asOf) &&
+      Date.parse(sourceVersion.effectiveFrom) <= Date.parse(registry.asOf) &&
+      Date.parse(registry.asOf) <= Date.parse(sourceVersion.effectiveUntil);
     const manifest = resolveUnique(
       registry.rightsManifests,
       (entry) =>
@@ -732,6 +751,7 @@ export function buildSimilarityFirewallReview(
     );
     if (
       !manifest ||
+      !sourceVersionValid ||
       registry.registryVersion !== "question_foundry.trusted_source_registry.v1" ||
       registry.territory !== "KR" ||
       manifest.sourceClass !== reference.sourceClass ||
@@ -764,11 +784,23 @@ export function buildSimilarityFirewallReview(
   return Object.freeze({
     candidateId: candidate.candidateId,
     corpusDigest: canonicalDigest(
-      references.map(({ referenceId, sourceClass, rightsManifestId, rightsManifestVersionId, body }) => ({
+      references.map(({
         referenceId,
+        sourceId,
+        sourceVersionId,
         sourceClass,
         rightsManifestId,
         rightsManifestVersionId,
+        contentDigest,
+        body,
+      }) => ({
+        referenceId,
+        sourceId,
+        sourceVersionId,
+        sourceClass,
+        rightsManifestId,
+        rightsManifestVersionId,
+        contentDigest,
         bodyDigest: canonicalDigest(body),
       })),
     ),

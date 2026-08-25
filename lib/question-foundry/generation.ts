@@ -3,11 +3,12 @@ import {
   type BankFirstSelectionV1,
   type BankSelectionRequestV1,
   type CandidateBatchV1,
-  type QuestionBankArtifactV1,
+  type QuestionBankReleaseEnvelopeV1,
   type QuestionBlueprintV1,
   type QuestionCandidateV1,
   type QuestionOptionV1,
 } from "./contracts";
+import { createQuestionBankArtifact } from "./release-policy";
 import {
   canonicalDigest,
   validateAnswerSpecification,
@@ -143,29 +144,37 @@ export function generateCandidateBatch(
   return batch;
 }
 
-function artifactIsAssignable(artifact: QuestionBankArtifactV1) {
-  return [
-    "PERSONAL_LEARNING_USABLE",
-    "TRANSFER_VERIFIED",
-    "MEASUREMENT_CALIBRATED",
-  ].includes(artifact.releaseTier);
+function revalidateReleaseEnvelope(envelope: QuestionBankReleaseEnvelopeV1) {
+  const recomputedArtifact = createQuestionBankArtifact({
+    artifactId: envelope.artifact.artifactId,
+    bundle: envelope.bundle,
+    requestedTier: envelope.requestedTier,
+    decision: envelope.decision,
+    trustContext: envelope.trustContext,
+    auditRun: envelope.auditRun,
+    occurredAt: envelope.artifact.createdAt,
+  });
+  if (canonicalDigest(recomputedArtifact) !== canonicalDigest(envelope.artifact)) {
+    throw new Error("bank-release-envelope-artifact-mismatch");
+  }
+  return recomputedArtifact;
 }
 
 export function selectBankFirstOrGenerateOnGap(
   request: BankSelectionRequestV1,
-  bank: readonly QuestionBankArtifactV1[],
+  bank: readonly QuestionBankReleaseEnvelopeV1[],
   generateOffline: (() => CandidateBatchV1) | null,
 ): BankFirstSelectionV1 {
   const eligible = bank
     .filter(
-      (artifact) =>
-        artifact.subject === request.subject &&
-        artifact.skillId === request.skillId &&
-        artifact.difficultyBand === request.difficultyBand &&
-        artifact.itemFamily === request.itemFamily &&
-        !request.excludedArtifactIds.includes(artifact.artifactId) &&
-        artifactIsAssignable(artifact),
+      (envelope) =>
+        envelope.artifact.subject === request.subject &&
+        envelope.artifact.skillId === request.skillId &&
+        envelope.artifact.difficultyBand === request.difficultyBand &&
+        envelope.artifact.itemFamily === request.itemFamily &&
+        !request.excludedArtifactIds.includes(envelope.artifact.artifactId),
     )
+    .map(revalidateReleaseEnvelope)
     .sort((left, right) => left.artifactId.localeCompare(right.artifactId));
 
   if (eligible.length > 0) {

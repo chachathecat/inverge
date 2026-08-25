@@ -78,13 +78,27 @@ function sourceBinding(overrides = {}) {
   };
 }
 
+function similarityReferenceBody() {
+  return "A cleared reference discusses unrelated property classification and legal conditions.";
+}
+
+function similaritySourceBinding(overrides = {}) {
+  const body = similarityReferenceBody();
+  return sourceBinding({
+    sourceId: "source:deterministic:similarity",
+    sourceVersionId: "source:deterministic:similarity@1",
+    contentDigest: canonicalDigest(body),
+    ...overrides,
+  });
+}
+
 function sourceRegistry(overrides = {}) {
   return {
     registryVersion: "question_foundry.trusted_source_registry.v1",
     asOf: "2026-08-25T00:00:00.000Z",
     territory: "KR",
     rightsManifests: [rightsManifest()],
-    sourceVersions: [sourceBinding()],
+    sourceVersions: [sourceBinding(), similaritySourceBinding()],
     ...overrides,
   };
 }
@@ -173,12 +187,16 @@ function batch() {
 }
 
 function similarityReference(overrides = {}) {
+  const body = overrides.body ?? similarityReferenceBody();
   return {
     referenceId: "reference:cleared:unrelated",
+    sourceId: "source:deterministic:similarity",
+    sourceVersionId: "source:deterministic:similarity@1",
     sourceClass: "CLEARED_DETERMINISTIC_TEMPLATE",
     rightsManifestId: "rights:question-foundry:1",
     rightsManifestVersionId: "rights:question-foundry:1@1",
-    body: "A cleared reference discusses unrelated property classification and legal conditions.",
+    contentDigest: canonicalDigest(body),
+    body,
     ...overrides,
   };
 }
@@ -520,7 +538,12 @@ test("rights-safe similarity firewall detects near-copy, reconstruction and deni
   const copied = buildSimilarityFirewallReview(
     selected,
     [similarityReference({ body: copiedBody })],
-    sourceRegistry(),
+    sourceRegistry({
+      sourceVersions: [
+        sourceBinding(),
+        similaritySourceBinding({ contentDigest: canonicalDigest(copiedBody) }),
+      ],
+    }),
   );
   assert.equal(copied.nearCopyDetected, true);
   const privateCorpus = buildSimilarityFirewallReview(
@@ -551,6 +574,16 @@ test("rights-safe similarity firewall detects near-copy, reconstruction and deni
   const changedBody = similarityReference({ body: "A different cleared comparison body." });
   const changedReview = buildSimilarityFirewallReview(selected, [changedBody], sourceRegistry());
   assert.notEqual(changedReview.corpusDigest, safe.corpusDigest);
+
+  const relabeledAcademyBody = similarityReference({
+    body: "A private academy explanation relabeled as if it were cleared source material.",
+  });
+  const relabelReview = buildSimilarityFirewallReview(
+    selected,
+    [relabeledAcademyBody],
+    sourceRegistry(),
+  );
+  assert.equal(relabelReview.reconstructionRiskDetected, true);
 
   const staleReviewBundle = personalBundle();
   staleReviewBundle.similarityReferences[0].body = "The exact corpus body changed after review.";
@@ -638,11 +671,12 @@ test("TRANSFER_VERIFIED requires its stronger closed bundle and transfer-purpose
   assert.ok(blocked.blockingCodes.some((code) => code.includes("PURPOSE_DENIED")));
 });
 
-test("MEASUREMENT_CALIBRATED requires exact actual Owner response evidence from a trusted runtime registry", () => {
+test("MEASUREMENT_CALIBRATED stays unavailable until trusted runtime authority is installed", () => {
   const measurement = measurementBundle();
   const trustContext = measurementTrustContext(measurement);
   const decision = evaluateQuestionRelease(measurement, "MEASUREMENT_CALIBRATED", trustContext);
-  assert.equal(decision.allowed, true, decision.blockingCodes.join(","));
+  assert.equal(decision.allowed, false);
+  assert.ok(decision.blockingCodes.includes("MEASUREMENT_RUNTIME_AUTHORITY_NOT_INSTALLED"));
   assert.equal(decision.calibrationClaimedWithoutOwnerEvidence, false);
   assert.equal(
     evaluateQuestionRelease(measurement, "MEASUREMENT_CALIBRATED").allowed,
@@ -714,15 +748,24 @@ test("bank-first selection never generates when an exact assignable item exists 
   const bundleValue = personalBundle();
   const decision = evaluateQuestionRelease(bundleValue, "PERSONAL_LEARNING_USABLE");
   const auditRun = createReleaseAudit(bundleValue, decision, "audit-run-1");
+  const trustContext = { ownerResponseExportBinding: null };
   const artifact = createQuestionBankArtifact({
     artifactId: "artifact-1",
     bundle: bundleValue,
     requestedTier: "PERSONAL_LEARNING_USABLE",
     decision,
-    trustContext: { ownerResponseExportBinding: null },
+    trustContext,
     auditRun,
-    occurredAt: "2026-08-25T00:20:00.000Z",
+    occurredAt: "2026-08-25T00:12:00.000Z",
   });
+  const releaseEnvelope = {
+    artifact,
+    bundle: bundleValue,
+    requestedTier: "PERSONAL_LEARNING_USABLE",
+    decision,
+    trustContext,
+    auditRun,
+  };
   const request = {
     requestId: "request-1",
     subject: artifact.subject,
@@ -734,7 +777,7 @@ test("bank-first selection never generates when an exact assignable item exists 
     occurredAt: "2026-08-25T00:21:00.000Z",
   };
   let calls = 0;
-  const found = selectBankFirstOrGenerateOnGap(request, [artifact], () => {
+  const found = selectBankFirstOrGenerateOnGap(request, [releaseEnvelope], () => {
     calls += 1;
     return batch();
   });
@@ -766,6 +809,24 @@ test("bank-first selection never generates when an exact assignable item exists 
   assert.equal(generated.generatedBatch.offline, true);
   assert.ok(generated.generatedBatch.candidates.every((candidate) => candidate.initialState === "QUARANTINED"));
   assert.equal(calls, 1);
+
+  const fabricatedEnvelope = clone(releaseEnvelope);
+  fabricatedEnvelope.artifact.releaseTier = "TRANSFER_VERIFIED";
+  assert.throws(
+    () => selectBankFirstOrGenerateOnGap(request, [fabricatedEnvelope], null),
+    /bank-release-envelope-artifact-mismatch/,
+  );
+  for (const mutate of [
+    (envelope) => { envelope.artifact.auditRunId = "fabricated-audit"; },
+    (envelope) => { envelope.artifact.createdAt = "2026-08-25T00:19:00.000Z"; },
+  ]) {
+    const fabricated = clone(releaseEnvelope);
+    mutate(fabricated);
+    assert.throws(
+      () => selectBankFirstOrGenerateOnGap(request, [fabricated], null),
+      /bank-release-envelope-artifact-mismatch|release-audit-not-bound|artifact-time-must-equal/,
+    );
+  }
 
   const emptyBatch = clone(batch());
   emptyBatch.candidates = [];
@@ -804,7 +865,7 @@ test("dispute, revision and retirement are immutable, lineage-preserving and sta
     decision,
     trustContext: { ownerResponseExportBinding: null },
     auditRun,
-    occurredAt: "2026-08-25T00:20:00.000Z",
+    occurredAt: "2026-08-25T00:12:00.000Z",
   });
   assert.equal(isQuestionBankArtifactAssignable(artifact), true);
   const disputedAt = "2026-08-25T00:21:00.000Z";
@@ -822,6 +883,22 @@ test("dispute, revision and retirement are immutable, lineage-preserving and sta
     "DISPUTED",
     disputedAuditId,
     disputedAt,
+  );
+  const backdatedDisputedAt = "2026-08-24T00:00:00.000Z";
+  const backdatedExpected = {
+    ...expectedDisputed,
+    updatedAt: backdatedDisputedAt,
+  };
+  const backdatedAudit = createLifecycleAudit(
+    artifact,
+    backdatedExpected,
+    "DISPUTED",
+    disputedAuditId,
+    backdatedDisputedAt,
+  );
+  assert.throws(
+    () => disputeQuestionBankArtifact(artifact, 1, backdatedAudit, backdatedDisputedAt),
+    /lifecycle-time-must-follow-audit/,
   );
   const disputed = disputeQuestionBankArtifact(
     artifact,
@@ -1027,7 +1104,7 @@ test("bank artifact release is bound to exact evidence, decision, immutable audi
     decision,
     trustContext: { ownerResponseExportBinding: null },
     auditRun,
-    occurredAt: "2026-08-25T00:20:00.000Z",
+    occurredAt: "2026-08-25T00:12:00.000Z",
   };
   const artifact = createQuestionBankArtifact(input);
   assert.equal(artifact.auditRunId, auditRun.auditRunId);
@@ -1050,7 +1127,7 @@ test("bank artifact release is bound to exact evidence, decision, immutable audi
   );
   assert.throws(
     () => createQuestionBankArtifact({ ...input, occurredAt: "2026-08-25T00:11:00.000Z" }),
-    /must-follow-release-audit/,
+    /must-equal-release-audit-completion/,
   );
 });
 
