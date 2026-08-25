@@ -13,7 +13,7 @@
 
 ## Branches and PRs
 
-- amendment: `codex/parallel-execution-v1`; base `c269d8fa489dc1ac77ef77d203dadffc0e4e73e5`; Draft PR #808; linked amendment Issue #809; source correction 1 updates linkage/log; focused `20/20`, answer-review plus amendment `48/48`, full `1544/1544`, lint/typecheck/webpack production build/diff-check passed
+- amendment: `codex/parallel-execution-v1`; base `c269d8fa489dc1ac77ef77d203dadffc0e4e73e5`; Draft PR #808; linked amendment Issue #809; source corrections `2/2`; focused `20/20`, answer-review plus amendment `48/48`, full `1544/1544`, lint/typecheck/webpack production build/diff-check passed; live GitHub is exact-head check/review authority
 - frozen M1 donor: `codex/wcv-c3r-t-theory-durable-learning-delta`; base `c269d8fa489dc1ac77ef77d203dadffc0e4e73e5`; no PR
 
 ## Lane ownership
@@ -30,8 +30,8 @@
 
 ## Current blocker
 
-- exact-head CI, formal exact-head review and exact Owner merge approval remain
+- exact Owner high-risk squash-merge approval for the live PR #808 head
 
 ## Next exact action
 
-- `gh pr checks 808 --repo chachathecat/inverge`
+- Owner supplies `PR808_EXACT_HEAD_SQUASH_MERGE_APPROVED_<live-head-sha>`
