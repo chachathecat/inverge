@@ -19,7 +19,10 @@
     "minimumActiveMinutes": 30,
     "maximumActiveMinutes": 720,
     "maximumCoreOutcomes": 3,
+    "maximumCandidatesPerPlan": 256,
     "capacityHistoryMaximumDays": 28,
+    "capacityHistoryRequiresExplicitAsOfDate": true,
+    "capacityHistoryRequiresDistinctPriorDates": true,
     "capacityCalibrationThresholdDays": {
       "declaredOnlyMaximum": 6,
       "calibratingMinimum": 7,
@@ -34,6 +37,8 @@
       "break",
       "failed_generation"
     ],
+    "actualActiveMinutesAlreadyNetOfExclusions": true,
+    "exclusionMetadataIsNotDoubleSubtracted": true,
     "completionDoesNotChangeMastery": true,
     "assistedSuccessDoesNotCountAsIndependent": true,
     "sameSurfaceRetryDoesNotCountAsTransfer": true,
@@ -41,6 +46,14 @@
     "lifeModeIsNotEffortOrAbilityRating": true,
     "capacityBandCanChangeDaily": true,
     "bankFirstPersonalGenerationOnGap": true,
+    "verifiedBankMatchNewGenerationBudgetMinutes": 0,
+    "usableNonprotectedWindowsBoundSchedulableCapacity": true,
+    "highLoadRejectedFromHighInterruptionWindows": true,
+    "splitsAreAtomicAndBounded": true,
+    "planGapShortfallIsExactArithmetic": true,
+    "replanClassifiesUnchangedCandidateScopeExactlyOnce": true,
+    "unknownOrRawInputFieldsFailClosed": true,
+    "budgetImpossiblePlacementSearchShortCircuits": true,
     "personalGenerationReadinessEligible": false,
     "personalGenerationCrossUserReuseEligible": false
   },
@@ -146,7 +159,14 @@
     "overtime_replan_180_to_60",
     "ai_drill_capacity_48h",
     "invalid_overlapping_windows",
-    "deterministic_replay"
+    "deterministic_replay",
+    "usable_window_capacity_bound",
+    "protected_and_empty_window_capacity_zero",
+    "atomic_split_max_parts",
+    "high_interruption_high_load_denied",
+    "history_distinct_prior_dates",
+    "hostile_input_fail_closed",
+    "replan_scope_exactly_once"
   ],
   "forbiddenClaims": [
     "ten_hours_is_an_official_pass_condition",
@@ -169,6 +189,9 @@
   ],
   "integrationGate": {
     "pr800MustRemainUntouchedByThisWork": true,
+    "sourceMergeDependencySatisfiedByPr800": true,
+    "pr800ResultingMainSha": "71fd878a7369c25a153bc90389347039684c501f",
+    "pr800ResultingMainTree": "f6fb7bc1d1613a8431a4bbdfe155eea9d9f5303c",
     "requiresCurrentMergeWriterTerminalBeforeRuntimeIntegration": true,
     "requiresSeparateAuthorityReconciliation": true,
     "requiresSeparateAuthenticatedUiPersistenceE2EWork": true,

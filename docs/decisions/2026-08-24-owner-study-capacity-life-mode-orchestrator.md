@@ -40,7 +40,7 @@ This Work must not change any path in PR #800 and must not change:
 - `AGENTS.md`, dated decisions already governing C3R-P, canonical unified contracts, `roadmap/active-program.yml`, migration inventory or selector state;
 - Supabase, Storage, RLS, environment variables, Vercel settings, provider configuration, billing, public navigation, real-user access or Production.
 
-PR #800 remains an independent C3R-P candidate. This decision neither completes, blocks, supersedes nor supplies a receipt for C3R-P, C3R-T or C3R-L.
+PR #800 remained an independent C3R-P candidate while this source Work was opened. It has since merged through the protected exact-head path; live GitHub identifies resulting `main` as `71fd878a7369c25a153bc90389347039684c501f` with tree `f6fb7bc1d1613a8431a4bbdfe155eea9d9f5303c`. That terminal dependency permits this source PR to proceed through its own ordinary Ready/review/merge gates, but this decision neither completes, supersedes nor supplies a receipt for C3R-T or C3R-L.
 
 ## Authorized source implementation
 
@@ -62,15 +62,15 @@ The source vertical must provide:
 
 - `LifeModeV1`, `ExamModeV1`, `StudyPhaseV1` and daily-changing capacity-band contracts;
 - a 30–720 active-minute envelope;
-- 7-day and 14-day evidence calibration that excludes app interaction and provider waiting;
+- deterministic as-of-date calibration from distinct valid prior dates in the recent 28-day horizon, with 7-day and 14-day evidence levels that exclude app interaction and provider waiting;
 - fatigue/error guardrails without medical diagnosis or shame copy;
-- environment-aware study windows and protected-window rejection;
+- environment-aware study windows, usable nonprotected-window capacity bounds and protected-window rejection;
 - deterministic task ranking and allocation;
-- long continuous-task protection and employed-weekend routing;
+- high-interruption rejection for high-load work, max-continuous enforcement, atomic bounded splitting and employed-weekend routing;
 - max-three CoreOutcomes with more than three ExecutionBlocks when capacity permits;
-- honest `PlanGapV1` and weekly feasibility projections without pass prediction;
-- bounded replan decisions with no backlog cloning;
-- bank-first, 48-hour-capacity-bounded personal drill generation;
+- arithmetically exact `PlanGapV1` and usable-window-bounded weekly feasibility projections without pass prediction;
+- bounded replan decisions that classify the unchanged candidate scope exactly once with no backlog cloning;
+- verified-bank-first personal drills with zero new-generation budget while a match exists, then 48-hour-capacity-bounded personal generation only on a gap;
 - no mastery mutation from schedule generation or block completion;
 - deterministic replay and fail-closed invalid input handling.
 
@@ -109,11 +109,6 @@ remote_or_production_mutation = 0
 
 ## Merge and continuation boundary
 
-The pull request created by this Work must remain Draft and must not be merged, marked Ready or auto-merged by this Work. Its PR body must state that runtime/UI/persistence integration is blocked pending:
+The original Draft-only boundary applied while PR #800 occupied the sole merge-producing writer slot. PR #800 is now terminal with a validated resulting-main receipt, and the Owner Study OS program expressly requires this source PR to merge before runtime-bridge work. This PR may therefore be marked Ready and squash-merged only after refreshed-main exact-head tests, required CI, zero unresolved actionable threads and fresh actionable P0/P1/P2 `0/0/0` review.
 
-1. terminal disposition of the current merge-producing writer;
-2. fresh authority and path reconciliation;
-3. a separate exact-scope authenticated integration Work;
-4. exact-head tests and review under the then-live repository rules.
-
-No follow-on Work starts automatically from this decision.
+Runtime/UI/persistence integration remains blocked pending fresh authority and path reconciliation plus a separate exact-scope authenticated integration Work. Source merge does not authorize runtime activation, Supabase/Production mutation, public first-round exposure, payment or external learner activation. Follow-on work proceeds only under the then-live Owner Study OS milestone order.

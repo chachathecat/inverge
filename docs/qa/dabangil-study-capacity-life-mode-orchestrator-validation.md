@@ -56,13 +56,18 @@ Changed TypeScript must also pass the repository `npm run typecheck`, changed-fi
 | employed weekend 420 | long timed task can execute in a valid continuous window |
 | life-mode/capacity independence | full-time recovery day may be compressed; employed weekend may be full-day |
 | shift commute 90 | commute-safe recall allowed; desk/calculator task denied |
-| history 14 days | app interaction/provider wait excluded from sustainable capacity |
+| history 14 days | `actualActiveMinutes` is already net active study; app interaction/provider wait remain separate exclusion metadata and are neither added nor double-subtracted |
+| history identity | explicit as-of date; distinct valid prior dates only; stale rows excluded; duplicate/current/future rows fail closed |
 | fatigue/error evidence | capacity guardrail may reduce plan without diagnosis or shame copy |
-| Plan Gap | feasibility and exact shortfall only; no pass probability |
-| overtime 180→60 | each candidate kept/deferred/dropped once; backlog clone count exactly zero |
-| AI drill budget | verified bank first; new personal generation bounded by next 48-hour drill capacity |
+| Plan Gap | `shortfall = max(0, required - forecast)` exactly; execution constraints remain separately visible; no pass probability |
+| overtime 180→60 | unchanged candidate scope required; every candidate kept/deferred/dropped exactly once; backlog clone count exactly zero |
+| AI drill budget | verified bank match gives personal generation budget/items `0/0`; only a bank gap can use remaining 48-hour capacity |
 | first/second/both | all accepted; schedule output cannot mutate mastery |
 | invalid windows | overlap and out-of-range minutes fail closed |
+| narrow/protected/empty windows | weekly available capacity is bounded to usable nonprotected minutes, including zero |
+| high-load continuity | high interruption denied; unsplittable over-limit work deferred; split work is atomic and bounded by `maxParts` |
+| hostile input | raw/unknown fields, unknown enums, duplicate IDs/signals and non-finite priority fail closed |
+| complexity bound | at most 256 candidates; load/active-impossible candidates short-circuit before split-placement search |
 | deterministic replay | identical input produces identical plan digest and blocks |
 | data/copy boundary | no raw body key, shame phrase, guarantee or pass-probability claim |
 
@@ -73,12 +78,23 @@ core_outcomes_over_3 = 0
 planned_active_minutes_over_capacity = 0
 protected_window_use = 0
 environment_incompatible_assignment = 0
+high_load_in_high_interruption_window = 0
+high_load_part_over_continuous_limit = 0
+adjacent_high_load_run_over_continuous_limit = 0
+partial_split_assignment = 0
 non_splittable_long_task_fake_split = 0
 life_mode_to_effort_or_price = 0
 app_or_wait_to_active_study = 0
 block_completion_to_mastery = 0
 plan_gap_to_pass_probability = 0
 backlog_clone_on_replan = 0
+replan_candidate_unclassified_or_duplicated = 0
+declared_capacity_over_usable_window_minutes = 0
+duplicate_or_future_history_as_evidence = 0
+verified_bank_match_personal_generation_budget = 0
+unknown_or_raw_input_accepted = 0
+candidate_count_over_256_accepted = 0
+budget_impossible_exhaustive_placement_search = 0
 personal_generation_to_readiness = 0
 personal_generation_to_cross_user_reuse = 0
 raw_body_in_plan = 0
@@ -102,7 +118,7 @@ References:
 
 This source PR is complete when its exact changed-path manifest, focused tests, typecheck, lint, diff-check and fresh review are clean. It does not make the learner product complete.
 
-Authenticated integration remains a separate Work and must re-fetch live authority after the current merge-producing writer is terminal. That later Work must cover:
+PR #800 is terminal with a validated resulting-main receipt. This source PR may merge after its own fresh exact-head gates. Authenticated integration remains a separate Work and must re-fetch live authority. That later Work must cover:
 
 - onboarding and explicit user consent for optional life-mode fields;
 - learner-private persistence and RLS;

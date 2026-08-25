@@ -1,62 +1,838 @@
-export type LifeModeV1="full_time_study"|"full_time_employed"|"part_time_employed"|"shift_or_irregular_work"|"leave_or_transition"|"caregiving_constrained"|"health_constrained"|"custom";
-export type ExamModeV1="first"|"second"|"both";
-export type StudyPhaseV1="foundation"|"coverage"|"consolidation"|"timed_integration"|"final_sprint"|"recovery";
-export type CapacityBandV1="micro_30_90"|"compressed_90_180"|"standard_180_360"|"intensive_360_600"|"full_day_600_720";
-export type ScheduleVolatilityV1="low"|"medium"|"high";
-export type DayKindV1="weekday"|"weekend"|"holiday"|"recovery";
-export type CognitiveLoadV1="high"|"medium"|"low"|"recovery";
-export type TaskRequirednessV1="required"|"core_candidate"|"support"|"optional";
-export type TaskKindV1="due_review"|"independent_problem_solving"|"timed_set"|"timed_answer_writing"|"rewrite_recalculate"|"lecture"|"textbook_reading"|"memorization"|"guided_study"|"microdrill"|"capture_triage"|"mock_set"|"manual";
-export type EnvironmentV1="desk"|"library"|"office_break"|"commute_public_transit"|"walking"|"custom";
-export type TaskPrioritySignalV1="due_review"|"high_confidence_wrong"|"pass_risk"|"exam_urgency"|"unseen_transfer_due"|"timed_evidence_missing"|"repeated_error"|"coverage_gap"|"recent_absence"|"learner_pinned"|"stable_support"|"new_study";
-export type DeferralReasonV1="capacity_exhausted"|"cognitive_load_budget_exhausted"|"continuous_window_missing"|"move_long_task_to_weekend"|"environment_incompatible"|"protected_window_conflict"|"optional_scope_dropped"|"recovery_mode"|"not_selected_by_priority";
-export type PlanGapReasonV1="due_review_overload"|"coverage_gap"|"timed_evidence_missing"|"external_commitment"|"recent_absence"|"exam_urgency";
-export type PlanGapChoiceV1="drop_low_value_scope"|"shorten_support_tasks"|"move_long_task_to_weekend"|"increase_capacity"|"defer_noncritical_scope"|"change_target_timeline";
-export type CapacityEvidenceLevelV1="declared_only"|"calibrating_7d"|"evidence_supported_14d";
-export type StudyWindowV1={id:string;startMinute:number;endMinute:number;environment:EnvironmentV1;interruptibility:"low"|"medium"|"high";protected?:boolean;allowedTaskKinds?:TaskKindV1[]};
-export type DayAvailabilityV1={date:string;dayKind:DayKindV1;declaredActiveMinutes:number;windows:StudyWindowV1[];externalCommitmentMinutes?:number};
-export type CapacityHistoryDayV1={date:string;plannedActiveMinutes:number;actualActiveMinutes:number;appInteractionMinutes?:number;providerWaitMinutes?:number;highLoadPlannedMinutes?:number;highLoadCompletedMinutes?:number;replanCount?:number;fatigueSelfReport?:1|2|3|4|5;lateSessionErrorDelta?:number};
-export type LearnerConstraintProfileV1={lifeMode:LifeModeV1;examMode:ExamModeV1;phase:StudyPhaseV1;scheduleVolatility:ScheduleVolatilityV1;targetExamDates?:{first?:string;second?:string};policyVersion:string};
-export type CapacityEnvelopeV1={declaredActiveMinutes:number;effectiveActiveMinutes:number;schedulableActiveMinutes:number;capacityBand:CapacityBandV1;evidenceLevel:CapacityEvidenceLevelV1;historyDaysUsed:number;highLoadBudgetMinutes:number;mediumLoadBudgetMinutes:number;lowLoadBudgetMinutes:number;recoveryBudgetMinutes:number;unallocatedBufferMinutes:number;maxContinuousHighLoadMinutes:number;derivationReasons:string[];policyVersion:string};
-export type StudyTaskCandidateV1={id:string;title:string;subject:string;taskKind:TaskKindV1;cognitiveLoad:CognitiveLoadV1;requiredness:TaskRequirednessV1;estimatedMinutes:number;minimumContinuousMinutes?:number;splittable?:boolean;maxParts?:number;allowedEnvironments?:EnvironmentV1[];requiresDesk?:boolean;requiresCalculator?:boolean;requiresDesktop?:boolean;prioritySignals:TaskPrioritySignalV1[];basePriority:number;outcomeKey?:string;sourceRef?:string;metadataOnly?:true};
-export type ExecutionBlockV1={blockId:string;candidateId:string|null;outcomeKey:string|null;title:string;subject:string|null;taskKind:TaskKindV1|"recovery_buffer";cognitiveLoad:CognitiveLoadV1;startMinute:number;endMinute:number;activeMinutes:number;windowId:string;requiredness:TaskRequirednessV1|"buffer";countsTowardActiveStudy:boolean;selectionReasons:string[];metadataOnly:true};
-export type CoreOutcomeV1={outcomeId:string;title:string;blockIds:string[];estimatedMinutes:number;reason:string;metadataOnly:true};
-export type DeferredTaskV1={candidateId:string;title:string;reason:DeferralReasonV1;nextEligibleDayKind?:DayKindV1;metadataOnly:true};
-export type PlanGapV1={forecastCapacityMinutes:number;requiredPlanMinutes:number;shortfallMinutes:number;reasons:PlanGapReasonV1[];choices:PlanGapChoiceV1[];claimBoundary:"schedule_feasibility_only_not_pass_probability";metadataOnly:true};
-export type StudyDayPlanV1={date:string;profile:LearnerConstraintProfileV1;capacity:CapacityEnvelopeV1;coreOutcomes:CoreOutcomeV1[];executionBlocks:ExecutionBlockV1[];deferredTasks:DeferredTaskV1[];planGap:PlanGapV1|null;plannedActiveMinutes:number;completionMeaning:"block_completion_is_not_mastery";masteryMutationAllowed:false;deterministicPlanDigest:string;metadataOnly:true};
-export type FeasibilityProjectionV1={status:"feasible"|"tight"|"infeasible";weeklyAvailableMinutes:number;requiredMinimumMinutes:number;requiredMaximumMinutes:number;shortfallMinutes:number;claimBoundary:"schedule_feasibility_only_not_pass_probability";reasons:string[];metadataOnly:true};
-export type StudyWeekPlanV1={profile:LearnerConstraintProfileV1;dayPlans:StudyDayPlanV1[];weeklyAvailableMinutes:number;weeklyPlannedMinutes:number;remainingTaskIds:string[];feasibility:FeasibilityProjectionV1;metadataOnly:true};
-export type DrillBudgetV1={next48hAvailableDrillMinutes:number;pendingDrillMinutes:number;newGenerationBudgetMinutes:number;maximumNewItems:number;route:"verified_bank_first"|"personal_generation_on_gap"|"no_generation_capacity";readinessEligible:false;crossUserReuseEligible:false;metadataOnly:true};
-export type ReplanDecisionV1={candidateId:string;decision:"keep"|"defer"|"drop";reason:string;metadataOnly:true};
-export type ReplannedStudyDayV1={plan:StudyDayPlanV1;decisions:ReplanDecisionV1[];backlogCloneCount:0;metadataOnly:true};
+export type LifeModeV1 = "full_time_study" | "full_time_employed" | "part_time_employed" | "shift_or_irregular_work" | "leave_or_transition" | "caregiving_constrained" | "health_constrained" | "custom";
+export type ExamModeV1 = "first" | "second" | "both";
+export type StudyPhaseV1 = "foundation" | "coverage" | "consolidation" | "timed_integration" | "final_sprint" | "recovery";
+export type CapacityBandV1 = "micro_30_90" | "compressed_90_180" | "standard_180_360" | "intensive_360_600" | "full_day_600_720";
+export type ScheduleVolatilityV1 = "low" | "medium" | "high";
+export type DayKindV1 = "weekday" | "weekend" | "holiday" | "recovery";
+export type CognitiveLoadV1 = "high" | "medium" | "low" | "recovery";
+export type TaskRequirednessV1 = "required" | "core_candidate" | "support" | "optional";
+export type TaskKindV1 = "due_review" | "independent_problem_solving" | "timed_set" | "timed_answer_writing" | "rewrite_recalculate" | "lecture" | "textbook_reading" | "memorization" | "guided_study" | "microdrill" | "capture_triage" | "mock_set" | "manual";
+export type EnvironmentV1 = "desk" | "library" | "office_break" | "commute_public_transit" | "walking" | "custom";
+export type TaskPrioritySignalV1 = "due_review" | "high_confidence_wrong" | "pass_risk" | "exam_urgency" | "unseen_transfer_due" | "timed_evidence_missing" | "repeated_error" | "coverage_gap" | "recent_absence" | "learner_pinned" | "stable_support" | "new_study";
+export type DeferralReasonV1 = "capacity_exhausted" | "cognitive_load_budget_exhausted" | "continuous_window_missing" | "move_long_task_to_weekend" | "environment_incompatible" | "protected_window_conflict" | "optional_scope_dropped" | "recovery_mode" | "not_selected_by_priority";
+export type PlanGapReasonV1 = "due_review_overload" | "coverage_gap" | "timed_evidence_missing" | "external_commitment" | "recent_absence" | "exam_urgency";
+export type PlanGapChoiceV1 = "drop_low_value_scope" | "shorten_support_tasks" | "move_long_task_to_weekend" | "increase_capacity" | "defer_noncritical_scope" | "change_target_timeline";
+export type CapacityEvidenceLevelV1 = "declared_only" | "calibrating_7d" | "evidence_supported_14d";
+
+export type StudyWindowV1 = { id: string; startMinute: number; endMinute: number; environment: EnvironmentV1; interruptibility: "low" | "medium" | "high"; protected?: boolean; allowedTaskKinds?: TaskKindV1[] };
+export type DayAvailabilityV1 = { date: string; dayKind: DayKindV1; declaredActiveMinutes: number; windows: StudyWindowV1[]; externalCommitmentMinutes?: number };
+export type CapacityHistoryDayV1 = { date: string; plannedActiveMinutes: number; actualActiveMinutes: number; appInteractionMinutes?: number; providerWaitMinutes?: number; highLoadPlannedMinutes?: number; highLoadCompletedMinutes?: number; replanCount?: number; fatigueSelfReport?: 1 | 2 | 3 | 4 | 5; lateSessionErrorDelta?: number };
+export type LearnerConstraintProfileV1 = { lifeMode: LifeModeV1; examMode: ExamModeV1; phase: StudyPhaseV1; scheduleVolatility: ScheduleVolatilityV1; targetExamDates?: { first?: string; second?: string }; policyVersion: string };
+export type CapacityEnvelopeV1 = { declaredActiveMinutes: number; effectiveActiveMinutes: number; schedulableActiveMinutes: number; capacityBand: CapacityBandV1; evidenceLevel: CapacityEvidenceLevelV1; historyDaysUsed: number; highLoadBudgetMinutes: number; mediumLoadBudgetMinutes: number; lowLoadBudgetMinutes: number; recoveryBudgetMinutes: number; unallocatedBufferMinutes: number; maxContinuousHighLoadMinutes: number; derivationReasons: string[]; policyVersion: string };
+export type StudyTaskCandidateV1 = { id: string; title: string; subject: string; taskKind: TaskKindV1; cognitiveLoad: CognitiveLoadV1; requiredness: TaskRequirednessV1; estimatedMinutes: number; minimumContinuousMinutes?: number; splittable?: boolean; maxParts?: number; allowedEnvironments?: EnvironmentV1[]; requiresDesk?: boolean; requiresCalculator?: boolean; requiresDesktop?: boolean; prioritySignals: TaskPrioritySignalV1[]; basePriority: number; outcomeKey?: string; sourceRef?: string; metadataOnly?: true };
+export type ExecutionBlockV1 = { blockId: string; candidateId: string | null; outcomeKey: string | null; title: string; subject: string | null; taskKind: TaskKindV1 | "recovery_buffer"; cognitiveLoad: CognitiveLoadV1; startMinute: number; endMinute: number; activeMinutes: number; windowId: string; requiredness: TaskRequirednessV1 | "buffer"; countsTowardActiveStudy: boolean; selectionReasons: string[]; metadataOnly: true };
+export type CoreOutcomeV1 = { outcomeId: string; title: string; blockIds: string[]; estimatedMinutes: number; reason: string; metadataOnly: true };
+export type DeferredTaskV1 = { candidateId: string; title: string; reason: DeferralReasonV1; nextEligibleDayKind?: DayKindV1; metadataOnly: true };
+export type PlanGapV1 = { forecastCapacityMinutes: number; requiredPlanMinutes: number; shortfallMinutes: number; reasons: PlanGapReasonV1[]; choices: PlanGapChoiceV1[]; claimBoundary: "schedule_feasibility_only_not_pass_probability"; metadataOnly: true };
+export type StudyDayPlanV1 = { date: string; profile: LearnerConstraintProfileV1; capacity: CapacityEnvelopeV1; coreOutcomes: CoreOutcomeV1[]; executionBlocks: ExecutionBlockV1[]; deferredTasks: DeferredTaskV1[]; planGap: PlanGapV1 | null; plannedActiveMinutes: number; completionMeaning: "block_completion_is_not_mastery"; masteryMutationAllowed: false; deterministicPlanDigest: string; metadataOnly: true };
+export type FeasibilityProjectionV1 = { status: "feasible" | "tight" | "infeasible"; weeklyAvailableMinutes: number; requiredMinimumMinutes: number; requiredMaximumMinutes: number; shortfallMinutes: number; claimBoundary: "schedule_feasibility_only_not_pass_probability"; reasons: string[]; metadataOnly: true };
+export type StudyWeekPlanV1 = { profile: LearnerConstraintProfileV1; dayPlans: StudyDayPlanV1[]; weeklyAvailableMinutes: number; weeklyPlannedMinutes: number; remainingTaskIds: string[]; feasibility: FeasibilityProjectionV1; metadataOnly: true };
+export type DrillBudgetV1 = { next48hAvailableDrillMinutes: number; pendingDrillMinutes: number; newGenerationBudgetMinutes: number; maximumNewItems: number; route: "verified_bank_first" | "personal_generation_on_gap" | "no_generation_capacity"; readinessEligible: false; crossUserReuseEligible: false; metadataOnly: true };
+export type ReplanDecisionV1 = { candidateId: string; decision: "keep" | "defer" | "drop"; reason: string; metadataOnly: true };
+export type ReplannedStudyDayV1 = { plan: StudyDayPlanV1; decisions: ReplanDecisionV1[]; backlogCloneCount: 0; metadataOnly: true };
 
 const MAX_ACTIVE_MINUTES = 720;
 const MIN_ACTIVE_MINUTES = 30;
 const MAX_CORE_OUTCOMES = 3;
-const PROHIBITED_COPY=[/하루\s*10시간.*합격/i,/10시간.*합격\s*조건/i,/합격\s*확률/i,/합격\s*보장/i,/의지\s*부족/i,/게으름/i,/실패자/i,/불합격\s*확정/i,/지금\s*안\s*하면\s*끝/i,/streak/i,/casino/i,/gacha/i];
-const SIGNAL:Record<TaskPrioritySignalV1,number>={due_review:220,high_confidence_wrong:190,pass_risk:160,exam_urgency:130,unseen_transfer_due:180,timed_evidence_missing:145,repeated_error:150,coverage_gap:90,recent_absence:120,learner_pinned:175,stable_support:15,new_study:30};
-const REQUIRED:Record<TaskRequirednessV1,number>={required:260,core_candidate:140,support:55,optional:0};
-const uniq=<T>(v:T[])=>[...new Set(v)];
-function integer(name:string,value:number,min:number,max:number){if(!Number.isSafeInteger(value)||value<min||value>max)throw new Error(`invalid-${name}:${String(value)}`)}
-function safeText(v:string){for(const p of PROHIBITED_COPY)if(p.test(v))throw new Error(`prohibited-capacity-copy:${String(p)}`)}
-function metadataSafe(v:unknown):void{const raw=/(rawText|rawOcrText|ocrText|problemText|questionText|userAnswer|answerText|sourceText|copyrightedText|fullText)/i;if(typeof v==="string"){safeText(v);return}if(!v||typeof v!=="object")return;if(Array.isArray(v)){v.forEach(metadataSafe);return}for(const[k,n]of Object.entries(v as Record<string,unknown>)){if(raw.test(k))throw new Error(`raw-body-field-not-allowed:${k}`);metadataSafe(n)}}
-function validProfile(p:LearnerConstraintProfileV1){if(!["full_time_study","full_time_employed","part_time_employed","shift_or_irregular_work","leave_or_transition","caregiving_constrained","health_constrained","custom"].includes(p.lifeMode))throw new Error(`unsupported-life-mode:${String(p.lifeMode)}`);if(!["first","second","both"].includes(p.examMode))throw new Error(`unsupported-exam-mode:${String(p.examMode)}`);if(!["foundation","coverage","consolidation","timed_integration","final_sprint","recovery"].includes(p.phase))throw new Error(`unsupported-study-phase:${String(p.phase)}`);if(!["low","medium","high"].includes(p.scheduleVolatility))throw new Error(`unsupported-schedule-volatility:${String(p.scheduleVolatility)}`);if(!p.policyVersion.trim())throw new Error("missing-policy-version")}
-const usable=(d:CapacityHistoryDayV1)=>Math.max(0,Math.floor(d.actualActiveMinutes)-Math.max(0,Math.floor(d.appInteractionMinutes??0))-Math.max(0,Math.floor(d.providerWaitMinutes??0)));
-function pct(v:number,r:number){return Math.max(0,Math.floor(v*r))}
-function percentile(v:number[],r:number){if(!v.length)return 0;const s=[...v].sort((a,b)=>a-b);return s[Math.min(s.length-1,Math.max(0,Math.floor((s.length-1)*r)))]}
-function hash(s:string){let h=2166136261;for(let i=0;i<s.length;i++){h^=s.charCodeAt(i);h=Math.imul(h,16777619)}return(h>>>0).toString(16).padStart(8,"0")}
-export function classifyCapacityBand(m:number):CapacityBandV1{integer("capacity-minutes",m,MIN_ACTIVE_MINUTES,MAX_ACTIVE_MINUTES);return m<=90?"micro_30_90":m<=180?"compressed_90_180":m<=360?"standard_180_360":m<600?"intensive_360_600":"full_day_600_720"}
-function ratios(b:CapacityBandV1,p:StudyPhaseV1){if(p==="recovery")return{high:.2,medium:.3,low:.35,recovery:.15};if(b==="micro_30_90")return{high:.35,medium:.35,low:.25,recovery:.05};if(b==="compressed_90_180")return{high:.45,medium:.35,low:.15,recovery:.05};if(b==="standard_180_360")return{high:.5,medium:.3,low:.15,recovery:.05};if(b==="intensive_360_600")return{high:.48,medium:.3,low:.15,recovery:.07};return{high:.45,medium:.3,low:.15,recovery:.1}}
-const continuous=(b:CapacityBandV1,p:StudyPhaseV1)=>p==="recovery"?45:b==="micro_30_90"?60:b==="compressed_90_180"?75:b==="standard_180_360"?100:120;
-export function buildCapacityEnvelope(i:{profile:LearnerConstraintProfileV1;declaredActiveMinutes:number;history?:CapacityHistoryDayV1[];recoveryOverrideMinutes?:number}):CapacityEnvelopeV1{validProfile(i.profile);integer("declared-active-minutes",i.declaredActiveMinutes,30,720);if(i.recoveryOverrideMinutes!==undefined)integer("recovery-override-minutes",i.recoveryOverrideMinutes,30,720);const hist=(i.history??[]).filter(x=>Number.isFinite(x.actualActiveMinutes)).slice(-28),u=hist.map(usable),level:CapacityEvidenceLevelV1=u.length>=14?"evidence_supported_14d":u.length>=7?"calibrating_7d":"declared_only",why:string[]=[];let effective=i.declaredActiveMinutes;if(u.length>=7){effective=Math.max(30,Math.min(i.declaredActiveMinutes,Math.floor(percentile(u,u.length>=14?.6:.5)*1.05)));why.push(`recent-active-evidence:${u.length}d`);if(effective<i.declaredActiveMinutes)why.push("declared-capacity-reduced-to-sustainable-evidence")}else why.push("declared-capacity-used-pending-evidence");const fatigue=hist.filter(x=>(x.fatigueSelfReport??0)>=4).length,errors=hist.filter(x=>(x.lateSessionErrorDelta??0)>0).length;if(hist.length>=7&&(fatigue/hist.length>=.35||errors/hist.length>=.35)){effective=Math.max(30,Math.floor(effective*.9));why.push("fatigue-or-late-error-guardrail-applied")}if(i.profile.phase==="recovery"){effective=Math.min(effective,i.recoveryOverrideMinutes??180);why.push("recovery-phase-cap-applied")}else if(i.recoveryOverrideMinutes!==undefined){effective=Math.min(effective,i.recoveryOverrideMinutes);why.push("manual-recovery-override-applied")}effective=Math.max(30,Math.min(720,effective));const band=classifyCapacityBand(effective),buffer=Math.max(band==="full_day_600_720"?30:5,pct(effective,band==="full_day_600_720"?.08:band==="intensive_360_600"?.06:.04)),sched=Math.max(30,effective-buffer),r=ratios(band,i.profile.phase);const high=pct(sched,r.high),medium=pct(sched,r.medium);let low=pct(sched,r.low);const recovery=Math.max(0,sched-high-medium-low);if(high+medium+low+recovery>sched)low=Math.max(0,sched-high-medium-recovery);const out:CapacityEnvelopeV1={declaredActiveMinutes:i.declaredActiveMinutes,effectiveActiveMinutes:effective,schedulableActiveMinutes:sched,capacityBand:band,evidenceLevel:level,historyDaysUsed:u.length,highLoadBudgetMinutes:high,mediumLoadBudgetMinutes:medium,lowLoadBudgetMinutes:low,recoveryBudgetMinutes:recovery,unallocatedBufferMinutes:buffer,maxContinuousHighLoadMinutes:continuous(band,i.profile.phase),derivationReasons:why,policyVersion:i.profile.policyVersion};metadataSafe(out);return out}
-function validateAvailability(a:DayAvailabilityV1){integer("day-declared-active-minutes",a.declaredActiveMinutes,30,720);if(!a.date.trim())throw new Error("missing-study-date");for(const w of a.windows){if(!w.id.trim())throw new Error("missing-window-id");integer("window-start-minute",w.startMinute,0,1439);integer("window-end-minute",w.endMinute,1,1440);if(w.endMinute<=w.startMinute)throw new Error(`invalid-window-order:${w.id}`)}const s=[...a.windows].sort((x,y)=>x.startMinute-y.startMinute);for(let n=1;n<s.length;n++)if(s[n].startMinute<s[n-1].endMinute)throw new Error(`overlapping-study-windows:${s[n-1].id}:${s[n].id}`)}
-function validateCandidate(c:StudyTaskCandidateV1){if(!c.id.trim())throw new Error("missing-candidate-id");if(!c.title.trim())throw new Error(`missing-candidate-title:${c.id}`);safeText(c.title);integer("candidate-estimated-minutes",c.estimatedMinutes,1,720);if(c.minimumContinuousMinutes!==undefined)integer("candidate-minimum-continuous-minutes",c.minimumContinuousMinutes,1,c.estimatedMinutes)}
-const score=(c:StudyTaskCandidateV1)=>c.basePriority+REQUIRED[c.requiredness]+c.prioritySignals.reduce((s,x)=>s+SIGNAL[x],0);
-function compatible(c:StudyTaskCandidateV1,w:StudyWindowV1){if(w.protected)return false;if(w.allowedTaskKinds&&!w.allowedTaskKinds.includes(c.taskKind))return false;if(c.allowedEnvironments&&!c.allowedEnvironments.includes(w.environment))return false;if((c.requiresDesk||c.requiresDesktop||c.requiresCalculator)&&!["desk","library"].includes(w.environment))return false;return !(["commute_public_transit","walking"].includes(w.environment)&&["timed_set","timed_answer_writing","independent_problem_solving","rewrite_recalculate","mock_set"].includes(c.taskKind))}
-function limit(p:LearnerConstraintProfileV1,a:DayAvailabilityV1,e:CapacityEnvelopeV1){if(e.capacityBand==="micro_30_90"||p.phase==="recovery")return 1;if(p.lifeMode==="full_time_employed"&&a.dayKind==="weekday")return 2;if(p.lifeMode==="shift_or_irregular_work"&&p.scheduleVolatility==="high")return 2;return MAX_CORE_OUTCOMES}
-function gap(cap:CapacityEnvelopeV1,cands:StudyTaskCandidateV1[],scheduled:Set<string>,a:DayAvailabilityV1):PlanGapV1|null{const req=cands.filter(c=>c.requiredness==="required"),missing=req.filter(c=>!scheduled.has(c.id)),reqMin=req.reduce((s,c)=>s+c.estimatedMinutes,0),short=Math.max(0,reqMin-cap.schedulableActiveMinutes);if(!missing.length&&!short)return null;const rs:PlanGapReasonV1[]=[];if(missing.some(c=>c.prioritySignals.includes("due_review")))rs.push("due_review_overload");if(missing.some(c=>c.prioritySignals.includes("coverage_gap")))rs.push("coverage_gap");if(missing.some(c=>c.prioritySignals.includes("timed_evidence_missing")))rs.push("timed_evidence_missing");if((a.externalCommitmentMinutes??0)>0)rs.push("external_commitment");if(missing.some(c=>c.prioritySignals.includes("recent_absence")))rs.push("recent_absence");if(missing.some(c=>c.prioritySignals.includes("exam_urgency")))rs.push("exam_urgency");const cs:PlanGapChoiceV1[]=["drop_low_value_scope","shorten_support_tasks","defer_noncritical_scope"];if(missing.some(c=>c.estimatedMinutes>=100))cs.push("move_long_task_to_weekend");cs.push("increase_capacity","change_target_timeline");return{forecastCapacityMinutes:cap.schedulableActiveMinutes,requiredPlanMinutes:reqMin,shortfallMinutes:Math.max(short,missing.reduce((s,c)=>s+c.estimatedMinutes,0)),reasons:uniq(rs.length?rs:["coverage_gap"]),choices:uniq(cs),claimBoundary:"schedule_feasibility_only_not_pass_probability",metadataOnly:true}}
-export function buildStudyDayPlan(i:{profile:LearnerConstraintProfileV1;availability:DayAvailabilityV1;candidates:StudyTaskCandidateV1[];capacityHistory?:CapacityHistoryDayV1[];recoveryOverrideMinutes?:number}):StudyDayPlanV1{validProfile(i.profile);validateAvailability(i.availability);const ids=new Set<string>();for(const c of i.candidates){validateCandidate(c);if(ids.has(c.id))throw new Error(`duplicate-candidate-id:${c.id}`);ids.add(c.id)}const cap=buildCapacityEnvelope({profile:i.profile,declaredActiveMinutes:i.availability.declaredActiveMinutes,history:i.capacityHistory,recoveryOverrideMinutes:i.recoveryOverrideMinutes}),states=i.availability.windows.filter(w=>!w.protected).map(w=>({w,cursor:w.startMinute})),used:{[K in CognitiveLoadV1]:number}={high:0,medium:0,low:0,recovery:0},bud:{[K in CognitiveLoadV1]:number}={high:cap.highLoadBudgetMinutes,medium:cap.mediumLoadBudgetMinutes,low:cap.lowLoadBudgetMinutes,recovery:cap.recoveryBudgetMinutes},blocks:ExecutionBlockV1[]=[],deferred:DeferredTaskV1[]=[],scheduled=new Set<string>(),ordered=[...i.candidates].sort((a,b)=>score(b)-score(a)||a.estimatedMinutes-b.estimatedMinutes||a.id.localeCompare(b.id));for(const c of ordered){const comp=states.filter(s=>compatible(c,s.w)),fit=comp.filter(s=>s.w.endMinute-s.cursor>=c.estimatedMinutes&&s.w.endMinute-s.cursor>=(c.minimumContinuousMinutes??c.estimatedMinutes)),load=used[c.cognitiveLoad]+c.estimatedMinutes>bud[c.cognitiveLoad],active=blocks.reduce((s,b)=>s+b.activeMinutes,0)+c.estimatedMinutes>cap.schedulableActiveMinutes;if(!fit.length||load||active){let reason:DeferralReasonV1=!comp.length?"environment_incompatible":!fit.length?(i.profile.lifeMode==="full_time_employed"&&i.availability.dayKind==="weekday"&&c.estimatedMinutes>=100?"move_long_task_to_weekend":"continuous_window_missing"):load?"cognitive_load_budget_exhausted":c.requiredness==="optional"?"optional_scope_dropped":"capacity_exhausted";if(i.profile.phase==="recovery"&&c.requiredness!=="required")reason="recovery_mode";deferred.push({candidateId:c.id,title:c.title,reason,nextEligibleDayKind:reason==="move_long_task_to_weekend"?"weekend":undefined,metadataOnly:true});continue}const s=fit.sort((a,b)=>(a.w.endMinute-a.cursor)-(b.w.endMinute-b.cursor)||a.w.startMinute-b.w.startMinute)[0],start=s.cursor,end=start+c.estimatedMinutes;s.cursor=end;used[c.cognitiveLoad]+=c.estimatedMinutes;scheduled.add(c.id);blocks.push({blockId:`block:${i.availability.date}:${c.id}`,candidateId:c.id,outcomeKey:c.outcomeKey??c.id,title:c.title,subject:c.subject,taskKind:c.taskKind,cognitiveLoad:c.cognitiveLoad,startMinute:start,endMinute:end,activeMinutes:c.estimatedMinutes,windowId:s.w.id,requiredness:c.requiredness,countsTowardActiveStudy:true,selectionReasons:uniq([`requiredness:${c.requiredness}`,...c.prioritySignals.map(x=>`priority:${x}`),`life-mode:${i.profile.lifeMode}`,`day-kind:${i.availability.dayKind}`]),metadataOnly:true})}blocks.sort((a,b)=>a.startMinute-b.startMinute||a.blockId.localeCompare(b.blockId));const cmap=new Map(i.candidates.map(c=>[c.id,c])),groups=new Map<string,ExecutionBlockV1[]>();for(const b of [...blocks].sort((a,z)=>score(cmap.get(z.candidateId!)!)-score(cmap.get(a.candidateId!)!))){if(b.requiredness==="support"||b.requiredness==="optional")continue;const k=b.outcomeKey??b.blockId;if(!groups.has(k))groups.set(k,[]);groups.get(k)!.push(b)}const outcomes:CoreOutcomeV1[]=[...groups.entries()].slice(0,limit(i.profile,i.availability,cap)).map(([k,bs],n)=>({outcomeId:`outcome:${i.availability.date}:${n+1}:${hash(k)}`,title:bs[0].title,blockIds:bs.map(b=>b.blockId),estimatedMinutes:bs.reduce((s,b)=>s+b.activeMinutes,0),reason:bs[0].selectionReasons.filter(x=>x.startsWith("priority:")).slice(0,2).join(", ")||"highest-value-executable-outcome",metadataOnly:true}));if(outcomes.length>MAX_CORE_OUTCOMES)throw new Error("core-outcome-limit-violated");const planned=blocks.reduce((s,b)=>s+b.activeMinutes,0);if(planned>cap.schedulableActiveMinutes)throw new Error("planned-active-minutes-exceed-capacity");const basis=JSON.stringify({date:i.availability.date,profile:i.profile,cap,blocks:blocks.map(b=>[b.blockId,b.candidateId,b.startMinute,b.endMinute,b.windowId]),deferred:deferred.map(d=>[d.candidateId,d.reason])});const out:StudyDayPlanV1={date:i.availability.date,profile:{...i.profile},capacity:cap,coreOutcomes:outcomes,executionBlocks:blocks,deferredTasks:deferred,planGap:gap(cap,i.candidates,scheduled,i.availability),plannedActiveMinutes:planned,completionMeaning:"block_completion_is_not_mastery",masteryMutationAllowed:false,deterministicPlanDigest:`sclm-v1:${hash(basis)}`,metadataOnly:true};metadataSafe(out);return out}
-export function projectWeeklyFeasibility(i:{weeklyAvailableMinutes:number;requiredMinimumMinutes:number;requiredMaximumMinutes:number;reasons?:string[]}):FeasibilityProjectionV1{integer("weekly-available-minutes",i.weeklyAvailableMinutes,0,5040);integer("required-minimum-minutes",i.requiredMinimumMinutes,0,5040);integer("required-maximum-minutes",i.requiredMaximumMinutes,i.requiredMinimumMinutes,5040);const out:FeasibilityProjectionV1={status:i.weeklyAvailableMinutes<i.requiredMinimumMinutes?"infeasible":i.weeklyAvailableMinutes<i.requiredMaximumMinutes?"tight":"feasible",weeklyAvailableMinutes:i.weeklyAvailableMinutes,requiredMinimumMinutes:i.requiredMinimumMinutes,requiredMaximumMinutes:i.requiredMaximumMinutes,shortfallMinutes:Math.max(0,i.requiredMinimumMinutes-i.weeklyAvailableMinutes),claimBoundary:"schedule_feasibility_only_not_pass_probability",reasons:i.reasons??[],metadataOnly:true};metadataSafe(out);return out}
-export function buildStudyWeekPlan(i:{profile:LearnerConstraintProfileV1;days:DayAvailabilityV1[];candidates:StudyTaskCandidateV1[];capacityHistory?:CapacityHistoryDayV1[];requiredMinimumMinutes:number;requiredMaximumMinutes:number}):StudyWeekPlanV1{validProfile(i.profile);if(!i.days.length||i.days.length>7)throw new Error(`invalid-week-day-count:${i.days.length}`);if(new Set(i.days.map(d=>d.date)).size!==i.days.length)throw new Error("duplicate-week-date");let remaining=[...i.candidates];const plans:StudyDayPlanV1[]=[];for(const day of [...i.days].sort((a,b)=>a.date.localeCompare(b.date))){const candidates=[...remaining].sort((a,b)=>{if(i.profile.lifeMode==="full_time_employed"){const al=a.estimatedMinutes>=100?1:0,bl=b.estimatedMinutes>=100?1:0;if(day.dayKind==="weekend"&&al!==bl)return bl-al;if(day.dayKind==="weekday"&&al!==bl)return al-bl}return score(b)-score(a)}),p=buildStudyDayPlan({profile:i.profile,availability:day,candidates,capacityHistory:i.capacityHistory});plans.push(p);const done=new Set(p.executionBlocks.map(b=>b.candidateId).filter((x):x is string=>Boolean(x)));remaining=remaining.filter(c=>!done.has(c.id))}const available=plans.reduce((s,p)=>s+p.capacity.schedulableActiveMinutes,0),planned=plans.reduce((s,p)=>s+p.plannedActiveMinutes,0),out:StudyWeekPlanV1={profile:{...i.profile},dayPlans:plans,weeklyAvailableMinutes:available,weeklyPlannedMinutes:planned,remainingTaskIds:remaining.map(c=>c.id),feasibility:projectWeeklyFeasibility({weeklyAvailableMinutes:available,requiredMinimumMinutes:i.requiredMinimumMinutes,requiredMaximumMinutes:i.requiredMaximumMinutes,reasons:remaining.length?["candidate-scope-remains-after-week-allocation"]:[]}),metadataOnly:true};metadataSafe(out);return out}
-export function buildPersonalDrillBudget(i:{next48hAvailableDrillMinutes:number;pendingDrillMinutes:number;estimatedMinutesPerNewItem:number;verifiedBankHasMatchingItems:boolean}):DrillBudgetV1{integer("next48h-drill-minutes",i.next48hAvailableDrillMinutes,0,1440);integer("pending-drill-minutes",i.pendingDrillMinutes,0,1440);integer("estimated-minutes-per-new-item",i.estimatedMinutesPerNewItem,1,180);const b=Math.max(0,i.next48hAvailableDrillMinutes-i.pendingDrillMinutes),n=Math.floor(b/i.estimatedMinutesPerNewItem),out:DrillBudgetV1={next48hAvailableDrillMinutes:i.next48hAvailableDrillMinutes,pendingDrillMinutes:i.pendingDrillMinutes,newGenerationBudgetMinutes:b,maximumNewItems:n,route:i.verifiedBankHasMatchingItems?"verified_bank_first":n?"personal_generation_on_gap":"no_generation_capacity",readinessEligible:false,crossUserReuseEligible:false,metadataOnly:true};metadataSafe(out);return out}
-export function replanStudyDay(i:{previousPlan:StudyDayPlanV1;newAvailability:DayAvailabilityV1;candidates:StudyTaskCandidateV1[];capacityHistory?:CapacityHistoryDayV1[];reason:"overtime"|"illness"|"family_commitment"|"energy_drop"|"custom"}):ReplannedStudyDayV1{const plan=buildStudyDayPlan({profile:i.previousPlan.profile,availability:i.newAvailability,candidates:i.candidates,capacityHistory:i.capacityHistory,recoveryOverrideMinutes:i.reason==="illness"?Math.min(180,i.newAvailability.declaredActiveMinutes):undefined}),next=new Set(plan.executionBlocks.map(b=>b.candidateId).filter((x):x is string=>Boolean(x))),prev=new Set(i.previousPlan.executionBlocks.map(b=>b.candidateId).filter((x):x is string=>Boolean(x))),map=new Map(i.candidates.map(c=>[c.id,c])),decisions:ReplanDecisionV1[]=[];for(const id of uniq([...prev,...next])){const c=map.get(id);decisions.push(next.has(id)?{candidateId:id,decision:"keep",reason:`replanned-after:${i.reason}`,metadataOnly:true}:c?.requiredness==="optional"?{candidateId:id,decision:"drop",reason:`optional-scope-dropped-after:${i.reason}`,metadataOnly:true}:{candidateId:id,decision:"defer",reason:`capacity-preserved-after:${i.reason}`,metadataOnly:true})}const out:ReplannedStudyDayV1={plan,decisions,backlogCloneCount:0,metadataOnly:true};metadataSafe(out);return out}
+const MAX_CANDIDATES_PER_PLAN = 256;
+const MAX_WINDOWS_PER_DAY = 24;
+const MAX_SPLIT_PARTS = 12;
+const DAY_MS = 86_400_000;
+
+const LIFE_MODES = ["full_time_study", "full_time_employed", "part_time_employed", "shift_or_irregular_work", "leave_or_transition", "caregiving_constrained", "health_constrained", "custom"] as const;
+const EXAM_MODES = ["first", "second", "both"] as const;
+const STUDY_PHASES = ["foundation", "coverage", "consolidation", "timed_integration", "final_sprint", "recovery"] as const;
+const VOLATILITY = ["low", "medium", "high"] as const;
+const DAY_KINDS = ["weekday", "weekend", "holiday", "recovery"] as const;
+const COGNITIVE_LOADS = ["high", "medium", "low", "recovery"] as const;
+const REQUIREDNESS = ["required", "core_candidate", "support", "optional"] as const;
+const TASK_KINDS = ["due_review", "independent_problem_solving", "timed_set", "timed_answer_writing", "rewrite_recalculate", "lecture", "textbook_reading", "memorization", "guided_study", "microdrill", "capture_triage", "mock_set", "manual"] as const;
+const ENVIRONMENTS = ["desk", "library", "office_break", "commute_public_transit", "walking", "custom"] as const;
+const INTERRUPTIBILITY = ["low", "medium", "high"] as const;
+const PRIORITY_SIGNALS = ["due_review", "high_confidence_wrong", "pass_risk", "exam_urgency", "unseen_transfer_due", "timed_evidence_missing", "repeated_error", "coverage_gap", "recent_absence", "learner_pinned", "stable_support", "new_study"] as const;
+const CAPACITY_BANDS = ["micro_30_90", "compressed_90_180", "standard_180_360", "intensive_360_600", "full_day_600_720"] as const;
+const EVIDENCE_LEVELS = ["declared_only", "calibrating_7d", "evidence_supported_14d"] as const;
+const DEFERRAL_REASONS = ["capacity_exhausted", "cognitive_load_budget_exhausted", "continuous_window_missing", "move_long_task_to_weekend", "environment_incompatible", "protected_window_conflict", "optional_scope_dropped", "recovery_mode", "not_selected_by_priority"] as const;
+const PLAN_GAP_REASONS = ["due_review_overload", "coverage_gap", "timed_evidence_missing", "external_commitment", "recent_absence", "exam_urgency"] as const;
+const PLAN_GAP_CHOICES = ["drop_low_value_scope", "shorten_support_tasks", "move_long_task_to_weekend", "increase_capacity", "defer_noncritical_scope", "change_target_timeline"] as const;
+const REPLAN_REASONS = ["overtime", "illness", "family_commitment", "energy_drop", "custom"] as const;
+const PROHIBITED_COPY = [/하루\s*10시간.*합격/i, /10시간.*합격\s*조건/i, /합격\s*확률/i, /합격\s*보장/i, /의지\s*부족/i, /게으름/i, /실패자/i, /불합격\s*확정/i, /지금\s*안\s*하면\s*끝/i, /streak/i, /casino/i, /gacha/i];
+const SIGNAL: Record<TaskPrioritySignalV1, number> = { due_review: 220, high_confidence_wrong: 190, pass_risk: 160, exam_urgency: 130, unseen_transfer_due: 180, timed_evidence_missing: 145, repeated_error: 150, coverage_gap: 90, recent_absence: 120, learner_pinned: 175, stable_support: 15, new_study: 30 };
+const REQUIRED: Record<TaskRequirednessV1, number> = { required: 260, core_candidate: 140, support: 55, optional: 0 };
+
+type WindowState = { w: StudyWindowV1; cursor: number };
+type PlannedPart = { state: WindowState; start: number; end: number };
+
+const uniq = <T>(values: T[]) => [...new Set(values)];
+
+function integer(name: string, value: number, min: number, max: number) {
+  if (!Number.isSafeInteger(value) || value < min || value > max) throw new Error(`invalid-${name}:${String(value)}`);
+}
+
+function finite(name: string, value: number, min: number, max: number) {
+  if (!Number.isFinite(value) || value < min || value > max) throw new Error(`invalid-${name}:${String(value)}`);
+}
+
+function safeText(value: string) {
+  for (const pattern of PROHIBITED_COPY) if (pattern.test(value)) throw new Error(`prohibited-capacity-copy:${String(pattern)}`);
+}
+
+function requiredText(name: string, value: unknown, maximumLength = 256): asserts value is string {
+  if (typeof value !== "string" || !value.trim() || value.length > maximumLength) throw new Error(`invalid-${name}`);
+  safeText(value);
+}
+
+function metadataSafe(value: unknown): void {
+  const raw = /(rawText|rawOcrText|ocrText|problemText|questionText|userAnswer|answerText|sourceText|copyrightedText|fullText)/i;
+  if (typeof value === "string") {
+    safeText(value);
+    return;
+  }
+  if (!value || typeof value !== "object") return;
+  if (Array.isArray(value)) {
+    value.forEach(metadataSafe);
+    return;
+  }
+  for (const [key, nested] of Object.entries(value as Record<string, unknown>)) {
+    if (raw.test(key)) throw new Error(`raw-body-field-not-allowed:${key}`);
+    metadataSafe(nested);
+  }
+}
+
+function exactKeys(name: string, value: unknown, allowed: readonly string[]) {
+  if (!value || typeof value !== "object" || Array.isArray(value)) throw new Error(`invalid-${name}`);
+  const allowedSet = new Set(allowed);
+  for (const key of Object.keys(value)) if (!allowedSet.has(key)) throw new Error(`unknown-${name}-field:${key}`);
+}
+
+function enumValue<T extends string>(name: string, value: unknown, allowed: readonly T[]): asserts value is T {
+  if (typeof value !== "string" || !allowed.includes(value as T)) throw new Error(`unsupported-${name}:${String(value)}`);
+}
+
+function uniqueEnumArray<T extends string>(name: string, value: unknown, allowed: readonly T[]): asserts value is T[] {
+  if (!Array.isArray(value)) throw new Error(`invalid-${name}`);
+  const seen = new Set<string>();
+  for (const entry of value) {
+    enumValue(name, entry, allowed);
+    if (seen.has(entry)) throw new Error(`duplicate-${name}:${entry}`);
+    seen.add(entry);
+  }
+}
+
+function dateOrdinal(name: string, value: unknown) {
+  if (typeof value !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(value)) throw new Error(`invalid-${name}:${String(value)}`);
+  const [year, month, day] = value.split("-").map(Number);
+  const time = Date.UTC(year, month - 1, day);
+  const date = new Date(time);
+  if (date.getUTCFullYear() !== year || date.getUTCMonth() !== month - 1 || date.getUTCDate() !== day) throw new Error(`invalid-${name}:${value}`);
+  return Math.floor(time / DAY_MS);
+}
+
+function validProfile(profile: LearnerConstraintProfileV1) {
+  exactKeys("profile", profile, ["lifeMode", "examMode", "phase", "scheduleVolatility", "targetExamDates", "policyVersion"]);
+  enumValue("life-mode", profile.lifeMode, LIFE_MODES);
+  enumValue("exam-mode", profile.examMode, EXAM_MODES);
+  enumValue("study-phase", profile.phase, STUDY_PHASES);
+  enumValue("schedule-volatility", profile.scheduleVolatility, VOLATILITY);
+  requiredText("policy-version", profile.policyVersion, 128);
+  if (profile.targetExamDates !== undefined) {
+    exactKeys("target-exam-dates", profile.targetExamDates, ["first", "second"]);
+    if (profile.targetExamDates.first !== undefined) dateOrdinal("first-exam-date", profile.targetExamDates.first);
+    if (profile.targetExamDates.second !== undefined) dateOrdinal("second-exam-date", profile.targetExamDates.second);
+  }
+}
+
+function validateHistory(history: CapacityHistoryDayV1[] | undefined, asOfDate: string) {
+  const asOf = dateOrdinal("capacity-as-of-date", asOfDate);
+  if (history === undefined) return [];
+  if (!Array.isArray(history)) throw new Error("invalid-capacity-history");
+  const dates = new Set<string>();
+  const validated = history.map((day) => {
+    exactKeys("capacity-history-day", day, ["date", "plannedActiveMinutes", "actualActiveMinutes", "appInteractionMinutes", "providerWaitMinutes", "highLoadPlannedMinutes", "highLoadCompletedMinutes", "replanCount", "fatigueSelfReport", "lateSessionErrorDelta"]);
+    const ordinal = dateOrdinal("capacity-history-date", day.date);
+    if (ordinal >= asOf) throw new Error(`capacity-history-not-before-as-of:${day.date}`);
+    if (dates.has(day.date)) throw new Error(`duplicate-capacity-history-date:${day.date}`);
+    dates.add(day.date);
+    integer("history-planned-active-minutes", day.plannedActiveMinutes, 0, 1440);
+    integer("history-actual-active-minutes", day.actualActiveMinutes, 0, 1440);
+    for (const [name, value] of [["history-app-interaction-minutes", day.appInteractionMinutes], ["history-provider-wait-minutes", day.providerWaitMinutes], ["history-high-load-planned-minutes", day.highLoadPlannedMinutes], ["history-high-load-completed-minutes", day.highLoadCompletedMinutes]] as const) {
+      if (value !== undefined) integer(name, value, 0, 1440);
+    }
+    if (day.actualActiveMinutes + (day.appInteractionMinutes ?? 0) + (day.providerWaitMinutes ?? 0) > 1440) throw new Error(`history-tracked-minutes-exceed-day:${day.date}`);
+    if ((day.highLoadCompletedMinutes ?? 0) > day.actualActiveMinutes) throw new Error(`history-high-load-exceeds-actual:${day.date}`);
+    if (day.replanCount !== undefined) integer("history-replan-count", day.replanCount, 0, 100);
+    if (day.fatigueSelfReport !== undefined) integer("history-fatigue-self-report", day.fatigueSelfReport, 1, 5);
+    if (day.lateSessionErrorDelta !== undefined) finite("history-late-session-error-delta", day.lateSessionErrorDelta, -10, 10);
+    return { day, ordinal };
+  });
+  return validated.filter(({ ordinal }) => asOf - ordinal <= 28).sort((a, b) => a.ordinal - b.ordinal).slice(-28).map(({ day }) => day);
+}
+
+const usable = (day: CapacityHistoryDayV1) => day.actualActiveMinutes;
+const pct = (value: number, ratio: number) => Math.max(0, Math.floor(value * ratio));
+
+function percentile(values: number[], ratio: number) {
+  if (!values.length) return 0;
+  const sorted = [...values].sort((a, b) => a - b);
+  return sorted[Math.min(sorted.length - 1, Math.max(0, Math.floor((sorted.length - 1) * ratio)))];
+}
+
+function hash(value: string) {
+  let result = 2166136261;
+  for (let index = 0; index < value.length; index += 1) {
+    result ^= value.charCodeAt(index);
+    result = Math.imul(result, 16777619);
+  }
+  return (result >>> 0).toString(16).padStart(8, "0");
+}
+
+export function classifyCapacityBand(minutes: number): CapacityBandV1 {
+  integer("capacity-minutes", minutes, MIN_ACTIVE_MINUTES, MAX_ACTIVE_MINUTES);
+  return minutes <= 90 ? "micro_30_90" : minutes <= 180 ? "compressed_90_180" : minutes <= 360 ? "standard_180_360" : minutes < 600 ? "intensive_360_600" : "full_day_600_720";
+}
+
+function ratios(band: CapacityBandV1, phase: StudyPhaseV1) {
+  if (phase === "recovery") return { high: 0.2, medium: 0.3, low: 0.35, recovery: 0.15 };
+  if (band === "micro_30_90") return { high: 0.35, medium: 0.35, low: 0.25, recovery: 0.05 };
+  if (band === "compressed_90_180") return { high: 0.45, medium: 0.35, low: 0.15, recovery: 0.05 };
+  if (band === "standard_180_360") return { high: 0.5, medium: 0.3, low: 0.15, recovery: 0.05 };
+  if (band === "intensive_360_600") return { high: 0.48, medium: 0.3, low: 0.15, recovery: 0.07 };
+  return { high: 0.45, medium: 0.3, low: 0.15, recovery: 0.1 };
+}
+
+const continuous = (band: CapacityBandV1, phase: StudyPhaseV1) => phase === "recovery" ? 45 : band === "micro_30_90" ? 60 : band === "compressed_90_180" ? 75 : band === "standard_180_360" ? 100 : 120;
+
+function loadBudgets(minutes: number, band: CapacityBandV1, phase: StudyPhaseV1) {
+  const ratio = ratios(band, phase);
+  const high = pct(minutes, ratio.high);
+  const medium = pct(minutes, ratio.medium);
+  const low = pct(minutes, ratio.low);
+  return { high, medium, low, recovery: Math.max(0, minutes - high - medium - low) };
+}
+
+export function buildCapacityEnvelope(input: { profile: LearnerConstraintProfileV1; declaredActiveMinutes: number; asOfDate: string; history?: CapacityHistoryDayV1[]; recoveryOverrideMinutes?: number }): CapacityEnvelopeV1 {
+  metadataSafe(input);
+  exactKeys("capacity-envelope-input", input, ["profile", "declaredActiveMinutes", "asOfDate", "history", "recoveryOverrideMinutes"]);
+  validProfile(input.profile);
+  integer("declared-active-minutes", input.declaredActiveMinutes, 30, 720);
+  dateOrdinal("capacity-as-of-date", input.asOfDate);
+  if (input.recoveryOverrideMinutes !== undefined) integer("recovery-override-minutes", input.recoveryOverrideMinutes, 30, 720);
+  const history = validateHistory(input.history, input.asOfDate);
+  const usableMinutes = history.map(usable);
+  const evidenceLevel: CapacityEvidenceLevelV1 = usableMinutes.length >= 14 ? "evidence_supported_14d" : usableMinutes.length >= 7 ? "calibrating_7d" : "declared_only";
+  const derivationReasons: string[] = [];
+  let effective = input.declaredActiveMinutes;
+  if (usableMinutes.length >= 7) {
+    effective = Math.max(30, Math.min(input.declaredActiveMinutes, Math.floor(percentile(usableMinutes, usableMinutes.length >= 14 ? 0.6 : 0.5) * 1.05)));
+    derivationReasons.push(`recent-active-evidence:${usableMinutes.length}d`);
+    if (effective < input.declaredActiveMinutes) derivationReasons.push("declared-capacity-reduced-to-sustainable-evidence");
+  } else {
+    derivationReasons.push("declared-capacity-used-pending-evidence");
+  }
+  const fatigueDays = history.filter((day) => (day.fatigueSelfReport ?? 0) >= 4).length;
+  const lateErrorDays = history.filter((day) => (day.lateSessionErrorDelta ?? 0) > 0).length;
+  if (history.length >= 7 && (fatigueDays / history.length >= 0.35 || lateErrorDays / history.length >= 0.35)) {
+    effective = Math.max(30, Math.floor(effective * 0.9));
+    derivationReasons.push("fatigue-or-late-error-guardrail-applied");
+  }
+  if (input.profile.phase === "recovery") {
+    effective = Math.min(effective, input.recoveryOverrideMinutes ?? 180);
+    derivationReasons.push("recovery-phase-cap-applied");
+  } else if (input.recoveryOverrideMinutes !== undefined) {
+    effective = Math.min(effective, input.recoveryOverrideMinutes);
+    derivationReasons.push("manual-recovery-override-applied");
+  }
+  effective = Math.max(30, Math.min(720, effective));
+  const capacityBand = classifyCapacityBand(effective);
+  const buffer = Math.max(capacityBand === "full_day_600_720" ? 30 : 5, pct(effective, capacityBand === "full_day_600_720" ? 0.08 : capacityBand === "intensive_360_600" ? 0.06 : 0.04));
+  const schedulable = Math.max(0, effective - buffer);
+  const budgets = loadBudgets(schedulable, capacityBand, input.profile.phase);
+  const output: CapacityEnvelopeV1 = {
+    declaredActiveMinutes: input.declaredActiveMinutes,
+    effectiveActiveMinutes: effective,
+    schedulableActiveMinutes: schedulable,
+    capacityBand,
+    evidenceLevel,
+    historyDaysUsed: usableMinutes.length,
+    highLoadBudgetMinutes: budgets.high,
+    mediumLoadBudgetMinutes: budgets.medium,
+    lowLoadBudgetMinutes: budgets.low,
+    recoveryBudgetMinutes: budgets.recovery,
+    unallocatedBufferMinutes: buffer,
+    maxContinuousHighLoadMinutes: continuous(capacityBand, input.profile.phase),
+    derivationReasons,
+    policyVersion: input.profile.policyVersion,
+  };
+  metadataSafe(output);
+  return output;
+}
+
+function validateAvailability(availability: DayAvailabilityV1) {
+  exactKeys("day-availability", availability, ["date", "dayKind", "declaredActiveMinutes", "windows", "externalCommitmentMinutes"]);
+  dateOrdinal("study-date", availability.date);
+  enumValue("day-kind", availability.dayKind, DAY_KINDS);
+  integer("day-declared-active-minutes", availability.declaredActiveMinutes, 30, 720);
+  if (availability.externalCommitmentMinutes !== undefined) integer("external-commitment-minutes", availability.externalCommitmentMinutes, 0, 1440);
+  if (!Array.isArray(availability.windows) || availability.windows.length > MAX_WINDOWS_PER_DAY) throw new Error(`invalid-study-window-count:${String(availability.windows?.length)}`);
+  const ids = new Set<string>();
+  for (const window of availability.windows) {
+    exactKeys("study-window", window, ["id", "startMinute", "endMinute", "environment", "interruptibility", "protected", "allowedTaskKinds"]);
+    requiredText("window-id", window.id, 128);
+    if (ids.has(window.id)) throw new Error(`duplicate-window-id:${window.id}`);
+    ids.add(window.id);
+    integer("window-start-minute", window.startMinute, 0, 1439);
+    integer("window-end-minute", window.endMinute, 1, 1440);
+    if (window.endMinute <= window.startMinute) throw new Error(`invalid-window-order:${window.id}`);
+    enumValue("window-environment", window.environment, ENVIRONMENTS);
+    enumValue("window-interruptibility", window.interruptibility, INTERRUPTIBILITY);
+    if (window.protected !== undefined && typeof window.protected !== "boolean") throw new Error(`invalid-window-protected:${window.id}`);
+    if (window.allowedTaskKinds !== undefined) uniqueEnumArray("window-allowed-task-kind", window.allowedTaskKinds, TASK_KINDS);
+  }
+  const sorted = [...availability.windows].sort((left, right) => left.startMinute - right.startMinute);
+  for (let index = 1; index < sorted.length; index += 1) {
+    if (sorted[index].startMinute < sorted[index - 1].endMinute) throw new Error(`overlapping-study-windows:${sorted[index - 1].id}:${sorted[index].id}`);
+  }
+}
+
+function validateCandidate(candidate: StudyTaskCandidateV1) {
+  exactKeys("candidate", candidate, ["id", "title", "subject", "taskKind", "cognitiveLoad", "requiredness", "estimatedMinutes", "minimumContinuousMinutes", "splittable", "maxParts", "allowedEnvironments", "requiresDesk", "requiresCalculator", "requiresDesktop", "prioritySignals", "basePriority", "outcomeKey", "sourceRef", "metadataOnly"]);
+  requiredText("candidate-id", candidate.id, 128);
+  requiredText(`candidate-title:${candidate.id}`, candidate.title, 256);
+  requiredText(`candidate-subject:${candidate.id}`, candidate.subject, 128);
+  enumValue("candidate-task-kind", candidate.taskKind, TASK_KINDS);
+  enumValue("candidate-cognitive-load", candidate.cognitiveLoad, COGNITIVE_LOADS);
+  enumValue("candidate-requiredness", candidate.requiredness, REQUIREDNESS);
+  integer("candidate-estimated-minutes", candidate.estimatedMinutes, 1, 720);
+  integer("candidate-base-priority", candidate.basePriority, -10_000, 10_000);
+  if (candidate.minimumContinuousMinutes !== undefined) integer("candidate-minimum-continuous-minutes", candidate.minimumContinuousMinutes, 1, candidate.estimatedMinutes);
+  if (candidate.splittable !== undefined && typeof candidate.splittable !== "boolean") throw new Error(`invalid-candidate-splittable:${candidate.id}`);
+  if (candidate.maxParts !== undefined) {
+    integer("candidate-max-parts", candidate.maxParts, 2, MAX_SPLIT_PARTS);
+    if (candidate.splittable !== true) throw new Error(`max-parts-requires-splittable:${candidate.id}`);
+  }
+  if (candidate.allowedEnvironments !== undefined) uniqueEnumArray("candidate-allowed-environment", candidate.allowedEnvironments, ENVIRONMENTS);
+  for (const [name, value] of [["requires-desk", candidate.requiresDesk], ["requires-calculator", candidate.requiresCalculator], ["requires-desktop", candidate.requiresDesktop]] as const) {
+    if (value !== undefined && typeof value !== "boolean") throw new Error(`invalid-candidate-${name}:${candidate.id}`);
+  }
+  uniqueEnumArray("candidate-priority-signal", candidate.prioritySignals, PRIORITY_SIGNALS);
+  if (candidate.outcomeKey !== undefined) requiredText(`candidate-outcome-key:${candidate.id}`, candidate.outcomeKey, 128);
+  if (candidate.sourceRef !== undefined) requiredText(`candidate-source-ref:${candidate.id}`, candidate.sourceRef, 512);
+  if (candidate.metadataOnly !== undefined && candidate.metadataOnly !== true) throw new Error(`candidate-metadata-only-required:${candidate.id}`);
+}
+
+function score(candidate: StudyTaskCandidateV1) {
+  return candidate.basePriority + REQUIRED[candidate.requiredness] + candidate.prioritySignals.reduce((sum, signal) => sum + SIGNAL[signal], 0);
+}
+
+function compatible(candidate: StudyTaskCandidateV1, window: StudyWindowV1, allowProtected = false) {
+  if (window.protected && !allowProtected) return false;
+  if (candidate.cognitiveLoad === "high" && window.interruptibility === "high") return false;
+  if (window.allowedTaskKinds && !window.allowedTaskKinds.includes(candidate.taskKind)) return false;
+  if (candidate.allowedEnvironments && !candidate.allowedEnvironments.includes(window.environment)) return false;
+  if ((candidate.requiresDesk || candidate.requiresDesktop || candidate.requiresCalculator) && !["desk", "library"].includes(window.environment)) return false;
+  return !(["commute_public_transit", "walking"].includes(window.environment) && ["timed_set", "timed_answer_writing", "independent_problem_solving", "rewrite_recalculate", "mock_set"].includes(candidate.taskKind));
+}
+
+const interruptionRank = (window: StudyWindowV1) => window.interruptibility === "low" ? 0 : window.interruptibility === "medium" ? 1 : 2;
+
+function compareEligibleWindows(candidate: StudyTaskCandidateV1, left: WindowState, right: WindowState) {
+  if (candidate.cognitiveLoad === "high" || candidate.estimatedMinutes >= 100) {
+    const interruptionDifference = interruptionRank(left.w) - interruptionRank(right.w);
+    if (interruptionDifference !== 0) return interruptionDifference;
+  }
+  return (left.w.endMinute - left.cursor) - (right.w.endMinute - right.cursor) || left.w.startMinute - right.w.startMinute || left.w.id.localeCompare(right.w.id);
+}
+
+function capEnvelopeToWindows(envelope: CapacityEnvelopeV1, availability: DayAvailabilityV1, phase: StudyPhaseV1) {
+  const usableWindowMinutes = availability.windows.filter((window) => !window.protected).reduce((sum, window) => sum + window.endMinute - window.startMinute, 0);
+  const schedulable = Math.min(envelope.schedulableActiveMinutes, usableWindowMinutes);
+  if (schedulable === envelope.schedulableActiveMinutes) return envelope;
+  const budgets = loadBudgets(schedulable, envelope.capacityBand, phase);
+  return {
+    ...envelope,
+    schedulableActiveMinutes: schedulable,
+    highLoadBudgetMinutes: budgets.high,
+    mediumLoadBudgetMinutes: budgets.medium,
+    lowLoadBudgetMinutes: budgets.low,
+    recoveryBudgetMinutes: budgets.recovery,
+    unallocatedBufferMinutes: Math.max(envelope.unallocatedBufferMinutes, envelope.effectiveActiveMinutes - schedulable),
+    derivationReasons: uniq([...envelope.derivationReasons, "usable-nonprotected-window-cap-applied"]),
+  };
+}
+
+function highLoadRunExceeds(blocks: ExecutionBlockV1[], parts: PlannedPart[], maximumMinutes: number) {
+  const intervals = [
+    ...blocks.filter((block) => block.cognitiveLoad === "high").map((block) => ({ start: block.startMinute, end: block.endMinute })),
+    ...parts.map((part) => ({ start: part.start, end: part.end })),
+  ].sort((left, right) => left.start - right.start || left.end - right.end);
+  let runStart = -1;
+  let runEnd = -1;
+  for (const interval of intervals) {
+    if (runStart < 0 || interval.start > runEnd) {
+      runStart = interval.start;
+      runEnd = interval.end;
+    } else {
+      runEnd = Math.max(runEnd, interval.end);
+    }
+    if (runEnd - runStart > maximumMinutes) return true;
+  }
+  return false;
+}
+
+function materializeSplitParts(candidate: StudyTaskCandidateV1, selected: { state: WindowState; capacity: number }[], minimum: number, blocks: ExecutionBlockV1[], maxContinuousHighLoadMinutes: number) {
+  if (candidate.cognitiveLoad === "high") {
+    let answer: PlannedPart[] | null = null;
+    const durations: number[] = [];
+    const place = (index: number, parts: PlannedPart[]) => {
+      if (answer) return;
+      if (index === selected.length) {
+        answer = [...parts];
+        return;
+      }
+      const { state } = selected[index];
+      const duration = durations[index];
+      const latestStart = state.w.endMinute - duration;
+      for (let start = state.cursor; start <= latestStart; start += 1) {
+        const part = { state, start, end: start + duration };
+        if (highLoadRunExceeds(blocks, [...parts, part], maxContinuousHighLoadMinutes)) continue;
+        parts.push(part);
+        place(index + 1, parts);
+        parts.pop();
+        if (answer) return;
+      }
+    };
+    const allocate = (index: number, remaining: number) => {
+      if (answer) return;
+      if (index === selected.length) {
+        if (remaining === 0) place(0, []);
+        return;
+      }
+      const remainingMinimum = (selected.length - index - 1) * minimum;
+      const remainingMaximum = selected.slice(index + 1).reduce((sum, entry) => sum + entry.capacity, 0);
+      const minimumDuration = Math.max(minimum, remaining - remainingMaximum);
+      const maximumDuration = Math.min(selected[index].capacity, remaining - remainingMinimum);
+      for (let duration = maximumDuration; duration >= minimumDuration; duration -= 1) {
+        durations[index] = duration;
+        allocate(index + 1, remaining - duration);
+        if (answer) return;
+      }
+    };
+    allocate(0, candidate.estimatedMinutes);
+    return answer;
+  }
+  const minutes = selected.map(() => minimum);
+  let remaining = candidate.estimatedMinutes - minutes.reduce((sum, value) => sum + value, 0);
+  for (let index = 0; index < selected.length && remaining > 0; index += 1) {
+    const addition = Math.min(remaining, selected[index].capacity - minutes[index]);
+    minutes[index] += addition;
+    remaining -= addition;
+  }
+  if (remaining !== 0) return null;
+  return selected.map(({ state }, index) => ({ state, start: state.cursor, end: state.cursor + minutes[index] }));
+}
+
+function chooseSplitStates(candidate: StudyTaskCandidateV1, states: WindowState[], blocks: ExecutionBlockV1[], maxContinuousHighLoadMinutes: number): PlannedPart[] | null {
+  const minimum = candidate.minimumContinuousMinutes ?? 1;
+  const maxParts = candidate.maxParts ?? 2;
+  const eligible = states
+    .filter(({ w }) => compatible(candidate, w))
+    .map((state) => ({ state, capacity: Math.min(state.w.endMinute - state.cursor, candidate.cognitiveLoad === "high" ? maxContinuousHighLoadMinutes : candidate.estimatedMinutes) }))
+    .filter(({ capacity }) => capacity >= minimum)
+    .sort((left, right) => compareEligibleWindows(candidate, left.state, right.state) || left.capacity - right.capacity);
+  const selected: typeof eligible = [];
+  let answer: PlannedPart[] | null = null;
+  const search = (start: number, parts: number, capacity: number) => {
+    if (answer) return;
+    if (capacity >= candidate.estimatedMinutes && candidate.estimatedMinutes >= parts * minimum) {
+      const plannedParts = materializeSplitParts(candidate, selected, minimum, blocks, maxContinuousHighLoadMinutes);
+      if (plannedParts) {
+        answer = plannedParts;
+        return;
+      }
+    }
+    if (parts >= maxParts) return;
+    for (let index = start; index < eligible.length; index += 1) {
+      selected.push(eligible[index]);
+      search(index + 1, parts + 1, capacity + eligible[index].capacity);
+      selected.pop();
+      if (answer) return;
+    }
+  };
+  search(0, 0, 0);
+  return answer;
+}
+
+function chooseParts(candidate: StudyTaskCandidateV1, states: WindowState[], blocks: ExecutionBlockV1[], maxContinuousHighLoadMinutes: number): PlannedPart[] | null {
+  if (candidate.splittable === true) return chooseSplitStates(candidate, states, blocks, maxContinuousHighLoadMinutes);
+  if (candidate.cognitiveLoad === "high" && candidate.estimatedMinutes > maxContinuousHighLoadMinutes) return null;
+  const requiredContinuous = Math.max(candidate.estimatedMinutes, candidate.minimumContinuousMinutes ?? candidate.estimatedMinutes);
+  const eligible = states
+    .filter(({ w, cursor }) => compatible(candidate, w) && w.endMinute - cursor >= requiredContinuous)
+    .sort((left, right) => compareEligibleWindows(candidate, left, right));
+  for (const state of eligible) {
+    const latestStart = state.w.endMinute - candidate.estimatedMinutes;
+    for (let start = state.cursor; start <= latestStart; start += 1) {
+      const parts = [{ state, start, end: start + candidate.estimatedMinutes }];
+      if (candidate.cognitiveLoad !== "high" || !highLoadRunExceeds(blocks, parts, maxContinuousHighLoadMinutes)) return parts;
+    }
+  }
+  return null;
+}
+
+function hasStructuralPlacement(candidate: StudyTaskCandidateV1, states: WindowState[], maxContinuousHighLoadMinutes: number) {
+  if (candidate.splittable !== true) {
+    if (candidate.cognitiveLoad === "high" && candidate.estimatedMinutes > maxContinuousHighLoadMinutes) return false;
+    const requiredContinuous = Math.max(candidate.estimatedMinutes, candidate.minimumContinuousMinutes ?? candidate.estimatedMinutes);
+    return states.some(({ w, cursor }) => compatible(candidate, w) && w.endMinute - cursor >= requiredContinuous);
+  }
+  const minimum = candidate.minimumContinuousMinutes ?? 1;
+  const maximumParts = candidate.maxParts ?? 2;
+  const capacities = states
+    .filter(({ w }) => compatible(candidate, w))
+    .map(({ w, cursor }) => Math.min(w.endMinute - cursor, candidate.cognitiveLoad === "high" ? maxContinuousHighLoadMinutes : candidate.estimatedMinutes))
+    .filter((capacity) => capacity >= minimum)
+    .sort((left, right) => right - left)
+    .slice(0, maximumParts);
+  for (let parts = 1; parts <= capacities.length; parts += 1) {
+    if (candidate.estimatedMinutes >= parts * minimum && capacities.slice(0, parts).reduce((sum, capacity) => sum + capacity, 0) >= candidate.estimatedMinutes) return true;
+  }
+  return false;
+}
+
+function outcomeLimit(profile: LearnerConstraintProfileV1, availability: DayAvailabilityV1, envelope: CapacityEnvelopeV1) {
+  if (envelope.capacityBand === "micro_30_90" || profile.phase === "recovery") return 1;
+  if (profile.lifeMode === "full_time_employed" && availability.dayKind === "weekday") return 2;
+  if (profile.lifeMode === "shift_or_irregular_work" && profile.scheduleVolatility === "high") return 2;
+  return MAX_CORE_OUTCOMES;
+}
+
+function buildPlanGap(envelope: CapacityEnvelopeV1, candidates: StudyTaskCandidateV1[], scheduled: Set<string>, availability: DayAvailabilityV1): PlanGapV1 | null {
+  const required = candidates.filter((candidate) => candidate.requiredness === "required");
+  const missing = required.filter((candidate) => !scheduled.has(candidate.id));
+  const requiredMinutes = required.reduce((sum, candidate) => sum + candidate.estimatedMinutes, 0);
+  const shortfall = Math.max(0, requiredMinutes - envelope.schedulableActiveMinutes);
+  if (!missing.length && !shortfall) return null;
+  const reasons: PlanGapReasonV1[] = [];
+  if (missing.some((candidate) => candidate.prioritySignals.includes("due_review"))) reasons.push("due_review_overload");
+  if (missing.some((candidate) => candidate.prioritySignals.includes("coverage_gap"))) reasons.push("coverage_gap");
+  if (missing.some((candidate) => candidate.prioritySignals.includes("timed_evidence_missing"))) reasons.push("timed_evidence_missing");
+  if ((availability.externalCommitmentMinutes ?? 0) > 0) reasons.push("external_commitment");
+  if (missing.some((candidate) => candidate.prioritySignals.includes("recent_absence"))) reasons.push("recent_absence");
+  if (missing.some((candidate) => candidate.prioritySignals.includes("exam_urgency"))) reasons.push("exam_urgency");
+  const choices: PlanGapChoiceV1[] = ["drop_low_value_scope", "shorten_support_tasks", "defer_noncritical_scope"];
+  if (missing.some((candidate) => candidate.estimatedMinutes >= 100)) choices.push("move_long_task_to_weekend");
+  choices.push("increase_capacity", "change_target_timeline");
+  return { forecastCapacityMinutes: envelope.schedulableActiveMinutes, requiredPlanMinutes: requiredMinutes, shortfallMinutes: shortfall, reasons: uniq(reasons.length ? reasons : ["coverage_gap"]), choices: uniq(choices), claimBoundary: "schedule_feasibility_only_not_pass_probability", metadataOnly: true };
+}
+
+export function buildStudyDayPlan(input: { profile: LearnerConstraintProfileV1; availability: DayAvailabilityV1; candidates: StudyTaskCandidateV1[]; capacityHistory?: CapacityHistoryDayV1[]; recoveryOverrideMinutes?: number }): StudyDayPlanV1 {
+  metadataSafe(input);
+  exactKeys("study-day-plan-input", input, ["profile", "availability", "candidates", "capacityHistory", "recoveryOverrideMinutes"]);
+  validProfile(input.profile);
+  validateAvailability(input.availability);
+  if (!Array.isArray(input.candidates) || input.candidates.length > MAX_CANDIDATES_PER_PLAN) throw new Error(`invalid-study-candidate-count:${String(input.candidates?.length)}`);
+  const candidateIds = new Set<string>();
+  for (const candidate of input.candidates) {
+    validateCandidate(candidate);
+    if (candidateIds.has(candidate.id)) throw new Error(`duplicate-candidate-id:${candidate.id}`);
+    candidateIds.add(candidate.id);
+  }
+  const derivedEnvelope = buildCapacityEnvelope({ profile: input.profile, declaredActiveMinutes: input.availability.declaredActiveMinutes, asOfDate: input.availability.date, history: input.capacityHistory, recoveryOverrideMinutes: input.recoveryOverrideMinutes });
+  const envelope = capEnvelopeToWindows(derivedEnvelope, input.availability, input.profile.phase);
+  const states = input.availability.windows.filter((window) => !window.protected).map((window) => ({ w: window, cursor: window.startMinute }));
+  const used: Record<CognitiveLoadV1, number> = { high: 0, medium: 0, low: 0, recovery: 0 };
+  const budgets: Record<CognitiveLoadV1, number> = { high: envelope.highLoadBudgetMinutes, medium: envelope.mediumLoadBudgetMinutes, low: envelope.lowLoadBudgetMinutes, recovery: envelope.recoveryBudgetMinutes };
+  const blocks: ExecutionBlockV1[] = [];
+  const deferred: DeferredTaskV1[] = [];
+  const scheduled = new Set<string>();
+  const ordered = [...input.candidates].sort((left, right) => score(right) - score(left) || left.estimatedMinutes - right.estimatedMinutes || left.id.localeCompare(right.id));
+  for (const candidate of ordered) {
+    const loadExceeded = used[candidate.cognitiveLoad] + candidate.estimatedMinutes > budgets[candidate.cognitiveLoad];
+    const plannedMinutes = blocks.reduce((sum, block) => sum + block.activeMinutes, 0);
+    const activeExceeded = plannedMinutes + candidate.estimatedMinutes > envelope.schedulableActiveMinutes;
+    const structurallyPlaceable = hasStructuralPlacement(candidate, states, envelope.maxContinuousHighLoadMinutes);
+    const parts = structurallyPlaceable && !loadExceeded && !activeExceeded ? chooseParts(candidate, states, blocks, envelope.maxContinuousHighLoadMinutes) : null;
+    if (!parts) {
+      const anyUnprotectedCompatible = states.some(({ w }) => compatible(candidate, w));
+      const protectedCompatible = input.availability.windows.some((window) => Boolean(window.protected) && compatible(candidate, window, true));
+      let reason: DeferralReasonV1 = !anyUnprotectedCompatible ? (protectedCompatible ? "protected_window_conflict" : "environment_incompatible") : !structurallyPlaceable ? (input.profile.lifeMode === "full_time_employed" && input.availability.dayKind === "weekday" && candidate.estimatedMinutes >= 100 ? "move_long_task_to_weekend" : "continuous_window_missing") : loadExceeded ? "cognitive_load_budget_exhausted" : activeExceeded ? (candidate.requiredness === "optional" ? "optional_scope_dropped" : "capacity_exhausted") : "continuous_window_missing";
+      if (input.profile.phase === "recovery" && candidate.requiredness !== "required") reason = "recovery_mode";
+      deferred.push({ candidateId: candidate.id, title: candidate.title, reason, nextEligibleDayKind: reason === "move_long_task_to_weekend" ? "weekend" : undefined, metadataOnly: true });
+      continue;
+    }
+    used[candidate.cognitiveLoad] += candidate.estimatedMinutes;
+    scheduled.add(candidate.id);
+    parts.forEach((part, index) => {
+      part.state.cursor = part.end;
+      blocks.push({
+        blockId: parts.length === 1 ? `block:${input.availability.date}:${candidate.id}` : `block:${input.availability.date}:${candidate.id}:part:${index + 1}`,
+        candidateId: candidate.id,
+        outcomeKey: candidate.outcomeKey ?? candidate.id,
+        title: candidate.title,
+        subject: candidate.subject,
+        taskKind: candidate.taskKind,
+        cognitiveLoad: candidate.cognitiveLoad,
+        startMinute: part.start,
+        endMinute: part.end,
+        activeMinutes: part.end - part.start,
+        windowId: part.state.w.id,
+        requiredness: candidate.requiredness,
+        countsTowardActiveStudy: true,
+        selectionReasons: uniq([`requiredness:${candidate.requiredness}`, ...candidate.prioritySignals.map((signal) => `priority:${signal}`), `life-mode:${input.profile.lifeMode}`, `day-kind:${input.availability.dayKind}`]),
+        metadataOnly: true,
+      });
+    });
+  }
+  blocks.sort((left, right) => left.startMinute - right.startMinute || left.blockId.localeCompare(right.blockId));
+  const candidateMap = new Map(input.candidates.map((candidate) => [candidate.id, candidate]));
+  const groups = new Map<string, ExecutionBlockV1[]>();
+  for (const block of [...blocks].sort((left, right) => score(candidateMap.get(right.candidateId!)!) - score(candidateMap.get(left.candidateId!)!))) {
+    if (block.requiredness === "support" || block.requiredness === "optional") continue;
+    const key = block.outcomeKey ?? block.blockId;
+    if (!groups.has(key)) groups.set(key, []);
+    groups.get(key)!.push(block);
+  }
+  const outcomes: CoreOutcomeV1[] = [...groups.entries()].slice(0, outcomeLimit(input.profile, input.availability, envelope)).map(([key, groupBlocks], index) => ({
+    outcomeId: `outcome:${input.availability.date}:${index + 1}:${hash(key)}`,
+    title: groupBlocks[0].title,
+    blockIds: groupBlocks.map((block) => block.blockId),
+    estimatedMinutes: groupBlocks.reduce((sum, block) => sum + block.activeMinutes, 0),
+    reason: groupBlocks[0].selectionReasons.filter((reason) => reason.startsWith("priority:")).slice(0, 2).join(", ") || "highest-value-executable-outcome",
+    metadataOnly: true,
+  }));
+  if (outcomes.length > MAX_CORE_OUTCOMES) throw new Error("core-outcome-limit-violated");
+  const plannedActiveMinutes = blocks.reduce((sum, block) => sum + block.activeMinutes, 0);
+  if (plannedActiveMinutes > envelope.schedulableActiveMinutes) throw new Error("planned-active-minutes-exceed-capacity");
+  const basis = JSON.stringify({ date: input.availability.date, profile: input.profile, envelope, blocks: blocks.map((block) => [block.blockId, block.candidateId, block.startMinute, block.endMinute, block.windowId]), deferred: deferred.map((entry) => [entry.candidateId, entry.reason]) });
+  const output: StudyDayPlanV1 = {
+    date: input.availability.date,
+    profile: { ...input.profile },
+    capacity: envelope,
+    coreOutcomes: outcomes,
+    executionBlocks: blocks,
+    deferredTasks: deferred,
+    planGap: buildPlanGap(envelope, input.candidates, scheduled, input.availability),
+    plannedActiveMinutes,
+    completionMeaning: "block_completion_is_not_mastery",
+    masteryMutationAllowed: false,
+    deterministicPlanDigest: `sclm-v1:${hash(basis)}`,
+    metadataOnly: true,
+  };
+  metadataSafe(output);
+  return output;
+}
+
+export function projectWeeklyFeasibility(input: { weeklyAvailableMinutes: number; requiredMinimumMinutes: number; requiredMaximumMinutes: number; reasons?: string[] }): FeasibilityProjectionV1 {
+  metadataSafe(input);
+  exactKeys("weekly-feasibility-input", input, ["weeklyAvailableMinutes", "requiredMinimumMinutes", "requiredMaximumMinutes", "reasons"]);
+  integer("weekly-available-minutes", input.weeklyAvailableMinutes, 0, 5040);
+  integer("required-minimum-minutes", input.requiredMinimumMinutes, 0, 5040);
+  integer("required-maximum-minutes", input.requiredMaximumMinutes, input.requiredMinimumMinutes, 5040);
+  if (input.reasons !== undefined) {
+    if (!Array.isArray(input.reasons)) throw new Error("invalid-weekly-feasibility-reasons");
+    input.reasons.forEach((reason) => requiredText("weekly-feasibility-reason", reason, 128));
+  }
+  const output: FeasibilityProjectionV1 = {
+    status: input.weeklyAvailableMinutes < input.requiredMinimumMinutes ? "infeasible" : input.weeklyAvailableMinutes < input.requiredMaximumMinutes ? "tight" : "feasible",
+    weeklyAvailableMinutes: input.weeklyAvailableMinutes,
+    requiredMinimumMinutes: input.requiredMinimumMinutes,
+    requiredMaximumMinutes: input.requiredMaximumMinutes,
+    shortfallMinutes: Math.max(0, input.requiredMinimumMinutes - input.weeklyAvailableMinutes),
+    claimBoundary: "schedule_feasibility_only_not_pass_probability",
+    reasons: input.reasons ?? [],
+    metadataOnly: true,
+  };
+  metadataSafe(output);
+  return output;
+}
+
+export function buildStudyWeekPlan(input: { profile: LearnerConstraintProfileV1; days: DayAvailabilityV1[]; candidates: StudyTaskCandidateV1[]; capacityHistory?: CapacityHistoryDayV1[]; requiredMinimumMinutes: number; requiredMaximumMinutes: number }): StudyWeekPlanV1 {
+  metadataSafe(input);
+  exactKeys("study-week-plan-input", input, ["profile", "days", "candidates", "capacityHistory", "requiredMinimumMinutes", "requiredMaximumMinutes"]);
+  validProfile(input.profile);
+  if (!Array.isArray(input.candidates) || input.candidates.length > MAX_CANDIDATES_PER_PLAN) throw new Error(`invalid-study-candidate-count:${String(input.candidates?.length)}`);
+  if (!Array.isArray(input.days) || !input.days.length || input.days.length > 7) throw new Error(`invalid-week-day-count:${String(input.days?.length)}`);
+  if (new Set(input.days.map((day) => day.date)).size !== input.days.length) throw new Error("duplicate-week-date");
+  let remaining = [...input.candidates];
+  const plans: StudyDayPlanV1[] = [];
+  for (const day of [...input.days].sort((left, right) => left.date.localeCompare(right.date))) {
+    const candidates = [...remaining].sort((left, right) => {
+      if (input.profile.lifeMode === "full_time_employed") {
+        const leftLong = left.estimatedMinutes >= 100 ? 1 : 0;
+        const rightLong = right.estimatedMinutes >= 100 ? 1 : 0;
+        if (day.dayKind === "weekend" && leftLong !== rightLong) return rightLong - leftLong;
+        if (day.dayKind === "weekday" && leftLong !== rightLong) return leftLong - rightLong;
+      }
+      return score(right) - score(left);
+    });
+    const plan = buildStudyDayPlan({ profile: input.profile, availability: day, candidates, capacityHistory: input.capacityHistory });
+    plans.push(plan);
+    const completed = new Set(plan.executionBlocks.map((block) => block.candidateId).filter((candidateId): candidateId is string => Boolean(candidateId)));
+    remaining = remaining.filter((candidate) => !completed.has(candidate.id));
+  }
+  const weeklyAvailableMinutes = plans.reduce((sum, plan) => sum + plan.capacity.schedulableActiveMinutes, 0);
+  const weeklyPlannedMinutes = plans.reduce((sum, plan) => sum + plan.plannedActiveMinutes, 0);
+  const output: StudyWeekPlanV1 = {
+    profile: { ...input.profile },
+    dayPlans: plans,
+    weeklyAvailableMinutes,
+    weeklyPlannedMinutes,
+    remainingTaskIds: remaining.map((candidate) => candidate.id),
+    feasibility: projectWeeklyFeasibility({ weeklyAvailableMinutes, requiredMinimumMinutes: input.requiredMinimumMinutes, requiredMaximumMinutes: input.requiredMaximumMinutes, reasons: remaining.length ? ["candidate-scope-remains-after-week-allocation"] : [] }),
+    metadataOnly: true,
+  };
+  metadataSafe(output);
+  return output;
+}
+
+export function buildPersonalDrillBudget(input: { next48hAvailableDrillMinutes: number; pendingDrillMinutes: number; estimatedMinutesPerNewItem: number; verifiedBankHasMatchingItems: boolean }): DrillBudgetV1 {
+  metadataSafe(input);
+  exactKeys("personal-drill-budget-input", input, ["next48hAvailableDrillMinutes", "pendingDrillMinutes", "estimatedMinutesPerNewItem", "verifiedBankHasMatchingItems"]);
+  integer("next48h-drill-minutes", input.next48hAvailableDrillMinutes, 0, 1440);
+  integer("pending-drill-minutes", input.pendingDrillMinutes, 0, 1440);
+  integer("estimated-minutes-per-new-item", input.estimatedMinutesPerNewItem, 1, 180);
+  if (typeof input.verifiedBankHasMatchingItems !== "boolean") throw new Error("invalid-verified-bank-match-state");
+  const residualMinutes = Math.max(0, input.next48hAvailableDrillMinutes - input.pendingDrillMinutes);
+  const generationBudgetMinutes = input.verifiedBankHasMatchingItems ? 0 : residualMinutes;
+  const maximumNewItems = Math.floor(generationBudgetMinutes / input.estimatedMinutesPerNewItem);
+  const output: DrillBudgetV1 = {
+    next48hAvailableDrillMinutes: input.next48hAvailableDrillMinutes,
+    pendingDrillMinutes: input.pendingDrillMinutes,
+    newGenerationBudgetMinutes: generationBudgetMinutes,
+    maximumNewItems,
+    route: input.verifiedBankHasMatchingItems ? "verified_bank_first" : maximumNewItems ? "personal_generation_on_gap" : "no_generation_capacity",
+    readinessEligible: false,
+    crossUserReuseEligible: false,
+    metadataOnly: true,
+  };
+  metadataSafe(output);
+  return output;
+}
+
+function validatePreviousPlan(plan: StudyDayPlanV1) {
+  exactKeys("previous-plan", plan, ["date", "profile", "capacity", "coreOutcomes", "executionBlocks", "deferredTasks", "planGap", "plannedActiveMinutes", "completionMeaning", "masteryMutationAllowed", "deterministicPlanDigest", "metadataOnly"]);
+  dateOrdinal("previous-plan-date", plan.date);
+  validProfile(plan.profile);
+  exactKeys("previous-plan-capacity", plan.capacity, ["declaredActiveMinutes", "effectiveActiveMinutes", "schedulableActiveMinutes", "capacityBand", "evidenceLevel", "historyDaysUsed", "highLoadBudgetMinutes", "mediumLoadBudgetMinutes", "lowLoadBudgetMinutes", "recoveryBudgetMinutes", "unallocatedBufferMinutes", "maxContinuousHighLoadMinutes", "derivationReasons", "policyVersion"]);
+  integer("previous-declared-active-minutes", plan.capacity.declaredActiveMinutes, 30, 720);
+  integer("previous-effective-active-minutes", plan.capacity.effectiveActiveMinutes, 30, 720);
+  integer("previous-schedulable-active-minutes", plan.capacity.schedulableActiveMinutes, 0, plan.capacity.effectiveActiveMinutes);
+  enumValue("previous-capacity-band", plan.capacity.capacityBand, CAPACITY_BANDS);
+  if (plan.capacity.capacityBand !== classifyCapacityBand(plan.capacity.effectiveActiveMinutes)) throw new Error("previous-capacity-band-mismatch");
+  enumValue("previous-evidence-level", plan.capacity.evidenceLevel, EVIDENCE_LEVELS);
+  integer("previous-history-days-used", plan.capacity.historyDaysUsed, 0, 28);
+  for (const [name, value] of [["high", plan.capacity.highLoadBudgetMinutes], ["medium", plan.capacity.mediumLoadBudgetMinutes], ["low", plan.capacity.lowLoadBudgetMinutes], ["recovery", plan.capacity.recoveryBudgetMinutes]] as const) integer(`previous-${name}-load-budget-minutes`, value, 0, plan.capacity.schedulableActiveMinutes);
+  const budgetTotal = plan.capacity.highLoadBudgetMinutes + plan.capacity.mediumLoadBudgetMinutes + plan.capacity.lowLoadBudgetMinutes + plan.capacity.recoveryBudgetMinutes;
+  if (budgetTotal !== plan.capacity.schedulableActiveMinutes) throw new Error("previous-load-budget-total-mismatch");
+  integer("previous-unallocated-buffer-minutes", plan.capacity.unallocatedBufferMinutes, 0, 720);
+  if (plan.capacity.schedulableActiveMinutes + plan.capacity.unallocatedBufferMinutes !== plan.capacity.effectiveActiveMinutes) throw new Error("previous-capacity-envelope-total-mismatch");
+  integer("previous-max-continuous-high-load-minutes", plan.capacity.maxContinuousHighLoadMinutes, 1, 720);
+  if (!Array.isArray(plan.capacity.derivationReasons)) throw new Error("invalid-previous-derivation-reasons");
+  plan.capacity.derivationReasons.forEach((reason) => requiredText("previous-derivation-reason", reason, 128));
+  requiredText("previous-capacity-policy-version", plan.capacity.policyVersion, 128);
+  if (plan.capacity.policyVersion !== plan.profile.policyVersion) throw new Error("previous-policy-version-mismatch");
+
+  if (!Array.isArray(plan.executionBlocks)) throw new Error("invalid-previous-execution-blocks");
+  const blockIds = new Set<string>();
+  const scheduledCandidates = new Set<string>();
+  for (const block of plan.executionBlocks) {
+    exactKeys("previous-execution-block", block, ["blockId", "candidateId", "outcomeKey", "title", "subject", "taskKind", "cognitiveLoad", "startMinute", "endMinute", "activeMinutes", "windowId", "requiredness", "countsTowardActiveStudy", "selectionReasons", "metadataOnly"]);
+    requiredText("previous-block-id", block.blockId, 256);
+    if (blockIds.has(block.blockId)) throw new Error(`duplicate-previous-block-id:${block.blockId}`);
+    blockIds.add(block.blockId);
+    if (block.candidateId === null) {
+      if (block.outcomeKey !== null || block.subject !== null || block.taskKind !== "recovery_buffer" || block.requiredness !== "buffer") throw new Error(`invalid-previous-buffer-block:${block.blockId}`);
+    } else {
+      requiredText(`previous-block-candidate-id:${block.blockId}`, block.candidateId, 128);
+      scheduledCandidates.add(block.candidateId);
+      requiredText(`previous-block-outcome-key:${block.blockId}`, block.outcomeKey, 128);
+      requiredText(`previous-block-subject:${block.blockId}`, block.subject, 128);
+      enumValue("previous-block-task-kind", block.taskKind, TASK_KINDS);
+      enumValue("previous-block-requiredness", block.requiredness, REQUIREDNESS);
+    }
+    requiredText(`previous-block-title:${block.blockId}`, block.title, 256);
+    enumValue("previous-block-cognitive-load", block.cognitiveLoad, COGNITIVE_LOADS);
+    integer("previous-block-start-minute", block.startMinute, 0, 1439);
+    integer("previous-block-end-minute", block.endMinute, 1, 1440);
+    integer("previous-block-active-minutes", block.activeMinutes, 1, 720);
+    if (block.endMinute <= block.startMinute || block.activeMinutes !== block.endMinute - block.startMinute) throw new Error(`previous-block-duration-mismatch:${block.blockId}`);
+    requiredText(`previous-block-window-id:${block.blockId}`, block.windowId, 128);
+    if (block.countsTowardActiveStudy !== true || block.metadataOnly !== true) throw new Error(`invalid-previous-block-boundary:${block.blockId}`);
+    if (!Array.isArray(block.selectionReasons)) throw new Error(`invalid-previous-block-selection-reasons:${block.blockId}`);
+    block.selectionReasons.forEach((reason) => requiredText(`previous-block-selection-reason:${block.blockId}`, reason, 128));
+  }
+  const chronologicalBlocks = [...plan.executionBlocks].sort((left, right) => left.startMinute - right.startMinute || left.endMinute - right.endMinute);
+  for (let index = 1; index < chronologicalBlocks.length; index += 1) if (chronologicalBlocks[index].startMinute < chronologicalBlocks[index - 1].endMinute) throw new Error("overlapping-previous-execution-blocks");
+  if (highLoadRunExceeds(plan.executionBlocks, [], plan.capacity.maxContinuousHighLoadMinutes)) throw new Error("previous-high-load-run-exceeds-limit");
+
+  if (!Array.isArray(plan.deferredTasks)) throw new Error("invalid-previous-deferred-tasks");
+  const deferredCandidates = new Set<string>();
+  for (const entry of plan.deferredTasks) {
+    exactKeys("previous-deferred-task", entry, ["candidateId", "title", "reason", "nextEligibleDayKind", "metadataOnly"]);
+    requiredText("previous-deferred-candidate-id", entry.candidateId, 128);
+    requiredText(`previous-deferred-title:${entry.candidateId}`, entry.title, 256);
+    if (deferredCandidates.has(entry.candidateId) || scheduledCandidates.has(entry.candidateId)) throw new Error(`duplicate-previous-candidate-classification:${entry.candidateId}`);
+    deferredCandidates.add(entry.candidateId);
+    enumValue("previous-deferral-reason", entry.reason, DEFERRAL_REASONS);
+    if (entry.nextEligibleDayKind !== undefined) enumValue("previous-next-eligible-day-kind", entry.nextEligibleDayKind, DAY_KINDS);
+    if (entry.metadataOnly !== true) throw new Error(`invalid-previous-deferred-boundary:${entry.candidateId}`);
+  }
+
+  if (!Array.isArray(plan.coreOutcomes) || plan.coreOutcomes.length > MAX_CORE_OUTCOMES) throw new Error("invalid-previous-core-outcomes");
+  const outcomeIds = new Set<string>();
+  for (const outcome of plan.coreOutcomes) {
+    exactKeys("previous-core-outcome", outcome, ["outcomeId", "title", "blockIds", "estimatedMinutes", "reason", "metadataOnly"]);
+    requiredText("previous-outcome-id", outcome.outcomeId, 256);
+    if (outcomeIds.has(outcome.outcomeId)) throw new Error(`duplicate-previous-outcome-id:${outcome.outcomeId}`);
+    outcomeIds.add(outcome.outcomeId);
+    requiredText(`previous-outcome-title:${outcome.outcomeId}`, outcome.title, 256);
+    if (!Array.isArray(outcome.blockIds) || !outcome.blockIds.length || new Set(outcome.blockIds).size !== outcome.blockIds.length) throw new Error(`invalid-previous-outcome-block-ids:${outcome.outcomeId}`);
+    const outcomeBlocks = outcome.blockIds.map((blockId) => {
+      requiredText(`previous-outcome-block-id:${outcome.outcomeId}`, blockId, 256);
+      const block = plan.executionBlocks.find((candidate) => candidate.blockId === blockId);
+      if (!block) throw new Error(`unknown-previous-outcome-block:${blockId}`);
+      return block;
+    });
+    integer("previous-outcome-estimated-minutes", outcome.estimatedMinutes, 1, 720);
+    if (outcome.estimatedMinutes !== outcomeBlocks.reduce((sum, block) => sum + block.activeMinutes, 0)) throw new Error(`previous-outcome-duration-mismatch:${outcome.outcomeId}`);
+    requiredText(`previous-outcome-reason:${outcome.outcomeId}`, outcome.reason, 256);
+    if (outcome.metadataOnly !== true) throw new Error(`invalid-previous-outcome-boundary:${outcome.outcomeId}`);
+  }
+
+  if (plan.planGap !== null) {
+    exactKeys("previous-plan-gap", plan.planGap, ["forecastCapacityMinutes", "requiredPlanMinutes", "shortfallMinutes", "reasons", "choices", "claimBoundary", "metadataOnly"]);
+    integer("previous-gap-forecast-capacity-minutes", plan.planGap.forecastCapacityMinutes, 0, 720);
+    integer("previous-gap-required-plan-minutes", plan.planGap.requiredPlanMinutes, 0, 5040);
+    integer("previous-gap-shortfall-minutes", plan.planGap.shortfallMinutes, 0, 5040);
+    if (plan.planGap.forecastCapacityMinutes !== plan.capacity.schedulableActiveMinutes || plan.planGap.shortfallMinutes !== Math.max(0, plan.planGap.requiredPlanMinutes - plan.planGap.forecastCapacityMinutes)) throw new Error("previous-plan-gap-arithmetic-mismatch");
+    uniqueEnumArray("previous-plan-gap-reason", plan.planGap.reasons, PLAN_GAP_REASONS);
+    uniqueEnumArray("previous-plan-gap-choice", plan.planGap.choices, PLAN_GAP_CHOICES);
+    if (plan.planGap.claimBoundary !== "schedule_feasibility_only_not_pass_probability" || plan.planGap.metadataOnly !== true) throw new Error("invalid-previous-plan-gap-boundary");
+  }
+  integer("previous-planned-active-minutes", plan.plannedActiveMinutes, 0, 720);
+  if (plan.plannedActiveMinutes !== plan.executionBlocks.reduce((sum, block) => sum + block.activeMinutes, 0) || plan.plannedActiveMinutes > plan.capacity.schedulableActiveMinutes) throw new Error("previous-planned-active-minutes-mismatch");
+  if (plan.completionMeaning !== "block_completion_is_not_mastery" || plan.masteryMutationAllowed !== false || plan.metadataOnly !== true) throw new Error("invalid-previous-plan-learning-boundary");
+  const basis = JSON.stringify({ date: plan.date, profile: plan.profile, envelope: plan.capacity, blocks: plan.executionBlocks.map((block) => [block.blockId, block.candidateId, block.startMinute, block.endMinute, block.windowId]), deferred: plan.deferredTasks.map((entry) => [entry.candidateId, entry.reason]) });
+  if (plan.deterministicPlanDigest !== `sclm-v1:${hash(basis)}`) throw new Error("previous-plan-digest-mismatch");
+}
+
+export function replanStudyDay(input: { previousPlan: StudyDayPlanV1; newAvailability: DayAvailabilityV1; candidates: StudyTaskCandidateV1[]; capacityHistory?: CapacityHistoryDayV1[]; reason: "overtime" | "illness" | "family_commitment" | "energy_drop" | "custom" }): ReplannedStudyDayV1 {
+  metadataSafe(input);
+  exactKeys("replan-study-day-input", input, ["previousPlan", "newAvailability", "candidates", "capacityHistory", "reason"]);
+  enumValue("replan-reason", input.reason, REPLAN_REASONS);
+  validatePreviousPlan(input.previousPlan);
+  if (!Array.isArray(input.candidates) || input.candidates.length > MAX_CANDIDATES_PER_PLAN) throw new Error(`invalid-study-candidate-count:${String(input.candidates?.length)}`);
+  const previousScope = new Set([...input.previousPlan.executionBlocks.map((block) => block.candidateId).filter((candidateId): candidateId is string => Boolean(candidateId)), ...input.previousPlan.deferredTasks.map((entry) => entry.candidateId)]);
+  const candidateScope = new Set(input.candidates.map((candidate) => candidate.id));
+  if (previousScope.size !== candidateScope.size || [...previousScope].some((candidateId) => !candidateScope.has(candidateId))) throw new Error("replan-candidate-scope-mismatch");
+  const plan = buildStudyDayPlan({ profile: input.previousPlan.profile, availability: input.newAvailability, candidates: input.candidates, capacityHistory: input.capacityHistory, recoveryOverrideMinutes: input.reason === "illness" ? Math.min(180, input.newAvailability.declaredActiveMinutes) : undefined });
+  const next = new Set(plan.executionBlocks.map((block) => block.candidateId).filter((candidateId): candidateId is string => Boolean(candidateId)));
+  const decisions: ReplanDecisionV1[] = input.candidates.map((candidate) => next.has(candidate.id)
+    ? { candidateId: candidate.id, decision: "keep", reason: `replanned-after:${input.reason}`, metadataOnly: true }
+    : candidate.requiredness === "optional"
+      ? { candidateId: candidate.id, decision: "drop", reason: `optional-scope-dropped-after:${input.reason}`, metadataOnly: true }
+      : { candidateId: candidate.id, decision: "defer", reason: `capacity-preserved-after:${input.reason}`, metadataOnly: true });
+  const output: ReplannedStudyDayV1 = { plan, decisions, backlogCloneCount: 0, metadataOnly: true };
+  metadataSafe(output);
+  return output;
+}

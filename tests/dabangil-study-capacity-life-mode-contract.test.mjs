@@ -3,6 +3,11 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
+import {
+  buildCapacityEnvelope,
+  buildPersonalDrillBudget,
+  buildStudyWeekPlan,
+} from "../lib/review-os/study-capacity-life-mode-orchestrator.ts";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const root = join(here, "..");
@@ -64,6 +69,9 @@ test("machine contract is default-off and carries no runtime, production or PR #
   ]) {
     assert.equal(config[field], false, `${field} must remain false`);
   }
+  assert.equal(config.integrationGate.sourceMergeDependencySatisfiedByPr800, true);
+  assert.equal(config.integrationGate.pr800ResultingMainSha, "71fd878a7369c25a153bc90389347039684c501f");
+  assert.equal(config.integrationGate.pr800ResultingMainTree, "f6fb7bc1d1613a8431a4bbdfe155eea9d9f5303c");
 });
 
 test("changed-path manifest is exact, unique and has zero PR #800 runtime overlap", () => {
@@ -101,10 +109,12 @@ test("max-three outcomes and many execution blocks are preserved exactly", () =>
 test("active study excludes app interaction and provider wait", () => {
   assert.ok(config.policy.studyTimeExclusions.includes("app_interaction"));
   assert.ok(config.policy.studyTimeExclusions.includes("provider_wait"));
+  assert.equal(config.policy.actualActiveMinutesAlreadyNetOfExclusions, true);
+  assert.equal(config.policy.exclusionMetadataIsNotDoubleSubtracted, true);
   assert.match(engine, /actualActiveMinutes/);
   assert.match(engine, /appInteractionMinutes/);
   assert.match(engine, /providerWaitMinutes/);
-  assert.match(qa, /app interaction\/provider wait excluded/);
+  assert.match(qa, /neither added nor double-subtracted/);
 });
 
 test("learning integrity blocks schedule completion from becoming mastery or readiness", () => {
@@ -128,10 +138,42 @@ test("plan gap is a scheduling feasibility projection, never pass probability", 
 
 test("source documents preserve exact non-goals and separate integration gate", () => {
   assert.match(decision, /PR #800 source, branch, metadata, reviews and runtime evidence are immutable to this Work/);
-  assert.match(decision, /must remain Draft/);
-  assert.match(decision, /must not be merged, marked Ready or auto-merged/);
+  assert.match(decision, /original Draft-only boundary applied while PR #800 occupied the sole merge-producing writer slot/);
+  assert.match(decision, /may therefore be marked Ready and squash-merged only after refreshed-main exact-head tests/);
   assert.match(product, /learner-facing runtime 완성을 주장하지 않는다/);
   assert.match(qa, /Authenticated integration remains a separate Work/);
+});
+
+test("machine policy claims are executable for windows, bank-first and distinct-date evidence", () => {
+  assert.equal(config.policy.usableNonprotectedWindowsBoundSchedulableCapacity, true);
+  assert.equal(config.policy.verifiedBankMatchNewGenerationBudgetMinutes, 0);
+  assert.equal(config.policy.capacityHistoryRequiresDistinctPriorDates, true);
+  const profile = {
+    lifeMode: "full_time_study",
+    examMode: "first",
+    phase: "timed_integration",
+    scheduleVolatility: "low",
+    policyVersion: config.contractVersion,
+  };
+  const week = buildStudyWeekPlan({
+    profile,
+    days: [{
+      date: "2026-08-24",
+      dayKind: "weekday",
+      declaredActiveMinutes: 720,
+      windows: [{ id: "narrow", startMinute: 600, endMinute: 630, environment: "desk", interruptibility: "low" }],
+    }],
+    candidates: [],
+    requiredMinimumMinutes: 60,
+    requiredMaximumMinutes: 120,
+  });
+  assert.equal(week.weeklyAvailableMinutes, 30);
+  assert.equal(week.feasibility.status, "infeasible");
+  const bank = buildPersonalDrillBudget({ next48hAvailableDrillMinutes: 120, pendingDrillMinutes: 40, estimatedMinutesPerNewItem: 10, verifiedBankHasMatchingItems: true });
+  assert.equal(bank.newGenerationBudgetMinutes, 0);
+  assert.equal(bank.maximumNewItems, 0);
+  const duplicates = Array.from({ length: 14 }, () => ({ date: "2026-08-10", plannedActiveMinutes: 120, actualActiveMinutes: 120 }));
+  assert.throws(() => buildCapacityEnvelope({ profile, declaredActiveMinutes: 180, asOfDate: "2026-08-25", history: duplicates }), /duplicate-capacity-history-date/);
 });
 
 test("forbidden claims include ten-hour dogma, guarantees, shame and unlimited AI entitlement", () => {

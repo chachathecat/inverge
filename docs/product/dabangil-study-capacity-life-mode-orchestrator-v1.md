@@ -83,10 +83,10 @@ targetActiveStudyMinutes
 = 강의·읽기·문풀·답안·복습의 순공 목표
 
 actualActiveMinutes
-= 앱 조작·provider 대기·idle·식사·휴식을 제외한 evidence
+= 앱 조작·provider 대기·idle·식사·휴식을 이미 제외한 순공 evidence
 ```
 
-타이머를 켠 시간이나 앱 체류시간을 순공으로 승격하지 않는다.
+`appInteractionMinutes`와 `providerWaitMinutes`는 별도 exclusion/audit metadata다. `actualActiveMinutes`에 더하지 않으며, 이미 net인 actual에서 다시 빼지도 않는다. 타이머를 켠 시간이나 앱 체류시간을 순공으로 승격하지 않는다.
 
 ## 4. Capacity Envelope
 
@@ -100,7 +100,7 @@ intensive   361~599
 full_day    600~720
 ```
 
-Day 1에는 선언 capacity를 사용하되 `declared_only`로 표시한다. 7일 이후에는 실제 active evidence로 보정하고, 14일 이후에는 `evidence_supported_14d`로 표시할 수 있다.
+Day 1에는 선언 capacity를 사용하되 `declared_only`로 표시한다. 보정은 명시적 계획 기준일보다 앞선 실제 ISO 날짜, 중복 없는 최근 28일 evidence만 사용한다. 7개 distinct day 이후에는 실제 active evidence로 보정하고, 14개 distinct day 이후에는 `evidence_supported_14d`로 표시할 수 있다. 같은 날짜의 중복, 기준일 당일·미래 날짜, 잘못된 날짜와 비유한 수치는 fail closed한다.
 
 보정에서 제외:
 
@@ -126,7 +126,9 @@ failed generation
 | low | 강의, 기본서, 정리, 안정단원 확인 |
 | recovery | 캡처 정리, 다음 행동 확인, 저부하 회상 |
 
-600~720분 계획은 high-load budget이 전체 schedulable capacity보다 반드시 작고, medium·low·recovery와 unallocated buffer를 보존한다.
+600~720분 계획은 high-load budget이 전체 schedulable capacity보다 반드시 작고, medium·low·recovery와 unallocated buffer를 보존한다. 당일 schedulable capacity는 선언·evidence envelope와 실제 nonprotected window 분 합계 중 작은 값이다. 빈 window 또는 protected-only window는 실행 가능 capacity 0이다.
+
+high-load 과제는 high-interruption window에 배치하지 않고, capacity band별 최대 연속 고강도 분을 넘지 않는다. `splittable=true`인 과제만 `maxParts` 이내로 원자적으로 분할할 수 있으며, 모든 part가 minimum continuous 분을 만족하고 전체 분을 배치할 수 없으면 부분 배치 없이 과제 전체를 defer한다.
 
 ## 6. 생활형태별 정책
 
@@ -186,6 +188,8 @@ reason codes
 choices
 ```
 
+`shortfall = max(0, required plan minutes - forecast capacity minutes)`를 정확히 유지한다. 환경·연속시간 제약으로 required task가 미배치되었지만 총 forecast 분은 충분한 경우 Plan Gap은 남을 수 있으나 shortfall은 0이며, 실제 제약은 `DeferredTaskV1.reason`이 설명한다.
+
 선택지는 low-value scope 제거, support 축소, 주말 이동, capacity 증가, 비핵심 연기, 목표시점 변경이다.
 
 `Plan Gap`은 합격확률이 아니다. 다음 문구는 금지한다.
@@ -206,7 +210,7 @@ choices
 
 ```text
 verified bank 검색
-→ 있으면 먼저 배정
+→ 있으면 먼저 배정하고 personal generation budget = 0
 → 없고 capacity가 남을 때만 personal generation
 ```
 
@@ -254,7 +258,7 @@ defer
 drop
 ```
 
-현재 순수 정책엔진은 keep/defer/drop과 backlog clone 0을 보장한다.
+현재 순수 정책엔진은 이전 계획의 block/deferred 전체 candidate scope와 재계획 입력 scope가 정확히 같을 때만 실행한다. 모든 candidate에 keep/defer/drop 하나를 정확히 한 번 만들고 backlog clone 0을 보장한다. scope 변경은 bounded replan이 아니라 새 계획으로 처리한다.
 
 ## 11. 성공지표
 
@@ -303,6 +307,12 @@ tests/dabangil-study-capacity-life-mode-contract.test.mjs
 - replan without backlog cloning;
 - 48-hour drill budget;
 - deterministic digest and fail-closed validation;
+- closed input keys/enums, finite numeric bounds and raw-body rejection;
+- maximum 256 candidates per plan and budget-impossible placement-search short-circuit;
+- distinct prior-date capacity evidence and usable-window capacity caps;
+- enforced high-load continuity/interruption and atomic bounded splits;
+- exact Plan Gap arithmetic and exact-scope replan classification;
+- strict verified-bank-first zero-generation budget;
 - focused regression and source-consistency tests.
 
 구현되지 않았고 이 PR이 승인하지 않는 것:
@@ -318,7 +328,7 @@ tests/dabangil-study-capacity-life-mode-contract.test.mjs
 
 ## 13. 후속 통합 gate
 
-현재 merge-producing writer가 terminal한 뒤 별도 Work에서만 다음을 수행한다.
+PR #800은 protected exact-head squash merge와 validated resulting-main receipt로 terminal하다. 따라서 이 source PR 자체는 fresh exact-head CI/review 후 merge할 수 있다. 별도 authenticated integration Work에서만 다음을 수행한다.
 
 1. live authority와 path 재조정;
 2. optional life-mode onboarding과 동의;
