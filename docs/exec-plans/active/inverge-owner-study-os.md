@@ -15,7 +15,7 @@
 
 ## Branches and PRs
 
-- Lane A: `codex/owner-study-lane-a-c3r-t`; worktree `.agent-factory/worktrees/owner-study-lane-a`; base `cad8b98e4f13a2fe50d82ffd983616adc70eb75a`; Draft PR #815; exact-head CI pending after this log receipt
+- Lane A: `codex/owner-study-lane-a-c3r-t`; worktree `.agent-factory/worktrees/owner-study-lane-a`; base `cad8b98e4f13a2fe50d82ffd983616adc70eb75a`; Draft PR #815; pre-correction head `62b111325e3cdc92bb33492f5be7b4521e06ccfc`; tree `2660ff5cfbc86257aeaeec5a0d475b5960e9cdbd`; correction candidate exact 20-path manifest, focused `66/66`, full `1558/1558`, typecheck/lint/build/diff clean, fresh review `0/0/0`
 - Lane B: `codex/owner-study-lane-b-first-stage-kernel`; worktree `.agent-factory/worktrees/owner-study-lane-b`; base `cad8b98e4f13a2fe50d82ffd983616adc70eb75a`; Draft PR #813 correction-trigger head `9e0b8306809a40302953328924efcfe7678e91f8`; tree `ef74ee83cd17192f306749b21a8699b1e0231fe8`; local full/focused/typecheck/lint/build/diff clean; Draft integration-held and lane parked; required CI and final review pending
 - Lane C: `codex/owner-study-lane-c-question-foundry`; worktree `.agent-factory/worktrees/owner-study-lane-c`; base `cad8b98e4f13a2fe50d82ffd983616adc70eb75a`; Draft PR #810 head `c7a3fd818259b088acd8caf0e5cb6efed4c8becb`; tree `1ab32f16cad5154fe89274cde2ce678ea363c47c`; all required checks successful; formal review `0/0/0`, zero threads; integration-held
 - frozen read-only M1 donor: `codex/wcv-c3r-t-theory-durable-learning-delta`; worktree `.agent-factory/worktrees/c3r-t`; base `c269d8fa489dc1ac77ef77d203dadffc0e4e73e5`; no PR
@@ -36,8 +36,8 @@
 
 ## Current blocker
 
-- Draft PR #815 exact-head required CI and two-cycle PostgreSQL 15.8 browser-to-database runtime evidence are pending
+- Draft PR #815 correction candidate requires an ordinary commit/push and fresh exact-head generic and dedicated PostgreSQL 15.8 runtime checks
 
 ## Next exact action
 
-- commit and push this PR #815 log receipt, then inspect exact-head checks and repair the first in-scope failure
+- create and push the ordinary PR #815 correction commit, then inspect fresh exact-head generic and dedicated runtime checks

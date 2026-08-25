@@ -185,6 +185,8 @@
       "lib/review-os/c3r-t-engine.ts",
       "lib/review-os/c3r-t-repository.ts",
       "lib/review-os/c3r-t-service.ts",
+      "scripts/automation/produce-runtime-evidence.mjs",
+      "scripts/automation/runtime-gate.mjs",
       "scripts/automation/wcv-c3r-p-practice-common-runtime.mjs",
       "supabase/migrations/20260825054823_c3r_t_theory_durable_learning_delta.sql",
       "supabase/migrations/20260825055252_c3r_t_theory_common_substrate_integration.sql",

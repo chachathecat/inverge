@@ -17,9 +17,17 @@ import {
 import { trustedRepairCanonicalFixture } from
   "../lib/review-os/trusted-repair-fixtures.ts";
 import {
+  C3R_T_NATIVE_SCHEMA_VERSION,
   C3R_T_ENUM_MIGRATION_PATH,
   C3R_T_INTEGRATION_MIGRATION_PATH,
+  C3R_T_RUNTIME_PRODUCER_VERSION,
+  createC3RTNativeEvidence,
   createTheoryRuntimeArtifact,
+  isC3RPRiskCandidate,
+  isC3RTRiskCandidate,
+  isNativeContainerVerifiedAbsent,
+  validateC3RPMigrationAuthorityBinding,
+  validateC3RTNativeEvidence,
   validateTheoryRuntimeArtifact,
 } from "../scripts/automation/wcv-c3r-p-practice-common-runtime.mjs";
 
@@ -43,6 +51,8 @@ const routeSource = read("app/api/review-os/c3r-t/route.ts");
 const componentSource = read("components/review-os/c3r-t-theory-loop.tsx");
 const engineSource = read("lib/review-os/c3r-t-engine.ts");
 const runtimeSource = read("scripts/automation/wcv-c3r-p-practice-common-runtime.mjs");
+const runtimeProducerSource = read("scripts/automation/produce-runtime-evidence.mjs");
+const runtimeGateSource = read("scripts/automation/runtime-gate.mjs");
 const workflowSource = read(".github/workflows/c3r-t-theory-durable-learning-delta.yml");
 const practiceSql = read(
   "supabase/migrations/20260822120000_c3r_p_practice_common_durable_substrate.sql",
@@ -344,6 +354,301 @@ test("forward migrations preserve the validated C3R-P append byte-for-byte", () 
     /alter type public\.c3r_p_subject add value if not exists 'THEORY'/);
   assert.doesNotMatch(enumSql + integrationSql, /add value 'LAW'/);
   assert.equal(contract.pathManifest.forwardMigrationsExactly.length, 2);
+  const actualChangedPaths = execFileSync("git", [
+    "diff", "--name-only", contract.authority.baseSha, "--",
+  ], { cwd: root, encoding: "utf8" }).trim().split(/\r?\n/u).filter(Boolean);
+  assert.deepEqual(contract.pathManifest.changedPathsExactly,
+    [...contract.pathManifest.changedPathsExactly].sort());
+  assert.equal(new Set(contract.pathManifest.changedPathsExactly).size,
+    contract.pathManifest.changedPathsExactly.length);
+  assert.deepEqual(actualChangedPaths, contract.pathManifest.changedPathsExactly);
+});
+
+test("generic runtime gate has a closed exact-head C3R-T native adapter", () => {
+  const sharedRuntimePath =
+    "scripts/automation/wcv-c3r-p-practice-common-runtime.mjs";
+  const riskResult = {
+    version: 1,
+    risk: "high",
+    reasons: [],
+    runtimeEvidenceRequired: true,
+    runtimeReasons: [
+      { path: C3R_T_ENUM_MIGRATION_PATH, pattern: "supabase/migrations/**" },
+      { path: C3R_T_INTEGRATION_MIGRATION_PATH, pattern: "supabase/migrations/**" },
+      { path: sharedRuntimePath, pattern: sharedRuntimePath },
+    ],
+    changedFiles: [
+      C3R_T_ENUM_MIGRATION_PATH,
+      C3R_T_INTEGRATION_MIGRATION_PATH,
+      sharedRuntimePath,
+    ],
+    changedFilesTruncated: false,
+  };
+  assert.equal(isC3RTRiskCandidate(riskResult), true);
+  assert.equal(isC3RPRiskCandidate(riskResult), false);
+  assert.equal(isC3RTRiskCandidate({
+    ...riskResult,
+    changedFiles: [C3R_T_ENUM_MIGRATION_PATH, sharedRuntimePath],
+  }), false);
+  assert.equal(isC3RTRiskCandidate({
+    ...riskResult,
+    changedFiles: [
+      ...riskResult.changedFiles,
+      "supabase/migrations/20990101000000_unowned_runtime.sql",
+    ],
+  }), false);
+  assert.equal(isC3RTRiskCandidate({
+    ...riskResult,
+    changedFiles: [...riskResult.changedFiles, C3R_T_ENUM_MIGRATION_PATH],
+  }), false);
+  assert.equal(isC3RTRiskCandidate({ ...riskResult, changedFilesTruncated: true }), false);
+  assert.equal(isC3RTRiskCandidate({ ...riskResult, runtimeEvidenceRequired: false }), false);
+  assert.equal(isC3RTRiskCandidate({
+    ...riskResult,
+    runtimeReasons: riskResult.runtimeReasons.slice(1),
+  }), false);
+  assert.equal(isC3RTRiskCandidate({
+    ...riskResult,
+    runtimeReasons: [...riskResult.runtimeReasons, riskResult.runtimeReasons[0]],
+  }), false);
+
+  const adapterFixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), "c3r-t-native-adapter-"));
+  const adapterRepository = path.join(adapterFixtureRoot, "repository");
+  const priorEnvironment = {
+    PR_HEAD_SHA: process.env.PR_HEAD_SHA,
+    GITHUB_RUN_ID: process.env.GITHUB_RUN_ID,
+    GITHUB_RUN_ATTEMPT: process.env.GITHUB_RUN_ATTEMPT,
+  };
+  try {
+    const gitMetadataPath = path.join(root, ".git");
+    const sourceGitDirectory = fs.statSync(gitMetadataPath).isDirectory()
+      ? gitMetadataPath
+      : path.resolve(root, fs.readFileSync(gitMetadataPath, "utf8")
+        .trim().replace(/^gitdir:\s*/u, ""));
+    execFileSync("git", [
+      "-c", `safe.directory=${root}`,
+      "-c", `safe.directory=${sourceGitDirectory}`,
+      "-c", "core.autocrlf=false", "clone", "--quiet", "--no-hardlinks",
+      root, adapterRepository,
+    ]);
+    const gitFixture = (args) => execFileSync("git", args, {
+      cwd: adapterRepository,
+      encoding: "utf8",
+    }).trim();
+    const headSha = gitFixture(["rev-parse", "HEAD"]);
+    const headTree = gitFixture(["rev-parse", "HEAD^{tree}"]);
+    const commitEnvironment = {
+      ...process.env,
+      GIT_AUTHOR_NAME: "C3R-T Runtime Fixture",
+      GIT_AUTHOR_EMAIL: "c3r-t-runtime@example.invalid",
+      GIT_COMMITTER_NAME: "C3R-T Runtime Fixture",
+      GIT_COMMITTER_EMAIL: "c3r-t-runtime@example.invalid",
+    };
+    const commitTree = (parents, message) => execFileSync("git", [
+      "commit-tree", headTree, ...parents.flatMap((parent) => ["-p", parent]),
+    ], {
+      cwd: adapterRepository,
+      encoding: "utf8",
+      input: `${message}\n`,
+      env: commitEnvironment,
+    }).trim();
+    const syntheticSideSha = commitTree([headSha], "synthetic side");
+    const syntheticMergeSha = commitTree(
+      [headSha, syntheticSideSha],
+      "synthetic pull request merge",
+    );
+    gitFixture(["checkout", "--quiet", "--detach", syntheticMergeSha]);
+    assert.notEqual(gitFixture(["rev-parse", "HEAD^{commit}"]), headSha);
+    assert.equal(gitFixture(["rev-parse", "HEAD^{tree}"]), headTree);
+    process.env.PR_HEAD_SHA = headSha;
+    process.env.GITHUB_RUN_ID = "98765";
+    process.env.GITHUB_RUN_ATTEMPT = "2";
+    const riskBytes = Buffer.from(`${JSON.stringify(riskResult)}\n`, "utf8");
+    const theoryDelta = [
+      { path: C3R_T_ENUM_MIGRATION_PATH, sha256: sha256(Buffer.from(enumSql, "utf8")) },
+      { path: C3R_T_INTEGRATION_MIGRATION_PATH,
+        sha256: sha256(Buffer.from(integrationSql, "utf8")) },
+    ];
+    const inheritedInventory = validateC3RPMigrationAuthorityBinding(
+      adapterRepository,
+      headSha,
+    );
+    const inheritedAppend = inheritedInventory.find(
+      (identity) => identity.path ===
+        "supabase/migrations/20260822120000_c3r_p_practice_common_durable_substrate.sql",
+    );
+    assert.ok(inheritedAppend);
+    const practiceBase = {
+      validatedInventoryCount: 26,
+      inventorySha256: sha256(Buffer.from(canonicalJson(inheritedInventory), "utf8")),
+      appendPath: inheritedAppend.path,
+      appendSha256: inheritedAppend.sha256,
+    };
+    const forcedRlsTables = [
+      "c3r_p_assistance_events", "c3r_p_attempts", "c3r_p_command_receipts",
+      "c3r_p_failure_notes", "c3r_p_learning_gaps", "c3r_p_learning_records",
+      "c3r_p_ledger_entries", "c3r_p_plan_blocks", "c3r_p_plans",
+      "c3r_p_transfer_tasks",
+    ];
+    const cycle = (number) => ({
+      cycle: number,
+      databaseIdentity: `c3r-t-native-98765-2-${number}`,
+      containerIdentity: `inverge-runtime-98765-2-c3r-t-${number}`,
+      serverVersionNum: 150008,
+      appliedRepositoryFilesExactly: [
+        practiceBase.appendPath,
+        C3R_T_ENUM_MIGRATION_PATH,
+        C3R_T_INTEGRATION_MIGRATION_PATH,
+      ],
+      forcedRlsTables,
+      subjectLabels: ["PRACTICE", "THEORY"],
+      theoryStartIdempotent: true,
+      practiceStartIdempotentPreserved: true,
+      crossTargetValidatorUnsupported: true,
+      crossSubjectInsertDenied: true,
+      authenticatedTableInsertDenied: true,
+      authenticatedValidatorExecuteDenied: true,
+      cleanup: "complete",
+    });
+    const evidence = createC3RTNativeEvidence({
+      headSha,
+      headTree,
+      runId: "98765",
+      runAttempt: 2,
+      riskBytes,
+      practiceBase,
+      theoryDelta,
+      cycles: [cycle(1), cycle(2)],
+    });
+    assert.equal(evidence.schemaVersion, C3R_T_NATIVE_SCHEMA_VERSION);
+    assert.equal(evidence.producerVersion, C3R_T_RUNTIME_PRODUCER_VERSION);
+    assert.doesNotThrow(() => validateC3RTNativeEvidence(
+      evidence,
+      { riskResult, riskBytes },
+      adapterRepository,
+    ));
+    assert.throws(() => validateC3RTNativeEvidence({
+      ...evidence,
+      verifiedAt: "2026-01-01T00:00:00.000Z",
+    }, { riskResult, riskBytes }, adapterRepository), /stale or in the future/u);
+    assert.throws(() => validateC3RTNativeEvidence({
+      ...evidence,
+      pullRequestHeadSha: "a".repeat(40),
+    }, { riskResult, riskBytes }, adapterRepository), /exact execution head/u);
+    assert.throws(() => validateC3RTNativeEvidence(
+      evidence,
+      { riskResult, riskBytes: Buffer.from("different-risk", "utf8") },
+      adapterRepository,
+    ), /identity is invalid/u);
+    assert.throws(() => validateC3RTNativeEvidence({
+      ...evidence,
+      practiceBase: { ...practiceBase, validatedInventoryCount: 25 },
+    }, { riskResult, riskBytes }, adapterRepository), /Practice base or Theory delta/u);
+    assert.throws(() => validateC3RTNativeEvidence({
+      ...evidence,
+      theoryDelta: [theoryDelta[0], theoryDelta[0]],
+    }, { riskResult, riskBytes }, adapterRepository), /Practice base or Theory delta/u);
+    assert.throws(() => validateC3RTNativeEvidence({
+      ...evidence,
+      cycles: [cycle(1), { ...cycle(2), databaseIdentity: cycle(1).databaseIdentity }],
+    }, { riskResult, riskBytes }, adapterRepository), /native cycle 2 is invalid/u);
+    assert.throws(() => validateC3RTNativeEvidence({
+      ...evidence,
+      cycles: [{ ...cycle(1), appliedMigrationCount: 28 }, cycle(2)],
+    }, { riskResult, riskBytes }, adapterRepository), /keys are not exact/u);
+    assert.throws(() => validateC3RTNativeEvidence({
+      ...evidence,
+      cycles: [{ ...cycle(1), forcedRlsTables: forcedRlsTables.slice(1) }, cycle(2)],
+    }, { riskResult, riskBytes }, adapterRepository), /native cycle 1 is invalid/u);
+    assert.throws(() => validateC3RTNativeEvidence({
+      ...evidence,
+      assertions: evidence.assertions.slice(1),
+    }, { riskResult, riskBytes }, adapterRepository), /assertion set/u);
+    assert.throws(() => validateC3RTNativeEvidence({
+      ...evidence,
+      assertions: [...evidence.assertions.slice(0, -1), evidence.assertions[0]],
+    }, { riskResult, riskBytes }, adapterRepository), /assertion set/u);
+    assert.throws(() => validateC3RTNativeEvidence({
+      ...evidence,
+      assertions: [{ ...evidence.assertions[0], note: "self-attested" },
+        ...evidence.assertions.slice(1)],
+    }, { riskResult, riskBytes }, adapterRepository), /keys are not exact/u);
+    assert.throws(() => validateC3RTNativeEvidence({
+      ...evidence,
+      dataBoundary: { ...evidence.dataBoundary, rawLearnerContentPersisted: true },
+    }, { riskResult, riskBytes }, adapterRepository), /metadata-only boundary/u);
+    fs.writeFileSync(path.join(adapterRepository, "checkout-tree-drift.txt"), "drift\n");
+    gitFixture(["add", "checkout-tree-drift.txt"]);
+    gitFixture([
+      "-c", "user.name=C3R-T Runtime Fixture",
+      "-c", "user.email=c3r-t-runtime@example.invalid",
+      "commit", "--quiet", "-m", "different checkout tree",
+    ]);
+    assert.notEqual(gitFixture(["rev-parse", "HEAD^{tree}"]), headTree);
+    assert.throws(() => validateC3RTNativeEvidence(
+      evidence,
+      { riskResult, riskBytes },
+      adapterRepository,
+    ), /exact execution head\/tree\/run/u);
+    gitFixture(["checkout", "--quiet", "--detach", syntheticMergeSha]);
+    fs.appendFileSync(path.join(adapterRepository, C3R_T_ENUM_MIGRATION_PATH), "\n-- dirty\n");
+    assert.throws(() => validateC3RTNativeEvidence(
+      evidence,
+      { riskResult, riskBytes },
+      adapterRepository,
+    ), /worktree bytes drifted/u);
+  } finally {
+    for (const [key, value] of Object.entries(priorEnvironment)) {
+      if (value === undefined) delete process.env[key];
+      else process.env[key] = value;
+    }
+    fs.rmSync(adapterFixtureRoot, { recursive: true, force: true });
+  }
+
+  assert.ok(runtimeProducerSource.indexOf("if (isC3RTRiskCandidate(riskResult))") <
+    runtimeProducerSource.indexOf("if (isC3RPRiskCandidate(riskResult))"));
+  assert.ok(runtimeGateSource.indexOf("if (isC3RTRiskCandidate(riskResult))") <
+    runtimeGateSource.indexOf("if (isC3RPRiskCandidate(riskResult))"));
+  assert.match(runtimeSource,
+    /nativePsql\(name, sql\.append[\s\S]*nativePsql\(name, sql\.enum[\s\S]*nativePsql\(name, sql\.integration/u);
+  assert.match(runtimeSource,
+    /authenticated direct mutation did not fail closed[\s\S]*authenticated proof validation did not fail closed/u);
+  assert.match(runtimeSource,
+    /service !== "applied\|applied\|applied\|applied\|1\|1\|UNSUPPORTED"/u);
+  assert.equal(isNativeContainerVerifiedAbsent({
+    status: 1, stdout: "", stderr: "Error: No such container: native-cycle",
+  }), true);
+  assert.equal(isNativeContainerVerifiedAbsent({
+    status: 1, stdout: "", stderr: "Cannot connect to the Docker daemon",
+  }), false);
+  assert.equal(isNativeContainerVerifiedAbsent({ status: 0, stdout: "[]", stderr: "" }), false);
+});
+
+test("dedicated Theory cycles bind identity relations before legacy Practice receipt replay", () => {
+  const cycleSource = runtimeSource.slice(
+    runtimeSource.indexOf("async function runTheoryDedicatedCycle"),
+    runtimeSource.indexOf("export function createTheoryRuntimeArtifact"),
+  );
+  const baseApplied = cycleSource.indexOf("applyExactMigrationHistory(cycleRoot, databaseContainer)");
+  const identitiesCreated = cycleSource.indexOf("await createTheoryIdentity");
+  const identityRelationsSeeded = cycleSource.indexOf(
+    "seedTheoryIdentityRelations(databaseContainer, identities)",
+  );
+  const legacyReceiptSeeded = cycleSource.indexOf(
+    "applyTheoryMigrationHistory(cycleRoot, databaseContainer, identities[0])",
+  );
+  assert.ok(baseApplied >= 0 && baseApplied < identitiesCreated);
+  assert.ok(identitiesCreated < identityRelationsSeeded);
+  assert.ok(identityRelationsSeeded < legacyReceiptSeeded);
+  const identityFixtureSource = runtimeSource.slice(
+    runtimeSource.indexOf("function seedTheoryIdentityRelations"),
+    runtimeSource.indexOf("async function verifyDirectBoundaries"),
+  );
+  assert.match(identityFixtureSource, /insert into public\.profiles/u);
+  assert.match(identityFixtureSource, /select count\(\*\) from auth\.users/u);
+  assert.doesNotMatch(identityFixtureSource, /public\.users/u);
+  assert.match(runtimeSource,
+    /seedLegacyPracticePlannerReceipts\(container, identity\)[\s\S]*userId: identity\.userId\.toLowerCase\(\)/u);
 });
 
 test("THEORY_RUNTIME artifact closes two exact-head PG15.8 cycles and rejects drift", () => {

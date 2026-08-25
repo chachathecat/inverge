@@ -48,6 +48,10 @@ export const C3R_P_RUNTIME_PRODUCER_VERSION =
   "wcv-c3r-p.practice-common-durable-runtime.v1";
 export const C3R_P_NATIVE_SCHEMA_VERSION =
   "inverge.runtime_evidence.c3r_p.v1";
+export const C3R_T_NATIVE_SCHEMA_VERSION =
+  "inverge.runtime_evidence.c3r_t.v1";
+export const C3R_T_RUNTIME_PRODUCER_VERSION =
+  "wcv-c3r-t.theory-durable-learning-delta.v1";
 export const C3R_P_RUNTIME_REQUIRED_PATTERNS = Object.freeze([
   C3R_P_CONTRACT_PATH,
   ...C3R_P_AUTHORIZED_EXISTING_MIGRATION_PATHS,
@@ -55,6 +59,11 @@ export const C3R_P_RUNTIME_REQUIRED_PATTERNS = Object.freeze([
   "scripts/automation/wcv-c3r-p-practice-common-runtime.mjs",
   "app/api/review-os/c3r-p/**",
   "lib/review-os/c3r-p-*.ts",
+]);
+export const C3R_T_RUNTIME_REQUIRED_PATHS = Object.freeze([
+  C3R_T_ENUM_MIGRATION_PATH,
+  C3R_T_INTEGRATION_MIGRATION_PATH,
+  "scripts/automation/wcv-c3r-p-practice-common-runtime.mjs",
 ]);
 
 const SHA40 = /^[0-9a-f]{40}$/;
@@ -487,6 +496,23 @@ export function isC3RPRiskCandidate(riskResult) {
   );
 }
 
+export function isC3RTRiskCandidate(riskResult) {
+  if (riskResult?.runtimeEvidenceRequired !== true ||
+    riskResult.changedFilesTruncated !== false || !Array.isArray(riskResult.changedFiles) ||
+    !Array.isArray(riskResult.runtimeReasons)) return false;
+  const changedFiles = riskResult.changedFiles;
+  if (new Set(changedFiles).size !== changedFiles.length ||
+    !changedFiles.includes(C3R_T_ENUM_MIGRATION_PATH) ||
+    !changedFiles.includes(C3R_T_INTEGRATION_MIGRATION_PATH)) return false;
+  const runtimeRequiredPaths = runtimeRequiredPathRecords(changedFiles)
+    .map(({ path: file }) => file);
+  return runtimeRequiredPaths.length > 0 && runtimeRequiredPaths.every(
+    (file) => C3R_T_RUNTIME_REQUIRED_PATHS.includes(file),
+  ) && canonicalJson(riskResult.runtimeReasons) === canonicalJson(
+    runtimeRequiredPathRecords(changedFiles),
+  );
+}
+
 function git(repositoryRoot, args) {
   return execFileSync("git", args, { cwd: repositoryRoot, encoding: "utf8" }).trim();
 }
@@ -766,6 +792,189 @@ function nativeEvidenceKeys() {
   ];
 }
 
+const C3R_T_NATIVE_ASSERTION_IDS = Object.freeze([
+  "validated_c3r_p_inventory_inherited",
+  "exact_two_theory_migrations_bound",
+  "exact_three_repository_files_applied_per_cycle",
+  "postgresql_15_8",
+  "two_isolated_cycles",
+  "exact_forced_rls_table_set",
+  "practice_and_theory_enum_labels",
+  "theory_start_idempotency",
+  "practice_start_idempotency_preserved",
+  "cross_target_validator_unsupported",
+  "cross_subject_insert_denied",
+  "authenticated_table_insert_denied",
+  "authenticated_validator_execute_denied",
+  "cleanup_complete",
+]);
+const C3R_T_FORCED_RLS_TABLES = Object.freeze([
+  "c3r_p_assistance_events",
+  "c3r_p_attempts",
+  "c3r_p_command_receipts",
+  "c3r_p_failure_notes",
+  "c3r_p_learning_gaps",
+  "c3r_p_learning_records",
+  "c3r_p_ledger_entries",
+  "c3r_p_plan_blocks",
+  "c3r_p_plans",
+  "c3r_p_transfer_tasks",
+]);
+
+function theoryNativeEvidenceKeys() {
+  return [
+    "schemaVersion", "producerVersion", "status", "sourceLevelOnly", "verifiedAt",
+    "pullRequestHeadSha", "pullRequestHeadTree", "githubRunId", "githubRunAttempt",
+    "riskFileSha256", "practiceBase", "theoryDelta", "cycles", "assertions", "cleanup",
+    "dataBoundary",
+  ];
+}
+
+export function createC3RTNativeEvidence(input) {
+  return {
+    schemaVersion: C3R_T_NATIVE_SCHEMA_VERSION,
+    producerVersion: C3R_T_RUNTIME_PRODUCER_VERSION,
+    status: "verified",
+    sourceLevelOnly: false,
+    verifiedAt: input.verifiedAt ?? new Date().toISOString(),
+    pullRequestHeadSha: input.headSha,
+    pullRequestHeadTree: input.headTree,
+    githubRunId: input.runId,
+    githubRunAttempt: input.runAttempt,
+    riskFileSha256: sha256(input.riskBytes),
+    practiceBase: input.practiceBase,
+    theoryDelta: input.theoryDelta,
+    cycles: input.cycles,
+    assertions: C3R_T_NATIVE_ASSERTION_IDS.map((id) => ({ id, passed: true })),
+    cleanup: { status: "complete" },
+    dataBoundary: {
+      metadataOnly: true,
+      rawLearnerContentPersisted: false,
+      sourceTextPersisted: false,
+      credentialMaterialPersisted: false,
+      learnerIdentifiersPersisted: false,
+      rowBodiesPersisted: false,
+      providerBodiesPersisted: false,
+    },
+  };
+}
+
+export function validateC3RTNativeEvidence(evidence, { riskResult, riskBytes },
+  repositoryRoot = process.cwd()) {
+  if (!isC3RTRiskCandidate(riskResult)) throw new Error("not a C3R-T runtime risk candidate.");
+  exactKeys(evidence, theoryNativeEvidenceKeys(), "C3R-T native runtime evidence");
+  if (evidence.schemaVersion !== C3R_T_NATIVE_SCHEMA_VERSION ||
+    evidence.producerVersion !== C3R_T_RUNTIME_PRODUCER_VERSION ||
+    evidence.status !== "verified" || evidence.sourceLevelOnly !== false ||
+    evidence.riskFileSha256 !== sha256(riskBytes)) {
+    throw new Error("C3R-T native runtime evidence identity is invalid.");
+  }
+  const verifiedMs = typeof evidence.verifiedAt === "string"
+    ? Date.parse(evidence.verifiedAt)
+    : Number.NaN;
+  const ageMs = Date.now() - verifiedMs;
+  if (!Number.isFinite(verifiedMs) || new Date(verifiedMs).toISOString() !== evidence.verifiedAt ||
+    ageMs < -5 * 60_000 || ageMs > 30 * 60_000) {
+    throw new Error("C3R-T native runtime evidence is stale or in the future.");
+  }
+  const expectedHead = process.env.PR_HEAD_SHA?.toLowerCase();
+  const expectedRunId = process.env.GITHUB_RUN_ID;
+  const expectedRunAttempt = Number(process.env.GITHUB_RUN_ATTEMPT);
+  const expectedHeadTree = expectedHead && SHA40.test(expectedHead)
+    ? git(repositoryRoot, [
+      "--no-replace-objects", "rev-parse", "--verify", `${expectedHead}^{tree}`,
+    ])
+    : undefined;
+  const checkoutTree = expectedHeadTree
+    ? git(repositoryRoot, [
+      "--no-replace-objects", "rev-parse", "--verify", "HEAD^{tree}",
+    ])
+    : undefined;
+  if (!expectedHead || !SHA40.test(expectedHead) || evidence.pullRequestHeadSha !== expectedHead ||
+    evidence.pullRequestHeadTree !== expectedHeadTree || checkoutTree !== expectedHeadTree ||
+    !/^\d+$/.test(expectedRunId ?? "") ||
+    !Number.isSafeInteger(expectedRunAttempt) || expectedRunAttempt < 1 ||
+    evidence.githubRunId !== expectedRunId || evidence.githubRunAttempt !== expectedRunAttempt) {
+    throw new Error("C3R-T native evidence does not bind the exact execution head/tree/run.");
+  }
+  const expectedPracticeInventory = validateC3RPMigrationAuthorityBinding(
+    repositoryRoot,
+    expectedHead,
+  );
+  const expectedAppend = expectedPracticeInventory.find(
+    (identity) => identity.path === C3R_P_APPEND_PATH,
+  );
+  exactKeys(evidence.practiceBase, [
+    "validatedInventoryCount", "inventorySha256", "appendPath", "appendSha256",
+  ], "C3R-T native Practice base");
+  const expectedPracticeBase = {
+    validatedInventoryCount: 26,
+    inventorySha256: sha256(Buffer.from(canonicalJson(expectedPracticeInventory), "utf8")),
+    appendPath: C3R_P_APPEND_PATH,
+    appendSha256: expectedAppend?.sha256,
+  };
+  const expectedTheoryDelta = theoryHeadMigrationIdentities(repositoryRoot, expectedHead);
+  if (expectedPracticeInventory.length !== 26 || !expectedAppend ||
+    canonicalJson(evidence.practiceBase) !== canonicalJson(expectedPracticeBase) ||
+    canonicalJson(evidence.theoryDelta) !== canonicalJson(expectedTheoryDelta)) {
+    throw new Error("C3R-T native evidence Practice base or Theory delta identity is invalid.");
+  }
+  if (!Array.isArray(evidence.cycles) || evidence.cycles.length !== 2) {
+    throw new Error("C3R-T native evidence requires exactly two cycles.");
+  }
+  for (const [index, cycle] of evidence.cycles.entries()) {
+    exactKeys(cycle, [
+      "cycle", "databaseIdentity", "containerIdentity", "serverVersionNum",
+      "appliedRepositoryFilesExactly", "forcedRlsTables", "subjectLabels",
+      "theoryStartIdempotent", "practiceStartIdempotentPreserved",
+      "crossTargetValidatorUnsupported", "crossSubjectInsertDenied",
+      "authenticatedTableInsertDenied", "authenticatedValidatorExecuteDenied", "cleanup",
+    ], `C3R-T native cycle ${index + 1}`);
+    const number = index + 1;
+    if (cycle.cycle !== number ||
+      cycle.databaseIdentity !== `c3r-t-native-${expectedRunId}-${expectedRunAttempt}-${number}` ||
+      cycle.containerIdentity !==
+        `inverge-runtime-${expectedRunId}-${expectedRunAttempt}-c3r-t-${number}` ||
+      cycle.serverVersionNum !== ORACLE_SERVER_VERSION_NUM ||
+      canonicalJson(cycle.appliedRepositoryFilesExactly) !== canonicalJson([
+        C3R_P_APPEND_PATH, C3R_T_ENUM_MIGRATION_PATH, C3R_T_INTEGRATION_MIGRATION_PATH,
+      ]) ||
+      canonicalJson(cycle.forcedRlsTables) !== canonicalJson(C3R_T_FORCED_RLS_TABLES) ||
+      canonicalJson(cycle.subjectLabels) !== canonicalJson(["PRACTICE", "THEORY"]) ||
+      cycle.theoryStartIdempotent !== true || cycle.practiceStartIdempotentPreserved !== true ||
+      cycle.crossTargetValidatorUnsupported !== true || cycle.crossSubjectInsertDenied !== true ||
+      cycle.authenticatedTableInsertDenied !== true ||
+      cycle.authenticatedValidatorExecuteDenied !== true || cycle.cleanup !== "complete") {
+      throw new Error(`C3R-T native cycle ${number} is invalid.`);
+    }
+  }
+  if (evidence.cycles[0].databaseIdentity === evidence.cycles[1].databaseIdentity ||
+    evidence.cycles[0].containerIdentity === evidence.cycles[1].containerIdentity) {
+    throw new Error("C3R-T native cycles reused an isolation identity.");
+  }
+  for (const [index, assertion] of evidence.assertions?.entries?.() ?? []) {
+    exactKeys(assertion, ["id", "passed"], `C3R-T native assertion ${index + 1}`);
+  }
+  if (!Array.isArray(evidence.assertions) ||
+    canonicalJson(evidence.assertions) !== canonicalJson(
+      C3R_T_NATIVE_ASSERTION_IDS.map((id) => ({ id, passed: true })),
+    )) {
+    throw new Error("C3R-T native assertion set is incomplete, duplicated, or reordered.");
+  }
+  exactKeys(evidence.cleanup, ["status"], "C3R-T native cleanup");
+  exactKeys(evidence.dataBoundary, [
+    "metadataOnly", "rawLearnerContentPersisted", "sourceTextPersisted",
+    "credentialMaterialPersisted", "learnerIdentifiersPersisted", "rowBodiesPersisted",
+    "providerBodiesPersisted",
+  ], "C3R-T native data boundary");
+  if (evidence.cleanup.status !== "complete" || evidence.dataBoundary.metadataOnly !== true ||
+    Object.entries(evidence.dataBoundary).some(
+      ([key, value]) => key !== "metadataOnly" && value !== false,
+    )) {
+    throw new Error("C3R-T native cleanup or metadata-only boundary is invalid.");
+  }
+}
+
 export function createC3RPNativeEvidence(input) {
   return {
     schemaVersion: C3R_P_NATIVE_SCHEMA_VERSION,
@@ -856,10 +1065,15 @@ function nativeDocker(args, options = {}) {
   });
 }
 
+export function isNativeContainerVerifiedAbsent(inspected) {
+  return inspected?.status !== 0 && /no such (?:object|container)/i.test(
+    `${inspected.stderr ?? ""}\n${inspected.stdout ?? ""}`,
+  );
+}
+
 function removeNativeContainer(name) {
   nativeDocker(["rm", "--force", name]);
-  const inspected = nativeDocker(["inspect", name]);
-  return inspected.status !== 0;
+  return isNativeContainerVerifiedAbsent(nativeDocker(["inspect", name]));
 }
 
 function nativePsql(name, sql, allowFailure = false, stage = "assertion") {
@@ -944,6 +1158,254 @@ function nativeCycle(name, appendSql, cycle) {
     cleanup = removeNativeContainer(name);
     if (!cleanup) throw new Error("C3R-P native container cleanup failed.");
   }
+}
+
+function nativeTheoryCycle(name, databaseIdentity, sql, cycle) {
+  try {
+    startNativeContainer(name);
+    nativePsql(name, "show server_version_num;\n", false, "Theory server-version assertion");
+    nativePsql(name, NATIVE_BOOTSTRAP_SQL, false, "Theory bootstrap");
+    nativePsql(name, sql.append, false, "Practice substrate application");
+    nativePsql(name, sql.enum, false, "Theory enum migration application");
+    nativePsql(name, sql.integration, false, "Theory integration migration application");
+    const catalog = nativePsql(name, `select concat_ws('|',
+      current_setting('server_version_num'),
+      (select string_agg(concat(c.relname, ':', c.relrowsecurity::text, ':',
+        c.relforcerowsecurity::text), ',' order by c.relname)
+       from pg_class c join pg_namespace n on n.oid=c.relnamespace
+       where n.nspname='public' and c.relname like 'c3r_p_%' and c.relkind='r'),
+      (select string_agg(enumlabel, ',' order by enumsortorder) from pg_enum e
+       join pg_type t on t.oid=e.enumtypid where t.typname='c3r_p_subject'),
+      has_table_privilege('authenticated','public.c3r_p_learning_records','INSERT'),
+      has_function_privilege('authenticated',
+        'public.c3r_t_apply_learning_command_v1(uuid,uuid,bigint,text,jsonb)','EXECUTE'),
+      has_function_privilege('service_role',
+        'public.c3r_t_apply_learning_command_v1(uuid,uuid,bigint,text,jsonb)','EXECUTE'),
+      has_function_privilege('service_role',
+        'public.c3r_t_validate_theory_claim_v1(jsonb,text,timestamptz)','EXECUTE'),
+      (to_regprocedure(
+        'public.c3r_p_apply_learning_command_practice_legacy_v1(uuid,uuid,bigint,text,jsonb)')
+        is not null)::text);
+    `, false, "Theory catalog assertion").stdout.trim();
+    const exactRlsCatalog = C3R_T_FORCED_RLS_TABLES
+      .map((table) => `${table}:true:true`).join(",");
+    if (catalog !== `150008|${exactRlsCatalog}|` +
+      "PRACTICE,THEORY|f|f|t|t|true") {
+      throw new Error("C3R-T native catalog, RLS, grants, subject, or Practice binding failed.");
+    }
+    const theoryUserId = crypto.randomUUID();
+    const practiceUserId = crypto.randomUUID();
+    const theoryRecordId = crypto.randomUUID();
+    const theoryCommandId = crypto.randomUUID();
+    const theoryAttemptId = crypto.randomUUID();
+    const practiceRecordId = crypto.randomUUID();
+    const practiceCommandId = crypto.randomUUID();
+    const practiceAttemptId = crypto.randomUUID();
+    const configurationDigest = "d".repeat(64);
+    const theoryPayload = JSON.stringify({
+      artifactId: "artifact:theory:synthetic-v1",
+      attemptBody: "synthetic-private-theory-body",
+      attemptId: theoryAttemptId,
+      confidence: "medium",
+      itemId: "theory-item-1",
+      configurationDigest,
+      configurationSnapshot: { policy: "synthetic-frozen-v1" },
+      occurredAt: "2026-08-25T00:00:00.000Z",
+      prediction: "likely_partial",
+      problemId: "theory-problem-1",
+      recordId: theoryRecordId,
+      revisionId: "b8e6d6e9-8c0c-4b54-9c1e-608d33245001",
+      sourceId: "theory-source-1",
+      surfaceId: "native-runtime",
+    }).replaceAll("'", "''");
+    const practicePayload = JSON.stringify({
+      artifactId: "artifact:practice:synthetic-v1",
+      attemptBody: "synthetic-private-practice-body",
+      attemptId: practiceAttemptId,
+      confidence: "medium",
+      itemId: "practice-item-1",
+      configurationDigest,
+      configurationSnapshot: { policy: "synthetic-frozen-v1" },
+      occurredAt: "2026-08-25T00:00:00.000Z",
+      prediction: "likely_partial",
+      problemId: "practice-problem-1",
+      recordId: practiceRecordId,
+      revisionId: "practice-revision-1",
+      sourceId: "practice-source-1",
+      surfaceId: "native-runtime",
+    }).replaceAll("'", "''");
+    const crossTargetClaim = JSON.stringify({
+      sourceRevisionId: "b8e6d6e9-8c0c-4b54-9c1e-608d33245001",
+      anchorId: "repair-anchor:theory:synthetic-income-approach",
+      anchorVersionId: "repair-anchor:theory:synthetic-income-approach@1",
+      targetScopeId: "theory-target:synthetic-income-approach",
+      clauses: [{
+        clauseIndex: 1,
+        scopeResolution: "EXACT",
+        scopeId: "theory-target:synthetic-cost-approach",
+        predicates: [{
+          predicateId: "converts_expected_income_to_value",
+          polarity: "ASSERTED",
+        }],
+      }],
+      confirmationMode: "MANUAL_STRUCTURED",
+    }).replaceAll("'", "''");
+    const service = nativePsql(name, `begin;
+      insert into auth.users(id) values ('${theoryUserId}'), ('${practiceUserId}');
+      set local role service_role;
+      select concat_ws('|',
+        (public.c3r_t_apply_learning_command_v1('${theoryUserId}','${theoryCommandId}',0,
+          'start','${theoryPayload}'::jsonb)->>'status'),
+        (public.c3r_t_apply_learning_command_v1('${theoryUserId}','${theoryCommandId}',0,
+          'start','${theoryPayload}'::jsonb)->>'status'),
+        (public.c3r_p_apply_learning_command_v1('${practiceUserId}','${practiceCommandId}',0,
+          'start','${practicePayload}'::jsonb)->>'status'),
+        (public.c3r_p_apply_learning_command_v1('${practiceUserId}','${practiceCommandId}',0,
+          'start','${practicePayload}'::jsonb)->>'status'),
+        (select count(*) from public.c3r_p_learning_records
+          where user_id='${theoryUserId}' and subject='THEORY'),
+        (select count(*) from public.c3r_p_learning_records
+          where user_id='${practiceUserId}' and subject='PRACTICE'),
+        (public.c3r_t_validate_theory_claim_v1('${crossTargetClaim}'::jsonb,
+          'b8e6d6e9-8c0c-4b54-9c1e-608d33245001',
+          '2026-08-25T00:01:00.000Z'::timestamptz)->>'state'));
+      commit;`, false, "Theory and Practice service command assertions").stdout.trim();
+    if (service !== "applied|applied|applied|applied|1|1|UNSUPPORTED") {
+      throw new Error("C3R-T native service, proof, idempotency, or Practice preservation failed.");
+    }
+    const crossSubject = nativePsql(name, `begin;
+      set local role service_role;
+      insert into public.c3r_p_attempts (
+        id, record_id, user_id, subject, source_id, problem_id, revision_id, item_id,
+        artifact_id, surface_id, phase, outcome, body, occurred_at
+      ) values (
+        gen_random_uuid(), '${theoryRecordId}', '${theoryUserId}', 'PRACTICE',
+        'theory-source-1', 'theory-problem-1',
+        'b8e6d6e9-8c0c-4b54-9c1e-608d33245001', 'theory-item-1',
+        'artifact:theory:synthetic-v1', 'native-runtime', 'D0', 'FAILURE',
+        'synthetic-private-cross-subject-body', statement_timestamp()
+      );
+      commit;`, true, "Theory cross-subject foreign-key assertion");
+    if (crossSubject.status === 0 || !/c3r_attempts_subject_record_fk/i.test(
+      `${crossSubject.stderr}\n${crossSubject.stdout}`,
+    )) {
+      throw new Error("C3R-T native cross-subject foreign key did not fail closed.");
+    }
+    const directMutation = nativePsql(name, `set role authenticated;
+      set local request.jwt.claim.sub='${theoryUserId}';
+      insert into public.c3r_p_learning_records(id,user_id,subject,source_id,problem_id,
+        revision_id,item_id,artifact_id,initial_surface_id,prediction,confidence,d0_basis)
+      values (gen_random_uuid(),'${theoryUserId}','THEORY','x','x','x','x','x','x',
+        'likely_partial','medium','{}');`, true, "Theory authenticated direct mutation");
+    if (directMutation.status === 0 ||
+      !/(permission denied|row-level security)/i.test(
+        `${directMutation.stderr}\n${directMutation.stdout}`,
+      )) {
+      throw new Error("C3R-T native authenticated direct mutation did not fail closed.");
+    }
+    const directProof = nativePsql(name, `set role authenticated;
+      select public.c3r_t_validate_theory_claim_v1('${crossTargetClaim}'::jsonb,
+        'b8e6d6e9-8c0c-4b54-9c1e-608d33245001', statement_timestamp());`,
+    true, "Theory authenticated proof validation");
+    if (directProof.status === 0 ||
+      !/(permission denied|service_role_required)/i.test(
+        `${directProof.stderr}\n${directProof.stdout}`,
+      )) {
+      throw new Error("C3R-T native authenticated proof validation did not fail closed.");
+    }
+    return {
+      cycle,
+      databaseIdentity,
+      containerIdentity: name,
+      serverVersionNum: ORACLE_SERVER_VERSION_NUM,
+      appliedRepositoryFilesExactly: [
+        C3R_P_APPEND_PATH,
+        C3R_T_ENUM_MIGRATION_PATH,
+        C3R_T_INTEGRATION_MIGRATION_PATH,
+      ],
+      forcedRlsTables: [...C3R_T_FORCED_RLS_TABLES],
+      subjectLabels: ["PRACTICE", "THEORY"],
+      theoryStartIdempotent: true,
+      practiceStartIdempotentPreserved: true,
+      crossTargetValidatorUnsupported: true,
+      crossSubjectInsertDenied: true,
+      authenticatedTableInsertDenied: true,
+      authenticatedValidatorExecuteDenied: true,
+      cleanup: "complete",
+    };
+  } finally {
+    if (!removeNativeContainer(name)) {
+      throw new Error("C3R-T native container cleanup failed.");
+    }
+  }
+}
+
+export function cleanupC3RTNativeEvidence(context) {
+  let complete = true;
+  for (const cycle of [1, 2]) {
+    complete = removeNativeContainer(`${context.containerName}-c3r-t-${cycle}`) && complete;
+  }
+  return complete;
+}
+
+export function produceC3RTNativeEvidence({ context, evidencePath, riskBytes, riskResult,
+  repositoryRoot = process.cwd() }) {
+  if (!isC3RTRiskCandidate(riskResult)) throw new Error("not a C3R-T runtime risk candidate.");
+  if (!evidencePath) throw new Error("RUNTIME_EVIDENCE_PATH is not set.");
+  const inheritedInventory = validateC3RPMigrationAuthorityBinding(
+    repositoryRoot,
+    context.headSha,
+  );
+  if (inheritedInventory.length !== 26) {
+    throw new Error("C3R-T native inherited Practice inventory is not exactly 26 migrations.");
+  }
+  const migrations = theoryHeadMigrationIdentities(repositoryRoot, context.headSha);
+  const committedSql = (migrationPath) => execFileSync("git", [
+    "--no-replace-objects", "show", `${context.headSha}:${migrationPath}`,
+  ], { cwd: repositoryRoot, encoding: "utf8", maxBuffer: 32 * 1024 * 1024 });
+  const sql = {
+    append: committedSql(C3R_P_APPEND_PATH),
+    enum: committedSql(C3R_T_ENUM_MIGRATION_PATH),
+    integration: committedSql(C3R_T_INTEGRATION_MIGRATION_PATH),
+  };
+  const cycles = [1, 2].map((cycle) => nativeTheoryCycle(
+    `${context.containerName}-c3r-t-${cycle}`,
+    `c3r-t-native-${context.runId}-${context.runAttempt}-${cycle}`,
+    sql,
+    cycle,
+  ));
+  const appendIdentity = inheritedInventory.find(
+    (identity) => identity.path === C3R_P_APPEND_PATH,
+  );
+  if (!appendIdentity) {
+    throw new Error("C3R-T native inherited Practice append identity is missing.");
+  }
+  const evidence = createC3RTNativeEvidence({
+    headSha: context.headSha,
+    headTree: git(repositoryRoot, [
+      "--no-replace-objects", "rev-parse", "--verify", `${context.headSha}^{tree}`,
+    ]),
+    runId: context.runId,
+    runAttempt: context.runAttempt,
+    riskBytes,
+    practiceBase: {
+      validatedInventoryCount: inheritedInventory.length,
+      inventorySha256: sha256(Buffer.from(canonicalJson(inheritedInventory), "utf8")),
+      appendPath: C3R_P_APPEND_PATH,
+      appendSha256: appendIdentity.sha256,
+    },
+    theoryDelta: migrations,
+    cycles,
+  });
+  validateC3RTNativeEvidence(evidence, { riskResult, riskBytes }, repositoryRoot);
+  fs.mkdirSync(path.dirname(path.resolve(evidencePath)), { recursive: true });
+  fs.writeFileSync(path.resolve(evidencePath), `${JSON.stringify(evidence, null, 2)}\n`, {
+    mode: 0o600,
+  });
+  console.log(JSON.stringify({
+    status: "verified", assertionsPassed: C3R_T_NATIVE_ASSERTION_IDS.length,
+    cleanup: "complete",
+  }));
 }
 
 export function produceC3RPNativeEvidence({ context, evidencePath, riskBytes, riskResult,
@@ -1187,9 +1649,12 @@ function prepareTheoryCycle(repositoryRoot, cycleRoot, projectId) {
   }
 }
 
-function seedLegacyPracticePlannerReceipts(container) {
+function seedLegacyPracticePlannerReceipts(container, identity) {
+  if (!identity || !UUID.test(identity.userId)) {
+    throw new Error("C3R-T legacy Practice planner identity fixture is invalid.");
+  }
   const fixture = {
-    userId: crypto.randomUUID(),
+    userId: identity.userId.toLowerCase(),
     createCommandId: crypto.randomUUID(),
     decideCommandId: crypto.randomUUID(),
     planId: crypto.randomUUID(),
@@ -1250,9 +1715,11 @@ function assertLegacyPracticePlannerReceiptReplay(container, fixture) {
   }
 }
 
-function applyTheoryMigrationHistory(cycleRoot, container) {
-  applyExactMigrationHistory(cycleRoot, container);
-  const legacyPracticePlannerReceipts = seedLegacyPracticePlannerReceipts(container);
+function applyTheoryMigrationHistory(cycleRoot, container, legacyPracticeIdentity) {
+  const legacyPracticePlannerReceipts = seedLegacyPracticePlannerReceipts(
+    container,
+    legacyPracticeIdentity,
+  );
   const migrationRoot = path.join(cycleRoot, "c3r-t-migrations");
   for (const name of fs.readdirSync(migrationRoot).sort()) {
     const sql = fs.readFileSync(path.join(migrationRoot, name), "utf8");
@@ -1292,7 +1759,7 @@ async function createTheoryIdentity(apiUrl, anonKey, label) {
   return { email, password, userId: body.user.id, accessToken: body.access_token };
 }
 
-function seedTheoryProfiles(container, identities) {
+function seedTheoryIdentityRelations(container, identities) {
   if (!/^supabase_db_c3r-t-cycle-[12]-\d+-\d+$/.test(container) ||
     !Array.isArray(identities) || identities.length !== 3 ||
     identities.some((identity) => !UUID.test(identity.userId) ||
@@ -1302,6 +1769,10 @@ function seedTheoryProfiles(container, identities) {
   const payload = identities.map((identity) => ({
     user_id: identity.userId.toLowerCase(), email: identity.email.toLowerCase(),
   }));
+  if (new Set(payload.map((identity) => identity.user_id)).size !== 3 ||
+    new Set(payload.map((identity) => identity.email)).size !== 3) {
+    throw new Error("C3R-T disposable identity fixtures are not unique.");
+  }
   const payloadBase64 = Buffer.from(JSON.stringify(payload), "utf8").toString("base64");
   const result = psql(container, `with fixture as (
     select input.user_id::uuid as user_id, input.email
@@ -1317,10 +1788,15 @@ function seedTheoryProfiles(container, identities) {
       email=excluded.email, invite_status='active', entitlement_tier='free_trial',
       updated_at=statement_timestamp()
     returning profile.user_id
-  ) select concat_ws('|', (select count(*) from upserted),
+  ) select concat_ws('|',
+    (select count(*) from auth.users as auth_user join fixture
+      on auth_user.id = fixture.user_id and lower(auth_user.email) = fixture.email),
+    (select count(*) from upserted),
     (select count(*) from upserted where user_id in (select user_id from fixture)));`,
-  "C3R-T disposable Review OS profile fixture");
-  if (result !== "3|3") throw new Error("C3R-T disposable profile fixture assertion failed.");
+  "C3R-T disposable Auth and Review OS profile fixture");
+  if (result !== "3|3|3") {
+    throw new Error("C3R-T disposable Auth/profile identity fixture assertion failed.");
+  }
 }
 
 async function verifyDirectBoundaries(apiUrl, anonKey, user) {
@@ -1879,14 +2355,15 @@ async function runTheoryDedicatedCycle(input) {
       ["SERVICE_ROLE_KEY", "service_role_key", "SECRET_KEY", "secret_key"]);
     const databaseContainer = `supabase_db_${projectId}`;
     assertExternalMigrationSubstrate(databaseContainer);
-    applyTheoryMigrationHistory(cycleRoot, databaseContainer);
-    theoryDatabaseSecurity(databaseContainer);
+    applyExactMigrationHistory(cycleRoot, databaseContainer);
     const identities = [
       await createTheoryIdentity(apiUrl, anonKey, `owner-a-${input.cycle}`),
       await createTheoryIdentity(apiUrl, anonKey, `owner-b-${input.cycle}`),
       await createTheoryIdentity(apiUrl, anonKey, `non-owner-${input.cycle}`),
     ];
-    seedTheoryProfiles(databaseContainer, identities);
+    seedTheoryIdentityRelations(databaseContainer, identities);
+    applyTheoryMigrationHistory(cycleRoot, databaseContainer, identities[0]);
+    theoryDatabaseSecurity(databaseContainer);
     await verifyDirectBoundaries(apiUrl, anonKey, identities[0]);
     const nextEnv = {
       NEXT_PUBLIC_SUPABASE_URL: apiUrl,
