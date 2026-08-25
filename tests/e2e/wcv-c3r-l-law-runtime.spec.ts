@@ -28,7 +28,9 @@ const DATABASE_CONTAINER = /^supabase_db_c3r-l-cycle-[12]-\d+-\d+$/u;
 const BROWSER_FAILURE_STAGE_SCHEMA_VERSION = "inverge.c3r_l.browser_failure_stage.v1";
 const BROWSER_FAILURE_STAGES = {
   journey: [
-    "LOAD_RETRY_INITIAL", "LOAD_RETRY_ERROR_VISIBLE", "LOAD_RETRY_COMPLETE",
+    "LOAD_RETRY_INITIAL", "LOAD_RETRY_ROUTE_INSTALLED", "LOAD_RETRY_NAVIGATION_COMPLETE",
+    "LOAD_RETRY_ERROR_SURFACE_VISIBLE", "LOAD_RETRY_ERROR_TEXT_VISIBLE",
+    "LOAD_RETRY_RELEASED", "LOAD_RETRY_ERROR_VISIBLE", "LOAD_RETRY_COMPLETE",
     "STALE_BOOKMARK_INITIAL", "STALE_BOOKMARK_ERROR_VISIBLE",
     "STALE_BOOKMARK_RECOVERY_COMPLETE",
     "INITIAL_RUNTIME", "LAW_START", "FEEDBACK_COMMIT", "FEEDBACK_UI",
@@ -695,10 +697,15 @@ test("C3R-L initial load errors support retry and stale-bookmark recovery", asyn
       await route.continue();
     };
     await page.route("**/api/review-os/c3r-l*", transientFailure);
+    markBrowserFailureStage("LOAD_RETRY_ROUTE_INSTALLED");
     await page.goto("/app/c3r-l");
+    markBrowserFailureStage("LOAD_RETRY_NAVIGATION_COMPLETE");
     await expect(page.getByTestId("c3r-l-load-error")).toBeVisible();
+    markBrowserFailureStage("LOAD_RETRY_ERROR_SURFACE_VISIBLE");
     await expect(page.getByRole("alert")).toContainText("temporarily_unavailable");
+    markBrowserFailureStage("LOAD_RETRY_ERROR_TEXT_VISIBLE");
     failInitialLoads = false;
+    markBrowserFailureStage("LOAD_RETRY_RELEASED");
     markBrowserFailureStage("LOAD_RETRY_ERROR_VISIBLE");
     await page.getByRole("button", { name: "다시 시도", exact: true }).click();
     await expect(page.getByTestId("c3r-l-runtime")).toBeVisible();
