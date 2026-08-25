@@ -16,7 +16,7 @@
 
 ## Branches and PRs
 
-- Lane A Law proposed-plan clean replacement: `codex/owner-study-lane-a-c3r-l-proposed-plan-replan1`; Draft PR pending initial push; worktree `.agent-factory/worktrees/owner-study-lane-a-c3r-l-proposed-plan-replan1`; base `75f3ce787d31047c2bceacc2ef752c0bfdfb23cc`
+- Lane A Law proposed-plan clean replacement: `codex/owner-study-lane-a-c3r-l-proposed-plan-replan1`; Draft PR #832; worktree `.agent-factory/worktrees/owner-study-lane-a-c3r-l-proposed-plan-replan1`; base `75f3ce787d31047c2bceacc2ef752c0bfdfb23cc`
 - Superseded Lane A PR #831: closed unmerged after the two-correction limit; exact-head checks passed, but final review found `PROPOSED` plan IDs could make an otherwise valid Law completion return 409
 - Superseded Lane A PR #830: closed unmerged after the two-correction limit; exact-head checks passed, but final review found cleanup could claim completion after a failed local Supabase stop
 - Superseded Lane A PR #829: closed unmerged after the two-correction limit; exact-head Law run remained at `LOAD_RETRY_INITIAL`
@@ -43,8 +43,8 @@
 
 ## Current blocker
 
-- Clean replacement root repair is locally clean: Law 23/23 and inherited Practice/Theory/Law/access 129/129 passed with typecheck, changed-file lint, and diff check; Draft PR is not yet open; remote Supabase/Production mutation remains zero
+- Draft PR #832 root repair is locally clean: Law 23/23 and inherited Practice/Theory/Law/access 129/129 passed with typecheck, changed-file lint, and diff check; correction 1 is docs-only PR-log synchronization; remote Supabase/Production mutation remains zero
 
 ## Next exact action
 
-- commit and push the initial candidate, open the one replacement Draft PR, then record its number as the first docs-only correction before the exact-head gate
+- push correction 1; while its exact-head checks/runtime and fresh review run, inspect them; repair any in-scope defect within the remaining single correction slot or issue the exact Owner merge packet when clean
