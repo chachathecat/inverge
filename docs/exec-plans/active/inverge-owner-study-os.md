@@ -16,7 +16,7 @@
 
 ## Branches and PRs
 
-- Lane A Law Theory-identity recovery: `codex/owner-study-lane-a-c3r-l-theory-identity-recovery`; PR pending; worktree `.agent-factory/worktrees/owner-study-lane-a-c3r-l-theory-identity-recovery`; base `75f3ce787d31047c2bceacc2ef752c0bfdfb23cc`
+- Lane A Law Theory-identity recovery: `codex/owner-study-lane-a-c3r-l-theory-identity-recovery`; Draft PR #824; candidate head `6666bb962b0d07d5a69a9ea30e66e7c84e36f184`; worktree `.agent-factory/worktrees/owner-study-lane-a-c3r-l-theory-identity-recovery`; base `75f3ce787d31047c2bceacc2ef752c0bfdfb23cc`
 - Lane B: `codex/owner-study-lane-b-first-stage-kernel`; Draft PR #813; parked
 - Lane C: `codex/owner-study-lane-c-question-foundry`; Draft PR #810; parked
 
@@ -38,8 +38,8 @@
 
 ## Current blocker
 
-- PR #823 closed unmerged after its exact head exposed a distinct fixture-sequencing defect: a preserved D0 Theory record was followed by an invalid second start for the same frozen natural-key item; replacement reuses the preserved record; remote Supabase/Production mutation remains zero
+- Draft PR #824 reuses the preserved D0 Theory record and exact-head CI is pending; local exact runtime is unavailable because Docker/Podman is absent; remote Supabase/Production mutation remains zero
 
 ## Next exact action
 
-- validate the single-record Theory compatibility repair, commit the 20-path replacement, push, and open one Draft PR
+- commit and push the PR #824 log correction, then inspect exact-head dedicated CI and request fresh formal review
