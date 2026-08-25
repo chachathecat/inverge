@@ -61,6 +61,13 @@ const FORMER_C3R_P_SOURCE_REVISION_ID =
 const C3R_P_SOURCE_REVISION_ID = "26a4f3bd-ddf3-4215-9fdf-d83453122ce1";
 const MISMATCHED_C3R_P_SOURCE_REVISION_ID =
   "d2889575-35e6-4e31-9ed7-e27ae55d7e8d";
+// Regression-only anchor for the validated PR #800 squash result. Live GitHub
+// remains the merge-receipt authority; these values prevent later descendants
+// from being mistaken for the original C3R-P candidate diff.
+const C3R_P_VALIDATED_RESULTING_MAIN_SHA =
+  "71fd878a7369c25a153bc90389347039684c501f";
+const C3R_P_VALIDATED_RESULTING_MAIN_TREE =
+  "f6fb7bc1d1613a8431a4bbdfe155eea9d9f5303c";
 
 function exactPracticeClaim(sourceRevisionId) {
   return {
@@ -1010,14 +1017,30 @@ test("frozen path manifest is unique, package identity is unchanged, and candida
   assert.equal(execFileSync("git", ["hash-object", "package-lock.json"], { cwd: root, encoding: "utf8" }).trim(),
     contract.packageIdentity.packageLockJsonGitBlob);
   const head = execFileSync("git", ["rev-parse", "HEAD"], { cwd: root, encoding: "utf8" }).trim();
+  const validatedResultAvailable = spawnSync(
+    "git", ["cat-file", "-e", `${C3R_P_VALIDATED_RESULTING_MAIN_SHA}^{commit}`], { cwd: root },
+  ).status === 0;
+  const headDescendsFromValidatedResult = validatedResultAvailable && spawnSync(
+    "git", ["merge-base", "--is-ancestor", C3R_P_VALIDATED_RESULTING_MAIN_SHA, head], { cwd: root },
+  ).status === 0;
+  const candidateBoundary = headDescendsFromValidatedResult
+    ? C3R_P_VALIDATED_RESULTING_MAIN_SHA
+    : head;
+  if (headDescendsFromValidatedResult) {
+    assert.equal(execFileSync(
+      "git", ["rev-parse", `${C3R_P_VALIDATED_RESULTING_MAIN_SHA}^{tree}`],
+      { cwd: root, encoding: "utf8" },
+    ).trim(), C3R_P_VALIDATED_RESULTING_MAIN_TREE);
+  }
   const baseAvailable = spawnSync(
     "git", ["cat-file", "-e", `${contract.authority.baseSha}^{commit}`], { cwd: root },
   ).status === 0;
-  if (head !== contract.authority.baseSha && baseAvailable) {
-    const changed = execFileSync("git", ["diff", "--name-only", `${contract.authority.baseSha}...HEAD`],
+  if (candidateBoundary !== contract.authority.baseSha && baseAvailable) {
+    const changed = execFileSync("git", ["diff", "--name-only",
+      `${contract.authority.baseSha}...${candidateBoundary}`],
       { cwd: root, encoding: "utf8" }).trim().split(/\r?\n/).filter(Boolean).sort();
     assert.deepEqual(changed, [...manifest].sort());
-  } else if (head !== contract.authority.baseSha) {
+  } else if (candidateBoundary !== contract.authority.baseSha) {
     assert.equal(process.env.CI, "true", "the pinned base must exist outside a shallow CI checkout");
   }
 });
