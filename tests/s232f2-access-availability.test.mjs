@@ -202,6 +202,7 @@ test("S232F.2 every data-bearing app page gates a fresh access result before dow
   ].sort();
   const specializedGuardPages = [
     "app/app/c3r-p/page.tsx",
+    "app/app/c3r-l/page.tsx",
     "app/app/c3r-t/page.tsx",
     "app/app/trusted-repair/page.tsx",
   ].sort();
@@ -266,6 +267,18 @@ test("S232F.2 every data-bearing app page gates a fresh access result before dow
   assert.ok(c3rTNotFoundIndex > c3rTDeniedIndex);
   assert.ok(c3rTRethrowIndex > c3rTNotFoundIndex);
   assert.ok(c3rTLoopIndex > c3rTRethrowIndex);
+
+  const c3rLPage = read("app/app/c3r-l/page.tsx");
+  const c3rLAccessIndex = c3rLPage.indexOf("await requireC3RLAccess()");
+  const c3rLDeniedIndex = c3rLPage.indexOf("error instanceof C3RLError");
+  const c3rLNotFoundIndex = c3rLPage.indexOf("notFound()", c3rLDeniedIndex);
+  const c3rLRethrowIndex = c3rLPage.indexOf("throw error", c3rLNotFoundIndex);
+  const c3rLLoopIndex = c3rLPage.indexOf("<C3RLLawLoop");
+  assert.ok(c3rLAccessIndex >= 0, "C3R-L must resolve its specialized access gate");
+  assert.ok(c3rLDeniedIndex > c3rLAccessIndex);
+  assert.ok(c3rLNotFoundIndex > c3rLDeniedIndex);
+  assert.ok(c3rLRethrowIndex > c3rLNotFoundIndex);
+  assert.ok(c3rLLoopIndex > c3rLRethrowIndex);
 });
 
 test("S232F.2 documents the failure boundary and registers the contract in the full suite", () => {
