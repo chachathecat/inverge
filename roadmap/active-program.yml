@@ -9,6 +9,15 @@ program:
   mergeProducingDeliverySlotCount: 1
   globalMergeProducingWriterLimit: 1
   wipLimitDoesNotAuthorizeWriterCount: true
+  ownerStudyOsParallelExecutionV1State: effective_only_after_expected_head_pinned_squash_merge_and_validated_receipt
+  ownerStudyOsParallelExecutionV1ProgramId: INVERGE_OWNER_STUDY_OS
+  ownerStudyOsParallelExecutionV1Authority: docs/decisions/2026-08-25-owner-parallel-execution-v1.md
+  ownerStudyOsParallelExecutionV1Contract: config/dabangil-parallel-execution-v1.json
+  ownerStudyOsInitialMergeProducingLaneLimit: 3
+  ownerStudyOsSubjectAdapterEvalLaneLimitAfterKernelFreeze: 6
+  ownerStudyOsParallelExecutionDoesNotSelectUnrelatedRoadmapItems: true
+  ownerStudyOsParallelExecutionRemoteMutationAuthorizationCount: 0
+  ownerStudyOsParallelExecutionProductionMutationAuthorizationCount: 0
   campaignOverlay: C3
   structuralRecoveryOverlayId: WCV-C2R-STRUCTURAL-RECOVERY
   c3StructuralRecoveryOverlayId: WCV-C3R-SERIAL-PROGRAM
