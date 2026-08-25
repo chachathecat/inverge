@@ -16,7 +16,8 @@
 
 ## Branches and PRs
 
-- Lane A Law assertion-root replacement: `codex/owner-study-lane-a-c3r-l-assertion-root`; Draft PR #829; worktree `.agent-factory/worktrees/owner-study-lane-a-c3r-l-assertion-root`; base `75f3ce787d31047c2bceacc2ef752c0bfdfb23cc`
+- Lane A Law retry-checkpoint replacement: `codex/owner-study-lane-a-c3r-l-retry-checkpoint`; PR not opened; worktree `.agent-factory/worktrees/owner-study-lane-a-c3r-l-retry-checkpoint`; base `75f3ce787d31047c2bceacc2ef752c0bfdfb23cc`
+- Superseded Lane A PR #829: closed unmerged after the two-correction limit; exact-head Law run remained at `LOAD_RETRY_INITIAL`
 - Superseded Lane A PR #828: closed unmerged after the two-correction limit; exact-head Law run reached the later journey `COMPLETE` marker but the overall Playwright run retained an earlier assertion failure
 - Superseded Lane A PR #827: closed unmerged after the two-correction limit and an exact-head Law journey failure at the prior terminal stage marker
 - Lane B: `codex/owner-study-lane-b-first-stage-kernel`; Draft PR #813; parked
@@ -40,8 +41,8 @@
 
 ## Current blocker
 
-- PR #829 preserved `LOAD_RETRY_INITIAL`: a one-shot route failure could be consumed by React development's duplicate initial effect; the final correction holds all initial GETs failed until the error UI is observed, then releases retry; remote Supabase/Production mutation remains zero
+- The remaining `LOAD_RETRY_INITIAL` failure is bounded to route installation, navigation, error-surface visibility, error-text visibility or retry release; the clean replacement adds exact closed checkpoints for those operations; remote Supabase/Production mutation remains zero
 
 ## Next exact action
 
-- run focused checks, commit and push the bounded retry-harness repair, then require clean exact-head CI/runtime and fresh formal review
+- run focused checks, commit and push the checkpoint replacement, open one Draft PR, then repair the first exact preserved operation
