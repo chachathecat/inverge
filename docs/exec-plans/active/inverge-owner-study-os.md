@@ -42,8 +42,8 @@
 
 ## Current blocker
 
-- Draft PR #831 exact-head CI/runtime is pending; local cleanup and Practice/Theory/Law/access regressions pass 127/127 and fresh review is `0/0/0`; remote Supabase/Production mutation remains zero
+- Draft PR #831 correction 1 pins its cleanup-only unit fixture under GitHub `RUNNER_TEMP`; the reproduced exact contract command passes 110/110 and review is `0/0/0`; exact-head rerun is pending; remote Supabase/Production mutation remains zero
 
 ## Next exact action
 
-- commit and push the fail-closed cleanup candidate, open Draft PR #831, then inspect its exact-head CI/runtime
+- commit and push correction 1, then inspect the exact-head CI/runtime rerun
