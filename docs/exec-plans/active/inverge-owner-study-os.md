@@ -16,7 +16,7 @@
 
 ## Branches and PRs
 
-- Lane A Law retry-checkpoint replacement: `codex/owner-study-lane-a-c3r-l-retry-checkpoint`; PR not opened; worktree `.agent-factory/worktrees/owner-study-lane-a-c3r-l-retry-checkpoint`; base `75f3ce787d31047c2bceacc2ef752c0bfdfb23cc`
+- Lane A Law retry-checkpoint replacement: `codex/owner-study-lane-a-c3r-l-retry-checkpoint`; Draft PR #830; worktree `.agent-factory/worktrees/owner-study-lane-a-c3r-l-retry-checkpoint`; base `75f3ce787d31047c2bceacc2ef752c0bfdfb23cc`
 - Superseded Lane A PR #829: closed unmerged after the two-correction limit; exact-head Law run remained at `LOAD_RETRY_INITIAL`
 - Superseded Lane A PR #828: closed unmerged after the two-correction limit; exact-head Law run reached the later journey `COMPLETE` marker but the overall Playwright run retained an earlier assertion failure
 - Superseded Lane A PR #827: closed unmerged after the two-correction limit and an exact-head Law journey failure at the prior terminal stage marker
@@ -41,8 +41,8 @@
 
 ## Current blocker
 
-- The remaining `LOAD_RETRY_INITIAL` failure is bounded to route installation, navigation, error-surface visibility, error-text visibility or retry release; the clean replacement adds exact closed checkpoints for those operations; remote Supabase/Production mutation remains zero
+- PR #830 exact-head PostgreSQL/browser CI must expose or clear the first retry checkpoint; remote Supabase/Production mutation remains zero
 
 ## Next exact action
 
-- run focused checks, commit and push the checkpoint replacement, open one Draft PR, then repair the first exact preserved operation
+- inspect PR #830 exact-head retry checkpoint, repair the first exact operation if any, then complete exact-head CI and fresh formal review
