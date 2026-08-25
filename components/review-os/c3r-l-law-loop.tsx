@@ -28,6 +28,52 @@ type ApiResult = {
 const apiPath = "/api/review-os/c3r-l";
 function id() { return crypto.randomUUID(); }
 
+type LawClaimDraft = {
+  anchorId: string;
+  anchorVersionId: string;
+  lawSourceBindingId: string;
+  sourceId: string;
+  sourceVersionId: string;
+  lawAnchorId: string;
+  lawAnchorVersionId: string;
+  exactLocator: string;
+  exactVersionIdentity: string;
+  effectiveFrom: string;
+  effectiveTo: string;
+  applicableAsOf: string;
+  currentLawApplicability: "" | "APPLICABLE_CURRENT" | "NOT_CURRENT" | "UNRESOLVED";
+  openBlockingReferenceIds: string;
+  blockerCount: string;
+};
+type LawTextClaimKey = Exclude<keyof LawClaimDraft, "currentLawApplicability">;
+
+const emptyLawClaimDraft: LawClaimDraft = {
+  anchorId: "", anchorVersionId: "", lawSourceBindingId: "", sourceId: "",
+  sourceVersionId: "", lawAnchorId: "", lawAnchorVersionId: "", exactLocator: "",
+  exactVersionIdentity: "", effectiveFrom: "", effectiveTo: "", applicableAsOf: "",
+  currentLawApplicability: "", openBlockingReferenceIds: "", blockerCount: "",
+};
+const lawClaimTextFields: ReadonlyArray<{
+  key: LawTextClaimKey;
+  label: string;
+  optional?: boolean;
+}> = [
+  { key: "anchorId", label: "수리 앵커 ID" },
+  { key: "anchorVersionId", label: "수리 앵커 버전 ID" },
+  { key: "lawSourceBindingId", label: "법원문 결합 ID" },
+  { key: "sourceId", label: "출처 ID" },
+  { key: "sourceVersionId", label: "출처 버전 ID" },
+  { key: "lawAnchorId", label: "법조문 앵커 ID" },
+  { key: "lawAnchorVersionId", label: "법조문 앵커 버전 ID" },
+  { key: "exactLocator", label: "정확 위치" },
+  { key: "exactVersionIdentity", label: "정확 버전 식별자" },
+  { key: "effectiveFrom", label: "효력 시작일 (YYYY-MM-DD)" },
+  { key: "effectiveTo", label: "효력 종료일 (없으면 비움)", optional: true },
+  { key: "applicableAsOf", label: "적용 기준일 (YYYY-MM-DD)" },
+  { key: "openBlockingReferenceIds", label: "열린 차단 근거 ID (쉼표 구분, 없으면 비움)", optional: true },
+  { key: "blockerCount", label: "열린 차단 근거 수" },
+];
+
 export function C3RLLawLoop({ initialRecordId }: { initialRecordId: string | null }) {
   const [view, setView] = useState<C3RLView | null>(null);
   const [pending, setPending] = useState(false);
@@ -37,6 +83,7 @@ export function C3RLLawLoop({ initialRecordId }: { initialRecordId: string | nul
   const [prediction, setPrediction] = useState<"likely_success" | "likely_partial" | "likely_blocked">("likely_partial");
   const [confidence, setConfidence] = useState<"low" | "medium" | "high">("medium");
   const [lawBindingConfirmed, setLawBindingConfirmed] = useState(false);
+  const [lawClaimDraft, setLawClaimDraft] = useState<LawClaimDraft>(emptyLawClaimDraft);
   const [availableMinutes, setAvailableMinutes] = useState(90);
 
   const request = useCallback(async (body?: Record<string, unknown>, query = "") => {
@@ -107,23 +154,49 @@ export function C3RLLawLoop({ initialRecordId }: { initialRecordId: string | nul
     block.reviewPhase === currentPhase && block.executionState === "PENDING") ?? null,
   [currentPhase, record?.id, record?.primary_gap_id, view?.currentPlan?.blocks]);
 
-  function claim(forceFailure = false) {
+  function resetLawReconstruction() {
+    setLawClaimDraft(emptyLawClaimDraft);
+    setLawBindingConfirmed(false);
+  }
+
+  const requiredClaimValues = [
+    lawClaimDraft.anchorId, lawClaimDraft.anchorVersionId, lawClaimDraft.lawSourceBindingId,
+    lawClaimDraft.sourceId, lawClaimDraft.sourceVersionId, lawClaimDraft.lawAnchorId,
+    lawClaimDraft.lawAnchorVersionId, lawClaimDraft.exactLocator,
+    lawClaimDraft.exactVersionIdentity, lawClaimDraft.effectiveFrom,
+    lawClaimDraft.applicableAsOf, lawClaimDraft.currentLawApplicability,
+    lawClaimDraft.blockerCount,
+  ];
+  const reconstructionReady = lawBindingConfirmed && requiredClaimValues.every((value) =>
+    value.trim().length > 0) && /^\d+$/u.test(lawClaimDraft.blockerCount);
+
+  function updateClaimDraft<K extends keyof LawClaimDraft>(key: K, value: LawClaimDraft[K]) {
+    setLawClaimDraft((current) => ({ ...current, [key]: value }));
+    setLawBindingConfirmed(false);
+  }
+
+  function claim() {
+    const blockerReferences = lawClaimDraft.openBlockingReferenceIds.split(",")
+      .map((value) => value.trim()).filter(Boolean);
     return {
       sourceRevisionId: view?.source.revisionId,
-      anchorId: C3R_L_ANCHOR_ID,
-      anchorVersionId: C3R_L_ANCHOR_VERSION_ID,
-      lawSourceBindingId: C3R_L_SOURCE_BINDING_ID,
-      sourceId: C3R_L_SOURCE_ID,
-      sourceVersionId: C3R_L_SOURCE_VERSION_ID,
-      lawAnchorId: C3R_L_LAW_ANCHOR_ID,
-      lawAnchorVersionId: C3R_L_LAW_ANCHOR_VERSION_ID,
-      exactLocator: forceFailure ? "Article 11" : "Article 10",
-      exactVersionIdentity: "2026-01-01",
-      effectiveFrom: "2026-01-01",
-      effectiveTo: null,
-      applicableAsOf: "2026-08-15",
-      currentLawApplicability: "APPLICABLE_CURRENT",
-      blockerState: { openBlockingReferenceIds: [], blockerCount: 0 },
+      anchorId: lawClaimDraft.anchorId.trim(),
+      anchorVersionId: lawClaimDraft.anchorVersionId.trim(),
+      lawSourceBindingId: lawClaimDraft.lawSourceBindingId.trim(),
+      sourceId: lawClaimDraft.sourceId.trim(),
+      sourceVersionId: lawClaimDraft.sourceVersionId.trim(),
+      lawAnchorId: lawClaimDraft.lawAnchorId.trim(),
+      lawAnchorVersionId: lawClaimDraft.lawAnchorVersionId.trim(),
+      exactLocator: lawClaimDraft.exactLocator.trim(),
+      exactVersionIdentity: lawClaimDraft.exactVersionIdentity.trim(),
+      effectiveFrom: lawClaimDraft.effectiveFrom.trim(),
+      effectiveTo: lawClaimDraft.effectiveTo.trim() || null,
+      applicableAsOf: lawClaimDraft.applicableAsOf.trim(),
+      currentLawApplicability: lawClaimDraft.currentLawApplicability,
+      blockerState: {
+        openBlockingReferenceIds: blockerReferences,
+        blockerCount: Number(lawClaimDraft.blockerCount),
+      },
       confirmationMode: "MANUAL_STRUCTURED",
     };
   }
@@ -146,11 +219,12 @@ export function C3RLLawLoop({ initialRecordId }: { initialRecordId: string | nul
   }
   async function submitRepair() {
     if (!record) return;
-    await request({
+    const data = await request({
       action: "submit_repair", commandId: id(), recordId: record.id,
       expectedVersion: record.record_version, attemptId: id(), claim: claim(),
       evidenceStep: "feedback",
     });
+    if (data.ok) resetLawReconstruction();
   }
   async function review(action: "record_assisted_review" | "complete_d1" |
     "complete_d7_transfer" | "complete_recurrence" | "complete_reopened_review" |
@@ -161,10 +235,10 @@ export function C3RLLawLoop({ initialRecordId }: { initialRecordId: string | nul
         : action === "complete_d7_transfer" ? "d7"
           : action === "complete_recurrence" ? "recurrence"
             : action === "record_later_failure" ? "reopen" : "reopenComplete";
-    await request({
+    const data = await request({
       action, commandId: id(), recordId: record.id,
       expectedVersion: record.record_version, attemptId: id(),
-      claim: claim(action === "record_later_failure"),
+      claim: claim(),
       ...(action === "complete_d7_transfer" ? { transferTaskId: transferTask?.taskId } : {}),
       ...(new Set(["complete_d1", "complete_d7_transfer", "complete_recurrence", "complete_reopened_review"]).has(action) ? {
         planBlockId: currentPlanBlock?.blockId ?? null,
@@ -173,14 +247,16 @@ export function C3RLLawLoop({ initialRecordId }: { initialRecordId: string | nul
       } : {}),
       evidenceStep,
     });
+    if (data.ok) resetLawReconstruction();
   }
   async function presentTransfer() {
     if (!record || !transferTask) return;
-    await request({
+    const data = await request({
       action: "present_d7_transfer_task", commandId: id(), recordId: record.id,
       expectedVersion: record.record_version, transferTaskId: transferTask.taskId,
       evidenceStep: "d7",
     });
+    if (data.ok) resetLawReconstruction();
   }
   async function createPlan(kind: "TODAY" | "FULL_DAY") {
     if (!record) return;
@@ -261,20 +337,48 @@ export function C3RLLawLoop({ initialRecordId }: { initialRecordId: string | nul
 
       {record && ["FEEDBACK_COMMITTED", "REPAIRED", "D1_COMPLETE", "D7_COMPLETE", "CLOSED", "REOPENED"].includes(record.state) ? <section className="grid gap-3 rounded-2xl border p-5" data-testid="c3r-l-structured-claim">
         <h2 className="font-bold">정확 법규적용 결합</h2>
-        <p className="text-sm text-slate-700">자유서술이나 상태 라벨은 검증 근거가 아닙니다. 아래 닫힌 출처 결합을 직접 확인하세요.</p>
-        <dl className="grid gap-1 text-sm">
-          <div><dt className="inline font-semibold">출처·버전:</dt> <dd className="inline">{C3R_L_SOURCE_VERSION_ID}</dd></div>
-          <div><dt className="inline font-semibold">앵커·위치:</dt> <dd className="inline">{C3R_L_LAW_ANCHOR_VERSION_ID} · Article 10</dd></div>
-          <div><dt className="inline font-semibold">효력·적용일:</dt> <dd className="inline">2026-01-01부터 · 2026-08-15 기준</dd></div>
-          <div><dt className="inline font-semibold">현재성·차단 근거:</dt> <dd className="inline">APPLICABLE_CURRENT · 0개</dd></div>
-        </dl>
-        <label className="flex items-start gap-2"><input type="checkbox" checked={lawBindingConfirmed} onChange={(event) => setLawBindingConfirmed(event.target.checked)} /><span>출처·버전·위치·효력기간·적용일·현재성과 열린 차단 근거 0개를 직접 확인했습니다.</span></label>
-        {record.state === "FEEDBACK_COMMITTED" ? <button disabled={pending || !lawBindingConfirmed} onClick={() => void submitRepair()} className="rounded-xl bg-slate-900 px-4 py-3 font-semibold text-white disabled:opacity-50">구조화 재작성 제출</button> : null}
-        {record.state === "REPAIRED" ? <div className="grid gap-2">{!d1Eligible ? <p id="c3r-l-d1-eligibility" role="status" data-testid="c3r-l-d1-eligibility" className="rounded-xl bg-slate-50 p-3 text-sm">D+1 복습은 서버 Review Queue 예정 시각{d1QueueItem?.dueAt ? ` ${d1QueueItem.dueAt}` : ""} 이후에 열립니다.</p> : null}<div className="grid grid-cols-2 gap-2"><button disabled={pending || !d1Eligible} aria-describedby={!d1Eligible ? "c3r-l-d1-eligibility" : undefined} onClick={() => void review("record_assisted_review")} className="rounded-xl border px-4 py-3 disabled:opacity-50">도움받아 복습</button><button disabled={pending || !d1Eligible} aria-describedby={!d1Eligible ? "c3r-l-d1-eligibility" : undefined} onClick={() => void review("complete_d1")} className="rounded-xl bg-slate-900 px-4 py-3 text-white disabled:opacity-50">D+1 독립 재구성</button></div></div> : null}
-        {record.state === "D1_COMPLETE" ? <div className="grid gap-2">{!d7Eligible ? <p id="c3r-l-d7-eligibility" role="status" data-testid="c3r-l-d7-eligibility" className="rounded-xl bg-slate-50 p-3 text-sm">D+7 전이 과업은 서버 Review Queue 예정 시각{d7QueueItem?.dueAt ? ` ${d7QueueItem.dueAt}` : ""} 이후에 열립니다.</p> : null}{transferTask?.state === "SEALED" ? <button disabled={pending || !d7Eligible} aria-describedby={!d7Eligible ? "c3r-l-d7-eligibility" : undefined} onClick={() => void presentTransfer()} className="rounded-xl bg-slate-900 px-4 py-3 text-white disabled:opacity-50">D+7 전이 과업 열기</button> : null}{transferTask?.prompt ? <p data-testid="c3r-l-transfer-prompt">{transferTask.prompt}</p> : <p data-testid="c3r-l-transfer-sealed">전이 과업은 아직 봉인되어 있습니다.</p>}{transferTask?.state === "PRESENTED" ? <button disabled={pending || !d7Eligible} aria-describedby={!d7Eligible ? "c3r-l-d7-eligibility" : undefined} onClick={() => void review("complete_d7_transfer")} className="rounded-xl bg-slate-900 px-4 py-3 text-white disabled:opacity-50">D+7 전이 제출</button> : null}</div> : null}
-        {record.state === "D7_COMPLETE" ? <div className="grid gap-2">{!recurrenceEligible ? <p id="c3r-l-recurrence-eligibility" role="status" data-testid="c3r-l-recurrence-eligibility" className="rounded-xl bg-slate-50 p-3 text-sm">시간 제한 재현은 서버 Review Queue 예정 시각{recurrenceQueueItem?.dueAt ? ` ${recurrenceQueueItem.dueAt}` : ""} 이후에 열립니다.</p> : null}<button disabled={pending || !recurrenceEligible} aria-describedby={!recurrenceEligible ? "c3r-l-recurrence-eligibility" : undefined} onClick={() => void review("complete_recurrence")} className="rounded-xl bg-slate-900 px-4 py-3 text-white disabled:opacity-50">시간 제한 재현 완료</button></div> : null}
-        {record.state === "CLOSED" ? <button disabled={pending} onClick={() => void review("record_later_failure")} className="rounded-xl border border-amber-500 px-4 py-3 text-amber-800">후속 실패로 다시 열기</button> : null}
-        {record.state === "REOPENED" ? <div className="grid gap-2">{!reopenedEligible ? <p id="c3r-l-reopened-eligibility" role="status" data-testid="c3r-l-reopened-eligibility" className="rounded-xl bg-slate-50 p-3 text-sm">재개 복습은 서버 Review Queue 예정 시각{reopenedQueueItem?.dueAt ? ` ${reopenedQueueItem.dueAt}` : ""} 이후에 열립니다.</p> : null}<button disabled={pending || !reopenedEligible} aria-describedby={!reopenedEligible ? "c3r-l-reopened-eligibility" : undefined} onClick={() => void review("complete_reopened_review")} className="rounded-xl bg-slate-900 px-4 py-3 text-white disabled:opacity-50">재개 복습 독립 완료</button></div> : null}
+        <p className="text-sm text-slate-700">자유서술이나 상태 라벨은 검증 근거가 아닙니다. 답을 표시하지 않은 빈 필드에서 이번 단계의 출처 결합을 새로 재구성하세요. 단계가 바뀌면 입력은 지워집니다.</p>
+        {record.state === "FEEDBACK_COMMITTED" ? <aside className="grid gap-1 rounded-xl bg-slate-50 p-3 text-sm" data-testid="c3r-l-direct-repair-reference">
+          <p className="font-semibold">직접 수리용 검증 참조 — 이후 독립 복습에서는 숨겨집니다.</p>
+          <p>{C3R_L_ANCHOR_ID} · {C3R_L_ANCHOR_VERSION_ID}</p>
+          <p>{C3R_L_SOURCE_BINDING_ID} · {C3R_L_SOURCE_ID} · {C3R_L_SOURCE_VERSION_ID}</p>
+          <p>{C3R_L_LAW_ANCHOR_ID} · {C3R_L_LAW_ANCHOR_VERSION_ID}</p>
+          <p>Article 10 · 2026-01-01부터 종료일 없음 · 2026-08-15 기준 · APPLICABLE_CURRENT · 열린 차단 근거 0개</p>
+        </aside> : null}
+        <div className="grid gap-3 sm:grid-cols-2" data-testid="c3r-l-reconstruction-fields">
+          {lawClaimTextFields.map((field) => <label key={field.key} className="grid gap-1 text-sm">
+            {field.label}
+            <input
+              data-testid={`c3r-l-claim-${field.key}`}
+              value={lawClaimDraft[field.key]}
+              onChange={(event) => updateClaimDraft(field.key, event.target.value)}
+              required={!field.optional}
+              inputMode={field.key === "blockerCount" ? "numeric" : undefined}
+              className="rounded-lg border p-2"
+            />
+          </label>)}
+          <label className="grid gap-1 text-sm">현재 법규 적용 상태
+            <select
+              data-testid="c3r-l-claim-currentLawApplicability"
+              value={lawClaimDraft.currentLawApplicability}
+              onChange={(event) => updateClaimDraft("currentLawApplicability",
+                event.target.value as LawClaimDraft["currentLawApplicability"])}
+              className="rounded-lg border p-2"
+            >
+              <option value="">직접 선택</option>
+              <option value="APPLICABLE_CURRENT">현재 적용</option>
+              <option value="NOT_CURRENT">현재 미적용</option>
+              <option value="UNRESOLVED">미해결</option>
+            </select>
+          </label>
+        </div>
+        <label className="flex items-start gap-2"><input type="checkbox" checked={lawBindingConfirmed} onChange={(event) => setLawBindingConfirmed(event.target.checked)} /><span>이번 단계에서 출처·버전·위치·효력기간·적용일·현재성과 차단 근거를 직접 재구성했습니다.</span></label>
+        {record.state === "FEEDBACK_COMMITTED" ? <button disabled={pending || !reconstructionReady} onClick={() => void submitRepair()} className="rounded-xl bg-slate-900 px-4 py-3 font-semibold text-white disabled:opacity-50">구조화 재작성 제출</button> : null}
+        {record.state === "REPAIRED" ? <div className="grid gap-2">{!d1Eligible ? <p id="c3r-l-d1-eligibility" role="status" data-testid="c3r-l-d1-eligibility" className="rounded-xl bg-slate-50 p-3 text-sm">D+1 복습은 서버 Review Queue 예정 시각{d1QueueItem?.dueAt ? ` ${d1QueueItem.dueAt}` : ""} 이후에 열립니다.</p> : null}<div className="grid grid-cols-2 gap-2"><button disabled={pending || !d1Eligible || !reconstructionReady} aria-describedby={!d1Eligible ? "c3r-l-d1-eligibility" : undefined} onClick={() => void review("record_assisted_review")} className="rounded-xl border px-4 py-3 disabled:opacity-50">도움받아 복습</button><button disabled={pending || !d1Eligible || !reconstructionReady} aria-describedby={!d1Eligible ? "c3r-l-d1-eligibility" : undefined} onClick={() => void review("complete_d1")} className="rounded-xl bg-slate-900 px-4 py-3 text-white disabled:opacity-50">D+1 독립 재구성</button></div></div> : null}
+        {record.state === "D1_COMPLETE" ? <div className="grid gap-2">{!d7Eligible ? <p id="c3r-l-d7-eligibility" role="status" data-testid="c3r-l-d7-eligibility" className="rounded-xl bg-slate-50 p-3 text-sm">D+7 전이 과업은 서버 Review Queue 예정 시각{d7QueueItem?.dueAt ? ` ${d7QueueItem.dueAt}` : ""} 이후에 열립니다.</p> : null}{transferTask?.state === "SEALED" ? <button disabled={pending || !d7Eligible} aria-describedby={!d7Eligible ? "c3r-l-d7-eligibility" : undefined} onClick={() => void presentTransfer()} className="rounded-xl bg-slate-900 px-4 py-3 text-white disabled:opacity-50">D+7 전이 과업 열기</button> : null}{transferTask?.prompt ? <p data-testid="c3r-l-transfer-prompt">{transferTask.prompt}</p> : <p data-testid="c3r-l-transfer-sealed">전이 과업은 아직 봉인되어 있습니다.</p>}{transferTask?.state === "PRESENTED" ? <button disabled={pending || !d7Eligible || !reconstructionReady} aria-describedby={!d7Eligible ? "c3r-l-d7-eligibility" : undefined} onClick={() => void review("complete_d7_transfer")} className="rounded-xl bg-slate-900 px-4 py-3 text-white disabled:opacity-50">D+7 전이 제출</button> : null}</div> : null}
+        {record.state === "D7_COMPLETE" ? <div className="grid gap-2">{!recurrenceEligible ? <p id="c3r-l-recurrence-eligibility" role="status" data-testid="c3r-l-recurrence-eligibility" className="rounded-xl bg-slate-50 p-3 text-sm">시간 제한 재현은 서버 Review Queue 예정 시각{recurrenceQueueItem?.dueAt ? ` ${recurrenceQueueItem.dueAt}` : ""} 이후에 열립니다.</p> : null}<button disabled={pending || !recurrenceEligible || !reconstructionReady} aria-describedby={!recurrenceEligible ? "c3r-l-recurrence-eligibility" : undefined} onClick={() => void review("complete_recurrence")} className="rounded-xl bg-slate-900 px-4 py-3 text-white disabled:opacity-50">시간 제한 재현 완료</button></div> : null}
+        {record.state === "CLOSED" ? <button disabled={pending || !reconstructionReady} onClick={() => void review("record_later_failure")} className="rounded-xl border border-amber-500 px-4 py-3 text-amber-800 disabled:opacity-50">후속 실패로 다시 열기</button> : null}
+        {record.state === "REOPENED" ? <div className="grid gap-2">{!reopenedEligible ? <p id="c3r-l-reopened-eligibility" role="status" data-testid="c3r-l-reopened-eligibility" className="rounded-xl bg-slate-50 p-3 text-sm">재개 복습은 서버 Review Queue 예정 시각{reopenedQueueItem?.dueAt ? ` ${reopenedQueueItem.dueAt}` : ""} 이후에 열립니다.</p> : null}<button disabled={pending || !reopenedEligible || !reconstructionReady} aria-describedby={!reopenedEligible ? "c3r-l-reopened-eligibility" : undefined} onClick={() => void review("complete_reopened_review")} className="rounded-xl bg-slate-900 px-4 py-3 text-white disabled:opacity-50">재개 복습 독립 완료</button></div> : null}
       </section> : null}
 
       {record ? <section className="grid gap-3 rounded-2xl border p-5">

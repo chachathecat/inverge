@@ -2846,7 +2846,7 @@ const C3R_L_BROWSER_FAILURE_STAGE_SCHEMA_VERSION =
   "inverge.c3r_l.browser_failure_stage.v1";
 const C3R_L_BROWSER_FAILURE_STAGES = Object.freeze({
   journey: Object.freeze([
-    "INITIAL_RUNTIME", "PRACTICE_START", "THEORY_START", "LAW_START",
+    "INITIAL_RUNTIME", "PRACTICE_START", "THEORY_COMPATIBILITY", "THEORY_START", "LAW_START",
     "PRACTICE_COMPATIBILITY", "FEEDBACK", "DIRECT_RPC_DENIALS", "REPAIR_REPLAY",
     "EARLY_D1_UI", "ASSISTED_REVIEW", "D1_PLAN_COMPLETE", "EARLY_D7_UI",
     "D7_PLAN_COMPLETE", "EARLY_RECURRENCE_UI", "RECURRENCE", "TERMINAL_PLAN_UI",
@@ -3537,7 +3537,8 @@ const C3R_L_BROWSER_ASSERTIONS = Object.freeze([
   "earlyReopenedUiSuppressed", "preDuePlanUiSuppressed", "terminalPlanUiSuppressed",
   "sealedD7Transfer", "timedRecurrence", "laterFailureReopen",
   "postReopenIndependentCompletion", "crossUserLawRestoreCamouflaged",
-  "crossSubjectPracticeRestoreCamouflaged", "ownerOnly", "restartRestore",
+  "crossSubjectPracticeRestoreCamouflaged", "theoryDurableCompatibility",
+  "theoryDeletePreservesPracticeAndLaw", "ownerOnly", "restartRestore",
   "completeLearnerExport", "lawDeletePreservesPractice", "lawDeletePreservesTheory",
   "restoreExportDelete",
 ]);
@@ -3688,7 +3689,9 @@ async function runLawDedicatedCycle(input) {
       hostileDirectRpcDenied: true,
       legacyPracticePlannerReceiptReplay: true,
       practiceCompatibilityPreserved: practiceCompatibilityEvidence.practiceVertical,
-      theoryCompatibilityPreserved: browserEvidence.lawDeletePreservesTheory,
+      theoryCompatibilityPreserved: browserEvidence.theoryDurableCompatibility &&
+        browserEvidence.theoryDeletePreservesPracticeAndLaw &&
+        browserEvidence.lawDeletePreservesTheory,
       practiceWrapperArgumentNamesPreserved:
         migrationResult.practiceWrapperArgumentNamesPreserved,
       theoryWrapperArgumentNamesPreserved:
