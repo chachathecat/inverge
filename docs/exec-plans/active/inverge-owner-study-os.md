@@ -16,7 +16,7 @@
 
 ## Branches and PRs
 
-- Lane A Law replan 1: `codex/owner-study-lane-a-c3r-l-replan-1`; PR pending; worktree `.agent-factory/worktrees/owner-study-lane-a-c3r-l-replan-1`; base `75f3ce787d31047c2bceacc2ef752c0bfdfb23cc`
+- Lane A Law replan 1: `codex/owner-study-lane-a-c3r-l-replan-1`; Draft PR #822; diagnostic head `1ee2c040b3e817c0f8875d9a6dc1e8f7d4635afa`; worktree `.agent-factory/worktrees/owner-study-lane-a-c3r-l-replan-1`; base `75f3ce787d31047c2bceacc2ef752c0bfdfb23cc`
 - Lane B: `codex/owner-study-lane-b-first-stage-kernel`; Draft PR #813; parked
 - Lane C: `codex/owner-study-lane-c-question-foundry`; Draft PR #810; parked
 
@@ -42,4 +42,4 @@
 
 ## Next exact action
 
-- validate the replan head, push it, open one Draft replacement PR, and repair the first exact Theory-compatibility substage root
+- inspect PR #822 exact-head dedicated CI and repair the first exact Theory-compatibility substage root
