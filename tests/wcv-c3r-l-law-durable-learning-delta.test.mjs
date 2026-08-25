@@ -264,9 +264,18 @@ test("Owner-only/default-off UI and API expose exact Law confirmation only", () 
   assert.match(routeSource, /parseLawApplicabilityClaimV1Input/);
   assert.doesNotMatch(routeSource, /parseLawPredicateClaimV1Input/);
   assert.match(componentSource, /lawBindingConfirmed/);
-  assert.match(componentSource, /Article 10/);
-  assert.match(componentSource, /APPLICABLE_CURRENT/);
-  assert.match(componentSource, /열린 차단 근거 0개/);
+  assert.match(componentSource,
+    /function resetLawReconstruction\(\)[\s\S]*setLawClaimDraft\(emptyLawClaimDraft\)[\s\S]*setLawBindingConfirmed\(false\)/);
+  assert.match(componentSource,
+    /submit_repair[\s\S]*if \(data\.ok\) resetLawReconstruction\(\)[\s\S]*present_d7_transfer_task[\s\S]*if \(data\.ok\) resetLawReconstruction\(\)/);
+  assert.match(componentSource,
+    /lawClaimDraft\.exactLocator\.trim\(\)[\s\S]*lawClaimDraft\.applicableAsOf\.trim\(\)/);
+  assert.match(componentSource,
+    /complete_d1[\s\S]*!reconstructionReady[\s\S]*complete_d7_transfer[\s\S]*!reconstructionReady[\s\S]*complete_recurrence[\s\S]*!reconstructionReady/);
+  assert.match(componentSource,
+    /record\.state === "FEEDBACK_COMMITTED"[\s\S]*c3r-l-direct-repair-reference[\s\S]*이후 독립 복습에서는 숨겨집니다/);
+  assert.doesNotMatch(componentSource,
+    /anchorId:\s*C3R_L_ANCHOR_ID|sourceVersionId:\s*C3R_L_SOURCE_VERSION_ID|exactLocator:\s*"Article 10"/);
   assert.doesNotMatch(componentSource, /scopeResolution|requiredPolarity|forbiddenPolarity/);
   assert.equal(contract.runtimeBoundary.featureDefaultOff, true);
   assert.equal(contract.runtimeBoundary.productionDenied, true);
@@ -347,6 +356,13 @@ test("the dedicated browser fixture covers the full Law vertical and P/T isolati
   assert.match(lawE2eSource, /subject='LAW'/);
   assert.match(lawE2eSource, /subject='PRACTICE'/);
   assert.match(lawE2eSource, /subject='THEORY'/);
+  assert.match(lawE2eSource,
+    /exerciseTheoryCompatibility[\s\S]*record_assisted_review[\s\S]*complete_d1[\s\S]*complete_d7_transfer[\s\S]*complete_recurrence[\s\S]*record_later_failure[\s\S]*complete_reopened_review[\s\S]*action: "delete"/);
+  assert.match(lawE2eSource,
+    /assertBlankLawReconstruction[\s\S]*toHaveValue\(""\)[\s\S]*c3r-l-direct-repair-reference[\s\S]*toBeDisabled/);
+  assert.match(lawE2eSource, /theoryDeletePreservesPracticeAndLaw: true/);
+  assert.match(runtimeSource,
+    /theoryDurableCompatibility &&[\s\S]*theoryDeletePreservesPracticeAndLaw &&[\s\S]*lawDeletePreservesTheory/);
   assert.doesNotMatch(lawE2eSource, /validator:law-scoped-predicate/);
 });
 
