@@ -613,36 +613,48 @@ returns uuid language sql stable security invoker set search_path = ''
 as $$ select public.c3r_subject_find_record_v1(
   'PRACTICE', p_user_id, p_source_id, p_problem_id, p_revision_id, p_item_id, p_artifact_id
 ) $$;
-create or replace function public.c3r_t_find_record_v1(uuid, text, text, text, text, text)
+create or replace function public.c3r_t_find_record_v1(
+  p_user_id uuid,
+  p_source_id text,
+  p_problem_id text,
+  p_revision_id text,
+  p_item_id text,
+  p_artifact_id text
+)
 returns uuid language sql stable security invoker set search_path = ''
-as $$ select public.c3r_subject_find_record_v1('THEORY', $1, $2, $3, $4, $5, $6) $$;
+as $$ select public.c3r_subject_find_record_v1(
+  'THEORY', p_user_id, p_source_id, p_problem_id, p_revision_id, p_item_id, p_artifact_id
+) $$;
 create or replace function public.c3r_p_restore_record_v1(p_user_id uuid, p_record_id uuid)
 returns jsonb language sql stable security invoker set search_path = ''
 as $$ select public.c3r_subject_restore_record_v1('PRACTICE', p_user_id, p_record_id) $$;
-create or replace function public.c3r_t_restore_record_v1(uuid, uuid)
+create or replace function public.c3r_t_restore_record_v1(p_user_id uuid, p_record_id uuid)
 returns jsonb language sql stable security invoker set search_path = ''
-as $$ select public.c3r_subject_restore_record_v1('THEORY', $1, $2) $$;
+as $$ select public.c3r_subject_restore_record_v1('THEORY', p_user_id, p_record_id) $$;
 create or replace function public.c3r_p_load_dashboard_v1(
   p_user_id uuid,
   p_as_of timestamptz
 )
 returns jsonb language sql stable security invoker set search_path = ''
 as $$ select public.c3r_subject_load_dashboard_v1('PRACTICE', p_user_id, p_as_of) $$;
-create or replace function public.c3r_t_load_dashboard_v1(uuid, timestamptz)
+create or replace function public.c3r_t_load_dashboard_v1(
+  p_user_id uuid,
+  p_as_of timestamptz
+)
 returns jsonb language sql stable security invoker set search_path = ''
-as $$ select public.c3r_subject_load_dashboard_v1('THEORY', $1, $2) $$;
+as $$ select public.c3r_subject_load_dashboard_v1('THEORY', p_user_id, p_as_of) $$;
 create or replace function public.c3r_p_export_learner_data_v1(p_user_id uuid)
 returns jsonb language sql stable security invoker set search_path = ''
 as $$ select public.c3r_subject_export_learner_data_v1('PRACTICE', p_user_id) $$;
-create or replace function public.c3r_t_export_learner_data_v1(uuid)
+create or replace function public.c3r_t_export_learner_data_v1(p_user_id uuid)
 returns jsonb language sql stable security invoker set search_path = ''
-as $$ select public.c3r_subject_export_learner_data_v1('THEORY', $1) $$;
+as $$ select public.c3r_subject_export_learner_data_v1('THEORY', p_user_id) $$;
 create or replace function public.c3r_p_delete_learner_data_v1(p_user_id uuid)
 returns jsonb language sql security invoker set search_path = ''
 as $$ select public.c3r_subject_delete_learner_data_v1('PRACTICE', p_user_id) $$;
-create or replace function public.c3r_t_delete_learner_data_v1(uuid)
+create or replace function public.c3r_t_delete_learner_data_v1(p_user_id uuid)
 returns jsonb language sql security invoker set search_path = ''
-as $$ select public.c3r_subject_delete_learner_data_v1('THEORY', $1) $$;
+as $$ select public.c3r_subject_delete_learner_data_v1('THEORY', p_user_id) $$;
 
 create or replace function public.c3r_subject_create_plan_v1(
   p_subject public.c3r_p_subject,

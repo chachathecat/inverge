@@ -804,6 +804,7 @@ const C3R_T_NATIVE_ASSERTION_IDS = Object.freeze([
   "theory_start_idempotency",
   "practice_start_idempotency_preserved",
   "practice_wrapper_argument_names_preserved",
+  "theory_postgrest_argument_names_bound",
   "cross_target_validator_unsupported",
   "cross_subject_insert_denied",
   "authenticated_table_insert_denied",
@@ -872,6 +873,48 @@ const C3R_P_PRACTICE_WRAPPER_ARGUMENT_CATALOG =
   `${C3R_P_PRACTICE_WRAPPER_ARGUMENTS.length}#${C3R_P_PRACTICE_WRAPPER_ARGUMENTS
     .map(({ signature, names }) => `${signature.slice("public.".length).split("(")[0]}:${names}`)
     .join("|")}`;
+const C3R_T_POSTGREST_WRAPPER_ARGUMENTS = Object.freeze([
+  Object.freeze({
+    signature: "public.c3r_t_apply_learning_command_v1(uuid,uuid,bigint,text,jsonb)",
+    names: "p_user_id,p_command_id,p_expected_version,p_action,p_payload",
+  }),
+  Object.freeze({
+    signature:
+      "public.c3r_t_create_plan_v1(uuid,uuid,uuid,public.c3r_p_plan_kind,integer,timestamptz,jsonb)",
+    names:
+      "p_user_id,p_command_id,p_plan_id,p_plan_kind,p_available_minutes,p_as_of,p_blocks",
+  }),
+  Object.freeze({
+    signature:
+      "public.c3r_t_decide_plan_v1(uuid,uuid,uuid,bigint,text,timestamptz,jsonb)",
+    names:
+      "p_user_id,p_command_id,p_plan_id,p_expected_version,p_decision,p_as_of,p_blocks",
+  }),
+  Object.freeze({
+    signature: "public.c3r_t_delete_learner_data_v1(uuid)",
+    names: "p_user_id",
+  }),
+  Object.freeze({
+    signature: "public.c3r_t_export_learner_data_v1(uuid)",
+    names: "p_user_id",
+  }),
+  Object.freeze({
+    signature: "public.c3r_t_find_record_v1(uuid,text,text,text,text,text)",
+    names: "p_user_id,p_source_id,p_problem_id,p_revision_id,p_item_id,p_artifact_id",
+  }),
+  Object.freeze({
+    signature: "public.c3r_t_load_dashboard_v1(uuid,timestamptz)",
+    names: "p_user_id,p_as_of",
+  }),
+  Object.freeze({
+    signature: "public.c3r_t_restore_record_v1(uuid,uuid)",
+    names: "p_user_id,p_record_id",
+  }),
+]);
+const C3R_T_POSTGREST_WRAPPER_ARGUMENT_CATALOG =
+  `${C3R_T_POSTGREST_WRAPPER_ARGUMENTS.length}#${C3R_T_POSTGREST_WRAPPER_ARGUMENTS
+    .map(({ signature, names }) => `${signature.slice("public.".length).split("(")[0]}:${names}`)
+    .join("|")}`;
 
 function practiceWrapperArgumentCatalogSql() {
   const signatures = C3R_P_PRACTICE_WRAPPER_ARGUMENTS
@@ -885,6 +928,22 @@ function practiceWrapperArgumentCatalogSql() {
 function assertPracticeWrapperArgumentCatalog(value, stage) {
   if (value !== C3R_P_PRACTICE_WRAPPER_ARGUMENT_CATALOG) {
     throw new Error(`C3R-T Practice wrapper argument catalog changed during ${stage}.`);
+  }
+  return true;
+}
+
+function theoryPostgrestArgumentCatalogSql() {
+  const signatures = C3R_T_POSTGREST_WRAPPER_ARGUMENTS
+    .map(({ signature }) => `to_regprocedure('${signature}')`).join(",");
+  return `select concat_ws('#', count(*)::text, coalesce(string_agg(
+    concat(p.proname, ':', array_to_string(p.proargnames, ',')),
+    '|' order by p.proname), ''))
+  from pg_proc p where p.oid = any(array[${signatures}]);`;
+}
+
+function assertTheoryPostgrestArgumentCatalog(value, stage) {
+  if (value !== C3R_T_POSTGREST_WRAPPER_ARGUMENT_CATALOG) {
+    throw new Error(`C3R-T PostgREST wrapper argument catalog is invalid during ${stage}.`);
   }
   return true;
 }
@@ -1003,7 +1062,7 @@ export function validateC3RTNativeEvidence(evidence, { riskResult, riskBytes },
       "cycle", "databaseIdentity", "containerIdentity", "serverVersionNum",
       "appliedRepositoryFilesExactly", "forcedRlsTables", "subjectLabels",
       "theoryStartIdempotent", "practiceStartIdempotentPreserved",
-      "practiceWrapperArgumentNamesPreserved",
+      "practiceWrapperArgumentNamesPreserved", "theoryPostgrestArgumentNamesBound",
       "crossTargetValidatorUnsupported", "crossSubjectInsertDenied",
       "authenticatedTableInsertDenied", "authenticatedValidatorExecuteDenied", "cleanup",
     ], `C3R-T native cycle ${index + 1}`);
@@ -1020,6 +1079,7 @@ export function validateC3RTNativeEvidence(evidence, { riskResult, riskBytes },
       canonicalJson(cycle.subjectLabels) !== canonicalJson(["PRACTICE", "THEORY"]) ||
       cycle.theoryStartIdempotent !== true || cycle.practiceStartIdempotentPreserved !== true ||
       cycle.practiceWrapperArgumentNamesPreserved !== true ||
+      cycle.theoryPostgrestArgumentNamesBound !== true ||
       cycle.crossTargetValidatorUnsupported !== true || cycle.crossSubjectInsertDenied !== true ||
       cycle.authenticatedTableInsertDenied !== true ||
       cycle.authenticatedValidatorExecuteDenied !== true || cycle.cleanup !== "complete") {
@@ -1351,6 +1411,15 @@ function nativeTheoryCycle(name, databaseIdentity, sql, cycle) {
       "PRACTICE,THEORY|f|f|t|t|true") {
       throw new Error("C3R-T native catalog, RLS, grants, subject, or Practice binding failed.");
     }
+    assertTheoryPostgrestArgumentCatalog(
+      nativePsql(
+        name,
+        theoryPostgrestArgumentCatalogSql(),
+        false,
+        "Theory PostgREST wrapper argument catalog",
+      ).stdout.trim(),
+      "native cycle",
+    );
     const theoryUserId = crypto.randomUUID();
     const practiceUserId = crypto.randomUUID();
     const theoryRecordId = crypto.randomUUID();
@@ -1489,6 +1558,7 @@ function nativeTheoryCycle(name, databaseIdentity, sql, cycle) {
       theoryStartIdempotent: true,
       practiceStartIdempotentPreserved: true,
       practiceWrapperArgumentNamesPreserved: true,
+      theoryPostgrestArgumentNamesBound: true,
       crossTargetValidatorUnsupported: true,
       crossSubjectInsertDenied: true,
       authenticatedTableInsertDenied: true,
@@ -1903,9 +1973,18 @@ function applyTheoryMigrationHistory(cycleRoot, container, legacyPracticeIdentit
   if (practiceWrapperArgumentsAfter !== practiceWrapperArgumentsBefore) {
     throw new Error("C3R-T Practice wrapper argument names changed across migration.");
   }
+  const theoryPostgrestArguments = psql(
+    container,
+    theoryPostgrestArgumentCatalogSql(),
+    "C3R-T Theory PostgREST wrapper argument catalog",
+  );
+  assertTheoryPostgrestArgumentCatalog(theoryPostgrestArguments, "dedicated post-migration");
   psql(container, "notify pgrst, 'reload schema';\n", "C3R-T PostgREST schema reload");
   assertLegacyPracticePlannerReceiptReplay(container, legacyPracticePlannerReceipts);
-  return true;
+  return {
+    practiceWrapperArgumentNamesPreserved: true,
+    theoryPostgrestArgumentNamesBound: true,
+  };
 }
 
 async function createIdentity(apiUrl, anonKey, label) {
@@ -2145,6 +2224,45 @@ function runTheoryBrowser(repositoryRoot, baseUrl, identities, browserEvidencePa
     label: `C3R-T ${browserMode} browser verification`,
     reportOutput: true,
   });
+}
+
+export function classifyC3RTNextFailureDiagnostic(value) {
+  const diagnostic = redactC3RPEntryDiagnosticText(String(value))
+    .replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/gu, "");
+  if (/\b(?:GET|POST) \/api\/review-os\/c3r-t(?:\?[^\s]*)? 503\b/u.test(diagnostic)) {
+    return "C3R_T_API_TEMPORARILY_UNAVAILABLE";
+  }
+  if (/\b(?:GET|POST) \/api\/review-os\/c3r-t(?:\?[^\s]*)? 404\b/u.test(diagnostic)) {
+    return "C3R_T_API_NOT_FOUND";
+  }
+  if (/\bGET \/app\/c3r-t(?:\?[^\s]*)? 404\b/u.test(diagnostic)) {
+    return "C3R_T_PAGE_NOT_FOUND";
+  }
+  if (/\b(?:Failed to compile|Build Error|Module not found)\b/iu.test(diagnostic)) {
+    return "C3R_T_NEXT_COMPILE_FAILURE";
+  }
+  return "C3R_T_NEXT_FAILURE_UNCLASSIFIED";
+}
+
+async function runTheoryBrowserWithClosedDiagnostic(input) {
+  try {
+    runTheoryBrowser(
+      input.repositoryRoot,
+      input.server.baseUrl,
+      input.identities,
+      input.browserEvidencePath,
+      input.practiceCompatibilityEvidencePath,
+      input.databaseContainer,
+      input.browserMode,
+    );
+  } catch {
+    await stopNext(input.server);
+    const diagnostic = fs.existsSync(input.server.diagnosticPath)
+      ? fs.readFileSync(input.server.diagnosticPath, "utf8")
+      : "";
+    const classification = classifyC3RTNextFailureDiagnostic(diagnostic);
+    throw new Error(`C3R-T ${input.browserMode} browser verification failed: ${classification}.`);
+  }
 }
 
 function entryDiagnosticPaths(diagnosticRoot, cycle, label, nextDiagnosticPath) {
@@ -2541,7 +2659,10 @@ async function runTheoryDedicatedCycle(input) {
       await createTheoryIdentity(apiUrl, anonKey, `non-owner-${input.cycle}`),
     ];
     seedTheoryIdentityRelations(databaseContainer, identities);
-    const practiceWrapperArgumentNamesPreserved = applyTheoryMigrationHistory(
+    const {
+      practiceWrapperArgumentNamesPreserved,
+      theoryPostgrestArgumentNamesBound,
+    } = applyTheoryMigrationHistory(
       cycleRoot,
       databaseContainer,
       identities[0],
@@ -2573,26 +2694,34 @@ async function runTheoryDedicatedCycle(input) {
     );
 
     server = await startFor("journey");
-    runTheoryBrowser(input.repositoryRoot, server.baseUrl, identities,
-      browserEvidencePath, practiceCompatibilityEvidencePath, databaseContainer, "journey");
+    await runTheoryBrowserWithClosedDiagnostic({
+      repositoryRoot: input.repositoryRoot, server, identities, browserEvidencePath,
+      practiceCompatibilityEvidencePath, databaseContainer, browserMode: "journey",
+    });
     await stopAndDiscardNext(server);
     server = null;
 
     server = await startFor("restart-restore");
-    runTheoryBrowser(input.repositoryRoot, server.baseUrl, identities,
-      browserEvidencePath, practiceCompatibilityEvidencePath, databaseContainer, "restore");
+    await runTheoryBrowserWithClosedDiagnostic({
+      repositoryRoot: input.repositoryRoot, server, identities, browserEvidencePath,
+      practiceCompatibilityEvidencePath, databaseContainer, browserMode: "restore",
+    });
     await stopAndDiscardNext(server);
     server = null;
 
     if (input.cycle === 1) {
       server = await startFor("feature-off", { ...nextEnv, WCV_C3R_T_THEORY_ENABLED: "false" });
-      runTheoryBrowser(input.repositoryRoot, server.baseUrl, identities,
-        browserEvidencePath, practiceCompatibilityEvidencePath, databaseContainer, "feature_off");
+      await runTheoryBrowserWithClosedDiagnostic({
+        repositoryRoot: input.repositoryRoot, server, identities, browserEvidencePath,
+        practiceCompatibilityEvidencePath, databaseContainer, browserMode: "feature_off",
+      });
       await stopAndDiscardNext(server);
       server = null;
       server = await startFor("production-denied", { ...nextEnv, VERCEL_ENV: "production" });
-      runTheoryBrowser(input.repositoryRoot, server.baseUrl, identities,
-        browserEvidencePath, practiceCompatibilityEvidencePath, databaseContainer, "production_denied");
+      await runTheoryBrowserWithClosedDiagnostic({
+        repositoryRoot: input.repositoryRoot, server, identities, browserEvidencePath,
+        practiceCompatibilityEvidencePath, databaseContainer, browserMode: "production_denied",
+      });
       await stopAndDiscardNext(server);
       server = null;
     }
@@ -2621,6 +2750,7 @@ async function runTheoryDedicatedCycle(input) {
       legacyPracticePlannerReceiptReplay: true,
       practiceCompatibilityPreserved: practiceCompatibilityEvidence.practiceVertical,
       practiceWrapperArgumentNamesPreserved,
+      theoryPostgrestArgumentNamesBound,
       cleanup: "complete",
     };
   } finally {
@@ -2740,7 +2870,7 @@ export function validateTheoryRuntimeArtifact(artifact, repositoryRoot = process
       "serverVersionNum", "browserEvidenceSha256", "practiceCompatibilityEvidenceSha256",
       "browserToPostgres", "restartRestore", "restoreExportDelete", "hostileDirectRpcDenied",
       "legacyPracticePlannerReceiptReplay", "practiceCompatibilityPreserved",
-      "practiceWrapperArgumentNamesPreserved", "cleanup",
+      "practiceWrapperArgumentNamesPreserved", "theoryPostgrestArgumentNamesBound", "cleanup",
     ], `THEORY_RUNTIME reset/replay cycle ${index + 1}`);
     const identityMatch = new RegExp(`^c3r-t-cycle-${index + 1}-(\\d+)-(\\d+)$`, "u")
       .exec(cycle.databaseIdentity);
@@ -2753,7 +2883,8 @@ export function validateTheoryRuntimeArtifact(artifact, repositoryRoot = process
       cycle.restoreExportDelete !== true || cycle.hostileDirectRpcDenied !== true ||
       cycle.legacyPracticePlannerReceiptReplay !== true ||
       cycle.practiceCompatibilityPreserved !== true ||
-      cycle.practiceWrapperArgumentNamesPreserved !== true || cycle.cleanup !== "complete") {
+      cycle.practiceWrapperArgumentNamesPreserved !== true ||
+      cycle.theoryPostgrestArgumentNamesBound !== true || cycle.cleanup !== "complete") {
       throw new Error(`THEORY_RUNTIME reset/replay cycle ${index + 1} is invalid.`);
     }
     const currentExecutionIdentity = `${identityMatch[1]}:${identityMatch[2]}`;

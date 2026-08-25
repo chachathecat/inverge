@@ -15,7 +15,7 @@
 
 ## Branches and PRs
 
-- Lane A: `codex/owner-study-lane-a-c3r-t-replan-1`; worktree `.agent-factory/worktrees/owner-study-lane-a-replan-1`; base `cad8b98e4f13a2fe50d82ffd983616adc70eb75a`; no PR yet; replacement candidate exact 20-path manifest; focused `66/66`, full `1558/1558`, typecheck, lint, production build and diff checks clean; fresh review `0/0/0`. Predecessor Draft PR #815 closed unmerged at head `6c1e3430c5d9a508bbbecf2113772c2ddeb1d514` after its exact-head fixture attempted a no-change commit and its native service assertion read record counts in the same unordered expression as mutating RPCs
+- Lane A: `codex/owner-study-lane-a-c3r-t-replan-1`; worktree `.agent-factory/worktrees/owner-study-lane-a-replan-1`; base `cad8b98e4f13a2fe50d82ffd983616adc70eb75a`; Draft PR #816 current pushed head `d47ed38b06ae72589a5134138957722ef2b3cc01`; correction 1 repairs the five unnamed Theory PostgREST wrapper arguments and adds closed browser-failure classification; exact 20-path candidate manifest; focused `67/67`, full `1559/1559`, typecheck, lint and diff checks clean; fresh correction review `0/0/0`. Predecessor Draft PR #815 closed unmerged at head `6c1e3430c5d9a508bbbecf2113772c2ddeb1d514`
 - Lane B: `codex/owner-study-lane-b-first-stage-kernel`; worktree `.agent-factory/worktrees/owner-study-lane-b`; base `cad8b98e4f13a2fe50d82ffd983616adc70eb75a`; Draft PR #813 correction-trigger head `9e0b8306809a40302953328924efcfe7678e91f8`; tree `ef74ee83cd17192f306749b21a8699b1e0231fe8`; local full/focused/typecheck/lint/build/diff clean; Draft integration-held and lane parked; required CI and final review pending
 - Lane C: `codex/owner-study-lane-c-question-foundry`; worktree `.agent-factory/worktrees/owner-study-lane-c`; base `cad8b98e4f13a2fe50d82ffd983616adc70eb75a`; Draft PR #810 head `c7a3fd818259b088acd8caf0e5cb6efed4c8becb`; tree `1ab32f16cad5154fe89274cde2ce678ea363c47c`; all required checks successful; formal review `0/0/0`, zero threads; integration-held
 - frozen read-only M1 donor: `codex/wcv-c3r-t-theory-durable-learning-delta`; worktree `.agent-factory/worktrees/c3r-t`; base `c269d8fa489dc1ac77ef77d203dadffc0e4e73e5`; no PR
@@ -36,8 +36,8 @@
 
 ## Current blocker
 
-- none in source; exact-head runtime and CI remain pending until the replacement Draft PR exists
+- none in source; correction 1 exact-head runtime and CI remain pending
 
 ## Next exact action
 
-- create the first ordinary replan commit, push without force, open one new Draft PR and inspect its exact-head runtime and CI
+- commit and push correction 1 without force, update Draft PR #816, validate the disjoint-lane plan, then inspect both exact-head runtime workflows

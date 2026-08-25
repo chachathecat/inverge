@@ -23,6 +23,7 @@ import {
   C3R_T_RUNTIME_PRODUCER_VERSION,
   boundedNativePostgresDiagnostic,
   c3rTNativePrerequisiteClosure,
+  classifyC3RTNextFailureDiagnostic,
   classifyC3RTNativeServiceAssertions,
   createC3RTNativeEvidence,
   createTheoryRuntimeArtifact,
@@ -541,6 +542,7 @@ test("generic runtime gate has a closed exact-head C3R-T native adapter", () => 
       theoryStartIdempotent: true,
       practiceStartIdempotentPreserved: true,
       practiceWrapperArgumentNamesPreserved: true,
+      theoryPostgrestArgumentNamesBound: true,
       crossTargetValidatorUnsupported: true,
       crossSubjectInsertDenied: true,
       authenticatedTableInsertDenied: true,
@@ -608,6 +610,10 @@ test("generic runtime gate has a closed exact-head C3R-T native adapter", () => 
     assert.throws(() => validateC3RTNativeEvidence({
       ...evidence,
       cycles: [{ ...cycle(1), practiceWrapperArgumentNamesPreserved: false }, cycle(2)],
+    }, { riskResult, riskBytes }, adapterRepository), /native cycle 1 is invalid/u);
+    assert.throws(() => validateC3RTNativeEvidence({
+      ...evidence,
+      cycles: [{ ...cycle(1), theoryPostgrestArgumentNamesBound: false }, cycle(2)],
     }, { riskResult, riskBytes }, adapterRepository), /native cycle 1 is invalid/u);
     assert.throws(() => validateC3RTNativeEvidence({
       ...evidence,
@@ -732,9 +738,7 @@ test("dedicated Theory cycles bind identity relations before legacy Practice rec
   const identityRelationsSeeded = cycleSource.indexOf(
     "seedTheoryIdentityRelations(databaseContainer, identities)",
   );
-  const legacyReceiptSeeded = cycleSource.indexOf(
-    "const practiceWrapperArgumentNamesPreserved = applyTheoryMigrationHistory(",
-  );
+  const legacyReceiptSeeded = cycleSource.indexOf("applyTheoryMigrationHistory(");
   assert.ok(baseApplied >= 0 && baseApplied < identitiesCreated);
   assert.ok(identitiesCreated < identityRelationsSeeded);
   assert.ok(identityRelationsSeeded < legacyReceiptSeeded);
@@ -783,6 +787,71 @@ test("dedicated Theory cycles bind identity relations before legacy Practice rec
   }
   assert.doesNotMatch(integrationSql,
     /create or replace function public\.c3r_p_(?:find_record|restore_record|load_dashboard|export_learner_data|delete_learner_data)_v1\((?:uuid|uuid,)/u);
+  const exactTheoryPostgrestCatalog = [
+    ["public.c3r_t_apply_learning_command_v1(uuid,uuid,bigint,text,jsonb)",
+      "p_user_id,p_command_id,p_expected_version,p_action,p_payload"],
+    ["public.c3r_t_create_plan_v1(uuid,uuid,uuid,public.c3r_p_plan_kind,integer,timestamptz,jsonb)",
+      "p_user_id,p_command_id,p_plan_id,p_plan_kind,p_available_minutes,p_as_of,p_blocks"],
+    ["public.c3r_t_decide_plan_v1(uuid,uuid,uuid,bigint,text,timestamptz,jsonb)",
+      "p_user_id,p_command_id,p_plan_id,p_expected_version,p_decision,p_as_of,p_blocks"],
+    ["public.c3r_t_delete_learner_data_v1(uuid)", "p_user_id"],
+    ["public.c3r_t_export_learner_data_v1(uuid)", "p_user_id"],
+    ["public.c3r_t_find_record_v1(uuid,text,text,text,text,text)",
+      "p_user_id,p_source_id,p_problem_id,p_revision_id,p_item_id,p_artifact_id"],
+    ["public.c3r_t_load_dashboard_v1(uuid,timestamptz)", "p_user_id,p_as_of"],
+    ["public.c3r_t_restore_record_v1(uuid,uuid)", "p_user_id,p_record_id"],
+  ];
+  const theoryCatalogSource = runtimeSource.slice(
+    runtimeSource.indexOf("const C3R_T_POSTGREST_WRAPPER_ARGUMENTS"),
+    runtimeSource.indexOf("function practiceWrapperArgumentCatalogSql"),
+  );
+  assert.equal((theoryCatalogSource.match(/signature:\s*"public\.c3r_t_/gu) ?? []).length,
+    exactTheoryPostgrestCatalog.length);
+  for (const [signature, names] of exactTheoryPostgrestCatalog) {
+    assert.ok(theoryCatalogSource.includes(signature));
+    assert.ok(theoryCatalogSource.includes(`"${names}"`));
+  }
+  const requiredTheoryWrapperSignatures = [
+    /c3r_t_find_record_v1\(\s*p_user_id uuid,\s*p_source_id text,\s*p_problem_id text,\s*p_revision_id text,\s*p_item_id text,\s*p_artifact_id text\s*\)/u,
+    /c3r_t_restore_record_v1\(p_user_id uuid, p_record_id uuid\)/u,
+    /c3r_t_load_dashboard_v1\(\s*p_user_id uuid,\s*p_as_of timestamptz\s*\)/u,
+    /c3r_t_export_learner_data_v1\(p_user_id uuid\)/u,
+    /c3r_t_delete_learner_data_v1\(p_user_id uuid\)/u,
+  ];
+  for (const signature of requiredTheoryWrapperSignatures) assert.match(integrationSql, signature);
+  assert.doesNotMatch(integrationSql,
+    /create or replace function public\.c3r_t_(?:find_record|restore_record|load_dashboard|export_learner_data|delete_learner_data)_v1\((?:uuid|uuid,)/u);
+  for (const rpcName of [
+    "apply_learning_command", "restore_record", "find_record", "load_dashboard",
+    "create_plan", "decide_plan", "export_learner_data", "delete_learner_data",
+  ]) {
+    assert.ok(repositorySource.includes(`.rpc("c3r_t_${rpcName}_v1"`));
+  }
+  assert.match(runtimeSource,
+    /assertTheoryPostgrestArgumentCatalog[\s\S]*Theory PostgREST wrapper argument catalog/u);
+});
+
+test("Theory browser failures surface only closed Next classifications", () => {
+  assert.equal(classifyC3RTNextFailureDiagnostic(
+    "GET /api/review-os/c3r-t 503 in 42ms",
+  ), "C3R_T_API_TEMPORARILY_UNAVAILABLE");
+  assert.equal(classifyC3RTNextFailureDiagnostic(
+    "POST /api/review-os/c3r-t?recordId=metadata-only 404 in 8ms",
+  ), "C3R_T_API_NOT_FOUND");
+  assert.equal(classifyC3RTNextFailureDiagnostic(
+    "GET /app/c3r-t 404 in 7ms",
+  ), "C3R_T_PAGE_NOT_FOUND");
+  assert.equal(classifyC3RTNextFailureDiagnostic(
+    "Failed to compile: Module not found",
+  ), "C3R_T_NEXT_COMPILE_FAILURE");
+  const raw = "owner@example.invalid password=private-secret raw-private-answer";
+  const classification = classifyC3RTNextFailureDiagnostic(raw);
+  assert.equal(classification, "C3R_T_NEXT_FAILURE_UNCLASSIFIED");
+  assert.doesNotMatch(classification, /example\.invalid|private-secret|raw-private/u);
+  assert.match(runtimeSource,
+    /catch \{[\s\S]*classifyC3RTNextFailureDiagnostic\(diagnostic\)[\s\S]*browser verification failed: \$\{classification\}/u);
+  assert.doesNotMatch(runtimeSource,
+    /browser verification failed: \$\{(?:diagnostic|error|input\.server\.diagnosticPath)\}/u);
 });
 
 test("THEORY_RUNTIME artifact closes two exact-head PG15.8 cycles and rejects drift", () => {
@@ -802,6 +871,7 @@ test("THEORY_RUNTIME artifact closes two exact-head PG15.8 cycles and rejects dr
     legacyPracticePlannerReceiptReplay: true,
     practiceCompatibilityPreserved: true,
     practiceWrapperArgumentNamesPreserved: true,
+    theoryPostgrestArgumentNamesBound: true,
     cleanup: "complete",
   });
   const artifactRepository = fs.mkdtempSync(path.join(os.tmpdir(), "c3r-t-artifact-"));
