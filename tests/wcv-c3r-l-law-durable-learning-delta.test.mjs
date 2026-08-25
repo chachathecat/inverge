@@ -359,6 +359,9 @@ test("the dedicated browser fixture covers the full Law vertical and P/T isolati
   assert.match(lawE2eSource,
     /exerciseTheoryCompatibility[\s\S]*record_assisted_review[\s\S]*complete_d1[\s\S]*complete_d7_transfer[\s\S]*complete_recurrence[\s\S]*record_later_failure[\s\S]*complete_reopened_review[\s\S]*action: "delete"/);
   assert.match(lawE2eSource,
+    /complete_d1[\s\S]*currentPlanInput\(body\.view\)[\s\S]*complete_d7_transfer[\s\S]*currentPlanInput\(body\.view\)/);
+  assert.doesNotMatch(lawE2eSource, /lawPlanInput/);
+  assert.match(lawE2eSource,
     /assertBlankLawReconstruction[\s\S]*toHaveValue\(""\)[\s\S]*c3r-l-direct-repair-reference[\s\S]*toBeDisabled/);
   assert.match(lawE2eSource, /theoryDeletePreservesPracticeAndLaw: true/);
   assert.match(runtimeSource,

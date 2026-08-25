@@ -493,7 +493,7 @@ async function exerciseTheoryCompatibility(
   body = await postTheory(request, {
     action: "complete_d1", commandId: randomUUID(), recordId,
     expectedVersion: body.view.restored?.record.record_version,
-    attemptId: randomUUID(), claim: theoryClaim(), ...lawPlanInput(body.view),
+    attemptId: randomUUID(), claim: theoryClaim(), ...currentPlanInput(body.view),
     evidenceStep: "d1Rescheduled",
   });
   markBrowserFailureStage("THEORY_COMPAT_D7_PLAN");
@@ -512,7 +512,7 @@ async function exerciseTheoryCompatibility(
     action: "complete_d7_transfer", commandId: randomUUID(), recordId,
     expectedVersion: body.view.restored?.record.record_version,
     attemptId: randomUUID(), claim: theoryClaim(), transferTaskId,
-    ...lawPlanInput(body.view), evidenceStep: "d7",
+    ...currentPlanInput(body.view), evidenceStep: "d7",
   });
   markBrowserFailureStage("THEORY_COMPAT_RECURRENCE");
   body = await postTheory(request, {
