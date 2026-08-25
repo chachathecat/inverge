@@ -16,7 +16,7 @@
 
 ## Branches and PRs
 
-- Lane A Law: `codex/owner-study-lane-a-c3r-l`; worktree `.agent-factory/worktrees/owner-study-lane-a-c3r-l`; base `75f3ce787d31047c2bceacc2ef752c0bfdfb23cc`; no PR yet
+- Lane A Law: `codex/owner-study-lane-a-c3r-l`; Draft PR #821; candidate before log refresh `b8e0b18`; worktree `.agent-factory/worktrees/owner-study-lane-a-c3r-l`; base `75f3ce787d31047c2bceacc2ef752c0bfdfb23cc`
 - Lane B: `codex/owner-study-lane-b-first-stage-kernel`; Draft PR #813; parked
 - Lane C: `codex/owner-study-lane-c-question-foundry`; Draft PR #810; parked
 
@@ -38,8 +38,8 @@
 
 ## Current blocker
 
-- none for Lane A; Lane B and Lane C remain integration-held; remote Supabase/Production mutation remains zero
+- PR #821 exact-head CI is pending; this workstation has no Docker/Podman, so isolated PG15.8 evidence runs in GitHub CI; remote Supabase/Production mutation remains zero
 
 ## Next exact action
 
-- commit the exact 20-path C3R-L candidate, then run its two isolated exact-head PostgreSQL/browser cycles
+- push this log refresh, then inspect PR #821 exact-head CI and repair its first in-scope root failure
