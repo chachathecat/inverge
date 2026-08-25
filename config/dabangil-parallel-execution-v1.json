@@ -1,0 +1,184 @@
+{
+  "schemaVersion": "parallel_execution_v1.authority.v1",
+  "amendmentId": "PARALLEL_EXECUTION_V1",
+  "programId": "INVERGE_OWNER_STUDY_OS",
+  "authorityDecisionPath": "docs/decisions/2026-08-25-owner-parallel-execution-v1.md",
+  "authorityStatus": "effective_only_after_expected_head_pinned_squash_merge_and_validated_github_receipt",
+  "validatedPrerequisite": {
+    "pullRequest": 807,
+    "reviewedHeadSha": "eae0cfc27d6c44f244cd368882fdbdeae7282a0c",
+    "resultingMainSha": "c269d8fa489dc1ac77ef77d203dadffc0e4e73e5",
+    "resultingMainTree": "90c725a3f82665d8533a20254f1088de86fef18c",
+    "contributionPresentAndUnreverted": true
+  },
+  "limits": {
+    "initialMergeProducingLaneCount": 3,
+    "subjectAdapterEvalLaneCountAfterKernelFreeze": 6
+  },
+  "initialLanes": [
+    {
+      "laneId": "LANE_A_SECOND_STAGE",
+      "purpose": "C3R-T and C3R-L durable-learning verticals, then WCV-C3 Foundation Freeze",
+      "milestoneOrder": ["C3R-T", "C3R-L", "WCV-C3_FOUNDATION_FREEZE"]
+    },
+    {
+      "laneId": "LANE_B_FIRST_STAGE_KERNEL",
+      "purpose": "First-Stage common MCQ Kernel and frozen SubjectAdapter, then Study Capacity runtime bridge",
+      "milestoneOrder": ["FIRST_STAGE_COMMON_KERNEL", "STUDY_CAPACITY_RUNTIME_BRIDGE"]
+    },
+    {
+      "laneId": "LANE_C_QUESTION_FOUNDRY",
+      "purpose": "source-only offline AI-validated Question Foundry",
+      "milestoneOrder": ["QUESTION_FOUNDRY_V1"]
+    }
+  ],
+  "declaredIntegrationAndMergeOrder": [
+    "LANE_A_SECOND_STAGE:C3R-T",
+    "LANE_A_SECOND_STAGE:C3R-L",
+    "LANE_A_SECOND_STAGE:WCV-C3_FOUNDATION_FREEZE",
+    "LANE_B_FIRST_STAGE_KERNEL:FIRST_STAGE_COMMON_KERNEL",
+    "LANE_B_FIRST_STAGE_KERNEL:STUDY_CAPACITY_RUNTIME_BRIDGE",
+    "LANE_C_QUESTION_FOUNDRY:QUESTION_FOUNDRY_V1",
+    "ACCOUNTING",
+    "ECONOMICS",
+    "CIVIL_LAW",
+    "APPRAISAL_RELATED_LAWS",
+    "REAL_ESTATE_PRINCIPLES",
+    "GOLDEN_EVAL_META_AUDIT"
+  ],
+  "subjectAdapterEvalLanes": [
+    "ACCOUNTING",
+    "ECONOMICS",
+    "CIVIL_LAW",
+    "APPRAISAL_RELATED_LAWS",
+    "REAL_ESTATE_PRINCIPLES",
+    "GOLDEN_EVAL_META_AUDIT"
+  ],
+  "subjectLaneStartGate": {
+    "requiredMergedMilestone": "FIRST_STAGE_COMMON_KERNEL",
+    "requiredFrozenInterface": "SubjectAdapter",
+    "validatedResultingMainReceiptRequired": true
+  },
+  "worktreePolicy": {
+    "oneIsolatedGitWorktreePerLane": true,
+    "uniqueWorktreePathPerLane": true,
+    "uniqueBranchPerLane": true,
+    "initialLanesShareAmendmentResultingMain": true
+  },
+  "ownershipPolicy": {
+    "exactRepoRelativeOwnedPathsRequired": true,
+    "globOwnershipProhibited": true,
+    "trustedGitDiffEvidenceRequired": true,
+    "cleanWorktreeRequiredAtCandidate": true,
+    "baseAncestorAndExactMergeBaseRequired": true,
+    "everyChangedPathMustBeOwnedByExactlyOneLane": true,
+    "overlappingOwnedOrChangedPathDisposition": "fail_closed",
+    "undeclaredChangedPathDisposition": "fail_closed"
+  },
+  "frozenAmendmentArtifacts": [
+    "config/dabangil-parallel-execution-v1.json",
+    "docs/decisions/2026-08-25-owner-parallel-execution-v1.md",
+    "scripts/automation/parallel-execution-v1.mjs"
+  ],
+  "protectedConcurrentMutationClasses": [
+    {
+      "classId": "MIGRATIONS",
+      "pathPrefixes": ["supabase/migrations/"],
+      "exactPaths": [],
+      "pathTokenPatterns": [],
+      "maximumConcurrentOwningLanes": 1
+    },
+    {
+      "classId": "SHARED_AUTH_OR_RLS",
+      "pathPrefixes": [
+        "app/(auth)/",
+        "app/api/auth/",
+        "lib/auth/",
+        "lib/supabase/",
+        "supabase/rls/"
+      ],
+      "exactPaths": ["middleware.ts", "proxy.ts"],
+      "pathTokenPatterns": [
+        "(^|[/_.-])(auth|authenticated|login|sign-in|sign-up|rls|row-level|row_level)([/_.-]|$)"
+      ],
+      "maximumConcurrentOwningLanes": 1
+    },
+    {
+      "classId": "PACKAGE_AND_LOCKFILES",
+      "pathPrefixes": [],
+      "exactPaths": [
+        "package.json",
+        "package-lock.json",
+        "pnpm-lock.yaml",
+        "yarn.lock",
+        "bun.lock",
+        "bun.lockb"
+      ],
+      "pathTokenPatterns": [],
+      "maximumConcurrentOwningLanes": 1
+    },
+    {
+      "classId": "COMMON_DURABLE_SUBSTRATE",
+      "pathPrefixes": [
+        "app/api/review-os/c3r-p/",
+        "app/app/c3r-p/"
+      ],
+      "exactPaths": [
+        "components/review-os/c3r-p-practice-loop.tsx",
+        "config/dabangil-wcv-c3r-p-practice-common-durable-runtime-v1.json",
+        "lib/review-os/c3r-p-contract.ts",
+        "lib/review-os/c3r-p-engine.ts",
+        "lib/review-os/c3r-p-repository.ts",
+        "lib/review-os/c3r-p-service.ts",
+        "scripts/automation/produce-runtime-evidence.mjs",
+        "scripts/automation/runtime-gate.mjs",
+        "scripts/automation/runtime-risk-contract.mjs",
+        "scripts/automation/validate-pr-contract.mjs",
+        "scripts/automation/wcv-c3r-p-practice-common-runtime.mjs",
+        "supabase/migrations/20260822120000_c3r_p_practice_common_durable_substrate.sql",
+        "tests/agent-factory-contract-validation.test.mjs",
+        "tests/agent-factory-runtime-gate.test.mjs",
+        "tests/e2e/wcv-c3r-p-playwright.config.ts",
+        "tests/e2e/wcv-c3r-p-practice-common-runtime.spec.ts",
+        "tests/wcv-c3r-p-practice-common-durable-runtime.test.mjs"
+      ],
+      "pathTokenPatterns": [],
+      "maximumConcurrentOwningLanes": 1
+    },
+    {
+      "classId": "GLOBAL_AUTHORITY_PROGRAM_MIRRORS",
+      "pathPrefixes": ["docs/decisions/", "docs/exec-plans/active/"],
+      "exactPaths": [
+        "AGENTS.md",
+        "config/dabangil-unified-program-contract.json",
+        "docs/dabangil-unified-program-contract.md",
+        "roadmap/active-program.yml"
+      ],
+      "pathTokenPatterns": [],
+      "maximumConcurrentOwningLanes": 1
+    },
+    {
+      "classId": "SHARED_TEST_REGISTRATION",
+      "pathPrefixes": [".github/workflows/"],
+      "exactPaths": ["scripts/run-node-tests.mjs"],
+      "pathTokenPatterns": [],
+      "maximumConcurrentOwningLanes": 1
+    }
+  ],
+  "commonKernelBoundary": {
+    "pathPrefixes": [
+      "lib/review-os/first-stage/kernel/",
+      "lib/review-os/first-stage/subject-adapter/"
+    ],
+    "subjectLaneMutationRequiresOneIntegrationGate": true
+  },
+  "activationBoundary": {
+    "ownerOnly": true,
+    "defaultOff": true,
+    "publicActivation": false,
+    "paymentActivation": false,
+    "externalLearnerActivation": false,
+    "remoteSupabaseMutation": false,
+    "productionMutation": false
+  }
+}

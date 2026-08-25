@@ -5,6 +5,13 @@
 Use this authority order when sources conflict:
 
 1. a dated Owner decision for the exact decision it owns, currently
+   `docs/decisions/2026-08-25-owner-parallel-execution-v1.md` for the sole
+   narrow `INVERGE_OWNER_STUDY_OS` exception to the default one-writer rule,
+   its three initial isolated lanes, post-Kernel six-lane subject/eval cap,
+   exact disjoint path ownership, protected-path serialization, declared merge
+   order and preserved Owner-only/default-off/zero-remote boundary; it is only
+   an operating amendment and becomes repository authority after its own
+   expected-head-pinned squash merge and validated GitHub receipt,
    `docs/decisions/2026-08-22-owner-wcv-c3-pre-p-migration-mutation-authority.md`
    for the minimal source-only `C3RPMigrationMutationAuthorityV1`, the exact
    seven prospective existing-path transformations, sole frozen C3R-P append,
@@ -91,8 +98,13 @@ threads, mergeability and merge result are authoritative. Repository files may
 summarize a completed merge, but must not recreate GitHub state as an
 independent receipt, check ledger or proof system.
 
-There is exactly one merge-producing writer. Work uses a feature branch, an
-ordinary non-force push and a pull request. Before merge, the live ruleset-
+There is exactly one merge-producing writer by default. The sole exception is
+the exact, receipt-gated `PARALLEL_EXECUTION_V1` Owner Study OS operating
+amendment in `docs/decisions/2026-08-25-owner-parallel-execution-v1.md` and
+`config/dabangil-parallel-execution-v1.json`; it grants only the bounded,
+isolated, disjoint-path lanes validated there and changes no other program's
+writer limit. Work uses a feature branch, an ordinary non-force push and a pull
+request. Before merge, the live ruleset-
 required native checks must succeed for the current PR head against the latest
 required base, actionable review findings must be corrected, every review
 thread must be resolved, and a fresh exact-head Codex review must report
@@ -1255,8 +1267,10 @@ A source-level green check does not prove real runtime behavior or content corre
 
 - At any time there is at most one merge-producing Work, one writing branch,
   one writing PR, and one writer mutating shared authority or implementation
-  state. Read-only research and non-overlapping inspection may run concurrently
-  inside that Work.
+  state, except for the exact receipt-gated `PARALLEL_EXECUTION_V1` Owner Study
+  OS lanes. Those lanes require the amendment's isolated worktrees, exact
+  disjoint manifests, protected-path serialization and declared merge order.
+  Read-only research and non-overlapping inspection may run concurrently.
 - Every PR has one explicit lead issue. A complete learner-visible vertical may
   close multiple adjacent child issues only when they form one learner-visible
   outcome, one independently testable acceptance story, one deployment and
@@ -1361,15 +1375,20 @@ not bypass the global per-plan cap.
 The selectors do not provide a cross-process distributed writer lease,
 hierarchical/multi-lock ownership, cross-run reservation, or owned-file
 exclusivity. The Owner single-writer prohibition remains controlling across
-independent Work windows. The WCV campaign therefore retains one shared flat
-lock group and dependency chain in addition to the mechanically enforced cap.
+independent Work windows except for the exact `PARALLEL_EXECUTION_V1` scope,
+whose separate validator fails closed on lane, worktree, branch, ownership,
+protected-path and merge-order drift. The WCV campaign otherwise retains one
+shared flat lock group and dependency chain in addition to the mechanically
+enforced cap.
 
 `program.wipLimit` is three: two occupied reservations preserve the truthful
-blocked CPF-1 and S236P items, and one slot permits the sole merge-producing
-delivery. This runner capacity is not permission for three writers. Shared
-source-of-truth, schema, auth/RLS, billing, and control-plane mutation remains
-serialized through the global writer limit, dependencies, and exact Owner
-authority.
+blocked CPF-1 and S236P items, and one slot permits the default merge-producing
+delivery. This generic runner capacity does not authorize parallel work. The
+Owner Study OS exception is authorized only through its exact amendment and
+does not select unrelated queued roadmap items. Shared source-of-truth,
+schema, auth/RLS, billing, and control-plane mutation remains serialized
+through the global default, amendment path-class limits, dependencies, and
+exact Owner authority.
 
 Owner gates:
 
