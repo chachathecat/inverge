@@ -7,6 +7,7 @@ import os from "node:os";
 import path from "node:path";
 
 import {
+  parseJsonRejectingDuplicateKeys,
   parseLawApplicabilityClaimV1Input,
   TrustedRepairContractError,
 } from "../lib/review-os/trusted-repair-contract.ts";
@@ -172,6 +173,48 @@ test("closed Law input and trusted live binding yield PASS only for the exact bu
   assert.throws(() => parseLawApplicabilityClaimV1Input({
     ...lawClaim(), blockerState: { openBlockingReferenceIds: ["x", "x"], blockerCount: 2 },
   }), TrustedRepairContractError);
+});
+
+test("Law API returns invalid_input for every closed request-parser failure", () => {
+  for (const body of [
+    '{"action":',
+    '{"action":"start","action":"diagnose"}',
+    '{"claim":{"sourceId":"one","sourceId":"two"}}',
+  ]) {
+    assert.throws(
+      () => parseJsonRejectingDuplicateKeys(body),
+      (error) => error instanceof TrustedRepairContractError &&
+        error.code === "invalid_input",
+    );
+  }
+  assert.throws(
+    () => parseLawApplicabilityClaimV1Input({
+      ...lawClaim(),
+      callerProofState: "PASS",
+    }),
+    (error) => error instanceof TrustedRepairContractError &&
+      error.code === "invalid_input",
+  );
+  const trustedRepairHandlerStart = routeSource.indexOf(
+    "if (error instanceof TrustedRepairContractError)",
+  );
+  const c3rLErrorHandlerStart = routeSource.indexOf(
+    "if (error instanceof C3RLError)",
+    trustedRepairHandlerStart,
+  );
+  assert.ok(trustedRepairHandlerStart >= 0);
+  assert.ok(c3rLErrorHandlerStart > trustedRepairHandlerStart);
+  const trustedRepairHandler = routeSource.slice(
+    trustedRepairHandlerStart,
+    c3rLErrorHandlerStart,
+  );
+  assert.match(trustedRepairHandler,
+    /error\.code === "invalid_input"[\s\S]*error: "invalid_input"[\s\S]*400/);
+  assert.match(trustedRepairHandler,
+    /return response\(\{ ok: false, error: "temporarily_unavailable" \}, 503\)/);
+  assert.equal((trustedRepairHandler.match(/\b400\b/g) ?? []).length, 1);
+  assert.match(routeSource,
+    /parseJsonRejectingDuplicateKeys\(await request\.text\(\)\)[\s\S]*parseLawApplicabilityClaimV1Input\(row\.claim\)/);
 });
 
 test("TypeScript renders but never mints the authoritative proof digest", () => {
