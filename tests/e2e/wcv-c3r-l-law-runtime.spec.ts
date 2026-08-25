@@ -28,6 +28,9 @@ const DATABASE_CONTAINER = /^supabase_db_c3r-l-cycle-[12]-\d+-\d+$/u;
 const BROWSER_FAILURE_STAGE_SCHEMA_VERSION = "inverge.c3r_l.browser_failure_stage.v1";
 const BROWSER_FAILURE_STAGES = {
   journey: [
+    "LOAD_RETRY_INITIAL", "LOAD_RETRY_ERROR_VISIBLE", "LOAD_RETRY_COMPLETE",
+    "STALE_BOOKMARK_INITIAL", "STALE_BOOKMARK_ERROR_VISIBLE",
+    "STALE_BOOKMARK_RECOVERY_COMPLETE",
     "INITIAL_RUNTIME", "LAW_START", "FEEDBACK_COMMIT", "FEEDBACK_UI",
     "DIRECT_RPC_DENIALS", "REPAIR_REPLAY", "EARLY_D1_UI", "ASSISTED_REVIEW",
     "D1_PLAN_COMPLETE", "EARLY_D7_UI", "D7_PLAN_COMPLETE", "EARLY_RECURRENCE_UI",
@@ -40,7 +43,7 @@ const BROWSER_FAILURE_STAGES = {
     "THEORY_COMPAT_D7_COMPLETE", "THEORY_COMPAT_RECURRENCE", "THEORY_COMPAT_REOPEN",
     "THEORY_COMPAT_REOPEN_COMPLETE", "THEORY_COMPAT_RESTORE", "THEORY_COMPAT_EXPORT",
     "THEORY_COMPAT_DELETE", "THEORY_COMPAT_ISOLATION", "THEORY_START", "ISOLATION",
-    "PERSISTENCE_EVIDENCE", "COMPLETE",
+    "PERSISTENCE_EVIDENCE", "TERMINAL_CONTEXT_CLOSE", "COMPLETE",
   ],
   restore: ["RESTORE_LOAD", "EXPORT", "DELETE_ISOLATION", "COMPLETE"],
   feature_off: ["ACCESS_GATE", "COMPLETE"],
@@ -678,6 +681,7 @@ test("C3R-L initial load errors support retry and stale-bookmark recovery", asyn
   try {
     await login(owner, ownerEmail, ownerPassword);
     const page = await owner.newPage();
+    markBrowserFailureStage("LOAD_RETRY_INITIAL");
     let failFirstGet = true;
     const transientFailure = async (route: Route) => {
       if (failFirstGet && route.request().method() === "GET") {
@@ -695,18 +699,23 @@ test("C3R-L initial load errors support retry and stale-bookmark recovery", asyn
     await page.goto("/app/c3r-l");
     await expect(page.getByTestId("c3r-l-load-error")).toBeVisible();
     await expect(page.getByRole("alert")).toContainText("temporarily_unavailable");
+    markBrowserFailureStage("LOAD_RETRY_ERROR_VISIBLE");
     await page.getByRole("button", { name: "다시 시도", exact: true }).click();
     await expect(page.getByTestId("c3r-l-runtime")).toBeVisible();
+    markBrowserFailureStage("LOAD_RETRY_COMPLETE");
     await page.unroute("**/api/review-os/c3r-l*", transientFailure);
 
     const missingRecordId = randomUUID();
+    markBrowserFailureStage("STALE_BOOKMARK_INITIAL");
     await page.goto(`/app/c3r-l?recordId=${missingRecordId}`);
     await expect(page.getByTestId("c3r-l-load-error")).toBeVisible();
     await expect(page.getByRole("alert")).toContainText("not_found");
+    markBrowserFailureStage("STALE_BOOKMARK_ERROR_VISIBLE");
     await page.getByRole("button", { name: "기본 법규 학습으로 돌아가기" }).click();
     await expect(page.getByTestId("c3r-l-runtime")).toBeVisible();
     await expect.poll(() => new URL(page.url()).pathname).toBe("/app/c3r-l");
     await expect.poll(() => new URL(page.url()).search).toBe("");
+    markBrowserFailureStage("STALE_BOOKMARK_RECOVERY_COMPLETE");
   } finally {
     await owner.close();
   }
@@ -1026,10 +1035,11 @@ test("C3R-L Owner Law journey reaches Postgres and remains isolated", async ({ b
     rawLearnerBodyInEvidence: false,
     providerCalls: 0,
   });
-  markBrowserFailureStage("COMPLETE");
+  markBrowserFailureStage("TERMINAL_CONTEXT_CLOSE");
   await owner.close();
   await otherOwner.close();
   await nonOwner.close();
+  markBrowserFailureStage("COMPLETE");
 });
 
 test("C3R-L restart restore, export and subject-isolated delete are durable", async ({ browser }) => {
