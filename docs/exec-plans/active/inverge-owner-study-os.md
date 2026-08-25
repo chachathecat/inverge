@@ -13,7 +13,7 @@
 
 ## Branches and PRs
 
-- amendment: `codex/parallel-execution-v1`; base `c269d8fa489dc1ac77ef77d203dadffc0e4e73e5`; candidate head pending ordinary commit; PR pending; focused `20/20`, answer-review plus amendment `48/48`, full `1544/1544`, lint/typecheck/webpack production build/diff-check passed
+- amendment: `codex/parallel-execution-v1`; base `c269d8fa489dc1ac77ef77d203dadffc0e4e73e5`; Draft PR #808; linked amendment Issue #809; source correction 1 updates linkage/log; focused `20/20`, answer-review plus amendment `48/48`, full `1544/1544`, lint/typecheck/webpack production build/diff-check passed
 - frozen M1 donor: `codex/wcv-c3r-t-theory-durable-learning-delta`; base `c269d8fa489dc1ac77ef77d203dadffc0e4e73e5`; no PR
 
 ## Lane ownership
@@ -30,8 +30,8 @@
 
 ## Current blocker
 
-- final manifest review, ordinary commit, Draft PR, exact-head CI and exact Owner merge approval remain
+- exact-head CI, formal exact-head review and exact Owner merge approval remain
 
 ## Next exact action
 
-- `git add -- AGENTS.md app/api/answer-review/grade-second/route.ts config/dabangil-parallel-execution-v1.json docs/decisions/2026-08-25-owner-parallel-execution-v1.md docs/exec-plans/active/inverge-owner-study-os.md roadmap/active-program.yml scripts/automation/parallel-execution-v1.mjs scripts/run-node-tests.mjs tests/parallel-execution-v1.test.mjs`
+- `gh pr checks 808 --repo chachathecat/inverge`
