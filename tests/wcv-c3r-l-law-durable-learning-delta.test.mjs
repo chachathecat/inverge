@@ -514,6 +514,8 @@ test("the exact 20-path envelope remains sorted, unique, and migration-bounded",
   assert.match(workflowSource, /fetch-depth: 0/);
   assert.match(workflowSource, /--c3r-l-dedicated/);
   assert.match(workflowSource, /--verify-c3r-l-artifact/);
+  assert.match(workflowSource, /"lib\/review-os\/law-source-version-registry\.ts"/);
+  assert.match(workflowSource, /"lib\/review-os\/trusted-repair-source-binding\.ts"/);
   assert.doesNotMatch(workflowSource, /supabase link|supabase db push|--linked/);
 });
 
