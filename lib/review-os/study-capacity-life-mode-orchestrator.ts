@@ -325,13 +325,15 @@ function score(candidate: StudyTaskCandidateV1) {
 }
 
 function compareCandidatesForDay(profile: LearnerConstraintProfileV1, availability: DayAvailabilityV1, left: StudyTaskCandidateV1, right: StudyTaskCandidateV1) {
+  const scoreDifference = score(right) - score(left);
+  if (scoreDifference !== 0) return scoreDifference;
   if (profile.lifeMode === "full_time_employed") {
     const leftLong = left.estimatedMinutes >= 100 ? 1 : 0;
     const rightLong = right.estimatedMinutes >= 100 ? 1 : 0;
     if (availability.dayKind === "weekend" && leftLong !== rightLong) return rightLong - leftLong;
     if (availability.dayKind === "weekday" && leftLong !== rightLong) return leftLong - rightLong;
   }
-  return score(right) - score(left) || left.estimatedMinutes - right.estimatedMinutes || left.id.localeCompare(right.id);
+  return left.estimatedMinutes - right.estimatedMinutes || left.id.localeCompare(right.id);
 }
 
 function compatible(candidate: StudyTaskCandidateV1, window: StudyWindowV1, allowProtected = false) {

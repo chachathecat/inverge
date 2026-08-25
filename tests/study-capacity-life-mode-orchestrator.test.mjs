@@ -328,6 +328,25 @@ test("employed weekend priority survives daily allocation when equal-score work 
   assert.deepEqual(week.remainingTaskIds, ["weekend-short"]);
 });
 
+test("employed weekend length routing never displaces higher-priority required work", () => {
+  const plan = buildStudyDayPlan({
+    profile: profile({ lifeMode: "full_time_employed", scheduleVolatility: "medium" }),
+    availability: availability({
+      dayKind: "weekend",
+      declaredActiveMinutes: 420,
+      windows: [{ id: "weekend", startMinute: 540, endMinute: 960, environment: "library", interruptibility: "low" }],
+    }),
+    candidates: [
+      task("optional-long", { cognitiveLoad: "medium", estimatedMinutes: 110, requiredness: "optional" }),
+      task("required-review", { taskKind: "due_review", cognitiveLoad: "medium", estimatedMinutes: 60, requiredness: "required", prioritySignals: ["due_review"] }),
+    ],
+  });
+  const scheduled = plan.executionBlocks.map((block) => block.candidateId);
+  assert.ok(scheduled.includes("required-review"));
+  assert.ok(!scheduled.includes("optional-long"));
+  assert.equal(plan.deferredTasks.find((task) => task.candidateId === "optional-long")?.reason, "cognitive_load_budget_exhausted");
+});
+
 test("shift commute window admits safe guided recall but rejects desk-dependent work", () => {
   const plan = buildStudyDayPlan({
     profile: profile({ lifeMode: "shift_or_irregular_work", scheduleVolatility: "high" }),
