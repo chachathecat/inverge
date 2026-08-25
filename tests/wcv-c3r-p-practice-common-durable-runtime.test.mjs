@@ -7,9 +7,10 @@ import path from "node:path";
 import { execFileSync, spawnSync } from "node:child_process";
 
 // The validated Practice substrate is the default live-tree authority. Its
-// successor Theory delta is imported here so the unchanged central test runner
-// executes the C3R-T regressions without modifying scripts/run-node-tests.mjs.
+// successor Theory and Law deltas are imported here so the unchanged central
+// test runner executes C3R-T/L regressions without modifying run-node-tests.
 import "./wcv-c3r-t-theory-durable-learning-delta.test.mjs";
+import "./wcv-c3r-l-law-durable-learning-delta.test.mjs";
 
 import { parsePracticeCalculationClaimV2Input } from
   "../lib/review-os/trusted-repair-contract.ts";
