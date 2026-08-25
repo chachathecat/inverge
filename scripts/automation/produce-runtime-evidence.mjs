@@ -13,9 +13,12 @@ import {
 } from "./wcv-c3-pre-p-postgresql-security-state-oracle.mjs";
 import {
   cleanupC3RTNativeEvidence,
+  cleanupC3RLNativeEvidence,
   isC3RPRiskCandidate,
+  isC3RLRiskCandidate,
   isC3RTRiskCandidate,
   produceC3RPNativeEvidence,
+  produceC3RLNativeEvidence,
   produceC3RTNativeEvidence,
 } from "./wcv-c3r-p-practice-common-runtime.mjs";
 
@@ -3220,6 +3223,15 @@ function produce(riskFile) {
     });
     return;
   }
+  if (isC3RLRiskCandidate(riskResult)) {
+    produceC3RLNativeEvidence({
+      context,
+      evidencePath: process.env.RUNTIME_EVIDENCE_PATH,
+      riskBytes,
+      riskResult,
+    });
+    return;
+  }
   if (isC3RTRiskCandidate(riskResult)) {
     produceC3RTNativeEvidence({
       context,
@@ -3264,8 +3276,9 @@ function main() {
   if (options.cleanupOnly) {
     const context = executionContext();
     const genericComplete = cleanupContainer(context.containerName);
+    const lawComplete = cleanupC3RLNativeEvidence(context);
     const theoryComplete = cleanupC3RTNativeEvidence(context);
-    const complete = genericComplete && theoryComplete;
+    const complete = genericComplete && lawComplete && theoryComplete;
     if (options.requireComplete && !complete) throw new Error("isolated Postgres cleanup is incomplete.");
     console.log(JSON.stringify({ cleanup: complete ? "complete" : "incomplete" }));
     return;
