@@ -13,7 +13,9 @@ import {
 } from "./wcv-c3-pre-p-postgresql-security-state-oracle.mjs";
 import {
   isC3RPRiskCandidate,
+  isC3RTRiskCandidate,
   validateC3RPNativeEvidence,
+  validateC3RTNativeEvidence,
 } from "./wcv-c3r-p-practice-common-runtime.mjs";
 
 export const RUNTIME_EVIDENCE_SCHEMA_VERSION = "inverge.runtime_evidence.v2";
@@ -382,6 +384,10 @@ function expectedRuntimeContract(riskResult, headSha) {
 export function validateRuntimeEvidence(evidence, { riskResult, riskBytes }) {
   if (isOracleRiskCandidate(riskResult)) {
     validatePostgresSecurityOracleEvidence(evidence, { riskResult, riskBytes });
+    return;
+  }
+  if (isC3RTRiskCandidate(riskResult)) {
+    validateC3RTNativeEvidence(evidence, { riskResult, riskBytes });
     return;
   }
   if (isC3RPRiskCandidate(riskResult)) {
