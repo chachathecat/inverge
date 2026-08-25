@@ -38,8 +38,8 @@
 
 ## Current blocker
 
-- PR #821 closed unmerged after correction 2 reproduced `C3R_L_BROWSER_JOURNEY_THEORY_COMPATIBILITY`; clean replan 1 preserves the 20-path vertical and adds closed Theory substages; remote Supabase/Production mutation remains zero
+- PR #822 isolated PR #821's coarse failure to `THEORY_COMPAT_D1_COMPLETE`: a stale nonexistent plan-helper symbol; final correction repairs it with a regression; remote Supabase/Production mutation remains zero
 
 ## Next exact action
 
-- inspect PR #822 exact-head dedicated CI and repair the first exact Theory-compatibility substage root
+- commit and push PR #822 final correction, then inspect exact-head dedicated CI and request fresh formal review
