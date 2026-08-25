@@ -186,6 +186,27 @@ test("TypeScript renders but never mints the authoritative proof digest", () => 
   assert.equal(contract.lawProof.canonicalSentenceIsOutputOnly, true);
 });
 
+test("both Law migrations carry data-preserving rollback and forward-recovery instructions", () => {
+  for (const [label, sql] of [["enum", enumSql], ["integration", integrationSql]]) {
+    assert.match(sql, /PRE-APPLY ROLLBACK:/u, `${label} migration must define pre-apply rollback`);
+    assert.match(sql, /POST-APPLY FORWARD RECOVERY:/u,
+      `${label} migration must define post-apply forward recovery`);
+    assert.match(sql, /WCV_C3R_L_LAW_ENABLED=false/u,
+      `${label} migration recovery must keep Law disabled`);
+    assert.match(sql, /Retain the (?:inert )?LAW enum label|Retain\s+-- the LAW enum label/u,
+      `${label} migration recovery must retain the LAW enum label`);
+    assert.match(sql, /preserve all learner rows/u,
+      `${label} migration recovery must preserve learner data`);
+    assert.match(sql, /separate(?:ly)? (?:exact )?Owner gate/u,
+      `${label} migration recovery must remain Owner-gated`);
+  }
+  assert.match(enumSql, /newly authorized forward-only repair migration/u);
+  assert.match(integrationSql, /new forward-only repair migration/u);
+  assert.match(integrationSql,
+    /restore predecessor-compatible\s+-- Practice\/Theory constraints, functions, argument names, RLS, and\s+-- service-only grants/u);
+  assert.match(integrationSql, /two fresh local PostgreSQL 15\.8 reset\/replay cycles/u);
+});
+
 test("the enum migration is isolated and the integration closes P/T/L identities", () => {
   assert.match(enumSql, /alter type public\.c3r_p_subject add value if not exists 'LAW'/);
   assert.doesNotMatch(enumSql, /'LAW'::public\.c3r_p_subject/);
