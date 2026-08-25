@@ -17,6 +17,8 @@ import {
 } from "../lib/review-os/trusted-repair-engine.ts";
 import { trustedRepairCanonicalFixture } from
   "../lib/review-os/trusted-repair-fixtures.ts";
+import { c3rLCompletionPlanBinding } from
+  "../lib/review-os/c3r-l-contract.ts";
 import {
   C3R_L_ENUM_MIGRATION_PATH,
   C3R_L_INTEGRATION_MIGRATION_PATH,
@@ -358,6 +360,52 @@ test("Owner-only/default-off UI and API expose exact Law confirmation only", () 
   assert.equal(contract.runtimeBoundary.productionDenied, true);
   assert.equal(contract.runtimeBoundary.remoteSupabaseMutationCount, 0);
   assert.equal(contract.runtimeBoundary.publicActivation, false);
+});
+
+test("completion binds only accepted or edited Today and Full-Day plans", () => {
+  const recordId = "00000000-0000-4000-8000-000000000101";
+  const gapId = "repair-anchor:law:synthetic-article-10";
+  const plan = {
+    planId: "00000000-0000-4000-8000-000000000102",
+    planKind: "TODAY",
+    recordVersion: 3,
+    eligibilityDigest: "a".repeat(64),
+    state: "PROPOSED",
+    blocks: [{
+      blockId: "00000000-0000-4000-8000-000000000103",
+      blockKind: "CORE_OUTCOME",
+      recordId,
+      gapId,
+      reviewPhase: "D1",
+      ordinal: 1,
+      minutes: 30,
+      executionState: "PENDING",
+    }],
+    completionState: "ACTIONABLE",
+    dayComplete: false,
+    terminalReason: null,
+    generatedAt: "2026-08-26T00:00:00.000Z",
+    updatedAt: "2026-08-26T00:00:00.000Z",
+  };
+  const input = { plan, recordId, gapId, reviewPhase: "D1" };
+  const emptyBinding = { planBlockId: null, planId: null, planVersion: null };
+
+  assert.deepEqual(c3rLCompletionPlanBinding(input), emptyBinding);
+  for (const state of ["REJECTED", "STALE"]) {
+    assert.deepEqual(c3rLCompletionPlanBinding({ ...input, plan: { ...plan, state } }),
+      emptyBinding);
+  }
+  for (const state of ["ACCEPTED", "EDITED"]) {
+    assert.deepEqual(c3rLCompletionPlanBinding({ ...input, plan: { ...plan, state } }), {
+      planBlockId: plan.blocks[0].blockId,
+      planId: plan.planId,
+      planVersion: plan.recordVersion,
+    });
+  }
+  assert.deepEqual(c3rLCompletionPlanBinding({ ...input, recordId: crypto.randomUUID(),
+    plan: { ...plan, state: "ACCEPTED" } }), emptyBinding);
+  assert.match(componentSource,
+    /c3rLCompletionPlanBinding\([\s\S]*plan: view\?\.currentPlan[\s\S]*completionPlanBinding/);
 });
 
 test("Today/Full-Day and durable review transitions remain deterministic", () => {

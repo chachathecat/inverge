@@ -16,7 +16,8 @@
 
 ## Branches and PRs
 
-- Lane A Law cleanup-closure replacement: `codex/owner-study-lane-a-c3r-l-cleanup-closure`; Draft PR #831; worktree `.agent-factory/worktrees/owner-study-lane-a-c3r-l-cleanup-closure`; base `75f3ce787d31047c2bceacc2ef752c0bfdfb23cc`
+- Lane A Law proposed-plan clean replacement: `codex/owner-study-lane-a-c3r-l-proposed-plan-replan1`; Draft PR pending initial push; worktree `.agent-factory/worktrees/owner-study-lane-a-c3r-l-proposed-plan-replan1`; base `75f3ce787d31047c2bceacc2ef752c0bfdfb23cc`
+- Superseded Lane A PR #831: closed unmerged after the two-correction limit; exact-head checks passed, but final review found `PROPOSED` plan IDs could make an otherwise valid Law completion return 409
 - Superseded Lane A PR #830: closed unmerged after the two-correction limit; exact-head checks passed, but final review found cleanup could claim completion after a failed local Supabase stop
 - Superseded Lane A PR #829: closed unmerged after the two-correction limit; exact-head Law run remained at `LOAD_RETRY_INITIAL`
 - Superseded Lane A PR #828: closed unmerged after the two-correction limit; exact-head Law run reached the later journey `COMPLETE` marker but the overall Playwright run retained an earlier assertion failure
@@ -42,8 +43,8 @@
 
 ## Current blocker
 
-- Draft PR #831 correction 1 is exact-head green; correction 2 is the final allowed source correction and updates only this stale program log; merge remains blocked until correction-2 exact-head checks/review are clean, after which only exact high-risk Owner approval remains; remote Supabase/Production mutation remains zero
+- Clean replacement root repair is locally clean: Law 23/23 and inherited Practice/Theory/Law/access 129/129 passed with typecheck, changed-file lint, and diff check; Draft PR is not yet open; remote Supabase/Production mutation remains zero
 
 ## Next exact action
 
-- push correction 2; while its exact-head checks/review run, inspect them; when clean, issue the exact Owner merge packet without further source mutation
+- commit and push the initial candidate, open the one replacement Draft PR, then record its number as the first docs-only correction before the exact-head gate

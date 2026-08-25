@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 import {
   C3R_L_ANCHOR_ID,
@@ -10,6 +10,7 @@ import {
   C3R_L_SOURCE_BINDING_ID,
   C3R_L_SOURCE_ID,
   C3R_L_SOURCE_VERSION_ID,
+  c3rLCompletionPlanBinding,
   c3rLCurrentQueueItem,
   type C3RLPlanBlockInput,
   type C3RLView,
@@ -151,10 +152,12 @@ export function C3RLLawLoop({ initialRecordId }: { initialRecordId: string | nul
     : record?.state === "D1_COMPLETE" ? "D7_TRANSFER"
       : record?.state === "D7_COMPLETE" ? "RECURRENCE"
         : record?.state === "REOPENED" ? "REOPENED_REVIEW" : null;
-  const currentPlanBlock = useMemo(() => view?.currentPlan?.blocks.find((block) =>
-    block.recordId === record?.id && block.gapId === record?.primary_gap_id &&
-    block.reviewPhase === currentPhase && block.executionState === "PENDING") ?? null,
-  [currentPhase, record?.id, record?.primary_gap_id, view?.currentPlan?.blocks]);
+  const completionPlanBinding = c3rLCompletionPlanBinding({
+    plan: view?.currentPlan,
+    recordId: record?.id,
+    gapId: record?.primary_gap_id,
+    reviewPhase: currentPhase,
+  });
 
   function resetLawReconstruction() {
     setLawClaimDraft(emptyLawClaimDraft);
@@ -242,11 +245,8 @@ export function C3RLLawLoop({ initialRecordId }: { initialRecordId: string | nul
       expectedVersion: record.record_version, attemptId: id(),
       claim: claim(),
       ...(action === "complete_d7_transfer" ? { transferTaskId: transferTask?.taskId } : {}),
-      ...(new Set(["complete_d1", "complete_d7_transfer", "complete_recurrence", "complete_reopened_review"]).has(action) ? {
-        planBlockId: currentPlanBlock?.blockId ?? null,
-        planId: view?.currentPlan?.planId ?? null,
-        planVersion: view?.currentPlan?.recordVersion ?? null,
-      } : {}),
+      ...(new Set(["complete_d1", "complete_d7_transfer", "complete_recurrence", "complete_reopened_review"])
+        .has(action) ? completionPlanBinding : {}),
       evidenceStep,
     });
     if (data.ok) resetLawReconstruction();

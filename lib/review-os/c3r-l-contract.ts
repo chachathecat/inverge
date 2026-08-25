@@ -215,6 +215,40 @@ export type C3RLView = Readonly<{
   planHistory: readonly C3RLPersistedPlan[];
 }>;
 
+export type C3RLCompletionPlanBinding = Readonly<{
+  planBlockId: string | null;
+  planId: string | null;
+  planVersion: number | null;
+}>;
+
+const EMPTY_C3R_L_COMPLETION_PLAN_BINDING: C3RLCompletionPlanBinding = Object.freeze({
+  planBlockId: null,
+  planId: null,
+  planVersion: null,
+});
+
+export function c3rLCompletionPlanBinding(input: Readonly<{
+  plan: C3RLPersistedPlan | null | undefined;
+  recordId: string | null | undefined;
+  gapId: string | null | undefined;
+  reviewPhase: C3RLQueueItem["reviewPhase"] | null | undefined;
+}>): C3RLCompletionPlanBinding {
+  const { plan } = input;
+  if (!plan || (plan.state !== "ACCEPTED" && plan.state !== "EDITED") ||
+      !input.recordId || !input.gapId || !input.reviewPhase) {
+    return EMPTY_C3R_L_COMPLETION_PLAN_BINDING;
+  }
+  const block = plan.blocks.find((candidate) =>
+    candidate.recordId === input.recordId && candidate.gapId === input.gapId &&
+    candidate.reviewPhase === input.reviewPhase && candidate.executionState === "PENDING");
+  if (!block) return EMPTY_C3R_L_COMPLETION_PLAN_BINDING;
+  return {
+    planBlockId: block.blockId,
+    planId: plan.planId,
+    planVersion: plan.recordVersion,
+  };
+}
+
 export function c3rLCurrentQueueItem(input: Readonly<{
   queue: readonly C3RLQueueItem[];
   recordId: string | null | undefined;
