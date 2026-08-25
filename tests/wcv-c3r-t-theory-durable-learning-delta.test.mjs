@@ -366,6 +366,23 @@ test("forward migrations preserve the validated C3R-P append byte-for-byte", () 
     /alter type public\.c3r_p_subject add value if not exists 'THEORY'/);
   assert.doesNotMatch(enumSql + integrationSql, /add value 'LAW'/);
   assert.equal(contract.pathManifest.forwardMigrationsExactly.length, 2);
+  for (const migrationPath of [
+    C3R_T_ENUM_MIGRATION_PATH,
+    C3R_T_INTEGRATION_MIGRATION_PATH,
+  ]) {
+    const mergedBlob = execFileSync("git", [
+      "rev-parse", `${C3R_T_RESULTING_MAIN_SHA}:${migrationPath}`,
+    ], { cwd: root, encoding: "utf8" }).trim();
+    const currentBlob = execFileSync("git", [
+      "rev-parse", `HEAD:${migrationPath}`,
+    ], { cwd: root, encoding: "utf8" }).trim();
+    assert.equal(currentBlob, mergedBlob, `${migrationPath} must stay immutable`);
+    const mergedBytes = execFileSync("git", [
+      "show", `${C3R_T_RESULTING_MAIN_SHA}:${migrationPath}`,
+    ], { cwd: root, encoding: "utf8" }).replace(/\r\n/g, "\n");
+    assert.equal(read(migrationPath).replace(/\r\n/g, "\n"), mergedBytes,
+      `${migrationPath} working bytes must match the merged receipt`);
+  }
   const actualChangedPaths = execFileSync("git", [
     "diff", "--name-only", contract.authority.baseSha,
     C3R_T_RESULTING_MAIN_SHA, "--",
@@ -378,20 +395,18 @@ test("forward migrations preserve the validated C3R-P append byte-for-byte", () 
 });
 
 test("post-merge migration recovery is concrete, immutable and fail-closed", () => {
-  const enumMigration =
-    "supabase/migrations/20260825054823_c3r_t_theory_durable_learning_delta.sql";
-  const integrationMigration =
-    "supabase/migrations/20260825055252_c3r_t_theory_common_substrate_integration.sql";
   const occurrences = (value) => migrationRecoveryRunbook.split(value).length - 1;
 
-  assert.equal(occurrences(enumMigration), 1);
-  assert.equal(occurrences(integrationMigration), 1);
+  assert.equal(occurrences(C3R_T_ENUM_MIGRATION_PATH), 1);
+  assert.equal(occurrences(C3R_T_INTEGRATION_MIGRATION_PATH), 1);
   for (const expected of [
     /Never edit, replay, or replace either historical migration in place/i,
     /cannot remove the `THEORY` label safely/i,
     /Neither migration applied/i,
     /Only the enum migration applied/i,
-    /Integration migration partially or fully applied/i,
+    /Integration migration partially applied, failed, or catalog-drifted/i,
+    /Integration migration fully applied with an exact approved catalog/i,
+    /No database recovery is needed[\s\S]*Leave the schema inert[\s\S]*perform no database mutation/i,
     /new forward-only repair migration/i,
     /verified pre-apply database backup/i,
     /separate, explicit remote\/Production and destructive-recovery Owner gate/i,
@@ -405,7 +420,11 @@ test("post-merge migration recovery is concrete, immutable and fail-closed", () 
   ]) assert.match(migrationRecoveryRunbook, expected);
 
   for (const required of [
-    "pg_enum", "pg_constraint", "proargnames", "relforcerowsecurity",
+    "pg_enum", "pg_constraint", "pg_attribute", "pg_get_expr",
+    "pg_get_functiondef", "prosecdef", "proargnames", "relforcerowsecurity",
+    "pg_policies", "c3r_learning_records_d0_exact",
+    "c3r_p_attempts_proof_state_check", "c3r_attempts_theory_proof_closed",
+    "c3r_transfer_tasks_distinct_identity",
     "PRACTICE", "THEORY", "forced RLS", "service-only mutation grants",
     "owner/isolation", "restore/export/delete", "cleanup", "default-off",
   ]) assert.ok(migrationRecoveryRunbook.includes(required), required);
