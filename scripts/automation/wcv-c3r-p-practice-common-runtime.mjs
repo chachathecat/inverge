@@ -3590,6 +3590,7 @@ async function runLawDedicatedCycle(input) {
     supabase(input.repositoryRoot, ["start", "--workdir", cycleRoot, "--exclude",
       EXCLUDED_SUPABASE_SERVICES.join(","), "--output", "json", "--yes"], {
       label: `C3R-L Supabase cycle ${input.cycle} start`,
+      reportOutput: true,
     });
     const status = parseStatus(supabase(input.repositoryRoot,
       ["status", "--workdir", cycleRoot, "--output", "json"], {
