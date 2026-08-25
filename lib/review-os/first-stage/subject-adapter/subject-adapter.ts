@@ -9,6 +9,7 @@ import {
   type AnswerSubmission,
   type Attempt,
   type AttemptEvaluation,
+  type AttemptEvaluationDecision,
   type ChoiceId,
   type ConceptBinding,
   type FirstStageSubjectId,
@@ -17,6 +18,7 @@ import {
   type ImmutableEvidenceReference,
   type QuestionReference,
   type ReviewTask,
+  type RetryDisposition,
 } from "../kernel/domain";
 
 export const SUBJECT_ADAPTER_SCHEMA_VERSION =
@@ -70,7 +72,16 @@ export interface SubjectAdapterV1 {
   buildIndependentRetry(input: IndependentRetryInput): IndependentRetryCandidate;
 }
 
-export const SUBJECT_ADAPTER_V1_INTERFACE_DESCRIPTOR = Object.freeze({
+function deepFreeze<const T>(value: T): T {
+  if (value !== null && typeof value === "object" && !Object.isFrozen(value)) {
+    const row = value as Record<PropertyKey, unknown>;
+    for (const key of Reflect.ownKeys(value)) deepFreeze(row[key]);
+    Object.freeze(value);
+  }
+  return value;
+}
+
+export const SUBJECT_ADAPTER_V1_INTERFACE_DESCRIPTOR = deepFreeze({
   schemaVersion: SUBJECT_ADAPTER_SCHEMA_VERSION,
   interfaceName: "SubjectAdapterV1",
   subjects: FIRST_STAGE_SUBJECT_IDS,
@@ -132,6 +143,9 @@ export const SUBJECT_ADAPTER_V1_INTERFACE_DESCRIPTOR = Object.freeze({
       "nextActionCode", "retryDisposition", "reviewAfterMs", "evaluationPolicyVersion",
       "evidenceEnvelope",
     ],
+    AttemptEvaluationDecision: [
+      "correct", "incorrect", "unanswered", "unavailable", "withheld",
+    ],
     AttemptEvidenceEnvelope: [
       "schemaVersion", "attemptId", "submissionSha256", "questionId", "questionVersion",
       "subjectId", "adapterId", "adapterVersion", "officialKeyReference",
@@ -157,8 +171,10 @@ export const SUBJECT_ADAPTER_V1_INTERFACE_DESCRIPTOR = Object.freeze({
     "nonwithheld_evaluation_requires_key_choice_source_version_rights_and_reviewed_feedback_receipts",
     "reviewed_feedback_requires_named_owner_authorized_human_or_owner_approved_reviewer_and_model_alone_false",
     "withheld_or_unavailable_feedback_has_no_receipt_or_reviewer",
+    "withheld_or_unavailable_evaluation_has_null_error_cause_concepts_gap_action_retry_and_review_schedule",
+    "withheld_or_unavailable_attempt_records_no_review_task_concept_state_or_retry_queue",
     "evaluation_is_deterministic_for_exact_adapter_version_reference_attempt_submission",
-    "evaluation_has_exactly_one_primary_concept_and_no_duplicate_concept_binding",
+    "reviewed_evaluation_has_exactly_one_primary_concept_and_no_duplicate_concept_binding",
     "independent_retry_stays_in_subject_and_cannot_reuse_the_same_question_identity",
     "unknown_missing_cross_subject_or_stale_binding_fails_closed",
     "adapter_makes_no_mastery_efficacy_calibration_or_official_result_claim",
@@ -168,7 +184,7 @@ export const SUBJECT_ADAPTER_V1_INTERFACE_DESCRIPTOR = Object.freeze({
 // SHA-256 over RFC-8785-equivalent recursively-key-sorted JSON for the exact
 // descriptor above. The focused contract test recomputes and binds this value.
 export const SUBJECT_ADAPTER_V1_INTERFACE_DIGEST =
-  "54c5c44daccc5cf0584bd329cd94db1affe14c8f75c0a9d118340b8dc7e43667" as const;
+  "3ab5255ae09124d8c1f242cf2e5806e71392123613cdcd9aef403adc97ad2ba1" as const;
 
 function fail(): never {
   throw new FirstStageKernelError("adapter_mismatch");
@@ -317,7 +333,14 @@ function parseEvidenceEnvelope(
     feedback.modelAlone !== false
   ) fail();
   const reviewedAvailable = feedback.state === "reviewed_available";
+  const unreviewed = decision === "unavailable" || decision === "withheld";
+  const requiredFeedbackState = decision === "unavailable"
+    ? "not_emitted_unavailable"
+    : decision === "withheld"
+      ? "withheld_rights_or_version"
+      : "reviewed_available";
   if (
+    feedback.state !== requiredFeedbackState ||
     reviewedAvailable !== (feedback.receiptReference !== null) ||
     reviewedAvailable !== (feedback.reviewerIdentity !== null) ||
     reviewedAvailable !== (feedback.reviewerClass !== null)
@@ -344,8 +367,8 @@ function parseEvidenceEnvelope(
   const choiceSetReference = row.choiceSetReference === null
     ? null : parseEvidenceReference(row.choiceSetReference);
   if (
-    (decision === "withheld" && reviewedAvailable) ||
-    (decision !== "withheld" && (!reviewedAvailable || !officialKeyReference || !choiceSetReference))
+    (unreviewed && (reviewedAvailable || officialKeyReference !== null || choiceSetReference !== null)) ||
+    (!unreviewed && (!reviewedAvailable || !officialKeyReference || !choiceSetReference))
   ) fail();
   return Object.freeze({
     schemaVersion: "first_stage.attempt_evidence_envelope.v1" as const,
@@ -385,9 +408,35 @@ export function validateAttemptEvaluation(
     "nextActionCode", "retryDisposition", "reviewAfterMs", "evaluationPolicyVersion",
     "evidenceEnvelope",
   ]);
+  const decision = row.decision as AttemptEvaluationDecision;
+  const unreviewed = decision === "unavailable" || decision === "withheld";
   if (
     row.schemaVersion !== "first_stage.attempt_evaluation.v1" ||
-    !["correct", "incorrect", "unanswered", "withheld"].includes(String(row.decision)) ||
+    !["correct", "incorrect", "unanswered", "unavailable", "withheld"].includes(String(row.decision))
+  ) fail();
+  if (unreviewed) {
+    if (
+      row.errorCause !== null ||
+      row.conceptBindings !== null ||
+      row.biggestGapCode !== null ||
+      row.nextActionCode !== null ||
+      row.retryDisposition !== null ||
+      row.reviewAfterMs !== null
+    ) fail();
+    return Object.freeze({
+      schemaVersion: "first_stage.attempt_evaluation.v1",
+      decision,
+      errorCause: null,
+      conceptBindings: null,
+      biggestGapCode: null,
+      nextActionCode: null,
+      retryDisposition: null,
+      reviewAfterMs: null,
+      evaluationPolicyVersion: requiredIdentifier(row.evaluationPolicyVersion),
+      evidenceEnvelope: parseEvidenceEnvelope(adapter, input, row.evidenceEnvelope, decision),
+    });
+  }
+  if (
     !["retry_now", "review_then_retry", "review_before_new_variant"].includes(String(row.retryDisposition)) ||
     !Array.isArray(row.conceptBindings) ||
     row.conceptBindings.length < 1 ||
@@ -404,11 +453,11 @@ export function validateAttemptEvaluation(
       : fail();
   const selectedChoice = input.submission.selectedChoice;
   if (
-    (selectedChoice === null && !["unanswered", "withheld"].includes(String(row.decision))) ||
+    (selectedChoice === null && row.decision !== "unanswered") ||
     (selectedChoice !== null && row.decision === "unanswered") ||
     (row.decision === "correct" && errorCause !== null) ||
     (row.decision === "incorrect" && errorCause === null) ||
-    (["unanswered", "withheld"].includes(String(row.decision)) && errorCause !== null)
+    (row.decision === "unanswered" && errorCause !== null)
   ) fail();
   const reviewAfterMs = requiredSafeInteger(row.reviewAfterMs, 0, 2_592_000_000);
   if (
@@ -417,12 +466,12 @@ export function validateAttemptEvaluation(
   ) fail();
   return Object.freeze({
     schemaVersion: "first_stage.attempt_evaluation.v1",
-    decision: row.decision as AttemptEvaluation["decision"],
+    decision,
     errorCause,
     conceptBindings: Object.freeze(concepts),
     biggestGapCode: requiredIdentifier(row.biggestGapCode),
     nextActionCode: requiredIdentifier(row.nextActionCode),
-    retryDisposition: row.retryDisposition as AttemptEvaluation["retryDisposition"],
+    retryDisposition: row.retryDisposition as RetryDisposition,
     reviewAfterMs,
     evaluationPolicyVersion: requiredIdentifier(row.evaluationPolicyVersion),
     evidenceEnvelope: parseEvidenceEnvelope(

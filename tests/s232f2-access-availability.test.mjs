@@ -204,6 +204,7 @@ test("S232F.2 every data-bearing app page gates a fresh access result before dow
     "app/app/c3r-p/page.tsx",
     "app/app/c3r-l/page.tsx",
     "app/app/c3r-t/page.tsx",
+    "app/app/first-stage/page.tsx",
     "app/app/trusted-repair/page.tsx",
   ].sort();
   const allPages = collectPageFiles("app/app").sort();
@@ -279,6 +280,20 @@ test("S232F.2 every data-bearing app page gates a fresh access result before dow
   assert.ok(c3rLNotFoundIndex > c3rLDeniedIndex);
   assert.ok(c3rLRethrowIndex > c3rLNotFoundIndex);
   assert.ok(c3rLLoopIndex > c3rLRethrowIndex);
+
+  const firstStagePage = read("app/app/first-stage/page.tsx");
+  const firstStageFlagIndex = firstStagePage.indexOf("process.env[FIRST_STAGE_FEATURE_FLAG]");
+  const firstStageSessionIndex = firstStagePage.indexOf("await getServerSessionUser()");
+  const firstStageAdminIndex = firstStagePage.indexOf("process.env.ALPHA_ADMIN_EMAILS");
+  const firstStageOwnerIndex = firstStagePage.indexOf("process.env[FIRST_STAGE_OWNER_ALLOWLIST]");
+  const firstStageDeniedIndex = firstStagePage.lastIndexOf("notFound()");
+  const firstStageLoopIndex = firstStagePage.indexOf("<FirstStageMcqLoop />");
+  assert.ok(firstStageFlagIndex >= 0, "first-stage must resolve its default-off feature gate");
+  assert.ok(firstStageSessionIndex > firstStageFlagIndex, "first-stage must authenticate after its feature gate");
+  assert.ok(firstStageAdminIndex > firstStageSessionIndex, "first-stage must require the alpha admin allowlist");
+  assert.ok(firstStageOwnerIndex > firstStageAdminIndex, "first-stage must require its narrower Owner allowlist");
+  assert.ok(firstStageDeniedIndex > firstStageOwnerIndex, "first-stage must fail closed after both allowlists");
+  assert.ok(firstStageLoopIndex > firstStageDeniedIndex, "first-stage must render only after its specialized gate");
 });
 
 test("S232F.2 documents the failure boundary and registers the contract in the full suite", () => {
