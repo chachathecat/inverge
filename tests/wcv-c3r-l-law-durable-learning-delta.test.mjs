@@ -509,7 +509,10 @@ test("Law cleanup fails closed and retains its retry identity", () => {
 });
 
 test("Law cleanup-only attempts both exact cycles and reports success only after both pass", () => {
-  const temporaryRoot = fs.mkdtempSync(path.join(os.tmpdir(), "c3r-l-cleanup-only-"));
+  const temporaryRoot = fs.mkdtempSync(path.join(
+    path.resolve(process.env.RUNNER_TEMP ?? os.tmpdir()),
+    "c3r-l-cleanup-only-",
+  ));
   const calls = [];
   const outputs = [];
   try {
