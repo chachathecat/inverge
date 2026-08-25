@@ -421,13 +421,21 @@ test("post-merge migration recovery is concrete, immutable and fail-closed", () 
 
   for (const required of [
     "pg_enum", "pg_constraint", "pg_attribute", "pg_get_expr",
+    "pg_index", "pg_indexes", "indisunique", "indisvalid", "indisready", "indexdef",
     "pg_get_functiondef", "prosecdef", "proargnames", "relforcerowsecurity",
     "pg_policies", "c3r_learning_records_d0_exact",
     "c3r_p_attempts_proof_state_check", "c3r_attempts_theory_proof_closed",
     "c3r_transfer_tasks_distinct_identity",
+    "c3r_learning_gaps_subject_queue_idx", "c3r_ledger_subject_time_idx",
+    "c3r_plans_subject_time_idx", "c3r_receipts_subject_aggregate_idx",
     "PRACTICE", "THEORY", "forced RLS", "service-only mutation grants",
     "owner/isolation", "restore/export/delete", "cleanup", "default-off",
   ]) assert.ok(migrationRecoveryRunbook.includes(required), required);
+
+  assert.match(migrationRecoveryRunbook,
+    /new forward-only repair migration[\s\S]*approved constraints, indexes, functions/);
+  assert.match(migrationRecoveryRunbook,
+    /missing, invalid, not-ready, unexpectedly unique, or definition-drifted index state returns to recovery case 3/i);
 
   assert.doesNotMatch(migrationRecoveryRunbook,
     /\bDROP\s+(?:TYPE|TABLE|FUNCTION|SCHEMA)\b/i);

@@ -17,7 +17,7 @@ The current remote Supabase and Production mutation count is zero. Keep `WCV_C3R
 There are only two recovery routes:
 
 - Restore a verified pre-apply database backup only under a separate, explicit remote/Production and destructive-recovery Owner gate.
-- Otherwise, after an exact catalog diff and separate Owner migration authority, create a **new forward-only repair migration** that restores the approved constraints, functions, argument names, policies, and grants. Validate that new migration through two disposable PostgreSQL 15.8 reset/replay cycles before any separately authorized remote operation.
+- Otherwise, after an exact catalog diff and separate Owner migration authority, create a **new forward-only repair migration** that restores the approved constraints, indexes, functions, argument names, policies, and grants. Validate that new migration through two disposable PostgreSQL 15.8 reset/replay cycles before any separately authorized remote operation.
 
 This runbook authorizes no destructive SQL, linked Supabase command, remote schema/history repair, or Production operation.
 
@@ -50,6 +50,21 @@ where c.relnamespace = 'public'::regnamespace
   and c.relname like 'c3r_p_%'
 order by c.relname, a.attnum;
 
+select p.schemaname, p.tablename, p.indexname,
+       i.indisunique, i.indisvalid, i.indisready, p.indexdef
+from pg_indexes p
+join pg_class x
+  on x.relnamespace = p.schemaname::regnamespace and x.relname = p.indexname
+join pg_index i on i.indexrelid = x.oid
+where p.schemaname = 'public'
+  and p.indexname in (
+    'c3r_learning_gaps_subject_queue_idx',
+    'c3r_ledger_subject_time_idx',
+    'c3r_plans_subject_time_idx',
+    'c3r_receipts_subject_aggregate_idx'
+  )
+order by p.indexname;
+
 select p.proname, p.proargnames,
        pg_get_function_identity_arguments(p.oid) as identity_arguments,
        p.prosecdef, p.provolatile, p.proparallel, p.proconfig, p.proacl,
@@ -73,6 +88,6 @@ where p.schemaname = 'public' and p.tablename like 'c3r_p_%'
 order by p.tablename, p.policyname;
 ```
 
-The evidence must show the expected `PRACTICE`/`THEORY` enum labels; every approved column, type, nullability, and default; every approved constraint; forced RLS and exact policies; service-only mutation grants; revoked public execution; and unchanged definitions, security-definer state, configuration, ACLs, and `proargnames` for `c3r_t_*`, Practice wrappers, and shared subject functions. At minimum the constraint comparison must include `c3r_learning_records_d0_exact`, `c3r_p_attempts_proof_state_check`, `c3r_attempts_theory_proof_closed`, and `c3r_transfer_tasks_distinct_identity` in addition to every subject, evidence-reference, uniqueness, and owner/subject foreign-key constraint. In an isolated local database, also run the existing Practice and Theory owner/isolation, restore/export/delete, cleanup, and default-off checks. Use PostgreSQL 15.8 and the full repository migration history twice; use no linked or remote Supabase project.
+The evidence must show the expected `PRACTICE`/`THEORY` enum labels; every approved column, type, nullability, and default; every approved constraint; the exact definitions and valid/ready/unique states of all four integration indexes; forced RLS and exact policies; service-only mutation grants; revoked public execution; and unchanged definitions, security-definer state, configuration, ACLs, and `proargnames` for `c3r_t_*`, Practice wrappers, and shared subject functions. At minimum the constraint comparison must include `c3r_learning_records_d0_exact`, `c3r_p_attempts_proof_state_check`, `c3r_attempts_theory_proof_closed`, and `c3r_transfer_tasks_distinct_identity` in addition to every subject, evidence-reference, uniqueness, and owner/subject foreign-key constraint. The exact index comparison must include `c3r_learning_gaps_subject_queue_idx`, `c3r_ledger_subject_time_idx`, `c3r_plans_subject_time_idx`, and `c3r_receipts_subject_aggregate_idx`; missing, invalid, not-ready, unexpectedly unique, or definition-drifted index state returns to recovery case 3. In an isolated local database, also run the existing Practice and Theory owner/isolation, restore/export/delete, cleanup, and default-off checks. Use PostgreSQL 15.8 and the full repository migration history twice; use no linked or remote Supabase project.
 
 Stop and return to the Owner if a backup restore, remote/Production action, destructive recovery, security weakening, migration-authority expansion, catalog ambiguity, private-data exposure, or any change to the accepted Practice/Theory contract would be required.
