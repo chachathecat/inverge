@@ -18,10 +18,13 @@ import { trustedRepairCanonicalFixture } from
   "../lib/review-os/trusted-repair-fixtures.ts";
 import {
   C3R_T_NATIVE_SCHEMA_VERSION,
+  C3R_T_CONTRACT_PATH,
   C3R_T_ENUM_MIGRATION_PATH,
   C3R_T_INTEGRATION_MIGRATION_PATH,
   C3R_T_RUNTIME_PRODUCER_VERSION,
+  C3R_T_RUNTIME_SCHEMA_VERSION,
   boundedNativePostgresDiagnostic,
+  buildPerSubjectItemReferences,
   classifyC3RTBrowserFailureStage,
   c3rTNativePrerequisiteClosure,
   classifyC3RTNextFailureDiagnostic,
@@ -39,9 +42,8 @@ import {
 
 const root = path.resolve(import.meta.dirname, "..");
 const read = (name) => fs.readFileSync(path.join(root, name), "utf8");
-const contract = JSON.parse(read(
-  "config/dabangil-wcv-c3r-t-theory-durable-learning-delta-v1.json",
-));
+const contractSource = read(C3R_T_CONTRACT_PATH);
+const contract = JSON.parse(contractSource);
 const authority = JSON.parse(read(
   "config/dabangil-wcv-c3r-a1-serial-program-authority-v1.json",
 ));
@@ -158,6 +160,32 @@ test("C3R-T binds the exact canonical #706/#707/#708 per-subject inventories", (
   assert.equal(contract.postMergeState.governedIssuesRemainOpen.includes(706), true);
   assert.equal(contract.postMergeState.c3rL,
     "blocked_until_validated_c3r_t_receipt_then_authorized_unstarted");
+});
+
+test("Theory item-reference authority rejects unknown issue keys and weakened gates", () => {
+  const options = {
+    expectedStage: "C3R-T",
+    expectedSubject: "THEORY",
+    expectedArtifactRef: contract.perSubjectIssueEvidence.artifactRef,
+  };
+  assert.equal(
+    buildPerSubjectItemReferences(contract.perSubjectIssueEvidence, options).length,
+    16,
+  );
+  for (const mutate of [
+    (authority) => { authority.requiredExactly["709"] = ["UNKNOWN_ITEM"]; },
+    (authority) => { authority.artifactKind = "LAW_RUNTIME"; },
+    (authority) => {
+      authority.missingUnknownDuplicateCrossStageOrCrossSubjectFailsClosed = false;
+    },
+  ]) {
+    const authority = structuredClone(contract.perSubjectIssueEvidence);
+    mutate(authority);
+    assert.throws(
+      () => buildPerSubjectItemReferences(authority, options),
+      /keys are not exact|authority is invalid|authority is not fail-closed/u,
+    );
+  }
 });
 
 test("closed Theory parser and validator reproduce PASS and every fail-closed class", () => {
@@ -392,6 +420,31 @@ test("forward migrations preserve the validated C3R-P append byte-for-byte", () 
   assert.equal(new Set(contract.pathManifest.changedPathsExactly).size,
     contract.pathManifest.changedPathsExactly.length);
   assert.deepEqual(actualChangedPaths, contract.pathManifest.changedPathsExactly);
+});
+
+test("receipt repair changed paths equal the exact declared lane manifest", () => {
+  const repairBranch = "codex/owner-study-c3r-tl-receipt-evidence-repair";
+  const currentBranch = execFileSync("git", ["branch", "--show-current"], {
+    cwd: root,
+    encoding: "utf8",
+  }).trim();
+  if (currentBranch !== repairBranch && process.env.GITHUB_HEAD_REF !== repairBranch) return;
+  const repairBase = "4989f02f54f187fb440f2bfa6722e4ee832420de";
+  const declaredPaths = [
+    ".github/workflows/c3r-t-theory-durable-learning-delta.yml",
+    "docs/exec-plans/active/inverge-owner-study-os.md",
+    "scripts/automation/wcv-c3r-p-practice-common-runtime.mjs",
+    "tests/wcv-c3r-l-law-durable-learning-delta.test.mjs",
+    "tests/wcv-c3r-t-theory-durable-learning-delta.test.mjs",
+  ];
+  const observedPaths = execFileSync("git", [
+    "diff", "--name-only", "--diff-filter=ACDMRTUXB", repairBase, "--",
+  ], { cwd: root, encoding: "utf8" }).trim().split(/\r?\n/u).filter(Boolean).sort();
+  const untrackedPaths = execFileSync("git", [
+    "ls-files", "--others", "--exclude-standard",
+  ], { cwd: root, encoding: "utf8" }).trim().split(/\r?\n/u).filter(Boolean);
+
+  assert.deepEqual([...new Set([...observedPaths, ...untrackedPaths])].sort(), declaredPaths);
 });
 
 test("post-merge migration recovery is concrete, immutable and fail-closed", () => {
@@ -1019,6 +1072,7 @@ test("THEORY_RUNTIME artifact closes two exact-head PG15.8 cycles and rejects dr
     for (const [migrationPath, bytes] of [
       [C3R_T_ENUM_MIGRATION_PATH, enumSql],
       [C3R_T_INTEGRATION_MIGRATION_PATH, integrationSql],
+      [C3R_T_CONTRACT_PATH, contractSource],
     ]) {
       const destination = path.join(artifactRepository, migrationPath);
       fs.mkdirSync(path.dirname(destination), { recursive: true });
@@ -1032,7 +1086,8 @@ test("THEORY_RUNTIME artifact closes two exact-head PG15.8 cycles and rejects dr
     gitFixture(["config", "user.name", "C3R-T artifact fixture"]);
     gitFixture(["config", "user.email", "c3r-t-artifact@example.invalid"]);
     gitFixture(["config", "core.autocrlf", "false"]);
-    gitFixture(["add", "--", C3R_T_ENUM_MIGRATION_PATH, C3R_T_INTEGRATION_MIGRATION_PATH]);
+    gitFixture(["add", "--", C3R_T_ENUM_MIGRATION_PATH, C3R_T_INTEGRATION_MIGRATION_PATH,
+      C3R_T_CONTRACT_PATH]);
     gitFixture(["commit", "--quiet", "-m", "fixture"]);
     const candidateHead = gitFixture(["rev-parse", "HEAD"]);
     const candidateTree = gitFixture(["rev-parse", "HEAD^{tree}"]);
@@ -1047,8 +1102,41 @@ test("THEORY_RUNTIME artifact closes two exact-head PG15.8 cycles and rejects dr
       candidateTree,
       migrationIdentities,
       resetReplayCycles: [cycle(1), cycle(2)],
-    });
+    }, artifactRepository);
+    const expectedPerItemRuntimeEvidenceRefs = ["706", "707", "708"]
+      .flatMap((issue) => contract.perSubjectIssueEvidence.requiredExactly[issue]
+        .map((evidenceId) => {
+          const evidenceRef = `${contract.perSubjectIssueEvidence.artifactRef}#${issue}:${evidenceId}`;
+          return {
+            issue: Number(issue),
+            evidenceId,
+            evidenceRef,
+            runtimeEvidenceRef: evidenceRef,
+          };
+        }));
+    assert.equal(artifact.schemaVersion, C3R_T_RUNTIME_SCHEMA_VERSION);
+    assert.deepEqual(artifact.perItemRuntimeEvidenceRefs, expectedPerItemRuntimeEvidenceRefs);
     assert.equal(validateTheoryRuntimeArtifact(artifact, artifactRepository), artifact);
+    for (const perItemRuntimeEvidenceRefs of [
+      artifact.perItemRuntimeEvidenceRefs.slice(1),
+      [...artifact.perItemRuntimeEvidenceRefs, artifact.perItemRuntimeEvidenceRefs[0]],
+      [artifact.perItemRuntimeEvidenceRefs[1], artifact.perItemRuntimeEvidenceRefs[0],
+        ...artifact.perItemRuntimeEvidenceRefs.slice(2)],
+      artifact.perItemRuntimeEvidenceRefs.map((entry, index) => index === 0
+        ? { ...entry, issue: 707 }
+        : entry),
+      artifact.perItemRuntimeEvidenceRefs.map((entry, index) => index === 0
+        ? { ...entry, evidenceId: "UNKNOWN_ITEM" }
+        : entry),
+      artifact.perItemRuntimeEvidenceRefs.map((entry, index) => index === 0
+        ? { ...entry, runtimeEvidenceRef: `${entry.runtimeEvidenceRef}-drift` }
+        : entry),
+    ]) {
+      assert.throws(() => validateTheoryRuntimeArtifact(resignArtifact({
+        ...artifact,
+        perItemRuntimeEvidenceRefs,
+      }), artifactRepository), /per-item runtime evidence references are invalid/u);
+    }
     assert.throws(() => validateTheoryRuntimeArtifact({
       ...artifact,
       resetReplayCycles: [{ ...cycle(1), hostileDirectRpcDenied: false }, cycle(2)],
@@ -1058,7 +1146,7 @@ test("THEORY_RUNTIME artifact closes two exact-head PG15.8 cycles and rejects dr
       candidateTree,
       migrationIdentities: [migrationIdentities[0], migrationIdentities[0]],
       resetReplayCycles: [cycle(1), cycle(2)],
-    });
+    }, artifactRepository);
     assert.throws(() => validateTheoryRuntimeArtifact(duplicateMigration, artifactRepository),
       /closed ordered head files/u);
     const reusedReceipt = createTheoryRuntimeArtifact({
@@ -1069,7 +1157,7 @@ test("THEORY_RUNTIME artifact closes two exact-head PG15.8 cycles and rejects dr
         ...cycle(2),
         receiptId: cycle(1).receiptId,
       }],
-    });
+    }, artifactRepository);
     assert.throws(() => validateTheoryRuntimeArtifact(reusedReceipt, artifactRepository),
       /reused receiptId/u);
     const reusedCycleIdentity = createTheoryRuntimeArtifact({
@@ -1081,12 +1169,16 @@ test("THEORY_RUNTIME artifact closes two exact-head PG15.8 cycles and rejects dr
         databaseIdentity: cycle(1).databaseIdentity,
         containerIdentity: cycle(1).containerIdentity,
       }],
-    });
+    }, artifactRepository);
     assert.throws(() => validateTheoryRuntimeArtifact(reusedCycleIdentity, artifactRepository),
       /reset\/replay cycle 2 is invalid/u);
     const extraPrivateField = resignArtifact({ ...artifact, rawLearnerBody: "private" });
     assert.throws(() => validateTheoryRuntimeArtifact(extraPrivateField, artifactRepository),
       /keys are not exact/u);
+    fs.appendFileSync(path.join(artifactRepository, C3R_T_CONTRACT_PATH), "\n");
+    assert.throws(() => validateTheoryRuntimeArtifact(artifact, artifactRepository),
+      /evidence authority drifted from the candidate head/u);
+    fs.writeFileSync(path.join(artifactRepository, C3R_T_CONTRACT_PATH), contractSource, "utf8");
     fs.appendFileSync(path.join(artifactRepository, C3R_T_ENUM_MIGRATION_PATH), "\n-- dirty\n");
     assert.throws(() => validateTheoryRuntimeArtifact(artifact, artifactRepository),
       /closed ordered head files/u);

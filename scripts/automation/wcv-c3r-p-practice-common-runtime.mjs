@@ -24,10 +24,14 @@ export const C3R_T_ENUM_MIGRATION_PATH =
   "supabase/migrations/20260825054823_c3r_t_theory_durable_learning_delta.sql";
 export const C3R_T_INTEGRATION_MIGRATION_PATH =
   "supabase/migrations/20260825055252_c3r_t_theory_common_substrate_integration.sql";
+export const C3R_T_CONTRACT_PATH =
+  "config/dabangil-wcv-c3r-t-theory-durable-learning-delta-v1.json";
 export const C3R_L_ENUM_MIGRATION_PATH =
   "supabase/migrations/20260825122242_c3r_l_law_durable_learning_delta.sql";
 export const C3R_L_INTEGRATION_MIGRATION_PATH =
   "supabase/migrations/20260825122257_c3r_l_law_common_substrate_integration.sql";
+export const C3R_L_CONTRACT_PATH =
+  "config/dabangil-wcv-c3r-l-law-durable-learning-delta-v1.json";
 // The validated PR #800 squash result is the immutable Practice inventory
 // boundary. Successor stages may append migrations, while every path that
 // existed at this boundary must still be present with its validated bytes.
@@ -55,11 +59,15 @@ export const C3R_P_NATIVE_SCHEMA_VERSION =
 export const C3R_T_NATIVE_SCHEMA_VERSION =
   "inverge.runtime_evidence.c3r_t.v1";
 export const C3R_T_RUNTIME_PRODUCER_VERSION =
-  "wcv-c3r-t.theory-durable-learning-delta.v1";
+  "wcv-c3r-t.theory-durable-learning-delta.receipt-evidence-repair.v2";
+export const C3R_T_RUNTIME_SCHEMA_VERSION =
+  "inverge.wcv_c3r_t.theory_runtime.v2";
 export const C3R_L_NATIVE_SCHEMA_VERSION =
   "inverge.runtime_evidence.c3r_l.v1";
 export const C3R_L_RUNTIME_PRODUCER_VERSION =
-  "wcv-c3r-l.law-durable-learning-delta.v1";
+  "wcv-c3r-l.law-durable-learning-delta.receipt-evidence-repair.v2";
+export const C3R_L_RUNTIME_SCHEMA_VERSION =
+  "inverge.wcv_c3r_l.law_runtime.v2";
 export const C3R_P_RUNTIME_REQUIRED_PATTERNS = Object.freeze([
   C3R_P_CONTRACT_PATH,
   ...C3R_P_AUTHORIZED_EXISTING_MIGRATION_PATHS,
@@ -332,6 +340,107 @@ function perItemReferences(practiceEvidenceRefs) {
       runtimeEvidenceRef: evidenceRef,
     };
   });
+}
+
+export function buildPerSubjectItemReferences(authority, {
+  expectedStage,
+  expectedSubject,
+  expectedArtifactRef,
+}) {
+  exactKeys(authority, [
+    "stage", "subject", "artifactKind", "artifactRef", "browserToPostgresEvidenceRef",
+    "practiceCompatibilityEvidenceRef", "requiredExactly",
+    "everyItemMustBeProvedExactlyOnce",
+    "missingUnknownDuplicateCrossStageOrCrossSubjectFailsClosed", "metadataOnly",
+  ], `${expectedStage} per-subject evidence authority`);
+  exactKeys(authority.requiredExactly, ["706", "707", "708"],
+    `${expectedStage} required issue evidence`);
+  if (authority?.stage !== expectedStage || authority?.subject !== expectedSubject ||
+    authority?.artifactKind !== `${expectedSubject}_RUNTIME` ||
+    authority?.artifactRef !== expectedArtifactRef ||
+    authority?.browserToPostgresEvidenceRef !== `${expectedArtifactRef}#browser-to-postgres` ||
+    authority?.practiceCompatibilityEvidenceRef !== `${expectedArtifactRef}#practice-compatibility` ||
+    authority?.everyItemMustBeProvedExactlyOnce !== true || authority?.metadataOnly !== true) {
+    throw new Error(`${expectedStage} per-subject evidence authority is invalid.`);
+  }
+  if (authority.missingUnknownDuplicateCrossStageOrCrossSubjectFailsClosed !== true) {
+    throw new Error(`${expectedStage} per-subject evidence authority is not fail-closed.`);
+  }
+  const references = [];
+  const identities = new Set();
+  const expectedCounts = { "706": 5, "707": 5, "708": 6 };
+  for (const issue of ["706", "707", "708"]) {
+    const evidenceKeys = authority.requiredExactly?.[issue];
+    if (!Array.isArray(evidenceKeys) || evidenceKeys.length !== expectedCounts[issue]) {
+      throw new Error(`${expectedStage} issue ${issue} evidence authority is invalid.`);
+    }
+    for (const evidenceId of evidenceKeys) {
+      if (!/^[A-Z0-9_]+$/u.test(evidenceId)) {
+        throw new Error(`${expectedStage} issue ${issue} evidence identity is invalid.`);
+      }
+      const identity = `${issue}:${evidenceId}`;
+      if (identities.has(identity)) {
+        throw new Error(`${expectedStage} per-subject evidence authority is duplicated.`);
+      }
+      identities.add(identity);
+      const evidenceRef = `${expectedArtifactRef}#${issue}:${evidenceId}`;
+      references.push({
+        issue: Number(issue),
+        evidenceId,
+        evidenceRef,
+        runtimeEvidenceRef: evidenceRef,
+      });
+    }
+  }
+  if (references.length !== 16) {
+    throw new Error(`${expectedStage} per-subject evidence authority is incomplete.`);
+  }
+  return references;
+}
+
+function perSubjectItemReferences({
+  contractPath,
+  expectedStage,
+  expectedSubject,
+  expectedArtifactRef,
+  repositoryRoot,
+  candidateHead,
+}) {
+  if (!SHA40.test(candidateHead)) {
+    throw new Error(`${expectedStage} candidate head is invalid.`);
+  }
+  const committedBytes = execFileSync("git", [
+    "--no-replace-objects", "show", `${candidateHead}:${contractPath}`,
+  ], { cwd: repositoryRoot });
+  const diskBytes = fs.readFileSync(path.join(repositoryRoot, contractPath));
+  if (!diskBytes.equals(committedBytes)) {
+    throw new Error(`${expectedStage} evidence authority drifted from the candidate head.`);
+  }
+  const contract = JSON.parse(committedBytes.toString("utf8"));
+  return buildPerSubjectItemReferences(contract.perSubjectIssueEvidence, {
+    expectedStage,
+    expectedSubject,
+    expectedArtifactRef,
+  });
+}
+
+function validatePerSubjectItemReferences(actual, expected, label) {
+  if (!Array.isArray(actual) || canonicalJson(actual) !== canonicalJson(expected)) {
+    throw new Error(`${label} per-item runtime evidence references are invalid.`);
+  }
+  const identities = new Set();
+  for (const [index, entry] of actual.entries()) {
+    exactKeys(
+      entry,
+      ["issue", "evidenceId", "evidenceRef", "runtimeEvidenceRef"],
+      `${label} per-item runtime evidence reference ${index + 1}`,
+    );
+    const identity = `${entry.issue}:${entry.evidenceId}`;
+    if (identities.has(identity)) {
+      throw new Error(`${label} per-item runtime evidence references are duplicated.`);
+    }
+    identities.add(identity);
+  }
 }
 
 export function createPracticeRuntimeArtifact(input, repositoryRoot = process.cwd()) {
@@ -3816,15 +3925,24 @@ async function runLawDedicatedCycle(input) {
   return { ...completedCycle, cleanup: "complete" };
 }
 
-export function createTheoryRuntimeArtifact(input) {
+export function createTheoryRuntimeArtifact(input, repositoryRoot = process.cwd()) {
+  const artifactRef = "THEORY_RUNTIME:c3r-t-theory-durable-learning-v1";
   const base = {
-    schemaVersion: "inverge.wcv_c3r_t.theory_runtime.v1",
+    schemaVersion: C3R_T_RUNTIME_SCHEMA_VERSION,
     artifactKind: "THEORY_RUNTIME",
-    artifactRef: "THEORY_RUNTIME:c3r-t-theory-durable-learning-v1",
+    artifactRef,
     browserToPostgresEvidenceRef:
       "THEORY_RUNTIME:c3r-t-theory-durable-learning-v1#browser-to-postgres",
     practiceCompatibilityEvidenceRef:
       "THEORY_RUNTIME:c3r-t-theory-durable-learning-v1#practice-compatibility",
+    perItemRuntimeEvidenceRefs: perSubjectItemReferences({
+      contractPath: C3R_T_CONTRACT_PATH,
+      expectedStage: "C3R-T",
+      expectedSubject: "THEORY",
+      expectedArtifactRef: artifactRef,
+      repositoryRoot,
+      candidateHead: input.candidateHead,
+    }),
     candidateHead: input.candidateHead,
     candidateTree: input.candidateTree,
     migrationIdentities: input.migrationIdentities,
@@ -3874,15 +3992,26 @@ function lawHeadMigrationIdentities(repositoryRoot, headSha) {
     });
 }
 
-export function createLawRuntimeArtifact(input) {
+export function createLawRuntimeArtifact(input, repositoryRoot = process.cwd()) {
+  const artifactRef = "LAW_RUNTIME:c3r-l-law-durable-learning-v1";
   const base = {
-    schemaVersion: "inverge.wcv_c3r_l.law_runtime.v1",
+    schemaVersion: C3R_L_RUNTIME_SCHEMA_VERSION,
     artifactKind: "LAW_RUNTIME",
-    artifactRef: "LAW_RUNTIME:c3r-l-law-durable-learning-v1",
+    artifactRef,
     browserToPostgresEvidenceRef:
       "LAW_RUNTIME:c3r-l-law-durable-learning-v1#browser-to-postgres",
+    practiceCompatibilityEvidenceRef:
+      "LAW_RUNTIME:c3r-l-law-durable-learning-v1#practice-compatibility",
     predecessorCompatibilityEvidenceRef:
       "LAW_RUNTIME:c3r-l-law-durable-learning-v1#predecessor-compatibility",
+    perItemRuntimeEvidenceRefs: perSubjectItemReferences({
+      contractPath: C3R_L_CONTRACT_PATH,
+      expectedStage: "C3R-L",
+      expectedSubject: "LAW",
+      expectedArtifactRef: artifactRef,
+      repositoryRoot,
+      candidateHead: input.candidateHead,
+    }),
     candidateHead: input.candidateHead,
     candidateTree: input.candidateTree,
     migrationIdentities: input.migrationIdentities,
@@ -3909,15 +4038,19 @@ export function createLawRuntimeArtifact(input) {
 export function validateLawRuntimeArtifact(artifact, repositoryRoot = process.cwd()) {
   exactKeys(artifact, [
     "schemaVersion", "artifactKind", "artifactRef", "browserToPostgresEvidenceRef",
-    "predecessorCompatibilityEvidenceRef", "candidateHead", "candidateTree",
+    "practiceCompatibilityEvidenceRef", "predecessorCompatibilityEvidenceRef",
+    "perItemRuntimeEvidenceRefs",
+    "candidateHead", "candidateTree",
     "migrationIdentities", "resetReplayCycles", "security", "featureBoundary",
     "mutationBoundary", "artifactSha256",
   ], "LAW_RUNTIME artifact");
-  if (artifact.schemaVersion !== "inverge.wcv_c3r_l.law_runtime.v1" ||
+  if (artifact.schemaVersion !== C3R_L_RUNTIME_SCHEMA_VERSION ||
     artifact.artifactKind !== "LAW_RUNTIME" ||
     artifact.artifactRef !== "LAW_RUNTIME:c3r-l-law-durable-learning-v1" ||
     artifact.browserToPostgresEvidenceRef !==
       "LAW_RUNTIME:c3r-l-law-durable-learning-v1#browser-to-postgres" ||
+    artifact.practiceCompatibilityEvidenceRef !==
+      "LAW_RUNTIME:c3r-l-law-durable-learning-v1#practice-compatibility" ||
     artifact.predecessorCompatibilityEvidenceRef !==
       "LAW_RUNTIME:c3r-l-law-durable-learning-v1#predecessor-compatibility" ||
     !SHA40.test(artifact.candidateHead) || !SHA40.test(artifact.candidateTree) ||
@@ -3934,6 +4067,18 @@ export function validateLawRuntimeArtifact(artifact, repositoryRoot = process.cw
     resolvedCandidateTree !== artifact.candidateTree) {
     throw new Error("LAW_RUNTIME artifact candidate head/tree Git objects are mismatched.");
   }
+  validatePerSubjectItemReferences(
+    artifact.perItemRuntimeEvidenceRefs,
+    perSubjectItemReferences({
+      contractPath: C3R_L_CONTRACT_PATH,
+      expectedStage: "C3R-L",
+      expectedSubject: "LAW",
+      expectedArtifactRef: artifact.artifactRef,
+      repositoryRoot,
+      candidateHead: resolvedCandidateHead,
+    }),
+    "LAW_RUNTIME",
+  );
   if (process.env.PR_HEAD_SHA) {
     const expectedHead = process.env.PR_HEAD_SHA.toLowerCase();
     if (artifact.candidateHead !== expectedHead || git(repositoryRoot, [
@@ -4036,12 +4181,13 @@ export function validateLawRuntimeArtifact(artifact, repositoryRoot = process.cw
 export function validateTheoryRuntimeArtifact(artifact, repositoryRoot = process.cwd()) {
   exactKeys(artifact, [
     "schemaVersion", "artifactKind", "artifactRef", "browserToPostgresEvidenceRef",
-    "practiceCompatibilityEvidenceRef", "candidateHead", "candidateTree",
+    "practiceCompatibilityEvidenceRef", "perItemRuntimeEvidenceRefs",
+    "candidateHead", "candidateTree",
     "migrationIdentities", "resetReplayCycles", "security", "featureBoundary",
     "mutationBoundary", "artifactSha256",
   ], "THEORY_RUNTIME artifact");
   if (
-    artifact.schemaVersion !== "inverge.wcv_c3r_t.theory_runtime.v1" ||
+    artifact.schemaVersion !== C3R_T_RUNTIME_SCHEMA_VERSION ||
     artifact.artifactKind !== "THEORY_RUNTIME" ||
     artifact.artifactRef !== "THEORY_RUNTIME:c3r-t-theory-durable-learning-v1" ||
     artifact.browserToPostgresEvidenceRef !==
@@ -4062,6 +4208,18 @@ export function validateTheoryRuntimeArtifact(artifact, repositoryRoot = process
     resolvedCandidateTree !== artifact.candidateTree) {
     throw new Error("THEORY_RUNTIME artifact candidate head/tree Git objects are mismatched.");
   }
+  validatePerSubjectItemReferences(
+    artifact.perItemRuntimeEvidenceRefs,
+    perSubjectItemReferences({
+      contractPath: C3R_T_CONTRACT_PATH,
+      expectedStage: "C3R-T",
+      expectedSubject: "THEORY",
+      expectedArtifactRef: artifact.artifactRef,
+      repositoryRoot,
+      candidateHead: resolvedCandidateHead,
+    }),
+    "THEORY_RUNTIME",
+  );
   if (process.env.PR_HEAD_SHA) {
     const expectedHead = process.env.PR_HEAD_SHA.toLowerCase();
     if (artifact.candidateHead !== expectedHead || git(repositoryRoot, [
