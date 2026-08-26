@@ -37,4 +37,4 @@
 
 ## Next exact action
 
-- commit and push the log binding, inspect exact-head CI and review threads, then obtain a fresh formal `0/0/0` review
+- inspect exact-head CI and review threads, obtain a fresh formal `0/0/0` review, then prepare the concise Owner merge packet
