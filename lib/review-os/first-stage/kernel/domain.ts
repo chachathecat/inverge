@@ -125,6 +125,7 @@ export type AttemptEvidenceEnvelope = Readonly<{
   submissionSha256: string;
   questionId: string;
   questionVersion: string;
+  questionReferenceSha256: string;
   subjectId: FirstStageSubjectId;
   adapterId: string;
   adapterVersion: string;
@@ -204,8 +205,10 @@ export type IndependentRetryLineageReceipt = Readonly<{
   subjectId: FirstStageSubjectId;
   sourceQuestionId: string;
   sourceQuestionVersion: string;
+  sourceQuestionReferenceSha256: string;
   variantQuestionId: string;
   variantQuestionVersion: string;
+  variantQuestionReferenceSha256: string;
   targetConceptBindingKeys: readonly string[];
   priorRetryCount: number;
   decision: "verified_variant_for_independent_retry";

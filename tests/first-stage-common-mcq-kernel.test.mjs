@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { execFileSync } from "node:child_process";
 import crypto from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
@@ -43,6 +44,25 @@ function digest(value) {
   return crypto.createHash("sha256").update(canonicalJson(value)).digest("hex");
 }
 
+function normalizedSource(filePath) {
+  return fs.readFileSync(path.join(root, filePath), "utf8").replace(/\r\n?/gu, "\n");
+}
+
+function sourceDigest(filePath, selection = null) {
+  let source = normalizedSource(filePath);
+  if (selection) {
+    const start = source.indexOf(selection.startMarker);
+    const end = source.indexOf(selection.endMarker);
+    assert.notEqual(start, -1, `${filePath}: missing start marker`);
+    assert.notEqual(end, -1, `${filePath}: missing end marker`);
+    assert.equal(source.split("\n").filter((line) => line === selection.startMarker).length, 1);
+    assert.equal(source.split("\n").filter((line) => line === selection.endMarker).length, 1);
+    assert.ok(start < end, `${filePath}: reversed markers`);
+    source = source.slice(start + selection.startMarker.length, end);
+  }
+  return crypto.createHash("sha256").update(source, "utf8").digest("hex");
+}
+
 function reference(questionId = "acct-q1", questionVersion = "v1", subjectId = "accounting") {
   return {
     schemaVersion: "first_stage.question_reference.v1",
@@ -80,6 +100,7 @@ function evidenceReference(evidenceId, character = "a") {
 }
 
 function makeAdapter(options = {}) {
+  let retryBuildCalls = 0;
   return {
     schemaVersion: SUBJECT_ADAPTER_SCHEMA_VERSION,
     adapterId: options.adapterId ?? "test-accounting-adapter",
@@ -122,6 +143,7 @@ function makeAdapter(options = {}) {
         submissionSha256: input.submissionSha256,
         questionId: input.questionReference.questionId,
         questionVersion: input.questionReference.questionVersion,
+        questionReferenceSha256: digest(input.questionReference),
         subjectId: input.questionReference.subjectId,
         adapterId: this.adapterId,
         adapterVersion: this.adapterVersion,
@@ -159,17 +181,24 @@ function makeAdapter(options = {}) {
         retryDisposition: unreviewed ? null : decision === "incorrect"
           ? "retry_now" : "review_then_retry",
         reviewAfterMs: unreviewed ? null : decision === "incorrect" ? 0 : 60_000,
-        evaluationPolicyVersion: "test-accounting-evaluation-v1",
+        evaluationPolicyVersion: options.bindReviewTaskId
+          ? `test-accounting-evaluation-${input.attempt.reviewTaskId ?? "none"}`
+          : "test-accounting-evaluation-v1",
         evidenceEnvelope,
       };
       options.mutateEvaluation?.(evaluation, input);
       return evaluation;
     },
     buildIndependentRetry(input) {
+      retryBuildCalls += 1;
       const number = input.priorRetries.length + 1;
       const candidateReference = options.reuseCycleQuestion
         ? reference("acct-q2", "v1")
-        : reference(`${input.sourceQuestionReference.questionId}-retry-${number}`, "v1");
+        : options.reuseSourceQuestionWithVersionBump
+          ? reference(input.sourceQuestionReference.questionId, "v2")
+        : reference(`${input.sourceQuestionReference.questionId}-retry-${number}${
+          options.unstableRetryCandidate ? `-${retryBuildCalls}` : ""
+        }`, "v1");
       const lineageReceipt = {
           schemaVersion: "first_stage.independent_retry_lineage_receipt.v1",
           receiptId: `retry-lineage-${input.sourceQuestionReference.questionId}-${number}`,
@@ -179,8 +208,10 @@ function makeAdapter(options = {}) {
           subjectId: this.subjectId,
           sourceQuestionId: input.sourceQuestionReference.questionId,
           sourceQuestionVersion: input.sourceQuestionReference.questionVersion,
+          sourceQuestionReferenceSha256: digest(input.sourceQuestionReference),
           variantQuestionId: candidateReference.questionId,
           variantQuestionVersion: candidateReference.questionVersion,
+          variantQuestionReferenceSha256: digest(candidateReference),
           targetConceptBindingKeys: conceptKeys(input.reviewTask.conceptBindings),
           priorRetryCount: input.priorRetries.length,
           decision: "verified_variant_for_independent_retry",
@@ -277,21 +308,87 @@ test("freezes one exact SubjectAdapter descriptor and Lane B path manifest", () 
   assert.deepEqual(contract.subjectAdapterFreeze.interfaceDescriptor, SUBJECT_ADAPTER_V1_INTERFACE_DESCRIPTOR);
   assert.equal(digest(SUBJECT_ADAPTER_V1_INTERFACE_DESCRIPTOR), SUBJECT_ADAPTER_V1_INTERFACE_DIGEST);
   assert.equal(contract.subjectAdapterFreeze.interfaceDigest, SUBJECT_ADAPTER_V1_INTERFACE_DIGEST);
+  for (const binding of SUBJECT_ADAPTER_V1_INTERFACE_DESCRIPTOR.transitiveSourceBindings) {
+    assert.equal(binding.normalization, "utf8_lf");
+    assert.equal(
+      sourceDigest(binding.path, binding.selection ?? null),
+      binding.sha256,
+      `${binding.path}: adapter-facing type source drift`,
+    );
+  }
+  for (const mutate of [
+    (value) => value.typeShapes.QuestionReference.pop(),
+    (value) => value.typeShapes.AnswerSubmission.pop(),
+    (value) => value.vocabularies.confidence.pop(),
+    (value) => value.vocabularies.retryDispositions.reverse(),
+  ]) {
+    const hostile = structuredClone(SUBJECT_ADAPTER_V1_INTERFACE_DESCRIPTOR);
+    mutate(hostile);
+    assert.notEqual(digest(hostile), SUBJECT_ADAPTER_V1_INTERFACE_DIGEST);
+  }
   assert.equal(contract.subjectAdapterFreeze.productionAdapterImplementationsIncluded, 0);
   assert.deepEqual(contract.ownedPathManifest, [
     "app/api/review-os/first-stage/kernel/route.ts",
     "app/app/first-stage/page.tsx",
     "components/review-os/first-stage-mcq-loop.tsx",
     "config/dabangil-first-stage-common-mcq-kernel-v1.json",
+    "docs/exec-plans/active/inverge-owner-study-os.md",
     "lib/review-os/first-stage/kernel/domain.ts",
     "lib/review-os/first-stage/kernel/index.ts",
     "lib/review-os/first-stage/kernel/mcq-kernel.ts",
     "lib/review-os/first-stage/kernel/today-queue.ts",
     "lib/review-os/first-stage/subject-adapter/index.ts",
     "lib/review-os/first-stage/subject-adapter/subject-adapter.ts",
+    "scripts/run-node-tests.mjs",
     "tests/first-stage-common-mcq-kernel.test.mjs",
     "tests/s232f2-access-availability.test.mjs",
+    "tests/wcv-c3-foundation-freeze.test.mjs",
   ]);
+  const runner = fs.readFileSync(path.join(root, "scripts/run-node-tests.mjs"), "utf8");
+  assert.equal(
+    runner.match(/"tests\/first-stage-common-mcq-kernel\.test\.mjs"/gu)?.length,
+    1,
+  );
+  assert.equal(contract.deferredIntegration.sharedTestRunnerRegistration,
+    "installed_by_lane_b_serial_integration_gate");
+  assert.deepEqual(contract.validatedFoundationFreezeReceipt, {
+    pullRequest: 838,
+    reviewedHeadSha: "2106d370b2725d3f03923db3a6d279e94778bd6d",
+    reviewedTree: "313056e25e3296d1546e909389eb0ad014da5a66",
+    resultingMainSha: "aded1d711c837aa6e93470d3b31bd75907452996",
+    resultingMainTree: "313056e25e3296d1546e909389eb0ad014da5a66",
+    liveGitHubValidated: true,
+    exactHeadPinnedSquashMerged: true,
+    requiredChecksPassed: true,
+    actionableP0P1P2: [0, 0, 0],
+    unresolvedActionableThreads: 0,
+    focusedResultingTreeTests: "8/8",
+    governedIssuesClosed: [706, 707, 708, 781, 837],
+    issue714RemainsOpenWithAllocations: ["C4", "C6"],
+    remoteSupabaseMutationCount: 0,
+    productionMutationCount: 0,
+  });
+  const receipt = contract.validatedFoundationFreezeReceipt;
+  assert.equal(execFileSync("git", ["show", "-s", "--format=%T", receipt.reviewedHeadSha], {
+    cwd: root, encoding: "utf8",
+  }).trim(), receipt.reviewedTree);
+  assert.equal(execFileSync("git", ["show", "-s", "--format=%T", receipt.resultingMainSha], {
+    cwd: root, encoding: "utf8",
+  }).trim(), receipt.resultingMainTree);
+  execFileSync("git", ["diff", "--quiet", receipt.reviewedHeadSha, receipt.resultingMainSha], {
+    cwd: root,
+  });
+  execFileSync("git", ["merge-base", "--is-ancestor", receipt.resultingMainSha, "HEAD"], {
+    cwd: root,
+  });
+  assert.equal(receipt.reviewedTree, receipt.resultingMainTree);
+  assert.equal(execFileSync("git", ["rev-list", "--parents", "-n", "1", receipt.resultingMainSha], {
+    cwd: root, encoding: "utf8",
+  }).trim().split(/\s+/u).length, 2, "receipt must bind a single-parent squash result");
+  const changedPaths = execFileSync("git", [
+    "diff", "--name-only", contract.validatedFoundationFreezeReceipt.resultingMainSha,
+  ], { cwd: root, encoding: "utf8" }).trim().split(/\r?\n/gu).filter(Boolean).sort();
+  assert.deepEqual(changedPaths, [...contract.ownedPathManifest].sort());
 });
 
 test("derives elapsed time from trusted server instants and rejects client clock authority", () => {
@@ -545,6 +642,17 @@ test("rejects blank-as-correct, cycle-reused retry, cross-concept closure, and d
     trustedStartedAt: "2026-08-25T00:00:02.000Z",
   }, reuseRegistry), "adapter_mismatch");
 
+  const versionBumpReuseRegistry = createSubjectAdapterRegistry([makeAdapter({
+    reuseSourceQuestionWithVersionBump: true,
+  })]);
+  expectKernelCode(() => beginIndependentRetry(dueState(versionBumpReuseRegistry), {
+    expectedRevision: 3,
+    reviewTaskId: "review-q1-initial",
+    independentRetryId: "independent-retry-q1-version-bump",
+    retryAttemptId: "attempt-q1-retry-version-bump",
+    trustedStartedAt: "2026-08-25T00:00:02.000Z",
+  }, versionBumpReuseRegistry), "adapter_mismatch");
+
   const collidingReceiptRegistry = createSubjectAdapterRegistry([makeAdapter({
     mutateLineage: (receipt) => { receipt.receiptId = "cycle-owner-today-1"; },
   })]);
@@ -573,7 +681,53 @@ test("rejects blank-as-correct, cycle-reused retry, cross-concept closure, and d
   }, crossRegistry), "adapter_mismatch");
 
   const registry = createSubjectAdapterRegistry([makeAdapter()]);
-  const persisted = beginIndependentRetry(dueState(registry), {
+  const exactInputRegistry = createSubjectAdapterRegistry([makeAdapter({ bindReviewTaskId: true })]);
+  const exactInputRetry = beginIndependentRetry(dueState(exactInputRegistry), {
+    expectedRevision: 3,
+    reviewTaskId: "review-q1-initial",
+    independentRetryId: "independent-retry-exact-input",
+    retryAttemptId: "attempt-retry-exact-input",
+    trustedStartedAt: "2026-08-25T00:00:02.000Z",
+  }, exactInputRegistry);
+  assert.equal(exactInputRetry.revision, 4);
+  assert.equal(presentAttemptQuestion(
+    exactInputRetry,
+    "attempt-retry-exact-input",
+    exactInputRegistry,
+  ).questionReference.questionId, "acct-q1-retry-1");
+  const unstableRegistry = createSubjectAdapterRegistry([makeAdapter({
+    unstableRetryCandidate: true,
+  })]);
+  const unstableRetry = beginIndependentRetry(dueState(unstableRegistry), {
+    expectedRevision: 3,
+    reviewTaskId: "review-q1-initial",
+    independentRetryId: "independent-retry-unstable",
+    retryAttemptId: "attempt-retry-unstable",
+    trustedStartedAt: "2026-08-25T00:00:02.000Z",
+  }, unstableRegistry);
+  expectKernelCode(() => presentAttemptQuestion(
+    unstableRetry,
+    "attempt-retry-unstable",
+    unstableRegistry,
+  ), "invalid_input");
+  const pending = dueState(registry);
+  for (const mutate of [
+    (state) => { state.reviewTasks[0].dueAt = "2026-08-25T00:00:01.000Z"; },
+    (state) => { state.reviewTasks[0].questionReference.sessionId = "hostile-session"; },
+    (state) => { state.reviewTasks[0].conceptBindings[0].conceptId = "hostile-concept"; },
+    (state) => { state.reviewTasks[0].sourceAttemptId = "hostile-source-attempt"; },
+  ]) {
+    const hostile = structuredClone(pending);
+    mutate(hostile);
+    expectKernelCode(() => beginIndependentRetry(hostile, {
+      expectedRevision: hostile.revision,
+      reviewTaskId: "review-q1-initial",
+      independentRetryId: "independent-retry-hostile-pending",
+      retryAttemptId: "attempt-hostile-pending",
+      trustedStartedAt: "2026-08-25T00:00:02.000Z",
+    }, registry), "invalid_input");
+  }
+  const persisted = beginIndependentRetry(pending, {
     expectedRevision: 3,
     reviewTaskId: "review-q1-initial",
     independentRetryId: "independent-retry-q1-1",
@@ -619,6 +773,71 @@ test("rejects blank-as-correct, cycle-reused retry, cross-concept closure, and d
     trustedSubmittedAt: "2026-08-25T00:00:04.000Z",
     submission: draft(2),
   }, registry), "invalid_input");
+  for (const mutate of [
+    (state) => { state.independentRetries[0].sourceAttemptId = "attempt-q2-initial"; },
+    (state) => { state.independentRetries[0].retryAttemptId = "attempt-q1-initial"; },
+    (state) => { state.independentRetries[0].questionReference.sessionId = "hostile-session"; },
+    (state) => { state.reviewTasks[0].questionReference.questionNumber = 2; },
+    (state) => { state.attempts.at(-1).sourceAttemptId = "hostile-source-attempt"; },
+    (state) => { state.attempts[0].evaluation = null; },
+    (state) => {
+      state.attempts.at(-1).submission = structuredClone(state.attempts[0].submission);
+      state.attempts.at(-1).evaluation = structuredClone(state.attempts[0].evaluation);
+    },
+    (state) => {
+      state.independentRetries[0].adapterId = "hostile-adapter";
+      state.independentRetries[0].adapterVersion = "hostile-version";
+      state.independentRetries[0].lineageReceipt.adapterId = "hostile-adapter";
+      state.independentRetries[0].lineageReceipt.adapterVersion = "hostile-version";
+    },
+    (state) => {
+      state.independentRetries[0].startedAt = "2026-08-25T00:00:01.000Z";
+      state.attempts.at(-1).startedAt = "2026-08-25T00:00:01.000Z";
+    },
+    (state) => {
+      const reused = structuredClone(state.attempts[0].questionReference);
+      state.independentRetries[0].questionReference = structuredClone(reused);
+      state.attempts.at(-1).questionReference = structuredClone(reused);
+      state.independentRetries[0].lineageReceipt.variantQuestionId = reused.questionId;
+      state.independentRetries[0].lineageReceipt.variantQuestionVersion = reused.questionVersion;
+      state.independentRetries[0].lineageReceipt.variantQuestionReferenceSha256 = digest(reused);
+    },
+    (state) => { state.independentRetries[0].extra = true; },
+  ]) {
+    const hostile = structuredClone(persisted);
+    mutate(hostile);
+    expectKernelCode(() => submitAnswer(hostile, {
+      expectedRevision: hostile.revision,
+      attemptId: "attempt-q1-retry-1",
+      reviewTaskId: "review-q1-initial",
+      trustedSubmittedAt: "2026-08-25T00:00:04.000Z",
+      submission: draft(2),
+    }, registry), "invalid_input");
+  }
+  const unavailableRegistry = createSubjectAdapterRegistry([makeAdapter({
+    forceDecision: () => "unavailable",
+  })]);
+  let unavailable = beginAttempt(initialState(), {
+    expectedRevision: 1,
+    attemptId: "attempt-unavailable-dangling",
+    questionId: "acct-q1",
+    trustedStartedAt: "2026-08-25T00:00:00.000Z",
+  }, unavailableRegistry);
+  unavailable = submitAnswer(unavailable, {
+    expectedRevision: 2,
+    attemptId: "attempt-unavailable-dangling",
+    reviewTaskId: "review-unavailable-unused",
+    trustedSubmittedAt: "2026-08-25T00:00:02.000Z",
+    submission: draft(1),
+  }, unavailableRegistry);
+  const dangling = structuredClone(unavailable);
+  dangling.attempts[0].reviewTaskId = "review-dangling";
+  expectKernelCode(() => beginAttempt(dangling, {
+    expectedRevision: dangling.revision,
+    attemptId: "attempt-after-dangling",
+    questionId: "acct-q2",
+    trustedStartedAt: "2026-08-25T00:00:03.000Z",
+  }, unavailableRegistry), "invalid_input");
 });
 
 test("binds reviewed feedback/key/source evidence and withholds without emitting review authority", () => {
@@ -692,6 +911,21 @@ test("binds reviewed feedback/key/source evidence and withholds without emitting
   const withheldRegistry = createSubjectAdapterRegistry([makeAdapter({
     forceDecision: () => "withheld",
   })]);
+  for (const decision of ["withheld", "unavailable"]) {
+    const malformedRegistry = createSubjectAdapterRegistry([makeAdapter({
+      forceDecision: () => decision,
+    })]);
+    for (const [index, reviewTaskId] of [null, "", {}, 7].entries()) {
+      const suffix = `malformed-${decision}-${index}`;
+      expectKernelCode(() => submitAnswer(started(malformedRegistry, suffix), {
+        expectedRevision: 2,
+        attemptId: `attempt-evidence-${suffix}`,
+        reviewTaskId,
+        trustedSubmittedAt: "2026-08-25T00:00:02.000Z",
+        submission: draft(1),
+      }, malformedRegistry), "invalid_input");
+    }
+  }
   const withheld = submit(started(withheldRegistry, "withheld"),
     withheldRegistry, "withheld");
   const evaluation = withheld.attempts[0].evaluation;
