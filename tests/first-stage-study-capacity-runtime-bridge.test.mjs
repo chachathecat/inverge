@@ -185,6 +185,8 @@ test("binds M5 to the validated M4 receipt and preserves every frozen upstream",
   assert.equal(contract.runtimeBoundary.productionMutation, false);
   assert.equal(contract.bridge.noPlaceholderQuestions, true);
   assert.equal(contract.bridge.serverCandidateSourceInstalled, false);
+  assert.equal(contract.bridge.candidateSchedulingDurationLoadAndConstraintsComeOnlyFromServerSource, true);
+  assert.equal(contract.bridge.requirednessDerivedByBridgeFromTrustedKernelQueueClass, true);
   assert.deepEqual(contract.untrustedInputBoundary.acceptsOnly, [
     "action",
     "planKind",
