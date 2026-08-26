@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 
+import { ReviewOsAppShell } from "@/components/review-os/app-shell";
 import { FirstStageMcqLoop } from "@/components/review-os/first-stage-mcq-loop";
 import { getServerSessionUser } from "@/lib/auth/session";
 import {
@@ -29,5 +30,9 @@ export default async function FirstStageOwnerPage() {
     !emails(process.env.ALPHA_ADMIN_EMAILS).includes(email) ||
     !emails(process.env[FIRST_STAGE_OWNER_ALLOWLIST]).includes(email)
   ) notFound();
-  return <FirstStageMcqLoop />;
+  return (
+    <ReviewOsAppShell email={email}>
+      <FirstStageMcqLoop />
+    </ReviewOsAppShell>
+  );
 }

@@ -402,7 +402,7 @@ test("freezes one exact SubjectAdapter descriptor and Lane B path manifest", () 
   assert.equal(contract.subjectAdapterFreeze.productionAdapterImplementationsIncluded, 0);
   assert.deepEqual(contract.ownedPathManifest, [
     "app/api/review-os/first-stage/kernel/route.ts",
-    "app/app/first-stage/page.tsx",
+    "app/(owner-first-stage)/app/first-stage/page.tsx",
     "components/review-os/first-stage-mcq-loop.tsx",
     "config/dabangil-first-stage-common-mcq-kernel-v1.json",
     "docs/exec-plans/active/inverge-owner-study-os.md",
@@ -1565,7 +1565,8 @@ test("binds reviewed feedback/key/source evidence and withholds without emitting
 test("keeps API/UI Owner-only, default-off, no-store, adapter-empty, and non-activating", () => {
   const route = fs.readFileSync(path.join(root,
     "app/api/review-os/first-stage/kernel/route.ts"), "utf8");
-  const page = fs.readFileSync(path.join(root, "app/app/first-stage/page.tsx"), "utf8");
+  const page = fs.readFileSync(path.join(root,
+    "app/(owner-first-stage)/app/first-stage/page.tsx"), "utf8");
   const component = fs.readFileSync(path.join(root,
     "components/review-os/first-stage-mcq-loop.tsx"), "utf8");
   for (const source of [route, page]) {
@@ -1588,6 +1589,21 @@ test("keeps API/UI Owner-only, default-off, no-store, adapter-empty, and non-act
   assert.equal(contract.runtimeBoundary.registeredSubjectAdapters.length, 0);
   assert.equal(contract.runtimeBoundary.remoteSupabaseMutation, false);
   assert.equal(contract.runtimeBoundary.productionMutation, false);
+  assert.equal(contract.runtimeBoundary.ownerRoutePhysicalPathExactly,
+    "app/(owner-first-stage)/app/first-stage/page.tsx");
+  assert.equal(contract.runtimeBoundary.ownerRouteParentLayoutIsolation, "root_layout_only");
+  assert.equal(contract.runtimeBoundary.genericReviewOsParentLayoutInherited, false);
+  assert.equal(contract.runtimeBoundary.genericReviewOsAccessInvokedBeforeOwnerGuard, false);
+  assert.equal(contract.runtimeBoundary.authorizedOwnerPageRendersShellAfterSpecializedGuard, true);
+  assert.equal(fs.existsSync(path.join(root, "app/app/first-stage/page.tsx")), false,
+    "the Owner route must not inherit the generic Review OS parent layout");
+  assert.doesNotMatch(page,
+    /getReviewOsServerContext|ensureAccess|includeProfile|includeUsage/u);
+  const deniedIndex = page.lastIndexOf("notFound()");
+  const ownerShellIndex = page.indexOf("<ReviewOsAppShell email={email}>");
+  const loopIndex = page.indexOf("<FirstStageMcqLoop />");
+  assert.ok(ownerShellIndex > deniedIndex, "the learner shell must render only after Owner access");
+  assert.ok(loopIndex > ownerShellIndex, "the MCQ loop must render inside the authorized Owner shell");
   const queueSource = fs.readFileSync(path.join(root,
     "lib/review-os/first-stage/kernel/today-queue.ts"), "utf8");
   assert.doesNotMatch(queueSource, /localeCompare/u);
