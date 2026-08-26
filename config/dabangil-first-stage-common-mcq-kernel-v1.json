@@ -1,0 +1,695 @@
+{
+  "schemaVersion": "dabangil.first_stage.common_mcq_kernel.v1",
+  "programId": "INVERGE_OWNER_STUDY_OS",
+  "milestoneId": "FIRST_STAGE_COMMON_KERNEL",
+  "milestoneState": "complete_candidate_default_off_no_subject_adapters",
+  "parallelLane": "LANE_B_FIRST_STAGE_KERNEL",
+  "inheritedAuthority": {
+    "parallelExecutionDecision": "docs/decisions/2026-08-25-owner-parallel-execution-v1.md",
+    "parallelExecutionContract": "config/dabangil-parallel-execution-v1.json",
+    "foundationContract": "config/s235b-first-round-adaptive-mcq-foundation-contract.json",
+    "foundationSchemaVersion": "dabangil.first_round_foundation.v1",
+    "subjectTaxonomyVersion": "appraiser.first.subjects.2026-04-04.v1",
+    "subjectIdsExactly": [
+      "civil_law",
+      "economics_principles",
+      "real_estate_principles",
+      "appraiser_related_law",
+      "accounting"
+    ],
+    "choiceCountExactly": 5,
+    "confidenceVocabularyExactly": ["low", "medium", "high"],
+    "errorCauseVocabularyExactly": ["K", "C", "A", "R", "T", "G"],
+    "elapsedBucketsExactly": [
+      "0_29999",
+      "30000_59999",
+      "60000_119999",
+      "120000_plus"
+    ]
+  },
+  "validatedFoundationFreezeReceipt": {
+    "pullRequest": 838,
+    "reviewedHeadSha": "2106d370b2725d3f03923db3a6d279e94778bd6d",
+    "reviewedTree": "313056e25e3296d1546e909389eb0ad014da5a66",
+    "resultingMainSha": "aded1d711c837aa6e93470d3b31bd75907452996",
+    "resultingMainTree": "313056e25e3296d1546e909389eb0ad014da5a66",
+    "liveGitHubValidated": true,
+    "exactHeadPinnedSquashMerged": true,
+    "requiredChecksPassed": true,
+    "actionableP0P1P2": [0, 0, 0],
+    "unresolvedActionableThreads": 0,
+    "focusedResultingTreeTests": "8/8",
+    "governedIssuesClosed": [706, 707, 708, 781, 837],
+    "issue714RemainsOpenWithAllocations": ["C4", "C6"],
+    "remoteSupabaseMutationCount": 0,
+    "productionMutationCount": 0
+  },
+  "ownedPathManifest": [
+    "app/api/review-os/first-stage/kernel/route.ts",
+    "app/(owner-first-stage)/app/first-stage/page.tsx",
+    "components/review-os/first-stage-mcq-loop.tsx",
+    "config/dabangil-first-stage-common-mcq-kernel-v1.json",
+    "docs/exec-plans/active/inverge-owner-study-os.md",
+    "lib/review-os/first-stage/kernel/domain.ts",
+    "lib/review-os/first-stage/kernel/index.ts",
+    "lib/review-os/first-stage/kernel/mcq-kernel.ts",
+    "lib/review-os/first-stage/kernel/today-queue.ts",
+    "lib/review-os/first-stage/subject-adapter/index.ts",
+    "lib/review-os/first-stage/subject-adapter/subject-adapter.ts",
+    "scripts/run-node-tests.mjs",
+    "tests/first-stage-common-mcq-kernel.test.mjs",
+    "tests/s232f2-access-availability.test.mjs",
+    "tests/wcv-c3-foundation-freeze.test.mjs"
+  ],
+  "domainContract": {
+    "denyUnknownFields": true,
+    "maximumTodayQuestionCount": 100,
+    "maximumFullDayQuestionCount": 200,
+    "typesExactly": [
+      "ExamCycle",
+      "QuestionReference",
+      "Attempt",
+      "AnswerSubmission",
+      "Confidence",
+      "ElapsedTime",
+      "WorkTrace",
+      "ErrorCause",
+      "ConceptBinding",
+      "ReviewTask",
+      "IndependentRetry",
+      "ConceptState",
+      "TodayQueue",
+      "ImmutableEvidenceReference",
+      "AttemptEvidenceEnvelope",
+      "ReviewedFeedbackEvidence"
+    ],
+    "questionReference": {
+      "bodyless": true,
+      "choiceCountExactly": 5,
+      "requiresSourceVersionManifestIds": true,
+      "rightsStates": ["verified_owner_private", "verified_cleared"],
+      "currentnessStates": ["verified_exam_date", "verified_current"],
+      "duplicateQuestionIdentityFailsClosed": true,
+      "duplicateQuestionIdAcrossVersionsFailsClosed": true
+    },
+    "answerSubmission": {
+      "clientWritableFieldsExactly": [
+        "schemaVersion",
+        "selectedChoice",
+        "confidence",
+        "answerChanged",
+        "previousChoice",
+        "eliminatedChoiceIds",
+        "workTrace"
+      ],
+      "trustedServerFieldsExactly": ["attemptStartedAt", "submittedAt"],
+      "elapsedTimeDerivedFromTrustedServerFields": true,
+      "clientElapsedTimeOrSubmittedAtRejectedAsUnknown": true,
+      "clientMaySetCorrectness": false,
+      "clientMaySetErrorCause": false,
+      "clientMaySetConceptBindings": false,
+      "clientMaySetReviewSchedule": false,
+      "blankChoiceAllowed": true,
+      "elapsedBucketMustEqualDeterministicMillisecondsBucket": true,
+      "answerChangePreviousChoiceAndWorkTraceMustAgree": true,
+      "eliminationSetAndWorkTraceMustAgree": true,
+      "impossibleUtcCalendarInstantFailsClosed": true
+    },
+    "workTrace": {
+      "bodyless": true,
+      "minimumSteps": 1,
+      "maximumSteps": 64,
+      "stepKindsExactly": [
+        "read_stem",
+        "read_all_choices",
+        "eliminate_choice",
+        "calculate",
+        "source_check",
+        "change_answer",
+        "select_answer"
+      ],
+      "sequenceMustBeContiguous": true,
+      "elapsedMustBeMonotonicAndWithinSubmissionElapsed": true,
+      "freeTextAllowed": false
+    },
+    "attempt": {
+      "kinds": ["initial", "independent_retry"],
+      "states": ["in_progress", "evaluated"],
+      "evaluationDecisionsExactly": [
+        "correct",
+        "incorrect",
+        "unanswered",
+        "unavailable",
+        "withheld"
+      ],
+      "maximumSimultaneousInProgress": 1,
+      "initialAssistance": "none",
+      "serverAdapterIsSoleEvaluationAuthority": true,
+      "withheldOrUnavailableReviewedLearningFieldsAreNull": true,
+      "withheldOrUnavailableRecordsAttemptOnly": true,
+      "withheldOrUnavailableCreatesReviewTask": false,
+      "withheldOrUnavailableCreatesConceptState": false,
+      "withheldOrUnavailableCreatesRetryQueueItem": false
+    },
+    "attemptEvidenceEnvelope": {
+      "bodyless": true,
+      "denyUnknownFields": true,
+      "bindsExactAttemptSubmissionQuestionAndAdapterVersion": true,
+      "submissionDigestAuthority": "server_computed_sha256_over_canonical_answer_submission",
+      "questionReferenceDigestAuthority": "server_computed_sha256_over_canonical_full_question_reference",
+      "requiredNonWithheldReferences": [
+        "officialKeyReference",
+        "choiceSetReference",
+        "sourceReference",
+        "versionDecisionReference",
+        "rightsDecisionReference",
+        "reviewedFeedback.receiptReference"
+      ],
+      "reviewerClassesExactly": [
+        "named_owner_authorized_human_reviewer",
+        "owner_approved_personal_feedback_reviewer"
+      ],
+      "modelAloneAlwaysFalse": true,
+      "withheldOrUnavailableEmitsReviewedFeedback": false
+    },
+    "reviewTask": {
+      "dispositionsExactly": [
+        "retry_now",
+        "review_then_retry",
+        "review_before_new_variant"
+      ],
+      "everyReviewedInitialEvaluationCreatesExactlyOneReviewTask": true,
+      "retryNowRequiresZeroReviewAfterMs": true,
+      "deferredRetryRequiresPositiveReviewAfterMs": true,
+      "retryCannotStartBeforeDueAt": true,
+      "failedRetryReopensSameTask": true,
+      "successfulRetryCompletesSameTask": true,
+      "unreviewedRetryCannotFailReopenOrCompleteTask": true
+    },
+    "independentRetry": {
+      "assistanceExactly": "none",
+      "sameSubjectRequired": true,
+      "sameQuestionIdAcrossAnyVersionReuseForbidden": true,
+      "anyQuestionIdAcrossAnyVersionAlreadyInCycleOrAttemptHistoryForbidden": true,
+      "serverAdapterBuildsRetryReference": true,
+      "lineageReceiptPersistedInAuthoritativeRetryState": true,
+      "lineageReceiptIdGloballyUniqueAndRevalidatedAfterReload": true,
+      "lineageReceiptBindsAdapterAndSourceVariantVersions": true,
+      "lineageReceiptBindsExactSourceAndVariantQuestionReferenceSha256": true,
+      "lineageReceiptBindsExactOrderedReviewTargetConcepts": true,
+      "retryEvaluationConceptsMustEqualReviewTargetConcepts": true,
+      "withheldOrUnavailableEvaluationRejectsTransition": true,
+      "withheldOrUnavailableEvaluationPreservesActiveAttemptAndVariant": true,
+      "withheldOrUnavailableEvaluationConsumesNoRevisionOrLineage": true,
+      "outcomes": ["active", "succeeded", "failed"]
+    },
+    "rehydratedStateValidation": {
+      "runsBeforeAttemptPresentationAndEveryMutation": true,
+      "runsBeforeTodayQueueDerivation": true,
+      "topLevelStateAndExamCycleParsedExactly": true,
+      "examCycleImmutableDefinitionSha256Revalidated": true,
+      "independentlyTrustedExamCycleDefinitionSha256RequiredByEveryConsumer": true,
+      "trustedOwnerIdBoundOnEveryReadAndMutation": true,
+      "validatedStateCanonicalizedAndDeepFrozenBeforeConsumption": true,
+      "allCycleReferencesRequireTheirRegisteredAdapterBeforeConsumption": true,
+      "revisionDerivedFromAttemptBeginsAndSubmissions": true,
+      "cycleLifecycleAndTimestampsDerivedFromValidatedAttempts": true,
+      "oneInitialAttemptPerCycleQuestion": true,
+      "maximumOneActiveAttemptGlobally": true,
+      "oneRetryRecordPerIndependentRetryAttempt": true,
+      "allAttemptsSubmissionsAndEvaluationsParsedExactly": true,
+      "initialEvaluationReplayRestoresOriginalNullReviewTaskId": true,
+      "storedEvaluationsRecomputedByExactRegisteredAdapterVersion": true,
+      "allTasksBindTheirSourceAttemptAndReviewedEvaluation": true,
+      "taskDueStatusAndCompletionDerivedAcrossOrderedRetries": true,
+      "retryCannotStartBeforeRecomputedDueAt": true,
+      "retryCandidateRebuiltByExactAdapterWithTaskAtStartAndPriorRetries": true,
+      "rawQuestionIdReuseAcrossCycleAndAttemptHistoryRejectedAfterReload": true,
+      "activeRetrySubmissionAndEvaluationMustBeNull": true,
+      "completedRetryRequiresReviewedEvaluation": true,
+      "completedRetryEvaluationConceptBindingsExactlyEqualReviewTaskTargets": true,
+      "retryAndReceiptAdapterIdentityMustEqualRegisteredAdapter": true,
+      "fullSourceAndVariantQuestionReferencesBoundBySha256": true,
+      "conceptStatesRebuiltFromValidatedAttemptTaskRetryHistory": true,
+      "retryStartPreservesLatestCompletedConceptEvidenceProvenance": true,
+      "unknownMissingCoordinatedOrStaleDriftFailsClosed": true
+    },
+    "conceptState": {
+      "statesExactly": [
+        "review_required",
+        "independent_retry_due",
+        "independent_retry_recorded",
+        "reopened"
+      ],
+      "masteryClaimAlwaysFalse": true,
+      "unobservedRepresentedByAbsenceNotPersistedRow": true,
+      "initialCorrectnessAloneCreatesMastery": false,
+      "independentRetryRecordedCreatesMastery": false
+    },
+    "todayQueue": {
+      "priorityOrder": [
+        "active_attempt",
+        "due_critical_review",
+        "due_high_review",
+        "due_normal_review",
+        "new_question"
+      ],
+      "stableTieBreak": "priority_then_due_at_then_id_then_cycle_order",
+      "notYetDueReviewsExcluded": true,
+      "oneScreenOnePrimaryTask": true
+    }
+  },
+  "subjectAdapterFreeze": {
+    "schemaVersion": "dabangil.first_stage.subject_adapter.v1",
+    "interfaceDigestAlgorithm": "sha256_over_recursively_key_sorted_utf8_json",
+    "interfaceDigest": "f7e134498ad65b9ae2bc10c4570949cae7ca71d2038aa493f6485247b5dfc00a",
+    "interfaceDescriptor": {
+      "schemaVersion": "dabangil.first_stage.subject_adapter.v1",
+      "interfaceName": "SubjectAdapterV1",
+      "subjects": [
+        "civil_law",
+        "economics_principles",
+        "real_estate_principles",
+        "appraiser_related_law",
+        "accounting"
+      ],
+      "transitiveSourceBindings": [
+        {
+          "path": "lib/review-os/first-stage/kernel/domain.ts",
+          "normalization": "utf8_lf",
+          "sha256": "3df7bd48e24949d746f30a62d3031e68df4f1b6116d2731006d998599a4ff2e7",
+          "covers": [
+            "QuestionReference",
+            "Attempt",
+            "AnswerSubmission",
+            "Confidence",
+            "ElapsedTime",
+            "WorkTrace",
+            "WorkTraceStep",
+            "ErrorCause",
+            "ConceptBinding",
+            "ReviewTask",
+            "IndependentRetry",
+            "IndependentRetryLineageReceipt",
+            "AttemptEvaluation",
+            "AttemptEvidenceEnvelope",
+            "ImmutableEvidenceReference",
+            "ReviewedFeedbackEvidence",
+            "FirstStageSubjectId",
+            "ChoiceId",
+            "AttemptKind",
+            "AttemptEvaluationDecision",
+            "RetryDisposition",
+            "ElapsedTimeBucket",
+            "WorkTraceStepKind"
+          ]
+        },
+        {
+          "path": "lib/review-os/first-stage/subject-adapter/subject-adapter.ts",
+          "normalization": "utf8_lf",
+          "selection": {
+            "startMarker": "/* SUBJECT_ADAPTER_V1_TYPE_SOURCE_START */",
+            "endMarker": "/* SUBJECT_ADAPTER_V1_TYPE_SOURCE_END */",
+            "markersExcluded": true
+          },
+          "sha256": "dcd540526ca2bf61638bfdeb1e7a5824ebdf843c7f62270b71ac34a764c83125",
+          "covers": [
+            "SUBJECT_ADAPTER_SCHEMA_VERSION",
+            "McqChoicePresentation",
+            "McqQuestionPresentation",
+            "SubjectEvaluationInput",
+            "IndependentRetryInput",
+            "IndependentRetryCandidate",
+            "SubjectAdapterV1"
+          ]
+        }
+      ],
+      "fields": ["schemaVersion", "adapterId", "adapterVersion", "subjectId"],
+      "methods": [
+        {
+          "name": "assertQuestionReference",
+          "input": "QuestionReference",
+          "output": "void_or_fail_closed"
+        },
+        {
+          "name": "presentQuestion",
+          "input": "QuestionReference",
+          "output": "McqQuestionPresentation"
+        },
+        {
+          "name": "evaluateSubmission",
+          "input": "SubjectEvaluationInput",
+          "output": "AttemptEvaluation"
+        },
+        {
+          "name": "buildIndependentRetry",
+          "input": "IndependentRetryInput",
+          "output": "IndependentRetryCandidate"
+        }
+      ],
+      "typeShapes": {
+        "SubjectAdapterV1": [
+          "schemaVersion",
+          "adapterId",
+          "adapterVersion",
+          "subjectId",
+          "assertQuestionReference",
+          "presentQuestion",
+          "evaluateSubmission",
+          "buildIndependentRetry"
+        ],
+        "SubjectEvaluationInput": [
+          "schemaVersion",
+          "questionReference",
+          "attempt",
+          "submission",
+          "submissionSha256"
+        ],
+        "IndependentRetryInput": [
+          "schemaVersion",
+          "sourceQuestionReference",
+          "sourceAttempt",
+          "reviewTask",
+          "priorRetries"
+        ],
+        "IndependentRetryCandidate": [
+          "schemaVersion",
+          "questionReference",
+          "lineageReceipt"
+        ],
+        "McqChoicePresentation": [
+          "choiceId",
+          "body"
+        ],
+        "McqQuestionPresentation": [
+          "schemaVersion",
+          "questionReference",
+          "stem",
+          "choices",
+          "sourceStatusLabel",
+          "currentnessStatusLabel",
+          "learningReferenceDisclaimer"
+        ],
+        "QuestionReference": [
+          "schemaVersion",
+          "questionId",
+          "questionVersion",
+          "subjectId",
+          "examYear",
+          "examRound",
+          "sessionId",
+          "questionNumber",
+          "choiceCount",
+          "sourceVersionManifestIds",
+          "rightsState",
+          "currentnessState"
+        ],
+        "Attempt": [
+          "schemaVersion",
+          "attemptId",
+          "examCycleId",
+          "questionReference",
+          "kind",
+          "sourceAttemptId",
+          "reviewTaskId",
+          "exposureState",
+          "assistanceLevel",
+          "startedAt",
+          "state",
+          "submission",
+          "evaluation"
+        ],
+        "AnswerSubmission": [
+          "schemaVersion",
+          "selectedChoice",
+          "confidence",
+          "elapsedTime",
+          "answerChanged",
+          "previousChoice",
+          "eliminatedChoiceIds",
+          "workTrace",
+          "submittedAt"
+        ],
+        "ElapsedTime": [
+          "milliseconds",
+          "bucket"
+        ],
+        "WorkTrace": [
+          "schemaVersion",
+          "steps"
+        ],
+        "WorkTraceStep": [
+          "sequence",
+          "kind",
+          "atElapsedMs",
+          "choiceId"
+        ],
+        "ConceptBinding": [
+          "schemaVersion",
+          "conceptId",
+          "conceptVersion",
+          "subjectId",
+          "role"
+        ],
+        "ReviewTask": [
+          "schemaVersion",
+          "reviewTaskId",
+          "examCycleId",
+          "sourceAttemptId",
+          "questionReference",
+          "conceptBindings",
+          "errorCause",
+          "disposition",
+          "priority",
+          "dueAt",
+          "status",
+          "completedAt"
+        ],
+        "IndependentRetryLineageReceipt": [
+          "schemaVersion",
+          "receiptId",
+          "receiptVersion",
+          "adapterId",
+          "adapterVersion",
+          "subjectId",
+          "sourceQuestionId",
+          "sourceQuestionVersion",
+          "sourceQuestionReferenceSha256",
+          "variantQuestionId",
+          "variantQuestionVersion",
+          "variantQuestionReferenceSha256",
+          "targetConceptBindingKeys",
+          "priorRetryCount",
+          "decision"
+        ],
+        "IndependentRetry": [
+          "schemaVersion",
+          "independentRetryId",
+          "reviewTaskId",
+          "sourceAttemptId",
+          "retryAttemptId",
+          "questionReference",
+          "adapterId",
+          "adapterVersion",
+          "lineageReceipt",
+          "assistanceLevel",
+          "startedAt",
+          "completedAt",
+          "outcome"
+        ],
+        "AttemptEvaluation": [
+          "schemaVersion",
+          "decision",
+          "errorCause",
+          "conceptBindings",
+          "biggestGapCode",
+          "nextActionCode",
+          "retryDisposition",
+          "reviewAfterMs",
+          "evaluationPolicyVersion",
+          "evidenceEnvelope"
+        ],
+        "AttemptEvidenceEnvelope": [
+          "schemaVersion",
+          "attemptId",
+          "submissionSha256",
+          "questionId",
+          "questionVersion",
+          "questionReferenceSha256",
+          "subjectId",
+          "adapterId",
+          "adapterVersion",
+          "officialKeyReference",
+          "choiceSetReference",
+          "sourceReference",
+          "versionDecisionReference",
+          "rightsDecisionReference",
+          "reviewedFeedback"
+        ],
+        "ImmutableEvidenceReference": [
+          "schemaVersion",
+          "evidenceId",
+          "evidenceVersion",
+          "evidenceSha256"
+        ],
+        "ReviewedFeedbackEvidence": [
+          "schemaVersion",
+          "state",
+          "receiptReference",
+          "reviewerIdentity",
+          "reviewerClass",
+          "modelAlone"
+        ]
+      },
+      "vocabularies": {
+        "subjects": [
+          "civil_law",
+          "economics_principles",
+          "real_estate_principles",
+          "appraiser_related_law",
+          "accounting"
+        ],
+        "choiceIds": [1, 2, 3, 4, 5],
+        "confidence": ["low", "medium", "high"],
+        "elapsedTimeBuckets": [
+          "0_29999",
+          "30000_59999",
+          "60000_119999",
+          "120000_plus"
+        ],
+        "workTraceStepKinds": [
+          "read_stem",
+          "read_all_choices",
+          "eliminate_choice",
+          "calculate",
+          "source_check",
+          "change_answer",
+          "select_answer"
+        ],
+        "errorCauses": ["K", "C", "A", "R", "T", "G"],
+        "questionRightsStates": [
+          "verified_owner_private",
+          "verified_cleared"
+        ],
+        "questionCurrentnessStates": [
+          "verified_exam_date",
+          "verified_current"
+        ],
+        "attemptKinds": ["initial", "independent_retry"],
+        "attemptEvaluationDecisions": [
+          "correct",
+          "incorrect",
+          "unanswered",
+          "unavailable",
+          "withheld"
+        ],
+        "retryDispositions": [
+          "retry_now",
+          "review_then_retry",
+          "review_before_new_variant"
+        ],
+        "conceptBindingRoles": ["primary", "supporting"],
+        "reviewedFeedbackStates": [
+          "reviewed_available",
+          "withheld_rights_or_version",
+          "not_emitted_unavailable"
+        ],
+        "reviewerClasses": [
+          "named_owner_authorized_human_reviewer",
+          "owner_approved_personal_feedback_reviewer"
+        ],
+        "attemptExposureStates": [
+          "first_exposure",
+          "repeated_exposure",
+          "verified_variant"
+        ],
+        "assistanceLevels": [
+          "none",
+          "hint_or_scaffold",
+          "answer_revealed"
+        ],
+        "attemptStates": ["in_progress", "evaluated"],
+        "reviewTaskPriorities": ["critical", "high", "normal"],
+        "reviewTaskStatuses": ["pending", "retry_active", "completed"],
+        "independentRetryOutcomes": ["active", "succeeded", "failed"],
+        "independentRetryLineageDecisions": [
+          "verified_variant_for_independent_retry"
+        ]
+      },
+      "invariants": [
+        "adapter_has_exactly_the_four_fields_and_four_own_callable_methods_and_is_frozen_on_registration",
+        "adapter_subject_equals_every_input_and_output_question_subject",
+        "question_reference_is_bodyless_and_has_exactly_five_choices",
+        "presentation_has_exactly_positions_1_through_5_once",
+        "presentation_carries_source_currentness_and_learning_reference_disclaimer",
+        "client_never_supplies_correctness_error_cause_concepts_or_schedule",
+        "evaluation_evidence_binds_exact_attempt_submission_question_and_adapter_version",
+        "nonwithheld_evaluation_requires_key_choice_source_version_rights_and_reviewed_feedback_receipts",
+        "reviewed_feedback_requires_named_owner_authorized_human_or_owner_approved_reviewer_and_model_alone_false",
+        "withheld_or_unavailable_feedback_has_no_receipt_or_reviewer",
+        "withheld_or_unavailable_evaluation_has_null_error_cause_concepts_gap_action_retry_and_review_schedule",
+        "withheld_or_unavailable_attempt_records_no_review_task_concept_state_or_retry_queue",
+        "evaluation_is_deterministic_for_exact_adapter_version_reference_attempt_submission",
+        "independent_retry_builder_is_pure_and_deterministic_for_exact_adapter_version_and_input",
+        "reviewed_evaluation_has_exactly_one_primary_concept_and_no_duplicate_concept_binding",
+        "independent_retry_stays_in_subject_and_cannot_reuse_the_same_question_id_across_any_version",
+        "unknown_missing_cross_subject_or_stale_binding_fails_closed",
+        "adapter_makes_no_mastery_efficacy_calibration_or_official_result_claim"
+      ]
+    },
+    "productionAdapterImplementationsIncluded": 0,
+    "subjectLaneMayMutateCommonKernelWithoutIntegrationGate": false
+  },
+  "runtimeBoundary": {
+    "featureFlag": "INVERGE_OWNER_FIRST_STAGE_KERNEL_ENABLED",
+    "ownerAllowlist": "INVERGE_OWNER_FIRST_STAGE_EMAILS",
+    "alphaAdminAllowlistAlsoRequired": true,
+    "defaultOff": true,
+    "ownerOnly": true,
+    "productionDenied": true,
+    "publicNavigationAdded": false,
+    "onboardingAdded": false,
+    "paymentChanged": false,
+    "externalLearnerActivation": false,
+    "remoteSupabaseMutation": false,
+    "productionMutation": false,
+    "schemaOrPersistenceChanged": false,
+    "authOrRlsChanged": false,
+    "apiAcceptsClientKernelState": false,
+    "apiAcceptsClientEvaluationAuthority": false,
+    "apiAcceptsClientAttemptSubmissionOrQueueClock": false,
+    "kernelTransitionClockAuthority": "trusted_server_inputs_only",
+    "ownerRoutePhysicalPathExactly": "app/(owner-first-stage)/app/first-stage/page.tsx",
+    "ownerRouteParentLayoutIsolation": "root_layout_only",
+    "genericReviewOsParentLayoutInherited": false,
+    "genericReviewOsAccessInvokedBeforeOwnerGuard": false,
+    "authorizedOwnerPageRendersShellAfterSpecializedGuard": true,
+    "availabilitySchemaVersion": "first_stage.kernel_availability.v1",
+    "queueAvailabilitySchemaVersion": "first_stage.today_queue_availability.v1",
+    "registeredSubjectAdapters": [],
+    "noAdapterBehavior": "authenticated_owner_receives_frozen_empty_today_queue_and_subject_adapter_required_blocker",
+    "cachePolicy": "private_no_store"
+  },
+  "claimsBoundary": {
+    "officialResultClaim": false,
+    "passProbabilityClaim": false,
+    "learningEfficacyClaim": false,
+    "transferValidationClaim": false,
+    "measurementCalibrationClaim": false,
+    "calibratedExamItemQualityClaim": false,
+    "masteryClaim": false
+  },
+  "deferredIntegration": {
+    "subjectAdapterImplementations": [
+      "ACCOUNTING",
+      "ECONOMICS",
+      "CIVIL_LAW",
+      "APPRAISAL_RELATED_LAWS",
+      "REAL_ESTATE_PRINCIPLES"
+    ],
+    "studyCapacityRuntimeBridge": "after_validated_kernel_merge",
+    "mixedFiveSubjectTodayAndFullDay": "later_milestone",
+    "sharedTestRunnerRegistration": "installed_by_lane_b_serial_integration_gate",
+    "durablePersistence": "not_authorized_by_this_milestone"
+  }
+}
