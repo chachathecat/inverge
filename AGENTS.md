@@ -5,6 +5,14 @@
 Use this authority order when sources conflict:
 
 1. a dated Owner decision for the exact decision it owns, currently
+   `docs/decisions/2026-08-26-owner-wcv-c3-foundation-freeze.md` for the
+   minimal source-only `WCV_C3_FOUNDATION_FREEZE_V1`, its live-GitHub-only
+   C3R-P/T/L receipt summaries, exact frozen foundation bindings, terminal
+   WCV-C3/M3 post-merge state, C3-complete/C4-C6-preserved #714 allocation,
+   M4 Owner Study OS continuation and zero-activation/zero-remote boundary;
+   it is not a product stage, master plan, generalized receipt system or
+   second control plane and becomes repository authority only after its own
+   expected-head-pinned squash merge and validated GitHub receipt,
    `docs/decisions/2026-08-25-owner-parallel-execution-v1.md` for the sole
    narrow `INVERGE_OWNER_STUDY_OS` exception to the default one-writer rule,
    its three initial isolated lanes, post-Kernel six-lane subject/eval cap,
@@ -188,6 +196,30 @@ dependency. Only C3R-L may complete WCV-C3, complete Issue #714 allocation C3
 while preserving C4/C6, close #706/#707/#708/#781, advance the program
 selector or publish the terminal WCV-C3 receipt. A1 starts no runtime and
 leaves WCV-C3 incomplete.
+
+## WCV-C3 Foundation Freeze
+
+`WCV_C3_FOUNDATION_FREEZE_V1` is the source-only M3 closeout after validated
+PR #800 C3R-P, merged PR #816 C3R-T plus PR #818/#820 repairs, and validated
+PR #832 C3R-L. The late Theory P2 is recorded rather than relabeled clean;
+the repairs and M3's fresh exact-head review validate the current repaired
+tree. GitHub remains the sole receipt authority; the repository contract is a
+reviewable fail-closed summary and creates no new receipt system.
+
+C3R-P/T/L and the repair chain are existing merged inputs. Only after the freeze decision's own
+expected-head-pinned squash merge and validated GitHub receipt are WCV-C3 and
+M3 terminally closed and the listed foundation Git blobs frozen. Issue #714
+then has exactly C2/C3 complete with C4/C6 preserved and remains open. The
+next Owner Study OS milestone is M4 / `FIRST_STAGE_COMMON_KERNEL`; its parked
+candidate must refresh from the freeze resulting main. This closeout neither
+selects nor starts ULC-M1 and changes no canonical ULC order.
+
+The freeze changes no migration, runtime, workflow, package/lock, auth or RLS
+path and performs no migration apply. Owner-only/default-off remains in force;
+public, payment, external learner, provider, remote Supabase, Production and
+deployment mutation counts remain zero. It makes no learning-efficacy,
+transfer-calibration, measurement-calibration or calibrated-item-quality
+claim.
 
 ## C3R-A1 WCV-C3 serial program authority
 

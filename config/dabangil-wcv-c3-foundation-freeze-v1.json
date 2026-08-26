@@ -1,0 +1,288 @@
+{
+  "schemaVersion": "dabangil.wcv_c3.foundation_freeze.v1",
+  "contractId": "WCV_C3_FOUNDATION_FREEZE_V1",
+  "milestone": "M3",
+  "status": "candidate_effective_only_after_expected_head_pinned_squash_merge_and_validated_github_receipt",
+  "authorityDecisionPath": "docs/decisions/2026-08-26-owner-wcv-c3-foundation-freeze.md",
+  "authority": {
+    "repository": "chachathecat/inverge",
+    "programId": "INVERGE_OWNER_STUDY_OS",
+    "baseMainSha": "4989f02f54f187fb440f2bfa6722e4ee832420de",
+    "baseMainTree": "d24d7d8259918e0a50d8a6b0455289b01ef6f3c4",
+    "branch": "codex/owner-study-m3-wcv-c3-foundation-freeze",
+    "sourceOnly": true,
+    "createsProductStage": false,
+    "createsMasterPlan": false,
+    "createsGeneralReceiptSystem": false,
+    "createsSecondControlPlane": false
+  },
+  "receiptSemantics": {
+    "liveGitHubIsSoleReceiptAuthority": true,
+    "repositorySummaryIsIndependentReceipt": false,
+    "summaryKind": "non_authoritative_live_github_history_and_current_tree_closeout_input",
+    "conformingC3RStageMergeReceiptV1StagesExactly": ["C3R-P", "C3R-L"],
+    "nonconformingHistoricalStageSummary": "C3R-T",
+    "candidateTestsOrIssueStateMaySubstitute": false,
+    "missingExtraMismatchedRevertedOrUnreviewedEvidenceFailsClosed": true,
+    "c3rTMergeReviewLateP2Recorded": true,
+    "c3rTRepairsExactly": [818, 820],
+    "terminalFreezeRequiresFreshExactHeadReviewOfRepairedCurrentTree": true,
+    "requiredReceiptFieldsExactly": [
+      "stage",
+      "pullRequest",
+      "baseSha",
+      "reviewedHead",
+      "reviewedTree",
+      "squashMergeSha",
+      "resultingMainSha",
+      "resultingMainTree",
+      "exactHeadChecksPassed",
+      "formalReviewId",
+      "actionableCounts",
+      "unresolvedActionableThreads",
+      "runtimeEvidenceRefs",
+      "perSubjectIssueEvidence",
+      "metadataOnlyArtifactRefs",
+      "featureDefaultOff",
+      "remoteMutationCount"
+    ]
+  },
+  "liveGitHubStageMergeSummaries": [
+    {
+      "stage": "C3R-P",
+      "pullRequest": 800,
+      "baseSha": "342d3795c8ea51aeb6f94751a5db913a9dbfcffd",
+      "reviewedHead": "8f434027e5d20a5f3e799b1c2d85876e766b3858",
+      "reviewedTree": "f6fb7bc1d1613a8431a4bbdfe155eea9d9f5303c",
+      "squashMergeSha": "71fd878a7369c25a153bc90389347039684c501f",
+      "resultingMainSha": "71fd878a7369c25a153bc90389347039684c501f",
+      "resultingMainTree": "f6fb7bc1d1613a8431a4bbdfe155eea9d9f5303c",
+      "exactHeadChecksPassed": true,
+      "formalReviewId": "IC_kwDOSMHn8M8AAAABQbQgWQ",
+      "actionableCounts": { "p0": 0, "p1": 0, "p2": 0 },
+      "unresolvedActionableThreads": 0,
+      "runtimeEvidenceRefs": [
+        "github-actions:run:32742257724:artifact:9525876400:c3r-p-practice-runtime-32742257724-1"
+      ],
+      "perSubjectIssueEvidence": [
+        { "stage": "C3R-P", "subject": "PRACTICE", "issue": 706, "evidenceKey": "FROZEN_D0", "runtimeEvidenceRef": "PRACTICE_RUNTIME:c3r-p-practice-common-durable-runtime-v1#706:FROZEN_D0" },
+        { "stage": "C3R-P", "subject": "PRACTICE", "issue": 706, "evidenceKey": "D_PLUS_1_UNAIDED_RECONSTRUCTION", "runtimeEvidenceRef": "PRACTICE_RUNTIME:c3r-p-practice-common-durable-runtime-v1#706:D_PLUS_1_UNAIDED_RECONSTRUCTION" },
+        { "stage": "C3R-P", "subject": "PRACTICE", "issue": 706, "evidenceKey": "SEALED_NON_SAME_SURFACE_D_PLUS_7_TRANSFER", "runtimeEvidenceRef": "PRACTICE_RUNTIME:c3r-p-practice-common-durable-runtime-v1#706:SEALED_NON_SAME_SURFACE_D_PLUS_7_TRANSFER" },
+        { "stage": "C3R-P", "subject": "PRACTICE", "issue": 706, "evidenceKey": "TIMED_RECURRENCE", "runtimeEvidenceRef": "PRACTICE_RUNTIME:c3r-p-practice-common-durable-runtime-v1#706:TIMED_RECURRENCE" },
+        { "stage": "C3R-P", "subject": "PRACTICE", "issue": 706, "evidenceKey": "LATER_FAILURE_REOPEN", "runtimeEvidenceRef": "PRACTICE_RUNTIME:c3r-p-practice-common-durable-runtime-v1#706:LATER_FAILURE_REOPEN" },
+        { "stage": "C3R-P", "subject": "PRACTICE", "issue": 707, "evidenceKey": "LEARNER_PRIVATE_FORCED_RLS_LEDGER", "runtimeEvidenceRef": "PRACTICE_RUNTIME:c3r-p-practice-common-durable-runtime-v1#707:LEARNER_PRIVATE_FORCED_RLS_LEDGER" },
+        { "stage": "C3R-P", "subject": "PRACTICE", "issue": 707, "evidenceKey": "EXACT_SOURCE_ATTEMPT_ARTIFACT_ITEM_BINDING", "runtimeEvidenceRef": "PRACTICE_RUNTIME:c3r-p-practice-common-durable-runtime-v1#707:EXACT_SOURCE_ATTEMPT_ARTIFACT_ITEM_BINDING" },
+        { "stage": "C3R-P", "subject": "PRACTICE", "issue": 707, "evidenceKey": "BODYLESS_RECURRING_DEDUCTION_EVIDENCE_PROJECTION", "runtimeEvidenceRef": "PRACTICE_RUNTIME:c3r-p-practice-common-durable-runtime-v1#707:BODYLESS_RECURRING_DEDUCTION_EVIDENCE_PROJECTION" },
+        { "stage": "C3R-P", "subject": "PRACTICE", "issue": 707, "evidenceKey": "SOURCE_BOUND_FAILURE_NOTES", "runtimeEvidenceRef": "PRACTICE_RUNTIME:c3r-p-practice-common-durable-runtime-v1#707:SOURCE_BOUND_FAILURE_NOTES" },
+        { "stage": "C3R-P", "subject": "PRACTICE", "issue": 707, "evidenceKey": "RESTORE_EXPORT_DELETE", "runtimeEvidenceRef": "PRACTICE_RUNTIME:c3r-p-practice-common-durable-runtime-v1#707:RESTORE_EXPORT_DELETE" },
+        { "stage": "C3R-P", "subject": "PRACTICE", "issue": 708, "evidenceKey": "DETERMINISTIC_REVIEW_QUEUE", "runtimeEvidenceRef": "PRACTICE_RUNTIME:c3r-p-practice-common-durable-runtime-v1#708:DETERMINISTIC_REVIEW_QUEUE" },
+        { "stage": "C3R-P", "subject": "PRACTICE", "issue": 708, "evidenceKey": "TODAY_AND_FULL_DAY", "runtimeEvidenceRef": "PRACTICE_RUNTIME:c3r-p-practice-common-durable-runtime-v1#708:TODAY_AND_FULL_DAY" },
+        { "stage": "C3R-P", "subject": "PRACTICE", "issue": 708, "evidenceKey": "CORE_OUTCOME_MAXIMUM_3", "runtimeEvidenceRef": "PRACTICE_RUNTIME:c3r-p-practice-common-durable-runtime-v1#708:CORE_OUTCOME_MAXIMUM_3" },
+        { "stage": "C3R-P", "subject": "PRACTICE", "issue": 708, "evidenceKey": "PLANNER_REVIEW_STATE_SEPARATION", "runtimeEvidenceRef": "PRACTICE_RUNTIME:c3r-p-practice-common-durable-runtime-v1#708:PLANNER_REVIEW_STATE_SEPARATION" },
+        { "stage": "C3R-P", "subject": "PRACTICE", "issue": 708, "evidenceKey": "ACCEPT_EDIT_REJECT_WITHOUT_EVIDENCE_MUTATION", "runtimeEvidenceRef": "PRACTICE_RUNTIME:c3r-p-practice-common-durable-runtime-v1#708:ACCEPT_EDIT_REJECT_WITHOUT_EVIDENCE_MUTATION" },
+        { "stage": "C3R-P", "subject": "PRACTICE", "issue": 708, "evidenceKey": "STALE_PLAN_REJECTION_AND_ELIGIBILITY_REFRESH", "runtimeEvidenceRef": "PRACTICE_RUNTIME:c3r-p-practice-common-durable-runtime-v1#708:STALE_PLAN_REJECTION_AND_ELIGIBILITY_REFRESH" }
+      ],
+      "metadataOnlyArtifactRefs": [
+        "github-actions:run:32742257724:artifact:9525875396:c3r-p-entry-metadata-32742257724-1"
+      ],
+      "featureDefaultOff": true,
+      "remoteMutationCount": 0
+    },
+    {
+      "stage": "C3R-T",
+      "pullRequest": 816,
+      "baseSha": "cad8b98e4f13a2fe50d82ffd983616adc70eb75a",
+      "reviewedHead": "96933cbe08864c6b3cb94a7349cb33e92bf2df8d",
+      "reviewedTree": "3b01fc6b9ea5576992dd9b9612de7dae4d546b7f",
+      "squashMergeSha": "a70a7e0dbde7919c82d00189dafb91b7681caca3",
+      "resultingMainSha": "a70a7e0dbde7919c82d00189dafb91b7681caca3",
+      "resultingMainTree": "3b01fc6b9ea5576992dd9b9612de7dae4d546b7f",
+      "exactHeadChecksPassed": true,
+      "formalReviewId": "PRR_kwDOSMHn8M8AAAABKx6Ing",
+      "actionableCounts": { "p0": 0, "p1": 0, "p2": 1 },
+      "unresolvedActionableThreads": 0,
+      "runtimeEvidenceRefs": [
+        "github-actions:run:32840331435:artifact:9560369170:c3r-t-theory-runtime-32840331435-1"
+      ],
+      "perSubjectIssueEvidence": [
+        { "stage": "C3R-T", "subject": "THEORY", "issue": 706, "evidenceKey": "FROZEN_D0", "runtimeEvidenceRef": "THEORY_RUNTIME:c3r-t-theory-durable-learning-v1#706:FROZEN_D0" },
+        { "stage": "C3R-T", "subject": "THEORY", "issue": 706, "evidenceKey": "D_PLUS_1_UNAIDED_RECONSTRUCTION", "runtimeEvidenceRef": "THEORY_RUNTIME:c3r-t-theory-durable-learning-v1#706:D_PLUS_1_UNAIDED_RECONSTRUCTION" },
+        { "stage": "C3R-T", "subject": "THEORY", "issue": 706, "evidenceKey": "SEALED_NON_SAME_SURFACE_D_PLUS_7_TRANSFER", "runtimeEvidenceRef": "THEORY_RUNTIME:c3r-t-theory-durable-learning-v1#706:SEALED_NON_SAME_SURFACE_D_PLUS_7_TRANSFER" },
+        { "stage": "C3R-T", "subject": "THEORY", "issue": 706, "evidenceKey": "TIMED_RECURRENCE", "runtimeEvidenceRef": "THEORY_RUNTIME:c3r-t-theory-durable-learning-v1#706:TIMED_RECURRENCE" },
+        { "stage": "C3R-T", "subject": "THEORY", "issue": 706, "evidenceKey": "LATER_FAILURE_REOPEN", "runtimeEvidenceRef": "THEORY_RUNTIME:c3r-t-theory-durable-learning-v1#706:LATER_FAILURE_REOPEN" },
+        { "stage": "C3R-T", "subject": "THEORY", "issue": 707, "evidenceKey": "LEARNER_PRIVATE_FORCED_RLS_LEDGER", "runtimeEvidenceRef": "THEORY_RUNTIME:c3r-t-theory-durable-learning-v1#707:LEARNER_PRIVATE_FORCED_RLS_LEDGER" },
+        { "stage": "C3R-T", "subject": "THEORY", "issue": 707, "evidenceKey": "EXACT_SOURCE_ATTEMPT_ARTIFACT_ITEM_BINDING", "runtimeEvidenceRef": "THEORY_RUNTIME:c3r-t-theory-durable-learning-v1#707:EXACT_SOURCE_ATTEMPT_ARTIFACT_ITEM_BINDING" },
+        { "stage": "C3R-T", "subject": "THEORY", "issue": 707, "evidenceKey": "BODYLESS_RECURRING_DEDUCTION_EVIDENCE_PROJECTION", "runtimeEvidenceRef": "THEORY_RUNTIME:c3r-t-theory-durable-learning-v1#707:BODYLESS_RECURRING_DEDUCTION_EVIDENCE_PROJECTION" },
+        { "stage": "C3R-T", "subject": "THEORY", "issue": 707, "evidenceKey": "SOURCE_BOUND_FAILURE_NOTES", "runtimeEvidenceRef": "THEORY_RUNTIME:c3r-t-theory-durable-learning-v1#707:SOURCE_BOUND_FAILURE_NOTES" },
+        { "stage": "C3R-T", "subject": "THEORY", "issue": 707, "evidenceKey": "RESTORE_EXPORT_DELETE", "runtimeEvidenceRef": "THEORY_RUNTIME:c3r-t-theory-durable-learning-v1#707:RESTORE_EXPORT_DELETE" },
+        { "stage": "C3R-T", "subject": "THEORY", "issue": 708, "evidenceKey": "DETERMINISTIC_REVIEW_QUEUE", "runtimeEvidenceRef": "THEORY_RUNTIME:c3r-t-theory-durable-learning-v1#708:DETERMINISTIC_REVIEW_QUEUE" },
+        { "stage": "C3R-T", "subject": "THEORY", "issue": 708, "evidenceKey": "TODAY_AND_FULL_DAY", "runtimeEvidenceRef": "THEORY_RUNTIME:c3r-t-theory-durable-learning-v1#708:TODAY_AND_FULL_DAY" },
+        { "stage": "C3R-T", "subject": "THEORY", "issue": 708, "evidenceKey": "CORE_OUTCOME_MAXIMUM_3", "runtimeEvidenceRef": "THEORY_RUNTIME:c3r-t-theory-durable-learning-v1#708:CORE_OUTCOME_MAXIMUM_3" },
+        { "stage": "C3R-T", "subject": "THEORY", "issue": 708, "evidenceKey": "PLANNER_REVIEW_STATE_SEPARATION", "runtimeEvidenceRef": "THEORY_RUNTIME:c3r-t-theory-durable-learning-v1#708:PLANNER_REVIEW_STATE_SEPARATION" },
+        { "stage": "C3R-T", "subject": "THEORY", "issue": 708, "evidenceKey": "ACCEPT_EDIT_REJECT_WITHOUT_EVIDENCE_MUTATION", "runtimeEvidenceRef": "THEORY_RUNTIME:c3r-t-theory-durable-learning-v1#708:ACCEPT_EDIT_REJECT_WITHOUT_EVIDENCE_MUTATION" },
+        { "stage": "C3R-T", "subject": "THEORY", "issue": 708, "evidenceKey": "STALE_PLAN_REJECTION_AND_ELIGIBILITY_REFRESH", "runtimeEvidenceRef": "THEORY_RUNTIME:c3r-t-theory-durable-learning-v1#708:STALE_PLAN_REJECTION_AND_ELIGIBILITY_REFRESH" }
+      ],
+      "metadataOnlyArtifactRefs": [
+        "github-actions:run:32840331435:artifact:9560369170:c3r-t-theory-runtime-32840331435-1#metadata-only"
+      ],
+      "featureDefaultOff": true,
+      "remoteMutationCount": 0
+    },
+    {
+      "stage": "C3R-L",
+      "pullRequest": 832,
+      "baseSha": "75f3ce787d31047c2bceacc2ef752c0bfdfb23cc",
+      "reviewedHead": "fa0084b13ea2e6c2bedf72f0084d57c66158bd4d",
+      "reviewedTree": "d24d7d8259918e0a50d8a6b0455289b01ef6f3c4",
+      "squashMergeSha": "4989f02f54f187fb440f2bfa6722e4ee832420de",
+      "resultingMainSha": "4989f02f54f187fb440f2bfa6722e4ee832420de",
+      "resultingMainTree": "d24d7d8259918e0a50d8a6b0455289b01ef6f3c4",
+      "exactHeadChecksPassed": true,
+      "formalReviewId": "IC_kwDOSMHn8M8AAAABQst2vw",
+      "actionableCounts": { "p0": 0, "p1": 0, "p2": 0 },
+      "unresolvedActionableThreads": 0,
+      "runtimeEvidenceRefs": [
+        "github-actions:run:32888570891:artifact:9578708182:c3r-l-law-runtime-32888570891-1"
+      ],
+      "perSubjectIssueEvidence": [
+        { "stage": "C3R-L", "subject": "LAW", "issue": 706, "evidenceKey": "FROZEN_D0", "runtimeEvidenceRef": "LAW_RUNTIME:c3r-l-law-durable-learning-v1#706:FROZEN_D0" },
+        { "stage": "C3R-L", "subject": "LAW", "issue": 706, "evidenceKey": "D_PLUS_1_UNAIDED_RECONSTRUCTION", "runtimeEvidenceRef": "LAW_RUNTIME:c3r-l-law-durable-learning-v1#706:D_PLUS_1_UNAIDED_RECONSTRUCTION" },
+        { "stage": "C3R-L", "subject": "LAW", "issue": 706, "evidenceKey": "SEALED_NON_SAME_SURFACE_D_PLUS_7_TRANSFER", "runtimeEvidenceRef": "LAW_RUNTIME:c3r-l-law-durable-learning-v1#706:SEALED_NON_SAME_SURFACE_D_PLUS_7_TRANSFER" },
+        { "stage": "C3R-L", "subject": "LAW", "issue": 706, "evidenceKey": "TIMED_RECURRENCE", "runtimeEvidenceRef": "LAW_RUNTIME:c3r-l-law-durable-learning-v1#706:TIMED_RECURRENCE" },
+        { "stage": "C3R-L", "subject": "LAW", "issue": 706, "evidenceKey": "LATER_FAILURE_REOPEN", "runtimeEvidenceRef": "LAW_RUNTIME:c3r-l-law-durable-learning-v1#706:LATER_FAILURE_REOPEN" },
+        { "stage": "C3R-L", "subject": "LAW", "issue": 707, "evidenceKey": "LEARNER_PRIVATE_FORCED_RLS_LEDGER", "runtimeEvidenceRef": "LAW_RUNTIME:c3r-l-law-durable-learning-v1#707:LEARNER_PRIVATE_FORCED_RLS_LEDGER" },
+        { "stage": "C3R-L", "subject": "LAW", "issue": 707, "evidenceKey": "EXACT_SOURCE_ATTEMPT_ARTIFACT_ITEM_BINDING", "runtimeEvidenceRef": "LAW_RUNTIME:c3r-l-law-durable-learning-v1#707:EXACT_SOURCE_ATTEMPT_ARTIFACT_ITEM_BINDING" },
+        { "stage": "C3R-L", "subject": "LAW", "issue": 707, "evidenceKey": "BODYLESS_RECURRING_DEDUCTION_EVIDENCE_PROJECTION", "runtimeEvidenceRef": "LAW_RUNTIME:c3r-l-law-durable-learning-v1#707:BODYLESS_RECURRING_DEDUCTION_EVIDENCE_PROJECTION" },
+        { "stage": "C3R-L", "subject": "LAW", "issue": 707, "evidenceKey": "SOURCE_BOUND_FAILURE_NOTES", "runtimeEvidenceRef": "LAW_RUNTIME:c3r-l-law-durable-learning-v1#707:SOURCE_BOUND_FAILURE_NOTES" },
+        { "stage": "C3R-L", "subject": "LAW", "issue": 707, "evidenceKey": "RESTORE_EXPORT_DELETE", "runtimeEvidenceRef": "LAW_RUNTIME:c3r-l-law-durable-learning-v1#707:RESTORE_EXPORT_DELETE" },
+        { "stage": "C3R-L", "subject": "LAW", "issue": 708, "evidenceKey": "DETERMINISTIC_REVIEW_QUEUE", "runtimeEvidenceRef": "LAW_RUNTIME:c3r-l-law-durable-learning-v1#708:DETERMINISTIC_REVIEW_QUEUE" },
+        { "stage": "C3R-L", "subject": "LAW", "issue": 708, "evidenceKey": "TODAY_AND_FULL_DAY", "runtimeEvidenceRef": "LAW_RUNTIME:c3r-l-law-durable-learning-v1#708:TODAY_AND_FULL_DAY" },
+        { "stage": "C3R-L", "subject": "LAW", "issue": 708, "evidenceKey": "CORE_OUTCOME_MAXIMUM_3", "runtimeEvidenceRef": "LAW_RUNTIME:c3r-l-law-durable-learning-v1#708:CORE_OUTCOME_MAXIMUM_3" },
+        { "stage": "C3R-L", "subject": "LAW", "issue": 708, "evidenceKey": "PLANNER_REVIEW_STATE_SEPARATION", "runtimeEvidenceRef": "LAW_RUNTIME:c3r-l-law-durable-learning-v1#708:PLANNER_REVIEW_STATE_SEPARATION" },
+        { "stage": "C3R-L", "subject": "LAW", "issue": 708, "evidenceKey": "ACCEPT_EDIT_REJECT_WITHOUT_EVIDENCE_MUTATION", "runtimeEvidenceRef": "LAW_RUNTIME:c3r-l-law-durable-learning-v1#708:ACCEPT_EDIT_REJECT_WITHOUT_EVIDENCE_MUTATION" },
+        { "stage": "C3R-L", "subject": "LAW", "issue": 708, "evidenceKey": "STALE_PLAN_REJECTION_AND_ELIGIBILITY_REFRESH", "runtimeEvidenceRef": "LAW_RUNTIME:c3r-l-law-durable-learning-v1#708:STALE_PLAN_REJECTION_AND_ELIGIBILITY_REFRESH" }
+      ],
+      "metadataOnlyArtifactRefs": [
+        "github-actions:run:32888570891:artifact:9578708182:c3r-l-law-runtime-32888570891-1#metadata-only"
+      ],
+      "featureDefaultOff": true,
+      "remoteMutationCount": 0
+    }
+  ],
+  "validatedRepairChainSummariesExactly": [
+    {
+      "stage": "C3R-P",
+      "pullRequest": 806,
+      "baseSha": "71fd878a7369c25a153bc90389347039684c501f",
+      "reviewedHead": "2b24f29d8e7a8ad41289775a449afce3c0ef5b44",
+      "reviewedTree": "42859133338b8d1f638f852f170c0ddbb6be329a",
+      "resultingMainSha": "f3251d0161873c0113d82ee2e72b422436a01158",
+      "resultingMainTree": "42859133338b8d1f638f852f170c0ddbb6be329a"
+    },
+    {
+      "stage": "C3R-T",
+      "pullRequest": 818,
+      "baseSha": "a70a7e0dbde7919c82d00189dafb91b7681caca3",
+      "reviewedHead": "ff73a280cb476a75e5a8038dd7f1171effae8b6a",
+      "reviewedTree": "a9f3a119b7a3b7d4c586eb6ef58f1fd32f8a0c84",
+      "resultingMainSha": "64b7e3655e4fc78646aa4281abc6855d180f209b",
+      "resultingMainTree": "a9f3a119b7a3b7d4c586eb6ef58f1fd32f8a0c84"
+    },
+    {
+      "stage": "C3R-T",
+      "pullRequest": 820,
+      "baseSha": "64b7e3655e4fc78646aa4281abc6855d180f209b",
+      "reviewedHead": "53584fead7ea1a786bb163f66cc7ce1b767e8232",
+      "reviewedTree": "a3e8ab7618cbceddb2c9ac156a84fc45bb018f1b",
+      "resultingMainSha": "75f3ce787d31047c2bceacc2ef752c0bfdfb23cc",
+      "resultingMainTree": "a3e8ab7618cbceddb2c9ac156a84fc45bb018f1b"
+    }
+  ],
+  "frozenFoundationBindings": [
+    { "path": "config/dabangil-wcv-c3r-a1-serial-program-authority-v1.json", "gitBlob": "4b8efb14ef58e7940c457c925f972f995066c677", "sha256": "4219924c4ee7e36f6d0005c53660a76b32fbf82dae9fbf218b46d1f7e1397823" },
+    { "path": "config/dabangil-wcv-c3r-p-practice-common-durable-runtime-v1.json", "gitBlob": "73be1916b19e8f1e306da1324418b1de64597348", "sha256": "0be26b09e54e95e87ef5e153c2857879edaebd9eac1856f759255f2aa8e73e4b" },
+    { "path": "config/dabangil-wcv-c3r-t-theory-durable-learning-delta-v1.json", "gitBlob": "ec6d1a3eb2d857ac0ae5a2d98ff126d8620b9a09", "sha256": "cba56ee845f0e31c9056fe636ffc6260a3621c8143ea8382ac643473bfb6395b" },
+    { "path": "config/dabangil-wcv-c3r-l-law-durable-learning-delta-v1.json", "gitBlob": "cf5003b2e8e90baf7db5f2437d1c0a79af03d1b2", "sha256": "6eca0eacc26b289834f4ed076a7ec885f936682b3335fb49d31f1350ceda0298" },
+    { "path": "lib/review-os/c3r-p-contract.ts", "gitBlob": "8c920538770414feff795135dc7690186fe11bab", "sha256": "da42d12aa7a3cf59e3890a015954d24fed9899aa47e641e79889fab2eb383558" },
+    { "path": "lib/review-os/c3r-p-engine.ts", "gitBlob": "351047c5b5ed7463ec7aac96baad389b5a3a92d9", "sha256": "af2b8385b8b50c9e46b791cfb2a4d6cefa86fcdfc6375c564e4f15c816328af7" },
+    { "path": "lib/review-os/c3r-p-repository.ts", "gitBlob": "c9fceb98d4a6f9dd9a2eb89f7f612fb60b0d41c8", "sha256": "e7b7ea5eadc995c33d20b5eeee801580849c6a27e17631062436dd8fdb8cab0e" },
+    { "path": "lib/review-os/c3r-p-service.ts", "gitBlob": "5923cd57c2cf1d00aea258d930495a48ac1dc516", "sha256": "8816499ace617f28b028824384b3787757c06f3b5e934dc463cf67a2bdb2c845" },
+    { "path": "scripts/automation/produce-runtime-evidence.mjs", "gitBlob": "140c2b99ad176be154a06a7990aa2c81a77e571a", "sha256": "d942a4d68984062ea5a8c7e1dc81341f87fcd670bc2cab6547fa5746cfc6e15f" },
+    { "path": "scripts/automation/runtime-gate.mjs", "gitBlob": "80c78b04e6b82111ee4e9372e66b95d549744a0c", "sha256": "ffc0f647b2d01c5aedbd0c1e66dc72ad2305dd8734cf590d17c53b3cc1d0ff49" },
+    { "path": "scripts/automation/runtime-risk-contract.mjs", "gitBlob": "6a67c191890360df29a93a0405b8ec7796f9b7b3", "sha256": "12ff3e5a1a8b5110d72efcb06037a6f4fa1d9d6bcf69c7c0b211afccfd28cca7" },
+    { "path": "scripts/automation/wcv-c3r-p-practice-common-runtime.mjs", "gitBlob": "7a1acb7f9cc5ece3c18c5901d2abc93eaecfc00a", "sha256": "7e24b9e1f5c9ebae0cbf4b867642fa22053e8a8770bcc57f7b2fafdfdd2f1e0e" },
+    { "path": "supabase/migrations/20260822120000_c3r_p_practice_common_durable_substrate.sql", "gitBlob": "647364293149e55410b05b3645ad4473e21c40ef", "sha256": "51c79a5c522a5cd3e6e52040686917b0d67ea524a31a39259b850f928fd4307c" },
+    { "path": "supabase/migrations/20260825054823_c3r_t_theory_durable_learning_delta.sql", "gitBlob": "4224fa66a0c03e3af85bfdc176b1a7e9d46c1b21", "sha256": "a28dac992f9dca35a2db53c1ae5091085ca8c2a625d98008e368386fcdb605b6" },
+    { "path": "supabase/migrations/20260825055252_c3r_t_theory_common_substrate_integration.sql", "gitBlob": "3719b2380f55a35b6e495f1b53e32747f66f5960", "sha256": "dcd90c4710196014b1c8351a2e69d2d04f49d28b39280478e8640e93b7c6963b" },
+    { "path": "supabase/migrations/20260825122242_c3r_l_law_durable_learning_delta.sql", "gitBlob": "99ec44a9dcaa257383ccc1ec763c1933a95a0d7e", "sha256": "a4f5669603b1bce8de55cdce96df07e86cc525609ab918d6ff17367b0a1e8db5" },
+    { "path": "supabase/migrations/20260825122257_c3r_l_law_common_substrate_integration.sql", "gitBlob": "25578970fe7f6a3ab96c58794e679a9c4116ffe3", "sha256": "cd910cf3a0075a545b1c8d833a745d0f7f5f254c55d99a12ce40220fa4bc5117" }
+  ],
+  "integrationGate": {
+    "futureMutationOfFrozenBindingRequiresOneExplicitGate": true,
+    "silentDriftAllowed": false,
+    "downstreamKernelMayReadButNotMutateFrozenFoundation": true,
+    "subjectAdapterLaneMayMutateCommonKernel": false
+  },
+  "postMergeState": {
+    "c3rP": "complete_and_unreverted",
+    "c3rT": "complete_repaired_and_unreverted",
+    "c3rL": "complete_and_unreverted",
+    "wcvC3TerminalOutcome": "complete",
+    "foundation": "frozen",
+    "m3": "complete",
+    "nextOwnerStudyOsMilestone": "M4_FIRST_STAGE_COMMON_KERNEL",
+    "laneBMustRefreshFromM3ResultingMain": true,
+    "canonicalUlcSequenceChanged": false,
+    "ulcM1Selected": false,
+    "ulcM1Started": false,
+    "issue714State": "OPEN",
+    "issue714CompletedAllocationsExactly": ["C2", "C3"],
+    "issue714RemainingAllocationsExactly": ["C4", "C6"]
+  },
+  "activationBoundary": {
+    "ownerOnly": true,
+    "featureDefaultOff": true,
+    "firstStageRuntimeActivated": false,
+    "publicActivation": false,
+    "paymentActivation": false,
+    "externalLearnerActivation": false,
+    "providerMutationCount": 0,
+    "remoteSupabaseMutationCount": 0,
+    "productionMutationCount": 0,
+    "migrationApplyCount": 0,
+    "deploymentCount": 0
+  },
+  "claimBoundary": {
+    "actualLearningEfficacyClaimed": false,
+    "transferVerifiedClaimed": false,
+    "measurementCalibratedClaimed": false,
+    "calibratedExamItemQualityClaimed": false
+  },
+  "deliveryControl": {
+    "draftRequired": true,
+    "autoMergeAllowed": false,
+    "mergeAuthorizedByThisWork": false,
+    "ownerExactHeadMergeApprovalRequired": true,
+    "requiredClosingReference": "Closes #781",
+    "requiredReferenceLinesExactly": ["Refs #706", "Refs #707", "Refs #708", "Refs #714"],
+    "issue781ClosesOnProtectedM3SquashMerge": true,
+    "issue781MustReopenIfResultingMainValidationFails": true,
+    "issues706Through708ClosureRequiresValidatedM3ResultingMainReceipt": true,
+    "issue714MustRemainOpen": true
+  },
+  "pathManifest": {
+    "changedPathsExactly": [
+      "AGENTS.md",
+      "config/dabangil-wcv-c3-foundation-freeze-v1.json",
+      "docs/decisions/2026-08-26-owner-wcv-c3-foundation-freeze.md",
+      "docs/exec-plans/active/inverge-owner-study-os.md",
+      "scripts/run-node-tests.mjs",
+      "tests/wcv-c3-foundation-freeze.test.mjs"
+    ],
+    "migrationPathsChanged": 0,
+    "runtimePathsChanged": 0,
+    "workflowPathsChanged": 0,
+    "packageOrLockPathsChanged": 0,
+    "authOrRlsPathsChanged": 0
+  }
+}
