@@ -132,6 +132,10 @@ function modelFamilyKey(value: QuestionFoundryModelIdentityV1): string {
   return value.modelFamilyId;
 }
 
+function modelProviderVersionKey(value: QuestionFoundryModelIdentityV1): string {
+  return canonicalDigest([value.providerId, value.modelVersionId]);
+}
+
 function isIsoInstant(value: unknown): value is string {
   if (typeof value !== "string") return false;
   const epoch = Date.parse(value);
@@ -1854,7 +1858,7 @@ export function validateGeneratorJudgeSolverSeparation(
     const independenceKeys = [
       `family:${family}`,
       `artifact:${identity.modelArtifactDigest}`,
-      `provider-version:${identity.providerId}/${identity.modelVersionId}`,
+      `provider-version:${modelProviderVersionKey(identity)}`,
     ];
     for (const key of independenceKeys) {
       const priorActor = modelActors.get(key);
@@ -1965,6 +1969,30 @@ export function validateMetaAuditBundle(
   const generatorFamilies = new Set(
     batch.candidates.map((candidate) => candidate.generatorModelIdentity.modelFamilyId),
   );
+  const generatorProviderVersions = new Set(
+    batch.candidates.map((candidate) =>
+      modelProviderVersionKey(candidate.generatorModelIdentity)),
+  );
+  const generatorArtifacts = new Set(
+    batch.candidates.map((candidate) => candidate.generatorModelIdentity.modelArtifactDigest),
+  );
+  const generatorEvaluatorAliasOverlap = (
+    actorId: unknown,
+    identity: QuestionFoundryModelIdentityV1,
+    path: string,
+  ): boolean => {
+    const axes: string[] = [];
+    if (isSafeId(actorId) && generatorIds.has(actorId)) axes.push("ACTOR_ID");
+    if (generatorFamilies.has(identity.modelFamilyId)) axes.push("MODEL_FAMILY_ID");
+    if (generatorProviderVersions.has(modelProviderVersionKey(identity))) {
+      axes.push("PROVIDER_MODEL_VERSION_ID");
+    }
+    if (generatorArtifacts.has(identity.modelArtifactDigest)) axes.push("MODEL_ARTIFACT_DIGEST");
+    for (const axis of axes) {
+      errors.push(`metaAudit:GENERATOR_EVALUATOR_ALIAS_OVERLAP:${path}:${axis}`);
+    }
+    return axes.length > 0;
+  };
   const expectedCandidateIds = batch.candidates.map((candidate) => candidate.candidateId).sort();
   const selfPreference = value.selfPreference;
   if (isRecord(selfPreference)) {
@@ -2035,6 +2063,11 @@ export function validateMetaAuditBundle(
       const modelErrorsBefore = errors.length;
       const evaluatorModelIdentity = run.evaluatorModelIdentity;
       const modelValid = validateModelIdentity(evaluatorModelIdentity, errors, `${path}.evaluatorModelIdentity`);
+      const generatorAliasOverlap = modelValid && generatorEvaluatorAliasOverlap(
+        run.evaluatorId,
+        evaluatorModelIdentity,
+        path,
+      );
       if (
         !isSafeId(run.runId) ||
         runIds.has(String(run.runId)) ||
@@ -2044,7 +2077,7 @@ export function validateMetaAuditBundle(
         run.anonymizedCandidateDigest !== anonymizedCandidateDigest ||
         run.selectedCandidateId !== selectedCandidateId ||
         !isIsoInstant(run.completedAt) ||
-        (modelValid && generatorFamilies.has(evaluatorModelIdentity.modelFamilyId)) ||
+        generatorAliasOverlap ||
         errors.length !== modelErrorsBefore
       ) {
         selfRunsValid = false;
@@ -2128,6 +2161,11 @@ export function validateMetaAuditBundle(
       );
       const evaluatorModelIdentity = run.evaluatorModelIdentity;
       const modelValid = validateModelIdentity(evaluatorModelIdentity, errors, `${path}.evaluatorModelIdentity`);
+      const generatorAliasOverlap = modelValid && generatorEvaluatorAliasOverlap(
+        run.evaluatorId,
+        evaluatorModelIdentity,
+        path,
+      );
       const expectedDigest = permutation
         ? canonicalDigest({
             permutationId: permutation.permutationId,
@@ -2144,7 +2182,7 @@ export function validateMetaAuditBundle(
         !isSafeId(run.evaluatorVersion) ||
         !isSafeId(run.evaluatorExecutionId) ||
         !isIsoInstant(run.completedAt) ||
-        (modelValid && generatorFamilies.has(evaluatorModelIdentity.modelFamilyId))
+        generatorAliasOverlap
       ) {
         orderRunsValid = false;
       }
@@ -2231,7 +2269,17 @@ export function validateMetaAuditBundle(
         path,
         errors,
       );
-      validateModelIdentity(run.evaluatorModelIdentity, errors, `${path}.evaluatorModelIdentity`);
+      const evaluatorModelIdentity = run.evaluatorModelIdentity;
+      const modelValid = validateModelIdentity(
+        evaluatorModelIdentity,
+        errors,
+        `${path}.evaluatorModelIdentity`,
+      );
+      const generatorAliasOverlap = modelValid && generatorEvaluatorAliasOverlap(
+        run.evaluatorId,
+        evaluatorModelIdentity,
+        path,
+      );
       if (
         !isSafeId(run.runId) ||
         runIds.has(String(run.runId)) ||
@@ -2242,7 +2290,8 @@ export function validateMetaAuditBundle(
         run.selectedCandidateId !== selectedCandidateId ||
         run.selectedOptionId !== selectedCandidate?.proposedCorrectOptionId ||
         run.releaseDecision !== "PERSONAL_LEARNING_USABLE" ||
-        !isIsoInstant(run.completedAt)
+        !isIsoInstant(run.completedAt) ||
+        generatorAliasOverlap
       ) {
         stabilityRunsValid = false;
       }
@@ -2317,13 +2366,24 @@ export function validateMetaAuditBundle(
           `${path}.${kind}`,
           errors,
         );
-        validateModelIdentity(outcome.judgeModelIdentity, errors, `${path}.${kind}.judgeModelIdentity`);
+        const judgeModelIdentity = outcome.judgeModelIdentity;
+        const modelValid = validateModelIdentity(
+          judgeModelIdentity,
+          errors,
+          `${path}.${kind}.judgeModelIdentity`,
+        );
+        const generatorAliasOverlap = modelValid && generatorEvaluatorAliasOverlap(
+          outcome.judgeId,
+          judgeModelIdentity,
+          `${path}.${kind}`,
+        );
         if (
           !isSafeId(outcome.judgeId) ||
           !isSafeId(outcome.judgeVersion) ||
           !isSafeId(outcome.judgeExecutionId) ||
           !isIsoInstant(outcome.completedAt) ||
-          typeof outcome.approved !== "boolean"
+          typeof outcome.approved !== "boolean" ||
+          generatorAliasOverlap
         ) {
           driftFixturesValid = false;
         }

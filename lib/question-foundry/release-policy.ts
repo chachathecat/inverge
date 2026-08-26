@@ -58,6 +58,10 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
+function modelProviderVersionKey(value: QuestionFoundryModelIdentityV1): string {
+  return canonicalDigest([value.providerId, value.modelVersionId]);
+}
+
 function hasExactKeys(value: unknown, keys: readonly string[]) {
   return (
     isRecord(value) &&
@@ -759,7 +763,7 @@ function validateTrustedModelExecutions(
       Date.parse(registry.verifiedAt) <= Date.parse(model.validUntil);
     if (!identityValid) errors.push(`TRUSTED_MODEL_CATALOG_ENTRY_INVALID:${model.registryModelId}`);
     const identityDigest = canonicalDigest(identity);
-    const providerVersion = `${identity.providerId}/${identity.modelVersionId}`;
+    const providerVersion = modelProviderVersionKey(identity);
     const priorProviderVersion = providerVersions.get(providerVersion);
     if (priorProviderVersion && priorProviderVersion !== identityDigest) {
       errors.push(`TRUSTED_MODEL_PROVIDER_VERSION_ALIAS_CONFLICT:${providerVersion}`);

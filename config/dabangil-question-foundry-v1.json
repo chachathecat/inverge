@@ -240,6 +240,7 @@
       "JUDGE_DRIFT"
     ],
     "selfPreferenceRequiresAnonymizedCandidatesAndZeroGeneratorEvaluatorOverlap": true,
+    "everyMetaEvaluatorAndDriftOutcomeMustBeDisjointFromGeneratorsAcrossActorFamilyProviderVersionAndArtifact": true,
     "orderBiasRequiresAtLeastTwoDistinctPermutationsAndStableWinner": true,
     "repeatedStabilityRequiresAtLeastThreeDistinctRunsWithOneWinnerAnswerAndDecision": true,
     "judgeDriftRequiresPinnedFixtureDigestAndBoundedDisagreement": true,

@@ -34,6 +34,8 @@ import {
   validateCandidateBatch,
   validateCandidateCalculation,
   validateCalculationSpecification,
+  validateGeneratorJudgeSolverSeparation,
+  validateMetaAuditBundle,
   validateQuestionBlueprint,
   validateTrustedSourceBindings,
 } from "../lib/question-foundry/index.ts";
@@ -1154,6 +1156,11 @@ test("machine contract freezes source-only boundaries and exact lane ownership",
     contract.rightsAndSourceBoundary.nearCopyFailureTransformationsExactly,
     QUESTION_FOUNDRY_NEAR_COPY_FAILURE_TRANSFORMATIONS,
   );
+  assert.equal(
+    contract.metaAudits
+      .everyMetaEvaluatorAndDriftOutcomeMustBeDisjointFromGeneratorsAcrossActorFamilyProviderVersionAndArtifact,
+    true,
+  );
   assert.equal(contract.parallelExecutionBinding.mergeAuthorizedNow, true);
   assert.equal(contract.parallelExecutionBinding.sharedBaseSha, "fd8d0039bbeb2981935fdb671094e37d73a34400");
   assert.equal(contract.parallelExecutionBinding.sharedBaseTree, "1d338b7be92cfc98c00611b4ff3f2b75dea1784d");
@@ -1937,6 +1944,21 @@ test("AI-only release is capped at PERSONAL_LEARNING_USABLE and no generator can
     ["generator-solver-model", (value) => {
       value.blindSolverReviews[0].solverModelIdentity = clone(value.batch.candidates[0].generatorModelIdentity);
     }],
+    ["generator-solver-actor", (value) => {
+      value.blindSolverReviews[0].solverId = value.batch.candidates[0].generatorId;
+    }],
+    ["generator-solver-provider-version-alias", (value) => {
+      const generatorIdentity = value.batch.candidates[0].generatorModelIdentity;
+      value.blindSolverReviews[0].solverModelIdentity = {
+        ...value.blindSolverReviews[0].solverModelIdentity,
+        providerId: generatorIdentity.providerId,
+        modelVersionId: generatorIdentity.modelVersionId,
+      };
+    }],
+    ["generator-solver-artifact-alias", (value) => {
+      value.blindSolverReviews[0].solverModelIdentity.modelArtifactDigest =
+        value.batch.candidates[0].generatorModelIdentity.modelArtifactDigest;
+    }],
     ["judge-solver-model", (value) => {
       value.judgeReviews[0].judgeModelIdentity = clone(value.blindSolverReviews[0].solverModelIdentity);
     }],
@@ -2513,6 +2535,228 @@ test("all four meta-audits are independently mandatory", () => {
     assert.equal(decision.allowed, false, name);
     assert.ok(decision.blockingCodes.some((code) => code.includes("metaAudit")), name);
   }
+
+  const aliasAxes = [
+    "ACTOR_ID",
+    "MODEL_FAMILY_ID",
+    "PROVIDER_MODEL_VERSION_ID",
+    "MODEL_ARTIFACT_DIGEST",
+  ];
+  const aliasCases = [
+    {
+      name: "selfPreference",
+      path: "metaAudit.selfPreference.runs[0]",
+      targets: (bundleValue) => [{
+        record: bundleValue.metaAudits.selfPreference.runs[0],
+        actorKey: "evaluatorId",
+        modelKey: "evaluatorModelIdentity",
+      }],
+      afterActorMutation: (bundleValue, generatorId) => {
+        bundleValue.metaAudits.selfPreference.evaluatorIds = [generatorId];
+        bundleValue.metaAudits.selfPreference.generatorEvaluatorOverlap = [generatorId];
+      },
+    },
+    {
+      name: "orderBias",
+      path: "metaAudit.orderBias.runs[0]",
+      targets: (bundleValue) => [{
+        record: bundleValue.metaAudits.orderBias.runs[0],
+        actorKey: "evaluatorId",
+        modelKey: "evaluatorModelIdentity",
+      }],
+    },
+    {
+      name: "repeatedStability",
+      path: "metaAudit.repeatedStability.runs[0]",
+      targets: (bundleValue) => [{
+        record: bundleValue.metaAudits.repeatedStability.runs[0],
+        actorKey: "evaluatorId",
+        modelKey: "evaluatorModelIdentity",
+      }],
+    },
+    {
+      name: "judgeDrift",
+      path: "metaAudit.judgeDrift.fixtures[0].baseline",
+      targets: (bundleValue, axis) => {
+        const fixture = bundleValue.metaAudits.judgeDrift.fixtures[0];
+        const outcomes = axis === "MODEL_FAMILY_ID"
+          ? [fixture.baseline, fixture.current]
+          : [fixture.baseline];
+        return outcomes.map((record) => ({
+          record,
+          actorKey: "judgeId",
+          modelKey: "judgeModelIdentity",
+        }));
+      },
+    },
+  ];
+  const aliasedIdentity = (original, generatorIdentity, axis, label) => {
+    if (axis === "MODEL_FAMILY_ID") {
+      return {
+        ...original,
+        modelFamilyId: generatorIdentity.modelFamilyId,
+        modelArtifactDigest: canonicalDigest({ label, axis, version: original.modelVersionId }),
+      };
+    }
+    if (axis === "PROVIDER_MODEL_VERSION_ID") {
+      return {
+        ...original,
+        providerId: generatorIdentity.providerId,
+        modelVersionId: generatorIdentity.modelVersionId,
+        modelArtifactDigest: canonicalDigest({ label, axis }),
+      };
+    }
+    if (axis === "MODEL_ARTIFACT_DIGEST") {
+      return {
+        ...original,
+        modelArtifactDigest: generatorIdentity.modelArtifactDigest,
+      };
+    }
+    return original;
+  };
+
+  for (const aliasCase of aliasCases) {
+    for (const axis of aliasAxes) {
+      const hostile = personalBundle();
+      const generator = hostile.batch.candidates[0];
+      const targets = aliasCase.targets(hostile, axis);
+      for (const { record, actorKey, modelKey } of targets) {
+        if (axis === "ACTOR_ID") {
+          record[actorKey] = generator.generatorId;
+        } else {
+          record[modelKey] = aliasedIdentity(
+            record[modelKey],
+            generator.generatorModelIdentity,
+            axis,
+            `${aliasCase.name}:${record[actorKey]}`,
+          );
+        }
+      }
+      if (axis === "ACTOR_ID") {
+        aliasCase.afterActorMutation?.(hostile, generator.generatorId);
+      }
+      hostile.trustedModelExecutions = trustedModelExecutionRegistry(hostile);
+      const expectedCode =
+        `metaAudit:GENERATOR_EVALUATOR_ALIAS_OVERLAP:${aliasCase.path}:${axis}`;
+      const direct = validateMetaAuditBundle(
+        hostile.metaAudits,
+        hostile.batch,
+        hostile.selectedCandidateId,
+      );
+      assert.equal(direct.valid, false, `${aliasCase.name}:${axis}:direct`);
+      assert.ok(direct.errors.includes(expectedCode), `${aliasCase.name}:${axis}:direct-code`);
+      const decision = evaluateQuestionRelease(
+        hostile,
+        "PERSONAL_LEARNING_USABLE",
+        personalTrustContext(hostile),
+      );
+      assert.equal(decision.allowed, false, `${aliasCase.name}:${axis}:release`);
+      assert.ok(
+        decision.blockingCodes.includes(expectedCode),
+        `${aliasCase.name}:${axis}:release-code`,
+      );
+    }
+  }
+
+  for (const [name, mutate, expectedPath] of [
+    [
+      "repeatedStabilityExactGeneratorModel",
+      (bundleValue) => {
+        bundleValue.metaAudits.repeatedStability.runs[0].evaluatorModelIdentity = clone(
+          bundleValue.batch.candidates[0].generatorModelIdentity,
+        );
+      },
+      "metaAudit.repeatedStability.runs[0]",
+    ],
+    [
+      "judgeDriftExactGeneratorModel",
+      (bundleValue) => {
+        const generatorIdentity = bundleValue.batch.candidates[0].generatorModelIdentity;
+        bundleValue.metaAudits.judgeDrift.fixtures[0].baseline.judgeModelIdentity = clone(
+          generatorIdentity,
+        );
+        bundleValue.metaAudits.judgeDrift.fixtures[0].current.judgeModelIdentity = clone(
+          generatorIdentity,
+        );
+      },
+      "metaAudit.judgeDrift.fixtures[0].baseline",
+    ],
+  ]) {
+    const hostile = personalBundle();
+    mutate(hostile);
+    hostile.trustedModelExecutions = trustedModelExecutionRegistry(hostile);
+    const expectedCode =
+      `metaAudit:GENERATOR_EVALUATOR_ALIAS_OVERLAP:${expectedPath}:MODEL_FAMILY_ID`;
+    const decision = evaluateQuestionRelease(
+      hostile,
+      "PERSONAL_LEARNING_USABLE",
+      personalTrustContext(hostile),
+    );
+    assert.equal(decision.allowed, false, name);
+    assert.ok(decision.blockingCodes.includes(expectedCode), name);
+  }
+
+  const slashBoundary = clone(personalBundle());
+  const slashGeneratorIdentity = {
+    ...slashBoundary.batch.candidates[0].generatorModelIdentity,
+    providerId: "owner/model",
+    modelVersionId: "v1",
+    modelArtifactDigest: canonicalDigest({ role: "slash-boundary-generator" }),
+  };
+  for (const candidate of slashBoundary.batch.candidates) {
+    candidate.generatorModelIdentity = clone(slashGeneratorIdentity);
+  }
+  const slashEvaluatorIdentity = {
+    ...slashBoundary.blindSolverReviews[0].solverModelIdentity,
+    providerId: "owner",
+    modelVersionId: "model/v1",
+    modelArtifactDigest: canonicalDigest({ role: "slash-boundary-evaluator" }),
+  };
+  slashBoundary.blindSolverReviews[0].solverModelIdentity = clone(slashEvaluatorIdentity);
+  slashBoundary.metaAudits.repeatedStability.runs[0].evaluatorModelIdentity = clone(
+    slashEvaluatorIdentity,
+  );
+  const slashFixtureDigest = canonicalDigest({
+    batchDigest: canonicalDigest(slashBoundary.batch),
+    selectedCandidateId: slashBoundary.selectedCandidateId,
+  });
+  slashBoundary.metaAudits.repeatedStability.fixtureDigest = slashFixtureDigest;
+  for (const run of slashBoundary.metaAudits.repeatedStability.runs) {
+    run.fixtureDigest = slashFixtureDigest;
+  }
+  slashBoundary.trustedModelExecutions = trustedModelExecutionRegistry(slashBoundary);
+  const slashSeparation = validateGeneratorJudgeSolverSeparation(
+    slashBoundary.batch,
+    slashBoundary.blindSolverReviews,
+    slashBoundary.judgeReviews,
+    slashBoundary.selectedCandidateId,
+  );
+  assert.equal(slashSeparation.valid, true, slashSeparation.errors.join(","));
+  const slashMeta = validateMetaAuditBundle(
+    slashBoundary.metaAudits,
+    slashBoundary.batch,
+    slashBoundary.selectedCandidateId,
+  );
+  assert.equal(slashMeta.valid, true, slashMeta.errors.join(","));
+  const slashDecision = evaluateQuestionRelease(
+    slashBoundary,
+    "PERSONAL_LEARNING_USABLE",
+    personalTrustContext(slashBoundary),
+  );
+  assert.equal(
+    slashDecision.blockingCodes.some((code) => code.includes("CANONICAL_MODEL_ALIAS_REUSE")),
+    false,
+  );
+  assert.equal(
+    slashDecision.blockingCodes.some((code) => code.includes("PROVIDER_MODEL_VERSION_ID")),
+    false,
+  );
+  assert.equal(
+    slashDecision.blockingCodes.some(
+      (code) => code.includes("TRUSTED_MODEL_PROVIDER_VERSION_ALIAS_CONFLICT"),
+    ),
+    false,
+  );
 });
 
 test("bank-first assignment revalidates current rights and generation-on-gap preflights before callbacks", () => {

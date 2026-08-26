@@ -14,7 +14,7 @@
 ## Branches and PRs
 
 - M5: merged PR #845 from `codex/owner-study-m5-study-capacity-runtime-bridge-r1`
-- Question Foundry: Draft PR #849 from `codex/owner-study-question-foundry-r4`; isolated worktree `.agent-factory/worktrees/owner-study-question-foundry-r4`; fixed-threshold and transformed-copy repairs are included; source corrections 1/2
+- Question Foundry: Draft PR #849 from `codex/owner-study-question-foundry-r4`; isolated worktree `.agent-factory/worktrees/owner-study-question-foundry-r4`; fixed-threshold, transformed-copy and mandatory meta-audit generator-separation repairs are included; source corrections 2/2
 - Exhausted candidates: PR #848, PR #847, PR #846, PR #843 and PR #810 closed unmerged
 
 ## Lane ownership
@@ -33,8 +33,8 @@
 
 ## Current blocker
 
-- PR #849 must pass exact-head CI and fresh formal review before the exact Owner merge-approval gate; no acceptance gate is waived
+- PR #849 final correction must pass exact-head CI and fresh formal review before the exact Owner merge-approval gate; source corrections are exhausted and no acceptance gate is waived
 
 ## Next exact action
 
-- inspect PR #849 exact-head CI and obtain a fresh formal review; repair any in-scope finding within the one remaining correction, otherwise prepare the exact-head Owner merge packet
+- inspect PR #849 final exact-head CI and obtain a fresh formal review; if clean prepare the exact-head Owner merge packet, otherwise apply the exhausted-candidate disposition
