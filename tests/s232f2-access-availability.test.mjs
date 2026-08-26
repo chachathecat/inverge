@@ -303,6 +303,29 @@ test("S232F.2 every data-bearing app page gates a fresh access result before dow
   assert.doesNotMatch(firstStagePage,
     /getReviewOsServerContext|ensureAccess|includeProfile|includeUsage/,
     "first-stage must not call the generic profile or usage access path");
+
+  const capacityPage = read("app/(owner-first-stage)/app/first-stage/capacity/page.tsx");
+  const capacityKernelFlagIndex = capacityPage.indexOf("process.env[FIRST_STAGE_FEATURE_FLAG]");
+  const capacityFlagIndex = capacityPage.indexOf("process.env[FIRST_STAGE_CAPACITY_BRIDGE_FEATURE_FLAG]");
+  const capacitySessionIndex = capacityPage.indexOf("await getServerSessionUser()");
+  const capacityAdminIndex = capacityPage.indexOf("process.env.ALPHA_ADMIN_EMAILS");
+  const capacityOwnerIndex = capacityPage.indexOf("process.env[FIRST_STAGE_OWNER_ALLOWLIST]");
+  const capacityDeniedIndex = capacityPage.lastIndexOf("notFound()");
+  const capacityShellIndex = capacityPage.indexOf("<ReviewOsAppShell email={email}>");
+  const capacityPlannerIndex = capacityPage.indexOf("<FirstStageStudyCapacityPlanner />");
+  assert.ok(capacityKernelFlagIndex >= 0, "capacity bridge must preserve the Kernel gate");
+  assert.ok(capacityFlagIndex > capacityKernelFlagIndex, "capacity bridge must require its own default-off gate");
+  assert.ok(capacitySessionIndex > capacityFlagIndex, "capacity bridge must authenticate only after both flags");
+  assert.ok(capacityAdminIndex > capacitySessionIndex, "capacity bridge must require alpha admin");
+  assert.ok(capacityOwnerIndex > capacityAdminIndex, "capacity bridge must require the narrower Owner allowlist");
+  assert.ok(capacityDeniedIndex > capacityOwnerIndex, "capacity bridge must fail closed after both allowlists");
+  assert.ok(capacityShellIndex > capacityDeniedIndex, "capacity bridge must render its shell only after access");
+  assert.ok(capacityPlannerIndex > capacityShellIndex, "capacity planner must render inside the authorized shell");
+  assert.equal(existsSync("app/app/first-stage/capacity/page.tsx"), false,
+    "capacity bridge must live outside the generic Review OS parent layout");
+  assert.doesNotMatch(capacityPage,
+    /getReviewOsServerContext|ensureAccess|includeProfile|includeUsage/,
+    "capacity bridge must not call the generic profile or usage access path");
 });
 
 test("S232F.2 documents the failure boundary and registers the contract in the full suite", () => {

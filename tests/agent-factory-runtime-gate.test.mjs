@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import crypto from "node:crypto";
 import fs from "node:fs";
+import os from "node:os";
 import path from "node:path";
 import { execFileSync, spawnSync } from "node:child_process";
 import { after, test } from "node:test";
@@ -63,7 +64,7 @@ const SCRIPT = path.resolve(WORKSPACE_ROOT, "scripts/automation/runtime-gate.mjs
 const WORKFLOW = path.resolve(WORKSPACE_ROOT, ".github/workflows/runtime-gate.yml");
 const MIGRATION_PATH = "supabase/migrations/20260721060237_s233a_answer_review_persistence.sql";
 const UNSUPPORTED_MIGRATION_PATH = "supabase/migrations/20260721060238_unrelated.sql";
-const FIXTURE_REPO = fs.mkdtempSync(path.join(WORKSPACE_ROOT, "runtime-gate-git-test-"));
+const FIXTURE_REPO = fs.mkdtempSync(path.join(os.tmpdir(), "inverge-runtime-gate-git-test-"));
 fs.mkdirSync(path.join(FIXTURE_REPO, "supabase/migrations"), { recursive: true });
 const S233A_FIXTURE_SQL = [
   "select 'claim_s233a_answer_review_v1';",
@@ -739,7 +740,7 @@ test("S236P expiry matrix covers exact boundaries, missing metadata, cleanup, an
 });
 
 test("closed S233A, S236P, and C2R-C-P adapters bind exact migrations and reject unsupported sets", () => {
-  const directory = fs.mkdtempSync(path.join(WORKSPACE_ROOT, "runtime-producer-git-test-"));
+  const directory = fs.mkdtempSync(path.join(os.tmpdir(), "inverge-runtime-producer-git-test-"));
   execFileSync("git", ["init", "--quiet"], { cwd: directory });
   execFileSync("git", ["config", "user.name", "Runtime Evidence Test"], { cwd: directory });
   execFileSync("git", ["config", "user.email", "runtime-evidence@example.invalid"], { cwd: directory });
