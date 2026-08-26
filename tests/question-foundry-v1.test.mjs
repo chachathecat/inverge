@@ -49,18 +49,18 @@ const RIGHTS_PURPOSES = [
   "MEASUREMENT_BANK",
 ];
 const MODEL_EXECUTION_SIGNATURES = Object.freeze({
-  "51a49892ff29a9c6cfe52a948d07430c286cfb604448bd17e6b1ced19dd84f11":
-    "yIK8A6pGsWK6FMkngNoigPVRwsKECM/FhtqER6YScAd//VOznz83Pxoq9vlLlfOWK/4JhfKH4RZuVjrGrOB5Cg==",
-  "a4543a5bf9010f65c3bf6808813f429fd6b1f9b3ba68ef38ba31d0d4edc007b2":
-    "anDnr4UOWdEhIRTufOaMFc5jgbKU8BuBrrxdaA0EnIGxjZg6U849C2lGojKlZi+sARP5XAtvT6qrIPvxEtLOAw==",
+  "2b3ea5953d427d716194fe3ff0ecfe3ac669cfb2cb6e52e18222532c4859e1a3":
+    "TeZMPG+IuEE9DEWRsrWuMJ3inWIJWc4hIj1BjQLysPd0D5oiOQ2wWUFKrZjfzmPo/LaIIx4shN9Xa2klOjGoCw==",
+  "3c9953a55a0387b3ed291fe1e9cd03e48a2040660e0f25d078eb411c49fe8bbf":
+    "hjanK42I4k6M5shLYYxVjVBKh2T6X2AD1wJlw4R03N02OrUmfuEw6EyrxcTA7c9nHW6H138XW1v/g9Lk57r7DA==",
 });
 const OWNER_ADJUDICATION_SIGNATURES = Object.freeze({
-  "cab35b0e05d4445a03bcea81e1ad5d6c20c6c04e494e0c8debdf50bb51da14f7":
-    "yZ2STPQTyT4OlVTVTZzaJm9gxPG2QF913P0wv6/xhB79kxSzrLdmyybJhoWzrm7jUlnnvUEFc2wmeRmLXM3mAA==",
+  "d2ab39e07290ee729f0bf5665c97623a1a65f91a4dae36ab7b6bbd07d6be8a4b":
+    "uWtJGWElKhwZ0zw2CFljnF3GpSneb18qlcaCz8bvFGeiblqxP5kyDemRwVr+0qYgOG1uC2I72qIeW2+nVK3UDQ==",
 });
 const SEALED_VARIANT_SIGNATURES = Object.freeze({
   "4d0d1095b98a13a87c6085b48b64ab78b2def6b4c61b2cdab764d09681f61c2f":
-    "qzrmIrIUvby2p0znvNujEq0RcOoRtHVVbjMGe6Py93etd9EJp5PcOHb0WYaK0Fe8bsj0bT7a1eMY6iu+0ojlCg==",
+    "Kjyg7f7aFRo+OYK6kBsypW0BC5tdbVyuEc1xnYOwA0x82PwJYwaPW9tjkOlDTFKeV6U/D5FbstQpkxOl1hMHAA==",
 });
 const SOURCE_REGISTRY_SIGNATURES = Object.freeze({
   "204b8dd60717b78ee9e6ececd93ee0ff9078d3c2e5c9aa203c959ca52dc0a26b":
@@ -284,8 +284,8 @@ function blueprint(overrides = {}) {
     sourceBindings: [sourceBinding()],
     calculation: {
       operation: "DIVIDE",
-      operands: [40, 2],
-      result: 20,
+      operands: ["40", "2"],
+      result: "20",
       unit: "POINTS",
       rounding: { mode: "HALF_UP", scale: 0 },
       tolerance: 0,
@@ -1419,15 +1419,15 @@ test("trusted current source and deterministic calculation validators fail close
 
   const negativeHalfTie = {
     operation: "DIVIDE",
-    operands: [-3, 2],
-    result: -2,
+    operands: ["-3", "2"],
+    result: "-2",
     unit: "POINTS",
     rounding: { mode: "HALF_UP", scale: 0 },
     tolerance: 0,
   };
   assert.equal(validateCalculationSpecification(negativeHalfTie).valid, true);
   assert.equal(
-    validateCalculationSpecification({ ...negativeHalfTie, result: -1 }).valid,
+    validateCalculationSpecification({ ...negativeHalfTie, result: "-1" }).valid,
     false,
   );
 
@@ -1440,8 +1440,8 @@ test("trusted current source and deterministic calculation validators fail close
   ]) {
     const validation = validateCalculationSpecification({
       operation: "ADD",
-      operands: [40, 2],
-      result: 21,
+      operands: ["40", "2"],
+      result: "21",
       unit: "POINTS",
       rounding: { mode: "NONE", scale: 0 },
       tolerance,
@@ -1452,8 +1452,8 @@ test("trusted current source and deterministic calculation validators fail close
   assert.ok(
     validateCalculationSpecification({
       operation: "ADD",
-      operands: [40, 2],
-      result: 21,
+      operands: ["40", "2"],
+      result: "21",
       unit: "POINTS",
       rounding: { mode: "NONE", scale: 0 },
       tolerance: 0,
@@ -1462,8 +1462,8 @@ test("trusted current source and deterministic calculation validators fail close
 
   const decimalHalfTie = {
     operation: "DIVIDE",
-    operands: [2015, 200],
-    result: 10.08,
+    operands: ["2015", "200"],
+    result: "10.08",
     unit: "POINTS",
     rounding: { mode: "HALF_UP", scale: 2 },
     tolerance: 0,
@@ -1471,36 +1471,36 @@ test("trusted current source and deterministic calculation validators fail close
   assert.equal(calculateDeterministically(decimalHalfTie), 10.08);
   assert.equal(validateCalculationSpecification(decimalHalfTie).valid, true);
   assert.ok(
-    validateCalculationSpecification({ ...decimalHalfTie, result: 10.07 }).errors.includes(
+    validateCalculationSpecification({ ...decimalHalfTie, result: "10.07" }).errors.includes(
       "calculation:RESULT_MISMATCH",
     ),
   );
   const negativeDecimalHalfTie = {
     ...decimalHalfTie,
-    operands: [-2015, 200],
-    result: -10.08,
+    operands: ["-2015", "200"],
+    result: "-10.08",
   };
   assert.equal(calculateDeterministically(negativeDecimalHalfTie), -10.08);
   assert.equal(validateCalculationSpecification(negativeDecimalHalfTie).valid, true);
   assert.ok(
-    validateCalculationSpecification({ ...negativeDecimalHalfTie, result: -10.07 }).errors.includes(
+    validateCalculationSpecification({ ...negativeDecimalHalfTie, result: "-10.07" }).errors.includes(
       "calculation:RESULT_MISMATCH",
     ),
   );
-  for (const [operands, expected] of [
-    [[20149, 2000], 10.07],
-    [[20151, 2000], 10.08],
-    [[1999, 200], 10],
+  for (const [operands, expected, expectedNumber] of [
+    [["20149", "2000"], "10.07", 10.07],
+    [["20151", "2000"], "10.08", 10.08],
+    [["1999", "200"], "10", 10],
   ]) {
     const calculation = { ...decimalHalfTie, operands, result: expected };
-    assert.equal(calculateDeterministically(calculation), expected);
+    assert.equal(calculateDeterministically(calculation), expectedNumber);
     assert.equal(validateCalculationSpecification(calculation).valid, true);
   }
   assert.equal(
     validateCalculationSpecification({
       operation: "ADD",
-      operands: [0.1, 0.2],
-      result: 0.3,
+      operands: ["0.1", "0.2"],
+      result: "0.3",
       unit: "POINTS",
       rounding: { mode: "NONE", scale: 0 },
       tolerance: 0,
@@ -1510,13 +1510,50 @@ test("trusted current source and deterministic calculation validators fail close
   assert.ok(
     validateCalculationSpecification({
       operation: "DIVIDE",
-      operands: [1, 3],
-      result: 0.3333333333333333,
+      operands: ["1", "3"],
+      result: "0.3333333333333333",
       unit: "POINTS",
       rounding: { mode: "NONE", scale: 0 },
       tolerance: 0,
     }).errors.includes("calculation:NON_TERMINATING_RESULT_REQUIRES_ROUNDING"),
   );
+  const exactSourceDecimal = {
+    operation: "ADD",
+    operands: ["0.10000000000000001", "0"],
+    result: "0.10000000000000001",
+    unit: "POINTS",
+    rounding: { mode: "NONE", scale: 0 },
+    tolerance: 0,
+  };
+  assert.equal(validateCalculationSpecification(exactSourceDecimal).valid, true);
+  assert.ok(
+    validateCalculationSpecification({ ...exactSourceDecimal, result: "0.1" }).errors.includes(
+      "calculation:RESULT_MISMATCH",
+    ),
+  );
+  const beyondSafeInteger = {
+    ...exactSourceDecimal,
+    operands: ["9007199254740993", "0"],
+    result: "9007199254740993",
+  };
+  assert.equal(validateCalculationSpecification(beyondSafeInteger).valid, true);
+  assert.equal(calculateDeterministically(beyondSafeInteger), null);
+  const lossyNumericProjection = {
+    ...exactSourceDecimal,
+    operation: "MULTIPLY",
+    operands: ["0.1234567890123456789012345", "0.1"],
+    result: "0.01234567890123456789012345",
+  };
+  assert.equal(validateCalculationSpecification(lossyNumericProjection).valid, true);
+  assert.equal(calculateDeterministically(lossyNumericProjection), null);
+  for (const invalidDecimal of ["01", "1.0", "-0", "1e3", 0.1]) {
+    const invalid = validateCalculationSpecification({
+      ...exactSourceDecimal,
+      operands: [invalidDecimal, "0"],
+    });
+    assert.equal(invalid.valid, false, String(invalidDecimal));
+    assert.ok(invalid.errors.includes("calculation.operands:INVALID"), String(invalidDecimal));
+  }
 
   const exactCandidate = clone(selected);
   const exactCorrect = exactCandidate.options.find(
@@ -1528,9 +1565,38 @@ test("trusted current source and deterministic calculation validators fail close
     calculation: decimalHalfTie,
   };
   assert.equal(validateCandidateCalculation(exactCandidate, exactSpecification).valid, true);
-  exactCandidate.options.find(
+  exactCorrect.body = "1.008e1 POINTS";
+  assert.equal(validateCandidateCalculation(exactCandidate, exactSpecification).valid, true);
+  for (const hostileBody of [
+    ".5 points",
+    "10.08e points",
+    "10.08 or 99 points",
+    "1,0.08 points",
+    "10,.08 wrong-units",
+    "prefix10.08suffix points",
+    "10.08.99 points",
+    "10.08 meters",
+  ]) {
+    exactCorrect.body = hostileBody;
+    assert.equal(validateCandidateCalculation(exactCandidate, exactSpecification).valid, false, hostileBody);
+  }
+  exactCorrect.body = "10.08 points";
+  const extremeExponentOption = exactCandidate.options.find(
     (option) => option.optionId !== exactCandidate.proposedCorrectOptionId,
-  ).body = "10.080 points";
+  );
+  extremeExponentOption.body = "1e9007199254740991 points";
+  const extremeExponentValidation = validateCandidateCalculation(exactCandidate, exactSpecification);
+  assert.equal(extremeExponentValidation.valid, false);
+  assert.ok(
+    extremeExponentValidation.errors.includes("candidateCalculation:OPTION_NUMERIC_TOKEN_INVALID"),
+  );
+  extremeExponentOption.body = `${"9".repeat(65)} points`;
+  assert.ok(
+    validateCandidateCalculation(exactCandidate, exactSpecification).errors.includes(
+      "candidateCalculation:OPTION_NUMERIC_TOKEN_INVALID",
+    ),
+  );
+  extremeExponentOption.body = "10.080 points";
   assert.ok(
     validateCandidateCalculation(exactCandidate, exactSpecification).errors.includes(
       "candidateCalculation:MULTIPLE_OR_ZERO_NUMERIC_ANSWERS",
@@ -2265,6 +2331,7 @@ test("bank-first assignment revalidates current rights and generation-on-gap pre
     occurredAt: "2026-08-25T00:12:00.000Z",
   });
   const releaseEnvelope = {
+    envelopeKind: "RELEASE",
     artifact,
     bundle: bundleValue,
     requestedTier: "PERSONAL_LEARNING_USABLE",
@@ -2319,19 +2386,140 @@ test("bank-first assignment revalidates current rights and generation-on-gap pre
   assert.equal(found.generationCount, 0);
   assert.equal(calls, 0);
 
-  for (const lifecycleTier of ["QUARANTINED", "DISPUTED", "RETIRED"]) {
-    const lifecycleEnvelope = clone(releaseEnvelope);
-    lifecycleEnvelope.artifact.artifactId = `artifact-0-${lifecycleTier.toLowerCase()}`;
-    lifecycleEnvelope.artifact.releaseTier = lifecycleTier;
+  const laterArtifact = createQuestionBankArtifact({
+    artifactId: "artifact-z-valid",
+    bundle: bundleValue,
+    requestedTier: "PERSONAL_LEARNING_USABLE",
+    decision,
+    trustContext,
+    auditRun,
+    occurredAt: "2026-08-25T00:12:00.000Z",
+  });
+  const laterReleaseEnvelope = { ...releaseEnvelope, artifact: laterArtifact };
+  const disputedAt = "2026-08-25T00:13:00.000Z";
+  const disputedExpected = {
+    ...artifact,
+    releaseTier: "DISPUTED",
+    revision: 2,
+    auditRunId: "audit-bank-disputed",
+    updatedAt: disputedAt,
+  };
+  const disputedAudit = createLifecycleAudit(
+    artifact,
+    disputedExpected,
+    "DISPUTED",
+    "audit-bank-disputed",
+    disputedAt,
+  );
+  const disputedArtifact = disputeQuestionBankArtifact(
+    artifact,
+    artifact.revision,
+    disputedAudit,
+    disputedAt,
+  );
+  const disputedTransition = {
+    lifecycleAction: "DISPUTED",
+    artifact: disputedArtifact,
+    auditRun: disputedAudit,
+    occurredAt: disputedAt,
+  };
+  const revisedAt = "2026-08-25T00:14:00.000Z";
+  const revisedExpected = {
+    ...disputedArtifact,
+    artifactId: "artifact-revised-quarantined",
+    candidateId: "candidate-revised-quarantined",
+    releaseTier: "QUARANTINED",
+    revision: 1,
+    parentArtifactId: disputedArtifact.artifactId,
+    auditRunId: "audit-bank-revised",
+    createdAt: revisedAt,
+    updatedAt: revisedAt,
+  };
+  const revisedAudit = createLifecycleAudit(
+    disputedArtifact,
+    revisedExpected,
+    "REVISED",
+    "audit-bank-revised",
+    revisedAt,
+  );
+  const revisedArtifact = reviseQuestionBankArtifact({
+    artifact: disputedArtifact,
+    expectedRevision: disputedArtifact.revision,
+    newArtifactId: revisedExpected.artifactId,
+    newCandidateId: revisedExpected.candidateId,
+    auditRun: revisedAudit,
+    occurredAt: revisedAt,
+  });
+  const retiredAt = "2026-08-25T00:15:00.000Z";
+  const retiredExpected = {
+    ...artifact,
+    releaseTier: "RETIRED",
+    revision: 2,
+    auditRunId: "audit-bank-retired",
+    updatedAt: retiredAt,
+  };
+  const retiredAudit = createLifecycleAudit(
+    artifact,
+    retiredExpected,
+    "RETIRED",
+    "audit-bank-retired",
+    retiredAt,
+  );
+  const retiredArtifact = retireQuestionBankArtifact(
+    artifact,
+    artifact.revision,
+    retiredAudit,
+    retiredAt,
+  );
+  const lifecycleEnvelopes = [
+    {
+      label: "DISPUTED",
+      envelopeKind: "LIFECYCLE",
+      releaseEnvelope,
+      transitions: [disputedTransition],
+      artifact: disputedArtifact,
+    },
+    {
+      label: "QUARANTINED",
+      envelopeKind: "LIFECYCLE",
+      releaseEnvelope,
+      transitions: [
+        disputedTransition,
+        {
+          lifecycleAction: "REVISED",
+          artifact: revisedArtifact,
+          auditRun: revisedAudit,
+          occurredAt: revisedAt,
+        },
+      ],
+      artifact: revisedArtifact,
+    },
+    {
+      label: "RETIRED",
+      envelopeKind: "LIFECYCLE",
+      releaseEnvelope,
+      transitions: [
+        {
+          lifecycleAction: "RETIRED",
+          artifact: retiredArtifact,
+          auditRun: retiredAudit,
+          occurredAt: retiredAt,
+        },
+      ],
+      artifact: retiredArtifact,
+    },
+  ];
+
+  for (const { label: lifecycleTier, ...lifecycleEnvelope } of lifecycleEnvelopes) {
     const selectedAfterHistory = selectBankFirstOrGenerateOnGap(
       request,
-      [lifecycleEnvelope, releaseEnvelope],
+      [lifecycleEnvelope, releaseEnvelope, laterReleaseEnvelope],
       currentSources,
       sourceRegistryExportBinding(currentSources),
       generationPlan(),
     );
     assert.equal(selectedAfterHistory.kind, "BANK_ITEM", lifecycleTier);
-    assert.equal(selectedAfterHistory.artifact.artifactId, artifact.artifactId, lifecycleTier);
+    assert.equal(selectedAfterHistory.artifact.artifactId, laterArtifact.artifactId, lifecycleTier);
     assert.equal(calls, 0, lifecycleTier);
 
     const generatedAfterHistory = selectBankFirstOrGenerateOnGap(
@@ -2356,6 +2544,24 @@ test("bank-first assignment revalidates current rights and generation-on-gap pre
     assert.equal(calls, 0, lifecycleTier);
   }
 
+  for (const lifecycleTier of ["QUARANTINED", "DISPUTED", "RETIRED"]) {
+    const unauditedHistory = clone(releaseEnvelope);
+    unauditedHistory.artifact.releaseTier = lifecycleTier;
+    assert.throws(
+      () =>
+        selectBankFirstOrGenerateOnGap(
+          request,
+          [unauditedHistory],
+          currentSources,
+          sourceRegistryExportBinding(currentSources),
+          generationPlan(),
+        ),
+      /bank-nonassignable-history-requires-lifecycle-envelope/,
+      lifecycleTier,
+    );
+    assert.equal(calls, 0, lifecycleTier);
+  }
+
   const unknownTierEnvelope = clone(releaseEnvelope);
   unknownTierEnvelope.artifact.releaseTier = "UNKNOWN_TIER";
   assert.throws(
@@ -2372,7 +2578,7 @@ test("bank-first assignment revalidates current rights and generation-on-gap pre
   assert.equal(calls, 0);
 
   const corruptReleasableEnvelope = clone(releaseEnvelope);
-  corruptReleasableEnvelope.artifact.artifactId = "artifact-0-corrupt";
+  corruptReleasableEnvelope.artifact.artifactId = "artifact-z-corrupt";
   corruptReleasableEnvelope.artifact.candidateId = "candidate-corrupt";
   assert.throws(
     () =>
@@ -2466,6 +2672,36 @@ test("bank-first assignment revalidates current rights and generation-on-gap pre
   assert.equal(blocked.scarcityEvent.containsBody, false);
   assert.equal(calls, 0);
 
+  for (const authorityValue of [undefined, null, "false", 0, 1, {}]) {
+    const invalidRequest = { ...request, offlineGenerationOnGapAuthorized: authorityValue };
+    if (authorityValue === undefined) delete invalidRequest.offlineGenerationOnGapAuthorized;
+    assert.throws(
+      () =>
+        selectBankFirstOrGenerateOnGap(
+          invalidRequest,
+          [],
+          currentSources,
+          sourceRegistryExportBinding(currentSources),
+          generationPlan(),
+        ),
+      /invalid-bank-selection-request/,
+      String(authorityValue),
+    );
+    assert.equal(calls, 0, String(authorityValue));
+  }
+  assert.throws(
+    () =>
+      selectBankFirstOrGenerateOnGap(
+        { ...request, unexpectedAuthority: true },
+        [],
+        currentSources,
+        sourceRegistryExportBinding(currentSources),
+        generationPlan(),
+      ),
+    /invalid-bank-selection-request:closed-shape/,
+  );
+  assert.equal(calls, 0);
+
   const rightsBlocked = selectBankFirstOrGenerateOnGap(
     { ...request, requestId: "request-rights-blocked" },
     [],
@@ -2476,6 +2712,38 @@ test("bank-first assignment revalidates current rights and generation-on-gap pre
   assert.equal(rightsBlocked.kind, "BLOCKED");
   assert.equal(rightsBlocked.reasonCode, "TRUSTED_SOURCE_REGISTRY_REQUIRED_BEFORE_GENERATION");
   assert.equal(calls, 0);
+
+  for (const [name, planOverride] of [
+    ["batchId", { batchId: "" }],
+    ["batchIdType", { batchId: true }],
+    ["generatorId", { generatorId: "" }],
+    ["generatorVersion", { generatorVersion: "" }],
+    ["generationRunId", { generationRunId: "" }],
+    ["generatorModelIdentity", {
+      generatorModelIdentity: { ...modelIdentity("generator-family"), modelArtifactDigest: "bad" },
+    }],
+    ["generatorModelIdentityType", {
+      generatorModelIdentity: { ...modelIdentity("generator-family"), providerId: true },
+    }],
+    ["generatorExecutionIds", {
+      generatorExecutionIds: ["unsafe execution id", "gap-generator-execution-2"],
+    }],
+    ["unknownField", { unknownGenerationField: true }],
+  ]) {
+    assert.throws(
+      () =>
+        selectBankFirstOrGenerateOnGap(
+          request,
+          [],
+          currentSources,
+          sourceRegistryExportBinding(currentSources),
+          generationPlan(planOverride),
+        ),
+      /generation-plan/,
+      name,
+    );
+    assert.equal(calls, 0, name);
+  }
 
   const generated = selectBankFirstOrGenerateOnGap(
     { ...request, requestId: "request-3" },

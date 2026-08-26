@@ -31,6 +31,13 @@ import {
 const SHA256 = /^[a-f0-9]{64}$/u;
 const SAFE_ID = /^[A-Za-z0-9][A-Za-z0-9._:/@-]{0,199}$/u;
 const BASE64_SIGNATURE = /^[A-Za-z0-9+/]+={0,2}$/u;
+const CALCULATION_DECIMAL = /^-?(?:0|[1-9]\d*)(?:[.]\d*[1-9])?$/u;
+const EXACT_DECIMAL = /^([+-]?)(\d+)(?:[.](\d*))?(?:[eE]([+-]?\d+))?$/u;
+const CALCULATION_DECIMAL_MAX_LENGTH = 96;
+const EXACT_DECIMAL_MAX_DIGITS = 64;
+const EXACT_DECIMAL_MIN_EXPONENT = -324;
+const EXACT_DECIMAL_MAX_EXPONENT = 308;
+const CALCULATION_OPTION_BODY_MAX_LENGTH = 512;
 const RIGHTS_AUTHORITY_PUBLIC_KEY = `-----BEGIN PUBLIC KEY-----
 MCowBQYDK2VwAyEASWYp/L1EfC+LW1GYDKudsTK5EvkYd3gYJmGWeRhf8EQ=
 -----END PUBLIC KEY-----
@@ -298,11 +305,11 @@ function validateCalculationShape(
   if (
     !Array.isArray(value.operands) ||
     value.operands.length !== 2 ||
-    value.operands.some((entry) => typeof entry !== "number" || !Number.isFinite(entry))
+    value.operands.some((entry) => !isCanonicalCalculationDecimal(entry))
   ) {
     errors.push(`${path}.operands:INVALID`);
   }
-  if (typeof value.result !== "number" || !Number.isFinite(value.result)) {
+  if (!isCanonicalCalculationDecimal(value.result)) {
     errors.push(`${path}.result:INVALID`);
   }
   if (!isSafeId(value.unit)) errors.push(`${path}.unit:INVALID`);
@@ -330,13 +337,27 @@ function validateCalculationShape(
   return true;
 }
 
+function isCanonicalCalculationDecimal(value: unknown): value is string {
+  if (
+    typeof value !== "string" ||
+    value.length === 0 ||
+    value.length > CALCULATION_DECIMAL_MAX_LENGTH ||
+    !CALCULATION_DECIMAL.test(value) ||
+    value === "-0"
+  ) {
+    return false;
+  }
+  const digits = value.replaceAll("-", "").replaceAll(".", "");
+  return digits.length <= EXACT_DECIMAL_MAX_DIGITS;
+}
+
 type ExactRational = Readonly<{
   numerator: bigint;
   denominator: bigint;
 }>;
 
 type ExactCalculationOutcome =
-  | Readonly<{ kind: "OK"; rational: ExactRational; numeric: number }>
+  | Readonly<{ kind: "OK"; rational: ExactRational }>
   | Readonly<{
       kind:
         | "DIVISION_BY_ZERO_OR_NONFINITE"
@@ -372,13 +393,20 @@ function normalizeRational(numerator: bigint, denominator: bigint): ExactRationa
   };
 }
 
-function parseExactDecimal(value: number | string): ExactRational | null {
-  const text = typeof value === "number" ? value.toString() : value;
-  const match = text.match(/^([+-]?)(\d+)(?:[.](\d*))?(?:[eE]([+-]?\d+))?$/u);
+function parseExactDecimal(text: string): ExactRational | null {
+  if (text.length === 0 || text.length > CALCULATION_DECIMAL_MAX_LENGTH) return null;
+  const match = text.match(EXACT_DECIMAL);
   if (!match) return null;
   const fraction = match[3] ?? "";
+  if (match[2].length + fraction.length > EXACT_DECIMAL_MAX_DIGITS) return null;
   const exponent = Number(match[4] ?? "0");
-  if (!Number.isSafeInteger(exponent)) return null;
+  if (
+    !Number.isSafeInteger(exponent) ||
+    exponent < EXACT_DECIMAL_MIN_EXPONENT ||
+    exponent > EXACT_DECIMAL_MAX_EXPONENT
+  ) {
+    return null;
+  }
   const coefficient = BigInt(`${match[1]}${match[2]}${fraction}`);
   const decimalPlaces = fraction.length - exponent;
   return decimalPlaces >= 0
@@ -476,7 +504,9 @@ function exactRationalToNumber(value: ExactRational): number | null {
         ? `0.${"0".repeat(scale - digits.length)}${digits}`
         : `${digits.slice(0, digits.length - scale)}.${digits.slice(digits.length - scale)}`;
   const numeric = Number(`${negative ? "-" : ""}${unsigned}`);
-  return Number.isFinite(numeric) ? numeric : null;
+  if (!Number.isFinite(numeric)) return null;
+  const roundTrip = parseExactDecimal(numeric.toString());
+  return roundTrip !== null && exactRationalsEqual(roundTrip, value) ? numeric : null;
 }
 
 function exactRationalsEqual(left: ExactRational, right: ExactRational): boolean {
@@ -499,17 +529,14 @@ function calculateExactly(calculation: CalculationSpecificationV1): ExactCalcula
     calculation.rounding.mode === "HALF_UP"
       ? roundHalfUp(combined, calculation.rounding.scale)
       : combined;
-  const numeric = exactRationalToNumber(rational);
-  return numeric === null
-    ? { kind: "EXACT_DECIMAL_CONVERSION_FAILED" }
-    : { kind: "OK", rational, numeric };
+  return { kind: "OK", rational };
 }
 
 export function calculateDeterministically(
   calculation: CalculationSpecificationV1,
 ): number | null {
   const outcome = calculateExactly(calculation);
-  return outcome.kind === "OK" ? outcome.numeric : null;
+  return outcome.kind === "OK" ? exactRationalToNumber(outcome.rational) : null;
 }
 
 export function validateCalculationSpecification(
@@ -787,7 +814,11 @@ function validateCandidate(
       }
       closedKeys(option, ["optionId", "body"], `${path}.options[${index}]`, errors);
       if (!isSafeId(option.optionId)) errors.push(`${path}.options[${index}].optionId:INVALID`);
-      if (typeof option.body !== "string" || !normalizeQuestionText(option.body)) {
+      if (
+        typeof option.body !== "string" ||
+        !normalizeQuestionText(option.body) ||
+        option.body.length > CALCULATION_OPTION_BODY_MAX_LENGTH
+      ) {
         errors.push(`${path}.options[${index}].body:INVALID`);
       }
       optionIds.push(String(option.optionId));
@@ -1444,11 +1475,23 @@ export function validateQuestionBlueprint(
   return validationResult(errors);
 }
 
-function extractNumericValue(body: string): ExactRational | null {
-  const normalized = body.replaceAll(",", "");
-  const match = normalized.match(/[-+]?\d+(?:[.]\d+)?(?:[eE][-+]?\d+)?/u);
-  if (!match) return null;
-  return parseExactDecimal(match[0]);
+function extractNumericValue(body: string, expectedUnit: string): ExactRational | null {
+  if (
+    body.length === 0 ||
+    body.length > CALCULATION_OPTION_BODY_MAX_LENGTH ||
+    body !== body.trim()
+  ) {
+    return null;
+  }
+  const match = body.match(
+    /^([-+]?(?:(?:(?:0|[1-9]\d*)|(?:\d{1,3}(?:,\d{3})+))(?:[.]\d+)?|[.]\d+)(?:[eE][-+]?\d+)?) ([A-Za-z0-9][A-Za-z0-9._:/@-]{0,199})$/u,
+  );
+  if (!match || match[2].toUpperCase() !== expectedUnit.toUpperCase()) return null;
+  let numericToken = match[1].replaceAll(",", "");
+  if (numericToken.startsWith("+.")) numericToken = `+0${numericToken.slice(1)}`;
+  else if (numericToken.startsWith("-.")) numericToken = `-0${numericToken.slice(1)}`;
+  else if (numericToken.startsWith(".")) numericToken = `0${numericToken}`;
+  return parseExactDecimal(numericToken);
 }
 
 export function validateCandidateCalculation(
@@ -1464,14 +1507,22 @@ export function validateCandidateCalculation(
   if (outcome.kind !== "OK") return validationResult(errors);
   const correct = candidate.options.find((option) => option.optionId === candidate.proposedCorrectOptionId);
   if (!correct) return validationResult([...errors, "candidateCalculation:CORRECT_OPTION_MISSING"]);
-  const correctValue = extractNumericValue(correct.body);
-  if (correctValue === null || !exactRationalsEqual(correctValue, outcome.rational)) {
+  const parsedOptions = candidate.options.map((option) => ({
+    option,
+    value: extractNumericValue(option.body, calculation.unit),
+  }));
+  if (parsedOptions.some((entry) => entry.value === null)) {
+    errors.push("candidateCalculation:OPTION_NUMERIC_TOKEN_INVALID");
+  }
+  const correctValue = parsedOptions.find(
+    (entry) => entry.option.optionId === candidate.proposedCorrectOptionId,
+  )?.value;
+  if (correctValue == null || !exactRationalsEqual(correctValue, outcome.rational)) {
     errors.push("candidateCalculation:CORRECT_VALUE_MISMATCH");
   }
-  const matchingOptions = candidate.options.filter((option) => {
-    const value = extractNumericValue(option.body);
-    return value !== null && exactRationalsEqual(value, outcome.rational);
-  });
+  const matchingOptions = parsedOptions.filter(
+    (entry) => entry.value !== null && exactRationalsEqual(entry.value, outcome.rational),
+  );
   if (matchingOptions.length !== 1) errors.push("candidateCalculation:MULTIPLE_OR_ZERO_NUMERIC_ANSWERS");
   return validationResult(errors);
 }

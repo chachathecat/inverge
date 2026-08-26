@@ -204,8 +204,8 @@ export type TrustedModelExecutionRegistryV1 = Readonly<{
 
 export type CalculationSpecificationV1 = Readonly<{
   operation: "ADD" | "SUBTRACT" | "MULTIPLY" | "DIVIDE";
-  operands: readonly [number, number];
-  result: number;
+  operands: readonly [string, string];
+  result: string;
   unit: string;
   rounding: Readonly<{
     mode: "NONE" | "HALF_UP";
@@ -735,6 +735,7 @@ export type QuestionBankArtifactV1 = Readonly<{
 }>;
 
 export type QuestionBankReleaseEnvelopeV1 = Readonly<{
+  envelopeKind: "RELEASE";
   artifact: QuestionBankArtifactV1;
   bundle: ReleaseEvidenceBundleV1;
   requestedTier: QuestionFoundryReleasableTier;
@@ -742,6 +743,24 @@ export type QuestionBankReleaseEnvelopeV1 = Readonly<{
   trustContext: ReleaseTrustContextV1;
   auditRun: AuditRunV1;
 }>;
+
+export type QuestionBankLifecycleTransitionV1 = Readonly<{
+  lifecycleAction: "DISPUTED" | "REVISED" | "RETIRED";
+  artifact: QuestionBankArtifactV1;
+  auditRun: AuditRunV1;
+  occurredAt: string;
+}>;
+
+export type QuestionBankLifecycleEnvelopeV1 = Readonly<{
+  envelopeKind: "LIFECYCLE";
+  releaseEnvelope: QuestionBankReleaseEnvelopeV1;
+  transitions: readonly QuestionBankLifecycleTransitionV1[];
+  artifact: QuestionBankArtifactV1;
+}>;
+
+export type QuestionBankEnvelopeV1 =
+  | QuestionBankReleaseEnvelopeV1
+  | QuestionBankLifecycleEnvelopeV1;
 
 export type BankSelectionRequestV1 = Readonly<{
   requestId: string;
