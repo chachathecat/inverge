@@ -201,6 +201,18 @@
     },
     "rehydratedStateValidation": {
       "runsBeforeAttemptPresentationAndEveryMutation": true,
+      "runsBeforeTodayQueueDerivation": true,
+      "topLevelStateAndExamCycleParsedExactly": true,
+      "examCycleImmutableDefinitionSha256Revalidated": true,
+      "independentlyTrustedExamCycleDefinitionSha256RequiredByEveryConsumer": true,
+      "trustedOwnerIdBoundOnEveryReadAndMutation": true,
+      "validatedStateCanonicalizedAndDeepFrozenBeforeConsumption": true,
+      "allCycleReferencesRequireTheirRegisteredAdapterBeforeConsumption": true,
+      "revisionDerivedFromAttemptBeginsAndSubmissions": true,
+      "cycleLifecycleAndTimestampsDerivedFromValidatedAttempts": true,
+      "oneInitialAttemptPerCycleQuestion": true,
+      "maximumOneActiveAttemptGlobally": true,
+      "oneRetryRecordPerIndependentRetryAttempt": true,
       "allAttemptsSubmissionsAndEvaluationsParsedExactly": true,
       "initialEvaluationReplayRestoresOriginalNullReviewTaskId": true,
       "storedEvaluationsRecomputedByExactRegisteredAdapterVersion": true,
@@ -212,17 +224,19 @@
       "activeRetrySubmissionAndEvaluationMustBeNull": true,
       "retryAndReceiptAdapterIdentityMustEqualRegisteredAdapter": true,
       "fullSourceAndVariantQuestionReferencesBoundBySha256": true,
+      "conceptStatesRebuiltFromValidatedAttemptTaskRetryHistory": true,
+      "retryStartPreservesLatestCompletedConceptEvidenceProvenance": true,
       "unknownMissingCoordinatedOrStaleDriftFailsClosed": true
     },
     "conceptState": {
       "statesExactly": [
-        "unobserved",
         "review_required",
         "independent_retry_due",
         "independent_retry_recorded",
         "reopened"
       ],
       "masteryClaimAlwaysFalse": true,
+      "unobservedRepresentedByAbsenceNotPersistedRow": true,
       "initialCorrectnessAloneCreatesMastery": false,
       "independentRetryRecordedCreatesMastery": false
     },
@@ -242,7 +256,7 @@
   "subjectAdapterFreeze": {
     "schemaVersion": "dabangil.first_stage.subject_adapter.v1",
     "interfaceDigestAlgorithm": "sha256_over_recursively_key_sorted_utf8_json",
-    "interfaceDigest": "3317bf9a450c9cecd8530a578eb540ffcf1ad133dcfc866676c95746409e6cbb",
+    "interfaceDigest": "f7e134498ad65b9ae2bc10c4570949cae7ca71d2038aa493f6485247b5dfc00a",
     "interfaceDescriptor": {
       "schemaVersion": "dabangil.first_stage.subject_adapter.v1",
       "interfaceName": "SubjectAdapterV1",
@@ -257,7 +271,7 @@
         {
           "path": "lib/review-os/first-stage/kernel/domain.ts",
           "normalization": "utf8_lf",
-          "sha256": "a8a92eafe394e7b658dd6882df31133738b3967d549eaa3e7a568b1fe4567818",
+          "sha256": "3df7bd48e24949d746f30a62d3031e68df4f1b6116d2731006d998599a4ff2e7",
           "covers": [
             "QuestionReference",
             "Attempt",
