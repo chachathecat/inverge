@@ -35,11 +35,12 @@
 - PR #836 / official-source currentness: reviewed `3a2f9d89fd904ba07e0aa18e4d92f7bdd2671dd3`; resulting main `2991e2579925e65173468049a94143bd99dc8e81`
 - PR #834 / C3R-T/L receipt evidence repair: reviewed `768cf4a09caedc1c3aad0c514a3ada3d97813817`; resulting main `a121eea722fd2a9054d11a5c0e5f3893b52da014`; tree `5b151f72cc339cd5d17d89b6f01c7b4380e71759`; Issue #833 closed
 - M3 candidate: 34-path manifest clean; focused changed-file suite 252/252; full suite 1595/1595; typecheck and changed-file/repository lint clean with 11 unchanged warnings; webpack production build clean; fresh review P0/P1/P2 `0/0/0`; remote mutation count 0
+- PR #838 pre-final head `488748d0f802533316c0f45c050643a714745dc8`: every applicable exact-head check passed; fresh review P0/P1/P2 `0/0/0`; unresolved actionable threads 0
 
 ## Current blocker
 
-- Draft PR #838 exact-head CI and fresh formal review are in progress; protected M3 squash merge then requires exact-head Owner approval
+- protected M3 squash merge requires exact-head Owner approval after the final log-only synchronized head passes all checks and fresh review
 
 ## Next exact action
 
-- inspect Draft PR #838 exact-head CI and repair the first in-scope failure
+- if the final head is clean, request exact Owner approval for PR #838; after approval mark ready and squash-merge pinned to that head
