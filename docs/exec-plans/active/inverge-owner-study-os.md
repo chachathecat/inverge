@@ -15,7 +15,7 @@
 ## Branches and PRs
 
 - M4: merged PR #842 from `codex/owner-study-lane-b-first-stage-kernel-replan-4`
-- M5 clean replacement: `codex/owner-study-m5-study-capacity-runtime-bridge-r1`; isolated worktree `.agent-factory/worktrees/owner-study-m5-study-capacity-runtime-bridge-r1`; no replacement PR yet
+- M5 clean replacement: `codex/owner-study-m5-study-capacity-runtime-bridge-r1`; isolated worktree `.agent-factory/worktrees/owner-study-m5-study-capacity-runtime-bridge-r1`; Draft PR #845; this PR binding is source correction 1/2
 - M5 exhausted candidate: PR #843 closed unmerged at `fd503b4b7aa4cd143423e9d82108b66ae96305f2` after exact-head review `0/0/1` found the stale next-action log P2
 - Question Foundry: `codex/owner-study-lane-c-question-foundry`; Draft PR #810; parked pending M5 and a clean rights-safe refresh
 
@@ -36,8 +36,8 @@
 
 ## Current blocker
 
-- The clean M5 replacement has no Draft PR or exact-head CI yet; it must preserve the reviewed twelve-path outcome and correct the stale resume instruction without inventing subject scheduling policy
+- Draft PR #845 must pass the full clean-replacement local gate, exact-head required checks, fresh formal review, and the post-Ready gate without inventing subject scheduling policy; exact Owner merge approval remains required
 
 ## Next exact action
 
-- commit and push this clean replacement, open one Draft PR against exact main, then bind that PR/head here and inspect exact-head CI plus fresh formal review
+- complete PR #845's exact-head local, CI, and formal-review gates; if clean, mark Ready, obtain the post-Ready exact-head gate, and prepare the Owner merge packet without merging before approval
