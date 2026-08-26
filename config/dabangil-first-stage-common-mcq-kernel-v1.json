@@ -183,7 +183,8 @@
       "deferredRetryRequiresPositiveReviewAfterMs": true,
       "retryCannotStartBeforeDueAt": true,
       "failedRetryReopensSameTask": true,
-      "successfulRetryCompletesSameTask": true
+      "successfulRetryCompletesSameTask": true,
+      "unreviewedRetryCannotFailReopenOrCompleteTask": true
     },
     "independentRetry": {
       "assistanceExactly": "none",
@@ -197,6 +198,9 @@
       "lineageReceiptBindsExactSourceAndVariantQuestionReferenceSha256": true,
       "lineageReceiptBindsExactOrderedReviewTargetConcepts": true,
       "retryEvaluationConceptsMustEqualReviewTargetConcepts": true,
+      "withheldOrUnavailableEvaluationRejectsTransition": true,
+      "withheldOrUnavailableEvaluationPreservesActiveAttemptAndVariant": true,
+      "withheldOrUnavailableEvaluationConsumesNoRevisionOrLineage": true,
       "outcomes": ["active", "succeeded", "failed"]
     },
     "rehydratedStateValidation": {
@@ -222,6 +226,7 @@
       "retryCandidateRebuiltByExactAdapterWithTaskAtStartAndPriorRetries": true,
       "rawQuestionIdReuseAcrossCycleAndAttemptHistoryRejectedAfterReload": true,
       "activeRetrySubmissionAndEvaluationMustBeNull": true,
+      "completedRetryRequiresReviewedEvaluation": true,
       "retryAndReceiptAdapterIdentityMustEqualRegisteredAdapter": true,
       "fullSourceAndVariantQuestionReferencesBoundBySha256": true,
       "conceptStatesRebuiltFromValidatedAttemptTaskRetryHistory": true,

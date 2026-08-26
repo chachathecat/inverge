@@ -356,6 +356,7 @@ function validateKernelState(
         completedAt === null ||
         retryAttempt.state !== "evaluated" ||
         retryAttempt.submission === null || retryAttempt.evaluation === null ||
+        !isReviewedEvaluation(retryAttempt.evaluation) ||
         retryAttempt.submission?.submittedAt !== completedAt ||
         (retry.outcome === "succeeded"
           ? retryAttempt.evaluation?.decision !== "correct"
@@ -480,10 +481,11 @@ function validateKernelState(
         expectedStatus = "completed";
         expectedCompletedAt = retrySubmission.submittedAt;
       } else {
-        expectedStatus = "pending";
-        if (isReviewedEvaluation(retryEvaluation)) {
-          expectedDueAt = addMs(retrySubmission.submittedAt, retryEvaluation.reviewAfterMs);
+        if (!isReviewedEvaluation(retryEvaluation)) {
+          throw new FirstStageKernelError("invalid_input");
         }
+        expectedStatus = "pending";
+        expectedDueAt = addMs(retrySubmission.submittedAt, retryEvaluation.reviewAfterMs);
       }
     }
     if (
@@ -1060,22 +1062,7 @@ export function submitAnswer(
     throw new FirstStageKernelError("invalid_transition");
   }
   if (!isReviewedEvaluation(evaluation)) {
-    const task = Object.freeze({
-      ...state.reviewTasks[taskIndex],
-      status: "pending" as const,
-    });
-    const completedRetry = Object.freeze({
-      ...retry,
-      completedAt: submission.submittedAt,
-      outcome: "failed" as const,
-    });
-    return Object.freeze({
-      ...state,
-      revision: state.revision + 1,
-      attempts,
-      reviewTasks: replaceAt(state.reviewTasks, taskIndex, task),
-      independentRetries: replaceAt(state.independentRetries, retryIndex, completedRetry),
-    });
+    throw new FirstStageKernelError("invalid_transition");
   }
   if (
     JSON.stringify(evaluation.conceptBindings.map(receiptConceptKey)) !==
