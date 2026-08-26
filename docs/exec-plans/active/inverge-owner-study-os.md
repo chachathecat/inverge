@@ -8,14 +8,14 @@
 ## Current milestones
 
 - M1 / C3R-T, M2 / C3R-L, M3 / Foundation Freeze, M4 / common Kernel plus frozen `SubjectAdapterV1`, and M5 / Study Capacity runtime bridge: merged and validated
-- Question Foundry V1 second clean replacement: active, source-only/offline/default-off
+- Question Foundry V1 clean replacement R3: active, source-only/offline/default-off
 - M6–M10: not started
 
 ## Branches and PRs
 
 - M5: merged PR #845 from `codex/owner-study-m5-study-capacity-runtime-bridge-r1`
-- Question Foundry: `codex/owner-study-question-foundry-r2`; isolated worktree `.agent-factory/worktrees/owner-study-question-foundry-r2`; PR #847; implementation head `406ea48c2a946da77d470c9a289324bd69f52359`; tree `5fd670b570a9b9781b176632663fb02ed5ed6cea`; source correction 2/2 repairs the exact-head numeric, callback-preflight and bank-lifecycle findings
-- Exhausted candidates: PR #846, PR #843 and PR #810 closed unmerged
+- Question Foundry: `codex/owner-study-question-foundry-r3`; isolated worktree `.agent-factory/worktrees/owner-study-question-foundry-r3`; PR not opened; initial replacement implementation repairs every known #847 and R3 pre-candidate formal/security/arithmetic/integration review root before candidate review; source corrections 0/2
+- Exhausted candidates: PR #847, PR #846, PR #843 and PR #810 closed unmerged
 
 ## Lane ownership
 
@@ -33,8 +33,8 @@
 
 ## Current blocker
 
-- PR #847 source correction 2/2 must pass focused/full gates and fresh exact-head review; no acceptance gate is waived
+- R3 must pass focused gates before its first Draft PR is opened; no acceptance gate is waived
 
 ## Next exact action
 
-- run the full required local suite and exact-head CI, audit live review threads, and obtain a fresh formal `0/0/0` review before the Owner merge gate
+- run focused Foundry, adjacent compatibility, typecheck, changed-file lint and diff checks; then commit, push and open the R3 Draft PR
