@@ -14,7 +14,7 @@
 ## Branches and PRs
 
 - M5: merged PR #845 from `codex/owner-study-m5-study-capacity-runtime-bridge-r1`
-- Question Foundry: `codex/owner-study-question-foundry-r3`; isolated worktree `.agent-factory/worktrees/owner-study-question-foundry-r3`; PR not opened; initial replacement implementation repairs every known #847 and R3 pre-candidate formal/security/arithmetic/integration review root before candidate review; source corrections 0/2
+- Question Foundry: PR #848 from `codex/owner-study-question-foundry-r3`; isolated worktree `.agent-factory/worktrees/owner-study-question-foundry-r3`; initial reviewed head `38f2212efbed8db43baa8662e80246690828ea83`; tree `81be6f5473c88447a5244b553fe806ac4614e2e9`; log-binding source correction 1/2
 - Exhausted candidates: PR #847, PR #846, PR #843 and PR #810 closed unmerged
 
 ## Lane ownership
@@ -33,8 +33,8 @@
 
 ## Current blocker
 
-- R3 must pass focused gates before its first Draft PR is opened; no acceptance gate is waived
+- PR #848 must pass exact-head CI and a fresh formal `0/0/0` review; no acceptance gate is waived
 
 ## Next exact action
 
-- run focused Foundry, adjacent compatibility, typecheck, changed-file lint and diff checks; then commit, push and open the R3 Draft PR
+- commit and push the log binding, inspect exact-head CI and review threads, then obtain a fresh formal `0/0/0` review
