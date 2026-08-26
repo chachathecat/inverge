@@ -107,6 +107,7 @@ const defaultTestFiles = [
   "tests/foundation-development-toolchain-security.test.mjs",
   "tests/foundation-continuous-security-automation.test.mjs",
   "tests/first-stage-common-mcq-kernel.test.mjs",
+  "tests/first-stage-study-capacity-runtime-bridge.test.mjs",
   "tests/github-native-delivery-control.test.mjs",
   "tests/postgrest-timestamps-normalization.test.mjs",
   "tests/platform-portability.test.mjs",
