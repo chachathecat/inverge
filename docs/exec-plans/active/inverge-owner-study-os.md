@@ -17,7 +17,7 @@
 
 ## Branches and PRs
 
-- Receipt-evidence repair: `codex/owner-study-c3r-tl-receipt-evidence-repair`; Issue #833; Draft PR pending; isolated worktree `.agent-factory/worktrees/owner-study-c3r-tl-evidence-repair`; base `4989f02f54f187fb440f2bfa6722e4ee832420de`
+- Receipt-evidence repair: `codex/owner-study-c3r-tl-receipt-evidence-repair`; Issue #833; Draft PR #834; live PR head/tree are GitHub authority; isolated worktree `.agent-factory/worktrees/owner-study-c3r-tl-evidence-repair`; base `4989f02f54f187fb440f2bfa6722e4ee832420de`
 - M3: `codex/owner-study-m3-wcv-c3-foundation-freeze`; uncommitted and parked pending #833
 - M4: `codex/owner-study-lane-b-first-stage-kernel`; Draft PR #813; parked
 - Question Foundry: `codex/owner-study-lane-c-question-foundry`; Draft PR #810; parked
@@ -39,8 +39,8 @@
 
 ## Current blocker
 
-- Theory and Law runtime artifacts omit A1-required canonical per-item evidence references; Issue #833 repair must merge with fresh exact-head P/T/L artifacts before M3 resumes
+- Draft PR #834 must pass fresh exact-head P/T/L artifacts, required checks, formal `0/0/0` review, and exact-head Owner merge approval before M3 resumes
 
 ## Next exact action
 
-- `node scripts/run-node-tests.mjs tests/wcv-c3r-t-theory-durable-learning-delta.test.mjs tests/wcv-c3r-l-law-durable-learning-delta.test.mjs tests/wcv-c3r-p-practice-common-durable-runtime.test.mjs`
+- `gh pr checks 834 --repo chachathecat/inverge --watch`
