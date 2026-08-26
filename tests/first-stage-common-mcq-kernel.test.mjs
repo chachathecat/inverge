@@ -11,14 +11,15 @@ import {
   ERROR_CAUSES,
   FIRST_STAGE_SUBJECT_IDS,
   FirstStageKernelError,
-  beginAttempt,
-  beginIndependentRetry,
-  buildTodayQueue,
+  beginAttempt as beginAttemptKernel,
+  beginIndependentRetry as beginIndependentRetryKernel,
+  buildTodayQueue as buildTodayQueueKernel,
   createExamCycleState,
   parseAnswerSubmission,
   parseJsonRejectingDuplicateKeys,
-  presentAttemptQuestion,
-  submitAnswer,
+  presentAttemptQuestion as presentAttemptQuestionKernel,
+  submitAnswer as submitAnswerKernel,
+  validateFirstStageKernelState,
 } from "../lib/review-os/first-stage/kernel/index.ts";
 import {
   SUBJECT_ADAPTER_SCHEMA_VERSION,
@@ -28,6 +29,9 @@ import {
 } from "../lib/review-os/first-stage/subject-adapter/index.ts";
 
 const root = path.resolve(import.meta.dirname, "..");
+const TRUSTED_OWNER_ID = "owner-private-1";
+const TRUSTED_CYCLE_DEFINITION_SHA256 =
+  "416f767b45b7bb6a5cae52ec72423d640db104cf4d58f003dfe98010103df048";
 const contract = JSON.parse(fs.readFileSync(path.join(
   root,
   "config/dabangil-first-stage-common-mcq-kernel-v1.json",
@@ -224,6 +228,60 @@ function makeAdapter(options = {}) {
       };
     },
   };
+}
+
+function beginAttempt(state, input, registry) {
+  return beginAttemptKernel(state, {
+    ...input,
+    trustedOwnerId: TRUSTED_OWNER_ID,
+    trustedExamCycleDefinitionSha256: TRUSTED_CYCLE_DEFINITION_SHA256,
+  }, registry);
+}
+
+function submitAnswer(state, input, registry) {
+  return submitAnswerKernel(state, {
+    ...input,
+    trustedOwnerId: TRUSTED_OWNER_ID,
+    trustedExamCycleDefinitionSha256: TRUSTED_CYCLE_DEFINITION_SHA256,
+  }, registry);
+}
+
+function beginIndependentRetry(state, input, registry) {
+  return beginIndependentRetryKernel(
+    state,
+    {
+      ...input,
+      trustedOwnerId: TRUSTED_OWNER_ID,
+      trustedExamCycleDefinitionSha256: TRUSTED_CYCLE_DEFINITION_SHA256,
+    },
+    registry,
+  );
+}
+
+function presentAttemptQuestion(state, attemptId, registry) {
+  return presentAttemptQuestionKernel(
+    state,
+    attemptId,
+    TRUSTED_OWNER_ID,
+    TRUSTED_CYCLE_DEFINITION_SHA256,
+    registry,
+  );
+}
+
+function buildTodayQueue(
+  state,
+  input,
+  registry = createSubjectAdapterRegistry([makeAdapter()]),
+) {
+  return buildTodayQueueKernel(
+    state,
+    {
+      ...input,
+      trustedOwnerId: TRUSTED_OWNER_ID,
+      trustedExamCycleDefinitionSha256: TRUSTED_CYCLE_DEFINITION_SHA256,
+    },
+    registry,
+  );
 }
 
 function draft(choice, options = {}) {
@@ -599,6 +657,284 @@ test("fails closed on adapter absence, malformed registration, ambiguity, stale 
   }, registry), "invalid_input");
 });
 
+test("exact-validates and canonicalizes every rehydrated aggregate before any consumer", () => {
+  const registry = createSubjectAdapterRegistry([makeAdapter()]);
+  let persisted = beginAttempt(initialState(), {
+    expectedRevision: 1,
+    attemptId: "attempt-rehydrate-initial",
+    questionId: "acct-q1",
+    trustedStartedAt: "2026-08-25T00:00:00.000Z",
+  }, registry);
+  persisted = submitAnswer(persisted, {
+    expectedRevision: 2,
+    attemptId: "attempt-rehydrate-initial",
+    reviewTaskId: "review-rehydrate-initial",
+    trustedSubmittedAt: "2026-08-25T00:00:02.000Z",
+    submission: draft(1),
+  }, registry);
+
+  const cloned = structuredClone(persisted);
+  const canonical = validateFirstStageKernelState(
+    cloned,
+    TRUSTED_OWNER_ID,
+    TRUSTED_CYCLE_DEFINITION_SHA256,
+    registry,
+  );
+  assert.notEqual(canonical, cloned);
+  assert.deepEqual(canonical, cloned);
+  (function assertDeepFrozen(value) {
+    if (value === null || typeof value !== "object") return;
+    assert.equal(Object.isFrozen(value), true);
+    for (const nested of Object.values(value)) assertDeepFrozen(nested);
+  })(canonical);
+
+  function assertEveryConsumerRejects(hostile, label) {
+    const expectedRevision = Number.isSafeInteger(hostile.revision) ? hostile.revision : 3;
+    expectKernelCode(() => beginAttemptKernel(hostile, {
+      trustedOwnerId: TRUSTED_OWNER_ID,
+      trustedExamCycleDefinitionSha256: TRUSTED_CYCLE_DEFINITION_SHA256,
+      expectedRevision,
+      attemptId: `attempt-hostile-${label}`,
+      questionId: "acct-q2",
+      trustedStartedAt: "2026-08-25T00:00:03.000Z",
+    }, registry), "invalid_input");
+    expectKernelCode(() => submitAnswerKernel(hostile, {
+      trustedOwnerId: TRUSTED_OWNER_ID,
+      trustedExamCycleDefinitionSha256: TRUSTED_CYCLE_DEFINITION_SHA256,
+      expectedRevision,
+      attemptId: "missing-hostile-attempt",
+      reviewTaskId: "missing-hostile-review",
+      trustedSubmittedAt: "2026-08-25T00:00:03.000Z",
+      submission: draft(1),
+    }, registry), "invalid_input");
+    expectKernelCode(() => beginIndependentRetryKernel(hostile, {
+      trustedOwnerId: TRUSTED_OWNER_ID,
+      trustedExamCycleDefinitionSha256: TRUSTED_CYCLE_DEFINITION_SHA256,
+      expectedRevision,
+      reviewTaskId: "review-rehydrate-initial",
+      independentRetryId: `retry-hostile-${label}`,
+      retryAttemptId: `retry-attempt-hostile-${label}`,
+      trustedStartedAt: "2026-08-25T00:00:03.000Z",
+    }, registry), "invalid_input");
+    expectKernelCode(() => presentAttemptQuestionKernel(
+      hostile,
+      "missing-hostile-attempt",
+      TRUSTED_OWNER_ID,
+      TRUSTED_CYCLE_DEFINITION_SHA256,
+      registry,
+    ), "invalid_input");
+    expectKernelCode(() => buildTodayQueueKernel(hostile, {
+      trustedOwnerId: TRUSTED_OWNER_ID,
+      trustedExamCycleDefinitionSha256: TRUSTED_CYCLE_DEFINITION_SHA256,
+      trustedGeneratedAt: "2026-08-25T00:00:03.000Z",
+    }, registry), "invalid_input");
+  }
+
+  function rewriteStoredCycleDefinitionDigest(state) {
+    state.examCycle.definitionSha256 = digest({
+      schemaVersion: state.examCycle.schemaVersion,
+      examCycleId: state.examCycle.examCycleId,
+      ownerId: state.examCycle.ownerId,
+      mode: state.examCycle.mode,
+      questionReferences: state.examCycle.questionReferences,
+    });
+  }
+
+  const aggregateMutations = [
+    ["top-schema", (state) => { state.schemaVersion = "hostile.schema"; }],
+    ["top-extra", (state) => { state.extra = true; }],
+    ["top-missing", (state) => { delete state.independentRetries; }],
+    ["revision", (state) => { state.revision += 10; }],
+    ["cycle-schema", (state) => { state.examCycle.schemaVersion = "hostile.cycle"; }],
+    ["cycle-owner", (state) => { state.examCycle.ownerId = "other-owner"; }],
+    ["cycle-extra", (state) => { state.examCycle.extra = true; }],
+    ["cycle-definition", (state) => { state.examCycle.definitionSha256 = "0".repeat(64); }],
+    ["cycle-mode", (state) => { state.examCycle.mode = "full_day"; }],
+    ["cycle-mode-coordinated", (state) => {
+      state.examCycle.mode = "full_day";
+      rewriteStoredCycleDefinitionDigest(state);
+    }],
+    ["cycle-state", (state) => { state.examCycle.state = "completed"; }],
+    ["cycle-start", (state) => { state.examCycle.startedAt = "2026-08-25T00:00:01.000Z"; }],
+    ["cycle-complete", (state) => { state.examCycle.completedAt = "2026-08-25T00:00:02.000Z"; }],
+    ["cycle-reference", (state) => {
+      state.examCycle.questionReferences.push(reference("acct-q1", "v2"));
+    }],
+    ["cycle-reference-coordinated", (state) => {
+      state.examCycle.questionReferences[1] = reference("acct-q3");
+      rewriteStoredCycleDefinitionDigest(state);
+    }],
+    ["concept-schema", (state) => { state.conceptStates[0].schemaVersion = "hostile.concept"; }],
+    ["concept-binding", (state) => { state.conceptStates[0].binding.conceptId = "hostile-concept"; }],
+    ["concept-state", (state) => { state.conceptStates[0].state = "unobserved"; }],
+    ["concept-last", (state) => { state.conceptStates[0].lastAttemptId = "fake-attempt"; }],
+    ["concept-evidence", (state) => { state.conceptStates[0].evidenceAttemptIds.push("fake-attempt"); }],
+    ["concept-time", (state) => { state.conceptStates[0].updatedAt = "2026-08-25T00:00:01.000Z"; }],
+    ["concept-mastery", (state) => { state.conceptStates[0].masteryClaim = true; }],
+    ["concept-extra", (state) => { state.conceptStates[0].extra = true; }],
+    ["concept-duplicate", (state) => { state.conceptStates.push(structuredClone(state.conceptStates[0])); }],
+    ["concept-missing", (state) => { state.conceptStates = []; }],
+  ];
+  for (const [label, mutate] of aggregateMutations) {
+    const hostile = structuredClone(persisted);
+    mutate(hostile);
+    assertEveryConsumerRejects(hostile, label);
+  }
+
+  const active = beginAttempt(initialState(), {
+    expectedRevision: 1,
+    attemptId: "attempt-active-one",
+    questionId: "acct-q1",
+    trustedStartedAt: "2026-08-25T00:00:00.000Z",
+  }, registry);
+  const twoActive = structuredClone(active);
+  twoActive.attempts.push({
+    ...structuredClone(twoActive.attempts[0]),
+    attemptId: "attempt-active-two",
+    questionReference: reference("acct-q2"),
+  });
+  twoActive.revision = 3;
+  assertEveryConsumerRejects(twoActive, "two-active");
+
+  const duplicateInitial = structuredClone(persisted);
+  duplicateInitial.attempts.push({
+    ...structuredClone(duplicateInitial.attempts[0]),
+    attemptId: "attempt-duplicate-initial",
+    reviewTaskId: null,
+    startedAt: "2026-08-25T00:00:03.000Z",
+    state: "in_progress",
+    submission: null,
+    evaluation: null,
+  });
+  duplicateInitial.revision = 4;
+  assertEveryConsumerRejects(duplicateInitial, "duplicate-initial");
+
+  const orphanRetry = structuredClone(persisted);
+  orphanRetry.attempts.push({
+    schemaVersion: "first_stage.attempt.v1",
+    attemptId: "attempt-orphan-retry",
+    examCycleId: orphanRetry.examCycle.examCycleId,
+    questionReference: reference("acct-orphan-retry"),
+    kind: "independent_retry",
+    sourceAttemptId: "attempt-rehydrate-initial",
+    reviewTaskId: "review-rehydrate-initial",
+    exposureState: "verified_variant",
+    assistanceLevel: "none",
+    startedAt: "2026-08-25T00:00:03.000Z",
+    state: "in_progress",
+    submission: null,
+    evaluation: null,
+  });
+  orphanRetry.revision = 4;
+  assertEveryConsumerRejects(orphanRetry, "orphan-retry");
+
+  expectKernelCode(() => beginAttemptKernel(initialState(), {
+    trustedExamCycleDefinitionSha256: TRUSTED_CYCLE_DEFINITION_SHA256,
+    expectedRevision: 1,
+    attemptId: "attempt-missing-owner",
+    questionId: "acct-q1",
+    trustedStartedAt: "2026-08-25T00:00:00.000Z",
+  }, registry), "invalid_input");
+  expectKernelCode(() => beginAttemptKernel(initialState(), {
+    trustedOwnerId: "other-owner",
+    trustedExamCycleDefinitionSha256: TRUSTED_CYCLE_DEFINITION_SHA256,
+    expectedRevision: 1,
+    attemptId: "attempt-wrong-owner",
+    questionId: "acct-q1",
+    trustedStartedAt: "2026-08-25T00:00:00.000Z",
+  }, registry), "invalid_input");
+  expectKernelCode(() => beginAttemptKernel(initialState(), {
+    trustedOwnerId: TRUSTED_OWNER_ID,
+    trustedExamCycleDefinitionSha256: "0".repeat(64),
+    expectedRevision: 1,
+    attemptId: "attempt-wrong-cycle-definition",
+    questionId: "acct-q1",
+    trustedStartedAt: "2026-08-25T00:00:00.000Z",
+  }, registry), "invalid_input");
+  expectKernelCode(() => buildTodayQueueKernel(initialState(), {
+    trustedOwnerId: TRUSTED_OWNER_ID,
+    trustedExamCycleDefinitionSha256: TRUSTED_CYCLE_DEFINITION_SHA256,
+    trustedGeneratedAt: "2026-08-25T00:00:00.000Z",
+  }, createSubjectAdapterRegistry()), "adapter_unavailable");
+
+  const rehydrationContract = contract.domainContract.rehydratedStateValidation;
+  for (const invariant of [
+    "runsBeforeTodayQueueDerivation",
+    "topLevelStateAndExamCycleParsedExactly",
+    "examCycleImmutableDefinitionSha256Revalidated",
+    "independentlyTrustedExamCycleDefinitionSha256RequiredByEveryConsumer",
+    "trustedOwnerIdBoundOnEveryReadAndMutation",
+    "validatedStateCanonicalizedAndDeepFrozenBeforeConsumption",
+    "allCycleReferencesRequireTheirRegisteredAdapterBeforeConsumption",
+    "revisionDerivedFromAttemptBeginsAndSubmissions",
+    "cycleLifecycleAndTimestampsDerivedFromValidatedAttempts",
+    "oneInitialAttemptPerCycleQuestion",
+    "maximumOneActiveAttemptGlobally",
+    "oneRetryRecordPerIndependentRetryAttempt",
+    "conceptStatesRebuiltFromValidatedAttemptTaskRetryHistory",
+    "retryStartPreservesLatestCompletedConceptEvidenceProvenance",
+  ]) assert.equal(rehydrationContract[invariant], true, invariant);
+  assert.equal(contract.domainContract.conceptState.unobservedRepresentedByAbsenceNotPersistedRow, true);
+  assert.equal(contract.domainContract.conceptState.statesExactly.includes("unobserved"), false);
+});
+
+test("starting a later retry never regresses completed concept evidence provenance", () => {
+  const registry = createSubjectAdapterRegistry([makeAdapter()]);
+  let state = beginAttempt(initialState(), {
+    expectedRevision: 1,
+    attemptId: "attempt-provenance-initial",
+    questionId: "acct-q1",
+    trustedStartedAt: "2026-08-25T00:00:00.000Z",
+  }, registry);
+  state = submitAnswer(state, {
+    expectedRevision: 2,
+    attemptId: "attempt-provenance-initial",
+    reviewTaskId: "review-provenance",
+    trustedSubmittedAt: "2026-08-25T00:00:02.000Z",
+    submission: draft(1),
+  }, registry);
+  state = beginIndependentRetry(state, {
+    expectedRevision: 3,
+    reviewTaskId: "review-provenance",
+    independentRetryId: "retry-provenance-one",
+    retryAttemptId: "attempt-provenance-retry-one",
+    trustedStartedAt: "2026-08-25T00:00:03.000Z",
+  }, registry);
+  assert.equal(state.conceptStates[0].lastAttemptId, "attempt-provenance-initial");
+  assert.deepEqual(state.conceptStates[0].evidenceAttemptIds, ["attempt-provenance-initial"]);
+  state = submitAnswer(state, {
+    expectedRevision: 4,
+    attemptId: "attempt-provenance-retry-one",
+    reviewTaskId: "review-provenance",
+    trustedSubmittedAt: "2026-08-25T00:00:04.000Z",
+    submission: draft(1),
+  }, registry);
+  assert.equal(state.conceptStates[0].lastAttemptId, "attempt-provenance-retry-one");
+  assert.deepEqual(state.conceptStates[0].evidenceAttemptIds, [
+    "attempt-provenance-initial",
+    "attempt-provenance-retry-one",
+  ]);
+  state = beginIndependentRetry(state, {
+    expectedRevision: 5,
+    reviewTaskId: "review-provenance",
+    independentRetryId: "retry-provenance-two",
+    retryAttemptId: "attempt-provenance-retry-two",
+    trustedStartedAt: "2026-08-25T00:00:04.000Z",
+  }, registry);
+  assert.equal(state.conceptStates[0].state, "independent_retry_due");
+  assert.equal(state.conceptStates[0].lastAttemptId, "attempt-provenance-retry-one");
+  assert.deepEqual(state.conceptStates[0].evidenceAttemptIds, [
+    "attempt-provenance-initial",
+    "attempt-provenance-retry-one",
+  ]);
+  validateFirstStageKernelState(
+    structuredClone(state),
+    TRUSTED_OWNER_ID,
+    TRUSTED_CYCLE_DEFINITION_SHA256,
+    registry,
+  );
+});
+
 test("rejects blank-as-correct, cycle-reused retry, cross-concept closure, and duplicate persisted lineage", () => {
   const blankCorrectRegistry = createSubjectAdapterRegistry([makeAdapter({
     forceDecision: () => "correct",
@@ -951,7 +1287,7 @@ test("binds reviewed feedback/key/source evidence and withholds without emitting
   assert.deepEqual(withheld.independentRetries, []);
   assert.deepEqual(buildTodayQueue(withheld, {
     trustedGeneratedAt: "2026-08-25T00:00:02.000Z",
-  }).items.map((item) => item.kind), ["new_question"]);
+  }, withheldRegistry).items.map((item) => item.kind), ["new_question"]);
 
   const unavailableRegistry = createSubjectAdapterRegistry([makeAdapter({
     forceDecision: () => "unavailable",

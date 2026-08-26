@@ -119,7 +119,7 @@ export const SUBJECT_ADAPTER_V1_INTERFACE_DESCRIPTOR = deepFreeze({
     {
       path: "lib/review-os/first-stage/kernel/domain.ts",
       normalization: "utf8_lf",
-      sha256: "a8a92eafe394e7b658dd6882df31133738b3967d549eaa3e7a568b1fe4567818",
+      sha256: "3df7bd48e24949d746f30a62d3031e68df4f1b6116d2731006d998599a4ff2e7",
       covers: [
         "QuestionReference", "Attempt", "AnswerSubmission", "Confidence",
         "ElapsedTime", "WorkTrace", "WorkTraceStep", "ErrorCause", "ConceptBinding",
@@ -331,7 +331,7 @@ export const SUBJECT_ADAPTER_V1_INTERFACE_DESCRIPTOR = deepFreeze({
 // SHA-256 over RFC-8785-equivalent recursively-key-sorted JSON for the exact
 // descriptor above. The focused contract test recomputes and binds this value.
 export const SUBJECT_ADAPTER_V1_INTERFACE_DIGEST =
-  "3317bf9a450c9cecd8530a578eb540ffcf1ad133dcfc866676c95746409e6cbb" as const;
+  "f7e134498ad65b9ae2bc10c4570949cae7ca71d2038aa493f6485247b5dfc00a" as const;
 
 function fail(): never {
   throw new FirstStageKernelError("adapter_mismatch");
@@ -345,7 +345,14 @@ function exactText(value: unknown, maximumLength: number) {
 }
 
 function sameReference(left: QuestionReference, right: QuestionReference) {
-  return JSON.stringify(left) === JSON.stringify(right);
+  const canonical = (value: unknown): string => {
+    if (value === null || typeof value !== "object") return JSON.stringify(value);
+    if (Array.isArray(value)) return `[${value.map(canonical).join(",")}]`;
+    const row = value as Record<string, unknown>;
+    return `{${Object.keys(row).sort().map((key) =>
+      `${JSON.stringify(key)}:${canonical(row[key])}`).join(",")}}`;
+  };
+  return canonical(left) === canonical(right);
 }
 
 export function assertAdapterIdentity(adapter: SubjectAdapterV1) {
