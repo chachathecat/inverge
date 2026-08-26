@@ -340,6 +340,21 @@ function expectKernelCode(fn, code) {
   assert.throws(fn, (error) => error instanceof FirstStageKernelError && error.code === code);
 }
 
+function validateReachableFoundationFreezeResult(receipt, executeGit = (args) =>
+  execFileSync("git", args, { cwd: root, encoding: "utf8" }).trim()) {
+  assert.equal(
+    executeGit(["show", "-s", "--format=%T", receipt.resultingMainSha]),
+    receipt.resultingMainTree,
+  );
+  executeGit(["merge-base", "--is-ancestor", receipt.resultingMainSha, "HEAD"]);
+  assert.equal(
+    executeGit(["rev-list", "--parents", "-n", "1", receipt.resultingMainSha])
+      .split(/\s+/u).length,
+    2,
+    "receipt must bind a single-parent squash result",
+  );
+}
+
 test("freezes one exact SubjectAdapter descriptor and Lane B path manifest", () => {
   function assertDeepFrozen(value) {
     if (value === null || typeof value !== "object") return;
@@ -427,26 +442,33 @@ test("freezes one exact SubjectAdapter descriptor and Lane B path manifest", () 
     productionMutationCount: 0,
   });
   const receipt = contract.validatedFoundationFreezeReceipt;
-  assert.equal(execFileSync("git", ["show", "-s", "--format=%T", receipt.reviewedHeadSha], {
-    cwd: root, encoding: "utf8",
-  }).trim(), receipt.reviewedTree);
-  assert.equal(execFileSync("git", ["show", "-s", "--format=%T", receipt.resultingMainSha], {
-    cwd: root, encoding: "utf8",
-  }).trim(), receipt.resultingMainTree);
-  execFileSync("git", ["diff", "--quiet", receipt.reviewedHeadSha, receipt.resultingMainSha], {
-    cwd: root,
-  });
-  execFileSync("git", ["merge-base", "--is-ancestor", receipt.resultingMainSha, "HEAD"], {
-    cwd: root,
-  });
+  validateReachableFoundationFreezeResult(receipt);
   assert.equal(receipt.reviewedTree, receipt.resultingMainTree);
-  assert.equal(execFileSync("git", ["rev-list", "--parents", "-n", "1", receipt.resultingMainSha], {
-    cwd: root, encoding: "utf8",
-  }).trim().split(/\s+/u).length, 2, "receipt must bind a single-parent squash result");
   const changedPaths = execFileSync("git", [
     "diff", "--name-only", contract.validatedFoundationFreezeReceipt.resultingMainSha,
   ], { cwd: root, encoding: "utf8" }).trim().split(/\r?\n/gu).filter(Boolean).sort();
   assert.deepEqual(changedPaths, [...contract.ownedPathManifest].sort());
+});
+
+test("validates the Foundation Freeze receipt without resolving its transient source commit", () => {
+  const receipt = contract.validatedFoundationFreezeReceipt;
+  const expectedCalls = [
+    ["show", "-s", "--format=%T", receipt.resultingMainSha],
+    ["merge-base", "--is-ancestor", receipt.resultingMainSha, "HEAD"],
+    ["rev-list", "--parents", "-n", "1", receipt.resultingMainSha],
+  ];
+  const outputs = [
+    receipt.resultingMainTree,
+    "",
+    `${receipt.resultingMainSha} ${"f".repeat(40)}`,
+  ];
+  const calls = [];
+  validateReachableFoundationFreezeResult(receipt, (args) => {
+    calls.push(args);
+    return outputs[calls.length - 1];
+  });
+  assert.deepEqual(calls, expectedCalls);
+  assert.equal(calls.some((args) => args.includes(receipt.reviewedHeadSha)), false);
 });
 
 test("derives elapsed time from trusted server instants and rejects client clock authority", () => {
