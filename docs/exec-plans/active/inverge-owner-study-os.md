@@ -15,7 +15,7 @@
 ## Branches and PRs
 
 - M4: merged PR #842 from `codex/owner-study-lane-b-first-stage-kernel-replan-4`
-- M5: `codex/owner-study-m5-study-capacity-runtime-bridge`; isolated worktree `.agent-factory/worktrees/owner-study-m5-study-capacity-runtime-bridge`; PR not opened
+- M5: `codex/owner-study-m5-study-capacity-runtime-bridge`; isolated worktree `.agent-factory/worktrees/owner-study-m5-study-capacity-runtime-bridge`; Draft PR #843
 - Question Foundry: `codex/owner-study-lane-c-question-foundry`; Draft PR #810; parked pending M5 and a clean rights-safe refresh
 
 ## Lane ownership
@@ -35,8 +35,8 @@
 
 ## Current blocker
 
-- M5 must complete its projection-only server candidate-source bridge, Owner-only adapter-blocked capacity preview, focused/runtime checks, Draft PR exact-head CI, and fresh review without inventing subject scheduling policy
+- Draft PR #843 must pass full candidate validation, exact-head required checks, and fresh/post-Ready review without inventing subject scheduling policy
 
 ## Next exact action
 
-- finish the exact eleven-path M5 vertical, run focused tests/typecheck/lint/build/path checks, commit, push, and open one Draft PR
+- commit and push the PR #843 log binding, then inspect exact-head CI and run the final full candidate suite
