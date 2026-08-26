@@ -70,6 +70,7 @@ jobs:
           --test --test-concurrency=1
           tests/s232f2-access-availability.test.mjs
           tests/wcv-c3r-p-practice-common-durable-runtime.test.mjs
+          tests/wcv-c3r-t-theory-durable-learning-delta.test.mjs
 
       - name: Install bounded Chromium runtime
         run: npm exec playwright install -- --with-deps chromium
