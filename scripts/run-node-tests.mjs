@@ -122,6 +122,7 @@ const defaultTestFiles = [
   "tests/wcv-c3-pre-p-postgresql-security-state-oracle.test.mjs",
   "tests/wcv-c3-pre-p-migration-mutation-authority.test.mjs",
   "tests/wcv-c3r-p-practice-common-durable-runtime.test.mjs",
+  "tests/wcv-c3-foundation-freeze.test.mjs",
   "tests/wcv-c2r-structural-recovery-authority.test.mjs",
   "tests/rights-safe-adaptive-variant-foundry-contract.test.mjs",
   "tests/c2r-b-typed-subject-proof-contract.test.mjs",

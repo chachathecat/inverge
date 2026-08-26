@@ -201,7 +201,9 @@ test("S232F.2 every data-bearing app page gates a fresh access result before dow
     "app/app/today/page.tsx",
   ].sort();
   const specializedGuardPages = [
+    "app/app/c3r-l/page.tsx",
     "app/app/c3r-p/page.tsx",
+    "app/app/c3r-t/page.tsx",
     "app/app/first-stage/page.tsx",
     "app/app/trusted-repair/page.tsx",
   ].sort();
@@ -268,6 +270,30 @@ test("S232F.2 every data-bearing app page gates a fresh access result before dow
   assert.ok(firstStageOwnerIndex > firstStageAdminIndex, "first-stage must require its narrower Owner allowlist");
   assert.ok(firstStageDeniedIndex > firstStageOwnerIndex, "first-stage must fail closed after both allowlists");
   assert.ok(firstStageLoopIndex > firstStageDeniedIndex, "first-stage must render only after its specialized gate");
+
+  const c3rTPage = read("app/app/c3r-t/page.tsx");
+  const c3rTAccessIndex = c3rTPage.indexOf("await requireC3RTAccess()");
+  const c3rTDeniedIndex = c3rTPage.indexOf("error instanceof C3RTError");
+  const c3rTNotFoundIndex = c3rTPage.indexOf("notFound()", c3rTDeniedIndex);
+  const c3rTRethrowIndex = c3rTPage.indexOf("throw error", c3rTNotFoundIndex);
+  const c3rTLoopIndex = c3rTPage.indexOf("<C3RTTheoryLoop");
+  assert.ok(c3rTAccessIndex >= 0, "C3R-T must resolve its specialized access gate");
+  assert.ok(c3rTDeniedIndex > c3rTAccessIndex);
+  assert.ok(c3rTNotFoundIndex > c3rTDeniedIndex);
+  assert.ok(c3rTRethrowIndex > c3rTNotFoundIndex);
+  assert.ok(c3rTLoopIndex > c3rTRethrowIndex);
+
+  const c3rLPage = read("app/app/c3r-l/page.tsx");
+  const c3rLAccessIndex = c3rLPage.indexOf("await requireC3RLAccess()");
+  const c3rLDeniedIndex = c3rLPage.indexOf("error instanceof C3RLError");
+  const c3rLNotFoundIndex = c3rLPage.indexOf("notFound()", c3rLDeniedIndex);
+  const c3rLRethrowIndex = c3rLPage.indexOf("throw error", c3rLNotFoundIndex);
+  const c3rLLoopIndex = c3rLPage.indexOf("<C3RLLawLoop");
+  assert.ok(c3rLAccessIndex >= 0, "C3R-L must resolve its specialized access gate");
+  assert.ok(c3rLDeniedIndex > c3rLAccessIndex);
+  assert.ok(c3rLNotFoundIndex > c3rLDeniedIndex);
+  assert.ok(c3rLRethrowIndex > c3rLNotFoundIndex);
+  assert.ok(c3rLLoopIndex > c3rLRethrowIndex);
 });
 
 test("S232F.2 documents the failure boundary and registers the contract in the full suite", () => {

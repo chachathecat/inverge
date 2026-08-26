@@ -1,0 +1,18 @@
+-- Add the Law subject without using the new enum value in this transaction.
+-- The following integration migration installs the complete Owner-only,
+-- default-off C3R-L durable-learning vertical.
+--
+-- PRE-APPLY ROLLBACK: do not apply this migration. Keep
+-- WCV_C3R_L_LAW_ENABLED=false and revert only the unmerged source candidate
+-- through the protected Git process; no database rollback is required.
+--
+-- POST-APPLY FORWARD RECOVERY: PostgreSQL enum labels are not removed by this
+-- delivery. Retain the inert LAW enum label, preserve all learner rows, keep
+-- WCV_C3R_L_LAW_ENABLED=false, and stop before the integration migration. Do
+-- not edit or replay this historical file and do not attempt DROP TYPE, enum
+-- reconstruction, or destructive data cleanup. Any remote/Production repair
+-- requires a separate exact Owner gate. If integration has started, recover
+-- only with a newly authorized forward-only repair migration that follows the
+-- integration migration's recovery instructions and passes two fresh local
+-- PostgreSQL 15.8 reset/replay cycles first.
+alter type public.c3r_p_subject add value if not exists 'LAW';

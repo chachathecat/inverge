@@ -1,0 +1,254 @@
+{
+  "schemaVersion": "dabangil.wcv_c3r_l.law_durable_learning_delta.v1",
+  "contractId": "dabangil_wcv_c3r_l_law_durable_learning_delta_v1",
+  "contractVersion": "1.0.0",
+  "status": "candidate_effective_only_after_expected_head_pinned_squash_merge_and_validated_github_receipt",
+  "authority": {
+    "repository": "chachathecat/inverge",
+    "stage": "C3R-L",
+    "subject": "LAW",
+    "baseSha": "75f3ce787d31047c2bceacc2ef752c0bfdfb23cc",
+    "baseTree": "a3e8ab7618cbceddb2c9ac156a84fc45bb018f1b",
+    "branch": "codex/owner-study-lane-a-c3r-l",
+    "serialProgramAuthorityRef": "config/dabangil-wcv-c3r-a1-serial-program-authority-v1.json",
+    "validatedDependencyReceipt": {
+      "stage": "C3R-P",
+      "pullRequest": 800,
+      "reviewedHeadSha": "8f434027e5d20a5f3e799b1c2d85876e766b3858",
+      "resultingMainSha": "71fd878a7369c25a153bc90389347039684c501f",
+      "resultingMainTree": "f6fb7bc1d1613a8431a4bbdfe155eea9d9f5303c",
+      "expectedHeadPinned": true,
+      "checksPassed": true,
+      "actionableReviewCounts": { "p0": 0, "p1": 0, "p2": 0 },
+      "unresolvedActionableThreads": 0,
+      "presentAndUnrevertedAtBase": true
+    },
+    "parallelExecutionReceipt": {
+      "pullRequest": 808,
+      "reviewedHeadSha": "b06874e4e354e690da53ecd8497fdda04d2cf6ae",
+      "resultingMainSha": "cad8b98e4f13a2fe50d82ffd983616adc70eb75a",
+      "resultingMainTree": "dae1e5d7a2d7138f2e793f50e08f721ece354472",
+      "validated": true
+    },
+    "validatedTheoryReceipt": {
+      "stage": "C3R-T",
+      "pullRequest": 816,
+      "reviewedHeadSha": "96933cbe08864c6b3cb94a7349cb33e92bf2df8d",
+      "resultingMainSha": "a70a7e0dbde7919c82d00189dafb91b7681caca3",
+      "resultingMainTree": "3b01fc6b9ea5576992dd9b9612de7dae4d546b7f",
+      "expectedHeadPinned": true,
+      "checksPassed": true,
+      "actionableReviewCounts": { "p0": 0, "p1": 0, "p2": 0 },
+      "unresolvedActionableThreads": 0,
+      "presentAndUnrevertedAtBase": true
+    },
+    "validatedTheoryRepairReceiptsExactly": [
+      {
+        "pullRequest": 818,
+        "reviewedHeadSha": "ff73a280cb476a75e5a8038dd7f1171effae8b6a",
+        "resultingMainSha": "64b7e3655e4fc78646aa4281abc6855d180f209b",
+        "resultingMainTree": "a9f3a119b7a3b7d4c586eb6ef58f1fd32f8a0c84"
+      },
+      {
+        "pullRequest": 820,
+        "reviewedHeadSha": "53584fead7ea1a786bb163f66cc7ce1b767e8232",
+        "resultingMainSha": "75f3ce787d31047c2bceacc2ef752c0bfdfb23cc",
+        "resultingMainTree": "a3e8ab7618cbceddb2c9ac156a84fc45bb018f1b"
+      }
+    ],
+    "inheritsCommonDurableSubstrate": true,
+    "ownsNewCommonDurableSubstrate": false,
+    "createsGeneralReceiptSystem": false
+  },
+  "lawProof": {
+    "sourceId": "law-source:synthetic-official-act",
+    "problemId": "c3r-l:law:synthetic-article-10-applicability",
+    "revisionId": "d9f7e7fa-9d1d-4c65-8d2f-719e44356001",
+    "itemId": "c3r-l:law:synthetic-article-10-applicability:d0",
+    "artifactId": "c3r-l:law:synthetic-article-10-applicability:artifact-v1",
+    "anchorId": "repair-anchor:law:synthetic-article-10",
+    "anchorVersionId": "repair-anchor:law:synthetic-article-10@1",
+    "lawSourceBindingId": "law-binding:synthetic-official-act:article-10",
+    "sourceVersionId": "law-source:synthetic-official-act@2026-01-01",
+    "lawAnchorId": "law-anchor:synthetic-official-act:article-10",
+    "lawAnchorVersionId": "law-anchor:synthetic-official-act:article-10@2026-01-01",
+    "exactLocator": "Article 10",
+    "exactVersionIdentity": "2026-01-01",
+    "effectiveFrom": "2026-01-01",
+    "effectiveTo": null,
+    "applicableAsOf": "2026-08-15",
+    "currentLawApplicability": "APPLICABLE_CURRENT",
+    "openBlockingReferenceCount": 0,
+    "validatorId": "validator:law-exact-applicability@1",
+    "freeFormCreatesVerifiedOrMastery": false,
+    "structuredServerValidatedPassRequired": true,
+    "closedEvaluationStatesExactly": [
+      "PASS",
+      "PARTIAL",
+      "AMBIGUOUS",
+      "UNSUPPORTED",
+      "BLOCKED",
+      "STALE"
+    ],
+    "failureStateAndReasonCodesPersistedExactly": true,
+    "claimAndEvaluationPersistedAndDigestCrossBound": true,
+    "databaseRevalidatesEveryTransition": true,
+    "proofDigestAuthority": "DATABASE_CANONICAL_JSONB_CLAIM_AND_EVALUATION_ONLY",
+    "typescriptProofDigestProduced": false,
+    "canonicalSentenceIsOutputOnly": true
+  },
+  "learnerVertical": {
+    "orderedFlowExactly": [
+      "CAPTURE_D0",
+      "DETERMINISTIC_DIAGNOSIS",
+      "DIRECT_STRUCTURED_REPAIR",
+      "D_PLUS_1_UNAIDED_RECONSTRUCTION",
+      "SEALED_NON_SAME_SURFACE_D_PLUS_7_TRANSFER",
+      "TIMED_RECURRENCE",
+      "LATER_FAILURE_REOPEN",
+      "POST_REOPEN_INDEPENDENT_COMPLETION",
+      "PERSONAL_STUDY_LEDGER",
+      "DETERMINISTIC_REVIEW_QUEUE",
+      "TODAY_AND_FULL_DAY",
+      "RESTORE_EXPORT_DELETE"
+    ],
+    "attemptBeforeReveal": true,
+    "oneBiggestGap": true,
+    "oneSmallestScaffold": true,
+    "d1AssistanceCannotCreateIndependentCompletion": true,
+    "d1AssistanceReschedulesAndStalesPlan": true,
+    "d7TransferItemId": "c3r-l:law:synthetic-article-10-applicability:d7-transfer-v1",
+    "d7TransferSurfaceId": "server:law-transfer-v1",
+    "d7PromptHiddenUntilDueAndPresented": true,
+    "coreOutcomeMaximum": 3,
+    "plannerReviewStateSeparated": true,
+    "planDecisionMutatesEvidence": false,
+    "stalePlanRejectedAndEligibilityRefreshed": true
+  },
+  "perSubjectIssueEvidence": {
+    "stage": "C3R-L",
+    "subject": "LAW",
+    "artifactKind": "LAW_RUNTIME",
+    "artifactRef": "LAW_RUNTIME:c3r-l-law-durable-learning-v1",
+    "browserToPostgresEvidenceRef": "LAW_RUNTIME:c3r-l-law-durable-learning-v1#browser-to-postgres",
+    "practiceCompatibilityEvidenceRef": "LAW_RUNTIME:c3r-l-law-durable-learning-v1#practice-compatibility",
+    "requiredExactly": {
+      "706": [
+        "FROZEN_D0",
+        "D_PLUS_1_UNAIDED_RECONSTRUCTION",
+        "SEALED_NON_SAME_SURFACE_D_PLUS_7_TRANSFER",
+        "TIMED_RECURRENCE",
+        "LATER_FAILURE_REOPEN"
+      ],
+      "707": [
+        "LEARNER_PRIVATE_FORCED_RLS_LEDGER",
+        "EXACT_SOURCE_ATTEMPT_ARTIFACT_ITEM_BINDING",
+        "BODYLESS_RECURRING_DEDUCTION_EVIDENCE_PROJECTION",
+        "SOURCE_BOUND_FAILURE_NOTES",
+        "RESTORE_EXPORT_DELETE"
+      ],
+      "708": [
+        "DETERMINISTIC_REVIEW_QUEUE",
+        "TODAY_AND_FULL_DAY",
+        "CORE_OUTCOME_MAXIMUM_3",
+        "PLANNER_REVIEW_STATE_SEPARATION",
+        "ACCEPT_EDIT_REJECT_WITHOUT_EVIDENCE_MUTATION",
+        "STALE_PLAN_REJECTION_AND_ELIGIBILITY_REFRESH"
+      ]
+    },
+    "everyItemMustBeProvedExactlyOnce": true,
+    "missingUnknownDuplicateCrossStageOrCrossSubjectFailsClosed": true,
+    "metadataOnly": true
+  },
+  "dataBoundary": {
+    "tables": "validated_c3r_p_common_durable_tables",
+    "subjectEnumAfterCandidateExactly": ["PRACTICE", "THEORY", "LAW"],
+    "serverPinnedSubject": "LAW",
+    "clientSubjectSelectorAllowed": false,
+    "forcedRlsPreserved": true,
+    "authenticatedReadOwnOnly": true,
+    "serviceRoleMutationOnly": true,
+    "childParentSubjectEqualityDatabaseEnforced": true,
+    "ledgerAndReceiptsBodyless": true,
+    "failureNoteLearnerPrivate": true,
+    "restoreExportDeleteSubjectScoped": true,
+    "lawDeletePreservesPractice": true,
+    "lawDeletePreservesTheory": true,
+    "theoryDeletePreservesPracticeAndLaw": true,
+    "practiceDeletePreservesLaw": true,
+    "practiceDeletePreservesTheory": true,
+    "deleteSerializesWithSameSubjectMutation": true
+  },
+  "runtimeBoundary": {
+    "featureFlag": "WCV_C3R_L_LAW_ENABLED",
+    "featureDefaultOff": true,
+    "ownerAllowlistEnvironment": "WCV_C3R_L_OWNER_EMAILS",
+    "alsoRequiresAlphaAdminAllowlist": true,
+    "productionDenied": true,
+    "publicActivation": false,
+    "externalLearnerActivation": false,
+    "paymentActivation": false,
+    "providerCallsAllowed": false,
+    "remoteSupabaseMutationCount": 0,
+    "productionMutationCount": 0,
+    "lawRuntimeIncluded": true,
+    "theoryRuntimeBehaviorMustRemainCompatible": true,
+    "practiceRuntimeBehaviorMustRemainCompatible": true,
+    "resetReplayCycleCount": 2,
+    "postgresqlServerVersionNum": 150008
+  },
+  "deliveryControl": {
+    "draftRequired": true,
+    "autoMergeAllowed": false,
+    "mergeAuthorizedByThisWork": false,
+    "sourceCorrectionMaximum": 2,
+    "formalReviewMaximum": 3,
+    "requiredReferenceLinesExactly": [
+      "Refs #706",
+      "Refs #707",
+      "Refs #708",
+      "Refs #714",
+      "Refs #781"
+    ],
+    "requiredDispositionLine": "All referenced canonical issues remain open in the candidate; only a validated resulting-main C3R-L receipt may close terminal WCV-C3 scope.",
+    "closingKeywordsAllowedForCanonicalIssues": false
+  },
+  "pathManifest": {
+    "changedPathsExactly": [
+      ".github/workflows/c3r-l-law-durable-learning-delta.yml",
+      "app/api/review-os/c3r-l/route.ts",
+      "app/app/c3r-l/page.tsx",
+      "components/review-os/c3r-l-law-loop.tsx",
+      "config/dabangil-wcv-c3r-l-law-durable-learning-delta-v1.json",
+      "docs/exec-plans/active/inverge-owner-study-os.md",
+      "lib/review-os/c3r-l-contract.ts",
+      "lib/review-os/c3r-l-engine.ts",
+      "lib/review-os/c3r-l-repository.ts",
+      "lib/review-os/c3r-l-service.ts",
+      "scripts/automation/produce-runtime-evidence.mjs",
+      "scripts/automation/runtime-gate.mjs",
+      "scripts/automation/wcv-c3r-p-practice-common-runtime.mjs",
+      "supabase/migrations/20260825122242_c3r_l_law_durable_learning_delta.sql",
+      "supabase/migrations/20260825122257_c3r_l_law_common_substrate_integration.sql",
+      "tests/e2e/wcv-c3r-l-law-runtime.spec.ts",
+      "tests/e2e/wcv-c3r-l-playwright.config.ts",
+      "tests/s232f2-access-availability.test.mjs",
+      "tests/wcv-c3r-l-law-durable-learning-delta.test.mjs",
+      "tests/wcv-c3r-p-practice-common-durable-runtime.test.mjs"
+    ],
+    "immutableHistoricalMigration": "supabase/migrations/20260822120000_c3r_p_practice_common_durable_substrate.sql",
+    "forwardMigrationsExactly": [
+      "supabase/migrations/20260825122242_c3r_l_law_durable_learning_delta.sql",
+      "supabase/migrations/20260825122257_c3r_l_law_common_substrate_integration.sql"
+    ]
+  },
+  "postMergeState": {
+    "c3rP": "complete_and_unreverted",
+    "c3rT": "complete_and_repaired_unreverted",
+    "c3rL": "candidate_only_complete_after_validated_expected_head_pinned_merge_receipt",
+    "wcvC3": "incomplete",
+    "governedIssuesRemainOpen": [706, 707, 708, 714, 781],
+    "remoteMutationCount": 0,
+    "successorStarted": false
+  }
+}

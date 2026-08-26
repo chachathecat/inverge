@@ -287,6 +287,7 @@ test("resolves roadmap, campaign, tracker and current-stage authority without al
   const campaignMatches = overlay.campaigns.filter(
     (campaign) => campaign.id === overlay.soleNextImplementationCampaign,
   );
+  const c3 = overlay.campaigns.find((campaign) => campaign.id === "C3");
 
   assert.deepEqual(graph, {
     roadmapItemId: "WCV-C2",
@@ -298,16 +299,18 @@ test("resolves roadmap, campaign, tracker and current-stage authority without al
     completedTerminalReplacementStageId: "C2R-C-L",
     replacementStageChain: ["C2R-A", "C2R-B", "C2R-C-P", "C2R-C-T", "C2R-C-L"],
   });
-  assert.equal(campaignMatches.length, 1);
-  assert.equal(campaignMatches[0].roadmapItemId, "WCV-C3");
-  assert.equal(campaignMatches[0].leadIssue, 706);
-  assert.equal(overlay.soleNextImplementationTrackerIssue, 706);
+  assert.equal(campaignMatches.length, 0);
+  assert.equal(c3.roadmapItemId, "WCV-C3");
+  assert.equal(c3.leadIssue, 706);
+  assert.equal(c3.wcvC3Complete, true);
+  assert.equal(overlay.soleNextImplementationTrackerIssue, null);
   assert.equal(overlay.soleNextReplacementStage, graph.currentReplacementStageId);
   assert.equal(overlay.soleNextReplacementStageIssue, graph.currentReplacementStageIssue);
   assert.equal(roadmap.program.campaignOverlay, "C3");
-  assert.equal(roadmap.program.soleNextImplementationCampaign, "C3");
-  assert.equal(roadmap.program.soleNextImplementationItem, "WCV-C3");
-  assert.equal(roadmap.program.soleNextImplementationTrackerIssue, 706);
+  assert.equal(roadmap.program.soleNextImplementationCampaign, null);
+  assert.equal(roadmap.program.soleNextImplementationItem, null);
+  assert.equal(roadmap.program.soleNextImplementationTrackerIssue, null);
+  assert.equal(roadmap.program.completedImplementationItem, "WCV-C3");
   assert.equal(roadmap.program.soleNextReplacementStage, graph.currentReplacementStageId);
   assert.equal(roadmap.program.soleNextReplacementStageIssue, graph.currentReplacementStageIssue);
   assert.equal(new Set(stageIds).size, stageIds.length);
@@ -417,13 +420,17 @@ test("uses terminal replacement-stage merges and preserves open #714 allocations
   assert.equal(rules.issue705ClosureRequiresTerminalReplacementStage, "C2R-C-L");
   assert.equal(rules.issue706RequiresTerminalIssue, 705);
   assert.equal(rules.issue706RequiresTerminalReplacementStage, "C2R-C-L");
-  assert.equal(c3.state, "authorized_unstarted_after_validated_terminal_c2r_c_l_receipt");
+  assert.equal(
+    c3.state,
+    "complete_after_pr_834_current_tree_repair_and_validated_m3_resulting_main_receipt",
+  );
+  assert.equal(c3.wcvC3Complete, true);
   assert.equal(c3.terminalReplacementDependency, "C2R-C-L");
   assert.equal(c3.automaticStartAllowed, false);
   assert.equal(c3.githubNativeAutomaticContinuationAllowed, true);
 });
 
-test("keeps roadmap selection metadata-only with one writer and no stage auto-start", async () => {
+test("keeps terminal WCV-C3 metadata-only with one writer and no ULC auto-start", async () => {
   const source = await text("roadmap/active-program.yml");
   const roadmap = parseRoadmap(source);
   const c2 = roadmap.byId.get("WCV-C2");
@@ -435,10 +442,12 @@ test("keeps roadmap selection metadata-only with one writer and no stage auto-st
 
   assert.equal(roadmap.program.globalMergeProducingWriterLimit, 1);
   assert.equal(roadmap.program.campaignOverlay, "C3");
-  assert.equal(roadmap.program.soleNextImplementationItem, "WCV-C3");
-  assert.equal(roadmap.program.soleNextImplementationCampaign, "C3");
-  assert.equal(roadmap.program.soleNextImplementationLeadIssue, 706);
-  assert.equal(roadmap.program.soleNextImplementationTrackerIssue, 706);
+  assert.equal(roadmap.program.soleNextImplementationItem, null);
+  assert.equal(roadmap.program.soleNextImplementationCampaign, null);
+  assert.equal(roadmap.program.soleNextImplementationLeadIssue, null);
+  assert.equal(roadmap.program.soleNextImplementationTrackerIssue, null);
+  assert.equal(roadmap.program.completedImplementationItem, "WCV-C3");
+  assert.equal(roadmap.program.ownerStudyOsNextMilestone, "M4_FIRST_STAGE_COMMON_KERNEL");
   assert.equal(roadmap.program.soleNextReplacementStage, null);
   assert.equal(roadmap.program.soleNextReplacementStageIssue, null);
   assert.equal(roadmap.program.structuralRecoveryTrackerIssue, 717);
@@ -492,15 +501,19 @@ test("keeps roadmap selection metadata-only with one writer and no stage auto-st
   assert.equal(c2.coverageLiveGithubReceiptValidationRequired, true);
   assert.equal(c2.coverageSuccessorRepositoryPrRequired, false);
   assert.equal(c2.terminalIssueClosureRequiresValidatedCoverageReceipt, true);
-  assert.equal(c3.executionState, "authorized_unstarted_after_validated_terminal_c2r_c_l_receipt");
+  assert.equal(
+    c3.executionState,
+    "complete_after_pr_834_current_tree_repair_and_validated_m3_resulting_main_receipt",
+  );
   assert.equal(c3.terminalReplacementDependency, "C2R-C-L");
   assert.equal(c3.automaticStartAllowed, false);
-  assert.equal(c3.selected, true);
-  assert.equal(c3.started, false);
+  assert.equal(c3.selected, false);
+  assert.equal(c3.started, true);
+  assert.equal(c3.wcvC3Complete, true);
   assert.equal(plan.globalMergeProducingWriterLimit, 1);
   assert.equal(plan.activeWriterCount, 0);
   assert.equal(plan.availableWriterSlots, 1);
-  assert.deepEqual(plan.selectedItemIds, ["WCV-C3"]);
+  assert.equal(plan.selectedItemIds.includes("WCV-C3"), false);
   assert.equal(
     (await json("config/dabangil-unified-program-contract.json"))
       .roadmapContract.selectionAutomaticallyStartsWork,
@@ -508,8 +521,8 @@ test("keeps roadmap selection metadata-only with one writer and no stage auto-st
   );
   const roadmapContract = (await json("config/dabangil-unified-program-contract.json"))
     .roadmapContract;
-  assert.equal(roadmapContract.soleNextImplementationCampaignId, "C3");
-  assert.equal(roadmapContract.soleNextImplementationTrackerIssue, 706);
+  assert.equal(roadmapContract.soleNextImplementationCampaignId, null);
+  assert.equal(roadmapContract.soleNextImplementationTrackerIssue, null);
   assert.equal(roadmapContract.soleNextReplacementStageId, null);
   assert.equal(roadmapContract.soleNextReplacementStageIssue, null);
 });

@@ -1,0 +1,94 @@
+name: C3R-L Law Durable Learning Delta
+
+on:
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened]
+
+permissions:
+  contents: read
+
+jobs:
+  c3r-l-law-durable-learning-delta:
+    name: c3r-l-law-durable-learning-delta
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    concurrency:
+      group: c3r-l-law-runtime-${{ github.event.pull_request.number }}
+      cancel-in-progress: true
+    env:
+      CI: "true"
+      DO_NOT_TRACK: "1"
+      SUPABASE_TELEMETRY_DISABLED: "1"
+      PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+      C3R_L_RUNTIME_EVIDENCE_PATH: ${{ github.workspace }}/.agent-factory/c3r-l-law-runtime-evidence.json
+
+    steps:
+      - name: Check out exact PR head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Verify exact checkout
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "${PR_HEAD_SHA}"
+          [[ "${PR_HEAD_SHA}" =~ ^[0-9a-f]{40}$ ]]
+          test -z "$(git status --porcelain=v1 --untracked-files=no)"
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install locked dependencies
+        run: npm ci
+
+      - name: Verify Law contracts, proof boundary, migration and Practice compatibility
+        run: >-
+          node --experimental-strip-types --loader ./tests/ts-extension-loader.mjs
+          --test --test-concurrency=1
+          tests/s232f2-access-availability.test.mjs
+          tests/wcv-c3r-l-law-durable-learning-delta.test.mjs
+          tests/wcv-c3r-p-practice-common-durable-runtime.test.mjs
+
+      - name: Install bounded Chromium runtime
+        run: npm exec playwright install -- --with-deps chromium
+
+      - name: Run two fresh exact-head PostgreSQL 15.8 reset/replay cycles
+        env:
+          GITHUB_RUN_ID: ${{ github.run_id }}
+          GITHUB_RUN_ATTEMPT: ${{ github.run_attempt }}
+          C3R_L_SUPABASE_WORKDIR: ${{ runner.temp }}/c3r-l-runtime-${{ github.run_id }}-${{ github.run_attempt }}
+        run: node scripts/automation/wcv-c3r-p-practice-common-runtime.mjs --c3r-l-dedicated
+
+      - name: Unconditionally remove local runtime resources
+        if: always()
+        env:
+          C3R_L_SUPABASE_WORKDIR: ${{ runner.temp }}/c3r-l-runtime-${{ github.run_id }}-${{ github.run_attempt }}
+        run: node scripts/automation/wcv-c3r-p-practice-common-runtime.mjs --c3r-l-cleanup
+
+      - name: Verify metadata-only LAW_RUNTIME artifact
+        if: success()
+        run: node scripts/automation/wcv-c3r-p-practice-common-runtime.mjs --verify-c3r-l-artifact
+
+      - name: Recheck exact head and immutable dependency declarations
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "${PR_HEAD_SHA}"
+          git diff --exit-code -- package.json package-lock.json
+
+      - name: Upload metadata-only exact-head Law evidence
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: c3r-l-law-runtime-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ env.C3R_L_RUNTIME_EVIDENCE_PATH }}
+          if-no-files-found: error
+          include-hidden-files: true
+          retention-days: 7

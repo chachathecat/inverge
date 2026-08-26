@@ -22,10 +22,18 @@ program:
   structuralRecoveryOverlayId: WCV-C2R-STRUCTURAL-RECOVERY
   c3StructuralRecoveryOverlayId: WCV-C3R-SERIAL-PROGRAM
   campaignLockGroup: wcv-vertical-campaign
-  soleNextImplementationItem: WCV-C3
-  soleNextImplementationCampaign: C3
-  soleNextImplementationLeadIssue: 706
-  soleNextImplementationTrackerIssue: 706
+  soleNextImplementationItem: null
+  soleNextImplementationCampaign: null
+  soleNextImplementationLeadIssue: null
+  soleNextImplementationTrackerIssue: null
+  completedImplementationItem: WCV-C3
+  completedImplementationCampaign: C3
+  wcvC3Complete: true
+  wcvC3FoundationState: frozen_after_validated_m3_resulting_main_receipt
+  ownerStudyOsNextMilestone: M4_FIRST_STAGE_COMMON_KERNEL
+  ownerStudyOsM4IsCanonicalUlcStage: false
+  issue714CompletedAllocations: [C2, C3]
+  issue714RemainingAllocations: [C4, C6]
   soleNextReplacementStage: null
   soleNextReplacementStageIssue: null
   soleNextReplacementStageDecision: docs/decisions/2026-08-14-wcv-c2-structural-recovery.md
@@ -40,9 +48,9 @@ program:
   preC3rPMigrationFilesChangedByAuthorityWork: 0
   preC3rPRemoteMutationAuthorizationCount: 0
   c3rStrictStageOrder: [C3R-P, C3R-T, C3R-L]
-  soleNextC3rStage: C3R-P
-  soleNextC3rStageIssue: 706
-  soleNextC3rStageState: authorized_unstarted_after_validated_c3r_a1_merge_receipt
+  soleNextC3rStage: null
+  soleNextC3rStageIssue: null
+  soleNextC3rStageState: complete_after_pr_834_current_tree_repair_and_validated_m3_resulting_main_receipt
   c3rRuntimeAutomaticStartAllowed: false
   c3rSuccessorRuntimeStarted: false
   structuralRecoveryChainDecision: docs/decisions/2026-08-14-wcv-c2-structural-recovery.md
@@ -478,14 +486,14 @@ items:
     priority: 31.13
   - id: WCV-C3
     title: C3 Durable Learning and Daily Command Vertical
-    status: queued
-    executionState: authorized_unstarted_after_validated_terminal_c2r_c_l_receipt
+    status: completed
+    executionState: complete_after_pr_834_current_tree_repair_and_validated_m3_resulting_main_receipt
     leadIssue: 706
     includedIssues: [706, 707, 708]
     crossVerticalAcceptanceTracker: 714
     terminalReplacementDependency: C2R-C-L
-    selected: true
-    started: false
+    selected: false
+    started: true
     c3rA0State: installed
     c3rA0ValidatedReceiptPr: 785
     c3rA1State: installed_after_expected_head_pinned_merge_and_validated_receipt
@@ -497,18 +505,23 @@ items:
     expectedFutureEffectiveMigrationCount: 26
     migrationFilesChangedByAuthorityWork: 0
     c3rStrictStageOrder: [C3R-P, C3R-T, C3R-L]
-    currentAuthorizedRuntimeStage: C3R-P
-    currentAuthorizedRuntimeStageState: authorized_unstarted
+    currentAuthorizedRuntimeStage: null
+    currentAuthorizedRuntimeStageState: complete
     c3rPStartRequiresValidatedStageReceipts: [C3R-A1]
     c3rTStartRequiresValidatedStageReceipts: [C3R-P]
     c3rLStartRequiresValidatedStageReceipts: [C3R-P, C3R-T]
     issueStateMaySubstituteForStageReceipt: false
     closedUnmergedPrMaySubstituteForStageReceipt: false
     candidateTestsMaySubstituteForResultingMainReceipt: false
-    c3rPStarted: false
-    c3rTStarted: false
-    c3rLStarted: false
-    wcvC3Complete: false
+    c3rPStarted: true
+    c3rTStarted: true
+    c3rLStarted: true
+    c3rPState: complete_and_unreverted
+    c3rTState: complete_repaired_and_unreverted
+    c3rLState: complete_and_unreverted
+    terminalCurrentTreeRepairPr: 834
+    foundationState: frozen_after_validated_m3_resulting_main_receipt
+    wcvC3Complete: true
     issueClosureStage: C3R-L
     issue714C3CompletionStage: C3R-L
     issue714RemainingAllocationsPreserved: [C4, C6]

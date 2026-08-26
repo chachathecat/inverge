@@ -1,0 +1,214 @@
+{
+  "schemaVersion": "dabangil.wcv_c3r_t.theory_durable_learning_delta.v1",
+  "contractId": "dabangil_wcv_c3r_t_theory_durable_learning_delta_v1",
+  "contractVersion": "1.0.0",
+  "status": "candidate_effective_only_after_expected_head_pinned_squash_merge_and_validated_github_receipt",
+  "authority": {
+    "repository": "chachathecat/inverge",
+    "stage": "C3R-T",
+    "subject": "THEORY",
+    "baseSha": "cad8b98e4f13a2fe50d82ffd983616adc70eb75a",
+    "baseTree": "dae1e5d7a2d7138f2e793f50e08f721ece354472",
+    "branch": "codex/owner-study-lane-a-c3r-t",
+    "serialProgramAuthorityRef": "config/dabangil-wcv-c3r-a1-serial-program-authority-v1.json",
+    "validatedDependencyReceipt": {
+      "stage": "C3R-P",
+      "pullRequest": 800,
+      "reviewedHeadSha": "8f434027e5d20a5f3e799b1c2d85876e766b3858",
+      "resultingMainSha": "71fd878a7369c25a153bc90389347039684c501f",
+      "resultingMainTree": "f6fb7bc1d1613a8431a4bbdfe155eea9d9f5303c",
+      "expectedHeadPinned": true,
+      "checksPassed": true,
+      "actionableReviewCounts": { "p0": 0, "p1": 0, "p2": 0 },
+      "unresolvedActionableThreads": 0,
+      "presentAndUnrevertedAtBase": true
+    },
+    "parallelExecutionReceipt": {
+      "pullRequest": 808,
+      "reviewedHeadSha": "b06874e4e354e690da53ecd8497fdda04d2cf6ae",
+      "resultingMainSha": "cad8b98e4f13a2fe50d82ffd983616adc70eb75a",
+      "resultingMainTree": "dae1e5d7a2d7138f2e793f50e08f721ece354472",
+      "validated": true
+    },
+    "inheritsCommonDurableSubstrate": true,
+    "ownsNewCommonDurableSubstrate": false,
+    "createsGeneralReceiptSystem": false
+  },
+  "theoryProof": {
+    "sourceId": "inverge-synthetic-theory-income-approach-v1",
+    "problemId": "c3r-t:theory:income-approach-scope",
+    "revisionId": "b8e6d6e9-8c0c-4b54-9c1e-608d33245001",
+    "itemId": "c3r-t:theory:income-approach-scope:d0",
+    "artifactId": "c3r-t:theory:income-approach-scope:artifact-v1",
+    "anchorId": "repair-anchor:theory:synthetic-income-approach",
+    "anchorVersionId": "repair-anchor:theory:synthetic-income-approach@1",
+    "targetScopeId": "theory-target:synthetic-income-approach",
+    "validatorId": "validator:theory-scoped-predicate@1",
+    "freeFormCreatesVerifiedOrMastery": false,
+    "structuredServerValidatedPassRequired": true,
+    "closedEvaluationStatesExactly": [
+      "PASS",
+      "PARTIAL",
+      "AMBIGUOUS",
+      "UNSUPPORTED",
+      "BLOCKED",
+      "STALE"
+    ],
+    "failureStateAndReasonCodesPersistedExactly": true,
+    "claimAndEvaluationPersistedAndDigestCrossBound": true,
+    "databaseRevalidatesEveryTransition": true,
+    "proofDigestAuthority": "DATABASE_CANONICAL_JSONB_CLAIM_AND_EVALUATION_ONLY",
+    "typescriptProofDigestProduced": false,
+    "canonicalSentenceIsOutputOnly": true
+  },
+  "learnerVertical": {
+    "orderedFlowExactly": [
+      "CAPTURE_D0",
+      "DETERMINISTIC_DIAGNOSIS",
+      "DIRECT_STRUCTURED_REPAIR",
+      "D_PLUS_1_UNAIDED_RECONSTRUCTION",
+      "SEALED_NON_SAME_SURFACE_D_PLUS_7_TRANSFER",
+      "TIMED_RECURRENCE",
+      "LATER_FAILURE_REOPEN",
+      "POST_REOPEN_INDEPENDENT_COMPLETION",
+      "PERSONAL_STUDY_LEDGER",
+      "DETERMINISTIC_REVIEW_QUEUE",
+      "TODAY_AND_FULL_DAY",
+      "RESTORE_EXPORT_DELETE"
+    ],
+    "attemptBeforeReveal": true,
+    "oneBiggestGap": true,
+    "oneSmallestScaffold": true,
+    "d1AssistanceCannotCreateIndependentCompletion": true,
+    "d1AssistanceReschedulesAndStalesPlan": true,
+    "d7TransferItemId": "c3r-t:theory:income-approach-scope:d7-transfer-v1",
+    "d7TransferSurfaceId": "server:theory-transfer-v1",
+    "d7PromptHiddenUntilDueAndPresented": true,
+    "coreOutcomeMaximum": 3,
+    "plannerReviewStateSeparated": true,
+    "planDecisionMutatesEvidence": false,
+    "stalePlanRejectedAndEligibilityRefreshed": true
+  },
+  "perSubjectIssueEvidence": {
+    "stage": "C3R-T",
+    "subject": "THEORY",
+    "artifactKind": "THEORY_RUNTIME",
+    "artifactRef": "THEORY_RUNTIME:c3r-t-theory-durable-learning-v1",
+    "browserToPostgresEvidenceRef": "THEORY_RUNTIME:c3r-t-theory-durable-learning-v1#browser-to-postgres",
+    "practiceCompatibilityEvidenceRef": "THEORY_RUNTIME:c3r-t-theory-durable-learning-v1#practice-compatibility",
+    "requiredExactly": {
+      "706": [
+        "FROZEN_D0",
+        "D_PLUS_1_UNAIDED_RECONSTRUCTION",
+        "SEALED_NON_SAME_SURFACE_D_PLUS_7_TRANSFER",
+        "TIMED_RECURRENCE",
+        "LATER_FAILURE_REOPEN"
+      ],
+      "707": [
+        "LEARNER_PRIVATE_FORCED_RLS_LEDGER",
+        "EXACT_SOURCE_ATTEMPT_ARTIFACT_ITEM_BINDING",
+        "BODYLESS_RECURRING_DEDUCTION_EVIDENCE_PROJECTION",
+        "SOURCE_BOUND_FAILURE_NOTES",
+        "RESTORE_EXPORT_DELETE"
+      ],
+      "708": [
+        "DETERMINISTIC_REVIEW_QUEUE",
+        "TODAY_AND_FULL_DAY",
+        "CORE_OUTCOME_MAXIMUM_3",
+        "PLANNER_REVIEW_STATE_SEPARATION",
+        "ACCEPT_EDIT_REJECT_WITHOUT_EVIDENCE_MUTATION",
+        "STALE_PLAN_REJECTION_AND_ELIGIBILITY_REFRESH"
+      ]
+    },
+    "everyItemMustBeProvedExactlyOnce": true,
+    "missingUnknownDuplicateCrossStageOrCrossSubjectFailsClosed": true,
+    "metadataOnly": true
+  },
+  "dataBoundary": {
+    "tables": "validated_c3r_p_common_durable_tables",
+    "subjectEnumAfterCandidateExactly": ["PRACTICE", "THEORY"],
+    "serverPinnedSubject": "THEORY",
+    "clientSubjectSelectorAllowed": false,
+    "forcedRlsPreserved": true,
+    "authenticatedReadOwnOnly": true,
+    "serviceRoleMutationOnly": true,
+    "childParentSubjectEqualityDatabaseEnforced": true,
+    "ledgerAndReceiptsBodyless": true,
+    "failureNoteLearnerPrivate": true,
+    "restoreExportDeleteSubjectScoped": true,
+    "theoryDeletePreservesPractice": true,
+    "practiceDeletePreservesTheory": true,
+    "deleteSerializesWithSameSubjectMutation": true
+  },
+  "runtimeBoundary": {
+    "featureFlag": "WCV_C3R_T_THEORY_ENABLED",
+    "featureDefaultOff": true,
+    "ownerAllowlistEnvironment": "WCV_C3R_T_OWNER_EMAILS",
+    "alsoRequiresAlphaAdminAllowlist": true,
+    "productionDenied": true,
+    "publicActivation": false,
+    "externalLearnerActivation": false,
+    "paymentActivation": false,
+    "providerCallsAllowed": false,
+    "remoteSupabaseMutationCount": 0,
+    "productionMutationCount": 0,
+    "lawRuntimeIncluded": false,
+    "practiceRuntimeBehaviorMustRemainCompatible": true,
+    "resetReplayCycleCount": 2,
+    "postgresqlServerVersionNum": 150008
+  },
+  "deliveryControl": {
+    "draftRequired": true,
+    "autoMergeAllowed": false,
+    "mergeAuthorizedByThisWork": false,
+    "sourceCorrectionMaximum": 2,
+    "formalReviewMaximum": 3,
+    "requiredReferenceLinesExactly": [
+      "Refs #706",
+      "Refs #707",
+      "Refs #708",
+      "Refs #714",
+      "Refs #781"
+    ],
+    "requiredDispositionLine": "All referenced canonical issues remain open; C3R-T closes none and does not start C3R-L.",
+    "closingKeywordsAllowedForCanonicalIssues": false
+  },
+  "pathManifest": {
+    "changedPathsExactly": [
+      ".github/workflows/c3r-t-theory-durable-learning-delta.yml",
+      "app/api/review-os/c3r-t/route.ts",
+      "app/app/c3r-t/page.tsx",
+      "components/review-os/c3r-t-theory-loop.tsx",
+      "config/dabangil-wcv-c3r-t-theory-durable-learning-delta-v1.json",
+      "docs/exec-plans/active/inverge-owner-study-os.md",
+      "lib/review-os/c3r-t-contract.ts",
+      "lib/review-os/c3r-t-engine.ts",
+      "lib/review-os/c3r-t-repository.ts",
+      "lib/review-os/c3r-t-service.ts",
+      "scripts/automation/produce-runtime-evidence.mjs",
+      "scripts/automation/runtime-gate.mjs",
+      "scripts/automation/wcv-c3r-p-practice-common-runtime.mjs",
+      "supabase/migrations/20260825054823_c3r_t_theory_durable_learning_delta.sql",
+      "supabase/migrations/20260825055252_c3r_t_theory_common_substrate_integration.sql",
+      "tests/e2e/wcv-c3r-t-playwright.config.ts",
+      "tests/e2e/wcv-c3r-t-theory-runtime.spec.ts",
+      "tests/s232f2-access-availability.test.mjs",
+      "tests/wcv-c3r-p-practice-common-durable-runtime.test.mjs",
+      "tests/wcv-c3r-t-theory-durable-learning-delta.test.mjs"
+    ],
+    "immutableHistoricalMigration": "supabase/migrations/20260822120000_c3r_p_practice_common_durable_substrate.sql",
+    "forwardMigrationsExactly": [
+      "supabase/migrations/20260825054823_c3r_t_theory_durable_learning_delta.sql",
+      "supabase/migrations/20260825055252_c3r_t_theory_common_substrate_integration.sql"
+    ]
+  },
+  "postMergeState": {
+    "c3rP": "complete_and_unreverted",
+    "c3rT": "complete_only_after_validated_expected_head_pinned_merge_receipt",
+    "c3rL": "blocked_until_validated_c3r_t_receipt_then_authorized_unstarted",
+    "wcvC3": "incomplete",
+    "governedIssuesRemainOpen": [706, 707, 708, 714, 781],
+    "remoteMutationCount": 0,
+    "successorStarted": false
+  }
+}

@@ -12,8 +12,14 @@ import {
   producePostgresSecurityOracleEvidence,
 } from "./wcv-c3-pre-p-postgresql-security-state-oracle.mjs";
 import {
+  cleanupC3RTNativeEvidence,
+  cleanupC3RLNativeEvidence,
   isC3RPRiskCandidate,
+  isC3RLRiskCandidate,
+  isC3RTRiskCandidate,
   produceC3RPNativeEvidence,
+  produceC3RLNativeEvidence,
+  produceC3RTNativeEvidence,
 } from "./wcv-c3r-p-practice-common-runtime.mjs";
 
 export const SCHEMA_VERSION = "inverge.runtime_evidence.v2";
@@ -3217,6 +3223,24 @@ function produce(riskFile) {
     });
     return;
   }
+  if (isC3RLRiskCandidate(riskResult)) {
+    produceC3RLNativeEvidence({
+      context,
+      evidencePath: process.env.RUNTIME_EVIDENCE_PATH,
+      riskBytes,
+      riskResult,
+    });
+    return;
+  }
+  if (isC3RTRiskCandidate(riskResult)) {
+    produceC3RTNativeEvidence({
+      context,
+      evidencePath: process.env.RUNTIME_EVIDENCE_PATH,
+      riskBytes,
+      riskResult,
+    });
+    return;
+  }
   if (isC3RPRiskCandidate(riskResult)) {
     produceC3RPNativeEvidence({
       context,
@@ -3250,7 +3274,11 @@ function produce(riskFile) {
 function main() {
   const options = parseArguments();
   if (options.cleanupOnly) {
-    const complete = cleanupContainer(executionContext().containerName);
+    const context = executionContext();
+    const genericComplete = cleanupContainer(context.containerName);
+    const lawComplete = cleanupC3RLNativeEvidence(context);
+    const theoryComplete = cleanupC3RTNativeEvidence(context);
+    const complete = genericComplete && lawComplete && theoryComplete;
     if (options.requireComplete && !complete) throw new Error("isolated Postgres cleanup is incomplete.");
     console.log(JSON.stringify({ cleanup: complete ? "complete" : "incomplete" }));
     return;
