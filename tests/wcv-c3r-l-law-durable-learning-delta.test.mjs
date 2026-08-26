@@ -21,9 +21,11 @@ import { c3rLCompletionPlanBinding, c3rLDeletedView } from
   "../lib/review-os/c3r-l-contract.ts";
 import {
   C3R_L_ENUM_MIGRATION_PATH,
+  C3R_L_CONTRACT_PATH,
   C3R_L_INTEGRATION_MIGRATION_PATH,
   C3R_L_NATIVE_SCHEMA_VERSION,
   C3R_L_RUNTIME_PRODUCER_VERSION,
+  C3R_L_RUNTIME_SCHEMA_VERSION,
   c3rLNativePrerequisiteClosure,
   classifyC3RLBrowserFailureStage,
   classifyC3RLNextFailureDiagnostic,
@@ -43,9 +45,8 @@ import { runtimeRequiredPathRecords } from
 
 const root = path.resolve(import.meta.dirname, "..");
 const read = (name) => fs.readFileSync(path.join(root, name), "utf8");
-const contract = JSON.parse(read(
-  "config/dabangil-wcv-c3r-l-law-durable-learning-delta-v1.json",
-));
+const contractSource = read(C3R_L_CONTRACT_PATH);
+const contract = JSON.parse(contractSource);
 const authority = JSON.parse(read(
   "config/dabangil-wcv-c3r-a1-serial-program-authority-v1.json",
 ));
@@ -85,6 +86,26 @@ const sourceBinding = {
   applicableAsOf: anchor.applicableAsOf,
 };
 const revisionId = "d9f7e7fa-9d1d-4c65-8d2f-719e44356001";
+
+function canonicalJson(value) {
+  if (Array.isArray(value)) return `[${value.map(canonicalJson).join(",")}]`;
+  if (value && typeof value === "object") {
+    return `{${Object.keys(value).sort().map((key) =>
+      `${JSON.stringify(key)}:${canonicalJson(value[key])}`).join(",")}}`;
+  }
+  return JSON.stringify(value);
+}
+
+function resignArtifact(artifact) {
+  const base = { ...artifact };
+  delete base.artifactSha256;
+  return {
+    ...base,
+    artifactSha256: crypto.createHash("sha256")
+      .update(Buffer.from(canonicalJson(base), "utf8"))
+      .digest("hex"),
+  };
+}
 
 function lawClaim(overrides = {}) {
   return {
@@ -804,6 +825,7 @@ test("LAW_RUNTIME artifact binds two isolated exact-head PostgreSQL cycles", () 
     for (const [migrationPath, bytes] of [
       [C3R_L_ENUM_MIGRATION_PATH, enumSql],
       [C3R_L_INTEGRATION_MIGRATION_PATH, integrationSql],
+      [C3R_L_CONTRACT_PATH, contractSource],
     ]) {
       const destination = path.join(artifactRepository, migrationPath);
       fs.mkdirSync(path.dirname(destination), { recursive: true });
@@ -817,7 +839,8 @@ test("LAW_RUNTIME artifact binds two isolated exact-head PostgreSQL cycles", () 
     gitFixture(["config", "user.name", "C3R-L artifact fixture"]);
     gitFixture(["config", "user.email", "c3r-l-artifact@example.invalid"]);
     gitFixture(["config", "core.autocrlf", "false"]);
-    gitFixture(["add", "--", C3R_L_ENUM_MIGRATION_PATH, C3R_L_INTEGRATION_MIGRATION_PATH]);
+    gitFixture(["add", "--", C3R_L_ENUM_MIGRATION_PATH, C3R_L_INTEGRATION_MIGRATION_PATH,
+      C3R_L_CONTRACT_PATH]);
     gitFixture(["commit", "--quiet", "-m", "fixture"]);
     const candidateHead = gitFixture(["rev-parse", "HEAD"]);
     const candidateTree = gitFixture(["rev-parse", "HEAD^{tree}"]);
@@ -833,8 +856,50 @@ test("LAW_RUNTIME artifact binds two isolated exact-head PostgreSQL cycles", () 
       candidateTree,
       migrationIdentities,
       resetReplayCycles: [cycle(1), cycle(2)],
-    });
+    }, artifactRepository);
+    const expectedPerItemRuntimeEvidenceRefs = ["706", "707", "708"]
+      .flatMap((issue) => contract.perSubjectIssueEvidence.requiredExactly[issue]
+        .map((evidenceId) => {
+          const evidenceRef = `${contract.perSubjectIssueEvidence.artifactRef}#${issue}:${evidenceId}`;
+          return {
+            issue: Number(issue),
+            evidenceId,
+            evidenceRef,
+            runtimeEvidenceRef: evidenceRef,
+          };
+        }));
+    assert.equal(artifact.schemaVersion, C3R_L_RUNTIME_SCHEMA_VERSION);
+    assert.deepEqual(artifact.perItemRuntimeEvidenceRefs, expectedPerItemRuntimeEvidenceRefs);
     assert.equal(validateLawRuntimeArtifact(artifact, artifactRepository), artifact);
+    assert.throws(() => validateLawRuntimeArtifact(resignArtifact({
+      ...artifact,
+      practiceCompatibilityEvidenceRef: `${artifact.practiceCompatibilityEvidenceRef}-drift`,
+    }), artifactRepository), /LAW_RUNTIME artifact is invalid/u);
+    const missingPracticeCompatibilityRef = { ...artifact };
+    delete missingPracticeCompatibilityRef.practiceCompatibilityEvidenceRef;
+    assert.throws(() => validateLawRuntimeArtifact(
+      resignArtifact(missingPracticeCompatibilityRef), artifactRepository,
+    ), /keys are not exact/u);
+    for (const perItemRuntimeEvidenceRefs of [
+      artifact.perItemRuntimeEvidenceRefs.slice(1),
+      [...artifact.perItemRuntimeEvidenceRefs, artifact.perItemRuntimeEvidenceRefs[0]],
+      [artifact.perItemRuntimeEvidenceRefs[1], artifact.perItemRuntimeEvidenceRefs[0],
+        ...artifact.perItemRuntimeEvidenceRefs.slice(2)],
+      artifact.perItemRuntimeEvidenceRefs.map((entry, index) => index === 0
+        ? { ...entry, issue: 707 }
+        : entry),
+      artifact.perItemRuntimeEvidenceRefs.map((entry, index) => index === 0
+        ? { ...entry, evidenceId: "UNKNOWN_ITEM" }
+        : entry),
+      artifact.perItemRuntimeEvidenceRefs.map((entry, index) => index === 0
+        ? { ...entry, evidenceRef: `${entry.evidenceRef}-drift` }
+        : entry),
+    ]) {
+      assert.throws(() => validateLawRuntimeArtifact(resignArtifact({
+        ...artifact,
+        perItemRuntimeEvidenceRefs,
+      }), artifactRepository), /per-item runtime evidence references are invalid/u);
+    }
     assert.throws(() => validateLawRuntimeArtifact({
       ...artifact,
       resetReplayCycles: [{ ...cycle(1), lawPostgrestArgumentNamesBound: false }, cycle(2)],
@@ -843,6 +908,10 @@ test("LAW_RUNTIME artifact binds two isolated exact-head PostgreSQL cycles", () 
       ...artifact,
       rawLearnerBody: "private",
     }, artifactRepository), /keys are not exact/u);
+    fs.appendFileSync(path.join(artifactRepository, C3R_L_CONTRACT_PATH), "\n");
+    assert.throws(() => validateLawRuntimeArtifact(artifact, artifactRepository),
+      /evidence authority drifted from the candidate head/u);
+    fs.writeFileSync(path.join(artifactRepository, C3R_L_CONTRACT_PATH), contractSource, "utf8");
     fs.appendFileSync(path.join(artifactRepository, C3R_L_ENUM_MIGRATION_PATH), "\n-- dirty\n");
     assert.throws(() => validateLawRuntimeArtifact(artifact, artifactRepository),
       /closed ordered head files/u);

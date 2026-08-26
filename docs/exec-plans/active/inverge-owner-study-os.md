@@ -2,14 +2,14 @@
 
 ## Current main
 
-- SHA: `4989f02f54f187fb440f2bfa6722e4ee832420de`
-- tree: `d24d7d8259918e0a50d8a6b0455289b01ef6f3c4`
+- SHA: `a121eea722fd2a9054d11a5c0e5f3893b52da014`
+- tree: `5b151f72cc339cd5d17d89b6f01c7b4380e71759`
 
 ## Current milestones
 
-- `PARALLEL_EXECUTION_V1`: merged and validated; protected-path work remains serialized
-- M1 / C3R-T: merged, repaired, and validated
-- M2 / C3R-L: merged and validated
+- `PARALLEL_EXECUTION_V1`: merged and validated; protected-path work serialized
+- M1 / C3R-T: merged, repaired, and receipt-validated by PR #834
+- M2 / C3R-L: merged and receipt-validated by PR #834
 - M3 / WCV-C3 Foundation Freeze: active, source-only
 - M4 / common Kernel and SubjectAdapter: Draft integration-held; refresh required after M3
 - Question Foundry V1: Draft integration-held
@@ -17,29 +17,28 @@
 
 ## Branches and PRs
 
-- M3: `codex/owner-study-m3-wcv-c3-foundation-freeze`; Draft PR pending; isolated worktree `.agent-factory/worktrees/owner-study-m3-wcv-c3-foundation-freeze`; base `4989f02f54f187fb440f2bfa6722e4ee832420de`
+- M3: `codex/owner-study-m3-wcv-c3-foundation-freeze`; PR pending; isolated worktree `.agent-factory/worktrees/owner-study-m3-wcv-c3-foundation-freeze`; base `a121eea722fd2a9054d11a5c0e5f3893b52da014`
 - M4: `codex/owner-study-lane-b-first-stage-kernel`; Draft PR #813; parked
 - Question Foundry: `codex/owner-study-lane-c-question-foundry`; Draft PR #810; parked
 
 ## Lane ownership
 
-- Lane A / M3 owns exactly `AGENTS.md`, the Foundation Freeze decision/contract/test, `scripts/run-node-tests.mjs`, and this log
-- Lane B and Lane C are read-only until M3's validated merge; migrations, runtime, auth/RLS, packages/locks, workflows, and Production configuration have no M3 owner
+- M3 owns exactly `AGENTS.md`, `config/dabangil-wcv-c3-foundation-freeze-v1.json`, `docs/decisions/2026-08-26-owner-wcv-c3-foundation-freeze.md`, this log, `scripts/run-node-tests.mjs`, and `tests/wcv-c3-foundation-freeze.test.mjs`
+- M4 and Question Foundry remain read-only; migrations, runtime, auth/RLS, packages/locks, workflows, remote Supabase, and Production have no M3 owner
 
-## Completed receipts
+## Completed receipts and merge results
 
-- PR #800 / C3R-P: reviewed `8f434027e5d20a5f3e799b1c2d85876e766b3858`; resulting main `71fd878a7369c25a153bc90389347039684c501f`; tree `f6fb7bc1d1613a8431a4bbdfe155eea9d9f5303c`
-- PR #806 / Practice repair: reviewed `2b24f29d8e7a8ad41289775a449afce3c0ef5b44`; resulting main `f3251d0161873c0113d82ee2e72b422436a01158`; tree `42859133338b8d1f638f852f170c0ddbb6be329a`
-- PR #808 / `PARALLEL_EXECUTION_V1`: reviewed `b06874e4e354e690da53ecd8497fdda04d2cf6ae`; resulting main `cad8b98e4f13a2fe50d82ffd983616adc70eb75a`; tree `dae1e5d7a2d7138f2e793f50e08f721ece354472`
-- PR #816 / C3R-T: reviewed `96933cbe08864c6b3cb94a7349cb33e92bf2df8d`; resulting main `a70a7e0dbde7919c82d00189dafb91b7681caca3`; tree `3b01fc6b9ea5576992dd9b9612de7dae4d546b7f`
-- PR #818 / Theory repair 1: reviewed `ff73a280cb476a75e5a8038dd7f1171effae8b6a`; resulting main `64b7e3655e4fc78646aa4281abc6855d180f209b`; tree `a9f3a119b7a3b7d4c586eb6ef58f1fd32f8a0c84`
-- PR #820 / Theory repair 2: reviewed `53584fead7ea1a786bb163f66cc7ce1b767e8232`; resulting main `75f3ce787d31047c2bceacc2ef752c0bfdfb23cc`; tree `a3e8ab7618cbceddb2c9ac156a84fc45bb018f1b`
-- PR #832 / C3R-L: reviewed `fa0084b13ea2e6c2bedf72f0084d57c66158bd4d`; resulting main `4989f02f54f187fb440f2bfa6722e4ee832420de`; tree `d24d7d8259918e0a50d8a6b0455289b01ef6f3c4`
+- PR #800/#806 / C3R-P: reviewed `8f434027e5d20a5f3e799b1c2d85876e766b3858` and `2b24f29d8e7a8ad41289775a449afce3c0ef5b44`; repaired resulting main `f3251d0161873c0113d82ee2e72b422436a01158`
+- PR #807/#808 / start and parallel gates: reviewed `eae0cfc27d6c44f244cd368882fdbdeae7282a0c` and `b06874e4e354e690da53ecd8497fdda04d2cf6ae`; parallel resulting main `cad8b98e4f13a2fe50d82ffd983616adc70eb75a`
+- PR #816/#818/#820 / C3R-T: reviewed stage head `96933cbe08864c6b3cb94a7349cb33e92bf2df8d`; repaired resulting main `75f3ce787d31047c2bceacc2ef752c0bfdfb23cc`
+- PR #832 / C3R-L: reviewed `fa0084b13ea2e6c2bedf72f0084d57c66158bd4d`; resulting main `4989f02f54f187fb440f2bfa6722e4ee832420de`
+- PR #836 / official-source currentness: reviewed `3a2f9d89fd904ba07e0aa18e4d92f7bdd2671dd3`; resulting main `2991e2579925e65173468049a94143bd99dc8e81`
+- PR #834 / C3R-T/L receipt evidence repair: reviewed `768cf4a09caedc1c3aad0c514a3ada3d97813817`; resulting main `a121eea722fd2a9054d11a5c0e5f3893b52da014`; tree `5b151f72cc339cd5d17d89b6f01c7b4380e71759`; Issue #833 closed
 
 ## Current blocker
 
-- M3 Draft PR is not yet open; exact-head CI and fresh formal review have not run
+- M3 authority and tests still bind the pre-repair tree and must be refreshed before the Draft PR opens
 
 ## Next exact action
 
-- `node --test tests/wcv-c3-foundation-freeze.test.mjs`
+- `npm.cmd test -- tests/wcv-c3-foundation-freeze.test.mjs`
