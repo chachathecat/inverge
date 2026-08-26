@@ -5,11 +5,11 @@ Date: 2026-08-26 (KST)
 ## Decision
 
 Install the source-only `WCV_C3_FOUNDATION_FREEZE_V1` closeout for milestone
-M3 of `INVERGE_OWNER_STUDY_OS`. It consumes the live-GitHub-validated C3R-P,
-the merged C3R-T plus its two merged repairs, and the validated C3R-L
-resulting-main state at
-`4989f02f54f187fb440f2bfa6722e4ee832420de`, tree
-`d24d7d8259918e0a50d8a6b0455289b01ef6f3c4`.
+M3 of `INVERGE_OWNER_STUDY_OS`. It consumes the live GitHub history for C3R-P,
+C3R-T and C3R-L, plus PR #834's terminal current-tree receipt-evidence repair
+at resulting main
+`a121eea722fd2a9054d11a5c0e5f3893b52da014`, tree
+`5b151f72cc339cd5d17d89b6f01c7b4380e71759`.
 
 This Work is not a product stage, runtime feature, master plan, generalized
 receipt system, or second delivery control plane. GitHub remains the sole
@@ -18,10 +18,14 @@ fail-closed, reviewable summary of the exact live receipts and the immutable
 foundation bindings consumed by later Owner Study OS milestones.
 
 The merged C3R-P/T/L chain and repairs are existing inputs, not outcomes
-created by this Work. C3R-T's late P2 review is recorded honestly; its two
-repairs plus this Work's fresh exact-head review validate the current repaired
-tree. After this decision's expected-head-pinned squash merge and validated
-GitHub receipt:
+created by this Work. PR #800 is the only originally conforming stage receipt.
+PR #816's late actionable P2 and missing artifact-carried exact item references
+remain historical facts. PR #832 also lacked artifact-carried exact item
+references. PR #834 supplies the terminal current-tree Practice, Theory and Law
+validation bundle, exact ordered 16-item evidence per subject, clean `0/0/0`
+review, and zero unresolved threads. It does not retroactively relabel PR #816
+or PR #832 as clean stage receipts and does not weaken C3R-A1. After this
+decision's expected-head-pinned squash merge and validated GitHub receipt:
 
 - their complete-and-unreverted statuses are recorded in the freeze summary;
 - the WCV-C3 terminal outcome and M3 are complete;
@@ -46,7 +50,9 @@ The exact changed-path manifest is closed in
 `config/dabangil-wcv-c3-foundation-freeze-v1.json`. The candidate uses a Draft
 PR, one ordinary branch, protected squash-only merge, current-head required
 checks, a fresh exact-head review with actionable P0/P1/P2 `0/0/0`, and zero
-unresolved actionable threads. Its sole closing keyword closes #781 on the
-protected merge and #781 must reopen if resulting-main validation fails.
-#706, #707, and #708 stay open until the validated M3 resulting-main receipt;
-#714 is reference-only and remains open after closeout.
+unresolved actionable threads. The sole closing keyword is `Closes #837` and
+records only protected delivery of this M3 source candidate; it is not a WCV-C3
+completion receipt. Issues #706, #707, #708 and #781 stay reference-only and
+open through the protected merge. They close only after the exact M3
+resulting-main SHA/tree and GitHub receipt validate. Issue #714 remains open
+with C3 complete and C4/C6 preserved. #833 and #834 are historical references.

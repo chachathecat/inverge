@@ -210,11 +210,12 @@ Issue #701 remains the parent program. The exact identifiers are completed
 roadmap item `WCV-C2`, completed campaign `C2`, recovery tracker #717,
 completed source-only stages C2R-A for Issue #702 and C2R-B for Issue #714,
 and completed Practice, Theory and Law stages C2R-C-P, C2R-C-T and C2R-C-L
-for Issue #703 under expected-head-merge-and-receipt semantics. The current
-dependency-ready non-Production selector is roadmap item `WCV-C3`, campaign
-`C3`, lead Issue #706, authorized but unstarted. Issue #714 remains open: only
-its C2 allocation is complete, while C3, C4 and C6 remain preserved. The
-canonical tuple is `WCV-C3 / C3 / #706 / authorized_unstarted`.
+for Issue #703 under expected-head-merge-and-receipt semantics. The historical
+post-#717, pre-M3 dependency-ready non-Production selector was roadmap item
+`WCV-C3`, campaign `C3`, lead Issue #706, authorized but unstarted. At that
+boundary Issue #714 remained open with only its C2 allocation complete and C3,
+C4 and C6 preserved. The historical canonical tuple was
+`WCV-C3 / C3 / #706 / authorized_unstarted`.
 
 `launchConvergenceAmendment`, `wcvCampaignOverlay`, `roadmapContract`, the ULC
 preserved-current-authority mirror and active roadmap must expose one identical
@@ -407,7 +408,35 @@ reconciliation packet. Repaired known-applied history is never replayed
 remotely. C3R-P remains `authorized_unstarted`; C3R-T and C3R-L remain receipt-
 blocked and WCV-C3 remains incomplete.
 
-## 2D. Unified product and multisurface launch convergence
+## 2D. WCV-C3 Foundation Freeze closeout
+
+`WCV_C3_FOUNDATION_FREEZE_V1` is the source-only M3 closeout. It records PR
+#800 as the only originally conforming stage receipt, preserves the late
+Theory P2 and missing historical Theory/Law artifact-item bindings, and binds
+PR #834 as the terminal current-tree receipt-evidence repair. PR #834 validated
+Practice, Theory and Law at resulting main
+`a121eea722fd2a9054d11a5c0e5f3893b52da014`, tree
+`5b151f72cc339cd5d17d89b6f01c7b4380e71759`, with exact ordered 16-item
+evidence per subject, actionable `0/0/0`, zero unresolved threads and zero
+remote mutation. It does not retroactively relabel PR #816 or PR #832 clean.
+
+Only after M3's own expected-head-pinned squash merge and validated GitHub
+receipt are C3R-P/T/L and WCV-C3 complete and the listed common durable
+foundation bindings frozen. The obsolete C3R-P selector is then cleared.
+Issue #714 remains open with C2/C3 complete and C4/C6 preserved. The Owner
+Study OS overlay continues to M4 / `FIRST_STAGE_COMMON_KERNEL`, but M4 is not a
+new V13 or ULC stage. ULC-M1 stays `future_gated_unselected_unstarted` on its
+unchanged `[WCV-C3, S241A]` dependencies, and the canonical ULC order does not
+change.
+
+The M3 delivery PR closes only Issue #837. Issues #706/#707/#708/#781 remain
+open through merge and close only after exact resulting-main validation.
+Owner-only/default-off and zero public, payment, provider, external learner,
+remote Supabase, Production, migration-apply and deployment mutation remain in
+force. No learning-efficacy, transfer-calibration, measurement-calibration or
+calibrated-item-quality claim is created.
+
+## 2E. Unified product and multisurface launch convergence
 
 The 2026-08-14 ULC-0 decision is a mandatory subordinate V13 launch
 amendment led by Issue #719. It is not V14, V13.1, another active master or

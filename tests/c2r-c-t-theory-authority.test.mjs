@@ -55,11 +55,16 @@ test("C2R-C-T remains complete after terminal Law selects WCV-C3", async () => {
   assert.equal(stages.get("C2R-C-L").state, "complete_law_runtime");
   assert.deepEqual(stages.get("C2R-C-L").dependencies, ["C2R-C-T"]);
   assert.equal(stage.stage.postMergeNextStage, "C2R-C-L");
-  assert.match(roadmap, /soleNextImplementationItem: WCV-C3/);
+  assert.match(roadmap, /completedImplementationItem: WCV-C3/);
+  assert.match(roadmap, /ownerStudyOsNextMilestone: M4_FIRST_STAGE_COMMON_KERNEL/);
   assert.match(roadmap, /soleNextReplacementStage: null/);
   assert.match(roadmap, /c2rCTState: complete_theory_runtime/);
   assert.match(roadmap, /c2rCLState: complete_law_runtime/);
-  assert.match(agents, /WCV-C3 \/ C3 \/ #706 \/ authorized_unstarted/);
+  assert.match(
+    agents,
+    /Historical post-#717 selector state:[\s\S]*WCV-C3 \/ C3 \/ #706 \/\s+authorized_unstarted/,
+  );
+  assert.match(agents, /WCV-C3 Foundation Freeze/);
 });
 
 test("C2R-C-T preserves exactly five PR 762 Theory declarations", async () => {

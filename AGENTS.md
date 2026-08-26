@@ -176,13 +176,14 @@ The authority-graph identifiers are distinct: completed roadmap item `WCV-C2`,
 completed campaign `C2`, recovery tracker #717, completed source-only stages
 `C2R-A` for Issue #702 and `C2R-B` for Issue #714, and completed Practice,
 Theory and Law runtime stages `C2R-C-P`, `C2R-C-T` and `C2R-C-L` for Issue
-#703. The next dependency-ready non-Production selector represented after the
-terminal expected-head-pinned merge and validated #717 receipt is roadmap item
-`WCV-C3`, campaign `C3`, lead Issue #706, authorized but unstarted. The
-canonical tuple is `WCV-C3 / C3 / #706 / authorized_unstarted`. An issue state
-or issue closure cannot substitute for a replacement-stage merge or receipt.
-C2R-B completes only the Issue #714 allocation for campaign C2 and leaves
-Issue #714 open with its C3, C4 and C6 allocations preserved.
+#703. Historical post-#717 selector state: after the terminal expected-head-
+pinned merge and validated #717 receipt, the next dependency-ready non-
+Production selector was roadmap item `WCV-C3`, campaign `C3`, lead Issue #706,
+authorized but unstarted, with canonical tuple `WCV-C3 / C3 / #706 /
+authorized_unstarted`. An issue state or issue closure cannot substitute for a
+replacement-stage merge or receipt. At that historical boundary C2R-B had
+completed only the Issue #714 allocation for campaign C2 and left Issue #714
+open with its C3, C4 and C6 allocations preserved.
 
 For WCV-C3 recovery only, C3R-A0 is the installed immutable PostgreSQL
 migration-dependency authority and C3R-A1 is the independently complete
@@ -199,20 +200,26 @@ leaves WCV-C3 incomplete.
 
 ## WCV-C3 Foundation Freeze
 
-`WCV_C3_FOUNDATION_FREEZE_V1` is the source-only M3 closeout after validated
-PR #800 C3R-P, merged PR #816 C3R-T plus PR #818/#820 repairs, and validated
-PR #832 C3R-L. The late Theory P2 is recorded rather than relabeled clean;
-the repairs and M3's fresh exact-head review validate the current repaired
-tree. GitHub remains the sole receipt authority; the repository contract is a
-reviewable fail-closed summary and creates no new receipt system.
+`WCV_C3_FOUNDATION_FREEZE_V1` is the source-only M3 closeout after PR #800
+C3R-P, PR #816 C3R-T plus PR #818/#820 repairs, PR #832 C3R-L and PR #834's
+terminal current-tree receipt-evidence repair. PR #800 is the only originally
+conforming stage receipt. The late Theory P2 and the missing artifact-carried
+exact item references in the historical Theory and Law artifacts remain
+recorded rather than relabeled clean. PR #834 supplies the current-tree
+Practice/Theory/Law validation bundle and M3 requires its own fresh exact-head
+review. GitHub remains the sole receipt authority; the repository contract is
+a reviewable fail-closed summary and creates no new receipt system.
 
-C3R-P/T/L and the repair chain are existing merged inputs. Only after the freeze decision's own
-expected-head-pinned squash merge and validated GitHub receipt are WCV-C3 and
-M3 terminally closed and the listed foundation Git blobs frozen. Issue #714
-then has exactly C2/C3 complete with C4/C6 preserved and remains open. The
-next Owner Study OS milestone is M4 / `FIRST_STAGE_COMMON_KERNEL`; its parked
-candidate must refresh from the freeze resulting main. This closeout neither
-selects nor starts ULC-M1 and changes no canonical ULC order.
+C3R-P/T/L and the repair chain are existing merged inputs. Only after the
+freeze decision's own expected-head-pinned squash merge and validated GitHub
+receipt are WCV-C3 and M3 terminally closed and the listed foundation Git
+blobs frozen. The delivery PR closes only Issue #837; #706/#707/#708/#781
+remain open through merge and close only after the resulting-main receipt
+validates. Issue #714 then has exactly C2/C3 complete with C4/C6 preserved and
+remains open. The next Owner Study OS milestone is M4 /
+`FIRST_STAGE_COMMON_KERNEL`; its parked candidate must refresh from the freeze
+resulting main. This closeout neither selects nor starts ULC-M1 and changes no
+canonical ULC order.
 
 The freeze changes no migration, runtime, workflow, package/lock, auth or RLS
 path and performs no migration apply. Owner-only/default-off remains in force;

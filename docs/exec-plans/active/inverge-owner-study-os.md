@@ -17,13 +17,13 @@
 
 ## Branches and PRs
 
-- M3: `codex/owner-study-m3-wcv-c3-foundation-freeze`; PR pending; isolated worktree `.agent-factory/worktrees/owner-study-m3-wcv-c3-foundation-freeze`; base `a121eea722fd2a9054d11a5c0e5f3893b52da014`
+- M3: `codex/owner-study-m3-wcv-c3-foundation-freeze`; PR pending; delivery Issue #837; isolated worktree `.agent-factory/worktrees/owner-study-m3-wcv-c3-foundation-freeze`; base `a121eea722fd2a9054d11a5c0e5f3893b52da014`
 - M4: `codex/owner-study-lane-b-first-stage-kernel`; Draft PR #813; parked
 - Question Foundry: `codex/owner-study-lane-c-question-foundry`; Draft PR #810; parked
 
 ## Lane ownership
 
-- M3 owns exactly `AGENTS.md`, `config/dabangil-wcv-c3-foundation-freeze-v1.json`, `docs/decisions/2026-08-26-owner-wcv-c3-foundation-freeze.md`, this log, `scripts/run-node-tests.mjs`, and `tests/wcv-c3-foundation-freeze.test.mjs`
+- M3 owns exactly the 34-path manifest in `config/dabangil-wcv-c3-foundation-freeze-v1.json`: its decision/contract/test/registry/log, four canonical authority mirrors, and 24 historical mirror/runner assertion tests
 - M4 and Question Foundry remain read-only; migrations, runtime, auth/RLS, packages/locks, workflows, remote Supabase, and Production have no M3 owner
 
 ## Completed receipts and merge results
@@ -34,11 +34,12 @@
 - PR #832 / C3R-L: reviewed `fa0084b13ea2e6c2bedf72f0084d57c66158bd4d`; resulting main `4989f02f54f187fb440f2bfa6722e4ee832420de`
 - PR #836 / official-source currentness: reviewed `3a2f9d89fd904ba07e0aa18e4d92f7bdd2671dd3`; resulting main `2991e2579925e65173468049a94143bd99dc8e81`
 - PR #834 / C3R-T/L receipt evidence repair: reviewed `768cf4a09caedc1c3aad0c514a3ada3d97813817`; resulting main `a121eea722fd2a9054d11a5c0e5f3893b52da014`; tree `5b151f72cc339cd5d17d89b6f01c7b4380e71759`; Issue #833 closed
+- M3 candidate: 34-path manifest clean; focused changed-file suite 252/252; full suite 1595/1595; typecheck and changed-file/repository lint clean with 11 unchanged warnings; webpack production build clean; fresh review P0/P1/P2 `0/0/0`; remote mutation count 0
 
 ## Current blocker
 
-- M3 authority and tests still bind the pre-repair tree and must be refreshed before the Draft PR opens
+- none before Draft PR delivery; protected M3 squash merge will require exact-head Owner approval after CI
 
 ## Next exact action
 
-- `npm.cmd test -- tests/wcv-c3-foundation-freeze.test.mjs`
+- stage the exact 34-path M3 manifest, run cached diff checks, and create the ordinary candidate commit
