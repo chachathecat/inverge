@@ -935,6 +935,159 @@ test("starting a later retry never regresses completed concept evidence provenan
   );
 });
 
+test("keeps unreviewed independent retries active without consuming retry authority", () => {
+  let retryDecision = "unavailable";
+  const registry = createSubjectAdapterRegistry([makeAdapter({
+    forceDecision: (input) => input.attempt.kind === "independent_retry"
+      ? retryDecision
+      : undefined,
+  })]);
+  let state = beginAttempt(initialState(), {
+    expectedRevision: 1,
+    attemptId: "attempt-outage-initial",
+    questionId: "acct-q1",
+    trustedStartedAt: "2026-08-25T00:00:00.000Z",
+  }, registry);
+  state = submitAnswer(state, {
+    expectedRevision: 2,
+    attemptId: "attempt-outage-initial",
+    reviewTaskId: "review-outage",
+    trustedSubmittedAt: "2026-08-25T00:00:02.000Z",
+    submission: draft(1),
+  }, registry);
+  state = beginIndependentRetry(state, {
+    expectedRevision: 3,
+    reviewTaskId: "review-outage",
+    independentRetryId: "retry-outage-one",
+    retryAttemptId: "attempt-outage-retry-one",
+    trustedStartedAt: "2026-08-25T00:00:03.000Z",
+  }, registry);
+
+  const activeSnapshot = canonicalJson(state);
+  const activeVariant = structuredClone(state.independentRetries[0].questionReference);
+  for (const [decision, submittedAt] of [
+    ["unavailable", "2026-08-25T00:00:04.000Z"],
+    ["withheld", "2026-08-25T00:00:05.000Z"],
+    ["unavailable", "2026-08-25T00:00:06.000Z"],
+  ]) {
+    retryDecision = decision;
+    expectKernelCode(() => submitAnswer(state, {
+      expectedRevision: 4,
+      attemptId: "attempt-outage-retry-one",
+      reviewTaskId: "review-outage",
+      trustedSubmittedAt: submittedAt,
+      submission: draft(1),
+    }, registry), "invalid_transition");
+    assert.equal(canonicalJson(state), activeSnapshot);
+    assert.equal(state.revision, 4);
+    assert.equal(state.independentRetries.length, 1);
+    assert.deepEqual(state.independentRetries[0].questionReference, activeVariant);
+    assert.equal(state.independentRetries[0].lineageReceipt.priorRetryCount, 0);
+    assert.equal(state.independentRetries[0].outcome, "active");
+    assert.equal(state.attempts.at(-1).state, "in_progress");
+    assert.equal(state.reviewTasks[0].status, "retry_active");
+    assert.deepEqual(state.conceptStates[0].evidenceAttemptIds, ["attempt-outage-initial"]);
+  }
+
+  const queueKinds = buildTodayQueue(state, {
+    trustedGeneratedAt: "2026-08-25T00:00:06.000Z",
+  }, registry).items.map((item) => item.kind);
+  assert.deepEqual(queueKinds, ["active_attempt", "new_question"]);
+  assert.equal(queueKinds.includes("independent_retry"), false);
+  expectKernelCode(() => beginIndependentRetry(state, {
+    expectedRevision: 4,
+    reviewTaskId: "review-outage",
+    independentRetryId: "retry-outage-two",
+    retryAttemptId: "attempt-outage-retry-two",
+    trustedStartedAt: "2026-08-25T00:00:06.000Z",
+  }, registry), "invalid_transition");
+
+  for (const decision of ["unavailable", "withheld"]) {
+    retryDecision = decision;
+    const hostile = structuredClone(state);
+    const retryAttempt = hostile.attempts.at(-1);
+    const submission = parseAnswerSubmission(draft(1), {
+      attemptStartedAt: retryAttempt.startedAt,
+      submittedAt: "2026-08-25T00:00:07.000Z",
+    });
+    const preEvaluationAttempt = {
+      ...structuredClone(retryAttempt),
+      state: "in_progress",
+      submission: null,
+      evaluation: null,
+    };
+    const evaluationInput = {
+      schemaVersion: "first_stage.subject_evaluation_input.v1",
+      questionReference: retryAttempt.questionReference,
+      attempt: preEvaluationAttempt,
+      submission,
+      submissionSha256: digest(submission),
+    };
+    retryAttempt.state = "evaluated";
+    retryAttempt.submission = submission;
+    retryAttempt.evaluation = registry.require("accounting").evaluateSubmission(evaluationInput);
+    hostile.independentRetries[0].completedAt = submission.submittedAt;
+    hostile.independentRetries[0].outcome = "failed";
+    hostile.reviewTasks[0].status = "pending";
+    hostile.revision = 5;
+
+    for (const consume of [
+      () => validateFirstStageKernelState(
+        hostile,
+        TRUSTED_OWNER_ID,
+        TRUSTED_CYCLE_DEFINITION_SHA256,
+        registry,
+      ),
+      () => buildTodayQueue(hostile, {
+        trustedGeneratedAt: "2026-08-25T00:00:08.000Z",
+      }, registry),
+      () => presentAttemptQuestion(hostile, "attempt-outage-retry-one", registry),
+      () => beginAttempt(hostile, {
+        expectedRevision: 5,
+        attemptId: `attempt-after-hostile-${decision}`,
+        questionId: "acct-q2",
+        trustedStartedAt: "2026-08-25T00:00:08.000Z",
+      }, registry),
+      () => submitAnswer(hostile, {
+        expectedRevision: 5,
+        attemptId: "attempt-outage-retry-one",
+        reviewTaskId: "review-outage",
+        trustedSubmittedAt: "2026-08-25T00:00:08.000Z",
+        submission: draft(2),
+      }, registry),
+      () => beginIndependentRetry(hostile, {
+        expectedRevision: 5,
+        reviewTaskId: "review-outage",
+        independentRetryId: `retry-after-hostile-${decision}`,
+        retryAttemptId: `attempt-retry-after-hostile-${decision}`,
+        trustedStartedAt: "2026-08-25T00:00:08.000Z",
+      }, registry),
+    ]) expectKernelCode(consume, "invalid_input");
+  }
+
+  retryDecision = undefined;
+  state = submitAnswer(state, {
+    expectedRevision: 4,
+    attemptId: "attempt-outage-retry-one",
+    reviewTaskId: "review-outage",
+    trustedSubmittedAt: "2026-08-25T00:00:07.000Z",
+    submission: draft(2),
+  }, registry);
+  assert.equal(state.revision, 5);
+  assert.equal(state.independentRetries.length, 1);
+  assert.equal(state.independentRetries[0].independentRetryId, "retry-outage-one");
+  assert.deepEqual(state.independentRetries[0].questionReference, activeVariant);
+  assert.equal(state.independentRetries[0].outcome, "succeeded");
+  assert.equal(state.attempts.at(-1).attemptId, "attempt-outage-retry-one");
+  assert.equal(state.reviewTasks[0].status, "completed");
+
+  assert.equal(contract.domainContract.reviewTask.unreviewedRetryCannotFailReopenOrCompleteTask, true);
+  assert.equal(contract.domainContract.independentRetry.withheldOrUnavailableEvaluationRejectsTransition, true);
+  assert.equal(contract.domainContract.independentRetry.withheldOrUnavailableEvaluationPreservesActiveAttemptAndVariant, true);
+  assert.equal(contract.domainContract.independentRetry.withheldOrUnavailableEvaluationConsumesNoRevisionOrLineage, true);
+  assert.equal(contract.domainContract.rehydratedStateValidation.completedRetryRequiresReviewedEvaluation, true);
+});
+
 test("rejects blank-as-correct, cycle-reused retry, cross-concept closure, and duplicate persisted lineage", () => {
   const blankCorrectRegistry = createSubjectAdapterRegistry([makeAdapter({
     forceDecision: () => "correct",
