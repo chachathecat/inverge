@@ -10,6 +10,9 @@ import {
   QUESTION_BLUEPRINT_VERSION,
   QUESTION_FOUNDRY_CONTRACT_VERSION,
   QUESTION_FOUNDRY_MINIMUM_OWNER_RESPONSES_FOR_MEASUREMENT,
+  QUESTION_FOUNDRY_NEAR_COPY_FAILURE_TRANSFORMATIONS,
+  QUESTION_FOUNDRY_CALCULATION_NUMERIC_TOKEN_SOURCE,
+  QUESTION_FOUNDRY_SIMILARITY_THRESHOLD,
   QUESTION_FOUNDRY_SUBJECTS,
   QUESTION_FOUNDRY_SUBJECT_ADAPTER_INTERFACE_DIGEST,
   buildSimilarityFirewallReview,
@@ -1139,7 +1142,17 @@ test("machine contract freezes source-only boundaries and exact lane ownership",
   assert.equal(contract.parallelExecutionBinding.laneId, "LANE_C_QUESTION_FOUNDRY");
   assert.equal(
     contract.parallelExecutionBinding.branch,
-    "codex/owner-study-question-foundry-r3",
+    "codex/owner-study-question-foundry-r4",
+  );
+  assert.equal(
+    contract.rightsAndSourceBoundary.similarityTokenJaccardThresholdExactly,
+    QUESTION_FOUNDRY_SIMILARITY_THRESHOLD,
+  );
+  assert.equal(contract.rightsAndSourceBoundary.callerMayOverrideSimilarityThreshold, false);
+  assert.equal(contract.rightsAndSourceBoundary.similarityNumericLexerSharesCalculationGrammar, true);
+  assert.deepEqual(
+    contract.rightsAndSourceBoundary.nearCopyFailureTransformationsExactly,
+    QUESTION_FOUNDRY_NEAR_COPY_FAILURE_TRANSFORMATIONS,
   );
   assert.equal(contract.parallelExecutionBinding.mergeAuthorizedNow, true);
   assert.equal(contract.parallelExecutionBinding.sharedBaseSha, "fd8d0039bbeb2981935fdb671094e37d73a34400");
@@ -1685,6 +1698,14 @@ test("trusted current source and deterministic calculation validators fail close
 });
 
 test("rights-safe similarity firewall detects near-copy, reconstruction and denied comparison corpora", () => {
+  const numericScanner = new RegExp(
+    `${QUESTION_FOUNDRY_CALCULATION_NUMERIC_TOKEN_SOURCE}|\\p{L}+`,
+    "gu",
+  );
+  assert.deepEqual(
+    "18,000 18.50e+2 .75 -0.25E-2 words".match(numericScanner),
+    ["18,000", "18.50e+2", ".75", "-0.25E-2", "words"],
+  );
   const candidateBatch = batch();
   const selected = candidateBatch.candidates[0];
   const safe = similarityReviewWithAuthority(selected, [similarityReference()], sourceRegistry());
@@ -1704,6 +1725,108 @@ test("rights-safe similarity firewall detects near-copy, reconstruction and deni
     copiedRegistry,
   );
   assert.equal(copied.nearCopyDetected, true);
+  const highOverlapBody = `${copiedBody}\nadditionalword`;
+  const highOverlapReference = similarityReference({ body: highOverlapBody });
+  assert.throws(
+    () => similarityReviewWithAuthority(
+      selected,
+      [highOverlapReference],
+      sourceRegistry(),
+      0.999999,
+    ),
+    /similarity-threshold-policy-mismatch/,
+  );
+
+  const permissiveThresholdBundle = clone(personalBundle());
+  permissiveThresholdBundle.similarityReview.threshold = 0.999999;
+  const permissiveThresholdDecision = evaluateQuestionRelease(
+    permissiveThresholdBundle,
+    "PERSONAL_LEARNING_USABLE",
+    personalTrustContext(permissiveThresholdBundle),
+  );
+  assert.equal(permissiveThresholdDecision.allowed, false);
+  assert.ok(
+    permissiveThresholdDecision.blockingCodes.includes("SIMILARITY_THRESHOLD_POLICY_MISMATCH"),
+  );
+
+  const transformCandidate = (kind) => {
+    const transformed = clone(selected);
+    if (kind === "NUMBER_ONLY") {
+      transformed.stem = transformed.stem.replace(/\d+/gu, (value) => String(Number(value) + 100));
+      transformed.options = transformed.options.map((option) => ({
+        ...option,
+        body: option.body.replace(/\d+/gu, (value) => String(Number(value) + 100)),
+      }));
+    } else if (kind === "NUMBER_ONLY_GROUPED") {
+      transformed.options = transformed.options.map((option) => ({
+        ...option,
+        body: option.body.replace(/\d+/gu, (value) => `${value},000`),
+      }));
+    } else if (kind === "NUMBER_ONLY_EXPONENT") {
+      transformed.options = transformed.options.map((option) => ({
+        ...option,
+        body: option.body.replace(/\d+/gu, (value) => `${value}e1`),
+      }));
+    } else if (kind === "NAME_ONLY") {
+      transformed.stem = transformed.stem.replace(/template/gu, "scenario");
+    } else if (kind === "NAME_ONLY_MULTI_TOKEN") {
+      transformed.stem = transformed.stem.replace(/template/gu, "reference scenario");
+    } else if (kind === "ORDER_ONLY") {
+      transformed.stem = transformed.stem.split(" ").toReversed().join(" ");
+    } else if (kind === "WORD_ONLY") {
+      transformed.stem = transformed.stem.replace(/\p{L}+/gu, "term");
+      transformed.options = transformed.options.map((option) => ({
+        ...option,
+        body: option.body.replace(/\p{L}+/gu, "term"),
+      }));
+    } else if (kind === "WORD_ONLY_MULTI_TOKEN") {
+      transformed.stem = transformed.stem.replace(/\p{L}+/gu, "term phrase");
+      transformed.options = transformed.options.map((option) => ({
+        ...option,
+        body: option.body.replace(/\p{L}+/gu, "term phrase"),
+      }));
+    } else {
+      throw new Error(`unknown test transformation: ${kind}`);
+    }
+    return transformed;
+  };
+
+  for (const transformation of [
+    "NUMBER_ONLY",
+    "NUMBER_ONLY_GROUPED",
+    "NUMBER_ONLY_EXPONENT",
+    "NAME_ONLY",
+    "NAME_ONLY_MULTI_TOKEN",
+    "ORDER_ONLY",
+    "WORD_ONLY",
+    "WORD_ONLY_MULTI_TOKEN",
+  ]) {
+    const transformed = transformCandidate(transformation);
+    const transformedReview = similarityReviewWithAuthority(
+      transformed,
+      [similarityReference({ body: copiedBody })],
+      copiedRegistry,
+    );
+    assert.equal(transformedReview.nearCopyDetected, true, transformation);
+
+    const transformedBundle = clone(personalBundle());
+    transformedBundle.batch.candidates[0] = transformed;
+    transformedBundle.trustedSources = clone(copiedRegistry);
+    transformedBundle.similarityReferences = [similarityReference({ body: copiedBody })];
+    transformedBundle.similarityReview = transformedReview;
+    const transformedDecision = evaluateQuestionRelease(
+      transformedBundle,
+      "PERSONAL_LEARNING_USABLE",
+      personalTrustContext(transformedBundle),
+    );
+    assert.equal(transformedDecision.allowed, false, transformation);
+    assert.ok(
+      transformedDecision.blockingCodes.includes(
+        "SIMILARITY_OR_RECONSTRUCTION_FIREWALL_BLOCKED",
+      ),
+      transformation,
+    );
+  }
   const privateCorpus = similarityReviewWithAuthority(
     selected,
     [similarityReference({ sourceClass: "ACADEMY_OR_COMMERCIAL_TEXTBOOK" })],

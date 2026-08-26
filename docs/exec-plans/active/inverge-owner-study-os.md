@@ -8,14 +8,14 @@
 ## Current milestones
 
 - M1 / C3R-T, M2 / C3R-L, M3 / Foundation Freeze, M4 / common Kernel plus frozen `SubjectAdapterV1`, and M5 / Study Capacity runtime bridge: merged and validated
-- Question Foundry V1 clean replacement R3: active, source-only/offline/default-off
+- Question Foundry V1 clean replacement R4: active, source-only/offline/default-off
 - M6–M10: not started
 
 ## Branches and PRs
 
 - M5: merged PR #845 from `codex/owner-study-m5-study-capacity-runtime-bridge-r1`
-- Question Foundry: `codex/owner-study-question-foundry-r3`; isolated worktree `.agent-factory/worktrees/owner-study-question-foundry-r3`; PR not opened; initial replacement implementation repairs every known #847 and R3 pre-candidate formal/security/arithmetic/integration review root before candidate review; source corrections 0/2
-- Exhausted candidates: PR #847, PR #846, PR #843 and PR #810 closed unmerged
+- Question Foundry: `codex/owner-study-question-foundry-r4`; isolated worktree `.agent-factory/worktrees/owner-study-question-foundry-r4`; PR not opened; initial replacement pins the similarity firewall threshold and carries forward every prior reviewed repair before candidate review; source corrections 0/2
+- Exhausted candidates: PR #848, PR #847, PR #846, PR #843 and PR #810 closed unmerged
 
 ## Lane ownership
 
@@ -33,8 +33,8 @@
 
 ## Current blocker
 
-- R3 must pass focused gates before its first Draft PR is opened; no acceptance gate is waived
+- R4 must pass focused gates and pre-candidate review before its first Draft PR is opened; no acceptance gate is waived
 
 ## Next exact action
 
-- run focused Foundry, adjacent compatibility, typecheck, changed-file lint and diff checks; then commit, push and open the R3 Draft PR
+- run focused Foundry, adjacent compatibility, typecheck, changed-file lint and diff checks; obtain pre-candidate review; then commit, push and open the R4 Draft PR

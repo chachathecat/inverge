@@ -20,6 +20,7 @@ import {
   buildSimilarityFirewallReview,
   canonicalDigest,
   normalizeQuestionText,
+  QUESTION_FOUNDRY_SIMILARITY_THRESHOLD,
   reviewDistractorsAndAnswerClues,
   validateCandidateBatch,
   validateCandidateCalculation,
@@ -930,7 +931,6 @@ function validateSimilarity(
     bundle.similarityReferences,
     bundle.trustedSources,
     trustContext.sourceRegistryExportBinding,
-    review.threshold,
   );
   if (
     bundle.similarityReferences.length < 1 ||
@@ -950,12 +950,12 @@ function validateSimilarity(
   if (!SHA256.test(review.corpusDigest) || review.referenceCount < 1) {
     errors.push("SIMILARITY_CORPUS_EVIDENCE_MISSING");
   }
+  if (review.threshold !== QUESTION_FOUNDRY_SIMILARITY_THRESHOLD) {
+    errors.push("SIMILARITY_THRESHOLD_POLICY_MISMATCH");
+  }
   if (
     !Number.isFinite(review.maximumTokenJaccard) ||
-    !Number.isFinite(review.threshold) ||
-    review.threshold <= 0 ||
-    review.threshold >= 1 ||
-    review.maximumTokenJaccard >= review.threshold ||
+    review.maximumTokenJaccard >= QUESTION_FOUNDRY_SIMILARITY_THRESHOLD ||
     review.nearCopyDetected ||
     review.reconstructionRiskDetected ||
     review.protectedExplanationSequenceDetected

@@ -38,6 +38,26 @@ const EXACT_DECIMAL_MAX_DIGITS = 64;
 const EXACT_DECIMAL_MIN_EXPONENT = -324;
 const EXACT_DECIMAL_MAX_EXPONENT = 308;
 const CALCULATION_OPTION_BODY_MAX_LENGTH = 512;
+export const QUESTION_FOUNDRY_CALCULATION_NUMERIC_TOKEN_SOURCE = String.raw`[-+]?(?:(?:(?:[1-9]\d{0,2}(?:,\d{3})+)|(?:0|[1-9]\d*))(?:[.]\d+)?|[.]\d+)(?:[eE][-+]?\d+)?`;
+const CALCULATION_OPTION_PATTERN = new RegExp(
+  `^(${QUESTION_FOUNDRY_CALCULATION_NUMERIC_TOKEN_SOURCE}) ([A-Za-z0-9][A-Za-z0-9._:/@-]{0,199})$`,
+  "u",
+);
+const NEAR_COPY_TOKEN_PATTERN = new RegExp(
+  `${QUESTION_FOUNDRY_CALCULATION_NUMERIC_TOKEN_SOURCE}|\\p{L}+`,
+  "gu",
+);
+const NEAR_COPY_NUMBER_PATTERN = new RegExp(
+  `^(?:${QUESTION_FOUNDRY_CALCULATION_NUMERIC_TOKEN_SOURCE})$`,
+  "u",
+);
+export const QUESTION_FOUNDRY_SIMILARITY_THRESHOLD = 0.72;
+export const QUESTION_FOUNDRY_NEAR_COPY_FAILURE_TRANSFORMATIONS = [
+  "NUMBER_ONLY",
+  "NAME_ONLY",
+  "ORDER_ONLY",
+  "WORD_ONLY",
+] as const;
 const RIGHTS_AUTHORITY_PUBLIC_KEY = `-----BEGIN PUBLIC KEY-----
 MCowBQYDK2VwAyEASWYp/L1EfC+LW1GYDKudsTK5EvkYd3gYJmGWeRhf8EQ=
 -----END PUBLIC KEY-----
@@ -1520,9 +1540,7 @@ function extractNumericValue(body: string, expectedUnit: string): ExactRational 
   ) {
     return null;
   }
-  const match = body.match(
-    /^([-+]?(?:(?:(?:0|[1-9]\d*)|(?:[1-9]\d{0,2}(?:,\d{3})+))(?:[.]\d+)?|[.]\d+)(?:[eE][-+]?\d+)?) ([A-Za-z0-9][A-Za-z0-9._:/@-]{0,199})$/u,
-  );
+  const match = body.match(CALCULATION_OPTION_PATTERN);
   if (!match || match[2].toUpperCase() !== expectedUnit.toUpperCase()) return null;
   let numericToken = match[1].replaceAll(",", "");
   if (numericToken.startsWith("+.")) numericToken = `+0${numericToken.slice(1)}`;
@@ -1609,15 +1627,70 @@ function jaccard(left: Set<string>, right: Set<string>): number {
   return union === 0 ? 0 : intersection / union;
 }
 
+type NearCopyToken = Readonly<{
+  kind: "NUMBER" | "WORD";
+  value: string;
+}>;
+
+function nearCopyTokenLines(value: string): NearCopyToken[][] {
+  return value
+    .normalize("NFKC")
+    .toLowerCase()
+    .split(/\r?\n/gu)
+    .map((line) =>
+      (line.match(NEAR_COPY_TOKEN_PATTERN) ?? []).map((token) => ({
+        kind: NEAR_COPY_NUMBER_PATTERN.test(token)
+          ? "NUMBER" as const
+          : "WORD" as const,
+        value: token,
+      })),
+    )
+    .filter((line) => line.length > 0);
+}
+
+function nearCopyProjection(lines: NearCopyToken[][], replace: "NUMBER" | "WORD"): string {
+  return JSON.stringify(
+    lines.map((line) => {
+      const projection: string[] = [];
+      for (const token of line) {
+        const value = token.kind === replace ? `<${replace}>` : token.value;
+        if (value !== `<${replace}>` || projection.at(-1) !== value) projection.push(value);
+      }
+      return projection;
+    }),
+  );
+}
+
+function mandatoryNearCopyTransformationDetected(leftBody: string, rightBody: string): boolean {
+  const left = nearCopyTokenLines(leftBody);
+  const right = nearCopyTokenLines(rightBody);
+  if (left.length === 0 || right.length === 0) return false;
+
+  const leftValues = left.flat().map((token) => `${token.kind}:${token.value}`);
+  const rightValues = right.flat().map((token) => `${token.kind}:${token.value}`);
+  const changed = leftValues.join("\n") !== rightValues.join("\n");
+  if (!changed) return false;
+
+  const numberOnlyDetected = left.length === right.length &&
+    nearCopyProjection(left, "NUMBER") === nearCopyProjection(right, "NUMBER");
+  const wordOnlyDetected = left.length === right.length &&
+    nearCopyProjection(left, "WORD") === nearCopyProjection(right, "WORD");
+  const nameOnlyDetected = wordOnlyDetected;
+  const orderOnlyDetected = leftValues.length === rightValues.length &&
+    leftValues.toSorted().join("\n") === rightValues.toSorted().join("\n");
+
+  return numberOnlyDetected || nameOnlyDetected || orderOnlyDetected || wordOnlyDetected;
+}
+
 export function buildSimilarityFirewallReview(
   candidate: QuestionCandidateV1,
   references: readonly SimilarityReferenceV1[],
   registry: TrustedSourceRegistryV1,
   sourceRegistryExportBinding: unknown = null,
-  threshold = 0.72,
+  threshold = QUESTION_FOUNDRY_SIMILARITY_THRESHOLD,
 ): SimilarityFirewallReviewV1 {
-  if (!Number.isFinite(threshold) || threshold <= 0 || threshold >= 1) {
-    throw new Error("invalid-similarity-threshold");
+  if (threshold !== QUESTION_FOUNDRY_SIMILARITY_THRESHOLD) {
+    throw new Error("similarity-threshold-policy-mismatch");
   }
   const sourceAuthorityValidation = validateTrustedSourceRegistryAuthority(
     registry,
@@ -1631,9 +1704,14 @@ export function buildSimilarityFirewallReview(
   const candidateBody = `${candidate.stem}\n${candidate.options.map((option) => option.body).join("\n")}`;
   const candidateTokens = tokenSet(candidateBody);
   let maximum = 0;
+  let mandatoryTransformationDetected = false;
   let reconstructionRiskDetected = false;
   let protectedExplanationSequenceDetected = false;
   for (const reference of references) {
+    mandatoryTransformationDetected ||= mandatoryNearCopyTransformationDetected(
+      candidateBody,
+      reference.body,
+    );
     if (!ELIGIBLE_SOURCE_CLASSES.has(reference.sourceClass)) {
       reconstructionRiskDetected = true;
       continue;
@@ -1731,7 +1809,8 @@ export function buildSimilarityFirewallReview(
     referenceCount: references.length,
     maximumTokenJaccard: Number(maximum.toFixed(6)),
     threshold,
-    nearCopyDetected: maximum >= threshold,
+    nearCopyDetected:
+      maximum >= QUESTION_FOUNDRY_SIMILARITY_THRESHOLD || mandatoryTransformationDetected,
     reconstructionRiskDetected,
     protectedExplanationSequenceDetected,
   });
