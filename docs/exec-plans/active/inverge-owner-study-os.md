@@ -19,7 +19,7 @@
 
 - M3: `codex/owner-study-m3-wcv-c3-foundation-freeze`; merged PR #838; closed Issue #837; historical read-only worktree `.agent-factory/worktrees/owner-study-m3-wcv-c3-foundation-freeze`
 - M4 exhausted candidate: `codex/owner-study-lane-b-first-stage-kernel`; PR #813 closed unmerged after final exact-head review `0/1/0`
-- M4 clean replan 1: `codex/owner-study-lane-b-first-stage-kernel-replan-1`; Draft PR #839; candidate head `9a9c311901494e877e53c2a0e78b35fd00c6d40f`; tree `52000d1fe49b913186c19b9bd58d63ff5063d139`; isolated worktree `.agent-factory/worktrees/owner-study-lane-b-replan-1`; integration base `aded1d711c837aa6e93470d3b31bd75907452996`
+- M4 clean replan 1: `codex/owner-study-lane-b-first-stage-kernel-replan-1`; Draft PR #839; reviewed implementation head `9a9c311901494e877e53c2a0e78b35fd00c6d40f`; tree `52000d1fe49b913186c19b9bd58d63ff5063d139`; isolated worktree `.agent-factory/worktrees/owner-study-lane-b-replan-1`; integration base `aded1d711c837aa6e93470d3b31bd75907452996`
 - Question Foundry: `codex/owner-study-lane-c-question-foundry`; Draft PR #810; parked
 
 ## Lane ownership
@@ -38,11 +38,12 @@
 - PR #838 / Foundation Freeze: reviewed `2106d370b2725d3f03923db3a6d279e94778bd6d`; resulting main `aded1d711c837aa6e93470d3b31bd75907452996`; tree `313056e25e3296d1546e909389eb0ad014da5a66`; exact-head checks passed; review `0/0/0`; Issues #837/#706/#707/#708/#781 closed; #714 remains open for C4/C6
 - PR #813 terminal review: exact head `e797b44cd7c1b0e48a209b840a171529d2c2041f`; tree `2bd05811c95ed8b9096d6f4f00c91c5010950c40`; exact-head CI passed; final review `0/1/0`; closed unmerged under correction-cap policy
 - M4 clean replan current checks: exact 15-path diff from protected main; focused Kernel/S232F2/M3 `24/24`; full suite `1605/1605`; typecheck; changed-file lint; `git diff --check`; independent pre-commit review `0/0/0`
+- PR #839 pre-final-log head `eafd030865b85eefbdd8aa1fdf5aded1bf93efd4`: exact-head CI passed; fresh formal review `0/0/0`; unresolved review threads zero
 
 ## Current blocker
 
-- M4 clean replan aggregate-state repair and local candidate gates are clean; PR #839 exact-head CI and fresh formal review remain
+- PR #839 requires exact Owner high-risk squash-merge approval after this final operating-log-only head passes the repeated exact-head gates
 
 ## Next exact action
 
-- push the PR #839 operating-log correction, inspect its exact-head CI/runtime, then obtain a fresh formal review with actionable `0/0/0` and zero unresolved threads
+- validate the final PR #839 operating-log-only head, then request exact-head Owner squash-merge approval
