@@ -5,6 +5,14 @@
 Use this authority order when sources conflict:
 
 1. a dated Owner decision for the exact decision it owns, currently
+   `docs/decisions/2026-08-26-owner-wcv-c3-foundation-freeze.md` for the
+   minimal source-only `WCV_C3_FOUNDATION_FREEZE_V1`, its live-GitHub-only
+   C3R-P/T/L receipt summaries, exact frozen foundation bindings, terminal
+   WCV-C3/M3 post-merge state, C3-complete/C4-C6-preserved #714 allocation,
+   M4 Owner Study OS continuation and zero-activation/zero-remote boundary;
+   it is not a product stage, master plan, generalized receipt system or
+   second control plane and becomes repository authority only after its own
+   expected-head-pinned squash merge and validated GitHub receipt,
    `docs/decisions/2026-08-25-owner-parallel-execution-v1.md` for the sole
    narrow `INVERGE_OWNER_STUDY_OS` exception to the default one-writer rule,
    its three initial isolated lanes, post-Kernel six-lane subject/eval cap,
@@ -168,13 +176,14 @@ The authority-graph identifiers are distinct: completed roadmap item `WCV-C2`,
 completed campaign `C2`, recovery tracker #717, completed source-only stages
 `C2R-A` for Issue #702 and `C2R-B` for Issue #714, and completed Practice,
 Theory and Law runtime stages `C2R-C-P`, `C2R-C-T` and `C2R-C-L` for Issue
-#703. The next dependency-ready non-Production selector represented after the
-terminal expected-head-pinned merge and validated #717 receipt is roadmap item
-`WCV-C3`, campaign `C3`, lead Issue #706, authorized but unstarted. The
-canonical tuple is `WCV-C3 / C3 / #706 / authorized_unstarted`. An issue state
-or issue closure cannot substitute for a replacement-stage merge or receipt.
-C2R-B completes only the Issue #714 allocation for campaign C2 and leaves
-Issue #714 open with its C3, C4 and C6 allocations preserved.
+#703. Historical post-#717 selector state: after the terminal expected-head-
+pinned merge and validated #717 receipt, the next dependency-ready non-
+Production selector was roadmap item `WCV-C3`, campaign `C3`, lead Issue #706,
+authorized but unstarted, with canonical tuple `WCV-C3 / C3 / #706 /
+authorized_unstarted`. An issue state or issue closure cannot substitute for a
+replacement-stage merge or receipt. At that historical boundary C2R-B had
+completed only the Issue #714 allocation for campaign C2 and left Issue #714
+open with its C3, C4 and C6 allocations preserved.
 
 For WCV-C3 recovery only, C3R-A0 is the installed immutable PostgreSQL
 migration-dependency authority and C3R-A1 is the independently complete
@@ -188,6 +197,36 @@ dependency. Only C3R-L may complete WCV-C3, complete Issue #714 allocation C3
 while preserving C4/C6, close #706/#707/#708/#781, advance the program
 selector or publish the terminal WCV-C3 receipt. A1 starts no runtime and
 leaves WCV-C3 incomplete.
+
+## WCV-C3 Foundation Freeze
+
+`WCV_C3_FOUNDATION_FREEZE_V1` is the source-only M3 closeout after PR #800
+C3R-P, PR #816 C3R-T plus PR #818/#820 repairs, PR #832 C3R-L and PR #834's
+terminal current-tree receipt-evidence repair. PR #800 is the only originally
+conforming stage receipt. The late Theory P2 and the missing artifact-carried
+exact item references in the historical Theory and Law artifacts remain
+recorded rather than relabeled clean. PR #834 supplies the current-tree
+Practice/Theory/Law validation bundle and M3 requires its own fresh exact-head
+review. GitHub remains the sole receipt authority; the repository contract is
+a reviewable fail-closed summary and creates no new receipt system.
+
+C3R-P/T/L and the repair chain are existing merged inputs. Only after the
+freeze decision's own expected-head-pinned squash merge and validated GitHub
+receipt are WCV-C3 and M3 terminally closed and the listed foundation Git
+blobs frozen. The delivery PR closes only Issue #837; #706/#707/#708/#781
+remain open through merge and close only after the resulting-main receipt
+validates. Issue #714 then has exactly C2/C3 complete with C4/C6 preserved and
+remains open. The next Owner Study OS milestone is M4 /
+`FIRST_STAGE_COMMON_KERNEL`; its parked candidate must refresh from the freeze
+resulting main. This closeout neither selects nor starts ULC-M1 and changes no
+canonical ULC order.
+
+The freeze changes no migration, runtime, workflow, package/lock, auth or RLS
+path and performs no migration apply. Owner-only/default-off remains in force;
+public, payment, external learner, provider, remote Supabase, Production and
+deployment mutation counts remain zero. It makes no learning-efficacy,
+transfer-calibration, measurement-calibration or calibrated-item-quality
+claim.
 
 ## C3R-A1 WCV-C3 serial program authority
 

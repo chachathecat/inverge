@@ -439,7 +439,7 @@ test("runs a least-privilege report-only audit and package-lock-only SBOM workfl
   assert.doesNotMatch(workflow, /\$\{\{\s*secrets\./);
 });
 
-test("keeps Phase E metadata-only and preserves the current product authority tuple", async () => {
+test("keeps Phase E metadata-only through terminal WCV-C3 and M4 overlay continuation", async () => {
   const policy = await readJson(POLICY_PATH);
   const roadmap = await read("roadmap/active-program.yml");
   assert.deepEqual(policy.acceptance, {
@@ -451,7 +451,9 @@ test("keeps Phase E metadata-only and preserves the current product authority tu
     live_service_called: false,
     dependency_graph_changed: false,
   });
-  assert.match(roadmap, /soleNextImplementationItem:\s*WCV-C3/);
+  assert.match(roadmap, /soleNextImplementationItem:\s*null/);
+  assert.match(roadmap, /completedImplementationItem:\s*WCV-C3/);
+  assert.match(roadmap, /ownerStudyOsNextMilestone:\s*M4_FIRST_STAGE_COMMON_KERNEL/);
   assert.match(roadmap, /currentReplacementStage:\s*null/);
   assert.match(roadmap, /currentReplacementStageIssue:\s*null/);
   assert.match(roadmap, /c2rCPState:\s*complete_practice_runtime/);

@@ -4,6 +4,9 @@
 - 상세 제품 기준: `docs/inverge-second-round-final-product-spec.md`
 - 실행 상태와 의존성 기준: `roadmap/active-program.yml`
 - Current exact-scope authority:
+  `docs/decisions/2026-08-26-owner-wcv-c3-foundation-freeze.md`
+  for the source-only WCV-C3/M3 terminal closeout, current-tree PR #834
+  validation and frozen second-stage foundation,
   `docs/decisions/2026-08-22-owner-wcv-c3-pre-p-migration-mutation-authority.md`
   for the minimal exact source-only C3R-P migration-operation bridge,
   `docs/decisions/2026-08-21-owner-wcv-c3r-a1-serial-program-authority.md`
@@ -22,6 +25,30 @@
   for the program amendment, and `docs/dabangil-unified-program-contract.md`
   supersede historical ordering in this document; this file remains phase
   history and second-round detail.
+
+## 2026-08-26 WCV-C3 Foundation Freeze
+
+`WCV_C3_FOUNDATION_FREEZE_V1` closes the WCV-C3 recovery only after its own
+expected-head-pinned squash merge and validated GitHub receipt. PR #800 is the
+only originally conforming stage receipt. The late Theory P2 and the missing
+artifact-carried exact item references in historical Theory/Law receipts are
+preserved. PR #834 is the terminal current-tree receipt-evidence repair at
+main `a121eea722fd2a9054d11a5c0e5f3893b52da014`, tree
+`5b151f72cc339cd5d17d89b6f01c7b4380e71759`; it supplies clean exact-head
+Practice/Theory/Law evidence without retroactively relabeling PR #816 or #832.
+
+The resulting post-M3 state has C3R-P/T/L and WCV-C3 complete, the listed
+common durable foundation frozen, and Issue #714 still open with C2/C3
+complete and C4/C6 preserved. The obsolete C3R-P selector is cleared. Owner
+Study OS continues to M4 / `FIRST_STAGE_COMMON_KERNEL`, which is an overlay
+milestone rather than a new V13 or ULC stage. ULC-M1 remains future-gated,
+unselected and unstarted on `[WCV-C3, S241A]`; the canonical ULC order is
+unchanged.
+
+The M3 PR closes only delivery Issue #837. Issues #706/#707/#708/#781 close
+only after exact resulting-main validation. Owner-only/default-off and zero
+remote Supabase, Production, payment, public, provider and external-learner
+mutation remain in force.
 
 ## 2026-08-14 Unified Product and Multisurface Launch Convergence
 

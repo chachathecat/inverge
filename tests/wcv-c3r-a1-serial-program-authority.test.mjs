@@ -567,7 +567,7 @@ test("V13, one writer and every activation gate remain closed", () => {
   assert.equal(contract.historicalDonors.maySatisfyStageDependency, false);
 });
 
-test("roadmap and canonical mirrors expose the same unstarted C3R-P selector", async () => {
+test("roadmap and canonical mirrors preserve A1 history after terminal WCV-C3 closeout", async () => {
   const [agents, roadmap, unifiedMarkdown, masterRoadmap, unified] = await Promise.all([
     readFile(path.join(repositoryRoot, "AGENTS.md"), "utf8"),
     readFile(path.join(repositoryRoot, "roadmap/active-program.yml"), "utf8"),
@@ -581,8 +581,8 @@ test("roadmap and canonical mirrors expose the same unstarted C3R-P selector", a
     "docs/decisions/2026-08-21-owner-wcv-c3r-a0-migration-dependency-authority.md",
   ));
   assert.match(roadmap, /c3rStrictStageOrder: \[C3R-P, C3R-T, C3R-L\]/u);
-  assert.match(roadmap, /soleNextC3rStage: C3R-P/u);
-  assert.match(roadmap, /currentAuthorizedRuntimeStageState: authorized_unstarted/u);
+  assert.match(roadmap, /soleNextC3rStage: null/u);
+  assert.match(roadmap, /currentAuthorizedRuntimeStageState: complete/u);
   assert.match(unifiedMarkdown, /C3R-P → C3R-T → C3R-L/u);
   assert.match(masterRoadmap, /C3R-P → C3R-T → C3R-L/u);
   assert.deepEqual(unified.wcvCampaignOverlay.c3SerialProgram.strictStageOrder, [
@@ -590,7 +590,7 @@ test("roadmap and canonical mirrors expose the same unstarted C3R-P selector", a
     "C3R-T",
     "C3R-L",
   ]);
-  assert.equal(unified.wcvCampaignOverlay.soleNextC3rStage, "C3R-P");
+  assert.equal(unified.wcvCampaignOverlay.soleNextC3rStage, null);
   assert.deepEqual(
     unified.wcvCampaignOverlay.c3SerialProgram
       .perSubjectIssueEvidenceRequiredForEveryStageExactly,
@@ -601,8 +601,10 @@ test("roadmap and canonical mirrors expose the same unstarted C3R-P selector", a
       .stageReceiptMustProveEveryBoundInventoryItemExactlyOnce,
     true,
   );
-  assert.equal(unified.roadmapContract.soleNextC3rStageId, "C3R-P");
-  assert.equal(unified.launchConvergenceAmendment.soleNextC3rStage, "C3R-P");
+  assert.equal(unified.roadmapContract.soleNextC3rStageId, null);
+  assert.equal(unified.launchConvergenceAmendment.soleNextC3rStage, null);
+  assert.equal(unified.wcvCampaignOverlay.c3SerialProgram.wcvC3Complete, true);
+  assert.equal(unified.ownerStudyOsFoundationFreeze.foundationState, "frozen");
 });
 
 test("A1 owns exactly eleven source-authority paths and is registered once", async () => {

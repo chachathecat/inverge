@@ -183,8 +183,8 @@ test("active roadmap marks S214 and S215 completed while advancing the next read
   assert.deepEqual(s225?.missingDependencies, ["O4D", "WCV-C6"]);
   assert.equal(plan.wipOccupiedCount, 2);
   assert.equal(plan.availableSlots, 1);
-  assert.deepEqual(plan.readyItemIds, ["WCV-C3", "S236B"]);
-  assert.deepEqual(plan.selectedItemIds, ["WCV-C3"]);
+  assert.deepEqual(plan.readyItemIds, ["S236B"]);
+  assert.deepEqual(plan.selectedItemIds, ["S236B"]);
   assert.equal(s215?.missingDependencies.includes("S213"), false);
   assert.equal(s215?.missingDependencies.includes("S214"), false);
 });
