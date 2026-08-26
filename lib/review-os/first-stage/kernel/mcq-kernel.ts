@@ -35,6 +35,8 @@ export type CreateExamCycleInput = Readonly<{
 }>;
 
 export type BeginAttemptInput = Readonly<{
+  trustedOwnerId: string;
+  trustedExamCycleDefinitionSha256: string;
   expectedRevision: number;
   attemptId: string;
   questionId: string;
@@ -42,6 +44,8 @@ export type BeginAttemptInput = Readonly<{
 }>;
 
 export type SubmitAnswerInput = Readonly<{
+  trustedOwnerId: string;
+  trustedExamCycleDefinitionSha256: string;
   expectedRevision: number;
   attemptId: string;
   reviewTaskId: string;
@@ -50,6 +54,8 @@ export type SubmitAnswerInput = Readonly<{
 }>;
 
 export type BeginIndependentRetryInput = Readonly<{
+  trustedOwnerId: string;
+  trustedExamCycleDefinitionSha256: string;
   expectedRevision: number;
   reviewTaskId: string;
   independentRetryId: string;
@@ -57,11 +63,70 @@ export type BeginIndependentRetryInput = Readonly<{
   trustedStartedAt: string;
 }>;
 
-function stale(
+function validateKernelState(
   state: FirstStageKernelState,
-  expectedRevision: number,
+  trustedOwnerId: string,
+  trustedExamCycleDefinitionSha256: string,
   registry: SubjectAdapterRegistry,
 ) {
+  const trustedDefinitionSha256 = requiredSha256(trustedExamCycleDefinitionSha256);
+  const stateRow = exactObject(state, [
+    "schemaVersion", "revision", "examCycle", "attempts", "reviewTasks",
+    "independentRetries", "conceptStates",
+  ]);
+  if (
+    stateRow.schemaVersion !== FIRST_STAGE_KERNEL_SCHEMA_VERSION ||
+    !Array.isArray(stateRow.attempts) ||
+    !Array.isArray(stateRow.reviewTasks) ||
+    !Array.isArray(stateRow.independentRetries) ||
+    !Array.isArray(stateRow.conceptStates)
+  ) throw new FirstStageKernelError("invalid_input");
+  requiredSafeInteger(stateRow.revision, 1, Number.MAX_SAFE_INTEGER);
+  const cycleRow = exactObject(stateRow.examCycle, [
+    "schemaVersion", "definitionSha256", "examCycleId", "ownerId", "mode", "state",
+    "questionReferences", "startedAt", "completedAt",
+  ]);
+  if (
+    cycleRow.schemaVersion !== "first_stage.exam_cycle.v1" ||
+    !["today", "full_day"].includes(String(cycleRow.mode)) ||
+    !["ready", "active", "completed"].includes(String(cycleRow.state)) ||
+    !Array.isArray(cycleRow.questionReferences)
+  ) throw new FirstStageKernelError("invalid_input");
+  const ownerId = requiredIdentifier(cycleRow.ownerId);
+  if (ownerId !== requiredIdentifier(trustedOwnerId)) {
+    throw new FirstStageKernelError("invalid_input");
+  }
+  const examCycleId = requiredIdentifier(cycleRow.examCycleId);
+  const maximumQuestions = cycleRow.mode === "today" ? 100 : 200;
+  if (
+    cycleRow.questionReferences.length < 1 ||
+    cycleRow.questionReferences.length > maximumQuestions
+  ) throw new FirstStageKernelError("invalid_input");
+  const cycleReferences = cycleRow.questionReferences.map(parseQuestionReference);
+  const cycleReferenceIdentities = cycleReferences.map(referenceIdentity);
+  const cycleQuestionIds = cycleReferences.map((reference) => reference.questionId);
+  if (
+    new Set(cycleReferenceIdentities).size !== cycleReferenceIdentities.length ||
+    new Set(cycleQuestionIds).size !== cycleQuestionIds.length ||
+    canonicalJson(cycleReferences) !== canonicalJson(cycleRow.questionReferences)
+  ) throw new FirstStageKernelError("invalid_input");
+  const expectedCycleDefinitionSha256 = examCycleDefinitionSha256({
+    schemaVersion: "first_stage.exam_cycle.v1",
+    examCycleId,
+    ownerId,
+    mode: cycleRow.mode as ExamCycle["mode"],
+    questionReferences: cycleReferences,
+  });
+  if (
+    !/^[a-f0-9]{64}$/u.test(String(cycleRow.definitionSha256)) ||
+    cycleRow.definitionSha256 !== expectedCycleDefinitionSha256 ||
+    cycleRow.definitionSha256 !== trustedDefinitionSha256
+  ) throw new FirstStageKernelError("invalid_input");
+  for (const reference of cycleReferences) {
+    registry.require(reference.subjectId).assertQuestionReference(reference);
+  }
+  if (cycleRow.startedAt !== null) requiredUtcInstant(cycleRow.startedAt);
+  if (cycleRow.completedAt !== null) requiredUtcInstant(cycleRow.completedAt);
   const authorityIds = [
     state.examCycle.examCycleId,
     ...state.attempts.map((item) => item.attemptId),
@@ -293,10 +358,8 @@ function stale(
         retryAttempt.submission === null || retryAttempt.evaluation === null ||
         retryAttempt.submission?.submittedAt !== completedAt ||
         (retry.outcome === "succeeded"
-          ? task.status !== "completed" || task.completedAt !== completedAt ||
-            retryAttempt.evaluation?.decision !== "correct"
-          : task.status !== "pending" || task.completedAt !== null ||
-            retryAttempt.evaluation?.decision === "correct");
+          ? retryAttempt.evaluation?.decision !== "correct"
+          : retryAttempt.evaluation?.decision === "correct");
     if (
       retry.schemaVersion !== "first_stage.independent_retry.v1" ||
       retry.assistanceLevel !== "none" ||
@@ -331,6 +394,7 @@ function stale(
       retryAttempt.exposureState !== "verified_variant" ||
       retryAttempt.assistanceLevel !== "none" ||
       retryAttempt.startedAt !== retry.startedAt ||
+      state.attempts.indexOf(sourceAttempt) >= state.attempts.indexOf(retryAttempt) ||
       canonicalJson(retryAttemptReference) !== canonicalJson(retryReference) ||
       questionReferenceSha256(retryReference) !== receipt.variantQuestionReferenceSha256 ||
       outcomeStateInvalid ||
@@ -428,9 +492,100 @@ function stale(
       task.completedAt !== expectedCompletedAt
     ) throw new FirstStageKernelError("invalid_input");
   }
-  if (requiredSafeInteger(expectedRevision, 1, Number.MAX_SAFE_INTEGER) !== state.revision) {
+  const initialAttempts = state.attempts.filter((attempt) => attempt.kind === "initial");
+  const initialIdentities = initialAttempts.map((attempt) =>
+    referenceIdentity(attempt.questionReference));
+  const activeAttempts = state.attempts.filter((attempt) => attempt.state === "in_progress");
+  const attemptQuestionIds = state.attempts.map((attempt) =>
+    attempt.questionReference.questionId);
+  const retryAttemptIds = state.attempts
+    .filter((attempt) => attempt.kind === "independent_retry")
+    .map((attempt) => attempt.attemptId);
+  const recordedRetryAttemptIds = state.independentRetries.map((retry) => retry.retryAttemptId);
+  const recordedRetryAttemptPositions = recordedRetryAttemptIds.map((attemptId) =>
+    state.attempts.findIndex((attempt) => attempt.attemptId === attemptId));
+  if (
+    new Set(initialIdentities).size !== initialIdentities.length ||
+    new Set(attemptQuestionIds).size !== attemptQuestionIds.length ||
+    activeAttempts.length > 1 ||
+    (activeAttempts.length === 1 &&
+      state.attempts.indexOf(activeAttempts[0]) !== state.attempts.length - 1) ||
+    retryAttemptIds.length !== recordedRetryAttemptIds.length ||
+    recordedRetryAttemptPositions.some((position, index) =>
+      position < 0 || (index > 0 && position <= recordedRetryAttemptPositions[index - 1])) ||
+    retryAttemptIds.some((attemptId) =>
+      recordedRetryAttemptIds.filter((recordedId) => recordedId === attemptId).length !== 1)
+  ) throw new FirstStageKernelError("invalid_input");
+
+  let priorActivity = -Infinity;
+  for (const attempt of state.attempts) {
+    const startedAt = instantMs(attempt.startedAt);
+    if (startedAt < priorActivity) throw new FirstStageKernelError("invalid_input");
+    priorActivity = attempt.submission
+      ? instantMs(attempt.submission.submittedAt)
+      : startedAt;
+  }
+
+  const allInitialsEvaluated = cycleReferences.every((reference) =>
+    initialAttempts.some((attempt) =>
+      attempt.state === "evaluated" &&
+      referenceIdentity(attempt.questionReference) === referenceIdentity(reference)));
+  const expectedCycleState = state.attempts.length === 0
+    ? "ready"
+    : allInitialsEvaluated ? "completed" : "active";
+  const expectedStartedAt = state.attempts.length === 0 ? null : state.attempts[0].startedAt;
+  const initialSubmissionTimes = initialAttempts.flatMap((attempt) =>
+    attempt.submission ? [instantMs(attempt.submission.submittedAt)] : []);
+  const expectedCompletedAt = allInitialsEvaluated
+    ? new Date(Math.max(...initialSubmissionTimes)).toISOString()
+    : null;
+  const expectedRevision = 1 + state.attempts.length + validatedSubmissions.size;
+  const rebuiltConceptStates = rebuildConceptStates(
+    state,
+    validatedEvaluations,
+    validatedSubmissions,
+  );
+  if (
+    state.examCycle.state !== expectedCycleState ||
+    state.examCycle.startedAt !== expectedStartedAt ||
+    state.examCycle.completedAt !== expectedCompletedAt ||
+    state.revision !== expectedRevision ||
+    canonicalJson(state.conceptStates) !== canonicalJson(rebuiltConceptStates)
+  ) throw new FirstStageKernelError("invalid_input");
+  return canonicalStateSnapshot(state);
+}
+
+export function validateFirstStageKernelState(
+  state: FirstStageKernelState,
+  trustedOwnerId: string,
+  trustedExamCycleDefinitionSha256: string,
+  registry: SubjectAdapterRegistry,
+) {
+  return validateKernelState(
+    state,
+    trustedOwnerId,
+    trustedExamCycleDefinitionSha256,
+    registry,
+  );
+}
+
+function stale(
+  state: FirstStageKernelState,
+  expectedRevision: number,
+  trustedOwnerId: string,
+  trustedExamCycleDefinitionSha256: string,
+  registry: SubjectAdapterRegistry,
+) {
+  const snapshot = validateKernelState(
+    state,
+    trustedOwnerId,
+    trustedExamCycleDefinitionSha256,
+    registry,
+  );
+  if (requiredSafeInteger(expectedRevision, 1, Number.MAX_SAFE_INTEGER) !== snapshot.revision) {
     throw new FirstStageKernelError("stale_state");
   }
+  return snapshot;
 }
 
 function instantMs(value: string) {
@@ -481,12 +636,48 @@ function canonicalJson(value: unknown): string {
     `${JSON.stringify(key)}:${canonicalJson(row[key])}`).join(",")}}`;
 }
 
+function deepFreezeJson<T>(value: T): T {
+  if (value !== null && typeof value === "object" && !Object.isFrozen(value)) {
+    for (const nested of Object.values(value as Record<string, unknown>)) {
+      deepFreezeJson(nested);
+    }
+    Object.freeze(value);
+  }
+  return value;
+}
+
+function canonicalStateSnapshot(state: FirstStageKernelState) {
+  try {
+    return deepFreezeJson(
+      JSON.parse(canonicalJson(state)) as FirstStageKernelState,
+    );
+  } catch {
+    throw new FirstStageKernelError("invalid_input");
+  }
+}
+
 export function answerSubmissionSha256(submission: unknown) {
   return crypto.createHash("sha256").update(canonicalJson(submission)).digest("hex");
 }
 
 function questionReferenceSha256(reference: QuestionReference) {
   return crypto.createHash("sha256").update(canonicalJson(reference)).digest("hex");
+}
+
+function requiredSha256(value: unknown) {
+  if (typeof value !== "string" || !/^[a-f0-9]{64}$/u.test(value)) {
+    throw new FirstStageKernelError("invalid_input");
+  }
+  return value;
+}
+
+function examCycleDefinitionSha256(
+  cycle: Readonly<Pick<
+    ExamCycle,
+    "schemaVersion" | "examCycleId" | "ownerId" | "mode" | "questionReferences"
+  >>,
+) {
+  return crypto.createHash("sha256").update(canonicalJson(cycle)).digest("hex");
 }
 
 function referenceIdentity(reference: QuestionReference) {
@@ -514,13 +705,17 @@ export function createExamCycleState(input: CreateExamCycleInput): FirstStageKer
   ) {
     throw new FirstStageKernelError("invalid_input");
   }
-  const cycle: ExamCycle = Object.freeze({
+  const cycleDefinition = Object.freeze({
     schemaVersion: "first_stage.exam_cycle.v1",
     examCycleId: requiredIdentifier(row.examCycleId),
     ownerId: requiredIdentifier(row.ownerId),
     mode,
-    state: "ready",
     questionReferences: Object.freeze(references),
+  });
+  const cycle: ExamCycle = Object.freeze({
+    ...cycleDefinition,
+    definitionSha256: examCycleDefinitionSha256(cycleDefinition),
+    state: "ready",
     startedAt: null,
     completedAt: null,
   });
@@ -549,8 +744,17 @@ export function beginAttempt(
   input: BeginAttemptInput,
   registry: SubjectAdapterRegistry,
 ): FirstStageKernelState {
-  const row = exactObject(input, ["expectedRevision", "attemptId", "questionId", "trustedStartedAt"]);
-  stale(state, requiredSafeInteger(row.expectedRevision, 1, Number.MAX_SAFE_INTEGER), registry);
+  const row = exactObject(input, [
+    "trustedOwnerId", "trustedExamCycleDefinitionSha256", "expectedRevision",
+    "attemptId", "questionId", "trustedStartedAt",
+  ]);
+  state = stale(
+    state,
+    requiredSafeInteger(row.expectedRevision, 1, Number.MAX_SAFE_INTEGER),
+    requiredIdentifier(row.trustedOwnerId),
+    requiredSha256(row.trustedExamCycleDefinitionSha256),
+    registry,
+  );
   if (state.examCycle.state === "completed") throw new FirstStageKernelError("invalid_transition");
   if (state.attempts.some((item) => item.state === "in_progress")) {
     throw new FirstStageKernelError("invalid_transition");
@@ -589,10 +793,18 @@ export function beginAttempt(
 export function presentAttemptQuestion(
   state: FirstStageKernelState,
   attemptId: string,
+  trustedOwnerId: string,
+  trustedExamCycleDefinitionSha256: string,
   registry: SubjectAdapterRegistry,
 ): McqQuestionPresentation {
-  stale(state, state.revision, registry);
-  const attempt = state.attempts.find((item) => item.attemptId === requiredIdentifier(attemptId));
+  const snapshot = validateFirstStageKernelState(
+    state,
+    requiredIdentifier(trustedOwnerId),
+    requiredSha256(trustedExamCycleDefinitionSha256),
+    registry,
+  );
+  const attempt = snapshot.attempts.find((item) =>
+    item.attemptId === requiredIdentifier(attemptId));
   if (!attempt || attempt.state !== "in_progress") throw new FirstStageKernelError("not_found");
   const adapter = registry.require(attempt.questionReference.subjectId);
   adapter.assertQuestionReference(attempt.questionReference);
@@ -629,21 +841,25 @@ function updateConceptStates(
   attemptId: string,
   updatedAt: string,
   nextState: ConceptOperationalState,
+  recordEvidence = true,
 ) {
   const next = [...states];
   for (const binding of bindings) {
     const key = conceptKey(binding);
     const index = next.findIndex((item) => conceptKey(item.binding) === key);
     const prior = index >= 0 ? next[index] : null;
-    const evidenceAttemptIds = Object.freeze([
-      ...(prior?.evidenceAttemptIds ?? []),
-      ...((prior?.evidenceAttemptIds ?? []).includes(attemptId) ? [] : [attemptId]),
-    ]);
+    if (!recordEvidence && !prior) throw new FirstStageKernelError("invalid_input");
+    const evidenceAttemptIds = recordEvidence
+      ? Object.freeze([
+        ...(prior?.evidenceAttemptIds ?? []),
+        ...((prior?.evidenceAttemptIds ?? []).includes(attemptId) ? [] : [attemptId]),
+      ])
+      : prior!.evidenceAttemptIds;
     const item: ConceptState = Object.freeze({
       schemaVersion: "first_stage.concept_state.v1",
       binding,
       state: nextState,
-      lastAttemptId: attemptId,
+      lastAttemptId: recordEvidence ? attemptId : prior!.lastAttemptId,
       evidenceAttemptIds,
       updatedAt,
       masteryClaim: false,
@@ -652,6 +868,57 @@ function updateConceptStates(
     else next.push(item);
   }
   return Object.freeze(next);
+}
+
+function rebuildConceptStates(
+  state: FirstStageKernelState,
+  evaluations: ReadonlyMap<string, AttemptEvaluation>,
+  submissions: ReadonlyMap<string, ReturnType<typeof parseAnswerSubmission>>,
+) {
+  let rebuilt: readonly ConceptState[] = Object.freeze([]);
+  for (const attempt of state.attempts) {
+    const evaluation = evaluations.get(attempt.attemptId);
+    const submission = submissions.get(attempt.attemptId);
+    if (attempt.kind === "initial") {
+      if (evaluation && submission && isReviewedEvaluation(evaluation)) {
+        const dueAt = addMs(submission.submittedAt, evaluation.reviewAfterMs);
+        rebuilt = updateConceptStates(
+          rebuilt,
+          evaluation.conceptBindings,
+          attempt.attemptId,
+          submission.submittedAt,
+          instantMs(dueAt) <= instantMs(submission.submittedAt)
+            ? "independent_retry_due"
+            : "review_required",
+        );
+      }
+      continue;
+    }
+    const retry = state.independentRetries.find((item) =>
+      item.retryAttemptId === attempt.attemptId);
+    const task = retry
+      ? state.reviewTasks.find((item) => item.reviewTaskId === retry.reviewTaskId)
+      : undefined;
+    if (!retry || !task) throw new FirstStageKernelError("invalid_input");
+    rebuilt = updateConceptStates(
+      rebuilt,
+      task.conceptBindings,
+      retry.retryAttemptId,
+      retry.startedAt,
+      "independent_retry_due",
+      false,
+    );
+    if (retry.outcome !== "active" && evaluation && submission && isReviewedEvaluation(evaluation)) {
+      rebuilt = updateConceptStates(
+        rebuilt,
+        task.conceptBindings,
+        attempt.attemptId,
+        submission.submittedAt,
+        retry.outcome === "succeeded" ? "independent_retry_recorded" : "reopened",
+      );
+    }
+  }
+  return rebuilt;
 }
 
 function cycleAfterInitialEvaluation(
@@ -678,9 +945,17 @@ export function submitAnswer(
   registry: SubjectAdapterRegistry,
 ): FirstStageKernelState {
   const row = exactObject(input, [
-    "expectedRevision", "attemptId", "reviewTaskId", "trustedSubmittedAt", "submission",
+    "trustedOwnerId", "trustedExamCycleDefinitionSha256", "expectedRevision",
+    "attemptId", "reviewTaskId",
+    "trustedSubmittedAt", "submission",
   ]);
-  stale(state, requiredSafeInteger(row.expectedRevision, 1, Number.MAX_SAFE_INTEGER), registry);
+  state = stale(
+    state,
+    requiredSafeInteger(row.expectedRevision, 1, Number.MAX_SAFE_INTEGER),
+    requiredIdentifier(row.trustedOwnerId),
+    requiredSha256(row.trustedExamCycleDefinitionSha256),
+    registry,
+  );
   const attemptId = requiredIdentifier(row.attemptId);
   const reviewTaskId = requiredIdentifier(row.reviewTaskId);
   const attemptIndex = state.attempts.findIndex((item) => item.attemptId === attemptId);
@@ -842,10 +1117,17 @@ export function beginIndependentRetry(
   registry: SubjectAdapterRegistry,
 ): FirstStageKernelState {
   const row = exactObject(input, [
-    "expectedRevision", "reviewTaskId", "independentRetryId", "retryAttemptId",
+    "trustedOwnerId", "trustedExamCycleDefinitionSha256", "expectedRevision",
+    "reviewTaskId", "independentRetryId", "retryAttemptId",
     "trustedStartedAt",
   ]);
-  stale(state, requiredSafeInteger(row.expectedRevision, 1, Number.MAX_SAFE_INTEGER), registry);
+  state = stale(
+    state,
+    requiredSafeInteger(row.expectedRevision, 1, Number.MAX_SAFE_INTEGER),
+    requiredIdentifier(row.trustedOwnerId),
+    requiredSha256(row.trustedExamCycleDefinitionSha256),
+    registry,
+  );
   if (state.attempts.some((item) => item.state === "in_progress")) {
     throw new FirstStageKernelError("invalid_transition");
   }
@@ -979,9 +1261,10 @@ export function beginIndependentRetry(
     conceptStates: updateConceptStates(
       state.conceptStates,
       task.conceptBindings,
-      sourceAttempt.attemptId,
+      retryAttempt.attemptId,
       startedAt,
       "independent_retry_due",
+      false,
     ),
   });
 }

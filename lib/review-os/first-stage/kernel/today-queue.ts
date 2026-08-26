@@ -1,12 +1,15 @@
 import {
   FirstStageKernelError,
   exactObject,
+  requiredIdentifier,
   requiredSafeInteger,
   requiredUtcInstant,
   type FirstStageKernelState,
   type FirstStageSubjectId,
   type QuestionReference,
 } from "./domain";
+import { validateFirstStageKernelState } from "./mcq-kernel";
+import type { SubjectAdapterRegistry } from "../subject-adapter/subject-adapter";
 
 export type TodayQueueItem = Readonly<{
   schemaVersion: "first_stage.today_queue_item.v1";
@@ -107,31 +110,40 @@ function newQuestionQueueItems(state: FirstStageKernelState) {
 
 export function buildTodayQueue(
   state: FirstStageKernelState,
-  input: Readonly<{ trustedGeneratedAt: string; limit?: number }>,
+  input: Readonly<{
+    trustedOwnerId: string;
+    trustedExamCycleDefinitionSha256: string;
+    trustedGeneratedAt: string;
+    limit?: number;
+  }>,
+  registry: SubjectAdapterRegistry,
 ): TodayQueue {
   const keys = input && typeof input === "object" && Object.hasOwn(input, "limit")
-    ? ["trustedGeneratedAt", "limit"]
-    : ["trustedGeneratedAt"];
+    ? ["trustedOwnerId", "trustedExamCycleDefinitionSha256", "trustedGeneratedAt", "limit"]
+    : ["trustedOwnerId", "trustedExamCycleDefinitionSha256", "trustedGeneratedAt"];
   const row = exactObject(input, keys);
-  if (state.schemaVersion !== "dabangil.first_stage.common_mcq_kernel.v1") {
-    throw new FirstStageKernelError("invalid_input");
-  }
+  const snapshot = validateFirstStageKernelState(
+    state,
+    requiredIdentifier(row.trustedOwnerId),
+    String(row.trustedExamCycleDefinitionSha256),
+    registry,
+  );
   const generatedAt = requiredUtcInstant(row.trustedGeneratedAt);
-  const maximum = state.examCycle.mode === "today" ? 100 : 200;
+  const maximum = snapshot.examCycle.mode === "today" ? 100 : 200;
   const limit = row.limit === undefined
     ? maximum
     : requiredSafeInteger(row.limit, 1, maximum);
-  const active = activeQueueItems(state);
+  const active = activeQueueItems(snapshot);
   if (active.length > 1) throw new FirstStageKernelError("invalid_transition");
-  const reviews = reviewQueueItems(state, generatedAt);
+  const reviews = reviewQueueItems(snapshot, generatedAt);
   const eligible = Object.freeze([
     ...active,
     ...reviews.items,
-    ...newQuestionQueueItems(state),
+    ...newQuestionQueueItems(snapshot),
   ]);
   return Object.freeze({
     schemaVersion: "first_stage.today_queue.v1",
-    kernelRevision: state.revision,
+    kernelRevision: snapshot.revision,
     generatedAt,
     items: Object.freeze(eligible.slice(0, limit)),
     omittedPriorityItemCount: Math.max(0, active.length + reviews.items.length - limit),
