@@ -36,6 +36,10 @@ const contract = JSON.parse(fs.readFileSync(path.join(
   root,
   "config/dabangil-first-stage-common-mcq-kernel-v1.json",
 ), "utf8"));
+const VALIDATED_M4_RESULT = Object.freeze({
+  resultingMainSha: "3e78b8d783506bed676f817a4efe23d576ad5568",
+  resultingMainTree: "268de11f1ca7f0a7c0453020bcbf2681217821c1",
+});
 
 function canonicalJson(value) {
   if (value === null || typeof value !== "object") return JSON.stringify(value);
@@ -355,6 +359,20 @@ function validateReachableFoundationFreezeResult(receipt, executeGit = (args) =>
   );
 }
 
+function validateReachableM4Result(receipt, executeGit = (args) =>
+  execFileSync("git", args, { cwd: root, encoding: "utf8" }).trim()) {
+  assert.equal(
+    executeGit(["show", "-s", "--format=%T", receipt.resultingMainSha]),
+    receipt.resultingMainTree,
+  );
+  executeGit(["merge-base", "--is-ancestor", receipt.resultingMainSha, "HEAD"]);
+  assert.deepEqual(
+    executeGit(["show", "-s", "--format=%P", receipt.resultingMainSha]).split(/\s+/u),
+    [contract.validatedFoundationFreezeReceipt.resultingMainSha],
+    "validated M4 result must be a single-parent squash child of Foundation Freeze",
+  );
+}
+
 test("freezes one exact SubjectAdapter descriptor and Lane B path manifest", () => {
   function assertDeepFrozen(value) {
     if (value === null || typeof value !== "object") return;
@@ -443,9 +461,11 @@ test("freezes one exact SubjectAdapter descriptor and Lane B path manifest", () 
   });
   const receipt = contract.validatedFoundationFreezeReceipt;
   validateReachableFoundationFreezeResult(receipt);
+  validateReachableM4Result(VALIDATED_M4_RESULT);
   assert.equal(receipt.reviewedTree, receipt.resultingMainTree);
   const changedPaths = execFileSync("git", [
     "diff", "--name-only", contract.validatedFoundationFreezeReceipt.resultingMainSha,
+    VALIDATED_M4_RESULT.resultingMainSha,
   ], { cwd: root, encoding: "utf8" }).trim().split(/\r?\n/gu).filter(Boolean).sort();
   assert.deepEqual(changedPaths, [...contract.ownedPathManifest].sort());
 });

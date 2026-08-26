@@ -431,6 +431,7 @@ test("registers the exact M5 path manifest and no forbidden concurrent class", (
     "lib/review-os/first-stage/study-capacity/index.ts",
     "lib/review-os/first-stage/study-capacity/runtime-bridge.ts",
     "scripts/run-node-tests.mjs",
+    "tests/first-stage-common-mcq-kernel.test.mjs",
     "tests/first-stage-study-capacity-runtime-bridge.test.mjs",
     "tests/s232f2-access-availability.test.mjs",
   ];
@@ -440,5 +441,6 @@ test("registers the exact M5 path manifest and no forbidden concurrent class", (
   assert.ok(expected.every((filePath) => !filePath.startsWith("lib/auth/")));
   assert.ok(expected.every((filePath) => !filePath.startsWith("lib/review-os/first-stage/kernel/")));
   assert.ok(expected.every((filePath) => !filePath.startsWith("lib/review-os/first-stage/subject-adapter/")));
+  assert.equal(contract.pathOwnership.validatedM4EvidenceTestRepair, true);
   assert.match(read("scripts/run-node-tests.mjs"), /tests\/first-stage-study-capacity-runtime-bridge\.test\.mjs/);
 });

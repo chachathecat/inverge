@@ -20,7 +20,7 @@
 
 ## Lane ownership
 
-- M5 owns exactly the ten paths in `config/dabangil-first-stage-study-capacity-runtime-bridge-v1.json`, including the sole active log and serial shared-test registration gate
+- M5 owns exactly the eleven paths in `config/dabangil-first-stage-study-capacity-runtime-bridge-v1.json`, including the sole active log, serial shared-test registration gate, and the M4 receipt-pinned evidence-test repair
 - M5 does not mutate the frozen Kernel/`SubjectAdapterV1`, migrations, auth/RLS, packages/locks, common durable substrate, remote Supabase, or Production
 - Question Foundry retains its disjoint nine-path implementation manifest and no current merge authority
 
@@ -39,4 +39,4 @@
 
 ## Next exact action
 
-- finish the exact ten-path M5 vertical, run focused tests/typecheck/lint/build/path checks, commit, push, and open one Draft PR
+- finish the exact eleven-path M5 vertical, run focused tests/typecheck/lint/build/path checks, commit, push, and open one Draft PR
