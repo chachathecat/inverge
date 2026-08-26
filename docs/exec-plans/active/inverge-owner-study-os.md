@@ -14,7 +14,7 @@
 ## Branches and PRs
 
 - M5: merged PR #845 from `codex/owner-study-m5-study-capacity-runtime-bridge-r1`
-- Question Foundry: `codex/owner-study-question-foundry-r1`; isolated worktree `.agent-factory/worktrees/owner-study-question-foundry-r1`; Draft PR not opened yet
+- Question Foundry: `codex/owner-study-question-foundry-r1`; isolated worktree `.agent-factory/worktrees/owner-study-question-foundry-r1`; Draft PR #846; reviewed implementation commit `bf953c538ce980faae7ad51391bf03f0ce84a30e`; tree `91413611f09724c8ad31b1fd3311c48b801e4b18`; PR binding is source correction 1/2
 - Exhausted candidates: PR #843 and PR #810 closed unmerged
 
 ## Lane ownership
@@ -33,8 +33,8 @@
 
 ## Current blocker
 
-- Question Foundry replacement has clean pre-PR focused/static/integration gates and independent review `0/0/0`; ordinary commit/push, Draft PR binding, exact-head CI, and final full candidate gates remain before the high-risk Owner merge gate
+- Draft PR #846 must pass final full local gates, exact-head CI/runtime evidence, and fresh exact-head review before the high-risk Owner merge gate
 
 ## Next exact action
 
-- stage the exact eleven-path manifest, create one ordinary commit, push, then open the replacement tracking issue and one Draft PR
+- commit and push the PR #846 program-log binding, then run the full final-candidate suite, build, exact-head CI, and fresh formal review
