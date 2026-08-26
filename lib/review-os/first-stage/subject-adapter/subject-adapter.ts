@@ -1,4 +1,8 @@
+import crypto from "node:crypto";
+
 import {
+  CHOICE_IDS,
+  CONFIDENCE_VALUES,
   ERROR_CAUSES,
   FIRST_STAGE_SUBJECT_IDS,
   FirstStageKernelError,
@@ -8,19 +12,30 @@ import {
   requiredSafeInteger,
   type AnswerSubmission,
   type Attempt,
+  type AttemptEvidenceEnvelope,
   type AttemptEvaluation,
   type AttemptEvaluationDecision,
+  type AttemptKind,
   type ChoiceId,
   type ConceptBinding,
+  type Confidence,
+  type ElapsedTime,
+  type ElapsedTimeBucket,
+  type ErrorCause,
   type FirstStageSubjectId,
   type IndependentRetry,
   type IndependentRetryLineageReceipt,
   type ImmutableEvidenceReference,
   type QuestionReference,
+  type ReviewedFeedbackEvidence,
   type ReviewTask,
   type RetryDisposition,
+  type WorkTrace,
+  type WorkTraceStep,
+  type WorkTraceStepKind,
 } from "../kernel/domain";
 
+/* SUBJECT_ADAPTER_V1_TYPE_SOURCE_START */
 export const SUBJECT_ADAPTER_SCHEMA_VERSION =
   "dabangil.first_stage.subject_adapter.v1" as const;
 
@@ -71,6 +86,7 @@ export interface SubjectAdapterV1 {
   evaluateSubmission(input: SubjectEvaluationInput): AttemptEvaluation;
   buildIndependentRetry(input: IndependentRetryInput): IndependentRetryCandidate;
 }
+/* SUBJECT_ADAPTER_V1_TYPE_SOURCE_END */
 
 function deepFreeze<const T>(value: T): T {
   if (value !== null && typeof value === "object" && !Object.isFrozen(value)) {
@@ -81,10 +97,55 @@ function deepFreeze<const T>(value: T): T {
   return value;
 }
 
+type ExactKeyTuple<T, K extends readonly (keyof T)[]> =
+  Exclude<keyof T, K[number]> extends never ? K : never;
+
+function exactTypeKeys<T>() {
+  return <const K extends readonly (keyof T)[]>(keys: ExactKeyTuple<T, K>) => keys;
+}
+
+type ExactValueTuple<T extends PropertyKey, K extends readonly T[]> =
+  Exclude<T, K[number]> extends never ? K : never;
+
+function exactValues<T extends PropertyKey>() {
+  return <const K extends readonly T[]>(values: ExactValueTuple<T, K>) => values;
+}
+
 export const SUBJECT_ADAPTER_V1_INTERFACE_DESCRIPTOR = deepFreeze({
   schemaVersion: SUBJECT_ADAPTER_SCHEMA_VERSION,
   interfaceName: "SubjectAdapterV1",
   subjects: FIRST_STAGE_SUBJECT_IDS,
+  transitiveSourceBindings: [
+    {
+      path: "lib/review-os/first-stage/kernel/domain.ts",
+      normalization: "utf8_lf",
+      sha256: "a8a92eafe394e7b658dd6882df31133738b3967d549eaa3e7a568b1fe4567818",
+      covers: [
+        "QuestionReference", "Attempt", "AnswerSubmission", "Confidence",
+        "ElapsedTime", "WorkTrace", "WorkTraceStep", "ErrorCause", "ConceptBinding",
+        "ReviewTask", "IndependentRetry", "IndependentRetryLineageReceipt",
+        "AttemptEvaluation", "AttemptEvidenceEnvelope", "ImmutableEvidenceReference",
+        "ReviewedFeedbackEvidence", "FirstStageSubjectId", "ChoiceId", "AttemptKind",
+        "AttemptEvaluationDecision", "RetryDisposition", "ElapsedTimeBucket",
+        "WorkTraceStepKind",
+      ],
+    },
+    {
+      path: "lib/review-os/first-stage/subject-adapter/subject-adapter.ts",
+      normalization: "utf8_lf",
+      selection: {
+        startMarker: "/* SUBJECT_ADAPTER_V1_TYPE_SOURCE_START */",
+        endMarker: "/* SUBJECT_ADAPTER_V1_TYPE_SOURCE_END */",
+        markersExcluded: true,
+      },
+      sha256: "dcd540526ca2bf61638bfdeb1e7a5824ebdf843c7f62270b71ac34a764c83125",
+      covers: [
+        "SUBJECT_ADAPTER_SCHEMA_VERSION", "McqChoicePresentation",
+        "McqQuestionPresentation", "SubjectEvaluationInput", "IndependentRetryInput",
+        "IndependentRetryCandidate", "SubjectAdapterV1",
+      ],
+    },
+  ],
   fields: ["schemaVersion", "adapterId", "adapterVersion", "subjectId"],
   methods: [
     {
@@ -109,56 +170,141 @@ export const SUBJECT_ADAPTER_V1_INTERFACE_DESCRIPTOR = deepFreeze({
     },
   ],
   typeShapes: {
-    SubjectAdapterV1: [
+    SubjectAdapterV1: exactTypeKeys<SubjectAdapterV1>()([
       "schemaVersion", "adapterId", "adapterVersion", "subjectId",
       "assertQuestionReference", "presentQuestion", "evaluateSubmission",
       "buildIndependentRetry",
-    ],
-    SubjectEvaluationInput: [
+    ]),
+    SubjectEvaluationInput: exactTypeKeys<SubjectEvaluationInput>()([
       "schemaVersion", "questionReference", "attempt", "submission", "submissionSha256",
-    ],
-    IndependentRetryInput: [
+    ]),
+    IndependentRetryInput: exactTypeKeys<IndependentRetryInput>()([
       "schemaVersion", "sourceQuestionReference", "sourceAttempt", "reviewTask",
       "priorRetries",
-    ],
-    IndependentRetryCandidate: [
+    ]),
+    IndependentRetryCandidate: exactTypeKeys<IndependentRetryCandidate>()([
       "schemaVersion", "questionReference", "lineageReceipt",
-    ],
-    IndependentRetryLineageReceipt: [
+    ]),
+    McqChoicePresentation: exactTypeKeys<McqChoicePresentation>()([
+      "choiceId", "body",
+    ]),
+    McqQuestionPresentation: exactTypeKeys<McqQuestionPresentation>()([
+      "schemaVersion", "questionReference", "stem", "choices", "sourceStatusLabel",
+      "currentnessStatusLabel", "learningReferenceDisclaimer",
+    ]),
+    QuestionReference: exactTypeKeys<QuestionReference>()([
+      "schemaVersion", "questionId", "questionVersion", "subjectId", "examYear",
+      "examRound", "sessionId", "questionNumber", "choiceCount",
+      "sourceVersionManifestIds", "rightsState", "currentnessState",
+    ]),
+    Attempt: exactTypeKeys<Attempt>()([
+      "schemaVersion", "attemptId", "examCycleId", "questionReference", "kind",
+      "sourceAttemptId", "reviewTaskId", "exposureState", "assistanceLevel",
+      "startedAt", "state", "submission", "evaluation",
+    ]),
+    AnswerSubmission: exactTypeKeys<AnswerSubmission>()([
+      "schemaVersion", "selectedChoice", "confidence", "elapsedTime", "answerChanged",
+      "previousChoice", "eliminatedChoiceIds", "workTrace", "submittedAt",
+    ]),
+    ElapsedTime: exactTypeKeys<ElapsedTime>()([
+      "milliseconds", "bucket",
+    ]),
+    WorkTrace: exactTypeKeys<WorkTrace>()([
+      "schemaVersion", "steps",
+    ]),
+    WorkTraceStep: exactTypeKeys<WorkTraceStep>()([
+      "sequence", "kind", "atElapsedMs", "choiceId",
+    ]),
+    ConceptBinding: exactTypeKeys<ConceptBinding>()([
+      "schemaVersion", "conceptId", "conceptVersion", "subjectId", "role",
+    ]),
+    ReviewTask: exactTypeKeys<ReviewTask>()([
+      "schemaVersion", "reviewTaskId", "examCycleId", "sourceAttemptId",
+      "questionReference", "conceptBindings", "errorCause", "disposition", "priority",
+      "dueAt", "status", "completedAt",
+    ]),
+    IndependentRetryLineageReceipt: exactTypeKeys<IndependentRetryLineageReceipt>()([
       "schemaVersion", "receiptId", "receiptVersion", "adapterId", "adapterVersion",
-      "subjectId", "sourceQuestionId", "sourceQuestionVersion", "variantQuestionId",
-      "variantQuestionVersion", "targetConceptBindingKeys", "priorRetryCount", "decision",
-    ],
-    IndependentRetry: [
+      "subjectId", "sourceQuestionId", "sourceQuestionVersion",
+      "sourceQuestionReferenceSha256", "variantQuestionId", "variantQuestionVersion",
+      "variantQuestionReferenceSha256", "targetConceptBindingKeys", "priorRetryCount", "decision",
+    ]),
+    IndependentRetry: exactTypeKeys<IndependentRetry>()([
       "schemaVersion", "independentRetryId", "reviewTaskId", "sourceAttemptId",
       "retryAttemptId", "questionReference", "adapterId", "adapterVersion",
       "lineageReceipt", "assistanceLevel", "startedAt", "completedAt", "outcome",
-    ],
-    McqQuestionPresentation: [
-      "schemaVersion", "questionReference", "stem", "choices", "sourceStatusLabel",
-      "currentnessStatusLabel", "learningReferenceDisclaimer",
-    ],
-    AttemptEvaluation: [
+    ]),
+    AttemptEvaluation: exactTypeKeys<AttemptEvaluation>()([
       "schemaVersion", "decision", "errorCause", "conceptBindings", "biggestGapCode",
       "nextActionCode", "retryDisposition", "reviewAfterMs", "evaluationPolicyVersion",
       "evidenceEnvelope",
-    ],
-    AttemptEvaluationDecision: [
-      "correct", "incorrect", "unanswered", "unavailable", "withheld",
-    ],
-    AttemptEvidenceEnvelope: [
+    ]),
+    AttemptEvidenceEnvelope: exactTypeKeys<AttemptEvidenceEnvelope>()([
       "schemaVersion", "attemptId", "submissionSha256", "questionId", "questionVersion",
-      "subjectId", "adapterId", "adapterVersion", "officialKeyReference",
+      "questionReferenceSha256", "subjectId", "adapterId", "adapterVersion", "officialKeyReference",
       "choiceSetReference", "sourceReference", "versionDecisionReference",
       "rightsDecisionReference", "reviewedFeedback",
-    ],
-    ImmutableEvidenceReference: [
+    ]),
+    ImmutableEvidenceReference: exactTypeKeys<ImmutableEvidenceReference>()([
       "schemaVersion", "evidenceId", "evidenceVersion", "evidenceSha256",
-    ],
-    ReviewedFeedbackEvidence: [
+    ]),
+    ReviewedFeedbackEvidence: exactTypeKeys<ReviewedFeedbackEvidence>()([
       "schemaVersion", "state", "receiptReference", "reviewerIdentity",
       "reviewerClass", "modelAlone",
-    ],
+    ]),
+  },
+  vocabularies: {
+    subjects: exactValues<FirstStageSubjectId>()(FIRST_STAGE_SUBJECT_IDS),
+    choiceIds: exactValues<ChoiceId>()(CHOICE_IDS),
+    confidence: exactValues<Confidence>()(CONFIDENCE_VALUES),
+    elapsedTimeBuckets: exactValues<ElapsedTimeBucket>()([
+      "0_29999", "30000_59999", "60000_119999", "120000_plus",
+    ]),
+    workTraceStepKinds: exactValues<WorkTraceStepKind>()([
+      "read_stem", "read_all_choices", "eliminate_choice", "calculate",
+      "source_check", "change_answer", "select_answer",
+    ]),
+    errorCauses: exactValues<ErrorCause>()(ERROR_CAUSES),
+    questionRightsStates: exactValues<QuestionReference["rightsState"]>()([
+      "verified_owner_private", "verified_cleared",
+    ]),
+    questionCurrentnessStates: exactValues<QuestionReference["currentnessState"]>()([
+      "verified_exam_date", "verified_current",
+    ]),
+    attemptKinds: exactValues<AttemptKind>()(["initial", "independent_retry"]),
+    attemptEvaluationDecisions: exactValues<AttemptEvaluationDecision>()([
+      "correct", "incorrect", "unanswered", "unavailable", "withheld",
+    ]),
+    retryDispositions: exactValues<RetryDisposition>()([
+      "retry_now", "review_then_retry", "review_before_new_variant",
+    ]),
+    conceptBindingRoles: exactValues<ConceptBinding["role"]>()(["primary", "supporting"]),
+    reviewedFeedbackStates: exactValues<ReviewedFeedbackEvidence["state"]>()([
+      "reviewed_available", "withheld_rights_or_version", "not_emitted_unavailable",
+    ]),
+    reviewerClasses: exactValues<Exclude<ReviewedFeedbackEvidence["reviewerClass"], null>>()([
+      "named_owner_authorized_human_reviewer", "owner_approved_personal_feedback_reviewer",
+    ]),
+    attemptExposureStates: exactValues<Attempt["exposureState"]>()([
+      "first_exposure", "repeated_exposure", "verified_variant",
+    ]),
+    assistanceLevels: exactValues<Attempt["assistanceLevel"]>()([
+      "none", "hint_or_scaffold", "answer_revealed",
+    ]),
+    attemptStates: exactValues<Attempt["state"]>()(["in_progress", "evaluated"]),
+    reviewTaskPriorities: exactValues<ReviewTask["priority"]>()([
+      "critical", "high", "normal",
+    ]),
+    reviewTaskStatuses: exactValues<ReviewTask["status"]>()([
+      "pending", "retry_active", "completed",
+    ]),
+    independentRetryOutcomes: exactValues<IndependentRetry["outcome"]>()([
+      "active", "succeeded", "failed",
+    ]),
+    independentRetryLineageDecisions:
+      exactValues<IndependentRetryLineageReceipt["decision"]>()([
+        "verified_variant_for_independent_retry",
+      ]),
   },
   invariants: [
     "adapter_has_exactly_the_four_fields_and_four_own_callable_methods_and_is_frozen_on_registration",
@@ -174,8 +320,9 @@ export const SUBJECT_ADAPTER_V1_INTERFACE_DESCRIPTOR = deepFreeze({
     "withheld_or_unavailable_evaluation_has_null_error_cause_concepts_gap_action_retry_and_review_schedule",
     "withheld_or_unavailable_attempt_records_no_review_task_concept_state_or_retry_queue",
     "evaluation_is_deterministic_for_exact_adapter_version_reference_attempt_submission",
+    "independent_retry_builder_is_pure_and_deterministic_for_exact_adapter_version_and_input",
     "reviewed_evaluation_has_exactly_one_primary_concept_and_no_duplicate_concept_binding",
-    "independent_retry_stays_in_subject_and_cannot_reuse_the_same_question_identity",
+    "independent_retry_stays_in_subject_and_cannot_reuse_the_same_question_id_across_any_version",
     "unknown_missing_cross_subject_or_stale_binding_fails_closed",
     "adapter_makes_no_mastery_efficacy_calibration_or_official_result_claim",
   ],
@@ -184,7 +331,7 @@ export const SUBJECT_ADAPTER_V1_INTERFACE_DESCRIPTOR = deepFreeze({
 // SHA-256 over RFC-8785-equivalent recursively-key-sorted JSON for the exact
 // descriptor above. The focused contract test recomputes and binds this value.
 export const SUBJECT_ADAPTER_V1_INTERFACE_DIGEST =
-  "3ab5255ae09124d8c1f242cf2e5806e71392123613cdcd9aef403adc97ad2ba1" as const;
+  "3317bf9a450c9cecd8530a578eb540ffcf1ad133dcfc866676c95746409e6cbb" as const;
 
 function fail(): never {
   throw new FirstStageKernelError("adapter_mismatch");
@@ -307,7 +454,7 @@ function parseEvidenceEnvelope(
 ) {
   const row = exactObject(value, [
     "schemaVersion", "attemptId", "submissionSha256", "questionId", "questionVersion",
-    "subjectId", "adapterId", "adapterVersion", "officialKeyReference",
+    "questionReferenceSha256", "subjectId", "adapterId", "adapterVersion", "officialKeyReference",
     "choiceSetReference", "sourceReference", "versionDecisionReference",
     "rightsDecisionReference", "reviewedFeedback",
   ]);
@@ -319,6 +466,7 @@ function parseEvidenceEnvelope(
     !/^[0-9a-f]{64}$/u.test(row.submissionSha256) ||
     row.questionId !== input.questionReference.questionId ||
     row.questionVersion !== input.questionReference.questionVersion ||
+    row.questionReferenceSha256 !== questionReferenceSha256(input.questionReference) ||
     row.subjectId !== input.questionReference.subjectId ||
     row.adapterId !== adapter.adapterId ||
     row.adapterVersion !== adapter.adapterVersion
@@ -376,6 +524,7 @@ function parseEvidenceEnvelope(
     submissionSha256: input.submissionSha256,
     questionId: input.questionReference.questionId,
     questionVersion: input.questionReference.questionVersion,
+    questionReferenceSha256: questionReferenceSha256(input.questionReference),
     subjectId: input.questionReference.subjectId,
     adapterId: adapter.adapterId,
     adapterVersion: adapter.adapterVersion,
@@ -386,6 +535,18 @@ function parseEvidenceEnvelope(
     rightsDecisionReference: parseEvidenceReference(row.rightsDecisionReference),
     reviewedFeedback,
   });
+}
+
+function canonicalJson(value: unknown): string {
+  if (value === null || typeof value !== "object") return JSON.stringify(value);
+  if (Array.isArray(value)) return `[${value.map(canonicalJson).join(",")}]`;
+  const row = value as Record<string, unknown>;
+  return `{${Object.keys(row).sort().map((key) =>
+    `${JSON.stringify(key)}:${canonicalJson(row[key])}`).join(",")}}`;
+}
+
+function questionReferenceSha256(reference: QuestionReference) {
+  return crypto.createHash("sha256").update(canonicalJson(reference)).digest("hex");
 }
 
 export function validateAttemptEvaluation(
