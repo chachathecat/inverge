@@ -1088,6 +1088,88 @@ test("keeps unreviewed independent retries active without consuming retry author
   assert.equal(contract.domainContract.rehydratedStateValidation.completedRetryRequiresReviewedEvaluation, true);
 });
 
+test("rejects rehydrated retry evidence for concepts outside the ReviewTask targets", () => {
+  const sourceRegistry = createSubjectAdapterRegistry([makeAdapter()]);
+  let persisted = beginAttempt(initialState(), {
+    expectedRevision: 1,
+    attemptId: "attempt-cross-rehydrate-initial",
+    questionId: "acct-q1",
+    trustedStartedAt: "2026-08-25T00:00:00.000Z",
+  }, sourceRegistry);
+  persisted = submitAnswer(persisted, {
+    expectedRevision: 2,
+    attemptId: "attempt-cross-rehydrate-initial",
+    reviewTaskId: "review-cross-rehydrate",
+    trustedSubmittedAt: "2026-08-25T00:00:02.000Z",
+    submission: draft(1),
+  }, sourceRegistry);
+  persisted = beginIndependentRetry(persisted, {
+    expectedRevision: 3,
+    reviewTaskId: "review-cross-rehydrate",
+    independentRetryId: "retry-cross-rehydrate",
+    retryAttemptId: "attempt-cross-rehydrate-retry",
+    trustedStartedAt: "2026-08-25T00:00:03.000Z",
+  }, sourceRegistry);
+  persisted = submitAnswer(persisted, {
+    expectedRevision: 4,
+    attemptId: "attempt-cross-rehydrate-retry",
+    reviewTaskId: "review-cross-rehydrate",
+    trustedSubmittedAt: "2026-08-25T00:00:04.000Z",
+    submission: draft(2),
+  }, sourceRegistry);
+  assert.equal(persisted.reviewTasks[0].status, "completed");
+  assert.equal(persisted.conceptStates[0].state, "independent_retry_recorded");
+
+  const hostile = structuredClone(persisted);
+  hostile.attempts.at(-1).evaluation.conceptBindings[0].conceptId =
+    "accounting-unrelated-concept";
+  const crossConceptRegistry = createSubjectAdapterRegistry([makeAdapter({
+    crossConceptOnRetry: true,
+  })]);
+  for (const consume of [
+    () => validateFirstStageKernelState(
+      hostile,
+      TRUSTED_OWNER_ID,
+      TRUSTED_CYCLE_DEFINITION_SHA256,
+      crossConceptRegistry,
+    ),
+    () => buildTodayQueue(hostile, {
+      trustedGeneratedAt: "2026-08-25T00:00:05.000Z",
+    }, crossConceptRegistry),
+    () => presentAttemptQuestion(
+      hostile,
+      "attempt-cross-rehydrate-retry",
+      crossConceptRegistry,
+    ),
+    () => beginAttempt(hostile, {
+      expectedRevision: 5,
+      attemptId: "attempt-after-cross-rehydrate",
+      questionId: "acct-q2",
+      trustedStartedAt: "2026-08-25T00:00:05.000Z",
+    }, crossConceptRegistry),
+    () => submitAnswer(hostile, {
+      expectedRevision: 5,
+      attemptId: "attempt-cross-rehydrate-retry",
+      reviewTaskId: "review-cross-rehydrate",
+      trustedSubmittedAt: "2026-08-25T00:00:05.000Z",
+      submission: draft(2),
+    }, crossConceptRegistry),
+    () => beginIndependentRetry(hostile, {
+      expectedRevision: 5,
+      reviewTaskId: "review-cross-rehydrate",
+      independentRetryId: "retry-after-cross-rehydrate",
+      retryAttemptId: "attempt-retry-after-cross-rehydrate",
+      trustedStartedAt: "2026-08-25T00:00:05.000Z",
+    }, crossConceptRegistry),
+  ]) expectKernelCode(consume, "invalid_input");
+
+  assert.equal(
+    contract.domainContract.rehydratedStateValidation
+      .completedRetryEvaluationConceptBindingsExactlyEqualReviewTaskTargets,
+    true,
+  );
+});
+
 test("rejects blank-as-correct, cycle-reused retry, cross-concept closure, and duplicate persisted lineage", () => {
   const blankCorrectRegistry = createSubjectAdapterRegistry([makeAdapter({
     forceDecision: () => "correct",
