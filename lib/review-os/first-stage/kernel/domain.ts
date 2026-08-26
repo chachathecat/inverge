@@ -231,7 +231,6 @@ export type IndependentRetry = Readonly<{
 }>;
 
 export type ConceptOperationalState =
-  | "unobserved"
   | "review_required"
   | "independent_retry_due"
   | "independent_retry_recorded"
@@ -248,6 +247,7 @@ export type ConceptState = Readonly<{
 
 export type ExamCycle = Readonly<{
   schemaVersion: "first_stage.exam_cycle.v1";
+  definitionSha256: string;
   examCycleId: string;
   ownerId: string;
   mode: "today" | "full_day";
