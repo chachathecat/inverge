@@ -227,6 +227,7 @@
       "rawQuestionIdReuseAcrossCycleAndAttemptHistoryRejectedAfterReload": true,
       "activeRetrySubmissionAndEvaluationMustBeNull": true,
       "completedRetryRequiresReviewedEvaluation": true,
+      "completedRetryEvaluationConceptBindingsExactlyEqualReviewTaskTargets": true,
       "retryAndReceiptAdapterIdentityMustEqualRegisteredAdapter": true,
       "fullSourceAndVariantQuestionReferencesBoundBySha256": true,
       "conceptStatesRebuiltFromValidatedAttemptTaskRetryHistory": true,

@@ -474,6 +474,10 @@ function validateKernelState(
       const retrySubmission = validatedSubmissions.get(retryAttempt.attemptId);
       const retryEvaluation = validatedEvaluations.get(retryAttempt.attemptId);
       if (!retrySubmission || !retryEvaluation) throw new FirstStageKernelError("invalid_input");
+      if (
+        !isReviewedEvaluation(retryEvaluation) ||
+        !sameOrderedConceptBindings(retryEvaluation.conceptBindings, task.conceptBindings)
+      ) throw new FirstStageKernelError("invalid_input");
       if (retry.outcome === "succeeded") {
         if (index !== retries.length - 1 || retryEvaluation.decision !== "correct") {
           throw new FirstStageKernelError("invalid_input");
@@ -837,6 +841,14 @@ function receiptConceptKey(binding: ConceptBinding) {
   return `${binding.subjectId}:${binding.conceptId}@${binding.conceptVersion}:${binding.role}`;
 }
 
+function sameOrderedConceptBindings(
+  left: readonly ConceptBinding[],
+  right: readonly ConceptBinding[],
+) {
+  return JSON.stringify(left.map(receiptConceptKey)) ===
+    JSON.stringify(right.map(receiptConceptKey));
+}
+
 function updateConceptStates(
   states: readonly ConceptState[],
   bindings: readonly ConceptBinding[],
@@ -1064,10 +1076,10 @@ export function submitAnswer(
   if (!isReviewedEvaluation(evaluation)) {
     throw new FirstStageKernelError("invalid_transition");
   }
-  if (
-    JSON.stringify(evaluation.conceptBindings.map(receiptConceptKey)) !==
-    JSON.stringify(state.reviewTasks[taskIndex].conceptBindings.map(receiptConceptKey))
-  ) throw new FirstStageKernelError("adapter_mismatch");
+  if (!sameOrderedConceptBindings(
+    evaluation.conceptBindings,
+    state.reviewTasks[taskIndex].conceptBindings,
+  )) throw new FirstStageKernelError("adapter_mismatch");
   const succeeded = evaluation.decision === "correct";
   const task: ReviewTask = Object.freeze({
     ...state.reviewTasks[taskIndex],

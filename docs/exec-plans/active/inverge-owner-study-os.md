@@ -20,7 +20,8 @@
 - M3: `codex/owner-study-m3-wcv-c3-foundation-freeze`; merged PR #838; closed Issue #837; historical read-only worktree `.agent-factory/worktrees/owner-study-m3-wcv-c3-foundation-freeze`
 - M4 exhausted candidate: `codex/owner-study-lane-b-first-stage-kernel`; PR #813 closed unmerged after final exact-head review `0/1/0`
 - M4 clean replan 1: `codex/owner-study-lane-b-first-stage-kernel-replan-1`; PR #839 closed unmerged after a post-approval actionable P2; historical worktree `.agent-factory/worktrees/owner-study-lane-b-replan-1`
-- M4 clean replan 2: `codex/owner-study-lane-b-first-stage-kernel-replan-2`; replacement PR pending; isolated worktree `.agent-factory/worktrees/owner-study-lane-b-replan-2`; integration base `aded1d711c837aa6e93470d3b31bd75907452996`
+- M4 clean replan 2: `codex/owner-study-lane-b-first-stage-kernel-replan-2`; PR #840 closed unmerged after final exact-head review `0/1/0`; historical worktree `.agent-factory/worktrees/owner-study-lane-b-replan-2`
+- M4 clean replan 3: `codex/owner-study-lane-b-first-stage-kernel-replan-3`; replacement PR pending; isolated worktree `.agent-factory/worktrees/owner-study-lane-b-replan-3`; integration base `aded1d711c837aa6e93470d3b31bd75907452996`
 - Question Foundry: `codex/owner-study-lane-c-question-foundry`; Draft PR #810; parked
 
 ## Lane ownership
@@ -39,12 +40,13 @@
 - PR #838 / Foundation Freeze: reviewed `2106d370b2725d3f03923db3a6d279e94778bd6d`; resulting main `aded1d711c837aa6e93470d3b31bd75907452996`; tree `313056e25e3296d1546e909389eb0ad014da5a66`; exact-head checks passed; review `0/0/0`; Issues #837/#706/#707/#708/#781 closed; #714 remains open for C4/C6
 - PR #813 terminal review: exact head `e797b44cd7c1b0e48a209b840a171529d2c2041f`; tree `2bd05811c95ed8b9096d6f4f00c91c5010950c40`; exact-head CI passed; final review `0/1/0`; closed unmerged under correction-cap policy
 - PR #839 terminal review: approved exact head `bb3d445e4d107a1ed27da0beac3109e9f5d90131`; tree `a677f84db2f05dc9c975d41ee4e96ac39da15359`; pre-approval gates `0/0/0`; post-Ready actionable P2 on unreviewed retry requeue; approval not exercised; closed unmerged
-- M4 clean replan 2 current checks: exact 15-path diff from protected main; forbidden-path overlap zero; focused Kernel/S232F2/M3 `25/25`; full suite `1606/1606`; typecheck; changed-file and full lint with zero errors; webpack Production build; `git diff --check`
+- PR #840 terminal review: exact head `ebd94bff88f8be45632c82eb53e4d1cfd9f9f474`; tree `093d376380d0f228c2c32f589f71f2a0dc3f759a`; ruleset-required checks passed; final review `0/1/0` on persisted retry-evaluation versus ReviewTask concept bindings; closed unmerged at correction cap
+- M4 clean replan 3 current checks: exact 15-path diff and forbidden-path overlap zero; hostile cross-concept retry state rejected by all six consumers; focused Kernel/S232F2/M3 `26/26`; full suite `1607/1607`; typecheck; changed-file and full lint with zero errors; webpack Production build; `git diff --check`; independent review `0/0/0`
 
 ## Current blocker
 
-- M4 clean replan 2 must prove the unreviewed-retry repair, then pass replacement exact-head CI/review before exact Owner high-risk merge approval
+- M4 clean replan 3 local final candidate is clean; replacement exact-head CI/review remains before exact Owner high-risk merge approval
 
 ## Next exact action
 
-- commit and push the validated repair, open the replacement Draft PR, then obtain exact-head CI, post-Ready `0/0/0` review, zero actionable threads and Owner approval
+- commit and push the validated replan 3 repair, open the replacement Draft PR with the exact required contract, then obtain exact-head and post-Ready `0/0/0` review
