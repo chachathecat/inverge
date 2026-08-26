@@ -20,7 +20,7 @@
 - M3: `codex/owner-study-m3-wcv-c3-foundation-freeze`; merged PR #838; closed Issue #837; historical read-only worktree `.agent-factory/worktrees/owner-study-m3-wcv-c3-foundation-freeze`
 - M4 exhausted candidate: `codex/owner-study-lane-b-first-stage-kernel`; PR #813 closed unmerged after final exact-head review `0/1/0`
 - M4 clean replan 1: `codex/owner-study-lane-b-first-stage-kernel-replan-1`; PR #839 closed unmerged after a post-approval actionable P2; historical worktree `.agent-factory/worktrees/owner-study-lane-b-replan-1`
-- M4 clean replan 2: `codex/owner-study-lane-b-first-stage-kernel-replan-2`; replacement PR pending; isolated worktree `.agent-factory/worktrees/owner-study-lane-b-replan-2`; integration base `aded1d711c837aa6e93470d3b31bd75907452996`
+- M4 clean replan 2: `codex/owner-study-lane-b-first-stage-kernel-replan-2`; Draft PR #840; PR-identity operating-log correction `1/2`; isolated worktree `.agent-factory/worktrees/owner-study-lane-b-replan-2`; integration base `aded1d711c837aa6e93470d3b31bd75907452996`
 - Question Foundry: `codex/owner-study-lane-c-question-foundry`; Draft PR #810; parked
 
 ## Lane ownership
@@ -43,8 +43,8 @@
 
 ## Current blocker
 
-- M4 clean replan 2 must prove the unreviewed-retry repair, then pass replacement exact-head CI/review before exact Owner high-risk merge approval
+- M4 clean replan 2 PR #840 must pass exact-head CI, fresh and post-Ready review, and the zero-thread gate before exact Owner high-risk merge approval
 
 ## Next exact action
 
-- commit and push the validated repair, open the replacement Draft PR, then obtain exact-head CI, post-Ready `0/0/0` review, zero actionable threads and Owner approval
+- complete PR #840 exact-head CI, fresh and post-Ready `0/0/0` review and zero actionable threads, then prepare the exact-head Owner merge packet
