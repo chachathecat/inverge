@@ -19,7 +19,7 @@
 
 - M3: `codex/owner-study-m3-wcv-c3-foundation-freeze`; merged PR #838; closed Issue #837; historical read-only worktree `.agent-factory/worktrees/owner-study-m3-wcv-c3-foundation-freeze`
 - M4 exhausted candidate: `codex/owner-study-lane-b-first-stage-kernel`; PR #813 closed unmerged after final exact-head review `0/1/0`
-- M4 clean replan 1: `codex/owner-study-lane-b-first-stage-kernel-replan-1`; PR not yet opened; isolated worktree `.agent-factory/worktrees/owner-study-lane-b-replan-1`; integration base `aded1d711c837aa6e93470d3b31bd75907452996`
+- M4 clean replan 1: `codex/owner-study-lane-b-first-stage-kernel-replan-1`; Draft PR #839; candidate head `9a9c311901494e877e53c2a0e78b35fd00c6d40f`; tree `52000d1fe49b913186c19b9bd58d63ff5063d139`; isolated worktree `.agent-factory/worktrees/owner-study-lane-b-replan-1`; integration base `aded1d711c837aa6e93470d3b31bd75907452996`
 - Question Foundry: `codex/owner-study-lane-c-question-foundry`; Draft PR #810; parked
 
 ## Lane ownership
@@ -41,8 +41,8 @@
 
 ## Current blocker
 
-- M4 clean replan aggregate-state repair and pre-commit review are clean; final candidate build and exact-head PR gates remain
+- M4 clean replan aggregate-state repair and local candidate gates are clean; PR #839 exact-head CI and fresh formal review remain
 
 ## Next exact action
 
-- run final candidate build and isolation checks, commit and push clean replan 1, open one replacement Draft PR, then inspect exact-head CI/runtime and fresh formal review
+- push the PR #839 operating-log correction, inspect its exact-head CI/runtime, then obtain a fresh formal review with actionable `0/0/0` and zero unresolved threads
