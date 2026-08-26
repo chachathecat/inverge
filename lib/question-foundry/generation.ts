@@ -1,9 +1,13 @@
 import {
   QUESTION_FOUNDRY_RELEASE_TIERS,
+  QUESTION_FOUNDRY_SUBJECTS,
   type AnswerSpecificationV1,
   type BankFirstSelectionV1,
   type BankSelectionRequestV1,
   type CandidateBatchV1,
+  type QuestionBankEnvelopeV1,
+  type QuestionBankLifecycleEnvelopeV1,
+  type QuestionBankLifecycleTransitionV1,
   type QuestionBankReleaseEnvelopeV1,
   type QuestionBlueprintV1,
   type QuestionCandidateV1,
@@ -14,7 +18,10 @@ import {
 } from "./contracts";
 import {
   createQuestionBankArtifact,
+  disputeQuestionBankArtifact,
   isQuestionBankArtifactAssignable,
+  retireQuestionBankArtifact,
+  reviseQuestionBankArtifact,
 } from "./release-policy";
 import {
   canonicalDigest,
@@ -31,6 +38,138 @@ type CandidateDraft = Readonly<{
   proposedCorrectOptionId: string;
   explanation: string;
 }>;
+
+const SAFE_ID = /^[A-Za-z0-9][A-Za-z0-9._:/@-]{0,199}$/u;
+const SHA256 = /^[a-f0-9]{64}$/u;
+const GENERATION_PLAN_KEYS = [
+  "batchId",
+  "blueprint",
+  "answerSpecification",
+  "candidateCount",
+  "generatorId",
+  "generatorVersion",
+  "generatorModelIdentity",
+  "generatorExecutionIds",
+  "generationRunId",
+  "generatedAt",
+  "trustedSources",
+  "sourceRegistryExportBinding",
+  "generator",
+] as const;
+const BANK_REQUEST_KEYS = [
+  "requestId",
+  "subject",
+  "skillId",
+  "difficultyBand",
+  "itemFamily",
+  "excludedArtifactIds",
+  "offlineGenerationOnGapAuthorized",
+  "occurredAt",
+] as const;
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return value !== null && typeof value === "object" && !Array.isArray(value);
+}
+
+function hasExactKeys(value: Record<string, unknown>, expected: readonly string[]): boolean {
+  const actual = Object.keys(value).sort();
+  const exact = [...expected].sort();
+  return actual.length === exact.length && actual.every((key, index) => key === exact[index]);
+}
+
+function isIsoInstant(value: unknown): value is string {
+  if (typeof value !== "string") return false;
+  const epoch = Date.parse(value);
+  return Number.isFinite(epoch) && new Date(epoch).toISOString() === value;
+}
+
+function assertGenerationPlanPreflight(
+  value: unknown,
+): asserts value is GenerateCandidateBatchInput {
+  if (!isRecord(value) || !hasExactKeys(value, GENERATION_PLAN_KEYS)) {
+    throw new Error("generation-plan-closed-shape-invalid");
+  }
+  if (
+    typeof value.batchId !== "string" ||
+    !SAFE_ID.test(value.batchId) ||
+    typeof value.generatorId !== "string" ||
+    !SAFE_ID.test(value.generatorId) ||
+    typeof value.generatorVersion !== "string" ||
+    !SAFE_ID.test(value.generatorVersion) ||
+    typeof value.generationRunId !== "string" ||
+    !SAFE_ID.test(value.generationRunId)
+  ) {
+    throw new Error("generation-plan-provenance-identity-invalid");
+  }
+  if (!isIsoInstant(value.generatedAt)) throw new Error("generation-plan-time-invalid");
+  if (
+    typeof value.candidateCount !== "number" ||
+    !Number.isInteger(value.candidateCount) ||
+    value.candidateCount < 2 ||
+    value.candidateCount > 12
+  ) {
+    throw new Error("candidate-count-must-be-between-2-and-12");
+  }
+  if (
+    !Array.isArray(value.generatorExecutionIds) ||
+    value.generatorExecutionIds.length !== value.candidateCount ||
+    value.generatorExecutionIds.some((entry) => typeof entry !== "string" || !SAFE_ID.test(entry)) ||
+    new Set(value.generatorExecutionIds).size !== value.generatorExecutionIds.length
+  ) {
+    throw new Error("generation-plan-execution-ids-invalid");
+  }
+  if (
+    !isRecord(value.generatorModelIdentity) ||
+    !hasExactKeys(value.generatorModelIdentity, [
+      "providerId",
+      "modelFamilyId",
+      "modelVersionId",
+      "modelArtifactDigest",
+    ]) ||
+    typeof value.generatorModelIdentity.providerId !== "string" ||
+    !SAFE_ID.test(value.generatorModelIdentity.providerId) ||
+    typeof value.generatorModelIdentity.modelFamilyId !== "string" ||
+    !SAFE_ID.test(value.generatorModelIdentity.modelFamilyId) ||
+    typeof value.generatorModelIdentity.modelVersionId !== "string" ||
+    !SAFE_ID.test(value.generatorModelIdentity.modelVersionId) ||
+    typeof value.generatorModelIdentity.modelArtifactDigest !== "string" ||
+    !SHA256.test(value.generatorModelIdentity.modelArtifactDigest)
+  ) {
+    throw new Error("generation-plan-model-identity-invalid");
+  }
+  if (typeof value.generator !== "function") throw new Error("generation-plan-callback-invalid");
+}
+
+function assertBankSelectionRequest(value: unknown): asserts value is BankSelectionRequestV1 {
+  if (!isRecord(value) || !hasExactKeys(value, BANK_REQUEST_KEYS)) {
+    throw new Error("invalid-bank-selection-request:closed-shape");
+  }
+  if (
+    typeof value.requestId !== "string" ||
+    !SAFE_ID.test(value.requestId) ||
+    typeof value.skillId !== "string" ||
+    !SAFE_ID.test(value.skillId) ||
+    typeof value.itemFamily !== "string" ||
+    !SAFE_ID.test(value.itemFamily) ||
+    !QUESTION_FOUNDRY_SUBJECTS.some((subject) => subject === value.subject) ||
+    typeof value.difficultyBand !== "string" ||
+    !["FOUNDATION", "STANDARD", "ADVANCED"].includes(value.difficultyBand) ||
+    !isIsoInstant(value.occurredAt)
+  ) {
+    throw new Error("invalid-bank-selection-request:identity-or-time");
+  }
+  if (
+    !Array.isArray(value.excludedArtifactIds) ||
+    value.excludedArtifactIds.length > 1_000 ||
+    value.excludedArtifactIds.some((entry) => typeof entry !== "string" || !SAFE_ID.test(entry)) ||
+    new Set(value.excludedArtifactIds).size !== value.excludedArtifactIds.length
+  ) {
+    throw new Error("invalid-bank-selection-request:excluded-artifacts");
+  }
+  if (typeof value.offlineGenerationOnGapAuthorized !== "boolean") {
+    throw new Error("invalid-bank-selection-request:generation-authority-boolean-required");
+  }
+}
 
 export type OfflineCandidateGenerator = (input: Readonly<{
   blueprint: QuestionBlueprintV1;
@@ -77,6 +216,7 @@ function twoDistinctOrders<T>(values: readonly T[]): readonly (readonly T[])[] {
 export function generateCandidateBatch(
   input: GenerateCandidateBatchInput,
 ): CandidateBatchV1 {
+  assertGenerationPlanPreflight(input);
   const blueprintValidation = validateQuestionBlueprint(
     input.blueprint,
     input.trustedSources,
@@ -93,15 +233,6 @@ export function generateCandidateBatch(
   );
   if (!specificationValidation.valid) {
     throw new Error(`invalid-answer-specification:${specificationValidation.errors.join(",")}`);
-  }
-  if (!Number.isInteger(input.candidateCount) || input.candidateCount < 2 || input.candidateCount > 12) {
-    throw new Error("candidate-count-must-be-between-2-and-12");
-  }
-  if (
-    input.generatorExecutionIds.length !== input.candidateCount ||
-    new Set(input.generatorExecutionIds).size !== input.generatorExecutionIds.length
-  ) {
-    throw new Error("one-unique-generator-execution-id-required-per-candidate");
   }
   if (Date.parse(input.answerSpecification.createdAt) > Date.parse(input.generatedAt)) {
     throw new Error("solution-must-be-committed-before-generation");
@@ -182,6 +313,21 @@ export function generateCandidateBatch(
 }
 
 function revalidateReleaseEnvelope(envelope: QuestionBankReleaseEnvelopeV1) {
+  if (
+    !isRecord(envelope) ||
+    !hasExactKeys(envelope, [
+      "envelopeKind",
+      "artifact",
+      "bundle",
+      "requestedTier",
+      "decision",
+      "trustContext",
+      "auditRun",
+    ]) ||
+    envelope.envelopeKind !== "RELEASE"
+  ) {
+    throw new Error("bank-release-envelope-closed-shape-invalid");
+  }
   const recomputedArtifact = createQuestionBankArtifact({
     artifactId: envelope.artifact.artifactId,
     bundle: envelope.bundle,
@@ -197,13 +343,78 @@ function revalidateReleaseEnvelope(envelope: QuestionBankReleaseEnvelopeV1) {
   return recomputedArtifact;
 }
 
+function revalidateLifecycleEnvelope(envelope: QuestionBankLifecycleEnvelopeV1) {
+  if (
+    !isRecord(envelope) ||
+    !hasExactKeys(envelope, ["envelopeKind", "releaseEnvelope", "transitions", "artifact"]) ||
+    envelope.envelopeKind !== "LIFECYCLE" ||
+    !Array.isArray(envelope.transitions) ||
+    envelope.transitions.length < 1 ||
+    envelope.transitions.length > 16
+  ) {
+    throw new Error("bank-lifecycle-envelope-closed-shape-invalid");
+  }
+  let current = revalidateReleaseEnvelope(envelope.releaseEnvelope);
+  const lineageArtifactIds = new Set([current.artifactId]);
+  for (const rawTransition of envelope.transitions as readonly unknown[]) {
+    if (
+      !isRecord(rawTransition) ||
+      !hasExactKeys(rawTransition, ["lifecycleAction", "artifact", "auditRun", "occurredAt"]) ||
+      !["DISPUTED", "REVISED", "RETIRED"].includes(String(rawTransition.lifecycleAction)) ||
+      !isIsoInstant(rawTransition.occurredAt)
+    ) {
+      throw new Error("bank-lifecycle-transition-closed-shape-invalid");
+    }
+    const transition = rawTransition as unknown as QuestionBankLifecycleTransitionV1;
+    let recomputed;
+    if (transition.lifecycleAction === "DISPUTED") {
+      recomputed = disputeQuestionBankArtifact(
+        current,
+        current.revision,
+        transition.auditRun,
+        transition.occurredAt,
+      );
+    } else if (transition.lifecycleAction === "RETIRED") {
+      recomputed = retireQuestionBankArtifact(
+        current,
+        current.revision,
+        transition.auditRun,
+        transition.occurredAt,
+      );
+    } else {
+      recomputed = reviseQuestionBankArtifact({
+        artifact: current,
+        expectedRevision: current.revision,
+        newArtifactId: transition.artifact.artifactId,
+        newCandidateId: transition.artifact.candidateId,
+        auditRun: transition.auditRun,
+        occurredAt: transition.occurredAt,
+      });
+    }
+    if (canonicalDigest(recomputed) !== canonicalDigest(transition.artifact)) {
+      throw new Error("bank-lifecycle-transition-artifact-mismatch");
+    }
+    current = recomputed;
+    lineageArtifactIds.add(current.artifactId);
+  }
+  if (
+    canonicalDigest(current) !== canonicalDigest(envelope.artifact) ||
+    isQuestionBankArtifactAssignable(current)
+  ) {
+    throw new Error("bank-lifecycle-envelope-terminal-artifact-mismatch");
+  }
+  return { artifact: current, lineageArtifactIds };
+}
+
 export function selectBankFirstOrGenerateOnGap(
   request: BankSelectionRequestV1,
-  bank: readonly QuestionBankReleaseEnvelopeV1[],
+  bank: readonly QuestionBankEnvelopeV1[],
   currentTrustedSources: TrustedSourceRegistryV1 | null,
   currentSourceRegistryExportBinding: TrustedSourceRegistryExportBindingV1 | null,
   generationPlan: GenerateCandidateBatchInput | null,
 ): BankFirstSelectionV1 {
+  assertBankSelectionRequest(request);
+  if (!Array.isArray(bank)) throw new Error("bank-must-be-array");
   const inScopeEnvelopes = bank.filter(
     (envelope) =>
       envelope.artifact.subject === request.subject &&
@@ -212,18 +423,39 @@ export function selectBankFirstOrGenerateOnGap(
       envelope.artifact.itemFamily === request.itemFamily &&
       !request.excludedArtifactIds.includes(envelope.artifact.artifactId),
   );
+  const releasableEnvelopes: Array<{
+    envelope: QuestionBankReleaseEnvelopeV1;
+    artifact: ReturnType<typeof revalidateReleaseEnvelope>;
+  }> = [];
+  const nonAssignableLineageArtifactIds = new Set<string>();
   for (const envelope of inScopeEnvelopes) {
     if (!QUESTION_FOUNDRY_RELEASE_TIERS.includes(envelope.artifact.releaseTier)) {
       throw new Error("bank-artifact-release-tier-invalid");
     }
+    if (isQuestionBankArtifactAssignable(envelope.artifact)) {
+      if (envelope.envelopeKind !== "RELEASE") {
+        throw new Error("bank-releasable-entry-requires-release-envelope");
+      }
+      releasableEnvelopes.push({
+        envelope,
+        artifact: revalidateReleaseEnvelope(envelope),
+      });
+    } else {
+      if (envelope.envelopeKind !== "LIFECYCLE") {
+        throw new Error("bank-nonassignable-history-requires-lifecycle-envelope");
+      }
+      const history = revalidateLifecycleEnvelope(envelope);
+      for (const artifactId of history.lineageArtifactIds) {
+        nonAssignableLineageArtifactIds.add(artifactId);
+      }
+    }
   }
-  const matchingEnvelopes = inScopeEnvelopes
-    .filter((envelope) => isQuestionBankArtifactAssignable(envelope.artifact))
+  const matchingEnvelopes = releasableEnvelopes
+    .filter((entry) => !nonAssignableLineageArtifactIds.has(entry.artifact.artifactId))
     .sort((left, right) => left.artifact.artifactId.localeCompare(right.artifact.artifactId));
 
   if (matchingEnvelopes.length > 0) {
-    const envelope = matchingEnvelopes[0];
-    const artifact = revalidateReleaseEnvelope(envelope);
+    const { envelope, artifact } = matchingEnvelopes[0];
     if (Date.parse(request.occurredAt) < Date.parse(artifact.updatedAt)) {
       throw new Error("bank-assignment-request-predates-artifact");
     }
@@ -289,7 +521,7 @@ export function selectBankFirstOrGenerateOnGap(
     containsBody: false as const,
   });
 
-  if (!request.offlineGenerationOnGapAuthorized || generationPlan === null) {
+  if (request.offlineGenerationOnGapAuthorized !== true || generationPlan === null) {
     return deepFreeze({
       kind: "BLOCKED" as const,
       artifact: null,

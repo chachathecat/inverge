@@ -14,7 +14,7 @@
 ## Branches and PRs
 
 - M5: merged PR #845 from `codex/owner-study-m5-study-capacity-runtime-bridge-r1`
-- Question Foundry: `codex/owner-study-question-foundry-r2`; isolated worktree `.agent-factory/worktrees/owner-study-question-foundry-r2`; Draft PR #847; implementation head `406ea48c2a946da77d470c9a289324bd69f52359`; tree `5fd670b570a9b9781b176632663fb02ed5ed6cea`; source correction 1/2 binds this live PR receipt
+- Question Foundry: `codex/owner-study-question-foundry-r2`; isolated worktree `.agent-factory/worktrees/owner-study-question-foundry-r2`; PR #847; implementation head `406ea48c2a946da77d470c9a289324bd69f52359`; tree `5fd670b570a9b9781b176632663fb02ed5ed6cea`; source correction 2/2 repairs the exact-head numeric, callback-preflight and bank-lifecycle findings
 - Exhausted candidates: PR #846, PR #843 and PR #810 closed unmerged
 
 ## Lane ownership
@@ -33,7 +33,7 @@
 
 ## Current blocker
 
-- PR #847 is blocked only on exact-head full gates and fresh formal review after repairing the three live #846 review roots
+- PR #847 source correction 2/2 must pass focused/full gates and fresh exact-head review; no acceptance gate is waived
 
 ## Next exact action
 
