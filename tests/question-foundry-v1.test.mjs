@@ -1137,6 +1137,10 @@ test("machine contract freezes source-only boundaries and exact lane ownership",
   assert.equal(contract.schemaVersion, QUESTION_FOUNDRY_CONTRACT_VERSION);
   assert.equal(contract.status, "source_implemented_offline_default_off");
   assert.equal(contract.parallelExecutionBinding.laneId, "LANE_C_QUESTION_FOUNDRY");
+  assert.equal(
+    contract.parallelExecutionBinding.branch,
+    "codex/owner-study-question-foundry-r3",
+  );
   assert.equal(contract.parallelExecutionBinding.mergeAuthorizedNow, true);
   assert.equal(contract.parallelExecutionBinding.sharedBaseSha, "fd8d0039bbeb2981935fdb671094e37d73a34400");
   assert.equal(contract.parallelExecutionBinding.sharedBaseTree, "1d338b7be92cfc98c00611b4ff3f2b75dea1784d");
@@ -1386,6 +1390,37 @@ test("offline solution-first generation creates multiple quarantined candidates 
   );
 });
 
+test("candidate and option permutation records are closed, unique, and exactly candidate-scoped", () => {
+  const valid = batch();
+  for (const [name, mutate] of [
+    ["candidate private body", (value) => {
+      value.candidateOrderPermutations[0].rawPrivateBody = "must not enter evidence";
+    }],
+    ["option academy body", (value) => {
+      value.optionOrderPermutations[0].academyTextbookBody = "must not enter evidence";
+    }],
+    ["duplicate candidate permutation id", (value) => {
+      value.candidateOrderPermutations[1].permutationId =
+        value.candidateOrderPermutations[0].permutationId;
+    }],
+    ["duplicate cross-kind permutation id", (value) => {
+      value.optionOrderPermutations[0].permutationId =
+        value.candidateOrderPermutations[0].permutationId;
+    }],
+    ["orphan option permutation", (value) => {
+      value.optionOrderPermutations[0].candidateId = "candidate-not-in-batch";
+    }],
+  ]) {
+    const hostile = clone(valid);
+    mutate(hostile);
+    assert.equal(
+      validateBatchWithAuthority(hostile, sourceRegistry()).valid,
+      false,
+      name,
+    );
+  }
+});
+
 test("trusted current source and deterministic calculation validators fail closed", () => {
   const candidateBatch = batch();
   const selected = candidateBatch.candidates[0];
@@ -1554,6 +1589,14 @@ test("trusted current source and deterministic calculation validators fail close
     assert.equal(invalid.valid, false, String(invalidDecimal));
     assert.ok(invalid.errors.includes("calculation.operands:INVALID"), String(invalidDecimal));
   }
+  for (const invalidScale of [Number.MAX_SAFE_INTEGER, 1.5, -1, "8", null]) {
+    const hostileScale = {
+      ...exactSourceDecimal,
+      rounding: { mode: "HALF_UP", scale: invalidScale },
+    };
+    assert.doesNotThrow(() => calculateDeterministically(hostileScale), String(invalidScale));
+    assert.equal(calculateDeterministically(hostileScale), null, String(invalidScale));
+  }
 
   const exactCandidate = clone(selected);
   const exactCorrect = exactCandidate.options.find(
@@ -1565,6 +1608,43 @@ test("trusted current source and deterministic calculation validators fail close
     calculation: decimalHalfTie,
   };
   assert.equal(validateCandidateCalculation(exactCandidate, exactSpecification).valid, true);
+  const groupingCandidate = clone(exactCandidate);
+  const groupingCorrect = groupingCandidate.options.find(
+    (option) => option.optionId === groupingCandidate.proposedCorrectOptionId,
+  );
+  const onePointSpecification = {
+    ...candidateBatch.answerSpecification,
+    calculation: {
+      operation: "ADD",
+      operands: ["1", "0"],
+      result: "1",
+      unit: "POINTS",
+      rounding: { mode: "NONE", scale: 0 },
+      tolerance: 0,
+    },
+  };
+  for (const malformedGrouping of ["0,001 points", "00,001 points", "000,001 points"]) {
+    groupingCorrect.body = malformedGrouping;
+    assert.ok(
+      validateCandidateCalculation(groupingCandidate, onePointSpecification).errors.includes(
+        "candidateCalculation:OPTION_NUMERIC_TOKEN_INVALID",
+      ),
+      malformedGrouping,
+    );
+  }
+  groupingCorrect.body = "1,001 points";
+  const oneThousandOnePointSpecification = {
+    ...onePointSpecification,
+    calculation: {
+      ...onePointSpecification.calculation,
+      operands: ["1001", "0"],
+      result: "1001",
+    },
+  };
+  assert.equal(
+    validateCandidateCalculation(groupingCandidate, oneThousandOnePointSpecification).valid,
+    true,
+  );
   exactCorrect.body = "1.008e1 POINTS";
   assert.equal(validateCandidateCalculation(exactCandidate, exactSpecification).valid, true);
   for (const hostileBody of [
@@ -2396,6 +2476,30 @@ test("bank-first assignment revalidates current rights and generation-on-gap pre
     occurredAt: "2026-08-25T00:12:00.000Z",
   });
   const laterReleaseEnvelope = { ...releaseEnvelope, artifact: laterArtifact };
+  assert.throws(
+    () =>
+      selectBankFirstOrGenerateOnGap(
+        request,
+        [releaseEnvelope, clone(releaseEnvelope)],
+        currentSources,
+        sourceRegistryExportBinding(currentSources),
+        generationPlan(),
+      ),
+    /bank-duplicate-release-artifact-identity/,
+  );
+  assert.equal(calls, 0);
+  assert.throws(
+    () =>
+      selectBankFirstOrGenerateOnGap(
+        request,
+        [releaseEnvelope, laterReleaseEnvelope],
+        currentSources,
+        sourceRegistryExportBinding(currentSources),
+        generationPlan(),
+      ),
+    /bank-duplicate-release-candidate-identity/,
+  );
+  assert.equal(calls, 0);
   const disputedAt = "2026-08-25T00:13:00.000Z";
   const disputedExpected = {
     ...artifact,
@@ -2471,6 +2575,54 @@ test("bank-first assignment revalidates current rights and generation-on-gap pre
     retiredAudit,
     retiredAt,
   );
+  const revisedDisputedAt = "2026-08-25T00:15:30.000Z";
+  const revisedDisputedExpected = {
+    ...revisedArtifact,
+    releaseTier: "DISPUTED",
+    revision: 2,
+    auditRunId: "audit-bank-revised-disputed",
+    updatedAt: revisedDisputedAt,
+  };
+  const revisedDisputedAudit = createLifecycleAudit(
+    revisedArtifact,
+    revisedDisputedExpected,
+    "DISPUTED",
+    "audit-bank-revised-disputed",
+    revisedDisputedAt,
+  );
+  const revisedDisputedArtifact = disputeQuestionBankArtifact(
+    revisedArtifact,
+    revisedArtifact.revision,
+    revisedDisputedAudit,
+    revisedDisputedAt,
+  );
+  const reusedAt = "2026-08-25T00:16:00.000Z";
+  const reusedExpected = {
+    ...revisedDisputedArtifact,
+    artifactId: artifact.artifactId,
+    candidateId: artifact.candidateId,
+    releaseTier: "QUARANTINED",
+    revision: 1,
+    parentArtifactId: revisedDisputedArtifact.artifactId,
+    auditRunId: "audit-bank-reused-lineage-identity",
+    createdAt: reusedAt,
+    updatedAt: reusedAt,
+  };
+  const reusedAudit = createLifecycleAudit(
+    revisedDisputedArtifact,
+    reusedExpected,
+    "REVISED",
+    "audit-bank-reused-lineage-identity",
+    reusedAt,
+  );
+  const reusedArtifact = reviseQuestionBankArtifact({
+    artifact: revisedDisputedArtifact,
+    expectedRevision: revisedDisputedArtifact.revision,
+    newArtifactId: reusedExpected.artifactId,
+    newCandidateId: reusedExpected.candidateId,
+    auditRun: reusedAudit,
+    occurredAt: reusedAt,
+  });
   const lifecycleEnvelopes = [
     {
       label: "DISPUTED",
@@ -2510,16 +2662,140 @@ test("bank-first assignment revalidates current rights and generation-on-gap pre
     },
   ];
 
+  assert.throws(
+    () =>
+      selectBankFirstOrGenerateOnGap(
+        request,
+        [
+          {
+            envelopeKind: "LIFECYCLE",
+            releaseEnvelope,
+            transitions: [
+              disputedTransition,
+              {
+                lifecycleAction: "REVISED",
+                artifact: revisedArtifact,
+                auditRun: revisedAudit,
+                occurredAt: revisedAt,
+              },
+              {
+                lifecycleAction: "DISPUTED",
+                artifact: revisedDisputedArtifact,
+                auditRun: revisedDisputedAudit,
+                occurredAt: revisedDisputedAt,
+              },
+              {
+                lifecycleAction: "REVISED",
+                artifact: reusedArtifact,
+                auditRun: reusedAudit,
+                occurredAt: reusedAt,
+              },
+            ],
+            artifact: reusedArtifact,
+          },
+        ],
+        currentSources,
+        sourceRegistryExportBinding(currentSources),
+        generationPlan(),
+      ),
+    /bank-lifecycle-revision-identity-reused/,
+  );
+  assert.equal(calls, 0);
+
+  const quarantinedLifecycleEnvelope = clone(lifecycleEnvelopes.find(
+    (entry) => entry.label === "QUARANTINED",
+  ));
+  delete quarantinedLifecycleEnvelope.label;
+  const retiredLifecycleEnvelope = clone(lifecycleEnvelopes.find(
+    (entry) => entry.label === "RETIRED",
+  ));
+  delete retiredLifecycleEnvelope.label;
+
+  const excludedTerminalHistory = selectBankFirstOrGenerateOnGap(
+    {
+      ...request,
+      requestId: "request-excluded-terminal-history",
+      excludedArtifactIds: [revisedArtifact.artifactId],
+      offlineGenerationOnGapAuthorized: false,
+    },
+    [releaseEnvelope, quarantinedLifecycleEnvelope],
+    currentSources,
+    sourceRegistryExportBinding(currentSources),
+    generationPlan(),
+  );
+  assert.equal(excludedTerminalHistory.kind, "BLOCKED");
+  assert.equal(calls, 0);
+
+  const driftedLifecycleSummary = clone(quarantinedLifecycleEnvelope);
+  driftedLifecycleSummary.artifact = {
+    ...driftedLifecycleSummary.artifact,
+    subject: "economics",
+  };
+  assert.throws(
+    () =>
+      selectBankFirstOrGenerateOnGap(
+        request,
+        [releaseEnvelope, driftedLifecycleSummary],
+        currentSources,
+        sourceRegistryExportBinding(currentSources),
+        generationPlan(),
+      ),
+    /bank-lifecycle-envelope-terminal-artifact-mismatch/,
+  );
+  assert.equal(calls, 0);
+
+  const driftedReleaseScope = clone(releaseEnvelope);
+  driftedReleaseScope.artifact.subject = "ACCOUNTING";
+  assert.throws(
+    () =>
+      selectBankFirstOrGenerateOnGap(
+        request,
+        [driftedReleaseScope],
+        currentSources,
+        sourceRegistryExportBinding(currentSources),
+        generationPlan(),
+      ),
+    /bank-release-envelope-artifact-mismatch/,
+  );
+  assert.equal(calls, 0);
+
+  const rewrappedArtifact = createQuestionBankArtifact({
+    artifactId: "artifact-rewrapped-same-candidate",
+    bundle: bundleValue,
+    requestedTier: "PERSONAL_LEARNING_USABLE",
+    decision,
+    trustContext,
+    auditRun,
+    occurredAt: "2026-08-25T00:12:00.000Z",
+  });
+  const rewrappedEnvelope = { ...releaseEnvelope, artifact: rewrappedArtifact };
+  const blockedRewrappedCandidate = selectBankFirstOrGenerateOnGap(
+    {
+      ...request,
+      requestId: "request-retired-candidate-rewrapped",
+      offlineGenerationOnGapAuthorized: false,
+    },
+    [retiredLifecycleEnvelope, rewrappedEnvelope],
+    currentSources,
+    sourceRegistryExportBinding(currentSources),
+    generationPlan(),
+  );
+  assert.equal(blockedRewrappedCandidate.kind, "BLOCKED");
+  assert.equal(calls, 0);
+
   for (const { label: lifecycleTier, ...lifecycleEnvelope } of lifecycleEnvelopes) {
     const selectedAfterHistory = selectBankFirstOrGenerateOnGap(
-      request,
-      [lifecycleEnvelope, releaseEnvelope, laterReleaseEnvelope],
+      {
+        ...request,
+        requestId: `request-history-plus-rewrapped-${lifecycleTier.toLowerCase()}`,
+        offlineGenerationOnGapAuthorized: false,
+      },
+      [lifecycleEnvelope, releaseEnvelope],
       currentSources,
       sourceRegistryExportBinding(currentSources),
       generationPlan(),
     );
-    assert.equal(selectedAfterHistory.kind, "BANK_ITEM", lifecycleTier);
-    assert.equal(selectedAfterHistory.artifact.artifactId, laterArtifact.artifactId, lifecycleTier);
+    assert.equal(selectedAfterHistory.kind, "BLOCKED", lifecycleTier);
     assert.equal(calls, 0, lifecycleTier);
 
     const generatedAfterHistory = selectBankFirstOrGenerateOnGap(
@@ -2716,6 +2992,7 @@ test("bank-first assignment revalidates current rights and generation-on-gap pre
   for (const [name, planOverride] of [
     ["batchId", { batchId: "" }],
     ["batchIdType", { batchId: true }],
+    ["derivedBatchIds", { batchId: "b".repeat(200) }],
     ["generatorId", { generatorId: "" }],
     ["generatorVersion", { generatorVersion: "" }],
     ["generationRunId", { generationRunId: "" }],

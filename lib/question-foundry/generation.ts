@@ -83,6 +83,34 @@ function isIsoInstant(value: unknown): value is string {
   return Number.isFinite(epoch) && new Date(epoch).toISOString() === value;
 }
 
+function candidateIdFor(batchId: string, candidateIndex: number): string {
+  return `${batchId}:candidate:${candidateIndex + 1}`;
+}
+
+function candidateOrderPermutationIdFor(batchId: string, permutationIndex: number): string {
+  return `${batchId}:candidate-order:${permutationIndex + 1}`;
+}
+
+function optionOrderPermutationIdFor(candidateId: string, permutationIndex: number): string {
+  return `${candidateId}:option-order:${permutationIndex + 1}`;
+}
+
+function assertDerivedGenerationIdentities(batchId: string, candidateCount: number): void {
+  const candidateIds = Array.from({ length: candidateCount }, (_, index) =>
+    candidateIdFor(batchId, index),
+  );
+  const derivedIds = [
+    ...candidateIds,
+    ...[0, 1].map((index) => candidateOrderPermutationIdFor(batchId, index)),
+    ...candidateIds.flatMap((candidateId) =>
+      [0, 1].map((index) => optionOrderPermutationIdFor(candidateId, index)),
+    ),
+  ];
+  if (derivedIds.some((identity) => !SAFE_ID.test(identity))) {
+    throw new Error("generation-plan-derived-identities-invalid");
+  }
+}
+
 function assertGenerationPlanPreflight(
   value: unknown,
 ): asserts value is GenerateCandidateBatchInput {
@@ -118,6 +146,7 @@ function assertGenerationPlanPreflight(
   ) {
     throw new Error("generation-plan-execution-ids-invalid");
   }
+  assertDerivedGenerationIdentities(value.batchId, value.candidateCount);
   if (
     !isRecord(value.generatorModelIdentity) ||
     !hasExactKeys(value.generatorModelIdentity, [
@@ -154,7 +183,8 @@ function assertBankSelectionRequest(value: unknown): asserts value is BankSelect
     !QUESTION_FOUNDRY_SUBJECTS.some((subject) => subject === value.subject) ||
     typeof value.difficultyBand !== "string" ||
     !["FOUNDATION", "STANDARD", "ADVANCED"].includes(value.difficultyBand) ||
-    !isIsoInstant(value.occurredAt)
+    !isIsoInstant(value.occurredAt) ||
+    !SAFE_ID.test(`${value.requestId}:scarcity`)
   ) {
     throw new Error("invalid-bank-selection-request:identity-or-time");
   }
@@ -246,7 +276,7 @@ export function generateCandidateBatch(
 
   const candidates: QuestionCandidateV1[] = [];
   for (let index = 0; index < input.candidateCount; index += 1) {
-    const candidateId = `${input.batchId}:candidate:${index + 1}`;
+    const candidateId = candidateIdFor(input.batchId, index);
     const draft = input.generator({
       blueprint,
       answerSpecification,
@@ -282,7 +312,7 @@ export function generateCandidateBatch(
   const optionOrderPermutations = candidates.flatMap((candidate) => {
     const optionIds = candidate.options.map((option) => option.optionId);
     return twoDistinctOrders(optionIds).map((order, index) => ({
-      permutationId: `${candidate.candidateId}:option-order:${index + 1}`,
+      permutationId: optionOrderPermutationIdFor(candidate.candidateId, index),
       candidateId: candidate.candidateId,
       optionIds: order,
     }));
@@ -294,7 +324,7 @@ export function generateCandidateBatch(
     answerSpecification,
     candidates,
     candidateOrderPermutations: candidateOrders.map((order, index) => ({
-      permutationId: `${input.batchId}:candidate-order:${index + 1}`,
+      permutationId: candidateOrderPermutationIdFor(input.batchId, index),
       candidateIds: order,
     })),
     optionOrderPermutations,
@@ -356,6 +386,7 @@ function revalidateLifecycleEnvelope(envelope: QuestionBankLifecycleEnvelopeV1) 
   }
   let current = revalidateReleaseEnvelope(envelope.releaseEnvelope);
   const lineageArtifactIds = new Set([current.artifactId]);
+  const lineageCandidateIds = new Set([current.candidateId]);
   for (const rawTransition of envelope.transitions as readonly unknown[]) {
     if (
       !isRecord(rawTransition) ||
@@ -382,6 +413,12 @@ function revalidateLifecycleEnvelope(envelope: QuestionBankLifecycleEnvelopeV1) 
         transition.occurredAt,
       );
     } else {
+      if (
+        lineageArtifactIds.has(transition.artifact.artifactId) ||
+        lineageCandidateIds.has(transition.artifact.candidateId)
+      ) {
+        throw new Error("bank-lifecycle-revision-identity-reused");
+      }
       recomputed = reviseQuestionBankArtifact({
         artifact: current,
         expectedRevision: current.revision,
@@ -396,6 +433,7 @@ function revalidateLifecycleEnvelope(envelope: QuestionBankLifecycleEnvelopeV1) 
     }
     current = recomputed;
     lineageArtifactIds.add(current.artifactId);
+    lineageCandidateIds.add(current.candidateId);
   }
   if (
     canonicalDigest(current) !== canonicalDigest(envelope.artifact) ||
@@ -403,7 +441,7 @@ function revalidateLifecycleEnvelope(envelope: QuestionBankLifecycleEnvelopeV1) 
   ) {
     throw new Error("bank-lifecycle-envelope-terminal-artifact-mismatch");
   }
-  return { artifact: current, lineageArtifactIds };
+  return { artifact: current, lineageArtifactIds, lineageCandidateIds };
 }
 
 export function selectBankFirstOrGenerateOnGap(
@@ -415,43 +453,74 @@ export function selectBankFirstOrGenerateOnGap(
 ): BankFirstSelectionV1 {
   assertBankSelectionRequest(request);
   if (!Array.isArray(bank)) throw new Error("bank-must-be-array");
-  const inScopeEnvelopes = bank.filter(
-    (envelope) =>
-      envelope.artifact.subject === request.subject &&
-      envelope.artifact.skillId === request.skillId &&
-      envelope.artifact.difficultyBand === request.difficultyBand &&
-      envelope.artifact.itemFamily === request.itemFamily &&
-      !request.excludedArtifactIds.includes(envelope.artifact.artifactId),
-  );
   const releasableEnvelopes: Array<{
     envelope: QuestionBankReleaseEnvelopeV1;
     artifact: ReturnType<typeof revalidateReleaseEnvelope>;
   }> = [];
   const nonAssignableLineageArtifactIds = new Set<string>();
-  for (const envelope of inScopeEnvelopes) {
-    if (!QUESTION_FOUNDRY_RELEASE_TIERS.includes(envelope.artifact.releaseTier)) {
-      throw new Error("bank-artifact-release-tier-invalid");
-    }
-    if (isQuestionBankArtifactAssignable(envelope.artifact)) {
-      if (envelope.envelopeKind !== "RELEASE") {
-        throw new Error("bank-releasable-entry-requires-release-envelope");
+  const nonAssignableLineageCandidateIds = new Set<string>();
+  const releaseArtifactIds = new Set<string>();
+  const releaseCandidateIds = new Set<string>();
+  for (const rawEnvelope of bank as readonly unknown[]) {
+    if (!isRecord(rawEnvelope)) throw new Error("bank-envelope-must-be-object");
+    if (rawEnvelope.envelopeKind === "RELEASE") {
+      const rawArtifact = rawEnvelope.artifact;
+      if (
+        !isRecord(rawArtifact) ||
+        !QUESTION_FOUNDRY_RELEASE_TIERS.some(
+          (releaseTier) => releaseTier === rawArtifact.releaseTier,
+        )
+      ) {
+        throw new Error("bank-artifact-release-tier-invalid");
       }
-      releasableEnvelopes.push({
-        envelope,
-        artifact: revalidateReleaseEnvelope(envelope),
-      });
-    } else {
-      if (envelope.envelopeKind !== "LIFECYCLE") {
+      if (
+        !["PERSONAL_LEARNING_USABLE", "TRANSFER_VERIFIED", "MEASUREMENT_CALIBRATED"].includes(
+          String(rawArtifact.releaseTier),
+        )
+      ) {
         throw new Error("bank-nonassignable-history-requires-lifecycle-envelope");
       }
+      const envelope = rawEnvelope as unknown as QuestionBankReleaseEnvelopeV1;
+      const artifact = revalidateReleaseEnvelope(envelope);
+      if (!QUESTION_FOUNDRY_RELEASE_TIERS.includes(artifact.releaseTier)) {
+        throw new Error("bank-artifact-release-tier-invalid");
+      }
+      if (releaseArtifactIds.has(artifact.artifactId)) {
+        throw new Error("bank-duplicate-release-artifact-identity");
+      }
+      if (releaseCandidateIds.has(artifact.candidateId)) {
+        throw new Error("bank-duplicate-release-candidate-identity");
+      }
+      releaseArtifactIds.add(artifact.artifactId);
+      releaseCandidateIds.add(artifact.candidateId);
+      releasableEnvelopes.push({
+        envelope,
+        artifact,
+      });
+    } else if (rawEnvelope.envelopeKind === "LIFECYCLE") {
+      const envelope = rawEnvelope as unknown as QuestionBankLifecycleEnvelopeV1;
       const history = revalidateLifecycleEnvelope(envelope);
       for (const artifactId of history.lineageArtifactIds) {
         nonAssignableLineageArtifactIds.add(artifactId);
       }
+      for (const candidateId of history.lineageCandidateIds) {
+        nonAssignableLineageCandidateIds.add(candidateId);
+      }
+    } else {
+      throw new Error("bank-envelope-kind-invalid");
     }
   }
   const matchingEnvelopes = releasableEnvelopes
-    .filter((entry) => !nonAssignableLineageArtifactIds.has(entry.artifact.artifactId))
+    .filter(
+      (entry) =>
+        entry.artifact.subject === request.subject &&
+        entry.artifact.skillId === request.skillId &&
+        entry.artifact.difficultyBand === request.difficultyBand &&
+        entry.artifact.itemFamily === request.itemFamily &&
+        !request.excludedArtifactIds.includes(entry.artifact.artifactId) &&
+        !nonAssignableLineageArtifactIds.has(entry.artifact.artifactId) &&
+        !nonAssignableLineageCandidateIds.has(entry.artifact.candidateId),
+    )
     .sort((left, right) => left.artifact.artifactId.localeCompare(right.artifact.artifactId));
 
   if (matchingEnvelopes.length > 0) {

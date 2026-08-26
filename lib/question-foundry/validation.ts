@@ -535,6 +535,10 @@ function calculateExactly(calculation: CalculationSpecificationV1): ExactCalcula
 export function calculateDeterministically(
   calculation: CalculationSpecificationV1,
 ): number | null {
+  const errors: string[] = [];
+  if (!validateCalculationShape(calculation, errors, "calculation") || errors.length > 0) {
+    return null;
+  }
   const outcome = calculateExactly(calculation);
   return outcome.kind === "OK" ? exactRationalToNumber(outcome.rational) : null;
 }
@@ -906,11 +910,22 @@ export function validateCandidateBatch(
       : [];
     if (candidatePermutations.length < 2) errors.push("batch.candidateOrderPermutations:MINIMUM_2");
     const signatures = new Set<string>();
+    const permutationIds = new Set<string>();
     for (const [index, entry] of candidatePermutations.entries()) {
-      if (!isRecord(entry) || !isSafeId(entry.permutationId) || !Array.isArray(entry.candidateIds)) {
+      const path = `batch.candidateOrderPermutations[${index}]`;
+      if (!isRecord(entry)) {
+        errors.push(`${path}:INVALID`);
+        continue;
+      }
+      closedKeys(entry, ["permutationId", "candidateIds"], path, errors);
+      if (!isSafeId(entry.permutationId) || !Array.isArray(entry.candidateIds)) {
         errors.push(`batch.candidateOrderPermutations[${index}]:INVALID`);
         continue;
       }
+      if (permutationIds.has(entry.permutationId)) {
+        errors.push("batch.permutations:DUPLICATE_ID");
+      }
+      permutationIds.add(entry.permutationId);
       if (!permutationIsExact(entry.candidateIds as string[], candidateIds)) {
         errors.push(`batch.candidateOrderPermutations[${index}]:NOT_EXACT_PERMUTATION`);
       }
@@ -921,12 +936,38 @@ export function validateCandidateBatch(
     const optionPermutations = Array.isArray(value.optionOrderPermutations)
       ? value.optionOrderPermutations
       : [];
+    const validOptionPermutations: Record<string, unknown>[] = [];
+    for (const [index, entry] of optionPermutations.entries()) {
+      const path = `batch.optionOrderPermutations[${index}]`;
+      if (!isRecord(entry)) {
+        errors.push(`${path}:INVALID`);
+        continue;
+      }
+      closedKeys(entry, ["permutationId", "candidateId", "optionIds"], path, errors);
+      if (
+        !isSafeId(entry.permutationId) ||
+        !isSafeId(entry.candidateId) ||
+        !Array.isArray(entry.optionIds)
+      ) {
+        errors.push(`${path}:INVALID`);
+        continue;
+      }
+      if (permutationIds.has(entry.permutationId)) {
+        errors.push("batch.permutations:DUPLICATE_ID");
+      }
+      permutationIds.add(entry.permutationId);
+      if (!candidateIds.includes(entry.candidateId)) {
+        errors.push(`${path}:ORPHAN_CANDIDATE`);
+        continue;
+      }
+      validOptionPermutations.push(entry);
+    }
     for (const candidate of value.candidates.filter(isRecord)) {
       const options = Array.isArray(candidate.options)
         ? candidate.options.filter(isRecord).map((option) => String(option.optionId))
         : [];
-      const forCandidate = optionPermutations.filter(
-        (entry) => isRecord(entry) && entry.candidateId === candidate.candidateId,
+      const forCandidate = validOptionPermutations.filter(
+        (entry) => entry.candidateId === candidate.candidateId,
       );
       if (forCandidate.length < 2) {
         errors.push(`batch.optionOrderPermutations:${String(candidate.candidateId)}:MINIMUM_2`);
@@ -934,10 +975,6 @@ export function validateCandidateBatch(
       }
       const optionSignatures = new Set<string>();
       for (const entry of forCandidate) {
-        if (!isRecord(entry) || !isSafeId(entry.permutationId) || !Array.isArray(entry.optionIds)) {
-          errors.push(`batch.optionOrderPermutations:${String(candidate.candidateId)}:INVALID`);
-          continue;
-        }
         if (!permutationIsExact(entry.optionIds as string[], options)) {
           errors.push(`batch.optionOrderPermutations:${String(candidate.candidateId)}:NOT_EXACT_PERMUTATION`);
         }
@@ -1484,7 +1521,7 @@ function extractNumericValue(body: string, expectedUnit: string): ExactRational 
     return null;
   }
   const match = body.match(
-    /^([-+]?(?:(?:(?:0|[1-9]\d*)|(?:\d{1,3}(?:,\d{3})+))(?:[.]\d+)?|[.]\d+)(?:[eE][-+]?\d+)?) ([A-Za-z0-9][A-Za-z0-9._:/@-]{0,199})$/u,
+    /^([-+]?(?:(?:(?:0|[1-9]\d*)|(?:[1-9]\d{0,2}(?:,\d{3})+))(?:[.]\d+)?|[.]\d+)(?:[eE][-+]?\d+)?) ([A-Za-z0-9][A-Za-z0-9._:/@-]{0,199})$/u,
   );
   if (!match || match[2].toUpperCase() !== expectedUnit.toUpperCase()) return null;
   let numericToken = match[1].replaceAll(",", "");
