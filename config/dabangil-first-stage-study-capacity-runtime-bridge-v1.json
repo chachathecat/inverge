@@ -120,6 +120,7 @@
       "lib/review-os/first-stage/study-capacity/index.ts",
       "lib/review-os/first-stage/study-capacity/runtime-bridge.ts",
       "scripts/run-node-tests.mjs",
+      "tests/agent-factory-runtime-gate.test.mjs",
       "tests/first-stage-common-mcq-kernel.test.mjs",
       "tests/first-stage-study-capacity-runtime-bridge.test.mjs",
       "tests/s232f2-access-availability.test.mjs"
@@ -131,6 +132,7 @@
     "sharedAuthOrRlsMutation": false,
     "packageOrLockfileMutation": false,
     "commonDurableSubstrateMutation": false,
+    "isolatedWorktreeWindowsGitFixtureRepair": true,
     "validatedM4EvidenceTestRepair": true,
     "sharedTestRegistrationOwnedSeriallyByLaneB": true
   }

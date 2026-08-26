@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import crypto from "node:crypto";
 import fs from "node:fs";
+import os from "node:os";
 import path from "node:path";
 import { execFileSync, spawnSync } from "node:child_process";
 import { after, test } from "node:test";
@@ -739,7 +740,7 @@ test("S236P expiry matrix covers exact boundaries, missing metadata, cleanup, an
 });
 
 test("closed S233A, S236P, and C2R-C-P adapters bind exact migrations and reject unsupported sets", () => {
-  const directory = fs.mkdtempSync(path.join(WORKSPACE_ROOT, "runtime-producer-git-test-"));
+  const directory = fs.mkdtempSync(path.join(os.tmpdir(), "inverge-runtime-producer-git-test-"));
   execFileSync("git", ["init", "--quiet"], { cwd: directory });
   execFileSync("git", ["config", "user.name", "Runtime Evidence Test"], { cwd: directory });
   execFileSync("git", ["config", "user.email", "runtime-evidence@example.invalid"], { cwd: directory });
