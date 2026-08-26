@@ -14,7 +14,7 @@
 ## Branches and PRs
 
 - M5: merged PR #845 from `codex/owner-study-m5-study-capacity-runtime-bridge-r1`
-- Question Foundry: `codex/owner-study-question-foundry-r2`; isolated worktree `.agent-factory/worktrees/owner-study-question-foundry-r2`; based on current main; replacement PR not yet opened
+- Question Foundry: `codex/owner-study-question-foundry-r2`; isolated worktree `.agent-factory/worktrees/owner-study-question-foundry-r2`; Draft PR #847; implementation head `406ea48c2a946da77d470c9a289324bd69f52359`; tree `5fd670b570a9b9781b176632663fb02ed5ed6cea`; source correction 1/2 binds this live PR receipt
 - Exhausted candidates: PR #846, PR #843 and PR #810 closed unmerged
 
 ## Lane ownership
@@ -33,8 +33,8 @@
 
 ## Current blocker
 
-- Clean replacement is repairing the three live #846 review roots: zero caller tolerance, exact decimal `HALF_UP`, and lifecycle-aware fail-closed bank selection
+- PR #847 is blocked only on exact-head full gates and fresh formal review after repairing the three live #846 review roots
 
 ## Next exact action
 
-- complete focused and final local gates, commit and push the clean replacement, then open one Draft PR for exact-head CI and fresh formal review
+- run the full required local suite and exact-head CI, audit live review threads, and obtain a fresh formal `0/0/0` review before the Owner merge gate
