@@ -429,7 +429,7 @@ test("receipt repair changed paths equal the exact declared lane manifest", () =
     encoding: "utf8",
   }).trim();
   if (currentBranch !== repairBranch && process.env.GITHUB_HEAD_REF !== repairBranch) return;
-  const repairBase = "4989f02f54f187fb440f2bfa6722e4ee832420de";
+  const repairBase = "2991e2579925e65173468049a94143bd99dc8e81";
   const declaredPaths = [
     ".github/workflows/c3r-t-theory-durable-learning-delta.yml",
     "docs/exec-plans/active/inverge-owner-study-os.md",
