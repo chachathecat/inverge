@@ -17,7 +17,7 @@
 
 ## Branches and PRs
 
-- M3: `codex/owner-study-m3-wcv-c3-foundation-freeze`; PR pending; delivery Issue #837; isolated worktree `.agent-factory/worktrees/owner-study-m3-wcv-c3-foundation-freeze`; base `a121eea722fd2a9054d11a5c0e5f3893b52da014`
+- M3: `codex/owner-study-m3-wcv-c3-foundation-freeze`; Draft PR #838; delivery Issue #837; isolated worktree `.agent-factory/worktrees/owner-study-m3-wcv-c3-foundation-freeze`; base `a121eea722fd2a9054d11a5c0e5f3893b52da014`
 - M4: `codex/owner-study-lane-b-first-stage-kernel`; Draft PR #813; parked
 - Question Foundry: `codex/owner-study-lane-c-question-foundry`; Draft PR #810; parked
 
@@ -38,8 +38,8 @@
 
 ## Current blocker
 
-- none before Draft PR delivery; protected M3 squash merge will require exact-head Owner approval after CI
+- Draft PR #838 exact-head CI and fresh formal review are in progress; protected M3 squash merge then requires exact-head Owner approval
 
 ## Next exact action
 
-- stage the exact 34-path M3 manifest, run cached diff checks, and create the ordinary candidate commit
+- inspect Draft PR #838 exact-head CI and repair the first in-scope failure
