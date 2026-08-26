@@ -428,10 +428,7 @@ test("keeps canonical mirrors, current log and registry aligned", async () => {
   assert.match(decision, /PR #834 supplies the terminal current-tree/u);
   assert.match(decision, /sole closing keyword is `Closes #837`/u);
   assert.match(agents, /PR #834's\nterminal current-tree receipt-evidence repair/u);
-  assert.match(
-    log,
-    /## Current main[\s\S]*SHA: `a121eea722fd2a9054d11a5c0e5f3893b52da014`[\s\S]*tree: `5b151f72cc339cd5d17d89b6f01c7b4380e71759`/u,
-  );
+  assert.match(log, /PR #838 \/ Foundation Freeze:[\s\S]*reviewed `2106d370b2725d3f03923db3a6d279e94778bd6d`[\s\S]*resulting main `aded1d711c837aa6e93470d3b31bd75907452996`[\s\S]*tree `313056e25e3296d1546e909389eb0ad014da5a66`/u);
   assert.equal(registry.match(/tests\/wcv-c3-foundation-freeze\.test\.mjs/gu)?.length, 1);
   assert.match(roadmap, /soleNextImplementationItem: null/u);
   assert.match(roadmap, /soleNextC3rStage: null/u);
