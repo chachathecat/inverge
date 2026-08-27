@@ -70,9 +70,35 @@ jobs:
       - name: HIGH lint
         if: inputs.platform == 'windows' && inputs.validation_route == 'HIGH_STANDARD'
         run: npm.cmd run lint
-      - name: HIGH security audit validation
+      - name: Prepare HIGH security evidence directory
         if: inputs.platform == 'linux' && inputs.validation_route == 'HIGH_STANDARD'
-        run: npm run security:audit:validate
+        shell: bash
+        run: mkdir -p "${RUNNER_TEMP}/security-v2"
+      - name: Collect HIGH report-only npm audit evidence
+        if: inputs.platform == 'linux' && inputs.validation_route == 'HIGH_STANDARD'
+        shell: bash
+        run: |
+          set +e
+          npm audit --package-lock-only --omit=dev --json > "${RUNNER_TEMP}/security-v2/production-audit.json"
+          production_status=$?
+          npm audit --package-lock-only --json > "${RUNNER_TEMP}/security-v2/full-audit.json"
+          full_status=$?
+          set -e
+          echo "npm audit report exit codes: production=${production_status}, full=${full_status}"
+      - name: Generate HIGH package-lock-only CycloneDX SBOM
+        if: inputs.platform == 'linux' && inputs.validation_route == 'HIGH_STANDARD'
+        shell: bash
+        run: npm sbom --package-lock-only --sbom-format cyclonedx --sbom-type application > "${RUNNER_TEMP}/security-v2/sbom.cdx.json"
+      - name: Enforce HIGH security policy
+        if: inputs.platform == 'linux' && inputs.validation_route == 'HIGH_STANDARD'
+        run: >-
+          npm run security:audit:validate --
+          --production-audit "${RUNNER_TEMP}/security-v2/production-audit.json"
+          --full-audit "${RUNNER_TEMP}/security-v2/full-audit.json"
+          --policy config/foundation-continuous-security-automation-v1.json
+          --sbom "${RUNNER_TEMP}/security-v2/sbom.cdx.json"
+          --package package.json
+          --output "${RUNNER_TEMP}/security-v2/security-summary-v1.json"
       - name: Production build
         run: ${{ inputs.platform == 'windows' && 'npm.cmd run build' || 'npm run build' }}
       - name: HIGH closed-beta readiness

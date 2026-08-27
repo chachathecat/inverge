@@ -209,6 +209,12 @@ test("workflows retain stable checks, gate heavy jobs, and keep HIGH out of auto
   assert.match(heavy, /HIGH full test suite/u);
   assert.match(heavy, /QF-I1 exact bounded test suite/u);
   assert.match(heavy, /qf-i1-tests/u);
+  assert.match(heavy, /--production-audit/u);
+  assert.match(heavy, /--full-audit/u);
+  assert.match(heavy, /--policy config\/foundation-continuous-security-automation-v1\.json/u);
+  assert.match(heavy, /--sbom/u);
+  assert.match(heavy, /--package package\.json/u);
+  assert.match(heavy, /--output/u);
   assert.match(runtime, /name: runtime-gate/u);
   assert.match(learner, /name: Learner Loop Health/u);
   assert.match(merge, /github\.ref == 'refs\/heads\/main'/u);
