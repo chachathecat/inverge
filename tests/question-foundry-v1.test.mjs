@@ -1204,7 +1204,7 @@ test("machine contract freezes source-only boundaries and exact lane ownership",
   assert.equal(contract.parallelExecutionBinding.laneId, "LANE_C_QUESTION_FOUNDRY");
   assert.equal(
     contract.parallelExecutionBinding.branch,
-    "codex/owner-study-question-foundry-r4",
+    "codex/owner-study-question-foundry-r5",
   );
   assert.equal(
     contract.rightsAndSourceBoundary.similarityTokenJaccardThresholdExactly,
