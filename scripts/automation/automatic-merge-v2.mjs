@@ -157,6 +157,23 @@ function mergeCommitIsOnMain(repository, mergeCommitSha) {
   return ["ahead", "identical"].includes(comparison?.status);
 }
 
+function readSquashBaseEvidence(repository, mergeCommitSha) {
+  if (!SHA_PATTERN.test(mergeCommitSha ?? "")) {
+    return { baseSha: null, mergeParentSha: null, mergeParentCount: 0, baseCommitOnMain: false };
+  }
+  const commit = ghJson(["api", `repos/${repository}/git/commits/${mergeCommitSha}`]);
+  const parents = Array.isArray(commit?.parents) ? commit.parents : [];
+  const mergeParentSha = parents.length === 1 && SHA_PATTERN.test(parents[0]?.sha ?? "")
+    ? parents[0].sha
+    : null;
+  return {
+    baseSha: mergeParentSha,
+    mergeParentSha,
+    mergeParentCount: parents.length,
+    baseCommitOnMain: mergeParentSha !== null && mergeCommitIsOnMain(repository, mergeParentSha),
+  };
+}
+
 function receiptIsValidated(repository, pullSummary, laneId, contract) {
   if (!pullSummary?.merged_at || !SHA_PATTERN.test(pullSummary?.head?.sha ?? "") ||
       !mergeCommitIsOnMain(repository, pullSummary.merge_commit_sha)) return false;
@@ -167,6 +184,7 @@ function receiptIsValidated(repository, pullSummary, laneId, contract) {
   if (!lane) return false;
   const checks = readChecks(repository, pullRequest.headRefOid);
   const review = readFinalReview(pullRequest, pullRequest.headRefOid);
+  const squashBase = readSquashBaseEvidence(repository, pullSummary.merge_commit_sha);
   return evaluateMergeReceiptEvidence(contract, laneId, {
     state: pullRequest.state,
     mergedAt: pullSummary.merged_at,
@@ -175,6 +193,7 @@ function receiptIsValidated(repository, pullSummary, laneId, contract) {
     headSha: pullRequest.headRefOid,
     headRefName: pullRequest.headRefName,
     baseRefName: pullRequest.baseRefName,
+    ...squashBase,
     sameRepository: pullRequest.headRepository?.nameWithOwner === repository,
     changedPaths: (pullRequest.files?.nodes ?? []).map((entry) => entry.path),
     worktreeDeclarationCount: exactWorktreeDeclarationCount(pullRequest, lane),

@@ -131,11 +131,14 @@ function removedPatchBody(patch) {
 
 const ACTIVE_SOURCE_PATTERN = /\.(?:[cm]?[jt]sx?|mts|cts)$/u;
 const NON_PRODUCT_EVIDENCE_PATTERN = /^(?:tests?|docs?|reference_corpus\/|.*\/fixtures\/)/u;
-const NETWORK_MODULE_PATTERN = String.raw`(?:(?:node:)?(?:http|https|http2|net|tls|dns|dgram)(?:\/[^"']*)?|undici(?:\/[^"']*)?|axios|got|@supabase\/[^"']+|stripe|@stripe\/[^"']+)`;
-const NETWORK_IMPORT_PATTERN = new RegExp(
-  String.raw`(?:\b(?:import|export)\s+(?:[^"'\n;]+?\s+from\s+)?["']${NETWORK_MODULE_PATTERN}["']|\bimport\s*\(\s*["']${NETWORK_MODULE_PATTERN}["']\s*\)|\brequire\s*\(\s*["']${NETWORK_MODULE_PATTERN}["']\s*\))`,
-  "u",
-);
+const NETWORK_MODULE_PATTERN = String.raw`(?:(?:node:)?(?:http|https|http2|net|tls|dns|dgram)(?:\/[^"']*)?|undici(?:\/[^"']*)?|axios(?:\/[^"']*)?|got(?:\/[^"']*)?|@supabase\/[^"']+|stripe|@stripe\/[^"']+)`;
+const JS_INTERSTITIAL_PATTERN = String.raw`(?:\s|\/\*[\s\S]*?\*\/|\/\/[^\r\n]*(?:\r?\n|$))*`;
+const NETWORK_IMPORT_PATTERNS = [
+  new RegExp(String.raw`\bfrom\b${JS_INTERSTITIAL_PATTERN}["']${NETWORK_MODULE_PATTERN}["']`, "u"),
+  new RegExp(String.raw`\bimport\b${JS_INTERSTITIAL_PATTERN}["']${NETWORK_MODULE_PATTERN}["']`, "u"),
+  new RegExp(String.raw`\bimport\b${JS_INTERSTITIAL_PATTERN}\(${JS_INTERSTITIAL_PATTERN}["']${NETWORK_MODULE_PATTERN}["']${JS_INTERSTITIAL_PATTERN}\)`, "u"),
+  new RegExp(String.raw`\brequire\b${JS_INTERSTITIAL_PATTERN}\(${JS_INTERSTITIAL_PATTERN}["']${NETWORK_MODULE_PATTERN}["']${JS_INTERSTITIAL_PATTERN}\)`, "u"),
+];
 const NETWORK_CALL_PATTERN = /(?:\bfetch\s*\(|\b(?:WebSocket|EventSource)\s*\(|\bnavigator\.sendBeacon\s*\(|\bhttps?\s*\.\s*(?:get|request)\s*\(|\bcreateClient\s*\(|\bpostgres\s*\()/u;
 const REMOTE_ACTIVATION_JSON_PATTERN = /"(?:providerOrNetwork|remoteSupabaseMutation|productionMutation|payment|publicActivation|externalLearnerActivation|learnerRuntime|databaseOrRls|remoteMutation|networkAccess|providerAccess|productionActivation)"\s*:\s*true\b/u;
 
@@ -182,7 +185,8 @@ export function deriveSemanticHighRiskSignals(changedFileEvidence) {
         (jsonConfig && /"releaseStatesAvailable"\s*:\s*\[\s*["']/u.test(added))) {
       signals.add("durable_release_authority");
     }
-    if ((activeSource && (NETWORK_IMPORT_PATTERN.test(added) || NETWORK_CALL_PATTERN.test(added))) ||
+    const networkImportDetected = NETWORK_IMPORT_PATTERNS.some((pattern) => pattern.test(added));
+    if ((activeSource && (networkImportDetected || NETWORK_CALL_PATTERN.test(added))) ||
         (jsonConfig && REMOTE_ACTIVATION_JSON_PATTERN.test(added))) {
       signals.add("remote_or_production_or_payment");
     }

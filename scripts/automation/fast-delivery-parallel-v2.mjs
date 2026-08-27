@@ -199,6 +199,7 @@ export function validateAuthority(contract) {
   add(errors, contract.mergePolicy?.isolatedWorktreeDeclarationRequired === true, "automatic merge must require isolated-worktree evidence");
   add(errors, contract.mergePolicy?.liveDependencyAndDeclaredOrderReceiptsRequired === true, "automatic merge must require live dependency and order receipts");
   add(errors, contract.mergePolicy?.validatedReceiptBindsExactLanePathsAndDeclaration === true, "validated receipts must bind exact lane paths and declaration");
+  add(errors, contract.mergePolicy?.validatedReceiptBindsExactBaseShaAndSquashParent === true, "validated receipts must bind the exact base SHA and squash parent");
   add(errors, contract.mergePolicy?.receiptReviewAndApprovalMustPrecedeMerge === true, "receipt review and approval must precede merge");
   add(errors, contract.mergePolicy?.registeredLaneMayMergeOnlyOnce === true, "registered lane identities must be single-merge");
   add(errors, contract.mergePolicy?.liveLaneConcurrencyRevalidatedBeforeMerge === true, "automatic merge must revalidate live lane concurrency");
@@ -337,6 +338,13 @@ export function evaluateMergeReceiptEvidence(contract, laneId, evidence) {
   add(errors, evidence.state === "MERGED", `${laneId}: receipt pull request is not merged`);
   add(errors, evidence.headRefName === lane.branch, `${laneId}: receipt branch identity drifted`);
   add(errors, evidence.baseRefName === "main", `${laneId}: receipt base must be main`);
+  add(errors, SHA_PATTERN.test(evidence.baseSha ?? ""), `${laneId}: receipt base SHA is missing or invalid`);
+  add(errors, evidence.mergeParentCount === 1, `${laneId}: receipt merge commit is not one-parent squash history`);
+  add(errors, evidence.mergeParentSha === evidence.baseSha, `${laneId}: receipt base SHA is not the exact squash merge parent`);
+  add(errors, evidence.baseCommitOnMain === true, `${laneId}: receipt base commit is not on protected main`);
+  if (laneId === AMENDMENT_ID) {
+    add(errors, evidence.baseSha === contract.deliveryControl.baseSha, `${laneId}: receipt base SHA drifted from the pinned V2 base`);
+  }
   add(errors, evidence.sameRepository === true, `${laneId}: receipt must use the authority repository`);
   add(errors, evidence.mergeCommitOnMain === true, `${laneId}: resulting merge commit is not on protected main`);
   add(errors, SHA_PATTERN.test(evidence.summaryHeadSha ?? "") && evidence.headSha === evidence.summaryHeadSha,

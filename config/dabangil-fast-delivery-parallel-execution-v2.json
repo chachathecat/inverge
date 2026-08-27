@@ -133,6 +133,7 @@
     "blockingLabelsFailClosed": true,
     "liveDependencyAndDeclaredOrderReceiptsRequired": true,
     "validatedReceiptBindsExactLanePathsAndDeclaration": true,
+    "validatedReceiptBindsExactBaseShaAndSquashParent": true,
     "receiptReviewAndApprovalMustPrecedeMerge": true,
     "registeredLaneMayMergeOnlyOnce": true,
     "liveLaneConcurrencyRevalidatedBeforeMerge": true,

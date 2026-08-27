@@ -91,6 +91,7 @@ function passingSnapshot(overrides = {}) {
 
 function passingReceipt(laneId = AMENDMENT_ID) {
   const headSha = "c".repeat(40);
+  const baseSha = laneId === AMENDMENT_ID ? contract.deliveryControl.baseSha : "b".repeat(40);
   const lane = laneId === AMENDMENT_ID
     ? contract.candidateLane
     : contract.questionFoundrySplitCampaign.lanes.find((entry) => entry.laneId === laneId);
@@ -102,6 +103,10 @@ function passingReceipt(laneId = AMENDMENT_ID) {
     headSha,
     headRefName: lane.branch,
     baseRefName: "main",
+    baseSha,
+    mergeParentSha: baseSha,
+    mergeParentCount: 1,
+    baseCommitOnMain: true,
     sameRepository: true,
     changedPaths: [...lane.ownedPathsExactly],
     worktreeDeclarationCount: 1,
@@ -225,18 +230,27 @@ test("risk routing is specific-low before broad-medium and unknown fails HIGH", 
   }]), ["security_boundary_weakening"]);
   assert.equal(classify(registeredPaths, ["uninspectable_change"], policy, { profileOverride: override }).profile, "HIGH");
 
-  for (const networkSource of [
-    "const https = await import('node:https');",
-    "import { get as transmit } from 'https'; transmit(url);",
-    "const { request: transmit } = await import('https'); transmit(options);",
-    "const { request: transmit } = require('https'); transmit(options);",
-  ]) {
-    const dynamicNetworkSignals = deriveSemanticHighRiskSignals([{
-      path: "lib/question-foundry/similarity/bounded-similarity-corpus-v1.mjs",
-      patch: `@@ -0,0 +1 @@\n+${networkSource}\n`,
-    }]);
-    assert.deepEqual(dynamicNetworkSignals, ["remote_or_production_or_payment"]);
-    assert.equal(classify(registeredPaths, dynamicNetworkSignals, policy, { profileOverride: override }).profile, "HIGH");
+  const networkModules = [
+    "http", "node:http", "https", "node:https", "http2", "node:http2", "net", "node:net",
+    "tls", "node:tls", "dns", "node:dns", "dgram", "node:dgram", "undici", "undici/index.js",
+    "axios", "axios/index.js", "got", "got/dist/source", "@supabase/supabase-js", "stripe", "@stripe/stripe-js",
+  ];
+  for (const networkModule of networkModules) {
+    for (const networkSource of [
+      `import {\n  request as transmit\n} from /* boundary */ "${networkModule}";`,
+      `export {\n  request as transmit\n} from /* boundary */ "${networkModule}";`,
+      `const client = await import(/* boundary */ "${networkModule}");`,
+      `const client = require(/* boundary */ "${networkModule}");`,
+      `} from "${networkModule}";`,
+    ]) {
+      const addedNetworkSource = networkSource.split("\n").map((line) => `+${line}`).join("\n");
+      const dynamicNetworkSignals = deriveSemanticHighRiskSignals([{
+        path: "lib/question-foundry/similarity/bounded-similarity-corpus-v1.mjs",
+        patch: `@@ -0,0 +1 @@\n${addedNetworkSource}\n`,
+      }]);
+      assert.equal(dynamicNetworkSignals.includes("remote_or_production_or_payment"), true);
+      assert.equal(classify(registeredPaths, dynamicNetworkSignals, policy, { profileOverride: override }).profile, "HIGH");
+    }
   }
   const jsonActivationSignals = deriveSemanticHighRiskSignals([{
     path: "config/dabangil-question-foundry-bounded-similarity-corpus-v1.json",
@@ -357,6 +371,27 @@ test("LOW and MEDIUM automatic merge require exact-head post-check clean review"
 test("validated receipts bind exact lane scope, chronology, and V2 Owner approval", () => {
   assert.deepEqual(evaluateMergeReceiptEvidence(contract, AMENDMENT_ID, passingReceipt()), { validated: true, errors: [] });
   assert.deepEqual(evaluateMergeReceiptEvidence(contract, QF_ORDER[0], passingReceipt(QF_ORDER[0])), { validated: true, errors: [] });
+
+  const missingBase = passingReceipt();
+  delete missingBase.baseSha;
+  assert.match(evaluateMergeReceiptEvidence(contract, AMENDMENT_ID, missingBase).errors.join("\n"), /base SHA is missing or invalid/u);
+
+  const wrongPinnedBase = passingReceipt();
+  wrongPinnedBase.baseSha = "d".repeat(40);
+  wrongPinnedBase.mergeParentSha = wrongPinnedBase.baseSha;
+  assert.match(evaluateMergeReceiptEvidence(contract, AMENDMENT_ID, wrongPinnedBase).errors.join("\n"), /pinned V2 base/u);
+
+  const wrongMergeParent = passingReceipt(QF_ORDER[0]);
+  wrongMergeParent.mergeParentSha = "d".repeat(40);
+  assert.match(evaluateMergeReceiptEvidence(contract, QF_ORDER[0], wrongMergeParent).errors.join("\n"), /exact squash merge parent/u);
+
+  const nonSquashMerge = passingReceipt(QF_ORDER[0]);
+  nonSquashMerge.mergeParentCount = 2;
+  assert.match(evaluateMergeReceiptEvidence(contract, QF_ORDER[0], nonSquashMerge).errors.join("\n"), /one-parent squash history/u);
+
+  const baseOffMain = passingReceipt(QF_ORDER[0]);
+  baseOffMain.baseCommitOnMain = false;
+  assert.match(evaluateMergeReceiptEvidence(contract, QF_ORDER[0], baseOffMain).errors.join("\n"), /not on protected main/u);
 
   const wrongPath = passingReceipt(QF_ORDER[0]);
   wrongPath.changedPaths.push("lib/question-foundry/release-integration-v1.mjs");

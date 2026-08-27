@@ -91,9 +91,11 @@ stale, malformed, ambiguous or changed evidence fails closed. HIGH is rejected
 by this automatic path and requires a separate exact-head Owner approval.
 
 Each dependency receipt binds the registered branch, exact reviewed head,
-actual changed paths, exact lane ownership, and the single matching worktree
-declaration. Its clean formal review must postdate the required exact-head
-checks and precede the merge. The V2 start-gate receipt also requires one
+actual changed paths, exact lane ownership, the single matching worktree
+declaration, and the exact protected-main base SHA reproduced as the sole
+parent of its squash merge. Its clean formal review must postdate the required
+exact-head checks and precede the merge. The V2 start-gate receipt additionally
+binds the pinned V2 base SHA and requires one
 trusted exact-head Owner approval marker with prefix
 `FAST_DELIVERY_PARALLEL_V2_EXACT_HEAD_SQUASH_MERGE_APPROVED_`, submitted before
 merge by GitHub actor `chachathecat` with exact `OWNER` association. Member or
