@@ -191,6 +191,8 @@ export function validateAuthority(contract) {
   add(errors, contract.mergePolicy?.HIGH === "exact_head_owner_approval_required", "HIGH must require exact-head Owner approval");
   add(errors, contract.mergePolicy?.formalReviewMarkerTemplate === "FAST_DELIVERY_V2_FINAL_REVIEW head=<40_hex_sha> actionable=0/0/0", "formal review marker drifted");
   add(errors, contract.mergePolicy?.v2OwnerApprovalReceiptMarkerPrefix === "FAST_DELIVERY_PARALLEL_V2_EXACT_HEAD_SQUASH_MERGE_APPROVED_", "V2 Owner approval receipt marker drifted");
+  add(errors, contract.mergePolicy?.v2OwnerApprovalActorLogin === "chachathecat", "V2 Owner approval actor login drifted");
+  add(errors, contract.mergePolicy?.v2OwnerApprovalAuthorAssociation === "OWNER", "V2 Owner approval association drifted");
   add(errors, sameArray(contract.mergePolicy?.actionableP0P1P2Required, [0, 0, 0]), "merge review counts must be 0/0/0");
   add(errors, contract.mergePolicy?.registeredLaneOrExactFutureAuthorityRequired === true, "automatic merge must require a registered lane");
   add(errors, contract.mergePolicy?.exactChangedPathOwnershipRequired === true, "automatic merge must require exact changed-path ownership");
@@ -387,7 +389,8 @@ export function evaluateMergeReceiptEvidence(contract, laneId, evidence) {
       const expectedMarker = `${contract.mergePolicy.v2OwnerApprovalReceiptMarkerPrefix}${evidence.headSha}`;
       add(errors, approval.headSha === evidence.headSha, `${laneId}: Owner approval head drifted`);
       add(errors, approval.marker === expectedMarker, `${laneId}: Owner approval marker drifted`);
-      add(errors, approval.trustedReviewer === true, `${laneId}: Owner approval is not trusted`);
+      add(errors, approval.authorLogin === contract.mergePolicy.v2OwnerApprovalActorLogin, `${laneId}: Owner approval actor login drifted`);
+      add(errors, approval.authorAssociation === contract.mergePolicy.v2OwnerApprovalAuthorAssociation, `${laneId}: Owner approval author association drifted`);
       const approvalSubmittedAt = Date.parse(approval.submittedAt ?? "");
       add(errors, Number.isFinite(approvalSubmittedAt), `${laneId}: Owner approval timestamp is invalid`);
       if (Number.isFinite(approvalSubmittedAt) && Number.isFinite(reviewSubmittedAt)) {

@@ -128,7 +128,8 @@ function readV2OwnerApproval(pullRequest, headSha, contract) {
   return {
     headSha,
     marker: markerText,
-    trustedReviewer: TRUSTED_ASSOCIATIONS.has(matches[0].authorAssociation),
+    authorLogin: matches[0].author?.login ?? null,
+    authorAssociation: matches[0].authorAssociation,
     submittedAt: matches[0].submittedAt,
   };
 }

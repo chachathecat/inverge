@@ -131,9 +131,9 @@ function removedPatchBody(patch) {
 
 const ACTIVE_SOURCE_PATTERN = /\.(?:[cm]?[jt]sx?|mts|cts)$/u;
 const NON_PRODUCT_EVIDENCE_PATTERN = /^(?:tests?|docs?|reference_corpus\/|.*\/fixtures\/)/u;
-const NETWORK_MODULE_PATTERN = String.raw`(?:node:(?:http|https|net|tls)(?:\/[^"']*)?|@supabase\/[^"']+|stripe|@stripe\/[^"']+)`;
+const NETWORK_MODULE_PATTERN = String.raw`(?:(?:node:)?(?:http|https|http2|net|tls|dns|dgram)(?:\/[^"']*)?|undici(?:\/[^"']*)?|axios|got|@supabase\/[^"']+|stripe|@stripe\/[^"']+)`;
 const NETWORK_IMPORT_PATTERN = new RegExp(
-  String.raw`(?:\bfrom\s+["']${NETWORK_MODULE_PATTERN}["']|\bimport\s*\(\s*["']${NETWORK_MODULE_PATTERN}["']\s*\)|\brequire\s*\(\s*["']${NETWORK_MODULE_PATTERN}["']\s*\))`,
+  String.raw`(?:\b(?:import|export)\s+(?:[^"'\n;]+?\s+from\s+)?["']${NETWORK_MODULE_PATTERN}["']|\bimport\s*\(\s*["']${NETWORK_MODULE_PATTERN}["']\s*\)|\brequire\s*\(\s*["']${NETWORK_MODULE_PATTERN}["']\s*\))`,
   "u",
 );
 const NETWORK_CALL_PATTERN = /(?:\bfetch\s*\(|\b(?:WebSocket|EventSource)\s*\(|\bnavigator\.sendBeacon\s*\(|\bhttps?\s*\.\s*(?:get|request)\s*\(|\bcreateClient\s*\(|\bpostgres\s*\()/u;

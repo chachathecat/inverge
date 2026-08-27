@@ -126,6 +126,8 @@
     "reviewMustPostdateApplicableChecks": true,
     "formalReviewMarkerTemplate": "FAST_DELIVERY_V2_FINAL_REVIEW head=<40_hex_sha> actionable=0/0/0",
     "v2OwnerApprovalReceiptMarkerPrefix": "FAST_DELIVERY_PARALLEL_V2_EXACT_HEAD_SQUASH_MERGE_APPROVED_",
+    "v2OwnerApprovalActorLogin": "chachathecat",
+    "v2OwnerApprovalAuthorAssociation": "OWNER",
     "actionableP0P1P2Required": [0, 0, 0],
     "unresolvedNonOutdatedReviewThreadsRequired": 0,
     "blockingLabelsFailClosed": true,

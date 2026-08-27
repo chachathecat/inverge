@@ -120,7 +120,8 @@ function passingReceipt(laneId = AMENDMENT_ID) {
     ownerApproval: laneId === AMENDMENT_ID ? {
       headSha,
       marker: `${contract.mergePolicy.v2OwnerApprovalReceiptMarkerPrefix}${headSha}`,
-      trustedReviewer: true,
+      authorLogin: contract.mergePolicy.v2OwnerApprovalActorLogin,
+      authorAssociation: contract.mergePolicy.v2OwnerApprovalAuthorAssociation,
       submittedAt: "2026-08-27T01:02:00.000Z",
     } : null,
     unresolvedNonOutdatedReviewThreads: 0,
@@ -224,12 +225,19 @@ test("risk routing is specific-low before broad-medium and unknown fails HIGH", 
   }]), ["security_boundary_weakening"]);
   assert.equal(classify(registeredPaths, ["uninspectable_change"], policy, { profileOverride: override }).profile, "HIGH");
 
-  const dynamicNetworkSignals = deriveSemanticHighRiskSignals([{
-    path: "lib/question-foundry/similarity/bounded-similarity-corpus-v1.mjs",
-    patch: "@@ -0,0 +1 @@\n+const https = await import('node:https');\n",
-  }]);
-  assert.deepEqual(dynamicNetworkSignals, ["remote_or_production_or_payment"]);
-  assert.equal(classify(registeredPaths, dynamicNetworkSignals, policy, { profileOverride: override }).profile, "HIGH");
+  for (const networkSource of [
+    "const https = await import('node:https');",
+    "import { get as transmit } from 'https'; transmit(url);",
+    "const { request: transmit } = await import('https'); transmit(options);",
+    "const { request: transmit } = require('https'); transmit(options);",
+  ]) {
+    const dynamicNetworkSignals = deriveSemanticHighRiskSignals([{
+      path: "lib/question-foundry/similarity/bounded-similarity-corpus-v1.mjs",
+      patch: `@@ -0,0 +1 @@\n+${networkSource}\n`,
+    }]);
+    assert.deepEqual(dynamicNetworkSignals, ["remote_or_production_or_payment"]);
+    assert.equal(classify(registeredPaths, dynamicNetworkSignals, policy, { profileOverride: override }).profile, "HIGH");
+  }
   const jsonActivationSignals = deriveSemanticHighRiskSignals([{
     path: "config/dabangil-question-foundry-bounded-similarity-corpus-v1.json",
     patch: "@@ -1 +1 @@\n-  \"providerOrNetwork\": false\n+  \"providerOrNetwork\": true\n",
@@ -373,6 +381,15 @@ test("validated receipts bind exact lane scope, chronology, and V2 Owner approva
   const earlyApproval = passingReceipt();
   earlyApproval.ownerApproval.submittedAt = "2026-08-27T00:59:00.000Z";
   assert.match(evaluateMergeReceiptEvidence(contract, AMENDMENT_ID, earlyApproval).errors.join("\n"), /predates final review/u);
+
+  for (const authorAssociation of ["MEMBER", "COLLABORATOR"]) {
+    const nonOwnerApproval = passingReceipt();
+    nonOwnerApproval.ownerApproval.authorAssociation = authorAssociation;
+    assert.match(evaluateMergeReceiptEvidence(contract, AMENDMENT_ID, nonOwnerApproval).errors.join("\n"), /author association drifted/u);
+  }
+  const wrongOwnerLogin = passingReceipt();
+  wrongOwnerLogin.ownerApproval.authorLogin = "another-maintainer";
+  assert.match(evaluateMergeReceiptEvidence(contract, AMENDMENT_ID, wrongOwnerLogin).errors.join("\n"), /actor login drifted/u);
 });
 
 test("workflows retain stable checks, gate heavy jobs, and keep HIGH out of auto-merge", async () => {

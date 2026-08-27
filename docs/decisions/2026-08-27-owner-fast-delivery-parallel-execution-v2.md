@@ -96,7 +96,8 @@ declaration. Its clean formal review must postdate the required exact-head
 checks and precede the merge. The V2 start-gate receipt also requires one
 trusted exact-head Owner approval marker with prefix
 `FAST_DELIVERY_PARALLEL_V2_EXACT_HEAD_SQUASH_MERGE_APPROVED_`, submitted before
-merge. A registered lane branch may produce exactly one merge; a later pull
+merge by GitHub actor `chachathecat` with exact `OWNER` association. Member or
+collaborator association is insufficient. A registered lane branch may produce exactly one merge; a later pull
 request on an already-merged lane identity fails closed.
 
 The one machine-readable clean-review marker is
