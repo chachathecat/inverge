@@ -10,6 +10,7 @@ import {
   QF_ORDER,
   REQUIRED_STABLE_CHECKS,
   evaluateAutomaticMerge,
+  evaluateMergeReceiptEvidence,
   validateAuthority,
   validateCandidateChangedPaths,
   validateLaneChangedPaths,
@@ -58,6 +59,7 @@ function passingSnapshot(overrides = {}) {
       currentLaneId: QF_ORDER[1],
       currentPullRequestNumber: 900,
       currentPullRequestObservedOnce: true,
+      currentLanePriorMergedCount: 0,
       currentMainSha: "b".repeat(40),
       requiredReceiptIds: [AMENDMENT_ID, QF_ORDER[0]],
       validatedReceiptIds: [AMENDMENT_ID, QF_ORDER[0]],
@@ -87,6 +89,45 @@ function passingSnapshot(overrides = {}) {
   };
 }
 
+function passingReceipt(laneId = AMENDMENT_ID) {
+  const headSha = "c".repeat(40);
+  const lane = laneId === AMENDMENT_ID
+    ? contract.candidateLane
+    : contract.questionFoundrySplitCampaign.lanes.find((entry) => entry.laneId === laneId);
+  return {
+    state: "MERGED",
+    mergedAt: "2026-08-27T01:04:00.000Z",
+    mergeCommitOnMain: true,
+    summaryHeadSha: headSha,
+    headSha,
+    headRefName: lane.branch,
+    baseRefName: "main",
+    sameRepository: true,
+    changedPaths: [...lane.ownedPathsExactly],
+    worktreeDeclarationCount: 1,
+    checks: Object.fromEntries(REQUIRED_STABLE_CHECKS.map((name) => [name, {
+      headSha,
+      conclusion: "SUCCESS",
+      completedAt: "2026-08-27T01:00:00.000Z",
+    }])),
+    finalReview: {
+      headSha,
+      actionableP0P1P2: [0, 0, 0],
+      formal: true,
+      trustedReviewer: true,
+      submittedAt: "2026-08-27T01:01:00.000Z",
+    },
+    ownerApproval: laneId === AMENDMENT_ID ? {
+      headSha,
+      marker: `${contract.mergePolicy.v2OwnerApprovalReceiptMarkerPrefix}${headSha}`,
+      trustedReviewer: true,
+      submittedAt: "2026-08-27T01:02:00.000Z",
+    } : null,
+    unresolvedNonOutdatedReviewThreads: 0,
+    blockingCurrentHeadReviewCount: 0,
+  };
+}
+
 test("V2 authority is closed, fail-closed, and product-inert", () => {
   assert.deepEqual(validateAuthority(contract), { ok: true, errors: [] });
   assert.equal(contract.authorityStatus, "effective_only_after_exact_head_owner_approved_squash_merge_and_validated_github_receipt");
@@ -96,6 +137,9 @@ test("V2 authority is closed, fail-closed, and product-inert", () => {
   assert.equal(contract.questionFoundrySplitCampaign.maximumConcurrentMergeProducingLanes, 2);
   assert.equal(contract.riskClassifier.registeredLaneProfileCannotOverrideSemanticHighRiskSignal, true);
   assert.equal(contract.mergePolicy.completePostReadyGateReevaluationRequired, true);
+  assert.equal(contract.mergePolicy.validatedReceiptBindsExactLanePathsAndDeclaration, true);
+  assert.equal(contract.mergePolicy.receiptReviewAndApprovalMustPrecedeMerge, true);
+  assert.equal(contract.mergePolicy.registeredLaneMayMergeOnlyOnce, true);
   assert.ok(Object.values(contract.activationBoundary).every((value) => value === false));
   assert.deepEqual(validateCandidateChangedPaths(contract, contract.candidateLane.ownedPathsExactly), { ok: true, errors: [] });
   assert.match(
@@ -179,6 +223,23 @@ test("risk routing is specific-low before broad-medium and unknown fails HIGH", 
     patch: "@@ -1 +1 @@\n-throw new Error('fail closed');\n+return candidate;\n",
   }]), ["security_boundary_weakening"]);
   assert.equal(classify(registeredPaths, ["uninspectable_change"], policy, { profileOverride: override }).profile, "HIGH");
+
+  const dynamicNetworkSignals = deriveSemanticHighRiskSignals([{
+    path: "lib/question-foundry/similarity/bounded-similarity-corpus-v1.mjs",
+    patch: "@@ -0,0 +1 @@\n+const https = await import('node:https');\n",
+  }]);
+  assert.deepEqual(dynamicNetworkSignals, ["remote_or_production_or_payment"]);
+  assert.equal(classify(registeredPaths, dynamicNetworkSignals, policy, { profileOverride: override }).profile, "HIGH");
+  const jsonActivationSignals = deriveSemanticHighRiskSignals([{
+    path: "config/dabangil-question-foundry-bounded-similarity-corpus-v1.json",
+    patch: "@@ -1 +1 @@\n-  \"providerOrNetwork\": false\n+  \"providerOrNetwork\": true\n",
+  }]);
+  assert.deepEqual(jsonActivationSignals, ["remote_or_production_or_payment"]);
+  assert.equal(classify(registeredPaths, jsonActivationSignals, policy, { profileOverride: override }).profile, "HIGH");
+  assert.deepEqual(deriveSemanticHighRiskSignals([{
+    path: "config/dabangil-question-foundry-bounded-similarity-corpus-v1.json",
+    patch: "@@ -1 +1 @@\n-  \"remoteSupabaseMutation\": false\n+  \"remoteSupabaseMutation\": true\n",
+  }]), ["remote_or_production_or_payment"]);
 
   const qfI1 = contract.questionFoundrySplitCampaign.lanes[4];
   assert.deepEqual(
@@ -279,6 +340,39 @@ test("LOW and MEDIUM automatic merge require exact-head post-check clean review"
     evaluateAutomaticMerge(contract, passingSnapshot({ semanticSignalEvidenceComplete: false })).errors.join("\n"),
     /semantic HIGH-signal/u,
   );
+
+  const reusedLane = passingSnapshot();
+  reusedLane.laneGateEvidence.currentLanePriorMergedCount = 1;
+  assert.match(evaluateAutomaticMerge(contract, reusedLane).errors.join("\n"), /already produced a merge/u);
+});
+
+test("validated receipts bind exact lane scope, chronology, and V2 Owner approval", () => {
+  assert.deepEqual(evaluateMergeReceiptEvidence(contract, AMENDMENT_ID, passingReceipt()), { validated: true, errors: [] });
+  assert.deepEqual(evaluateMergeReceiptEvidence(contract, QF_ORDER[0], passingReceipt(QF_ORDER[0])), { validated: true, errors: [] });
+
+  const wrongPath = passingReceipt(QF_ORDER[0]);
+  wrongPath.changedPaths.push("lib/question-foundry/release-integration-v1.mjs");
+  assert.match(evaluateMergeReceiptEvidence(contract, QF_ORDER[0], wrongPath).errors.join("\n"), /undeclared changed path/u);
+
+  const missingDeclaration = passingReceipt(QF_ORDER[0]);
+  missingDeclaration.worktreeDeclarationCount = 0;
+  assert.match(evaluateMergeReceiptEvidence(contract, QF_ORDER[0], missingDeclaration).errors.join("\n"), /worktree declaration/u);
+
+  const lateReview = passingReceipt(QF_ORDER[0]);
+  lateReview.finalReview.submittedAt = "2026-08-27T01:05:00.000Z";
+  assert.match(evaluateMergeReceiptEvidence(contract, QF_ORDER[0], lateReview).errors.join("\n"), /after merge/u);
+
+  const missingApproval = passingReceipt();
+  missingApproval.ownerApproval = null;
+  assert.match(evaluateMergeReceiptEvidence(contract, AMENDMENT_ID, missingApproval).errors.join("\n"), /Owner approval is missing/u);
+
+  const wrongApproval = passingReceipt();
+  wrongApproval.ownerApproval.marker = `${contract.mergePolicy.v2OwnerApprovalReceiptMarkerPrefix}${"d".repeat(40)}`;
+  assert.match(evaluateMergeReceiptEvidence(contract, AMENDMENT_ID, wrongApproval).errors.join("\n"), /Owner approval marker drifted/u);
+
+  const earlyApproval = passingReceipt();
+  earlyApproval.ownerApproval.submittedAt = "2026-08-27T00:59:00.000Z";
+  assert.match(evaluateMergeReceiptEvidence(contract, AMENDMENT_ID, earlyApproval).errors.join("\n"), /predates final review/u);
 });
 
 test("workflows retain stable checks, gate heavy jobs, and keep HIGH out of auto-merge", async () => {

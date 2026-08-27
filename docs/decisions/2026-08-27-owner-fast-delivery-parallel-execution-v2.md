@@ -90,6 +90,15 @@ semantic risk, dependency receipts, order and concurrency. Any missing,
 stale, malformed, ambiguous or changed evidence fails closed. HIGH is rejected
 by this automatic path and requires a separate exact-head Owner approval.
 
+Each dependency receipt binds the registered branch, exact reviewed head,
+actual changed paths, exact lane ownership, and the single matching worktree
+declaration. Its clean formal review must postdate the required exact-head
+checks and precede the merge. The V2 start-gate receipt also requires one
+trusted exact-head Owner approval marker with prefix
+`FAST_DELIVERY_PARALLEL_V2_EXACT_HEAD_SQUASH_MERGE_APPROVED_`, submitted before
+merge. A registered lane branch may produce exactly one merge; a later pull
+request on an already-merged lane identity fails closed.
+
 The one machine-readable clean-review marker is
 `FAST_DELIVERY_V2_FINAL_REVIEW head=<40_hex_sha> actionable=0/0/0`; the review
 submission itself must bind that commit and come from a trusted repository

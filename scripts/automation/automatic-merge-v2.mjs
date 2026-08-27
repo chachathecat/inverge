@@ -8,8 +8,8 @@ import { classify, deriveSemanticHighRiskSignals, parsePolicy } from "./classify
 import {
   AMENDMENT_ID,
   QF_ORDER,
-  REQUIRED_STABLE_CHECKS,
   evaluateAutomaticMerge,
+  evaluateMergeReceiptEvidence,
   validateLaneChangedPaths,
 } from "./fast-delivery-parallel-v2.mjs";
 
@@ -116,6 +116,28 @@ function readFinalReview(pullRequest, headSha) {
   };
 }
 
+function readV2OwnerApproval(pullRequest, headSha, contract) {
+  const markerText = `${contract.mergePolicy.v2OwnerApprovalReceiptMarkerPrefix}${headSha}`;
+  const escapedMarker = markerText.replace(/[.*+?^${}()|[\]\\]/gu, "\\$&");
+  const marker = new RegExp(`(?:^|\\n)${escapedMarker}(?:\\n|$)`, "u");
+  const matches = (pullRequest.reviews?.nodes ?? []).filter((review) =>
+    review?.commit?.oid === headSha && ["APPROVED", "COMMENTED"].includes(review?.state) &&
+      marker.test(review?.body ?? ""),
+  );
+  if (matches.length !== 1) return null;
+  return {
+    headSha,
+    marker: markerText,
+    trustedReviewer: TRUSTED_ASSOCIATIONS.has(matches[0].authorAssociation),
+    submittedAt: matches[0].submittedAt,
+  };
+}
+
+function exactWorktreeDeclarationCount(pullRequest, lane) {
+  const expected = `FAST_DELIVERY_V2_LANE lane=${lane.laneId} branch=${lane.branch} worktree=${lane.worktreePath}`;
+  return String(pullRequest.body ?? "").split(/\r?\n/u).filter((line) => line.trim() === expected).length;
+}
+
 function readBranchPullRequests(repository, branch, cache) {
   if (cache.has(branch)) return cache.get(branch);
   const [owner] = repository.split("/");
@@ -134,26 +156,35 @@ function mergeCommitIsOnMain(repository, mergeCommitSha) {
   return ["ahead", "identical"].includes(comparison?.status);
 }
 
-function receiptIsValidated(repository, pullSummary) {
+function receiptIsValidated(repository, pullSummary, laneId, contract) {
   if (!pullSummary?.merged_at || !SHA_PATTERN.test(pullSummary?.head?.sha ?? "") ||
       !mergeCommitIsOnMain(repository, pullSummary.merge_commit_sha)) return false;
   const pullRequest = readPullRequest(repository, pullSummary.number);
-  if (pullRequest.state !== "MERGED" || pullRequest.headRefOid !== pullSummary.head.sha ||
-      pullRequest.baseRefName !== "main" || pullRequest.headRepository?.nameWithOwner !== repository) return false;
+  const lane = laneId === AMENDMENT_ID
+    ? contract.candidateLane
+    : contract.questionFoundrySplitCampaign.lanes.find((entry) => entry.laneId === laneId);
+  if (!lane) return false;
   const checks = readChecks(repository, pullRequest.headRefOid);
-  const completedTimes = [];
-  for (const name of REQUIRED_STABLE_CHECKS) {
-    const check = checks[name];
-    if (check?.headSha !== pullRequest.headRefOid || check?.conclusion !== "SUCCESS") return false;
-    const completedAt = Date.parse(check.completedAt ?? "");
-    if (!Number.isFinite(completedAt)) return false;
-    completedTimes.push(completedAt);
-  }
   const review = readFinalReview(pullRequest, pullRequest.headRefOid);
-  if (!review?.trustedReviewer || Date.parse(review.submittedAt ?? "") < Math.max(...completedTimes)) return false;
-  if ((pullRequest.reviewThreads?.nodes ?? []).some((thread) => !thread.isOutdated && !thread.isResolved)) return false;
-  if ((pullRequest.reviews?.nodes ?? []).some((entry) => entry?.commit?.oid === pullRequest.headRefOid && entry?.state === "CHANGES_REQUESTED")) return false;
-  return true;
+  return evaluateMergeReceiptEvidence(contract, laneId, {
+    state: pullRequest.state,
+    mergedAt: pullSummary.merged_at,
+    mergeCommitOnMain: true,
+    summaryHeadSha: pullSummary.head.sha,
+    headSha: pullRequest.headRefOid,
+    headRefName: pullRequest.headRefName,
+    baseRefName: pullRequest.baseRefName,
+    sameRepository: pullRequest.headRepository?.nameWithOwner === repository,
+    changedPaths: (pullRequest.files?.nodes ?? []).map((entry) => entry.path),
+    worktreeDeclarationCount: exactWorktreeDeclarationCount(pullRequest, lane),
+    checks,
+    finalReview: review,
+    ownerApproval: laneId === AMENDMENT_ID ? readV2OwnerApproval(pullRequest, pullRequest.headRefOid, contract) : null,
+    unresolvedNonOutdatedReviewThreads: (pullRequest.reviewThreads?.nodes ?? [])
+      .filter((thread) => !thread.isOutdated && !thread.isResolved).length,
+    blockingCurrentHeadReviewCount: (pullRequest.reviews?.nodes ?? [])
+      .filter((entry) => entry?.commit?.oid === pullRequest.headRefOid && entry?.state === "CHANGES_REQUESTED").length,
+  }).validated;
 }
 
 function readLaneGateEvidence(repository, pullRequestNumber, lane, contract) {
@@ -169,7 +200,7 @@ function readLaneGateEvidence(repository, pullRequestNumber, lane, contract) {
   for (const laneId of requiredReceiptIds) {
     const branch = branchById.get(laneId);
     const merged = readBranchPullRequests(repository, branch, cache).filter((entry) => entry.merged_at !== null);
-    if (merged.length === 1 && receiptIsValidated(repository, merged[0])) validatedReceiptIds.push(laneId);
+    if (merged.length === 1 && receiptIsValidated(repository, merged[0], laneId, contract)) validatedReceiptIds.push(laneId);
   }
 
   const openLaneIds = [];
@@ -183,7 +214,8 @@ function readLaneGateEvidence(repository, pullRequestNumber, lane, contract) {
   const concurrencyValid = uniqueOpenLaneIds.length <= 2 &&
     uniqueOpenLaneIds.includes(lane.laneId) &&
     (uniqueOpenLaneIds.length < 2 || uniqueOpenLaneIds.every((laneId) => parallelPair.includes(laneId)));
-  const currentPulls = readBranchPullRequests(repository, lane.branch, cache)
+  const currentLanePulls = readBranchPullRequests(repository, lane.branch, cache);
+  const currentPulls = currentLanePulls
     .filter((entry) => entry.state === "open" && entry.number === pullRequestNumber);
 
   const mainRef = ghJson(["api", `repos/${repository}/git/ref/heads/main`]);
@@ -191,6 +223,7 @@ function readLaneGateEvidence(repository, pullRequestNumber, lane, contract) {
     currentLaneId: lane.laneId,
     currentPullRequestNumber: pullRequestNumber,
     currentPullRequestObservedOnce: currentPulls.length === 1,
+    currentLanePriorMergedCount: currentLanePulls.filter((entry) => entry.merged_at !== null).length,
     currentMainSha: mainRef?.object?.sha ?? null,
     requiredReceiptIds,
     validatedReceiptIds,

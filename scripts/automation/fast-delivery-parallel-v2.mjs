@@ -190,11 +190,15 @@ export function validateAuthority(contract) {
   add(errors, contract.mergePolicy?.MEDIUM?.startsWith("conditional_automatic_ready"), "MEDIUM automatic Ready/merge policy is missing");
   add(errors, contract.mergePolicy?.HIGH === "exact_head_owner_approval_required", "HIGH must require exact-head Owner approval");
   add(errors, contract.mergePolicy?.formalReviewMarkerTemplate === "FAST_DELIVERY_V2_FINAL_REVIEW head=<40_hex_sha> actionable=0/0/0", "formal review marker drifted");
+  add(errors, contract.mergePolicy?.v2OwnerApprovalReceiptMarkerPrefix === "FAST_DELIVERY_PARALLEL_V2_EXACT_HEAD_SQUASH_MERGE_APPROVED_", "V2 Owner approval receipt marker drifted");
   add(errors, sameArray(contract.mergePolicy?.actionableP0P1P2Required, [0, 0, 0]), "merge review counts must be 0/0/0");
   add(errors, contract.mergePolicy?.registeredLaneOrExactFutureAuthorityRequired === true, "automatic merge must require a registered lane");
   add(errors, contract.mergePolicy?.exactChangedPathOwnershipRequired === true, "automatic merge must require exact changed-path ownership");
   add(errors, contract.mergePolicy?.isolatedWorktreeDeclarationRequired === true, "automatic merge must require isolated-worktree evidence");
   add(errors, contract.mergePolicy?.liveDependencyAndDeclaredOrderReceiptsRequired === true, "automatic merge must require live dependency and order receipts");
+  add(errors, contract.mergePolicy?.validatedReceiptBindsExactLanePathsAndDeclaration === true, "validated receipts must bind exact lane paths and declaration");
+  add(errors, contract.mergePolicy?.receiptReviewAndApprovalMustPrecedeMerge === true, "receipt review and approval must precede merge");
+  add(errors, contract.mergePolicy?.registeredLaneMayMergeOnlyOnce === true, "registered lane identities must be single-merge");
   add(errors, contract.mergePolicy?.liveLaneConcurrencyRevalidatedBeforeMerge === true, "automatic merge must revalidate live lane concurrency");
   add(errors, contract.mergePolicy?.completePostReadyGateReevaluationRequired === true, "automatic merge must fully re-evaluate after Ready");
   add(errors, contract.laneIsolation?.oneIsolatedGitWorktreePerLane === true, "one isolated worktree per lane is required");
@@ -315,6 +319,89 @@ export function validateCandidateChangedPaths(contract, changedPaths) {
   return { ok: errors.length === 0, errors };
 }
 
+export function evaluateMergeReceiptEvidence(contract, laneId, evidence) {
+  const errors = [];
+  const authority = validateAuthority(contract);
+  errors.push(...authority.errors);
+  add(errors, isRecord(evidence), "merge receipt evidence must be an object");
+  if (!isRecord(evidence)) return { validated: false, errors };
+
+  const lane = laneId === AMENDMENT_ID
+    ? contract.candidateLane
+    : contract.questionFoundrySplitCampaign?.lanes?.find((entry) => entry.laneId === laneId);
+  add(errors, isRecord(lane), `merge receipt lane is not registered: ${String(laneId)}`);
+  if (!isRecord(lane)) return { validated: false, errors };
+
+  add(errors, evidence.state === "MERGED", `${laneId}: receipt pull request is not merged`);
+  add(errors, evidence.headRefName === lane.branch, `${laneId}: receipt branch identity drifted`);
+  add(errors, evidence.baseRefName === "main", `${laneId}: receipt base must be main`);
+  add(errors, evidence.sameRepository === true, `${laneId}: receipt must use the authority repository`);
+  add(errors, evidence.mergeCommitOnMain === true, `${laneId}: resulting merge commit is not on protected main`);
+  add(errors, SHA_PATTERN.test(evidence.summaryHeadSha ?? "") && evidence.headSha === evidence.summaryHeadSha,
+    `${laneId}: receipt head identity drifted`);
+
+  const changedPaths = Array.isArray(evidence.changedPaths) ? evidence.changedPaths : [];
+  add(errors, changedPaths.length > 0, `${laneId}: receipt changed paths are missing`);
+  const pathValidation = laneId === AMENDMENT_ID
+    ? validateCandidateChangedPaths(contract, changedPaths)
+    : validateLaneChangedPaths(contract, laneId, changedPaths, { includeSerialIntegrationPaths: true });
+  errors.push(...pathValidation.errors.map((message) => `${laneId}: ${message}`));
+  add(errors, evidence.worktreeDeclarationCount === 1, `${laneId}: exact worktree declaration must occur once`);
+
+  const mergedAt = Date.parse(evidence.mergedAt ?? "");
+  add(errors, Number.isFinite(mergedAt), `${laneId}: merge timestamp is invalid`);
+  const checks = isRecord(evidence.checks) ? evidence.checks : {};
+  const completedTimes = [];
+  for (const checkName of REQUIRED_STABLE_CHECKS) {
+    const check = checks[checkName];
+    add(errors, check?.headSha === evidence.headSha, `${laneId}: ${checkName} receipt check is missing or stale`);
+    add(errors, check?.conclusion === "SUCCESS", `${laneId}: ${checkName} receipt check is not green`);
+    const completedAt = Date.parse(check?.completedAt ?? "");
+    add(errors, Number.isFinite(completedAt), `${laneId}: ${checkName} receipt completion time is invalid`);
+    if (Number.isFinite(completedAt)) completedTimes.push(completedAt);
+  }
+
+  const review = evidence.finalReview;
+  add(errors, isRecord(review), `${laneId}: exact-head final review is missing`);
+  let reviewSubmittedAt = Number.NaN;
+  if (isRecord(review)) {
+    add(errors, review.headSha === evidence.headSha, `${laneId}: final review head drifted`);
+    add(errors, sameArray(review.actionableP0P1P2, [0, 0, 0]), `${laneId}: final review is not actionable 0/0/0`);
+    add(errors, review.formal === true && review.trustedReviewer === true, `${laneId}: final review is not trusted and formal`);
+    reviewSubmittedAt = Date.parse(review.submittedAt ?? "");
+    add(errors, Number.isFinite(reviewSubmittedAt), `${laneId}: final review timestamp is invalid`);
+    if (Number.isFinite(reviewSubmittedAt) && completedTimes.length === REQUIRED_STABLE_CHECKS.length) {
+      add(errors, reviewSubmittedAt >= Math.max(...completedTimes), `${laneId}: final review predates required checks`);
+    }
+    if (Number.isFinite(reviewSubmittedAt) && Number.isFinite(mergedAt)) {
+      add(errors, reviewSubmittedAt <= mergedAt, `${laneId}: final review occurred after merge`);
+    }
+  }
+  add(errors, evidence.unresolvedNonOutdatedReviewThreads === 0, `${laneId}: unresolved review threads remain`);
+  add(errors, evidence.blockingCurrentHeadReviewCount === 0, `${laneId}: current-head changes-requested review remains`);
+
+  if (laneId === AMENDMENT_ID) {
+    const approval = evidence.ownerApproval;
+    add(errors, isRecord(approval), `${laneId}: exact-head Owner approval is missing`);
+    if (isRecord(approval)) {
+      const expectedMarker = `${contract.mergePolicy.v2OwnerApprovalReceiptMarkerPrefix}${evidence.headSha}`;
+      add(errors, approval.headSha === evidence.headSha, `${laneId}: Owner approval head drifted`);
+      add(errors, approval.marker === expectedMarker, `${laneId}: Owner approval marker drifted`);
+      add(errors, approval.trustedReviewer === true, `${laneId}: Owner approval is not trusted`);
+      const approvalSubmittedAt = Date.parse(approval.submittedAt ?? "");
+      add(errors, Number.isFinite(approvalSubmittedAt), `${laneId}: Owner approval timestamp is invalid`);
+      if (Number.isFinite(approvalSubmittedAt) && Number.isFinite(reviewSubmittedAt)) {
+        add(errors, approvalSubmittedAt >= reviewSubmittedAt, `${laneId}: Owner approval predates final review`);
+      }
+      if (Number.isFinite(approvalSubmittedAt) && Number.isFinite(mergedAt)) {
+        add(errors, approvalSubmittedAt <= mergedAt, `${laneId}: Owner approval occurred after merge`);
+      }
+    }
+  }
+
+  return { validated: errors.length === 0, errors };
+}
+
 export function evaluateAutomaticMerge(contract, snapshot) {
   const errors = [];
   const authority = validateAuthority(contract);
@@ -346,6 +433,7 @@ export function evaluateAutomaticMerge(contract, snapshot) {
     add(errors, Number.isInteger(laneGate.currentPullRequestNumber) && laneGate.currentPullRequestNumber > 0,
       "live lane evidence must bind the current pull request");
     add(errors, laneGate.currentPullRequestObservedOnce === true, "current registered lane pull request must be uniquely open");
+    add(errors, laneGate.currentLanePriorMergedCount === 0, "current registered lane identity has already produced a merge");
     add(errors, SHA_PATTERN.test(laneGate.currentMainSha ?? ""), "live protected-main identity is required");
     add(errors, sameArray(laneGate.requiredReceiptIds, requiredReceiptIds), "declared merge-order receipt set is stale or incomplete");
     add(errors, sameArray(laneGate.validatedReceiptIds, requiredReceiptIds), "every prior lane must have one validated resulting-main receipt");

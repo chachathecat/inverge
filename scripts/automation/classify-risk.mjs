@@ -131,6 +131,13 @@ function removedPatchBody(patch) {
 
 const ACTIVE_SOURCE_PATTERN = /\.(?:[cm]?[jt]sx?|mts|cts)$/u;
 const NON_PRODUCT_EVIDENCE_PATTERN = /^(?:tests?|docs?|reference_corpus\/|.*\/fixtures\/)/u;
+const NETWORK_MODULE_PATTERN = String.raw`(?:node:(?:http|https|net|tls)(?:\/[^"']*)?|@supabase\/[^"']+|stripe|@stripe\/[^"']+)`;
+const NETWORK_IMPORT_PATTERN = new RegExp(
+  String.raw`(?:\bfrom\s+["']${NETWORK_MODULE_PATTERN}["']|\bimport\s*\(\s*["']${NETWORK_MODULE_PATTERN}["']\s*\)|\brequire\s*\(\s*["']${NETWORK_MODULE_PATTERN}["']\s*\))`,
+  "u",
+);
+const NETWORK_CALL_PATTERN = /(?:\bfetch\s*\(|\b(?:WebSocket|EventSource)\s*\(|\bnavigator\.sendBeacon\s*\(|\bhttps?\s*\.\s*(?:get|request)\s*\(|\bcreateClient\s*\(|\bpostgres\s*\()/u;
+const REMOTE_ACTIVATION_JSON_PATTERN = /"(?:providerOrNetwork|remoteSupabaseMutation|productionMutation|payment|publicActivation|externalLearnerActivation|learnerRuntime|databaseOrRls|remoteMutation|networkAccess|providerAccess|productionActivation)"\s*:\s*true\b/u;
 
 export function deriveSemanticHighRiskSignals(changedFileEvidence) {
   const signals = new Set();
@@ -175,7 +182,8 @@ export function deriveSemanticHighRiskSignals(changedFileEvidence) {
         (jsonConfig && /"releaseStatesAvailable"\s*:\s*\[\s*["']/u.test(added))) {
       signals.add("durable_release_authority");
     }
-    if (activeSource && /(?:\bfetch\s*\(|from\s+["']node:(?:http|https|net|tls)["']|from\s+["']@supabase\/|\bcreateClient\s*\(|\bpostgres\s*\()/u.test(added)) {
+    if ((activeSource && (NETWORK_IMPORT_PATTERN.test(added) || NETWORK_CALL_PATTERN.test(added))) ||
+        (jsonConfig && REMOTE_ACTIVATION_JSON_PATTERN.test(added))) {
       signals.add("remote_or_production_or_payment");
     }
   }
