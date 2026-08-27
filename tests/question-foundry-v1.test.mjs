@@ -2477,6 +2477,13 @@ test("every sealed transfer variant independently revalidates answer, distractor
       ],
     },
     {
+      name: "retained expected option with noncanonical answer body",
+      mutate: (variant) => {
+        variant.options.find((option) => option.optionId === variant.expectedOptionId).body = "20 POINTS";
+      },
+      expectedPrefixes: ["SEALED_TRANSFER_VARIANT_SINGLE_ANSWER_INVALID:"],
+    },
+    {
       name: "multiple equivalent correct answers",
       mutate: (variant) => {
         variant.options.find((option) => option.optionId !== variant.expectedOptionId).body = "20 points";

@@ -993,6 +993,7 @@ function validateSealedTransferVariantContent(
   );
   if (
     !correct ||
+    correct.body !== bundle.batch.answerSpecification.expectedAnswer ||
     normalizeQuestionText(correct.body) !== expectedAnswer ||
     matchingExpectedAnswers.length !== 1
   ) {

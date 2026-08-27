@@ -14,7 +14,7 @@
 ## Branches and PRs
 
 - M5: merged PR #845 from `codex/owner-study-m5-study-capacity-runtime-bridge-r1`
-- Question Foundry R5: `codex/owner-study-question-foundry-r5`; isolated worktree `.agent-factory/worktrees/owner-study-question-foundry-r5`; Draft PR #850; initial candidate with correction budget 0/1
+- Question Foundry R5: `codex/owner-study-question-foundry-r5`; isolated worktree `.agent-factory/worktrees/owner-study-question-foundry-r5`; Draft PR #850; exact expected-body audit repair included; correction budget 1/1
 - Question Foundry R4: PR #849 closed unmerged at `3895864be7a06507c43507549a4f72b8176f16a5`; branch retained as read-only donor evidence; prior approval packet and token are invalid
 - Earlier exhausted candidates: PR #848, PR #847, PR #846, PR #843 and PR #810 closed unmerged
 
@@ -35,8 +35,8 @@
 
 ## Current blocker
 
-- R5 must complete its one final validation set, exact-head CI, independent adversarial audit, fresh formal review, post-Ready review, and zero-thread gate before exact Owner merge approval
+- R5 bounded correction 1/1 must pass the final validation set, exact-head CI, adversarial verification, fresh formal review, post-Ready review, and zero-thread gate; no further source correction or replacement is authorized
 
 ## Next exact action
 
-- run the single final validation set on Draft PR #850, then complete its exact-head review sequence without starting any later product wave
+- run the focused corrected-body regression, commit and push correction 1/1, then run the finished-head validation and review sequence without starting any later product wave
