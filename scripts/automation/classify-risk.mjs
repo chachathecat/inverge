@@ -98,7 +98,7 @@ export function getChangedFiles() {
 }
 
 export function getLocalChangedFileEvidence(files) {
-  if (process.env.CHANGED_FILES && readEvent() === null) {
+  if (process.env.CHANGED_FILES) {
     return files.map((file) => ({ path: file, patchComplete: false, patch: null }));
   }
   const { baseSha, headSha } = resolveDiffBoundary();
@@ -320,7 +320,7 @@ function main() {
   const policy = parsePolicy(path.resolve("config/agent-risk-policy.yml"));
   const changedFiles = getChangedFiles();
   const changedFileEvidence = getLocalChangedFileEvidence(changedFiles);
-  const pathOnlyManualInvocation = Boolean(process.env.CHANGED_FILES) && readEvent() === null;
+  const pathOnlyManualInvocation = Boolean(process.env.CHANGED_FILES);
   const derivedHighRiskSignals = pathOnlyManualInvocation ? [] : deriveSemanticHighRiskSignals(changedFileEvidence);
   const signals = [...new Set([...getSignals(), ...derivedHighRiskSignals])];
   const event = readEvent();

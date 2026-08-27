@@ -196,6 +196,37 @@ test("risk routing is specific-low before broad-medium and unknown fails HIGH", 
   assert.equal(qfI1Classification.learnerLoopRequired, false);
 });
 
+test("explicit CHANGED_FILES stays path-only even when a CI event is present", async () => {
+  const directory = await mkdtemp(path.join(tmpdir(), "fast-delivery-v2-risk-"));
+  const eventPath = path.join(directory, "event.json");
+  await writeFile(eventPath, JSON.stringify({
+    pull_request: {
+      base: { sha: "b".repeat(40) },
+      head: { sha: "a".repeat(40), ref: "codex/manual-risk-check" },
+    },
+  }));
+
+  try {
+    const result = spawnSync(process.execPath, ["scripts/automation/classify-risk.mjs"], {
+      cwd: new URL("../", import.meta.url),
+      encoding: "utf8",
+      env: {
+        ...process.env,
+        CHANGED_FILES: "docs/readme.md",
+        GITHUB_EVENT_PATH: eventPath,
+        PR_SIGNALS: "",
+      },
+    });
+    assert.equal(result.status, 0, result.stderr);
+    const classification = JSON.parse(result.stdout);
+    assert.equal(classification.risk, "low");
+    assert.equal(classification.semanticSignalEvidenceComplete, false);
+    assert.deepEqual(classification.derivedHighRiskSignals, []);
+  } finally {
+    await rm(directory, { recursive: true, force: true });
+  }
+});
+
 test("validation evidence selection is deterministic and schema parsing fails closed", () => {
   const selected = selectChangedEvidence([
     "tests/z.test.mjs",
