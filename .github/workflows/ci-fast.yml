@@ -26,19 +26,28 @@ jobs:
           cache: npm
       - name: Install dependencies
         run: npm ci
+      - name: Classify changed paths and validation profile
+        id: risk
+        env:
+          RISK_OUTPUT_PATH: .agent-factory/risk.json
+        run: node scripts/automation/classify-risk.mjs
+      - name: Validate V2 operating authority
+        run: node scripts/automation/fast-delivery-parallel-v2.mjs validate-authority
+      - name: Validate V2 candidate exact path manifest
+        if: github.event_name == 'pull_request' && github.event.pull_request.head.ref == 'codex/fast-delivery-parallel-execution-v2'
+        run: node scripts/automation/fast-delivery-parallel-v2.mjs validate-candidate-paths
+      - name: Focused deterministic tests
+        run: node scripts/automation/validation-profile-v2.mjs focused-tests
+      - name: Parse changed JSON schemas
+        run: node scripts/automation/validation-profile-v2.mjs schema-parse
       - name: Typecheck
         run: npm run typecheck
-      - name: Lint
-        run: npm run lint
-      - name: Focused tests
-        run: npm run test -- --workers=1
-      - name: Verify learner loop
-        run: npm run verify:learner-loop:ci
+      - name: Changed-file lint
+        run: node scripts/automation/validation-profile-v2.mjs changed-file-lint
+      - name: Diff check
+        run: node scripts/automation/validation-profile-v2.mjs diff-check
       - name: Run PR contract
         if: github.event_name == 'pull_request'
         env:
           PR_BODY: ${{ github.event.pull_request.body }}
         run: node scripts/automation/validate-pr-contract.mjs
-      - name: Run risk classification
-        if: github.event_name == 'pull_request'
-        run: node scripts/automation/classify-risk.mjs

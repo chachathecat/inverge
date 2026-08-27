@@ -1,0 +1,80 @@
+name: Reusable Heavy Validation V2
+
+on:
+  workflow_call:
+    inputs:
+      profile:
+        required: true
+        type: string
+      platform:
+        required: true
+        type: string
+      validation_route:
+        required: true
+        type: string
+      representative_e2e_required:
+        required: true
+        type: boolean
+
+permissions:
+  contents: read
+
+jobs:
+  heavy-validation:
+    name: heavy-${{ inputs.platform }}-${{ inputs.profile }}
+    runs-on: ${{ inputs.platform == 'windows' && 'windows-latest' || 'ubuntu-latest' }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: Validate reusable-job eligibility
+        shell: bash
+        env:
+          PROFILE: ${{ inputs.profile }}
+          PLATFORM: ${{ inputs.platform }}
+          VALIDATION_ROUTE: ${{ inputs.validation_route }}
+        run: |
+          node -e "const {PROFILE:p,PLATFORM:o,VALIDATION_ROUTE:r}=process.env; if(!['MEDIUM','HIGH'].includes(p)||!['linux','windows'].includes(o)||!['MEDIUM_STANDARD','HIGH_STANDARD','QF_I1_BOUNDED_HIGH'].includes(r)||(r==='QF_I1_BOUNDED_HIGH'&&o!=='linux')||(o==='windows'&&p!=='HIGH')) process.exit(1)"
+      - name: Verify canonical checkout line endings
+        if: inputs.platform == 'windows'
+        shell: pwsh
+        run: |
+          $unexpected = git ls-files --eol | Select-String 'i/lf\s+w/(?:crlf|mixed)'
+          if ($unexpected) {
+            $unexpected | ForEach-Object { Write-Error $_.Line }
+            exit 1
+          }
+      - name: Install dependencies
+        run: ${{ inputs.platform == 'windows' && 'npm.cmd ci' || 'npm ci' }}
+      - name: MEDIUM affected regression family
+        if: inputs.platform == 'linux' && inputs.profile == 'MEDIUM'
+        run: node scripts/automation/validation-profile-v2.mjs affected-tests
+      - name: MEDIUM representative E2E when applicable
+        if: inputs.platform == 'linux' && inputs.profile == 'MEDIUM'
+        env:
+          REPRESENTATIVE_E2E_REQUIRED: ${{ inputs.representative_e2e_required }}
+        run: node scripts/automation/validation-profile-v2.mjs representative-e2e
+      - name: HIGH full test suite
+        if: inputs.profile == 'HIGH' && inputs.validation_route == 'HIGH_STANDARD'
+        run: ${{ inputs.platform == 'windows' && 'npm.cmd run test -- --workers=1' || 'npm run test -- --workers=1' }}
+      - name: QF-I1 exact bounded test suite
+        if: inputs.platform == 'linux' && inputs.validation_route == 'QF_I1_BOUNDED_HIGH'
+        run: node scripts/automation/validation-profile-v2.mjs qf-i1-tests
+      - name: HIGH typecheck
+        if: inputs.platform == 'windows' && inputs.validation_route == 'HIGH_STANDARD'
+        run: npm.cmd run typecheck
+      - name: HIGH lint
+        if: inputs.platform == 'windows' && inputs.validation_route == 'HIGH_STANDARD'
+        run: npm.cmd run lint
+      - name: HIGH security audit validation
+        if: inputs.platform == 'linux' && inputs.validation_route == 'HIGH_STANDARD'
+        run: npm run security:audit:validate
+      - name: Production build
+        run: ${{ inputs.platform == 'windows' && 'npm.cmd run build' || 'npm run build' }}
+      - name: HIGH closed-beta readiness
+        if: inputs.platform == 'linux' && inputs.validation_route == 'HIGH_STANDARD'
+        run: npm run check:closed-beta-readiness

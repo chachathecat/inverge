@@ -2,30 +2,27 @@
 
 ## Current main
 
-- SHA: `3e78b8d783506bed676f817a4efe23d576ad5568`
-- tree: `268de11f1ca7f0a7c0453020bcbf2681217821c1`
+- SHA: `fd8d0039bbeb2981935fdb671094e37d73a34400`
+- tree: `1d338b7be92cfc98c00611b4ff3f2b75dea1784d`
 
 ## Current milestones
 
-- `PARALLEL_EXECUTION_V1`, M1 / C3R-T, M2 / C3R-L, M3 / Foundation Freeze, and M4 / common Kernel plus frozen `SubjectAdapterV1`: merged and validated
-- M5 / Study Capacity runtime bridge: active
-- Question Foundry V1: Draft integration-held after M5
+- M1–M5: merged and validated; C3R-T/L, Foundation Freeze, common Kernel with frozen `SubjectAdapterV1`, and Study Capacity runtime bridge are complete
+- Fast Delivery / Parallel Execution V2: HIGH-risk operating candidate; no authority until exact-head Owner-approved merge and validated receipt
+- Question Foundry: monolithic path terminally closed; QF-0/S1/S2/S3/I1 split is gated on the V2 receipt
 - M6–M10: not started
 
 ## Branches and PRs
 
-- M4: merged PR #842 from `codex/owner-study-lane-b-first-stage-kernel-replan-4`
-- M5 clean replacement: `codex/owner-study-m5-study-capacity-runtime-bridge-r1`; isolated worktree `.agent-factory/worktrees/owner-study-m5-study-capacity-runtime-bridge-r1`; Draft PR #845; this PR binding is source correction 1/2
-- M5 exhausted candidate: PR #843 closed unmerged at `fd503b4b7aa4cd143423e9d82108b66ae96305f2` after exact-head review `0/0/1` found the stale next-action log P2
-- Question Foundry: `codex/owner-study-lane-c-question-foundry`; Draft PR #810; parked pending M5 and a clean rights-safe refresh
+- PR #850: closed unmerged; read-only donor branch `codex/owner-study-question-foundry-r5`, head `b6a2bab8ce2c3f074526080afb60a1fbd9741985`, tree `6c8221df4d649929c1cf71502c909337f91c4a51`
+- V2: branch `codex/fast-delivery-parallel-execution-v2`; isolated worktree `.agent-factory/worktrees/fast-delivery-parallel-execution-v2`; PR pending
 
 ## Lane ownership
 
-- M5 owns exactly the twelve paths in `config/dabangil-first-stage-study-capacity-runtime-bridge-v1.json`, including the sole active log, serial shared-test registration gate, M4 receipt-pinned evidence repair, and isolated-worktree Windows Git fixture repair
-- M5 does not mutate the frozen Kernel/`SubjectAdapterV1`, migrations, auth/RLS, packages/locks, common durable substrate, remote Supabase, or Production
-- Question Foundry retains its disjoint nine-path implementation manifest and no current merge authority
+- V2 is the sole merge-producing writer and owns only its declared workflow, classifier/validator, authority, focused-test, roadmap and this permitted #850-close log checkpoint paths
+- PRs #849/#850 and all Question Foundry product paths are read-only; no QF split lane starts before the V2 resulting-main receipt
 
-## Completed receipts and merge results
+## Completed receipts
 
 - PR #800/#806 / C3R-P: reviewed `8f434027e5d20a5f3e799b1c2d85876e766b3858` and `2b24f29d8e7a8ad41289775a449afce3c0ef5b44`; repaired resulting main `f3251d0161873c0113d82ee2e72b422436a01158`
 - PR #807/#808 / start and parallel gates: reviewed `eae0cfc27d6c44f244cd368882fdbdeae7282a0c` and `b06874e4e354e690da53ecd8497fdda04d2cf6ae`; parallel resulting main `cad8b98e4f13a2fe50d82ffd983616adc70eb75a`
@@ -33,11 +30,13 @@
 - PR #832/#834 / C3R-L: reviewed `fa0084b13ea2e6c2bedf72f0084d57c66158bd4d`; receipt-validated through resulting main `a121eea722fd2a9054d11a5c0e5f3893b52da014`
 - PR #838 / Foundation Freeze: reviewed `2106d370b2725d3f03923db3a6d279e94778bd6d`; resulting main `aded1d711c837aa6e93470d3b31bd75907452996`; tree `313056e25e3296d1546e909389eb0ad014da5a66`
 - PR #842 / common Kernel and frozen `SubjectAdapterV1`: reviewed `b56f9d6db73f15b906f438419ccd818dc65ce11b`; reviewed/resulting tree `268de11f1ca7f0a7c0453020bcbf2681217821c1`; resulting main `3e78b8d783506bed676f817a4efe23d576ad5568`; required checks passed; review `0/0/0`; zero unresolved actionable threads
+- PR #845 / Study Capacity runtime bridge: reviewed `162d21df9ae77fb22888ab80c03992304f021717`; resulting main `fd8d0039bbeb2981935fdb671094e37d73a34400`, tree `1d338b7be92cfc98c00611b4ff3f2b75dea1784d`
+- PR #850 disposition: `QUESTION_FOUNDRY_R5_CLOSED_UNMERGED_SCOPE_SPLIT_DONOR`; terminal review `0/3/1`; no finding recorded as corrected
 
 ## Current blocker
 
-- Draft PR #845 must pass the full clean-replacement local gate, exact-head required checks, fresh formal review, and the post-Ready gate without inventing subject scheduling policy; exact Owner merge approval remains required
+- V2 modifies workflow and authority, so it requires exact applicable HIGH validation, fresh exact-head `0/0/0` formal review, zero unresolved actionable threads and exact Owner approval before merge
 
 ## Next exact action
 
-- complete PR #845's exact-head local, CI, and formal-review gates; if clean, mark Ready, obtain the post-Ready exact-head gate, and prepare the Owner merge packet without merging before approval
+- finish the V2 candidate, open one Draft PR, obtain terminal exact-head checks and formal review, then return `FAST_DELIVERY_PARALLEL_V2_OWNER_APPROVAL_REQUIRED` without beginning product mutation

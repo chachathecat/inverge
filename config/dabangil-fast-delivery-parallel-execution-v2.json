@@ -1,0 +1,338 @@
+{
+  "schemaVersion": "fast_delivery_parallel_execution_v2.authority.v1",
+  "amendmentId": "FAST_DELIVERY_AND_PARALLEL_EXECUTION_V2",
+  "programId": "INVERGE_OWNER_STUDY_OS",
+  "authorityDecisionPath": "docs/decisions/2026-08-27-owner-fast-delivery-parallel-execution-v2.md",
+  "authorityStatus": "effective_only_after_exact_head_owner_approved_squash_merge_and_validated_github_receipt",
+  "candidateBase": {
+    "protectedMainSha": "fd8d0039bbeb2981935fdb671094e37d73a34400",
+    "protectedMainTree": "1d338b7be92cfc98c00611b4ff3f2b75dea1784d"
+  },
+  "deliveryControl": {
+    "repository": "chachathecat/inverge",
+    "baseRef": "main",
+    "baseSha": "fd8d0039bbeb2981935fdb671094e37d73a34400",
+    "headRef": "codex/fast-delivery-parallel-execution-v2",
+    "headRepository": "chachathecat/inverge",
+    "pullRequestTitle": "[FDV2] Install bounded Fast Delivery / Parallel Execution V2 authority",
+    "draftRequired": true,
+    "referenceOnlyIssueLine": "Refs #714",
+    "requiredDispositionLine": "Issue #714 remains open; this operating amendment closes no issue and starts no product mutation.",
+    "closingKeywordsAllowed": false
+  },
+  "candidateLane": {
+    "laneId": "FAST_DELIVERY_AND_PARALLEL_EXECUTION_V2",
+    "branch": "codex/fast-delivery-parallel-execution-v2",
+    "worktreePath": ".agent-factory/worktrees/fast-delivery-parallel-execution-v2",
+    "profile": "HIGH",
+    "ownedPathsExactly": [
+      ".github/AGENTS.md",
+      ".github/workflows/auto-merge.yml",
+      ".github/workflows/ci-fast.yml",
+      ".github/workflows/ci-full.yml",
+      ".github/workflows/learner-loop-health.yml",
+      ".github/workflows/reusable-heavy-validation-v2.yml",
+      ".github/workflows/risk-classifier.yml",
+      "AGENTS.md",
+      "config/agent-risk-policy.yml",
+      "config/dabangil-fast-delivery-parallel-execution-v2.json",
+      "docs/decisions/2026-08-27-owner-fast-delivery-parallel-execution-v2.md",
+      "docs/exec-plans/active/inverge-owner-study-os.md",
+      "roadmap/active-program.yml",
+      "scripts/automation/automatic-merge-v2.mjs",
+      "scripts/automation/classify-risk.mjs",
+      "scripts/automation/fast-delivery-parallel-v2.mjs",
+      "scripts/automation/validate-pr-contract.mjs",
+      "scripts/automation/validation-profile-v2.mjs",
+      "scripts/run-node-tests.mjs",
+      "tests/fast-delivery-parallel-execution-v2.test.mjs"
+    ]
+  },
+  "terminalDonors": [
+    {
+      "pullRequest": 849,
+      "disposition": "closed_unmerged_read_only_donor_evidence",
+      "mergeAuthority": false
+    },
+    {
+      "pullRequest": 850,
+      "branch": "codex/owner-study-question-foundry-r5",
+      "headSha": "b6a2bab8ce2c3f074526080afb60a1fbd9741985",
+      "tree": "6c8221df4d649929c1cf71502c909337f91c4a51",
+      "disposition": "QUESTION_FOUNDRY_R5_CLOSED_UNMERGED_SCOPE_SPLIT_DONOR",
+      "mergeAuthority": false,
+      "commitAncestryReuseAllowed": false
+    }
+  ],
+  "riskClassifier": {
+    "alwaysRunsOnPullRequests": true,
+    "changedPathsRequired": true,
+    "unknownPathDisposition": "HIGH",
+    "highestApplicableProfileWins": true,
+    "registeredLaneExactPathProfileOverridesGenericPathProfile": true,
+    "stableCheckName": "risk-classifier",
+    "artifactContainsMetadataOnly": true
+  },
+  "stableRequiredCheckNames": [
+    "pr-contract",
+    "risk-classifier",
+    "runtime-gate",
+    "fast-ci",
+    "full-ci",
+    "full-ci-windows",
+    "Learner Loop Health"
+  ],
+  "validationProfiles": {
+    "LOW": {
+      "eligibleKinds": ["docs", "schema", "pure_helper", "bounded_algorithm_module", "golden_or_hostile_fixture"],
+      "required": ["focused_deterministic_tests", "schema_parse_when_applicable", "typecheck", "changed_file_lint", "git_diff_check", "one_final_exact_head_review"],
+      "forbidden": ["postgresql_replay", "browser_to_database", "inherited_practice_theory_law_runtime", "windows_full_suite", "repeated_broad_review"]
+    },
+    "MEDIUM": {
+      "eligibleKinds": ["source_only_integration", "adapter", "ordinary_api_or_ui"],
+      "required": ["focused_tests", "affected_regression_family", "production_build", "one_representative_e2e_when_applicable", "git_diff_check", "one_final_exact_head_review"]
+    },
+    "HIGH": {
+      "eligibleKinds": ["workflow_or_rules_authority", "migration", "rls_or_auth", "durable_release_authority", "remote_or_production_or_payment"],
+      "required": ["all_applicable_security_and_runtime_evidence", "applicable_full_or_exact_bounded_release_suite", "production_build", "git_diff_check", "one_final_exact_head_review", "exact_head_owner_approval"]
+    }
+  },
+  "validationExecution": {
+    "implementationLoop": "focused_tests_only",
+    "finalApplicablePassCount": 1,
+    "finalFormalReviewCount": 1,
+    "heavyValidationWorkflow": ".github/workflows/reusable-heavy-validation-v2.yml",
+    "heavyJobsRunOnlyWhenProfileEligible": true,
+    "dependencyCache": "setup_node_npm_cache",
+    "samePullRequestStaleRunCancellation": true,
+    "stableRequiredChecksAlwaysReachTerminalResult": true,
+    "qfI1UsesItsExactBoundedHighRouteWithoutWindowsOrInheritedDurableRuntime": true,
+    "notApplicableHeavyJobsMayBeSkippedBehindAStablePassingAggregator": true
+  },
+  "mergePolicy": {
+    "LOW": "conditional_automatic_ready_and_expected_head_pinned_squash_merge",
+    "MEDIUM": "conditional_automatic_ready_and_expected_head_pinned_squash_merge",
+    "HIGH": "exact_head_owner_approval_required",
+    "automaticGateWorkflow": ".github/workflows/auto-merge.yml",
+    "sameRepositoryBranchRequired": true,
+    "registeredLaneOrExactFutureAuthorityRequired": true,
+    "exactChangedPathOwnershipRequired": true,
+    "isolatedWorktreeDeclarationRequired": true,
+    "allStableChecksGreenRequired": true,
+    "reviewMustBindExactHead": true,
+    "reviewMustPostdateApplicableChecks": true,
+    "formalReviewMarkerTemplate": "FAST_DELIVERY_V2_FINAL_REVIEW head=<40_hex_sha> actionable=0/0/0",
+    "actionableP0P1P2Required": [0, 0, 0],
+    "unresolvedNonOutdatedReviewThreadsRequired": 0,
+    "blockingLabelsFailClosed": true,
+    "forcePushRebaseAmendAndDirectMainPushProhibited": true
+  },
+  "laneIsolation": {
+    "oneIsolatedGitWorktreePerLane": true,
+    "oneUniqueCodexBranchPerLane": true,
+    "exactRepoRelativePathOwnershipRequired": true,
+    "globOwnershipProhibited": true,
+    "overlapDisposition": "fail_closed",
+    "undeclaredChangedPathDisposition": "fail_closed",
+    "oneDeclaredIntegrationAndMergeOrderRequired": true
+  },
+  "frozenAmendmentArtifacts": [
+    "config/dabangil-fast-delivery-parallel-execution-v2.json",
+    "docs/decisions/2026-08-27-owner-fast-delivery-parallel-execution-v2.md",
+    "scripts/automation/fast-delivery-parallel-v2.mjs"
+  ],
+  "questionFoundrySplitCampaign": {
+    "monolithicReplacementProhibited": true,
+    "donorUse": "read_only_evidence_only_no_cherry_pick",
+    "startGate": "validated_v2_resulting_main_receipt",
+    "maximumConcurrentMergeProducingLanes": 2,
+    "parallelPairExactly": ["QF_S1_BOUNDED_SIMILARITY_CORPUS_V1", "QF_S2_CANDIDATE_TIME_AWARE_AUDIT_PRELUDE_V1"],
+    "declaredIntegrationAndMergeOrder": [
+      "QF_0_QUARANTINE_CORE",
+      "QF_S1_BOUNDED_SIMILARITY_CORPUS_V1",
+      "QF_S2_CANDIDATE_TIME_AWARE_AUDIT_PRELUDE_V1",
+      "QF_S3_DEPENDENCY_RANKED_TRANSFER_CHRONOLOGY_V1",
+      "QF_I1_RELEASE_INTEGRATION"
+    ],
+    "lanes": [
+      {
+        "laneId": "QF_0_QUARANTINE_CORE",
+        "branch": "codex/question-foundry-quarantine-core-v1",
+        "worktreePath": ".agent-factory/worktrees/question-foundry-quarantine-core-v1",
+        "profile": "MEDIUM",
+        "dependencies": ["FAST_DELIVERY_AND_PARALLEL_EXECUTION_V2"],
+        "ownedPathsExactly": [
+          "config/dabangil-question-foundry-quarantine-core-v1.json",
+          "lib/question-foundry/quarantine-core-v1.mjs",
+          "tests/question-foundry-quarantine-core-v1.test.mjs"
+        ],
+        "requiredCapabilities": [
+          "closed_contracts",
+          "exact_identities_and_digests",
+          "source_and_rights_authority",
+          "exact_decimal_arithmetic_and_calculation_validation",
+          "trusted_model_execution_identity",
+          "generator_solver_judge_separation_contracts",
+          "solution_first_candidate_generation",
+          "candidate_quarantine",
+          "lifecycle_identity",
+          "bodyless_bank_scarcity_event",
+          "offline_execution",
+          "zero_mutation_boundary"
+        ],
+        "releaseStatesAvailable": [],
+        "everyCandidateState": "QUARANTINED",
+        "hardBoundaries": ["no_release_artifact", "no_bank_assignment", "no_learner_runtime", "no_provider_or_network", "no_database"]
+      },
+      {
+        "laneId": "QF_S1_BOUNDED_SIMILARITY_CORPUS_V1",
+        "branch": "codex/question-foundry-bounded-similarity-corpus-v1",
+        "worktreePath": ".agent-factory/worktrees/question-foundry-bounded-similarity-corpus-v1",
+        "profile": "LOW",
+        "dependencies": ["QF_0_QUARANTINE_CORE"],
+        "ownedPathsExactly": [
+          "config/dabangil-question-foundry-bounded-similarity-corpus-v1.json",
+          "lib/question-foundry/similarity/bounded-similarity-corpus-v1.mjs",
+          "tests/question-foundry-bounded-similarity-corpus-v1.test.mjs"
+        ],
+        "requiredInvariants": [
+          "machine_owned_maximum_reference_count",
+          "machine_owned_total_corpus_character_and_token_caps",
+          "machine_owned_per_reference_limits",
+          "machine_owned_deterministic_work_unit_cap",
+          "every_reference_counts_including_unchanged_short_ineligible_and_skipped",
+          "malformed_or_over_budget_fails_before_scanning",
+          "bounded_transformed_window_detection_both_directions",
+          "whole_body_jaccard_remains_separate",
+          "number_name_and_word_only_preserve_meaningful_token_order",
+          "word_only_does_not_reduce_unrelated_calculations_to_numeric_skeleton",
+          "order_only_rejects_arbitrary_generic_token_bags",
+          "machine_owned_protected_minimum_span",
+          "short_generic_phrases_and_shared_numeric_layouts_are_negative_controls",
+          "no_caller_threshold_or_work_bound_override"
+        ],
+        "forbiddenMutations": ["audit", "release_policy"]
+      },
+      {
+        "laneId": "QF_S2_CANDIDATE_TIME_AWARE_AUDIT_PRELUDE_V1",
+        "branch": "codex/question-foundry-candidate-time-audit-prelude-v1",
+        "worktreePath": ".agent-factory/worktrees/question-foundry-candidate-time-audit-prelude-v1",
+        "profile": "LOW",
+        "dependencies": ["QF_0_QUARANTINE_CORE"],
+        "ownedPathsExactly": [
+          "config/dabangil-question-foundry-candidate-time-audit-prelude-v1.json",
+          "lib/question-foundry/audit-prelude/candidate-time-audit-prelude-v1.mjs",
+          "tests/question-foundry-candidate-time-audit-prelude-v1.test.mjs"
+        ],
+        "requiredInvariants": [
+          "exact_evidence_timestamps_preserved",
+          "candidate_generated_and_quarantined_use_candidate_own_time",
+          "solution_commitment_precedes_authorized_candidate",
+          "candidate_specific_prerequisites_are_causally_attached",
+          "distinct_candidate_times_cannot_create_non_monotonic_prelude",
+          "equal_times_use_immutable_deterministic_tie_breakers",
+          "duplicate_immutable_evidence_fails_closed"
+        ],
+        "forbiddenMutations": ["release", "transfer_aggregate", "owner_adjudication", "similarity"]
+      },
+      {
+        "laneId": "QF_S3_DEPENDENCY_RANKED_TRANSFER_CHRONOLOGY_V1",
+        "branch": "codex/question-foundry-transfer-chronology-v1",
+        "worktreePath": ".agent-factory/worktrees/question-foundry-transfer-chronology-v1",
+        "profile": "LOW",
+        "dependencies": ["QF_S2_CANDIDATE_TIME_AWARE_AUDIT_PRELUDE_V1"],
+        "ownedPathsExactly": [
+          "config/dabangil-question-foundry-transfer-chronology-v1.json",
+          "lib/question-foundry/transfer-chronology/dependency-ranked-transfer-chronology-v1.mjs",
+          "tests/question-foundry-transfer-chronology-v1.test.mjs"
+        ],
+        "requiredInvariants": [
+          "individual_transfer_receipts_precede_aggregate",
+          "all_required_receipts_precede_owner_adjudication",
+          "owner_adjudication_precedes_release",
+          "release_decision_is_terminal",
+          "timestamps_are_never_fabricated_or_normalized",
+          "same_rank_orders_by_occurred_at_then_immutable_identity",
+          "dependent_timestamp_before_required_cause_fails_closed",
+          "equal_time_aggregate_cannot_precede_receipt",
+          "stable_topological_order_is_byte_reproducible",
+          "cycles_missing_parents_and_duplicate_identities_fail_closed"
+        ],
+        "forbiddenMutations": ["similarity"]
+      },
+      {
+        "laneId": "QF_I1_RELEASE_INTEGRATION",
+        "branch": "codex/question-foundry-release-integration-v1",
+        "worktreePath": ".agent-factory/worktrees/question-foundry-release-integration-v1",
+        "profile": "HIGH",
+        "dependencies": ["QF_0_QUARANTINE_CORE", "QF_S1_BOUNDED_SIMILARITY_CORPUS_V1", "QF_S2_CANDIDATE_TIME_AWARE_AUDIT_PRELUDE_V1", "QF_S3_DEPENDENCY_RANKED_TRANSFER_CHRONOLOGY_V1"],
+        "ownedPathsExactly": [
+          "config/dabangil-question-foundry-release-integration-v1.json",
+          "lib/question-foundry/release-integration-v1.mjs",
+          "tests/question-foundry-release-integration-v1.test.mjs"
+        ],
+        "serialIntegrationPathsExactly": [
+          "docs/exec-plans/active/inverge-owner-study-os.md",
+          "scripts/run-node-tests.mjs"
+        ],
+        "maximumAiOnlyReleaseState": "PERSONAL_LEARNING_USABLE",
+        "measurementCalibratedRequiresActualOwnerResponseEvidence": true,
+        "requiredIntegrationProofs": [
+          "similarity_corpus_bounded_before_release",
+          "false_positive_controls_pass",
+          "candidate_time_aware_audit_prelude",
+          "exact_causal_transfer_chronology",
+          "sealed_variants_independently_validated",
+          "judge_drift_identities_and_artifacts_exact_and_distinct",
+          "source_rights_and_effective_versions_current",
+          "generator_self_approval_impossible",
+          "ai_only_ceiling_personal_learning_usable",
+          "provider_network_database_remote_and_production_mutation_zero"
+        ],
+        "finalValidationExactly": [
+          "complete_question_foundry_focused_suite",
+          "all_split_module_hostile_tests",
+          "governing_c2r_a_tests",
+          "adjacent_foundation_kernel_study_capacity_regressions",
+          "schema_and_exact_path_validation",
+          "typecheck",
+          "changed_file_lint",
+          "production_build",
+          "git_diff_check",
+          "repository_required_exact_head_ci",
+          "one_independent_adversarial_review",
+          "one_fresh_formal_exact_head_review",
+          "one_post_ready_review",
+          "zero_unresolved_actionable_threads"
+        ],
+        "forbiddenValidation": ["postgresql", "browser_to_database", "migrations", "inherited_durable_runtimes", "remote_supabase", "production"]
+      }
+    ],
+    "serialProgramLogIntegration": {
+      "path": "docs/exec-plans/active/inverge-owner-study-os.md",
+      "ownedBySplitImplementationLanes": false,
+      "singleIntegrationCoordinatorOnly": true,
+      "updateOnlyAtValidatedMergeOrFinalGate": true
+    },
+    "failurePolicy": {
+      "originalCandidateCount": 1,
+      "maximumCleanReplacementCount": 1,
+      "thirdReplacementAllowed": false,
+      "unchangedHeadReviewRerunAllowed": false,
+      "unrelatedMergedLaneInvalidatedByOtherLaneFailure": false
+    }
+  },
+  "activationBoundary": {
+    "questionFoundryProductCodeInstalledByThisAmendment": false,
+    "learnerRuntime": false,
+    "providerOrNetwork": false,
+    "databaseOrRls": false,
+    "payment": false,
+    "publicActivation": false,
+    "externalLearnerActivation": false,
+    "remoteSupabaseMutation": false,
+    "productionMutation": false,
+    "learningEfficacyClaim": false,
+    "calibratedExamItemQualityClaim": false
+  }
+}

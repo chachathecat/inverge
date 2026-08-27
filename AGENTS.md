@@ -5,6 +5,13 @@
 Use this authority order when sources conflict:
 
 1. a dated Owner decision for the exact decision it owns, currently
+   `docs/decisions/2026-08-27-owner-fast-delivery-parallel-execution-v2.md`
+   for the bounded `FAST_DELIVERY_AND_PARALLEL_EXECUTION_V2` operating
+   amendment, changed-path LOW/MEDIUM/HIGH validation routing, stable required
+   checks, eligible-only reusable heavy jobs, exact-head merge gates and the
+   five-milestone Question Foundry scope split; it installs no product runtime
+   and becomes authority only after its HIGH-risk exact-head Owner-approved
+   squash merge and validated GitHub receipt,
    `docs/decisions/2026-08-26-owner-wcv-c3-foundation-freeze.md` for the
    minimal source-only `WCV_C3_FOUNDATION_FREEZE_V1`, its live-GitHub-only
    C3R-P/T/L receipt summaries, exact frozen foundation bindings, terminal
@@ -107,12 +114,15 @@ summarize a completed merge, but must not recreate GitHub state as an
 independent receipt, check ledger or proof system.
 
 There is exactly one merge-producing writer by default. The sole exception is
-the exact, receipt-gated `PARALLEL_EXECUTION_V1` Owner Study OS operating
-amendment in `docs/decisions/2026-08-25-owner-parallel-execution-v1.md` and
-`config/dabangil-parallel-execution-v1.json`; it grants only the bounded,
-isolated, disjoint-path lanes validated there and changes no other program's
-writer limit. Work uses a feature branch, an ordinary non-force push and a pull
-request. Before merge, the live ruleset-
+the exact, receipt-gated `PARALLEL_EXECUTION_V1` Owner Study OS amendment for
+its completed initial lanes and frozen subject/eval grant. After V2's own
+validated receipt,
+`FAST_DELIVERY_AND_PARALLEL_EXECUTION_V2` supersedes only V1's monolithic
+Question Foundry lane with the bounded split campaign in
+`docs/decisions/2026-08-27-owner-fast-delivery-parallel-execution-v2.md` and
+`config/dabangil-fast-delivery-parallel-execution-v2.json`. V2 changes no
+unrelated program's writer limit. Work uses a feature branch, an ordinary
+non-force push and a pull request. Before merge, the live ruleset-
 required native checks must succeed for the current PR head against the latest
 required base, actionable review findings must be corrected, every review
 thread must be resolved, and a fresh exact-head Codex review must report
@@ -1307,8 +1317,9 @@ A source-level green check does not prove real runtime behavior or content corre
 - At any time there is at most one merge-producing Work, one writing branch,
   one writing PR, and one writer mutating shared authority or implementation
   state, except for the exact receipt-gated `PARALLEL_EXECUTION_V1` Owner Study
-  OS lanes. Those lanes require the amendment's isolated worktrees, exact
-  disjoint manifests, protected-path serialization and declared merge order.
+  OS lanes and V2's sole QF-S1/QF-S2 split pair. Those lanes require their
+  amendment's isolated worktrees, exact disjoint manifests,
+  protected-path serialization and declared merge order.
   Read-only research and non-overlapping inspection may run concurrently.
 - Every PR has one explicit lead issue. A complete learner-visible vertical may
   close multiple adjacent child issues only when they form one learner-visible
@@ -1414,9 +1425,9 @@ not bypass the global per-plan cap.
 The selectors do not provide a cross-process distributed writer lease,
 hierarchical/multi-lock ownership, cross-run reservation, or owned-file
 exclusivity. The Owner single-writer prohibition remains controlling across
-independent Work windows except for the exact `PARALLEL_EXECUTION_V1` scope,
-whose separate validator fails closed on lane, worktree, branch, ownership,
-protected-path and merge-order drift. The WCV campaign otherwise retains one
+independent Work windows except for the exact `PARALLEL_EXECUTION_V1` scope and
+V2's receipt-gated QF-S1/QF-S2 pair, whose validators fail closed on lane,
+worktree, branch, ownership, protected-path and merge-order drift. The WCV campaign otherwise retains one
 shared flat lock group and dependency chain in addition to the mechanically
 enforced cap.
 

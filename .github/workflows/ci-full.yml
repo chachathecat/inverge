@@ -7,12 +7,19 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: full-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
 jobs:
-  full-ci:
+  classify:
+    name: validation-profile
     runs-on: ubuntu-latest
-    concurrency:
-      group: full-${{ github.event.pull_request.number }}
-      cancel-in-progress: true
+    outputs:
+      profile: ${{ steps.risk.outputs.profile }}
+      validation_route: ${{ steps.risk.outputs.validation_route }}
+      heavy_windows_required: ${{ steps.risk.outputs.heavy_windows_required }}
+      representative_e2e_required: ${{ steps.risk.outputs.representative_e2e_required }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -20,47 +27,58 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-          cache: npm
-      - name: Install dependencies
-        run: npm ci
-      - name: Run full test suite
-        run: npm run test -- --workers=1
-      - name: Verify learner loop
-        run: npm run verify:learner-loop:ci
-      - name: Build
-        run: npm run build
-      - name: Check closed-beta readiness
-        run: npm run check:closed-beta-readiness
+      - name: Classify changed paths
+        id: risk
+        run: node scripts/automation/classify-risk.mjs
+
+  heavy-linux:
+    needs: classify
+    if: needs.classify.outputs.profile == 'MEDIUM' || needs.classify.outputs.profile == 'HIGH'
+    uses: ./.github/workflows/reusable-heavy-validation-v2.yml
+    with:
+      profile: ${{ needs.classify.outputs.profile }}
+      platform: linux
+      validation_route: ${{ needs.classify.outputs.validation_route }}
+      representative_e2e_required: ${{ needs.classify.outputs.representative_e2e_required == 'true' }}
+
+  heavy-windows:
+    needs: classify
+    if: needs.classify.outputs.heavy_windows_required == 'true'
+    uses: ./.github/workflows/reusable-heavy-validation-v2.yml
+    with:
+      profile: HIGH
+      platform: windows
+      validation_route: ${{ needs.classify.outputs.validation_route }}
+      representative_e2e_required: false
+
+  full-ci:
+    name: full-ci
+    if: always()
+    needs: [classify, heavy-linux]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Verify Linux profile disposition
+        env:
+          CLASSIFY_RESULT: ${{ needs.classify.result }}
+          PROFILE: ${{ needs.classify.outputs.profile }}
+          HEAVY_RESULT: ${{ needs.heavy-linux.result }}
+        run: |
+          node -e "const {CLASSIFY_RESULT:c,PROFILE:p,HEAVY_RESULT:h}=process.env; if(c!=='success'||!['LOW','MEDIUM','HIGH'].includes(p)||(p==='LOW'?h!=='skipped':h!=='success')){console.error({c,p,h});process.exit(1)} console.log({profile:p,heavyLinux:h})"
 
   full-ci-windows:
     name: full-ci-windows
-    runs-on: windows-latest
-    concurrency:
-      group: full-windows-${{ github.event.pull_request.number || github.ref }}
-      cancel-in-progress: true
+    if: always()
+    needs: [classify, heavy-windows]
+    runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 22
-          cache: npm
-      - name: Verify canonical checkout line endings
-        shell: pwsh
+      - name: Verify Windows profile disposition
+        env:
+          CLASSIFY_RESULT: ${{ needs.classify.result }}
+          PROFILE: ${{ needs.classify.outputs.profile }}
+          WINDOWS_REQUIRED: ${{ needs.classify.outputs.heavy_windows_required }}
+          HEAVY_RESULT: ${{ needs.heavy-windows.result }}
         run: |
-          $unexpected = git ls-files --eol | Select-String 'i/lf\s+w/(?:crlf|mixed)'
-          if ($unexpected) {
-            $unexpected | ForEach-Object { Write-Error $_.Line }
-            exit 1
-          }
-      - name: Install dependencies
-        run: npm.cmd ci
-      - name: Typecheck
-        run: npm.cmd run typecheck
-      - name: Lint
-        run: npm.cmd run lint
-      - name: Run full test suite
-        run: npm.cmd run test -- --workers=1
-      - name: Build
-        run: npm.cmd run build
+          node -e "const {CLASSIFY_RESULT:c,PROFILE:p,WINDOWS_REQUIRED:w,HEAVY_RESULT:h}=process.env; if(c!=='success'||!['LOW','MEDIUM','HIGH'].includes(p)||(w==='true'?h!=='success':h!=='skipped')){console.error({c,p,w,h});process.exit(1)} console.log({profile:p,windowsRequired:w,heavyWindows:h})"

@@ -102,6 +102,8 @@ const C3R_P_RUNTIME_REFERENCE_LINES = Object.freeze([
 ]);
 const C3R_P_RUNTIME_DISPOSITION =
   "All referenced issues remain open; C3R-P closes none and does not start C3R-T.";
+const FAST_DELIVERY_V2_CONTRACT_PATH =
+  "config/dabangil-fast-delivery-parallel-execution-v2.json";
 const GITHUB_CLOSING_KEYWORD_PATTERN = new RegExp(
   String.raw`\b(?:close(?:s|d)?|fix(?:es|ed)?|resolve(?:s|d)?)(?:\s*:\s*|\s+)(?:#\d+|[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+#\d+|https:\/\/github\.com\/[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+\/(?:issues|pull)\/\d+)\b`,
   "gi",
@@ -258,12 +260,48 @@ function isC3rPRuntimeCandidate(context) {
     context?.headRef === C3R_P_RUNTIME_SCOPE.headRef;
 }
 
+function readFastDeliveryV2DeliveryControl() {
+  if (!fs.existsSync(FAST_DELIVERY_V2_CONTRACT_PATH)) return null;
+  try {
+    return JSON.parse(fs.readFileSync(FAST_DELIVERY_V2_CONTRACT_PATH, "utf8"))?.deliveryControl ?? null;
+  } catch {
+    return null;
+  }
+}
+
+function isFastDeliveryV2Candidate(context) {
+  return context?.repository === "chachathecat/inverge" &&
+    context?.headRef === "codex/fast-delivery-parallel-execution-v2";
+}
+
 function validateIssueLink(body, errors, context) {
   const issueLinks = [...body.matchAll(/\b(?:Closes|Fixes)\s+#(\d+)\b/gi)];
   const allGithubClosingLinks = [
     ...body.matchAll(GITHUB_CLOSING_KEYWORD_PATTERN),
   ];
   const sourceAuthority = readC3rA0SourceAuthorityIssueLink();
+
+  if (isFastDeliveryV2Candidate(context)) {
+    const delivery = readFastDeliveryV2DeliveryControl();
+    const bodyLines = body.split(/\r?\n/u).map((line) => line.trim());
+    const referenceLines = bodyLines.filter((line) => /^Refs #\d+$/u.test(line));
+    const dispositionCount = bodyLines.filter(
+      (line) => line === delivery?.requiredDispositionLine,
+    ).length;
+    const scopeMatches = delivery?.repository === context.repository &&
+      delivery?.baseRef === context.baseRef && delivery?.baseSha === context.baseSha &&
+      delivery?.headRef === context.headRef && delivery?.headRepository === context.headRepository &&
+      delivery?.pullRequestTitle === context.pullRequestTitle &&
+      delivery?.draftRequired === context.isDraft;
+    if (!scopeMatches || delivery?.closingKeywordsAllowed !== false ||
+        JSON.stringify(referenceLines) !== JSON.stringify([delivery?.referenceOnlyIssueLine]) ||
+        dispositionCount !== 1 || allGithubClosingLinks.length !== 0) {
+      errors.push(
+        "Fast Delivery V2 requires its exact Draft scope, reference-only #714 line, open disposition, and zero issue-closing keywords.",
+      );
+    }
+    return;
+  }
 
   if (isC3rPRuntimeCandidate(context)) {
     const contract = readC3rPRuntimeContract();

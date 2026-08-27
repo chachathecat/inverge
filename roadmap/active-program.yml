@@ -18,6 +18,13 @@ program:
   ownerStudyOsParallelExecutionDoesNotSelectUnrelatedRoadmapItems: true
   ownerStudyOsParallelExecutionRemoteMutationAuthorizationCount: 0
   ownerStudyOsParallelExecutionProductionMutationAuthorizationCount: 0
+  ownerStudyOsFastDeliveryParallelExecutionV2State: candidate_high_risk_owner_approval_required_before_effective
+  ownerStudyOsFastDeliveryParallelExecutionV2Authority: docs/decisions/2026-08-27-owner-fast-delivery-parallel-execution-v2.md
+  ownerStudyOsFastDeliveryParallelExecutionV2Contract: config/dabangil-fast-delivery-parallel-execution-v2.json
+  ownerStudyOsQuestionFoundryMonolithicReplacementAllowed: false
+  ownerStudyOsQuestionFoundrySplitOrder: [QF_0_QUARANTINE_CORE, QF_S1_BOUNDED_SIMILARITY_CORPUS_V1, QF_S2_CANDIDATE_TIME_AWARE_AUDIT_PRELUDE_V1, QF_S3_DEPENDENCY_RANKED_TRANSFER_CHRONOLOGY_V1, QF_I1_RELEASE_INTEGRATION]
+  ownerStudyOsQuestionFoundryMaximumConcurrentSplitLanes: 2
+  ownerStudyOsQuestionFoundryProductMutationStartAllowed: false
   campaignOverlay: C3
   structuralRecoveryOverlayId: WCV-C2R-STRUCTURAL-RECOVERY
   c3StructuralRecoveryOverlayId: WCV-C3R-SERIAL-PROGRAM

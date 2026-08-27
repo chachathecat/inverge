@@ -6,12 +6,39 @@ on:
     branches: [main]
   workflow_dispatch:
 
+permissions:
+  contents: read
+
+concurrency:
+  group: learner-loop-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
 jobs:
-  learner-loop-health:
-    name: Learner Loop Health
+  classify:
+    name: learner-loop-profile
+    runs-on: ubuntu-latest
+    outputs:
+      profile: ${{ steps.risk.outputs.profile }}
+      learner_loop_required: ${{ steps.risk.outputs.learner_loop_required }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Classify changed paths
+        id: risk
+        run: node scripts/automation/classify-risk.mjs
+
+  learner-loop-heavy:
+    needs: classify
+    if: needs.classify.outputs.learner_loop_required == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - uses: actions/setup-node@v4
         with:
           node-version: 22
@@ -20,3 +47,18 @@ jobs:
         run: npm ci
       - name: Verify learner loop CI gate
         run: npm run verify:learner-loop:ci
+
+  learner-loop-health:
+    name: Learner Loop Health
+    if: always()
+    needs: [classify, learner-loop-heavy]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Verify learner-loop profile disposition
+        env:
+          CLASSIFY_RESULT: ${{ needs.classify.result }}
+          PROFILE: ${{ needs.classify.outputs.profile }}
+          LEARNER_LOOP_REQUIRED: ${{ needs.classify.outputs.learner_loop_required }}
+          HEAVY_RESULT: ${{ needs.learner-loop-heavy.result }}
+        run: |
+          node -e "const {CLASSIFY_RESULT:c,PROFILE:p,LEARNER_LOOP_REQUIRED:l,HEAVY_RESULT:h}=process.env; if(c!=='success'||!['LOW','MEDIUM','HIGH'].includes(p)||(l==='true'?h!=='success':h!=='skipped')){console.error({c,p,l,h});process.exit(1)} console.log({profile:p,learnerLoopRequired:l,learnerLoop:h})"
