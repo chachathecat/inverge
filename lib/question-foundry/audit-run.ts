@@ -316,11 +316,16 @@ export const QUESTION_FOUNDRY_DETERMINISTIC_VALIDATOR_ACTOR = deepFreeze({
 });
 
 type ReleaseAuditEvidenceStep = Readonly<{
+  immutableEvidenceId: string;
   kind: AuditStepV1["kind"];
   actor: AuditActorV1;
   occurredAt: string;
   evidenceDigest: string;
 }>;
+
+function immutableEvidenceId(kind: string, identity: unknown) {
+  return `${kind}:${canonicalDigest(identity)}`;
+}
 
 function releasePurposes(decision: ReleaseDecisionV1) {
   return [
@@ -337,10 +342,44 @@ function releasePurposes(decision: ReleaseDecisionV1) {
   ] as const;
 }
 
-function latestInstant(values: readonly string[], fallback: string) {
-  return values
-    .filter((value) => Number.isFinite(Date.parse(value)))
-    .sort((left, right) => Date.parse(right) - Date.parse(left))[0] ?? fallback;
+function latestInstant(values: readonly string[]) {
+  if (values.length === 0 || values.some((value) => !isIsoInstant(value))) {
+    throw new Error("release-audit-evidence-time-invalid");
+  }
+  return [...values].sort((left, right) => Date.parse(right) - Date.parse(left))[0];
+}
+
+function canonicalConcurrentEvidence(
+  steps: readonly ReleaseAuditEvidenceStep[],
+  quarantineBoundary: string,
+  completedAt: string,
+) {
+  if (!isIsoInstant(quarantineBoundary) || !isIsoInstant(completedAt)) {
+    throw new Error("release-audit-boundary-time-invalid");
+  }
+  const identities = new Set<string>();
+  for (const step of steps) {
+    if (!SAFE_ID.test(step.immutableEvidenceId) || !isIsoInstant(step.occurredAt)) {
+      throw new Error("release-audit-concurrent-evidence-invalid");
+    }
+    if (identities.has(step.immutableEvidenceId)) {
+      throw new Error(`release-audit-immutable-evidence-duplicate:${step.immutableEvidenceId}`);
+    }
+    identities.add(step.immutableEvidenceId);
+    if (Date.parse(step.occurredAt) < Date.parse(quarantineBoundary)) {
+      throw new Error(`release-audit-evidence-before-quarantine-boundary:${step.immutableEvidenceId}`);
+    }
+    if (Date.parse(step.occurredAt) > Date.parse(completedAt)) {
+      throw new Error(`release-audit-evidence-after-completion:${step.immutableEvidenceId}`);
+    }
+  }
+  return [...steps].sort((left, right) =>
+    Date.parse(left.occurredAt) - Date.parse(right.occurredAt) ||
+    left.immutableEvidenceId.localeCompare(right.immutableEvidenceId) ||
+    left.kind.localeCompare(right.kind) ||
+    left.actor.actorId.localeCompare(right.actor.actorId) ||
+    left.actor.version.localeCompare(right.actor.version) ||
+    left.evidenceDigest.localeCompare(right.evidenceDigest));
 }
 
 function releaseAuditEvidencePlan(
@@ -382,8 +421,9 @@ function releaseAuditEvidencePlan(
     releasePurposes(decision),
     trustContext.sourceRegistryExportBinding,
   );
-  const steps: ReleaseAuditEvidenceStep[] = [
+  const prelude: ReleaseAuditEvidenceStep[] = [
     {
+      immutableEvidenceId: "source-pre-blueprint",
       kind: "SOURCE_VALIDATED",
       actor: validator,
       occurredAt: bundle.batch.blueprint.createdAt,
@@ -397,12 +437,17 @@ function releaseAuditEvidencePlan(
       }),
     },
     {
+      immutableEvidenceId: immutableEvidenceId(
+        "solution",
+        bundle.batch.answerSpecification.answerSpecificationId,
+      ),
       kind: "SOLUTION_COMMITTED",
       actor: generatorActor(selectedCandidate),
       occurredAt: bundle.batch.answerSpecification.createdAt,
       evidenceDigest: canonicalDigest(bundle.batch.answerSpecification),
     },
     {
+      immutableEvidenceId: immutableEvidenceId("source-generation", selectedCandidate.candidateId),
       kind: "SOURCE_VALIDATED",
       actor: validator,
       occurredAt: selectedCandidate.generatedAt,
@@ -416,14 +461,17 @@ function releaseAuditEvidencePlan(
       }),
     },
   ];
-  for (const candidate of bundle.batch.candidates) {
-    steps.push({
+  for (const candidate of [...bundle.batch.candidates].sort((left, right) =>
+    left.generatedAt.localeCompare(right.generatedAt) || left.candidateId.localeCompare(right.candidateId))) {
+    prelude.push({
+      immutableEvidenceId: immutableEvidenceId("candidate", candidate.candidateId),
       kind: "CANDIDATE_GENERATED",
       actor: generatorActor(candidate),
       occurredAt: candidate.generatedAt,
       evidenceDigest: canonicalDigest(candidate),
     });
-    steps.push({
+    prelude.push({
+      immutableEvidenceId: immutableEvidenceId("quarantine", candidate.candidateId),
       kind: "QUARANTINED",
       actor: validator,
       occurredAt: candidate.generatedAt,
@@ -433,8 +481,9 @@ function releaseAuditEvidencePlan(
       }),
     });
   }
-  steps.push(
+  prelude.push(
     {
+      immutableEvidenceId: immutableEvidenceId("permutation", selectedCandidate.candidateId),
       kind: "PERMUTED",
       actor: validator,
       occurredAt: selectedCandidate.generatedAt,
@@ -444,6 +493,7 @@ function releaseAuditEvidencePlan(
       }),
     },
     {
+      immutableEvidenceId: immutableEvidenceId("deterministic", selectedCandidate.candidateId),
       kind: "DETERMINISTIC_VALIDATED",
       actor: validator,
       occurredAt: selectedCandidate.generatedAt,
@@ -455,7 +505,16 @@ function releaseAuditEvidencePlan(
         ),
       }),
     },
+  );
+  const quarantineBoundary = latestInstant(
+    bundle.batch.candidates.map((candidate) => candidate.generatedAt),
+  );
+  const concurrent: ReleaseAuditEvidenceStep[] = [
     {
+      immutableEvidenceId: immutableEvidenceId("similarity", {
+        candidateId: bundle.similarityReview.candidateId,
+        corpusDigest: bundle.similarityReview.corpusDigest,
+      }),
       kind: "SIMILARITY_REVIEWED",
       actor: validator,
       occurredAt: selectedCandidate.generatedAt,
@@ -464,10 +523,10 @@ function releaseAuditEvidencePlan(
         review: bundle.similarityReview,
       }),
     },
-  );
-  for (const review of [...bundle.blindSolverReviews].sort((left, right) =>
-    left.completedAt.localeCompare(right.completedAt) || left.reviewId.localeCompare(right.reviewId))) {
-    steps.push({
+  ];
+  for (const review of bundle.blindSolverReviews) {
+    concurrent.push({
+      immutableEvidenceId: immutableEvidenceId("blind-solver", review.reviewId),
       kind: "BLIND_SOLVED",
       actor: {
         actorId: review.solverId,
@@ -478,9 +537,9 @@ function releaseAuditEvidencePlan(
       evidenceDigest: canonicalDigest(review),
     });
   }
-  for (const review of [...bundle.judgeReviews].sort((left, right) =>
-    left.completedAt.localeCompare(right.completedAt) || left.reviewId.localeCompare(right.reviewId))) {
-    steps.push({
+  for (const review of bundle.judgeReviews) {
+    concurrent.push({
+      immutableEvidenceId: immutableEvidenceId("judge", review.reviewId),
       kind: "JUDGED",
       actor: {
         actorId: review.judgeId,
@@ -500,13 +559,11 @@ function releaseAuditEvidencePlan(
         fixture.baseline.completedAt,
         fixture.current.completedAt,
       ]),
-      ...bundle.blindSolverReviews.map((review) => review.completedAt),
-      ...bundle.judgeReviews.map((review) => review.completedAt),
     ],
-    selectedCandidate.generatedAt,
   );
-  steps.push(
+  concurrent.push(
     {
+      immutableEvidenceId: immutableEvidenceId("meta", bundle.metaAudits),
       kind: "META_AUDITED",
       actor: validator,
       occurredAt: metaCompletedAt,
@@ -537,7 +594,8 @@ function releaseAuditEvidencePlan(
             (entry) => entry.registryModelId === execution.registryModelId,
           )
         : null;
-      steps.push({
+      concurrent.push({
+        immutableEvidenceId: immutableEvidenceId("transfer-receipt", receipt.receiptId),
         kind: "TRANSFER_VALIDATED",
         actor: {
           actorId: receipt.evaluatorId,
@@ -548,8 +606,9 @@ function releaseAuditEvidencePlan(
         evidenceDigest: canonicalDigest({ receipt, execution, model }),
       });
     }
-    steps.push(
+    concurrent.push(
       {
+        immutableEvidenceId: immutableEvidenceId("transfer-bundle", bundle.transferEvidence.bundleId),
         kind: "TRANSFER_VALIDATED",
         actor: validator,
         occurredAt: bundle.transferEvidence.completedAt,
@@ -565,20 +624,46 @@ function releaseAuditEvidencePlan(
           }),
         }),
       },
-      {
-        kind: "OWNER_ADJUDICATED",
-        actor: {
-          actorId: bundle.ownerAdjudication.adjudicatorId,
-          role: "OWNER",
-          version: bundle.ownerAdjudication.adjudicatorVersion,
-        },
-        occurredAt: bundle.ownerAdjudication.decidedAt,
-        evidenceDigest: canonicalDigest(bundle.ownerAdjudication),
-      },
     );
   }
-  steps.push(
+  const concurrentChronology = canonicalConcurrentEvidence(
+    concurrent,
+    quarantineBoundary,
+    completedAt,
+  );
+  const authoritativeSuffix: ReleaseAuditEvidenceStep[] = [];
+  if (
+    decision.requestedTier === "TRANSFER_VERIFIED" ||
+    decision.requestedTier === "MEASUREMENT_CALIBRATED"
+  ) {
+    if (!bundle.ownerAdjudication) {
+      throw new Error("release-audit-owner-evidence-required");
+    }
+    const latestAutomatedAt = concurrentChronology.at(-1)?.occurredAt ?? quarantineBoundary;
+    if (!isIsoInstant(bundle.ownerAdjudication.decidedAt)) {
+      throw new Error("release-audit-owner-time-invalid");
+    }
+    if (Date.parse(bundle.ownerAdjudication.decidedAt) < Date.parse(latestAutomatedAt)) {
+      throw new Error("release-audit-owner-adjudication-before-automated-evidence");
+    }
+    if (Date.parse(bundle.ownerAdjudication.decidedAt) > Date.parse(completedAt)) {
+      throw new Error("release-audit-owner-adjudication-after-completion");
+    }
+    authoritativeSuffix.push({
+      immutableEvidenceId: immutableEvidenceId("owner", bundle.ownerAdjudication.adjudicationId),
+      kind: "OWNER_ADJUDICATED",
+      actor: {
+        actorId: bundle.ownerAdjudication.adjudicatorId,
+        role: "OWNER",
+        version: bundle.ownerAdjudication.adjudicatorVersion,
+      },
+      occurredAt: bundle.ownerAdjudication.decidedAt,
+      evidenceDigest: canonicalDigest(bundle.ownerAdjudication),
+    });
+  }
+  authoritativeSuffix.push(
     {
+      immutableEvidenceId: "source-release",
       kind: "SOURCE_VALIDATED",
       actor: validator,
       occurredAt: completedAt,
@@ -591,13 +676,26 @@ function releaseAuditEvidencePlan(
       }),
     },
     {
+      immutableEvidenceId: immutableEvidenceId("release", {
+        candidateId: decision.candidateId,
+        requestedTier: decision.requestedTier,
+      }),
       kind: "RELEASE_DECIDED",
       actor: validator,
       occurredAt: completedAt,
       evidenceDigest: canonicalDigest(decision),
     },
   );
-  return steps;
+  const plan = [...prelude, ...concurrentChronology, ...authoritativeSuffix];
+  if (plan.at(-1)?.kind !== "RELEASE_DECIDED") {
+    throw new Error("release-audit-release-decision-not-terminal");
+  }
+  for (let index = 1; index < prelude.length; index += 1) {
+    if (Date.parse(prelude[index].occurredAt) < Date.parse(prelude[index - 1].occurredAt)) {
+      throw new Error("release-audit-prelude-not-monotonic");
+    }
+  }
+  return plan;
 }
 
 export function createReleaseAuditRun(input: Readonly<{

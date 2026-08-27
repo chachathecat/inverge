@@ -173,6 +173,12 @@
       "ORDER_ONLY",
       "WORD_ONLY"
     ],
+    "transformedPartialWindowCopiesFailClosed": true,
+    "similarityWindowBoundsMachineOwned": true,
+    "similarityWindowMinimumProtectedSpanTokensExactly": 8,
+    "similarityWindowMaximumTokensPerBodyExactly": 256,
+    "similarityWindowMaximumBodyCharactersExactly": 32768,
+    "similarityWindowMaximumWorkUnitsExactly": 300000,
     "nearCopyReconstructionOrProtectedExplanationSequenceBlocksRelease": true
   },
   "releasePolicy": {
@@ -311,6 +317,10 @@
     "releaseAuditRequiresExactEvidenceStepOrderCardinalityActorsVersionsAndEvidenceDigests": true,
     "releaseAuditRecomputesEveryCanonicalStepIdInputAndOutputDigest": true,
     "transferReleaseAuditRequiresExactPerEvaluatorAggregateAndOwnerSteps": true,
+    "concurrentEvidenceOrderedByActualOccurredAt": true,
+    "concurrentEvidenceUsesImmutableDeterministicTieBreakers": true,
+    "evidenceTimestampsMayBeFabricatedOrNormalized": false,
+    "releaseDecisionIsExactTerminalStep": true,
     "genericDigestChainMaySubstituteForSemanticReleaseAudit": false,
     "rawPrivateBodiesStored": false,
     "providerCalls": 0,

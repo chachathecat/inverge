@@ -52,6 +52,10 @@ const NEAR_COPY_NUMBER_PATTERN = new RegExp(
   "u",
 );
 export const QUESTION_FOUNDRY_SIMILARITY_THRESHOLD = 0.72;
+export const QUESTION_FOUNDRY_SIMILARITY_WINDOW_MINIMUM_TOKENS = 8;
+export const QUESTION_FOUNDRY_SIMILARITY_WINDOW_MAXIMUM_TOKENS_PER_BODY = 256;
+export const QUESTION_FOUNDRY_SIMILARITY_WINDOW_MAXIMUM_BODY_CHARACTERS = 32_768;
+export const QUESTION_FOUNDRY_SIMILARITY_WINDOW_MAXIMUM_WORK_UNITS = 300_000;
 export const QUESTION_FOUNDRY_NEAR_COPY_FAILURE_TRANSFORMATIONS = [
   "NUMBER_ONLY",
   "NAME_ONLY",
@@ -1636,6 +1640,23 @@ type NearCopyToken = Readonly<{
   value: string;
 }>;
 
+const GENERIC_NEAR_COPY_WORDS = new Set([
+  "answer",
+  "best",
+  "choose",
+  "correct",
+  "following",
+  "given",
+  "option",
+  "question",
+  "select",
+  "statement",
+  "the",
+  "which",
+]);
+
+type NearCopyWorkBudget = { used: number };
+
 function nearCopyTokenLines(value: string): NearCopyToken[][] {
   return value
     .normalize("NFKC")
@@ -1665,25 +1686,206 @@ function nearCopyProjection(lines: NearCopyToken[][], replace: "NUMBER" | "WORD"
   );
 }
 
-function mandatoryNearCopyTransformationDetected(leftBody: string, rightBody: string): boolean {
+function boundedNearCopyTokens(value: string): NearCopyToken[] {
+  if (
+    typeof value !== "string" ||
+    value.length === 0 ||
+    value.length > QUESTION_FOUNDRY_SIMILARITY_WINDOW_MAXIMUM_BODY_CHARACTERS
+  ) {
+    throw new Error("similarity-window-body-contract-exceeded");
+  }
+  const tokens = nearCopyTokenLines(value).flat();
+  if (
+    tokens.length === 0 ||
+    tokens.length > QUESTION_FOUNDRY_SIMILARITY_WINDOW_MAXIMUM_TOKENS_PER_BODY
+  ) {
+    throw new Error("similarity-window-token-contract-exceeded");
+  }
+  return tokens;
+}
+
+function nearCopyTokenIdentity(token: NearCopyToken) {
+  return `${token.kind}:${token.value}`;
+}
+
+function commonOrderedTokenIdentities(
+  left: readonly NearCopyToken[],
+  right: readonly NearCopyToken[],
+) {
+  const rows = Array.from({ length: left.length + 1 }, () =>
+    Array<number>(right.length + 1).fill(0));
+  for (let leftIndex = 1; leftIndex <= left.length; leftIndex += 1) {
+    for (let rightIndex = 1; rightIndex <= right.length; rightIndex += 1) {
+      rows[leftIndex][rightIndex] =
+        nearCopyTokenIdentity(left[leftIndex - 1]) ===
+          nearCopyTokenIdentity(right[rightIndex - 1])
+          ? rows[leftIndex - 1][rightIndex - 1] + 1
+          : Math.max(rows[leftIndex - 1][rightIndex], rows[leftIndex][rightIndex - 1]);
+    }
+  }
+  return rows[left.length][right.length];
+}
+
+function exactNonGenericWordAnchors(
+  left: readonly NearCopyToken[],
+  right: readonly NearCopyToken[],
+) {
+  const rightWords = new Set(
+    right
+      .filter((token) => token.kind === "WORD" && !GENERIC_NEAR_COPY_WORDS.has(token.value))
+      .map((token) => token.value),
+  );
+  return new Set(
+    left
+      .filter(
+        (token) =>
+          token.kind === "WORD" &&
+          !GENERIC_NEAR_COPY_WORDS.has(token.value) &&
+          rightWords.has(token.value),
+      )
+      .map((token) => token.value),
+  ).size;
+}
+
+function transformedNearCopyWindowDetected(
+  left: readonly NearCopyToken[],
+  right: readonly NearCopyToken[],
+) {
+  const leftIdentities = left.map(nearCopyTokenIdentity);
+  const rightIdentities = right.map(nearCopyTokenIdentity);
+  if (leftIdentities.join("\n") === rightIdentities.join("\n")) return false;
+
+  const enoughSpecificAnchors = exactNonGenericWordAnchors(left, right) >= 4;
+  const numberOnlyDetected =
+    left.length === right.length &&
+    enoughSpecificAnchors &&
+    left.every((token, index) =>
+      token.kind === right[index].kind &&
+      (token.kind === "NUMBER" || token.value === right[index].value)) &&
+    left.some((token, index) =>
+      token.kind === "NUMBER" && token.value !== right[index].value);
+
+  const leftNumbers = left
+    .filter((token) => token.kind === "NUMBER")
+    .map((token) => token.value);
+  const rightNumbers = right
+    .filter((token) => token.kind === "NUMBER")
+    .map((token) => token.value);
+  const commonOrdered = commonOrderedTokenIdentities(left, right);
+  const wordOrNameOnlyDetected =
+    enoughSpecificAnchors &&
+    leftNumbers.join("\n") === rightNumbers.join("\n") &&
+    commonOrdered >= QUESTION_FOUNDRY_SIMILARITY_WINDOW_MINIMUM_TOKENS - 3 &&
+    Math.max(left.length, right.length) - commonOrdered <= 3;
+
+  const uniqueIdentities = new Set(leftIdentities);
+  const orderOnlyDetected =
+    left.length === right.length &&
+    enoughSpecificAnchors &&
+    uniqueIdentities.size >= 6 &&
+    uniqueIdentities.size / left.length >= 0.75 &&
+    leftIdentities.toSorted().join("\n") === rightIdentities.toSorted().join("\n");
+
+  return numberOnlyDetected || wordOrNameOnlyDetected || orderOnlyDetected;
+}
+
+function boundedTransformedNearCopyDetected(
+  left: readonly NearCopyToken[],
+  right: readonly NearCopyToken[],
+  budget: NearCopyWorkBudget,
+) {
+  const minimum = QUESTION_FOUNDRY_SIMILARITY_WINDOW_MINIMUM_TOKENS;
+  const maximumComparedSpan = minimum + 2;
+  const searchDirection = (
+    source: readonly NearCopyToken[],
+    target: readonly NearCopyToken[],
+  ) => {
+    for (let sourceStart = 0; sourceStart + minimum <= source.length; sourceStart += 1) {
+      const sourceWindow = source.slice(sourceStart, sourceStart + minimum);
+      for (let targetStart = 0; targetStart + minimum <= target.length; targetStart += 1) {
+        for (
+          let targetSpan = minimum;
+          targetSpan <= maximumComparedSpan && targetStart + targetSpan <= target.length;
+          targetSpan += 1
+        ) {
+          budget.used += 1;
+          if (budget.used > QUESTION_FOUNDRY_SIMILARITY_WINDOW_MAXIMUM_WORK_UNITS) {
+            throw new Error("similarity-window-work-limit-exceeded");
+          }
+          if (
+            transformedNearCopyWindowDetected(
+              sourceWindow,
+              target.slice(targetStart, targetStart + targetSpan),
+            )
+          ) return true;
+        }
+      }
+    }
+    return false;
+  };
+  return searchDirection(left, right) || searchDirection(right, left);
+}
+
+function mandatoryNearCopyTransformationDetected(
+  leftBody: string,
+  rightBody: string,
+  budget: NearCopyWorkBudget,
+): boolean {
+  const boundedLeft = boundedNearCopyTokens(leftBody);
+  const boundedRight = boundedNearCopyTokens(rightBody);
   const left = nearCopyTokenLines(leftBody);
   const right = nearCopyTokenLines(rightBody);
-  if (left.length === 0 || right.length === 0) return false;
 
   const leftValues = left.flat().map((token) => `${token.kind}:${token.value}`);
   const rightValues = right.flat().map((token) => `${token.kind}:${token.value}`);
   const changed = leftValues.join("\n") !== rightValues.join("\n");
   if (!changed) return false;
 
-  const numberOnlyDetected = left.length === right.length &&
+  const minimumSpanPresent =
+    leftValues.length >= QUESTION_FOUNDRY_SIMILARITY_WINDOW_MINIMUM_TOKENS &&
+    rightValues.length >= QUESTION_FOUNDRY_SIMILARITY_WINDOW_MINIMUM_TOKENS;
+  const boundedTokenCountDifference =
+    Math.abs(leftValues.length - rightValues.length) <= Math.max(2, left.length);
+  const exactNumberSkeleton = left.flat()
+    .filter((token) => token.kind === "NUMBER")
+    .map((token) => token.value)
+    .join("\n");
+  const exactRightNumberSkeleton = right.flat()
+    .filter((token) => token.kind === "NUMBER")
+    .map((token) => token.value)
+    .join("\n");
+  const enoughSpecificAnchors = exactNonGenericWordAnchors(left.flat(), right.flat()) >= 4;
+  const numberOnlyDetected = minimumSpanPresent && left.length === right.length &&
     nearCopyProjection(left, "NUMBER") === nearCopyProjection(right, "NUMBER");
-  const wordOnlyDetected = left.length === right.length &&
-    nearCopyProjection(left, "WORD") === nearCopyProjection(right, "WORD");
+  const wordOnlyDetected = minimumSpanPresent &&
+    left.length === right.length &&
+    nearCopyProjection(left, "WORD") === nearCopyProjection(right, "WORD") &&
+    (
+      (enoughSpecificAnchors && boundedTokenCountDifference) ||
+      (exactNumberSkeleton.length > 0 && exactNumberSkeleton === exactRightNumberSkeleton)
+    );
   const nameOnlyDetected = wordOnlyDetected;
-  const orderOnlyDetected = leftValues.length === rightValues.length &&
+  const uniqueLeftValues = new Set(leftValues);
+  const orderOnlyDetected =
+    minimumSpanPresent &&
+    enoughSpecificAnchors &&
+    uniqueLeftValues.size >= 6 &&
+    uniqueLeftValues.size / leftValues.length >= 0.75 &&
+    leftValues.length === rightValues.length &&
     leftValues.toSorted().join("\n") === rightValues.toSorted().join("\n");
 
-  return numberOnlyDetected || nameOnlyDetected || orderOnlyDetected || wordOnlyDetected;
+  return numberOnlyDetected ||
+    nameOnlyDetected ||
+    orderOnlyDetected ||
+    wordOnlyDetected ||
+    boundedTransformedNearCopyDetected(boundedLeft, boundedRight, budget);
+}
+
+export function detectQuestionFoundryMandatoryNearCopyTransformation(
+  leftBody: string,
+  rightBody: string,
+) {
+  return mandatoryNearCopyTransformationDetected(leftBody, rightBody, { used: 0 });
 }
 
 export function buildSimilarityFirewallReview(
@@ -1711,11 +1913,14 @@ export function buildSimilarityFirewallReview(
   let mandatoryTransformationDetected = false;
   let reconstructionRiskDetected = false;
   let protectedExplanationSequenceDetected = false;
+  const nearCopyWorkBudget: NearCopyWorkBudget = { used: 0 };
   for (const reference of references) {
-    mandatoryTransformationDetected ||= mandatoryNearCopyTransformationDetected(
+    const transformedWindowDetected = mandatoryNearCopyTransformationDetected(
       candidateBody,
       reference.body,
+      nearCopyWorkBudget,
     );
+    mandatoryTransformationDetected ||= transformedWindowDetected;
     if (!ELIGIBLE_SOURCE_CLASSES.has(reference.sourceClass)) {
       reconstructionRiskDetected = true;
       continue;

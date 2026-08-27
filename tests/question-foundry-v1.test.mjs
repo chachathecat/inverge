@@ -13,6 +13,10 @@ import {
   QUESTION_FOUNDRY_NEAR_COPY_FAILURE_TRANSFORMATIONS,
   QUESTION_FOUNDRY_CALCULATION_NUMERIC_TOKEN_SOURCE,
   QUESTION_FOUNDRY_SIMILARITY_THRESHOLD,
+  QUESTION_FOUNDRY_SIMILARITY_WINDOW_MAXIMUM_BODY_CHARACTERS,
+  QUESTION_FOUNDRY_SIMILARITY_WINDOW_MAXIMUM_TOKENS_PER_BODY,
+  QUESTION_FOUNDRY_SIMILARITY_WINDOW_MAXIMUM_WORK_UNITS,
+  QUESTION_FOUNDRY_SIMILARITY_WINDOW_MINIMUM_TOKENS,
   QUESTION_FOUNDRY_SUBJECTS,
   QUESTION_FOUNDRY_SUBJECT_ADAPTER_INTERFACE_DIGEST,
   buildSimilarityFirewallReview,
@@ -21,6 +25,7 @@ import {
   createAuditRun,
   createReleaseAuditRun,
   createQuestionBankArtifact,
+  detectQuestionFoundryMandatoryNearCopyTransformation,
   disputeQuestionBankArtifact,
   evaluateQuestionRelease,
   generateCandidateBatch,
@@ -1216,6 +1221,28 @@ test("machine contract freezes source-only boundaries and exact lane ownership",
     contract.rightsAndSourceBoundary.nearCopyFailureTransformationsExactly,
     QUESTION_FOUNDRY_NEAR_COPY_FAILURE_TRANSFORMATIONS,
   );
+  assert.equal(contract.rightsAndSourceBoundary.transformedPartialWindowCopiesFailClosed, true);
+  assert.equal(contract.rightsAndSourceBoundary.similarityWindowBoundsMachineOwned, true);
+  assert.equal(
+    contract.rightsAndSourceBoundary.similarityWindowMinimumProtectedSpanTokensExactly,
+    QUESTION_FOUNDRY_SIMILARITY_WINDOW_MINIMUM_TOKENS,
+  );
+  assert.equal(
+    contract.rightsAndSourceBoundary.similarityWindowMaximumTokensPerBodyExactly,
+    QUESTION_FOUNDRY_SIMILARITY_WINDOW_MAXIMUM_TOKENS_PER_BODY,
+  );
+  assert.equal(
+    contract.rightsAndSourceBoundary.similarityWindowMaximumBodyCharactersExactly,
+    QUESTION_FOUNDRY_SIMILARITY_WINDOW_MAXIMUM_BODY_CHARACTERS,
+  );
+  assert.equal(
+    contract.rightsAndSourceBoundary.similarityWindowMaximumWorkUnitsExactly,
+    QUESTION_FOUNDRY_SIMILARITY_WINDOW_MAXIMUM_WORK_UNITS,
+  );
+  assert.equal(contract.audit.concurrentEvidenceOrderedByActualOccurredAt, true);
+  assert.equal(contract.audit.concurrentEvidenceUsesImmutableDeterministicTieBreakers, true);
+  assert.equal(contract.audit.evidenceTimestampsMayBeFabricatedOrNormalized, false);
+  assert.equal(contract.audit.releaseDecisionIsExactTerminalStep, true);
   assert.equal(
     contract.metaAudits
       .everyMetaEvaluatorAndDriftOutcomeMustBeDisjointFromGeneratorsAcrossActorFamilyProviderVersionAndArtifact,
@@ -1965,6 +1992,139 @@ test("rights-safe similarity firewall detects near-copy, reconstruction and deni
     ).blockingCodes.includes(
       "SIMILARITY_REVIEW_NOT_BOUND_TO_EXACT_CORPUS",
     ),
+  );
+});
+
+test("bounded transformed windows block embedded partial copies without generic false positives", () => {
+  const selected = batch().candidates[0];
+  const tokenJaccard = (left, right) => {
+    const tokens = (value) => new Set(value.toLowerCase().match(/[\p{L}\p{N}]+/gu) ?? []);
+    const leftTokens = tokens(left);
+    const rightTokens = tokens(right);
+    const intersection = [...leftTokens].filter((token) => rightTokens.has(token)).length;
+    return intersection / new Set([...leftTokens, ...rightTokens]).size;
+  };
+  const longPrefix =
+    "archival context describes shoreline zoning seasonal access financing history and survey notes";
+  const longSuffix =
+    "appendix materials discuss drainage easements inspection schedules title records and unrelated exhibits";
+
+  for (const [name, candidateStem, protectedSegment] of [
+    [
+      "number-only middle segment",
+      "assess coastal parcel income using rate 7 over term 12 with indexed reserve",
+      "assess coastal parcel income using rate 5 over term 10 with indexed reserve",
+    ],
+    [
+      "name-only middle segment",
+      "analyst jiho park applies residual method to harbor district parcel valuation",
+      "analyst mira choi applies residual method to harbor district parcel valuation",
+    ],
+    [
+      "word-only different surroundings",
+      "derive ending yield adjustment from stabilized operating income before reserve deduction",
+      "derive terminal capitalization adjustment from stabilized operating income before reserve deduction",
+    ],
+    [
+      "line breaks and punctuation",
+      "compute harbor income, using rate 7; over\nterm 12 with indexed reserve balance",
+      "compute harbor income using rate 5 over term 10 with indexed reserve balance",
+    ],
+  ]) {
+    const referenceBody = `${longPrefix} ${protectedSegment} ${longSuffix}`;
+    assert.equal(
+      detectQuestionFoundryMandatoryNearCopyTransformation(candidateStem, referenceBody),
+      true,
+      name,
+    );
+    assert.ok(tokenJaccard(candidateStem, referenceBody) < QUESTION_FOUNDRY_SIMILARITY_THRESHOLD, name);
+  }
+
+  assert.equal(
+    detectQuestionFoundryMandatoryNearCopyTransformation(
+      `${longPrefix} assess inland parcel income using rate 9 over term 14 with indexed reserve ${longSuffix}`,
+      "assess inland parcel income using rate 6 over term 11 with indexed reserve",
+    ),
+    true,
+  );
+
+  const copiedBody = `${selected.stem}\n${selected.options.map((option) => option.body).join("\n")}`;
+  const copiedRegistry = sourceRegistry({
+    sourceVersions: [
+      sourceBinding(),
+      similaritySourceBinding({ contentDigest: canonicalDigest(copiedBody) }),
+    ],
+  });
+  const embeddedCandidate = clone(selected);
+  embeddedCandidate.stem =
+    `${longPrefix} Divide the cleared scenario quantity by the stated factor ${longSuffix}`;
+  const embeddedReview = similarityReviewWithAuthority(
+    embeddedCandidate,
+    [similarityReference({ body: copiedBody })],
+    copiedRegistry,
+  );
+  assert.equal(embeddedReview.nearCopyDetected, true);
+  assert.ok(embeddedReview.maximumTokenJaccard < QUESTION_FOUNDRY_SIMILARITY_THRESHOLD);
+  const blockedBundle = clone(personalBundle());
+  blockedBundle.batch.candidates[0] = embeddedCandidate;
+  blockedBundle.trustedSources = clone(copiedRegistry);
+  blockedBundle.similarityReferences = [similarityReference({ body: copiedBody })];
+  blockedBundle.similarityReview = embeddedReview;
+  assert.ok(
+    evaluateQuestionRelease(
+      blockedBundle,
+      "PERSONAL_LEARNING_USABLE",
+      personalTrustContext(blockedBundle),
+    ).blockingCodes.includes("SIMILARITY_OR_RECONSTRUCTION_FIREWALL_BLOCKED"),
+  );
+
+  for (const [name, candidateStem, referenceBody] of [
+    [
+      "short generic phrase",
+      "choose the best correct answer while applying independent coastal income analysis methodology",
+      "choose the best correct answer",
+    ],
+    [
+      "few common words",
+      "coastal income analysis reconciles market leases through stabilized vacancy and reserve forecasts",
+      "historical title analysis compares boundary surveys through archived easement maps and zoning exhibits",
+    ],
+    [
+      "similar numeric token counts",
+      "discount projected harbor income at 5 percent across 10 annual periods",
+      "classify three zoning exhibits under 7 categories across 12 registry sections",
+    ],
+    [
+      "independent same skill expression",
+      "estimate terminal value by dividing normalized annual proceeds by a market yield",
+      "apply a supported capitalization relationship after independently stabilizing recurring net revenue",
+    ],
+    [
+      "generic option boilerplate",
+      "select the best answer from the following options for a separately derived coastal valuation",
+      "choose the correct option from the following answers for an unrelated archived classification",
+    ],
+  ]) {
+    assert.equal(
+      detectQuestionFoundryMandatoryNearCopyTransformation(candidateStem, referenceBody),
+      false,
+      name,
+    );
+  }
+
+  assert.throws(
+    () => detectQuestionFoundryMandatoryNearCopyTransformation(
+      "bounded candidate expression with enough ordinary tokens for local validation",
+      "overflow ".repeat(QUESTION_FOUNDRY_SIMILARITY_WINDOW_MAXIMUM_TOKENS_PER_BODY + 1),
+    ),
+    /similarity-window-token-contract-exceeded/,
+  );
+  assert.throws(
+    () => detectQuestionFoundryMandatoryNearCopyTransformation(
+      "lefttoken ".repeat(QUESTION_FOUNDRY_SIMILARITY_WINDOW_MAXIMUM_TOKENS_PER_BODY),
+      "righttoken ".repeat(QUESTION_FOUNDRY_SIMILARITY_WINDOW_MAXIMUM_TOKENS_PER_BODY),
+    ),
+    /similarity-window-work-limit-exceeded/,
   );
 });
 
@@ -3960,6 +4120,155 @@ test("AuditRunV1 is immutable, canonical, solution-first and rejects role or dig
       expectedCode,
     );
   }
+});
+
+test("release audit canonically orders concurrent evidence by actual immutable chronology", () => {
+  const decisionFor = (bundleValue, tier = "PERSONAL_LEARNING_USABLE") =>
+    evaluateQuestionRelease(
+      bundleValue,
+      tier,
+      tier === "TRANSFER_VERIFIED"
+        ? transferTrustContext(bundleValue)
+        : personalTrustContext(bundleValue),
+    );
+
+  const judgeBeforeSlowSolver = personalBundle();
+  judgeBeforeSlowSolver.blindSolverReviews[0].completedAt = "2026-08-25T00:03:00.000Z";
+  judgeBeforeSlowSolver.judgeReviews[0].completedAt = "2026-08-25T00:04:00.000Z";
+  judgeBeforeSlowSolver.blindSolverReviews[1].completedAt = "2026-08-25T00:05:00.000Z";
+  const outOfPhaseAudit = createReleaseAudit(
+    judgeBeforeSlowSolver,
+    decisionFor(judgeBeforeSlowSolver),
+    "release-audit-out-of-phase",
+  );
+  const outOfPhaseActors = outOfPhaseAudit.steps
+    .filter((step) => step.kind === "BLIND_SOLVED" || step.kind === "JUDGED")
+    .map((step) => step.actorId);
+  assert.deepEqual(outOfPhaseActors, ["blind-solver-1", "judge-1", "blind-solver-2"]);
+  assert.equal(validateAuditRun(outOfPhaseAudit).valid, true);
+
+  const interleaved = personalBundle();
+  interleaved.blindSolverReviews[0].completedAt = "2026-08-25T00:03:00.000Z";
+  interleaved.judgeReviews[0].completedAt = "2026-08-25T00:04:00.000Z";
+  interleaved.blindSolverReviews[1].completedAt = "2026-08-25T00:05:00.000Z";
+  interleaved.judgeReviews.push({
+    ...clone(interleaved.judgeReviews[0]),
+    reviewId: "judge-review-2",
+    judgeId: "judge-2",
+    judgeVersion: "judge-2@1",
+    judgeModelIdentity: modelIdentity("judge-family-2"),
+    judgeExecutionId: "judge-execution-2",
+    completedAt: "2026-08-25T00:06:00.000Z",
+  });
+  const interleavedAudit = createReleaseAudit(
+    interleaved,
+    decisionFor(interleaved),
+    "release-audit-interleaved",
+  );
+  assert.deepEqual(
+    interleavedAudit.steps
+      .filter((step) => step.kind === "BLIND_SOLVED" || step.kind === "JUDGED")
+      .map((step) => step.actorId),
+    ["blind-solver-1", "judge-1", "blind-solver-2", "judge-2"],
+  );
+
+  const tied = personalBundle();
+  tied.blindSolverReviews.forEach((review) => {
+    review.completedAt = "2026-08-25T00:03:00.000Z";
+  });
+  tied.judgeReviews[0].completedAt = "2026-08-25T00:03:00.000Z";
+  const tiedAudit = createReleaseAudit(tied, decisionFor(tied), "release-audit-tied");
+  const expectedTieOrder = [
+    ...tied.blindSolverReviews.map((review) => ({
+      actorId: review.solverId,
+      identity: `blind-solver:${canonicalDigest(review.reviewId)}`,
+    })),
+    ...tied.judgeReviews.map((review) => ({
+      actorId: review.judgeId,
+      identity: `judge:${canonicalDigest(review.reviewId)}`,
+    })),
+  ].sort((left, right) => left.identity.localeCompare(right.identity));
+  assert.deepEqual(
+    tiedAudit.steps
+      .filter(
+        (step) =>
+          step.occurredAt === "2026-08-25T00:03:00.000Z" &&
+          (step.kind === "BLIND_SOLVED" || step.kind === "JUDGED"),
+      )
+      .map((step) => step.actorId),
+    expectedTieOrder.map((entry) => entry.actorId),
+  );
+
+  const repeatedA = createReleaseAudit(tied, decisionFor(tied), "release-audit-repeatable");
+  const repeatedB = createReleaseAudit(tied, decisionFor(tied), "release-audit-repeatable");
+  assert.deepEqual(repeatedA.steps, repeatedB.steps);
+  assert.equal(repeatedA.auditDigest, repeatedB.auditDigest);
+  assert.equal(repeatedA.steps.at(-1).kind, "RELEASE_DECIDED");
+  const nonterminalRelease = clone(repeatedA);
+  const penultimateIndex = nonterminalRelease.steps.length - 2;
+  const terminalIndex = nonterminalRelease.steps.length - 1;
+  [nonterminalRelease.steps[penultimateIndex], nonterminalRelease.steps[terminalIndex]] =
+    [nonterminalRelease.steps[terminalIndex], nonterminalRelease.steps[penultimateIndex]];
+  assert.ok(
+    validateAuditRun(nonterminalRelease).errors.includes("AUDIT_TERMINAL_STEP_INVALID"),
+  );
+
+  const normal = personalBundle();
+  const normalAudit = createReleaseAudit(normal, decisionFor(normal), "release-audit-normal-order");
+  for (const review of normal.blindSolverReviews) {
+    const step = normalAudit.steps.find(
+      (entry) => entry.kind === "BLIND_SOLVED" && entry.actorId === review.solverId,
+    );
+    assert.equal(step.occurredAt, review.completedAt);
+    assert.equal(step.evidenceDigest, canonicalDigest(review));
+  }
+  const normalJudgeStep = normalAudit.steps.find((step) => step.kind === "JUDGED");
+  assert.equal(normalJudgeStep.occurredAt, normal.judgeReviews[0].completedAt);
+  assert.equal(normalJudgeStep.evidenceDigest, canonicalDigest(normal.judgeReviews[0]));
+
+  const beforeBoundary = personalBundle();
+  beforeBoundary.blindSolverReviews[0].completedAt = T1;
+  assert.throws(
+    () => createReleaseAudit(
+      beforeBoundary,
+      decisionFor(beforeBoundary),
+      "release-audit-before-boundary",
+    ),
+    /release-audit-evidence-before-quarantine-boundary/,
+  );
+
+  const afterCompletion = personalBundle();
+  afterCompletion.judgeReviews[0].completedAt = "2026-08-25T00:13:00.000Z";
+  assert.throws(
+    () => createReleaseAudit(
+      afterCompletion,
+      decisionFor(afterCompletion),
+      "release-audit-after-completion",
+    ),
+    /release-audit-evidence-after-completion/,
+  );
+
+  const duplicateEvidence = personalBundle();
+  duplicateEvidence.blindSolverReviews.push(clone(duplicateEvidence.blindSolverReviews[0]));
+  assert.throws(
+    () => createReleaseAudit(
+      duplicateEvidence,
+      decisionFor(duplicateEvidence),
+      "release-audit-duplicate-evidence",
+    ),
+    /release-audit-immutable-evidence-duplicate/,
+  );
+
+  const prematureOwner = transferBundle();
+  prematureOwner.ownerAdjudication.decidedAt = "2026-08-25T00:10:01.000Z";
+  assert.throws(
+    () => createReleaseAudit(
+      prematureOwner,
+      decisionFor(prematureOwner, "TRANSFER_VERIFIED"),
+      "release-audit-premature-owner",
+    ),
+    /release-audit-owner-adjudication-before-automated-evidence/,
+  );
 });
 
 test("bank artifact release is bound to exact evidence, decision, immutable audit and time", () => {
