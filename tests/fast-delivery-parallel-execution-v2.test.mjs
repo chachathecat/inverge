@@ -6,6 +6,7 @@ import path from "node:path";
 import test from "node:test";
 
 import {
+  AMENDMENT_ID,
   QF_ORDER,
   REQUIRED_STABLE_CHECKS,
   evaluateAutomaticMerge,
@@ -13,7 +14,13 @@ import {
   validateCandidateChangedPaths,
   validateLaneChangedPaths,
 } from "../scripts/automation/fast-delivery-parallel-v2.mjs";
-import { classify, findRegisteredLaneProfileOverride, findRegisteredLaneRegistration, parsePolicy } from "../scripts/automation/classify-risk.mjs";
+import {
+  classify,
+  deriveSemanticHighRiskSignals,
+  findRegisteredLaneProfileOverride,
+  findRegisteredLaneRegistration,
+  parsePolicy,
+} from "../scripts/automation/classify-risk.mjs";
 import { parseChangedJson, selectChangedEvidence } from "../scripts/automation/validation-profile-v2.mjs";
 
 const root = new URL("../", import.meta.url);
@@ -37,13 +44,29 @@ function passingSnapshot(overrides = {}) {
     baseRefName: "main",
     sameRepository: true,
     registeredLane: true,
+    registeredLaneId: QF_ORDER[1],
     pathOwnershipValid: true,
     isolatedWorktreeDeclared: true,
     expectedHeadSha: headSha,
     headSha,
     profile: "LOW",
     classifierHeadSha: headSha,
+    derivedHighRiskSignals: [],
+    semanticSignalEvidenceComplete: true,
     changedPathCount: 3,
+    laneGateEvidence: {
+      currentLaneId: QF_ORDER[1],
+      currentPullRequestNumber: 900,
+      currentPullRequestObservedOnce: true,
+      currentMainSha: "b".repeat(40),
+      requiredReceiptIds: [AMENDMENT_ID, QF_ORDER[0]],
+      validatedReceiptIds: [AMENDMENT_ID, QF_ORDER[0]],
+      directDependencyIds: [QF_ORDER[0]],
+      directDependenciesSatisfied: true,
+      declaredMergePrefixSatisfied: true,
+      openLaneIds: [QF_ORDER[1]],
+      concurrencyValid: true,
+    },
     labels: [],
     checks: Object.fromEntries(REQUIRED_STABLE_CHECKS.map((name) => [name, {
       headSha,
@@ -71,6 +94,8 @@ test("V2 authority is closed, fail-closed, and product-inert", () => {
   assert.deepEqual(contract.questionFoundrySplitCampaign.declaredIntegrationAndMergeOrder, QF_ORDER);
   assert.equal(contract.questionFoundrySplitCampaign.monolithicReplacementProhibited, true);
   assert.equal(contract.questionFoundrySplitCampaign.maximumConcurrentMergeProducingLanes, 2);
+  assert.equal(contract.riskClassifier.registeredLaneProfileCannotOverrideSemanticHighRiskSignal, true);
+  assert.equal(contract.mergePolicy.completePostReadyGateReevaluationRequired, true);
   assert.ok(Object.values(contract.activationBoundary).every((value) => value === false));
   assert.deepEqual(validateCandidateChangedPaths(contract, contract.candidateLane.ownedPathsExactly), { ok: true, errors: [] });
   assert.match(
@@ -137,6 +162,24 @@ test("risk routing is specific-low before broad-medium and unknown fails HIGH", 
   );
   assert.equal(findRegisteredLaneProfileOverride([...registeredPaths, "AGENTS.md"], s1.branch), null);
 
+  const semanticSignals = deriveSemanticHighRiskSignals([{
+    path: "lib/question-foundry/similarity/bounded-similarity-corpus-v1.mjs",
+    patch: "@@ -0,0 +1 @@\n+return 'TRANSFER_VERIFIED';\n",
+  }]);
+  assert.deepEqual(semanticSignals, ["durable_release_authority"]);
+  assert.equal(classify(registeredPaths, semanticSignals, policy, { profileOverride: override }).profile, "HIGH");
+  assert.deepEqual(deriveSemanticHighRiskSignals([{ path: registeredPaths[0] }]), ["uninspectable_change"]);
+  assert.deepEqual(deriveSemanticHighRiskSignals([{
+    path: registeredPaths[0],
+    patch: "@@ -0,0 +1 @@\n+export const safe = true;\n",
+    patchComplete: false,
+  }]), ["uninspectable_change"]);
+  assert.deepEqual(deriveSemanticHighRiskSignals([{
+    path: "lib/question-foundry/similarity/bounded-similarity-corpus-v1.mjs",
+    patch: "@@ -1 +1 @@\n-throw new Error('fail closed');\n+return candidate;\n",
+  }]), ["security_boundary_weakening"]);
+  assert.equal(classify(registeredPaths, ["uninspectable_change"], policy, { profileOverride: override }).profile, "HIGH");
+
   const qfI1 = contract.questionFoundrySplitCampaign.lanes[4];
   assert.deepEqual(
     validateLaneChangedPaths(contract, qfI1.laneId, [...qfI1.ownedPathsExactly, ...qfI1.serialIntegrationPathsExactly], { includeSerialIntegrationPaths: true }),
@@ -187,10 +230,28 @@ test("LOW and MEDIUM automatic merge require exact-head post-check clean review"
   assert.match(evaluateAutomaticMerge(contract, passingSnapshot({ unresolvedNonOutdatedReviewThreads: 1 })).errors.join("\n"), /threads must be zero/u);
   assert.match(evaluateAutomaticMerge(contract, passingSnapshot({ blockingCurrentHeadReviewCount: 1 })).errors.join("\n"), /changes-requested/u);
   assert.match(evaluateAutomaticMerge(contract, passingSnapshot({ isDraft: false, mergeStateStatus: "BLOCKED" })).errors.join("\n"), /ruleset merge state/u);
+
+  const missingReceipt = passingSnapshot();
+  missingReceipt.laneGateEvidence.validatedReceiptIds.pop();
+  assert.match(evaluateAutomaticMerge(contract, missingReceipt).errors.join("\n"), /prior lane/u);
+
+  const reorderedReceipt = passingSnapshot();
+  reorderedReceipt.laneGateEvidence.validatedReceiptIds.reverse();
+  assert.match(evaluateAutomaticMerge(contract, reorderedReceipt).errors.join("\n"), /prior lane/u);
+
+  const overlappingLane = passingSnapshot();
+  overlappingLane.laneGateEvidence.openLaneIds = [QF_ORDER[1], QF_ORDER[3]];
+  overlappingLane.laneGateEvidence.concurrencyValid = false;
+  assert.match(evaluateAutomaticMerge(contract, overlappingLane).errors.join("\n"), /lane cap|parallel-pair/u);
+
+  assert.match(
+    evaluateAutomaticMerge(contract, passingSnapshot({ semanticSignalEvidenceComplete: false })).errors.join("\n"),
+    /semantic HIGH-signal/u,
+  );
 });
 
 test("workflows retain stable checks, gate heavy jobs, and keep HIGH out of auto-merge", async () => {
-  const [risk, fast, full, heavy, merge, runtime, learner] = await Promise.all([
+  const [risk, fast, full, heavy, merge, runtime, learner, automatic] = await Promise.all([
     read(".github/workflows/risk-classifier.yml"),
     read(".github/workflows/ci-fast.yml"),
     read(".github/workflows/ci-full.yml"),
@@ -198,6 +259,7 @@ test("workflows retain stable checks, gate heavy jobs, and keep HIGH out of auto
     read(".github/workflows/auto-merge.yml"),
     read(".github/workflows/runtime-gate.yml"),
     read(".github/workflows/learner-loop-health.yml"),
+    read("scripts/automation/automatic-merge-v2.mjs"),
   ]);
   assert.match(risk, /name: risk-classifier/u);
   assert.match(fast, /name: fast-ci/u);
@@ -223,6 +285,11 @@ test("workflows retain stable checks, gate heavy jobs, and keep HIGH out of auto
   assert.match(merge, /contains\(github\.event\.review\.body, 'FAST_DELIVERY_V2_FINAL_REVIEW'\)/u);
   assert.match(merge, /automatic-merge-v2\.mjs/u);
   assert.doesNotMatch(merge, /pull_request_target/u);
+  assert.match(automatic, /deriveSemanticHighRiskSignals/u);
+  assert.match(automatic, /readLaneGateEvidence/u);
+  const readyIndex = automatic.indexOf('gh(["pr", "ready"');
+  assert.ok(readyIndex > 0);
+  assert.ok(automatic.indexOf("const refreshedDecision = evaluateAutomaticMerge", readyIndex) > readyIndex);
 });
 
 test("V2 PR contract is exact-scope Draft and reference-only", async () => {

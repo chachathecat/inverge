@@ -121,7 +121,10 @@ validated receipt,
 Question Foundry lane with the bounded split campaign in
 `docs/decisions/2026-08-27-owner-fast-delivery-parallel-execution-v2.md` and
 `config/dabangil-fast-delivery-parallel-execution-v2.json`. V2 changes no
-unrelated program's writer limit. Work uses a feature branch, an ordinary
+unrelated program's writer limit. Its LOW/MEDIUM automation derives semantic
+HIGH signals from the exact patch, requires live validated receipts for every
+prior declared lane, revalidates the two-lane cap, and repeats the complete
+gate after Ready; any drift fails closed. Work uses a feature branch, an ordinary
 non-force push and a pull request. Before merge, the live ruleset-
 required native checks must succeed for the current PR head against the latest
 required base, actionable review findings must be corrected, every review

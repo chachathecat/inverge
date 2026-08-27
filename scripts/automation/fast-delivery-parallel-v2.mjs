@@ -173,6 +173,9 @@ export function validateAuthority(contract) {
   add(errors, contract.riskClassifier?.changedPathsRequired === true, "risk classifier must require changed paths");
   add(errors, contract.riskClassifier?.unknownPathDisposition === "HIGH", "unknown paths must fail closed to HIGH");
   add(errors, contract.riskClassifier?.registeredLaneExactPathProfileOverridesGenericPathProfile === true, "registered exact-lane profile routing is required");
+  add(errors, contract.riskClassifier?.exactDiffSemanticHighRiskSignalsRequired === true, "exact-diff semantic HIGH signals are required");
+  add(errors, contract.riskClassifier?.registeredLaneProfileCannotOverrideSemanticHighRiskSignal === true, "registered lanes must not suppress semantic HIGH signals");
+  add(errors, contract.riskClassifier?.uninspectableChangedFileDisposition === "HIGH", "uninspectable changed files must fail closed to HIGH");
   add(errors, sameArray(contract.stableRequiredCheckNames, REQUIRED_STABLE_CHECKS), "stable required-check names drifted");
 
   for (const profile of ["LOW", "MEDIUM", "HIGH"]) {
@@ -191,9 +194,13 @@ export function validateAuthority(contract) {
   add(errors, contract.mergePolicy?.registeredLaneOrExactFutureAuthorityRequired === true, "automatic merge must require a registered lane");
   add(errors, contract.mergePolicy?.exactChangedPathOwnershipRequired === true, "automatic merge must require exact changed-path ownership");
   add(errors, contract.mergePolicy?.isolatedWorktreeDeclarationRequired === true, "automatic merge must require isolated-worktree evidence");
+  add(errors, contract.mergePolicy?.liveDependencyAndDeclaredOrderReceiptsRequired === true, "automatic merge must require live dependency and order receipts");
+  add(errors, contract.mergePolicy?.liveLaneConcurrencyRevalidatedBeforeMerge === true, "automatic merge must revalidate live lane concurrency");
+  add(errors, contract.mergePolicy?.completePostReadyGateReevaluationRequired === true, "automatic merge must fully re-evaluate after Ready");
   add(errors, contract.laneIsolation?.oneIsolatedGitWorktreePerLane === true, "one isolated worktree per lane is required");
   add(errors, contract.laneIsolation?.exactRepoRelativePathOwnershipRequired === true, "exact path ownership is required");
   add(errors, contract.laneIsolation?.overlapDisposition === "fail_closed", "path overlap must fail closed");
+  add(errors, contract.laneIsolation?.validatedResultingMainReceiptRequiredForEveryPriorLane === true, "every prior lane requires a validated resulting-main receipt");
   add(errors, sameArray(contract.frozenAmendmentArtifacts, FROZEN_AMENDMENT_ARTIFACTS), "frozen amendment artifacts drifted");
 
   const campaign = contract.questionFoundrySplitCampaign;
@@ -320,12 +327,35 @@ export function evaluateAutomaticMerge(contract, snapshot) {
   add(errors, snapshot.baseRefName === "main", "base branch must be main");
   add(errors, snapshot.sameRepository === true, "automatic merge requires a same-repository branch");
   add(errors, snapshot.registeredLane === true, "automatic merge requires a registered exact lane");
+  const lane = contract.questionFoundrySplitCampaign?.lanes?.find((entry) => entry.laneId === snapshot.registeredLaneId);
+  add(errors, isRecord(lane), "automatic merge requires an exact registered lane identity");
   add(errors, snapshot.pathOwnershipValid === true, "live changed paths must equal the lane's exact ownership boundary");
   add(errors, snapshot.isolatedWorktreeDeclared === true, "exact isolated-worktree declaration is missing");
   add(errors, SHA_PATTERN.test(snapshot.expectedHeadSha ?? "") && snapshot.headSha === snapshot.expectedHeadSha, "live head must equal the expected head");
   add(errors, ["LOW", "MEDIUM"].includes(snapshot.profile), "HIGH and unknown profiles require Owner approval");
   add(errors, snapshot.classifierHeadSha === snapshot.headSha, "risk classification must bind the live head");
+  add(errors, snapshot.semanticSignalEvidenceComplete === true, "semantic HIGH-signal evidence must cover every changed file");
   add(errors, snapshot.changedPathCount > 0, "changed-path evidence is required");
+
+  const laneGate = snapshot.laneGateEvidence;
+  add(errors, isRecord(laneGate), "live lane dependency and concurrency evidence is required");
+  if (isRecord(lane) && isRecord(laneGate)) {
+    const laneIndex = QF_ORDER.indexOf(lane.laneId);
+    const requiredReceiptIds = [AMENDMENT_ID, ...QF_ORDER.slice(0, laneIndex)];
+    add(errors, laneGate.currentLaneId === lane.laneId, "live lane evidence must bind the current lane");
+    add(errors, Number.isInteger(laneGate.currentPullRequestNumber) && laneGate.currentPullRequestNumber > 0,
+      "live lane evidence must bind the current pull request");
+    add(errors, laneGate.currentPullRequestObservedOnce === true, "current registered lane pull request must be uniquely open");
+    add(errors, SHA_PATTERN.test(laneGate.currentMainSha ?? ""), "live protected-main identity is required");
+    add(errors, sameArray(laneGate.requiredReceiptIds, requiredReceiptIds), "declared merge-order receipt set is stale or incomplete");
+    add(errors, sameArray(laneGate.validatedReceiptIds, requiredReceiptIds), "every prior lane must have one validated resulting-main receipt");
+    add(errors, sameArray(laneGate.directDependencyIds, lane.dependencies), "direct dependency evidence drifted");
+    add(errors, laneGate.directDependenciesSatisfied === true, "live direct dependency receipts are incomplete");
+    add(errors, laneGate.declaredMergePrefixSatisfied === true, "declared integration and merge order is not satisfied");
+    add(errors, Array.isArray(laneGate.openLaneIds) && new Set(laneGate.openLaneIds).size === laneGate.openLaneIds.length &&
+      laneGate.openLaneIds.includes(lane.laneId), "live open-lane evidence is invalid");
+    add(errors, laneGate.concurrencyValid === true, "live merge-producing lane cap or parallel-pair boundary is violated");
+  }
 
   const labelNames = Array.isArray(snapshot.labels) ? snapshot.labels.map((value) => String(value).toLowerCase()) : [];
   for (const label of labelNames) if (BLOCKING_LABELS.has(label)) errors.push(`blocking label: ${label}`);

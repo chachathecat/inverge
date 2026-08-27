@@ -70,6 +70,9 @@
     "unknownPathDisposition": "HIGH",
     "highestApplicableProfileWins": true,
     "registeredLaneExactPathProfileOverridesGenericPathProfile": true,
+    "exactDiffSemanticHighRiskSignalsRequired": true,
+    "registeredLaneProfileCannotOverrideSemanticHighRiskSignal": true,
+    "uninspectableChangedFileDisposition": "HIGH",
     "stableCheckName": "risk-classifier",
     "artifactContainsMetadataOnly": true
   },
@@ -125,6 +128,9 @@
     "actionableP0P1P2Required": [0, 0, 0],
     "unresolvedNonOutdatedReviewThreadsRequired": 0,
     "blockingLabelsFailClosed": true,
+    "liveDependencyAndDeclaredOrderReceiptsRequired": true,
+    "liveLaneConcurrencyRevalidatedBeforeMerge": true,
+    "completePostReadyGateReevaluationRequired": true,
     "forcePushRebaseAmendAndDirectMainPushProhibited": true
   },
   "laneIsolation": {
@@ -134,7 +140,8 @@
     "globOwnershipProhibited": true,
     "overlapDisposition": "fail_closed",
     "undeclaredChangedPathDisposition": "fail_closed",
-    "oneDeclaredIntegrationAndMergeOrderRequired": true
+    "oneDeclaredIntegrationAndMergeOrderRequired": true,
+    "validatedResultingMainReceiptRequiredForEveryPriorLane": true
   },
   "frozenAmendmentArtifacts": [
     "config/dabangil-fast-delivery-parallel-execution-v2.json",

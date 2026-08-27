@@ -36,6 +36,8 @@ highRiskPaths:
   - "next.config.*"
   - "config/paid-launch-readiness.json"
 highRiskSignals:
+  - uninspectable_change
+  - security_boundary_weakening
   - new_dependency
   - new_environment_variable
   - schema_change

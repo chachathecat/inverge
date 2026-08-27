@@ -40,7 +40,9 @@ The sole downgrade exception is a registered split-lane branch whose complete
 live diff fits its frozen exact path manifest plus the serial program-log
 integration path. That branch uses the profile frozen for its lane. Any extra
 path or HIGH signal removes the exception and fails to the ordinary highest
-profile.
+profile. HIGH semantic signals are derived from the exact changed-file patch
+in both CI and the merge-time reclassification; an unavailable or incomplete
+patch is HIGH, and a registered-lane profile can never suppress that result.
 
 - LOW covers docs, schema, pure helpers, bounded algorithm modules and
   Golden/hostile fixtures. It requires focused deterministic tests, applicable
@@ -75,13 +77,18 @@ LOW and MEDIUM may use the V2 automatic gate only on a trusted same-repository
 branch registered by exact lane authority. It re-fetches the pull request and
 exact head, reclassifies every live changed path, requires the exact isolated
 worktree declaration, proves every changed path is inside that lane's exact
-manifest, verifies every stable check at that head, requires one clean
+manifest, and fetches the live validated resulting-main receipts for the V2
+start gate and every prior milestone in the declared merge order. It also
+revalidates the sole QF-S1/QF-S2 parallel pair and the two-lane cap. The gate
+verifies every stable check at that head, requires one clean
 formal review bound to the exact head and submitted after the applicable
 checks, requires actionable P0/P1/P2 `0/0/0`, zero unresolved non-outdated
 review threads and zero blocking labels, then marks Ready and performs an
-expected-head-pinned squash merge. Any missing, stale, malformed, ambiguous or
-changed evidence fails closed. HIGH is rejected by this automatic path and
-requires a separate exact-head Owner approval.
+expected-head-pinned squash merge. After Ready it rebuilds and re-evaluates
+that complete live snapshot, including labels, reviews, threads, checks,
+semantic risk, dependency receipts, order and concurrency. Any missing,
+stale, malformed, ambiguous or changed evidence fails closed. HIGH is rejected
+by this automatic path and requires a separate exact-head Owner approval.
 
 The one machine-readable clean-review marker is
 `FAST_DELIVERY_V2_FINAL_REVIEW head=<40_hex_sha> actionable=0/0/0`; the review
