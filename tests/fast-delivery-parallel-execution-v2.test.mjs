@@ -279,6 +279,114 @@ test("risk routing is specific-low before broad-medium and unknown fails HIGH", 
   assert.equal(qfI1Classification.learnerLoopRequired, false);
 });
 
+test("semantic network call extraction is bounded, literal-first, and overrides registered LOW lanes", () => {
+  const policy = parsePolicy(new URL("../config/agent-risk-policy.yml", import.meta.url));
+  const lane = contract.questionFoundrySplitCampaign.lanes[1];
+  const registeredPaths = [...lane.ownedPathsExactly];
+  const registeredSourcePath = registeredPaths.find((file) => file.endsWith(".mjs"));
+  assert.equal(typeof registeredSourcePath, "string");
+  const registration = findRegisteredLaneRegistration(registeredPaths, lane.branch);
+  assert.deepEqual(registration, { laneId: lane.laneId, profile: "LOW" });
+
+  const networkModules = [
+    "http", "node:http", "https", "node:https", "http2", "node:http2", "net", "node:net",
+    "tls", "node:tls", "dns", "node:dns", "dgram", "node:dgram", "undici", "undici/index.js",
+    "axios", "axios/index.js", "got", "got/dist/source", "@supabase/supabase-js", "stripe", "@stripe/stripe-js",
+  ];
+  const patchFor = (source) => `@@ -0,0 +1 @@\n${source.split("\n").map((line) => `+${line}`).join("\n")}\n`;
+  const signalsFor = (source) => deriveSemanticHighRiskSignals([{
+    path: registeredSourcePath,
+    patch: patchFor(source),
+  }]);
+
+  for (const networkModule of networkModules) {
+    const governedForms = [
+      `const client = await import("${networkModule}");`,
+      `const client = await import("${networkModule}",);`,
+      `const client = await import("${networkModule}", { with: {} });`,
+      `const client = await import(\n  "${networkModule}",\n  { with: {} },\n);`,
+      `const client = await import(\n  /* specifier */\n  "${networkModule}"\n  /* after specifier */,\n  { with: {} },\n);`,
+      `const client = await import(\n  // specifier follows\n  "${networkModule}" // options follow\n  , { with: {} }\n);`,
+      `const client = require("${networkModule}");`,
+      `const client = require("${networkModule}",);`,
+      `const client = require("${networkModule}", undefined);`,
+      `const client = require /* call */ (\n  "${networkModule}",\n);`,
+      `const client = await import('${networkModule}', { with: {} });`,
+      `const client = require('${networkModule}', undefined);`,
+      `const client = await import(\`${networkModule}\`,);`,
+    ];
+
+    for (const source of governedForms) {
+      const signals = signalsFor(source);
+      assert.deepEqual(signals, ["remote_or_production_or_payment"], `${networkModule}: ${source}`);
+      const classification = classify(registeredPaths, signals, policy, {
+        profileOverride: registration.profile,
+        registeredLaneId: registration.laneId,
+      });
+      assert.equal(classification.risk, "high", `${networkModule}: ${source}`);
+      assert.equal(classification.profile, "HIGH", `${networkModule}: ${source}`);
+      assert.equal(
+        classification.reasons.some((reason) =>
+          reason.kind === "signal" && reason.signal === "remote_or_production_or_payment"),
+        true,
+        `${networkModule}: ${source}`,
+      );
+      assert.equal(classification.automaticMergeEligible, false, `${networkModule}: ${source}`);
+      assert.equal(classification.ownerApprovalRequired, true, `${networkModule}: ${source}`);
+
+      const mediumAttempt = classify(registeredPaths, signals, policy, {
+        profileOverride: "MEDIUM",
+        registeredLaneId: registration.laneId,
+      });
+      assert.equal(mediumAttempt.profile, "HIGH", `${networkModule}: MEDIUM ${source}`);
+      assert.equal(mediumAttempt.automaticMergeEligible, false, `${networkModule}: MEDIUM ${source}`);
+      assert.equal(mediumAttempt.ownerApprovalRequired, true, `${networkModule}: MEDIUM ${source}`);
+    }
+  }
+
+  for (const unsafeFirstArgument of [
+    "const client = await import(moduleSpecifier);",
+    "const client = require(moduleSpecifier);",
+    "const client = await import(`node:${protocol}`);",
+    "const client = await import(\"./local-\" + suffix);",
+  ]) {
+    assert.deepEqual(
+      signalsFor(unsafeFirstArgument),
+      ["remote_or_production_or_payment"],
+      `unsafe governed call must fail closed: ${unsafeFirstArgument}`,
+    );
+  }
+
+  const negativeControls = [
+    "const client = await import(\"./local-module\", { with: {} });",
+    "const client = require(\"./https\",);",
+    "const prose = 'import(\"node:https\",)';",
+    "// import(\"node:https\",)",
+    "/* require(\"https\", undefined) */",
+    "const client = await import(\"node:https-extra\",);",
+    "const client = await import(\"https-extra\", { with: {} });",
+    "const client = require(\"axios-extra\",);",
+    "const client = require(\"preaxios\",);",
+    "const client = await import(\"@supabaseish/supabase-js\",);",
+    "const client = await import(\"stripe-extra\",);",
+    "const client = loader.import(\"node:https\",);",
+    "const client = loader.require(\"https\",);",
+    "export const boundedSimilarity = true;",
+  ];
+  for (const source of negativeControls) {
+    const signals = signalsFor(source);
+    assert.equal(signals.includes("remote_or_production_or_payment"), false, source);
+    const classification = classify(registeredPaths, signals, policy, {
+      profileOverride: registration.profile,
+      registeredLaneId: registration.laneId,
+    });
+    assert.equal(classification.risk, "low", source);
+    assert.equal(classification.profile, "LOW", source);
+    assert.equal(classification.automaticMergeEligible, true, source);
+    assert.equal(classification.ownerApprovalRequired, false, source);
+  }
+});
+
 test("explicit CHANGED_FILES stays path-only even when a CI event is present", async () => {
   const directory = await mkdtemp(path.join(tmpdir(), "fast-delivery-v2-risk-"));
   const eventPath = path.join(directory, "event.json");

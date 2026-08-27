@@ -136,11 +136,139 @@ const JS_INTERSTITIAL_PATTERN = String.raw`(?:\s|\/\*[\s\S]*?\*\/|\/\/[^\r\n]*(?
 const NETWORK_IMPORT_PATTERNS = [
   new RegExp(String.raw`\bfrom\b${JS_INTERSTITIAL_PATTERN}["']${NETWORK_MODULE_PATTERN}["']`, "u"),
   new RegExp(String.raw`\bimport\b${JS_INTERSTITIAL_PATTERN}["']${NETWORK_MODULE_PATTERN}["']`, "u"),
-  new RegExp(String.raw`\bimport\b${JS_INTERSTITIAL_PATTERN}\(${JS_INTERSTITIAL_PATTERN}["']${NETWORK_MODULE_PATTERN}["']${JS_INTERSTITIAL_PATTERN}\)`, "u"),
-  new RegExp(String.raw`\brequire\b${JS_INTERSTITIAL_PATTERN}\(${JS_INTERSTITIAL_PATTERN}["']${NETWORK_MODULE_PATTERN}["']${JS_INTERSTITIAL_PATTERN}\)`, "u"),
 ];
+const NETWORK_MODULE_SPECIFIER_PATTERN = new RegExp(String.raw`^(?:${NETWORK_MODULE_PATTERN})$`, "u");
+const JS_IDENTIFIER_CONTINUE_PATTERN = /[$_\u200C\u200D\p{ID_Continue}]/u;
+const FIRST_LITERAL_ARGUMENT_SCAN_LIMIT = 16_384;
 const NETWORK_CALL_PATTERN = /(?:\bfetch\s*\(|\b(?:WebSocket|EventSource)\s*\(|\bnavigator\.sendBeacon\s*\(|\bhttps?\s*\.\s*(?:get|request)\s*\(|\bcreateClient\s*\(|\bpostgres\s*\()/u;
 const REMOTE_ACTIVATION_JSON_PATTERN = /"(?:providerOrNetwork|remoteSupabaseMutation|productionMutation|payment|publicActivation|externalLearnerActivation|learnerRuntime|databaseOrRls|remoteMutation|networkAccess|providerAccess|productionActivation)"\s*:\s*true\b/u;
+
+function skipQuotedSourceToken(source, start, quote) {
+  for (let index = start + 1; index < source.length; index += 1) {
+    const character = source[index];
+    if (character === "\\") {
+      index += 1;
+      continue;
+    }
+    if (character === quote) return index + 1;
+  }
+  return source.length;
+}
+
+function skipInterspersedWhitespaceAndComments(source, start, limit) {
+  let index = start;
+  while (index < limit) {
+    if (/\s/u.test(source[index])) {
+      index += 1;
+      continue;
+    }
+    if (source.startsWith("//", index)) {
+      const newline = source.indexOf("\n", index + 2);
+      index = newline === -1 ? limit : Math.min(newline + 1, limit);
+      continue;
+    }
+    if (source.startsWith("/*", index)) {
+      const close = source.indexOf("*/", index + 2);
+      if (close === -1 || close + 2 > limit) return { index: limit, safe: false };
+      index = close + 2;
+      continue;
+    }
+    break;
+  }
+  return { index, safe: true };
+}
+
+function readBoundedLiteral(source, start, limit) {
+  const quote = source[start];
+  if (quote !== '"' && quote !== "'" && quote !== "`") return { safe: false };
+  let value = "";
+  for (let index = start + 1; index < limit; index += 1) {
+    const character = source[index];
+    if (character === "\\") return { safe: false };
+    if (quote === "`" && character === "$" && source[index + 1] === "{") return { safe: false };
+    if (character === quote) return { safe: true, value, end: index + 1 };
+    if (quote !== "`" && (character === "\n" || character === "\r")) return { safe: false };
+    value += character;
+  }
+  return { safe: false };
+}
+
+function inspectFirstLiteralCallArgument(source, openParenthesisIndex) {
+  const limit = Math.min(source.length, openParenthesisIndex + 1 + FIRST_LITERAL_ARGUMENT_SCAN_LIMIT);
+  const beforeArgument = skipInterspersedWhitespaceAndComments(source, openParenthesisIndex + 1, limit);
+  if (!beforeArgument.safe || beforeArgument.index >= limit) return { safelyLocal: false, highRisk: true };
+
+  const literal = readBoundedLiteral(source, beforeArgument.index, limit);
+  if (!literal.safe) return { safelyLocal: false, highRisk: true };
+
+  const afterArgument = skipInterspersedWhitespaceAndComments(source, literal.end, limit);
+  if (!afterArgument.safe || afterArgument.index >= limit) return { safelyLocal: false, highRisk: true };
+  const delimiter = source[afterArgument.index];
+  if (delimiter !== "," && delimiter !== ")") return { safelyLocal: false, highRisk: true };
+
+  const highRisk = NETWORK_MODULE_SPECIFIER_PATTERN.test(literal.value);
+  return { safelyLocal: !highRisk, highRisk };
+}
+
+function governedNetworkCallDetected(source) {
+  let lastSignificantCharacter = null;
+  for (let index = 0; index < source.length;) {
+    const character = source[index];
+    if (/\s/u.test(character)) {
+      index += 1;
+      continue;
+    }
+    if (source.startsWith("//", index)) {
+      const newline = source.indexOf("\n", index + 2);
+      index = newline === -1 ? source.length : newline + 1;
+      continue;
+    }
+    if (source.startsWith("/*", index)) {
+      const close = source.indexOf("*/", index + 2);
+      index = close === -1 ? source.length : close + 2;
+      continue;
+    }
+    if (character === '"' || character === "'" || character === "`") {
+      index = skipQuotedSourceToken(source, index, character);
+      lastSignificantCharacter = "literal";
+      continue;
+    }
+
+    const governedName = source.startsWith("import", index)
+      ? "import"
+      : source.startsWith("require", index)
+        ? "require"
+        : null;
+    if (governedName !== null) {
+      const end = index + governedName.length;
+      const previousCharacter = index === 0 ? "" : source[index - 1];
+      const nextCharacter = source[end] ?? "";
+      const identifierBoundariesAreValid =
+        !JS_IDENTIFIER_CONTINUE_PATTERN.test(previousCharacter) &&
+        !JS_IDENTIFIER_CONTINUE_PATTERN.test(nextCharacter);
+      if (identifierBoundariesAreValid && lastSignificantCharacter !== ".") {
+        const callScanLimit = Math.min(source.length, end + FIRST_LITERAL_ARGUMENT_SCAN_LIMIT);
+        const beforeCall = skipInterspersedWhitespaceAndComments(
+          source,
+          end,
+          callScanLimit,
+        );
+        if (!beforeCall.safe || (beforeCall.index >= callScanLimit && callScanLimit < source.length)) return true;
+        if (source[beforeCall.index] === "(") {
+          const result = inspectFirstLiteralCallArgument(source, beforeCall.index);
+          if (result.highRisk || !result.safelyLocal) return true;
+        }
+      }
+      lastSignificantCharacter = governedName.at(-1);
+      index = end;
+      continue;
+    }
+
+    lastSignificantCharacter = character;
+    index += 1;
+  }
+  return false;
+}
 
 export function deriveSemanticHighRiskSignals(changedFileEvidence) {
   const signals = new Set();
@@ -185,7 +313,9 @@ export function deriveSemanticHighRiskSignals(changedFileEvidence) {
         (jsonConfig && /"releaseStatesAvailable"\s*:\s*\[\s*["']/u.test(added))) {
       signals.add("durable_release_authority");
     }
-    const networkImportDetected = NETWORK_IMPORT_PATTERNS.some((pattern) => pattern.test(added));
+    const networkImportDetected =
+      NETWORK_IMPORT_PATTERNS.some((pattern) => pattern.test(added)) ||
+      governedNetworkCallDetected(added);
     if ((activeSource && (networkImportDetected || NETWORK_CALL_PATTERN.test(added))) ||
         (jsonConfig && REMOTE_ACTIVATION_JSON_PATTERN.test(added))) {
       signals.add("remote_or_production_or_payment");
