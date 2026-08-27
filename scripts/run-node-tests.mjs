@@ -62,6 +62,7 @@ const defaultTestFiles = [
   "tests/s218-similar-question-review-scheduler.test.mjs",
   "tests/s233-parallel-execution-contract.test.mjs",
   "tests/parallel-execution-v1.test.mjs",
+  "tests/semantic-risk-classifier-v2.test.mjs",
   "tests/s219-learner-catalog-usage-ledger.test.mjs",
   "tests/s220-billing-entitlement-credit-usage.test.mjs",
   "tests/s221-paid-trust-privacy-cost-guardrails.test.mjs",

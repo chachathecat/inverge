@@ -1,0 +1,131 @@
+{
+  "schemaVersion": "DabangilSemanticRiskClassifierV2Contract/1.0.0",
+  "classifierId": "SEMANTIC_RISK_CLASSIFIER_V2",
+  "classifierVersion": "2.0.0",
+  "authorityStatus": "source_only_inert_foundation_effective_only_after_exact_head_owner_approved_squash_merge_and_validated_receipt",
+  "delivery": {
+    "repository": "chachathecat/inverge",
+    "baseRef": "main",
+    "baseSha": "fd8d0039bbeb2981935fdb671094e37d73a34400",
+    "baseTree": "1d338b7be92cfc98c00611b4ff3f2b75dea1784d",
+    "branch": "codex/semantic-risk-classifier-v2",
+    "pullRequestTitle": "[FDV2-A] Install standalone Semantic Risk Classifier V2",
+    "risk": "HIGH",
+    "draftUntilOwnerGate": true,
+    "squashMergeOnly": true
+  },
+  "scope": {
+    "changedPathsExactly": [
+      "config/dabangil-semantic-risk-classifier-v2.json",
+      "docs/decisions/2026-08-27-owner-semantic-risk-classifier-v2-foundation.md",
+      "docs/qa/semantic-risk-classifier-v2-validation.md",
+      "scripts/automation/semantic-risk-classifier-v2.mjs",
+      "scripts/run-node-tests.mjs",
+      "tests/semantic-risk-classifier-v2.test.mjs"
+    ],
+    "typescriptCompilerApiAlreadyInstalled": true,
+    "dependencyOrLockfileMutationAllowed": false,
+    "workflowMutationAllowed": false,
+    "riskPolicyMutationAllowed": false,
+    "routerOrAutomaticMergeAuthorityIncluded": false
+  },
+  "donorEvidence": {
+    "pullRequest": 851,
+    "branch": "codex/fast-delivery-parallel-execution-v2",
+    "head": "e6d6b6e17f6a2be83359f11fab6fa482c1b675c3",
+    "tree": "a8eecc1ca76dfcb809fa476fb77ebb7c0acac116",
+    "terminalDisposition": "FAST_DELIVERY_PARALLEL_V2_CLOSED_UNMERGED_SCOPE_SPLIT_DONOR",
+    "commitAncestryReusable": false
+  },
+  "analysis": {
+    "sourceAuthority": "exact_local_git_base_and_head_blobs",
+    "parser": "installed_typescript_compiler_api",
+    "activeExtensions": [
+      ".js",
+      ".jsx",
+      ".mjs",
+      ".cjs",
+      ".ts",
+      ".tsx",
+      ".mts",
+      ".cts"
+    ],
+    "compareAsDeterministicMultisets": true,
+    "canonicalFactExcludesSourceLocationWhitespaceCommentsAndLineWrapping": true,
+    "increasedMultiplicityIsNew": true,
+    "materiallyChangedUnsafeFactIsNew": true,
+    "movedIdenticalFactIsNotNew": true,
+    "completeBaseAndHeadFileContentsRequired": true
+  },
+  "machineLimits": {
+    "maximumChangedActiveSourceFiles": 256,
+    "maximumSourceBytesPerFile": 1048576,
+    "maximumSemanticFactsPerFile": 10000,
+    "maximumModuleSpecifierCharacters": 512,
+    "maximumGitCommandMilliseconds": 30000,
+    "maximumGitOutputBytes": 4194304,
+    "callerOverrideAllowed": false
+  },
+  "semanticForms": [
+    "static_import",
+    "side_effect_import",
+    "static_export_from",
+    "typescript_import_equals",
+    "dynamic_import",
+    "global_require",
+    "module_require",
+    "governed_direct_network_call"
+  ],
+  "networkModuleFamilies": {
+    "exactRootOrSubpath": [
+      "http",
+      "node:http",
+      "https",
+      "node:https",
+      "http2",
+      "node:http2",
+      "net",
+      "node:net",
+      "tls",
+      "node:tls",
+      "dns",
+      "node:dns",
+      "dgram",
+      "node:dgram",
+      "undici",
+      "axios",
+      "got",
+      "stripe"
+    ],
+    "exactScopedPrefix": [
+      "@supabase/",
+      "@stripe/"
+    ],
+    "nearPrefixMatchAllowed": false
+  },
+  "failClosed": {
+    "blockingHeadParseDiagnostic": "uninspectable_change",
+    "baseParseDiagnosticOrIncompleteComparison": "uninspectable_change",
+    "exactBlobLoadFailure": "uninspectable_change",
+    "unsafeNewDynamicModuleSpecifier": "remote_or_production_or_payment",
+    "machineLimitExceeded": "uninspectable_change",
+    "lowerProfileOverrideAllowed": false
+  },
+  "integrationBoundary": {
+    "semanticHighRiskFloor": "HIGH",
+    "automaticMergeEligibleWhenSemanticHigh": false,
+    "ownerApprovalRequiredWhenSemanticHigh": true,
+    "consumer": "future_workflow_router_or_automatic_merge_authority_v2_after_independent_classifier_merge_receipt"
+  },
+  "activationBoundary": {
+    "currentRiskRoutingChanged": false,
+    "workflowChanged": false,
+    "readyDecisionEnabled": false,
+    "automaticMergeEnabled": false,
+    "githubContact": false,
+    "networkOrProviderContact": false,
+    "databaseOrSupabaseMutation": false,
+    "productionOrPaymentMutation": false,
+    "productOrQuestionFoundryMutation": false
+  }
+}
