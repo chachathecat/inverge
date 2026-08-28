@@ -1,0 +1,123 @@
+{
+  "contractVersion": "dabangil.qf0a1.bounded_canonical_json.v1",
+  "stage": "QF-0A1",
+  "status": "candidate_source_only",
+  "ownerDecisionDate": "2026-08-28",
+  "tracking": {
+    "childIssue": 861,
+    "qf0aUmbrella": 859,
+    "qf0Umbrella": 857,
+    "questionFoundryProgram": 811,
+    "cognitiveProductReference": 714,
+    "closedUnmergedDonorPr": 860,
+    "closedUnmergedDonorHead": "fc91503ef5c3e719d2490670665099d4acb0d69d"
+  },
+  "outcome": "bounded canonical JSON, deterministic SHA-256 identity, and host-independent UTF-8 byte order",
+  "sourceOnlyBoundary": {
+    "inertUtility": true,
+    "runtimeActivation": "OFF",
+    "publicActivation": "OFF",
+    "externalLearnerActivation": "OFF",
+    "providerActivation": "OFF",
+    "remoteMutationCount": 0,
+    "productionMutationCount": 0,
+    "domainAuthorityInstalled": false
+  },
+  "exportsExactly": [
+    "QF0A1_LIMITS",
+    "QF0A1_SOURCE_ONLY_BOUNDARY_RECEIPT",
+    "canonicalizeBoundedJsonV1",
+    "compareUtf8BytesV1",
+    "digestCanonicalJsonV1"
+  ],
+  "limits": {
+    "maxCanonicalOutputBytes": 262144,
+    "maxInspectedUtf16CodeUnits": 262144,
+    "maxEntries": 10000,
+    "maxDepth": 32,
+    "maxComparisonSteps": 524288,
+    "surrogateLookaheadOutsideInspectionLimit": 0,
+    "callerOverride": false,
+    "nestedReset": false
+  },
+  "inspectionModel": {
+    "oneTraversalStatePerCanonicalization": true,
+    "keysAndValuesShareInspectionCounter": true,
+    "keysAndValuesShareOutputCounter": true,
+    "oneForwardUnicodePass": true,
+    "validatesUtf16Surrogates": true,
+    "rawUtf8Accounting": true,
+    "jsonStringAccounting": true,
+    "keyInspectionExactlyOnce": true,
+    "cachedKeyUtf8Bytes": true,
+    "comparatorRescansOriginalStrings": false,
+    "engineInternalKeyEnumerationWorkClaimed": false
+  },
+  "byteOrder": {
+    "order": "unsigned_lexicographic_utf8_bytes",
+    "stableImplementationRequired": true,
+    "hostLocaleIndependent": true,
+    "localeApisForbidden": true,
+    "comparisonStepsCumulative": true,
+    "overflow": "FAIL_CLOSED"
+  },
+  "canonicalValuesExactly": [
+    "null",
+    "finite_number",
+    "boolean",
+    "well_formed_string",
+    "dense_ordinary_array",
+    "plain_data_property_object"
+  ],
+  "failClosedExactly": [
+    "undefined",
+    "bigint",
+    "function",
+    "symbol",
+    "non_finite_number",
+    "cycle",
+    "accessor",
+    "sparse_array",
+    "array_extra_property",
+    "unsupported_prototype",
+    "symbol_key",
+    "unsupported_property_descriptor",
+    "depth_overflow",
+    "entry_overflow",
+    "inspection_overflow",
+    "output_byte_overflow",
+    "comparison_step_overflow",
+    "unpaired_surrogate"
+  ],
+  "deterministicIdentity": {
+    "canonicalEncoding": "UTF-8",
+    "digest": "SHA-256",
+    "negativeZeroCanonicalizesAsZero": true,
+    "normalization": "NONE",
+    "truncation": "FORBIDDEN",
+    "coercion": "FORBIDDEN"
+  },
+  "successorGate": {
+    "stage": "QF-0A2",
+    "state": "BLOCKED",
+    "requires": "VALIDATED_QF0A1_RESULTING_MAIN_RECEIPT",
+    "automaticStart": false
+  },
+  "nonGoalsExactly": [
+    "domain_decision_contracts",
+    "source_use_authority",
+    "model_execution_contracts",
+    "content_lifecycle",
+    "scarcity_or_release",
+    "learner_or_bank_assignment",
+    "runtime_or_activation",
+    "network_provider_database_or_remote_mutation"
+  ],
+  "changedPathsExactly": [
+    "config/dabangil-qf0a1-bounded-canonical-json-v1.json",
+    "docs/product/dabangil-qf0a1-bounded-canonical-json-v1.md",
+    "docs/qa/dabangil-qf0a1-bounded-canonical-json-validation.md",
+    "lib/question-foundry/quarantine/bounded-canonical-json.ts",
+    "tests/qf0a1-bounded-canonical-json.test.mjs"
+  ]
+}
