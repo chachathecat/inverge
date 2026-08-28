@@ -1,0 +1,206 @@
+{
+  "contractVersion": "dabangil.question_foundry_quarantine_core.v1",
+  "stage": {
+    "id": "QF-0",
+    "issue": 857,
+    "parentQuestionFoundryIssue": 811,
+    "cognitiveProductReferenceIssue": 714,
+    "sourceOnly": true,
+    "inert": true,
+    "everyCandidateQuarantined": true,
+    "runtimeReadinessEstablished": false
+  },
+  "contractsExactly": [
+    "SourceEligibilityDecisionV1",
+    "RightsManifestRefV1",
+    "ModelExecutionIdentityV1",
+    "QuarantinedQuestionCandidateV1",
+    "QuestionCandidateLifecycleV1",
+    "BodylessBankScarcityEventV1"
+  ],
+  "sourcePolicy": {
+    "purposeExactly": "QUARANTINED_CANDIDATE_CREATION",
+    "sourceClassesExactly": [
+      "INVERGE_ORIGINAL",
+      "RIGHTS_CLEARED_OFFICIAL",
+      "CONTRACTED_EXPERT_ORIGINAL",
+      "CLEARED_DETERMINISTIC_TEMPLATE",
+      "USER_PRIVATE_ONLY",
+      "ACADEMY_OR_COMMERCIAL_TEXTBOOK",
+      "RIGHTS_UNKNOWN",
+      "BLOCKED"
+    ],
+    "potentiallyQuarantineEligibleExactly": [
+      "INVERGE_ORIGINAL",
+      "RIGHTS_CLEARED_OFFICIAL",
+      "CONTRACTED_EXPERT_ORIGINAL",
+      "CLEARED_DETERMINISTIC_TEMPLATE"
+    ],
+    "currentExactRightsDecisionRequired": true,
+    "rightsStatusesAllowedExactly": ["ACTIVE"],
+    "rightsStatusesFailClosedExactly": [
+      "STALE",
+      "DISPUTED",
+      "BLOCKED",
+      "REVOKED",
+      "EXPIRED"
+    ],
+    "allSourcesReceiveReleaseEligibility": false,
+    "allSourcesReceiveBankEligibility": false,
+    "sharedRouteDenials": {
+      "USER_PRIVATE_ONLY": {
+        "sharedBlueprintEligible": false,
+        "sharedBankEligible": false,
+        "modelTrainingEligible": false,
+        "crossUserReuseEligible": false,
+        "sourceBodyAllowedInScarcityEvent": false
+      },
+      "ACADEMY_OR_COMMERCIAL_TEXTBOOK": {
+        "sharedBlueprintEligible": false,
+        "sharedBankEligible": false,
+        "modelTrainingEligible": false,
+        "crossUserReuseEligible": false,
+        "sourceBodyAllowedInScarcityEvent": false
+      },
+      "RIGHTS_UNKNOWN": {
+        "generationEligible": false,
+        "sharedBlueprintEligible": false,
+        "sharedBankEligible": false,
+        "modelTrainingEligible": false,
+        "crossUserReuseEligible": false
+      },
+      "BLOCKED": {
+        "generationEligible": false,
+        "sharedBlueprintEligible": false,
+        "sharedBankEligible": false,
+        "modelTrainingEligible": false,
+        "crossUserReuseEligible": false
+      }
+    }
+  },
+  "quarantine": {
+    "constructibleLifecycleExactly": "QUARANTINED",
+    "nonReleaseTerminalLifecycleOptionExactly": "REJECTED",
+    "lifecyclesExactly": ["QUARANTINED", "REJECTED"],
+    "releasableLifecycleCount": 0,
+    "exactBindingsRequired": [
+      "candidateId",
+      "candidateChecksum",
+      "contentDigest",
+      "blueprintId",
+      "blueprintVersion",
+      "blueprintDigest",
+      "answerSpecificationDigest",
+      "sourceEligibilityDecision",
+      "rightsManifestRef",
+      "generatorExecutionIdentity",
+      "validatorProfileRefs",
+      "policyVersion"
+    ],
+    "releaseStatusExactly": null,
+    "learnerAssignmentExactly": null,
+    "bankAssignmentExactly": null,
+    "unknownCallerFieldsFailClosed": true,
+    "memoryLocalOnly": true
+  },
+  "modelRoleBoundary": {
+    "identityFieldsExactly": [
+      "providerId",
+      "modelId",
+      "modelVersion",
+      "modelArtifactDigest",
+      "executionId",
+      "executionArtifactDigest",
+      "configurationDigest",
+      "executedAt",
+      "identityDigest"
+    ],
+    "rolesExactly": ["GENERATOR", "SOLVER", "JUDGE"],
+    "generatorMayApproveOwnCandidate": false,
+    "futureSolverOrJudgeMustDifferByImmutableExecutionIdentity": true,
+    "providerExecutionIncluded": false,
+    "sufficiencyForReleaseEstablished": false
+  },
+  "solutionFirst": {
+    "answerSpecificationDigestRequiredBeforeCandidate": true,
+    "blueprintReferenceRequiredBeforeCandidate": true,
+    "validatorProfileReferencesRequiredBeforeCandidate": true,
+    "answerCorrectnessEstablished": false,
+    "freeFormQuestionFirstEntryAllowed": false
+  },
+  "bodylessBankScarcityEvent": {
+    "allowedFieldsExactly": [
+      "contractVersion",
+      "eventId",
+      "eventChecksum",
+      "examPackageRef",
+      "subjectRef",
+      "skillConceptRef",
+      "problemFamilyRef",
+      "requestedDifficultyBand",
+      "requestedTaskProfile",
+      "capacityShortageCount",
+      "policyVersion",
+      "occurredAt"
+    ],
+    "forbiddenContentExactly": [
+      "rawProblemBody",
+      "rawAnswer",
+      "ocrText",
+      "learnerText",
+      "textbookContent",
+      "sourceExcerpt",
+      "providerPrompt",
+      "providerResponse",
+      "learnerIdentity",
+      "accountIdentifier"
+    ],
+    "unknownFieldsFailClosed": true,
+    "capacityShortageCountMaximum": 100000
+  },
+  "excludedScopeExactly": [
+    "CANDIDATE_RELEASE",
+    "PERSONAL_LEARNING_USABLE",
+    "TRANSFER_VERIFIED",
+    "CALIBRATION_PILOT",
+    "MEASUREMENT_CALIBRATED",
+    "RELEASE_ARTIFACT",
+    "LEARNER_ASSIGNMENT",
+    "SHARED_BANK_ASSIGNMENT",
+    "SIMILARITY_SCANNING",
+    "AUDIT_CHRONOLOGY",
+    "JUDGE_DRIFT",
+    "TRANSFER_CHRONOLOGY",
+    "PROVIDER_EXECUTION",
+    "DATABASE_PERSISTENCE",
+    "RUNTIME_ACTIVATION"
+  ],
+  "authorizationBoundary": {
+    "networkAuthorized": false,
+    "providerAuthorized": false,
+    "databaseAuthorized": false,
+    "persistenceAuthorized": false,
+    "apiAuthorized": false,
+    "uiAuthorized": false,
+    "migrationAuthorized": false,
+    "rlsAuthorized": false,
+    "authAuthorized": false,
+    "remoteSupabaseAuthorized": false,
+    "productionAuthorized": false,
+    "paymentAuthorized": false,
+    "externalLearnerAuthorized": false,
+    "releaseAuthorized": false
+  },
+  "ownedPathsExactly": [
+    "docs/product/dabangil-question-foundry-quarantine-core-v1.md",
+    "config/dabangil-question-foundry-quarantine-core-v1.json",
+    "docs/qa/dabangil-question-foundry-quarantine-core-validation.md",
+    "lib/question-foundry/quarantine-contracts.ts",
+    "lib/question-foundry/quarantine-core.ts",
+    "tests/question-foundry-quarantine-core.test.mjs"
+  ],
+  "testRegistration": {
+    "sharedRunnerModified": false,
+    "directFocusedExecution": "node scripts/run-node-tests.mjs tests/question-foundry-quarantine-core.test.mjs"
+  }
+}
