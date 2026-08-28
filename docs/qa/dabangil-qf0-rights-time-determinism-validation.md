@@ -16,14 +16,18 @@ files.
   decision binding. Snapshot freshness remains future authority responsibility.
 - Canonical object keys use UTF-8 byte ordering and remain identical across
   locale settings and insertion-order permutations.
-- Canonical work rejects malformed time, non-finite values, unsupported JSON,
-  cycles, and byte/depth/entry overflow.
+- Canonical work rejects malformed time, non-finite values, unpaired
+  surrogates, prototype-key collisions, sparse arrays, symbol keys, accessors,
+  non-enumerable properties, unsupported JSON, cycles, and early
+  byte/depth/entry overflow.
 - Model execution identities bind every declared immutable field, while no
   model execution occurs.
 - No candidate, scarcity, release, learner/bank assignment, provider, network,
   database, remote, or runtime contract exists.
 - The changed-path manifest is exactly six paths and does not touch the shared
   test runner.
+- QF-0B and QF-0I each require a validated QF-0A resulting-main receipt and
+  cannot start automatically.
 
 ## Focused evidence
 

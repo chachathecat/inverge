@@ -65,7 +65,8 @@
       "policyVersion",
       "policyDigest",
       "policyValidFrom",
-      "policyValidUntil"
+      "policyValidUntil",
+      "denialReasons"
     ],
     "eligibilityIntervalDerivedFromExactly": [
       "decision.evaluatedAt",
@@ -153,6 +154,7 @@
   ],
   "successor": {
     "qf0BPublicationRequiresValidatedQf0AMergeReceipt": true,
+    "qf0ICandidateIntegrationRequiresValidatedQf0AMergeReceipt": true,
     "automaticSuccessorStartAllowed": false
   }
 }

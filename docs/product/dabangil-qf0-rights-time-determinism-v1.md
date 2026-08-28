@@ -30,11 +30,14 @@ revocation without a fresh authority snapshot supplied by a future caller.
 Canonical object keys are ordered by their UTF-8 bytes. Locale APIs, process
 language settings, filesystem order, and object insertion order are not
 authority. Canonical work is bounded by byte, depth, and entry limits;
-unsupported, cyclic, malformed-time, and non-finite values fail closed.
+unpaired surrogates, sparse arrays, symbol keys, accessors, non-enumerable
+properties, unsupported values, cycles, malformed times, and non-finite values
+fail closed. The byte limit is enforced during traversal before an oversized
+canonical tree or serialized copy can be constructed.
 
 Model identity records role, provider, exact model/version/artifact,
 execution/artifact/configuration identities, canonical time, and deterministic
 identity digest. QF-0A executes no model.
 
-QF-0B remains blocked until QF-0A has an approved, validated resulting-main
-receipt.
+QF-0B and QF-0I each remain blocked until QF-0A has an approved, validated
+resulting-main receipt.

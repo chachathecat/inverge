@@ -97,6 +97,31 @@ test("QF0A-CONTRACT-001 fixes the exact trust-only six-path contract", async () 
     ...QF0A_DECISION_STATUSES,
   ]);
   assert.deepEqual(contract.modelIdentity.rolesExactly, [...QF0A_MODEL_ROLES]);
+  assert.deepEqual(contract.rightsTime.decisionBindingsExactly, [
+    "decisionId",
+    "decisionDigest",
+    "evaluatedAt",
+    "eligibilityInterval",
+    "rightsManifestRef",
+    "sourceClass",
+    "purpose",
+    "decisionStatus",
+    "outcome",
+    "policyVersion",
+    "policyDigest",
+    "policyValidFrom",
+    "policyValidUntil",
+    "denialReasons",
+  ]);
+  assert.equal(
+    contract.successor.qf0BPublicationRequiresValidatedQf0AMergeReceipt,
+    true,
+  );
+  assert.equal(
+    contract.successor.qf0ICandidateIntegrationRequiresValidatedQf0AMergeReceipt,
+    true,
+  );
+  assert.equal(contract.successor.automaticSuccessorStartAllowed, false);
   assert.deepEqual(contract.ownedPathsExactly, [
     "docs/product/dabangil-qf0-rights-time-determinism-v1.md",
     "config/dabangil-qf0-rights-time-determinism-v1.json",
@@ -231,6 +256,36 @@ test("QF0A-DETERMINISM-009 ignores object insertion order", () => {
   assert.equal(decision().decisionDigest, decision().decisionDigest);
 });
 
+test("QF0A-DETERMINISM-009A preserves __proto__ as owned identity material", () => {
+  const withPrototypeKey = Object.create(null);
+  Object.defineProperty(withPrototypeKey, "__proto__", {
+    value: { scope: "rights" },
+    enumerable: true,
+    configurable: true,
+    writable: true,
+  });
+  assert.equal(
+    canonicalizeBoundedJsonV1(withPrototypeKey),
+    '{"__proto__":{"scope":"rights"}}',
+  );
+  assert.notEqual(digestCanonicalJsonV1(withPrototypeKey), digestCanonicalJsonV1({}));
+});
+
+test("QF0A-DETERMINISM-009B rejects unpaired-surrogate keys and values", () => {
+  for (const surrogate of ["\ud800", "\ud801", "\udfff"]) {
+    const keyed = Object.create(null);
+    Object.defineProperty(keyed, surrogate, {
+      value: true,
+      enumerable: true,
+      configurable: true,
+      writable: true,
+    });
+    assert.throws(() => canonicalizeBoundedJsonV1(keyed));
+    assert.throws(() => canonicalizeBoundedJsonV1({ value: surrogate }));
+    assert.throws(() => compareUtf8BytesV1(surrogate, "safe"));
+  }
+});
+
 test("QF0A-DETERMINISM-010 remains identical across process locale settings", () => {
   const moduleUrl = new URL(
     "../lib/question-foundry/quarantine/trust-core.ts",
@@ -289,6 +344,48 @@ test("QF0A-BOUNDS-012 rejects malformed time and non-finite or oversized JSON", 
   let nested = { leaf: true };
   for (let index = 0; index < 40; index += 1) nested = { nested };
   assert.throws(() => canonicalizeBoundedJsonV1(nested));
+});
+
+test("QF0A-BOUNDS-012A rejects sparse, symbol, accessor, and hidden shapes", () => {
+  assert.throws(() => canonicalizeBoundedJsonV1(new Array(1)));
+  assert.throws(() => canonicalizeBoundedJsonV1(Object.assign([null], { extra: true })));
+
+  const symbolObject = { safe: true };
+  symbolObject[Symbol("hidden")] = true;
+  assert.throws(() => canonicalizeBoundedJsonV1(symbolObject));
+
+  const hiddenObject = { safe: true };
+  Object.defineProperty(hiddenObject, "hidden", { value: true, enumerable: false });
+  assert.throws(() => canonicalizeBoundedJsonV1(hiddenObject));
+
+  let getterExecuted = false;
+  const accessorObject = {};
+  Object.defineProperty(accessorObject, "unsafe", {
+    get() {
+      getterExecuted = true;
+      return true;
+    },
+    enumerable: true,
+  });
+  assert.throws(() => canonicalizeBoundedJsonV1(accessorObject));
+  assert.equal(getterExecuted, false);
+  assert.notEqual(digestCanonicalJsonV1([null]), digestCanonicalJsonV1({ 0: null }));
+});
+
+test("QF0A-BOUNDS-012B applies byte and entry caps before serialization work", () => {
+  const originalStringify = JSON.stringify;
+  let stringifyCalled = false;
+  JSON.stringify = (...arguments_) => {
+    stringifyCalled = true;
+    return originalStringify(...arguments_);
+  };
+  try {
+    assert.throws(() => canonicalizeBoundedJsonV1("x".repeat(262_145)));
+    assert.equal(stringifyCalled, false);
+  } finally {
+    JSON.stringify = originalStringify;
+  }
+  assert.throws(() => canonicalizeBoundedJsonV1(new Array(10_001)));
 });
 
 test("QF0A-SCOPE-013 defines no candidate, scarcity, release, bank, or learner contract", async () => {
