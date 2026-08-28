@@ -15,11 +15,14 @@ exact head remain read-only evidence; its commit ancestry is not reused.
 The classifier reads exact local Git base/head blobs, parses complete active
 JavaScript and TypeScript family files with the already installed TypeScript
 Compiler API, extracts closed semantic facts, and compares deterministic fact
-multisets. Source locations, comments, whitespace, line wrapping, and harmless
-movement do not create capability. New facts, increased multiplicity, unsafe
-dynamic module loads, materially changed unsafe facts, incomplete comparison,
-blocking parse diagnostics, blob failures, AST-analysis failures, and
-machine-limit overflow fail closed.
+multisets across all changed active source files. Binding-aware identities make
+changed dynamic specifiers, imported or required network aliases, and changed
+direct-call arguments visible while excluding lexically shadowed globals and
+unrelated properties. Source locations, comments, whitespace, line wrapping,
+and harmless cross-file movement do not create capability. New facts,
+increased multiplicity, unsafe dynamic module loads, materially changed unsafe
+facts, incomplete comparison, blocking parse diagnostics, blob failures,
+AST-analysis failures, and machine-limit overflow fail closed.
 
 ## Boundary
 

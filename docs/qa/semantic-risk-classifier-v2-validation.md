@@ -12,9 +12,11 @@ registration. It does not modify workflows or current routing.
 - Detect static imports, exports, import-equals, dynamic import, global require,
   `module.require`, and the closed direct network-call families.
 - Preserve executable template interpolation and import options.
-- Compare deterministic semantic-fact multisets so unrelated edits and harmless
-  movement do not reclassify existing behavior, while a materially changed
-  unsafe fact remains new.
+- Bind dynamic expressions, network-module aliases, and direct-call arguments
+  into semantic identity while excluding lexically shadowed globals.
+- Compare repository-wide deterministic semantic-fact multisets so unrelated
+  edits and harmless cross-file movement do not reclassify existing behavior,
+  while a materially changed unsafe fact remains new.
 - Fail closed on unsafe dynamic specifiers, parse failure, blob failure,
   incomplete comparison, and machine-owned source, fact, Git-time, and
   Git-output limits.

@@ -82,6 +82,10 @@ test("machine contract is exact, bounded, inert, and router-free", async () => {
   assert.equal(contract.scope.routerOrAutomaticMergeAuthorityIncluded, false);
   assert.equal(contract.scope.workflowMutationAllowed, false);
   assert.equal(contract.scope.dependencyOrLockfileMutationAllowed, false);
+  assert.equal(contract.analysis.repositoryWideMultisetComparisonAcrossChangedFiles, true);
+  assert.equal(contract.analysis.bindingAwareDynamicAndDirectCallIdentity, true);
+  assert.equal(contract.analysis.directCallArgumentsBoundIntoIdentity, true);
+  assert.equal(contract.analysis.lexicallyShadowedGlobalsExcluded, true);
   assert.deepEqual(contract.donorEvidence, {
     pullRequest: 852,
     branch: "codex/semantic-risk-classifier-v2",
@@ -227,6 +231,70 @@ test("governed direct network calls are AST facts while unrelated properties rem
   for (const source of unrelated) assertNoSemanticHigh(classifyHead(source), source);
 });
 
+test("binding-aware module and direct-call facts detect changed capability without spelling shortcuts", () => {
+  const changedModuleBinding = classifyHead(
+    'const moduleName = "node:https";\nconst client = await import(moduleName);\n',
+    "lib/future-lane/binding.mjs",
+    'const moduleName = "./local-module";\nconst client = await import(moduleName);\n',
+  );
+  assertSemanticHigh(changedModuleBinding, "dynamic module binding changed");
+
+  const changedInterpolationBinding = classifyHead(
+    'const kind = "https";\nconst client = await import(`node:${kind}`);\n',
+    "lib/future-lane/interpolation.mjs",
+    'const kind = "local";\nconst client = await import(`node:${kind}`);\n',
+  );
+  assertSemanticHigh(changedInterpolationBinding, "template interpolation binding changed");
+
+  const changedAssignment = classifyHead(
+    'let moduleName = "./local-module";\nmoduleName = "node:https";\nconst client = await import(moduleName);\n',
+    "lib/future-lane/assignment.mjs",
+    'let moduleName = "./local-module";\nmoduleName = "./other-local-module";\nconst client = await import(moduleName);\n',
+  );
+  assertSemanticHigh(changedAssignment, "dynamic module assignment changed");
+
+  const importedAlias = classifyHead(
+    'import * as transport from "node:https";\ntransport.request("/resource");\n',
+    "lib/future-lane/alias.mjs",
+    'import * as transport from "node:https";\n',
+  );
+  assertSemanticHigh(importedAlias, "pre-existing governed alias called");
+  assert.equal(importedAlias.introducedFacts.some((entry) => entry.fact.form === "bound_network_property_call"), true);
+
+  const requiredAlias = classifyHead(
+    'const transport = require("node:https");\ntransport.get("/resource");\n',
+    "lib/future-lane/alias.cjs",
+    'const transport = require("node:https");\n',
+  );
+  assertSemanticHigh(requiredAlias, "pre-existing required alias called");
+
+  const assignedAlias = classifyHead(
+    'let transport;\ntransport = require("node:https");\ntransport.request("/resource");\n',
+    "lib/future-lane/assigned-alias.cjs",
+    'let transport;\ntransport = { request() {} };\ntransport.request("/resource");\n',
+  );
+  assertSemanticHigh(assignedAlias, "governed assigned alias called");
+
+  const changedEndpoint = classifyHead(
+    'const endpoint = "https://example.invalid/new";\nfetch(endpoint);\n',
+    "lib/future-lane/fetch.mjs",
+    'const endpoint = "https://example.invalid/old";\nfetch(endpoint);\n',
+  );
+  assertSemanticHigh(changedEndpoint, "existing direct-call endpoint changed");
+});
+
+test("lexically shadowed globals and transports remain inert", () => {
+  const shadowed = [
+    'const fetch = (value) => value; fetch("local");',
+    'const http = { get(value) { return value; } }; http.get("local");',
+    'const module = { require(value) { return value; } }; module.require("https");',
+    'const require = (value) => value; require("https");',
+    'function invoke(http) { return http.request("local"); }',
+    'function invoke(fetch) { return fetch("local"); }',
+  ];
+  for (const source of shadowed) assertNoSemanticHigh(classifyHead(source), source);
+});
+
 test("strings, comments, local loads, arbitrary properties, prose, and near-prefixes stay inert", () => {
   const negativeSources = [
     'const client = await import("./local-module", { with: {} });',
@@ -286,6 +354,10 @@ test("blocking parse diagnostics and machine bounds produce explicit uninspectab
   );
   assert.equal(oversized.complete, false);
   assert.deepEqual(oversized.failures.map((failure) => failure.code), ["SOURCE_SIZE_LIMIT_EXCEEDED"]);
+
+  const deeplyNested = classifyHead(`fetch(${"(".repeat(MACHINE_LIMITS.maximumBindingIdentityDepth + 2)}endpoint${")".repeat(MACHINE_LIMITS.maximumBindingIdentityDepth + 2)});`);
+  assertSemanticHigh(deeplyNested, "binding identity depth limit");
+  assert.equal(deeplyNested.failures.some((failure) => failure.code === "BINDING_IDENTITY_LIMIT_EXCEEDED"), true);
 });
 
 test("repository diff reads exact full blobs and fails closed when exact identities are unavailable", async () => {
@@ -321,6 +393,35 @@ test("repository diff reads exact full blobs and fails closed when exact identit
     assertSemanticHigh(unavailable, "missing exact head");
     assert.deepEqual(unavailable.semanticHighSignals, ["uninspectable_change"]);
     assert.equal(unavailable.failures[0].code, "BASE_HEAD_COMPARISON_INCOMPLETE");
+  } finally {
+    await rm(directory, { recursive: true, force: true });
+  }
+});
+
+test("repository-wide multiset comparison treats cross-file movement as unchanged capability", async () => {
+  const directory = await mkdtemp(path.join(tmpdir(), "semantic-risk-v2-move-"));
+  try {
+    runGit(directory, ["init", "-b", "main"]);
+    runGit(directory, ["config", "user.email", "semantic-risk@example.invalid"]);
+    runGit(directory, ["config", "user.name", "Semantic Risk Test"]);
+    const firstPath = path.join(directory, "first.mjs");
+    const secondPath = path.join(directory, "second.mjs");
+    await writeFile(firstPath, 'import "node:https";\nexport const first = 1;\n', "utf8");
+    await writeFile(secondPath, 'export const second = 2;\n', "utf8");
+    runGit(directory, ["add", "first.mjs", "second.mjs"]);
+    runGit(directory, ["commit", "-m", "base"]);
+    const baseSha = runGit(directory, ["rev-parse", "HEAD"]);
+
+    await writeFile(firstPath, 'export const first = 1;\n', "utf8");
+    await writeFile(secondPath, 'import "node:https";\nexport const second = 2;\n', "utf8");
+    runGit(directory, ["add", "first.mjs", "second.mjs"]);
+    runGit(directory, ["commit", "-m", "head"]);
+    const headSha = runGit(directory, ["rev-parse", "HEAD"]);
+
+    assertNoSemanticHigh(
+      classifyRepositoryDiff({ repoRoot: directory, baseSha, headSha }),
+      "cross-file semantic move",
+    );
   } finally {
     await rm(directory, { recursive: true, force: true });
   }

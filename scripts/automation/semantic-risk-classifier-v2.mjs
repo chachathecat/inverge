@@ -14,6 +14,8 @@ export const MACHINE_LIMITS = Object.freeze({
   maximumChangedActiveSourceFiles: 256,
   maximumSourceBytesPerFile: 1_048_576,
   maximumSemanticFactsPerFile: 10_000,
+  maximumBindingIdentityNodesPerFile: 20_000,
+  maximumBindingIdentityDepth: 32,
   maximumModuleSpecifierCharacters: 512,
   maximumGitCommandMilliseconds: 30_000,
   maximumGitOutputBytes: 4_194_304,
@@ -26,6 +28,13 @@ const PACKAGE_NETWORK_ROOTS = Object.freeze(["undici", "axios", "got", "stripe"]
 const SCOPED_NETWORK_PREFIXES = Object.freeze(["@supabase/", "@stripe/"]);
 const UTF8_DECODER = new TextDecoder("utf-8", { fatal: true });
 const AST_PRINTER = ts.createPrinter({ removeComments: true, newLine: ts.NewLineKind.LineFeed });
+
+class BoundedAnalysisError extends Error {
+  constructor(code) {
+    super(code);
+    this.code = code;
+  }
+}
 
 function compareText(left, right) {
   return left < right ? -1 : left > right ? 1 : 0;
@@ -70,58 +79,303 @@ function factKey(fact) {
   return JSON.stringify([fact.category, fact.form, fact.target]);
 }
 
-function directCallFact(node) {
+function digestIdentity(value) {
+  return createHash("sha256").update(value, "utf8").digest("hex");
+}
+
+function createBoundSourceFile(filePath, sourceText) {
+  const sourceFile = ts.createSourceFile(
+    filePath,
+    sourceText,
+    ts.ScriptTarget.Latest,
+    true,
+    scriptKindForPath(filePath),
+  );
+  if ((sourceFile.parseDiagnostics ?? []).length > 0) return { sourceFile, checker: null };
+
+  const compilerOptions = {
+    allowJs: true,
+    checkJs: false,
+    jsx: ts.JsxEmit.Preserve,
+    module: ts.ModuleKind.ESNext,
+    noLib: true,
+    noResolve: true,
+    target: ts.ScriptTarget.Latest,
+  };
+  const host = {
+    fileExists: (candidate) => candidate === filePath,
+    getCanonicalFileName: (candidate) => candidate,
+    getCurrentDirectory: () => "",
+    getDefaultLibFileName: () => "lib.d.ts",
+    getDirectories: () => [],
+    getNewLine: () => "\n",
+    getSourceFile: (candidate) => candidate === filePath ? sourceFile : undefined,
+    readFile: (candidate) => candidate === filePath ? sourceText : undefined,
+    useCaseSensitiveFileNames: () => true,
+    writeFile: () => {},
+  };
+  const program = ts.createProgram([filePath], compilerOptions, host);
+  return { sourceFile: program.getSourceFile(filePath) ?? sourceFile, checker: program.getTypeChecker() };
+}
+
+function declarationModuleSpecifier(declaration) {
+  let current = declaration;
+  while (current) {
+    if (ts.isImportDeclaration(current) && current.moduleSpecifier) return staticModuleSpecifier(current.moduleSpecifier);
+    if (ts.isImportEqualsDeclaration(current) && ts.isExternalModuleReference(current.moduleReference)) {
+      return staticModuleSpecifier(current.moduleReference.expression);
+    }
+    current = current.parent;
+  }
+  return null;
+}
+
+function createSemanticContext(sourceFile, checker) {
+  const state = { identityNodes: 0, resolvingSymbols: new Set() };
+  const writesBySymbol = new Map();
+  const collectWrites = (node) => {
+    if (ts.isBinaryExpression(node) &&
+        node.operatorToken.kind >= ts.SyntaxKind.FirstAssignment &&
+        node.operatorToken.kind <= ts.SyntaxKind.LastAssignment &&
+        ts.isIdentifier(node.left)) {
+      const symbol = checker.getSymbolAtLocation(node.left);
+      if (symbol) {
+        if (!writesBySymbol.has(symbol)) writesBySymbol.set(symbol, []);
+        writesBySymbol.get(symbol).push(node.right);
+      }
+    }
+    ts.forEachChild(node, collectWrites);
+  };
+  collectWrites(sourceFile);
+
+  const consumeIdentityNode = (depth) => {
+    state.identityNodes += 1;
+    if (state.identityNodes > MACHINE_LIMITS.maximumBindingIdentityNodesPerFile ||
+        depth > MACHINE_LIMITS.maximumBindingIdentityDepth) {
+      throw new BoundedAnalysisError("BINDING_IDENTITY_LIMIT_EXCEEDED");
+    }
+  };
+
+  const printedIdentity = (node) => AST_PRINTER.printNode(ts.EmitHint.Unspecified, node, sourceFile);
+
+  const expressionIdentity = (node, depth = 0) => {
+    if (!node) return "missing";
+    consumeIdentityNode(depth);
+    if (ts.isIdentifier(node)) {
+      const symbol = checker.getSymbolAtLocation(node);
+      if (!symbol) return `global:${node.text}`;
+      return symbolIdentity(symbol, node.text, depth + 1);
+    }
+    const children = [];
+    ts.forEachChild(node, (child) => {
+      children.push(expressionIdentity(child, depth + 1));
+    });
+    return `${ts.SyntaxKind[node.kind]}:${printedIdentity(node)}:[${children.join(",")}]`;
+  };
+
+  const declarationIdentity = (declaration, fallbackName, depth) => {
+    consumeIdentityNode(depth);
+    const moduleSpecifier = declarationModuleSpecifier(declaration);
+    if (moduleSpecifier?.kind === "static") {
+      return `import:${moduleSpecifier.value}:${ts.SyntaxKind[declaration.kind]}:${fallbackName}`;
+    }
+    if (ts.isVariableDeclaration(declaration) || ts.isParameter(declaration) || ts.isPropertyDeclaration(declaration)) {
+      return `${ts.SyntaxKind[declaration.kind]}:${fallbackName}:${expressionIdentity(declaration.initializer, depth + 1)}`;
+    }
+    if (ts.isBindingElement(declaration)) {
+      const variableDeclaration = declaration.parent?.parent;
+      const bindingName = declaration.propertyName ?? declaration.name;
+      const binding = printedIdentity(bindingName);
+      if (variableDeclaration && ts.isVariableDeclaration(variableDeclaration)) {
+        return `binding:${binding}:${expressionIdentity(variableDeclaration.initializer, depth + 1)}`;
+      }
+      return `binding:${binding}:unresolved`;
+    }
+    return `${ts.SyntaxKind[declaration.kind]}:${fallbackName}`;
+  };
+
+  const symbolIdentity = (symbol, fallbackName, depth = 0) => {
+    consumeIdentityNode(depth);
+    if (state.resolvingSymbols.has(symbol)) return `cycle:${fallbackName}`;
+    state.resolvingSymbols.add(symbol);
+    try {
+      const declarations = [...(symbol.declarations ?? [])];
+      const declarationIdentities = declarations
+        .map((declaration) => declarationIdentity(declaration, fallbackName, depth + 1))
+        .sort(compareText);
+      const writeIdentities = (writesBySymbol.get(symbol) ?? [])
+        .map((write) => expressionIdentity(write, depth + 1))
+        .sort(compareText);
+      if (declarationIdentities.length === 0 && writeIdentities.length === 0) {
+        return `symbol:${fallbackName}:unresolved`;
+      }
+      return `${declarationIdentities.join("|")}|writes:${writeIdentities.join("|")}`;
+    } finally {
+      state.resolvingSymbols.delete(symbol);
+    }
+  };
+
+  const callArgumentsIdentity = (argumentsList) => {
+    const identity = [...argumentsList].map((argument) => expressionIdentity(argument)).join("|");
+    return `sha256:${digestIdentity(identity)}`;
+  };
+
+  const networkOriginFromExpression = (expression, seenSymbols = new Set(), depth = 0) => {
+    consumeIdentityNode(depth);
+    if (ts.isParenthesizedExpression(expression) || ts.isAsExpression(expression) ||
+        ts.isTypeAssertionExpression(expression) || ts.isNonNullExpression(expression) ||
+        ts.isSatisfiesExpression(expression)) {
+      return networkOriginFromExpression(expression.expression, seenSymbols, depth + 1);
+    }
+    if (ts.isCallExpression(expression)) {
+      const requireSymbol = ts.isIdentifier(expression.expression)
+        ? checker.getSymbolAtLocation(expression.expression)
+        : null;
+      const isGlobalRequire = ts.isIdentifier(expression.expression) && expression.expression.text === "require" &&
+        (requireSymbol === undefined || (requireSymbol?.declarations ?? []).length === 0);
+      const moduleSymbol = ts.isPropertyAccessExpression(expression.expression) &&
+        ts.isIdentifier(expression.expression.expression)
+        ? checker.getSymbolAtLocation(expression.expression.expression)
+        : null;
+      const isModuleRequire = ts.isPropertyAccessExpression(expression.expression) &&
+        ts.isIdentifier(expression.expression.expression) && expression.expression.expression.text === "module" &&
+        (moduleSymbol === undefined || (moduleSymbol?.declarations ?? []).length === 0) &&
+        expression.expression.name.text === "require";
+      if (isGlobalRequire || isModuleRequire) {
+        const specifier = staticModuleSpecifier(expression.arguments[0]);
+        if (specifier.kind === "static" && isGovernedNetworkModuleSpecifier(specifier.value)) {
+          return { module: specifier.value, member: null };
+        }
+      }
+      return null;
+    }
+    if (ts.isPropertyAccessExpression(expression)) {
+      const parent = networkOriginFromExpression(expression.expression, seenSymbols, depth + 1);
+      return parent ? { module: parent.module, member: [parent.member, expression.name.text].filter(Boolean).join(".") } : null;
+    }
+    if (!ts.isIdentifier(expression)) return null;
+    const symbol = checker.getSymbolAtLocation(expression);
+    if (!symbol || seenSymbols.has(symbol)) return null;
+    seenSymbols.add(symbol);
+    try {
+      for (const declaration of symbol.declarations ?? []) {
+        const moduleSpecifier = declarationModuleSpecifier(declaration);
+        if (moduleSpecifier?.kind === "static" && isGovernedNetworkModuleSpecifier(moduleSpecifier.value)) {
+          let member = null;
+          if (ts.isImportSpecifier(declaration)) member = (declaration.propertyName ?? declaration.name).text;
+          return { module: moduleSpecifier.value, member };
+        }
+        if (ts.isVariableDeclaration(declaration) && declaration.initializer) {
+          const origin = networkOriginFromExpression(declaration.initializer, seenSymbols, depth + 1);
+          if (origin) return origin;
+        }
+        if (ts.isBindingElement(declaration)) {
+          const variableDeclaration = declaration.parent?.parent;
+          if (variableDeclaration && ts.isVariableDeclaration(variableDeclaration) && variableDeclaration.initializer) {
+            const origin = networkOriginFromExpression(variableDeclaration.initializer, seenSymbols, depth + 1);
+            if (origin) {
+              const member = printedIdentity(declaration.propertyName ?? declaration.name);
+              return { module: origin.module, member: [origin.member, member].filter(Boolean).join(".") };
+            }
+          }
+        }
+      }
+      for (const write of writesBySymbol.get(symbol) ?? []) {
+        const origin = networkOriginFromExpression(write, seenSymbols, depth + 1);
+        if (origin) return origin;
+      }
+      return null;
+    } finally {
+      seenSymbols.delete(symbol);
+    }
+  };
+
+  return { callArgumentsIdentity, checker, expressionIdentity, networkOriginFromExpression };
+}
+
+function directFactTarget(target, node, context) {
+  return `${target}|arguments:${context.callArgumentsIdentity(node.arguments ?? [])}`;
+}
+
+function isUnshadowedIdentifier(identifier, context) {
+  if (!ts.isIdentifier(identifier)) return false;
+  const symbol = context.checker.getSymbolAtLocation(identifier);
+  return symbol === undefined || (symbol.declarations ?? []).length === 0;
+}
+
+function directCallFact(node, context) {
   const expression = node.expression;
   const identifierNames = new Set(["fetch", "WebSocket", "EventSource", "createClient", "postgres"]);
-  if (ts.isIdentifier(expression) && identifierNames.has(expression.text)) {
-    return canonicalFact("direct_network_call", "global_call", expression.text);
+  if (ts.isIdentifier(expression) && identifierNames.has(expression.text) && isUnshadowedIdentifier(expression, context)) {
+    return canonicalFact("direct_network_call", "global_call", directFactTarget(expression.text, node, context));
   }
 
+  if (ts.isIdentifier(expression)) {
+    const origin = context.networkOriginFromExpression(expression);
+    if (origin) {
+      const target = `${origin.module}${origin.member ? `#${origin.member}` : ""}`;
+      return canonicalFact("direct_network_call", "bound_network_call", directFactTarget(target, node, context));
+    }
+  }
   if (!ts.isPropertyAccessExpression(expression)) return null;
   const owner = expression.expression;
   const member = expression.name.text;
-  if (ts.isIdentifier(owner) && owner.text === "navigator" && member === "sendBeacon") {
-    return canonicalFact("direct_network_call", "global_property_call", "navigator.sendBeacon");
+  if (ts.isIdentifier(owner) && owner.text === "navigator" && member === "sendBeacon" &&
+      isUnshadowedIdentifier(owner, context)) {
+    return canonicalFact("direct_network_call", "global_property_call", directFactTarget("navigator.sendBeacon", node, context));
   }
-  if (ts.isIdentifier(owner) && ["http", "https"].includes(owner.text) && ["get", "request"].includes(member)) {
-    return canonicalFact("direct_network_call", "node_transport_call", `${owner.text}.${member}`);
+  if (ts.isIdentifier(owner) && ["http", "https"].includes(owner.text) && ["get", "request"].includes(member) &&
+      isUnshadowedIdentifier(owner, context)) {
+    return canonicalFact("direct_network_call", "node_transport_call", directFactTarget(`${owner.text}.${member}`, node, context));
   }
   if (ts.isIdentifier(owner) && ["globalThis", "window", "self"].includes(owner.text) &&
-      ["fetch", "WebSocket", "EventSource"].includes(member)) {
-    return canonicalFact("direct_network_call", "explicit_global_call", `${owner.text}.${member}`);
+      ["fetch", "WebSocket", "EventSource"].includes(member) && isUnshadowedIdentifier(owner, context)) {
+    return canonicalFact("direct_network_call", "explicit_global_call", directFactTarget(`${owner.text}.${member}`, node, context));
+  }
+  const origin = context.networkOriginFromExpression(owner);
+  if (origin) {
+    const target = `${origin.module}${origin.member ? `#${origin.member}` : ""}.${member}`;
+    return canonicalFact("direct_network_call", "bound_network_property_call", directFactTarget(target, node, context));
   }
   return null;
 }
 
-function directConstructionFact(node) {
+function directConstructionFact(node, context) {
   const expression = node.expression;
-  if (ts.isIdentifier(expression) && ["WebSocket", "EventSource"].includes(expression.text)) {
-    return canonicalFact("direct_network_call", "global_construct", expression.text);
+  if (ts.isIdentifier(expression) && ["WebSocket", "EventSource"].includes(expression.text) &&
+      isUnshadowedIdentifier(expression, context)) {
+    return canonicalFact("direct_network_call", "global_construct", directFactTarget(expression.text, node, context));
   }
   if (ts.isPropertyAccessExpression(expression) && ts.isIdentifier(expression.expression) &&
       ["globalThis", "window", "self"].includes(expression.expression.text) &&
-      ["WebSocket", "EventSource"].includes(expression.name.text)) {
+      ["WebSocket", "EventSource"].includes(expression.name.text) &&
+      isUnshadowedIdentifier(expression.expression, context)) {
     return canonicalFact(
       "direct_network_call",
       "explicit_global_construct",
-      `${expression.expression.text}.${expression.name.text}`,
+      directFactTarget(`${expression.expression.text}.${expression.name.text}`, node, context),
     );
+  }
+  const origin = context.networkOriginFromExpression(expression);
+  if (origin) {
+    const target = `${origin.module}${origin.member ? `#${origin.member}` : ""}`;
+    return canonicalFact("direct_network_call", "bound_network_construct", directFactTarget(target, node, context));
   }
   return null;
 }
 
-function unsafeSpecifierIdentity(argument, sourceFile) {
+function unsafeSpecifierIdentity(argument, context) {
   if (!argument) return "missing_first_argument";
-  const printed = AST_PRINTER.printNode(ts.EmitHint.Expression, argument, sourceFile);
-  const digest = createHash("sha256").update(printed, "utf8").digest("hex");
+  const identity = context.expressionIdentity(argument);
+  const digest = digestIdentity(identity);
   return `${ts.SyntaxKind[argument.kind]}:sha256:${digest}`;
 }
 
-function moduleLoadFact(form, argument, sourceFile) {
+function moduleLoadFact(form, argument, context) {
   if (!argument) return canonicalFact("unsafe_module_load", form, "unresolved_first_argument");
   const resolved = staticModuleSpecifier(argument);
   if (resolved.kind !== "static") {
-    return canonicalFact("unsafe_module_load", form, unsafeSpecifierIdentity(argument, sourceFile));
+    return canonicalFact("unsafe_module_load", form, unsafeSpecifierIdentity(argument, context));
   }
   if (!isGovernedNetworkModuleSpecifier(resolved.value)) return null;
   return canonicalFact("network_module_load", form, resolved.value);
@@ -139,16 +393,14 @@ function extractSemanticFactsUnchecked(filePath, sourceText) {
     return { complete: false, facts: [], failures: [parseFailure(filePath, "SOURCE_SIZE_LIMIT_EXCEEDED")] };
   }
 
-  const sourceFile = ts.createSourceFile(
-    filePath,
-    sourceText,
-    ts.ScriptTarget.Latest,
-    true,
-    scriptKindForPath(filePath),
-  );
+  const { sourceFile, checker } = createBoundSourceFile(filePath, sourceText);
   if ((sourceFile.parseDiagnostics ?? []).length > 0) {
     return { complete: false, facts: [], failures: [parseFailure(filePath, "BLOCKING_PARSE_DIAGNOSTIC")] };
   }
+  if (!checker) {
+    return { complete: false, facts: [], failures: [parseFailure(filePath, "AST_BINDING_FAILED")] };
+  }
+  const context = createSemanticContext(sourceFile, checker);
 
   const facts = [];
   let limitExceeded = false;
@@ -168,27 +420,29 @@ function extractSemanticFactsUnchecked(filePath, sourceText) {
       addFact(moduleLoadFact(
         node.importClause ? "static_import" : "side_effect_import",
         node.moduleSpecifier,
-        sourceFile,
+        context,
       ));
     } else if (ts.isExportDeclaration(node) && node.moduleSpecifier) {
-      addFact(moduleLoadFact("static_export_from", node.moduleSpecifier, sourceFile));
+      addFact(moduleLoadFact("static_export_from", node.moduleSpecifier, context));
     } else if (ts.isImportEqualsDeclaration(node) && ts.isExternalModuleReference(node.moduleReference)) {
-      addFact(moduleLoadFact("typescript_import_equals", node.moduleReference.expression, sourceFile));
+      addFact(moduleLoadFact("typescript_import_equals", node.moduleReference.expression, context));
     } else if (ts.isCallExpression(node)) {
       if (node.expression.kind === ts.SyntaxKind.ImportKeyword) {
-        addFact(moduleLoadFact("dynamic_import", node.arguments[0], sourceFile));
-      } else if (ts.isIdentifier(node.expression) && node.expression.text === "require") {
-        addFact(moduleLoadFact("global_require", node.arguments[0], sourceFile));
+        addFact(moduleLoadFact("dynamic_import", node.arguments[0], context));
+      } else if (ts.isIdentifier(node.expression) && node.expression.text === "require" &&
+          isUnshadowedIdentifier(node.expression, context)) {
+        addFact(moduleLoadFact("global_require", node.arguments[0], context));
       } else if (ts.isPropertyAccessExpression(node.expression) &&
           ts.isIdentifier(node.expression.expression) &&
           node.expression.expression.text === "module" &&
-          node.expression.name.text === "require") {
-        addFact(moduleLoadFact("module_require", node.arguments[0], sourceFile));
+          node.expression.name.text === "require" &&
+          isUnshadowedIdentifier(node.expression.expression, context)) {
+        addFact(moduleLoadFact("module_require", node.arguments[0], context));
       } else {
-        addFact(directCallFact(node));
+        addFact(directCallFact(node, context));
       }
     } else if (ts.isNewExpression(node)) {
-      addFact(directConstructionFact(node));
+      addFact(directConstructionFact(node, context));
     }
 
     ts.forEachChild(node, visit);
@@ -205,8 +459,9 @@ function extractSemanticFactsUnchecked(filePath, sourceText) {
 export function extractSemanticFacts(filePath, sourceText) {
   try {
     return extractSemanticFactsUnchecked(filePath, sourceText);
-  } catch {
-    return { complete: false, facts: [], failures: [parseFailure(filePath, "AST_ANALYSIS_FAILED")] };
+  } catch (error) {
+    const code = error instanceof BoundedAnalysisError ? error.code : "AST_ANALYSIS_FAILED";
+    return { complete: false, facts: [], failures: [parseFailure(filePath, code)] };
   }
 }
 
@@ -230,6 +485,29 @@ export function compareSemanticFactMultisets(baseFacts, headFacts) {
     if (delta > 0) introduced.push({ fact: head.factsByKey.get(key), count: delta });
   }
   return introduced;
+}
+
+function compareRepositorySemanticFactMultisets(files) {
+  const baseFacts = files.flatMap((file) => file.baseFacts);
+  const headFacts = files.flatMap((file) => file.headFacts);
+  const introduced = compareSemanticFactMultisets(baseFacts, headFacts);
+  const headPathsByKey = new Map();
+  for (const file of files) {
+    for (const fact of file.headFacts) {
+      const key = factKey(fact);
+      if (!headPathsByKey.has(key)) headPathsByKey.set(key, []);
+      headPathsByKey.get(key).push(file.path);
+    }
+  }
+  for (const paths of headPathsByKey.values()) paths.sort(compareText);
+
+  const introducedByPath = new Map(files.map((file) => [file.path, []]));
+  for (const entry of introduced) {
+    const paths = headPathsByKey.get(factKey(entry.fact)) ?? [];
+    const path = paths[0];
+    if (path) introducedByPath.get(path).push(entry);
+  }
+  return files.map((file) => ({ path: file.path, introducedFacts: introducedByPath.get(file.path) ?? [] }));
 }
 
 function integrationBoundary(hasSemanticHigh) {
@@ -380,7 +658,7 @@ export function classifyRepositoryDiff({ repoRoot = process.cwd(), baseSha, head
     return incompleteRepositoryReport(baseSha, headSha, "CHANGED_ACTIVE_SOURCE_FILE_LIMIT_EXCEEDED");
   }
 
-  const files = [];
+  const analyzed = [];
   const failures = [];
   for (const record of activeRecords.sort((left, right) => compareText(left.headPath, right.headPath))) {
     if (!safeRepositoryPath(record.basePath) || !safeRepositoryPath(record.headPath)) {
@@ -423,12 +701,16 @@ export function classifyRepositoryDiff({ repoRoot = process.cwd(), baseSha, head
       );
       continue;
     }
-    files.push({
+    analyzed.push({
       path: comparisonPath,
-      introducedFacts: compareSemanticFactMultisets(base.facts, head.facts),
+      baseFacts: base.facts,
+      headFacts: head.facts,
     });
   }
 
+  const files = failures.length === 0
+    ? compareRepositorySemanticFactMultisets(analyzed)
+    : analyzed.map((file) => ({ path: file.path, introducedFacts: [] }));
   return reportFor({ baseSha, headSha, files, failures });
 }
 
