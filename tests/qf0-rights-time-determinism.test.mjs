@@ -30,6 +30,30 @@ const POLICY_DIGEST = `sha256:${"a".repeat(64)}`;
 const DIGEST_B = `sha256:${"b".repeat(64)}`;
 const DIGEST_C = `sha256:${"c".repeat(64)}`;
 const EVALUATED_AT = "2026-08-28T03:00:00.000Z";
+const MAX_CANONICAL_BYTES = 262_144;
+
+function captureRejectedStringInspection(operation) {
+  const descriptor = Object.getOwnPropertyDescriptor(String.prototype, "charCodeAt");
+  assert.ok(descriptor && typeof descriptor.value === "function");
+  let inspections = 0;
+  let rejection;
+  Object.defineProperty(String.prototype, "charCodeAt", {
+    ...descriptor,
+    value(index) {
+      inspections += 1;
+      return Reflect.apply(descriptor.value, this, [index]);
+    },
+  });
+  try {
+    operation();
+  } catch (error) {
+    rejection = error;
+  } finally {
+    Object.defineProperty(String.prototype, "charCodeAt", descriptor);
+  }
+  assert.ok(rejection instanceof Error, "operation must reject");
+  return { inspections, rejection };
+}
 
 function manifest(overrides = {}) {
   return createRightsManifestRefV1({
@@ -84,6 +108,7 @@ test("QF0A-CONTRACT-001 fixes the exact trust-only six-path contract", async () 
     ),
   );
   assert.equal(contract.contractVersion, QF0A_CONTRACT_VERSION);
+  assert.equal(contract.determinism.maximumCanonicalBytes, MAX_CANONICAL_BYTES);
   assert.deepEqual(contract.contractsExactly, [
     "RightsManifestRefV1",
     "SourceEligibilityDecisionV1",
@@ -245,6 +270,19 @@ test("QF0A-DETERMINISM-008 repeats byte-identical normalized output and digests"
   assert.equal(first, second);
   assert.equal(digestCanonicalJsonV1(input), digestCanonicalJsonV1(input));
   assert.equal(compareUtf8BytesV1("z", "ä"), -1);
+  assert.equal(first, '{"a":{"alpha":null,"β":true},"z":1,"ä":2}');
+  assert.equal(
+    digestCanonicalJsonV1(input),
+    "sha256:47bfb996512d74f9214b232b721f043944e631221371e6323645a4f0ae8a9caf",
+  );
+  assert.equal(
+    manifest().manifestDigest,
+    "sha256:40127413aa7a4e71128949823b1789d42bba2e3c9a7d80e8e1a5d2aa06aa87a7",
+  );
+  assert.equal(
+    decision().decisionDigest,
+    "sha256:24d1c7f1b614b722d2d2982def552eb858029b82827606abe910a0fc89f5b4da",
+  );
 });
 
 test("QF0A-DETERMINISM-009 ignores object insertion order", () => {
@@ -386,6 +424,157 @@ test("QF0A-BOUNDS-012B applies byte and entry caps before serialization work", (
     JSON.stringify = originalStringify;
   }
   assert.throws(() => canonicalizeBoundedJsonV1(new Array(10_001)));
+});
+
+test("QF0A-CAPPED-015 bounds ASCII, BMP, and surrogate-pair rejection work", () => {
+  const cases = [
+    {
+      label: "ASCII",
+      value: "a".repeat(MAX_CANONICAL_BYTES * 4),
+      expectedInspections: MAX_CANONICAL_BYTES - 1,
+      maximumInspections: MAX_CANONICAL_BYTES + 1,
+    },
+    {
+      label: "BMP",
+      value: "\u0800".repeat(MAX_CANONICAL_BYTES * 2),
+      expectedInspections: Math.floor((MAX_CANONICAL_BYTES - 2) / 3) + 1,
+      maximumInspections: Math.ceil(MAX_CANONICAL_BYTES / 3) + 1,
+    },
+    {
+      label: "SURROGATE_PAIR",
+      value: "😀".repeat(MAX_CANONICAL_BYTES),
+      expectedInspections: 2 * (Math.floor((MAX_CANONICAL_BYTES - 2) / 4) + 1),
+      maximumInspections: Math.ceil(MAX_CANONICAL_BYTES / 2) + 1,
+    },
+  ];
+  for (const { label, value, expectedInspections, maximumInspections } of cases) {
+    assert.ok(value.length > MAX_CANONICAL_BYTES, label);
+    const { inspections, rejection } = captureRejectedStringInspection(() =>
+      canonicalizeBoundedJsonV1(value),
+    );
+    assert.match(rejection.message, /CANONICAL_BYTE_LIMIT_EXCEEDED/, label);
+    assert.equal(inspections, expectedInspections, label);
+    assert.ok(inspections <= maximumInspections, `${label}: ${inspections}`);
+    assert.ok(inspections < value.length, label);
+  }
+});
+
+test("QF0A-CAPPED-016 rejects malformed surrogates without scanning beyond the cap", () => {
+  for (const malformed of ["prefix\ud800suffix", "prefix\udfffsuffix"]) {
+    const { inspections, rejection } = captureRejectedStringInspection(() =>
+      canonicalizeBoundedJsonV1(malformed),
+    );
+    assert.match(rejection.message, /UNPAIRED_SURROGATE/);
+    assert.ok(inspections <= "prefix".length + 2);
+  }
+
+  const malformedAfterCap = `${"a".repeat(MAX_CANONICAL_BYTES * 2)}\ud800`;
+  const { inspections, rejection } = captureRejectedStringInspection(() =>
+    canonicalizeBoundedJsonV1(malformedAfterCap),
+  );
+  assert.match(rejection.message, /CANONICAL_BYTE_LIMIT_EXCEEDED/);
+  assert.equal(inspections, MAX_CANONICAL_BYTES - 1);
+  assert.ok(inspections <= MAX_CANONICAL_BYTES + 1);
+  assert.ok(inspections < malformedAfterCap.indexOf("\ud800"));
+});
+
+test("QF0A-CAPPED-017 applies one cumulative capped budget to object keys", () => {
+  const oversizedKey = "k".repeat(MAX_CANONICAL_BYTES * 2);
+  const oversizedKeyObject = Object.create(null);
+  Object.defineProperty(oversizedKeyObject, oversizedKey, {
+    value: true,
+    enumerable: true,
+  });
+  const oversizedResult = captureRejectedStringInspection(() =>
+    canonicalizeBoundedJsonV1(oversizedKeyObject),
+  );
+  assert.match(oversizedResult.rejection.message, /CANONICAL_BYTE_LIMIT_EXCEEDED/);
+  assert.ok(oversizedResult.inspections <= MAX_CANONICAL_BYTES + 1);
+  assert.ok(oversizedResult.inspections < oversizedKey.length);
+
+  const manyKeys = Object.create(null);
+  let aggregateKeyCodeUnits = 0;
+  for (let index = 0; index < 9_000; index += 1) {
+    const key = `key_${String(index).padStart(4, "0")}_${"x".repeat(22)}`;
+    aggregateKeyCodeUnits += key.length;
+    Object.defineProperty(manyKeys, key, { value: null, enumerable: true });
+  }
+  assert.ok(aggregateKeyCodeUnits > MAX_CANONICAL_BYTES);
+  const aggregateResult = captureRejectedStringInspection(() =>
+    canonicalizeBoundedJsonV1(manyKeys),
+  );
+  assert.match(aggregateResult.rejection.message, /CANONICAL_BYTE_LIMIT_EXCEEDED/);
+  assert.ok(aggregateResult.inspections <= MAX_CANONICAL_BYTES);
+  assert.ok(aggregateResult.inspections < aggregateKeyCodeUnits);
+});
+
+test("QF0A-CAPPED-018 gates comparator encoding behind capped inspection", () => {
+  const descriptor = Object.getOwnPropertyDescriptor(TextEncoder.prototype, "encode");
+  assert.ok(descriptor && typeof descriptor.value === "function");
+  let nativeEncodes = 0;
+  Object.defineProperty(TextEncoder.prototype, "encode", {
+    ...descriptor,
+    value(...arguments_) {
+      nativeEncodes += 1;
+      return Reflect.apply(descriptor.value, this, arguments_);
+    },
+  });
+  let result;
+  try {
+    result = captureRejectedStringInspection(() =>
+      compareUtf8BytesV1("c".repeat(MAX_CANONICAL_BYTES * 2), "safe"),
+    );
+  } finally {
+    Object.defineProperty(TextEncoder.prototype, "encode", descriptor);
+  }
+  assert.match(result.rejection.message, /CANONICAL_BYTE_LIMIT_EXCEEDED/);
+  assert.equal(result.inspections, MAX_CANONICAL_BYTES + 1);
+  assert.equal(nativeEncodes, 0);
+});
+
+test("QF0A-CAPPED-019 accounts exactly for JSON escapes at the boundary", () => {
+  const escaped = '"\\\b\t\n\f\r\u0000';
+  const escapedCanonical = canonicalizeBoundedJsonV1(escaped);
+  assert.equal(escapedCanonical, JSON.stringify(escaped));
+  assert.equal(new TextEncoder().encode(escapedCanonical).length, 22);
+
+  const escapedTwoByteCount = (MAX_CANONICAL_BYTES - 2) / 2;
+  const quoteBoundary = '"'.repeat(escapedTwoByteCount);
+  assert.equal(
+    new TextEncoder().encode(canonicalizeBoundedJsonV1(quoteBoundary)).length,
+    MAX_CANONICAL_BYTES,
+  );
+  assert.throws(() => canonicalizeBoundedJsonV1(`${quoteBoundary}"`));
+
+  const backslashBoundary = "\\".repeat(escapedTwoByteCount);
+  assert.equal(
+    new TextEncoder().encode(canonicalizeBoundedJsonV1(backslashBoundary)).length,
+    MAX_CANONICAL_BYTES,
+  );
+  assert.throws(() => canonicalizeBoundedJsonV1(`${backslashBoundary}\\`));
+
+  const sixByteControlCount = Math.floor((MAX_CANONICAL_BYTES - 2) / 6);
+  const controlBoundary = `${"\u0000".repeat(sixByteControlCount)}aa`;
+  assert.equal(
+    new TextEncoder().encode(canonicalizeBoundedJsonV1(controlBoundary)).length,
+    MAX_CANONICAL_BYTES,
+  );
+  assert.throws(() => canonicalizeBoundedJsonV1(`${controlBoundary}a`));
+});
+
+test("QF0A-CAPPED-020 preserves deterministic valid identities at the exact cap", () => {
+  const boundaryValues = [
+    "a".repeat(MAX_CANONICAL_BYTES - 2),
+    `${"\u0800".repeat(87_380)}\u0080`,
+    `${"😀".repeat(65_535)}\u0080`,
+  ];
+  for (const value of boundaryValues) {
+    const first = canonicalizeBoundedJsonV1(value);
+    const second = canonicalizeBoundedJsonV1(value);
+    assert.equal(new TextEncoder().encode(first).length, MAX_CANONICAL_BYTES);
+    assert.equal(first, second);
+    assert.equal(digestCanonicalJsonV1(value), digestCanonicalJsonV1(value));
+  }
 });
 
 test("QF0A-SCOPE-013 defines no candidate, scarcity, release, bank, or learner contract", async () => {

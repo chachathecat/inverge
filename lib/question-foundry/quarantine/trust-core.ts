@@ -42,35 +42,55 @@ function plainRecord(value: unknown, label: string): Record<string, unknown> {
   return value as Record<string, unknown>;
 }
 
-function assertWellFormedUnicode(value: string, label: string): void {
+type StringByteMode = "RAW_UTF8" | "JSON_STRING";
+
+function inspectStringBytesBounded(
+  value: string,
+  label: string,
+  mode: StringByteMode,
+  remainingBytes: number,
+): number {
+  if (!Number.isSafeInteger(remainingBytes) || remainingBytes < 0) {
+    fail("CANONICAL_BYTE_BUDGET_INVALID");
+  }
+  let bytes = mode === "JSON_STRING" ? 2 : 0;
+  if (bytes > remainingBytes) fail("CANONICAL_BYTE_LIMIT_EXCEEDED");
   for (let index = 0; index < value.length; index += 1) {
     const codeUnit = value.charCodeAt(index);
+    let byteCost: number;
     if (codeUnit >= 0xd800 && codeUnit <= 0xdbff) {
       const nextCodeUnit = value.charCodeAt(index + 1);
       if (!(nextCodeUnit >= 0xdc00 && nextCodeUnit <= 0xdfff)) {
         fail(`${label}_UNPAIRED_SURROGATE`);
       }
+      byteCost = 4;
       index += 1;
-      continue;
-    }
-    if (codeUnit >= 0xdc00 && codeUnit <= 0xdfff) {
+    } else if (codeUnit >= 0xdc00 && codeUnit <= 0xdfff) {
       fail(`${label}_UNPAIRED_SURROGATE`);
+    } else if (mode === "JSON_STRING" && (codeUnit === 0x22 || codeUnit === 0x5c)) {
+      byteCost = 2;
+    } else if (
+      mode === "JSON_STRING" &&
+      (codeUnit === 0x08 ||
+        codeUnit === 0x09 ||
+        codeUnit === 0x0a ||
+        codeUnit === 0x0c ||
+        codeUnit === 0x0d)
+    ) {
+      byteCost = 2;
+    } else if (mode === "JSON_STRING" && codeUnit <= 0x1f) {
+      byteCost = 6;
+    } else if (codeUnit <= 0x7f) {
+      byteCost = 1;
+    } else if (codeUnit <= 0x7ff) {
+      byteCost = 2;
+    } else {
+      byteCost = 3;
     }
-  }
-}
-
-function utf8ByteLengthBounded(value: string, label: string): number {
-  assertWellFormedUnicode(value, label);
-  let bytes = 0;
-  for (let index = 0; index < value.length; index += 1) {
-    const codeUnit = value.charCodeAt(index);
-    if (codeUnit <= 0x7f) bytes += 1;
-    else if (codeUnit <= 0x7ff) bytes += 2;
-    else if (codeUnit >= 0xd800 && codeUnit <= 0xdbff) {
-      bytes += 4;
-      index += 1;
-    } else bytes += 3;
-    if (bytes > MAX_CANONICAL_BYTES) fail("CANONICAL_BYTE_LIMIT_EXCEEDED");
+    if (byteCost > remainingBytes - bytes) {
+      fail("CANONICAL_BYTE_LIMIT_EXCEEDED");
+    }
+    bytes += byteCost;
   }
   return bytes;
 }
@@ -87,8 +107,8 @@ function compareEncodedBytes(left: Uint8Array, right: Uint8Array): number {
 }
 
 export function compareUtf8BytesV1(left: string, right: string): number {
-  utf8ByteLengthBounded(left, "UTF8_LEFT");
-  utf8ByteLengthBounded(right, "UTF8_RIGHT");
+  inspectStringBytesBounded(left, "UTF8_LEFT", "RAW_UTF8", MAX_CANONICAL_BYTES);
+  inspectStringBytesBounded(right, "UTF8_RIGHT", "RAW_UTF8", MAX_CANONICAL_BYTES);
   const leftBytes = UTF8.encode(left);
   const rightBytes = UTF8.encode(right);
   return compareEncodedBytes(leftBytes, rightBytes);
@@ -111,7 +131,6 @@ function ownEnumerableDataKeys(value: object, label: string): string[] {
     ) {
       fail(`${label}_PROPERTY_DESCRIPTOR_UNSUPPORTED`);
     }
-    assertWellFormedUnicode(key, `${label}_KEY`);
   }
   return keys as string[];
 }
@@ -122,7 +141,18 @@ function assertExactKeys(
   label: string,
 ): Record<string, unknown> {
   const candidate = plainRecord(value, label);
-  const actual = ownEnumerableDataKeys(candidate, label).sort(compareUtf8BytesV1);
+  const actual = ownEnumerableDataKeys(candidate, label);
+  let remainingKeyBytes = MAX_CANONICAL_BYTES;
+  for (const key of actual) {
+    const byteLength = inspectStringBytesBounded(
+      key,
+      `${label}_KEY`,
+      "RAW_UTF8",
+      remainingKeyBytes,
+    );
+    remainingKeyBytes -= byteLength;
+  }
+  actual.sort(compareUtf8BytesV1);
   const expected = [...expectedKeys].sort(compareUtf8BytesV1);
   if (JSON.stringify(actual) !== JSON.stringify(expected)) {
     fail(`${label}_FIELDS_MISMATCH`);
@@ -139,7 +169,7 @@ function assertText(value: unknown, label: string): asserts value is string {
   ) {
     fail(`${label}_INVALID`);
   }
-  assertWellFormedUnicode(value, label);
+  inspectStringBytesBounded(value, label, "RAW_UTF8", MAX_CANONICAL_BYTES);
 }
 
 function assertDigest(value: unknown, label: string): asserts value is string {
@@ -186,34 +216,17 @@ function appendCanonicalChunk(
   state.chunks.push(chunk);
 }
 
-function jsonStringByteLengthBounded(value: string, label: string): number {
-  assertWellFormedUnicode(value, label);
-  let bytes = 2;
-  for (let index = 0; index < value.length; index += 1) {
-    const codeUnit = value.charCodeAt(index);
-    if (codeUnit === 0x22 || codeUnit === 0x5c) bytes += 2;
-    else if ([0x08, 0x09, 0x0a, 0x0c, 0x0d].includes(codeUnit)) bytes += 2;
-    else if (codeUnit <= 0x1f) bytes += 6;
-    else if (codeUnit <= 0x7f) bytes += 1;
-    else if (codeUnit <= 0x7ff) bytes += 2;
-    else if (codeUnit >= 0xd800 && codeUnit <= 0xdbff) {
-      bytes += 4;
-      index += 1;
-    } else bytes += 3;
-    if (bytes > MAX_CANONICAL_BYTES) fail("CANONICAL_BYTE_LIMIT_EXCEEDED");
-  }
-  return bytes;
-}
-
 function appendCanonicalString(
   state: CanonicalState,
   value: string,
   label: string,
 ): void {
-  const byteLength = jsonStringByteLengthBounded(value, label);
-  if (state.bytes + byteLength > MAX_CANONICAL_BYTES) {
-    fail("CANONICAL_BYTE_LIMIT_EXCEEDED");
-  }
+  const byteLength = inspectStringBytesBounded(
+    value,
+    label,
+    "JSON_STRING",
+    MAX_CANONICAL_BYTES - state.bytes,
+  );
   appendCanonicalChunk(state, JSON.stringify(value), byteLength);
 }
 
@@ -314,30 +327,30 @@ function appendCanonicalJsonValue(
     if (state.entries > MAX_CANONICAL_ENTRIES) {
       fail("CANONICAL_ENTRY_LIMIT_EXCEEDED");
     }
-    const measuredKeys = keys.map((key) => {
-      const serializedByteLength = jsonStringByteLengthBounded(
+    appendCanonicalChunk(state, "{");
+    let remainingKeyBytes = MAX_CANONICAL_BYTES - state.bytes - 1;
+    if (remainingKeyBytes < 0) fail("CANONICAL_BYTE_LIMIT_EXCEEDED");
+    const measuredKeys: Array<{ key: string; serializedByteLength: number }> = [];
+    for (const [index, key] of keys.entries()) {
+      const structuralBytes = 1 + (index > 0 ? 1 : 0);
+      if (structuralBytes > remainingKeyBytes) {
+        fail("CANONICAL_BYTE_LIMIT_EXCEEDED");
+      }
+      remainingKeyBytes -= structuralBytes;
+      const serializedByteLength = inspectStringBytesBounded(
         key,
         `JSON_KEY_AT_${path}`,
+        "JSON_STRING",
+        remainingKeyBytes,
       );
-      return {
-        key,
-        serializedByteLength,
-      };
-    });
-    const keyStructureBytes = measuredKeys.reduce(
-      (total, key, index) =>
-        total + key.serializedByteLength + 1 + (index > 0 ? 1 : 0),
-      0,
-    );
-    if (state.bytes + 2 + keyStructureBytes > MAX_CANONICAL_BYTES) {
-      fail("CANONICAL_BYTE_LIMIT_EXCEEDED");
+      remainingKeyBytes -= serializedByteLength;
+      measuredKeys.push({ key, serializedByteLength });
     }
     const sortableKeys = measuredKeys.map((key) => ({
       ...key,
       encoded: UTF8.encode(key.key),
     }));
     sortableKeys.sort((left, right) => compareEncodedBytes(left.encoded, right.encoded));
-    appendCanonicalChunk(state, "{");
     sortableKeys.forEach(({ key, serializedByteLength }, index) => {
       if (index > 0) appendCanonicalChunk(state, ",");
       appendCanonicalChunk(state, JSON.stringify(key), serializedByteLength);
