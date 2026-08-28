@@ -165,6 +165,12 @@ export function declaredLaneRiskFromBody(body) {
   return match?.[1] ?? "INVALID";
 }
 
+export function resolveDeclaredLaneRisk(eventBody, environment = process.env) {
+  if (Object.hasOwn(environment, "DECLARED_LANE_RISK")) return environment.DECLARED_LANE_RISK;
+  if (Object.hasOwn(environment, "CHANGED_FILES")) return null;
+  return declaredLaneRiskFromBody(eventBody);
+}
+
 export function classify(files, signals = [], contract = loadRouterContract(), options = {}) {
   const inputFiles = Array.isArray(files) ? files : [];
   const pathRecords = inputFiles.map((file) => pathClassification(file, contract));
@@ -343,8 +349,7 @@ export function runClassifier() {
   const contract = loadRouterContract();
   const changedFiles = getChangedFiles();
   const event = readEvent();
-  const declaredLaneRisk = process.env.DECLARED_LANE_RISK
-    ?? declaredLaneRiskFromBody(event?.pull_request?.body);
+  const declaredLaneRisk = resolveDeclaredLaneRisk(event?.pull_request?.body);
   const classification = classify(changedFiles, getSignals(), contract, { declaredLaneRisk });
   const result = {
     version: 2,

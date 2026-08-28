@@ -8,6 +8,7 @@ import {
   evaluateMediumSourceOnlyEligibility,
   loadRouterContract,
   normalizeRepositoryPath,
+  resolveDeclaredLaneRisk,
 } from "../scripts/automation/classify-risk.mjs";
 import {
   evaluateAutomaticMergeEvidence,
@@ -216,6 +217,18 @@ test("signals and lane declarations only raise the computed floor", () => {
     "FAST_DELIVERY_ROUTER_V2_LITE_DECLARED_RISK LOW",
     "FAST_DELIVERY_ROUTER_V2_LITE_DECLARED_RISK HIGH",
   ].join("\n")), "INVALID");
+  assert.equal(resolveDeclaredLaneRisk(
+    "FAST_DELIVERY_ROUTER_V2_LITE_DECLARED_RISK HIGH",
+    { CHANGED_FILES: "docs/qa/sample.md" },
+  ), null);
+  assert.equal(resolveDeclaredLaneRisk(
+    "FAST_DELIVERY_ROUTER_V2_LITE_DECLARED_RISK HIGH",
+    {},
+  ), "HIGH");
+  assert.equal(resolveDeclaredLaneRisk(
+    "FAST_DELIVERY_ROUTER_V2_LITE_DECLARED_RISK HIGH",
+    { CHANGED_FILES: "docs/qa/sample.md", DECLARED_LANE_RISK: "MEDIUM" },
+  ), "MEDIUM");
 });
 
 test("empty, duplicate and oversized changed-path evidence fails closed", () => {
