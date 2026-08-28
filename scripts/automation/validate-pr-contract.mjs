@@ -102,6 +102,29 @@ const C3R_P_RUNTIME_REFERENCE_LINES = Object.freeze([
 ]);
 const C3R_P_RUNTIME_DISPOSITION =
   "All referenced issues remain open; C3R-P closes none and does not start C3R-T.";
+const SEMANTIC_RISK_CLASSIFIER_V2_CONTRACT_PATH =
+  "config/dabangil-semantic-risk-classifier-v2.json";
+const SEMANTIC_RISK_CLASSIFIER_V2_SCOPE = Object.freeze({
+  repository: "chachathecat/inverge",
+  baseRef: "main",
+  baseSha: "fd8d0039bbeb2981935fdb671094e37d73a34400",
+  headRef: "codex/semantic-risk-classifier-v2",
+  headRepository: "chachathecat/inverge",
+  pullRequestTitle: "[FDV2-A] Install standalone Semantic Risk Classifier V2",
+  isDraft: true,
+});
+const SEMANTIC_RISK_CLASSIFIER_V2_REFERENCE_LINE = "Refs #714";
+const SEMANTIC_RISK_CLASSIFIER_V2_DISPOSITION =
+  "Issue #714 remains open; this standalone security foundation closes no issue and starts no product mutation.";
+const SEMANTIC_RISK_CLASSIFIER_V2_CHANGED_PATHS = Object.freeze([
+  "config/dabangil-semantic-risk-classifier-v2.json",
+  "docs/decisions/2026-08-27-owner-semantic-risk-classifier-v2-foundation.md",
+  "docs/qa/semantic-risk-classifier-v2-validation.md",
+  "scripts/automation/semantic-risk-classifier-v2.mjs",
+  "scripts/automation/validate-pr-contract.mjs",
+  "scripts/run-node-tests.mjs",
+  "tests/semantic-risk-classifier-v2.test.mjs",
+]);
 const GITHUB_CLOSING_KEYWORD_PATTERN = new RegExp(
   String.raw`\b(?:close(?:s|d)?|fix(?:es|ed)?|resolve(?:s|d)?)(?:\s*:\s*|\s+)(?:#\d+|[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+#\d+|https:\/\/github\.com\/[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+\/(?:issues|pull)\/\d+)\b`,
   "gi",
@@ -258,12 +281,68 @@ function isC3rPRuntimeCandidate(context) {
     context?.headRef === C3R_P_RUNTIME_SCOPE.headRef;
 }
 
+function readSemanticRiskClassifierV2Contract() {
+  if (!fs.existsSync(SEMANTIC_RISK_CLASSIFIER_V2_CONTRACT_PATH)) return null;
+  try {
+    return JSON.parse(
+      fs.readFileSync(SEMANTIC_RISK_CLASSIFIER_V2_CONTRACT_PATH, "utf8"),
+    );
+  } catch {
+    return null;
+  }
+}
+
+function isSemanticRiskClassifierV2Candidate(context) {
+  return context?.repository === SEMANTIC_RISK_CLASSIFIER_V2_SCOPE.repository &&
+    context?.headRef === SEMANTIC_RISK_CLASSIFIER_V2_SCOPE.headRef;
+}
+
+function matchesExactSemanticRiskClassifierV2Scope(context) {
+  return Object.entries(SEMANTIC_RISK_CLASSIFIER_V2_SCOPE).every(
+    ([key, value]) => context?.[key] === value,
+  );
+}
+
 function validateIssueLink(body, errors, context) {
   const issueLinks = [...body.matchAll(/\b(?:Closes|Fixes)\s+#(\d+)\b/gi)];
   const allGithubClosingLinks = [
     ...body.matchAll(GITHUB_CLOSING_KEYWORD_PATTERN),
   ];
   const sourceAuthority = readC3rA0SourceAuthorityIssueLink();
+
+  if (isSemanticRiskClassifierV2Candidate(context)) {
+    const contract = readSemanticRiskClassifierV2Contract();
+    const bodyLines = body.split(/\r?\n/u).map((line) => line.trim());
+    const actualReferenceLines = bodyLines.filter((line) => /\bRefs\b/iu.test(line));
+    const actualDispositionLines = bodyLines.filter(
+      (line) => /\bIssue #714\b/iu.test(line),
+    );
+    const contractScopeMatches =
+      contract?.delivery?.repository === SEMANTIC_RISK_CLASSIFIER_V2_SCOPE.repository &&
+      contract?.delivery?.baseRef === SEMANTIC_RISK_CLASSIFIER_V2_SCOPE.baseRef &&
+      contract?.delivery?.baseSha === SEMANTIC_RISK_CLASSIFIER_V2_SCOPE.baseSha &&
+      contract?.delivery?.branch === SEMANTIC_RISK_CLASSIFIER_V2_SCOPE.headRef &&
+      contract?.delivery?.pullRequestTitle ===
+        SEMANTIC_RISK_CLASSIFIER_V2_SCOPE.pullRequestTitle &&
+      contract?.delivery?.draftUntilOwnerGate === true &&
+      JSON.stringify(contract?.scope?.changedPathsExactly) ===
+        JSON.stringify(SEMANTIC_RISK_CLASSIFIER_V2_CHANGED_PATHS);
+
+    if (
+      !matchesExactSemanticRiskClassifierV2Scope(context) ||
+      !contractScopeMatches ||
+      JSON.stringify(actualReferenceLines) !==
+        JSON.stringify([SEMANTIC_RISK_CLASSIFIER_V2_REFERENCE_LINE]) ||
+      JSON.stringify(actualDispositionLines) !==
+        JSON.stringify([SEMANTIC_RISK_CLASSIFIER_V2_DISPOSITION]) ||
+      allGithubClosingLinks.length !== 0
+    ) {
+      errors.push(
+        "Semantic Risk Classifier V2 requires its exact Draft identity, reference-only #714 line, open disposition, seven-path contract, and zero issue-closing keywords.",
+      );
+    }
+    return;
+  }
 
   if (isC3rPRuntimeCandidate(context)) {
     const contract = readC3rPRuntimeContract();

@@ -20,6 +20,7 @@
       "docs/decisions/2026-08-27-owner-semantic-risk-classifier-v2-foundation.md",
       "docs/qa/semantic-risk-classifier-v2-validation.md",
       "scripts/automation/semantic-risk-classifier-v2.mjs",
+      "scripts/automation/validate-pr-contract.mjs",
       "scripts/run-node-tests.mjs",
       "tests/semantic-risk-classifier-v2.test.mjs"
     ],

@@ -19,6 +19,103 @@ const contract = JSON.parse(await readFile(
   new URL("../config/dabangil-semantic-risk-classifier-v2.json", import.meta.url),
   "utf8",
 ));
+const PR_CONTRACT_VALIDATOR = path.resolve("scripts/automation/validate-pr-contract.mjs");
+const EXACT_REFERENCE_LINE = "Refs #714";
+const EXACT_DISPOSITION_LINE =
+  "Issue #714 remains open; this standalone security foundation closes no issue and starts no product mutation.";
+
+function prContractBody({ relationshipLines = [EXACT_REFERENCE_LINE], disposition = EXACT_DISPOSITION_LINE } = {}) {
+  const relationship = relationshipLines.join("\n");
+  const dispositionBlock = disposition === null ? "" : `\n\n${disposition}`;
+  return `## Goal
+
+Validate one exact reference-only foundation.
+
+${relationship}${dispositionBlock}
+
+## Non-goals
+
+No product or workflow activation.
+
+## Risk classification
+
+- Risk: [high]
+
+## Data boundary
+
+Repository source only.
+
+## Schema / API / environment changes
+
+None.
+
+## Tests and evidence
+
+Focused hostile regressions.
+
+## Runtime evidence
+
+Not applicable; source-only validation.
+
+## Rollout and rollback
+
+Draft only; revert an eventual authorized squash merge.
+
+## Remaining risks
+
+Owner approval remains required.
+
+## Merge recommendation
+
+- [ ] Auto-merge candidate
+- [x] Human approval required
+- [ ] Blocked
+`;
+}
+
+function exactPrEvent(body = prContractBody()) {
+  return {
+    repository: { full_name: "chachathecat/inverge" },
+    pull_request: {
+      body,
+      draft: true,
+      title: "[FDV2-A] Install standalone Semantic Risk Classifier V2",
+      base: {
+        ref: "main",
+        sha: "fd8d0039bbeb2981935fdb671094e37d73a34400",
+      },
+      head: {
+        ref: "codex/semantic-risk-classifier-v2",
+        repo: { full_name: "chachathecat/inverge" },
+      },
+    },
+  };
+}
+
+async function runPrContractEvent(event) {
+  const directory = await mkdtemp(path.join(tmpdir(), "semantic-risk-pr-contract-"));
+  const eventPath = path.join(directory, "event.json");
+  try {
+    await writeFile(eventPath, `${JSON.stringify(event)}\n`, "utf8");
+    return spawnSync(process.execPath, [PR_CONTRACT_VALIDATOR], {
+      cwd: process.cwd(),
+      encoding: "utf8",
+      env: { ...process.env, GITHUB_EVENT_PATH: eventPath, PR_BODY: "" },
+    });
+  } finally {
+    await rm(directory, { recursive: true, force: true });
+  }
+}
+
+function runPrContractBodyOnly(body) {
+  const environment = { ...process.env, PR_BODY: body };
+  delete environment.GITHUB_EVENT_PATH;
+  return spawnSync(process.execPath, [PR_CONTRACT_VALIDATOR], {
+    cwd: process.cwd(),
+    encoding: "utf8",
+    env: environment,
+  });
+}
 
 function assertSemanticHigh(report, label = "semantic HIGH") {
   assert.equal(report.semanticHighSignals.length > 0, true, label);
@@ -65,6 +162,7 @@ test("machine contract is exact, bounded, inert, and router-free", async () => {
     "docs/decisions/2026-08-27-owner-semantic-risk-classifier-v2-foundation.md",
     "docs/qa/semantic-risk-classifier-v2-validation.md",
     "scripts/automation/semantic-risk-classifier-v2.mjs",
+    "scripts/automation/validate-pr-contract.mjs",
     "scripts/run-node-tests.mjs",
     "tests/semantic-risk-classifier-v2.test.mjs",
   ]);
@@ -84,6 +182,154 @@ test("machine contract is exact, bounded, inert, and router-free", async () => {
   assert.match(decision, /Workflow Router \/ Automatic Merge Authority V2/u);
   assert.match(validation, /exact base\/head blobs/u);
   assert.match(runner, /tests\/semantic-risk-classifier-v2\.test\.mjs/u);
+});
+
+test("exact reference-only PR exception is closed, identity-pinned, and fail-closed", async () => {
+  const valid = await runPrContractEvent(exactPrEvent());
+  assert.equal(valid.status, 0, valid.stderr);
+
+  for (const closingLine of [
+    "Closes #714", "Fixes #714", "Resolves #714",
+    "Closed #714", "Fixed #714", "Resolved #714",
+  ]) {
+    const closing = await runPrContractEvent(exactPrEvent(prContractBody({
+      relationshipLines: [closingLine],
+    })));
+    assert.notEqual(closing.status, 0, closingLine);
+    assert.match(closing.stderr, /reference-only #714/u);
+  }
+
+  const identityMutations = [
+    (event) => { event.repository.full_name = "other/inverge"; },
+    (event) => { event.pull_request.base.ref = "release"; },
+    (event) => { event.pull_request.base.sha = "0".repeat(40); },
+    (event) => { event.pull_request.head.ref = "codex/unrelated"; },
+    (event) => { event.pull_request.head.repo.full_name = "other/inverge"; },
+    (event) => { event.pull_request.title = "Unrelated Draft"; },
+    (event) => { event.pull_request.draft = false; },
+  ];
+  for (const mutate of identityMutations) {
+    const event = structuredClone(exactPrEvent());
+    mutate(event);
+    const result = await runPrContractEvent(event);
+    assert.notEqual(result.status, 0, mutate.toString());
+  }
+
+  const invalidBodies = [
+    prContractBody({ relationshipLines: [] }),
+    prContractBody({ relationshipLines: [EXACT_REFERENCE_LINE, EXACT_REFERENCE_LINE] }),
+    prContractBody({ relationshipLines: [EXACT_REFERENCE_LINE, "refs #714"] }),
+    prContractBody({ relationshipLines: [EXACT_REFERENCE_LINE, "- Refs #714"] }),
+    prContractBody({ disposition: null }),
+    prContractBody({ disposition: `${EXACT_DISPOSITION_LINE} altered` }),
+    `${prContractBody()}\nIssue #714 remains open; altered duplicate disposition.\n`,
+    `${prContractBody()}\n* Issue #714 remains open; altered duplicate disposition.\n`,
+  ];
+  for (const body of invalidBodies) {
+    const result = await runPrContractEvent(exactPrEvent(body));
+    assert.notEqual(result.status, 0, body);
+    assert.match(result.stderr, /reference-only #714/u);
+  }
+
+  const unrelated = exactPrEvent();
+  unrelated.pull_request.head.ref = "codex/unrelated";
+  unrelated.pull_request.title = "Unrelated Draft";
+  const unrelatedResult = await runPrContractEvent(unrelated);
+  assert.notEqual(unrelatedResult.status, 0);
+  assert.match(unrelatedResult.stderr, /exactly one issue-closing reference/u);
+
+  const bodyOnly = runPrContractBodyOnly(prContractBody());
+  assert.notEqual(bodyOnly.status, 0);
+  assert.match(bodyOnly.stderr, /exactly one issue-closing reference/u);
+
+  const ordinary = exactPrEvent(prContractBody({
+    relationshipLines: ["Closes #123"],
+    disposition: null,
+  }));
+  ordinary.pull_request.head.ref = "codex/ordinary-change";
+  ordinary.pull_request.title = "Ordinary change";
+  const ordinaryResult = await runPrContractEvent(ordinary);
+  assert.equal(ordinaryResult.status, 0, ordinaryResult.stderr);
+});
+
+test("all pre-existing exact reference-only PR exceptions remain valid", async () => {
+  const paths = {
+    a0: "config/dabangil-wcv-c3r-a0-migration-dependency-authority-v1.json",
+    a1: "config/dabangil-wcv-c3r-a1-serial-program-authority-v1.json",
+    oracle: "config/dabangil-wcv-c3-pre-p-postgresql-security-state-oracle-v1.json",
+    minimal: "config/dabangil-wcv-c3-pre-p-migration-mutation-authority-v1.json",
+    practice: "config/dabangil-wcv-c3r-p-practice-common-durable-runtime-v1.json",
+  };
+  const entries = Object.fromEntries(await Promise.all(Object.entries(paths).map(async ([key, filePath]) => [
+    key,
+    JSON.parse(await readFile(filePath, "utf8")),
+  ])));
+
+  const a0 = entries.a0.deliveryControl.sourceAuthorityIssueLink;
+  const a1 = entries.a1.deliveryControl.referenceOnlyIssueLinks;
+  const oracle = entries.oracle.deliveryControl;
+  const minimal = entries.minimal.deliveryControl;
+  const practice = entries.practice;
+  const cases = [
+    {
+      scope: a0,
+      references: [a0.requiredReferenceLine],
+      disposition: a0.requiredDispositionLine,
+      draft: true,
+    },
+    {
+      scope: a1,
+      references: a1.requiredReferenceLinesExactly,
+      disposition: a1.requiredDispositionLine,
+      draft: true,
+    },
+    {
+      scope: oracle,
+      references: oracle.referenceOnlyIssueLinks.requiredReferenceLinesExactly,
+      disposition: oracle.referenceOnlyIssueLinks.requiredDispositionLine,
+      draft: oracle.draftRequired,
+    },
+    {
+      scope: minimal,
+      references: minimal.referenceOnlyIssueLinks.requiredReferenceLinesExactly,
+      disposition: minimal.referenceOnlyIssueLinks.requiredDispositionLine,
+      draft: minimal.draftRequired,
+    },
+    {
+      scope: {
+        repository: practice.authority.repository,
+        baseRef: "main",
+        baseSha: practice.authority.baseSha,
+        headRef: practice.authority.headRef,
+        headRepository: practice.authority.repository,
+        pullRequestTitle: practice.authority.pullRequestTitle,
+      },
+      references: practice.deliveryControl.requiredReferenceLinesExactly,
+      disposition: practice.deliveryControl.requiredDispositionLine,
+      draft: practice.deliveryControl.draftRequired,
+    },
+  ];
+
+  for (const candidate of cases) {
+    const event = {
+      repository: { full_name: candidate.scope.repository },
+      pull_request: {
+        body: prContractBody({
+          relationshipLines: candidate.references,
+          disposition: candidate.disposition,
+        }),
+        draft: candidate.draft,
+        title: candidate.scope.pullRequestTitle,
+        base: { ref: candidate.scope.baseRef, sha: candidate.scope.baseSha },
+        head: {
+          ref: candidate.scope.headRef,
+          repo: { full_name: candidate.scope.headRepository },
+        },
+      },
+    };
+    const result = await runPrContractEvent(event);
+    assert.equal(result.status, 0, `${candidate.scope.headRef}: ${result.stderr}`);
+  }
 });
 
 test("closed network module roots and subpaths are exact", () => {
