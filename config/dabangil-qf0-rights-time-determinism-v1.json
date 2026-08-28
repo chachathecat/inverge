@@ -1,0 +1,158 @@
+{
+  "contractVersion": "dabangil.qf0.rights_time_determinism.v1",
+  "milestone": {
+    "id": "QF-0A",
+    "issue": 859,
+    "parentQf0Issue": 857,
+    "questionFoundryIssue": 811,
+    "cognitiveProductReferenceIssue": 714,
+    "sourceOnly": true,
+    "inert": true,
+    "candidateConstructionIncluded": false,
+    "scarcityEventIncluded": false,
+    "runtimeReadinessEstablished": false
+  },
+  "contractsExactly": [
+    "RightsManifestRefV1",
+    "SourceEligibilityDecisionV1",
+    "ModelExecutionIdentityV1"
+  ],
+  "sourceClassesExactly": [
+    "INVERGE_ORIGINAL",
+    "RIGHTS_CLEARED_OFFICIAL",
+    "CONTRACTED_EXPERT_ORIGINAL",
+    "CLEARED_DETERMINISTIC_TEMPLATE",
+    "USER_PRIVATE_ONLY",
+    "ACADEMY_OR_COMMERCIAL_TEXTBOOK",
+    "RIGHTS_UNKNOWN",
+    "BLOCKED"
+  ],
+  "rightsTime": {
+    "rightsStatusesExactly": [
+      "ACTIVE",
+      "STALE",
+      "DISPUTED",
+      "BLOCKED",
+      "REVOKED",
+      "EXPIRED"
+    ],
+    "decisionStatusesExactly": ["CURRENT", "STALE", "DISPUTED", "BLOCKED"],
+    "eligibleOutcomeExactly": "ELIGIBLE",
+    "deniedOutcomeExactly": "DENIED",
+    "purposeExactly": "QUARANTINED_CANDIDATE_CREATION",
+    "manifestBindingsExactly": [
+      "manifestId",
+      "manifestVersionId",
+      "manifestDigest",
+      "sourceClass",
+      "status",
+      "permittedPurpose",
+      "validFrom",
+      "validUntil",
+      "policyVersion",
+      "policyDigest"
+    ],
+    "decisionBindingsExactly": [
+      "decisionId",
+      "decisionDigest",
+      "evaluatedAt",
+      "eligibilityInterval",
+      "rightsManifestRef",
+      "sourceClass",
+      "purpose",
+      "decisionStatus",
+      "outcome",
+      "policyVersion",
+      "policyDigest",
+      "policyValidFrom",
+      "policyValidUntil"
+    ],
+    "eligibilityIntervalDerivedFromExactly": [
+      "decision.evaluatedAt",
+      "rightsManifestRef.validFrom",
+      "rightsManifestRef.validUntil",
+      "policyValidFrom",
+      "policyValidUntil"
+    ],
+    "atUseGateChecksExactly": [
+      "DECISION_STATUS_CURRENT",
+      "DECISION_OUTCOME_ELIGIBLE",
+      "RIGHTS_STATUS_ACTIVE",
+      "USE_NOT_BEFORE_EVALUATION",
+      "USE_INSIDE_DERIVED_ELIGIBILITY_INTERVAL",
+      "USE_INSIDE_RIGHTS_INTERVAL",
+      "EXACT_RIGHTS_SNAPSHOT_BINDING",
+      "SOURCE_CLASS_MATCH",
+      "PURPOSE_MATCH",
+      "POLICY_VERSION_AND_DIGEST_MATCH"
+    ],
+    "freshAuthoritySnapshotRequiredToDetectLaterRevocation": true,
+    "laterRevocationDetectionClaimedWithoutFreshSnapshot": false
+  },
+  "determinism": {
+    "canonicalJsonBounded": true,
+    "digestAlgorithmExactly": "SHA-256",
+    "keyOrderingExactly": "UTF8_BYTEWISE_ASCENDING",
+    "localeCompareAllowed": false,
+    "intlCollatorAllowed": false,
+    "hostLocaleAuthorityAllowed": false,
+    "filesystemOrderAuthorityAllowed": false,
+    "objectInsertionOrderAuthorityAllowed": false,
+    "maximumCanonicalBytes": 262144,
+    "maximumCanonicalDepth": 32,
+    "maximumCanonicalEntries": 10000
+  },
+  "modelIdentity": {
+    "rolesExactly": ["GENERATOR", "SOLVER", "JUDGE"],
+    "bindingsExactly": [
+      "role",
+      "providerId",
+      "modelId",
+      "modelVersion",
+      "modelArtifactDigest",
+      "executionId",
+      "executionArtifactDigest",
+      "configurationDigest",
+      "executedAt",
+      "identityDigest"
+    ],
+    "modelExecutionIncluded": false
+  },
+  "excludedContractsExactly": [
+    "QuarantinedQuestionCandidateV1",
+    "BodylessBankScarcityEventV1",
+    "ReleaseArtifactV1",
+    "LearnerAssignmentV1",
+    "BankAssignmentV1"
+  ],
+  "authorizationBoundary": {
+    "candidateAuthorized": false,
+    "scarcityAuthorized": false,
+    "releaseAuthorized": false,
+    "learnerAssignmentAuthorized": false,
+    "bankAssignmentAuthorized": false,
+    "providerAuthorized": false,
+    "networkAuthorized": false,
+    "databaseAuthorized": false,
+    "persistenceAuthorized": false,
+    "apiAuthorized": false,
+    "uiAuthorized": false,
+    "migrationAuthorized": false,
+    "rlsAuthorized": false,
+    "authAuthorized": false,
+    "remoteSupabaseAuthorized": false,
+    "productionAuthorized": false
+  },
+  "ownedPathsExactly": [
+    "docs/product/dabangil-qf0-rights-time-determinism-v1.md",
+    "config/dabangil-qf0-rights-time-determinism-v1.json",
+    "docs/qa/dabangil-qf0-rights-time-determinism-validation.md",
+    "lib/question-foundry/quarantine/trust-contracts.ts",
+    "lib/question-foundry/quarantine/trust-core.ts",
+    "tests/qf0-rights-time-determinism.test.mjs"
+  ],
+  "successor": {
+    "qf0BPublicationRequiresValidatedQf0AMergeReceipt": true,
+    "automaticSuccessorStartAllowed": false
+  }
+}

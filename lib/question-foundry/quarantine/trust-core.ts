@@ -1,0 +1,604 @@
+import { createHash } from "node:crypto";
+
+import {
+  QF0A_CONTRACT_VERSION,
+  QF0A_DECISION_STATUSES,
+  QF0A_MODEL_ROLES,
+  QF0A_PURPOSES,
+  QF0A_RIGHTS_STATUSES,
+  QF0A_SOURCE_CLASSES,
+  type ModelExecutionIdentityV1,
+  type RightsManifestRefV1,
+  type SourceEligibilityDecisionV1,
+} from "./trust-contracts";
+
+const UTF8 = new TextEncoder();
+const MAX_CANONICAL_BYTES = 262_144;
+const MAX_CANONICAL_DEPTH = 32;
+const MAX_CANONICAL_ENTRIES = 10_000;
+const MAX_TEXT_LENGTH = 256;
+const DIGEST_PATTERN = /^sha256:[a-f0-9]{64}$/;
+const ELIGIBLE_SOURCE_CLASSES = new Set<(typeof QF0A_SOURCE_CLASSES)[number]>([
+  "INVERGE_ORIGINAL",
+  "RIGHTS_CLEARED_OFFICIAL",
+  "CONTRACTED_EXPERT_ORIGINAL",
+  "CLEARED_DETERMINISTIC_TEMPLATE",
+]);
+
+function fail(code: string): never {
+  throw new Error(`QF0A_FAIL_CLOSED:${code}`);
+}
+
+function plainRecord(value: unknown, label: string): Record<string, unknown> {
+  if (
+    value === null ||
+    typeof value !== "object" ||
+    Array.isArray(value) ||
+    (Object.getPrototypeOf(value) !== Object.prototype &&
+      Object.getPrototypeOf(value) !== null)
+  ) {
+    fail(`${label}_MUST_BE_PLAIN_OBJECT`);
+  }
+  return value as Record<string, unknown>;
+}
+
+export function compareUtf8BytesV1(left: string, right: string): number {
+  const leftBytes = UTF8.encode(left);
+  const rightBytes = UTF8.encode(right);
+  const sharedLength = Math.min(leftBytes.length, rightBytes.length);
+  for (let index = 0; index < sharedLength; index += 1) {
+    if (leftBytes[index] !== rightBytes[index]) {
+      return leftBytes[index] < rightBytes[index] ? -1 : 1;
+    }
+  }
+  if (leftBytes.length === rightBytes.length) return 0;
+  return leftBytes.length < rightBytes.length ? -1 : 1;
+}
+
+function assertExactKeys(
+  value: unknown,
+  expectedKeys: readonly string[],
+  label: string,
+): Record<string, unknown> {
+  const candidate = plainRecord(value, label);
+  const actual = Object.keys(candidate).sort(compareUtf8BytesV1);
+  const expected = [...expectedKeys].sort(compareUtf8BytesV1);
+  if (JSON.stringify(actual) !== JSON.stringify(expected)) {
+    fail(`${label}_FIELDS_MISMATCH`);
+  }
+  return candidate;
+}
+
+function assertText(value: unknown, label: string): asserts value is string {
+  if (
+    typeof value !== "string" ||
+    value.length === 0 ||
+    value.length > MAX_TEXT_LENGTH ||
+    value.trim() !== value
+  ) {
+    fail(`${label}_INVALID`);
+  }
+}
+
+function assertDigest(value: unknown, label: string): asserts value is string {
+  if (typeof value !== "string" || !DIGEST_PATTERN.test(value)) {
+    fail(`${label}_INVALID_DIGEST`);
+  }
+}
+
+function assertCanonicalInstant(
+  value: unknown,
+  label: string,
+): asserts value is string {
+  if (typeof value !== "string") fail(`${label}_INVALID_TIME`);
+  const instant = Date.parse(value);
+  if (!Number.isFinite(instant) || new Date(instant).toISOString() !== value) {
+    fail(`${label}_INVALID_TIME`);
+  }
+}
+
+function assertSourceClass(
+  value: unknown,
+): asserts value is (typeof QF0A_SOURCE_CLASSES)[number] {
+  if (!QF0A_SOURCE_CLASSES.includes(value as (typeof QF0A_SOURCE_CLASSES)[number])) {
+    fail("UNDECLARED_SOURCE_CLASS");
+  }
+}
+
+function normalizedJsonValue(
+  value: unknown,
+  path: string,
+  depth: number,
+  state: { entries: number; seen: Set<object> },
+): unknown {
+  if (depth > MAX_CANONICAL_DEPTH) fail("CANONICAL_DEPTH_LIMIT_EXCEEDED");
+  if (value === null || typeof value === "string" || typeof value === "boolean") {
+    return value;
+  }
+  if (typeof value === "number") {
+    if (!Number.isFinite(value)) fail(`NON_FINITE_NUMBER_AT_${path}`);
+    return Object.is(value, -0) ? 0 : value;
+  }
+  if (typeof value !== "object") fail(`NON_JSON_VALUE_AT_${path}`);
+  if (state.seen.has(value)) fail(`CYCLIC_VALUE_AT_${path}`);
+  state.seen.add(value);
+  try {
+    if (Array.isArray(value)) {
+      state.entries += value.length;
+      if (state.entries > MAX_CANONICAL_ENTRIES) {
+        fail("CANONICAL_ENTRY_LIMIT_EXCEEDED");
+      }
+      return value.map((entry, index) =>
+        normalizedJsonValue(entry, `${path}[${index}]`, depth + 1, state),
+      );
+    }
+    const source = plainRecord(value, `JSON_VALUE_AT_${path}`);
+    const keys = Object.keys(source).sort(compareUtf8BytesV1);
+    state.entries += keys.length;
+    if (state.entries > MAX_CANONICAL_ENTRIES) {
+      fail("CANONICAL_ENTRY_LIMIT_EXCEEDED");
+    }
+    const normalized: Record<string, unknown> = {};
+    for (const key of keys) {
+      if (source[key] === undefined) fail(`UNDEFINED_VALUE_AT_${path}.${key}`);
+      normalized[key] = normalizedJsonValue(
+        source[key],
+        `${path}.${key}`,
+        depth + 1,
+        state,
+      );
+    }
+    return normalized;
+  } finally {
+    state.seen.delete(value);
+  }
+}
+
+function immutableJson<T>(value: T): T {
+  const clone = JSON.parse(canonicalizeBoundedJsonV1(value)) as T;
+  const freeze = (entry: unknown): void => {
+    if (entry === null || typeof entry !== "object" || Object.isFrozen(entry)) return;
+    for (const child of Object.values(entry)) freeze(child);
+    Object.freeze(entry);
+  };
+  freeze(clone);
+  return clone;
+}
+
+export function canonicalizeBoundedJsonV1(value: unknown): string {
+  const normalized = normalizedJsonValue(value, "$", 0, {
+    entries: 0,
+    seen: new Set(),
+  });
+  const serialized = JSON.stringify(normalized);
+  if (UTF8.encode(serialized).length > MAX_CANONICAL_BYTES) {
+    fail("CANONICAL_BYTE_LIMIT_EXCEEDED");
+  }
+  return serialized;
+}
+
+export function digestCanonicalJsonV1(value: unknown): string {
+  return `sha256:${createHash("sha256")
+    .update(canonicalizeBoundedJsonV1(value), "utf8")
+    .digest("hex")}`;
+}
+
+export function createRightsManifestRefV1(
+  input: Omit<RightsManifestRefV1, "contractVersion" | "manifestDigest">,
+): RightsManifestRefV1 {
+  assertExactKeys(
+    input,
+    [
+      "manifestId",
+      "manifestVersionId",
+      "sourceClass",
+      "status",
+      "permittedPurpose",
+      "validFrom",
+      "validUntil",
+      "policyVersion",
+      "policyDigest",
+    ],
+    "RIGHTS_MANIFEST_INPUT",
+  );
+  assertText(input.manifestId, "MANIFEST_ID");
+  assertText(input.manifestVersionId, "MANIFEST_VERSION_ID");
+  assertSourceClass(input.sourceClass);
+  if (!QF0A_RIGHTS_STATUSES.includes(input.status)) fail("RIGHTS_STATUS_INVALID");
+  if (!QF0A_PURPOSES.includes(input.permittedPurpose)) fail("RIGHTS_PURPOSE_INVALID");
+  assertCanonicalInstant(input.validFrom, "RIGHTS_VALID_FROM");
+  assertCanonicalInstant(input.validUntil, "RIGHTS_VALID_UNTIL");
+  if (Date.parse(input.validFrom) > Date.parse(input.validUntil)) {
+    fail("RIGHTS_VALIDITY_WINDOW_INVALID");
+  }
+  assertText(input.policyVersion, "RIGHTS_POLICY_VERSION");
+  assertDigest(input.policyDigest, "RIGHTS_POLICY");
+  const material = {
+    contractVersion: "RightsManifestRefV1" as const,
+    ...input,
+  };
+  return immutableJson({
+    ...material,
+    manifestDigest: digestCanonicalJsonV1(material),
+  });
+}
+
+export function validateRightsManifestRefV1(
+  input: RightsManifestRefV1,
+): RightsManifestRefV1 {
+  assertExactKeys(
+    input,
+    [
+      "contractVersion",
+      "manifestId",
+      "manifestVersionId",
+      "manifestDigest",
+      "sourceClass",
+      "status",
+      "permittedPurpose",
+      "validFrom",
+      "validUntil",
+      "policyVersion",
+      "policyDigest",
+    ],
+    "RIGHTS_MANIFEST",
+  );
+  if (input.contractVersion !== "RightsManifestRefV1") {
+    fail("RIGHTS_CONTRACT_VERSION_MISMATCH");
+  }
+  const rebuilt = createRightsManifestRefV1({
+    manifestId: input.manifestId,
+    manifestVersionId: input.manifestVersionId,
+    sourceClass: input.sourceClass,
+    status: input.status,
+    permittedPurpose: input.permittedPurpose,
+    validFrom: input.validFrom,
+    validUntil: input.validUntil,
+    policyVersion: input.policyVersion,
+    policyDigest: input.policyDigest,
+  });
+  assertDigest(input.manifestDigest, "RIGHTS_MANIFEST");
+  if (input.manifestDigest !== rebuilt.manifestDigest) {
+    fail("RIGHTS_MANIFEST_DIGEST_MISMATCH");
+  }
+  return immutableJson(input);
+}
+
+export function createSourceEligibilityDecisionV1(input: {
+  sourceClass: (typeof QF0A_SOURCE_CLASSES)[number];
+  purpose: (typeof QF0A_PURPOSES)[number];
+  decisionStatus: SourceEligibilityDecisionV1["decisionStatus"];
+  evaluatedAt: string;
+  rightsManifestRef: RightsManifestRefV1;
+  policyVersion: string;
+  policyDigest: string;
+  policyValidFrom: string;
+  policyValidUntil: string;
+}): SourceEligibilityDecisionV1 {
+  assertExactKeys(
+    input,
+    [
+      "sourceClass",
+      "purpose",
+      "decisionStatus",
+      "evaluatedAt",
+      "rightsManifestRef",
+      "policyVersion",
+      "policyDigest",
+      "policyValidFrom",
+      "policyValidUntil",
+    ],
+    "SOURCE_DECISION_INPUT",
+  );
+  assertSourceClass(input.sourceClass);
+  if (!QF0A_PURPOSES.includes(input.purpose)) fail("SOURCE_PURPOSE_INVALID");
+  if (!QF0A_DECISION_STATUSES.includes(input.decisionStatus)) {
+    fail("SOURCE_DECISION_STATUS_INVALID");
+  }
+  assertCanonicalInstant(input.evaluatedAt, "SOURCE_DECISION_EVALUATED_AT");
+  assertText(input.policyVersion, "SOURCE_POLICY_VERSION");
+  assertDigest(input.policyDigest, "SOURCE_POLICY");
+  assertCanonicalInstant(input.policyValidFrom, "POLICY_VALID_FROM");
+  assertCanonicalInstant(input.policyValidUntil, "POLICY_VALID_UNTIL");
+  if (Date.parse(input.policyValidFrom) > Date.parse(input.policyValidUntil)) {
+    fail("POLICY_VALIDITY_WINDOW_INVALID");
+  }
+  const rights = validateRightsManifestRefV1(input.rightsManifestRef);
+  const denialReasons: string[] = [];
+  const evaluatedAt = Date.parse(input.evaluatedAt);
+
+  if (input.decisionStatus !== "CURRENT") {
+    denialReasons.push(`SOURCE_DECISION_${input.decisionStatus}`);
+  }
+  if (!ELIGIBLE_SOURCE_CLASSES.has(input.sourceClass)) {
+    denialReasons.push(`SOURCE_CLASS_${input.sourceClass}_DENIED`);
+  }
+  if (rights.status !== "ACTIVE") denialReasons.push(`RIGHTS_${rights.status}`);
+  if (rights.sourceClass !== input.sourceClass) {
+    denialReasons.push("RIGHTS_SOURCE_CLASS_MISMATCH");
+  }
+  if (rights.permittedPurpose !== input.purpose) {
+    denialReasons.push("RIGHTS_PURPOSE_MISMATCH");
+  }
+  if (
+    rights.policyVersion !== input.policyVersion ||
+    rights.policyDigest !== input.policyDigest
+  ) {
+    denialReasons.push("RIGHTS_POLICY_MISMATCH");
+  }
+  if (
+    evaluatedAt < Date.parse(rights.validFrom) ||
+    evaluatedAt > Date.parse(rights.validUntil)
+  ) {
+    denialReasons.push("EVALUATION_OUTSIDE_RIGHTS_INTERVAL");
+  }
+  if (
+    evaluatedAt < Date.parse(input.policyValidFrom) ||
+    evaluatedAt > Date.parse(input.policyValidUntil)
+  ) {
+    denialReasons.push("EVALUATION_OUTSIDE_POLICY_INTERVAL");
+  }
+
+  const derivedValidFrom = new Date(
+    Math.max(
+      evaluatedAt,
+      Date.parse(rights.validFrom),
+      Date.parse(input.policyValidFrom),
+    ),
+  ).toISOString();
+  const derivedValidUntil = new Date(
+    Math.min(Date.parse(rights.validUntil), Date.parse(input.policyValidUntil)),
+  ).toISOString();
+  if (Date.parse(derivedValidFrom) > Date.parse(derivedValidUntil)) {
+    denialReasons.push("NO_ELIGIBILITY_INTERVAL_INTERSECTION");
+  }
+
+  const eligible = denialReasons.length === 0;
+  const material = {
+    contractVersion: "SourceEligibilityDecisionV1" as const,
+    sourceClass: input.sourceClass,
+    purpose: input.purpose,
+    decisionStatus: input.decisionStatus,
+    outcome: eligible ? ("ELIGIBLE" as const) : ("DENIED" as const),
+    evaluatedAt: input.evaluatedAt,
+    eligibilityInterval: eligible
+      ? { validFrom: derivedValidFrom, validUntil: derivedValidUntil }
+      : null,
+    rightsManifestRef: rights,
+    policyVersion: input.policyVersion,
+    policyDigest: input.policyDigest,
+    policyValidFrom: input.policyValidFrom,
+    policyValidUntil: input.policyValidUntil,
+    denialReasons: [...new Set(denialReasons)].sort(compareUtf8BytesV1),
+  };
+  const decisionDigest = digestCanonicalJsonV1(material);
+  return immutableJson({
+    ...material,
+    decisionId: `qf0a_decision_${decisionDigest.slice("sha256:".length)}`,
+    decisionDigest,
+  });
+}
+
+export function validateSourceEligibilityDecisionV1(
+  input: SourceEligibilityDecisionV1,
+): SourceEligibilityDecisionV1 {
+  assertExactKeys(
+    input,
+    [
+      "contractVersion",
+      "decisionId",
+      "decisionDigest",
+      "sourceClass",
+      "purpose",
+      "decisionStatus",
+      "outcome",
+      "evaluatedAt",
+      "eligibilityInterval",
+      "rightsManifestRef",
+      "policyVersion",
+      "policyDigest",
+      "policyValidFrom",
+      "policyValidUntil",
+      "denialReasons",
+    ],
+    "SOURCE_DECISION",
+  );
+  if (input.contractVersion !== "SourceEligibilityDecisionV1") {
+    fail("SOURCE_DECISION_CONTRACT_VERSION_MISMATCH");
+  }
+  const rebuilt = createSourceEligibilityDecisionV1({
+    sourceClass: input.sourceClass,
+    purpose: input.purpose,
+    decisionStatus: input.decisionStatus,
+    evaluatedAt: input.evaluatedAt,
+    rightsManifestRef: input.rightsManifestRef,
+    policyVersion: input.policyVersion,
+    policyDigest: input.policyDigest,
+    policyValidFrom: input.policyValidFrom,
+    policyValidUntil: input.policyValidUntil,
+  });
+  if (canonicalizeBoundedJsonV1(input) !== canonicalizeBoundedJsonV1(rebuilt)) {
+    fail("SOURCE_DECISION_IDENTITY_OR_BINDING_MISMATCH");
+  }
+  return immutableJson(input);
+}
+
+export function assertSourceEligibilityAtUseV1(input: {
+  decision: SourceEligibilityDecisionV1;
+  rightsManifestAtUse: RightsManifestRefV1;
+  useAt: string;
+  expectedSourceClass: (typeof QF0A_SOURCE_CLASSES)[number];
+  expectedPurpose: (typeof QF0A_PURPOSES)[number];
+  expectedPolicyVersion: string;
+  expectedPolicyDigest: string;
+}): SourceEligibilityDecisionV1 {
+  assertExactKeys(
+    input,
+    [
+      "decision",
+      "rightsManifestAtUse",
+      "useAt",
+      "expectedSourceClass",
+      "expectedPurpose",
+      "expectedPolicyVersion",
+      "expectedPolicyDigest",
+    ],
+    "AT_USE_INPUT",
+  );
+  const decision = validateSourceEligibilityDecisionV1(input.decision);
+  const rightsAtUse = validateRightsManifestRefV1(input.rightsManifestAtUse);
+  assertCanonicalInstant(input.useAt, "USE_AT");
+  assertSourceClass(input.expectedSourceClass);
+  if (!QF0A_PURPOSES.includes(input.expectedPurpose)) fail("AT_USE_PURPOSE_INVALID");
+  assertText(input.expectedPolicyVersion, "AT_USE_POLICY_VERSION");
+  assertDigest(input.expectedPolicyDigest, "AT_USE_POLICY");
+
+  if (decision.decisionStatus !== "CURRENT") fail("AT_USE_DECISION_NOT_CURRENT");
+  if (decision.outcome !== "ELIGIBLE" || decision.eligibilityInterval === null) {
+    fail("AT_USE_DECISION_NOT_ELIGIBLE");
+  }
+  if (rightsAtUse.status !== "ACTIVE") fail("AT_USE_RIGHTS_NOT_ACTIVE");
+  if (
+    canonicalizeBoundedJsonV1(rightsAtUse) !==
+    canonicalizeBoundedJsonV1(decision.rightsManifestRef)
+  ) {
+    fail("AT_USE_RIGHTS_BINDING_DRIFT");
+  }
+  if (
+    decision.sourceClass !== input.expectedSourceClass ||
+    rightsAtUse.sourceClass !== input.expectedSourceClass
+  ) {
+    fail("AT_USE_SOURCE_CLASS_MISMATCH");
+  }
+  if (
+    decision.purpose !== input.expectedPurpose ||
+    rightsAtUse.permittedPurpose !== input.expectedPurpose
+  ) {
+    fail("AT_USE_PURPOSE_MISMATCH");
+  }
+  if (
+    decision.policyVersion !== input.expectedPolicyVersion ||
+    rightsAtUse.policyVersion !== input.expectedPolicyVersion ||
+    decision.policyDigest !== input.expectedPolicyDigest ||
+    rightsAtUse.policyDigest !== input.expectedPolicyDigest
+  ) {
+    fail("AT_USE_POLICY_MISMATCH");
+  }
+
+  const useAt = Date.parse(input.useAt);
+  if (useAt < Date.parse(decision.evaluatedAt)) {
+    fail("AT_USE_BEFORE_DECISION_EVALUATION");
+  }
+  if (
+    useAt < Date.parse(decision.eligibilityInterval.validFrom) ||
+    useAt > Date.parse(decision.eligibilityInterval.validUntil)
+  ) {
+    fail("AT_USE_OUTSIDE_DERIVED_ELIGIBILITY_INTERVAL");
+  }
+  if (
+    useAt < Date.parse(rightsAtUse.validFrom) ||
+    useAt > Date.parse(rightsAtUse.validUntil)
+  ) {
+    fail("AT_USE_OUTSIDE_RIGHTS_INTERVAL");
+  }
+  return decision;
+}
+
+export function createModelExecutionIdentityV1(
+  input: Omit<ModelExecutionIdentityV1, "contractVersion" | "identityDigest">,
+): ModelExecutionIdentityV1 {
+  assertExactKeys(
+    input,
+    [
+      "role",
+      "providerId",
+      "modelId",
+      "modelVersion",
+      "modelArtifactDigest",
+      "executionId",
+      "executionArtifactDigest",
+      "configurationDigest",
+      "executedAt",
+    ],
+    "MODEL_EXECUTION_INPUT",
+  );
+  if (!QF0A_MODEL_ROLES.includes(input.role)) fail("MODEL_ROLE_INVALID");
+  for (const [label, value] of [
+    ["MODEL_PROVIDER_ID", input.providerId],
+    ["MODEL_ID", input.modelId],
+    ["MODEL_VERSION", input.modelVersion],
+    ["MODEL_EXECUTION_ID", input.executionId],
+  ] as const) {
+    assertText(value, label);
+  }
+  assertDigest(input.modelArtifactDigest, "MODEL_ARTIFACT");
+  assertDigest(input.executionArtifactDigest, "MODEL_EXECUTION_ARTIFACT");
+  assertDigest(input.configurationDigest, "MODEL_CONFIGURATION");
+  assertCanonicalInstant(input.executedAt, "MODEL_EXECUTED_AT");
+  const material = {
+    contractVersion: "ModelExecutionIdentityV1" as const,
+    ...input,
+  };
+  return immutableJson({
+    ...material,
+    identityDigest: digestCanonicalJsonV1(material),
+  });
+}
+
+export function validateModelExecutionIdentityV1(
+  input: ModelExecutionIdentityV1,
+): ModelExecutionIdentityV1 {
+  assertExactKeys(
+    input,
+    [
+      "contractVersion",
+      "role",
+      "providerId",
+      "modelId",
+      "modelVersion",
+      "modelArtifactDigest",
+      "executionId",
+      "executionArtifactDigest",
+      "configurationDigest",
+      "executedAt",
+      "identityDigest",
+    ],
+    "MODEL_EXECUTION_IDENTITY",
+  );
+  if (input.contractVersion !== "ModelExecutionIdentityV1") {
+    fail("MODEL_EXECUTION_CONTRACT_VERSION_MISMATCH");
+  }
+  const rebuilt = createModelExecutionIdentityV1({
+    role: input.role,
+    providerId: input.providerId,
+    modelId: input.modelId,
+    modelVersion: input.modelVersion,
+    modelArtifactDigest: input.modelArtifactDigest,
+    executionId: input.executionId,
+    executionArtifactDigest: input.executionArtifactDigest,
+    configurationDigest: input.configurationDigest,
+    executedAt: input.executedAt,
+  });
+  if (input.identityDigest !== rebuilt.identityDigest) {
+    fail("MODEL_EXECUTION_IDENTITY_DIGEST_MISMATCH");
+  }
+  return immutableJson(input);
+}
+
+export function assertQf0ATrustOnlyBoundaryV1(): Readonly<{
+  contractVersion: typeof QF0A_CONTRACT_VERSION;
+  modelExecution: false;
+  network: false;
+  database: false;
+  persistence: false;
+  runtime: false;
+}> {
+  return Object.freeze({
+    contractVersion: QF0A_CONTRACT_VERSION,
+    modelExecution: false,
+    network: false,
+    database: false,
+    persistence: false,
+    runtime: false,
+  });
+}
