@@ -18,7 +18,7 @@ The explicit inspection limit governs QF-0A1 userland character scanning. The en
 
 The accepted domain is limited to null, finite numbers, booleans, well-formed strings, dense ordinary arrays, and plain objects containing enumerable data properties. Negative zero is emitted as zero. Input is never normalized, coerced, or truncated.
 
-Cycles, unsupported values, malformed surrogates, accessors, symbol keys, sparse or extended arrays, hostile prototypes, and every limit overflow fail closed.
+Cycles, proxies, unsupported values, malformed surrogates, accessors, symbol keys, sparse or extended arrays, hostile prototypes, and every limit overflow fail closed. Proxy rejection uses Node's trap-free proxy identity check before array detection, prototype inspection, key enumeration, or property-descriptor access.
 
 ## Boundary
 

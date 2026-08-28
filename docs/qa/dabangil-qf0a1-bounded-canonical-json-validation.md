@@ -6,7 +6,7 @@
 - child issue: #861;
 - branch: `codex/qf0a1-bounded-canonical-json-v1`;
 - exact path count: five;
-- config SHA-256: `sha256:846f0afde2d3547d34e9118d4472278036bbdc0dde894bbfe2d922955aaeb396`;
+- config SHA-256: `sha256:0a4a4f54ecf6ebf6d19be209811aaf688abe7172932548f5ae8784fa02a8fe53`;
 - remote and Production mutation: zero.
 
 ## Focused command
@@ -15,11 +15,11 @@
 node scripts/run-node-tests.mjs tests/qf0a1-bounded-canonical-json.test.mjs
 ```
 
-The focused suite proves one cumulative key/value inspection counter, early rejection of the 461,939-character hostile class, exact output-byte boundaries, cached-byte sorting without original-string rescans, malformed-surrogate rejection, deterministic locale-independent order and digest, comparison-step overflow, the closed JSON domain, the exact five-path manifest, and the inert source-only boundary.
+The focused suite proves one cumulative key/value inspection counter, early rejection of the 461,939-character hostile class, exact output-byte boundaries, cached-byte sorting without original-string rescans, malformed-surrogate rejection, deterministic locale-independent order and digest, comparison-step overflow, trap-free proxy rejection before governed reflection, the closed JSON domain, the exact five-path manifest, and the inert source-only boundary.
 
 ## Candidate gates
 
-- focused QF-0A1 suite: pass, 20/20;
+- focused QF-0A1 suite: pass, 21/21;
 - JSON/config identity: pass, pinned SHA-256;
 - exact five-path manifest: pass;
 - typecheck: pass;

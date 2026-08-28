@@ -1,4 +1,5 @@
 import { createHash } from "node:crypto";
+import { types as utilTypes } from "node:util";
 
 const CONTRACT_VERSION = "QF0A1BoundedCanonicalJsonV1" as const;
 
@@ -441,6 +442,7 @@ function appendCanonicalValue(
     return;
   }
   if (typeof value !== "object") fail("NON_JSON_VALUE_UNSUPPORTED");
+  if (utilTypes.isProxy(value)) fail("PROXY_UNSUPPORTED");
   if (state.seen.has(value)) fail("CYCLIC_VALUE_UNSUPPORTED");
 
   state.seen.add(value);

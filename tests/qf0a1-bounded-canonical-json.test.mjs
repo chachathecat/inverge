@@ -21,7 +21,7 @@ const BASE_SHA = "fd8d0039bbeb2981935fdb671094e37d73a34400";
 const CONFIG_PATH = "config/dabangil-qf0a1-bounded-canonical-json-v1.json";
 const MODULE_PATH = "lib/question-foundry/quarantine/bounded-canonical-json.ts";
 const MAX_BYTES = 262_144;
-const EXPECTED_CONFIG_DIGEST = "846f0afde2d3547d34e9118d4472278036bbdc0dde894bbfe2d922955aaeb396";
+const EXPECTED_CONFIG_DIGEST = "0a4a4f54ecf6ebf6d19be209811aaf688abe7172932548f5ae8784fa02a8fe53";
 const EXACT_PATHS = [
   CONFIG_PATH,
   "docs/product/dabangil-qf0a1-bounded-canonical-json-v1.md",
@@ -119,6 +119,7 @@ test("QF0A1-CONTRACT-001 binds the closed five-path inert source-only contract",
   assert.equal(contract.successorGate.state, "BLOCKED");
   assert.equal(contract.successorGate.requires, "VALIDATED_QF0A1_RESULTING_MAIN_RECEIPT");
   assert.equal(contract.successorGate.automaticStart, false);
+  assert.ok(contract.failClosedExactly.includes("proxy"));
   assert.deepEqual(contract.changedPathsExactly, EXACT_PATHS);
   assert.deepEqual(changedPaths(), [...EXACT_PATHS].sort());
   assert.equal(sha256(contractText), EXPECTED_CONFIG_DIGEST);
@@ -411,7 +412,76 @@ test("QF0A1-DOMAIN-018 keeps valid nested arrays and objects deterministic", () 
   assert.equal(digestCanonicalJsonV1(value), digestCanonicalJsonV1(value));
 });
 
-test("QF0A1-BOUNDARY-019 contains no locale API or downstream operational contract", () => {
+test("QF0A1-DOMAIN-019 rejects proxies before any governed reflection trap", () => {
+  function rejectWithoutTraps(target, label, handler = {}) {
+    let trapCalls = 0;
+    const guardedHandler = {
+      getPrototypeOf(...arguments_) {
+        trapCalls += 1;
+        if (handler.getPrototypeOf) {
+          return Reflect.apply(handler.getPrototypeOf, handler, arguments_);
+        }
+        return Reflect.getPrototypeOf(...arguments_);
+      },
+      ownKeys(...arguments_) {
+        trapCalls += 1;
+        if (handler.ownKeys) return Reflect.apply(handler.ownKeys, handler, arguments_);
+        return Reflect.ownKeys(...arguments_);
+      },
+      getOwnPropertyDescriptor(...arguments_) {
+        trapCalls += 1;
+        if (handler.getOwnPropertyDescriptor) {
+          return Reflect.apply(handler.getOwnPropertyDescriptor, handler, arguments_);
+        }
+        return Reflect.getOwnPropertyDescriptor(...arguments_);
+      },
+    };
+    const value = new Proxy(target, guardedHandler);
+    assert.throws(
+      () => canonicalizeBoundedJsonV1(value),
+      /PROXY_UNSUPPORTED/,
+      label,
+    );
+    assert.equal(trapCalls, 0, label);
+  }
+
+  rejectWithoutTraps({ safe: true }, "transparent object proxy");
+  rejectWithoutTraps([true], "transparent array proxy");
+
+  rejectWithoutTraps({}, "stateful work proxy", {
+    ownKeys() {
+      throw new Error("stateful proxy work must never execute");
+    },
+  });
+
+  const accessorTarget = {};
+  Object.defineProperty(accessorTarget, "value", {
+    enumerable: true,
+    configurable: true,
+    get: () => 1,
+  });
+  rejectWithoutTraps(accessorTarget, "accessor-hiding proxy", {
+    getOwnPropertyDescriptor() {
+      return { value: 1, enumerable: true, configurable: true, writable: true };
+    },
+  });
+
+  const sparseTarget = new Array(2);
+  sparseTarget[1] = true;
+  rejectWithoutTraps(sparseTarget, "sparse-array proxy", {
+    ownKeys() {
+      return ["0", "1", "length"];
+    },
+    getOwnPropertyDescriptor(target, key) {
+      if (key === "0") {
+        return { value: true, enumerable: true, configurable: true, writable: true };
+      }
+      return Reflect.getOwnPropertyDescriptor(target, key);
+    },
+  });
+});
+
+test("QF0A1-BOUNDARY-020 contains no locale API or downstream operational contract", () => {
   const moduleSource = read(MODULE_PATH);
   assert.doesNotMatch(moduleSource, /localeCompare|Intl\.Collator|\.sort\s*\(/u);
   assert.doesNotMatch(
@@ -424,7 +494,7 @@ test("QF0A1-BOUNDARY-019 contains no locale API or downstream operational contra
   );
 });
 
-test("QF0A1-BOUNDARY-020 has no network, provider, database, or remote mutation path", () => {
+test("QF0A1-BOUNDARY-021 has no network, provider, database, or remote mutation path", () => {
   const moduleSource = read(MODULE_PATH);
   assert.match(moduleSource, /from "node:crypto"/u);
   assert.doesNotMatch(
