@@ -1,0 +1,321 @@
+{
+  "schemaVersion": "DabangilFastDeliveryRouterV2LiteV1",
+  "contractId": "FAST_DELIVERY_ROUTER_V2_LITE",
+  "effectiveOnlyAfterValidatedMerge": true,
+  "repository": "chachathecat/inverge",
+  "issue": 855,
+  "base": {
+    "sha": "fd8d0039bbeb2981935fdb671094e37d73a34400",
+    "tree": "1d338b7be92cfc98c00611b4ff3f2b75dea1784d"
+  },
+  "branch": "codex/fast-delivery-router-v2-lite",
+  "baseBranch": "main",
+  "workflowCount": {
+    "before": 48,
+    "after": 48
+  },
+  "protectedMainRuleset": {
+    "id": 20903914,
+    "name": "main-pr-only",
+    "target": "branch",
+    "enforcement": "active",
+    "refNameIncludeExactly": [
+      "~DEFAULT_BRANCH"
+    ],
+    "refNameExcludeExactly": [],
+    "strictRequiredStatusChecks": true,
+    "allowedMergeMethodsExactly": [
+      "squash"
+    ],
+    "requiredReviewThreadResolution": true,
+    "bypassActorCount": 0
+  },
+  "publicProfilesExactly": [
+    "LOW",
+    "MEDIUM",
+    "HIGH"
+  ],
+  "profileOrder": {
+    "LOW": 0,
+    "MEDIUM": 1,
+    "HIGH": 2
+  },
+  "unknownEquals": "HIGH",
+  "maximumChangedFiles": 200,
+  "highRisk": {
+    "exactPaths": [
+      ".github/dependabot.yml",
+      "AGENTS.md",
+      "config/agent-risk-policy.yml",
+      "config/dabangil-fast-delivery-router-v2-lite.json",
+      "middleware.js",
+      "middleware.ts",
+      "next.config.js",
+      "next.config.mjs",
+      "next.config.ts",
+      "package-lock.json",
+      "package.json",
+      "pnpm-lock.yaml",
+      "roadmap/active-program.yml",
+      "vercel.json",
+      "yarn.lock"
+    ],
+    "pathPrefixes": [
+      ".github/",
+      "app/api/",
+      "bin/",
+      "cli/",
+      "database/",
+      "db/",
+      "docs/decisions/",
+      "docs/exec-plans/active/",
+      "lib/auth/",
+      "lib/billing/",
+      "lib/delete/",
+      "lib/deployment/",
+      "lib/entitlements/",
+      "lib/export/",
+      "lib/notifications/",
+      "lib/network/",
+      "lib/openai/",
+      "lib/payment/",
+      "lib/payments/",
+      "lib/production/",
+      "lib/provider/",
+      "lib/providers/",
+      "lib/release/",
+      "lib/rls/",
+      "lib/stripe/",
+      "lib/supabase/",
+      "public/",
+      "migrations/",
+      "pages/api/",
+      "prisma/",
+      "server/",
+      "src/app/api/",
+      "src/pages/api/",
+      "src/server/",
+      "src/worker/",
+      "src/workers/",
+      "supabase/",
+      "worker/",
+      "workers/"
+    ],
+    "pathGlobs": [
+      "**/.env*",
+      "**/AGENTS.md",
+      "**/Dockerfile*",
+      "**/docker-compose*.yml",
+      "**/docker-compose*.yaml",
+      "**/api/**",
+      "**/auth/**",
+      "**/billing/**",
+      "**/migrations/**",
+      "**/network/**",
+      "**/package.json",
+      "**/package-lock.json",
+      "**/pnpm-lock.yaml",
+      "**/payment/**",
+      "**/payments/**",
+      "**/production/**",
+      "**/provider/**",
+      "**/providers/**",
+      "**/rls/**",
+      "**/stripe/**",
+      "**/supabase/**",
+      "**/yarn.lock",
+      "app/**/route.js",
+      "app/**/route.jsx",
+      "app/**/route.mjs",
+      "app/**/route.ts",
+      "app/**/route.tsx",
+      "scripts/automation/*merge*",
+      "scripts/automation/*risk*",
+      "scripts/automation/*release*",
+      "scripts/automation/validate-pr-contract.mjs"
+    ],
+    "signals": [
+      "destructive_data_operation",
+      "new_dependency",
+      "new_environment_variable",
+      "official_answer_semantics",
+      "payment_or_entitlement_change",
+      "personal_data_policy_change",
+      "production_flag_change",
+      "provider_or_network_change",
+      "remote_mutation",
+      "schema_change"
+    ]
+  },
+  "executableExtensions": [
+    ".cjs",
+    ".cts",
+    ".js",
+    ".jsx",
+    ".mjs",
+    ".mts",
+    ".ps1",
+    ".py",
+    ".sh",
+    ".ts",
+    ".tsx"
+  ],
+  "lowAllowlist": [
+    {
+      "prefix": "config/examples/",
+      "extensions": [
+        ".json"
+      ]
+    },
+    {
+      "prefix": "docs/examples/",
+      "extensions": [
+        ".json",
+        ".md",
+        ".yaml",
+        ".yml"
+      ]
+    },
+    {
+      "prefix": "docs/qa/",
+      "extensions": [
+        ".md"
+      ]
+    }
+  ],
+  "blockingLabels": [
+    "blocked",
+    "do-not-merge",
+    "human-decision",
+    "needs-live-runtime"
+  ],
+  "requiredExactHeadChecks": [
+    "pr-contract",
+    "risk-classifier",
+    "runtime-gate",
+    "fast-ci",
+    "full-ci",
+    "full-ci-windows",
+    "Learner Loop Health",
+    "security-audit-sbom",
+    "Vercel"
+  ],
+  "requiredCheckProducers": {
+    "pr-contract": {
+      "source": "check_run",
+      "appSlug": "github-actions",
+      "appId": 15368,
+      "integrationId": 15368
+    },
+    "risk-classifier": {
+      "source": "check_run",
+      "appSlug": "github-actions",
+      "appId": 15368,
+      "integrationId": 15368
+    },
+    "runtime-gate": {
+      "source": "check_run",
+      "appSlug": "github-actions",
+      "appId": 15368,
+      "integrationId": 15368
+    },
+    "fast-ci": {
+      "source": "check_run",
+      "appSlug": "github-actions",
+      "appId": 15368,
+      "integrationId": 15368
+    },
+    "full-ci": {
+      "source": "check_run",
+      "appSlug": "github-actions",
+      "appId": 15368,
+      "integrationId": 15368
+    },
+    "full-ci-windows": {
+      "source": "check_run",
+      "appSlug": "github-actions",
+      "appId": 15368,
+      "integrationId": 15368
+    },
+    "Learner Loop Health": {
+      "source": "check_run",
+      "appSlug": "github-actions",
+      "appId": 15368,
+      "integrationId": 15368
+    },
+    "security-audit-sbom": {
+      "source": "check_run",
+      "appSlug": "github-actions",
+      "appId": 15368,
+      "integrationId": 15368
+    },
+    "Vercel": {
+      "source": "commit_status",
+      "integrationId": 8329,
+      "avatarUrlPrefix": "https://avatars.githubusercontent.com/in/8329",
+      "targetUrlPrefix": "https://vercel.com/chachathecats-projects/inverge/"
+    }
+  },
+  "mediumSourceOnly": {
+    "isAConditionalEligibilitySubtypeOf": "MEDIUM",
+    "isNotAPublicProfile": true,
+    "registeredLanes": [],
+    "requiredEvidenceKeys": [
+      "activationDefaultOff",
+      "affectedRegressionPassed",
+      "buildPassedWhenApplicable",
+      "disjointPathOwnership",
+      "exactPathOwnership",
+      "focusedTestsPassed",
+      "isolatedWorktree",
+      "noDatabaseAuthOrRlsChange",
+      "noDependencyChange",
+      "noEntrypointChange",
+      "noEnvironmentChange",
+      "noExistingRuntimeReference",
+      "noProviderPaymentOrProductionChange",
+      "remoteMutationZero"
+    ]
+  },
+  "automaticMerge": {
+    "allowedCandidateKindsExactly": [
+      "LOW",
+      "MEDIUM_SOURCE_ONLY"
+    ],
+    "ordinaryMediumEnabled": false,
+    "highEnabled": false,
+    "unknownEnabled": false,
+    "squashOnly": true,
+    "exactHeadRequired": true,
+    "allRequiredChecksTerminalGreen": true,
+    "freshTrustedReviewMarker": "FAST_DELIVERY_ROUTER_V2_LITE_FINAL_REVIEW",
+    "actionableCountsRequired": "0/0/0",
+    "unresolvedThreadsRequired": 0,
+    "readyTransitionBeforeMerge": true,
+    "trustedMainCodeOnly": true
+  },
+  "activationBoundary": {
+    "public": false,
+    "payment": false,
+    "externalLearner": false,
+    "remoteSupabase": false,
+    "production": false
+  },
+  "deferredDonors": {
+    "dependabotPr737": "DEPENDABOT_PR737_CLOSED_UNMERGED_DEFERRED_WORKFLOW_DEPENDENCY_MAINTENANCE",
+    "semanticClassifierPr854": "SEMANTIC_RISK_CLASSIFIER_V2_CLOSED_UNMERGED_DEFERRED_STATIC_ANALYSIS_DONOR",
+    "semanticClassifierIssue853": "CLOSED_NOT_PLANNED"
+  },
+  "changedPathsExactly": [
+    ".github/workflows/auto-merge.yml",
+    ".github/workflows/risk-classifier.yml",
+    "config/agent-risk-policy.yml",
+    "config/dabangil-fast-delivery-router-v2-lite.json",
+    "docs/decisions/2026-08-28-owner-fast-delivery-router-v2-lite.md",
+    "docs/qa/fast-delivery-router-v2-lite-validation.md",
+    "scripts/automation/automatic-merge-v2-lite.mjs",
+    "scripts/automation/classify-risk.mjs",
+    "tests/agent-factory-risk-classification.test.mjs",
+    "tests/fast-delivery-router-v2-lite.test.mjs"
+  ]
+}

@@ -12,12 +12,12 @@ function runClassifier(changedFiles) {
   return JSON.parse(result.stdout);
 }
 
-test("docs-only change is low risk", () => {
-  assert.equal(runClassifier("docs/readme.md").risk, "low");
+test("exact allowlisted non-authoritative QA documentation is low risk", () => {
+  assert.equal(runClassifier("docs/qa/readme.md").risk, "low");
 });
 
-test("learner API change is at least medium risk", () => {
-  assert.equal(runClassifier("app/api/learner/route.ts").risk, "medium");
+test("learner API change is high risk", () => {
+  assert.equal(runClassifier("app/api/learner/route.ts").risk, "high");
 });
 
 test("Supabase migration is high risk and runtime-required", () => {
@@ -33,6 +33,14 @@ test("workflow change is high risk but not live-runtime-required", () => {
 });
 
 test("mixed paths take the highest risk", () => {
-  const result = runClassifier("docs/readme.md\nsupabase/migrations/20260624_example.sql");
+  const result = runClassifier("docs/qa/readme.md\nsupabase/migrations/20260624_example.sql");
   assert.equal(result.risk, "high");
+});
+
+test("executable tests cannot be low risk", () => {
+  assert.equal(runClassifier("tests/example.test.mjs").risk, "medium");
+});
+
+test("unknown paths fail closed as high risk", () => {
+  assert.equal(runClassifier("misc/unclassified.txt").risk, "high");
 });

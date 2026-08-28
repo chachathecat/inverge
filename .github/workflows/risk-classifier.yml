@@ -18,6 +18,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          persist-credentials: false
       - uses: actions/setup-node@v4
         with:
           node-version: 20
@@ -25,6 +26,10 @@ jobs:
         env:
           RISK_OUTPUT_PATH: .agent-factory/risk.json
         run: node scripts/automation/classify-risk.mjs
+      - name: Validate deterministic route inputs
+        run: node scripts/automation/classify-risk.mjs --validate-route
+      - name: Run Router V2 Lite focused regressions
+        run: node --test tests/agent-factory-risk-classification.test.mjs tests/fast-delivery-router-v2-lite.test.mjs
       - name: Upload bounded risk artifact
         uses: actions/upload-artifact@v4
         with:
