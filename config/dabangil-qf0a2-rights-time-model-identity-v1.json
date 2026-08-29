@@ -1,0 +1,296 @@
+{
+  "contractVersion": "dabangil.qf0a2.rights_time_model_identity.v1",
+  "stage": "QF-0A2",
+  "status": "candidate_source_only",
+  "ownerDecisionDate": "2026-08-28",
+  "tracking": {
+    "closesIssue": 859,
+    "qf0a1CompletedIssue": 861,
+    "qf0Umbrella": 857,
+    "questionFoundryProgram": 811,
+    "cognitiveProductReference": 714
+  },
+  "qf0a1Dependency": {
+    "required": true,
+    "resultingMainSha": "62268861dcc6a60126700c5259c662c55bd1a4ee",
+    "resultingMainTree": "996b1e7ea30f31f21782e765be644798aad8d548",
+    "configSha256": "0a4a4f54ecf6ebf6d19be209811aaf688abe7172932548f5ae8784fa02a8fe53",
+    "implementationSha256": "cccc4dc8da9163d982a252633e3160f1ba5ad2138d0fda0f152f21b2c01e8d9e",
+    "fivePathIdentity": "sha256:d3919726b908cfd9146335173907c06c2a3ebcdfd3a892b84485d21fbc14e618",
+    "pathObjectsExactly": [
+      {
+        "path": "config/dabangil-qf0a1-bounded-canonical-json-v1.json",
+        "mode": "100644",
+        "type": "blob",
+        "objectId": "12a8be4b0b2a14eb10cf2bbe5478aa909d18790e"
+      },
+      {
+        "path": "docs/product/dabangil-qf0a1-bounded-canonical-json-v1.md",
+        "mode": "100644",
+        "type": "blob",
+        "objectId": "17afb96912b796e4d7216c545481f507f9e9192e"
+      },
+      {
+        "path": "docs/qa/dabangil-qf0a1-bounded-canonical-json-validation.md",
+        "mode": "100644",
+        "type": "blob",
+        "objectId": "7456a749ffc091665fc806fe594ce4880db983a5"
+      },
+      {
+        "path": "lib/question-foundry/quarantine/bounded-canonical-json.ts",
+        "mode": "100644",
+        "type": "blob",
+        "objectId": "3dcfe51e7b15e1d36554c10b4e12a1bf10f9cf91"
+      },
+      {
+        "path": "tests/qf0a1-bounded-canonical-json.test.mjs",
+        "mode": "100644",
+        "type": "blob",
+        "objectId": "01164598ea62591663fbc95ddbf1b5190f5b54f9"
+      }
+    ],
+    "requiredExportsExactly": [
+      "QF0A1_LIMITS",
+      "QF0A1_SOURCE_ONLY_BOUNDARY_RECEIPT",
+      "canonicalizeBoundedJsonV1",
+      "compareUtf8BytesV1",
+      "digestCanonicalJsonV1"
+    ],
+    "sourceOnlyBoundaryReceiptDigest": "sha256:bf9f1223fd788696294261995a9a09b05e1db0bfa4d8bc803359cdf98fa9853a",
+    "sourceOnlyBoundaryReceipt": {
+      "contractVersion": "QF0A1BoundedCanonicalJsonV1",
+      "scope": "INERT_SOURCE_ONLY_UTILITY",
+      "activation": "OFF",
+      "remoteMutation": "ZERO",
+      "downstreamAuthorityInstalled": false,
+      "allowedExportsExactly": [
+        "QF0A1_LIMITS",
+        "QF0A1_SOURCE_ONLY_BOUNDARY_RECEIPT",
+        "canonicalizeBoundedJsonV1",
+        "compareUtf8BytesV1",
+        "digestCanonicalJsonV1"
+      ],
+      "limits": {
+        "contractVersion": "QF0A1BoundedCanonicalJsonV1",
+        "maxCanonicalOutputBytes": 262144,
+        "maxInspectedUtf16CodeUnits": 262144,
+        "maxEntries": 10000,
+        "maxDepth": 32,
+        "maxComparisonSteps": 524288,
+        "surrogateLookaheadOutsideInspectionLimit": 0
+      }
+    },
+    "canonicalizationReimplemented": false,
+    "unicodeScannerReimplemented": false,
+    "utf8ComparatorReimplemented": false,
+    "canonicalDigestReimplemented": false,
+    "driftDisposition": "FAIL_CLOSED"
+  },
+  "purposeExactly": "QUESTION_FOUNDRY_QUARANTINED_CANDIDATE_CREATION",
+  "sourceClassesExactly": [
+    "INVERGE_ORIGINAL",
+    "RIGHTS_CLEARED_OFFICIAL",
+    "CONTRACTED_EXPERT_ORIGINAL",
+    "CLEARED_DETERMINISTIC_TEMPLATE",
+    "USER_PRIVATE_ONLY",
+    "ACADEMY_OR_COMMERCIAL_TEXTBOOK",
+    "RIGHTS_UNKNOWN",
+    "BLOCKED"
+  ],
+  "eligibleSourceClassesExactly": [
+    "INVERGE_ORIGINAL",
+    "RIGHTS_CLEARED_OFFICIAL",
+    "CONTRACTED_EXPERT_ORIGINAL",
+    "CLEARED_DETERMINISTIC_TEMPLATE"
+  ],
+  "alwaysDeniedSourceClassesExactly": [
+    "USER_PRIVATE_ONLY",
+    "ACADEMY_OR_COMMERCIAL_TEXTBOOK",
+    "RIGHTS_UNKNOWN",
+    "BLOCKED"
+  ],
+  "rightsManifestRefV1": {
+    "contractVersion": "RightsManifestRefV1",
+    "fieldsExactly": [
+      "contractVersion",
+      "manifestId",
+      "manifestVersionId",
+      "sourceClass",
+      "status",
+      "permittedPurpose",
+      "validFrom",
+      "validUntil",
+      "policyVersion",
+      "policyDigest",
+      "manifestDigest"
+    ],
+    "statusesExactly": [
+      "ACTIVE",
+      "STALE",
+      "DISPUTED",
+      "BLOCKED",
+      "REVOKED",
+      "EXPIRED"
+    ],
+    "manifestIdPattern": "^rm_[a-f0-9]{32}$",
+    "manifestVersionIdPattern": "^rmv_[a-f0-9]{32}$",
+    "digestPattern": "^sha256:[a-f0-9]{64}$",
+    "canonicalUtcMillisecondsRequired": true,
+    "validFromNotAfterValidUntil": true,
+    "exactFieldClosure": true,
+    "proxyAccessorAndUnsupportedShape": "FAIL_CLOSED",
+    "digestConstruction": "QF0A1_EXACT_CANONICAL_UTF8_SHA256",
+    "modifiedMaterialWithOldDigest": "FAIL_CLOSED",
+    "activeRequiredForEligibility": true
+  },
+  "sourceEligibilityDecisionV1": {
+    "contractVersion": "SourceEligibilityDecisionV1",
+    "fieldsExactly": [
+      "contractVersion",
+      "decisionId",
+      "decisionDigest",
+      "sourceClass",
+      "purpose",
+      "decisionStatus",
+      "outcome",
+      "evaluatedAt",
+      "eligibilityInterval",
+      "rightsManifest",
+      "policyVersion",
+      "policyDigest",
+      "policyValidityInterval",
+      "denialReasons"
+    ],
+    "statusesExactly": [
+      "CURRENT",
+      "STALE",
+      "DISPUTED",
+      "BLOCKED"
+    ],
+    "outcomesExactly": [
+      "ELIGIBLE",
+      "DENIED"
+    ],
+    "denialReasonsExactly": [
+      "DECISION_STATUS_NOT_CURRENT",
+      "SOURCE_CLASS_NOT_ELIGIBLE",
+      "PURPOSE_NOT_AUTHORIZED",
+      "RIGHTS_STATUS_NOT_ACTIVE",
+      "SOURCE_CLASS_MISMATCH",
+      "PURPOSE_MISMATCH",
+      "POLICY_VERSION_MISMATCH",
+      "POLICY_DIGEST_MISMATCH",
+      "EVALUATED_AT_OUTSIDE_RIGHTS_INTERVAL",
+      "EVALUATED_AT_OUTSIDE_POLICY_INTERVAL",
+      "ELIGIBILITY_INTERVAL_EMPTY"
+    ],
+    "callerSuppliesOutcome": false,
+    "callerSuppliesDenialReasons": false,
+    "decisionId": "DETERMINISTIC_QF0A1_DIGEST_DERIVATION",
+    "decisionDigest": "QF0A1_EXACT_CANONICAL_UTF8_SHA256",
+    "eligibleOnlyWhenAllRequiredPredicatesHold": true,
+    "derivedEligibilityInterval": {
+      "validFrom": "MAX_OF_EVALUATED_AT_RIGHTS_VALID_FROM_POLICY_VALID_FROM",
+      "validUntil": "MIN_OF_RIGHTS_VALID_UNTIL_POLICY_VALID_UNTIL",
+      "emptyIntersection": "DENIED"
+    }
+  },
+  "atUseGate": {
+    "helper": "assertSourceEligibilityAtUseV1",
+    "requiresValidatedCurrentEligibleDecision": true,
+    "requiresActiveAtUseManifest": true,
+    "requiresExactManifestIdVersionDigest": true,
+    "requiresExactSourceClassPurposePolicy": true,
+    "useAtNotBeforeEvaluatedAt": true,
+    "useAtInsideDerivedEligibilityInterval": true,
+    "useAtInsideRightsInterval": true,
+    "useAtInsidePolicyInterval": true,
+    "priorDecisionReplayAfterExpiry": "FAIL_CLOSED",
+    "liveRightsAuthorityFetch": false,
+    "detectsLaterRevocationWithoutFreshAuthoritySnapshot": false,
+    "trustedFutureCallerMustSupplyFreshAtUseAuthority": true
+  },
+  "modelExecutionIdentityV1": {
+    "contractVersion": "ModelExecutionIdentityV1",
+    "fieldsExactly": [
+      "contractVersion",
+      "role",
+      "providerId",
+      "modelId",
+      "modelVersion",
+      "modelArtifactDigest",
+      "executionId",
+      "executionArtifactDigest",
+      "configurationDigest",
+      "executedAt",
+      "identityDigest"
+    ],
+    "rolesExactly": [
+      "GENERATOR",
+      "BLIND_SOLVER",
+      "JUDGE",
+      "ADVERSARIAL_CRITIC",
+      "META_AUDITOR"
+    ],
+    "machineIdentifierMaximumLength": 96,
+    "executionIdPattern": "^exec_[a-f0-9]{32}$",
+    "executionIdOpaque": true,
+    "digestConstruction": "QF0A1_EXACT_CANONICAL_UTF8_SHA256",
+    "immutable": true,
+    "forbiddenBodyFieldsExactly": [
+      "prompt",
+      "promptBody",
+      "response",
+      "responseBody",
+      "learnerText",
+      "sourceExcerpt",
+      "credentials",
+      "providerRawPayload"
+    ]
+  },
+  "executionIdentitySeparation": {
+    "generatorRoleRequired": "GENERATOR",
+    "independentGeneratorRoleForbidden": true,
+    "generatorExecutionIdReuse": "FAIL_CLOSED",
+    "generatorIdentityDigestReuse": "FAIL_CLOSED",
+    "independentExecutionIdsMutuallyUnique": true,
+    "independentIdentityDigestsMutuallyUnique": true,
+    "sameModelAndVersionWithDistinctImmutableExecutions": "ALLOWED",
+    "claimsOnlyExactExecutionIdentitySeparation": true,
+    "differentModelFamilyClaim": false,
+    "independentOrganizationClaim": false,
+    "humanIndependenceClaim": false,
+    "releaseSufficiencyClaim": false,
+    "consensusCorrectnessClaim": false
+  },
+  "sourceOnlyBoundary": {
+    "inert": true,
+    "inMemoryOnly": true,
+    "runtimeActivation": "OFF",
+    "providerExecution": "OFF",
+    "network": "OFF",
+    "databaseAndPersistence": "OFF",
+    "remoteMutationCount": 0,
+    "productionMutationCount": 0,
+    "candidateAuthorityAbsent": true,
+    "scarcityAuthorityAbsent": true,
+    "releaseAuthorityAbsent": true,
+    "learnerAssignmentAbsent": true,
+    "bankAssignmentAbsent": true,
+    "releasableLifecycleStates": []
+  },
+  "successorGate": {
+    "qf0b": "BLOCKED",
+    "qf0i": "BLOCKED",
+    "requires": "VALIDATED_QF0A2_RESULTING_MAIN_RECEIPT",
+    "automaticStart": false
+  },
+  "changedPathsExactly": [
+    "config/dabangil-qf0a2-rights-time-model-identity-v1.json",
+    "docs/product/dabangil-qf0a2-rights-time-model-identity-v1.md",
+    "docs/qa/dabangil-qf0a2-rights-time-model-identity-validation.md",
+    "lib/question-foundry/quarantine/trust-contracts.ts",
+    "lib/question-foundry/quarantine/trust-core.ts",
+    "tests/qf0a2-rights-time-model-identity.test.mjs"
+  ]
+}
