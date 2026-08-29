@@ -1,0 +1,289 @@
+{
+  "contractVersion": "dabangil.question_foundry.qf_s1_similarity_firewall.v1",
+  "stage": "QF-S1",
+  "status": "SOURCE_ONLY_CANDIDATE",
+  "tracking": {
+    "closesIssue": 867,
+    "questionFoundryProgram": 811,
+    "cognitiveProductReference": 714,
+    "completedPrerequisite": {
+      "stage": "QF-0",
+      "issue": 857,
+      "pullRequest": 866
+    },
+    "qfS3": "UNSTARTED",
+    "qfI1": "UNSTARTED"
+  },
+  "publication": {
+    "finalBranch": "codex/qf-s1-bounded-similarity-rights-firewall-v1",
+    "publicationSequenceGate": {
+      "scope": "PUBLICATION_SEQUENCE_ONLY",
+      "qfS2ReceiptStatus": "VALIDATED_RESULTING_MAIN",
+      "refreshedProtectedMain": {
+        "sha": "4503afc74cf782c18437d6c5031541ef9786eed9",
+        "tree": "b5d3596ebebc50142b01a63d731a4951288d1499"
+      },
+      "qfS2RuntimeOrContractConsumption": false
+    },
+    "reconstruction": {
+      "preparedScratchBranch": "codex/scratch-qf-s1-local-preparation-v1",
+      "preparedScratchCommit": "d9b2a8e5e3343850f7dbb5233750acce3821a1cc",
+      "method": "MECHANICAL_SIX_PATH_SOURCE_BYTE_RECREATION",
+      "scratchAncestryImported": false,
+      "donorAncestryImported": false
+    },
+    "remotePublicationState": "NOT_YET_PUBLISHED",
+    "pullRequestState": "NOT_YET_OPENED"
+  },
+  "changedPathsExactly": [
+    "docs/product/dabangil-qf-s1-bounded-similarity-rights-firewall-v1.md",
+    "config/dabangil-qf-s1-bounded-similarity-rights-firewall-v1.json",
+    "docs/qa/dabangil-qf-s1-bounded-similarity-rights-firewall-validation.md",
+    "lib/question-foundry/similarity/similarity-contracts.ts",
+    "lib/question-foundry/similarity/similarity-firewall.ts",
+    "tests/qf-s1-bounded-similarity-rights-firewall.test.mjs"
+  ],
+  "qf0Dependency": {
+    "resultingMain": {
+      "sha": "7b21551b0ec2a6b78286fb861b9acd0d1f8ca8c2",
+      "tree": "9ad60b9ece4931d7172cdc0462e079ed8d9a53fa"
+    },
+    "aggregateConfigSha256": "34722851960a8818876a95ce189d8074727337efed0d9d8040f034a119935993",
+    "sixPathIdentity": "sha256:4452ad1a5e28bcba5409081a366e1d615db46bb20bc9bfae1c9381e49ea038aa",
+    "candidateContractsImplementationSha256": "9ff5f6ebdf0e2700591a789dacd096643406c445541b07898ba10559b202ff05",
+    "candidateCoreImplementationSha256": "c122e610734b6e51fd68b8e821838cac225130d30cddf7723127d9bd78d15452",
+    "sourceOnlyBoundaryReceiptDigest": "sha256:0062eb9c6987ddda8bc7ade7f94f61b555483b4c508397663b5069ead9798cb7",
+    "candidateContractExportsExactly": [
+      "QF0I_CANDIDATE_LIFECYCLES",
+      "QF0I_CONTRACT_VERSION",
+      "QF0I_LIMITS",
+      "QF0I_SOURCE_ONLY_BOUNDARY_RECEIPT"
+    ],
+    "candidateCoreExportsExactly": [
+      "assertQuarantinedQuestionCandidateV1",
+      "createQuarantinedQuestionCandidateV1"
+    ],
+    "consumesExactly": [
+      "QF-0A1 canonicalizeBoundedJsonV1",
+      "QF-0A1 digestCanonicalJsonV1",
+      "QF-0A1 compareUtf8BytesV1",
+      "QF-0I assertQuarantinedQuestionCandidateV1",
+      "QF-0I candidateId",
+      "QF-0I candidateDigest",
+      "QF-0I candidateContentDigest",
+      "QF-0I source-only boundary receipt"
+    ],
+    "driftDisposition": "FAIL_CLOSED"
+  },
+  "publicContract": {
+    "contractVersion": "QFS1BoundedSimilarityRightsFirewallV1",
+    "policyRef": "dabangil.question_foundry.similarity_rights_firewall.v1",
+    "policyDigest": "sha256:4751ee5b590405eabdf86f8556d93c3c12179fdd4495ee68c887edae62463283",
+    "sourceOnlyBoundaryReceiptDigest": "sha256:0b5fd7dda96b747c1f9b7d2e23d601618b3501b13f4dca3677b8337c2aa0f673",
+    "contractExportsExactly": [
+      "QFS1_BODY_PART_KINDS",
+      "QFS1_CONTRACT_VERSION",
+      "QFS1_LIMITS",
+      "QFS1_MATCH_KINDS",
+      "QFS1_OUTCOMES",
+      "QFS1_POLICY_DIGEST",
+      "QFS1_POLICY_REFERENCE",
+      "QFS1_QF0_DEPENDENCY_RECEIPT",
+      "QFS1_REFERENCE_PURPOSES",
+      "QFS1_REFERENCE_SOURCE_CLASSES",
+      "QFS1_SOURCE_ONLY_BOUNDARY_RECEIPT",
+      "QFS1_TRANSFORMATIONS"
+    ],
+    "coreExportsExactly": [
+      "assertSimilarityFirewallReviewV1",
+      "createSimilarityFirewallReviewV1"
+    ]
+  },
+  "ephemeralBodyContract": {
+    "fieldsExactly": ["partId", "partKind", "bodyDigest", "bodyText"],
+    "partKindsExactly": [
+      "QUESTION_STEM",
+      "QUESTION_OPTION",
+      "SUPPORTING_MATERIAL",
+      "ANSWER_BODY",
+      "EXPLANATION",
+      "RUBRIC"
+    ],
+    "bodyDigestAlgorithm": "SHA-256_OF_EXACT_UTF8_BODY",
+    "bodyDigestMismatch": "FAIL_CLOSED",
+    "bodyTextRetention": "NEVER",
+    "candidateManifestDomain": "QFS1_CANDIDATE_BODY_MANIFEST_V1",
+    "candidateContentCrossBinding": "candidateBodyManifestDigest == candidate.candidateContentDigest",
+    "inputOrder": "QF0A1_UTF8_BY_PART_ID_THEN_BODY_DIGEST"
+  },
+  "referenceCorpusContract": {
+    "contractVersion": "SimilarityReferenceCorpusV1",
+    "referenceIdPattern": "^qfsr_[a-f0-9]{64}$",
+    "corpusIdPattern": "^qfsc_[a-f0-9]{64}$",
+    "referenceFieldsExactly": [
+      "referenceId",
+      "referenceDigest",
+      "purpose",
+      "sourceClass",
+      "version",
+      "parts",
+      "manifestDigest"
+    ],
+    "purposesExactly": [
+      "PROTECTED_EXPRESSION_GUARD",
+      "PRIVATE_SOURCE_GUARD",
+      "EXISTING_BANK_DUPLICATE_GUARD",
+      "CURRENT_BATCH_DUPLICATE_GUARD"
+    ],
+    "sourceClassesExactly": [
+      "INVERGE_ORIGINAL",
+      "RIGHTS_CLEARED_OFFICIAL",
+      "CONTRACTED_EXPERT_ORIGINAL",
+      "CLEARED_DETERMINISTIC_TEMPLATE",
+      "USER_PRIVATE_ONLY",
+      "ACADEMY_OR_COMMERCIAL_TEXTBOOK",
+      "RIGHTS_UNKNOWN",
+      "BLOCKED"
+    ],
+    "referenceManifestDomain": "QFS1_REFERENCE_BODY_MANIFEST_V1",
+    "referenceIdentityDomain": "QFS1_REFERENCE_IDENTITY_V1",
+    "corpusManifestDomain": "QFS1_REFERENCE_CORPUS_MANIFEST_V1",
+    "bodyRetention": "NEVER",
+    "protectiveComparisonGrantsSourceRight": false,
+    "protectiveComparisonGrantsGenerationRight": false,
+    "protectiveComparisonGrantsBlueprintRight": false,
+    "protectiveComparisonGrantsReleaseRight": false
+  },
+  "limits": {
+    "maxCandidateParts": 16,
+    "maxCorpusReferences": 64,
+    "maxPartsPerReference": 16,
+    "maxCharactersPerBody": 32768,
+    "maxAggregateInspectedCharacters": 262144,
+    "maxTokensRetainedPerBody": 256,
+    "maxTotalGeneratedWindows": 65536,
+    "maxTotalComparisonWorkUnits": 524288,
+    "maxTotalWorkUnits": 1048576,
+    "fixedReferenceOverheadWorkUnits": 64,
+    "lexicalWindowSize": 5,
+    "minimumStrongTokenCount": 8,
+    "minimumStrongLexicalTokenCount": 6,
+    "minimumDistinctLexicalEvidence": 5,
+    "minimumBlockingLexicalCoverageMillionths": 800000,
+    "minimumReviewLexicalCoverageMillionths": 600000,
+    "maximumOrderDisplacement": 4,
+    "callerOverride": false
+  },
+  "boundedWorkInvariants": {
+    "arrayCountsBeforeBodyTraversal": true,
+    "characterLengthsBeforeHashOrNormalization": true,
+    "fixedOverheadPerReference": true,
+    "shortReferencesCharged": true,
+    "unchangedReferencesCharged": true,
+    "skippedMatchingModesChargedThroughReferenceOverhead": true,
+    "charactersCharged": true,
+    "tokensCharged": true,
+    "windowsCharged": true,
+    "comparisonsCharged": true,
+    "unboundedRegexPass": false,
+    "localeComparison": false,
+    "hardInputOverflow": "THROW_FAIL_CLOSED",
+    "comparisonOrWindowBudgetExhaustion": "REVIEW_REQUIRED",
+    "clearRequiresCompleteCorpusInspection": true
+  },
+  "coverage": {
+    "matchKindsExactly": [
+      "EXACT_NORMALIZED_COPY",
+      "NEAR_WHOLE_BODY_COPY",
+      "CANDIDATE_FRAGMENT_IN_REFERENCE",
+      "REFERENCE_FRAGMENT_IN_CANDIDATE",
+      "NUMERIC_SUBSTITUTION",
+      "IDENTIFIER_OR_NAME_SUBSTITUTION",
+      "BOUNDED_ORDER_PERTURBATION",
+      "LEXICAL_TRANSFORMED_COPY",
+      "STRUCTURED_PARTS_COPY"
+    ],
+    "detectsExactNormalizedCopy": true,
+    "detectsNearWholeBodyCopy": true,
+    "detectsBothContainmentDirections": true,
+    "detectsNumericSubstitutions": true,
+    "detectsIdentifierOrNameSubstitutions": true,
+    "detectsBoundedOrderPerturbations": true,
+    "detectsLexicalTransformedCopiesWithStrongEvidence": true,
+    "detectsCopiesAcrossStructuredParts": true,
+    "numericLayoutAloneBlocks": false,
+    "shortGenericExpressionAloneBlocks": false,
+    "insufficientDistinctLexicalEvidenceBlocks": false,
+    "semanticPlagiarismDetectionClaim": false
+  },
+  "reviewArtifact": {
+    "contractVersion": "SimilarityFirewallReviewV1",
+    "fieldsExactly": [
+      "contractVersion",
+      "candidateId",
+      "candidateDigest",
+      "candidateBodyManifestDigest",
+      "policyRef",
+      "policyDigest",
+      "corpusManifestDigest",
+      "corpusCounts",
+      "workAccounting",
+      "outcome",
+      "matches",
+      "reviewDigest"
+    ],
+    "outcomesExactly": ["CLEAR", "BLOCKED", "REVIEW_REQUIRED"],
+    "matchSummaryFieldsExactly": [
+      "referenceId",
+      "referenceDigest",
+      "candidatePartKind",
+      "referencePartKind",
+      "matchKind",
+      "measure",
+      "candidateTokenRange",
+      "referenceTokenRange",
+      "transformationProfile",
+      "disposition"
+    ],
+    "rawTextFieldCount": 0,
+    "excerptFieldCount": 0,
+    "reviewDigestAlgorithm": "QF0A1_CANONICAL_JSON_SHA256",
+    "inputOrderIndependent": true,
+    "processLocaleIndependent": true
+  },
+  "sourceOnlyBoundary": {
+    "scope": "EPHEMERAL_BOUNDED_BODY_INSPECTION_ONLY",
+    "storage": "IN_MEMORY_ONLY",
+    "runtimeActivation": "OFF",
+    "providerExecution": "OFF",
+    "network": "OFF",
+    "databaseAndPersistence": "OFF",
+    "remoteMutationCount": 0,
+    "productionMutationCount": 0,
+    "rawBodyOutputAbsent": true,
+    "excerptOutputAbsent": true,
+    "metadataOnlySimilarityEvidence": true,
+    "sourceRightAuthorityAbsent": true,
+    "sourceEligibilityAuthorityAbsent": true,
+    "transferAuthorityAbsent": true,
+    "releaseAuthorityAbsent": true,
+    "learnerAssignmentAbsent": true,
+    "bankAssignmentAbsent": true
+  },
+  "nonAuthority": {
+    "clearGrantsRights": false,
+    "clearGrantsReleaseEligibility": false,
+    "blockedGrantsReuseRight": false,
+    "reviewRequiredGrantsAnyAuthority": false,
+    "sourceClassGrantsRightsThroughFirewall": false,
+    "semanticPlagiarismVerdict": false,
+    "providerOrModelExecution": false,
+    "learnerOrBankAssignment": false
+  },
+  "successorGate": {
+    "qfS2Dependency": "NONE",
+    "qfS3": "BLOCKED_PENDING_VALIDATED_QF_S1_AND_QF_S2_MERGE_RECEIPTS",
+    "qfI1": "UNSTARTED",
+    "automaticStart": false
+  }
+}
