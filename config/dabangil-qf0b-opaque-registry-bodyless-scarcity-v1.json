@@ -1,0 +1,339 @@
+{
+  "contractVersion": "dabangil.qf0b.opaque_registry_bodyless_scarcity.v1",
+  "stage": "QF-0B",
+  "status": "candidate_source_only",
+  "ownerDecisionDate": "2026-08-29",
+  "tracking": {
+    "closesIssue": 864,
+    "qf0Umbrella": 857,
+    "questionFoundryProgram": 811,
+    "cognitiveProductReference": 714,
+    "completedQf0a1Issue": 861,
+    "completedQf0a2Issue": 859
+  },
+  "dependencies": {
+    "qf0a1": {
+      "pullRequest": 862,
+      "reviewedHead": "a9e586ec8db3753e4496ec9be4447c14e9fcc69a",
+      "resultingMainSha": "62268861dcc6a60126700c5259c662c55bd1a4ee",
+      "resultingMainTree": "996b1e7ea30f31f21782e765be644798aad8d548",
+      "configSha256": "0a4a4f54ecf6ebf6d19be209811aaf688abe7172932548f5ae8784fa02a8fe53",
+      "implementationSha256": "cccc4dc8da9163d982a252633e3160f1ba5ad2138d0fda0f152f21b2c01e8d9e",
+      "fivePathIdentity": "sha256:d3919726b908cfd9146335173907c06c2a3ebcdfd3a892b84485d21fbc14e618",
+      "sourceOnlyBoundaryReceiptDigest": "sha256:bf9f1223fd788696294261995a9a09b05e1db0bfa4d8bc803359cdf98fa9853a",
+      "requiredExportsExactly": [
+        "QF0A1_LIMITS",
+        "QF0A1_SOURCE_ONLY_BOUNDARY_RECEIPT",
+        "canonicalizeBoundedJsonV1",
+        "compareUtf8BytesV1",
+        "digestCanonicalJsonV1"
+      ],
+      "sourceOnlyBoundaryReceipt": {
+        "contractVersion": "QF0A1BoundedCanonicalJsonV1",
+        "scope": "INERT_SOURCE_ONLY_UTILITY",
+        "activation": "OFF",
+        "remoteMutation": "ZERO",
+        "downstreamAuthorityInstalled": false,
+        "allowedExportsExactly": [
+          "QF0A1_LIMITS",
+          "QF0A1_SOURCE_ONLY_BOUNDARY_RECEIPT",
+          "canonicalizeBoundedJsonV1",
+          "compareUtf8BytesV1",
+          "digestCanonicalJsonV1"
+        ],
+        "limits": {
+          "contractVersion": "QF0A1BoundedCanonicalJsonV1",
+          "maxCanonicalOutputBytes": 262144,
+          "maxInspectedUtf16CodeUnits": 262144,
+          "maxEntries": 10000,
+          "maxDepth": 32,
+          "maxComparisonSteps": 524288,
+          "surrogateLookaheadOutsideInspectionLimit": 0
+        }
+      },
+      "pathObjectsExactly": [
+        {
+          "path": "config/dabangil-qf0a1-bounded-canonical-json-v1.json",
+          "mode": "100644",
+          "type": "blob",
+          "objectId": "12a8be4b0b2a14eb10cf2bbe5478aa909d18790e"
+        },
+        {
+          "path": "docs/product/dabangil-qf0a1-bounded-canonical-json-v1.md",
+          "mode": "100644",
+          "type": "blob",
+          "objectId": "17afb96912b796e4d7216c545481f507f9e9192e"
+        },
+        {
+          "path": "docs/qa/dabangil-qf0a1-bounded-canonical-json-validation.md",
+          "mode": "100644",
+          "type": "blob",
+          "objectId": "7456a749ffc091665fc806fe594ce4880db983a5"
+        },
+        {
+          "path": "lib/question-foundry/quarantine/bounded-canonical-json.ts",
+          "mode": "100644",
+          "type": "blob",
+          "objectId": "3dcfe51e7b15e1d36554c10b4e12a1bf10f9cf91"
+        },
+        {
+          "path": "tests/qf0a1-bounded-canonical-json.test.mjs",
+          "mode": "100644",
+          "type": "blob",
+          "objectId": "01164598ea62591663fbc95ddbf1b5190f5b54f9"
+        }
+      ]
+    },
+    "qf0a2": {
+      "pullRequest": 863,
+      "approvedHead": "1bf712e5c7808505b06c41e8e77df6e8cc758942",
+      "resultingMainSha": "daebb7d2b58ad464ed43ff06a75fe36f2ac8765a",
+      "resultingMainTree": "628660cac8c4afc0b2fe50b555177eabd5787a96",
+      "exactParent": "62268861dcc6a60126700c5259c662c55bd1a4ee",
+      "configSha256": "45bbdcd1c7d9858bd4a0a9be86c4df2e556ca4aa0953ff5ff25da89e1458ccda",
+      "implementationPathDigests": {
+        "lib/question-foundry/quarantine/trust-contracts.ts": "4f9963cb989e4776355e8601a7c690c011857e4197b73494db14c7e71f599527",
+        "lib/question-foundry/quarantine/trust-core.ts": "4843278ff1e0af3550a851f60678d80d42ce9221e7e12caef906b1d0d757679a"
+      },
+      "sixPathIdentity": "sha256:3432a751f40dda4563463920359545ab6f3348b69f3759e622d8229914fb4bd0",
+      "sourceOnlyBoundaryReceiptDigest": "sha256:09ed5b0f3385cef65ec674af5e3b047df81df5ae53a6e17c023eb8be05a25f97",
+      "contractExportsExactly": [
+        "QF0A2_CONTRACT_VERSION",
+        "QF0A2_DECISION_OUTCOMES",
+        "QF0A2_DECISION_STATUSES",
+        "QF0A2_DENIAL_REASONS",
+        "QF0A2_ELIGIBLE_SOURCE_CLASSES",
+        "QF0A2_MODEL_ROLES",
+        "QF0A2_PURPOSE",
+        "QF0A2_QF0A1_DEPENDENCY_RECEIPT",
+        "QF0A2_RIGHTS_STATUSES",
+        "QF0A2_SOURCE_CLASSES",
+        "QF0A2_SOURCE_ONLY_BOUNDARY_RECEIPT"
+      ],
+      "coreExportsExactly": [
+        "QF0A2_CONTRACT_VERSION",
+        "assertDistinctModelExecutionIdentitiesV1",
+        "assertModelExecutionIdentityV1",
+        "assertQf0a1DependencyV1",
+        "assertRightsManifestRefV1",
+        "assertSourceEligibilityAtUseV1",
+        "assertSourceEligibilityDecisionV1",
+        "createModelExecutionIdentityV1",
+        "createRightsManifestRefV1",
+        "createSourceEligibilityDecisionV1"
+      ],
+      "sourceOnlyBoundaryReceipt": {
+        "contractVersion": "QF0A2RightsTimeModelIdentityCoreV1",
+        "scope": "INERT_SOURCE_ONLY_TRUST_BOUNDARY",
+        "storage": "IN_MEMORY_ONLY",
+        "runtimeActivation": "OFF",
+        "providerExecution": "OFF",
+        "network": "OFF",
+        "databaseAndPersistence": "OFF",
+        "remoteMutation": "ZERO",
+        "productionMutation": "ZERO",
+        "candidateAuthorityAbsent": true,
+        "scarcityAuthorityAbsent": true,
+        "releaseAuthorityAbsent": true,
+        "learnerAssignmentAbsent": true,
+        "bankAssignmentAbsent": true,
+        "liveRightsAuthorityFetch": false,
+        "laterRevocationDetectionWithoutFreshSnapshot": false
+      },
+      "pathObjectsExactly": [
+        {
+          "path": "config/dabangil-qf0a2-rights-time-model-identity-v1.json",
+          "mode": "100644",
+          "type": "blob",
+          "objectId": "0168b254d6eda50e4de3aee63b08263c016959c2"
+        },
+        {
+          "path": "docs/product/dabangil-qf0a2-rights-time-model-identity-v1.md",
+          "mode": "100644",
+          "type": "blob",
+          "objectId": "3541f64759cdef340b5e6e69f411618ec5f2581a"
+        },
+        {
+          "path": "docs/qa/dabangil-qf0a2-rights-time-model-identity-validation.md",
+          "mode": "100644",
+          "type": "blob",
+          "objectId": "34ffef6008cbcd38fa1525689be43a1254581647"
+        },
+        {
+          "path": "lib/question-foundry/quarantine/trust-contracts.ts",
+          "mode": "100644",
+          "type": "blob",
+          "objectId": "f0cd1b50ebfcd669a4c435cf0920da2fbdf0f1b8"
+        },
+        {
+          "path": "lib/question-foundry/quarantine/trust-core.ts",
+          "mode": "100644",
+          "type": "blob",
+          "objectId": "3a9ec19dafeb119638420e6e998db19a75421b3c"
+        },
+        {
+          "path": "tests/qf0a2-rights-time-model-identity.test.mjs",
+          "mode": "100644",
+          "type": "blob",
+          "objectId": "85008aa18dcf57c53a0c92582bc9e733438818db"
+        }
+      ]
+    },
+    "dependencyDriftDisposition": "FAIL_CLOSED",
+    "qf0a1PrimitiveReimplemented": false,
+    "qf0a2TrustContractsReimplemented": false
+  },
+  "publicExportsExactly": [
+    "QF0B_CONTRACT_VERSION",
+    "QF0B_REGISTRY_REF_KINDS",
+    "QF0B_LIMITS",
+    "QF0B_SOURCE_ONLY_BOUNDARY_RECEIPT",
+    "createOpaqueRegistryRefV1",
+    "assertOpaqueRegistryRefV1",
+    "createBodylessBankScarcityEventV1",
+    "assertBodylessBankScarcityEventV1"
+  ],
+  "limits": {
+    "maxRegistryObjectVersion": 1000000,
+    "maxCapacityShortageCount": 1000000,
+    "registryReferenceSlotsPerEvent": 7,
+    "callerOverride": false
+  },
+  "opaqueRegistryRefV1": {
+    "contractVersion": "OpaqueRegistryRefV1",
+    "referenceKindsExactly": [
+      "EXAM_PACKAGE",
+      "SUBJECT",
+      "SKILL_CONCEPT",
+      "PROBLEM_FAMILY",
+      "DIFFICULTY_BAND",
+      "TASK_PROFILE",
+      "BLUEPRINT",
+      "ANSWER_SPECIFICATION",
+      "VALIDATOR_PROFILE",
+      "POLICY"
+    ],
+    "fieldsExactly": [
+      "contractVersion",
+      "refKind",
+      "registryId",
+      "objectId",
+      "version",
+      "objectDigest",
+      "refDigest"
+    ],
+    "registryIdPattern": "^reg_[a-f0-9]{32}$",
+    "objectIdPattern": "^obj_[a-f0-9]{32}$",
+    "version": "POSITIVE_SAFE_INTEGER_AT_MOST_1000000",
+    "digestPattern": "^sha256:[a-f0-9]{64}$",
+    "refDigestDerivation": "QF0A1_CANONICAL_SHA256_DOMAIN_QF0B_OPAQUE_REGISTRY_REF_V1",
+    "exactFieldClosure": true,
+    "proxyAccessorSymbolUnsupportedShape": "FAIL_CLOSED",
+    "existenceCurrentnessAuthorizationOrReleaseClaim": false,
+    "futureTrustedRegistryResolverRequired": true
+  },
+  "bodylessBankScarcityEventV1": {
+    "contractVersion": "BodylessBankScarcityEventV1",
+    "fieldsExactly": [
+      "contractVersion",
+      "eventId",
+      "eventDigest",
+      "examPackageRef",
+      "subjectRef",
+      "skillConceptRef",
+      "problemFamilyRef",
+      "difficultyBandRef",
+      "taskProfileRef",
+      "policyRef",
+      "capacityShortageCount",
+      "occurredAt"
+    ],
+    "slotKindsExactly": {
+      "examPackageRef": "EXAM_PACKAGE",
+      "subjectRef": "SUBJECT",
+      "skillConceptRef": "SKILL_CONCEPT",
+      "problemFamilyRef": "PROBLEM_FAMILY",
+      "difficultyBandRef": "DIFFICULTY_BAND",
+      "taskProfileRef": "TASK_PROFILE",
+      "policyRef": "POLICY"
+    },
+    "eventIdPattern": "^bse_[a-f0-9]{64}$",
+    "eventDigestPattern": "^sha256:[a-f0-9]{64}$",
+    "eventIdDerivation": "QF0A1_CANONICAL_SHA256_DOMAIN_QF0B_BODYLESS_BANK_SCARCITY_EVENT_ID_V1",
+    "eventDigestDerivation": "QF0A1_CANONICAL_SHA256_DOMAIN_QF0B_BODYLESS_BANK_SCARCITY_EVENT_DIGEST_V1",
+    "capacityShortageCount": "POSITIVE_SAFE_INTEGER_AT_MOST_1000000",
+    "occurredAt": "CANONICAL_UTC_MILLISECOND_PRECISION",
+    "allReferencesIndependentlyValidated": true,
+    "wrongSlotKind": "FAIL_CLOSED",
+    "exactFieldClosure": true,
+    "metadataOnlyDemandSignal": true,
+    "questionOrBlueprintCreation": false,
+    "candidateCreation": false,
+    "capacityReservation": false,
+    "learnerAssignment": false,
+    "bankAssignment": false,
+    "generationAuthorization": false,
+    "providerAuthorization": false,
+    "releaseAuthorization": false,
+    "safetyCorrectnessOrAvailabilityClaim": false
+  },
+  "antiExfiltration": {
+    "fixedLengthOpaqueIds": true,
+    "fixedCountClosedReferences": true,
+    "genericMetadataOrExtensionBag": false,
+    "callerControlledUnknownFields": false,
+    "forbiddenMaterialExactly": [
+      "arbitrary_strings",
+      "display_names_labels_descriptions_notes_reasons_summaries",
+      "natural_language_identifiers",
+      "urls_uris_filesystem_paths_source_locators_signed_urls",
+      "base64_payloads_json_blobs_markdown",
+      "raw_problem_or_answer_specification_body",
+      "ocr_handwriting_learner_answer_or_note",
+      "source_textbook_academy_or_commercial_excerpt",
+      "learner_account_email_phone_or_external_user_identity",
+      "provider_prompt_response_or_raw_payload"
+    ]
+  },
+  "sourceOnlyBoundary": {
+    "inertUtility": true,
+    "inMemoryOnly": true,
+    "runtimeActivation": "OFF",
+    "providerExecution": "OFF",
+    "network": "OFF",
+    "databaseAndPersistence": "OFF",
+    "remoteMutationCount": 0,
+    "productionMutationCount": 0,
+    "questionCandidateAuthorityAbsent": true,
+    "scarcityEventMetadataOnly": true,
+    "registryResolutionAuthorityAbsent": true,
+    "generationAuthorityAbsent": true,
+    "releaseAuthorityAbsent": true,
+    "learnerAssignmentAbsent": true,
+    "bankAssignmentAbsent": true,
+    "releasableLifecycleStates": []
+  },
+  "successorGate": {
+    "qf0i": "BLOCKED",
+    "requires": "VALIDATED_QF0B_RESULTING_MAIN_RECEIPT",
+    "automaticStart": false
+  },
+  "nonGoalsExactly": [
+    "question_or_answer_construction",
+    "source_rights_decision_creation",
+    "model_execution",
+    "similarity_scanning",
+    "audit_or_transfer_chronology",
+    "candidate_or_release_lifecycle",
+    "learner_or_shared_bank_assignment",
+    "provider_network_database_runtime_or_remote_mutation"
+  ],
+  "changedPathsExactly": [
+    "docs/product/dabangil-qf0b-opaque-registry-bodyless-scarcity-v1.md",
+    "config/dabangil-qf0b-opaque-registry-bodyless-scarcity-v1.json",
+    "docs/qa/dabangil-qf0b-opaque-registry-bodyless-scarcity-validation.md",
+    "lib/question-foundry/quarantine/scarcity-contracts.ts",
+    "lib/question-foundry/quarantine/scarcity-core.ts",
+    "tests/qf0b-opaque-registry-bodyless-scarcity.test.mjs"
+  ]
+}
