@@ -1,0 +1,192 @@
+{
+  "contractVersion": "dabangil.question_foundry.qf_s2_candidate_audit_prelude.v1",
+  "stage": "QF-S2",
+  "status": "SOURCE_ONLY_CANDIDATE",
+  "tracking": {
+    "closesIssue": 868,
+    "questionFoundryProgram": 811,
+    "cognitiveProductReference": 714,
+    "completedPrerequisite": { "stage": "QF-0", "issue": 857, "pullRequest": 866 },
+    "qfS3": "UNSTARTED",
+    "qfI1": "UNSTARTED"
+  },
+  "base": {
+    "sha": "7b21551b0ec2a6b78286fb861b9acd0d1f8ca8c2",
+    "tree": "9ad60b9ece4931d7172cdc0462e079ed8d9a53fa"
+  },
+  "changedPathsExactly": [
+    "docs/product/dabangil-qf-s2-candidate-audit-prelude-v1.md",
+    "config/dabangil-qf-s2-candidate-audit-prelude-v1.json",
+    "docs/qa/dabangil-qf-s2-candidate-audit-prelude-validation.md",
+    "lib/question-foundry/audit/prelude-contracts.ts",
+    "lib/question-foundry/audit/prelude-core.ts",
+    "tests/qf-s2-candidate-audit-prelude.test.mjs"
+  ],
+  "qf0Dependency": {
+    "resultingMainSha": "7b21551b0ec2a6b78286fb861b9acd0d1f8ca8c2",
+    "resultingMainTree": "9ad60b9ece4931d7172cdc0462e079ed8d9a53fa",
+    "aggregateConfigSha256": "34722851960a8818876a95ce189d8074727337efed0d9d8040f034a119935993",
+    "sixPathIdentity": "sha256:4452ad1a5e28bcba5409081a366e1d615db46bb20bc9bfae1c9381e49ea038aa",
+    "candidateContractsSha256": "9ff5f6ebdf0e2700591a789dacd096643406c445541b07898ba10559b202ff05",
+    "candidateCoreSha256": "c122e610734b6e51fd68b8e821838cac225130d30cddf7723127d9bd78d15452",
+    "sourceOnlyBoundaryReceiptDigest": "sha256:0062eb9c6987ddda8bc7ade7f94f61b555483b4c508397663b5069ead9798cb7",
+    "contractExportsExactly": [
+      "QF0I_CANDIDATE_LIFECYCLES",
+      "QF0I_CONTRACT_VERSION",
+      "QF0I_LIMITS",
+      "QF0I_SOURCE_ONLY_BOUNDARY_RECEIPT"
+    ],
+    "coreExportsExactly": [
+      "assertQuarantinedQuestionCandidateV1",
+      "createQuarantinedQuestionCandidateV1"
+    ],
+    "publicExportsExactly": [
+      "QF0I_CONTRACT_VERSION",
+      "QF0I_CANDIDATE_LIFECYCLES",
+      "QF0I_LIMITS",
+      "QF0I_SOURCE_ONLY_BOUNDARY_RECEIPT",
+      "createQuarantinedQuestionCandidateV1",
+      "assertQuarantinedQuestionCandidateV1"
+    ],
+    "dependencyDigest": "sha256:b1b7fca1085519351e1275c81bd2c39cbcf45799e252778be7b8bd2938d06a14",
+    "driftDisposition": "FAIL_CLOSED"
+  },
+  "publicExportsExactly": [
+    "QFS2_CONTRACT_VERSION",
+    "QFS2_LIMITS",
+    "QFS2_SOURCE_ONLY_BOUNDARY_RECEIPT",
+    "createCandidateAuditPreludeV1",
+    "assertCandidateAuditPreludeV1"
+  ],
+  "preludeFieldsExactly": [
+    "contractVersion",
+    "preludeId",
+    "preludeDigest",
+    "candidateId",
+    "candidateDigest",
+    "qf0DependencyDigest",
+    "actors",
+    "steps",
+    "startedAt",
+    "completedAt"
+  ],
+  "actorContract": {
+    "kindsExactly": ["SYSTEM_COMPONENT", "MODEL_EXECUTION"],
+    "systemFieldsExactly": [
+      "actorRefId",
+      "kind",
+      "componentId",
+      "contractVersion",
+      "implementationOrBoundaryDigest"
+    ],
+    "systemComponentId": "QF_S2_CANDIDATE_AUDIT_PRELUDE",
+    "modelFieldsExactly": [
+      "actorRefId",
+      "kind",
+      "role",
+      "executionId",
+      "identityDigest",
+      "modelArtifactDigest",
+      "executionArtifactDigest",
+      "executedAt"
+    ],
+    "modelIdentitySource": "EXACT_MERGED_QF0A2_CANDIDATE_EXECUTION"
+  },
+  "stepContract": {
+    "fieldsExactly": [
+      "stepId",
+      "kind",
+      "actorRefId",
+      "occurredAt",
+      "evidenceDigest",
+      "dependsOnStepIds",
+      "dependencyOutputDigests",
+      "stepDigest"
+    ],
+    "kindsExactly": [
+      "SOURCE_DECISION_BOUND",
+      "GENERATION_RIGHTS_REVALIDATED",
+      "GENERATOR_EXECUTION_BOUND",
+      "INDEPENDENT_EXECUTION_IDENTITY_BOUND",
+      "MATERIALIZATION_RIGHTS_REVALIDATED",
+      "CANDIDATE_QUARANTINED"
+    ],
+    "forbiddenKinds": [
+      "SIMILARITY_REVIEWED",
+      "BLIND_SOLVED",
+      "JUDGED",
+      "TRANSFER_VALIDATED",
+      "RELEASE_DECIDED",
+      "APPROVED",
+      "BANK_ASSIGNED",
+      "LEARNER_ASSIGNED"
+    ]
+  },
+  "causalDependenciesExactly": {
+    "SOURCE_DECISION_BOUND": [],
+    "GENERATION_RIGHTS_REVALIDATED": ["SOURCE_DECISION_BOUND"],
+    "GENERATOR_EXECUTION_BOUND": ["GENERATION_RIGHTS_REVALIDATED"],
+    "INDEPENDENT_EXECUTION_IDENTITY_BOUND": ["GENERATOR_EXECUTION_BOUND"],
+    "MATERIALIZATION_RIGHTS_REVALIDATED": [
+      "SOURCE_DECISION_BOUND",
+      "GENERATOR_EXECUTION_BOUND"
+    ],
+    "CANDIDATE_QUARANTINED": [
+      "MATERIALIZATION_RIGHTS_REVALIDATED",
+      "GENERATOR_EXECUTION_BOUND",
+      "EVERY_INDEPENDENT_EXECUTION_IDENTITY_BOUND"
+    ]
+  },
+  "chronology": {
+    "wallClockEvidence": false,
+    "sourceDecision": "sourceDecision.evaluatedAt",
+    "generationRights": "generatorExecution.executedAt",
+    "generatorExecution": "generatorExecution.executedAt",
+    "independentExecution": "independentExecution.executedAt",
+    "materializationRights": "candidate.createdAt",
+    "candidateQuarantine": "candidate.createdAt",
+    "startedAt": "EARLIEST_EXACT_EVIDENCE_TIME",
+    "completedAt": "candidate.createdAt",
+    "causalPredecessorNotLaterThanChild": true,
+    "fixedPreludeTimestamp": false
+  },
+  "deterministicOrder": [
+    "EXPLICIT_DEPENDENCY_TOPOLOGY",
+    "OCCURRED_AT",
+    "CLOSED_PHASE_RANK",
+    "IMMUTABLE_EVIDENCE_AND_IDENTITY_DIGEST"
+  ],
+  "limits": {
+    "maxActors": 18,
+    "maxSteps": 21,
+    "maxIndependentExecutions": 16,
+    "maxIndependentExecutionsSource": "INHERITED_QF0I",
+    "callerOverride": false
+  },
+  "sourceOnlyBoundary": {
+    "receiptDigest": "sha256:7b97a2156f1243954929c7d750b881922840c39cc63a639b78903020f5f8c7e9",
+    "scope": "INERT_SOURCE_ONLY_CANDIDATE_TIME_AUDIT_PRELUDE",
+    "storage": "IN_MEMORY_ONLY",
+    "rawCandidateBodyAbsent": true,
+    "network": "OFF",
+    "providerExecution": "OFF",
+    "databaseAndPersistence": "OFF",
+    "remoteMutationCount": 0,
+    "productionMutationCount": 0,
+    "releaseAuthorityAbsent": true,
+    "transferAuthorityAbsent": true,
+    "similarityAuthorityAbsent": true,
+    "learnerAssignmentAbsent": true,
+    "bankAssignmentAbsent": true,
+    "qfS3RequiredForLaterChronologyAggregation": true
+  },
+  "evidenceClaimBoundary": {
+    "rightsAtUseRevalidationMetadataRequired": true,
+    "rightsAtUseRevalidationMetadataOnly": true,
+    "candidateQualityValidationClaimAbsent": true,
+    "independentTaskCompletionClaimAbsent": true,
+    "judgingClaimAbsent": true,
+    "transferClaimAbsent": true,
+    "releaseClaimAbsent": true
+  }
+}
