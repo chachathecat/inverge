@@ -902,3 +902,72 @@ test("QFS1B-ASSERT-031 rejects a recomputed-digest fabricated CLEAR artifact", (
     /QFS1_FAIL_CLOSED:REVIEW_AUTHORITY_RECOMPUTE_MISMATCH/u,
   );
 });
+
+test("QFS1B-HOSTILE-032 snapshots dense arrays without invoking hostile instance methods", () => {
+  const candidateParts = [bodyPart("part_snapshot_candidate", "QUESTION_STEM", ORIGINAL)];
+  const references = [
+    referenceFixture({
+      referenceId: "snapshot_reference",
+      parts: [bodyPart("part_snapshot_reference", "QUESTION_STEM", ORIGINAL)],
+    }),
+  ];
+  const input = preparationInput(candidateParts, references);
+  const created = firewall.createSimilarityFirewallReviewV1(input);
+  assert.equal(created.outcome, "BLOCKED");
+  assert.ok(created.matches.length > 0);
+
+  const hostileMatches = clone(created);
+  let matchesMapReads = 0;
+  Object.defineProperty(hostileMatches.matches, "map", {
+    configurable: true,
+    enumerable: true,
+    get() {
+      matchesMapReads += 1;
+      throw new Error("hostile matches map getter executed");
+    },
+  });
+  assert.throws(
+    () => firewall.assertSimilarityFirewallReviewV1(hostileMatches, input),
+    /QFS1_FAIL_CLOSED:REVIEW_MATCHES_ARRAY_EXTENSION_FORBIDDEN/u,
+  );
+  assert.equal(matchesMapReads, 0);
+
+  const hostileTransformations = clone(created);
+  let transformationMapReads = 0;
+  Object.defineProperty(hostileTransformations.matches[0].transformationProfile, "map", {
+    configurable: true,
+    enumerable: true,
+    get() {
+      transformationMapReads += 1;
+      throw new Error("hostile transformation map getter executed");
+    },
+  });
+  assert.throws(
+    () => firewall.assertSimilarityFirewallReviewV1(hostileTransformations, input),
+    /QFS1_FAIL_CLOSED:MATCH_0_TRANSFORMATIONS_ARRAY_EXTENSION_FORBIDDEN/u,
+  );
+  assert.equal(transformationMapReads, 0);
+
+  const dataExtension = clone(created);
+  let dataMapCalls = 0;
+  Object.defineProperty(dataExtension.matches, "map", {
+    configurable: true,
+    enumerable: true,
+    value() {
+      dataMapCalls += 1;
+    },
+  });
+  assert.throws(
+    () => firewall.assertSimilarityFirewallReviewV1(dataExtension, input),
+    /QFS1_FAIL_CLOSED:REVIEW_MATCHES_ARRAY_EXTENSION_FORBIDDEN/u,
+  );
+  assert.equal(dataMapCalls, 0);
+
+  const asserted = firewall.assertSimilarityFirewallReviewV1(clone(created), input);
+  assert.deepEqual(asserted, created);
+  assert.equal(
+    qf0a1.canonicalizeBoundedJsonV1(clone(asserted)),
+    qf0a1.canonicalizeBoundedJsonV1(clone(created)),
+  );
+  assertDeepFrozen(asserted);
+});

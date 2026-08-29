@@ -177,34 +177,75 @@ function readDenseArray(
   maximum: number,
   label: string,
 ): readonly unknown[] {
-  if (!Array.isArray(value) || utilTypes.isProxy(value)) {
+  if (value === null || typeof value !== "object") {
     fail(`${label}_DENSE_ARRAY_REQUIRED`);
   }
-  if (Object.getPrototypeOf(value) !== Array.prototype) {
+  if (utilTypes.isProxy(value)) {
+    fail(`${label}_DENSE_ARRAY_REQUIRED`);
+  }
+  if (!Array.isArray(value)) {
+    fail(`${label}_DENSE_ARRAY_REQUIRED`);
+  }
+
+  let prototype: object | null;
+  let keys: (string | symbol)[];
+  let lengthDescriptor: PropertyDescriptor | undefined;
+  try {
+    prototype = Object.getPrototypeOf(value);
+    keys = Reflect.ownKeys(value);
+    lengthDescriptor = Object.getOwnPropertyDescriptor(value, "length");
+  } catch {
+    fail(`${label}_ARRAY_UNINSPECTABLE`);
+  }
+  if (prototype !== Array.prototype) {
     fail(`${label}_ARRAY_PROTOTYPE_UNSUPPORTED`);
   }
-  if (value.length < minimum || value.length > maximum) {
+  if (
+    lengthDescriptor === undefined ||
+    !("value" in lengthDescriptor) ||
+    !Number.isSafeInteger(lengthDescriptor.value) ||
+    lengthDescriptor.value < minimum ||
+    lengthDescriptor.value > maximum
+  ) {
     fail(`${label}_COUNT_INVALID`);
   }
-  if (Reflect.ownKeys(value).some((key) => typeof key === "symbol")) {
+  if (keys.some((key) => typeof key === "symbol")) {
     fail(`${label}_SYMBOL_FORBIDDEN`);
   }
-  for (let index = 0; index < value.length; index += 1) {
-    if (!Object.prototype.hasOwnProperty.call(value, index)) {
-      fail(`${label}_SPARSE_ARRAY_FORBIDDEN`);
-    }
-    const descriptor = Object.getOwnPropertyDescriptor(value, String(index));
-    if (descriptor === undefined || !("value" in descriptor)) {
-      fail(`${label}_DATA_ELEMENT_REQUIRED`);
-    }
+
+  const permitted = new Set<string>(["length"]);
+  for (let index = 0; index < lengthDescriptor.value; index += 1) {
+    permitted.add(String(index));
   }
-  const permitted = new Set(["length", ...value.map((_, index) => String(index))]);
-  for (const key of Reflect.ownKeys(value)) {
+  for (const key of keys) {
     if (typeof key === "string" && !permitted.has(key)) {
       fail(`${label}_ARRAY_EXTENSION_FORBIDDEN`);
     }
   }
-  return value;
+  if (keys.length !== lengthDescriptor.value + 1) {
+    fail(`${label}_SPARSE_ARRAY_FORBIDDEN`);
+  }
+
+  const snapshot: unknown[] = [];
+  for (let index = 0; index < lengthDescriptor.value; index += 1) {
+    let descriptor: PropertyDescriptor | undefined;
+    try {
+      descriptor = Object.getOwnPropertyDescriptor(value, String(index));
+    } catch {
+      fail(`${label}_ELEMENT_UNINSPECTABLE`);
+    }
+    if (
+      descriptor === undefined ||
+      !("value" in descriptor) ||
+      descriptor.get !== undefined ||
+      descriptor.set !== undefined ||
+      descriptor.enumerable !== true
+    ) {
+      fail(`${label}_DATA_ELEMENT_REQUIRED`);
+    }
+    snapshot.push(descriptor.value);
+  }
+  return snapshot;
 }
 
 function readString(value: unknown, pattern: RegExp, label: string): string {
