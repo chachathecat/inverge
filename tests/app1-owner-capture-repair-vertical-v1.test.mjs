@@ -252,6 +252,58 @@ test("APP1-VM-003 requires learner-entered repair and reports honest same-sessio
   ]);
 });
 
+test("APP1-VM-003A exposes guided_path_needed without fabricating confirmation, mastery or transfer", () => {
+  const detail = syntheticDetail();
+  const requestedGap = buildApp1PrimaryGap(detail, draft());
+  const guided = evaluateApp1SameSessionRepair({
+    detail,
+    requestedGap,
+    repairText: "사례 사실과 논거를 연결하려고 직접 작성했지만 검토 초안을 아직 확인하지 못한 충분히 긴 합성 입력입니다.",
+    repairDraft: null,
+  });
+
+  assert.equal(guided.state, "guided_path_needed");
+  assert.equal(guided.sameSessionOnly, true);
+  assert.equal(guided.masteryCreated, false);
+  assert.equal(guided.transferCreated, false);
+  assert.equal(app1GuidedRepairHref(requestedGap.subject), "/app/c3r-t");
+  assert.equal("durableReceipt" in guided, false);
+  assert.equal("queueReceipt" in guided, false);
+  assert.equal("d7Transfer" in guided, false);
+});
+
+test("APP1-VM-003B blocks uncertain OCR/source evidence before successful repair persistence", async () => {
+  const detail = syntheticDetail({
+    item: {
+      rawPayload: {
+        user_confirmed_fields: {
+          pageCount: 1,
+          lowConfidenceFlag: true,
+        },
+      },
+    },
+  });
+  const requestedGap = buildApp1PrimaryGap(detail, draft());
+  const blocked = evaluateApp1SameSessionRepair({
+    detail,
+    requestedGap,
+    repairText: "확인되지 않은 OCR 원문을 근거로 성공 처리해서는 안 되는 충분히 긴 합성 복구 입력입니다.",
+    repairDraft: draft({ gap: "결론 문장의 범위를 한정할 필요가 있습니다." }),
+  });
+
+  assert.equal(blocked.state, "blocked_by_ocr_or_source_uncertainty");
+  assert.equal(blocked.masteryCreated, false);
+  assert.equal(blocked.transferCreated, false);
+  assert.equal("durableReceipt" in blocked, false);
+  assert.equal("queueReceipt" in blocked, false);
+
+  const repairLoop = await read("components/owner-study/app1-capture-repair-loop.tsx");
+  assert.ok(repairLoop.includes('verification.state === "blocked_by_ocr_or_source_uncertainty"'));
+  assert.ok(repairLoop.includes("완료되지 않은 복구는 성공 기록으로 저장하지 않습니다."));
+  assert.ok(repairLoop.includes("원문 다시 확인하기"));
+  assert.ok(repairLoop.includes("/app/capture?mode=second&rewriteFrom="));
+});
+
 test("APP1-VM-004 persists through the existing learner-private receipt binding only", () => {
   const detail = syntheticDetail();
   const requestedGap = buildApp1PrimaryGap(detail, draft());
@@ -336,6 +388,14 @@ test("APP1-UI-001 binds exact copy, one-gap UI, no prefilled repair and truthful
   assert.equal(repairLoop.includes("Date.now("), false);
 });
 
+test("APP1-UI-002 never renders answer-analysis payload errors and binds exact safe learner copy", async () => {
+  const repairLoop = await read("components/owner-study/app1-capture-repair-loop.tsx");
+  assert.equal(repairLoop.includes("payload.error"), false);
+  assert.ok(repairLoop.includes("답안 분석을 완료하지 못했습니다. 입력은 그대로 남아 있습니다."));
+  assert.ok(repairLoop.includes("복구 입력 검토를 완료하지 못했습니다. 성공으로 처리되지 않았습니다."));
+  assert.equal(repairLoop.includes("synthetic_analysis_unavailable"), false);
+});
+
 test("APP1-BOUNDARY-001 stays within existing API and product authority", async () => {
   const runtimeSources = await Promise.all([
     read("app/app/capture/page.tsx"),
@@ -400,6 +460,10 @@ test("APP1-E2E-CONTRACT-001 freezes executable synthetic browser assertions with
     "page.reload()",
     "deduped: true",
     "synthetic_analysis_unavailable",
+    "synthetic_verification_unavailable",
+    "synthetic_repair_save_unavailable",
+    "복구 입력 검토를 완료하지 못했습니다. 성공으로 처리되지 않았습니다.",
+    "복구 기록 저장에 실패했습니다. 완료로 처리되지 않았습니다.",
     "중복 성공으로 처리하지 않았습니다",
   ]) {
     assert.ok(e2e.includes(marker), `missing E2E marker: ${marker}`);

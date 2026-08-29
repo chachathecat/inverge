@@ -92,6 +92,11 @@ function safeError(value: unknown, fallback: string) {
   return value instanceof Error && value.message ? value.message : fallback;
 }
 
+const ANALYSIS_FAILURE_MESSAGE =
+  "답안 분석을 완료하지 못했습니다. 입력은 그대로 남아 있습니다.";
+const VERIFICATION_FAILURE_MESSAGE =
+  "복구 입력 검토를 완료하지 못했습니다. 성공으로 처리되지 않았습니다.";
+
 async function sha256Text(value: string) {
   const bytes = new TextEncoder().encode(value);
   const digest = await crypto.subtle.digest("SHA-256", bytes);
@@ -100,7 +105,11 @@ async function sha256Text(value: string) {
   ).join("");
 }
 
-async function requestStructure(detail: WrongAnswerDetail, answerText: string) {
+async function requestStructure(
+  detail: WrongAnswerDetail,
+  answerText: string,
+  failureMessage: string,
+) {
   const formData = new FormData();
   formData.set("questionText", detail.item.rawQuestionText ?? "");
   formData.set("answerText", answerText);
@@ -114,14 +123,10 @@ async function requestStructure(detail: WrongAnswerDetail, answerText: string) {
   });
   const payload = (await response.json().catch(() => null)) as
     | { ok: true; draft: unknown }
-    | { ok: false; error?: string }
+    | { ok: false }
     | null;
   if (!response.ok || !payload?.ok) {
-    throw new Error(
-      payload && !payload.ok && payload.error
-        ? payload.error
-        : "답안 분석을 완료하지 못했습니다. 입력은 그대로 남아 있습니다.",
-    );
+    throw new Error(failureMessage);
   }
   return normalizeAnswerReviewStructureDraft(payload.draft);
 }
@@ -215,17 +220,16 @@ export function App1CaptureRepairLoop({
     setGap(null);
     setVerification(null);
     try {
-      const draft = await requestStructure(detail, getApp1LearnerAnswer(detail));
+      const draft = await requestStructure(
+        detail,
+        getApp1LearnerAnswer(detail),
+        ANALYSIS_FAILURE_MESSAGE,
+      );
       const primaryGap = buildApp1PrimaryGap(detail, draft);
       setGap(primaryGap);
       setPhase("evidence_review");
-    } catch (analysisError) {
-      setError(
-        safeError(
-          analysisError,
-          "답안 분석을 완료하지 못했습니다. 입력은 그대로 남아 있습니다.",
-        ),
-      );
+    } catch {
+      setError(ANALYSIS_FAILURE_MESSAGE);
       setPhase("structure_confirmation");
     }
   }
@@ -255,7 +259,11 @@ export function App1CaptureRepairLoop({
     setPhase("verifying");
     setError(null);
     try {
-      const repairedDraft = await requestStructure(detail, trimmed);
+      const repairedDraft = await requestStructure(
+        detail,
+        trimmed,
+        VERIFICATION_FAILURE_MESSAGE,
+      );
       const nextVerification = evaluateApp1SameSessionRepair({
         detail,
         requestedGap: gap,
@@ -264,13 +272,8 @@ export function App1CaptureRepairLoop({
       });
       setVerification(nextVerification);
       setPhase("repair_verification");
-    } catch (verificationError) {
-      setError(
-        safeError(
-          verificationError,
-          "복구 입력 검토를 완료하지 못했습니다. 성공으로 처리되지 않았습니다.",
-        ),
-      );
+    } catch {
+      setError(VERIFICATION_FAILURE_MESSAGE);
       setPhase("direct_repair");
     }
   }

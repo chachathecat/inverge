@@ -188,16 +188,22 @@ async function installSyntheticSeams(
     }
     if (request.method() === "POST" && url.pathname === "/api/answer-review/structure") {
       structureCount += 1;
-      if (exerciseFailures && structureCount === 1) {
+      if (exerciseFailures && [1, 4].includes(structureCount)) {
         await route.fulfill({
           status: 503,
           contentType: "application/json",
-          body: JSON.stringify({ ok: false, error: "synthetic_analysis_unavailable" }),
+          body: JSON.stringify({
+            ok: false,
+            error:
+              structureCount === 1
+                ? "synthetic_analysis_unavailable"
+                : "synthetic_verification_unavailable",
+          }),
         });
         return;
       }
       const repairedReview = exerciseFailures
-        ? structureCount >= 4
+        ? structureCount >= 5
         : structureCount >= 2;
       await route.fulfill({
         status: 200,
@@ -220,6 +226,14 @@ async function installSyntheticSeams(
       };
       const confirmed = submitted.extractionPayload?.user_confirmed_fields ?? {};
       if (exerciseFailures && itemSaveCount === 2) {
+        await route.fulfill({
+          status: 503,
+          contentType: "application/json",
+          body: JSON.stringify({ ok: false, error: "synthetic_repair_save_unavailable" }),
+        });
+        return;
+      }
+      if (exerciseFailures && itemSaveCount === 3) {
         await route.fulfill({
           status: 200,
           contentType: "application/json",
@@ -428,20 +442,40 @@ test("synthetic Owner Capture → one-gap direct repair → durable next review 
       await page.getByRole("button", { name: "복구 확인" }).click();
     }
 
+    if (viewport.exerciseFailures) {
+      await expect(page.getByText("복구 입력 검토를 완료하지 못했습니다. 성공으로 처리되지 않았습니다.")).toBeVisible();
+      await expect(page.getByText("synthetic_verification_unavailable")).toHaveCount(0);
+      await expect(repair).toHaveValue(syntheticRepair);
+      await expect(page.locator("[data-app1-completed]")).toHaveCount(0);
+      await page.getByRole("button", { name: "복구 확인" }).click();
+    }
+
     await expect(page.getByText("이 세션의 요청한 복구 1개가 확인되었습니다")).toBeVisible();
     await expect(page.getByText(/D\+7 전이·숙달·점수·합격 상태는 만들지 않습니다/)).toBeVisible();
     await page.getByRole("button", { name: "복구 결과 저장하고 다음 복습 만들기" }).click();
     if (viewport.exerciseFailures) {
+      await expect(page.getByText("복구 기록 저장에 실패했습니다. 완료로 처리되지 않았습니다.")).toBeVisible();
+      await expect(page.getByText("synthetic_repair_save_unavailable")).toHaveCount(0);
+      await expect(page.locator("[data-app1-completed]")).toHaveCount(0);
+      await expect(page.locator('[data-app1-persistence-receipt="durable"]')).toHaveCount(0);
+      await expect(page.locator('[data-app1-queue-receipt="valid"]')).toHaveCount(0);
+      await expect(page.getByText(/복구 기록과 다음 독립 행동이 저장되었습니다/)).toHaveCount(0);
+      await expect(page.locator('[data-app1-repair-verification="repair_confirmed_for_this_session"]')).toBeVisible();
+      await expect(page.getByRole("button", { name: "복구 결과 저장하고 다음 복습 만들기" })).toBeVisible();
+      await page.getByRole("button", { name: "복구 결과 저장하고 다음 복습 만들기" }).click();
       await expect(page.locator('[data-app1-conflict="true"]')).toBeVisible();
       await expect(page.getByText(/중복 성공으로 처리하지 않았습니다/)).toBeVisible();
+      await expect(page.locator("[data-app1-completed]")).toHaveCount(0);
+      await expect(page.locator('[data-app1-persistence-receipt="durable"]')).toHaveCount(0);
+      await expect(page.locator('[data-app1-queue-receipt="valid"]')).toHaveCount(0);
       await page.getByRole("button", { name: "복구 결과 저장하고 다음 복습 만들기" }).click();
     }
     await expect(page.locator('[data-app1-persistence-receipt="durable"]')).toBeVisible();
     await expect(page.locator('[data-app1-queue-receipt="valid"]')).toBeVisible();
     await expect(page.getByText(/답을 보지 않고 보강한 연결을 다시 한 번 작성하기/)).toBeVisible();
     expect(seams.ocrCount()).toBe(viewport.exerciseFailures ? 2 : 1);
-    expect(seams.structureCount()).toBe(viewport.exerciseFailures ? 4 : 2);
-    expect(seams.itemSaveCount()).toBe(viewport.exerciseFailures ? 3 : 2);
+    expect(seams.structureCount()).toBe(viewport.exerciseFailures ? 5 : 2);
+    expect(seams.itemSaveCount()).toBe(viewport.exerciseFailures ? 4 : 2);
     expect(seams.sourceLoadCount()).toBeGreaterThanOrEqual(viewport.exerciseFailures ? 2 : 1);
     expect(new Set(seams.mutations.map((entry) => entry.replace(/^POST /u, "")))).toEqual(
       new Set(["/api/inverge/ocr", "/api/answer-review/structure", "/api/os/items"]),
