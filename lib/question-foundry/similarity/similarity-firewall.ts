@@ -82,7 +82,8 @@ const CORPUS_COUNT_FIELDS = Object.freeze([
 ] as const);
 const WORK_FIELDS = Object.freeze([
   "fixedReferenceOverheadUnits",
-  "inspectedCharacters",
+  "originalCharacters",
+  "normalizedCharacters",
   "observedTokens",
   "retainedTokens",
   "generatedWindows",
@@ -190,7 +191,8 @@ interface InspectionSnapshot {
 
 interface WorkState {
   fixedReferenceOverheadUnits: number;
-  inspectedCharacters: number;
+  originalCharacters: number;
+  normalizedCharacters: number;
   observedTokens: number;
   retainedTokens: number;
   generatedWindows: number;
@@ -633,7 +635,8 @@ function createWorkState(referenceCount: number): WorkState {
   }
   return {
     fixedReferenceOverheadUnits,
-    inspectedCharacters: 0,
+    originalCharacters: 0,
+    normalizedCharacters: 0,
     observedTokens: 0,
     retainedTokens: 0,
     generatedWindows: 0,
@@ -686,6 +689,21 @@ function tokenizePart(part: BodyPartSnapshot, state: WorkState): readonly TokenV
   let current = "";
   let currentKind: TokenKind | null = null;
 
+  state.originalCharacters += part.characterCount;
+  chargeRequiredWork(state, part.characterCount, "ORIGINAL_CHARACTER");
+  const normalizedBody = part.bodyText.normalize("NFKC").toLowerCase();
+  if (normalizedBody.length > QFS1_LIMITS.maxNormalizedCharactersPerBody) {
+    fail("NORMALIZED_CHARACTER_LIMIT_EXCEEDED");
+  }
+  if (
+    normalizedBody.length >
+    QFS1_LIMITS.maxAggregateNormalizedCharacters - state.normalizedCharacters
+  ) {
+    fail("AGGREGATE_NORMALIZED_CHARACTER_LIMIT_EXCEEDED");
+  }
+  state.normalizedCharacters += normalizedBody.length;
+  chargeRequiredWork(state, normalizedBody.length, "NORMALIZED_CHARACTER");
+
   const finalize = (): void => {
     if (current.length === 0 || currentKind === null) return;
     state.observedTokens += 1;
@@ -707,38 +725,29 @@ function tokenizePart(part: BodyPartSnapshot, state: WorkState): readonly TokenV
     currentKind = null;
   };
 
-  for (let index = 0; index < part.bodyText.length; index += 1) {
-    const first = part.bodyText.charCodeAt(index);
+  for (let index = 0; index < normalizedBody.length; index += 1) {
+    const first = normalizedBody.charCodeAt(index);
     let character: string;
-    let width = 1;
     if (first >= 0xd800 && first <= 0xdbff) {
-      if (index + 1 >= part.bodyText.length) fail("UNPAIRED_HIGH_SURROGATE");
-      const second = part.bodyText.charCodeAt(index + 1);
+      if (index + 1 >= normalizedBody.length) fail("UNPAIRED_HIGH_SURROGATE");
+      const second = normalizedBody.charCodeAt(index + 1);
       if (second < 0xdc00 || second > 0xdfff) fail("UNPAIRED_HIGH_SURROGATE");
-      character = part.bodyText.slice(index, index + 2);
-      width = 2;
+      character = normalizedBody.slice(index, index + 2);
       index += 1;
     } else if (first >= 0xdc00 && first <= 0xdfff) {
       fail("UNPAIRED_LOW_SURROGATE");
     } else {
-      character = part.bodyText[index];
+      character = normalizedBody[index];
     }
-    state.inspectedCharacters += width;
-    chargeRequiredWork(state, width, "CHARACTER");
 
-    const normalized = character.normalize("NFKC").toLowerCase();
-    for (const normalizedCharacter of normalized) {
-      if (!LETTER_OR_NUMBER.test(normalizedCharacter)) {
-        finalize();
-        continue;
-      }
-      const nextKind: TokenKind = NUMBER.test(normalizedCharacter)
-        ? "NUMBER"
-        : "LEXICAL";
-      if (currentKind !== null && currentKind !== nextKind) finalize();
-      currentKind = nextKind;
-      current += normalizedCharacter;
+    if (!LETTER_OR_NUMBER.test(character)) {
+      finalize();
+      continue;
     }
+    const nextKind: TokenKind = NUMBER.test(character) ? "NUMBER" : "LEXICAL";
+    if (currentKind !== null && currentKind !== nextKind) finalize();
+    currentKind = nextKind;
+    current += character;
   }
   finalize();
   return Object.freeze(tokens);
@@ -1406,7 +1415,8 @@ function buildReview(snapshot: InspectionSnapshot): SimilarityFirewallReviewV1 {
   });
   const workAccounting: SimilarityWorkAccountingV1 = Object.freeze({
     fixedReferenceOverheadUnits: state.fixedReferenceOverheadUnits,
-    inspectedCharacters: state.inspectedCharacters,
+    originalCharacters: state.originalCharacters,
+    normalizedCharacters: state.normalizedCharacters,
     observedTokens: state.observedTokens,
     retainedTokens: state.retainedTokens,
     generatedWindows: state.generatedWindows,
@@ -1569,11 +1579,17 @@ function assertWorkAccounting(value: unknown): SimilarityWorkAccountingV1 {
       QFS1_LIMITS.maxCorpusReferences * QFS1_LIMITS.fixedReferenceOverheadWorkUnits,
       "WORK_REFERENCE_OVERHEAD",
     ),
-    inspectedCharacters: readSafeInteger(
-      record.inspectedCharacters,
+    originalCharacters: readSafeInteger(
+      record.originalCharacters,
       0,
       QFS1_LIMITS.maxAggregateInspectedCharacters,
-      "WORK_CHARACTERS",
+      "WORK_ORIGINAL_CHARACTERS",
+    ),
+    normalizedCharacters: readSafeInteger(
+      record.normalizedCharacters,
+      0,
+      QFS1_LIMITS.maxAggregateNormalizedCharacters,
+      "WORK_NORMALIZED_CHARACTERS",
     ),
     observedTokens: readSafeInteger(
       record.observedTokens,
@@ -1626,7 +1642,8 @@ function assertWorkAccounting(value: unknown): SimilarityWorkAccountingV1 {
   });
   const expectedTotal =
     result.fixedReferenceOverheadUnits +
-    result.inspectedCharacters +
+    result.originalCharacters +
+    result.normalizedCharacters +
     result.observedTokens +
     result.generatedWindows +
     result.comparisonWorkUnits;

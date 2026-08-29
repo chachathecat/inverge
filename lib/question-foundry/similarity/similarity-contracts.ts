@@ -66,6 +66,8 @@ export const QFS1_LIMITS = Object.freeze({
   maxPartsPerReference: 16,
   maxCharactersPerBody: 32_768,
   maxAggregateInspectedCharacters: 262_144,
+  maxNormalizedCharactersPerBody: 32_768,
+  maxAggregateNormalizedCharacters: 262_144,
   maxTokensRetainedPerBody: 256,
   maxTotalGeneratedWindows: 65_536,
   maxTotalComparisonWorkUnits: 524_288,
@@ -241,7 +243,8 @@ export interface SimilarityCorpusCountsV1 {
 
 export interface SimilarityWorkAccountingV1 {
   readonly fixedReferenceOverheadUnits: number;
-  readonly inspectedCharacters: number;
+  readonly originalCharacters: number;
+  readonly normalizedCharacters: number;
   readonly observedTokens: number;
   readonly retainedTokens: number;
   readonly generatedWindows: number;

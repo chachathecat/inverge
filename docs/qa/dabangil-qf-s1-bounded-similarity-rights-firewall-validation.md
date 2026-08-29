@@ -44,34 +44,37 @@ The focused suite independently recomputes, rather than trusts:
 The QF-S1 suite proves:
 
 1. exact normalized whole-body copy blocks;
-2. a candidate fragment embedded in a longer reference blocks;
-3. a reference fragment embedded in a longer candidate blocks;
-4. numeric substitution with retained lexical structure blocks;
-5. identifier/name substitution blocks;
-6. bounded order perturbation blocks;
-7. lexical-only transformed partial copy is detected;
-8. a copy spanning structured parts blocks;
-9. numeric layout without copied lexical structure remains clear;
-10. short generic expressions cannot block;
-11. insufficient distinct lexical evidence cannot become strong copy;
-12. every short reference consumes fixed overhead;
-13. unchanged duplicate-content references still consume work;
-14. excess reference count fails before a body accessor can run;
-15. per-body character overflow fails;
-16. aggregate character overflow fails before body hashing;
-17. token overflow throws, while exhausted window/comparison work cannot
+2. canonically identical composed/decomposed whole-body copies block in both
+   directions with deterministic, separately charged normalization work;
+3. a candidate fragment embedded in a longer reference blocks;
+4. a reference fragment embedded in a longer candidate blocks;
+5. numeric substitution with retained lexical structure blocks;
+6. identifier/name substitution blocks;
+7. bounded order perturbation blocks;
+8. lexical-only transformed partial copy is detected;
+9. a copy spanning structured parts blocks;
+10. numeric layout without copied lexical structure remains clear;
+11. short generic expressions cannot block;
+12. insufficient distinct lexical evidence cannot become strong copy;
+13. every short reference consumes fixed overhead;
+14. unchanged duplicate-content references still consume work;
+15. excess reference count fails before a body accessor can run;
+16. original per-body and aggregate character overflow fail before
+    normalization;
+17. normalized per-body and aggregate expansion overflow fail closed;
+18. token overflow throws, while exhausted window/comparison work cannot
     produce `CLEAR`;
-18. candidate body/digest and QF-0 candidate identity drift fail;
-19. reference body/digest drift fails;
-20. corpus-manifest drift fails;
-21. no source class grants rights through the firewall;
-22. protected, private and textbook sources can block without granting reuse;
-23. proxies, accessors, symbols, non-dense arrays and unsupported shapes fail;
-24. process locale and input permutation do not alter the review;
-25. raw bodies and excerpts are absent from the artifact;
-26. `CLEAR` creates no rights, release, bank or learner authority;
-27. every bound review metadata mutation invalidates assertion;
-28. source inspection proves no provider, network, database, persistence,
+19. candidate body/digest and QF-0 candidate identity drift fail;
+20. reference body/digest drift fails;
+21. corpus-manifest drift fails;
+22. no source class grants rights through the firewall;
+23. protected, private and textbook sources can block without granting reuse;
+24. proxies, accessors, symbols, non-dense arrays and unsupported shapes fail;
+25. process locale and input permutation do not alter the review;
+26. raw bodies and excerpts are absent from the artifact;
+27. `CLEAR` creates no rights, release, bank or learner authority;
+28. every bound review metadata mutation invalidates assertion;
+29. source inspection proves no provider, network, database, persistence,
     filesystem-write or remote-mutation path.
 
 ## Final candidate validation commands

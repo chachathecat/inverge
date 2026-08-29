@@ -92,19 +92,25 @@ Body or manifest drift fails closed.
 ## Bounded scanner and work accounting
 
 The tokenizer is a deterministic code-point scanner, not an unbounded whole-
-body regular-expression pass. It validates surrogate pairs, applies bounded
-per-character NFKC/case normalization, forms lexical and numeric tokens, and
-retains at most 256 tokens per body. Punctuation and whitespace are
+body regular-expression pass. After all original body count and character
+limits are established, it NFKC-normalizes and case-folds each already bounded
+whole body so composed and decomposed canonical sequences cannot split into
+different lexemes. The normalized output is separately bounded before the
+scanner validates surrogate pairs and forms lexical and numeric tokens. At
+most 256 tokens are retained per body. Punctuation and whitespace are
 separators. Process locale is never consulted.
 
 Machine-owned limits are 16 candidate parts, 64 references, 16 parts per
-reference, 32,768 UTF-16 code units per body, 262,144 aggregate inspected
-code units, 65,536 generated lexical windows, 524,288 comparison units and
-1,048,576 total work units. Caller override is absent.
+reference, 32,768 original and normalized UTF-16 code units per body,
+262,144 aggregate original and normalized code units in each separately
+accounted traversal, 65,536 generated lexical windows, 524,288 comparison
+units and 1,048,576 total work units. Caller override is absent.
 
 Every reference incurs 64 work units even when it is short, unchanged or
-cannot enter a matching mode. Inspected characters, observed tokens,
-generated windows and comparisons are each charged. Count, character or
+cannot enter a matching mode. Original normalization-input characters and
+normalized scanner-output characters are published as distinct totals and
+both are charged, as are observed tokens, generated windows and comparisons.
+Count, original/normalized character or
 per-body token overflow throws before an unsafe artifact can be created. If
 the window/comparison budget is exhausted, no uncharged operation is
 performed and the result cannot be `CLEAR`; it is `REVIEW_REQUIRED` unless

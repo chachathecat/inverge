@@ -78,7 +78,7 @@
   "publicContract": {
     "contractVersion": "QFS1BoundedSimilarityRightsFirewallV1",
     "policyRef": "dabangil.question_foundry.similarity_rights_firewall.v1",
-    "policyDigest": "sha256:4751ee5b590405eabdf86f8556d93c3c12179fdd4495ee68c887edae62463283",
+    "policyDigest": "sha256:0acf2ce1e86bf73e971b5d6cb7a75a7de520966a6809bd5cdb80124fda1222eb",
     "sourceOnlyBoundaryReceiptDigest": "sha256:0b5fd7dda96b747c1f9b7d2e23d601618b3501b13f4dca3677b8337c2aa0f673",
     "contractExportsExactly": [
       "QFS1_BODY_PART_KINDS",
@@ -160,6 +160,8 @@
     "maxPartsPerReference": 16,
     "maxCharactersPerBody": 32768,
     "maxAggregateInspectedCharacters": 262144,
+    "maxNormalizedCharactersPerBody": 32768,
+    "maxAggregateNormalizedCharacters": 262144,
     "maxTokensRetainedPerBody": 256,
     "maxTotalGeneratedWindows": 65536,
     "maxTotalComparisonWorkUnits": 524288,
@@ -182,6 +184,9 @@
     "unchangedReferencesCharged": true,
     "skippedMatchingModesChargedThroughReferenceOverhead": true,
     "charactersCharged": true,
+    "originalNormalizationInputCharactersCharged": true,
+    "normalizedScannerOutputCharactersBoundedAndCharged": true,
+    "publishedCharacterAccountingSplit": true,
     "tokensCharged": true,
     "windowsCharged": true,
     "comparisonsCharged": true,

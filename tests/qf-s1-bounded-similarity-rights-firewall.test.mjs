@@ -26,7 +26,7 @@ const CONFIG_PATH = "config/dabangil-qf-s1-bounded-similarity-rights-firewall-v1
 const CONTRACTS_PATH = "lib/question-foundry/similarity/similarity-contracts.ts";
 const FIREWALL_PATH = "lib/question-foundry/similarity/similarity-firewall.ts";
 const EXPECTED_CONFIG_SHA256 =
-  "285ffc3a6c35a2d3185afe480eacefd3d5a6bd7417b006d958e525bbfc5b9510";
+  "780b97caa08e88c253628cd2ccaa2c928e4272b92228d66a7e164ba21b98354a";
 
 const EXACT_PATHS = [
   "docs/product/dabangil-qf-s1-bounded-similarity-rights-firewall-v1.md",
@@ -483,6 +483,33 @@ test("QFS1-COPY-004A strongly supported near-whole-body copy blocks", () => {
   assert.equal(artifact.matches[0].matchKind, "NEAR_WHOLE_BODY_COPY");
 });
 
+test("QFS1-COPY-004B composed and decomposed exact copies block both ways", () => {
+  const composed =
+    "Café résumé naïve façade coöperate élève jalapeño piñata valuation evidence";
+  const decomposed = composed.normalize("NFD");
+  const normalized = composed.normalize("NFKC").toLowerCase();
+  assert.notEqual(composed, decomposed);
+
+  const forward = review(composed, [decomposed]);
+  const forwardRepeat = review(composed, [decomposed]);
+  const reverse = review(decomposed, [composed]);
+  const reverseRepeat = review(decomposed, [composed]);
+
+  assert.deepEqual(forwardRepeat, forward);
+  assert.deepEqual(reverseRepeat, reverse);
+  for (const artifact of [forward, reverse]) {
+    assert.equal(artifact.outcome, "BLOCKED");
+    assert.equal(artifact.matches[0].matchKind, "EXACT_NORMALIZED_COPY");
+    assert.equal(
+      artifact.workAccounting.originalCharacters,
+      composed.length + decomposed.length,
+    );
+    assert.equal(artifact.workAccounting.normalizedCharacters, normalized.length * 2);
+    assert.equal("inspectedCharacters" in artifact.workAccounting, false);
+    assert.deepEqual(firewall.assertSimilarityFirewallReviewV1(artifact), artifact);
+  }
+});
+
 test("QFS1-COPY-005 copied candidate fragment embedded in a longer reference blocks", () => {
   const artifact = review(ORIGINAL, [
     `introductory unrelated framing ${ORIGINAL} additional unrelated closing material`,
@@ -675,7 +702,14 @@ test("QFS1-ACCOUNTING-016 unchanged duplicate-content references still consume w
     artifact.workAccounting.fixedReferenceOverheadUnits,
     3 * contracts.QFS1_LIMITS.fixedReferenceOverheadWorkUnits,
   );
-  assert.equal(artifact.workAccounting.inspectedCharacters, ORIGINAL.length + 12);
+  assert.equal(
+    artifact.workAccounting.originalCharacters,
+    ORIGINAL.length + 12,
+  );
+  assert.equal(
+    artifact.workAccounting.normalizedCharacters,
+    ORIGINAL.length + 12,
+  );
 });
 
 test("QFS1-LIMIT-017 excessive reference count fails before any body accessor runs", () => {
@@ -746,6 +780,46 @@ test("QFS1-LIMIT-019 aggregate character overflow fails before hashing", () => {
   assert.throws(
     () => firewall.createSimilarityFirewallReviewV1(inspection(parts, [])),
     /QFS1_FAIL_CLOSED:AGGREGATE_CHARACTER_LIMIT_EXCEEDED/u,
+  );
+});
+
+test("QFS1-LIMIT-019A NFKC expansion is bounded per body and in aggregate", () => {
+  const expandingCharacter = "\ufb03";
+  assert.equal(expandingCharacter.normalize("NFKC"), "ffi");
+  const perBodyOverflow = expandingCharacter.repeat(
+    Math.floor(contracts.QFS1_LIMITS.maxNormalizedCharactersPerBody / 3) + 1,
+  );
+  assert.ok(perBodyOverflow.length <= contracts.QFS1_LIMITS.maxCharactersPerBody);
+  assert.ok(
+    perBodyOverflow.normalize("NFKC").length >
+      contracts.QFS1_LIMITS.maxNormalizedCharactersPerBody,
+  );
+  assert.throws(
+    () => review(perBodyOverflow, []),
+    /QFS1_FAIL_CLOSED:NORMALIZED_CHARACTER_LIMIT_EXCEEDED/u,
+  );
+
+  const aggregateBody = expandingCharacter.repeat(10_000);
+  assert.ok(
+    aggregateBody.normalize("NFKC").length <=
+      contracts.QFS1_LIMITS.maxNormalizedCharactersPerBody,
+  );
+  const aggregateParts = Array.from({ length: 9 }, (_, index) =>
+    bodyPart(`part_normalized_aggregate_${index}`, "SUPPORTING_MATERIAL", aggregateBody),
+  );
+  assert.ok(
+    aggregateParts.reduce((total, part) => total + part.bodyText.length, 0) <=
+      contracts.QFS1_LIMITS.maxAggregateInspectedCharacters,
+  );
+  assert.ok(
+    aggregateParts.reduce(
+      (total, part) => total + part.bodyText.normalize("NFKC").length,
+      0,
+    ) > contracts.QFS1_LIMITS.maxAggregateNormalizedCharacters,
+  );
+  assert.throws(
+    () => firewall.createSimilarityFirewallReviewV1(inspection(aggregateParts, [])),
+    /QFS1_FAIL_CLOSED:AGGREGATE_NORMALIZED_CHARACTER_LIMIT_EXCEEDED/u,
   );
 });
 
