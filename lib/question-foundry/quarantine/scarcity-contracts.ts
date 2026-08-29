@@ -60,13 +60,13 @@ export interface BodylessBankScarcityEventV1
 
 const QF0B_PUBLIC_EXPORTS = Object.freeze([
   "QF0B_CONTRACT_VERSION",
-  "QF0B_LIMITS",
   "QF0B_REGISTRY_REF_KINDS",
+  "QF0B_LIMITS",
   "QF0B_SOURCE_ONLY_BOUNDARY_RECEIPT",
-  "assertBodylessBankScarcityEventV1",
+  "createOpaqueRegistryRefV1",
   "assertOpaqueRegistryRefV1",
   "createBodylessBankScarcityEventV1",
-  "createOpaqueRegistryRefV1",
+  "assertBodylessBankScarcityEventV1",
 ] as const);
 
 export const QF0B_SOURCE_ONLY_BOUNDARY_RECEIPT = Object.freeze({

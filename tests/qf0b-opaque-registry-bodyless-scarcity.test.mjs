@@ -275,6 +275,7 @@ test("QF0B-DEPENDENCY-003 recomputes exact QF-0A2 identities, exports, and bound
 });
 
 test("QF0B-SURFACE-004 exposes only the closed constants and pure helpers", () => {
+  const contract = JSON.parse(read(CONFIG_PATH));
   assert.deepEqual(Object.keys(contracts), [
     "QF0B_CONTRACT_VERSION",
     "QF0B_LIMITS",
@@ -295,6 +296,10 @@ test("QF0B-SURFACE-004 exposes only the closed constants and pure helpers", () =
   assert.equal(QF0B_SOURCE_ONLY_BOUNDARY_RECEIPT.remoteMutation, "ZERO");
   assert.equal(QF0B_SOURCE_ONLY_BOUNDARY_RECEIPT.productionMutation, "ZERO");
   assert.deepEqual(QF0B_SOURCE_ONLY_BOUNDARY_RECEIPT.releasableLifecycleStates, []);
+  assert.deepEqual(
+    QF0B_SOURCE_ONLY_BOUNDARY_RECEIPT.publicExportsExactly,
+    contract.publicExportsExactly,
+  );
 });
 
 test("QF0B-REF-005 creates a deterministic valid OpaqueRegistryRefV1", () => {
@@ -460,16 +465,16 @@ test("QF0B-EVENT-014 ignores event field order without changing identity", () =>
 });
 
 test("QF0B-EVENT-015 rejects every wrong fixed slot-kind permutation", () => {
-  const slots = Object.keys(EVENT_SLOT_KINDS);
-  for (let index = 0; index < slots.length; index += 1) {
-    const slot = slots[index];
-    const wrongKind = EVENT_SLOT_KINDS[slots[(index + 1) % slots.length]];
-    const wrongRef = createOpaqueRegistryRefV1(refMaterial(wrongKind, "8"));
-    assert.throws(
-      () => createBodylessBankScarcityEventV1(eventMaterial({ [slot]: wrongRef })),
-      /REF_KIND_MISMATCH/,
-      slot,
-    );
+  for (const [slot, requiredKind] of Object.entries(EVENT_SLOT_KINDS)) {
+    for (const wrongKind of QF0B_REGISTRY_REF_KINDS) {
+      if (wrongKind === requiredKind) continue;
+      const wrongRef = createOpaqueRegistryRefV1(refMaterial(wrongKind, "8"));
+      assert.throws(
+        () => createBodylessBankScarcityEventV1(eventMaterial({ [slot]: wrongRef })),
+        /REF_KIND_MISMATCH/,
+        `${slot}:${wrongKind}`,
+      );
+    }
   }
 });
 
