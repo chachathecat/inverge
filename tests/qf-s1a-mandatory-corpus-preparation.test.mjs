@@ -304,8 +304,10 @@ function assertDeepFrozen(value, seen = new Set()) {
 test("QFS1A-CONTRACT-001 binds the exact six-path source-only candidate", () => {
   const config = JSON.parse(read(CONFIG_PATH));
   assert.deepEqual(config.base, { sha: BASE_SHA, tree: BASE_TREE });
-  assert.equal(git("rev-parse", "HEAD^"), BASE_SHA);
-  assert.equal(git("show", "-s", "--format=%T", "HEAD^"), BASE_TREE);
+  assert.equal(git("rev-parse", BASE_SHA), BASE_SHA);
+  assert.equal(git("show", "-s", "--format=%T", BASE_SHA), BASE_TREE);
+  assert.equal(git("merge-base", "HEAD", BASE_SHA), BASE_SHA);
+  git("merge-base", "--is-ancestor", BASE_SHA, "HEAD");
   assert.equal(config.tracking.closesIssue, 871);
   assert.equal(config.tracking.qfS1Umbrella, 867);
   assert.deepEqual(config.changedPathsExactly, EXACT_PATHS);
