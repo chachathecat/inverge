@@ -406,6 +406,7 @@ function plainQfs2BoundaryReceipt(): Record<string, unknown> {
     similarityAuthorityAbsent: receipt.similarityAuthorityAbsent,
     learnerAssignmentAbsent: receipt.learnerAssignmentAbsent,
     bankAssignmentAbsent: receipt.bankAssignmentAbsent,
+    evidenceClaimBoundary: { ...receipt.evidenceClaimBoundary },
     qfS3RequiredForLaterChronologyAggregation:
       receipt.qfS3RequiredForLaterChronologyAggregation,
     qf0SourceOnlyBoundaryReceiptDigest:

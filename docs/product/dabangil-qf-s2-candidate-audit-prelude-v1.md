@@ -14,6 +14,18 @@ remote mutation, or Production mutation. It has no similarity, validation,
 judging, transfer, release, learner-assignment, or bank-assignment authority.
 QF-S3 is required before any later chronology aggregation.
 
+The two rights-at-use steps retain required revalidation metadata only. They
+are not candidate-quality validation. The closed evidence/claim boundary fixes
+all of these machine fields to `true`:
+
+- `rightsAtUseRevalidationMetadataRequired`
+- `rightsAtUseRevalidationMetadataOnly`
+- `candidateQualityValidationClaimAbsent`
+- `independentTaskCompletionClaimAbsent`
+- `judgingClaimAbsent`
+- `transferClaimAbsent`
+- `releaseClaimAbsent`
+
 An independent model identity proves only that the exact QF-0A2 identity was
 bound. Its presence does not prove that a blind solver, critic, or judge
 completed a valid task.
@@ -36,6 +48,9 @@ bound to the QF-S2 contract version and QF-S2 source-only boundary digest. Each
 identity digest, model artifact digest, execution artifact digest, and
 `executedAt`. With the generator and at most sixteen inherited independent
 executions, the single system actor keeps the closed maximum at eighteen.
+The corresponding closed graph has exactly five fixed steps plus at most
+sixteen independent-identity steps, so its machine maximum is twenty-one
+(`QFS2_LIMITS.maxSteps = 21`).
 
 The only step kinds are:
 

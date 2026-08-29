@@ -6,7 +6,7 @@ export const QFS2_CONTRACT_VERSION =
 export const QFS2_LIMITS = Object.freeze({
   contractVersion: QFS2_CONTRACT_VERSION,
   maxActors: 18,
-  maxSteps: 22,
+  maxSteps: 21,
   maxIndependentExecutions: 16,
   callerOverride: false,
 });
@@ -78,6 +78,16 @@ const QFS2_PUBLIC_EXPORTS = Object.freeze([
   "assertCandidateAuditPreludeV1",
 ] as const);
 
+const QFS2_EVIDENCE_CLAIM_BOUNDARY = Object.freeze({
+  rightsAtUseRevalidationMetadataRequired: true,
+  rightsAtUseRevalidationMetadataOnly: true,
+  candidateQualityValidationClaimAbsent: true,
+  independentTaskCompletionClaimAbsent: true,
+  judgingClaimAbsent: true,
+  transferClaimAbsent: true,
+  releaseClaimAbsent: true,
+});
+
 export const QFS2_SOURCE_ONLY_BOUNDARY_RECEIPT = Object.freeze({
   contractVersion: QFS2_CONTRACT_VERSION,
   scope: "INERT_SOURCE_ONLY_CANDIDATE_TIME_AUDIT_PRELUDE",
@@ -94,6 +104,7 @@ export const QFS2_SOURCE_ONLY_BOUNDARY_RECEIPT = Object.freeze({
   similarityAuthorityAbsent: true,
   learnerAssignmentAbsent: true,
   bankAssignmentAbsent: true,
+  evidenceClaimBoundary: QFS2_EVIDENCE_CLAIM_BOUNDARY,
   qfS3RequiredForLaterChronologyAggregation: true,
   qf0SourceOnlyBoundaryReceiptDigest:
     "sha256:0062eb9c6987ddda8bc7ade7f94f61b555483b4c508397663b5069ead9798cb7",

@@ -158,13 +158,13 @@
   ],
   "limits": {
     "maxActors": 18,
-    "maxSteps": 22,
+    "maxSteps": 21,
     "maxIndependentExecutions": 16,
     "maxIndependentExecutionsSource": "INHERITED_QF0I",
     "callerOverride": false
   },
   "sourceOnlyBoundary": {
-    "receiptDigest": "sha256:d782357f578efa86e2405b5b0f055b0c571889d67b19c78cdd288f8e68c762a7",
+    "receiptDigest": "sha256:7b97a2156f1243954929c7d750b881922840c39cc63a639b78903020f5f8c7e9",
     "scope": "INERT_SOURCE_ONLY_CANDIDATE_TIME_AUDIT_PRELUDE",
     "storage": "IN_MEMORY_ONLY",
     "rawCandidateBodyAbsent": true,
@@ -180,11 +180,13 @@
     "bankAssignmentAbsent": true,
     "qfS3RequiredForLaterChronologyAggregation": true
   },
-  "claimsAbsent": {
-    "independentIdentityProvesValidSolverTask": false,
-    "validationOccurred": false,
-    "judgingOccurred": false,
-    "transferOccurred": false,
-    "releaseOccurred": false
+  "evidenceClaimBoundary": {
+    "rightsAtUseRevalidationMetadataRequired": true,
+    "rightsAtUseRevalidationMetadataOnly": true,
+    "candidateQualityValidationClaimAbsent": true,
+    "independentTaskCompletionClaimAbsent": true,
+    "judgingClaimAbsent": true,
+    "transferClaimAbsent": true,
+    "releaseClaimAbsent": true
   }
 }

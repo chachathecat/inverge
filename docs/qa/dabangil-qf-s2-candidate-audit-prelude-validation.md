@@ -33,6 +33,15 @@ actor version and artifact drift, candidate identity drift, evidence drift,
 input permutation, raw-field rejection, forbidden authority kinds, and the
 absence of provider/network/database/remote mutation paths.
 
+The suite also fixes the true closed-graph maximum at 21 steps, compares the
+source receipt, config, and product documentation for the same explicit
+rights-revalidation-metadata/non-authority boundary, and exercises every
+nested actor, step, and dependency container against proxies, accessors,
+symbols, sparse or extended arrays, and hostile prototypes. Observable proxy
+traps and accessor getters must remain at zero. Created and asserted preludes,
+their actor/step records, and every dependency array are recursively frozen
+at the public contract boundary.
+
 The prelude is always asserted again against the exact QF-0 candidate. An
 internally re-labeled artifact cannot substitute for that candidate binding.
 

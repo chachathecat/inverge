@@ -20,7 +20,7 @@ const BASE_SHA = "7b21551b0ec2a6b78286fb861b9acd0d1f8ca8c2";
 const BASE_TREE = "9ad60b9ece4931d7172cdc0462e079ed8d9a53fa";
 const CONFIG_PATH = "config/dabangil-qf-s2-candidate-audit-prelude-v1.json";
 const EXPECTED_CONFIG_DIGEST =
-  "0b5a09e876ded31d48f73e9efbee6cd6e96a8b5d9981345c872772cc1107e6ec";
+  "b4861ada014ad37f4af78fb416c2cd2533774d89abec41fc70931ff19d63d31a";
 
 const EXACT_PATHS = [
   "docs/product/dabangil-qf-s2-candidate-audit-prelude-v1.md",
@@ -64,6 +64,30 @@ function digest(character) {
 
 function clone(value) {
   return JSON.parse(JSON.stringify(value));
+}
+
+function observableTrapProxy(target) {
+  let trapCount = 0;
+  const trap = () => {
+    trapCount += 1;
+    throw new Error("QFS2_TEST_OBSERVABLE_TRAP_FIRED");
+  };
+  return {
+    value: new Proxy(target, {
+      defineProperty: trap,
+      deleteProperty: trap,
+      get: trap,
+      getOwnPropertyDescriptor: trap,
+      getPrototypeOf: trap,
+      has: trap,
+      isExtensible: trap,
+      ownKeys: trap,
+      preventExtensions: trap,
+      set: trap,
+      setPrototypeOf: trap,
+    }),
+    count: () => trapCount,
+  };
 }
 
 function changedPaths() {
@@ -292,10 +316,37 @@ test("QFS2-SURFACE-003 exposes only the preferred closed runtime surface", () =>
   assert.deepEqual(contracts.QFS2_LIMITS, {
     contractVersion: "QFS2CandidateTimeAwareAuditPreludeV1",
     maxActors: 18,
-    maxSteps: 22,
+    maxSteps: 21,
     maxIndependentExecutions: qf0iContracts.QF0I_LIMITS.maxIndependentExecutions,
     callerOverride: false,
   });
+});
+
+test("QFS2-AUTHORITY-003A source, config, and docs share one explicit claim boundary", () => {
+  const config = JSON.parse(read(CONFIG_PATH));
+  const expected = {
+    rightsAtUseRevalidationMetadataRequired: true,
+    rightsAtUseRevalidationMetadataOnly: true,
+    candidateQualityValidationClaimAbsent: true,
+    independentTaskCompletionClaimAbsent: true,
+    judgingClaimAbsent: true,
+    transferClaimAbsent: true,
+    releaseClaimAbsent: true,
+  };
+  assert.deepEqual(
+    clone(contracts.QFS2_SOURCE_ONLY_BOUNDARY_RECEIPT.evidenceClaimBoundary),
+    expected,
+  );
+  assert.deepEqual(config.evidenceClaimBoundary, expected);
+  assert.equal(config.limits.maxSteps, contracts.QFS2_LIMITS.maxSteps);
+  assert.equal(Object.hasOwn(config, "claimsAbsent"), false);
+  const product = read("docs/product/dabangil-qf-s2-candidate-audit-prelude-v1.md");
+  for (const field of Object.keys(expected)) {
+    assert.equal(product.includes(`\`${field}\``), true, field);
+  }
+  assert.match(product, /rights-at-use steps retain required revalidation metadata only/u);
+  assert.match(product, /not candidate-quality validation/u);
+  assert.match(product, /`QFS2_LIMITS\.maxSteps = 21`/u);
 });
 
 test("QFS2-DETERMINISM-004 zero-independent candidate is deterministic", () => {
@@ -531,7 +582,7 @@ test("QFS2-BINDING-020A role and step-order drift fail", () => {
   assert.throws(() => core.assertCandidateAuditPreludeV1(changedOrder, candidate), /STEP_ORDER_NONDETERMINISTIC/);
 });
 
-test("QFS2-LIMITS-020B exact inherited maximum stays within 18 actors and 22 steps", () => {
+test("QFS2-LIMITS-020B exact inherited maximum is 18 actors and 21 steps", () => {
   const roles = ["BLIND_SOLVER", "JUDGE", "ADVERSARIAL_CRITIC", "META_AUDITOR"];
   const independentMaterials = Array.from({ length: 16 }, (_, index) =>
     modelMaterial(
@@ -563,25 +614,242 @@ test("QFS2-DOMAIN-021 raw, learner, provider, and unsupported fields fail", () =
       field,
     );
   }
+  const observedProxy = observableTrapProxy(clone(baseline));
   assert.throws(
-    () => core.assertCandidateAuditPreludeV1(new Proxy(clone(baseline), {}), candidate),
+    () => core.assertCandidateAuditPreludeV1(observedProxy.value, candidate),
     /PROXY_UNSUPPORTED/,
   );
+  assert.equal(observedProxy.count(), 0);
   const accessor = clone(baseline);
+  let getterCalls = 0;
   Object.defineProperty(accessor, "startedAt", {
     enumerable: true,
-    get: () => baseline.startedAt,
+    get: () => {
+      getterCalls += 1;
+      return baseline.startedAt;
+    },
   });
   assert.throws(
     () => core.assertCandidateAuditPreludeV1(accessor, candidate),
     /DATA_PROPERTY_REQUIRED/,
   );
+  assert.equal(getterCalls, 0);
   const symbol = clone(baseline);
   symbol[Symbol("hidden")] = true;
   assert.throws(
     () => core.assertCandidateAuditPreludeV1(symbol, candidate),
     /SYMBOL_KEY_UNSUPPORTED/,
   );
+  const hostilePrototype = clone(baseline);
+  Object.setPrototypeOf(hostilePrototype, { inherited: true });
+  assert.throws(
+    () => core.assertCandidateAuditPreludeV1(hostilePrototype, candidate),
+    /PROTOTYPE_UNSUPPORTED/,
+  );
+});
+
+test("QFS2-DOMAIN-021A nested proxies fail before every observable trap", () => {
+  const candidate = createCandidate();
+  const baseline = core.createCandidateAuditPreludeV1(candidate);
+  const cases = [
+    ["actor record", (prelude, wrap) => {
+      prelude.actors[0] = wrap(prelude.actors[0]);
+    }],
+    ["step record", (prelude, wrap) => {
+      prelude.steps[0] = wrap(prelude.steps[0]);
+    }],
+    ["actors array", (prelude, wrap) => {
+      prelude.actors = wrap(prelude.actors);
+    }],
+    ["steps array", (prelude, wrap) => {
+      prelude.steps = wrap(prelude.steps);
+    }],
+    ["dependency IDs array", (prelude, wrap) => {
+      const step = prelude.steps.find((entry) => entry.dependsOnStepIds.length > 0);
+      step.dependsOnStepIds = wrap(step.dependsOnStepIds);
+    }],
+    ["dependency outputs array", (prelude, wrap) => {
+      const step = prelude.steps.find((entry) => entry.dependencyOutputDigests.length > 0);
+      step.dependencyOutputDigests = wrap(step.dependencyOutputDigests);
+    }],
+  ];
+  for (const [label, install] of cases) {
+    const malformed = clone(baseline);
+    let observed;
+    install(malformed, (target) => {
+      observed = observableTrapProxy(target);
+      return observed.value;
+    });
+    assert.throws(
+      () => core.assertCandidateAuditPreludeV1(malformed, candidate),
+      /PROXY_UNSUPPORTED/,
+      label,
+    );
+    assert.equal(observed.count(), 0, label);
+  }
+});
+
+test("QFS2-DOMAIN-021B nested accessors fail without invoking getters", () => {
+  const candidate = createCandidate();
+  const baseline = core.createCandidateAuditPreludeV1(candidate);
+  const cases = [
+    ["actor field", (prelude, define) => {
+      const actor = prelude.actors.find((entry) => entry.kind === "MODEL_EXECUTION");
+      define(actor, "executionId", actor.executionId);
+    }],
+    ["step field", (prelude, define) => {
+      define(prelude.steps[0], "evidenceDigest", prelude.steps[0].evidenceDigest);
+    }],
+    ["actors element", (prelude, define) => {
+      define(prelude.actors, "0", prelude.actors[0]);
+    }],
+    ["steps element", (prelude, define) => {
+      define(prelude.steps, "0", prelude.steps[0]);
+    }],
+    ["dependency ID element", (prelude, define) => {
+      const step = prelude.steps.find((entry) => entry.dependsOnStepIds.length > 0);
+      define(step.dependsOnStepIds, "0", step.dependsOnStepIds[0]);
+    }],
+    ["dependency output element", (prelude, define) => {
+      const step = prelude.steps.find((entry) => entry.dependencyOutputDigests.length > 0);
+      define(step.dependencyOutputDigests, "0", step.dependencyOutputDigests[0]);
+    }],
+  ];
+  for (const [label, install] of cases) {
+    const malformed = clone(baseline);
+    let getterCalls = 0;
+    install(malformed, (target, field, result) => {
+      Object.defineProperty(target, field, {
+        enumerable: true,
+        configurable: true,
+        get: () => {
+          getterCalls += 1;
+          return result;
+        },
+      });
+    });
+    assert.throws(
+      () => core.assertCandidateAuditPreludeV1(malformed, candidate),
+      /DATA_(?:PROPERTY|ELEMENT)_REQUIRED/,
+      label,
+    );
+    assert.equal(getterCalls, 0, label);
+  }
+});
+
+test("QFS2-DOMAIN-021C nested records and arrays reject every hostile shape", () => {
+  const candidate = createCandidate();
+  const baseline = core.createCandidateAuditPreludeV1(candidate);
+  const recordLocators = [
+    ["actor", (prelude) => prelude.actors[0]],
+    ["step", (prelude) => prelude.steps[0]],
+  ];
+  for (const [label, locate] of recordLocators) {
+    const withSymbol = clone(baseline);
+    locate(withSymbol)[Symbol(label)] = true;
+    assert.throws(
+      () => core.assertCandidateAuditPreludeV1(withSymbol, candidate),
+      /SYMBOL_KEY_UNSUPPORTED/,
+      `${label} symbol`,
+    );
+    const hostilePrototype = clone(baseline);
+    Object.setPrototypeOf(locate(hostilePrototype), { inherited: true });
+    assert.throws(
+      () => core.assertCandidateAuditPreludeV1(hostilePrototype, candidate),
+      /PROTOTYPE_UNSUPPORTED/,
+      `${label} prototype`,
+    );
+  }
+
+  const arrayLocators = [
+    ["actors", (prelude) => prelude.actors],
+    ["steps", (prelude) => prelude.steps],
+    ["dependency IDs", (prelude) =>
+      prelude.steps.find((entry) => entry.dependsOnStepIds.length > 0)
+        .dependsOnStepIds],
+    ["dependency outputs", (prelude) =>
+      prelude.steps.find((entry) => entry.dependencyOutputDigests.length > 0)
+        .dependencyOutputDigests],
+  ];
+  for (const [label, locate] of arrayLocators) {
+    const sparse = clone(baseline);
+    delete locate(sparse)[0];
+    assert.throws(
+      () => core.assertCandidateAuditPreludeV1(sparse, candidate),
+      /DENSE_BOUNDED_ARRAY_REQUIRED/,
+      `${label} sparse`,
+    );
+    const extended = clone(baseline);
+    locate(extended).unexpected = true;
+    assert.throws(
+      () => core.assertCandidateAuditPreludeV1(extended, candidate),
+      /DENSE_BOUNDED_ARRAY_REQUIRED/,
+      `${label} extended`,
+    );
+    const withSymbol = clone(baseline);
+    locate(withSymbol)[Symbol(label)] = true;
+    assert.throws(
+      () => core.assertCandidateAuditPreludeV1(withSymbol, candidate),
+      /DENSE_BOUNDED_ARRAY_REQUIRED/,
+      `${label} symbol`,
+    );
+    const hostilePrototype = clone(baseline);
+    Object.setPrototypeOf(locate(hostilePrototype), null);
+    assert.throws(
+      () => core.assertCandidateAuditPreludeV1(hostilePrototype, candidate),
+      /PROTOTYPE_UNSUPPORTED/,
+      `${label} prototype`,
+    );
+  }
+});
+
+test("QFS2-DOMAIN-021D public artifacts are deeply frozen and reject mutation", () => {
+  const candidate = createCandidate();
+  const created = core.createCandidateAuditPreludeV1(candidate);
+  const asserted = core.assertCandidateAuditPreludeV1(created, candidate);
+  for (const [label, prelude] of [["created", created], ["asserted", asserted]]) {
+    assert.equal(Object.isFrozen(prelude), true, `${label} prelude`);
+    assert.equal(Object.isFrozen(prelude.actors), true, `${label} actors`);
+    assert.equal(Object.isFrozen(prelude.steps), true, `${label} steps`);
+    for (const actor of prelude.actors) {
+      assert.equal(Object.isFrozen(actor), true, `${label} actor`);
+    }
+    for (const step of prelude.steps) {
+      assert.equal(Object.isFrozen(step), true, `${label} step`);
+      assert.equal(
+        Object.isFrozen(step.dependsOnStepIds),
+        true,
+        `${label} dependency IDs`,
+      );
+      assert.equal(
+        Object.isFrozen(step.dependencyOutputDigests),
+        true,
+        `${label} dependency outputs`,
+      );
+    }
+    const dependencyStep = prelude.steps.find(
+      (step) => step.dependsOnStepIds.length > 0,
+    );
+    const mutations = [
+      ["prelude", () => {
+        prelude.startedAt = "2026-01-01T00:00:00.000Z";
+      }],
+      ["actors array", () => prelude.actors.push(prelude.actors[0])],
+      ["actor", () => {
+        prelude.actors[0].actorRefId = `qfaa_${"f".repeat(64)}`;
+      }],
+      ["steps array", () => prelude.steps.push(prelude.steps[0])],
+      ["step", () => {
+        prelude.steps[0].evidenceDigest = digest("f");
+      }],
+      ["dependency IDs", () => dependencyStep.dependsOnStepIds.push("x")],
+      ["dependency outputs", () =>
+        dependencyStep.dependencyOutputDigests.push(digest("f"))],
+    ];
+    for (const [target, mutate] of mutations) {
+      assert.throws(mutate, TypeError, `${label} ${target}`);
+    }
+  }
 });
 
 test("QFS2-AUTHORITY-022 forbidden authority step kinds cannot appear", () => {
