@@ -17,7 +17,7 @@
 - reconstruction: mechanical recreation of the six source files with no
   scratch or donor ancestry import;
 - exact changed-path count: six;
-- remote push and PR publication: not performed in final local preparation.
+- Draft publication: PR #870, with no Ready transition or merge.
 
 All validation evidence below is regenerated against the final reconstructed
 bytes and refreshed base. Scratch validation is not final-head evidence.
@@ -64,18 +64,38 @@ The QF-S1 suite proves:
 17. normalized per-body and aggregate expansion overflow fail closed;
 18. token overflow throws, while exhausted window/comparison work cannot
     produce `CLEAR`;
-19. candidate body/digest and QF-0 candidate identity drift fail;
-20. reference body/digest drift fails;
-21. corpus-manifest drift fails;
-22. no source class grants rights through the firewall;
-23. protected, private and textbook sources can block without granting reuse;
-24. proxies, accessors, symbols, non-dense arrays and unsupported shapes fail;
-25. process locale and input permutation do not alter the review;
-26. raw bodies and excerpts are absent from the artifact;
-27. `CLEAR` creates no rights, release, bank or learner authority;
-28. every bound review metadata mutation invalidates assertion;
-29. source inspection proves no provider, network, database, persistence,
+19. every legal candidate and declared reference body is normalized and
+    tokenized in one mandatory corpus phase before any optional window or
+    comparison work begins;
+20. a legal two-reference, eight-body corpus at the exact 262,144 original-
+    and normalized-character ceilings completes every mandatory body scan
+    before first-reference optional exhaustion, returns `REVIEW_REQUIRED`,
+    reports all eight bodies inspected, and reaches the exact 1,048,576 total
+    work ceiling without a late mandatory-work exception;
+21. the late-reference review is byte-deterministic under reference input
+    permutation and a supported process-locale change;
+22. blocking evidence established before later optional exhaustion preserves
+    `BLOCKED` precedence while reporting exhausted/incomplete optional work
+    and granting no rights or release authority;
+23. candidate body/digest and QF-0 candidate identity drift fail;
+24. reference body/digest drift fails;
+25. corpus-manifest drift fails;
+26. no source class grants rights through the firewall;
+27. protected, private and textbook sources can block without granting reuse;
+28. proxies, accessors, symbols, non-dense arrays and unsupported shapes fail;
+29. process locale and input permutation do not alter the review;
+30. raw bodies and excerpts are absent from the artifact;
+31. `CLEAR` creates no rights, release, bank or learner authority;
+32. every bound review metadata mutation invalidates assertion;
+33. source inspection proves no provider, network, database, persistence,
     filesystem-write or remote-mutation path.
+
+The corrected focused suite observation is 39/39 passing. The mandatory-
+first regression records `inspectedBodyCount = 8`, `originalCharacters =
+262144`, `normalizedCharacters = 262144`, `totalWorkUnits = 1048576`,
+`budgetExhausted = true`, `completeCorpusInspection = false`, and
+`outcome = REVIEW_REQUIRED`. The blocking-precedence companion records the
+same complete mandatory corpus accounting with `outcome = BLOCKED`.
 
 ## Final candidate validation commands
 

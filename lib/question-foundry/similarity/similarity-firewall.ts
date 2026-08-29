@@ -774,11 +774,17 @@ function generateLexicalWindows(
   return windows;
 }
 
-function prepareSequence(
+function prepareMandatorySequence(
   parts: readonly BodyPartSnapshot[],
   state: WorkState,
+): readonly TokenV1[] {
+  return Object.freeze(parts.flatMap((part) => tokenizePart(part, state)));
+}
+
+function prepareOptionalSequence(
+  tokens: readonly TokenV1[],
+  state: WorkState,
 ): PreparedSequence {
-  const tokens = Object.freeze(parts.flatMap((part) => tokenizePart(part, state)));
   return Object.freeze({
     tokens,
     lexicalWindows: generateLexicalWindows(tokens, state),
@@ -1181,10 +1187,12 @@ function detectReferenceMatch(
       );
     }
   }
+  if (state.budgetExhausted) return null;
 
   // A bounded permutation is identity-preserving evidence, so classify it
   // before positional lexical substitutions.
   const order = boundedOrderEvidence(candidateTokens, referenceTokens, state);
+  if (state.budgetExhausted) return null;
   if (
     order !== null &&
     order.maximumDisplacement > 0 &&
@@ -1212,6 +1220,7 @@ function detectReferenceMatch(
   }
 
   const alignment = bestShapeAlignment(candidateTokens, referenceTokens, state);
+  if (state.budgetExhausted) return null;
   if (
     alignment !== null &&
     alignment.kindMismatchCount === 0 &&
@@ -1275,6 +1284,7 @@ function detectReferenceMatch(
   }
 
   const span = longestExactSpan(candidateTokens, referenceTokens, state);
+  if (state.budgetExhausted) return null;
   if (span !== null && span.length > 0) {
     const evidence = rangeEvidence(candidateTokens, span.candidateStart, span.length);
     if (isStrongEvidence(span.length, evidence)) {
@@ -1312,6 +1322,7 @@ function detectReferenceMatch(
   }
 
   const overlap = lexicalOverlap(candidate, compared, state);
+  if (state.budgetExhausted) return null;
   if (
     overlap !== null &&
     overlap.commonLexicalTokenCount >=
@@ -1380,12 +1391,47 @@ function canonicalReviewMaterial(
 
 function buildReview(snapshot: InspectionSnapshot): SimilarityFirewallReviewV1 {
   const state = createWorkState(snapshot.references.length);
-  const candidate = prepareSequence(snapshot.candidateParts, state);
+  // Phase M: complete every mandatory body scan before any optional window or
+  // comparison work can consume the shared total-work budget.
+  const candidateTokens = prepareMandatorySequence(snapshot.candidateParts, state);
+  const mandatoryReferences = Object.freeze(
+    snapshot.references.map((reference) =>
+      Object.freeze({
+        reference,
+        tokens: prepareMandatorySequence(reference.parts, state),
+      }),
+    ),
+  );
+
+  // Phase O: generate bounded windows only after the complete corpus has been
+  // normalized and tokenized, then compare in the existing canonical order.
+  const candidate = prepareOptionalSequence(candidateTokens, state);
+  const optionalReferences: Array<{
+    readonly reference: ReferenceSnapshot;
+    readonly prepared: PreparedSequence;
+  }> = [];
+  if (!state.budgetExhausted) {
+    for (const mandatory of mandatoryReferences) {
+      optionalReferences.push({
+        reference: mandatory.reference,
+        prepared: prepareOptionalSequence(mandatory.tokens, state),
+      });
+      if (state.budgetExhausted) break;
+    }
+  }
+
   const matches: SimilarityMatchSummaryV1[] = [];
-  for (const reference of snapshot.references) {
-    const compared = prepareSequence(reference.parts, state);
-    const match = detectReferenceMatch(reference, candidate, compared, state);
-    if (match !== null) matches.push(match);
+  if (!state.budgetExhausted) {
+    for (const optional of optionalReferences) {
+      const match = detectReferenceMatch(
+        optional.reference,
+        candidate,
+        optional.prepared,
+        state,
+      );
+      if (match !== null) matches.push(match);
+      if (state.budgetExhausted) break;
+    }
   }
   const orderedMatches = Object.freeze(
     orderByUtf8(matches, canonicalMatchSortKey),

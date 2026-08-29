@@ -340,6 +340,42 @@ function review(candidateText, referenceTexts, options = {}) {
   );
 }
 
+function fullBudgetBody(prefix) {
+  const tokens = Array.from({ length: contracts.QFS1_LIMITS.maxTokensRetainedPerBody }, (_, index) => {
+    const first = String.fromCharCode(97 + Math.floor(index / (26 * 26)));
+    const second = String.fromCharCode(97 + Math.floor(index / 26) % 26);
+    const third = String.fromCharCode(97 + index % 26);
+    const stem = `${prefix}${first}${second}${third}`;
+    assert.ok(stem.length < 127);
+    return `${stem}${"x".repeat(127 - stem.length)}`;
+  });
+  const body = `${tokens.join(" ")}z`;
+  assert.equal(body.length, contracts.QFS1_LIMITS.maxCharactersPerBody);
+  return body;
+}
+
+function orderedReferencePair(firstParts, secondParts, seed) {
+  const first = referenceFixture({
+    referenceId: `${seed}first`,
+    parts: firstParts,
+  });
+  for (let index = 0; index < 128; index += 1) {
+    const second = referenceFixture({
+      referenceId: `${seed}second${index}`,
+      parts: secondParts,
+    });
+    if (
+      qf0a1.compareUtf8BytesV1(
+        `${first.referenceDigest}/${first.referenceId}`,
+        `${second.referenceDigest}/${second.referenceId}`,
+      ) < 0
+    ) {
+      return [first, second];
+    }
+  }
+  assert.fail(`unable to establish deterministic reference order for ${seed}`);
+}
+
 const ORIGINAL =
   "Orchid analysts compare coastal parcel income using stable rent growth discount periods and terminal yield assumptions";
 
@@ -861,6 +897,117 @@ test("QFS1-LIMIT-020 token overflow throws and comparison/window exhaustion cann
       exhausted.workAccounting.comparisonWorkUnits ===
         contracts.QFS1_LIMITS.maxTotalComparisonWorkUnits,
   );
+});
+
+test("QFS1-ACCOUNTING-020A mandatory corpus scan completes before late-reference optional exhaustion", () => {
+  const candidateText = fullBudgetBody("candidatebudget");
+  const candidateParts = [
+    bodyPart("part_candidate_budget", "QUESTION_STEM", candidateText),
+  ];
+  const heavyParts = Array.from({ length: 6 }, (_, index) =>
+    bodyPart(
+      `part_heavy_${index}`,
+      "SUPPORTING_MATERIAL",
+      fullBudgetBody(`heavybudget${String.fromCharCode(97 + index)}`),
+    ),
+  );
+  const lateParts = [
+    bodyPart(
+      "part_late_budget",
+      "RUBRIC",
+      fullBudgetBody("latebudget"),
+    ),
+  ];
+  const [heavyReference, lateReference] = orderedReferencePair(
+    heavyParts,
+    lateParts,
+    "mandatorylate",
+  );
+
+  const forward = firewall.createSimilarityFirewallReviewV1(
+    inspection(candidateParts, [heavyReference, lateReference]),
+  );
+  const previous = process.env.LC_ALL;
+  process.env.LC_ALL = "tr_TR.UTF-8";
+  let permuted;
+  try {
+    permuted = firewall.createSimilarityFirewallReviewV1(
+      inspection(candidateParts, [lateReference, heavyReference]),
+    );
+  } finally {
+    if (previous === undefined) delete process.env.LC_ALL;
+    else process.env.LC_ALL = previous;
+  }
+
+  assert.deepEqual(permuted, forward);
+  assert.equal(forward.outcome, "REVIEW_REQUIRED");
+  assert.deepEqual(forward.matches, []);
+  assert.equal(forward.workAccounting.budgetExhausted, true);
+  assert.equal(forward.workAccounting.completeCorpusInspection, false);
+  assert.equal(forward.corpusCounts.inspectedBodyCount, 8);
+  assert.equal(
+    forward.workAccounting.originalCharacters,
+    contracts.QFS1_LIMITS.maxAggregateInspectedCharacters,
+  );
+  assert.equal(
+    forward.workAccounting.normalizedCharacters,
+    contracts.QFS1_LIMITS.maxAggregateNormalizedCharacters,
+  );
+  assert.ok(forward.workAccounting.generatedWindows > 0);
+  assert.ok(forward.workAccounting.comparisonWorkUnits > 0);
+  assert.equal(
+    forward.workAccounting.totalWorkUnits,
+    contracts.QFS1_LIMITS.maxTotalWorkUnits,
+  );
+  assert.doesNotMatch(
+    JSON.stringify(forward),
+    /candidatebudget|heavybudget|latebudget|bodyText|excerpt/u,
+  );
+  assert.deepEqual(firewall.assertSimilarityFirewallReviewV1(forward), forward);
+});
+
+test("QFS1-ACCOUNTING-020B blocking evidence precedes later optional exhaustion", () => {
+  const candidateText = fullBudgetBody("blockingbudget");
+  const candidateParts = [
+    bodyPart("part_candidate_blocking", "QUESTION_STEM", candidateText),
+  ];
+  const blockingParts = [
+    bodyPart("part_blocking_copy", "QUESTION_STEM", candidateText),
+  ];
+  const heavyParts = Array.from({ length: 6 }, (_, index) =>
+    bodyPart(
+      `part_blocking_heavy_${index}`,
+      "SUPPORTING_MATERIAL",
+      fullBudgetBody(`blockingheavy${String.fromCharCode(97 + index)}`),
+    ),
+  );
+  const [blockingReference, heavyReference] = orderedReferencePair(
+    blockingParts,
+    heavyParts,
+    "blockingprecedence",
+  );
+
+  const artifact = firewall.createSimilarityFirewallReviewV1(
+    inspection(candidateParts, [blockingReference, heavyReference]),
+  );
+
+  assert.equal(artifact.outcome, "BLOCKED");
+  assert.equal(artifact.matches[0].matchKind, "EXACT_NORMALIZED_COPY");
+  assert.equal(artifact.matches[0].disposition, "BLOCKING");
+  assert.equal(artifact.workAccounting.budgetExhausted, true);
+  assert.equal(artifact.workAccounting.completeCorpusInspection, false);
+  assert.equal(artifact.corpusCounts.inspectedBodyCount, 8);
+  assert.equal(
+    artifact.workAccounting.originalCharacters,
+    contracts.QFS1_LIMITS.maxAggregateInspectedCharacters,
+  );
+  assert.equal(
+    artifact.workAccounting.normalizedCharacters,
+    contracts.QFS1_LIMITS.maxAggregateNormalizedCharacters,
+  );
+  assert.equal("releaseAuthority" in artifact, false);
+  assert.equal("rightsGranted" in artifact, false);
+  assert.deepEqual(firewall.assertSimilarityFirewallReviewV1(artifact), artifact);
 });
 
 test("QFS1-BINDING-021 candidate body digest and content binding drift fail", () => {
