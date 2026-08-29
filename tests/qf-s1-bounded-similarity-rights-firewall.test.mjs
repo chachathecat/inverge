@@ -791,21 +791,29 @@ test("QFS1B-ACCOUNTING-026 formulas and QF-S1A optional ceiling are exact", () =
 });
 
 test("QFS1B-ASSERT-027 review assertion rejects drift and preserves deep immutability", () => {
-  const created = review(ORIGINAL, [ORIGINAL]);
-  const asserted = firewall.assertSimilarityFirewallReviewV1(clone(created));
+  const candidateParts = [bodyPart("part_assert_candidate", "QUESTION_STEM", ORIGINAL)];
+  const references = [
+    referenceFixture({
+      referenceId: "assert_reference",
+      parts: [bodyPart("part_assert_reference", "QUESTION_STEM", ORIGINAL)],
+    }),
+  ];
+  const input = preparationInput(candidateParts, references);
+  const created = firewall.createSimilarityFirewallReviewV1(input);
+  const asserted = firewall.assertSimilarityFirewallReviewV1(clone(created), input);
   assert.deepEqual(asserted, created);
   assertDeepFrozen(created);
   assertDeepFrozen(asserted);
   const changed = clone(created);
   changed.workAccounting.comparisonWorkUnits += 1;
   assert.throws(
-    () => firewall.assertSimilarityFirewallReviewV1(changed),
+    () => firewall.assertSimilarityFirewallReviewV1(changed, input),
     /QFS1_FAIL_CLOSED/u,
   );
   const extra = clone(created);
   extra.note = "forbidden";
   assert.throws(
-    () => firewall.assertSimilarityFirewallReviewV1(extra),
+    () => firewall.assertSimilarityFirewallReviewV1(extra, input),
     /QFS1_FAIL_CLOSED:REVIEW_FIELD_COUNT_INVALID/u,
   );
 });
@@ -855,4 +863,42 @@ test("QFS1B-BOUNDARY-030 no release, transfer, assignment, or runtime lifecycle 
   assert.equal(contracts.QFS1_SOURCE_ONLY_BOUNDARY_RECEIPT.network, "OFF");
   assert.equal(contracts.QFS1_SOURCE_ONLY_BOUNDARY_RECEIPT.remoteMutation, "ZERO");
   assert.equal(contracts.QFS1_SOURCE_ONLY_BOUNDARY_RECEIPT.productionMutation, "ZERO");
+});
+
+test("QFS1B-ASSERT-031 rejects a recomputed-digest fabricated CLEAR artifact", () => {
+  const candidateParts = [bodyPart("part_forged_candidate", "QUESTION_STEM", ORIGINAL)];
+  const references = [
+    referenceFixture({
+      referenceId: "forged_reference",
+      parts: [
+        bodyPart(
+          "part_forged_reference",
+          "QUESTION_STEM",
+          "unrelated harbor traffic inspection schedule",
+        ),
+      ],
+    }),
+  ];
+  const input = preparationInput(candidateParts, references);
+  const created = firewall.createSimilarityFirewallReviewV1(input);
+  assert.equal(created.outcome, "CLEAR");
+  assert.ok(created.workAccounting.optionalWorkUnitsConsumed > 0);
+
+  const forged = clone(created);
+  forged.workAccounting.generatedWindows = 0;
+  forged.workAccounting.comparisonWorkUnits = 0;
+  forged.workAccounting.optionalWorkUnitsConsumed = 0;
+  forged.workAccounting.totalWorkUnits = forged.workAccounting.mandatoryTotalWorkUnits;
+  forged.workAccounting.budgetExhausted = false;
+  forged.workAccounting.completeCorpusInspection = true;
+  forged.matches = [];
+  forged.outcome = "CLEAR";
+  const forgedMaterial = clone(forged);
+  delete forgedMaterial.reviewDigest;
+  forged.reviewDigest = qf0a1.digestCanonicalJsonV1(forgedMaterial);
+
+  assert.throws(
+    () => firewall.assertSimilarityFirewallReviewV1(forged, input),
+    /QFS1_FAIL_CLOSED:REVIEW_AUTHORITY_RECOMPUTE_MISMATCH/u,
+  );
 });

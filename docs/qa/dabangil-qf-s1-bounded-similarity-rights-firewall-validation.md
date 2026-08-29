@@ -35,6 +35,9 @@ The focused suite proves:
 - input-order, UTF-8-order and locale-independent determinism;
 - exact mandatory/optional/total accounting formulas;
 - review-digest drift rejection and deep immutability;
+- rejection of a fabricated `CLEAR` artifact even when its unkeyed review
+  digest is recomputed, by authoritative reconstruction from the original
+  closed preparation input;
 - proxy, accessor, symbol and hostile-prototype rejection without hostile trap
   execution;
 - absence of raw bodies, token values, excerpts, provider payloads, learner

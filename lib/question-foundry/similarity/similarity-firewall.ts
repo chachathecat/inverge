@@ -1512,6 +1512,7 @@ export function createSimilarityFirewallReviewV1(
 
 export function assertSimilarityFirewallReviewV1(
   value: unknown,
+  authorityInput: SimilarityCorpusPreparationInputV1,
 ): SimilarityFirewallReviewV1 {
   assertDependenciesV1();
   const record = readClosedRecord(value, REVIEW_FIELDS, "REVIEW");
@@ -1593,5 +1594,10 @@ export function assertSimilarityFirewallReviewV1(
   if (QFS1_CONTRACT_VERSION !== QFS1_LIMITS.contractVersion) {
     fail("LIMIT_CONTRACT_VERSION_DRIFT");
   }
-  return Object.freeze({ ...material, reviewDigest });
+  const validated = Object.freeze({ ...material, reviewDigest });
+  const authoritative = createSimilarityFirewallReviewV1(authorityInput);
+  if (!sameCanonical(validated, authoritative)) {
+    fail("REVIEW_AUTHORITY_RECOMPUTE_MISMATCH");
+  }
+  return authoritative;
 }

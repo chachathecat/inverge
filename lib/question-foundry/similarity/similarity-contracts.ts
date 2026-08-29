@@ -98,6 +98,8 @@ const QFS1_POLICY_MATERIAL = Object.freeze({
   outcomesExactly: [...QFS1_OUTCOMES],
   matchKindsExactly: [...QFS1_MATCH_KINDS],
   transformationsExactly: [...QFS1_TRANSFORMATIONS],
+  artifactAssertionAuthority:
+    "AUTHORITATIVE_RECOMPUTATION_FROM_ORIGINAL_PREPARATION_INPUT",
   semanticPlagiarismClaim: false,
   sourceRightGranted: false,
   sourceEligibilityGranted: false,
@@ -137,6 +139,8 @@ export const QFS1_SOURCE_ONLY_BOUNDARY_RECEIPT = Object.freeze({
   rawBodyOutputAbsent: true,
   excerptOutputAbsent: true,
   metadataOnlySimilarityEvidence: true,
+  artifactAssertionAuthority:
+    "AUTHORITATIVE_RECOMPUTATION_FROM_ORIGINAL_PREPARATION_INPUT",
   semanticPlagiarismVerdictAbsent: true,
   sourceRightAuthorityAbsent: true,
   sourceEligibilityAuthorityAbsent: true,

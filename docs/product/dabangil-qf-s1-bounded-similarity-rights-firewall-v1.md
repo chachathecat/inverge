@@ -6,6 +6,12 @@ only `SimilarityCorpusPreparationInputV1` and calls
 `prepareSimilarityCorpusV1` exactly once. Callers cannot submit a prepared
 corpus as authority.
 
+The public assertion requires that same original closed preparation input. It
+recomputes the authoritative review through the sole QF-S1A-backed creation
+path and accepts the supplied metadata artifact only when its canonical bytes
+match the recomputed result. A caller-recomputed unkeyed digest proves only
+self-consistency and cannot establish that inspection occurred.
+
 The firewall retains no raw body. QF-S1A validates body digests, Unicode,
 closed manifests, corpus identity and all mandatory work before QF-S1B begins
 optional matching. QF-S1B consumes only QF-S1A's bounded prepared tokens,
@@ -74,6 +80,10 @@ but can never grant reuse.
 body-manifest digest, QF-S1A preparation digest, policy identity, corpus
 manifest, counts, truthful work accounting, closed outcome, metadata-only
 matches and a canonical review digest.
+
+Artifact validation is authoritative revalidation, not digest-only trust:
+`assertSimilarityFirewallReviewV1` reconstructs the review from the original
+ephemeral input and returns the newly recomputed immutable artifact.
 
 Match summaries contain only opaque reference identity, part kinds, closed
 match/transformation values, deterministic measures and token index ranges.

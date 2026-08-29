@@ -88,7 +88,13 @@
     "inputContract": "SimilarityCorpusPreparationInputV1",
     "callsPrepareSimilarityCorpusV1Exactly": 1,
     "callerPreparedCorpusAuthority": false,
-    "outputContract": "SimilarityFirewallReviewV1"
+    "outputContract": "SimilarityFirewallReviewV1",
+    "artifactAssertion": {
+      "authorityInputContract": "SimilarityCorpusPreparationInputV1",
+      "recomputesAuthoritativeReview": true,
+      "canonicalExactMatchRequired": true,
+      "digestOnlyTrust": false
+    }
   },
   "publicExportsExactly": [
     "QFS1_CONTRACT_VERSION",
@@ -177,7 +183,8 @@
   ],
   "policy": {
     "reference": "dabangil.question_foundry.similarity_rights_firewall.v1",
-    "digest": "sha256:5dc751154fceb0caeb604decffcfa3fa0cee76834f0801bea5304250fe3ce890",
+    "digest": "sha256:e1f7397e3ed56b2d3095aed3daf9f64738a656ec7e9a74bd9f12c45b7f5416d9",
+    "artifactAssertionAuthority": "AUTHORITATIVE_RECOMPUTATION_FROM_ORIGINAL_PREPARATION_INPUT",
     "semanticPlagiarismClaim": false,
     "sourceRightGranted": false,
     "sourceEligibilityGranted": false,
@@ -186,7 +193,7 @@
   },
   "boundary": {
     "scope": "OPTIONAL_BOUNDED_SIMILARITY_MATCHING_AND_RIGHTS_FIREWALL_ONLY",
-    "receiptDigest": "sha256:01b53efb8f55d585bab93e7684eb7e6418091877dc0dc4813e542abe342b2809",
+    "receiptDigest": "sha256:d827b128218a8a8671de93ad1cd7d5485285c6729274cabd077432d3ba476c1e",
     "sourceOnly": true,
     "inMemoryOnly": true,
     "rawBodyOutput": "ABSENT",
@@ -204,6 +211,7 @@
     "releaseAuthority": "ABSENT",
     "learnerAssignment": "ABSENT",
     "bankAssignment": "ABSENT",
-    "semanticPlagiarismVerdict": "ABSENT"
+    "semanticPlagiarismVerdict": "ABSENT",
+    "artifactAssertionAuthority": "AUTHORITATIVE_RECOMPUTATION_FROM_ORIGINAL_PREPARATION_INPUT"
   }
 }
