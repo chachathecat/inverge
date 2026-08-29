@@ -1,0 +1,226 @@
+{
+  "contractVersion": "QFS3DependencyRankedTransferChronologyV1",
+  "stage": "QF-S3",
+  "status": "final_source_only_candidate",
+  "tracking": {
+    "closesIssue": 875,
+    "questionFoundryProgram": 811,
+    "cognitiveProductReference": 714,
+    "completedSiblings": {
+      "qfS1": 867,
+      "qfS2": 868
+    },
+    "qfI1BlockedPendingValidatedMergeReceipt": true
+  },
+  "base": {
+    "sha": "761b7f6b7648d19845ab3385665e92046165dddd",
+    "tree": "c6c6a8ad876c2f40b5276a26485b088656addf49"
+  },
+  "finalPublicationRule": {
+    "scratchBranchMayBePushed": false,
+    "scratchAncestryMayBeImported": false,
+    "finalBranchMustStartFromRefreshedProtectedMain": true,
+    "finalEvidenceMustBeRegenerated": true,
+    "app1TerminalReceiptRequiredBeforePublication": true
+  },
+  "app1TerminalReceipt": {
+    "outcome": "APP1_BLOCKED",
+    "pullRequest": 876,
+    "headSha": "0685ae1266c842e7a3d03bef20ce4ba2369bf961",
+    "headTree": "42403b9d7fd8a242176a6089d33184a036a25b08",
+    "draft": true,
+    "merged": false,
+    "actionable": {
+      "p0": 0,
+      "p1": 1,
+      "p2": 0
+    }
+  },
+  "changedPathsExactly": [
+    "docs/product/dabangil-qf-s3-dependency-ranked-transfer-chronology-v1.md",
+    "config/dabangil-qf-s3-dependency-ranked-transfer-chronology-v1.json",
+    "docs/qa/dabangil-qf-s3-dependency-ranked-transfer-chronology-validation.md",
+    "lib/question-foundry/chronology/chronology-contracts.ts",
+    "lib/question-foundry/chronology/chronology-core.ts",
+    "tests/qf-s3-dependency-ranked-transfer-chronology.test.mjs"
+  ],
+  "dependencies": {
+    "qf0": {
+      "resultingMainSha": "7b21551b0ec2a6b78286fb861b9acd0d1f8ca8c2",
+      "resultingMainTree": "9ad60b9ece4931d7172cdc0462e079ed8d9a53fa",
+      "aggregateConfigSha256": "34722851960a8818876a95ce189d8074727337efed0d9d8040f034a119935993",
+      "sixPathIdentity": "sha256:4452ad1a5e28bcba5409081a366e1d615db46bb20bc9bfae1c9381e49ea038aa",
+      "candidateContractsSha256": "9ff5f6ebdf0e2700591a789dacd096643406c445541b07898ba10559b202ff05",
+      "candidateCoreSha256": "c122e610734b6e51fd68b8e821838cac225130d30cddf7723127d9bd78d15452",
+      "sourceOnlyBoundaryReceiptDigest": "sha256:0062eb9c6987ddda8bc7ade7f94f61b555483b4c508397663b5069ead9798cb7"
+    },
+    "qf0a1": {
+      "configSha256": "0a4a4f54ecf6ebf6d19be209811aaf688abe7172932548f5ae8784fa02a8fe53",
+      "implementationSha256": "cccc4dc8da9163d982a252633e3160f1ba5ad2138d0fda0f152f21b2c01e8d9e",
+      "fivePathIdentity": "sha256:d3919726b908cfd9146335173907c06c2a3ebcdfd3a892b84485d21fbc14e618",
+      "sourceOnlyBoundaryReceiptDigest": "sha256:bf9f1223fd788696294261995a9a09b05e1db0bfa4d8bc803359cdf98fa9853a",
+      "exportsExactly": [
+        "QF0A1_LIMITS",
+        "QF0A1_SOURCE_ONLY_BOUNDARY_RECEIPT",
+        "canonicalizeBoundedJsonV1",
+        "compareUtf8BytesV1",
+        "digestCanonicalJsonV1"
+      ]
+    },
+    "qf0a2": {
+      "configSha256": "45bbdcd1c7d9858bd4a0a9be86c4df2e556ca4aa0953ff5ff25da89e1458ccda",
+      "trustContractsSha256": "4f9963cb989e4776355e8601a7c690c011857e4197b73494db14c7e71f599527",
+      "trustCoreSha256": "4843278ff1e0af3550a851f60678d80d42ce9221e7e12caef906b1d0d757679a",
+      "sixPathIdentity": "sha256:3432a751f40dda4563463920359545ab6f3348b69f3759e622d8229914fb4bd0",
+      "sourceOnlyBoundaryReceiptDigest": "sha256:09ed5b0f3385cef65ec674af5e3b047df81df5ae53a6e17c023eb8be05a25f97",
+      "contractExportsExactly": [
+        "QF0A2_CONTRACT_VERSION",
+        "QF0A2_DECISION_OUTCOMES",
+        "QF0A2_DECISION_STATUSES",
+        "QF0A2_DENIAL_REASONS",
+        "QF0A2_ELIGIBLE_SOURCE_CLASSES",
+        "QF0A2_MODEL_ROLES",
+        "QF0A2_PURPOSE",
+        "QF0A2_QF0A1_DEPENDENCY_RECEIPT",
+        "QF0A2_RIGHTS_STATUSES",
+        "QF0A2_SOURCE_CLASSES",
+        "QF0A2_SOURCE_ONLY_BOUNDARY_RECEIPT"
+      ],
+      "coreExportsExactly": [
+        "QF0A2_CONTRACT_VERSION",
+        "assertDistinctModelExecutionIdentitiesV1",
+        "assertModelExecutionIdentityV1",
+        "assertQf0a1DependencyV1",
+        "assertRightsManifestRefV1",
+        "assertSourceEligibilityAtUseV1",
+        "assertSourceEligibilityDecisionV1",
+        "createModelExecutionIdentityV1",
+        "createRightsManifestRefV1",
+        "createSourceEligibilityDecisionV1"
+      ]
+    },
+    "qf0b": {
+      "configSha256": "90b29227472b7d6337ebef9c651a9e9a3e5b2ae222dabe4dc9f5533081cb7156",
+      "scarcityContractsSha256": "1797246b63ab8aa655fbbf2653db68b9ad8a9b1d7d9ad6831d20384a534a865f",
+      "scarcityCoreSha256": "ecd4f486fae0a6345fe3a4e10126460579814839f3d581f69c958325d9d616ef",
+      "sourceOnlyBoundaryReceiptDigest": "sha256:397d051c5bd1fc158f0444563c402b8e792e414c88a3f6df44717caaae1ee9f8",
+      "contractExportsExactly": [
+        "QF0B_CONTRACT_VERSION",
+        "QF0B_LIMITS",
+        "QF0B_REGISTRY_REF_KINDS",
+        "QF0B_SOURCE_ONLY_BOUNDARY_RECEIPT"
+      ],
+      "coreExportsExactly": [
+        "assertBodylessBankScarcityEventV1",
+        "assertOpaqueRegistryRefV1",
+        "createBodylessBankScarcityEventV1",
+        "createOpaqueRegistryRefV1"
+      ]
+    },
+    "qfS1": {
+      "qfS1aConfigSha256": "b1037eb9866c91df550968668b97da161a9487d2f762dbf37715ddcb204c99d6",
+      "qfS1aContractsSha256": "1ac2b16080dbe619bfc8da09184d4939ddb1a1aceaf3153db453294ac806f37b",
+      "qfS1aCoreSha256": "a686f723e60cfd0b1566bc8bc517d1392580a35e3004abe3dc5814e36339ee3d",
+      "qfS1aSixPathIdentity": "sha256:a73ec04b00eb8bb716c568dfb5c7d101d892e21592a2b2466411682727ff492d",
+      "qfS1aBoundaryReceiptDigest": "sha256:7b6fad8d02089c8d69d43ab5e3aedba5e0a3aebad3c04b67b141e816f770f865",
+      "qfS1bConfigSha256": "b099a10a7b1381191e5431495315e948856fa8f5f03cd990a38db6f997cbbaf3",
+      "qfS1bContractsSha256": "2c54de91e2f45be021fde3c15d02b093339954931765f8dd883711df00237190",
+      "qfS1bCoreSha256": "f7dd115560b25536341c51ed5daac74db57dbc815e7240464b539f1347649a36",
+      "qfS1bPolicyDigest": "sha256:e1f7397e3ed56b2d3095aed3daf9f64738a656ec7e9a74bd9f12c45b7f5416d9",
+      "qfS1bBoundaryReceiptDigest": "sha256:d827b128218a8a8671de93ad1cd7d5485285c6729274cabd077432d3ba476c1e",
+      "qfS1bSixPathIdentity": "sha256:e89f7e0dc2c1c95ce0997b97c9949e4d81629c91b1a9380b96b720093cfa2417",
+      "contractExportsExactly": [
+        "QFS1_CONTRACT_VERSION",
+        "QFS1_LIMITS",
+        "QFS1_MATCH_KINDS",
+        "QFS1_OUTCOMES",
+        "QFS1_POLICY_DIGEST",
+        "QFS1_POLICY_REFERENCE",
+        "QFS1_QFS1A_DEPENDENCY_RECEIPT",
+        "QFS1_SOURCE_ONLY_BOUNDARY_RECEIPT",
+        "QFS1_TRANSFORMATIONS"
+      ],
+      "coreExportsExactly": [
+        "assertSimilarityFirewallReviewV1",
+        "createSimilarityFirewallReviewV1"
+      ]
+    },
+    "qfS2": {
+      "configSha256": "b4861ada014ad37f4af78fb416c2cd2533774d89abec41fc70931ff19d63d31a",
+      "contractsSha256": "42af8564db69f9b9e69b23cebb8304714486d3c5212482dd9f4bff596d8db381",
+      "coreSha256": "6e31097690e691a1ffe8a908d7a93f8c5e563030e83df8d52c4bfad41fa64793",
+      "sixPathIdentity": "sha256:73f97341d31b7935bb7eb296cfab5bf1b2f9cdfe28849efefee06f7f98c12974",
+      "sourceOnlyBoundaryReceiptDigest": "sha256:7b97a2156f1243954929c7d750b881922840c39cc63a639b78903020f5f8c7e9",
+      "contractExportsExactly": [
+        "QFS2_CONTRACT_VERSION",
+        "QFS2_LIMITS",
+        "QFS2_SOURCE_ONLY_BOUNDARY_RECEIPT"
+      ],
+      "coreExportsExactly": [
+        "assertCandidateAuditPreludeV1",
+        "createCandidateAuditPreludeV1"
+      ]
+    }
+  },
+  "receiptKindsExactly": [
+    "CANDIDATE_PRELUDE_BOUND",
+    "SIMILARITY_REVIEW_BOUND",
+    "TRANSFER_VARIANT_SEALED",
+    "DECLARED_VALIDATOR_COMPLETED",
+    "BLIND_SOLVER_COMPLETED",
+    "JUDGE_COMPLETED",
+    "ADVERSARIAL_CRITIC_COMPLETED",
+    "VARIANT_VALIDATION_AGGREGATED",
+    "TRANSFER_EVIDENCE_AGGREGATED",
+    "META_AUDIT_COMPLETED"
+  ],
+  "actorPolicy": {
+    "declaredValidator": "TRUSTED_SYSTEM_COMPONENT_ONLY",
+    "blindSolver": "BLIND_SOLVER",
+    "judge": "JUDGE",
+    "adversarialCritic": "ADVERSARIAL_CRITIC",
+    "metaAuditor": "META_AUDITOR"
+  },
+  "completenessStatesExactly": [
+    "COMPLETE",
+    "INCOMPLETE"
+  ],
+  "blockingReasonsExactly": [
+    "MISSING_VARIANT_SEAL",
+    "MISSING_DECLARED_VALIDATOR",
+    "MISSING_BLIND_SOLVER",
+    "MISSING_JUDGE",
+    "MISSING_ADVERSARIAL_CRITIC",
+    "MISSING_VARIANT_AGGREGATE",
+    "MISSING_TRANSFER_AGGREGATE",
+    "MISSING_META_AUDIT"
+  ],
+  "limits": {
+    "contractVersion": "QFS3DependencyRankedTransferChronologyV1",
+    "maxVariants": 16,
+    "maxDeclaredValidatorsPerVariant": 16,
+    "maxEvidenceReceipts": 340,
+    "maxActors": 341,
+    "maxPredecessorsPerReceipt": 64,
+    "callerOverride": false
+  },
+  "ordering": [
+    "topological_dependency_rank",
+    "occurredAt",
+    "closed_receipt_kind_phase_rank",
+    "immutable_artifact_and_receipt_digest"
+  ],
+  "sourceOnlyBoundary": {
+    "receiptDigest": "sha256:76cb40c5316e6645407d31e6b9a027b1bac84e92f231eb281d09c1735baf54b7",
+    "runtimeActivation": "OFF",
+    "providerExecution": "OFF",
+    "network": "OFF",
+    "databaseAndPersistence": "OFF",
+    "remoteMutation": "ZERO",
+    "productionMutation": "ZERO",
+    "releaseAuthorityAbsent": true,
+    "learnerAssignmentAbsent": true,
+    "bankAssignmentAbsent": true,
+    "qfI1Required": true
+  }
+}
