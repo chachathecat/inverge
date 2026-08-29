@@ -148,7 +148,9 @@ test("capture flow starts as a four-step wizard with one Trust Card", () => {
   assert.ok(capture.includes('setStage("saved-plan")'));
   assert.equal(capture.includes("if (savedConfirmation) {\n    return"), false);
   assert.equal(capturePage.includes("ClosedBetaBanner"), false);
-  assert.doesNotMatch(capture, /OCR 결과는 초안입니다|OCR\/AI 정리는 초안입니다|학습 보조 초안입니다\. 저장 전 직접 확인/);
+  assert.ok(capture.includes("OCR 결과는 초안입니다. 저장 전 직접 확인해 주세요."));
+  assert.ok(capture.includes("const ownerCaptureRepairSubjectEnabled"));
+  assert.doesNotMatch(capture, /OCR\/AI 정리는 초안입니다|학습 보조 초안입니다\. 저장 전 직접 확인/);
   assert.equal(capture.includes("학습 노트 초안 만들기"), false);
   assert.ok(capture.indexOf("사진 찍기") < capture.indexOf("선택 정보"));
   assert.ok(capture.indexOf("사진 찍기") < capture.indexOf("첨부 상태"));

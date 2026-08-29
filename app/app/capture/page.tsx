@@ -6,6 +6,10 @@ import { normalizeSubjectForMode, resolveAppraisalMode } from "@/lib/review-os/a
 import { buildReviewOsReturnTo, getReviewOsServerContext } from "@/lib/review-os/server";
 import { reviewOsService } from "@/lib/review-os/service";
 import { buildDetailStudyNote } from "@/lib/review-os/study-note";
+import {
+  isTrustedRepairEnabled,
+  trustedRepairAuthorizedSubjects,
+} from "@/lib/review-os/trusted-repair-access";
 
 type PageProps = {
   searchParams?: Promise<{ mode?: string; rewriteFrom?: string; subject?: string }>;
@@ -20,6 +24,11 @@ export default async function ReviewOsCapturePage({ searchParams }: PageProps) {
   if (!session.userId) return null;
 
   const mode = resolveAppraisalMode(profile, modeParam);
+  const ownerCaptureRepairSubjects =
+    mode === "second" && isTrustedRepairEnabled()
+      ? trustedRepairAuthorizedSubjects(session.email)
+      : [];
+  const ownerCaptureRepairEnabled = ownerCaptureRepairSubjects.length > 0;
   const initialSubject = normalizeSubjectForMode(query?.subject, mode);
   const rewriteDetail =
     mode === "second" && rewriteFrom && session.email
@@ -58,6 +67,8 @@ export default async function ReviewOsCapturePage({ searchParams }: PageProps) {
         initialPreferredSubjects={profile?.preferredSubjects}
         initialSubject={initialSubject}
         rewriteContext={rewriteContext}
+        ownerCaptureRepairEnabled={ownerCaptureRepairEnabled}
+        ownerCaptureRepairSubjects={ownerCaptureRepairSubjects}
       />
 
       <div className="space-y-3">

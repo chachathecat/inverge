@@ -20,6 +20,10 @@ import {
 } from "@/components/review-os/trust-status-card";
 import { Button, type ButtonProps } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import {
+  isApp1SubjectAuthorized,
+  type App1TrustedRepairSubject,
+} from "@/lib/owner-study/app1-capture-repair-view-model";
 import { buildCaptureToNoteDraft } from "@/lib/capture/capture-to-note";
 import {
   getDefaultSubject,
@@ -91,6 +95,8 @@ function CaptureActionButton({
 }
 
 const CAPTURE_TRUST_LAYER_COPY = "OCR과 AI 정리는 학습 보조 초안입니다. 저장 전 직접 수정할 수 있습니다.";
+const APP1_OCR_CONFIRMATION_WARNING =
+  "OCR 결과는 초안입니다. 저장 전 직접 확인해 주세요.";
 
 const V3_CAPTURE_TRUST_SOURCE_LABELS: Record<
   SourceType,
@@ -267,6 +273,8 @@ type SavedCaptureConfirmation = {
 type CaptureFormProps = {
   userId: string;
   mode: AppraisalMode;
+  ownerCaptureRepairEnabled?: boolean;
+  ownerCaptureRepairSubjects?: readonly App1TrustedRepairSubject[];
   labelledBy?: string;
   initialPreferredSubjects?: string[];
   initialSubject?: string;
@@ -556,6 +564,8 @@ function stripPreviewUrls(pages: UploadedPage[]): PersistedCapturePage[] {
 export function WrongAnswerCaptureForm({
   userId,
   mode,
+  ownerCaptureRepairEnabled = false,
+  ownerCaptureRepairSubjects = [],
   labelledBy = "capture-page-title",
   initialPreferredSubjects = [],
   initialSubject,
@@ -624,6 +634,10 @@ export function WrongAnswerCaptureForm({
     }
     return createInitialDraftState();
   });
+  const ownerCaptureRepairSubjectEnabled =
+    ownerCaptureRepairEnabled &&
+    mode === "second" &&
+    isApp1SubjectAuthorized(form.subjectLabel, ownerCaptureRepairSubjects);
   const secondWriteEnabled = mode === "second" && workflow === "second-write" && !rewriteContext;
   const getInitialStage = () => {
     if (rewriteContext && mode === "second") return "confirm" as const;
@@ -1776,6 +1790,13 @@ export function WrongAnswerCaptureForm({
         router.refresh();
         return;
       }
+      if (ownerCaptureRepairSubjectEnabled) {
+        router.push(
+          `/app/capture/repair?itemId=${encodeURIComponent(result.item.id)}`,
+        );
+        router.refresh();
+        return;
+      }
       openSavedPlanStage(buildSaveConfirmation({
         itemId: result.item.id,
         status: "durable_saved",
@@ -2104,8 +2125,9 @@ export function WrongAnswerCaptureForm({
             onPdf={handlePdfImport}
             onGenerate={() => generateStructuredDraft()}
             onQuickSave={saveQuickCaptureFromIntake}
-            canQuickSave={canQuickSaveCapture}
+            canQuickSave={canQuickSaveCapture && !ownerCaptureRepairSubjectEnabled}
             saving={submitting}
+            ownerCaptureRepairEnabled={ownerCaptureRepairSubjectEnabled}
             cameraInputRef={cameraInputRef}
             galleryInputRef={galleryInputRef}
             pdfInputRef={pdfInputRef}
@@ -2128,23 +2150,34 @@ export function WrongAnswerCaptureForm({
           ) : null}
 
           {(mode === "first" ? stage !== "intake" : stage === "preview") ? (
-            <ExtractionPreview
-              form={form}
-              mode={mode}
-              uploadedPages={uploadedPages}
-              needsOcrConfirmation={needsOcrConfirmation}
-              missingConfirmationFields={missingConfirmationFields.map((field) => field.label)}
-              extractError={extractError}
-              onEdit={continueAfterExtractionReview}
-              onRegenerate={() => generateStructuredDraft()}
-              onRawOcrChange={(value) => {
-                update("rawQuestionText", value);
-                update("rawOcrText", value);
-                update("hasManualCorrection", true);
-                update("ocrConfirmedByLearner", true);
-                update("lowConfidenceFlag", form.lowConfidenceFlag || hasLowConfidenceText(value));
-              }}
-            />
+            <>
+              {ownerCaptureRepairSubjectEnabled ? (
+                <p
+                  className="v3-type-compact ko-keep rounded-[var(--v3-radius-control)] border border-[var(--color-border-attention)] bg-[var(--color-background-attention)] px-4 py-3 text-[var(--color-text-primary)]"
+                  role="status"
+                  data-app1-ocr-confirmation-warning
+                >
+                  {APP1_OCR_CONFIRMATION_WARNING}
+                </p>
+              ) : null}
+              <ExtractionPreview
+                form={form}
+                mode={mode}
+                uploadedPages={uploadedPages}
+                needsOcrConfirmation={needsOcrConfirmation}
+                missingConfirmationFields={missingConfirmationFields.map((field) => field.label)}
+                extractError={extractError}
+                onEdit={continueAfterExtractionReview}
+                onRegenerate={() => generateStructuredDraft()}
+                onRawOcrChange={(value) => {
+                  update("rawQuestionText", value);
+                  update("rawOcrText", value);
+                  update("hasManualCorrection", true);
+                  update("ocrConfirmedByLearner", true);
+                  update("lowConfidenceFlag", form.lowConfidenceFlag || hasLowConfidenceText(value));
+                }}
+              />
+            </>
           ) : null}
 
           {stage === "confirm" ? (
@@ -2574,6 +2607,7 @@ function IntakePanel({
   onQuickSave,
   canQuickSave,
   saving,
+  ownerCaptureRepairEnabled,
   cameraInputRef,
   galleryInputRef,
   pdfInputRef,
@@ -2595,6 +2629,7 @@ function IntakePanel({
   onQuickSave: () => void | Promise<void>;
   canQuickSave: boolean;
   saving: boolean;
+  ownerCaptureRepairEnabled: boolean;
   cameraInputRef: React.RefObject<HTMLInputElement | null>;
   galleryInputRef: React.RefObject<HTMLInputElement | null>;
   pdfInputRef: React.RefObject<HTMLInputElement | null>;
@@ -2658,7 +2693,7 @@ function IntakePanel({
             }}
             data-s226-capture-primary-action
           >
-            답안 사진 찍기
+            {ownerCaptureRepairEnabled ? "사진·PDF·텍스트로 시작" : "답안 사진 찍기"}
           </CaptureActionButton>
           <V3QuietDisclosure
             summary="다른 입력 방식"
