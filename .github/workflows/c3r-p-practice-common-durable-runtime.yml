@@ -39,7 +39,7 @@ jobs:
 
     steps:
       - name: Check out exact PR head
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           ref: ${{ github.event.pull_request.head.sha }}
           fetch-depth: 0
@@ -52,7 +52,7 @@ jobs:
           test "$(git rev-parse HEAD)" = "${PR_HEAD_SHA}"
           [[ "${PR_HEAD_SHA}" =~ ^[0-9a-f]{40}$ ]]
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: 22
           cache: npm
@@ -78,7 +78,7 @@ jobs:
 
       - name: Upload bounded entry failure diagnostic
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: c3r-p-entry-failure-${{ github.run_id }}-${{ github.run_attempt }}
           path: ${{ runner.temp }}/c3r-p-runtime-${{ github.run_id }}-${{ github.run_attempt }}/entry-diagnostics/failure-*
@@ -88,7 +88,7 @@ jobs:
 
       - name: Upload verified entry metadata
         if: success()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: c3r-p-entry-metadata-${{ github.run_id }}-${{ github.run_attempt }}
           path: ${{ runner.temp }}/c3r-p-runtime-${{ github.run_id }}-${{ github.run_attempt }}/entry-diagnostics/entry-proof-*.json
@@ -116,7 +116,7 @@ jobs:
 
       - name: Upload metadata-only exact-head evidence
         if: success()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: c3r-p-practice-runtime-${{ github.run_id }}-${{ github.run_attempt }}
           path: ${{ env.C3R_P_RUNTIME_EVIDENCE_PATH }}
