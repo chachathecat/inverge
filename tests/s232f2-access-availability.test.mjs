@@ -204,6 +204,7 @@ test("S232F.2 every data-bearing app page gates a fresh access result before dow
     "app/app/c3r-p/page.tsx",
     "app/app/c3r-l/page.tsx",
     "app/app/c3r-t/page.tsx",
+    "app/app/capture/repair/page.tsx",
     "app/app/trusted-repair/page.tsx",
   ].sort();
   const allPages = collectPageFiles("app/app").sort();
@@ -255,6 +256,47 @@ test("S232F.2 every data-bearing app page gates a fresh access result before dow
   assert.ok(trustedRepairNotFoundIndex > trustedRepairDeniedIndex);
   assert.ok(trustedRepairRethrowIndex > trustedRepairNotFoundIndex);
   assert.ok(trustedRepairLoopIndex > trustedRepairRethrowIndex);
+
+  const app1CaptureRepairPage = read("app/app/capture/repair/page.tsx");
+  const app1ItemValidationIndex = app1CaptureRepairPage.indexOf(
+    "if (!ITEM_ID_PATTERN.test(itemId)) notFound()",
+  );
+  const app1AccessIndex = app1CaptureRepairPage.indexOf(
+    "await requireTrustedRepairAccess()",
+  );
+  const app1DeniedIndex = app1CaptureRepairPage.indexOf(
+    "isTrustedRepairAccessError(error)",
+    app1AccessIndex,
+  );
+  const app1AccessNotFoundIndex = app1CaptureRepairPage.indexOf(
+    "notFound()",
+    app1DeniedIndex,
+  );
+  const app1RethrowIndex = app1CaptureRepairPage.indexOf(
+    "throw error",
+    app1AccessNotFoundIndex,
+  );
+  const app1LoopIndex = app1CaptureRepairPage.indexOf(
+    "<App1CaptureRepairLoop",
+    app1RethrowIndex,
+  );
+  assert.ok(app1ItemValidationIndex >= 0, "APP-1 repair must validate itemId");
+  assert.ok(
+    app1AccessIndex > app1ItemValidationIndex,
+    "APP-1 repair must validate itemId before resolving trusted access",
+  );
+  assert.ok(app1DeniedIndex > app1AccessIndex);
+  assert.ok(app1AccessNotFoundIndex > app1DeniedIndex);
+  assert.ok(app1RethrowIndex > app1AccessNotFoundIndex);
+  assert.ok(
+    app1LoopIndex > app1RethrowIndex,
+    "APP-1 repair must render only after its specialized access boundary",
+  );
+  assert.doesNotMatch(
+    app1CaptureRepairPage.slice(0, app1AccessIndex),
+    /<App1CaptureRepairLoop|reviewOsService\.|\bfetch\s*\(/,
+    "APP-1 repair must not fetch learner detail or begin downstream work before trusted access",
+  );
 
   const c3rTPage = read("app/app/c3r-t/page.tsx");
   const c3rTAccessIndex = c3rTPage.indexOf("await requireC3RTAccess()");

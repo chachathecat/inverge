@@ -150,14 +150,109 @@ async function assertA11y(page: Page) {
   expect(blocking).toEqual([]);
 }
 
+type JsonRecord = Record<string, unknown>;
+type ItemSaveClass = "initial_capture_save" | "app1_repair_save" | "unknown_item_save";
+type InitialCaptureResponseClass = "synthetic_source_save_success";
+type RepairResponseClass =
+  | "synthetic_repair_save_503"
+  | "synthetic_dedupe_conflict"
+  | "synthetic_durable_success";
+
+const APP1_VERIFICATION_STATES = [
+  "repair_confirmed_for_this_session",
+  "one_connection_still_missing",
+  "guided_path_needed",
+  "deferred",
+  "blocked_by_ocr_or_source_uncertainty",
+] as const;
+
+const APP1_REPAIR_MARKER_KEYS = [
+  "app1_contract_version",
+  "app1_source_item_id",
+  "app1_verification_state",
+  "app1_same_session_only",
+  "app1_mastery_created",
+  "app1_transfer_created",
+] as const;
+
+function isPlainJsonRecord(value: unknown): value is JsonRecord {
+  if (value === null || typeof value !== "object" || Array.isArray(value)) return false;
+  const prototype = Object.getPrototypeOf(value);
+  return prototype === Object.prototype || prototype === null;
+}
+
+function hasNonemptyString(record: JsonRecord, key: string) {
+  return typeof record[key] === "string" && record[key].trim().length > 0;
+}
+
+function confirmedFieldsOf(submitted: JsonRecord) {
+  const extractionPayload = submitted.extractionPayload;
+  if (!isPlainJsonRecord(extractionPayload)) return null;
+  const confirmed = extractionPayload.user_confirmed_fields;
+  return isPlainJsonRecord(confirmed) ? confirmed : null;
+}
+
+function classifyItemSavePayload(value: unknown): ItemSaveClass {
+  if (!isPlainJsonRecord(value)) return "unknown_item_save";
+  const confirmed = confirmedFieldsOf(value);
+  if (!confirmed) return "unknown_item_save";
+
+  const hasPersistenceBinding =
+    hasNonemptyString(confirmed, "persistence_operation_id") &&
+    hasNonemptyString(confirmed, "persistence_work_revision_id");
+  const supportedVerificationState = APP1_VERIFICATION_STATES.some(
+    (state) => state === confirmed.app1_verification_state,
+  );
+  const isRepairSave =
+    value.rewriteSourceItemId === SOURCE_ITEM_ID &&
+    value.createdFromCapture === true &&
+    value.captureIntent === "save" &&
+    confirmed.app1_contract_version === "OwnerCaptureToRepairVerticalV1" &&
+    confirmed.app1_source_item_id === SOURCE_ITEM_ID &&
+    supportedVerificationState &&
+    confirmed.app1_same_session_only === true &&
+    confirmed.app1_mastery_created === false &&
+    confirmed.app1_transfer_created === false &&
+    hasPersistenceBinding;
+  if (isRepairSave) return "app1_repair_save";
+
+  const hasRepairMarker = APP1_REPAIR_MARKER_KEYS.some((key) =>
+    Object.prototype.hasOwnProperty.call(confirmed, key),
+  );
+  const sourceType = value.sourceType;
+  const isSupportedCaptureSource =
+    sourceType === "text" || sourceType === "photo" || sourceType === "pdf";
+  const extractionPayload = value.extractionPayload as JsonRecord;
+  const isInitialCaptureSave =
+    value.createdFromCapture === true &&
+    value.captureIntent === "save" &&
+    value.examName === "감정평가사 2차" &&
+    value.subjectLabel === "감정평가이론" &&
+    isSupportedCaptureSource &&
+    confirmed.sourceType === sourceType &&
+    confirmed.subject === "감정평가이론" &&
+    confirmed.examMode === "second" &&
+    hasNonemptyString(extractionPayload, "raw_ocr_text") &&
+    hasPersistenceBinding &&
+    !hasRepairMarker &&
+    value.rewriteSourceItemId !== SOURCE_ITEM_ID;
+  return isInitialCaptureSave ? "initial_capture_save" : "unknown_item_save";
+}
+
 async function installSyntheticSeams(
   context: BrowserContext,
   { exerciseFailures }: { exerciseFailures: boolean },
 ) {
   let ocrCount = 0;
   let structureCount = 0;
-  let itemSaveCount = 0;
+  let totalItemSaveCount = 0;
+  let initialCaptureSaveCount = 0;
+  let repairSaveCount = 0;
+  let unknownItemSaveCount = 0;
+  let unknownItemResponseCount = 0;
   let sourceLoadCount = 0;
+  const initialCaptureResponseClasses: InitialCaptureResponseClass[] = [];
+  const repairResponseClasses: RepairResponseClass[] = [];
   const mutations: string[] = [];
   await context.route("**/api/**", async (route) => {
     const request = route.request();
@@ -220,12 +315,62 @@ async function installSyntheticSeams(
       return;
     }
     if (request.method() === "POST" && url.pathname === "/api/os/items") {
-      itemSaveCount += 1;
-      const submitted = request.postDataJSON() as {
-        extractionPayload?: { user_confirmed_fields?: Record<string, unknown> };
-      };
-      const confirmed = submitted.extractionPayload?.user_confirmed_fields ?? {};
-      if (exerciseFailures && itemSaveCount === 2) {
+      totalItemSaveCount += 1;
+      let submitted: unknown;
+      try {
+        submitted = request.postDataJSON();
+      } catch {
+        submitted = null;
+      }
+      const itemSaveClass = classifyItemSavePayload(submitted);
+      if (itemSaveClass === "unknown_item_save" || !isPlainJsonRecord(submitted)) {
+        unknownItemSaveCount += 1;
+        unknownItemResponseCount += 1;
+        await route.fulfill({
+          status: 422,
+          contentType: "application/json",
+          body: JSON.stringify({ ok: false, error: "APP1_E2E_UNKNOWN_ITEM_SAVE_PAYLOAD" }),
+        });
+        return;
+      }
+      const confirmed = confirmedFieldsOf(submitted);
+      if (!confirmed) {
+        unknownItemSaveCount += 1;
+        unknownItemResponseCount += 1;
+        await route.fulfill({
+          status: 422,
+          contentType: "application/json",
+          body: JSON.stringify({ ok: false, error: "APP1_E2E_UNKNOWN_ITEM_SAVE_PAYLOAD" }),
+        });
+        return;
+      }
+
+      if (itemSaveClass === "initial_capture_save") {
+        initialCaptureSaveCount += 1;
+        initialCaptureResponseClasses.push("synthetic_source_save_success");
+        await route.fulfill({
+          status: 200,
+          contentType: "application/json",
+          body: JSON.stringify({
+            ok: true,
+            item: {
+              id: SOURCE_ITEM_ID,
+              updatedAt: "2026-08-29T02:00:00.000Z",
+              rawPayload: {
+                user_confirmed_fields: {
+                  persistence_operation_id: confirmed.persistence_operation_id,
+                  persistence_work_revision_id: confirmed.persistence_work_revision_id,
+                },
+              },
+            },
+          }),
+        });
+        return;
+      }
+
+      repairSaveCount += 1;
+      if (exerciseFailures && repairSaveCount === 1) {
+        repairResponseClasses.push("synthetic_repair_save_503");
         await route.fulfill({
           status: 503,
           contentType: "application/json",
@@ -233,7 +378,8 @@ async function installSyntheticSeams(
         });
         return;
       }
-      if (exerciseFailures && itemSaveCount === 3) {
+      if (exerciseFailures && repairSaveCount === 2) {
+        repairResponseClasses.push("synthetic_dedupe_conflict");
         await route.fulfill({
           status: 200,
           contentType: "application/json",
@@ -254,14 +400,24 @@ async function installSyntheticSeams(
         });
         return;
       }
-      const persistedItemId = itemSaveCount === 1 ? SOURCE_ITEM_ID : REPAIR_ITEM_ID;
+      const expectedDurableOrdinal = exerciseFailures ? 3 : 1;
+      if (repairSaveCount !== expectedDurableOrdinal) {
+        unknownItemResponseCount += 1;
+        await route.fulfill({
+          status: 422,
+          contentType: "application/json",
+          body: JSON.stringify({ ok: false, error: "APP1_E2E_UNEXPECTED_REPAIR_SAVE_COUNT" }),
+        });
+        return;
+      }
+      repairResponseClasses.push("synthetic_durable_success");
       await route.fulfill({
         status: 200,
         contentType: "application/json",
         body: JSON.stringify({
           ok: true,
           item: {
-            id: persistedItemId,
+            id: REPAIR_ITEM_ID,
             updatedAt: "2026-08-29T02:00:00.000Z",
             rawPayload: {
               user_confirmed_fields: {
@@ -307,7 +463,13 @@ async function installSyntheticSeams(
     mutations,
     ocrCount: () => ocrCount,
     structureCount: () => structureCount,
-    itemSaveCount: () => itemSaveCount,
+    totalItemSaveCount: () => totalItemSaveCount,
+    initialCaptureSaveCount: () => initialCaptureSaveCount,
+    repairSaveCount: () => repairSaveCount,
+    unknownItemSaveCount: () => unknownItemSaveCount,
+    unknownItemResponseCount: () => unknownItemResponseCount,
+    initialCaptureResponseClasses: () => [...initialCaptureResponseClasses],
+    repairResponseClasses: () => [...repairResponseClasses],
     sourceLoadCount: () => sourceLoadCount,
   };
 }
@@ -319,7 +481,9 @@ async function completeCapture(
   inputKind: CaptureInputKind,
   exerciseFailures: boolean,
 ) {
-  await page.goto("/app/capture?mode=second");
+  await page.goto(
+    "/app/capture?mode=second&subject=" + encodeURIComponent("감정평가이론"),
+  );
   await expect(page.getByRole("button", { name: "사진·PDF·텍스트로 시작" })).toBeVisible();
 
   if (inputKind === "text") {
@@ -330,7 +494,11 @@ async function completeCapture(
     );
     await page.getByRole("button", { name: "입력 내용 확인하기" }).click();
   } else if (inputKind === "photo") {
-    await page.locator('input[type="file"][accept="image/*"]').first().setInputFiles({
+    const photoInput = page.locator(
+      'input[type="file"][accept="image/*"]:not([capture])',
+    );
+    await expect(photoInput).toHaveCount(1);
+    await photoInput.setInputFiles({
       name: "synthetic-app1.png",
       mimeType: "image/png",
       buffer: Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=", "base64"),
@@ -363,7 +531,14 @@ async function completeCapture(
   await page.getByRole("button", { name: "다음: 목차 작성" }).click();
   await page.getByLabel("목차 초안").fill("I. 정의\nII. 논거\nIII. 사례 적용\nIV. 결론");
   await page.getByRole("button", { name: "다음: 내 답안 작성" }).click();
-  await page.getByLabel("내 답안", { exact: true }).fill(
+  const answerPanel = page.locator('[data-s232e-second-write-panel="3"]');
+  await expect(answerPanel).toHaveCount(1);
+  await expect(answerPanel).toBeVisible();
+  await expect(answerPanel.getByText("내 답안", { exact: true })).toBeVisible();
+  const answerTextarea = answerPanel.getByRole("textbox");
+  await expect(answerTextarea).toHaveCount(1);
+  await expect(answerTextarea).toBeEditable();
+  await answerTextarea.fill(
     "정의를 제시하고 논거를 설명했으나 사례 사실과 논거를 충분히 연결하지 못했다.",
   );
   await page.getByRole("button", { name: "다음: 강의/교재 정리 입력" }).click();
@@ -375,7 +550,15 @@ async function completeCapture(
     "사례의 합성 사실 A는 논거 B의 적용 대상이라는 연결을 학습자가 직접 작성했다.",
   );
   await page.getByRole("button", { name: "마지막 확인으로 이동" }).click();
-  await page.getByRole("button", { name: "저장하고 오늘 계획에 반영" }).click();
+  const [initialSaveResponse] = await Promise.all([
+    page.waitForResponse(
+      (response) =>
+        response.request().method() === "POST" &&
+        new URL(response.url()).pathname === "/api/os/items",
+    ),
+    page.getByRole("button", { name: "저장하고 오늘 계획에 반영" }).click(),
+  ]);
+  expect(initialSaveResponse.status()).toBe(200);
   await expect(page).toHaveURL(new RegExp(`/app/capture/repair\\?itemId=${SOURCE_ITEM_ID}$`));
 }
 
@@ -419,6 +602,9 @@ test("synthetic Owner Capture → one-gap direct repair → durable next review 
     if (viewport.exerciseFailures) {
       await page.getByRole("button", { name: "이 내용으로 분석" }).click();
       await expect(page.getByText(/분석을 완료하지 못했습니다/)).toBeVisible();
+      await expect(
+        page.getByRole("heading", { name: "Capture에서 직접 복구까지", exact: true }),
+      ).toBeFocused();
     }
     await analyzeToDirectRepair(page, viewport.keyboard);
     const repair = page.getByLabel("내 복구 입력");
@@ -460,9 +646,24 @@ test("synthetic Owner Capture → one-gap direct repair → durable next review 
       await expect(page.locator('[data-app1-persistence-receipt="durable"]')).toHaveCount(0);
       await expect(page.locator('[data-app1-queue-receipt="valid"]')).toHaveCount(0);
       await expect(page.getByText(/복구 기록과 다음 독립 행동이 저장되었습니다/)).toHaveCount(0);
-      await expect(page.locator('[data-app1-repair-verification="repair_confirmed_for_this_session"]')).toBeVisible();
-      await expect(page.getByRole("button", { name: "복구 결과 저장하고 다음 복습 만들기" })).toBeVisible();
-      await page.getByRole("button", { name: "복구 결과 저장하고 다음 복습 만들기" }).click();
+      const retainedVerificationHeading = page.getByRole("heading", {
+        name: "이 세션의 요청한 복구 1개가 확인되었습니다",
+        exact: true,
+      });
+      await expect(retainedVerificationHeading).toHaveCount(1);
+      await expect(retainedVerificationHeading).toBeVisible();
+      const repairSaveRetry = page.getByRole("button", {
+        name: "복구 결과 저장하고 다음 복습 만들기",
+        exact: true,
+      });
+      await expect(repairSaveRetry).toHaveCount(1);
+      await expect(repairSaveRetry).toBeVisible();
+      await expect(repairSaveRetry).toBeEnabled();
+      const saveFailureAlert = page.locator("[data-app1-error]");
+      await expect(saveFailureAlert).toHaveCount(1);
+      await expect(saveFailureAlert).toBeVisible();
+      await expect(saveFailureAlert).toHaveAttribute("data-app1-conflict", "false");
+      await repairSaveRetry.click();
       await expect(page.locator('[data-app1-conflict="true"]')).toBeVisible();
       await expect(page.getByText(/중복 성공으로 처리하지 않았습니다/)).toBeVisible();
       await expect(page.locator("[data-app1-completed]")).toHaveCount(0);
@@ -475,12 +676,36 @@ test("synthetic Owner Capture → one-gap direct repair → durable next review 
     await expect(page.getByText(/답을 보지 않고 보강한 연결을 다시 한 번 작성하기/)).toBeVisible();
     expect(seams.ocrCount()).toBe(viewport.exerciseFailures ? 2 : 1);
     expect(seams.structureCount()).toBe(viewport.exerciseFailures ? 5 : 2);
-    expect(seams.itemSaveCount()).toBe(viewport.exerciseFailures ? 4 : 2);
+    expect(seams.repairSaveCount()).toBe(viewport.exerciseFailures ? 3 : 1);
+    expect(seams.repairResponseClasses()).toEqual(
+      viewport.exerciseFailures
+        ? [
+            "synthetic_repair_save_503",
+            "synthetic_dedupe_conflict",
+            "synthetic_durable_success",
+          ]
+        : ["synthetic_durable_success"],
+    );
+    expect(seams.unknownItemSaveCount()).toBe(0);
+    expect(seams.unknownItemResponseCount()).toBe(0);
+    expect(seams.initialCaptureSaveCount()).toBeGreaterThanOrEqual(1);
+    expect(seams.initialCaptureResponseClasses()).toHaveLength(
+      seams.initialCaptureSaveCount(),
+    );
+    expect(
+      seams.initialCaptureResponseClasses().every(
+        (responseClass) => responseClass === "synthetic_source_save_success",
+      ),
+    ).toBe(true);
+    expect(seams.totalItemSaveCount()).toBe(
+      seams.initialCaptureSaveCount() +
+        seams.repairSaveCount() +
+        seams.unknownItemSaveCount(),
+    );
     expect(seams.sourceLoadCount()).toBeGreaterThanOrEqual(viewport.exerciseFailures ? 2 : 1);
     expect(new Set(seams.mutations.map((entry) => entry.replace(/^POST /u, "")))).toEqual(
       new Set(["/api/inverge/ocr", "/api/answer-review/structure", "/api/os/items"]),
     );
-
     await page.evaluate(() => {
       document.documentElement.style.fontSize = "200%";
     });

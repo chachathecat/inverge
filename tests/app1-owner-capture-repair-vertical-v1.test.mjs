@@ -35,6 +35,8 @@ const EXPECTED_PATHS = [
   "tests/ux-surface-reset-v1-answer-road.test.mjs",
 ];
 
+const SHARED_ACCESS_INVENTORY_PATH = "tests/s232f2-access-availability.test.mjs";
+
 function syntheticDetail(overrides = {}) {
   const base = {
     item: {
@@ -394,6 +396,71 @@ test("APP1-UI-002 never renders answer-analysis payload errors and binds exact s
   assert.ok(repairLoop.includes("답안 분석을 완료하지 못했습니다. 입력은 그대로 남아 있습니다."));
   assert.ok(repairLoop.includes("복구 입력 검토를 완료하지 못했습니다. 성공으로 처리되지 않았습니다."));
   assert.equal(repairLoop.includes("synthetic_analysis_unavailable"), false);
+});
+
+test("APP1-UI-003 enters repair only after a durable receipt without racing the route refresh", async () => {
+  const captureForm = await read("components/review-os/capture-form.tsx");
+  const receiptIndex = captureForm.indexOf(
+    "const persistenceEvidence = buildDurableCapturePersistenceReceipt(result.item, operation);",
+  );
+  const repairBranch = captureForm.match(
+    /if \(ownerCaptureRepairSubjectEnabled\) \{[\s\S]*?return;\s*\}/u,
+  )?.[0];
+
+  assert.ok(receiptIndex >= 0, "missing durable capture receipt gate");
+  assert.ok(repairBranch, "missing APP-1 repair-route branch");
+  assert.ok(captureForm.indexOf("if (ownerCaptureRepairSubjectEnabled)", receiptIndex) > receiptIndex);
+  assert.match(repairBranch, /router\.push\([\s\S]*?\/app\/capture\/repair\?itemId=/u);
+  assert.doesNotMatch(repairBranch, /router\.refresh\(\)/u);
+});
+test("APP1-PERMISSION-001 separates input confirmation from quick save at the IntakePanel boundary", async () => {
+  const captureForm = await read("components/review-os/capture-form.tsx");
+  const config = JSON.parse(await read("config/dabangil-app1-owner-capture-repair-vertical-v1.json"));
+  const sharedAccessInventory = await read(SHARED_ACCESS_INVENTORY_PATH);
+  const intakeBoundary = captureForm.match(/<IntakePanel\b[\s\S]*?\/>/u)?.[0];
+  const intakePanel = captureForm.match(/function IntakePanel\([\s\S]*?(?=\nfunction ExtractionPreview\()/u)?.[0];
+
+  assert.ok(intakeBoundary, "missing WrongAnswerCaptureForm to IntakePanel boundary");
+  assert.ok(intakePanel, "missing IntakePanel implementation");
+  assert.match(captureForm, /const canQuickSaveCapture = hasLearnerCaptureContent\(form\);/u);
+  assert.match(intakeBoundary, /\bcanConfirmInput=\{canQuickSaveCapture\}/u);
+  assert.match(
+    intakeBoundary,
+    /\bcanQuickSave=\{\s*canQuickSaveCapture\s*&&\s*!ownerCaptureRepairSubjectEnabled\s*\}/u,
+  );
+  assert.match(intakePanel, /\bcanConfirmInput: boolean;/u);
+  assert.match(
+    intakePanel,
+    /onClick=\{onQuickSave\}\s+disabled=\{!canQuickSave \|\| saving \|\| extracting\}/u,
+  );
+  assert.match(
+    intakePanel,
+    /onClick=\{onGenerate\}\s+disabled=\{!canConfirmInput \|\| saving \|\| extracting\}/u,
+  );
+  assert.doesNotMatch(intakePanel, /onClick=\{onGenerate\}\s+disabled=\{!canQuickSave\b/u);
+
+  const permissions = (validInput, app1AuthorizedSubject) => ({
+    canConfirmInput: validInput,
+    canQuickSave: validInput && !app1AuthorizedSubject,
+  });
+  assert.deepEqual(permissions(true, true), { canConfirmInput: true, canQuickSave: false });
+  assert.deepEqual(permissions(true, false), { canConfirmInput: true, canQuickSave: true });
+  assert.deepEqual(permissions(false, true), { canConfirmInput: false, canQuickSave: false });
+  assert.deepEqual(permissions(false, false), { canConfirmInput: false, canQuickSave: false });
+
+  const generateStart = captureForm.indexOf("async function generateStructuredDraft");
+  const quickSaveStart = captureForm.indexOf("async function saveQuickCaptureFromIntake");
+  assert.ok(generateStart >= 0 && quickSaveStart > generateStart);
+  assert.doesNotMatch(
+    captureForm.slice(generateStart, quickSaveStart),
+    /\/api\/os\/items/u,
+    "input confirmation must not perform the durable item save",
+  );
+  assert.deepEqual(config.changedPaths, EXPECTED_PATHS);
+  assert.equal(config.changedPaths.length, 13);
+  assert.equal(config.changedPaths.includes(SHARED_ACCESS_INVENTORY_PATH), false);
+  assert.equal(new Set([...config.changedPaths, SHARED_ACCESS_INVENTORY_PATH]).size, 14);
+  assert.match(sharedAccessInventory, /app\/app\/capture\/repair\/page\.tsx/u);
 });
 
 test("APP1-BOUNDARY-001 stays within existing API and product authority", async () => {

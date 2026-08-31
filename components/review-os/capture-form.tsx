@@ -1794,7 +1794,6 @@ export function WrongAnswerCaptureForm({
         router.push(
           `/app/capture/repair?itemId=${encodeURIComponent(result.item.id)}`,
         );
-        router.refresh();
         return;
       }
       openSavedPlanStage(buildSaveConfirmation({
@@ -2125,6 +2124,7 @@ export function WrongAnswerCaptureForm({
             onPdf={handlePdfImport}
             onGenerate={() => generateStructuredDraft()}
             onQuickSave={saveQuickCaptureFromIntake}
+            canConfirmInput={canQuickSaveCapture}
             canQuickSave={canQuickSaveCapture && !ownerCaptureRepairSubjectEnabled}
             saving={submitting}
             ownerCaptureRepairEnabled={ownerCaptureRepairSubjectEnabled}
@@ -2605,6 +2605,7 @@ function IntakePanel({
   onPdf,
   onGenerate,
   onQuickSave,
+  canConfirmInput,
   canQuickSave,
   saving,
   ownerCaptureRepairEnabled,
@@ -2627,6 +2628,7 @@ function IntakePanel({
   onPdf: (file: File) => void;
   onGenerate: () => void | Promise<void>;
   onQuickSave: () => void | Promise<void>;
+  canConfirmInput: boolean;
   canQuickSave: boolean;
   saving: boolean;
   ownerCaptureRepairEnabled: boolean;
@@ -2944,7 +2946,7 @@ function IntakePanel({
               mode={mode}
               type="button"
               onClick={onGenerate}
-              disabled={!canQuickSave || saving || extracting}
+              disabled={!canConfirmInput || saving || extracting}
               className="primary-action min-h-12 w-full shrink-0 sm:w-auto disabled:cursor-not-allowed disabled:opacity-60"
               data-testid="capture-save-primary"
               data-s224v-dominant-primary-action
