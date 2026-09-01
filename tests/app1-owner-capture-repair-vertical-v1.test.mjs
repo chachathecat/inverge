@@ -139,7 +139,8 @@ function draft({
 }
 
 function resolvedTargetDraft({
-  strength = "사례 사실을 논거의 요건에 연결하여 결론을 도출했습니다.",
+  strength =
+    "임대료 미납 사실을 계약 해지 논거의 요건에 연결하여 계약 종료 결론을 도출했습니다.",
 } = {}) {
   return draft({
     gap: "결론 문장의 범위를 한정할 필요가 있습니다.",
@@ -459,9 +460,9 @@ test("APP1-VM-003 requires target-specific learner and draft evidence without mo
     detail,
     requestedGap,
     repairText:
-      "사안의 구체적 사실을 근거 기준에 적용하여 판단을 도출했다고 직접 설명했다.",
+      "사안의 임대료 미납 사실을 계약 해지 기준에 적용하여 판단을 도출했다고 직접 설명했다.",
     repairDraft: resolvedTargetDraft({
-      strength: "사안의 사실을 기준 근거와 연계하여 판단을 도출했습니다.",
+      strength: "임대료 미납 사실을 계약 해지 근거와 연계하여 판단을 도출했습니다.",
     }),
   });
   assert.equal(equivalentWording.state, "repair_confirmed_for_this_session");
@@ -474,10 +475,13 @@ test("APP1-VM-003 requires target-specific learner and draft evidence without mo
   const singleFacetEquivalent = evaluateApp1SameSessionRepair({
     detail,
     requestedGap: singleFacetGap,
-    repairText: "산식 수치의 단위를 바로잡고 검산을 완료했다고 직접 설명했다.",
+    repairText:
+      "임대료 수익 120에서 비용 20을 빼 순수익 100으로 계산하고 단위를 바로잡아 검산을 완료했다고 직접 설명했다.",
     repairDraft: draft({
       gap: "문단 구조를 보강할 필요가 있습니다.",
-      strengths: ["수식의 단위를 바로잡고 검산을 완료했습니다."],
+      strengths: [
+        "임대료 수익 120에서 비용 20을 빼 순수익 100으로 계산하고 수식 단위를 바로잡아 검산을 완료했습니다.",
+      ],
       missingIssueCandidates: ["문단 구조를 보강할 필요가 있습니다."],
       weakParagraphPoint: "문단 순서를 다시 확인하세요.",
       weakLogicPoint: "구조 순서를 확인해야 합니다.",
@@ -488,10 +492,13 @@ test("APP1-VM-003 requires target-specific learner and draft evidence without mo
   const resolvedNegativeNoun = evaluateApp1SameSessionRepair({
     detail,
     requestedGap: singleFacetGap,
-    repairText: "계산 오류를 바로잡고 산식 단위 검산을 완료했다고 직접 설명했다.",
+    repairText:
+      "임대료 수익 120에서 비용 20을 빼 순수익 100으로 계산해 오류를 바로잡고 산식 단위 검산을 완료했다고 직접 설명했다.",
     repairDraft: draft({
       gap: "문단 구조를 보강할 필요가 있습니다.",
-      strengths: ["계산 오류를 바로잡고 수식 단위 검산을 완료했습니다."],
+      strengths: [
+        "임대료 수익 120에서 비용 20을 빼 순수익 100으로 계산해 오류를 바로잡고 수식 단위 검산을 완료했습니다.",
+      ],
       missingIssueCandidates: ["문단 구조를 보강할 필요가 있습니다."],
       weakParagraphPoint: "문단 순서를 다시 확인하세요.",
       weakLogicPoint: "구조 순서를 확인해야 합니다.",
@@ -499,7 +506,7 @@ test("APP1-VM-003 requires target-specific learner and draft evidence without mo
   });
   assert.equal(resolvedNegativeNoun.state, "repair_confirmed_for_this_session");
 
-  const resolvedHistoricalDefectNouns = evaluateApp1SameSessionRepair({
+  const selfReportedCompletionWithoutReconstruction = evaluateApp1SameSessionRepair({
     detail,
     requestedGap,
     repairText:
@@ -509,8 +516,8 @@ test("APP1-VM-003 requires target-specific learner and draft evidence without mo
     }),
   });
   assert.equal(
-    resolvedHistoricalDefectNouns.state,
-    "repair_confirmed_for_this_session",
+    selfReportedCompletionWithoutReconstruction.state,
+    "one_connection_still_missing",
   );
 
   const correctNamedTargetRepair = evaluateApp1SameSessionRepair({
@@ -784,9 +791,11 @@ test("APP1-VM-004A preserves multiline Theory, Law and Practice bodies without i
       subjectLabel: "감정평가이론",
       sourceType: "text",
       repairText:
-        "  사례 사실 A를 논거의 요건 B에 연결하여 결론을 도출했다.\r\n\r\n둘째 문단에서 그 적용 이유를 직접 설명했다.  ",
+        "  임대료 미납 사실을 계약 해지 논거의 요건에 연결하여 계약 종료 결론을 도출했다.\r\n\r\n둘째 문단에서 그 적용 이유를 직접 설명했다.  ",
       expected:
-        "사례 사실 A를 논거의 요건 B에 연결하여 결론을 도출했다.\n\n둘째 문단에서 그 적용 이유를 직접 설명했다.",
+        "임대료 미납 사실을 계약 해지 논거의 요건에 연결하여 계약 종료 결론을 도출했다.\n\n둘째 문단에서 그 적용 이유를 직접 설명했다.",
+      strength:
+        "임대료 미납 사실을 계약 해지 논거의 요건에 연결하여 계약 종료 결론을 도출했습니다.",
       nextReviewDate: "2020-01-01",
       reviewQueue: [],
     },
@@ -794,9 +803,11 @@ test("APP1-VM-004A preserves multiline Theory, Law and Practice bodies without i
       subjectLabel: "감정평가 및 보상법규",
       sourceType: "text",
       repairText:
-        "사안의 사실을 법리 기준에 적용해 결론을 도출했다.\r\n\r\n조문 근거와 사안 적용을 별도 문단으로 유지했다.",
+        "임대료 미납 사실을 계약 해지 법리 기준에 적용해 계약 종료 결론을 도출했다.\r\n\r\n조문 근거와 사안 적용을 별도 문단으로 유지했다.",
       expected:
-        "사안의 사실을 법리 기준에 적용해 결론을 도출했다.\n\n조문 근거와 사안 적용을 별도 문단으로 유지했다.",
+        "임대료 미납 사실을 계약 해지 법리 기준에 적용해 계약 종료 결론을 도출했다.\n\n조문 근거와 사안 적용을 별도 문단으로 유지했다.",
+      strength:
+        "임대료 미납 사실을 계약 해지 법리 기준에 적용해 계약 종료 결론을 도출했습니다.",
       nextReviewDate: null,
       reviewQueue: [{
         queueId: "55555555-5555-4555-8555-555555555555",
@@ -808,9 +819,11 @@ test("APP1-VM-004A preserves multiline Theory, Law and Practice bodies without i
       subjectLabel: "감정평가실무",
       sourceType: "text",
       repairText:
-        "사례 사실 A를 계산 기준 B에 대입해 연결했다.\r\nNOI = 100 - 20\r\nV = NOI / 0.05\r\n검산: 단위와 부호를 확인했다.",
+        "임대료 수익 120과 비용 20이라는 사례 사실을 수익환원 계산 논거의 요건에 연결하여 순수익 100을 산출하고 단위와 부호 검산을 완료했다.\r\nNOI = 120 - 20\r\nV = NOI / 0.05\r\n검산: 단위와 부호를 확인했다.",
       expected:
-        "사례 사실 A를 계산 기준 B에 대입해 연결했다.\nNOI = 100 - 20\nV = NOI / 0.05\n검산: 단위와 부호를 확인했다.",
+        "임대료 수익 120과 비용 20이라는 사례 사실을 수익환원 계산 논거의 요건에 연결하여 순수익 100을 산출하고 단위와 부호 검산을 완료했다.\nNOI = 120 - 20\nV = NOI / 0.05\n검산: 단위와 부호를 확인했다.",
+      strength:
+        "임대료 수익 120과 비용 20이라는 사례 사실을 수익환원 계산 논거의 요건에 연결하여 순수익 100을 산출하고 단위와 부호 검산을 완료했습니다.",
       nextReviewDate: "2020-01-01",
       reviewQueue: [{
         queueId: "55555555-5555-4555-8555-555555555555",
@@ -834,9 +847,13 @@ test("APP1-VM-004A preserves multiline Theory, Law and Practice bodies without i
       detail,
       requestedGap,
       repairText: fixture.repairText,
-      repairDraft: resolvedTargetDraft(),
+      repairDraft: resolvedTargetDraft({ strength: fixture.strength }),
     });
-    assert.equal(verification.state, "repair_confirmed_for_this_session");
+    assert.equal(
+      verification.state,
+      "repair_confirmed_for_this_session",
+      fixture.subjectLabel,
+    );
     const payload = buildApp1RepairPersistenceInput({
       detail,
       gap: requestedGap,
@@ -858,7 +875,7 @@ test("APP1-VM-004B enforces exact normalized 4,000/4,001-character body bounds",
   const detail = syntheticDetail();
   const requestedGap = buildApp1PrimaryGap(detail, draft());
   const prefix =
-    "사례 사실을 논거의 요건에 연결하여 결론을 도출했다고 직접 설명했다.";
+    "임대료 미납 사실을 계약 해지 논거의 요건에 연결하여 계약 종료 결론을 도출했다고 직접 설명했다.";
   const exactMaximum = `${prefix}${"가".repeat(
     APP1_LIMITS.maximumRepairCharacters - prefix.length,
   )}`;

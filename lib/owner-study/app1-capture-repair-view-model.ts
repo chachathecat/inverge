@@ -495,18 +495,38 @@ function countProfileWordMatches(
   ).length;
 }
 
-function hasSubstantiveOovSupport(
+function substantiveRepairWords(value: string) {
+  return lexicalWords(value).filter(
+    (word) =>
+      repairFacetForWord(word) === null &&
+      !includesAny(word, APP1_REPAIR_ACTION_ROOTS) &&
+      !includesAny(word, APP1_REPAIR_UNRESOLVED_CUES) &&
+      !includesAny(word, APP1_REPAIR_DISCUSSION_ONLY_CUES) &&
+      !includesAny(word, APP1_REPAIR_TARGET_DISPLACEMENT_CUES),
+  );
+}
+
+function hasSubstantiveRepairSupport(
   value: string,
   profile: App1RepairTargetProfile,
 ) {
-  if (profile.requiredFacets.length > 0) return true;
-  if (profile.contextAnchors.length < 2) return false;
   return value
     .split(/[.!?\n。！？]+/u)
     .map((segment) => segment.trim())
     .filter(Boolean)
     .some((segment) => {
+      const identity = normalizedIdentity(segment);
       const segmentWords = new Set(lexicalWords(segment));
+      if (profile.requiredFacets.length > 0) {
+        return (
+          profile.requiredFacets.every((facet) =>
+            includesAny(identity, APP1_REPAIR_TARGET_FACETS[facet]),
+          ) &&
+          new Set(substantiveRepairWords(segment)).size >= 2 &&
+          APP1_REPAIR_COMPLETION_PATTERNS.some((pattern) => pattern.test(identity))
+        );
+      }
+      if (profile.contextAnchors.length < 2) return false;
       return (
         countProfileWordMatches(segmentWords, profile.literalAnchors) >= 2 &&
         countProfileWordMatches(segmentWords, profile.contextAnchors) >= 2 &&
@@ -578,7 +598,7 @@ function isTargetSpecificPositiveEvidence(
   const identity = normalizedIdentity(value);
   return (
     matchesRepairTarget(value, profile) &&
-    hasSubstantiveOovSupport(value, profile) &&
+    hasSubstantiveRepairSupport(value, profile) &&
     APP1_REPAIR_COMPLETION_PATTERNS.some((pattern) => pattern.test(identity)) &&
     !includesAny(identity, APP1_REPAIR_UNRESOLVED_CUES) &&
     !includesAny(identity, APP1_REPAIR_DISCUSSION_ONLY_CUES) &&
