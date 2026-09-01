@@ -1113,35 +1113,101 @@ export class ReviewOsRepository {
     assertSupabaseOperation("review-os.completeReviewQueueItem", result);
   }
 
+  private async listReviewQueueForWrongAnswerItem(
+    userId: string,
+    item: WrongAnswerItemRecord,
+    primaryTag: WrongAnswerTagRecord | null,
+  ) {
+    const client = getUserClient(userId);
+    const pageSize = 100;
+    const queueRows: Record<string, unknown>[] = [];
+    const seenRowIds = new Set<string>();
+    let expectedTotal: number | null = null;
+
+    for (let offset = 0; ; offset += pageSize) {
+      const result = await client
+        .from("review_queue_items")
+        .select("*", { count: "exact" })
+        .eq("user_id", userId)
+        .eq("exam_id", "wrong_answer_os")
+        .eq("stage", "alpha")
+        .eq("status", "pending")
+        .eq("source_kind", "wrong_answer")
+        .eq("source_submission_id", item.id)
+        .order("priority_score", { ascending: false })
+        .order("created_at", { ascending: false })
+        .order("id", { ascending: false })
+        .range(offset, offset + pageSize - 1);
+      assertSupabaseOperation(
+        "review-os.listReviewQueueForWrongAnswerItem",
+        result,
+      );
+      if (
+        typeof result.count !== "number" ||
+        !Number.isSafeInteger(result.count) ||
+        result.count < 0
+      ) {
+        throw new Error("review-os:item-queue-count-unavailable");
+      }
+      expectedTotal ??= result.count;
+      if (result.count !== expectedTotal) {
+        throw new Error("review-os:item-queue-changed-during-read");
+      }
+
+      const pageRows = (result.data ?? []) as Record<string, unknown>[];
+      if (queueRows.length + pageRows.length > expectedTotal) {
+        throw new Error("review-os:item-queue-count-mismatch");
+      }
+      for (const row of pageRows) {
+        const rowId = typeof row.id === "string" ? row.id : null;
+        if (rowId === null || seenRowIds.has(rowId)) {
+          throw new Error("review-os:item-queue-page-identity-invalid");
+        }
+        seenRowIds.add(rowId);
+        queueRows.push(row);
+      }
+
+      if (queueRows.length === expectedTotal) break;
+      if (pageRows.length === 0) {
+        throw new Error("review-os:item-queue-incomplete");
+      }
+    }
+
+    return queueRows.map((row) =>
+      mapReviewQueueCard(row, item, primaryTag),
+    );
+  }
+
   async getWrongAnswerDetail(
     userId: string,
     itemId: string,
   ): Promise<WrongAnswerDetail | null> {
     const item = await this.getWrongAnswerItem(userId, itemId);
     if (!item) return null;
-    const [note, tags, reviewQueue] = await Promise.all([
+    const [note, tags] = await Promise.all([
       this.getWrongAnswerNote(userId, itemId),
       this.listWrongAnswerTags(userId, itemId),
-      this.listReviewQueue(userId, 20),
     ]);
     const primaryTag = tags[0] ?? null;
-    const recurrence =
+    const [recurrence, reviewQueue] = await Promise.all([
       primaryTag === null
-        ? null
-        : await this.getRecurrenceFeature(
+        ? Promise.resolve(null)
+        : this.getRecurrenceFeature(
             userId,
             item.examName,
             item.subjectLabel,
             primaryTag.topicTag,
             primaryTag.mistakeType,
-          );
+          ),
+      this.listReviewQueueForWrongAnswerItem(userId, item, primaryTag),
+    ]);
 
     return {
       item,
       note,
       tags,
       recurrence,
-      reviewQueue: reviewQueue.filter((entry) => entry.itemId === itemId),
+      reviewQueue,
     };
   }
 

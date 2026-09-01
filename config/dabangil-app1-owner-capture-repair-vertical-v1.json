@@ -16,6 +16,7 @@
     "docs/product/dabangil-app1-owner-capture-repair-vertical-v1.md",
     "docs/qa/dabangil-app1-owner-capture-repair-validation.md",
     "lib/owner-study/app1-capture-repair-view-model.ts",
+    "lib/review-os/repository.ts",
     "tests/answer-submission-ocr-save-contract.test.mjs",
     "tests/app1-owner-capture-repair-vertical-v1.test.mjs",
     "tests/e2e/app1-owner-capture-repair-vertical-v1.spec.ts",

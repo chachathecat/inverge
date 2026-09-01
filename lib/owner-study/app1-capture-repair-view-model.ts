@@ -131,6 +131,16 @@ function learnerBodyText(value: unknown) {
   return value.replace(/\r\n?/gu, "\n").trim();
 }
 
+const APP1_PERSISTED_ANSWER_PLACEHOLDERS = new Set(["-", "–", "—"]);
+
+function substantiveLearnerBodyText(value: unknown) {
+  const normalized = learnerBodyText(value);
+  if (normalized === null || APP1_PERSISTED_ANSWER_PLACEHOLDERS.has(normalized)) {
+    return null;
+  }
+  return normalized;
+}
+
 function exactConfirmedFields(detail: WrongAnswerDetail) {
   const rawPayload = record(detail.item.rawPayload);
   return record(rawPayload?.user_confirmed_fields);
@@ -142,9 +152,9 @@ function positiveSafeInteger(value: unknown) {
 
 export function getApp1LearnerAnswer(detail: WrongAnswerDetail) {
   const candidates = [
-    learnerBodyText(detail.item.userAnswer),
-    learnerBodyText(detail.item.rawAnswerText),
-    learnerBodyText(detail.item.rewriteParagraph),
+    substantiveLearnerBodyText(detail.item.userAnswer),
+    substantiveLearnerBodyText(detail.item.rawAnswerText),
+    substantiveLearnerBodyText(detail.item.rewriteParagraph),
   ];
   return candidates.find((candidate) => candidate) ?? "";
 }
@@ -334,6 +344,15 @@ const APP1_REPAIR_UNRESOLVED_CUES = Object.freeze([
   "불충분하",
   "오류가남",
   "오류를남",
+  "오류로",
+  "오인하여",
+  "오인해서",
+  "잘못명시",
+  "잘못확인",
+  "착오로명시",
+  "부정확하게",
+  "틀리게",
+  "틀린채",
   "틀렸",
   "여전히",
   "필요하",
@@ -373,6 +392,16 @@ const APP1_REPAIR_TARGET_DISPLACEMENT_CUES = Object.freeze([
   "불일치",
 ] as const);
 
+const APP1_REPAIR_OOV_COMPLETION_PATTERNS = Object.freeze([
+  /보강(?:했고|했다|했습니다|하였(?:고|다))/u,
+  /설명(?:했고|했다|했습니다|하였(?:고|다))/u,
+  /바로잡(?:고|았(?:고|다|습니다))/u,
+  /완성(?:했고|했다|했습니다|하였(?:고|다))/u,
+  /명시(?:했고|했다|했습니다|하였(?:고|다))/u,
+  /특정(?:했고|했다|했습니다|하였(?:고|다)|하고)/u,
+  /보충(?:했고|했다|했습니다|하였(?:고|다))/u,
+] as const);
+
 const APP1_REPAIR_LEXICAL_STOP_WORDS = new Set([
   "그리고",
   "그러나",
@@ -395,6 +424,7 @@ const APP1_REPAIR_LEXICAL_SUFFIX =
 type App1RepairTargetProfile = Readonly<{
   requiredFacets: readonly App1RepairTargetFacet[];
   literalAnchors: readonly string[];
+  contextAnchors: readonly string[];
   minimumLiteralMatches: number;
 }>;
 
@@ -436,15 +466,62 @@ function literalTargetWords(value: string) {
   return lexicalWords(value).filter(
     (word) =>
       repairFacetForWord(word) === null &&
-      !includesAny(word, APP1_REPAIR_ACTION_ROOTS),
+      !includesAny(word, APP1_REPAIR_ACTION_ROOTS) &&
+      !includesAny(word, APP1_REPAIR_UNRESOLVED_CUES) &&
+      !includesAny(word, APP1_REPAIR_DISCUSSION_ONLY_CUES) &&
+      !includesAny(word, APP1_REPAIR_TARGET_DISPLACEMENT_CUES),
   );
+}
+
+function contextTargetWords(value: string) {
+  return lexicalWords(value).filter(
+    (word) =>
+      !includesAny(word, APP1_REPAIR_ACTION_ROOTS) &&
+      !includesAny(word, APP1_REPAIR_UNRESOLVED_CUES) &&
+      !includesAny(word, APP1_REPAIR_DISCUSSION_ONLY_CUES) &&
+      !includesAny(word, APP1_REPAIR_TARGET_DISPLACEMENT_CUES),
+  );
+}
+
+function countProfileWordMatches(
+  words: ReadonlySet<string>,
+  anchors: readonly string[],
+) {
+  return anchors.filter((anchor) =>
+    [...words].some(
+      (word) =>
+        word === anchor || word.includes(anchor) || anchor.includes(word),
+    ),
+  ).length;
+}
+
+function hasSubstantiveOovSupport(
+  value: string,
+  profile: App1RepairTargetProfile,
+) {
+  if (profile.requiredFacets.length > 0) return true;
+  if (profile.contextAnchors.length < 2) return false;
+  return value
+    .split(/[.!?\n。！？]+/u)
+    .map((segment) => segment.trim())
+    .filter(Boolean)
+    .some((segment) => {
+      const segmentWords = new Set(lexicalWords(segment));
+      return (
+        countProfileWordMatches(segmentWords, profile.literalAnchors) >= 2 &&
+        countProfileWordMatches(segmentWords, profile.contextAnchors) >= 2 &&
+        APP1_REPAIR_OOV_COMPLETION_PATTERNS.some((pattern) =>
+          pattern.test(normalizedIdentity(segment)),
+        )
+      );
+    });
 }
 
 function buildApp1RepairTargetProfile(
   requestedGap: App1PrimaryGap,
 ): App1RepairTargetProfile {
-  const targetMaterial = [requestedGap.gap, requestedGap.repairAction].join(" ");
-  const targetIdentity = normalizedIdentity(targetMaterial);
+  const facetMaterial = [requestedGap.gap, requestedGap.repairAction].join(" ");
+  const targetIdentity = normalizedIdentity(facetMaterial);
   const requiredFacets = (
     Object.entries(APP1_REPAIR_TARGET_FACETS) as Array<
       [App1RepairTargetFacet, readonly string[]]
@@ -453,26 +530,44 @@ function buildApp1RepairTargetProfile(
     .filter(([, terms]) => includesAny(targetIdentity, terms))
     .map(([facet]) => facet);
   const literalAnchors = Array.from(
-    new Set(literalTargetWords(targetMaterial)),
+    new Set(literalTargetWords(facetMaterial)),
+  ).slice(0, 8);
+  const contextAnchors = Array.from(
+    new Set(
+      contextTargetWords(requestedGap.whyItMatters).filter(
+        (word) =>
+          !literalAnchors.some(
+            (anchor) =>
+              word === anchor || word.includes(anchor) || anchor.includes(word),
+          ),
+      ),
+    ),
   ).slice(0, 8);
   return Object.freeze({
     requiredFacets: Object.freeze(requiredFacets),
     literalAnchors: Object.freeze(literalAnchors),
+    contextAnchors: Object.freeze(contextAnchors),
     minimumLiteralMatches: Math.min(2, literalAnchors.length),
   });
 }
 
 function matchesRepairTarget(value: string, profile: App1RepairTargetProfile) {
   const identity = normalizedIdentity(value);
-  if (!identity || profile.requiredFacets.length === 0) return false;
-  const facetsMatch = profile.requiredFacets.every((facet) =>
-    includesAny(identity, APP1_REPAIR_TARGET_FACETS[facet]),
-  );
-  if (!facetsMatch) return false;
+  if (!identity) return false;
   const valueWords = new Set(lexicalWords(value));
   const literalMatches = profile.literalAnchors.filter((anchor) =>
     valueWords.has(anchor),
   ).length;
+  if (profile.requiredFacets.length === 0) {
+    return (
+      profile.literalAnchors.length >= 2 &&
+      literalMatches >= Math.max(2, profile.minimumLiteralMatches)
+    );
+  }
+  const facetsMatch = profile.requiredFacets.every((facet) =>
+    includesAny(identity, APP1_REPAIR_TARGET_FACETS[facet]),
+  );
+  if (!facetsMatch) return false;
   return literalMatches >= profile.minimumLiteralMatches;
 }
 
@@ -483,6 +578,7 @@ function isTargetSpecificPositiveEvidence(
   const identity = normalizedIdentity(value);
   return (
     matchesRepairTarget(value, profile) &&
+    hasSubstantiveOovSupport(value, profile) &&
     APP1_REPAIR_COMPLETION_PATTERNS.some((pattern) => pattern.test(identity)) &&
     !includesAny(identity, APP1_REPAIR_UNRESOLVED_CUES) &&
     !includesAny(identity, APP1_REPAIR_DISCUSSION_ONLY_CUES) &&

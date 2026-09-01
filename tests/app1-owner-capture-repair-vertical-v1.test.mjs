@@ -29,6 +29,7 @@ const EXPECTED_PATHS = [
   "docs/product/dabangil-app1-owner-capture-repair-vertical-v1.md",
   "docs/qa/dabangil-app1-owner-capture-repair-validation.md",
   "lib/owner-study/app1-capture-repair-view-model.ts",
+  "lib/review-os/repository.ts",
   "tests/answer-submission-ocr-save-contract.test.mjs",
   "tests/app1-owner-capture-repair-vertical-v1.test.mjs",
   "tests/e2e/app1-owner-capture-repair-vertical-v1.spec.ts",
@@ -144,13 +145,13 @@ function resolvedTargetDraft({
   });
 }
 
-test("APP1-CONTRACT-001 freezes the exact 13-path Owner-only/default-off candidate", async () => {
+test("APP1-CONTRACT-001 freezes the exact 14-path Owner-only/default-off core candidate", async () => {
   const config = JSON.parse(await read("config/dabangil-app1-owner-capture-repair-vertical-v1.json"));
   assert.equal(config.contractVersion, APP1_CONTRACT_VERSION);
   assert.equal(config.base.sha, "761b7f6b7648d19845ab3385665e92046165dddd");
   assert.equal(config.base.tree, "c6c6a8ad876c2f40b5276a26485b088656addf49");
   assert.deepEqual(config.changedPaths, EXPECTED_PATHS);
-  assert.equal(config.changedPaths.length, 13);
+  assert.equal(config.changedPaths.length, 14);
   assert.equal(config.access.ownerOnly, true);
   assert.equal(config.access.defaultOff, true);
   assert.equal(config.access.gate, "trusted-repair-access");
@@ -202,6 +203,61 @@ test("APP1-VM-001 builds a bounded OCR-confirmed structure summary", () => {
   });
   assert.equal(getApp1LearnerAnswer(longSourceDetail), longSourceAnswer);
   assert.equal(buildApp1StructureSummary(longSourceDetail).uncertainty, null);
+});
+
+test("APP1-VM-001A skips only closed persisted answer placeholders and preserves substantive body precedence", () => {
+  const multilineTheory =
+    "시효 완성 시점을 먼저 특정했다.\r\n\r\n그 시점의 판단 근거를 별도 문단으로 설명했다.";
+  assert.equal(
+    getApp1LearnerAnswer(
+      syntheticDetail({
+        item: {
+          userAnswer: "-",
+          rawAnswerText: "—",
+          rewriteParagraph: multilineTheory,
+        },
+      }),
+    ),
+    multilineTheory.replace(/\r\n/gu, "\n"),
+  );
+
+  const practiceCalculation = "NOI = 100 - 20\r\nV = NOI / 0.05\r\n검산: 단위 확인";
+  assert.equal(
+    getApp1LearnerAnswer(
+      syntheticDetail({
+        item: {
+          userAnswer: "–",
+          rawAnswerText: "-",
+          rewriteParagraph: practiceCalculation,
+        },
+      }),
+    ),
+    practiceCalculation.replace(/\r\n/gu, "\n"),
+  );
+  assert.equal(
+    getApp1LearnerAnswer(
+      syntheticDetail({
+        item: {
+          userAnswer: "짧음",
+          rawAnswerText: "더 긴 원문",
+          rewriteParagraph: "다시 쓴 문단",
+        },
+      }),
+    ),
+    "짧음",
+  );
+  assert.equal(
+    getApp1LearnerAnswer(
+      syntheticDetail({
+        item: {
+          userAnswer: "-",
+          rawAnswerText: "—",
+          rewriteParagraph: "",
+        },
+      }),
+    ),
+    "",
+  );
 });
 
 test("APP1-ACCESS-001 preserves the exact partial subject authorization", () => {
@@ -491,6 +547,143 @@ test("APP1-VM-003 requires target-specific learner and draft evidence without mo
     "deferred",
     "blocked_by_ocr_or_source_uncertainty",
   ]);
+});
+
+test("APP1-VM-003C confirms stable out-of-vocabulary targets only with positive learner and draft evidence", () => {
+  const detail = syntheticDetail();
+  const baseGap = buildApp1PrimaryGap(detail, draft());
+  const requestedGap = {
+    ...baseGap,
+    gap: "시효 완성 시점을 빠뜨렸습니다.",
+    whyItMatters: "시효 완성 시점이 달라지면 법률효과의 판단 기준이 달라집니다.",
+    repairAction: "시효 완성 시점을 보충하세요.",
+  };
+  const validRepair =
+    "시효 완성 시점의 법률효과와 판단 기준을 기준일 다음 날로 특정하고 그 이유를 명시했습니다.";
+  const validDraft = draft({
+    gap: "결론 문장의 범위를 한정할 필요가 있습니다.",
+    strengths: [
+      "시효 완성 시점의 법률효과와 판단 기준을 기준일 다음 날로 특정하고 이유를 명시했습니다.",
+    ],
+    missingIssueCandidates: ["결론 문장의 범위를 한정할 필요가 있습니다."],
+    weakParagraphPoint: "결론 범위를 다시 확인하세요.",
+    weakLogicPoint: "결론 범위의 근거를 확인해야 합니다.",
+  });
+  assert.equal(
+    evaluateApp1SameSessionRepair({
+      detail,
+      requestedGap,
+      repairText: validRepair,
+      repairDraft: validDraft,
+    }).state,
+    "repair_confirmed_for_this_session",
+  );
+
+  const cases = [
+    {
+      name: "unchanged target",
+      repairText: "시효 완성 시점을 여전히 빠뜨려 보강하지 못했다고 설명했습니다.",
+      repairDraft: validDraft,
+    },
+    {
+      name: "generic strength",
+      repairText: "문장의 표현을 명확히 보강하고 전체 구조를 다시 정리했습니다.",
+      repairDraft: validDraft,
+    },
+    {
+      name: "generic target echo",
+      repairText: "시효 완성 시점을 확인했습니다.",
+      repairDraft: validDraft,
+    },
+    {
+      name: "target echo with unrelated filler",
+      repairText: "시효 완성 시점을 확인했습니다. 답안 전체를 정리했습니다.",
+      repairDraft: draft({
+        gap: "결론 문장의 범위를 한정할 필요가 있습니다.",
+        strengths: ["시효 완성 시점을 확인했습니다. 답안 전체를 정리했습니다."],
+        missingIssueCandidates: ["결론 문장의 범위를 한정할 필요가 있습니다."],
+      }),
+    },
+    {
+      name: "contradictory target echo with unrelated filler",
+      repairText: "시효 완성 시점을 오류로 명시했습니다. 답안 전체를 정리했습니다.",
+      repairDraft: draft({
+        gap: "결론 문장의 범위를 한정할 필요가 있습니다.",
+        strengths: ["시효 완성 시점을 오류로 명시했습니다. 답안 전체를 정리했습니다."],
+        missingIssueCandidates: ["결론 문장의 범위를 한정할 필요가 있습니다."],
+      }),
+    },
+    {
+      name: "contradictory learner completion claim",
+      repairText: "시효 완성 시점을 틀리게 명시했습니다.",
+      repairDraft: validDraft,
+    },
+    {
+      name: "contradictory draft strength",
+      repairText: validRepair,
+      repairDraft: draft({
+        gap: "결론 문장의 범위를 한정할 필요가 있습니다.",
+        strengths: ["시효 완성 시점을 틀리게 명시했습니다."],
+        missingIssueCandidates: ["결론 문장의 범위를 한정할 필요가 있습니다."],
+        weakParagraphPoint: "결론 범위를 다시 확인하세요.",
+        weakLogicPoint: "결론 범위의 근거를 확인해야 합니다.",
+      }),
+    },
+    {
+      name: "unrelated repair",
+      repairText: "손실보상 결론의 범위를 한정하고 그 판단 이유를 명시했습니다.",
+      repairDraft: validDraft,
+    },
+    {
+      name: "target remains missing",
+      repairText: validRepair,
+      repairDraft: draft({
+        gap: "시효 완성 시점의 설명이 아직 빠져 있습니다.",
+        strengths: ["시효 완성 시점을 검토 대상으로 확인했습니다."],
+        missingIssueCandidates: ["시효 완성 시점의 설명이 아직 빠져 있습니다."],
+      }),
+    },
+    {
+      name: "conflicting evidence",
+      repairText: validRepair,
+      repairDraft: draft({
+        gap: "결론 문장의 범위를 한정할 필요가 있습니다.",
+        strengths: ["시효 완성 시점을 명시했습니다."],
+        missingIssueCandidates: ["시효 완성 시점의 근거가 여전히 부족합니다."],
+      }),
+    },
+  ];
+  for (const fixture of cases) {
+    const verification = evaluateApp1SameSessionRepair({
+      detail,
+      requestedGap,
+      repairText: fixture.repairText,
+      repairDraft: fixture.repairDraft,
+    });
+    assert.equal(verification.state, "one_connection_still_missing", fixture.name);
+    assert.equal(verification.masteryCreated, false, fixture.name);
+    assert.equal(verification.transferCreated, false, fixture.name);
+  }
+
+  const unstableGap = {
+    ...baseGap,
+    gap: "이 부분이 약합니다.",
+    whyItMatters: "보완이 필요합니다.",
+    repairAction: "직접 보강하세요.",
+  };
+  assert.equal(
+    evaluateApp1SameSessionRepair({
+      detail,
+      requestedGap: unstableGap,
+      repairText: "표현을 명확히 보강하고 완료했다고 직접 설명했습니다.",
+      repairDraft: draft({
+        gap: "결론 범위를 확인할 필요가 있습니다.",
+        strengths: ["표현을 명확히 보강하고 완료했습니다."],
+        missingIssueCandidates: ["결론 범위를 확인할 필요가 있습니다."],
+      }),
+    }).state,
+    "one_connection_still_missing",
+  );
 });
 
 test("APP1-VM-003A exposes guided_path_needed without fabricating confirmation, mastery or transfer", () => {
@@ -950,6 +1143,57 @@ test("APP1-UI-004 keeps queue confirmation post-save and item-specific", async (
   );
 });
 
+test("APP1-QUEUE-001 reads every exact item Queue row before ordering and without a global limit", async () => {
+  const repository = await read("lib/review-os/repository.ts");
+  const method = repository.match(
+    /private async listReviewQueueForWrongAnswerItem\([\s\S]*?(?=\n  async getWrongAnswerDetail\()/u,
+  )?.[0];
+  const detailMethod = repository.match(
+    /async getWrongAnswerDetail\([\s\S]*?(?=\n  async upsertWeeklySummary\()/u,
+  )?.[0];
+  assert.ok(method, "missing exact item-specific Queue repository query");
+  assert.ok(detailMethod, "missing wrong-answer detail repository method");
+  const filters = [
+    '.eq("user_id", userId)',
+    '.eq("exam_id", "wrong_answer_os")',
+    '.eq("stage", "alpha")',
+    '.eq("status", "pending")',
+    '.eq("source_kind", "wrong_answer")',
+    '.eq("source_submission_id", item.id)',
+  ];
+  let previousIndex = method.indexOf('.select("*", { count: "exact" })');
+  assert.ok(previousIndex >= 0);
+  for (const filter of filters) {
+    const index = method.indexOf(filter);
+    assert.ok(index > previousIndex, `missing or unordered Queue filter: ${filter}`);
+    previousIndex = index;
+  }
+  const firstOrder = method.indexOf('.order("priority_score"');
+  assert.ok(firstOrder > previousIndex, "Queue filters must precede ordering");
+  const finalOrder = method.indexOf('.order("id"', firstOrder);
+  const range = method.indexOf(".range(offset, offset + pageSize - 1)");
+  assert.ok(finalOrder > firstOrder);
+  assert.ok(range > finalOrder, "item-specific paging must follow exact filters and order");
+  assert.doesNotMatch(method, /\.limit\(/u);
+  assert.match(method, /expectedTotal \?\?= result\.count/u);
+  assert.match(method, /result\.count !== expectedTotal/u);
+  assert.match(method, /queueRows\.length === expectedTotal/u);
+  assert.match(method, /pageRows\.length === 0/u);
+  assert.match(method, /seenRowIds\.has\(rowId\)/u);
+  assert.match(
+    method,
+    /queueRows\.map\(\(row\) =>[\s\S]*?mapReviewQueueCard\(row, item, primaryTag\)/u,
+  );
+  assert.match(
+    detailMethod,
+    /this\.listReviewQueueForWrongAnswerItem\(userId, item, primaryTag\)/u,
+  );
+  assert.doesNotMatch(
+    detailMethod,
+    /listReviewQueue\(userId, 20\)|reviewQueue\.filter/u,
+  );
+});
+
 test("APP1-PERMISSION-001 separates input confirmation from quick save at the IntakePanel boundary", async () => {
   const captureForm = await read("components/review-os/capture-form.tsx");
   const config = JSON.parse(await read("config/dabangil-app1-owner-capture-repair-vertical-v1.json"));
@@ -994,9 +1238,9 @@ test("APP1-PERMISSION-001 separates input confirmation from quick save at the In
     "input confirmation must not perform the durable item save",
   );
   assert.deepEqual(config.changedPaths, EXPECTED_PATHS);
-  assert.equal(config.changedPaths.length, 13);
+  assert.equal(config.changedPaths.length, 14);
   assert.equal(config.changedPaths.includes(SHARED_ACCESS_INVENTORY_PATH), false);
-  assert.equal(new Set([...config.changedPaths, SHARED_ACCESS_INVENTORY_PATH]).size, 14);
+  assert.equal(new Set([...config.changedPaths, SHARED_ACCESS_INVENTORY_PATH]).size, 15);
   assert.match(sharedAccessInventory, /app\/app\/capture\/repair\/page\.tsx/u);
 });
 

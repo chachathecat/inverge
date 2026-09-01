@@ -9,12 +9,15 @@ const ownerPassword = process.env.APP1_OWNER_PASSWORD ?? "";
 const SOURCE_ITEM_ID = "11111111-1111-4111-8111-111111111111";
 const REPAIR_ITEM_ID = "22222222-2222-4222-8222-222222222222";
 const QUEUE_ID = "33333333-3333-4333-8333-333333333333";
+const SYNTHETIC_HIGHER_PRIORITY_QUEUE_COUNT = 21;
 
-const originalGap = "사례 사실과 논거의 연결이 약합니다.";
+const originalGap = "시효 완성 시점을 빠뜨렸습니다.";
+const syntheticSourceRewrite =
+  "시효의 기산점을 먼저 설명했다.\n\n그러나 시효 완성 시점의 판단은 아직 보충하지 못했다.";
 const syntheticRepair =
-  "합성 사례의 사실 A는 위 논거의 요건 B를 충족하므로 결론 C에 이른다고 내가 직접 연결했다.\n\n둘째 문단에서 그 적용 이유를 직접 설명했다.";
+  "시효 완성 시점의 법률효과와 판단 기준을 기준일 다음 날로 특정하고 그 이유를 명시했다.\n\n둘째 문단에서 그 법률효과를 직접 설명했다.";
 const syntheticConflictResolvedRepair =
-  `${syntheticRepair}\n\n충돌을 확인한 뒤 사실 A와 요건 B의 적용 연결을 학습자가 직접 다시 고쳤다.`;
+  `${syntheticRepair}\n\n충돌을 확인한 뒤 시효 완성 시점과 판단 이유를 학습자가 직접 다시 고쳤다.`;
 
 const syntheticDetail = {
   item: {
@@ -29,10 +32,10 @@ const syntheticDetail = {
     problemTitle: "저작권 안전 합성 문제",
     problemIdentifier: "SYNTHETIC-APP1-E2E",
     rawQuestionText: "합성 사례의 정의와 논거, 적용 관계를 설명하시오.",
-    rawAnswerText: "정의를 제시하고 논거를 설명했으나 사례 사실과 논거를 충분히 연결하지 못했다.",
-    rewriteParagraph: "",
+    rawAnswerText: "-",
+    rewriteParagraph: syntheticSourceRewrite,
     correctAnswer: "-",
-    userAnswer: "정의를 제시하고 논거를 설명했으나 사례 사실과 논거를 충분히 연결하지 못했다.",
+    userAnswer: "-",
     userReasonText: originalGap,
     confidence: "중간",
     timeSpentSeconds: 720,
@@ -41,9 +44,9 @@ const syntheticDetail = {
     coreFormula: "정의 → 논거 → 적용",
     comparisonPoint: "사례 적용을 직접 연결한다.",
     missingIssue: originalGap,
-    weakStructurePoint: "적용 문장이 부족합니다.",
-    weakApplicationSentence: "사례 사실을 논거에 연결합니다.",
-    rewriteInstruction: "사례 사실과 논거를 한 문장으로 직접 연결하세요.",
+    weakStructurePoint: "시효 완성 시점 문장이 부족합니다.",
+    weakApplicationSentence: "시효 완성 시점과 판단 이유를 연결합니다.",
+    rewriteInstruction: "시효 완성 시점과 판단 이유를 한 문장으로 직접 보충하세요.",
     referenceStructure: "정의 → 논거 → 사례 적용 → 결론",
     myAnswerSummary: "정의와 논거를 적었으나 적용이 부족함",
     caseSummary: "저작권 안전 합성 사례",
@@ -124,8 +127,8 @@ function syntheticRepairDetail(binding: RepairPersistenceBinding) {
 function structureDraft({
   gap = originalGap,
   strengths = ["정의와 핵심 논거가 확인됩니다."],
-  weakParagraphPoint = "사례 사실을 논거에 연결하는 한 문장을 직접 적으세요.",
-  weakLogicPoint = "논거에서 사례로 이어지는 연결을 확인합니다.",
+  weakParagraphPoint = "시효 완성 시점의 판단 문장을 직접 적으세요.",
+  weakLogicPoint = "시효 완성 시점의 판단 이유를 확인합니다.",
 } = {}) {
   return {
     questionSummary: "합성 문제의 구조를 검토합니다.",
@@ -138,11 +141,11 @@ function structureDraft({
     missingIssueCandidates: [gap],
     weakParagraphPoint,
     weakLogicPoint,
-    rewriteTarget: "적용 연결 문장",
+    rewriteTarget: "시효 완성 시점 문장",
     rewriteDraftSuggestion: "학습자가 직접 작성해야 합니다.",
-    nextAction: "사례 사실과 논거를 한 문장으로 직접 연결하세요.",
+    nextAction: "시효 완성 시점을 판단 이유와 함께 보충하세요.",
     caution: "학습 보조 초안입니다.",
-    plainExplanation: "한 연결만 직접 보강합니다.",
+    plainExplanation: "시효 완성 시점 한 연결만 직접 보강합니다.",
     keyTermExplanations: ["적용: 사실을 기준에 연결하는 단계"],
     stepByStepExplanation: ["논거 확인", "사례 사실 확인", "직접 연결"],
     examAnswerHints: ["적용 연결을 확인합니다."],
@@ -162,9 +165,9 @@ function captureExtraction() {
       reference_outline: "정의 → 논거 → 적용 → 결론",
       user_answer_summary: "정의와 논거를 적었으나 적용 연결이 부족함",
       missing_issue: originalGap,
-      weak_sentence: "사례 사실을 논거에 연결하는 문장이 필요합니다.",
-      weak_structure_point: "적용 연결 문장이 부족합니다.",
-      rewrite_instruction: "사례 사실과 논거를 한 문장으로 직접 연결하세요.",
+      weak_sentence: "시효 완성 시점과 판단 이유를 연결하는 문장이 필요합니다.",
+      weak_structure_point: "시효 완성 시점 문장이 부족합니다.",
+      rewrite_instruction: "시효 완성 시점과 판단 이유를 한 문장으로 직접 보충하세요.",
       review_date_suggestion: "2026-08-30",
       needs_review: false,
     },
@@ -320,6 +323,7 @@ async function installSyntheticSeams(
   let sourceLoadCount = 0;
   let repairItemLoadCount = 0;
   let queuePresentationLoadCount = 0;
+  let placeholderRewriteAnalysisCount = 0;
   let durableRepairBinding: RepairPersistenceBinding | null = null;
   const initialCaptureResponseClasses: InitialCaptureResponseClass[] = [];
   const repairResponseClasses: RepairResponseClass[] = [];
@@ -381,6 +385,12 @@ async function installSyntheticSeams(
     }
     if (request.method() === "POST" && url.pathname === "/api/answer-review/structure") {
       structureCount += 1;
+      const submittedStructureBody = (
+        request.postDataBuffer()?.toString("utf8") ?? ""
+      ).replace(/\r\n/gu, "\n");
+      if (submittedStructureBody.includes(syntheticSourceRewrite)) {
+        placeholderRewriteAnalysisCount += 1;
+      }
       if (exerciseFailures && [1, 4].includes(structureCount)) {
         await route.fulfill({
           status: 503,
@@ -402,7 +412,7 @@ async function installSyntheticSeams(
         : structureCount >= 2;
       const draft = paraphrasedUnresolved
         ? structureDraft({
-            gap: "사안의 구체적 사실을 근거 기준과 결부하는 설명이 여전히 빠져 있습니다.",
+            gap: "시효 완성 시점의 판단 설명이 여전히 빠져 있습니다.",
             strengths: ["정의와 핵심 논거가 확인됩니다."],
             weakParagraphPoint: "결론 문장의 범위를 한정해 다시 적으세요.",
             weakLogicPoint: "결론 범위의 한정 근거를 확인해야 합니다.",
@@ -411,7 +421,7 @@ async function installSyntheticSeams(
           ? structureDraft({
               gap: "결론 문장의 범위를 한정할 필요가 있습니다.",
               strengths: [
-                "사례 사실을 논거의 요건에 연결하여 결론을 도출했습니다.",
+                "시효 완성 시점의 법률효과와 판단 기준을 기준일 다음 날로 특정하고 이유를 명시했습니다.",
               ],
               weakParagraphPoint: "결론 문장의 범위를 한정해 다시 적으세요.",
               weakLogicPoint: "결론 범위의 한정 근거를 확인해야 합니다.",
@@ -549,7 +559,18 @@ async function installSyntheticSeams(
       await route.fulfill({
         status: 200,
         contentType: "application/json",
-        body: JSON.stringify({ ok: true, items: [] }),
+        body: JSON.stringify({
+          ok: true,
+          items: Array.from(
+            { length: SYNTHETIC_HIGHER_PRIORITY_QUEUE_COUNT },
+            (_, index) => ({
+              ...repairQueueCard(),
+              queueId: `aaaaaaaa-aaaa-4aaa-8aaa-${String(index).padStart(12, "0")}`,
+              itemId: `bbbbbbbb-bbbb-4bbb-8bbb-${String(index).padStart(12, "0")}`,
+              priorityScore: 100 - index,
+            }),
+          ),
+        }),
       });
       return;
     }
@@ -569,6 +590,8 @@ async function installSyntheticSeams(
     sourceLoadCount: () => sourceLoadCount,
     repairItemLoadCount: () => repairItemLoadCount,
     queuePresentationLoadCount: () => queuePresentationLoadCount,
+    placeholderRewriteAnalysisCount: () => placeholderRewriteAnalysisCount,
+    higherPriorityQueueCount: () => SYNTHETIC_HIGHER_PRIORITY_QUEUE_COUNT,
   };
 }
 
@@ -648,13 +671,20 @@ async function completeCapture(
     "사례의 합성 사실 A는 논거 B의 적용 대상이라는 연결을 학습자가 직접 작성했다.",
   );
   await page.getByRole("button", { name: "마지막 확인으로 이동" }).click();
+  const initialSaveButton = page.getByRole("button", {
+    name: "저장하고 오늘 계획에 반영",
+  });
+  await expect(initialSaveButton).toHaveCount(1);
+  await expect(initialSaveButton).toBeVisible();
+  await expect(initialSaveButton).toBeEnabled();
   const [initialSaveResponse] = await Promise.all([
     page.waitForResponse(
       (response) =>
         response.request().method() === "POST" &&
         new URL(response.url()).pathname === "/api/os/items",
+      { timeout: 30_000 },
     ),
-    page.getByRole("button", { name: "저장하고 오늘 계획에 반영" }).click(),
+    initialSaveButton.click(),
   ]);
   expect(initialSaveResponse.status()).toBe(200);
   await expect(page).toHaveURL(new RegExp(`/app/capture/repair\\?itemId=${SOURCE_ITEM_ID}$`));
@@ -676,7 +706,11 @@ async function analyzeToDirectRepair(page: Page, keyboard: boolean) {
 
 test.skip(APP1_AUTH_RUNTIME !== "1", "requires local authenticated Owner/default-off APP-1 runtime");
 
-test("synthetic Owner Capture → one-gap direct repair → durable next review is responsive and accessible", async ({ browser }) => {
+test("synthetic Owner Capture → one-gap direct repair → durable next review is responsive and accessible", async ({ browser }, testInfo) => {
+  // Three independent authenticated viewports execute serially in this one
+  // contract test. Keep one bounded aggregate wall-clock allowance while
+  // recording the exact active viewport for fail-closed diagnostics.
+  test.setTimeout(120_000);
   requireLocalRuntime();
   const viewports = [
     { width: 390, height: 844, keyboard: true, inputKind: "text" as const, exerciseFailures: true },
@@ -685,6 +719,10 @@ test("synthetic Owner Capture → one-gap direct repair → durable next review 
   ];
 
   for (const viewport of viewports) {
+    testInfo.annotations.push({
+      type: "app1-viewport-started",
+      description: `${viewport.width}x${viewport.height}-${viewport.inputKind}`,
+    });
     const context = await ownerContext(browser, viewport);
     const seams = await installSyntheticSeams(context, {
       exerciseFailures: viewport.exerciseFailures,
@@ -798,6 +836,9 @@ test("synthetic Owner Capture → one-gap direct repair → durable next review 
     await expect(page.getByText(/답을 보지 않고 보강한 연결을 다시 한 번 작성하기/)).toBeVisible();
     expect(seams.ocrCount()).toBe(viewport.exerciseFailures ? 2 : 1);
     expect(seams.structureCount()).toBe(viewport.exerciseFailures ? 7 : 2);
+    expect(seams.placeholderRewriteAnalysisCount()).toBe(
+      viewport.exerciseFailures ? 3 : 1,
+    );
     expect(seams.repairSaveCount()).toBe(viewport.exerciseFailures ? 3 : 1);
     expect(seams.repairResponseClasses()).toEqual(
       viewport.exerciseFailures
@@ -827,6 +868,7 @@ test("synthetic Owner Capture → one-gap direct repair → durable next review 
     expect(seams.sourceLoadCount()).toBeGreaterThanOrEqual(viewport.exerciseFailures ? 2 : 1);
     expect(seams.repairItemLoadCount()).toBe(1);
     expect(seams.queuePresentationLoadCount()).toBe(0);
+    expect(seams.higherPriorityQueueCount()).toBe(21);
     expect(new Set(seams.mutations.map((entry) => entry.replace(/^POST /u, "")))).toEqual(
       new Set(["/api/inverge/ocr", "/api/answer-review/structure", "/api/os/items"]),
     );
@@ -836,6 +878,10 @@ test("synthetic Owner Capture → one-gap direct repair → durable next review 
     await assertNoHorizontalOverflow(page);
     await assertA11y(page);
     await context.close();
+    testInfo.annotations.push({
+      type: "app1-viewport-completed",
+      description: `${viewport.width}x${viewport.height}-${viewport.inputKind}`,
+    });
   }
 
   const queueFailureContext = await ownerContext(browser, {
@@ -882,6 +928,8 @@ test("synthetic Owner Capture → one-gap direct repair → durable next review 
   ]);
   expect(queueFailureSeams.repairItemLoadCount()).toBe(1);
   expect(queueFailureSeams.queuePresentationLoadCount()).toBe(0);
+  expect(queueFailureSeams.placeholderRewriteAnalysisCount()).toBe(1);
+  expect(queueFailureSeams.higherPriorityQueueCount()).toBe(21);
   expect(queueFailureSeams.unknownItemSaveCount()).toBe(0);
   await queueFailureContext.close();
 });
