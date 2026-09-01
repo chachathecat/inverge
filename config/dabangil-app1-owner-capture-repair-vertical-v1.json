@@ -10,6 +10,7 @@
   "changedPaths": [
     "app/app/capture/page.tsx",
     "app/app/capture/repair/page.tsx",
+    "app/api/answer-review/structure/route.ts",
     "components/owner-study/app1-capture-repair-loop.tsx",
     "components/review-os/capture-form.tsx",
     "config/dabangil-app1-owner-capture-repair-vertical-v1.json",
@@ -26,6 +27,11 @@
   "entry": {
     "route": "/app/capture?mode=second",
     "primaryCallToAction": "사진·PDF·텍스트로 시작",
+    "inputChoices": [
+      "사진 찍기",
+      "PDF 선택",
+      "텍스트 붙여넣기"
+    ],
     "analysisCallToAction": "이 내용으로 분석",
     "ocrWarning": "OCR 결과는 초안입니다. 저장 전 직접 확인해 주세요.",
     "publicNavigation": false
@@ -65,6 +71,17 @@
     ],
     "newApi": false,
     "newPersistence": false
+  },
+  "answerReviewStructure": {
+    "requestPurposes": [
+      "learning_analysis",
+      "repair_verification"
+    ],
+    "defaultRequestPurpose": "learning_analysis",
+    "repairVerificationRequiresAuthenticatedOwnedExactSecondStageItem": true,
+    "repairVerificationRequiresExactSubjectAuthorization": true,
+    "repairVerificationCreatesLearningSignal": false,
+    "callerControlledGenericSideEffectSuppression": false
   },
   "verificationStates": [
     "repair_confirmed_for_this_session",

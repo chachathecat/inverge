@@ -210,6 +210,7 @@ async function assertA11y(page: Page) {
 
 type JsonRecord = Record<string, unknown>;
 type ItemSaveClass = "initial_capture_save" | "app1_repair_save" | "unknown_item_save";
+type StructureRequestPurpose = "learning_analysis" | "repair_verification";
 type InitialCaptureResponseClass = "synthetic_source_save_success";
 type RepairResponseClass =
   | "synthetic_repair_save_503"
@@ -303,6 +304,29 @@ function classifyItemSavePayload(value: unknown): ItemSaveClass {
   return isInitialCaptureSave ? "initial_capture_save" : "unknown_item_save";
 }
 
+function multipartFieldEquals(
+  body: string,
+  fieldName: string,
+  expectedValue: string,
+) {
+  return body.includes(
+    `name="${fieldName}"\n\n${expectedValue}\n`,
+  );
+}
+
+function classifyStructureRequest(body: string): StructureRequestPurpose | null {
+  if (multipartFieldEquals(body, "requestPurpose", "learning_analysis")) {
+    return "learning_analysis";
+  }
+  if (
+    multipartFieldEquals(body, "requestPurpose", "repair_verification") &&
+    multipartFieldEquals(body, "sourceItemId", SOURCE_ITEM_ID)
+  ) {
+    return "repair_verification";
+  }
+  return null;
+}
+
 async function installSyntheticSeams(
   context: BrowserContext,
   {
@@ -315,6 +339,9 @@ async function installSyntheticSeams(
 ) {
   let ocrCount = 0;
   let structureCount = 0;
+  let learningAnalysisCount = 0;
+  let repairVerificationCount = 0;
+  let unknownStructureRequestCount = 0;
   let totalItemSaveCount = 0;
   let initialCaptureSaveCount = 0;
   let repairSaveCount = 0;
@@ -384,21 +411,40 @@ async function installSyntheticSeams(
       return;
     }
     if (request.method() === "POST" && url.pathname === "/api/answer-review/structure") {
-      structureCount += 1;
       const submittedStructureBody = (
         request.postDataBuffer()?.toString("utf8") ?? ""
       ).replace(/\r\n/gu, "\n");
+      const requestPurpose = classifyStructureRequest(submittedStructureBody);
+      if (!requestPurpose) {
+        unknownStructureRequestCount += 1;
+        await route.fulfill({
+          status: 422,
+          contentType: "application/json",
+          body: JSON.stringify({ ok: false, error: "APP1_E2E_UNKNOWN_STRUCTURE_PURPOSE" }),
+        });
+        return;
+      }
+      structureCount += 1;
       if (submittedStructureBody.includes(syntheticSourceRewrite)) {
         placeholderRewriteAnalysisCount += 1;
       }
-      if (exerciseFailures && [1, 4].includes(structureCount)) {
+      if (requestPurpose === "learning_analysis") {
+        learningAnalysisCount += 1;
+      } else {
+        repairVerificationCount += 1;
+      }
+      if (
+        exerciseFailures &&
+        ((requestPurpose === "learning_analysis" && learningAnalysisCount === 1) ||
+          (requestPurpose === "repair_verification" && repairVerificationCount === 1))
+      ) {
         await route.fulfill({
           status: 503,
           contentType: "application/json",
           body: JSON.stringify({
             ok: false,
             error:
-              structureCount === 1
+              requestPurpose === "learning_analysis"
                 ? "synthetic_analysis_unavailable"
                 : "synthetic_verification_unavailable",
           }),
@@ -406,10 +452,10 @@ async function installSyntheticSeams(
         return;
       }
       const paraphrasedUnresolved =
-        exerciseFailures && structureCount === 5;
-      const repairedReview = exerciseFailures
-        ? structureCount >= 6
-        : structureCount >= 2;
+        requestPurpose === "repair_verification" &&
+        exerciseFailures &&
+        repairVerificationCount === 2;
+      const repairedReview = requestPurpose === "repair_verification";
       const draft = paraphrasedUnresolved
         ? structureDraft({
             gap: "시효 완성 시점의 판단 설명이 여전히 빠져 있습니다.",
@@ -430,7 +476,16 @@ async function installSyntheticSeams(
       await route.fulfill({
         status: 200,
         contentType: "application/json",
-        body: JSON.stringify({ ok: true, draft }),
+        body: JSON.stringify({
+          ok: true,
+          draft,
+          learningSignalStatus:
+            requestPurpose === "learning_analysis" ? "saved" : "skipped",
+          learningSignalSkipReason:
+            requestPurpose === "repair_verification"
+              ? "repair_verification"
+              : undefined,
+        }),
       });
       return;
     }
@@ -580,6 +635,9 @@ async function installSyntheticSeams(
     mutations,
     ocrCount: () => ocrCount,
     structureCount: () => structureCount,
+    learningAnalysisCount: () => learningAnalysisCount,
+    repairVerificationCount: () => repairVerificationCount,
+    unknownStructureRequestCount: () => unknownStructureRequestCount,
     totalItemSaveCount: () => totalItemSaveCount,
     initialCaptureSaveCount: () => initialCaptureSaveCount,
     repairSaveCount: () => repairSaveCount,
@@ -605,28 +663,49 @@ async function completeCapture(
   await page.goto(
     "/app/capture?mode=second&subject=" + encodeURIComponent("감정평가이론"),
   );
-  await expect(page.getByRole("button", { name: "사진·PDF·텍스트로 시작" })).toBeVisible();
+  const captureEntry = page.getByRole("button", {
+    name: "사진·PDF·텍스트로 시작",
+  });
+  await expect(captureEntry).toHaveCount(1);
+  await expect(captureEntry).toBeVisible();
+  await expect(captureEntry).toHaveAttribute("aria-expanded", "false");
+  await expect(page.getByText("다른 입력 방식", { exact: true })).toHaveCount(0);
 
   if (inputKind === "text") {
-    await page.getByText("다른 입력 방식", { exact: true }).click();
-    await page.getByRole("button", { name: "텍스트 붙여넣기" }).click();
-    await page.getByLabel("오늘 공부한 내용 또는 내 답안").fill(
+    await captureEntry.focus();
+    await page.keyboard.press("Enter");
+    await expect(captureEntry).toHaveAttribute("aria-expanded", "true");
+    const photoChoice = page.getByRole("button", { name: "사진 찍기" });
+    const pdfChoice = page.getByRole("button", { name: "PDF 선택" });
+    const textChoice = page.getByRole("button", { name: "텍스트 붙여넣기" });
+    await expect(photoChoice).toBeFocused();
+    await page.keyboard.press("Tab");
+    await expect(pdfChoice).toBeFocused();
+    await page.keyboard.press("Tab");
+    await expect(textChoice).toBeFocused();
+    await page.keyboard.press("Enter");
+    const textInput = page.getByLabel("오늘 공부한 내용 또는 내 답안");
+    await expect(textInput).toBeFocused();
+    await textInput.fill(
       "감정평가이론\n내 답안: 정의와 논거를 적었으나 적용 연결이 부족합니다.\n누락 논점: 사례 사실과 논거의 연결이 약합니다.",
     );
     await page.getByRole("button", { name: "입력 내용 확인하기" }).click();
   } else if (inputKind === "photo") {
-    const photoInput = page.locator(
-      'input[type="file"][accept="image/*"]:not([capture])',
-    );
-    await expect(photoInput).toHaveCount(1);
-    await photoInput.setInputFiles({
+    await captureEntry.click();
+    const fileChooserPromise = page.waitForEvent("filechooser");
+    await page.getByRole("button", { name: "사진 찍기" }).click();
+    const photoChooser = await fileChooserPromise;
+    await photoChooser.setFiles({
       name: "synthetic-app1.png",
       mimeType: "image/png",
       buffer: Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=", "base64"),
     });
   } else {
-    await page.getByText("다른 입력 방식", { exact: true }).click();
-    await page.locator('input[type="file"][accept="application/pdf"]').setInputFiles({
+    await captureEntry.click();
+    const fileChooserPromise = page.waitForEvent("filechooser");
+    await page.getByRole("button", { name: "PDF 선택" }).click();
+    const pdfChooser = await fileChooserPromise;
+    await pdfChooser.setFiles({
       name: "synthetic-app1.pdf",
       mimeType: "application/pdf",
       buffer: Buffer.from("%PDF-1.4\n% synthetic fixture only\n%%EOF\n"),
@@ -841,6 +920,9 @@ test("synthetic Owner Capture → one-gap direct repair → durable next review 
     await expect(page.getByText(/답을 보지 않고 보강한 연결을 다시 한 번 작성하기/)).toBeVisible();
     expect(seams.ocrCount()).toBe(viewport.exerciseFailures ? 2 : 1);
     expect(seams.structureCount()).toBe(viewport.exerciseFailures ? 7 : 2);
+    expect(seams.learningAnalysisCount()).toBe(viewport.exerciseFailures ? 3 : 1);
+    expect(seams.repairVerificationCount()).toBe(viewport.exerciseFailures ? 4 : 1);
+    expect(seams.unknownStructureRequestCount()).toBe(0);
     expect(seams.placeholderRewriteAnalysisCount()).toBe(
       viewport.exerciseFailures ? 3 : 1,
     );
@@ -934,6 +1016,9 @@ test("synthetic Owner Capture → one-gap direct repair → durable next review 
   expect(queueFailureSeams.repairItemLoadCount()).toBe(1);
   expect(queueFailureSeams.queuePresentationLoadCount()).toBe(0);
   expect(queueFailureSeams.placeholderRewriteAnalysisCount()).toBe(1);
+  expect(queueFailureSeams.learningAnalysisCount()).toBe(1);
+  expect(queueFailureSeams.repairVerificationCount()).toBe(1);
+  expect(queueFailureSeams.unknownStructureRequestCount()).toBe(0);
   expect(queueFailureSeams.higherPriorityQueueCount()).toBe(21);
   expect(queueFailureSeams.unknownItemSaveCount()).toBe(0);
   await queueFailureContext.close();

@@ -23,6 +23,7 @@ const read = (path) => readFile(new URL(path, root), "utf8");
 const EXPECTED_PATHS = [
   "app/app/capture/page.tsx",
   "app/app/capture/repair/page.tsx",
+  "app/api/answer-review/structure/route.ts",
   "components/owner-study/app1-capture-repair-loop.tsx",
   "components/review-os/capture-form.tsx",
   "config/dabangil-app1-owner-capture-repair-vertical-v1.json",
@@ -149,13 +150,13 @@ function resolvedTargetDraft({
   });
 }
 
-test("APP1-CONTRACT-001 freezes the exact 14-path Owner-only/default-off core candidate", async () => {
+test("APP1-CONTRACT-001 freezes the exact 15-path Owner-only/default-off core candidate", async () => {
   const config = JSON.parse(await read("config/dabangil-app1-owner-capture-repair-vertical-v1.json"));
   assert.equal(config.contractVersion, APP1_CONTRACT_VERSION);
   assert.equal(config.base.sha, "761b7f6b7648d19845ab3385665e92046165dddd");
   assert.equal(config.base.tree, "c6c6a8ad876c2f40b5276a26485b088656addf49");
   assert.deepEqual(config.changedPaths, EXPECTED_PATHS);
-  assert.equal(config.changedPaths.length, 14);
+  assert.equal(config.changedPaths.length, 15);
   assert.equal(config.access.ownerOnly, true);
   assert.equal(config.access.defaultOff, true);
   assert.equal(config.access.gate, "trusted-repair-access");
@@ -1044,6 +1045,12 @@ test("APP1-UI-001 binds exact copy, one-gap UI, no prefilled repair and truthful
   const repairPage = await read("app/app/capture/repair/page.tsx");
   const repairLoop = await read("components/owner-study/app1-capture-repair-loop.tsx");
   assert.ok(captureForm.includes("사진·PDF·텍스트로 시작"));
+  assert.ok(captureForm.includes("data-app1-capture-input-chooser"));
+  assert.ok(captureForm.includes('aria-expanded={ownerCaptureRepairEnabled ? app1InputChooserOpen : undefined}'));
+  assert.ok(captureForm.includes('aria-controls={ownerCaptureRepairEnabled ? app1InputChooserId : undefined}'));
+  for (const choice of ["사진 찍기", "PDF 선택", "텍스트 붙여넣기"]) {
+    assert.ok(captureForm.includes(choice), `missing APP-1 input choice: ${choice}`);
+  }
   assert.ok(captureForm.includes("OCR 결과는 초안입니다. 저장 전 직접 확인해 주세요."));
   assert.ok(captureForm.includes("const ownerCaptureRepairSubjectEnabled"));
   assert.ok(captureForm.includes("/app/capture/repair?itemId="));
@@ -1068,6 +1075,46 @@ test("APP1-UI-002 never renders answer-analysis payload errors and binds exact s
   assert.ok(repairLoop.includes("답안 분석을 완료하지 못했습니다. 입력은 그대로 남아 있습니다."));
   assert.ok(repairLoop.includes("복구 입력 검토를 완료하지 못했습니다. 성공으로 처리되지 않았습니다."));
   assert.equal(repairLoop.includes("synthetic_analysis_unavailable"), false);
+});
+
+test("APP1-API-001 isolates repair verification from learning-state signals behind exact Owner bindings", async () => {
+  const route = await read("app/api/answer-review/structure/route.ts");
+  const repairLoop = await read("components/owner-study/app1-capture-repair-loop.tsx");
+  const config = JSON.parse(await read("config/dabangil-app1-owner-capture-repair-vertical-v1.json"));
+
+  assert.deepEqual(config.answerReviewStructure.requestPurposes, [
+    "learning_analysis",
+    "repair_verification",
+  ]);
+  assert.equal(config.answerReviewStructure.defaultRequestPurpose, "learning_analysis");
+  assert.equal(config.answerReviewStructure.repairVerificationCreatesLearningSignal, false);
+  assert.match(route, /value === null\) return "learning_analysis"/u);
+  assert.match(route, /requestPurposeValues\.length > 1/u);
+  assert.match(route, /ANSWER_REVIEW_REQUEST_PURPOSES = \["learning_analysis", "repair_verification"\]/u);
+  assert.match(route, /!session\.isAuthenticated \|\| !session\.userId \|\| !session\.email/u);
+  assert.match(route, /ITEM_ID_PATTERN\.test\(sourceItemId\)/u);
+  assert.match(route, /sourceItemIdValues\.length !== 1/u);
+  assert.match(route, /sourceItemId !== sourceItemId\.trim\(\)/u);
+  assert.match(route, /trustedRepairAuthorizedSubjects\(session\.email\)/u);
+  assert.match(route, /isApp1SubjectAuthorized\(subject, authorizedSubjects\)/u);
+  assert.match(route, /reviewOsRepository\.getWrongAnswerItem\([\s\S]*?session\.userId,[\s\S]*?sourceItemId/u);
+  assert.match(route, /sourceItem\.examName !== "감정평가사 2차"/u);
+  assert.match(route, /sourceItem\.subjectLabel !== subject/u);
+  assert.ok(
+    route.indexOf('requestPurpose === "repair_verification"') <
+      route.indexOf("isGeminiConfigured()"),
+    "repair authorization must complete before provider execution",
+  );
+  assert.match(
+    route,
+    /session\.userId && session\.email && requestPurpose === "learning_analysis" && !skipReason/u,
+  );
+  assert.match(route, /learningSignalSkipReason = requestPurpose === "repair_verification" \? "repair_verification"/u);
+  assert.match(route, /metadataJson|requestPurpose|\{ examMode: mode, explanationLevel, requestPurpose \}/u);
+  assert.match(repairLoop, /formData\.set\("requestPurpose", requestPurpose\)/u);
+  assert.match(repairLoop, /requestPurpose === "repair_verification"[\s\S]*?formData\.set\("sourceItemId", detail\.item\.id\)/u);
+  assert.match(repairLoop, /getApp1LearnerAnswer\(detail\),\s*"learning_analysis"/u);
+  assert.match(repairLoop, /trimmed,\s*"repair_verification"/u);
 });
 
 test("APP1-UI-002A exposes guided fallback after verification service failure without save authority", async () => {
@@ -1271,7 +1318,7 @@ test("APP1-PERMISSION-001 separates input confirmation from quick save at the In
     "input confirmation must not perform the durable item save",
   );
   assert.deepEqual(config.changedPaths, EXPECTED_PATHS);
-  assert.equal(config.changedPaths.length, 14);
+  assert.equal(config.changedPaths.length, 15);
   assert.equal(config.changedPaths.includes(SHARED_ACCESS_INVENTORY_PATH), false);
   assert.equal(config.changedPaths.includes(INHERITED_C3R_P_IDENTITY_PATH), false);
   assert.equal(config.changedPaths.includes(INHERITED_C3R_P_RUNTIME_SPEC_PATH), false);
@@ -1282,7 +1329,7 @@ test("APP1-PERMISSION-001 separates input confirmation from quick save at the In
       INHERITED_C3R_P_IDENTITY_PATH,
       INHERITED_C3R_P_RUNTIME_SPEC_PATH,
     ]).size,
-    17,
+    18,
   );
   assert.match(sharedAccessInventory, /app\/app\/capture\/repair\/page\.tsx/u);
 });
@@ -1344,7 +1391,10 @@ test("APP1-E2E-CONTRACT-001 freezes executable synthetic browser assertions with
     'inputKind: "text"',
     'inputKind: "photo"',
     'inputKind: "pdf"',
-    "setInputFiles",
+    'waitForEvent("filechooser")',
+    "setFiles",
+    'requestPurpose", "learning_analysis"',
+    'requestPurpose", "repair_verification"',
     'url.pathname === "/api/inverge/ocr"',
     "OCR 결과는 초안입니다. 저장 전 직접 확인해 주세요.",
     "page.reload()",

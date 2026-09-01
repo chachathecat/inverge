@@ -4,7 +4,7 @@ APP-1 is an Owner-only, default-off continuation of the existing second-stage Ca
 
 ## Learner outcome
 
-The Owner enters through `/app/capture?mode=second` and sees one primary action: `사진·PDF·텍스트로 시작`. OCR and imported text stay editable. The confirmation surface always says `OCR 결과는 초안입니다. 저장 전 직접 확인해 주세요.` for the gated APP-1 path.
+The Owner enters through `/app/capture?mode=second` and sees one primary action: `사진·PDF·텍스트로 시작`. That action opens one inline, keyboard-accessible chooser with exactly `사진 찍기`, `PDF 선택` and `텍스트 붙여넣기`; it does not silently invoke the camera, and APP-1 does not duplicate the choices under `다른 입력 방식`. OCR and imported text stay editable. The confirmation surface always says `OCR 결과는 초안입니다. 저장 전 직접 확인해 주세요.` for the gated APP-1 path.
 
 After a durable Capture save, the gated path continues to `/app/capture/repair?itemId=<id>`. The route reloads the learner-owned record and shows a bounded structure summary: subject, detected sections, page or section count, OCR-confirmation state and any known uncertainty. The Owner chooses `이 내용으로 분석` only after confirming the material.
 
@@ -19,6 +19,14 @@ The second structure check may report only one of five honest states:
 - OCR or source uncertainty blocks confirmation.
 
 Same-session confirmation creates no mastery, transfer, score, pass-probability, official-grading or official-answer claim. A guided fallback uses the already gated C3R Practice, Theory or Law route.
+
+## Answer Review purpose boundary
+
+The existing `/api/answer-review/structure` endpoint accepts only `learning_analysis` and `repair_verification`; an absent purpose remains backward-compatible `learning_analysis`. APP-1 sends the former for the initial Evidence Review and the latter, together with the exact source item ID, for direct-repair verification.
+
+Before any repair-verification model call, the server requires an authenticated Owner, a well-formed learner-owned source item, exact second-stage mode and persisted subject agreement, and the existing trusted-repair flag and Owner allowlist for that subject. Missing, cross-account, first-stage, mismatched or unauthorized bindings fail closed without revealing another account's item.
+
+Ordinary learning analysis retains eligible learning-signal creation. Repair verification may perform the model analysis and body-free usage/observability accounting, but it never creates a learning-signal event, weakness, mastery, Queue, item or Today-selection input. Its result remains same-session verification evidence only; durable repair and Queue authority still require the separate persistence receipts below.
 
 ## Persistence and scheduling truth
 

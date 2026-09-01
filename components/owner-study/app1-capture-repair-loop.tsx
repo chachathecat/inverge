@@ -105,6 +105,7 @@ async function sha256Text(value: string) {
 async function requestStructure(
   detail: WrongAnswerDetail,
   answerText: string,
+  requestPurpose: "learning_analysis" | "repair_verification",
   failureMessage: string,
 ) {
   const formData = new FormData();
@@ -114,6 +115,10 @@ async function requestStructure(
   formData.set("examMode", "second");
   formData.set("subject", detail.item.subjectLabel);
   formData.set("explanationLevel", "standard");
+  formData.set("requestPurpose", requestPurpose);
+  if (requestPurpose === "repair_verification") {
+    formData.set("sourceItemId", detail.item.id);
+  }
   const response = await fetch("/api/answer-review/structure", {
     method: "POST",
     body: formData,
@@ -220,6 +225,7 @@ export function App1CaptureRepairLoop({
       const draft = await requestStructure(
         detail,
         getApp1LearnerAnswer(detail),
+        "learning_analysis",
         ANALYSIS_FAILURE_MESSAGE,
       );
       const primaryGap = buildApp1PrimaryGap(detail, draft);
@@ -259,6 +265,7 @@ export function App1CaptureRepairLoop({
       const repairedDraft = await requestStructure(
         detail,
         trimmed,
+        "repair_verification",
         VERIFICATION_FAILURE_MESSAGE,
       );
       const nextVerification = evaluateApp1SameSessionRepair({

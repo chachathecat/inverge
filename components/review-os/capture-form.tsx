@@ -2642,6 +2642,9 @@ function IntakePanel({
     if (form.rawQuestionText.trim() || uploadedPages.length > 0 || form.sourceLabel.trim()) return form.sourceType;
     return null;
   });
+  const [app1InputChooserOpen, setApp1InputChooserOpen] = useState(false);
+  const app1InputChooserId = "app1-capture-input-chooser";
+  const app1PhotoChoiceId = "app1-capture-photo-choice";
   const hasActiveInput =
     Boolean(selectedInputMethod) ||
     form.rawQuestionText.trim().length > 0 ||
@@ -2688,20 +2691,61 @@ function IntakePanel({
             variant={hasActiveInput ? "outline" : undefined}
             className={`${hasActiveInput ? "" : "primary-action"} min-h-[var(--control-height)] w-full justify-center rounded-[var(--v3-radius-control)]`}
             onClick={() => {
+              if (ownerCaptureRepairEnabled) {
+                setApp1InputChooserOpen(true);
+                window.setTimeout(
+                  () => document.getElementById(app1PhotoChoiceId)?.focus(),
+                  0,
+                );
+                return;
+              }
               const sourceType = inferSourceTypeFromAction("camera");
               setSelectedInputMethod(sourceType);
               update("sourceType", sourceType);
               cameraInputRef.current?.click();
             }}
+            aria-expanded={ownerCaptureRepairEnabled ? app1InputChooserOpen : undefined}
+            aria-controls={ownerCaptureRepairEnabled ? app1InputChooserId : undefined}
             data-s226-capture-primary-action
           >
             {ownerCaptureRepairEnabled ? "사진·PDF·텍스트로 시작" : "답안 사진 찍기"}
           </CaptureActionButton>
-          <V3QuietDisclosure
-            summary="다른 입력 방식"
-            helper="이미 텍스트나 PDF가 있을 때만 선택하세요."
-          >
-            <div className="grid gap-2 sm:grid-cols-2">
+          {ownerCaptureRepairEnabled ? (
+            app1InputChooserOpen ? (
+              <div
+                id={app1InputChooserId}
+                className="grid gap-2 rounded-[var(--v3-radius-control)] border border-[var(--color-border-default)] bg-[var(--color-background-elevated)] p-3 sm:grid-cols-3"
+                data-app1-capture-input-chooser
+              >
+              <CaptureActionButton
+                mode={mode}
+                type="button"
+                variant="outline"
+                className="min-h-[var(--control-height)] w-full"
+                id={app1PhotoChoiceId}
+                onClick={() => {
+                  const sourceType = inferSourceTypeFromAction("camera");
+                  setSelectedInputMethod(sourceType);
+                  update("sourceType", sourceType);
+                  cameraInputRef.current?.click();
+                }}
+              >
+                사진 찍기
+              </CaptureActionButton>
+              <CaptureActionButton
+                mode={mode}
+                type="button"
+                variant="outline"
+                className="min-h-[var(--control-height)] w-full"
+                onClick={() => {
+                  const sourceType = inferSourceTypeFromAction("pdf");
+                  setSelectedInputMethod(sourceType);
+                  update("sourceType", sourceType);
+                  pdfInputRef.current?.click();
+                }}
+              >
+                PDF 선택
+              </CaptureActionButton>
               <CaptureActionButton
                 mode={mode}
                 type="button"
@@ -2719,22 +2763,48 @@ function IntakePanel({
               >
                 텍스트 붙여넣기
               </CaptureActionButton>
-              <CaptureActionButton
-                mode={mode}
-                type="button"
-                variant="outline"
-                className="min-h-[var(--control-height)] w-full"
-                onClick={() => {
-                  const sourceType = inferSourceTypeFromAction("pdf");
-                  setSelectedInputMethod(sourceType);
-                  update("sourceType", sourceType);
-                  pdfInputRef.current?.click();
-                }}
-              >
-                PDF 선택
-              </CaptureActionButton>
             </div>
-          </V3QuietDisclosure>
+            ) : null
+          ) : (
+            <V3QuietDisclosure
+              summary="다른 입력 방식"
+              helper="이미 텍스트나 PDF가 있을 때만 선택하세요."
+            >
+              <div className="grid gap-2 sm:grid-cols-2">
+                <CaptureActionButton
+                  mode={mode}
+                  type="button"
+                  variant="outline"
+                  className="min-h-[var(--control-height)] w-full"
+                  onClick={() => {
+                    const sourceType = inferSourceTypeFromAction("text");
+                    setSelectedInputMethod(sourceType);
+                    update("sourceType", sourceType);
+                    window.setTimeout(() => {
+                      textAreaRef.current?.focus();
+                      textAreaRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+                    }, 0);
+                  }}
+                >
+                  텍스트 붙여넣기
+                </CaptureActionButton>
+                <CaptureActionButton
+                  mode={mode}
+                  type="button"
+                  variant="outline"
+                  className="min-h-[var(--control-height)] w-full"
+                  onClick={() => {
+                    const sourceType = inferSourceTypeFromAction("pdf");
+                    setSelectedInputMethod(sourceType);
+                    update("sourceType", sourceType);
+                    pdfInputRef.current?.click();
+                  }}
+                >
+                  PDF 선택
+                </CaptureActionButton>
+              </div>
+            </V3QuietDisclosure>
+          )}
         </div>
       ) : (
         <div className="mt-3 grid gap-3 sm:mt-5 sm:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)_minmax(0,1fr)]" data-capture-input-options data-s224v-secondary-input-options="quiet">
