@@ -13,10 +13,7 @@ import {
 } from "@/lib/owner-study/app1-capture-repair-view-model";
 import type { CaptureSaveOperationBinding } from "@/lib/review-os/capture-persistence-controller";
 import { reviewOsRepository } from "@/lib/review-os/repository";
-import {
-  requireTrustedRepairAccess,
-  trustedRepairAuthorizedSubjects,
-} from "@/lib/review-os/trusted-repair-access";
+import { requireTrustedRepairAccess } from "@/lib/review-os/trusted-repair-access";
 import type { WrongAnswerDetail, WrongAnswerItemInput } from "@/lib/review-os/types";
 
 import {
@@ -194,12 +191,8 @@ export function parseApp1PersistenceCommand(
 
 export function isClientAuthoredApp1Persistence(
   input: WrongAnswerItemInput,
-  email: string | null,
 ) {
-  return isClientAuthoredApp1PersistenceCandidate(
-    input,
-    trustedRepairAuthorizedSubjects(email),
-  );
+  return isClientAuthoredApp1PersistenceCandidate(input);
 }
 
 export async function requireApp1AuthorizedSourceDetail(input: Readonly<{

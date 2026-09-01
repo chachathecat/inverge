@@ -1131,7 +1131,7 @@ export class ReviewOsService {
     email: string | null,
     input: WrongAnswerItemInput,
   ) {
-    if (isClientAuthoredApp1Persistence(input, email)) {
+    if (isClientAuthoredApp1Persistence(input)) {
       throw new App1ServerAuthorityError(
         "APP1_PERSISTENCE_COMMAND_INVALID",
       );

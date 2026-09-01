@@ -5,10 +5,6 @@ import {
   type CaptureSaveOperationBinding,
 } from "../review-os/capture-persistence-controller";
 import type { FailureAwarePersistenceEvidence } from "../review-os/failure-aware-state";
-import {
-  normalizeSubjectForMode,
-  resolveAppraisalMode,
-} from "../review-os/appraisal";
 import type {
   WrongAnswerDetail,
   WrongAnswerItemInput,
@@ -59,21 +55,13 @@ export function isApp1SubjectAuthorized(
 
 export function isClientAuthoredApp1PersistenceCandidate(
   input: WrongAnswerItemInput,
-  authorizedSubjects: readonly App1TrustedRepairSubject[],
 ) {
   const fields = input.extractionPayload?.user_confirmed_fields;
-  const persistedSubject = normalizeSubjectForMode(
-    input.subjectLabel,
-    resolveAppraisalMode(null, input.examName),
-  );
   return Boolean(
-    (fields &&
-        typeof fields === "object" &&
-        !Array.isArray(fields) &&
-        Object.keys(fields).some((key) => key.startsWith("app1_"))) ||
-      (typeof input.rewriteSourceItemId === "string" &&
-        input.rewriteCompleted !== false &&
-        isApp1SubjectAuthorized(persistedSubject, authorizedSubjects)),
+    fields &&
+      typeof fields === "object" &&
+      !Array.isArray(fields) &&
+      Object.keys(fields).some((key) => key.startsWith("app1_")),
   );
 }
 

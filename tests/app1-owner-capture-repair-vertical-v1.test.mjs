@@ -705,7 +705,7 @@ test("APP1-AUTHORITY-002 covers all 17 production authority-boundary cases and d
     },
   };
   assert.equal(
-    isClientAuthoredApp1PersistenceCandidate(ordinaryInput, ["appraisal_theory"]),
+    isClientAuthoredApp1PersistenceCandidate(ordinaryInput),
     false,
   );
 });
@@ -841,40 +841,35 @@ test("APP1-ACCESS-002 rejects client-authored APP-1 rewrite success before gener
     },
   };
   assert.equal(
-    isClientAuthoredApp1PersistenceCandidate(
-      clientRewriteWithoutMarkers,
-      ["appraisal_theory"],
-    ),
-    true,
+    isClientAuthoredApp1PersistenceCandidate(clientRewriteWithoutMarkers),
+    false,
+    "an ordinary completed rewrite remains available when trusted repair is enabled",
   );
   assert.equal(
     isClientAuthoredApp1PersistenceCandidate(
       { ...clientRewriteWithoutMarkers, subjectLabel: "not-a-valid-subject" },
-      ["appraisal_practical"],
     ),
-    true,
-    "the generic guard must use the exact defaulted subject that persistence will use",
+    false,
+    "subject normalization cannot turn ordinary rewrite fields into APP-1 metadata",
   );
   assert.equal(
-    isClientAuthoredApp1PersistenceCandidate(
-      clientRewriteWithoutMarkers,
-      [],
-    ),
+    isClientAuthoredApp1PersistenceCandidate({
+      ...clientRewriteWithoutMarkers,
+      rewriteCompleted: false,
+    }),
     false,
   );
   assert.equal(
-    isClientAuthoredApp1PersistenceCandidate(
-      { ...clientRewriteWithoutMarkers, rewriteCompleted: false },
-      ["appraisal_theory"],
-    ),
-    false,
+    isClientAuthoredApp1PersistenceCandidate(app1Input),
+    true,
   );
   assert.equal(
-    isClientAuthoredApp1PersistenceCandidate(
-      app1Input,
-      [],
-    ),
+    isClientAuthoredApp1PersistenceCandidate({
+      ...app1Input,
+      subjectLabel: "not-a-valid-subject",
+    }),
     true,
+    "closed APP-1 metadata remains rejected even when the subject label is invalid",
   );
 
   const effects = {
@@ -887,10 +882,7 @@ test("APP1-ACCESS-002 rejects client-authored APP-1 rewrite success before gener
   };
   assert.throws(() => {
     if (
-      isClientAuthoredApp1PersistenceCandidate(
-        clientRewriteWithoutMarkers,
-        ["appraisal_theory"],
-      )
+      isClientAuthoredApp1PersistenceCandidate(app1Input)
     ) {
       throw new Error("APP1_PERSISTENCE_COMMAND_INVALID");
     }
@@ -1918,7 +1910,7 @@ test("APP1-API-002 revalidates exact Owner, subject, and source-item authority b
   )?.[0];
   assert.ok(genericCreate && app1Create && commonCreate);
   assert.ok(
-    genericCreate.indexOf("isClientAuthoredApp1Persistence(input, email)") <
+    genericCreate.indexOf("isClientAuthoredApp1Persistence(input)") <
       genericCreate.indexOf("createWrongAnswerItemAfterAuthority"),
     "client-authored APP-1 metadata must fail before generic service effects",
   );
@@ -1937,10 +1929,21 @@ test("APP1-API-002 revalidates exact Owner, subject, and source-item authority b
   assert.match(serverAuthority, /await requireTrustedRepairAccess\(\)/u);
   assert.match(serverAuthority, /reviewOsRepository\.getWrongAnswerDetail/u);
   assert.match(serverAuthority, /authorizeApp1PersistenceCommand/u);
-  assert.match(serverAuthority, /trustedRepairAuthorizedSubjects\(email\)/u);
+  assert.match(
+    serverAuthority,
+    /isClientAuthoredApp1PersistenceCandidate\(input\)/u,
+  );
+  assert.doesNotMatch(
+    serverAuthority,
+    /trustedRepairAuthorizedSubjects\(_?email\)/u,
+  );
   assert.match(
     await read("lib/owner-study/app1-capture-repair-view-model.ts"),
-    /typeof input\.rewriteSourceItemId === "string"[\s\S]*?input\.rewriteCompleted !== false[\s\S]*?isApp1SubjectAuthorized/u,
+    /Object\.keys\(fields\)[\s\S]*?key\.startsWith\("app1_"\)/u,
+  );
+  assert.doesNotMatch(
+    await read("lib/owner-study/app1-capture-repair-view-model.ts"),
+    /typeof input\.rewriteSourceItemId === "string"[\s\S]*?input\.rewriteCompleted/u,
   );
   assert.match(serverAuthority, /process\.env\.APP1_VERIFICATION_SIGNING_SECRET/u);
   assert.equal(serverAuthority.includes("NEXT_PUBLIC_APP1"), false);
