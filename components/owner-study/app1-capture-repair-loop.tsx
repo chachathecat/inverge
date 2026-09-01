@@ -18,8 +18,6 @@ import {
   APP1_RUNTIME_BOUNDARY_RECEIPT,
   app1GuidedRepairHref,
   buildApp1NextReviewReceipt,
-  buildApp1PrimaryGap,
-  buildApp1RepairPersistenceInput,
   buildApp1StructureSummary,
   evaluateApp1SameSessionRepair,
   getApp1LearnerAnswer,
@@ -105,8 +103,16 @@ async function sha256Text(value: string) {
 async function requestStructure(
   detail: WrongAnswerDetail,
   answerText: string,
-  requestPurpose: "learning_analysis" | "repair_verification",
+  requestPurpose:
+    | "app1_initial_analysis"
+    | "repair_verification",
   failureMessage: string,
+  authority?: Readonly<{
+    primaryGap: App1PrimaryGap;
+    analysisBinding: string;
+    persistenceOperationId: string;
+    persistenceWorkRevisionId: string;
+  }>,
 ) {
   const formData = new FormData();
   formData.set("questionText", detail.item.rawQuestionText ?? "");
@@ -116,21 +122,44 @@ async function requestStructure(
   formData.set("subject", detail.item.subjectLabel);
   formData.set("explanationLevel", "standard");
   formData.set("requestPurpose", requestPurpose);
-  if (requestPurpose === "repair_verification") {
-    formData.set("sourceItemId", detail.item.id);
+  formData.set("sourceItemId", detail.item.id);
+  if (requestPurpose === "repair_verification" && authority) {
+    formData.set("primaryGap", JSON.stringify(authority.primaryGap));
+    formData.set("analysisBinding", authority.analysisBinding);
+    formData.set(
+      "persistenceOperationId",
+      authority.persistenceOperationId,
+    );
+    formData.set(
+      "persistenceWorkRevisionId",
+      authority.persistenceWorkRevisionId,
+    );
   }
   const response = await fetch("/api/answer-review/structure", {
     method: "POST",
     body: formData,
   });
   const payload = (await response.json().catch(() => null)) as
-    | { ok: true; draft: unknown }
+    | {
+        ok: true;
+        draft: unknown;
+        primaryGap?: App1PrimaryGap;
+        analysisBinding?: string;
+        verification?: App1RepairVerification;
+        verificationReceipt?: string | null;
+      }
     | { ok: false }
     | null;
   if (!response.ok || !payload?.ok) {
     throw new Error(failureMessage);
   }
-  return normalizeAnswerReviewStructureDraft(payload.draft);
+  return {
+    draft: normalizeAnswerReviewStructureDraft(payload.draft),
+    primaryGap: payload.primaryGap,
+    analysisBinding: payload.analysisBinding,
+    verification: payload.verification,
+    verificationReceipt: payload.verificationReceipt ?? null,
+  };
 }
 
 export function App1CaptureRepairLoop({
@@ -148,6 +177,9 @@ export function App1CaptureRepairLoop({
   const [repairText, setRepairText] = useState("");
   const [verification, setVerification] =
     useState<App1RepairVerification | null>(null);
+  const [analysisBinding, setAnalysisBinding] = useState<string | null>(null);
+  const [verificationReceipt, setVerificationReceipt] =
+    useState<string | null>(null);
   const [nextReview, setNextReview] =
     useState<App1NextReviewReceipt | null>(null);
   const [persistedRecordId, setPersistedRecordId] = useState<string | null>(null);
@@ -221,15 +253,25 @@ export function App1CaptureRepairLoop({
     setError(null);
     setGap(null);
     setVerification(null);
+    setAnalysisBinding(null);
+    setVerificationReceipt(null);
+    pendingSaveRef.current = null;
     try {
-      const draft = await requestStructure(
+      const result = await requestStructure(
         detail,
         getApp1LearnerAnswer(detail),
-        "learning_analysis",
+        "app1_initial_analysis",
         ANALYSIS_FAILURE_MESSAGE,
       );
-      const primaryGap = buildApp1PrimaryGap(detail, draft);
-      setGap(primaryGap);
+      if (
+        !result.primaryGap ||
+        typeof result.analysisBinding !== "string" ||
+        !result.analysisBinding
+      ) {
+        throw new Error(ANALYSIS_FAILURE_MESSAGE);
+      }
+      setGap(result.primaryGap);
+      setAnalysisBinding(result.analysisBinding);
       setPhase("evidence_review");
     } catch {
       setError(ANALYSIS_FAILURE_MESSAGE);
@@ -240,13 +282,15 @@ export function App1CaptureRepairLoop({
   function beginRepair() {
     setRepairText("");
     setVerification(null);
+    setVerificationReceipt(null);
+    pendingSaveRef.current = null;
     setError(null);
     setPhase("direct_repair");
     requestAnimationFrame(() => repairRef.current?.focus());
   }
 
   async function verifyRepair() {
-    if (!detail || !gap) return;
+    if (!detail || !gap || !analysisBinding) return;
     const trimmed = repairText.trim();
     const preliminary = evaluateApp1SameSessionRepair({
       detail,
@@ -256,28 +300,50 @@ export function App1CaptureRepairLoop({
     });
     if (trimmed.length < APP1_LIMITS.minimumRepairCharacters) {
       setVerification(preliminary);
+      setVerificationReceipt(null);
+      pendingSaveRef.current = null;
       setPhase("repair_verification");
       return;
     }
     setPhase("verifying");
     setError(null);
     try {
-      const repairedDraft = await requestStructure(
+      const workFingerprint = await sha256Text(
+        `${ownerScope}\u0000${detail.item.id}\u0000${analysisBinding}\u0000${gap.gap}\u0000${trimmed}`,
+      );
+      const pending = resolvePendingCaptureSaveOperation(
+        pendingSaveRef.current,
+        workFingerprint,
+      );
+      pendingSaveRef.current = pending;
+      const result = await requestStructure(
         detail,
         trimmed,
         "repair_verification",
         VERIFICATION_FAILURE_MESSAGE,
+        {
+          primaryGap: gap,
+          analysisBinding,
+          persistenceOperationId: pending.binding.operationId,
+          persistenceWorkRevisionId: pending.binding.workRevisionId,
+        },
       );
-      const nextVerification = evaluateApp1SameSessionRepair({
-        detail,
-        requestedGap: gap,
-        repairText: trimmed,
-        repairDraft: repairedDraft,
-      });
-      setVerification(nextVerification);
+      if (!result.verification) {
+        throw new Error(VERIFICATION_FAILURE_MESSAGE);
+      }
+      const receipt =
+        result.verification.state === "repair_confirmed_for_this_session" &&
+        typeof result.verificationReceipt === "string" &&
+        result.verificationReceipt
+          ? result.verificationReceipt
+          : null;
+      setVerification(result.verification);
+      setVerificationReceipt(receipt);
       setPhase("repair_verification");
     } catch {
       setVerification(preliminary);
+      setVerificationReceipt(null);
+      pendingSaveRef.current = null;
       setError(VERIFICATION_FAILURE_MESSAGE);
       setPhase("repair_verification");
     }
@@ -294,6 +360,8 @@ export function App1CaptureRepairLoop({
         deferred: true,
       }),
     );
+    setVerificationReceipt(null);
+    pendingSaveRef.current = null;
     setPhase("repair_verification");
   }
 
@@ -301,15 +369,29 @@ export function App1CaptureRepairLoop({
     if (!conflict) return;
     pendingSaveRef.current = null;
     setVerification(null);
+    setVerificationReceipt(null);
     setConflict(false);
     setError(null);
     setPhase("direct_repair");
     requestAnimationFrame(() => repairRef.current?.focus());
   }
 
+  function updateRepairText(value: string) {
+    setRepairText(value.slice(0, APP1_LIMITS.maximumRepairCharacters));
+    setVerification(null);
+    setVerificationReceipt(null);
+    pendingSaveRef.current = null;
+    setConflict(false);
+  }
+
   async function saveRepair() {
-    if (!detail || !gap || !verification) return;
-    if (verification.state !== "repair_confirmed_for_this_session") {
+    if (!detail || !gap || !verification || !analysisBinding) return;
+    const pending = pendingSaveRef.current;
+    if (
+      verification.state !== "repair_confirmed_for_this_session" ||
+      !verificationReceipt ||
+      !pending
+    ) {
       setError("완료되지 않은 복구는 성공 기록으로 저장하지 않습니다.");
       return;
     }
@@ -317,21 +399,16 @@ export function App1CaptureRepairLoop({
     setError(null);
     setConflict(false);
     try {
-      const workFingerprint = await sha256Text(
-        `${ownerScope}\u0000${detail.item.id}\u0000${gap.gap}\u0000${repairText.trim()}\u0000${verification.state}`,
-      );
-      const pending = resolvePendingCaptureSaveOperation(
-        pendingSaveRef.current,
-        workFingerprint,
-      );
-      pendingSaveRef.current = pending;
-      const body = buildApp1RepairPersistenceInput({
-        detail,
-        gap,
-        repairText,
-        verification,
-        operation: pending.binding,
-      });
+      const body = {
+        commandVersion: "App1VerifiedRepairPersistenceCommandV1",
+        sourceItemId: detail.item.id,
+        primaryGap: gap,
+        analysisBinding,
+        verificationReceipt,
+        repairText: repairText.trim(),
+        persistenceOperationId: pending.binding.operationId,
+        persistenceWorkRevisionId: pending.binding.workRevisionId,
+      };
       const response = await fetch("/api/os/items", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -347,9 +424,27 @@ export function App1CaptureRepairLoop({
               rawPayload?: Record<string, unknown>;
             };
           }
-        | { ok: false; error?: string }
+        | { ok: false; error?: string; errorCode?: string }
         | null;
       if (!response.ok || !payload?.ok || !payload.item) {
+        if (
+          payload &&
+          !payload.ok &&
+          [
+            "APP1_VERIFICATION_EXPIRED",
+            "APP1_VERIFICATION_RECEIPT_INVALID",
+            "APP1_ANALYSIS_BINDING_INVALID",
+          ].includes(payload.errorCode ?? "")
+        ) {
+          pendingSaveRef.current = null;
+          setVerification(null);
+          setVerificationReceipt(null);
+          setError(
+            "복구 확인 시간이 만료되었거나 입력이 변경되었습니다. 입력은 유지되며 다시 확인해야 합니다.",
+          );
+          setPhase("direct_repair");
+          return;
+        }
         throw new Error("복구 기록 저장에 실패했습니다. 완료로 처리되지 않았습니다.");
       }
       const receipt = buildDurableCapturePersistenceReceipt(
@@ -369,6 +464,7 @@ export function App1CaptureRepairLoop({
       }
 
       pendingSaveRef.current = null;
+      setVerificationReceipt(null);
       setPersistedRecordId(payload.item.id);
       let queueReceipt: App1NextReviewReceipt | null = null;
       try {
@@ -562,7 +658,7 @@ export function App1CaptureRepairLoop({
             ref={repairRef}
             id="app1-repair-input"
             value={repairText}
-            onChange={(event) => setRepairText(event.target.value.slice(0, APP1_LIMITS.maximumRepairCharacters))}
+            onChange={(event) => updateRepairText(event.target.value)}
             className="min-h-48 rounded-[var(--v3-radius-control)] border-[var(--color-border-default)] bg-[var(--color-background-surface)]"
             placeholder={gap.subject.includes("실무") ? "산식·단위·검산을 직접 다시 적어 주세요." : gap.subject.includes("법규") ? "규범과 사안 적용을 직접 다시 연결해 주세요." : "주장과 논거를 직접 다시 연결해 주세요."}
             aria-describedby="app1-repair-help"
@@ -624,7 +720,8 @@ export function App1CaptureRepairLoop({
             >
               복구 입력 수정하기
             </V3ActionButton>
-          ) : verification.state === "repair_confirmed_for_this_session" ? (
+          ) : verification.state === "repair_confirmed_for_this_session" &&
+            verificationReceipt ? (
             <V3ActionButton type="button" onClick={() => void saveRepair()} data-app1-save-repair>
               복구 결과 저장하고 다음 복습 만들기
             </V3ActionButton>

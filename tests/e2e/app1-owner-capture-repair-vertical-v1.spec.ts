@@ -210,20 +210,12 @@ async function assertA11y(page: Page) {
 
 type JsonRecord = Record<string, unknown>;
 type ItemSaveClass = "initial_capture_save" | "app1_repair_save" | "unknown_item_save";
-type StructureRequestPurpose = "learning_analysis" | "repair_verification";
+type StructureRequestPurpose = "app1_initial_analysis" | "repair_verification";
 type InitialCaptureResponseClass = "synthetic_source_save_success";
 type RepairResponseClass =
   | "synthetic_repair_save_503"
   | "synthetic_dedupe_conflict"
   | "synthetic_durable_success";
-
-const APP1_VERIFICATION_STATES = [
-  "repair_confirmed_for_this_session",
-  "one_connection_still_missing",
-  "guided_path_needed",
-  "deferred",
-  "blocked_by_ocr_or_source_uncertainty",
-] as const;
 
 const APP1_REPAIR_MARKER_KEYS = [
   "app1_contract_version",
@@ -233,6 +225,18 @@ const APP1_REPAIR_MARKER_KEYS = [
   "app1_mastery_created",
   "app1_transfer_created",
 ] as const;
+
+const syntheticPrimaryGap = Object.freeze({
+  subject: "감정평가이론",
+  anchor: "확인된 1페이지 · 적용 문단",
+  anchorKind: "exact",
+  alreadySuccessful: "정의와 핵심 논거가 확인됩니다.",
+  gap: originalGap,
+  whyItMatters: "시효 완성 시점의 판단 이유를 확인합니다.",
+  repairAction: "시효 완성 시점 문장을 직접 적으세요.",
+  expectedMinutes: 8,
+});
+const SYNTHETIC_ANALYSIS_BINDING = "app1-analysis.synthetic-local-only";
 
 function isPlainJsonRecord(value: unknown): value is JsonRecord {
   if (value === null || typeof value !== "object" || Array.isArray(value)) return false;
@@ -254,32 +258,34 @@ function confirmedFieldsOf(submitted: JsonRecord) {
 function classifyItemSavePayload(value: unknown): ItemSaveClass {
   if (!isPlainJsonRecord(value)) return "unknown_item_save";
   const confirmed = confirmedFieldsOf(value);
+  const isRepairSave =
+    Object.keys(value).sort().join("|") ===
+      [
+        "analysisBinding",
+        "commandVersion",
+        "persistenceOperationId",
+        "persistenceWorkRevisionId",
+        "primaryGap",
+        "repairText",
+        "sourceItemId",
+        "verificationReceipt",
+      ].sort().join("|") &&
+    value.commandVersion === "App1VerifiedRepairPersistenceCommandV1" &&
+    value.sourceItemId === SOURCE_ITEM_ID &&
+    value.analysisBinding === SYNTHETIC_ANALYSIS_BINDING &&
+    isPlainJsonRecord(value.primaryGap) &&
+    JSON.stringify(value.primaryGap) === JSON.stringify(syntheticPrimaryGap) &&
+    [syntheticRepair, syntheticConflictResolvedRepair].includes(value.repairText as string) &&
+    hasNonemptyString(value, "verificationReceipt") &&
+    hasNonemptyString(value, "persistenceOperationId") &&
+    hasNonemptyString(value, "persistenceWorkRevisionId");
+  if (isRepairSave) return "app1_repair_save";
+
   if (!confirmed) return "unknown_item_save";
 
   const hasPersistenceBinding =
     hasNonemptyString(confirmed, "persistence_operation_id") &&
     hasNonemptyString(confirmed, "persistence_work_revision_id");
-  const supportedVerificationState = APP1_VERIFICATION_STATES.some(
-    (state) => state === confirmed.app1_verification_state,
-  );
-  const isRepairSave =
-    value.rewriteSourceItemId === SOURCE_ITEM_ID &&
-    value.createdFromCapture === true &&
-    value.captureIntent === "save" &&
-    confirmed.app1_contract_version === "OwnerCaptureToRepairVerticalV1" &&
-    confirmed.app1_source_item_id === SOURCE_ITEM_ID &&
-    supportedVerificationState &&
-    confirmed.app1_same_session_only === true &&
-    confirmed.app1_mastery_created === false &&
-    confirmed.app1_transfer_created === false &&
-    [syntheticRepair, syntheticConflictResolvedRepair].includes(
-      value.rawAnswerText as string,
-    ) &&
-    value.rewriteParagraph === value.rawAnswerText &&
-    value.userAnswer === value.rawAnswerText &&
-    !Object.prototype.hasOwnProperty.call(value, "nextReviewDate") &&
-    hasPersistenceBinding;
-  if (isRepairSave) return "app1_repair_save";
 
   const hasRepairMarker = APP1_REPAIR_MARKER_KEYS.some((key) =>
     Object.prototype.hasOwnProperty.call(confirmed, key),
@@ -315,12 +321,19 @@ function multipartFieldEquals(
 }
 
 function classifyStructureRequest(body: string): StructureRequestPurpose | null {
-  if (multipartFieldEquals(body, "requestPurpose", "learning_analysis")) {
-    return "learning_analysis";
+  if (
+    multipartFieldEquals(body, "requestPurpose", "app1_initial_analysis") &&
+    multipartFieldEquals(body, "sourceItemId", SOURCE_ITEM_ID)
+  ) {
+    return "app1_initial_analysis";
   }
   if (
     multipartFieldEquals(body, "requestPurpose", "repair_verification") &&
-    multipartFieldEquals(body, "sourceItemId", SOURCE_ITEM_ID)
+    multipartFieldEquals(body, "sourceItemId", SOURCE_ITEM_ID) &&
+    multipartFieldEquals(body, "analysisBinding", SYNTHETIC_ANALYSIS_BINDING) &&
+    body.includes('name="primaryGap"') &&
+    body.includes('name="persistenceOperationId"') &&
+    body.includes('name="persistenceWorkRevisionId"')
   ) {
     return "repair_verification";
   }
@@ -339,7 +352,7 @@ async function installSyntheticSeams(
 ) {
   let ocrCount = 0;
   let structureCount = 0;
-  let learningAnalysisCount = 0;
+  let app1InitialAnalysisCount = 0;
   let repairVerificationCount = 0;
   let unknownStructureRequestCount = 0;
   let totalItemSaveCount = 0;
@@ -428,14 +441,14 @@ async function installSyntheticSeams(
       if (submittedStructureBody.includes(syntheticSourceRewrite)) {
         placeholderRewriteAnalysisCount += 1;
       }
-      if (requestPurpose === "learning_analysis") {
-        learningAnalysisCount += 1;
+      if (requestPurpose === "app1_initial_analysis") {
+        app1InitialAnalysisCount += 1;
       } else {
         repairVerificationCount += 1;
       }
       if (
         exerciseFailures &&
-        ((requestPurpose === "learning_analysis" && learningAnalysisCount === 1) ||
+        ((requestPurpose === "app1_initial_analysis" && app1InitialAnalysisCount === 1) ||
           (requestPurpose === "repair_verification" && repairVerificationCount === 1))
       ) {
         await route.fulfill({
@@ -444,7 +457,7 @@ async function installSyntheticSeams(
           body: JSON.stringify({
             ok: false,
             error:
-              requestPurpose === "learning_analysis"
+              requestPurpose === "app1_initial_analysis"
                 ? "synthetic_analysis_unavailable"
                 : "synthetic_verification_unavailable",
           }),
@@ -479,8 +492,38 @@ async function installSyntheticSeams(
         body: JSON.stringify({
           ok: true,
           draft,
+          primaryGap:
+            requestPurpose === "app1_initial_analysis"
+              ? syntheticPrimaryGap
+              : undefined,
+          analysisBinding:
+            requestPurpose === "app1_initial_analysis"
+              ? SYNTHETIC_ANALYSIS_BINDING
+              : undefined,
+          verification:
+            requestPurpose === "repair_verification"
+              ? {
+                  state: paraphrasedUnresolved
+                    ? "one_connection_still_missing"
+                    : "repair_confirmed_for_this_session",
+                  requestedGap: originalGap,
+                  observedGap: paraphrasedUnresolved
+                    ? "시효 완성 시점의 판단 설명이 여전히 빠져 있습니다."
+                    : null,
+                  reason: paraphrasedUnresolved
+                    ? "요청한 연결이 아직 남아 있습니다."
+                    : "서버가 같은 세션의 요청한 연결을 확인했습니다.",
+                  sameSessionOnly: true,
+                  masteryCreated: false,
+                  transferCreated: false,
+                }
+              : undefined,
+          verificationReceipt:
+            requestPurpose === "repair_verification" && !paraphrasedUnresolved
+              ? "app1-verification.synthetic-local-only"
+              : undefined,
           learningSignalStatus:
-            requestPurpose === "learning_analysis" ? "saved" : "skipped",
+            requestPurpose === "app1_initial_analysis" ? "saved" : "skipped",
           learningSignalSkipReason:
             requestPurpose === "repair_verification"
               ? "repair_verification"
@@ -509,7 +552,19 @@ async function installSyntheticSeams(
         return;
       }
       const confirmed = confirmedFieldsOf(submitted);
-      if (!confirmed) {
+      const binding =
+        itemSaveClass === "app1_repair_save"
+          ? {
+              operationId: submitted.persistenceOperationId as string,
+              workRevisionId: submitted.persistenceWorkRevisionId as string,
+            }
+          : confirmed
+            ? {
+                operationId: confirmed.persistence_operation_id as string,
+                workRevisionId: confirmed.persistence_work_revision_id as string,
+              }
+            : null;
+      if (!binding) {
         unknownItemSaveCount += 1;
         unknownItemResponseCount += 1;
         await route.fulfill({
@@ -533,8 +588,8 @@ async function installSyntheticSeams(
               updatedAt: "2026-08-29T02:00:00.000Z",
               rawPayload: {
                 user_confirmed_fields: {
-                  persistence_operation_id: confirmed.persistence_operation_id,
-                  persistence_work_revision_id: confirmed.persistence_work_revision_id,
+                  persistence_operation_id: binding.operationId,
+                  persistence_work_revision_id: binding.workRevisionId,
                 },
               },
             },
@@ -586,8 +641,8 @@ async function installSyntheticSeams(
         return;
       }
       durableRepairBinding = {
-        operationId: confirmed.persistence_operation_id as string,
-        workRevisionId: confirmed.persistence_work_revision_id as string,
+        operationId: binding.operationId,
+        workRevisionId: binding.workRevisionId,
       };
       repairResponseClasses.push("synthetic_durable_success");
       await route.fulfill({
@@ -600,8 +655,8 @@ async function installSyntheticSeams(
             updatedAt: "2026-08-29T02:00:00.000Z",
             rawPayload: {
               user_confirmed_fields: {
-                persistence_operation_id: confirmed.persistence_operation_id,
-                persistence_work_revision_id: confirmed.persistence_work_revision_id,
+                persistence_operation_id: binding.operationId,
+                persistence_work_revision_id: binding.workRevisionId,
               },
             },
           },
@@ -635,7 +690,7 @@ async function installSyntheticSeams(
     mutations,
     ocrCount: () => ocrCount,
     structureCount: () => structureCount,
-    learningAnalysisCount: () => learningAnalysisCount,
+    app1InitialAnalysisCount: () => app1InitialAnalysisCount,
     repairVerificationCount: () => repairVerificationCount,
     unknownStructureRequestCount: () => unknownStructureRequestCount,
     totalItemSaveCount: () => totalItemSaveCount,
@@ -920,7 +975,7 @@ test("synthetic Owner Capture → one-gap direct repair → durable next review 
     await expect(page.getByText(/답을 보지 않고 보강한 연결을 다시 한 번 작성하기/)).toBeVisible();
     expect(seams.ocrCount()).toBe(viewport.exerciseFailures ? 2 : 1);
     expect(seams.structureCount()).toBe(viewport.exerciseFailures ? 7 : 2);
-    expect(seams.learningAnalysisCount()).toBe(viewport.exerciseFailures ? 3 : 1);
+    expect(seams.app1InitialAnalysisCount()).toBe(viewport.exerciseFailures ? 3 : 1);
     expect(seams.repairVerificationCount()).toBe(viewport.exerciseFailures ? 4 : 1);
     expect(seams.unknownStructureRequestCount()).toBe(0);
     expect(seams.placeholderRewriteAnalysisCount()).toBe(
@@ -1016,7 +1071,7 @@ test("synthetic Owner Capture → one-gap direct repair → durable next review 
   expect(queueFailureSeams.repairItemLoadCount()).toBe(1);
   expect(queueFailureSeams.queuePresentationLoadCount()).toBe(0);
   expect(queueFailureSeams.placeholderRewriteAnalysisCount()).toBe(1);
-  expect(queueFailureSeams.learningAnalysisCount()).toBe(1);
+  expect(queueFailureSeams.app1InitialAnalysisCount()).toBe(1);
   expect(queueFailureSeams.repairVerificationCount()).toBe(1);
   expect(queueFailureSeams.unknownStructureRequestCount()).toBe(0);
   expect(queueFailureSeams.higherPriorityQueueCount()).toBe(21);

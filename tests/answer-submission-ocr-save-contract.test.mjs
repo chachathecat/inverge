@@ -122,7 +122,8 @@ test("durable save path binds to request user and separates instructor OCR", asy
   const instructorOcrRoute = await read("app/api/instructor/second-grading/ocr/route.ts");
 
   assert.ok(osItemsRoute.includes("const userId = await requireRequestUserId(request);"));
-  assert.ok(osItemsRoute.includes("reviewOsService.createWrongAnswerItem(userId, session.email, body)"));
+  assert.ok(osItemsRoute.includes("reviewOsService.createWrongAnswerItem("));
+  assert.ok(osItemsRoute.includes("reviewOsService.createApp1VerifiedRepairItem("));
   assert.ok(service.includes("buildLearnerAnswerSubmissionPersistenceContract"));
   assert.ok(service.includes("learner_answer_submission: answerSubmissionContract"));
   assert.ok(service.includes("learner_answer_submission: answerSubmissionDerivedMetadata"));

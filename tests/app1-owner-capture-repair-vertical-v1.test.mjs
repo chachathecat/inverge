@@ -1,5 +1,7 @@
 import assert from "node:assert/strict";
+import crypto from "node:crypto";
 import { readFile } from "node:fs/promises";
+import { register } from "node:module";
 import test from "node:test";
 
 import {
@@ -14,23 +16,53 @@ import {
   buildApp1StructureSummary,
   evaluateApp1SameSessionRepair,
   getApp1LearnerAnswer,
+  isClientAuthoredApp1PersistenceCandidate,
   isApp1SubjectAuthorized,
 } from "../lib/owner-study/app1-capture-repair-view-model.ts";
+register(
+  `data:text/javascript,${encodeURIComponent(`
+    export async function resolve(specifier, context, nextResolve) {
+      if (specifier === "server-only") {
+        return {
+          url: "data:text/javascript,export default undefined",
+          shortCircuit: true,
+        };
+      }
+      return nextResolve(specifier, context);
+    }
+  `)}`,
+  import.meta.url,
+);
+
+const {
+  APP1_RECEIPT_TTL_MS,
+  APP1_VERIFICATION_POLICY_VERSION,
+  assertApp1AnalysisBinding,
+  assertApp1VerificationReceipt,
+  executeApp1AuthorityBoundaryV1,
+  issueApp1AnalysisBinding,
+  issueApp1VerificationReceipt,
+} = await import("../lib/owner-study/app1-verification-receipt-core.ts");
 
 const root = new URL("../", import.meta.url);
 const read = (path) => readFile(new URL(path, root), "utf8");
 
 const EXPECTED_PATHS = [
+  ".env.example",
   "app/app/capture/page.tsx",
   "app/app/capture/repair/page.tsx",
   "app/api/answer-review/structure/route.ts",
+  "app/api/os/items/route.ts",
   "components/owner-study/app1-capture-repair-loop.tsx",
   "components/review-os/capture-form.tsx",
   "config/dabangil-app1-owner-capture-repair-vertical-v1.json",
   "docs/product/dabangil-app1-owner-capture-repair-vertical-v1.md",
   "docs/qa/dabangil-app1-owner-capture-repair-validation.md",
   "lib/owner-study/app1-capture-repair-view-model.ts",
+  "lib/owner-study/app1-server-authority.ts",
+  "lib/owner-study/app1-verification-receipt-core.ts",
   "lib/review-os/repository.ts",
+  "lib/review-os/service.ts",
   "tests/answer-submission-ocr-save-contract.test.mjs",
   "tests/app1-owner-capture-repair-vertical-v1.test.mjs",
   "tests/e2e/app1-owner-capture-repair-vertical-v1.spec.ts",
@@ -151,13 +183,13 @@ function resolvedTargetDraft({
   });
 }
 
-test("APP1-CONTRACT-001 freezes the exact 15-path Owner-only/default-off core candidate", async () => {
+test("APP1-CONTRACT-001 freezes the exact 20-path Owner-only/default-off core candidate", async () => {
   const config = JSON.parse(await read("config/dabangil-app1-owner-capture-repair-vertical-v1.json"));
   assert.equal(config.contractVersion, APP1_CONTRACT_VERSION);
   assert.equal(config.base.sha, "761b7f6b7648d19845ab3385665e92046165dddd");
   assert.equal(config.base.tree, "c6c6a8ad876c2f40b5276a26485b088656addf49");
   assert.deepEqual(config.changedPaths, EXPECTED_PATHS);
-  assert.equal(config.changedPaths.length, 15);
+  assert.equal(config.changedPaths.length, 20);
   assert.equal(config.access.ownerOnly, true);
   assert.equal(config.access.defaultOff, true);
   assert.equal(config.access.gate, "trusted-repair-access");
@@ -180,6 +212,420 @@ test("APP1-CONTRACT-001 freezes the exact 15-path Owner-only/default-off core ca
     sameSessionMasteryAuthority: false,
     transferAuthority: false,
   });
+});
+
+test("APP1-AUTHORITY-001 signs closed analysis and verification receipts and rejects tamper, drift, expiry, and replay rebinding", () => {
+  const key = Buffer.alloc(32, 0x5a);
+  const issuedAt = new Date("2026-09-01T00:00:00.000Z");
+  const detail = syntheticDetail();
+  const gap = buildApp1PrimaryGap(detail, draft());
+  const repairText =
+    "사례의 합성 사실 A는 위 논거의 요건 B를 충족하므로 결론 C에 이른다고 직접 연결했다.";
+  const verification = Object.freeze({
+    state: "repair_confirmed_for_this_session",
+    requestedGap: gap.gap,
+    observedGap: null,
+    reason: "서버에서 같은 세션의 요청한 연결을 확인했습니다.",
+    sameSessionOnly: true,
+    masteryCreated: false,
+    transferCreated: false,
+  });
+  const operationId = "33333333-3333-4333-8333-333333333333";
+  const workRevisionId = "44444444-4444-4444-8444-444444444444";
+  const analysisBinding = issueApp1AnalysisBinding({
+    key,
+    userId: detail.item.userId,
+    detail,
+    gap,
+    now: issuedAt,
+  });
+  assert.equal(
+    assertApp1AnalysisBinding({
+      key,
+      token: analysisBinding,
+      userId: detail.item.userId,
+      detail,
+      gap,
+      now: issuedAt,
+    }).gapDigest.startsWith("sha256:"),
+    true,
+  );
+  const verificationReceipt = issueApp1VerificationReceipt({
+    key,
+    userId: detail.item.userId,
+    detail,
+    gap,
+    analysisBinding,
+    repairText,
+    verification,
+    persistenceOperationId: operationId,
+    persistenceWorkRevisionId: workRevisionId,
+    now: issuedAt,
+  });
+  const verified = assertApp1VerificationReceipt({
+    key,
+    token: verificationReceipt,
+    userId: detail.item.userId,
+    detail,
+    gap,
+    analysisBinding,
+    repairText,
+    persistenceOperationId: operationId,
+    persistenceWorkRevisionId: workRevisionId,
+    now: issuedAt,
+  });
+  assert.equal(
+    verified.verificationPolicyVersion,
+    APP1_VERIFICATION_POLICY_VERSION,
+  );
+  assert.equal(verified.verificationState, "repair_confirmed_for_this_session");
+
+  const bindingInput = {
+    key,
+    token: verificationReceipt,
+    userId: detail.item.userId,
+    detail,
+    gap,
+    analysisBinding,
+    repairText,
+    persistenceOperationId: operationId,
+    persistenceWorkRevisionId: workRevisionId,
+    now: issuedAt,
+  };
+  for (const mutation of [
+    { ...bindingInput, userId: "55555555-5555-4555-8555-555555555555" },
+    {
+      ...bindingInput,
+      detail: syntheticDetail({
+        item: { id: "66666666-6666-4666-8666-666666666666" },
+      }),
+    },
+    {
+      ...bindingInput,
+      detail: syntheticDetail({ item: { subjectLabel: "감정평가실무" } }),
+    },
+    {
+      ...bindingInput,
+      detail: syntheticDetail({ item: { examName: "감정평가사 1차" } }),
+    },
+    { ...bindingInput, gap: { ...gap, gap: `${gap.gap} 변조` } },
+    { ...bindingInput, repairText: `${repairText} 변조` },
+    { ...bindingInput, repairText: ` ${repairText}` },
+    { ...bindingInput, repairText: `${repairText}\r\n` },
+    {
+      ...bindingInput,
+      persistenceOperationId: "77777777-7777-4777-8777-777777777777",
+    },
+    {
+      ...bindingInput,
+      persistenceWorkRevisionId: "88888888-8888-4888-8888-888888888888",
+    },
+  ]) {
+    assert.throws(
+      () => assertApp1VerificationReceipt(mutation),
+      /app1-receipt:binding_mismatch/u,
+    );
+  }
+  assert.throws(
+    () =>
+      assertApp1VerificationReceipt({
+        ...bindingInput,
+        now: new Date(issuedAt.getTime() + APP1_RECEIPT_TTL_MS),
+      }),
+    /app1-receipt:receipt_expired/u,
+  );
+  assert.throws(
+    () =>
+      issueApp1VerificationReceipt({
+        key,
+        userId: detail.item.userId,
+        detail,
+        gap,
+        analysisBinding,
+        repairText,
+        verification: { ...verification, masteryCreated: true },
+        persistenceOperationId: operationId,
+        persistenceWorkRevisionId: workRevisionId,
+        now: issuedAt,
+      }),
+    /app1-receipt:binding_mismatch/u,
+  );
+  assert.throws(
+    () =>
+      assertApp1VerificationReceipt({
+        ...bindingInput,
+        key: Buffer.alloc(31, 0x5a),
+      }),
+    /app1-receipt:invalid_key/u,
+  );
+
+  function resign(token, mutate) {
+    const [prefix, encoded] = token.split(".");
+    const payload = JSON.parse(Buffer.from(encoded, "base64url").toString("utf8"));
+    mutate(payload);
+    const nextEncoded = Buffer.from(JSON.stringify(payload), "utf8").toString(
+      "base64url",
+    );
+    const signature = crypto
+      .createHmac("sha256", key)
+      .update(`${prefix}.${nextEncoded}`, "utf8")
+      .digest("base64url");
+    return `${prefix}.${nextEncoded}.${signature}`;
+  }
+  for (const tampered of [
+    `${verificationReceipt.slice(0, -1)}${verificationReceipt.endsWith("A") ? "B" : "A"}`,
+    resign(verificationReceipt, (payload) => {
+      payload.verificationState = "forged_success";
+    }),
+    resign(verificationReceipt, (payload) => {
+      payload.verificationPolicyVersion = "ForgedPolicyV9";
+    }),
+    resign(verificationReceipt, (payload) => {
+      payload.extra = true;
+    }),
+  ]) {
+    assert.throws(
+      () =>
+        assertApp1VerificationReceipt({
+          ...bindingInput,
+          token: tampered,
+        }),
+      /app1-receipt:invalid_receipt/u,
+    );
+  }
+});
+
+test("APP1-AUTHORITY-002 covers all 17 production authority-boundary cases and denies every invalid APP-1 case before injected effects", async () => {
+  const key = Buffer.alloc(32, 0x3c);
+  const issuedAt = new Date("2026-09-01T01:00:00.000Z");
+  const detail = syntheticDetail();
+  const gap = buildApp1PrimaryGap(detail, draft());
+  const repairText =
+    "사례 사실을 논거의 요건에 직접 연결하고 그 적용 결과를 결론으로 완성했습니다.";
+  const verification = Object.freeze({
+    state: "repair_confirmed_for_this_session",
+    requestedGap: gap.gap,
+    observedGap: null,
+    reason: "서버가 같은 세션의 요청한 연결을 확인했습니다.",
+    sameSessionOnly: true,
+    masteryCreated: false,
+    transferCreated: false,
+  });
+  const operationId = "33333333-3333-4333-8333-333333333333";
+  const workRevisionId = "44444444-4444-4444-8444-444444444444";
+  const analysisBinding = issueApp1AnalysisBinding({
+    key,
+    userId: detail.item.userId,
+    detail,
+    gap,
+    now: issuedAt,
+  });
+  const verificationReceipt = issueApp1VerificationReceipt({
+    key,
+    userId: detail.item.userId,
+    detail,
+    gap,
+    analysisBinding,
+    repairText,
+    verification,
+    persistenceOperationId: operationId,
+    persistenceWorkRevisionId: workRevisionId,
+    now: issuedAt,
+  });
+  const base = {
+    key,
+    token: verificationReceipt,
+    userId: detail.item.userId,
+    detail,
+    gap,
+    analysisBinding,
+    repairText,
+    persistenceOperationId: operationId,
+    persistenceWorkRevisionId: workRevisionId,
+    now: issuedAt,
+  };
+  const emptyEffects = () => ({
+    provider: 0,
+    recurrence: 0,
+    learningSignal: 0,
+    captureUsage: 0,
+    itemInsert: 0,
+    queueInsert: 0,
+  });
+  const persistedOperations = new Set();
+  function persistAuthorized(input, current = { owner: true, feature: true }) {
+    const effects = emptyEffects();
+    return executeApp1AuthorityBoundaryV1({
+      authorize: () => {
+        if (!current.owner || !current.feature) {
+          throw new Error("APP1_AUTHORITY_REQUIRED");
+        }
+        return assertApp1VerificationReceipt(input);
+      },
+      execute: () => {
+        const replayKey = `${input.persistenceOperationId}:${input.persistenceWorkRevisionId}`;
+        if (persistedOperations.has(replayKey)) {
+          return { disposition: "idempotent_replay", effects };
+        }
+        persistedOperations.add(replayKey);
+        effects.provider += 1;
+        effects.recurrence += 1;
+        effects.captureUsage += 1;
+        effects.itemInsert += 1;
+        effects.queueInsert += 1;
+        return { disposition: "created", effects };
+      },
+    });
+  }
+  async function expectDenied(label, input, current) {
+    const effects = emptyEffects();
+    let caught;
+    try {
+      await executeApp1AuthorityBoundaryV1({
+        authorize: () => {
+          if (!current?.owner || !current?.feature) {
+            throw new Error("APP1_AUTHORITY_REQUIRED");
+          }
+          return assertApp1VerificationReceipt(input);
+        },
+        execute: () => {
+          for (const key of Object.keys(effects)) effects[key] += 1;
+        },
+      });
+    } catch (error) {
+      caught = error;
+    }
+    assert.ok(caught, `${label} must be denied`);
+    assert.deepEqual(effects, emptyEffects(), `${label} must precede effects`);
+  }
+  function resign(token, mutate) {
+    const [prefix, encoded] = token.split(".");
+    const payload = JSON.parse(Buffer.from(encoded, "base64url").toString("utf8"));
+    mutate(payload);
+    const nextEncoded = Buffer.from(JSON.stringify(payload), "utf8").toString(
+      "base64url",
+    );
+    const signature = crypto
+      .createHmac("sha256", key)
+      .update(`${prefix}.${nextEncoded}`, "utf8")
+      .digest("base64url");
+    return `${prefix}.${nextEncoded}.${signature}`;
+  }
+
+  const deniedCases = [
+    ["non-owner direct POST", base, { owner: false, feature: true }],
+    ["authorized Owner without receipt", { ...base, token: "" }],
+    [
+      "forged success state",
+      {
+        ...base,
+        token: resign(verificationReceipt, (payload) => {
+          payload.verificationState = "forged_success";
+        }),
+      },
+    ],
+    ["modified repair text", { ...base, repairText: `${repairText} 변조` }],
+    ["modified gap", { ...base, gap: { ...gap, gap: `${gap.gap} 변조` } }],
+    [
+      "modified subject",
+      {
+        ...base,
+        detail: syntheticDetail({ item: { subjectLabel: "감정평가실무" } }),
+      },
+    ],
+    [
+      "another user's source item",
+      {
+        ...base,
+        detail: syntheticDetail({
+          item: { userId: "55555555-5555-4555-8555-555555555555" },
+        }),
+      },
+    ],
+    [
+      "first-stage source item",
+      { ...base, detail: syntheticDetail({ item: { examName: "감정평가사 1차" } }) },
+    ],
+    [
+      "expired receipt",
+      { ...base, now: new Date(issuedAt.getTime() + APP1_RECEIPT_TTL_MS) },
+    ],
+    [
+      "changed operation ID",
+      {
+        ...base,
+        persistenceOperationId: "77777777-7777-4777-8777-777777777777",
+      },
+    ],
+    [
+      "changed work-revision ID",
+      {
+        ...base,
+        persistenceWorkRevisionId: "88888888-8888-4888-8888-888888888888",
+      },
+    ],
+    ["Owner authorization revoked after verification", base, { owner: false, feature: true }],
+    ["feature flag revoked after verification", base, { owner: true, feature: false }],
+  ];
+  for (const [label, input, current] of deniedCases) {
+    await expectDenied(label, input, current ?? { owner: true, feature: true });
+  }
+
+  const retryReceipt = issueApp1VerificationReceipt({
+    key,
+    userId: detail.item.userId,
+    detail,
+    gap,
+    analysisBinding,
+    repairText,
+    verification,
+    persistenceOperationId: operationId,
+    persistenceWorkRevisionId: workRevisionId,
+    now: new Date(issuedAt.getTime() + 1_000),
+  });
+  assert.doesNotThrow(() =>
+    assertApp1VerificationReceipt({
+      ...base,
+      token: retryReceipt,
+      now: new Date(issuedAt.getTime() + 1_000),
+    }),
+  );
+
+  const created = await persistAuthorized(base);
+  assert.equal(created.disposition, "created");
+  assert.deepEqual(created.effects, {
+    provider: 1,
+    recurrence: 1,
+    learningSignal: 0,
+    captureUsage: 1,
+    itemInsert: 1,
+    queueInsert: 1,
+  });
+  const replay = await persistAuthorized(base);
+  assert.equal(replay.disposition, "idempotent_replay");
+  assert.deepEqual(replay.effects, emptyEffects());
+
+  const ordinaryInput = {
+    ...buildApp1RepairPersistenceInput({
+      detail,
+      gap,
+      repairText,
+      verification,
+      operation: { operationId, workRevisionId },
+    }),
+    rewriteSourceItemId: undefined,
+    rewriteCompleted: false,
+    extractionPayload: {
+      raw_ocr_text: "",
+      raw_extraction_json: {},
+      normalized_draft: null,
+      user_confirmed_fields: {},
+    },
+  };
+  assert.equal(
+    isClientAuthoredApp1PersistenceCandidate(ordinaryInput, ["appraisal_theory"]),
+    false,
+  );
 });
 
 test("APP1-VM-001 builds a bounded OCR-confirmed structure summary", () => {
@@ -275,6 +721,107 @@ test("APP1-ACCESS-001 preserves the exact partial subject authorization", () => 
     false,
   );
   assert.equal(isApp1SubjectAuthorized("민법", practiceOnly), false);
+});
+
+test("APP1-ACCESS-002 rejects client-authored APP-1 rewrite success before generic effects while preserving ordinary flows", () => {
+  const detail = syntheticDetail();
+  const gap = buildApp1PrimaryGap(detail, draft());
+  const operation = {
+    operationId: "33333333-3333-4333-8333-333333333333",
+    workRevisionId: "44444444-4444-4444-8444-444444444444",
+  };
+  const app1Input = buildApp1RepairPersistenceInput({
+    detail,
+    gap,
+    repairText:
+      "사례 사실과 논거를 직접 연결하고 그 적용 결과를 결론 문장으로 완성했습니다.",
+    verification: {
+      state: "repair_confirmed_for_this_session",
+      requestedGap: gap.gap,
+      observedGap: null,
+      reason: "서버에서 확인했습니다.",
+      sameSessionOnly: true,
+      masteryCreated: false,
+      transferCreated: false,
+    },
+    operation,
+  });
+  const clientRewriteWithoutMarkers = {
+    ...app1Input,
+    extractionPayload: {
+      raw_ocr_text: "",
+      raw_extraction_json: {},
+      normalized_draft: null,
+      user_confirmed_fields: {
+        persistence_operation_id: operation.operationId,
+        persistence_work_revision_id: operation.workRevisionId,
+      },
+    },
+  };
+  assert.equal(
+    isClientAuthoredApp1PersistenceCandidate(
+      clientRewriteWithoutMarkers,
+      ["appraisal_theory"],
+    ),
+    true,
+  );
+  assert.equal(
+    isClientAuthoredApp1PersistenceCandidate(
+      { ...clientRewriteWithoutMarkers, subjectLabel: "not-a-valid-subject" },
+      ["appraisal_practical"],
+    ),
+    true,
+    "the generic guard must use the exact defaulted subject that persistence will use",
+  );
+  assert.equal(
+    isClientAuthoredApp1PersistenceCandidate(
+      clientRewriteWithoutMarkers,
+      [],
+    ),
+    false,
+  );
+  assert.equal(
+    isClientAuthoredApp1PersistenceCandidate(
+      { ...clientRewriteWithoutMarkers, rewriteCompleted: false },
+      ["appraisal_theory"],
+    ),
+    false,
+  );
+  assert.equal(
+    isClientAuthoredApp1PersistenceCandidate(
+      app1Input,
+      [],
+    ),
+    true,
+  );
+
+  const effects = {
+    provider: 0,
+    recurrence: 0,
+    learningSignal: 0,
+    captureUsage: 0,
+    itemInsert: 0,
+    queueInsert: 0,
+  };
+  assert.throws(() => {
+    if (
+      isClientAuthoredApp1PersistenceCandidate(
+        clientRewriteWithoutMarkers,
+        ["appraisal_theory"],
+      )
+    ) {
+      throw new Error("APP1_PERSISTENCE_COMMAND_INVALID");
+    }
+    for (const key of Object.keys(effects)) effects[key] += 1;
+  }, /APP1_PERSISTENCE_COMMAND_INVALID/u);
+  assert.deepEqual(effects, {
+    provider: 0,
+    recurrence: 0,
+    learningSignal: 0,
+    captureUsage: 0,
+    itemInsert: 0,
+    queueInsert: 0,
+  });
 });
 
 test("APP1-VM-002 emits exactly one anchored gap and one direct action", () => {
@@ -1088,7 +1635,7 @@ test("APP1-UI-001 binds exact copy, one-gap UI, no prefilled repair and truthful
 
 test("APP1-UI-002 never renders answer-analysis payload errors and binds exact safe learner copy", async () => {
   const repairLoop = await read("components/owner-study/app1-capture-repair-loop.tsx");
-  assert.equal(repairLoop.includes("payload.error"), false);
+  assert.doesNotMatch(repairLoop, /payload\.error(?!Code)/u);
   assert.ok(repairLoop.includes("답안 분석을 완료하지 못했습니다. 입력은 그대로 남아 있습니다."));
   assert.ok(repairLoop.includes("복구 입력 검토를 완료하지 못했습니다. 성공으로 처리되지 않았습니다."));
   assert.equal(repairLoop.includes("synthetic_analysis_unavailable"), false);
@@ -1101,41 +1648,67 @@ test("APP1-API-001 isolates repair verification from learning-state signals behi
 
   assert.deepEqual(config.answerReviewStructure.requestPurposes, [
     "learning_analysis",
+    "app1_initial_analysis",
     "repair_verification",
   ]);
   assert.equal(config.answerReviewStructure.defaultRequestPurpose, "learning_analysis");
   assert.equal(config.answerReviewStructure.repairVerificationCreatesLearningSignal, false);
   assert.match(route, /value === null\) return "learning_analysis"/u);
   assert.match(route, /requestPurposeValues\.length > 1/u);
-  assert.match(route, /ANSWER_REVIEW_REQUEST_PURPOSES = \["learning_analysis", "repair_verification"\]/u);
+  assert.match(route, /"learning_analysis",[\s\S]*?"app1_initial_analysis",[\s\S]*?"repair_verification"/u);
   assert.match(route, /!session\.isAuthenticated \|\| !session\.userId \|\| !session\.email/u);
   assert.match(route, /ITEM_ID_PATTERN\.test\(sourceItemId\)/u);
-  assert.match(route, /sourceItemIdValues\.length !== 1/u);
+  assert.match(route, /const sourceItemId = singleFormString\(formData, "sourceItemId"\)/u);
+  assert.match(route, /values\.length === 1 && typeof value === "string"/u);
   assert.match(route, /sourceItemId !== sourceItemId\.trim\(\)/u);
-  assert.match(route, /trustedRepairAuthorizedSubjects\(session\.email\)/u);
-  assert.match(route, /isApp1SubjectAuthorized\(subject, authorizedSubjects\)/u);
-  assert.match(route, /reviewOsRepository\.getWrongAnswerItem\([\s\S]*?session\.userId,[\s\S]*?sourceItemId/u);
-  assert.match(route, /sourceItem\.examName !== "감정평가사 2차"/u);
-  assert.match(route, /sourceItem\.subjectLabel !== subject/u);
-  assert.ok(
-    route.indexOf('requestPurpose === "repair_verification"') <
-      route.indexOf("isGeminiConfigured()"),
-    "repair authorization must complete before provider execution",
+  assert.match(route, /requireApp1AuthorizedSourceDetail\([\s\S]*?userId: session\.userId,[\s\S]*?sourceItemId,[\s\S]*?expectedSubject: subject/u);
+  assert.match(route, /assertApp1SigningAuthorityReady\(\)/u);
+  assert.match(route, /APP1_FILE_INPUT_FORBIDDEN/u);
+  assert.match(
+    route,
+    /questionText =\s*app1Detail\.item\.rawQuestionText \?\? app1Detail\.item\.problemTitle \?\? ""/u,
   );
   assert.match(
     route,
-    /session\.userId && session\.email && requestPurpose === "learning_analysis" && !skipReason/u,
+    /requestPurpose === "app1_initial_analysis"[\s\S]*?answerText = getApp1LearnerAnswer\(app1Detail\)/u,
+  );
+  assert.match(
+    route,
+    /const exactRepairText = singleFormString\(formData, "answerText"\)[\s\S]*?answerText = exactRepairText/u,
+  );
+  assert.match(route, /assertApp1RepairVerificationRequestAuthority\([\s\S]*?analysisBinding: app1AnalysisBinding[\s\S]*?persistenceOperationId,[\s\S]*?persistenceWorkRevisionId/u);
+  assert.ok(
+    route.indexOf("requireApp1AuthorizedSourceDetail") <
+      route.indexOf("isGeminiConfigured()"),
+    "APP-1 source authorization must complete before provider execution",
+  );
+  assert.ok(
+    route.indexOf("questionText =\n        app1Detail.item.rawQuestionText") <
+      route.indexOf("isGeminiConfigured()"),
+    "APP-1 provider context must be rebound to persisted source bytes before provider execution",
+  );
+  assert.match(
+    route,
+    /session\.userId && session\.email && requestPurpose !== "repair_verification" && !skipReason/u,
   );
   assert.match(route, /learningSignalSkipReason = requestPurpose === "repair_verification" \? "repair_verification"/u);
   assert.match(route, /metadataJson|requestPurpose|\{ examMode: mode, explanationLevel, requestPurpose \}/u);
   assert.match(repairLoop, /formData\.set\("requestPurpose", requestPurpose\)/u);
-  assert.match(repairLoop, /requestPurpose === "repair_verification"[\s\S]*?formData\.set\("sourceItemId", detail\.item\.id\)/u);
-  assert.match(repairLoop, /getApp1LearnerAnswer\(detail\),\s*"learning_analysis"/u);
+  assert.match(repairLoop, /formData\.set\("sourceItemId", detail\.item\.id\)/u);
+  assert.match(repairLoop, /getApp1LearnerAnswer\(detail\),\s*"app1_initial_analysis"/u);
   assert.match(repairLoop, /trimmed,\s*"repair_verification"/u);
+  assert.match(repairLoop, /setGap\(result\.primaryGap\)/u);
+  assert.match(repairLoop, /setAnalysisBinding\(result\.analysisBinding\)/u);
+  assert.match(repairLoop, /setVerification\(result\.verification\)/u);
+  assert.match(repairLoop, /setVerificationReceipt\(receipt\)/u);
 });
 
 test("APP1-API-002 revalidates exact Owner, subject, and source-item authority before repair persistence", async () => {
   const repository = await read("lib/review-os/repository.ts");
+  const service = await read("lib/review-os/service.ts");
+  const route = await read("app/api/os/items/route.ts");
+  const serverAuthority = await read("lib/owner-study/app1-server-authority.ts");
+  const receiptCore = await read("lib/owner-study/app1-verification-receipt-core.ts");
   const authority = repository.match(
     /private async assertApp1RepairPersistenceAuthority\([\s\S]*?(?=\n  async )/u,
   )?.[0];
@@ -1162,6 +1735,46 @@ test("APP1-API-002 revalidates exact Owner, subject, and source-item authority b
       insertion.indexOf("getUserClient(userId)"),
     "APP-1 authority and source binding must precede persistence client use",
   );
+  const genericCreate = service.match(
+    /async createWrongAnswerItem\([\s\S]*?(?=\n  async createApp1VerifiedRepairItem)/u,
+  )?.[0];
+  const app1Create = service.match(
+    /async createApp1VerifiedRepairItem\([\s\S]*?(?=\n  private async createWrongAnswerItemAfterAuthority)/u,
+  )?.[0];
+  const commonCreate = service.match(
+    /private async createWrongAnswerItemAfterAuthority\([\s\S]*?(?=\n  async )/u,
+  )?.[0];
+  assert.ok(genericCreate && app1Create && commonCreate);
+  assert.ok(
+    genericCreate.indexOf("isClientAuthoredApp1Persistence(input, email)") <
+      genericCreate.indexOf("createWrongAnswerItemAfterAuthority"),
+    "client-authored APP-1 metadata must fail before generic service effects",
+  );
+  assert.ok(
+    app1Create.indexOf("requireApp1AuthorizedSourceDetail") <
+      app1Create.indexOf("authorizeApp1PersistenceCommand") &&
+      app1Create.indexOf("authorizeApp1PersistenceCommand") <
+        app1Create.indexOf("createWrongAnswerItemAfterAuthority") &&
+      app1Create.indexOf("executeApp1AuthorityBoundaryV1") <
+        app1Create.indexOf("createWrongAnswerItemAfterAuthority"),
+    "current Owner/source and receipt authority must precede common service work",
+  );
+  assert.match(commonCreate, /await this\.ensureAccess\(userId, email\)/u);
+  assert.match(route, /createApp1VerifiedRepairItem/u);
+  assert.match(route, /APP1_PERSISTENCE_COMMAND_VERSION/u);
+  assert.match(serverAuthority, /await requireTrustedRepairAccess\(\)/u);
+  assert.match(serverAuthority, /reviewOsRepository\.getWrongAnswerDetail/u);
+  assert.match(serverAuthority, /authorizeApp1PersistenceCommand/u);
+  assert.match(serverAuthority, /trustedRepairAuthorizedSubjects\(email\)/u);
+  assert.match(
+    await read("lib/owner-study/app1-capture-repair-view-model.ts"),
+    /typeof input\.rewriteSourceItemId === "string"[\s\S]*?input\.rewriteCompleted !== false[\s\S]*?isApp1SubjectAuthorized/u,
+  );
+  assert.match(serverAuthority, /process\.env\.APP1_VERIFICATION_SIGNING_SECRET/u);
+  assert.equal(serverAuthority.includes("NEXT_PUBLIC_APP1"), false);
+  assert.match(receiptCore, /createHmac\("sha256"/u);
+  assert.match(receiptCore, /timingSafeEqual\(expected, comparable\)/u);
+  assert.match(receiptCore, /APP1_RECEIPT_TTL_MS = 5 \* 60 \* 1_000/u);
 });
 
 test("APP1-UI-002A exposes guided fallback after verification service failure without save authority", async () => {
@@ -1176,7 +1789,7 @@ test("APP1-UI-002A exposes guided fallback after verification service failure wi
   assert.ok(verifyRepair, "missing verification request boundary");
   assert.match(
     verifyRepair,
-    /catch \{\s*setVerification\(preliminary\);\s*setError\(VERIFICATION_FAILURE_MESSAGE\);\s*setPhase\("repair_verification"\);\s*\}/u,
+    /catch \{[\s\S]*?setVerification\(preliminary\);[\s\S]*?setVerificationReceipt\(null\);[\s\S]*?setError\(VERIFICATION_FAILURE_MESSAGE\);[\s\S]*?setPhase\("repair_verification"\);[\s\S]*?\}/u,
   );
   assert.match(
     repairLoop,
@@ -1185,12 +1798,15 @@ test("APP1-UI-002A exposes guided fallback after verification service failure wi
   assert.ok(saveRepair, "missing repair persistence boundary");
   assert.match(
     saveRepair,
-    /verification\.state !== "repair_confirmed_for_this_session"[\s\S]*?완료되지 않은 복구는 성공 기록으로 저장하지 않습니다/u,
+    /verification\.state !== "repair_confirmed_for_this_session" \|\|[\s\S]*?!verificationReceipt \|\|[\s\S]*?!pending[\s\S]*?완료되지 않은 복구는 성공 기록으로 저장하지 않습니다/u,
   );
   assert.match(
     repairLoop,
-    /verification\.state === "repair_confirmed_for_this_session" \? \([\s\S]*?data-app1-save-repair/u,
+    /verification\.state === "repair_confirmed_for_this_session" &&[\s\S]*?verificationReceipt \? \([\s\S]*?data-app1-save-repair/u,
   );
+  assert.match(repairLoop, /function updateRepairText\([\s\S]*?setVerificationReceipt\(null\)[\s\S]*?pendingSaveRef\.current = null/u);
+  assert.equal(repairLoop.includes("buildApp1RepairPersistenceInput"), false);
+  assert.match(repairLoop, /commandVersion: "App1VerifiedRepairPersistenceCommandV1"/u);
 });
 
 test("APP1-UI-003 enters repair only after a durable receipt without racing the route refresh", async () => {
@@ -1365,7 +1981,7 @@ test("APP1-PERMISSION-001 separates input confirmation from quick save at the In
     "input confirmation must not perform the durable item save",
   );
   assert.deepEqual(config.changedPaths, EXPECTED_PATHS);
-  assert.equal(config.changedPaths.length, 15);
+  assert.equal(config.changedPaths.length, 20);
   assert.equal(config.changedPaths.includes(SHARED_ACCESS_INVENTORY_PATH), false);
   assert.equal(config.changedPaths.includes(INHERITED_C3R_P_IDENTITY_PATH), false);
   assert.equal(config.changedPaths.includes(INHERITED_C3R_P_RUNTIME_SPEC_PATH), false);
@@ -1376,7 +1992,7 @@ test("APP1-PERMISSION-001 separates input confirmation from quick save at the In
       INHERITED_C3R_P_IDENTITY_PATH,
       INHERITED_C3R_P_RUNTIME_SPEC_PATH,
     ]).size,
-    18,
+    23,
   );
   assert.match(sharedAccessInventory, /app\/app\/capture\/repair\/page\.tsx/u);
 });
@@ -1440,8 +2056,10 @@ test("APP1-E2E-CONTRACT-001 freezes executable synthetic browser assertions with
     'inputKind: "pdf"',
     'waitForEvent("filechooser")',
     "setFiles",
-    'requestPurpose", "learning_analysis"',
+    'requestPurpose", "app1_initial_analysis"',
     'requestPurpose", "repair_verification"',
+    "verificationReceipt",
+    "analysisBinding",
     'url.pathname === "/api/inverge/ocr"',
     "OCR 결과는 초안입니다. 저장 전 직접 확인해 주세요.",
     "page.reload()",

@@ -1,6 +1,14 @@
 import "server-only";
 
 import { consumeRateLimit } from "@/lib/rate-limit";
+import {
+  App1ServerAuthorityError,
+  authorizeApp1PersistenceCommand,
+  isClientAuthoredApp1Persistence,
+  parseApp1PersistenceCommand,
+  requireApp1AuthorizedSourceDetail,
+} from "@/lib/owner-study/app1-server-authority";
+import { executeApp1AuthorityBoundaryV1 } from "@/lib/owner-study/app1-verification-receipt-core";
 import type { ReviewOsAccessResult } from "@/lib/review-os/access-result";
 import { generateWrongAnswerArtifacts } from "@/lib/review-os/ai";
 import {
@@ -1119,6 +1127,43 @@ export class ReviewOsService {
   }
 
   async createWrongAnswerItem(
+    userId: string,
+    email: string | null,
+    input: WrongAnswerItemInput,
+  ) {
+    if (isClientAuthoredApp1Persistence(input, email)) {
+      throw new App1ServerAuthorityError(
+        "APP1_PERSISTENCE_COMMAND_INVALID",
+      );
+    }
+    return this.createWrongAnswerItemAfterAuthority(userId, email, input);
+  }
+
+  async createApp1VerifiedRepairItem(
+    userId: string,
+    email: string | null,
+    value: unknown,
+  ) {
+    return executeApp1AuthorityBoundaryV1({
+      authorize: async () => {
+        const command = parseApp1PersistenceCommand(value);
+        const detail = await requireApp1AuthorizedSourceDetail({
+          userId,
+          sourceItemId: command.sourceItemId,
+          expectedSubject: command.primaryGap.subject,
+        });
+        return authorizeApp1PersistenceCommand({
+          userId,
+          detail,
+          command,
+        });
+      },
+      execute: (input) =>
+        this.createWrongAnswerItemAfterAuthority(userId, email, input),
+    });
+  }
+
+  private async createWrongAnswerItemAfterAuthority(
     userId: string,
     email: string | null,
     input: WrongAnswerItemInput,
