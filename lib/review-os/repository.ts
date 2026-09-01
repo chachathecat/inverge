@@ -37,6 +37,8 @@ import type {
   TaxonomyClassificationCandidate,
 } from "@/lib/review-os/types";
 import type { AppraisalMode } from "@/lib/review-os/appraisal";
+import { requireTrustedRepairAccess } from "@/lib/review-os/trusted-repair-access";
+import type { TrustedRepairSubject } from "@/lib/review-os/trusted-repair-contract";
 import {
   sanitizeDerivedMetadata,
   sanitizeLearningSignalMetadata,
@@ -57,6 +59,33 @@ function createUuid() {
 
 function hashPayload(value: string) {
   return crypto.createHash("sha256").update(value).digest("hex");
+}
+
+const APP1_CONTRACT_VERSION = "OwnerCaptureToRepairVerticalV1";
+const APP1_PERSISTENCE_FIELDS = Object.freeze([
+  "app1_contract_version",
+  "app1_mastery_created",
+  "app1_same_session_only",
+  "app1_source_item_id",
+  "app1_transfer_created",
+  "app1_verification_state",
+] as const);
+const APP1_SUBJECT_BY_LABEL: Readonly<Record<string, TrustedRepairSubject>> =
+  Object.freeze({
+    감정평가실무: "appraisal_practical",
+    감정평가이론: "appraisal_theory",
+    "감정평가 및 보상법규": "appraisal_law",
+  });
+
+function app1ConfirmedFields(input: WrongAnswerItemInput) {
+  const fields = input.extractionPayload?.user_confirmed_fields;
+  return fields && typeof fields === "object" && !Array.isArray(fields)
+    ? fields
+    : null;
+}
+
+function rejectApp1PersistenceAuthority(): never {
+  throw new Error("review-os:app1-persistence-authority");
 }
 
 export function normalizePostgrestTimestamp(value: unknown): string {
@@ -494,6 +523,59 @@ function getExamModeLabel(
 }
 
 export class ReviewOsRepository {
+  private async assertApp1RepairPersistenceAuthority(
+    userId: string,
+    input: WrongAnswerItemInput,
+  ) {
+    const fields = app1ConfirmedFields(input);
+    const app1Fields = fields
+      ? Object.keys(fields)
+          .filter((key) => key.startsWith("app1_"))
+          .sort()
+      : [];
+    if (app1Fields.length === 0) return;
+    if (
+      app1Fields.length !== APP1_PERSISTENCE_FIELDS.length ||
+      app1Fields.some((field, index) => field !== APP1_PERSISTENCE_FIELDS[index]) ||
+      fields?.app1_contract_version !== APP1_CONTRACT_VERSION ||
+      fields.app1_verification_state !== "repair_confirmed_for_this_session" ||
+      fields.app1_same_session_only !== true ||
+      fields.app1_mastery_created !== false ||
+      fields.app1_transfer_created !== false ||
+      typeof fields.app1_source_item_id !== "string" ||
+      fields.app1_source_item_id !== input.rewriteSourceItemId ||
+      input.examName !== "감정평가사 2차" ||
+      input.createdFromCapture !== true ||
+      input.captureIntent !== "save" ||
+      input.rewriteCompleted !== true
+    ) {
+      rejectApp1PersistenceAuthority();
+    }
+
+    const subject = APP1_SUBJECT_BY_LABEL[input.subjectLabel];
+    if (!subject) rejectApp1PersistenceAuthority();
+    const access = await requireTrustedRepairAccess();
+    if (
+      access.userId !== userId ||
+      !access.trustedRepairSubjects.includes(subject)
+    ) {
+      rejectApp1PersistenceAuthority();
+    }
+
+    const sourceItem = await this.getWrongAnswerItem(
+      userId,
+      fields.app1_source_item_id,
+    );
+    if (
+      !sourceItem ||
+      sourceItem.id !== input.rewriteSourceItemId ||
+      sourceItem.examName !== "감정평가사 2차" ||
+      sourceItem.subjectLabel !== input.subjectLabel
+    ) {
+      rejectApp1PersistenceAuthority();
+    }
+  }
+
   claimS233aReview: S233aReviewRepositoryPort["claim"] =
     s233aSupabaseRepository.claim;
 
@@ -744,6 +826,7 @@ export class ReviewOsRepository {
     rawPayload: Record<string, unknown>,
     derivedPayload: Record<string, unknown>,
   ) {
+    await this.assertApp1RepairPersistenceAuthority(userId, input);
     const client = getUserClient(userId);
     const id = createUuid();
     const result = await client.from("wrong_answer_items").insert({

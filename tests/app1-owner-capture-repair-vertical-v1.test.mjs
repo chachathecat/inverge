@@ -1134,6 +1134,36 @@ test("APP1-API-001 isolates repair verification from learning-state signals behi
   assert.match(repairLoop, /trimmed,\s*"repair_verification"/u);
 });
 
+test("APP1-API-002 revalidates exact Owner, subject, and source-item authority before repair persistence", async () => {
+  const repository = await read("lib/review-os/repository.ts");
+  const authority = repository.match(
+    /private async assertApp1RepairPersistenceAuthority\([\s\S]*?(?=\n  async )/u,
+  )?.[0];
+  const insertion = repository.match(
+    /async insertWrongAnswerItem\([\s\S]*?(?=\n  async getWrongAnswerItem\()/u,
+  )?.[0];
+
+  assert.ok(authority, "missing APP-1 persistence authority gate");
+  assert.ok(insertion, "missing wrong-answer persistence boundary");
+  assert.match(authority, /Object\.keys\(fields\)[\s\S]*?key\.startsWith\("app1_"\)/u);
+  assert.match(authority, /app1Fields\.length !== APP1_PERSISTENCE_FIELDS\.length/u);
+  assert.match(authority, /app1_contract_version !== APP1_CONTRACT_VERSION/u);
+  assert.match(authority, /app1_verification_state !== "repair_confirmed_for_this_session"/u);
+  assert.match(authority, /fields\.app1_source_item_id !== input\.rewriteSourceItemId/u);
+  assert.match(authority, /input\.rewriteCompleted !== true/u);
+  assert.match(authority, /await requireTrustedRepairAccess\(\)/u);
+  assert.match(authority, /access\.userId !== userId/u);
+  assert.match(authority, /access\.trustedRepairSubjects\.includes\(subject\)/u);
+  assert.match(authority, /this\.getWrongAnswerItem\([\s\S]*?userId,[\s\S]*?fields\.app1_source_item_id/u);
+  assert.match(authority, /sourceItem\.examName !== "감정평가사 2차"/u);
+  assert.match(authority, /sourceItem\.subjectLabel !== input\.subjectLabel/u);
+  assert.ok(
+    insertion.indexOf("await this.assertApp1RepairPersistenceAuthority(userId, input)") <
+      insertion.indexOf("getUserClient(userId)"),
+    "APP-1 authority and source binding must precede persistence client use",
+  );
+});
+
 test("APP1-UI-002A exposes guided fallback after verification service failure without save authority", async () => {
   const repairLoop = await read("components/owner-study/app1-capture-repair-loop.tsx");
   const verifyRepair = repairLoop.match(
