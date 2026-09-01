@@ -677,17 +677,12 @@ async function completeCapture(
   await expect(initialSaveButton).toHaveCount(1);
   await expect(initialSaveButton).toBeVisible();
   await expect(initialSaveButton).toBeEnabled();
-  const [initialSaveResponse] = await Promise.all([
-    page.waitForResponse(
-      (response) =>
-        response.request().method() === "POST" &&
-        new URL(response.url()).pathname === "/api/os/items",
-      { timeout: 30_000 },
+  await Promise.all([
+    page.waitForURL(
+      new RegExp(`/app/capture/repair\\?itemId=${SOURCE_ITEM_ID}$`),
     ),
     initialSaveButton.click(),
   ]);
-  expect(initialSaveResponse.status()).toBe(200);
-  await expect(page).toHaveURL(new RegExp(`/app/capture/repair\\?itemId=${SOURCE_ITEM_ID}$`));
 }
 
 async function analyzeToDirectRepair(page: Page, keyboard: boolean) {
@@ -767,8 +762,18 @@ test("synthetic Owner Capture → one-gap direct repair → durable next review 
     if (viewport.exerciseFailures) {
       await expect(page.getByText("복구 입력 검토를 완료하지 못했습니다. 성공으로 처리되지 않았습니다.")).toBeVisible();
       await expect(page.getByText("synthetic_verification_unavailable")).toHaveCount(0);
-      await expect(repair).toHaveValue(syntheticRepair);
       await expect(page.locator("[data-app1-completed]")).toHaveCount(0);
+      await expect(
+        page.getByRole("heading", { name: "구조화된 가이드 경로가 필요합니다" }),
+      ).toBeVisible();
+      await expect(
+        page.getByRole("link", { name: "구조화된 신뢰 복구로 이동" }),
+      ).toHaveAttribute("href", "/app/c3r-t");
+      await expect(
+        page.getByRole("button", { name: "복구 결과 저장하고 다음 복습 만들기" }),
+      ).toHaveCount(0);
+      await page.getByRole("button", { name: "직접 복구 다시 시도" }).click();
+      await expect(repair).toHaveValue(syntheticRepair);
       await page.getByRole("button", { name: "복구 확인" }).click();
       await expect(
         page.getByText("연결 1개가 아직 남아 있습니다"),

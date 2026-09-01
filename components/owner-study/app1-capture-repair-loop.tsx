@@ -270,8 +270,9 @@ export function App1CaptureRepairLoop({
       setVerification(nextVerification);
       setPhase("repair_verification");
     } catch {
+      setVerification(preliminary);
       setError(VERIFICATION_FAILURE_MESSAGE);
-      setPhase("direct_repair");
+      setPhase("repair_verification");
     }
   }
 
@@ -301,10 +302,7 @@ export function App1CaptureRepairLoop({
 
   async function saveRepair() {
     if (!detail || !gap || !verification) return;
-    if (
-      verification.state === "deferred" ||
-      verification.state === "blocked_by_ocr_or_source_uncertainty"
-    ) {
+    if (verification.state !== "repair_confirmed_for_this_session") {
       setError("완료되지 않은 복구는 성공 기록으로 저장하지 않습니다.");
       return;
     }
@@ -594,9 +592,14 @@ export function App1CaptureRepairLoop({
               연결 1개 보강하기
             </V3ActionButton>
           ) : verification.state === "guided_path_needed" ? (
-            <V3ActionLink href={app1GuidedRepairHref(gap.subject)} tone="secondary">
-              구조화된 신뢰 복구로 이동
-            </V3ActionLink>
+            <div className="flex flex-col gap-2 sm:flex-row">
+              <V3ActionLink href={app1GuidedRepairHref(gap.subject)} tone="secondary">
+                구조화된 신뢰 복구로 이동
+              </V3ActionLink>
+              <V3ActionButton type="button" onClick={() => setPhase("direct_repair")}>
+                직접 복구 다시 시도
+              </V3ActionButton>
+            </div>
           ) : verification.state === "deferred" ? (
             <V3ActionLink href="/app?mode=second" tone="secondary">
               오늘 할 일로 돌아가기
@@ -614,10 +617,7 @@ export function App1CaptureRepairLoop({
             >
               복구 입력 수정하기
             </V3ActionButton>
-          ) : ![
-            "deferred",
-            "blocked_by_ocr_or_source_uncertainty",
-          ].includes(verification.state) ? (
+          ) : verification.state === "repair_confirmed_for_this_session" ? (
             <V3ActionButton type="button" onClick={() => void saveRepair()} data-app1-save-repair>
               복구 결과 저장하고 다음 복습 만들기
             </V3ActionButton>

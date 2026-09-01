@@ -1070,6 +1070,35 @@ test("APP1-UI-002 never renders answer-analysis payload errors and binds exact s
   assert.equal(repairLoop.includes("synthetic_analysis_unavailable"), false);
 });
 
+test("APP1-UI-002A exposes guided fallback after verification service failure without save authority", async () => {
+  const repairLoop = await read("components/owner-study/app1-capture-repair-loop.tsx");
+  const verifyRepair = repairLoop.match(
+    /async function verifyRepair\(\) \{[\s\S]*?(?=\n  function deferRepair\(\))/u,
+  )?.[0];
+  const saveRepair = repairLoop.match(
+    /async function saveRepair\(\) \{[\s\S]*?(?=\n  const busy =)/u,
+  )?.[0];
+
+  assert.ok(verifyRepair, "missing verification request boundary");
+  assert.match(
+    verifyRepair,
+    /catch \{\s*setVerification\(preliminary\);\s*setError\(VERIFICATION_FAILURE_MESSAGE\);\s*setPhase\("repair_verification"\);\s*\}/u,
+  );
+  assert.match(
+    repairLoop,
+    /verification\.state === "guided_path_needed"[\s\S]*?app1GuidedRepairHref\(gap\.subject\)[\s\S]*?구조화된 신뢰 복구로 이동[\s\S]*?직접 복구 다시 시도/u,
+  );
+  assert.ok(saveRepair, "missing repair persistence boundary");
+  assert.match(
+    saveRepair,
+    /verification\.state !== "repair_confirmed_for_this_session"[\s\S]*?완료되지 않은 복구는 성공 기록으로 저장하지 않습니다/u,
+  );
+  assert.match(
+    repairLoop,
+    /verification\.state === "repair_confirmed_for_this_session" \? \([\s\S]*?data-app1-save-repair/u,
+  );
+});
+
 test("APP1-UI-003 enters repair only after a durable receipt without racing the route refresh", async () => {
   const captureForm = await read("components/review-os/capture-form.tsx");
   const receiptIndex = captureForm.indexOf(
@@ -1143,7 +1172,7 @@ test("APP1-UI-004 keeps queue confirmation post-save and item-specific", async (
   );
   assert.match(
     repairLoop,
-    /conflict \? \([\s\S]*?data-app1-edit-conflicted-repair[\s\S]*?복구 입력 수정하기[\s\S]*?: !\[/u,
+    /conflict \? \([\s\S]*?data-app1-edit-conflicted-repair[\s\S]*?복구 입력 수정하기[\s\S]*?: verification\.state === "repair_confirmed_for_this_session"/u,
   );
 });
 
