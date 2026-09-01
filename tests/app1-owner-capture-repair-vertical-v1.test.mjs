@@ -16,6 +16,7 @@ import {
   buildApp1StructureSummary,
   evaluateApp1SameSessionRepair,
   getApp1LearnerAnswer,
+  isApp1InitialAnalysisEligible,
   isClientAuthoredApp1PersistenceCandidate,
   isApp1SubjectAuthorized,
 } from "../lib/owner-study/app1-capture-repair-view-model.ts";
@@ -1436,6 +1437,7 @@ test("APP1-VM-003B blocks uncertain OCR/source evidence before successful repair
         user_confirmed_fields: {
           pageCount: 1,
           lowConfidenceFlag: true,
+          ocrConfirmedByLearner: true,
         },
       },
     },
@@ -1454,11 +1456,58 @@ test("APP1-VM-003B blocks uncertain OCR/source evidence before successful repair
   assert.equal("durableReceipt" in blocked, false);
   assert.equal("queueReceipt" in blocked, false);
 
+  const explicitlyCorrected = buildApp1StructureSummary(
+    syntheticDetail({
+      item: {
+        rawPayload: {
+          user_confirmed_fields: {
+            pageCount: 1,
+            lowConfidenceFlag: true,
+            ocrConfirmedByLearner: true,
+            hasManualCorrection: true,
+          },
+        },
+      },
+    }),
+  );
+  assert.equal(explicitlyCorrected.ocrConfirmed, true);
+  assert.equal(explicitlyCorrected.uncertainty, null);
+
   const repairLoop = await read("components/owner-study/app1-capture-repair-loop.tsx");
   assert.ok(repairLoop.includes('verification.state === "blocked_by_ocr_or_source_uncertainty"'));
   assert.ok(repairLoop.includes("완료되지 않은 복구는 성공 기록으로 저장하지 않습니다."));
   assert.ok(repairLoop.includes("원문 다시 확인하기"));
   assert.ok(repairLoop.includes("/app/capture?mode=second&rewriteFrom="));
+});
+
+test("APP1-VM-003D keeps the Capture continuation outside APP-1 until the saved answer is analyzable", async () => {
+  assert.equal(
+    isApp1InitialAnalysisEligible({
+      questionText: "저작권 안전 합성 사례의 정확한 질문입니다.",
+      answerText: "짧은 답",
+    }),
+    false,
+  );
+  assert.equal(
+    isApp1InitialAnalysisEligible({
+      questionText: "저작권 안전 합성 사례의 정확한 질문입니다.",
+      answerText:
+        "요건과 사례 사실의 연결을 구체적으로 설명한 충분한 합성 답안입니다.",
+    }),
+    true,
+  );
+
+  const captureForm = await read("components/review-os/capture-form.tsx");
+  const redirectBranch = captureForm.match(
+    /if \(ownerCaptureRepairInitialAnalysisEligible\) \{[\s\S]*?return;\s*\}/u,
+  )?.[0];
+  assert.ok(redirectBranch, "missing analyzability-gated APP-1 repair redirect");
+  assert.match(redirectBranch, /\/app\/capture\/repair\?itemId=/u);
+  assert.ok(
+    captureForm.indexOf("openSavedPlanStage(buildSaveConfirmation", captureForm.indexOf(redirectBranch)) >
+      captureForm.indexOf(redirectBranch),
+    "ineligible captures must retain the ordinary durable saved-plan continuation",
+  );
 });
 
 test("APP1-VM-004 persists through the existing learner-private receipt binding only", () => {
@@ -2002,12 +2051,12 @@ test("APP1-UI-003 enters repair only after a durable receipt without racing the 
     "const persistenceEvidence = buildDurableCapturePersistenceReceipt(result.item, operation);",
   );
   const repairBranch = captureForm.match(
-    /if \(ownerCaptureRepairSubjectEnabled\) \{[\s\S]*?return;\s*\}/u,
+    /if \(ownerCaptureRepairInitialAnalysisEligible\) \{[\s\S]*?return;\s*\}/u,
   )?.[0];
 
   assert.ok(receiptIndex >= 0, "missing durable capture receipt gate");
   assert.ok(repairBranch, "missing APP-1 repair-route branch");
-  assert.ok(captureForm.indexOf("if (ownerCaptureRepairSubjectEnabled)", receiptIndex) > receiptIndex);
+  assert.ok(captureForm.indexOf("if (ownerCaptureRepairInitialAnalysisEligible)", receiptIndex) > receiptIndex);
   assert.match(repairBranch, /router\.push\([\s\S]*?\/app\/capture\/repair\?itemId=/u);
   assert.doesNotMatch(repairBranch, /router\.refresh\(\)/u);
 });

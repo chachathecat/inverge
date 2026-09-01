@@ -4,6 +4,7 @@ import {
   buildCapturePersistenceMetadata,
   type CaptureSaveOperationBinding,
 } from "../review-os/capture-persistence-controller";
+import { getAnswerReviewInputQualityIssue } from "../review-os/learning-signal";
 import type { FailureAwarePersistenceEvidence } from "../review-os/failure-aware-state";
 import type {
   WrongAnswerDetail,
@@ -171,6 +172,23 @@ export function getApp1LearnerAnswer(detail: WrongAnswerDetail) {
   return candidates.find((candidate) => candidate) ?? "";
 }
 
+export function isApp1InitialAnalysisEligible(input: Readonly<{
+  questionText: string;
+  answerText: string;
+  referenceText?: string;
+}>) {
+  return (
+    getAnswerReviewInputQualityIssue({
+      questionText: input.questionText,
+      answerText: input.answerText,
+      referenceText: input.referenceText ?? "",
+      questionFileCount: 0,
+      answerFileCount: 0,
+      referenceFileCount: 0,
+    }) === null
+  );
+}
+
 export function buildApp1StructureSummary(
   detail: WrongAnswerDetail,
 ): App1StructureSummary {
@@ -194,6 +212,8 @@ export function buildApp1StructureSummary(
   );
   const ocrConfirmed =
     !requiresExplicitOcrConfirmation || fields?.ocrConfirmedByLearner === true;
+  const unresolvedLowConfidence =
+    fields?.lowConfidenceFlag === true && fields?.hasManualCorrection !== true;
   const recordedCount = positiveSafeInteger(fields?.pageCount);
   const paragraphCount = answer
     ? answer
@@ -204,7 +224,7 @@ export function buildApp1StructureSummary(
   const pageOrSectionCount = recordedCount ?? Math.max(paragraphCount, sections.length, 1);
   const uncertainty = !ocrConfirmed
     ? "OCR 확인 영수증이 없습니다. 원문을 다시 확인해야 합니다."
-    : fields?.lowConfidenceFlag === true
+    : unresolvedLowConfidence
       ? "낮은 신뢰도의 OCR 구간이 기록되었습니다. 분석 전에 원문과 다시 대조해 주세요."
       : answer
         ? null
@@ -733,7 +753,7 @@ export function evaluateApp1SameSessionRepair(input: Readonly<{
   if (input.deferred) {
     return result("deferred", "복구 입력은 완료로 처리되지 않았고 다음 시도로 미뤄졌습니다.", null);
   }
-  if (!summary.ocrConfirmed || summary.uncertainty?.includes("없습니다")) {
+  if (!summary.ocrConfirmed || summary.uncertainty !== null) {
     return result(
       "blocked_by_ocr_or_source_uncertainty",
       "확인된 OCR/원문 근거가 없어 같은 세션 복구를 확인할 수 없습니다.",
