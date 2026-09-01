@@ -33,10 +33,7 @@ import {
   resolvePendingCaptureSaveOperation,
   type PendingCaptureSaveOperation,
 } from "@/lib/review-os/capture-persistence-controller";
-import type {
-  ReviewQueueCard,
-  WrongAnswerDetail,
-} from "@/lib/review-os/types";
+import type { WrongAnswerDetail } from "@/lib/review-os/types";
 
 type TrustedRepairSubject =
   | "appraisal_practical"
@@ -358,22 +355,27 @@ export function App1CaptureRepairLoop({
 
       pendingSaveRef.current = null;
       setPersistedRecordId(payload.item.id);
-      const queueResponse = await fetch("/api/os/review-queue", {
-        method: "GET",
-        cache: "no-store",
-      });
-      const queuePayload = (await queueResponse.json().catch(() => null)) as
-        | { ok: true; items: ReviewQueueCard[] }
-        | { ok: false }
-        | null;
-      const queueReceipt =
-        queueResponse.ok && queuePayload?.ok && payload.item.updatedAt
-          ? buildApp1NextReviewReceipt(
-              queuePayload.items,
-              payload.item.id,
-              payload.item.updatedAt,
-            )
-          : null;
+      let queueReceipt: App1NextReviewReceipt | null = null;
+      try {
+        const itemResponse = await fetch(
+          `/api/os/items/${encodeURIComponent(payload.item.id)}`,
+          { method: "GET", cache: "no-store" },
+        );
+        const itemPayload = (await itemResponse.json().catch(() => null)) as
+          | { ok: true; detail: WrongAnswerDetail | null }
+          | { ok: false }
+          | null;
+        queueReceipt =
+          itemResponse.ok && itemPayload?.ok && itemPayload.detail
+            ? buildApp1NextReviewReceipt(
+                itemPayload.detail,
+                payload.item.id,
+                receipt,
+              )
+            : null;
+      } catch {
+        queueReceipt = null;
+      }
       if (!queueReceipt) {
         setNextReview(null);
         setPhase("saved_without_queue");
@@ -625,7 +627,11 @@ export function App1CaptureRepairLoop({
       ) : null}
 
       {phase === "saved_without_queue" && persistedRecordId ? (
-        <div role="alert" data-app1-saved-without-queue>
+        <div
+          role="alert"
+          data-app1-saved-without-queue
+          data-app1-persistence-receipt="durable"
+        >
           <V3Surface className="space-y-4">
             <h2 className="v3-type-section ko-keep text-[var(--color-text-primary)]">복구 기록은 저장됐지만 다음 복습을 확인하지 못했습니다</h2>
             <p className="v3-type-body ko-keep text-[var(--color-text-secondary)]">

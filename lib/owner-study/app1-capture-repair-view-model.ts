@@ -4,8 +4,8 @@ import {
   buildCapturePersistenceMetadata,
   type CaptureSaveOperationBinding,
 } from "../review-os/capture-persistence-controller";
+import type { FailureAwarePersistenceEvidence } from "../review-os/failure-aware-state";
 import type {
-  ReviewQueueCard,
   WrongAnswerDetail,
   WrongAnswerItemInput,
 } from "../review-os/types";
@@ -126,6 +126,11 @@ function scalarText(
   return `${normalized.slice(0, maximum - 1).trimEnd()}…`;
 }
 
+function learnerBodyText(value: unknown) {
+  if (typeof value !== "string") return null;
+  return value.replace(/\r\n?/gu, "\n").trim();
+}
+
 function exactConfirmedFields(detail: WrongAnswerDetail) {
   const rawPayload = record(detail.item.rawPayload);
   return record(rawPayload?.user_confirmed_fields);
@@ -136,10 +141,16 @@ function positiveSafeInteger(value: unknown) {
 }
 
 export function getApp1LearnerAnswer(detail: WrongAnswerDetail) {
+  const candidates = [
+    learnerBodyText(detail.item.userAnswer),
+    learnerBodyText(detail.item.rawAnswerText),
+    learnerBodyText(detail.item.rewriteParagraph),
+  ];
   return (
-    scalarText(detail.item.userAnswer, APP1_LIMITS.maximumRepairCharacters) ||
-    scalarText(detail.item.rawAnswerText, APP1_LIMITS.maximumRepairCharacters) ||
-    scalarText(detail.item.rewriteParagraph, APP1_LIMITS.maximumRepairCharacters)
+    candidates.find(
+      (candidate) =>
+        candidate && candidate.length <= APP1_LIMITS.maximumRepairCharacters,
+    ) ?? ""
   );
 }
 
@@ -253,6 +264,236 @@ function normalizedIdentity(value: string) {
   return value.normalize("NFKC").replace(/[^0-9A-Za-z가-힣]+/gu, "").toLowerCase();
 }
 
+type App1RepairTargetFacet =
+  | "evidence_subject"
+  | "authority_or_reason"
+  | "linkage"
+  | "conclusion_scope"
+  | "calculation"
+  | "structure";
+
+const APP1_REPAIR_TARGET_FACETS: Readonly<
+  Record<App1RepairTargetFacet, readonly string[]>
+> = Object.freeze({
+  evidence_subject: Object.freeze(["사례", "사실", "사안", "조건", "자료"]),
+  authority_or_reason: Object.freeze([
+    "논거",
+    "요건",
+    "기준",
+    "근거",
+    "법리",
+    "규범",
+    "조문",
+    "정의",
+  ]),
+  linkage: Object.freeze(["연결", "연계", "결부", "적용", "대입", "이어", "관계"]),
+  conclusion_scope: Object.freeze(["결론", "판단", "범위", "한정"]),
+  calculation: Object.freeze([
+    "계산",
+    "산식",
+    "수식",
+    "단위",
+    "수치",
+    "검산",
+    "부호",
+    "반올림",
+  ]),
+  structure: Object.freeze(["문단", "목차", "구조", "순서"]),
+});
+
+const APP1_REPAIR_COMPLETION_PATTERNS = Object.freeze([
+  /충족(?:하므로|하여(?!야)|했고|했다(?!면)|했습니다(?!면)|됐(?:고|다)|되었(?:고|다)|됨(?:을|이|으로)?)/u,
+  /도출(?:했고|했다(?!면)|했습니다(?!면)|하였(?:고|다)|됐(?:고|다)|되었습니다(?!면)|됨(?:을|이|으로)?)/u,
+  /보강(?:했고|했다(?!면)|했습니다(?!면)|하였(?:고|다)|됐(?:고|다)|되었습니다(?!면)|됨(?:을|이|으로)?)/u,
+  /설명(?:했고|했다(?!면)|했습니다(?!면)|하였(?:고|다)|됐(?:고|다)|되었습니다(?!면)|됨(?:을|이|으로)?)/u,
+  /완료(?:했고|했다(?!면)|했습니다(?!면)|하였(?:고|다)|됐(?:고|다)|되었습니다(?!면)|됨(?:을|이|으로)?)/u,
+  /바로잡(?:고(?!자|싶)|았(?:고|다|습니다))/u,
+  /재작성(?:했고|했다(?!면)|했습니다(?!면)|하였(?:고|다))/u,
+  /재구성(?:했고|했다(?!면)|했습니다(?!면)|하였(?:고|다))/u,
+  /완성(?:했고|했다(?!면)|했습니다(?!면)|하였(?:고|다))/u,
+  /명시(?:했고|했다(?!면)|했습니다(?!면)|하였(?:고|다))/u,
+  /확인(?:했고|했다(?!면)|했습니다(?!면)|하였(?:고|다))/u,
+] as const);
+const APP1_REPAIR_ACTION_ROOTS = Object.freeze([
+  "충족",
+  "도출",
+  "보강",
+  "설명",
+  "완료",
+  "바로잡",
+  "재작성",
+  "재구성",
+  "완성",
+  "명시",
+  "확인",
+] as const);
+const APP1_REPAIR_UNRESOLVED_CUES = Object.freeze([
+  "못",
+  "않",
+  "부족하",
+  "미흡하",
+  "약하",
+  "누락되어있",
+  "누락된채",
+  "빠져",
+  "불충분하",
+  "오류가남",
+  "오류를남",
+  "틀렸",
+  "여전히",
+  "필요하",
+  "해야",
+  "남아",
+  "아직",
+] as const);
+const APP1_REPAIR_DISCUSSION_ONLY_CUES = Object.freeze([
+  "검토항목",
+  "확인대상",
+  "설명대상",
+  "하려고",
+  "하고자",
+  "고자",
+  "하여야",
+  "고싶",
+  "싶다",
+  "원하",
+  "향후",
+  "예정",
+  "계획",
+  "시도",
+  "의도",
+  "목표",
+  "되어야",
+  "되도록",
+  "되면",
+  "할수",
+  "가능",
+] as const);
+const APP1_REPAIR_TARGET_DISPLACEMENT_CUES = Object.freeze([
+  "다른",
+  "별개",
+  "무관",
+  "대신",
+  "반대",
+  "불일치",
+] as const);
+
+const APP1_REPAIR_LEXICAL_STOP_WORDS = new Set([
+  "그리고",
+  "그러나",
+  "대하여",
+  "문장",
+  "부분",
+  "필요",
+  "있습니다",
+  "없습니다",
+  "합니다",
+  "됩니다",
+  "약합니다",
+  "직접",
+  "적으세요",
+]);
+
+const APP1_REPAIR_LEXICAL_SUFFIX =
+  /(으로|에서|에게|까지|부터|처럼|보다|하고|하며|하여|해서|했다|합니다|으세요|하세요|되도록|해야|되었다|되었습니다|의|과|와|을|를|은|는|이|가|에|로)$/u;
+
+type App1RepairTargetProfile = Readonly<{
+  requiredFacets: readonly App1RepairTargetFacet[];
+  literalAnchors: readonly string[];
+  minimumLiteralMatches: number;
+}>;
+
+function lexicalWords(value: string) {
+  return value
+    .normalize("NFKC")
+    .toLowerCase()
+    .split(/[^0-9A-Za-z가-힣]+/gu)
+    .map((word) => word.trim())
+    .filter(
+      (word) =>
+        word.length >= 2 && !APP1_REPAIR_LEXICAL_STOP_WORDS.has(word),
+    )
+    .map((word) => normalizedIdentity(word).replace(APP1_REPAIR_LEXICAL_SUFFIX, ""))
+    .filter(
+      (word) =>
+        word.length >= 2 && !APP1_REPAIR_LEXICAL_STOP_WORDS.has(word),
+    );
+}
+
+function includesAny(identity: string, values: readonly string[]) {
+  return values.some((value) => identity.includes(normalizedIdentity(value)));
+}
+
+function repairFacetForWord(word: string) {
+  return (
+    Object.entries(APP1_REPAIR_TARGET_FACETS) as Array<
+      [App1RepairTargetFacet, readonly string[]]
+    >
+  ).find(([, terms]) =>
+    terms.some((term) => {
+      const identity = normalizedIdentity(term);
+      return word.includes(identity) || identity.includes(word);
+    }),
+  )?.[0] ?? null;
+}
+
+function literalTargetWords(value: string) {
+  return lexicalWords(value).filter(
+    (word) =>
+      repairFacetForWord(word) === null &&
+      !includesAny(word, APP1_REPAIR_ACTION_ROOTS),
+  );
+}
+
+function buildApp1RepairTargetProfile(
+  requestedGap: App1PrimaryGap,
+): App1RepairTargetProfile {
+  const targetMaterial = [requestedGap.gap, requestedGap.repairAction].join(" ");
+  const targetIdentity = normalizedIdentity(targetMaterial);
+  const requiredFacets = (
+    Object.entries(APP1_REPAIR_TARGET_FACETS) as Array<
+      [App1RepairTargetFacet, readonly string[]]
+    >
+  )
+    .filter(([, terms]) => includesAny(targetIdentity, terms))
+    .map(([facet]) => facet);
+  const literalAnchors = Array.from(
+    new Set(literalTargetWords(targetMaterial)),
+  ).slice(0, 8);
+  return Object.freeze({
+    requiredFacets: Object.freeze(requiredFacets),
+    literalAnchors: Object.freeze(literalAnchors),
+    minimumLiteralMatches: Math.min(2, literalAnchors.length),
+  });
+}
+
+function matchesRepairTarget(value: string, profile: App1RepairTargetProfile) {
+  const identity = normalizedIdentity(value);
+  if (!identity || profile.requiredFacets.length === 0) return false;
+  const facetsMatch = profile.requiredFacets.every((facet) =>
+    includesAny(identity, APP1_REPAIR_TARGET_FACETS[facet]),
+  );
+  if (!facetsMatch) return false;
+  const valueWords = new Set(lexicalWords(value));
+  const literalMatches = profile.literalAnchors.filter((anchor) =>
+    valueWords.has(anchor),
+  ).length;
+  return literalMatches >= profile.minimumLiteralMatches;
+}
+
+function isTargetSpecificPositiveEvidence(
+  value: string,
+  profile: App1RepairTargetProfile,
+) {
+  const identity = normalizedIdentity(value);
+  return (
+    matchesRepairTarget(value, profile) &&
+    APP1_REPAIR_COMPLETION_PATTERNS.some((pattern) => pattern.test(identity)) &&
+    !includesAny(identity, APP1_REPAIR_UNRESOLVED_CUES) &&
+    !includesAny(identity, APP1_REPAIR_DISCUSSION_ONLY_CUES) &&
+    !includesAny(identity, APP1_REPAIR_TARGET_DISPLACEMENT_CUES)
+  );
+}
 function observedPrimaryGap(draft: AnswerReviewStructureDraft) {
   return buildAnswerReviewQualityView(draft).primaryFix.gap;
 }
@@ -269,7 +510,7 @@ export function evaluateApp1SameSessionRepair(input: Readonly<{
     input.requestedGap.gap,
     APP1_LIMITS.maximumGapCharacters,
   );
-  const repairText = scalarText(input.repairText, APP1_LIMITS.maximumRepairCharacters);
+  const repairText = learnerBodyText(input.repairText);
   const result = (
     state: App1VerificationState,
     reason: string,
@@ -296,12 +537,13 @@ export function evaluateApp1SameSessionRepair(input: Readonly<{
     );
   }
   if (
+    repairText === null ||
     repairText.length < APP1_LIMITS.minimumRepairCharacters ||
     repairText.length > APP1_LIMITS.maximumRepairCharacters
   ) {
     return result(
       "one_connection_still_missing",
-      `학습자 복구 입력은 ${APP1_LIMITS.minimumRepairCharacters}자 이상이어야 합니다.`,
+      `학습자 복구 입력은 ${APP1_LIMITS.minimumRepairCharacters}자 이상 ${APP1_LIMITS.maximumRepairCharacters}자 이하여야 합니다.`,
       null,
     );
   }
@@ -317,13 +559,24 @@ export function evaluateApp1SameSessionRepair(input: Readonly<{
     observedPrimaryGap(input.repairDraft),
     APP1_LIMITS.maximumGapCharacters,
   );
-  const requestedGapIdentity = normalizedIdentity(requestedGap);
-  const requestedGapStillPresent = input.repairDraft.missingIssueCandidates
-    .some(
-      (candidate) =>
-        normalizedIdentity(candidate) === requestedGapIdentity,
-    );
-  if (requestedGapStillPresent || input.repairDraft.strengths.length === 0) {
+  const targetProfile = buildApp1RepairTargetProfile(input.requestedGap);
+  const learnerSupportsTarget = isTargetSpecificPositiveEvidence(
+    repairText,
+    targetProfile,
+  );
+  const targetSpecificPositiveEvidence = input.repairDraft.strengths.some(
+    (strength) => isTargetSpecificPositiveEvidence(strength, targetProfile),
+  );
+  const targetSpecificConflict = [
+    ...input.repairDraft.missingIssueCandidates,
+    input.repairDraft.weakLogicPoint,
+    input.repairDraft.weakParagraphPoint,
+  ].some((candidate) => matchesRepairTarget(candidate, targetProfile));
+  if (
+    !learnerSupportsTarget ||
+    !targetSpecificPositiveEvidence ||
+    targetSpecificConflict
+  ) {
     return result(
       "one_connection_still_missing",
       "검토 초안에서 요청한 연결이 여전히 남아 있습니다. 복구 입력을 직접 보강해 주세요.",
@@ -346,15 +599,16 @@ export function buildApp1RepairPersistenceInput(input: Readonly<{
   operation: CaptureSaveOperationBinding;
 }>): WrongAnswerItemInput {
   const source = input.detail.item;
-  const repairText = scalarText(input.repairText, APP1_LIMITS.maximumRepairCharacters);
-  if (repairText.length < APP1_LIMITS.minimumRepairCharacters) {
+  const repairText = learnerBodyText(input.repairText);
+  if (!repairText || repairText.length < APP1_LIMITS.minimumRepairCharacters) {
     throw new Error("app1:repair-input-too-short");
+  }
+  if (repairText.length > APP1_LIMITS.maximumRepairCharacters) {
+    throw new Error("app1:repair-input-too-long");
   }
   if (input.verification.requestedGap !== input.gap.gap) {
     throw new Error("app1:verification-gap-mismatch");
   }
-  const nextReviewDate =
-    source.nextReviewDate ?? input.detail.reviewQueue[0]?.dueAt.slice(0, 10) ?? null;
 
   return {
     examName: "감정평가사 2차",
@@ -371,7 +625,7 @@ export function buildApp1RepairPersistenceInput(input: Readonly<{
     userReasonText: input.gap.gap,
     confidence: source.confidence,
     timeSpentSeconds: source.timeSpentSeconds,
-    nextReviewDate,
+
     keyConcepts: source.keyConcepts,
     coreFormula: source.coreFormula,
     comparisonPoint: input.verification.reason,
@@ -379,7 +633,10 @@ export function buildApp1RepairPersistenceInput(input: Readonly<{
     weakStructurePoint: input.gap.whyItMatters,
     rewriteInstruction: input.gap.repairAction,
     referenceStructure: source.referenceStructure,
-    myAnswerSummary: repairText,
+    myAnswerSummary: scalarText(
+      repairText,
+      APP1_LIMITS.maximumSummaryCharacters,
+    ),
     caseSummary: source.caseSummary,
     issueRecall: source.issueRecall,
     outlineDraft: source.outlineDraft,
@@ -412,14 +669,30 @@ export function buildApp1RepairPersistenceInput(input: Readonly<{
 }
 
 export function buildApp1NextReviewReceipt(
-  queue: readonly ReviewQueueCard[],
+  detail: WrongAnswerDetail,
   itemId: string,
-  persistedAt: string,
+  persistence: FailureAwarePersistenceEvidence,
 ): App1NextReviewReceipt | null {
-  const match = queue.find((entry) => entry.itemId === itemId);
-  if (!match || !match.queueId || !match.dueAt) return null;
+  const uuid =
+    /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/iu;
+  const confirmedFields = exactConfirmedFields(detail);
+  if (
+    persistence.kind !== "durable_record" ||
+    persistence.recordId !== itemId ||
+    detail.item.id !== itemId ||
+    detail.item.updatedAt !== persistence.persistedAt ||
+    confirmedFields?.persistence_operation_id !== persistence.operationId ||
+    confirmedFields?.persistence_work_revision_id !== persistence.workRevisionId ||
+    !uuid.test(itemId)
+  ) {
+    return null;
+  }
+  const matches = detail.reviewQueue.filter((entry) => entry.itemId === itemId);
+  if (matches.length !== 1) return null;
+  const [match] = matches;
+  if (!uuid.test(match.queueId) || !match.dueAt) return null;
   const due = Date.parse(match.dueAt);
-  const persisted = Date.parse(persistedAt);
+  const persisted = Date.parse(persistence.persistedAt);
   if (!Number.isFinite(due) || !Number.isFinite(persisted) || due < persisted) {
     return null;
   }
@@ -442,7 +715,6 @@ export function buildApp1NextReviewReceipt(
         : "답을 보지 않고 다시 풀기",
   });
 }
-
 export function app1GuidedRepairHref(subject: string) {
   if (subject.includes("이론")) return "/app/c3r-t";
   if (subject.includes("법규")) return "/app/c3r-l";

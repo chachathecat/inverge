@@ -12,7 +12,7 @@ const QUEUE_ID = "33333333-3333-4333-8333-333333333333";
 
 const originalGap = "사례 사실과 논거의 연결이 약합니다.";
 const syntheticRepair =
-  "합성 사례의 사실 A는 위 논거의 요건 B를 충족하므로 결론 C에 이른다고 내가 직접 연결했다.";
+  "합성 사례의 사실 A는 위 논거의 요건 B를 충족하므로 결론 C에 이른다고 내가 직접 연결했다.\n\n둘째 문단에서 그 적용 이유를 직접 설명했다.";
 
 const syntheticDetail = {
   item: {
@@ -71,7 +71,60 @@ const syntheticDetail = {
   reviewQueue: [],
 };
 
-function structureDraft(gap: string) {
+function repairQueueCard() {
+  return {
+    queueId: QUEUE_ID,
+    itemId: REPAIR_ITEM_ID,
+    examName: "감정평가사 2차",
+    subjectLabel: "감정평가이론",
+    problemTitle: "합성 문제 · 직접 복구",
+    topicTag: "합성 태그",
+    mistakeType: "연결 부족",
+    reviewReason: "독립 복습",
+    priorityScore: 1,
+    dueAt: "2026-08-30T02:00:00.000Z",
+    recurrenceCount: 0,
+    confidence: "중간",
+    timeSpentSeconds: 600,
+    createdFromCapture: true,
+    itemCreatedAt: "2026-08-29T02:00:00.000Z",
+  };
+}
+
+type RepairPersistenceBinding = Readonly<{
+  operationId: string;
+  workRevisionId: string;
+}>;
+
+function syntheticRepairDetail(binding: RepairPersistenceBinding) {
+  return {
+    ...syntheticDetail,
+    item: {
+      ...syntheticDetail.item,
+      id: REPAIR_ITEM_ID,
+      dedupeKey: "synthetic-app1-e2e-repair",
+      rawAnswerText: syntheticRepair,
+      rewriteParagraph: syntheticRepair,
+      userAnswer: syntheticRepair,
+      nextReviewDate: "2026-08-30",
+      updatedAt: "2026-08-29T02:00:00.000Z",
+      rawPayload: {
+        user_confirmed_fields: {
+          persistence_operation_id: binding.operationId,
+          persistence_work_revision_id: binding.workRevisionId,
+        },
+      },
+    },
+    reviewQueue: [repairQueueCard()],
+  };
+}
+
+function structureDraft({
+  gap = originalGap,
+  strengths = ["정의와 핵심 논거가 확인됩니다."],
+  weakParagraphPoint = "사례 사실을 논거에 연결하는 한 문장을 직접 적으세요.",
+  weakLogicPoint = "논거에서 사례로 이어지는 연결을 확인합니다.",
+} = {}) {
   return {
     questionSummary: "합성 문제의 구조를 검토합니다.",
     coreConcepts: ["정의", "논거", "적용"],
@@ -79,10 +132,10 @@ function structureDraft(gap: string) {
     userAnswerSummary: "정의와 논거가 있고 적용 연결을 확인합니다.",
     userAnswerStructure: "정의 → 논거 → 적용",
     referenceStructure: "정의 → 논거 → 적용 → 결론",
-    strengths: ["정의와 핵심 논거가 확인됩니다."],
+    strengths,
     missingIssueCandidates: [gap],
-    weakParagraphPoint: "사례 사실을 논거에 연결하는 한 문장을 직접 적으세요.",
-    weakLogicPoint: "논거에서 사례로 이어지는 연결을 확인합니다.",
+    weakParagraphPoint,
+    weakLogicPoint,
     rewriteTarget: "적용 연결 문장",
     rewriteDraftSuggestion: "학습자가 직접 작성해야 합니다.",
     nextAction: "사례 사실과 논거를 한 문장으로 직접 연결하세요.",
@@ -213,6 +266,10 @@ function classifyItemSavePayload(value: unknown): ItemSaveClass {
     confirmed.app1_same_session_only === true &&
     confirmed.app1_mastery_created === false &&
     confirmed.app1_transfer_created === false &&
+    value.rawAnswerText === syntheticRepair &&
+    value.rewriteParagraph === syntheticRepair &&
+    value.userAnswer === syntheticRepair &&
+    !Object.prototype.hasOwnProperty.call(value, "nextReviewDate") &&
     hasPersistenceBinding;
   if (isRepairSave) return "app1_repair_save";
 
@@ -241,7 +298,13 @@ function classifyItemSavePayload(value: unknown): ItemSaveClass {
 
 async function installSyntheticSeams(
   context: BrowserContext,
-  { exerciseFailures }: { exerciseFailures: boolean },
+  {
+    exerciseFailures,
+    failRepairItemDetail = false,
+  }: {
+    exerciseFailures: boolean;
+    failRepairItemDetail?: boolean;
+  },
 ) {
   let ocrCount = 0;
   let structureCount = 0;
@@ -251,6 +314,9 @@ async function installSyntheticSeams(
   let unknownItemSaveCount = 0;
   let unknownItemResponseCount = 0;
   let sourceLoadCount = 0;
+  let repairItemLoadCount = 0;
+  let queuePresentationLoadCount = 0;
+  let durableRepairBinding: RepairPersistenceBinding | null = null;
   const initialCaptureResponseClasses: InitialCaptureResponseClass[] = [];
   const repairResponseClasses: RepairResponseClass[] = [];
   const mutations: string[] = [];
@@ -262,6 +328,34 @@ async function installSyntheticSeams(
     if (request.method() === "GET" && url.pathname === `/api/os/items/${SOURCE_ITEM_ID}`) {
       sourceLoadCount += 1;
       await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ ok: true, detail: syntheticDetail }) });
+      return;
+    }
+    if (request.method() === "GET" && url.pathname === `/api/os/items/${REPAIR_ITEM_ID}`) {
+      repairItemLoadCount += 1;
+      if (failRepairItemDetail) {
+        await route.fulfill({
+          status: 503,
+          contentType: "application/json",
+          body: JSON.stringify({ ok: false, error: "synthetic_item_detail_unavailable" }),
+        });
+        return;
+      }
+      if (!durableRepairBinding) {
+        await route.fulfill({
+          status: 409,
+          contentType: "application/json",
+          body: JSON.stringify({ ok: false, error: "APP1_E2E_MISSING_DURABLE_BINDING" }),
+        });
+        return;
+      }
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          ok: true,
+          detail: syntheticRepairDetail(durableRepairBinding),
+        }),
+      });
       return;
     }
     if (request.method() === "POST" && url.pathname === "/api/inverge/ocr") {
@@ -297,20 +391,32 @@ async function installSyntheticSeams(
         });
         return;
       }
+      const paraphrasedUnresolved =
+        exerciseFailures && structureCount === 5;
       const repairedReview = exerciseFailures
-        ? structureCount >= 5
+        ? structureCount >= 6
         : structureCount >= 2;
+      const draft = paraphrasedUnresolved
+        ? structureDraft({
+            gap: "사안의 구체적 사실을 근거 기준과 결부하는 설명이 여전히 빠져 있습니다.",
+            strengths: ["정의와 핵심 논거가 확인됩니다."],
+            weakParagraphPoint: "결론 문장의 범위를 한정해 다시 적으세요.",
+            weakLogicPoint: "결론 범위의 한정 근거를 확인해야 합니다.",
+          })
+        : repairedReview
+          ? structureDraft({
+              gap: "결론 문장의 범위를 한정할 필요가 있습니다.",
+              strengths: [
+                "사례 사실을 논거의 요건에 연결하여 결론을 도출했습니다.",
+              ],
+              weakParagraphPoint: "결론 문장의 범위를 한정해 다시 적으세요.",
+              weakLogicPoint: "결론 범위의 한정 근거를 확인해야 합니다.",
+            })
+          : structureDraft();
       await route.fulfill({
         status: 200,
         contentType: "application/json",
-        body: JSON.stringify({
-          ok: true,
-          draft: structureDraft(
-            repairedReview
-              ? "결론의 범위를 한정할 필요가 있습니다."
-              : originalGap,
-          ),
-        }),
+        body: JSON.stringify({ ok: true, draft }),
       });
       return;
     }
@@ -410,6 +516,10 @@ async function installSyntheticSeams(
         });
         return;
       }
+      durableRepairBinding = {
+        operationId: confirmed.persistence_operation_id as string,
+        workRevisionId: confirmed.persistence_work_revision_id as string,
+      };
       repairResponseClasses.push("synthetic_durable_success");
       await route.fulfill({
         status: 200,
@@ -431,29 +541,11 @@ async function installSyntheticSeams(
       return;
     }
     if (request.method() === "GET" && url.pathname === "/api/os/review-queue") {
+      queuePresentationLoadCount += 1;
       await route.fulfill({
         status: 200,
         contentType: "application/json",
-        body: JSON.stringify({
-          ok: true,
-          items: [{
-            queueId: QUEUE_ID,
-            itemId: REPAIR_ITEM_ID,
-            examName: "감정평가사 2차",
-            subjectLabel: "감정평가이론",
-            problemTitle: "합성 문제 · 직접 복구",
-            topicTag: "합성 태그",
-            mistakeType: "연결 부족",
-            reviewReason: "독립 복습",
-            priorityScore: 1,
-            dueAt: "2026-08-30T02:00:00.000Z",
-            recurrenceCount: 0,
-            confidence: "중간",
-            timeSpentSeconds: 600,
-            createdFromCapture: true,
-            itemCreatedAt: "2026-08-29T02:00:00.000Z",
-          }],
-        }),
+        body: JSON.stringify({ ok: true, items: [] }),
       });
       return;
     }
@@ -471,6 +563,8 @@ async function installSyntheticSeams(
     initialCaptureResponseClasses: () => [...initialCaptureResponseClasses],
     repairResponseClasses: () => [...repairResponseClasses],
     sourceLoadCount: () => sourceLoadCount,
+    repairItemLoadCount: () => repairItemLoadCount,
+    queuePresentationLoadCount: () => queuePresentationLoadCount,
   };
 }
 
@@ -634,6 +728,15 @@ test("synthetic Owner Capture → one-gap direct repair → durable next review 
       await expect(repair).toHaveValue(syntheticRepair);
       await expect(page.locator("[data-app1-completed]")).toHaveCount(0);
       await page.getByRole("button", { name: "복구 확인" }).click();
+      await expect(
+        page.getByText("연결 1개가 아직 남아 있습니다"),
+      ).toBeVisible();
+      await expect(
+        page.getByText("이 세션의 요청한 복구 1개가 확인되었습니다"),
+      ).toHaveCount(0);
+      await page.getByRole("button", { name: "연결 1개 보강하기" }).click();
+      await expect(repair).toHaveValue(syntheticRepair);
+      await page.getByRole("button", { name: "복구 확인" }).click();
     }
 
     await expect(page.getByText("이 세션의 요청한 복구 1개가 확인되었습니다")).toBeVisible();
@@ -675,7 +778,7 @@ test("synthetic Owner Capture → one-gap direct repair → durable next review 
     await expect(page.locator('[data-app1-queue-receipt="valid"]')).toBeVisible();
     await expect(page.getByText(/답을 보지 않고 보강한 연결을 다시 한 번 작성하기/)).toBeVisible();
     expect(seams.ocrCount()).toBe(viewport.exerciseFailures ? 2 : 1);
-    expect(seams.structureCount()).toBe(viewport.exerciseFailures ? 5 : 2);
+    expect(seams.structureCount()).toBe(viewport.exerciseFailures ? 6 : 2);
     expect(seams.repairSaveCount()).toBe(viewport.exerciseFailures ? 3 : 1);
     expect(seams.repairResponseClasses()).toEqual(
       viewport.exerciseFailures
@@ -703,6 +806,8 @@ test("synthetic Owner Capture → one-gap direct repair → durable next review 
         seams.unknownItemSaveCount(),
     );
     expect(seams.sourceLoadCount()).toBeGreaterThanOrEqual(viewport.exerciseFailures ? 2 : 1);
+    expect(seams.repairItemLoadCount()).toBe(1);
+    expect(seams.queuePresentationLoadCount()).toBe(0);
     expect(new Set(seams.mutations.map((entry) => entry.replace(/^POST /u, "")))).toEqual(
       new Set(["/api/inverge/ocr", "/api/answer-review/structure", "/api/os/items"]),
     );
@@ -713,4 +818,51 @@ test("synthetic Owner Capture → one-gap direct repair → durable next review 
     await assertA11y(page);
     await context.close();
   }
+
+  const queueFailureContext = await ownerContext(browser, {
+    width: 390,
+    height: 844,
+  });
+  const queueFailureSeams = await installSyntheticSeams(queueFailureContext, {
+    exerciseFailures: false,
+    failRepairItemDetail: true,
+  });
+  const queueFailurePage = await queueFailureContext.newPage();
+  await completeCapture(queueFailurePage, "text", false);
+  await analyzeToDirectRepair(queueFailurePage, false);
+  await queueFailurePage.getByLabel("내 복구 입력").fill(syntheticRepair);
+  await queueFailurePage.getByRole("button", { name: "복구 확인" }).click();
+  await expect(
+    queueFailurePage.getByText("이 세션의 요청한 복구 1개가 확인되었습니다"),
+  ).toBeVisible();
+  await queueFailurePage
+    .getByRole("button", { name: "복구 결과 저장하고 다음 복습 만들기" })
+    .click();
+  await expect(
+    queueFailurePage.getByRole("heading", {
+      name: "복구 기록은 저장됐지만 다음 복습을 확인하지 못했습니다",
+    }),
+  ).toBeVisible();
+  await expect(
+    queueFailurePage.getByRole("link", { name: "저장 기록 확인" }),
+  ).toHaveAttribute(
+    "href",
+    `/app/items/${REPAIR_ITEM_ID}?mode=second`,
+  );
+  await expect(queueFailurePage.locator("[data-app1-completed]")).toHaveCount(0);
+  await expect(
+    queueFailurePage.locator('[data-app1-persistence-receipt="durable"]'),
+  ).toHaveCount(1);
+  await expect(
+    queueFailurePage.locator('[data-app1-queue-receipt="valid"]'),
+  ).toHaveCount(0);
+  await expect(queueFailurePage.locator("[data-app1-error]")).toHaveCount(0);
+  expect(queueFailureSeams.repairSaveCount()).toBe(1);
+  expect(queueFailureSeams.repairResponseClasses()).toEqual([
+    "synthetic_durable_success",
+  ]);
+  expect(queueFailureSeams.repairItemLoadCount()).toBe(1);
+  expect(queueFailureSeams.queuePresentationLoadCount()).toBe(0);
+  expect(queueFailureSeams.unknownItemSaveCount()).toBe(0);
+  await queueFailureContext.close();
 });

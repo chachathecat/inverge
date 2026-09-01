@@ -101,7 +101,14 @@ function syntheticDetail(overrides = {}) {
   };
 }
 
-function draft({ gap = "사례 사실과 논거의 연결이 약합니다.", strength = "정의와 핵심 논거가 확인됩니다." } = {}) {
+function draft({
+  gap = "사례 사실과 논거의 연결이 약합니다.",
+  strength = "정의와 핵심 논거가 확인됩니다.",
+  strengths,
+  missingIssueCandidates,
+  weakParagraphPoint = "사례 사실을 논거에 연결하는 한 문장을 직접 적으세요.",
+  weakLogicPoint = "논거에서 사례로 이어지는 연결이 필요합니다.",
+} = {}) {
   return {
     questionSummary: "합성 문제의 구조를 검토합니다.",
     coreConcepts: ["정의", "논거", "적용"],
@@ -109,10 +116,10 @@ function draft({ gap = "사례 사실과 논거의 연결이 약합니다.", str
     userAnswerSummary: "정의와 논거가 있고 적용 연결이 약합니다.",
     userAnswerStructure: "정의 → 논거",
     referenceStructure: "정의 → 논거 → 적용 → 결론",
-    strengths: strength ? [strength] : [],
-    missingIssueCandidates: [gap],
-    weakParagraphPoint: "사례 사실을 논거에 연결하는 한 문장을 직접 적으세요.",
-    weakLogicPoint: "논거에서 사례로 이어지는 연결이 필요합니다.",
+    strengths: strengths ?? (strength ? [strength] : []),
+    missingIssueCandidates: missingIssueCandidates ?? [gap],
+    weakParagraphPoint,
+    weakLogicPoint,
     rewriteTarget: "적용 연결 문장",
     rewriteDraftSuggestion: "학습자가 직접 작성해야 합니다.",
     nextAction: "사례 사실과 논거를 한 문장으로 직접 연결하세요.",
@@ -122,6 +129,18 @@ function draft({ gap = "사례 사실과 논거의 연결이 약합니다.", str
     stepByStepExplanation: ["논거 확인", "사례 사실 확인", "직접 연결"],
     examAnswerHints: ["적용 연결을 확인합니다."],
   };
+}
+
+function resolvedTargetDraft({
+  strength = "사례 사실을 논거의 요건에 연결하여 결론을 도출했습니다.",
+} = {}) {
+  return draft({
+    gap: "결론 문장의 범위를 한정할 필요가 있습니다.",
+    strengths: [strength],
+    missingIssueCandidates: ["결론 문장의 범위를 한정할 필요가 있습니다."],
+    weakParagraphPoint: "결론 문장의 범위를 한정해 다시 적으세요.",
+    weakLogicPoint: "결론 범위의 한정 근거를 확인해야 합니다.",
+  });
 }
 
 test("APP1-CONTRACT-001 freezes the exact 13-path Owner-only/default-off candidate", async () => {
@@ -193,58 +212,244 @@ test("APP1-VM-002 emits exactly one anchored gap and one direct action", () => {
   assert.equal(Object.keys(gap).filter((key) => key === "gap").length, 1);
 });
 
-test("APP1-VM-003 requires learner-entered repair and reports honest same-session states", () => {
+test("APP1-VM-003 requires target-specific learner and draft evidence without model-wording authority", () => {
   const detail = syntheticDetail();
   const requestedGap = buildApp1PrimaryGap(detail, draft());
-  const tooShort = evaluateApp1SameSessionRepair({ detail, requestedGap, repairText: "짧은 입력", repairDraft: null });
+  const targetRepair =
+    "사례의 합성 사실 A는 위 논거의 요건 B를 충족하므로 결론 C에 이른다고 직접 연결했다.";
+  const tooShort = evaluateApp1SameSessionRepair({
+    detail,
+    requestedGap,
+    repairText: "짧은 입력",
+    repairDraft: null,
+  });
   assert.equal(tooShort.state, "one_connection_still_missing");
+
+  const exactDefectUnchanged = evaluateApp1SameSessionRepair({
+    detail,
+    requestedGap,
+    repairText: "사례 사실과 논거의 연결을 시도했지만 여전히 부족하여 제대로 보강하지 못했다.",
+    repairDraft: draft({ strength: "" }),
+  });
+  const paraphrasedDefectUnchanged = evaluateApp1SameSessionRepair({
+    detail,
+    requestedGap,
+    repairText: targetRepair,
+    repairDraft: draft({
+      gap: "사안의 구체적 사실을 근거 기준과 결부하는 설명이 여전히 빠져 있습니다.",
+      strength: "",
+    }),
+  });
+  const genericStrengthWithUnresolvedDefect = evaluateApp1SameSessionRepair({
+    detail,
+    requestedGap,
+    repairText: targetRepair,
+    repairDraft: draft(),
+  });
+  const modelOnlyTargetClaim = evaluateApp1SameSessionRepair({
+    detail,
+    requestedGap,
+    repairText: "결론 문장의 범위를 한정해 표현을 명확히 보강했다.",
+    repairDraft: resolvedTargetDraft(),
+  });
+  const differentSameFacetRepair = evaluateApp1SameSessionRepair({
+    detail,
+    requestedGap,
+    repairText:
+      "다른 사례 사실을 별개 논거 기준에 적용해 결론을 도출했다고 설명했다.",
+    repairDraft: resolvedTargetDraft(),
+  });
+  const discussionOnlyRepair = evaluateApp1SameSessionRepair({
+    detail,
+    requestedGap,
+    repairText:
+      "사례 사실과 논거 연결은 검토 항목으로 명시하고 확인 대상으로 설명했다.",
+    repairDraft: resolvedTargetDraft({
+      strength: "사례 사실과 논거 연결을 검토 항목으로 명시하고 확인 대상으로 설명했습니다.",
+    }),
+  });
+  const intendedButIncompleteRepair = evaluateApp1SameSessionRepair({
+    detail,
+    requestedGap,
+    repairText:
+      "사례 사실과 논거의 연결을 향후 보강하려고 한다고 직접 설명했다.",
+    repairDraft: resolvedTargetDraft({
+      strength: "사례 사실과 논거의 연결을 보강하고자 계획했습니다.",
+    }),
+  });
+  const conditionalPassiveRepair = evaluateApp1SameSessionRepair({
+    detail,
+    requestedGap,
+    repairText:
+      "사례 사실과 논거의 연결이 보강되어야 한다고 설명했다.",
+    repairDraft: resolvedTargetDraft({
+      strength: "사례 사실과 논거의 연결이 보강되도록 설명했습니다.",
+    }),
+  });
+  const activeObligationOrDesire = evaluateApp1SameSessionRepair({
+    detail,
+    requestedGap,
+    repairText:
+      "사례 사실을 논거 요건에 충족하여야 하며 연결을 바로잡고 싶다고 설명했다.",
+    repairDraft: resolvedTargetDraft({
+      strength: "사례 사실을 논거에 연결하여야 하며 바로잡고 싶다고 설명했습니다.",
+    }),
+  });
+  const explainedButUnrepaired = evaluateApp1SameSessionRepair({
+    detail,
+    requestedGap,
+    repairText:
+      "사례 사실과 논거의 연결을 보강하지 못한 이유를 설명했다.",
+    repairDraft: resolvedTargetDraft({
+      strength: "사례 사실과 논거의 연결을 보강하지 못했다고 설명했습니다.",
+    }),
+  });
+  const namedTargetGap = {
+    ...requestedGap,
+    gap: "Alpha 사례 사실과 Beta 논거의 연결이 약합니다.",
+    repairAction: "Alpha 사실을 Beta 논거에 연결해 보강하세요.",
+  };
+  const wrongNamedTargetRepair = evaluateApp1SameSessionRepair({
+    detail,
+    requestedGap: namedTargetGap,
+    repairText:
+      "Gamma 사례 사실을 Delta 논거 기준에 연결해 결론을 도출하고 보강했다.",
+    repairDraft: resolvedTargetDraft({
+      strength: "Gamma 사실을 Delta 논거에 연결해 결론을 도출하고 보강했습니다.",
+    }),
+  });
+  const ambiguousRepair = evaluateApp1SameSessionRepair({
+    detail,
+    requestedGap,
+    repairText: targetRepair,
+    repairDraft: draft({
+      gap: "사안의 사실과 논거 기준의 연계가 아직 충분하지 않습니다.",
+      strengths: ["사례 사실을 논거의 요건에 연결하여 결론을 도출했습니다."],
+      weakParagraphPoint: "결론 문장의 범위를 한정해 다시 적으세요.",
+      weakLogicPoint: "결론 범위의 한정 근거를 확인해야 합니다.",
+    }),
+  });
+
+  for (const verification of [
+    exactDefectUnchanged,
+    paraphrasedDefectUnchanged,
+    genericStrengthWithUnresolvedDefect,
+    modelOnlyTargetClaim,
+    differentSameFacetRepair,
+    discussionOnlyRepair,
+    intendedButIncompleteRepair,
+    conditionalPassiveRepair,
+    activeObligationOrDesire,
+    explainedButUnrepaired,
+    wrongNamedTargetRepair,
+    ambiguousRepair,
+  ]) {
+    assert.equal(verification.state, "one_connection_still_missing");
+    assert.equal(verification.masteryCreated, false);
+    assert.equal(verification.transferCreated, false);
+  }
 
   const confirmed = evaluateApp1SameSessionRepair({
     detail,
     requestedGap,
-    repairText: "사례의 합성 사실 A는 위 논거의 요건 B를 충족하므로 결론 C에 이른다고 직접 연결했다.",
-    repairDraft: draft({ gap: "결론 문장의 범위를 한정할 필요가 있습니다." }),
+    repairText: targetRepair,
+    repairDraft: resolvedTargetDraft(),
   });
   assert.equal(confirmed.state, "repair_confirmed_for_this_session");
   assert.equal(confirmed.sameSessionOnly, true);
   assert.equal(confirmed.masteryCreated, false);
   assert.equal(confirmed.transferCreated, false);
 
-  const unchanged = evaluateApp1SameSessionRepair({
+  const equivalentWording = evaluateApp1SameSessionRepair({
     detail,
     requestedGap,
-    repairText: "사례의 합성 사실 A를 논거의 기준 B와 연결하려 했으나 여전히 연결이 충분하지 않은 입력이다.",
-    repairDraft: draft(),
+    repairText:
+      "사안의 구체적 사실을 근거 기준에 적용하여 판단을 도출했다고 직접 설명했다.",
+    repairDraft: resolvedTargetDraft({
+      strength: "사안의 사실을 기준 근거와 연계하여 판단을 도출했습니다.",
+    }),
   });
-  assert.equal(unchanged.state, "one_connection_still_missing");
+  assert.equal(equivalentWording.state, "repair_confirmed_for_this_session");
 
-  const shiftedPrimary = draft({
-    gap: "결론 문장의 범위를 한정할 필요가 있습니다.",
+  const singleFacetGap = {
+    ...requestedGap,
+    gap: "계산 단위가 약합니다.",
+    repairAction: "산식 단위를 검산해 바로잡으세요.",
+  };
+  const singleFacetEquivalent = evaluateApp1SameSessionRepair({
+    detail,
+    requestedGap: singleFacetGap,
+    repairText: "산식 수치의 단위를 바로잡고 검산을 완료했다고 직접 설명했다.",
+    repairDraft: draft({
+      gap: "문단 구조를 보강할 필요가 있습니다.",
+      strengths: ["수식의 단위를 바로잡고 검산을 완료했습니다."],
+      missingIssueCandidates: ["문단 구조를 보강할 필요가 있습니다."],
+      weakParagraphPoint: "문단 순서를 다시 확인하세요.",
+      weakLogicPoint: "구조 순서를 확인해야 합니다.",
+    }),
   });
-  shiftedPrimary.missingIssueCandidates.push(requestedGap.gap);
-  const originalGapStillPresent = evaluateApp1SameSessionRepair({
+  assert.equal(singleFacetEquivalent.state, "repair_confirmed_for_this_session");
+
+  const resolvedNegativeNoun = evaluateApp1SameSessionRepair({
+    detail,
+    requestedGap: singleFacetGap,
+    repairText: "계산 오류를 바로잡고 산식 단위 검산을 완료했다고 직접 설명했다.",
+    repairDraft: draft({
+      gap: "문단 구조를 보강할 필요가 있습니다.",
+      strengths: ["계산 오류를 바로잡고 수식 단위 검산을 완료했습니다."],
+      missingIssueCandidates: ["문단 구조를 보강할 필요가 있습니다."],
+      weakParagraphPoint: "문단 순서를 다시 확인하세요.",
+      weakLogicPoint: "구조 순서를 확인해야 합니다.",
+    }),
+  });
+  assert.equal(resolvedNegativeNoun.state, "repair_confirmed_for_this_session");
+
+  const resolvedHistoricalDefectNouns = evaluateApp1SameSessionRepair({
     detail,
     requestedGap,
-    repairText: "사례의 합성 사실 A는 위 논거의 요건 B를 충족하므로 결론 C에 이른다고 직접 연결했다.",
-    repairDraft: shiftedPrimary,
+    repairText:
+      "부족했던 사례 사실과 논거 연결을 보강했다고 직접 설명했다.",
+    repairDraft: resolvedTargetDraft({
+      strength: "누락된 사례 사실과 논거 연결을 보강했다고 명시했습니다.",
+    }),
   });
   assert.equal(
-    originalGapStillPresent.state,
-    "one_connection_still_missing",
-    "moving the requested gap behind a new primary gap cannot confirm repair",
+    resolvedHistoricalDefectNouns.state,
+    "repair_confirmed_for_this_session",
   );
-  const shiftedPayload = buildApp1RepairPersistenceInput({
+
+  const correctNamedTargetRepair = evaluateApp1SameSessionRepair({
+    detail,
+    requestedGap: namedTargetGap,
+    repairText:
+      "Alpha 사례 사실을 Beta 논거 기준에 연결해 결론을 도출하고 보강했다.",
+    repairDraft: resolvedTargetDraft({
+      strength: "Alpha 사실을 Beta 논거에 연결해 결론을 도출하고 보강했습니다.",
+    }),
+  });
+  assert.equal(correctNamedTargetRepair.state, "repair_confirmed_for_this_session");
+
+  const ambiguousPayload = buildApp1RepairPersistenceInput({
     detail,
     gap: requestedGap,
-    repairText: "사례의 합성 사실 A는 위 논거의 요건 B를 충족하므로 결론 C에 이른다고 직접 연결했다.",
-    verification: originalGapStillPresent,
+    repairText: targetRepair,
+    verification: ambiguousRepair,
     operation: {
       operationId: "88888888-8888-4888-8888-888888888888",
       workRevisionId: "99999999-9999-4999-8999-999999999999",
     },
   });
-  assert.equal(shiftedPayload.rewriteCompleted, false);
-  assert.equal(evaluateApp1SameSessionRepair({ detail, requestedGap, repairText: "직접 작성한 보류 입력입니다. 충분한 길이를 갖습니다.", repairDraft: null, deferred: true }).state, "deferred");
+  assert.equal(ambiguousPayload.rewriteCompleted, false);
+  assert.equal(
+    evaluateApp1SameSessionRepair({
+      detail,
+      requestedGap,
+      repairText: "직접 작성한 보류 입력입니다. 충분한 길이를 갖습니다.",
+      repairDraft: null,
+      deferred: true,
+    }).state,
+    "deferred",
+  );
   assert.deepEqual(APP1_VERIFICATION_STATES, [
     "repair_confirmed_for_this_session",
     "one_connection_still_missing",
@@ -309,16 +514,19 @@ test("APP1-VM-003B blocks uncertain OCR/source evidence before successful repair
 test("APP1-VM-004 persists through the existing learner-private receipt binding only", () => {
   const detail = syntheticDetail();
   const requestedGap = buildApp1PrimaryGap(detail, draft());
+  const repairText =
+    "사례의 합성 사실 A는 위 논거의 요건 B를 충족하므로 결론 C에 이른다고 직접 연결했다.";
   const verification = evaluateApp1SameSessionRepair({
     detail,
     requestedGap,
-    repairText: "사례의 합성 사실 A는 위 논거의 요건 B를 충족하므로 결론 C에 이른다고 직접 연결했다.",
-    repairDraft: draft({ gap: "결론 문장의 범위를 한정할 필요가 있습니다." }),
+    repairText,
+    repairDraft: resolvedTargetDraft(),
   });
+  assert.equal(verification.state, "repair_confirmed_for_this_session");
   const payload = buildApp1RepairPersistenceInput({
     detail,
     gap: requestedGap,
-    repairText: "사례의 합성 사실 A는 위 논거의 요건 B를 충족하므로 결론 C에 이른다고 직접 연결했다.",
+    repairText,
     verification,
     operation: {
       operationId: "33333333-3333-4333-8333-333333333333",
@@ -332,15 +540,151 @@ test("APP1-VM-004 persists through the existing learner-private receipt binding 
   assert.equal(payload.extractionPayload.user_confirmed_fields.app1_transfer_created, false);
   assert.equal(payload.extractionPayload.user_confirmed_fields.persistence_operation_id, "33333333-3333-4333-8333-333333333333");
   assert.equal(payload.extractionPayload.user_confirmed_fields.persistence_work_revision_id, "44444444-4444-4444-8444-444444444444");
+  assert.equal("nextReviewDate" in payload, false);
   assert.equal("releaseStatus" in payload, false);
   assert.equal("mastery" in payload, false);
   assert.equal("transfer" in payload, false);
 });
 
-test("APP1-VM-005 announces a next review only from an exact durable queue receipt", () => {
+test("APP1-VM-004A preserves multiline Theory, Law and Practice bodies without inheriting stale schedules", () => {
+  const cases = [
+    {
+      subjectLabel: "감정평가이론",
+      sourceType: "text",
+      repairText:
+        "  사례 사실 A를 논거의 요건 B에 연결하여 결론을 도출했다.\r\n\r\n둘째 문단에서 그 적용 이유를 직접 설명했다.  ",
+      expected:
+        "사례 사실 A를 논거의 요건 B에 연결하여 결론을 도출했다.\n\n둘째 문단에서 그 적용 이유를 직접 설명했다.",
+      nextReviewDate: "2020-01-01",
+      reviewQueue: [],
+    },
+    {
+      subjectLabel: "감정평가 및 보상법규",
+      sourceType: "text",
+      repairText:
+        "사안의 사실을 법리 기준에 적용해 결론을 도출했다.\r\n\r\n조문 근거와 사안 적용을 별도 문단으로 유지했다.",
+      expected:
+        "사안의 사실을 법리 기준에 적용해 결론을 도출했다.\n\n조문 근거와 사안 적용을 별도 문단으로 유지했다.",
+      nextReviewDate: null,
+      reviewQueue: [{
+        queueId: "55555555-5555-4555-8555-555555555555",
+        itemId: "11111111-1111-4111-8111-111111111111",
+        dueAt: "2020-01-01T00:00:00.000Z",
+      }],
+    },
+    {
+      subjectLabel: "감정평가실무",
+      sourceType: "text",
+      repairText:
+        "사례 사실 A를 계산 기준 B에 대입해 연결했다.\r\nNOI = 100 - 20\r\nV = NOI / 0.05\r\n검산: 단위와 부호를 확인했다.",
+      expected:
+        "사례 사실 A를 계산 기준 B에 대입해 연결했다.\nNOI = 100 - 20\nV = NOI / 0.05\n검산: 단위와 부호를 확인했다.",
+      nextReviewDate: "2020-01-01",
+      reviewQueue: [{
+        queueId: "55555555-5555-4555-8555-555555555555",
+        itemId: "11111111-1111-4111-8111-111111111111",
+        dueAt: "2020-01-01T00:00:00.000Z",
+      }],
+    },
+  ];
+
+  for (const fixture of cases) {
+    const detail = syntheticDetail({
+      item: {
+        subjectLabel: fixture.subjectLabel,
+        sourceType: fixture.sourceType,
+        nextReviewDate: fixture.nextReviewDate,
+      },
+      reviewQueue: fixture.reviewQueue,
+    });
+    const requestedGap = buildApp1PrimaryGap(detail, draft());
+    const verification = evaluateApp1SameSessionRepair({
+      detail,
+      requestedGap,
+      repairText: fixture.repairText,
+      repairDraft: resolvedTargetDraft(),
+    });
+    assert.equal(verification.state, "repair_confirmed_for_this_session");
+    const payload = buildApp1RepairPersistenceInput({
+      detail,
+      gap: requestedGap,
+      repairText: fixture.repairText,
+      verification,
+      operation: {
+        operationId: "33333333-3333-4333-8333-333333333333",
+        workRevisionId: "44444444-4444-4444-8444-444444444444",
+      },
+    });
+    assert.equal(payload.rawAnswerText, fixture.expected);
+    assert.equal(payload.rewriteParagraph, fixture.expected);
+    assert.equal(payload.userAnswer, fixture.expected);
+    assert.equal("nextReviewDate" in payload, false);
+  }
+});
+
+test("APP1-VM-004B enforces exact normalized 4,000/4,001-character body bounds", () => {
+  const detail = syntheticDetail();
+  const requestedGap = buildApp1PrimaryGap(detail, draft());
+  const prefix =
+    "사례 사실을 논거의 요건에 연결하여 결론을 도출했다고 직접 설명했다.";
+  const exactMaximum = `${prefix}${"가".repeat(
+    APP1_LIMITS.maximumRepairCharacters - prefix.length,
+  )}`;
+  const accepted = evaluateApp1SameSessionRepair({
+    detail,
+    requestedGap,
+    repairText: exactMaximum,
+    repairDraft: resolvedTargetDraft(),
+  });
+  assert.equal(accepted.state, "repair_confirmed_for_this_session");
+  const acceptedPayload = buildApp1RepairPersistenceInput({
+    detail,
+    gap: requestedGap,
+    repairText: exactMaximum,
+    verification: accepted,
+    operation: {
+      operationId: "33333333-3333-4333-8333-333333333333",
+      workRevisionId: "44444444-4444-4444-8444-444444444444",
+    },
+  });
+  assert.equal(acceptedPayload.rawAnswerText.length, 4_000);
+  assert.equal(acceptedPayload.rawAnswerText, exactMaximum);
+
+  const excessive = `${exactMaximum}가`;
+  const rejected = evaluateApp1SameSessionRepair({
+    detail,
+    requestedGap,
+    repairText: excessive,
+    repairDraft: resolvedTargetDraft(),
+  });
+  assert.equal(rejected.state, "one_connection_still_missing");
+  assert.match(rejected.reason, /4000자 이하/u);
+  assert.throws(
+    () =>
+      buildApp1RepairPersistenceInput({
+        detail,
+        gap: requestedGap,
+        repairText: excessive,
+        verification: accepted,
+        operation: {
+          operationId: "33333333-3333-4333-8333-333333333333",
+          workRevisionId: "44444444-4444-4444-8444-444444444444",
+        },
+      }),
+    /app1:repair-input-too-long/u,
+  );
+});
+test("APP1-VM-005 announces a next review only from an exactly cross-bound new item detail", () => {
+  const persistence = Object.freeze({
+    kind: "durable_record",
+    recordId: "66666666-6666-4666-8666-666666666666",
+    operationId: "77777777-7777-4777-8777-777777777777",
+    workRevisionId: "88888888-8888-4888-8888-888888888888",
+    persistedAt: "2026-08-29T01:00:00.000Z",
+  });
   const baseQueue = {
     queueId: "55555555-5555-4555-8555-555555555555",
-    itemId: "66666666-6666-4666-8666-666666666666",
+    itemId: persistence.recordId,
     examName: "감정평가사 2차",
     subjectLabel: "감정평가이론",
     problemTitle: "합성 문제 · 직접 복구",
@@ -353,19 +697,116 @@ test("APP1-VM-005 announces a next review only from an exact durable queue recei
     confidence: "중간",
     timeSpentSeconds: 600,
     createdFromCapture: true,
-    itemCreatedAt: "2026-08-29T01:00:00.000Z",
+    itemCreatedAt: persistence.persistedAt,
   };
+  const repairDetail = syntheticDetail({
+    item: {
+      id: persistence.recordId,
+      updatedAt: persistence.persistedAt,
+      rawPayload: {
+        user_confirmed_fields: {
+          persistence_operation_id: persistence.operationId,
+          persistence_work_revision_id: persistence.workRevisionId,
+        },
+      },
+    },
+    reviewQueue: [baseQueue],
+  });
   const receipt = buildApp1NextReviewReceipt(
-    [baseQueue],
+    repairDetail,
     baseQueue.itemId,
-    "2026-08-29T01:00:00.000Z",
+    persistence,
   );
   assert.equal(receipt.policyWindow, "D+1");
   assert.match(receipt.nextIndependentAction, /답을 보지 않고/);
-  assert.equal(buildApp1NextReviewReceipt([baseQueue], "77777777-7777-4777-8777-777777777777", "2026-08-29T01:00:00.000Z"), null);
-  assert.equal(buildApp1NextReviewReceipt([{ ...baseQueue, dueAt: "2026-08-28T01:00:00.000Z" }], baseQueue.itemId, "2026-08-29T01:00:00.000Z"), null);
-});
-
+  assert.equal(
+    buildApp1NextReviewReceipt(
+      syntheticDetail({ reviewQueue: [baseQueue] }),
+      baseQueue.itemId,
+      persistence,
+    ),
+    null,
+    "the fetched detail must be bound to the exact new item",
+  );
+  assert.equal(
+    buildApp1NextReviewReceipt(
+      { ...repairDetail, reviewQueue: [{ ...baseQueue, queueId: "invalid" }] },
+      baseQueue.itemId,
+      persistence,
+    ),
+    null,
+  );
+  assert.equal(
+    buildApp1NextReviewReceipt(
+      { ...repairDetail, reviewQueue: [baseQueue, { ...baseQueue }] },
+      baseQueue.itemId,
+      persistence,
+    ),
+    null,
+  );
+  assert.equal(
+    buildApp1NextReviewReceipt(
+      {
+        ...repairDetail,
+        reviewQueue: [{ ...baseQueue, dueAt: "2026-08-28T01:00:00.000Z" }],
+      },
+      baseQueue.itemId,
+      persistence,
+    ),
+    null,
+  );
+  assert.equal(
+    buildApp1NextReviewReceipt(
+      {
+        ...repairDetail,
+        item: { ...repairDetail.item, updatedAt: "2026-08-29T00:59:59.000Z" },
+      },
+      baseQueue.itemId,
+      persistence,
+    ),
+    null,
+    "item update time must equal the durable persistence receipt",
+  );
+  assert.equal(
+    buildApp1NextReviewReceipt(
+      {
+        ...repairDetail,
+        item: {
+          ...repairDetail.item,
+          rawPayload: {
+            user_confirmed_fields: {
+              persistence_operation_id: "99999999-9999-4999-8999-999999999999",
+              persistence_work_revision_id: persistence.workRevisionId,
+            },
+          },
+        },
+      },
+      baseQueue.itemId,
+      persistence,
+    ),
+    null,
+    "item operation metadata must equal the durable persistence receipt",
+  );
+  assert.equal(
+    buildApp1NextReviewReceipt(
+      {
+        ...repairDetail,
+        item: {
+          ...repairDetail.item,
+          rawPayload: {
+            user_confirmed_fields: {
+              persistence_operation_id: persistence.operationId,
+              persistence_work_revision_id: "99999999-9999-4999-8999-999999999999",
+            },
+          },
+        },
+      },
+      baseQueue.itemId,
+      persistence,
+    ),
+    null,
+    "item work-revision metadata must independently equal the durable receipt",
+  );});
 test("APP1-UI-001 binds exact copy, one-gap UI, no prefilled repair and truthful failures", async () => {
   const capturePage = await read("app/app/capture/page.tsx");
   const captureForm = await read("components/review-os/capture-form.tsx");
@@ -413,6 +854,60 @@ test("APP1-UI-003 enters repair only after a durable receipt without racing the 
   assert.match(repairBranch, /router\.push\([\s\S]*?\/app\/capture\/repair\?itemId=/u);
   assert.doesNotMatch(repairBranch, /router\.refresh\(\)/u);
 });
+test("APP1-UI-004 keeps queue confirmation post-save and item-specific", async () => {
+  const repairLoop = await read("components/owner-study/app1-capture-repair-loop.tsx");
+  const receiptIndex = repairLoop.indexOf(
+    "const receipt = buildDurableCapturePersistenceReceipt(",
+  );
+  const settleIndex = repairLoop.indexOf(
+    "pendingSaveRef.current = null;",
+    receiptIndex,
+  );
+  const persistedLinkIndex = repairLoop.indexOf(
+    "setPersistedRecordId(payload.item.id);",
+    settleIndex,
+  );
+  const itemDetailIndex = repairLoop.indexOf(
+    "/api/os/items/${encodeURIComponent(payload.item.id)}",
+    persistedLinkIndex,
+  );
+  const savedWithoutQueueIndex = repairLoop.indexOf(
+    'setPhase("saved_without_queue")',
+    itemDetailIndex,
+  );
+  const completedIndex = repairLoop.indexOf(
+    'setPhase("completed")',
+    savedWithoutQueueIndex,
+  );
+
+  assert.ok(receiptIndex >= 0);
+  assert.ok(settleIndex > receiptIndex);
+  assert.ok(persistedLinkIndex > settleIndex);
+  assert.ok(itemDetailIndex > persistedLinkIndex);
+  assert.ok(savedWithoutQueueIndex > itemDetailIndex);
+  assert.ok(completedIndex > savedWithoutQueueIndex);
+  assert.match(
+    repairLoop.slice(itemDetailIndex, savedWithoutQueueIndex),
+    /catch \{\s*queueReceipt = null;\s*\}/u,
+  );
+  assert.match(
+    repairLoop.slice(itemDetailIndex, savedWithoutQueueIndex),
+    /buildApp1NextReviewReceipt\(\s*itemPayload\.detail,\s*payload\.item\.id,\s*receipt/u,
+  );
+  assert.equal(repairLoop.includes("/api/os/review-queue"), false);
+  assert.match(
+    repairLoop,
+    /data-app1-saved-without-queue[\s\S]*?data-app1-persistence-receipt="durable"/u,
+  );
+  assert.equal(
+    repairLoop
+      .slice(settleIndex, completedIndex)
+      .includes('setPhase("repair_verification")'),
+    false,
+    "post-save Queue uncertainty must not return to the pre-save phase",
+  );
+});
+
 test("APP1-PERMISSION-001 separates input confirmation from quick save at the IntakePanel boundary", async () => {
   const captureForm = await read("components/review-os/capture-form.tsx");
   const config = JSON.parse(await read("config/dabangil-app1-owner-capture-repair-vertical-v1.json"));
@@ -478,7 +973,6 @@ test("APP1-BOUNDARY-001 stays within existing API and product authority", async 
     "/api/inverge/ocr",
     "/api/os/items",
     "/api/os/items/",
-    "/api/os/review-queue",
   ]);
   for (const endpoint of governedEndpoints) {
     assert.ok([...allowed].some((prefix) => endpoint.startsWith(prefix)), `unexpected APP-1 endpoint: ${endpoint}`);
