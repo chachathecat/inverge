@@ -330,19 +330,6 @@ const APP1_REPAIR_TARGET_FACETS: Readonly<
   structure: Object.freeze(["문단", "목차", "구조", "순서"]),
 });
 
-const APP1_REPAIR_COMPLETION_PATTERNS = Object.freeze([
-  /충족(?:하므로|하여(?!야)|했고|했다(?!면)|했습니다(?!면)|됐(?:고|다)|되었(?:고|다)|됨(?:을|이|으로)?)/u,
-  /도출(?:했고|했다(?!면)|했습니다(?!면)|하였(?:고|다)|됐(?:고|다)|되었습니다(?!면)|됨(?:을|이|으로)?)/u,
-  /보강(?:했고|했다(?!면)|했습니다(?!면)|하였(?:고|다)|됐(?:고|다)|되었습니다(?!면)|됨(?:을|이|으로)?)/u,
-  /설명(?:했고|했다(?!면)|했습니다(?!면)|하였(?:고|다)|됐(?:고|다)|되었습니다(?!면)|됨(?:을|이|으로)?)/u,
-  /완료(?:했고|했다(?!면)|했습니다(?!면)|하였(?:고|다)|됐(?:고|다)|되었습니다(?!면)|됨(?:을|이|으로)?)/u,
-  /바로잡(?:고(?!자|싶)|았(?:고|다|습니다))/u,
-  /재작성(?:했고|했다(?!면)|했습니다(?!면)|하였(?:고|다))/u,
-  /재구성(?:했고|했다(?!면)|했습니다(?!면)|하였(?:고|다))/u,
-  /완성(?:했고|했다(?!면)|했습니다(?!면)|하였(?:고|다))/u,
-  /명시(?:했고|했다(?!면)|했습니다(?!면)|하였(?:고|다))/u,
-  /확인(?:했고|했다(?!면)|했습니다(?!면)|하였(?:고|다))/u,
-] as const);
 const APP1_REPAIR_ACTION_ROOTS = Object.freeze([
   "충족",
   "도출",
@@ -415,15 +402,43 @@ const APP1_REPAIR_TARGET_DISPLACEMENT_CUES = Object.freeze([
   "반대",
   "불일치",
 ] as const);
-
-const APP1_REPAIR_OOV_COMPLETION_PATTERNS = Object.freeze([
-  /보강(?:했고|했다|했습니다|하였(?:고|다))/u,
-  /설명(?:했고|했다|했습니다|하였(?:고|다))/u,
-  /바로잡(?:고|았(?:고|다|습니다))/u,
-  /완성(?:했고|했다|했습니다|하였(?:고|다))/u,
-  /명시(?:했고|했다|했습니다|하였(?:고|다))/u,
-  /특정(?:했고|했다|했습니다|하였(?:고|다)|하고)/u,
-  /보충(?:했고|했다|했습니다|하였(?:고|다))/u,
+const APP1_REPAIR_RELATION_PREDICATES = Object.freeze([
+  "충족하",
+  "적용하",
+  "적용해",
+  "적용하여",
+  "대입하",
+  "연결하",
+  "연결해",
+  "연결하여",
+  "연결되어",
+  "연계하",
+  "연계해",
+  "연계하여",
+  "연계되어",
+  "결부하",
+  "결부해",
+  "결부하여",
+  "결부되어",
+] as const);
+const APP1_REPAIR_OUTCOME_PREDICATES = Object.freeze([
+  "도출",
+  "산출",
+  "성립",
+  "이른",
+  "발생",
+] as const);
+const APP1_REPAIR_CALCULATION_OPERATORS = Object.freeze([
+  "빼",
+  "더하",
+  "곱하",
+  "나누",
+  "대입",
+] as const);
+const APP1_REPAIR_CALCULATION_RESULTS = Object.freeze([
+  "계산",
+  "산출",
+  "검산",
 ] as const);
 
 const APP1_REPAIR_LEXICAL_STOP_WORDS = new Set([
@@ -449,6 +464,7 @@ type App1RepairTargetProfile = Readonly<{
   requiredFacets: readonly App1RepairTargetFacet[];
   literalAnchors: readonly string[];
   contextAnchors: readonly string[];
+  sourceAnchors: readonly string[];
   minimumLiteralMatches: number;
 }>;
 
@@ -530,6 +546,33 @@ function substantiveRepairWords(value: string) {
   );
 }
 
+function hasClosedRepairPropositionShape(
+  value: string,
+  requiredFacets: readonly App1RepairTargetFacet[],
+) {
+  const identity = normalizedIdentity(value);
+  const facetSet = new Set(requiredFacets);
+  if (
+    facetSet.has("evidence_subject") &&
+    facetSet.has("authority_or_reason") &&
+    facetSet.has("linkage")
+  ) {
+    return (
+      includesAny(identity, APP1_REPAIR_RELATION_PREDICATES) &&
+      includesAny(identity, APP1_REPAIR_OUTCOME_PREDICATES)
+    );
+  }
+  if (facetSet.has("calculation")) {
+    const numericOperands = value.match(/[0-9]+(?:[.,][0-9]+)?/gu) ?? [];
+    return (
+      numericOperands.length >= 2 &&
+      includesAny(identity, APP1_REPAIR_CALCULATION_OPERATORS) &&
+      includesAny(identity, APP1_REPAIR_CALCULATION_RESULTS)
+    );
+  }
+  return false;
+}
+
 function hasSubstantiveRepairSupport(
   value: string,
   profile: App1RepairTargetProfile,
@@ -542,27 +585,34 @@ function hasSubstantiveRepairSupport(
       const identity = normalizedIdentity(segment);
       const segmentWords = new Set(lexicalWords(segment));
       if (profile.requiredFacets.length > 0) {
+        const targetAnchored =
+          profile.literalAnchors.length >= 2
+            ? countProfileWordMatches(segmentWords, profile.literalAnchors) >=
+              Math.max(2, profile.minimumLiteralMatches)
+            : profile.sourceAnchors.length >= 2 &&
+              countProfileWordMatches(segmentWords, profile.sourceAnchors) >=
+                Math.min(4, profile.sourceAnchors.length);
         return (
           profile.requiredFacets.every((facet) =>
             includesAny(identity, APP1_REPAIR_TARGET_FACETS[facet]),
           ) &&
+          targetAnchored &&
           new Set(substantiveRepairWords(segment)).size >= 2 &&
-          APP1_REPAIR_COMPLETION_PATTERNS.some((pattern) => pattern.test(identity))
+          hasClosedRepairPropositionShape(segment, profile.requiredFacets)
         );
       }
       if (profile.contextAnchors.length < 2) return false;
       return (
         countProfileWordMatches(segmentWords, profile.literalAnchors) >= 2 &&
         countProfileWordMatches(segmentWords, profile.contextAnchors) >= 2 &&
-        APP1_REPAIR_OOV_COMPLETION_PATTERNS.some((pattern) =>
-          pattern.test(normalizedIdentity(segment)),
-        )
+        new Set(substantiveRepairWords(segment)).size >= 2
       );
     });
 }
 
 function buildApp1RepairTargetProfile(
   requestedGap: App1PrimaryGap,
+  detail: WrongAnswerDetail,
 ): App1RepairTargetProfile {
   const facetMaterial = [requestedGap.gap, requestedGap.repairAction].join(" ");
   const targetIdentity = normalizedIdentity(facetMaterial);
@@ -587,12 +637,44 @@ function buildApp1RepairTargetProfile(
       ),
     ),
   ).slice(0, 8);
+  const sourceMaterial = [
+    detail.item.problemTitle,
+    detail.item.problemIdentifier,
+    detail.item.rawQuestionText,
+    detail.item.rawAnswerText,
+    detail.item.rewriteParagraph,
+    detail.item.userAnswer,
+    detail.item.missingIssue,
+    detail.item.weakApplicationSentence,
+    detail.item.rewriteInstruction,
+    detail.item.caseSummary,
+    detail.item.issueRecall,
+    detail.item.coreFormula,
+    ...(detail.item.keyConcepts ?? []),
+  ]
+    .filter((value): value is string => typeof value === "string")
+    .join(" ");
+  const sourceAnchors = Array.from(
+    new Set(literalTargetWords(sourceMaterial)),
+  ).slice(0, 16);
   return Object.freeze({
     requiredFacets: Object.freeze(requiredFacets),
     literalAnchors: Object.freeze(literalAnchors),
     contextAnchors: Object.freeze(contextAnchors),
+    sourceAnchors: Object.freeze(sourceAnchors),
     minimumLiteralMatches: Math.min(2, literalAnchors.length),
   });
+}
+
+function supportsClosedRepairShape(profile: App1RepairTargetProfile) {
+  if (profile.requiredFacets.length === 0) return true;
+  const facetSet = new Set(profile.requiredFacets);
+  return (
+    facetSet.has("calculation") ||
+    (facetSet.has("evidence_subject") &&
+      facetSet.has("authority_or_reason") &&
+      facetSet.has("linkage"))
+  );
 }
 
 function matchesRepairTarget(value: string, profile: App1RepairTargetProfile) {
@@ -623,7 +705,6 @@ function isTargetSpecificPositiveEvidence(
   return (
     matchesRepairTarget(value, profile) &&
     hasSubstantiveRepairSupport(value, profile) &&
-    APP1_REPAIR_COMPLETION_PATTERNS.some((pattern) => pattern.test(identity)) &&
     !includesAny(identity, APP1_REPAIR_UNRESOLVED_CUES) &&
     !includesAny(identity, APP1_REPAIR_DISCUSSION_ONLY_CUES) &&
     !includesAny(identity, APP1_REPAIR_TARGET_DISPLACEMENT_CUES)
@@ -694,7 +775,17 @@ export function evaluateApp1SameSessionRepair(input: Readonly<{
     observedPrimaryGap(input.repairDraft),
     APP1_LIMITS.maximumGapCharacters,
   );
-  const targetProfile = buildApp1RepairTargetProfile(input.requestedGap);
+  const targetProfile = buildApp1RepairTargetProfile(
+    input.requestedGap,
+    input.detail,
+  );
+  if (!supportsClosedRepairShape(targetProfile)) {
+    return result(
+      "guided_path_needed",
+      "이 복구 유형은 자동 확인 범위를 벗어납니다. 저장 전 안내 경로에서 다시 검토해 주세요.",
+      observedGap,
+    );
+  }
   const learnerSupportsTarget = isTargetSpecificPositiveEvidence(
     repairText,
     targetProfile,

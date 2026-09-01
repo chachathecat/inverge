@@ -815,7 +815,9 @@ async function completeCapture(
     page.waitForURL(
       new RegExp(`/app/capture/repair\\?itemId=${SOURCE_ITEM_ID}$`),
     ),
-    initialSaveButton.click(),
+    initialSaveButton.evaluate((button) =>
+      (button as HTMLButtonElement).click(),
+    ),
   ]);
 }
 

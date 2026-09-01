@@ -35,6 +35,7 @@ register(
 );
 
 const {
+  APP1_ANALYSIS_BINDING_TTL_MS,
   APP1_RECEIPT_TTL_MS,
   APP1_VERIFICATION_POLICY_VERSION,
   assertApp1AnalysisBinding,
@@ -89,8 +90,10 @@ function syntheticDetail(overrides = {}) {
       sourceLabel: "synthetic-page-1",
       problemTitle: "저작권 안전 합성 문제",
       problemIdentifier: "SYNTHETIC-APP1-001",
-      rawQuestionText: "합성 사례의 정의와 논거, 적용 관계를 설명하시오.",
-      rawAnswerText: "정의를 제시하고 논거를 설명했다. 다만 사례 사실과 논거의 연결을 충분히 적지 못했다.",
+      rawQuestionText:
+        "저작권 안전 합성 임대료 미납 사례에서 계약 해지 논거와 수익 120, 비용 20의 계산 관계를 설명하시오.",
+      rawAnswerText:
+        "임대료 미납 사실과 계약 해지 논거를 제시했다. 다만 사실과 논거의 연결 및 수익 120, 비용 20의 계산을 충분히 적지 못했다.",
       rewriteParagraph: "",
       correctAnswer: "-",
       userAnswer: "정의를 제시하고 논거를 설명했다. 다만 사례 사실과 논거의 연결을 충분히 적지 못했다.",
@@ -196,6 +199,9 @@ test("APP1-CONTRACT-001 freezes the exact 20-path Owner-only/default-off core ca
   assert.equal(config.activation.public, false);
   assert.equal(config.activation.remoteSupabaseMutation, false);
   assert.equal(config.activation.productionMutation, false);
+  assert.equal(config.serverAuthority.analysisBindingLifetimeSeconds, 900);
+  assert.equal(config.serverAuthority.verificationReceiptLifetimeSeconds, 300);
+  assert.equal("receiptLifetimeSeconds" in config.serverAuthority, false);
   assert.deepEqual(APP1_RUNTIME_BOUNDARY_RECEIPT, {
     contractVersion: APP1_CONTRACT_VERSION,
     ownerOnly: true,
@@ -250,6 +256,41 @@ test("APP1-AUTHORITY-001 signs closed analysis and verification receipts and rej
     }).gapDigest.startsWith("sha256:"),
     true,
   );
+  assert.doesNotThrow(() =>
+    assertApp1AnalysisBinding({
+      key,
+      token: analysisBinding,
+      userId: detail.item.userId,
+      detail,
+      gap,
+      now: new Date(issuedAt.getTime() + 12 * 60 * 1_000),
+    }),
+  );
+  assert.throws(
+    () =>
+      assertApp1AnalysisBinding({
+        key,
+        token: analysisBinding,
+        userId: detail.item.userId,
+        detail,
+        gap,
+        now: new Date(issuedAt.getTime() + APP1_ANALYSIS_BINDING_TTL_MS),
+      }),
+    /app1-receipt:receipt_expired/u,
+  );
+  const lateVerificationIssuedAt = new Date(
+    issuedAt.getTime() + APP1_ANALYSIS_BINDING_TTL_MS - 1_000,
+  );
+  assert.doesNotThrow(() =>
+    assertApp1AnalysisBinding({
+      key,
+      token: analysisBinding,
+      userId: detail.item.userId,
+      detail,
+      gap,
+      now: lateVerificationIssuedAt,
+    }),
+  );
   const verificationReceipt = issueApp1VerificationReceipt({
     key,
     userId: detail.item.userId,
@@ -261,6 +302,18 @@ test("APP1-AUTHORITY-001 signs closed analysis and verification receipts and rej
     persistenceOperationId: operationId,
     persistenceWorkRevisionId: workRevisionId,
     now: issuedAt,
+  });
+  const lateVerificationReceipt = issueApp1VerificationReceipt({
+    key,
+    userId: detail.item.userId,
+    detail,
+    gap,
+    analysisBinding,
+    repairText,
+    verification,
+    persistenceOperationId: operationId,
+    persistenceWorkRevisionId: workRevisionId,
+    now: lateVerificationIssuedAt,
   });
   const verified = assertApp1VerificationReceipt({
     key,
@@ -279,6 +332,35 @@ test("APP1-AUTHORITY-001 signs closed analysis and verification receipts and rej
     APP1_VERIFICATION_POLICY_VERSION,
   );
   assert.equal(verified.verificationState, "repair_confirmed_for_this_session");
+  const lateVerificationInput = {
+    key,
+    token: lateVerificationReceipt,
+    userId: detail.item.userId,
+    detail,
+    gap,
+    analysisBinding,
+    repairText,
+    persistenceOperationId: operationId,
+    persistenceWorkRevisionId: workRevisionId,
+  };
+  assert.doesNotThrow(() =>
+    assertApp1VerificationReceipt({
+      ...lateVerificationInput,
+      now: new Date(
+        lateVerificationIssuedAt.getTime() + APP1_RECEIPT_TTL_MS - 1_000,
+      ),
+    }),
+  );
+  assert.throws(
+    () =>
+      assertApp1VerificationReceipt({
+        ...lateVerificationInput,
+        now: new Date(
+          lateVerificationIssuedAt.getTime() + APP1_RECEIPT_TTL_MS,
+        ),
+      }),
+    /app1-receipt:receipt_expired/u,
+  );
 
   const bindingInput = {
     key,
@@ -859,7 +941,7 @@ test("APP1-VM-003 requires target-specific learner and draft evidence without mo
   const detail = syntheticDetail();
   const requestedGap = buildApp1PrimaryGap(detail, draft());
   const targetRepair =
-    "사례의 합성 사실 A는 위 논거의 요건 B를 충족하므로 결론 C에 이른다고 직접 연결했다.";
+    "임대료 미납 사실은 계약 해지 논거의 요건을 충족하므로 계약 종료 결론에 이른다고 직접 연결했다.";
   const tooShort = evaluateApp1SameSessionRepair({
     detail,
     requestedGap,
@@ -1067,6 +1149,69 @@ test("APP1-VM-003 requires target-specific learner and draft evidence without mo
     "one_connection_still_missing",
   );
 
+  const verboseSelfReportWithoutReconstruction = evaluateApp1SameSessionRepair({
+    detail,
+    requestedGap,
+    repairText:
+      "사례 사실과 논거 연결은 충분하게 명료하게 개선되었습니다.",
+    repairDraft: resolvedTargetDraft({
+      strength:
+        "사례 사실과 논거 연결이 구체적으로 적절하게 보완되었습니다.",
+    }),
+  });
+  assert.equal(
+    verboseSelfReportWithoutReconstruction.state,
+    "one_connection_still_missing",
+  );
+
+  const verboseSelfReportWithGenericPropositionWords =
+    evaluateApp1SameSessionRepair({
+      detail,
+      requestedGap,
+      repairText:
+        "사례 사실과 논거 연결에 적용 결과와 결론을 포함해 충분하게 개선되었습니다.",
+      repairDraft: resolvedTargetDraft({
+        strength:
+          "사례 사실과 논거 연결에 적용 결과와 결론을 포함해 구체적으로 보완되었습니다.",
+      }),
+    });
+  assert.equal(
+    verboseSelfReportWithGenericPropositionWords.state,
+    "one_connection_still_missing",
+  );
+
+  const verboseSelfReportWithRelationAndOutcomeVerbs =
+    evaluateApp1SameSessionRepair({
+      detail,
+      requestedGap,
+      repairText:
+        "사례 사실을 논거에 연결해 결론을 도출했다고 충분하게 명료하게 보고합니다.",
+      repairDraft: resolvedTargetDraft({
+        strength:
+          "사례 사실을 논거에 연결해 결론을 도출했다고 구체적으로 적절하게 보고합니다.",
+      }),
+    });
+  assert.equal(
+    verboseSelfReportWithRelationAndOutcomeVerbs.state,
+    "one_connection_still_missing",
+  );
+
+  const directReconstructionWithoutCompletionClaim =
+    evaluateApp1SameSessionRepair({
+      detail,
+      requestedGap,
+      repairText:
+        "임대료 미납 사실을 계약 해지 논거의 요건에 적용해 연결하므로 계약 종료 결론이 성립한다.",
+      repairDraft: resolvedTargetDraft({
+        strength:
+          "임대료 미납 사실이 계약 해지 논거의 요건에 연결되어 계약 종료 결론이 성립합니다.",
+      }),
+    });
+  assert.equal(
+    directReconstructionWithoutCompletionClaim.state,
+    "repair_confirmed_for_this_session",
+  );
+
   const correctNamedTargetRepair = evaluateApp1SameSessionRepair({
     detail,
     requestedGap: namedTargetGap,
@@ -1263,6 +1408,33 @@ test("APP1-VM-003A exposes guided_path_needed without fabricating confirmation, 
   assert.equal("durableReceipt" in guided, false);
   assert.equal("queueReceipt" in guided, false);
   assert.equal("d7Transfer" in guided, false);
+
+  for (const unsupportedGap of [
+    {
+      ...requestedGap,
+      gap: "결론 범위가 약합니다.",
+      repairAction: "결론 범위를 한정하세요.",
+    },
+    {
+      ...requestedGap,
+      gap: "문단 구조가 약합니다.",
+      repairAction: "문단 순서를 바로잡으세요.",
+    },
+  ]) {
+    const unsupported = evaluateApp1SameSessionRepair({
+      detail,
+      requestedGap: unsupportedGap,
+      repairText:
+        "저작권 안전 합성 사례의 결론과 문단 구조를 충분히 직접 고쳤다고 설명했습니다.",
+      repairDraft: resolvedTargetDraft({
+        strength:
+          "저작권 안전 합성 사례의 결론과 문단 구조를 충분히 보완했습니다.",
+      }),
+    });
+    assert.equal(unsupported.state, "guided_path_needed");
+    assert.equal(unsupported.masteryCreated, false);
+    assert.equal(unsupported.transferCreated, false);
+  }
 });
 
 test("APP1-VM-003B blocks uncertain OCR/source evidence before successful repair persistence", async () => {
@@ -1301,7 +1473,7 @@ test("APP1-VM-004 persists through the existing learner-private receipt binding 
   const detail = syntheticDetail();
   const requestedGap = buildApp1PrimaryGap(detail, draft());
   const repairText =
-    "사례의 합성 사실 A는 위 논거의 요건 B를 충족하므로 결론 C에 이른다고 직접 연결했다.";
+    "임대료 미납 사실은 계약 해지 논거의 요건을 충족하므로 계약 종료 결론에 이른다고 직접 연결했다.";
   const verification = evaluateApp1SameSessionRepair({
     detail,
     requestedGap,
@@ -1774,6 +1946,10 @@ test("APP1-API-002 revalidates exact Owner, subject, and source-item authority b
   assert.equal(serverAuthority.includes("NEXT_PUBLIC_APP1"), false);
   assert.match(receiptCore, /createHmac\("sha256"/u);
   assert.match(receiptCore, /timingSafeEqual\(expected, comparable\)/u);
+  assert.match(
+    receiptCore,
+    /APP1_ANALYSIS_BINDING_TTL_MS = 15 \* 60 \* 1_000/u,
+  );
   assert.match(receiptCore, /APP1_RECEIPT_TTL_MS = 5 \* 60 \* 1_000/u);
 });
 
@@ -1789,7 +1965,15 @@ test("APP1-UI-002A exposes guided fallback after verification service failure wi
   assert.ok(verifyRepair, "missing verification request boundary");
   assert.match(
     verifyRepair,
-    /catch \{[\s\S]*?setVerification\(preliminary\);[\s\S]*?setVerificationReceipt\(null\);[\s\S]*?setError\(VERIFICATION_FAILURE_MESSAGE\);[\s\S]*?setPhase\("repair_verification"\);[\s\S]*?\}/u,
+    /catch \(verificationError\) \{[\s\S]*?APP1_ANALYSIS_BINDING_INVALID[\s\S]*?APP1_VERIFICATION_EXPIRED[\s\S]*?returnToFreshAnalysis\(\);[\s\S]*?setVerification\(preliminary\);[\s\S]*?setVerificationReceipt\(null\);[\s\S]*?setError\(VERIFICATION_FAILURE_MESSAGE\);[\s\S]*?setPhase\("repair_verification"\);[\s\S]*?\}/u,
+  );
+  assert.match(
+    repairLoop,
+    /function returnToFreshAnalysis\(\) \{[\s\S]*?setGap\(null\);[\s\S]*?setAnalysisBinding\(null\);[\s\S]*?setVerificationReceipt\(null\);[\s\S]*?setError\(AUTHORITY_EXPIRED_MESSAGE\);[\s\S]*?setPhase\("structure_confirmation"\);[\s\S]*?\}/u,
+  );
+  assert.doesNotMatch(
+    repairLoop,
+    /function beginRepair\(\) \{[\s\S]*?setRepairText\(""\)/u,
   );
   assert.match(
     repairLoop,

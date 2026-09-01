@@ -91,6 +91,18 @@ const ANALYSIS_FAILURE_MESSAGE =
   "답안 분석을 완료하지 못했습니다. 입력은 그대로 남아 있습니다.";
 const VERIFICATION_FAILURE_MESSAGE =
   "복구 입력 검토를 완료하지 못했습니다. 성공으로 처리되지 않았습니다.";
+const AUTHORITY_EXPIRED_MESSAGE =
+  "분석 기준 시간이 만료되었습니다. 복구 입력은 유지됩니다. 현재 기록을 다시 분석한 뒤 확인해 주세요.";
+
+class App1StructureRequestError extends Error {
+  constructor(
+    message: string,
+    readonly errorCode: string | null,
+  ) {
+    super(message);
+    this.name = "App1StructureRequestError";
+  }
+}
 
 async function sha256Text(value: string) {
   const bytes = new TextEncoder().encode(value);
@@ -148,10 +160,15 @@ async function requestStructure(
         verification?: App1RepairVerification;
         verificationReceipt?: string | null;
       }
-    | { ok: false }
+    | { ok: false; errorCode?: string }
     | null;
   if (!response.ok || !payload?.ok) {
-    throw new Error(failureMessage);
+    throw new App1StructureRequestError(
+      failureMessage,
+      payload && !payload.ok && typeof payload.errorCode === "string"
+        ? payload.errorCode
+        : null,
+    );
   }
   return {
     draft: normalizeAnswerReviewStructureDraft(payload.draft),
@@ -280,13 +297,23 @@ export function App1CaptureRepairLoop({
   }
 
   function beginRepair() {
-    setRepairText("");
     setVerification(null);
     setVerificationReceipt(null);
     pendingSaveRef.current = null;
     setError(null);
     setPhase("direct_repair");
     requestAnimationFrame(() => repairRef.current?.focus());
+  }
+
+  function returnToFreshAnalysis() {
+    setGap(null);
+    setAnalysisBinding(null);
+    setVerification(null);
+    setVerificationReceipt(null);
+    pendingSaveRef.current = null;
+    setConflict(false);
+    setError(AUTHORITY_EXPIRED_MESSAGE);
+    setPhase("structure_confirmation");
   }
 
   async function verifyRepair() {
@@ -340,7 +367,17 @@ export function App1CaptureRepairLoop({
       setVerification(result.verification);
       setVerificationReceipt(receipt);
       setPhase("repair_verification");
-    } catch {
+    } catch (verificationError) {
+      if (
+        verificationError instanceof App1StructureRequestError &&
+        [
+          "APP1_ANALYSIS_BINDING_INVALID",
+          "APP1_VERIFICATION_EXPIRED",
+        ].includes(verificationError.errorCode ?? "")
+      ) {
+        returnToFreshAnalysis();
+        return;
+      }
       setVerification(preliminary);
       setVerificationReceipt(null);
       pendingSaveRef.current = null;
@@ -432,15 +469,22 @@ export function App1CaptureRepairLoop({
           !payload.ok &&
           [
             "APP1_VERIFICATION_EXPIRED",
-            "APP1_VERIFICATION_RECEIPT_INVALID",
             "APP1_ANALYSIS_BINDING_INVALID",
           ].includes(payload.errorCode ?? "")
+        ) {
+          returnToFreshAnalysis();
+          return;
+        }
+        if (
+          payload &&
+          !payload.ok &&
+          payload.errorCode === "APP1_VERIFICATION_RECEIPT_INVALID"
         ) {
           pendingSaveRef.current = null;
           setVerification(null);
           setVerificationReceipt(null);
           setError(
-            "복구 확인 시간이 만료되었거나 입력이 변경되었습니다. 입력은 유지되며 다시 확인해야 합니다.",
+            "복구 확인 입력이 변경되었습니다. 입력은 유지되며 다시 확인해야 합니다.",
           );
           setPhase("direct_repair");
           return;

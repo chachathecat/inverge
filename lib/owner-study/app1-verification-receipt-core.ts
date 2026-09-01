@@ -14,6 +14,7 @@ export const APP1_VERIFICATION_RECEIPT_VERSION =
   "App1RepairVerificationReceiptV1" as const;
 export const APP1_VERIFICATION_POLICY_VERSION =
   "App1SameSessionRepairPolicyV1" as const;
+export const APP1_ANALYSIS_BINDING_TTL_MS = 15 * 60 * 1_000;
 export const APP1_RECEIPT_TTL_MS = 5 * 60 * 1_000;
 
 const APP1_CONTRACT_VERSION = "OwnerCaptureToRepairVerticalV1" as const;
@@ -195,23 +196,24 @@ function assertReceiptWindow(
   issuedAt: unknown,
   expiresAt: unknown,
   now: Date,
+  expectedTtlMs: number,
 ) {
   if (!canonicalTimestamp(issuedAt) || !canonicalTimestamp(expiresAt)) {
     reject("invalid_receipt");
   }
   const issued = Date.parse(String(issuedAt));
   const expires = Date.parse(String(expiresAt));
-  if (expires - issued !== APP1_RECEIPT_TTL_MS || now.getTime() < issued) {
+  if (expires - issued !== expectedTtlMs || now.getTime() < issued) {
     reject("invalid_receipt");
   }
   if (now.getTime() >= expires) reject("receipt_expired");
 }
 
-function bindingTimestamp(now: Date) {
+function bindingTimestamp(now: Date, ttlMs: number) {
   const issuedAt = now.toISOString();
   return {
     issuedAt,
-    expiresAt: new Date(now.getTime() + APP1_RECEIPT_TTL_MS).toISOString(),
+    expiresAt: new Date(now.getTime() + ttlMs).toISOString(),
   };
 }
 
@@ -299,7 +301,7 @@ export function issueApp1AnalysisBinding(input: Readonly<{
     mode: "second",
     sourceRevision: app1SourceRevision(input.detail),
     gapDigest: app1PrimaryGapDigest(input.gap),
-    ...bindingTimestamp(now),
+    ...bindingTimestamp(now, APP1_ANALYSIS_BINDING_TTL_MS),
   };
   return encodePayload(ANALYSIS_PREFIX, payload, input.key);
 }
@@ -343,7 +345,12 @@ export function assertApp1AnalysisBinding(input: Readonly<{
   ) {
     reject("invalid_receipt");
   }
-  assertReceiptWindow(payload.issuedAt, payload.expiresAt, input.now ?? new Date());
+  assertReceiptWindow(
+    payload.issuedAt,
+    payload.expiresAt,
+    input.now ?? new Date(),
+    APP1_ANALYSIS_BINDING_TTL_MS,
+  );
   if (
     payload.userId !== input.userId ||
     payload.sourceItemId !== input.detail.item.id ||
@@ -404,7 +411,7 @@ export function issueApp1VerificationReceipt(input: Readonly<{
     verificationPolicyVersion: APP1_VERIFICATION_POLICY_VERSION,
     persistenceOperationId: input.persistenceOperationId,
     persistenceWorkRevisionId: input.persistenceWorkRevisionId,
-    ...bindingTimestamp(now),
+    ...bindingTimestamp(now, APP1_RECEIPT_TTL_MS),
   };
   return encodePayload(VERIFICATION_PREFIX, payload, input.key);
 }
@@ -422,14 +429,6 @@ export function assertApp1VerificationReceipt(input: Readonly<{
   now?: Date;
 }>): VerificationPayload {
   const now = input.now ?? new Date();
-  assertApp1AnalysisBinding({
-    key: input.key,
-    token: input.analysisBinding,
-    userId: input.userId,
-    detail: input.detail,
-    gap: input.gap,
-    now,
-  });
   const payload = decodePayload(input.token, VERIFICATION_PREFIX, input.key);
   if (
     !exactKeys(payload, [
@@ -477,7 +476,14 @@ export function assertApp1VerificationReceipt(input: Readonly<{
   ) {
     reject("invalid_receipt");
   }
-  assertReceiptWindow(payload.issuedAt, payload.expiresAt, now);
+  assertReceiptWindow(
+    payload.issuedAt,
+    payload.expiresAt,
+    now,
+    APP1_RECEIPT_TTL_MS,
+  );
+  // Issuance already validated the older analysis binding. The newer signed
+  // receipt binds its exact digest below and keeps its full five-minute window.
   if (
     payload.userId !== input.userId ||
     payload.sourceItemId !== input.detail.item.id ||
