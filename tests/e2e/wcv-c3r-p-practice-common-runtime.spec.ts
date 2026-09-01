@@ -1432,7 +1432,7 @@ test("exact Practice browser-to-Postgres durable loop", async ({ browser }) => {
   await page.unroute(c3rPApiUrl, d1RescheduledRouteA);
   await secondPage.unroute(c3rPApiUrl, d1RescheduledRouteB);
   const completedD1PlanResponse = await context.request.get(
-    `/api/review-os/c3r-p?recordId=${recordId}`,
+    `/api/review-os/c3r-p?recordId=${recordId}&evidenceStep=d1Rescheduled`,
   );
   const completedD1Plan = await completedD1PlanResponse.json();
   expect(completedD1Plan.view.currentPlan).toBeNull();
@@ -1450,7 +1450,7 @@ test("exact Practice browser-to-Postgres durable loop", async ({ browser }) => {
     }),
   ]));
   const sealedTransferResponse = await context.request.get(
-    `/api/review-os/c3r-p?recordId=${recordId}`,
+    `/api/review-os/c3r-p?recordId=${recordId}&evidenceStep=d1Rescheduled`,
   );
   const sealedTransfer = await sealedTransferResponse.json();
   expect(sealedTransfer.view.restored.transferTask).toMatchObject({

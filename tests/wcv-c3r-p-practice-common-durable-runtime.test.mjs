@@ -850,6 +850,11 @@ test("disposable fixture leaves production access code and frozen identities unc
   const firstOrder = itemQueueSource.indexOf('.order("priority_score"');
   const pageRange = itemQueueSource.indexOf(".range(offset, offset + pageSize - 1)");
   assert.ok(previousFilter < firstOrder && firstOrder < pageRange);
+  assert.match(
+    browserSource,
+    /const completedD1PlanResponse = await context\.request\.get\([\s\S]*evidenceStep=d1Rescheduled[\s\S]*const sealedTransferResponse = await context\.request\.get\([\s\S]*evidenceStep=d1Rescheduled/u,
+    "pre-D+7 assertions must use the frozen post-D+1 evidence time, never wall-clock time",
+  );
   assert.equal(execFileSync("git", ["hash-object", "package.json"], { cwd: root, encoding: "utf8" }).trim(),
     contract.packageIdentity.packageJsonGitBlob);
   assert.equal(execFileSync("git", ["hash-object", "package-lock.json"], { cwd: root, encoding: "utf8" }).trim(),

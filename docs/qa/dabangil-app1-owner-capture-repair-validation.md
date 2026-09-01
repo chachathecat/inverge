@@ -6,7 +6,7 @@
 - Base tree: `c6c6a8ad876c2f40b5276a26485b088656addf49`
 - Tracking issue: `#874`
 - APP-1 core changed paths: 14
-- Aggregate PR changed paths: 16 (`14` APP-1 core paths plus the separately governed `tests/s232f2-access-availability.test.mjs` access-inventory correction and the inherited `tests/wcv-c3r-p-practice-common-durable-runtime.test.mjs` frozen-identity alignment)
+- Aggregate PR changed paths: 17 (`14` APP-1 core paths plus the separately governed `tests/s232f2-access-availability.test.mjs` access-inventory correction, the inherited `tests/wcv-c3r-p-practice-common-durable-runtime.test.mjs` frozen-identity alignment, and its directly coupled `tests/e2e/wcv-c3r-p-practice-common-runtime.spec.ts` frozen evidence-time correction)
 - New API, migration, database, RLS, auth, package, lockfile, workflow and public-navigation paths: 0
 
 ## Focused contract evidence
@@ -45,6 +45,8 @@ The terminal three-finding root correction makes the source-answer placeholder s
 
 The inherited C3R-P access-identity regression was then aligned from historical `repository.ts` blob `f7f20117c5e3acb14eeb331d8f45a9b97d66c8c2` to audited APP-1 successor blob `9fa5dd0fcf3200fbc9e560a8ba379a3c210d8586`. The semantic diff is limited to replacing the globally bounded item-detail Queue lookup with a private exact-user/exact-item query that applies the closed exam, stage, status, source-kind and source-submission filters before ordering and paging. Every other frozen production-access blob remains unchanged. The regression still hashes every exact file and now also proves that `getWrongAnswerDetail` no longer calls `listReviewQueue(userId, 20)` and that the exact filters precede any ordering or range.
 
+The first exact-head C3R-P runtime run then exposed an independent stale wall-clock assumption in the inherited browser fixture: two post-D+1 reads omitted the existing `evidenceStep` seam, so the fixed D+7 due time had naturally become eligible by the September CI date. Both reads now bind the already-defined `d1Rescheduled` instant (`2026-08-25T00:09:00.000Z`), which remains before the D+7 due time and preserves the intended fail-closed pre-D+7 assertion. No C3R-P product, persistence, schema, RLS, authentication or runtime behavior changed.
+
 After each runtime, the ephemeral Owner was deleted; Next, Chromium, DB/Auth/REST/Kong, containers, volume, bridge, listeners, temporary guards, reports and artifacts were removed with zero matching runtime resources remaining. Fixture bodies remain synthetic and no raw body is retained in evidence.
 
 ## Corrective evidence inventory
@@ -78,7 +80,7 @@ After each runtime, the ephemeral Owner was deleted; Next, Chromium, DB/Auth/RES
 - changed-file lint: passed;
 - typecheck: passed;
 - production Webpack build: passed for the final application-source bytes;
-- exact 14-path APP-1 core manifest plus one separately governed shared access-inventory path and one directly coupled inherited C3R-P identity regression (`16` aggregate): passed;
+- exact 14-path APP-1 core manifest plus one separately governed shared access-inventory path, one directly coupled inherited C3R-P identity regression, and its frozen evidence-time runtime-spec correction (`17` aggregate): passed;
 - `git diff --check`: passed;
 - repository-required exact-head CI and fresh formal review.
 
