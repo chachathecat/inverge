@@ -21,7 +21,7 @@ import {
 import { Button, type ButtonProps } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import {
-  isApp1InitialAnalysisEligible,
+  isApp1PersistedInitialAnalysisEligible,
   isApp1SubjectAuthorized,
   type App1TrustedRepairSubject,
 } from "@/lib/owner-study/app1-capture-repair-view-model";
@@ -639,13 +639,7 @@ export function WrongAnswerCaptureForm({
     ownerCaptureRepairEnabled &&
     mode === "second" &&
     isApp1SubjectAuthorized(form.subjectLabel, ownerCaptureRepairSubjects);
-  const ownerCaptureRepairInitialAnalysisEligible =
-    ownerCaptureRepairSubjectEnabled &&
-    isApp1InitialAnalysisEligible({
-      questionText: form.rawQuestionText || form.problemTitle,
-      answerText: form.userAnswer,
-      referenceText: form.correctAnswer === "-" ? "" : form.correctAnswer,
-    });
+
   const secondWriteEnabled = mode === "second" && workflow === "second-write" && !rewriteContext;
   const getInitialStage = () => {
     if (rewriteContext && mode === "second") return "confirm" as const;
@@ -1750,6 +1744,13 @@ export function WrongAnswerCaptureForm({
         item?: {
           id: string;
           examName?: string;
+          subjectLabel?: string;
+          sourceType?: string;
+          problemTitle?: string;
+          rawQuestionText?: string;
+          rawAnswerText?: string;
+          userAnswer?: string;
+          correctAnswer?: string;
           updatedAt?: string;
           rawPayload?: Record<string, unknown>;
         };
@@ -1798,7 +1799,15 @@ export function WrongAnswerCaptureForm({
         router.refresh();
         return;
       }
-      if (ownerCaptureRepairInitialAnalysisEligible) {
+      const ownerCaptureRepairPersistedInitialAnalysisEligible =
+        ownerCaptureRepairEnabled &&
+        mode === "second" &&
+        isApp1SubjectAuthorized(
+          result.item.subjectLabel ?? "",
+          ownerCaptureRepairSubjects,
+        ) &&
+        isApp1PersistedInitialAnalysisEligible(result.item);
+      if (ownerCaptureRepairPersistedInitialAnalysisEligible) {
         router.push(
           `/app/capture/repair?itemId=${encodeURIComponent(result.item.id)}`,
         );

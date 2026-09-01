@@ -17,6 +17,7 @@ import {
   evaluateApp1SameSessionRepair,
   getApp1LearnerAnswer,
   isApp1InitialAnalysisEligible,
+  isApp1PersistedInitialAnalysisEligible,
   isClientAuthoredApp1PersistenceCandidate,
   isApp1SubjectAuthorized,
 } from "../lib/owner-study/app1-capture-repair-view-model.ts";
@@ -1496,13 +1497,96 @@ test("APP1-VM-003D keeps the Capture continuation outside APP-1 until the saved 
     }),
     true,
   );
+  assert.equal(
+    isApp1InitialAnalysisEligible({
+      questionText: "저작권 안전 합성 사례의 정확한 질문입니다.",
+      answerText:
+        "요건과 사례 사실의 연결을 구체적으로 설명한 충분한 합성 답안입니다.",
+      sourceType: "photo",
+      ocrConfirmedByLearner: true,
+      lowConfidenceFlag: true,
+      hasManualCorrection: false,
+    }),
+    false,
+  );
+  assert.equal(
+    isApp1InitialAnalysisEligible({
+      questionText: "저작권 안전 합성 사례의 정확한 질문입니다.",
+      answerText:
+        "요건과 사례 사실의 연결을 구체적으로 설명한 충분한 합성 답안입니다.",
+      sourceType: "pdf",
+      ocrConfirmedByLearner: true,
+      lowConfidenceFlag: true,
+      hasManualCorrection: true,
+    }),
+    true,
+  );
+  assert.equal(
+    isApp1InitialAnalysisEligible({
+      questionText: "저작권 안전 합성 사례의 정확한 질문입니다.",
+      answerText:
+        "요건과 사례 사실의 연결을 구체적으로 설명한 충분한 합성 답안입니다.",
+      sourceType: "image",
+      ocrConfirmedByLearner: false,
+      lowConfidenceFlag: false,
+      hasManualCorrection: false,
+    }),
+    false,
+  );
+
+  const persistedEligible = {
+    subjectLabel: "감정평가이론",
+    sourceType: "pdf",
+    problemTitle: "저작권 안전 합성 사례의 정확한 질문입니다.",
+    rawQuestionText: "저작권 안전 합성 사례의 정확한 질문입니다.",
+    rawAnswerText:
+      "요건과 사례 사실의 연결을 구체적으로 설명한 충분한 합성 답안입니다.",
+    userAnswer:
+      "요건과 사례 사실의 연결을 구체적으로 설명한 충분한 합성 답안입니다.",
+    correctAnswer: "-",
+    rawPayload: {
+      user_confirmed_fields: {
+        examMode: "second",
+        subject: "감정평가이론",
+        sourceType: "pdf",
+        ocrConfirmedByLearner: true,
+        lowConfidenceFlag: true,
+        hasManualCorrection: true,
+      },
+    },
+  };
+  assert.equal(isApp1PersistedInitialAnalysisEligible(persistedEligible), true);
+  assert.equal(
+    isApp1PersistedInitialAnalysisEligible({ ...persistedEligible, rawPayload: {} }),
+    false,
+  );
+  assert.equal(
+    isApp1PersistedInitialAnalysisEligible({
+      ...persistedEligible,
+      rawPayload: { user_confirmed_fields: { ...persistedEligible.rawPayload.user_confirmed_fields, hasManualCorrection: false } },
+    }),
+    false,
+  );
+  assert.equal(
+    isApp1PersistedInitialAnalysisEligible({
+      ...persistedEligible,
+      rawPayload: { user_confirmed_fields: { ...persistedEligible.rawPayload.user_confirmed_fields, sourceType: "photo" } },
+    }),
+    false,
+  );
 
   const captureForm = await read("components/review-os/capture-form.tsx");
+  assert.match(captureForm, /isApp1PersistedInitialAnalysisEligible\(result\.item\)/u);
   const redirectBranch = captureForm.match(
-    /if \(ownerCaptureRepairInitialAnalysisEligible\) \{[\s\S]*?return;\s*\}/u,
+    /if \(ownerCaptureRepairPersistedInitialAnalysisEligible\) \{[\s\S]*?return;\s*\}/u,
   )?.[0];
   assert.ok(redirectBranch, "missing analyzability-gated APP-1 repair redirect");
   assert.match(redirectBranch, /\/app\/capture\/repair\?itemId=/u);
+  assert.ok(
+    captureForm.indexOf("isApp1PersistedInitialAnalysisEligible(result.item)") >
+      captureForm.indexOf("buildDurableCapturePersistenceReceipt(result.item, operation)"),
+    "APP-1 entry eligibility must be derived from the exact persisted item after its durable receipt",
+  );
   assert.ok(
     captureForm.indexOf("openSavedPlanStage(buildSaveConfirmation", captureForm.indexOf(redirectBranch)) >
       captureForm.indexOf(redirectBranch),
@@ -2051,12 +2135,12 @@ test("APP1-UI-003 enters repair only after a durable receipt without racing the 
     "const persistenceEvidence = buildDurableCapturePersistenceReceipt(result.item, operation);",
   );
   const repairBranch = captureForm.match(
-    /if \(ownerCaptureRepairInitialAnalysisEligible\) \{[\s\S]*?return;\s*\}/u,
+    /if \(ownerCaptureRepairPersistedInitialAnalysisEligible\) \{[\s\S]*?return;\s*\}/u,
   )?.[0];
 
   assert.ok(receiptIndex >= 0, "missing durable capture receipt gate");
   assert.ok(repairBranch, "missing APP-1 repair-route branch");
-  assert.ok(captureForm.indexOf("if (ownerCaptureRepairInitialAnalysisEligible)", receiptIndex) > receiptIndex);
+  assert.ok(captureForm.indexOf("if (ownerCaptureRepairPersistedInitialAnalysisEligible)", receiptIndex) > receiptIndex);
   assert.match(repairBranch, /router\.push\([\s\S]*?\/app\/capture\/repair\?itemId=/u);
   assert.doesNotMatch(repairBranch, /router\.refresh\(\)/u);
 });

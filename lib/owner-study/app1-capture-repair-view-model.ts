@@ -176,7 +176,20 @@ export function isApp1InitialAnalysisEligible(input: Readonly<{
   questionText: string;
   answerText: string;
   referenceText?: string;
+  sourceType?: string;
+  ocrConfirmedByLearner?: boolean;
+  lowConfidenceFlag?: boolean;
+  hasManualCorrection?: boolean;
 }>) {
+  const requiresExplicitOcrConfirmation = ["photo", "image", "pdf"].includes(
+    input.sourceType ?? "text",
+  );
+  if (
+    (requiresExplicitOcrConfirmation && input.ocrConfirmedByLearner !== true) ||
+    (input.lowConfidenceFlag === true && input.hasManualCorrection !== true)
+  ) {
+    return false;
+  }
   return (
     getAnswerReviewInputQualityIssue({
       questionText: input.questionText,
@@ -187,6 +200,53 @@ export function isApp1InitialAnalysisEligible(input: Readonly<{
       referenceFileCount: 0,
     }) === null
   );
+}
+
+export function isApp1PersistedInitialAnalysisEligible(input: Readonly<{
+  subjectLabel?: unknown;
+  sourceType?: unknown;
+  problemTitle?: unknown;
+  rawQuestionText?: unknown;
+  rawAnswerText?: unknown;
+  userAnswer?: unknown;
+  correctAnswer?: unknown;
+  rawPayload?: unknown;
+}>) {
+  if (
+    typeof input.subjectLabel !== "string" ||
+    typeof input.sourceType !== "string" ||
+    typeof input.userAnswer !== "string" ||
+    typeof input.correctAnswer !== "string"
+  ) {
+    return false;
+  }
+  const rawPayload = record(input.rawPayload);
+  const fields = record(rawPayload?.user_confirmed_fields);
+  if (
+    !fields ||
+    fields.examMode !== "second" ||
+    fields.subject !== input.subjectLabel ||
+    fields.sourceType !== input.sourceType ||
+    typeof fields.ocrConfirmedByLearner !== "boolean" ||
+    typeof fields.lowConfidenceFlag !== "boolean" ||
+    typeof fields.hasManualCorrection !== "boolean"
+  ) {
+    return false;
+  }
+  return isApp1InitialAnalysisEligible({
+    questionText:
+      typeof input.rawQuestionText === "string"
+        ? input.rawQuestionText
+        : typeof input.problemTitle === "string"
+          ? input.problemTitle
+          : "",
+    answerText: input.userAnswer,
+    referenceText: input.correctAnswer === "-" ? "" : input.correctAnswer,
+    sourceType: input.sourceType,
+    ocrConfirmedByLearner: fields.ocrConfirmedByLearner,
+    lowConfidenceFlag: fields.lowConfidenceFlag,
+    hasManualCorrection: fields.hasManualCorrection,
+  });
 }
 
 export function buildApp1StructureSummary(

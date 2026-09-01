@@ -585,9 +585,17 @@ async function installSyntheticSeams(
             ok: true,
             item: {
               id: SOURCE_ITEM_ID,
+              subjectLabel: submitted.subjectLabel,
+              sourceType: submitted.sourceType,
+              problemTitle: submitted.problemTitle,
+              rawQuestionText: submitted.rawQuestionText,
+              rawAnswerText: submitted.rawAnswerText,
+              userAnswer: submitted.userAnswer,
+              correctAnswer: submitted.correctAnswer,
               updatedAt: "2026-08-29T02:00:00.000Z",
               rawPayload: {
                 user_confirmed_fields: {
+                  ...confirmed,
                   persistence_operation_id: binding.operationId,
                   persistence_work_revision_id: binding.workRevisionId,
                 },
