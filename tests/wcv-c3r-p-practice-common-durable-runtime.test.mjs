@@ -855,6 +855,16 @@ test("disposable fixture leaves production access code and frozen identities unc
     /const completedD1PlanResponse = await context\.request\.get\([\s\S]*evidenceStep=d1Rescheduled[\s\S]*const sealedTransferResponse = await context\.request\.get\([\s\S]*evidenceStep=d1Rescheduled/u,
     "pre-D+7 assertions must use the frozen post-D+1 evidence time, never wall-clock time",
   );
+  assert.match(
+    browserSource,
+    /const preDueD7Route = async \(route: Route\)[\s\S]*url\.searchParams\.set\("evidenceStep", "d1Rescheduled"\)[\s\S]*route\.fetch\(\{ url: url\.toString\(\) \}\)[\s\S]*secondPage\.route\(c3rPApiUrl, preDueD7Route\)[\s\S]*secondPage\.unroute\(c3rPApiUrl, preDueD7Route\)/u,
+    "both browser contexts must retain the frozen pre-D+7 evidence time",
+  );
+  assert.match(
+    browserSource,
+    /const transferredResponse = await context\.request\.get\([\s\S]*evidenceStep=d7/u,
+    "the pre-recurrence assertion must use the frozen post-D+7 evidence time",
+  );
   assert.equal(execFileSync("git", ["hash-object", "package.json"], { cwd: root, encoding: "utf8" }).trim(),
     contract.packageIdentity.packageJsonGitBlob);
   assert.equal(execFileSync("git", ["hash-object", "package-lock.json"], { cwd: root, encoding: "utf8" }).trim(),
