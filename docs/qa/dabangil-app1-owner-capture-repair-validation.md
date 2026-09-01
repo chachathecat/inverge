@@ -6,7 +6,7 @@
 - Base tree: `c6c6a8ad876c2f40b5276a26485b088656addf49`
 - Tracking issue: `#874`
 - APP-1 core changed paths: 14
-- Aggregate PR changed paths: 15 (`14` APP-1 core paths plus the separately governed `tests/s232f2-access-availability.test.mjs` access-inventory correction)
+- Aggregate PR changed paths: 16 (`14` APP-1 core paths plus the separately governed `tests/s232f2-access-availability.test.mjs` access-inventory correction and the inherited `tests/wcv-c3r-p-practice-common-durable-runtime.test.mjs` frozen-identity alignment)
 - New API, migration, database, RLS, auth, package, lockfile, workflow and public-navigation paths: 0
 
 ## Focused contract evidence
@@ -43,6 +43,8 @@ The authorized exact-head review self-correction removed unchanged retry as a re
 
 The terminal three-finding root correction makes the source-answer placeholder set exact, requires literal and contextual evidence plus a closed completed-action profile for unknown repair targets, and moves item-specific Queue receipt lookup to an exhaustive private exact-item query rather than any bounded general presentation. The final authenticated run passed `1/1` with zero skip across `390x844` text, `768x900` photo and `1440x1024` PDF. It proved that placeholder-backed persisted records send the substantive multiline rewrite body into analysis, unresolved out-of-vocabulary wording fails closed while exact completed evidence confirms, and one exact target Queue row remains authoritative despite 21 higher-priority unrelated rows; unrelated and cross-user rows were absent from the item-bound result. The separate item-detail failure still truthfully rendered `saved_without_queue`. Keyboard and visible focus passed, 200% reflow passed, horizontal overflow was zero, axe serious/critical violations were zero, browser and Next unauthorized application attempts were zero, and successful remote Supabase, Production, provider and payment contacts were zero. The sanitized terminal runtime receipt digest is `sha256:35b4c5ff4417953fc99d8ddd8ff73901f4495ae74fa448d72f131b8fdfe184cf`.
 
+The inherited C3R-P access-identity regression was then aligned from historical `repository.ts` blob `f7f20117c5e3acb14eeb331d8f45a9b97d66c8c2` to audited APP-1 successor blob `9fa5dd0fcf3200fbc9e560a8ba379a3c210d8586`. The semantic diff is limited to replacing the globally bounded item-detail Queue lookup with a private exact-user/exact-item query that applies the closed exam, stage, status, source-kind and source-submission filters before ordering and paging. Every other frozen production-access blob remains unchanged. The regression still hashes every exact file and now also proves that `getWrongAnswerDetail` no longer calls `listReviewQueue(userId, 20)` and that the exact filters precede any ordering or range.
+
 After each runtime, the ephemeral Owner was deleted; Next, Chromium, DB/Auth/REST/Kong, containers, volume, bridge, listeners, temporary guards, reports and artifacts were removed with zero matching runtime resources remaining. Fixture bodies remain synthetic and no raw body is retained in evidence.
 
 ## Corrective evidence inventory
@@ -64,16 +66,19 @@ After each runtime, the ephemeral Owner was deleted; Next, Chromium, DB/Auth/RES
 - Exhaustive private Queue authority: stable 100-row paging is bound to the exact user, exam mode, lifecycle, source kind and repair item; count drift, overrun, incomplete pages, duplicate row IDs and more than one exact semantic row fail closed. The local API saturation run proved the exact target survives 21 higher-priority unrelated rows and excludes cross-user data.
 - Directly adjacent Capture, persistence, Queue and trusted-repair behavior: `61/61` passed on the completed local candidate.
 - Combined read-only hostile review of all five final-batch findings: actionable `P0/P1/P2 = 0/0/0`.
+- Inherited C3R-P/T/L deterministic identity and receipt bundle: `129/129` passed after the exact successor-blob alignment.
+- Read-only hostile review of the inherited identity alignment: actionable `P0/P1/P2 = 0/0/0`; no frozen identity was weakened and no unrelated C3R authority changed.
 
 ## Final candidate checks
 
 - APP-1 focused and required-adjacent tests: `38/38` passed;
+- inherited C3R-P/T/L deterministic tests: `129/129` passed;
 - directly adjacent Capture, persistence, Queue and trusted-repair tests: `61/61` passed;
 - S232F.2 route-inventory tests: `6/6` passed, including `app/app/capture/repair/page.tsx`;
 - changed-file lint: passed;
 - typecheck: passed;
 - production Webpack build: passed for the final application-source bytes;
-- exact 14-path APP-1 core manifest plus one separately governed shared access-inventory path (`15` aggregate): passed;
+- exact 14-path APP-1 core manifest plus one separately governed shared access-inventory path and one directly coupled inherited C3R-P identity regression (`16` aggregate): passed;
 - `git diff --check`: passed;
 - repository-required exact-head CI and fresh formal review.
 

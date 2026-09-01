@@ -57,8 +57,13 @@ const workflowSource = fs.readFileSync(path.join(root,
   ".github/workflows/c3r-p-practice-common-durable-runtime.yml"), "utf8");
 const fullCiWorkflowSource = fs.readFileSync(path.join(root,
   ".github/workflows/ci-full.yml"), "utf8");
+const sharedRepositorySource = fs.readFileSync(path.join(root,
+  "lib/review-os/repository.ts"), "utf8");
 const productionAccessBlobs = Object.freeze({
-  "lib/review-os/repository.ts": "f7f20117c5e3acb14eeb331d8f45a9b97d66c8c2",
+  // The original C3R-P identity remains historical Git evidence. This entry
+  // freezes the audited APP-1 successor; future access changes still require
+  // an explicit identity update and semantic audit.
+  "lib/review-os/repository.ts": "9fa5dd0fcf3200fbc9e560a8ba379a3c210d8586",
   "lib/review-os/server.ts": "429085a06c3104aa66c49b272738d53f00318d8a",
   "app/app/layout.tsx": "215ec312e2102d39332eeb47e2cc3b446ad78d19",
   "app/app/c3r-p/page.tsx": "1183828115a8a0ef0fb04c5d9c0e42a8ae5bd240",
@@ -820,6 +825,31 @@ test("disposable fixture leaves production access code and frozen identities unc
     assert.equal(execFileSync("git", ["hash-object", file], { cwd: root, encoding: "utf8" }).trim(),
       expectedBlob, file);
   }
+  const itemQueueStart = sharedRepositorySource.indexOf(
+    "private async listReviewQueueForWrongAnswerItem",
+  );
+  const detailStart = sharedRepositorySource.indexOf("async getWrongAnswerDetail", itemQueueStart);
+  assert.ok(itemQueueStart >= 0 && detailStart > itemQueueStart);
+  const itemQueueSource = sharedRepositorySource.slice(itemQueueStart, detailStart);
+  const detailSource = sharedRepositorySource.slice(detailStart);
+  assert.equal(detailSource.includes("this.listReviewQueue(userId, 20)"), false);
+  const closedItemFilters = [
+    '.eq("user_id", userId)',
+    '.eq("exam_id", "wrong_answer_os")',
+    '.eq("stage", "alpha")',
+    '.eq("status", "pending")',
+    '.eq("source_kind", "wrong_answer")',
+    '.eq("source_submission_id", item.id)',
+  ];
+  let previousFilter = -1;
+  for (const filter of closedItemFilters) {
+    const filterIndex = itemQueueSource.indexOf(filter);
+    assert.ok(filterIndex > previousFilter, filter);
+    previousFilter = filterIndex;
+  }
+  const firstOrder = itemQueueSource.indexOf('.order("priority_score"');
+  const pageRange = itemQueueSource.indexOf(".range(offset, offset + pageSize - 1)");
+  assert.ok(previousFilter < firstOrder && firstOrder < pageRange);
   assert.equal(execFileSync("git", ["hash-object", "package.json"], { cwd: root, encoding: "utf8" }).trim(),
     contract.packageIdentity.packageJsonGitBlob);
   assert.equal(execFileSync("git", ["hash-object", "package-lock.json"], { cwd: root, encoding: "utf8" }).trim(),

@@ -38,6 +38,8 @@ const EXPECTED_PATHS = [
 ];
 
 const SHARED_ACCESS_INVENTORY_PATH = "tests/s232f2-access-availability.test.mjs";
+const INHERITED_C3R_P_IDENTITY_PATH =
+  "tests/wcv-c3r-p-practice-common-durable-runtime.test.mjs";
 
 function syntheticDetail(overrides = {}) {
   const base = {
@@ -1240,7 +1242,15 @@ test("APP1-PERMISSION-001 separates input confirmation from quick save at the In
   assert.deepEqual(config.changedPaths, EXPECTED_PATHS);
   assert.equal(config.changedPaths.length, 14);
   assert.equal(config.changedPaths.includes(SHARED_ACCESS_INVENTORY_PATH), false);
-  assert.equal(new Set([...config.changedPaths, SHARED_ACCESS_INVENTORY_PATH]).size, 15);
+  assert.equal(config.changedPaths.includes(INHERITED_C3R_P_IDENTITY_PATH), false);
+  assert.equal(
+    new Set([
+      ...config.changedPaths,
+      SHARED_ACCESS_INVENTORY_PATH,
+      INHERITED_C3R_P_IDENTITY_PATH,
+    ]).size,
+    16,
+  );
   assert.match(sharedAccessInventory, /app\/app\/capture\/repair\/page\.tsx/u);
 });
 
