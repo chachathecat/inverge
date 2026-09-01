@@ -13,6 +13,8 @@ const QUEUE_ID = "33333333-3333-4333-8333-333333333333";
 const originalGap = "사례 사실과 논거의 연결이 약합니다.";
 const syntheticRepair =
   "합성 사례의 사실 A는 위 논거의 요건 B를 충족하므로 결론 C에 이른다고 내가 직접 연결했다.\n\n둘째 문단에서 그 적용 이유를 직접 설명했다.";
+const syntheticConflictResolvedRepair =
+  `${syntheticRepair}\n\n충돌을 확인한 뒤 사실 A와 요건 B의 적용 연결을 학습자가 직접 다시 고쳤다.`;
 
 const syntheticDetail = {
   item: {
@@ -266,9 +268,11 @@ function classifyItemSavePayload(value: unknown): ItemSaveClass {
     confirmed.app1_same_session_only === true &&
     confirmed.app1_mastery_created === false &&
     confirmed.app1_transfer_created === false &&
-    value.rawAnswerText === syntheticRepair &&
-    value.rewriteParagraph === syntheticRepair &&
-    value.userAnswer === syntheticRepair &&
+    [syntheticRepair, syntheticConflictResolvedRepair].includes(
+      value.rawAnswerText as string,
+    ) &&
+    value.rewriteParagraph === value.rawAnswerText &&
+    value.userAnswer === value.rawAnswerText &&
     !Object.prototype.hasOwnProperty.call(value, "nextReviewDate") &&
     hasPersistenceBinding;
   if (isRepairSave) return "app1_repair_save";
@@ -772,13 +776,28 @@ test("synthetic Owner Capture → one-gap direct repair → durable next review 
       await expect(page.locator("[data-app1-completed]")).toHaveCount(0);
       await expect(page.locator('[data-app1-persistence-receipt="durable"]')).toHaveCount(0);
       await expect(page.locator('[data-app1-queue-receipt="valid"]')).toHaveCount(0);
-      await page.getByRole("button", { name: "복구 결과 저장하고 다음 복습 만들기" }).click();
+      await expect(
+        page.getByRole("button", {
+          name: "복구 결과 저장하고 다음 복습 만들기",
+          exact: true,
+        }),
+      ).toHaveCount(0);
+      await page.getByRole("button", { name: "복구 입력 수정하기" }).click();
+      await expect(repair).toHaveValue(syntheticRepair);
+      await repair.fill(syntheticConflictResolvedRepair);
+      await page.getByRole("button", { name: "복구 확인" }).click();
+      await expect(
+        page.getByText("이 세션의 요청한 복구 1개가 확인되었습니다"),
+      ).toBeVisible();
+      await page
+        .getByRole("button", { name: "복구 결과 저장하고 다음 복습 만들기" })
+        .click();
     }
     await expect(page.locator('[data-app1-persistence-receipt="durable"]')).toBeVisible();
     await expect(page.locator('[data-app1-queue-receipt="valid"]')).toBeVisible();
     await expect(page.getByText(/답을 보지 않고 보강한 연결을 다시 한 번 작성하기/)).toBeVisible();
     expect(seams.ocrCount()).toBe(viewport.exerciseFailures ? 2 : 1);
-    expect(seams.structureCount()).toBe(viewport.exerciseFailures ? 6 : 2);
+    expect(seams.structureCount()).toBe(viewport.exerciseFailures ? 7 : 2);
     expect(seams.repairSaveCount()).toBe(viewport.exerciseFailures ? 3 : 1);
     expect(seams.repairResponseClasses()).toEqual(
       viewport.exerciseFailures

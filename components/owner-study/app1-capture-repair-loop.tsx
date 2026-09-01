@@ -289,6 +289,16 @@ export function App1CaptureRepairLoop({
     setPhase("repair_verification");
   }
 
+  function editRepairAfterConflict() {
+    if (!conflict) return;
+    pendingSaveRef.current = null;
+    setVerification(null);
+    setConflict(false);
+    setError(null);
+    setPhase("direct_repair");
+    requestAnimationFrame(() => repairRef.current?.focus());
+  }
+
   async function saveRepair() {
     if (!detail || !gap || !verification) return;
     if (
@@ -596,7 +606,15 @@ export function App1CaptureRepairLoop({
               원문 다시 확인하기
             </V3ActionLink>
           ) : null}
-          {![
+          {conflict ? (
+            <V3ActionButton
+              type="button"
+              onClick={editRepairAfterConflict}
+              data-app1-edit-conflicted-repair
+            >
+              복구 입력 수정하기
+            </V3ActionButton>
+          ) : ![
             "deferred",
             "blocked_by_ocr_or_source_uncertainty",
           ].includes(verification.state) ? (

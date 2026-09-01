@@ -13,6 +13,7 @@ import {
   buildApp1RepairPersistenceInput,
   buildApp1StructureSummary,
   evaluateApp1SameSessionRepair,
+  getApp1LearnerAnswer,
   isApp1SubjectAuthorized,
 } from "../lib/owner-study/app1-capture-repair-view-model.ts";
 
@@ -188,6 +189,19 @@ test("APP1-VM-001 builds a bounded OCR-confirmed structure summary", () => {
   );
   assert.equal(blocked.ocrConfirmed, false);
   assert.match(blocked.uncertainty, /OCR 확인 영수증/);
+
+  const longSourceAnswer = `확인된 장문 답안입니다.\n\n${"가".repeat(
+    APP1_LIMITS.maximumRepairCharacters + 1,
+  )}`;
+  const longSourceDetail = syntheticDetail({
+    item: {
+      userAnswer: longSourceAnswer,
+      rawAnswerText: "",
+      rewriteParagraph: "",
+    },
+  });
+  assert.equal(getApp1LearnerAnswer(longSourceDetail), longSourceAnswer);
+  assert.equal(buildApp1StructureSummary(longSourceDetail).uncertainty, null);
 });
 
 test("APP1-ACCESS-001 preserves the exact partial subject authorization", () => {
@@ -210,6 +224,26 @@ test("APP1-VM-002 emits exactly one anchored gap and one direct action", () => {
   assert.ok(gap.alreadySuccessful);
   assert.ok(gap.repairAction);
   assert.equal(Object.keys(gap).filter((key) => key === "gap").length, 1);
+
+  const unlocated = buildApp1PrimaryGap(
+    syntheticDetail({
+      item: {
+        rawPayload: {
+          user_confirmed_fields: {
+            ocrConfirmedByLearner: true,
+            pageCount: 2,
+          },
+        },
+      },
+    }),
+    draft(),
+  );
+  assert.equal(
+    unlocated.anchor,
+    "확인된 2페이지 답안 전체 · 세부 위치 미확인",
+  );
+  assert.equal(unlocated.anchorKind, "unavailable");
+  assert.doesNotMatch(unlocated.anchor, /문단 1/u);
 });
 
 test("APP1-VM-003 requires target-specific learner and draft evidence without model-wording authority", () => {
@@ -905,6 +939,14 @@ test("APP1-UI-004 keeps queue confirmation post-save and item-specific", async (
       .includes('setPhase("repair_verification")'),
     false,
     "post-save Queue uncertainty must not return to the pre-save phase",
+  );
+  assert.match(
+    repairLoop,
+    /function editRepairAfterConflict\(\) \{[\s\S]*?pendingSaveRef\.current = null;[\s\S]*?setVerification\(null\);[\s\S]*?setConflict\(false\);[\s\S]*?setPhase\("direct_repair"\);/u,
+  );
+  assert.match(
+    repairLoop,
+    /conflict \? \([\s\S]*?data-app1-edit-conflicted-repair[\s\S]*?복구 입력 수정하기[\s\S]*?: !\[/u,
   );
 });
 

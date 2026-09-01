@@ -146,12 +146,7 @@ export function getApp1LearnerAnswer(detail: WrongAnswerDetail) {
     learnerBodyText(detail.item.rawAnswerText),
     learnerBodyText(detail.item.rewriteParagraph),
   ];
-  return (
-    candidates.find(
-      (candidate) =>
-        candidate && candidate.length <= APP1_LIMITS.maximumRepairCharacters,
-    ) ?? ""
-  );
+  return candidates.find((candidate) => candidate) ?? "";
 }
 
 export function buildApp1StructureSummary(
@@ -218,9 +213,9 @@ function resolveAnchor(detail: WrongAnswerDetail): Pick<
   if (answer) {
     return {
       anchor: pageCount
-        ? `확인된 ${pageCount}페이지 범위 · 답안 문단 1`
-        : "확인된 답안 · 문단 1",
-      anchorKind: "bounded_section",
+        ? `확인된 ${pageCount}페이지 답안 전체 · 세부 위치 미확인`
+        : "확인된 학습자 답안 전체 · 세부 위치 미확인",
+      anchorKind: "unavailable",
     };
   }
   return {
