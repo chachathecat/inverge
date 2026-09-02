@@ -1607,6 +1607,19 @@ test("APP1-VM-003F recalculates closed symbolic and verbal Practice arithmetic",
     }).state,
     "repair_confirmed_for_this_session",
   );
+  const correctEquationWithNonCalculationResultCount =
+    "수익 120과 비용 20의 계산 산식은 120 - 20 = 100이고 검토 결과 2개의 쟁점을 확인했으며 결과 단위와 부호의 검산을 완료했다.";
+  assert.equal(
+    evaluateApp1SameSessionRepair({
+      detail,
+      requestedGap,
+      repairText: correctEquationWithNonCalculationResultCount,
+      repairDraft: resolvedTargetDraft({
+        strength: correctEquationWithNonCalculationResultCount,
+      }),
+    }).state,
+    "repair_confirmed_for_this_session",
+  );
   const correctMixedCalculation =
     "수익 120과 비용 20의 계산 산식은 120 - 20 = 100이고 수익 120에서 비용 20을 빼 순수익 100으로 계산했으며 단위와 부호의 검산을 완료했다.";
   assert.equal(

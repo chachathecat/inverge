@@ -371,13 +371,16 @@ The fresh exact-head review then identified the remaining representation gap: th
 
 The following exact-head review found one final duplicated consumption inside repair-anchor construction. `buildApp1RepairTargetProfile` now uses `getApp1LearnerAnswer` instead of reading three persisted answer fields independently, so a recognized-facet repair is anchored to the same mapped rewrite body used for entry and analysis. The focused regression proves a rewrite stored only at `rawPayload.rewrite_paragraph` can confirm a source-grounded closed relation/outcome repair, while the existing target-specific and fail-closed hostile cases remain green.
 
+The next exact-head review found that the verbal-calculation scanner treated an ordinary count such as `검토 결과 2개의 쟁점` as a second arithmetic result after a valid equation. The closed result pattern now recognizes a verbal calculation only when the result noun and numeric value are joined by an output case marker to an immediate calculation, derivation or verification verb. Ordinary prose counts are ignored, while every actual symbolic and verbal arithmetic claim remains independently recalculated and fail-closed. The focused regression proves that a correct equation followed by the non-calculation result count remains confirmable.
+
 ## Final candidate checks
 
-- APP-1 focused suite: `29/29` passed, including `APP1-UI-002B` for revoked-authority exit, `APP1-VM-003D` for shared persisted-answer selection across substantive `userAnswer`, `rawAnswerText`, flat `rewriteParagraph` and mapped `rawPayload.rewrite_paragraph` fallbacks, and `APP1-VM-003` for mapped-rewrite repair anchoring;
-- inherited C3R-P/T/L, Capture outer-flow, adjacent persistence/Queue/trusted-repair and S232F.2 results remain prior-head evidence and are revalidated only by the new clean-checkout exact-head CI;
+- APP-1 focused suite: `37/37` passed, including `APP1-UI-002B` for revoked-authority exit, `APP1-VM-003D` for shared persisted-answer selection across substantive `userAnswer`, `rawAnswerText`, flat `rewriteParagraph` and mapped `rawPayload.rewrite_paragraph` fallbacks, `APP1-VM-003` for mapped-rewrite repair anchoring, and `APP1-VM-003F` for exhaustive arithmetic validation without misclassifying ordinary result counts;
+- inherited C3R-P/T/L deterministic bundle: `129/129` passed;
+- S232F.2 access inventory: `6/6` passed; Capture outer-flow and adjacent persistence/Queue/trusted-repair remain prior-head evidence and are revalidated by the new clean-checkout exact-head CI;
 - changed-file lint: passed;
 - typecheck: passed;
-- production Webpack and complete authenticated browser acceptance were not repeated for these deterministic client-state and pure persisted-eligibility corrections; the preserved prior runtime receipt is `sha256:b0c277325884e9bd1e02c6713a62b2ac7219d392249261177260d6d367a59354`, and clean-checkout exact-head CI is authoritative for integration;
+- production Webpack build with Next.js `16.2.12`: passed; complete authenticated browser acceptance was not repeated for this deterministic scanner correction, and the preserved prior runtime receipt is `sha256:b0c277325884e9bd1e02c6713a62b2ac7219d392249261177260d6d367a59354`;
 - exact PR aggregate remains `25` paths because all three corrective paths already belong to the existing candidate;
 - `git diff --check`: passed;
 - repository-required exact-head CI and fresh formal review: pending the corrective push.

@@ -595,7 +595,7 @@ const APP1_REPAIR_CALCULATION_RESULTS = Object.freeze([
 const APP1_REPAIR_CALCULATION_SYMBOL_PATTERN =
   /(?:^|(?<=[^0-9]))(-?[0-9]+(?:[.,][0-9]+)?)\s*(\+|-|−|×|\*|÷|\/)\s*(-?[0-9]+(?:[.,][0-9]+)?)\s*=\s*(-?[0-9]+(?:[.,][0-9]+)?)(?=$|[^0-9])/gu;
 const APP1_REPAIR_VERBAL_CALCULATION_RESULT_PATTERN =
-  /(?:^|(?<=[\s,.;:()[\]{}]))(?:결과|합계|차액|순수익)(?:은|는|이|가)?\s*(-?[0-9]+(?:[.,][0-9]+)?)(?:을|를|으로|로)?/gu;
+  /(?:^|(?<=[\s,.;:()[\]{}]))(?:결과|합계|차액|순수익)(?:은|는|이|가)?\s*(-?[0-9]+(?:[.,][0-9]+)?)(?:을|를|으로|로)\s*(?:계산|산출|검산)/gu;
 
 function parseApp1CalculationNumber(value: string) {
   const parsed = Number(value.replace(/,/gu, ""));
