@@ -1607,12 +1607,24 @@ test("APP1-VM-003F recalculates closed symbolic and verbal Practice arithmetic",
     }).state,
     "repair_confirmed_for_this_session",
   );
+  const correctMixedCalculation =
+    "수익 120과 비용 20의 계산 산식은 120 - 20 = 100이고 수익 120에서 비용 20을 빼 순수익 100으로 계산했으며 단위와 부호의 검산을 완료했다.";
+  assert.equal(
+    evaluateApp1SameSessionRepair({
+      detail,
+      requestedGap,
+      repairText: correctMixedCalculation,
+      repairDraft: resolvedTargetDraft({ strength: correctMixedCalculation }),
+    }).state,
+    "repair_confirmed_for_this_session",
+  );
   for (const repairText of [
     "수익 120과 비용 20의 계산 산식은 120 - 20 = 999이고 결과 단위와 부호의 검산을 완료했다.",
     "수익 120과 비용 20의 계산 산식은 120 + 20 = 100이고 결과 단위와 부호의 검산을 완료했다.",
     "수익 120과 비용 20의 계산 산식은 120 / 0 = 120이고 결과 단위와 부호의 검산을 완료했다.",
     "수익 120과 비용 20의 계산 산식은 120 - 20 = 100이고 100 / 0.05 = 999로 환원했으며 결과 단위와 부호의 검산을 완료했다.",
     "수익 120과 비용 20의 계산 산식은 120 - 20 = 100이고 100 / 0 = 2000으로 환원했으며 결과 단위와 부호의 검산을 완료했다.",
+    "수익 120과 비용 20의 계산 산식은 120 - 20 = 100이고 수익 120에서 비용 20을 빼 순수익 999로 계산했으며 단위와 부호의 검산을 완료했다.",
     "임대료 수익 120에서 비용 20을 빼 순수익 999로 계산하고 단위를 검산했다.",
     "수익 120에서 비용 20을 빼고 결과를 검산했다.",
     "임대료 수익 금액은 120이고 비용 20과 연도 2026을 적은 뒤 비용을 빼 계산 결과를 검산했다.",

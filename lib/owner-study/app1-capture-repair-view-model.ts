@@ -595,7 +595,7 @@ const APP1_REPAIR_CALCULATION_RESULTS = Object.freeze([
 const APP1_REPAIR_CALCULATION_SYMBOL_PATTERN =
   /(?:^|(?<=[^0-9]))(-?[0-9]+(?:[.,][0-9]+)?)\s*(\+|-|−|×|\*|÷|\/)\s*(-?[0-9]+(?:[.,][0-9]+)?)\s*=\s*(-?[0-9]+(?:[.,][0-9]+)?)(?=$|[^0-9])/gu;
 const APP1_REPAIR_VERBAL_CALCULATION_RESULT_PATTERN =
-  /(?:^|[\s,.;:()[\]{}])(?:결과|합계|차액|순수익)(?:은|는|이|가)?\s*(-?[0-9]+(?:[.,][0-9]+)?)(?:을|를|으로|로)?/u;
+  /(?:^|(?<=[\s,.;:()[\]{}]))(?:결과|합계|차액|순수익)(?:은|는|이|가)?\s*(-?[0-9]+(?:[.,][0-9]+)?)(?:을|를|으로|로)?/gu;
 
 function parseApp1CalculationNumber(value: string) {
   const parsed = Number(value.replace(/,/gu, ""));
@@ -629,45 +629,65 @@ function hasCorrectClosedPracticeCalculation(value: string) {
   const symbolicCalculations = [
     ...value.matchAll(APP1_REPAIR_CALCULATION_SYMBOL_PATTERN),
   ];
-  if (symbolicCalculations.length > 0) {
-    for (const symbolic of symbolicCalculations) {
-      const left = parseApp1CalculationNumber(symbolic[1]);
-      const right = parseApp1CalculationNumber(symbolic[3]);
-      const stated = parseApp1CalculationNumber(symbolic[4]);
-      if (left === null || right === null || stated === null) return false;
-      const calculated = evaluateApp1BinaryCalculation(
-        left,
-        symbolic[2],
-        right,
-      );
-      if (calculated === null || !app1CalculationEquals(calculated, stated)) {
-        return false;
-      }
+  for (const symbolic of symbolicCalculations) {
+    const left = parseApp1CalculationNumber(symbolic[1]);
+    const right = parseApp1CalculationNumber(symbolic[3]);
+    const stated = parseApp1CalculationNumber(symbolic[4]);
+    if (left === null || right === null || stated === null) return false;
+    const calculated = evaluateApp1BinaryCalculation(
+      left,
+      symbolic[2],
+      right,
+    );
+    if (calculated === null || !app1CalculationEquals(calculated, stated)) {
+      return false;
     }
-    return true;
   }
 
-  const resultMatch = value.match(APP1_REPAIR_VERBAL_CALCULATION_RESULT_PATTERN);
-  if (!resultMatch || resultMatch.index === undefined) return false;
-  const stated = parseApp1CalculationNumber(resultMatch[1]);
-  const materialBeforeResult = value.slice(0, resultMatch.index);
-  const operands = [
-    ...materialBeforeResult.matchAll(/-?[0-9]+(?:[.,][0-9]+)?/gu),
-  ]
-    .map((match) => parseApp1CalculationNumber(match[0]))
-    .filter((number): number is number => number !== null);
-  if (stated === null || operands.length !== 2) return false;
-  const identity = normalizedIdentity(materialBeforeResult);
-  const operator = APP1_REPAIR_CALCULATION_OPERATORS.find((candidate) =>
-    identity.includes(candidate),
-  );
-  if (!operator) return false;
-  const calculated = evaluateApp1BinaryCalculation(
-    operands[0],
-    operator,
-    operands[1],
-  );
-  return calculated !== null && app1CalculationEquals(calculated, stated);
+  const verbalCalculations = [
+    ...value.matchAll(APP1_REPAIR_VERBAL_CALCULATION_RESULT_PATTERN),
+  ];
+  let precedingCalculationEnd = 0;
+  for (const resultMatch of verbalCalculations) {
+    if (resultMatch.index === undefined) return false;
+    for (const symbolic of symbolicCalculations) {
+      if (
+        symbolic.index !== undefined &&
+        symbolic.index + symbolic[0].length <= resultMatch.index
+      ) {
+        precedingCalculationEnd = Math.max(
+          precedingCalculationEnd,
+          symbolic.index + symbolic[0].length,
+        );
+      }
+    }
+    const stated = parseApp1CalculationNumber(resultMatch[1]);
+    const materialBeforeResult = value.slice(
+      precedingCalculationEnd,
+      resultMatch.index,
+    );
+    const operands = [
+      ...materialBeforeResult.matchAll(/-?[0-9]+(?:[.,][0-9]+)?/gu),
+    ]
+      .map((match) => parseApp1CalculationNumber(match[0]))
+      .filter((number): number is number => number !== null);
+    if (stated === null || operands.length !== 2) return false;
+    const identity = normalizedIdentity(materialBeforeResult);
+    const operator = APP1_REPAIR_CALCULATION_OPERATORS.find((candidate) =>
+      identity.includes(candidate),
+    );
+    if (!operator) return false;
+    const calculated = evaluateApp1BinaryCalculation(
+      operands[0],
+      operator,
+      operands[1],
+    );
+    if (calculated === null || !app1CalculationEquals(calculated, stated)) {
+      return false;
+    }
+    precedingCalculationEnd = resultMatch.index + resultMatch[0].length;
+  }
+  return symbolicCalculations.length > 0 || verbalCalculations.length > 0;
 }
 
 const APP1_REPAIR_LEXICAL_STOP_WORDS = new Set([

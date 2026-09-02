@@ -8,19 +8,27 @@ truth boundaries. The correction changes no schema, migration, RLS, general
 authentication, provider, package, workflow, remote state or public
 activation.
 
+The following fresh formal review of exact head
+`edef93a50c46c36d63ae1e83107095bb480cb594` identified one remaining mixed-
+form bypass: a correct symbolic equation could previously short-circuit an
+incorrect verbal calculation in the same repair. The final evaluator now
+validates both collections before granting confirmation.
+
 - `buildApp1NextReviewReceipt` now accepts the closed persisted UUID versions
   actually used by the existing paths: ordinary version 4 and APP-1's
   deterministic version 5. It still rejects malformed identities and every
   mismatched item, Queue or persistence binding. A deterministic APP-1 item
   and Queue row can therefore produce the truthful next-review receipt after
   their exact durable cross-bindings pass.
-- Practice confirmation now scans every supported numeric binary equation in
-  the complete repair before sentence-level evidence matching. Every stated
-  result must equal its recalculated result; a later wrong equation or division
-  by zero fails the complete repair even when an earlier equation is correct.
-  Two correct equations remain confirmable. This closes the decimal sentence-
-  segmentation bypass without weakening the existing target-specific learner
-  and draft evidence gates.
+- Practice confirmation now scans every supported symbolic equation and every
+  closed verbal result claim in the complete repair before sentence-level
+  evidence matching. Every stated result must equal its recalculated result; a
+  later wrong equation, division by zero or incorrect verbal result fails the
+  complete repair even when an earlier equation is correct. Multiple correct
+  equations and a correct symbolic-plus-verbal repair remain confirmable. This
+  closes both the decimal sentence-segmentation bypass and the mixed-form
+  short-circuit without weakening the existing target-specific learner and
+  draft evidence gates.
 
 Completed local evidence for this correction:
 
