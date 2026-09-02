@@ -1582,6 +1582,7 @@ test("APP1-VM-003F recalculates closed symbolic and verbal Practice arithmetic",
     "120 × 20 = 2400",
     "120 / 20 = 6",
     "120 ÷ 20 = 6",
+    "120만원 - 20만원 = 100만원",
   ]) {
     const repairText =
       `수익 120과 비용 20의 계산 산식은 ${expression}이고 결과 단위와 부호의 검산을 완료했다.`;
@@ -1653,6 +1654,10 @@ test("APP1-VM-003F recalculates closed symbolic and verbal Practice arithmetic",
     "수익 120과 비용 20의 계산 산식은 120 - 20 = 100이고 수익 120에서 비용 20을 빼 계산하고 단위와 부호를 검산한 순수익은 999이다.",
     "수익 120과 비용 20의 계산 산식은 120 - 20 = 100이고 수익 120에서 비용 20을 빼 계산하고 단위와 부호를 검산한 순수익은 999원이다.",
     "수익 120에서 비용 20을 빼지 않고 더해 순수익은 100이다, 단위와 부호를 검산했다.",
+    "수익 120과 비용 20의 계산 산식은 120 - 20 = 100이고 수익 120에서 비용 20을 빼서는 안 되고 더해 순수익은 100이다, 단위와 부호를 검산했다.",
+    "수익 120과 비용 20의 계산 산식은 120 - 20 = 100이고 수익 120에서 비용 20을 빼고 2026년 기준 순수익은 999이다, 단위와 부호를 검산했다.",
+    "수익 120만원과 비용 20만원의 계산 산식은 120 - 20 = 100원이고 단위와 부호를 검산했다.",
+    "수익 120만원과 비용 20만원의 계산 산식은 120만원 - 20만원 = 100원이고 단위와 부호를 검산했다.",
     "수익 120만원에서 비용 20만원을 빼 계산하고 단위와 부호를 검산한 순수익은 100원이다.",
     "수익 120과 비용 20의 계산 산식은 120 - 20 = 100이고 수익 120에서 비용 20을 빼 순수익 999로 계산했으며 단위와 부호의 검산을 완료했다.",
     "임대료 수익 120에서 비용 20을 빼 순수익 999로 계산하고 단위를 검산했다.",
@@ -1728,6 +1733,17 @@ test("APP1-VM-003F recalculates closed symbolic and verbal Practice arithmetic",
       requestedGap,
       repairText: correctBoundedUnits,
       repairDraft: resolvedTargetDraft({ strength: correctBoundedUnits }),
+    }).state,
+    "repair_confirmed_for_this_session",
+  );
+  const correctContextualYear =
+    "수익 120에서 비용 20을 빼고 2026년 기준 순수익은 100이다, 단위와 부호를 검산했다.";
+  assert.equal(
+    evaluateApp1SameSessionRepair({
+      detail,
+      requestedGap,
+      repairText: correctContextualYear,
+      repairDraft: resolvedTargetDraft({ strength: correctContextualYear }),
     }).state,
     "repair_confirmed_for_this_session",
   );

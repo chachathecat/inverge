@@ -586,7 +586,7 @@ const APP1_REPAIR_CALCULATION_RESULTS = Object.freeze([
   "검산",
 ] as const);
 const APP1_REPAIR_CALCULATION_SYMBOL_PATTERN =
-  /(?:^|(?<=[^0-9]))(-?[0-9]+(?:[.,][0-9]+)?)\s*(\+|-|−|×|\*|÷|\/)\s*(-?[0-9]+(?:[.,][0-9]+)?)\s*=\s*(-?[0-9]+(?:[.,][0-9]+)?)(?=$|[^0-9])/gu;
+  /(?:^|(?<=[^0-9]))(-?[0-9]+(?:[.,][0-9]+)?)\s*(억원|만원|천원|원)?\s*(\+|-|−|×|\*|÷|\/)\s*(-?[0-9]+(?:[.,][0-9]+)?)\s*(억원|만원|천원|원)?\s*=\s*(-?[0-9]+(?:[.,][0-9]+)?)\s*(억원|만원|천원|원)?(?=$|[^0-9])/gu;
 const APP1_REPAIR_VERBAL_CALCULATION_RESULT_PATTERN =
   /(?:^|(?<=[\s,.;:()[\]{}]))(결과|합계|차액|순수익)(?:은|는|이|가)?\s*(-?[0-9]+(?:[.,][0-9]+)?)\s*(억원|만원|천원|원)?(?:(?:을|를|으로|로)\s*(?:계산|산출|검산)|(이다|입니다|이었다|이었습니다|였다|였습니다))/gu;
 const APP1_REPAIR_VERBAL_CALCULATION_OPERATOR_PATTERN =
@@ -637,7 +637,9 @@ function parseApp1VerbalCalculationOperator(value: string) {
   )) {
     if (match.index === undefined) return null;
     const following = identity.slice(match.index + match[0].length);
-    if (/^(?:지않|지아니|지못)/u.test(following)) continue;
+    if (/^(?:지(?:않|아니|못|말)|서는안|선안|면안)/u.test(following)) {
+      continue;
+    }
     const token = match[1];
     if (token.startsWith("빼")) operators.push("-");
     else if (token.startsWith("더")) operators.push("+");
@@ -649,18 +651,33 @@ function parseApp1VerbalCalculationOperator(value: string) {
   return operators.length === 1 ? operators[0] : null;
 }
 
+function parseApp1VerbalCalculationOperands(value: string) {
+  return [
+    ...value.matchAll(
+      /(-?[0-9]+(?:[.,][0-9]+)?)\s*(억원|만원|천원|원)?\s*(년|월|일|회|개|건|명)?/gu,
+    ),
+  ]
+    .filter((match) => match[3] === undefined)
+    .map((match) => parseApp1CalculationNumber(match[1], match[2]))
+    .filter((number): number is number => number !== null);
+}
+
 function hasCorrectClosedPracticeCalculation(value: string) {
   const symbolicCalculations = [
     ...value.matchAll(APP1_REPAIR_CALCULATION_SYMBOL_PATTERN),
   ];
   for (const symbolic of symbolicCalculations) {
-    const left = parseApp1CalculationNumber(symbolic[1]);
-    const right = parseApp1CalculationNumber(symbolic[3]);
-    const stated = parseApp1CalculationNumber(symbolic[4]);
+    const units = [symbolic[2], symbolic[5], symbolic[7]].filter(
+      (unit) => unit !== undefined,
+    );
+    if (units.length > 0 && units.length !== 3) return false;
+    const left = parseApp1CalculationNumber(symbolic[1], symbolic[2]);
+    const right = parseApp1CalculationNumber(symbolic[4], symbolic[5]);
+    const stated = parseApp1CalculationNumber(symbolic[6], symbolic[7]);
     if (left === null || right === null || stated === null) return false;
     const calculated = evaluateApp1BinaryCalculation(
       left,
-      symbolic[2],
+      symbolic[3],
       right,
     );
     if (calculated === null || !app1CalculationEquals(calculated, stated)) {
@@ -691,17 +708,17 @@ function hasCorrectClosedPracticeCalculation(value: string) {
       precedingCalculationEnd,
       resultMatch.index,
     );
-    const operands = [
-      ...materialBeforeResult.matchAll(
-        /(-?[0-9]+(?:[.,][0-9]+)?)\s*(억원|만원|천원|원)?/gu,
-      ),
-    ]
-      .map((match) => parseApp1CalculationNumber(match[1], match[2]))
-      .filter((number): number is number => number !== null);
+    const operands = parseApp1VerbalCalculationOperands(materialBeforeResult);
     if (stated === null) return false;
     const operator = parseApp1VerbalCalculationOperator(materialBeforeResult);
     if (operands.length !== 2 || !operator) {
-      if (resultMatch[4] !== undefined) continue;
+      if (
+        resultMatch[4] !== undefined &&
+        operands.length === 0 &&
+        !operator
+      ) {
+        continue;
+      }
       return false;
     }
     const calculated = evaluateApp1BinaryCalculation(
