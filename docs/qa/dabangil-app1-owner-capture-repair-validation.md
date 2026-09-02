@@ -22,7 +22,7 @@ and clean-checkout exact-head checks rather than reusing that browser receipt.
 - Base tree: `c6c6a8ad876c2f40b5276a26485b088656addf49`
 - Tracking issue: `#874`
 - APP-1 core changed paths: 20
-- Aggregate PR changed paths: 24 (`20` APP-1 core paths plus the separately governed `tests/s232f2-access-availability.test.mjs` access-inventory correction, the inherited `tests/wcv-c3r-p-practice-common-durable-runtime.test.mjs` frozen-identity alignment, its directly coupled `tests/e2e/wcv-c3r-p-practice-common-runtime.spec.ts` frozen evidence-time correction, and the exact `package-lock.json` Browserslist security remediation)
+- Aggregate PR changed paths: 25 (`20` APP-1 core paths plus the separately governed `tests/s232f2-access-availability.test.mjs` access-inventory correction, the inherited `tests/wcv-c3r-p-practice-common-durable-runtime.test.mjs` frozen-identity alignment, its directly coupled `tests/e2e/wcv-c3r-p-practice-common-runtime.spec.ts` frozen evidence-time correction, the exact `package-lock.json` Browserslist security remediation, and the directly coupled `tests/wcv-c3r-a1-serial-program-authority.test.mjs` historical/current lock-identity alignment)
 - New API, migration, database, RLS, auth, package, workflow and public-navigation paths: 0; development-tooling lockfile paths: 1
 
 ## Focused contract evidence

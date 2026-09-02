@@ -636,12 +636,34 @@ test("A1 owns exactly eleven source-authority paths and is registered once", asy
   }
 });
 
-test("package and lockfile identities remain exactly the A1 start-gate blobs", async () => {
+test("package source identity remains exact while the current lock binds the APP-1 security patch", async () => {
   const packageBytes = await readFile(path.join(repositoryRoot, "package.json"));
   const lockBytes = await readFile(path.join(repositoryRoot, "package-lock.json"));
+  const lock = JSON.parse(lockBytes.toString("utf8"));
   assert.equal(gitBlob(packageBytes), contract.packageIdentity.packageJsonGitBlob);
-  assert.equal(gitBlob(lockBytes), contract.packageIdentity.packageLockJsonGitBlob);
+  assert.equal(
+    contract.packageIdentity.packageLockJsonGitBlob,
+    "70f85fb69c39aa73cf572082c4d38eb426c0b398",
+  );
+  assert.equal(
+    gitBlob(lockBytes),
+    "3c3224cfdf7e87df0dd6d5b19ad86bff1f1d1894",
+  );
   assert.equal(contract.packageIdentity.packageMutationAuthorized, false);
+  const browserslistInstances = Object.entries(lock.packages)
+    .filter(([packagePath]) =>
+      packagePath === "node_modules/browserslist" ||
+      packagePath.endsWith("/node_modules/browserslist"))
+    .map(([packagePath, metadata]) => ({
+      packagePath,
+      version: metadata.version,
+      dev: metadata.dev,
+    }));
+  assert.deepEqual(browserslistInstances, [{
+    packagePath: "node_modules/browserslist",
+    version: "4.28.8",
+    dev: true,
+  }]);
 });
 
 test("hostile stage-graph and gate mutations fail closed", () => {
