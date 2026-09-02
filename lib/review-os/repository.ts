@@ -1107,6 +1107,106 @@ export class ReviewOsRepository {
     );
   }
 
+  async countApp1RecurrenceEvidence(
+    userId: string,
+    input: Pick<
+      RecurrenceFeatureRecord,
+      "examName" | "subjectLabel" | "topicTag" | "mistakeType"
+    >,
+  ) {
+    const client = getUserClient(userId);
+    const evidenceResult = await client
+      .from("wrong_answer_items")
+      .select("id", { count: "exact", head: true })
+      .eq("user_id", userId)
+      .eq("exam_name", input.examName)
+      .eq("subject_label", input.subjectLabel)
+      .eq("derived_payload->>topicTag", input.topicTag)
+      .eq("derived_payload->>mistakeType", input.mistakeType);
+    assertSupabaseOperation(
+      "review-os.countApp1RecurrenceEvidence",
+      evidenceResult,
+    );
+    return evidenceResult.count ?? 0;
+  }
+
+  async ensureApp1RecurrenceFeature(
+    userId: string,
+    input: Pick<
+      RecurrenceFeatureRecord,
+      "examName" | "subjectLabel" | "topicTag" | "mistakeType"
+    >,
+  ) {
+    const targetCount = await this.countApp1RecurrenceEvidence(userId, input);
+    if (!Number.isSafeInteger(targetCount) || targetCount < 1) {
+      throw new Error("review-os:app1-replay-recurrence-invalid");
+    }
+    const client = getUserClient(userId);
+    const readCurrent = () =>
+      this.getRecurrenceFeature(
+        userId,
+        input.examName,
+        input.subjectLabel,
+        input.topicTag,
+        input.mistakeType,
+      );
+    const existing = await readCurrent();
+    if (existing && existing.recurrenceCount >= targetCount) {
+      return { status: "deduped" as const, recurrence: existing };
+    }
+
+    const now = new Date().toISOString();
+    if (existing) {
+      const updateResult = await client
+        .from("recurrence_features")
+        .update({
+          recurrence_count: targetCount,
+          last_seen_at: now,
+          risk_level:
+            targetCount >= 3
+              ? "high"
+              : targetCount >= 2
+                ? "watch"
+                : "stable",
+          updated_at: now,
+        })
+        .eq("id", existing.id)
+        .eq("user_id", userId)
+        .lt("recurrence_count", targetCount);
+      assertSupabaseOperation(
+        "review-os.ensureApp1RecurrenceFeature.update",
+        updateResult,
+      );
+    } else {
+      const insertResult = await client.from("recurrence_features").insert({
+        id: createUuid(),
+        user_id: userId,
+        exam_name: input.examName,
+        subject_label: input.subjectLabel,
+        topic_tag: input.topicTag,
+        mistake_type: input.mistakeType,
+        recurrence_count: targetCount,
+        last_seen_at: now,
+        risk_level:
+          targetCount >= 3 ? "high" : targetCount >= 2 ? "watch" : "stable",
+        created_at: now,
+        updated_at: now,
+      });
+      if (insertResult.error?.code !== "23505") {
+        assertSupabaseOperation(
+          "review-os.ensureApp1RecurrenceFeature.insert",
+          insertResult,
+        );
+      }
+    }
+
+    const ensured = await readCurrent();
+    if (!ensured || ensured.recurrenceCount < targetCount) {
+      throw new Error("review-os:app1-replay-recurrence-conflict");
+    }
+    return { status: "saved" as const, recurrence: ensured };
+  }
+
   async getRecurrenceFeature(
     userId: string,
     examName: string,

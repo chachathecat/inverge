@@ -1,5 +1,45 @@
 # APP-1 validation
 
+## Final exact-head review correction: complete calculation results and pre-item replay safety
+
+The fresh formal review of exact head
+`48a312e33b56eb670f706ed25bc3e909c0475e25` identified two remaining
+same-goal boundaries. This correction keeps the existing APP-1 product,
+schema, migration, RLS, authentication, provider, package, workflow and public
+scope unchanged.
+
+- A verbal Practice calculation now requires at least three numeric terms,
+  including an explicit numeric result phrase, in addition to the closed
+  calculation and result cues. Symbolic binary arithmetic retains its exact
+  supported-operator and explicit-result contract. A sentence that merely
+  names two operands and says that the result was checked cannot create a
+  confirmed repair.
+- For the sealed APP-1 persistence path, recurrence and the five early durable
+  Capture usage events are no longer written before the durable item marker.
+  They are bound to the exact deterministic item identity and included in the
+  authenticated post-item replay plan. Each new plan derives its sealed
+  recurrence snapshot from prior durable item evidence plus the candidate item;
+  replay derives the monotonic aggregate target from the complete current
+  durable item evidence for the exact recurrence key. Thus an earlier durable
+  item whose recurrence application failed is still counted by the next plan,
+  while a completed retry cannot increment again. Every interruption can resume without
+  duplicating recurrence, usage, note, tag, Queue or learning-signal effects.
+
+Completed local evidence for this correction:
+
+- APP-1 focused deterministic suite: `37/37` passed;
+- APP-1 plus required adjacent contract suite: `54/54` passed;
+- S232F.2 access inventory: `6/6` passed on the unchanged route inventory;
+- directly inherited C3R-P/T/L aggregate: `129/129` passed after aligning
+  the existing C3R-P frozen repository identity to the audited successor blob;
+- TypeScript typecheck: passed;
+- changed-file lint: `0` errors (one unchanged pre-existing
+  `dayStartUtcIso` warning in `lib/review-os/service.ts`);
+- production Webpack build with Next.js `16.2.12`: passed;
+- `git diff --check`: passed;
+- repository-required exact-head CI and one fresh formal review remain pending
+  the corrective push.
+
 ## Continuous exact-head review closeout: expired replay and proposition coverage
 
 The fresh formal review of exact head

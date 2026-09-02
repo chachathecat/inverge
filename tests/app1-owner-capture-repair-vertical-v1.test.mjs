@@ -1597,6 +1597,9 @@ test("APP1-VM-003F recognizes only closed symbolic Practice arithmetic expressio
     );
   }
   for (const repairText of [
+    "수익 120에서 비용 20을 빼고 결과를 검산했다.",
+    "임대료 수익 금액은 120이고 비용 20과 연도 2026을 적은 뒤 비용을 빼 계산 결과를 검산했다.",
+    "임대료 수익 입력값 120을 계산하고 비용 20과 연도 2026을 적은 뒤 비용을 빼 순수익 계산 결과를 검산했다.",
     "수익 -20 = 100이라는 숫자만 적고 계산 결과 검산을 완료했다.",
     "수익 기간 2026-08과 비용 20을 적고 계산 결과 검산을 완료했다.",
     "수익 120, 비용 20, 순수익 100의 숫자 배치만 적고 계산 결과 검산을 완료했다.",
@@ -2254,7 +2257,15 @@ test("APP1-PERSISTENCE-REPLAY-001 resumes every post-item interruption without d
     Object.freeze({ id: "usage-1" }),
     Object.freeze({ id: "usage-2" }),
   ]);
-  const orderedKeys = ["note", "tag", "usage-1", "usage-2", "queue", "signal"];
+  const orderedKeys = [
+    "recurrence",
+    "note",
+    "tag",
+    "usage-1",
+    "usage-2",
+    "queue",
+    "signal",
+  ];
   for (let failureIndex = 0; failureIndex < orderedKeys.length; failureIndex += 1) {
     const persisted = new Set();
     let failOnce = true;
@@ -2270,6 +2281,7 @@ test("APP1-PERSISTENCE-REPLAY-001 resumes every post-item interruption without d
     const execute = () =>
       executeApp1ResumableArtifactPlanV1({
         usageEvents,
+        ensureRecurrence: () => ensure("recurrence"),
         ensureNote: () => ensure("note"),
         ensureTag: () => ensure("tag"),
         ensureUsage: (event) => ensure(event.id),
@@ -2314,11 +2326,20 @@ test("APP1-PERSISTENCE-REPLAY-002 binds exact authority before replay and never 
   assert.match(service, /plan\.itemId !==\s*app1DeterministicUuid\(expected\.authorityDigest, "wrong-answer-item"\)/u);
   assert.match(service, /APP1_REPLAY_SNAPSHOT_KEY/u);
   assert.match(repository, /ensureApp1WrongAnswerNote/u);
+  assert.match(repository, /ensureApp1RecurrenceFeature/u);
+  assert.match(repository, /countApp1RecurrenceEvidence/u);
+  assert.match(commonCreate, /countApp1RecurrenceEvidence/u);
+  assert.match(repository, /\.eq\("derived_payload->>topicTag", input\.topicTag\)/u);
+  assert.match(repository, /\.eq\("derived_payload->>mistakeType", input\.mistakeType\)/u);
   assert.match(repository, /ensureApp1WrongAnswerTag/u);
   assert.match(repository, /ensureApp1ReviewQueueEntry/u);
   assert.match(repository, /ensureApp1UsageEvent/u);
   assert.match(repository, /ensureApp1LearningSignalEvent/u);
   assert.match(repository, /assertApp1ReplayExact/u);
+  assert.match(commonCreate, /const ordinaryRecurrence = replayAuthority\s*\? null\s*:\s*await reviewOsRepository\.upsertRecurrenceFeature/u);
+  assert.match(commonCreate, /app1PreInsertUsageEvents/u);
+  assert.match(commonCreate, /\.\.\.app1PreInsertUsageEvents/u);
+  assert.match(commonCreate, /targetCount: recurrenceCount/u);
   const app1Create = service.match(
     /async createApp1VerifiedRepairItem\([\s\S]*?(?=\n  private async resumeExistingApp1RepairAfterExpiredAuthority)/u,
   )?.[0];
@@ -2343,6 +2364,10 @@ test("APP1-PERSISTENCE-REPLAY-003 fails closed on a conflicting artifact and per
     () =>
       executeApp1ResumableArtifactPlanV1({
         usageEvents: Object.freeze([Object.freeze({ id: "usage-1" })]),
+        ensureRecurrence: async () => {
+          completed.push("recurrence");
+          return "deduped";
+        },
         ensureNote: async () => {
           completed.push("note");
           return "deduped";
@@ -2365,7 +2390,52 @@ test("APP1-PERSISTENCE-REPLAY-003 fails closed on a conflicting artifact and per
       }),
     /review-os:app1-replay-authority-conflict/u,
   );
-  assert.deepEqual(completed, ["note"]);
+  assert.deepEqual(completed, ["recurrence", "note"]);
+});
+test("APP1-PERSISTENCE-REPLAY-004 derives preparation and replay recurrence from durable item evidence", async () => {
+  const durableItems = new Set();
+  const sealedQueueCounts = new Map();
+  let recurrenceCount = 0;
+  const prepare = (itemId) => {
+    const targetCount = durableItems.size + 1;
+    durableItems.add(itemId);
+    sealedQueueCounts.set(itemId, targetCount);
+    return targetCount;
+  };
+  const complete = async (itemId, failRecurrence = false) =>
+    executeApp1ResumableArtifactPlanV1({
+      usageEvents: Object.freeze([]),
+      ensureRecurrence: async () => {
+        if (failRecurrence) {
+          throw new Error("synthetic-pre-recurrence-application-failure");
+        }
+        const targetCount = durableItems.size;
+        if (recurrenceCount >= targetCount) return "deduped";
+        recurrenceCount = targetCount;
+        return "saved";
+      },
+      ensureNote: async () => "deduped",
+      ensureTag: async () => "deduped",
+      ensureUsage: async () => "deduped",
+      ensureQueue: async () => "deduped",
+      ensureLearningSignal: async () => "deduped",
+    });
+
+  assert.equal(prepare("item-a"), 1);
+  await assert.rejects(
+    complete("item-a", true),
+    /synthetic-pre-recurrence-application-failure/u,
+  );
+  assert.equal(recurrenceCount, 0);
+  assert.equal(prepare("item-b"), 2);
+  await complete("item-b");
+  assert.equal(recurrenceCount, 2);
+  await complete("item-a");
+  assert.equal(recurrenceCount, 2);
+  assert.deepEqual([...sealedQueueCounts.entries()], [
+    ["item-a", 1],
+    ["item-b", 2],
+  ]);
 });
 test("APP1-VM-005 announces a next review only from an exactly cross-bound new item detail", () => {
   const persistence = Object.freeze({

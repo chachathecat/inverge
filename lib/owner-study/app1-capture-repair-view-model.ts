@@ -35,6 +35,7 @@ export type App1VerificationState = (typeof APP1_VERIFICATION_STATES)[number];
 export async function executeApp1ResumableArtifactPlanV1<TUsageEvent>(
   input: Readonly<{
     usageEvents: readonly TUsageEvent[];
+    ensureRecurrence: () => Promise<"saved" | "deduped">;
     ensureNote: () => Promise<"saved" | "deduped">;
     ensureTag: () => Promise<"saved" | "deduped">;
     ensureUsage: (event: TUsageEvent) => Promise<"saved" | "deduped">;
@@ -46,6 +47,7 @@ export async function executeApp1ResumableArtifactPlanV1<TUsageEvent>(
   const run = async (operation: () => Promise<"saved" | "deduped">) => {
     if ((await operation()) === "saved") savedCount += 1;
   };
+  await run(input.ensureRecurrence);
   await run(input.ensureNote);
   await run(input.ensureTag);
   for (const event of input.usageEvents) {
@@ -592,6 +594,8 @@ const APP1_REPAIR_CALCULATION_RESULTS = Object.freeze([
 ] as const);
 const APP1_REPAIR_CALCULATION_SYMBOL_PATTERN =
   /(?:^|[^0-9])[0-9]+(?:[.,][0-9]+)?\s*(?:\+|-|−|×|\*|÷|\/)\s*[0-9]+(?:[.,][0-9]+)?\s*=\s*-?[0-9]+(?:[.,][0-9]+)?(?:$|[^0-9])/u;
+const APP1_REPAIR_VERBAL_CALCULATION_RESULT_PATTERN =
+  /(?:^|[\s,.;:()[\]{}])(?:결과|합계|차액|순수익)(?:은|는|이|가)?\s*-?[0-9]+(?:[.,][0-9]+)?(?:을|를|으로|로)?/u;
 
 const APP1_REPAIR_LEXICAL_STOP_WORDS = new Set([
   "그리고",
@@ -725,10 +729,15 @@ function hasClosedRepairPropositionShape(
   }
   if (facetSet.has("calculation")) {
     const numericOperands = value.match(/[0-9]+(?:[.,][0-9]+)?/gu) ?? [];
+    const hasSymbolicCalculation =
+      APP1_REPAIR_CALCULATION_SYMBOL_PATTERN.test(value);
+    const hasCompleteVerbalCalculation =
+      numericOperands.length >= 3 &&
+      includesAny(identity, APP1_REPAIR_CALCULATION_OPERATORS) &&
+      APP1_REPAIR_VERBAL_CALCULATION_RESULT_PATTERN.test(value);
     return (
       numericOperands.length >= 2 &&
-      (includesAny(identity, APP1_REPAIR_CALCULATION_OPERATORS) ||
-        APP1_REPAIR_CALCULATION_SYMBOL_PATTERN.test(value)) &&
+      (hasSymbolicCalculation || hasCompleteVerbalCalculation) &&
       includesAny(identity, APP1_REPAIR_CALCULATION_RESULTS)
     );
   }

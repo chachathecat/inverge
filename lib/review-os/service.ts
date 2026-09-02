@@ -112,6 +112,7 @@ type App1ReplayUsageEvent = Readonly<{
   id: string;
   eventName: string;
   entityType: string | null;
+  entityId: string;
   metadataJson: Record<string, unknown>;
 }>;
 
@@ -126,6 +127,13 @@ type App1PostInsertReplayPlanV1 = Readonly<{
   workRevisionId: string;
   sourceItemId: string;
   repairTextDigest: string;
+  recurrence: Readonly<{
+    examName: string;
+    subjectLabel: string;
+    topicTag: string;
+    mistakeType: string;
+    targetCount: number;
+  }>;
   noteId: string;
   note: Omit<WrongAnswerNoteRecord, "id" | "wrongAnswerItemId" | "createdAt">;
   tagId: string;
@@ -143,6 +151,7 @@ type App1PostInsertReplayPlanV1 = Readonly<{
 }>;
 
 type App1PostInsertReplayOperations = Readonly<{
+  ensureRecurrence: () => Promise<{ status: "saved" | "deduped" }>;
   ensureNote: () => Promise<{ status: "saved" | "deduped" }>;
   ensureTag: () => Promise<{ status: "saved" | "deduped" }>;
   ensureUsage: (
@@ -158,6 +167,8 @@ export async function executeApp1PostInsertReplayV1(
 ) {
   return executeApp1ResumableArtifactPlanV1({
     usageEvents: plan.usageEvents,
+    ensureRecurrence: async () =>
+      (await operations.ensureRecurrence()).status,
     ensureNote: async () => (await operations.ensureNote()).status,
     ensureTag: async () => (await operations.ensureTag()).status,
     ensureUsage: async (event) => (await operations.ensureUsage(event)).status,
@@ -259,6 +270,7 @@ function parseApp1ReplayPlan(
     "planSeal",
     "queue",
     "queueId",
+    "recurrence",
     "repairTextDigest",
     "sourceItemId",
     "tag",
@@ -270,11 +282,12 @@ function parseApp1ReplayPlan(
   const { planDigest, planSeal, ...planMaterial } = plan;
   const usageEventsValid =
     Array.isArray(plan.usageEvents) &&
-    plan.usageEvents.length >= 8 &&
-    plan.usageEvents.length <= 9 &&
+    plan.usageEvents.length >= 13 &&
+    plan.usageEvents.length <= 14 &&
     plan.usageEvents.every(
       (event, index) =>
         app1ExactKeys(event, [
+          "entityId",
           "entityType",
           "eventName",
           "id",
@@ -282,6 +295,7 @@ function parseApp1ReplayPlan(
         ]) &&
         typeof event.eventName === "string" &&
         (typeof event.entityType === "string" || event.entityType === null) &&
+        event.entityId === plan.itemId &&
         typeof event.id === "string" &&
         event.id ===
           app1DeterministicUuid(
@@ -304,6 +318,21 @@ function parseApp1ReplayPlan(
     plan.workRevisionId !== expected.workRevisionId ||
     plan.sourceItemId !== expected.sourceItemId ||
     plan.repairTextDigest !== expected.repairTextDigest ||
+    !app1ExactKeys(plan.recurrence, [
+      "examName",
+      "mistakeType",
+      "subjectLabel",
+      "targetCount",
+      "topicTag",
+    ]) ||
+    plan.recurrence?.examName !== item.examName ||
+    plan.recurrence?.subjectLabel !== item.subjectLabel ||
+    plan.recurrence?.topicTag !== plan.tag?.topicTag ||
+    plan.recurrence?.mistakeType !== plan.tag?.mistakeType ||
+    !Number.isSafeInteger(plan.recurrence?.targetCount) ||
+    Number(plan.recurrence?.targetCount) < 1 ||
+    plan.queue?.derivedPayload?.recurrenceCount !==
+      plan.recurrence?.targetCount ||
     typeof plan.noteId !== "string" ||
     !app1ExactKeys(plan.note, [
       "aiSummary",
@@ -365,6 +394,11 @@ async function completeApp1PostInsertReplay(
   plan: App1PostInsertReplayPlanV1,
 ) {
   return executeApp1PostInsertReplayV1(plan, {
+    ensureRecurrence: () =>
+      reviewOsRepository.ensureApp1RecurrenceFeature(
+        userId,
+        plan.recurrence,
+      ),
     ensureNote: () =>
       reviewOsRepository.ensureApp1WrongAnswerNote(
         userId,
@@ -385,7 +419,7 @@ async function completeApp1PostInsertReplay(
         event.id,
         event.eventName,
         event.entityType,
-        item.id,
+        event.entityId,
         event.metadataJson,
       ),
     ensureQueue: () =>
@@ -1559,6 +1593,30 @@ export class ReviewOsService {
       normalizedInput,
       dedupeKey,
     );
+    const app1PreInsertUsageEvents: Array<
+      Omit<App1ReplayUsageEvent, "entityId" | "id">
+    > = [];
+    const recordPreInsertUsageEvent = async (
+      eventName: string,
+      entityType: string | null,
+      metadataJson: Record<string, unknown>,
+    ) => {
+      if (replayAuthority) {
+        app1PreInsertUsageEvents.push({
+          eventName,
+          entityType,
+          metadataJson,
+        });
+        return;
+      }
+      await reviewOsRepository.logUsageEvent(
+        userId,
+        eventName,
+        entityType,
+        null,
+        metadataJson,
+      );
+    };
     const existing = await reviewOsRepository.findExistingByDedupe(
       userId,
       dedupeKey,
@@ -1588,15 +1646,29 @@ export class ReviewOsService {
 
     try {
       const artifacts = await generateWrongAnswerArtifacts(normalizedInput);
-      const recurrence = await reviewOsRepository.upsertRecurrenceFeature(
-        userId,
-        {
-          examName: normalizedInput.examName,
-          subjectLabel: normalizedInput.subjectLabel,
-          topicTag: artifacts.tags.topicTag,
-          mistakeType: artifacts.tags.mistakeType,
-        },
-      );
+      const recurrenceInput = {
+        examName: normalizedInput.examName,
+        subjectLabel: normalizedInput.subjectLabel,
+        topicTag: artifacts.tags.topicTag,
+        mistakeType: artifacts.tags.mistakeType,
+      };
+      const existingApp1RecurrenceEvidenceCount = replayAuthority
+        ? await reviewOsRepository.countApp1RecurrenceEvidence(
+            userId,
+            recurrenceInput,
+          )
+        : null;
+      const app1RecurrenceTargetCount = replayAuthority
+        ? (existingApp1RecurrenceEvidenceCount ?? 0) + 1
+        : null;
+      const ordinaryRecurrence = replayAuthority
+        ? null
+        : await reviewOsRepository.upsertRecurrenceFeature(
+            userId,
+            recurrenceInput,
+          );
+      const recurrenceCount =
+        app1RecurrenceTargetCount ?? ordinaryRecurrence?.recurrenceCount ?? 1;
       const schedule = resolveReviewSchedule({
         mode,
         isCorrect: isMeaningfullyCorrectAnswer(
@@ -1605,7 +1677,7 @@ export class ReviewOsService {
         ),
         confidence: normalizedInput.confidence,
         mistakeType: artifacts.tags.mistakeType,
-        recurrenceCount: recurrence?.recurrenceCount ?? 1,
+        recurrenceCount,
         hasWeakParagraph:
           mode === "second" &&
           Boolean(
@@ -1633,22 +1705,18 @@ export class ReviewOsService {
             properties: { status: "started" },
           }),
         );
-        await reviewOsRepository.logUsageEvent(
-          userId,
+        await recordPreInsertUsageEvent(
           "capture_started",
           "capture_session",
-          null,
           sanitizeCaptureTelemetryMetadata({
             mode,
             subject: normalizedInput.subjectLabel,
             createdFromCapture: true,
           }),
         );
-        await reviewOsRepository.logUsageEvent(
-          userId,
+        await recordPreInsertUsageEvent(
           "capture_input_method_selected",
           "capture_session",
-          null,
           sanitizeCaptureTelemetryMetadata({
             mode,
             sourceType: input.sourceType,
@@ -1675,11 +1743,9 @@ export class ReviewOsService {
               normalizedInput.extractionPayload?.user_confirmed_fields,
             itemInput: normalizedInput,
           }) as Record<string, unknown>;
-          await reviewOsRepository.logUsageEvent(
-            userId,
+          await recordPreInsertUsageEvent(
             "ocr_draft_generated",
             "capture_session",
-            null,
             sanitizeCaptureTelemetryMetadata({
               mode,
               subject: normalizedInput.subjectLabel,
@@ -1688,11 +1754,9 @@ export class ReviewOsService {
             }),
           );
         } catch (error) {
-          await reviewOsRepository.logUsageEvent(
-            userId,
+          await recordPreInsertUsageEvent(
             "ocr_draft_failed",
             "capture_session",
-            null,
             sanitizeCaptureTelemetryMetadata({
               mode,
               subject: normalizedInput.subjectLabel,
@@ -1743,11 +1807,9 @@ export class ReviewOsService {
       }
 
       if (isCaptureCreated) {
-        await reviewOsRepository.logUsageEvent(
-          userId,
+        await recordPreInsertUsageEvent(
           "draft_field_edited",
           "capture_session",
-          null,
           sanitizeCaptureTelemetryMetadata({
             mode,
             fieldName: "normalized_draft",
@@ -1757,11 +1819,9 @@ export class ReviewOsService {
             createdFromCapture: true,
           }),
         );
-        await reviewOsRepository.logUsageEvent(
-          userId,
+        await recordPreInsertUsageEvent(
           "draft_confirmed",
           "capture_session",
-          null,
           sanitizeCaptureTelemetryMetadata({
             mode,
             subject: normalizedInput.subjectLabel,
@@ -1871,7 +1931,7 @@ export class ReviewOsService {
         const queueDerivedPayload = {
           topicTag: artifacts.tags.topicTag,
           mistakeType: artifacts.tags.mistakeType,
-          recurrenceCount: recurrence?.recurrenceCount ?? 1,
+          recurrenceCount,
           concept_node_candidate: conceptNodeCandidate,
           conceptNodeId: conceptNodeCandidate.conceptNodeId,
           conceptFamily: conceptNodeCandidate.conceptFamily,
@@ -1883,6 +1943,7 @@ export class ReviewOsService {
           nextReviewDate: effectiveNextReviewDate,
         };
         const usageEvents = [
+          ...app1PreInsertUsageEvents,
           {
             eventName: "capture_saved",
             entityType: "wrong_answer_item",
@@ -1966,6 +2027,7 @@ export class ReviewOsService {
           },
         ].map((event, index) => Object.freeze({
           ...event,
+          entityId: itemId,
           id: app1DeterministicUuid(
             replayAuthority.authorityDigest,
             `usage-${index}-${event.eventName}`,
@@ -1976,6 +2038,10 @@ export class ReviewOsService {
           ...replayAuthority,
           dedupeKey,
           itemId,
+          recurrence: Object.freeze({
+            ...recurrenceInput,
+            targetCount: recurrenceCount,
+          }),
           noteId: app1DeterministicUuid(replayAuthority.authorityDigest, "note"),
           note: artifacts.note,
           tagId: app1DeterministicUuid(replayAuthority.authorityDigest, "tag"),
@@ -2097,7 +2163,7 @@ export class ReviewOsService {
         {
           topicTag: artifacts.tags.topicTag,
           mistakeType: artifacts.tags.mistakeType,
-          recurrenceCount: recurrence?.recurrenceCount ?? 1,
+          recurrenceCount,
           taxonomyClassification,
           created_from_capture: isCaptureCreated,
           capture_note_engine_v1: captureSignals,
@@ -2184,7 +2250,7 @@ export class ReviewOsService {
             missingIssue: input.missingIssue,
           })
         : rankQueueItem({
-            recurrenceCount: recurrence?.recurrenceCount ?? 1,
+            recurrenceCount,
             confidence: item.confidence,
             timeSpentSeconds: item.timeSpentSeconds ?? null,
             createdAt: item.createdAt,
@@ -2200,7 +2266,7 @@ export class ReviewOsService {
               missingIssue: input.missingIssue,
             })
         : getReviewReason({
-            recurrenceCount: recurrence?.recurrenceCount ?? 1,
+            recurrenceCount,
             confidence: item.confidence,
             timeSpentSeconds: item.timeSpentSeconds ?? null,
             mistakeType: artifacts.tags.mistakeType,
@@ -2267,7 +2333,7 @@ export class ReviewOsService {
         {
           topicTag: artifacts.tags.topicTag,
           mistakeType: artifacts.tags.mistakeType,
-          recurrenceCount: recurrence?.recurrenceCount ?? 1,
+          recurrenceCount,
           concept_node_candidate: conceptNodeCandidate,
           conceptNodeId: conceptNodeCandidate.conceptNodeId,
           conceptFamily: conceptNodeCandidate.conceptFamily,
