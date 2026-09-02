@@ -1637,6 +1637,7 @@ test("APP1-VM-003F recalculates closed symbolic and verbal Practice arithmetic",
     "수익 120과 비용 20의 계산 산식은 120 / 0 = 120이고 결과 단위와 부호의 검산을 완료했다.",
     "수익 120과 비용 20의 계산 산식은 120 - 20 = 100이고 100 / 0.05 = 999로 환원했으며 결과 단위와 부호의 검산을 완료했다.",
     "수익 120과 비용 20의 계산 산식은 120 - 20 = 100이고 100 / 0 = 2000으로 환원했으며 결과 단위와 부호의 검산을 완료했다.",
+    "수익 120과 비용 20의 계산 산식은 120 - 20 = 100이고 수익 120에서 비용 20을 빼 계산하고 단위와 부호를 검산한 순수익은 999이다.",
     "수익 120과 비용 20의 계산 산식은 120 - 20 = 100이고 수익 120에서 비용 20을 빼 순수익 999로 계산했으며 단위와 부호의 검산을 완료했다.",
     "임대료 수익 120에서 비용 20을 빼 순수익 999로 계산하고 단위를 검산했다.",
     "수익 120에서 비용 20을 빼고 결과를 검산했다.",
@@ -1667,6 +1668,17 @@ test("APP1-VM-003F recalculates closed symbolic and verbal Practice arithmetic",
       requestedGap,
       repairText: correctVerbal,
       repairDraft: resolvedTargetDraft({ strength: correctVerbal }),
+    }).state,
+    "repair_confirmed_for_this_session",
+  );
+  const correctDeclarative =
+    "임대료 수익 120에서 비용 20을 빼 계산하고 단위와 부호를 검산한 순수익은 100이다.";
+  assert.equal(
+    evaluateApp1SameSessionRepair({
+      detail,
+      requestedGap,
+      repairText: correctDeclarative,
+      repairDraft: resolvedTargetDraft({ strength: correctDeclarative }),
     }).state,
     "repair_confirmed_for_this_session",
   );

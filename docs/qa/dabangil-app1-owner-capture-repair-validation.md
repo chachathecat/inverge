@@ -373,6 +373,8 @@ The following exact-head review found one final duplicated consumption inside re
 
 The next exact-head review found that the verbal-calculation scanner treated an ordinary count such as `검토 결과 2개의 쟁점` as a second arithmetic result after a valid equation. The closed result pattern now recognizes a verbal calculation only when the result noun and numeric value are joined by an output case marker to an immediate calculation, derivation or verification verb. Ordinary prose counts are ignored, while every actual symbolic and verbal arithmetic claim remains independently recalculated and fail-closed. The focused regression proves that a correct equation followed by the non-calculation result count remains confirmable.
 
+The ensuing exact-head review found that the first narrowing excluded an ordinary declarative arithmetic result such as `수익 120에서 비용 20을 빼 순수익은 999이다`. The closed scanner now also recognizes exact result-noun and numeric-value declarations with a Korean copular ending. Such a declaration is recalculated from its locally bound operands and operator, so a later contradictory declaration fails the whole repair while the corresponding correct declaration confirms. The non-calculation `결과 2개의 쟁점` form remains outside the result grammar.
+
 ## Final candidate checks
 
 - APP-1 focused suite: `37/37` passed, including `APP1-UI-002B` for revoked-authority exit, `APP1-VM-003D` for shared persisted-answer selection across substantive `userAnswer`, `rawAnswerText`, flat `rewriteParagraph` and mapped `rawPayload.rewrite_paragraph` fallbacks, `APP1-VM-003` for mapped-rewrite repair anchoring, and `APP1-VM-003F` for exhaustive arithmetic validation without misclassifying ordinary result counts;
