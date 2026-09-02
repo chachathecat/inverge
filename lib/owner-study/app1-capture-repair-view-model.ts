@@ -158,11 +158,16 @@ function selectSubstantivePersistedLearnerBody(input: Readonly<{
   userAnswer?: unknown;
   rawAnswerText?: unknown;
   rewriteParagraph?: unknown;
+  rawPayload?: unknown;
 }>) {
+  const rawPayload = record(input.rawPayload);
+  const persistedRewriteParagraph =
+    substantiveLearnerBodyText(input.rewriteParagraph) ??
+    substantiveLearnerBodyText(rawPayload?.rewrite_paragraph);
   const candidates = [
     substantiveLearnerBodyText(input.userAnswer),
     substantiveLearnerBodyText(input.rawAnswerText),
-    substantiveLearnerBodyText(input.rewriteParagraph),
+    persistedRewriteParagraph,
   ];
   return candidates.find((candidate) => candidate) ?? "";
 }

@@ -1580,6 +1580,28 @@ test("APP1-VM-003D keeps the Capture continuation outside APP-1 until the saved 
       substantiveRewrite.replace(/\r\n/gu, "\n"),
     );
   }
+  const mappedRewriteBacked = {
+    ...persistedEligible,
+    userAnswer: "-",
+    rawAnswerText: "",
+    rewriteParagraph: undefined,
+    rawPayload: {
+      ...persistedEligible.rawPayload,
+      rewrite_paragraph: substantiveRewrite,
+    },
+  };
+  assert.equal(
+    isApp1PersistedInitialAnalysisEligible(mappedRewriteBacked),
+    true,
+  );
+  assert.equal(
+    getApp1LearnerAnswer(
+      syntheticDetail({
+        item: mappedRewriteBacked,
+      }),
+    ),
+    substantiveRewrite.replace(/\r\n/gu, "\n"),
+  );
   assert.equal(
     isApp1PersistedInitialAnalysisEligible({
       ...persistedEligible,

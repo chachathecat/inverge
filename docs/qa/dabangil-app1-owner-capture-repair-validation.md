@@ -132,9 +132,11 @@ The ensuing exact-head review found one client exit defect after server authorit
 
 The next exact-head review found that persisted entry eligibility still read only `userAnswer`, while downstream analysis already selected the first substantive persisted body in `userAnswer → rawAnswerText → rewriteParagraph` order. One private pure selector now supplies both `getApp1LearnerAnswer` and `isApp1PersistedInitialAnalysisEligible`. It preserves multiline source content, skips only the closed placeholders `-`, `–` and `—`, imposes no repair-text 4,000-character limit on the captured source body, and still passes the selected body through the shared input-quality and persisted OCR/source gates. Placeholder-only, empty, too-short and unresolved-low-confidence records remain ineligible. This deterministic root correction changes no component, server authority, receipt, persistence, Queue, API, database, package, workflow or runtime behavior.
 
+The fresh exact-head review then identified the remaining representation gap: the persisted item mapper retains the stored rewrite only as `rawPayload.rewrite_paragraph`, so the flat `rewriteParagraph` fallback was not present on the exact Capture save response. The same private selector now treats that closed raw-payload field as the persisted representation of `rewriteParagraph`, after substantive `userAnswer` and `rawAnswerText`, without changing the mapper or any API/repository path. The focused regression passes the exact mapped response shape through both persisted eligibility and `getApp1LearnerAnswer`, proving identical multiline bytes and the existing fail-closed quality/OCR gates.
+
 ## Final candidate checks
 
-- APP-1 focused suite: `29/29` passed, including `APP1-UI-002B` for revoked-authority exit and `APP1-VM-003D` for shared persisted-answer selection across substantive `userAnswer`, `rawAnswerText` and multiline `rewriteParagraph` fallbacks;
+- APP-1 focused suite: `29/29` passed, including `APP1-UI-002B` for revoked-authority exit and `APP1-VM-003D` for shared persisted-answer selection across substantive `userAnswer`, `rawAnswerText`, flat `rewriteParagraph` and mapped `rawPayload.rewrite_paragraph` fallbacks;
 - inherited C3R-P/T/L, Capture outer-flow, adjacent persistence/Queue/trusted-repair and S232F.2 results remain prior-head evidence and are revalidated only by the new clean-checkout exact-head CI;
 - changed-file lint: passed;
 - typecheck: passed;
