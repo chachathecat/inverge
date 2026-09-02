@@ -585,14 +585,29 @@ const APP1_REPAIR_CALCULATION_RESULTS = Object.freeze([
   "산출",
   "검산",
 ] as const);
-const APP1_REPAIR_CALCULATION_SYMBOL_PATTERN =
-  /(?:^|(?<=[^0-9]))(-?[0-9]+(?:[.,][0-9]+)?)\s*(억원|만원|천원|원)?\s*(\+|-|−|×|\*|÷|\/)\s*(-?[0-9]+(?:[.,][0-9]+)?)\s*(억원|만원|천원|원)?\s*=\s*(-?[0-9]+(?:[.,][0-9]+)?)\s*(억원|만원|천원|원)?(?=$|[^0-9])/gu;
-const APP1_REPAIR_VERBAL_CALCULATION_RESULT_PATTERN =
-  /(?:^|(?<=[\s,.;:()[\]{}]))(결과|합계|차액|순수익)(?:은|는|이|가)?\s*(-?[0-9]+(?:[.,][0-9]+)?)\s*(억원|만원|천원|원)?(?:(?:을|를|으로|로)\s*(?:계산|산출|검산)|(이다|입니다|이었다|이었습니다|였다|였습니다))/gu;
+const APP1_REPAIR_CALCULATION_NUMBER_SOURCE =
+  String.raw`-?(?:[0-9]{1,3}(?:,[0-9]{3})+(?:\.[0-9]+)?|[0-9]+(?:\.[0-9]+)?)`;
+const APP1_REPAIR_CALCULATION_NUMBER_PATTERN = new RegExp(
+  String.raw`^${APP1_REPAIR_CALCULATION_NUMBER_SOURCE}$`,
+  "u",
+);
+const APP1_REPAIR_CALCULATION_SYMBOL_PATTERN = new RegExp(
+  String.raw`(?:^|(?<=[^0-9.,]))(${APP1_REPAIR_CALCULATION_NUMBER_SOURCE})\s*(억원|만원|천원|원)?\s*(\+|-|−|×|\*|÷|\/)\s*(${APP1_REPAIR_CALCULATION_NUMBER_SOURCE})\s*(억원|만원|천원|원)?\s*=\s*(${APP1_REPAIR_CALCULATION_NUMBER_SOURCE})\s*(억원|만원|천원|원)?(?=$|[^0-9.,])`,
+  "gu",
+);
+const APP1_REPAIR_VERBAL_CALCULATION_RESULT_PATTERN = new RegExp(
+  String.raw`(?:^|(?<=[\s,.;:()[\]{}]))(결과|합계|차액|순수익)(?:은|는|이|가)?\s*(${APP1_REPAIR_CALCULATION_NUMBER_SOURCE})\s*(억원|만원|천원|원)?(?:(?:을|를|으로|로)\s*(?:계산|산출|검산)|(이다|입니다|이었다|이었습니다|였다|였습니다))`,
+  "gu",
+);
+const APP1_REPAIR_VERBAL_CALCULATION_RESULT_CANDIDATE_PATTERN =
+  /(?:^|(?<=[\s,.;:()[\]{}]))(?:결과|합계|차액|순수익)(?:은|는|이|가)?\s*-?[0-9][0-9.,]*\s*(?:억원|만원|천원|원)?(?:(?:을|를|으로|로)\s*(?:계산|산출|검산)|(?:이다|입니다|이었다|이었습니다|였다|였습니다))/gu;
 const APP1_REPAIR_VERBAL_CALCULATION_OPERATOR_PATTERN =
   /(빼|더하|더해|곱하|곱해|나누|나눠)/gu;
+const APP1_REPAIR_CONTEXT_DATE_PATTERN =
+  /(?<![0-9])(?:[12][0-9]{3})[-/.](?:0[1-9]|1[0-2])[-/.](?:0[1-9]|[12][0-9]|3[01])(?![0-9])/gu;
 
 function parseApp1CalculationNumber(value: string, unit?: string) {
+  if (!APP1_REPAIR_CALCULATION_NUMBER_PATTERN.test(value)) return null;
   const parsed = Number(value.replace(/,/gu, ""));
   if (!Number.isFinite(parsed)) return null;
   const scale =
@@ -604,6 +619,41 @@ function parseApp1CalculationNumber(value: string, unit?: string) {
           ? 1_000
           : 1;
   return parsed * scale;
+}
+
+function hasCompatibleApp1CalculationDimensions(
+  operator: string,
+  leftUnit?: string,
+  rightUnit?: string,
+  resultUnit?: string,
+  allowImplicitWonResult = false,
+) {
+  const leftIsCurrency = leftUnit !== undefined;
+  const rightIsCurrency = rightUnit !== undefined;
+  const resultIsCurrency = resultUnit !== undefined;
+  if (operator === "+" || operator === "-" || operator === "−") {
+    return (
+      (leftIsCurrency && rightIsCurrency && resultIsCurrency) ||
+      (!leftIsCurrency &&
+        !rightIsCurrency &&
+        (!resultIsCurrency || (allowImplicitWonResult && resultUnit === "원")))
+    );
+  }
+  if (operator === "*" || operator === "×") {
+    return (
+      (!leftIsCurrency && !rightIsCurrency && !resultIsCurrency) ||
+      (leftIsCurrency && !rightIsCurrency && resultIsCurrency) ||
+      (!leftIsCurrency && rightIsCurrency && resultIsCurrency)
+    );
+  }
+  if (operator === "/" || operator === "÷") {
+    return (
+      (!leftIsCurrency && !rightIsCurrency && !resultIsCurrency) ||
+      (leftIsCurrency && !rightIsCurrency && resultIsCurrency) ||
+      (leftIsCurrency && rightIsCurrency && !resultIsCurrency)
+    );
+  }
+  return false;
 }
 
 function app1CalculationEquals(actual: number, expected: number) {
@@ -637,7 +687,11 @@ function parseApp1VerbalCalculationOperator(value: string) {
   )) {
     if (match.index === undefined) return null;
     const following = identity.slice(match.index + match[0].length);
-    if (/^(?:지(?:않|아니|못|말)|서는안|선안|면안)/u.test(following)) {
+    if (
+      /^(?:지(?:않|아니|못|말)|(?:아|어)?서는안|(?:아|어)?선안|(?:으)?면안)/u.test(
+        following,
+      )
+    ) {
       continue;
     }
     const token = match[1];
@@ -652,25 +706,67 @@ function parseApp1VerbalCalculationOperator(value: string) {
 }
 
 function parseApp1VerbalCalculationOperands(value: string) {
+  const materialWithoutDates = value.replace(
+    APP1_REPAIR_CONTEXT_DATE_PATTERN,
+    " ",
+  );
   return [
-    ...value.matchAll(
-      /(-?[0-9]+(?:[.,][0-9]+)?)\s*(억원|만원|천원|원)?\s*(년|월|일|회|개|건|명)?/gu,
+    ...materialWithoutDates.matchAll(
+      new RegExp(
+        String.raw`(?:^|(?<=[^0-9.,]))(${APP1_REPAIR_CALCULATION_NUMBER_SOURCE})\s*(억원|만원|천원|원)?\s*(년|월|일|회|개|건|명|번|차|문제)?(?=$|[^0-9.,])`,
+        "gu",
+      ),
     ),
   ]
     .filter((match) => match[3] === undefined)
-    .map((match) => parseApp1CalculationNumber(match[1], match[2]))
-    .filter((number): number is number => number !== null);
+    .map(
+      (match): { unit: string | undefined; value: number | null } => ({
+        unit: match[2] || undefined,
+        value: parseApp1CalculationNumber(match[1], match[2]),
+      }),
+    )
+    .filter(
+      (operand): operand is { unit: string | undefined; value: number } =>
+        operand.value !== null,
+    );
 }
 
 function hasCorrectClosedPracticeCalculation(value: string) {
   const symbolicCalculations = [
     ...value.matchAll(APP1_REPAIR_CALCULATION_SYMBOL_PATTERN),
   ];
+  if ([...value.matchAll(/=/gu)].length !== symbolicCalculations.length) {
+    return false;
+  }
+  let precedingSymbolicEnd = 0;
   for (const symbolic of symbolicCalculations) {
-    const units = [symbolic[2], symbolic[5], symbolic[7]].filter(
-      (unit) => unit !== undefined,
+    if (symbolic.index === undefined) return false;
+    const contextualOperands = parseApp1VerbalCalculationOperands(
+      value.slice(precedingSymbolicEnd, symbolic.index),
     );
-    if (units.length > 0 && units.length !== 3) return false;
+    if (contextualOperands.length > 0) {
+      if (contextualOperands.length !== 2) return false;
+      const symbolicLeft = parseApp1CalculationNumber(symbolic[1], symbolic[2]);
+      const symbolicRight = parseApp1CalculationNumber(symbolic[4], symbolic[5]);
+      if (
+        symbolicLeft === null ||
+        symbolicRight === null ||
+        !app1CalculationEquals(contextualOperands[0].value, symbolicLeft) ||
+        !app1CalculationEquals(contextualOperands[1].value, symbolicRight)
+      ) {
+        return false;
+      }
+    }
+    if (
+      !hasCompatibleApp1CalculationDimensions(
+        symbolic[3],
+        symbolic[2],
+        symbolic[5],
+        symbolic[7],
+      )
+    ) {
+      return false;
+    }
     const left = parseApp1CalculationNumber(symbolic[1], symbolic[2]);
     const right = parseApp1CalculationNumber(symbolic[4], symbolic[5]);
     const stated = parseApp1CalculationNumber(symbolic[6], symbolic[7]);
@@ -683,11 +779,18 @@ function hasCorrectClosedPracticeCalculation(value: string) {
     if (calculated === null || !app1CalculationEquals(calculated, stated)) {
       return false;
     }
+    precedingSymbolicEnd = symbolic.index + symbolic[0].length;
   }
 
   const verbalCalculations = [
     ...value.matchAll(APP1_REPAIR_VERBAL_CALCULATION_RESULT_PATTERN),
   ];
+  if (
+    [...value.matchAll(APP1_REPAIR_VERBAL_CALCULATION_RESULT_CANDIDATE_PATTERN)]
+      .length !== verbalCalculations.length
+  ) {
+    return false;
+  }
   let precedingCalculationEnd = 0;
   let validatedVerbalCalculations = 0;
   for (const resultMatch of verbalCalculations) {
@@ -721,10 +824,21 @@ function hasCorrectClosedPracticeCalculation(value: string) {
       }
       return false;
     }
+    if (
+      !hasCompatibleApp1CalculationDimensions(
+        operator,
+        operands[0].unit,
+        operands[1].unit,
+        resultMatch[3],
+        true,
+      )
+    ) {
+      return false;
+    }
     const calculated = evaluateApp1BinaryCalculation(
-      operands[0],
+      operands[0].value,
       operator,
-      operands[1],
+      operands[1].value,
     );
     if (calculated === null || !app1CalculationEquals(calculated, stated)) {
       return false;
