@@ -128,17 +128,17 @@ The final corrected authenticated production-Webpack acceptance passed `1/1` wit
 
 The final dependency-only remediation updates the single development-tooling `browserslist` lock entry from `4.28.2` to exact patched `4.28.8`, together with only its required Browserslist data/tool dependency family. `package.json`, application/runtime source, workflows and `config/foundation-continuous-security-automation-v1.json` remain byte-identical. The lockfile-only production audit reports High/Critical `0/0`; the full audit reports no unapproved High/Critical blocker, and `GHSA-73WF-GQ98-2V4G` plus `GHSA-C83G-RGW3-J3CX` are absent. The unchanged policy validator passed with blocking findings `0`; no security exception was added. The authenticated APP-1 runtime receipt above remains authoritative and was not repeated.
 
+The ensuing exact-head review found one client exit defect after server authority revocation. The closed `authority_required` transition now handles the exact `APP1_AUTHORITY_REQUIRED` code during initial analysis, repair verification and final persistence. It clears the analysis binding, verification, verification receipt, pending persistence binding, conflict and success/Queue client state while preserving the learner's current repair text in a read-only copyable field. The state exposes no save or automatic retry action: `권한 다시 확인` performs a full same-item route re-entry for a fresh server-side access check, and `오늘 할 일로 돌아가기` exits to the second-stage Today route. Expired/invalid receipt recovery and normal durable persistence remain separate unchanged branches. No server-authority, API, persistence, package, workflow or security-policy path changed, and the prior complete authenticated runtime receipt remains unchanged-flow evidence rather than evidence for this new client-only branch.
+
 ## Final candidate checks
 
-- APP-1 focused and required-adjacent tests: `45/45` passed;
-- inherited C3R-P/T/L deterministic tests: `129/129` passed;
-- directly affected Capture outer-flow tests: `23/23` passed; the broader adjacent Capture, persistence, Queue and trusted-repair inventory remained green at `60/60` on the immediately preceding exact head and is revalidated by exact-head CI;
-- S232F.2 route-inventory tests: `6/6` passed, including `app/app/capture/repair/page.tsx`;
+- APP-1 focused revoked-authority suite: `29/29` passed, including `APP1-UI-002B` for all three response boundaries, state clearing, preserved repair text, absent save authority and the two exact exits;
+- inherited C3R-P/T/L, Capture outer-flow, adjacent persistence/Queue/trusted-repair and S232F.2 results remain prior-head evidence and are revalidated only by the new clean-checkout exact-head CI;
 - changed-file lint: passed;
 - typecheck: passed;
-- production Webpack build: passed for the final application-source bytes;
-- exact 20-path APP-1 core manifest plus one separately governed shared access-inventory path, one directly coupled inherited C3R-P identity regression, and its frozen evidence-time runtime-spec correction (`23` aggregate): passed;
+- production Webpack and complete authenticated browser acceptance were not repeated for this deterministic client-exit correction; the preserved prior runtime receipt is `sha256:b0c277325884e9bd1e02c6713a62b2ac7219d392249261177260d6d367a59354`, and clean-checkout exact-head CI is authoritative for integration;
+- exact PR aggregate remains `25` paths because all three corrective paths already belong to the existing candidate;
 - `git diff --check`: passed;
-- repository-required exact-head CI and fresh formal review.
+- repository-required exact-head CI and fresh formal review: pending the corrective push.
 
 The linked-worktree local build used explicit Webpack; clean-checkout CI remains authoritative for the repository's default Turbopack path. The authenticated runtime used only an isolated disposable local Supabase fixture. Remote Supabase, Production, provider and payment mutation remained zero.

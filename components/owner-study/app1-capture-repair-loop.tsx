@@ -47,6 +47,7 @@ type App1Phase =
   | "verifying"
   | "repair_verification"
   | "saving"
+  | "authority_required"
   | "completed"
   | "saved_without_queue"
   | "failed";
@@ -257,6 +258,19 @@ export function App1CaptureRepairLoop({
     [detail],
   );
 
+  function enterAuthorityRequired() {
+    setGap(null);
+    setAnalysisBinding(null);
+    setVerification(null);
+    setVerificationReceipt(null);
+    pendingSaveRef.current = null;
+    setConflict(false);
+    setNextReview(null);
+    setPersistedRecordId(null);
+    setError(null);
+    setPhase("authority_required");
+  }
+
   async function analyze() {
     if (!detail || !summary) return;
     if (!summary.ocrConfirmed || !getApp1LearnerAnswer(detail)) {
@@ -290,7 +304,14 @@ export function App1CaptureRepairLoop({
       setGap(result.primaryGap);
       setAnalysisBinding(result.analysisBinding);
       setPhase("evidence_review");
-    } catch {
+    } catch (analysisError) {
+      if (
+        analysisError instanceof App1StructureRequestError &&
+        analysisError.errorCode === "APP1_AUTHORITY_REQUIRED"
+      ) {
+        enterAuthorityRequired();
+        return;
+      }
       setError(ANALYSIS_FAILURE_MESSAGE);
       setPhase("structure_confirmation");
     }
@@ -368,6 +389,13 @@ export function App1CaptureRepairLoop({
       setVerificationReceipt(receipt);
       setPhase("repair_verification");
     } catch (verificationError) {
+      if (
+        verificationError instanceof App1StructureRequestError &&
+        verificationError.errorCode === "APP1_AUTHORITY_REQUIRED"
+      ) {
+        enterAuthorityRequired();
+        return;
+      }
       if (
         verificationError instanceof App1StructureRequestError &&
         [
@@ -467,6 +495,14 @@ export function App1CaptureRepairLoop({
         if (
           payload &&
           !payload.ok &&
+          payload.errorCode === "APP1_AUTHORITY_REQUIRED"
+        ) {
+          enterAuthorityRequired();
+          return;
+        }
+        if (
+          payload &&
+          !payload.ok &&
           [
             "APP1_VERIFICATION_EXPIRED",
             "APP1_ANALYSIS_BINDING_INVALID",
@@ -559,6 +595,7 @@ export function App1CaptureRepairLoop({
     verifying: "복구 확인",
     repair_verification: "복구 확인",
     saving: "저장",
+    authority_required: "권한 다시 확인",
     completed: "다음 복습",
     saved_without_queue: "복습 영수증 확인 필요",
     failed: "불러오기 실패",
@@ -771,6 +808,55 @@ export function App1CaptureRepairLoop({
             </V3ActionButton>
           ) : null}
         </V3Surface>
+      ) : null}
+
+      {phase === "authority_required" ? (
+        <div role="alert" data-app1-authority-required>
+          <V3Surface className="space-y-5">
+            <div>
+              <p className="v3-type-caption text-[var(--color-text-brand)]">
+                APP-1 권한 확인 필요
+              </p>
+              <h2 className="v3-type-section ko-keep mt-1 text-[var(--color-text-primary)]">
+                현재 APP-1 권한이 더 이상 유효하지 않습니다
+              </h2>
+              <p className="v3-type-body ko-keep mt-2 text-[var(--color-text-secondary)]">
+                복구 기록은 저장되지 않았습니다. 같은 확인 영수증으로 다시 시도해도 처리되지 않습니다. 접근이 복구되면 이 경로에 다시 들어와 새 서버 권한 확인을 진행해 주세요.
+              </p>
+            </div>
+            <div className="space-y-2">
+              <label
+                htmlFor="app1-unsaved-repair-text"
+                className="v3-type-label-strong text-[var(--color-text-primary)]"
+              >
+                저장되지 않은 복구 입력
+              </label>
+              <Textarea
+                id="app1-unsaved-repair-text"
+                value={repairText}
+                readOnly
+                className="min-h-40 rounded-[var(--v3-radius-control)] border-[var(--color-border-default)] bg-[var(--color-background-surface)]"
+                data-app1-unsaved-repair-text
+              />
+            </div>
+            <div className="flex flex-col gap-2 sm:flex-row">
+              <V3ActionButton
+                type="button"
+                onClick={() =>
+                  window.location.assign(
+                    `/app/capture/repair?itemId=${encodeURIComponent(itemId)}`,
+                  )
+                }
+                data-app1-recheck-authority
+              >
+                권한 다시 확인
+              </V3ActionButton>
+              <V3ActionLink href="/app?mode=second" tone="secondary">
+                오늘 할 일로 돌아가기
+              </V3ActionLink>
+            </div>
+          </V3Surface>
+        </div>
       ) : null}
 
       {phase === "completed" && nextReview && persistedRecordId ? (

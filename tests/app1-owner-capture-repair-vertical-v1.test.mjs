@@ -2129,6 +2129,55 @@ test("APP1-UI-002A exposes guided fallback after verification service failure wi
   assert.match(repairLoop, /commandVersion: "App1VerifiedRepairPersistenceCommandV1"/u);
 });
 
+test("APP1-UI-002B exits revoked authority without retaining a retryable client receipt", async () => {
+  const repairLoop = await read("components/owner-study/app1-capture-repair-loop.tsx");
+  const transition = repairLoop.match(
+    /function enterAuthorityRequired\(\) \{[\s\S]*?(?=\n  async function analyze\(\))/u,
+  )?.[0];
+  const analyze = repairLoop.match(
+    /async function analyze\(\) \{[\s\S]*?(?=\n  function beginRepair\(\))/u,
+  )?.[0];
+  const verifyRepair = repairLoop.match(
+    /async function verifyRepair\(\) \{[\s\S]*?(?=\n  function deferRepair\(\))/u,
+  )?.[0];
+  const saveRepair = repairLoop.match(
+    /async function saveRepair\(\) \{[\s\S]*?(?=\n  const busy =)/u,
+  )?.[0];
+  const authoritySurface = repairLoop.match(
+    /\{phase === "authority_required" \? \([\s\S]*?data-app1-recheck-authority[\s\S]*?오늘 할 일로 돌아가기[\s\S]*?\) : null\}/u,
+  )?.[0];
+
+  assert.ok(transition, "missing revoked-authority transition");
+  assert.match(
+    transition,
+    /setGap\(null\);[\s\S]*?setAnalysisBinding\(null\);[\s\S]*?setVerification\(null\);[\s\S]*?setVerificationReceipt\(null\);[\s\S]*?pendingSaveRef\.current = null;[\s\S]*?setConflict\(false\);[\s\S]*?setNextReview\(null\);[\s\S]*?setPersistedRecordId\(null\);[\s\S]*?setError\(null\);[\s\S]*?setPhase\("authority_required"\);/u,
+  );
+  assert.doesNotMatch(transition, /setRepairText/u);
+  for (const [label, boundary] of [
+    ["initial analysis", analyze],
+    ["repair verification", verifyRepair],
+    ["repair persistence", saveRepair],
+  ]) {
+    assert.ok(boundary, `missing ${label} boundary`);
+    assert.match(
+      boundary,
+      /APP1_AUTHORITY_REQUIRED[\s\S]*?enterAuthorityRequired\(\);[\s\S]*?return;/u,
+      `${label} must enter the closed revoked-authority state`,
+    );
+  }
+  assert.ok(authoritySurface, "missing revoked-authority surface");
+  assert.match(authoritySurface, /현재 APP-1 권한이 더 이상 유효하지 않습니다/u);
+  assert.match(authoritySurface, /복구 기록은 저장되지 않았습니다/u);
+  assert.match(authoritySurface, /같은 확인 영수증으로 다시 시도해도 처리되지 않습니다/u);
+  assert.match(authoritySurface, /value=\{repairText\}[\s\S]*?readOnly/u);
+  assert.match(
+    authoritySurface,
+    /window\.location\.assign\([\s\S]*?\/app\/capture\/repair\?itemId=[\s\S]*?권한 다시 확인/u,
+  );
+  assert.match(authoritySurface, /href="\/app\?mode=second"[\s\S]*?오늘 할 일로 돌아가기/u);
+  assert.doesNotMatch(authoritySurface, /data-app1-save-repair|data-app1-completed|data-app1-queue-receipt/u);
+});
+
 test("APP1-UI-003 enters repair only after a durable receipt without racing the route refresh", async () => {
   const captureForm = await read("components/review-os/capture-form.tsx");
   const receiptIndex = captureForm.indexOf(
