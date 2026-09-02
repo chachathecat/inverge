@@ -1,5 +1,50 @@
 # APP-1 validation
 
+## Exact-head arithmetic-truth and post-insert recurrence closeout
+
+The fresh formal review of exact head
+`71a510cf06856c6aa68abce3c6cb8c7b9038aa66` identified two directly coupled
+APP-1 boundaries. This correction changes no product goal, schema, migration,
+RLS, general authentication, provider, package, workflow, remote state or
+public activation.
+
+- Practice repair confirmation now parses and recalculates the closed binary
+  symbolic operators `+`, `-`, `−`, `*`, `×`, `/` and `÷`. The closed verbal
+  operators are also recalculated from exactly two operands and the numeric
+  value bound to `결과`, `합계`, `차액` or `순수익`. The stated result must equal
+  the computed result; division by zero, incomplete expressions and incorrect
+  symbolic or verbal results remain fail-closed even when a model repeats them
+  as a strength.
+- APP-1 no longer seals a recurrence count, Queue due time or recurrence-derived
+  schedule before the repair item exists. The HMAC plan seals only the exact
+  recurrence key, stable schedule inputs, schedule reference time and static
+  Queue material. Replay counts exact matching durable items after insertion,
+  materializes the Queue schedule and derived recurrence snapshot from that
+  evidence, and synchronizes the item snapshot to the same persisted Queue
+  count. A completed replay accepts only an exact server-created Queue whose
+  stored count is positive, no greater than fresh durable evidence and whose
+  complete static identity and recomputed schedule match. Concurrent plans
+  prepared before either insert therefore cannot both retain the former stale
+  `N+1` pre-insert snapshot.
+
+Completed local evidence for this correction:
+
+- APP-1 focused deterministic suite: `37/37` passed, including correct and
+  incorrect symbolic/verbal calculation results and the concurrent two-item
+  post-insert Queue fixture;
+- APP-1 plus required adjacent contract suite: `54/54` passed;
+- S232F.2 access inventory: `6/6` passed;
+- directly inherited C3R-P/T/L aggregate: `129/129` passed after aligning the
+  existing frozen repository identity to the audited successor bytes;
+- TypeScript typecheck: passed;
+- changed-file lint: `0` errors (one unchanged pre-existing `dayStartUtcIso`
+  warning in `lib/review-os/service.ts`);
+- production Webpack build with Next.js `16.2.12`: passed;
+- `git diff --check`: passed;
+- local read-only hostile audit: actionable `P0/P1/P2 = 0/0/0`;
+- repository-required exact-head CI and one fresh formal exact-head review
+  remain pending the corrective push.
+
 ## Final exact-head review correction: complete calculation results and pre-item replay safety
 
 The fresh formal review of exact head

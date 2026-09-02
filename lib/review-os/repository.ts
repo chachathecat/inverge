@@ -1266,6 +1266,9 @@ export class ReviewOsRepository {
     priorityScore: number,
     dueAt: string,
     derivedPayload: Record<string, unknown>,
+    assertExisting?: (
+      row: Record<string, unknown>,
+    ) => void | Promise<void>,
   ) {
     const client = getUserClient(userId);
     const payload = {
@@ -1302,8 +1305,73 @@ export class ReviewOsRepository {
       existingResult,
     );
     if (!existingResult.data) throw new Error("review-os:app1-replay-queue-missing");
-    assertApp1ReplayExact(existingResult.data, payload);
+    if (assertExisting) {
+      await assertExisting(existingResult.data as Record<string, unknown>);
+    } else {
+      assertApp1ReplayExact(existingResult.data, payload);
+    }
     return { status: "deduped" as const };
+  }
+
+  async ensureApp1WrongAnswerItemRecurrenceSnapshot(
+    userId: string,
+    itemId: string,
+    recurrenceCount: number,
+  ) {
+    if (!Number.isSafeInteger(recurrenceCount) || recurrenceCount < 1) {
+      throw new Error("review-os:app1-replay-recurrence-invalid");
+    }
+    const client = getUserClient(userId);
+    const readCurrent = async () => {
+      const result = await client
+        .from("wrong_answer_items")
+        .select("id, derived_payload")
+        .eq("user_id", userId)
+        .eq("id", itemId)
+        .maybeSingle();
+      assertSupabaseOperation(
+        "review-os.ensureApp1WrongAnswerItemRecurrenceSnapshot.select",
+        result,
+      );
+      return result.data as Record<string, unknown> | null;
+    };
+    const current = await readCurrent();
+    if (!current) throw new Error("review-os:app1-replay-item-missing");
+    const derivedPayload =
+      current.derived_payload &&
+      typeof current.derived_payload === "object" &&
+      !Array.isArray(current.derived_payload)
+        ? (current.derived_payload as Record<string, unknown>)
+        : {};
+    const currentCount = derivedPayload.recurrenceCount;
+    if (currentCount === recurrenceCount) return { status: "deduped" as const };
+    if (currentCount !== 1) {
+      throw new Error("review-os:app1-replay-authority-conflict");
+    }
+    const updateResult = await client
+      .from("wrong_answer_items")
+      .update({
+        derived_payload: sanitizeDerivedMetadata({
+          ...derivedPayload,
+          recurrenceCount,
+        }),
+        updated_at: new Date().toISOString(),
+      })
+      .eq("user_id", userId)
+      .eq("id", itemId);
+    assertSupabaseOperation(
+      "review-os.ensureApp1WrongAnswerItemRecurrenceSnapshot.update",
+      updateResult,
+    );
+    const ensured = await readCurrent();
+    if (
+      !ensured ||
+      (ensured.derived_payload as Record<string, unknown> | null)
+        ?.recurrenceCount !== recurrenceCount
+    ) {
+      throw new Error("review-os:app1-replay-authority-conflict");
+    }
+    return { status: "saved" as const };
   }
 
   async listReviewQueue(userId: string, limit = 10) {

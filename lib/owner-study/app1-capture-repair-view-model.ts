@@ -593,9 +593,71 @@ const APP1_REPAIR_CALCULATION_RESULTS = Object.freeze([
   "검산",
 ] as const);
 const APP1_REPAIR_CALCULATION_SYMBOL_PATTERN =
-  /(?:^|[^0-9])[0-9]+(?:[.,][0-9]+)?\s*(?:\+|-|−|×|\*|÷|\/)\s*[0-9]+(?:[.,][0-9]+)?\s*=\s*-?[0-9]+(?:[.,][0-9]+)?(?:$|[^0-9])/u;
+  /(?:^|[^0-9])(-?[0-9]+(?:[.,][0-9]+)?)\s*(\+|-|−|×|\*|÷|\/)\s*(-?[0-9]+(?:[.,][0-9]+)?)\s*=\s*(-?[0-9]+(?:[.,][0-9]+)?)(?:$|[^0-9])/u;
 const APP1_REPAIR_VERBAL_CALCULATION_RESULT_PATTERN =
-  /(?:^|[\s,.;:()[\]{}])(?:결과|합계|차액|순수익)(?:은|는|이|가)?\s*-?[0-9]+(?:[.,][0-9]+)?(?:을|를|으로|로)?/u;
+  /(?:^|[\s,.;:()[\]{}])(?:결과|합계|차액|순수익)(?:은|는|이|가)?\s*(-?[0-9]+(?:[.,][0-9]+)?)(?:을|를|으로|로)?/u;
+
+function parseApp1CalculationNumber(value: string) {
+  const parsed = Number(value.replace(/,/gu, ""));
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
+function app1CalculationEquals(actual: number, expected: number) {
+  const scale = Math.max(1, Math.abs(actual), Math.abs(expected));
+  return Math.abs(actual - expected) <= Number.EPSILON * scale * 16;
+}
+
+function evaluateApp1BinaryCalculation(
+  left: number,
+  operator: string,
+  right: number,
+) {
+  if (operator === "+" || operator.includes("더하")) return left + right;
+  if (operator === "-" || operator === "−" || operator.includes("빼")) {
+    return left - right;
+  }
+  if (operator === "*" || operator === "×" || operator.includes("곱하")) {
+    return left * right;
+  }
+  if (operator === "/" || operator === "÷" || operator.includes("나누")) {
+    return right === 0 ? null : left / right;
+  }
+  return null;
+}
+
+function hasCorrectClosedPracticeCalculation(value: string) {
+  const symbolic = value.match(APP1_REPAIR_CALCULATION_SYMBOL_PATTERN);
+  if (symbolic) {
+    const left = parseApp1CalculationNumber(symbolic[1]);
+    const right = parseApp1CalculationNumber(symbolic[3]);
+    const stated = parseApp1CalculationNumber(symbolic[4]);
+    if (left === null || right === null || stated === null) return false;
+    const calculated = evaluateApp1BinaryCalculation(left, symbolic[2], right);
+    return calculated !== null && app1CalculationEquals(calculated, stated);
+  }
+
+  const resultMatch = value.match(APP1_REPAIR_VERBAL_CALCULATION_RESULT_PATTERN);
+  if (!resultMatch || resultMatch.index === undefined) return false;
+  const stated = parseApp1CalculationNumber(resultMatch[1]);
+  const materialBeforeResult = value.slice(0, resultMatch.index);
+  const operands = [
+    ...materialBeforeResult.matchAll(/-?[0-9]+(?:[.,][0-9]+)?/gu),
+  ]
+    .map((match) => parseApp1CalculationNumber(match[0]))
+    .filter((number): number is number => number !== null);
+  if (stated === null || operands.length !== 2) return false;
+  const identity = normalizedIdentity(materialBeforeResult);
+  const operator = APP1_REPAIR_CALCULATION_OPERATORS.find((candidate) =>
+    identity.includes(candidate),
+  );
+  if (!operator) return false;
+  const calculated = evaluateApp1BinaryCalculation(
+    operands[0],
+    operator,
+    operands[1],
+  );
+  return calculated !== null && app1CalculationEquals(calculated, stated);
+}
 
 const APP1_REPAIR_LEXICAL_STOP_WORDS = new Set([
   "그리고",
@@ -729,15 +791,9 @@ function hasClosedRepairPropositionShape(
   }
   if (facetSet.has("calculation")) {
     const numericOperands = value.match(/[0-9]+(?:[.,][0-9]+)?/gu) ?? [];
-    const hasSymbolicCalculation =
-      APP1_REPAIR_CALCULATION_SYMBOL_PATTERN.test(value);
-    const hasCompleteVerbalCalculation =
-      numericOperands.length >= 3 &&
-      includesAny(identity, APP1_REPAIR_CALCULATION_OPERATORS) &&
-      APP1_REPAIR_VERBAL_CALCULATION_RESULT_PATTERN.test(value);
     return (
       numericOperands.length >= 2 &&
-      (hasSymbolicCalculation || hasCompleteVerbalCalculation) &&
+      hasCorrectClosedPracticeCalculation(value) &&
       includesAny(identity, APP1_REPAIR_CALCULATION_RESULTS)
     );
   }

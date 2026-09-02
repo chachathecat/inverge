@@ -1561,7 +1561,7 @@ test("APP1-VM-003E distinguishes substantive negative conclusions from unresolve
   }
 });
 
-test("APP1-VM-003F recognizes only closed symbolic Practice arithmetic expressions", () => {
+test("APP1-VM-003F recalculates closed symbolic and verbal Practice arithmetic", () => {
   const detail = syntheticDetail({
     item: {
       subjectLabel: "감정평가실무",
@@ -1597,6 +1597,10 @@ test("APP1-VM-003F recognizes only closed symbolic Practice arithmetic expressio
     );
   }
   for (const repairText of [
+    "수익 120과 비용 20의 계산 산식은 120 - 20 = 999이고 결과 단위와 부호의 검산을 완료했다.",
+    "수익 120과 비용 20의 계산 산식은 120 + 20 = 100이고 결과 단위와 부호의 검산을 완료했다.",
+    "수익 120과 비용 20의 계산 산식은 120 / 0 = 120이고 결과 단위와 부호의 검산을 완료했다.",
+    "임대료 수익 120에서 비용 20을 빼 순수익 999로 계산하고 단위를 검산했다.",
     "수익 120에서 비용 20을 빼고 결과를 검산했다.",
     "임대료 수익 금액은 120이고 비용 20과 연도 2026을 적은 뒤 비용을 빼 계산 결과를 검산했다.",
     "임대료 수익 입력값 120을 계산하고 비용 20과 연도 2026을 적은 뒤 비용을 빼 순수익 계산 결과를 검산했다.",
@@ -1616,6 +1620,18 @@ test("APP1-VM-003F recognizes only closed symbolic Practice arithmetic expressio
       repairText,
     );
   }
+
+  const correctVerbal =
+    "임대료 수익 120에서 비용 20을 빼 순수익 100으로 계산하고 단위를 검산했다.";
+  assert.equal(
+    evaluateApp1SameSessionRepair({
+      detail,
+      requestedGap,
+      repairText: correctVerbal,
+      repairDraft: resolvedTargetDraft({ strength: correctVerbal }),
+    }).state,
+    "repair_confirmed_for_this_session",
+  );
 });
 
 test("APP1-VM-003C confirms stable out-of-vocabulary targets only with positive learner and draft evidence", () => {
@@ -2328,18 +2344,24 @@ test("APP1-PERSISTENCE-REPLAY-002 binds exact authority before replay and never 
   assert.match(repository, /ensureApp1WrongAnswerNote/u);
   assert.match(repository, /ensureApp1RecurrenceFeature/u);
   assert.match(repository, /countApp1RecurrenceEvidence/u);
-  assert.match(commonCreate, /countApp1RecurrenceEvidence/u);
+  assert.match(service, /materializeApp1ReplayQueue/u);
+  assert.match(service, /const durableRecurrenceCount =\s*await reviewOsRepository\.countApp1RecurrenceEvidence/u);
+  assert.doesNotMatch(commonCreate, /existingApp1RecurrenceEvidenceCount/u);
+  assert.doesNotMatch(commonCreate, /app1RecurrenceTargetCount/u);
   assert.match(repository, /\.eq\("derived_payload->>topicTag", input\.topicTag\)/u);
   assert.match(repository, /\.eq\("derived_payload->>mistakeType", input\.mistakeType\)/u);
   assert.match(repository, /ensureApp1WrongAnswerTag/u);
   assert.match(repository, /ensureApp1ReviewQueueEntry/u);
   assert.match(repository, /ensureApp1UsageEvent/u);
   assert.match(repository, /ensureApp1LearningSignalEvent/u);
+  assert.match(repository, /ensureApp1WrongAnswerItemRecurrenceSnapshot/u);
   assert.match(repository, /assertApp1ReplayExact/u);
   assert.match(commonCreate, /const ordinaryRecurrence = replayAuthority\s*\? null\s*:\s*await reviewOsRepository\.upsertRecurrenceFeature/u);
   assert.match(commonCreate, /app1PreInsertUsageEvents/u);
   assert.match(commonCreate, /\.\.\.app1PreInsertUsageEvents/u);
-  assert.match(commonCreate, /targetCount: recurrenceCount/u);
+  assert.match(commonCreate, /scheduleInput: Object\.freeze/u);
+  assert.match(commonCreate, /derivedPayloadBase: queueDerivedPayloadBase/u);
+  assert.doesNotMatch(commonCreate, /targetCount: recurrenceCount/u);
   const app1Create = service.match(
     /async createApp1VerifiedRepairItem\([\s\S]*?(?=\n  private async resumeExistingApp1RepairAfterExpiredAuthority)/u,
   )?.[0];
@@ -2392,15 +2414,13 @@ test("APP1-PERSISTENCE-REPLAY-003 fails closed on a conflicting artifact and per
   );
   assert.deepEqual(completed, ["recurrence", "note"]);
 });
-test("APP1-PERSISTENCE-REPLAY-004 derives preparation and replay recurrence from durable item evidence", async () => {
+test("APP1-PERSISTENCE-REPLAY-004 materializes Queue recurrence only from post-insert durable evidence", async () => {
   const durableItems = new Set();
-  const sealedQueueCounts = new Map();
+  const persistedQueueCounts = new Map();
   let recurrenceCount = 0;
   const prepare = (itemId) => {
-    const targetCount = durableItems.size + 1;
     durableItems.add(itemId);
-    sealedQueueCounts.set(itemId, targetCount);
-    return targetCount;
+    return itemId;
   };
   const complete = async (itemId, failRecurrence = false) =>
     executeApp1ResumableArtifactPlanV1({
@@ -2417,24 +2437,33 @@ test("APP1-PERSISTENCE-REPLAY-004 derives preparation and replay recurrence from
       ensureNote: async () => "deduped",
       ensureTag: async () => "deduped",
       ensureUsage: async () => "deduped",
-      ensureQueue: async () => "deduped",
+      ensureQueue: async () => {
+        const durableCountAtQueueMaterialization = durableItems.size;
+        const existing = persistedQueueCounts.get(itemId);
+        if (existing !== undefined) {
+          assert.ok(existing <= durableCountAtQueueMaterialization);
+          return "deduped";
+        }
+        persistedQueueCounts.set(itemId, durableCountAtQueueMaterialization);
+        return "saved";
+      },
       ensureLearningSignal: async () => "deduped",
     });
 
-  assert.equal(prepare("item-a"), 1);
+  assert.equal(prepare("item-a"), "item-a");
   await assert.rejects(
     complete("item-a", true),
     /synthetic-pre-recurrence-application-failure/u,
   );
   assert.equal(recurrenceCount, 0);
-  assert.equal(prepare("item-b"), 2);
+  assert.equal(prepare("item-b"), "item-b");
   await complete("item-b");
   assert.equal(recurrenceCount, 2);
   await complete("item-a");
   assert.equal(recurrenceCount, 2);
-  assert.deepEqual([...sealedQueueCounts.entries()], [
-    ["item-a", 1],
+  assert.deepEqual([...persistedQueueCounts.entries()], [
     ["item-b", 2],
+    ["item-a", 2],
   ]);
 });
 test("APP1-VM-005 announces a next review only from an exactly cross-bound new item detail", () => {

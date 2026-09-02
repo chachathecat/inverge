@@ -132,7 +132,6 @@ type App1PostInsertReplayPlanV1 = Readonly<{
     subjectLabel: string;
     topicTag: string;
     mistakeType: string;
-    targetCount: number;
   }>;
   noteId: string;
   note: Omit<WrongAnswerNoteRecord, "id" | "wrongAnswerItemId" | "createdAt">;
@@ -142,8 +141,16 @@ type App1PostInsertReplayPlanV1 = Readonly<{
   queue: Readonly<{
     reviewReason: string;
     priorityScore: number;
-    dueAt: string;
-    derivedPayload: Record<string, unknown>;
+    scheduleInput: Readonly<{
+      mode: AppraisalMode;
+      isCorrect: boolean;
+      confidence: WrongAnswerItemInput["confidence"];
+      mistakeType: string;
+      hasWeakParagraph: boolean;
+      scheduledAt: string;
+      nextReviewDateOverride: string | null;
+    }>;
+    derivedPayloadBase: Record<string, unknown>;
   }>;
   usageEvents: readonly App1ReplayUsageEvent[];
   learningSignalId: string;
@@ -322,17 +329,12 @@ function parseApp1ReplayPlan(
       "examName",
       "mistakeType",
       "subjectLabel",
-      "targetCount",
       "topicTag",
     ]) ||
     plan.recurrence?.examName !== item.examName ||
     plan.recurrence?.subjectLabel !== item.subjectLabel ||
     plan.recurrence?.topicTag !== plan.tag?.topicTag ||
     plan.recurrence?.mistakeType !== plan.tag?.mistakeType ||
-    !Number.isSafeInteger(plan.recurrence?.targetCount) ||
-    Number(plan.recurrence?.targetCount) < 1 ||
-    plan.queue?.derivedPayload?.recurrenceCount !==
-      plan.recurrence?.targetCount ||
     typeof plan.noteId !== "string" ||
     !app1ExactKeys(plan.note, [
       "aiSummary",
@@ -352,11 +354,35 @@ function parseApp1ReplayPlan(
     ]) ||
     typeof plan.queueId !== "string" ||
     !app1ExactKeys(plan.queue, [
-      "derivedPayload",
-      "dueAt",
+      "derivedPayloadBase",
       "priorityScore",
       "reviewReason",
+      "scheduleInput",
     ]) ||
+    !app1ExactKeys(plan.queue?.scheduleInput, [
+      "confidence",
+      "hasWeakParagraph",
+      "isCorrect",
+      "mistakeType",
+      "mode",
+      "nextReviewDateOverride",
+      "scheduledAt",
+    ]) ||
+    !["first", "second"].includes(String(plan.queue?.scheduleInput?.mode)) ||
+    typeof plan.queue?.scheduleInput?.isCorrect !== "boolean" ||
+    !["낮음", "중간", "높음"].includes(
+      String(plan.queue?.scheduleInput?.confidence),
+    ) ||
+    typeof plan.queue?.scheduleInput?.mistakeType !== "string" ||
+    typeof plan.queue?.scheduleInput?.hasWeakParagraph !== "boolean" ||
+    typeof plan.queue?.scheduleInput?.scheduledAt !== "string" ||
+    new Date(plan.queue.scheduleInput.scheduledAt).toISOString() !==
+      plan.queue.scheduleInput.scheduledAt ||
+    (plan.queue?.scheduleInput?.nextReviewDateOverride !== null &&
+      typeof plan.queue?.scheduleInput?.nextReviewDateOverride !== "string") ||
+    !plan.queue?.derivedPayloadBase ||
+    typeof plan.queue.derivedPayloadBase !== "object" ||
+    Array.isArray(plan.queue.derivedPayloadBase) ||
     !usageEventsValid ||
     typeof plan.learningSignalId !== "string" ||
     !app1ExactKeys(plan.learningSignal, [
@@ -386,6 +412,80 @@ function parseApp1ReplayPlan(
     throw new Error("review-os:app1-replay-authority-conflict");
   }
   return plan as App1PostInsertReplayPlanV1;
+}
+
+function materializeApp1ReplayQueue(
+  plan: App1PostInsertReplayPlanV1,
+  recurrenceCount: number,
+) {
+  if (!Number.isSafeInteger(recurrenceCount) || recurrenceCount < 1) {
+    throw new Error("review-os:app1-replay-recurrence-invalid");
+  }
+  const scheduleInput = plan.queue.scheduleInput;
+  const schedule = resolveReviewSchedule({
+    mode: scheduleInput.mode,
+    isCorrect: scheduleInput.isCorrect,
+    confidence: scheduleInput.confidence,
+    mistakeType: scheduleInput.mistakeType,
+    recurrenceCount,
+    hasWeakParagraph: scheduleInput.hasWeakParagraph,
+    now: new Date(scheduleInput.scheduledAt),
+  });
+  const nextReviewDate =
+    scheduleInput.nextReviewDateOverride ?? schedule.nextReviewDate;
+  const dueAt =
+    schedule.retryDueAt ??
+    resolveScheduleOverrideDate(nextReviewDate, schedule.reviewDueAt);
+  return Object.freeze({
+    dueAt,
+    derivedPayload: Object.freeze({
+      ...plan.queue.derivedPayloadBase,
+      recurrenceCount,
+      schedulingPolicy: schedule.policy,
+      retryDueAt: schedule.retryDueAt,
+      followUpReviewAt: schedule.followUpReviewAt,
+      nextReviewDate,
+    }),
+  });
+}
+
+function assertExistingApp1ReplayQueue(
+  row: Record<string, unknown>,
+  userId: string,
+  item: WrongAnswerItemRecord,
+  plan: App1PostInsertReplayPlanV1,
+  maximumDurableRecurrenceCount: number,
+) {
+  const derivedPayload = row.derived_payload as Record<string, unknown> | null;
+  const storedCount = derivedPayload?.recurrenceCount;
+  if (
+    !Number.isSafeInteger(storedCount) ||
+    Number(storedCount) < 1 ||
+    Number(storedCount) > maximumDurableRecurrenceCount
+  ) {
+    throw new Error("review-os:app1-replay-authority-conflict");
+  }
+  const materialized = materializeApp1ReplayQueue(plan, Number(storedCount));
+  const expected = {
+    id: plan.queueId,
+    user_id: userId,
+    exam_id: "wrong_answer_os",
+    subject_id: item.subjectLabel,
+    stage: "alpha",
+    source_submission_id: item.id,
+    source_kind: "wrong_answer",
+    status: "pending",
+    priority_score: plan.queue.priorityScore,
+    raw_payload: {
+      dueAt: materialized.dueAt,
+      reviewReason: plan.queue.reviewReason,
+    },
+    derived_payload: materialized.derivedPayload,
+  };
+  if (stableApp1Json(row) !== stableApp1Json(expected)) {
+    throw new Error("review-os:app1-replay-authority-conflict");
+  }
+  return Number(storedCount);
 }
 
 async function completeApp1PostInsertReplay(
@@ -422,16 +522,47 @@ async function completeApp1PostInsertReplay(
         event.entityId,
         event.metadataJson,
       ),
-    ensureQueue: () =>
-      reviewOsRepository.ensureApp1ReviewQueueEntry(
+    ensureQueue: async () => {
+      const durableRecurrenceCount =
+        await reviewOsRepository.countApp1RecurrenceEvidence(
+          userId,
+          plan.recurrence,
+        );
+      const materialized = materializeApp1ReplayQueue(
+        plan,
+        durableRecurrenceCount,
+      );
+      let persistedRecurrenceCount = durableRecurrenceCount;
+      const result = await reviewOsRepository.ensureApp1ReviewQueueEntry(
         userId,
         plan.queueId,
         item,
         plan.queue.reviewReason,
         plan.queue.priorityScore,
-        plan.queue.dueAt,
-        plan.queue.derivedPayload,
-      ),
+        materialized.dueAt,
+        materialized.derivedPayload,
+        async (existing) => {
+          const latestDurableRecurrenceCount =
+            await reviewOsRepository.countApp1RecurrenceEvidence(
+              userId,
+              plan.recurrence,
+            );
+          persistedRecurrenceCount = assertExistingApp1ReplayQueue(
+            existing,
+            userId,
+            item,
+            plan,
+            latestDurableRecurrenceCount,
+          );
+        },
+      );
+      await reviewOsRepository.ensureApp1WrongAnswerItemRecurrenceSnapshot(
+        userId,
+        item.id,
+        persistedRecurrenceCount,
+      );
+      return result;
+    },
     ensureLearningSignal: () =>
       reviewOsRepository.ensureApp1LearningSignalEvent(
         userId,
@@ -1567,7 +1698,12 @@ export class ReviewOsService {
       existing,
     );
     await completeApp1PostInsertReplay(userId, existing, plan);
-    return { item: existing, deduped: true };
+    const resumed = await reviewOsRepository.getWrongAnswerItem(
+      userId,
+      existing.id,
+    );
+    if (!resumed) throw new Error("review-os-item-missing-after-replay");
+    return { item: resumed, deduped: true };
   }
 
   private async createWrongAnswerItemAfterAuthority(
@@ -1629,6 +1765,12 @@ export class ReviewOsService {
           existing,
         );
         await completeApp1PostInsertReplay(userId, existing, plan);
+        const resumed = await reviewOsRepository.getWrongAnswerItem(
+          userId,
+          existing.id,
+        );
+        if (!resumed) throw new Error("review-os-item-missing-after-replay");
+        return { item: resumed, deduped: true };
       }
       return { item: existing, deduped: true };
     }
@@ -1652,37 +1794,29 @@ export class ReviewOsService {
         topicTag: artifacts.tags.topicTag,
         mistakeType: artifacts.tags.mistakeType,
       };
-      const existingApp1RecurrenceEvidenceCount = replayAuthority
-        ? await reviewOsRepository.countApp1RecurrenceEvidence(
-            userId,
-            recurrenceInput,
-          )
-        : null;
-      const app1RecurrenceTargetCount = replayAuthority
-        ? (existingApp1RecurrenceEvidenceCount ?? 0) + 1
-        : null;
       const ordinaryRecurrence = replayAuthority
         ? null
         : await reviewOsRepository.upsertRecurrenceFeature(
             userId,
             recurrenceInput,
           );
-      const recurrenceCount =
-        app1RecurrenceTargetCount ?? ordinaryRecurrence?.recurrenceCount ?? 1;
+      const recurrenceCount = ordinaryRecurrence?.recurrenceCount ?? 1;
+      const scheduleReference = new Date();
+      const scheduleIsCorrect = isMeaningfullyCorrectAnswer(
+        normalizedInput.correctAnswer,
+        normalizedInput.userAnswer,
+      );
+      const scheduleHasWeakParagraph =
+        mode === "second" &&
+        Boolean(normalizedInput.weakStructurePoint || normalizedInput.missingIssue);
       const schedule = resolveReviewSchedule({
         mode,
-        isCorrect: isMeaningfullyCorrectAnswer(
-          normalizedInput.correctAnswer,
-          normalizedInput.userAnswer,
-        ),
+        isCorrect: scheduleIsCorrect,
         confidence: normalizedInput.confidence,
         mistakeType: artifacts.tags.mistakeType,
         recurrenceCount,
-        hasWeakParagraph:
-          mode === "second" &&
-          Boolean(
-            normalizedInput.weakStructurePoint || normalizedInput.missingIssue,
-          ),
+        hasWeakParagraph: scheduleHasWeakParagraph,
+        now: scheduleReference,
       });
       const effectiveNextReviewDate =
         input.nextReviewDate ?? schedule.nextReviewDate;
@@ -1928,19 +2062,14 @@ export class ReviewOsService {
               weakStructurePoint: input.weakStructurePoint,
               missingIssue: input.missingIssue,
             });
-        const queueDerivedPayload = {
+        const queueDerivedPayloadBase = {
           topicTag: artifacts.tags.topicTag,
           mistakeType: artifacts.tags.mistakeType,
-          recurrenceCount,
           concept_node_candidate: conceptNodeCandidate,
           conceptNodeId: conceptNodeCandidate.conceptNodeId,
           conceptFamily: conceptNodeCandidate.conceptFamily,
           retrievalPrompt: conceptNodeCandidate.retrievalPrompt,
           conceptNextTaskType: conceptNodeCandidate.nextTaskType,
-          schedulingPolicy: schedule.policy,
-          retryDueAt: schedule.retryDueAt,
-          followUpReviewAt: schedule.followUpReviewAt,
-          nextReviewDate: effectiveNextReviewDate,
         };
         const usageEvents = [
           ...app1PreInsertUsageEvents,
@@ -2040,7 +2169,6 @@ export class ReviewOsService {
           itemId,
           recurrence: Object.freeze({
             ...recurrenceInput,
-            targetCount: recurrenceCount,
           }),
           noteId: app1DeterministicUuid(replayAuthority.authorityDigest, "note"),
           note: artifacts.note,
@@ -2050,8 +2178,16 @@ export class ReviewOsService {
           queue: Object.freeze({
             reviewReason,
             priorityScore,
-            dueAt: queueDueAt,
-            derivedPayload: queueDerivedPayload,
+            scheduleInput: Object.freeze({
+              mode,
+              isCorrect: scheduleIsCorrect,
+              confidence: normalizedInput.confidence,
+              mistakeType: artifacts.tags.mistakeType,
+              hasWeakParagraph: scheduleHasWeakParagraph,
+              scheduledAt: scheduleReference.toISOString(),
+              nextReviewDateOverride: input.nextReviewDate ?? null,
+            }),
+            derivedPayloadBase: queueDerivedPayloadBase,
           }),
           usageEvents: Object.freeze(usageEvents),
           learningSignalId: app1DeterministicUuid(
@@ -2194,6 +2330,11 @@ export class ReviewOsService {
 
       if (app1ReplayPlan) {
         await completeApp1PostInsertReplay(userId, item, app1ReplayPlan);
+        const completedItem = await reviewOsRepository.getWrongAnswerItem(
+          userId,
+          item.id,
+        );
+        if (!completedItem) throw new Error("review-os-item-missing-after-replay");
         recordLearningMetricIfEnabled(
           buildLearningMetricEvent({
             eventName: "capture_saved",
@@ -2216,7 +2357,7 @@ export class ReviewOsService {
             properties: { candidateCount: 1, selectedCount: 1 },
           }),
         );
-        return { item, deduped: false };
+        return { item: completedItem, deduped: false };
       }
 
       await reviewOsRepository.insertWrongAnswerNote(

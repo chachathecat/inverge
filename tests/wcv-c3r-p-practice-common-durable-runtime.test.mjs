@@ -63,7 +63,7 @@ const productionAccessBlobs = Object.freeze({
   // The original C3R-P identity remains historical Git evidence. This entry
   // freezes the audited APP-1 successor; future access changes still require
   // an explicit identity update and semantic audit.
-  "lib/review-os/repository.ts": "70e29593ed6fe99e9d34b8e67f896f3d5a770a30",
+  "lib/review-os/repository.ts": "251ed39c5633ea277e3d8f20c20c36d82bdfed9217cc29ff394d0c7981654609",
   "lib/review-os/server.ts": "429085a06c3104aa66c49b272738d53f00318d8a",
   "app/app/layout.tsx": "215ec312e2102d39332eeb47e2cc3b446ad78d19",
   "app/app/c3r-p/page.tsx": "1183828115a8a0ef0fb04c5d9c0e42a8ae5bd240",
