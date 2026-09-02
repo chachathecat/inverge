@@ -1,5 +1,63 @@
 # APP-1 validation
 
+## Final three-root repair-integrity closeout candidate
+
+The final review batch closes the three exact repair-integrity findings without
+changing the APP-1 product goal, schema, RLS, authentication design, provider
+surface or public state.
+
+- One shared `canonicalizeApp1RepairBody` boundary normalizes CRLF and CR to LF,
+  trims only the outer boundary, preserves internal paragraphs and line-oriented
+  calculations, and applies the existing repair limit after canonicalization.
+  The client fingerprint, multipart verification body, server evaluator,
+  verification receipt digest, JSON persistence command and persisted repair
+  fields now consume that same canonical representation. The deterministic
+  FormData-to-JSON integration proved LF/CRLF/CR equivalence while non-newline
+  tampering remains invalid.
+- Exact APP-1 dedupe retries now resume the sealed post-item artifact plan rather
+  than returning before required work. The plan is bound to the user, exact
+  operation/work revision, source item, repair digest and dedupe identity, and is
+  authenticated with the existing APP-1 server HMAC authority. Note, tag, usage,
+  Queue and learning-signal writes use deterministic identifiers and exact
+  conflict checks; provider generation and recurrence remain unreachable on an
+  exact replay.
+- The repair evaluator distinguishes closed, target-specific negative
+  propositions from unresolved metacommentary. Source-anchored Theory and Law
+  negative conclusions may confirm, while unresolved self-report, unrelated
+  negatives and positive/negative contradiction remain fail-closed.
+
+Completed deterministic evidence:
+
+- APP-1 focused suite: `35/35` passed;
+- APP-1 focused plus required adjacent contract suite: `52/52` passed;
+- S232F.2 access inventory: `6/6` passed;
+- TypeScript typecheck: passed;
+- changed-file lint: `0` errors (one unchanged pre-existing `dayStartUtcIso`
+  warning in `lib/review-os/service.ts`);
+- `git diff --check`: passed;
+- combined local hostile review: actionable `P0/P1/P2 = 0/0/0`.
+
+One disposable loopback-only Supabase `2.114.0` integration used the checked-in
+migration history and the real APP-1 service executor/repository adapter. A
+synthetic failure immediately before Queue insertion left exact counts
+`note/tag/usage/Queue/signal = 1/1/1/0/0`; the exact retry completed only the
+missing Queue and learning signal (`savedCount = 2`), and a fully completed retry
+created nothing (`savedCount = 0`). Final durable counts were exactly
+`item/note/tag/usage/Queue/signal = 1/1/1/1/1/1`; a conflicting Queue replay was
+rejected and the Queue count remained one. Sanitized metadata-only receipt:
+`sha256:87555bc28f4fe25f8a7ef49623c91fdeaf9abf6edebc9b9007333a13b8c239f7`.
+The ephemeral user, DB/Auth/REST/Kong runtime, containers, volume, network and
+temporary harness were removed; remote Supabase, Production, provider and
+payment mutation remained zero.
+
+The targeted route-level FormData regression proved the browser newline
+conversion, so the complete `390/768/1440` lifecycle was not repeated under this
+batch's targeted-integration rule. The local default Turbopack attempt reproduced
+the already documented linked-worktree `node_modules` symlink limitation. A
+Webpack fallback did not produce a terminal build artifact after its command host
+detached, so no new local build success is claimed; the orphan process was stopped
+and clean-checkout exact-head CI remains authoritative for production build.
+
 ## Final persistence-boundary review correction
 
 The exact-head formal review at `842530d9cbb419cfaf23e6fc1a0f1b4ffc6ff8de`

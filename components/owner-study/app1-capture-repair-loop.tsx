@@ -19,6 +19,7 @@ import {
   app1GuidedRepairHref,
   buildApp1NextReviewReceipt,
   buildApp1StructureSummary,
+  canonicalizeApp1RepairBody,
   evaluateApp1SameSessionRepair,
   getApp1LearnerAnswer,
   type App1NextReviewReceipt,
@@ -127,9 +128,10 @@ async function requestStructure(
     persistenceWorkRevisionId: string;
   }>,
 ) {
+  const canonicalAnswerText = canonicalizeApp1RepairBody(answerText);
   const formData = new FormData();
   formData.set("questionText", detail.item.rawQuestionText ?? "");
-  formData.set("answerText", answerText);
+  formData.set("answerText", canonicalAnswerText);
   formData.set("referenceText", detail.item.correctAnswer === "-" ? "" : detail.item.correctAnswer);
   formData.set("examMode", "second");
   formData.set("subject", detail.item.subjectLabel);
@@ -339,14 +341,17 @@ export function App1CaptureRepairLoop({
 
   async function verifyRepair() {
     if (!detail || !gap || !analysisBinding) return;
-    const trimmed = repairText.trim();
+    const canonicalRepair = canonicalizeApp1RepairBody(repairText);
     const preliminary = evaluateApp1SameSessionRepair({
       detail,
       requestedGap: gap,
-      repairText: trimmed,
+      repairText: canonicalRepair,
       repairDraft: null,
     });
-    if (trimmed.length < APP1_LIMITS.minimumRepairCharacters) {
+    if (
+      canonicalRepair.length < APP1_LIMITS.minimumRepairCharacters ||
+      canonicalRepair.length > APP1_LIMITS.maximumRepairCharacters
+    ) {
       setVerification(preliminary);
       setVerificationReceipt(null);
       pendingSaveRef.current = null;
@@ -357,7 +362,7 @@ export function App1CaptureRepairLoop({
     setError(null);
     try {
       const workFingerprint = await sha256Text(
-        `${ownerScope}\u0000${detail.item.id}\u0000${analysisBinding}\u0000${gap.gap}\u0000${trimmed}`,
+        `${ownerScope}\u0000${detail.item.id}\u0000${analysisBinding}\u0000${gap.gap}\u0000${canonicalRepair}`,
       );
       const pending = resolvePendingCaptureSaveOperation(
         pendingSaveRef.current,
@@ -366,7 +371,7 @@ export function App1CaptureRepairLoop({
       pendingSaveRef.current = pending;
       const result = await requestStructure(
         detail,
-        trimmed,
+        canonicalRepair,
         "repair_verification",
         VERIFICATION_FAILURE_MESSAGE,
         {
@@ -442,7 +447,7 @@ export function App1CaptureRepairLoop({
   }
 
   function updateRepairText(value: string) {
-    setRepairText(value.slice(0, APP1_LIMITS.maximumRepairCharacters));
+    setRepairText(value);
     setVerification(null);
     setVerificationReceipt(null);
     pendingSaveRef.current = null;
@@ -464,13 +469,22 @@ export function App1CaptureRepairLoop({
     setError(null);
     setConflict(false);
     try {
+      const canonicalRepair = canonicalizeApp1RepairBody(repairText);
+      if (
+        canonicalRepair.length < APP1_LIMITS.minimumRepairCharacters ||
+        canonicalRepair.length > APP1_LIMITS.maximumRepairCharacters
+      ) {
+        setError("복구 입력 길이를 확인해 주세요.");
+        setPhase("repair_verification");
+        return;
+      }
       const body = {
         commandVersion: "App1VerifiedRepairPersistenceCommandV1",
         sourceItemId: detail.item.id,
         primaryGap: gap,
         analysisBinding,
         verificationReceipt,
-        repairText: repairText.trim(),
+        repairText: canonicalRepair,
         persistenceOperationId: pending.binding.operationId,
         persistenceWorkRevisionId: pending.binding.workRevisionId,
       };
@@ -749,7 +763,7 @@ export function App1CaptureRepairLoop({
             AI가 완성 답안을 자동 입력하지 않습니다. 현재 입력은 저장 전 메모리 안에만 있고, 새로고침하면 복원되지 않습니다.
           </p>
           <div className="flex flex-col gap-2 sm:flex-row">
-            <V3ActionButton type="button" onClick={() => void verifyRepair()} disabled={!repairText.trim()} data-app1-verify-repair>
+            <V3ActionButton type="button" onClick={() => void verifyRepair()} disabled={!canonicalizeApp1RepairBody(repairText)} data-app1-verify-repair>
               복구 확인
             </V3ActionButton>
             <button type="button" onClick={deferRepair} className="v3-type-label min-h-11 rounded-[var(--v3-radius-control)] px-4 text-[var(--color-text-secondary)] underline underline-offset-4">

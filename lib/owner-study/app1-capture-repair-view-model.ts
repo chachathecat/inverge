@@ -32,6 +32,30 @@ export const APP1_VERIFICATION_STATES = Object.freeze([
 
 export type App1VerificationState = (typeof APP1_VERIFICATION_STATES)[number];
 
+export async function executeApp1ResumableArtifactPlanV1<TUsageEvent>(
+  input: Readonly<{
+    usageEvents: readonly TUsageEvent[];
+    ensureNote: () => Promise<"saved" | "deduped">;
+    ensureTag: () => Promise<"saved" | "deduped">;
+    ensureUsage: (event: TUsageEvent) => Promise<"saved" | "deduped">;
+    ensureQueue: () => Promise<"saved" | "deduped">;
+    ensureLearningSignal: () => Promise<"saved" | "deduped">;
+  }>,
+) {
+  let savedCount = 0;
+  const run = async (operation: () => Promise<"saved" | "deduped">) => {
+    if ((await operation()) === "saved") savedCount += 1;
+  };
+  await run(input.ensureNote);
+  await run(input.ensureTag);
+  for (const event of input.usageEvents) {
+    await run(() => input.ensureUsage(event));
+  }
+  await run(input.ensureQueue);
+  await run(input.ensureLearningSignal);
+  return Object.freeze({ savedCount });
+}
+
 export type App1TrustedRepairSubject =
   | "appraisal_practical"
   | "appraisal_theory"
@@ -139,9 +163,13 @@ function scalarText(
   return `${normalized.slice(0, maximum - 1).trimEnd()}…`;
 }
 
+export function canonicalizeApp1RepairBody(value: string) {
+  return value.replace(/\r\n?/gu, "\n").trim();
+}
+
 function learnerBodyText(value: unknown) {
   if (typeof value !== "string") return null;
-  return value.replace(/\r\n?/gu, "\n").trim();
+  return canonicalizeApp1RepairBody(value);
 }
 
 const APP1_PERSISTED_ANSWER_PLACEHOLDERS = new Set(["-", "–", "—"]);
@@ -426,8 +454,6 @@ const APP1_REPAIR_ACTION_ROOTS = Object.freeze([
   "확인",
 ] as const);
 const APP1_REPAIR_UNRESOLVED_CUES = Object.freeze([
-  "못",
-  "않",
   "부족하",
   "미흡하",
   "약하",
@@ -452,6 +478,34 @@ const APP1_REPAIR_UNRESOLVED_CUES = Object.freeze([
   "해야",
   "남아",
   "아직",
+] as const);
+const APP1_REPAIR_UNRESOLVED_METACOMMENTARY = Object.freeze([
+  "아직연결하지않",
+  "아직보강하지않",
+  "충분히보강하지못",
+  "연결하지못",
+  "보강하지못",
+  "오류가여전히남아",
+  "오류가남아",
+  "추가설명이필요",
+  "설명이필요",
+  "결론을완성하지못",
+  "완성하지못",
+] as const);
+const APP1_REPAIR_SUBSTANTIVE_NEGATIVE_PREDICATES = Object.freeze([
+  "충족하지않",
+  "해당하지않",
+  "성립하지않",
+  "적용되지않",
+] as const);
+const APP1_REPAIR_SUBSTANTIVE_AFFIRMATIVE_PREDICATES = Object.freeze([
+  "충족하",
+  "충족되",
+  "해당하",
+  "성립하",
+  "성립되",
+  "적용하",
+  "적용되",
 ] as const);
 const APP1_REPAIR_DISCUSSION_ONLY_CUES = Object.freeze([
   "검토항목",
@@ -489,6 +543,7 @@ const APP1_REPAIR_RELATION_PREDICATES = Object.freeze([
   "적용하",
   "적용해",
   "적용하여",
+  "적용되",
   "대입하",
   "연결하",
   "연결해",
@@ -509,6 +564,7 @@ const APP1_REPAIR_OUTCOME_PREDICATES = Object.freeze([
   "성립",
   "이른",
   "발생",
+  "해당",
 ] as const);
 const APP1_REPAIR_CALCULATION_OPERATORS = Object.freeze([
   "빼",
@@ -569,6 +625,15 @@ function lexicalWords(value: string) {
 
 function includesAny(identity: string, values: readonly string[]) {
   return values.some((value) => identity.includes(normalizedIdentity(value)));
+}
+
+function hasUnresolvedRepairMetacommentary(value: string) {
+  const identity = normalizedIdentity(value);
+  return (
+    includesAny(identity, APP1_REPAIR_UNRESOLVED_CUES) ||
+    includesAny(identity, APP1_REPAIR_UNRESOLVED_METACOMMENTARY) ||
+    includesAny(identity, APP1_REPAIR_DISCUSSION_ONLY_CUES)
+  );
 }
 
 function repairFacetForWord(word: string) {
@@ -785,10 +850,50 @@ function isTargetSpecificPositiveEvidence(
   return (
     matchesRepairTarget(value, profile) &&
     hasSubstantiveRepairSupport(value, profile) &&
-    !includesAny(identity, APP1_REPAIR_UNRESOLVED_CUES) &&
-    !includesAny(identity, APP1_REPAIR_DISCUSSION_ONLY_CUES) &&
+    !hasUnresolvedRepairMetacommentary(value) &&
     !includesAny(identity, APP1_REPAIR_TARGET_DISPLACEMENT_CUES)
   );
+}
+
+function repairEvidencePolarities(
+  value: string,
+  profile: App1RepairTargetProfile,
+) {
+  const polarities = new Set<"affirmative" | "negative">();
+  for (const segment of value
+    .split(/[.!?\n。！？]+/u)
+    .map((candidate) => candidate.trim())
+    .filter(Boolean)) {
+    if (
+      !matchesRepairTarget(segment, profile) ||
+      !hasSubstantiveRepairSupport(segment, profile) ||
+      hasUnresolvedRepairMetacommentary(segment) ||
+      includesAny(
+        normalizedIdentity(segment),
+        APP1_REPAIR_TARGET_DISPLACEMENT_CUES,
+      )
+    ) {
+      continue;
+    }
+    const identity = normalizedIdentity(segment);
+    const hasNegative = includesAny(
+      identity,
+      APP1_REPAIR_SUBSTANTIVE_NEGATIVE_PREDICATES,
+    );
+    const identityWithoutNegativePredicates =
+      APP1_REPAIR_SUBSTANTIVE_NEGATIVE_PREDICATES.reduce(
+        (current, predicate) =>
+          current.replaceAll(normalizedIdentity(predicate), ""),
+        identity,
+      );
+    const hasAffirmative = includesAny(
+      identityWithoutNegativePredicates,
+      APP1_REPAIR_SUBSTANTIVE_AFFIRMATIVE_PREDICATES,
+    );
+    if (hasNegative) polarities.add("negative");
+    if (hasAffirmative || !hasNegative) polarities.add("affirmative");
+  }
+  return polarities;
 }
 function observedPrimaryGap(draft: AnswerReviewStructureDraft) {
   return buildAnswerReviewQualityView(draft).primaryFix.gap;
@@ -878,10 +983,18 @@ export function evaluateApp1SameSessionRepair(input: Readonly<{
     input.repairDraft.weakLogicPoint,
     input.repairDraft.weakParagraphPoint,
   ].some((candidate) => matchesRepairTarget(candidate, targetProfile));
+  const evidencePolarities = new Set<"affirmative" | "negative">();
+  for (const evidence of [repairText, ...input.repairDraft.strengths]) {
+    for (const polarity of repairEvidencePolarities(evidence, targetProfile)) {
+      evidencePolarities.add(polarity);
+    }
+  }
+  const contradictoryTargetPolarity = evidencePolarities.size > 1;
   if (
     !learnerSupportsTarget ||
     !targetSpecificPositiveEvidence ||
-    targetSpecificConflict
+    targetSpecificConflict ||
+    contradictoryTargetPolarity
   ) {
     return result(
       "one_connection_still_missing",

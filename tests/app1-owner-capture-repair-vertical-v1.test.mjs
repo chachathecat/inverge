@@ -14,7 +14,9 @@ import {
   buildApp1PrimaryGap,
   buildApp1RepairPersistenceInput,
   buildApp1StructureSummary,
+  canonicalizeApp1RepairBody,
   evaluateApp1SameSessionRepair,
+  executeApp1ResumableArtifactPlanV1,
   getApp1LearnerAnswer,
   isApp1InitialAnalysisEligible,
   isApp1PersistedInitialAnalysisEligible,
@@ -39,11 +41,14 @@ register(
 const {
   APP1_ANALYSIS_BINDING_TTL_MS,
   APP1_RECEIPT_TTL_MS,
+  APP1_REPLAY_PLAN_SEAL_VERSION,
   APP1_VERIFICATION_POLICY_VERSION,
   assertApp1AnalysisBinding,
+  assertApp1ReplayPlanSeal,
   assertApp1VerificationReceipt,
   executeApp1AuthorityBoundaryV1,
   issueApp1AnalysisBinding,
+  issueApp1ReplayPlanSeal,
   issueApp1VerificationReceipt,
 } = await import("../lib/owner-study/app1-verification-receipt-core.ts");
 
@@ -394,8 +399,6 @@ test("APP1-AUTHORITY-001 signs closed analysis and verification receipts and rej
     },
     { ...bindingInput, gap: { ...gap, gap: `${gap.gap} 변조` } },
     { ...bindingInput, repairText: `${repairText} 변조` },
-    { ...bindingInput, repairText: ` ${repairText}` },
-    { ...bindingInput, repairText: `${repairText}\r\n` },
     {
       ...bindingInput,
       persistenceOperationId: "77777777-7777-4777-8777-777777777777",
@@ -408,6 +411,19 @@ test("APP1-AUTHORITY-001 signs closed analysis and verification receipts and rej
     assert.throws(
       () => assertApp1VerificationReceipt(mutation),
       /app1-receipt:binding_mismatch/u,
+    );
+  }
+  for (const equivalentRepairText of [
+    ` ${repairText} `,
+    `${repairText}\n`,
+    `${repairText}\r\n`,
+    `${repairText}\r`,
+  ]) {
+    assert.doesNotThrow(() =>
+      assertApp1VerificationReceipt({
+        ...bindingInput,
+        repairText: equivalentRepairText,
+      }),
     );
   }
   assert.throws(
@@ -477,6 +493,106 @@ test("APP1-AUTHORITY-001 signs closed analysis and verification receipts and rej
       /app1-receipt:invalid_receipt/u,
     );
   }
+});
+
+test("APP1-AUTHORITY-001A seals stored replay plans and integrates multipart newline input with JSON persistence", () => {
+  const key = Buffer.alloc(32, 0x41);
+  const planDigest = `sha256:${"a".repeat(64)}`;
+  const planSeal = issueApp1ReplayPlanSeal({ key, planDigest });
+  assert.equal(
+    assertApp1ReplayPlanSeal({ key, token: planSeal, planDigest })
+      .receiptVersion,
+    APP1_REPLAY_PLAN_SEAL_VERSION,
+  );
+  assert.throws(
+    () =>
+      assertApp1ReplayPlanSeal({
+        key,
+        token: planSeal,
+        planDigest: `sha256:${"b".repeat(64)}`,
+      }),
+    /app1-receipt:binding_mismatch/u,
+  );
+  assert.throws(
+    () =>
+      assertApp1ReplayPlanSeal({
+        key,
+        token: `${planSeal.slice(0, -1)}${planSeal.endsWith("A") ? "B" : "A"}`,
+        planDigest,
+      }),
+    /app1-receipt:invalid_receipt/u,
+  );
+
+  const detail = syntheticDetail();
+  const gap = buildApp1PrimaryGap(detail, draft());
+  const canonicalRepair =
+    "임대료 미납 사실을 계약 해지 논거에 연결했다.\n\n따라서 요건을 충족하므로 계약 종료 결론에 이른다.";
+  const formData = new FormData();
+  formData.set("answerText", `\r\n${canonicalRepair.replaceAll("\n", "\r\n")}\r\n`);
+  const multipartRepair = formData.get("answerText");
+  assert.equal(typeof multipartRepair, "string");
+  const canonicalMultipartRepair = canonicalizeApp1RepairBody(multipartRepair);
+  assert.equal(canonicalMultipartRepair, canonicalRepair);
+
+  const verification = Object.freeze({
+    state: "repair_confirmed_for_this_session",
+    requestedGap: gap.gap,
+    observedGap: null,
+    reason: "서버가 같은 세션의 요청한 연결을 확인했습니다.",
+    sameSessionOnly: true,
+    masteryCreated: false,
+    transferCreated: false,
+  });
+  const operation = Object.freeze({
+    operationId: "33333333-3333-4333-8333-333333333333",
+    workRevisionId: "44444444-4444-4444-8444-444444444444",
+  });
+  const analysisBinding = issueApp1AnalysisBinding({
+    key,
+    userId: detail.item.userId,
+    detail,
+    gap,
+    now: new Date("2026-09-01T00:00:00.000Z"),
+  });
+  const verificationReceipt = issueApp1VerificationReceipt({
+    key,
+    userId: detail.item.userId,
+    detail,
+    gap,
+    analysisBinding,
+    repairText: canonicalMultipartRepair,
+    verification,
+    persistenceOperationId: operation.operationId,
+    persistenceWorkRevisionId: operation.workRevisionId,
+    now: new Date("2026-09-01T00:00:00.000Z"),
+  });
+  const jsonCommand = JSON.parse(
+    JSON.stringify({ repairText: canonicalRepair.replaceAll("\n", "\r") }),
+  );
+  assert.doesNotThrow(() =>
+    assertApp1VerificationReceipt({
+      key,
+      token: verificationReceipt,
+      userId: detail.item.userId,
+      detail,
+      gap,
+      analysisBinding,
+      repairText: jsonCommand.repairText,
+      persistenceOperationId: operation.operationId,
+      persistenceWorkRevisionId: operation.workRevisionId,
+      now: new Date("2026-09-01T00:00:00.000Z"),
+    }),
+  );
+  const persistence = buildApp1RepairPersistenceInput({
+    detail,
+    gap,
+    repairText: jsonCommand.repairText,
+    verification,
+    operation,
+  });
+  assert.equal(persistence.rawAnswerText, canonicalRepair);
+  assert.equal(persistence.userAnswer, canonicalRepair);
+  assert.equal(persistence.rewriteParagraph, canonicalRepair);
 });
 
 test("APP1-AUTHORITY-002 covers all 17 production authority-boundary cases and denies every invalid APP-1 case before injected effects", async () => {
@@ -1295,6 +1411,92 @@ test("APP1-VM-003 requires target-specific learner and draft evidence without mo
   ]);
 });
 
+test("APP1-VM-003E distinguishes substantive negative conclusions from unresolved metacommentary", () => {
+  const detail = syntheticDetail();
+  const requestedGap = buildApp1PrimaryGap(detail, draft());
+  const substantiveNegativeConclusions = [
+    "임대료 미납 사실은 계약 해지 논거의 요건을 충족하지 않으므로 계약 종료 결론에 해당하지 않는다고 직접 연결했다.",
+    "임대료 미납 사례 사실은 계약 해지 논거에 적용해도 처분에 해당하지 않는다는 결론을 직접 연결했다.",
+    "임대료 미납 시장가치 사례 사실은 계약 해지 시장가치 논거에 적용되지 않으므로 시장가치가 성립하지 않는다고 직접 연결했다.",
+    "임대료 미납 사례 사실에는 계약 해지 논거의 법리가 적용되지 않으므로 처분에 해당하지 않는다고 직접 연결했다.",
+  ];
+  for (const repairText of substantiveNegativeConclusions) {
+    const verification = evaluateApp1SameSessionRepair({
+      detail,
+      requestedGap,
+      repairText,
+      repairDraft: resolvedTargetDraft({ strength: repairText }),
+    });
+    assert.equal(
+      verification.state,
+      "repair_confirmed_for_this_session",
+      repairText,
+    );
+  }
+
+  const lawDetail = syntheticDetail({
+    item: { subjectLabel: "감정평가 및 보상법규" },
+  });
+  const lawGap = buildApp1PrimaryGap(lawDetail, draft());
+  const lawNegative =
+    "임대료 미납 사례 사실에는 계약 해지 논거의 법리가 적용되지 않으므로 처분에 해당하지 않는다고 직접 연결했다.";
+  assert.equal(
+    evaluateApp1SameSessionRepair({
+      detail: lawDetail,
+      requestedGap: lawGap,
+      repairText: lawNegative,
+      repairDraft: resolvedTargetDraft({ strength: lawNegative }),
+    }).state,
+    "repair_confirmed_for_this_session",
+  );
+
+  for (const repairText of [
+    "임대료 미납 사례 사실을 계약 해지 논거에 아직 연결하지 않았다.",
+    "임대료 미납 사례 사실을 계약 해지 논거에 충분히 보강하지 못했다.",
+    "임대료 미납 사례 사실과 계약 해지 논거의 오류가 여전히 남아 있다.",
+    "임대료 미납 사례 사실과 계약 해지 논거에는 추가 설명이 필요하다.",
+    "임대료 미납 사례 사실과 계약 해지 논거의 결론을 완성하지 못했다.",
+  ]) {
+    assert.equal(
+      evaluateApp1SameSessionRepair({
+        detail,
+        requestedGap,
+        repairText,
+        repairDraft: resolvedTargetDraft({ strength: repairText }),
+      }).state,
+      "one_connection_still_missing",
+      repairText,
+    );
+  }
+
+  const affirmative =
+    "임대료 미납 사실은 계약 해지 논거의 요건을 충족하므로 계약 종료 결론에 이른다고 직접 연결했다.";
+  const negative =
+    "임대료 미납 사실은 계약 해지 논거의 요건을 충족하지 않으므로 계약 종료 결론에 해당하지 않는다고 직접 연결했다.";
+  assert.equal(
+    evaluateApp1SameSessionRepair({
+      detail,
+      requestedGap,
+      repairText: `${affirmative}\n${negative}`,
+      repairDraft: resolvedTargetDraft({ strength: affirmative }),
+    }).state,
+    "one_connection_still_missing",
+  );
+  assert.equal(
+    evaluateApp1SameSessionRepair({
+      detail,
+      requestedGap,
+      repairText:
+        "임대료 미납 사실은 계약 해지 요건을 충족하므로 계약 종료에 해당하지만, 같은 사실에는 그 법리가 적용되지 않는다고 결론냈다.",
+      repairDraft: resolvedTargetDraft({
+        strength:
+          "임대료 미납 사실은 계약 해지 요건을 충족하므로 계약 종료에 해당하지만, 같은 사실에는 그 법리가 적용되지 않는다고 결론냈다.",
+      }),
+    }).state,
+    "one_connection_still_missing",
+  );
+});
+
 test("APP1-VM-003C confirms stable out-of-vocabulary targets only with positive learner and draft evidence", () => {
   const detail = syntheticDetail();
   const baseGap = buildApp1PrimaryGap(detail, draft());
@@ -1908,6 +2110,129 @@ test("APP1-VM-004B enforces exact normalized 4,000/4,001-character body bounds",
     /app1:repair-input-too-long/u,
   );
 });
+
+test("APP1-VM-004C canonicalizes LF, CRLF, CR, and mixed boundaries before every body limit and digest binding", () => {
+  const canonical = "첫 문단\n\n둘째 문단\n셋째 문단";
+  for (const candidate of [
+    `  ${canonical}  `,
+    `\r\n첫 문단\r\n\r\n둘째 문단\r셋째 문단\r\n`,
+    "첫 문단\r\r둘째 문단\r셋째 문단",
+  ]) {
+    assert.equal(canonicalizeApp1RepairBody(candidate), canonical);
+  }
+  const exactCanonicalLimit = "가".repeat(APP1_LIMITS.maximumRepairCharacters);
+  assert.equal(
+    canonicalizeApp1RepairBody(`\r\n${exactCanonicalLimit}\r\n`).length,
+    APP1_LIMITS.maximumRepairCharacters,
+  );
+  assert.equal(
+    canonicalizeApp1RepairBody(`${exactCanonicalLimit}가`).length,
+    APP1_LIMITS.maximumRepairCharacters + 1,
+  );
+});
+
+test("APP1-PERSISTENCE-REPLAY-001 resumes every post-item interruption without duplicate note, tag, usage, Queue, or signal artifacts", async () => {
+  const usageEvents = Object.freeze([
+    Object.freeze({ id: "usage-1" }),
+    Object.freeze({ id: "usage-2" }),
+  ]);
+  const orderedKeys = ["note", "tag", "usage-1", "usage-2", "queue", "signal"];
+  for (let failureIndex = 0; failureIndex < orderedKeys.length; failureIndex += 1) {
+    const persisted = new Set();
+    let failOnce = true;
+    const ensure = async (key) => {
+      if (failOnce && orderedKeys.indexOf(key) === failureIndex) {
+        failOnce = false;
+        throw new Error(`synthetic-post-item-failure:${key}`);
+      }
+      if (persisted.has(key)) return "deduped";
+      persisted.add(key);
+      return "saved";
+    };
+    const execute = () =>
+      executeApp1ResumableArtifactPlanV1({
+        usageEvents,
+        ensureNote: () => ensure("note"),
+        ensureTag: () => ensure("tag"),
+        ensureUsage: (event) => ensure(event.id),
+        ensureQueue: () => ensure("queue"),
+        ensureLearningSignal: () => ensure("signal"),
+      });
+    await assert.rejects(execute, /synthetic-post-item-failure/u);
+    await assert.doesNotReject(execute);
+    const completedReplay = await execute();
+    assert.equal(completedReplay.savedCount, 0);
+    assert.deepEqual([...persisted].sort(), [...orderedKeys].sort());
+  }
+});
+
+test("APP1-PERSISTENCE-REPLAY-002 binds exact authority before replay and never regenerates provider artifacts", async () => {
+  const service = await read("lib/review-os/service.ts");
+  const repository = await read("lib/review-os/repository.ts");
+  const commonCreate = service.match(
+    /private async createWrongAnswerItemAfterAuthority\([\s\S]*?(?=\n  async )/u,
+  )?.[0];
+  assert.ok(commonCreate);
+  const existingBranch = commonCreate.match(
+    /if \(existing\) \{[\s\S]*?return \{ item: existing, deduped: true \};\s*\}/u,
+  )?.[0];
+  assert.ok(existingBranch);
+  assert.match(existingBranch, /parseApp1ReplayPlan/u);
+  assert.match(existingBranch, /completeApp1PostInsertReplay/u);
+  assert.doesNotMatch(existingBranch, /generateWrongAnswerArtifacts/u);
+  assert.ok(
+    commonCreate.indexOf("findExistingByDedupe") <
+      commonCreate.indexOf("consumeRateLimit"),
+    "an exactly authorized replay must resume before new-item rate and usage gates",
+  );
+  assert.ok(
+    commonCreate.indexOf("return { item: existing, deduped: true }") <
+      commonCreate.indexOf("generateWrongAnswerArtifacts"),
+    "provider generation must remain unreachable on replay",
+  );
+  assert.match(service, /planDigest !== app1Sha256\(planMaterial\)/u);
+  assert.match(service, /assertApp1PostInsertReplayPlanSeal/u);
+  assert.match(service, /sealApp1PostInsertReplayPlan/u);
+  assert.match(service, /plan\.itemId !==\s*app1DeterministicUuid\(expected\.authorityDigest, "wrong-answer-item"\)/u);
+  assert.match(service, /APP1_REPLAY_SNAPSHOT_KEY/u);
+  assert.match(repository, /ensureApp1WrongAnswerNote/u);
+  assert.match(repository, /ensureApp1WrongAnswerTag/u);
+  assert.match(repository, /ensureApp1ReviewQueueEntry/u);
+  assert.match(repository, /ensureApp1UsageEvent/u);
+  assert.match(repository, /ensureApp1LearningSignalEvent/u);
+  assert.match(repository, /assertApp1ReplayExact/u);
+});
+
+test("APP1-PERSISTENCE-REPLAY-003 fails closed on a conflicting artifact and performs no later Queue or learning-signal work", async () => {
+  const completed = [];
+  await assert.rejects(
+    () =>
+      executeApp1ResumableArtifactPlanV1({
+        usageEvents: Object.freeze([Object.freeze({ id: "usage-1" })]),
+        ensureNote: async () => {
+          completed.push("note");
+          return "deduped";
+        },
+        ensureTag: async () => {
+          throw new Error("review-os:app1-replay-authority-conflict");
+        },
+        ensureUsage: async () => {
+          completed.push("usage");
+          return "saved";
+        },
+        ensureQueue: async () => {
+          completed.push("queue");
+          return "saved";
+        },
+        ensureLearningSignal: async () => {
+          completed.push("signal");
+          return "saved";
+        },
+      }),
+    /review-os:app1-replay-authority-conflict/u,
+  );
+  assert.deepEqual(completed, ["note"]);
+});
 test("APP1-VM-005 announces a next review only from an exactly cross-bound new item detail", () => {
   const persistence = Object.freeze({
     kind: "durable_record",
@@ -2112,7 +2437,7 @@ test("APP1-API-001 isolates repair verification from learning-state signals behi
   );
   assert.match(
     route,
-    /const exactRepairText = singleFormString\(formData, "answerText"\)[\s\S]*?answerText = exactRepairText/u,
+    /const exactRepairText = singleFormString\(formData, "answerText"\)[\s\S]*?answerText = canonicalizeApp1RepairBody\(exactRepairText\)/u,
   );
   assert.match(route, /assertApp1RepairVerificationRequestAuthority\([\s\S]*?analysisBinding: app1AnalysisBinding[\s\S]*?persistenceOperationId,[\s\S]*?persistenceWorkRevisionId/u);
   assert.ok(
@@ -2134,7 +2459,7 @@ test("APP1-API-001 isolates repair verification from learning-state signals behi
   assert.match(repairLoop, /formData\.set\("requestPurpose", requestPurpose\)/u);
   assert.match(repairLoop, /formData\.set\("sourceItemId", detail\.item\.id\)/u);
   assert.match(repairLoop, /getApp1LearnerAnswer\(detail\),\s*"app1_initial_analysis"/u);
-  assert.match(repairLoop, /trimmed,\s*"repair_verification"/u);
+  assert.match(repairLoop, /canonicalRepair,\s*"repair_verification"/u);
   assert.match(repairLoop, /setGap\(result\.primaryGap\)/u);
   assert.match(repairLoop, /setAnalysisBinding\(result\.analysisBinding\)/u);
   assert.match(repairLoop, /setVerification\(result\.verification\)/u);

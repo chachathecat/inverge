@@ -5,6 +5,7 @@ import {
   APP1_LIMITS,
   buildApp1PrimaryGap,
   buildApp1RepairPersistenceInput,
+  canonicalizeApp1RepairBody,
   evaluateApp1SameSessionRepair,
   isClientAuthoredApp1PersistenceCandidate,
   isApp1SubjectAuthorized,
@@ -20,8 +21,10 @@ import {
   APP1_VERIFICATION_POLICY_VERSION,
   App1ReceiptError,
   assertApp1AnalysisBinding,
+  assertApp1ReplayPlanSeal,
   assertApp1VerificationReceipt,
   issueApp1AnalysisBinding,
+  issueApp1ReplayPlanSeal,
   issueApp1VerificationReceipt,
 } from "./app1-verification-receipt-core";
 
@@ -84,6 +87,35 @@ function signingKey() {
 
 export function assertApp1SigningAuthorityReady() {
   signingKey();
+}
+
+export function sealApp1PostInsertReplayPlan(planDigest: string) {
+  try {
+    return issueApp1ReplayPlanSeal({ key: signingKey(), planDigest });
+  } catch (error) {
+    if (error instanceof App1ReceiptError) {
+      reject("APP1_PERSISTENCE_COMMAND_INVALID");
+    }
+    throw error;
+  }
+}
+
+export function assertApp1PostInsertReplayPlanSeal(input: Readonly<{
+  planDigest: string;
+  planSeal: string;
+}>) {
+  try {
+    assertApp1ReplayPlanSeal({
+      key: signingKey(),
+      token: input.planSeal,
+      planDigest: input.planDigest,
+    });
+  } catch (error) {
+    if (error instanceof App1ReceiptError) {
+      reject("APP1_PERSISTENCE_COMMAND_INVALID");
+    }
+    throw error;
+  }
 }
 
 function plainRecord(value: unknown): Record<string, unknown> | null {
@@ -183,7 +215,7 @@ export function parseApp1PersistenceCommand(
     primaryGap: parseApp1PrimaryGap(input.primaryGap),
     analysisBinding: input.analysisBinding,
     verificationReceipt: input.verificationReceipt,
-    repairText: input.repairText,
+    repairText: canonicalizeApp1RepairBody(input.repairText),
     persistenceOperationId: input.persistenceOperationId,
     persistenceWorkRevisionId: input.persistenceWorkRevisionId,
   });
@@ -262,11 +294,18 @@ export function createApp1RepairVerificationAuthority(input: Readonly<{
   persistenceOperationId: string;
   persistenceWorkRevisionId: string;
 }>) {
+  const repairText = canonicalizeApp1RepairBody(input.repairText);
+  if (
+    repairText.length < APP1_LIMITS.minimumRepairCharacters ||
+    repairText.length > APP1_LIMITS.maximumRepairCharacters
+  ) {
+    reject("APP1_PERSISTENCE_COMMAND_INVALID");
+  }
   assertApp1RepairVerificationRequestAuthority(input);
   const verification = evaluateApp1SameSessionRepair({
     detail: input.detail,
     requestedGap: input.primaryGap,
-    repairText: input.repairText,
+    repairText,
     repairDraft: input.repairDraft,
   });
   const verificationReceipt =
@@ -277,7 +316,7 @@ export function createApp1RepairVerificationAuthority(input: Readonly<{
           detail: input.detail,
           gap: input.primaryGap,
           analysisBinding: input.analysisBinding,
-          repairText: input.repairText,
+          repairText,
           verification,
           persistenceOperationId: input.persistenceOperationId,
           persistenceWorkRevisionId: input.persistenceWorkRevisionId,
@@ -320,6 +359,13 @@ export function authorizeApp1PersistenceCommand(input: Readonly<{
   detail: WrongAnswerDetail;
   command: App1PersistenceCommand;
 }>): WrongAnswerItemInput {
+  const repairText = canonicalizeApp1RepairBody(input.command.repairText);
+  if (
+    repairText.length < APP1_LIMITS.minimumRepairCharacters ||
+    repairText.length > APP1_LIMITS.maximumRepairCharacters
+  ) {
+    reject("APP1_PERSISTENCE_COMMAND_INVALID");
+  }
   try {
     assertApp1VerificationReceipt({
       key: signingKey(),
@@ -328,7 +374,7 @@ export function authorizeApp1PersistenceCommand(input: Readonly<{
       detail: input.detail,
       gap: input.command.primaryGap,
       analysisBinding: input.command.analysisBinding,
-      repairText: input.command.repairText,
+      repairText,
       persistenceOperationId: input.command.persistenceOperationId,
       persistenceWorkRevisionId: input.command.persistenceWorkRevisionId,
     });
@@ -351,7 +397,7 @@ export function authorizeApp1PersistenceCommand(input: Readonly<{
   return buildApp1RepairPersistenceInput({
     detail: input.detail,
     gap: input.command.primaryGap,
-    repairText: input.command.repairText,
+    repairText,
     verification,
     operation,
   });

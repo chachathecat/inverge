@@ -11,7 +11,7 @@ import {
   parseApp1PrimaryGap,
   requireApp1AuthorizedSourceDetail,
 } from "@/lib/owner-study/app1-server-authority";
-import { getApp1LearnerAnswer } from "@/lib/owner-study/app1-capture-repair-view-model";
+import { APP1_LIMITS, canonicalizeApp1RepairBody, getApp1LearnerAnswer } from "@/lib/owner-study/app1-capture-repair-view-model";
 import { buildAnswerReviewReferenceGrounding } from "@/lib/review-os/answer-review-reference-grounding";
 import { parseAppraisalMode } from "@/lib/review-os/appraisal";
 import { assertCanRunAnswerReview, EntitlementBlockedError } from "@/lib/review-os/entitlement-enforcement";
@@ -140,7 +140,13 @@ export async function POST(request: Request) {
         if (exactRepairText === null) {
           return repairVerificationError(400, "INVALID_REPAIR_BODY");
         }
-        answerText = exactRepairText;
+        answerText = canonicalizeApp1RepairBody(exactRepairText);
+        if (
+          answerText.length < APP1_LIMITS.minimumRepairCharacters ||
+          answerText.length > APP1_LIMITS.maximumRepairCharacters
+        ) {
+          return repairVerificationError(400, "APP1_PERSISTENCE_COMMAND_INVALID");
+        }
         app1AnalysisBinding = singleFormString(formData, "analysisBinding");
         persistenceOperationId = singleFormString(
           formData,

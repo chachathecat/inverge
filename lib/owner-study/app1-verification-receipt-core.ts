@@ -6,6 +6,7 @@ import type {
   App1PrimaryGap,
   App1RepairVerification,
 } from "./app1-capture-repair-view-model";
+import { canonicalizeApp1RepairBody } from "./app1-capture-repair-view-model";
 import type { WrongAnswerDetail } from "../review-os/types";
 
 export const APP1_ANALYSIS_RECEIPT_VERSION =
@@ -14,12 +15,15 @@ export const APP1_VERIFICATION_RECEIPT_VERSION =
   "App1RepairVerificationReceiptV1" as const;
 export const APP1_VERIFICATION_POLICY_VERSION =
   "App1SameSessionRepairPolicyV1" as const;
+export const APP1_REPLAY_PLAN_SEAL_VERSION =
+  "App1PostInsertReplayPlanSealV1" as const;
 export const APP1_ANALYSIS_BINDING_TTL_MS = 15 * 60 * 1_000;
 export const APP1_RECEIPT_TTL_MS = 5 * 60 * 1_000;
 
 const APP1_CONTRACT_VERSION = "OwnerCaptureToRepairVerticalV1" as const;
 const ANALYSIS_PREFIX = "app1a1";
 const VERIFICATION_PREFIX = "app1v1";
+const REPLAY_PLAN_PREFIX = "app1r1";
 const SHA256_PATTERN = /^sha256:[a-f0-9]{64}$/u;
 const UUID_PATTERN =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/u;
@@ -63,6 +67,13 @@ type VerificationPayload = Readonly<{
   persistenceWorkRevisionId: string;
   issuedAt: string;
   expiresAt: string;
+}>;
+
+type ReplayPlanSealPayload = Readonly<{
+  contractVersion: typeof APP1_CONTRACT_VERSION;
+  receiptVersion: typeof APP1_REPLAY_PLAN_SEAL_VERSION;
+  receiptKind: "post_insert_replay_plan";
+  planDigest: string;
 }>;
 
 export class App1ReceiptError extends Error {
@@ -276,11 +287,50 @@ export function app1PrimaryGapDigest(gap: App1PrimaryGap) {
 }
 
 export function app1RepairTextDigest(repairText: string) {
-  return sha256(repairText);
+  return sha256(canonicalizeApp1RepairBody(repairText));
 }
 
 export function app1AnalysisBindingDigest(token: string) {
   return sha256(token);
+}
+
+export function issueApp1ReplayPlanSeal(input: Readonly<{
+  key: Uint8Array;
+  planDigest: string;
+}>) {
+  if (!SHA256_PATTERN.test(input.planDigest)) reject("invalid_receipt");
+  const payload: ReplayPlanSealPayload = {
+    contractVersion: APP1_CONTRACT_VERSION,
+    receiptVersion: APP1_REPLAY_PLAN_SEAL_VERSION,
+    receiptKind: "post_insert_replay_plan",
+    planDigest: input.planDigest,
+  };
+  return encodePayload(REPLAY_PLAN_PREFIX, payload, input.key);
+}
+
+export function assertApp1ReplayPlanSeal(input: Readonly<{
+  key: Uint8Array;
+  token: string;
+  planDigest: string;
+}>): ReplayPlanSealPayload {
+  const payload = decodePayload(input.token, REPLAY_PLAN_PREFIX, input.key);
+  if (
+    !exactKeys(payload, [
+      "contractVersion",
+      "receiptVersion",
+      "receiptKind",
+      "planDigest",
+    ]) ||
+    payload.contractVersion !== APP1_CONTRACT_VERSION ||
+    payload.receiptVersion !== APP1_REPLAY_PLAN_SEAL_VERSION ||
+    payload.receiptKind !== "post_insert_replay_plan" ||
+    typeof payload.planDigest !== "string" ||
+    !SHA256_PATTERN.test(payload.planDigest)
+  ) {
+    reject("invalid_receipt");
+  }
+  if (payload.planDigest !== input.planDigest) reject("binding_mismatch");
+  return payload as ReplayPlanSealPayload;
 }
 
 export function issueApp1AnalysisBinding(input: Readonly<{

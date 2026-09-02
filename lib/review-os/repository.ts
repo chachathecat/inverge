@@ -61,6 +61,22 @@ function hashPayload(value: string) {
   return crypto.createHash("sha256").update(value).digest("hex");
 }
 
+function stableJson(value: unknown): string {
+  if (value === null || typeof value !== "object") return JSON.stringify(value);
+  if (Array.isArray(value)) return `[${value.map(stableJson).join(",")}]`;
+  const record = value as Record<string, unknown>;
+  return `{${Object.keys(record)
+    .sort()
+    .map((key) => `${JSON.stringify(key)}:${stableJson(record[key])}`)
+    .join(",")}}`;
+}
+
+function assertApp1ReplayExact(actual: unknown, expected: unknown) {
+  if (stableJson(actual) !== stableJson(expected)) {
+    throw new Error("review-os:app1-replay-authority-conflict");
+  }
+}
+
 const APP1_CONTRACT_VERSION = "OwnerCaptureToRepairVerticalV1";
 const APP1_PERSISTENCE_FIELDS = Object.freeze([
   "app1_contract_version",
@@ -825,10 +841,11 @@ export class ReviewOsRepository {
     input: WrongAnswerItemInput,
     rawPayload: Record<string, unknown>,
     derivedPayload: Record<string, unknown>,
+    exactItemId?: string,
   ) {
     await this.assertApp1RepairPersistenceAuthority(userId, input);
     const client = getUserClient(userId);
-    const id = createUuid();
+    const id = exactItemId ?? createUuid();
     const result = await client.from("wrong_answer_items").insert({
       id,
       user_id: userId,
@@ -903,6 +920,42 @@ export class ReviewOsRepository {
     assertSupabaseOperation("review-os.insertWrongAnswerNote", result);
   }
 
+  async ensureApp1WrongAnswerNote(
+    userId: string,
+    id: string,
+    itemId: string,
+    note: Omit<WrongAnswerNoteRecord, "id" | "wrongAnswerItemId" | "createdAt">,
+  ) {
+    const client = getUserClient(userId);
+    const payload = {
+      id,
+      wrong_answer_item_id: itemId,
+      ai_summary: note.aiSummary,
+      key_distinction: note.keyDistinction,
+      review_checkpoint: note.reviewCheckpoint,
+      next_try_tip: note.nextTryTip,
+      generation_source: note.generationSource,
+    };
+    const result = await client.from("wrong_answer_notes").insert(payload);
+    if (!result.error) return { status: "saved" as const };
+    if (result.error.code !== "23505") {
+      assertSupabaseOperation("review-os.ensureApp1WrongAnswerNote.insert", result);
+    }
+    const existingResult = await client
+      .from("wrong_answer_notes")
+      .select("id, wrong_answer_item_id, ai_summary, key_distinction, review_checkpoint, next_try_tip, generation_source")
+      .eq("id", id)
+      .eq("wrong_answer_item_id", itemId)
+      .maybeSingle();
+    assertSupabaseOperation(
+      "review-os.ensureApp1WrongAnswerNote.selectExisting",
+      existingResult,
+    );
+    if (!existingResult.data) throw new Error("review-os:app1-replay-note-missing");
+    assertApp1ReplayExact(existingResult.data, payload);
+    return { status: "deduped" as const };
+  }
+
   async getWrongAnswerNote(userId: string, itemId: string) {
     const client = getUserClient(userId);
     const result = await client
@@ -933,6 +986,43 @@ export class ReviewOsRepository {
       recurrence_candidate: tag.recurrenceCandidate,
     });
     assertSupabaseOperation("review-os.insertWrongAnswerTag", result);
+  }
+
+  async ensureApp1WrongAnswerTag(
+    userId: string,
+    id: string,
+    itemId: string,
+    tag: Omit<WrongAnswerTagRecord, "id" | "wrongAnswerItemId" | "createdAt">,
+  ) {
+    const client = getUserClient(userId);
+    const payload = {
+      id,
+      wrong_answer_item_id: itemId,
+      topic_tag: tag.topicTag,
+      mistake_type: tag.mistakeType,
+      task_type: tag.taskType,
+      classifier_source: tag.classifierSource,
+      confidence: tag.confidence,
+      recurrence_candidate: tag.recurrenceCandidate,
+    };
+    const result = await client.from("wrong_answer_tags").insert(payload);
+    if (!result.error) return { status: "saved" as const };
+    if (result.error.code !== "23505") {
+      assertSupabaseOperation("review-os.ensureApp1WrongAnswerTag.insert", result);
+    }
+    const existingResult = await client
+      .from("wrong_answer_tags")
+      .select("id, wrong_answer_item_id, topic_tag, mistake_type, task_type, classifier_source, confidence, recurrence_candidate")
+      .eq("id", id)
+      .eq("wrong_answer_item_id", itemId)
+      .maybeSingle();
+    assertSupabaseOperation(
+      "review-os.ensureApp1WrongAnswerTag.selectExisting",
+      existingResult,
+    );
+    if (!existingResult.data) throw new Error("review-os:app1-replay-tag-missing");
+    assertApp1ReplayExact(existingResult.data, payload);
+    return { status: "deduped" as const };
   }
 
   async listWrongAnswerTags(userId: string, itemId: string) {
@@ -1066,6 +1156,54 @@ export class ReviewOsRepository {
       updated_at: new Date().toISOString(),
     });
     assertSupabaseOperation("review-os.insertReviewQueueEntry", result);
+  }
+
+  async ensureApp1ReviewQueueEntry(
+    userId: string,
+    id: string,
+    item: WrongAnswerItemRecord,
+    reviewReason: string,
+    priorityScore: number,
+    dueAt: string,
+    derivedPayload: Record<string, unknown>,
+  ) {
+    const client = getUserClient(userId);
+    const payload = {
+      id,
+      user_id: userId,
+      exam_id: "wrong_answer_os",
+      subject_id: item.subjectLabel,
+      stage: "alpha",
+      source_submission_id: item.id,
+      source_kind: "wrong_answer",
+      status: "pending",
+      priority_score: priorityScore,
+      raw_payload: { dueAt, reviewReason },
+      derived_payload: sanitizeDerivedMetadata(derivedPayload),
+    };
+    const now = new Date().toISOString();
+    const result = await client.from("review_queue_items").insert({
+      ...payload,
+      created_at: now,
+      updated_at: now,
+    });
+    if (!result.error) return { status: "saved" as const };
+    if (result.error.code !== "23505") {
+      assertSupabaseOperation("review-os.ensureApp1ReviewQueueEntry.insert", result);
+    }
+    const existingResult = await client
+      .from("review_queue_items")
+      .select("id, user_id, exam_id, subject_id, stage, source_submission_id, source_kind, status, priority_score, raw_payload, derived_payload")
+      .eq("id", id)
+      .eq("user_id", userId)
+      .maybeSingle();
+    assertSupabaseOperation(
+      "review-os.ensureApp1ReviewQueueEntry.selectExisting",
+      existingResult,
+    );
+    if (!existingResult.data) throw new Error("review-os:app1-replay-queue-missing");
+    assertApp1ReplayExact(existingResult.data, payload);
+    return { status: "deduped" as const };
   }
 
   async listReviewQueue(userId: string, limit = 10) {
@@ -1511,6 +1649,49 @@ export class ReviewOsRepository {
     return { status: "saved" as const, record: mapLearningSignalEvent(record) };
   }
 
+  async ensureApp1LearningSignalEvent(
+    userId: string,
+    id: string,
+    input: LearningSignalEventInput,
+  ) {
+    const client = getUserClient(userId);
+    const payload = {
+      id,
+      user_id: userId,
+      exam_mode: input.examMode,
+      subject: input.subject,
+      source_type: input.sourceType,
+      derived_tags: input.derivedTags,
+      related_formulas: input.relatedFormulas,
+      next_task_type: input.nextTaskType,
+      next_task: input.nextTask,
+      metadata_json: sanitizeLearningSignalMetadata(input.metadataJson ?? {}),
+    };
+    const result = await client.from("learning_signal_events").insert(payload);
+    if (!result.error) return { status: "saved" as const };
+    if (result.error.code !== "23505") {
+      assertSupabaseOperation(
+        "review-os.ensureApp1LearningSignalEvent.insert",
+        result,
+      );
+    }
+    const existingResult = await client
+      .from("learning_signal_events")
+      .select("id, user_id, exam_mode, subject, source_type, derived_tags, related_formulas, next_task_type, next_task, metadata_json")
+      .eq("id", id)
+      .eq("user_id", userId)
+      .maybeSingle();
+    assertSupabaseOperation(
+      "review-os.ensureApp1LearningSignalEvent.selectExisting",
+      existingResult,
+    );
+    if (!existingResult.data) {
+      throw new Error("review-os:app1-replay-learning-signal-missing");
+    }
+    assertApp1ReplayExact(existingResult.data, payload);
+    return { status: "deduped" as const };
+  }
+
   async listLearningSignalEvents(
     userId: string,
     mode: AppraisalMode,
@@ -1579,6 +1760,43 @@ export class ReviewOsRepository {
       metadata_json: sanitizeDerivedMetadata(metadataJson),
     });
     assertSupabaseOperation("review-os.logUsageEvent", result);
+  }
+
+  async ensureApp1UsageEvent(
+    userId: string,
+    id: string,
+    eventName: string,
+    entityType: string | null,
+    entityId: string | null,
+    metadataJson: Record<string, unknown>,
+  ) {
+    const client = getUserClient(userId);
+    const payload = {
+      id,
+      user_id: userId,
+      event_name: eventName,
+      entity_type: entityType,
+      entity_id: entityId,
+      metadata_json: sanitizeDerivedMetadata(metadataJson),
+    };
+    const result = await client.from("usage_events").insert(payload);
+    if (!result.error) return { status: "saved" as const };
+    if (result.error.code !== "23505") {
+      assertSupabaseOperation("review-os.ensureApp1UsageEvent.insert", result);
+    }
+    const existingResult = await client
+      .from("usage_events")
+      .select("id, user_id, event_name, entity_type, entity_id, metadata_json")
+      .eq("id", id)
+      .eq("user_id", userId)
+      .maybeSingle();
+    assertSupabaseOperation(
+      "review-os.ensureApp1UsageEvent.selectExisting",
+      existingResult,
+    );
+    if (!existingResult.data) throw new Error("review-os:app1-replay-usage-missing");
+    assertApp1ReplayExact(existingResult.data, payload);
+    return { status: "deduped" as const };
   }
 
   async createFeedback(userId: string, input: FeedbackItemInput) {
