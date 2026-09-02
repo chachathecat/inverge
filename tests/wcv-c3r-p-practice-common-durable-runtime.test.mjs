@@ -74,6 +74,32 @@ const productionAccessBlobs = Object.freeze({
   "components/review-os/c3r-p-practice-loop.tsx": "0a7897389de1a57968c10d95dedb0b7204774cd1",
 });
 
+const APP1_BROWSERSLIST_PATCHED_PACKAGE_LOCK_GIT_BLOB =
+  "3c3224cfdf7e87df0dd6d5b19ad86bff1f1d1894";
+
+function assertPackageIdentityAfterApp1BrowserslistPatch() {
+  const packageJson = JSON.parse(fs.readFileSync(path.join(root, "package.json"), "utf8"));
+  const packageLock = JSON.parse(fs.readFileSync(path.join(root, "package-lock.json"), "utf8"));
+  assert.equal(execFileSync("git", ["hash-object", "package.json"], { cwd: root, encoding: "utf8" }).trim(),
+    contract.packageIdentity.packageJsonGitBlob);
+  assert.equal(contract.packageIdentity.packageLockJsonGitBlob,
+    "70f85fb69c39aa73cf572082c4d38eb426c0b398");
+  assert.equal(execFileSync("git", ["hash-object", "package-lock.json"], {
+    cwd: root, encoding: "utf8",
+  }).trim(), APP1_BROWSERSLIST_PATCHED_PACKAGE_LOCK_GIT_BLOB);
+  assert.equal(packageJson.dependencies?.browserslist, undefined);
+  assert.equal(packageJson.devDependencies?.browserslist, undefined);
+  const browserslistInstances = Object.entries(packageLock.packages)
+    .filter(([packagePath]) => packagePath === "node_modules/browserslist" ||
+      packagePath.endsWith("/node_modules/browserslist"))
+    .map(([packagePath, metadata]) => ({
+      packagePath, version: metadata.version, dev: metadata.dev,
+    }));
+  assert.deepEqual(browserslistInstances, [{
+    packagePath: "node_modules/browserslist", version: "4.28.8", dev: true,
+  }]);
+}
+
 const FORMER_C3R_P_SOURCE_REVISION_ID =
   "inverge-synthetic-practice-valuation-v1@1";
 const C3R_P_SOURCE_REVISION_ID = "26a4f3bd-ddf3-4215-9fdf-d83453122ce1";
@@ -865,10 +891,7 @@ test("disposable fixture leaves production access code and frozen identities unc
     /const transferredResponse = await context\.request\.get\([\s\S]*evidenceStep=d7/u,
     "the pre-recurrence assertion must use the frozen post-D+7 evidence time",
   );
-  assert.equal(execFileSync("git", ["hash-object", "package.json"], { cwd: root, encoding: "utf8" }).trim(),
-    contract.packageIdentity.packageJsonGitBlob);
-  assert.equal(execFileSync("git", ["hash-object", "package-lock.json"], { cwd: root, encoding: "utf8" }).trim(),
-    contract.packageIdentity.packageLockJsonGitBlob);
+  assertPackageIdentityAfterApp1BrowserslistPatch();
   assert.equal(sha256(Buffer.from(canonicalJson(exactMigrationInventory(root)), "utf8")),
     contract.migrationAuthorityBinding.effectiveInventorySha256);
 });
@@ -1115,15 +1138,12 @@ test("PRACTICE_RUNTIME verifier rejects arbitrary, missing, unrelated and self-a
   }
 });
 
-test("frozen path manifest is unique, package identity is unchanged, and candidate diff closes exactly", () => {
+test("frozen path manifest is unique, package source identity and exact security-patched lock close", () => {
   const manifest = contract.pathManifest.changedPathsExactly;
   assert.equal(manifest.length, 37);
   assert.equal(new Set(manifest).size, manifest.length);
   for (const file of manifest) assert.equal(fs.existsSync(path.join(root, file)), true, file);
-  assert.equal(execFileSync("git", ["hash-object", "package.json"], { cwd: root, encoding: "utf8" }).trim(),
-    contract.packageIdentity.packageJsonGitBlob);
-  assert.equal(execFileSync("git", ["hash-object", "package-lock.json"], { cwd: root, encoding: "utf8" }).trim(),
-    contract.packageIdentity.packageLockJsonGitBlob);
+  assertPackageIdentityAfterApp1BrowserslistPatch();
   const changed = manifestBoundaryChangedPaths(
     root,
     "HEAD",

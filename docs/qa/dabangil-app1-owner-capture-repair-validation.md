@@ -22,8 +22,8 @@ and clean-checkout exact-head checks rather than reusing that browser receipt.
 - Base tree: `c6c6a8ad876c2f40b5276a26485b088656addf49`
 - Tracking issue: `#874`
 - APP-1 core changed paths: 20
-- Aggregate PR changed paths: 23 (`20` APP-1 core paths plus the separately governed `tests/s232f2-access-availability.test.mjs` access-inventory correction, the inherited `tests/wcv-c3r-p-practice-common-durable-runtime.test.mjs` frozen-identity alignment, and its directly coupled `tests/e2e/wcv-c3r-p-practice-common-runtime.spec.ts` frozen evidence-time correction)
-- New API, migration, database, RLS, auth, package, lockfile, workflow and public-navigation paths: 0
+- Aggregate PR changed paths: 24 (`20` APP-1 core paths plus the separately governed `tests/s232f2-access-availability.test.mjs` access-inventory correction, the inherited `tests/wcv-c3r-p-practice-common-durable-runtime.test.mjs` frozen-identity alignment, its directly coupled `tests/e2e/wcv-c3r-p-practice-common-runtime.spec.ts` frozen evidence-time correction, and the exact `package-lock.json` Browserslist security remediation)
+- New API, migration, database, RLS, auth, package, workflow and public-navigation paths: 0; development-tooling lockfile paths: 1
 
 ## Focused contract evidence
 
@@ -125,6 +125,8 @@ The corrected working-tree candidate passed the focused and required-adjacent ba
 The exact-head review then closed the remaining entry mismatch: after the durable receipt is verified, the redirect decision is derived from the exact returned persisted item rather than the pre-save client form. Photo, image and PDF captures require persisted OCR confirmation before redirect, and any low-confidence capture requires the same explicit persisted manual-correction signal used by the downstream evaluator. Missing, malformed or drifted returned confirmation metadata fails closed to the ordinary durable saved-plan continuation.
 
 The final corrected authenticated production-Webpack acceptance passed `1/1` with zero skip in `29.201` seconds after the persisted-item drift regression and exact fixture echo were complete. The run covered `390x844` text, `768x900` photo and `1440x1024` PDF; retained the exact `503 → conflict → durable → Queue` sequence; and passed keyboard/focus, 200% reflow, zero horizontal overflow and axe serious/critical zero. DB/Auth/REST/Kong were healthy, `/login` returned `200`, and browser/Next loopback guards recorded zero successful remote Supabase, Production, provider or payment contacts. The sanitized final persisted-item runtime receipt digest is `sha256:b0c277325884e9bd1e02c6713a62b2ac7219d392249261177260d6d367a59354`; the prior `sha256:c980dbce2d98471d4b796df20f081421a603d66cd7b47ce755b8df967ac27dd5` receipt remains historical evidence for the pre-drift-check working tree and is not reused as final acceptance evidence. The ephemeral Owner, local data, Next/Chromium processes, containers, volumes, networks, reports and nonce-scoped helpers were removed.
+
+The final dependency-only remediation updates the single development-tooling `browserslist` lock entry from `4.28.2` to exact patched `4.28.8`, together with only its required Browserslist data/tool dependency family. `package.json`, application/runtime source, workflows and `config/foundation-continuous-security-automation-v1.json` remain byte-identical. The lockfile-only production audit reports High/Critical `0/0`; the full audit reports no unapproved High/Critical blocker, and `GHSA-73WF-GQ98-2V4G` plus `GHSA-C83G-RGW3-J3CX` are absent. The unchanged policy validator passed with blocking findings `0`; no security exception was added. The authenticated APP-1 runtime receipt above remains authoritative and was not repeated.
 
 ## Final candidate checks
 
