@@ -6,6 +6,7 @@ import { consumeRateLimit } from "@/lib/rate-limit";
 import {
   App1ServerAuthorityError,
   assertApp1PostInsertReplayPlanSeal,
+  authorizeExpiredApp1PersistenceReplayCommand,
   authorizeApp1PersistenceCommand,
   isClientAuthoredApp1Persistence,
   parseApp1PersistenceCommand,
@@ -1461,15 +1462,78 @@ export class ReviewOsService {
           sourceItemId: command.sourceItemId,
           expectedSubject: command.primaryGap.subject,
         });
-        return authorizeApp1PersistenceCommand({
-          userId,
-          detail,
-          command,
-        });
+        try {
+          return Object.freeze({
+            input: authorizeApp1PersistenceCommand({
+              userId,
+              detail,
+              command,
+            }),
+            expiredReplayOnly: false,
+          });
+        } catch (error) {
+          if (
+            !(error instanceof App1ServerAuthorityError) ||
+            error.code !== "APP1_VERIFICATION_EXPIRED"
+          ) {
+            throw error;
+          }
+          return Object.freeze({
+            input: authorizeExpiredApp1PersistenceReplayCommand({
+              userId,
+              detail,
+              command,
+            }),
+            expiredReplayOnly: true,
+          });
+        }
       },
-      execute: (input) =>
-        this.createWrongAnswerItemAfterAuthority(userId, email, input),
+      execute: ({ input, expiredReplayOnly }) =>
+        expiredReplayOnly
+          ? this.resumeExistingApp1RepairAfterExpiredAuthority(
+              userId,
+              email,
+              input,
+            )
+          : this.createWrongAnswerItemAfterAuthority(userId, email, input),
     });
+  }
+
+  private async resumeExistingApp1RepairAfterExpiredAuthority(
+    userId: string,
+    email: string | null,
+    input: WrongAnswerItemInput,
+  ) {
+    await this.ensureAccess(userId, email);
+    const mode = resolveAppraisalMode(null, input.examName);
+    const normalizedInput: WrongAnswerItemInput = {
+      ...input,
+      examName: getModeLabel(mode),
+      subjectLabel: normalizeSubjectForMode(input.subjectLabel, mode),
+    };
+    const dedupeKey = reviewOsRepository.createDedupeKey(
+      userId,
+      normalizedInput,
+    );
+    const replayAuthority = app1ReplayAuthority(
+      userId,
+      normalizedInput,
+      dedupeKey,
+    );
+    const existing = await reviewOsRepository.findExistingByDedupe(
+      userId,
+      dedupeKey,
+    );
+    if (!existing || !replayAuthority) {
+      throw new App1ServerAuthorityError("APP1_VERIFICATION_EXPIRED");
+    }
+    const plan = parseApp1ReplayPlan(
+      existing.rawPayload[APP1_REPLAY_SNAPSHOT_KEY],
+      replayAuthority,
+      existing,
+    );
+    await completeApp1PostInsertReplay(userId, existing, plan);
+    return { item: existing, deduped: true };
   }
 
   private async createWrongAnswerItemAfterAuthority(

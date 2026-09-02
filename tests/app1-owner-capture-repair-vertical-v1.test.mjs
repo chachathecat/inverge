@@ -44,6 +44,7 @@ const {
   APP1_REPLAY_PLAN_SEAL_VERSION,
   APP1_VERIFICATION_POLICY_VERSION,
   assertApp1AnalysisBinding,
+  assertExpiredApp1VerificationReceiptForReplay,
   assertApp1ReplayPlanSeal,
   assertApp1VerificationReceipt,
   executeApp1AuthorityBoundaryV1,
@@ -339,6 +340,18 @@ test("APP1-AUTHORITY-001 signs closed analysis and verification receipts and rej
     APP1_VERIFICATION_POLICY_VERSION,
   );
   assert.equal(verified.verificationState, "repair_confirmed_for_this_session");
+  const bindingInput = {
+    key,
+    token: verificationReceipt,
+    userId: detail.item.userId,
+    detail,
+    gap,
+    analysisBinding,
+    repairText,
+    persistenceOperationId: operationId,
+    persistenceWorkRevisionId: workRevisionId,
+    now: issuedAt,
+  };
   const lateVerificationInput = {
     key,
     token: lateVerificationReceipt,
@@ -368,19 +381,29 @@ test("APP1-AUTHORITY-001 signs closed analysis and verification receipts and rej
       }),
     /app1-receipt:receipt_expired/u,
   );
-
-  const bindingInput = {
-    key,
-    token: verificationReceipt,
-    userId: detail.item.userId,
-    detail,
-    gap,
-    analysisBinding,
-    repairText,
-    persistenceOperationId: operationId,
-    persistenceWorkRevisionId: workRevisionId,
-    now: issuedAt,
+  const expiredReplayInput = {
+    ...bindingInput,
+    now: new Date(issuedAt.getTime() + APP1_RECEIPT_TTL_MS),
   };
+  assert.doesNotThrow(() =>
+    assertExpiredApp1VerificationReceiptForReplay(expiredReplayInput),
+  );
+  assert.throws(
+    () =>
+      assertExpiredApp1VerificationReceiptForReplay({
+        ...expiredReplayInput,
+        repairText: `${repairText} 변조`,
+      }),
+    /app1-receipt:binding_mismatch/u,
+  );
+  assert.throws(
+    () =>
+      assertExpiredApp1VerificationReceiptForReplay({
+        ...expiredReplayInput,
+        now: new Date(issuedAt.getTime() + APP1_RECEIPT_TTL_MS - 1),
+      }),
+    /app1-receipt:invalid_receipt/u,
+  );
   for (const mutation of [
     { ...bindingInput, userId: "55555555-5555-4555-8555-555555555555" },
     {
@@ -410,6 +433,14 @@ test("APP1-AUTHORITY-001 signs closed analysis and verification receipts and rej
   ]) {
     assert.throws(
       () => assertApp1VerificationReceipt(mutation),
+      /app1-receipt:binding_mismatch/u,
+    );
+    assert.throws(
+      () =>
+        assertExpiredApp1VerificationReceiptForReplay({
+          ...mutation,
+          now: new Date(issuedAt.getTime() + APP1_RECEIPT_TTL_MS),
+        }),
       /app1-receipt:binding_mismatch/u,
     );
   }
@@ -1495,6 +1526,93 @@ test("APP1-VM-003E distinguishes substantive negative conclusions from unresolve
     }).state,
     "one_connection_still_missing",
   );
+
+  for (const repairText of [
+    "임대료 미납 사례 사실이 계약 해지 법리의 요건을 충족해야 계약 종료 결론이 성립한다고 직접 연결했다.",
+    "임대료 미납 사례 사실을 계약 해지 법리의 요건에 적용하여야 계약 종료 결론이 성립한다고 직접 연결했다.",
+    "임대료 미납 사례 사실에 계약 해지 법리의 요건이 적용되어야 계약 종료 결론이 성립한다고 직접 설명했다.",
+  ]) {
+    assert.equal(
+      evaluateApp1SameSessionRepair({
+        detail,
+        requestedGap,
+        repairText,
+        repairDraft: resolvedTargetDraft({ strength: repairText }),
+      }).state,
+      "repair_confirmed_for_this_session",
+      repairText,
+    );
+  }
+  for (const repairText of [
+    "임대료 미납 사례 사실과 계약 해지 논거를 추가 보강해야 한다.",
+    "임대료 미납 사례 사실과 계약 해지 논거가 더 설명되어야 한다.",
+    "임대료 미납 사례 사실을 계약 해지 논거에 충족하여야 하며 바로잡고 싶다.",
+  ]) {
+    assert.equal(
+      evaluateApp1SameSessionRepair({
+        detail,
+        requestedGap,
+        repairText,
+        repairDraft: resolvedTargetDraft({ strength: repairText }),
+      }).state,
+      "one_connection_still_missing",
+      repairText,
+    );
+  }
+});
+
+test("APP1-VM-003F recognizes only closed symbolic Practice arithmetic expressions", () => {
+  const detail = syntheticDetail({
+    item: {
+      subjectLabel: "감정평가실무",
+      coreFormula: "수익 120 - 비용 20 = 순수익 100",
+    },
+  });
+  const baseGap = buildApp1PrimaryGap(detail, draft());
+  const requestedGap = {
+    ...baseGap,
+    gap: "수익 120과 비용 20의 계산 산식과 검산이 빠졌습니다.",
+    whyItMatters: "수익과 비용의 계산 결과와 단위를 검산해야 순수익을 확인할 수 있습니다.",
+    repairAction: "수익 120과 비용 20을 산식으로 계산하고 결과를 검산하세요.",
+  };
+  for (const expression of [
+    "120 - 20 = 100",
+    "120+20=140",
+    "120 * 20 = 2400",
+    "120 × 20 = 2400",
+    "120 / 20 = 6",
+    "120 ÷ 20 = 6",
+  ]) {
+    const repairText =
+      `수익 120과 비용 20의 계산 산식은 ${expression}이고 결과 단위와 부호의 검산을 완료했다.`;
+    assert.equal(
+      evaluateApp1SameSessionRepair({
+        detail,
+        requestedGap,
+        repairText,
+        repairDraft: resolvedTargetDraft({ strength: repairText }),
+      }).state,
+      "repair_confirmed_for_this_session",
+      expression,
+    );
+  }
+  for (const repairText of [
+    "수익 -20 = 100이라는 숫자만 적고 계산 결과 검산을 완료했다.",
+    "수익 기간 2026-08과 비용 20을 적고 계산 결과 검산을 완료했다.",
+    "수익 120, 비용 20, 순수익 100의 숫자 배치만 적고 계산 결과 검산을 완료했다.",
+    "수익 120 = 100과 비용 20을 적고 계산 결과 검산을 완료했다.",
+  ]) {
+    assert.equal(
+      evaluateApp1SameSessionRepair({
+        detail,
+        requestedGap,
+        repairText,
+        repairDraft: resolvedTargetDraft({ strength: repairText }),
+      }).state,
+      "one_connection_still_missing",
+      repairText,
+    );
+  }
 });
 
 test("APP1-VM-003C confirms stable out-of-vocabulary targets only with positive learner and draft evidence", () => {
@@ -2201,6 +2319,22 @@ test("APP1-PERSISTENCE-REPLAY-002 binds exact authority before replay and never 
   assert.match(repository, /ensureApp1UsageEvent/u);
   assert.match(repository, /ensureApp1LearningSignalEvent/u);
   assert.match(repository, /assertApp1ReplayExact/u);
+  const app1Create = service.match(
+    /async createApp1VerifiedRepairItem\([\s\S]*?(?=\n  private async resumeExistingApp1RepairAfterExpiredAuthority)/u,
+  )?.[0];
+  const expiredReplay = service.match(
+    /private async resumeExistingApp1RepairAfterExpiredAuthority\([\s\S]*?(?=\n  private async createWrongAnswerItemAfterAuthority)/u,
+  )?.[0];
+  assert.ok(app1Create && expiredReplay);
+  assert.match(app1Create, /authorizeExpiredApp1PersistenceReplayCommand/u);
+  assert.match(app1Create, /APP1_VERIFICATION_EXPIRED/u);
+  assert.match(expiredReplay, /findExistingByDedupe/u);
+  assert.match(expiredReplay, /if \(!existing \|\| !replayAuthority\)/u);
+  assert.match(expiredReplay, /parseApp1ReplayPlan/u);
+  assert.match(expiredReplay, /completeApp1PostInsertReplay/u);
+  assert.doesNotMatch(expiredReplay, /insertWrongAnswerItem/u);
+  assert.doesNotMatch(expiredReplay, /generateWrongAnswerArtifacts/u);
+  assert.doesNotMatch(expiredReplay, /upsertRecurrenceFeature/u);
 });
 
 test("APP1-PERSISTENCE-REPLAY-003 fails closed on a conflicting artifact and performs no later Queue or learning-signal work", async () => {

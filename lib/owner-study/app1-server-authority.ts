@@ -21,6 +21,7 @@ import {
   APP1_VERIFICATION_POLICY_VERSION,
   App1ReceiptError,
   assertApp1AnalysisBinding,
+  assertExpiredApp1VerificationReceiptForReplay,
   assertApp1ReplayPlanSeal,
   assertApp1VerificationReceipt,
   issueApp1AnalysisBinding,
@@ -381,6 +382,15 @@ export function authorizeApp1PersistenceCommand(input: Readonly<{
   } catch (error) {
     mapReceiptError(error, "APP1_VERIFICATION_RECEIPT_INVALID");
   }
+  return buildAuthorizedApp1PersistenceInput(input);
+}
+
+function buildAuthorizedApp1PersistenceInput(input: Readonly<{
+  userId: string;
+  detail: WrongAnswerDetail;
+  command: App1PersistenceCommand;
+}>): WrongAnswerItemInput {
+  const repairText = canonicalizeApp1RepairBody(input.command.repairText);
   const verification: App1RepairVerification = Object.freeze({
     state: "repair_confirmed_for_this_session",
     requestedGap: input.command.primaryGap.gap,
@@ -401,4 +411,37 @@ export function authorizeApp1PersistenceCommand(input: Readonly<{
     verification,
     operation,
   });
+}
+
+export function authorizeExpiredApp1PersistenceReplayCommand(input: Readonly<{
+  userId: string;
+  detail: WrongAnswerDetail;
+  command: App1PersistenceCommand;
+}>): WrongAnswerItemInput {
+  const repairText = canonicalizeApp1RepairBody(input.command.repairText);
+  if (
+    repairText.length < APP1_LIMITS.minimumRepairCharacters ||
+    repairText.length > APP1_LIMITS.maximumRepairCharacters
+  ) {
+    reject("APP1_PERSISTENCE_COMMAND_INVALID");
+  }
+  try {
+    assertExpiredApp1VerificationReceiptForReplay({
+      key: signingKey(),
+      token: input.command.verificationReceipt,
+      userId: input.userId,
+      detail: input.detail,
+      gap: input.command.primaryGap,
+      analysisBinding: input.command.analysisBinding,
+      repairText,
+      persistenceOperationId: input.command.persistenceOperationId,
+      persistenceWorkRevisionId: input.command.persistenceWorkRevisionId,
+    });
+  } catch (error) {
+    if (error instanceof App1ReceiptError) {
+      reject("APP1_VERIFICATION_RECEIPT_INVALID");
+    }
+    throw error;
+  }
+  return buildAuthorizedApp1PersistenceInput(input);
 }

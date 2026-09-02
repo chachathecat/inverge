@@ -466,7 +466,7 @@ export function issueApp1VerificationReceipt(input: Readonly<{
   return encodePayload(VERIFICATION_PREFIX, payload, input.key);
 }
 
-export function assertApp1VerificationReceipt(input: Readonly<{
+type App1VerificationReceiptAssertion = Readonly<{
   key: Uint8Array;
   token: string;
   userId: string;
@@ -477,7 +477,12 @@ export function assertApp1VerificationReceipt(input: Readonly<{
   persistenceOperationId: string;
   persistenceWorkRevisionId: string;
   now?: Date;
-}>): VerificationPayload {
+}>;
+
+function assertApp1VerificationReceiptPayload(
+  input: App1VerificationReceiptAssertion,
+  requiredWindow: "fresh" | "expired",
+): VerificationPayload {
   const now = input.now ?? new Date();
   const payload = decodePayload(input.token, VERIFICATION_PREFIX, input.key);
   if (
@@ -526,12 +531,30 @@ export function assertApp1VerificationReceipt(input: Readonly<{
   ) {
     reject("invalid_receipt");
   }
-  assertReceiptWindow(
-    payload.issuedAt,
-    payload.expiresAt,
-    now,
-    APP1_RECEIPT_TTL_MS,
-  );
+  if (requiredWindow === "fresh") {
+    assertReceiptWindow(
+      payload.issuedAt,
+      payload.expiresAt,
+      now,
+      APP1_RECEIPT_TTL_MS,
+    );
+  } else {
+    if (
+      !canonicalTimestamp(payload.issuedAt) ||
+      !canonicalTimestamp(payload.expiresAt)
+    ) {
+      reject("invalid_receipt");
+    }
+    const issued = Date.parse(String(payload.issuedAt));
+    const expires = Date.parse(String(payload.expiresAt));
+    if (
+      expires - issued !== APP1_RECEIPT_TTL_MS ||
+      now.getTime() < issued ||
+      now.getTime() < expires
+    ) {
+      reject("invalid_receipt");
+    }
+  }
   // Issuance already validated the older analysis binding. The newer signed
   // receipt binds its exact digest below and keeps its full five-minute window.
   if (
@@ -549,4 +572,16 @@ export function assertApp1VerificationReceipt(input: Readonly<{
     reject("binding_mismatch");
   }
   return Object.freeze(payload as unknown as VerificationPayload);
+}
+
+export function assertApp1VerificationReceipt(
+  input: App1VerificationReceiptAssertion,
+): VerificationPayload {
+  return assertApp1VerificationReceiptPayload(input, "fresh");
+}
+
+export function assertExpiredApp1VerificationReceiptForReplay(
+  input: App1VerificationReceiptAssertion,
+): VerificationPayload {
+  return assertApp1VerificationReceiptPayload(input, "expired");
 }

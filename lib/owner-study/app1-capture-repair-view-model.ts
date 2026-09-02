@@ -474,8 +474,6 @@ const APP1_REPAIR_UNRESOLVED_CUES = Object.freeze([
   "틀린채",
   "틀렸",
   "여전히",
-  "필요하",
-  "해야",
   "남아",
   "아직",
 ] as const);
@@ -489,6 +487,20 @@ const APP1_REPAIR_UNRESOLVED_METACOMMENTARY = Object.freeze([
   "오류가남아",
   "추가설명이필요",
   "설명이필요",
+  "보강이필요",
+  "수정이필요",
+  "연결이필요",
+  "완성이필요",
+  "추가설명해야",
+  "추가보강해야",
+  "다시연결해야",
+  "더설명해야",
+  "보완해야",
+  "수정해야",
+  "보강되어야",
+  "연결되어야",
+  "수정되어야",
+  "완성되어야",
   "결론을완성하지못",
   "완성하지못",
 ] as const);
@@ -514,7 +526,6 @@ const APP1_REPAIR_DISCUSSION_ONLY_CUES = Object.freeze([
   "하려고",
   "하고자",
   "고자",
-  "하여야",
   "고싶",
   "싶다",
   "원하",
@@ -524,7 +535,6 @@ const APP1_REPAIR_DISCUSSION_ONLY_CUES = Object.freeze([
   "시도",
   "의도",
   "목표",
-  "되어야",
   "되도록",
   "되면",
   "할수",
@@ -540,6 +550,8 @@ const APP1_REPAIR_TARGET_DISPLACEMENT_CUES = Object.freeze([
 ] as const);
 const APP1_REPAIR_RELATION_PREDICATES = Object.freeze([
   "충족하",
+  "충족해",
+  "충족하여",
   "적용하",
   "적용해",
   "적용하여",
@@ -578,6 +590,8 @@ const APP1_REPAIR_CALCULATION_RESULTS = Object.freeze([
   "산출",
   "검산",
 ] as const);
+const APP1_REPAIR_CALCULATION_SYMBOL_PATTERN =
+  /(?:^|[^0-9])[0-9]+(?:[.,][0-9]+)?\s*(?:\+|-|−|×|\*|÷|\/)\s*[0-9]+(?:[.,][0-9]+)?\s*=\s*-?[0-9]+(?:[.,][0-9]+)?(?:$|[^0-9])/u;
 
 const APP1_REPAIR_LEXICAL_STOP_WORDS = new Set([
   "그리고",
@@ -713,7 +727,8 @@ function hasClosedRepairPropositionShape(
     const numericOperands = value.match(/[0-9]+(?:[.,][0-9]+)?/gu) ?? [];
     return (
       numericOperands.length >= 2 &&
-      includesAny(identity, APP1_REPAIR_CALCULATION_OPERATORS) &&
+      (includesAny(identity, APP1_REPAIR_CALCULATION_OPERATORS) ||
+        APP1_REPAIR_CALCULATION_SYMBOL_PATTERN.test(value)) &&
       includesAny(identity, APP1_REPAIR_CALCULATION_RESULTS)
     );
   }

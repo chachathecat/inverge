@@ -1,5 +1,55 @@
 # APP-1 validation
 
+## Continuous exact-head review closeout: expired replay and proposition coverage
+
+The fresh formal review of exact head
+`aa4e96c20edaf8f9a4a8c4279ddcfdfd69b13965` identified three remaining
+same-goal P2 boundaries. This batch closes them without changing the APP-1
+product goal, schema, migrations, RLS, general authentication, provider
+surface, package graph, workflow or public state.
+
+- A valid but expired verification receipt may now authorize only an exact
+  replay of an already-durable APP-1 repair. Current trusted Owner, subject and
+  source-item authority are revalidated first. The expired receipt must retain
+  its exact HMAC signature and user, source revision, gap, repair body,
+  persistence operation and work-revision bindings. The replay recomputes the
+  exact dedupe authority, requires the existing item and its sealed stored
+  plan, and resumes only missing post-insert artifacts. No new item insert,
+  provider generation or recurrence mutation is reachable from this path; a
+  missing item, forged receipt, binding drift or sealed-plan conflict fails
+  closed.
+- Practice verification recognizes a closed binary symbolic arithmetic form
+  using `+`, `-`, `−`, `*`, `×`, `/` or `÷` followed by an exact result. It
+  still requires the existing source anchors, at least two numeric operands
+  and a calculation/result cue. Isolated signs, dates/ranges, number layouts
+  and an equals sign without a supported operator remain insufficient.
+- Theory and Law verification no longer treat every normative `해야`,
+  `하여야` or `되어야` occurrence as unfinished work. A completed normative
+  proposition may confirm only with the existing target anchors, closed
+  relation and outcome, and matching model strength. Explicit repair
+  metacommentary such as additional explanation, correction, reinforcement or
+  unfinished linkage remains fail-closed.
+
+Completed local evidence for this batch:
+
+- APP-1 focused deterministic suite: `36/36` passed;
+- APP-1 plus required adjacent contract suite: `53/53` passed;
+- S232F.2 access inventory: `6/6` passed;
+- inherited C3R-P/T/L deterministic bundle: `129/129` passed;
+- TypeScript typecheck: passed;
+- changed-file lint: `0` errors (one unchanged pre-existing `dayStartUtcIso`
+  warning in `lib/review-os/service.ts`);
+- exact expired-receipt hostile binding checks cover user, source identity,
+  subject, mode, gap, repair body, operation and work-revision drift;
+- the deterministic replay seam covers every post-item interruption, exact
+  retry, completed retry and conflicting artifact, while the service boundary
+  asserts existing-item lookup and absence of insert/provider/recurrence work;
+- production Webpack build with Next.js `16.2.12`: passed;
+- exact six-path corrective manifest, unchanged 25-path aggregate and
+  `git diff --check`: passed;
+- repository-required exact-head CI and a fresh formal review: pending the
+  corrective push.
+
 ## Final three-root repair-integrity closeout candidate
 
 The final review batch closes the three exact repair-integrity findings without
