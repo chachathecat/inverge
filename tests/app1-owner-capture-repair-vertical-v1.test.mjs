@@ -1079,6 +1079,54 @@ test("APP1-VM-003 requires target-specific learner and draft evidence without mo
   assert.equal(confirmed.masteryCreated, false);
   assert.equal(confirmed.transferCreated, false);
 
+  const mappedRewrite =
+    "Alpha Beta Gamma Delta 사실관계를 확인했다.";
+  const mappedRewriteDetail = syntheticDetail({
+    item: {
+      problemTitle: "합성 문제",
+      problemIdentifier: "",
+      rawQuestionText: "사례 사실과 기준의 연결을 검토하시오.",
+      rawAnswerText: "",
+      rewriteParagraph: undefined,
+      userAnswer: "-",
+      missingIssue: "",
+      weakApplicationSentence: "",
+      rewriteInstruction: "",
+      caseSummary: "",
+      issueRecall: "",
+      coreFormula: "",
+      keyConcepts: [],
+      rawPayload: {
+        user_confirmed_fields: {
+          ocrConfirmedByLearner: true,
+          pageCount: 1,
+          lowConfidenceFlag: false,
+        },
+        rewrite_paragraph: mappedRewrite,
+      },
+    },
+  });
+  const mappedRewriteGap = {
+    ...buildApp1PrimaryGap(mappedRewriteDetail, draft()),
+    gap: "사례 사실과 논거 연결이 약합니다.",
+    whyItMatters: "사례 사실과 논거 연결이 판단에 필요합니다.",
+    repairAction: "사례 사실을 논거 기준에 연결해 보강하세요.",
+  };
+  const mappedRewriteRepair =
+    "Alpha Beta Gamma Delta 사례 사실은 해제 기준을 충족하므로 계약 종료에 이른다고 직접 연결했다.";
+  const mappedRewriteConfirmed = evaluateApp1SameSessionRepair({
+    detail: mappedRewriteDetail,
+    requestedGap: mappedRewriteGap,
+    repairText: mappedRewriteRepair,
+    repairDraft: resolvedTargetDraft({
+      strength: mappedRewriteRepair,
+    }),
+  });
+  assert.equal(
+    mappedRewriteConfirmed.state,
+    "repair_confirmed_for_this_session",
+  );
+
   const equivalentWording = evaluateApp1SameSessionRepair({
     detail,
     requestedGap,

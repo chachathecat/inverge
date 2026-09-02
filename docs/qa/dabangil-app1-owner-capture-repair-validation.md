@@ -134,9 +134,11 @@ The next exact-head review found that persisted entry eligibility still read onl
 
 The fresh exact-head review then identified the remaining representation gap: the persisted item mapper retains the stored rewrite only as `rawPayload.rewrite_paragraph`, so the flat `rewriteParagraph` fallback was not present on the exact Capture save response. The same private selector now treats that closed raw-payload field as the persisted representation of `rewriteParagraph`, after substantive `userAnswer` and `rawAnswerText`, without changing the mapper or any API/repository path. The focused regression passes the exact mapped response shape through both persisted eligibility and `getApp1LearnerAnswer`, proving identical multiline bytes and the existing fail-closed quality/OCR gates.
 
+The following exact-head review found one final duplicated consumption inside repair-anchor construction. `buildApp1RepairTargetProfile` now uses `getApp1LearnerAnswer` instead of reading three persisted answer fields independently, so a recognized-facet repair is anchored to the same mapped rewrite body used for entry and analysis. The focused regression proves a rewrite stored only at `rawPayload.rewrite_paragraph` can confirm a source-grounded closed relation/outcome repair, while the existing target-specific and fail-closed hostile cases remain green.
+
 ## Final candidate checks
 
-- APP-1 focused suite: `29/29` passed, including `APP1-UI-002B` for revoked-authority exit and `APP1-VM-003D` for shared persisted-answer selection across substantive `userAnswer`, `rawAnswerText`, flat `rewriteParagraph` and mapped `rawPayload.rewrite_paragraph` fallbacks;
+- APP-1 focused suite: `29/29` passed, including `APP1-UI-002B` for revoked-authority exit, `APP1-VM-003D` for shared persisted-answer selection across substantive `userAnswer`, `rawAnswerText`, flat `rewriteParagraph` and mapped `rawPayload.rewrite_paragraph` fallbacks, and `APP1-VM-003` for mapped-rewrite repair anchoring;
 - inherited C3R-P/T/L, Capture outer-flow, adjacent persistence/Queue/trusted-repair and S232F.2 results remain prior-head evidence and are revalidated only by the new clean-checkout exact-head CI;
 - changed-file lint: passed;
 - typecheck: passed;
