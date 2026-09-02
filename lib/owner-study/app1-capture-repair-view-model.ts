@@ -154,6 +154,19 @@ function substantiveLearnerBodyText(value: unknown) {
   return normalized;
 }
 
+function selectSubstantivePersistedLearnerBody(input: Readonly<{
+  userAnswer?: unknown;
+  rawAnswerText?: unknown;
+  rewriteParagraph?: unknown;
+}>) {
+  const candidates = [
+    substantiveLearnerBodyText(input.userAnswer),
+    substantiveLearnerBodyText(input.rawAnswerText),
+    substantiveLearnerBodyText(input.rewriteParagraph),
+  ];
+  return candidates.find((candidate) => candidate) ?? "";
+}
+
 function exactConfirmedFields(detail: WrongAnswerDetail) {
   const rawPayload = record(detail.item.rawPayload);
   return record(rawPayload?.user_confirmed_fields);
@@ -164,12 +177,7 @@ function positiveSafeInteger(value: unknown) {
 }
 
 export function getApp1LearnerAnswer(detail: WrongAnswerDetail) {
-  const candidates = [
-    substantiveLearnerBodyText(detail.item.userAnswer),
-    substantiveLearnerBodyText(detail.item.rawAnswerText),
-    substantiveLearnerBodyText(detail.item.rewriteParagraph),
-  ];
-  return candidates.find((candidate) => candidate) ?? "";
+  return selectSubstantivePersistedLearnerBody(detail.item);
 }
 
 export function isApp1InitialAnalysisEligible(input: Readonly<{
@@ -209,17 +217,18 @@ export function isApp1PersistedInitialAnalysisEligible(input: Readonly<{
   rawQuestionText?: unknown;
   rawAnswerText?: unknown;
   userAnswer?: unknown;
+  rewriteParagraph?: unknown;
   correctAnswer?: unknown;
   rawPayload?: unknown;
 }>) {
   if (
     typeof input.subjectLabel !== "string" ||
     typeof input.sourceType !== "string" ||
-    typeof input.userAnswer !== "string" ||
     typeof input.correctAnswer !== "string"
   ) {
     return false;
   }
+  const learnerAnswer = selectSubstantivePersistedLearnerBody(input);
   const rawPayload = record(input.rawPayload);
   const fields = record(rawPayload?.user_confirmed_fields);
   if (
@@ -240,7 +249,7 @@ export function isApp1PersistedInitialAnalysisEligible(input: Readonly<{
         : typeof input.problemTitle === "string"
           ? input.problemTitle
           : "",
-    answerText: input.userAnswer,
+    answerText: learnerAnswer,
     referenceText: input.correctAnswer === "-" ? "" : input.correctAnswer,
     sourceType: input.sourceType,
     ocrConfirmedByLearner: fields.ocrConfirmedByLearner,

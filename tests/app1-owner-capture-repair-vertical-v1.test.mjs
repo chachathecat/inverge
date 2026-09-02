@@ -1543,6 +1543,7 @@ test("APP1-VM-003D keeps the Capture continuation outside APP-1 until the saved 
       "요건과 사례 사실의 연결을 구체적으로 설명한 충분한 합성 답안입니다.",
     userAnswer:
       "요건과 사례 사실의 연결을 구체적으로 설명한 충분한 합성 답안입니다.",
+    rewriteParagraph: "",
     correctAnswer: "-",
     rawPayload: {
       user_confirmed_fields: {
@@ -1556,6 +1557,76 @@ test("APP1-VM-003D keeps the Capture continuation outside APP-1 until the saved 
     },
   };
   assert.equal(isApp1PersistedInitialAnalysisEligible(persistedEligible), true);
+  const substantiveRewrite =
+    "시효 완성 시점을 먼저 특정했다.\r\n\r\n그 시점의 판단 근거를 별도 문단으로 설명했다.";
+  for (const placeholder of ["-", "–", "—"]) {
+    const rewriteBacked = {
+      ...persistedEligible,
+      userAnswer: placeholder,
+      rawAnswerText: "",
+      rewriteParagraph: substantiveRewrite,
+    };
+    assert.equal(isApp1PersistedInitialAnalysisEligible(rewriteBacked), true);
+    assert.equal(
+      getApp1LearnerAnswer(
+        syntheticDetail({
+          item: {
+            userAnswer: placeholder,
+            rawAnswerText: "",
+            rewriteParagraph: substantiveRewrite,
+          },
+        }),
+      ),
+      substantiveRewrite.replace(/\r\n/gu, "\n"),
+    );
+  }
+  assert.equal(
+    isApp1PersistedInitialAnalysisEligible({
+      ...persistedEligible,
+      userAnswer: undefined,
+      rawAnswerText:
+        "원문 답안의 요건과 사례 사실을 연결한 충분한 합성 답안입니다.",
+      rewriteParagraph: "다시 쓴 문단도 충분하지만 원문 답안이 우선합니다.",
+    }),
+    true,
+  );
+  assert.equal(
+    isApp1PersistedInitialAnalysisEligible({
+      ...persistedEligible,
+      userAnswer: "짧음",
+      rawAnswerText:
+        "충분한 원문 답안이 있어도 실질 userAnswer가 먼저 선택되어야 합니다.",
+      rewriteParagraph: substantiveRewrite,
+    }),
+    false,
+  );
+  assert.equal(
+    isApp1PersistedInitialAnalysisEligible({
+      ...persistedEligible,
+      userAnswer: "-",
+      rawAnswerText: "–",
+      rewriteParagraph: "—",
+    }),
+    false,
+  );
+  assert.equal(
+    isApp1PersistedInitialAnalysisEligible({
+      ...persistedEligible,
+      userAnswer: "-",
+      rawAnswerText: "",
+      rewriteParagraph: "짧은 답",
+    }),
+    false,
+  );
+  assert.equal(
+    isApp1PersistedInitialAnalysisEligible({
+      ...persistedEligible,
+      userAnswer: "-",
+      rawAnswerText: "",
+      rewriteParagraph: `장문 답안입니다. ${"가".repeat(APP1_LIMITS.maximumRepairCharacters + 1)}`,
+    }),
+    true,
+  );
   assert.equal(
     isApp1PersistedInitialAnalysisEligible({ ...persistedEligible, rawPayload: {} }),
     false,
