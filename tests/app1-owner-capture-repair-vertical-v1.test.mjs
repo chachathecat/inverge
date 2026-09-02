@@ -1596,10 +1596,23 @@ test("APP1-VM-003F recalculates closed symbolic and verbal Practice arithmetic",
       expression,
     );
   }
+  const twoCorrectEquations =
+    "수익 120과 비용 20의 계산 산식은 120 - 20 = 100이고 100 / 0.05 = 2000으로 환원했으며 결과 단위와 부호의 검산을 완료했다.";
+  assert.equal(
+    evaluateApp1SameSessionRepair({
+      detail,
+      requestedGap,
+      repairText: twoCorrectEquations,
+      repairDraft: resolvedTargetDraft({ strength: twoCorrectEquations }),
+    }).state,
+    "repair_confirmed_for_this_session",
+  );
   for (const repairText of [
     "수익 120과 비용 20의 계산 산식은 120 - 20 = 999이고 결과 단위와 부호의 검산을 완료했다.",
     "수익 120과 비용 20의 계산 산식은 120 + 20 = 100이고 결과 단위와 부호의 검산을 완료했다.",
     "수익 120과 비용 20의 계산 산식은 120 / 0 = 120이고 결과 단위와 부호의 검산을 완료했다.",
+    "수익 120과 비용 20의 계산 산식은 120 - 20 = 100이고 100 / 0.05 = 999로 환원했으며 결과 단위와 부호의 검산을 완료했다.",
+    "수익 120과 비용 20의 계산 산식은 120 - 20 = 100이고 100 / 0 = 2000으로 환원했으며 결과 단위와 부호의 검산을 완료했다.",
     "임대료 수익 120에서 비용 20을 빼 순수익 999로 계산하고 단위를 검산했다.",
     "수익 120에서 비용 20을 빼고 결과를 검산했다.",
     "임대료 수익 금액은 120이고 비용 20과 연도 2026을 적은 뒤 비용을 빼 계산 결과를 검산했다.",
@@ -2511,6 +2524,36 @@ test("APP1-VM-005 announces a next review only from an exactly cross-bound new i
   );
   assert.equal(receipt.policyWindow, "D+1");
   assert.match(receipt.nextIndependentAction, /답을 보지 않고/);
+  const deterministicPersistence = Object.freeze({
+    ...persistence,
+    recordId: "66666666-6666-5666-a666-666666666666",
+  });
+  const deterministicQueue = {
+    ...baseQueue,
+    queueId: "55555555-5555-5555-a555-555555555555",
+    itemId: deterministicPersistence.recordId,
+  };
+  const deterministicDetail = syntheticDetail({
+    item: {
+      id: deterministicPersistence.recordId,
+      updatedAt: deterministicPersistence.persistedAt,
+      rawPayload: {
+        user_confirmed_fields: {
+          persistence_operation_id: deterministicPersistence.operationId,
+          persistence_work_revision_id: deterministicPersistence.workRevisionId,
+        },
+      },
+    },
+    reviewQueue: [deterministicQueue],
+  });
+  assert.ok(
+    buildApp1NextReviewReceipt(
+      deterministicDetail,
+      deterministicPersistence.recordId,
+      deterministicPersistence,
+    ),
+    "the deterministic version-5 APP-1 item and Queue identities must be accepted",
+  );
   assert.equal(
     buildApp1NextReviewReceipt(
       syntheticDetail({ reviewQueue: [baseQueue] }),

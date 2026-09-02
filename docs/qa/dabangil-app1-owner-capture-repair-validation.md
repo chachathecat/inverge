@@ -1,5 +1,39 @@
 # APP-1 validation
 
+## Exact-head deterministic-receipt and complete-arithmetic closeout
+
+The fresh formal review of exact head
+`3ecb8e9e1abdb5bc051a692072b9a819f8729ea0` identified two same-goal APP-1
+truth boundaries. The correction changes no schema, migration, RLS, general
+authentication, provider, package, workflow, remote state or public
+activation.
+
+- `buildApp1NextReviewReceipt` now accepts the closed persisted UUID versions
+  actually used by the existing paths: ordinary version 4 and APP-1's
+  deterministic version 5. It still rejects malformed identities and every
+  mismatched item, Queue or persistence binding. A deterministic APP-1 item
+  and Queue row can therefore produce the truthful next-review receipt after
+  their exact durable cross-bindings pass.
+- Practice confirmation now scans every supported numeric binary equation in
+  the complete repair before sentence-level evidence matching. Every stated
+  result must equal its recalculated result; a later wrong equation or division
+  by zero fails the complete repair even when an earlier equation is correct.
+  Two correct equations remain confirmable. This closes the decimal sentence-
+  segmentation bypass without weakening the existing target-specific learner
+  and draft evidence gates.
+
+Completed local evidence for this correction:
+
+- APP-1 focused deterministic suite: `37/37` passed;
+- APP-1 plus required adjacent contract suite: `54/54` passed;
+- S232F.2 access inventory: `6/6` passed;
+- directly inherited C3R-P/T/L aggregate: `129/129` passed;
+- TypeScript typecheck and changed-file lint: passed with zero lint errors;
+- production Webpack build with Next.js `16.2.12`: passed;
+- `git diff --check`: passed;
+- repository-required exact-head CI and a fresh formal exact-head review remain
+  pending the corrective push.
+
 ## Exact-head arithmetic-truth and post-insert recurrence closeout
 
 The fresh formal review of exact head

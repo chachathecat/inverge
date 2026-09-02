@@ -593,7 +593,7 @@ const APP1_REPAIR_CALCULATION_RESULTS = Object.freeze([
   "검산",
 ] as const);
 const APP1_REPAIR_CALCULATION_SYMBOL_PATTERN =
-  /(?:^|[^0-9])(-?[0-9]+(?:[.,][0-9]+)?)\s*(\+|-|−|×|\*|÷|\/)\s*(-?[0-9]+(?:[.,][0-9]+)?)\s*=\s*(-?[0-9]+(?:[.,][0-9]+)?)(?:$|[^0-9])/u;
+  /(?:^|(?<=[^0-9]))(-?[0-9]+(?:[.,][0-9]+)?)\s*(\+|-|−|×|\*|÷|\/)\s*(-?[0-9]+(?:[.,][0-9]+)?)\s*=\s*(-?[0-9]+(?:[.,][0-9]+)?)(?=$|[^0-9])/gu;
 const APP1_REPAIR_VERBAL_CALCULATION_RESULT_PATTERN =
   /(?:^|[\s,.;:()[\]{}])(?:결과|합계|차액|순수익)(?:은|는|이|가)?\s*(-?[0-9]+(?:[.,][0-9]+)?)(?:을|를|으로|로)?/u;
 
@@ -626,14 +626,25 @@ function evaluateApp1BinaryCalculation(
 }
 
 function hasCorrectClosedPracticeCalculation(value: string) {
-  const symbolic = value.match(APP1_REPAIR_CALCULATION_SYMBOL_PATTERN);
-  if (symbolic) {
-    const left = parseApp1CalculationNumber(symbolic[1]);
-    const right = parseApp1CalculationNumber(symbolic[3]);
-    const stated = parseApp1CalculationNumber(symbolic[4]);
-    if (left === null || right === null || stated === null) return false;
-    const calculated = evaluateApp1BinaryCalculation(left, symbolic[2], right);
-    return calculated !== null && app1CalculationEquals(calculated, stated);
+  const symbolicCalculations = [
+    ...value.matchAll(APP1_REPAIR_CALCULATION_SYMBOL_PATTERN),
+  ];
+  if (symbolicCalculations.length > 0) {
+    for (const symbolic of symbolicCalculations) {
+      const left = parseApp1CalculationNumber(symbolic[1]);
+      const right = parseApp1CalculationNumber(symbolic[3]);
+      const stated = parseApp1CalculationNumber(symbolic[4]);
+      if (left === null || right === null || stated === null) return false;
+      const calculated = evaluateApp1BinaryCalculation(
+        left,
+        symbolic[2],
+        right,
+      );
+      if (calculated === null || !app1CalculationEquals(calculated, stated)) {
+        return false;
+      }
+    }
+    return true;
   }
 
   const resultMatch = value.match(APP1_REPAIR_VERBAL_CALCULATION_RESULT_PATTERN);
@@ -804,6 +815,12 @@ function hasSubstantiveRepairSupport(
   value: string,
   profile: App1RepairTargetProfile,
 ) {
+  if (
+    profile.requiredFacets.includes("calculation") &&
+    !hasCorrectClosedPracticeCalculation(value)
+  ) {
+    return false;
+  }
   return value
     .split(/[.!?\n。！？]+/u)
     .map((segment) => segment.trim())
@@ -1172,8 +1189,8 @@ export function buildApp1NextReviewReceipt(
   itemId: string,
   persistence: FailureAwarePersistenceEvidence,
 ): App1NextReviewReceipt | null {
-  const uuid =
-    /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/iu;
+  const persistedUuid =
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[45][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/iu;
   const confirmedFields = exactConfirmedFields(detail);
   if (
     persistence.kind !== "durable_record" ||
@@ -1182,14 +1199,14 @@ export function buildApp1NextReviewReceipt(
     detail.item.updatedAt !== persistence.persistedAt ||
     confirmedFields?.persistence_operation_id !== persistence.operationId ||
     confirmedFields?.persistence_work_revision_id !== persistence.workRevisionId ||
-    !uuid.test(itemId)
+    !persistedUuid.test(itemId)
   ) {
     return null;
   }
   const matches = detail.reviewQueue.filter((entry) => entry.itemId === itemId);
   if (matches.length !== 1) return null;
   const [match] = matches;
-  if (!uuid.test(match.queueId) || !match.dueAt) return null;
+  if (!persistedUuid.test(match.queueId) || !match.dueAt) return null;
   const due = Date.parse(match.dueAt);
   const persisted = Date.parse(persistence.persistedAt);
   if (!Number.isFinite(due) || !Number.isFinite(persisted) || due < persisted) {
