@@ -140,7 +140,7 @@ test("three-bank admission fails closed", () => {
   );
 });
 
-test("checkpoint resumes all eligible lanes and seven-exam remains source-only", () => {
+test("checkpoint resumes eligible independent lanes while APP-1 H0 is in progress", () => {
   const checkpoint = JSON.parse(fs.readFileSync(
     path.join(
       root,
@@ -164,11 +164,14 @@ test("checkpoint resumes all eligible lanes and seven-exam remains source-only",
     CORE_BLITZ_STARTING_TREE,
   );
   assert.deepEqual(decision.readyNodeIds, [
-    "APP1_C3R_HANDOFF_H0",
     "M4_FIRST_STAGE_COMMON_KERNEL",
     "QF_I1_INTEGRATION",
     "SEVEN_EXAM_DOSSIER_AND_SOURCE_PREPARATION",
   ]);
+  assert.equal(
+    checkpoint.nodes.find((node) => node.nodeId === "APP1_C3R_HANDOFF_H0")?.state,
+    "IN_PROGRESS",
+  );
   assert.equal(
     contract.startingAuthority.mainSha,
     CORE_BLITZ_STARTING_MAIN,
