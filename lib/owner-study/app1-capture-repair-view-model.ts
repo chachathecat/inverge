@@ -809,9 +809,17 @@ function app1ExactHalfUpMatches(
   );
 }
 
+function app1ExactDecimalsEqual(
+  left: App1ExactDecimal,
+  right: App1ExactDecimal,
+) {
+  return (
+    left.numerator * right.denominator ===
+    right.numerator * left.denominator
+  );
+}
+
 function app1CalculationMatchesDeclaredResult(
-  calculated: number,
-  stated: number,
   statedToken: string,
   resultUnit: string | undefined,
   clause: string,
@@ -819,10 +827,14 @@ function app1CalculationMatchesDeclaredResult(
 ) {
   const roundingPlaces = parseApp1DeclaredRoundingPlaces(clause);
   if (roundingPlaces === null) return false;
-  if (roundingPlaces === undefined) {
-    return app1CalculationEquals(calculated, stated);
-  }
   const exactStated = parseApp1ExactDecimal(statedToken, resultUnit);
+  if (roundingPlaces === undefined) {
+    return Boolean(
+      exactCalculation &&
+        exactStated &&
+        app1ExactDecimalsEqual(exactCalculation, exactStated),
+    );
+  }
   return Boolean(
     exactCalculation &&
       exactStated &&
@@ -978,8 +990,6 @@ function hasCorrectClosedPracticeCalculation(value: string) {
     if (
       calculated === null ||
       !app1CalculationMatchesDeclaredResult(
-        calculated,
-        stated,
         symbolic[6],
         symbolic[7],
         getApp1CalculationClause(value, symbolic.index, symbolicEnd),
@@ -1088,8 +1098,6 @@ function hasCorrectClosedPracticeCalculation(value: string) {
     if (
       calculated === null ||
       !app1CalculationMatchesDeclaredResult(
-        calculated,
-        stated,
         resultMatch[2],
         resultMatch[3],
         getApp1CalculationClause(value, resultMatch.index, resultEnd),
