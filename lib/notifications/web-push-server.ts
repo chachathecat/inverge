@@ -4,14 +4,15 @@ import webPush from "web-push";
 import type { PushSubscription } from "web-push";
 
 import { validateNotificationPayload, type NotificationPayload } from "./push-payload";
+import {
+  classifyWebPushProviderError,
+  validateWebPushSubscriptionShape,
+  type WebPushSendResult,
+} from "./web-push-result";
 
 export type WebPushRuntimeStatus =
   | { configured: true; publicKey: string }
   | { configured: false; missing: Array<"NEXT_PUBLIC_VAPID_PUBLIC_KEY" | "VAPID_PRIVATE_KEY" | "VAPID_SUBJECT"> };
-
-export type WebPushSendResult =
-  | { ok: true; status: "sent" }
-  | { ok: false; status: "missing_config" | "expired" | "failed"; statusCode?: number };
 
 export function getWebPushRuntimeStatus(env: NodeJS.ProcessEnv = process.env): WebPushRuntimeStatus {
   const missing: Array<"NEXT_PUBLIC_VAPID_PUBLIC_KEY" | "VAPID_PRIVATE_KEY" | "VAPID_SUBJECT"> = [];
@@ -26,47 +27,52 @@ export function getVapidPublicKey(env: NodeJS.ProcessEnv = process.env) {
   return env.NEXT_PUBLIC_VAPID_PUBLIC_KEY ?? null;
 }
 
-function configureWebPush(env: NodeJS.ProcessEnv) {
+function configureWebPush(env: NodeJS.ProcessEnv): WebPushSendResult | null {
   const status = getWebPushRuntimeStatus(env);
-  if (!status.configured) return false;
-  webPush.setVapidDetails(env.VAPID_SUBJECT!, env.NEXT_PUBLIC_VAPID_PUBLIC_KEY!, env.VAPID_PRIVATE_KEY!);
-  return true;
+  if (!status.configured) return { ok: false, status: "missing_config", retryable: false };
+  try {
+    webPush.setVapidDetails(env.VAPID_SUBJECT!, env.NEXT_PUBLIC_VAPID_PUBLIC_KEY!, env.VAPID_PRIVATE_KEY!);
+    return null;
+  } catch {
+    return { ok: false, status: "vapid_configuration_error", retryable: false };
+  }
 }
 
-export function toWebPushSubscription(input: { endpoint: string; p256dh: string; auth: string }): PushSubscription {
+export function toWebPushSubscription(input: { endpoint: unknown; p256dh: unknown; auth: unknown }): PushSubscription {
   return {
-    endpoint: input.endpoint,
+    endpoint: typeof input.endpoint === "string" ? input.endpoint : "",
     keys: {
-      p256dh: input.p256dh,
-      auth: input.auth,
+      p256dh: typeof input.p256dh === "string" ? input.p256dh : "",
+      auth: typeof input.auth === "string" ? input.auth : "",
     },
   };
 }
 
-function statusCodeOf(error: unknown) {
-  if (typeof error === "object" && error !== null && "statusCode" in error) {
-    const statusCode = Number((error as { statusCode?: unknown }).statusCode);
-    return Number.isFinite(statusCode) ? statusCode : undefined;
-  }
-  return undefined;
-}
+type WebPushNotificationSender = (subscription: PushSubscription, payload: string) => Promise<unknown>;
 
 export async function sendWebPushPayload(
   subscription: PushSubscription,
-  payloadInput: NotificationPayload,
+  payloadInput: unknown,
   env: NodeJS.ProcessEnv = process.env,
+  sendNotification: WebPushNotificationSender = webPush.sendNotification,
 ): Promise<WebPushSendResult> {
-  const payload = validateNotificationPayload(payloadInput);
-  if (!configureWebPush(env)) return { ok: false, status: "missing_config" };
+  const configurationError = configureWebPush(env);
+  if (configurationError) return configurationError;
+
+  const safeSubscription = validateWebPushSubscriptionShape(subscription);
+  if (!safeSubscription) return { ok: false, status: "subscription_format_error", retryable: false };
+
+  let payload: NotificationPayload;
+  try {
+    payload = validateNotificationPayload(payloadInput);
+  } catch {
+    return { ok: false, status: "payload_validation_error", retryable: false };
+  }
 
   try {
-    await webPush.sendNotification(subscription, JSON.stringify(payload));
+    await sendNotification(safeSubscription, JSON.stringify(payload));
     return { ok: true, status: "sent" };
   } catch (error) {
-    const statusCode = statusCodeOf(error);
-    if (statusCode === 404 || statusCode === 410) {
-      return { ok: false, status: "expired", statusCode };
-    }
-    return { ok: false, status: "failed", statusCode };
+    return classifyWebPushProviderError(error);
   }
 }
