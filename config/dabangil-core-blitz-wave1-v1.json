@@ -1,7 +1,7 @@
 {
   "contractVersion": "dabangil.core_blitz.wave1.v1",
   "programIssue": 880,
-  "status": "standing_authority_foundation_candidate",
+  "status": "wave1_runtime_integration_in_progress",
   "startingAuthority": {
     "mainSha": "d4e056938707c11e6c862230745c381297c0b26f",
     "mainTree": "c19f7abe3f0ace8ecdc8afbe9647a8e31eb4dfc2",
@@ -24,6 +24,8 @@
       "laneId": "APP1_C3R_CLOSED_LOOP",
       "initialNode": "APP1_C3R_HANDOFF_H0",
       "goal": "APP-1 D0 repair binds to exactly one existing C3R journey and exactly one learner-visible D+1 unaided ReviewUnit before D+7, Timed and Reopen.",
+      "persistedHandoffCandidateInstalled": true,
+      "durableJourneyMaterializationComplete": false,
       "duplicateEvidenceAuthorityAllowed": false,
       "duplicateQueueAllowed": false,
       "duplicateReviewStateMachineAllowed": false
@@ -174,6 +176,9 @@
     "docs/decisions/2026-09-03-owner-core-blitz-wave1-standing-authority.md",
     "docs/exec-plans/active/core-blitz-wave1-checkpoint.json",
     "lib/core-blitz/wave1.ts",
+    "lib/review-os/app1-c3r-handoff.ts",
+    "lib/review-os/capture-learning-signals.ts",
+    "tests/app1-c3r-handoff-runtime.test.mjs",
     "tests/core-blitz-wave1.test.mjs"
   ]
 }
