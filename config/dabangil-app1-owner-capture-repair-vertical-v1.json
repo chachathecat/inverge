@@ -1,0 +1,147 @@
+{
+  "contractVersion": "OwnerCaptureToRepairVerticalV1",
+  "milestone": "APP-1",
+  "trackingIssue": 874,
+  "base": {
+    "sha": "761b7f6b7648d19845ab3385665e92046165dddd",
+    "tree": "c6c6a8ad876c2f40b5276a26485b088656addf49"
+  },
+  "branch": "codex/app1-owner-capture-repair-vertical-v1",
+  "changedPaths": [
+    ".env.example",
+    "app/app/capture/page.tsx",
+    "app/app/capture/repair/page.tsx",
+    "app/api/answer-review/structure/route.ts",
+    "app/api/os/items/route.ts",
+    "components/owner-study/app1-capture-repair-loop.tsx",
+    "components/review-os/capture-form.tsx",
+    "config/dabangil-app1-owner-capture-repair-vertical-v1.json",
+    "docs/product/dabangil-app1-owner-capture-repair-vertical-v1.md",
+    "docs/qa/dabangil-app1-owner-capture-repair-validation.md",
+    "lib/owner-study/app1-capture-repair-view-model.ts",
+    "lib/owner-study/app1-server-authority.ts",
+    "lib/owner-study/app1-verification-receipt-core.ts",
+    "lib/review-os/repository.ts",
+    "lib/review-os/service.ts",
+    "tests/answer-submission-ocr-save-contract.test.mjs",
+    "tests/app1-owner-capture-repair-vertical-v1.test.mjs",
+    "tests/e2e/app1-owner-capture-repair-vertical-v1.spec.ts",
+    "tests/s225x-founder-grade-visual-taste-reset.test.mjs",
+    "tests/ux-surface-reset-v1-answer-road.test.mjs"
+  ],
+  "entry": {
+    "route": "/app/capture?mode=second",
+    "primaryCallToAction": "사진·PDF·텍스트로 시작",
+    "inputChoices": [
+      "사진 찍기",
+      "PDF 선택",
+      "텍스트 붙여넣기"
+    ],
+    "analysisCallToAction": "이 내용으로 분석",
+    "ocrWarning": "OCR 결과는 초안입니다. 저장 전 직접 확인해 주세요.",
+    "publicNavigation": false
+  },
+  "access": {
+    "ownerOnly": true,
+    "defaultOff": true,
+    "gate": "trusted-repair-access",
+    "selectedSubjectMustBeInExactAuthorizedSet": true,
+    "subjects": [
+      "appraisal_practical",
+      "appraisal_theory",
+      "appraisal_law"
+    ]
+  },
+  "flow": [
+    "capture",
+    "editable_ocr_confirmation",
+    "bounded_structure_summary",
+    "one_biggest_gap",
+    "learner_entered_direct_repair",
+    "same_session_verification",
+    "durable_receipt",
+    "queue_receipt_or_truthful_unscheduled_state"
+  ],
+  "existingRuntimeDependencies": {
+    "reads": [
+      "/api/os/items/:itemId",
+      "/api/os/review-queue"
+    ],
+    "writes": [
+      "/api/os/items"
+    ],
+    "analysis": [
+      "/api/inverge/ocr",
+      "/api/answer-review/structure"
+    ],
+    "newApi": false,
+    "newPersistence": false
+  },
+  "answerReviewStructure": {
+    "requestPurposes": [
+      "learning_analysis",
+      "app1_initial_analysis",
+      "repair_verification"
+    ],
+    "defaultRequestPurpose": "learning_analysis",
+    "repairVerificationRequiresAuthenticatedOwnedExactSecondStageItem": true,
+    "repairVerificationRequiresExactSubjectAuthorization": true,
+    "repairVerificationCreatesLearningSignal": false,
+    "callerControlledGenericSideEffectSuppression": false
+  },
+  "serverAuthority": {
+    "analysisGapDerivedByServer": true,
+    "analysisQuestionAndReferenceDerivedFromPersistedSource": true,
+    "initialAnswerDerivedFromPersistedSource": true,
+    "repairVerificationAcceptsOnlyExactRepairBodyFromClient": true,
+    "app1FileInputsForbidden": true,
+    "analysisBindingReceipt": "App1AnalysisBindingReceiptV1",
+    "verificationEvaluatedByServer": true,
+    "verificationReceipt": "App1RepairVerificationReceiptV1",
+    "verificationPolicyVersion": "App1SameSessionRepairPolicyV1",
+    "analysisBindingLifetimeSeconds": 900,
+    "verificationReceiptLifetimeSeconds": 300,
+    "signingAlgorithm": "HMAC-SHA256",
+    "signingSecret": "APP1_VERIFICATION_SIGNING_SECRET",
+    "signingSecretServerOnly": true,
+    "signingSecretMinimumDecodedBytes": 32,
+    "clientVerificationStateCreatesAuthority": false,
+    "clientApp1MetadataCreatesAuthority": false,
+    "authorizationBeforeEveryServiceSideEffect": true,
+    "currentOwnerAndSubjectRevalidatedAtSave": true,
+    "sourceRevisionRevalidatedAtVerificationAndSave": true,
+    "operationAndWorkRevisionBound": true,
+    "exactReplayMayDedupe": true
+  },
+  "verificationStates": [
+    "repair_confirmed_for_this_session",
+    "one_connection_still_missing",
+    "guided_path_needed",
+    "deferred",
+    "blocked_by_ocr_or_source_uncertainty"
+  ],
+  "truthBoundary": {
+    "officialGrading": false,
+    "officialModelAnswer": false,
+    "confirmedScore": false,
+    "passProbability": false,
+    "masteryAuthority": false,
+    "transferAuthority": false,
+    "scheduleClaimRequiresDurableItemReceipt": true,
+    "nextReviewClaimRequiresQueueReceipt": true,
+    "dedupeConflictCountsAsSuccess": false
+  },
+  "browserEvidence": {
+    "specificationIsExecutable": true,
+    "typecheckIsNotRuntimeEvidence": true,
+    "runtimeReceiptRequiredBeforeClaimingPass": true,
+    "fixtures": "author_created_synthetic_only"
+  },
+  "activation": {
+    "public": false,
+    "externalLearner": false,
+    "payment": false,
+    "remoteSupabaseMutation": false,
+    "productionMutation": false
+  }
+}

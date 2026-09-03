@@ -105,7 +105,9 @@ test("learner capture UI keeps OCR editable before save and uses required trust 
   assert.ok(combined.includes("<TrustEvidenceBar"));
   assert.ok(combined.includes('data-trust-layer="capture-intake"'));
   assert.ok(combined.includes("OCR과 AI 정리는 학습 보조 초안입니다. 저장 전 직접 수정할 수 있습니다."));
-  assert.equal(combined.includes("OCR 결과는 초안입니다. 저장 전 직접 확인해 주세요."), false);
+  assert.ok(combined.includes("OCR 결과는 초안입니다. 저장 전 직접 확인해 주세요."));
+  assert.ok(captureForm.includes("const ownerCaptureRepairSubjectEnabled"));
+  assert.ok(captureForm.includes("data-app1-ocr-confirmation-warning"));
   assert.ok(captureForm.includes("OCR 결과 확인 (편집 가능 · 자동 저장)"));
   assert.ok(captureForm.includes("value={form.rawQuestionText}"));
   assert.ok(captureForm.includes("onRawOcrChange(event.target.value)"));
@@ -120,7 +122,8 @@ test("durable save path binds to request user and separates instructor OCR", asy
   const instructorOcrRoute = await read("app/api/instructor/second-grading/ocr/route.ts");
 
   assert.ok(osItemsRoute.includes("const userId = await requireRequestUserId(request);"));
-  assert.ok(osItemsRoute.includes("reviewOsService.createWrongAnswerItem(userId, session.email, body)"));
+  assert.ok(osItemsRoute.includes("reviewOsService.createWrongAnswerItem("));
+  assert.ok(osItemsRoute.includes("reviewOsService.createApp1VerifiedRepairItem("));
   assert.ok(service.includes("buildLearnerAnswerSubmissionPersistenceContract"));
   assert.ok(service.includes("learner_answer_submission: answerSubmissionContract"));
   assert.ok(service.includes("learner_answer_submission: answerSubmissionDerivedMetadata"));

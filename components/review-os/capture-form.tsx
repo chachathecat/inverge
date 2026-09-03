@@ -20,6 +20,11 @@ import {
 } from "@/components/review-os/trust-status-card";
 import { Button, type ButtonProps } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import {
+  isApp1PersistedInitialAnalysisEligible,
+  isApp1SubjectAuthorized,
+  type App1TrustedRepairSubject,
+} from "@/lib/owner-study/app1-capture-repair-view-model";
 import { buildCaptureToNoteDraft } from "@/lib/capture/capture-to-note";
 import {
   getDefaultSubject,
@@ -91,6 +96,8 @@ function CaptureActionButton({
 }
 
 const CAPTURE_TRUST_LAYER_COPY = "OCR과 AI 정리는 학습 보조 초안입니다. 저장 전 직접 수정할 수 있습니다.";
+const APP1_OCR_CONFIRMATION_WARNING =
+  "OCR 결과는 초안입니다. 저장 전 직접 확인해 주세요.";
 
 const V3_CAPTURE_TRUST_SOURCE_LABELS: Record<
   SourceType,
@@ -267,6 +274,8 @@ type SavedCaptureConfirmation = {
 type CaptureFormProps = {
   userId: string;
   mode: AppraisalMode;
+  ownerCaptureRepairEnabled?: boolean;
+  ownerCaptureRepairSubjects?: readonly App1TrustedRepairSubject[];
   labelledBy?: string;
   initialPreferredSubjects?: string[];
   initialSubject?: string;
@@ -556,6 +565,8 @@ function stripPreviewUrls(pages: UploadedPage[]): PersistedCapturePage[] {
 export function WrongAnswerCaptureForm({
   userId,
   mode,
+  ownerCaptureRepairEnabled = false,
+  ownerCaptureRepairSubjects = [],
   labelledBy = "capture-page-title",
   initialPreferredSubjects = [],
   initialSubject,
@@ -624,6 +635,11 @@ export function WrongAnswerCaptureForm({
     }
     return createInitialDraftState();
   });
+  const ownerCaptureRepairSubjectEnabled =
+    ownerCaptureRepairEnabled &&
+    mode === "second" &&
+    isApp1SubjectAuthorized(form.subjectLabel, ownerCaptureRepairSubjects);
+
   const secondWriteEnabled = mode === "second" && workflow === "second-write" && !rewriteContext;
   const getInitialStage = () => {
     if (rewriteContext && mode === "second") return "confirm" as const;
@@ -1728,6 +1744,13 @@ export function WrongAnswerCaptureForm({
         item?: {
           id: string;
           examName?: string;
+          subjectLabel?: string;
+          sourceType?: string;
+          problemTitle?: string;
+          rawQuestionText?: string;
+          rawAnswerText?: string;
+          userAnswer?: string;
+          correctAnswer?: string;
           updatedAt?: string;
           rawPayload?: Record<string, unknown>;
         };
@@ -1774,6 +1797,20 @@ export function WrongAnswerCaptureForm({
       if (destination === "first-ox" && mode === "first") {
         router.push(`/app/first/ox?sourceItemId=${encodeURIComponent(result.item.id)}&mode=first`);
         router.refresh();
+        return;
+      }
+      const ownerCaptureRepairPersistedInitialAnalysisEligible =
+        ownerCaptureRepairEnabled &&
+        mode === "second" &&
+        isApp1SubjectAuthorized(
+          result.item.subjectLabel ?? "",
+          ownerCaptureRepairSubjects,
+        ) &&
+        isApp1PersistedInitialAnalysisEligible(result.item);
+      if (ownerCaptureRepairPersistedInitialAnalysisEligible) {
+        router.push(
+          `/app/capture/repair?itemId=${encodeURIComponent(result.item.id)}`,
+        );
         return;
       }
       openSavedPlanStage(buildSaveConfirmation({
@@ -2104,8 +2141,10 @@ export function WrongAnswerCaptureForm({
             onPdf={handlePdfImport}
             onGenerate={() => generateStructuredDraft()}
             onQuickSave={saveQuickCaptureFromIntake}
-            canQuickSave={canQuickSaveCapture}
+            canConfirmInput={canQuickSaveCapture}
+            canQuickSave={canQuickSaveCapture && !ownerCaptureRepairSubjectEnabled}
             saving={submitting}
+            ownerCaptureRepairEnabled={ownerCaptureRepairSubjectEnabled}
             cameraInputRef={cameraInputRef}
             galleryInputRef={galleryInputRef}
             pdfInputRef={pdfInputRef}
@@ -2128,23 +2167,34 @@ export function WrongAnswerCaptureForm({
           ) : null}
 
           {(mode === "first" ? stage !== "intake" : stage === "preview") ? (
-            <ExtractionPreview
-              form={form}
-              mode={mode}
-              uploadedPages={uploadedPages}
-              needsOcrConfirmation={needsOcrConfirmation}
-              missingConfirmationFields={missingConfirmationFields.map((field) => field.label)}
-              extractError={extractError}
-              onEdit={continueAfterExtractionReview}
-              onRegenerate={() => generateStructuredDraft()}
-              onRawOcrChange={(value) => {
-                update("rawQuestionText", value);
-                update("rawOcrText", value);
-                update("hasManualCorrection", true);
-                update("ocrConfirmedByLearner", true);
-                update("lowConfidenceFlag", form.lowConfidenceFlag || hasLowConfidenceText(value));
-              }}
-            />
+            <>
+              {ownerCaptureRepairSubjectEnabled ? (
+                <p
+                  className="v3-type-compact ko-keep rounded-[var(--v3-radius-control)] border border-[var(--color-border-attention)] bg-[var(--color-background-attention)] px-4 py-3 text-[var(--color-text-primary)]"
+                  role="status"
+                  data-app1-ocr-confirmation-warning
+                >
+                  {APP1_OCR_CONFIRMATION_WARNING}
+                </p>
+              ) : null}
+              <ExtractionPreview
+                form={form}
+                mode={mode}
+                uploadedPages={uploadedPages}
+                needsOcrConfirmation={needsOcrConfirmation}
+                missingConfirmationFields={missingConfirmationFields.map((field) => field.label)}
+                extractError={extractError}
+                onEdit={continueAfterExtractionReview}
+                onRegenerate={() => generateStructuredDraft()}
+                onRawOcrChange={(value) => {
+                  update("rawQuestionText", value);
+                  update("rawOcrText", value);
+                  update("hasManualCorrection", true);
+                  update("ocrConfirmedByLearner", true);
+                  update("lowConfidenceFlag", form.lowConfidenceFlag || hasLowConfidenceText(value));
+                }}
+              />
+            </>
           ) : null}
 
           {stage === "confirm" ? (
@@ -2572,8 +2622,10 @@ function IntakePanel({
   onPdf,
   onGenerate,
   onQuickSave,
+  canConfirmInput,
   canQuickSave,
   saving,
+  ownerCaptureRepairEnabled,
   cameraInputRef,
   galleryInputRef,
   pdfInputRef,
@@ -2593,8 +2645,10 @@ function IntakePanel({
   onPdf: (file: File) => void;
   onGenerate: () => void | Promise<void>;
   onQuickSave: () => void | Promise<void>;
+  canConfirmInput: boolean;
   canQuickSave: boolean;
   saving: boolean;
+  ownerCaptureRepairEnabled: boolean;
   cameraInputRef: React.RefObject<HTMLInputElement | null>;
   galleryInputRef: React.RefObject<HTMLInputElement | null>;
   pdfInputRef: React.RefObject<HTMLInputElement | null>;
@@ -2605,6 +2659,9 @@ function IntakePanel({
     if (form.rawQuestionText.trim() || uploadedPages.length > 0 || form.sourceLabel.trim()) return form.sourceType;
     return null;
   });
+  const [app1InputChooserOpen, setApp1InputChooserOpen] = useState(false);
+  const app1InputChooserId = "app1-capture-input-chooser";
+  const app1PhotoChoiceId = "app1-capture-photo-choice";
   const hasActiveInput =
     Boolean(selectedInputMethod) ||
     form.rawQuestionText.trim().length > 0 ||
@@ -2651,20 +2708,61 @@ function IntakePanel({
             variant={hasActiveInput ? "outline" : undefined}
             className={`${hasActiveInput ? "" : "primary-action"} min-h-[var(--control-height)] w-full justify-center rounded-[var(--v3-radius-control)]`}
             onClick={() => {
+              if (ownerCaptureRepairEnabled) {
+                setApp1InputChooserOpen(true);
+                window.setTimeout(
+                  () => document.getElementById(app1PhotoChoiceId)?.focus(),
+                  0,
+                );
+                return;
+              }
               const sourceType = inferSourceTypeFromAction("camera");
               setSelectedInputMethod(sourceType);
               update("sourceType", sourceType);
               cameraInputRef.current?.click();
             }}
+            aria-expanded={ownerCaptureRepairEnabled ? app1InputChooserOpen : undefined}
+            aria-controls={ownerCaptureRepairEnabled ? app1InputChooserId : undefined}
             data-s226-capture-primary-action
           >
-            답안 사진 찍기
+            {ownerCaptureRepairEnabled ? "사진·PDF·텍스트로 시작" : "답안 사진 찍기"}
           </CaptureActionButton>
-          <V3QuietDisclosure
-            summary="다른 입력 방식"
-            helper="이미 텍스트나 PDF가 있을 때만 선택하세요."
-          >
-            <div className="grid gap-2 sm:grid-cols-2">
+          {ownerCaptureRepairEnabled ? (
+            app1InputChooserOpen ? (
+              <div
+                id={app1InputChooserId}
+                className="grid gap-2 rounded-[var(--v3-radius-control)] border border-[var(--color-border-default)] bg-[var(--color-background-elevated)] p-3 sm:grid-cols-3"
+                data-app1-capture-input-chooser
+              >
+              <CaptureActionButton
+                mode={mode}
+                type="button"
+                variant="outline"
+                className="min-h-[var(--control-height)] w-full"
+                id={app1PhotoChoiceId}
+                onClick={() => {
+                  const sourceType = inferSourceTypeFromAction("camera");
+                  setSelectedInputMethod(sourceType);
+                  update("sourceType", sourceType);
+                  cameraInputRef.current?.click();
+                }}
+              >
+                사진 찍기
+              </CaptureActionButton>
+              <CaptureActionButton
+                mode={mode}
+                type="button"
+                variant="outline"
+                className="min-h-[var(--control-height)] w-full"
+                onClick={() => {
+                  const sourceType = inferSourceTypeFromAction("pdf");
+                  setSelectedInputMethod(sourceType);
+                  update("sourceType", sourceType);
+                  pdfInputRef.current?.click();
+                }}
+              >
+                PDF 선택
+              </CaptureActionButton>
               <CaptureActionButton
                 mode={mode}
                 type="button"
@@ -2682,22 +2780,48 @@ function IntakePanel({
               >
                 텍스트 붙여넣기
               </CaptureActionButton>
-              <CaptureActionButton
-                mode={mode}
-                type="button"
-                variant="outline"
-                className="min-h-[var(--control-height)] w-full"
-                onClick={() => {
-                  const sourceType = inferSourceTypeFromAction("pdf");
-                  setSelectedInputMethod(sourceType);
-                  update("sourceType", sourceType);
-                  pdfInputRef.current?.click();
-                }}
-              >
-                PDF 선택
-              </CaptureActionButton>
             </div>
-          </V3QuietDisclosure>
+            ) : null
+          ) : (
+            <V3QuietDisclosure
+              summary="다른 입력 방식"
+              helper="이미 텍스트나 PDF가 있을 때만 선택하세요."
+            >
+              <div className="grid gap-2 sm:grid-cols-2">
+                <CaptureActionButton
+                  mode={mode}
+                  type="button"
+                  variant="outline"
+                  className="min-h-[var(--control-height)] w-full"
+                  onClick={() => {
+                    const sourceType = inferSourceTypeFromAction("text");
+                    setSelectedInputMethod(sourceType);
+                    update("sourceType", sourceType);
+                    window.setTimeout(() => {
+                      textAreaRef.current?.focus();
+                      textAreaRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+                    }, 0);
+                  }}
+                >
+                  텍스트 붙여넣기
+                </CaptureActionButton>
+                <CaptureActionButton
+                  mode={mode}
+                  type="button"
+                  variant="outline"
+                  className="min-h-[var(--control-height)] w-full"
+                  onClick={() => {
+                    const sourceType = inferSourceTypeFromAction("pdf");
+                    setSelectedInputMethod(sourceType);
+                    update("sourceType", sourceType);
+                    pdfInputRef.current?.click();
+                  }}
+                >
+                  PDF 선택
+                </CaptureActionButton>
+              </div>
+            </V3QuietDisclosure>
+          )}
         </div>
       ) : (
         <div className="mt-3 grid gap-3 sm:mt-5 sm:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)_minmax(0,1fr)]" data-capture-input-options data-s224v-secondary-input-options="quiet">
@@ -2909,7 +3033,7 @@ function IntakePanel({
               mode={mode}
               type="button"
               onClick={onGenerate}
-              disabled={!canQuickSave || saving || extracting}
+              disabled={!canConfirmInput || saving || extracting}
               className="primary-action min-h-12 w-full shrink-0 sm:w-auto disabled:cursor-not-allowed disabled:opacity-60"
               data-testid="capture-save-primary"
               data-s224v-dominant-primary-action

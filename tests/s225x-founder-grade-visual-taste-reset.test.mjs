@@ -65,11 +65,16 @@ test("S225X removes stale rendered public and learner copy", () => {
     "Review Queue candidate",
     "오늘 할 일 후보",
     "복습 후보",
-    "OCR 결과는 초안입니다. 저장 전 직접 확인해 주세요.",
     "OCR/AI 정리는 초안입니다. 저장 전 직접 확인해 주세요.",
   ]) {
     assert.equal(combined.includes(phrase), false, `stale rendered copy remains: ${phrase}`);
   }
+  assert.equal(
+    count(rendered, "OCR 결과는 초안입니다. 저장 전 직접 확인해 주세요."),
+    1,
+    "the new warning must exist only in the Owner-gated capture source",
+  );
+  assert.ok(read("components/review-os/capture-form.tsx").includes("const ownerCaptureRepairSubjectEnabled"));
   assert.equal(rendered.includes("metadataOnly"), false, "metadataOnly must not be rendered as UI copy");
 });
 

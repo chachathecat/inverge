@@ -1,6 +1,21 @@
 import "server-only";
 
+import crypto from "node:crypto";
+
 import { consumeRateLimit } from "@/lib/rate-limit";
+import {
+  App1ServerAuthorityError,
+  assertApp1PostInsertReplayPlanSeal,
+  authorizeExpiredApp1PersistenceReplayCommand,
+  authorizeApp1PersistenceCommand,
+  isClientAuthoredApp1Persistence,
+  parseApp1PersistenceCommand,
+  requireApp1AuthorizedSourceDetail,
+  sealApp1PostInsertReplayPlan,
+  translateApp1TrustedRepairAccessError,
+} from "@/lib/owner-study/app1-server-authority";
+import { executeApp1ResumableArtifactPlanV1 } from "@/lib/owner-study/app1-capture-repair-view-model";
+import { executeApp1AuthorityBoundaryV1 } from "@/lib/owner-study/app1-verification-receipt-core";
 import type { ReviewOsAccessResult } from "@/lib/review-os/access-result";
 import { generateWrongAnswerArtifacts } from "@/lib/review-os/ai";
 import {
@@ -80,6 +95,8 @@ import type {
   ReviewCompletionMetadata,
   WrongAnswerItemInput,
   WrongAnswerItemRecord,
+  WrongAnswerNoteRecord,
+  WrongAnswerTagRecord,
   StudyLogInput,
 } from "@/lib/review-os/types";
 import { buildS233aQueueTodayLinkage } from "@/lib/review-os/s233a-queue-today";
@@ -88,6 +105,473 @@ import type { S233aReviewRuntimeDependencies } from "@/lib/review-os/s233a-types
 const globalCache = globalThis as typeof globalThis & {
   __reviewOsGenerationLocks?: Map<string, boolean>;
 };
+
+const APP1_POST_INSERT_REPLAY_VERSION = "App1PostInsertReplayV1" as const;
+const APP1_REPLAY_SNAPSHOT_KEY = "app1_post_insert_replay_v1" as const;
+
+type App1ReplayUsageEvent = Readonly<{
+  id: string;
+  eventName: string;
+  entityType: string | null;
+  entityId: string;
+  metadataJson: Record<string, unknown>;
+}>;
+
+type App1PostInsertReplayPlanV1 = Readonly<{
+  contractVersion: typeof APP1_POST_INSERT_REPLAY_VERSION;
+  authorityDigest: string;
+  planDigest: string;
+  planSeal: string;
+  dedupeKey: string;
+  itemId: string;
+  operationId: string;
+  workRevisionId: string;
+  sourceItemId: string;
+  repairTextDigest: string;
+  recurrence: Readonly<{
+    examName: string;
+    subjectLabel: string;
+    topicTag: string;
+    mistakeType: string;
+  }>;
+  noteId: string;
+  note: Omit<WrongAnswerNoteRecord, "id" | "wrongAnswerItemId" | "createdAt">;
+  tagId: string;
+  tag: Omit<WrongAnswerTagRecord, "id" | "wrongAnswerItemId" | "createdAt">;
+  queueId: string;
+  queue: Readonly<{
+    reviewReason: string;
+    priorityScore: number;
+    scheduleInput: Readonly<{
+      mode: AppraisalMode;
+      isCorrect: boolean;
+      confidence: WrongAnswerItemInput["confidence"];
+      mistakeType: string;
+      hasWeakParagraph: boolean;
+      scheduledAt: string;
+      nextReviewDateOverride: string | null;
+    }>;
+    derivedPayloadBase: Record<string, unknown>;
+  }>;
+  usageEvents: readonly App1ReplayUsageEvent[];
+  learningSignalId: string;
+  learningSignal: LearningSignalEventInput;
+}>;
+
+type App1PostInsertReplayOperations = Readonly<{
+  ensureRecurrence: () => Promise<{ status: "saved" | "deduped" }>;
+  ensureNote: () => Promise<{ status: "saved" | "deduped" }>;
+  ensureTag: () => Promise<{ status: "saved" | "deduped" }>;
+  ensureUsage: (
+    event: App1ReplayUsageEvent,
+  ) => Promise<{ status: "saved" | "deduped" }>;
+  ensureQueue: () => Promise<{ status: "saved" | "deduped" }>;
+  ensureLearningSignal: () => Promise<{ status: "saved" | "deduped" }>;
+}>;
+
+export async function executeApp1PostInsertReplayV1(
+  plan: App1PostInsertReplayPlanV1,
+  operations: App1PostInsertReplayOperations,
+) {
+  return executeApp1ResumableArtifactPlanV1({
+    usageEvents: plan.usageEvents,
+    ensureRecurrence: async () =>
+      (await operations.ensureRecurrence()).status,
+    ensureNote: async () => (await operations.ensureNote()).status,
+    ensureTag: async () => (await operations.ensureTag()).status,
+    ensureUsage: async (event) => (await operations.ensureUsage(event)).status,
+    ensureQueue: async () => (await operations.ensureQueue()).status,
+    ensureLearningSignal: async () =>
+      (await operations.ensureLearningSignal()).status,
+  });
+}
+
+function stableApp1Json(value: unknown): string {
+  if (value === null || typeof value !== "object") return JSON.stringify(value);
+  if (Array.isArray(value)) return `[${value.map(stableApp1Json).join(",")}]`;
+  const record = value as Record<string, unknown>;
+  return `{${Object.keys(record)
+    .sort()
+    .map((key) => `${JSON.stringify(key)}:${stableApp1Json(record[key])}`)
+    .join(",")}}`;
+}
+
+function app1ExactKeys(value: unknown, expected: readonly string[]) {
+  return Boolean(
+    value &&
+      typeof value === "object" &&
+      !Array.isArray(value) &&
+      stableApp1Json(Object.keys(value as Record<string, unknown>).sort()) ===
+        stableApp1Json([...expected].sort()),
+  );
+}
+
+function app1Sha256(value: unknown) {
+  return `sha256:${crypto.createHash("sha256").update(stableApp1Json(value)).digest("hex")}`;
+}
+
+function app1DeterministicUuid(authorityDigest: string, kind: string) {
+  const hex = crypto
+    .createHash("sha256")
+    .update(`${authorityDigest}\u0000${kind}`, "utf8")
+    .digest("hex");
+  return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-5${hex.slice(13, 16)}-a${hex.slice(17, 20)}-${hex.slice(20, 32)}`;
+}
+
+function app1ReplayAuthority(
+  userId: string,
+  input: WrongAnswerItemInput,
+  dedupeKey: string,
+) {
+  const fields = input.extractionPayload?.user_confirmed_fields;
+  if (!isClientAuthoredApp1Persistence(input) || !fields) return null;
+  const operationId = fields.persistence_operation_id;
+  const workRevisionId = fields.persistence_work_revision_id;
+  const sourceItemId = fields.app1_source_item_id;
+  if (
+    typeof operationId !== "string" ||
+    typeof workRevisionId !== "string" ||
+    typeof sourceItemId !== "string" ||
+    typeof input.rawAnswerText !== "string"
+  ) {
+    throw new Error("review-os:app1-replay-authority-invalid");
+  }
+  const repairTextDigest = app1Sha256(input.rawAnswerText);
+  const authorityDigest = app1Sha256({
+    contractVersion: APP1_POST_INSERT_REPLAY_VERSION,
+    userId,
+    dedupeKey,
+    operationId,
+    workRevisionId,
+    sourceItemId,
+    repairTextDigest,
+  });
+  return Object.freeze({
+    authorityDigest,
+    operationId,
+    workRevisionId,
+    sourceItemId,
+    repairTextDigest,
+  });
+}
+
+function parseApp1ReplayPlan(
+  value: unknown,
+  expected: ReturnType<typeof app1ReplayAuthority>,
+  item: WrongAnswerItemRecord,
+): App1PostInsertReplayPlanV1 {
+  if (!expected || !value || typeof value !== "object" || Array.isArray(value)) {
+    throw new Error("review-os:app1-replay-plan-missing");
+  }
+  const plan = value as Partial<App1PostInsertReplayPlanV1>;
+  const exactPlanKeys = [
+    "authorityDigest",
+    "contractVersion",
+    "dedupeKey",
+    "itemId",
+    "learningSignal",
+    "learningSignalId",
+    "note",
+    "noteId",
+    "operationId",
+    "planDigest",
+    "planSeal",
+    "queue",
+    "queueId",
+    "recurrence",
+    "repairTextDigest",
+    "sourceItemId",
+    "tag",
+    "tagId",
+    "usageEvents",
+    "workRevisionId",
+  ].sort();
+  const actualPlanKeys = Object.keys(plan).sort();
+  const { planDigest, planSeal, ...planMaterial } = plan;
+  const usageEventsValid =
+    Array.isArray(plan.usageEvents) &&
+    plan.usageEvents.length >= 13 &&
+    plan.usageEvents.length <= 14 &&
+    plan.usageEvents.every(
+      (event, index) =>
+        app1ExactKeys(event, [
+          "entityId",
+          "entityType",
+          "eventName",
+          "id",
+          "metadataJson",
+        ]) &&
+        typeof event.eventName === "string" &&
+        (typeof event.entityType === "string" || event.entityType === null) &&
+        event.entityId === plan.itemId &&
+        typeof event.id === "string" &&
+        event.id ===
+          app1DeterministicUuid(
+            expected.authorityDigest,
+            `usage-${index}-${event.eventName}`,
+          ) &&
+        event.metadataJson &&
+        typeof event.metadataJson === "object" &&
+        !Array.isArray(event.metadataJson),
+    );
+  if (
+    stableApp1Json(actualPlanKeys) !== stableApp1Json(exactPlanKeys) ||
+    plan.contractVersion !== APP1_POST_INSERT_REPLAY_VERSION ||
+    plan.authorityDigest !== expected.authorityDigest ||
+    plan.dedupeKey !== item.dedupeKey ||
+    plan.itemId !== item.id ||
+    plan.itemId !==
+      app1DeterministicUuid(expected.authorityDigest, "wrong-answer-item") ||
+    plan.operationId !== expected.operationId ||
+    plan.workRevisionId !== expected.workRevisionId ||
+    plan.sourceItemId !== expected.sourceItemId ||
+    plan.repairTextDigest !== expected.repairTextDigest ||
+    !app1ExactKeys(plan.recurrence, [
+      "examName",
+      "mistakeType",
+      "subjectLabel",
+      "topicTag",
+    ]) ||
+    plan.recurrence?.examName !== item.examName ||
+    plan.recurrence?.subjectLabel !== item.subjectLabel ||
+    plan.recurrence?.topicTag !== plan.tag?.topicTag ||
+    plan.recurrence?.mistakeType !== plan.tag?.mistakeType ||
+    typeof plan.noteId !== "string" ||
+    !app1ExactKeys(plan.note, [
+      "aiSummary",
+      "generationSource",
+      "keyDistinction",
+      "nextTryTip",
+      "reviewCheckpoint",
+    ]) ||
+    typeof plan.tagId !== "string" ||
+    !app1ExactKeys(plan.tag, [
+      "classifierSource",
+      "confidence",
+      "mistakeType",
+      "recurrenceCandidate",
+      "taskType",
+      "topicTag",
+    ]) ||
+    typeof plan.queueId !== "string" ||
+    !app1ExactKeys(plan.queue, [
+      "derivedPayloadBase",
+      "priorityScore",
+      "reviewReason",
+      "scheduleInput",
+    ]) ||
+    !app1ExactKeys(plan.queue?.scheduleInput, [
+      "confidence",
+      "hasWeakParagraph",
+      "isCorrect",
+      "mistakeType",
+      "mode",
+      "nextReviewDateOverride",
+      "scheduledAt",
+    ]) ||
+    !["first", "second"].includes(String(plan.queue?.scheduleInput?.mode)) ||
+    typeof plan.queue?.scheduleInput?.isCorrect !== "boolean" ||
+    !["낮음", "중간", "높음"].includes(
+      String(plan.queue?.scheduleInput?.confidence),
+    ) ||
+    typeof plan.queue?.scheduleInput?.mistakeType !== "string" ||
+    typeof plan.queue?.scheduleInput?.hasWeakParagraph !== "boolean" ||
+    typeof plan.queue?.scheduleInput?.scheduledAt !== "string" ||
+    new Date(plan.queue.scheduleInput.scheduledAt).toISOString() !==
+      plan.queue.scheduleInput.scheduledAt ||
+    (plan.queue?.scheduleInput?.nextReviewDateOverride !== null &&
+      typeof plan.queue?.scheduleInput?.nextReviewDateOverride !== "string") ||
+    !plan.queue?.derivedPayloadBase ||
+    typeof plan.queue.derivedPayloadBase !== "object" ||
+    Array.isArray(plan.queue.derivedPayloadBase) ||
+    !usageEventsValid ||
+    typeof plan.learningSignalId !== "string" ||
+    !app1ExactKeys(plan.learningSignal, [
+      "derivedTags",
+      "examMode",
+      "metadataJson",
+      "nextTask",
+      "nextTaskType",
+      "relatedFormulas",
+      "sourceType",
+      "subject",
+    ]) ||
+    typeof planDigest !== "string" ||
+    planDigest !== app1Sha256(planMaterial) ||
+    typeof planSeal !== "string" ||
+    plan.noteId !== app1DeterministicUuid(expected.authorityDigest, "note") ||
+    plan.tagId !== app1DeterministicUuid(expected.authorityDigest, "tag") ||
+    plan.queueId !== app1DeterministicUuid(expected.authorityDigest, "queue") ||
+    plan.learningSignalId !==
+      app1DeterministicUuid(expected.authorityDigest, "learning-signal")
+  ) {
+    throw new Error("review-os:app1-replay-authority-conflict");
+  }
+  try {
+    assertApp1PostInsertReplayPlanSeal({ planDigest, planSeal });
+  } catch {
+    throw new Error("review-os:app1-replay-authority-conflict");
+  }
+  return plan as App1PostInsertReplayPlanV1;
+}
+
+function materializeApp1ReplayQueue(
+  plan: App1PostInsertReplayPlanV1,
+  recurrenceCount: number,
+) {
+  if (!Number.isSafeInteger(recurrenceCount) || recurrenceCount < 1) {
+    throw new Error("review-os:app1-replay-recurrence-invalid");
+  }
+  const scheduleInput = plan.queue.scheduleInput;
+  const schedule = resolveReviewSchedule({
+    mode: scheduleInput.mode,
+    isCorrect: scheduleInput.isCorrect,
+    confidence: scheduleInput.confidence,
+    mistakeType: scheduleInput.mistakeType,
+    recurrenceCount,
+    hasWeakParagraph: scheduleInput.hasWeakParagraph,
+    now: new Date(scheduleInput.scheduledAt),
+  });
+  const nextReviewDate =
+    scheduleInput.nextReviewDateOverride ?? schedule.nextReviewDate;
+  const dueAt =
+    schedule.retryDueAt ??
+    resolveScheduleOverrideDate(nextReviewDate, schedule.reviewDueAt);
+  return Object.freeze({
+    dueAt,
+    derivedPayload: Object.freeze({
+      ...plan.queue.derivedPayloadBase,
+      recurrenceCount,
+      schedulingPolicy: schedule.policy,
+      retryDueAt: schedule.retryDueAt,
+      followUpReviewAt: schedule.followUpReviewAt,
+      nextReviewDate,
+    }),
+  });
+}
+
+function assertExistingApp1ReplayQueue(
+  row: Record<string, unknown>,
+  userId: string,
+  item: WrongAnswerItemRecord,
+  plan: App1PostInsertReplayPlanV1,
+  maximumDurableRecurrenceCount: number,
+) {
+  const derivedPayload = row.derived_payload as Record<string, unknown> | null;
+  const storedCount = derivedPayload?.recurrenceCount;
+  if (
+    !Number.isSafeInteger(storedCount) ||
+    Number(storedCount) < 1 ||
+    Number(storedCount) > maximumDurableRecurrenceCount
+  ) {
+    throw new Error("review-os:app1-replay-authority-conflict");
+  }
+  const materialized = materializeApp1ReplayQueue(plan, Number(storedCount));
+  const expected = {
+    id: plan.queueId,
+    user_id: userId,
+    exam_id: "wrong_answer_os",
+    subject_id: item.subjectLabel,
+    stage: "alpha",
+    source_submission_id: item.id,
+    source_kind: "wrong_answer",
+    status: "pending",
+    priority_score: plan.queue.priorityScore,
+    raw_payload: {
+      dueAt: materialized.dueAt,
+      reviewReason: plan.queue.reviewReason,
+    },
+    derived_payload: materialized.derivedPayload,
+  };
+  if (stableApp1Json(row) !== stableApp1Json(expected)) {
+    throw new Error("review-os:app1-replay-authority-conflict");
+  }
+  return Number(storedCount);
+}
+
+async function completeApp1PostInsertReplay(
+  userId: string,
+  item: WrongAnswerItemRecord,
+  plan: App1PostInsertReplayPlanV1,
+) {
+  return executeApp1PostInsertReplayV1(plan, {
+    ensureRecurrence: () =>
+      reviewOsRepository.ensureApp1RecurrenceFeature(
+        userId,
+        plan.recurrence,
+      ),
+    ensureNote: () =>
+      reviewOsRepository.ensureApp1WrongAnswerNote(
+        userId,
+        plan.noteId,
+        item.id,
+        plan.note,
+      ),
+    ensureTag: () =>
+      reviewOsRepository.ensureApp1WrongAnswerTag(
+        userId,
+        plan.tagId,
+        item.id,
+        plan.tag,
+      ),
+    ensureUsage: (event) =>
+      reviewOsRepository.ensureApp1UsageEvent(
+        userId,
+        event.id,
+        event.eventName,
+        event.entityType,
+        event.entityId,
+        event.metadataJson,
+      ),
+    ensureQueue: async () => {
+      const durableRecurrenceCount =
+        await reviewOsRepository.countApp1RecurrenceEvidence(
+          userId,
+          plan.recurrence,
+        );
+      const materialized = materializeApp1ReplayQueue(
+        plan,
+        durableRecurrenceCount,
+      );
+      let persistedRecurrenceCount = durableRecurrenceCount;
+      const result = await reviewOsRepository.ensureApp1ReviewQueueEntry(
+        userId,
+        plan.queueId,
+        item,
+        plan.queue.reviewReason,
+        plan.queue.priorityScore,
+        materialized.dueAt,
+        materialized.derivedPayload,
+        async (existing) => {
+          const latestDurableRecurrenceCount =
+            await reviewOsRepository.countApp1RecurrenceEvidence(
+              userId,
+              plan.recurrence,
+            );
+          persistedRecurrenceCount = assertExistingApp1ReplayQueue(
+            existing,
+            userId,
+            item,
+            plan,
+            latestDurableRecurrenceCount,
+          );
+        },
+      );
+      await reviewOsRepository.ensureApp1WrongAnswerItemRecurrenceSnapshot(
+        userId,
+        item.id,
+        persistedRecurrenceCount,
+      );
+      return result;
+    },
+    ensureLearningSignal: () =>
+      reviewOsRepository.ensureApp1LearningSignalEvent(
+        userId,
+        plan.learningSignalId,
+        plan.learningSignal,
+      ),
+  });
+}
 
 function getGenerationLockStore() {
   if (!globalCache.__reviewOsGenerationLocks) {
@@ -1123,6 +1607,115 @@ export class ReviewOsService {
     email: string | null,
     input: WrongAnswerItemInput,
   ) {
+    if (isClientAuthoredApp1Persistence(input)) {
+      throw new App1ServerAuthorityError(
+        "APP1_PERSISTENCE_COMMAND_INVALID",
+      );
+    }
+    return this.createWrongAnswerItemAfterAuthority(userId, email, input);
+  }
+
+  async createApp1VerifiedRepairItem(
+    userId: string,
+    email: string | null,
+    value: unknown,
+  ) {
+    try {
+      return await executeApp1AuthorityBoundaryV1({
+        authorize: async () => {
+          const command = parseApp1PersistenceCommand(value);
+          const detail = await requireApp1AuthorizedSourceDetail({
+            userId,
+            sourceItemId: command.sourceItemId,
+            expectedSubject: command.primaryGap.subject,
+          });
+          try {
+            return Object.freeze({
+              input: authorizeApp1PersistenceCommand({
+                userId,
+                detail,
+                command,
+              }),
+              expiredReplayOnly: false,
+            });
+          } catch (error) {
+            if (
+              !(error instanceof App1ServerAuthorityError) ||
+              error.code !== "APP1_VERIFICATION_EXPIRED"
+            ) {
+              throw error;
+            }
+            return Object.freeze({
+              input: authorizeExpiredApp1PersistenceReplayCommand({
+                userId,
+                detail,
+                command,
+              }),
+              expiredReplayOnly: true,
+            });
+          }
+        },
+        execute: ({ input, expiredReplayOnly }) =>
+          expiredReplayOnly
+            ? this.resumeExistingApp1RepairAfterExpiredAuthority(
+                userId,
+                email,
+                input,
+              )
+            : this.createWrongAnswerItemAfterAuthority(userId, email, input),
+      });
+    } catch (error) {
+      translateApp1TrustedRepairAccessError(error);
+    }
+  }
+
+  private async resumeExistingApp1RepairAfterExpiredAuthority(
+    userId: string,
+    email: string | null,
+    input: WrongAnswerItemInput,
+  ) {
+    await this.ensureAccess(userId, email);
+    const mode = resolveAppraisalMode(null, input.examName);
+    const normalizedInput: WrongAnswerItemInput = {
+      ...input,
+      examName: getModeLabel(mode),
+      subjectLabel: normalizeSubjectForMode(input.subjectLabel, mode),
+    };
+    const dedupeKey = reviewOsRepository.createDedupeKey(
+      userId,
+      normalizedInput,
+    );
+    const replayAuthority = app1ReplayAuthority(
+      userId,
+      normalizedInput,
+      dedupeKey,
+    );
+    const existing = await reviewOsRepository.findExistingByDedupe(
+      userId,
+      dedupeKey,
+    );
+    if (!existing || !replayAuthority) {
+      throw new App1ServerAuthorityError("APP1_VERIFICATION_EXPIRED");
+    }
+    const plan = parseApp1ReplayPlan(
+      existing.rawPayload[APP1_REPLAY_SNAPSHOT_KEY],
+      replayAuthority,
+      existing,
+    );
+    await completeApp1PostInsertReplay(userId, existing, plan);
+    const resumed = await reviewOsRepository.getWrongAnswerItem(
+      userId,
+      existing.id,
+    );
+    if (!resumed) throw new Error("review-os-item-missing-after-replay");
+    return { item: resumed, deduped: true };
+  }
+
+  private async createWrongAnswerItemAfterAuthority(
+    userId: string,
+    email: string | null,
+    input: WrongAnswerItemInput,
+  ) {
     await this.ensureAccess(userId, email);
     const mode = resolveAppraisalMode(null, input.examName);
     const config = getModeConfig(mode);
@@ -1132,6 +1725,61 @@ export class ReviewOsService {
       subjectLabel: normalizeSubjectForMode(input.subjectLabel, mode),
     };
 
+    const dedupeKey = reviewOsRepository.createDedupeKey(
+      userId,
+      normalizedInput,
+    );
+    const replayAuthority = app1ReplayAuthority(
+      userId,
+      normalizedInput,
+      dedupeKey,
+    );
+    const app1PreInsertUsageEvents: Array<
+      Omit<App1ReplayUsageEvent, "entityId" | "id">
+    > = [];
+    const recordPreInsertUsageEvent = async (
+      eventName: string,
+      entityType: string | null,
+      metadataJson: Record<string, unknown>,
+    ) => {
+      if (replayAuthority) {
+        app1PreInsertUsageEvents.push({
+          eventName,
+          entityType,
+          metadataJson,
+        });
+        return;
+      }
+      await reviewOsRepository.logUsageEvent(
+        userId,
+        eventName,
+        entityType,
+        null,
+        metadataJson,
+      );
+    };
+    const existing = await reviewOsRepository.findExistingByDedupe(
+      userId,
+      dedupeKey,
+    );
+    if (existing) {
+      if (replayAuthority) {
+        const plan = parseApp1ReplayPlan(
+          existing.rawPayload[APP1_REPLAY_SNAPSHOT_KEY],
+          replayAuthority,
+          existing,
+        );
+        await completeApp1PostInsertReplay(userId, existing, plan);
+        const resumed = await reviewOsRepository.getWrongAnswerItem(
+          userId,
+          existing.id,
+        );
+        if (!resumed) throw new Error("review-os-item-missing-after-replay");
+        return { item: resumed, deduped: true };
+      }
+      return { item: existing, deduped: true };
+    }
+
     const rate = consumeRateLimit(`review-os:${userId}`);
     if (!rate.allowed) throw new ReviewOsBurstLimitError();
 
@@ -1139,45 +1787,41 @@ export class ReviewOsService {
     if (usage.remaining <= 0) throw new ReviewOsUsageLimitError();
     await assertCanCreateWrongAnswer(userId);
 
-    const dedupeKey = reviewOsRepository.createDedupeKey(
-      userId,
-      normalizedInput,
-    );
-    const existing = await reviewOsRepository.findExistingByDedupe(
-      userId,
-      dedupeKey,
-    );
-    if (existing) return { item: existing, deduped: true };
-
     const locks = getGenerationLockStore();
     if (locks.get(userId)) throw new ReviewOsConcurrentGenerationError();
     locks.set(userId, true);
 
     try {
       const artifacts = await generateWrongAnswerArtifacts(normalizedInput);
-      const recurrence = await reviewOsRepository.upsertRecurrenceFeature(
-        userId,
-        {
-          examName: normalizedInput.examName,
-          subjectLabel: normalizedInput.subjectLabel,
-          topicTag: artifacts.tags.topicTag,
-          mistakeType: artifacts.tags.mistakeType,
-        },
+      const recurrenceInput = {
+        examName: normalizedInput.examName,
+        subjectLabel: normalizedInput.subjectLabel,
+        topicTag: artifacts.tags.topicTag,
+        mistakeType: artifacts.tags.mistakeType,
+      };
+      const ordinaryRecurrence = replayAuthority
+        ? null
+        : await reviewOsRepository.upsertRecurrenceFeature(
+            userId,
+            recurrenceInput,
+          );
+      const recurrenceCount = ordinaryRecurrence?.recurrenceCount ?? 1;
+      const scheduleReference = new Date();
+      const scheduleIsCorrect = isMeaningfullyCorrectAnswer(
+        normalizedInput.correctAnswer,
+        normalizedInput.userAnswer,
       );
+      const scheduleHasWeakParagraph =
+        mode === "second" &&
+        Boolean(normalizedInput.weakStructurePoint || normalizedInput.missingIssue);
       const schedule = resolveReviewSchedule({
         mode,
-        isCorrect: isMeaningfullyCorrectAnswer(
-          normalizedInput.correctAnswer,
-          normalizedInput.userAnswer,
-        ),
+        isCorrect: scheduleIsCorrect,
         confidence: normalizedInput.confidence,
         mistakeType: artifacts.tags.mistakeType,
-        recurrenceCount: recurrence?.recurrenceCount ?? 1,
-        hasWeakParagraph:
-          mode === "second" &&
-          Boolean(
-            normalizedInput.weakStructurePoint || normalizedInput.missingIssue,
-          ),
+        recurrenceCount,
+        hasWeakParagraph: scheduleHasWeakParagraph,
+        now: scheduleReference,
       });
       const effectiveNextReviewDate =
         input.nextReviewDate ?? schedule.nextReviewDate;
@@ -1200,22 +1844,18 @@ export class ReviewOsService {
             properties: { status: "started" },
           }),
         );
-        await reviewOsRepository.logUsageEvent(
-          userId,
+        await recordPreInsertUsageEvent(
           "capture_started",
           "capture_session",
-          null,
           sanitizeCaptureTelemetryMetadata({
             mode,
             subject: normalizedInput.subjectLabel,
             createdFromCapture: true,
           }),
         );
-        await reviewOsRepository.logUsageEvent(
-          userId,
+        await recordPreInsertUsageEvent(
           "capture_input_method_selected",
           "capture_session",
-          null,
           sanitizeCaptureTelemetryMetadata({
             mode,
             sourceType: input.sourceType,
@@ -1242,11 +1882,9 @@ export class ReviewOsService {
               normalizedInput.extractionPayload?.user_confirmed_fields,
             itemInput: normalizedInput,
           }) as Record<string, unknown>;
-          await reviewOsRepository.logUsageEvent(
-            userId,
+          await recordPreInsertUsageEvent(
             "ocr_draft_generated",
             "capture_session",
-            null,
             sanitizeCaptureTelemetryMetadata({
               mode,
               subject: normalizedInput.subjectLabel,
@@ -1255,11 +1893,9 @@ export class ReviewOsService {
             }),
           );
         } catch (error) {
-          await reviewOsRepository.logUsageEvent(
-            userId,
+          await recordPreInsertUsageEvent(
             "ocr_draft_failed",
             "capture_session",
-            null,
             sanitizeCaptureTelemetryMetadata({
               mode,
               subject: normalizedInput.subjectLabel,
@@ -1310,11 +1946,9 @@ export class ReviewOsService {
       }
 
       if (isCaptureCreated) {
-        await reviewOsRepository.logUsageEvent(
-          userId,
+        await recordPreInsertUsageEvent(
           "draft_field_edited",
           "capture_session",
-          null,
           sanitizeCaptureTelemetryMetadata({
             mode,
             fieldName: "normalized_draft",
@@ -1324,11 +1958,9 @@ export class ReviewOsService {
             createdFromCapture: true,
           }),
         );
-        await reviewOsRepository.logUsageEvent(
-          userId,
+        await recordPreInsertUsageEvent(
           "draft_confirmed",
           "capture_session",
-          null,
           sanitizeCaptureTelemetryMetadata({
             mode,
             subject: normalizedInput.subjectLabel,
@@ -1405,6 +2037,197 @@ export class ReviewOsService {
       const answerSubmissionDerivedMetadata =
         buildLearnerAnswerSubmissionDerivedMetadata(answerSubmissionContract);
 
+      const app1ReplayPlan = (() => {
+        if (!replayAuthority) return null;
+        const itemId = app1DeterministicUuid(
+          replayAuthority.authorityDigest,
+          "wrong-answer-item",
+        );
+        const confirmedFields = input.extractionPayload?.user_confirmed_fields as
+          Record<string, unknown> | undefined;
+        const lowConfidenceCapture =
+          (Boolean(confirmedFields?.lowConfidenceFlag) ||
+            /low_confidence|ocr_failed|manual_fallback/.test(
+              String(confirmedFields?.captureQualityIssue ?? ""),
+            )) && confirmedFields?.ocrConfirmedByLearner !== true;
+        const priorityScore = computeCaptureQueuePriority({
+          examName: normalizedInput.examName,
+          confidence: normalizedInput.confidence,
+          timeSpentSeconds: normalizedInput.timeSpentSeconds ?? null,
+          mistakeOrWeakPoint: `${artifacts.tags.mistakeType} ${input.weakStructurePoint ?? ""} ${input.missingIssue ?? ""}`,
+          weakStructurePoint: input.weakStructurePoint,
+          missingIssue: input.missingIssue,
+        });
+        const reviewReason = lowConfidenceCapture
+          ? "OCR 숫자/용어 확인 필요"
+          : buildCaptureReviewReason({
+              examName: normalizedInput.examName,
+              confidence: normalizedInput.confidence,
+              mistakeReason: artifacts.tags.mistakeType,
+              weakStructurePoint: input.weakStructurePoint,
+              missingIssue: input.missingIssue,
+            });
+        const queueDerivedPayloadBase = {
+          topicTag: artifacts.tags.topicTag,
+          mistakeType: artifacts.tags.mistakeType,
+          concept_node_candidate: conceptNodeCandidate,
+          conceptNodeId: conceptNodeCandidate.conceptNodeId,
+          conceptFamily: conceptNodeCandidate.conceptFamily,
+          retrievalPrompt: conceptNodeCandidate.retrievalPrompt,
+          conceptNextTaskType: conceptNodeCandidate.nextTaskType,
+        };
+        const usageEvents = [
+          ...app1PreInsertUsageEvents,
+          {
+            eventName: "capture_saved",
+            entityType: "wrong_answer_item",
+            metadataJson: sanitizeCaptureTelemetryMetadata({
+              mode,
+              subject: normalizedInput.subjectLabel,
+              sourceType: input.sourceType,
+              confidence: normalizedInput.confidence,
+              nextTaskType: "rewrite",
+              topicCandidate: artifacts.tags.topicTag,
+              mistakeType: artifacts.tags.mistakeType,
+              weakStructurePoint: input.weakStructurePoint ?? null,
+              missingIssue: input.missingIssue ?? null,
+              createdFromCapture: true,
+            }),
+          },
+          ...(answerSubmissionDerivedMetadata
+            ? [{
+                eventName: "answer_submission_saved",
+                entityType: "wrong_answer_item",
+                metadataJson: sanitizeCaptureTelemetryMetadata(
+                  answerSubmissionDerivedMetadata,
+                ),
+              }]
+            : []),
+          {
+            eventName: "post_save_execution_started",
+            entityType: "wrong_answer_item",
+            metadataJson: sanitizeCaptureTelemetryMetadata({
+              mode,
+              nextTaskType: "rewrite",
+              createdFromCapture: true,
+            }),
+          },
+          {
+            eventName: "post_save_execution_completed",
+            entityType: "wrong_answer_item",
+            metadataJson: sanitizeCaptureTelemetryMetadata({
+              mode,
+              createdFromCapture: true,
+            }),
+          },
+          {
+            eventName: "review_followup_scheduled",
+            entityType: "review_queue_item",
+            metadataJson: sanitizeCaptureTelemetryMetadata({
+              mode,
+              nextTaskType: "rewrite",
+              createdFromCapture: true,
+            }),
+          },
+          {
+            eventName: "wrong_answer_create",
+            entityType: "wrong_answer_item",
+            metadataJson: {
+              examName: normalizedInput.examName,
+              subjectLabel: normalizedInput.subjectLabel,
+            },
+          },
+          {
+            eventName: "ai_note_generate",
+            entityType: "wrong_answer_item",
+            metadataJson: { generationSource: artifacts.note.generationSource },
+          },
+          {
+            eventName: "tag_generate",
+            entityType: "wrong_answer_item",
+            metadataJson: {
+              topicTag: artifacts.tags.topicTag,
+              mistakeType: artifacts.tags.mistakeType,
+            },
+          },
+          {
+            eventName: "second_stage_rewrite_completed",
+            entityType: "wrong_answer_item",
+            metadataJson: {
+              rewrite_source_item_id: input.rewriteSourceItemId,
+              rewrite_source_gap: input.rewriteSourceGap ?? null,
+              rewrite_completed: input.rewriteCompleted ?? true,
+            },
+          },
+        ].map((event, index) => Object.freeze({
+          ...event,
+          entityId: itemId,
+          id: app1DeterministicUuid(
+            replayAuthority.authorityDigest,
+            `usage-${index}-${event.eventName}`,
+          ),
+        }));
+        const planMaterial = {
+          contractVersion: APP1_POST_INSERT_REPLAY_VERSION,
+          ...replayAuthority,
+          dedupeKey,
+          itemId,
+          recurrence: Object.freeze({
+            ...recurrenceInput,
+          }),
+          noteId: app1DeterministicUuid(replayAuthority.authorityDigest, "note"),
+          note: artifacts.note,
+          tagId: app1DeterministicUuid(replayAuthority.authorityDigest, "tag"),
+          tag: artifacts.tags,
+          queueId: app1DeterministicUuid(replayAuthority.authorityDigest, "queue"),
+          queue: Object.freeze({
+            reviewReason,
+            priorityScore,
+            scheduleInput: Object.freeze({
+              mode,
+              isCorrect: scheduleIsCorrect,
+              confidence: normalizedInput.confidence,
+              mistakeType: artifacts.tags.mistakeType,
+              hasWeakParagraph: scheduleHasWeakParagraph,
+              scheduledAt: scheduleReference.toISOString(),
+              nextReviewDateOverride: input.nextReviewDate ?? null,
+            }),
+            derivedPayloadBase: queueDerivedPayloadBase,
+          }),
+          usageEvents: Object.freeze(usageEvents),
+          learningSignalId: app1DeterministicUuid(
+            replayAuthority.authorityDigest,
+            "learning-signal",
+          ),
+          learningSignal: buildCaptureLearningSignal({
+            itemId,
+            examName: normalizedInput.examName,
+            subject: normalizedInput.subjectLabel,
+            sourceType: input.sourceType,
+            confidence: normalizedInput.confidence,
+            timeSpentSeconds: normalizedInput.timeSpentSeconds ?? undefined,
+            biggestGap: input.biggestGap ?? input.missingIssue,
+            nextAction: input.comparisonPoint,
+            mistakeReason: artifacts.tags.mistakeType,
+            keyConcepts: input.keyConcepts,
+            weakStructurePoint: input.weakStructurePoint,
+            missingIssue: input.missingIssue,
+            rewriteInstruction: input.rewriteInstruction,
+            calculationRisk: secondRewriteSignal?.calculationRisk ?? undefined,
+            unitRisk: secondRewriteSignal?.unitRisk ?? undefined,
+            supportedCalculatorTemplateId:
+              secondRewriteSignal?.supportedCalculatorTemplateId ?? undefined,
+            createdFromCapture: true,
+          }),
+        };
+        const planDigest = app1Sha256(planMaterial);
+        return Object.freeze({
+          ...planMaterial,
+          planDigest,
+          planSeal: sealApp1PostInsertReplayPlan(planDigest),
+        }) satisfies App1PostInsertReplayPlanV1;
+      })();
+
       const item = await reviewOsRepository.insertWrongAnswerItem(
         userId,
         normalizedInput,
@@ -1474,11 +2297,14 @@ export class ReviewOsService {
             ? (input.captureIntent ?? "save")
             : null,
           learner_answer_submission: answerSubmissionContract,
+          ...(app1ReplayPlan
+            ? { [APP1_REPLAY_SNAPSHOT_KEY]: app1ReplayPlan }
+            : {}),
         },
         {
           topicTag: artifacts.tags.topicTag,
           mistakeType: artifacts.tags.mistakeType,
-          recurrenceCount: recurrence?.recurrenceCount ?? 1,
+          recurrenceCount,
           taxonomyClassification,
           created_from_capture: isCaptureCreated,
           capture_note_engine_v1: captureSignals,
@@ -1502,9 +2328,42 @@ export class ReviewOsService {
             secondRewriteSignal?.supportedCalculatorTemplateId ?? null,
           learner_answer_submission: answerSubmissionDerivedMetadata,
         },
+        app1ReplayPlan?.itemId,
       );
 
       if (!item) throw new Error("review-os-item-missing-after-insert");
+
+      if (app1ReplayPlan) {
+        await completeApp1PostInsertReplay(userId, item, app1ReplayPlan);
+        const completedItem = await reviewOsRepository.getWrongAnswerItem(
+          userId,
+          item.id,
+        );
+        if (!completedItem) throw new Error("review-os-item-missing-after-replay");
+        recordLearningMetricIfEnabled(
+          buildLearningMetricEvent({
+            eventName: "capture_saved",
+            examMode: mode,
+            subject: item.subjectLabel,
+            conceptNodeId: conceptNodeCandidate.conceptNodeId,
+            taskType: "rewrite",
+            sourceEventType: "capture",
+            properties: { status: "saved", confidenceBand: item.confidence },
+          }),
+        );
+        recordLearningMetricIfEnabled(
+          buildLearningMetricEvent({
+            eventName: "adaptive_today_plan_generated",
+            examMode: mode,
+            subject: item.subjectLabel,
+            conceptNodeId: conceptNodeCandidate.conceptNodeId,
+            taskType: "rewrite",
+            sourceEventType: "capture",
+            properties: { candidateCount: 1, selectedCount: 1 },
+          }),
+        );
+        return { item: completedItem, deduped: false };
+      }
 
       await reviewOsRepository.insertWrongAnswerNote(
         userId,
@@ -1537,7 +2396,7 @@ export class ReviewOsService {
             missingIssue: input.missingIssue,
           })
         : rankQueueItem({
-            recurrenceCount: recurrence?.recurrenceCount ?? 1,
+            recurrenceCount,
             confidence: item.confidence,
             timeSpentSeconds: item.timeSpentSeconds ?? null,
             createdAt: item.createdAt,
@@ -1553,7 +2412,7 @@ export class ReviewOsService {
               missingIssue: input.missingIssue,
             })
         : getReviewReason({
-            recurrenceCount: recurrence?.recurrenceCount ?? 1,
+            recurrenceCount,
             confidence: item.confidence,
             timeSpentSeconds: item.timeSpentSeconds ?? null,
             mistakeType: artifacts.tags.mistakeType,
@@ -1620,7 +2479,7 @@ export class ReviewOsService {
         {
           topicTag: artifacts.tags.topicTag,
           mistakeType: artifacts.tags.mistakeType,
-          recurrenceCount: recurrence?.recurrenceCount ?? 1,
+          recurrenceCount,
           concept_node_candidate: conceptNodeCandidate,
           conceptNodeId: conceptNodeCandidate.conceptNodeId,
           conceptFamily: conceptNodeCandidate.conceptFamily,

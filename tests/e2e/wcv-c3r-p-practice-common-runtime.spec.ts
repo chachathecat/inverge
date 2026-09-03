@@ -1432,7 +1432,7 @@ test("exact Practice browser-to-Postgres durable loop", async ({ browser }) => {
   await page.unroute(c3rPApiUrl, d1RescheduledRouteA);
   await secondPage.unroute(c3rPApiUrl, d1RescheduledRouteB);
   const completedD1PlanResponse = await context.request.get(
-    `/api/review-os/c3r-p?recordId=${recordId}`,
+    `/api/review-os/c3r-p?recordId=${recordId}&evidenceStep=d1Rescheduled`,
   );
   const completedD1Plan = await completedD1PlanResponse.json();
   expect(completedD1Plan.view.currentPlan).toBeNull();
@@ -1450,7 +1450,7 @@ test("exact Practice browser-to-Postgres durable loop", async ({ browser }) => {
     }),
   ]));
   const sealedTransferResponse = await context.request.get(
-    `/api/review-os/c3r-p?recordId=${recordId}`,
+    `/api/review-os/c3r-p?recordId=${recordId}&evidenceStep=d1Rescheduled`,
   );
   const sealedTransfer = await sealedTransferResponse.json();
   expect(sealedTransfer.view.restored.transferTask).toMatchObject({
@@ -1507,7 +1507,8 @@ test("exact Practice browser-to-Postgres durable loop", async ({ browser }) => {
       return;
     }
     if (request.method() === "GET" && url.pathname === "/api/review-os/c3r-p") {
-      const response = await route.fetch();
+      url.searchParams.set("evidenceStep", "d1Rescheduled");
+      const response = await route.fetch({ url: url.toString() });
       const body = await response.json();
       body.view.dashboard.queue.push(
         {
@@ -1559,6 +1560,7 @@ test("exact Practice browser-to-Postgres durable loop", async ({ browser }) => {
   expect(earlyD7Requests).toEqual([]);
   await page.unroute(c3rPApiUrl, preDueD7Route);
 
+  await secondPage.route(c3rPApiUrl, preDueD7Route);
   await secondPage.goto(`/app/c3r-p?recordId=${recordId}`);
   await expectState(secondPage, "D1_COMPLETE");
   await expect(secondPage.getByTestId("c3r-p-transfer-task")).toHaveAttribute(
@@ -1573,6 +1575,7 @@ test("exact Practice browser-to-Postgres durable loop", async ({ browser }) => {
   await expect(secondPage.getByRole("button", {
     name: "D+7 전이 과업 열기",
   })).toBeDisabled();
+  await secondPage.unroute(c3rPApiUrl, preDueD7Route);
 
   const d7EvidenceRouteA = dashboardEvidenceStepRoute("d7");
   const d7EvidenceRouteB = dashboardEvidenceStepRoute("d7");
@@ -1744,7 +1747,7 @@ test("exact Practice browser-to-Postgres durable loop", async ({ browser }) => {
   });
   await expectState(secondPage, "D7_COMPLETE");
   const transferredResponse = await context.request.get(
-    `/api/review-os/c3r-p?recordId=${recordId}`,
+    `/api/review-os/c3r-p?recordId=${recordId}&evidenceStep=d7`,
   );
   const transferred = await transferredResponse.json();
   expect(transferred.view.restored.transferTask).toMatchObject({
