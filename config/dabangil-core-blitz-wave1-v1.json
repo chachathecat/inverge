@@ -1,0 +1,179 @@
+{
+  "contractVersion": "dabangil.core_blitz.wave1.v1",
+  "programIssue": 880,
+  "status": "standing_authority_foundation_candidate",
+  "startingAuthority": {
+    "mainSha": "d4e056938707c11e6c862230745c381297c0b26f",
+    "mainTree": "c19f7abe3f0ace8ecdc8afbe9647a8e31eb4dfc2",
+    "app1MergedPr": 876,
+    "app1ResultingMainSha": "4aa0d84e0d8d9255e74a7b6428aca99e25a4218e",
+    "qfS3MergedPr": 879,
+    "qfS3ResultingMainSha": "d4e056938707c11e6c862230745c381297c0b26f"
+  },
+  "operatingModel": {
+    "rootOrchestratorCount": 1,
+    "maximumDisjointMutationWorktrees": 3,
+    "mergeProducingIntegrationWriterCount": 1,
+    "readOnlyAndSourceWorkers": "as_needed",
+    "llmPollingLoopAllowed": false,
+    "checkpointResumeRequired": true,
+    "onePrimaryDraftPerMilestone": true
+  },
+  "lanes": [
+    {
+      "laneId": "APP1_C3R_CLOSED_LOOP",
+      "initialNode": "APP1_C3R_HANDOFF_H0",
+      "goal": "APP-1 D0 repair binds to exactly one existing C3R journey and exactly one learner-visible D+1 unaided ReviewUnit before D+7, Timed and Reopen.",
+      "duplicateEvidenceAuthorityAllowed": false,
+      "duplicateQueueAllowed": false,
+      "duplicateReviewStateMachineAllowed": false
+    },
+    {
+      "laneId": "COMMON_KERNEL_AND_LEARNER_EXPERIENCE",
+      "initialNode": "M4_FIRST_STAGE_COMMON_KERNEL",
+      "goal": "Install the common selected-response kernel and the smallest directly usable learner capability floor with honest assistance semantics.",
+      "sameItemMasteryFromExplanationAllowed": false,
+      "sameItemMasteryFromRevealedSolutionAllowed": false
+    },
+    {
+      "laneId": "VERIFIED_QUESTION_FOUNDRY_RUNTIME",
+      "initialNode": "QF_I1_INTEGRATION",
+      "goal": "Consume merged QF-S3 and establish rights-safe generation, release-chain completeness and three-bank admission without public or learner activation.",
+      "banks": [
+        "LEARNING_PRACTICE",
+        "VERIFIED_TRANSFER",
+        "MEASUREMENT"
+      ]
+    },
+    {
+      "laneId": "SEVEN_EXAM_PRE_T0_SOURCE",
+      "initialNode": "SEVEN_EXAM_DOSSIER_AND_SOURCE_PREPARATION",
+      "goal": "Prepare seven exam-cell source packets without shared-core mutation or learner runtime."
+    }
+  ],
+  "competitiveCapabilityFloor": {
+    "input": [
+      "text",
+      "image_camera",
+      "multi_page_image",
+      "pdf",
+      "editable_ocr"
+    ],
+    "answerAndExplanation": [
+      "try_first",
+      "direct_answer",
+      "answer_only",
+      "full_worked_solution",
+      "step_by_step",
+      "easy_explanation",
+      "why_and_analogy",
+      "formal_exam_explanation",
+      "key_concepts",
+      "traps"
+    ],
+    "studyObjects": [
+      "quiz",
+      "ox",
+      "cloze",
+      "flashcards",
+      "short_answer",
+      "similar_practice",
+      "generated_learning_problem"
+    ],
+    "personalStudy": [
+      "autosave",
+      "resume",
+      "study_ledger",
+      "review_queue",
+      "progress"
+    ]
+  },
+  "assistancePolicy": {
+    "independentClasses": [
+      "NONE"
+    ],
+    "nonIndependentClasses": [
+      "MINIMAL_HINT",
+      "GUIDED_EXPLANATION",
+      "EASY_EXPLANATION",
+      "FULL_SOLUTION_REVEALED",
+      "DIRECT_ANSWER_REVEALED"
+    ],
+    "revealedAnswerRequiresDistinctUnaidedAttempt": true,
+    "explanationViewingChangesMastery": false
+  },
+  "bankAdmissionPolicy": {
+    "learningPractice": {
+      "learnerUse": "LEARNING_ONLY",
+      "transferClaimAllowed": false,
+      "measurementClaimAllowed": false
+    },
+    "verifiedTransfer": {
+      "releaseChainCompleteRequired": true,
+      "sealedUnseenSnapshotRequired": true,
+      "nonSameSurfaceRequired": true,
+      "familyIsolationRequired": true
+    },
+    "measurement": {
+      "allVerifiedTransferRequirements": true,
+      "measurementCalibrationRequired": true,
+      "timedProtocolRequired": true
+    }
+  },
+  "validationPolicy": {
+    "risk": "MEDIUM",
+    "duringImplementation": [
+      "affected_focused_tests",
+      "typecheck_when_applicable",
+      "changed_file_lint",
+      "diff_check"
+    ],
+    "milestoneCandidate": [
+      "affected_lane_suite",
+      "appraiser_donor_smoke",
+      "build_shard",
+      "one_representative_e2e_when_runtime_changed",
+      "one_local_hostile_review"
+    ],
+    "remoteExactHead": [
+      "required_ci_once",
+      "one_fresh_formal_review"
+    ]
+  },
+  "activationBoundary": {
+    "ownerOnly": true,
+    "defaultOff": true,
+    "production": false,
+    "publicLaunch": false,
+    "payment": false,
+    "remoteSupabaseMutation": false,
+    "realLearnerData": false,
+    "providerExecution": false
+  },
+  "selfCorrection": {
+    "ordinaryP1P2": true,
+    "testsFixturesLocators": true,
+    "directlyCoupledPaths": true,
+    "ciAndPrMetadata": true,
+    "compatibleNarrowSecurityPatch": true,
+    "arbitraryCorrectionBudget": false
+  },
+  "hardOwnerGates": [
+    "production_or_public_activation",
+    "remote_migration_rls_or_database_apply",
+    "actual_learner_or_customer_data",
+    "payment_price_refund_or_entitlement",
+    "irreversible_destructive_data_action",
+    "new_unresolved_legal_or_rights_decision",
+    "scope_expansion",
+    "unavoidable_live_ruleset_human_approval"
+  ],
+  "ownedPathsExactly": [
+    "config/dabangil-core-blitz-wave1-v1.json",
+    "config/dabangil-seven-exam-pre-t0-v1.json",
+    "docs/decisions/2026-09-03-owner-core-blitz-wave1-standing-authority.md",
+    "docs/exec-plans/active/core-blitz-wave1-checkpoint.json",
+    "lib/core-blitz/wave1.ts",
+    "tests/core-blitz-wave1.test.mjs"
+  ]
+}

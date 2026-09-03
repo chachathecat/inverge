@@ -1,0 +1,80 @@
+{
+  "schemaVersion": "dabangil.core_blitz.wave1.v1",
+  "programIssue": 880,
+  "scopeDigest": "sha256:issue-880-core-blitz-wave1-standing-authority-v1",
+  "startingMain": "d4e056938707c11e6c862230745c381297c0b26f",
+  "startingTree": "c19f7abe3f0ace8ecdc8afbe9647a8e31eb4dfc2",
+  "integration": {
+    "branch": "codex/issue-880-core-blitz-wave1",
+    "pullRequest": null,
+    "headSha": null,
+    "headTree": null,
+    "writerLock": "INTEGRATION_WRITER_HELD",
+    "readyOrMergeAuthorized": false
+  },
+  "ownedPaths": [
+    "config/dabangil-core-blitz-wave1-v1.json",
+    "config/dabangil-seven-exam-pre-t0-v1.json",
+    "docs/decisions/2026-09-03-owner-core-blitz-wave1-standing-authority.md",
+    "docs/exec-plans/active/core-blitz-wave1-checkpoint.json",
+    "lib/core-blitz/wave1.ts",
+    "tests/core-blitz-wave1.test.mjs"
+  ],
+  "nodes": [
+    {
+      "nodeId": "AUTHORITY_FOUNDATION",
+      "lane": "COMMON_KERNEL_AND_LEARNER_EXPERIENCE",
+      "dependencies": [],
+      "state": "COMPLETE"
+    },
+    {
+      "nodeId": "APP1_C3R_HANDOFF_H0",
+      "lane": "APP1_C3R_CLOSED_LOOP",
+      "dependencies": [
+        "AUTHORITY_FOUNDATION"
+      ],
+      "state": "READY"
+    },
+    {
+      "nodeId": "M4_FIRST_STAGE_COMMON_KERNEL",
+      "lane": "COMMON_KERNEL_AND_LEARNER_EXPERIENCE",
+      "dependencies": [
+        "AUTHORITY_FOUNDATION"
+      ],
+      "state": "READY"
+    },
+    {
+      "nodeId": "QF_I1_INTEGRATION",
+      "lane": "VERIFIED_QUESTION_FOUNDRY_RUNTIME",
+      "dependencies": [
+        "AUTHORITY_FOUNDATION"
+      ],
+      "state": "READY"
+    },
+    {
+      "nodeId": "SEVEN_EXAM_DOSSIER_AND_SOURCE_PREPARATION",
+      "lane": "SEVEN_EXAM_PRE_T0_SOURCE",
+      "dependencies": [
+        "AUTHORITY_FOUNDATION"
+      ],
+      "state": "READY"
+    }
+  ],
+  "validationEvidence": {
+    "focusedCoreBlitzTests": "PENDING_REMOTE_CANDIDATE",
+    "typecheck": "PENDING_REMOTE_CANDIDATE",
+    "changedFileLint": "PENDING_REMOTE_CANDIDATE",
+    "jsonParse": "PENDING_REMOTE_CANDIDATE",
+    "diffCheck": "PENDING_REMOTE_CANDIDATE"
+  },
+  "activation": {
+    "ownerOnly": true,
+    "defaultOff": true,
+    "production": false,
+    "public": false,
+    "payment": false,
+    "remoteMutation": false,
+    "realLearnerData": false
+  },
+  "hardGates": []
+}
