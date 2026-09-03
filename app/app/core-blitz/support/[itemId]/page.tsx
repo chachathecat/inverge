@@ -13,7 +13,7 @@ export const dynamic = "force-dynamic";
 
 type PageProps = {
   params: Promise<{ itemId: string }>;
-  searchParams?: Promise<{ choice?: string }>;
+  searchParams?: Promise<Record<string, string | string[] | undefined>>;
 };
 
 const CHOICE_LABELS: Readonly<Record<LearnerSupportChoiceV1, string>> =
@@ -25,9 +25,14 @@ const CHOICE_LABELS: Readonly<Record<LearnerSupportChoiceV1, string>> =
     DIRECT_ANSWER: "정답만 보기",
   });
 
-function normalizedChoice(value: string | undefined): LearnerSupportChoiceV1 {
-  return LEARNER_SUPPORT_CHOICES_V1.includes(value as LearnerSupportChoiceV1)
-    ? (value as LearnerSupportChoiceV1)
+function normalizedChoice(
+  value: string | string[] | undefined,
+): LearnerSupportChoiceV1 {
+  const candidate = Array.isArray(value) ? value[0] : value;
+  return LEARNER_SUPPORT_CHOICES_V1.includes(
+    candidate as LearnerSupportChoiceV1,
+  )
+    ? (candidate as LearnerSupportChoiceV1)
     : "TRY_FIRST";
 }
 
@@ -44,7 +49,8 @@ export default async function CoreBlitzLearnerSupportPage({
 }: PageProps) {
   const [{ itemId }, query] = await Promise.all([
     params,
-    searchParams ?? Promise.resolve({}),
+    searchParams ??
+      Promise.resolve<Record<string, string | string[] | undefined>>({}),
   ]);
 
   let session: Awaited<ReturnType<typeof requireTrustedRepairAccess>>;
@@ -131,7 +137,10 @@ export default async function CoreBlitzLearnerSupportPage({
         ))}
       </nav>
 
-      <section className="space-y-4 rounded-2xl border border-[var(--color-border-default)] bg-[var(--color-background-surface)] p-5" data-core-blitz-support-result>
+      <section
+        className="space-y-4 rounded-2xl border border-[var(--color-border-default)] bg-[var(--color-background-surface)] p-5"
+        data-core-blitz-support-result
+      >
         <div className="space-y-1">
           <p className="text-sm text-[var(--color-text-secondary)]">
             {projection.authority === "SUPPLIED_REFERENCE"
