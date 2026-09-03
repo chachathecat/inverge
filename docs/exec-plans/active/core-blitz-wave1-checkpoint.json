@@ -9,8 +9,8 @@
     "branch": "codex/issue-880-core-blitz-wave1",
     "pullRequest": 882,
     "identityAuthority": "GITHUB_LIVE_PR_REF",
-    "lastObservedHeadSha": "2b1b307533a823d93f021def392223c763efb8ef",
-    "lastObservedHeadTree": "2eede5393bdca059d7a669ed7d6b1b2662acfeb2",
+    "lastObservedHeadSha": "90909d7767208d7ac2e2c747492c6aceb4569bed",
+    "lastObservedHeadTree": "3362a22f9e34c5050da6ea13afa01956cf373d9e",
     "writerLock": "INTEGRATION_WRITER_HELD",
     "readyOrMergeAuthorized": false
   },
@@ -63,11 +63,11 @@
     }
   ],
   "validationEvidence": {
-    "focusedCoreBlitzTests": "RECONSTRUCTED_AWAITING_EXACT_HEAD_CI",
-    "typecheck": "RECONSTRUCTED_AWAITING_EXACT_HEAD_CI",
-    "changedFileLint": "RECONSTRUCTED_AWAITING_EXACT_HEAD_CI",
-    "jsonParse": "RECONSTRUCTED_AWAITING_EXACT_HEAD_CI",
-    "diffCheck": "RECONSTRUCTED_AWAITING_EXACT_HEAD_CI"
+    "focusedCoreBlitzTests": "6_OF_6_LOCAL_RECONSTRUCTION_PASSED",
+    "typecheck": "STRICT_TYPESCRIPT_5_8_3_PASSED",
+    "changedFileLint": "PENDING_EXACT_HEAD_CI",
+    "jsonParse": "PASSED",
+    "diffCheck": "PENDING_EXACT_HEAD_CI"
   },
   "activation": {
     "ownerOnly": true,
