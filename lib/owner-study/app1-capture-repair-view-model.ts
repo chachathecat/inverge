@@ -706,11 +706,6 @@ function hasCompatibleApp1BoundResultDimensions(
   );
 }
 
-function app1CalculationEquals(actual: number, expected: number) {
-  const scale = Math.max(1, Math.abs(actual), Math.abs(expected));
-  return Math.abs(actual - expected) <= Number.EPSILON * scale * 16;
-}
-
 function getApp1CalculationClause(
   value: string,
   calculationStart: number,
@@ -910,10 +905,12 @@ function parseApp1VerbalCalculationOperands(value: string) {
         token: string;
         unit: string | undefined;
         value: number | null;
+        exact: App1ExactDecimal | null;
       } => ({
         token: match[1],
         unit: match[2] || undefined,
         value: parseApp1CalculationNumber(match[1], match[2]),
+        exact: parseApp1ExactDecimal(match[1], match[2]),
       }),
     )
     .filter(
@@ -921,8 +918,9 @@ function parseApp1VerbalCalculationOperands(value: string) {
         token: string;
         unit: string | undefined;
         value: number;
+        exact: App1ExactDecimal;
       } =>
-        operand.value !== null,
+        operand.value !== null && operand.exact !== null,
     );
 }
 
@@ -936,7 +934,7 @@ function hasCorrectClosedPracticeCalculation(value: string) {
   let precedingSymbolicEnd = 0;
   const validatedSymbolicResults: Array<{
     end: number;
-    stated: number;
+    stated: App1ExactDecimal;
     unit: string | undefined;
   }> = [];
   for (const symbolic of symbolicCalculations) {
@@ -946,13 +944,13 @@ function hasCorrectClosedPracticeCalculation(value: string) {
     );
     if (contextualOperands.length > 0) {
       if (contextualOperands.length !== 2) return false;
-      const symbolicLeft = parseApp1CalculationNumber(symbolic[1], symbolic[2]);
-      const symbolicRight = parseApp1CalculationNumber(symbolic[4], symbolic[5]);
+      const symbolicLeft = parseApp1ExactDecimal(symbolic[1], symbolic[2]);
+      const symbolicRight = parseApp1ExactDecimal(symbolic[4], symbolic[5]);
       if (
         symbolicLeft === null ||
         symbolicRight === null ||
-        !app1CalculationEquals(contextualOperands[0].value, symbolicLeft) ||
-        !app1CalculationEquals(contextualOperands[1].value, symbolicRight)
+        !app1ExactDecimalsEqual(contextualOperands[0].exact, symbolicLeft) ||
+        !app1ExactDecimalsEqual(contextualOperands[1].exact, symbolicRight)
       ) {
         return false;
       }
@@ -970,7 +968,15 @@ function hasCorrectClosedPracticeCalculation(value: string) {
     const left = parseApp1CalculationNumber(symbolic[1], symbolic[2]);
     const right = parseApp1CalculationNumber(symbolic[4], symbolic[5]);
     const stated = parseApp1CalculationNumber(symbolic[6], symbolic[7]);
-    if (left === null || right === null || stated === null) return false;
+    const exactStated = parseApp1ExactDecimal(symbolic[6], symbolic[7]);
+    if (
+      left === null ||
+      right === null ||
+      stated === null ||
+      exactStated === null
+    ) {
+      return false;
+    }
     const calculated = evaluateApp1BinaryCalculation(
       left,
       symbolic[3],
@@ -1000,7 +1006,7 @@ function hasCorrectClosedPracticeCalculation(value: string) {
     }
     validatedSymbolicResults.push({
       end: symbolicEnd,
-      stated,
+      stated: exactStated,
       unit: symbolic[7] || undefined,
     });
     precedingSymbolicEnd = symbolicEnd;
@@ -1034,12 +1040,13 @@ function hasCorrectClosedPracticeCalculation(value: string) {
       }
     }
     const stated = parseApp1CalculationNumber(resultMatch[2], resultMatch[3]);
+    const exactStated = parseApp1ExactDecimal(resultMatch[2], resultMatch[3]);
     const materialBeforeResult = value.slice(
       precedingCalculationEnd,
       resultMatch.index,
     );
     const operands = parseApp1VerbalCalculationOperands(materialBeforeResult);
-    if (stated === null) return false;
+    if (stated === null || exactStated === null) return false;
     const operator = parseApp1VerbalCalculationOperator(materialBeforeResult);
     if (operands.length !== 2 || !operator) {
       if (
@@ -1056,7 +1063,7 @@ function hasCorrectClosedPracticeCalculation(value: string) {
             nearestSymbolicResult.unit,
             resultMatch[3],
           ) ||
-          !app1CalculationEquals(nearestSymbolicResult.stated, stated)
+          !app1ExactDecimalsEqual(nearestSymbolicResult.stated, exactStated)
         ) {
           return false;
         }
