@@ -1656,6 +1656,9 @@ test("APP1-VM-003F recalculates closed symbolic and verbal Practice arithmetic",
     "수익 120과 비용 20의 계산 산식은 120 - 20 = 100이고 수익 120에서 비용 20을 빼서는 안 되고 더해 순수익은 100이다, 단위와 부호를 검산했다.",
     "수익 120과 비용 20의 계산 산식은 120 - 20 = 100이고 수익 120에서 비용 20을 빼고 2026년 기준 순수익은 999이다, 단위와 부호를 검산했다.",
     "수익 120과 비용 20의 계산 산식은 120 - 20 = 100이고 수익 120에서 비용 20을 빼고 2026-08-26 기준 순수익은 999이다, 단위와 부호를 검산했다.",
+    "수익 120과 비용 20의 계산 산식은 120 - 20 = 100이고 감정평가액은 999원이다, 단위와 부호를 검산했다.",
+    "수익 120과 비용 20의 계산 산식은 120 - 20 = 100이고 시산가액은 999원이다, 단위와 부호를 검산했다.",
+    "수익 120과 비용 20의 계산 산식은 120 - 20 = 100이고 수익가액은 999원이다, 단위와 부호를 검산했다.",
     "수익 120만원과 비용 20만원의 계산 산식은 120 - 20 = 100원이고 단위와 부호를 검산했다.",
     "수익 120만원과 비용 20만원의 계산 산식은 120만원 - 20만원 = 100원이고 단위와 부호를 검산했다.",
     "수익 120만원과 비용 20만원의 계산 산식은 120원 - 20원 = 100원이고 단위와 부호를 검산했다.",
@@ -1813,9 +1816,72 @@ test("APP1-VM-003F recalculates closed symbolic and verbal Practice arithmetic",
       repairDraft: resolvedTargetDraft({
         strength: correctContextualIsoDate,
       }),
-    }).state,
-    "repair_confirmed_for_this_session",
-  );
+      }).state,
+      "repair_confirmed_for_this_session",
+    );
+  for (const appraisalResultNoun of ["감정평가액", "시산가액", "수익가액"]) {
+    const correctAppraisalResult =
+      `수익 120과 비용 20의 계산 산식은 120 - 20 = 100이고 ${appraisalResultNoun}은 100원이다, 단위와 부호를 검산했다.`;
+    assert.equal(
+      evaluateApp1SameSessionRepair({
+        detail,
+        requestedGap,
+        repairText: correctAppraisalResult,
+        repairDraft: resolvedTargetDraft({ strength: correctAppraisalResult }),
+      }).state,
+      "repair_confirmed_for_this_session",
+      appraisalResultNoun,
+    );
+  }
+});
+
+test("APP1-VM-003G honors only closed explicit Practice rounding", () => {
+  const detail = syntheticDetail({
+    item: {
+      subjectLabel: "감정평가실무",
+      coreFormula: "수익 100 / 환원 배수 3 = 수익가액 33.3",
+    },
+  });
+  const baseGap = buildApp1PrimaryGap(detail, draft());
+  const requestedGap = {
+    ...baseGap,
+    gap: "수익 100과 환원 배수 3의 계산 산식과 반올림 검산이 빠졌습니다.",
+    whyItMatters:
+      "수익과 환원 배수의 계산 결과를 명시한 자리까지 반올림해야 수익가액을 확인할 수 있습니다.",
+    repairAction:
+      "수익 100을 환원 배수 3으로 나누고 소수점 첫째 자리까지 반올림해 검산하세요.",
+  };
+  for (const repairText of [
+    "수익 100과 환원 배수 3의 계산 산식은 100 / 3 = 33.3이고 단위와 부호를 검산했다.",
+    "수익 100과 환원 배수 3의 계산 산식은 100 / 3 = 33.4이고 소수점 첫째 자리까지 반올림했으며 단위와 부호를 검산했다.",
+    "수익 100과 환원 배수 3의 계산 산식은 100 / 3 = 33.3이고 소수점 첫째 자리에서 반올림했으며 단위와 부호를 검산했다.",
+  ]) {
+    assert.equal(
+      evaluateApp1SameSessionRepair({
+        detail,
+        requestedGap,
+        repairText,
+        repairDraft: resolvedTargetDraft({ strength: repairText }),
+      }).state,
+      "one_connection_still_missing",
+      repairText,
+    );
+  }
+  for (const repairText of [
+    "수익 100과 환원 배수 3의 계산 산식은 100 / 3 = 33.3이고 소수점 첫째 자리까지 반올림했으며 단위와 부호를 검산했다.",
+    "수익 100만원과 환원 배수 3의 계산 산식은 100만원 / 3 = 33.3만원이고 소수점 첫째 자리까지 반올림했으며 단위와 부호를 검산했다.",
+  ]) {
+    assert.equal(
+      evaluateApp1SameSessionRepair({
+        detail,
+        requestedGap,
+        repairText,
+        repairDraft: resolvedTargetDraft({ strength: repairText }),
+      }).state,
+      "repair_confirmed_for_this_session",
+      repairText,
+    );
+  }
 });
 
 test("APP1-VM-003C confirms stable out-of-vocabulary targets only with positive learner and draft evidence", () => {

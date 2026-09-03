@@ -591,34 +591,49 @@ const APP1_REPAIR_CALCULATION_NUMBER_PATTERN = new RegExp(
   String.raw`^${APP1_REPAIR_CALCULATION_NUMBER_SOURCE}$`,
   "u",
 );
+const APP1_REPAIR_CALCULATION_RESULT_NOUN_SOURCE =
+  String.raw`결과|합계|차액|순수익|감정평가액|시산가액|수익가액`;
+const APP1_REPAIR_APPRAISAL_RESULT_NOUNS = new Set([
+  "감정평가액",
+  "시산가액",
+  "수익가액",
+]);
 const APP1_REPAIR_CALCULATION_SYMBOL_PATTERN = new RegExp(
   String.raw`(?:^|(?<=[^0-9.,]))(${APP1_REPAIR_CALCULATION_NUMBER_SOURCE})\s*(억원|만원|천원|원)?\s*(\+|-|−|×|\*|÷|\/)\s*(${APP1_REPAIR_CALCULATION_NUMBER_SOURCE})\s*(억원|만원|천원|원)?\s*=\s*(${APP1_REPAIR_CALCULATION_NUMBER_SOURCE})\s*(억원|만원|천원|원)?(?=$|[^0-9.,])`,
   "gu",
 );
 const APP1_REPAIR_VERBAL_CALCULATION_RESULT_PATTERN = new RegExp(
-  String.raw`(?:^|(?<=[\s,.;:()[\]{}]))(결과|합계|차액|순수익)(?:은|는|이|가)?\s*(${APP1_REPAIR_CALCULATION_NUMBER_SOURCE})\s*(억원|만원|천원|원)?(?:(?:을|를|으로|로)\s*(?:계산|산출|검산)|(이다|입니다|이었다|이었습니다|였다|였습니다))`,
+  String.raw`(?:^|(?<=[\s,.;:()[\]{}]))(${APP1_REPAIR_CALCULATION_RESULT_NOUN_SOURCE})(?:은|는|이|가)?\s*(${APP1_REPAIR_CALCULATION_NUMBER_SOURCE})\s*(억원|만원|천원|원)?(?:(?:을|를|으로|로)\s*(?:계산|산출|검산)|(이다|입니다|이었다|이었습니다|였다|였습니다))`,
   "gu",
 );
-const APP1_REPAIR_VERBAL_CALCULATION_RESULT_CANDIDATE_PATTERN =
-  /(?:^|(?<=[\s,.;:()[\]{}]))(?:결과|합계|차액|순수익)(?:은|는|이|가)?\s*-?[0-9][0-9.,]*\s*(?:억원|만원|천원|원)?(?:(?:을|를|으로|로)\s*(?:계산|산출|검산)|(?:이다|입니다|이었다|이었습니다|였다|였습니다))/gu;
+const APP1_REPAIR_VERBAL_CALCULATION_RESULT_CANDIDATE_PATTERN = new RegExp(
+  String.raw`(?:^|(?<=[\s,.;:()[\]{}]))(?:${APP1_REPAIR_CALCULATION_RESULT_NOUN_SOURCE})(?:은|는|이|가)?\s*-?[0-9][0-9.,]*\s*(?:억원|만원|천원|원)?(?:(?:을|를|으로|로)\s*(?:계산|산출|검산)|(?:이다|입니다|이었다|이었습니다|였다|였습니다))`,
+  "gu",
+);
 const APP1_REPAIR_VERBAL_CALCULATION_OPERATOR_PATTERN =
   /(빼|더하|더해|곱하|곱해|나누|나눠)/gu;
 const APP1_REPAIR_CONTEXT_DATE_PATTERN =
   /(?<![0-9])(?:[12][0-9]{3})[-/.](?:0[1-9]|1[0-2])[-/.](?:0[1-9]|[12][0-9]|3[01])(?![0-9])/gu;
+const APP1_REPAIR_ROUNDING_PATTERN =
+  /소수점\s*(첫째|둘째|셋째|[0-6])\s*자리(?:까지|로)\s*반올림/gu;
+const APP1_REPAIR_SENTENCE_BOUNDARY_PATTERN =
+  /(?:\r?\n|[!?。！？]+|(?<![0-9])\.|\.(?![0-9]))+/u;
+
+function app1CalculationUnitScale(unit?: string) {
+  return unit === "억원"
+    ? 100_000_000
+    : unit === "만원"
+      ? 10_000
+      : unit === "천원"
+        ? 1_000
+        : 1;
+}
 
 function parseApp1CalculationNumber(value: string, unit?: string) {
   if (!APP1_REPAIR_CALCULATION_NUMBER_PATTERN.test(value)) return null;
   const parsed = Number(value.replace(/,/gu, ""));
   if (!Number.isFinite(parsed)) return null;
-  const scale =
-    unit === "억원"
-      ? 100_000_000
-      : unit === "만원"
-        ? 10_000
-        : unit === "천원"
-          ? 1_000
-          : 1;
-  return parsed * scale;
+  return parsed * app1CalculationUnitScale(unit);
 }
 
 function hasCompatibleApp1CalculationDimensions(
@@ -656,9 +671,71 @@ function hasCompatibleApp1CalculationDimensions(
   return false;
 }
 
+function hasCompatibleApp1BoundResultDimensions(
+  sourceUnit?: string,
+  resultUnit?: string,
+) {
+  const sourceIsCurrency = sourceUnit !== undefined;
+  const resultIsCurrency = resultUnit !== undefined;
+  return (
+    (sourceIsCurrency && resultIsCurrency) ||
+    (!sourceIsCurrency && (!resultIsCurrency || resultUnit === "원"))
+  );
+}
+
 function app1CalculationEquals(actual: number, expected: number) {
   const scale = Math.max(1, Math.abs(actual), Math.abs(expected));
   return Math.abs(actual - expected) <= Number.EPSILON * scale * 16;
+}
+
+function getApp1CalculationClause(
+  value: string,
+  calculationStart: number,
+  calculationEnd: number,
+) {
+  const before = value.slice(0, calculationStart);
+  const priorBoundaries = [
+    ...before.matchAll(/(?:\r?\n|[!?]|\.(?=\s))/gu),
+  ];
+  const priorBoundary = priorBoundaries.at(-1);
+  const clauseStart = priorBoundary
+    ? (priorBoundary.index ?? -1) + priorBoundary[0].length
+    : 0;
+  const after = value.slice(calculationEnd);
+  const nextBoundary = after.search(/(?:\r?\n|[!?]|\.(?=\s|$))/u);
+  const clauseEnd =
+    nextBoundary === -1 ? value.length : calculationEnd + nextBoundary;
+  return value.slice(clauseStart, clauseEnd);
+}
+
+function parseApp1DeclaredRoundingPlaces(value: string) {
+  if (!value.includes("반올림")) return undefined;
+  const matches = [...value.matchAll(APP1_REPAIR_ROUNDING_PATTERN)];
+  if (matches.length !== 1) return null;
+  const token = matches[0][1];
+  if (token === "첫째") return 1;
+  if (token === "둘째") return 2;
+  if (token === "셋째") return 3;
+  const places = Number(token);
+  return Number.isInteger(places) && places >= 0 && places <= 6 ? places : null;
+}
+
+function app1CalculationMatchesDeclaredResult(
+  calculated: number,
+  stated: number,
+  resultUnit: string | undefined,
+  clause: string,
+) {
+  const roundingPlaces = parseApp1DeclaredRoundingPlaces(clause);
+  if (roundingPlaces === null) return false;
+  if (roundingPlaces === undefined) {
+    return app1CalculationEquals(calculated, stated);
+  }
+  const resultScale = app1CalculationUnitScale(resultUnit);
+  const factor = 10 ** roundingPlaces;
+  const rounded =
+    (Math.round((calculated / resultScale) * factor) / factor) * resultScale;
+  return app1CalculationEquals(rounded, stated);
 }
 
 function evaluateApp1BinaryCalculation(
@@ -739,6 +816,11 @@ function hasCorrectClosedPracticeCalculation(value: string) {
     return false;
   }
   let precedingSymbolicEnd = 0;
+  const validatedSymbolicResults: Array<{
+    end: number;
+    stated: number;
+    unit: string | undefined;
+  }> = [];
   for (const symbolic of symbolicCalculations) {
     if (symbolic.index === undefined) return false;
     const contextualOperands = parseApp1VerbalCalculationOperands(
@@ -776,10 +858,24 @@ function hasCorrectClosedPracticeCalculation(value: string) {
       symbolic[3],
       right,
     );
-    if (calculated === null || !app1CalculationEquals(calculated, stated)) {
+    const symbolicEnd = symbolic.index + symbolic[0].length;
+    if (
+      calculated === null ||
+      !app1CalculationMatchesDeclaredResult(
+        calculated,
+        stated,
+        symbolic[7],
+        getApp1CalculationClause(value, symbolic.index, symbolicEnd),
+      )
+    ) {
       return false;
     }
-    precedingSymbolicEnd = symbolic.index + symbolic[0].length;
+    validatedSymbolicResults.push({
+      end: symbolicEnd,
+      stated,
+      unit: symbolic[7] || undefined,
+    });
+    precedingSymbolicEnd = symbolicEnd;
   }
 
   const verbalCalculations = [
@@ -795,15 +891,18 @@ function hasCorrectClosedPracticeCalculation(value: string) {
   let validatedVerbalCalculations = 0;
   for (const resultMatch of verbalCalculations) {
     if (resultMatch.index === undefined) return false;
-    for (const symbolic of symbolicCalculations) {
-      if (
-        symbolic.index !== undefined &&
-        symbolic.index + symbolic[0].length <= resultMatch.index
-      ) {
-        precedingCalculationEnd = Math.max(
-          precedingCalculationEnd,
-          symbolic.index + symbolic[0].length,
-        );
+    let nearestSymbolicResult:
+      | (typeof validatedSymbolicResults)[number]
+      | undefined;
+    for (const symbolic of validatedSymbolicResults) {
+      if (symbolic.end <= resultMatch.index) {
+        precedingCalculationEnd = Math.max(precedingCalculationEnd, symbolic.end);
+        if (
+          nearestSymbolicResult === undefined ||
+          symbolic.end > nearestSymbolicResult.end
+        ) {
+          nearestSymbolicResult = symbolic;
+        }
       }
     }
     const stated = parseApp1CalculationNumber(resultMatch[2], resultMatch[3]);
@@ -820,6 +919,21 @@ function hasCorrectClosedPracticeCalculation(value: string) {
         operands.length === 0 &&
         !operator
       ) {
+        if (!APP1_REPAIR_APPRAISAL_RESULT_NOUNS.has(resultMatch[1])) {
+          continue;
+        }
+        if (
+          nearestSymbolicResult === undefined ||
+          !hasCompatibleApp1BoundResultDimensions(
+            nearestSymbolicResult.unit,
+            resultMatch[3],
+          ) ||
+          !app1CalculationEquals(nearestSymbolicResult.stated, stated)
+        ) {
+          return false;
+        }
+        validatedVerbalCalculations += 1;
+        precedingCalculationEnd = resultMatch.index + resultMatch[0].length;
         continue;
       }
       return false;
@@ -840,11 +954,20 @@ function hasCorrectClosedPracticeCalculation(value: string) {
       operator,
       operands[1].value,
     );
-    if (calculated === null || !app1CalculationEquals(calculated, stated)) {
+    const resultEnd = resultMatch.index + resultMatch[0].length;
+    if (
+      calculated === null ||
+      !app1CalculationMatchesDeclaredResult(
+        calculated,
+        stated,
+        resultMatch[3],
+        getApp1CalculationClause(value, resultMatch.index, resultEnd),
+      )
+    ) {
       return false;
     }
     validatedVerbalCalculations += 1;
-    precedingCalculationEnd = resultMatch.index + resultMatch[0].length;
+    precedingCalculationEnd = resultEnd;
   }
   return symbolicCalculations.length > 0 || validatedVerbalCalculations > 0;
 }
@@ -1001,7 +1124,7 @@ function hasSubstantiveRepairSupport(
     return false;
   }
   return value
-    .split(/[.!?\n。！？]+/u)
+    .split(APP1_REPAIR_SENTENCE_BOUNDARY_PATTERN)
     .map((segment) => segment.trim())
     .filter(Boolean)
     .some((segment) => {
@@ -1137,7 +1260,7 @@ function repairEvidencePolarities(
 ) {
   const polarities = new Set<"affirmative" | "negative">();
   for (const segment of value
-    .split(/[.!?\n。！？]+/u)
+    .split(APP1_REPAIR_SENTENCE_BOUNDARY_PATTERN)
     .map((candidate) => candidate.trim())
     .filter(Boolean)) {
     if (
