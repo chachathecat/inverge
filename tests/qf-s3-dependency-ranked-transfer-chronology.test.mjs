@@ -1040,6 +1040,13 @@ test("QFS3-CONFIG-024 config binds exact closed states and limits", () => {
   });
   assert.deepEqual(config.completenessStatesExactly, ["COMPLETE", "INCOMPLETE"]);
   assert.deepEqual(config.limits, contracts.QFS3_LIMITS);
+  assert.deepEqual(config.variantRequirementBinding, {
+    canonicalDigestDomain: "QFS3_VARIANT_REQUIREMENTS_DIGEST_V1",
+    outputDigestField: "variantRequirementsDigest",
+    bindsVariantIdDigestAndDeclaredValidatorProfileRefs: true,
+    boundIntoChronologyIdAndDigest: true,
+    incompleteChronologyRequirementsRemainBound: true,
+  });
   assert.equal(config.sourceOnlyBoundary.receiptDigest, qf0a1.digestCanonicalJsonV1(clone(contracts.QFS3_SOURCE_ONLY_BOUNDARY_RECEIPT)));
 });
 
@@ -1073,7 +1080,7 @@ test("QFS3-CAPACITY-025 advertised 8 by 4 maximum is constructible within QF-0A1
   const canonicalSnapshot = clone(chronology);
   const canonical = qf0a1.canonicalizeBoundedJsonV1(canonicalSnapshot);
   const canonicalBytes = Buffer.byteLength(canonical, "utf8");
-  assert.equal(canonicalBytes, 154_625);
+  assert.equal(canonicalBytes, 154_727);
   assert.ok(canonicalBytes <= qf0a1.QF0A1_LIMITS.maxCanonicalOutputBytes);
   assert.equal(
     qf0a1.digestCanonicalJsonV1(canonicalSnapshot),
@@ -1182,5 +1189,57 @@ test("QFS3-CAPACITY-028 every receipt actor must resolve exactly", () => {
   assert.throws(
     () => core.assertDependencyRankedTransferChronologyV1(chronology, input),
     /OUTPUT_RECEIPT_ACTOR_UNKNOWN/u,
+  );
+});
+
+test("QFS3-IDENTITY-029 incomplete chronology binds every variant requirement", () => {
+  const input = completeInput();
+  input.receipts = input.receipts.filter((entry) =>
+    ["CANDIDATE_PRELUDE_BOUND", "SIMILARITY_REVIEW_BOUND"].includes(entry.kind),
+  );
+  const chronology = core.createDependencyRankedTransferChronologyV1(input);
+  assert.equal(chronology.completeness, "INCOMPLETE");
+
+  const changes = [
+    (changed) => {
+      changed.variants[0].variantId = variantId("c");
+    },
+    (changed) => {
+      changed.variants[0].variantDigest = digest("d");
+    },
+    (changed) => {
+      changed.variants[0].declaredValidatorProfileRefs = [
+        qf0b.createOpaqueRegistryRefV1(
+          refMaterial("VALIDATOR_PROFILE", "e"),
+        ),
+      ];
+    },
+  ];
+  for (const change of changes) {
+    const changed = clone(input);
+    change(changed);
+    const changedChronology = core.createDependencyRankedTransferChronologyV1(changed);
+    assert.notEqual(changedChronology.variantRequirementsDigest, chronology.variantRequirementsDigest);
+    assert.notEqual(changedChronology.chronologyId, chronology.chronologyId);
+    assert.notEqual(changedChronology.chronologyDigest, chronology.chronologyDigest);
+    assert.throws(
+      () => core.assertDependencyRankedTransferChronologyV1(chronology, changed),
+      /CHRONOLOGY_AUTHORITY_RECOMPUTE_MISMATCH/u,
+    );
+  }
+});
+
+test("QFS3-ACTOR-030 root-only chronology accepts one shared exact actor", () => {
+  const input = completeInput();
+  input.receipts = input.receipts.filter((entry) =>
+    ["CANDIDATE_PRELUDE_BOUND", "SIMILARITY_REVIEW_BOUND"].includes(entry.kind),
+  );
+  input.receipts[1].actor = clone(input.receipts[0].actor);
+  const chronology = core.createDependencyRankedTransferChronologyV1(input);
+  assert.equal(chronology.completeness, "INCOMPLETE");
+  assert.equal(chronology.actors.length, 1);
+  assert.deepEqual(
+    core.assertDependencyRankedTransferChronologyV1(chronology, input),
+    chronology,
   );
 });

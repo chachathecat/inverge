@@ -206,6 +206,13 @@
     "maxPredecessorsPerReceipt": 9,
     "callerOverride": false
   },
+  "variantRequirementBinding": {
+    "canonicalDigestDomain": "QFS3_VARIANT_REQUIREMENTS_DIGEST_V1",
+    "outputDigestField": "variantRequirementsDigest",
+    "bindsVariantIdDigestAndDeclaredValidatorProfileRefs": true,
+    "boundIntoChronologyIdAndDigest": true,
+    "incompleteChronologyRequirementsRemainBound": true
+  },
   "ordering": [
     "topological_dependency_rank",
     "occurredAt",

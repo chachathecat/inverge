@@ -62,6 +62,18 @@ Missing evidence can produce only `INCOMPLETE` with closed blocking reasons.
 It can never be hidden by an aggregate. Supplying an aggregate before its
 final causal receipt fails closed.
 
+Every chronology exposes a metadata-only `variantRequirementsDigest`. It is
+derived from the canonical byte-ordered variant IDs, variant digests, and
+declared validator-profile references, and is bound into both the chronology
+ID and chronology digest. Therefore an incomplete chronology still identifies
+the exact evidence that was required but absent; changing an unsealed variant
+or an unrun declared validator changes the chronology identity.
+
+The two mandatory root receipts may truthfully share one exact system actor.
+Construction deduplicates that identity, so a valid root-only incomplete
+chronology may contain one actor. Every retained actor must still be used by a
+receipt, and every receipt actor must resolve exactly.
+
 The stable order is:
 
 1. topological dependency rank;
@@ -111,7 +123,7 @@ used actor per receipt makes the exact actor ceiling 76. The transfer
 aggregate's similarity root plus eight variant aggregates makes the exact
 predecessor ceiling 9.
 
-The full maximum result canonicalizes to 154,625 UTF-8 bytes, below the
+The full maximum result canonicalizes to 154,727 UTF-8 bytes, below the
 unchanged QF-0A1 ceiling of 262,144 bytes. The maximum fixture also remains
 within QF-0A1 entry, inspection, depth, and comparison limits. Callers cannot
 override any limit, and no evidence is truncated or compressed to fit.

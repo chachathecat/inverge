@@ -147,6 +147,7 @@ export interface DependencyRankedTransferChronologyV1 {
   readonly candidateDigest: string;
   readonly qfS1ReviewDigest: string;
   readonly qfS2PreludeDigest: string;
+  readonly variantRequirementsDigest: string;
   readonly actors: readonly TransferChronologyActorV1[];
   readonly receipts: readonly DependencyRankedTransferReceiptV1[];
   readonly startedAt: string;

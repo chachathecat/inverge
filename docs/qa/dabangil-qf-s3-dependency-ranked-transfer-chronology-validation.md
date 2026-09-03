@@ -37,11 +37,19 @@ The focused suite covers:
 The capacity fixture constructs the complete advertised maximum: 8 variants,
 4 declared validators per variant, 76 receipts, 76 used actors, and a transfer
 aggregate with 9 predecessors. Creation, assertion, canonicalization, and
-canonical digesting all succeed. The canonical closed snapshot is 154,625
+canonical digesting all succeed. The canonical closed snapshot is 154,727
 UTF-8 bytes, below QF-0A1's unchanged 262,144-byte ceiling. A ninth variant,
 fifth validator, seventy-seventh receipt, actor overflow, orphan actor, and
 unknown receipt actor all fail closed. Reversed input order produces the same
 chronology, and the existing locale test remains green.
+
+The first exact-head formal review identified two actionable P2 boundaries in
+the incomplete chronology path. The bounded correction binds the canonical
+variant ID, variant digest, and declared validator-profile requirements into
+`variantRequirementsDigest`, which is included in the chronology identity and
+digest even when receipts are absent. It also permits the truthful one-actor
+minimum when both mandatory roots share the same exact system-component
+identity, while retaining unknown-actor and orphan-actor rejection.
 
 The suite also confirms discovery of the inherited focused QF-0A1, QF-0A2,
 QF-0B, QF-0I, QF-S1A, QF-S1B, and QF-S2 tests. Final evidence must actually
@@ -68,7 +76,7 @@ runtime validation for this source-only foundation.
 
 ## Final local candidate result
 
-- QF-S3 focused: 31/31 passed.
+- QF-S3 focused: 33/33 passed.
 - Inherited behavioral assertions: 200/200 applicable assertions passed; nine
   predecessor-only branch/aggregate-manifest assertions are intentionally not
   descendant-branch behavior evidence.
@@ -76,11 +84,11 @@ runtime validation for this source-only foundation.
 - JSON identity (20 dependency file identities), exact six-path manifest, and
   `git diff --check`: passed.
 - QF-S3 config SHA-256:
-  `3067a43771ccbb2df3e85a7f4f65f6bbf348255a31173539ce42963aab2c0db0`.
+  `8d3fc3788f53796ada2474527c6426d79b25ad8841224f246cbfb5d3c4efbac4`.
 - QF-S3 contract implementation SHA-256:
-  `d6ebd98d3807dcc3a5d8fe3d0afca4eaeeb803ee45b56b3ea04ec0692c5feedd`.
+  `d1f04ddba1d98aa31e3558c4c09a7a3df60dceee4d940d982eb3d112a971b578`.
 - QF-S3 core implementation SHA-256:
-  `8a672200a20504aa497f87a4cda15eea10a8e71c24426acdc3986ebb7cd8c115`.
+  `978400e4766e8d22dd53a6edfe2740ffa3104103054e132f513cb899bb29b6bb`.
 - QF-S3 source-only boundary receipt digest:
   `sha256:59d1f6122332905ef60776e5cf11f0276e14d2f61650306d5013e90fb8cf9076`.
 

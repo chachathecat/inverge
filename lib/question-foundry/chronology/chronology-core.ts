@@ -78,6 +78,7 @@ const CHRONOLOGY_FIELDS = Object.freeze([
   "candidateDigest",
   "qfS1ReviewDigest",
   "qfS2PreludeDigest",
+  "variantRequirementsDigest",
   "actors",
   "receipts",
   "startedAt",
@@ -1028,11 +1029,20 @@ function buildChronology(value: unknown): DependencyRankedTransferChronologyV1 {
   ) {
     fail("CANDIDATE_QFS1_QFS2_CROSS_BINDING_DRIFT");
   }
-  const variants = readDenseArray(record.variants, 1, QFS3_LIMITS.maxVariants, "VARIANTS").map(
-    readVariant,
+  const variants = Object.freeze(
+    orderByUtf8(
+      readDenseArray(record.variants, 1, QFS3_LIMITS.maxVariants, "VARIANTS").map(
+        readVariant,
+      ),
+      (variant) => `${variant.variantId}/${variant.variantDigest}`,
+    ),
   );
   assertUniqueStrings(variants.map((variant) => variant.variantId), "VARIANT_ID");
   assertUniqueStrings(variants.map((variant) => variant.variantDigest), "VARIANT_DIGEST");
+  const variantRequirementsDigest = qf0a1.digestCanonicalJsonV1(plain({
+    domain: "QFS3_VARIANT_REQUIREMENTS_DIGEST_V1",
+    variants,
+  }));
   const variantById = new Map(variants.map((variant) => [variant.variantId, variant]));
   const receiptInputs = readDenseArray(
     record.receipts,
@@ -1125,6 +1135,7 @@ function buildChronology(value: unknown): DependencyRankedTransferChronologyV1 {
     candidateDigest: candidate.candidateDigest,
     qfS1ReviewDigest: review.reviewDigest,
     qfS2PreludeDigest: prelude.preludeDigest,
+    variantRequirementsDigest,
     actors,
     receipts,
     startedAt,
@@ -1225,7 +1236,7 @@ function parseReceipt(value: unknown, index: number): DependencyRankedTransferRe
 function parseChronology(value: unknown): DependencyRankedTransferChronologyV1 {
   const record = readClosedRecord(value, CHRONOLOGY_FIELDS, "OUTPUT_CHRONOLOGY");
   const actors = Object.freeze(
-    readDenseArray(record.actors, 2, QFS3_LIMITS.maxActors, "OUTPUT_ACTORS").map(parseActor),
+    readDenseArray(record.actors, 1, QFS3_LIMITS.maxActors, "OUTPUT_ACTORS").map(parseActor),
   );
   const receipts = Object.freeze(
     readDenseArray(record.receipts, 2, QFS3_LIMITS.maxEvidenceReceipts, "OUTPUT_RECEIPTS").map(parseReceipt),
@@ -1248,6 +1259,10 @@ function parseChronology(value: unknown): DependencyRankedTransferChronologyV1 {
     candidateDigest: readDigest(record.candidateDigest, "OUTPUT_CANDIDATE_DIGEST"),
     qfS1ReviewDigest: readDigest(record.qfS1ReviewDigest, "OUTPUT_QFS1_DIGEST"),
     qfS2PreludeDigest: readDigest(record.qfS2PreludeDigest, "OUTPUT_QFS2_DIGEST"),
+    variantRequirementsDigest: readDigest(
+      record.variantRequirementsDigest,
+      "OUTPUT_VARIANT_REQUIREMENTS_DIGEST",
+    ),
     actors,
     receipts,
     startedAt: readCanonicalUtc(record.startedAt, "OUTPUT_STARTED_AT"),
