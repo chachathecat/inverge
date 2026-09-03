@@ -593,6 +593,8 @@ const APP1_REPAIR_CALCULATION_NUMBER_PATTERN = new RegExp(
 );
 const APP1_REPAIR_CALCULATION_RESULT_NOUN_SOURCE =
   String.raw`결과|합계|차액|순수익|감정평가액|시산가액|수익가액`;
+const APP1_REPAIR_APPRAISAL_RESULT_NOUN_SOURCE =
+  String.raw`감정평가액|시산가액|수익가액`;
 const APP1_REPAIR_APPRAISAL_RESULT_NOUNS = new Set([
   "감정평가액",
   "시산가액",
@@ -603,11 +605,23 @@ const APP1_REPAIR_CALCULATION_SYMBOL_PATTERN = new RegExp(
   "gu",
 );
 const APP1_REPAIR_VERBAL_CALCULATION_RESULT_PATTERN = new RegExp(
-  String.raw`(?:^|(?<=[\s,.;:()[\]{}]))(${APP1_REPAIR_CALCULATION_RESULT_NOUN_SOURCE})(?:은|는|이|가|을|를)?\s*(${APP1_REPAIR_CALCULATION_NUMBER_SOURCE})\s*(억원|만원|천원|원)?(?:(?:을|를|으로|로)\s*(?:계산|산출|검산)|((?:을|를|으로|로)\s*(?:결정|산정)|이다|입니다|이었다|이었습니다|였다|였습니다))`,
+  String.raw`(?:^|(?<=[\s,.;:()[\]{}]))(${APP1_REPAIR_CALCULATION_RESULT_NOUN_SOURCE})(?:은|는|이|가|을|를)?\s*(${APP1_REPAIR_CALCULATION_NUMBER_SOURCE})\s*(억원|만원|천원|원)?(?:(?:을|를|으로|로)\s*(?:계산|산출|검산)|(이다|입니다|이었다|이었습니다|였다|였습니다))`,
   "gu",
 );
 const APP1_REPAIR_VERBAL_CALCULATION_RESULT_CANDIDATE_PATTERN = new RegExp(
-  String.raw`(?:^|(?<=[\s,.;:()[\]{}]))(?:${APP1_REPAIR_CALCULATION_RESULT_NOUN_SOURCE})(?:은|는|이|가|을|를)?\s*-?[0-9][0-9.,]*\s*(?:억원|만원|천원|원)?(?:(?:을|를|으로|로)\s*(?:계산|산출|검산|결정|산정)|(?:이다|입니다|이었다|이었습니다|였다|였습니다))`,
+  String.raw`(?:^|(?<=[\s,.;:()[\]{}]))(?:${APP1_REPAIR_CALCULATION_RESULT_NOUN_SOURCE})(?:은|는|이|가|을|를)?\s*-?[0-9][0-9.,]*\s*(?:억원|만원|천원|원)?(?:(?:을|를|으로|로)\s*(?:계산|산출|검산)|(?:이다|입니다|이었다|이었습니다|였다|였습니다))`,
+  "gu",
+);
+const APP1_REPAIR_APPRAISAL_RESULT_NOUN_PATTERN = new RegExp(
+  String.raw`(?:^|(?<=[\s,.;:()[\]{}]))(${APP1_REPAIR_APPRAISAL_RESULT_NOUN_SOURCE})(?:은|는|이|가|을|를)?`,
+  "gu",
+);
+const APP1_REPAIR_APPRAISAL_ASSIGNMENT_PATTERN = new RegExp(
+  String.raw`(?:^|(?<=[^0-9.,]))(${APP1_REPAIR_CALCULATION_NUMBER_SOURCE})\s*(억원|만원|천원|원)?(?:을|를|으로|로)\s*(결정|산정)(\s*하지)?`,
+  "gu",
+);
+const APP1_REPAIR_APPRAISAL_ASSIGNMENT_CANDIDATE_PATTERN = new RegExp(
+  String.raw`(?:^|(?<=[^0-9.,]))-?[0-9][0-9.,]*\s*(?:억원|만원|천원|원)?(?:을|를|으로|로)\s*(?:결정|산정)(?:\s*하지)?`,
   "gu",
 );
 const APP1_REPAIR_VERBAL_CALCULATION_OPERATOR_PATTERN =
@@ -622,6 +636,16 @@ const APP1_REPAIR_SENTENCE_BOUNDARY_PATTERN =
 type App1ExactDecimal = Readonly<{
   numerator: bigint;
   denominator: bigint;
+}>;
+
+type App1VerbalCalculationResult = Readonly<{
+  index: number;
+  length: number;
+  noun: string;
+  token: string;
+  unit: string | undefined;
+  boundDeclaration: boolean;
+  appraisalAssignment: boolean;
 }>;
 
 function app1CalculationUnitScale(unit?: string) {
@@ -924,6 +948,57 @@ function parseApp1VerbalCalculationOperands(value: string) {
     );
 }
 
+function parseApp1AppraisalAssignments(
+  value: string,
+): readonly App1VerbalCalculationResult[] | null {
+  const nouns = [
+    ...value.matchAll(APP1_REPAIR_APPRAISAL_RESULT_NOUN_PATTERN),
+  ];
+  const assignments: App1VerbalCalculationResult[] = [];
+  for (const [nounIndex, noun] of nouns.entries()) {
+    if (noun.index === undefined) return null;
+    const segmentStart = noun.index + noun[0].length;
+    const remaining = value.slice(segmentStart);
+    const sentenceBoundary = remaining.search(
+      APP1_REPAIR_SENTENCE_BOUNDARY_PATTERN,
+    );
+    const nextNounIndex = nouns[nounIndex + 1]?.index;
+    const segmentEnd = Math.min(
+      sentenceBoundary === -1
+        ? value.length
+        : segmentStart + sentenceBoundary,
+      nextNounIndex ?? value.length,
+    );
+    const segment = value.slice(segmentStart, segmentEnd);
+    const exactAssignments = [
+      ...segment.matchAll(APP1_REPAIR_APPRAISAL_ASSIGNMENT_PATTERN),
+    ];
+    if (
+      [
+        ...segment.matchAll(
+          APP1_REPAIR_APPRAISAL_ASSIGNMENT_CANDIDATE_PATTERN,
+        ),
+      ].length !== exactAssignments.length
+    ) {
+      return null;
+    }
+    for (const assignment of exactAssignments) {
+      if (assignment.index === undefined) return null;
+      if (assignment[4] !== undefined) continue;
+      assignments.push({
+        index: segmentStart + assignment.index,
+        length: assignment[0].length,
+        noun: noun[1],
+        token: assignment[1],
+        unit: assignment[2] || undefined,
+        boundDeclaration: true,
+        appraisalAssignment: true,
+      });
+    }
+  }
+  return assignments;
+}
+
 function hasCorrectClosedPracticeCalculation(value: string) {
   const symbolicCalculations = [
     ...value.matchAll(APP1_REPAIR_CALCULATION_SYMBOL_PATTERN),
@@ -1012,19 +1087,33 @@ function hasCorrectClosedPracticeCalculation(value: string) {
     precedingSymbolicEnd = symbolicEnd;
   }
 
-  const verbalCalculations = [
+  const directVerbalMatches = [
     ...value.matchAll(APP1_REPAIR_VERBAL_CALCULATION_RESULT_PATTERN),
   ];
   if (
     [...value.matchAll(APP1_REPAIR_VERBAL_CALCULATION_RESULT_CANDIDATE_PATTERN)]
-      .length !== verbalCalculations.length
+      .length !== directVerbalMatches.length
   ) {
     return false;
   }
+  const appraisalAssignments = parseApp1AppraisalAssignments(value);
+  if (appraisalAssignments === null) return false;
+  const verbalCalculations: App1VerbalCalculationResult[] = [
+    ...directVerbalMatches.map((match) => ({
+      index: match.index ?? -1,
+      length: match[0].length,
+      noun: match[1],
+      token: match[2],
+      unit: match[3] || undefined,
+      boundDeclaration: match[4] !== undefined,
+      appraisalAssignment: false,
+    })),
+    ...appraisalAssignments,
+  ].sort((left, right) => left.index - right.index);
   let precedingCalculationEnd = 0;
   let validatedVerbalCalculations = 0;
   for (const resultMatch of verbalCalculations) {
-    if (resultMatch.index === undefined) return false;
+    if (resultMatch.index < 0) return false;
     let nearestSymbolicResult:
       | (typeof validatedSymbolicResults)[number]
       | undefined;
@@ -1039,8 +1128,33 @@ function hasCorrectClosedPracticeCalculation(value: string) {
         }
       }
     }
-    const stated = parseApp1CalculationNumber(resultMatch[2], resultMatch[3]);
-    const exactStated = parseApp1ExactDecimal(resultMatch[2], resultMatch[3]);
+    const stated = parseApp1CalculationNumber(
+      resultMatch.token,
+      resultMatch.unit,
+    );
+    const exactStated = parseApp1ExactDecimal(
+      resultMatch.token,
+      resultMatch.unit,
+    );
+    const resultEnd = resultMatch.index + resultMatch.length;
+    if (resultMatch.appraisalAssignment) {
+      if (
+        stated === null ||
+        exactStated === null ||
+        !APP1_REPAIR_APPRAISAL_RESULT_NOUNS.has(resultMatch.noun) ||
+        nearestSymbolicResult === undefined ||
+        !hasCompatibleApp1BoundResultDimensions(
+          nearestSymbolicResult.unit,
+          resultMatch.unit,
+        ) ||
+        !app1ExactDecimalsEqual(nearestSymbolicResult.stated, exactStated)
+      ) {
+        return false;
+      }
+      validatedVerbalCalculations += 1;
+      precedingCalculationEnd = resultEnd;
+      continue;
+    }
     const materialBeforeResult = value.slice(
       precedingCalculationEnd,
       resultMatch.index,
@@ -1050,25 +1164,25 @@ function hasCorrectClosedPracticeCalculation(value: string) {
     const operator = parseApp1VerbalCalculationOperator(materialBeforeResult);
     if (operands.length !== 2 || !operator) {
       if (
-        resultMatch[4] !== undefined &&
+        resultMatch.boundDeclaration &&
         operands.length === 0 &&
         !operator
       ) {
-        if (!APP1_REPAIR_APPRAISAL_RESULT_NOUNS.has(resultMatch[1])) {
+        if (!APP1_REPAIR_APPRAISAL_RESULT_NOUNS.has(resultMatch.noun)) {
           continue;
         }
         if (
           nearestSymbolicResult === undefined ||
           !hasCompatibleApp1BoundResultDimensions(
             nearestSymbolicResult.unit,
-            resultMatch[3],
+            resultMatch.unit,
           ) ||
           !app1ExactDecimalsEqual(nearestSymbolicResult.stated, exactStated)
         ) {
           return false;
         }
         validatedVerbalCalculations += 1;
-        precedingCalculationEnd = resultMatch.index + resultMatch[0].length;
+        precedingCalculationEnd = resultMatch.index + resultMatch.length;
         continue;
       }
       return false;
@@ -1078,7 +1192,7 @@ function hasCorrectClosedPracticeCalculation(value: string) {
         operator,
         operands[0].unit,
         operands[1].unit,
-        resultMatch[3],
+        resultMatch.unit,
         true,
       )
     ) {
@@ -1101,12 +1215,11 @@ function hasCorrectClosedPracticeCalculation(value: string) {
       exactLeft && exactRight
         ? evaluateApp1ExactBinaryCalculation(exactLeft, operator, exactRight)
         : null;
-    const resultEnd = resultMatch.index + resultMatch[0].length;
     if (
       calculated === null ||
       !app1CalculationMatchesDeclaredResult(
-        resultMatch[2],
-        resultMatch[3],
+        resultMatch.token,
+        resultMatch.unit,
         getApp1CalculationClause(value, resultMatch.index, resultEnd),
         exactCalculation,
       )
