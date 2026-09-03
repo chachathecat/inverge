@@ -617,11 +617,11 @@ const APP1_REPAIR_APPRAISAL_RESULT_NOUN_PATTERN = new RegExp(
   "gu",
 );
 const APP1_REPAIR_APPRAISAL_ASSIGNMENT_PATTERN = new RegExp(
-  String.raw`(?:^|(?<=[^0-9.,]))(${APP1_REPAIR_CALCULATION_NUMBER_SOURCE})\s*(억원|만원|천원|원)?(?:을|를|으로|로)\s*(결정|산정)(\s*하지)?`,
+  String.raw`(?:^|(?<=[^0-9.,]))(${APP1_REPAIR_CALCULATION_NUMBER_SOURCE})\s*(억원|만원|천원|원)?(?:을|를|으로|로)\s*(결정|산정)(\s*하지(?:는|도)?\s*(?:않|못|아니|말))?`,
   "gu",
 );
 const APP1_REPAIR_APPRAISAL_ASSIGNMENT_CANDIDATE_PATTERN = new RegExp(
-  String.raw`(?:^|(?<=[^0-9.,]))-?[0-9][0-9.,]*\s*(?:억원|만원|천원|원)?(?:을|를|으로|로)\s*(?:결정|산정)(?:\s*하지)?`,
+  String.raw`(?:^|(?<=[^0-9.,]))-?[0-9][0-9.,]*\s*(?:억원|만원|천원|원)?(?:을|를|으로|로)\s*(?:결정|산정)(?:\s*하지(?:는|도)?\s*(?:않|못|아니|말))?`,
   "gu",
 );
 const APP1_REPAIR_VERBAL_CALCULATION_OPERATOR_PATTERN =
