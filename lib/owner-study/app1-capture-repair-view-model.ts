@@ -603,11 +603,11 @@ const APP1_REPAIR_CALCULATION_SYMBOL_PATTERN = new RegExp(
   "gu",
 );
 const APP1_REPAIR_VERBAL_CALCULATION_RESULT_PATTERN = new RegExp(
-  String.raw`(?:^|(?<=[\s,.;:()[\]{}]))(${APP1_REPAIR_CALCULATION_RESULT_NOUN_SOURCE})(?:은|는|이|가)?\s*(${APP1_REPAIR_CALCULATION_NUMBER_SOURCE})\s*(억원|만원|천원|원)?(?:(?:을|를|으로|로)\s*(?:계산|산출|검산)|(이다|입니다|이었다|이었습니다|였다|였습니다))`,
+  String.raw`(?:^|(?<=[\s,.;:()[\]{}]))(${APP1_REPAIR_CALCULATION_RESULT_NOUN_SOURCE})(?:은|는|이|가|을|를)?\s*(${APP1_REPAIR_CALCULATION_NUMBER_SOURCE})\s*(억원|만원|천원|원)?(?:(?:을|를|으로|로)\s*(?:계산|산출|검산)|((?:을|를|으로|로)\s*(?:결정|산정)|이다|입니다|이었다|이었습니다|였다|였습니다))`,
   "gu",
 );
 const APP1_REPAIR_VERBAL_CALCULATION_RESULT_CANDIDATE_PATTERN = new RegExp(
-  String.raw`(?:^|(?<=[\s,.;:()[\]{}]))(?:${APP1_REPAIR_CALCULATION_RESULT_NOUN_SOURCE})(?:은|는|이|가)?\s*-?[0-9][0-9.,]*\s*(?:억원|만원|천원|원)?(?:(?:을|를|으로|로)\s*(?:계산|산출|검산)|(?:이다|입니다|이었다|이었습니다|였다|였습니다))`,
+  String.raw`(?:^|(?<=[\s,.;:()[\]{}]))(?:${APP1_REPAIR_CALCULATION_RESULT_NOUN_SOURCE})(?:은|는|이|가|을|를)?\s*-?[0-9][0-9.,]*\s*(?:억원|만원|천원|원)?(?:(?:을|를|으로|로)\s*(?:계산|산출|검산|결정|산정)|(?:이다|입니다|이었다|이었습니다|였다|였습니다))`,
   "gu",
 );
 const APP1_REPAIR_VERBAL_CALCULATION_OPERATOR_PATTERN =
