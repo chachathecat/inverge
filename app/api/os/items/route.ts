@@ -5,6 +5,7 @@ import {
   APP1_PERSISTENCE_COMMAND_VERSION,
   isApp1ServerAuthorityError,
 } from "@/lib/owner-study/app1-server-authority";
+import { materializeApp1C3rReviewOsHandoffV1 } from "@/lib/review-os/app1-c3r-review-os-repository";
 import { reviewOsErrorResponse } from "@/lib/review-os/http";
 import { reviewOsService } from "@/lib/review-os/service";
 import type { WrongAnswerItemInput } from "@/lib/review-os/types";
@@ -48,7 +49,14 @@ export async function POST(request: Request) {
           session.email,
           body as WrongAnswerItemInput,
         );
-    return NextResponse.json({ ok: true, ...result });
+    const app1C3rHandoff = app1Command
+      ? await materializeApp1C3rReviewOsHandoffV1(userId, result.item)
+      : null;
+    return NextResponse.json({
+      ok: true,
+      ...result,
+      ...(app1C3rHandoff ? { app1C3rHandoff } : {}),
+    });
   } catch (error) {
     if (isApp1ServerAuthorityError(error)) {
       const status =
