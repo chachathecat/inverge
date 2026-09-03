@@ -9,8 +9,8 @@
     "branch": "codex/issue-880-core-blitz-wave1",
     "pullRequest": 882,
     "identityAuthority": "GITHUB_LIVE_PR_REF",
-    "lastObservedHeadSha": "90909d7767208d7ac2e2c747492c6aceb4569bed",
-    "lastObservedHeadTree": "3362a22f9e34c5050da6ea13afa01956cf373d9e",
+    "lastObservedHeadSha": "b51659a007d4af12211d6b0f9ddc1f0586eaf967",
+    "lastObservedHeadTree": "da38066a36b1273c788378f115f23ba88dce576c",
     "writerLock": "INTEGRATION_WRITER_HELD",
     "readyOrMergeAuthorized": false
   },
@@ -20,6 +20,9 @@
     "docs/decisions/2026-09-03-owner-core-blitz-wave1-standing-authority.md",
     "docs/exec-plans/active/core-blitz-wave1-checkpoint.json",
     "lib/core-blitz/wave1.ts",
+    "lib/review-os/app1-c3r-handoff.ts",
+    "lib/review-os/capture-learning-signals.ts",
+    "tests/app1-c3r-handoff-runtime.test.mjs",
     "tests/core-blitz-wave1.test.mjs"
   ],
   "nodes": [
@@ -35,7 +38,7 @@
       "dependencies": [
         "AUTHORITY_FOUNDATION"
       ],
-      "state": "READY"
+      "state": "IN_PROGRESS"
     },
     {
       "nodeId": "M4_FIRST_STAGE_COMMON_KERNEL",
@@ -63,8 +66,9 @@
     }
   ],
   "validationEvidence": {
-    "focusedCoreBlitzTests": "6_OF_6_LOCAL_RECONSTRUCTION_PASSED",
-    "typecheck": "STRICT_TYPESCRIPT_5_8_3_PASSED",
+    "focusedCoreBlitzTests": "6_OF_6_PRIOR_HEAD_PASSED",
+    "app1C3rHandoffRuntime": "3_OF_3_LOCAL_FOCUSED_PASSED",
+    "typecheck": "APP1_C3R_CHANGED_TYPES_STRICT_5_8_3_PASSED",
     "changedFileLint": "PENDING_EXACT_HEAD_CI",
     "jsonParse": "PASSED",
     "diffCheck": "PENDING_EXACT_HEAD_CI"
