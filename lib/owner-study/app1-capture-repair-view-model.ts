@@ -619,6 +619,11 @@ const APP1_REPAIR_ROUNDING_PATTERN =
 const APP1_REPAIR_SENTENCE_BOUNDARY_PATTERN =
   /(?:\r?\n|[!?。！？]+|(?<![0-9])\.|\.(?![0-9]))+/u;
 
+type App1ExactDecimal = Readonly<{
+  numerator: bigint;
+  denominator: bigint;
+}>;
+
 function app1CalculationUnitScale(unit?: string) {
   return unit === "억원"
     ? 100_000_000
@@ -634,6 +639,24 @@ function parseApp1CalculationNumber(value: string, unit?: string) {
   const parsed = Number(value.replace(/,/gu, ""));
   if (!Number.isFinite(parsed)) return null;
   return parsed * app1CalculationUnitScale(unit);
+}
+
+function parseApp1ExactDecimal(
+  value: string,
+  unit?: string,
+): App1ExactDecimal | null {
+  if (!APP1_REPAIR_CALCULATION_NUMBER_PATTERN.test(value)) return null;
+  const normalized = value.replace(/,/gu, "");
+  const negative = normalized.startsWith("-");
+  const unsigned = negative ? normalized.slice(1) : normalized;
+  const [integer, fraction = ""] = unsigned.split(".");
+  const coefficient = BigInt(`${integer}${fraction}`);
+  return Object.freeze({
+    numerator:
+      (negative ? -coefficient : coefficient) *
+      BigInt(app1CalculationUnitScale(unit)),
+    denominator: BigInt(10) ** BigInt(fraction.length),
+  });
 }
 
 function hasCompatibleApp1CalculationDimensions(
@@ -711,7 +734,8 @@ function getApp1CalculationClause(
 function parseApp1DeclaredRoundingPlaces(value: string) {
   if (!value.includes("반올림")) return undefined;
   const matches = [...value.matchAll(APP1_REPAIR_ROUNDING_PATTERN)];
-  if (matches.length !== 1) return null;
+  const mentions = [...value.matchAll(/반올림/gu)];
+  if (matches.length !== 1 || mentions.length !== 1) return null;
   const token = matches[0][1];
   if (token === "첫째") return 1;
   if (token === "둘째") return 2;
@@ -720,22 +744,95 @@ function parseApp1DeclaredRoundingPlaces(value: string) {
   return Number.isInteger(places) && places >= 0 && places <= 6 ? places : null;
 }
 
+function evaluateApp1ExactBinaryCalculation(
+  left: App1ExactDecimal,
+  operator: string,
+  right: App1ExactDecimal,
+): App1ExactDecimal | null {
+  if (operator === "+") {
+    return Object.freeze({
+      numerator:
+        left.numerator * right.denominator +
+        right.numerator * left.denominator,
+      denominator: left.denominator * right.denominator,
+    });
+  }
+  if (operator === "-" || operator === "−") {
+    return Object.freeze({
+      numerator:
+        left.numerator * right.denominator -
+        right.numerator * left.denominator,
+      denominator: left.denominator * right.denominator,
+    });
+  }
+  if (operator === "*" || operator === "×") {
+    return Object.freeze({
+      numerator: left.numerator * right.numerator,
+      denominator: left.denominator * right.denominator,
+    });
+  }
+  if (operator === "/" || operator === "÷") {
+    if (right.numerator === BigInt(0)) return null;
+    const numerator = left.numerator * right.denominator;
+    const denominator = left.denominator * right.numerator;
+    return Object.freeze(
+      denominator < BigInt(0)
+        ? { numerator: -numerator, denominator: -denominator }
+        : { numerator, denominator },
+    );
+  }
+  return null;
+}
+
+function app1ExactHalfUpMatches(
+  calculated: App1ExactDecimal,
+  stated: App1ExactDecimal,
+  resultUnit: string | undefined,
+  roundingPlaces: number,
+) {
+  const decimalScale = BigInt(10) ** BigInt(roundingPlaces);
+  const resultUnitScale = BigInt(app1CalculationUnitScale(resultUnit));
+  const scaledNumerator = calculated.numerator * decimalScale;
+  const scaledDenominator = calculated.denominator * resultUnitScale;
+  const absoluteNumerator =
+    scaledNumerator < BigInt(0) ? -scaledNumerator : scaledNumerator;
+  let roundedMagnitude = absoluteNumerator / scaledDenominator;
+  const remainder = absoluteNumerator % scaledDenominator;
+  if (remainder * BigInt(2) >= scaledDenominator) {
+    roundedMagnitude += BigInt(1);
+  }
+  const rounded =
+    scaledNumerator < BigInt(0) ? -roundedMagnitude : roundedMagnitude;
+  return (
+    stated.numerator * decimalScale ===
+    rounded * stated.denominator * resultUnitScale
+  );
+}
+
 function app1CalculationMatchesDeclaredResult(
   calculated: number,
   stated: number,
+  statedToken: string,
   resultUnit: string | undefined,
   clause: string,
+  exactCalculation: App1ExactDecimal | null,
 ) {
   const roundingPlaces = parseApp1DeclaredRoundingPlaces(clause);
   if (roundingPlaces === null) return false;
   if (roundingPlaces === undefined) {
     return app1CalculationEquals(calculated, stated);
   }
-  const resultScale = app1CalculationUnitScale(resultUnit);
-  const factor = 10 ** roundingPlaces;
-  const rounded =
-    (Math.round((calculated / resultScale) * factor) / factor) * resultScale;
-  return app1CalculationEquals(rounded, stated);
+  const exactStated = parseApp1ExactDecimal(statedToken, resultUnit);
+  return Boolean(
+    exactCalculation &&
+      exactStated &&
+      app1ExactHalfUpMatches(
+        exactCalculation,
+        exactStated,
+        resultUnit,
+        roundingPlaces,
+      ),
+  );
 }
 
 function evaluateApp1BinaryCalculation(
@@ -797,13 +894,22 @@ function parseApp1VerbalCalculationOperands(value: string) {
   ]
     .filter((match) => match[3] === undefined)
     .map(
-      (match): { unit: string | undefined; value: number | null } => ({
+      (match): {
+        token: string;
+        unit: string | undefined;
+        value: number | null;
+      } => ({
+        token: match[1],
         unit: match[2] || undefined,
         value: parseApp1CalculationNumber(match[1], match[2]),
       }),
     )
     .filter(
-      (operand): operand is { unit: string | undefined; value: number } =>
+      (operand): operand is {
+        token: string;
+        unit: string | undefined;
+        value: number;
+      } =>
         operand.value !== null,
     );
 }
@@ -858,14 +964,26 @@ function hasCorrectClosedPracticeCalculation(value: string) {
       symbolic[3],
       right,
     );
+    const exactLeft = parseApp1ExactDecimal(symbolic[1], symbolic[2]);
+    const exactRight = parseApp1ExactDecimal(symbolic[4], symbolic[5]);
+    const exactCalculation =
+      exactLeft && exactRight
+        ? evaluateApp1ExactBinaryCalculation(
+            exactLeft,
+            symbolic[3],
+            exactRight,
+          )
+        : null;
     const symbolicEnd = symbolic.index + symbolic[0].length;
     if (
       calculated === null ||
       !app1CalculationMatchesDeclaredResult(
         calculated,
         stated,
+        symbolic[6],
         symbolic[7],
         getApp1CalculationClause(value, symbolic.index, symbolicEnd),
+        exactCalculation,
       )
     ) {
       return false;
@@ -954,14 +1072,28 @@ function hasCorrectClosedPracticeCalculation(value: string) {
       operator,
       operands[1].value,
     );
+    const exactLeft = parseApp1ExactDecimal(
+      operands[0].token,
+      operands[0].unit,
+    );
+    const exactRight = parseApp1ExactDecimal(
+      operands[1].token,
+      operands[1].unit,
+    );
+    const exactCalculation =
+      exactLeft && exactRight
+        ? evaluateApp1ExactBinaryCalculation(exactLeft, operator, exactRight)
+        : null;
     const resultEnd = resultMatch.index + resultMatch[0].length;
     if (
       calculated === null ||
       !app1CalculationMatchesDeclaredResult(
         calculated,
         stated,
+        resultMatch[2],
         resultMatch[3],
         getApp1CalculationClause(value, resultMatch.index, resultEnd),
+        exactCalculation,
       )
     ) {
       return false;

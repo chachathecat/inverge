@@ -12,6 +12,7 @@ import {
   parseApp1PersistenceCommand,
   requireApp1AuthorizedSourceDetail,
   sealApp1PostInsertReplayPlan,
+  translateApp1TrustedRepairAccessError,
 } from "@/lib/owner-study/app1-server-authority";
 import { executeApp1ResumableArtifactPlanV1 } from "@/lib/owner-study/app1-capture-repair-view-model";
 import { executeApp1AuthorityBoundaryV1 } from "@/lib/owner-study/app1-verification-receipt-core";
@@ -1619,49 +1620,53 @@ export class ReviewOsService {
     email: string | null,
     value: unknown,
   ) {
-    return executeApp1AuthorityBoundaryV1({
-      authorize: async () => {
-        const command = parseApp1PersistenceCommand(value);
-        const detail = await requireApp1AuthorizedSourceDetail({
-          userId,
-          sourceItemId: command.sourceItemId,
-          expectedSubject: command.primaryGap.subject,
-        });
-        try {
-          return Object.freeze({
-            input: authorizeApp1PersistenceCommand({
-              userId,
-              detail,
-              command,
-            }),
-            expiredReplayOnly: false,
+    try {
+      return await executeApp1AuthorityBoundaryV1({
+        authorize: async () => {
+          const command = parseApp1PersistenceCommand(value);
+          const detail = await requireApp1AuthorizedSourceDetail({
+            userId,
+            sourceItemId: command.sourceItemId,
+            expectedSubject: command.primaryGap.subject,
           });
-        } catch (error) {
-          if (
-            !(error instanceof App1ServerAuthorityError) ||
-            error.code !== "APP1_VERIFICATION_EXPIRED"
-          ) {
-            throw error;
+          try {
+            return Object.freeze({
+              input: authorizeApp1PersistenceCommand({
+                userId,
+                detail,
+                command,
+              }),
+              expiredReplayOnly: false,
+            });
+          } catch (error) {
+            if (
+              !(error instanceof App1ServerAuthorityError) ||
+              error.code !== "APP1_VERIFICATION_EXPIRED"
+            ) {
+              throw error;
+            }
+            return Object.freeze({
+              input: authorizeExpiredApp1PersistenceReplayCommand({
+                userId,
+                detail,
+                command,
+              }),
+              expiredReplayOnly: true,
+            });
           }
-          return Object.freeze({
-            input: authorizeExpiredApp1PersistenceReplayCommand({
-              userId,
-              detail,
-              command,
-            }),
-            expiredReplayOnly: true,
-          });
-        }
-      },
-      execute: ({ input, expiredReplayOnly }) =>
-        expiredReplayOnly
-          ? this.resumeExistingApp1RepairAfterExpiredAuthority(
-              userId,
-              email,
-              input,
-            )
-          : this.createWrongAnswerItemAfterAuthority(userId, email, input),
-    });
+        },
+        execute: ({ input, expiredReplayOnly }) =>
+          expiredReplayOnly
+            ? this.resumeExistingApp1RepairAfterExpiredAuthority(
+                userId,
+                email,
+                input,
+              )
+            : this.createWrongAnswerItemAfterAuthority(userId, email, input),
+      });
+    } catch (error) {
+      translateApp1TrustedRepairAccessError(error);
+    }
   }
 
   private async resumeExistingApp1RepairAfterExpiredAuthority(

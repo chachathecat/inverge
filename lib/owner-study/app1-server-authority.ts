@@ -14,7 +14,10 @@ import {
 } from "@/lib/owner-study/app1-capture-repair-view-model";
 import type { CaptureSaveOperationBinding } from "@/lib/review-os/capture-persistence-controller";
 import { reviewOsRepository } from "@/lib/review-os/repository";
-import { requireTrustedRepairAccess } from "@/lib/review-os/trusted-repair-access";
+import {
+  TrustedRepairAccessError,
+  requireTrustedRepairAccess,
+} from "@/lib/review-os/trusted-repair-access";
 import type { WrongAnswerDetail, WrongAnswerItemInput } from "@/lib/review-os/types";
 
 import {
@@ -72,6 +75,21 @@ export function isApp1ServerAuthorityError(
 
 function reject(code: App1ServerAuthorityError["code"]): never {
   throw new App1ServerAuthorityError(code);
+}
+
+export function translateApp1TrustedRepairAccessError(error: unknown): never {
+  if (error instanceof TrustedRepairAccessError) {
+    reject("APP1_AUTHORITY_REQUIRED");
+  }
+  throw error;
+}
+
+async function requireApp1TrustedRepairAccess() {
+  try {
+    return await requireTrustedRepairAccess();
+  } catch (error) {
+    translateApp1TrustedRepairAccessError(error);
+  }
 }
 
 function signingKey() {
@@ -233,7 +251,7 @@ export async function requireApp1AuthorizedSourceDetail(input: Readonly<{
   sourceItemId: string;
   expectedSubject?: string;
 }>): Promise<WrongAnswerDetail> {
-  const access = await requireTrustedRepairAccess();
+  const access = await requireApp1TrustedRepairAccess();
   if (access.userId !== input.userId) reject("APP1_AUTHORITY_REQUIRED");
   const detail = await reviewOsRepository.getWrongAnswerDetail(
     input.userId,

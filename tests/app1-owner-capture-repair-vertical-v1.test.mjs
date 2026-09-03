@@ -1855,6 +1855,9 @@ test("APP1-VM-003G honors only closed explicit Practice rounding", () => {
     "수익 100과 환원 배수 3의 계산 산식은 100 / 3 = 33.3이고 단위와 부호를 검산했다.",
     "수익 100과 환원 배수 3의 계산 산식은 100 / 3 = 33.4이고 소수점 첫째 자리까지 반올림했으며 단위와 부호를 검산했다.",
     "수익 100과 환원 배수 3의 계산 산식은 100 / 3 = 33.3이고 소수점 첫째 자리에서 반올림했으며 단위와 부호를 검산했다.",
+    "수익 1.005와 환원 배수 0의 계산 산식은 1.005 + 0 = 1.00이고 소수점 둘째 자리까지 반올림했으며 단위와 부호를 검산했다.",
+    "수익 2.675와 환원 배수 0의 계산 산식은 2.675 + 0 = 2.67이고 소수점 둘째 자리까지 반올림했으며 단위와 부호를 검산했다.",
+    "수익 -1.005와 환원 배수 0의 계산 산식은 -1.005 + 0 = -1.00이고 소수점 둘째 자리까지 반올림했으며 단위와 부호를 검산했다.",
   ]) {
     assert.equal(
       evaluateApp1SameSessionRepair({
@@ -1870,6 +1873,10 @@ test("APP1-VM-003G honors only closed explicit Practice rounding", () => {
   for (const repairText of [
     "수익 100과 환원 배수 3의 계산 산식은 100 / 3 = 33.3이고 소수점 첫째 자리까지 반올림했으며 단위와 부호를 검산했다.",
     "수익 100만원과 환원 배수 3의 계산 산식은 100만원 / 3 = 33.3만원이고 소수점 첫째 자리까지 반올림했으며 단위와 부호를 검산했다.",
+    "수익 1.005와 환원 배수 0의 계산 산식은 1.005 + 0 = 1.01이고 소수점 둘째 자리까지 반올림했으며 단위와 부호를 검산했다.",
+    "수익 2.675와 환원 배수 0의 계산 산식은 2.675 + 0 = 2.68이고 소수점 둘째 자리까지 반올림했으며 단위와 부호를 검산했다.",
+    "수익 -1.005와 환원 배수 0의 계산 산식은 -1.005 + 0 = -1.01이고 소수점 둘째 자리까지 반올림했으며 단위와 부호를 검산했다.",
+    "수익 1.005와 환원 배수 0의 계산 산식은 1.005 + 0 = 1.005이고 단위와 부호를 검산했다.",
   ]) {
     assert.equal(
       evaluateApp1SameSessionRepair({
@@ -3155,6 +3162,51 @@ test("APP1-UI-002B exits revoked authority without retaining a retryable client 
   );
   assert.match(authoritySurface, /href="\/app\?mode=second"[\s\S]*?오늘 할 일로 돌아가기/u);
   assert.doesNotMatch(authoritySurface, /data-app1-save-repair|data-app1-completed|data-app1-queue-receipt/u);
+});
+
+test("APP1-API-003 translates only exact trusted-repair revocation across all APP-1 server boundaries", async () => {
+  const serverAuthority = await read("lib/owner-study/app1-server-authority.ts");
+  const service = await read("lib/review-os/service.ts");
+  const structureRoute = await read("app/api/answer-review/structure/route.ts");
+  const itemRoute = await read("app/api/os/items/route.ts");
+  const repairLoop = await read("components/owner-study/app1-capture-repair-loop.tsx");
+
+  assert.match(
+    serverAuthority,
+    /error instanceof TrustedRepairAccessError[\s\S]*?reject\("APP1_AUTHORITY_REQUIRED"\);[\s\S]*?throw error;/u,
+  );
+  assert.doesNotMatch(
+    serverAuthority,
+    /isTrustedRepairAccessError\(error\)[\s\S]*?APP1_AUTHORITY_REQUIRED/u,
+  );
+  assert.match(
+    serverAuthority,
+    /try \{[\s\S]*?await requireTrustedRepairAccess\(\);[\s\S]*?catch \(error\) \{[\s\S]*?translateApp1TrustedRepairAccessError\(error\);/u,
+  );
+  assert.match(
+    structureRoute,
+    /"app1_initial_analysis"[\s\S]*?"repair_verification"[\s\S]*?requireApp1AuthorizedSourceDetail/u,
+  );
+  assert.match(
+    service,
+    /createApp1VerifiedRepairItem\([\s\S]*?try \{[\s\S]*?executeApp1AuthorityBoundaryV1[\s\S]*?catch \(error\) \{[\s\S]*?translateApp1TrustedRepairAccessError\(error\);/u,
+  );
+  for (const route of [structureRoute, itemRoute]) {
+    assert.match(
+      route,
+      /APP1_AUTHORITY_REQUIRED[\s\S]*?403[\s\S]*?errorCode: error\.code/u,
+    );
+  }
+  assert.match(
+    repairLoop,
+    /function enterAuthorityRequired\(\) \{[\s\S]*?setAnalysisBinding\(null\);[\s\S]*?setVerificationReceipt\(null\);[\s\S]*?pendingSaveRef\.current = null;[\s\S]*?setPhase\("authority_required"\);/u,
+  );
+  assert.doesNotMatch(
+    repairLoop.match(
+      /\{phase === "authority_required" \? \([\s\S]*?\) : null\}/u,
+    )?.[0] ?? "",
+    /data-app1-save-repair|data-app1-completed|data-app1-queue-receipt/u,
+  );
 });
 
 test("APP1-UI-003 enters repair only after a durable receipt without racing the route refresh", async () => {
