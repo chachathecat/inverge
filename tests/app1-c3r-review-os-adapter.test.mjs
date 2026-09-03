@@ -111,6 +111,10 @@ test("APP-1 H0 persists one bodyless journey projection and reuses the canonical
   assert.equal(first.dedicatedC3rEvidenceMutated, false);
   assert.equal(port.projections.size, 1);
   const [projection] = port.projections.values();
+  assert.equal(projection.app1ReceiptId, SIGNAL_ID);
+  assert.equal(projection.reviewUnitId, QUEUE_ID);
+  assert.equal(projection.reviewUnitKey, candidate().reviewUnitKey);
+  assert.equal(projection.d1DueAt, DUE_AT);
   assert.equal(projection.containsRawContent, false);
   assert.equal(projection.masteryCreated, false);
   assert.equal(projection.transferCreated, false);
@@ -160,6 +164,18 @@ test("APP-1 H0 rejects queue and replay binding drift", async () => {
       }),
     assertCode("INVALID_REPLAY_PLAN"),
   );
+
+  const missingAuthority = item();
+  delete missingAuthority.rawPayload.user_confirmed_fields;
+  await assert.rejects(
+    () =>
+      materializeApp1C3rReviewOsAdapterV1({
+        userId: "user-1",
+        item: missingAuthority,
+        storage: storage(),
+      }),
+    assertCode("INVALID_REPLAY_PLAN"),
+  );
 });
 
 test("server adapter reuses Review Queue and the APP-1 route invokes it", () => {
@@ -173,6 +189,10 @@ test("server adapter reuses Review Queue and the APP-1 route invokes it", () => 
     repository,
     /from\("learning_signal_events"\)[\s\S]*?\.insert\(expected\)/u,
   );
+  assert.match(repository, /app1ReceiptId: projection\.app1ReceiptId/u);
+  assert.match(repository, /reviewUnitId: projection\.reviewUnitId/u);
+  assert.match(repository, /reviewUnitKey: projection\.reviewUnitKey/u);
+  assert.match(repository, /d1DueAt: projection\.d1DueAt/u);
   assert.match(repository, /from\("review_queue_items"\)[\s\S]*?\.select\(/u);
   assert.doesNotMatch(
     repository,

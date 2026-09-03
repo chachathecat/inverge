@@ -36,9 +36,13 @@ export type App1C3rJourneyProjectionV1 = Readonly<{
   contractVersion: typeof APP1_C3R_REVIEW_OS_ADAPTER_VERSION;
   journeyId: string;
   journeyKey: string;
+  app1ReceiptId: string;
   userId: string;
   itemId: string;
   repairRevisionId: string;
+  reviewUnitId: string;
+  reviewUnitKey: string;
+  d1DueAt: string;
   track: App1C3rHandoffCandidateV1["track"];
   c3rRoute: string;
   subject: string;
@@ -142,8 +146,8 @@ function readReplayPlan(item: WrongAnswerItemRecord) {
     !nonEmpty(replay.learningSignalId) ||
     !UUID_PATTERN.test(replay.learningSignalId) ||
     !nonEmpty(replay.workRevisionId) ||
-    (confirmed &&
-      confirmed.persistence_work_revision_id !== replay.workRevisionId) ||
+    !confirmed ||
+    confirmed.persistence_work_revision_id !== replay.workRevisionId ||
     candidate.sourceItemId !== item.id
   ) {
     reject("INVALID_REPLAY_PLAN");
@@ -202,9 +206,13 @@ export async function materializeApp1C3rReviewOsAdapterV1(input: Readonly<{
         contractVersion: APP1_C3R_REVIEW_OS_ADAPTER_VERSION,
         journeyId,
         journeyKey: journeyInput.journeyKey,
+        app1ReceiptId: replay.learningSignalId,
         userId: input.userId,
         itemId: journeyInput.itemId,
         repairRevisionId: journeyInput.repairRevisionId,
+        reviewUnitId: queue.reviewUnitId,
+        reviewUnitKey: replay.candidate.reviewUnitKey,
+        d1DueAt: queue.dueAt,
         track: journeyInput.track,
         c3rRoute: journeyInput.c3rRoute,
         subject: input.item.subjectLabel,
