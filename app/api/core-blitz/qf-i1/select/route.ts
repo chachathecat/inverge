@@ -10,6 +10,7 @@ export const dynamic = "force-dynamic";
 
 const MAX_REQUEST_BYTES = 64 * 1024;
 const SELECTOR_EXPORT_CANDIDATES = Object.freeze([
+  "selectQfI1BankFirstAssignmentV1",
   "selectQfI1BankFirstV1",
   "selectQfI1AssignmentV1",
   "selectBankFirstQuestionV1",
@@ -19,12 +20,12 @@ const SELECTOR_EXPORT_CANDIDATES = Object.freeze([
 type QfI1Selector = (input: unknown) => unknown;
 
 function selector(): QfI1Selector {
-  const module = qfI1 as unknown as Record<string, unknown>;
+  const moduleExports = qfI1 as unknown as Record<string, unknown>;
   for (const name of SELECTOR_EXPORT_CANDIDATES) {
-    const candidate = module[name];
+    const candidate = moduleExports[name];
     if (typeof candidate === "function") return candidate as QfI1Selector;
   }
-  const discovered = Object.entries(module).filter(
+  const discovered = Object.entries(moduleExports).filter(
     ([name, value]) =>
       typeof value === "function" &&
       /(?:qf.*i1|bank.*first|first.*bank)/iu.test(name),
