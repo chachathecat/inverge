@@ -1,7 +1,7 @@
 {
   "contractVersion": "dabangil.core_blitz.wave1.v1",
   "programIssue": 880,
-  "status": "wave1_multi_lane_runtime_in_progress",
+  "status": "wave1_runtime_integration_in_progress",
   "startingAuthority": {
     "mainSha": "d4e056938707c11e6c862230745c381297c0b26f",
     "mainTree": "c19f7abe3f0ace8ecdc8afbe9647a8e31eb4dfc2",
@@ -26,7 +26,6 @@
       "goal": "APP-1 D0 repair binds to exactly one existing C3R journey and exactly one learner-visible D+1 unaided ReviewUnit before D+7, Timed and Reopen.",
       "persistedHandoffCandidateInstalled": true,
       "materializationCoordinatorInstalled": true,
-      "durableJourneyRepositoryAdapterComplete": false,
       "durableJourneyMaterializationComplete": false,
       "duplicateEvidenceAuthorityAllowed": false,
       "duplicateQueueAllowed": false,
@@ -36,9 +35,11 @@
       "laneId": "COMMON_KERNEL_AND_LEARNER_EXPERIENCE",
       "initialNode": "M4_FIRST_STAGE_COMMON_KERNEL",
       "goal": "Install the common selected-response kernel and the smallest directly usable learner capability floor with honest assistance semantics.",
-      "learnerChoiceDecisionKernelInstalled": true,
+      "learnerChoiceKernelInstalled": true,
       "learnerSupportProjectionInstalled": true,
-      "learnerUiIntegrationComplete": false,
+      "learnerFacingSupportRouteInstalled": true,
+      "assistanceUsagePersistenceInstalled": true,
+      "mainItemEntryLinkInstalled": false,
       "sameItemMasteryFromExplanationAllowed": false,
       "sameItemMasteryFromRevealedSolutionAllowed": false
     },
@@ -46,9 +47,10 @@
       "laneId": "VERIFIED_QUESTION_FOUNDRY_RUNTIME",
       "initialNode": "QF_I1_INTEGRATION",
       "goal": "Consume merged QF-S3 and establish rights-safe generation, release-chain completeness and three-bank admission without public or learner activation.",
-      "bankFirstAssignmentKernelInstalled": true,
-      "durableBankPersistenceComplete": false,
-      "providerGenerationComplete": false,
+      "bankFirstSelectionInstalled": true,
+      "durableAssignmentCoordinatorInstalled": true,
+      "reviewOsMetadataAdapterInstalled": true,
+      "providerGenerationInstalled": false,
       "banks": [
         "LEARNING_PRACTICE",
         "VERIFIED_TRANSFER",
@@ -179,20 +181,29 @@
     "unavoidable_live_ruleset_human_approval"
   ],
   "ownedPathsExactly": [
+    "app/api/os/learner-support/route.ts",
+    "app/app/items/[itemId]/support/page.tsx",
+    "components/core-blitz/learner-support-panel.tsx",
     "config/dabangil-core-blitz-wave1-v1.json",
     "config/dabangil-seven-exam-pre-t0-v1.json",
     "docs/decisions/2026-09-03-owner-core-blitz-wave1-standing-authority.md",
     "docs/exec-plans/active/core-blitz-wave1-checkpoint.json",
     "lib/core-blitz/learner-capability.ts",
+    "lib/core-blitz/learner-support-event.ts",
+    "lib/core-blitz/learner-support-repository.ts",
     "lib/core-blitz/wave1.ts",
     "lib/question-foundry/runtime/qf-i1-bank-first.ts",
+    "lib/question-foundry/runtime/qf-i1-persistence.ts",
+    "lib/question-foundry/runtime/qf-i1-review-os-repository.ts",
     "lib/review-os/app1-c3r-handoff-runtime.ts",
     "lib/review-os/app1-c3r-handoff.ts",
     "lib/review-os/capture-learning-signals.ts",
     "tests/app1-c3r-handoff-materialization.test.mjs",
     "tests/app1-c3r-handoff-runtime.test.mjs",
     "tests/core-blitz-learner-capability.test.mjs",
+    "tests/core-blitz-learner-support-runtime.test.mjs",
     "tests/core-blitz-wave1.test.mjs",
-    "tests/qf-i1-bank-first-runtime.test.mjs"
+    "tests/qf-i1-bank-first-runtime.test.mjs",
+    "tests/qf-i1-persistence-runtime.test.mjs"
   ]
 }

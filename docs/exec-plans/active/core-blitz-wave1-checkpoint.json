@@ -9,27 +9,36 @@
     "branch": "codex/issue-880-core-blitz-wave1",
     "pullRequest": 882,
     "identityAuthority": "GITHUB_LIVE_PR_REF",
-    "lastObservedHeadSha": "2b676cc797c4fb3900ff727017dd8c4d04a7f117",
-    "lastObservedHeadTree": "7e8792febdf5141caa6a4b72a2f68b943626b85d",
+    "lastObservedHeadSha": "7eda8ab211b90a5775d6d56cd73f5271e0386efc",
+    "lastObservedHeadTree": "ed2be4e420c95756ee177c7664dca34ff55be7e3",
     "writerLock": "INTEGRATION_WRITER_HELD",
     "readyOrMergeAuthorized": false
   },
   "ownedPaths": [
+    "app/api/os/learner-support/route.ts",
+    "app/app/items/[itemId]/support/page.tsx",
+    "components/core-blitz/learner-support-panel.tsx",
     "config/dabangil-core-blitz-wave1-v1.json",
     "config/dabangil-seven-exam-pre-t0-v1.json",
     "docs/decisions/2026-09-03-owner-core-blitz-wave1-standing-authority.md",
     "docs/exec-plans/active/core-blitz-wave1-checkpoint.json",
     "lib/core-blitz/learner-capability.ts",
+    "lib/core-blitz/learner-support-event.ts",
+    "lib/core-blitz/learner-support-repository.ts",
     "lib/core-blitz/wave1.ts",
     "lib/question-foundry/runtime/qf-i1-bank-first.ts",
+    "lib/question-foundry/runtime/qf-i1-persistence.ts",
+    "lib/question-foundry/runtime/qf-i1-review-os-repository.ts",
     "lib/review-os/app1-c3r-handoff-runtime.ts",
     "lib/review-os/app1-c3r-handoff.ts",
     "lib/review-os/capture-learning-signals.ts",
     "tests/app1-c3r-handoff-materialization.test.mjs",
     "tests/app1-c3r-handoff-runtime.test.mjs",
     "tests/core-blitz-learner-capability.test.mjs",
+    "tests/core-blitz-learner-support-runtime.test.mjs",
     "tests/core-blitz-wave1.test.mjs",
-    "tests/qf-i1-bank-first-runtime.test.mjs"
+    "tests/qf-i1-bank-first-runtime.test.mjs",
+    "tests/qf-i1-persistence-runtime.test.mjs"
   ],
   "nodes": [
     {
@@ -71,13 +80,28 @@
       "state": "READY"
     }
   ],
+  "runtimeProgress": {
+    "app1C3rCandidatePersisted": true,
+    "app1C3rMaterializationCoordinatorInstalled": true,
+    "realC3rRepositoryAdapterInstalled": false,
+    "learnerChoiceKernelInstalled": true,
+    "learnerSupportRouteInstalled": true,
+    "assistanceUsagePersistenceInstalled": true,
+    "mainItemEntryLinkInstalled": false,
+    "qfBankFirstSelectionInstalled": true,
+    "qfDurableAssignmentCoordinatorInstalled": true,
+    "qfReviewOsMetadataAdapterInstalled": true,
+    "qfProviderGenerationInstalled": false
+  },
   "validationEvidence": {
     "focusedCoreBlitzTests": "6_OF_6_PRIOR_HEAD_PASSED",
-    "app1C3rHandoffRuntime": "3_OF_3_PRIOR_HEAD_PASSED",
-    "app1C3rMaterializationCoordinator": "3_OF_3_ISOLATED_RECONSTRUCTION_PASSED",
-    "learnerCapabilityKernel": "3_OF_3_ISOLATED_RECONSTRUCTION_PASSED",
-    "qfI1BankFirst": "4_OF_4_ISOLATED_RECONSTRUCTION_PASSED",
+    "app1C3rHandoffRuntime": "3_OF_3_PRIOR_FOCUSED_PASSED",
+    "app1C3rMaterialization": "3_OF_3_PRIOR_FOCUSED_PASSED",
+    "learnerCapabilityKernel": "3_OF_3_PRIOR_FOCUSED_PASSED",
+    "qfI1BankFirst": "4_OF_4_PRIOR_FOCUSED_PASSED",
+    "learnerSupportAndQfPersistence": "8_OF_8_ISOLATED_RECONSTRUCTION_PASSED",
     "typecheck": "NEW_PURE_MODULES_STRICT_TYPESCRIPT_5_8_3_PASSED",
+    "syntaxCheck": "ALL_NEW_RUNTIME_FILES_TYPESCRIPT_NOCHECK_PARSE_PASSED",
     "changedFileLint": "PENDING_EXACT_HEAD_CI",
     "jsonParse": "PASSED",
     "diffCheck": "PENDING_EXACT_HEAD_CI"
