@@ -9,8 +9,8 @@
     "branch": "codex/issue-880-core-blitz-wave1",
     "pullRequest": 882,
     "identityAuthority": "GITHUB_LIVE_PR_REF",
-    "lastObservedHeadSha": "b51659a007d4af12211d6b0f9ddc1f0586eaf967",
-    "lastObservedHeadTree": "da38066a36b1273c788378f115f23ba88dce576c",
+    "lastObservedHeadSha": "2b676cc797c4fb3900ff727017dd8c4d04a7f117",
+    "lastObservedHeadTree": "7e8792febdf5141caa6a4b72a2f68b943626b85d",
     "writerLock": "INTEGRATION_WRITER_HELD",
     "readyOrMergeAuthorized": false
   },
@@ -19,11 +19,17 @@
     "config/dabangil-seven-exam-pre-t0-v1.json",
     "docs/decisions/2026-09-03-owner-core-blitz-wave1-standing-authority.md",
     "docs/exec-plans/active/core-blitz-wave1-checkpoint.json",
+    "lib/core-blitz/learner-capability.ts",
     "lib/core-blitz/wave1.ts",
+    "lib/question-foundry/runtime/qf-i1-bank-first.ts",
+    "lib/review-os/app1-c3r-handoff-runtime.ts",
     "lib/review-os/app1-c3r-handoff.ts",
     "lib/review-os/capture-learning-signals.ts",
+    "tests/app1-c3r-handoff-materialization.test.mjs",
     "tests/app1-c3r-handoff-runtime.test.mjs",
-    "tests/core-blitz-wave1.test.mjs"
+    "tests/core-blitz-learner-capability.test.mjs",
+    "tests/core-blitz-wave1.test.mjs",
+    "tests/qf-i1-bank-first-runtime.test.mjs"
   ],
   "nodes": [
     {
@@ -46,7 +52,7 @@
       "dependencies": [
         "AUTHORITY_FOUNDATION"
       ],
-      "state": "READY"
+      "state": "IN_PROGRESS"
     },
     {
       "nodeId": "QF_I1_INTEGRATION",
@@ -54,7 +60,7 @@
       "dependencies": [
         "AUTHORITY_FOUNDATION"
       ],
-      "state": "READY"
+      "state": "IN_PROGRESS"
     },
     {
       "nodeId": "SEVEN_EXAM_DOSSIER_AND_SOURCE_PREPARATION",
@@ -67,8 +73,11 @@
   ],
   "validationEvidence": {
     "focusedCoreBlitzTests": "6_OF_6_PRIOR_HEAD_PASSED",
-    "app1C3rHandoffRuntime": "3_OF_3_LOCAL_FOCUSED_PASSED",
-    "typecheck": "APP1_C3R_CHANGED_TYPES_STRICT_5_8_3_PASSED",
+    "app1C3rHandoffRuntime": "3_OF_3_PRIOR_HEAD_PASSED",
+    "app1C3rMaterializationCoordinator": "3_OF_3_ISOLATED_RECONSTRUCTION_PASSED",
+    "learnerCapabilityKernel": "3_OF_3_ISOLATED_RECONSTRUCTION_PASSED",
+    "qfI1BankFirst": "4_OF_4_ISOLATED_RECONSTRUCTION_PASSED",
+    "typecheck": "NEW_PURE_MODULES_STRICT_TYPESCRIPT_5_8_3_PASSED",
     "changedFileLint": "PENDING_EXACT_HEAD_CI",
     "jsonParse": "PASSED",
     "diffCheck": "PENDING_EXACT_HEAD_CI"
