@@ -1,14 +1,16 @@
 {
   "schemaVersion": "dabangil.core_blitz.wave1.v1",
   "programIssue": 880,
+  "milestoneIssue": 881,
   "scopeDigest": "sha256:issue-880-core-blitz-wave1-standing-authority-v1",
   "startingMain": "d4e056938707c11e6c862230745c381297c0b26f",
   "startingTree": "c19f7abe3f0ace8ecdc8afbe9647a8e31eb4dfc2",
   "integration": {
     "branch": "codex/issue-880-core-blitz-wave1",
-    "pullRequest": null,
-    "headSha": null,
-    "headTree": null,
+    "pullRequest": 882,
+    "identityAuthority": "GITHUB_LIVE_PR_REF",
+    "lastObservedHeadSha": "2b1b307533a823d93f021def392223c763efb8ef",
+    "lastObservedHeadTree": "2eede5393bdca059d7a669ed7d6b1b2662acfeb2",
     "writerLock": "INTEGRATION_WRITER_HELD",
     "readyOrMergeAuthorized": false
   },
@@ -61,11 +63,11 @@
     }
   ],
   "validationEvidence": {
-    "focusedCoreBlitzTests": "PENDING_REMOTE_CANDIDATE",
-    "typecheck": "PENDING_REMOTE_CANDIDATE",
-    "changedFileLint": "PENDING_REMOTE_CANDIDATE",
-    "jsonParse": "PENDING_REMOTE_CANDIDATE",
-    "diffCheck": "PENDING_REMOTE_CANDIDATE"
+    "focusedCoreBlitzTests": "RECONSTRUCTED_AWAITING_EXACT_HEAD_CI",
+    "typecheck": "RECONSTRUCTED_AWAITING_EXACT_HEAD_CI",
+    "changedFileLint": "RECONSTRUCTED_AWAITING_EXACT_HEAD_CI",
+    "jsonParse": "RECONSTRUCTED_AWAITING_EXACT_HEAD_CI",
+    "diffCheck": "RECONSTRUCTED_AWAITING_EXACT_HEAD_CI"
   },
   "activation": {
     "ownerOnly": true,

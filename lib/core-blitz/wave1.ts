@@ -22,6 +22,13 @@ export const QUESTION_BANK_CLASSES = [
 ] as const;
 export type QuestionBankClass = (typeof QUESTION_BANK_CLASSES)[number];
 
+export const CALIBRATION_STATES = [
+  "UNASSESSED",
+  "TRANSFER_VERIFIED",
+  "MEASUREMENT_CALIBRATED",
+] as const;
+export type CalibrationState = (typeof CALIBRATION_STATES)[number];
+
 export const CORE_BLITZ_ERROR_CODES = [
   "INVALID_INPUT",
   "RAW_BODY_FORBIDDEN",
@@ -39,12 +46,15 @@ export const CORE_BLITZ_ERROR_CODES = [
   "CHECKPOINT_SCOPE_DRIFT",
   "CHECKPOINT_MAIN_DRIFT",
   "CHECKPOINT_DUPLICATE_NODE",
+  "CHECKPOINT_DUPLICATE_DEPENDENCY",
   "CHECKPOINT_UNKNOWN_DEPENDENCY",
+  "CHECKPOINT_CYCLE",
 ] as const;
 export type CoreBlitzErrorCode = (typeof CORE_BLITZ_ERROR_CODES)[number];
 
 export class CoreBlitzWave1Error extends Error {
   readonly code: CoreBlitzErrorCode;
+
   constructor(code: CoreBlitzErrorCode) {
     super(code);
     this.name = "CoreBlitzWave1Error";
@@ -53,20 +63,46 @@ export class CoreBlitzWave1Error extends Error {
 }
 
 const RAW_BODY_KEYS = new Set([
-  "question", "questionBody", "answer", "answerBody", "referenceAnswer",
-  "prompt", "response", "ocr", "ocrText", "learnerBody", "providerPayload",
+  "question",
+  "questionbody",
+  "answer",
+  "answerbody",
+  "referenceanswer",
+  "prompt",
+  "response",
+  "ocr",
+  "ocrtext",
+  "learnerbody",
+  "providerpayload",
 ]);
+
+const IDENTIFIER_PATTERN = /^[A-Za-z0-9][A-Za-z0-9._:@/-]{0,255}$/u;
 
 function assertRecord(value: unknown): asserts value is Record<string, unknown> {
   if (value === null || typeof value !== "object" || Array.isArray(value)) {
     throw new CoreBlitzWave1Error("INVALID_INPUT");
   }
 }
+
 function assertString(value: unknown): asserts value is string {
   if (typeof value !== "string" || value.trim() === "") {
     throw new CoreBlitzWave1Error("INVALID_INPUT");
   }
 }
+
+function assertIdentifier(value: unknown): asserts value is string {
+  assertString(value);
+  if (!IDENTIFIER_PATTERN.test(value)) {
+    throw new CoreBlitzWave1Error("INVALID_INPUT");
+  }
+}
+
+function assertBoolean(value: unknown): asserts value is boolean {
+  if (typeof value !== "boolean") {
+    throw new CoreBlitzWave1Error("INVALID_INPUT");
+  }
+}
+
 function assertClosedMetadata(value: unknown): void {
   if (value === null || typeof value !== "object") return;
   if (Array.isArray(value)) {
@@ -74,12 +110,25 @@ function assertClosedMetadata(value: unknown): void {
     return;
   }
   for (const [key, entry] of Object.entries(value)) {
-    if (RAW_BODY_KEYS.has(key)) throw new CoreBlitzWave1Error("RAW_BODY_FORBIDDEN");
+    if (RAW_BODY_KEYS.has(key.toLowerCase())) {
+      throw new CoreBlitzWave1Error("RAW_BODY_FORBIDDEN");
+    }
     assertClosedMetadata(entry);
   }
 }
 
-export function classifyAssistanceV1(assistanceClass: AssistanceClass) {
+export type AssistanceDecisionV1 = Readonly<{
+  schemaVersion: typeof CORE_BLITZ_WAVE1_CONTRACT_VERSION;
+  assistanceClass: AssistanceClass;
+  independentAttemptEligible: boolean;
+  sameItemMasteryGainAllowed: boolean;
+  transferEvidenceEligible: boolean;
+  requiresDistinctUnaidedAttempt: boolean;
+}>;
+
+export function classifyAssistanceV1(
+  assistanceClass: AssistanceClass,
+): AssistanceDecisionV1 {
   if (!ASSISTANCE_CLASSES.includes(assistanceClass)) {
     throw new CoreBlitzWave1Error("INVALID_INPUT");
   }
@@ -96,8 +145,16 @@ export function classifyAssistanceV1(assistanceClass: AssistanceClass) {
 
 export type App1C3rHandoffInputV1 = Readonly<{
   schemaVersion: typeof CORE_BLITZ_WAVE1_CONTRACT_VERSION;
-  app1Receipt: Readonly<{ receiptId: string; itemId: string; repairRevisionId: string }>;
-  c3rJourney: Readonly<{ journeyId: string; itemId: string; repairRevisionId: string }>;
+  app1Receipt: Readonly<{
+    receiptId: string;
+    itemId: string;
+    repairRevisionId: string;
+  }>;
+  c3rJourney: Readonly<{
+    journeyId: string;
+    itemId: string;
+    repairRevisionId: string;
+  }>;
   d1ReviewUnits: readonly Readonly<{
     reviewUnitId: string;
     journeyId: string;
@@ -109,46 +166,80 @@ export type App1C3rHandoffInputV1 = Readonly<{
   }>[];
 }>;
 
-export function assertApp1C3rHandoffH0V1(input: App1C3rHandoffInputV1) {
+export type App1C3rHandoffReceiptV1 = Readonly<{
+  schemaVersion: typeof CORE_BLITZ_WAVE1_CONTRACT_VERSION;
+  outcome: "APP1_C3R_HANDOFF_H0_VALID";
+  app1ReceiptId: string;
+  c3rJourneyId: string;
+  d1ReviewUnitId: string;
+  itemId: string;
+  repairRevisionId: string;
+  learnerVisibleNextUnaidedCheck: true;
+}>;
+
+export function assertApp1C3rHandoffH0V1(
+  input: App1C3rHandoffInputV1,
+): App1C3rHandoffReceiptV1 {
   assertRecord(input);
   assertClosedMetadata(input);
   if (input.schemaVersion !== CORE_BLITZ_WAVE1_CONTRACT_VERSION) {
     throw new CoreBlitzWave1Error("INVALID_INPUT");
   }
+
   assertRecord(input.app1Receipt);
   assertRecord(input.c3rJourney);
-  assertString(input.app1Receipt.receiptId);
-  assertString(input.app1Receipt.itemId);
-  assertString(input.app1Receipt.repairRevisionId);
-  assertString(input.c3rJourney.journeyId);
+  assertIdentifier(input.app1Receipt.receiptId);
+  assertIdentifier(input.app1Receipt.itemId);
+  assertIdentifier(input.app1Receipt.repairRevisionId);
+  assertIdentifier(input.c3rJourney.journeyId);
+  assertIdentifier(input.c3rJourney.itemId);
+  assertIdentifier(input.c3rJourney.repairRevisionId);
+
   if (!Array.isArray(input.d1ReviewUnits) || input.d1ReviewUnits.length !== 1) {
     throw new CoreBlitzWave1Error("H0_EXACTLY_ONE_D1_REVIEW_UNIT_REQUIRED");
   }
+
   const unit = input.d1ReviewUnits[0];
   assertRecord(unit);
-  assertString(unit.reviewUnitId);
+  assertIdentifier(unit.reviewUnitId);
+  assertIdentifier(unit.journeyId);
+  assertIdentifier(unit.itemId);
+  assertBoolean(unit.learnerVisible);
+  assertBoolean(unit.requiresUnaidedAttempt);
+
   const bindingMatches =
     input.app1Receipt.itemId === input.c3rJourney.itemId &&
     input.app1Receipt.repairRevisionId === input.c3rJourney.repairRevisionId &&
     unit.itemId === input.app1Receipt.itemId &&
     unit.journeyId === input.c3rJourney.journeyId &&
     unit.dueKind === "D1";
-  if (!bindingMatches) throw new CoreBlitzWave1Error("H0_D1_BINDING_MISMATCH");
+  if (!bindingMatches) {
+    throw new CoreBlitzWave1Error("H0_D1_BINDING_MISMATCH");
+  }
+
   if (!ASSISTANCE_CLASSES.includes(unit.assistanceClass as AssistanceClass)) {
     throw new CoreBlitzWave1Error("INVALID_INPUT");
   }
-  const assistance = classifyAssistanceV1(unit.assistanceClass as AssistanceClass);
-  if (!unit.learnerVisible || !unit.requiresUnaidedAttempt ||
-      !assistance.independentAttemptEligible) {
+  const assistance = classifyAssistanceV1(
+    unit.assistanceClass as AssistanceClass,
+  );
+  if (
+    unit.learnerVisible !== true ||
+    unit.requiresUnaidedAttempt !== true ||
+    !assistance.independentAttemptEligible
+  ) {
     throw new CoreBlitzWave1Error("H0_UNAIDED_CHECK_REQUIRED");
   }
+
   return Object.freeze({
     schemaVersion: CORE_BLITZ_WAVE1_CONTRACT_VERSION,
-    outcome: "APP1_C3R_HANDOFF_H0_VALID" as const,
+    outcome: "APP1_C3R_HANDOFF_H0_VALID",
     app1ReceiptId: input.app1Receipt.receiptId,
     c3rJourneyId: input.c3rJourney.journeyId,
     d1ReviewUnitId: unit.reviewUnitId,
-    learnerVisibleNextUnaidedCheck: true as const,
+    itemId: input.app1Receipt.itemId,
+    repairRevisionId: input.app1Receipt.repairRevisionId,
+    learnerVisibleNextUnaidedCheck: true,
   });
 }
 
@@ -163,52 +254,101 @@ export type QuestionBankAdmissionInputV1 = Readonly<{
   unseenEligibilitySnapshotSealed: boolean;
   nonSameSurfaceAsSource: boolean;
   familyIsolated: boolean;
-  calibrationState: "UNASSESSED" | "TRANSFER_VERIFIED" | "MEASUREMENT_CALIBRATED";
+  calibrationState: CalibrationState;
   timedProtocolBound: boolean;
 }>;
 
-export function admitQuestionToBankV1(input: QuestionBankAdmissionInputV1) {
+export type QuestionBankAdmissionReceiptV1 = Readonly<{
+  schemaVersion: typeof CORE_BLITZ_WAVE1_CONTRACT_VERSION;
+  admitted: true;
+  bankClass: QuestionBankClass;
+  candidateId: string;
+  familyId: string;
+  learnerUse: "LEARNING_ONLY" | "VERIFIED_TRANSFER" | "MEASUREMENT";
+}>;
+
+export function admitQuestionToBankV1(
+  input: QuestionBankAdmissionInputV1,
+): QuestionBankAdmissionReceiptV1 {
   assertRecord(input);
   assertClosedMetadata(input);
-  if (input.schemaVersion !== CORE_BLITZ_WAVE1_CONTRACT_VERSION ||
-      !QUESTION_BANK_CLASSES.includes(input.bankClass)) {
+  if (
+    input.schemaVersion !== CORE_BLITZ_WAVE1_CONTRACT_VERSION ||
+    !QUESTION_BANK_CLASSES.includes(input.bankClass) ||
+    !CALIBRATION_STATES.includes(input.calibrationState)
+  ) {
     throw new CoreBlitzWave1Error("INVALID_INPUT");
   }
-  assertString(input.candidateId);
-  assertString(input.familyId);
-  if (!input.rightsVerified) throw new CoreBlitzWave1Error("BANK_RIGHTS_REQUIRED");
-  if (!input.sourceCurrent) throw new CoreBlitzWave1Error("BANK_CURRENT_SOURCE_REQUIRED");
-  if (input.bankClass !== "LEARNING_PRACTICE") {
-    if (!input.releaseChainComplete) throw new CoreBlitzWave1Error("BANK_RELEASE_CHAIN_REQUIRED");
-    if (!input.unseenEligibilitySnapshotSealed) throw new CoreBlitzWave1Error("BANK_UNSEEN_SNAPSHOT_REQUIRED");
-    if (!input.nonSameSurfaceAsSource) throw new CoreBlitzWave1Error("BANK_NON_SAME_SURFACE_REQUIRED");
-    if (!input.familyIsolated) throw new CoreBlitzWave1Error("BANK_FAMILY_ISOLATION_REQUIRED");
+
+  assertIdentifier(input.candidateId);
+  assertIdentifier(input.familyId);
+  assertBoolean(input.rightsVerified);
+  assertBoolean(input.sourceCurrent);
+  assertBoolean(input.releaseChainComplete);
+  assertBoolean(input.unseenEligibilitySnapshotSealed);
+  assertBoolean(input.nonSameSurfaceAsSource);
+  assertBoolean(input.familyIsolated);
+  assertBoolean(input.timedProtocolBound);
+
+  if (!input.rightsVerified) {
+    throw new CoreBlitzWave1Error("BANK_RIGHTS_REQUIRED");
   }
-  if (input.bankClass === "VERIFIED_TRANSFER" && input.calibrationState === "UNASSESSED") {
+  if (!input.sourceCurrent) {
+    throw new CoreBlitzWave1Error("BANK_CURRENT_SOURCE_REQUIRED");
+  }
+
+  if (input.bankClass !== "LEARNING_PRACTICE") {
+    if (!input.releaseChainComplete) {
+      throw new CoreBlitzWave1Error("BANK_RELEASE_CHAIN_REQUIRED");
+    }
+    if (!input.unseenEligibilitySnapshotSealed) {
+      throw new CoreBlitzWave1Error("BANK_UNSEEN_SNAPSHOT_REQUIRED");
+    }
+    if (!input.nonSameSurfaceAsSource) {
+      throw new CoreBlitzWave1Error("BANK_NON_SAME_SURFACE_REQUIRED");
+    }
+    if (!input.familyIsolated) {
+      throw new CoreBlitzWave1Error("BANK_FAMILY_ISOLATION_REQUIRED");
+    }
+  }
+
+  if (
+    input.bankClass === "VERIFIED_TRANSFER" &&
+    input.calibrationState === "UNASSESSED"
+  ) {
     throw new CoreBlitzWave1Error("BANK_RELEASE_CHAIN_REQUIRED");
   }
+
   if (input.bankClass === "MEASUREMENT") {
     if (input.calibrationState !== "MEASUREMENT_CALIBRATED") {
-      throw new CoreBlitzWave1Error("BANK_MEASUREMENT_CALIBRATION_REQUIRED");
+      throw new CoreBlitzWave1Error(
+        "BANK_MEASUREMENT_CALIBRATION_REQUIRED",
+      );
     }
     if (!input.timedProtocolBound) {
       throw new CoreBlitzWave1Error("BANK_TIMED_PROTOCOL_REQUIRED");
     }
   }
+
   return Object.freeze({
     schemaVersion: CORE_BLITZ_WAVE1_CONTRACT_VERSION,
-    admitted: true as const,
+    admitted: true,
     bankClass: input.bankClass,
     candidateId: input.candidateId,
     familyId: input.familyId,
-    learnerUse: input.bankClass === "LEARNING_PRACTICE"
-      ? "LEARNING_ONLY" as const
-      : input.bankClass,
+    learnerUse:
+      input.bankClass === "LEARNING_PRACTICE"
+        ? "LEARNING_ONLY"
+        : input.bankClass,
   });
 }
 
 export const CHECKPOINT_NODE_STATES = [
-  "PENDING", "READY", "IN_PROGRESS", "COMPLETE", "BLOCKED_HARD_GATE",
+  "PENDING",
+  "READY",
+  "IN_PROGRESS",
+  "COMPLETE",
+  "BLOCKED_HARD_GATE",
 ] as const;
 type CheckpointNodeState = (typeof CHECKPOINT_NODE_STATES)[number];
 
@@ -217,6 +357,29 @@ type CheckpointNodeV1 = Readonly<{
   dependencies: readonly string[];
   state: CheckpointNodeState;
 }>;
+
+function assertAcyclicCheckpoint(nodes: readonly CheckpointNodeV1[]): void {
+  const byId = new Map(nodes.map((node) => [node.nodeId, node] as const));
+  const visiting = new Set<string>();
+  const visited = new Set<string>();
+
+  const visit = (nodeId: string): void => {
+    if (visited.has(nodeId)) return;
+    if (visiting.has(nodeId)) {
+      throw new CoreBlitzWave1Error("CHECKPOINT_CYCLE");
+    }
+    visiting.add(nodeId);
+    const node = byId.get(nodeId);
+    if (!node) {
+      throw new CoreBlitzWave1Error("CHECKPOINT_UNKNOWN_DEPENDENCY");
+    }
+    for (const dependency of node.dependencies) visit(dependency);
+    visiting.delete(nodeId);
+    visited.add(nodeId);
+  };
+
+  for (const node of nodes) visit(node.nodeId);
+}
 
 export function resumeCoreBlitzCheckpointV1(
   checkpoint: unknown,
@@ -227,53 +390,88 @@ export function resumeCoreBlitzCheckpointV1(
   assertRecord(checkpoint);
   assertClosedMetadata(checkpoint);
   assertString(expectedScopeDigest);
+  assertString(liveMain);
+  assertString(liveTree);
+
   if (checkpoint.schemaVersion !== CORE_BLITZ_WAVE1_CONTRACT_VERSION) {
     throw new CoreBlitzWave1Error("INVALID_INPUT");
   }
   if (checkpoint.scopeDigest !== expectedScopeDigest) {
     throw new CoreBlitzWave1Error("CHECKPOINT_SCOPE_DRIFT");
   }
-  if (checkpoint.startingMain !== liveMain || checkpoint.startingTree !== liveTree) {
+  if (
+    checkpoint.startingMain !== liveMain ||
+    checkpoint.startingTree !== liveTree
+  ) {
     throw new CoreBlitzWave1Error("CHECKPOINT_MAIN_DRIFT");
   }
-  if (!Array.isArray(checkpoint.nodes)) throw new CoreBlitzWave1Error("INVALID_INPUT");
+  if (!Array.isArray(checkpoint.nodes)) {
+    throw new CoreBlitzWave1Error("INVALID_INPUT");
+  }
+
   const nodes: CheckpointNodeV1[] = [];
   const byId = new Map<string, CheckpointNodeV1>();
   for (const raw of checkpoint.nodes) {
     assertRecord(raw);
-    assertString(raw.nodeId);
-    if (!Array.isArray(raw.dependencies) || raw.dependencies.some((v) => typeof v !== "string") ||
-        !CHECKPOINT_NODE_STATES.includes(raw.state as CheckpointNodeState)) {
+    assertIdentifier(raw.nodeId);
+    if (
+      !Array.isArray(raw.dependencies) ||
+      raw.dependencies.some((value) => typeof value !== "string") ||
+      !CHECKPOINT_NODE_STATES.includes(raw.state as CheckpointNodeState)
+    ) {
       throw new CoreBlitzWave1Error("INVALID_INPUT");
     }
-    if (byId.has(raw.nodeId)) throw new CoreBlitzWave1Error("CHECKPOINT_DUPLICATE_NODE");
+
+    const dependencies = raw.dependencies as string[];
+    for (const dependency of dependencies) assertIdentifier(dependency);
+    if (new Set(dependencies).size !== dependencies.length) {
+      throw new CoreBlitzWave1Error("CHECKPOINT_DUPLICATE_DEPENDENCY");
+    }
+    if (byId.has(raw.nodeId)) {
+      throw new CoreBlitzWave1Error("CHECKPOINT_DUPLICATE_NODE");
+    }
+
     const node = Object.freeze({
       nodeId: raw.nodeId,
-      dependencies: Object.freeze([...raw.dependencies]) as readonly string[],
+      dependencies: Object.freeze([...dependencies]) as readonly string[],
       state: raw.state as CheckpointNodeState,
     });
     nodes.push(node);
     byId.set(node.nodeId, node);
   }
+
   for (const node of nodes) {
     for (const dependency of node.dependencies) {
-      if (!byId.has(dependency)) throw new CoreBlitzWave1Error("CHECKPOINT_UNKNOWN_DEPENDENCY");
+      if (!byId.has(dependency)) {
+        throw new CoreBlitzWave1Error("CHECKPOINT_UNKNOWN_DEPENDENCY");
+      }
     }
   }
+  assertAcyclicCheckpoint(nodes);
+
   const readyNodeIds = nodes
-    .filter((node) => (node.state === "PENDING" || node.state === "READY") &&
-      node.dependencies.every((id) => byId.get(id)?.state === "COMPLETE"))
+    .filter(
+      (node) =>
+        (node.state === "PENDING" || node.state === "READY") &&
+        node.dependencies.every(
+          (dependency) => byId.get(dependency)?.state === "COMPLETE",
+        ),
+    )
     .map((node) => node.nodeId)
     .sort();
+
   const blockedHardGateNodeIds = nodes
     .filter((node) => node.state === "BLOCKED_HARD_GATE")
     .map((node) => node.nodeId)
     .sort();
+
   return Object.freeze({
     schemaVersion: CORE_BLITZ_WAVE1_CONTRACT_VERSION,
     readyNodeIds: Object.freeze(readyNodeIds),
     blockedHardGateNodeIds: Object.freeze(blockedHardGateNodeIds),
-    terminal: nodes.every((node) =>
-      node.state === "COMPLETE" || node.state === "BLOCKED_HARD_GATE"),
+    terminal: nodes.every(
+      (node) =>
+        node.state === "COMPLETE" || node.state === "BLOCKED_HARD_GATE",
+    ),
   });
 }
