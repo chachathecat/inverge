@@ -1,12 +1,19 @@
 import crypto from "node:crypto";
 
 import type { WrongAnswerItemRecord } from "./types";
-import type { App1C3rHandoffCandidateV1 } from "./app1-c3r-handoff";
+import {
+  buildApp1C3rHandoffCandidateV1,
+  type App1C3rHandoffCandidateV1,
+} from "./app1-c3r-handoff";
 import {
   materializeApp1C3rHandoffH0V1,
   type App1C3rHandoffPersistencePortV1,
   type DurableC3rJourneyV1,
 } from "./app1-c3r-handoff-runtime";
+import {
+  resolveReviewSchedule,
+  resolveScheduleOverrideDate,
+} from "./scheduling";
 
 export const APP1_C3R_REVIEW_OS_ADAPTER_VERSION =
   "app1_c3r_review_os_adapter.v1" as const;
@@ -60,6 +67,7 @@ export type App1C3rReviewQueueSnapshotV1 = Readonly<{
   subject: string;
   status: "pending" | "completed";
   dueAt: string;
+  recurrenceCount: number;
 }>;
 
 export type App1C3rReviewOsStoragePortV1 = Readonly<{
@@ -122,12 +130,14 @@ function deterministicUuid(value: unknown) {
   return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-5${hex.slice(13, 16)}-a${hex.slice(17, 20)}-${hex.slice(20, 32)}`;
 }
 
-function readReplayPlan(item: WrongAnswerItemRecord) {
+function readReplayPlan(item: WrongAnswerItemRecord, userId: string) {
   if (
     !item ||
     typeof item !== "object" ||
     !UUID_PATTERN.test(item.id) ||
-    !canonicalUtc(item.updatedAt)
+    !canonicalUtc(item.updatedAt) ||
+    item.userId !== userId ||
+    item.examName !== "감정평가사 2차"
   ) {
     reject("INVALID_ITEM");
   }
@@ -139,6 +149,17 @@ function readReplayPlan(item: WrongAnswerItemRecord) {
   const candidate = record(metadata?.app1_c3r_handoff_candidate);
   if (!candidate) return null;
   const confirmed = record(rawPayload?.user_confirmed_fields);
+  const queuePlan = record(replay.queue);
+  const scheduleInput = record(queuePlan?.scheduleInput);
+  const expectedCandidate = buildApp1C3rHandoffCandidateV1({
+    itemId: item.id,
+    examName: item.examName,
+    subject: item.subjectLabel,
+    conceptNodeId: candidate.conceptNodeId as string,
+    createdFromCapture: true,
+    hasRepairTarget: true,
+    hasRepairDirective: true,
+  });
   if (
     replay.itemId !== item.id ||
     !nonEmpty(replay.queueId) ||
@@ -148,7 +169,19 @@ function readReplayPlan(item: WrongAnswerItemRecord) {
     !nonEmpty(replay.workRevisionId) ||
     !confirmed ||
     confirmed.persistence_work_revision_id !== replay.workRevisionId ||
-    candidate.sourceItemId !== item.id
+    candidate.sourceItemId !== item.id ||
+    !expectedCandidate ||
+    stableJson(candidate) !== stableJson(expectedCandidate) ||
+    !scheduleInput ||
+    scheduleInput.mode !== "second" ||
+    typeof scheduleInput.isCorrect !== "boolean" ||
+    !["낮음", "중간", "높음"].includes(String(scheduleInput.confidence)) ||
+    !nonEmpty(scheduleInput.mistakeType) ||
+    typeof scheduleInput.hasWeakParagraph !== "boolean" ||
+    !canonicalUtc(scheduleInput.scheduledAt) ||
+    (scheduleInput.nextReviewDateOverride !== null &&
+      (!nonEmpty(scheduleInput.nextReviewDateOverride) ||
+        !Number.isFinite(Date.parse(scheduleInput.nextReviewDateOverride))))
   ) {
     reject("INVALID_REPLAY_PLAN");
   }
@@ -157,7 +190,39 @@ function readReplayPlan(item: WrongAnswerItemRecord) {
     queueId: replay.queueId,
     learningSignalId: replay.learningSignalId,
     repairRevisionId: replay.workRevisionId,
+    scheduleInput: Object.freeze({
+      mode: "second" as const,
+      isCorrect: scheduleInput.isCorrect,
+      confidence: scheduleInput.confidence as
+        | "낮음"
+        | "중간"
+        | "높음",
+      mistakeType: scheduleInput.mistakeType,
+      hasWeakParagraph: scheduleInput.hasWeakParagraph,
+      scheduledAt: scheduleInput.scheduledAt,
+      nextReviewDateOverride: scheduleInput.nextReviewDateOverride as
+        | string
+        | null,
+    }),
   });
+}
+
+function expectedQueueDueAt(
+  replay: NonNullable<ReturnType<typeof readReplayPlan>>,
+  recurrenceCount: number,
+) {
+  const schedule = resolveReviewSchedule({
+    ...replay.scheduleInput,
+    recurrenceCount,
+    now: new Date(replay.scheduleInput.scheduledAt),
+  });
+  return (
+    schedule.retryDueAt ??
+    resolveScheduleOverrideDate(
+      replay.scheduleInput.nextReviewDateOverride ?? schedule.nextReviewDate,
+      schedule.reviewDueAt,
+    )
+  );
 }
 
 function assertProjection(
@@ -175,7 +240,7 @@ export async function materializeApp1C3rReviewOsAdapterV1(input: Readonly<{
   storage: App1C3rReviewOsStoragePortV1;
 }>) {
   if (!nonEmpty(input?.userId) || !input?.storage) reject("INVALID_ITEM");
-  const replay = readReplayPlan(input.item);
+  const replay = readReplayPlan(input.item, input.userId);
   if (!replay) return null;
 
   const queue = await input.storage.loadReviewQueueUnit({
@@ -190,7 +255,10 @@ export async function materializeApp1C3rReviewOsAdapterV1(input: Readonly<{
     queue.itemId !== input.item.id ||
     queue.subject !== input.item.subjectLabel ||
     !["pending", "completed"].includes(queue.status) ||
-    !canonicalUtc(queue.dueAt)
+    !canonicalUtc(queue.dueAt) ||
+    !Number.isSafeInteger(queue.recurrenceCount) ||
+    queue.recurrenceCount < 1 ||
+    queue.dueAt !== expectedQueueDueAt(replay, queue.recurrenceCount)
   ) {
     reject("REVIEW_QUEUE_BINDING_CONFLICT");
   }

@@ -116,7 +116,9 @@ function sameAssignment(
   actual: QfI1DurableAssignmentV1,
   expected: AssignedDecision,
 ) {
-  const { durable: _durable, ...actualMaterial } = actual;
+  const actualMaterial = Object.fromEntries(
+    Object.entries(actual).filter(([key]) => key !== "durable"),
+  );
   return stableJson(actualMaterial) === stableJson(expected);
 }
 
@@ -201,7 +203,9 @@ export async function recordQfI1PresentationV1(input: Readonly<{
   if (!exposure || exposure.durable !== true) {
     reject("NON_DURABLE_EXPOSURE");
   }
-  const { durable: _durable, ...actual } = exposure;
+  const actual = Object.fromEntries(
+    Object.entries(exposure).filter(([key]) => key !== "durable"),
+  );
   if (stableJson(actual) !== stableJson(material)) {
     reject("EXPOSURE_BINDING_CONFLICT");
   }

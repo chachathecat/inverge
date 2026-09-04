@@ -40,7 +40,13 @@ export default async function LearnerSupportPage({ params }: PageProps) {
     session.email,
     itemId,
   );
-  if (!detail || detail.item.id !== itemId) notFound();
+  if (
+    !detail ||
+    detail.item.id !== itemId ||
+    detail.item.examName !== "감정평가사 2차"
+  ) {
+    notFound();
+  }
 
   const note = buildDetailStudyNote(detail);
   const draft = normalizeAnswerReviewStructureDraft({

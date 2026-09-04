@@ -36,6 +36,9 @@ function candidate(bankClass, token, overrides = {}) {
     familyId: `family-${token}`,
     surfaceId: `surface-${token}`,
     bankClass,
+    origin: "BANK_STOCK",
+    contentAuthority:
+      bankClass === "LEARNING_PRACTICE" ? "LEARNING_ONLY" : bankClass,
     rightsStatus: "VERIFIED",
     sourceStatus: "CURRENT",
     releaseChainComplete: bankClass !== "LEARNING_PRACTICE",
@@ -87,15 +90,54 @@ test("bank-first assignment is deterministic and does not generate when bank has
   assert.equal(result.candidateId, higher.candidateId);
   assert.equal(result.learnerUse, "LEARNING_ONLY");
   assert.equal(result.transferClaimAllowed, false);
+  assert.equal(result.generationAuthorized, false);
 });
 
-test("learning gaps authorize only learning-only generation", () => {
-  const result = selectQfI1BankFirstAssignmentV1(
+test("learning gaps authorize only deterministic learning-only generation", () => {
+  const first = selectQfI1BankFirstAssignmentV1(
     request("LEARNING_PRACTICE", []),
   );
-  assert.equal(result.status, "GENERATION_REQUIRED");
-  assert.equal(result.generationAuthorized, true);
-  assert.equal(result.generatedContentMaximumAuthority, "LEARNING_ONLY");
+  const retry = selectQfI1BankFirstAssignmentV1(
+    request("LEARNING_PRACTICE", []),
+  );
+  assert.equal(first.status, "GENERATION_REQUIRED");
+  assert.equal(first.generationAuthorized, true);
+  assert.equal(first.generatedContentMaximumAuthority, "LEARNING_ONLY");
+  assert.match(first.generationRequestId, /^qfg_[0-9a-f]{64}$/u);
+  assert.match(first.retryIdentity, /^qfgr_[0-9a-f]{64}$/u);
+  assert.match(first.conflictIdentity, /^qfgc_[0-9a-f]{64}$/u);
+  assert.equal(retry.generationRequestId, first.generationRequestId);
+  assert.equal(retry.retryIdentity, first.retryIdentity);
+  assert.equal(retry.conflictIdentity, first.conflictIdentity);
+  assert.equal(first.providerExecutionAllowed, false);
+  assert.equal(first.publicLearnerActivationAllowed, false);
+  assert.equal(first.rawGeneratedBodyMetadataPersistenceAllowed, false);
+  assert.equal(first.verifiedTransferAdmissionAllowed, false);
+  assert.equal(first.measurementAdmissionAllowed, false);
+});
+
+test("generated learning-only content cannot enter transfer or measurement banks", () => {
+  for (const bankClass of ["VERIFIED_TRANSFER", "MEASUREMENT"]) {
+    assert.throws(
+      () =>
+        selectQfI1BankFirstAssignmentV1(
+          request(
+            bankClass === "VERIFIED_TRANSFER"
+              ? "D7_TRANSFER"
+              : "TIMED_MEASUREMENT",
+            [
+              candidate(bankClass, bankClass === "VERIFIED_TRANSFER" ? "8" : "9", {
+                origin: "GENERATED",
+                contentAuthority: "LEARNING_ONLY",
+              }),
+            ],
+          ),
+        ),
+      (error) =>
+        error instanceof QfI1BankFirstError &&
+        error.code === "GENERATED_AUTHORITY_ESCALATION",
+    );
+  }
 });
 
 test("D+7 excludes exposed, same-family, and same-surface candidates", () => {

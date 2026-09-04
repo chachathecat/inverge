@@ -27,6 +27,8 @@ export const QF_I1_ERROR_CODES = Object.freeze([
   "CHRONOLOGY_INCOMPLETE",
   "CHRONOLOGY_BINDING_MISMATCH",
   "DUPLICATE_CANDIDATE_ID",
+  "AUTHORITY_BINDING_MISMATCH",
+  "GENERATED_AUTHORITY_ESCALATION",
 ] as const);
 export type QfI1ErrorCode = (typeof QF_I1_ERROR_CODES)[number];
 
@@ -53,6 +55,8 @@ export type QfI1CandidateV1 = Readonly<{
   familyId: string;
   surfaceId: string;
   bankClass: QuestionBankClass;
+  origin: "BANK_STOCK" | "GENERATED";
+  contentAuthority: "LEARNING_ONLY" | "VERIFIED_TRANSFER" | "MEASUREMENT";
   rightsStatus: "VERIFIED";
   sourceStatus: "CURRENT";
   releaseChainComplete: boolean;
@@ -149,6 +153,17 @@ function assertChronology(candidate: QfI1CandidateV1) {
 
 function assertCandidate(candidate: QfI1CandidateV1) {
   if (
+    candidate.origin === "GENERATED" &&
+    (candidate.bankClass !== "LEARNING_PRACTICE" ||
+      candidate.contentAuthority !== "LEARNING_ONLY")
+  ) {
+    reject("GENERATED_AUTHORITY_ESCALATION");
+  }
+  const requiredAuthority =
+    candidate.bankClass === "LEARNING_PRACTICE"
+      ? "LEARNING_ONLY"
+      : candidate.bankClass;
+  if (
     !nonEmpty(candidate.candidateId) ||
     !nonEmpty(candidate.candidateDigest) ||
     !nonEmpty(candidate.familyId) ||
@@ -156,9 +171,15 @@ function assertCandidate(candidate: QfI1CandidateV1) {
     !canonicalUtc(candidate.availableAt) ||
     !Number.isSafeInteger(candidate.priority) ||
     candidate.priority < 0 ||
-    candidate.priority > 100
+    candidate.priority > 100 ||
+    !["BANK_STOCK", "GENERATED"].includes(candidate.origin) ||
+    candidate.contentAuthority !== requiredAuthority
   ) {
-    reject("INVALID_INPUT");
+    reject(
+      candidate.contentAuthority !== requiredAuthority
+        ? "AUTHORITY_BINDING_MISMATCH"
+        : "INVALID_INPUT",
+    );
   }
   assertChronology(candidate);
   admitQuestionToBankV1({
@@ -252,6 +273,21 @@ export function selectQfI1BankFirstAssignmentV1(
 
   const selected = eligible[0] ?? null;
   if (!selected) {
+    const generationAuthorized = request.purpose === "LEARNING_PRACTICE";
+    const generationMaterial = {
+      contractVersion: QF_I1_BANK_FIRST_RUNTIME_VERSION,
+      purpose: request.purpose,
+      learnerScopeId: request.learnerScopeId,
+      sourceCandidateId: request.sourceCandidateId,
+      sourceFamilyId: request.sourceFamilyId,
+      sourceSurfaceId: request.sourceSurfaceId,
+      asOf: request.asOf,
+      requiredBankClass: bankClass,
+    };
+    const generationRequestDigest = digest({
+      domain: "QF_I1_LEARNING_ONLY_GENERATION_REQUEST_V1",
+      material: generationMaterial,
+    });
     return Object.freeze({
       contractVersion: QF_I1_BANK_FIRST_RUNTIME_VERSION,
       status:
@@ -260,12 +296,34 @@ export function selectQfI1BankFirstAssignmentV1(
           : ("NO_CERTIFIED_CANDIDATE" as const),
       purpose: request.purpose,
       requiredBankClass: bankClass,
-      generationAuthorized:
-        request.purpose === "LEARNING_PRACTICE",
+      generationAuthorized,
       generatedContentMaximumAuthority:
-        request.purpose === "LEARNING_PRACTICE"
+        generationAuthorized
           ? ("LEARNING_ONLY" as const)
           : ("NONE" as const),
+      generationRequestId: generationAuthorized
+        ? `qfg_${generationRequestDigest.slice("sha256:".length)}`
+        : null,
+      generationRequestDigest: generationAuthorized
+        ? generationRequestDigest
+        : null,
+      retryIdentity: generationAuthorized
+        ? `qfgr_${digest({
+            domain: "QF_I1_GENERATION_RETRY_V1",
+            generationRequestDigest,
+          }).slice("sha256:".length)}`
+        : null,
+      conflictIdentity: generationAuthorized
+        ? `qfgc_${digest({
+            domain: "QF_I1_GENERATION_CONFLICT_V1",
+            generationMaterial,
+          }).slice("sha256:".length)}`
+        : null,
+      providerExecutionAllowed: false as const,
+      publicLearnerActivationAllowed: false as const,
+      rawGeneratedBodyMetadataPersistenceAllowed: false as const,
+      verifiedTransferAdmissionAllowed: false as const,
+      measurementAdmissionAllowed: false as const,
     });
   }
 
@@ -278,6 +336,8 @@ export function selectQfI1BankFirstAssignmentV1(
     familyId: selected.familyId,
     surfaceId: selected.surfaceId,
     bankClass: selected.bankClass,
+    origin: selected.origin,
+    contentAuthority: selected.contentAuthority,
     chronologyDigest: selected.chronology?.chronologyDigest ?? null,
     assignedAt: request.asOf,
   };
@@ -292,5 +352,6 @@ export function selectQfI1BankFirstAssignmentV1(
         : selected.bankClass,
     transferClaimAllowed: selected.bankClass !== "LEARNING_PRACTICE",
     measurementClaimAllowed: selected.bankClass === "MEASUREMENT",
+    generationAuthorized: false as const,
   });
 }

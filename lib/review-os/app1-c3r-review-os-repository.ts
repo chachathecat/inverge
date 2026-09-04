@@ -168,7 +168,7 @@ export function createApp1C3rReviewOsStoragePortV1(
       const result = await clientFor(userId)
         .from("review_queue_items")
         .select(
-          "id, user_id, exam_id, subject_id, stage, source_submission_id, source_kind, status, raw_payload",
+          "id, user_id, exam_id, subject_id, stage, source_submission_id, source_kind, status, raw_payload, derived_payload",
         )
         .eq("id", input.reviewUnitId)
         .eq("user_id", userId)
@@ -181,7 +181,9 @@ export function createApp1C3rReviewOsStoragePortV1(
       const row = record(result.data);
       if (!row) return null;
       const rawPayload = record(row.raw_payload);
+      const derivedPayload = record(row.derived_payload);
       const dueAt = normalizeTimestamp(rawPayload?.dueAt);
+      const recurrenceCount = derivedPayload?.recurrenceCount;
       if (
         row.id !== input.reviewUnitId ||
         row.user_id !== userId ||
@@ -191,7 +193,9 @@ export function createApp1C3rReviewOsStoragePortV1(
         row.source_submission_id !== input.itemId ||
         row.source_kind !== "wrong_answer" ||
         !["pending", "completed"].includes(String(row.status)) ||
-        !dueAt
+        !dueAt ||
+        !Number.isSafeInteger(recurrenceCount) ||
+        Number(recurrenceCount) < 1
       ) {
         throw new Error("app1-c3r-review-os:review-unit-binding-conflict");
       }
@@ -202,6 +206,7 @@ export function createApp1C3rReviewOsStoragePortV1(
         subject: row.subject_id,
         status: row.status as "pending" | "completed",
         dueAt,
+        recurrenceCount: Number(recurrenceCount),
       });
     },
   });

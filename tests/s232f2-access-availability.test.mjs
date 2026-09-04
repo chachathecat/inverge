@@ -206,7 +206,6 @@ test("S232F.2 every data-bearing app page gates a fresh access result before dow
     "app/app/c3r-l/page.tsx",
     "app/app/c3r-t/page.tsx",
     "app/app/capture/repair/page.tsx",
-    "app/app/core-blitz/support/[itemId]/page.tsx",
     "app/app/trusted-repair/page.tsx",
   ].sort();
   const allPages = collectPageFiles("app/app").sort();

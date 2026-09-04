@@ -53,7 +53,7 @@ const CHOICE_CONFIGURATION: Readonly<
     disclosure: "NONE",
   }),
   ONE_HINT: Object.freeze({
-    label: "힌트 하나 보기",
+    label: "힌트 하나",
     assistanceClass: "MINIMAL_HINT",
     disclosure: "HINT",
   }),
@@ -63,7 +63,7 @@ const CHOICE_CONFIGURATION: Readonly<
     disclosure: "EASY_EXPLANATION",
   }),
   FULL_SOLUTION: Object.freeze({
-    label: "정답·전체풀이 보기",
+    label: "전체풀이",
     assistanceClass: "FULL_SOLUTION_REVEALED",
     disclosure: "FULL_SOLUTION",
   }),
@@ -245,26 +245,30 @@ export function projectLearnerSupportV1(input: Readonly<{
     });
   }
 
-  const sections = Object.freeze(
-    [
-      referenceAnswer ? section("정답", [referenceAnswer]) : null,
-      section("풀이 흐름", input.draft.stepByStepExplanation ?? []),
-      section("시험답안식 구조", [input.draft.referenceStructure]),
-      section("교정 예시", [input.draft.rewriteDraftSuggestion]),
-      section("시험장에서 볼 것", input.draft.examAnswerHints ?? []),
-    ].filter((value): value is NonNullable<typeof value> => value !== null),
-  );
+  const sections = referenceAnswer
+    ? Object.freeze(
+        [
+          section("정답", [referenceAnswer]),
+          section("풀이 흐름", input.draft.stepByStepExplanation ?? []),
+          section("시험답안식 구조", [input.draft.referenceStructure]),
+          section("교정 예시", [input.draft.rewriteDraftSuggestion]),
+          section("시험장에서 볼 것", input.draft.examAnswerHints ?? []),
+        ].filter(
+          (value): value is NonNullable<typeof value> => value !== null,
+        ),
+      )
+    : Object.freeze([]);
   return Object.freeze({
     contractVersion: "DabangilLearnerSupportProjectionV1",
     choice: input.choice,
     assistanceClass: decision.assistanceClass,
-    available: sections.length > 0,
-    authority: referenceAnswer ? "SUPPLIED_REFERENCE" : "STRUCTURE_ONLY",
-    title: "정답·전체풀이",
+    available: referenceAnswer !== null,
+    authority: referenceAnswer ? "SUPPLIED_REFERENCE" : "NONE",
+    title: "전체풀이",
     sections,
     notice: referenceAnswer
       ? "전체풀이를 본 시도는 독립 수행으로 계산하지 않습니다."
-      : "확인된 기준답안이 없어 구조화된 풀이만 제공하며 정답 전체라고 단정하지 않습니다.",
+      : "확인된 기준답안이 없어 전체풀이를 제공하지 않습니다.",
     fullSolutionClaimAllowed: referenceAnswer !== null,
     directAnswerClaimAllowed: referenceAnswer !== null,
     requiresDistinctUnaidedAttempt: true,

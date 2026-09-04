@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import fs from "node:fs";
+import fs, { existsSync } from "node:fs";
 import path from "node:path";
 import test from "node:test";
 
@@ -92,9 +92,9 @@ test("learner support route verifies the owned item before durable disclosure lo
 
   for (const label of [
     "내가 먼저 풀기",
-    "힌트 하나 보기",
+    "힌트 하나",
     "1타 쉬운풀이",
-    "정답·전체풀이 보기",
+    "전체풀이",
     "정답만 보기",
   ]) {
     assert.ok(read("lib/core-blitz/learner-capability.ts").includes(label));
@@ -103,5 +103,29 @@ test("learner support route verifies the owned item before durable disclosure lo
   assert.match(component, /fetch\("\/api\/os\/learner-support"/u);
   assert.match(component, /내용은 아직 공개하지 않았습니다/u);
   assert.match(page, /getWrongAnswerDetail/u);
+  assert.match(page, /detail\.item\.examName !== "감정평가사 2차"/u);
   assert.match(page, /<LearnerSupportPanel/u);
+});
+
+test("Study Ledger is the sole authenticated learner-support entry", () => {
+  const itemPage = read("app/app/items/[itemId]/page.tsx");
+  const ledger = read("components/learner/study-ledger-ui.tsx");
+
+  assert.ok(
+    itemPage.includes(
+      'supportHref={`/app/items/${encodeURIComponent(itemId)}/support`}',
+    ),
+  );
+  assert.match(ledger, /supportHref\?: string \| null/u);
+  assert.ok(ledger.includes("href={supportHref}"));
+  assert.match(ledger, /data-core-blitz-learner-support-entry/u);
+  assert.match(ledger, /필요한 만큼 도움받기/u);
+  assert.equal(
+    existsSync(path.join(root, "app/app/core-blitz/support/[itemId]/page.tsx")),
+    false,
+  );
+  assert.equal(
+    existsSync(path.join(root, "lib/core-blitz/learner-support-runtime.ts")),
+    false,
+  );
 });

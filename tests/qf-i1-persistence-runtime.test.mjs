@@ -18,6 +18,8 @@ function candidate() {
     familyId: "family-2",
     surfaceId: "surface-2",
     bankClass: "LEARNING_PRACTICE",
+    origin: "BANK_STOCK",
+    contentAuthority: "LEARNING_ONLY",
     rightsStatus: "VERIFIED",
     sourceStatus: "CURRENT",
     releaseChainComplete: false,
@@ -103,6 +105,9 @@ test("QF-I1 preserves generation-on-learning-gap without fabricating an assignme
   });
   assert.equal(result.outcome, "GENERATION_REQUIRED");
   assert.equal(result.decision.generatedContentMaximumAuthority, "LEARNING_ONLY");
+  assert.match(result.decision.generationRequestId, /^qfg_[0-9a-f]{64}$/u);
+  assert.match(result.decision.retryIdentity, /^qfgr_[0-9a-f]{64}$/u);
+  assert.match(result.decision.conflictIdentity, /^qfgc_[0-9a-f]{64}$/u);
   assert.equal(assignmentWrites, 0);
 });
 

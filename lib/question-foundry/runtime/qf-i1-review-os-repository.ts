@@ -193,7 +193,9 @@ export async function ensureQfI1CandidateMetadataV1(
         metadata_json: existing.metadata_json,
       }
     : null;
-  const { created_at: _createdAt, ...comparableExpected } = expected;
+  const comparableExpected = Object.fromEntries(
+    Object.entries(expected).filter(([key]) => key !== "created_at"),
+  );
   if (
     !existing ||
     stableJson(comparableExisting) !== stableJson(comparableExpected) ||

@@ -1,160 +1,117 @@
 {
   "contractVersion": "dabangil.core_blitz.wave1.v1",
   "programIssue": 880,
-  "status": "wave1_runtime_integration_in_progress",
+  "pullRequest": 882,
+  "status": "appraiser_second_stage_wave1_candidate_validation",
   "startingAuthority": {
     "mainSha": "d4e056938707c11e6c862230745c381297c0b26f",
     "mainTree": "c19f7abe3f0ace8ecdc8afbe9647a8e31eb4dfc2",
+    "startingLivePrHead": "36bac9ef30c456248283275d2560bc036438b501",
+    "startingLivePrTree": "5ac03c17941d2386a365de5676d0bec687a8e8bb",
     "app1MergedPr": 876,
-    "app1ResultingMainSha": "4aa0d84e0d8d9255e74a7b6428aca99e25a4218e",
-    "qfS3MergedPr": 879,
-    "qfS3ResultingMainSha": "d4e056938707c11e6c862230745c381297c0b26f"
+    "qfS3MergedPr": 879
   },
-  "operatingModel": {
-    "rootOrchestratorCount": 1,
-    "maximumDisjointMutationWorktrees": 3,
-    "mergeProducingIntegrationWriterCount": 1,
-    "readOnlyAndSourceWorkers": "as_needed",
-    "llmPollingLoopAllowed": false,
-    "checkpointResumeRequired": true,
-    "onePrimaryDraftPerMilestone": true
-  },
-  "lanes": [
+  "activeLanes": [
     {
       "laneId": "APP1_C3R_CLOSED_LOOP",
-      "initialNode": "APP1_C3R_HANDOFF_H0",
-      "goal": "APP-1 D0 repair binds to exactly one existing C3R journey and exactly one learner-visible D+1 unaided ReviewUnit before D+7, Timed and Reopen.",
-      "persistedHandoffCandidateInstalled": true,
-      "materializationCoordinatorInstalled": true,
-      "durableJourneyMaterializationComplete": true,
-      "reviewOsJourneyProjectionAdapterInstalled": true,
-      "canonicalReviewQueueAdapterInstalled": true,
-      "reviewQueueRowReusedWithoutMutation": true,
-      "dedicatedSubjectC3rEvidenceAuthorityDuplicated": false,
-      "d1SubjectExecutionUsesExistingC3rRoutes": true,
-      "duplicateEvidenceAuthorityAllowed": false,
-      "duplicateQueueAllowed": false,
-      "duplicateReviewStateMachineAllowed": false
+      "remainingTarget": "APP1_AUTHENTICATED_C3R_PERSISTENCE_ACCEPTANCE",
+      "goal": "Prove an authenticated APP-1 durable save reuses exactly one existing Review Queue row and materializes exactly one bodyless C3R journey projection.",
+      "reviewQueueInsertAllowed": false,
+      "masteryOrTransferEvidenceFromRepairAllowed": false,
+      "syntheticLocalDataOnly": true
     },
     {
-      "laneId": "COMMON_KERNEL_AND_LEARNER_EXPERIENCE",
-      "initialNode": "M4_FIRST_STAGE_COMMON_KERNEL",
-      "goal": "Install the common selected-response kernel and the smallest directly usable learner capability floor with honest assistance semantics.",
-      "learnerChoiceKernelInstalled": true,
-      "learnerSupportProjectionInstalled": true,
-      "learnerFacingSupportRouteInstalled": true,
-      "assistanceUsagePersistenceInstalled": true,
-      "mainItemEntryLinkInstalled": false,
-      "sameItemMasteryFromExplanationAllowed": false,
-      "sameItemMasteryFromRevealedSolutionAllowed": false
+      "laneId": "APPRAISER_SECOND_STAGE_LEARNER_SUPPORT",
+      "remainingTarget": "CANONICAL_STUDY_LEDGER_SUPPORT_ROUTE",
+      "goal": "Expose one authenticated appraiser second-stage learner-support route from the stored-item Study Ledger flow with honest assistance semantics.",
+      "canonicalRoute": "/app/items/[itemId]/support",
+      "duplicateRouteAllowed": false,
+      "suppliedReferenceRequiredForAnswerOrFullSolution": true
     },
     {
       "laneId": "VERIFIED_QUESTION_FOUNDRY_RUNTIME",
-      "initialNode": "QF_I1_INTEGRATION",
-      "goal": "Consume merged QF-S3 and establish rights-safe generation, release-chain completeness and three-bank admission without public or learner activation.",
-      "bankFirstSelectionInstalled": true,
-      "durableAssignmentCoordinatorInstalled": true,
-      "reviewOsMetadataAdapterInstalled": true,
-      "providerGenerationInstalled": false,
-      "banks": [
-        "LEARNING_PRACTICE",
-        "VERIFIED_TRANSFER",
-        "MEASUREMENT"
-      ]
-    },
-    {
-      "laneId": "SEVEN_EXAM_PRE_T0_SOURCE",
-      "initialNode": "SEVEN_EXAM_DOSSIER_AND_SOURCE_PREPARATION",
-      "goal": "Prepare seven exam-cell source packets without shared-core mutation or learner runtime."
+      "remainingTarget": "QF_I1_LEARNING_ONLY_BOUNDARY",
+      "goal": "Prefer eligible bank stock and authorize deterministic generation only for an absent Learning Practice candidate while preventing authority escalation.",
+      "providerExecution": false,
+      "publicLearnerActivation": false,
+      "generatedMaximumAuthority": "LEARNING_ONLY"
     }
   ],
-  "competitiveCapabilityFloor": {
-    "input": [
-      "text",
-      "image_camera",
-      "multi_page_image",
-      "pdf",
-      "editable_ocr"
-    ],
-    "answerAndExplanation": [
-      "try_first",
-      "direct_answer",
-      "answer_only",
-      "full_worked_solution",
-      "step_by_step",
-      "easy_explanation",
-      "why_and_analogy",
-      "formal_exam_explanation",
-      "key_concepts",
-      "traps"
-    ],
-    "studyObjects": [
-      "quiz",
-      "ox",
-      "cloze",
-      "flashcards",
-      "short_answer",
-      "similar_practice",
-      "generated_learning_problem"
-    ],
-    "personalStudy": [
-      "autosave",
-      "resume",
-      "study_ledger",
-      "review_queue",
-      "progress"
-    ]
-  },
-  "assistancePolicy": {
-    "independentClasses": [
-      "NONE"
-    ],
-    "nonIndependentClasses": [
-      "MINIMAL_HINT",
-      "GUIDED_EXPLANATION",
-      "EASY_EXPLANATION",
-      "FULL_SOLUTION_REVEALED",
-      "DIRECT_ANSWER_REVEALED"
-    ],
-    "revealedAnswerRequiresDistinctUnaidedAttempt": true,
-    "explanationViewingChangesMastery": false
-  },
-  "bankAdmissionPolicy": {
-    "learningPractice": {
-      "learnerUse": "LEARNING_ONLY",
-      "transferClaimAllowed": false,
-      "measurementClaimAllowed": false
+  "parkedMilestones": {
+    "sevenExams": {
+      "activeLane": false,
+      "activeNode": false,
+      "completionGateForPr882": false,
+      "sourceCollectionAllowed": false,
+      "runtimeAllowed": false,
+      "resumeOnlyAfter": [
+        "APPRAISER_SECOND_STAGE_MAINSTREAM_COMPLETE",
+        "APPRAISER_FIRST_STAGE_FIVE_SUBJECT_COMPLETE",
+        "APPRAISER_FIRST_SECOND_STAGE_CONNECTION_COMPLETE"
+      ]
     },
-    "verifiedTransfer": {
-      "releaseChainCompleteRequired": true,
-      "sealedUnseenSnapshotRequired": true,
-      "nonSameSurfaceRequired": true,
-      "familyIsolationRequired": true
-    },
-    "measurement": {
-      "allVerifiedTransferRequirements": true,
-      "measurementCalibrationRequired": true,
-      "timedProtocolRequired": true
+    "appraiserFirstStage": {
+      "subjectAdaptersStartedInPr882": false,
+      "completionGateForPr882": false,
+      "nextMilestoneAfterPr882Merge": "APPRAISER_FIRST_STAGE_FIVE_SUBJECT_LEARNER_LOOP"
     }
+  },
+  "learnerSupportPolicy": {
+    "choices": [
+      "내가 먼저 풀기",
+      "힌트 하나",
+      "1타 쉬운풀이",
+      "전체풀이",
+      "정답만 보기"
+    ],
+    "onlyUnaidedChoice": "내가 먼저 풀기",
+    "assistedSameItemMasteryEligible": false,
+    "assistedTransferEvidenceEligible": false,
+    "distinctLaterUnaidedAttemptRequired": true,
+    "fabricatedAuthoritativeAnswerAllowed": false,
+    "fabricatedFullSolutionAllowed": false
+  },
+  "qfI1Policy": {
+    "eligibleBankStockPreferred": true,
+    "generationPurposeAllowedExactly": [
+      "LEARNING_PRACTICE"
+    ],
+    "generatedMaximumAuthority": "LEARNING_ONLY",
+    "generatedVerifiedTransferAdmissionAllowed": false,
+    "generatedMeasurementAdmissionAllowed": false,
+    "providerExecution": false,
+    "publicLearnerActivation": false,
+    "rawGeneratedBodyMetadataPersistenceAllowed": false,
+    "deterministicIdentities": [
+      "assignment",
+      "exposure",
+      "generation_request",
+      "retry",
+      "conflict"
+    ]
   },
   "validationPolicy": {
     "risk": "MEDIUM",
     "duringImplementation": [
       "affected_focused_tests",
-      "typecheck_when_applicable",
+      "typecheck",
       "changed_file_lint",
+      "json_validation",
       "diff_check"
     ],
-    "milestoneCandidate": [
-      "affected_lane_suite",
-      "appraiser_donor_smoke",
-      "build_shard",
-      "one_representative_e2e_when_runtime_changed",
-      "one_local_hostile_review"
-    ],
-    "remoteExactHead": [
-      "required_ci_once",
-      "one_fresh_formal_review"
+    "frozenCandidate": [
+      "affected_learner_loop_suites",
+      "fast_ci",
+      "full_ci_linux",
+      "full_ci_windows",
+      "pr_contract",
+      "risk_gate",
+      "runtime_gate",
+      "security",
+      "c3r_checks_as_applicable",
+      "build",
+      "representative_authenticated_runtime_acceptance",
+      "one_fresh_exact_head_formal_review"
     ]
   },
   "activationBoundary": {
@@ -165,44 +122,24 @@
     "payment": false,
     "remoteSupabaseMutation": false,
     "realLearnerData": false,
-    "providerExecution": false
+    "providerExecution": false,
+    "migrationRlsOrAuthChange": false
   },
-  "selfCorrection": {
-    "ordinaryP1P2": true,
-    "testsFixturesLocators": true,
-    "directlyCoupledPaths": true,
-    "ciAndPrMetadata": true,
-    "compatibleNarrowSecurityPatch": true,
-    "arbitraryCorrectionBudget": false
-  },
-  "hardOwnerGates": [
-    "production_or_public_activation",
-    "remote_migration_rls_or_database_apply",
-    "actual_learner_or_customer_data",
-    "payment_price_refund_or_entitlement",
-    "irreversible_destructive_data_action",
-    "new_unresolved_legal_or_rights_decision",
-    "scope_expansion",
-    "unavoidable_live_ruleset_human_approval"
-  ],
   "ownedPathsExactly": [
     "app/api/core-blitz/qf-i1/select/route.ts",
     "app/api/os/items/route.ts",
     "app/api/os/learner-support/route.ts",
-    "app/app/core-blitz/support/[itemId]/page.tsx",
+    "app/app/items/[itemId]/page.tsx",
     "app/app/items/[itemId]/support/page.tsx",
     "components/core-blitz/learner-support-panel.tsx",
+    "components/learner/study-ledger-ui.tsx",
     "config/dabangil-core-blitz-wave1-v1.json",
-    "config/dabangil-seven-exam-pre-t0-packets-v1.json",
-    "config/dabangil-seven-exam-pre-t0-v1.json",
     "docs/decisions/2026-09-03-owner-core-blitz-wave1-standing-authority.md",
     "docs/exec-plans/active/core-blitz-wave1-checkpoint.json",
     "lib/core-blitz/learner-capability.ts",
     "lib/core-blitz/learner-support-event.ts",
     "lib/core-blitz/learner-support-repository.ts",
-    "lib/core-blitz/learner-support-runtime.ts",
     "lib/core-blitz/wave1.ts",
-    "lib/exam-cells/pre-t0.ts",
     "lib/question-foundry/runtime/qf-i1-bank-first.ts",
     "lib/question-foundry/runtime/qf-i1-persistence.ts",
     "lib/question-foundry/runtime/qf-i1-review-os-repository.ts",
@@ -211,6 +148,8 @@
     "lib/review-os/app1-c3r-review-os-adapter.ts",
     "lib/review-os/app1-c3r-review-os-repository.ts",
     "lib/review-os/capture-learning-signals.ts",
+    "package.json",
+    "tests/app1-c3r-authenticated-persistence-acceptance.test.mjs",
     "tests/app1-c3r-handoff-materialization.test.mjs",
     "tests/app1-c3r-handoff-runtime.test.mjs",
     "tests/app1-c3r-review-os-adapter.test.mjs",
@@ -220,7 +159,6 @@
     "tests/qf-i1-bank-first-runtime.test.mjs",
     "tests/qf-i1-owner-selector-route.test.mjs",
     "tests/qf-i1-persistence-runtime.test.mjs",
-    "tests/s232f2-access-availability.test.mjs",
-    "tests/seven-exam-pre-t0-packets.test.mjs"
+    "tests/s232f2-access-availability.test.mjs"
   ]
 }

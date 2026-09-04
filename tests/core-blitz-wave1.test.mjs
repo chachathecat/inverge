@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import crypto from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
 import test from "node:test";
@@ -140,7 +141,7 @@ test("three-bank admission fails closed", () => {
   );
 });
 
-test("checkpoint resumes eligible independent lanes while APP-1 H0 is in progress", () => {
+test("checkpoint contains only completed appraiser-second-stage Wave 1 nodes", () => {
   const checkpoint = JSON.parse(fs.readFileSync(
     path.join(
       root,
@@ -152,25 +153,32 @@ test("checkpoint resumes eligible independent lanes while APP-1 H0 is in progres
     path.join(root, "config/dabangil-core-blitz-wave1-v1.json"),
     "utf8",
   ));
-  const seven = JSON.parse(fs.readFileSync(
-    path.join(root, "config/dabangil-seven-exam-pre-t0-v1.json"),
+  const decisionSource = fs.readFileSync(
+    path.join(
+      root,
+      "docs/decisions/2026-09-03-owner-core-blitz-wave1-standing-authority.md",
+    ),
     "utf8",
-  ));
-
+  );
   const decision = resumeCoreBlitzCheckpointV1(
     checkpoint,
     checkpoint.scopeDigest,
     CORE_BLITZ_STARTING_MAIN,
     CORE_BLITZ_STARTING_TREE,
   );
-  assert.deepEqual(decision.readyNodeIds, [
-    "M4_FIRST_STAGE_COMMON_KERNEL",
-    "QF_I1_INTEGRATION",
-    "SEVEN_EXAM_DOSSIER_AND_SOURCE_PREPARATION",
-  ]);
+  assert.deepEqual(decision.readyNodeIds, []);
+  assert.equal(decision.terminal, true);
   assert.equal(
-    checkpoint.nodes.find((node) => node.nodeId === "APP1_C3R_HANDOFF_H0")?.state,
-    "IN_PROGRESS",
+    checkpoint.scopeDigest,
+    "sha256:" +
+      crypto.createHash("sha256").update(decisionSource).digest("hex"),
+  );
+  assert.equal(
+    checkpoint.nodes.find(
+      (node) =>
+        node.nodeId === "APP1_AUTHENTICATED_C3R_PERSISTENCE_ACCEPTANCE",
+    )?.state,
+    "COMPLETE",
   );
   assert.equal(
     contract.startingAuthority.mainSha,
@@ -186,15 +194,43 @@ test("checkpoint resumes eligible independent lanes while APP-1 H0 is in progres
     checkpoint.integration.identityAuthority,
     "GITHUB_LIVE_PR_REF",
   );
-  assert.equal(seven.examCells.length, 7);
-  for (const forbidden of [
-    "shared_core_mutation",
-    "learner_runtime",
-    "publication",
-    "commercial_activation",
-    "rights_decision",
+  assert.equal(contract.activeLanes.length, 3);
+  assert.equal(
+    contract.activeLanes.some(
+      (lane) =>
+        lane.laneId === "SEVEN_EXAM_PRE_T0_SOURCE" ||
+        lane.remainingTarget ===
+          "SEVEN_EXAM_DOSSIER_AND_SOURCE_PREPARATION",
+    ),
+    false,
+  );
+  assert.equal(contract.parkedMilestones.sevenExams.activeLane, false);
+  assert.equal(contract.parkedMilestones.sevenExams.activeNode, false);
+  assert.equal(
+    contract.parkedMilestones.sevenExams.completionGateForPr882,
+    false,
+  );
+  assert.deepEqual(
+    contract.parkedMilestones.sevenExams.resumeOnlyAfter,
+    [
+      "APPRAISER_SECOND_STAGE_MAINSTREAM_COMPLETE",
+      "APPRAISER_FIRST_STAGE_FIVE_SUBJECT_COMPLETE",
+      "APPRAISER_FIRST_SECOND_STAGE_CONNECTION_COMPLETE",
+    ],
+  );
+  assert.equal(
+    contract.parkedMilestones.appraiserFirstStage
+      .subjectAdaptersStartedInPr882,
+    false,
+  );
+  for (const removed of [
+    "config/dabangil-seven-exam-pre-t0-v1.json",
+    "config/dabangil-seven-exam-pre-t0-packets-v1.json",
+    "lib/exam-cells/pre-t0.ts",
+    "tests/seven-exam-pre-t0-packets.test.mjs",
   ]) {
-    assert.ok(seven.forbiddenUntilCertified.includes(forbidden));
+    assert.equal(fs.existsSync(path.join(root, removed)), false);
+    assert.equal(contract.ownedPathsExactly.includes(removed), false);
   }
 });
 
@@ -252,7 +288,9 @@ test("checkpoint rejects duplicate dependency declarations and cycles", () => {
   );
 
   const cycle = structuredClone(checkpoint);
-  cycle.nodes[0].dependencies = ["APP1_C3R_HANDOFF_H0"];
+  cycle.nodes[0].dependencies = [
+    "APP1_AUTHENTICATED_C3R_PERSISTENCE_ACCEPTANCE",
+  ];
   assertCode(
     () => resumeCoreBlitzCheckpointV1(
       cycle,

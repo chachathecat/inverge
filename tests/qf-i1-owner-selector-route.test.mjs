@@ -34,6 +34,10 @@ test("owner selector endpoint is fail-closed and cannot activate persistence or 
     "no-store",
     "persisted: false",
     "providerExecution: false",
+    "generatedContentMaximumAuthority: \"LEARNING_ONLY\"",
+    "verifiedTransferAdmissionForGeneratedContent: false",
+    "measurementAdmissionForGeneratedContent: false",
+    "rawGeneratedBodyMetadataPersistence: false",
     "productionActivation: false",
     "remoteMutation: false",
   ]) {
@@ -44,5 +48,9 @@ test("owner selector endpoint is fail-closed and cannot activate persistence or 
 
 test("endpoint never accepts an unbounded or array request body", () => {
   assert.match(route, /length > MAX_REQUEST_BYTES/u);
-  assert.match(route, /!input \|\| typeof input !== \"object\" \|\| Array\.isArray\(input\)/u);
+  assert.ok(
+    route.includes(
+      '!input || typeof input !== "object" || Array.isArray(input)',
+    ),
+  );
 });

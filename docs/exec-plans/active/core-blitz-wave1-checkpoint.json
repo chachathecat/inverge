@@ -2,65 +2,28 @@
   "schemaVersion": "dabangil.core_blitz.wave1.v1",
   "programIssue": 880,
   "milestoneIssue": 881,
-  "scopeDigest": "sha256:issue-880-core-blitz-wave1-standing-authority-v1",
+  "scopeDigest": "sha256:db193c3a103113f2d1e61d9e57e5c2dc21de7bc1a8fb89df2af1719e00683f63",
+  "scopeDecisionPath": "docs/decisions/2026-09-03-owner-core-blitz-wave1-standing-authority.md",
   "startingMain": "d4e056938707c11e6c862230745c381297c0b26f",
   "startingTree": "c19f7abe3f0ace8ecdc8afbe9647a8e31eb4dfc2",
   "integration": {
     "branch": "codex/issue-880-core-blitz-wave1",
     "pullRequest": 882,
     "identityAuthority": "GITHUB_LIVE_PR_REF",
-    "lastObservedHeadSha": "7aec9453bf4f21d1776768a7b8908fc71d36ad86",
-    "lastObservedHeadTree": "8bd5f0a233ea04a901263cebd6f59650baae3dcf",
+    "startingLiveHeadSha": "36bac9ef30c456248283275d2560bc036438b501",
+    "startingLiveHeadTree": "5ac03c17941d2386a365de5676d0bec687a8e8bb",
     "writerLock": "INTEGRATION_WRITER_HELD",
     "readyOrMergeAuthorized": false
   },
-  "ownedPaths": [
-    "app/api/core-blitz/qf-i1/select/route.ts",
-    "app/api/os/items/route.ts",
-    "app/api/os/learner-support/route.ts",
-    "app/app/core-blitz/support/[itemId]/page.tsx",
-    "app/app/items/[itemId]/support/page.tsx",
-    "components/core-blitz/learner-support-panel.tsx",
-    "config/dabangil-core-blitz-wave1-v1.json",
-    "config/dabangil-seven-exam-pre-t0-packets-v1.json",
-    "config/dabangil-seven-exam-pre-t0-v1.json",
-    "docs/decisions/2026-09-03-owner-core-blitz-wave1-standing-authority.md",
-    "docs/exec-plans/active/core-blitz-wave1-checkpoint.json",
-    "lib/core-blitz/learner-capability.ts",
-    "lib/core-blitz/learner-support-event.ts",
-    "lib/core-blitz/learner-support-repository.ts",
-    "lib/core-blitz/learner-support-runtime.ts",
-    "lib/core-blitz/wave1.ts",
-    "lib/exam-cells/pre-t0.ts",
-    "lib/question-foundry/runtime/qf-i1-bank-first.ts",
-    "lib/question-foundry/runtime/qf-i1-persistence.ts",
-    "lib/question-foundry/runtime/qf-i1-review-os-repository.ts",
-    "lib/review-os/app1-c3r-handoff-runtime.ts",
-    "lib/review-os/app1-c3r-handoff.ts",
-    "lib/review-os/app1-c3r-review-os-adapter.ts",
-    "lib/review-os/app1-c3r-review-os-repository.ts",
-    "lib/review-os/capture-learning-signals.ts",
-    "tests/app1-c3r-handoff-materialization.test.mjs",
-    "tests/app1-c3r-handoff-runtime.test.mjs",
-    "tests/app1-c3r-review-os-adapter.test.mjs",
-    "tests/core-blitz-learner-capability.test.mjs",
-    "tests/core-blitz-learner-support-runtime.test.mjs",
-    "tests/core-blitz-wave1.test.mjs",
-    "tests/qf-i1-bank-first-runtime.test.mjs",
-    "tests/qf-i1-owner-selector-route.test.mjs",
-    "tests/qf-i1-persistence-runtime.test.mjs",
-    "tests/s232f2-access-availability.test.mjs",
-    "tests/seven-exam-pre-t0-packets.test.mjs"
-  ],
   "nodes": [
     {
       "nodeId": "AUTHORITY_FOUNDATION",
-      "lane": "COMMON_KERNEL_AND_LEARNER_EXPERIENCE",
+      "lane": "APPRAISER_SECOND_STAGE_WAVE1",
       "dependencies": [],
       "state": "COMPLETE"
     },
     {
-      "nodeId": "APP1_C3R_HANDOFF_H0",
+      "nodeId": "APP1_AUTHENTICATED_C3R_PERSISTENCE_ACCEPTANCE",
       "lane": "APP1_C3R_CLOSED_LOOP",
       "dependencies": [
         "AUTHORITY_FOUNDATION"
@@ -68,60 +31,60 @@
       "state": "COMPLETE"
     },
     {
-      "nodeId": "M4_FIRST_STAGE_COMMON_KERNEL",
-      "lane": "COMMON_KERNEL_AND_LEARNER_EXPERIENCE",
+      "nodeId": "APPRAISER_SECOND_STAGE_LEARNER_SUPPORT",
+      "lane": "APPRAISER_SECOND_STAGE_LEARNER_SUPPORT",
       "dependencies": [
         "AUTHORITY_FOUNDATION"
       ],
-      "state": "IN_PROGRESS"
+      "state": "COMPLETE"
     },
     {
-      "nodeId": "QF_I1_INTEGRATION",
+      "nodeId": "QF_I1_LEARNING_ONLY_BOUNDARY",
       "lane": "VERIFIED_QUESTION_FOUNDRY_RUNTIME",
       "dependencies": [
         "AUTHORITY_FOUNDATION"
       ],
-      "state": "IN_PROGRESS"
-    },
-    {
-      "nodeId": "SEVEN_EXAM_DOSSIER_AND_SOURCE_PREPARATION",
-      "lane": "SEVEN_EXAM_PRE_T0_SOURCE",
-      "dependencies": [
-        "AUTHORITY_FOUNDATION"
-      ],
-      "state": "IN_PROGRESS"
+      "state": "COMPLETE"
     }
   ],
+  "parked": {
+    "sevenExamsCompletionGate": false,
+    "sevenExamsActiveLane": false,
+    "sevenExamsActiveNode": false,
+    "sevenExamsResumeOnlyAfter": [
+      "APPRAISER_SECOND_STAGE_MAINSTREAM_COMPLETE",
+      "APPRAISER_FIRST_STAGE_FIVE_SUBJECT_COMPLETE",
+      "APPRAISER_FIRST_SECOND_STAGE_CONNECTION_COMPLETE"
+    ],
+    "firstStageSubjectAdaptersStarted": false,
+    "nextMilestoneAfterMerge": "APPRAISER_FIRST_STAGE_FIVE_SUBJECT_LEARNER_LOOP"
+  },
   "runtimeProgress": {
-    "app1C3rCandidatePersisted": true,
-    "app1C3rMaterializationCoordinatorInstalled": true,
-    "reviewOsJourneyProjectionAdapterInstalled": true,
-    "canonicalReviewQueueReuseInstalled": true,
+    "authenticatedSyntheticApp1SaveAccepted": true,
+    "canonicalReviewQueueReused": true,
     "duplicateReviewQueueCreated": false,
-    "dedicatedSubjectC3rEvidenceStateMutated": false,
-    "subjectC3rD1ExecutionRouteBound": true,
-    "learnerChoiceKernelInstalled": true,
-    "learnerSupportRouteInstalled": true,
-    "assistanceUsagePersistenceInstalled": true,
-    "mainItemEntryLinkInstalled": false,
-    "qfBankFirstSelectionInstalled": true,
-    "qfDurableAssignmentCoordinatorInstalled": true,
-    "qfReviewOsMetadataAdapterInstalled": true,
-    "qfProviderGenerationInstalled": false
+    "bodylessJourneyProjectionCount": 1,
+    "identicalRetryReusedJourneyAndQueue": true,
+    "hostileBindingDriftsFailClosed": true,
+    "dedicatedMasteryOrTransferEvidenceCreated": false,
+    "syntheticUserAndRecordsCleaned": true,
+    "canonicalLearnerSupportRoute": "/app/items/[itemId]/support",
+    "duplicateLearnerSupportRoutePresent": false,
+    "studyLedgerEntryInstalled": true,
+    "qfLearningOnlyGenerationBoundaryInstalled": true,
+    "qfProviderExecutionInstalled": false
   },
   "validationEvidence": {
-    "focusedCoreBlitzTests": "6_OF_6_PRIOR_HEAD_PASSED",
-    "app1C3rHandoffRuntime": "3_OF_3_PRIOR_FOCUSED_PASSED",
-    "app1C3rMaterialization": "3_OF_3_PRIOR_FOCUSED_PASSED",
-    "app1C3rReviewOsAdapter": "4_OF_4_LOCAL_FOCUSED_PASSED",
-    "learnerCapabilityKernel": "3_OF_3_PRIOR_FOCUSED_PASSED",
-    "qfI1BankFirst": "4_OF_4_PRIOR_FOCUSED_PASSED",
-    "learnerSupportAndQfPersistence": "8_OF_8_PRIOR_FOCUSED_PASSED",
-    "typecheck": "ADAPTER_AND_ACCESS_CORRECTION_STRICT_TYPESCRIPT_5_8_3_PASSED",
-    "syntaxCheck": "ADAPTER_ROUTE_AND_REPOSITORY_TYPESCRIPT_PARSE_PASSED",
-    "changedFileLint": "PENDING_EXACT_HEAD_CI",
-    "jsonParse": "PASSED",
-    "diffCheck": "PENDING_EXACT_HEAD_CI"
+    "focusedAffectedTests": "36_OF_36_PASSED",
+    "authenticatedPersistenceAcceptance": "1_OF_1_PASSED_ISOLATED_POSTGRESQL_15_8",
+    "typecheck": "PASSED_TYPESCRIPT_5_8_3",
+    "changedFileLint": "PASSED_ZERO_WARNINGS",
+    "jsonValidation": "PASSED",
+    "diffCheck": "PASSED_EXACT_34_PATH_MANIFEST",
+    "affectedLearnerLoop": "PASSED_708_TESTS_PLUS_QUALITY_TAXONOMY_AND_EXPLANATION_EVALS",
+    "build": "PASSED_NEXT_16_2_12_PRODUCTION_BUILD",
+    "frozenCandidateExactHeadCi": "PENDING",
+    "exactHeadFormalReview": "PENDING"
   },
   "activation": {
     "ownerOnly": true,
@@ -130,7 +93,17 @@
     "public": false,
     "payment": false,
     "remoteMutation": false,
-    "realLearnerData": false
+    "realLearnerData": false,
+    "providerExecution": false
   },
-  "hardGates": []
+  "rollbackEvidence": {
+    "remoteMutationCount": 0,
+    "migrationRlsOrAuthChanged": false,
+    "syntheticUserRemoved": true,
+    "syntheticRecordsRemoved": true,
+    "isolatedAcceptanceContainerRemoved": true,
+    "ownerOnlyDefaultOffPreserved": true
+  },
+  "stopCondition": "CORE_BLITZ_WAVE1_DRAFT_READY_FOR_OWNER",
+  "stopConditionState": "VALIDATION_PENDING"
 }

@@ -28,10 +28,19 @@ const draft = {
 };
 
 test("learner choices preserve user control without creating mastery", () => {
-  assert.equal(
-    resolveLearnerEntryChoiceV1("TRY_FIRST").independentAttemptEligible,
-    true,
-  );
+  const tryFirst = resolveLearnerEntryChoiceV1("TRY_FIRST");
+  assert.equal(tryFirst.label, "내가 먼저 풀기");
+  assert.equal(tryFirst.independentAttemptEligible, true);
+  assert.equal(tryFirst.masteryCreatedByChoice, false);
+  assert.equal(tryFirst.transferCreatedByChoice, false);
+  assert.equal(tryFirst.nextRequiredAction, "ATTEMPT_NOW");
+
+  const expectedLabels = {
+    ONE_HINT: "힌트 하나",
+    EASY_EXPLANATION: "1타 쉬운풀이",
+    FULL_SOLUTION: "전체풀이",
+    DIRECT_ANSWER: "정답만 보기",
+  };
   for (const choice of [
     "ONE_HINT",
     "EASY_EXPLANATION",
@@ -39,6 +48,7 @@ test("learner choices preserve user control without creating mastery", () => {
     "DIRECT_ANSWER",
   ]) {
     const decision = resolveLearnerEntryChoiceV1(choice);
+    assert.equal(decision.label, expectedLabels[choice]);
     assert.equal(decision.independentAttemptEligible, false);
     assert.equal(decision.sameItemMasteryEvidenceEligible, false);
     assert.equal(decision.transferEvidenceEligible, false);
@@ -77,13 +87,15 @@ test("direct answer and full-solution claims require a supplied reference", () =
   assert.equal(absent.available, false);
   assert.equal(absent.directAnswerClaimAllowed, false);
 
-  const structureOnly = projectLearnerSupportV1({
+  const unavailable = projectLearnerSupportV1({
     choice: "FULL_SOLUTION",
     draft,
   });
-  assert.equal(structureOnly.available, true);
-  assert.equal(structureOnly.authority, "STRUCTURE_ONLY");
-  assert.equal(structureOnly.fullSolutionClaimAllowed, false);
+  assert.equal(unavailable.available, false);
+  assert.equal(unavailable.authority, "NONE");
+  assert.equal(unavailable.sections.length, 0);
+  assert.equal(unavailable.fullSolutionClaimAllowed, false);
+  assert.equal(unavailable.directAnswerClaimAllowed, false);
 
   const grounded = projectLearnerSupportV1({
     choice: "FULL_SOLUTION",
@@ -93,4 +105,5 @@ test("direct answer and full-solution claims require a supplied reference", () =
   assert.equal(grounded.authority, "SUPPLIED_REFERENCE");
   assert.equal(grounded.fullSolutionClaimAllowed, true);
   assert.equal(grounded.directAnswerClaimAllowed, true);
+  assert.equal(grounded.requiresDistinctUnaidedAttempt, true);
 });

@@ -1,78 +1,97 @@
-# Owner Core Blitz Wave 1 standing authority
+# Owner Core Blitz Wave 1 appraiser-first standing authority
 
-- Decision date: 2026-09-03
+- Original decision date: 2026-09-03
+- Appraiser-first rescope date: 2026-09-04
 - Parent authority: Issue #880
-- Exact starting main: `d4e056938707c11e6c862230745c381297c0b26f`
-- Exact starting tree: `c19f7abe3f0ace8ecdc8afbe9647a8e31eb4dfc2`
+- Sole integration PR: Draft PR #882
+- Existing remote branch: `codex/issue-880-core-blitz-wave1`
+- Starting live PR head: `36bac9ef30c456248283275d2560bc036438b501`
+- Starting live PR tree: `5ac03c17941d2386a365de5676d0bec687a8e8bb`
 - Runtime impact of this decision artifact: none
 
 ## Decision
 
-Install the smallest repository-native subordinate contract needed to run the
-Owner-only, default-off `DABANGIL Core Blitz 24x7 + Seven-Exam Pre-T0`
-program without routine Owner interruption.
+PR #882 is the sole integration PR for the appraiser second-stage Wave 1
+mainstream. Its remaining completion scope is exactly:
 
-The program may use one root orchestrator, up to three disjoint mutation
-worktrees, one merge-producing integration writer, and read-only/source
-workers. Independent lanes must continue while another lane waits on CI or
-review. A frontier model must not be used as a periodic status poller.
+1. authenticated synthetic APP-1 to C3R persistence acceptance against an
+   isolated local database;
+2. one canonical authenticated appraiser second-stage learner-support route
+   entered from the stored-item Study Ledger flow;
+3. the smallest QF-I1 bank-first, generation-on-learning-gap,
+   `LEARNING_ONLY` boundary.
 
-## Wave 1 lane allocation
+No appraiser first-stage Subject Adapter begins in PR #882. After PR #882 is
+merged, the next milestone is the appraiser first-stage five-subject learner
+loop. This decision does not start that milestone.
 
-1. `APP1_C3R_CLOSED_LOOP`
-   - bind an APP-1 D0 repair to exactly one existing C3R journey;
-   - create exactly one learner-visible D+1 unaided ReviewUnit;
-   - reuse the existing Evidence, Queue, ReviewUnit, Timed and Reopen authority.
+## Seven Exams disposition
 
-2. `COMMON_KERNEL_AND_LEARNER_EXPERIENCE`
-   - continue `M4_FIRST_STAGE_COMMON_KERNEL`;
-   - provide the minimum competitive capability floor;
-   - record hints, easy explanations, direct answers and full-solution reveals
-     as assistance rather than independent evidence.
+`SEVEN_EXAM_PRE_T0_SOURCE` is not an active PR #882 lane.
+`SEVEN_EXAM_DOSSIER_AND_SOURCE_PREPARATION` is not an active PR #882 node.
+Seven Exams packet or source readiness is not a PR #882 completion gate.
 
-3. `VERIFIED_QUESTION_FOUNDRY_RUNTIME`
-   - consume the merged QF-S3 resulting-main receipt;
-   - continue QF-I1 and the Blueprint/release-chain/three-bank foundation;
-   - keep unverified generated objects `LEARNING_ONLY`.
+Seven Exams is parked until all three of these milestones are complete:
 
-4. `SEVEN_EXAM_PRE_T0_SOURCE`
-   - prepare seven exam-cell Dossiers, sources, rights/effective-date candidates,
-     skill graphs, rubrics, validators, Golden/hostile plans and bounded scopes;
-  - do not mutate the shared learner truth plane or create seven runtimes.
+1. appraiser second-stage mainstream completion;
+2. appraiser first-stage five-subject completion;
+3. combined appraiser first/second-stage connection.
 
-## Authority interpretation
+PR #882 collects no Seven Exams sources, creates no Seven Exams runtime and
+creates no separate Seven Exams PR.
 
-Ordinary code, test, fixture, selector, documentation, manifest, directly
-coupled path, PR metadata, CI and P1/P2 defects inside the frozen semantic
-scope are self-correcting. Findings are collected by root cause and corrected
-as one batch. Arbitrary path-count or correction-count stop rules are not
-part of this authority.
+## APP-1 acceptance boundary
 
-The integration writer exclusively owns shared Evidence, durable C3R state,
-auth/RLS, migrations, package/lockfile, common routing, roadmap, shared
-workflows and final integration candidates.
+APP-1 repair may materialize one bodyless C3R journey projection only after
+the existing user-owned Review Queue row is loaded and its item, revision,
+subject, route, recurrence and due-time bindings agree. The Queue row is
+reused and is never inserted or updated by the adapter. Identical retry reuses
+the same deterministic journey and Queue identity. Missing Queue or any
+binding drift fails closed.
 
-## Validation
+APP-1 repair creates neither mastery nor transfer Evidence. Raw answer,
+question, OCR, prompt and learner bodies remain outside derived metadata.
+Acceptance uses synthetic Owner data and an isolated local database only,
+then removes the synthetic user, records and container.
 
-Use the lowest sufficient validation tier:
+## Learner-support boundary
 
-- LOW: schema, identity, source locators, focused deterministic and
-  Golden/hostile checks;
-- MEDIUM: affected lane/modality tests, build shard and one representative E2E
-  when runtime changed;
-- HIGH: isolated database/security/privacy/rollback evidence and exact Owner
-  approval for shared trust boundaries.
+The only authenticated learner-support route is
+`/app/items/[itemId]/support`, linked from the appraiser second-stage stored
+item and Study Ledger flow. Its choices are:
 
-Do not repeat Docker, the full browser matrix, full builds, exact-head CI or
-formal review after every ordinary correction. Run required exact-head CI and
-one fresh formal review at a complete milestone candidate.
+- 내가 먼저 풀기
+- 힌트 하나
+- 1타 쉬운풀이
+- 전체풀이
+- 정답만 보기
 
-## Preserved boundaries
+Only `내가 먼저 풀기` is unaided. Every assisted path is ineligible for
+same-item mastery and transfer Evidence and requires a separate later unaided
+attempt. An authoritative answer or full solution is unavailable without a
+supplied reference authority.
 
-This decision grants no Production or public activation, payment change,
-remote Supabase/database mutation, provider execution, real learner/customer
-data use, destructive action, unresolved rights waiver, pass-probability
-claim or unknown future exact-head merge.
+## QF-I1 boundary
 
-Unavoidable human merge approval remains an exact-head Owner gate. Other
-non-conflicting lanes continue while that packet is prepared.
+Eligible bank stock is always preferred. Generation is authorized only for a
+Learning Practice gap, and generated content has maximum authority
+`LEARNING_ONLY`. Generated origin cannot be admitted to Verified Transfer
+or Measurement. Assignment, exposure, generation request, retry and conflict
+identities are deterministic and idempotent.
+
+Provider execution, public learner activation and raw generated body
+persistence in metadata-only stores remain off.
+
+## Validation and delivery
+
+The complete candidate runs focused tests, typecheck, changed-file lint, JSON
+validation, diff inspection, affected learner-loop suites, build, exact-head
+GitHub checks, one representative authenticated runtime acceptance and
+exactly one fresh formal review when no exact-head review exists.
+
+The Draft PR remains Draft. This authority grants no Ready transition, merge,
+auto-merge, force push, replacement PR, new remote branch, Production/public
+activation, remote Supabase/database mutation, migration/RLS/auth change,
+payment/entitlement change, provider execution or use of real learner data.
+
+The stop condition is `CORE_BLITZ_WAVE1_DRAFT_READY_FOR_OWNER`.

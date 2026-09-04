@@ -194,6 +194,7 @@ export default async function ReviewOsItemDetailPage({ params, searchParams }: P
           comparison={rewriteComparison}
           calculatorHref={calculatorHref}
           reviewHref={`/app/review?mode=${mode}`}
+          supportHref={`/app/items/${encodeURIComponent(itemId)}/support`}
           writeHref={`/app/write?mode=${mode}`}
           topicCandidate={ledgerTopicCandidate}
           supportingEvidence={supportingEvidence}

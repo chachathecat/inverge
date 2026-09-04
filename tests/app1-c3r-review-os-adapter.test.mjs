@@ -10,7 +10,7 @@ import {
 const ITEM_ID = "11111111-1111-5111-a111-111111111111";
 const QUEUE_ID = "22222222-2222-5222-a222-222222222222";
 const SIGNAL_ID = "33333333-3333-5333-a333-333333333333";
-const DUE_AT = "2026-09-04T12:00:00.000Z";
+const DUE_AT = "2026-09-04T00:00:00.000Z";
 
 function candidate() {
   return {
@@ -37,6 +37,8 @@ function candidate() {
 function item() {
   return {
     id: ITEM_ID,
+    userId: "user-1",
+    examName: "감정평가사 2차",
     subjectLabel: "감정평가이론",
     updatedAt: "2026-09-03T12:00:00.000Z",
     rawPayload: {
@@ -48,6 +50,17 @@ function item() {
         queueId: QUEUE_ID,
         learningSignalId: SIGNAL_ID,
         workRevisionId: "revision-1",
+        queue: {
+          scheduleInput: {
+            mode: "second",
+            isCorrect: false,
+            confidence: "낮음",
+            mistakeType: "논점 누락",
+            hasWeakParagraph: true,
+            scheduledAt: "2026-09-03T12:00:00.000Z",
+            nextReviewDateOverride: "2026-09-04",
+          },
+        },
         learningSignal: {
           metadataJson: {
             app1_c3r_handoff_candidate: candidate(),
@@ -76,6 +89,7 @@ function storage(overrides = {}) {
         subject: "감정평가이론",
         status: "pending",
         dueAt: DUE_AT,
+        recurrenceCount: 1,
       };
     },
     ...overrides,
@@ -146,6 +160,7 @@ test("APP-1 H0 rejects queue and replay binding drift", async () => {
             subject: "감정평가 및 보상법규",
             status: "pending",
             dueAt: DUE_AT,
+            recurrenceCount: 1,
           }),
         }),
       }),
@@ -163,6 +178,52 @@ test("APP-1 H0 rejects queue and replay binding drift", async () => {
         storage: storage(),
       }),
     assertCode("INVALID_REPLAY_PLAN"),
+  );
+
+  const itemDrift = item();
+  itemDrift.rawPayload.app1_post_insert_replay_v1.itemId =
+    "44444444-4444-5444-a444-444444444444";
+  await assert.rejects(
+    () =>
+      materializeApp1C3rReviewOsAdapterV1({
+        userId: "user-1",
+        item: itemDrift,
+        storage: storage(),
+      }),
+    assertCode("INVALID_REPLAY_PLAN"),
+  );
+
+  const routeDrift = item();
+  routeDrift.rawPayload.app1_post_insert_replay_v1.learningSignal
+    .metadataJson.app1_c3r_handoff_candidate.c3rRoute = "/app/c3r-l";
+  await assert.rejects(
+    () =>
+      materializeApp1C3rReviewOsAdapterV1({
+        userId: "user-1",
+        item: routeDrift,
+        storage: storage(),
+      }),
+    assertCode("INVALID_REPLAY_PLAN"),
+  );
+
+  await assert.rejects(
+    () =>
+      materializeApp1C3rReviewOsAdapterV1({
+        userId: "user-1",
+        item: item(),
+        storage: storage({
+          loadReviewQueueUnit: async () => ({
+            reviewUnitId: QUEUE_ID,
+            userId: "user-1",
+            itemId: ITEM_ID,
+            subject: "감정평가이론",
+            status: "pending",
+            dueAt: "2026-09-04T12:00:01.000Z",
+            recurrenceCount: 1,
+          }),
+        }),
+      }),
+    assertCode("REVIEW_QUEUE_BINDING_CONFLICT"),
   );
 
   const missingAuthority = item();
