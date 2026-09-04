@@ -1,25 +1,19 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 
 import { V3ActionButton, V3Surface } from "@/components/learner";
 import {
   LEARNER_ENTRY_CHOICES,
-  projectLearnerSupportV1,
   resolveLearnerEntryChoiceV1,
   type LearnerEntryChoice,
   type LearnerSupportProjectionV1,
 } from "@/lib/core-blitz/learner-capability";
-import type { AnswerReviewStructureDraft } from "@/lib/evaluate/answer-review-structure";
 
 export function LearnerSupportPanel({
   itemId,
-  draft,
-  referenceAnswer,
 }: {
   itemId: string;
-  draft: AnswerReviewStructureDraft;
-  referenceAnswer?: string | null;
 }) {
   const choices = useMemo(
     () =>
@@ -33,19 +27,13 @@ export function LearnerSupportPanel({
   const [pendingChoice, setPendingChoice] =
     useState<LearnerEntryChoice | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const eventIdsByChoice = useRef<
+    Partial<Record<LearnerEntryChoice, string>>
+  >({});
 
   async function selectChoice(choice: LearnerEntryChoice) {
-    const nextProjection = projectLearnerSupportV1({
-      choice,
-      draft,
-      referenceAnswer,
-    });
     setError(null);
-
-    if (!nextProjection.available) {
-      setProjection(nextProjection);
-      return;
-    }
+    setProjection(null);
     if (
       typeof crypto === "undefined" ||
       typeof crypto.randomUUID !== "function"
@@ -54,26 +42,41 @@ export function LearnerSupportPanel({
       return;
     }
 
+    const eventId =
+      eventIdsByChoice.current[choice] ?? crypto.randomUUID();
+    eventIdsByChoice.current[choice] = eventId;
     setPendingChoice(choice);
     try {
       const response = await fetch("/api/os/learner-support", {
         method: "POST",
+        cache: "no-store",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          eventId: crypto.randomUUID(),
+          eventId,
           itemId,
           choice,
           surface: "STUDY_LEDGER_DETAIL",
         }),
       });
       const payload = (await response.json().catch(() => null)) as
-        | { ok: true; status: "saved" | "deduped" }
+        | {
+            ok: true;
+            status: "saved" | "deduped";
+            decision: { choice: LearnerEntryChoice };
+            projection: LearnerSupportProjectionV1;
+          }
         | { ok: false; error?: string }
         | null;
-      if (!response.ok || !payload?.ok) {
+      if (
+        !response.ok ||
+        !payload?.ok ||
+        payload.decision.choice !== choice ||
+        payload.projection.choice !== choice
+      ) {
         throw new Error("도움 사용 기록을 저장하지 못했습니다.");
       }
-      setProjection(nextProjection);
+      delete eventIdsByChoice.current[choice];
+      setProjection(payload.projection);
     } catch (selectionError) {
       setError(
         selectionError instanceof Error
@@ -107,12 +110,9 @@ export function LearnerSupportPanel({
         </p>
         <p
           className="v3-type-caption text-[var(--color-text-secondary)]"
-          data-reference-authority={referenceAnswer ? "SUPPLIED_REFERENCE" : "NONE"}
+          data-reference-authority="NONE"
         >
-          기준답안 권한:{" "}
-          {referenceAnswer
-            ? "검증된 학습 참고 연결됨"
-            : "검증된 학습 참고 미연결 · 정답/전체풀이 비활성"}
+          기준답안 권한: 검증된 학습 참고 미연결 · 정답/전체풀이 비활성
         </p>
       </header>
 

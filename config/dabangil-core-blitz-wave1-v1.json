@@ -73,7 +73,12 @@
     "productionAvailable": false,
     "storedWrongAnswerCorrectAnswerIsReferenceAuthority": false,
     "fabricatedAuthoritativeAnswerAllowed": false,
-    "fabricatedFullSolutionAllowed": false
+    "fabricatedFullSolutionAllowed": false,
+    "initialPageAssistedContentSerialized": false,
+    "assistedProjectionRequiresDurableExposure": true,
+    "successfulResponseContainsSelectedProjectionOnly": true,
+    "assistedResponseCacheable": false,
+    "retryEventIdentityReused": true
   },
   "qfI1Policy": {
     "eligibleBankStockPreferred": true,

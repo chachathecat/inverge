@@ -75,6 +75,15 @@ same-item mastery and transfer Evidence and requires a separate later unaided
 attempt. An authoritative answer or full solution is unavailable without a
 supplied verified learning-reference authority. The stored wrong-answer
 `correctAnswer` field is learner/OCR material and is never that authority.
+The initial page and RSC payload contain only choice metadata and item content
+safe before assistance recording; no assistance draft or projection is passed
+to the client. The server durably records the exact selected exposure before
+it constructs the hint, easy explanation, step-by-step explanation, full
+solution or direct-answer projection. A failed write returns and caches no
+assisted content. A successful response is private and non-cacheable and
+contains only the selected projection. A same-choice retry reuses its event
+identity and the first stored chronology; it never creates a second exposure
+or broadens the returned projection.
 
 ## QF-I1 boundary
 

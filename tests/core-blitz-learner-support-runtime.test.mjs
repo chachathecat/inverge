@@ -75,7 +75,7 @@ test("learner support input is exact, UUID-bound and server-time compatible", ()
   );
 });
 
-test("learner support route verifies the owned item before durable disclosure logging", () => {
+test("learner support route persists before constructing one non-cacheable projection", () => {
   const route = read("app/api/os/learner-support/route.ts");
   const access = read("lib/core-blitz/learner-support-access.ts");
   const repository = read("lib/core-blitz/learner-support-repository.ts");
@@ -102,6 +102,24 @@ test("learner support route verifies the owned item before durable disclosure lo
   assert.match(repository, /learner-support-idempotency-conflict/u);
   assert.match(repository, /assertNoRawUserDataInDerived/u);
 
+  const persistedAt = route.indexOf(
+    "await recordLearnerSupportUsageEventV1(userId, event)",
+  );
+  const noteBuiltAt = route.indexOf("buildDetailStudyNote(detail)");
+  const draftBuiltAt = route.indexOf("normalizeAnswerReviewStructureDraft({");
+  const projectionBuiltAt = route.indexOf("projectLearnerSupportV1({");
+  const projectionReturnedAt = route.indexOf("projection,", projectionBuiltAt);
+  assert.ok(persistedAt > -1);
+  assert.ok(noteBuiltAt > persistedAt);
+  assert.ok(draftBuiltAt > noteBuiltAt);
+  assert.ok(projectionBuiltAt > draftBuiltAt);
+  assert.ok(projectionReturnedAt > projectionBuiltAt);
+  assert.match(route, /choice: recorded\.event\.metadataJson\.choice/u);
+  assert.match(route, /referenceAnswer: verifiedReferenceAnswer/u);
+  assert.match(route, /const verifiedReferenceAnswer: string \| null = null/u);
+  assert.match(route, /Cache-Control": "private, no-store, max-age=0"/u);
+  assert.doesNotMatch(route, /projections/u);
+
   for (const label of [
     "내가 먼저 풀기",
     "힌트 하나",
@@ -111,8 +129,12 @@ test("learner support route verifies the owned item before durable disclosure lo
   ]) {
     assert.ok(read("lib/core-blitz/learner-capability.ts").includes(label));
   }
-  assert.match(component, /if \(!nextProjection\.available\)[\s\S]*?return;/u);
+  assert.match(component, /setProjection\(null\)[\s\S]*?fetch\("\/api\/os\/learner-support"/u);
   assert.match(component, /fetch\("\/api\/os\/learner-support"/u);
+  assert.match(component, /cache: "no-store"/u);
+  assert.match(component, /setProjection\(payload\.projection\)/u);
+  assert.doesNotMatch(component, /projectLearnerSupportV1/u);
+  assert.doesNotMatch(component, /AnswerReviewStructureDraft/u);
   assert.match(component, /내용은 아직 공개하지 않았습니다/u);
   assert.match(component, /data-reference-authority/u);
   assert.match(component, /검증된 학습 참고 미연결/u);
@@ -122,9 +144,38 @@ test("learner support route verifies the owned item before durable disclosure lo
     /hasCoreBlitzLearnerSupportOwnerAccess\(session\)\) notFound\(\)/u,
   );
   assert.match(page, /detail\.item\.examName !== "감정평가사 2차"/u);
-  assert.match(page, /referenceAnswer=\{null\}/u);
+  assert.match(page, /<LearnerSupportPanel itemId=\{itemId\} \/>/u);
+  assert.doesNotMatch(page, /normalizeAnswerReviewStructureDraft/u);
+  assert.doesNotMatch(page, /buildDetailStudyNote/u);
+  assert.doesNotMatch(page, /plainExplanation/u);
+  assert.doesNotMatch(page, /stepByStepExplanation/u);
+  assert.doesNotMatch(page, /examAnswerHints/u);
   assert.doesNotMatch(page, /detail\.item\.correctAnswer/u);
   assert.match(page, /<LearnerSupportPanel/u);
+});
+
+test("learner support retry reuses its event and stored chronology", () => {
+  const repository = read("lib/core-blitz/learner-support-repository.ts");
+  const component = read("components/core-blitz/learner-support-panel.tsx");
+
+  assert.match(
+    component,
+    /eventIdsByChoice\.current\[choice\] \?\? crypto\.randomUUID\(\)[\s\S]*?eventIdsByChoice\.current\[choice\] = eventId/u,
+  );
+  assert.match(component, /body: JSON\.stringify\(\{[\s\S]*?eventId,/u);
+  assert.match(
+    component,
+    /delete eventIdsByChoice\.current\[choice\];[\s\S]*?setProjection\(payload\.projection\)/u,
+  );
+  assert.match(repository, /delete identity\.occurredAt/u);
+  assert.match(
+    repository,
+    /existingCreatedAt === existingMetadataOccurredAt/u,
+  );
+  assert.match(
+    repository,
+    /status: "deduped" as const, event: canonicalEvent/u,
+  );
 });
 
 test("Study Ledger is the sole authenticated learner-support entry", () => {

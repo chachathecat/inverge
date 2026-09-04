@@ -24,6 +24,15 @@ function stableJson(value: unknown): string {
     .join(",")}}`;
 }
 
+function splitStoredMetadata(value: unknown) {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return null;
+  const metadata = value as Record<string, unknown>;
+  if (typeof metadata.occurredAt !== "string") return null;
+  const identity = { ...metadata };
+  delete identity.occurredAt;
+  return Object.freeze({ identity, occurredAt: metadata.occurredAt });
+}
+
 export async function recordLearnerSupportUsageEventV1(
   userId: string,
   event: LearnerSupportUsageEventV1,
@@ -72,20 +81,36 @@ export async function recordLearnerSupportUsageEventV1(
     typeof existing?.created_at === "string"
       ? Date.parse(existing.created_at)
       : Number.NaN;
-  const expectedCreatedAt = Date.parse(event.occurredAt);
+  const existingMetadata = splitStoredMetadata(existing?.metadata_json);
+  const expectedMetadata = splitStoredMetadata(expected.metadata_json);
+  const existingMetadataOccurredAt = existingMetadata
+    ? Date.parse(existingMetadata.occurredAt)
+    : Number.NaN;
   const identityMatches = Boolean(
     existing &&
+      existingMetadata &&
+      expectedMetadata &&
       existing.id === expected.id &&
       existing.user_id === expected.user_id &&
       existing.event_name === expected.event_name &&
       existing.entity_type === expected.entity_type &&
       existing.entity_id === expected.entity_id &&
-      stableJson(existing.metadata_json) === stableJson(expected.metadata_json) &&
+      stableJson(existingMetadata.identity) ===
+        stableJson(expectedMetadata.identity) &&
       Number.isFinite(existingCreatedAt) &&
-      existingCreatedAt === expectedCreatedAt,
+      Number.isFinite(existingMetadataOccurredAt) &&
+      existingCreatedAt === existingMetadataOccurredAt,
   );
   if (!identityMatches) {
     throw new Error("core-blitz:learner-support-idempotency-conflict");
   }
-  return Object.freeze({ status: "deduped" as const, event });
+  const canonicalEvent = Object.freeze({
+    ...event,
+    occurredAt: existingMetadata!.occurredAt,
+    metadataJson: Object.freeze({
+      ...event.metadataJson,
+      occurredAt: existingMetadata!.occurredAt,
+    }),
+  });
+  return Object.freeze({ status: "deduped" as const, event: canonicalEvent });
 }

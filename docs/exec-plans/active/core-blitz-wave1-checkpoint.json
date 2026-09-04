@@ -2,7 +2,7 @@
   "schemaVersion": "dabangil.core_blitz.wave1.v1",
   "programIssue": 880,
   "milestoneIssue": 881,
-  "scopeDigest": "sha256:632d19d945d46312094458985ef6cb2161017af9f679d5604a20f5fa731144aa",
+  "scopeDigest": "sha256:a99c6c250f5a11ce0ca9b5739996f16a9dd66a9eca6e5feacf32f799a6bf9f0e",
   "scopeDecisionPath": "docs/decisions/2026-09-03-owner-core-blitz-wave1-standing-authority.md",
   "startingMain": "d4e056938707c11e6c862230745c381297c0b26f",
   "startingTree": "c19f7abe3f0ace8ecdc8afbe9647a8e31eb4dfc2",
@@ -73,6 +73,11 @@
     "duplicateLearnerSupportRoutePresent": false,
     "learnerSupportOwnerOnlyDefaultOffAndNonProduction": true,
     "storedWrongAnswerCorrectAnswerIsReferenceAuthority": false,
+    "learnerSupportInitialRscContainsAssistedContent": false,
+    "learnerSupportProjectionRequiresDurableExposure": true,
+    "learnerSupportResponseContainsSelectedProjectionOnly": true,
+    "learnerSupportAssistedResponseCacheable": false,
+    "learnerSupportRetryEventIdentityReused": true,
     "studyLedgerEntryInstalled": true,
     "qfLearningOnlyGenerationBoundaryInstalled": true,
     "qfCandidateReadsScopedByExamModeAndSubject": true,
@@ -84,17 +89,17 @@
     "qfProviderExecutionInstalled": false
   },
   "validationEvidence": {
-    "focusedAffectedTests": "36_OF_36_PASSED",
+    "focusedAffectedTests": "20_OF_20_LEARNER_SUPPORT_CAPABILITY_AUTHORITY_AND_ACCESS_PASSED_AFTER_FOURTH_CORRECTION",
     "reviewCorrectionFocusedTests": "45_OF_45_QF_S3_AND_QF_I1_PLUS_6_OF_6_CORE_BLITZ_WAVE1_PASSED",
     "authenticatedPersistenceAcceptance": "1_OF_1_PASSED_ISOLATED_POSTGRESQL_15_8",
-    "typecheck": "PASSED_TYPESCRIPT_5_8_3",
-    "changedFileLint": "PASSED_ZERO_WARNINGS",
-    "jsonValidation": "PASSED",
-    "diffCheck": "PASSED_EXACT_34_PATH_MANIFEST",
+    "typecheck": "PASSED_TYPESCRIPT_5_8_3_AFTER_FOURTH_CORRECTION",
+    "changedFileLint": "PASSED_ZERO_WARNINGS_AFTER_FOURTH_CORRECTION",
+    "jsonValidation": "PASSED_AFTER_FOURTH_CORRECTION",
+    "diffCheck": "PASSED_EXACT_34_PATH_MANIFEST_AFTER_FOURTH_CORRECTION",
     "affectedLearnerLoop": "PASSED_708_TESTS_PLUS_QUALITY_TAXONOMY_AND_EXPLANATION_EVALS",
-    "build": "PASSED_NEXT_16_2_12_PRODUCTION_BUILD",
-    "frozenCandidateExactHeadCi": "PENDING",
-    "exactHeadFormalReview": "CYCLE_2_HEAD_185FDA2566C0FAEC4E8EF394672C586475A0DFBF_ACTIONABLE_0_3_0_OWNER_AUTHORIZED_FINAL_ROOT_CAUSE_BATCH_IMPLEMENTED_FINAL_EXACT_HEAD_REVIEW_PENDING"
+    "build": "PASSED_NEXT_16_2_12_PRODUCTION_BUILD_AFTER_FOURTH_CORRECTION",
+    "frozenCandidateExactHeadCi": "PENDING_FOURTH_CORRECTION_PUSH",
+    "exactHeadFormalReview": "CYCLE_3_HEAD_23DEE16088CB6253C7CD0CFAE405AC6087348500_ACTIONABLE_0_1_0_OWNER_AUTHORIZED_FOURTH_CORRECTION_IMPLEMENTED_FINAL_EXACT_HEAD_REVIEW_PENDING"
   },
   "activation": {
     "ownerOnly": true,
@@ -115,5 +120,5 @@
     "ownerOnlyDefaultOffPreserved": true
   },
   "stopCondition": "CORE_BLITZ_WAVE1_DRAFT_READY_FOR_OWNER",
-  "stopConditionState": "VALIDATION_PENDING"
+  "stopConditionState": "EXACT_HEAD_VALIDATION_PENDING"
 }
