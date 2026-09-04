@@ -15,8 +15,10 @@ import {
 import type {
   QfI1CandidateV1,
   QfI1ExposureV1,
+  QfI1Purpose,
 } from "./qf-i1-bank-first";
 import { assertQfI1CandidateV1 } from "./qf-i1-bank-first";
+import type { DependencyRankedTransferChronologyInputV1 } from "../chronology/chronology-contracts";
 import type {
   QfI1DurableAssignmentV1,
   QfI1DurableExposureV1,
@@ -31,6 +33,8 @@ const CANDIDATE_TASK_TYPE = "qf_i1_candidate";
 const ASSIGNMENT_EVENT = "qf_i1_assignment_created";
 const PRESENTED_EVENT = "qf_i1_candidate_presented";
 const COMPLETED_EVENT = "qf_i1_candidate_completed";
+const PAGE_SIZE = 200;
+const AUTHORITY_INPUT_REFERENCE_PREFIX = "qfai_";
 
 function stableJson(value: unknown): string {
   if (value === null || typeof value !== "object") return JSON.stringify(value);
@@ -52,6 +56,24 @@ function deterministicUuid(value: unknown) {
   return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-5${hex.slice(13, 16)}-a${hex.slice(17, 20)}-${hex.slice(20, 32)}`;
 }
 
+function sha256Digest(value: unknown) {
+  return (
+    "sha256:" +
+    crypto.createHash("sha256").update(stableJson(value), "utf8").digest("hex")
+  );
+}
+
+function chronologyAuthorityReference(
+  authorityInput: DependencyRankedTransferChronologyInputV1,
+) {
+  const authorityInputDigest = sha256Digest(authorityInput);
+  return Object.freeze({
+    authorityInputRef:
+      AUTHORITY_INPUT_REFERENCE_PREFIX + authorityInputDigest.slice(7),
+    authorityInputDigest,
+  });
+}
+
 function clientFor(userId: string) {
   requireSupabasePersistence(userId);
   const client = getSupabasePersistenceClient();
@@ -69,10 +91,12 @@ function metadataCandidate(candidate: QfI1CandidateV1) {
   const validated = assertQfI1CandidateV1(candidate);
   if (!validated.chronologyAuthority) return validated;
   const { authorityInput, ...binding } = validated.chronologyAuthority;
+  const authorityReference = chronologyAuthorityReference(authorityInput);
   return Object.freeze({
     ...validated,
     chronologyAuthority: Object.freeze({
       ...binding,
+      authorityInputRef: authorityReference.authorityInputRef,
       authorityInputDigest: `sha256:${crypto
         .createHash("sha256")
         .update(stableJson(authorityInput), "utf8")
@@ -81,6 +105,24 @@ function metadataCandidate(candidate: QfI1CandidateV1) {
     }),
   });
 }
+
+type CandidateScope = Readonly<{
+  examMode: "감정평가사 1차" | "감정평가사 2차";
+  subject: string;
+}>;
+
+export type QfI1ChronologyAuthorityResolverV1 = (
+  input: Readonly<{
+    userId: string;
+    examMode: CandidateScope["examMode"];
+    subject: string;
+    candidateId: string;
+    candidateDigest: string;
+    chronologyDigest: string;
+    authorityInputRef: string;
+    authorityInputDigest: string;
+  }>,
+) => Promise<DependencyRankedTransferChronologyInputV1 | null>;
 
 async function ensureUsageRow(
   userId: string,
@@ -225,10 +267,88 @@ export async function ensureQfI1CandidateMetadataV1(
   return Object.freeze({ status: "existing" as const, rowId });
 }
 
-function readCandidate(value: unknown): QfI1CandidateV1 | null {
+async function readCandidate(
+  value: unknown,
+  context: Readonly<{
+    userId: string;
+    scope: CandidateScope;
+    resolveChronologyAuthorityInput: QfI1ChronologyAuthorityResolverV1;
+  }>,
+): Promise<QfI1CandidateV1 | null> {
   const metadata = record(value);
   const candidate = record(metadata?.qf_i1_candidate);
-  return candidate ? (candidate as unknown as QfI1CandidateV1) : null;
+  if (!candidate) return null;
+  if (candidate.bankClass === "LEARNING_PRACTICE") {
+    return assertQfI1CandidateV1(candidate as unknown as QfI1CandidateV1);
+  }
+
+  const authority = record(candidate.chronologyAuthority);
+  const expectedKeys = [
+    "authorityInputDigest",
+    "authorityInputRef",
+    "authorityInputStored",
+    "candidateDigest",
+    "candidateId",
+    "chronologyDigest",
+    "validationMethod",
+  ];
+  if (
+    !authority ||
+    stableJson(Object.keys(authority).sort()) !== stableJson(expectedKeys) ||
+    authority.validationMethod !==
+      "assertDependencyRankedTransferChronologyV1" ||
+    typeof authority.chronologyDigest !== "string" ||
+    typeof authority.candidateId !== "string" ||
+    typeof authority.candidateDigest !== "string" ||
+    typeof authority.authorityInputRef !== "string" ||
+    !/^qfai_[0-9a-f]{64}$/u.test(authority.authorityInputRef) ||
+    typeof authority.authorityInputDigest !== "string" ||
+    !/^sha256:[0-9a-f]{64}$/u.test(authority.authorityInputDigest) ||
+    authority.authorityInputStored !== false
+  ) {
+    throw new Error("qf-i1:chronology-authority-reference-invalid");
+  }
+
+  const authorityInput = await context.resolveChronologyAuthorityInput({
+    userId: context.userId,
+    examMode: context.scope.examMode,
+    subject: context.scope.subject,
+    candidateId: authority.candidateId,
+    candidateDigest: authority.candidateDigest,
+    chronologyDigest: authority.chronologyDigest,
+    authorityInputRef: authority.authorityInputRef,
+    authorityInputDigest: authority.authorityInputDigest,
+  });
+  if (!authorityInput) {
+    throw new Error("qf-i1:chronology-authority-reference-unresolved");
+  }
+  const rehydrated = assertQfI1CandidateV1({
+    ...candidate,
+    chronologyAuthority: {
+      validationMethod: authority.validationMethod,
+      chronologyDigest: authority.chronologyDigest,
+      candidateId: authority.candidateId,
+      candidateDigest: authority.candidateDigest,
+      authorityInput,
+    },
+  } as unknown as QfI1CandidateV1);
+  const resolvedReference = chronologyAuthorityReference(
+    rehydrated.chronologyAuthority!.authorityInput,
+  );
+  if (
+    resolvedReference.authorityInputRef !== authority.authorityInputRef ||
+    resolvedReference.authorityInputDigest !== authority.authorityInputDigest
+  ) {
+    throw new Error("qf-i1:chronology-authority-input-digest-mismatch");
+  }
+  return rehydrated;
+}
+
+function requiredBankClass(purpose: QfI1Purpose) {
+  if (purpose === "LEARNING_PRACTICE") return "LEARNING_PRACTICE";
+  if (purpose === "D7_TRANSFER") return "VERIFIED_TRANSFER";
+  if (purpose === "TIMED_MEASUREMENT") return "MEASUREMENT";
+  throw new Error("qf-i1:candidate-purpose-invalid");
 }
 
 function readExposure(
@@ -257,10 +377,8 @@ function readExposure(
 
 export function createQfI1ReviewOsPersistencePortV1(
   userId: string,
-  scope: Readonly<{
-    examMode: "감정평가사 1차" | "감정평가사 2차";
-    subject: string;
-  }>,
+  scope: CandidateScope,
+  resolveChronologyAuthorityInput: QfI1ChronologyAuthorityResolverV1,
 ): QfI1PersistencePortV1 {
   if (
     !["감정평가사 1차", "감정평가사 2차"].includes(scope?.examMode) ||
@@ -270,48 +388,88 @@ export function createQfI1ReviewOsPersistencePortV1(
   ) {
     throw new Error("qf-i1:candidate-scope-invalid");
   }
+  if (typeof resolveChronologyAuthorityInput !== "function") {
+    throw new Error("qf-i1:chronology-authority-resolver-required");
+  }
   return Object.freeze({
-    async listCandidates() {
-      const result = await clientFor(userId)
-        .from("learning_signal_events")
-        .select("exam_mode, subject, metadata_json")
-        .eq("user_id", userId)
-        .eq("exam_mode", scope.examMode)
-        .eq("subject", scope.subject)
-        .eq("source_type", CANDIDATE_SOURCE_TYPE)
-        .eq("next_task_type", CANDIDATE_TASK_TYPE)
-        .order("created_at", { ascending: false })
-        .limit(200);
-      assertSupabaseOperation("qf-i1.listCandidates", result);
-      return ((result.data ?? []) as Record<string, unknown>[])
-        .filter(
-          (row) =>
-            row.exam_mode === scope.examMode &&
-            row.subject === scope.subject,
-        )
-        .map((row) => readCandidate(row.metadata_json))
-        .filter((candidate): candidate is QfI1CandidateV1 => candidate !== null);
+    async listCandidates(input) {
+      const bankClass = requiredBankClass(input.purpose);
+      const candidates: QfI1CandidateV1[] = [];
+      for (let offset = 0; ; offset += PAGE_SIZE) {
+        const result = await clientFor(userId)
+          .from("learning_signal_events")
+          .select("id, exam_mode, subject, metadata_json")
+          .eq("user_id", userId)
+          .eq("exam_mode", scope.examMode)
+          .eq("subject", scope.subject)
+          .eq("source_type", CANDIDATE_SOURCE_TYPE)
+          .eq("next_task_type", CANDIDATE_TASK_TYPE)
+          .eq("metadata_json->qf_i1_candidate->>bankClass", bankClass)
+          .lte("metadata_json->qf_i1_candidate->>availableAt", input.asOf)
+          .order("created_at", { ascending: false })
+          .order("id", { ascending: true })
+          .range(offset, offset + PAGE_SIZE - 1);
+        assertSupabaseOperation("qf-i1.listCandidates", result);
+        const rows = (result.data ?? []) as Record<string, unknown>[];
+        const page = await Promise.all(
+          rows
+            .filter(
+              (row) =>
+                row.exam_mode === scope.examMode &&
+                row.subject === scope.subject,
+            )
+            .map((row) =>
+              readCandidate(row.metadata_json, {
+                userId,
+                scope,
+                resolveChronologyAuthorityInput,
+              }),
+            ),
+        );
+        candidates.push(
+          ...page.filter(
+            (candidate): candidate is QfI1CandidateV1 =>
+              candidate !== null &&
+              candidate.bankClass === bankClass &&
+              Date.parse(candidate.availableAt) <= Date.parse(input.asOf),
+          ),
+        );
+        if (rows.length < PAGE_SIZE) break;
+      }
+      return candidates;
     },
 
     async listExposures(learnerScopeId) {
-      const result = await clientFor(userId)
-        .from("usage_events")
-        .select("event_name, metadata_json, created_at")
-        .eq("user_id", userId)
-        .eq("entity_type", "question_foundry_candidate")
-        .in("event_name", [PRESENTED_EVENT, COMPLETED_EVENT])
-        .order("created_at", { ascending: true })
-        .limit(500);
-      assertSupabaseOperation("qf-i1.listExposures", result);
-      return ((result.data ?? []) as Record<string, unknown>[])
-        .filter((row) => {
-          const metadata = record(row.metadata_json);
-          return metadata?.learnerScopeId === learnerScopeId;
-        })
-        .map((row) =>
-          readExposure(row.metadata_json, row.event_name, row.created_at),
-        )
-        .filter((exposure): exposure is QfI1ExposureV1 => exposure !== null);
+      const exposures: QfI1ExposureV1[] = [];
+      for (let offset = 0; ; offset += PAGE_SIZE) {
+        const result = await clientFor(userId)
+          .from("usage_events")
+          .select("id, event_name, metadata_json, created_at")
+          .eq("user_id", userId)
+          .eq("entity_type", "question_foundry_candidate")
+          .in("event_name", [PRESENTED_EVENT, COMPLETED_EVENT])
+          .eq("metadata_json->>learnerScopeId", learnerScopeId)
+          .order("created_at", { ascending: true })
+          .order("id", { ascending: true })
+          .range(offset, offset + PAGE_SIZE - 1);
+        assertSupabaseOperation("qf-i1.listExposures", result);
+        const rows = (result.data ?? []) as Record<string, unknown>[];
+        exposures.push(
+          ...rows
+            .filter((row) => {
+              const metadata = record(row.metadata_json);
+              return metadata?.learnerScopeId === learnerScopeId;
+            })
+            .map((row) =>
+              readExposure(row.metadata_json, row.event_name, row.created_at),
+            )
+            .filter(
+              (exposure): exposure is QfI1ExposureV1 => exposure !== null,
+            ),
+        );
+        if (rows.length < PAGE_SIZE) break;
+      }
+      return exposures;
     },
 
     async ensureAssignment(assignment) {

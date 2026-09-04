@@ -89,7 +89,14 @@ persistence in metadata-only stores remain off. Bank reads are scoped by
 exact exam mode and subject. Verified Transfer and Measurement candidates
 must pass the existing authoritative QF-S3 chronology validator against their
 complete authority input; caller labels, actors, receipts and digests are not
-trusted. The authority input is not copied into metadata-only persistence.
+trusted. Metadata-only persistence stores only a content-addressed opaque
+authority reference and digest, never the authority input. Certified rows are
+usable only after a server-injected authority resolver rehydrates the complete
+input, verifies the reference digest and re-runs the authoritative QF-S3
+validator. Missing, stale or mismatched authority fails closed. Candidate bank
+class and availability eligibility are applied before any truncation, and both
+candidate stock and the complete exact-learner exposure history are read with
+stable, deterministic pagination before assignment eligibility is decided.
 
 ## Validation and delivery
 

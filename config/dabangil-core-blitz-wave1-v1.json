@@ -88,7 +88,11 @@
     "rawGeneratedBodyMetadataPersistenceAllowed": false,
     "candidateReadsScopedByExamModeAndSubject": true,
     "qfS3ChronologyAuthorityRevalidated": true,
+    "certifiedChronologyAuthorityRehydrationRequired": true,
+    "certifiedChronologyAuthorityReferenceStored": true,
     "qfS3AuthorityInputMetadataPersistenceAllowed": false,
+    "candidateEligibilityFilteredBeforePagination": true,
+    "completeLearnerScopedExposureHistoryPaginated": true,
     "deterministicIdentities": [
       "assignment",
       "exposure",

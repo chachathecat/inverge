@@ -182,8 +182,48 @@ test("Review OS adapter is user-scoped, metadata-only and idempotent", () => {
   assert.match(source, /sanitizeLearningSignalMetadata/u);
   assert.match(source, /assertNoRawUserDataInDerived/u);
   assert.match(source, /assertQfI1CandidateV1/u);
+  assert.match(source, /authorityInputRef/u);
   assert.match(source, /authorityInputDigest/u);
   assert.match(source, /authorityInputStored: false/u);
+  assert.match(source, /resolveChronologyAuthorityInput/u);
+  assert.match(source, /chronology-authority-reference-unresolved/u);
+  assert.match(source, /chronology-authority-input-digest-mismatch/u);
+  assert.match(
+    source,
+    /\.eq\("metadata_json->qf_i1_candidate->>bankClass", bankClass\)/u,
+  );
+  assert.match(
+    source,
+    /\.lte\("metadata_json->qf_i1_candidate->>availableAt", input\.asOf\)/u,
+  );
+  assert.match(
+    source,
+    /\.eq\("metadata_json->>learnerScopeId", learnerScopeId\)/u,
+  );
+  assert.match(source, /\.range\(offset, offset \+ PAGE_SIZE - 1\)/u);
+  assert.doesNotMatch(source, /\.limit\(200\)|\.limit\(500\)/u);
+  const candidateBankFilter = source.indexOf(
+    '.eq("metadata_json->qf_i1_candidate->>bankClass", bankClass)',
+  );
+  const candidateAvailabilityFilter = source.indexOf(
+    '.lte("metadata_json->qf_i1_candidate->>availableAt", input.asOf)',
+  );
+  const candidatePage = source.indexOf(
+    ".range(offset, offset + PAGE_SIZE - 1)",
+    candidateAvailabilityFilter,
+  );
+  const learnerExposureFilter = source.indexOf(
+    '.eq("metadata_json->>learnerScopeId", learnerScopeId)',
+  );
+  const exposurePage = source.indexOf(
+    ".range(offset, offset + PAGE_SIZE - 1)",
+    learnerExposureFilter,
+  );
+  assert.ok(candidateBankFilter >= 0);
+  assert.ok(candidateBankFilter < candidateAvailabilityFilter);
+  assert.ok(candidateAvailabilityFilter < candidatePage);
+  assert.ok(learnerExposureFilter >= 0);
+  assert.ok(learnerExposureFilter < exposurePage);
   assert.match(source, /candidate-idempotency-conflict/u);
   assert.match(source, /usage-idempotency-conflict/u);
   assert.doesNotMatch(
