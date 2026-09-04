@@ -172,11 +172,18 @@ test("Review OS adapter is user-scoped, metadata-only and idempotent", () => {
     "utf8",
   );
   assert.match(source, /\.eq\("user_id", userId\)/u);
+  assert.match(source, /\.eq\("exam_mode", scope\.examMode\)/u);
+  assert.match(source, /\.eq\("subject", scope\.subject\)/u);
+  assert.match(source, /row\.exam_mode === scope\.examMode/u);
+  assert.match(source, /row\.subject === scope\.subject/u);
   assert.match(source, /source_type", CANDIDATE_SOURCE_TYPE/u);
   assert.match(source, /ASSIGNMENT_EVENT/u);
   assert.match(source, /PRESENTED_EVENT/u);
   assert.match(source, /sanitizeLearningSignalMetadata/u);
   assert.match(source, /assertNoRawUserDataInDerived/u);
+  assert.match(source, /assertQfI1CandidateV1/u);
+  assert.match(source, /authorityInputDigest/u);
+  assert.match(source, /authorityInputStored: false/u);
   assert.match(source, /candidate-idempotency-conflict/u);
   assert.match(source, /usage-idempotency-conflict/u);
   assert.doesNotMatch(

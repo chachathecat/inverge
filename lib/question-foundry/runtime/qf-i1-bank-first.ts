@@ -2,8 +2,10 @@ import crypto from "node:crypto";
 
 import {
   QFS3_CONTRACT_VERSION,
+  type DependencyRankedTransferChronologyInputV1,
   type DependencyRankedTransferChronologyV1,
 } from "../chronology/chronology-contracts";
+import { assertDependencyRankedTransferChronologyV1 } from "../chronology/chronology-core";
 import {
   CORE_BLITZ_WAVE1_CONTRACT_VERSION,
   admitQuestionToBankV1,
@@ -26,6 +28,7 @@ export const QF_I1_ERROR_CODES = Object.freeze([
   "CHRONOLOGY_REQUIRED",
   "CHRONOLOGY_INCOMPLETE",
   "CHRONOLOGY_BINDING_MISMATCH",
+  "CHRONOLOGY_AUTHORITY_INVALID",
   "DUPLICATE_CANDIDATE_ID",
   "AUTHORITY_BINDING_MISMATCH",
   "GENERATED_AUTHORITY_ESCALATION",
@@ -47,6 +50,7 @@ export type QfI1ChronologyAuthorityV1 = Readonly<{
   chronologyDigest: string;
   candidateId: string;
   candidateDigest: string;
+  authorityInput: DependencyRankedTransferChronologyInputV1;
 }>;
 
 export type QfI1CandidateV1 = Readonly<{
@@ -125,7 +129,12 @@ function requiredBank(purpose: QfI1Purpose): QuestionBankClass {
 }
 
 function assertChronology(candidate: QfI1CandidateV1) {
-  if (candidate.bankClass === "LEARNING_PRACTICE") return;
+  if (candidate.bankClass === "LEARNING_PRACTICE") {
+    if (candidate.chronology !== null || candidate.chronologyAuthority !== null) {
+      reject("CHRONOLOGY_BINDING_MISMATCH");
+    }
+    return;
+  }
   const chronology = candidate.chronology;
   const authority = candidate.chronologyAuthority;
   if (!chronology || !authority) reject("CHRONOLOGY_REQUIRED");
@@ -140,6 +149,18 @@ function assertChronology(candidate: QfI1CandidateV1) {
     chronology.candidateDigest !== candidate.candidateDigest
   ) {
     reject("CHRONOLOGY_BINDING_MISMATCH");
+  }
+  try {
+    const validated = assertDependencyRankedTransferChronologyV1(
+      chronology,
+      authority.authorityInput,
+    );
+    if (stableJson(validated) !== stableJson(chronology)) {
+      reject("CHRONOLOGY_AUTHORITY_INVALID");
+    }
+  } catch (error) {
+    if (error instanceof QfI1BankFirstError) throw error;
+    reject("CHRONOLOGY_AUTHORITY_INVALID");
   }
   if (
     chronology.completeness !== "COMPLETE" ||
@@ -197,6 +218,11 @@ function assertCandidate(candidate: QfI1CandidateV1) {
     calibrationState: candidate.calibrationState,
     timedProtocolBound: candidate.timedProtocolBound,
   });
+}
+
+export function assertQfI1CandidateV1(candidate: QfI1CandidateV1) {
+  assertCandidate(candidate);
+  return candidate;
 }
 
 export function selectQfI1BankFirstAssignmentV1(

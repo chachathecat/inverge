@@ -77,13 +77,25 @@ test("learner support input is exact, UUID-bound and server-time compatible", ()
 
 test("learner support route verifies the owned item before durable disclosure logging", () => {
   const route = read("app/api/os/learner-support/route.ts");
+  const access = read("lib/core-blitz/learner-support-access.ts");
   const repository = read("lib/core-blitz/learner-support-repository.ts");
   const component = read("components/core-blitz/learner-support-panel.tsx");
   const page = read("app/app/items/[itemId]/support/page.tsx");
 
+  assert.match(access, /CORE_BLITZ_LEARNER_SUPPORT_ENABLED/u);
+  assert.match(access, /CORE_BLITZ_LEARNER_SUPPORT_OWNER_EMAILS/u);
+  assert.match(access, /process\.env\.VERCEL_ENV === "production"/u);
+  assert.match(access, /!session\.authEnabled/u);
+  assert.match(access, /!session\.isAuthenticated/u);
+  assert.match(access, /session\.isDemo/u);
+  assert.match(access, /process\.env\.ALPHA_ADMIN_EMAILS/u);
   assert.match(
     route,
-    /getWrongAnswerDetail\([\s\S]*?detail\.item\.userId !== userId[\s\S]*?buildLearnerSupportUsageEventV1[\s\S]*?recordLearnerSupportUsageEventV1/u,
+    /hasCoreBlitzLearnerSupportOwnerAccess\(session\)[\s\S]*?learner-support-unavailable[\s\S]*?requireRequestUserId/u,
+  );
+  assert.match(
+    route,
+    /getWrongAnswerDetail\([\s\S]*?detail\.item\.userId !== userId[\s\S]*?detail\.item\.examName !== "감정평가사 2차"[\s\S]*?buildLearnerSupportUsageEventV1[\s\S]*?recordLearnerSupportUsageEventV1/u,
   );
   assert.match(route, /occurredAt: new Date\(\)\.toISOString\(\)/u);
   assert.match(repository, /\.eq\("id", event\.eventId\)[\s\S]*?\.eq\("user_id", userId\)/u);
@@ -102,8 +114,16 @@ test("learner support route verifies the owned item before durable disclosure lo
   assert.match(component, /if \(!nextProjection\.available\)[\s\S]*?return;/u);
   assert.match(component, /fetch\("\/api\/os\/learner-support"/u);
   assert.match(component, /내용은 아직 공개하지 않았습니다/u);
+  assert.match(component, /data-reference-authority/u);
+  assert.match(component, /검증된 학습 참고 미연결/u);
   assert.match(page, /getWrongAnswerDetail/u);
+  assert.match(
+    page,
+    /hasCoreBlitzLearnerSupportOwnerAccess\(session\)\) notFound\(\)/u,
+  );
   assert.match(page, /detail\.item\.examName !== "감정평가사 2차"/u);
+  assert.match(page, /referenceAnswer=\{null\}/u);
+  assert.doesNotMatch(page, /detail\.item\.correctAnswer/u);
   assert.match(page, /<LearnerSupportPanel/u);
 });
 
@@ -111,10 +131,9 @@ test("Study Ledger is the sole authenticated learner-support entry", () => {
   const itemPage = read("app/app/items/[itemId]/page.tsx");
   const ledger = read("components/learner/study-ledger-ui.tsx");
 
-  assert.ok(
-    itemPage.includes(
-      'supportHref={`/app/items/${encodeURIComponent(itemId)}/support`}',
-    ),
+  assert.match(
+    itemPage,
+    /supportHref=\{[\s\S]*?hasCoreBlitzLearnerSupportOwnerAccess\(session\)[\s\S]*?`\/app\/items\/\$\{encodeURIComponent\(itemId\)\}\/support`[\s\S]*?: null/u,
   );
   assert.match(ledger, /supportHref\?: string \| null/u);
   assert.ok(ledger.includes("href={supportHref}"));

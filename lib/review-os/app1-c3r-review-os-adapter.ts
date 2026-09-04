@@ -10,10 +10,6 @@ import {
   type App1C3rHandoffPersistencePortV1,
   type DurableC3rJourneyV1,
 } from "./app1-c3r-handoff-runtime";
-import {
-  resolveReviewSchedule,
-  resolveScheduleOverrideDate,
-} from "./scheduling";
 
 export const APP1_C3R_REVIEW_OS_ADAPTER_VERSION =
   "app1_c3r_review_os_adapter.v1" as const;
@@ -207,22 +203,16 @@ function readReplayPlan(item: WrongAnswerItemRecord, userId: string) {
   });
 }
 
-function expectedQueueDueAt(
+function exactD1QueueDueAt(
   replay: NonNullable<ReturnType<typeof readReplayPlan>>,
-  recurrenceCount: number,
 ) {
-  const schedule = resolveReviewSchedule({
-    ...replay.scheduleInput,
-    recurrenceCount,
-    now: new Date(replay.scheduleInput.scheduledAt),
-  });
-  return (
-    schedule.retryDueAt ??
-    resolveScheduleOverrideDate(
-      replay.scheduleInput.nextReviewDateOverride ?? schedule.nextReviewDate,
-      schedule.reviewDueAt,
-    )
-  );
+  const nextDay = new Date(replay.scheduleInput.scheduledAt);
+  nextDay.setUTCDate(nextDay.getUTCDate() + 1);
+  const nextDate = nextDay.toISOString().slice(0, 10);
+  if (replay.scheduleInput.nextReviewDateOverride !== nextDate) {
+    reject("REVIEW_QUEUE_BINDING_CONFLICT");
+  }
+  return `${nextDate}T00:00:00.000Z`;
 }
 
 function assertProjection(
@@ -256,9 +246,8 @@ export async function materializeApp1C3rReviewOsAdapterV1(input: Readonly<{
     queue.subject !== input.item.subjectLabel ||
     !["pending", "completed"].includes(queue.status) ||
     !canonicalUtc(queue.dueAt) ||
-    !Number.isSafeInteger(queue.recurrenceCount) ||
-    queue.recurrenceCount < 1 ||
-    queue.dueAt !== expectedQueueDueAt(replay, queue.recurrenceCount)
+    queue.recurrenceCount !== 1 ||
+    queue.dueAt !== exactD1QueueDueAt(replay)
   ) {
     reject("REVIEW_QUEUE_BINDING_CONFLICT");
   }

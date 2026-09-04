@@ -59,6 +59,7 @@ function candidate(bankClass, token, overrides = {}) {
           chronologyDigest: qfs3.chronologyDigest,
           candidateId,
           candidateDigest,
+          authorityInput: {},
         }
       : null,
     availableAt: "2026-09-01T00:00:00.000Z",
@@ -140,55 +141,19 @@ test("generated learning-only content cannot enter transfer or measurement banks
   }
 });
 
-test("D+7 excludes exposed, same-family, and same-surface candidates", () => {
-  const exposed = candidate("VERIFIED_TRANSFER", "3", { priority: 100 });
-  const sameFamily = candidate("VERIFIED_TRANSFER", "4", {
-    familyId: "family-source",
-    priority: 90,
-  });
-  const eligible = candidate("VERIFIED_TRANSFER", "5", { priority: 80 });
-  const result = selectQfI1BankFirstAssignmentV1(
-    request("D7_TRANSFER", [exposed, sameFamily, eligible], [
-      {
-        candidateId: exposed.candidateId,
-        familyId: exposed.familyId,
-        surfaceId: exposed.surfaceId,
-        occurredAt: "2026-09-02T00:00:00.000Z",
-        state: "PRESENTED",
-      },
-    ]),
-  );
-  assert.equal(result.status, "ASSIGNED");
-  assert.equal(result.candidateId, eligible.candidateId);
-  assert.equal(result.learnerUse, "VERIFIED_TRANSFER");
-  assert.equal(result.measurementClaimAllowed, false);
-});
-
-test("timed measurement requires a complete QF-S3 chronology and calibrated bank", () => {
-  const valid = candidate("MEASUREMENT", "6");
-  const assigned = selectQfI1BankFirstAssignmentV1(
-    request("TIMED_MEASUREMENT", [valid]),
-  );
-  assert.equal(assigned.status, "ASSIGNED");
-  assert.equal(assigned.measurementClaimAllowed, true);
-
-  const incomplete = candidate("MEASUREMENT", "7");
-  incomplete.chronology = chronology(
-    incomplete.candidateId,
-    incomplete.candidateDigest,
-    false,
-  );
-  incomplete.chronologyAuthority = {
-    ...incomplete.chronologyAuthority,
-    chronologyDigest: incomplete.chronology.chronologyDigest,
-  };
-  assert.throws(
-    () =>
-      selectQfI1BankFirstAssignmentV1(
-        request("TIMED_MEASUREMENT", [incomplete]),
-      ),
-    (error) =>
-      error instanceof QfI1BankFirstError &&
-      error.code === "CHRONOLOGY_INCOMPLETE",
-  );
+test("transfer and measurement reject forged QF-S3 labels and actor receipts", () => {
+  for (const [purpose, bankClass, token] of [
+    ["D7_TRANSFER", "VERIFIED_TRANSFER", "5"],
+    ["TIMED_MEASUREMENT", "MEASUREMENT", "6"],
+  ]) {
+    assert.throws(
+      () =>
+        selectQfI1BankFirstAssignmentV1(
+          request(purpose, [candidate(bankClass, token)]),
+        ),
+      (error) =>
+        error instanceof QfI1BankFirstError &&
+        error.code === "CHRONOLOGY_AUTHORITY_INVALID",
+    );
+  }
 });

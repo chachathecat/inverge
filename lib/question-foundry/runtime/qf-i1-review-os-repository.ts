@@ -16,6 +16,7 @@ import type {
   QfI1CandidateV1,
   QfI1ExposureV1,
 } from "./qf-i1-bank-first";
+import { assertQfI1CandidateV1 } from "./qf-i1-bank-first";
 import type {
   QfI1DurableAssignmentV1,
   QfI1DurableExposureV1,
@@ -62,6 +63,23 @@ function record(value: unknown): Record<string, unknown> | null {
   return value && typeof value === "object" && !Array.isArray(value)
     ? (value as Record<string, unknown>)
     : null;
+}
+
+function metadataCandidate(candidate: QfI1CandidateV1) {
+  const validated = assertQfI1CandidateV1(candidate);
+  if (!validated.chronologyAuthority) return validated;
+  const { authorityInput, ...binding } = validated.chronologyAuthority;
+  return Object.freeze({
+    ...validated,
+    chronologyAuthority: Object.freeze({
+      ...binding,
+      authorityInputDigest: `sha256:${crypto
+        .createHash("sha256")
+        .update(stableJson(authorityInput), "utf8")
+        .digest("hex")}`,
+      authorityInputStored: false as const,
+    }),
+  });
 }
 
 async function ensureUsageRow(
@@ -140,7 +158,7 @@ export async function ensureQfI1CandidateMetadataV1(
   });
   const metadataJson = sanitizeLearningSignalMetadata({
     contractVersion: QF_I1_REVIEW_OS_REPOSITORY_VERSION,
-    qf_i1_candidate: input.candidate,
+    qf_i1_candidate: metadataCandidate(input.candidate),
     containsRawContent: false,
     registeredAt: input.registeredAt,
   });
@@ -239,19 +257,38 @@ function readExposure(
 
 export function createQfI1ReviewOsPersistencePortV1(
   userId: string,
+  scope: Readonly<{
+    examMode: "감정평가사 1차" | "감정평가사 2차";
+    subject: string;
+  }>,
 ): QfI1PersistencePortV1 {
+  if (
+    !["감정평가사 1차", "감정평가사 2차"].includes(scope?.examMode) ||
+    typeof scope?.subject !== "string" ||
+    scope.subject.trim() !== scope.subject ||
+    scope.subject.length === 0
+  ) {
+    throw new Error("qf-i1:candidate-scope-invalid");
+  }
   return Object.freeze({
     async listCandidates() {
       const result = await clientFor(userId)
         .from("learning_signal_events")
-        .select("metadata_json")
+        .select("exam_mode, subject, metadata_json")
         .eq("user_id", userId)
+        .eq("exam_mode", scope.examMode)
+        .eq("subject", scope.subject)
         .eq("source_type", CANDIDATE_SOURCE_TYPE)
         .eq("next_task_type", CANDIDATE_TASK_TYPE)
         .order("created_at", { ascending: false })
         .limit(200);
       assertSupabaseOperation("qf-i1.listCandidates", result);
       return ((result.data ?? []) as Record<string, unknown>[])
+        .filter(
+          (row) =>
+            row.exam_mode === scope.examMode &&
+            row.subject === scope.subject,
+        )
         .map((row) => readCandidate(row.metadata_json))
         .filter((candidate): candidate is QfI1CandidateV1 => candidate !== null);
     },

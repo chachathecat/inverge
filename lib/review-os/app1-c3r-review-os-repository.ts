@@ -194,8 +194,7 @@ export function createApp1C3rReviewOsStoragePortV1(
         row.source_kind !== "wrong_answer" ||
         !["pending", "completed"].includes(String(row.status)) ||
         !dueAt ||
-        !Number.isSafeInteger(recurrenceCount) ||
-        Number(recurrenceCount) < 1
+        recurrenceCount !== 1
       ) {
         throw new Error("app1-c3r-review-os:review-unit-binding-conflict");
       }

@@ -102,8 +102,17 @@ export function LearnerSupportPanel({
           지금 필요한 만큼만 도움을 여세요
         </h2>
         <p className="v3-type-body ko-keep text-[var(--color-text-secondary)]">
-          정답과 풀이를 바로 볼 수 있지만, 도움을 본 같은 문제는 독립 숙달이나
-          전이 성공으로 계산하지 않습니다.
+          도움을 본 같은 문제는 독립 숙달이나 전이 성공으로 계산하지 않습니다.
+          정답과 전체풀이는 검증된 학습 참고가 연결된 경우에만 열립니다.
+        </p>
+        <p
+          className="v3-type-caption text-[var(--color-text-secondary)]"
+          data-reference-authority={referenceAnswer ? "SUPPLIED_REFERENCE" : "NONE"}
+        >
+          기준답안 권한:{" "}
+          {referenceAnswer
+            ? "검증된 학습 참고 연결됨"
+            : "검증된 학습 참고 미연결 · 정답/전체풀이 비활성"}
         </p>
       </header>
 

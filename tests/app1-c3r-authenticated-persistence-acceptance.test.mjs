@@ -406,6 +406,45 @@ test("authenticated APP-1 save reuses one Queue row and persists one bodyless C3
 
     query(
       "update public.review_queue_items set raw_payload = jsonb_set(raw_payload, '{dueAt}', " +
+        jsonLiteral("2026-09-05T00:00:00.000Z") +
+        ")",
+    );
+    const mislabeledLaterReview = structuredClone(item());
+    mislabeledLaterReview.rawPayload.app1_post_insert_replay_v1.queue
+      .scheduleInput.nextReviewDateOverride = "2026-09-05";
+    await assert.rejects(
+      () =>
+        materializeApp1C3rReviewOsAdapterV1({
+          userId: USER_ID,
+          item: mislabeledLaterReview,
+          storage,
+        }),
+      (error) =>
+        error instanceof App1C3rReviewOsAdapterError &&
+        error.code === "REVIEW_QUEUE_BINDING_CONFLICT",
+    );
+    query(
+      "update public.review_queue_items set raw_payload = jsonb_set(raw_payload, '{dueAt}', " +
+        jsonLiteral(DUE_AT) +
+        "), derived_payload = jsonb_set(derived_payload, '{recurrenceCount}', '2'::jsonb)",
+    );
+    await assert.rejects(
+      () =>
+        materializeApp1C3rReviewOsAdapterV1({
+          userId: USER_ID,
+          item: item(),
+          storage,
+        }),
+      (error) =>
+        error instanceof App1C3rReviewOsAdapterError &&
+        error.code === "REVIEW_QUEUE_BINDING_CONFLICT",
+    );
+    query(
+      "update public.review_queue_items set derived_payload = jsonb_set(derived_payload, '{recurrenceCount}', '1'::jsonb)",
+    );
+
+    query(
+      "update public.review_queue_items set raw_payload = jsonb_set(raw_payload, '{dueAt}', " +
         jsonLiteral("2026-09-04T00:00:01.000Z") +
         ")",
     );

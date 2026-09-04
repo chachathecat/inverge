@@ -226,6 +226,49 @@ test("APP-1 H0 rejects queue and replay binding drift", async () => {
     assertCode("REVIEW_QUEUE_BINDING_CONFLICT"),
   );
 
+  const mislabeledLaterReview = item();
+  mislabeledLaterReview.rawPayload.app1_post_insert_replay_v1.queue
+    .scheduleInput.nextReviewDateOverride = "2026-09-05";
+  await assert.rejects(
+    () =>
+      materializeApp1C3rReviewOsAdapterV1({
+        userId: "user-1",
+        item: mislabeledLaterReview,
+        storage: storage({
+          loadReviewQueueUnit: async () => ({
+            reviewUnitId: QUEUE_ID,
+            userId: "user-1",
+            itemId: ITEM_ID,
+            subject: "감정평가이론",
+            status: "pending",
+            dueAt: "2026-09-05T00:00:00.000Z",
+            recurrenceCount: 1,
+          }),
+        }),
+      }),
+    assertCode("REVIEW_QUEUE_BINDING_CONFLICT"),
+  );
+
+  await assert.rejects(
+    () =>
+      materializeApp1C3rReviewOsAdapterV1({
+        userId: "user-1",
+        item: item(),
+        storage: storage({
+          loadReviewQueueUnit: async () => ({
+            reviewUnitId: QUEUE_ID,
+            userId: "user-1",
+            itemId: ITEM_ID,
+            subject: "감정평가이론",
+            status: "pending",
+            dueAt: DUE_AT,
+            recurrenceCount: 2,
+          }),
+        }),
+      }),
+    assertCode("REVIEW_QUEUE_BINDING_CONFLICT"),
+  );
+
   const missingAuthority = item();
   delete missingAuthority.rawPayload.user_confirmed_fields;
   await assert.rejects(
@@ -266,6 +309,7 @@ test("server adapter reuses Review Queue and the APP-1 route invokes it", () => 
   assert.match(repository, /eq\("id", input\.reviewUnitId\)/u);
   assert.match(repository, /eq\("user_id", userId\)/u);
   assert.match(repository, /eq\("source_submission_id", input\.itemId\)/u);
+  assert.match(repository, /recurrenceCount !== 1/u);
   assert.match(route, /materializeApp1C3rReviewOsHandoffV1/u);
   assert.match(
     route,

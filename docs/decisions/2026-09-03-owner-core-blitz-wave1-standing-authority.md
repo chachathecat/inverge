@@ -44,7 +44,8 @@ creates no separate Seven Exams PR.
 
 APP-1 repair may materialize one bodyless C3R journey projection only after
 the existing user-owned Review Queue row is loaded and its item, revision,
-subject, route, recurrence and due-time bindings agree. The Queue row is
+subject, route, recurrence and exact D+1 due-time bindings agree. A later,
+immediate or repeated recurrence may not be relabeled as D+1. The Queue row is
 reused and is never inserted or updated by the adapter. Identical retry reuses
 the same deterministic journey and Queue identity. Missing Queue or any
 binding drift fails closed.
@@ -58,7 +59,10 @@ then removes the synthetic user, records and container.
 
 The only authenticated learner-support route is
 `/app/items/[itemId]/support`, linked from the appraiser second-stage stored
-item and Study Ledger flow. Its choices are:
+item and Study Ledger flow. It is Owner-only, default-off, unavailable in
+Production, and requires both `ALPHA_ADMIN_EMAILS` and the dedicated
+`CORE_BLITZ_LEARNER_SUPPORT_OWNER_EMAILS` allowlist while
+`CORE_BLITZ_LEARNER_SUPPORT_ENABLED=true`. Its choices are:
 
 - 내가 먼저 풀기
 - 힌트 하나
@@ -69,7 +73,8 @@ item and Study Ledger flow. Its choices are:
 Only `내가 먼저 풀기` is unaided. Every assisted path is ineligible for
 same-item mastery and transfer Evidence and requires a separate later unaided
 attempt. An authoritative answer or full solution is unavailable without a
-supplied reference authority.
+supplied verified learning-reference authority. The stored wrong-answer
+`correctAnswer` field is learner/OCR material and is never that authority.
 
 ## QF-I1 boundary
 
@@ -80,7 +85,11 @@ or Measurement. Assignment, exposure, generation request, retry and conflict
 identities are deterministic and idempotent.
 
 Provider execution, public learner activation and raw generated body
-persistence in metadata-only stores remain off.
+persistence in metadata-only stores remain off. Bank reads are scoped by
+exact exam mode and subject. Verified Transfer and Measurement candidates
+must pass the existing authoritative QF-S3 chronology validator against their
+complete authority input; caller labels, actors, receipts and digests are not
+trusted. The authority input is not copied into metadata-only persistence.
 
 ## Validation and delivery
 

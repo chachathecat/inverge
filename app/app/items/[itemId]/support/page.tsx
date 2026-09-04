@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { LearnerSupportPanel } from "@/components/core-blitz/learner-support-panel";
 import { ReviewOsAccessState } from "@/components/review-os/review-os-access-state";
 import { normalizeAnswerReviewStructureDraft } from "@/lib/evaluate/answer-review-structure";
+import { hasCoreBlitzLearnerSupportOwnerAccess } from "@/lib/core-blitz/learner-support-access";
 import { getAppraisalMode } from "@/lib/review-os/appraisal";
 import {
   buildReviewOsReturnTo,
@@ -18,13 +19,6 @@ type PageProps = {
   params: Promise<{ itemId: string }>;
 };
 
-function substantiveReference(value: string | undefined | null) {
-  const normalized = value?.trim() ?? "";
-  return normalized && !["-", "–", "—"].includes(normalized)
-    ? normalized
-    : null;
-}
-
 export default async function LearnerSupportPage({ params }: PageProps) {
   const { itemId } = await params;
   const { session, access } = await getReviewOsServerContext(
@@ -33,6 +27,7 @@ export default async function LearnerSupportPage({ params }: PageProps) {
   if (access.status !== "allowed") {
     return <ReviewOsAccessState access={access} embedded />;
   }
+  if (!hasCoreBlitzLearnerSupportOwnerAccess(session)) notFound();
   if (!session.userId || !session.email) return null;
 
   const detail = await reviewOsService.getWrongAnswerDetail(
@@ -94,8 +89,6 @@ export default async function LearnerSupportPage({ params }: PageProps) {
     ].filter(Boolean),
   });
   const mode = getAppraisalMode(detail.item.examName);
-  const referenceAnswer = substantiveReference(detail.item.correctAnswer);
-
   return (
     <main className="mx-auto w-full max-w-[900px] space-y-6 px-5 py-8 md:px-8">
       <header className="space-y-3">
@@ -119,7 +112,7 @@ export default async function LearnerSupportPage({ params }: PageProps) {
       <LearnerSupportPanel
         itemId={itemId}
         draft={draft}
-        referenceAnswer={referenceAnswer}
+        referenceAnswer={null}
       />
     </main>
   );

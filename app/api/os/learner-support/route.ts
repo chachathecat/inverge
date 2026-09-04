@@ -5,6 +5,7 @@ import {
   LearnerSupportEventError,
   buildLearnerSupportUsageEventV1,
 } from "@/lib/core-blitz/learner-support-event";
+import { hasCoreBlitzLearnerSupportOwnerAccess } from "@/lib/core-blitz/learner-support-access";
 import { recordLearnerSupportUsageEventV1 } from "@/lib/core-blitz/learner-support-repository";
 import { reviewOsErrorResponse } from "@/lib/review-os/http";
 import { reviewOsService } from "@/lib/review-os/service";
@@ -14,6 +15,12 @@ export const dynamic = "force-dynamic";
 export async function POST(request: Request) {
   try {
     const session = await getServerSessionUser();
+    if (!hasCoreBlitzLearnerSupportOwnerAccess(session)) {
+      return NextResponse.json(
+        { ok: false, error: "learner-support-unavailable" },
+        { status: 404 },
+      );
+    }
     const userId = await requireRequestUserId(request);
     let body: unknown;
     try {
@@ -50,7 +57,12 @@ export async function POST(request: Request) {
           itemId,
         )
       : null;
-    if (!detail || detail.item.id !== itemId || detail.item.userId !== userId) {
+    if (
+      !detail ||
+      detail.item.id !== itemId ||
+      detail.item.userId !== userId ||
+      detail.item.examName !== "감정평가사 2차"
+    ) {
       return NextResponse.json(
         { ok: false, error: "item-not-found" },
         { status: 404 },
