@@ -6,6 +6,7 @@ import {
   App1C3rReviewOsAdapterError,
   materializeApp1C3rReviewOsAdapterV1,
 } from "../lib/review-os/app1-c3r-review-os-adapter.ts";
+import { resolveApp1FirstRecurrenceD1Schedule } from "../lib/review-os/scheduling.ts";
 import {
   ORACLE_IMAGE,
   ORACLE_PLATFORM,
@@ -15,8 +16,21 @@ const USER_ID = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
 const ITEM_ID = "11111111-1111-5111-a111-111111111111";
 const QUEUE_ID = "22222222-2222-5222-a222-222222222222";
 const SIGNAL_ID = "33333333-3333-5333-a333-333333333333";
-const DUE_AT = "2026-09-04T00:00:00.000Z";
 const UPDATED_AT = "2026-09-03T12:00:00.000Z";
+const PRODUCTION_SCHEDULE_INPUT = Object.freeze({
+  mode: "second",
+  isCorrect: false,
+  confidence: "낮음",
+  mistakeType: "논점 누락",
+  recurrenceCount: 1,
+  hasWeakParagraph: true,
+  now: new Date(UPDATED_AT),
+  nextReviewDateOverride: null,
+});
+const PRODUCTION_SCHEDULE = resolveApp1FirstRecurrenceD1Schedule(
+  PRODUCTION_SCHEDULE_INPUT,
+);
+const DUE_AT = PRODUCTION_SCHEDULE.dueAt;
 const RAW_MARKER = "SYNTHETIC_RAW_LEARNER_BODY_MUST_NOT_DERIVE";
 
 function candidate() {
@@ -60,7 +74,8 @@ function rawPayload() {
           mistakeType: "논점 누락",
           hasWeakParagraph: true,
           scheduledAt: UPDATED_AT,
-          nextReviewDateOverride: "2026-09-04",
+          nextReviewDateOverride:
+            PRODUCTION_SCHEDULE.sealedNextReviewDateOverride,
         },
       },
       learningSignal: {
@@ -100,6 +115,11 @@ function docker(args, options = {}) {
 }
 
 test("authenticated APP-1 save reuses one Queue row and persists one bodyless C3R journey", { timeout: 120_000 }, async () => {
+  assert.equal(PRODUCTION_SCHEDULE_INPUT.nextReviewDateOverride, null);
+  assert.equal(PRODUCTION_SCHEDULE.initialNextReviewDateOverride, null);
+  assert.equal(PRODUCTION_SCHEDULE.sealedNextReviewDateOverride, "2026-09-04");
+  assert.equal(PRODUCTION_SCHEDULE.dueAt, DUE_AT);
+
   const dockerCheck = spawnSync("docker", ["version"], {
     encoding: "utf8",
     windowsHide: true,
@@ -230,20 +250,17 @@ test("authenticated APP-1 save reuses one Queue row and persists one bodyless C3
     );
 
     query(
-      [
-        "insert into public.wrong_answer_items (id,user_id,exam_name,subject_label,raw_payload,created_at,updated_at) values (" +
-          [
-            sqlLiteral(ITEM_ID) + "::uuid",
-            sqlLiteral(USER_ID) + "::uuid",
-            "'감정평가사 2차'",
-            "'감정평가이론'",
-            jsonLiteral(rawPayload()),
-            sqlLiteral(UPDATED_AT) + "::timestamptz",
-            sqlLiteral(UPDATED_AT) + "::timestamptz",
-          ].join(",") +
-          ")",
-        queueInsert(),
-      ].join(";") + ";",
+      "insert into public.wrong_answer_items (id,user_id,exam_name,subject_label,raw_payload,created_at,updated_at) values (" +
+        [
+          sqlLiteral(ITEM_ID) + "::uuid",
+          sqlLiteral(USER_ID) + "::uuid",
+          "'감정평가사 2차'",
+          "'감정평가이론'",
+          jsonLiteral(rawPayload()),
+          sqlLiteral(UPDATED_AT) + "::timestamptz",
+          sqlLiteral(UPDATED_AT) + "::timestamptz",
+        ].join(",") +
+        ")",
     );
 
     const storage = {
@@ -313,6 +330,22 @@ test("authenticated APP-1 save reuses one Queue row and persists one bodyless C3
       },
     };
 
+    await assert.rejects(
+      () =>
+        materializeApp1C3rReviewOsAdapterV1({
+          userId: USER_ID,
+          item: item(),
+          storage,
+        }),
+      (error) =>
+        error instanceof App1C3rReviewOsAdapterError &&
+        error.code === "REVIEW_QUEUE_MISSING",
+    );
+    assert.equal(query("select count(*) from public.wrong_answer_items"), "1");
+    assert.equal(query("select count(*) from public.review_queue_items"), "0");
+    assert.equal(query("select count(*) from public.learning_signal_events"), "0");
+
+    query(queueInsert());
     const first = await materializeApp1C3rReviewOsAdapterV1({
       userId: USER_ID,
       item: item(),

@@ -6,11 +6,26 @@ import {
   App1C3rReviewOsAdapterError,
   materializeApp1C3rReviewOsAdapterV1,
 } from "../lib/review-os/app1-c3r-review-os-adapter.ts";
+import { resolveApp1FirstRecurrenceD1Schedule } from "../lib/review-os/scheduling.ts";
 
 const ITEM_ID = "11111111-1111-5111-a111-111111111111";
 const QUEUE_ID = "22222222-2222-5222-a222-222222222222";
 const SIGNAL_ID = "33333333-3333-5333-a333-333333333333";
-const DUE_AT = "2026-09-04T00:00:00.000Z";
+const SCHEDULED_AT = "2026-09-03T12:00:00.000Z";
+const PRODUCTION_SCHEDULE_INPUT = Object.freeze({
+  mode: "second",
+  isCorrect: false,
+  confidence: "낮음",
+  mistakeType: "논점 누락",
+  recurrenceCount: 1,
+  hasWeakParagraph: true,
+  now: new Date(SCHEDULED_AT),
+  nextReviewDateOverride: null,
+});
+const PRODUCTION_SCHEDULE = resolveApp1FirstRecurrenceD1Schedule(
+  PRODUCTION_SCHEDULE_INPUT,
+);
+const DUE_AT = PRODUCTION_SCHEDULE.dueAt;
 
 function candidate() {
   return {
@@ -40,7 +55,7 @@ function item() {
     userId: "user-1",
     examName: "감정평가사 2차",
     subjectLabel: "감정평가이론",
-    updatedAt: "2026-09-03T12:00:00.000Z",
+    updatedAt: SCHEDULED_AT,
     rawPayload: {
       user_confirmed_fields: {
         persistence_work_revision_id: "revision-1",
@@ -57,8 +72,9 @@ function item() {
             confidence: "낮음",
             mistakeType: "논점 누락",
             hasWeakParagraph: true,
-            scheduledAt: "2026-09-03T12:00:00.000Z",
-            nextReviewDateOverride: "2026-09-04",
+            scheduledAt: SCHEDULED_AT,
+            nextReviewDateOverride:
+              PRODUCTION_SCHEDULE.sealedNextReviewDateOverride,
           },
         },
         learningSignal: {
@@ -100,6 +116,56 @@ function assertCode(code) {
   return (error) =>
     error instanceof App1C3rReviewOsAdapterError && error.code === code;
 }
+
+test("APP-1 production scheduling starts without client authority and seals one canonical D+1 binding", () => {
+  assert.equal(PRODUCTION_SCHEDULE_INPUT.nextReviewDateOverride, null);
+  assert.equal(PRODUCTION_SCHEDULE.initialNextReviewDateOverride, null);
+  assert.equal(
+    PRODUCTION_SCHEDULE.sealedNextReviewDateOverride,
+    "2026-09-04",
+  );
+  assert.equal(PRODUCTION_SCHEDULE.dueAt, "2026-09-04T00:00:00.000Z");
+  assert.equal(PRODUCTION_SCHEDULE.schedule.nextReviewDate, "2026-09-04");
+  assert.equal(
+    PRODUCTION_SCHEDULE.schedule.policy,
+    "app1_first_recurrence_d1",
+  );
+  assert.equal(PRODUCTION_SCHEDULE.schedule.reviewDueAt, DUE_AT);
+  assert.equal(PRODUCTION_SCHEDULE.schedule.retryDueAt, null);
+  assert.equal(PRODUCTION_SCHEDULE.schedule.followUpReviewAt, null);
+
+  assert.throws(
+    () =>
+      resolveApp1FirstRecurrenceD1Schedule({
+        ...PRODUCTION_SCHEDULE_INPUT,
+        nextReviewDateOverride: "2026-09-04",
+      }),
+    /app1-client-schedule-authority-forbidden/u,
+  );
+  assert.throws(
+    () =>
+      resolveApp1FirstRecurrenceD1Schedule({
+        ...PRODUCTION_SCHEDULE_INPUT,
+        recurrenceCount: 2,
+      }),
+    /app1-first-recurrence-required/u,
+  );
+
+  const service = readFileSync("lib/review-os/service.ts", "utf8");
+  assert.ok(service.includes("const app1D1Schedule = replayAuthority"));
+  assert.ok(
+    service.includes("nextReviewDateOverride: input.nextReviewDate ?? null"),
+  );
+  assert.ok(
+    service.includes("app1D1Schedule?.sealedNextReviewDateOverride"),
+  );
+  assert.ok(service.includes("app1D1Schedule?.dueAt"));
+  assert.ok(
+    service.includes(
+      "scheduleInput.nextReviewDateOverride !==\n    scheduleBinding.sealedNextReviewDateOverride",
+    ),
+  );
+});
 
 test("APP-1 H0 persists one bodyless journey projection and reuses the canonical queue", async () => {
   const port = storage();
@@ -160,6 +226,26 @@ test("APP-1 H0 rejects queue and replay binding drift", async () => {
             subject: "감정평가 및 보상법규",
             status: "pending",
             dueAt: DUE_AT,
+            recurrenceCount: 1,
+          }),
+        }),
+      }),
+    assertCode("REVIEW_QUEUE_BINDING_CONFLICT"),
+  );
+
+  await assert.rejects(
+    () =>
+      materializeApp1C3rReviewOsAdapterV1({
+        userId: "user-1",
+        item: item(),
+        storage: storage({
+          loadReviewQueueUnit: async () => ({
+            reviewUnitId: QUEUE_ID,
+            userId: "user-1",
+            itemId: ITEM_ID,
+            subject: "감정평가이론",
+            status: "pending",
+            dueAt: SCHEDULED_AT,
             recurrenceCount: 1,
           }),
         }),

@@ -2,7 +2,7 @@
   "schemaVersion": "dabangil.core_blitz.wave1.v1",
   "programIssue": 880,
   "milestoneIssue": 881,
-  "scopeDigest": "sha256:a99c6c250f5a11ce0ca9b5739996f16a9dd66a9eca6e5feacf32f799a6bf9f0e",
+  "scopeDigest": "sha256:9a234428a652b0c721dba30a00dc2a079224a4d77a920f87e926fb6224c9642b",
   "scopeDecisionPath": "docs/decisions/2026-09-03-owner-core-blitz-wave1-standing-authority.md",
   "startingMain": "d4e056938707c11e6c862230745c381297c0b26f",
   "startingTree": "c19f7abe3f0ace8ecdc8afbe9647a8e31eb4dfc2",
@@ -67,6 +67,10 @@
     "identicalRetryReusedJourneyAndQueue": true,
     "hostileBindingDriftsFailClosed": true,
     "reviewQueueBindingRequiresExactD1FirstRecurrence": true,
+    "app1ProductionInputClientScheduleAuthority": false,
+    "app1ServerDerivedD1ReplayBinding": true,
+    "app1ReplayPlanQueueAndJourneyDueTimeMatch": true,
+    "app1PartialSaveRetryCompletedWithoutDuplicates": true,
     "dedicatedMasteryOrTransferEvidenceCreated": false,
     "syntheticUserAndRecordsCleaned": true,
     "canonicalLearnerSupportRoute": "/app/items/[itemId]/support",
@@ -89,17 +93,18 @@
     "qfProviderExecutionInstalled": false
   },
   "validationEvidence": {
-    "focusedAffectedTests": "20_OF_20_LEARNER_SUPPORT_CAPABILITY_AUTHORITY_AND_ACCESS_PASSED_AFTER_FOURTH_CORRECTION",
+    "focusedAffectedTests": "251_OF_251_APP1_REVIEW_QUEUE_SCHEDULING_REPLAY_AND_C3R_TESTS_PASSED_AFTER_FIFTH_CORRECTION",
     "reviewCorrectionFocusedTests": "45_OF_45_QF_S3_AND_QF_I1_PLUS_6_OF_6_CORE_BLITZ_WAVE1_PASSED",
-    "authenticatedPersistenceAcceptance": "1_OF_1_PASSED_ISOLATED_POSTGRESQL_15_8",
-    "typecheck": "PASSED_TYPESCRIPT_5_8_3_AFTER_FOURTH_CORRECTION",
-    "changedFileLint": "PASSED_ZERO_WARNINGS_AFTER_FOURTH_CORRECTION",
-    "jsonValidation": "PASSED_AFTER_FOURTH_CORRECTION",
-    "diffCheck": "PASSED_EXACT_34_PATH_MANIFEST_AFTER_FOURTH_CORRECTION",
+    "authenticatedPersistenceAcceptance": "1_OF_1_PASSED_ACTUAL_PRODUCTION_D1_CONSTRUCTOR_ISOLATED_POSTGRESQL_15_8_WITH_PARTIAL_SAVE_RETRY",
+    "typecheck": "PASSED_TYPESCRIPT_5_8_3_AFTER_FIFTH_CORRECTION",
+    "changedFileLint": "PASSED_ZERO_ERRORS_WITH_ONE_PREEXISTING_UNUSED_LOCAL_WARNING_IN_SERVICE_TS",
+    "jsonValidation": "PASSED_AFTER_FIFTH_CORRECTION",
+    "diffCheck": "PASSED_EXACT_36_PATH_MANIFEST_AFTER_FIFTH_CORRECTION",
+    "authoritativeC3rSuites": "PASSED_C3R_P_C3R_T_AND_C3R_L_AFTER_FIFTH_CORRECTION",
     "affectedLearnerLoop": "PASSED_708_TESTS_PLUS_QUALITY_TAXONOMY_AND_EXPLANATION_EVALS",
-    "build": "PASSED_NEXT_16_2_12_PRODUCTION_BUILD_AFTER_FOURTH_CORRECTION",
-    "frozenCandidateExactHeadCi": "PENDING_FOURTH_CORRECTION_PUSH",
-    "exactHeadFormalReview": "CYCLE_3_HEAD_23DEE16088CB6253C7CD0CFAE405AC6087348500_ACTIONABLE_0_1_0_OWNER_AUTHORIZED_FOURTH_CORRECTION_IMPLEMENTED_FINAL_EXACT_HEAD_REVIEW_PENDING"
+    "build": "PASSED_NEXT_16_2_12_PRODUCTION_BUILD_AFTER_FIFTH_CORRECTION_WITH_EXISTING_NFT_TRACE_WARNING",
+    "frozenCandidateExactHeadCi": "PENDING_FIFTH_CORRECTION_EXACT_HEAD_CI",
+    "exactHeadFormalReview": "HEAD_7C50BF7119FDB3DF59857B8C638EAD00B0B834F9_ACTIONABLE_0_1_0_OWNER_AUTHORIZED_FIFTH_CORRECTION_IMPLEMENTED_FRESH_EXACT_HEAD_REVIEW_PENDING"
   },
   "activation": {
     "ownerOnly": true,
@@ -120,5 +125,5 @@
     "ownerOnlyDefaultOffPreserved": true
   },
   "stopCondition": "CORE_BLITZ_WAVE1_DRAFT_READY_FOR_OWNER",
-  "stopConditionState": "EXACT_HEAD_VALIDATION_PENDING"
+  "stopConditionState": "EXACT_HEAD_CI_AND_FINAL_REVIEW_PENDING"
 }

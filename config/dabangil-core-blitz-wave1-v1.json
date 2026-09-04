@@ -17,6 +17,9 @@
       "remainingTarget": "APP1_AUTHENTICATED_C3R_PERSISTENCE_ACCEPTANCE",
       "goal": "Prove an authenticated APP-1 durable save reuses exactly one existing Review Queue row and materializes exactly one bodyless C3R journey projection.",
       "reviewQueueInsertAllowed": false,
+      "d1ScheduleAuthority": "SERVER_CANONICAL_FIRST_RECURRENCE",
+      "clientD1OverrideAllowed": false,
+      "replayPlanQueueAndJourneyShareExactD1": true,
       "masteryOrTransferEvidenceFromRepairAllowed": false,
       "syntheticLocalDataOnly": true
     },
@@ -167,6 +170,8 @@
     "lib/review-os/app1-c3r-review-os-adapter.ts",
     "lib/review-os/app1-c3r-review-os-repository.ts",
     "lib/review-os/capture-learning-signals.ts",
+    "lib/review-os/scheduling.ts",
+    "lib/review-os/service.ts",
     "tests/app1-c3r-authenticated-persistence-acceptance.test.mjs",
     "tests/app1-c3r-handoff-materialization.test.mjs",
     "tests/app1-c3r-handoff-runtime.test.mjs",

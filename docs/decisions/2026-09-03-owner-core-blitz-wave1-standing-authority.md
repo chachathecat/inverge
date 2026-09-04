@@ -50,6 +50,14 @@ reused and is never inserted or updated by the adapter. Identical retry reuses
 the same deterministic journey and Queue identity. Missing Queue or any
 binding drift fails closed.
 
+The production APP-1 request supplies no schedule authority. The server uses
+the canonical Review OS scheduler and one immutable scheduling reference to
+derive the first-recurrence D+1 date and UTC due time, then seals that exact
+binding into the resumable replay plan used to create or reuse the canonical
+Queue row. The APP-1 to C3R adapter accepts only the same sealed Queue identity
+and due time. A client-authored override, a non-first recurrence or any drift
+between replay plan, Queue and journey fails closed before handoff.
+
 APP-1 repair creates neither mastery nor transfer Evidence. Raw answer,
 question, OCR, prompt and learner bodies remain outside derived metadata.
 Acceptance uses synthetic Owner data and an isolated local database only,
