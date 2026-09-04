@@ -80,7 +80,7 @@
     "typecheck": "PASSED_TYPESCRIPT_5_8_3",
     "changedFileLint": "PASSED_ZERO_WARNINGS",
     "jsonValidation": "PASSED",
-    "diffCheck": "PASSED_EXACT_34_PATH_MANIFEST",
+    "diffCheck": "PASSED_EXACT_33_PATH_MANIFEST",
     "affectedLearnerLoop": "PASSED_708_TESTS_PLUS_QUALITY_TAXONOMY_AND_EXPLANATION_EVALS",
     "build": "PASSED_NEXT_16_2_12_PRODUCTION_BUILD",
     "frozenCandidateExactHeadCi": "PENDING",

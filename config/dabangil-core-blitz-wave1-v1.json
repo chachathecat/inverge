@@ -148,7 +148,6 @@
     "lib/review-os/app1-c3r-review-os-adapter.ts",
     "lib/review-os/app1-c3r-review-os-repository.ts",
     "lib/review-os/capture-learning-signals.ts",
-    "package.json",
     "tests/app1-c3r-authenticated-persistence-acceptance.test.mjs",
     "tests/app1-c3r-handoff-materialization.test.mjs",
     "tests/app1-c3r-handoff-runtime.test.mjs",

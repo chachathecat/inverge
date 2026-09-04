@@ -28,7 +28,6 @@
     "start": "next start",
     "lint": "eslint",
     "test": "node scripts/run-node-tests.mjs",
-    "test:core-blitz:app1-persistence-acceptance": "node --experimental-strip-types --loader ./tests/ts-extension-loader.mjs --test tests/app1-c3r-authenticated-persistence-acceptance.test.mjs",
     "verify:review-os-schema": "node scripts/verify-review-os-schema.mjs",
     "smoke:review-os-auth": "node scripts/smoke-review-os-auth.mjs",
     "eval:ocr-extraction": "node scripts/eval-ocr-extraction.mjs",
