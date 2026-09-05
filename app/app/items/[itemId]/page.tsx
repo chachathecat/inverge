@@ -3,6 +3,7 @@ import { notFound, redirect } from "next/navigation";
 import type { ReactNode } from "react";
 
 import { StudyLedgerDetail } from "@/components/learner";
+import { hasCoreBlitzLearnerSupportOwnerAccess } from "@/lib/core-blitz/learner-support-access";
 import { ReviewOsFeedbackButton } from "@/components/review-os/feedback-button";
 import { ReviewOsAccessState } from "@/components/review-os/review-os-access-state";
 import { Button } from "@/components/ui/button";
@@ -194,6 +195,11 @@ export default async function ReviewOsItemDetailPage({ params, searchParams }: P
           comparison={rewriteComparison}
           calculatorHref={calculatorHref}
           reviewHref={`/app/review?mode=${mode}`}
+          supportHref={
+            hasCoreBlitzLearnerSupportOwnerAccess(session)
+              ? `/app/items/${encodeURIComponent(itemId)}/support`
+              : null
+          }
           writeHref={`/app/write?mode=${mode}`}
           topicCandidate={ledgerTopicCandidate}
           supportingEvidence={supportingEvidence}

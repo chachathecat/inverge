@@ -1,0 +1,187 @@
+{
+  "contractVersion": "dabangil.core_blitz.wave1.v1",
+  "programIssue": 880,
+  "pullRequest": 882,
+  "status": "appraiser_second_stage_wave1_candidate_validation",
+  "startingAuthority": {
+    "mainSha": "d4e056938707c11e6c862230745c381297c0b26f",
+    "mainTree": "c19f7abe3f0ace8ecdc8afbe9647a8e31eb4dfc2",
+    "startingLivePrHead": "36bac9ef30c456248283275d2560bc036438b501",
+    "startingLivePrTree": "5ac03c17941d2386a365de5676d0bec687a8e8bb",
+    "app1MergedPr": 876,
+    "qfS3MergedPr": 879
+  },
+  "activeLanes": [
+    {
+      "laneId": "APP1_C3R_CLOSED_LOOP",
+      "remainingTarget": "APP1_AUTHENTICATED_C3R_PERSISTENCE_ACCEPTANCE",
+      "goal": "Prove an authenticated APP-1 durable save reuses exactly one existing Review Queue row and materializes exactly one bodyless C3R journey projection.",
+      "reviewQueueInsertAllowed": false,
+      "d1ScheduleAuthority": "SERVER_CANONICAL_FIRST_RECURRENCE",
+      "clientD1OverrideAllowed": false,
+      "replayPlanQueueAndJourneyShareExactD1": true,
+      "masteryOrTransferEvidenceFromRepairAllowed": false,
+      "syntheticLocalDataOnly": true
+    },
+    {
+      "laneId": "APPRAISER_SECOND_STAGE_LEARNER_SUPPORT",
+      "remainingTarget": "CANONICAL_STUDY_LEDGER_SUPPORT_ROUTE",
+      "goal": "Expose one authenticated appraiser second-stage learner-support route from the stored-item Study Ledger flow with honest assistance semantics.",
+      "canonicalRoute": "/app/items/[itemId]/support",
+      "duplicateRouteAllowed": false,
+      "suppliedReferenceRequiredForAnswerOrFullSolution": true,
+      "storedWrongAnswerCorrectAnswerIsReferenceAuthority": false
+    },
+    {
+      "laneId": "VERIFIED_QUESTION_FOUNDRY_RUNTIME",
+      "remainingTarget": "QF_I1_LEARNING_ONLY_BOUNDARY",
+      "goal": "Prefer eligible bank stock and authorize deterministic generation only for an absent Learning Practice candidate while preventing authority escalation.",
+      "providerExecution": false,
+      "publicLearnerActivation": false,
+      "generatedMaximumAuthority": "LEARNING_ONLY"
+    }
+  ],
+  "parkedMilestones": {
+    "sevenExams": {
+      "activeLane": false,
+      "activeNode": false,
+      "completionGateForPr882": false,
+      "sourceCollectionAllowed": false,
+      "runtimeAllowed": false,
+      "resumeOnlyAfter": [
+        "APPRAISER_SECOND_STAGE_MAINSTREAM_COMPLETE",
+        "APPRAISER_FIRST_STAGE_FIVE_SUBJECT_COMPLETE",
+        "APPRAISER_FIRST_SECOND_STAGE_CONNECTION_COMPLETE"
+      ]
+    },
+    "appraiserFirstStage": {
+      "subjectAdaptersStartedInPr882": false,
+      "completionGateForPr882": false,
+      "nextMilestoneAfterPr882Merge": "APPRAISER_FIRST_STAGE_FIVE_SUBJECT_LEARNER_LOOP"
+    }
+  },
+  "learnerSupportPolicy": {
+    "choices": [
+      "내가 먼저 풀기",
+      "힌트 하나",
+      "1타 쉬운풀이",
+      "전체풀이",
+      "정답만 보기"
+    ],
+    "onlyUnaidedChoice": "내가 먼저 풀기",
+    "assistedSameItemMasteryEligible": false,
+    "assistedTransferEvidenceEligible": false,
+    "distinctLaterUnaidedAttemptRequired": true,
+    "ownerOnlyDefaultOff": true,
+    "productionAvailable": false,
+    "storedWrongAnswerCorrectAnswerIsReferenceAuthority": false,
+    "fabricatedAuthoritativeAnswerAllowed": false,
+    "fabricatedFullSolutionAllowed": false,
+    "initialPageAssistedContentSerialized": false,
+    "assistedProjectionRequiresDurableExposure": true,
+    "successfulResponseContainsSelectedProjectionOnly": true,
+    "assistedResponseCacheable": false,
+    "retryEventIdentityReused": true
+  },
+  "qfI1Policy": {
+    "eligibleBankStockPreferred": true,
+    "generationPurposeAllowedExactly": [
+      "LEARNING_PRACTICE"
+    ],
+    "generatedMaximumAuthority": "LEARNING_ONLY",
+    "generatedVerifiedTransferAdmissionAllowed": false,
+    "generatedMeasurementAdmissionAllowed": false,
+    "providerExecution": false,
+    "publicLearnerActivation": false,
+    "rawGeneratedBodyMetadataPersistenceAllowed": false,
+    "candidateReadsScopedByExamModeAndSubject": true,
+    "qfS3ChronologyAuthorityRevalidated": true,
+    "certifiedChronologyAuthorityRehydrationRequired": true,
+    "certifiedChronologyAuthorityReferenceStored": true,
+    "qfS3AuthorityInputMetadataPersistenceAllowed": false,
+    "candidateEligibilityFilteredBeforePagination": true,
+    "completeLearnerScopedExposureHistoryPaginated": true,
+    "deterministicIdentities": [
+      "assignment",
+      "exposure",
+      "generation_request",
+      "retry",
+      "conflict"
+    ]
+  },
+  "validationPolicy": {
+    "risk": "MEDIUM",
+    "duringImplementation": [
+      "affected_focused_tests",
+      "typecheck",
+      "changed_file_lint",
+      "json_validation",
+      "diff_check"
+    ],
+    "frozenCandidate": [
+      "affected_learner_loop_suites",
+      "fast_ci",
+      "full_ci_linux",
+      "full_ci_windows",
+      "pr_contract",
+      "risk_gate",
+      "runtime_gate",
+      "security",
+      "c3r_checks_as_applicable",
+      "build",
+      "representative_authenticated_runtime_acceptance",
+      "one_fresh_exact_head_formal_review"
+    ]
+  },
+  "activationBoundary": {
+    "ownerOnly": true,
+    "defaultOff": true,
+    "learnerSupportFeatureFlag": "CORE_BLITZ_LEARNER_SUPPORT_ENABLED",
+    "learnerSupportOwnerAllowlist": "CORE_BLITZ_LEARNER_SUPPORT_OWNER_EMAILS",
+    "production": false,
+    "publicLaunch": false,
+    "payment": false,
+    "remoteSupabaseMutation": false,
+    "realLearnerData": false,
+    "providerExecution": false,
+    "migrationRlsOrAuthChange": false
+  },
+  "ownedPathsExactly": [
+    "app/api/core-blitz/qf-i1/select/route.ts",
+    "app/api/os/items/route.ts",
+    "app/api/os/learner-support/route.ts",
+    "app/app/items/[itemId]/page.tsx",
+    "app/app/items/[itemId]/support/page.tsx",
+    "components/core-blitz/learner-support-panel.tsx",
+    "components/learner/study-ledger-ui.tsx",
+    "config/dabangil-core-blitz-wave1-v1.json",
+    "docs/decisions/2026-09-03-owner-core-blitz-wave1-standing-authority.md",
+    "docs/exec-plans/active/core-blitz-wave1-checkpoint.json",
+    "lib/core-blitz/learner-capability.ts",
+    "lib/core-blitz/learner-support-access.ts",
+    "lib/core-blitz/learner-support-event.ts",
+    "lib/core-blitz/learner-support-repository.ts",
+    "lib/core-blitz/wave1.ts",
+    "lib/question-foundry/runtime/qf-i1-bank-first.ts",
+    "lib/question-foundry/runtime/qf-i1-persistence.ts",
+    "lib/question-foundry/runtime/qf-i1-review-os-repository.ts",
+    "lib/review-os/app1-c3r-handoff-runtime.ts",
+    "lib/review-os/app1-c3r-handoff.ts",
+    "lib/review-os/app1-c3r-review-os-adapter.ts",
+    "lib/review-os/app1-c3r-review-os-repository.ts",
+    "lib/review-os/capture-learning-signals.ts",
+    "lib/review-os/scheduling.ts",
+    "lib/review-os/service.ts",
+    "tests/app1-c3r-authenticated-persistence-acceptance.test.mjs",
+    "tests/app1-c3r-handoff-materialization.test.mjs",
+    "tests/app1-c3r-handoff-runtime.test.mjs",
+    "tests/app1-c3r-review-os-adapter.test.mjs",
+    "tests/core-blitz-learner-capability.test.mjs",
+    "tests/core-blitz-learner-support-runtime.test.mjs",
+    "tests/core-blitz-wave1.test.mjs",
+    "tests/qf-i1-bank-first-runtime.test.mjs",
+    "tests/qf-i1-owner-selector-route.test.mjs",
+    "tests/qf-i1-persistence-runtime.test.mjs",
+    "tests/s232f2-access-availability.test.mjs"
+  ]
+}

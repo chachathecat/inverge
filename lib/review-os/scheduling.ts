@@ -2,6 +2,7 @@ import type { AppraisalMode } from "@/lib/review-os/appraisal";
 import type { ConfidenceLevel } from "@/lib/review-os/types";
 
 type SchedulingPolicyKey =
+  | "app1_first_recurrence_d1"
   | "correct_confident_7d"
   | "correct_uncertain_3d"
   | "wrong_concept_gap_1d"
@@ -26,6 +27,13 @@ export type ReviewSchedule = {
   retryDueAt: string | null;
   followUpReviewAt: string | null;
 };
+
+export type App1FirstRecurrenceD1Schedule = Readonly<{
+  initialNextReviewDateOverride: null;
+  sealedNextReviewDateOverride: string;
+  dueAt: string;
+  schedule: Readonly<ReviewSchedule>;
+}>;
 
 export type AdaptiveScheduleInput = {
   mode: "first" | "second";
@@ -179,6 +187,45 @@ export function resolveReviewSchedule(input: ReviewScheduleInput): ReviewSchedul
     retryDueAt: null,
     followUpReviewAt: null,
   };
+}
+
+export function resolveApp1FirstRecurrenceD1Schedule(
+  input: ReviewScheduleInput & Readonly<{
+    now: Date;
+    recurrenceCount: number;
+    nextReviewDateOverride: string | null;
+  }>,
+): App1FirstRecurrenceD1Schedule {
+  if (input.nextReviewDateOverride !== null) {
+    throw new Error("review-os:app1-client-schedule-authority-forbidden");
+  }
+  if (input.recurrenceCount !== 1) {
+    throw new Error("review-os:app1-first-recurrence-required");
+  }
+  if (!Number.isFinite(input.now.getTime())) {
+    throw new Error("review-os:app1-schedule-reference-invalid");
+  }
+
+  const canonicalSchedule = resolveReviewSchedule(input);
+  const sealedNextReviewDateOverride = toIsoDate(addDays(input.now, 1));
+  const dueAt = resolveScheduleOverrideDate(
+    sealedNextReviewDateOverride,
+    canonicalSchedule.reviewDueAt,
+  );
+
+  return Object.freeze({
+    initialNextReviewDateOverride: null,
+    sealedNextReviewDateOverride,
+    dueAt,
+    schedule: Object.freeze({
+      ...canonicalSchedule,
+      policy: "app1_first_recurrence_d1",
+      reviewDueAt: dueAt,
+      nextReviewDate: sealedNextReviewDateOverride,
+      retryDueAt: null,
+      followUpReviewAt: null,
+    }),
+  });
 }
 
 export function resolveScheduleOverrideDate(reviewDateOverride: string | null | undefined, fallbackDueAt: string) {

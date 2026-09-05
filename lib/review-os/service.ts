@@ -66,6 +66,7 @@ import {
 } from "@/lib/review-os/daily-study-state";
 import { reviewOsRepository } from "@/lib/review-os/repository";
 import {
+  resolveApp1FirstRecurrenceD1Schedule,
   resolveReviewSchedule,
   resolveScheduleOverrideDate,
 } from "@/lib/review-os/scheduling";
@@ -423,7 +424,7 @@ function materializeApp1ReplayQueue(
     throw new Error("review-os:app1-replay-recurrence-invalid");
   }
   const scheduleInput = plan.queue.scheduleInput;
-  const schedule = resolveReviewSchedule({
+  const scheduleBinding = resolveApp1FirstRecurrenceD1Schedule({
     mode: scheduleInput.mode,
     isCorrect: scheduleInput.isCorrect,
     confidence: scheduleInput.confidence,
@@ -431,12 +432,17 @@ function materializeApp1ReplayQueue(
     recurrenceCount,
     hasWeakParagraph: scheduleInput.hasWeakParagraph,
     now: new Date(scheduleInput.scheduledAt),
+    nextReviewDateOverride: null,
   });
-  const nextReviewDate =
-    scheduleInput.nextReviewDateOverride ?? schedule.nextReviewDate;
-  const dueAt =
-    schedule.retryDueAt ??
-    resolveScheduleOverrideDate(nextReviewDate, schedule.reviewDueAt);
+  if (
+    scheduleInput.nextReviewDateOverride !==
+    scheduleBinding.sealedNextReviewDateOverride
+  ) {
+    throw new Error("review-os:app1-replay-authority-conflict");
+  }
+  const schedule = scheduleBinding.schedule;
+  const nextReviewDate = scheduleBinding.sealedNextReviewDateOverride;
+  const dueAt = scheduleBinding.dueAt;
   return Object.freeze({
     dueAt,
     derivedPayload: Object.freeze({
@@ -1823,14 +1829,26 @@ export class ReviewOsService {
         hasWeakParagraph: scheduleHasWeakParagraph,
         now: scheduleReference,
       });
+      const app1D1Schedule = replayAuthority
+        ? resolveApp1FirstRecurrenceD1Schedule({
+            mode,
+            isCorrect: scheduleIsCorrect,
+            confidence: normalizedInput.confidence,
+            mistakeType: artifacts.tags.mistakeType,
+            recurrenceCount,
+            hasWeakParagraph: scheduleHasWeakParagraph,
+            now: scheduleReference,
+            nextReviewDateOverride: input.nextReviewDate ?? null,
+          })
+        : null;
       const effectiveNextReviewDate =
-        input.nextReviewDate ?? schedule.nextReviewDate;
+        app1D1Schedule?.sealedNextReviewDateOverride ??
+        input.nextReviewDate ??
+        schedule.nextReviewDate;
       const queueDueAt =
+        app1D1Schedule?.dueAt ??
         schedule.retryDueAt ??
-        resolveScheduleOverrideDate(
-          effectiveNextReviewDate,
-          schedule.reviewDueAt,
-        );
+        resolveScheduleOverrideDate(effectiveNextReviewDate, schedule.reviewDueAt);
 
       const isCaptureCreated = input.createdFromCapture === true;
       if (isCaptureCreated) {
@@ -2190,7 +2208,10 @@ export class ReviewOsService {
               mistakeType: artifacts.tags.mistakeType,
               hasWeakParagraph: scheduleHasWeakParagraph,
               scheduledAt: scheduleReference.toISOString(),
-              nextReviewDateOverride: input.nextReviewDate ?? null,
+              nextReviewDateOverride:
+                app1D1Schedule?.sealedNextReviewDateOverride ??
+                input.nextReviewDate ??
+                null,
             }),
             derivedPayloadBase: queueDerivedPayloadBase,
           }),
