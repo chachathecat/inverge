@@ -199,3 +199,251 @@ test("Study Ledger is the sole authenticated learner-support entry", () => {
     false,
   );
 });
+
+// Execute the actual route/component with isolated framework and storage ports.
+// No provider, database, deployment, or real learner data is used here.
+async function loadSupportTestModule(relativePath, dependencies, globals = {}) {
+  const { default: ts } = await import("typescript");
+  const { runInThisContext } = await import("node:vm");
+  const compiled = ts.transpileModule(read(relativePath), {
+    fileName: relativePath,
+    reportDiagnostics: true,
+    compilerOptions: {
+      target: ts.ScriptTarget.ES2022,
+      module: ts.ModuleKind.CommonJS,
+      jsx: ts.JsxEmit.ReactJSX,
+      esModuleInterop: true,
+    },
+  });
+  assert.equal(
+    (compiled.diagnostics ?? []).filter(
+      (diagnostic) => diagnostic.category === ts.DiagnosticCategory.Error,
+    ).length,
+    0,
+  );
+  const moduleExports = {};
+  const execute = runInThisContext(
+    `(function(require, exports, fetch, crypto) {\n${compiled.outputText}\n})`,
+    { filename: relativePath },
+  );
+  execute((specifier) => {
+    assert.ok(Object.hasOwn(dependencies, specifier), `Unexpected import: ${specifier}`);
+    return dependencies[specifier];
+  }, moduleExports, globals.fetch, globals.crypto);
+  return moduleExports;
+}
+
+async function supportAvailabilityHarness(options = {}) {
+  const capability = await import("../lib/core-blitz/learner-capability.ts");
+  const calls = [];
+  const saved = new Map();
+  let failWrite = options.failWrite ?? false;
+  const route = await loadSupportTestModule("app/api/os/learner-support/route.ts", {
+    "next/server": { NextResponse: { json: (body, init) => Response.json(body, init) } },
+    "@/lib/auth/session": {
+      getServerSessionUser: async () => ({ userId: "owner-1", email: "owner@example.invalid" }),
+      requireRequestUserId: async () => "owner-1",
+    },
+    "@/lib/core-blitz/learner-support-access": {
+      hasCoreBlitzLearnerSupportOwnerAccess: () => options.ownerAllowed !== false,
+    },
+    "@/lib/core-blitz/learner-support-event": {
+      LearnerSupportEventError,
+      buildLearnerSupportUsageEventV1,
+    },
+    "@/lib/core-blitz/learner-support-repository": {
+      recordLearnerSupportUsageEventV1: async (userId, event) => {
+        assert.equal(userId, "owner-1");
+        calls.push("write");
+        if (failWrite) {
+          failWrite = false;
+          throw new Error("synthetic-write-failure");
+        }
+        const existing = saved.get(event.eventId);
+        if (!existing) saved.set(event.eventId, event);
+        return { status: existing ? "deduped" : "saved", event: existing ?? event };
+      },
+    },
+    "@/lib/core-blitz/learner-capability": {
+      projectLearnerSupportV1: (value) => {
+        calls.push("projection");
+        return capability.projectLearnerSupportV1(value);
+      },
+    },
+    "@/lib/evaluate/answer-review-structure": {
+      normalizeAnswerReviewStructureDraft: (value) => {
+        calls.push("draft");
+        return value;
+      },
+    },
+    "@/lib/review-os/http": {
+      reviewOsErrorResponse: () => Response.json({ ok: false, error: "synthetic-failure" }, { status: 503 }),
+    },
+    "@/lib/review-os/service": {
+      reviewOsService: {
+        getWrongAnswerDetail: async () => ({
+          item: {
+            id: input().itemId,
+            userId: options.wrongOwner ? "other-owner" : "owner-1",
+            examName: "감정평가사 2차",
+            correctAnswer: "LEARNER_ENTERED_NOT_VERIFIED",
+          },
+          tags: [],
+        }),
+      },
+    },
+    "@/lib/review-os/study-note": {
+      buildDetailStudyNote: () => {
+        calls.push("note");
+        return {
+          coreLine: "SYNTHETIC_EASY_CONTENT",
+          nextAction: "SYNTHETIC_HINT_CONTENT",
+          keyTerms: ["synthetic term"],
+        };
+      },
+    },
+  });
+  return {
+    calls,
+    saved,
+    post: (choice, extra = {}) => {
+      const source = input(choice);
+      const body = {
+        eventId: source.eventId,
+        itemId: source.itemId,
+        choice,
+        surface: source.surface,
+      };
+      return route.POST(new Request("http://localhost/api/os/learner-support", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ...body, ...extra }),
+      }));
+    },
+  };
+}
+
+for (const choice of ["FULL_SOLUTION", "DIRECT_ANSWER"]) {
+  test(`availability: ${choice} and retries never persist a false exposure`, async () => {
+    const harness = await supportAvailabilityHarness();
+    for (let retry = 0; retry < 2; retry += 1) {
+      const response = await harness.post(choice);
+      assert.equal(response.status, 409);
+      assert.match(response.headers.get("Cache-Control"), /private, no-store/u);
+      assert.deepEqual(await response.json(), {
+        ok: false,
+        error: "verified-reference-unavailable",
+      });
+      assert.equal(harness.saved.size, 0);
+      assert.deepEqual(harness.calls, []);
+    }
+  });
+}
+
+test("availability: available choices still persist before selected-only disclosure", async () => {
+  for (const choice of ["TRY_FIRST", "ONE_HINT", "EASY_EXPLANATION"]) {
+    const harness = await supportAvailabilityHarness();
+    const response = await harness.post(choice);
+    const body = await response.json();
+    assert.equal(response.status, 200);
+    assert.equal(body.projection.available, true);
+    assert.equal(body.projection.choice, choice);
+    assert.equal(body.decision.choice, choice);
+    assert.equal(body.decision.masteryCreatedByChoice, false);
+    assert.equal(body.decision.transferCreatedByChoice, false);
+    assert.deepEqual(harness.calls, ["write", "note", "draft", "projection"]);
+    assert.equal(harness.saved.size, 1);
+    assert.match(response.headers.get("Cache-Control"), /private, no-store/u);
+    assert.equal(JSON.stringify(body).includes("LEARNER_ENTERED_NOT_VERIFIED"), false);
+    if (choice === "TRY_FIRST") {
+      assert.deepEqual(body.projection.sections, []);
+      assert.equal(body.decision.assistanceClass, "NONE");
+    } else if (choice === "ONE_HINT") {
+      assert.equal(body.projection.sections.length, 1);
+      assert.equal(JSON.stringify(body).includes("SYNTHETIC_EASY_CONTENT"), false);
+    }
+  }
+});
+
+test("availability: a failed write discloses nothing and the same request can retry", async () => {
+  const harness = await supportAvailabilityHarness({ failWrite: true });
+  const failed = await harness.post("EASY_EXPLANATION");
+  assert.equal(failed.status, 503);
+  assert.deepEqual(await failed.json(), { ok: false, error: "synthetic-failure" });
+  assert.match(failed.headers.get("Cache-Control"), /private, no-store/u);
+  assert.deepEqual(harness.calls, ["write"]);
+  assert.equal(harness.saved.size, 0);
+
+  const retry = await harness.post("EASY_EXPLANATION");
+  const firstSuccess = await retry.json();
+  assert.equal(retry.status, 200);
+  assert.equal(firstSuccess.status, "saved");
+  const duplicate = await harness.post("EASY_EXPLANATION");
+  const repeated = await duplicate.json();
+  assert.equal(duplicate.status, 200);
+  assert.equal(repeated.status, "deduped");
+  assert.deepEqual(repeated.decision, firstSuccess.decision);
+  assert.equal(harness.saved.size, 1);
+});
+
+test("availability: client reference claims and invalid choices cannot bypass the gate", async () => {
+  for (const [choice, extra] of [
+    ["DIRECT_ANSWER", { verifiedReferenceAnswer: "fake" }],
+    ["FULL_SOLUTION", { available: true }],
+    ["UNKNOWN", {}],
+    ["DIRECT_ANSWER", { eventId: "invalid" }],
+  ]) {
+    const harness = await supportAvailabilityHarness();
+    const response = await harness.post(choice, extra);
+    assert.equal(response.status, 400);
+    assert.equal(harness.saved.size, 0);
+    assert.deepEqual(harness.calls, []);
+  }
+  for (const options of [{ ownerAllowed: false }, { wrongOwner: true }]) {
+    const harness = await supportAvailabilityHarness(options);
+    assert.equal((await harness.post("DIRECT_ANSWER")).status, 404);
+    assert.equal(harness.saved.size, 0);
+    assert.deepEqual(harness.calls, []);
+  }
+});
+
+test("availability: the actual panel disables unsupported answers and blocks their handlers", async () => {
+  const capability = await import("../lib/core-blitz/learner-capability.ts");
+  let networkCalls = 0;
+  let eventIds = 0;
+  const element = (type, props) => ({ type, props });
+  const ui = await loadSupportTestModule("components/core-blitz/learner-support-panel.tsx", {
+    react: {
+      useMemo: (factory) => factory(),
+      useState: (initial) => [initial, () => {}],
+      useRef: (initial) => ({ current: initial }),
+    },
+    "react/jsx-runtime": { jsx: element, jsxs: element },
+    "@/components/learner": { V3ActionButton: "button", V3Surface: "section" },
+    "@/lib/core-blitz/learner-capability": capability,
+  }, {
+    fetch: async () => { networkCalls += 1; throw new Error("unexpected network"); },
+    crypto: { randomUUID: () => { eventIds += 1; return input().eventId; } },
+  });
+  const buttons = [];
+  const walk = (node) => {
+    if (Array.isArray(node)) return node.forEach(walk);
+    if (!node || typeof node !== "object") return;
+    if (node.props?.["data-learner-entry-choice"]) buttons.push(node);
+    walk(node.props?.children);
+  };
+  walk(ui.LearnerSupportPanel({ itemId: input().itemId }));
+  assert.equal(buttons.length, 5);
+  for (const button of buttons) {
+    const choice = button.props["data-learner-entry-choice"];
+    const unavailable = ["FULL_SOLUTION", "DIRECT_ANSWER"].includes(choice);
+    assert.equal(button.props.disabled, unavailable);
+    if (unavailable) {
+      assert.equal(button.props["aria-describedby"], "core-blitz-reference-unavailable");
+      button.props.onClick();
+    }
+  }
+  await Promise.resolve();
+  assert.equal(networkCalls, 0);
+  assert.equal(eventIds, 0);
+});

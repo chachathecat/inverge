@@ -75,6 +75,21 @@ export async function POST(request: Request) {
       surface: input.surface,
       occurredAt: new Date().toISOString(),
     });
+    // No verified reference resolver is connected to this boundary yet.
+    // Learner/OCR correctAnswer is not reference authority. Reject unavailable
+    // disclosures before the append-only exposure write, without building or
+    // serializing an assistance draft.
+    const verifiedReferenceAnswer: string | null = null;
+    if (
+      verifiedReferenceAnswer === null &&
+      (event.metadataJson.choice === "FULL_SOLUTION" ||
+        event.metadataJson.choice === "DIRECT_ANSWER")
+    ) {
+      return noStoreJson(
+        { ok: false, error: "verified-reference-unavailable" },
+        409,
+      );
+    }
     const recorded = await recordLearnerSupportUsageEventV1(userId, event);
 
     const note = buildDetailStudyNote(detail);
@@ -122,7 +137,6 @@ export async function POST(request: Request) {
         note.noteCard,
       ].filter(Boolean),
     });
-    const verifiedReferenceAnswer: string | null = null;
     const projection = projectLearnerSupportV1({
       choice: recorded.event.metadataJson.choice,
       draft,

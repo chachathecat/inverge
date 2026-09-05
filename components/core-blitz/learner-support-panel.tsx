@@ -34,6 +34,10 @@ export function LearnerSupportPanel({
   async function selectChoice(choice: LearnerEntryChoice) {
     setError(null);
     setProjection(null);
+    if (choice === "FULL_SOLUTION" || choice === "DIRECT_ANSWER") {
+      setError("검증된 학습 참고가 연결되지 않아 이 선택을 열 수 없습니다.");
+      return;
+    }
     if (
       typeof crypto === "undefined" ||
       typeof crypto.randomUUID !== "function"
@@ -110,6 +114,7 @@ export function LearnerSupportPanel({
         </p>
         <p
           className="v3-type-caption text-[var(--color-text-secondary)]"
+          id="core-blitz-reference-unavailable"
           data-reference-authority="NONE"
         >
           기준답안 권한: 검증된 학습 참고 미연결 · 정답/전체풀이 비활성
@@ -123,7 +128,17 @@ export function LearnerSupportPanel({
             type="button"
             tone={decision.choice === "TRY_FIRST" ? "primary" : "secondary"}
             onClick={() => void selectChoice(decision.choice)}
-            disabled={pendingChoice !== null}
+            disabled={
+              pendingChoice !== null ||
+              decision.choice === "FULL_SOLUTION" ||
+              decision.choice === "DIRECT_ANSWER"
+            }
+            aria-describedby={
+              decision.choice === "FULL_SOLUTION" ||
+              decision.choice === "DIRECT_ANSWER"
+                ? "core-blitz-reference-unavailable"
+                : undefined
+            }
             aria-pressed={projection?.choice === decision.choice}
             data-learner-entry-choice={decision.choice}
           >
