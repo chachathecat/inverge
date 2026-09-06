@@ -1,0 +1,163 @@
+{
+  "schemaVersion": "dabangil.core_blitz.wave1.v1",
+  "programIssue": 880,
+  "milestoneIssue": 881,
+  "scopeDigest": "sha256:7d6b07e5e10129bcffea5ad565396ca2796d032940bc42376f787bf49c3522e7",
+  "scopeDecisionPath": "docs/decisions/2026-09-03-owner-core-blitz-wave1-standing-authority.md",
+  "startingMain": "d4e056938707c11e6c862230745c381297c0b26f",
+  "startingTree": "c19f7abe3f0ace8ecdc8afbe9647a8e31eb4dfc2",
+  "integration": {
+    "branch": "codex/issue-880-core-blitz-wave1",
+    "pullRequest": 882,
+    "identityAuthority": "GITHUB_LIVE_PR_REF",
+    "startingLiveHeadSha": "36bac9ef30c456248283275d2560bc036438b501",
+    "startingLiveHeadTree": "5ac03c17941d2386a365de5676d0bec687a8e8bb",
+    "resumedLiveHeadSha": "f22627dca19ca8a758f17f5495be2364db5800e6",
+    "resumedLiveHeadTree": "d7b1112c0f7a3cfaf9ef37b96f325436c3933ad8",
+    "writerLock": "INTEGRATION_WRITER_HELD",
+    "readyOrMergeAuthorized": false
+  },
+  "nodes": [
+    {
+      "nodeId": "AUTHORITY_FOUNDATION",
+      "lane": "APPRAISER_SECOND_STAGE_WAVE1",
+      "dependencies": [],
+      "state": "COMPLETE"
+    },
+    {
+      "nodeId": "APP1_AUTHENTICATED_C3R_PERSISTENCE_ACCEPTANCE",
+      "lane": "APP1_C3R_CLOSED_LOOP",
+      "dependencies": [
+        "AUTHORITY_FOUNDATION"
+      ],
+      "state": "COMPLETE"
+    },
+    {
+      "nodeId": "APPRAISER_SECOND_STAGE_LEARNER_SUPPORT",
+      "lane": "APPRAISER_SECOND_STAGE_LEARNER_SUPPORT",
+      "dependencies": [
+        "AUTHORITY_FOUNDATION"
+      ],
+      "state": "COMPLETE"
+    },
+    {
+      "nodeId": "QF_I1_LEARNING_ONLY_BOUNDARY",
+      "lane": "VERIFIED_QUESTION_FOUNDRY_RUNTIME",
+      "dependencies": [
+        "AUTHORITY_FOUNDATION"
+      ],
+      "state": "COMPLETE"
+    }
+  ],
+  "parked": {
+    "sevenExamsCompletionGate": false,
+    "sevenExamsActiveLane": false,
+    "sevenExamsActiveNode": false,
+    "sevenExamsResumeOnlyAfter": [
+      "APPRAISER_SECOND_STAGE_MAINSTREAM_COMPLETE",
+      "APPRAISER_FIRST_STAGE_FIVE_SUBJECT_COMPLETE",
+      "APPRAISER_FIRST_SECOND_STAGE_CONNECTION_COMPLETE"
+    ],
+    "firstStageSubjectAdaptersStarted": false,
+    "nextMilestoneAfterMerge": "APPRAISER_FIRST_STAGE_FIVE_SUBJECT_LEARNER_LOOP"
+  },
+  "runtimeProgress": {
+    "authenticatedSyntheticApp1SaveAccepted": true,
+    "canonicalReviewQueueReused": true,
+    "duplicateReviewQueueCreated": false,
+    "bodylessJourneyProjectionCount": 1,
+    "identicalRetryReusedJourneyAndQueue": true,
+    "hostileBindingDriftsFailClosed": true,
+    "reviewQueueBindingRequiresExactD1FirstRecurrence": true,
+    "app1ProductionInputClientScheduleAuthority": false,
+    "app1ServerDerivedD1ReplayBinding": true,
+    "app1ReplayPlanQueueAndJourneyDueTimeMatch": true,
+    "app1PartialSaveRetryCompletedWithoutDuplicates": true,
+    "app1CumulativeTopicMistakeHistoryPreserved": true,
+    "app1FirstD1OrdinalIsPerRepair": true,
+    "app1CompletedSaveRetryPreservesEarlierHistorySnapshot": true,
+    "app1ConcurrentRetryUsesPersistedWinnerPlan": true,
+    "app1ExpiredPartialRetryPreservesOriginalOverdueD1": true,
+    "app1ActualProductionRequestServiceRepositoryExecuted": true,
+    "app1CurrentQueueStatusAuthority": "CANONICAL_REVIEW_QUEUE_ONLY",
+    "app1JourneyStoresImmutableLinkNotCurrentState": true,
+    "app1CompletedQueueRetryCreatesPendingH0": false,
+    "app1CompletedQueueMissingJourneyRecoverySupported": true,
+    "app1CompletedQueueExistingJourneyRetrySupported": true,
+    "app1QueueCompletionOverlappingLinkWriteRechecked": true,
+    "app1ExactLegacyJourneyNormalizedWithCompareAndSwap": true,
+    "app1CompletedRetryUiPromisesNewReview": false,
+    "ordinaryReviewRecurrencePolicyUnchanged": true,
+    "dedicatedMasteryOrTransferEvidenceCreated": false,
+    "syntheticUserAndRecordsCleaned": true,
+    "canonicalLearnerSupportRoute": "/app/items/[itemId]/support",
+    "duplicateLearnerSupportRoutePresent": false,
+    "learnerSupportOwnerOnlyDefaultOffAndNonProduction": true,
+    "storedWrongAnswerCorrectAnswerIsReferenceAuthority": false,
+    "learnerSupportInitialRscContainsAssistedContent": false,
+    "learnerSupportProjectionRequiresDurableExposure": true,
+    "learnerSupportResponseContainsSelectedProjectionOnly": true,
+    "learnerSupportAssistedResponseCacheable": false,
+    "learnerSupportRetryEventIdentityReused": true,
+    "studyLedgerEntryInstalled": true,
+    "qfLearningOnlyGenerationBoundaryInstalled": true,
+    "qfHttpPurpose": "LEARNING_PRACTICE",
+    "qfHttpCandidateMaximumAuthority": "LEARNING_ONLY",
+    "qfHttpCertifiedBankSelectionSupported": false,
+    "qfHttpClientMetadataIsServerVerifiedAuthority": false,
+    "qfHttpUnsupportedAuthorityRejectedBeforeSelection": true,
+    "qfInternalCertifiedBankImplementationUnchanged": true,
+    "qfIndependentServerFlagDefaultOff": true,
+    "qfC3rFlagsAloneAuthorizeAccess": false,
+    "qfProductionAccessAllowed": false,
+    "qfAccessDenialPrecedesBodyReadAndSelection": true,
+    "qfActualReceivedByteLimit": 65536,
+    "qfOversizeReadCancelledBeforeJsonParsing": true,
+    "qfErrorsExposeRawInputOrAreCacheable": false,
+    "qfRealLocalOrDeploymentFlagsChanged": false,
+    "qfCandidateReadsScopedByExamModeAndSubject": true,
+    "qfS3ChronologyAuthorityRevalidated": true,
+    "qfCertifiedChronologyAuthorityRehydrated": true,
+    "qfS3AuthorityInputStoredInMetadata": false,
+    "qfCandidateEligibilityPrecedesTruncation": true,
+    "qfCompleteLearnerScopedExposureHistoryPaginated": true,
+    "qfProviderExecutionInstalled": false
+  },
+  "validationEvidence": {
+    "focusedAffectedTests": "265_OF_265_APP1_REPLAY_QUEUE_C3R_P_T_L_QF_S3_I1_LEARNER_SUPPORT_ACCESS_AND_CHECKPOINT_PASSED_INCLUDING_17_PRODUCTION_PATH_TESTS_AND_40_APP1_VERTICAL_TESTS",
+    "reviewCorrectionFocusedTests": "STARTING_F22627D_COMPLETED_QUEUE_EXISTING_AND_MISSING_JOURNEY_RETRIES_REPRODUCED_500_REPLAY_STATUS_CONFLICT_THEN_AFTER_STATUS_VALIDATION_FIX_REPRODUCED_FALSE_PENDING_H0_BOTH_CASES_NOW_PASS",
+    "qfRuntimeAcceptance": "43_OF_43_ACTUAL_REQUEST_STREAM_ROUTE_ACCESS_AND_SELECTOR_TESTS_PASSED_INCLUDING_LOOPBACK_HTTP_VALID_QF_S3_AUTHORITY_DENIAL_WITH_ISOLATED_ENV_SYNTHETIC_SESSION_PORTS_ZERO_REMOTE_DB_PROVIDER_OR_REAL_FLAG_MUTATION",
+    "authenticatedPersistenceAcceptance": "FRESH_2_OF_2_NETWORK_NONE_POSTGRESQL_15_8_ACCEPTANCE_PASSED_307560_MS_ACTUAL_AUTHENTICATED_PRODUCTION_CONSTRUCTOR_TEN_REPEAT_REPAIRS_TEN_QUEUES_TEN_JOURNEYS_FIVE_COMPLETED_QUEUE_RECOVERY_AND_CONCURRENCY_CASES_PENDING_LIST_MATCHED_NO_COMPLETED_H0_ALL_SYNTHETIC_ROWS_USERS_CONTAINERS_CLEANED",
+    "priorExpandedAcceptanceAttempt": "240_SECOND_LIMIT_CANCELLED_EXPANDED_TEN_REPAIR_TEST_CALLBACK_LATER_COMPLETED_ALL_ASSERTIONS_AND_CLEANUP_AT_549_SECONDS_NOT_COUNTED_AS_PASSED_TEST_FINAL_900_SECOND_BOUNDED_RERUN_PASSED_WITH_ZERO_CANCELLED",
+    "priorApp1Evidence": "HEAD_6974567_APP1_REPEAT_HISTORY_AND_DELAYED_PARTIAL_RETRY_FAILURES_REPRODUCED_THEN_158_FOCUSED_PLUS_11_PRODUCTION_PATH_TESTS_PASSED_APP1_SOURCE_UNCHANGED_IN_QF_CORRECTION",
+    "typecheck": "PASSED_AFTER_COMPLETED_QUEUE_RETRY_CORRECTION",
+    "changedFileLint": "ZERO_ERRORS_ONE_EXISTING_DAYSTARTUTCISO_WARNING_IN_UNCHANGED_SERVICE_SECTION_VERIFIED_AT_STARTING_HEAD_NO_WARNING_SUPPRESSED",
+    "jsonValidation": "PASSED_SCOPE_DIGEST_AND_JSON_VALIDATION",
+    "diffCheck": "PASSED_EXACT_42_PATH_AGGREGATE_MANIFEST_AND_DIFF_CHECK",
+    "authoritativeC3rSuites": "86_OF_86_C3R_P_WITH_IMPORTED_T_L_PASSED_IN_265_TEST_AFFECTED_BATCH",
+    "affectedLearnerLoop": "FRESH_708_OF_708_LEARNER_LOOP_AND_5_OF_5_QUALITY_TESTS_TAXONOMY_AND_EXPLANATION_EVALS_PASSED",
+    "build": "PASSED_NEXT_16_2_12_BUILD_AFTER_COMPLETED_QUEUE_CORRECTION_WITH_EXISTING_NFT_TRACE_WARNING",
+    "frozenCandidateExactHeadCi": "GITHUB_LIVE_EXACT_HEAD_CHECKS_REQUIRED_AFTER_PUBLICATION_NOT_A_REPOSITORY_RECEIPT",
+    "exactHeadFormalReview": "STARTING_F22627D_REVIEW_5124482243_ACTIONABLE_0_0_1_NEW_HEAD_REVIEW_PENDING_DO_NOT_DUPLICATE_AUTOMATIC_REVIEW"
+  },
+  "activation": {
+    "ownerOnly": true,
+    "defaultOff": true,
+    "production": false,
+    "public": false,
+    "payment": false,
+    "remoteMutation": false,
+    "realLearnerData": false,
+    "providerExecution": false
+  },
+  "rollbackEvidence": {
+    "remoteMutationCount": 0,
+    "migrationRlsOrAuthChanged": false,
+    "syntheticUserRemoved": true,
+    "syntheticRecordsRemoved": true,
+    "isolatedAcceptanceContainerRemoved": true,
+    "ownerOnlyDefaultOffPreserved": true
+  },
+  "stopCondition": "CORE_BLITZ_WAVE1_DRAFT_READY_FOR_OWNER",
+  "stopConditionState": "EXACT_HEAD_CI_AND_FINAL_REVIEW_PENDING"
+}

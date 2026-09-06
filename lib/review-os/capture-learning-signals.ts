@@ -1,5 +1,6 @@
 import { sanitizeLearningSignalMetadata } from "./data-boundary";
 import { buildConceptNodeCandidate } from "./concept-node-mapping";
+import { buildApp1C3rHandoffCandidateV1 } from "./app1-c3r-handoff";
 import type { LearningSignalEventInput, WrongAnswerItemInput } from "@/lib/review-os/types";
 
 type CaptureExamMode = LearningSignalEventInput["examMode"];
@@ -30,6 +31,10 @@ type CaptureLearningSignalInput = {
 
 function uniq(values: Array<string | null | undefined>) {
   return [...new Set(values.map((v) => (typeof v === "string" ? v.trim() : "")).filter(Boolean))];
+}
+
+function hasText(value: string | null | undefined) {
+  return typeof value === "string" && value.trim().length > 0;
 }
 
 export function computeCaptureQueuePriority(input: {
@@ -123,7 +128,25 @@ export function buildCaptureLearningSignal(input: CaptureLearningSignalInput): L
       supportedCalculatorTemplateId: input.supportedCalculatorTemplateId,
     },
   });
-  const enrichedTags = uniq([...tags, conceptNodeCandidate.conceptFamily, conceptNodeCandidate.nextTaskType]);
+  const app1C3rHandoffCandidate = buildApp1C3rHandoffCandidateV1({
+    itemId: input.itemId,
+    examName: input.examName,
+    subject: input.subject,
+    conceptNodeId: conceptNodeCandidate.conceptNodeId,
+    createdFromCapture: input.createdFromCapture,
+    hasRepairTarget:
+      hasText(input.biggestGap) ||
+      hasText(input.missingIssue) ||
+      hasText(input.weakStructurePoint),
+    hasRepairDirective:
+      hasText(input.rewriteInstruction) || hasText(input.nextAction),
+  });
+  const enrichedTags = uniq([
+    ...tags,
+    conceptNodeCandidate.conceptFamily,
+    conceptNodeCandidate.nextTaskType,
+    app1C3rHandoffCandidate ? "app1_c3r_d1_required" : null,
+  ]);
 
   return {
     examMode,
@@ -161,6 +184,8 @@ export function buildCaptureLearningSignal(input: CaptureLearningSignalInput): L
       similar_topic_suggestion: uniq([input.keyConcepts?.[1], input.keyConcepts?.[2], input.missingIssue]).slice(0, 2),
       review_priority: reviewPriority,
       skeleton_keyword_hint: skeletonKeywordHint,
+      app1_c3r_handoff_candidate: app1C3rHandoffCandidate,
+      c3rHandoffStatus: app1C3rHandoffCandidate?.state ?? null,
     }),
   };
 }

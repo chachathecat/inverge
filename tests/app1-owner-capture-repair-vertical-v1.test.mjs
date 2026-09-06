@@ -3244,6 +3244,23 @@ test("APP1-UI-003 enters repair only after a durable receipt without racing the 
   assert.match(repairBranch, /router\.push\([\s\S]*?\/app\/capture\/repair\?itemId=/u);
   assert.doesNotMatch(repairBranch, /router\.refresh\(\)/u);
 });
+test("completed D+1 retry is a saved record, not a new pending review or failed save", async () => {
+  const source = await read("components/owner-study/app1-capture-repair-loop.tsx");
+  const branch = source.match(/if \(payload\.app1C3rHandoff\?\.outcome === "APP1_C3R_D1_ALREADY_COMPLETED"\) \{[\s\S]*?\n      \}/u)?.[0];
+  assert.ok(branch);
+  assert.match(branch, /setNextReview\(null\)/u);
+  assert.match(branch, /setPhase\("saved_review_already_completed"\)/u);
+  assert.match(branch, /return;/u);
+  assert.ok(source.indexOf(branch) > source.indexOf("setPersistedRecordId(payload.item.id)"));
+  assert.ok(source.indexOf(branch) < source.indexOf("let queueReceipt: App1NextReviewReceipt"));
+  const surface = source.match(/\{phase === "saved_review_already_completed" && persistedRecordId \? \([\s\S]*?\) : null\}/u)?.[0];
+  assert.ok(surface);
+  assert.match(surface, /role="status"/u);
+  assert.match(surface, /새 복습을 예약하거나 숙달·전이 성공을 판정하지 않습니다/u);
+  assert.match(surface, /저장 기록 확인/u);
+  assert.doesNotMatch(surface, /data-app1-queue-receipt|복습 대기로 이동|role="alert"/u);
+});
+
 test("APP1-UI-004 keeps queue confirmation post-save and item-specific", async () => {
   const repairLoop = await read("components/owner-study/app1-capture-repair-loop.tsx");
   const receiptIndex = repairLoop.indexOf(

@@ -180,6 +180,7 @@ test("S232F.2 every data-bearing app page gates a fresh access result before dow
     "app/app/capture/page.tsx",
     "app/app/first/ox/page.tsx",
     "app/app/items/[itemId]/page.tsx",
+    "app/app/items/[itemId]/support/page.tsx",
     "app/app/items/page.tsx",
     "app/app/mode-migration/page.tsx",
     "app/app/onboarding/page.tsx",
