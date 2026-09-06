@@ -12,6 +12,24 @@ const escape = value => String(value).replace(/[&<>"']/gu,
   character => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[character]);
 export const reviewPacketSha256 = source => crypto.createHash("sha256").update(source).digest("hex");
 const invalid = () => { throw new Error("private_review_packet_invalid"); };
+const deniedAuthorityFlags = new Set(["runtimeEligible", "transferOrMeasurementEligible",
+  "humanReviewComplete", "runtimeAuthorityGranted"]);
+
+function pendingHumanReview(value) {
+  return value !== null && typeof value === "object" && !Array.isArray(value) &&
+    Object.keys(value).length === 3 && Object.keys(value).every(key => ["reviewer", "decision", "state"].includes(key)) &&
+    value.reviewer === null && value.decision === null && value.state === "pending";
+}
+
+function assertReviewOnly(value) {
+  if (value === null || typeof value !== "object") return;
+  for (const [key, child] of Object.entries(value)) {
+    if (deniedAuthorityFlags.has(key) && child !== false) invalid();
+    if (key === "humanReview" && child !== false && !pendingHumanReview(child)) invalid();
+    if (key === "verifiedBy" && child?.human !== false) invalid();
+    assertReviewOnly(child);
+  }
+}
 
 function renderValue(value) {
   if (Array.isArray(value)) return `<ol>${value.map(item => `<li>${renderValue(item)}</li>`).join("")}</ol>`;
@@ -23,6 +41,8 @@ function renderValue(value) {
 /** Private review output only. This renderer cannot approve or install content. */
 export function renderPrivateReviewPacket(source, calculationSource) {
   const packet = JSON.parse(source), calculation = JSON.parse(calculationSource);
+  assertReviewOnly(packet);
+  assertReviewOnly(calculation);
   if (!Array.isArray(packet.originals) || !Array.isArray(packet.retryCandidates) ||
     !packet.originals.length || packet.originals.length > 20 ||
     packet.originals.length !== packet.retryCandidates.length || packet.runtimeEligible !== false ||
@@ -36,7 +56,7 @@ export function renderPrivateReviewPacket(source, calculationSource) {
   for (const row of rows) {
     if (typeof row.id !== "string" || !Array.isArray(row.choices) || row.choices.length !== 5 ||
       !Array.isArray(row.choiceExplanations) || row.choiceExplanations.length !== 5 ||
-      row.runtimeEligible !== false) invalid();
+      row.runtimeEligible !== false || row.transferOrMeasurementEligible !== false) invalid();
     // Named concepts are explanations of a skill, never an answer/choice list.
     // Validate before rendering; generic rendering previously hid a bad mapping.
     if (typeof row.concept !== "string" || !row.concept.trim() || row.concept.length > 300 ||
@@ -49,8 +69,7 @@ export function renderPrivateReviewPacket(source, calculationSource) {
     if (!result || result.checksPassed !== true || result.humanReview !== false ||
       result.runtimeAuthorityGranted !== false || result.computedChoice !==
       (original ? row.officialKeyObserved : row.proposedChoice)) invalid();
-    if (original ? row.verifiedBy?.human !== false : row.officialKeyApplies !== false ||
-      row.transferOrMeasurementEligible !== false) invalid();
+    if (original ? row.verifiedBy?.human !== false : row.officialKeyApplies !== false) invalid();
   }
   const pairs = packet.originals.map(original => {
     const matches = packet.retryCandidates.filter(retry => retry.sourceOriginalNumber === original.number);

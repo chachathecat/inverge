@@ -72,7 +72,7 @@
   reconnect and completion replay were verified. Local PostgreSQL rows/users
   were cleaned to zero; no external browser requests/errors. This replaces the
   prior fake-catalog port for integration evidence, not the real-auth limitation.
-- New packet evidence: r2 JSON SHA-256
+- Prior packet evidence: r2 JSON SHA-256
   `3e1a77a8c325d741b93c0d281a9ec7b34eb31aad65c51a9c2a018e1fbe9e93fa`.
   Five concept misbindings were reproduced and corrected in JSON and the common
   renderer; four synthetic generator regressions pass. Boundary-region comparison,
@@ -85,7 +85,7 @@
 - Final local candidate: typecheck, changed-file lint and build passed. The
   existing unrelated NFT trace warning remains. The isolated actual-loader
   PostgreSQL/browser acceptance passed after the final adapter evidence binding.
-- Next exact action: publish the batched D+1-eligibility correction after local
+- Next exact action: publish the batched review-only authority correction after local
   validation, then consume required native CI and one fresh exact-head review.
   Do not claim this blocked-stock candidate completes the economics learner flow.
 - Native delivery update: PR #884 first head `5653dcd4d26e09ca068d1f0dd43b2f0ad9eaba44`
@@ -100,6 +100,21 @@
   Correction-local evidence: 51 related tests plus one isolated PostgreSQL/browser
   acceptance passed (52 total), with typecheck, changed-file lint, build and diff
   checks passing. No remote mutation or additional source scope is included.
+- The next review (5125758010, head `316ef083696db652ccea831fd99d31cb94ff1688`)
+  found one generator P2: the original-row branch skipped transfer/measurement
+  eligibility validation. New synthetic tests reproduced both row and nested
+  authority contradictions. The common review-only validator now requires false
+  on every row and rejects contradictory explicit metadata claims, preserving
+  the strict null/null/pending human-review record. Six renderer tests pass.
+  The private r3 packet SHA-256 is
+  `14d6dc2b784be200ff5c98668ddc8b974966b226678663e36f3b2b58b1845fcd`;
+  calculation 10/10 and field-audit 50/50 are rebound to it. r2 is preserved and
+  question/explanation bodies are unchanged. The human checklist remains pending.
+  This correction changes no learner runtime: its earlier isolated execution
+  evidence belongs to 316ef083; new native CI/review must bind the corrected head.
+  Current generator-correction validation: 53 related tests, typecheck, changed-file
+  lint and build pass; JSON/manifest/diff checks and exact r2/r3 body-preservation
+  checks pass. No approved content was installed and no actual human record changed.
 - Not yet verified: actual login/deployed Next acceptance, exact-head native
   CI/review, actual human-approved content loading, human review or subject completeness.
 - No runtime flag, Production/public service, remote DB, provider, payment or
