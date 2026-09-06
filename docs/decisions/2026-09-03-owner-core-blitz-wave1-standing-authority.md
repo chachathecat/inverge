@@ -3,7 +3,7 @@
 - Original decision date: 2026-09-03
 - Appraiser-first rescope date: 2026-09-04
 - Parent authority: Issue #880
-- Sole integration PR: Draft PR #882
+- Sole integration PR: PR #882 (originally Draft; current state is live GitHub)
 - Existing remote branch: `codex/issue-880-core-blitz-wave1`
 - Starting live PR head: `36bac9ef30c456248283275d2560bc036438b501`
 - Starting live PR tree: `5ac03c17941d2386a365de5676d0bec687a8e8bb`
@@ -111,6 +111,34 @@ or broadens the returned projection.
 
 ## QF-I1 boundary
 
+The HTTP selector supports only `LEARNING_PRACTICE` requests and
+`LEARNING_PRACTICE` / `LEARNING_ONLY` candidates. `D7_TRANSFER` and
+`TIMED_MEASUREMENT` requests, including empty-stock requests, are explicitly
+rejected with HTTP 403 before selector execution. Nested certified bank or
+content authority is also rejected, even under a learning purpose or alongside
+eligible learning stock; it is not silently discarded or relabeled successful.
+Release/sealed-unseen/family-isolation/timed-protocol assertions must be false,
+calibration must be `UNASSESSED`, and chronology/chronology authority must be
+null on this route. A self-consistent client-authored QF-S3 graph cannot
+authorize certified selection.
+
+The route is a non-persistent learning-only metadata selection. Client
+rights/source values remain required, unverified caller assertions and are
+neither repaired nor returned as server-verified facts. The response explicitly
+labels that trust boundary. No reference content is fetched or released, no
+server-side certified-authority integration is added, and the existing internal
+certified-bank code and validators remain unchanged and unreachable from this
+HTTP path. The restriction precedes selection; it is not an output-flag rewrite.
+
+The latest 2026-09-06 Owner continuation authorizes only review `5124412945`'s
+QF client-authority P1 and directly related regressions, starting at head
+`63ac700afa5da1a59e6b316c4a6c2ffdbcc6cbe6`, tree
+`b1267f745031af830b4c603cf8732d279e7268bf`. Its correction/review-cycle exception
+changes no general repository policy. The earlier Ready/squash approval cannot
+authorize the corrected head. Keep the current Ready state without toggling;
+after exact-head checks and review pass, request a new head/tree Owner merge
+approval and stop. An automatic new-head review must not be duplicated manually.
+
 The QF-I1 selector independently requires the server-only
 `CORE_BLITZ_QF_I1_ENABLED` condition (missing or anything other than `true`
 is OFF), followed by the existing authenticated trusted-repair Owner/subject
@@ -149,10 +177,12 @@ identities are deterministic and idempotent.
 
 Provider execution, public learner activation and raw generated body
 persistence in metadata-only stores remain off. Bank reads are scoped by
-exact exam mode and subject. Verified Transfer and Measurement candidates
-must pass the existing authoritative QF-S3 chronology validator against their
-complete authority input; caller labels, actors, receipts and digests are not
-trusted. Metadata-only persistence stores only a content-addressed opaque
+exact exam mode and subject in the existing internal persistence adapter, not
+this non-persistent HTTP selector. Internal Verified Transfer and Measurement
+candidates must pass the existing QF-S3 chronology validator against their
+complete authority input. QF-S3 proves consistency of supplied metadata only;
+it does not certify client rights, source, release or calibration claims.
+Metadata-only persistence stores only a content-addressed opaque
 authority reference and digest, never the authority input. Certified rows are
 usable only after a server-injected authority resolver rehydrates the complete
 input, verifies the reference digest and re-runs the authoritative QF-S3
@@ -168,7 +198,8 @@ validation, diff inspection, affected learner-loop suites, build, exact-head
 GitHub checks, one representative authenticated runtime acceptance and
 exactly one fresh formal review when no exact-head review exists.
 
-The Draft PR remains Draft. This authority grants no Ready transition, merge,
+PR state remains as found on live GitHub, with no Draft/Ready toggling in this
+correction. This authority grants no further Ready transition, merge,
 auto-merge, force push, replacement PR, new remote branch, Production/public
 activation, remote Supabase/database mutation, migration/RLS/auth change,
 payment/entitlement change, provider execution or use of real learner data.

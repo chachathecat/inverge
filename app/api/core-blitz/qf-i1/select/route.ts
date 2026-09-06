@@ -57,6 +57,33 @@ function qfI1EnabledOutsideProduction() {
 
 class RequestTooLargeError extends Error {}
 
+function isLearningOnlyRequest(input: object) {
+  const request = input as Record<string, unknown>;
+  if (request.purpose !== "LEARNING_PRACTICE" || !Array.isArray(request.candidates)) {
+    return false;
+  }
+  // This HTTP path has no server-side certified-stock authority resolver.
+  // Reject unsupported capabilities before the selector, including nested
+  // candidates that its purpose filter would otherwise silently skip. A valid
+  // client-authored QF-S3 graph proves consistency, not certified authority.
+  return request.candidates.every((value: unknown) => {
+    if (!value || typeof value !== "object" || Array.isArray(value)) return false;
+    const candidate = value as Record<string, unknown>;
+    return (
+      candidate.bankClass === "LEARNING_PRACTICE" &&
+      candidate.contentAuthority === "LEARNING_ONLY" &&
+      candidate.releaseChainComplete === false &&
+      candidate.unseenEligibilitySnapshotSealed === false &&
+      candidate.nonSameSurfaceAsSource === false &&
+      candidate.familyIsolated === false &&
+      candidate.timedProtocolBound === false &&
+      candidate.calibrationState === "UNASSESSED" &&
+      candidate.chronology === null &&
+      candidate.chronologyAuthority === null
+    );
+  });
+}
+
 async function readBoundedJson(request: Request): Promise<unknown> {
   if (!request.body) return null;
   const reader = request.body.getReader();
@@ -113,6 +140,15 @@ export async function POST(request: Request) {
         { status: 400, headers: RESPONSE_HEADERS },
       );
     }
+    if (!isLearningOnlyRequest(input)) {
+      return NextResponse.json(
+        { ok: false, errorCode: "QF_I1_LEARNING_ONLY_REQUIRED" },
+        { status: 403, headers: RESPONSE_HEADERS },
+      );
+    }
+    // Rights/source values remain required caller assertions for this
+    // non-persistent learning selection, not server-verified facts. Never
+    // normalize them into authority or enter the internal certified-bank path.
     const result = selector()(input);
     return NextResponse.json(
       {
@@ -121,6 +157,8 @@ export async function POST(request: Request) {
         boundary: {
           ownerOnly: true,
           defaultOff: true,
+          candidateMetadataTrust: "UNVERIFIED_CLIENT_ASSERTIONS",
+          certifiedBankSelectionSupported: false,
           persisted: false,
           providerExecution: false,
           generatedContentMaximumAuthority: "LEARNING_ONLY",

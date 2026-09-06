@@ -87,6 +87,11 @@
     "retryEventIdentityReused": true
   },
   "qfI1Policy": {
+    "httpSelectorPurpose": "LEARNING_PRACTICE",
+    "httpCandidateMaximumAuthority": "LEARNING_ONLY",
+    "httpCertifiedBankSelectionSupported": false,
+    "httpClientMetadataIsServerVerifiedAuthority": false,
+    "httpUnsupportedAuthorityRejectedBeforeSelection": true,
     "independentServerFeatureFlag": "CORE_BLITZ_QF_I1_ENABLED",
     "featureFlagDefault": false,
     "c3rFlagsAloneAuthorizeQf": false,
