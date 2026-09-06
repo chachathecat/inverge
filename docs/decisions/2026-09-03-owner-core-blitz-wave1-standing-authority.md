@@ -111,6 +111,36 @@ or broadens the returned projection.
 
 ## QF-I1 boundary
 
+The QF-I1 selector independently requires the server-only
+`CORE_BLITZ_QF_I1_ENABLED` condition (missing or anything other than `true`
+is OFF), followed by the existing authenticated trusted-repair Owner/subject
+allowlists. Auth-disabled and demo sessions are denied. Existing C3R flags
+alone cannot enable QF. The existing learner-support deployment convention is
+preserved: `VERCEL_ENV=production` is always denied; `NODE_ENV=production`
+is denied unless `VERCEL_ENV=preview`. Local development/test and Vercel
+preview can exercise the route only with the explicit QF and existing access
+conditions. Access denial occurs before any body read or selector execution.
+This declaration enables no local or deployed flag: allow/deny validation
+injects isolated test configuration only.
+
+The request limit remains 65,536 received bytes. Content-Length may reject
+early but never authorizes an unbounded read. The route accumulates actual
+stream bytes in a bounded buffer, cancels reading at the first excessive
+chunk and returns HTTP 413 without waiting on transport cleanup. Only an
+in-limit complete body is decoded, JSON-parsed and passed to existing input
+validation. Missing, malformed and understated length headers do not bypass
+the limit; UTF-8 and split chunks are counted in bytes, not characters.
+Every response is private/no-store; errors carry only fixed codes, no raw
+input or exception text.
+
+The 2026-09-06 Owner continuation authorizes the two QF-I1 findings in review
+`5124107547` and directly coupled regression correction/validation only,
+starting at head `697456703b5e45e1197d432e5e93d87e5f496dbd`, tree
+`8545f5c90a3608bbf703284717cce9679af0d575`. Its correction/review-cycle
+exception does not change general repository policy or authorize unrelated
+features, real environment activation, Ready or merge. Existing APP-1
+cumulative history, per-repair D+1, resumability and concurrency stay intact.
+
 Eligible bank stock is always preferred. Generation is authorized only for a
 Learning Practice gap, and generated content has maximum authority
 `LEARNING_ONLY`. Generated origin cannot be admitted to Verified Transfer

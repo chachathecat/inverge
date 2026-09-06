@@ -9,6 +9,7 @@ import {
 export const dynamic = "force-dynamic";
 
 const MAX_REQUEST_BYTES = 64 * 1024;
+const RESPONSE_HEADERS = { "Cache-Control": "private, no-store, max-age=0" };
 const SELECTOR_EXPORT_CANDIDATES = Object.freeze([
   "selectQfI1BankFirstAssignmentV1",
   "selectQfI1BankFirstV1",
@@ -43,21 +44,73 @@ function contentLength(request: Request) {
   return Number.isSafeInteger(value) && value >= 0 ? value : null;
 }
 
+function qfI1EnabledOutsideProduction() {
+  // Same deployment convention as core-blitz/learner-support-access: preview
+  // runs a production build, but standalone production and Vercel production
+  // are denied. C3R flags are necessary access gates, not QF activation.
+  return (
+    process.env.CORE_BLITZ_QF_I1_ENABLED === "true" &&
+    process.env.VERCEL_ENV !== "production" &&
+    (process.env.NODE_ENV !== "production" || process.env.VERCEL_ENV === "preview")
+  );
+}
+
+class RequestTooLargeError extends Error {}
+
+async function readBoundedJson(request: Request): Promise<unknown> {
+  if (!request.body) return null;
+  const reader = request.body.getReader();
+  const bytes = new Uint8Array(MAX_REQUEST_BYTES);
+  let received = 0;
+  try {
+    for (;;) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      if (value.byteLength > MAX_REQUEST_BYTES - received) {
+        // Cancel without awaiting transport cleanup: even a failed or stalled
+        // cancellation must not defer the 413 or resume body consumption.
+        void reader.cancel().catch(() => undefined);
+        throw new RequestTooLargeError();
+      }
+      bytes.set(value, received);
+      received += value.byteLength;
+    }
+    return JSON.parse(new TextDecoder("utf-8", { fatal: true }).decode(bytes.subarray(0, received)));
+  } catch (error) {
+    if (error instanceof RequestTooLargeError) throw error;
+    return null;
+  } finally {
+    reader.releaseLock();
+  }
+}
+
 export async function POST(request: Request) {
   try {
-    await requireTrustedRepairAccess();
+    if (!qfI1EnabledOutsideProduction()) {
+      return NextResponse.json(
+        { ok: false, errorCode: "QF_I1_OWNER_AUTHORITY_REQUIRED" },
+        { status: 404, headers: RESPONSE_HEADERS },
+      );
+    }
+    const session = await requireTrustedRepairAccess();
+    if (!session.authEnabled || session.isDemo) {
+      return NextResponse.json(
+        { ok: false, errorCode: "QF_I1_OWNER_AUTHORITY_REQUIRED" },
+        { status: 404, headers: RESPONSE_HEADERS },
+      );
+    }
     const length = contentLength(request);
     if (length !== null && length > MAX_REQUEST_BYTES) {
       return NextResponse.json(
         { ok: false, errorCode: "QF_I1_REQUEST_TOO_LARGE" },
-        { status: 413 },
+        { status: 413, headers: RESPONSE_HEADERS },
       );
     }
-    const input = await request.json().catch(() => null);
+    const input = await readBoundedJson(request);
     if (!input || typeof input !== "object" || Array.isArray(input)) {
       return NextResponse.json(
         { ok: false, errorCode: "QF_I1_INVALID_INPUT" },
-        { status: 400 },
+        { status: 400, headers: RESPONSE_HEADERS },
       );
     }
     const result = selector()(input);
@@ -80,23 +133,25 @@ export async function POST(request: Request) {
       },
       {
         status: 200,
-        headers: { "Cache-Control": "no-store" },
+        headers: RESPONSE_HEADERS,
       },
     );
   } catch (error) {
+    if (error instanceof RequestTooLargeError) {
+      return NextResponse.json(
+        { ok: false, errorCode: "QF_I1_REQUEST_TOO_LARGE" },
+        { status: 413, headers: RESPONSE_HEADERS },
+      );
+    }
     if (isTrustedRepairAccessError(error)) {
       return NextResponse.json(
         { ok: false, errorCode: "QF_I1_OWNER_AUTHORITY_REQUIRED" },
-        { status: 404 },
+        { status: 404, headers: RESPONSE_HEADERS },
       );
     }
-    const errorCode =
-      error instanceof Error && error.message.startsWith("qf-i1:")
-        ? error.message.toUpperCase().replaceAll(":", "_").replaceAll("-", "_")
-        : "QF_I1_SELECTION_REJECTED";
     return NextResponse.json(
-      { ok: false, errorCode },
-      { status: 400 },
+      { ok: false, errorCode: "QF_I1_SELECTION_REJECTED" },
+      { status: 400, headers: RESPONSE_HEADERS },
     );
   }
 }

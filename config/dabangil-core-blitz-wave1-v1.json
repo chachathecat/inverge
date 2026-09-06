@@ -87,6 +87,17 @@
     "retryEventIdentityReused": true
   },
   "qfI1Policy": {
+    "independentServerFeatureFlag": "CORE_BLITZ_QF_I1_ENABLED",
+    "featureFlagDefault": false,
+    "c3rFlagsAloneAuthorizeQf": false,
+    "productionAccessAllowed": false,
+    "deploymentEnvironmentConvention": "VERCEL_ENV_PRODUCTION_DENIED_AND_NODE_ENV_PRODUCTION_REQUIRES_VERCEL_PREVIEW",
+    "accessCheckPrecedesBodyReadAndSelection": true,
+    "requestByteLimit": 65536,
+    "actualReceivedBytesBoundedBeforeJsonParsing": true,
+    "oversizeReadCancelled": true,
+    "errorResponsesContainRawInput": false,
+    "allResponsesCacheable": false,
     "eligibleBankStockPreferred": true,
     "generationPurposeAllowedExactly": [
       "LEARNING_PRACTICE"
@@ -141,6 +152,7 @@
     "defaultOff": true,
     "learnerSupportFeatureFlag": "CORE_BLITZ_LEARNER_SUPPORT_ENABLED",
     "learnerSupportOwnerAllowlist": "CORE_BLITZ_LEARNER_SUPPORT_OWNER_EMAILS",
+    "qfI1FeatureFlag": "CORE_BLITZ_QF_I1_ENABLED",
     "production": false,
     "publicLaunch": false,
     "payment": false,
