@@ -74,6 +74,41 @@ The resumed live head is `5e9858a808a4dbb9f042725cbee8d02ce78e1155`, tree
 `6163b521d50b75cf1ce679117fb70184d6804108`. This exception changes no general
 delivery policy, adds no feature scope and authorizes no Ready or merge action.
 
+The 2026-09-06 Owner continuation for review `5124482243`, starting at head
+`f22627dca19ca8a758f17f5495be2364db5800e6`, tree
+`d7b1112c0f7a3cfaf9ef37b96f325436c3933ad8`, authorizes only the completed-Queue
+retry P2 and its directly coupled state-consistency and regression corrections.
+Its correction/review-count exception changes no general delivery policy.
+Current Ready/Open status is preserved; the prior merge approval is invalid for
+the corrected head. Final exact-head checks, clean review and zero unresolved
+threads precede requesting a new head/tree Owner merge approval and stopping.
+
+Replay validates a pending or completed Queue's immutable bindings without
+changing its status. The bodyless journey stores only the immutable repair-to-D1
+link, not a second current Queue state or a promise of a future task. An exact
+legacy awaiting-D1 projection is normalized in place under compare-and-swap;
+unknown or conflicting metadata fails closed. Original identities, D+1 due
+time, creation time and independent historical APP-1 signals are preserved.
+Previously returned H0 receipts remain historical observations, not current
+visibility authority. No new database schema, ledger or review state machine
+is introduced.
+
+After the durable link write/recovery, all Queue bindings and current status
+are re-read. A pending snapshot alone may materialize the unchanged H0 contract.
+A completed Queue, with or without an existing journey, instead returns
+`APP1_C3R_D1_ALREADY_COMPLETED`, `currentPending: false` and its original D+1
+identity, without an H0 receipt or a new pending review unit. The API is no-store
+and the learner screen confirms the saved record and already processed review,
+without promising another review or asking the learner to repeat a successful
+save. Queue processing completion never certifies learning success. The Queue
+and its existing pending-only list remain the sole current-state authority.
+
+Rollback is fail-closed through the existing Owner/subject default-off access
+gates. Reverting to the defective adapter is not a safe way to continue serving
+this path: it cannot consume the normalized link or truthfully report completed
+retries. No flag is changed here, and no data deletion, migration, history
+rewrite or remote operation is part of rollback evidence.
+
 APP-1 repair creates neither mastery nor transfer Evidence. Raw answer,
 question, OCR, prompt and learner bodies remain outside derived metadata.
 Acceptance uses synthetic Owner data and an isolated local database only,
@@ -130,7 +165,7 @@ server-side certified-authority integration is added, and the existing internal
 certified-bank code and validators remain unchanged and unreachable from this
 HTTP path. The restriction precedes selection; it is not an output-flag rewrite.
 
-The latest 2026-09-06 Owner continuation authorizes only review `5124412945`'s
+The preceding 2026-09-06 Owner continuation authorized only review `5124412945`'s
 QF client-authority P1 and directly related regressions, starting at head
 `63ac700afa5da1a59e6b316c4a6c2ffdbcc6cbe6`, tree
 `b1267f745031af830b4c603cf8732d279e7268bf`. Its correction/review-cycle exception

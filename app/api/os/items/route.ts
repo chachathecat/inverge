@@ -56,7 +56,7 @@ export async function POST(request: Request) {
       ok: true,
       ...result,
       ...(app1C3rHandoff ? { app1C3rHandoff } : {}),
-    });
+    }, { headers: { "Cache-Control": "no-store" } });
   } catch (error) {
     if (isApp1ServerAuthorityError(error)) {
       const status =

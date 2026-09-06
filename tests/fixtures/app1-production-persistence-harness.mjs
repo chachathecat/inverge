@@ -43,6 +43,7 @@ export function productionHarness(executeQuery, options = {}) {
       lt(field, value) { q.filters.push([field, "lt", value]); return this; },
       gte(field, value) { q.filters.push([field, "gte", value]); return this; },
       in(field, value) { q.filters.push([field, "in", value]); return this; },
+      not(field, operator, value) { assert.equal(operator, "is"); assert.equal(value, null); q.filters.push([field, "notNull", null]); return this; },
       order(field, settings = {}) { (q.orders ??= []).push([field, settings.ascending !== false]); return this; },
       limit(limit) { q.limit = limit; return this; },
       range(from, to) { q.range = [from, to]; return this; },
@@ -133,9 +134,98 @@ export function productionHarness(executeQuery, options = {}) {
       const response = await route.POST(new Request("http://localhost/api/os/items", {
         method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(command),
       }));
-      return { status: response.status, body: await response.json() };
+      return { status: response.status, body: await response.json(), cacheControl: response.headers.get("cache-control") };
     },
   };
+}
+
+// Shared by in-memory regressions and authenticated, network-isolated Postgres.
+// Only fault timing/legacy stored representation is injected, never a schedule
+// or expected H0 result; every save uses the actual production constructor.
+export async function completedQueueRetryScenario(execute, scenario) {
+  const app = productionHarness(execute);
+  const read = async table => (await execute({ table, operation: "select", columns: "*", filters: [["user_id", "eq", OWNER_ID]] })).data;
+  const initialItems = (await read("wrong_answer_items")).length;
+  const initialQueues = (await read("review_queue_items")).length;
+  const initialSignals = (await read("learning_signal_events")).length;
+  const command = await app.command(scenario);
+  const partial = scenario !== "completed_after_full_save" && scenario !== "legacy_completed_concurrent";
+  let queueId;
+  const writer = productionHarness(execute, { afterQuery(q, result) {
+    if (!queueId && q.table === "review_queue_items" && q.operation === "insert" && !result.error) {
+      queueId = q.values.id;
+      if (partial) throw new Error("synthetic-response-loss-after-Queue");
+    }
+  } });
+  const initial = await writer.save(command);
+  assert.equal(initial.status, partial ? 500 : 200, JSON.stringify(initial.body));
+  assert.ok(queueId);
+  const queueBefore = (await read("review_queue_items")).find(row => row.id === queueId);
+  if (!partial) {
+    assert.equal(initial.body.app1C3rHandoff.currentPending, true);
+    assert.equal((await app.repository.listReviewQueue(OWNER_ID, 100)).some(row => row.queueId === queueId), true);
+  }
+  if (scenario === "legacy_completed_concurrent") {
+    const journey = (await read("learning_signal_events")).find(row => row.metadata_json.reviewUnitId === queueId);
+    const metadata = { ...journey.metadata_json, state: "REPAIRED_AWAITING_D1" };
+    delete metadata.linkKind;
+    await execute({ table: "learning_signal_events", operation: "update", filters: [["id", "eq", journey.id], ["user_id", "eq", OWNER_ID]], values: {
+      metadata_json: metadata, derived_tags: ["app1_c3r", "theory", "d1_unaided_review_required"],
+      next_task_type: "c3r_d1_unaided_review", next_task: "D+1에 답을 보지 않고 보강한 연결을 다시 작성합니다.",
+    } });
+  }
+  const completeDuringLink = scenario.startsWith("completion_");
+  if (!completeDuringLink) await app.repository.completeReviewQueueItem(OWNER_ID, queueId);
+  let completion;
+  const overlap = async q => {
+    if (completeDuringLink && q.table === "learning_signal_events" && q.operation === "insert" && q.values.source_type === "app1_c3r_handoff") {
+      completion ??= app.repository.completeReviewQueueItem(OWNER_ID, queueId);
+      await completion;
+    }
+  };
+  const options = { now: "2026-09-08T10:00:00.000Z", [scenario === "completion_before_link" ? "beforeQuery" : "afterQuery"]: overlap };
+  const results = await Promise.all([
+    productionHarness(execute, options).save(command),
+    productionHarness(execute, options).save(command),
+  ]);
+  for (const result of results) {
+    assert.equal(result.status, 200, JSON.stringify(result.body));
+    assert.equal(result.cacheControl, "no-store");
+    const handoff = result.body.app1C3rHandoff;
+    assert.equal(handoff.outcome, "APP1_C3R_D1_ALREADY_COMPLETED");
+    assert.equal(handoff.queueStatus, "completed");
+    assert.equal(handoff.currentPending, false);
+    assert.equal(Object.hasOwn(handoff, "h0Receipt"), false);
+    assert.equal(Object.hasOwn(handoff, "reviewUnit"), false);
+    assert.equal(handoff.completedReviewUnit.reviewUnitId, queueId);
+    assert.equal(handoff.completedReviewUnit.originalD1DueAt, queueBefore.raw_payload.dueAt);
+    assert.equal(handoff.masteryCreated, false);
+    assert.equal(handoff.transferCreated, false);
+  }
+  const queueAfter = (await read("review_queue_items")).find(row => row.id === queueId);
+  assert.equal(queueAfter.status, "completed");
+  assert.deepEqual(queueAfter.raw_payload, queueBefore.raw_payload);
+  assert.deepEqual(queueAfter.derived_payload, queueBefore.derived_payload);
+  assert.equal((await app.repository.listReviewQueue(OWNER_ID, 100)).some(row => row.queueId === queueId), false);
+  const signals = await read("learning_signal_events");
+  const journey = signals.find(row => row.metadata_json.reviewUnitId === queueId);
+  assert.equal(journey.metadata_json.linkKind, "APP1_REPAIR_TO_CANONICAL_D1");
+  assert.equal(Object.hasOwn(journey.metadata_json, "state"), false);
+  assert.equal(journey.next_task_type, "c3r_d1_link_record");
+  assert.equal(journey.metadata_json.masteryCreated, false);
+  assert.equal(journey.metadata_json.transferCreated, false);
+  assert.equal(JSON.stringify(signals).includes(RAW_MARKER), false);
+  assert.equal((await read("wrong_answer_items")).length, initialItems + 1);
+  assert.equal((await read("review_queue_items")).length, initialQueues + 1);
+  assert.equal(signals.length, initialSignals + 2);
+  const settled = await productionHarness(execute, { now: "2026-09-09T10:00:00.000Z" }).save(command);
+  assert.equal(settled.status, 200, JSON.stringify(settled.body));
+  assert.deepEqual(settled.body.app1C3rHandoff, { ...results[1].body.app1C3rHandoff, journeyStatus: "existing" });
+  assert.deepEqual((await read("review_queue_items")).find(row => row.id === queueId), queueAfter);
+  assert.deepEqual(await read("learning_signal_events"), signals);
+  // An earlier H0 remains historical evidence, not a current pending result.
+  if (!partial) assert.equal(initial.body.app1C3rHandoff.h0Receipt.learnerVisibleNextUnaidedCheck, true);
+  return results[0].body.item.id;
 }
 
 export function seedRows() {
@@ -161,7 +251,10 @@ export function memoryTransport(seed = seedRows()) {
     assert.ok(rows, `unexpected table ${q.table}`);
     const matches = row => q.filters.every(([field, op, value]) => {
       const actual = valueAt(row, field);
-      return op === "eq" ? JSON.stringify(actual) === JSON.stringify(value) : op === "lt" ? actual < value : op === "gte" ? actual >= value : value.includes(actual);
+      if (op === "eq" && actual && typeof actual === "object" && typeof value === "string") {
+        return JSON.stringify(actual) === JSON.stringify(JSON.parse(value));
+      }
+      return op === "notNull" ? actual != null : op === "eq" ? JSON.stringify(actual) === JSON.stringify(value) : op === "lt" ? actual < value : op === "gte" ? actual >= value : value.includes(actual);
     });
     if (q.operation === "insert") {
       const v = q.values;

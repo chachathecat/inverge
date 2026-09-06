@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import crypto from "node:crypto";
-import { memoryTransport, productionHarness, OWNER_ID, NOW, RAW_MARKER } from "./fixtures/app1-production-persistence-harness.mjs";
+import { memoryTransport, productionHarness, completedQueueRetryScenario, OWNER_ID, NOW, RAW_MARKER } from "./fixtures/app1-production-persistence-harness.mjs";
 
 function assertSaved(store, result, count) {
   assert.equal(result.status, 200, JSON.stringify(result.body));
@@ -132,6 +132,7 @@ test("production replay rejects client schedules and item/plan/Queue/journey dri
     tables => { tables.review_queue_items[0].derived_payload.reviewUnitRecurrenceCount = 2; },
     tables => { tables.review_queue_items[0].subject_id = "감정평가실무"; },
     tables => { tables.review_queue_items[0].source_submission_id = OWNER_ID; },
+    tables => { tables.review_queue_items[0].status = "skipped"; },
     tables => { tables.wrong_answer_items[1].raw_payload.app1_post_insert_replay_v1.workRevisionId = OWNER_ID; },
     tables => { tables.wrong_answer_items[1].raw_payload.app1_post_insert_replay_v1.queueId = OWNER_ID; },
     tables => { tables.learning_signal_events.find(row => row.source_type === "app1_c3r_handoff").metadata_json.c3rRoute = "/app/c3r-l"; },
@@ -145,6 +146,72 @@ test("production replay rejects client schedules and item/plan/Queue/journey dri
     assert.equal(store.tables.learning_signal_events.length, 2);
   }
 });
+
+test("re-read after link persistence rejects late Queue binding drift without H0", async () => {
+  const store = memoryTransport();
+  const app = productionHarness(store.execute, { afterQuery(q, result) {
+    if (q.table === "learning_signal_events" && q.operation === "insert" && q.values.source_type === "app1_c3r_handoff" && !result.error) {
+      store.tables.review_queue_items[0].raw_payload.dueAt = "2026-09-08T00:00:00.000Z";
+    }
+  } });
+  const result = await app.save(await app.command("late-binding-drift"));
+  assert.equal(result.status, 500);
+  assert.equal(Object.hasOwn(result.body, "app1C3rHandoff"), false);
+  assert.equal(store.tables.review_queue_items.length, 1);
+  assert.equal(store.tables.learning_signal_events.length, 2);
+});
+
+for (const partial of [false, true]) {
+  test(`completed canonical Queue retry preserves completion with ${partial ? "missing" : "existing"} journey`, async () => {
+    const store = memoryTransport();
+    const app = productionHarness(store.execute);
+    assertSaved(store, await app.save(await app.command("prior-history")), 1);
+    const command = await app.command("completed-retry");
+    let interrupted = false;
+    const writer = partial ? productionHarness(store.execute, { afterQuery(q, result) {
+      if (!interrupted && q.table === "review_queue_items" && q.operation === "insert" && !result.error) {
+        interrupted = true; throw new Error("synthetic-queue-response-loss");
+      }
+    } }) : app;
+    const initial = await writer.save(command);
+    assert.equal(initial.status, partial ? 500 : 200);
+    const queue = store.tables.review_queue_items.at(-1);
+    await app.repository.completeReviewQueueItem(OWNER_ID, queue.id);
+    const completedQueue = structuredClone(queue);
+    const retry = await app.save(command);
+    assertSaved(store, retry, 2);
+    const handoff = retry.body.app1C3rHandoff;
+    assert.equal(handoff.outcome, "APP1_C3R_D1_ALREADY_COMPLETED");
+    assert.equal(handoff.queueStatus, "completed");
+    assert.equal(handoff.currentPending, false);
+    assert.equal(Object.hasOwn(handoff, "h0Receipt"), false);
+    assert.equal(Object.hasOwn(handoff, "reviewUnit"), false);
+    assert.equal(handoff.completedReviewUnit.reviewUnitId, queue.id);
+    const listed = await app.repository.listReviewQueue(OWNER_ID, 100);
+    assert.equal(listed.some(row => row.queueId === queue.id), handoff.currentPending);
+    assert.deepEqual(queue, completedQueue);
+    const journey = store.tables.learning_signal_events.find(row => row.metadata_json.reviewUnitId === queue.id);
+    assert.equal(journey.metadata_json.linkKind, "APP1_REPAIR_TO_CANONICAL_D1");
+    assert.equal(Object.hasOwn(journey.metadata_json, "state"), false);
+    const snapshot = structuredClone(store.tables);
+    const again = await app.save(command);
+    assert.equal(again.body.app1C3rHandoff.outcome, handoff.outcome);
+    assert.deepEqual(store.tables, snapshot);
+    assert.equal(store.tables.review_queue_items.length, 2);
+    assert.equal(store.tables.learning_signal_events.length, 4);
+    assert.equal(store.tables.recurrence_features[0].recurrence_count, 2);
+  });
+}
+
+for (const scenario of ["completion_before_link", "completion_after_link", "legacy_completed_concurrent"]) {
+  test(`production completed-Queue interleaving: ${scenario}`, async () => {
+    const store = memoryTransport();
+    const app = productionHarness(store.execute);
+    assertSaved(store, await app.save(await app.command("prior-history")), 1);
+    await completedQueueRetryScenario(store.execute, scenario);
+    assert.equal(store.tables.recurrence_features[0].recurrence_count, 2);
+  });
+}
 
 test("ordinary review policy still uses accumulated history", () => {
   const app = productionHarness(memoryTransport().execute);

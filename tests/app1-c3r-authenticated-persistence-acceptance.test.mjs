@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { execFileSync, spawn, spawnSync } from "node:child_process";
 import test from "node:test";
-import { productionHarness, seedRows, OWNER_ID, RAW_MARKER as PRODUCTION_RAW_MARKER } from "./fixtures/app1-production-persistence-harness.mjs";
+import { productionHarness, completedQueueRetryScenario, seedRows, OWNER_ID, RAW_MARKER as PRODUCTION_RAW_MARKER } from "./fixtures/app1-production-persistence-harness.mjs";
 
 import {
   App1C3rReviewOsAdapterError,
@@ -30,7 +30,9 @@ const PRODUCTION_SCHEDULE_INPUT = Object.freeze({
   nextReviewDateOverride: null,
 });
 
-test("actual authenticated production constructor/service/repository recover repeat repairs in isolated PostgreSQL", { timeout: 240_000 }, async () => {
+// Ten complete repairs plus cross-worker retries use disposable psql transports.
+// The former five-repair 240s budget expires before the added completion cases.
+test("actual authenticated production constructor/service/repository recover repeat repairs in isolated PostgreSQL", { timeout: 900_000 }, async () => {
   const container = `inverge-app1-production-${process.pid}-${Date.now()}`;
   let started = false;
   const sql = (statement, authenticated = true) => new Promise((resolve, reject) => {
@@ -54,7 +56,8 @@ test("actual authenticated production constructor/service/repository recover rep
   const transport = async q => {
     assert.ok(tableNames.includes(q.table));
     const table = `public.${identifier(q.table)}`;
-    const predicates = q.filters.map(([field, operator, value]) => operator === "in"
+    const predicates = q.filters.map(([field, operator, value]) => operator === "notNull"
+      ? `${expression(field)} is not null` : operator === "in"
       ? `${expression(field)} in (${value.map(literal).join(",")})`
       : `${expression(field)} ${operator === "eq" ? "=" : operator === "lt" ? "<" : ">="} ${literal(value)}`);
     const where = predicates.length ? " where " + predicates.join(" and ") : "";
@@ -65,7 +68,8 @@ test("actual authenticated production constructor/service/repository recover rep
         return { data: null, error: null };
       }
       if (q.operation === "update") {
-        await sql(`update ${table} set ${Object.entries(q.values).map(([key,value]) => `${identifier(key)}=${literal(value)}`).join(",")}${where}`);
+        const columns = Object.keys(q.values).map(identifier).join(",");
+        await sql(`update ${table} set (${columns}) = (select ${columns} from jsonb_populate_record(null::${table}, ${jsonLiteral(q.values)}))${where}`);
         return { data: null, error: null };
       }
       const count = q.count ? Number(await sql(`select count(*) from ${table}${where}`)) : undefined;
@@ -146,10 +150,14 @@ test("actual authenticated production constructor/service/repository recover rep
     assert.equal(delayed.status, 200, JSON.stringify(delayed.body));
     assert.equal((await lateApp.save(delayedCommand)).status, 200);
     saved.push(delayed.body.item.id);
+    for (const scenario of ["completed_after_full_save", "completed_after_queue_only", "completion_before_link", "completion_after_link", "legacy_completed_concurrent"]) {
+      saved.push(await completedQueueRetryScenario(transport, scenario));
+      process.stdout.write(JSON.stringify({ completedQueueScenario: scenario, result: "passed" }) + "\n");
+    }
     const counts=await sql("select (select count(*) from wrong_answer_items)||':'||(select count(*) from review_queue_items)||':'||(select count(*) from learning_signal_events where source_type='app1_c3r_handoff')||':'||(select count(*) from learning_signal_events where source_type<>'app1_c3r_handoff')||':'||(select recurrence_count from recurrence_features)");
-    assert.equal(counts,"6:5:5:5:5");
+    assert.equal(counts,"11:10:10:10:10");
     const bindings=JSON.parse(await sql("select jsonb_agg(jsonb_build_object('due',q.raw_payload->>'dueAt','ordinal',q.derived_payload->'reviewUnitRecurrenceCount','topicCount',q.derived_payload->'recurrenceCount','journey',s.metadata_json)) from review_queue_items q join learning_signal_events s on s.metadata_json->>'reviewUnitId'=q.id::text where s.source_type='app1_c3r_handoff'"));
-    assert.equal(bindings.length,5);
+    assert.equal(bindings.length,10);
     for(const binding of bindings) {
       assert.equal(binding.ordinal,1);
       assert.equal(binding.due,"2026-09-07T00:00:00.000Z");
@@ -157,13 +165,13 @@ test("actual authenticated production constructor/service/repository recover rep
       assert.equal(binding.journey.masteryCreated,false);
       assert.equal(binding.journey.transferCreated,false);
     }
-    assert.deepEqual(bindings.map(b=>b.topicCount).sort(),[1,2,3,4,5]);
+    assert.deepEqual(bindings.map(b=>b.topicCount).sort((a,b)=>a-b),[1,2,3,4,5,6,7,8,9,10]);
     const derived=await sql("select coalesce(string_agg(metadata_json::text,''),'') from learning_signal_events");
     assert.equal(derived.includes(PRODUCTION_RAW_MARKER),false);
     await sql("delete from learning_signal_events; delete from usage_events; delete from review_queue_items; delete from wrong_answer_tags; delete from wrong_answer_notes; delete from recurrence_features; delete from wrong_answer_items; delete from profiles");
     await sql("delete from auth.users",false);
     assert.equal(await sql(`select ${[...tableNames,"auth.users"].map(table=>`(select count(*) from ${table})`).join("+")}`,false),"0");
-    process.stdout.write(JSON.stringify({ acceptance:"APP1_PRODUCTION_REPEAT_REPAIR_POSTGRESQL_ACCEPTED", previousTopicHistoryPreserved:true, repairCount:saved.length, queueCount:5, journeyCount:5, identicalAndConcurrentRetriesAccepted:true, delayedRetryPreservesOriginalD1:true, syntheticRowsAndUserCleaned:true })+"\n");
+    process.stdout.write(JSON.stringify({ acceptance:"APP1_PRODUCTION_REPEAT_REPAIR_POSTGRESQL_ACCEPTED", previousTopicHistoryPreserved:true, repairCount:saved.length, queueCount:10, journeyCount:10, completedQueueCases:5, currentPendingMatchesListReviewQueue:true, noCompletedH0Issued:true, legacyLinkNormalizationAccepted:true, identicalAndConcurrentRetriesAccepted:true, delayedRetryPreservesOriginalD1:true, syntheticRowsAndUserCleaned:true })+"\n");
   } finally {
     if(started) { docker(["rm","--force",container]); }
   }
@@ -429,7 +437,7 @@ test("authenticated APP-1 save reuses one Queue row and persists one bodyless C3
           d1DueAt: projection.d1DueAt,
           track: projection.track,
           c3rRoute: projection.c3rRoute,
-          state: projection.state,
+          linkKind: projection.linkKind,
           masteryCreated: false,
           transferCreated: false,
           containsRawContent: false,

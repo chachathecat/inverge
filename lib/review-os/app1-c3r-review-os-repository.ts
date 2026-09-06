@@ -22,7 +22,7 @@ export const APP1_C3R_REVIEW_OS_REPOSITORY_VERSION =
   "app1_c3r_review_os_repository.v1" as const;
 
 const JOURNEY_SOURCE_TYPE = "app1_c3r_handoff";
-const JOURNEY_TASK_TYPE = "c3r_d1_unaided_review";
+const JOURNEY_TASK_TYPE = "c3r_d1_link_record";
 
 function clientFor(userId: string) {
   requireSupabasePersistence(userId);
@@ -57,7 +57,7 @@ function normalizeTimestamp(value: unknown) {
   return Number.isFinite(parsed) ? new Date(parsed).toISOString() : null;
 }
 
-function expectedJourneyRow(projection: App1C3rJourneyProjectionV1) {
+function expectedJourneyRow(projection: App1C3rJourneyProjectionV1, legacy = false) {
   const metadataJson = sanitizeLearningSignalMetadata({
     contractVersion: APP1_C3R_REVIEW_OS_REPOSITORY_VERSION,
     adapterVersion: APP1_C3R_REVIEW_OS_ADAPTER_VERSION,
@@ -70,7 +70,7 @@ function expectedJourneyRow(projection: App1C3rJourneyProjectionV1) {
     d1DueAt: projection.d1DueAt,
     track: projection.track,
     c3rRoute: projection.c3rRoute,
-    state: projection.state,
+    ...(legacy ? { state: "REPAIRED_AWAITING_D1" } : { linkKind: projection.linkKind }),
     masteryCreated: false,
     transferCreated: false,
     containsRawContent: false,
@@ -85,11 +85,13 @@ function expectedJourneyRow(projection: App1C3rJourneyProjectionV1) {
     derived_tags: [
       "app1_c3r",
       projection.track.toLowerCase(),
-      "d1_unaided_review_required",
+      legacy ? "d1_unaided_review_required" : "d1_review_link_recorded",
     ],
     related_formulas: [],
-    next_task_type: JOURNEY_TASK_TYPE,
-    next_task: "D+1에 답을 보지 않고 보강한 연결을 다시 작성합니다.",
+    next_task_type: legacy ? "c3r_d1_unaided_review" : JOURNEY_TASK_TYPE,
+    next_task: legacy
+      ? "D+1에 답을 보지 않고 보강한 연결을 다시 작성합니다."
+      : "D+1 복습 연결 기록입니다. 현재 대기 여부는 Review Queue에서 확인합니다.",
     metadata_json: metadataJson,
     created_at: projection.createdAt,
   };
@@ -134,19 +136,43 @@ export function createApp1C3rReviewOsStoragePortV1(
           inserted,
         );
       }
-      const existingResult = await clientFor(userId)
-        .from("learning_signal_events")
-        .select(
-          "id, user_id, exam_mode, subject, source_type, derived_tags, related_formulas, next_task_type, next_task, metadata_json, created_at",
-        )
-        .eq("id", projection.journeyId)
-        .eq("user_id", userId)
-        .maybeSingle();
-      assertSupabaseOperation(
-        "app1-c3r-review-os.ensureJourney.selectExisting",
-        existingResult,
-      );
-      const existing = record(existingResult.data);
+      const readExisting = async () => {
+        const existingResult = await clientFor(userId)
+          .from("learning_signal_events")
+          .select(
+            "id, user_id, exam_mode, subject, source_type, derived_tags, related_formulas, next_task_type, next_task, metadata_json, created_at",
+          )
+          .eq("id", projection.journeyId)
+          .eq("user_id", userId)
+          .maybeSingle();
+        assertSupabaseOperation(
+          "app1-c3r-review-os.ensureJourney.selectExisting",
+          existingResult,
+        );
+        return record(existingResult.data);
+      };
+      let existing = await readExisting();
+      const legacy = expectedJourneyRow(projection, true);
+      if (existing &&
+          stableJson(comparableJourneyRow(existing)) === stableJson(comparableJourneyRow(legacy)) &&
+          normalizeTimestamp(existing.created_at) === projection.createdAt) {
+        // Normalize only the exact previous projection, under compare-and-swap.
+        // It was a link, not a durable H0 receipt or a second Queue state store.
+        // Concurrent recoveries converge; unrelated metadata drift is rejected.
+        const normalized = await clientFor(userId)
+          .from("learning_signal_events")
+          .update({
+            metadata_json: expected.metadata_json,
+            derived_tags: expected.derived_tags,
+            next_task_type: expected.next_task_type,
+            next_task: expected.next_task,
+          })
+          .eq("id", projection.journeyId)
+          .eq("user_id", userId)
+          .eq("metadata_json", JSON.stringify(existing.metadata_json));
+        assertSupabaseOperation("app1-c3r-review-os.ensureJourney.normalizeLink", normalized);
+        existing = await readExisting();
+      }
       if (
         !existing ||
         stableJson(comparableJourneyRow(existing)) !==

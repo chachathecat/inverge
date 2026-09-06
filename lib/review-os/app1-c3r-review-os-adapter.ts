@@ -49,7 +49,8 @@ export type App1C3rJourneyProjectionV1 = Readonly<{
   track: App1C3rHandoffCandidateV1["track"];
   c3rRoute: string;
   subject: string;
-  state: "REPAIRED_AWAITING_D1";
+  // Immutable linkage only. Current completion/visibility belongs to Queue.
+  linkKind: "APP1_REPAIR_TO_CANONICAL_D1";
   masteryCreated: false;
   transferCreated: false;
   containsRawContent: false;
@@ -237,69 +238,103 @@ export async function materializeApp1C3rReviewOsAdapterV1(input: Readonly<{
   const replay = readReplayPlan(input.item, input.userId);
   if (!replay) return null;
 
-  const queue = await input.storage.loadReviewQueueUnit({
-    userId: input.userId,
-    reviewUnitId: replay.queueId,
-    itemId: input.item.id,
-  });
-  if (!queue) reject("REVIEW_QUEUE_MISSING");
-  if (
-    queue.reviewUnitId !== replay.queueId ||
-    queue.userId !== input.userId ||
-    queue.itemId !== input.item.id ||
-    queue.subject !== input.item.subjectLabel ||
-    !["pending", "completed"].includes(queue.status) ||
-    !canonicalUtc(queue.dueAt) ||
-    !Number.isSafeInteger(queue.recurrenceCount) || queue.recurrenceCount < 1 ||
-    (replay.scheduleInput.reviewUnitRecurrenceCount === 1
-      ? queue.reviewUnitRecurrenceCount !== 1
-      : (queue.reviewUnitRecurrenceCount ?? queue.recurrenceCount) !== 1) ||
-    queue.dueAt !== exactD1QueueDueAt(replay)
-  ) {
-    reject("REVIEW_QUEUE_BINDING_CONFLICT");
-  }
+  const loadBoundQueue = async () => {
+    const queue = await input.storage.loadReviewQueueUnit({
+      userId: input.userId,
+      reviewUnitId: replay.queueId,
+      itemId: input.item.id,
+    });
+    if (!queue) reject("REVIEW_QUEUE_MISSING");
+    if (
+      queue.reviewUnitId !== replay.queueId ||
+      queue.userId !== input.userId ||
+      queue.itemId !== input.item.id ||
+      queue.subject !== input.item.subjectLabel ||
+      !["pending", "completed"].includes(queue.status) ||
+      !canonicalUtc(queue.dueAt) ||
+      !Number.isSafeInteger(queue.recurrenceCount) || queue.recurrenceCount < 1 ||
+      (replay.scheduleInput.reviewUnitRecurrenceCount === 1
+        ? queue.reviewUnitRecurrenceCount !== 1
+        : (queue.reviewUnitRecurrenceCount ?? queue.recurrenceCount) !== 1) ||
+      queue.dueAt !== exactD1QueueDueAt(replay)
+    ) {
+      reject("REVIEW_QUEUE_BINDING_CONFLICT");
+    }
+    return queue;
+  };
+  const initialQueue = await loadBoundQueue();
 
   const journeyId = deterministicUuid({
     domain: "APP1_C3R_JOURNEY_PROJECTION_V1",
     userId: input.userId,
     journeyKey: replay.candidate.journeyKey,
   });
-  const port: App1C3rHandoffPersistencePortV1 = Object.freeze({
-    async ensureJourney(journeyInput) {
-      const projection: App1C3rJourneyProjectionV1 = Object.freeze({
-        contractVersion: APP1_C3R_REVIEW_OS_ADAPTER_VERSION,
-        journeyId,
-        journeyKey: journeyInput.journeyKey,
-        app1ReceiptId: replay.learningSignalId,
-        userId: input.userId,
-        itemId: journeyInput.itemId,
-        repairRevisionId: journeyInput.repairRevisionId,
+  const projection: App1C3rJourneyProjectionV1 = Object.freeze({
+    contractVersion: APP1_C3R_REVIEW_OS_ADAPTER_VERSION,
+    journeyId,
+    journeyKey: replay.candidate.journeyKey,
+    app1ReceiptId: replay.learningSignalId,
+    userId: input.userId,
+    itemId: input.item.id,
+    repairRevisionId: replay.repairRevisionId,
+    reviewUnitId: initialQueue.reviewUnitId,
+    reviewUnitKey: replay.candidate.reviewUnitKey,
+    d1DueAt: initialQueue.dueAt,
+    track: replay.candidate.track,
+    c3rRoute: replay.candidate.c3rRoute,
+    subject: input.item.subjectLabel,
+    linkKind: "APP1_REPAIR_TO_CANONICAL_D1",
+    masteryCreated: false,
+    transferCreated: false,
+    containsRawContent: false,
+    createdAt: input.item.updatedAt,
+  });
+  const ensured = await input.storage.ensureJourneyProjection(projection);
+  if (!ensured || !["created", "existing"].includes(ensured.status)) {
+    reject("JOURNEY_PERSISTENCE_CONFLICT");
+  }
+  assertProjection(ensured.value, projection);
+  const value: DurableC3rJourneyV1 = Object.freeze({
+    journeyId,
+    journeyKey: projection.journeyKey,
+    itemId: projection.itemId,
+    repairRevisionId: projection.repairRevisionId,
+    track: projection.track,
+    c3rRoute: projection.c3rRoute,
+    durable: true,
+  });
+  // A Queue can complete while the link is being recovered. Re-read every
+  // binding after the last durable write; never infer visibility from a
+  // historical journey or a previously returned H0 receipt.
+  const queue = await loadBoundQueue();
+  const common = Object.freeze({
+    adapterVersion: APP1_C3R_REVIEW_OS_ADAPTER_VERSION,
+    queueReused: true as const,
+    duplicateQueueCreated: false as const,
+    dedicatedC3rEvidenceMutated: false as const,
+    queueStatusAuthority: "CANONICAL_REVIEW_QUEUE_SNAPSHOT" as const,
+  });
+  if (queue.status === "completed") {
+    return Object.freeze({
+      ...common,
+      outcome: "APP1_C3R_D1_ALREADY_COMPLETED" as const,
+      queueStatus: "completed" as const,
+      currentPending: false as const,
+      journeyStatus: ensured.status,
+      journey: value,
+      completedReviewUnit: Object.freeze({
         reviewUnitId: queue.reviewUnitId,
         reviewUnitKey: replay.candidate.reviewUnitKey,
-        d1DueAt: queue.dueAt,
-        track: journeyInput.track,
-        c3rRoute: journeyInput.c3rRoute,
-        subject: input.item.subjectLabel,
-        state: "REPAIRED_AWAITING_D1",
-        masteryCreated: false,
-        transferCreated: false,
-        containsRawContent: false,
-        createdAt: input.item.updatedAt,
-      });
-      const ensured = await input.storage.ensureJourneyProjection(projection);
-      if (!ensured || !["created", "existing"].includes(ensured.status)) {
-        reject("JOURNEY_PERSISTENCE_CONFLICT");
-      }
-      assertProjection(ensured.value, projection);
-      const value: DurableC3rJourneyV1 = Object.freeze({
+        itemId: queue.itemId,
         journeyId,
-        journeyKey: projection.journeyKey,
-        itemId: projection.itemId,
-        repairRevisionId: projection.repairRevisionId,
-        track: projection.track,
-        c3rRoute: projection.c3rRoute,
-        durable: true,
-      });
+        originalD1DueAt: queue.dueAt,
+      }),
+      masteryCreated: false as const,
+      transferCreated: false as const,
+    });
+  }
+  const port: App1C3rHandoffPersistencePortV1 = Object.freeze({
+    async ensureJourney() {
       return Object.freeze({ status: ensured.status, value });
     },
     async ensureD1ReviewUnit(reviewInput) {
@@ -341,10 +376,13 @@ export async function materializeApp1C3rReviewOsAdapterV1(input: Readonly<{
     port,
   });
   return Object.freeze({
-    adapterVersion: APP1_C3R_REVIEW_OS_ADAPTER_VERSION,
-    queueReused: true as const,
-    duplicateQueueCreated: false as const,
-    dedicatedC3rEvidenceMutated: false as const,
+    ...common,
+    queueStatus: "pending" as const,
+    currentPending: true as const,
     ...materialized,
   });
 }
+
+export type App1C3rReviewOsHandoffResultV1 = NonNullable<
+  Awaited<ReturnType<typeof materializeApp1C3rReviewOsAdapterV1>>
+>;

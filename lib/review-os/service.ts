@@ -474,6 +474,7 @@ function assertExistingApp1ReplayQueue(
   const derivedPayload = row.derived_payload as Record<string, unknown> | null;
   const storedCount = derivedPayload?.recurrenceCount;
   if (
+    (row.status !== "pending" && row.status !== "completed") ||
     !Number.isSafeInteger(storedCount) ||
     Number(storedCount) < 1 ||
     Number(storedCount) > maximumDurableRecurrenceCount
@@ -497,7 +498,9 @@ function assertExistingApp1ReplayQueue(
     stage: "alpha",
     source_submission_id: item.id,
     source_kind: "wrong_answer",
-    status: "pending",
+    // Completion changes current Queue state, not the sealed repair identity.
+    // Validate every immutable binding without reopening a completed row.
+    status: row.status,
     priority_score: plan.queue.priorityScore,
     raw_payload: {
       dueAt: materialized.dueAt,

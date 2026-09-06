@@ -51,6 +51,7 @@ type App1Phase =
   | "authority_required"
   | "completed"
   | "saved_without_queue"
+  | "saved_review_already_completed"
   | "failed";
 
 const SUBJECT_ACCESS: Readonly<Record<string, TrustedRepairSubject>> =
@@ -497,6 +498,7 @@ export function App1CaptureRepairLoop({
         | {
             ok: true;
             deduped?: boolean;
+            app1C3rHandoff?: import("@/lib/review-os/app1-c3r-review-os-adapter").App1C3rReviewOsHandoffResultV1;
             item: {
               id: string;
               updatedAt?: string;
@@ -560,6 +562,11 @@ export function App1CaptureRepairLoop({
       pendingSaveRef.current = null;
       setVerificationReceipt(null);
       setPersistedRecordId(payload.item.id);
+      if (payload.app1C3rHandoff?.outcome === "APP1_C3R_D1_ALREADY_COMPLETED") {
+        setNextReview(null);
+        setPhase("saved_review_already_completed");
+        return;
+      }
       let queueReceipt: App1NextReviewReceipt | null = null;
       try {
         const itemResponse = await fetch(
@@ -612,6 +619,7 @@ export function App1CaptureRepairLoop({
     authority_required: "권한 다시 확인",
     completed: "다음 복습",
     saved_without_queue: "복습 영수증 확인 필요",
+    saved_review_already_completed: "저장 확인 · 연결된 복습 처리 완료",
     failed: "불러오기 실패",
   }[phase];
 
@@ -888,6 +896,20 @@ export function App1CaptureRepairLoop({
               <V3ActionLink href="/app/review?mode=second">복습 대기로 이동</V3ActionLink>
               <V3ActionLink href="/app?mode=second" tone="secondary">오늘 할 일로 이동</V3ActionLink>
             </div>
+          </V3Surface>
+        </div>
+      ) : null}
+
+      {phase === "saved_review_already_completed" && persistedRecordId ? (
+        <div role="status" aria-live="polite" data-app1-review-already-completed data-app1-persistence-receipt="durable">
+          <V3Surface className="space-y-4">
+            <h2 className="v3-type-section ko-keep text-[var(--color-text-primary)]">복구 기록은 저장되어 있으며 연결된 D+1 복습은 이미 처리되었습니다</h2>
+            <p className="v3-type-body ko-keep text-[var(--color-text-secondary)]">
+              기존 완료 상태를 유지했습니다. 이 저장 재시도는 새 복습을 예약하거나 숙달·전이 성공을 판정하지 않습니다.
+            </p>
+            <V3ActionLink href={`/app/items/${encodeURIComponent(persistedRecordId)}?mode=second`}>
+              저장 기록 확인
+            </V3ActionLink>
           </V3Surface>
         </div>
       ) : null}
