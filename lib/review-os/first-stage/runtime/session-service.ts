@@ -217,6 +217,7 @@ export function createPrivateFirstStageSessionService(
     const saved = await load(ownerId, sessionId);
     const active = saved.state.attempts.find((item) => item.state === "in_progress");
     const latest = saved.state.attempts.at(-1);
+    const currentTime = Date.parse(requiredUtcInstant(now()));
     // Construct reference assistance only from a durably evaluated attempt.
     const explanation = !active && latest?.state === "evaluated" &&
       latest.evaluation?.evidenceEnvelope.reviewedFeedback.state === "reviewed_available"
@@ -230,13 +231,15 @@ export function createPrivateFirstStageSessionService(
       attempt: active ? { attemptId: active.attemptId, startedAt: active.startedAt }
         : latest ? { attemptId: latest.attemptId, decision: latest.evaluation?.decision } : null,
       explanation,
-      reviewTasks: saved.state.reviewTasks.map((task) => ({
-        reviewTaskId: task.reviewTaskId, dueAt: task.dueAt, status: task.status,
-        completedAt: task.completedAt,
-        retryAvailability: catalog.retryAvailability(task.questionReference,
+      reviewTasks: saved.state.reviewTasks.map((task) => {
+        const retryAvailability = catalog.retryAvailability(task.questionReference,
           saved.state.independentRetries.filter(retry => retry.reviewTaskId === task.reviewTaskId)
-            .map(retry => retry.questionReference.questionId)),
-      })),
+            .map(retry => retry.questionReference.questionId));
+        return { reviewTaskId: task.reviewTaskId, dueAt: task.dueAt, status: task.status,
+          completedAt: task.completedAt, retryAvailability,
+          canStartRetry: task.status === "pending" && !active && retryAvailability === "available" &&
+            currentTime >= Date.parse(task.dueAt) };
+      }),
       masteryClaim: false as const, transferEvidence: false as const,
     };
   }

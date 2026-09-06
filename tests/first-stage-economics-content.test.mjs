@@ -155,3 +155,25 @@ test("modified practice question is graded by its different reviewed answer, not
   assert.equal(completed.state.attempts.at(-1).evaluation.decision, "correct");
   assert.equal(completed.state.reviewTasks[0].status, "completed");
 });
+
+test("actual HTTP retry eligibility uses server due time; early/stale client attempts cannot open a retry", async () => {
+  const h = harness({ catalog: economicsCatalog }), route = privateRoute(h);
+  const { sessionId, attemptId } = await start(h);
+  h.setClock(SUBMIT);
+  await h.service.execute(OWNER, sessionId, submission(attemptId));
+  const get = async () => (await (await route.GET(new Request(`${URL}?sessionId=${sessionId}`))).json()).view;
+  const initial = await get(), task = initial.reviewTasks[0];
+  assert.equal(task.canStartRetry, false); assert.equal(task.retryAvailability, "available");
+  h.setClock(new Date(Date.parse(task.dueAt) - 1).toISOString());
+  assert.equal((await get()).reviewTasks[0].canStartRetry, false);
+  const retry = { sessionId, command: { action: "retry", requestId: "due-boundary",
+    expectedRevision: 3, reviewTaskId: task.reviewTaskId } };
+  assert.equal((await route.POST(post(retry))).status, 409);
+  assert.deepEqual(await get(), initial); // saved reference and pending state are preserved
+  h.setClock(task.dueAt);
+  assert.equal((await get()).reviewTasks[0].canStartRetry, true);
+  const started = await (await route.POST(post(retry))).json();
+  assert.equal(started.view.reviewTasks[0].status, "retry_active");
+  assert.equal(started.view.reviewTasks[0].canStartRetry, false);
+  assert.deepEqual(await (await route.POST(post(retry))).json(), started);
+});

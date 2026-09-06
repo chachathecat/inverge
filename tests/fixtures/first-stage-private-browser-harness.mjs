@@ -69,10 +69,17 @@ export async function verifyPrivateBrowser({ route, clock, failNextWrite }) {
     const sessionId = new URL(reconnectUrl).searchParams.get("sessionId");
     assert.ok(sessionId);
     const dueAt = await page.locator("time").getAttribute("datetime");
+    const retryButton = page.getByRole("button", { name: "예정 시각 이후 새 문제로 복습" });
+    assert.equal(await retryButton.isDisabled(), true);
+    await retryButton.evaluate(button => button.click());
+    assert.equal(await page.getByRole("region", { name: "저장된 응답 해설" }).count(), 1);
     await page.reload();
     await page.getByRole("region", { name: "저장된 응답 해설" }).waitFor();
     assert.equal(await page.locator("time").getAttribute("datetime"), dueAt);
     clock.set(dueAt);
+    await page.reload();
+    await page.getByRole("region", { name: "저장된 응답 해설" }).waitFor();
+    assert.equal(await retryButton.isEnabled(), true);
     await page.getByRole("button", { name: "예정 시각 이후 새 문제로 복습" }).click();
     await page.getByRole("radio").nth(1).check();
     clock.advance(60_000);

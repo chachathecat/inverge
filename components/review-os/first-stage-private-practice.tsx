@@ -165,8 +165,10 @@ export function FirstStagePrivatePractice() {
             task.status === "retry_active" ? <p>독립 재시도 진행 중 — 위 문제를 이어서 풀어주세요.</p> : <>
               <p>복습 예정 시각: <time dateTime={task.dueAt}>{task.dueAt}</time></p>
               {task.retryAvailability === "exhausted" ? <p>복습 필요 — 검토된 새 재시도 문항이 부족합니다. 현재 기록은 보존됩니다.</p> :
-              <button type="button" className={`${BUTTON} mt-3`} disabled={busy || Boolean(view.question)}
+              <button type="button" className={`${BUTTON} mt-3`} disabled={busy || !task.canStartRetry}
                 onClick={() => command("retry", { reviewTaskId: task.reviewTaskId })}>예정 시각 이후 새 문제로 복습</button>}
+              {task.retryAvailability === "available" && !task.canStartRetry && !view.question &&
+                <p className="mt-2 text-xs text-slate-500">아직 복습 시각 전입니다. 예정 시각 이후 서버 기록을 다시 불러오세요.</p>}
             </>}
         </section>)}
         {retryable && <button type="button" className={BUTTON} disabled={busy}

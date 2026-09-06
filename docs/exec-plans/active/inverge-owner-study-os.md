@@ -85,9 +85,21 @@
 - Final local candidate: typecheck, changed-file lint and build passed. The
   existing unrelated NFT trace warning remains. The isolated actual-loader
   PostgreSQL/browser acceptance passed after the final adapter evidence binding.
-- Next exact action: publish the single batched candidate after manifest/JSON/
-  diff checks, then consume required native CI and one fresh exact-head review.
+- Next exact action: publish the batched D+1-eligibility correction after local
+  validation, then consume required native CI and one fresh exact-head review.
   Do not claim this blocked-stock candidate completes the economics learner flow.
+- Native delivery update: PR #884 first head `5653dcd4d26e09ca068d1f0dd43b2f0ad9eaba44`
+  passed all nine required checks. Automatic review 5125713835 reported one P2:
+  the D+1 button allowed an early request that the kernel correctly rejected.
+  The correction projects server-clock `canStartRetry` from the durable task and
+  available stock, disables the early CTA and explicitly requests a refresh when
+  due. Actual HTTP and PostgreSQL/browser regressions cover pre-due rejection,
+  preserved explanation, exact-boundary availability and idempotent retry. The
+  earlier native results are not claimed for the corrected head; fresh checks
+  and exact-head independent review remain required. No content approval exists.
+  Correction-local evidence: 51 related tests plus one isolated PostgreSQL/browser
+  acceptance passed (52 total), with typecheck, changed-file lint, build and diff
+  checks passing. No remote mutation or additional source scope is included.
 - Not yet verified: actual login/deployed Next acceptance, exact-head native
   CI/review, actual human-approved content loading, human review or subject completeness.
 - No runtime flag, Production/public service, remote DB, provider, payment or
