@@ -18,6 +18,7 @@ const PRODUCTION_SCHEDULE_INPUT = Object.freeze({
   confidence: "낮음",
   mistakeType: "논점 누락",
   recurrenceCount: 1,
+  reviewUnitRecurrenceCount: 1,
   hasWeakParagraph: true,
   now: new Date(SCHEDULED_AT),
   nextReviewDateOverride: null,
@@ -146,7 +147,7 @@ test("APP-1 production scheduling starts without client authority and seals one 
     () =>
       resolveApp1FirstRecurrenceD1Schedule({
         ...PRODUCTION_SCHEDULE_INPUT,
-        recurrenceCount: 2,
+        reviewUnitRecurrenceCount: 2,
       }),
     /app1-first-recurrence-required/u,
   );

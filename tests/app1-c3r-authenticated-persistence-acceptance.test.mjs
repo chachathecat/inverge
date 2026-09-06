@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
-import { execFileSync, spawnSync } from "node:child_process";
+import { execFileSync, spawn, spawnSync } from "node:child_process";
 import test from "node:test";
+import { productionHarness, seedRows, OWNER_ID, RAW_MARKER as PRODUCTION_RAW_MARKER } from "./fixtures/app1-production-persistence-harness.mjs";
 
 import {
   App1C3rReviewOsAdapterError,
@@ -23,9 +24,149 @@ const PRODUCTION_SCHEDULE_INPUT = Object.freeze({
   confidence: "낮음",
   mistakeType: "논점 누락",
   recurrenceCount: 1,
+  reviewUnitRecurrenceCount: 1,
   hasWeakParagraph: true,
   now: new Date(UPDATED_AT),
   nextReviewDateOverride: null,
+});
+
+test("actual authenticated production constructor/service/repository recover repeat repairs in isolated PostgreSQL", { timeout: 240_000 }, async () => {
+  const container = `inverge-app1-production-${process.pid}-${Date.now()}`;
+  let started = false;
+  const sql = (statement, authenticated = true) => new Promise((resolve, reject) => {
+    const child = spawn("docker", ["exec", "-i", container, "psql", "-h", "127.0.0.1", "-U", "postgres", "-d", "postgres", "-X", "-v", "ON_ERROR_STOP=1", "-q", "-At"], { windowsHide: true });
+    let out = "", err = "";
+    child.stdout.on("data", b => { out += b; });
+    child.stderr.on("data", b => { err += b; });
+    child.on("error", reject);
+    child.on("close", code => code === 0 ? resolve(out.trim()) : reject(new Error(err)));
+    child.stdin.end("\\set VERBOSITY verbose\n" + (authenticated
+      ? `begin; set local role authenticated; set local "request.jwt.claim.sub" = ${sqlLiteral(OWNER_ID)}; ${statement}; commit;`
+      : statement));
+  });
+  const tableNames = Object.keys(seedRows());
+  const identifier = value => { assert.match(value, /^[a-z_]+$/); return `"${value}"`; };
+  const expression = field => {
+    if (field.includes("->>")) { const [column, key] = field.split("->>"); return `${identifier(column)}->>${sqlLiteral(key)}`; }
+    return identifier(field);
+  };
+  const literal = value => value === null ? "null" : typeof value === "object" ? jsonLiteral(value) : sqlLiteral(value);
+  const transport = async q => {
+    assert.ok(tableNames.includes(q.table));
+    const table = `public.${identifier(q.table)}`;
+    const predicates = q.filters.map(([field, operator, value]) => operator === "in"
+      ? `${expression(field)} in (${value.map(literal).join(",")})`
+      : `${expression(field)} ${operator === "eq" ? "=" : operator === "lt" ? "<" : ">="} ${literal(value)}`);
+    const where = predicates.length ? " where " + predicates.join(" and ") : "";
+    try {
+      if (q.operation === "insert") {
+        const columns = Object.keys(q.values);
+        await sql(`insert into ${table} (${columns.map(identifier).join(",")}) select ${columns.map(identifier).join(",")} from jsonb_populate_record(null::${table}, ${jsonLiteral(q.values)})`);
+        return { data: null, error: null };
+      }
+      if (q.operation === "update") {
+        await sql(`update ${table} set ${Object.entries(q.values).map(([key,value]) => `${identifier(key)}=${literal(value)}`).join(",")}${where}`);
+        return { data: null, error: null };
+      }
+      const count = q.count ? Number(await sql(`select count(*) from ${table}${where}`)) : undefined;
+      if (q.head) return { count, data: null, error: null };
+      const columns = q.columns === "*" ? "*" : q.columns.split(",").map(c => identifier(c.trim())).join(",");
+      const ordering = q.orders ? " order by " + q.orders.map(([field,asc]) => `${expression(field)} ${asc ? "asc" : "desc"}`).join(",") : "";
+      const paging = q.range ? ` limit ${q.range[1]-q.range[0]+1} offset ${q.range[0]}` : q.limit !== undefined ? ` limit ${q.limit}` : "";
+      const rows = JSON.parse(await sql(`select coalesce(jsonb_agg(to_jsonb(r)), '[]'::jsonb) from (select ${columns} from ${table}${where}${ordering}${paging}) r`));
+      return { data: q.single ? rows[0] ?? null : rows, count, error: null };
+    } catch (error) {
+      if (/23505/.test(error.message)) return { data: null, error: { code: "23505" } };
+      throw error;
+    }
+  };
+  try {
+    docker(["run", "--detach", "--name", container, "--platform", ORACLE_PLATFORM, "--network", "none", "--tmpfs", "/var/lib/postgresql/data:rw,noexec,nosuid,nodev,size=536870912", "--env", "POSTGRES_HOST_AUTH_METHOD=trust", ORACLE_IMAGE]);
+    started = true;
+    let ready = false;
+    for (let attempt=0; attempt<60; attempt++) {
+      // The image's temporary initialization server accepts Unix sockets only.
+      const probe=spawnSync("docker", ["exec", container, "pg_isready", "-h", "127.0.0.1", "-U", "postgres"], { windowsHide: true });
+      if(probe.status===0) { ready = true; break; }
+      await new Promise(resolve => setTimeout(resolve,250));
+    }
+    assert.equal(ready, true, "isolated PostgreSQL final server must be ready");
+    await sql(`
+      create schema auth; create role authenticated nologin;
+      create table auth.users (id uuid primary key, email text);
+      create function auth.uid() returns uuid language sql stable as $$ select nullif(current_setting('request.jwt.claim.sub',true),'')::uuid $$;
+      create table profiles(user_id uuid primary key references auth.users(id), email text, invite_status text, entitlement_tier text, updated_at timestamptz default now());
+      create table wrong_answer_items(id uuid primary key, user_id uuid references auth.users(id), exam_name text, subject_label text, source_type text, source_label text, problem_title text, problem_identifier text, raw_question_text text, raw_answer_text text, correct_answer text, user_answer text, user_reason_text text, user_reason_preset text, confidence text, time_spent_seconds numeric, dedupe_key text, processing_status text, raw_payload jsonb, derived_payload jsonb, created_at timestamptz default now(), updated_at timestamptz default now(), unique(user_id,dedupe_key));
+      create table wrong_answer_notes(id uuid primary key, wrong_answer_item_id uuid references wrong_answer_items(id), ai_summary text, key_distinction text, review_checkpoint text, next_try_tip text, generation_source text, created_at timestamptz default now());
+      create table wrong_answer_tags(id uuid primary key, wrong_answer_item_id uuid references wrong_answer_items(id), topic_tag text, mistake_type text, task_type text, classifier_source text, confidence numeric, recurrence_candidate boolean, created_at timestamptz default now());
+      create table recurrence_features(id uuid primary key, user_id uuid references auth.users(id), exam_name text, subject_label text, topic_tag text, mistake_type text, recurrence_count integer, last_seen_at timestamptz, risk_level text, created_at timestamptz default now(), updated_at timestamptz default now(), unique(user_id,exam_name,subject_label,topic_tag,mistake_type));
+      create table review_queue_items(id uuid primary key, user_id uuid references auth.users(id), exam_id text, subject_id text, stage text, source_submission_id uuid references wrong_answer_items(id), source_kind text, status text, priority_score numeric, raw_payload jsonb, derived_payload jsonb, created_at timestamptz default now(), updated_at timestamptz default now());
+      create table learning_signal_events(id uuid primary key, user_id uuid references auth.users(id), exam_mode text, subject text, source_type text, derived_tags text[], related_formulas text[], next_task_type text, next_task text, metadata_json jsonb, created_at timestamptz default now());
+      create table usage_events(id uuid primary key, user_id uuid references auth.users(id), event_name text, entity_type text, entity_id uuid, metadata_json jsonb, created_at timestamptz default now());
+      grant usage on schema auth,public to authenticated; grant select on auth.users to authenticated;
+      grant select,insert,update,delete on all tables in schema public to authenticated;
+      ${tableNames.map(table => `alter table ${table} enable row level security; alter table ${table} force row level security; create policy own_row on ${table} to authenticated using (${table === "wrong_answer_notes" || table === "wrong_answer_tags" ? "exists(select 1 from wrong_answer_items i where i.id=wrong_answer_item_id and i.user_id=auth.uid())" : "user_id=auth.uid()"});`).join("\n")}
+      insert into auth.users values (${sqlLiteral(OWNER_ID)},'synthetic-owner@example.invalid');
+    `, false);
+    for (const [table, rows] of Object.entries(seedRows())) for (const values of rows) await transport({ table, values, operation: "insert", filters: [] });
+    assert.equal(await sql("select current_user || ':' || auth.uid()"), `authenticated:${OWNER_ID}`);
+    const app=productionHarness(transport);
+    const saved=[];
+    const first=await app.save(await app.command("postgres-prior"));
+    assert.equal(first.status,200,JSON.stringify(first.body)); saved.push(first.body.item.id);
+    for (const table of ["wrong_answer_items", "review_queue_items"]) {
+      let fail=true;
+      const interrupted=productionHarness(transport, { afterQuery(q,result) {
+        if(fail && q.operation==="insert" && q.table===table && !result.error) { fail=false; throw new Error("synthetic-response-loss"); }
+      } });
+      const command=await app.command(`postgres-${table}`);
+      assert.equal((await interrupted.save(command)).status,500);
+      const results=await Promise.all([app.save(command),productionHarness(transport).save(command)]);
+      for(const result of results) assert.equal(result.status,200,JSON.stringify(result.body));
+      assert.equal(results[0].body.item.id,results[1].body.item.id); saved.push(results[0].body.item.id);
+      assert.equal((await app.save(command)).status,200);
+    }
+    // Also exercise competing first inserts in independent worker graphs.
+    const command=await app.command("postgres-concurrent-new");
+    const results=await Promise.all([app.save(command),productionHarness(transport, { now: "2026-09-06T10:00:01.000Z" }).save(command)]);
+    for(const result of results) assert.equal(result.status,200,JSON.stringify(result.body));
+    assert.equal(results[0].body.item.id,results[1].body.item.id); saved.push(results[0].body.item.id);
+    // A pending repair remains resumable after its original D+1 and receipt
+    // expiry. Recover that overdue unit; do not schedule a new later D+1.
+    let loseQueueResponse = true;
+    const interrupted = productionHarness(transport, { afterQuery(q, result) {
+      if (loseQueueResponse && q.table === "review_queue_items" && q.operation === "insert" && !result.error) {
+        loseQueueResponse = false; throw new Error("synthetic-delayed-queue-response-loss");
+      }
+    } });
+    const delayedCommand = await app.command("postgres-delayed-retry");
+    assert.equal((await interrupted.save(delayedCommand)).status, 500);
+    const lateApp = productionHarness(transport, { now: "2026-09-08T10:00:00.000Z" });
+    const delayed = await lateApp.save(delayedCommand);
+    assert.equal(delayed.status, 200, JSON.stringify(delayed.body));
+    assert.equal((await lateApp.save(delayedCommand)).status, 200);
+    saved.push(delayed.body.item.id);
+    const counts=await sql("select (select count(*) from wrong_answer_items)||':'||(select count(*) from review_queue_items)||':'||(select count(*) from learning_signal_events where source_type='app1_c3r_handoff')||':'||(select count(*) from learning_signal_events where source_type<>'app1_c3r_handoff')||':'||(select recurrence_count from recurrence_features)");
+    assert.equal(counts,"6:5:5:5:5");
+    const bindings=JSON.parse(await sql("select jsonb_agg(jsonb_build_object('due',q.raw_payload->>'dueAt','ordinal',q.derived_payload->'reviewUnitRecurrenceCount','topicCount',q.derived_payload->'recurrenceCount','journey',s.metadata_json)) from review_queue_items q join learning_signal_events s on s.metadata_json->>'reviewUnitId'=q.id::text where s.source_type='app1_c3r_handoff'"));
+    assert.equal(bindings.length,5);
+    for(const binding of bindings) {
+      assert.equal(binding.ordinal,1);
+      assert.equal(binding.due,"2026-09-07T00:00:00.000Z");
+      assert.equal(binding.journey.d1DueAt,binding.due);
+      assert.equal(binding.journey.masteryCreated,false);
+      assert.equal(binding.journey.transferCreated,false);
+    }
+    assert.deepEqual(bindings.map(b=>b.topicCount).sort(),[1,2,3,4,5]);
+    const derived=await sql("select coalesce(string_agg(metadata_json::text,''),'') from learning_signal_events");
+    assert.equal(derived.includes(PRODUCTION_RAW_MARKER),false);
+    await sql("delete from learning_signal_events; delete from usage_events; delete from review_queue_items; delete from wrong_answer_tags; delete from wrong_answer_notes; delete from recurrence_features; delete from wrong_answer_items; delete from profiles");
+    await sql("delete from auth.users",false);
+    assert.equal(await sql(`select ${[...tableNames,"auth.users"].map(table=>`(select count(*) from ${table})`).join("+")}`,false),"0");
+    process.stdout.write(JSON.stringify({ acceptance:"APP1_PRODUCTION_REPEAT_REPAIR_POSTGRESQL_ACCEPTED", previousTopicHistoryPreserved:true, repairCount:saved.length, queueCount:5, journeyCount:5, identicalAndConcurrentRetriesAccepted:true, delayedRetryPreservesOriginalD1:true, syntheticRowsAndUserCleaned:true })+"\n");
+  } finally {
+    if(started) { docker(["rm","--force",container]); }
+  }
 });
 const PRODUCTION_SCHEDULE = resolveApp1FirstRecurrenceD1Schedule(
   PRODUCTION_SCHEDULE_INPUT,

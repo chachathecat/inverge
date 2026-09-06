@@ -61,9 +61,9 @@ const sharedRepositorySource = fs.readFileSync(path.join(root,
   "lib/review-os/repository.ts"), "utf8");
 const productionAccessBlobs = Object.freeze({
   // The original C3R-P identity remains historical Git evidence. This entry
-  // freezes the audited APP-1 successor; future access changes still require
+  // freezes the audited APP-1 repeat-repair retry successor; future access changes still require
   // an explicit identity update and semantic audit.
-  "lib/review-os/repository.ts": "451bfd918cc8abc72cfb4ca152b9b39f6b0573af",
+  "lib/review-os/repository.ts": "287af612ef296e7a7dd0bf91b4fd5e1238288157",
   "lib/review-os/server.ts": "429085a06c3104aa66c49b272738d53f00318d8a",
   "app/app/layout.tsx": "215ec312e2102d39332eeb47e2cc3b446ad78d19",
   "app/app/c3r-p/page.tsx": "1183828115a8a0ef0fb04c5d9c0e42a8ae5bd240",
@@ -847,6 +847,24 @@ test("disposable profile fixture rejects non-local, non-UUID, duplicate and inco
 });
 
 test("disposable fixture leaves production access code and frozen identities unchanged", () => {
+  // Owner's APP-1 retry exception changes only unique-insert recovery and the
+  // recurrence snapshot CAS. Rebinding that file must not relax access code.
+  const priorRepository = execFileSync("git", ["show", "451bfd918cc8abc72cfb4ca152b9b39f6b0573af"], {
+    cwd: root, encoding: "utf8",
+  });
+  for (const [start, end] of [
+    [0, "  async insertWrongAnswerItem("],
+    ["  async getWrongAnswerItem(", "  async ensureApp1WrongAnswerItemRecurrenceSnapshot("],
+    ["  async listReviewQueue(", null],
+  ]) {
+    const section = source => {
+      const from = start === 0 ? 0 : source.indexOf(start);
+      const to = end === null ? source.length : source.indexOf(end, from);
+      assert.ok(from >= 0 && to > from);
+      return source.slice(from, to);
+    };
+    assert.equal(section(sharedRepositorySource), section(priorRepository));
+  }
   for (const [file, expectedBlob] of Object.entries(productionAccessBlobs)) {
     assert.equal(execFileSync("git", ["hash-object", file], { cwd: root, encoding: "utf8" }).trim(),
       expectedBlob, file);

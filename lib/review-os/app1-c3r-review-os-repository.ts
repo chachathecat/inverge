@@ -184,6 +184,7 @@ export function createApp1C3rReviewOsStoragePortV1(
       const derivedPayload = record(row.derived_payload);
       const dueAt = normalizeTimestamp(rawPayload?.dueAt);
       const recurrenceCount = derivedPayload?.recurrenceCount;
+      const reviewUnitRecurrenceCount = derivedPayload?.reviewUnitRecurrenceCount;
       if (
         row.id !== input.reviewUnitId ||
         row.user_id !== userId ||
@@ -194,7 +195,9 @@ export function createApp1C3rReviewOsStoragePortV1(
         row.source_kind !== "wrong_answer" ||
         !["pending", "completed"].includes(String(row.status)) ||
         !dueAt ||
-        recurrenceCount !== 1
+        !Number.isSafeInteger(recurrenceCount) || Number(recurrenceCount) < 1 ||
+        (reviewUnitRecurrenceCount === undefined
+          ? recurrenceCount !== 1 : reviewUnitRecurrenceCount !== 1)
       ) {
         throw new Error("app1-c3r-review-os:review-unit-binding-conflict");
       }
@@ -206,6 +209,9 @@ export function createApp1C3rReviewOsStoragePortV1(
         status: row.status as "pending" | "completed",
         dueAt,
         recurrenceCount: Number(recurrenceCount),
+        ...(reviewUnitRecurrenceCount === undefined ? {} : {
+          reviewUnitRecurrenceCount: Number(reviewUnitRecurrenceCount),
+        }),
       });
     },
   });

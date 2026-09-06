@@ -105,6 +105,7 @@ import type { S233aReviewRuntimeDependencies } from "@/lib/review-os/s233a-types
 
 const globalCache = globalThis as typeof globalThis & {
   __reviewOsGenerationLocks?: Map<string, boolean>;
+  __app1PersistenceRequests?: Map<string, Promise<{ item: WrongAnswerItemRecord; deduped: boolean }>>;
 };
 
 const APP1_POST_INSERT_REPLAY_VERSION = "App1PostInsertReplayV1" as const;
@@ -151,6 +152,7 @@ type App1PostInsertReplayPlanV1 = Readonly<{
       hasWeakParagraph: boolean;
       scheduledAt: string;
       nextReviewDateOverride: string | null;
+      reviewUnitRecurrenceCount?: 1;
     }>;
     derivedPayloadBase: Record<string, unknown>;
   }>;
@@ -369,7 +371,11 @@ function parseApp1ReplayPlan(
       "mode",
       "nextReviewDateOverride",
       "scheduledAt",
+      ...(Object.hasOwn(plan.queue?.scheduleInput ?? {}, "reviewUnitRecurrenceCount")
+        ? ["reviewUnitRecurrenceCount"] : []),
     ]) ||
+    (Object.hasOwn(plan.queue?.scheduleInput ?? {}, "reviewUnitRecurrenceCount") &&
+      plan.queue?.scheduleInput?.reviewUnitRecurrenceCount !== 1) ||
     !["first", "second"].includes(String(plan.queue?.scheduleInput?.mode)) ||
     typeof plan.queue?.scheduleInput?.isCorrect !== "boolean" ||
     !["낮음", "중간", "높음"].includes(
@@ -430,6 +436,7 @@ function materializeApp1ReplayQueue(
     confidence: scheduleInput.confidence,
     mistakeType: scheduleInput.mistakeType,
     recurrenceCount,
+    reviewUnitRecurrenceCount: scheduleInput.reviewUnitRecurrenceCount ?? 1,
     hasWeakParagraph: scheduleInput.hasWeakParagraph,
     now: new Date(scheduleInput.scheduledAt),
     nextReviewDateOverride: null,
@@ -448,6 +455,7 @@ function materializeApp1ReplayQueue(
     derivedPayload: Object.freeze({
       ...plan.queue.derivedPayloadBase,
       recurrenceCount,
+      reviewUnitRecurrenceCount: 1,
       schedulingPolicy: schedule.policy,
       retryDueAt: schedule.retryDueAt,
       followUpReviewAt: schedule.followUpReviewAt,
@@ -473,6 +481,14 @@ function assertExistingApp1ReplayQueue(
     throw new Error("review-os:app1-replay-authority-conflict");
   }
   const materialized = materializeApp1ReplayQueue(plan, Number(storedCount));
+  const expectedDerivedPayload: Record<string, unknown> = { ...materialized.derivedPayload };
+  // Previously completed first-history plans predate the separate ordinal.
+  // Their sealed identity and exact D+1 remain required; new/recovered rows
+  // always persist the explicit ordinal, including old item-only failures.
+  if (plan.queue.scheduleInput.reviewUnitRecurrenceCount === undefined &&
+      derivedPayload?.reviewUnitRecurrenceCount === undefined && storedCount === 1) {
+    delete expectedDerivedPayload.reviewUnitRecurrenceCount;
+  }
   const expected = {
     id: plan.queueId,
     user_id: userId,
@@ -487,7 +503,7 @@ function assertExistingApp1ReplayQueue(
       dueAt: materialized.dueAt,
       reviewReason: plan.queue.reviewReason,
     },
-    derived_payload: materialized.derivedPayload,
+    derived_payload: expectedDerivedPayload,
   };
   if (stableApp1Json(row) !== stableApp1Json(expected)) {
     throw new Error("review-os:app1-replay-authority-conflict");
@@ -1661,14 +1677,24 @@ export class ReviewOsService {
             });
           }
         },
-        execute: ({ input, expiredReplayOnly }) =>
-          expiredReplayOnly
+        execute: ({ input, expiredReplayOnly }) => {
+          // Coalesce identical authorized work within this process. Database
+          // identities and sealed winner plans remain authoritative across workers.
+          const requests = globalCache.__app1PersistenceRequests ??= new Map();
+          const key = app1Sha256({ userId, input, expiredReplayOnly });
+          const existing = requests.get(key);
+          if (existing) return existing;
+          const pending = (expiredReplayOnly
             ? this.resumeExistingApp1RepairAfterExpiredAuthority(
                 userId,
                 email,
                 input,
               )
-            : this.createWrongAnswerItemAfterAuthority(userId, email, input),
+            : this.createWrongAnswerItemAfterAuthority(userId, email, input)
+          ).finally(() => { if (requests.get(key) === pending) requests.delete(key); });
+          requests.set(key, pending);
+          return pending;
+        },
       });
     } catch (error) {
       translateApp1TrustedRepairAccessError(error);
@@ -1836,6 +1862,7 @@ export class ReviewOsService {
             confidence: normalizedInput.confidence,
             mistakeType: artifacts.tags.mistakeType,
             recurrenceCount,
+            reviewUnitRecurrenceCount: 1,
             hasWeakParagraph: scheduleHasWeakParagraph,
             now: scheduleReference,
             nextReviewDateOverride: input.nextReviewDate ?? null,
@@ -2208,6 +2235,7 @@ export class ReviewOsService {
               mistakeType: artifacts.tags.mistakeType,
               hasWeakParagraph: scheduleHasWeakParagraph,
               scheduledAt: scheduleReference.toISOString(),
+              reviewUnitRecurrenceCount: 1,
               nextReviewDateOverride:
                 app1D1Schedule?.sealedNextReviewDateOverride ??
                 input.nextReviewDate ??
@@ -2355,7 +2383,12 @@ export class ReviewOsService {
       if (!item) throw new Error("review-os-item-missing-after-insert");
 
       if (app1ReplayPlan) {
-        await completeApp1PostInsertReplay(userId, item, app1ReplayPlan);
+        // A simultaneous worker may have won the unique item insert. Resume
+        // only that persisted, authority-checked plan, including its clock.
+        const persistedPlan = parseApp1ReplayPlan(
+          item.rawPayload[APP1_REPLAY_SNAPSHOT_KEY], replayAuthority, item,
+        );
+        await completeApp1PostInsertReplay(userId, item, persistedPlan);
         const completedItem = await reviewOsRepository.getWrongAnswerItem(
           userId,
           item.id,

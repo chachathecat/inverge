@@ -44,8 +44,8 @@ creates no separate Seven Exams PR.
 
 APP-1 repair may materialize one bodyless C3R journey projection only after
 the existing user-owned Review Queue row is loaded and its item, revision,
-subject, route, recurrence and exact D+1 due-time bindings agree. A later,
-immediate or repeated recurrence may not be relabeled as D+1. The Queue row is
+subject, route, review-unit ordinal and exact D+1 due-time bindings agree. A
+later or immediate review unit may not be relabeled as the first D+1. The Queue row is
 reused and is never inserted or updated by the adapter. Identical retry reuses
 the same deterministic journey and Queue identity. Missing Queue or any
 binding drift fails closed.
@@ -57,6 +57,22 @@ binding into the resumable replay plan used to create or reuse the canonical
 Queue row. The APP-1 to C3R adapter accepts only the same sealed Queue identity
 and due time. A client-authored override, a non-first recurrence or any drift
 between replay plan, Queue and journey fails closed before handoff.
+
+The first recurrence belongs to this specific repair, not to the learner's
+cumulative topic/mistake history. The server seals `reviewUnitRecurrenceCount: 1`
+while preserving the independent accumulated `recurrenceCount`; existing topic
+history is never reset and ordinary Review OS recurrence policy is unchanged.
+Each new repair receives its own canonical first D+1. Partial-save, completed-save
+and simultaneous identical retries reuse the persisted winner's sealed plan,
+item, Queue, learning signal and journey. Legacy sealed plans are validated
+without rewriting their authority or erasing their prior history.
+
+The 2026-09-06 Owner continuation permits corrections and regression corrections
+only for this APP-1 P1 and its directly coupled save, schedule and retry paths,
+including a scoped exception to source-correction and review-cycle counts.
+The resumed live head is `5e9858a808a4dbb9f042725cbee8d02ce78e1155`, tree
+`6163b521d50b75cf1ce679117fb70184d6804108`. This exception changes no general
+delivery policy, adds no feature scope and authorizes no Ready or merge action.
 
 APP-1 repair creates neither mastery nor transfer Evidence. Raw answer,
 question, OCR, prompt and learner bodies remain outside derived metadata.

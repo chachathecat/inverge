@@ -870,6 +870,15 @@ export class ReviewOsRepository {
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     });
+    if (exactItemId && result.error?.code === "23505") {
+      const existing = await this.findExistingByDedupe(
+        userId, this.createDedupeKey(userId, input),
+      );
+      if (!existing || existing.id !== exactItemId) {
+        throw new Error("review-os:app1-replay-authority-conflict");
+      }
+      return existing;
+    }
     assertSupabaseOperation("review-os.insertWrongAnswerItem", result);
     return this.getWrongAnswerItem(userId, id);
   }
@@ -1358,7 +1367,8 @@ export class ReviewOsRepository {
         updated_at: new Date().toISOString(),
       })
       .eq("user_id", userId)
-      .eq("id", itemId);
+      .eq("id", itemId)
+      .eq("derived_payload->>recurrenceCount", "1");
     assertSupabaseOperation(
       "review-os.ensureApp1WrongAnswerItemRecurrenceSnapshot.update",
       updateResult,

@@ -193,14 +193,20 @@ export function resolveApp1FirstRecurrenceD1Schedule(
   input: ReviewScheduleInput & Readonly<{
     now: Date;
     recurrenceCount: number;
+    reviewUnitRecurrenceCount: number;
     nextReviewDateOverride: string | null;
   }>,
 ): App1FirstRecurrenceD1Schedule {
   if (input.nextReviewDateOverride !== null) {
     throw new Error("review-os:app1-client-schedule-authority-forbidden");
   }
-  if (input.recurrenceCount !== 1) {
+  // Topic/mistake history informs ordinary reviews; it is not the ordinal of
+  // this repair's first review unit. Never reset that cumulative history.
+  if (input.reviewUnitRecurrenceCount !== 1) {
     throw new Error("review-os:app1-first-recurrence-required");
+  }
+  if (!Number.isSafeInteger(input.recurrenceCount) || input.recurrenceCount < 1) {
+    throw new Error("review-os:app1-replay-recurrence-invalid");
   }
   if (!Number.isFinite(input.now.getTime())) {
     throw new Error("review-os:app1-schedule-reference-invalid");

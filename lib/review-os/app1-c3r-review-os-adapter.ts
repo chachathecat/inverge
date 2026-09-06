@@ -64,6 +64,7 @@ export type App1C3rReviewQueueSnapshotV1 = Readonly<{
   status: "pending" | "completed";
   dueAt: string;
   recurrenceCount: number;
+  reviewUnitRecurrenceCount?: number;
 }>;
 
 export type App1C3rReviewOsStoragePortV1 = Readonly<{
@@ -175,6 +176,8 @@ function readReplayPlan(item: WrongAnswerItemRecord, userId: string) {
     !nonEmpty(scheduleInput.mistakeType) ||
     typeof scheduleInput.hasWeakParagraph !== "boolean" ||
     !canonicalUtc(scheduleInput.scheduledAt) ||
+    (Object.hasOwn(scheduleInput, "reviewUnitRecurrenceCount") &&
+      scheduleInput.reviewUnitRecurrenceCount !== 1) ||
     (scheduleInput.nextReviewDateOverride !== null &&
       (!nonEmpty(scheduleInput.nextReviewDateOverride) ||
         !Number.isFinite(Date.parse(scheduleInput.nextReviewDateOverride))))
@@ -196,6 +199,7 @@ function readReplayPlan(item: WrongAnswerItemRecord, userId: string) {
       mistakeType: scheduleInput.mistakeType,
       hasWeakParagraph: scheduleInput.hasWeakParagraph,
       scheduledAt: scheduleInput.scheduledAt,
+      reviewUnitRecurrenceCount: scheduleInput.reviewUnitRecurrenceCount,
       nextReviewDateOverride: scheduleInput.nextReviewDateOverride as
         | string
         | null,
@@ -246,7 +250,10 @@ export async function materializeApp1C3rReviewOsAdapterV1(input: Readonly<{
     queue.subject !== input.item.subjectLabel ||
     !["pending", "completed"].includes(queue.status) ||
     !canonicalUtc(queue.dueAt) ||
-    queue.recurrenceCount !== 1 ||
+    !Number.isSafeInteger(queue.recurrenceCount) || queue.recurrenceCount < 1 ||
+    (replay.scheduleInput.reviewUnitRecurrenceCount === 1
+      ? queue.reviewUnitRecurrenceCount !== 1
+      : (queue.reviewUnitRecurrenceCount ?? queue.recurrenceCount) !== 1) ||
     queue.dueAt !== exactD1QueueDueAt(replay)
   ) {
     reject("REVIEW_QUEUE_BINDING_CONFLICT");
@@ -326,7 +333,10 @@ export async function materializeApp1C3rReviewOsAdapterV1(input: Readonly<{
     candidate: replay.candidate,
     app1ReceiptId: replay.learningSignalId,
     repairRevisionId: replay.repairRevisionId,
-    persistedAt: input.item.updatedAt,
+    // Snapshot repair on retry can update the item after its original D+1.
+    // Validate cadence against the immutable, durably sealed repair clock;
+    // never move the Queue due time forward to the retry's wall clock.
+    persistedAt: replay.scheduleInput.scheduledAt,
     d1DueAt: queue.dueAt,
     port,
   });
