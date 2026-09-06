@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 
 type KernelView = Readonly<{
   schemaVersion: "first_stage.kernel_availability.v1";
@@ -119,6 +120,9 @@ export function FirstStageMcqLoop() {
         <p className="mt-4 text-xs leading-5 text-slate-500">
           학습 효능, 합격 가능성, 문항 보정 또는 공식 결과를 주장하지 않습니다.
         </p>
+        <Link href="/app/first-stage/practice" prefetch={false} className="mt-4 block text-sm underline">
+          비공개 경제학 연습 상태 확인
+        </Link>
       </section>
     </main>
   );
