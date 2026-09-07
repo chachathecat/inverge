@@ -98,6 +98,17 @@ Live GitHub and the current tree remain authoritative for implemented state.
 Attachments, old execution prompts, handoffs, issue prose, and historical plans
 are inputs, not live operational truth.
 
+## Scoped private first-stage continuation
+
+For the private appraiser first-stage learner outcomes delegated on 2026-09-06,
+apply `docs/decisions/2026-09-06-owner-appraiser-first-private-continuation.md`.
+Only that scope replaces fixed correction/review-count disposal with
+root-cause progress criteria and permits conditional, exact-head protected
+squash integration without another Owner token. Required native checks,
+independent clean review, resolved threads, single-writer ownership, rights,
+privacy and all separate operational approval boundaries remain unchanged.
+This exception does not apply to Seven Exams or the separate legal repository.
+
 ## GitHub-native delivery control
 
 GitHub is the delivery trust boundary. The live ruleset, current PR head,
