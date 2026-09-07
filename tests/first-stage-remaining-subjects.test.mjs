@@ -3,7 +3,7 @@ import test from "node:test";
 import React from "react";
 import * as jsx from "react/jsx-runtime";
 import { renderToStaticMarkup } from "react-dom/server";
-import { SUBJECT_CASES, remainingPacket, remainingInput, remainingCatalogs } from "./fixtures/first-stage-remaining-content-harness.mjs";
+import { SUBJECT_CASES, remainingPacket, remainingInput, remainingCatalogs, rebindSyntheticCivilInput } from "./fixtures/first-stage-remaining-content-harness.mjs";
 import { syntheticContentInput } from "./fixtures/first-stage-economics-content-harness.mjs";
 import { syntheticAccountingInput } from "./fixtures/first-stage-accounting-content-harness.mjs";
 import { harness, submission, SUBMIT } from "./fixtures/first-stage-private-session-harness.mjs";
@@ -16,13 +16,15 @@ for (const spec of SUBJECT_CASES) {
   const questionId = `synthetic-${spec.slug}-q1`;
   const route = (h, options = {}) => privateRoute(h, { ...options, subject: spec.id });
 
-  test(`${spec.id}: generic human approval cannot substitute for the missing applicability consumer`, async () => {
+  test(`${spec.id}: generic human approval cannot substitute for subject applicability evidence`, async () => {
     // Deliberately forged test claims, NOT an actual human review or stock.
     const packet = remainingPacket(spec.id);
     packet.dataClass = "human_reviewed_private";
     const input = remainingInput(spec.id, packet);
     input.approvals[0].dataClass = "human_reviewed_private";
     delete input.expectedDataClass;
+    delete input.applicability;
+    const blocker = spec.id === "civil_law" ? "approved_content_required" : "subject_applicability_implementation_required";
     let reads = 0;
     const readBytes = input.readBytes;
     input.readBytes = async () => { reads++; return readBytes(); };
@@ -31,17 +33,17 @@ for (const spec of SUBJECT_CASES) {
     const r = route(harness(), { contentInput: input });
     const availability = await (await r.GET(new Request(URL))).json();
     assert.equal(availability.availability.state, "blocked");
-    assert.equal(availability.availability.blocker, "subject_applicability_implementation_required");
+    assert.equal(availability.availability.blocker, blocker);
     const request = post({ action: "create", requestId: "unsupported-human-stock", questionId });
     const denied = await r.POST(request);
     assert.equal(denied.status, 503); assert.equal(request.bodyUsed, false);
     assert.match(denied.headers.get("cache-control"), /no-store/u);
     const denial = await denied.json();
-    assert.equal(denial.error, "subject_applicability_implementation_required");
+    assert.equal(denial.error, blocker);
     assert.doesNotMatch(JSON.stringify(denial), /SYNTHETIC_|verified_exam_date|correctChoice|EXPLANATION/u);
     const reconnect = await r.GET(new Request(`${URL}?sessionId=synthetic-existing-session`));
     assert.equal(reconnect.status, 503);
-    assert.equal((await reconnect.json()).error, "subject_applicability_implementation_required");
+    assert.equal((await reconnect.json()).error, blocker);
     assert.equal(r.counts.repository, 0);
     assert.equal(reads, 0);
   });
@@ -118,6 +120,9 @@ for (const spec of SUBJECT_CASES) {
     const packet = remainingPacket(spec.id);
     packet.questions[1].correctChoice = 4; packet.keys[1].correctChoice = 4;
     packet.questions[1].feedback.incorrectCauseByChoice = ["C", "C", "C", null, "C"];
+    // A different synthetic answer requires a newly bound server receipt, not
+    // a mutation of an already admitted content/version snapshot.
+    if (spec.id === "civil_law") rebindSyntheticCivilInput(packet);
     const catalog = await spec.load(remainingInput(spec.id, packet)); assert.ok(catalog);
     const h = harness({ catalog }), options = { contentInput: remainingInput(spec.id, packet) }, r = route(h, options);
     const create = { action: "create", requestId: "create-one", questionId };

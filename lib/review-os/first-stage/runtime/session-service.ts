@@ -48,11 +48,13 @@ export interface PrivateFirstStageCatalog {
   readonly digest: string;
   readonly registry: SubjectAdapterRegistry;
   readonly initialReferences: readonly QuestionReference[];
+  questionAttributions?(reference: QuestionReference): readonly string[];
   retryAvailability(reference: QuestionReference, usedQuestionIds: readonly string[]): "available" | "exhausted";
   explanation(reference: QuestionReference): Readonly<{
     text: string;
     sourceStatus: string;
     learningReferenceDisclaimer: true;
+    attributions?: readonly string[];
   }>;
 }
 
@@ -228,6 +230,7 @@ export function createPrivateFirstStageSessionService(
         ? saved.state.examCycle.questionReferences[0].questionId : null,
       question: active ? presentAttemptQuestion(saved.state, active.attemptId, ownerId,
         saved.state.examCycle.definitionSha256, catalog.registry) : null,
+      ...(active && catalog.questionAttributions ? { questionAttributions: catalog.questionAttributions(active.questionReference) } : {}),
       attempt: active ? { attemptId: active.attemptId, startedAt: active.startedAt }
         : latest ? { attemptId: latest.attemptId, decision: latest.evaluation?.decision } : null,
       explanation,

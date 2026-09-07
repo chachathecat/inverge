@@ -177,6 +177,7 @@ function PrivatePracticeSession({ subject }: { subject: FirstStageSubjectId }) {
           } });
         }} className="space-y-5">
           <p className="whitespace-pre-wrap">{view.question.stem}</p>
+          {view.questionAttributions?.map((text, index) => <p key={index} className="whitespace-pre-wrap text-xs" data-content-attribution="question">{text}</p>)}
           <fieldset disabled={busy} className="space-y-3"><legend className="sr-only">답 선택</legend>
             {view.question.choices.map((choice) => <label key={choice.choiceId} className="flex gap-3 rounded-xl border p-3">
               <input type="radio" name="answer" checked={selected === choice.choiceId}
@@ -196,6 +197,7 @@ function PrivatePracticeSession({ subject }: { subject: FirstStageSubjectId }) {
           <h2 className="font-semibold">저장된 응답의 학습 참고 해설</h2>
           <p>{view.attempt?.decision === "correct" ? "이번 응답: 정답" : view.attempt?.decision === "incorrect" ? "이번 응답: 오답" : "응답 상태 확인 필요"}</p>
           <p className="whitespace-pre-wrap">{view.explanation.text}</p>
+          {view.explanation.attributions?.map((text, index) => <p key={index} className="whitespace-pre-wrap text-xs" data-content-attribution="feedback">{text}</p>)}
           <p className="text-xs">{view.explanation.sourceStatus} · 공식 해설이나 숙달 판정이 아닙니다.</p>
         </section>}
         {view?.reviewTasks.map((task) => <section key={task.reviewTaskId} className="rounded-xl border p-4">

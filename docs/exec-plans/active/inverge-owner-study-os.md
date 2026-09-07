@@ -1,6 +1,191 @@
 # Inverge Owner Study OS
 
-## Current private first-stage code continuation — #888 / 2026-09-07
+## Current private first-stage code continuation — #890 / 2026-09-07
+
+- #889 is integrated, not reopened: reviewed head
+  `f7998100721d008529a1dc8b333287f60dca1420`, squash/main
+  `1b974cb3a794634de7291847f6f634c488428dbf`, matching tree
+  `51164087db73064cdd4124bab54b2e8257a03142`. Its native closeout is
+  https://github.com/chachathecat/inverge/pull/889#issuecomment-5564941377.
+  That merge completed synthetic mechanics only; it did not implement the
+  three Foundation applicability consumers or approve actual content.
+- The Owner now authorizes those missing consumers, civil law first. Code child
+  #890 uses the same isolated worktree, single writer, branch
+  `codex/first-stage-civil-applicability`, from that freshly fetched main.
+  Relationship-law and real-estate consumers follow by reusing this structure;
+  they remain code-incomplete and real-stock-blocked in this civil-law slice.
+- Civil law now consumes the existing Foundation pre-release, law exam-date,
+  official history and extraction shapes. It verifies exact immutable triples,
+  JCS digests, one Civil Code authority, the five-choice/source-anchor projection,
+  complete ordered amendment intervals, selected/predecessor/successor identity,
+  transport/content-identity observations and the bound extraction configuration.
+  The supported historical date is the Foundation's `2026-04-04` only; this
+  does not certify any real law snapshot, another year or current legal advice.
+- Trust comes from separately reviewed **server-code-installed** Foundation
+  objects, pinned to exact private packet and per-question bytes. Hash agreement
+  or a self-asserted reviewer/currentness field is not trust. No receipt issuer,
+  new evidence ledger, law crawler or source database is added. Actual installed
+  content approvals and applicability objects are EMPTY. Test graphs are
+  explicitly synthetic dependency injection and record no actual human review.
+- The actual loader validates every original and retry before advertising stock;
+  the adapter's version evidence is the validated applicability reference. The
+  existing catalog digest binds the installed snapshot, so withdrawn/replaced
+  evidence cannot silently rehydrate an old session. HTTP does not accept proof,
+  approval, clock or currentness authority. The same service/repository/UI retain
+  durable-only explanation, CAS/replay, D+1 and completed-state preservation.
+  Civil-law unavailability now correctly names content approval, while the two
+  unimplemented subjects retain the implementation blocker.
+- Initial reproduction: a six-check synthetic packet without Foundation proof
+  was incorrectly admitted by the actual civil loader. The new negative test
+  failed before implementation and now passes. Fresh focused validation: 72
+  tests pass, zero skips, including 36 rehashed hostile graph cases through HTTP,
+  installation drift/withdrawal, runtime injection denial and five-subject
+  regressions. Build, sequential typecheck, changed-file lint (11 source/test
+  files), JSON validation (no JSON delta), 12-path manifest and diff check pass.
+  Seven isolated runtime tests pass, zero skips: all five actual loader/HTTP/
+  PostgreSQL/browser flows, delayed subject navigation and blocked POST/reload/
+  reconnect. Synthetic users/rows were cleaned to zero, disposable containers
+  removed, browser external requests/errors zero. The civil completion screenshot
+  was visually checked. These are injected synthetic auth/catalog/clock ports,
+  not remote auth or actual content acceptance. This initial evidence belongs to
+  head `09ba484342050405914c013f846ff19c31754a35`, tree
+  `bbb55961f004eb85df1c54a85cb9d376199b872d`. Its required native checks and
+  extra C3R-L passed, but independent review 5128747254 reported one P1; it was
+  not a clean merge candidate.
+- PR #891 P1 correction: reproduced admission of a nonexistent feedback-rights
+  reference before fixing the consumer. Both rights and source/version decisions
+  now resolve in the same installed snapshot and bind exact object/version/UTF-8
+  body hash, item/version/subject, Personal Raw Vault/private use/audience,
+  currentness, validity interval and authorized reviewer/decision. Source-version
+  decisions also bind the exam date and exact validated law-proof components.
+  This covers each false-choice correction, each explanation and easy explanation;
+  no receipt issuer or actual approval is added. Time is rechecked by the adapter
+  at use/readback, so expiry during persistence preserves the saved state without
+  disclosing feedback or duplicating a retry.
+- Correction candidate fresh local evidence: 76 focused tests PASS, zero skips,
+  including 44 rehashed hostile body-decision graphs via actual HTTP, coherent
+  wrong-body hashes, expiry during durable save and all prior regressions.
+  Seven isolated PostgreSQL/browser tests PASS, zero skips; all five synthetic
+  subject flows, CAS/lost-response/reconnect/D+1/completed-state and subject
+  navigation remain intact. Synthetic users/rows cleaned to zero, own disposable
+  containers removed, browser external requests/errors zero; the new civil
+  completion screenshot was visually checked. Build, sequential typecheck,
+  changed-file lint (11), Foundation/changed JSON validation (zero JSON delta),
+  12-path manifest and diff check PASS. Native checks and independent review for
+  that correction were subsequently obtained: head
+  `3b06f38fc5cfd31f5c4bd06c952008022f7d98da`, tree
+  `8c42ce7a05dffb1286d9ce4fbb7620ab5ce643f5`, required native checks 9/9 PASS,
+  extra C3R-L PASS. Independent review 5128941294 reports P0/P1/P2 `0/1/1`,
+  not a clean result: final Foundation release-receipt consumption is absent,
+  and sparse server-installed arrays can skip a choice. Both new threads remain
+  unresolved; the earlier body-reference P1 thread is resolved. No merge.
+- Local follow-up (NOT pushed or exact-head reviewed): reproduced a coherently
+  rehashed sparse five-choice graph being admitted. Recursive JSON validation now
+  requires every array index to be an own value and rejects non-JSON properties.
+  Fresh 78 focused tests, typecheck, two-file lint and diff check PASS. This
+  includes actual HTTP pre-body/storage denial and nested-array regressions.
+  The previous 7 PostgreSQL/browser tests and build belong to the pushed head,
+  not this uncommitted follow-up. Preserve both source/test changes here.
+- Latest Owner amendment (2026-09-07) resolves the above final-release boundary.
+  The existing Foundation and private-flow decision now distinguish official
+  originals (full 200-position official key) from private modified retries (their
+  own exact-version independently reviewed key, original lineage, LEARNING_ONLY).
+  The distinction is reusable within the already delegated private subjects.
+  It does not approve actual content, a new year/law scope or deployment.
+- Current local correction requires a final per-item decision after applicability
+  and resolves source/booklet/key, rights/private tuple, exact question and feedback
+  bodies, attribution, version and deterministic validator evidence. Branch choice
+  is pinned by the server-installed exact packet/item; HTTP cannot install it.
+  Sparse-array P2 remains fixed. Question attribution and durable-only feedback
+  attribution are separate exact blocks. Unsupported OCR/permission-grant chains
+  remain denied. Approval and installation lists remain empty.
+- New local results: affected 101-test run PASS/0 skips; after chronology tightening,
+  build, sequential typecheck, lint and the 19 direct tests PASS/0 skips. PR-wide
+  lint covers 21 source/test paths. A separate successful validation printed
+  JSON_VALIDATION_PASS (200 official rows, approvals/installations 0),
+  MANIFEST_BOUNDARY_PASS (25 paths; no schema/workflow/frozen-kernel/private-env
+  delta) and DIFF_CHECK_PASS. These are not the previous head's native CI results.
+- The isolated seven-check run passed six and failed a civil DOM assertion before
+  async rendering completed. After adding a render wait, the civil PostgreSQL/
+  browser rerun passed (1/1, zero skips), including exact attribution blocks,
+  durable replay/CAS/reconnect/D+1/completed state, browser external requests/errors
+  zero and synthetic rows/users cleaned to zero. Report six successes plus one
+  corrected rerun, not an all-pass first run. Screenshot artifact:
+  `C:/Users/jmg91/AppData/Local/Temp/inverge-first-stage-private-browser-civil_law-16852.png`,
+  SHA-256 `2391a8e2e23da435536e5989c6207b837f2eda9f18c42a12723a743b58c5b077`.
+  This records DOM/runtime evidence and file identity, not a visual-review receipt.
+- That correction was ordinarily pushed as head
+  `28aaf99c91a1f592f4052e041bd71f0780bf9732`, tree
+  `dbcff73ca101c193cf4ab1f90dd8bf9046d5508b`. Required native checks 9/9 and
+  extra C3R-L passed. The two prior threads were resolved. Fresh independent
+  review 5130056279 reported NEW P0/P1/P2 `0/1/1`: surplus unissued manifest IDs
+  could remain in QuestionReference, and private-only source rights could be
+  overstated as cleared. That head is not a clean merge candidate.
+- Both new defects were separately reproduced through the actual loader before
+  this directly coupled correction. Final release now compares the complete
+  reference manifest list with IDs from its resolved manifest objects and the
+  reference rights state with its resolved post/asset effective decision. It
+  rejects contradictions rather than relabeling output. Originals and both retry
+  candidates share these checks; full-200 official and independent-retry key
+  branches, sparse-array denial and empty real approval/install lists remain.
+- Fresh correction evidence: 107 affected tests PASS/0 skips; all seven isolated
+  PostgreSQL/browser tests PASS/0 skips in one run. Tests cover all four post/asset
+  rights combinations, missing/extra/substituted/duplicate manifests, coherent
+  hash-rebinding attacks, actual HTTP denial before body/storage and exact
+  reference preservation on durable save/replay/reconnect and D+1 retry.
+  All five synthetic subject flows retain CAS/lost-response/completed-state and
+  subject-navigation behavior; browser external requests/errors zero and synthetic
+  users/rows cleaned to zero. Build, sequential typecheck and PR-wide lint (21
+  source/test paths) PASS. JSON comparison confirms the original Foundation is
+  unchanged outside the authorized amendment and its 200-row rule remains;
+  approval/install counts 0, 25-path boundary and diff checks PASS. The first
+  JSON comparison hit Node's default output-buffer limit; the bounded 8 MiB rerun
+  completed successfully. No new content or human review is claimed.
+- This reference-binding correction was ordinarily pushed as
+  `c3bab5106e74d2463e55b37283a9eb3393f767e3`, tree
+  `c11627bc23ec0679861a0a2aa63c3a4f9be2919c`. Required native CI 9/9 and
+  extra C3R-L passed; both reference-binding threads were resolved. The single
+  independent review request completed as review 5130368091, P0/P1/P2 `0/1/0`:
+  original easy feedback could change under a byte-identical final decision.
+  This is fresh evidence at that head, not the old missing-release finding.
+- The new P1 was reproduced before correction with coherently rehashed original
+  easy body/rights/version and packet/item approvals, while preserving the exact
+  final release. The private amendment now requires one original
+  `easy_explanation_object` attribution row with its full object/version/body
+  hash and rights/source-version references, included in both final digests.
+  Retry reasoning retains its existing independent-key binding. Every emitted
+  feedback attribution now comes from the validated final projection; none is
+  appended outside the decision. The existing Foundation remains identical
+  outside this private amendment, including all 200 official key positions.
+- Fresh final local evidence for this easy-feedback correction: 109 affected
+  tests PASS/0 skips; seven isolated PostgreSQL/browser tests PASS/0 skips.
+  A new positive test initially expected easy text alone, whereas the unchanged
+  API returns answer, easy text and five-choice explanations together. After
+  correcting the exact expected response, the complete 109-test batch passed.
+  Regressions prove missing/duplicate/wrong-role/wrong-object rows deny, a changed
+  body needs a new final decision, failed persistence reveals nothing, and
+  successful save/retry/reconnect preserves exact feedback and bodyless storage.
+  All five synthetic subjects retain CAS/lost-response/D+1/completed-state and
+  subject switching; browser external requests/errors zero, users/rows cleaned
+  to zero. Build, sequential typecheck, 21-path lint, JSON/200-row/empty-list
+  validation, 25-path manifest and diff check PASS. No actual content/human
+  review, environment change or remote mutation is claimed.
+- Next: ordinary correction push, resolve the easy-feedback thread, then fresh
+  exact-head CI and one independent review if none is automatic. Recheck live
+  rules/base/threads/deployment before conditional pinned squash. No new-head
+  native result or clean review is presumed. #883 remains open and actual
+  approval/installation counts remain zero.
+
+Approved content: **0**. Real use remains blocked. Economics r3 and its six pending
+human checks are unchanged and are not repackaged. Genuine source/rights/key/
+feedback/version/lineage judgments, approved installation and actual environment
+activation remain external gates, distinct from independently integrated code.
+Rollback: empty approvals/feature OFF deny before content I/O; an ordinary source
+revert restores the prior civil-law blocker without deleting durable rows or
+changing economics/accounting. Evidence withdrawal/drift leaves stored state
+unchanged. No remote rollback or schema/RLS mutation is needed.
+
+## Historical #889 synthetic-mechanics candidate evidence — #888 / 2026-09-07
 
 - #884 economics code is integrated; #887 accounting code is now integrated at
   squash/main `66f47d8f6fc6e535fe6af35d9aa76561d5cb1efb`, tree

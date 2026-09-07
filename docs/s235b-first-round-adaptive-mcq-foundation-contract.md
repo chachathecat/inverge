@@ -606,6 +606,45 @@ supported primary cause was assigned. A future adapter must use the exact six
 codes or null. Cause is never serialized into QTI; it may appear only in the
 named xAPI or reviewed Caliper extension location.
 
+### Private runtime release amendment (Owner, 2026-09-07)
+
+For the delegated private five-subject work only, release means final per-item
+content-use permission, not deployment. Official originals retain the existing
+`releaseReceiptContract`, including its complete 200-position official answer
+mapping, exact source assets, booklet observations and question/answer binding.
+The `privateModifiedRetryReleaseContract` selects a separate, exact-version
+independently reviewed answer and reasoning for each private modified retry.
+It retains the validated original's lineage, not the original's answer authority.
+Both branches retain source/asset rights, attribution, complete five-choice
+feedback, applicable-date evidence, subject validators and a final named-human
+decision. Pre-release applicability and the generic six checks cannot replace it.
+
+The private-original route additionally appends exactly one
+`easy_explanation_object` row to the existing final attribution projection.
+It binds the exact installed object/version/body hash and rights/source-version
+references; the final row digest and ordered unique attribution list include it.
+Thus changed easy feedback requires a new final per-item decision even when
+generic packet approval and individual body decisions are rebound. A retry
+already binds the same object as its independent-key answer reasoning. No
+easy-feedback attribution or body may be emitted outside these final bindings.
+This adds no official-key authority and leaves all 200 official rows mandatory.
+
+The trusted server installation pins question kind and the complete packet/item
+digest. HTTP inputs cannot choose a branch or install approval. Modified retries
+remain `LEARNING_ONLY`, without officialness, mastery, transfer or measurement.
+Changed content must have rebound provenance, independent answer, feedback and
+final review. Variant validator input uses its independent key reference/digest;
+it does not synthesize a nonexistent official answer receipt. Exact attribution
+blocks are preserved individually; feedback attribution is released with durable
+feedback, not before submission. The initial consumer supports reviewed manual
+transcription and primary private-use rights with verified absence of third-party
+material; unsupported OCR/permission-grant chains remain denied.
+
+This same distinction may be reused in the subsequent already-delegated subjects
+without a new routine authority request. It expands no exam year, legal authority
+set, public scope or content activation. Actual approvals/installations remain
+empty, and synthetic evidence is not a performed human review.
+
 ## 6. Standards mapping-ready shapes
 
 All three profiles are mapping targets only. The versioned internal schema is

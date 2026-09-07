@@ -5,6 +5,7 @@ import { ECONOMICS_CONTENT_MAX_BYTES, loadEconomicsContent, type EconomicsConten
 import { loadAccountingContent, type AccountingContentApproval } from "./accounting-content";
 import type { PrivateFirstStageCatalog } from "./session-service";
 import type { PrivateContentApproval } from "./private-reviewed-content";
+import type { PrivateApplicabilityInstallation } from "./foundation-applicability";
 import { loadCivilLawContent, loadRealEstatePrinciplesContent, loadAppraiserRelatedLawContent } from "./remaining-subject-content";
 
 // Intentionally empty. AI review, Q-Net review packets and test receipts are NOT approvals.
@@ -12,6 +13,9 @@ import { loadCivilLawContent, loadRealEstatePrinciplesContent, loadAppraiserRela
 const APPROVED_ECONOMICS_CONTENT: readonly EconomicsContentApproval[] = Object.freeze([]);
 const APPROVED_ACCOUNTING_CONTENT: readonly AccountingContentApproval[] = Object.freeze([]);
 const APPROVED_CIVIL_LAW_CONTENT: readonly PrivateContentApproval[] = Object.freeze([]);
+// Separately reviewed Foundation objects. No runtime/test flag or content file
+// can install these, and generic six-check approval cannot replace them.
+const CIVIL_LAW_APPLICABILITY: readonly PrivateApplicabilityInstallation[] = Object.freeze([]);
 const APPROVED_REAL_ESTATE_PRINCIPLES_CONTENT: readonly PrivateContentApproval[] = Object.freeze([]);
 const APPROVED_APPRAISER_RELATED_LAW_CONTENT: readonly PrivateContentApproval[] = Object.freeze([]);
 
@@ -49,7 +53,7 @@ export async function loadApprovedPrivateAccountingCatalog(): Promise<PrivateFir
 }
 
 export async function loadApprovedPrivateCivilLawCatalog(): Promise<PrivateFirstStageCatalog | null> {
-  return loadCivilLawContent({ approvals: APPROVED_CIVIL_LAW_CONTENT,
+  return loadCivilLawContent({ approvals: APPROVED_CIVIL_LAW_CONTENT, applicability: CIVIL_LAW_APPLICABILITY,
     readBytes: () => readPrivateEconomicsContent(process.env.INVERGE_OWNER_CIVIL_LAW_CONTENT_PATH ?? "") });
 }
 
