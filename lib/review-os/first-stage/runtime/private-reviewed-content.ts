@@ -84,6 +84,15 @@ export async function loadPrivateReviewedContent(subjectId: keyof typeof POLICIE
     if (!Object.hasOwn(POLICIES, subjectId)) return null;
     const policy = POLICIES[subjectId];
     const expected = options.expectedDataClass ?? "human_reviewed_private";
+    // These three bindings currently verify synthetic mechanics only. The
+    // Foundation preReleaseApplicabilityReceiptShape consumer is not implemented:
+    // Civil Code exam-date proof, derived per-authority law proofs, and the
+    // real-estate subject-validator receipt cannot be replaced by six generic
+    // review checks or a packet's currentnessState/versionEvidence fields.
+    // Fail before reading a real packet even if a generic approval is installed.
+    // Synthetic injection is a test port, never an environment/HTTP setting.
+    if (subjectId !== "economics_principles" && subjectId !== "accounting" &&
+      expected !== "synthetic_test_only") return null;
     const approvals = options.approvals.map(approval);
     if (!approvals.length || approvals.some(item => item.dataClass !== expected) ||
       new Set(approvals.map(item => item.packetSha256)).size !== approvals.length) return null;

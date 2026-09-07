@@ -143,7 +143,10 @@ function PrivatePracticeSession({ subject }: { subject: FirstStageSubjectId }) {
       <div className="mt-6 space-y-5" aria-live="polite" aria-busy={busy}>
         {busy && <p>서버 기록을 확인하고 있습니다.</p>}
         {error && <p role="alert" className="text-sm text-rose-700">{error}</p>}
-        {unavailable && <p>사용 불가 — 권리·정답·인적 검토가 승인된 콘텐츠가 아직 없습니다. 개발 후보나 합성 자료는 학습 재고가 아닙니다.</p>}
+        {unavailable && <p>사용 불가 — 권리·정답·인적 검토가 승인된 콘텐츠가 아직 없습니다. 개발 후보나 합성 자료는 학습 재고가 아닙니다.
+          {subject !== "economics_principles" && subject !== "accounting" &&
+            " 이 과목의 적용시점·과목별 검증 증빙을 소비하는 기능도 미구현입니다. 콘텐츠 승인만으로 사용할 수 없습니다."}
+        </p>}
         {!busy && !error && !view && availability?.state === "available" &&
           availability.questions.map((item) => <button key={item.questionId} type="button" className={BUTTON}
             onClick={() => create(item.questionId)}>검토된 {item.questionNumber}번 시작</button>)}

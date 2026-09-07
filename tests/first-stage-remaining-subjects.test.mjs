@@ -16,6 +16,30 @@ for (const spec of SUBJECT_CASES) {
   const questionId = `synthetic-${spec.slug}-q1`;
   const route = (h, options = {}) => privateRoute(h, { ...options, subject: spec.id });
 
+  test(`${spec.id}: generic human approval cannot substitute for the missing applicability consumer`, async () => {
+    // Deliberately forged test claims, NOT an actual human review or stock.
+    const packet = remainingPacket(spec.id);
+    packet.dataClass = "human_reviewed_private";
+    const input = remainingInput(spec.id, packet);
+    input.approvals[0].dataClass = "human_reviewed_private";
+    delete input.expectedDataClass;
+    let reads = 0;
+    const readBytes = input.readBytes;
+    input.readBytes = async () => { reads++; return readBytes(); };
+    assert.equal(await spec.load(input), null);
+    assert.equal(reads, 0);
+    const r = route(harness(), { contentInput: input });
+    const availability = await (await r.GET(new Request(URL))).json();
+    assert.equal(availability.availability.state, "blocked");
+    const request = post({ action: "create", requestId: "unsupported-human-stock", questionId });
+    const denied = await r.POST(request);
+    assert.equal(denied.status, 503); assert.equal(request.bodyUsed, false);
+    assert.match(denied.headers.get("cache-control"), /no-store/u);
+    assert.doesNotMatch(await denied.text(), /SYNTHETIC_|verified_exam_date|correctChoice|EXPLANATION/u);
+    assert.equal(r.counts.repository, 0);
+    assert.equal(reads, 0);
+  });
+
   test(`${spec.id}: actual loader denies absent approval, wrong subject/key/version and current-law claims`, async () => {
     let reads = 0;
     assert.equal(await spec.load({ approvals: [], readBytes: async () => { reads++; return new Uint8Array(); } }), null);
