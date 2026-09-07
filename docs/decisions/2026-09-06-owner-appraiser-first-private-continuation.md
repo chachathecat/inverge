@@ -84,6 +84,13 @@ reviewed key and final personal-only decision, retaining original lineage,
 rights, attribution, complete feedback and subject/date applicability. Neither
 pre-release evidence nor the six general checks replaces final release.
 
+Directly coupled release regression correction also binds the original's exact
+easy-explanation object in one additional final attribution row, included in the
+release digests and display projection. Retries retain their independent-key
+reasoning binding. Changing a body or its rights/version references requires a
+new final per-item decision; body decisions or packet approval alone do not
+permit changed feedback. The full official-key contract remains mandatory.
+
 Kind and branch belong to trusted server-installed exact content, not HTTP.
 Variants remain LEARNING_ONLY, never official or mastery/transfer/measurement
 authority. Reuse this distinction for the already delegated subsequent subjects

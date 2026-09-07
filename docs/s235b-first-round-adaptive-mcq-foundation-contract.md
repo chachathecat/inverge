@@ -619,6 +619,16 @@ Both branches retain source/asset rights, attribution, complete five-choice
 feedback, applicable-date evidence, subject validators and a final named-human
 decision. Pre-release applicability and the generic six checks cannot replace it.
 
+The private-original route additionally appends exactly one
+`easy_explanation_object` row to the existing final attribution projection.
+It binds the exact installed object/version/body hash and rights/source-version
+references; the final row digest and ordered unique attribution list include it.
+Thus changed easy feedback requires a new final per-item decision even when
+generic packet approval and individual body decisions are rebound. A retry
+already binds the same object as its independent-key answer reasoning. No
+easy-feedback attribution or body may be emitted outside these final bindings.
+This adds no official-key authority and leaves all 200 official rows mandatory.
+
 The trusted server installation pins question kind and the complete packet/item
 digest. HTTP inputs cannot choose a branch or install approval. Modified retries
 remain `LEARNING_ONLY`, without officialness, mastery, transfer or measurement.

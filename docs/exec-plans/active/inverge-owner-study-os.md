@@ -141,12 +141,40 @@
   approval/install counts 0, 25-path boundary and diff checks PASS. The first
   JSON comparison hit Node's default output-buffer limit; the bounded 8 MiB rerun
   completed successfully. No new content or human review is claimed.
-- Next: one ordinary correction push, resolve the two new threads, obtain fresh
-  exact-head native CI and one independent review without duplication, then live
-  rules/base/thread/deployment checks before conditional pinned squash. These
-  local results are not new-head native CI or a clean review. #883 remains open;
-  actual env, flags, paths, remote DB, provider, payment and Production/public
-  state remain unchanged.
+- This reference-binding correction was ordinarily pushed as
+  `c3bab5106e74d2463e55b37283a9eb3393f767e3`, tree
+  `c11627bc23ec0679861a0a2aa63c3a4f9be2919c`. Required native CI 9/9 and
+  extra C3R-L passed; both reference-binding threads were resolved. The single
+  independent review request completed as review 5130368091, P0/P1/P2 `0/1/0`:
+  original easy feedback could change under a byte-identical final decision.
+  This is fresh evidence at that head, not the old missing-release finding.
+- The new P1 was reproduced before correction with coherently rehashed original
+  easy body/rights/version and packet/item approvals, while preserving the exact
+  final release. The private amendment now requires one original
+  `easy_explanation_object` attribution row with its full object/version/body
+  hash and rights/source-version references, included in both final digests.
+  Retry reasoning retains its existing independent-key binding. Every emitted
+  feedback attribution now comes from the validated final projection; none is
+  appended outside the decision. The existing Foundation remains identical
+  outside this private amendment, including all 200 official key positions.
+- Fresh final local evidence for this easy-feedback correction: 109 affected
+  tests PASS/0 skips; seven isolated PostgreSQL/browser tests PASS/0 skips.
+  A new positive test initially expected easy text alone, whereas the unchanged
+  API returns answer, easy text and five-choice explanations together. After
+  correcting the exact expected response, the complete 109-test batch passed.
+  Regressions prove missing/duplicate/wrong-role/wrong-object rows deny, a changed
+  body needs a new final decision, failed persistence reveals nothing, and
+  successful save/retry/reconnect preserves exact feedback and bodyless storage.
+  All five synthetic subjects retain CAS/lost-response/D+1/completed-state and
+  subject switching; browser external requests/errors zero, users/rows cleaned
+  to zero. Build, sequential typecheck, 21-path lint, JSON/200-row/empty-list
+  validation, 25-path manifest and diff check PASS. No actual content/human
+  review, environment change or remote mutation is claimed.
+- Next: ordinary correction push, resolve the easy-feedback thread, then fresh
+  exact-head CI and one independent review if none is automatic. Recheck live
+  rules/base/threads/deployment before conditional pinned squash. No new-head
+  native result or clean review is presumed. #883 remains open and actual
+  approval/installation counts remain zero.
 
 Approved content: **0**. Real use remains blocked. Economics r3 and its six pending
 human checks are unchanged and are not repackaged. Genuine source/rights/key/

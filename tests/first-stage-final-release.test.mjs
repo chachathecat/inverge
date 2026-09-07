@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+import { createHash } from "node:crypto";
 import { FIVE, RETRY_RELEASE_FIELDS, RETRY_KEY_FIELDS, RETRY_PROVENANCE_FIELDS } from "../lib/review-os/first-stage/runtime/foundation-release-contract.ts";
 import { privateSessionDigest as digest } from "../lib/review-os/first-stage/runtime/session-service.ts";
 import { validateCivilApplicability } from "../lib/review-os/first-stage/runtime/foundation-applicability.ts";
@@ -36,6 +37,50 @@ async function denied(options, label) {
   assert.equal(route.counts.repository, 0); assert.equal(h.rows.size, 0);
 }
 
+test("original easy feedback cannot change under a byte-identical final release", async () => {
+  const { packet, installed } = input();
+  const release = installed.receipts.find(row => row.receipt_id === installed.items[0].releaseReference.evidence_id);
+  const frozenRelease = structuredClone(release);
+  packet.questions[0].easyExplanation = "SYNTHETIC_CHANGED_EASY_NOT_FINALLY_RELEASED";
+  const ref = installed.items[0].easyExplanationReference = structuredClone(installed.items[0].easyExplanationReference);
+  ref.object_sha256 = createHash("sha256").update(packet.questions[0].easyExplanation).digest("hex");
+  for (const field of ["rights_decision_reference", "source_version_decision_reference"]) {
+    const receipt = installed.receipts.find(row => row.receipt_id === ref[field].evidence_id);
+    receipt.object_sha256 = ref.object_sha256;
+    receipt.receipt_sha256 = digest(Object.fromEntries(Object.entries(receipt).filter(([key]) => key !== "receipt_sha256")));
+    ref[field].evidence_sha256 = receipt.receipt_sha256;
+  }
+  assert.deepEqual(release, frozenRelease, "the final human decision was not replaced");
+  await denied(rebindReferenceInput(packet, installed), "new easy body needs a new final item decision");
+});
+
+test("changed original easy feedback needs an exact new release and durable evaluation before HTTP/reconnect disclosure", async () => {
+  const { packet, installed: before } = input();
+  packet.questions[0].easyExplanation = "SYNTHETIC_REVISED_FINALLY_BOUND_EASY";
+  const installed = civilApplicability(packet), options = { ...syntheticContentInput(packet), applicability: [installed] };
+  assert.notDeepEqual(installed.items[0].releaseReference, before.items[0].releaseReference);
+  const root = installed.receipts.find(row => row.receipt_id === installed.items[0].releaseReference.evidence_id);
+  assert.deepEqual(root.ordered_content_attribution_rows.at(-1).source_object_reference_or_null, installed.items[0].easyExplanationReference);
+  const h = harness(), route = privateRoute(h, { subject: "civil_law", contentInput: options });
+  const created = await (await route.POST(post(create))).json(), sessionId = created.view.sessionId;
+  const begun = await (await route.POST(post({ sessionId, command: { action: "begin", requestId: "revised-begin", expectedRevision: 1, questionId: create.questionId } }))).json();
+  assert.doesNotMatch(JSON.stringify([created, begun]), /REVISED_FINALLY_BOUND_EASY/u);
+  h.setClock(SUBMIT); h.failNextWrite();
+  const request = { sessionId, command: submission(begun.view.attempt.attemptId) };
+  const failed = await route.POST(post(request)); assert.equal(failed.status, 503);
+  assert.doesNotMatch(await failed.text(), /REVISED_FINALLY_BOUND_EASY/u);
+  const saved = await (await route.POST(post(request))).json();
+  assert.equal(saved.view.explanation.text, [`정답: ${packet.questions[0].correctChoice}`, packet.questions[0].easyExplanation,
+    ...packet.questions[0].choiceExplanations.map((text, index) => `${index + 1}. ${text}`)].join("\n\n"));
+  assert.deepEqual(saved.view.explanation.attributions, root.ordered_unique_attributions);
+  assert.deepEqual(await (await route.POST(post(request))).json(), saved);
+  const fresh = privateRoute(harness({ rows: h.rows }), { subject: "civil_law", contentInput: options });
+  assert.deepEqual(await (await fresh.GET(new Request(`${URL}?sessionId=${sessionId}`))).json(), saved);
+  assert.equal(h.rows.size, 1); assert.doesNotMatch(JSON.stringify([...h.rows]), /REVISED_FINALLY_BOUND_EASY/u);
+  const missing = privateRoute(h, { subject: "civil_law", contentInput: { ...options, applicability: [] } });
+  assert.equal((await missing.GET(new Request(`${URL}?sessionId=${sessionId}`))).status, 503);
+});
+
 test("Owner amendment preserves official Foundation and derives only the private modified key branch", () => {
   const amendment = FIVE.privateModifiedRetryReleaseContract;
   const derive = (base, row) => [...base.filter(field => !row.removeExactly.includes(field)), ...row.addExactly];
@@ -45,6 +90,8 @@ test("Owner amendment preserves official Foundation and derives only the private
   assert.equal(FIVE.releaseRule.requiresVerifiedOfficialKey, true);
   assert.ok(FIVE.releaseReceiptContract.verifiedOfficialKeyReceiptShape.officialKeyTableMappingReceiptShape.bindingInvariants.includes("row_count_equals_200_and_equals_ordered_key_rows_count"));
   assert.equal(amendment.actualApprovedContentCount, 0); assert.equal(amendment.actualInstalledContentCount, 0);
+  assert.equal(amendment.originalEasyExplanationAttributionBinding.contentRole, "easy_explanation_object");
+  assert.equal(amendment.originalEasyExplanationAttributionBinding.includedInFinalReleaseRowDigestAndOrderedUniqueAttributions, true);
   const { installed, packet } = input();
   assert.ok(validateCivilApplicability(installed, packet.questions, packet.keys));
 });
@@ -140,6 +187,18 @@ test("final use decision resolves rights, provenance, five-choice feedback, vers
     ["release-0", row => { row.reviewer = "self-appointed-human"; }],
     ["release-0", row => { row.source_asset_rights_receipt_reference = { evidence_id: "missing", evidence_version: "1", evidence_sha256: digest("missing") }; }],
     ["release-0", row => { row.ordered_unique_attributions.reverse(); row.ordered_unique_attributions_digest = digest(row.ordered_unique_attributions); }],
+    ...["missing", "duplicate", "wrong-role", "wrong-object"].map(kind => ["release-0", row => {
+      if (kind === "missing") row.ordered_content_attribution_rows.pop();
+      if (kind === "duplicate") row.ordered_content_attribution_rows.push(structuredClone(row.ordered_content_attribution_rows.at(-1)));
+      if (kind === "wrong-role") row.ordered_content_attribution_rows.at(-1).content_role = "choice_explanation_object";
+      if (kind === "wrong-object") {
+        const last = row.ordered_content_attribution_rows.at(-1);
+        last.source_object_reference_or_null = { ...last.source_object_reference_or_null, object_version: "different-easy-version" };
+      }
+      row.ordered_content_attribution_rows_digest = digest(row.ordered_content_attribution_rows);
+      row.ordered_unique_attributions = [...new Set(row.ordered_content_attribution_rows.map(value => value.exact_attribution))];
+      row.ordered_unique_attributions_digest = digest(row.ordered_unique_attributions);
+    }]),
     ["q1-asset-rights", row => { row.decision_scope.allowed_scope_tuples = []; }],
     ["q1-asset-rights", row => { row.decision_scope.expires_at_or_null = "2026-09-06T10:00:00.000Z"; }],
     ["q1-asset-rights", row => { row.third_party_rights_decision = "unresolved"; }],

@@ -148,7 +148,10 @@ export function finalReleaseFixture(packet, items, receipts, add, bodyRefs) {
       ...(variant ? [attribute("independent_retry_answer_reasoning", item.easyExplanationReference, item.easyExplanationReference.rights_decision_reference,
         get(item.easyExplanationReference.rights_decision_reference).exact_attribution)] : [attribute("official_key_source_post", null, keyPair.post, get(keyPair.post).attribution),
         attribute("official_key_source_asset", null, keyPair.asset, get(keyPair.asset).exact_attribution)]),
-      ...feedbackAttributions.map(row => attribute(`choice_${row.feedback_kind}`, row.source_object_reference, row.rights_receipt_reference, row.exact_attribution, row.position_1_to_5))];
+      ...feedbackAttributions.map(row => attribute(`choice_${row.feedback_kind}`, row.source_object_reference, row.rights_receipt_reference, row.exact_attribution, row.position_1_to_5)),
+      ...(!variant ? [attribute(FIVE.privateModifiedRetryReleaseContract.originalEasyExplanationAttributionBinding.contentRole,
+        item.easyExplanationReference, item.easyExplanationReference.rights_decision_reference,
+        get(item.easyExplanationReference.rights_decision_reference).exact_attribution)] : [])];
     const attributions = [...new Set(attributionRows.map(row => row.exact_attribution))];
     item.releaseReference = add(`release-${index}`, { receipt_version: variant ? RETRY_RELEASE_VERSION : FIVE.releaseReceiptContract.receiptVersion,
       item_id: ref.questionId, item_version: ref.questionVersion, subject_id: ref.subjectId, ...source,

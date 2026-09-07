@@ -1,7 +1,8 @@
 import foundation from "../../../../config/s235b-first-round-adaptive-mcq-foundation-contract.json" with { type: "json" };
 
 // Consume the existing Foundation, including its full 200-position official key
-// table. This private branch changes neither that table nor the official route.
+// table. Private use additionally binds every emitted easy-feedback object in
+// the final release; it does not weaken the official key/source requirements.
 export const FIVE = foundation.fiveChoiceCorrectionContract;
 export const RIGHTS = foundation.sourceRightsManifest.futureO3BReceiptContract;
 export const PRIVATE_USE = Object.freeze({ plane: "Personal Raw Vault", use: "personal_service_processing", audience: "owner_user_private" });

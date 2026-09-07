@@ -142,17 +142,25 @@ export function validateFinalReleases(installation: PrivateApplicabilityInstalla
     const attributionRows = [...rootAttributions, ...feedbackAttributions.map(row => ({ content_role: `choice_${row.feedback_kind}`,
       choice_position_or_null: row.position_1_to_5, source_object_reference_or_null: row.source_object_reference,
       rights_receipt_reference: row.rights_receipt_reference, exact_attribution: row.exact_attribution }))];
+    const easy = item.easyExplanationReference as Row;
+    const easyRights = ctx.resolve(easy.rights_decision_reference, BODY_DECISION_FIELDS);
+    // Unlike a retry's independent answer reasoning, original easy feedback is
+    // not part of the official key. Bind it explicitly in this final decision.
+    if (!variant) attributionRows.push({
+      content_role: FIVE.privateModifiedRetryReleaseContract.originalEasyExplanationAttributionBinding.contentRole,
+      choice_position_or_null: null, source_object_reference_or_null: easy,
+      rights_receipt_reference: easy.rights_decision_reference, exact_attribution: nonempty(easyRights.exact_attribution),
+    });
     same(release.ordered_content_attribution_rows, attributionRows); same(release.ordered_content_attribution_rows_digest, digest(attributionRows));
     const uniqueAttributions = [...new Set(attributionRows.map(row => nonempty(row.exact_attribution)))];
     same(release.ordered_unique_attributions, uniqueAttributions); same(release.ordered_unique_attributions_digest, digest(uniqueAttributions));
-    const easyRights = ctx.resolve((item.easyExplanationReference as Row).rights_decision_reference, BODY_DECISION_FIELDS);
     const validated = validateCivilReleaseEvidence(ctx, release, pre, keyReference, variant);
     same(reference.sourceVersionManifestIds, validated.sourceVersionManifestIds);
     expiresAt = Math.min(expiresAt, ctx.expiry());
     // Question/source attribution only before response. Full ordered release
     // attribution and easy-explanation attribution appear with durable feedback.
     const projection = Object.freeze({ question: Object.freeze([...new Set(rootAttributions.slice(0, 3).map(row => nonempty(row.exact_attribution)))]),
-      feedback: Object.freeze([...new Set([...uniqueAttributions, nonempty(easyRights.exact_attribution)])]) });
+      feedback: Object.freeze(uniqueAttributions) });
     completed.set(id, { row, release, reference: item.releaseReference, object, projection });
   }
   return { expiresAt, projections: new Map([...completed].map(([id, value]) => [id, value.projection])) };

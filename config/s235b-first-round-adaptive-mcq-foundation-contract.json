@@ -5067,7 +5067,19 @@
       "ownerAmendmentDate": "2026-09-07",
       "scope": "delegated_private_appraiser_first_stage_five_subjects_only",
       "releaseMeaning": "per_item_content_use_authorization_not_operational_deployment",
-      "officialOriginalRoute": "releaseReceiptContract_unchanged_including_full_200_row_official_key_table",
+      "officialOriginalRoute": "retain_releaseReceiptContract_including_full_200_row_official_key_table_and_require_the_private_easy_explanation_attribution_binding",
+      "originalEasyExplanationAttributionBinding": {
+        "base": "releaseReceiptContract.contentRightsAttributionProjectionContract",
+        "rowPosition": "append_exactly_once_after_all_existing_ordered_content_attribution_rows",
+        "contentRole": "easy_explanation_object",
+        "choicePosition": null,
+        "sourceObject": "exact_installed_item_easyExplanationReference_including_body_hash_rights_and_source_version_references",
+        "rightsReference": "easyExplanationReference.rights_decision_reference",
+        "exactAttribution": "resolved_easy_explanation_rights_decision.exact_attribution",
+        "includedInFinalReleaseRowDigestAndOrderedUniqueAttributions": true,
+        "changedBodyOrReferenceRequiresNewFinalPerItemDecision": true,
+        "retryUsesExistingIndependentAnswerReasoningBinding": true
+      },
       "retryReceiptVersion": "appraiser.first.private_modified_retry_release.v1",
       "retryRequiredFieldsDerivation": {
         "base": "releaseReceiptContract.requiredFields",
