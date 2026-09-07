@@ -111,6 +111,7 @@ const defaultTestFiles = [
   "tests/first-stage-private-route.test.mjs",
   "tests/first-stage-economics-content.test.mjs",
   "tests/economics-runtime-candidate.test.mjs",
+  "tests/first-stage-economics-final-release.test.mjs",
   "tests/first-stage-accounting-content.test.mjs",
   "tests/first-stage-remaining-subjects.test.mjs",
   "tests/first-stage-civil-applicability.test.mjs",

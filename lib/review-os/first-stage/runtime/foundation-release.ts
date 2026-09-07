@@ -4,9 +4,11 @@ import { applicabilityFailure as fail, requireSame as same, immutableReference, 
   BODY_DECISION_FIELDS, PRE_RELEASE_FIELDS, type FoundationEvidence, type PrivateApplicabilityInstallation } from "./foundation-applicability";
 import { FIVE, PRIVATE_USE, RETRY_RELEASE_VERSION, RETRY_RELEASE_FIELDS, RETRY_KEY_FIELDS, RETRY_PROVENANCE_FIELDS } from "./foundation-release-contract";
 import { nonempty, releaseContext, sourcePair, type Row } from "./foundation-release-rights";
-import { validateOfficialKey, OFFICIAL_ROUND, officialSession } from "./foundation-release-key";
+import { validateOfficialKey, officialSession } from "./foundation-release-key";
+import { profileForQuestion } from "./foundation-official-profile";
 import { validateLawReleaseEvidence } from "./foundation-release-validation";
 import { validateRealEstateReleaseEvidence } from "./foundation-real-estate-release";
+import { validateEconomicsReleaseEvidence } from "./foundation-economics-release";
 
 const HUMAN = "named_owner_authorized_human_reviewer";
 const CONTENT = "named_owner_authorized_human_content_reviewer";
@@ -41,7 +43,7 @@ export function validateFinalReleases(installation: PrivateApplicabilityInstalla
       release.item_id !== id || release.item_version !== reference.questionVersion || release.subject_id !== reference.subjectId ||
       release.requested_plane_or_null !== PRIVATE_USE.plane || release.requested_use_or_null !== PRIVATE_USE.use ||
       release.requested_audience_or_null !== PRIVATE_USE.audience ||
-      (reference.subjectId !== "real_estate_principles" && release.subject_validator_receipt_reference_or_null !== null)) fail();
+      (!["real_estate_principles", "economics_principles"].includes(String(reference.subjectId)) && release.subject_validator_receipt_reference_or_null !== null)) fail();
     same(release.pre_release_applicability_receipt_reference, item.receiptReference);
     const pre = ctx.resolve(item.receiptReference, PRE_RELEASE_FIELDS);
     same(release.applicable_version_status, pre.applicable_version_status); same(release.choice_set_digest, pre.choice_set_digest);
@@ -81,13 +83,13 @@ export function validateFinalReleases(installation: PrivateApplicabilityInstalla
     ];
     let keyReference: unknown;
     if (!variant) {
-      if (row.sourceQuestionId !== null || reference.examYear !== 2026 || reference.examRound !== 37 ||
-        release.official_exam_round_id !== OFFICIAL_ROUND || release.session_profile_id !== officialSession(reference.subjectId) ||
+      const profile = profileForQuestion(reference);
+      if (row.sourceQuestionId !== null || release.official_exam_round_id !== profile.id || release.session_profile_id !== officialSession(reference.subjectId, profile) ||
         reference.sessionId !== release.session_profile_id || release.official_question_number !== reference.questionNumber) fail();
       if (provenance.extraction_method_id !== TRANSCRIPTION_CONFIG.method || provenance.extraction_method_version !== TRANSCRIPTION_CONFIG.version ||
         provenance.extraction_configuration_digest !== digest(TRANSCRIPTION_CONFIG) || provenance.ocr_benchmark_gate_receipt_reference_or_null !== null) fail();
       ctx.review(provenance, CONTENT, "verified_question_item_object_provenance", source.asset.row.reviewed_at);
-      const official = validateOfficialKey(ctx, release, row.correctChoice, source, installation.sourceObservations);
+      const official = validateOfficialKey(ctx, release, row.correctChoice, source, installation.sourceObservations, profile);
       const position = (official.sourceObservation.ordered_position_bindings as Row[]).find(position =>
         position.subject_id === reference.subjectId && position.official_question_number === reference.questionNumber);
       if (!position) fail(); same(position.question_body_sha256, object.object_sha256); same(position.source_question_anchor, release.source_question_anchor);
@@ -158,6 +160,8 @@ export function validateFinalReleases(installation: PrivateApplicabilityInstalla
     same(release.ordered_unique_attributions, uniqueAttributions); same(release.ordered_unique_attributions_digest, digest(uniqueAttributions));
     const validated = reference.subjectId === "real_estate_principles"
       ? validateRealEstateReleaseEvidence(ctx, release, pre, row, item.choices, keyReference, variant)
+      : reference.subjectId === "economics_principles"
+      ? validateEconomicsReleaseEvidence(ctx, release, pre, row, item.choices, keyReference, variant)
       : validateLawReleaseEvidence(ctx, release, pre, keyReference, variant);
     same(reference.sourceVersionManifestIds, validated.sourceVersionManifestIds);
     expiresAt = Math.min(expiresAt, ctx.expiry());

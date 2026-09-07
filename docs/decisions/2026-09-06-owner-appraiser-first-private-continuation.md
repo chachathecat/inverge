@@ -148,6 +148,19 @@ The concrete sequence and remaining gate are in
 activation is performed by this source preparation. All remote, public, provider,
 extra-cost, payment and others' data boundaries below remain unchanged.
 
+The directly dependent #898 code consumer applies the already authorized 2025
+r3 profile (36th examination, 2025-04-05, session-global question positions) to
+the existing Foundation full 200-position original-key and separate private-retry
+release contracts. This is not another supported exam year or a general selector.
+Other subjects in that table are completeness positions only, not new 2025 runtime
+scope. The 2026 consumers remain unchanged. Neutral candidate references may bind
+to separately reviewed server-installed evidence without rewriting content;
+general six-check review is not final release. Economics formula/unit checks and
+reviewed graph absence use the existing subject-projection/validator objects;
+unsupported models stay denied. Neither code nor synthetic evidence authorizes
+the real r3 projections, original A/key correspondence, 53 normalized transcription,
+human decisions or any installation. Those remain genuine content gates.
+
 Production deployment, public activation, remote DB/migration/RLS apply,
 real-user data, additional paid usage/provider calls/payment changes,
 rights-unclear material, security weakening, destructive operations and scope

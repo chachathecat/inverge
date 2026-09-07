@@ -33,13 +33,28 @@ All six human reviewer/date/decision entries are null. These bodies and hashes
 stay private; do not upload them to Git, CI artifacts or public comments.
 
 The loader candidate uses neutral `private_review_candidate` and question
-identities with no `verified` fields. The same economics loader/adapter path can
-exercise it with exact-file/version synthetic receipts in isolated tests only.
-Real r3 candidates remain explicitly blocked even with a well-formed human
-six-check receipt: the 2025 full official-key/per-item final-release consumer is
-still a required code dependency. No HTTP option selects the test mode or installs
-approval. The candidate bytes need no fabricated human-review label or rewrite
-after review. Legacy content and all other subject consumers remain unchanged.
+identities with no `verified` fields. The #898 consumer binds this exact file to
+separately installed Foundation objects, changing only evidence references, not
+its body/choice/key/feedback content. The six checks alone remain insufficient:
+every original requires the complete 200-position 2025 official key, exact source
+observations and final per-item use decision. Each modified retry requires its
+own independently reviewed key and final decision linked to the original.
+No HTTP option selects the test mode, kind, year profile or installed approval.
+The candidate bytes need no fabricated human-review label or rewrite after review.
+2025 economics cannot select the legacy v1 six-check route. Existing 2026 and
+other-subject behavior remains unchanged.
+
+The bounded economics consumer reuses the existing exact-rational arithmetic and
+Foundation formula/graph/unit applicability contracts. A subject-specific reviewed
+projection pins the exact body, choices, concept, date and source anchors; all
+applicable passes are independently recomputed. It supports canonical declared
+units, four arithmetic operations and bounded min/max/corner comparisons, with
+five quantity comparisons bound to the five choice texts. Unsupported formulas,
+unit conversions or graph interpretation are explicitly denied. Graph absence
+requires the exact trusted subject review, never a packet's `not applicable`.
+This is a supported code boundary, not evidence that all ten real r3 questions
+have suitable or reviewed projections. Their exact models/choices still require
+genuine subject review; do not invent a projection to obtain a passing result.
 
 The original and retry keys stay distinct. All five original key observations
 and five separately calculated retry proposals remain proposals until actual
@@ -59,8 +74,8 @@ Choose separate unused local Supabase ports at installation, and record the
 actual bound addresses then. Suggested dedicated data directory on this PC:
 `C:/Users/jmg91/AppData/Local/Inverge/owner-economics` (not provisioned here).
 
-After the missing 2025 final-release consumer is implemented/verified and genuine
-approval is secured, perform the following in one dedicated local environment:
+After the code consumer is integrated/verified and genuine complete approval is
+secured, perform the following in one dedicated local environment:
 
 1. Revalidate the reviewed code, exact content bytes, human decisions and source
    evidence. Install only the genuine existing approval shape via the trusted
@@ -111,6 +126,6 @@ Owner use; leave it unobserved until it happens. No learning efficacy, mastery,
 transfer or measurement claim follows from completing a local practice item.
 
 Current actual-use result: **not executed; no endpoint or account provisioned**.
-The genuine reviewer/content decision remains the external gate. The 2025 r3
-final-release consumer remains a code dependency, not an Owner approval to waive.
-Code tests and integration can proceed without requesting those files again.
+The genuine reviewer/content decision and complete source/model/final-release
+evidence remain the external gate. Synthetic consumer tests and code integration
+do not satisfy it. No original r3 file is repackaged or requested again.

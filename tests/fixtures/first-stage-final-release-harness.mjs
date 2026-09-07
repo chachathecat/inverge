@@ -11,12 +11,15 @@ const session = subject => `first_2026_session_${SUBJECTS.indexOf(subject) < 3 ?
 const packetRef = ref => ({ schemaVersion: "first_stage.immutable_evidence_reference.v1", evidenceId: ref.evidence_id,
   evidenceVersion: ref.evidence_version, evidenceSha256: ref.evidence_sha256 });
 
-export function finalReleaseSources(packet, receipts, add) {
+export function finalReleaseSources(packet, receipts, add, historical2025 = false) {
+  const roundId = historical2025 ? "appraiser_2025_round_36_first" : ROUND;
+  const sessionId = subject => historical2025 ? `qnet-2025-36-s${SUBJECTS.indexOf(subject) < 3 ? 1 : 2}-A` : session(subject);
+  const number = (subject, i) => historical2025 ? (SUBJECTS.indexOf(subject) < 3 ? SUBJECTS.indexOf(subject) : SUBJECTS.indexOf(subject) - 3) * 40 + i + 1 : i + 1;
   // Malformed negative fixtures must reach the consumer, not crash while the
   // fixture links attribution. This placeholder grants nothing and is not a receipt.
   const get = ref => receipts.find(row => row.receipt_id === ref?.evidence_id || row.proof_receipt_id === ref?.evidence_id) ?? { exact_attribution: null };
   function rights(id, asset, parent = null) {
-    const postId = `synthetic-${id}-post`, assetId = asset ? `synthetic-${id}-asset` : null;
+    const postId = historical2025 ? (id === "key" ? "5246129" : "5231525") : `synthetic-${id}-post`, assetId = asset ? `synthetic-${id}-asset` : null;
     const raw = digest(`synthetic-${id}-${asset ? "asset" : "post"}-bytes`);
     const attribution = `Synthetic ${id} ${asset ? "asset" : "post"} attribution\nNot real source evidence.`;
     const policyUrl = `https://policy.example.test/synthetic/${id}/${asset ? "asset" : "post"}`;
@@ -59,20 +62,20 @@ export function finalReleaseSources(packet, receipts, add) {
     const post = rights(id, false), asset = rights(id, true, post); return { post, asset };
   });
   const originals = packet.questions.filter(row => row.kind === "original");
-  const positions = SUBJECTS.flatMap(subject => Array.from({ length: 40 }, (_, i) => ({ session_profile_id: session(subject), subject_id: subject,
-    official_question_number: i + 1, source_question_anchor: `synthetic-${subject}-${i + 1}` })));
+  const positions = SUBJECTS.flatMap(subject => Array.from({ length: 40 }, (_, i) => ({ session_profile_id: sessionId(subject), subject_id: subject,
+    official_question_number: number(subject, i), source_question_anchor: `synthetic-${subject}-${number(subject, i)}` })));
   const answers = positions.map(position => {
     const original = originals.find(row => row.reference.subjectId === position.subject_id && row.reference.questionNumber === position.official_question_number);
     return { session_profile_id: position.session_profile_id, subject_id: position.subject_id, official_question_number: position.official_question_number,
       final_answer_row_locator: `synthetic-final-${position.subject_id}-${position.official_question_number}`, answer_position_1_to_5: original?.correctChoice ?? 2 };
   });
   const observation = (pair, role, values, index) => add(`official-observation-${index}`, { source_post_id: get(pair.post).post_id,
-    source_asset_id: get(pair.asset).asset_id, raw_artifact_sha256: get(pair.asset).sha256, official_exam_round_id: ROUND,
-    session_profile_ids: [...new Set(values.map(row => row.session_profile_id))], booklet_id: "synthetic-booklet-A-not-official-evidence",
+    source_asset_id: get(pair.asset).asset_id, raw_artifact_sha256: get(pair.asset).sha256, official_exam_round_id: roundId,
+    session_profile_ids: [...new Set(values.map(row => row.session_profile_id))], booklet_id: historical2025 ? "A" : "synthetic-booklet-A-not-official-evidence",
     artifact_role: role, ordered_position_bindings: values, transport_receipt: get(pair.asset).transport_receipt,
     content_identity_receipt: get(pair.asset).content_identity_receipt, reviewer: HUMAN, reviewed_at: AT, decision: "verified_exact_official_booklet_positions" });
   const sourceObservations = sourcePairs.slice(0, 2).map((pair, index) => observation(pair, "official_question",
-    positions.filter(position => position.session_profile_id === `first_2026_session_${index + 1}`).map(position => {
+    positions.filter(position => (SUBJECTS.indexOf(position.subject_id) < 3 ? 0 : 1) === index).map(position => {
       const original = originals.find(row => row.reference.subjectId === position.subject_id && row.reference.questionNumber === position.official_question_number);
       return { ...position, question_body_sha256: original ? createHash("sha256").update(JSON.stringify({ stem: original.stem, choices: original.choices })).digest("hex") : digest(position) };
     }), index));
@@ -82,26 +85,26 @@ export function finalReleaseSources(packet, receipts, add) {
     final_url: get(keyPair.asset).official_download_url, http_status: 200, content_type: "application/pdf", byte_count: 321,
     raw_artifact_sha256: get(keyPair.asset).sha256, retrieved_at: AT });
   const keyRows = positions.map((position, index) => {
-    const pair = sourcePairs[position.session_profile_id.endsWith("1") ? 0 : 1];
+    const pair = sourcePairs[SUBJECTS.indexOf(position.subject_id) < 3 ? 0 : 1];
     return { ...position, source_question_post_id: get(pair.post).post_id, source_question_asset_id: get(pair.asset).asset_id,
       source_question_asset_sha256: get(pair.asset).sha256, final_answer_row_locator: answers[index].final_answer_row_locator,
       answer_position_1_to_5: answers[index].answer_position_1_to_5 };
   });
-  const table = add("official-key-table", { official_exam_round_id: ROUND, final_answer_post_id: get(keyPair.post).post_id,
+  const table = add("official-key-table", { official_exam_round_id: roundId, final_answer_post_id: get(keyPair.post).post_id,
     final_answer_asset_id: get(keyPair.asset).asset_id, final_answer_asset_sha256: get(keyPair.asset).sha256,
     final_answer_asset_rights_receipt_reference: keyPair.asset, source_question_asset_rights_receipt_references: sourcePairs.slice(0, 2).map(pair => pair.asset),
     row_count: 200, ordered_key_rows: keyRows, ordered_key_rows_digest: digest(keyRows), reviewer: HUMAN, reviewed_at: AT,
     decision: "verified_complete_official_key_table_mapping" });
 
-  return { get, sourcePairs, sourceObservations, keyPair, keyObservation, keyTransport, keyRows, table };
+  return { get, sourcePairs, sourceObservations, keyPair, keyObservation, keyTransport, keyRows, table, roundId };
 }
 
 export function finalReleaseFixture(packet, items, receipts, add, bodyRefs, subjectFixture = null) {
-  const { get, sourcePairs, sourceObservations, keyPair, keyObservation, keyTransport, keyRows, table } =
+  const { get, sourcePairs, sourceObservations, keyPair, keyObservation, keyTransport, keyRows, table, roundId } =
     subjectFixture?.sources ?? finalReleaseSources(packet, receipts, add);
   packet.questions.forEach((row, index) => {
     const item = items[index], pre = subjectFixture ? subjectFixture.pre(index) : get(item.receiptReference), variant = row.kind === "practice_retry", ref = row.reference;
-    const pair = sourcePairs[session(ref.subjectId).endsWith("1") ? 0 : 1], questionReference = bodyRefs[index]("question", JSON.stringify({ stem: row.stem, choices: row.choices }));
+    const pair = sourcePairs[SUBJECTS.indexOf(ref.subjectId) < 3 ? 0 : 1], questionReference = bodyRefs[index]("question", JSON.stringify({ stem: row.stem, choices: row.choices }));
     const source = { source_post_id: get(pair.post).post_id, source_asset_id: get(pair.asset).asset_id,
       source_question_anchor: `synthetic-${ref.subjectId}-${ref.questionNumber}`, source_post_rights_receipt_reference: pair.post, source_asset_rights_receipt_reference: pair.asset };
     const originalIndex = packet.questions.findIndex(candidate => candidate.reference.questionId === row.sourceQuestionId);
@@ -122,7 +125,7 @@ export function finalReleaseFixture(packet, items, receipts, add, bodyRefs, subj
     const mapped = keyRows.find(position => position.subject_id === ref.subjectId && position.official_question_number === ref.questionNumber);
     const key = add(`final-key-${index}`, variant ? { ...commonKey, question_item_object_reference: object, choice_set_digest: pre.choice_set_digest,
       original_release_reference: originalRelease, answer_reasoning_object_reference: item.easyExplanationReference, authority: "LEARNING_ONLY",
-      decision: "verified_independent_private_retry_key" } : { ...commonKey, ...mapped, official_exam_round_id: ROUND,
+      decision: "verified_independent_private_retry_key" } : { ...commonKey, ...mapped, official_exam_round_id: roundId,
       qnet_post_id: get(keyPair.post).post_id, qnet_asset_id: get(keyPair.asset).asset_id, exact_asset_raw_sha256: get(keyPair.asset).sha256,
       key_post_rights_receipt_reference: keyPair.post, key_asset_rights_receipt_reference: keyPair.asset,
       effective_key_rights_decision: "approved_owner_private_use", key_post_exact_attribution: get(keyPair.post).attribution,
@@ -164,7 +167,7 @@ export function finalReleaseFixture(packet, items, receipts, add, bodyRefs, subj
     item.releaseReference = add(`release-${index}`, { receipt_version: variant ? RETRY_RELEASE_VERSION : FIVE.releaseReceiptContract.receiptVersion,
       item_id: ref.questionId, item_version: ref.questionVersion, subject_id: ref.subjectId, ...source,
       ...(variant ? { item_kind: "private_modified_retry", authority: "LEARNING_ONLY", original_release_reference: originalRelease, independent_answer_key_reference: key }
-        : { official_exam_round_id: ROUND, session_profile_id: ref.sessionId, official_question_number: ref.questionNumber, verified_official_key_receipt_reference: key }),
+        : { official_exam_round_id: roundId, session_profile_id: ref.sessionId, official_question_number: ref.questionNumber, verified_official_key_receipt_reference: key }),
       question_item_object_reference_or_null: object, effective_rights_decision: "approved_owner_private_use",
       requested_plane_or_null: PRIVATE_USE.plane, requested_use_or_null: PRIVATE_USE.use, requested_audience_or_null: PRIVATE_USE.audience,
       source_version_manifest_references: [manifest], applicable_version_status: pre.applicable_version_status,

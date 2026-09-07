@@ -3,6 +3,7 @@ import { createHash } from "node:crypto";
 import test from "node:test";
 import { prepareEconomicsRuntimeCandidate } from "../scripts/content-review/prepare-economics-runtime-candidate.mjs";
 import { syntheticReviewInputs, syntheticRuntimeCandidateInput } from "./fixtures/economics-runtime-candidate-harness.mjs";
+import { economicsReleaseInput } from "./fixtures/first-stage-economics-applicability-harness.mjs";
 import { loadEconomicsContent } from "../lib/review-os/first-stage/runtime/economics-content.ts";
 import { loadAccountingContent } from "../lib/review-os/first-stage/runtime/accounting-content.ts";
 import { privateSessionDigest as digest } from "../lib/review-os/first-stage/runtime/session-service.ts";
@@ -61,7 +62,7 @@ test("pending candidate never reads with empty approvals or borrows test receipt
   assert.doesNotMatch(await response.text(), /SYNTHETIC_CANDIDATE|correctChoice/u);
 });
 
-test("six-check server approval cannot replace the unimplemented r3 final-release consumer", async () => {
+test("six-check server approval cannot replace installed r3 final-release evidence", async () => {
   // Synthetic bytes and synthetic identities ONLY: model a well-formed server
   // six-check shape, not a real approval or an installed production receipt.
   const prepared = prepareEconomicsRuntimeCandidate(syntheticReviewInputs());
@@ -80,7 +81,8 @@ test("six-check server approval cannot replace the unimplemented r3 final-releas
 });
 
 test("candidate same-loader HTTP path saves before feedback and survives concurrency, lost response and D+1 retry", async () => {
-  const input = syntheticRuntimeCandidateInput(), catalog = await loadEconomicsContent(input); assert.ok(catalog);
+  const { input } = await economicsReleaseInput();
+  const catalog = await loadEconomicsContent(input); assert.ok(catalog);
   const h = harness({ catalog }), route = privateRoute(h, { contentInput: input });
   const questionId = catalog.initialReferences[0].questionId;
   const create = { action: "create", requestId: "converted-create", questionId };
