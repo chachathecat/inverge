@@ -29,6 +29,6 @@ function privateSubjectSession(catalog: () => Promise<PrivateFirstStageCatalog |
 // Same gate and durable store; subject authority comes only from this server binding.
 export const handlePrivateFirstStageSession = privateSubjectSession(loadApprovedPrivateFirstStageCatalog);
 export const handlePrivateAccountingSession = privateSubjectSession(loadApprovedPrivateAccountingCatalog);
-export const handlePrivateCivilLawSession = privateSubjectSession(loadApprovedPrivateCivilLawCatalog, "subject_applicability_implementation_required");
+export const handlePrivateCivilLawSession = privateSubjectSession(loadApprovedPrivateCivilLawCatalog);
 export const handlePrivateRealEstatePrinciplesSession = privateSubjectSession(loadApprovedPrivateRealEstatePrinciplesCatalog, "subject_applicability_implementation_required");
 export const handlePrivateAppraiserRelatedLawSession = privateSubjectSession(loadApprovedPrivateAppraiserRelatedLawCatalog, "subject_applicability_implementation_required");

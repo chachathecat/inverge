@@ -1,6 +1,71 @@
 # Inverge Owner Study OS
 
-## Current private first-stage code continuation — #888 / 2026-09-07
+## Current private first-stage code continuation — #890 / 2026-09-07
+
+- #889 is integrated, not reopened: reviewed head
+  `f7998100721d008529a1dc8b333287f60dca1420`, squash/main
+  `1b974cb3a794634de7291847f6f634c488428dbf`, matching tree
+  `51164087db73064cdd4124bab54b2e8257a03142`. Its native closeout is
+  https://github.com/chachathecat/inverge/pull/889#issuecomment-5564941377.
+  That merge completed synthetic mechanics only; it did not implement the
+  three Foundation applicability consumers or approve actual content.
+- The Owner now authorizes those missing consumers, civil law first. Code child
+  #890 uses the same isolated worktree, single writer, branch
+  `codex/first-stage-civil-applicability`, from that freshly fetched main.
+  Relationship-law and real-estate consumers follow by reusing this structure;
+  they remain code-incomplete and real-stock-blocked in this civil-law slice.
+- Civil law now consumes the existing Foundation pre-release, law exam-date,
+  official history and extraction shapes. It verifies exact immutable triples,
+  JCS digests, one Civil Code authority, the five-choice/source-anchor projection,
+  complete ordered amendment intervals, selected/predecessor/successor identity,
+  transport/content-identity observations and the bound extraction configuration.
+  The supported historical date is the Foundation's `2026-04-04` only; this
+  does not certify any real law snapshot, another year or current legal advice.
+- Trust comes from separately reviewed **server-code-installed** Foundation
+  objects, pinned to exact private packet and per-question bytes. Hash agreement
+  or a self-asserted reviewer/currentness field is not trust. No receipt issuer,
+  new evidence ledger, law crawler or source database is added. Actual installed
+  content approvals and applicability objects are EMPTY. Test graphs are
+  explicitly synthetic dependency injection and record no actual human review.
+- The actual loader validates every original and retry before advertising stock;
+  the adapter's version evidence is the validated applicability reference. The
+  existing catalog digest binds the installed snapshot, so withdrawn/replaced
+  evidence cannot silently rehydrate an old session. HTTP does not accept proof,
+  approval, clock or currentness authority. The same service/repository/UI retain
+  durable-only explanation, CAS/replay, D+1 and completed-state preservation.
+  Civil-law unavailability now correctly names content approval, while the two
+  unimplemented subjects retain the implementation blocker.
+- Initial reproduction: a six-check synthetic packet without Foundation proof
+  was incorrectly admitted by the actual civil loader. The new negative test
+  failed before implementation and now passes. Fresh focused validation: 72
+  tests pass, zero skips, including 36 rehashed hostile graph cases through HTTP,
+  installation drift/withdrawal, runtime injection denial and five-subject
+  regressions. Build, sequential typecheck, changed-file lint (11 source/test
+  files), JSON validation (no JSON delta), 12-path manifest and diff check pass.
+  Seven isolated runtime tests pass, zero skips: all five actual loader/HTTP/
+  PostgreSQL/browser flows, delayed subject navigation and blocked POST/reload/
+  reconnect. Synthetic users/rows were cleaned to zero, disposable containers
+  removed, browser external requests/errors zero. The civil completion screenshot
+  was visually checked. These are injected synthetic auth/catalog/clock ports,
+  not remote auth or actual content acceptance. Native CI/review are pending;
+  no earlier head's CI/review is claimed for this candidate.
+- Next: finish local/runtime checks and changed-path review, ordinary push,
+  exact-head native checks and one independent review (reuse automatic review),
+  then conditional pinned squash only with zero actionable findings/threads and
+  unchanged safe deployment boundary. Keep #883 open and continue the next
+  subject consumer. No actual env, flag, content path, remote DB, provider,
+  payment, Production/public activation, Seven Exams or separate legal DB work.
+
+Approved content: **0**. Real use remains blocked. Economics r3 and its six pending
+human checks are unchanged and are not repackaged. Genuine source/rights/key/
+feedback/version/lineage judgments, approved installation and actual environment
+activation remain external gates, distinct from independently integrated code.
+Rollback: empty approvals/feature OFF deny before content I/O; an ordinary source
+revert restores the prior civil-law blocker without deleting durable rows or
+changing economics/accounting. Evidence withdrawal/drift leaves stored state
+unchanged. No remote rollback or schema/RLS mutation is needed.
+
+## Historical #889 synthetic-mechanics candidate evidence — #888 / 2026-09-07
 
 - #884 economics code is integrated; #887 accounting code is now integrated at
   squash/main `66f47d8f6fc6e535fe6af35d9aa76561d5cb1efb`, tree

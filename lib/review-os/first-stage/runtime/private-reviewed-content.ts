@@ -9,6 +9,7 @@ import {
   validateAttemptEvaluation, validatePresentation, type SubjectAdapterV1,
 } from "../subject-adapter/subject-adapter";
 import { privateSessionDigest as digest, type PrivateFirstStageCatalog } from "./session-service";
+import { validateCivilApplicability, type PrivateApplicabilityInstallation } from "./foundation-applicability";
 
 export const PRIVATE_CONTENT_MAX_BYTES = 2 * 1024 * 1024;
 export const PRIVATE_CONTENT_REVIEW_CHECKS = Object.freeze([
@@ -67,6 +68,8 @@ export type PrivateContentInput = {
   approvals: readonly PrivateContentApproval[];
   readBytes(): Promise<Uint8Array>;
   expectedDataClass?: PrivateContentApproval["dataClass"];
+  /** Server-installed Foundation objects; never parsed from the private packet. */
+  applicability?: readonly PrivateApplicabilityInstallation[];
 };
 
 // Closed server-selected policies. Request bodies cannot choose or alter these.
@@ -84,18 +87,17 @@ export async function loadPrivateReviewedContent(subjectId: keyof typeof POLICIE
     if (!Object.hasOwn(POLICIES, subjectId)) return null;
     const policy = POLICIES[subjectId];
     const expected = options.expectedDataClass ?? "human_reviewed_private";
-    // These three bindings currently verify synthetic mechanics only. The
-    // Foundation preReleaseApplicabilityReceiptShape consumer is not implemented:
-    // Civil Code exam-date proof, derived per-authority law proofs, and the
-    // real-estate subject-validator receipt cannot be replaced by six generic
-    // review checks or a packet's currentnessState/versionEvidence fields.
-    // Fail before reading a real packet even if a generic approval is installed.
-    // Synthetic injection is a test port, never an environment/HTTP setting.
-    if (subjectId !== "economics_principles" && subjectId !== "accounting" &&
+    // The remaining two subject consumers are still unimplemented. Civil law
+    // now consumes its existing Foundation proof in BOTH test and real classes.
+    if ((subjectId === "real_estate_principles" || subjectId === "appraiser_related_law") &&
       expected !== "synthetic_test_only") return null;
     const approvals = options.approvals.map(approval);
     if (!approvals.length || approvals.some(item => item.dataClass !== expected) ||
       new Set(approvals.map(item => item.packetSha256)).size !== approvals.length) return null;
+    const applicability = subjectId === "civil_law" ? structuredClone(options.applicability ?? []) : [];
+    if (subjectId === "civil_law" && (!applicability.length ||
+      applicability.some(item => item.dataClass !== expected) ||
+      new Set(applicability.map(item => item.packetSha256)).size !== applicability.length)) return null;
     const bytes = await options.readBytes();
     if (!bytes.length || bytes.byteLength > PRIVATE_CONTENT_MAX_BYTES) return null;
     const packetSha256 = crypto.createHash("sha256").update(bytes).digest("hex");
@@ -108,6 +110,12 @@ export async function loadPrivateReviewedContent(subjectId: keyof typeof POLICIE
       packet.authority !== "LEARNING_ONLY" || !Array.isArray(packet.questions) ||
       packet.questions.length < 2 || packet.questions.length > 200 || !Array.isArray(packet.keys) ||
       packet.keys.length !== packet.questions.length) return null;
+    let applicabilityDigest: string | null = null;
+    if (subjectId === "civil_law") {
+      const installed = applicability.find(item => item.packetSha256 === packetSha256);
+      if (!installed) return null;
+      applicabilityDigest = validateCivilApplicability(installed, packet.questions);
+    }
 
     const questions = packet.questions.map(value => {
       const row = exactObject(value, ["reference", "kind", "sourceQuestionId", "stem", "choices", "correctChoice",
@@ -224,7 +232,8 @@ export async function loadPrivateReviewedContent(subjectId: keyof typeof POLICIE
     };
     // Validate every presentation before advertising any stock. No body is returned here.
     for (const row of questions) adapter.presentQuestion(row.reference);
-    return Object.freeze({ digest: digest({ packetSha256, approved, adapterVersion: adapter.adapterVersion }),
+    return Object.freeze({ digest: digest({ packetSha256, approved, adapterVersion: adapter.adapterVersion,
+      ...(applicabilityDigest === null ? {} : { applicabilityDigest }) }),
       registry: createSubjectAdapterRegistry([adapter]),
       initialReferences: Object.freeze(questions.filter(row => row.kind === "original").map(row => row.reference)),
       retryAvailability(reference: QuestionReference, usedQuestionIds: readonly string[]) {
