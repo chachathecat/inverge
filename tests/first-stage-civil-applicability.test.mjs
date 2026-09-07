@@ -12,7 +12,7 @@ import * as accountingContent from "../lib/review-os/first-stage/runtime/account
 import { PRE_RELEASE_FIELDS, FOUNDATION_CHOICE_FIELDS, validateCivilApplicability } from "../lib/review-os/first-stage/runtime/foundation-applicability.ts";
 import { LAW_PROOF_FIELDS, LAW_HISTORY_FIELDS, LAW_EXTRACTION_FIELDS, LAW_CHAIN_FIELDS } from "../lib/review-os/first-stage/runtime/foundation-law-applicability.ts";
 import { privateRoute, compilePrivateSource, ENVIRONMENT } from "./fixtures/first-stage-private-route-harness.mjs";
-import { harness } from "./fixtures/first-stage-private-session-harness.mjs";
+import { harness, submission, SUBMIT } from "./fixtures/first-stage-private-session-harness.mjs";
 import { privateSessionDigest as digest } from "../lib/review-os/first-stage/runtime/session-service.ts";
 
 const URL = "http://127.0.0.1/api/review-os/first-stage/civil-law/sessions";
@@ -32,7 +32,7 @@ test("consumer uses existing Foundation exact shapes and digest fields without c
     [LAW_EXTRACTION_FIELDS, law.officialVersionHistoryExtractionReceiptShape.requiredFields],
     [LAW_CHAIN_FIELDS, law.amendmentChainRecordRequiredFields]]) assert.deepEqual(actual, expected);
   const { installed, packet } = input();
-  assert.match(validateCivilApplicability(installed, packet.questions), /^[a-f0-9]{64}$/u);
+  assert.match(validateCivilApplicability(installed, packet.questions).digest, /^[a-f0-9]{64}$/u);
 });
 
 test("civil law: missing Foundation evidence is rejected even with exact six-check synthetic approval", async () => {
@@ -44,6 +44,96 @@ test("civil law: trusted server Foundation graph admits the actual content adapt
   const catalog = await loadCivilLawContent({ ...syntheticContentInput(packet), applicability: [installed] });
   assert.ok(catalog);
   assert.equal(catalog.registry.require("civil_law").subjectId, "civil_law");
+});
+
+test("P1 reproduction: nonexistent feedback rights decisions must not admit the actual civil catalog", async () => {
+  const { options } = input((id, row) => {
+    if (id === "0-explanation-0-body") row.rights_decision_reference = {
+      evidence_id: "nonexistent-rights", evidence_version: "1", evidence_sha256: digest("unissued") };
+  });
+  assert.equal(await loadCivilLawContent(options), null);
+});
+
+test("body decisions resolve exact current rights/version/object/private-use bindings before HTTP disclosure", async () => {
+  const invalid = [
+    ["object_id", "other-object"], ["object_version", "2"], ["object_sha256", digest("other-body")],
+    ["item_id", "other-item"], ["item_version", "2"], ["subject_id", "appraiser_related_law"],
+    ["authorized_plane", "Reusable Derived Store"], ["authorized_use", "public_distribution"],
+    ["authorized_audience", "public"], ["currentness", "revoked"], ["currentness", "unresolved"],
+    ["effective_from", "2099-01-01T00:00:00.000Z"], ["expires_at_or_null", "2026-09-06T10:00:00.000Z"],
+    ["reviewer", "client-nominated-reviewer"], ["decision", "denied"],
+    ["reviewed_at", "2026-09-06T11:00:00.000Z"],
+  ];
+  const cases = [
+    ...["rights", "version"].flatMap(kind => invalid.map(([field, value]) =>
+      [`${kind}/${field}/${value}`, `0-explanation-0-${kind}`, row => { row[field] = value; }])),
+    ["version exam date", "0-explanation-0-version", row => { row.exam_date = "2026-04-05"; }],
+    ["version state", "0-explanation-0-version", row => { row.applicable_version_status = "verified_current"; }],
+    ["version proof binding", "0-explanation-0-version", row => { row.component_evidence_references = []; }],
+    ["easy explanation denial", "0-easy-rights", row => { row.decision = "denied"; }],
+    ["false-choice correction denial", "0-correction-0-version", row => { row.decision = "denied"; }],
+    ["last retry choice denial", "2-explanation-4-rights", row => { row.decision = "denied"; }],
+    ...["rights_decision_reference", "source_version_decision_reference"].flatMap(field =>
+      ["evidence_id", "evidence_version", "evidence_sha256"].map(key =>
+        [`unresolved ${field}/${key}`, "0-explanation-0-body", row => {
+          row[field] = { ...row[field], [key]: key === "evidence_sha256" ? digest("stale") : "missing-or-stale" };
+        }])),
+  ];
+  for (const [label, target, mutate] of cases) {
+    const { options } = input((id, row) => { if (id === target) mutate(row); });
+    assert.equal(await loadCivilLawContent(options), null, label);
+    const h = harness(), route = privateRoute(h, { subject: "civil_law", contentInput: options });
+    const request = post(create), denied = await route.POST(request);
+    assert.equal(denied.status, 503, label); assert.equal(request.bodyUsed, false, label);
+    assert.match(denied.headers.get("cache-control"), /no-store/u);
+    assert.deepEqual(await denied.json(), { ok: false, error: "approved_content_required" }, label);
+    assert.equal(route.counts.repository, 0, label); assert.equal(h.rows.size, 0, label);
+  }
+});
+
+test("internally matching rights/version hashes cannot authorize different explanation bytes", async () => {
+  const { options } = input((id, row) => {
+    // Rehash BOTH decisions and the body reference/root coherently. Only the
+    // exact private UTF-8 body binding detects this non-stale hostile graph.
+    if (["0-explanation-0-rights", "0-explanation-0-version", "0-explanation-0-body"].includes(id)) {
+      row.object_sha256 = digest("not-the-private-explanation-bytes");
+    }
+  });
+  assert.equal(await loadCivilLawContent(options), null);
+});
+
+test("expiry while a submission is durably saved discloses nothing and leaves retry state intact", async t => {
+  let wallClock = Date.parse("2026-09-07T11:00:00.000Z"), expireOnWrite = false;
+  const expires = "2026-09-07T12:00:00.000Z";
+  t.mock.method(Date, "now", () => wallClock);
+  const { options } = input((id, row) => {
+    if (id === "0-easy-rights") row.expires_at_or_null = expires;
+  });
+  const catalog = await loadCivilLawContent(options); assert.ok(catalog);
+  const h = harness({ catalog }), store = { ...h.store, async replace(value, revision) {
+    const result = await h.store.replace(value, revision);
+    if (expireOnWrite) wallClock = Date.parse(expires);
+    return result;
+  } };
+  const route = privateRoute(h, { subject: "civil_law", contentInput: options, repository: () => store });
+  const created = await (await route.POST(post(create))).json(), sessionId = created.view.sessionId;
+  const opened = await (await route.POST(post({ sessionId, command: { action: "begin", requestId: "begin",
+    expectedRevision: 1, questionId: create.questionId } }))).json();
+  assert.equal(opened.view.explanation, null);
+  expireOnWrite = true; h.setClock(SUBMIT);
+  const command = { sessionId, command: submission(opened.view.attempt.attemptId) };
+  const denied = await route.POST(post(command));
+  assert.equal(denied.status, 503);
+  assert.match(denied.headers.get("cache-control"), /no-store/u);
+  assert.doesNotMatch(await denied.text(), /SYNTHETIC_|EXPLANATION|correctChoice|정답/u);
+  const saved = JSON.stringify([...h.rows]);
+  assert.equal(h.rows.size, 1); assert.equal([...h.rows.values()][0].state.revision, 3);
+  assert.doesNotMatch(saved, /SYNTHETIC_|EXPLANATION|정답/u);
+  assert.throws(() => catalog.explanation(catalog.initialReferences[0]), /adapter_mismatch/u);
+  assert.equal((await route.POST(post(command))).status, 503);
+  assert.equal((await route.GET(new Request(`${URL}?sessionId=${sessionId}`))).status, 503);
+  assert.equal(JSON.stringify([...h.rows]), saved);
+  assert.equal(h.counts.creates, 1); assert.equal(h.counts.replaces, 2);
 });
 
 const invalidReceipts = [

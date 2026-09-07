@@ -70,16 +70,29 @@ export function civilApplicability(packet, mutate = () => {}) {
     decision: "verified_in_force_on_exam_date" }, true);
   const items = packet.questions.map((row, index) => {
     row.reference.sourceVersionManifestIds = [LAW_MANIFEST];
-    const bodyRef = id => ({ object_id: `synthetic-${index}-${id}`, object_version: "1", object_sha256: digest(id),
-      authorized_plane: "Personal Raw Vault", rights_decision_reference: history, source_version_decision_reference: proof });
+    const bodyRef = (id, body) => {
+      const binding = { object_id: `synthetic-${index}-${id}`, object_version: "1",
+        object_sha256: createHash("sha256").update(body, "utf8").digest("hex"),
+        item_id: row.reference.questionId, item_version: row.reference.questionVersion, subject_id: "civil_law",
+        authorized_plane: "Personal Raw Vault", authorized_use: "personal_service_processing", authorized_audience: "owner_user_private",
+        effective_from: REVIEWED, expires_at_or_null: "2099-12-31T00:00:00.000Z", currentness: "verified_current", reviewer: HUMAN, reviewed_at: REVIEWED };
+      const rights = add(`${index}-${id}-rights`, { ...binding, decision: "approved_owner_private_use" });
+      const version = add(`${index}-${id}-version`, { ...binding, exam_date: EXAM_DATE,
+        applicable_version_status: "law_exam_date_verified", component_evidence_references: [proof], decision: "verified_in_force_on_exam_date" });
+      const ref = { object_id: binding.object_id, object_version: binding.object_version, object_sha256: binding.object_sha256,
+        authorized_plane: "Personal Raw Vault", rights_decision_reference: rights, source_version_decision_reference: version };
+      mutate(`${index}-${id}-body`, ref);
+      return ref;
+    };
     const choices = row.choices.map((_, i) => ({ choice_id: `synthetic-choice-${i + 1}`, position_1_to_5: i + 1,
       verdict_true_false_or_unresolved: i + 1 === row.correctChoice ? "true" : "false",
       correction_status: i + 1 === row.correctChoice ? "verified_no_correction" : "verified_correction_available",
-      correction_reference_or_null: i + 1 === row.correctChoice ? null : bodyRef(`correction-${i}`),
-      explanation_status: "draft_private", explanation_reference_or_null: bodyRef(`explanation-${i}`),
+      correction_reference_or_null: i + 1 === row.correctChoice ? null : bodyRef(`correction-${i}`, row.choiceExplanations[i]),
+      explanation_status: "draft_private", explanation_reference_or_null: bodyRef(`explanation-${i}`, row.choiceExplanations[i]),
       source_anchor_ids: [`synthetic-civil-anchor-${index}-${i}`], law_or_kifrs_version_status: "law_exam_date_verified",
       uncertainty_codes: [] }));
     const anchors = choices.flatMap(choice => choice.source_anchor_ids).sort();
+    const easyExplanationReference = bodyRef("easy", row.easyExplanation);
     const receipt = add(`applicability-${index}`, { item_id: row.reference.questionId, item_version: row.reference.questionVersion,
       subject_id: "civil_law", choice_set_digest: digest({ item_id: row.reference.questionId, item_version: row.reference.questionVersion, choices }),
       source_anchor_ids_digest: digest(anchors), receipt_kind: "law_exam_date_bundle", applicable_authority_ids: ["civil_code"],
@@ -89,9 +102,9 @@ export function civilApplicability(packet, mutate = () => {}) {
     row.versionEvidence = { schemaVersion: "first_stage.immutable_evidence_reference.v1", evidenceId: receipt.evidence_id,
       evidenceVersion: receipt.evidence_version, evidenceSha256: receipt.evidence_sha256 };
     packet.keys[index].questionReferenceSha256 = digest(row.reference);
-    return { questionSha256: digest(row), examDate: EXAM_DATE, choices, receiptReference: receipt };
+    return { questionSha256: digest(row), examDate: EXAM_DATE, choices, easyExplanationReference, receiptReference: receipt };
   });
   return { packetSha256: createHash("sha256").update(JSON.stringify(packet)).digest("hex"), dataClass: "synthetic_test_only",
     items, receipts, historyExtractionConfigurations: [configuration], reviewers: [{ identity: HUMAN, classes: ["named_owner_authorized_human_law_reviewer",
-      "named_owner_authorized_human_subject_or_version_reviewer"] }] };
+      "named_owner_authorized_human_subject_or_version_reviewer", "named_owner_authorized_human_rights_reviewer"] }] };
 }

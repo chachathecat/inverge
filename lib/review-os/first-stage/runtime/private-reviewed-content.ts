@@ -111,10 +111,12 @@ export async function loadPrivateReviewedContent(subjectId: keyof typeof POLICIE
       packet.questions.length < 2 || packet.questions.length > 200 || !Array.isArray(packet.keys) ||
       packet.keys.length !== packet.questions.length) return null;
     let applicabilityDigest: string | null = null;
+    let applicabilityExpiresAt = Infinity;
     if (subjectId === "civil_law") {
       const installed = applicability.find(item => item.packetSha256 === packetSha256);
       if (!installed) return null;
-      applicabilityDigest = validateCivilApplicability(installed, packet.questions);
+      const validated = validateCivilApplicability(installed, packet.questions);
+      applicabilityDigest = validated.digest; applicabilityExpiresAt = validated.expiresAt;
     }
 
     const questions = packet.questions.map(value => {
@@ -170,6 +172,9 @@ export async function loadPrivateReviewedContent(subjectId: keyof typeof POLICIE
     if (!questions.some(row => row.kind === "original")) fail();
 
     function requireRow(reference: QuestionReference) {
+      // Recheck time at presentation/evaluation/retry and durable explanation
+      // readback, not only before a potentially slow persistence operation.
+      if (Date.now() >= applicabilityExpiresAt) fail();
       const row = rows.get(reference.questionId);
       if (!row || digest(reference) !== digest(row.reference)) fail();
       return row;

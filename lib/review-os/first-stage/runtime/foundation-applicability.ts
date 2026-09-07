@@ -1,3 +1,4 @@
+import crypto from "node:crypto";
 import { FirstStageKernelError, exactObject, requiredIdentifier, requiredUtcInstant } from "../kernel/domain";
 import { privateSessionDigest as digest } from "./session-service";
 import { validateCivilLawProof } from "./foundation-law-applicability";
@@ -11,7 +12,8 @@ type Row = Record<string, unknown>;
 export type PrivateApplicabilityInstallation = Readonly<{
   packetSha256: string;
   dataClass: "human_reviewed_private" | "synthetic_test_only";
-  items: readonly Readonly<{ questionSha256: string; examDate: string; choices: readonly unknown[]; receiptReference: unknown }>[];
+  items: readonly Readonly<{ questionSha256: string; examDate: string; choices: readonly unknown[];
+    easyExplanationReference: unknown; receiptReference: unknown }>[];
   receipts: readonly unknown[];
   reviewers: readonly Readonly<{ identity: string; classes: readonly string[] }>[];
   historyExtractionConfigurations: readonly unknown[];
@@ -105,26 +107,55 @@ export const PRE_RELEASE_FIELDS = ("receipt_id receipt_version receipt_sha256 it
 export const FOUNDATION_CHOICE_FIELDS = ("choice_id position_1_to_5 verdict_true_false_or_unresolved correction_status " +
   "correction_reference_or_null explanation_status explanation_reference_or_null source_anchor_ids law_or_kifrs_version_status uncertainty_codes").split(" ");
 const BODY_REFERENCE_FIELDS = "object_id object_version object_sha256 authorized_plane rights_decision_reference source_version_decision_reference".split(" ");
-function bodyReference(value: unknown) {
+// Closed consumption projections for choiceShape.bodylessReferenceShape's two
+// decisions. They resolve in the SAME installed Foundation snapshot, not a new
+// approval store. Merely looking like an immutable reference is insufficient.
+export const BODY_DECISION_FIELDS = ("receipt_id receipt_version receipt_sha256 object_id object_version object_sha256 item_id item_version subject_id " +
+  "authorized_plane authorized_use authorized_audience effective_from expires_at_or_null currentness reviewer reviewed_at decision").split(" ");
+export const BODY_VERSION_FIELDS = [...BODY_DECISION_FIELDS, "exam_date", "applicable_version_status", "component_evidence_references"];
+function bodyReference(value: unknown, body: unknown, question: Row, receipt: Row, evidence: FoundationEvidence, examDate: string) {
   const row = exactObject(value, BODY_REFERENCE_FIELDS);
   requiredIdentifier(row.object_id); requiredIdentifier(row.object_version); requiredHash(row.object_sha256);
-  if (row.authorized_plane !== "Personal Raw Vault") applicabilityFailure();
-  immutableReference(row.rights_decision_reference); immutableReference(row.source_version_decision_reference);
+  if (row.authorized_plane !== "Personal Raw Vault" || typeof body !== "string" ||
+    crypto.createHash("sha256").update(body, "utf8").digest("hex") !== row.object_sha256) applicabilityFailure();
+  const rights = evidence.resolve(row.rights_decision_reference, BODY_DECISION_FIELDS);
+  const version = evidence.resolve(row.source_version_decision_reference, BODY_VERSION_FIELDS);
+  let expiresAt = Infinity;
+  for (const [decision, role, requiredDecision] of [
+    [rights, "named_owner_authorized_human_rights_reviewer", "approved_owner_private_use"],
+    [version, "named_owner_authorized_human_law_reviewer", "verified_in_force_on_exam_date"],
+  ] as const) {
+    for (const field of ["object_id", "object_version", "object_sha256", "authorized_plane"]) requireSame(decision[field], row[field]);
+    if (decision.item_id !== question.questionId || decision.item_version !== question.questionVersion || decision.subject_id !== question.subjectId ||
+      decision.authorized_use !== "personal_service_processing" || decision.authorized_audience !== "owner_user_private" ||
+      decision.currentness !== "verified_current") applicabilityFailure();
+    const from = Date.parse(requiredUtcInstant(decision.effective_from));
+    const until = decision.expires_at_or_null === null ? Infinity : Date.parse(requiredUtcInstant(decision.expires_at_or_null));
+    if (from > Date.now() || until <= Date.now() || until <= from) applicabilityFailure();
+    evidence.reviewer(decision, role, requiredDecision);
+    if (Date.parse(requiredUtcInstant(decision.reviewed_at)) >= until ||
+      Date.parse(requiredUtcInstant(receipt.reviewed_at)) < Date.parse(requiredUtcInstant(decision.reviewed_at))) applicabilityFailure();
+    expiresAt = Math.min(expiresAt, until);
+  }
+  if (version.exam_date !== examDate || version.applicable_version_status !== receipt.applicable_version_status) applicabilityFailure();
+  requireSame(version.component_evidence_references, receipt.component_evidence_references);
+  return expiresAt;
 }
 
-export function validateCivilApplicability(installation: PrivateApplicabilityInstallation, questions: readonly unknown[]): string {
+export function validateCivilApplicability(installation: PrivateApplicabilityInstallation, questions: readonly unknown[]) {
   validJson(installation);
   if (JSON.stringify(installation).length > 4 * 1024 * 1024) applicabilityFailure();
   exactObject(installation, ["packetSha256", "dataClass", "items", "receipts", "reviewers", "historyExtractionConfigurations"]);
   requiredHash(installation.packetSha256);
   const snapshot = structuredClone(installation), evidence = foundationEvidence(snapshot);
+  let expiresAt = Infinity;
   if (!Array.isArray(snapshot.items) || snapshot.items.length !== questions.length ||
     new Set(snapshot.items.map(item => item.questionSha256)).size !== questions.length) applicabilityFailure();
   for (const value of questions) {
     const row = value as Row, reference = row.reference as Row;
     const item = snapshot.items.find(candidate => candidate.questionSha256 === digest(value));
     if (!item) applicabilityFailure();
-    exactObject(item, ["questionSha256", "examDate", "choices", "receiptReference"]);
+    exactObject(item, ["questionSha256", "examDate", "choices", "easyExplanationReference", "receiptReference"]);
     requiredHash(item.questionSha256);
     if (requiredDay(item.examDate) !== "2026-04-04" || reference.examYear !== 2026 || reference.subjectId !== "civil_law" ||
       reference.currentnessState !== "verified_exam_date" || !Array.isArray(reference.sourceVersionManifestIds) ||
@@ -137,6 +168,7 @@ export function validateCivilApplicability(installation: PrivateApplicabilityIns
       receipt.subject_id !== reference.subjectId || receipt.receipt_kind !== "law_exam_date_bundle" ||
       receipt.applicable_version_status !== "law_exam_date_verified" || receipt.authority_derivation_receipt_reference_or_null !== null) applicabilityFailure();
     requireSame(receipt.applicable_authority_ids, ["civil_code"]);
+    expiresAt = Math.min(expiresAt, bodyReference(item.easyExplanationReference, row.easyExplanation, reference, receipt, evidence, item.examDate));
     if (!Array.isArray(item.choices) || item.choices.length !== 5) applicabilityFailure();
     const anchors: string[] = [], ids = new Set<string>();
     item.choices.forEach((value: unknown, index: number) => {
@@ -147,8 +179,12 @@ export function validateCivilApplicability(installation: PrivateApplicabilityIns
         choice.explanation_status !== "draft_private" || choice.law_or_kifrs_version_status !== "law_exam_date_verified") applicabilityFailure();
       ids.add(id);
       if (correct) { if (choice.correction_reference_or_null !== null) applicabilityFailure(); }
-      else bodyReference(choice.correction_reference_or_null);
-      bodyReference(choice.explanation_reference_or_null);
+      // This private packet has one reviewed composite correction/explanation
+      // string per choice. Both object references must bind those exact UTF-8
+      // bytes; no undisclosed substitute correction text is fabricated.
+      const explanation = (row.choiceExplanations as unknown[])[index];
+      if (!correct) expiresAt = Math.min(expiresAt, bodyReference(choice.correction_reference_or_null, explanation, reference, receipt, evidence, item.examDate));
+      expiresAt = Math.min(expiresAt, bodyReference(choice.explanation_reference_or_null, explanation, reference, receipt, evidence, item.examDate));
       if (!Array.isArray(choice.source_anchor_ids) || !choice.source_anchor_ids.length || choice.source_anchor_ids.length > 100 ||
         new Set(choice.source_anchor_ids).size !== choice.source_anchor_ids.length) applicabilityFailure();
       anchors.push(...choice.source_anchor_ids.map(value => requiredIdentifier(value)));
@@ -162,5 +198,5 @@ export function validateCivilApplicability(installation: PrivateApplicabilityIns
   }
   // Reconnect/retry cannot reuse a catalog validated under a revoked/replaced
   // installed snapshot. No receipt body is added to durable learner metadata.
-  return digest(snapshot);
+  return Object.freeze({ digest: digest(snapshot), expiresAt });
 }

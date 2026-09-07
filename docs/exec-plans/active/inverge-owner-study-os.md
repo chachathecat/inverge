@@ -47,9 +47,33 @@
   reconnect. Synthetic users/rows were cleaned to zero, disposable containers
   removed, browser external requests/errors zero. The civil completion screenshot
   was visually checked. These are injected synthetic auth/catalog/clock ports,
-  not remote auth or actual content acceptance. Native CI/review are pending;
-  no earlier head's CI/review is claimed for this candidate.
-- Next: finish local/runtime checks and changed-path review, ordinary push,
+  not remote auth or actual content acceptance. This initial evidence belongs to
+  head `09ba484342050405914c013f846ff19c31754a35`, tree
+  `bbb55961f004eb85df1c54a85cb9d376199b872d`. Its required native checks and
+  extra C3R-L passed, but independent review 5128747254 reported one P1; it was
+  not a clean merge candidate.
+- PR #891 P1 correction: reproduced admission of a nonexistent feedback-rights
+  reference before fixing the consumer. Both rights and source/version decisions
+  now resolve in the same installed snapshot and bind exact object/version/UTF-8
+  body hash, item/version/subject, Personal Raw Vault/private use/audience,
+  currentness, validity interval and authorized reviewer/decision. Source-version
+  decisions also bind the exam date and exact validated law-proof components.
+  This covers each false-choice correction, each explanation and easy explanation;
+  no receipt issuer or actual approval is added. Time is rechecked by the adapter
+  at use/readback, so expiry during persistence preserves the saved state without
+  disclosing feedback or duplicating a retry.
+- Correction candidate fresh local evidence: 76 focused tests PASS, zero skips,
+  including 44 rehashed hostile body-decision graphs via actual HTTP, coherent
+  wrong-body hashes, expiry during durable save and all prior regressions.
+  Seven isolated PostgreSQL/browser tests PASS, zero skips; all five synthetic
+  subject flows, CAS/lost-response/reconnect/D+1/completed-state and subject
+  navigation remain intact. Synthetic users/rows cleaned to zero, own disposable
+  containers removed, browser external requests/errors zero; the new civil
+  completion screenshot was visually checked. Build, sequential typecheck,
+  changed-file lint (11), Foundation/changed JSON validation (zero JSON delta),
+  12-path manifest and diff check PASS. Native checks and independent review for
+  the correction head are still pending, not inherited from the earlier head.
+- Next: ordinary push of the reviewed local correction batch,
   exact-head native checks and one independent review (reuse automatic review),
   then conditional pinned squash only with zero actionable findings/threads and
   unchanged safe deployment boundary. Keep #883 open and continue the next
