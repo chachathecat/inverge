@@ -3,6 +3,7 @@ import { economicsPacket, syntheticContentInput } from "./first-stage-economics-
 import { loadCivilLawContent, loadRealEstatePrinciplesContent, loadAppraiserRelatedLawContent } from "../../lib/review-os/first-stage/runtime/remaining-subject-content.ts";
 import { privateSessionDigest as digest } from "../../lib/review-os/first-stage/runtime/session-service.ts";
 import { civilApplicability, relatedLawApplicability } from "./first-stage-civil-applicability-harness.mjs";
+import { realEstateApplicability } from "./first-stage-real-estate-applicability-harness.mjs";
 
 const installations = new WeakMap();
 
@@ -29,16 +30,17 @@ export function remainingPacket(subject) {
   }
   if (subject === "civil_law") installations.set(packet, civilApplicability(packet));
   if (subject === "appraiser_related_law") installations.set(packet, relatedLawApplicability(packet));
+  if (subject === "real_estate_principles") installations.set(packet, realEstateApplicability(packet));
   return packet;
 }
-export const remainingInput = (subject, packet = remainingPacket(subject)) => ({ ...syntheticContentInput(packet),
-  ...(subject !== "real_estate_principles" ? { applicability: [installations.get(packet)] } : {}) });
+export const remainingInput = (subject, packet = remainingPacket(subject)) => ({ ...syntheticContentInput(packet), applicability: [installations.get(packet)] });
 export function rebindSyntheticCivilInput(packet) {
   return rebindSyntheticLawInput(packet);
 }
 export function rebindSyntheticLawInput(packet) {
   const subject = packet.questions[0].reference.subjectId;
-  installations.set(packet, subject === "civil_law" ? civilApplicability(packet) : relatedLawApplicability(packet));
+  installations.set(packet, subject === "civil_law" ? civilApplicability(packet)
+    : subject === "appraiser_related_law" ? relatedLawApplicability(packet) : realEstateApplicability(packet));
   return remainingInput(subject, packet);
 }
 export const remainingCatalogs = Object.fromEntries(await Promise.all(SUBJECT_CASES.map(async spec => {

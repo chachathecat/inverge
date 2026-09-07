@@ -6,6 +6,7 @@ import { FIVE, PRIVATE_USE, RETRY_RELEASE_VERSION, RETRY_RELEASE_FIELDS, RETRY_K
 import { nonempty, releaseContext, sourcePair, type Row } from "./foundation-release-rights";
 import { validateOfficialKey, OFFICIAL_ROUND, officialSession } from "./foundation-release-key";
 import { validateLawReleaseEvidence } from "./foundation-release-validation";
+import { validateRealEstateReleaseEvidence } from "./foundation-real-estate-release";
 
 const HUMAN = "named_owner_authorized_human_reviewer";
 const CONTENT = "named_owner_authorized_human_content_reviewer";
@@ -39,7 +40,8 @@ export function validateFinalReleases(installation: PrivateApplicabilityInstalla
     if (release.receipt_version !== (variant ? RETRY_RELEASE_VERSION : FIVE.releaseReceiptContract.receiptVersion) ||
       release.item_id !== id || release.item_version !== reference.questionVersion || release.subject_id !== reference.subjectId ||
       release.requested_plane_or_null !== PRIVATE_USE.plane || release.requested_use_or_null !== PRIVATE_USE.use ||
-      release.requested_audience_or_null !== PRIVATE_USE.audience || release.subject_validator_receipt_reference_or_null !== null) fail();
+      release.requested_audience_or_null !== PRIVATE_USE.audience ||
+      (reference.subjectId !== "real_estate_principles" && release.subject_validator_receipt_reference_or_null !== null)) fail();
     same(release.pre_release_applicability_receipt_reference, item.receiptReference);
     const pre = ctx.resolve(item.receiptReference, PRE_RELEASE_FIELDS);
     same(release.applicable_version_status, pre.applicable_version_status); same(release.choice_set_digest, pre.choice_set_digest);
@@ -154,7 +156,9 @@ export function validateFinalReleases(installation: PrivateApplicabilityInstalla
     same(release.ordered_content_attribution_rows, attributionRows); same(release.ordered_content_attribution_rows_digest, digest(attributionRows));
     const uniqueAttributions = [...new Set(attributionRows.map(row => nonempty(row.exact_attribution)))];
     same(release.ordered_unique_attributions, uniqueAttributions); same(release.ordered_unique_attributions_digest, digest(uniqueAttributions));
-    const validated = validateLawReleaseEvidence(ctx, release, pre, keyReference, variant);
+    const validated = reference.subjectId === "real_estate_principles"
+      ? validateRealEstateReleaseEvidence(ctx, release, pre, row, item.choices, keyReference, variant)
+      : validateLawReleaseEvidence(ctx, release, pre, keyReference, variant);
     same(reference.sourceVersionManifestIds, validated.sourceVersionManifestIds);
     expiresAt = Math.min(expiresAt, ctx.expiry());
     // Question/source attribution only before response. Full ordered release
