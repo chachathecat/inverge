@@ -58,6 +58,15 @@
   2025 r3 final-release code dependency under #883. Actual login/use and real
   next-day observation remain unexecuted; reviewer is still unassigned.
   Do not request r3 files or automatically re-ask for the unassigned reviewer.
+- PR #897 opened at `20a62e3a7ed51973efb1befb9de228a9525472fc`, tree
+  `443005b1f3cf707a115adea1b01b0dfcf29f6709`. Automatic Codex review started;
+  no duplicate manual request. Initial PR Contract/Fast CI contract stage failed
+  because a negative sentence about leaving #883 open also matched the closing
+  keyword parser. Corrected PR prose passes the SAME local contract validator.
+  Its workflow captures event-time prose, so no stale-event rerun is attempted.
+  This checkpoint-only correction preserves implementation/test bytes and makes
+  the ordinary synchronize event consume the corrected body. Native checks and
+  review must bind the new exact head; the earlier results do not become new ones.
 
 ## Historical private first-stage code continuation — #894 / 2026-09-07
 
