@@ -17,6 +17,7 @@ const APPROVED_CIVIL_LAW_CONTENT: readonly PrivateContentApproval[] = Object.fre
 // can install these, and generic six-check approval cannot replace them.
 const CIVIL_LAW_APPLICABILITY: readonly PrivateApplicabilityInstallation[] = Object.freeze([]);
 const APPROVED_REAL_ESTATE_PRINCIPLES_CONTENT: readonly PrivateContentApproval[] = Object.freeze([]);
+const REAL_ESTATE_PRINCIPLES_APPLICABILITY: readonly PrivateApplicabilityInstallation[] = Object.freeze([]);
 const APPROVED_APPRAISER_RELATED_LAW_CONTENT: readonly PrivateContentApproval[] = Object.freeze([]);
 const APPRAISER_RELATED_LAW_APPLICABILITY: readonly PrivateApplicabilityInstallation[] = Object.freeze([]);
 
@@ -59,7 +60,7 @@ export async function loadApprovedPrivateCivilLawCatalog(): Promise<PrivateFirst
 }
 
 export async function loadApprovedPrivateRealEstatePrinciplesCatalog(): Promise<PrivateFirstStageCatalog | null> {
-  return loadRealEstatePrinciplesContent({ approvals: APPROVED_REAL_ESTATE_PRINCIPLES_CONTENT,
+  return loadRealEstatePrinciplesContent({ approvals: APPROVED_REAL_ESTATE_PRINCIPLES_CONTENT, applicability: REAL_ESTATE_PRINCIPLES_APPLICABILITY,
     readBytes: () => readPrivateEconomicsContent(process.env.INVERGE_OWNER_REAL_ESTATE_PRINCIPLES_CONTENT_PATH ?? "") });
 }
 

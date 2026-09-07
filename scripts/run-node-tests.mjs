@@ -114,6 +114,7 @@ const defaultTestFiles = [
   "tests/first-stage-remaining-subjects.test.mjs",
   "tests/first-stage-civil-applicability.test.mjs",
   "tests/first-stage-related-law-applicability.test.mjs",
+  "tests/first-stage-real-estate-applicability.test.mjs",
   "tests/first-stage-final-release.test.mjs",
   "tests/private-review-packet-renderer.test.mjs",
   "tests/first-stage-study-capacity-runtime-bridge.test.mjs",

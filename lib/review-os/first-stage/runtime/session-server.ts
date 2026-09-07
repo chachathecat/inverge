@@ -30,5 +30,5 @@ function privateSubjectSession(catalog: () => Promise<PrivateFirstStageCatalog |
 export const handlePrivateFirstStageSession = privateSubjectSession(loadApprovedPrivateFirstStageCatalog);
 export const handlePrivateAccountingSession = privateSubjectSession(loadApprovedPrivateAccountingCatalog);
 export const handlePrivateCivilLawSession = privateSubjectSession(loadApprovedPrivateCivilLawCatalog);
-export const handlePrivateRealEstatePrinciplesSession = privateSubjectSession(loadApprovedPrivateRealEstatePrinciplesCatalog, "subject_applicability_implementation_required");
+export const handlePrivateRealEstatePrinciplesSession = privateSubjectSession(loadApprovedPrivateRealEstatePrinciplesCatalog);
 export const handlePrivateAppraiserRelatedLawSession = privateSubjectSession(loadApprovedPrivateAppraiserRelatedLawCatalog);

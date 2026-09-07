@@ -9,7 +9,7 @@ import {
   validateAttemptEvaluation, validatePresentation, type SubjectAdapterV1,
 } from "../subject-adapter/subject-adapter";
 import { privateSessionDigest as digest, type PrivateFirstStageCatalog } from "./session-service";
-import { validateCivilApplicability, validateRelatedLawApplicability, type PrivateApplicabilityInstallation } from "./foundation-applicability";
+import { validateCivilApplicability, validateRelatedLawApplicability, validateRealEstateApplicability, type PrivateApplicabilityInstallation } from "./foundation-applicability";
 import type { FinalReleaseProjection } from "./foundation-release";
 
 export const PRIVATE_CONTENT_MAX_BYTES = 2 * 1024 * 1024;
@@ -88,15 +88,12 @@ export async function loadPrivateReviewedContent(subjectId: keyof typeof POLICIE
     if (!Object.hasOwn(POLICIES, subjectId)) return null;
     const policy = POLICIES[subjectId];
     const expected = options.expectedDataClass ?? "human_reviewed_private";
-    // Only real-estate applicability remains unimplemented. Both law subjects
-    // consume Foundation evidence in test AND real classes through the same path.
-    if (subjectId === "real_estate_principles" && expected !== "synthetic_test_only") return null;
     const approvals = options.approvals.map(approval);
     if (!approvals.length || approvals.some(item => item.dataClass !== expected) ||
       new Set(approvals.map(item => item.packetSha256)).size !== approvals.length) return null;
-    const requiresLaw = subjectId === "civil_law" || subjectId === "appraiser_related_law";
-    const applicability = requiresLaw ? structuredClone(options.applicability ?? []) : [];
-    if (requiresLaw && (!applicability.length ||
+    const requiresFoundation = subjectId === "civil_law" || subjectId === "appraiser_related_law" || subjectId === "real_estate_principles";
+    const applicability = requiresFoundation ? structuredClone(options.applicability ?? []) : [];
+    if (requiresFoundation && (!applicability.length ||
       applicability.some(item => item.dataClass !== expected) ||
       new Set(applicability.map(item => item.packetSha256)).size !== applicability.length)) return null;
     const bytes = await options.readBytes();
@@ -114,10 +111,11 @@ export async function loadPrivateReviewedContent(subjectId: keyof typeof POLICIE
     let applicabilityDigest: string | null = null;
     let applicabilityExpiresAt = Infinity;
     let attributions: ReadonlyMap<string, FinalReleaseProjection> | undefined;
-    if (requiresLaw) {
+    if (requiresFoundation) {
       const installed = applicability.find(item => item.packetSha256 === packetSha256);
       if (!installed) return null;
-      const validate = subjectId === "civil_law" ? validateCivilApplicability : validateRelatedLawApplicability;
+      const validate = subjectId === "civil_law" ? validateCivilApplicability
+        : subjectId === "appraiser_related_law" ? validateRelatedLawApplicability : validateRealEstateApplicability;
       const validated = validate(installed, packet.questions, packet.keys);
       applicabilityDigest = validated.digest; applicabilityExpiresAt = validated.expiresAt;
       attributions = validated.projections;

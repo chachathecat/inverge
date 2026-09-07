@@ -11,7 +11,7 @@ const session = subject => `first_2026_session_${SUBJECTS.indexOf(subject) < 3 ?
 const packetRef = ref => ({ schemaVersion: "first_stage.immutable_evidence_reference.v1", evidenceId: ref.evidence_id,
   evidenceVersion: ref.evidence_version, evidenceSha256: ref.evidence_sha256 });
 
-export function finalReleaseFixture(packet, items, receipts, add, bodyRefs) {
+export function finalReleaseSources(packet, receipts, add) {
   // Malformed negative fixtures must reach the consumer, not crash while the
   // fixture links attribution. This placeholder grants nothing and is not a receipt.
   const get = ref => receipts.find(row => row.receipt_id === ref?.evidence_id || row.proof_receipt_id === ref?.evidence_id) ?? { exact_attribution: null };
@@ -93,8 +93,14 @@ export function finalReleaseFixture(packet, items, receipts, add, bodyRefs) {
     row_count: 200, ordered_key_rows: keyRows, ordered_key_rows_digest: digest(keyRows), reviewer: HUMAN, reviewed_at: AT,
     decision: "verified_complete_official_key_table_mapping" });
 
+  return { get, sourcePairs, sourceObservations, keyPair, keyObservation, keyTransport, keyRows, table };
+}
+
+export function finalReleaseFixture(packet, items, receipts, add, bodyRefs, subjectFixture = null) {
+  const { get, sourcePairs, sourceObservations, keyPair, keyObservation, keyTransport, keyRows, table } =
+    subjectFixture?.sources ?? finalReleaseSources(packet, receipts, add);
   packet.questions.forEach((row, index) => {
-    const item = items[index], pre = get(item.receiptReference), variant = row.kind === "practice_retry", ref = row.reference;
+    const item = items[index], pre = subjectFixture ? subjectFixture.pre(index) : get(item.receiptReference), variant = row.kind === "practice_retry", ref = row.reference;
     const pair = sourcePairs[session(ref.subjectId).endsWith("1") ? 0 : 1], questionReference = bodyRefs[index]("question", JSON.stringify({ stem: row.stem, choices: row.choices }));
     const source = { source_post_id: get(pair.post).post_id, source_asset_id: get(pair.asset).asset_id,
       source_question_anchor: `synthetic-${ref.subjectId}-${ref.questionNumber}`, source_post_rights_receipt_reference: pair.post, source_asset_rights_receipt_reference: pair.asset };
@@ -137,10 +143,11 @@ export function finalReleaseFixture(packet, items, receipts, add, bodyRefs) {
       authorized_plane: PRIVATE_USE.plane, ordered_choice_feedback_rows: feedbackRows, ordered_choice_feedback_rows_digest: digest(feedbackRows),
       ordered_feedback_attribution_rows: feedbackAttributions, ordered_feedback_attribution_rows_digest: digest(feedbackAttributions),
       reviewer: HUMAN, reviewed_at: AT, decision: "verified_complete_five_choice_feedback_bundle" });
-    const manifest = add(`manifest-${index}`, { manifest_id: "appraiser.first.law.2026-04-04.contract.v1", manifest_version: "1", subject_id: ref.subjectId,
+    const manifest = subjectFixture?.manifests[index] ?? add(`manifest-${index}`, { manifest_id: "appraiser.first.law.2026-04-04.contract.v1", manifest_version: "1", subject_id: ref.subjectId,
       exam_date: "2026-04-04", applicable_version_status: "law_exam_date_verified", component_evidence_references: pre.component_evidence_references,
       reviewer: HUMAN, reviewed_at: AT, decision: "verified_exact_source_version_manifest" });
-    const validator = validatorFixture(add, index, ref, pre, item.receiptReference, object, key, [manifest], variant);
+    const validator = subjectFixture ? subjectFixture.complete(index, object, key, variant)
+      : validatorFixture(add, index, ref, pre, item.receiptReference, object, key, [manifest], variant);
     const attribute = (role, object, rights, text, position = null) => ({ content_role: role, choice_position_or_null: position,
       source_object_reference_or_null: object, rights_receipt_reference: rights, exact_attribution: text });
     const attributionRows = [attribute("question_source_post", null, pair.post, get(pair.post).attribution),
@@ -160,11 +167,11 @@ export function finalReleaseFixture(packet, items, receipts, add, bodyRefs) {
         : { official_exam_round_id: ROUND, session_profile_id: ref.sessionId, official_question_number: ref.questionNumber, verified_official_key_receipt_reference: key }),
       question_item_object_reference_or_null: object, effective_rights_decision: "approved_owner_private_use",
       requested_plane_or_null: PRIVATE_USE.plane, requested_use_or_null: PRIVATE_USE.use, requested_audience_or_null: PRIVATE_USE.audience,
-      source_version_manifest_references: [manifest], applicable_version_status: "law_exam_date_verified",
-      pre_release_applicability_receipt_reference: item.receiptReference, subject_validator_receipt_reference_or_null: null,
+      source_version_manifest_references: [manifest], applicable_version_status: pre.applicable_version_status,
+      pre_release_applicability_receipt_reference: item.receiptReference, subject_validator_receipt_reference_or_null: validator.subject ?? null,
       choice_set_digest: pre.choice_set_digest, five_choice_feedback_bundle_receipt_reference_or_null: bundle, author_provenance: provenance,
-      model_assistance_provenance_or_null: null, deterministic_validator_receipt_references: [validator.pass],
-      deterministic_validator_applicability_receipt_references: [validator.app], attribution: get(pair.post).attribution,
+      model_assistance_provenance_or_null: null, deterministic_validator_receipt_references: validator.passes ?? [validator.pass],
+      deterministic_validator_applicability_receipt_references: validator.apps ?? [validator.app], attribution: get(pair.post).attribution,
       ordered_content_attribution_rows: attributionRows, ordered_content_attribution_rows_digest: digest(attributionRows),
       ordered_unique_attributions: attributions, ordered_unique_attributions_digest: digest(attributions), reviewer: HUMAN, reviewed_at: AT, decision: "approved_personal_only" });
     row.sourceEvidence = packetRef(provenance); row.rightsEvidence = packetRef(object.rights_decision_reference);

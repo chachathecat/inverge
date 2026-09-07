@@ -1,6 +1,90 @@
 # Inverge Owner Study OS
 
-## Current private first-stage code continuation — #892 / 2026-09-07
+## Current private first-stage code continuation — #894 / 2026-09-07
+
+- #893 is integrated, not reopened: reviewed head
+  `22a6f00230020eb8357d1972fea7f91a41807314`, squash/resulting main
+  `f55cc8fb5d3ed480edc62edea1ea9a22ff4c00f9`, matching tree
+  `46a59d7ae190146cefa2365b0b63663b5b806377`. Native closeout:
+  https://github.com/chachathecat/inverge/pull/893#issuecomment-5569654403.
+  Required exact-head checks 9/9 plus C3R-L passed, independent review 0/0/0,
+  zero unresolved threads; all five post-main workflows passed. Actual optional
+  staging runtime was skipped for missing prerequisites. Vercel main was
+  canceled by Ignored Build Step, not deployed. #892 closed, #883 stays open.
+- The single writer uses the same isolated worktree on
+  `codex/first-stage-real-estate-applicability` from that fetched main. #894 is
+  the code-only remaining real-estate Foundation consumer. No other matching
+  issue, branch writer or current first-stage PR was found.
+- Initial failure reproduced before implementation: a six-check synthetic
+  real-estate packet with no Foundation subject evidence is admitted by the
+  actual loader. The negative regression now passes: both synthetic and actual
+  classes require the existing subject-validator/pre-release/final-release
+  shapes, exact concept/calculation applicability matrix and recomputed bound
+  facts through the same loader/HTTP/durable readback path.
+- Reuse the existing server-installed immutable snapshot, original 200-row key,
+  private independent retry key and bodyless durable store. Do not create an
+  issuer, source database or approval ledger. Exact reviewed input evidence must
+  precede the final subject/pre-release decision without circular digest links.
+  Actual approval/install lists remain empty; all test evidence stays synthetic.
+  No new year/legal scope, environment/flag/content-path setting, remote DB,
+  provider, paid usage/payment or deployment is authorized.
+- This bounded real-estate consumer supports the existing 2026/37th,
+  `2026-04-04` profile only. A specific server-installed, subject-reviewed input
+  projection binds exact source rights, question/choice bytes, concept, version,
+  date and anchors. The existing manifest references that projection; body
+  versions reference the same earlier projection, avoiding circular hashes.
+  Subject validator → pre-release → final decision stays a strict later chain.
+  Hashes prove integrity, not human judgment; generic six checks are insufficient.
+- Concept-only, calculation-only and combined items cover both exact matrix
+  rows. Only the bound reviewed projection can establish a feature's absence;
+  both absent is rejected. Concept relations, exact five choice claims and four
+  distractor references are recomputed. Calculation supports a bounded binary
+  add/subtract/multiply/divide expression, exact rational decimal arithmetic,
+  explicit rounding and canonical COUNT/KRW/M/YEAR unit dimensions. Unsupported
+  expressions, units, ambiguous keys or rounding are blocked, not approximated.
+  This is not complete real-estate curriculum/content coverage.
+- Pre-freeze local batch: 122 affected tests and seven isolated PostgreSQL
+  15.8/browser tests passed, zero skips; five subjects, actual loader/HTTP/SDK
+  repository, concurrent/lost-response retries, D+1/completed state, attribution,
+  blocked reload and late subject navigation. Synthetic rows/users zero and own
+  containers removed; external requests/browser errors zero. Build and sequential
+  typecheck, 14 source/test-path lint, 160 tracked JSON parses and diff check
+  passed; Foundation bytes unchanged and all eight actual approval/install arrays
+  empty. These are local candidate results, not new-head native CI or review.
+- Final local diff inspection reproduced one directly coupled chronology gap:
+  a body version reviewed before its referenced source input was admitted.
+  Require the body-version review to follow that exact input and add the hostile
+  loader/HTTP regression. Fresh final-source validation also passed: 122 affected
+  tests, all seven PG15.8/browser tests (zero skips, users/rows zero, own containers
+  removed, external requests/errors zero), build, sequential typecheck, 14-path
+  lint and diff check. The final real-estate screenshot is local Temp artifact
+  `inverge-first-stage-private-browser-real_estate_principles-16692.png`; no raw
+  source content or secret was uploaded. Native CI/review still pending.
+- Integration pending: ordinary candidate push/PR for code child #894, exact-head
+  native CI and independent clean review, resolved threads, refreshed main and
+  deployment boundary before conditional pinned squash. Parent #883 and all
+  actual content/human-use gates stay open. Source rollback restores unavailable
+  real-estate stock without deleting existing durable sessions; flag OFF remains
+  the unchanged kill switch. No actual switch is changed by this work.
+- PR #895 initial head `014cede913a5261d319e73fdfd0320a81a7cabb0`, tree
+  `a8b22b1f6545c34f883fb728fa07f78bf0ca977c`: native required 9/9 plus
+  C3R-L passed. Sole automatic review `5131626326` reported actionable 0/0/1,
+  thread `PRRT_kwDOSMHn8M6f5lLn`; not clean, not merged. The Foundation matrix
+  is an exact set, not an ordered list. Reproduced the valid reordered subject
+  applicability references being denied, then resolve both applicability and
+  pass sets by closed validator ID. Independently reject missing/extra/duplicate/
+  unknown validators, any N/A pass and nonidentical immutable release/subject
+  references. Exercise all 15 non-default independent order combinations via
+  actual loader/HTTP/save/reconnect, plus single-applicable cases. This directly
+  coupled P2 batch changes no Foundation contract or actual content. Fresh P2
+  candidate results: 123 affected tests PASS, all seven isolated PG15.8/browser
+  tests PASS, no skips, rows/users zero, own containers removed and external
+  requests/browser errors zero. Final screenshot suffix is `17340.png`. Build,
+  sequential typecheck, correction two-path lint, 160 JSON parses, exact three-
+  path correction manifest and diff check PASS. New exact-head CI/review remain
+  pending; prior native results are historical, not inherited approvals.
+
+## Historical private first-stage code continuation — #892 / 2026-09-07
 
 - #891 is integrated and is not reopened. Reviewed head
   `1779594cec11199caa178f412d6db719660899ec` was squash-merged as

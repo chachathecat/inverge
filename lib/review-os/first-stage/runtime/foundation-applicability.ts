@@ -3,6 +3,7 @@ import { FirstStageKernelError, exactObject, requiredIdentifier, requiredUtcInst
 import { privateSessionDigest as digest } from "./session-service";
 import { deriveRelatedLawAuthorities, validateLawProof } from "./foundation-law-applicability";
 import { validateFinalReleases } from "./foundation-release";
+import { realEstateBodyComponents, validateRealEstatePreRelease } from "./foundation-real-estate-release";
 
 type Row = Record<string, unknown>;
 /** A server-code installation of EXISTING Foundation objects, not a receipt,
@@ -126,6 +127,7 @@ export const BODY_DECISION_FIELDS = ("receipt_id receipt_version receipt_sha256 
   "authorized_plane authorized_use authorized_audience effective_from expires_at_or_null currentness exact_attribution reviewer reviewed_at decision").split(" ");
 export const BODY_VERSION_FIELDS = [...BODY_DECISION_FIELDS, "exam_date", "applicable_version_status", "component_evidence_references"];
 export function bodyReference(value: unknown, body: unknown, question: Row, receipt: Row, evidence: FoundationEvidence, examDate: string) {
+  const nonlegal = question.subjectId === "real_estate_principles";
   const row = exactObject(value, BODY_REFERENCE_FIELDS);
   requiredIdentifier(row.object_id); requiredIdentifier(row.object_version); requiredHash(row.object_sha256);
   if (row.authorized_plane !== "Personal Raw Vault" || typeof body !== "string" ||
@@ -136,7 +138,8 @@ export function bodyReference(value: unknown, body: unknown, question: Row, rece
   let expiresAt = Infinity;
   for (const [decision, role, requiredDecision] of [
     [rights, "named_owner_authorized_human_rights_reviewer", "approved_owner_private_use"],
-    [version, "named_owner_authorized_human_law_reviewer", "verified_in_force_on_exam_date"],
+    [version, nonlegal ? "named_owner_authorized_human_subject_reviewer" : "named_owner_authorized_human_law_reviewer",
+      nonlegal ? "verified_not_applicable_to_law_or_kifrs" : "verified_in_force_on_exam_date"],
   ] as const) {
     for (const field of ["object_id", "object_version", "object_sha256", "authorized_plane"]) requireSame(decision[field], row[field]);
     if (decision.item_id !== question.questionId || decision.item_version !== question.questionVersion || decision.subject_id !== question.subjectId ||
@@ -151,7 +154,11 @@ export function bodyReference(value: unknown, body: unknown, question: Row, rece
     expiresAt = Math.min(expiresAt, until);
   }
   if (version.exam_date !== examDate || version.applicable_version_status !== receipt.applicable_version_status) applicabilityFailure();
-  requireSame(version.component_evidence_references, receipt.component_evidence_references);
+  if (nonlegal) {
+    const source = realEstateBodyComponents(evidence, receipt);
+    requireSame(version.component_evidence_references, source.projectionRefs);
+    evidence.reviewer(version, "named_owner_authorized_human_subject_reviewer", "verified_not_applicable_to_law_or_kifrs", source.projection.reviewed_at);
+  } else requireSame(version.component_evidence_references, receipt.component_evidence_references);
   return expiresAt;
 }
 
@@ -161,8 +168,13 @@ export function validateCivilApplicability(installation: PrivateApplicabilityIns
 export function validateRelatedLawApplicability(installation: PrivateApplicabilityInstallation, questions: readonly unknown[], keys: readonly unknown[] = []) {
   return validateLawApplicability(installation, questions, keys, "appraiser_related_law");
 }
+export function validateRealEstateApplicability(installation: PrivateApplicabilityInstallation, questions: readonly unknown[], keys: readonly unknown[] = []) {
+  return validateLawApplicability(installation, questions, keys, "real_estate_principles");
+}
 function validateLawApplicability(installation: PrivateApplicabilityInstallation, questions: readonly unknown[], keys: readonly unknown[],
-  subjectId: "civil_law" | "appraiser_related_law") {
+  subjectId: "civil_law" | "appraiser_related_law" | "real_estate_principles") {
+  const nonlegal = subjectId === "real_estate_principles";
+  const versionStatus = nonlegal ? "not_applicable_verified" : "law_exam_date_verified";
   validJson(installation);
   if (JSON.stringify(installation).length > 4 * 1024 * 1024) applicabilityFailure();
   exactObject(installation, ["packetSha256", "dataClass", "items", "receipts", "reviewers", "historyExtractionConfigurations", "sourceObservations"]);
@@ -184,8 +196,8 @@ function validateLawApplicability(installation: PrivateApplicabilityInstallation
       evidenceVersion: ref.evidence_version, evidenceSha256: ref.evidence_sha256 });
     const receipt = evidence.resolve(ref, PRE_RELEASE_FIELDS);
     if (receipt.item_id !== reference.questionId || receipt.item_version !== reference.questionVersion ||
-      receipt.subject_id !== reference.subjectId || receipt.receipt_kind !== "law_exam_date_bundle" ||
-      receipt.applicable_version_status !== "law_exam_date_verified") applicabilityFailure();
+      receipt.subject_id !== reference.subjectId || receipt.receipt_kind !== (nonlegal ? "subject_not_applicable_validator" : "law_exam_date_bundle") ||
+      receipt.applicable_version_status !== versionStatus) applicabilityFailure();
     if (subjectId === "civil_law" && receipt.authority_derivation_receipt_reference_or_null !== null) applicabilityFailure();
     expiresAt = Math.min(expiresAt, bodyReference(item.easyExplanationReference, row.easyExplanation, reference, receipt, evidence, item.examDate));
     if (!Array.isArray(item.choices) || item.choices.length !== 5) applicabilityFailure();
@@ -195,7 +207,7 @@ function validateLawApplicability(installation: PrivateApplicabilityInstallation
       const id = requiredIdentifier(choice.choice_id);
       if (ids.has(id) || choice.position_1_to_5 !== index + 1 || choice.verdict_true_false_or_unresolved !== (correct ? "true" : "false") ||
         choice.correction_status !== (correct ? "verified_no_correction" : "verified_correction_available") ||
-        choice.explanation_status !== "draft_private" || choice.law_or_kifrs_version_status !== "law_exam_date_verified") applicabilityFailure();
+        choice.explanation_status !== "draft_private" || choice.law_or_kifrs_version_status !== versionStatus) applicabilityFailure();
       ids.add(id);
       if (correct) { if (choice.correction_reference_or_null !== null) applicabilityFailure(); }
       // This private packet has one reviewed composite correction/explanation
@@ -211,6 +223,10 @@ function validateLawApplicability(installation: PrivateApplicabilityInstallation
     });
     requireSame(receipt.source_anchor_ids_digest, digest([...new Set(anchors)].sort()));
     requireSame(receipt.choice_set_digest, digest({ item_id: reference.questionId, item_version: reference.questionVersion, choices: item.choices }));
+    if (nonlegal) {
+      validateRealEstatePreRelease(evidence, receipt, row, item.choices);
+      continue;
+    }
     let authorities = ["civil_code"];
     if (subjectId === "appraiser_related_law") {
       const derived = deriveRelatedLawAuthorities(evidence, receipt.authority_derivation_receipt_reference_or_null,
