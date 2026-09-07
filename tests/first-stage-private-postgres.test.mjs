@@ -48,7 +48,7 @@ test("all five browser routes consume their server blocker on POST, reload and r
       let unavailable = false;
       const route = privateRoute(h, { subject, get noCatalog() { return unavailable; } });
       const result = await verifyPrivateBrowser({ route, subject, blockCatalog() { unavailable = true; },
-        blockedMessage: SUBJECT_CASES.some(spec => spec.id === subject && spec.id !== "civil_law")
+        blockedMessage: subject === "real_estate_principles"
           ? "사용 불가 — 이 과목의 적용시점·과목별 검토 증빙을 확인하는 기능이 미구현입니다. 콘텐츠 승인만으로 사용할 수 없습니다."
           : "사용 불가 — 권리·정답·인적 검토가 승인된 콘텐츠가 아직 없습니다. 개발 후보나 합성 자료는 학습 재고가 아닙니다." });
       assert.equal(result.blocked, true); assert.equal(result.externalRequests, 0); assert.equal(result.browserErrors, 0);

@@ -4,6 +4,8 @@ import foundation from "../../../../config/s235b-first-round-adaptive-mcq-founda
 // table. Private use additionally binds every emitted easy-feedback object in
 // the final release; it does not weaken the official key/source requirements.
 export const FIVE = foundation.fiveChoiceCorrectionContract;
+export const LAW = foundation.versionStatusManifests.law;
+export const RELATED_LAW_AUTHORITIES = LAW.requiredAuthorities.filter(row => row.authorityId !== "civil_code");
 export const RIGHTS = foundation.sourceRightsManifest.futureO3BReceiptContract;
 export const PRIVATE_USE = Object.freeze({ plane: "Personal Raw Vault", use: "personal_service_processing", audience: "owner_user_private" });
 export const RETRY_RELEASE_VERSION = "appraiser.first.private_modified_retry_release.v1";

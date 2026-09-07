@@ -1,7 +1,7 @@
 import crypto from "node:crypto";
 import { FirstStageKernelError, exactObject, requiredIdentifier, requiredUtcInstant } from "../kernel/domain";
 import { privateSessionDigest as digest } from "./session-service";
-import { validateCivilLawProof } from "./foundation-law-applicability";
+import { deriveRelatedLawAuthorities, validateLawProof } from "./foundation-law-applicability";
 import { validateFinalReleases } from "./foundation-release";
 
 type Row = Record<string, unknown>;
@@ -156,6 +156,13 @@ export function bodyReference(value: unknown, body: unknown, question: Row, rece
 }
 
 export function validateCivilApplicability(installation: PrivateApplicabilityInstallation, questions: readonly unknown[], keys: readonly unknown[] = []) {
+  return validateLawApplicability(installation, questions, keys, "civil_law");
+}
+export function validateRelatedLawApplicability(installation: PrivateApplicabilityInstallation, questions: readonly unknown[], keys: readonly unknown[] = []) {
+  return validateLawApplicability(installation, questions, keys, "appraiser_related_law");
+}
+function validateLawApplicability(installation: PrivateApplicabilityInstallation, questions: readonly unknown[], keys: readonly unknown[],
+  subjectId: "civil_law" | "appraiser_related_law") {
   validJson(installation);
   if (JSON.stringify(installation).length > 4 * 1024 * 1024) applicabilityFailure();
   exactObject(installation, ["packetSha256", "dataClass", "items", "receipts", "reviewers", "historyExtractionConfigurations", "sourceObservations"]);
@@ -170,7 +177,7 @@ export function validateCivilApplicability(installation: PrivateApplicabilityIns
     if (!item) applicabilityFailure();
     exactObject(item, ["questionSha256", "examDate", "choices", "easyExplanationReference", "receiptReference", "releaseReference"]);
     requiredHash(item.questionSha256);
-    if (requiredDay(item.examDate) !== "2026-04-04" || reference.examYear !== 2026 || reference.subjectId !== "civil_law" ||
+    if (requiredDay(item.examDate) !== "2026-04-04" || reference.examYear !== 2026 || reference.subjectId !== subjectId ||
       reference.currentnessState !== "verified_exam_date" || !Array.isArray(reference.sourceVersionManifestIds)) applicabilityFailure();
     const ref = immutableReference(item.receiptReference);
     requireSame(row.versionEvidence, { schemaVersion: "first_stage.immutable_evidence_reference.v1", evidenceId: ref.evidence_id,
@@ -178,8 +185,8 @@ export function validateCivilApplicability(installation: PrivateApplicabilityIns
     const receipt = evidence.resolve(ref, PRE_RELEASE_FIELDS);
     if (receipt.item_id !== reference.questionId || receipt.item_version !== reference.questionVersion ||
       receipt.subject_id !== reference.subjectId || receipt.receipt_kind !== "law_exam_date_bundle" ||
-      receipt.applicable_version_status !== "law_exam_date_verified" || receipt.authority_derivation_receipt_reference_or_null !== null) applicabilityFailure();
-    requireSame(receipt.applicable_authority_ids, ["civil_code"]);
+      receipt.applicable_version_status !== "law_exam_date_verified") applicabilityFailure();
+    if (subjectId === "civil_law" && receipt.authority_derivation_receipt_reference_or_null !== null) applicabilityFailure();
     expiresAt = Math.min(expiresAt, bodyReference(item.easyExplanationReference, row.easyExplanation, reference, receipt, evidence, item.examDate));
     if (!Array.isArray(item.choices) || item.choices.length !== 5) applicabilityFailure();
     const anchors: string[] = [], ids = new Set<string>();
@@ -204,9 +211,19 @@ export function validateCivilApplicability(installation: PrivateApplicabilityIns
     });
     requireSame(receipt.source_anchor_ids_digest, digest([...new Set(anchors)].sort()));
     requireSame(receipt.choice_set_digest, digest({ item_id: reference.questionId, item_version: reference.questionVersion, choices: item.choices }));
-    if (!Array.isArray(receipt.component_evidence_references) || receipt.component_evidence_references.length !== 1) applicabilityFailure();
-    const proof = validateCivilLawProof(evidence, receipt.component_evidence_references[0], item.examDate);
-    evidence.reviewer(receipt, "named_owner_authorized_human_subject_or_version_reviewer", "verified_pre_release_applicability", proof.reviewed_at);
+    let authorities = ["civil_code"];
+    if (subjectId === "appraiser_related_law") {
+      const derived = deriveRelatedLawAuthorities(evidence, receipt.authority_derivation_receipt_reference_or_null,
+        reference.questionId, reference.questionVersion, receipt.choice_set_digest, anchors);
+      authorities = derived.authorities;
+      evidence.reviewer(receipt, "named_owner_authorized_human_subject_or_version_reviewer", "verified_pre_release_applicability", derived.reviewedAt);
+    }
+    requireSame(receipt.applicable_authority_ids, authorities);
+    if (!Array.isArray(receipt.component_evidence_references) || receipt.component_evidence_references.length !== authorities.length) applicabilityFailure();
+    for (const [index, authority] of authorities.entries()) {
+      const proof = validateLawProof(evidence, receipt.component_evidence_references[index], item.examDate, authority);
+      evidence.reviewer(receipt, "named_owner_authorized_human_subject_or_version_reviewer", "verified_pre_release_applicability", proof.reviewed_at);
+    }
   }
   // Reconnect/retry cannot reuse a catalog validated under a revoked/replaced
   // installed snapshot. No receipt body is added to durable learner metadata.

@@ -1,6 +1,96 @@
 # Inverge Owner Study OS
 
-## Current private first-stage code continuation — #890 / 2026-09-07
+## Current private first-stage code continuation — #892 / 2026-09-07
+
+- #891 is integrated and is not reopened. Reviewed head
+  `1779594cec11199caa178f412d6db719660899ec` was squash-merged as
+  `fce793be079ca7faa1c12a6de56af0e3572599a2`; both trees are
+  `6803602ae5ef182176dee3c2c9699b7dff1de3f5`. Native closeout:
+  https://github.com/chachathecat/inverge/pull/891#issuecomment-5568932816.
+  Exact-head required CI 9/9 plus C3R-L passed, independent review was clean
+  `0/0/0`, all six historical threads resolved. All five post-merge workflows
+  passed; optional staging runtime was skipped for missing prerequisites.
+  Main Vercel was actually canceled by the Ignored Build Step, not deployed.
+  #890 closed; parent #883 remains open for actual content and learner use.
+- The single writer continues in the existing isolated worktree on
+  `codex/first-stage-related-law-applicability`, from that fetched main.
+  #892 is the code-only relationship-law child. No actual content, flag, path,
+  provider, remote DB, auth/RLS, schema or deployment configuration changes.
+- First reproduced the related-law loader admitting a six-check synthetic packet
+  without any Foundation evidence. The implemented consumer now requires the
+  existing exact five-choice anchor-to-authority derivation, one through nine
+  supported authorities, zero unclassified anchors and one exact complete
+  history/extraction/identity/applicability proof per derived authority.
+  Civil-law verification is reused, with canonical official names from the
+  unchanged Foundation and its existing `2026-04-04` date only.
+- Final release reuses the full 200-row official original key and independent
+  LEARNING_ONLY modified-key branches. It recomputes the existing multi-law
+  validator facts and all four assertions. Every question, easy explanation,
+  choice correction, source/version, rights and attribution binding remains.
+  HTTP cannot install evidence, select a subject/kind or promote test data.
+- Fresh local results for code head `1d227297a48468d6f2e1adee1d4e2c745970ac73`:
+  115 affected tests PASS,
+  zero skips, including 1/2/9-authority admission, coherently rehashed hostile
+  graphs, loader/HTTP pre-body denial and durable reconnect/withdrawal. All
+  seven isolated PostgreSQL 15.8/browser tests PASS, zero skips, in one run:
+  five-subject actual loaders/routes/storage, CAS/concurrent/lost-response retry,
+  D+1/completed-state, attribution, blocked reload and late subject navigation.
+  Synthetic users/rows cleaned to zero; disposable containers removed; browser
+  external requests/errors zero. No real authentication or human review claimed.
+  Build, sequential typecheck, 15-file source/test lint, all 160 tracked JSON
+  parses and diff check PASS. Foundation bytes unchanged; actual installed
+  approval/applicability count zero across seven empty arrays. The existing
+  next.config.ts tracing warning remains outside this change.
+- One new regression initially used the wrong HTTP attribution field; corrected
+  to the existing typed `view.questionAttributions`, then the whole affected
+  batch passed. No runtime response shape was changed to satisfy that test.
+  The 16-path candidate includes this checkpoint. PR #893 was opened at that
+  code head, tree `ce92b01279df07ee7919b54c9cc70ad87689149f`. Its automatic
+  independent review completed without findings: summary comment 5569267873,
+  2026-09-07T10:35:15Z, bot clean reaction 492418309 at 10:35:17Z, P0/P1/P2
+  `0/0/0` and zero review threads. This is native comment/reaction evidence,
+  not an invented review-submission ID.
+- PR Contract failed on the original PR body's risk/checkbox syntax; Fast CI
+  failed only its PR-contract step, after its code checks passed. The corrected
+  live body passes the actual local contract validator. One targeted native
+  rerun proved it still reads the old event body; that identical retry is not
+  repeated. This checkpoint-only successor records actual delivery state and
+  produces a new native pull-request event with the corrected body. Source,
+  tests, Foundation and runtime artifacts are byte-identical to the above code
+  head; no unnecessary local runtime rerun is claimed. The successor still
+  requires its OWN native CI, exact-head independent review and zero threads;
+  the previous review/checks are not represented as successor-head evidence.
+- Relationship-law actual stock now reports the approval blocker. Real-estate
+  applicability remains code-incomplete and uses its implementation blocker;
+  it is the next dependency-ready delegated slice after this code integration.
+  All five real content approval lists remain empty. Human content review,
+  reviewed installation and explicit private-use activation are external gates;
+  synthetic verification or code integration cannot complete #883.
+- The checkpoint successor was head `6294073351f0ff38d1494f0084489555077ecb01`,
+  tree `b1a7ff68f32a52302aac418782aea3275e059ef8`. Its required native CI 9/9
+  passed, including corrected PR Contract/Fast CI. Independent review 5131026942
+  reported P0/P1/P2 `0/1/0`, thread PRRT_kwDOSMHn8M6f4UiE: the shared final
+  validator expected an invented per-validator facts schema instead of the
+  Foundation's exact `inputProjectionSchemaVersion`. This matched the concurrent
+  local contract audit; no merge or clean successor claim was made.
+- Reproduced first by changing only synthetic receipt construction to the
+  contract-mandated schema: actual catalog loading failed before the validator
+  fix. The shared civil/relationship-law comparison now uses the registry value;
+  both tests admit conforming receipts and reject rehashed unregistered schema
+  labels via loader/HTTP. Foundation, key completeness, feedback/body binding,
+  rights, date scope and real installation lists are unchanged.
+- Fresh corrected candidate: 115 affected tests PASS/0 skips; all seven isolated
+  PostgreSQL/browser tests PASS/0 skips in one run with external requests/errors
+  and remaining synthetic users/rows all zero. New related-law screenshot:
+  `C:/Users/jmg91/AppData/Local/Temp/inverge-first-stage-private-browser-appraiser_related_law-20768.png`.
+  Build, sequential typecheck, 16-file changed-source/test lint, 160 JSON parses,
+  17-path boundary and diff checks PASS. A new test initially failed by filtering
+  proof objects as ordinary receipt IDs (114 pass/1 fail); corrected only that
+  filter, then reran the entire 115-test batch successfully. No false all-pass
+  first-run claim. The correction is not yet committed here; its final-head
+  native checks, thread resolution and independent review remain pending.
+
+## Historical private first-stage code continuation — #890 / 2026-09-07
 
 - #889 is integrated, not reopened: reviewed head
   `f7998100721d008529a1dc8b333287f60dca1420`, squash/main

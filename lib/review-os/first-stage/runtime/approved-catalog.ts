@@ -18,6 +18,7 @@ const APPROVED_CIVIL_LAW_CONTENT: readonly PrivateContentApproval[] = Object.fre
 const CIVIL_LAW_APPLICABILITY: readonly PrivateApplicabilityInstallation[] = Object.freeze([]);
 const APPROVED_REAL_ESTATE_PRINCIPLES_CONTENT: readonly PrivateContentApproval[] = Object.freeze([]);
 const APPROVED_APPRAISER_RELATED_LAW_CONTENT: readonly PrivateContentApproval[] = Object.freeze([]);
+const APPRAISER_RELATED_LAW_APPLICABILITY: readonly PrivateApplicabilityInstallation[] = Object.freeze([]);
 
 /** A bounded server-only local file read. No network, public fallback or test flag. */
 export async function readPrivateEconomicsContent(file: string): Promise<Uint8Array> {
@@ -63,6 +64,6 @@ export async function loadApprovedPrivateRealEstatePrinciplesCatalog(): Promise<
 }
 
 export async function loadApprovedPrivateAppraiserRelatedLawCatalog(): Promise<PrivateFirstStageCatalog | null> {
-  return loadAppraiserRelatedLawContent({ approvals: APPROVED_APPRAISER_RELATED_LAW_CONTENT,
+  return loadAppraiserRelatedLawContent({ approvals: APPROVED_APPRAISER_RELATED_LAW_CONTENT, applicability: APPRAISER_RELATED_LAW_APPLICABILITY,
     readBytes: () => readPrivateEconomicsContent(process.env.INVERGE_OWNER_APPRAISER_RELATED_LAW_CONTENT_PATH ?? "") });
 }

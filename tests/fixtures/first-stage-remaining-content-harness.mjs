@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { economicsPacket, syntheticContentInput } from "./first-stage-economics-content-harness.mjs";
 import { loadCivilLawContent, loadRealEstatePrinciplesContent, loadAppraiserRelatedLawContent } from "../../lib/review-os/first-stage/runtime/remaining-subject-content.ts";
 import { privateSessionDigest as digest } from "../../lib/review-os/first-stage/runtime/session-service.ts";
-import { civilApplicability } from "./first-stage-civil-applicability-harness.mjs";
+import { civilApplicability, relatedLawApplicability } from "./first-stage-civil-applicability-harness.mjs";
 
 const installations = new WeakMap();
 
@@ -28,13 +28,18 @@ export function remainingPacket(subject) {
     packet.keys[index].questionReferenceSha256 = digest(row.reference);
   }
   if (subject === "civil_law") installations.set(packet, civilApplicability(packet));
+  if (subject === "appraiser_related_law") installations.set(packet, relatedLawApplicability(packet));
   return packet;
 }
 export const remainingInput = (subject, packet = remainingPacket(subject)) => ({ ...syntheticContentInput(packet),
-  ...(subject === "civil_law" ? { applicability: [installations.get(packet)] } : {}) });
+  ...(subject !== "real_estate_principles" ? { applicability: [installations.get(packet)] } : {}) });
 export function rebindSyntheticCivilInput(packet) {
-  installations.set(packet, civilApplicability(packet));
-  return remainingInput("civil_law", packet);
+  return rebindSyntheticLawInput(packet);
+}
+export function rebindSyntheticLawInput(packet) {
+  const subject = packet.questions[0].reference.subjectId;
+  installations.set(packet, subject === "civil_law" ? civilApplicability(packet) : relatedLawApplicability(packet));
+  return remainingInput(subject, packet);
 }
 export const remainingCatalogs = Object.fromEntries(await Promise.all(SUBJECT_CASES.map(async spec => {
   const catalog = await spec.load(remainingInput(spec.id));
