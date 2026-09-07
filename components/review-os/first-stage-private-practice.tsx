@@ -1,22 +1,42 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import type { ChoiceId, Confidence, WorkTraceStep } from "@/lib/review-os/first-stage/kernel/domain";
+import type { ChoiceId, Confidence, FirstStageSubjectId, WorkTraceStep } from "@/lib/review-os/first-stage/kernel/domain";
 import type { PrivateFirstStageSessionView } from "@/lib/review-os/first-stage/runtime/session-service";
+import type { PrivateContentBlocker } from "@/lib/review-os/first-stage/runtime/session-application";
 
 type Availability = { state: "available" | "blocked";
+  blocker: PrivateContentBlocker | null;
   questions: { questionId: string; subjectId: string; questionNumber: number }[] };
 type Payload = { ok: boolean; error?: string; view?: PrivateFirstStageSessionView;
   availability?: Availability };
 const requestId = () => `request-${crypto.randomUUID()}`;
 const BUTTON = "rounded-xl bg-slate-950 px-5 py-3 text-sm font-semibold text-white disabled:opacity-50";
+const BLOCKER_MESSAGES: Record<PrivateContentBlocker, string> = {
+  approved_content_required: "사용 불가 — 권리·정답·인적 검토가 승인된 콘텐츠가 아직 없습니다. 개발 후보나 합성 자료는 학습 재고가 아닙니다.",
+  subject_applicability_implementation_required: "사용 불가 — 이 과목의 적용시점·과목별 검토 증빙을 확인하는 기능이 미구현입니다. 콘텐츠 승인만으로 사용할 수 없습니다.",
+};
+function isContentBlocker(value: string | undefined): value is PrivateContentBlocker {
+  return value === "approved_content_required" || value === "subject_applicability_implementation_required";
+}
+const SUBJECTS = {
+  economics_principles: { label: "경제학", api: "/api/review-os/first-stage/sessions" },
+  accounting: { label: "회계학", api: "/api/review-os/first-stage/accounting/sessions" },
+  civil_law: { label: "민법", api: "/api/review-os/first-stage/civil-law/sessions" },
+  real_estate_principles: { label: "부동산학원론", api: "/api/review-os/first-stage/real-estate-principles/sessions" },
+  appraiser_related_law: { label: "감정평가관계법규", api: "/api/review-os/first-stage/appraiser-related-law/sessions" },
+} as const;
 
 /** No initial question/answer props: all private projections come from the guarded HTTP route. */
 export function FirstStagePrivatePractice({ subject = "economics_principles" }: {
-  subject?: "economics_principles" | "accounting";
+  subject?: FirstStageSubjectId;
 } = {}) {
-  const API = subject === "accounting" ? "/api/review-os/first-stage/accounting/sessions"
-    : "/api/review-os/first-stage/sessions";
+  // Changing subjects must not reuse another subject's pending intent or display.
+  return <PrivatePracticeSession key={subject} subject={subject} />;
+}
+
+function PrivatePracticeSession({ subject }: { subject: FirstStageSubjectId }) {
+  const API = SUBJECTS[subject].api;
   const [view, setView] = useState<PrivateFirstStageSessionView | null>(null);
   const [availability, setAvailability] = useState<Availability | null>(null);
   const [busy, setBusy] = useState(true);
@@ -24,11 +44,17 @@ export function FirstStagePrivatePractice({ subject = "economics_principles" }: 
   const [retryable, setRetryable] = useState(false);
   const intent = useRef<unknown>(null);
   const inFlight = useRef(false);
+  const mounted = useRef(false);
   const [selected, setSelected] = useState<ChoiceId | null>(null);
   const [previous, setPrevious] = useState<ChoiceId | null>(null);
   const [confidence, setConfidence] = useState<Confidence>("medium");
   const trace = useRef<WorkTraceStep[]>([]);
   const renderedAt = useRef(0);
+
+  function showBlocker(blocker: PrivateContentBlocker) {
+    setView(null); intent.current = null; setRetryable(false); setError(null);
+    setAvailability({ state: "blocked", blocker, questions: [] });
+  }
 
   function accept(payload: Payload) {
     if (payload.view) {
@@ -44,22 +70,27 @@ export function FirstStagePrivatePractice({ subject = "economics_principles" }: 
 
   useEffect(() => {
     let active = true;
+    mounted.current = true;
     const params = new URL(window.location.href).searchParams;
     const id = params.get("sessionId");
     fetch(id ? `${API}?${new URLSearchParams({ sessionId: id })}` : API,
       { cache: "no-store", credentials: "same-origin" }).then(async (response) => {
       const payload = await response.json() as Payload;
+      if ((!response.ok || !payload.ok) && isContentBlocker(payload.error)) {
+        if (active) showBlocker(payload.error);
+        return;
+      }
       if (!response.ok || !payload.ok) throw new Error("unavailable");
       if (active) {
         accept(payload);
-        if (!id && params.has("createId") && params.has("questionId")) {
+        if (!id && payload.availability?.state === "available" && params.has("createId") && params.has("questionId")) {
           intent.current = { action: "create", requestId: params.get("createId"), questionId: params.get("questionId") };
           setRetryable(true); setError("이전 시작 요청을 같은 식별자로 다시 확인하세요.");
         }
       }
     }).catch(() => { if (active) setError("기록을 불러올 수 없습니다. 승인 콘텐츠와 접근 권한을 확인하세요."); })
       .finally(() => { if (active) setBusy(false); });
-    return () => { active = false; };
+    return () => { active = false; mounted.current = false; };
   }, [API]);
 
   async function send(command: unknown) {
@@ -73,9 +104,12 @@ export function FirstStagePrivatePractice({ subject = "economics_principles" }: 
       const response = await fetch(API, { method: "POST", cache: "no-store", credentials: "same-origin",
         headers: { "Content-Type": "application/json" }, body: JSON.stringify(command) });
       const payload = await response.json() as Payload;
+      // The server may have saved successfully after navigation. Keep that write,
+      // but never let an unmounted subject rewrite the next page's URL or UI.
+      if (!mounted.current) return;
       if (!response.ok || !payload.ok || !payload.view) {
-        if (response.status === 409 || response.status === 400 || response.status === 404 ||
-          payload.error === "approved_content_required") {
+        if (isContentBlocker(payload.error)) { showBlocker(payload.error); return; }
+        if (response.status === 409 || response.status === 400 || response.status === 404) {
           intent.current = null;
           setError("현재 기록을 다시 불러오세요. 승인 콘텐츠가 없으면 학습을 시작할 수 없습니다.");
           return;
@@ -84,9 +118,10 @@ export function FirstStagePrivatePractice({ subject = "economics_principles" }: 
       }
       accept(payload); intent.current = null;
     } catch {
+      if (!mounted.current) return;
       setError("저장 결과를 확인하지 못했습니다. 같은 요청을 다시 확인할 수 있습니다.");
       setRetryable(true);
-    } finally { inFlight.current = false; setBusy(false); }
+    } finally { inFlight.current = false; if (mounted.current) setBusy(false); }
   }
 
   function create(questionId: string) {
@@ -121,12 +156,12 @@ export function FirstStagePrivatePractice({ subject = "economics_principles" }: 
   return <main className="mx-auto w-full max-w-2xl px-5 py-10">
     <section className="rounded-3xl border border-slate-200 bg-white p-7 shadow-sm">
       <p className="text-xs font-semibold text-slate-500">Owner private · default off</p>
-      <h1 className="mt-3 text-2xl font-bold text-slate-950">{subject === "accounting" ? "회계학" : "경제학"} 비공개 연습</h1>
+      <h1 className="mt-3 text-2xl font-bold text-slate-950">{SUBJECTS[subject].label} 비공개 연습</h1>
       <p className="mt-3 text-sm text-slate-600">먼저 응답하고, 저장된 결과의 해설과 다음 복습을 확인합니다.</p>
       <div className="mt-6 space-y-5" aria-live="polite" aria-busy={busy}>
         {busy && <p>서버 기록을 확인하고 있습니다.</p>}
         {error && <p role="alert" className="text-sm text-rose-700">{error}</p>}
-        {unavailable && <p>사용 불가 — 권리·정답·인적 검토가 승인된 콘텐츠가 아직 없습니다. 개발 후보나 합성 자료는 학습 재고가 아닙니다.</p>}
+        {unavailable && <p>{BLOCKER_MESSAGES[availability.blocker ?? "approved_content_required"]}</p>}
         {!busy && !error && !view && availability?.state === "available" &&
           availability.questions.map((item) => <button key={item.questionId} type="button" className={BUTTON}
             onClick={() => create(item.questionId)}>검토된 {item.questionNumber}번 시작</button>)}

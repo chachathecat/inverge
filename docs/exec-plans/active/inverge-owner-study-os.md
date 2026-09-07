@@ -1,6 +1,101 @@
 # Inverge Owner Study OS
 
-## Current private first-stage continuation — 2026-09-07
+## Current private first-stage code continuation — #888 / 2026-09-07
+
+- #884 economics code is integrated; #887 accounting code is now integrated at
+  squash/main `66f47d8f6fc6e535fe6af35d9aa76561d5cb1efb`, tree
+  `c9778f3e5734147bb0590a425f8bfd05f18c162c`, matching its reviewed candidate.
+  #887 required native checks 9/9, extra C3R-L runtime, automatic clean exact-head
+  Codex review, zero threads and five post-merge workflows passed. Vercel actually
+  canceled the main build via Ignored Build Step. Native closeout:
+  https://github.com/chachathecat/inverge/pull/887#issuecomment-5564541705.
+- Current work: #888, single writer in the same isolated worktree on
+  `codex/first-stage-remaining-private-flows`, based on that validated merge.
+  Reuse the common loader, kernel, SubjectAdapter contract, session service,
+  repository, local SQL design, Owner gate and practice component for civil law,
+  real-estate principles and appraisal-related law. No new DB schema or ledger.
+- Each added subject has its own fixed server schema/adapter/catalog/HTTP/page
+  binding. Five installed approval lists are empty; client approval/key/source/
+  rights/currentness claims remain rejected. The three new bindings support
+  synthetic mechanics ONLY, not human-reviewed stock. Their Foundation
+  `preReleaseApplicabilityReceiptShape` consumer remains unimplemented: Civil
+  Code exam-date proof, derived per-authority appraisal-law proofs and the
+  real-estate subject-validator receipt are required before real stock can be
+  supported. A generic approval or `verified_exam_date` marker cannot substitute.
+  This missing code is separate from content approval; no legal/subject-quality
+  validation is claimed. Economics/accounting behavior is unchanged by this fix.
+- RSC carries only subject metadata, not content. Explanations require durable
+  evaluated readback. A new actual-browser regression first reproduced a late
+  previous-subject save response overwriting the new subject URL. Keyed component
+  identity plus mounted-response handling now preserves the durable old write
+  without changing the new page's URL, intent or disclosure. This directly coupled
+  regression was fixed before publishing the candidate.
+- Prior candidate local validation: 62 loader/HTTP/RSC/kernel/private-renderer tests passed;
+  6 isolated runtime tests passed (5 subject-specific PostgreSQL/browser flows and
+  the delayed-navigation regression), zero skips. The accounting/additional-subject
+  17 tests also passed via the actual native runner and are now registered there.
+  Build, subsequent typecheck, changed-file lint, JSON/no-JSON-delta and diff checks
+  passed. The existing unrelated Turbopack NFT trace warning remains unchanged.
+  Each disposable PostgreSQL had no network, synthetic users/rows cleaned to zero;
+  browser external requests/errors were zero. Auth/clock/catalog are injected
+  synthetic ports, not remote authentication, deployed Next or real-content proof.
+- PR #889 head `70f1006387b5c2e99bf0647b4cb47a2d275ee81f` passed all nine
+  native required checks, but exact-head review 5127833346 reported one P2 about
+  absent subject-specific applicability receipts. Three negative tests reproduced
+  generic approvals incorrectly admitting human-class packets through the actual
+  loader. The correction removes that unsupported real-content path before file
+  I/O and displays the missing code prerequisite. Synthetic mechanics remain
+  test-only. No new receipt is invented and no approval standard is relaxed.
+  Correction local validation passed: 65 focused tests plus 6 isolated runtime
+  tests (all five PG/browser flows and navigation), zero skips; build, subsequent
+  typecheck, changed-file lint, JSON/no-JSON-delta, 23-path manifest and diff check.
+  Synthetic users/rows were cleaned to zero and disposable containers removed;
+  external browser requests/errors were zero. Native exact-head checks and review
+  are pending; prior GitHub results are not correction-head evidence. Next:
+  ordinary push, resolve the finding and integrate only at clean exact-head
+  CI/review/threads/rules and the existing deployment boundary. No actual feature/
+  content-path setting, auto-merge or remote apply.
+- Follow-up head `5643c6540910f20c4e7ae27cd9f128a025fdc113` passed all nine
+  native required checks, but review 5127917670 found one P2: HTTP still named
+  only `approved_content_required` while the UI named the missing implementation.
+  Actual three-subject HTTP regressions reproduced the mismatch. Fixed server
+  bindings now return `subject_applicability_implementation_required` consistently
+  for availability, POST and reconnect. The UI consumes that server reason, clears
+  impossible retry intents and preserves economics/accounting content-only
+  blockers. All-five-subject actual-browser coverage proves blocked POST,
+  create-intent reload and existing-session GET show the correct reason with no
+  retry recommendation, assistance or repository access. Fresh local validation
+  passed: 65 focused plus 7 isolated runtime tests (72 total, zero skips), build,
+  sequential typecheck, changed-file lint, JSON/no-JSON-delta, 24-path manifest and
+  diff checks. Synthetic users/rows zero, containers removed, browser external
+  requests/errors zero. Ordinary push, exact-head CI and independent review are
+  pending; no earlier check or review is claimed as final-head evidence.
+
+| Subject | Private mechanics | Content / actual-use status |
+| --- | --- | --- |
+| Economics | Integrated #884, shared engine regressions retained | 0 approved; r3 six human checks pending; actual use blocked |
+| Accounting | Integrated #887, same save/reconnect/D+1 flow | 0 approved; no actual stock; actual use blocked |
+| Civil law | #888 synthetic request/PG/browser mechanics candidate | 0 approved; applicability consumer missing; real stock rejected |
+| Real-estate principles | #888 synthetic request/PG/browser mechanics candidate | 0 approved; applicability consumer missing; real stock rejected |
+| Appraisal-related law | #888 synthetic request/PG/browser mechanics candidate | 0 approved; applicability consumer missing; real stock rejected |
+
+Actual learner acceptance remains open in #883. Economics r3 and its supplied AI
+report are unchanged; no reviewer/date/verdict/evidence is invented. The other
+subjects' functional fixtures are not content packs or subject-quality evidence.
+Remaining CODE work (not a human decision): consume the existing frozen
+subject-specific applicability evidence for the three new routes before admitting
+any human-class stock. #888 covers only the safely restricted synthetic mechanics;
+closing it must not mark this missing code or five-subject actual use complete.
+Genuine source/rights/key/feedback/version/lineage decisions and separately
+authorized actual environment/storage/activation remain external prerequisites.
+Code integration cannot close those conditions or assert economics/five-subject,
+learning efficacy, transfer or Measurement completion. No broader release starts.
+
+Rollback: keep approvals empty/feature OFF; an ordinary reviewed code revert can
+remove added subject bindings while preserving economics/accounting and durable
+rows. No DB deletion, remote rollback or operational mutation is needed.
+
+## Historical #887 accounting candidate evidence — 2026-09-07
 
 - Code integration and content/actual-use acceptance are separate under the
   Owner's 2026-09-07 instruction. PR #884 merged reviewed head

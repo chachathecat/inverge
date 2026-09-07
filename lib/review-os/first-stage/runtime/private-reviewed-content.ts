@@ -71,8 +71,11 @@ export type PrivateContentInput = {
 
 // Closed server-selected policies. Request bodies cannot choose or alter these.
 const POLICIES = Object.freeze({
-  economics_principles: Object.freeze({ name: "economics", schema: "first_stage.economics_private_content.v1" }),
-  accounting: Object.freeze({ name: "accounting", schema: "first_stage.accounting_private_content.v1" }),
+  economics_principles: Object.freeze({ name: "economics", schema: "first_stage.economics_private_content.v1", historicalOnly: false }),
+  accounting: Object.freeze({ name: "accounting", schema: "first_stage.accounting_private_content.v1", historicalOnly: false }),
+  civil_law: Object.freeze({ name: "civil-law", schema: "first_stage.civil_law_private_content.v1", historicalOnly: true }),
+  real_estate_principles: Object.freeze({ name: "real-estate-principles", schema: "first_stage.real_estate_principles_private_content.v1", historicalOnly: false }),
+  appraiser_related_law: Object.freeze({ name: "appraiser-related-law", schema: "first_stage.appraiser_related_law_private_content.v1", historicalOnly: true }),
 });
 
 export async function loadPrivateReviewedContent(subjectId: keyof typeof POLICIES,
@@ -81,6 +84,15 @@ export async function loadPrivateReviewedContent(subjectId: keyof typeof POLICIE
     if (!Object.hasOwn(POLICIES, subjectId)) return null;
     const policy = POLICIES[subjectId];
     const expected = options.expectedDataClass ?? "human_reviewed_private";
+    // These three bindings currently verify synthetic mechanics only. The
+    // Foundation preReleaseApplicabilityReceiptShape consumer is not implemented:
+    // Civil Code exam-date proof, derived per-authority law proofs, and the
+    // real-estate subject-validator receipt cannot be replaced by six generic
+    // review checks or a packet's currentnessState/versionEvidence fields.
+    // Fail before reading a real packet even if a generic approval is installed.
+    // Synthetic injection is a test port, never an environment/HTTP setting.
+    if (subjectId !== "economics_principles" && subjectId !== "accounting" &&
+      expected !== "synthetic_test_only") return null;
     const approvals = options.approvals.map(approval);
     if (!approvals.length || approvals.some(item => item.dataClass !== expected) ||
       new Set(approvals.map(item => item.packetSha256)).size !== approvals.length) return null;
@@ -102,6 +114,9 @@ export async function loadPrivateReviewedContent(subjectId: keyof typeof POLICIE
         "choiceExplanations", "easyExplanation", "concept", "feedback", "sourceEvidence", "rightsEvidence", "versionEvidence"]);
       const reference = parseQuestionReference(row.reference);
       if (reference.subjectId !== subjectId ||
+        // These law routes support reviewed historical exam snapshots only, not
+        // a timeless "current law" claim or a live legal-source validator.
+        (policy.historicalOnly && reference.currentnessState !== "verified_exam_date") ||
         !["original", "practice_retry"].includes(String(row.kind)) ||
         (row.kind === "original" ? row.sourceQuestionId !== null : typeof row.sourceQuestionId !== "string") ||
         !Array.isArray(row.choices) || row.choices.length !== 5 ||

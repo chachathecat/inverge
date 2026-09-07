@@ -4,11 +4,16 @@ import path from "node:path";
 import { ECONOMICS_CONTENT_MAX_BYTES, loadEconomicsContent, type EconomicsContentApproval } from "./economics-content";
 import { loadAccountingContent, type AccountingContentApproval } from "./accounting-content";
 import type { PrivateFirstStageCatalog } from "./session-service";
+import type { PrivateContentApproval } from "./private-reviewed-content";
+import { loadCivilLawContent, loadRealEstatePrinciplesContent, loadAppraiserRelatedLawContent } from "./remaining-subject-content";
 
 // Intentionally empty. AI review, Q-Net review packets and test receipts are NOT approvals.
 // Actual evidence must be installed by reviewed code, separately from the private body.
 const APPROVED_ECONOMICS_CONTENT: readonly EconomicsContentApproval[] = Object.freeze([]);
 const APPROVED_ACCOUNTING_CONTENT: readonly AccountingContentApproval[] = Object.freeze([]);
+const APPROVED_CIVIL_LAW_CONTENT: readonly PrivateContentApproval[] = Object.freeze([]);
+const APPROVED_REAL_ESTATE_PRINCIPLES_CONTENT: readonly PrivateContentApproval[] = Object.freeze([]);
+const APPROVED_APPRAISER_RELATED_LAW_CONTENT: readonly PrivateContentApproval[] = Object.freeze([]);
 
 /** A bounded server-only local file read. No network, public fallback or test flag. */
 export async function readPrivateEconomicsContent(file: string): Promise<Uint8Array> {
@@ -41,4 +46,19 @@ export async function loadApprovedPrivateFirstStageCatalog(): Promise<PrivateFir
 export async function loadApprovedPrivateAccountingCatalog(): Promise<PrivateFirstStageCatalog | null> {
   return loadAccountingContent({ approvals: APPROVED_ACCOUNTING_CONTENT,
     readBytes: () => readPrivateEconomicsContent(process.env.INVERGE_OWNER_ACCOUNTING_CONTENT_PATH ?? "") });
+}
+
+export async function loadApprovedPrivateCivilLawCatalog(): Promise<PrivateFirstStageCatalog | null> {
+  return loadCivilLawContent({ approvals: APPROVED_CIVIL_LAW_CONTENT,
+    readBytes: () => readPrivateEconomicsContent(process.env.INVERGE_OWNER_CIVIL_LAW_CONTENT_PATH ?? "") });
+}
+
+export async function loadApprovedPrivateRealEstatePrinciplesCatalog(): Promise<PrivateFirstStageCatalog | null> {
+  return loadRealEstatePrinciplesContent({ approvals: APPROVED_REAL_ESTATE_PRINCIPLES_CONTENT,
+    readBytes: () => readPrivateEconomicsContent(process.env.INVERGE_OWNER_REAL_ESTATE_PRINCIPLES_CONTENT_PATH ?? "") });
+}
+
+export async function loadApprovedPrivateAppraiserRelatedLawCatalog(): Promise<PrivateFirstStageCatalog | null> {
+  return loadAppraiserRelatedLawContent({ approvals: APPROVED_APPRAISER_RELATED_LAW_CONTENT,
+    readBytes: () => readPrivateEconomicsContent(process.env.INVERGE_OWNER_APPRAISER_RELATED_LAW_CONTENT_PATH ?? "") });
 }

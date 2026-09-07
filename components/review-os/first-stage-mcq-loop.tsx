@@ -126,6 +126,15 @@ export function FirstStageMcqLoop() {
         <Link href="/app/first-stage/accounting" prefetch={false} className="mt-3 block text-sm underline">
           비공개 회계학 연습 상태 확인
         </Link>
+        <Link href="/app/first-stage/civil-law" prefetch={false} className="mt-3 block text-sm underline">
+          비공개 민법 연습 상태 확인
+        </Link>
+        <Link href="/app/first-stage/real-estate-principles" prefetch={false} className="mt-3 block text-sm underline">
+          비공개 부동산학원론 연습 상태 확인
+        </Link>
+        <Link href="/app/first-stage/appraiser-related-law" prefetch={false} className="mt-3 block text-sm underline">
+          비공개 감정평가관계법규 연습 상태 확인
+        </Link>
       </section>
     </main>
   );

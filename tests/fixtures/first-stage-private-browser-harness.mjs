@@ -5,14 +5,16 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { build } from "esbuild";
 import { chromium } from "playwright";
+import { SUBJECT_CASES } from "./first-stage-remaining-content-harness.mjs";
 
 /** Real component + real compiled route entry + supplied isolated repository.
  * This is a localhost test host, NOT a Next deployment or remote auth acceptance.
  */
-export async function verifyPrivateBrowser({ route, clock, failNextWrite, subject = "economics_principles" }) {
-  assert.ok(["economics_principles", "accounting"].includes(subject));
-  const pagePath = subject === "accounting" ? "/app/first-stage/accounting" : "/app/first-stage/practice";
-  const apiPath = subject === "accounting" ? "/api/review-os/first-stage/accounting/sessions" : "/api/review-os/first-stage/sessions";
+export async function verifyPrivateBrowser({ route, clock, failNextWrite, subject = "economics_principles", blockCatalog, blockedMessage }) {
+  assert.ok(["economics_principles", "accounting", ...SUBJECT_CASES.map(spec => spec.id)].includes(subject));
+  const slug = SUBJECT_CASES.find(spec => spec.id === subject)?.slug ?? "accounting";
+  const pagePath = subject === "economics_principles" ? "/app/first-stage/practice" : `/app/first-stage/${slug}`;
+  const apiPath = subject === "economics_principles" ? "/api/review-os/first-stage/sessions" : `/api/review-os/first-stage/${slug}/sessions`;
   const bundle = await build({ stdin: {
     contents: `import React from "react"; import {createRoot} from "react-dom/client"; import {FirstStagePrivatePractice} from "./components/review-os/first-stage-private-practice"; createRoot(document.getElementById("root")).render(React.createElement(FirstStagePrivatePractice, {subject: ${JSON.stringify(subject)}}));`,
     resolveDir: process.cwd(), loader: "tsx",
@@ -54,6 +56,27 @@ export async function verifyPrivateBrowser({ route, clock, failNextWrite, subjec
     page.on("pageerror", () => failures.push("browser-page-error"));
     page.on("console", message => { if (message.type() === "error") consoleErrors.push(message.text()); });
     await page.goto(`${origin}${pagePath}`);
+    if (blockCatalog) {
+      // Availability can change between GET and POST. Use the actual server
+      // blocker, then verify reload and existing-session GET consume it too.
+      await page.getByRole("button", { name: "검토된 1번 시작" }).waitFor();
+      blockCatalog();
+      await page.getByRole("button", { name: "검토된 1번 시작" }).click();
+      const assertBlocked = async () => {
+        await page.getByText(blockedMessage, { exact: true }).waitFor();
+        assert.equal(await page.getByRole("button", { name: "같은 요청 다시 확인" }).count(), 0);
+        assert.equal(await page.getByRole("button", { name: "검토된 1번 시작" }).count(), 0);
+        assert.equal(await page.getByRole("region", { name: "저장된 응답 해설" }).count(), 0);
+      };
+      await assertBlocked();
+      await page.reload(); // Includes the old createId/questionId; must not offer retry.
+      await assertBlocked();
+      await page.goto(`${origin}${pagePath}?sessionId=synthetic-existing-session`);
+      await assertBlocked();
+      assert.deepEqual(failures, []); assert.deepEqual(external, []);
+      assert.ok(consoleErrors.every(message => /Failed to load resource.*(?:503|404)/u.test(message)));
+      return { blocked: true, browserErrors: failures.length, externalRequests: external.length };
+    }
     await page.getByRole("button", { name: "검토된 1번 시작" }).evaluate(button => {
       button.click(); button.click();
     });
