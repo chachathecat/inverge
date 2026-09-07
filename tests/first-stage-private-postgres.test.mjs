@@ -12,6 +12,8 @@ import { verifyPrivateBrowser } from "./fixtures/first-stage-private-browser-har
 import { verifyPrivateSubjectNavigation } from "./fixtures/first-stage-private-navigation-browser.mjs";
 import { harness as kernelHarness, SUBMIT, submission } from "./fixtures/first-stage-private-session-harness.mjs";
 import { economicsCatalog } from "./fixtures/first-stage-economics-content-harness.mjs";
+import { loadEconomicsContent } from "../lib/review-os/first-stage/runtime/economics-content.ts";
+import { syntheticRuntimeCandidateInput } from "./fixtures/economics-runtime-candidate-harness.mjs";
 import { accountingCatalog } from "./fixtures/first-stage-accounting-content-harness.mjs";
 import { remainingCatalogs, SUBJECT_CASES } from "./fixtures/first-stage-remaining-content-harness.mjs";
 import { ORACLE_IMAGE, ORACLE_PLATFORM } from "../scripts/automation/wcv-c3-pre-p-postgresql-security-state-oracle.mjs";
@@ -54,12 +56,20 @@ test("all five browser routes consume their server blocker on POST, reload and r
     }
   });
 
-for (const [subject, catalog] of Object.entries({ economics_principles: economicsCatalog, accounting: accountingCatalog, ...remainingCatalogs })) {
+const convertedInput = syntheticRuntimeCandidateInput();
+const convertedCatalog = await loadEconomicsContent(convertedInput);
+assert.ok(convertedCatalog);
+const postgresCases = [
+  ...Object.entries({ economics_principles: economicsCatalog, accounting: accountingCatalog, ...remainingCatalogs })
+    .map(([subject, catalog]) => ({ subject, catalog, label: subject, contentInput: undefined })),
+  { subject: "economics_principles", catalog: convertedCatalog, label: "economics_r3_candidate", contentInput: convertedInput },
+];
+for (const { subject, catalog, label, contentInput } of postgresCases) {
 const harness = options => kernelHarness({ ...options, catalog });
 const reference = () => catalog.initialReferences[0];
 const EXPLANATION = catalog.explanation(reference()).text;
 const BODY = catalog.registry.require(subject).presentQuestion(reference()).stem;
-test(`local PostgreSQL ${subject} enforces actual route/browser durable retry/CAS with synthetic auth ports`, { timeout: 240_000 }, async () => {
+test(`local PostgreSQL ${label} enforces actual route/browser durable retry/CAS with synthetic auth ports`, { timeout: 240_000 }, async () => {
   const container = `inverge-first-private-${process.pid}-${Date.now()}`;
   const docker = args => execFileSync("docker", args, { encoding: "utf8", windowsHide: true, stdio: ["ignore", "pipe", "pipe"] });
   let started = false;
@@ -133,10 +143,20 @@ test(`local PostgreSQL ${subject} enforces actual route/browser durable retry/CA
       create table auth.users(id uuid primary key);
       grant usage on schema public to anon,authenticated,service_role;
       insert into auth.users values (${literal(OWNER)}),(${literal(OTHER)});`, null);
-    const design = readFileSync(new URL("../supabase/local-designs/first-stage-private-sessions.sql", import.meta.url), "utf8");
+    const syntheticDesign = readFileSync(new URL("../supabase/local-designs/first-stage-private-sessions.sql", import.meta.url), "utf8");
+    const design = contentInput ? readFileSync(new URL("../supabase/local-designs/first-stage-owner-local-sessions.sql", import.meta.url), "utf8") : syntheticDesign;
     await assert.rejects(sql(design, null), { code: "P0001" });
+    if (contentInput) {
+      // Verify the proposed persistent design in a disposable fixture only.
+      // This setting in a synthetic test is NOT a performed personal-use approval.
+      await assert.rejects(sql(`set inverge.local_first_stage_design='synthetic_only';\n${design}`, null), { code: "P0001" });
+      await sql("set inverge.local_first_stage_design='';", null);
+      assert.equal(design.slice(design.indexOf("create table"), design.indexOf("comment on table")),
+        syntheticDesign.slice(syntheticDesign.indexOf("create table"), syntheticDesign.indexOf("comment on table")));
+    }
     for (let replay = 0; replay < 2; replay++) {
-      await sql(`set inverge.local_first_stage_design='synthetic_only';\n${design}`, null);
+      await sql((contentInput ? "set inverge.local_first_stage_personal_use='owner_approved_persistent_local';\n"
+        : "set inverge.local_first_stage_design='synthetic_only';\n") + design, null);
     }
     for (const role of ["anon", "authenticated"]) {
       await assert.rejects(sql(`select * from ${TABLE}`, role), { code: "42501" });
@@ -149,7 +169,7 @@ test(`local PostgreSQL ${subject} enforces actual route/browser durable retry/CA
     });
     const first = harness({ store: repository(sdk()) });
     const second = harness({ store: repository(sdk()) });
-    const handler = h => privateRoute(h, { ownerId: OWNER, client: sdk(), repository, subject });
+    const handler = h => privateRoute(h, { ownerId: OWNER, client: sdk(), repository, subject, contentInput });
     const post = (h, body) => handler(h).POST(new Request("http://127.0.0.1/sessions", {
       method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body),
     }));
@@ -192,7 +212,7 @@ test(`local PostgreSQL ${subject} enforces actual route/browser durable retry/CA
     reopened.setClock(tasks[0].dueAt);
     const retry = await reopened.service.execute(OWNER, sessionId, { action: "retry", requestId: "postgres-retry", expectedRevision: 3, reviewTaskId: tasks[0].reviewTaskId });
     reopened.setClock("2026-09-07T10:02:00.000Z");
-    const completed = await reopened.service.execute(OWNER, sessionId, { ...submission(retry.state.attempts.at(-1).attemptId, 2), requestId: "postgres-retry-submit", expectedRevision: 4 });
+    const completed = await reopened.service.execute(OWNER, sessionId, { ...submission(retry.state.attempts.at(-1).attemptId, contentInput ? 4 : 2), requestId: "postgres-retry-submit", expectedRevision: 4 });
     assert.equal(completed.state.reviewTasks[0].status, "completed");
     const oldRequest = await post(second, command);
     assert.equal(oldRequest.status, 200);
@@ -204,6 +224,7 @@ test(`local PostgreSQL ${subject} enforces actual route/browser durable retry/CA
     assert.equal(final.transferEvidence, false);
     const browserHarness = harness({ store: repository(sdk()) });
     const browserResult = await verifyPrivateBrowser({ route: handler(browserHarness), subject,
+      ...(contentInput ? { questionNumber: 46, retryChoice: 4 } : {}),
       ...(catalog.questionAttributions ? { expectedAttributions: { question: catalog.questionAttributions(reference()),
         feedback: catalog.explanation(reference()).attributions } } : {}),
       clock: { set: browserHarness.setClock, advance: ms => browserHarness.setClock(

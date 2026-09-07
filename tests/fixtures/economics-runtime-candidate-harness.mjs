@@ -1,0 +1,39 @@
+import { createHash } from "node:crypto";
+import { prepareEconomicsRuntimeCandidate } from "../../scripts/content-review/prepare-economics-runtime-candidate.mjs";
+import { syntheticContentInput } from "./first-stage-economics-content-harness.mjs";
+
+const hash = value => createHash("sha256").update(value).digest("hex");
+export function syntheticReviewInputs() {
+  const originals = [46, 49, 51, 52, 53].map(number => ({ id: `qnet-2025-36-s1-A-${number}`,
+    kind: "official_original_transcription", number, stem: `SYNTHETIC_CANDIDATE_STEM_${number}`,
+    choices: ["Synthetic alpha", "Synthetic beta", "Synthetic gamma", "Synthetic delta", "Synthetic epsilon"],
+    officialKeyObserved: 2, concept: "Synthetic original concept", answerBasis: "Synthetic observation only",
+    choiceExplanations: ["alpha reason", "beta reason", "gamma reason", "delta reason", "epsilon reason"],
+    easyExplanation: "SYNTHETIC_CANDIDATE_EXPLANATION", recalculation: "Synthetic prior arithmetic evidence",
+    verifiedBy: { human: false }, runtimeEligible: false, transferOrMeasurementEligible: false }));
+  const retryCandidates = originals.map(row => ({ ...row, id: `r${row.number}`,
+    kind: "ai_authored_modified_practice_candidate", sourceOriginalNumber: row.number,
+    stem: `SYNTHETIC_CANDIDATE_RETRY_${row.number}`, concept: "Synthetic retry concept", proposedChoice: 4,
+    officialKeyApplies: false, verification: "Synthetic prior independent calculation", difference: "Synthetic changed values" }));
+  const packet = { schemaVersion: "issue883.economics.review_candidate.v1", packetVersion: "issue883-economics-review-r3",
+    humanReview: { reviewer: null, decision: null, state: "pending" }, runtimeEligible: false,
+    exam: { year: 2025, round: 36, stage: 1, session: 1, subject: "economics_principles", pdfBooklet: "A", keyBookletExplicit: null },
+    sources: [{ postId: "5231525", sha256: hash("synthetic-question-source") }, { postId: "5246129", sha256: hash("synthetic-key-source") }],
+    sourcePolicy: { rawPublicGit: false, providerCalls: false }, originals, retryCandidates };
+  const reviewSource = JSON.stringify(packet);
+  return { reviewSource, calculationSource: JSON.stringify({ reviewPacketSha256: hash(reviewSource),
+    results: [...originals.map(row => ({ id: `original-${row.number}`, computedChoice: 2 })),
+      ...retryCandidates.map(row => ({ id: row.id, computedChoice: 4 }))].map(row => ({ ...row, checksPassed: true,
+        humanReview: false, runtimeAuthorityGranted: false })) }),
+    aiEvidenceSource: JSON.stringify({ packetSha256: hash(reviewSource), humanReviewComplete: false, contentApprovalGranted: false,
+      runtimeActivationApproved: false, transferMeasurementApproved: false, answerKeyExplicitBookletAObserved: false,
+      verbatimTranscriptionClaim: false, originalAnswerChoices: Object.fromEntries(originals.map(row => [row.number, 2])),
+      retryAnswerChoices: Object.fromEntries(retryCandidates.map(row => [row.id, 4])) }),
+    sourceObservationSource: JSON.stringify({ syntheticOnly: true }), humanChecklistSource: "SYNTHETIC SIX PENDING CHECKS" };
+}
+export function syntheticRuntimeCandidateInput() {
+  const { candidate } = prepareEconomicsRuntimeCandidate(syntheticReviewInputs());
+  // Only entirely synthetic input uses this explicit test classification.
+  candidate.dataClass = "synthetic_test_only";
+  return syntheticContentInput(candidate);
+}

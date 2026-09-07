@@ -11,6 +11,7 @@ import {
 import { privateSessionDigest as digest, type PrivateFirstStageCatalog } from "./session-service";
 import { validateCivilApplicability, validateRelatedLawApplicability, validateRealEstateApplicability, type PrivateApplicabilityInstallation } from "./foundation-applicability";
 import type { FinalReleaseProjection } from "./foundation-release";
+import { ECONOMICS_CANDIDATE_SCHEMA, projectApprovedEconomicsCandidate } from "./economics-candidate";
 
 export const PRIVATE_CONTENT_MAX_BYTES = 2 * 1024 * 1024;
 export const PRIVATE_CONTENT_REVIEW_CHECKS = Object.freeze([
@@ -101,7 +102,19 @@ export async function loadPrivateReviewedContent(subjectId: keyof typeof POLICIE
     const packetSha256 = crypto.createHash("sha256").update(bytes).digest("hex");
     const approved = approvals.find(item => item.packetSha256 === packetSha256);
     if (!approved) return null;
-    const packet = exactObject(JSON.parse(new TextDecoder("utf-8", { fatal: true }).decode(bytes)),
+    let decoded = JSON.parse(new TextDecoder("utf-8", { fatal: true }).decode(bytes));
+    let candidateProjections: ReadonlyMap<string, FinalReleaseProjection> | undefined;
+    if (decoded?.schemaVersion === ECONOMICS_CANDIDATE_SCHEMA) {
+      if (subjectId !== "economics_principles" || decoded.version !== approved.packetVersion) return null;
+      // Preparation only: the legacy six-check receipt is NOT the 2025 r3
+      // full official-key/per-item final-release consumer. Until that consumer
+      // exists, even a well-formed human six-check approval must stay blocked.
+      // The server entry never supplies synthetic_test_only; HTTP cannot set it.
+      if (expected !== "synthetic_test_only") return null;
+      const projected = projectApprovedEconomicsCandidate(decoded, expected);
+      decoded = projected.packet; candidateProjections = projected.projections;
+    }
+    const packet = exactObject(decoded,
       ["schemaVersion", "version", "dataClass", "authority", "questions", "keys"]);
     if (packet.schemaVersion !== policy.schema ||
       packet.version !== approved.packetVersion || packet.dataClass !== expected ||
@@ -110,7 +123,7 @@ export async function loadPrivateReviewedContent(subjectId: keyof typeof POLICIE
       packet.keys.length !== packet.questions.length) return null;
     let applicabilityDigest: string | null = null;
     let applicabilityExpiresAt = Infinity;
-    let attributions: ReadonlyMap<string, FinalReleaseProjection> | undefined;
+    let attributions: ReadonlyMap<string, FinalReleaseProjection> | undefined = candidateProjections;
     if (requiresFoundation) {
       const installed = applicability.find(item => item.packetSha256 === packetSha256);
       if (!installed) return null;

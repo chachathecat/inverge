@@ -1,6 +1,74 @@
 # Inverge Owner Study OS
 
-## Current private first-stage code continuation — #894 / 2026-09-07
+## Current economics first PC-local-use preparation — #883 / code child #896 / 2026-09-07
+
+- #891, #893 and #895 are integrated and preserved. #895 reviewed head
+  `d850968cec8bc82403661050622741a347db867e` became main
+  `4d99cdd474e7813944f8a4cef0a564832f740754`, identical tree
+  `116803bb25732b446e0bcbc9cac15cef58210a5c`. Native closeout:
+  https://github.com/chachathecat/inverge/pull/895#issuecomment-5570551426.
+  Required checks, independent 0/0/0, threads zero and post-main checks passed;
+  Vercel main canceled. Optional external staging was skipped, not real-use proof.
+- Current single writer: same isolated worktree,
+  `codex/issue-883-economics-local-use-preparation`, based on that fetched main.
+  No other matching writer or preparation work was found. Original Desktop
+  checkout/unrelated changes remain untouched; no merged PR is reopened.
+- Latest Owner authority permits preparation now and dedicated persistent
+  PC-local installation/account/store/activation only after actual content
+  approval. Owner explicitly says reviewer still unassigned, do not auto-register
+  Owner. All six human checks, approvals and real installation remain pending/0.
+- Reused r3/AI/source artifacts in the existing private folder without repackaging
+  or repeating calculations. Created `economics-runtime-candidate-r3-v1.json`
+  and `economics-runtime-mapping-r3-v1.json`: 10 candidate questions, 50 identical
+  body/choice/key/feedback field comparisons, preserved original source hashes,
+  source/lineage/AI evidence and all six null human decisions. Identical repeated
+  conversion reuses files; no actual content/body is added to Git or CI.
+- Neutral candidates contain no verified-reference or human-review assertions.
+  The same loader consumes exact-file/version synthetic candidates only. Final
+  inspection reproduced six-check-only admission before fixing it: real r3 is
+  now blocked even by well-formed human six-check approval until the 2025 full
+  official-key/per-item final-release consumer exists. That is an outstanding
+  code dependency, not an external decision or a waived gate. Empty actual lists
+  block before reading. Source attribution preserves question/feedback separation.
+- Added a separate persistent local SQL preparation with the same existing
+  constraints, forced RLS and service-only permissions. The synthetic-only SQL
+  and its cleanup boundary remain unchanged. No actual DB/account/env/flag/path
+  was configured. Preparation/actual-use steps are in
+  `docs/qa/issue-883-owner-local-economics.md`; proposed port is not a live endpoint.
+- Local frozen-source validation: 129 affected/kernel/5-subject/Foundation tests
+  passed with no skip, including the reproduced/fixed six-check-only denial.
+  Final candidate isolated PG/browser passed with actual route/SDK/repository,
+  synthetic auth/catalog/clock only, external requests/errors zero and synthetic
+  rows/users zero after cleanup. Screenshot suffix: economics_principles-14492.
+  Earlier full 8-case PG/browser run passed before the final attribution/denial
+  edits; it is not relabeled as final-source execution. Final candidate was rerun.
+  Build, typecheck, changed-file lint and diff check passed; all 160 tracked JSON
+  parsed and all eight actual approval/applicability lists stayed empty. Existing
+  next.config NFT-trace warning remains unrelated. Initial narrowing type error
+  was corrected before final validation. No private bodies are in test evidence.
+- Manifest (12 paths): economics-candidate.ts, private-reviewed-content.ts;
+  prepare-economics-runtime-candidate.mjs, run-node-tests.mjs;
+  economics-runtime-candidate.test.mjs, first-stage-private-postgres.test.mjs,
+  economics-runtime-candidate-harness.mjs, first-stage-private-browser-harness.mjs;
+  first-stage-owner-local-sessions.sql; issue-883-owner-local-economics.md;
+  the existing private-continuation decision and this checkpoint. Original
+  synthetic SQL, auth/Supabase clients, migrations, dependencies and workflows
+  are unchanged. Native exact-head delivery/review is still pending, not claimed.
+- Next: complete independent native delivery for #896, then the outstanding
+  2025 r3 final-release code dependency under #883. Actual login/use and real
+  next-day observation remain unexecuted; reviewer is still unassigned.
+  Do not request r3 files or automatically re-ask for the unassigned reviewer.
+- PR #897 opened at `20a62e3a7ed51973efb1befb9de228a9525472fc`, tree
+  `443005b1f3cf707a115adea1b01b0dfcf29f6709`. Automatic Codex review started;
+  no duplicate manual request. Initial PR Contract/Fast CI contract stage failed
+  because a negative sentence about leaving #883 open also matched the closing
+  keyword parser. Corrected PR prose passes the SAME local contract validator.
+  Its workflow captures event-time prose, so no stale-event rerun is attempted.
+  This checkpoint-only correction preserves implementation/test bytes and makes
+  the ordinary synchronize event consume the corrected body. Native checks and
+  review must bind the new exact head; the earlier results do not become new ones.
+
+## Historical private first-stage code continuation — #894 / 2026-09-07
 
 - #893 is integrated, not reopened: reviewed head
   `22a6f00230020eb8357d1972fea7f91a41807314`, squash/resulting main
