@@ -6,6 +6,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { harness, reference, submission, SUBMIT, BODY } from "./fixtures/first-stage-private-session-harness.mjs";
 import { CONTENT_EXPLANATION as EXPLANATION } from "./fixtures/first-stage-economics-content-harness.mjs";
 import * as content from "../lib/review-os/first-stage/runtime/economics-content.ts";
+import * as accountingContent from "../lib/review-os/first-stage/runtime/accounting-content.ts";
 import * as fs from "node:fs/promises";
 import path from "node:path";
 import { privateRoute, compilePrivateSource, ENVIRONMENT } from "./fixtures/first-stage-private-route-harness.mjs";
@@ -53,7 +54,8 @@ test("actual route availability exposes metadata only and absent approved stock 
   assert.equal(response.status, 503); assert.equal(request.bodyUsed, false);
   assert.equal(blocked.counts.repository, 0);
   const installed = compilePrivateSource("lib/review-os/first-stage/runtime/approved-catalog.ts", {
-    "server-only": {}, "node:fs/promises": fs, "node:path": { default: path }, "./economics-content": content });
+    "server-only": {}, "node:fs/promises": fs, "node:path": { default: path }, "./economics-content": content,
+    "./accounting-content": accountingContent });
   assert.equal(await installed.loadApprovedPrivateFirstStageCatalog(), null);
 });
 

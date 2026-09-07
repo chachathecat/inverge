@@ -1,6 +1,70 @@
 # Inverge Owner Study OS
 
-## Current private first-stage continuation — 2026-09-06
+## Current private first-stage continuation — 2026-09-07
+
+- Code integration and content/actual-use acceptance are separate under the
+  Owner's 2026-09-07 instruction. PR #884 merged reviewed head
+  `7e3a392caf84acf9474b1d2cf5f551dee321902e` as squash
+  `df6668e82353daecfda1560bc18e6ec2cc35620d`; resulting tree
+  `18d33a474ac0519fd62e55d080179ca0f7dcd2c7` equals the reviewed candidate.
+  Required checks 9/9, final clean exact-head Codex review and zero unresolved
+  threads were rechecked. All five resulting-main workflows succeeded; Vercel
+  reports `Canceled by Ignored Build Step`. Native closeout:
+  https://github.com/chachathecat/inverge/pull/884#issuecomment-5564336221.
+- Only code child #885 is closed. #883 remains OPEN for actual human review and
+  actual learner-use acceptance. Economics r3 and the additional AI report are
+  preserved privately; all six human-review items remain pending. Approved
+  content is zero. No reviewer/date/verdict, approval entry, actual environment,
+  feature flag, content path, remote DB, provider or payment has been installed.
+- Current code work: #886, accounting private question/response/explanation/
+  save/reconnect/D+1 practice. Single writer uses
+  `codex/first-stage-accounting-private-flow` in the existing isolated
+  `pr882-appraiser-first-rescope` worktree, starting at the validated #884 merge.
+- Reuse: unchanged common kernel, SubjectAdapter contract, session service,
+  repository and local-only SQL design. The reviewed-content loader now has two
+  closed server policies; economics preserves its schema and deterministic
+  identities. Accounting binds its own schema, subject, packet hash, keys and
+  adapter identities. Both installed approval lists remain empty; neither a
+  client claim nor a file path grants content authority.
+- Accounting entry: `/app/first-stage/accounting`, with versioned payloads at
+  `/api/review-os/first-stage/accounting/sessions`. It uses the existing Owner/
+  default-OFF/non-Production gate and practice component. RSC carries only the
+  subject selector, never question/reference content. Explanation still requires
+  durable evaluated readback. No schema, migration, RLS or SDK changes are needed.
+- Current implementation validation: 31 related loader/session/HTTP/RSC tests
+  and 19 common-kernel/private-renderer regressions passed. Both economics and accounting isolated PostgreSQL plus real-component
+  browser runs passed (2/2), proving concurrent create/replay, durable readback,
+  D+1, completed retry preservation and synthetic-user/record cleanup. Network
+  was disabled for each disposable DB, external browser requests/errors were 0.
+  Auth/clock/catalog are synthetic injected ports: this is not deployed Next,
+  remote authentication or actual-content acceptance. Build passed; a parallel
+  typecheck initially observed regenerating Next route types, then sequential
+  typecheck and changed-file lint passed after build completion. Diff/19-path
+  scope checks passed; no JSON files changed. An in-memory comparison against
+  the reviewed #884 economics loader proved identical catalog/evaluation/D+1/
+  retry identities and persisted rows for the same synthetic input. React/RSC
+  review found no content props, broad client imports or effect dependency drift.
+  These are local candidate results, not new-head native CI/review results.
+- Next action: ordinary-push the locally validated candidate PR for #886,
+  then use exact-head native checks and
+  one independent review without duplicating an automatic review. Do not apply
+  #884 evidence to a changed head or close #883 on the accounting code PR.
+
+| Subject | Code support | Approved actual content / actual use |
+| --- | --- | --- |
+| Economics | #884 integrated; current shared-loader regressions passed | 0 / blocked; six human-review items pending |
+| Accounting | #886 local candidate; actual HTTP/PG/browser synthetic checks passed | 0 / blocked; no human-approved packet installed |
+| Civil law | Frozen common interface only | 0 / unavailable |
+| Real-estate principles | Frozen common interface only | 0 / unavailable |
+| Appraisal-related law | Frozen common interface only | 0 / unavailable |
+
+Rollback for #886: keep approvals empty and the existing feature OFF. Remove
+the accounting entry/server catalog binding in a reviewed follow-up if needed;
+preserve stored rows and economics identities. No database deletion or remote
+rollback is required. This is code integration progress, not economics,
+accounting, five-subject, efficacy, transfer or measurement completion.
+
+## Historical #884 candidate evidence — 2026-09-06
 
 - Authority: `docs/decisions/2026-09-06-owner-appraiser-first-private-continuation.md`.
 - PR #882 is merged at `7626b82e8ebc9649ae2da125077900458e762b21`, tree

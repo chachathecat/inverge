@@ -123,6 +123,9 @@ export function FirstStageMcqLoop() {
         <Link href="/app/first-stage/practice" prefetch={false} className="mt-4 block text-sm underline">
           비공개 경제학 연습 상태 확인
         </Link>
+        <Link href="/app/first-stage/accounting" prefetch={false} className="mt-3 block text-sm underline">
+          비공개 회계학 연습 상태 확인
+        </Link>
       </section>
     </main>
   );
