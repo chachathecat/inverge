@@ -1,6 +1,7 @@
 import { exactObject, requiredIdentifier, requiredSafeInteger, requiredUtcInstant } from "../kernel/domain";
 import { privateSessionDigest as digest } from "./session-service";
 import { applicabilityFailure as fail, requiredDay, requiredHash, requireSame, type FoundationEvidence } from "./foundation-applicability";
+import { FIVE, LAW, RELATED_LAW_AUTHORITIES } from "./foundation-release-contract";
 
 export const LAW_PROOF_FIELDS = ("proof_receipt_id proof_receipt_version proof_receipt_sha256 authority_id selected_version_identity " +
   "official_version_history_url official_version_history_receipt predecessor_version_identity_or_null successor_version_identity_or_null " +
@@ -40,9 +41,9 @@ function transport(evidence: FoundationEvidence, ref: unknown, url: unknown, sha
   row.redirect_urls.forEach(value => officialUrl(value));
   requiredSafeInteger(row.byte_count, 1, 100_000_000); requireSame(requiredHash(row.raw_artifact_sha256), requiredHash(sha));
 }
-function identity(evidence: FoundationEvidence, ref: unknown, sha: unknown, version?: unknown, number?: unknown, from?: unknown) {
+function identity(evidence: FoundationEvidence, ref: unknown, sha: unknown, officialName: string, version?: unknown, number?: unknown, from?: unknown) {
   const row = evidence.resolve(ref, IDENTITY_FIELDS);
-  if (row.expected_official_name !== "민법" || row.representation_schema_or_magic_match !== true) fail();
+  if (row.expected_official_name !== officialName || row.representation_schema_or_magic_match !== true) fail();
   requiredIdentifier(row.expected_mst_or_lsi_seq); officialText(row.expected_promulgation_number); requiredDay(row.expected_effective_date);
   requireSame(requiredHash(row.raw_artifact_sha256), requiredHash(sha));
   if (version !== undefined) requireSame(row.expected_mst_or_lsi_seq, version);
@@ -51,8 +52,14 @@ function identity(evidence: FoundationEvidence, ref: unknown, sha: unknown, vers
 }
 
 export function validateCivilLawProof(evidence: FoundationEvidence, ref: unknown, examDate: string) {
+  return validateLawProof(evidence, ref, examDate, "civil_code");
+}
+
+/** Authority comes from the validated subject/anchor derivation, never the proof's label. */
+export function validateLawProof(evidence: FoundationEvidence, ref: unknown, examDate: string, authorityId: string) {
+  const authority = LAW.requiredAuthorities.find(row => row.authorityId === authorityId); if (!authority) fail();
   const proof = evidence.resolve(ref, LAW_PROOF_FIELDS, true);
-  if (proof.authority_id !== "civil_code" || proof.exam_date !== examDate || examDate !== "2026-04-04" ||
+  if (proof.authority_id !== authorityId || proof.exam_date !== examDate || examDate !== "2026-04-04" ||
     proof.amendment_chain_complete_through_exam_date !== true || !Array.isArray(proof.amendment_chain_records) ||
     !proof.amendment_chain_records.length || proof.amendment_chain_records.length > 512) fail();
   const chain = proof.amendment_chain_records.map(value => exactObject(value, LAW_CHAIN_FIELDS));
@@ -65,7 +72,7 @@ export function validateCivilLawProof(evidence: FoundationEvidence, ref: unknown
     if (requiredDay(row.promulgation_date) > from || (to !== null && from >= to) ||
       (index > 0 && chain[index - 1].effective_to_or_null !== from)) fail();
     transport(evidence, row.transport_receipt, row.official_version_url, row.raw_artifact_sha256);
-    identity(evidence, row.content_identity_receipt, row.raw_artifact_sha256, row.version_identity, row.promulgation_number, from);
+    identity(evidence, row.content_identity_receipt, row.raw_artifact_sha256, authority.officialName, row.version_identity, row.promulgation_number, from);
   }
   const selectedIndex = chain.findIndex(row => row.version_identity === proof.selected_version_identity);
   if (selectedIndex < 0) fail();
@@ -84,7 +91,7 @@ export function validateCivilLawProof(evidence: FoundationEvidence, ref: unknown
   const entries = chain.map(row => Object.fromEntries(ENTRY_FIELDS.map(key => [key, row[key]])));
   requireSame(history.ordered_version_entries, entries); requireSame(history.ordered_version_entries_digest, digest(entries));
   transport(evidence, history.transport_receipt_reference, history.official_version_history_url, history.raw_history_sha256);
-  identity(evidence, history.content_identity_receipt_reference, history.raw_history_sha256);
+  identity(evidence, history.content_identity_receipt_reference, history.raw_history_sha256, authority.officialName);
   const extraction = evidence.resolve(history.history_extraction_receipt_reference, LAW_EXTRACTION_FIELDS);
   for (const field of ["authority_id", "official_version_history_url", "raw_history_sha256", "version_entry_count", "ordered_version_entries", "ordered_version_entries_digest"]) {
     requireSame(extraction[field], history[field]);
@@ -97,4 +104,31 @@ export function validateCivilLawProof(evidence: FoundationEvidence, ref: unknown
   evidence.reviewer(history, "named_owner_authorized_human_law_reviewer", "verified_complete_official_history_through_exam_date", extraction.reviewed_at);
   evidence.reviewer(proof, "named_owner_authorized_human_law_reviewer", "verified_in_force_on_exam_date", history.reviewed_at);
   return proof;
+}
+
+/** Consume the existing complete anchor-to-authority derivation. A generic human
+ * checklist or an HTTP/packet authority array cannot replace this bound object. */
+export function deriveRelatedLawAuthorities(evidence: FoundationEvidence, reference: unknown,
+  itemId: unknown, itemVersion: unknown, choiceDigest: unknown, anchors: readonly string[]) {
+  const shape = FIVE.relationshipLawAuthorityDerivationReceiptShape;
+  const row = evidence.resolve(reference, shape.requiredFields);
+  requireSame(row.item_id, itemId); requireSame(row.item_version, itemVersion); requireSame(row.choice_set_digest, choiceDigest);
+  const expectedAnchors = [...new Set(anchors)].sort();
+  requireSame(row.source_anchor_ids, expectedAnchors); requireSame(row.source_anchor_ids_digest, digest(expectedAnchors));
+  if (!Array.isArray(row.source_anchor_to_authority_rows) || !row.source_anchor_to_authority_rows.length ||
+    row.source_anchor_to_authority_rows.length > expectedAnchors.length * RELATED_LAW_AUTHORITIES.length) fail();
+  const mappings = row.source_anchor_to_authority_rows.map(value => exactObject(value, shape.mappingRowRequiredFields));
+  const keys = mappings.map(mapping => {
+    const anchor = requiredIdentifier(mapping.source_anchor_id), authority = requiredIdentifier(mapping.authority_id);
+    if (!expectedAnchors.includes(anchor) || !RELATED_LAW_AUTHORITIES.some(row => row.authorityId === authority)) fail();
+    return `${anchor}\u0000${authority}`;
+  });
+  if (new Set(keys).size !== keys.length) fail(); requireSame(keys, [...keys].sort());
+  requireSame([...new Set(mappings.map(row => row.source_anchor_id))].sort(), expectedAnchors);
+  requireSame(row.source_anchor_to_authority_rows_digest, digest(mappings));
+  const authorities = [...new Set(mappings.map(row => requiredIdentifier(row.authority_id)))];
+  if (authorities.length < 1 || authorities.length > 9 || row.unclassified_source_anchor_count !== 0) fail();
+  requireSame(row.applicable_authority_ids, authorities);
+  evidence.reviewer(row, "named_owner_authorized_human_law_reviewer", "verified_complete_source_anchor_authority_derivation");
+  return { authorities, reviewedAt: row.reviewed_at };
 }

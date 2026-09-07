@@ -3,7 +3,7 @@ import test from "node:test";
 import React from "react";
 import * as jsx from "react/jsx-runtime";
 import { renderToStaticMarkup } from "react-dom/server";
-import { SUBJECT_CASES, remainingPacket, remainingInput, remainingCatalogs, rebindSyntheticCivilInput } from "./fixtures/first-stage-remaining-content-harness.mjs";
+import { SUBJECT_CASES, remainingPacket, remainingInput, remainingCatalogs, rebindSyntheticLawInput } from "./fixtures/first-stage-remaining-content-harness.mjs";
 import { syntheticContentInput } from "./fixtures/first-stage-economics-content-harness.mjs";
 import { syntheticAccountingInput } from "./fixtures/first-stage-accounting-content-harness.mjs";
 import { harness, submission, SUBMIT } from "./fixtures/first-stage-private-session-harness.mjs";
@@ -24,7 +24,7 @@ for (const spec of SUBJECT_CASES) {
     input.approvals[0].dataClass = "human_reviewed_private";
     delete input.expectedDataClass;
     delete input.applicability;
-    const blocker = spec.id === "civil_law" ? "approved_content_required" : "subject_applicability_implementation_required";
+    const blocker = spec.id === "real_estate_principles" ? "subject_applicability_implementation_required" : "approved_content_required";
     let reads = 0;
     const readBytes = input.readBytes;
     input.readBytes = async () => { reads++; return readBytes(); };
@@ -122,7 +122,7 @@ for (const spec of SUBJECT_CASES) {
     packet.questions[1].feedback.incorrectCauseByChoice = ["C", "C", "C", null, "C"];
     // A different synthetic answer requires a newly bound server receipt, not
     // a mutation of an already admitted content/version snapshot.
-    if (spec.id === "civil_law") rebindSyntheticCivilInput(packet);
+    if (spec.id !== "real_estate_principles") rebindSyntheticLawInput(packet);
     const catalog = await spec.load(remainingInput(spec.id, packet)); assert.ok(catalog);
     const h = harness({ catalog }), options = { contentInput: remainingInput(spec.id, packet) }, r = route(h, options);
     const create = { action: "create", requestId: "create-one", questionId };

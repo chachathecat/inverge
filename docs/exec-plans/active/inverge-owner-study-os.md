@@ -1,6 +1,58 @@
 # Inverge Owner Study OS
 
-## Current private first-stage code continuation — #890 / 2026-09-07
+## Current private first-stage code continuation — #892 / 2026-09-07
+
+- #891 is integrated and is not reopened. Reviewed head
+  `1779594cec11199caa178f412d6db719660899ec` was squash-merged as
+  `fce793be079ca7faa1c12a6de56af0e3572599a2`; both trees are
+  `6803602ae5ef182176dee3c2c9699b7dff1de3f5`. Native closeout:
+  https://github.com/chachathecat/inverge/pull/891#issuecomment-5568932816.
+  Exact-head required CI 9/9 plus C3R-L passed, independent review was clean
+  `0/0/0`, all six historical threads resolved. All five post-merge workflows
+  passed; optional staging runtime was skipped for missing prerequisites.
+  Main Vercel was actually canceled by the Ignored Build Step, not deployed.
+  #890 closed; parent #883 remains open for actual content and learner use.
+- The single writer continues in the existing isolated worktree on
+  `codex/first-stage-related-law-applicability`, from that fetched main.
+  #892 is the code-only relationship-law child. No actual content, flag, path,
+  provider, remote DB, auth/RLS, schema or deployment configuration changes.
+- First reproduced the related-law loader admitting a six-check synthetic packet
+  without any Foundation evidence. The implemented consumer now requires the
+  existing exact five-choice anchor-to-authority derivation, one through nine
+  supported authorities, zero unclassified anchors and one exact complete
+  history/extraction/identity/applicability proof per derived authority.
+  Civil-law verification is reused, with canonical official names from the
+  unchanged Foundation and its existing `2026-04-04` date only.
+- Final release reuses the full 200-row official original key and independent
+  LEARNING_ONLY modified-key branches. It recomputes the existing multi-law
+  validator facts and all four assertions. Every question, easy explanation,
+  choice correction, source/version, rights and attribution binding remains.
+  HTTP cannot install evidence, select a subject/kind or promote test data.
+- Fresh local results for this uncommitted candidate: 115 affected tests PASS,
+  zero skips, including 1/2/9-authority admission, coherently rehashed hostile
+  graphs, loader/HTTP pre-body denial and durable reconnect/withdrawal. All
+  seven isolated PostgreSQL 15.8/browser tests PASS, zero skips, in one run:
+  five-subject actual loaders/routes/storage, CAS/concurrent/lost-response retry,
+  D+1/completed-state, attribution, blocked reload and late subject navigation.
+  Synthetic users/rows cleaned to zero; disposable containers removed; browser
+  external requests/errors zero. No real authentication or human review claimed.
+  Build, sequential typecheck, 15-file source/test lint, all 160 tracked JSON
+  parses and diff check PASS. Foundation bytes unchanged; actual installed
+  approval/applicability count zero across seven empty arrays. The existing
+  next.config.ts tracing warning remains outside this change.
+- One new regression initially used the wrong HTTP attribution field; corrected
+  to the existing typed `view.questionAttributions`, then the whole affected
+  batch passed. No runtime response shape was changed to satisfy that test.
+  The 16-path candidate includes this checkpoint. Native CI and independent
+  review for the future committed head are pending, not inherited from #891.
+- Relationship-law actual stock now reports the approval blocker. Real-estate
+  applicability remains code-incomplete and uses its implementation blocker;
+  it is the next dependency-ready delegated slice after this code integration.
+  All five real content approval lists remain empty. Human content review,
+  reviewed installation and explicit private-use activation are external gates;
+  synthetic verification or code integration cannot complete #883.
+
+## Historical private first-stage code continuation — #890 / 2026-09-07
 
 - #889 is integrated, not reopened: reviewed head
   `f7998100721d008529a1dc8b333287f60dca1420`, squash/main

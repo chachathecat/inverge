@@ -5,7 +5,7 @@ import { applicabilityFailure as fail, requireSame as same, immutableReference, 
 import { FIVE, PRIVATE_USE, RETRY_RELEASE_VERSION, RETRY_RELEASE_FIELDS, RETRY_KEY_FIELDS, RETRY_PROVENANCE_FIELDS } from "./foundation-release-contract";
 import { nonempty, releaseContext, sourcePair, type Row } from "./foundation-release-rights";
 import { validateOfficialKey, OFFICIAL_ROUND, officialSession } from "./foundation-release-key";
-import { validateCivilReleaseEvidence } from "./foundation-release-validation";
+import { validateLawReleaseEvidence } from "./foundation-release-validation";
 
 const HUMAN = "named_owner_authorized_human_reviewer";
 const CONTENT = "named_owner_authorized_human_content_reviewer";
@@ -154,7 +154,7 @@ export function validateFinalReleases(installation: PrivateApplicabilityInstalla
     same(release.ordered_content_attribution_rows, attributionRows); same(release.ordered_content_attribution_rows_digest, digest(attributionRows));
     const uniqueAttributions = [...new Set(attributionRows.map(row => nonempty(row.exact_attribution)))];
     same(release.ordered_unique_attributions, uniqueAttributions); same(release.ordered_unique_attributions_digest, digest(uniqueAttributions));
-    const validated = validateCivilReleaseEvidence(ctx, release, pre, keyReference, variant);
+    const validated = validateLawReleaseEvidence(ctx, release, pre, keyReference, variant);
     same(reference.sourceVersionManifestIds, validated.sourceVersionManifestIds);
     expiresAt = Math.min(expiresAt, ctx.expiry());
     // Question/source attribution only before response. Full ordered release

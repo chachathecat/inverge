@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto";
 import { privateSessionDigest as digest } from "../../lib/review-os/first-stage/runtime/session-service.ts";
 import { FIVE, RIGHTS, PRIVATE_USE, RETRY_RELEASE_VERSION } from "../../lib/review-os/first-stage/runtime/foundation-release-contract.ts";
+import { CIVIL_DERIVATION, RELATED_LAW_DERIVATION } from "../../lib/review-os/first-stage/runtime/foundation-release-validation.ts";
 
 // SYNTHETIC metadata, never source documents, actual review or installable stock.
 const HUMAN = "synthetic-not-a-human-law-review", AT = "2026-09-06T10:00:00.000Z";
@@ -94,7 +95,7 @@ export function finalReleaseFixture(packet, items, receipts, add, bodyRefs) {
 
   packet.questions.forEach((row, index) => {
     const item = items[index], pre = get(item.receiptReference), variant = row.kind === "practice_retry", ref = row.reference;
-    const pair = sourcePairs[0], questionReference = bodyRefs[index]("question", JSON.stringify({ stem: row.stem, choices: row.choices }));
+    const pair = sourcePairs[session(ref.subjectId).endsWith("1") ? 0 : 1], questionReference = bodyRefs[index]("question", JSON.stringify({ stem: row.stem, choices: row.choices }));
     const source = { source_post_id: get(pair.post).post_id, source_asset_id: get(pair.asset).asset_id,
       source_question_anchor: `synthetic-${ref.subjectId}-${ref.questionNumber}`, source_post_rights_receipt_reference: pair.post, source_asset_rights_receipt_reference: pair.asset };
     const originalIndex = packet.questions.findIndex(candidate => candidate.reference.questionId === row.sourceQuestionId);
@@ -174,35 +175,38 @@ export function finalReleaseFixture(packet, items, receipts, add, bodyRefs) {
 }
 
 function validatorFixture(add, index, ref, pre, preReference, object, key, manifests, variant) {
-  const definition = FIVE.deterministicValidatorRegistry.definitions.exam_date_law_snapshot;
+  const related = ref.subjectId === "appraiser_related_law";
+  const validatorId = related ? "exam_date_multi_law_snapshot" : "exam_date_law_snapshot";
+  const definition = FIVE.deterministicValidatorRegistry.definitions[validatorId];
+  const method = related ? RELATED_LAW_DERIVATION : CIVIL_DERIVATION;
   const binding = { item_id: ref.questionId, item_version: ref.questionVersion, subject_id: ref.subjectId,
-    validator_contract_id: "exam_date_law_snapshot", validator_contract_version: "exam-date-law-snapshot.v1" };
+    validator_contract_id: validatorId, validator_contract_version: definition.contractVersion };
   const features = { always_applicable_subject_version_check: true };
   const app = add(`validator-app-${index}`, { ...binding, question_item_object_reference: object, choice_set_digest: pre.choice_set_digest,
-    feature_facts_schema_version: "exam_date_law_snapshot.applicability-facts.v1", feature_facts: features, feature_facts_digest: digest(features),
+    feature_facts_schema_version: definition.applicabilityContract.featureFactsSchemaVersion, feature_facts: features, feature_facts_digest: digest(features),
     feature_evidence_references: [preReference], applicability_status: "applicable", not_applicable_reason_code_or_null: null,
     reviewer: HUMAN, reviewed_at: AT, decision: "verified_validator_applicability" });
-  const facts = { authority_ids: ["civil_code"], exam_date: "2026-04-04", amendment_chain_receipt_references: pre.component_evidence_references,
-    applicability_decision_receipt_references: pre.component_evidence_references };
+  const facts = { authority_ids: pre.applicable_authority_ids, exam_date: "2026-04-04", amendment_chain_receipt_references: pre.component_evidence_references,
+    [related ? "cross_authority_applicability_receipt_references" : "applicability_decision_receipt_references"]: pre.component_evidence_references };
   const common = { ...binding, source_version_manifest_references: manifests, applicability_evidence_references: [preReference] };
   const derivation = add(`validator-derivation-${index}`, { ...common, input_projection_schema_version: "deterministic-validator-input.v1",
     question_item_object_reference: object, choice_set_digest: pre.choice_set_digest,
     [variant ? "independent_answer_key_reference" : "verified_official_key_receipt_reference"]: key,
-    validator_input_facts_schema_version: "exam_date_law_snapshot.input-facts.v1", validator_input_facts: facts, validator_input_facts_digest: digest(facts),
-    derivation_method_id: "foundation-civil-law-proof-projection", derivation_method_version: "1",
-    derivation_configuration_digest: digest({ method: "foundation-civil-law-proof-projection", version: "1", authority: "civil_code", examDate: "2026-04-04", canonicalization: "RFC8785" }),
+    validator_input_facts_schema_version: `${validatorId}.input-facts.v1`, validator_input_facts: facts, validator_input_facts_digest: digest(facts),
+    derivation_method_id: method.method, derivation_method_version: "1", derivation_configuration_digest: digest(method),
     evidence_observed_at: AT, reviewer: HUMAN, reviewed_at: AT, decision: "verified_deterministic_validator_input_derivation" });
   const projection = { item_id: ref.questionId, item_version: ref.questionVersion, subject_id: ref.subjectId, question_item_object_sha256: object.object_sha256,
     choice_set_digest: pre.choice_set_digest, [variant ? "independent_answer_key_receipt_sha256" : "verified_official_key_receipt_sha256"]: key.evidence_sha256,
     source_version_manifest_reference_tuples: manifests, applicability_evidence_reference_tuples: [preReference],
-    validator_input_facts_schema_version: "exam_date_law_snapshot.input-facts.v1", validator_input_facts_derivation_receipt_reference: derivation, validator_input_facts: facts };
+    validator_input_facts_schema_version: `${validatorId}.input-facts.v1`, validator_input_facts_derivation_receipt_reference: derivation, validator_input_facts: facts };
   const shared = { ...common, validator_configuration_digest: digest({ registryVersion: FIVE.deterministicValidatorRegistry.registryVersion, definition, canonicalization: "RFC8785" }),
     input_projection_digest: digest(projection), validator_input_facts_derivation_receipt_reference: derivation,
     assertion_count: 4, failed_assertion_count: 0, unresolved_assertion_count: 0 };
   const assertions = [
-    ["amendment_chain_complete", "exact_boolean_true", true, null], ["applicability_resolved", "exact_boolean_true", true, null],
-    ["authority_set_exact", "exact_canonical_set_equality", ["civil_code"], null], ["exam_date_exact", "exact_date_equality", "2026-04-04", "calendar_date"],
-  ].map(([id, comparison, value, unit]) => ({ assertion_id: id, assertion_contract_version: "exam-date-law-snapshot.v1", comparison,
+    [related ? "all_amendment_chains_complete" : "amendment_chain_complete", "exact_boolean_true", true, null],
+    [related ? "cross_authority_applicability_resolved" : "applicability_resolved", "exact_boolean_true", true, null],
+    ["authority_set_exact", "exact_canonical_set_equality", pre.applicable_authority_ids, null], ["exam_date_exact", "exact_date_equality", "2026-04-04", "calendar_date"],
+  ].sort(([a], [b]) => a < b ? -1 : a > b ? 1 : 0).map(([id, comparison, value, unit]) => ({ assertion_id: id, assertion_contract_version: definition.contractVersion, comparison,
     outcome: "passed", observed_value_or_null: value, expected_value_or_range: value, tolerance_or_null: null, unit_or_null: unit,
     evidence_references: pre.component_evidence_references, evidence_references_digest: digest(pre.component_evidence_references) }));
   const result = add(`validator-result-${index}`, { ...shared, ordered_assertion_rows: assertions, ordered_assertion_rows_digest: digest(assertions),
