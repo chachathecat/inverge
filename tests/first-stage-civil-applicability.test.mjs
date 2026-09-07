@@ -33,6 +33,10 @@ test("consumer uses existing Foundation exact shapes and digest fields without c
     [LAW_CHAIN_FIELDS, law.amendmentChainRecordRequiredFields]]) assert.deepEqual(actual, expected);
   const { installed, packet } = input();
   assert.match(validateCivilApplicability(installed, packet.questions, packet.keys).digest, /^[a-f0-9]{64}$/u);
+  for (const derivation of installed.receipts.filter(row => row.receipt_id?.startsWith("synthetic-validator-derivation-"))) {
+    assert.equal(derivation.validator_input_facts_schema_version,
+      five.deterministicValidatorRegistry.definitions.exam_date_law_snapshot.inputProjectionSchemaVersion);
+  }
 });
 
 test("civil law: missing Foundation evidence is rejected even with exact six-check synthetic approval", async () => {
@@ -218,6 +222,7 @@ const invalidReceipts = [
   ["different promulgation", "law-1-identity", row => { row.expected_promulgation_number = "different-number"; }],
   ["different effective date", "law-1-identity", row => { row.expected_effective_date = "2026-02-01"; }],
   ["unrecognized representation", "law-1-identity", row => { row.representation_schema_or_magic_match = false; }],
+  ["unregistered facts schema", "validator-derivation-0", row => { row.validator_input_facts_schema_version = "exam_date_law_snapshot.input-facts.v1"; }],
 ];
 test("rehashed hostile Foundation graphs fail at the actual loader and HTTP before body/storage/disclosure", async () => {
   for (const [label, target, mutate] of invalidReceipts) {

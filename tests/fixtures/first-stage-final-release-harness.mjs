@@ -192,13 +192,13 @@ function validatorFixture(add, index, ref, pre, preReference, object, key, manif
   const derivation = add(`validator-derivation-${index}`, { ...common, input_projection_schema_version: "deterministic-validator-input.v1",
     question_item_object_reference: object, choice_set_digest: pre.choice_set_digest,
     [variant ? "independent_answer_key_reference" : "verified_official_key_receipt_reference"]: key,
-    validator_input_facts_schema_version: `${validatorId}.input-facts.v1`, validator_input_facts: facts, validator_input_facts_digest: digest(facts),
+    validator_input_facts_schema_version: definition.inputProjectionSchemaVersion, validator_input_facts: facts, validator_input_facts_digest: digest(facts),
     derivation_method_id: method.method, derivation_method_version: "1", derivation_configuration_digest: digest(method),
     evidence_observed_at: AT, reviewer: HUMAN, reviewed_at: AT, decision: "verified_deterministic_validator_input_derivation" });
   const projection = { item_id: ref.questionId, item_version: ref.questionVersion, subject_id: ref.subjectId, question_item_object_sha256: object.object_sha256,
     choice_set_digest: pre.choice_set_digest, [variant ? "independent_answer_key_receipt_sha256" : "verified_official_key_receipt_sha256"]: key.evidence_sha256,
     source_version_manifest_reference_tuples: manifests, applicability_evidence_reference_tuples: [preReference],
-    validator_input_facts_schema_version: `${validatorId}.input-facts.v1`, validator_input_facts_derivation_receipt_reference: derivation, validator_input_facts: facts };
+    validator_input_facts_schema_version: definition.inputProjectionSchemaVersion, validator_input_facts_derivation_receipt_reference: derivation, validator_input_facts: facts };
   const shared = { ...common, validator_configuration_digest: digest({ registryVersion: FIVE.deterministicValidatorRegistry.registryVersion, definition, canonicalization: "RFC8785" }),
     input_projection_digest: digest(projection), validator_input_facts_derivation_receipt_reference: derivation,
     assertion_count: 4, failed_assertion_count: 0, unresolved_assertion_count: 0 };

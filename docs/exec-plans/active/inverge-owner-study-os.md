@@ -66,6 +66,29 @@
   All five real content approval lists remain empty. Human content review,
   reviewed installation and explicit private-use activation are external gates;
   synthetic verification or code integration cannot complete #883.
+- The checkpoint successor was head `6294073351f0ff38d1494f0084489555077ecb01`,
+  tree `b1a7ff68f32a52302aac418782aea3275e059ef8`. Its required native CI 9/9
+  passed, including corrected PR Contract/Fast CI. Independent review 5131026942
+  reported P0/P1/P2 `0/1/0`, thread PRRT_kwDOSMHn8M6f4UiE: the shared final
+  validator expected an invented per-validator facts schema instead of the
+  Foundation's exact `inputProjectionSchemaVersion`. This matched the concurrent
+  local contract audit; no merge or clean successor claim was made.
+- Reproduced first by changing only synthetic receipt construction to the
+  contract-mandated schema: actual catalog loading failed before the validator
+  fix. The shared civil/relationship-law comparison now uses the registry value;
+  both tests admit conforming receipts and reject rehashed unregistered schema
+  labels via loader/HTTP. Foundation, key completeness, feedback/body binding,
+  rights, date scope and real installation lists are unchanged.
+- Fresh corrected candidate: 115 affected tests PASS/0 skips; all seven isolated
+  PostgreSQL/browser tests PASS/0 skips in one run with external requests/errors
+  and remaining synthetic users/rows all zero. New related-law screenshot:
+  `C:/Users/jmg91/AppData/Local/Temp/inverge-first-stage-private-browser-appraiser_related_law-20768.png`.
+  Build, sequential typecheck, 16-file changed-source/test lint, 160 JSON parses,
+  17-path boundary and diff checks PASS. A new test initially failed by filtering
+  proof objects as ordinary receipt IDs (114 pass/1 fail); corrected only that
+  filter, then reran the entire 115-test batch successfully. No false all-pass
+  first-run claim. The correction is not yet committed here; its final-head
+  native checks, thread resolution and independent review remain pending.
 
 ## Historical private first-stage code continuation — #890 / 2026-09-07
 

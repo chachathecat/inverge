@@ -5,7 +5,7 @@ import { loadAppraiserRelatedLawContent } from "../lib/review-os/first-stage/run
 import * as remainingContent from "../lib/review-os/first-stage/runtime/remaining-subject-content.ts";
 import * as economicsContent from "../lib/review-os/first-stage/runtime/economics-content.ts";
 import * as accountingContent from "../lib/review-os/first-stage/runtime/accounting-content.ts";
-import { RELATED_LAW_AUTHORITIES } from "../lib/review-os/first-stage/runtime/foundation-release-contract.ts";
+import { FIVE, RELATED_LAW_AUTHORITIES } from "../lib/review-os/first-stage/runtime/foundation-release-contract.ts";
 import { validateRelatedLawApplicability } from "../lib/review-os/first-stage/runtime/foundation-applicability.ts";
 import { privateSessionDigest as digest } from "../lib/review-os/first-stage/runtime/session-service.ts";
 import { remainingPacket } from "./fixtures/first-stage-remaining-content-harness.mjs";
@@ -46,6 +46,10 @@ test("one, two and all nine supported authorities use the existing derivation an
     assert.match(validateRelatedLawApplicability(installed, packet.questions, packet.keys).digest, /^[a-f0-9]{64}$/u);
     const table = installed.receipts.find(row => row.receipt_id === "synthetic-official-key-table");
     assert.equal(table.row_count, 200); assert.equal(table.ordered_key_rows.length, 200);
+    for (const derivation of installed.receipts.filter(row => row.receipt_id?.startsWith("synthetic-validator-derivation-"))) {
+      assert.equal(derivation.validator_input_facts_schema_version,
+        FIVE.deterministicValidatorRegistry.definitions.exam_date_multi_law_snapshot.inputProjectionSchemaVersion);
+    }
     for (const item of installed.items) {
       const pre = installed.receipts.find(row => row.receipt_id === item.receiptReference.evidence_id);
       assert.deepEqual(pre.applicable_authority_ids, [...authorities].sort());
@@ -91,6 +95,7 @@ test("coherently rehashed derivation, per-authority proofs and final releases re
     ["subject validator mix", "validator-app-0", row => { row.validator_contract_id = "exam_date_law_snapshot"; }],
     ["not applicable bypass", "validator-app-0", row => { row.applicability_status = "not_applicable"; }],
     ["validator authority drift", "validator-derivation-0", row => { row.validator_input_facts.authority_ids = ["civil_code"]; row.validator_input_facts_digest = digest(row.validator_input_facts); }],
+    ["unregistered facts schema", "validator-derivation-0", row => { row.validator_input_facts_schema_version = "exam_date_multi_law_snapshot.input-facts.v1"; }],
     ["validator absent cross proof", "validator-derivation-0", row => { row.validator_input_facts.cross_authority_applicability_receipt_references = []; row.validator_input_facts_digest = digest(row.validator_input_facts); }],
     ["forged pass facts", "validator-result-0", row => { row.ordered_assertion_rows[2].observed_value_or_null = false; row.ordered_assertion_rows_digest = digest(row.ordered_assertion_rows); }],
     ["final release unreviewed", "release-0", row => { row.decision = "unresolved"; }],

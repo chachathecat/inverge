@@ -63,7 +63,7 @@ export function validateLawReleaseEvidence(ctx: ReleaseContext, release: Row, pr
   same(derivation.question_item_object_reference, release.question_item_object_reference_or_null);
   same(derivation.choice_set_digest, release.choice_set_digest); same(derivation[keyField], keyReference);
   same(derivation.input_projection_schema_version, definition.inputProjectionSchemaVersion);
-  same(derivation.validator_input_facts_schema_version, `${validatorId}.input-facts.v1`);
+  same(derivation.validator_input_facts_schema_version, definition.inputProjectionSchemaVersion);
   same(derivation.derivation_method_id, method.method); same(derivation.derivation_method_version, method.version);
   same(derivation.derivation_configuration_digest, digest(method));
   const key = exactObject(keyReference, ["evidence_id", "evidence_version", "evidence_sha256"]);
