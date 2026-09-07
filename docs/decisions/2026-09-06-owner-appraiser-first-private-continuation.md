@@ -128,6 +128,26 @@ automatic deployment. No check/review/protection bypass is authorized.
 
 ## Separate Owner boundaries and termination
 
+### Economics first PC-local use (Owner follow-up, 2026-09-07)
+
+Reuse the existing economics r3 and supplied AI evidence to prepare the exact
+loader candidate, separately from the review packet. Preserve question, choice,
+key, feedback and source identity; candidate creation is not approval. The Owner
+explicitly left the genuine six-check reviewer unassigned; do not assign the
+Owner, a date or a verdict. Continue candidate conversion, directly coupled code
+and isolated validation while that decision remains pending.
+
+ONLY after actual content approval and its required evidence, one economics
+bundle may be installed/activated with a dedicated persistent local account and
+store on the Owner's PC. Preserve the existing authentication/ownership/release
+conditions. Do not relax or reuse the synthetic-only store for actual records,
+or delete actual records using its cleanup. Keep genuine login/use evidence
+separate from injected tests, and automatic D+1 separate from next-day observation.
+The concrete sequence and remaining gate are in
+`docs/qa/issue-883-owner-local-economics.md`. No actual approval, installation or
+activation is performed by this source preparation. All remote, public, provider,
+extra-cost, payment and others' data boundaries below remain unchanged.
+
 Production deployment, public activation, remote DB/migration/RLS apply,
 real-user data, additional paid usage/provider calls/payment changes,
 rights-unclear material, security weakening, destructive operations and scope

@@ -10,7 +10,7 @@ import { SUBJECT_CASES } from "./first-stage-remaining-content-harness.mjs";
 /** Real component + real compiled route entry + supplied isolated repository.
  * This is a localhost test host, NOT a Next deployment or remote auth acceptance.
  */
-export async function verifyPrivateBrowser({ route, clock, failNextWrite, subject = "economics_principles", blockCatalog, blockedMessage, expectedAttributions }) {
+export async function verifyPrivateBrowser({ route, clock, failNextWrite, subject = "economics_principles", blockCatalog, blockedMessage, expectedAttributions, questionNumber = 1, retryChoice = 2 }) {
   assert.ok(["economics_principles", "accounting", ...SUBJECT_CASES.map(spec => spec.id)].includes(subject));
   const slug = SUBJECT_CASES.find(spec => spec.id === subject)?.slug ?? "accounting";
   const pagePath = subject === "economics_principles" ? "/app/first-stage/practice" : `/app/first-stage/${slug}`;
@@ -77,7 +77,7 @@ export async function verifyPrivateBrowser({ route, clock, failNextWrite, subjec
       assert.ok(consoleErrors.every(message => /Failed to load resource.*(?:503|404)/u.test(message)));
       return { blocked: true, browserErrors: failures.length, externalRequests: external.length };
     }
-    await page.getByRole("button", { name: "검토된 1번 시작" }).evaluate(button => {
+    await page.getByRole("button", { name: `검토된 ${questionNumber}번 시작` }).evaluate(button => {
       button.click(); button.click();
     });
     await page.getByRole("button", { name: "문제 열고 먼저 풀기" }).click();
@@ -113,7 +113,7 @@ export async function verifyPrivateBrowser({ route, clock, failNextWrite, subjec
     await page.getByRole("region", { name: "저장된 응답 해설" }).waitFor();
     assert.equal(await retryButton.isEnabled(), true);
     await page.getByRole("button", { name: "예정 시각 이후 새 문제로 복습" }).click();
-    await page.getByRole("radio").nth(1).check();
+    await page.getByRole("radio").nth(retryChoice - 1).check();
     clock.advance(60_000);
     await page.getByRole("button", { name: "응답 저장 후 해설 확인" }).click();
     await page.getByText("이 복습 처리 완료 — 학습 성공·숙달 판정과는 별개입니다.").waitFor();
