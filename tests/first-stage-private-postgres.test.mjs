@@ -13,7 +13,7 @@ import { verifyPrivateSubjectNavigation } from "./fixtures/first-stage-private-n
 import { harness as kernelHarness, SUBMIT, submission } from "./fixtures/first-stage-private-session-harness.mjs";
 import { economicsCatalog } from "./fixtures/first-stage-economics-content-harness.mjs";
 import { accountingCatalog } from "./fixtures/first-stage-accounting-content-harness.mjs";
-import { remainingCatalogs } from "./fixtures/first-stage-remaining-content-harness.mjs";
+import { remainingCatalogs, SUBJECT_CASES } from "./fixtures/first-stage-remaining-content-harness.mjs";
 import { ORACLE_IMAGE, ORACLE_PLATFORM } from "../scripts/automation/wcv-c3-pre-p-postgresql-security-state-oracle.mjs";
 
 const OWNER = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
@@ -40,6 +40,21 @@ function repositoryFactory() {
 
 test("late durable response from the previous subject cannot rewrite the newly selected subject URL",
   { timeout: 60_000 }, verifyPrivateSubjectNavigation);
+
+test("all five browser routes consume their server blocker on POST, reload and reconnect without retry advice",
+  { timeout: 60_000 }, async () => {
+    for (const subject of ["economics_principles", "accounting", ...SUBJECT_CASES.map(spec => spec.id)]) {
+      const h = kernelHarness();
+      let unavailable = false;
+      const route = privateRoute(h, { subject, get noCatalog() { return unavailable; } });
+      const result = await verifyPrivateBrowser({ route, subject, blockCatalog() { unavailable = true; },
+        blockedMessage: SUBJECT_CASES.some(spec => spec.id === subject)
+          ? "사용 불가 — 이 과목의 적용시점·과목별 검토 증빙을 확인하는 기능이 미구현입니다. 콘텐츠 승인만으로 사용할 수 없습니다."
+          : "사용 불가 — 권리·정답·인적 검토가 승인된 콘텐츠가 아직 없습니다. 개발 후보나 합성 자료는 학습 재고가 아닙니다." });
+      assert.equal(result.blocked, true); assert.equal(result.externalRequests, 0); assert.equal(result.browserErrors, 0);
+      assert.equal(route.counts.repository, 0); assert.equal(h.rows.size, 0);
+    }
+  });
 
 for (const [subject, catalog] of Object.entries({ economics_principles: economicsCatalog, accounting: accountingCatalog, ...remainingCatalogs })) {
 const harness = options => kernelHarness({ ...options, catalog });

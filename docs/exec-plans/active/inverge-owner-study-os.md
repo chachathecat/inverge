@@ -55,6 +55,21 @@
   ordinary push, resolve the finding and integrate only at clean exact-head
   CI/review/threads/rules and the existing deployment boundary. No actual feature/
   content-path setting, auto-merge or remote apply.
+- Follow-up head `5643c6540910f20c4e7ae27cd9f128a025fdc113` passed all nine
+  native required checks, but review 5127917670 found one P2: HTTP still named
+  only `approved_content_required` while the UI named the missing implementation.
+  Actual three-subject HTTP regressions reproduced the mismatch. Fixed server
+  bindings now return `subject_applicability_implementation_required` consistently
+  for availability, POST and reconnect. The UI consumes that server reason, clears
+  impossible retry intents and preserves economics/accounting content-only
+  blockers. All-five-subject actual-browser coverage proves blocked POST,
+  create-intent reload and existing-session GET show the correct reason with no
+  retry recommendation, assistance or repository access. Fresh local validation
+  passed: 65 focused plus 7 isolated runtime tests (72 total, zero skips), build,
+  sequential typecheck, changed-file lint, JSON/no-JSON-delta, 24-path manifest and
+  diff checks. Synthetic users/rows zero, containers removed, browser external
+  requests/errors zero. Ordinary push, exact-head CI and independent review are
+  pending; no earlier check or review is claimed as final-head evidence.
 
 | Subject | Private mechanics | Content / actual-use status |
 | --- | --- | --- |

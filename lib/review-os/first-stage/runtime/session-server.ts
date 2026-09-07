@@ -5,17 +5,19 @@ import { loadApprovedPrivateFirstStageCatalog, loadApprovedPrivateAccountingCata
   loadApprovedPrivateCivilLawCatalog, loadApprovedPrivateRealEstatePrinciplesCatalog,
   loadApprovedPrivateAppraiserRelatedLawCatalog } from "./approved-catalog";
 import type { PrivateFirstStageCatalog } from "./session-service";
-import { createPrivateSessionApplication, privateFirstStageOwner } from "./session-application";
+import { createPrivateSessionApplication, privateFirstStageOwner, type PrivateContentBlocker } from "./session-application";
 import { createPrivateSessionRepository } from "./session-repository";
 
 export const requirePrivateFirstStageOwner = () =>
   privateFirstStageOwner(process.env, getServerSessionUser);
 
-function privateSubjectSession(catalog: () => Promise<PrivateFirstStageCatalog | null>) {
+function privateSubjectSession(catalog: () => Promise<PrivateFirstStageCatalog | null>,
+  unavailableBlocker: PrivateContentBlocker = "approved_content_required") {
   return createPrivateSessionApplication({
     environment: () => process.env,
     session: getServerSessionUser,
     catalog,
+    unavailableBlocker,
     repository: () => {
       const client = getSupabasePersistenceClient();
       if (!client) throw new Error("first-stage-private-store-unavailable");
@@ -27,6 +29,6 @@ function privateSubjectSession(catalog: () => Promise<PrivateFirstStageCatalog |
 // Same gate and durable store; subject authority comes only from this server binding.
 export const handlePrivateFirstStageSession = privateSubjectSession(loadApprovedPrivateFirstStageCatalog);
 export const handlePrivateAccountingSession = privateSubjectSession(loadApprovedPrivateAccountingCatalog);
-export const handlePrivateCivilLawSession = privateSubjectSession(loadApprovedPrivateCivilLawCatalog);
-export const handlePrivateRealEstatePrinciplesSession = privateSubjectSession(loadApprovedPrivateRealEstatePrinciplesCatalog);
-export const handlePrivateAppraiserRelatedLawSession = privateSubjectSession(loadApprovedPrivateAppraiserRelatedLawCatalog);
+export const handlePrivateCivilLawSession = privateSubjectSession(loadApprovedPrivateCivilLawCatalog, "subject_applicability_implementation_required");
+export const handlePrivateRealEstatePrinciplesSession = privateSubjectSession(loadApprovedPrivateRealEstatePrinciplesCatalog, "subject_applicability_implementation_required");
+export const handlePrivateAppraiserRelatedLawSession = privateSubjectSession(loadApprovedPrivateAppraiserRelatedLawCatalog, "subject_applicability_implementation_required");

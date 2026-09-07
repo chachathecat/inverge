@@ -5,12 +5,15 @@ import { createPrivateFirstStageSessionService,
 
 type Environment = Readonly<Record<string, string | undefined>>;
 type Session = Readonly<{ isAuthenticated: boolean; userId?: string | null; email?: string | null }>;
+export type PrivateContentBlocker = "approved_content_required" | "subject_applicability_implementation_required";
 
 export interface PrivateSessionApplicationDependencies {
   environment(): Environment;
   session(): Promise<Session>;
   catalog(): Promise<PrivateFirstStageCatalog | null>;
   repository(): PrivateFirstStageSessionStore;
+  /** Fixed by the server subject binding; never request/content authority. */
+  unavailableBlocker?: PrivateContentBlocker;
   now?(): string;
 }
 
@@ -43,12 +46,13 @@ export function createPrivateSessionApplication(dependencies: PrivateSessionAppl
         return response({ ok: false, error: "method_not_allowed" }, 405);
       }
       const catalog = await dependencies.catalog();
+      const blocker = dependencies.unavailableBlocker ?? "approved_content_required";
       if (request.method === "GET" && !new URL(request.url).search) {
         // No adapter presentation or explanation construction in availability.
         return response({ ok: true, availability: {
           schemaVersion: "first_stage.private_availability.v1",
           state: catalog?.initialReferences.length ? "available" : "blocked",
-          blocker: catalog?.initialReferences.length ? null : "approved_content_required",
+          blocker: catalog?.initialReferences.length ? null : blocker,
           questions: (catalog?.initialReferences ?? []).map((item) => ({
             questionId: item.questionId, subjectId: item.subjectId,
             questionNumber: item.questionNumber,
@@ -57,7 +61,7 @@ export function createPrivateSessionApplication(dependencies: PrivateSessionAppl
         } });
       }
       if (!catalog?.initialReferences.length) {
-        return response({ ok: false, error: "approved_content_required" }, 503);
+        return response({ ok: false, error: blocker }, 503);
       }
       const handler = createPrivateSessionHttpHandler({
         requireOwner: async () => owner.ownerId,

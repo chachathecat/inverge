@@ -31,11 +31,17 @@ for (const spec of SUBJECT_CASES) {
     const r = route(harness(), { contentInput: input });
     const availability = await (await r.GET(new Request(URL))).json();
     assert.equal(availability.availability.state, "blocked");
+    assert.equal(availability.availability.blocker, "subject_applicability_implementation_required");
     const request = post({ action: "create", requestId: "unsupported-human-stock", questionId });
     const denied = await r.POST(request);
     assert.equal(denied.status, 503); assert.equal(request.bodyUsed, false);
     assert.match(denied.headers.get("cache-control"), /no-store/u);
-    assert.doesNotMatch(await denied.text(), /SYNTHETIC_|verified_exam_date|correctChoice|EXPLANATION/u);
+    const denial = await denied.json();
+    assert.equal(denial.error, "subject_applicability_implementation_required");
+    assert.doesNotMatch(JSON.stringify(denial), /SYNTHETIC_|verified_exam_date|correctChoice|EXPLANATION/u);
+    const reconnect = await r.GET(new Request(`${URL}?sessionId=synthetic-existing-session`));
+    assert.equal(reconnect.status, 503);
+    assert.equal((await reconnect.json()).error, "subject_applicability_implementation_required");
     assert.equal(r.counts.repository, 0);
     assert.equal(reads, 0);
   });
