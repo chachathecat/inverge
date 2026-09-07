@@ -1,5 +1,6 @@
 import { createHash } from "node:crypto";
 import { privateSessionDigest as digest } from "../../lib/review-os/first-stage/runtime/session-service.ts";
+import { finalReleaseFixture } from "./first-stage-final-release-harness.mjs";
 
 // Fictional metadata only. No law text, source retrieval or human review occurred.
 // These objects enter the same consumer through server dependency injection;
@@ -15,7 +16,7 @@ export function civilApplicability(packet, mutate = () => {}) {
     const row = { [`${prefix}_id`]: `synthetic-${id}`, [`${prefix}_version`]: "1", ...fields };
     mutate(id, row);
     row[`${prefix}_sha256`] = digest(row); receipts.push(row);
-    return { evidence_id: row[`${prefix}_id`], evidence_version: "1", evidence_sha256: row[`${prefix}_sha256`] };
+    return { evidence_id: row[`${prefix}_id`], evidence_version: row[`${prefix}_version`], evidence_sha256: row[`${prefix}_sha256`] };
   };
   const historyUrl = "https://www.law.go.kr/synthetic-history-not-a-source";
   const transport = (id, url, raw) => add(`${id}-transport`, {
@@ -68,14 +69,17 @@ export function civilApplicability(packet, mutate = () => {}) {
     amendment_chain_record_count: chain.length, amendment_chain_records: chain, amendment_chain_digest: digest(chain),
     amendment_chain_complete_through_exam_date: true, reviewer: HUMAN, reviewed_at: REVIEWED,
     decision: "verified_in_force_on_exam_date" }, true);
+  const bodyRefs = [];
   const items = packet.questions.map((row, index) => {
     row.reference.sourceVersionManifestIds = [LAW_MANIFEST];
+    row.reference.sessionId = "first_2026_session_1";
     const bodyRef = (id, body) => {
       const binding = { object_id: `synthetic-${index}-${id}`, object_version: "1",
         object_sha256: createHash("sha256").update(body, "utf8").digest("hex"),
         item_id: row.reference.questionId, item_version: row.reference.questionVersion, subject_id: "civil_law",
         authorized_plane: "Personal Raw Vault", authorized_use: "personal_service_processing", authorized_audience: "owner_user_private",
-        effective_from: REVIEWED, expires_at_or_null: "2099-12-31T00:00:00.000Z", currentness: "verified_current", reviewer: HUMAN, reviewed_at: REVIEWED };
+        effective_from: REVIEWED, expires_at_or_null: "2099-12-31T00:00:00.000Z", currentness: "verified_current",
+        exact_attribution: `Synthetic ${index}-${id} attribution — not actual reviewed content`, reviewer: HUMAN, reviewed_at: REVIEWED };
       const rights = add(`${index}-${id}-rights`, { ...binding, decision: "approved_owner_private_use" });
       const version = add(`${index}-${id}-version`, { ...binding, exam_date: EXAM_DATE,
         applicable_version_status: "law_exam_date_verified", component_evidence_references: [proof], decision: "verified_in_force_on_exam_date" });
@@ -84,6 +88,7 @@ export function civilApplicability(packet, mutate = () => {}) {
       mutate(`${index}-${id}-body`, ref);
       return ref;
     };
+    bodyRefs.push(bodyRef);
     const choices = row.choices.map((_, i) => ({ choice_id: `synthetic-choice-${i + 1}`, position_1_to_5: i + 1,
       verdict_true_false_or_unresolved: i + 1 === row.correctChoice ? "true" : "false",
       correction_status: i + 1 === row.correctChoice ? "verified_no_correction" : "verified_correction_available",
@@ -104,7 +109,9 @@ export function civilApplicability(packet, mutate = () => {}) {
     packet.keys[index].questionReferenceSha256 = digest(row.reference);
     return { questionSha256: digest(row), examDate: EXAM_DATE, choices, easyExplanationReference, receiptReference: receipt };
   });
+  const sourceObservations = finalReleaseFixture(packet, items, receipts, add, bodyRefs);
   return { packetSha256: createHash("sha256").update(JSON.stringify(packet)).digest("hex"), dataClass: "synthetic_test_only",
-    items, receipts, historyExtractionConfigurations: [configuration], reviewers: [{ identity: HUMAN, classes: ["named_owner_authorized_human_law_reviewer",
-      "named_owner_authorized_human_subject_or_version_reviewer", "named_owner_authorized_human_rights_reviewer"] }] };
+    items, receipts, sourceObservations, historyExtractionConfigurations: [configuration], reviewers: [{ identity: HUMAN, classes: ["named_owner_authorized_human_law_reviewer",
+      "named_owner_authorized_human_subject_or_version_reviewer", "named_owner_authorized_human_rights_reviewer", "named_owner_authorized_human_reviewer",
+      "named_owner_authorized_human_content_reviewer", "named_owner_authorized_human_subject_reviewer", "named_owner_authorized_human_answer_key_reviewer"] }] };
 }

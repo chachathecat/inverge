@@ -5063,6 +5063,50 @@
       "missingOrStaleReceiptFailsClosed": true,
       "receiptCreatedByS235B": false
     },
+    "privateModifiedRetryReleaseContract": {
+      "ownerAmendmentDate": "2026-09-07",
+      "scope": "delegated_private_appraiser_first_stage_five_subjects_only",
+      "releaseMeaning": "per_item_content_use_authorization_not_operational_deployment",
+      "officialOriginalRoute": "releaseReceiptContract_unchanged_including_full_200_row_official_key_table",
+      "retryReceiptVersion": "appraiser.first.private_modified_retry_release.v1",
+      "retryRequiredFieldsDerivation": {
+        "base": "releaseReceiptContract.requiredFields",
+        "removeExactly": ["official_exam_round_id", "session_profile_id", "official_question_number", "verified_official_key_receipt_reference"],
+        "addExactly": ["item_kind", "authority", "original_release_reference", "independent_answer_key_reference"]
+      },
+      "retryItemKind": "private_modified_retry",
+      "retryAuthority": "LEARNING_ONLY",
+      "retryDecision": "approved_personal_only",
+      "independentAnswerKeyRequiredFields": [
+        "receipt_id", "receipt_version", "receipt_sha256", "item_id", "item_version", "subject_id",
+        "question_item_object_reference", "choice_set_digest", "answer_position_1_to_5", "original_release_reference",
+        "answer_reasoning_object_reference", "authority", "reviewer", "reviewed_at", "decision"
+      ],
+      "independentAnswerKeyDecision": "verified_independent_private_retry_key",
+      "independentAnswerKeyReviewerClass": "named_owner_authorized_human_answer_key_reviewer",
+      "variantProvenanceFieldsDerivation": {
+        "base": "questionItemObjectProvenanceReceiptShape.requiredFields",
+        "removeExactly": ["extraction_method_id", "extraction_method_version", "extraction_configuration_digest", "ocr_benchmark_gate_receipt_reference_or_null"],
+        "addExactly": ["original_release_reference", "original_question_object_reference", "concept_binding_digest", "derivation_kind"]
+      },
+      "variantProvenanceDecision": "verified_exact_private_variant_lineage",
+      "variantProvenanceDerivationKind": "private_modified_practice_only",
+      "attributionDifference": "replace_the_two_official_key_rows_with_one_independent_retry_answer_reasoning_row_bound_to_its_reviewed_body_rights",
+      "validatorKeyBindingDifference": "replace_verified_official_key_receipt_reference_and_sha256_with_independent_answer_key_reference_and_independent_answer_key_receipt_sha256_in_variant_derivation_and_input_projection_only",
+      "bindingInvariants": [
+        "server_installed_exact_packet_and_question_digest_select_kind_and_release_path_never_HTTP_fields",
+        "original_release_and_original_question_object_are_current_exact_validated_originals_with_matching_subject_source_anchor_and_lineage",
+        "variant_body_choices_version_key_reasoning_feedback_rights_currentness_and_final_human_decision_bind_the_changed_content",
+        "variant_key_is_independently_reviewed_and_never_inherits_the_original_official_answer_or_fabricates_an_official_key_table",
+        "both_routes_require_final_per_item_release_after_pre_release_applicability_and_do_not_substitute_six_generic_review_checks",
+        "source_post_asset_rights_private_scope_attribution_all_five_feedback_objects_source_versions_and_subject_validators_remain_required",
+        "variant_has_no_officialness_mastery_verified_transfer_or_measurement_authority",
+        "unsupported_receipt_branches_are_explicitly_denied_not_approximated",
+        "no_exam_year_law_scope_public_scope_content_installation_or_operational_activation_is_added"
+      ],
+      "actualApprovedContentCount": 0,
+      "actualInstalledContentCount": 0
+    },
     "feedbackOutcome": {
       "feedbackStateVocabulary": [
         "not_emitted_unavailable",

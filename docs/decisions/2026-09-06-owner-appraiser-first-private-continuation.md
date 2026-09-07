@@ -74,6 +74,24 @@ packet's field mapping and explanations, rebinding exact-version AI/code evidenc
 and adding a public generator regression with synthetic content only. All six
 human-review checklist items remain separate and pending.
 
+### Final content-use release distinction (Owner, 2026-09-07)
+
+PR #891 may minimally consume the existing Foundation final release contract and
+its private-modified-retry branch. Official originals retain full 200-row official
+key completeness and exact source/booklet/question/answer binding. A modified
+retry instead requires its own exact body/choices/version-bound independently
+reviewed key and final personal-only decision, retaining original lineage,
+rights, attribution, complete feedback and subject/date applicability. Neither
+pre-release evidence nor the six general checks replaces final release.
+
+Kind and branch belong to trusted server-installed exact content, not HTTP.
+Variants remain LEARNING_ONLY, never official or mastery/transfer/measurement
+authority. Reuse this distinction for the already delegated subsequent subjects
+without asking again. This authorizes no new year, law scope, human approval,
+content installation, operational deployment, provider use or actual flag/path
+setting. Approval and installation lists remain empty. The preserved sparse-array
+P2 and final-release P1 belong to one correction/validation batch.
+
 ### Delivery conditions
 
 The Owner's 2026-09-07 completion-condition adjustment separates code integration

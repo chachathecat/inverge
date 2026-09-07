@@ -10,6 +10,7 @@ import {
 } from "../subject-adapter/subject-adapter";
 import { privateSessionDigest as digest, type PrivateFirstStageCatalog } from "./session-service";
 import { validateCivilApplicability, type PrivateApplicabilityInstallation } from "./foundation-applicability";
+import type { FinalReleaseProjection } from "./foundation-release";
 
 export const PRIVATE_CONTENT_MAX_BYTES = 2 * 1024 * 1024;
 export const PRIVATE_CONTENT_REVIEW_CHECKS = Object.freeze([
@@ -112,11 +113,13 @@ export async function loadPrivateReviewedContent(subjectId: keyof typeof POLICIE
       packet.keys.length !== packet.questions.length) return null;
     let applicabilityDigest: string | null = null;
     let applicabilityExpiresAt = Infinity;
+    let attributions: ReadonlyMap<string, FinalReleaseProjection> | undefined;
     if (subjectId === "civil_law") {
       const installed = applicability.find(item => item.packetSha256 === packetSha256);
       if (!installed) return null;
-      const validated = validateCivilApplicability(installed, packet.questions);
+      const validated = validateCivilApplicability(installed, packet.questions, packet.keys);
       applicabilityDigest = validated.digest; applicabilityExpiresAt = validated.expiresAt;
+      attributions = validated.projections;
     }
 
     const questions = packet.questions.map(value => {
@@ -241,6 +244,9 @@ export async function loadPrivateReviewedContent(subjectId: keyof typeof POLICIE
       ...(applicabilityDigest === null ? {} : { applicabilityDigest }) }),
       registry: createSubjectAdapterRegistry([adapter]),
       initialReferences: Object.freeze(questions.filter(row => row.kind === "original").map(row => row.reference)),
+      ...(attributions ? { questionAttributions(reference: QuestionReference) {
+        requireRow(reference); return attributions.get(reference.questionId)!.question;
+      } } : {}),
       retryAvailability(reference: QuestionReference, usedQuestionIds: readonly string[]) {
         requireRow(reference);
         return questions.some(row => row.sourceQuestionId === reference.questionId && !usedQuestionIds.includes(row.reference.questionId))
@@ -251,7 +257,8 @@ export async function loadPrivateReviewedContent(subjectId: keyof typeof POLICIE
         return Object.freeze({ text: [`정답: ${row.correctChoice}`, row.easyExplanation,
           ...row.choiceExplanations.map((body, index) => `${index + 1}. ${body}`)].join("\n\n"),
           sourceStatus: expected === "synthetic_test_only" ? "synthetic-test-only-not-human-review"
-            : "human-reviewed-private-learning-reference", learningReferenceDisclaimer: true as const });
+            : "human-reviewed-private-learning-reference", learningReferenceDisclaimer: true as const,
+          ...(attributions ? { attributions: attributions.get(reference.questionId)!.feedback } : {}) });
       } });
   } catch { return null; } // No raw body, parse error, source path or candidate authority escapes.
 }

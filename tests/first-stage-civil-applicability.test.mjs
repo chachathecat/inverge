@@ -32,7 +32,7 @@ test("consumer uses existing Foundation exact shapes and digest fields without c
     [LAW_EXTRACTION_FIELDS, law.officialVersionHistoryExtractionReceiptShape.requiredFields],
     [LAW_CHAIN_FIELDS, law.amendmentChainRecordRequiredFields]]) assert.deepEqual(actual, expected);
   const { installed, packet } = input();
-  assert.match(validateCivilApplicability(installed, packet.questions).digest, /^[a-f0-9]{64}$/u);
+  assert.match(validateCivilApplicability(installed, packet.questions, packet.keys).digest, /^[a-f0-9]{64}$/u);
 });
 
 test("civil law: missing Foundation evidence is rejected even with exact six-check synthetic approval", async () => {
@@ -44,6 +44,51 @@ test("civil law: trusted server Foundation graph admits the actual content adapt
   const catalog = await loadCivilLawContent({ ...syntheticContentInput(packet), applicability: [installed] });
   assert.ok(catalog);
   assert.equal(catalog.registry.require("civil_law").subjectId, "civil_law");
+});
+
+test("P1 final release: pre-release applicability and six checks alone disclose no question", async () => {
+  const { options, installed } = input();
+  for (const item of installed.items) delete item.releaseReference;
+  assert.equal(await loadCivilLawContent(options), null);
+  const h = harness(), route = privateRoute(h, { subject: "civil_law", contentInput: options });
+  const request = post(create), response = await route.POST(request);
+  assert.equal(response.status, 503); assert.equal(request.bodyUsed, false);
+  assert.equal(route.counts.repository, 0); assert.equal(h.rows.size, 0);
+});
+
+test("P2 reproduction: a coherently rehashed sparse five-choice installation is rejected", async () => {
+  const { packet, installed } = input(), item = installed.items[0];
+  delete item.choices[0];
+  const receipt = installed.receipts.find(row => row.receipt_id === item.receiptReference.evidence_id);
+  receipt.choice_set_digest = digest({ item_id: receipt.item_id, item_version: receipt.item_version, choices: item.choices });
+  receipt.source_anchor_ids_digest = digest([...new Set(item.choices.flatMap(choice => choice.source_anchor_ids))].sort());
+  receipt.receipt_sha256 = digest(Object.fromEntries(Object.entries(receipt).filter(([key]) => key !== "receipt_sha256")));
+  item.receiptReference.evidence_sha256 = receipt.receipt_sha256;
+  packet.questions[0].versionEvidence.evidenceSha256 = receipt.receipt_sha256;
+  item.questionSha256 = digest(packet.questions[0]);
+  const options = syntheticContentInput(packet);
+  installed.packetSha256 = options.approvals[0].packetSha256;
+  assert.equal(await loadCivilLawContent({ ...options, applicability: [installed] }), null);
+  const h = harness(), route = privateRoute(h, { subject: "civil_law", contentInput: { ...options, applicability: [installed] } });
+  const request = post(create), denied = await route.POST(request);
+  assert.equal(denied.status, 503); assert.equal(request.bodyUsed, false);
+  assert.deepEqual(await denied.json(), { ok: false, error: "approved_content_required" });
+  assert.equal(route.counts.repository, 0); assert.equal(h.rows.size, 0);
+});
+
+test("all nested Foundation arrays require own dense JSON values", () => {
+  for (const select of [value => value.items, value => value.receipts, value => value.reviewers,
+    value => value.reviewers[0].classes, value => value.items[0].choices,
+    value => value.items[0].choices[0].source_anchor_ids, value => value.historyExtractionConfigurations]) {
+    const { installed, packet } = input();
+    delete select(installed)[0];
+    assert.throws(() => validateCivilApplicability(installed, packet.questions, packet.keys), /adapter_mismatch/u);
+  }
+  for (const mutate of [array => { array.extra = "not-a-JSON-index"; },
+    array => { array[Symbol("not-JSON")] = true; }, array => { array[0] = undefined; }]) {
+    const { installed, packet } = input(); mutate(installed.items[0].choices);
+    assert.throws(() => validateCivilApplicability(installed, packet.questions, packet.keys), /adapter_mismatch/u);
+  }
 });
 
 test("P1 reproduction: nonexistent feedback rights decisions must not admit the actual civil catalog", async () => {

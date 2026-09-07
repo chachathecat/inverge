@@ -2,6 +2,7 @@ import crypto from "node:crypto";
 import { FirstStageKernelError, exactObject, requiredIdentifier, requiredUtcInstant } from "../kernel/domain";
 import { privateSessionDigest as digest } from "./session-service";
 import { validateCivilLawProof } from "./foundation-law-applicability";
+import { validateFinalReleases } from "./foundation-release";
 
 type Row = Record<string, unknown>;
 /** A server-code installation of EXISTING Foundation objects, not a receipt,
@@ -13,7 +14,8 @@ export type PrivateApplicabilityInstallation = Readonly<{
   packetSha256: string;
   dataClass: "human_reviewed_private" | "synthetic_test_only";
   items: readonly Readonly<{ questionSha256: string; examDate: string; choices: readonly unknown[];
-    easyExplanationReference: unknown; receiptReference: unknown }>[];
+    easyExplanationReference: unknown; receiptReference: unknown; releaseReference: unknown }>[];
+  sourceObservations: readonly unknown[];
   receipts: readonly unknown[];
   reviewers: readonly Readonly<{ identity: string; classes: readonly string[] }>[];
   historyExtractionConfigurations: readonly unknown[];
@@ -41,6 +43,16 @@ function validJson(value: unknown, depth = 0): void {
     // JCS rejects lone surrogates; JSON.stringify alone would silently escape them.
     if (value.length > 16_384 || /[\uD800-\uDBFF](?![\uDC00-\uDFFF])|(?<![\uD800-\uDBFF])[\uDC00-\uDFFF]/u.test(value)) applicabilityFailure();
   } else if (typeof value === "number") { if (!Number.isFinite(value)) applicabilityFailure(); }
+  else if (Array.isArray(value)) {
+    // A server-code snapshot is not necessarily JSON-parsed. Sparse indexes
+    // disappear from Object.entries/forEach and must never bypass a choice or
+    // nested proof obligation; non-JSON array properties are also rejected.
+    if (Reflect.ownKeys(value).length !== value.length + 1) applicabilityFailure();
+    for (let index = 0; index < value.length; index++) {
+      if (!Object.hasOwn(value, index)) applicabilityFailure();
+      validJson(value[index], depth + 1);
+    }
+  }
   else if (value !== null && typeof value === "object") {
     for (const [key, child] of Object.entries(value)) { validJson(key, depth + 1); validJson(child, depth + 1); }
   } else if (value !== null && typeof value !== "boolean") applicabilityFailure();
@@ -111,14 +123,15 @@ const BODY_REFERENCE_FIELDS = "object_id object_version object_sha256 authorized
 // decisions. They resolve in the SAME installed Foundation snapshot, not a new
 // approval store. Merely looking like an immutable reference is insufficient.
 export const BODY_DECISION_FIELDS = ("receipt_id receipt_version receipt_sha256 object_id object_version object_sha256 item_id item_version subject_id " +
-  "authorized_plane authorized_use authorized_audience effective_from expires_at_or_null currentness reviewer reviewed_at decision").split(" ");
+  "authorized_plane authorized_use authorized_audience effective_from expires_at_or_null currentness exact_attribution reviewer reviewed_at decision").split(" ");
 export const BODY_VERSION_FIELDS = [...BODY_DECISION_FIELDS, "exam_date", "applicable_version_status", "component_evidence_references"];
-function bodyReference(value: unknown, body: unknown, question: Row, receipt: Row, evidence: FoundationEvidence, examDate: string) {
+export function bodyReference(value: unknown, body: unknown, question: Row, receipt: Row, evidence: FoundationEvidence, examDate: string) {
   const row = exactObject(value, BODY_REFERENCE_FIELDS);
   requiredIdentifier(row.object_id); requiredIdentifier(row.object_version); requiredHash(row.object_sha256);
   if (row.authorized_plane !== "Personal Raw Vault" || typeof body !== "string" ||
     crypto.createHash("sha256").update(body, "utf8").digest("hex") !== row.object_sha256) applicabilityFailure();
   const rights = evidence.resolve(row.rights_decision_reference, BODY_DECISION_FIELDS);
+  if (typeof rights.exact_attribution !== "string" || !rights.exact_attribution.trim()) applicabilityFailure();
   const version = evidence.resolve(row.source_version_decision_reference, BODY_VERSION_FIELDS);
   let expiresAt = Infinity;
   for (const [decision, role, requiredDecision] of [
@@ -142,10 +155,10 @@ function bodyReference(value: unknown, body: unknown, question: Row, receipt: Ro
   return expiresAt;
 }
 
-export function validateCivilApplicability(installation: PrivateApplicabilityInstallation, questions: readonly unknown[]) {
+export function validateCivilApplicability(installation: PrivateApplicabilityInstallation, questions: readonly unknown[], keys: readonly unknown[] = []) {
   validJson(installation);
   if (JSON.stringify(installation).length > 4 * 1024 * 1024) applicabilityFailure();
-  exactObject(installation, ["packetSha256", "dataClass", "items", "receipts", "reviewers", "historyExtractionConfigurations"]);
+  exactObject(installation, ["packetSha256", "dataClass", "items", "receipts", "reviewers", "historyExtractionConfigurations", "sourceObservations"]);
   requiredHash(installation.packetSha256);
   const snapshot = structuredClone(installation), evidence = foundationEvidence(snapshot);
   let expiresAt = Infinity;
@@ -155,7 +168,7 @@ export function validateCivilApplicability(installation: PrivateApplicabilityIns
     const row = value as Row, reference = row.reference as Row;
     const item = snapshot.items.find(candidate => candidate.questionSha256 === digest(value));
     if (!item) applicabilityFailure();
-    exactObject(item, ["questionSha256", "examDate", "choices", "easyExplanationReference", "receiptReference"]);
+    exactObject(item, ["questionSha256", "examDate", "choices", "easyExplanationReference", "receiptReference", "releaseReference"]);
     requiredHash(item.questionSha256);
     if (requiredDay(item.examDate) !== "2026-04-04" || reference.examYear !== 2026 || reference.subjectId !== "civil_law" ||
       reference.currentnessState !== "verified_exam_date" || !Array.isArray(reference.sourceVersionManifestIds) ||
@@ -198,5 +211,6 @@ export function validateCivilApplicability(installation: PrivateApplicabilityIns
   }
   // Reconnect/retry cannot reuse a catalog validated under a revoked/replaced
   // installed snapshot. No receipt body is added to durable learner metadata.
-  return Object.freeze({ digest: digest(snapshot), expiresAt });
+  const final = validateFinalReleases(snapshot, questions, keys, evidence);
+  return Object.freeze({ digest: digest(snapshot), expiresAt: Math.min(expiresAt, final.expiresAt), projections: final.projections });
 }

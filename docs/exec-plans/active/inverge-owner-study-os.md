@@ -72,13 +72,53 @@
   completion screenshot was visually checked. Build, sequential typecheck,
   changed-file lint (11), Foundation/changed JSON validation (zero JSON delta),
   12-path manifest and diff check PASS. Native checks and independent review for
-  the correction head are still pending, not inherited from the earlier head.
-- Next: ordinary push of the reviewed local correction batch,
-  exact-head native checks and one independent review (reuse automatic review),
-  then conditional pinned squash only with zero actionable findings/threads and
-  unchanged safe deployment boundary. Keep #883 open and continue the next
-  subject consumer. No actual env, flag, content path, remote DB, provider,
-  payment, Production/public activation, Seven Exams or separate legal DB work.
+  that correction were subsequently obtained: head
+  `3b06f38fc5cfd31f5c4bd06c952008022f7d98da`, tree
+  `8c42ce7a05dffb1286d9ce4fbb7620ab5ce643f5`, required native checks 9/9 PASS,
+  extra C3R-L PASS. Independent review 5128941294 reports P0/P1/P2 `0/1/1`,
+  not a clean result: final Foundation release-receipt consumption is absent,
+  and sparse server-installed arrays can skip a choice. Both new threads remain
+  unresolved; the earlier body-reference P1 thread is resolved. No merge.
+- Local follow-up (NOT pushed or exact-head reviewed): reproduced a coherently
+  rehashed sparse five-choice graph being admitted. Recursive JSON validation now
+  requires every array index to be an own value and rejects non-JSON properties.
+  Fresh 78 focused tests, typecheck, two-file lint and diff check PASS. This
+  includes actual HTTP pre-body/storage denial and nested-array regressions.
+  The previous 7 PostgreSQL/browser tests and build belong to the pushed head,
+  not this uncommitted follow-up. Preserve both source/test changes here.
+- Latest Owner amendment (2026-09-07) resolves the above final-release boundary.
+  The existing Foundation and private-flow decision now distinguish official
+  originals (full 200-position official key) from private modified retries (their
+  own exact-version independently reviewed key, original lineage, LEARNING_ONLY).
+  The distinction is reusable within the already delegated private subjects.
+  It does not approve actual content, a new year/law scope or deployment.
+- Current local correction requires a final per-item decision after applicability
+  and resolves source/booklet/key, rights/private tuple, exact question and feedback
+  bodies, attribution, version and deterministic validator evidence. Branch choice
+  is pinned by the server-installed exact packet/item; HTTP cannot install it.
+  Sparse-array P2 remains fixed. Question attribution and durable-only feedback
+  attribution are separate exact blocks. Unsupported OCR/permission-grant chains
+  remain denied. Approval and installation lists remain empty.
+- New local results: affected 101-test run PASS/0 skips; after chronology tightening,
+  build, sequential typecheck, lint and the 19 direct tests PASS/0 skips. PR-wide
+  lint covers 21 source/test paths. A separate successful validation printed
+  JSON_VALIDATION_PASS (200 official rows, approvals/installations 0),
+  MANIFEST_BOUNDARY_PASS (25 paths; no schema/workflow/frozen-kernel/private-env
+  delta) and DIFF_CHECK_PASS. These are not the previous head's native CI results.
+- The isolated seven-check run passed six and failed a civil DOM assertion before
+  async rendering completed. After adding a render wait, the civil PostgreSQL/
+  browser rerun passed (1/1, zero skips), including exact attribution blocks,
+  durable replay/CAS/reconnect/D+1/completed state, browser external requests/errors
+  zero and synthetic rows/users cleaned to zero. Report six successes plus one
+  corrected rerun, not an all-pass first run. Screenshot artifact:
+  `C:/Users/jmg91/AppData/Local/Temp/inverge-first-stage-private-browser-civil_law-16852.png`,
+  SHA-256 `2391a8e2e23da435536e5989c6207b837f2eda9f18c42a12723a743b58c5b077`.
+  This records DOM/runtime evidence and file identity, not a visual-review receipt.
+- Next: ordinary push, resolve the two prior findings against the corrected head,
+  fresh native checks and one independent exact-head review without duplication,
+  then live thread/rules/deployment checks before conditional pinned squash.
+  No clean review or merge is claimed. #883 stays open; actual env, flags, paths,
+  remote DB, provider, payment and Production/public state remain unchanged.
 
 Approved content: **0**. Real use remains blocked. Economics r3 and its six pending
 human checks are unchanged and are not repackaged. Genuine source/rights/key/

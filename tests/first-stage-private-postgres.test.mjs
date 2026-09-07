@@ -206,6 +206,8 @@ test(`local PostgreSQL ${subject} enforces actual route/browser durable retry/CA
     assert.equal(final.transferEvidence, false);
     const browserHarness = harness({ store: repository(sdk()) });
     const browserResult = await verifyPrivateBrowser({ route: handler(browserHarness), subject,
+      ...(catalog.questionAttributions ? { expectedAttributions: { question: catalog.questionAttributions(reference()),
+        feedback: catalog.explanation(reference()).attributions } } : {}),
       clock: { set: browserHarness.setClock, advance: ms => browserHarness.setClock(
         new Date(Date.parse(browserHarness.getClock()) + ms).toISOString()) },
       failNextWrite: () => { loseNextWriteResponse = true; },

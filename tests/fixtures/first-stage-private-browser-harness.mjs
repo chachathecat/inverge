@@ -10,7 +10,7 @@ import { SUBJECT_CASES } from "./first-stage-remaining-content-harness.mjs";
 /** Real component + real compiled route entry + supplied isolated repository.
  * This is a localhost test host, NOT a Next deployment or remote auth acceptance.
  */
-export async function verifyPrivateBrowser({ route, clock, failNextWrite, subject = "economics_principles", blockCatalog, blockedMessage }) {
+export async function verifyPrivateBrowser({ route, clock, failNextWrite, subject = "economics_principles", blockCatalog, blockedMessage, expectedAttributions }) {
   assert.ok(["economics_principles", "accounting", ...SUBJECT_CASES.map(spec => spec.id)].includes(subject));
   const slug = SUBJECT_CASES.find(spec => spec.id === subject)?.slug ?? "accounting";
   const pagePath = subject === "economics_principles" ? "/app/first-stage/practice" : `/app/first-stage/${slug}`;
@@ -82,6 +82,11 @@ export async function verifyPrivateBrowser({ route, clock, failNextWrite, subjec
     });
     await page.getByRole("button", { name: "문제 열고 먼저 풀기" }).click();
     assert.equal(await page.getByRole("region", { name: "저장된 응답 해설" }).count(), 0);
+    if (expectedAttributions) {
+      await page.locator('[data-content-attribution="question"]').first().waitFor();
+      assert.deepEqual(await page.locator('[data-content-attribution="question"]').allTextContents(), expectedAttributions.question);
+      assert.equal(await page.locator('[data-content-attribution="feedback"]').count(), 0);
+    }
     await page.getByRole("radio").nth(0).check();
     await page.getByRole("radio").nth(1).check();
     await page.getByRole("radio").nth(0).check();
@@ -91,6 +96,7 @@ export async function verifyPrivateBrowser({ route, clock, failNextWrite, subjec
     assert.equal(await page.getByRole("region", { name: "저장된 응답 해설" }).count(), 0);
     await page.getByRole("button", { name: "같은 요청 다시 확인" }).click();
     await page.getByRole("region", { name: "저장된 응답 해설" }).waitFor();
+    if (expectedAttributions) assert.deepEqual(await page.locator('[data-content-attribution="feedback"]').allTextContents(), expectedAttributions.feedback);
     const reconnectUrl = page.url();
     const sessionId = new URL(reconnectUrl).searchParams.get("sessionId");
     assert.ok(sessionId);
