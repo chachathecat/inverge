@@ -66,6 +66,23 @@
   actual content/human-use gates stay open. Source rollback restores unavailable
   real-estate stock without deleting existing durable sessions; flag OFF remains
   the unchanged kill switch. No actual switch is changed by this work.
+- PR #895 initial head `014cede913a5261d319e73fdfd0320a81a7cabb0`, tree
+  `a8b22b1f6545c34f883fb728fa07f78bf0ca977c`: native required 9/9 plus
+  C3R-L passed. Sole automatic review `5131626326` reported actionable 0/0/1,
+  thread `PRRT_kwDOSMHn8M6f5lLn`; not clean, not merged. The Foundation matrix
+  is an exact set, not an ordered list. Reproduced the valid reordered subject
+  applicability references being denied, then resolve both applicability and
+  pass sets by closed validator ID. Independently reject missing/extra/duplicate/
+  unknown validators, any N/A pass and nonidentical immutable release/subject
+  references. Exercise all 15 non-default independent order combinations via
+  actual loader/HTTP/save/reconnect, plus single-applicable cases. This directly
+  coupled P2 batch changes no Foundation contract or actual content. Fresh P2
+  candidate results: 123 affected tests PASS, all seven isolated PG15.8/browser
+  tests PASS, no skips, rows/users zero, own containers removed and external
+  requests/browser errors zero. Final screenshot suffix is `17340.png`. Build,
+  sequential typecheck, correction two-path lint, 160 JSON parses, exact three-
+  path correction manifest and diff check PASS. New exact-head CI/review remain
+  pending; prior native results are historical, not inherited approvals.
 
 ## Historical private first-stage code continuation — #892 / 2026-09-07
 

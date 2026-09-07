@@ -84,6 +84,9 @@ test("rehashed subject/source/body/feature/validator and final-release forgeries
     ["subject no passes", "subject-validator-0", r => { r.deterministic_validator_receipt_references = []; }],
     ["subject no applicability", "subject-validator-0", r => { r.deterministic_validator_applicability_receipt_references.pop(); }],
     ["subject duplicate passes", "subject-validator-0", r => { r.deterministic_validator_receipt_references[1] = r.deterministic_validator_receipt_references[0]; }],
+    ["subject duplicate applicability", "subject-validator-0", r => { r.deterministic_validator_applicability_receipt_references[1] = r.deterministic_validator_applicability_receipt_references[0]; }],
+    ["extra applicability", "release-0", r => { r.deterministic_validator_applicability_receipt_references.push(r.deterministic_validator_applicability_receipt_references[0]); }],
+    ["unknown pass validator", `validator-pass-0-${K}`, r => { r.validator_contract_id = "unregistered-validator"; }],
     ["wrong pre branch", "applicability-0", r => { r.receipt_kind = "law_exam_date_bundle"; }],
     ["invented law authority", "applicability-0", r => { r.applicable_authority_ids = ["civil_code"]; }],
     ["missing subject", "release-0", r => { r.subject_validator_receipt_reference_or_null = null; }],
@@ -117,6 +120,39 @@ test("dense arrays, exact installation and specific subject review are mandatory
     v => { v.options.applicability = []; }, v => { v.options.approvals = []; },
     v => { delete v.options.expectedDataClass; }, v => { v.installed.dataClass = "human_reviewed_private"; },
   ]) { const value = input(); mutate(value); await denied(value.options, String(mutate)); }
+});
+
+test("P2: unordered applicability/pass sets admit all orderings through HTTP save and reconnect", async () => {
+  const fields = ["deterministic_validator_applicability_receipt_references", "deterministic_validator_receipt_references"];
+  for (let mask = 1; mask < 16; mask++) {
+    const { options } = input((id, row) => {
+      if (!/^(subject-validator|release)-[01]$/u.test(id)) return;
+      const offset = id.startsWith("subject-validator") ? 0 : 2;
+      fields.forEach((field, index) => { if (mask & (1 << (offset + index))) row[field] = [...row[field]].reverse(); });
+    });
+    const catalog = await loadRealEstatePrinciplesContent(options); assert.ok(catalog, `ordering ${mask}`);
+    const h = harness({ catalog }), route = privateRoute(h, { subject: SUBJECT, contentInput: options });
+    const created = await (await route.POST(post(create))).json(); const sessionId = created.view.sessionId;
+    const opened = await (await route.POST(post({ sessionId, command: { action: "begin", requestId: "begin-order",
+      expectedRevision: 1, questionId: create.questionId } }))).json();
+    assert.equal(opened.view.explanation, null); h.setClock(SUBMIT);
+    const saved = await (await route.POST(post({ sessionId, command: submission(opened.view.attempt.attemptId) }))).json();
+    assert.equal(saved.ok, true); assert.equal(saved.view.reviewTasks.length, 1);
+    assert.equal(saved.view.masteryClaim, false); assert.equal(saved.view.transferEvidence, false);
+    const fresh = privateRoute(harness({ rows: h.rows, catalog }), { subject: SUBJECT, contentInput: options });
+    assert.deepEqual(await (await fresh.GET(new Request(`${URL}?sessionId=${sessionId}`))).json(), saved);
+    assert.equal(h.rows.size, 1);
+  }
+  for (const mode of ["concept", "calculation"]) {
+    const { options } = input((id, row) => {
+      if (id.startsWith("subject-validator-")) row.deterministic_validator_applicability_receipt_references.reverse();
+    }, mode);
+    assert.ok(await loadRealEstatePrinciplesContent(options), mode);
+  }
+  const wrongPass = input((id, row) => {
+    if (id === `validator-pass-0-${C}`) row.validator_contract_id = K;
+  }, "concept");
+  await denied(wrongPass.options, "N/A validator cannot have a pass in place of the required applicable pass");
 });
 
 test("actual bounded arithmetic computes exact units and explicit rounding, rejecting unsupported or ambiguous expressions", () => {

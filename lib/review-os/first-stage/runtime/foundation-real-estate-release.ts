@@ -53,15 +53,32 @@ export function validateRealEstateReleaseEvidence(ctx: ReleaseContext, release: 
   same(release.subject_validator_receipt_reference_or_null, subjectRef);
   same(release.source_version_manifest_references, manifestRefs);
   for (const field of ["source_post_rights_receipt_reference", "source_asset_rights_receipt_reference"]) same(release[field], projection[field]);
-  same(release.deterministic_validator_applicability_receipt_references, subject.deterministic_validator_applicability_receipt_references);
-  same(release.deterministic_validator_receipt_references, subject.deterministic_validator_receipt_references);
-  const apps = rows(subject.deterministic_validator_applicability_receipt_references, MATRIX.length, MATRIX.length);
-  const passes = rows(subject.deterministic_validator_receipt_references, 1, MATRIX.length);
-  let passIndex = 0;
+  // Foundation declares exact sets, not positional arrays. Resolve BOTH the
+  // applicability and applicable-pass projections by their closed validator ID.
+  // Release/subject must still reference the exact same immutable objects.
+  function validatorSet(value: unknown, fields: readonly string[], min: number) {
+    const result = new Map<string, { row: Row; reference: unknown }>();
+    for (const reference of rows(value, min, MATRIX.length)) {
+      const row = ctx.resolve(reference, fields), id = requiredIdentifier(row.validator_contract_id);
+      if (!MATRIX.includes(id) || result.has(id)) fail();
+      result.set(id, { row, reference });
+    }
+    return result;
+  }
+  const appField = "deterministic_validator_applicability_receipt_references", passField = "deterministic_validator_receipt_references";
+  const apps = validatorSet(subject[appField], FIVE.deterministicValidatorApplicabilityReceiptShape.requiredFields, MATRIX.length);
+  const passes = validatorSet(subject[passField], FIVE.deterministicValidatorReceiptShape.requiredFields, 1);
+  const releasedApps = validatorSet(release[appField], FIVE.deterministicValidatorApplicabilityReceiptShape.requiredFields, MATRIX.length);
+  const releasedPasses = validatorSet(release[passField], FIVE.deterministicValidatorReceiptShape.requiredFields, 1);
+  for (const id of MATRIX) {
+    same(apps.get(id)?.reference ?? null, releasedApps.get(id)?.reference ?? null);
+    same(passes.get(id)?.reference ?? null, releasedPasses.get(id)?.reference ?? null);
+  }
+  let applicableCount = 0;
   const key = ctx.resolve(keyReference, variant ? RETRY_KEY_FIELDS : FIVE.releaseReceiptContract.verifiedOfficialKeyReceiptShape.requiredFields);
-  for (const [index, validatorId] of MATRIX.entries()) {
+  for (const validatorId of MATRIX) {
     const definition = realEstateValidatorConfiguration(validatorId).definition, actual = values.get(validatorId); if (!actual) fail();
-    const app = ctx.resolve(apps[index], FIVE.deterministicValidatorApplicabilityReceiptShape.requiredFields);
+    const app = apps.get(validatorId)?.row; if (!app) fail();
     const binding = { item_id: release.item_id, item_version: release.item_version, subject_id: SUBJECT,
       validator_contract_id: validatorId, validator_contract_version: definition.contractVersion };
     for (const [field, value] of Object.entries(binding)) same(app[field], value);
@@ -74,9 +91,9 @@ export function validateRealEstateReleaseEvidence(ctx: ReleaseContext, release: 
       ? "no_calculation_or_formula_feature" : "no_concept_claim_task_feature");
     ctx.review(app, ROLE, "verified_validator_applicability", projection.reviewed_at);
     ctx.review(subject, ROLE, "verified_not_applicable_to_law_or_kifrs", app.reviewed_at);
-    if (!applicable) continue;
-    if (passIndex >= passes.length) fail();
-    const pass = ctx.resolve(passes[passIndex++], FIVE.deterministicValidatorReceiptShape.requiredFields);
+    if (!applicable) { if (passes.has(validatorId)) fail(); continue; }
+    const pass = passes.get(validatorId)?.row; if (!pass) fail();
+    applicableCount++;
     const keyField = variant ? "independent_answer_key_reference" : "verified_official_key_receipt_reference";
     const fields = FIVE.deterministicValidatorInputDerivationReceiptShape.requiredFields.map(field =>
       field === "verified_official_key_receipt_reference" ? keyField : field);
@@ -125,6 +142,6 @@ export function validateRealEstateReleaseEvidence(ctx: ReleaseContext, release: 
     ctx.review(pass, ROLE, "verified_deterministic_validator_pass", pass.evidence_observed_at);
     ctx.review(subject, ROLE, "verified_not_applicable_to_law_or_kifrs", pass.reviewed_at);
   }
-  if (passIndex !== passes.length) fail();
+  if (applicableCount !== passes.size) fail();
   return { sourceVersionManifestIds: [requiredIdentifier(manifest.manifest_id)] };
 }
