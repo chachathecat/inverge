@@ -9,9 +9,9 @@ import { createClient } from "@supabase/supabase-js";
 import * as domain from "../lib/review-os/first-stage/kernel/domain.ts";
 import { privateRoute } from "./fixtures/first-stage-private-route-harness.mjs";
 import { verifyPrivateBrowser } from "./fixtures/first-stage-private-browser-harness.mjs";
-import { harness as kernelHarness, reference, SUBMIT, BODY, submission } from "./fixtures/first-stage-private-session-harness.mjs";
-import { economicsCatalog, CONTENT_EXPLANATION as EXPLANATION } from "./fixtures/first-stage-economics-content-harness.mjs";
-const harness = options => kernelHarness({ ...options, catalog: economicsCatalog });
+import { harness as kernelHarness, SUBMIT, submission } from "./fixtures/first-stage-private-session-harness.mjs";
+import { economicsCatalog } from "./fixtures/first-stage-economics-content-harness.mjs";
+import { accountingCatalog } from "./fixtures/first-stage-accounting-content-harness.mjs";
 import { ORACLE_IMAGE, ORACLE_PLATFORM } from "../scripts/automation/wcv-c3-pre-p-postgresql-security-state-oracle.mjs";
 
 const OWNER = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
@@ -36,7 +36,13 @@ function repositoryFactory() {
   return loaded.exports.createPrivateSessionRepository;
 }
 
-test("local PostgreSQL enforces actual route/browser durable retry/CAS with synthetic auth ports", { timeout: 240_000 }, async () => {
+for (const subject of ["economics_principles", "accounting"]) {
+const catalog = subject === "accounting" ? accountingCatalog : economicsCatalog;
+const harness = options => kernelHarness({ ...options, catalog });
+const reference = () => catalog.initialReferences[0];
+const EXPLANATION = catalog.explanation(reference()).text;
+const BODY = catalog.registry.require(subject).presentQuestion(reference()).stem;
+test(`local PostgreSQL ${subject} enforces actual route/browser durable retry/CAS with synthetic auth ports`, { timeout: 240_000 }, async () => {
   const container = `inverge-first-private-${process.pid}-${Date.now()}`;
   const docker = args => execFileSync("docker", args, { encoding: "utf8", windowsHide: true, stdio: ["ignore", "pipe", "pipe"] });
   let started = false;
@@ -126,7 +132,7 @@ test("local PostgreSQL enforces actual route/browser durable retry/CAS with synt
     });
     const first = harness({ store: repository(sdk()) });
     const second = harness({ store: repository(sdk()) });
-    const handler = h => privateRoute(h, { ownerId: OWNER, client: sdk(), repository });
+    const handler = h => privateRoute(h, { ownerId: OWNER, client: sdk(), repository, subject });
     const post = (h, body) => handler(h).POST(new Request("http://127.0.0.1/sessions", {
       method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body),
     }));
@@ -180,7 +186,7 @@ test("local PostgreSQL enforces actual route/browser durable retry/CAS with synt
     assert.equal(final.masteryClaim, false);
     assert.equal(final.transferEvidence, false);
     const browserHarness = harness({ store: repository(sdk()) });
-    const browserResult = await verifyPrivateBrowser({ route: handler(browserHarness),
+    const browserResult = await verifyPrivateBrowser({ route: handler(browserHarness), subject,
       clock: { set: browserHarness.setClock, advance: ms => browserHarness.setClock(
         new Date(Date.parse(browserHarness.getClock()) + ms).toISOString()) },
       failNextWrite: () => { loseNextWriteResponse = true; },
@@ -189,7 +195,7 @@ test("local PostgreSQL enforces actual route/browser durable retry/CAS with synt
     assert.equal(browserSaved.reviewTasks[0].status, "completed");
     assert.equal(browserSaved.reviewTasks[0].dueAt, browserResult.dueAt);
     assert.equal(await sql(`select count(*) from ${TABLE}`), "2");
-    process.stdout.write(JSON.stringify({ browser: "passed", screenshot: browserResult.screenshot,
+    process.stdout.write(JSON.stringify({ subject, browser: "passed", screenshot: browserResult.screenshot,
       externalRequests: browserResult.externalRequests, browserErrors: browserResult.browserErrors }) + "\n");
     await sql(`delete from auth.users where id in (${literal(OWNER)},${literal(OTHER)})`, null);
     assert.equal(await sql(`select count(*) from ${TABLE}`, null), "0");
@@ -199,3 +205,4 @@ test("local PostgreSQL enforces actual route/browser durable retry/CAS with synt
     if (started) docker(["rm", "--force", container]);
   }
 });
+}

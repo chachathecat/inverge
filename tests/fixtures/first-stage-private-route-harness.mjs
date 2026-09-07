@@ -5,6 +5,8 @@ import ts from "typescript";
 import * as application from "../../lib/review-os/first-stage/runtime/session-application.ts";
 import { loadEconomicsContent } from "../../lib/review-os/first-stage/runtime/economics-content.ts";
 import { syntheticContentInput } from "./first-stage-economics-content-harness.mjs";
+import { loadAccountingContent } from "../../lib/review-os/first-stage/runtime/accounting-content.ts";
+import { syntheticAccountingInput } from "./first-stage-accounting-content-harness.mjs";
 
 export const ENVIRONMENT = { NODE_ENV: "test", VERCEL_ENV: "development",
   INVERGE_OWNER_FIRST_STAGE_KERNEL_ENABLED: "true", ALPHA_ADMIN_EMAILS: "owner@example.test",
@@ -41,12 +43,17 @@ export function privateRoute(harness, options = {}) {
     "./approved-catalog": { loadApprovedPrivateFirstStageCatalog: async () => {
       counts.catalog++;
       return options.noCatalog ? null : loadEconomicsContent(options.contentInput ?? syntheticContentInput());
+    }, loadApprovedPrivateAccountingCatalog: async () => {
+      counts.catalog++;
+      return options.noCatalog ? null : loadAccountingContent(options.contentInput ?? syntheticAccountingInput());
     } },
     "./session-application": { ...application, createPrivateSessionApplication: dependencies =>
       application.createPrivateSessionApplication({ ...dependencies, now: harness.getClock }) },
     "./session-repository": { createPrivateSessionRepository: options.repository ?? (() => harness.store) },
   }, options.environment ?? ENVIRONMENT);
-  const route = compilePrivateSource("app/api/review-os/first-stage/sessions/route.ts", {
+  const route = compilePrivateSource(options.subject === "accounting"
+    ? "app/api/review-os/first-stage/accounting/sessions/route.ts"
+    : "app/api/review-os/first-stage/sessions/route.ts", {
     "@/lib/review-os/first-stage/runtime/session-server": server,
   });
   return { ...route, counts, server };

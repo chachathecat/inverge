@@ -9,9 +9,12 @@ import { chromium } from "playwright";
 /** Real component + real compiled route entry + supplied isolated repository.
  * This is a localhost test host, NOT a Next deployment or remote auth acceptance.
  */
-export async function verifyPrivateBrowser({ route, clock, failNextWrite }) {
+export async function verifyPrivateBrowser({ route, clock, failNextWrite, subject = "economics_principles" }) {
+  assert.ok(["economics_principles", "accounting"].includes(subject));
+  const pagePath = subject === "accounting" ? "/app/first-stage/accounting" : "/app/first-stage/practice";
+  const apiPath = subject === "accounting" ? "/api/review-os/first-stage/accounting/sessions" : "/api/review-os/first-stage/sessions";
   const bundle = await build({ stdin: {
-    contents: 'import React from "react"; import {createRoot} from "react-dom/client"; import {FirstStagePrivatePractice} from "./components/review-os/first-stage-private-practice"; createRoot(document.getElementById("root")).render(React.createElement(FirstStagePrivatePractice));',
+    contents: `import React from "react"; import {createRoot} from "react-dom/client"; import {FirstStagePrivatePractice} from "./components/review-os/first-stage-private-practice"; createRoot(document.getElementById("root")).render(React.createElement(FirstStagePrivatePractice, {subject: ${JSON.stringify(subject)}}));`,
     resolveDir: process.cwd(), loader: "tsx",
   }, bundle: true, write: false, platform: "browser", format: "iife", jsx: "automatic",
   define: { "process.env.NODE_ENV": '"production"' }, logLevel: "silent" });
@@ -24,12 +27,12 @@ export async function verifyPrivateBrowser({ route, clock, failNextWrite }) {
         outgoing.writeHead(200, { "content-type": "application/javascript", "cache-control": "no-store" });
         outgoing.end(bundle.outputFiles[0].contents); return;
       }
-      if (url.pathname === "/app/first-stage/practice") {
+      if (url.pathname === pagePath) {
         outgoing.writeHead(200, { "content-type": "text/html; charset=utf-8", "cache-control": "private, no-store",
           "referrer-policy": "no-referrer" });
         outgoing.end('<!doctype html><html lang="ko"><meta charset="utf-8"><title>Synthetic private flow</title><div id="root"></div><script src="/entry.js"></script></html>'); return;
       }
-      if (url.pathname !== "/api/review-os/first-stage/sessions") { outgoing.writeHead(404).end(); return; }
+      if (url.pathname !== apiPath) { outgoing.writeHead(404).end(); return; }
       const method = incoming.method;
       const request = new Request(url, { method, headers: incoming.headers,
         ...(method === "POST" ? { body: Readable.toWeb(incoming), duplex: "half" } : {}) });
@@ -50,7 +53,7 @@ export async function verifyPrivateBrowser({ route, clock, failNextWrite }) {
     const page = await context.newPage();
     page.on("pageerror", () => failures.push("browser-page-error"));
     page.on("console", message => { if (message.type() === "error") consoleErrors.push(message.text()); });
-    await page.goto(`${origin}/app/first-stage/practice`);
+    await page.goto(`${origin}${pagePath}`);
     await page.getByRole("button", { name: "검토된 1번 시작" }).evaluate(button => {
       button.click(); button.click();
     });
@@ -89,7 +92,7 @@ export async function verifyPrivateBrowser({ route, clock, failNextWrite }) {
     await page.getByText("이 복습 처리 완료 — 학습 성공·숙달 판정과는 별개입니다.").waitFor();
     assert.equal(await page.getByRole("button", { name: "예정 시각 이후 새 문제로 복습" }).count(), 0);
     assert.deepEqual(await page.evaluate(() => ({ local: localStorage.length, session: sessionStorage.length })), { local: 0, session: 0 });
-    const screenshot = join(tmpdir(), `inverge-first-stage-private-browser-${process.pid}.png`);
+    const screenshot = join(tmpdir(), `inverge-first-stage-private-browser-${subject}-${process.pid}.png`);
     await page.screenshot({ path: screenshot, fullPage: true });
     assert.deepEqual(failures, []); assert.deepEqual(external, []);
     // One deliberate 503 and a favicon 404 are browser resource diagnostics only.

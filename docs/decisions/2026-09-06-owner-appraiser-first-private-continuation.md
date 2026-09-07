@@ -76,6 +76,14 @@ human-review checklist items remain separate and pending.
 
 ### Delivery conditions
 
+The Owner's 2026-09-07 completion-condition adjustment separates code integration
+from content and actual-use acceptance. PR #884 integrated only the code child
+#885; parent #883 remains open for its six genuine human-review items and actual
+learner-use prerequisites. Empty installed approvals and blocked actual content
+do not block independently verified code integration under the conditions below.
+This changes no content approval, feature setting, deployment boundary or claim
+of subject completion. Later code slices must keep those same distinctions.
+
 For these private first-stage outcomes only, fixed source-correction and
 review-cycle counts do not require abandoning/recreating an otherwise viable
 candidate. Diagnose failures, batch root-cause corrections and judge actual
