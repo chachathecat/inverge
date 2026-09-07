@@ -171,8 +171,7 @@ export function validateCivilApplicability(installation: PrivateApplicabilityIns
     exactObject(item, ["questionSha256", "examDate", "choices", "easyExplanationReference", "receiptReference", "releaseReference"]);
     requiredHash(item.questionSha256);
     if (requiredDay(item.examDate) !== "2026-04-04" || reference.examYear !== 2026 || reference.subjectId !== "civil_law" ||
-      reference.currentnessState !== "verified_exam_date" || !Array.isArray(reference.sourceVersionManifestIds) ||
-      !reference.sourceVersionManifestIds.includes("appraiser.first.law.2026-04-04.contract.v1")) applicabilityFailure();
+      reference.currentnessState !== "verified_exam_date" || !Array.isArray(reference.sourceVersionManifestIds)) applicabilityFailure();
     const ref = immutableReference(item.receiptReference);
     requireSame(row.versionEvidence, { schemaVersion: "first_stage.immutable_evidence_reference.v1", evidenceId: ref.evidence_id,
       evidenceVersion: ref.evidence_version, evidenceSha256: ref.evidence_sha256 });

@@ -17,6 +17,15 @@ function input(mutate = () => {}) {
   const packet = remainingPacket("civil_law"), installed = civilApplicability(packet, mutate);
   return { packet, installed, options: { ...syntheticContentInput(packet), applicability: [installed] } };
 }
+function rebindReferenceInput(packet, installed) {
+  for (const [index, row] of packet.questions.entries()) {
+    installed.items[index].questionSha256 = digest(row);
+    packet.keys[index].questionReferenceSha256 = digest(row.reference);
+  }
+  const options = syntheticContentInput(packet);
+  installed.packetSha256 = options.approvals[0].packetSha256;
+  return { ...options, applicability: [installed] };
+}
 async function denied(options, label) {
   assert.equal(await loadCivilLawContent(options), null, label);
   const h = harness(), route = privateRoute(h, { subject: "civil_law", contentInput: options });
@@ -38,6 +47,64 @@ test("Owner amendment preserves official Foundation and derives only the private
   assert.equal(amendment.actualApprovedContentCount, 0); assert.equal(amendment.actualInstalledContentCount, 0);
   const { installed, packet } = input();
   assert.ok(validateCivilApplicability(installed, packet.questions, packet.keys));
+});
+
+for (const [label, mutate] of [
+  ["unissued manifests", row => { row.reference.sourceVersionManifestIds.push("unissued-legal-source"); }],
+  ["missing manifests", row => { row.reference.sourceVersionManifestIds = []; }],
+  ["substituted manifests", row => { row.reference.sourceVersionManifestIds = ["unissued-legal-source"]; }],
+  ["duplicate manifests", row => { row.reference.sourceVersionManifestIds.push(row.reference.sourceVersionManifestIds[0]); }],
+  ["overstated source rights", row => { row.reference.rightsState = "verified_cleared"; }],
+]) test(`released QuestionReference rejects ${label} in originals and private retries`, async () => {
+  for (const index of [0, 1, 2]) {
+    const { packet, installed } = input();
+    mutate(packet.questions[index]);
+    // Rebind server packet/item hashes and key reference identity to isolate the
+    // final release's semantic mismatch, not a stale-digest denial.
+    await denied(rebindReferenceInput(packet, installed), "reference must equal resolved release");
+  }
+});
+
+test("resolved post/asset rights determine the exact reference retained by HTTP, storage and reconnect", async () => {
+  for (const clearedKinds of [[], ["false"], ["true"], ["false", "true"]]) {
+    const effective = clearedKinds.length === 2 ? "approved_cleared_redistribution_with_attribution" : "approved_owner_private_use";
+    const expected = clearedKinds.length === 2 ? "verified_cleared" : "verified_owner_private";
+    const { packet, installed } = input((id, row) => {
+      // Coherent synthetic official-license observations, never actual rights.
+      const match = /^q1-(true|false)-basis(?:-(transport|identity|evidence))?$/u.exec(id);
+      if (match && clearedKinds.includes(match[1])) {
+        const url = `https://www.q-net.or.kr/synthetic-not-a-source/terms/${match[1]}`;
+        if (match[2] === "transport") { row.requested_url = url; row.final_url = url; }
+        else if (match[2] === "identity") row.representation_url = url;
+        else if (match[2] === "evidence") { row.authoritative_representation_url = url; row.evidence_kind = "official_terms_document"; }
+        else { row.basis_type = "official_license_label_and_terms"; row.official_label_or_terms_url = url; }
+      }
+      if ((id === "q1-post-rights" && clearedKinds.includes("false")) || (id === "q1-asset-rights" && clearedKinds.includes("true")))
+        row.decision = "approved_cleared_redistribution_with_attribution";
+      if (/^release-\d+$/u.test(id)) row.effective_rights_decision = effective;
+    });
+    for (const row of packet.questions) row.reference.rightsState = expected;
+    const options = rebindReferenceInput(packet, installed);
+    const h = harness(), route = privateRoute(h, { subject: "civil_law", contentInput: options });
+    const created = await route.POST(post(create)); assert.equal(created.status, 200);
+    const { view: { sessionId } } = await created.json();
+    const request = { sessionId, command: { action: "begin", requestId: "rights-begin", expectedRevision: 1, questionId: create.questionId } };
+    const begun = await (await route.POST(post(request))).json();
+    assert.equal(begun.view.question.sourceStatusLabel, expected);
+    assert.deepEqual(begun.view.question.questionReference, packet.questions[0].reference);
+    assert.deepEqual(await (await route.POST(post(request))).json(), begun);
+    const persisted = [...h.rows.values()][0].state;
+    assert.deepEqual(persisted.attempts[0].questionReference, packet.questions[0].reference);
+    const fresh = privateRoute(harness({ rows: h.rows }), { subject: "civil_law", contentInput: options });
+    assert.deepEqual(await (await fresh.GET(new Request(`${URL}?sessionId=${sessionId}`))).json(), begun);
+    assert.equal(h.rows.size, 1);
+    // Even a coherently rehashed installed packet cannot contradict either source.
+    for (const index of [0, 1, 2]) {
+      packet.questions[index].reference.rightsState = expected === "verified_cleared" ? "verified_owner_private" : "verified_cleared";
+      await denied(rebindReferenceInput(packet, installed), `${clearedKinds.join("+")}/${index}`);
+      packet.questions[index].reference.rightsState = expected;
+    }
+  }
 });
 
 test("official release requires the entire 200-position table and exact booklet/source/key mapping", async () => {
@@ -134,6 +201,8 @@ test("actual HTTP persists before feedback, preserves exact attribution blocks, 
   assert.doesNotMatch(JSON.stringify(response), /Synthetic|SYNTHETIC_|attribution|EXPLANATION/u);
   const opened = await (await route.POST(post({ sessionId, command: { action: "begin", requestId: "begin", expectedRevision: 1, questionId: create.questionId } }))).json();
   assert.equal(opened.view.explanation, null); assert.equal(opened.view.questionAttributions.length, 3);
+  assert.deepEqual(opened.view.question.questionReference, packet.questions[0].reference);
+  assert.equal(opened.view.question.sourceStatusLabel, "verified_owner_private");
   assert.doesNotMatch(JSON.stringify(opened.view.questionAttributions), /answer|explanation|easy|key/u);
   h.setClock(SUBMIT); h.failNextWrite();
   const submit = { sessionId, command: submission(opened.view.attempt.attemptId) };
@@ -149,6 +218,8 @@ test("actual HTTP persists before feedback, preserves exact attribution blocks, 
   const retry = { sessionId, command: { action: "retry", requestId: "retry", expectedRevision: 3, reviewTaskId: task.reviewTaskId } };
   const begun = await (await route.POST(post(retry))).json();
   assert.equal(begun.view.explanation, null); assert.equal(begun.view.questionAttributions.length, 3);
+  assert.deepEqual(begun.view.question.questionReference, packet.questions[1].reference);
+  assert.equal(begun.view.question.sourceStatusLabel, "verified_owner_private");
   h.setClock(new Date(Date.parse(task.dueAt) + 60_000).toISOString());
   const completed = await (await route.POST(post({ sessionId, command: { ...submission(begun.view.attempt.attemptId, 4), requestId: "retry-submit", expectedRevision: 4 } }))).json();
   assert.equal(completed.view.attempt.decision, "correct"); assert.equal(completed.view.reviewTasks[0].status, "completed");
@@ -157,6 +228,7 @@ test("actual HTTP persists before feedback, preserves exact attribution blocks, 
   const fresh = privateRoute(harness({ rows: h.rows }), { subject: "civil_law", contentInput: options });
   assert.deepEqual(await (await fresh.GET(new Request(`${URL}?sessionId=${sessionId}`))).json(), completed);
   assert.equal(h.rows.size, 1); assert.doesNotMatch(JSON.stringify([...h.rows]), /Synthetic|SYNTHETIC_|attribution|EXPLANATION/u);
+  assert.deepEqual([...h.rows.values()][0].state.attempts.map(attempt => attempt.questionReference), packet.questions.slice(0, 2).map(row => row.reference));
   const revoked = structuredClone(installed); revoked.items[1].releaseReference.evidence_sha256 = digest("revoked");
   const unavailable = privateRoute(h, { subject: "civil_law", contentInput: { ...options, applicability: [revoked] } });
   assert.equal((await unavailable.GET(new Request(`${URL}?sessionId=${sessionId}`))).status, 503); assert.equal(h.rows.size, 1);

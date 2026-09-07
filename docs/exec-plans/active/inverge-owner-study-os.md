@@ -114,11 +114,39 @@
   `C:/Users/jmg91/AppData/Local/Temp/inverge-first-stage-private-browser-civil_law-16852.png`,
   SHA-256 `2391a8e2e23da435536e5989c6207b837f2eda9f18c42a12723a743b58c5b077`.
   This records DOM/runtime evidence and file identity, not a visual-review receipt.
-- Next: ordinary push, resolve the two prior findings against the corrected head,
-  fresh native checks and one independent exact-head review without duplication,
-  then live thread/rules/deployment checks before conditional pinned squash.
-  No clean review or merge is claimed. #883 stays open; actual env, flags, paths,
-  remote DB, provider, payment and Production/public state remain unchanged.
+- That correction was ordinarily pushed as head
+  `28aaf99c91a1f592f4052e041bd71f0780bf9732`, tree
+  `dbcff73ca101c193cf4ab1f90dd8bf9046d5508b`. Required native checks 9/9 and
+  extra C3R-L passed. The two prior threads were resolved. Fresh independent
+  review 5130056279 reported NEW P0/P1/P2 `0/1/1`: surplus unissued manifest IDs
+  could remain in QuestionReference, and private-only source rights could be
+  overstated as cleared. That head is not a clean merge candidate.
+- Both new defects were separately reproduced through the actual loader before
+  this directly coupled correction. Final release now compares the complete
+  reference manifest list with IDs from its resolved manifest objects and the
+  reference rights state with its resolved post/asset effective decision. It
+  rejects contradictions rather than relabeling output. Originals and both retry
+  candidates share these checks; full-200 official and independent-retry key
+  branches, sparse-array denial and empty real approval/install lists remain.
+- Fresh correction evidence: 107 affected tests PASS/0 skips; all seven isolated
+  PostgreSQL/browser tests PASS/0 skips in one run. Tests cover all four post/asset
+  rights combinations, missing/extra/substituted/duplicate manifests, coherent
+  hash-rebinding attacks, actual HTTP denial before body/storage and exact
+  reference preservation on durable save/replay/reconnect and D+1 retry.
+  All five synthetic subject flows retain CAS/lost-response/completed-state and
+  subject-navigation behavior; browser external requests/errors zero and synthetic
+  users/rows cleaned to zero. Build, sequential typecheck and PR-wide lint (21
+  source/test paths) PASS. JSON comparison confirms the original Foundation is
+  unchanged outside the authorized amendment and its 200-row rule remains;
+  approval/install counts 0, 25-path boundary and diff checks PASS. The first
+  JSON comparison hit Node's default output-buffer limit; the bounded 8 MiB rerun
+  completed successfully. No new content or human review is claimed.
+- Next: one ordinary correction push, resolve the two new threads, obtain fresh
+  exact-head native CI and one independent review without duplication, then live
+  rules/base/thread/deployment checks before conditional pinned squash. These
+  local results are not new-head native CI or a clean review. #883 remains open;
+  actual env, flags, paths, remote DB, provider, payment and Production/public
+  state remain unchanged.
 
 Approved content: **0**. Real use remains blocked. Economics r3 and its six pending
 human checks are unchanged and are not repackaged. Genuine source/rights/key/

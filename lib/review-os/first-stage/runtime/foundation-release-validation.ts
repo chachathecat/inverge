@@ -89,4 +89,5 @@ export function validateCivilReleaseEvidence(ctx: ReleaseContext, release: Row, 
   ctx.review(pass, SUBJECT_REVIEWER, "verified_deterministic_validator_pass", result.reviewed_at);
   if (Date.parse(requiredUtcInstant(pass.evidence_observed_at)) < Date.parse(requiredUtcInstant(result.executed_at))) fail();
   ctx.review(pass, SUBJECT_REVIEWER, "verified_deterministic_validator_pass", pass.evidence_observed_at);
+  return { sourceVersionManifestIds: [requiredIdentifier(manifest.manifest_id)] };
 }

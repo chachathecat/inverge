@@ -46,6 +46,7 @@ export function validateFinalReleases(installation: PrivateApplicabilityInstalla
     const source = sourcePair(ctx, release.source_post_rights_receipt_reference, release.source_asset_rights_receipt_reference);
     same(release.source_post_id, source.post.row.post_id); same(release.source_asset_id, source.asset.row.asset_id);
     same(release.effective_rights_decision, source.effective); same(release.attribution, source.post.attribution);
+    same(reference.rightsState, source.effective === "approved_owner_private_use" ? "verified_owner_private" : "verified_cleared");
     const object = exactObject(release.question_item_object_reference_or_null, FIVE.questionItemObjectReferenceShape.requiredFields);
     same(object.item_id, id); same(object.item_version, reference.questionVersion);
     const bodyless = Object.fromEntries(["object_id", "object_version", "object_sha256", "authorized_plane", "rights_decision_reference", "source_version_decision_reference"].map(field => [field, object[field]]));
@@ -145,7 +146,8 @@ export function validateFinalReleases(installation: PrivateApplicabilityInstalla
     const uniqueAttributions = [...new Set(attributionRows.map(row => nonempty(row.exact_attribution)))];
     same(release.ordered_unique_attributions, uniqueAttributions); same(release.ordered_unique_attributions_digest, digest(uniqueAttributions));
     const easyRights = ctx.resolve((item.easyExplanationReference as Row).rights_decision_reference, BODY_DECISION_FIELDS);
-    validateCivilReleaseEvidence(ctx, release, pre, keyReference, variant);
+    const validated = validateCivilReleaseEvidence(ctx, release, pre, keyReference, variant);
+    same(reference.sourceVersionManifestIds, validated.sourceVersionManifestIds);
     expiresAt = Math.min(expiresAt, ctx.expiry());
     // Question/source attribution only before response. Full ordered release
     // attribution and easy-explanation attribution appear with durable feedback.
