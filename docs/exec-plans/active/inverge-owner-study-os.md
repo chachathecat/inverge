@@ -28,7 +28,8 @@
   validator facts and all four assertions. Every question, easy explanation,
   choice correction, source/version, rights and attribution binding remains.
   HTTP cannot install evidence, select a subject/kind or promote test data.
-- Fresh local results for this uncommitted candidate: 115 affected tests PASS,
+- Fresh local results for code head `1d227297a48468d6f2e1adee1d4e2c745970ac73`:
+  115 affected tests PASS,
   zero skips, including 1/2/9-authority admission, coherently rehashed hostile
   graphs, loader/HTTP pre-body denial and durable reconnect/withdrawal. All
   seven isolated PostgreSQL 15.8/browser tests PASS, zero skips, in one run:
@@ -43,8 +44,22 @@
 - One new regression initially used the wrong HTTP attribution field; corrected
   to the existing typed `view.questionAttributions`, then the whole affected
   batch passed. No runtime response shape was changed to satisfy that test.
-  The 16-path candidate includes this checkpoint. Native CI and independent
-  review for the future committed head are pending, not inherited from #891.
+  The 16-path candidate includes this checkpoint. PR #893 was opened at that
+  code head, tree `ce92b01279df07ee7919b54c9cc70ad87689149f`. Its automatic
+  independent review completed without findings: summary comment 5569267873,
+  2026-09-07T10:35:15Z, bot clean reaction 492418309 at 10:35:17Z, P0/P1/P2
+  `0/0/0` and zero review threads. This is native comment/reaction evidence,
+  not an invented review-submission ID.
+- PR Contract failed on the original PR body's risk/checkbox syntax; Fast CI
+  failed only its PR-contract step, after its code checks passed. The corrected
+  live body passes the actual local contract validator. One targeted native
+  rerun proved it still reads the old event body; that identical retry is not
+  repeated. This checkpoint-only successor records actual delivery state and
+  produces a new native pull-request event with the corrected body. Source,
+  tests, Foundation and runtime artifacts are byte-identical to the above code
+  head; no unnecessary local runtime rerun is claimed. The successor still
+  requires its OWN native CI, exact-head independent review and zero threads;
+  the previous review/checks are not represented as successor-head evidence.
 - Relationship-law actual stock now reports the approval blocker. Real-estate
   applicability remains code-incomplete and uses its implementation blocker;
   it is the next dependency-ready delegated slice after this code integration.
