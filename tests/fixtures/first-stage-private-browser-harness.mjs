@@ -5,14 +5,16 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { build } from "esbuild";
 import { chromium } from "playwright";
+import { SUBJECT_CASES } from "./first-stage-remaining-content-harness.mjs";
 
 /** Real component + real compiled route entry + supplied isolated repository.
  * This is a localhost test host, NOT a Next deployment or remote auth acceptance.
  */
 export async function verifyPrivateBrowser({ route, clock, failNextWrite, subject = "economics_principles" }) {
-  assert.ok(["economics_principles", "accounting"].includes(subject));
-  const pagePath = subject === "accounting" ? "/app/first-stage/accounting" : "/app/first-stage/practice";
-  const apiPath = subject === "accounting" ? "/api/review-os/first-stage/accounting/sessions" : "/api/review-os/first-stage/sessions";
+  assert.ok(["economics_principles", "accounting", ...SUBJECT_CASES.map(spec => spec.id)].includes(subject));
+  const slug = SUBJECT_CASES.find(spec => spec.id === subject)?.slug ?? "accounting";
+  const pagePath = subject === "economics_principles" ? "/app/first-stage/practice" : `/app/first-stage/${slug}`;
+  const apiPath = subject === "economics_principles" ? "/api/review-os/first-stage/sessions" : `/api/review-os/first-stage/${slug}/sessions`;
   const bundle = await build({ stdin: {
     contents: `import React from "react"; import {createRoot} from "react-dom/client"; import {FirstStagePrivatePractice} from "./components/review-os/first-stage-private-practice"; createRoot(document.getElementById("root")).render(React.createElement(FirstStagePrivatePractice, {subject: ${JSON.stringify(subject)}}));`,
     resolveDir: process.cwd(), loader: "tsx",

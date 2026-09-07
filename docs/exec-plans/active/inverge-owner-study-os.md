@@ -1,6 +1,66 @@
 # Inverge Owner Study OS
 
-## Current private first-stage continuation — 2026-09-07
+## Current private first-stage code continuation — #888 / 2026-09-07
+
+- #884 economics code is integrated; #887 accounting code is now integrated at
+  squash/main `66f47d8f6fc6e535fe6af35d9aa76561d5cb1efb`, tree
+  `c9778f3e5734147bb0590a425f8bfd05f18c162c`, matching its reviewed candidate.
+  #887 required native checks 9/9, extra C3R-L runtime, automatic clean exact-head
+  Codex review, zero threads and five post-merge workflows passed. Vercel actually
+  canceled the main build via Ignored Build Step. Native closeout:
+  https://github.com/chachathecat/inverge/pull/887#issuecomment-5564541705.
+- Current work: #888, single writer in the same isolated worktree on
+  `codex/first-stage-remaining-private-flows`, based on that validated merge.
+  Reuse the common loader, kernel, SubjectAdapter contract, session service,
+  repository, local SQL design, Owner gate and practice component for civil law,
+  real-estate principles and appraisal-related law. No new DB schema or ledger.
+- Each added subject has its own fixed server schema/adapter/catalog/HTTP/page
+  binding. Five installed approval lists are empty; client approval/key/source/
+  rights/currentness claims remain rejected. Law routes support only genuinely
+  reviewed historical exam-date snapshots; `verified_current` is rejected for
+  originals and retries. No live legal-source validation is implemented/claimed.
+- RSC carries only subject metadata, not content. Explanations require durable
+  evaluated readback. A new actual-browser regression first reproduced a late
+  previous-subject save response overwriting the new subject URL. Keyed component
+  identity plus mounted-response handling now preserves the durable old write
+  without changing the new page's URL, intent or disclosure. This directly coupled
+  regression was fixed before publishing the candidate.
+- Final local validation: 62 loader/HTTP/RSC/kernel/private-renderer tests passed;
+  6 isolated runtime tests passed (5 subject-specific PostgreSQL/browser flows and
+  the delayed-navigation regression), zero skips. The accounting/additional-subject
+  17 tests also passed via the actual native runner and are now registered there.
+  Build, subsequent typecheck, changed-file lint, JSON/no-JSON-delta and diff checks
+  passed. The existing unrelated Turbopack NFT trace warning remains unchanged.
+  Each disposable PostgreSQL had no network, synthetic users/rows cleaned to zero;
+  browser external requests/errors were zero. Auth/clock/catalog are injected
+  synthetic ports, not remote authentication, deployed Next or real-content proof.
+- These are local results for the new candidate. Native exact-head CI/review is
+  still pending. Next action: publish one coherent #888 code PR, use the automatic
+  review if started, and integrate only after live exact-head checks/review/threads/
+  rules and the existing deployment boundary pass. Do not reuse #887 CI as new-head
+  evidence. No force/auto-merge, actual feature/content-path setting or remote apply.
+
+| Subject | Private mechanics | Content / actual-use status |
+| --- | --- | --- |
+| Economics | Integrated #884, shared engine regressions retained | 0 approved; r3 six human checks pending; actual use blocked |
+| Accounting | Integrated #887, same save/reconnect/D+1 flow | 0 approved; no actual stock; actual use blocked |
+| Civil law | #888 code candidate, full synthetic request/PG/browser path | 0 approved; historical exam-date scope only; blocked |
+| Real-estate principles | #888 code candidate, full synthetic request/PG/browser path | 0 approved; no actual stock; blocked |
+| Appraisal-related law | #888 code candidate, full synthetic request/PG/browser path | 0 approved; historical exam-date scope only; blocked |
+
+Actual learner acceptance remains open in #883. Economics r3 and its supplied AI
+report are unchanged; no reviewer/date/verdict/evidence is invented. The other
+subjects' functional fixtures are not content packs or subject-quality evidence.
+Genuine source/rights/key/feedback/version/lineage decisions and separately
+authorized actual environment/storage/activation remain external prerequisites.
+Code integration cannot close those conditions or assert economics/five-subject,
+learning efficacy, transfer or Measurement completion. No broader release starts.
+
+Rollback: keep approvals empty/feature OFF; an ordinary reviewed code revert can
+remove added subject bindings while preserving economics/accounting and durable
+rows. No DB deletion, remote rollback or operational mutation is needed.
+
+## Historical #887 accounting candidate evidence — 2026-09-07
 
 - Code integration and content/actual-use acceptance are separate under the
   Owner's 2026-09-07 instruction. PR #884 merged reviewed head

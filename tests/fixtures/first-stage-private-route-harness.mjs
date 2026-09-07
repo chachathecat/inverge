@@ -7,6 +7,7 @@ import { loadEconomicsContent } from "../../lib/review-os/first-stage/runtime/ec
 import { syntheticContentInput } from "./first-stage-economics-content-harness.mjs";
 import { loadAccountingContent } from "../../lib/review-os/first-stage/runtime/accounting-content.ts";
 import { syntheticAccountingInput } from "./first-stage-accounting-content-harness.mjs";
+import { SUBJECT_CASES, remainingInput } from "./first-stage-remaining-content-harness.mjs";
 
 export const ENVIRONMENT = { NODE_ENV: "test", VERCEL_ENV: "development",
   INVERGE_OWNER_FIRST_STAGE_KERNEL_ENABLED: "true", ALPHA_ADMIN_EMAILS: "owner@example.test",
@@ -31,6 +32,10 @@ export function compilePrivateSource(relative, dependencies, environment = {}) {
 export function privateRoute(harness, options = {}) {
   const counts = { auth: 0, catalog: 0, repository: 0 };
   const ownerId = options.ownerId ?? "synthetic-owner-a";
+  const extraCatalogs = Object.fromEntries(SUBJECT_CASES.map(spec => [`loadApprovedPrivate${spec.name}Catalog`, async () => {
+    counts.catalog++;
+    return options.noCatalog ? null : spec.load(options.contentInput ?? remainingInput(spec.id));
+  }]));
   const server = compilePrivateSource("lib/review-os/first-stage/runtime/session-server.ts", {
     "server-only": {},
     "@/lib/auth/session": { getServerSessionUser: async () => {
@@ -40,7 +45,7 @@ export function privateRoute(harness, options = {}) {
     "@/lib/supabase/persistence": { getSupabasePersistenceClient: () => {
       counts.repository++; return options.client ?? {};
     } },
-    "./approved-catalog": { loadApprovedPrivateFirstStageCatalog: async () => {
+    "./approved-catalog": { ...extraCatalogs, loadApprovedPrivateFirstStageCatalog: async () => {
       counts.catalog++;
       return options.noCatalog ? null : loadEconomicsContent(options.contentInput ?? syntheticContentInput());
     }, loadApprovedPrivateAccountingCatalog: async () => {
@@ -51,9 +56,11 @@ export function privateRoute(harness, options = {}) {
       application.createPrivateSessionApplication({ ...dependencies, now: harness.getClock }) },
     "./session-repository": { createPrivateSessionRepository: options.repository ?? (() => harness.store) },
   }, options.environment ?? ENVIRONMENT);
-  const route = compilePrivateSource(options.subject === "accounting"
-    ? "app/api/review-os/first-stage/accounting/sessions/route.ts"
-    : "app/api/review-os/first-stage/sessions/route.ts", {
+  const extra = SUBJECT_CASES.find(spec => spec.id === options.subject);
+  const route = compilePrivateSource(extra
+    ? `app/api/review-os/first-stage/${extra.slug}/sessions/route.ts`
+    : options.subject === "accounting" ? "app/api/review-os/first-stage/accounting/sessions/route.ts"
+      : "app/api/review-os/first-stage/sessions/route.ts", {
     "@/lib/review-os/first-stage/runtime/session-server": server,
   });
   return { ...route, counts, server };

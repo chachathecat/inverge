@@ -71,8 +71,11 @@ export type PrivateContentInput = {
 
 // Closed server-selected policies. Request bodies cannot choose or alter these.
 const POLICIES = Object.freeze({
-  economics_principles: Object.freeze({ name: "economics", schema: "first_stage.economics_private_content.v1" }),
-  accounting: Object.freeze({ name: "accounting", schema: "first_stage.accounting_private_content.v1" }),
+  economics_principles: Object.freeze({ name: "economics", schema: "first_stage.economics_private_content.v1", historicalOnly: false }),
+  accounting: Object.freeze({ name: "accounting", schema: "first_stage.accounting_private_content.v1", historicalOnly: false }),
+  civil_law: Object.freeze({ name: "civil-law", schema: "first_stage.civil_law_private_content.v1", historicalOnly: true }),
+  real_estate_principles: Object.freeze({ name: "real-estate-principles", schema: "first_stage.real_estate_principles_private_content.v1", historicalOnly: false }),
+  appraiser_related_law: Object.freeze({ name: "appraiser-related-law", schema: "first_stage.appraiser_related_law_private_content.v1", historicalOnly: true }),
 });
 
 export async function loadPrivateReviewedContent(subjectId: keyof typeof POLICIES,
@@ -102,6 +105,9 @@ export async function loadPrivateReviewedContent(subjectId: keyof typeof POLICIE
         "choiceExplanations", "easyExplanation", "concept", "feedback", "sourceEvidence", "rightsEvidence", "versionEvidence"]);
       const reference = parseQuestionReference(row.reference);
       if (reference.subjectId !== subjectId ||
+        // These law routes support reviewed historical exam snapshots only, not
+        // a timeless "current law" claim or a live legal-source validator.
+        (policy.historicalOnly && reference.currentnessState !== "verified_exam_date") ||
         !["original", "practice_retry"].includes(String(row.kind)) ||
         (row.kind === "original" ? row.sourceQuestionId !== null : typeof row.sourceQuestionId !== "string") ||
         !Array.isArray(row.choices) || row.choices.length !== 5 ||

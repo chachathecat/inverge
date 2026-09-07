@@ -9,9 +9,11 @@ import { createClient } from "@supabase/supabase-js";
 import * as domain from "../lib/review-os/first-stage/kernel/domain.ts";
 import { privateRoute } from "./fixtures/first-stage-private-route-harness.mjs";
 import { verifyPrivateBrowser } from "./fixtures/first-stage-private-browser-harness.mjs";
+import { verifyPrivateSubjectNavigation } from "./fixtures/first-stage-private-navigation-browser.mjs";
 import { harness as kernelHarness, SUBMIT, submission } from "./fixtures/first-stage-private-session-harness.mjs";
 import { economicsCatalog } from "./fixtures/first-stage-economics-content-harness.mjs";
 import { accountingCatalog } from "./fixtures/first-stage-accounting-content-harness.mjs";
+import { remainingCatalogs } from "./fixtures/first-stage-remaining-content-harness.mjs";
 import { ORACLE_IMAGE, ORACLE_PLATFORM } from "../scripts/automation/wcv-c3-pre-p-postgresql-security-state-oracle.mjs";
 
 const OWNER = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
@@ -36,8 +38,10 @@ function repositoryFactory() {
   return loaded.exports.createPrivateSessionRepository;
 }
 
-for (const subject of ["economics_principles", "accounting"]) {
-const catalog = subject === "accounting" ? accountingCatalog : economicsCatalog;
+test("late durable response from the previous subject cannot rewrite the newly selected subject URL",
+  { timeout: 60_000 }, verifyPrivateSubjectNavigation);
+
+for (const [subject, catalog] of Object.entries({ economics_principles: economicsCatalog, accounting: accountingCatalog, ...remainingCatalogs })) {
 const harness = options => kernelHarness({ ...options, catalog });
 const reference = () => catalog.initialReferences[0];
 const EXPLANATION = catalog.explanation(reference()).text;

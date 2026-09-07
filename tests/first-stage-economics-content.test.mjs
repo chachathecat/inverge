@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import * as content from "../lib/review-os/first-stage/runtime/economics-content.ts";
 import * as accountingContent from "../lib/review-os/first-stage/runtime/accounting-content.ts";
+import * as remainingContent from "../lib/review-os/first-stage/runtime/remaining-subject-content.ts";
 import path from "node:path";
 const { loadEconomicsContent } = content;
 import { privateSessionDigest as digest } from "../lib/review-os/first-stage/runtime/session-service.ts";
@@ -18,6 +19,7 @@ test("actual server file reader bounds growing input and closes handles; empty i
     const reader = compilePrivateSource("lib/review-os/first-stage/runtime/approved-catalog.ts", {
       "server-only": {}, "node:path": { default: path }, "./economics-content": content,
       "./accounting-content": accountingContent,
+      "./remaining-subject-content": remainingContent,
       "node:fs/promises": { async open() { opened++; return {
         async stat() { return { isFile: () => true, size: 0 }; }, // file grows after stat
         async read(buffer) { const bytesRead = Math.min(buffer.length, size - read); read += bytesRead; return { bytesRead }; },
@@ -26,6 +28,9 @@ test("actual server file reader bounds growing input and closes handles; empty i
     });
     assert.equal(await reader.loadApprovedPrivateFirstStageCatalog(), null); assert.equal(opened, 0);
     assert.equal(await reader.loadApprovedPrivateAccountingCatalog(), null); assert.equal(opened, 0);
+    for (const name of ["CivilLaw", "RealEstatePrinciples", "AppraiserRelatedLaw"]) {
+      assert.equal(await reader[`loadApprovedPrivate${name}Catalog`](), null); assert.equal(opened, 0);
+    }
     const outside = path.resolve(process.cwd(), "..", "synthetic-private-reader.json");
     if (size > content.ECONOMICS_CONTENT_MAX_BYTES) await assert.rejects(reader.readPrivateEconomicsContent(outside), /private_content_unavailable/u);
     else assert.equal((await reader.readPrivateEconomicsContent(outside)).length, size);
