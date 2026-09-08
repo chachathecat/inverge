@@ -13,7 +13,7 @@ import { verifyPrivateSubjectNavigation } from "./fixtures/first-stage-private-n
 import { harness as kernelHarness, SUBMIT, submission } from "./fixtures/first-stage-private-session-harness.mjs";
 import { economicsCatalog } from "./fixtures/first-stage-economics-content-harness.mjs";
 import { loadEconomicsContent } from "../lib/review-os/first-stage/runtime/economics-content.ts";
-import { syntheticRuntimeCandidateInput } from "./fixtures/economics-runtime-candidate-harness.mjs";
+import { economicsReleaseInput } from "./fixtures/first-stage-economics-applicability-harness.mjs";
 import { accountingCatalog } from "./fixtures/first-stage-accounting-content-harness.mjs";
 import { remainingCatalogs, SUBJECT_CASES } from "./fixtures/first-stage-remaining-content-harness.mjs";
 import { ORACLE_IMAGE, ORACLE_PLATFORM } from "../scripts/automation/wcv-c3-pre-p-postgresql-security-state-oracle.mjs";
@@ -56,7 +56,7 @@ test("all five browser routes consume their server blocker on POST, reload and r
     }
   });
 
-const convertedInput = syntheticRuntimeCandidateInput();
+const convertedInput = (await economicsReleaseInput()).input;
 const convertedCatalog = await loadEconomicsContent(convertedInput);
 assert.ok(convertedCatalog);
 const postgresCases = [

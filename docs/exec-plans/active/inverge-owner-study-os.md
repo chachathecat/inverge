@@ -1,5 +1,69 @@
 # Inverge Owner Study OS
 
+## Current economics r3 final-use consumer — #883 / code child #898 / 2026-09-07
+
+- #897 code preparation is integrated: reviewed head
+  `7aca00daa7750253276f846eecff6764d243c04a`, squash/main
+  `9d6162438a588793749198116ee6322eb2dbc2c0`, identical reviewed/resulting tree
+  `9a2056375ae09acdffb604de29caf7f4e4f60148`. Required checks 9/9 plus C3R-L,
+  independent actionable 0/0/0, threads zero and all five main workflows passed.
+  Native closeout: https://github.com/chachathecat/inverge/pull/897#issuecomment-5572106158.
+  Optional external staging skipped for missing prerequisites; main Vercel
+  canceled by Ignored Build Step. No actual runtime acceptance is inferred.
+- Same single writer/worktree, branch `codex/issue-883-economics-r3-final-release`
+  from that fetched main. #896 closed; parent #883 stays open. #898 owns only
+  the next code dependency, not a new plan or actual-content completion.
+- Preserve private r3/candidate/mapping/AI evidence without repackaging. Actual
+  reviewer is explicitly unassigned, six checks pending, approved/install counts
+  zero. No real account, endpoint, environment, flag or content path is activated.
+- Existing 2026 Foundation consumers are fixed to their own profile. The already
+  authorized 2025/36th r3 needs exact source/session/booklet/numbering consumption,
+  unchanged 200-position original key completeness, per-item final decisions,
+  independent modified keys and economics formula/graph/unit applicability.
+  Reuse existing Foundation snapshot/resolver/body-rights/attribution contracts.
+  Do not replace final release with six checks or client/packet verified labels.
+- Reproduced the 2025 key-position rejection and the synthetic r3 HTTP path
+  accepting a pending final decision (200 where 503 was required). Connected the
+  existing Foundation consumer through neutral candidate binding, the actual
+  economics loader/adapter/HTTP and durable catalog identity. Original 200-row
+  completeness and separate modified keys are preserved. Missing final evidence
+  now denies before request body or repository access in both data classes.
+- Added bounded exact formula/unit/corner comparison and reviewed graph-absence
+  consumption; unsupported models/graphs deny, not an assertion that all real
+  r3 models are representable or reviewed. The candidate's fifty content fields
+  remain byte-identical; only separately installed references are bound.
+- Current local focused candidate/final-release run: 16 PASS, zero fail/skip.
+  Includes coherent forged/missing source/key/subject/release proofs, sparse
+  arrays, legacy-route disguise, expiry/reconnect, durable response loss,
+  concurrency, D+1/completion and no early feedback. Final-source affected run:
+  167 PASS, zero fail/skip, including the existing five subjects, kernel, APP-1
+  and QF HTTP regressions. Full isolated PostgreSQL/browser run: 8 PASS, zero
+  fail/skip, including the r3 final-release loader and shared subject navigation.
+  Synthetic auth/catalog/clock only; actual service/SDK/repository/PostgreSQL and
+  browser paths ran, external requests/browser errors zero, synthetic rows/users
+  zero after cleanup. Local r3 screenshot: inverge-first-stage-private-browser-
+  economics_principles-10820.png (synthetic only, not actual login/use).
+- Typecheck, changed-file ESLint, build, JSON and diff checks PASS. Build retains
+  the unrelated next.config NFT trace warning. Actual approval/installation
+  arrays are nine and all empty. No source SQL/auth/API/env/dependency change.
+  Exact-head native CI and independent review remain pending until the ordinary
+  candidate push; prior #897 native results above are historical, not this head.
+  Actual approval/install counts remain zero, reviewer unassigned. No actual
+  endpoint/account/environment was started. Stop/disable the local app or revert
+  the source consumer for rollback; preserve any future actual records.
+- Candidate changed-path manifest (21): existing Owner decision, this checkpoint,
+  issue-883-owner-local-economics.md; runtime approved-catalog.ts,
+  economics-candidate.ts, economics-candidate-release.ts,
+  foundation-applicability.ts, foundation-economics-facts.ts,
+  foundation-economics-release.ts, foundation-official-profile.ts,
+  foundation-real-estate-facts.ts, foundation-release-key.ts,
+  foundation-release.ts, private-reviewed-content.ts; run-node-tests.mjs;
+  economics-runtime-candidate.test.mjs, first-stage-economics-final-release.test.mjs,
+  first-stage-private-postgres.test.mjs; fixtures economics-runtime-candidate-harness.mjs,
+  first-stage-economics-applicability-harness.mjs, first-stage-final-release-harness.mjs.
+
+## Historical economics candidate preparation
+
 ## Current economics first PC-local-use preparation — #883 / code child #896 / 2026-09-07
 
 - #891, #893 and #895 are integrated and preserved. #895 reviewed head

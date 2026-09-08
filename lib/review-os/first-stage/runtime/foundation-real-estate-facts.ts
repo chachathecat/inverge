@@ -68,15 +68,25 @@ function quantity(value: unknown): Quantity {
   if (printed(number, { mode: "none", decimal_places: null }) !== row.decimal) fail();
   return { ...number, unit: unit(row.unit) };
 }
-function calculate(expression: unknown, inputs: Map<string, Quantity>, used: Set<string>, counter = { count: 0 }, depth = 0): Quantity {
+function calculate(expression: unknown, inputs: Map<string, Quantity>, used: Set<string>, counter = { count: 0 }, depth = 0, allowBounds = false): Quantity {
   if (++counter.count > 80 || depth > 12) fail();
   if (typeof expression === "string") {
     const input = inputs.get(requiredIdentifier(expression)); if (!input) fail(); used.add(expression); return input;
   }
   const row = exactObject(expression, ["operator", "operands"]);
-  if (!["add", "subtract", "multiply", "divide"].includes(String(row.operator))) fail();
-  const operands = rows(row.operands, 2, 2).map(value => calculate(value, inputs, used, counter, depth + 1));
+  if (!["add", "subtract", "multiply", "divide", ...(allowBounds ? ["minimum", "maximum", "select_greater"] : [])].includes(String(row.operator))) fail();
+  const count = row.operator === "select_greater" ? 4 : 2;
+  const operands = rows(row.operands, count, count).map(value => calculate(value, inputs, used, counter, depth + 1, allowBounds));
   const [a, b] = operands;
+  if (["minimum", "maximum", "select_greater"].includes(String(row.operator))) {
+    same(unitText(a.unit), unitText(b.unit));
+    const greater = a.n * b.d > b.n * a.d;
+    if (row.operator === "select_greater") {
+      same(unitText(operands[2].unit), unitText(operands[3].unit));
+      return greater ? operands[2] : operands[3];
+    }
+    return (row.operator === "maximum" ? greater : !greater) ? a : b;
+  }
   let number: Rational, dimensions = { ...a.unit };
   if (row.operator === "add" || row.operator === "subtract") {
     same(unitText(a.unit), unitText(b.unit));
@@ -88,6 +98,36 @@ function calculate(expression: unknown, inputs: Map<string, Quantity>, used: Set
     dimensions = unit(unitText(dimensions));
   }
   return { ...number, unit: dimensions };
+}
+
+/** Reuse the existing bounded exact arithmetic. Default behavior remains the
+ * four-operator real-estate contract. Only the economics caller opts into closed
+ * boundary/corner comparisons; there is no eval, external call or client input. */
+export function evaluateReviewedArithmetic(value: unknown, allowBounds = false) {
+  const calculation = exactObject(value, ["canonical_formula_expression", "ordered_input_values_and_units", "declared_rounding_rule"]);
+  if (typeof calculation.canonical_formula_expression !== "string" || calculation.canonical_formula_expression.length > 4000) fail();
+  const expression: unknown = JSON.parse(calculation.canonical_formula_expression);
+  same(calculation.canonical_formula_expression, JSON.stringify(expression));
+  const inputRows = rows(calculation.ordered_input_values_and_units, 1, 32).map(value => exactObject(value, ["symbol", "decimal", "unit"]));
+  const symbols = inputRows.map(row => requiredIdentifier(row.symbol)); same(symbols, [...new Set(symbols)].sort());
+  const inputs = new Map(inputRows.map(row => [String(row.symbol), quantity({ decimal: row.decimal, unit: row.unit })]));
+  const used = new Set<string>(), result = calculate(expression, inputs, used, { count: 0 }, 0, allowBounds);
+  if (used.size !== inputs.size) fail();
+  return { formula: calculation.canonical_formula_expression, inputRows, rounding: calculation.declared_rounding_rule,
+    result: { decimal: printed(result, calculation.declared_rounding_rule), unit: unitText(result.unit) } };
+}
+export function compareReviewedQuantities(left: unknown, right: unknown, comparison: unknown) {
+  const a = quantity(left), b = quantity(right); same(unitText(a.unit), unitText(b.unit));
+  const delta = a.n * b.d - b.n * a.d;
+  switch (comparison) {
+    case "equal": return delta === BigInt(0);
+    case "not_equal": return delta !== BigInt(0);
+    case "less": return delta < BigInt(0);
+    case "less_or_equal": return delta <= BigInt(0);
+    case "greater": return delta > BigInt(0);
+    case "greater_or_equal": return delta >= BigInt(0);
+    default: return fail();
+  }
 }
 function anchors(value: unknown, allowed: readonly string[]) {
   const result = rows(value, 1, 100).map(value => requiredIdentifier(value));
@@ -146,15 +186,9 @@ export function realEstateFacts(evidence: FoundationEvidence, projectionReferenc
   }
   if (projection.calculation_or_null !== null) {
     const calculation = exactObject(projection.calculation_or_null, ["canonical_formula_expression", "ordered_input_values_and_units", "declared_rounding_rule", "ordered_choice_values"]);
-    if (typeof calculation.canonical_formula_expression !== "string" || calculation.canonical_formula_expression.length > 4000) fail();
-    const expression: unknown = JSON.parse(calculation.canonical_formula_expression);
-    same(calculation.canonical_formula_expression, JSON.stringify(expression));
-    const inputRows = rows(calculation.ordered_input_values_and_units, 1, 32).map(value => exactObject(value, ["symbol", "decimal", "unit"]));
-    const symbols = inputRows.map(row => requiredIdentifier(row.symbol)); same(symbols, [...new Set(symbols)].sort());
-    const inputs = new Map(inputRows.map(row => [String(row.symbol), quantity({ decimal: row.decimal, unit: row.unit })]));
-    const used = new Set<string>(), result = calculate(expression, inputs, used);
-    if (used.size !== inputs.size) fail();
-    const expected = { decimal: printed(result, calculation.declared_rounding_rule), unit: unitText(result.unit) };
+    const evaluated = evaluateReviewedArithmetic({ canonical_formula_expression: calculation.canonical_formula_expression,
+      ordered_input_values_and_units: calculation.ordered_input_values_and_units, declared_rounding_rule: calculation.declared_rounding_rule });
+    const inputRows = evaluated.inputRows, expected = evaluated.result;
     const choices = choiceRows(calculation.ordered_choice_values, ["position_1_to_5", "choice_text_sha256", "decimal", "unit"], question);
     const correct = choices.flatMap((row, index) => {
       quantity({ decimal: row.decimal, unit: row.unit }); return row.decimal === expected.decimal && row.unit === expected.unit ? [index + 1] : [];

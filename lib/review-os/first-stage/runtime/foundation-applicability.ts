@@ -4,6 +4,8 @@ import { privateSessionDigest as digest } from "./session-service";
 import { deriveRelatedLawAuthorities, validateLawProof } from "./foundation-law-applicability";
 import { validateFinalReleases } from "./foundation-release";
 import { realEstateBodyComponents, validateRealEstatePreRelease } from "./foundation-real-estate-release";
+import { economicsBodyComponents, validateEconomicsPreRelease } from "./foundation-economics-release";
+import { profileForQuestion } from "./foundation-official-profile";
 
 type Row = Record<string, unknown>;
 /** A server-code installation of EXISTING Foundation objects, not a receipt,
@@ -63,6 +65,8 @@ function validJson(value: unknown, depth = 0): void {
  * prove integrity, not provenance: the production caller supplies this snapshot
  * from server-only reviewed code, never from the packet, HTTP or an env flag. */
 export function foundationEvidence(installation: PrivateApplicabilityInstallation) {
+  validJson(installation);
+  if (JSON.stringify(installation).length > 4 * 1024 * 1024) applicabilityFailure();
   if (!Array.isArray(installation.receipts) || installation.receipts.length > 5000 ||
     !Array.isArray(installation.reviewers) || !installation.reviewers.length) applicabilityFailure();
   const reviewers = new Map<string, readonly string[]>();
@@ -127,7 +131,7 @@ export const BODY_DECISION_FIELDS = ("receipt_id receipt_version receipt_sha256 
   "authorized_plane authorized_use authorized_audience effective_from expires_at_or_null currentness exact_attribution reviewer reviewed_at decision").split(" ");
 export const BODY_VERSION_FIELDS = [...BODY_DECISION_FIELDS, "exam_date", "applicable_version_status", "component_evidence_references"];
 export function bodyReference(value: unknown, body: unknown, question: Row, receipt: Row, evidence: FoundationEvidence, examDate: string) {
-  const nonlegal = question.subjectId === "real_estate_principles";
+  const nonlegal = question.subjectId === "real_estate_principles" || question.subjectId === "economics_principles";
   const row = exactObject(value, BODY_REFERENCE_FIELDS);
   requiredIdentifier(row.object_id); requiredIdentifier(row.object_version); requiredHash(row.object_sha256);
   if (row.authorized_plane !== "Personal Raw Vault" || typeof body !== "string" ||
@@ -155,7 +159,7 @@ export function bodyReference(value: unknown, body: unknown, question: Row, rece
   }
   if (version.exam_date !== examDate || version.applicable_version_status !== receipt.applicable_version_status) applicabilityFailure();
   if (nonlegal) {
-    const source = realEstateBodyComponents(evidence, receipt);
+    const source = question.subjectId === "economics_principles" ? economicsBodyComponents(evidence, receipt) : realEstateBodyComponents(evidence, receipt);
     requireSame(version.component_evidence_references, source.projectionRefs);
     evidence.reviewer(version, "named_owner_authorized_human_subject_reviewer", "verified_not_applicable_to_law_or_kifrs", source.projection.reviewed_at);
   } else requireSame(version.component_evidence_references, receipt.component_evidence_references);
@@ -171,9 +175,12 @@ export function validateRelatedLawApplicability(installation: PrivateApplicabili
 export function validateRealEstateApplicability(installation: PrivateApplicabilityInstallation, questions: readonly unknown[], keys: readonly unknown[] = []) {
   return validateLawApplicability(installation, questions, keys, "real_estate_principles");
 }
+export function validateEconomicsApplicability(installation: PrivateApplicabilityInstallation, questions: readonly unknown[], keys: readonly unknown[] = []) {
+  return validateLawApplicability(installation, questions, keys, "economics_principles");
+}
 function validateLawApplicability(installation: PrivateApplicabilityInstallation, questions: readonly unknown[], keys: readonly unknown[],
-  subjectId: "civil_law" | "appraiser_related_law" | "real_estate_principles") {
-  const nonlegal = subjectId === "real_estate_principles";
+  subjectId: "civil_law" | "appraiser_related_law" | "real_estate_principles" | "economics_principles") {
+  const nonlegal = subjectId === "real_estate_principles" || subjectId === "economics_principles";
   const versionStatus = nonlegal ? "not_applicable_verified" : "law_exam_date_verified";
   validJson(installation);
   if (JSON.stringify(installation).length > 4 * 1024 * 1024) applicabilityFailure();
@@ -189,7 +196,8 @@ function validateLawApplicability(installation: PrivateApplicabilityInstallation
     if (!item) applicabilityFailure();
     exactObject(item, ["questionSha256", "examDate", "choices", "easyExplanationReference", "receiptReference", "releaseReference"]);
     requiredHash(item.questionSha256);
-    if (requiredDay(item.examDate) !== "2026-04-04" || reference.examYear !== 2026 || reference.subjectId !== subjectId ||
+    const profile = profileForQuestion(reference);
+    if (requiredDay(item.examDate) !== profile.examDate || reference.subjectId !== subjectId ||
       reference.currentnessState !== "verified_exam_date" || !Array.isArray(reference.sourceVersionManifestIds)) applicabilityFailure();
     const ref = immutableReference(item.receiptReference);
     requireSame(row.versionEvidence, { schemaVersion: "first_stage.immutable_evidence_reference.v1", evidenceId: ref.evidence_id,
@@ -224,7 +232,8 @@ function validateLawApplicability(installation: PrivateApplicabilityInstallation
     requireSame(receipt.source_anchor_ids_digest, digest([...new Set(anchors)].sort()));
     requireSame(receipt.choice_set_digest, digest({ item_id: reference.questionId, item_version: reference.questionVersion, choices: item.choices }));
     if (nonlegal) {
-      validateRealEstatePreRelease(evidence, receipt, row, item.choices);
+      if (subjectId === "economics_principles") validateEconomicsPreRelease(evidence, receipt, row, item.choices);
+      else validateRealEstatePreRelease(evidence, receipt, row, item.choices);
       continue;
     }
     let authorities = ["civil_code"];

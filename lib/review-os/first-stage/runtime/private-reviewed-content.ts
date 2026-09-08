@@ -9,9 +9,10 @@ import {
   validateAttemptEvaluation, validatePresentation, type SubjectAdapterV1,
 } from "../subject-adapter/subject-adapter";
 import { privateSessionDigest as digest, type PrivateFirstStageCatalog } from "./session-service";
-import { validateCivilApplicability, validateRelatedLawApplicability, validateRealEstateApplicability, type PrivateApplicabilityInstallation } from "./foundation-applicability";
+import { validateCivilApplicability, validateRelatedLawApplicability, validateRealEstateApplicability, validateEconomicsApplicability, type PrivateApplicabilityInstallation } from "./foundation-applicability";
 import type { FinalReleaseProjection } from "./foundation-release";
-import { ECONOMICS_CANDIDATE_SCHEMA, projectApprovedEconomicsCandidate } from "./economics-candidate";
+import { ECONOMICS_CANDIDATE_SCHEMA } from "./economics-candidate";
+import { bindEconomicsCandidateRelease } from "./economics-candidate-release";
 
 export const PRIVATE_CONTENT_MAX_BYTES = 2 * 1024 * 1024;
 export const PRIVATE_CONTENT_REVIEW_CHECKS = Object.freeze([
@@ -92,8 +93,8 @@ export async function loadPrivateReviewedContent(subjectId: keyof typeof POLICIE
     const approvals = options.approvals.map(approval);
     if (!approvals.length || approvals.some(item => item.dataClass !== expected) ||
       new Set(approvals.map(item => item.packetSha256)).size !== approvals.length) return null;
-    const requiresFoundation = subjectId === "civil_law" || subjectId === "appraiser_related_law" || subjectId === "real_estate_principles";
-    const applicability = requiresFoundation ? structuredClone(options.applicability ?? []) : [];
+    let requiresFoundation = subjectId === "civil_law" || subjectId === "appraiser_related_law" || subjectId === "real_estate_principles";
+    const applicability = structuredClone(options.applicability ?? []);
     if (requiresFoundation && (!applicability.length ||
       applicability.some(item => item.dataClass !== expected) ||
       new Set(applicability.map(item => item.packetSha256)).size !== applicability.length)) return null;
@@ -106,12 +107,12 @@ export async function loadPrivateReviewedContent(subjectId: keyof typeof POLICIE
     let candidateProjections: ReadonlyMap<string, FinalReleaseProjection> | undefined;
     if (decoded?.schemaVersion === ECONOMICS_CANDIDATE_SCHEMA) {
       if (subjectId !== "economics_principles" || decoded.version !== approved.packetVersion) return null;
-      // Preparation only: the legacy six-check receipt is NOT the 2025 r3
-      // full official-key/per-item final-release consumer. Until that consumer
-      // exists, even a well-formed human six-check approval must stay blocked.
-      // The server entry never supplies synthetic_test_only; HTTP cannot set it.
-      if (expected !== "synthetic_test_only") return null;
-      const projected = projectApprovedEconomicsCandidate(decoded, expected);
+      requiresFoundation = true;
+      if (!applicability.length || applicability.some(item => item.dataClass !== expected) ||
+        new Set(applicability.map(item => item.packetSha256)).size !== applicability.length) return null;
+      const installed = applicability.find(item => item.packetSha256 === packetSha256);
+      if (!installed) return null;
+      const projected = bindEconomicsCandidateRelease(decoded, expected, installed);
       decoded = projected.packet; candidateProjections = projected.projections;
     }
     const packet = exactObject(decoded,
@@ -121,6 +122,10 @@ export async function loadPrivateReviewedContent(subjectId: keyof typeof POLICIE
       packet.authority !== "LEARNING_ONLY" || !Array.isArray(packet.questions) ||
       packet.questions.length < 2 || packet.questions.length > 200 || !Array.isArray(packet.keys) ||
       packet.keys.length !== packet.questions.length) return null;
+    // The historical r3 profile cannot be disguised as legacy v1 to choose a
+    // six-check-only route. Other already-supported legacy profiles are unchanged.
+    if (subjectId === "economics_principles" && !candidateProjections && packet.questions.some(value =>
+      (value as { reference?: { examYear?: unknown } })?.reference?.examYear === 2025)) return null;
     let applicabilityDigest: string | null = null;
     let applicabilityExpiresAt = Infinity;
     let attributions: ReadonlyMap<string, FinalReleaseProjection> | undefined = candidateProjections;
@@ -128,10 +133,15 @@ export async function loadPrivateReviewedContent(subjectId: keyof typeof POLICIE
       const installed = applicability.find(item => item.packetSha256 === packetSha256);
       if (!installed) return null;
       const validate = subjectId === "civil_law" ? validateCivilApplicability
-        : subjectId === "appraiser_related_law" ? validateRelatedLawApplicability : validateRealEstateApplicability;
+        : subjectId === "appraiser_related_law" ? validateRelatedLawApplicability
+        : subjectId === "economics_principles" ? validateEconomicsApplicability : validateRealEstateApplicability;
       const validated = validate(installed, packet.questions, packet.keys);
       applicabilityDigest = validated.digest; applicabilityExpiresAt = validated.expiresAt;
-      attributions = validated.projections;
+      attributions = candidateProjections ? new Map([...validated.projections].map(([id, value]) => {
+        const notices = candidateProjections.get(id); if (!notices) fail();
+        return [id, { question: Object.freeze([...value.question, ...notices.question]),
+          feedback: Object.freeze([...value.feedback, ...notices.feedback]) }];
+      })) : validated.projections;
     }
 
     const questions = packet.questions.map(value => {

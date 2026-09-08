@@ -11,6 +11,7 @@ import { loadCivilLawContent, loadRealEstatePrinciplesContent, loadAppraiserRela
 // Intentionally empty. AI review, Q-Net review packets and test receipts are NOT approvals.
 // Actual evidence must be installed by reviewed code, separately from the private body.
 const APPROVED_ECONOMICS_CONTENT: readonly EconomicsContentApproval[] = Object.freeze([]);
+const ECONOMICS_APPLICABILITY: readonly PrivateApplicabilityInstallation[] = Object.freeze([]);
 const APPROVED_ACCOUNTING_CONTENT: readonly AccountingContentApproval[] = Object.freeze([]);
 const APPROVED_CIVIL_LAW_CONTENT: readonly PrivateContentApproval[] = Object.freeze([]);
 // Separately reviewed Foundation objects. No runtime/test flag or content file
@@ -45,7 +46,7 @@ export async function readPrivateEconomicsContent(file: string): Promise<Uint8Ar
 }
 
 export async function loadApprovedPrivateFirstStageCatalog(): Promise<PrivateFirstStageCatalog | null> {
-  return loadEconomicsContent({ approvals: APPROVED_ECONOMICS_CONTENT,
+  return loadEconomicsContent({ approvals: APPROVED_ECONOMICS_CONTENT, applicability: ECONOMICS_APPLICABILITY,
     readBytes: () => readPrivateEconomicsContent(process.env.INVERGE_OWNER_ECONOMICS_CONTENT_PATH ?? "") });
 }
 

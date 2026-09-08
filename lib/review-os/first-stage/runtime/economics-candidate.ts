@@ -15,9 +15,8 @@ function dense(value: unknown, count?: number): unknown[] {
   return value;
 }
 
-/** Preparation projection after an exact file/version match. The loader currently
- * allows ONLY synthetic_test_only: real r3 requires the still-unimplemented 2025
- * full official-key/per-item final-release consumer, not just six checks.
+/** Preparation projection after an exact file/version match. The loader must
+ * additionally consume the installed full official-key/per-item final release.
  * The candidate contains no verified or human-review claims. This projection
  * changes no question content and issues no approval; v1 validates every row/key. */
 export function projectApprovedEconomicsCandidate(value: unknown, expected: "human_reviewed_private" | "synthetic_test_only") {
@@ -61,7 +60,7 @@ export function projectApprovedEconomicsCandidate(value: unknown, expected: "hum
     dense(row.choices, 5); dense(row.choiceExplanations, 5);
     const feedback = exactObject(row.feedback, ["incorrectCauseByChoice", "biggestGapCode", "nextActionCode"]);
     dense(feedback.incorrectCauseByChoice, 5);
-    const normalized = { ...ref, schemaVersion: "first_stage.question_reference.v1",
+    const normalized: Record<string, unknown> = { ...ref, schemaVersion: "first_stage.question_reference.v1",
       rightsState: "verified_owner_private", currentnessState: "verified_exam_date" };
     const before = digest(ref);
     if (referenceMapping.has(before)) fail();
@@ -82,13 +81,13 @@ export function projectApprovedEconomicsCandidate(value: unknown, expected: "hum
       ...(row.kind === "original" ? ["최종정답 출처: https://www.q-net.or.kr/cst003.do?artlSeq=5246129&boardId=Q004&gId=60&gSite=L&id=cst00302&menuType=cst00310"] : []),
       expected === "synthetic_test_only" ? "합성 검토 증빙 · 실제 사람 검토나 학습 재고 아님" : "AI 해설 초안에 대한 별도 사람 검토 · 공식 해설 아님",
     ]) });
-    return { ...row, reference: normalized };
+    return { ...row, reference: normalized } as Record<string, unknown> & { reference: Record<string, unknown> };
   });
   const keys = dense(candidate.keys, questions.length).map(value => {
     const row = exactObject(value, ["questionReferenceSha256", "choiceSetSha256", "correctChoice", "authority", "evidence"]);
     const mapped = referenceMapping.get(sha(row.questionReferenceSha256));
     if (!mapped) fail();
-    return { ...row, questionReferenceSha256: mapped };
+    return { ...row, questionReferenceSha256: mapped } as Record<string, unknown> & { questionReferenceSha256: string };
   });
   return { packet: { schemaVersion: "first_stage.economics_private_content.v1", version: candidate.version,
     dataClass: expected, authority: candidate.authority, questions, keys }, projections };

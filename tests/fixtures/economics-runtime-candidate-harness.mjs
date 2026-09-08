@@ -18,7 +18,7 @@ export function syntheticReviewInputs() {
   const packet = { schemaVersion: "issue883.economics.review_candidate.v1", packetVersion: "issue883-economics-review-r3",
     humanReview: { reviewer: null, decision: null, state: "pending" }, runtimeEligible: false,
     exam: { year: 2025, round: 36, stage: 1, session: 1, subject: "economics_principles", pdfBooklet: "A", keyBookletExplicit: null },
-    sources: [{ postId: "5231525", sha256: hash("synthetic-question-source") }, { postId: "5246129", sha256: hash("synthetic-key-source") }],
+    sources: [{ postId: "5231525", sha256: hash(JSON.stringify("synthetic-q1-asset-bytes")) }, { postId: "5246129", sha256: hash(JSON.stringify("synthetic-key-asset-bytes")) }],
     sourcePolicy: { rawPublicGit: false, providerCalls: false }, originals, retryCandidates };
   const reviewSource = JSON.stringify(packet);
   return { reviewSource, calculationSource: JSON.stringify({ reviewPacketSha256: hash(reviewSource),
