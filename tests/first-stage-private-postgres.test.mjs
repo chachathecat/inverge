@@ -16,7 +16,7 @@ import { loadEconomicsContent } from "../lib/review-os/first-stage/runtime/econo
 import { economicsReleaseInput } from "./fixtures/first-stage-economics-applicability-harness.mjs";
 import { accountingCatalog } from "./fixtures/first-stage-accounting-content-harness.mjs";
 import { remainingCatalogs, SUBJECT_CASES } from "./fixtures/first-stage-remaining-content-harness.mjs";
-import { trialHarness, startTrial } from "./fixtures/first-stage-owner-local-trial-harness.mjs";
+import { trialHarness, startTrial, syntheticTrialInput } from "./fixtures/first-stage-owner-local-trial-harness.mjs";
 import { ORACLE_IMAGE, ORACLE_PLATFORM } from "../scripts/automation/wcv-c3-pre-p-postgresql-security-state-oracle.mjs";
 
 const OWNER = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
@@ -247,7 +247,8 @@ test(`local PostgreSQL ${label} enforces actual route/browser durable retry/CAS 
     if(contentInput) {
       // Same real SDK/repository and disposable PostgreSQL, but the actual trial
       // loader -> adapter -> HTTP scope; no reviewed catalog substitution.
-      const trial=trialHarness({store:repository(sdk()),session:{userId:OWNER}});
+      const fixture=syntheticTrialInput({numericTrialModels:true});
+      const trial=trialHarness({fixture,store:repository(sdk()),session:{userId:OWNER}});
       const preserved=await sql(`select jsonb_agg(to_jsonb(r) order by session_id)::text from ${TABLE} r`);
       const deniedLegacy=await trial.send({action:"create",requestId:"legacy-trial-probe",questionId:"qnet-2025-36-s1-A-46"});
       assert.equal(deniedLegacy.status,503);assert.equal(deniedLegacy.body.view,undefined);
@@ -273,7 +274,7 @@ test(`local PostgreSQL ${label} enforces actual route/browser durable retry/CAS 
       assert.equal(trialSaved.state.attempts[0].evaluation.evidenceEnvelope.reviewedFeedback.reviewerIdentity,null);
       assert.equal(trialSaved.state.reviewTasks.length,1);
       assert.equal(JSON.stringify(trialSaved).includes("SYNTHETIC_CANDIDATE_EXPLANATION"),false);
-      const reconnect=trialHarness({store:repository(sdk()),session:{userId:OWNER}});
+      const reconnect=trialHarness({fixture,store:repository(sdk()),session:{userId:OWNER}});
       const opened=await reconnect.send(undefined,`?sessionId=${ids.sessionId}`);
       assert.deepEqual(opened.body,retries[0].body);
       await assert.rejects(reopened.service.view(OWNER,ids.sessionId),{code:"adapter_mismatch"});
@@ -287,6 +288,47 @@ test(`local PostgreSQL ${label} enforces actual route/browser durable retry/CAS 
       assert.equal(after.body.view.humanReviewComplete,false);assert.equal(after.body.view.measurementEvidence,false);
       assert.equal(after.body.view.masteryClaim,false);assert.equal(after.body.view.transferEvidence,false);
       assert.equal(await sql(`select count(*) from ${TABLE}`),"3");
+      for(const number of [49,51,53]) {
+        const questionId=`qnet-2025-36-s1-A-${number}`,create={action:"create",requestId:`pg-bundle-${number}`,questionId};
+        const pair=trialHarness({fixture,store:repository(sdk()),session:{userId:OWNER}});
+        const [a,b]=await Promise.all([pair.send(create),pair.send(create)]);
+        assert.equal(a.status,200);assert.deepEqual(a.body,b.body);
+        const sessionId=a.body.view.sessionId;
+        const begin=await pair.send({sessionId,command:{action:"begin",requestId:`pg-begin-${number}`,expectedRevision:1,questionId}});
+        assert.equal(begin.status,200);assert.equal(begin.body.view.explanation,null);pair.setClock(SUBMIT);
+        const command=submission(begin.body.view.attempt.attemptId,2);
+        loseNextWriteResponse=true;
+        const lost=await pair.send({sessionId,command});assert.equal(lost.status,503);assert.equal(lost.body.view,undefined);
+        const [saved,replay]=await Promise.all([pair.send({sessionId,command}),pair.send({sessionId,command})]);
+        assert.equal(saved.status,200);assert.deepEqual(saved.body,replay.body);
+        const next=trialHarness({fixture,store:repository(sdk()),session:{userId:OWNER}});
+        assert.deepEqual((await next.send(undefined,`?sessionId=${sessionId}`)).body,saved.body);
+        const task=saved.body.view.reviewTasks[0];next.setClock(task.dueAt);
+        const retry=await next.send({sessionId,command:{action:"retry",requestId:`pg-retry-${number}`,expectedRevision:3,reviewTaskId:task.reviewTaskId}});
+        assert.equal(retry.status,200);assert.equal(retry.body.view.question.questionReference.questionId,`issue883-r3-r${number}`);
+        next.setClock("2026-09-07T10:02:00.000Z");
+        const finished=await next.send({sessionId,command:{...submission(retry.body.view.attempt.attemptId,4),requestId:`pg-finish-${number}`,expectedRevision:4}});
+        assert.equal(finished.status,200);assert.equal(finished.body.view.reviewTasks[0].status,"completed");
+        assert.equal(finished.body.view.reviewTasks[0].dueAt,task.dueAt);
+        assert.deepEqual((await pair.send({sessionId,command})).body,finished.body);
+        await assert.rejects(reopened.service.view(OWNER,sessionId),{code:"adapter_mismatch"});
+      }
+      assert.equal(await sql(`select count(*) from ${TABLE}`),"6");
+      const trialBrowser=trialHarness({fixture,store:repository(sdk()),session:{userId:OWNER}});
+      const bridge=async request=>{
+        // Explicit synthetic transport canonicalization, NOT genuine auth proof:
+        // the test browser uses a random loopback port; the real handler still
+        // receives its exact permitted Host/Origin through the shared harness.
+        const result=await trialBrowser.send(request.method==="POST"?await request.json():undefined,new URL(request.url).search);
+        return Response.json(result.body,{status:result.status,headers:result.headers});
+      };
+      const trialBrowserResult=await verifyPrivateBrowser({route:{GET:bridge,POST:bridge},ownerLocalTrial:true,questionNumber:49,retryChoice:4,
+        clock:{set:trialBrowser.setClock,advance:ms=>trialBrowser.setClock(new Date(Date.parse(trialBrowser.getClock())+ms).toISOString())},
+        failNextWrite:()=>{loseNextWriteResponse=true;}});
+      assert.equal(trialBrowserResult.externalRequests,0);assert.equal(trialBrowserResult.browserErrors,0);
+      assert.equal(await sql(`select count(*) from ${TABLE}`),"7");
+      // Read/replay of the original trial survives all additions with no write.
+      assert.deepEqual((await trial.send(trialCommand)).body,after.body);
       const withTrial=await sql(`select jsonb_agg(to_jsonb(r) order by session_id)::text from ${TABLE} r`);
       await sql("set inverge.local_first_stage_personal_use='owner_approved_persistent_local';\n"+design,null);
       assert.equal(await sql(`select jsonb_agg(to_jsonb(r) order by session_id)::text from ${TABLE} r`),withTrial);

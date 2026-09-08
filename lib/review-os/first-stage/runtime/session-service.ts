@@ -1,5 +1,5 @@
 import crypto from "node:crypto";
-import { activeOwnerLocalR3TrialAdapter } from "./owner-local-trial-context";
+import { activeOwnerLocalR3TrialCatalog, acceptsOwnerLocalR3PreviousCatalog } from "./owner-local-trial-context";
 import { OWNER_LOCAL_R3_TRIAL_NOTICE } from "./owner-local-trial-boundary";
 
 import {
@@ -88,8 +88,7 @@ export function createPrivateFirstStageSessionService(
 ) {
   if (!/^[0-9a-f]{64}$/u.test(catalog.digest)) fail("adapter_mismatch");
   function isTrial() {
-    return catalog.initialReferences.length === 1 && activeOwnerLocalR3TrialAdapter(
-      catalog.registry.require(catalog.initialReferences[0].subjectId));
+    return activeOwnerLocalR3TrialCatalog(catalog);
   }
   function sessionSchema() {
     return isTrial() ? "first_stage.owner_local_trial_session.v1" as const : "first_stage.private_session.v1" as const;
@@ -99,7 +98,7 @@ export function createPrivateFirstStageSessionService(
     exactObject(value, ["schemaVersion", "sessionId", "ownerId", "catalogDigest", "state", "commands"]);
     if (value.schemaVersion !== sessionSchema() ||
       value.ownerId !== ownerId || value.sessionId !== sessionId ||
-      value.catalogDigest !== catalog.digest ||
+      (value.catalogDigest !== catalog.digest && !acceptsOwnerLocalR3PreviousCatalog(catalog, value)) ||
       value.state.examCycle.examCycleId !== sessionId ||
       !Array.isArray(value.commands) || value.commands.length < 1 ||
       value.commands.length > MAX_COMMANDS ||

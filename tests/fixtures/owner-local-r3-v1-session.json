@@ -1,0 +1,1191 @@
+{
+  "dataClass": "synthetic_test_only",
+  "generatedFrom": "46a0e3e84fe4a15791d101fc6bc897a65bd22a56",
+  "commands": [
+    {
+      "action": "create",
+      "requestId": "create-1",
+      "questionId": "qnet-2025-36-s1-A-46"
+    },
+    {
+      "sessionId": "first-session-4904e4360605ed2381fc8bda9e30e7ef4a2373bc",
+      "command": {
+        "action": "begin",
+        "requestId": "begin-1",
+        "expectedRevision": 1,
+        "questionId": "qnet-2025-36-s1-A-46"
+      }
+    },
+    {
+      "sessionId": "first-session-4904e4360605ed2381fc8bda9e30e7ef4a2373bc",
+      "command": {
+        "action": "submit",
+        "requestId": "submit-1",
+        "expectedRevision": 2,
+        "attemptId": "first-attempt-fb50d5cc613d5e07ffe7ec69b9406ee7a72dc027",
+        "submission": {
+          "selectedChoice": 2,
+          "confidence": "medium",
+          "answerChanged": false,
+          "previousChoice": null,
+          "eliminatedChoiceIds": [],
+          "workTrace": {
+            "schemaVersion": "first_stage.work_trace.v1",
+            "steps": [
+              {
+                "sequence": 1,
+                "kind": "select_answer",
+                "atElapsedMs": 1000,
+                "choiceId": 2
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "sessionId": "first-session-4904e4360605ed2381fc8bda9e30e7ef4a2373bc",
+      "command": {
+        "action": "retry",
+        "requestId": "retry-1",
+        "expectedRevision": 3,
+        "reviewTaskId": "first-review-3fa58c9a13729711610e642e0b5a0674f78f1c35"
+      }
+    },
+    {
+      "sessionId": "first-session-4904e4360605ed2381fc8bda9e30e7ef4a2373bc",
+      "command": {
+        "action": "submit",
+        "requestId": "retry-submit",
+        "expectedRevision": 4,
+        "attemptId": "first-attempt-e6c23fc5ab7bc01a22691f4202a790306f077659",
+        "submission": {
+          "selectedChoice": 4,
+          "confidence": "medium",
+          "answerChanged": false,
+          "previousChoice": null,
+          "eliminatedChoiceIds": [],
+          "workTrace": {
+            "schemaVersion": "first_stage.work_trace.v1",
+            "steps": [
+              {
+                "sequence": 1,
+                "kind": "select_answer",
+                "atElapsedMs": 1000,
+                "choiceId": 4
+              }
+            ]
+          }
+        }
+      }
+    }
+  ],
+  "states": [
+    {
+      "schemaVersion": "first_stage.owner_local_trial_session.v1",
+      "sessionId": "first-session-4904e4360605ed2381fc8bda9e30e7ef4a2373bc",
+      "ownerId": "synthetic-owner",
+      "catalogDigest": "fb9d80b365b6b671c770e1d1f9a05d96a8e60f1aaca9f13265a0d9d4a4a8ca20",
+      "state": {
+        "schemaVersion": "dabangil.first_stage.common_mcq_kernel.v1",
+        "revision": 1,
+        "examCycle": {
+          "schemaVersion": "first_stage.exam_cycle.v1",
+          "examCycleId": "first-session-4904e4360605ed2381fc8bda9e30e7ef4a2373bc",
+          "ownerId": "synthetic-owner",
+          "mode": "today",
+          "questionReferences": [
+            {
+              "questionId": "qnet-2025-36-s1-A-46",
+              "questionVersion": "issue883-economics-r3-runtime-v1",
+              "subjectId": "economics_principles",
+              "examYear": 2025,
+              "examRound": 36,
+              "sessionId": "qnet-2025-36-s1-A",
+              "questionNumber": 46,
+              "choiceCount": 5,
+              "sourceVersionManifestIds": [
+                "issue883-r3-source-46"
+              ],
+              "schemaVersion": "first_stage.owner_local_trial_question_reference.v1",
+              "rightsState": "observed_owner_local_only",
+              "currentnessState": "observed_historical_unreviewed"
+            }
+          ],
+          "definitionSha256": "1da8306fb7af7549b5728e8a894f33f6461a0570f895328953d472d1a4b62c93",
+          "state": "ready",
+          "startedAt": null,
+          "completedAt": null
+        },
+        "attempts": [],
+        "reviewTasks": [],
+        "independentRetries": [],
+        "conceptStates": []
+      },
+      "commands": [
+        {
+          "requestId": "create-1",
+          "requestDigest": "256bf604babb51463ec850cc8560c25524a25625aaaa72d2c86845da310a0f47",
+          "resultingRevision": 1
+        }
+      ]
+    },
+    {
+      "schemaVersion": "first_stage.owner_local_trial_session.v1",
+      "sessionId": "first-session-4904e4360605ed2381fc8bda9e30e7ef4a2373bc",
+      "ownerId": "synthetic-owner",
+      "catalogDigest": "fb9d80b365b6b671c770e1d1f9a05d96a8e60f1aaca9f13265a0d9d4a4a8ca20",
+      "state": {
+        "attempts": [
+          {
+            "schemaVersion": "first_stage.attempt.v1",
+            "attemptId": "first-attempt-fb50d5cc613d5e07ffe7ec69b9406ee7a72dc027",
+            "examCycleId": "first-session-4904e4360605ed2381fc8bda9e30e7ef4a2373bc",
+            "questionReference": {
+              "choiceCount": 5,
+              "currentnessState": "observed_historical_unreviewed",
+              "examRound": 36,
+              "examYear": 2025,
+              "questionId": "qnet-2025-36-s1-A-46",
+              "questionNumber": 46,
+              "questionVersion": "issue883-economics-r3-runtime-v1",
+              "rightsState": "observed_owner_local_only",
+              "schemaVersion": "first_stage.owner_local_trial_question_reference.v1",
+              "sessionId": "qnet-2025-36-s1-A",
+              "sourceVersionManifestIds": [
+                "issue883-r3-source-46"
+              ],
+              "subjectId": "economics_principles"
+            },
+            "kind": "initial",
+            "sourceAttemptId": null,
+            "reviewTaskId": null,
+            "exposureState": "first_exposure",
+            "assistanceLevel": "none",
+            "startedAt": "2026-09-06T10:00:00.000Z",
+            "state": "in_progress",
+            "submission": null,
+            "evaluation": null
+          }
+        ],
+        "conceptStates": [],
+        "examCycle": {
+          "completedAt": null,
+          "definitionSha256": "1da8306fb7af7549b5728e8a894f33f6461a0570f895328953d472d1a4b62c93",
+          "examCycleId": "first-session-4904e4360605ed2381fc8bda9e30e7ef4a2373bc",
+          "mode": "today",
+          "ownerId": "synthetic-owner",
+          "questionReferences": [
+            {
+              "choiceCount": 5,
+              "currentnessState": "observed_historical_unreviewed",
+              "examRound": 36,
+              "examYear": 2025,
+              "questionId": "qnet-2025-36-s1-A-46",
+              "questionNumber": 46,
+              "questionVersion": "issue883-economics-r3-runtime-v1",
+              "rightsState": "observed_owner_local_only",
+              "schemaVersion": "first_stage.owner_local_trial_question_reference.v1",
+              "sessionId": "qnet-2025-36-s1-A",
+              "sourceVersionManifestIds": [
+                "issue883-r3-source-46"
+              ],
+              "subjectId": "economics_principles"
+            }
+          ],
+          "schemaVersion": "first_stage.exam_cycle.v1",
+          "startedAt": "2026-09-06T10:00:00.000Z",
+          "state": "active"
+        },
+        "independentRetries": [],
+        "reviewTasks": [],
+        "revision": 2,
+        "schemaVersion": "dabangil.first_stage.common_mcq_kernel.v1"
+      },
+      "commands": [
+        {
+          "requestId": "create-1",
+          "requestDigest": "256bf604babb51463ec850cc8560c25524a25625aaaa72d2c86845da310a0f47",
+          "resultingRevision": 1
+        },
+        {
+          "requestId": "begin-1",
+          "requestDigest": "4ebb447489afaff75a9d629b1a05ecb68d8c45522410a0eabd6840c7f6cc235a",
+          "resultingRevision": 2
+        }
+      ]
+    },
+    {
+      "schemaVersion": "first_stage.owner_local_trial_session.v1",
+      "sessionId": "first-session-4904e4360605ed2381fc8bda9e30e7ef4a2373bc",
+      "ownerId": "synthetic-owner",
+      "catalogDigest": "fb9d80b365b6b671c770e1d1f9a05d96a8e60f1aaca9f13265a0d9d4a4a8ca20",
+      "state": {
+        "attempts": [
+          {
+            "assistanceLevel": "none",
+            "attemptId": "first-attempt-fb50d5cc613d5e07ffe7ec69b9406ee7a72dc027",
+            "evaluation": {
+              "schemaVersion": "first_stage.attempt_evaluation.v1",
+              "decision": "correct",
+              "errorCause": null,
+              "conceptBindings": [
+                {
+                  "schemaVersion": "first_stage.concept_binding.v1",
+                  "conceptId": "issue883-economics-concept-46",
+                  "conceptVersion": "issue883-economics-r3-runtime-v1",
+                  "subjectId": "economics_principles",
+                  "role": "primary"
+                }
+              ],
+              "biggestGapCode": "economics-concept-46",
+              "nextActionCode": "review-then-practice-retry",
+              "retryDisposition": "review_then_retry",
+              "reviewAfterMs": 86400000,
+              "evaluationPolicyVersion": "owner-local-r3-unreviewed-v1",
+              "evidenceEnvelope": {
+                "schemaVersion": "first_stage.attempt_evidence_envelope.v1",
+                "attemptId": "first-attempt-fb50d5cc613d5e07ffe7ec69b9406ee7a72dc027",
+                "submissionSha256": "b74635cb23e90958cdbad1f532754eea33c64c25647153cad7b10ce3493de9fc",
+                "questionId": "qnet-2025-36-s1-A-46",
+                "questionVersion": "issue883-economics-r3-runtime-v1",
+                "questionReferenceSha256": "a8606a1ed433e935198078ca069caf81e2f2c1c5631f590cf549289ce57fefe9",
+                "subjectId": "economics_principles",
+                "adapterId": "owner-local-economics-r3-experiment",
+                "adapterVersion": "1",
+                "officialKeyReference": {
+                  "schemaVersion": "first_stage.immutable_evidence_reference.v1",
+                  "evidenceId": "local-trial-original-key-observation-774fbe479f16017757a98bba18594476",
+                  "evidenceVersion": "issue883-economics-r3-runtime-v1",
+                  "evidenceSha256": "774fbe479f16017757a98bba18594476002e8e78b14d5a6a744c6c8982600d90"
+                },
+                "choiceSetReference": {
+                  "schemaVersion": "first_stage.immutable_evidence_reference.v1",
+                  "evidenceId": "local-trial-choices-0cf5f837b2f0fbc55d23d35ee7d6941c",
+                  "evidenceVersion": "issue883-economics-r3-runtime-v1",
+                  "evidenceSha256": "0cf5f837b2f0fbc55d23d35ee7d6941c28f14add5c4f30e86845a4b5479657b0"
+                },
+                "sourceReference": {
+                  "schemaVersion": "first_stage.immutable_evidence_reference.v1",
+                  "evidenceId": "issue883-r3-qnet-2025-36-s1-A-46-source",
+                  "evidenceVersion": "issue883-economics-r3-runtime-v1",
+                  "evidenceSha256": "454accd789b3d4d55e636e79963d4f65c0f3c06a26d83cf3fc6be3ec2fe4e47b"
+                },
+                "versionDecisionReference": {
+                  "schemaVersion": "first_stage.immutable_evidence_reference.v1",
+                  "evidenceId": "issue883-r3-qnet-2025-36-s1-A-46-version",
+                  "evidenceVersion": "issue883-economics-r3-runtime-v1",
+                  "evidenceSha256": "06ccc0d6a42d51ca0c363da1215709e95d01c16eafc4f43354eb900dcd8fe35a"
+                },
+                "rightsDecisionReference": {
+                  "schemaVersion": "first_stage.immutable_evidence_reference.v1",
+                  "evidenceId": "issue883-r3-qnet-2025-36-s1-A-46-rights-observation",
+                  "evidenceVersion": "issue883-economics-r3-runtime-v1",
+                  "evidenceSha256": "7e43f33927ebc360f5f1aadc9dc2e603ee1735be5324ec363389dc902e56b23d"
+                },
+                "reviewedFeedback": {
+                  "schemaVersion": "first_stage.owner_local_unreviewed_feedback.v1",
+                  "state": "human_unreviewed_owner_local",
+                  "receiptReference": null,
+                  "reviewerIdentity": null,
+                  "reviewerClass": null,
+                  "modelAlone": true
+                }
+              }
+            },
+            "examCycleId": "first-session-4904e4360605ed2381fc8bda9e30e7ef4a2373bc",
+            "exposureState": "first_exposure",
+            "kind": "initial",
+            "questionReference": {
+              "choiceCount": 5,
+              "currentnessState": "observed_historical_unreviewed",
+              "examRound": 36,
+              "examYear": 2025,
+              "questionId": "qnet-2025-36-s1-A-46",
+              "questionNumber": 46,
+              "questionVersion": "issue883-economics-r3-runtime-v1",
+              "rightsState": "observed_owner_local_only",
+              "schemaVersion": "first_stage.owner_local_trial_question_reference.v1",
+              "sessionId": "qnet-2025-36-s1-A",
+              "sourceVersionManifestIds": [
+                "issue883-r3-source-46"
+              ],
+              "subjectId": "economics_principles"
+            },
+            "reviewTaskId": "first-review-3fa58c9a13729711610e642e0b5a0674f78f1c35",
+            "schemaVersion": "first_stage.attempt.v1",
+            "sourceAttemptId": null,
+            "startedAt": "2026-09-06T10:00:00.000Z",
+            "state": "evaluated",
+            "submission": {
+              "schemaVersion": "first_stage.answer_submission.v1",
+              "selectedChoice": 2,
+              "confidence": "medium",
+              "elapsedTime": {
+                "milliseconds": 60000,
+                "bucket": "60000_119999"
+              },
+              "answerChanged": false,
+              "previousChoice": null,
+              "eliminatedChoiceIds": [],
+              "workTrace": {
+                "schemaVersion": "first_stage.work_trace.v1",
+                "steps": [
+                  {
+                    "sequence": 1,
+                    "kind": "select_answer",
+                    "atElapsedMs": 1000,
+                    "choiceId": 2
+                  }
+                ]
+              },
+              "submittedAt": "2026-09-06T10:01:00.000Z"
+            }
+          }
+        ],
+        "conceptStates": [
+          {
+            "schemaVersion": "first_stage.concept_state.v1",
+            "binding": {
+              "schemaVersion": "first_stage.concept_binding.v1",
+              "conceptId": "issue883-economics-concept-46",
+              "conceptVersion": "issue883-economics-r3-runtime-v1",
+              "subjectId": "economics_principles",
+              "role": "primary"
+            },
+            "state": "review_required",
+            "lastAttemptId": "first-attempt-fb50d5cc613d5e07ffe7ec69b9406ee7a72dc027",
+            "evidenceAttemptIds": [
+              "first-attempt-fb50d5cc613d5e07ffe7ec69b9406ee7a72dc027"
+            ],
+            "updatedAt": "2026-09-06T10:01:00.000Z",
+            "masteryClaim": false
+          }
+        ],
+        "examCycle": {
+          "completedAt": "2026-09-06T10:01:00.000Z",
+          "definitionSha256": "1da8306fb7af7549b5728e8a894f33f6461a0570f895328953d472d1a4b62c93",
+          "examCycleId": "first-session-4904e4360605ed2381fc8bda9e30e7ef4a2373bc",
+          "mode": "today",
+          "ownerId": "synthetic-owner",
+          "questionReferences": [
+            {
+              "choiceCount": 5,
+              "currentnessState": "observed_historical_unreviewed",
+              "examRound": 36,
+              "examYear": 2025,
+              "questionId": "qnet-2025-36-s1-A-46",
+              "questionNumber": 46,
+              "questionVersion": "issue883-economics-r3-runtime-v1",
+              "rightsState": "observed_owner_local_only",
+              "schemaVersion": "first_stage.owner_local_trial_question_reference.v1",
+              "sessionId": "qnet-2025-36-s1-A",
+              "sourceVersionManifestIds": [
+                "issue883-r3-source-46"
+              ],
+              "subjectId": "economics_principles"
+            }
+          ],
+          "schemaVersion": "first_stage.exam_cycle.v1",
+          "startedAt": "2026-09-06T10:00:00.000Z",
+          "state": "completed"
+        },
+        "independentRetries": [],
+        "reviewTasks": [
+          {
+            "schemaVersion": "first_stage.review_task.v1",
+            "reviewTaskId": "first-review-3fa58c9a13729711610e642e0b5a0674f78f1c35",
+            "examCycleId": "first-session-4904e4360605ed2381fc8bda9e30e7ef4a2373bc",
+            "sourceAttemptId": "first-attempt-fb50d5cc613d5e07ffe7ec69b9406ee7a72dc027",
+            "questionReference": {
+              "choiceCount": 5,
+              "currentnessState": "observed_historical_unreviewed",
+              "examRound": 36,
+              "examYear": 2025,
+              "questionId": "qnet-2025-36-s1-A-46",
+              "questionNumber": 46,
+              "questionVersion": "issue883-economics-r3-runtime-v1",
+              "rightsState": "observed_owner_local_only",
+              "schemaVersion": "first_stage.owner_local_trial_question_reference.v1",
+              "sessionId": "qnet-2025-36-s1-A",
+              "sourceVersionManifestIds": [
+                "issue883-r3-source-46"
+              ],
+              "subjectId": "economics_principles"
+            },
+            "conceptBindings": [
+              {
+                "schemaVersion": "first_stage.concept_binding.v1",
+                "conceptId": "issue883-economics-concept-46",
+                "conceptVersion": "issue883-economics-r3-runtime-v1",
+                "subjectId": "economics_principles",
+                "role": "primary"
+              }
+            ],
+            "errorCause": null,
+            "disposition": "review_then_retry",
+            "priority": "normal",
+            "dueAt": "2026-09-07T10:01:00.000Z",
+            "status": "pending",
+            "completedAt": null
+          }
+        ],
+        "revision": 3,
+        "schemaVersion": "dabangil.first_stage.common_mcq_kernel.v1"
+      },
+      "commands": [
+        {
+          "requestId": "create-1",
+          "requestDigest": "256bf604babb51463ec850cc8560c25524a25625aaaa72d2c86845da310a0f47",
+          "resultingRevision": 1
+        },
+        {
+          "requestId": "begin-1",
+          "requestDigest": "4ebb447489afaff75a9d629b1a05ecb68d8c45522410a0eabd6840c7f6cc235a",
+          "resultingRevision": 2
+        },
+        {
+          "requestId": "submit-1",
+          "requestDigest": "969a146a8380ecc978a32e64f2fd2f019e6a7ec30d5523f5c76ef9c6a0967d07",
+          "resultingRevision": 3
+        }
+      ]
+    },
+    {
+      "schemaVersion": "first_stage.owner_local_trial_session.v1",
+      "sessionId": "first-session-4904e4360605ed2381fc8bda9e30e7ef4a2373bc",
+      "ownerId": "synthetic-owner",
+      "catalogDigest": "fb9d80b365b6b671c770e1d1f9a05d96a8e60f1aaca9f13265a0d9d4a4a8ca20",
+      "state": {
+        "attempts": [
+          {
+            "assistanceLevel": "none",
+            "attemptId": "first-attempt-fb50d5cc613d5e07ffe7ec69b9406ee7a72dc027",
+            "evaluation": {
+              "biggestGapCode": "economics-concept-46",
+              "conceptBindings": [
+                {
+                  "conceptId": "issue883-economics-concept-46",
+                  "conceptVersion": "issue883-economics-r3-runtime-v1",
+                  "role": "primary",
+                  "schemaVersion": "first_stage.concept_binding.v1",
+                  "subjectId": "economics_principles"
+                }
+              ],
+              "decision": "correct",
+              "errorCause": null,
+              "evaluationPolicyVersion": "owner-local-r3-unreviewed-v1",
+              "evidenceEnvelope": {
+                "adapterId": "owner-local-economics-r3-experiment",
+                "adapterVersion": "1",
+                "attemptId": "first-attempt-fb50d5cc613d5e07ffe7ec69b9406ee7a72dc027",
+                "choiceSetReference": {
+                  "evidenceId": "local-trial-choices-0cf5f837b2f0fbc55d23d35ee7d6941c",
+                  "evidenceSha256": "0cf5f837b2f0fbc55d23d35ee7d6941c28f14add5c4f30e86845a4b5479657b0",
+                  "evidenceVersion": "issue883-economics-r3-runtime-v1",
+                  "schemaVersion": "first_stage.immutable_evidence_reference.v1"
+                },
+                "officialKeyReference": {
+                  "evidenceId": "local-trial-original-key-observation-774fbe479f16017757a98bba18594476",
+                  "evidenceSha256": "774fbe479f16017757a98bba18594476002e8e78b14d5a6a744c6c8982600d90",
+                  "evidenceVersion": "issue883-economics-r3-runtime-v1",
+                  "schemaVersion": "first_stage.immutable_evidence_reference.v1"
+                },
+                "questionId": "qnet-2025-36-s1-A-46",
+                "questionReferenceSha256": "a8606a1ed433e935198078ca069caf81e2f2c1c5631f590cf549289ce57fefe9",
+                "questionVersion": "issue883-economics-r3-runtime-v1",
+                "reviewedFeedback": {
+                  "modelAlone": true,
+                  "receiptReference": null,
+                  "reviewerClass": null,
+                  "reviewerIdentity": null,
+                  "schemaVersion": "first_stage.owner_local_unreviewed_feedback.v1",
+                  "state": "human_unreviewed_owner_local"
+                },
+                "rightsDecisionReference": {
+                  "evidenceId": "issue883-r3-qnet-2025-36-s1-A-46-rights-observation",
+                  "evidenceSha256": "7e43f33927ebc360f5f1aadc9dc2e603ee1735be5324ec363389dc902e56b23d",
+                  "evidenceVersion": "issue883-economics-r3-runtime-v1",
+                  "schemaVersion": "first_stage.immutable_evidence_reference.v1"
+                },
+                "schemaVersion": "first_stage.attempt_evidence_envelope.v1",
+                "sourceReference": {
+                  "evidenceId": "issue883-r3-qnet-2025-36-s1-A-46-source",
+                  "evidenceSha256": "454accd789b3d4d55e636e79963d4f65c0f3c06a26d83cf3fc6be3ec2fe4e47b",
+                  "evidenceVersion": "issue883-economics-r3-runtime-v1",
+                  "schemaVersion": "first_stage.immutable_evidence_reference.v1"
+                },
+                "subjectId": "economics_principles",
+                "submissionSha256": "b74635cb23e90958cdbad1f532754eea33c64c25647153cad7b10ce3493de9fc",
+                "versionDecisionReference": {
+                  "evidenceId": "issue883-r3-qnet-2025-36-s1-A-46-version",
+                  "evidenceSha256": "06ccc0d6a42d51ca0c363da1215709e95d01c16eafc4f43354eb900dcd8fe35a",
+                  "evidenceVersion": "issue883-economics-r3-runtime-v1",
+                  "schemaVersion": "first_stage.immutable_evidence_reference.v1"
+                }
+              },
+              "nextActionCode": "review-then-practice-retry",
+              "retryDisposition": "review_then_retry",
+              "reviewAfterMs": 86400000,
+              "schemaVersion": "first_stage.attempt_evaluation.v1"
+            },
+            "examCycleId": "first-session-4904e4360605ed2381fc8bda9e30e7ef4a2373bc",
+            "exposureState": "first_exposure",
+            "kind": "initial",
+            "questionReference": {
+              "choiceCount": 5,
+              "currentnessState": "observed_historical_unreviewed",
+              "examRound": 36,
+              "examYear": 2025,
+              "questionId": "qnet-2025-36-s1-A-46",
+              "questionNumber": 46,
+              "questionVersion": "issue883-economics-r3-runtime-v1",
+              "rightsState": "observed_owner_local_only",
+              "schemaVersion": "first_stage.owner_local_trial_question_reference.v1",
+              "sessionId": "qnet-2025-36-s1-A",
+              "sourceVersionManifestIds": [
+                "issue883-r3-source-46"
+              ],
+              "subjectId": "economics_principles"
+            },
+            "reviewTaskId": "first-review-3fa58c9a13729711610e642e0b5a0674f78f1c35",
+            "schemaVersion": "first_stage.attempt.v1",
+            "sourceAttemptId": null,
+            "startedAt": "2026-09-06T10:00:00.000Z",
+            "state": "evaluated",
+            "submission": {
+              "answerChanged": false,
+              "confidence": "medium",
+              "elapsedTime": {
+                "bucket": "60000_119999",
+                "milliseconds": 60000
+              },
+              "eliminatedChoiceIds": [],
+              "previousChoice": null,
+              "schemaVersion": "first_stage.answer_submission.v1",
+              "selectedChoice": 2,
+              "submittedAt": "2026-09-06T10:01:00.000Z",
+              "workTrace": {
+                "schemaVersion": "first_stage.work_trace.v1",
+                "steps": [
+                  {
+                    "atElapsedMs": 1000,
+                    "choiceId": 2,
+                    "kind": "select_answer",
+                    "sequence": 1
+                  }
+                ]
+              }
+            }
+          },
+          {
+            "schemaVersion": "first_stage.attempt.v1",
+            "attemptId": "first-attempt-e6c23fc5ab7bc01a22691f4202a790306f077659",
+            "examCycleId": "first-session-4904e4360605ed2381fc8bda9e30e7ef4a2373bc",
+            "questionReference": {
+              "questionId": "issue883-r3-r46",
+              "questionVersion": "issue883-economics-r3-runtime-v1",
+              "subjectId": "economics_principles",
+              "examYear": 2025,
+              "examRound": 36,
+              "sessionId": "qnet-2025-36-s1-A",
+              "questionNumber": 46,
+              "choiceCount": 5,
+              "sourceVersionManifestIds": [
+                "issue883-r3-source-46"
+              ],
+              "schemaVersion": "first_stage.owner_local_trial_question_reference.v1",
+              "rightsState": "observed_owner_local_only",
+              "currentnessState": "observed_historical_unreviewed"
+            },
+            "kind": "independent_retry",
+            "sourceAttemptId": "first-attempt-fb50d5cc613d5e07ffe7ec69b9406ee7a72dc027",
+            "reviewTaskId": "first-review-3fa58c9a13729711610e642e0b5a0674f78f1c35",
+            "exposureState": "unreviewed_local_variant",
+            "assistanceLevel": "none",
+            "startedAt": "2026-09-07T10:01:00.000Z",
+            "state": "in_progress",
+            "submission": null,
+            "evaluation": null
+          }
+        ],
+        "conceptStates": [
+          {
+            "schemaVersion": "first_stage.concept_state.v1",
+            "binding": {
+              "conceptId": "issue883-economics-concept-46",
+              "conceptVersion": "issue883-economics-r3-runtime-v1",
+              "role": "primary",
+              "schemaVersion": "first_stage.concept_binding.v1",
+              "subjectId": "economics_principles"
+            },
+            "state": "independent_retry_due",
+            "lastAttemptId": "first-attempt-fb50d5cc613d5e07ffe7ec69b9406ee7a72dc027",
+            "evidenceAttemptIds": [
+              "first-attempt-fb50d5cc613d5e07ffe7ec69b9406ee7a72dc027"
+            ],
+            "updatedAt": "2026-09-07T10:01:00.000Z",
+            "masteryClaim": false
+          }
+        ],
+        "examCycle": {
+          "completedAt": "2026-09-06T10:01:00.000Z",
+          "definitionSha256": "1da8306fb7af7549b5728e8a894f33f6461a0570f895328953d472d1a4b62c93",
+          "examCycleId": "first-session-4904e4360605ed2381fc8bda9e30e7ef4a2373bc",
+          "mode": "today",
+          "ownerId": "synthetic-owner",
+          "questionReferences": [
+            {
+              "choiceCount": 5,
+              "currentnessState": "observed_historical_unreviewed",
+              "examRound": 36,
+              "examYear": 2025,
+              "questionId": "qnet-2025-36-s1-A-46",
+              "questionNumber": 46,
+              "questionVersion": "issue883-economics-r3-runtime-v1",
+              "rightsState": "observed_owner_local_only",
+              "schemaVersion": "first_stage.owner_local_trial_question_reference.v1",
+              "sessionId": "qnet-2025-36-s1-A",
+              "sourceVersionManifestIds": [
+                "issue883-r3-source-46"
+              ],
+              "subjectId": "economics_principles"
+            }
+          ],
+          "schemaVersion": "first_stage.exam_cycle.v1",
+          "startedAt": "2026-09-06T10:00:00.000Z",
+          "state": "completed"
+        },
+        "independentRetries": [
+          {
+            "schemaVersion": "first_stage.independent_retry.v1",
+            "independentRetryId": "first-retry-e6c23fc5ab7bc01a22691f4202a790306f077659",
+            "reviewTaskId": "first-review-3fa58c9a13729711610e642e0b5a0674f78f1c35",
+            "sourceAttemptId": "first-attempt-fb50d5cc613d5e07ffe7ec69b9406ee7a72dc027",
+            "retryAttemptId": "first-attempt-e6c23fc5ab7bc01a22691f4202a790306f077659",
+            "questionReference": {
+              "questionId": "issue883-r3-r46",
+              "questionVersion": "issue883-economics-r3-runtime-v1",
+              "subjectId": "economics_principles",
+              "examYear": 2025,
+              "examRound": 36,
+              "sessionId": "qnet-2025-36-s1-A",
+              "questionNumber": 46,
+              "choiceCount": 5,
+              "sourceVersionManifestIds": [
+                "issue883-r3-source-46"
+              ],
+              "schemaVersion": "first_stage.owner_local_trial_question_reference.v1",
+              "rightsState": "observed_owner_local_only",
+              "currentnessState": "observed_historical_unreviewed"
+            },
+            "adapterId": "owner-local-economics-r3-experiment",
+            "adapterVersion": "1",
+            "lineageReceipt": {
+              "schemaVersion": "first_stage.independent_retry_lineage_receipt.v1",
+              "receiptId": "local-trial-lineage-ddef49b773b0632199774914e5fda80e",
+              "receiptVersion": "issue883-economics-r3-runtime-v1",
+              "adapterId": "owner-local-economics-r3-experiment",
+              "adapterVersion": "1",
+              "subjectId": "economics_principles",
+              "sourceQuestionId": "qnet-2025-36-s1-A-46",
+              "sourceQuestionVersion": "issue883-economics-r3-runtime-v1",
+              "sourceQuestionReferenceSha256": "a8606a1ed433e935198078ca069caf81e2f2c1c5631f590cf549289ce57fefe9",
+              "variantQuestionId": "issue883-r3-r46",
+              "variantQuestionVersion": "issue883-economics-r3-runtime-v1",
+              "variantQuestionReferenceSha256": "cb75497576ae9b14895de5b456cfdfda3a70eac35ab77072d4b25062a8ea73b5",
+              "targetConceptBindingKeys": [
+                "economics_principles:issue883-economics-concept-46@issue883-economics-r3-runtime-v1:primary"
+              ],
+              "priorRetryCount": 0,
+              "decision": "unreviewed_owner_local_practice_retry"
+            },
+            "assistanceLevel": "none",
+            "startedAt": "2026-09-07T10:01:00.000Z",
+            "completedAt": null,
+            "outcome": "active"
+          }
+        ],
+        "reviewTasks": [
+          {
+            "completedAt": null,
+            "conceptBindings": [
+              {
+                "conceptId": "issue883-economics-concept-46",
+                "conceptVersion": "issue883-economics-r3-runtime-v1",
+                "role": "primary",
+                "schemaVersion": "first_stage.concept_binding.v1",
+                "subjectId": "economics_principles"
+              }
+            ],
+            "disposition": "review_then_retry",
+            "dueAt": "2026-09-07T10:01:00.000Z",
+            "errorCause": null,
+            "examCycleId": "first-session-4904e4360605ed2381fc8bda9e30e7ef4a2373bc",
+            "priority": "normal",
+            "questionReference": {
+              "choiceCount": 5,
+              "currentnessState": "observed_historical_unreviewed",
+              "examRound": 36,
+              "examYear": 2025,
+              "questionId": "qnet-2025-36-s1-A-46",
+              "questionNumber": 46,
+              "questionVersion": "issue883-economics-r3-runtime-v1",
+              "rightsState": "observed_owner_local_only",
+              "schemaVersion": "first_stage.owner_local_trial_question_reference.v1",
+              "sessionId": "qnet-2025-36-s1-A",
+              "sourceVersionManifestIds": [
+                "issue883-r3-source-46"
+              ],
+              "subjectId": "economics_principles"
+            },
+            "reviewTaskId": "first-review-3fa58c9a13729711610e642e0b5a0674f78f1c35",
+            "schemaVersion": "first_stage.review_task.v1",
+            "sourceAttemptId": "first-attempt-fb50d5cc613d5e07ffe7ec69b9406ee7a72dc027",
+            "status": "retry_active"
+          }
+        ],
+        "revision": 4,
+        "schemaVersion": "dabangil.first_stage.common_mcq_kernel.v1"
+      },
+      "commands": [
+        {
+          "requestId": "create-1",
+          "requestDigest": "256bf604babb51463ec850cc8560c25524a25625aaaa72d2c86845da310a0f47",
+          "resultingRevision": 1
+        },
+        {
+          "requestId": "begin-1",
+          "requestDigest": "4ebb447489afaff75a9d629b1a05ecb68d8c45522410a0eabd6840c7f6cc235a",
+          "resultingRevision": 2
+        },
+        {
+          "requestId": "submit-1",
+          "requestDigest": "969a146a8380ecc978a32e64f2fd2f019e6a7ec30d5523f5c76ef9c6a0967d07",
+          "resultingRevision": 3
+        },
+        {
+          "requestId": "retry-1",
+          "requestDigest": "1f21ad0f410f28ee6b497143b9d33af34d1ca6c6641476d878a5667c0827d5ce",
+          "resultingRevision": 4
+        }
+      ]
+    },
+    {
+      "schemaVersion": "first_stage.owner_local_trial_session.v1",
+      "sessionId": "first-session-4904e4360605ed2381fc8bda9e30e7ef4a2373bc",
+      "ownerId": "synthetic-owner",
+      "catalogDigest": "fb9d80b365b6b671c770e1d1f9a05d96a8e60f1aaca9f13265a0d9d4a4a8ca20",
+      "state": {
+        "attempts": [
+          {
+            "assistanceLevel": "none",
+            "attemptId": "first-attempt-fb50d5cc613d5e07ffe7ec69b9406ee7a72dc027",
+            "evaluation": {
+              "biggestGapCode": "economics-concept-46",
+              "conceptBindings": [
+                {
+                  "conceptId": "issue883-economics-concept-46",
+                  "conceptVersion": "issue883-economics-r3-runtime-v1",
+                  "role": "primary",
+                  "schemaVersion": "first_stage.concept_binding.v1",
+                  "subjectId": "economics_principles"
+                }
+              ],
+              "decision": "correct",
+              "errorCause": null,
+              "evaluationPolicyVersion": "owner-local-r3-unreviewed-v1",
+              "evidenceEnvelope": {
+                "adapterId": "owner-local-economics-r3-experiment",
+                "adapterVersion": "1",
+                "attemptId": "first-attempt-fb50d5cc613d5e07ffe7ec69b9406ee7a72dc027",
+                "choiceSetReference": {
+                  "evidenceId": "local-trial-choices-0cf5f837b2f0fbc55d23d35ee7d6941c",
+                  "evidenceSha256": "0cf5f837b2f0fbc55d23d35ee7d6941c28f14add5c4f30e86845a4b5479657b0",
+                  "evidenceVersion": "issue883-economics-r3-runtime-v1",
+                  "schemaVersion": "first_stage.immutable_evidence_reference.v1"
+                },
+                "officialKeyReference": {
+                  "evidenceId": "local-trial-original-key-observation-774fbe479f16017757a98bba18594476",
+                  "evidenceSha256": "774fbe479f16017757a98bba18594476002e8e78b14d5a6a744c6c8982600d90",
+                  "evidenceVersion": "issue883-economics-r3-runtime-v1",
+                  "schemaVersion": "first_stage.immutable_evidence_reference.v1"
+                },
+                "questionId": "qnet-2025-36-s1-A-46",
+                "questionReferenceSha256": "a8606a1ed433e935198078ca069caf81e2f2c1c5631f590cf549289ce57fefe9",
+                "questionVersion": "issue883-economics-r3-runtime-v1",
+                "reviewedFeedback": {
+                  "modelAlone": true,
+                  "receiptReference": null,
+                  "reviewerClass": null,
+                  "reviewerIdentity": null,
+                  "schemaVersion": "first_stage.owner_local_unreviewed_feedback.v1",
+                  "state": "human_unreviewed_owner_local"
+                },
+                "rightsDecisionReference": {
+                  "evidenceId": "issue883-r3-qnet-2025-36-s1-A-46-rights-observation",
+                  "evidenceSha256": "7e43f33927ebc360f5f1aadc9dc2e603ee1735be5324ec363389dc902e56b23d",
+                  "evidenceVersion": "issue883-economics-r3-runtime-v1",
+                  "schemaVersion": "first_stage.immutable_evidence_reference.v1"
+                },
+                "schemaVersion": "first_stage.attempt_evidence_envelope.v1",
+                "sourceReference": {
+                  "evidenceId": "issue883-r3-qnet-2025-36-s1-A-46-source",
+                  "evidenceSha256": "454accd789b3d4d55e636e79963d4f65c0f3c06a26d83cf3fc6be3ec2fe4e47b",
+                  "evidenceVersion": "issue883-economics-r3-runtime-v1",
+                  "schemaVersion": "first_stage.immutable_evidence_reference.v1"
+                },
+                "subjectId": "economics_principles",
+                "submissionSha256": "b74635cb23e90958cdbad1f532754eea33c64c25647153cad7b10ce3493de9fc",
+                "versionDecisionReference": {
+                  "evidenceId": "issue883-r3-qnet-2025-36-s1-A-46-version",
+                  "evidenceSha256": "06ccc0d6a42d51ca0c363da1215709e95d01c16eafc4f43354eb900dcd8fe35a",
+                  "evidenceVersion": "issue883-economics-r3-runtime-v1",
+                  "schemaVersion": "first_stage.immutable_evidence_reference.v1"
+                }
+              },
+              "nextActionCode": "review-then-practice-retry",
+              "retryDisposition": "review_then_retry",
+              "reviewAfterMs": 86400000,
+              "schemaVersion": "first_stage.attempt_evaluation.v1"
+            },
+            "examCycleId": "first-session-4904e4360605ed2381fc8bda9e30e7ef4a2373bc",
+            "exposureState": "first_exposure",
+            "kind": "initial",
+            "questionReference": {
+              "choiceCount": 5,
+              "currentnessState": "observed_historical_unreviewed",
+              "examRound": 36,
+              "examYear": 2025,
+              "questionId": "qnet-2025-36-s1-A-46",
+              "questionNumber": 46,
+              "questionVersion": "issue883-economics-r3-runtime-v1",
+              "rightsState": "observed_owner_local_only",
+              "schemaVersion": "first_stage.owner_local_trial_question_reference.v1",
+              "sessionId": "qnet-2025-36-s1-A",
+              "sourceVersionManifestIds": [
+                "issue883-r3-source-46"
+              ],
+              "subjectId": "economics_principles"
+            },
+            "reviewTaskId": "first-review-3fa58c9a13729711610e642e0b5a0674f78f1c35",
+            "schemaVersion": "first_stage.attempt.v1",
+            "sourceAttemptId": null,
+            "startedAt": "2026-09-06T10:00:00.000Z",
+            "state": "evaluated",
+            "submission": {
+              "answerChanged": false,
+              "confidence": "medium",
+              "elapsedTime": {
+                "bucket": "60000_119999",
+                "milliseconds": 60000
+              },
+              "eliminatedChoiceIds": [],
+              "previousChoice": null,
+              "schemaVersion": "first_stage.answer_submission.v1",
+              "selectedChoice": 2,
+              "submittedAt": "2026-09-06T10:01:00.000Z",
+              "workTrace": {
+                "schemaVersion": "first_stage.work_trace.v1",
+                "steps": [
+                  {
+                    "atElapsedMs": 1000,
+                    "choiceId": 2,
+                    "kind": "select_answer",
+                    "sequence": 1
+                  }
+                ]
+              }
+            }
+          },
+          {
+            "assistanceLevel": "none",
+            "attemptId": "first-attempt-e6c23fc5ab7bc01a22691f4202a790306f077659",
+            "evaluation": {
+              "schemaVersion": "first_stage.attempt_evaluation.v1",
+              "decision": "correct",
+              "errorCause": null,
+              "conceptBindings": [
+                {
+                  "schemaVersion": "first_stage.concept_binding.v1",
+                  "conceptId": "issue883-economics-concept-46",
+                  "conceptVersion": "issue883-economics-r3-runtime-v1",
+                  "subjectId": "economics_principles",
+                  "role": "primary"
+                }
+              ],
+              "biggestGapCode": "economics-concept-46",
+              "nextActionCode": "review-then-practice-retry",
+              "retryDisposition": "review_then_retry",
+              "reviewAfterMs": 86400000,
+              "evaluationPolicyVersion": "owner-local-r3-unreviewed-v1",
+              "evidenceEnvelope": {
+                "schemaVersion": "first_stage.attempt_evidence_envelope.v1",
+                "attemptId": "first-attempt-e6c23fc5ab7bc01a22691f4202a790306f077659",
+                "submissionSha256": "712111cdcf43bbe113160231eb4c0b42aba79455a8d596596c22f5482fb65626",
+                "questionId": "issue883-r3-r46",
+                "questionVersion": "issue883-economics-r3-runtime-v1",
+                "questionReferenceSha256": "cb75497576ae9b14895de5b456cfdfda3a70eac35ab77072d4b25062a8ea73b5",
+                "subjectId": "economics_principles",
+                "adapterId": "owner-local-economics-r3-experiment",
+                "adapterVersion": "1",
+                "officialKeyReference": {
+                  "schemaVersion": "first_stage.immutable_evidence_reference.v1",
+                  "evidenceId": "local-trial-variant-own-key-cd6566d1c19a5cd4dce8a5b0bf2aad45",
+                  "evidenceVersion": "issue883-economics-r3-runtime-v1",
+                  "evidenceSha256": "cd6566d1c19a5cd4dce8a5b0bf2aad45ac6d3b06595dd62642a39f74d433f62b"
+                },
+                "choiceSetReference": {
+                  "schemaVersion": "first_stage.immutable_evidence_reference.v1",
+                  "evidenceId": "local-trial-choices-0cf5f837b2f0fbc55d23d35ee7d6941c",
+                  "evidenceVersion": "issue883-economics-r3-runtime-v1",
+                  "evidenceSha256": "0cf5f837b2f0fbc55d23d35ee7d6941c28f14add5c4f30e86845a4b5479657b0"
+                },
+                "sourceReference": {
+                  "schemaVersion": "first_stage.immutable_evidence_reference.v1",
+                  "evidenceId": "issue883-r3-r46-source",
+                  "evidenceVersion": "issue883-economics-r3-runtime-v1",
+                  "evidenceSha256": "32344ef8f644d617db4d2f9597fe0f9f622f5fcdddad258e4ad5140f06648cce"
+                },
+                "versionDecisionReference": {
+                  "schemaVersion": "first_stage.immutable_evidence_reference.v1",
+                  "evidenceId": "issue883-r3-r46-version",
+                  "evidenceVersion": "issue883-economics-r3-runtime-v1",
+                  "evidenceSha256": "101a1d2b02eaa89b7d2df61992234a6962d6daa8a55bda1e1bd44564baa22017"
+                },
+                "rightsDecisionReference": {
+                  "schemaVersion": "first_stage.immutable_evidence_reference.v1",
+                  "evidenceId": "issue883-r3-r46-rights-observation",
+                  "evidenceVersion": "issue883-economics-r3-runtime-v1",
+                  "evidenceSha256": "7e43f33927ebc360f5f1aadc9dc2e603ee1735be5324ec363389dc902e56b23d"
+                },
+                "reviewedFeedback": {
+                  "schemaVersion": "first_stage.owner_local_unreviewed_feedback.v1",
+                  "state": "human_unreviewed_owner_local",
+                  "receiptReference": null,
+                  "reviewerIdentity": null,
+                  "reviewerClass": null,
+                  "modelAlone": true
+                }
+              }
+            },
+            "examCycleId": "first-session-4904e4360605ed2381fc8bda9e30e7ef4a2373bc",
+            "exposureState": "unreviewed_local_variant",
+            "kind": "independent_retry",
+            "questionReference": {
+              "choiceCount": 5,
+              "currentnessState": "observed_historical_unreviewed",
+              "examRound": 36,
+              "examYear": 2025,
+              "questionId": "issue883-r3-r46",
+              "questionNumber": 46,
+              "questionVersion": "issue883-economics-r3-runtime-v1",
+              "rightsState": "observed_owner_local_only",
+              "schemaVersion": "first_stage.owner_local_trial_question_reference.v1",
+              "sessionId": "qnet-2025-36-s1-A",
+              "sourceVersionManifestIds": [
+                "issue883-r3-source-46"
+              ],
+              "subjectId": "economics_principles"
+            },
+            "reviewTaskId": "first-review-3fa58c9a13729711610e642e0b5a0674f78f1c35",
+            "schemaVersion": "first_stage.attempt.v1",
+            "sourceAttemptId": "first-attempt-fb50d5cc613d5e07ffe7ec69b9406ee7a72dc027",
+            "startedAt": "2026-09-07T10:01:00.000Z",
+            "state": "evaluated",
+            "submission": {
+              "schemaVersion": "first_stage.answer_submission.v1",
+              "selectedChoice": 4,
+              "confidence": "medium",
+              "elapsedTime": {
+                "milliseconds": 60000,
+                "bucket": "60000_119999"
+              },
+              "answerChanged": false,
+              "previousChoice": null,
+              "eliminatedChoiceIds": [],
+              "workTrace": {
+                "schemaVersion": "first_stage.work_trace.v1",
+                "steps": [
+                  {
+                    "sequence": 1,
+                    "kind": "select_answer",
+                    "atElapsedMs": 1000,
+                    "choiceId": 4
+                  }
+                ]
+              },
+              "submittedAt": "2026-09-07T10:02:00.000Z"
+            }
+          }
+        ],
+        "conceptStates": [
+          {
+            "schemaVersion": "first_stage.concept_state.v1",
+            "binding": {
+              "conceptId": "issue883-economics-concept-46",
+              "conceptVersion": "issue883-economics-r3-runtime-v1",
+              "role": "primary",
+              "schemaVersion": "first_stage.concept_binding.v1",
+              "subjectId": "economics_principles"
+            },
+            "state": "independent_retry_recorded",
+            "lastAttemptId": "first-attempt-e6c23fc5ab7bc01a22691f4202a790306f077659",
+            "evidenceAttemptIds": [
+              "first-attempt-fb50d5cc613d5e07ffe7ec69b9406ee7a72dc027",
+              "first-attempt-e6c23fc5ab7bc01a22691f4202a790306f077659"
+            ],
+            "updatedAt": "2026-09-07T10:02:00.000Z",
+            "masteryClaim": false
+          }
+        ],
+        "examCycle": {
+          "completedAt": "2026-09-06T10:01:00.000Z",
+          "definitionSha256": "1da8306fb7af7549b5728e8a894f33f6461a0570f895328953d472d1a4b62c93",
+          "examCycleId": "first-session-4904e4360605ed2381fc8bda9e30e7ef4a2373bc",
+          "mode": "today",
+          "ownerId": "synthetic-owner",
+          "questionReferences": [
+            {
+              "choiceCount": 5,
+              "currentnessState": "observed_historical_unreviewed",
+              "examRound": 36,
+              "examYear": 2025,
+              "questionId": "qnet-2025-36-s1-A-46",
+              "questionNumber": 46,
+              "questionVersion": "issue883-economics-r3-runtime-v1",
+              "rightsState": "observed_owner_local_only",
+              "schemaVersion": "first_stage.owner_local_trial_question_reference.v1",
+              "sessionId": "qnet-2025-36-s1-A",
+              "sourceVersionManifestIds": [
+                "issue883-r3-source-46"
+              ],
+              "subjectId": "economics_principles"
+            }
+          ],
+          "schemaVersion": "first_stage.exam_cycle.v1",
+          "startedAt": "2026-09-06T10:00:00.000Z",
+          "state": "completed"
+        },
+        "independentRetries": [
+          {
+            "adapterId": "owner-local-economics-r3-experiment",
+            "adapterVersion": "1",
+            "assistanceLevel": "none",
+            "completedAt": "2026-09-07T10:02:00.000Z",
+            "independentRetryId": "first-retry-e6c23fc5ab7bc01a22691f4202a790306f077659",
+            "lineageReceipt": {
+              "adapterId": "owner-local-economics-r3-experiment",
+              "adapterVersion": "1",
+              "decision": "unreviewed_owner_local_practice_retry",
+              "priorRetryCount": 0,
+              "receiptId": "local-trial-lineage-ddef49b773b0632199774914e5fda80e",
+              "receiptVersion": "issue883-economics-r3-runtime-v1",
+              "schemaVersion": "first_stage.independent_retry_lineage_receipt.v1",
+              "sourceQuestionId": "qnet-2025-36-s1-A-46",
+              "sourceQuestionReferenceSha256": "a8606a1ed433e935198078ca069caf81e2f2c1c5631f590cf549289ce57fefe9",
+              "sourceQuestionVersion": "issue883-economics-r3-runtime-v1",
+              "subjectId": "economics_principles",
+              "targetConceptBindingKeys": [
+                "economics_principles:issue883-economics-concept-46@issue883-economics-r3-runtime-v1:primary"
+              ],
+              "variantQuestionId": "issue883-r3-r46",
+              "variantQuestionReferenceSha256": "cb75497576ae9b14895de5b456cfdfda3a70eac35ab77072d4b25062a8ea73b5",
+              "variantQuestionVersion": "issue883-economics-r3-runtime-v1"
+            },
+            "outcome": "succeeded",
+            "questionReference": {
+              "choiceCount": 5,
+              "currentnessState": "observed_historical_unreviewed",
+              "examRound": 36,
+              "examYear": 2025,
+              "questionId": "issue883-r3-r46",
+              "questionNumber": 46,
+              "questionVersion": "issue883-economics-r3-runtime-v1",
+              "rightsState": "observed_owner_local_only",
+              "schemaVersion": "first_stage.owner_local_trial_question_reference.v1",
+              "sessionId": "qnet-2025-36-s1-A",
+              "sourceVersionManifestIds": [
+                "issue883-r3-source-46"
+              ],
+              "subjectId": "economics_principles"
+            },
+            "retryAttemptId": "first-attempt-e6c23fc5ab7bc01a22691f4202a790306f077659",
+            "reviewTaskId": "first-review-3fa58c9a13729711610e642e0b5a0674f78f1c35",
+            "schemaVersion": "first_stage.independent_retry.v1",
+            "sourceAttemptId": "first-attempt-fb50d5cc613d5e07ffe7ec69b9406ee7a72dc027",
+            "startedAt": "2026-09-07T10:01:00.000Z"
+          }
+        ],
+        "reviewTasks": [
+          {
+            "completedAt": "2026-09-07T10:02:00.000Z",
+            "conceptBindings": [
+              {
+                "conceptId": "issue883-economics-concept-46",
+                "conceptVersion": "issue883-economics-r3-runtime-v1",
+                "role": "primary",
+                "schemaVersion": "first_stage.concept_binding.v1",
+                "subjectId": "economics_principles"
+              }
+            ],
+            "disposition": "review_then_retry",
+            "dueAt": "2026-09-07T10:01:00.000Z",
+            "errorCause": null,
+            "examCycleId": "first-session-4904e4360605ed2381fc8bda9e30e7ef4a2373bc",
+            "priority": "normal",
+            "questionReference": {
+              "choiceCount": 5,
+              "currentnessState": "observed_historical_unreviewed",
+              "examRound": 36,
+              "examYear": 2025,
+              "questionId": "qnet-2025-36-s1-A-46",
+              "questionNumber": 46,
+              "questionVersion": "issue883-economics-r3-runtime-v1",
+              "rightsState": "observed_owner_local_only",
+              "schemaVersion": "first_stage.owner_local_trial_question_reference.v1",
+              "sessionId": "qnet-2025-36-s1-A",
+              "sourceVersionManifestIds": [
+                "issue883-r3-source-46"
+              ],
+              "subjectId": "economics_principles"
+            },
+            "reviewTaskId": "first-review-3fa58c9a13729711610e642e0b5a0674f78f1c35",
+            "schemaVersion": "first_stage.review_task.v1",
+            "sourceAttemptId": "first-attempt-fb50d5cc613d5e07ffe7ec69b9406ee7a72dc027",
+            "status": "completed"
+          }
+        ],
+        "revision": 5,
+        "schemaVersion": "dabangil.first_stage.common_mcq_kernel.v1"
+      },
+      "commands": [
+        {
+          "requestId": "create-1",
+          "requestDigest": "256bf604babb51463ec850cc8560c25524a25625aaaa72d2c86845da310a0f47",
+          "resultingRevision": 1
+        },
+        {
+          "requestId": "begin-1",
+          "requestDigest": "4ebb447489afaff75a9d629b1a05ecb68d8c45522410a0eabd6840c7f6cc235a",
+          "resultingRevision": 2
+        },
+        {
+          "requestId": "submit-1",
+          "requestDigest": "969a146a8380ecc978a32e64f2fd2f019e6a7ec30d5523f5c76ef9c6a0967d07",
+          "resultingRevision": 3
+        },
+        {
+          "requestId": "retry-1",
+          "requestDigest": "1f21ad0f410f28ee6b497143b9d33af34d1ca6c6641476d878a5667c0827d5ce",
+          "resultingRevision": 4
+        },
+        {
+          "requestId": "retry-submit",
+          "requestDigest": "8b02fafa02b63919840581ffb46a70e3c481d8f1678820455484ae9f7cd96491",
+          "resultingRevision": 5
+        }
+      ]
+    }
+  ]
+}

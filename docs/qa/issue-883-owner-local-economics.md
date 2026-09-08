@@ -6,6 +6,139 @@ content approval, installation and observed use are separate outcomes.
 
 ## Current boundary
 
+### r3 bundle continuation — 2026-09-08
+
+The Owner's accepted Goal extends only the existing PC-only human-unreviewed
+trial. Current candidate supports originals 46/49/51/53 and their own D+1
+variants (4+4); normal human-approved stock remains zero. The same nine private
+artifacts and installation bytes are reused, not repackaged or reapproved.
+Each added original uses its exact position in the full 200-answer observation;
+each variant uses its own calculation/key. A closed recorded-model policy checks
+49's interior versus zero-follower regime, 51's cartel/deviation quantities,
+stationary objective and profit (using each fixed model's own demand slope), and
+53's social/external-cost values plus unique numeric answer matching. These are
+checks on exact-bound existing AI/code observations, not human review or a
+general proof that textual source assumptions are correct.
+
+PR #903 review 5140137863 at bbcea9c reported one P2: the 51 target profit
+was only checked for positivity. A synthetic actual-loader HTTP regression
+reproduced both a choice-rebound unrelated profit and coherently rescaled
+quantities. The correction evaluates the deviation objective and its derivative
+for both original and retry; the synthetic retry model's profit is corrected
+to its own slope. Private r3 source, calculation evidence and installation bytes
+are unchanged. Earlier native checks are not new-head validation.
+Correction-local validation: 154 affected tests, typecheck, changed-file lint,
+build, JSON/manifest/diff and the affected isolated PostgreSQL/browser loop pass.
+The actual local catalog still exposes exactly 46/49/51/53, with saved 46/49
+readback successful; no actual attempt was added for this correction.
+
+Review 5140343585 at 2dac494 reported another P2: r49's positive price was
+not independently derived. The actual-loader HTTP regression reproduced a
+consistently rebound price/choice. Both fixed r3 49 models now check follower
+FOC price, stationary leader profit and zero-follower objective/derivative,
+not just signs. The input-level follower-cost anchors differ for original/retry;
+these narrow arithmetic constants do not contain private question bodies and
+are not inferred from the client's answer. Existing artifact binding is retained.
+Synthetic models and hostile profit/price/boundary observations cover both paths.
+Second-correction local evidence: 155 affected tests, the isolated r3
+PostgreSQL/browser loop, typecheck, changed-file lint, build, JSON, manifest
+and diff checks pass. Actual catalog remains four pairs and the existing 49
+saved revision/due readback passes. Fresh native checks/review are still required.
+
+Review 5140545687 at 07b813e reported 0/0/3: coherent replacement models still
+satisfied the 49/51/53 equations. Last successful point was isolated-field
+denial, not fixed-model identity. Six fully rebound original/retry cases first
+reproduced this gap. The root correction independently pins each existing r3
+calculation observation (canonical sorted `values` entries) in server source,
+as well as the exact private review JSON SHA above. Arithmetic remains checked;
+the installation cannot supply or refresh these expected pins. Hashes are
+evidence identifiers, not a confidentiality claim or human approval. No private
+numeric observations, question bodies or new artifacts are published/installed.
+The explicit existing synthetic dependency port selects distinct synthetic pins;
+production-default loading rejects synthetic relabeling and HTTP mode selection.
+Catalog/evaluation policy identities are deliberately unchanged: the existing
+46 and actual 49 records are not rewritten. A pre-pin synthetic 49 row/response
+digest proves read/replay compatibility. Focused tests cover all six coherent
+models, test/real separation and old 46/49 identities; human review stays pending.
+Root-correction local validation: 164 affected tests, the actual-loader isolated
+PostgreSQL/browser loop, typecheck, changed-file lint, build, JSON/manifest/diff
+pass. Existing private artifacts are unchanged; traced private-artifact matches
+remain zero. Final native checks and independent review must bind the new head.
+
+52/r52 is pending, not installed: the original's existing symbolic check proves
+a cost identity but asserts the textual answer without independently binding
+all five claims and assumptions. r52 arithmetic does not repair that source gap.
+53 is explicitly normalized transcription, not verbatim; the final key's absent
+explicit A label remains disclosed. No variant becomes official, reviewed,
+mastery, transfer or measurement evidence.
+
+Existing saved 46 records retain their exact original catalog binding, evaluated
+evidence, retry lineage and due time. A request-scoped loader registration permits
+only the unchanged installation's previous 46 digest and exact original reference;
+the normal reviewed catalog still requires exact digest equality. No row rewrite,
+new store, SQL/RLS change or installation-byte change is used for compatibility.
+
+Fresh local evidence for this candidate (not inherited #901 CI): 21 focused tests
+and typecheck passed; all eight isolated PostgreSQL/browser cases passed, then
+the affected r3 case passed again after adding picker/lost-create-response/new-tab
+coverage. Synthetic cases use real loader/HTTP/SDK/repository, concurrency,
+durable-response loss, reconnect, each admitted pair's own D+1, completed replay,
+cross-mode denial and zero synthetic rows/users after cleanup. No personal record
+is part of this cleanup. Five bodyless synthetic snapshots generated through the
+pre-expansion constructor retain exact saved-state/evidence compatibility.
+
+Genuine PC execution: the existing login remains usable; the previous 46 GET
+returns its unchanged revision and pending due time. The picker shows four
+options and one start action. One additional 49 functional walkthrough displayed
+the question before explanation, saved through the existing authenticated route,
+then returned the persisted response/explanation on reload. It is assistant-run
+functional use, not the Owner's independent performance. The due gate remains
+closed before its real time. Next-day observation is still pending; no clock was
+changed. All five host listeners were checked as IPv4 loopback-only before use.
+Certificates, accounts, private source, volumes and actual records were preserved.
+
+Final local validation: 153 affected tests, typecheck, changed-file lint, JSON,
+16-path manifest/diff and build passed. The existing unrelated curriculum NFT
+warning remains. An initially broad filename scan matched five ordinary tracked
+files; resolved-path inspection of all 187 traces found zero private artifacts.
+After the build, the restarted app reloaded both genuine saved sessions with
+unchanged addresses/due times and no framework overlay. All seven existing
+containers and all five loopback host listeners were rechecked. No new personal
+attempt was created for that restart verification.
+Native CI/exact-head formal review/integration remains pending; local read-only
+preflight review found no actionable P0/P1/P2 but is not the formal review.
+The shared UI's ordinary reviewed routes remain unchanged. To select
+another item, its secondary link opens a separate picker while keeping the saved
+session address in the current tab. No question/answer enters browser storage.
+
+Candidate changed-path manifest (16 paths; public synthetic fixtures only):
+
+```text
+components/review-os/first-stage-private-practice.tsx
+docs/decisions/2026-09-06-owner-appraiser-first-private-continuation.md
+docs/exec-plans/active/inverge-owner-study-os.md
+docs/qa/issue-883-owner-local-economics.md
+lib/review-os/first-stage/runtime/owner-local-r3-pair-evidence.ts
+lib/review-os/first-stage/runtime/owner-local-trial-content.ts
+lib/review-os/first-stage/runtime/owner-local-trial-context.ts
+lib/review-os/first-stage/runtime/session-service.ts
+scripts/local/owner-economics-app.mjs
+scripts/run-node-tests.mjs
+tests/first-stage-owner-local-r3-bundle.test.mjs
+tests/first-stage-private-postgres.test.mjs
+tests/fixtures/economics-runtime-candidate-harness.mjs
+tests/fixtures/first-stage-owner-local-trial-harness.mjs
+tests/fixtures/first-stage-private-browser-harness.mjs
+tests/fixtures/owner-local-r3-v1-session.json
+```
+
+Rollback: stop the local app/flag and preserve every record/volume/artifact.
+Do not run an older code version that cannot read newly created trial sessions;
+restore the validated bundle consumer before reopening them. No destructive
+rollback, downgrade of data or synthetic cleanup of genuine records is authorized.
+
+The following single-pair account is historical #901 execution evidence.
+
 ### Owner 2026-09-08: r3-only human-unreviewed PC trial
 
 The later scoped exception in the existing continuation decision permits only

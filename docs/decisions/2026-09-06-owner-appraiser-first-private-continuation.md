@@ -160,6 +160,18 @@ complete small trial unit. Unsupported/insufficient-evidence items are excluded;
 53 normalized transcription and the key's missing explicit A label stay disclosed.
 No repackaging or claim of subject completion follows from candidate installation.
 
+The subsequent 2026-09-08 Owner Goal accepts the bounded continuation proposed
+in PR #901 comment 5581993922: expand only within the existing r3 originals
+46/49/51/52/53 and their own retries, checking every added pair's exact source,
+model and answer evidence. Reuse unchanged private artifacts and the existing
+account, gateway and persistent store. Preserve saved 46 evidence and its due
+time across inventory additions; only its exact unchanged-installation legacy
+catalog binding may be consumed, with no history rewrite or general drift bypass.
+Bounded validators, selection UI and source-preserving installation updates are
+authorized. Human-reviewed stock remains zero; a pending semantic/source claim
+must be reported specifically, not passed through a generic checksPassed flag.
+This continuation adds no year, subject, account, port, trust root or remote work.
+
 The dedicated local database must have explicit loopback HOST port bindings.
 Inspect both Docker bindings and PC listeners before adding a real account,
 content or learning records; stop on any IPv4/IPv6 wildcard publication.

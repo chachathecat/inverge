@@ -3,7 +3,7 @@ import { prepareEconomicsRuntimeCandidate } from "../../scripts/content-review/p
 import { syntheticContentInput } from "./first-stage-economics-content-harness.mjs";
 
 const hash = value => createHash("sha256").update(value).digest("hex");
-export function syntheticReviewInputs() {
+export function syntheticReviewInputs({ numericTrialModels = false } = {}) {
   const originals = [46, 49, 51, 52, 53].map(number => ({ id: `qnet-2025-36-s1-A-${number}`,
     kind: "official_original_transcription", number, stem: `SYNTHETIC_CANDIDATE_STEM_${number}`,
     choices: ["Synthetic alpha", "Synthetic beta", "Synthetic gamma", "Synthetic delta", "Synthetic epsilon"],
@@ -15,6 +15,23 @@ export function syntheticReviewInputs() {
     kind: "ai_authored_modified_practice_candidate", sourceOriginalNumber: row.number,
     stem: `SYNTHETIC_CANDIDATE_RETRY_${row.number}`, concept: "Synthetic retry concept", proposedChoice: 4,
     officialKeyApplies: false, verification: "Synthetic prior independent calculation", difference: "Synthetic changed values" }));
+  // Entirely synthetic model records; not copied from the private r3 corpus.
+  const models = numericTrialModels ? {
+    "original-49": {leader:"8",follower:"4",price:"24",profit:"32",zeroFollowerThreshold:"16",zeroRegimeBestQuantity:"16",zeroRegimeBestProfit:"0",zeroRegimeDerivativeAtBest:"-16"},
+    r49: {leader:"12",follower:"6",price:"16",profit:"72",zeroFollowerThreshold:"24",zeroRegimeBestQuantity:"24",zeroRegimeBestProfit:"0",zeroRegimeDerivativeAtBest:"-24"},
+    "original-51": {cartelTotal:"12",follower:"6",deviator:"9",profit:"81"},
+    r51: {cartelTotal:"16",follower:"8",deviator:"12",profit:"288"},
+    "original-53": {marketQuantity:"12",socialQuantity:"8",unitTax:"12",welfareImprovement:"32"},
+    r53: {marketQuantity:"15",socialQuantity:"10",unitTax:"15",welfareImprovement:"50"},
+  } : {};
+  for (const row of [...originals,...retryCandidates]) {
+    const original=originals.includes(row), n=original?row.number:row.sourceOriginalNumber;
+    const model=models[original?`original-${n}`:row.id];
+    if (!model) continue;
+    const target=n===49?(original?model.leader:model.price):n===51?(original?model.profit:model.deviator):(original?model.welfareImprovement:model.unitTax);
+    row.choices=["1001","1002","1003","1004","1005"];
+    row.choices[(original?2:4)-1]=target;
+  }
   const packet = { schemaVersion: "issue883.economics.review_candidate.v1", packetVersion: "issue883-economics-review-r3",
     humanReview: { reviewer: null, decision: null, state: "pending" }, runtimeEligible: false,
     exam: { year: 2025, round: 36, stage: 1, session: 1, subject: "economics_principles", pdfBooklet: "A", keyBookletExplicit: null },
@@ -24,7 +41,8 @@ export function syntheticReviewInputs() {
   return { reviewSource, calculationSource: JSON.stringify({ reviewPacketSha256: hash(reviewSource),
     results: [...originals.map(row => ({ id: `original-${row.number}`, computedChoice: 2 })),
       ...retryCandidates.map(row => ({ id: row.id, computedChoice: 4 }))].map(row => ({ ...row, checksPassed: true,
-        humanReview: false, runtimeAuthorityGranted: false })) }),
+        humanReview: false, runtimeAuthorityGranted: false,
+        ...(models[row.id]?{method:"exact_rational_and_independent_objective_or_area_crosscheck",values:models[row.id]}:{}) })) }),
     aiEvidenceSource: JSON.stringify({ packetSha256: hash(reviewSource), humanReviewComplete: false, contentApprovalGranted: false,
       runtimeActivationApproved: false, transferMeasurementApproved: false, answerKeyExplicitBookletAObserved: false,
       verbatimTranscriptionClaim: false, originalAnswerChoices: Object.fromEntries(originals.map(row => [row.number, 2])),
