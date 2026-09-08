@@ -38,10 +38,20 @@ grant select,insert,update on public.first_stage_owner_local_planning to service
 -- with planner first-original insert. Historical duplicate sessions remain valid.
 create or replace function public.inverge_owner_local_original_insert_lock()
 returns trigger language plpgsql security invoker set search_path=pg_catalog,public as $$
+declare question_id text;
 begin
   if new.payload->>'schemaVersion'='first_stage.owner_local_trial_session.v1' then
-    perform pg_advisory_xact_lock(hashtextextended('owner-local-original:' || new.owner_id::text || ':' ||
-      (new.payload->'state'->'examCycle'->'questionReferences'->0->>'questionId'),0));
+    question_id:=new.payload->'state'->'examCycle'->'questionReferences'->0->>'questionId';
+    if question_id is null or length(question_id)>128 then raise exception 'invalid local original'; end if;
+    perform pg_advisory_xact_lock(hashtextextended('owner-local-original:' || new.owner_id::text || ':' || question_id,0));
+    -- The lock serializes writers but does not itself reject a manual insert
+    -- that waited behind the planner. Recheck AFTER acquiring it. This INSERT
+    -- guard neither rewrites old duplicates nor changes reviewed-session rules.
+    if exists(select 1 from public.first_stage_private_sessions where owner_id=new.owner_id and
+      payload->>'schemaVersion'='first_stage.owner_local_trial_session.v1' and
+      payload->'state'->'examCycle'->'questionReferences'->0->>'questionId'=question_id) then
+      raise unique_violation using message='owner-local original already exists';
+    end if;
   end if;
   return new;
 end $$;

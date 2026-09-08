@@ -2,8 +2,73 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { isolatedPlanningPostgres, PG_OWNER, PG_OTHER, literal } from "./fixtures/owner-local-planning-postgres-harness.mjs";
 import { trialHarness, syntheticTrialInput } from "./fixtures/first-stage-owner-local-trial-harness.mjs";
-import { submission } from "./fixtures/first-stage-private-session-harness.mjs";
+import { harness as reviewedHarness, submission } from "./fixtures/first-stage-private-session-harness.mjs";
 import { verifyOwnerLocalTodayBrowser } from "./fixtures/owner-local-today-browser-harness.mjs";
+
+test("planner-first lock wait rejects a manual duplicate while preserving historical duplicates and replay",{timeout:90_000},async()=>{
+  const pg=await isolatedPlanningPostgres({deferPlanning:true});let hold;
+  try {
+    const fixture=syntheticTrialInput({numericTrialModels:true});
+    const make=owner=>{const h=trialHarness({fixture,store:pg.repository(),planningStore:pg.planningRepository(),session:{userId:owner}});h.setClock("2026-09-08T00:00:00.000Z");return h;};
+    const legacy=make(PG_OWNER),h=make(PG_OTHER);
+    const oldRequests=["old-a","old-b"].map(requestId=>({action:"create",requestId,questionId:"qnet-2025-36-s1-A-51"}));
+    for(const request of oldRequests)assert.equal((await legacy.send(request)).status,200);
+    const oldRows=await pg.snapshot();await pg.apply();assert.equal(await pg.snapshot(),oldRows);
+    for(const request of oldRequests)assert.equal((await legacy.send(request)).status,200);
+    const configured=await h.send({action:"save_availability",input:{requestId:"race-prefs",expectedRevision:0,preferences:{remainingMinutes:150,lifeMode:"custom",phase:"coverage",windows:[{id:"desk",startMinute:540,endMinute:1440,environment:"desk",interruptibility:"low"}]}}},"?view=today");
+    assert.equal(configured.status,200);const plan=configured.body.today,action=plan.actions[0];
+    const request={action:"start_planned",input:{planId:plan.planId,actionId:action.id}};
+    hold=pg.holdNextReservation();const planned=h.send(request,"?view=today");
+    await Promise.race([hold.entered,new Promise((_,reject)=>setTimeout(()=>reject(new Error("reservation did not enter")),10_000).unref())]);
+    const manualRequest={action:"create",requestId:"manual-after-planner",questionId:action.questionId};
+    const manual=h.send(manualRequest);
+    let blocked=false;
+    for(let n=0;n<30;n++) {
+      if(await pg.sql("select exists(select 1 from pg_stat_activity where application_name='synthetic-original-manual' and wait_event='advisory')",null)==="t"){blocked=true;break;}
+    }
+    hold.release();const [started,denied]=await Promise.all([planned,manual]);
+    assert.equal(blocked,true,"actual manual INSERT waited for the planner's transaction lock");
+    assert.equal(started.status,200);assert.equal(denied.status,409,"manual original after planner must not create a second session");
+    assert.equal(await pg.sql("select count(*) from public.first_stage_private_sessions"),"3");
+    const snapshot=await pg.snapshot();
+    assert.equal((await h.send(manualRequest)).status,409);
+    assert.equal((await h.send(request,"?view=today")).status,200);
+    assert.equal(await pg.snapshot(),snapshot);
+    assert.equal((await legacy.send({action:"create",requestId:"new-duplicate",questionId:oldRequests[0].questionId})).status,409);
+    assert.equal(await pg.snapshot(),snapshot);
+    // The same original belongs independently to another Owner. Existing
+    // duplicates remain readable; no uniqueness migration rewrites old rows.
+    const crossOwner={action:"create",requestId:"other-owner-same-original",questionId:action.questionId};
+    assert.equal((await legacy.send(crossOwner)).status,200);
+    assert.equal((await legacy.send(crossOwner)).status,200);
+    assert.equal(await pg.sql("select count(*) from public.first_stage_private_sessions"),"4");
+    const sameRequest={action:"create",requestId:"identical-manual",questionId:"qnet-2025-36-s1-A-49"};
+    const same=await Promise.all([legacy.send(sameRequest),legacy.send(sameRequest)]);
+    assert.deepEqual(same.map(result=>result.status),[200,200]);assert.deepEqual(same[0].body,same[1].body);
+    const competing=["manual-a","manual-b"].map(requestId=>({action:"create",requestId,questionId:"qnet-2025-36-s1-A-53"}));
+    const different=await Promise.all(competing.map(value=>legacy.send(value)));
+    assert.deepEqual(different.map(result=>result.status).sort(),[200,409]);
+    for(let i=0;i<different.length;i++)assert.equal((await legacy.send(competing[i])).status,different[i].status);
+    assert.equal(await pg.sql("select count(*) from public.first_stage_private_sessions"),"6");
+    const opened=(await h.send(undefined,`?sessionId=${started.body.started.sessionId}`)).body.view;
+    h.setClock("2026-09-08T00:01:00.000Z");
+    const saved=await h.send({sessionId:opened.sessionId,command:{...submission(opened.attempt.attemptId,2),requestId:"single-original-submit"}});
+    assert.equal(saved.status,200);assert.equal(saved.body.view.reviewTasks.length,1);
+    const today=(await h.send(undefined,"?view=today")).body.today;
+    assert.equal(today.history.length,1);assert.equal(today.completionDebitMinutes,15);assert.equal(today.remainingMinutes,135);
+    // The general reviewed path remains unchanged: this guard cannot impose
+    // trial-only original reservation on separately validated reviewed sessions.
+    const reviewed=reviewedHarness({store:pg.repository()});
+    for(const requestId of ["reviewed-a","reviewed-b"]){
+      const row=await reviewed.service.create(PG_OWNER,{requestId,questionId:"synthetic-economics-q1"});
+      assert.equal(row.schemaVersion,"first_stage.private_session.v1");
+      assert.deepEqual(await reviewed.service.create(PG_OWNER,{requestId,questionId:"synthetic-economics-q1"}),row);
+    }
+    assert.equal(await pg.sql("select count(*) from public.first_stage_private_sessions"),"8");
+    const beforeReapply=await pg.snapshot();await pg.apply();assert.equal(await pg.snapshot(),beforeReapply);
+    await pg.cleanup();
+  } finally {hold?.release();pg.close();}
+});
 
 test("S01/S04/S05/S07/S11 real local Today HTTP and SDK/PG persist/restart/replay without duplicate or reviewed mixing",{timeout:240_000},async()=>{
   const pg=await isolatedPlanningPostgres();

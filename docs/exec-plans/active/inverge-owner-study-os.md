@@ -2,6 +2,29 @@
 
 ## Active post-#903 Today continuation — 2026-09-08 KST
 
+Second correction: head 98972e87c2b75564c729c3fa92af5e73893b6dc4 passed all nine
+required native checks and C3R-L, but formal review 5142592920 reported one P2
+(0/0/1), so it was NOT merged. A real PostgreSQL transaction held the planner
+reservation while the actual HTTP/manual INSERT waited on its advisory lock;
+after release the old code incorrectly returned 200 and duplicated the original.
+The trial-only BEFORE INSERT trigger now rechecks after locking. Different
+requests conflict with 409; same-ID replay, historical duplicate rows and the
+general reviewed path remain intact. New coverage also checks both writer orders,
+manual/manual concurrency, cross-Owner independence and a single completion debit.
+All 42 affected tests and both final isolated PostgreSQL/browser cases passed.
+The extra reviewed-path test initially called a non-exported helper; it now
+proves replay through the actual create API. Typecheck and correction-file lint
+passed; final build passed with only the existing curriculum NFT warning.
+All 161 tracked JSON files, the 28-path manifest and diff checks passed.
+New exact-head CI/review remain pending. Read-only helper
+review found no issue in this correction; it is not the formal GitHub review.
+Guarded local SQL reapply verified sessionsUnchanged=true, installationChanged=false
+and recordsReset=false. No actual record was changed. The stale generated dev
+type cache was preserved again, not edited or used to weaken source validation.
+Final build traces: 189, private-root matches: 0. Genuine authenticated restart
+returned 200, identical three-session history/preferences and 75 minutes, with no
+Next error dialog. App 14965/browser 96728 remain running on the existing loopback.
+
 PR #905 correction in progress: first head 15e3fc0b9027856aa302268e979c2dcff62baba8
 failed Fast/Linux/Windows CI on one historical whole-planner-freeze test. It now
 reconstructs the historical planner outside the exact authorized additive cap;
@@ -62,7 +85,7 @@ assistance before save; one explanation afterward. This is NOT independent Owner
 performance. Original 46/49 projections matched exactly; three actual sessions
 persist. Post-build app restart returned authenticated Today 200 with identical
 history/preferences/remainder and no Next error overlay. Never clean actual records.
-Actual next-day r46 remains UNOBSERVED. App session 30706 and browser REPL 96728
+Actual next-day r46 remains UNOBSERVED. App session 14965 and browser REPL 96728
 are retained. Private screenshot export was denied; no image inspection claim.
 
 Authenticated Vercel GET confirmed exact inverge project/team/repository, existing

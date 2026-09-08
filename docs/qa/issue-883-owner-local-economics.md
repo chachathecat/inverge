@@ -37,6 +37,14 @@ save replans them. Legacy settings without a declaration retain their already
 debited remaining time and history, but ask for a fresh declaration rather than
 inventing the old time. The nullable local column changes no grant/RLS policy.
 
+Original reservation uses both a shared per-Owner/question transaction lock and
+a post-lock trial-only INSERT existence check. A manual insert waiting behind a
+planner winner is rejected with 409, not admitted after the lock is released.
+Identical requests still return their own durable row; historical duplicate rows
+are neither removed nor made unreadable. Reviewed-session rules are unchanged.
+An isolated regression reproduces the actual SQL lock wait through HTTP/SDK,
+and checks both writer orders, manual concurrency, Owner separation and one debit.
+
 | Scoped scenario | Current implementation evidence |
 | --- | --- |
 | S01/S04 | Real loader/application/session commands → plan → dispatch → submit → replan; no assistance in planning or initial RSC |
@@ -78,6 +86,14 @@ kept the debited 75 minutes; an explicit same-settings replan persisted its
 server timestamp. Final app restart returned 200 with identical three-session
 history and preferences. No extra actual attempt or due-time change was made.
 Final exact-head native CI/review/merge remain pending at this source checkpoint.
+The first correction head 98972e87 passed all required native checks/C3R-L but
+review 5142592920 raised the planner-first duplicate P2. It was not merged; the
+post-lock existence correction requires its own final validation and review.
+Second-correction local results: 42 affected tests, both actual SDK/PG/HTTP/browser
+cases, typecheck, changed correction-file lint, final build, 161 JSON, 28-path
+manifest and diff passed. Guarded reapplication preserved the personal session
+digest and installation; no actual attempt was added. The new native head and
+independent review are still required before integration.
 
 ### r3 bundle continuation — 2026-09-08
 

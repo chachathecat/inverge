@@ -25,15 +25,20 @@ const planning=compile("owner-local-planning-repository","createOwnerLocalPlanni
 
 /** Real SDK/repositories/SQL. ONLY the network transport is redirected to an
  * isolated PostgreSQL 15.8 container (no network, ports, volume or personal data). */
-export async function isolatedPlanningPostgres() {
+export async function isolatedPlanningPostgres({deferPlanning=false}={}) {
   const container=`inverge-planning-synthetic-${process.pid}-${Date.now()}`;
   const docker=args=>execFileSync("docker",args,{encoding:"utf8",windowsHide:true,stdio:["ignore","pipe","pipe"]});
-  let started=false,loss=null;
-  const sql=(statement,role="service_role")=>new Promise((resolve,reject)=>{
+  let started=false,loss=null,reservationHold=null;
+  const marker="SYNTHETIC_RESERVATION_HELD";
+  const sql=(statement,role="service_role",hold=null)=>new Promise((resolve,reject)=>{
     const child=spawn("docker",["exec","-i",container,"psql","-h","127.0.0.1","-U","postgres","-d","postgres","-X","-q","-At","-v","ON_ERROR_STOP=1"],{windowsHide:true});
-    let output="",error="";child.stdout.on("data",value=>output+=value);child.stderr.on("data",value=>error+=value);
-    child.on("error",reject);child.on("close",code=>{if(code===0)resolve(output.trim());else {const failure=new Error("synthetic-pg-rejection");failure.code=error.match(/ERROR:\s+([0-9A-Z]{5}):/u)?.[1]??"unknown";reject(failure);}});
-    child.stdin.end("\\set VERBOSITY verbose\n"+(role?`begin; set local role ${role}; set local statement_timeout='15s'; ${statement}; commit;`:statement));
+    let output="",error="";child.stdout.on("data",value=>{output+=value;if(hold&&output.includes(marker))hold.entered();});child.stderr.on("data",value=>error+=value);
+    child.on("error",reject);child.on("close",code=>{if(code===0)resolve(output.replace(marker,"").trim());else {const failure=new Error("synthetic-pg-rejection");failure.code=error.match(/ERROR:\s+([0-9A-Z]{5}):/u)?.[1]??"unknown";reject(failure);}});
+    const prefix="\\set VERBOSITY verbose\n";
+    if(hold) {
+      child.stdin.write(prefix+`begin; set local role ${role}; set local statement_timeout='15s'; ${statement}; select '${marker}';\n`);
+      hold.released.then(()=>child.stdin.end("commit;\n"));
+    } else child.stdin.end(prefix+(role?`begin; set local role ${role}; set local statement_timeout='15s'; ${statement}; commit;`:statement));
   });
   const lose=point=>{if(loss===point){loss=null;throw new Error("synthetic-durable-response-lost");}};
   const identifier=value=>{assert.match(value,/^[a-z_]+$/u);return `"${value}"`;};
@@ -43,7 +48,8 @@ export async function isolatedPlanningPostgres() {
     try {
       if(url.pathname==="/rest/v1/rpc/inverge_owner_local_reserve_original") {
         assert.equal(method,"POST");const value=JSON.parse(init.body);
-        const result=await sql(`select public.inverge_owner_local_reserve_original(${literal(value.p_owner)}::uuid,${literal(value.p_session)},${literal(JSON.stringify(value.p_payload))}::jsonb)::text`);
+        const hold=reservationHold;reservationHold=null;
+        const result=await sql(`select public.inverge_owner_local_reserve_original(${literal(value.p_owner)}::uuid,${literal(value.p_session)},${literal(JSON.stringify(value.p_payload))}::jsonb)::text`,"service_role",hold);
         lose("rpc");return Response.json(result?JSON.parse(result):null);
       }
       const table=url.pathname==="/rest/v1/first_stage_private_sessions"?TABLE:PLANNING;
@@ -66,7 +72,7 @@ export async function isolatedPlanningPostgres() {
       } else {
         const value=JSON.parse(init.body),names=Object.keys(value).map(identifier).join(","),json=`${literal(JSON.stringify(value))}::jsonb`;
         if(method==="POST") {
-          await sql(`insert into ${table} (${names}) select ${names} from jsonb_populate_record(null::${table},${json})`);
+          await sql(`set local application_name='synthetic-original-manual'; insert into ${table} (${names}) select ${names} from jsonb_populate_record(null::${table},${json})`);
           lose(`${name}:POST`);return new Response(null,{status:201});
         }
         assert.equal(method,"PATCH");
@@ -92,8 +98,13 @@ export async function isolatedPlanningPostgres() {
     await sql("set inverge.local_first_stage_personal_use='owner_approved_persistent_local';\n"+readFileSync(new URL("../../supabase/local-designs/first-stage-owner-local-sessions.sql",import.meta.url),"utf8"),null);
     await assert.rejects(sql(design,null),{code:"P0001"});
     await assert.rejects(sql("set inverge.local_first_stage_personal_use='owner_approved_persistent_local'; set inverge.local_first_stage_design='synthetic_only';\n"+design,null),{code:"P0001"});
-    await apply();
+    if(!deferPlanning)await apply();
     return {sql,apply,close,repository:()=>sessions(sdk()),planningRepository:()=>planning(sdk()),loseNext:point=>{loss=point;},
+      holdNextReservation:()=>{
+        assert.equal(reservationHold,null);let entered,release;
+        const enteredPromise=new Promise(resolve=>{entered=resolve;}),released=new Promise(resolve=>{release=resolve;});
+        reservationHold={entered,released};return {entered:enteredPromise,release};
+      },
       snapshot:()=>sql(`select coalesce(jsonb_agg(to_jsonb(r) order by owner_id,session_id),'[]')::text from ${TABLE} r`),
       cleanup:async()=>{await sql(`delete from auth.users where id in (${literal(PG_OWNER)},${literal(PG_OTHER)})`,null);
         for(const table of [TABLE,PLANNING,"auth.users"])assert.equal(await sql(`select count(*) from ${table}`,null),"0");}};
