@@ -38,6 +38,8 @@ const defaultTestFiles = [
   "tests/learner-loop-telemetry.test.mjs",
   "tests/legal-source-ingest.test.mjs",
   "tests/legal-retrieval.test.mjs",
+  "tests/owner-legal-evidence-bridge.test.mjs",
+  "tests/owner-legal-evidence-bridge-browser.test.mjs",
   "tests/legal-concept-anchor-seed.test.mjs",
   "tests/legal-grounding-guard.test.mjs",
   "tests/legal-anchor-verification-report.test.mjs",

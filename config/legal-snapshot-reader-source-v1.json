@@ -1,0 +1,184 @@
+{
+  "schemaVersion": "LegalSnapshotReaderSourceV1",
+  "repository": "chachathecat/inverge-legal-authority",
+  "revision": "0b038faee68fb434e4f0f9236274e1ea93aee653",
+  "tree": "8d11e173431965cc72993a040a4cdf45e5ddecd9",
+  "entry": "src/statute-snapshot-reader.mjs",
+  "parser": "TYPESCRIPT_AST",
+  "dependencyFiles": [
+    {
+      "path": "src/appraiser-statute-contract.mjs",
+      "sha256": "98d736db5ba9aad1f69d25dc36a0f366b39610f391fbe5a1515d4e743f9fae84",
+      "bytes": 5225,
+      "imports": []
+    },
+    {
+      "path": "src/appraiser-statute-response.mjs",
+      "sha256": "6ddd2ab8bea06470d309d5e6b3207307080e0e64d67cdcf5bdd02cffdab3f7f8",
+      "bytes": 3060,
+      "imports": [
+        "src/appraiser-statute-contract.mjs",
+        "src/legal-statute-response-policy-v2.mjs",
+        "src/legal-statute-response-policy-v3.mjs"
+      ]
+    },
+    {
+      "path": "src/appraiser-statute-sync-contract.mjs",
+      "sha256": "2be37fdeaa38b462d1141d40168838157ddc134330aff470439149f5b3196453",
+      "bytes": 2685,
+      "imports": [
+        "src/appraiser-statute-contract.mjs"
+      ]
+    },
+    {
+      "path": "src/legal-statute-local-02-contract.mjs",
+      "sha256": "90f10b31fbee63249d38c1b755cb1a9016535fdcbdadb9f70b046c268debc3e3",
+      "bytes": 3569,
+      "imports": [
+        "src/legal-statute-local-contract.mjs",
+        "src/legal-statute-response-policy-v2.mjs"
+      ]
+    },
+    {
+      "path": "src/legal-statute-local-03-contract.mjs",
+      "sha256": "db69527250e55d60152eadf4e20fd39322943764af35adf0a3faa86337778c00",
+      "bytes": 5923,
+      "imports": [
+        "src/legal-statute-local-02-contract.mjs",
+        "src/legal-statute-local-contract.mjs",
+        "src/legal-statute-response-policy-v2.mjs",
+        "src/legal-statute-response-policy-v3.mjs",
+        "src/legal-statute-snapshot.mjs"
+      ]
+    },
+    {
+      "path": "src/legal-statute-local-contract.mjs",
+      "sha256": "166b167c438e7aabedfe567440328ba2e6364873541878f3b2889b9ab7d2036f",
+      "bytes": 2501,
+      "imports": [
+        "src/legal-statute-post-connectivity-contract.mjs",
+        "src/legal-statute-recovery-contract.mjs"
+      ]
+    },
+    {
+      "path": "src/legal-statute-post-connectivity-contract.mjs",
+      "sha256": "f12e265cb9b930db39bce9cbcf9918ab1b4e2e772360f23873bb484db2b913c5",
+      "bytes": 6765,
+      "imports": [
+        "src/legal-statute-recovery-contract.mjs",
+        "src/moleg-connectivity-diagnosis.mjs"
+      ]
+    },
+    {
+      "path": "src/legal-statute-process-env.mjs",
+      "sha256": "ee0e81b5044dbefe37f15d278a5d7a3b6bf38bc920efc9d8addb9cc394561465",
+      "bytes": 542,
+      "imports": []
+    },
+    {
+      "path": "src/legal-statute-recovery-contract.mjs",
+      "sha256": "100bd43c1cfc6722fc4d1484b95c01b78875694c57f02978668134bf4275bf0a",
+      "bytes": 9947,
+      "imports": [
+        "src/legal-statute-response-policy-v2.mjs",
+        "src/legal-statute-response-policy-v3.mjs"
+      ]
+    },
+    {
+      "path": "src/legal-statute-response-policy-v2.mjs",
+      "sha256": "70631918c4fb907fddf6f2b77c4d46d0d866f3d2fe5a4cf860ed644e9ec9e866",
+      "bytes": 8162,
+      "imports": [
+        "src/pea-m0r/json.mjs"
+      ]
+    },
+    {
+      "path": "src/legal-statute-response-policy-v3.mjs",
+      "sha256": "30bf3e791afc8b4bcfeb18ea011003a5f7d5ee31de8a3782968bd20f45a3eaea",
+      "bytes": 5188,
+      "imports": [
+        "src/legal-statute-response-policy-v2.mjs",
+        "src/pea-m0r/common.mjs",
+        "src/pea-m0r/json.mjs"
+      ]
+    },
+    {
+      "path": "src/legal-statute-snapshot.mjs",
+      "sha256": "fc666e86f5fdc9fbbdfc4f59b4f36e254f9ce7ca182729099f55740d57e6c60f",
+      "bytes": 41320,
+      "imports": [
+        "src/appraiser-statute-contract.mjs",
+        "src/appraiser-statute-response.mjs",
+        "src/appraiser-statute-sync-contract.mjs",
+        "src/legal-statute-local-02-contract.mjs",
+        "src/legal-statute-local-03-contract.mjs",
+        "src/legal-statute-local-contract.mjs",
+        "src/legal-statute-post-connectivity-contract.mjs",
+        "src/legal-statute-recovery-contract.mjs",
+        "src/legal-statute-response-policy-v2.mjs",
+        "src/legal-statute-response-policy-v3.mjs",
+        "src/pea-m0r/json.mjs",
+        "src/pea-m2f-moleg-partial-closeout-v2.mjs"
+      ]
+    },
+    {
+      "path": "src/legal-statute-windows.mjs",
+      "sha256": "700ac0127cf821afdc2ac6eaed74a146606a2be826b3eec193f078a112c2d368",
+      "bytes": 3554,
+      "imports": [
+        "src/legal-statute-process-env.mjs",
+        "src/legal-statute-snapshot.mjs"
+      ]
+    },
+    {
+      "path": "src/moleg-connectivity-diagnosis.mjs",
+      "sha256": "fa7d7b0b2d5262892c0de2b54357c2922c6957aef29f6a4bae758aed85ac991b",
+      "bytes": 12705,
+      "imports": [
+        "src/legal-statute-windows.mjs"
+      ]
+    },
+    {
+      "path": "src/pea-m0r/common.mjs",
+      "sha256": "13f33fe151be1d1f378249d16751249287d05c12a936d9ed581b4d6f33933d9b",
+      "bytes": 5882,
+      "imports": []
+    },
+    {
+      "path": "src/pea-m0r/json.mjs",
+      "sha256": "1545b95d2be7f49cf80681c266b6487c068e5214167ca572a27c9622689407c5",
+      "bytes": 4008,
+      "imports": [
+        "src/pea-m0r/common.mjs"
+      ]
+    },
+    {
+      "path": "src/pea-m2f-moleg-partial-closeout-v2.mjs",
+      "sha256": "892825af9437120ba9a72869e14b649db94b367d12a2e04122f2436db8a2f17e",
+      "bytes": 9856,
+      "imports": []
+    },
+    {
+      "path": "src/statute-snapshot-reader.mjs",
+      "sha256": "20bb735ed8684cd99be69dbacd81f5bcf2cf22f39cd550670255519de7ceae9a",
+      "bytes": 15679,
+      "imports": [
+        "src/legal-statute-snapshot.mjs",
+        "src/pea-m0r/json.mjs"
+      ]
+    }
+  ],
+  "builtins": [
+    "node:child_process",
+    "node:crypto",
+    "node:dns/promises",
+    "node:fs",
+    "node:net",
+    "node:os",
+    "node:path",
+    "node:perf_hooks",
+    "node:tls",
+    "node:url"
+  ],
+  "unknownImports": []
+}

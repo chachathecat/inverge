@@ -1,5 +1,42 @@
 # Inverge Owner Study OS
 
+## APPRAISER-LEGAL-EVIDENCE-BRIDGE-01 — 2026-09-09 single-writer transition
+
+Economics PR #907 is merged at f50e64bb1ed90e7e75f8c00196f46e901f059ea6,
+tree 6006f129cfe1365ec12ca8dd07f4059e7ade1bbb. All five resulting-main workflows
+were rechecked successful before transition. Its detailed uncommitted closeout,
+six personal records, 3883 server/browser/cache and Owner-only r46 next-day
+observation remain preserved in the original economics worktree.
+
+The Owner directly assigned the bridge to this same integrator. The preparation
+writer explicitly ended writes with exactly three untested drafts preserved;
+their hashes matched before takeover. The dedicated bridge worktree/branch is
+appraiser-legal-evidence-bridge-01 / codex/appraiser-legal-evidence-bridge-01 at
+that main base. The existing local handoff record now names thread
+01a06790-d555-7b40-9a04-3ef95010fb49 as sole implementation writer.
+
+Only held list/version/search/text/exact-reference reopen is in scope. The 12
+bridge files and four explicitly serialized shared documentation/entry/test files
+are implemented. New tests 8/8; default suite 1,806 before lint-only clarification;
+final typecheck, clean changed-file lint, focused 41/41 and build passed. Actual
+held-file HTTP execution (synthetic auth) checked 15 searches, 15 exact reopens
+and 15 tamper denials with zero writes/body output and unchanged catalog.
+162 JSON files and 191 build traces passed privacy/shape checks.
+
+Preservable stop: no code conflict or writer handoff remains. Vercel read-only
+query confirms Git auto-deploy enabled and Preview builds permitted; existing
+bridge authority prohibits Preview deployment. OFF-state automatic Preview CI
+permission was requested; pending it, no push/Draft PR/remote CI/formal review
+is claimed. Bridge merge and actual local activation remain separately gated.
+Do not turn on flags or switch the economics runtime worktree's branch.
+
+After preserving the bridge candidate, return to the original economics
+checkpoint. Its bounded curriculum Goal is already completed by #907; no new
+economics feature is automatically added. The next-day r46 observation remains
+Owner-only after 2026-09-09 15:39 KST, not an agent or artificial-clock attempt.
+No second writer starts; supplier/private data and the existing app/records
+remain unchanged. See the 2026-09-09 bridge decision and QA scope.
+
 ## Active post-#905 curriculum-to-usable-economics Goal — 2026-09-09 KST
 
 Owner accepted the bounded handoff in PR #905 comment 5587044730. Main is
