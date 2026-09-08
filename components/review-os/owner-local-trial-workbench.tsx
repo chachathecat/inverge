@@ -40,7 +40,7 @@ function OwnerLocalToday({initialSearch}:{initialSearch:string}) {
   function accept(value: Today) {
     setToday(value);
     if (value.preferences) setPreferences({...value.preferences,
-      remainingMinutes:value.state==="planned"?value.remainingMinutes:value.preferences.remainingMinutes});
+      remainingMinutes:"remainingMinutes" in value && typeof value.remainingMinutes==="number"?value.remainingMinutes:value.preferences.remainingMinutes});
     else {
       const local = new Date(Date.now()+9*3600_000);
       const startMinute = Math.min(1425,Math.ceil((local.getUTCHours()*60+local.getUTCMinutes())/15)*15);
@@ -82,7 +82,7 @@ function OwnerLocalToday({initialSearch}:{initialSearch:string}) {
     } finally {inFlight.current=false;if(mounted.current)setBusy(false);}
   }
   function start(actionId:string) {
-    if(today?.state!=="planned" || busy || inFlight.current)return;
+    if(today?.state!=="planned" || !today.executableNowActionIds.includes(actionId) || busy || inFlight.current)return;
     const input={planId:today.planId,actionId};
     const href=`${ROOT}?${new URLSearchParams(input)}`;
     window.history.replaceState(null,"",href);setLoginHref(`/login?returnTo=${encodeURIComponent(href)}`);
@@ -92,7 +92,8 @@ function OwnerLocalToday({initialSearch}:{initialSearch:string}) {
     setPreferences(previous=>({...previous,windows:previous.windows.map((value,i)=>i===index?{...value,...change}:value)}));
   }
   const planned=today?.state==="planned"?today:null;
-  const next=planned?.actions[0];
+  const next=planned?.actions.find(action=>action.id===planned.nextActionId);
+  const executableNowActionIds=planned?.executableNowActionIds??[];
   return <main className="mx-auto max-w-3xl space-y-6 px-5 py-10">
     <header><p className="text-xs text-slate-500">Owner PC · 사람 미검토 · 경제학 r3</p><h1 className="mt-2 text-2xl font-bold">Today · 오늘 남은 학습</h1>
       <p className="mt-4 rounded-xl border border-amber-300 bg-amber-50 p-4 text-sm">{OWNER_LOCAL_R3_TRIAL_NOTICE}</p></header>
@@ -107,14 +108,16 @@ function OwnerLocalToday({initialSearch}:{initialSearch:string}) {
       {planned && !retryable && !loginRequired && <>
         <p>오늘 남은 {planned.remainingMinutes}분 · 계획 {planned.plan.plannedActiveMinutes}분 · 미배정 {planned.unallocatedMinutes}분</p>
         <p className="text-sm text-slate-600">설정 이후 완료 {planned.completedSinceDeclaration}회 × 예상 15분 차감. 실제 공부시간 측정값이 아닙니다. 진행 중 예약 {planned.inProgressReservedMinutes}분은 남은 시간 안에 포함합니다.</p>
-        {next ? <button className={PRIMARY} disabled={busy} onClick={()=>start(next.id)}>{next.kind==="new"?"새 문제":next.kind==="retry"?"기한 복습":"이어하기"} · 경제학 {next.questionNumber}번</button> : <p>{planned.stockExhausted?"현재 시작 가능한 재고가 없습니다. 다음 복습 시각을 확인하세요.":"현재 시간·환경·회복 조건에 맞는 실행 블록이 없습니다."}</p>}
+        {next ? <button className={PRIMARY} disabled={busy || !executableNowActionIds.includes(next.id)} onClick={()=>start(next.id)}>{next.kind==="new"?"새 문제":next.kind==="retry"?"기한 복습":"이어하기"} · 경제학 {next.questionNumber}번</button> : <p>{planned.stockExhausted?"현재 시작 가능한 재고가 없습니다. 다음 복습 시각을 확인하세요.":"현재 시간·환경·회복 조건에 맞는 실행 블록이 없습니다."}</p>}
+        {next && !executableNowActionIds.includes(next.id) && <p role="status">아직 이 블록의 시작 시간이 아닙니다. Full-Day 시간표를 확인하고 해당 시간이 되면 <a className="underline" href={ROOT}>현재 서버 계획 새로 확인</a>을 눌러 주세요.</p>}
+        {planned.expiredBlockCount>0 && <p>지난 미실행 블록 {planned.expiredBlockCount}개는 완료로 처리하지 않습니다. 계속 공부하려면 아래 남은 시간·생활 조건을 저장해 다시 계획하세요.</p>}
         {planned.newStudyOpportunity && !planned.newStudyOpportunity.selected && <p className="text-sm">새 학습 보류: {planned.newStudyOpportunity.exception}</p>}
         {planned.overflowCount>0 && <p>계획 후보 한도 밖 {planned.overflowCount}건은 미완료로 남겨 두었습니다.</p>}
         <h2 className="font-semibold">오늘의 핵심 결과 · 최대 3개</h2>
         <ul className="space-y-2">{planned.plan.coreOutcomes.map(outcome=><li key={outcome.outcomeId}>{outcome.title} · {outcome.estimatedMinutes}분</li>)}</ul>
         <details><summary className="cursor-pointer py-3">Full-Day 시간표와 보류 항목</summary>
           <ol className="space-y-3">{planned.plan.executionBlocks.map(block=><li key={block.blockId} className="rounded-xl border p-3">{clock(block.startMinute)}–{clock(block.endMinute)} · {block.title}
-            {block.candidateId && planned.actions.some(action=>action.id===block.candidateId) && block.candidateId!==next?.id && <button disabled={busy} className={`${SECONDARY} ml-3`} onClick={()=>start(block.candidateId!)}>이 블록 시작</button>}</li>)}</ol>
+            {block.candidateId && planned.actions.some(action=>action.id===block.candidateId) && block.candidateId!==next?.id && <button disabled={busy || !executableNowActionIds.includes(block.candidateId)} className={`${SECONDARY} ml-3`} onClick={()=>start(block.candidateId!)}>이 블록 시작</button>}</li>)}</ol>
           <ul>{planned.plan.deferredTasks.map(task=><li key={task.candidateId} className="mt-2 text-sm">{task.title}: {task.reason}</li>)}</ul>
         </details>
       </>}

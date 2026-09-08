@@ -31,6 +31,12 @@ attachment's stub-validator runner is not application evidence. Keep genuine
 local walkthrough and real next-day observation distinct. Exact-head native CI,
 independent 0/0/0 review, resolved threads and deployment-boundary gates remain.
 
+This exact Today bridge may add an optional remaining-active-minute cap to the
+native planner without changing its historical daily/cognitive/recovery policy.
+The frozen-source regression preserves every other planner byte and the original
+M4/M5 evidence; the extension and unchanged callers require fresh behavioral tests.
+This narrowly supersedes that file's old whole-file freeze, not its safety rules.
+
 Continue private question, response, explanation, durable record, reconnect
 and review flows for civil law, economics, real-estate principles,
 appraisal-related law and accounting. Reuse existing engines, storage and

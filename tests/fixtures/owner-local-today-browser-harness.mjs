@@ -31,9 +31,18 @@ export async function verifyOwnerLocalTodayBrowser(h) {
     const page=await context.newPage();page.on("pageerror",()=>failures.push("browser-error"));
     await page.goto(origin+root);await page.getByRole("button",{name:"남은 시간 저장·재계획"}).waitFor();
     assert.equal(await page.getByRole("radio").count(),0);assert.equal(await page.getByRole("region",{name:"저장된 응답 해설"}).count(),0);
-    await page.getByLabel("구간 1 시작",{exact:true}).fill("09:00");await page.getByLabel("구간 1 종료",{exact:true}).fill("23:59");
+    await page.getByLabel("구간 1 시작",{exact:true}).fill("18:00");await page.getByLabel("구간 1 종료",{exact:true}).fill("23:59");
     await page.getByLabel("남은 공부시간",{exact:true}).fill("150");await page.getByRole("button",{name:"남은 시간 저장·재계획"}).click();
     await page.getByRole("button",{name:"새 문제 · 경제학 46번",exact:true}).waitFor();
+    assert.equal(await page.getByRole("button",{name:"새 문제 · 경제학 46번",exact:true}).isDisabled(),true);
+    await page.getByText("아직 이 블록의 시작 시간이 아닙니다.",{exact:false}).waitFor();
+    await page.getByText("Full-Day 시간표와 보류 항목",{exact:true}).click();
+    for(const button of await page.getByRole("button",{name:"이 블록 시작",exact:true}).all())assert.equal(await button.isDisabled(),true);
+    // An explicit availability edit, not a client clock/authority override.
+    await page.getByText("남은 시간·생활 조건 설정",{exact:true}).click();
+    await page.getByLabel("구간 1 시작",{exact:true}).fill("09:00");
+    await page.getByRole("button",{name:"남은 시간 저장·재계획"}).click();
+    await page.waitForFunction(()=>Array.from(document.querySelectorAll("button")).some(button=>button.textContent==="새 문제 · 경제학 46번"&&!button.disabled));
     await page.getByRole("button",{name:"새 문제 · 경제학 46번",exact:true}).evaluate(button=>{button.click();button.click();});
     await page.getByRole("button",{name:"같은 계획 요청 다시 확인"}).waitFor();const pending=page.url();assert.ok(new URL(pending).searchParams.has("planId"));
     await page.reload();await page.getByRole("button",{name:"같은 계획 요청 다시 확인"}).waitFor();assert.equal(page.url(),pending);
@@ -59,6 +68,6 @@ export async function verifyOwnerLocalTodayBrowser(h) {
     deny=true;await page.reload();await page.getByRole("link",{name:"기존 로컬 계정으로 다시 로그인"}).waitFor();
     assert.equal(await page.getByRole("button",{name:/새 문제 ·/}).count(),0);
     assert.deepEqual(failures,[]);assert.deepEqual(external,[]);assert.ok(statuses.every(status=>status===200));
-    return {browserErrors:0,externalRequests:0,persistedResume:true,remainingReplan:true,expiredLoginDenied:true};
+    return {browserErrors:0,externalRequests:0,persistedResume:true,remainingReplan:true,expiredLoginDenied:true,futureBlocksDisabled:true};
   }finally{await browser?.close();await new Promise(resolve=>server.close(resolve));}
 }

@@ -17,6 +17,10 @@ test("S01/S04/S05/S07/S11 real local Today HTTP and SDK/PG persist/restart/repla
     pg.loseNext("planning:POST");assert.equal((await h.send(save,"?view=today")).status,503);
     const configured=await h.send(save,"?view=today");assert.equal(configured.status,200);assert.equal(configured.body.today.preferencesRevision,1);
     assert.deepEqual(await today(make()),configured.body.today);
+    const notYet=configured.body.today.actions[1];
+    const untouched=await pg.snapshot();
+    assert.equal((await h.send({action:"start_planned",input:{planId:configured.body.today.planId,actionId:notYet.id}},"?view=today")).status,409);
+    assert.equal(await pg.snapshot(),untouched);
     assert.equal((await today(make(PG_OTHER))).history.length,0);
     for(const role of ["anon","authenticated"]) {
       await assert.rejects(pg.sql("select * from public.first_stage_owner_local_planning",role),{code:"42501"});
@@ -25,8 +29,10 @@ test("S01/S04/S05/S07/S11 real local Today HTTP and SDK/PG persist/restart/repla
     assert.equal(await pg.sql("select relrowsecurity and relforcerowsecurity from pg_class where oid='public.first_stage_owner_local_planning'::regclass",null),"t");
     // Three different post-commit failures: intent, original insert, begin CAS.
     let firstId,firstDue;
-    for(const [number,point] of [[46,"planning:PATCH"],[49,"rpc"],[51,"session:PATCH"]]) {
+    for(const [number,point] of [[49,"session:PATCH"],[46,"planning:PATCH"],[51,"rpc"]]) {
       const plan=await today(h),action=plan.actions.find(item=>item.kind==="new"&&item.questionNumber===number);assert.ok(action);
+      const scheduled=plan.plan.executionBlocks.find(block=>block.candidateId===action.id);
+      h.setClock(new Date(Math.max(Date.parse(h.getClock()),Date.parse("2026-09-07T15:00:00.000Z")+scheduled.startMinute*60_000)+1_000).toISOString());
       const request={action:"start_planned",input:{planId:plan.planId,actionId:action.id}};
       pg.loseNext(point);assert.equal((await h.send(request,"?view=today")).status,503);
       const restart=make();restart.setClock(h.getClock());const [a,b]=await Promise.all([restart.send(request,"?view=today"),h.send(request,"?view=today")]);
@@ -49,15 +55,21 @@ test("S01/S04/S05/S07/S11 real local Today HTTP and SDK/PG persist/restart/repla
     const security=await pg.sql("select coalesce(jsonb_agg(jsonb_build_array(relname,relrowsecurity,relforcerowsecurity)),'[]') from pg_class where relname in ('first_stage_private_sessions','first_stage_owner_local_planning')",null);
     assert.ok(!security.includes("false"));
     // Virtual clock ONLY in this networkless synthetic fixture; actual next-day observation stays separate.
-    h.setClock("2026-09-09T00:04:00.000Z");
+    h.setClock(new Date(Date.parse(h.getClock())+86_400_000+60_000).toISOString());
     const old=await today(h);assert.equal(old.state,"availability_required");
     const tomorrow=await h.send({action:"save_availability",input:{requestId:"pg-next-day",expectedRevision:old.preferencesRevision,preferences:prefs}},"?view=today");
     assert.equal(tomorrow.status,200);assert.ok(tomorrow.body.today.actions.some(action=>action.kind==="retry"));
-    const retryAction=tomorrow.body.today.actions.find(action=>action.sessionId===firstId);
-    const retryRequest={action:"start_planned",input:{planId:tomorrow.body.today.planId,actionId:retryAction.id}};
+    const futureRetry=tomorrow.body.today.actions.find(action=>action.sessionId===firstId);
+    assert.equal((await h.send({action:"start_planned",input:{planId:tomorrow.body.today.planId,actionId:futureRetry.id}},"?view=today")).status,409);
+    const retryBlock=tomorrow.body.today.plan.executionBlocks.find(block=>block.candidateId===futureRetry.id);
+    // Advance ONLY the isolated clock to the server-planned block, not a
+    // fixture-authored date that bypasses scheduling. Reads must not slide it.
+    h.setClock(new Date(Date.parse("2026-09-08T15:00:00.000Z")+retryBlock.startMinute*60_000+1_000).toISOString());
+    assert.equal((await today(h)).planId,tomorrow.body.today.planId);
+    const retryRequest={action:"start_planned",input:{planId:tomorrow.body.today.planId,actionId:futureRetry.id}};
     const retried=await h.send(retryRequest,"?view=today");assert.equal(retried.status,200);
     const active=(await h.send(undefined,`?sessionId=${firstId}`)).body.view;assert.equal(active.question.questionReference.questionId,"issue883-r3-r46");
-    h.setClock("2026-09-09T00:05:00.000Z");
+    h.setClock(new Date(Date.parse(h.getClock())+60_000).toISOString());
     // This synthetic candidate's independently supplied proposed choice is 4;
     // a wrong choice correctly preserves a pending task, not a completion.
     assert.equal((await h.send({sessionId:firstId,command:{...submission(active.attempt.attemptId,4),expectedRevision:4,requestId:"pg-finish-retry"}})).status,200);

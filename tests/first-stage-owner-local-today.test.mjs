@@ -15,6 +15,24 @@ async function configure(h,preferences=prefs()) {
   assert.equal(result.status,200,JSON.stringify(result.body));return result.body.today;
 }
 const startPlan=(h,plan,action=plan.actions[0])=>h.send({action:"start_planned",input:{planId:plan.planId,actionId:action.id}},query);
+test("scheduled dispatch rejects future blocks before any durable intent and starts only inside the server window",async()=>{
+  const h=make(),plan=await configure(h,prefs(150,"coverage",[
+    {id:"evening",startMinute:1080,endMinute:1200,environment:"desk",interruptibility:"low"}]));
+  const before=privateSessionDigest([...h.planningRows.values()]);
+  assert.equal((await startPlan(h,plan)).status,409);
+  assert.equal(privateSessionDigest([...h.planningRows.values()]),before);assert.equal(h.rows.size,0);
+  assert.deepEqual(plan.executableNowActionIds,[]);
+  h.setClock("2026-09-08T09:00:30.000Z");
+  const evening=await current(h);
+  assert.deepEqual(evening.executableNowActionIds,[evening.actions[0].id]);
+  assert.equal((await startPlan(h,evening,evening.actions[1])).status,409);
+  const started=await startPlan(h,evening);assert.equal(started.status,200);
+  const stored=[...h.rows.values()][0];assert.equal(stored.state.revision,2);
+  h.setClock("2026-09-08T11:00:00.000Z");
+  const digest=privateSessionDigest([...h.rows.values()]);
+  assert.equal((await startPlan(h,evening)).status,200); // durable command replay, not a new start
+  assert.equal(privateSessionDigest([...h.rows.values()]),digest);
+});
 async function manual(h,number,id,{finish=true}={}) {
   const questionId=`qnet-2025-36-s1-A-${number}`;
   const created=await h.send({action:"create",requestId:`create-${id}`,questionId});assert.equal(created.status,200);
@@ -25,6 +43,53 @@ async function manual(h,number,id,{finish=true}={}) {
   const saved=await h.send({sessionId,command:{...submission(begun.body.view.attempt.attemptId,1),requestId:`submit-${id}`}});assert.equal(saved.status,200);
   return {sessionId,view:saved.body.view};
 }
+
+test("block expiry during durable original creation preserves the row without beginning outside availability",async()=>{
+  const h=make(),plan=await configure(h,prefs(150,"coverage",[
+    {id:"short-desk",startMinute:540,endMinute:630,environment:"desk",interruptibility:"low"}]));
+  const create=h.store.createOriginalIfAbsent.bind(h.store);
+  h.store.createOriginalIfAbsent=async value=>{const result=await create(value);h.setClock("2026-09-08T01:30:00.000Z");return result;};
+  assert.equal((await startPlan(h,plan)).status,409);
+  assert.equal(h.rows.size,1);assert.equal([...h.rows.values()][0].state.revision,1);
+  assert.equal((await startPlan(h,plan)).status,409);
+});
+
+test("later blocks arrive without sliding on read; expired slots need explicit replan, never fake completion",async()=>{
+  const h=make(),plan=await configure(h),later=plan.actions[1];
+  const block=plan.plan.executionBlocks.find(item=>item.candidateId===later.id);
+  const before=privateSessionDigest([...h.planningRows.values()]);
+  h.setClock(new Date(Date.parse("2026-09-07T15:00:00.000Z")+block.startMinute*60_000+30_000).toISOString());
+  const refreshed=await current(h);
+  assert.equal(refreshed.planId,plan.planId);assert.deepEqual(refreshed.plan.executionBlocks,plan.plan.executionBlocks);
+  assert.equal(refreshed.nextActionId,later.id);assert.ok(refreshed.executableNowActionIds.includes(later.id));
+  assert.equal(privateSessionDigest([...h.planningRows.values()]),before);
+  assert.equal((await startPlan(h,plan,plan.actions[0])).status,409);
+  assert.equal((await startPlan(h,plan,later)).status,200);assert.equal(h.rows.size,1);
+  assert.equal([...h.rows.values()][0].state.examCycle.questionReferences[0].questionId,later.questionId);
+  h.setClock("2026-09-08T14:59:00.000Z");
+  const expired=await current(h);assert.equal(expired.nextActionId,null);assert.ok(expired.expiredBlockCount>0);
+  assert.equal(expired.history[0].committedAttempts.length,0);
+});
+
+test("legacy planning records preserve settings but cannot invent a declaration timestamp",async()=>{
+  const h=make();await configure(h);await manual(h,46,"legacy");
+  for(const value of h.planningRows.values())delete value.declaredAt;
+  const before=privateSessionDigest([...h.rows.values()]);const legacy=await current(h);
+  assert.equal(legacy.state,"availability_required");assert.equal(legacy.history.length,1);
+  assert.equal(legacy.remainingMinutes,135);
+  assert.equal((await configure(h,prefs(75))).remainingMinutes,75);
+  assert.equal(privateSessionDigest([...h.rows.values()]),before);
+});
+
+test("a later block retains its valid time through partial original creation and lost begin",async()=>{
+  const h=make(),plan=await configure(h),later=plan.actions[1];
+  const block=plan.plan.executionBlocks.find(item=>item.candidateId===later.id);
+  h.setClock(new Date(Date.parse("2026-09-07T15:00:00.000Z")+block.startMinute*60_000+30_000).toISOString());
+  h.failNextWrite();assert.equal((await startPlan(h,plan,later)).status,503);
+  assert.equal([...h.rows.values()][0].state.revision,1);
+  const retry=await startPlan(h,plan,later);assert.equal(retry.status,200);
+  assert.equal(h.rows.size,1);assert.equal([...h.rows.values()][0].state.revision,2);
+});
 
 test("S01 actual local-trial HTTP exposes planning setup without creating sessions or assistance", async () => {
   const h = trialHarness({ fixture: syntheticTrialInput({ numericTrialModels: true }) });
@@ -131,7 +196,7 @@ test("S10 drift quarantines the affected action and preserves unrelated validate
 
 test("S13 clients cannot inject authority/clock/owner or weaken local gates",async()=>{
   const h=make();
-  for(const key of ["ownerId","state","trustedNow","humanReviewComplete","priorities"]) {
+  for(const key of ["ownerId","state","trustedNow","declaredAt","humanReviewComplete","priorities"]) {
     const result=await h.send({action:"save_availability",input:{requestId:"invalid",expectedRevision:0,preferences:{...prefs(),[key]:true}}},query);
     assert.equal(result.status,400);
   }

@@ -16,7 +16,9 @@ export type TrialPlanningRecord = {
   schemaVersion: "first_stage.owner_local_planning.v1"; ownerId: string; revision: number;
   date: string; preferences: TrialPlanningPreferences; requestId: string; requestDigest: string;
   completedAtDeclaration: readonly string[];
-  dispatches: readonly { planId: string; action: TrialPlanAction; catalogDigest: string; date: string; availabilityDigest: string }[];
+  declaredAt?: string;
+  dispatches: readonly { planId: string; action: TrialPlanAction; catalogDigest: string; date: string; availabilityDigest: string;
+    block?: {startMinute:number;endMinute:number} }[];
 };
 export interface TrialPlanningStore {
   load(ownerId: string): Promise<TrialPlanningRecord | null>;
@@ -52,6 +54,13 @@ export function createOwnerLocalTodayService(store: PrivateFirstStageSessionStor
   planning: TrialPlanningStore, catalog: PrivateFirstStageCatalog, now: () => string) {
   if (!activeOwnerLocalR3TrialCatalog(catalog) || !store.listOwnerSnapshot) fail("adapter_mismatch");
   const sessions = createPrivateFirstStageSessionService(store, catalog, now);
+  function inBlock(date:string,block:{startMinute:number;endMinute:number},at=now()) {
+    const local = kst(at), minute = (Date.parse(at) + 9 * 3600_000) % 86400_000 / 60000;
+    return date===local.slice(0,10)&&minute>=block.startMinute&&minute<block.endMinute;
+  }
+  function executableNow(plan: ReturnType<typeof buildStudyDayPlan>, id: string, at = now()) {
+    return plan.executionBlocks.some(block =>block.candidateId===id&&block.countsTowardActiveStudy&&inBlock(plan.date,block,at));
+  }
   async function history(ownerId: string) {
     const snapshot = await store.listOwnerSnapshot!(ownerId, MODE);
     if (!Array.isArray(snapshot.sessions) || snapshot.sessions.length > 256 || typeof snapshot.complete !== "boolean") fail("adapter_mismatch");
@@ -68,7 +77,9 @@ export function createOwnerLocalTodayService(store: PrivateFirstStageSessionStor
   async function record(ownerId: string) {
     const value = await planning.load(ownerId);
     if (!value) return null;
-    exactObject(value, ["schemaVersion","ownerId","revision","date","preferences","requestId","requestDigest","completedAtDeclaration","dispatches"]);
+    const {declaredAt,...persisted}=value;
+    exactObject(persisted, ["schemaVersion","ownerId","revision","date","preferences","requestId","requestDigest","completedAtDeclaration","dispatches"]);
+    if(declaredAt!==undefined && kst(requiredUtcInstant(declaredAt)).slice(0,10)!==value.date) fail("adapter_mismatch");
     if (value.schemaVersion !== "first_stage.owner_local_planning.v1" || value.ownerId !== ownerId ||
       !/^\d{4}-\d{2}-\d{2}$/u.test(value.date) || !/^[a-f0-9]{64}$/u.test(value.requestDigest) ||
       !Array.isArray(value.completedAtDeclaration) || value.completedAtDeclaration.length > 1024 ||
@@ -78,7 +89,13 @@ export function createOwnerLocalTodayService(store: PrivateFirstStageSessionStor
     if(!Array.isArray(value.dispatches) || value.dispatches.length>256) fail("adapter_mismatch");
     const dispatchIds=new Set<string>();
     for(const dispatch of value.dispatches) {
-      exactObject(dispatch,["planId","action","catalogDigest","date","availabilityDigest"]);
+      const {block,...binding}=dispatch;
+      exactObject(binding,["planId","action","catalogDigest","date","availabilityDigest"]);
+      if(block!==undefined) {
+        exactObject(block,["startMinute","endMinute"]);
+        requiredSafeInteger(block.startMinute,0,1439);requiredSafeInteger(block.endMinute,1,1440);
+        if(block.endMinute-block.startMinute!==15)fail("adapter_mismatch");
+      }
       const {id,...action}=exactObject(dispatch.action,["id","kind","questionId","questionNumber","questionVersion","sessionId","revision","reviewTaskId","estimatedMinutes"]);
       requiredIdentifier(dispatch.planId);
       if(!/^\d{4}-\d{2}-\d{2}$/u.test(dispatch.date) || !/^[a-f0-9]{64}$/u.test(dispatch.availabilityDigest) ||
@@ -107,13 +124,22 @@ export function createOwnerLocalTodayService(store: PrivateFirstStageSessionStor
       humanReviewComplete: false, masteryClaim: false, transferEvidence: false, measurementEvidence: false,
       capacityCalibrationClaim: false, canonicalDueTimesChanged: false };
     if (!observed.complete) return { ...common, state: "history_incomplete" as const, actions: [], plan: null };
-    if (!saved || saved.date !== date) return { ...common, state: "availability_required" as const, actions: [], plan: null };
     const completed = observed.rows.flatMap(row => row.committedAttempts);
-    const newlyCompleted = completed.filter(item => !saved.completedAtDeclaration.includes(item.attemptId));
+    const newlyCompleted = completed.filter(item => !saved?.completedAtDeclaration.includes(item.attemptId));
     // These are transparent per-item planning estimates, not observed study time.
     const completionDebitMinutes = newlyCompleted.length * 15;
-    const remainingMinutes = Math.max(0,saved.preferences.remainingMinutes - completionDebitMinutes);
-    const cutoff = Math.ceil((Date.parse(at) + 9*3600_000) % 86400_000 / 60000);
+    const remainingMinutes = Math.max(0,(saved?.preferences.remainingMinutes??0) - completionDebitMinutes);
+    if (!saved || saved.date !== date || !saved.declaredAt) return { ...common, state: "availability_required" as const,
+      actions: [], plan: null, remainingMinutes:saved?.date===date?remainingMinutes:null };
+    // Reads do not move an unchanged timetable into the future. Only an actual
+    // declaration/session event or newly due review advances its server anchor.
+    // Expired unstarted blocks require an explicit availability replan.
+    const anchors=[saved.declaredAt,...observed.rows.flatMap(row=>[
+      ...(row.active?[row.active.startedAt]:[]),
+      ...row.committedAttempts.map(item=>item.submittedAt!).filter(Boolean),
+      ...row.reviews.filter(item=>item.status==="pending"&&item.stock==="available"&&Date.parse(item.dueAt)<=Date.parse(at)).map(item=>item.dueAt)])];
+    const anchorAt=new Date(Math.max(...anchors.map(value=>Date.parse(requiredUtcInstant(value))))).toISOString();
+    const cutoff = Math.floor((Date.parse(anchorAt) + 9*3600_000) % 86400_000 / 60000);
     const windows = saved.preferences.windows.map(window => ({...window,startMinute:Math.max(cutoff,window.startMinute)}))
       .filter(window => window.endMinute > window.startMinute).sort((a,b)=>a.startMinute-b.startMinute);
     const actions: TrialPlanAction[] = [];
@@ -161,9 +187,15 @@ export function createOwnerLocalTodayService(store: PrivateFirstStageSessionStor
     const executable = new Set(plan.executionBlocks.filter(block=>block.countsTowardActiveStudy).map(block=>block.candidateId));
     const basis = { policy:OWNER_LOCAL_TODAY_POLICY, catalog:catalog.digest, ownerId, date,
       preferencesRevision:saved.revision, rows:observed.rows, unavailable:observed.unavailable,
-      executable:[...executable], remainingMinutes };
+      executable:[...executable], remainingMinutes, anchorAt, blocks:plan.executionBlocks };
+    const executableNowActionIds=selected.filter(action=>executableNow(plan,action.id,at)).map(action=>action.id);
+    const currentMinute=(Date.parse(at)+9*3600_000)%86400_000/60000;
+    const pendingBlocks=plan.executionBlocks.filter(block=>block.countsTowardActiveStudy&&block.endMinute>currentMinute);
     return { ...common, state:"planned" as const, plan, planId:`trial-plan-${privateSessionDigest(basis)}`,
-      actions:selected.filter(action=>executable.has(action.id)), remainingMinutes, completionDebitMinutes,
+      actions:selected.filter(action=>executable.has(action.id)),
+      executableNowActionIds, nextActionId:executableNowActionIds[0]??pendingBlocks[0]?.candidateId??null,
+      expiredBlockCount:plan.executionBlocks.filter(block=>block.countsTowardActiveStudy&&block.endMinute<=currentMinute).length,
+      remainingMinutes, completionDebitMinutes,
       completedSinceDeclaration:newlyCompleted.length, inProgressReservedMinutes:actions.filter(action=>action.kind==="resume").length*15,
       unallocatedMinutes:remainingMinutes-plan.plannedActiveMinutes, overflowCount:overflow.length,
       stockExhausted:actions.length===0, newStudyOpportunity:protectedNew ?
@@ -174,7 +206,7 @@ export function createOwnerLocalTodayService(store: PrivateFirstStageSessionStor
   async function savePreferences(ownerId: string, input: unknown) {
     const row = exactObject(input,["requestId","expectedRevision","preferences"]);
     const requestId=requiredIdentifier(row.requestId), expectedRevision=requiredSafeInteger(row.expectedRevision,0,999_999);
-    const date=kst(now()).slice(0,10), preferences=validateTrialPlanningPreferences(row.preferences,date);
+    const declaredAt=requiredUtcInstant(now()), date=kst(declaredAt).slice(0,10), preferences=validateTrialPlanningPreferences(row.preferences,date);
     const requestDigest=privateSessionDigest({requestId,expectedRevision,preferences});
     const current=await record(ownerId);
     if(current?.requestId===requestId) {
@@ -186,7 +218,7 @@ export function createOwnerLocalTodayService(store: PrivateFirstStageSessionStor
     if(!observed.complete || observed.unavailable.length) fail("stale_state");
     const completedAtDeclaration=observed.rows.flatMap(item=>item.committedAttempts.map(attempt=>attempt.attemptId));
     if(completedAtDeclaration.length>1024) fail("invalid_transition");
-    const next:TrialPlanningRecord={schemaVersion:"first_stage.owner_local_planning.v1",ownerId,date,
+    const next:TrialPlanningRecord={schemaVersion:"first_stage.owner_local_planning.v1",ownerId,date,declaredAt,
       revision:expectedRevision+1,preferences,requestId,requestDigest,completedAtDeclaration,dispatches:current?.dispatches??[]};
     if(!await planning.save(next,expectedRevision)) {
       const winner=await record(ownerId);
@@ -204,8 +236,10 @@ export function createOwnerLocalTodayService(store: PrivateFirstStageSessionStor
       const current=await view(ownerId);
       if(current.state!=="planned" || current.planId!==row.planId) fail("stale_state");
       const selected=current.actions.find(item=>item.id===row.actionId);
-      if(!selected || savedPreferences.dispatches.length>=256) fail("stale_state");
-      intent={planId:String(row.planId),action:selected,catalogDigest:catalog.digest,date:current.date,availabilityDigest:savedPreferences.requestDigest};
+      if(!selected || !executableNow(current.plan,selected.id) || savedPreferences.dispatches.length>=256) fail("stale_state");
+      const selectedBlock=current.plan.executionBlocks.find(block=>block.candidateId===selected.id&&block.countsTowardActiveStudy)!;
+      intent={planId:String(row.planId),action:selected,catalogDigest:catalog.digest,date:current.date,availabilityDigest:savedPreferences.requestDigest,
+        block:{startMinute:selectedBlock.startMinute,endMinute:selectedBlock.endMinute}};
       // Persist the exact selected intent before any session mutation, so lost
       // responses/partial create can retry the same command after restart. This
       // is a bounded dispatch index; completion is always read from the session.
@@ -234,12 +268,17 @@ export function createOwnerLocalTodayService(store: PrivateFirstStageSessionStor
       await sessions.execute(ownerId,sessionId,command);return href();
     }
     if(action.kind==="retry" && existingHistory?.reviews.some(review=>review.reviewTaskId===action.reviewTaskId && review.status==="completed"))return href();
+    // Keep the selected server slot through a partial create. Its ready row
+    // changes queue priority but cannot move this already sealed intent's time.
+    const slot=intent.block;
     // An intent is not permanent scheduling authority. Recheck unfinished work
     // against current capacity/date/catalog, including a partially created row.
     const latestPreferences=await record(ownerId),fresh=await view(ownerId);
+    const executableCandidate=fresh.state==="planned" ? fresh.actions.find(candidate=>(candidate.id===action.id ||
+        (action.kind==="new" && existingHistory?.ready && candidate.kind==="begin" &&
+          candidate.sessionId===sessionId && candidate.questionVersion===action.questionVersion))) : undefined;
     if(fresh.state!=="planned" || fresh.date!==intent.date || latestPreferences?.requestDigest!==intent.availabilityDigest ||
-      !fresh.actions.some(candidate=>candidate.id===action.id || (action.kind==="new" && existingHistory?.ready &&
-        candidate.kind==="begin" && candidate.sessionId===sessionId && candidate.questionVersion===action.questionVersion))) {
+      !slot || !inBlock(intent.date,slot) || !executableCandidate) {
       // A concurrent identical request may have committed during revalidation.
       const winner=await store.load(ownerId,sessionId);
       if(action.kind!=="resume" && winner?.commands.some(item=>item.requestId===command.requestId)) {
@@ -247,18 +286,20 @@ export function createOwnerLocalTodayService(store: PrivateFirstStageSessionStor
       }
       fail("stale_state");
     }
+    const assertStartTime=(at:string)=>{if(!inBlock(intent.date,slot,at))fail("stale_state");};
     if(action.kind==="new") {
       // Stable across plans/tabs/restarts; do not bind create identity to the
       // clock, request UUID or inventory digest. Existing manual sessions win.
       const saved=await sessions.create(ownerId,{requestId:createRequestId,questionId:action.questionId},true);
       sessionId=saved.sessionId;
-      await sessions.execute(ownerId,sessionId,command);
+      await sessions.execute(ownerId,sessionId,command,assertStartTime);
     } else if(action.kind!=="resume") {
       if(!existing) fail("not_found");
-      await sessions.execute(ownerId,sessionId,command);
+      await sessions.execute(ownerId,sessionId,command,assertStartTime);
     } else {
       const loaded=await store.load(ownerId,sessionId!);
       if(!loaded || sessions.projectHistory(loaded,ownerId).revision!==action.revision) fail("stale_state");
+      assertStartTime(now());
     }
     return href();
   }

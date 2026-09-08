@@ -26,6 +26,9 @@ create table if not exists public.first_stage_owner_local_planning (
   check((jsonb_typeof(payload->'dispatches')='array' and jsonb_array_length(payload->'dispatches')<=256) is true),
   check((jsonb_typeof(payload->'completedAtDeclaration')='array' and jsonb_array_length(payload->'completedAtDeclaration')<=1024) is true)
 );
+-- Null historical rows retain their settings/history and ask for an explicit
+-- declaration; never invent their past planning timestamp or rewrite sessions.
+alter table public.first_stage_owner_local_planning add column if not exists declared_at timestamptz;
 alter table public.first_stage_owner_local_planning enable row level security;
 alter table public.first_stage_owner_local_planning force row level security;
 revoke all on public.first_stage_owner_local_planning from public,anon,authenticated;

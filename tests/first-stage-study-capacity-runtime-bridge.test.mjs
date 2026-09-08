@@ -222,10 +222,31 @@ test("preserves M5's historical M4 receipt and frozen upstream outside the exact
     ":(exclude)lib/review-os/first-stage/kernel/domain.ts",
     ":(exclude)lib/review-os/first-stage/kernel/mcq-kernel.ts",
     ":(exclude)lib/review-os/first-stage/subject-adapter/subject-adapter.ts",
-    "lib/review-os/study-capacity-life-mode-orchestrator.ts",
     "config/dabangil-study-capacity-life-mode-orchestrator-v1.json",
     "docs/decisions/2026-08-24-owner-study-capacity-life-mode-orchestrator.md",
   ], { cwd: root });
+  // Post-#903 Owner authority permits only this additive remaining-budget
+  // input. Reconstruct the frozen source byte-for-byte outside that exact
+  // extension instead of exempting the whole planner from preservation.
+  const plannerPath="lib/review-os/study-capacity-life-mode-orchestrator.ts";
+  const currentPlanner=read(plannerPath).replaceAll("\r\n","\n");
+  const remainingBudgetBlock=[
+    "  // An explicit remaining budget is not a revised daily-capacity estimate.",
+    "  // Keep all feasible windows available to selection; clipping them by input",
+    "  // order can consume the budget in unusable fragments before a feasible desk.",
+    "  // Existing callers and their cognitive/recovery policy remain unchanged.",
+    "  if (input.remainingActiveMinutes !== undefined) {",
+    '    integer("remaining-active-minutes",input.remainingActiveMinutes,0,720);',
+    "    envelope.schedulableActiveMinutes=Math.min(envelope.schedulableActiveMinutes,input.remainingActiveMinutes);",
+    '    envelope.derivationReasons.push("remaining-active-budget-not-daily-total");',
+    "  }", "",
+  ].join("\n");
+  assert.ok(currentPlanner.includes(remainingBudgetBlock));
+  const preservedPlanner=currentPlanner
+    .replace("recoveryOverrideMinutes?: number; remainingActiveMinutes?: number", "recoveryOverrideMinutes?: number")
+    .replace('"capacityHistory", "recoveryOverrideMinutes", "remainingActiveMinutes"', '"capacityHistory", "recoveryOverrideMinutes"')
+    .replace(remainingBudgetBlock, "");
+  assert.equal(preservedPlanner,execFileSync("git",["show",`${integrationBase}:${plannerPath}`],{cwd:root,encoding:"utf8"}).replaceAll("\r\n","\n"));
 });
 
 test("projects a trusted Kernel queue without mutating learning state", () => {

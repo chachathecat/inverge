@@ -8,17 +8,19 @@ export function createOwnerLocalPlanningRepository(client:SupabaseClient):TrialP
   return {
     async load(ownerId) {
       owner(ownerId);
-      const result=await client.from(TABLE).select("owner_id,revision,payload").eq("owner_id",ownerId).maybeSingle();
+      const result=await client.from(TABLE).select("owner_id,revision,payload,declared_at").eq("owner_id",ownerId).maybeSingle();
       if(result.error) unavailable();
       if(!result.data) return null;
-      const {owner_id,revision,payload}=result.data;
+      const {owner_id,revision,payload,declared_at}=result.data;
       if(owner_id!==ownerId || payload?.ownerId!==ownerId || payload?.revision!==revision) unavailable();
-      return payload as TrialPlanningRecord; // Full closed validation belongs to the service.
+      if(declared_at!==null && (typeof declared_at!=="string" || !Number.isFinite(Date.parse(declared_at))))unavailable();
+      return {...payload,...(declared_at?{declaredAt:new Date(declared_at).toISOString()}:{})} as TrialPlanningRecord;
     },
     async save(value,expectedRevision) {
       owner(value.ownerId);
       if(!Number.isSafeInteger(expectedRevision) || expectedRevision<0 || value.revision!==expectedRevision+1) unavailable();
-      const row={owner_id:value.ownerId,revision:value.revision,payload:value};
+      const {declaredAt,...payload}=value;
+      const row={owner_id:value.ownerId,revision:value.revision,payload,declared_at:declaredAt??null};
       if(expectedRevision===0) {
         const result=await client.from(TABLE).insert(row);
         if(result.error?.code==="23505") return false;

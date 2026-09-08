@@ -26,6 +26,17 @@ is counted as fresh stock and no sealed-unseen claim is made. Each completed
 attempt after a remaining-time declaration debits an explicit 15-minute estimate,
 not measured/calibrated time. Editing life mode starts from the current remainder.
 
+Scheduling uses a server declaration timestamp and validated session/due events,
+not the time of each read. Later blocks therefore arrive without sliding on
+refresh. A start seals its exact server-selected slot in the existing intent;
+the session service checks the actual kernel-start timestamp after durable load.
+Future/expired slots are disabled and rejected, while a valid later-slot partial
+create can retry without duplicate records. Completed command replay remains
+read-only after expiry. Missed blocks are not completed; an explicit availability
+save replans them. Legacy settings without a declaration retain their already
+debited remaining time and history, but ask for a fresh declaration rather than
+inventing the old time. The nullable local column changes no grant/RLS policy.
+
 | Scoped scenario | Current implementation evidence |
 | --- | --- |
 | S01/S04 | Real loader/application/session commands → plan → dispatch → submit → replan; no assistance in planning or initial RSC |
@@ -59,6 +70,13 @@ The local schema is not a remote migration. Post-build app restart/reconnect
 returned 200 with identical history/preferences and 75 remaining minutes. Local
 affected 124 tests, separate isolated PG/browser acceptance, typecheck, lint,
 build, JSON and diff passed; a later streamed-byte regression also passed.
+These initial results are historical. The scheduling correction passed 1,786
+local full-suite tests followed by 35 final affected regressions (21 Today),
+final isolated SDK/PG/HTTP/browser acceptance, typecheck/lint/build, 161 JSON,
+28-path manifest/diff and 189 private-root-free build traces. The legacy plan
+kept the debited 75 minutes; an explicit same-settings replan persisted its
+server timestamp. Final app restart returned 200 with identical three-session
+history and preferences. No extra actual attempt or due-time change was made.
 Final exact-head native CI/review/merge remain pending at this source checkpoint.
 
 ### r3 bundle continuation — 2026-09-08

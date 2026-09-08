@@ -183,7 +183,7 @@ export function createPrivateFirstStageSessionService(
     return saved;
   }
 
-  async function execute(ownerId: string, sessionId: string, input: unknown) {
+  async function execute(ownerId: string, sessionId: string, input: unknown, assertTrustedStartTime?: (at: string) => void) {
     if (!input || typeof input !== "object" || Array.isArray(input)) fail();
     const action = (input as Record<string, unknown>).action;
     const fields = action === "begin" ? ["questionId"]
@@ -198,6 +198,9 @@ export function createPrivateFirstStageSessionService(
     if (current.state.revision !== expectedRevision) fail("stale_state");
     if (current.commands.length >= MAX_COMMANDS) fail("invalid_transition");
     const trustedAt = requiredUtcInstant(now());
+    // Optional server-only planner guard, after durable load and replay checks.
+    // It observes the exact timestamp the kernel seals; HTTP cannot supply it.
+    if(action!=="submit")assertTrustedStartTime?.(trustedAt);
     const binding = { trustedOwnerId: ownerId,
       trustedExamCycleDefinitionSha256: current.state.examCycle.definitionSha256,
       expectedRevision };

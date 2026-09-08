@@ -2,6 +2,27 @@
 
 ## Active post-#903 Today continuation — 2026-09-08 KST
 
+PR #905 correction in progress: first head 15e3fc0b9027856aa302268e979c2dcff62baba8
+failed Fast/Linux/Windows CI on one historical whole-planner-freeze test. It now
+reconstructs the historical planner outside the exact authorized additive cap;
+daily/cognitive/recovery behavior has new preservation tests. Initial review
+5141981351 reported scheduled-start P2, not a clean result. Reproduced early
+future dispatch, read-driven block sliding, expiry during create and a later
+slot's partial-create replay. Server declaration time plus validated session/due
+events anchors the timetable; exact intent slots and kernel-sealed-time guards
+preserve retries and reject out-of-slot starts. Nullable local declared_at is
+additive; legacy preferences/history remain, but require an explicit replan.
+No personal session or due time is rewritten. Correction local validation passed:
+1,786 full-suite tests, then 35 final affected regressions (21 Today), final
+isolated SDK/PostgreSQL/HTTP/browser acceptance, typecheck/lint/build, 161 JSON,
+28-path manifest and diff. All 189 build traces exclude private roots. Native
+CI/review on the correction commit is still pending; earlier runs are historical.
+The app restarted on the same loopback address. Existing unanchored settings
+retained 75 minutes, then an explicit same-settings UI replan saved the new
+server anchor. Reconnect returned 200 with identical history/preferences and
+all three actual sessions unchanged. Its generated malformed dev type cache is
+preserved under excluded node_modules/.cache, not source-fixed.
+
 Owner accepted https://github.com/chachathecat/inverge/pull/903#issuecomment-5584374033.
 Goal remains ACTIVE; not a new master plan. Sole writer in the same cache worktree,
 branch `codex/issue-883-owner-trial-today`, based on main `8a14ae829a5202916817aeb63764c466ea06c77d`.
@@ -41,7 +62,7 @@ assistance before save; one explanation afterward. This is NOT independent Owner
 performance. Original 46/49 projections matched exactly; three actual sessions
 persist. Post-build app restart returned authenticated Today 200 with identical
 history/preferences/remainder and no Next error overlay. Never clean actual records.
-Actual next-day r46 remains UNOBSERVED. App session 22539 and browser REPL 96728
+Actual next-day r46 remains UNOBSERVED. App session 30706 and browser REPL 96728
 are retained. Private screenshot export was denied; no image inspection claim.
 
 Authenticated Vercel GET confirmed exact inverge project/team/repository, existing
