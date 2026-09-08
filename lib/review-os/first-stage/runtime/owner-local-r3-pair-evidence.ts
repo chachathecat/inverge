@@ -54,6 +54,16 @@ export function supportsR3RecordedPair(questionNumber: number, original: {correc
         if (Object.values(v).some(value=>!compare(value,"0","greater")) ||
           !compare(v.cartelTotal,calc(op("multiply","follower","two"),{follower:v.follower,two:"2"}),"equal") ||
           !compare(v.deviator,calc(op("divide",op("multiply","follower","three"),"two"),{follower:v.follower,three:"3",two:"2"}),"equal")) return false;
+        // Fixed r3 models: the original and variant have different demand
+        // slopes. Recover (intercept - marginal cost) from the cartel optimum,
+        // then evaluate the unilateral-deviation objective at its stationary
+        // quantity. A positive choice-matching profit alone is not evidence.
+        const slope=index===0?"1":"2";
+        const netIntercept=calc(op("multiply","two",op("multiply","slope","cartel")),{two:"2",slope,cartel:v.cartelTotal});
+        const inputs={netIntercept,slope,qa:v.deviator,qb:v.follower};
+        const derivative=calc(op("subtract","netIntercept",op("multiply","slope",op("add",op("multiply","two","qa"),"qb"))),{...inputs,two:"2"});
+        const profit=calc(op("multiply",op("subtract","netIntercept",op("multiply","slope",op("add","qa","qb"))),"qa"),inputs);
+        if (!compare(derivative,"0","equal") || !compare(v.profit,profit,"equal")) return false;
         target=index===0?v.profit:v.deviator;
       } else {
         const v=recordedValues(row,["marketQuantity","socialQuantity","unitTax","welfareImprovement"]);

@@ -31,11 +31,18 @@ new 49 functional save/reconnect succeeded. Both genuine saved sessions and due
 times survive the final build/app restart; all existing containers/listeners
 retain loopback isolation. Human review remains false and no real clock changed.
 Local read-only preflight review found no actionable P0/P1/P2, not formal review.
-Code integration child #902 is OPEN and parent #883 stays OPEN. Native CI/review/
-integration is unfinished. Next: ordinary commit/push of this 16-path candidate,
-create its PR, wait for exact-head native checks and one independent review,
-then revalidate live base/rules/deployment boundary for conditional pinned squash.
-Existing actual r46 next-day observation stays pending. No PR/commit pushed yet.
+Code integration child #902 is OPEN and parent #883 stays OPEN. PR #903 head
+`bbcea9cec7fe5218b2ff94b53e492ac7202c8c92` received review 5140137863 with one
+P2, not a clean result: 51's target profit lacked an objective cross-check.
+The actual-loader HTTP regression reproduces choice-rebound profit and coherent
+quantity drift. The correction checks both models' objective and stationary
+derivative using their distinct slopes; private content/installation is unchanged.
+Correction-local: 154 affected tests, typecheck, changed-file lint, build,
+JSON/manifest/diff and affected isolated PostgreSQL/browser acceptance passed.
+Initial-head native CI passed 9/9 plus C3R-L, but is not correction-head evidence.
+Next: ordinary batched push, fresh native checks and
+one exact-head independent review; then live base/rules/deployment revalidation.
+Existing actual r46 next-day observation stays pending. Integration is unfinished.
 
 ## Post-merge r3 PC-trial handoff — 2026-09-08 KST
 

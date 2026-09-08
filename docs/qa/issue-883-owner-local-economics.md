@@ -14,10 +14,23 @@ variants (4+4); normal human-approved stock remains zero. The same nine private
 artifacts and installation bytes are reused, not repackaged or reapproved.
 Each added original uses its exact position in the full 200-answer observation;
 each variant uses its own calculation/key. A closed recorded-model policy checks
-49's interior versus zero-follower regime, 51's cartel/deviation quantities and
+49's interior versus zero-follower regime, 51's cartel/deviation quantities,
+stationary objective and profit (using each fixed model's own demand slope), and
 53's social/external-cost values plus unique numeric answer matching. These are
 checks on exact-bound existing AI/code observations, not human review or a
 general proof that textual source assumptions are correct.
+
+PR #903 review 5140137863 at bbcea9c reported one P2: the 51 target profit
+was only checked for positivity. A synthetic actual-loader HTTP regression
+reproduced both a choice-rebound unrelated profit and coherently rescaled
+quantities. The correction evaluates the deviation objective and its derivative
+for both original and retry; the synthetic retry model's profit is corrected
+to its own slope. Private r3 source, calculation evidence and installation bytes
+are unchanged. Earlier native checks are not new-head validation.
+Correction-local validation: 154 affected tests, typecheck, changed-file lint,
+build, JSON/manifest/diff and the affected isolated PostgreSQL/browser loop pass.
+The actual local catalog still exposes exactly 46/49/51/53, with saved 46/49
+readback successful; no actual attempt was added for this correction.
 
 52/r52 is pending, not installed: the original's existing symbolic check proves
 a cost identity but asserts the textual answer without independently binding

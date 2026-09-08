@@ -122,3 +122,33 @@ test("every added original remains bound to its exact full-key position",async()
     assert.equal(r.body.availability.state,"blocked");assert.equal(h.rows.size,0);
   }
 });
+
+test("51 profit must follow its recorded deviation objective, not just match a positive answer",async()=>{
+  for(const id of ["original-51","r51"]) {
+    for(const mutation of ["profit-only","coherent-quantities"]) {
+      const fixture=syntheticTrialInput({numericTrialModels:true});
+      const calculations=JSON.parse(fixture.artifacts.calculations);
+      const row=calculations.results.find(entry=>entry.id===id);
+      if(mutation==="profit-only") row.values.profit=String(Number(row.values.profit)+1);
+      else for(const field of ["cartelTotal","follower","deviator"]) row.values[field]=String(Number(row.values[field])*2);
+      // Even a consistently rebound answer must not authorize an unrelated profit.
+      const review=JSON.parse(fixture.artifacts.review);
+      const question=id==="original-51"?review.originals.find(entry=>entry.number===51):review.retryCandidates.find(entry=>entry.id===id);
+      question.choices[(id==="original-51"?question.officialKeyObserved:question.proposedChoice)-1]=id==="original-51"?row.values.profit:row.values.deviator;
+      fixture.rebind("review",review);
+      calculations.reviewPacketSha256=fixture.input.installation.fileSha256.review;
+      fixture.rebind("calculations",calculations);
+      const ai=JSON.parse(fixture.artifacts.ai);
+      ai.packetSha256=calculations.reviewPacketSha256;fixture.rebind("ai",ai);
+      const candidate=prepareEconomicsRuntimeCandidate({reviewSource:fixture.artifacts.review.toString(),
+        calculationSource:fixture.artifacts.calculations.toString(),aiEvidenceSource:fixture.artifacts.ai.toString(),
+        sourceObservationSource:fixture.artifacts.observation.toString(),humanChecklistSource:fixture.artifacts.checklist.toString()}).candidate;
+      candidate.dataClass="synthetic_test_only";fixture.rebind("candidate",candidate);
+      const h=trialHarness({fixture}),available=await h.send();
+      assert.equal(available.status,200);
+      assert.equal(available.body.availability.questions.some(entry=>entry.questionNumber===51),false,`${id}/${mutation}`);
+      assert.equal((await h.send({action:"create",requestId:"bad-51-profit",questionId:"qnet-2025-36-s1-A-51"})).status,404);
+      assert.equal(h.rows.size,0);
+    }
+  }
+});
