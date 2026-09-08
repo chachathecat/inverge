@@ -54,6 +54,20 @@ must finish before merge. The previous post-build development
 cache returned 404; preserving that generated cache and restarting restored
 both pages/API to 200, revision 3 and exact original due times. No record reset.
 
+Root correction after review 5140545687 (07b813e, 0/0/3): coherent alternative
+models still passed relative equations. Six actual-loader HTTP reproductions
+confirmed that isolated-field checks were insufficient. Fixed server-side r3
+observation digests plus exact private review SHA now bind the unchanged evidence;
+the installation/HTTP cannot choose expected private pins. The existing explicit
+synthetic port has distinct pins, denied by production-default composition.
+No private artifacts or catalog/evaluation identities change. Focused 18 cases
+pass, including the pre-pin 49 row/response hashes and historical 46 snapshots;
+actual private inventory stays four pairs and saved 49 GET preserves revision/due.
+Root-correction local validation passed: 164 affected tests, isolated r3
+PostgreSQL/browser, typecheck, changed-file lint, build, JSON/manifest/diff.
+Next: ordinary batched push, new-head native CI and one fresh review; do not
+claim the earlier 07b813e 9/9 CI as corrected-head evidence.
+
 ## Post-merge r3 PC-trial handoff — 2026-09-08 KST
 
 PR #901 is MERGED by expected-head-pinned squash at 2026-09-08T08:30:21Z.

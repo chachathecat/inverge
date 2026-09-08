@@ -5,6 +5,7 @@ import { trialHarness, syntheticTrialInput } from "./fixtures/first-stage-owner-
 import { submission } from "./fixtures/first-stage-private-session-harness.mjs";
 import { privateSessionDigest as digest } from "../lib/review-os/first-stage/runtime/session-service.ts";
 import { prepareEconomicsRuntimeCandidate } from "../lib/review-os/first-stage/runtime/economics-review-candidate.mjs";
+import { supportsR3RecordedPair } from "../lib/review-os/first-stage/runtime/owner-local-r3-pair-evidence.ts";
 
 const legacy = JSON.parse(fs.readFileSync(new URL("./fixtures/owner-local-r3-v1-session.json", import.meta.url), "utf8"));
 const numbers = [46,49,51,53];
@@ -180,4 +181,76 @@ test("49 price and objective observations cannot self-authorize by rebinding the
       assert.equal(h.rows.size,0);
     }
   }
+});
+
+test("coherently rebound alternative models cannot replace the fixed r3 observations",async t=>{
+  for(const number of [49,51,53]) for(const original of [true,false]) await t.test(`${original?"original-":"r"}${number}`,async()=>{
+    const fixture=syntheticTrialInput({numericTrialModels:true}), id=original?`original-${number}`:`r${number}`;
+    const calculations=JSON.parse(fixture.artifacts.calculations), row=calculations.results.find(entry=>entry.id===id);
+    const v=row.values;
+    if(number===49) {
+      for(const field of ["leader","follower","zeroFollowerThreshold","zeroRegimeBestQuantity","zeroRegimeDerivativeAtBest"])v[field]=String(Number(v[field])*2);
+      v.price=String((original?20:10)+Number(v.follower));
+      for(const field of ["profit","zeroRegimeBestProfit"])v[field]=String(Number(v[field])*4);
+    } else if(number===51) {
+      for(const field of ["cartelTotal","follower","deviator"])v[field]=String(Number(v[field])*2);
+      v.profit=String(Number(v.profit)*4);
+    } else {
+      for(const field of ["marketQuantity","socialQuantity","unitTax"])v[field]=String(Number(v[field])*2);
+      v.welfareImprovement=String(Number(v.welfareImprovement)*4);
+    }
+    const review=JSON.parse(fixture.artifacts.review);
+    const question=original?review.originals.find(entry=>entry.number===number):review.retryCandidates.find(entry=>entry.id===id);
+    question.choices[(original?question.officialKeyObserved:question.proposedChoice)-1]=
+      number===49?(original?v.leader:v.price):number===51?(original?v.profit:v.deviator):(original?v.welfareImprovement:v.unitTax);
+    fixture.rebind("review",review);calculations.reviewPacketSha256=fixture.input.installation.fileSha256.review;
+    fixture.rebind("calculations",calculations);
+    const ai=JSON.parse(fixture.artifacts.ai);ai.packetSha256=calculations.reviewPacketSha256;fixture.rebind("ai",ai);
+    const candidate=prepareEconomicsRuntimeCandidate({reviewSource:fixture.artifacts.review.toString(),
+      calculationSource:fixture.artifacts.calculations.toString(),aiEvidenceSource:fixture.artifacts.ai.toString(),
+      sourceObservationSource:fixture.artifacts.observation.toString(),humanChecklistSource:fixture.artifacts.checklist.toString()}).candidate;
+    candidate.dataClass="synthetic_test_only";fixture.rebind("candidate",candidate);
+    const h=trialHarness({fixture}),available=await h.send();
+    assert.equal(available.status,200);
+    assert.equal(available.body.availability.questions.some(entry=>entry.questionNumber===number),false);
+    assert.equal((await h.send({action:"create",requestId:"different-model",questionId:`qnet-2025-36-s1-A-${number}`})).status,404);
+    assert.equal(h.rows.size,0);
+  });
+});
+
+test("synthetic observation pins require the explicit test port, never a relabeled installation or HTTP field",async()=>{
+  const fixture=syntheticTrialInput({numericTrialModels:true});
+  const candidate=JSON.parse(fixture.artifacts.candidate), calculations=JSON.parse(fixture.artifacts.calculations);
+  for(const number of [49,51,53]) {
+    const pair=candidate.questions.filter(row=>row.reference.questionNumber===number);
+    assert.equal(supportsR3RecordedPair(number,pair[0],pair[1],calculations.results),false);
+    assert.equal(supportsR3RecordedPair(number,pair[0],pair[1],calculations.results,"synthetic_test_only"),true);
+  }
+  delete fixture.input.expectedDataClass;
+  fixture.input.installation.dataClass="private_review_candidate";
+  candidate.dataClass="private_review_candidate";fixture.rebind("candidate",candidate);
+  const h=trialHarness({fixture});
+  const available=await h.send();
+  assert.equal(available.body.availability.state,"blocked");
+  assert.notEqual((await h.send(undefined,"?expectedDataClass=synthetic_test_only")).status,200);
+  const forged=await h.send({action:"create",requestId:"forged-test-port",questionId:"qnet-2025-36-s1-A-49",expectedDataClass:"synthetic_test_only"});
+  assert.notEqual(forged.status,200);assert.equal(h.rows.size,0);
+});
+
+test("fixed observation pins preserve the pre-pin 49 saved row and response identities",async()=>{
+  // Digests recorded via the real constructor at reviewed head 07b813e BEFORE
+  // adding pins; these describe synthetic state, not any personal record.
+  const h=bundleHarness();
+  const created=await h.send({action:"create",requestId:"fixed49-compat",questionId:"qnet-2025-36-s1-A-49"});
+  const sessionId=created.body.view.sessionId;
+  const begun=await h.send({sessionId,command:{action:"begin",requestId:"fixed49-begin",expectedRevision:1,questionId:"qnet-2025-36-s1-A-49"}});
+  h.setClock(new Date(Date.parse(h.getClock())+60000).toISOString());
+  const command=submission(begun.body.view.attempt.attemptId,2), saved=await h.send({sessionId,command});
+  assert.equal(saved.status,200);
+  const expectedRow="702637933e10f64722f27ec5bc4cf2c44e96ae5bd13862acb624b9ead0961daa";
+  assert.equal(digest([...h.rows.values()][0]),expectedRow);
+  assert.equal(digest(saved.body),"d89596756a2f050503d2015ab1cc758c2feee28914554496dc7e631c4cf6987b");
+  assert.deepEqual((await h.send(undefined,`?sessionId=${sessionId}`)).body,saved.body);
+  assert.deepEqual((await h.send({sessionId,command})).body,saved.body);
+  assert.equal(digest([...h.rows.values()][0]),expectedRow);
 });

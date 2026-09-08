@@ -45,6 +45,26 @@ PostgreSQL/browser loop, typecheck, changed-file lint, build, JSON, manifest
 and diff checks pass. Actual catalog remains four pairs and the existing 49
 saved revision/due readback passes. Fresh native checks/review are still required.
 
+Review 5140545687 at 07b813e reported 0/0/3: coherent replacement models still
+satisfied the 49/51/53 equations. Last successful point was isolated-field
+denial, not fixed-model identity. Six fully rebound original/retry cases first
+reproduced this gap. The root correction independently pins each existing r3
+calculation observation (canonical sorted `values` entries) in server source,
+as well as the exact private review JSON SHA above. Arithmetic remains checked;
+the installation cannot supply or refresh these expected pins. Hashes are
+evidence identifiers, not a confidentiality claim or human approval. No private
+numeric observations, question bodies or new artifacts are published/installed.
+The explicit existing synthetic dependency port selects distinct synthetic pins;
+production-default loading rejects synthetic relabeling and HTTP mode selection.
+Catalog/evaluation policy identities are deliberately unchanged: the existing
+46 and actual 49 records are not rewritten. A pre-pin synthetic 49 row/response
+digest proves read/replay compatibility. Focused tests cover all six coherent
+models, test/real separation and old 46/49 identities; human review stays pending.
+Root-correction local validation: 164 affected tests, the actual-loader isolated
+PostgreSQL/browser loop, typecheck, changed-file lint, build, JSON/manifest/diff
+pass. Existing private artifacts are unchanged; traced private-artifact matches
+remain zero. Final native checks and independent review must bind the new head.
+
 52/r52 is pending, not installed: the original's existing symbolic check proves
 a cost identity but asserts the textual answer without independently binding
 all five claims and assumptions. r52 arithmetic does not repair that source gap.

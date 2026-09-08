@@ -33,6 +33,10 @@ export async function loadOwnerLocalR3TrialContent(input: TrialContentInput): Pr
       if (!bytes.length || bytes.length > 2 * 1024 * 1024 || sha(bytes) !== installed.fileSha256[name]) return null;
       sources[name] = bytes;
     }
+    // This delegation is for the exact existing private r3, not any coherently
+    // rebound local corpus. The real server omits the synthetic dependency port.
+    if (expected === "private_review_candidate" && sha(sources.review) !==
+      "14d6dc2b784be200ff5c98668ddc8b974966b226678663e36f3b2b58b1845fcd") return null;
     const candidate = JSON.parse(text(sources.candidate));
     if (candidate.dataClass !== expected) return null;
     const prepared = prepareEconomicsRuntimeCandidate({ reviewSource: text(sources.review), calculationSource: text(sources.calculations),
@@ -63,7 +67,7 @@ export async function loadOwnerLocalR3TrialContent(input: TrialContentInput): Pr
     const calculation = JSON.parse(text(sources.calculations));
     const numbers = [46,49,51,52,53].filter(number => {
       const pair = allRows.filter(row => row.reference.questionNumber === number);
-      return pair.length === 2 && supportsR3RecordedPair(number,pair[0],pair[1],calculation.results);
+      return pair.length === 2 && supportsR3RecordedPair(number,pair[0],pair[1],calculation.results,expected);
     });
     const rawRows = allRows.filter(row => numbers.includes(row.reference.questionNumber));
     const rows = rawRows.map(row => ({ ...row, reference: parseQuestionReference({ ...row.reference,
