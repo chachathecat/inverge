@@ -1,5 +1,5 @@
 import crypto from "node:crypto";
-import { prepareEconomicsRuntimeCandidate } from "../../../../scripts/content-review/prepare-economics-runtime-candidate.mjs";
+import { prepareEconomicsRuntimeCandidate } from "./economics-review-candidate.mjs";
 import { FirstStageKernelError, parseQuestionReference, type ChoiceId, type QuestionReference } from "../kernel/domain";
 import { createSubjectAdapterRegistry, validatePresentation, validateAttemptEvaluation, type SubjectAdapterV1 } from "../subject-adapter/subject-adapter";
 import { privateSessionDigest as digest, type PrivateFirstStageCatalog } from "./session-service";

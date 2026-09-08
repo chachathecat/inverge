@@ -95,6 +95,19 @@ unchanged records/other constraints/RLS/privileges and unsupported-tag denial.
 The genuine PC preparation was replayed twice with installation/records unchanged;
 no reset, synthetic cleanup, remote operation or content approval was performed.
 
+The subsequent review found that importing the preparation CLI from the runtime
+also pulled in renderer filesystem entrypoints. Candidate transformation and
+review-only validation now live in pure shared modules, while the existing CLIs
+retain file I/O and compatible exports. The loader no longer constructs review
+HTML. Candidate content, evidence checks and generated HTML semantics are unchanged.
+Synthetic regressions cover the pure runtime import graph and actual rejection
+of Git-contained private roots. A production build reduced the trial page/API
+traces from 1,912/1,893 to 120/101 files, with no CLI/Git/test/doc entries in either
+trial trace. Narrow route-specific Git packaging exclusions do not bypass the
+runtime containment check. The pre-existing unrelated curriculum-reference
+tracing warning remains outside this correction. No private packet was repackaged
+and no content approval was issued by this source-only extraction.
+
 ### Preserved reviewed-content lane
 
 The Owner's 2026-09-07 instruction conditionally permits one economics bundle

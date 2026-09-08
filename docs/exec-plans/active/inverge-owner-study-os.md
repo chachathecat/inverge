@@ -120,7 +120,30 @@ Real runtime correction and local verification:
   verification; private installation and aggregate record digest unchanged.
   Actual authenticated readback still succeeds with the original pending due time.
 
-Next: publish the single P2 correction batch, resolve its thread and require
+The first correction is head `a64c14f9b847663626706bc92faf0f6df635436d`,
+tree `e4e0c3e10b60f57555f416a53a22d9501f41a211`: all nine required native checks
+and C3R-L passed; its first P2 thread is resolved. Review 5138735418 reported
+0/0/1, identifying a different packaging P2, so this is NOT a clean final review.
+
+Second correction: the runtime imported preparation/rendering CLI filesystem
+entrypoints. Reproduced production traces included 1,912 page / 1,893 API files,
+with 838 Git/test/doc entries in each. Extracted the unchanged candidate
+transformation and review-only audit into pure shared modules; CLIs retain their
+filesystem entrypoints and compatible exports. No private content is rewritten.
+Route-specific tracing exclusions remove only Git metadata for the two trial
+routes; actual Git-contained private roots still fail the unchanged runtime probe.
+The build now traces 120 page / 101 API files, with zero CLI/Git/test/doc entries
+in those routes. The unrelated curriculum-reference trace warning was also
+present in the #899 base build and is not fixed or concealed by this batch.
+Focused candidate/renderer/trial/helper and import/Git-containment regressions
+passed (34 tests, zero fail/skip), as did the affected isolated economics
+PostgreSQL/HTTP/browser acceptance, changed-file lint/typecheck, JSON/38-path
+manifest/diff and production build. All 187 traces had zero private-root or
+private credential/content file matches. This correction's
+native CI and independent exact-head review remain pending; earlier results
+are not attributed to its future commit. Personal records are preserved.
+
+Next: publish the second P2 correction batch, resolve its thread and require
 exact-head native CI and one independent exact-head review (no duplicate
 manual request if automatic review starts). Correct findings in one root-cause
 batch. Conditional pinned squash requires clean 0/0/0, zero unresolved threads,
