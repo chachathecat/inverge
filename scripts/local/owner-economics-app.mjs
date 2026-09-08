@@ -5,6 +5,8 @@ import { pathToFileURL } from "node:url";
 import { createHash } from "node:crypto";
 import { spawn,spawnSync } from "node:child_process";
 import { localDockerRequest as api,runLocalLoopback,validateLoopbackListeners } from "./owner-economics-loopback.mjs";
+import { CURRICULUM_INSTALLATION, CURRICULUM_INSTALLATION_FILE, CURRICULUM_SAMPLE_FILE,
+  assertInstallableCurriculumSample } from "../../lib/review-os/first-stage/runtime/owner-local-curriculum-policy.mjs";
 
 const PRIVATE_ROOT=path.join(process.env.USERPROFILE??"", ".cache","codex-runtimes","owner-private","issue-883-economics-2025");
 const LOCAL_ROOT=path.join(process.env.LOCALAPPDATA??"", "Inverge","owner-economics");
@@ -81,8 +83,18 @@ export async function prepareOwnerLocalPlanning(){
   if(execute(snapshot)!==before)fail("personal_sessions_changed_during_preparation");
   return {personalLocalPlanning:"prepared",sessionsUnchanged:true,installationChanged:false,recordsReset:false};
 }
+export async function prepareOwnerLocalCurriculum(){
+  await guardedEnvironment();
+  assertInstallableCurriculumSample(await readFile(path.join(PRIVATE_ROOT,CURRICULUM_SAMPLE_FILE)));
+  const target=path.join(LOCAL_ROOT,CURRICULUM_INSTALLATION_FILE),content=JSON.stringify(CURRICULUM_INSTALLATION,null,2)+"\n";
+  const existing=await readFile(target,"utf8").catch(error=>{if(error.code!=="ENOENT")throw error;return null;});
+  if(existing!==null&&existing!==content)fail("existing_curriculum_installation_drift_preserved");
+  if(existing===null)await writeFile(target,content,{flag:"wx",mode:0o600});
+  return {installationPath:target,additionalOriginalCandidates:3,additionalRetryCandidates:3,
+    runtimeAdmission:"server_source_key_and_pair_checks_required",humanApprovedQuestions:0,recordsReset:false,previousInstallationChanged:false};
+}
 if(process.argv[1]&&import.meta.url===pathToFileURL(path.resolve(process.argv[1])).href){
   const command=process.argv[2];
-  (command==="prepare"?prepareOwnerLocalApp().then(result=>console.log(JSON.stringify(result))):command==="prepare-planning"?prepareOwnerLocalPlanning().then(result=>console.log(JSON.stringify(result))):command==="start"?startOwnerLocalApp():Promise.reject(new Error("invalid_local_command")))
+  (command==="prepare"?prepareOwnerLocalApp().then(result=>console.log(JSON.stringify(result))):command==="prepare-planning"?prepareOwnerLocalPlanning().then(result=>console.log(JSON.stringify(result))):command==="prepare-curriculum"?prepareOwnerLocalCurriculum().then(result=>console.log(JSON.stringify(result))):command==="start"?startOwnerLocalApp():Promise.reject(new Error("invalid_local_command")))
     .catch(error=>{const message=String(error.message);console.error(/^[a-z_]+$/.test(message)?message:"local_trial_setup_failed");process.exitCode=1;});
 }

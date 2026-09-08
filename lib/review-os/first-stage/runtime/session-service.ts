@@ -16,6 +16,7 @@ import {
   beginIndependentRetry,
   createExamCycleState,
   presentAttemptQuestion,
+  recordOwnerLocalConceptHelp,
   submitAnswer,
   validateFirstStageKernelState,
 } from "../kernel/mcq-kernel";
@@ -58,6 +59,9 @@ export interface PrivateFirstStageCatalog {
   readonly digest: string;
   readonly registry: SubjectAdapterRegistry;
   readonly initialReferences: readonly QuestionReference[];
+  curriculumBinding?(reference: QuestionReference): Readonly<{ unitId: string; topicId: string; title: string; mappingVersion: string }> | null;
+  conceptAidDescriptor?(reference: QuestionReference, kind: "concept" | "prerequisite"): Readonly<{ id: string; version: string; sha256: string }> | null;
+  conceptAid?(reference: QuestionReference, kind: "concept" | "prerequisite"): Readonly<{ text: string; kind: "concept" | "prerequisite"; humanReviewComplete: false }>;
   questionAttributions?(reference: QuestionReference): readonly string[];
   retryAvailability(reference: QuestionReference, usedQuestionIds: readonly string[]): "available" | "exhausted";
   explanation(reference: QuestionReference): Readonly<{
@@ -135,6 +139,10 @@ export function createPrivateFirstStageSessionService(
       identity("first-session", ownerId, first.requestId) !== sessionId) fail("adapter_mismatch");
     validateFirstStageKernelState(value.state, ownerId,
       value.state.examCycle.definitionSha256, catalog.registry);
+    for(const attempt of value.state.attempts)for(const exposure of attempt.ownerLocalAssistance??[]) {
+      const descriptor=isTrial()?catalog.conceptAidDescriptor?.(attempt.questionReference,exposure.kind):null;
+      if(!descriptor || descriptor.id!==exposure.aidId || descriptor.version!==exposure.aidVersion || descriptor.sha256!==exposure.aidSha256)fail("adapter_mismatch");
+    }
     return value;
   }
 
@@ -188,7 +196,7 @@ export function createPrivateFirstStageSessionService(
     const action = (input as Record<string, unknown>).action;
     const fields = action === "begin" ? ["questionId"]
       : action === "submit" ? ["attemptId", "submission"]
-        : action === "retry" ? ["reviewTaskId"] : fail();
+        : action === "retry" ? ["reviewTaskId"] : action === "help" ? ["attemptId","kind"] : fail();
     const row = exactObject(input, ["action", "requestId", "expectedRevision", ...fields]);
     const requestId = requiredIdentifier(row.requestId);
     const expectedRevision = requiredSafeInteger(row.expectedRevision, 1, Number.MAX_SAFE_INTEGER);
@@ -200,7 +208,7 @@ export function createPrivateFirstStageSessionService(
     const trustedAt = requiredUtcInstant(now());
     // Optional server-only planner guard, after durable load and replay checks.
     // It observes the exact timestamp the kernel seals; HTTP cannot supply it.
-    if(action!=="submit")assertTrustedStartTime?.(trustedAt);
+    if(action==="begin"||action==="retry")assertTrustedStartTime?.(trustedAt);
     const binding = { trustedOwnerId: ownerId,
       trustedExamCycleDefinitionSha256: current.state.examCycle.definitionSha256,
       expectedRevision };
@@ -216,6 +224,14 @@ export function createPrivateFirstStageSessionService(
         independentRetryId: identity("first-retry", sessionId, requestId),
         retryAttemptId: identity("first-attempt", sessionId, requestId),
         trustedStartedAt: trustedAt }, catalog.registry);
+    } else if(action === "help") {
+      const attempt=current.state.attempts.find(item=>item.attemptId===row.attemptId);
+      if(!isTrial()||!attempt||attempt.state!=="in_progress"||attempt.kind!=="initial"||
+        (row.kind!=="concept"&&row.kind!=="prerequisite"))fail("invalid_transition");
+      const descriptor=catalog.conceptAidDescriptor?.(attempt.questionReference,row.kind);
+      if(!descriptor)fail("adapter_unavailable");
+      state=recordOwnerLocalConceptHelp(current.state,{...binding,attemptId:attempt.attemptId,
+        exposure:{kind:row.kind,aidId:descriptor.id,aidVersion:descriptor.version,aidSha256:descriptor.sha256,recordedAt:trustedAt}},catalog.registry);
     } else {
       const attemptId = requiredIdentifier(row.attemptId);
       const attempt = current.state.attempts.find((item) => item.attemptId === attemptId);
@@ -263,6 +279,12 @@ export function createPrivateFirstStageSessionService(
       attempt: active ? { attemptId: active.attemptId, startedAt: active.startedAt }
         : latest ? { attemptId: latest.attemptId, decision: latest.evaluation?.decision } : null,
       explanation,
+      ...(trial && saved.state.examCycle.questionReferences[0].questionVersion==="issue883-economics-curriculum-v1" ? {assistanceLevel:active?.assistanceLevel??latest?.assistanceLevel??"none",
+        availableConceptAids:active?.kind==="initial" ? (["concept","prerequisite"] as const).filter(kind=>
+          !active.ownerLocalAssistance?.some(exposure=>exposure.kind===kind)&&Boolean(catalog.conceptAidDescriptor?.(active.questionReference,kind))) : [],
+        // A successful command/GET returns the last specifically selected aid,
+        // not all projections. This is read from the durable winner only.
+        conceptAid:active?.ownerLocalAssistance?.length ? catalog.conceptAid?.(active.questionReference,active.ownerLocalAssistance.at(-1)!.kind)??null : null} : {}),
       reviewTasks: saved.state.reviewTasks.map((task) => {
         const retryAvailability = catalog.retryAvailability(task.questionReference,
           saved.state.independentRetries.filter(retry => retry.reviewTaskId === task.reviewTaskId)
@@ -292,6 +314,7 @@ export function createPrivateFirstStageSessionService(
       active: active ? { attemptId: active.attemptId, startedAt: active.startedAt } : null,
       committedAttempts: saved.state.attempts.filter(item => item.state === "evaluated")
         .map(item => ({ attemptId: item.attemptId, submittedAt: item.submission?.submittedAt,
+          assistanceLevel:item.assistanceLevel,
           practiceDecision: item.evaluation?.decision })),
       reviews: saved.state.reviewTasks.map(task => ({ reviewTaskId: task.reviewTaskId,
         dueAt: task.dueAt, status: task.status, completedAt: task.completedAt,

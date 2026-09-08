@@ -177,6 +177,9 @@ type UnreviewedAttemptEvaluation = Readonly<{
 
 export type AttemptEvaluation = ReviewedAttemptEvaluation | UnreviewedAttemptEvaluation;
 
+export type OwnerLocalConceptExposure = Readonly<{
+  kind: "concept" | "prerequisite"; aidId: string; aidVersion: string; aidSha256: string; recordedAt: string;
+}>;
 export type Attempt = Readonly<{
   schemaVersion: "first_stage.attempt.v1";
   attemptId: string;
@@ -187,6 +190,8 @@ export type Attempt = Readonly<{
   reviewTaskId: string | null;
   exposureState: "first_exposure" | "repeated_exposure" | "verified_variant" | "unreviewed_local_variant";
   assistanceLevel: "none" | "hint_or_scaffold" | "answer_revealed";
+  /** Optional only for the explicitly unreviewed local initial-attempt lane. */
+  ownerLocalAssistance?: readonly OwnerLocalConceptExposure[];
   startedAt: string;
   state: "in_progress" | "evaluated";
   submission: AnswerSubmission | null;
@@ -364,9 +369,12 @@ export function parseQuestionReference(value: unknown): QuestionReference {
   if ((!trial && row.schemaVersion !== "first_stage.question_reference.v1") || row.choiceCount !== 5) fail();
   if (trial && (row.rightsState !== "observed_owner_local_only" || row.currentnessState !== "observed_historical_unreviewed" ||
     row.subjectId !== "economics_principles" || row.examYear !== 2025 || row.examRound !== 36 ||
-    row.sessionId !== "qnet-2025-36-s1-A" || row.questionVersion !== "issue883-economics-r3-runtime-v1" ||
-    ![46, 49, 51, 52, 53].includes(Number(row.questionNumber)) ||
-    ![`qnet-2025-36-s1-A-${row.questionNumber}`, `issue883-r3-r${row.questionNumber}`].includes(String(row.questionId)))) fail();
+    row.sessionId !== "qnet-2025-36-s1-A" || !(
+      (row.questionVersion === "issue883-economics-r3-runtime-v1" && [46,49,51,52,53].includes(Number(row.questionNumber)) &&
+        [`qnet-2025-36-s1-A-${row.questionNumber}`, `issue883-r3-r${row.questionNumber}`].includes(String(row.questionId))) ||
+      (row.questionVersion === "issue883-economics-curriculum-v1" && [58,62,65].includes(Number(row.questionNumber)) &&
+        [`qnet-2025-36-s1-A-${row.questionNumber}`, `issue883-curriculum-r${row.questionNumber}`].includes(String(row.questionId)))
+    ))) fail();
   if (!Array.isArray(row.sourceVersionManifestIds) || row.sourceVersionManifestIds.length < 1 || row.sourceVersionManifestIds.length > 16) fail();
   const manifests = row.sourceVersionManifestIds.map((item) => requiredIdentifier(item));
   if (new Set(manifests).size !== manifests.length) fail();

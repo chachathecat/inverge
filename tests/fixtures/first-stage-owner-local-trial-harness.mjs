@@ -40,7 +40,7 @@ export function trialHarness(options = {}) {
   };
   const application = createOwnerLocalTrialApplication({ environment: () => env,
     session: async () => ({ isAuthenticated: true, isDemo: false, source: "supabase", userId: "synthetic-owner", email: "synthetic@example.test", ...options.session }),
-    catalog: async () => { catalogReads++; return await loadOwnerLocalR3TrialContent(fixture.input); },
+    catalog: async () => { catalogReads++; return await (options.catalogLoader??loadOwnerLocalR3TrialContent)(fixture.input); },
     repository: () => store.store, planningRepository:()=>planningStore, now: store.getClock });
   const send = async (body, query = "") => {
     const response = await application(new NextRequest(`http://127.0.0.1:3883/api/trial${query}`, body === undefined ? {headers:{host:"127.0.0.1:3883"}} : {

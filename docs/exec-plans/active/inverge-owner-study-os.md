@@ -1,6 +1,123 @@
 # Inverge Owner Study OS
 
-## Active post-#903 Today continuation — 2026-09-08 KST
+## Active post-#905 curriculum-to-usable-economics Goal — 2026-09-09 KST
+
+Owner accepted the bounded handoff in PR #905 comment 5587044730. Main is
+`b13c6d9945a47cbe132d5ecdf5eb3df3ca73e265`; the existing worktree now uses
+`codex/issue-883-economics-curriculum-today`. The previous uncommitted closeout
+below is preserved. Root is the sole writer; two native helpers are read-only.
+The separate legal bridge has explicitly been told not to start a second writer.
+
+Goal: account for all 40 existing 2025 economics positions, connect at least
+three additional teaching groups to selection/help/question/feedback/save/
+Today/reconnect, and verify actual local use beyond a PR merge. New installation
+is capped at 12 additional originals plus one independently answered retry each;
+this is not a promised count or an economics/five-subject completion claim.
+
+Source audit: preserved PDF pages 14–23 and economic final-key image were visually
+checked by a read-only AI helper. All 40 positions have editorial topic/support
+decisions. 50 and 69 accept all choices and stay outside single-answer stock;
+52/r52 stays excluded. Initial new sample is 58 (price ceiling/surplus transfer),
+62 (money demand/velocity), and 65 (separate fiscal-shock multipliers). Independent
+original arithmetic matches the preserved key. Six new rows/aids and the closed
+loader/adapter/Today consumer are implemented. Human review remains zero; existing
+source/booklet caveats remain. Child #906 tracks this bounded integration only.
+
+Progress: private 58/62/65 + own retry rows and aids have been authored; a read-only
+AI helper independently checked six calculations, choices, explanations and source
+conditions. r62's reciprocal wording was clarified and its exact row pin updated.
+No human approval was recorded. The new loader composes the unchanged base, pins
+each private row, and quarantines pairs independently. Existing session CAS now
+records a selected aid before disclosure. The actual Today/UI exposes all 40
+positions, usable vs missing supply, optional topic selection and dated planning.
+Existing r3 row AND response digest checks pass after scoping new view fields to
+new versions only. The exact interface/source hashes now declare the optional
+local help field; reviewed/legacy attempts still reject it. Private sample SHA256
+546b36871e55934593158d6e147bc550b1f80a6d11a59c07f55a90bfc660a16e and separate
+AI arithmetic evidence e028f0084dd78d50ddcb4244c7e4b04734ee7de996431413fbe910fcb32092c4
+remain outside Git; no reviewer/date/approval was invented.
+
+Local verification: full 1,797 tests passed after the exact descriptor correction;
+the subsequent explicit gate regression and final curriculum suite passed 12/12.
+Four isolated SDK/PostgreSQL/React cases passed, including all three groups,
+durable selected help, lost response/concurrency, D+1 completion/replay, old-date
+preservation and the prior Today insert-lock regression. Their synthetic users,
+rows and temporary networkless containers were cleaned; actual records were not.
+Typecheck, changed-file lint, final build, 161 JSON files and diff checks passed.
+All 187 build traces exclude resolved private roots. Native exact-head CI/review
+remain pending; prior-head results are not new-head evidence.
+
+Actual local walkthrough: all seven containers and all five published PC listeners
+were 127.0.0.1 only. Guarded additive planning preparation preserved sessions;
+optional sample installation preserved the old nine-artifact installation. The
+existing genuine login admitted seven originals and seven own practice variants.
+Today accounted for 40 positions: 7 usable unreviewed, 30 unsupplied, 3 excluded.
+A new KST date required explicit declaration and retained 2026-09-08's 75 minutes.
+A functional 45-minute trial correctly reported cognitive-budget deferral; no
+policy was relaxed. Explicit 150-minute functional replan then supported actual
+58/62/65 selection, optional aid, response/feedback save, reconnect and Today.
+Each new row has one aid exposure, assisted/unreviewed classification and one D+1;
+remaining estimates progressed 135/120/105. These are agent-operated functional
+checks through genuine auth, NOT independent Owner learning or measured capacity.
+External browser requests and browser errors were zero. The original 46/49/51
+row digests and due times match their pre-install snapshots exactly; six actual
+rows are retained. A stale dev-cache 404 was resolved by preserving the owned
+cache and generating it afresh, without auth/TLS/source-policy relaxation.
+
+Next: ordinary commit/push and PR for #906, native exact-head checks,
+independent review, all threads and deployment
+boundary, then conditional pinned squash and actual post-restart/main reconnect.
+Actual r46 next-day observation remains Owner-only and unobserved; never change
+the clock. Keep the existing local account, seven containers, TLS and loopback.
+No provider, remote DB, paid service, public activation or legal bridge work.
+
+## Completed post-#903 Today outcome — 2026-09-08 KST
+
+PR #905 is actually MERGED at 2026-09-08T14:30:43Z. Reviewed head
+`b7bea26cbdece0ee4a1313e4ef554ccbacfc5e97`; reviewed/resulting-main tree
+`c19225fb93da577e0110000fe3b444fead5e501f`; squash/resulting main
+`b13c6d9945a47cbe132d5ecdf5eb3df3ca73e265`. Fetch and exact tree comparison
+passed. All nine required exact-head checks and C3R-L passed. Independent Codex
+review comment 5586718706 is clean (actionable P0/P1/P2 0/0/0); both historical
+threads are resolved. No force push, auto-merge or Draft/Ready transition occurred.
+All five resulting-main workflows passed: Fast CI 34238732645, Learner Loop
+Health 34238732635, Security 34238732485, E2E Smoke 34238732448 and Post-Merge
+Orchestrator 34238732575. E2E's remote staging test was explicitly skipped for
+missing readiness secrets; its workflow success is NOT remote runtime evidence.
+Authenticated read-only Vercel GET confirmed exact Production deployment
+`dpl_8FzQ6b6Av5RhAkpf7nBkBfTctzh1` CANCELED for the squash SHA. GitHub remains
+delivery authority; this is a status summary, not another receipt or control system.
+Child #904 is CLOSED; parent #883 stays OPEN for broader content/use conditions.
+
+Final correction evidence: 42 affected tests and both isolated PostgreSQL/browser
+cases, typecheck, changed correction-file lint, build, 161 JSON, 28-path manifest
+and diff passed. All 189 build traces excluded private roots. The earlier full
+1,786-test local run belongs to the first correction; new-head native CI is
+separately recorded above. Actual SQL advisory-lock wait, both insert orders,
+same/different-request concurrency, historical duplicates, reviewed isolation,
+single debit, response loss, restart and synthetic D+1 completion were verified.
+No actual learning records were passed to synthetic cleanup.
+
+Actual address: http://127.0.0.1:3883/app/first-stage/economics-trial
+Existing account: owner@localhost.test, using its existing privately entered
+password only if login is needed. Eight human-unreviewed trial items remain:
+46/49/51/53 and their four own practice variants. Human-approved stock is 0;
+52/r52 remains excluded. The existing account, private artifacts, TLS certificate,
+seven loopback containers, volume and due times are unchanged. Final authenticated
+post-merge GET returned 200, the same three actual sessions and preferences,
+75 remaining minutes and no Next error dialog. The 51 walkthrough is functional
+verification, NOT independent Owner performance. Today/Full-Day, exact start or
+resume, durable save/reconnect and explicit replan are usable in this local trial.
+Expired slots require replan; fixed 15-minute estimates are not measured capacity.
+Actual next-day r46 observation after 2026-09-09 15:39 KST is still UNOBSERVED.
+
+No further implementation is required for this bounded Goal. Keep the app session
+14965 and browser 96728 available. Stop the app for rollback, retaining every
+actual row and volume. This local post-merge checkpoint is intentionally not a
+new code commit/CI cycle. No human content approval, remote DB/provider/payment,
+public activation, extra subject or broader first-stage completion is claimed.
+
+## Historical post-#903 implementation and corrections — 2026-09-08 KST
 
 Second correction: head 98972e87c2b75564c729c3fa92af5e73893b6dc4 passed all nine
 required native checks and C3R-L, but formal review 5142592920 reported one P2

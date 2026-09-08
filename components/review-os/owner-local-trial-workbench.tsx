@@ -95,7 +95,7 @@ function OwnerLocalToday({initialSearch}:{initialSearch:string}) {
   const next=planned?.actions.find(action=>action.id===planned.nextActionId);
   const executableNowActionIds=planned?.executableNowActionIds??[];
   return <main className="mx-auto max-w-3xl space-y-6 px-5 py-10">
-    <header><p className="text-xs text-slate-500">Owner PC · 사람 미검토 · 경제학 r3</p><h1 className="mt-2 text-2xl font-bold">Today · 오늘 남은 학습</h1>
+    <header><p className="text-xs text-slate-500">Owner PC · 사람 미검토 · 2025 경제학 제한 표본</p><h1 className="mt-2 text-2xl font-bold">Today · 오늘 남은 학습</h1>
       <p className="mt-4 rounded-xl border border-amber-300 bg-amber-50 p-4 text-sm">{OWNER_LOCAL_R3_TRIAL_NOTICE}</p></header>
     <section aria-live="polite" aria-busy={busy} className="space-y-4 rounded-2xl border bg-white p-6">
       {busy && <p role="status">서버의 시간·학습 기록을 확인합니다.</p>}
@@ -112,6 +112,7 @@ function OwnerLocalToday({initialSearch}:{initialSearch:string}) {
         {next && !executableNowActionIds.includes(next.id) && <p role="status">아직 이 블록의 시작 시간이 아닙니다. Full-Day 시간표를 확인하고 해당 시간이 되면 <a className="underline" href={ROOT}>현재 서버 계획 새로 확인</a>을 눌러 주세요.</p>}
         {planned.expiredBlockCount>0 && <p>지난 미실행 블록 {planned.expiredBlockCount}개는 완료로 처리하지 않습니다. 계속 공부하려면 아래 남은 시간·생활 조건을 저장해 다시 계획하세요.</p>}
         {planned.newStudyOpportunity && !planned.newStudyOpportunity.selected && <p className="text-sm">새 학습 보류: {planned.newStudyOpportunity.exception}</p>}
+        {planned.newStudyOpportunity && <p className="text-sm">새 학습 후보 근거: {planned.newStudyOpportunity.reason==="declared_unstudied_topic"?"직접 선택한 미학습 주제":"현재 공급 중인 미학습 주제 순서"}. 진행 중인 문제·기한 복습·현재 시간과 회복 조건을 함께 적용합니다.</p>}
         {planned.overflowCount>0 && <p>계획 후보 한도 밖 {planned.overflowCount}건은 미완료로 남겨 두었습니다.</p>}
         <h2 className="font-semibold">오늘의 핵심 결과 · 최대 3개</h2>
         <ul className="space-y-2">{planned.plan.coreOutcomes.map(outcome=><li key={outcome.outcomeId}>{outcome.title} · {outcome.estimatedMinutes}분</li>)}</ul>
@@ -143,6 +144,24 @@ function OwnerLocalToday({initialSearch}:{initialSearch:string}) {
         </fieldset>
       </form>
     </details>}
+    {today && <section aria-label="경제학 학습범위와 자료" className="space-y-4 rounded-2xl border bg-white p-6">
+      <h2 className="font-semibold">배울 주제와 실제 자료</h2>
+      <p className="text-sm">2025년 경제학 원문 위치 40개 중 로컬 시험 가능 {today.curriculum.usableOriginalCount}개, 미공급 {today.curriculum.noSupplyCount}개, 제외 {today.curriculum.excludedCount}개입니다. 공식 상세 출제범위나 과목 완성률이 아닙니다. 단원 연결은 내부 편집 분류입니다.</p>
+      <p className="text-sm">기록 없음과 자료 없음은 다릅니다. 사람 미검토 연습·개념 도움·익숙한 문제 반복은 독립 수행이나 숙달을 증명하지 않습니다. 개념·선행 계산 도움은 문제 진입 후 선택할 수 있고 필수 잠금은 아닙니다.</p>
+      {today.selectedTopic && <p role="status">선택한 주제: {today.curriculum.topics.find(topic=>topic.topicId===today.selectedTopic?.topicId)?.title}. 다음 실행은 위 Today 시간표를 따릅니다.</p>}
+      <ul className="space-y-3">{today.curriculum.topics.filter(topic=>topic.supply==="usable_unreviewed_trial").map(topic=><li key={topic.topicId} className="rounded-xl border p-3">
+        <p>{topic.title} · {topic.number}번</p>
+        <p className="text-sm text-slate-600">{topic.evidence==="assisted_practice_observed"?"도움을 받은 연습 기록 있음":topic.evidence==="unreviewed_practice_observed"?"미검토 연습 응답 있음":topic.evidence==="unavailable"?"기존 기록 확인 불가":"응답 기록 없음"} · 독립 수행 미확립{topic.conceptHelpAvailable?" · 개념·선행 계산 도움 있음":""}</p>
+        {topic.selectable && <button className={`${SECONDARY} mt-2`} disabled={busy||retryable||loginRequired||today.state!=="planned"} onClick={()=>void send({action:"select_topic",input:{requestId:`topic-${crypto.randomUUID()}`,expectedRevision:today.preferencesRevision,
+          topicId:topic.topicId,mappingVersion:topic.mappingVersion,questionVersion:topic.questionVersion}})}>이 미학습 주제로 재계획</button>}
+      </li>)}</ul>
+      {today.state==="availability_required" && <p className="text-sm">먼저 오늘 남은 시간을 명시적으로 저장하면 주제를 선택할 수 있습니다. 전날 예산을 오늘로 가져오지 않습니다.</p>}
+      <details><summary className="cursor-pointer py-3">전체 40개 위치의 공급·검증 상태</summary>
+        {today.curriculum.units.map(unit=><div key={unit.id} className="mt-4"><h3 className="font-semibold">{unit.name}</h3><ul className="space-y-2 text-sm">{today.curriculum.topics.filter(topic=>topic.unitId===unit.id).map(topic=><li key={topic.number}>{topic.number}번 · {topic.title} · {topic.supply==="usable_unreviewed_trial"?"미검토 시험 가능":topic.supply==="excluded"?"제외":"미공급"} — {topic.supportNote} · 원문 PDF {topic.sourcePage}쪽</li>)}</ul></div>)}
+        <p className="mt-4 text-sm">출처: 한국산업인력공단 Q-Net 2025 제36회 1교시 A형. 문제·정답 게시물 각각 공공누리 제1유형 관찰. 정답표의 A형 명시와 첨부 적용범위의 인적 확인은 미완료입니다. 50·69번의 전 선지 인정과 52/r52 제외를 유지합니다.</p>
+      </details>
+      {today.priorDateBudgets.length>0 && <details><summary className="cursor-pointer py-3">보존된 이전 날짜의 시간 선언</summary><ul className="text-sm">{today.priorDateBudgets.map(row=><li key={row.date}>{row.date} · 당시 남은 시간 선언 {row.declaredMinutes}분 · 현재 가용시간이나 측정된 공부시간 아님</li>)}</ul></details>}
+    </section>}
     {today && <section className="rounded-2xl border bg-white p-6"><h2 className="font-semibold">저장된 미검토 시험 기록·다음 복습</h2>
       <p className="my-3 text-sm">사람 승인 0문항. 허용 원문 {today.inventory.originalCount}개와 각 변형 1개뿐이며, 긴 공부시간을 모두 채울 재고는 아닙니다. 문항 처리 완료는 숙달이나 전이 성공이 아닙니다.</p>
       <ul className="space-y-4">{today.history.map(row=><li key={row.sessionId}><a className="underline" href={`${ROOT}?${new URLSearchParams({sessionId:row.sessionId})}`}>경제학 {row.questionNumber}번 · {row.active?"진행 중":row.ready?"시작 대기":`응답 저장 ${row.committedAttempts.length}회`}</a>

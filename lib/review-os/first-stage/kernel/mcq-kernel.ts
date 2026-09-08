@@ -20,6 +20,7 @@ import {
   type FirstStageKernelState,
   type QuestionReference,
   type ReviewTask,
+  type OwnerLocalConceptExposure,
 } from "./domain";
 import {
   validateAttemptEvaluation,
@@ -145,6 +146,7 @@ function validateKernelState(
       "schemaVersion", "attemptId", "examCycleId", "questionReference", "kind",
       "sourceAttemptId", "reviewTaskId", "exposureState", "assistanceLevel",
       "startedAt", "state", "submission", "evaluation",
+      ...("ownerLocalAssistance" in attempt ? ["ownerLocalAssistance"] : []),
     ]);
     const reference = parseQuestionReference(attempt.questionReference);
     const adapter = registry.require(reference.subjectId);
@@ -160,6 +162,21 @@ function validateKernelState(
       !["first_exposure", "repeated_exposure", "verified_variant", "unreviewed_local_variant"].includes(attempt.exposureState) ||
       !["none", "hint_or_scaffold", "answer_revealed"].includes(attempt.assistanceLevel)
     ) throw new FirstStageKernelError("invalid_input");
+    const exposures=attempt.ownerLocalAssistance;
+    if(exposures!==undefined) {
+      if(!activeOwnerLocalR3TrialAdapter(adapter)||reference.questionVersion!=="issue883-economics-curriculum-v1"||attempt.kind!=="initial"||
+        !Array.isArray(exposures)||exposures.length<1||exposures.length>2||attempt.assistanceLevel!=="hint_or_scaffold"||
+        new Set(exposures.map(item=>item.kind)).size!==exposures.length)throw new FirstStageKernelError("invalid_input");
+      let last=instantMs(attempt.startedAt);
+      for(const exposure of exposures) {
+        exactObject(exposure,["kind","aidId","aidVersion","aidSha256","recordedAt"]);
+        requiredIdentifier(exposure.aidId);requiredIdentifier(exposure.aidVersion);requiredSha256(exposure.aidSha256);
+        const at=instantMs(requiredUtcInstant(exposure.recordedAt));
+        if(!["concept","prerequisite"].includes(exposure.kind)||at<last||
+          (attempt.submission&&at>instantMs(attempt.submission.submittedAt)))throw new FirstStageKernelError("invalid_input");
+        last=at;
+      }
+    }
     if (attempt.kind === "initial") {
       const cycleReference = state.examCycle.questionReferences.find(
         (item) => item.questionId === reference.questionId,
@@ -168,7 +185,7 @@ function validateKernelState(
         attempt.sourceAttemptId !== null ||
         (attempt.state === "in_progress" && attempt.reviewTaskId !== null) ||
         attempt.exposureState !== "first_exposure" ||
-        attempt.assistanceLevel !== "none" ||
+        (exposures===undefined && attempt.assistanceLevel !== "none") ||
         !cycleReference ||
         canonicalJson(cycleReference) !== canonicalJson(reference)
       ) throw new FirstStageKernelError("invalid_input");
@@ -336,11 +353,13 @@ function validateKernelState(
       "schemaVersion", "attemptId", "examCycleId", "questionReference", "kind",
       "sourceAttemptId", "reviewTaskId", "exposureState", "assistanceLevel",
       "startedAt", "state", "submission", "evaluation",
+      ...("ownerLocalAssistance" in sourceAttempt ? ["ownerLocalAssistance"] : []),
     ]);
     exactObject(retryAttempt, [
       "schemaVersion", "attemptId", "examCycleId", "questionReference", "kind",
       "sourceAttemptId", "reviewTaskId", "exposureState", "assistanceLevel",
       "startedAt", "state", "submission", "evaluation",
+      ...("ownerLocalAssistance" in retryAttempt ? ["ownerLocalAssistance"] : []),
     ]);
     const retryReference = parseQuestionReference(retry.questionReference);
     const retryAttemptReference = parseQuestionReference(retryAttempt.questionReference);
@@ -546,7 +565,8 @@ function validateKernelState(
   const expectedCompletedAt = allInitialsEvaluated
     ? new Date(Math.max(...initialSubmissionTimes)).toISOString()
     : null;
-  const expectedRevision = 1 + state.attempts.length + validatedSubmissions.size;
+  const expectedRevision = 1 + state.attempts.length + validatedSubmissions.size +
+    state.attempts.reduce((sum,attempt)=>sum+(attempt.ownerLocalAssistance?.length??0),0);
   const rebuiltConceptStates = rebuildConceptStates(
     state,
     validatedEvaluations,
@@ -602,6 +622,7 @@ function instantMs(value: string) {
 function latestActivityMs(state: FirstStageKernelState) {
   const values = state.attempts.flatMap((attempt) => [
     instantMs(attempt.startedAt),
+    ...(attempt.ownerLocalAssistance ?? []).map(exposure => instantMs(exposure.recordedAt)),
     ...(attempt.submission ? [instantMs(attempt.submission.submittedAt)] : []),
   ]);
   return values.length === 0 ? null : Math.max(...values);
@@ -795,6 +816,25 @@ export function beginAttempt(
     }),
     attempts: Object.freeze([...state.attempts, attempt]),
   });
+}
+
+/** Explicit help in the narrow unreviewed local lane. The session service binds
+ * the descriptor to server content, persists this state with CAS, then discloses. */
+export function recordOwnerLocalConceptHelp(state: FirstStageKernelState, input: {
+  trustedOwnerId:string;trustedExamCycleDefinitionSha256:string;expectedRevision:number;attemptId:string;
+  exposure:OwnerLocalConceptExposure;
+}, registry:SubjectAdapterRegistry):FirstStageKernelState {
+  exactObject(input,["trustedOwnerId","trustedExamCycleDefinitionSha256","expectedRevision","attemptId","exposure"]);
+  state=stale(state,input.expectedRevision,input.trustedOwnerId,input.trustedExamCycleDefinitionSha256,registry);
+  const index=state.attempts.findIndex(attempt=>attempt.attemptId===input.attemptId),attempt=state.attempts[index];
+  if(!attempt || attempt.state!=="in_progress" || attempt.kind!=="initial" ||
+    !activeOwnerLocalR3TrialAdapter(registry.require(attempt.questionReference.subjectId)) ||
+    attempt.questionReference.questionVersion!=="issue883-economics-curriculum-v1" ||
+    attempt.ownerLocalAssistance?.some(exposure=>exposure.kind===input.exposure.kind)) throw new FirstStageKernelError("invalid_transition");
+  requireNondecreasingActivity(state,requiredUtcInstant(input.exposure.recordedAt));
+  const next=Object.freeze({...state,revision:state.revision+1,attempts:replaceAt(state.attempts,index,Object.freeze({...attempt,
+    assistanceLevel:"hint_or_scaffold" as const,ownerLocalAssistance:Object.freeze([...(attempt.ownerLocalAssistance??[]),Object.freeze(input.exposure)])}))});
+  return validateKernelState(next,input.trustedOwnerId,input.trustedExamCycleDefinitionSha256,registry);
 }
 
 export function presentAttemptQuestion(

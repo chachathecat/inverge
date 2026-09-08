@@ -9,7 +9,9 @@ import { createPrivateSessionRepository } from "./session-repository";
 import { createOwnerLocalPlanningRepository } from "./owner-local-planning-repository";
 import { createOwnerLocalTrialApplication } from "./owner-local-trial-context";
 import { genuineTrialSession, ownerLocalR3TrialEnvironment } from "./owner-local-trial-boundary";
-import { loadOwnerLocalR3TrialContent, type TrialInstallation } from "./owner-local-trial-content";
+import type { TrialInstallation } from "./owner-local-trial-content";
+import { loadOwnerLocalCurriculumContent } from "./owner-local-curriculum-content";
+import { readInstalledCurriculumSample, CURRICULUM_SAMPLE_FILE, CURRICULUM_INSTALLATION_FILE } from "./owner-local-curriculum-policy.mjs";
 
 const FILES = { candidate: "economics-runtime-candidate-r3-v1.json",
   review: "issue-883-economics-r3-review/review-packet-r3.json",
@@ -49,7 +51,9 @@ async function loadInstalledTrial() {
     const installationRoot = await privateRoot(path.join(process.env.LOCALAPPDATA ?? "", "Inverge", "owner-economics"));
     const installation: TrialInstallation = JSON.parse(new TextDecoder("utf-8",{fatal:true}).decode(await readBounded(installationRoot,"trial-installation.json")));
     // Real runtime never accepts synthetic_test_only, even if a local file says so.
-    return await loadOwnerLocalR3TrialContent({ installation, readArtifact: name => readBounded(root,FILES[name]) });
+    const sampleSource=await readInstalledCurriculumSample(()=>readBounded(installationRoot,CURRICULUM_INSTALLATION_FILE),
+      ()=>readBounded(root,CURRICULUM_SAMPLE_FILE));
+    return await loadOwnerLocalCurriculumContent({ installation, sampleSource, readArtifact: name => readBounded(root,FILES[name]) });
   } catch { return null; }
 }
 export async function requireOwnerLocalTrialPage() {

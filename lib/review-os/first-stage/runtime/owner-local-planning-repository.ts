@@ -8,19 +8,21 @@ export function createOwnerLocalPlanningRepository(client:SupabaseClient):TrialP
   return {
     async load(ownerId) {
       owner(ownerId);
-      const result=await client.from(TABLE).select("owner_id,revision,payload,declared_at").eq("owner_id",ownerId).maybeSingle();
+      const result=await client.from(TABLE).select("owner_id,revision,payload,declared_at,prior_dates,selected_topic").eq("owner_id",ownerId).maybeSingle();
       if(result.error) unavailable();
       if(!result.data) return null;
-      const {owner_id,revision,payload,declared_at}=result.data;
+      const {owner_id,revision,payload,declared_at,prior_dates,selected_topic}=result.data;
       if(owner_id!==ownerId || payload?.ownerId!==ownerId || payload?.revision!==revision) unavailable();
       if(declared_at!==null && (typeof declared_at!=="string" || !Number.isFinite(Date.parse(declared_at))))unavailable();
-      return {...payload,...(declared_at?{declaredAt:new Date(declared_at).toISOString()}:{})} as TrialPlanningRecord;
+      return {...payload,...(declared_at?{declaredAt:new Date(declared_at).toISOString()}:{}),
+        ...(prior_dates!==null?{priorDates:prior_dates}:{}),...(selected_topic!==null?{selectedTopic:selected_topic}:{})} as TrialPlanningRecord;
     },
     async save(value,expectedRevision) {
       owner(value.ownerId);
       if(!Number.isSafeInteger(expectedRevision) || expectedRevision<0 || value.revision!==expectedRevision+1) unavailable();
-      const {declaredAt,...payload}=value;
-      const row={owner_id:value.ownerId,revision:value.revision,payload,declared_at:declaredAt??null};
+      const {declaredAt,priorDates,selectedTopic,...payload}=value;
+      const row={owner_id:value.ownerId,revision:value.revision,payload,declared_at:declaredAt??null,
+        prior_dates:priorDates??null,selected_topic:selectedTopic??null};
       if(expectedRevision===0) {
         const result=await client.from(TABLE).insert(row);
         if(result.error?.code==="23505") return false;

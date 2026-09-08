@@ -2,6 +2,41 @@
 
 Date: 2026-09-06. Scope: `chachathecat/inverge` only.
 
+## Accepted post-#905 curriculum and bounded supply extension — 2026-09-09 KST
+
+The Owner accepted PR #905 comment 5587044730 in the existing Goal. This narrowly
+extends the r3-only local-trial scope to the already held 2025/36th economics
+positions 41–80, at most twelve ADDITIONAL originals and one separately answered
+private retry per admitted original. At least three additional/unsupplied teaching
+groups must work through selection, optional concept/prerequisite help, question,
+feedback, save, curriculum-aware Today/replan and reconnect. A source list or PR
+merge alone is not completion. Source/rights/full-key/independent-retry checks and
+human-unreviewed notices remain; no normal reviewed release is granted. 52/r52
+remains excluded. Unsupported or ambiguous sources stay unavailable, not silently
+promoted. Draft curriculum units are editorial organization, not official detailed
+syllabus, importance, mastery or efficacy authority.
+
+Reuse the existing kernel, adapter, catalog, commands, private stores and Today
+capacity/dispatch. Changes directly needed for version-bound supply, assistance
+recording before disclosure, server-owned content validation, read projections,
+API/UI and regression tests are authorized. Preserve existing r3 bytes, 46/49/51
+records, due times, assistance state, dated time budgets, account, TLS and loopback.
+The existing exact adapter descriptor/source digests may be re-bound solely for
+the optional Owner-local assistance receipt and closed sample versions. Its
+runtime validation still rejects those receipts in reviewed or legacy r3
+attempts; the frozen four-method interface and all unrelated contracts remain.
+Only additive, row-preserving preparation in the verified dedicated local store
+is permitted; never weaken synthetic cleanup guards, auth/RLS or grants. Reads
+create no attempts; a fresh KST day requires a fresh declaration. Existing action
+debits remain estimates and are not retroactively changed. Actual r46 next-day
+observation remains separate and must not be performed on the Owner's behalf.
+
+Root remains the sole shared-code/merge writer, with at most two native read-only
+helpers. Existing exact-head native checks, independent clean review, resolved
+threads, deployment-boundary verification and conditional pinned squash remain.
+No new year/subject, legal bridge, remote DB, provider, API billing/credit purchase,
+extra paid service, Preview/Production/public use or general policy change.
+
 ## Starting point
 
 The Owner approved PR #882 at head

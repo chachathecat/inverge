@@ -1,7 +1,8 @@
 import { buildStudyDayPlan, type DayAvailabilityV1, type LearnerConstraintProfileV1,
   type StudyTaskCandidateV1 } from "../../study-capacity-life-mode-orchestrator";
 import { FirstStageKernelError, exactObject, requiredIdentifier, requiredSafeInteger, requiredUtcInstant } from "../kernel/domain";
-import { activeOwnerLocalR3TrialCatalog } from "./owner-local-trial-context";
+import { activeOwnerLocalR3TrialCatalog, acceptsOwnerLocalCatalogReference, knownOwnerLocalCatalogDigest } from "./owner-local-trial-context";
+import { projectOwnerLocalCurriculum } from "./owner-local-curriculum-map";
 import { createPrivateFirstStageSessionService, privateSessionDigest, privateFirstStageSessionId, type PrivateFirstStageCatalog,
   type PrivateFirstStageSessionStore, type PrivateSessionHistory } from "./session-service";
 
@@ -17,6 +18,10 @@ export type TrialPlanningRecord = {
   date: string; preferences: TrialPlanningPreferences; requestId: string; requestDigest: string;
   completedAtDeclaration: readonly string[];
   declaredAt?: string;
+  priorDates?: readonly {date:string;preferences:TrialPlanningPreferences;declaredAt:string|null;
+    requestId:string;requestDigest:string;completedAtDeclaration:readonly string[]}[];
+  selectedTopic?: {topicId:string;questionId:string;questionVersion:string;mappingVersion:string;
+    selectedAt:string;requestId:string;requestDigest:string}|null;
   dispatches: readonly { planId: string; action: TrialPlanAction; catalogDigest: string; date: string; availabilityDigest: string;
     block?: {startMinute:number;endMinute:number} }[];
 };
@@ -65,19 +70,31 @@ export function createOwnerLocalTodayService(store: PrivateFirstStageSessionStor
     const snapshot = await store.listOwnerSnapshot!(ownerId, MODE);
     if (!Array.isArray(snapshot.sessions) || snapshot.sessions.length > 256 || typeof snapshot.complete !== "boolean") fail("adapter_mismatch");
     const seen = new Set<string>();
-    const rows: PrivateSessionHistory[] = [], unavailable: string[] = [];
+    const rows: PrivateSessionHistory[] = [], unavailable: string[] = [], unavailableQuestions:string[]=[];
     for (const value of snapshot.sessions) {
       if (value.ownerId !== ownerId || value.schemaVersion !== MODE || seen.has(value.sessionId)) fail("adapter_mismatch");
       seen.add(value.sessionId);
       try { rows.push(sessions.projectHistory(value, ownerId)); }
-      catch { unavailable.push(value.sessionId); } // Quarantine affected history, never rewrite or present it as fresh stock.
+      catch {
+        unavailable.push(value.sessionId);
+        const references=value.state?.examCycle?.questionReferences;
+        const id=Array.isArray(references)&&references.length===1?references[0]?.questionId:null;
+        const creation=value.commands?.[0];
+        // Reuse the durable create-command binding for absence accounting only.
+        // Unknown catalogs/identities still block all absence claims, as before.
+        const known=typeof id==="string"&&/^qnet-2025-36-s1-A-(?:4\d|[5-7]\d|80)$/u.test(id)&&creation&&
+          knownOwnerLocalCatalogDigest(catalog,value.catalogDigest)&&
+          value.sessionId===privateFirstStageSessionId(ownerId,creation.requestId)&&
+          creation.requestDigest===privateSessionDigest({action:"create",requestId:creation.requestId,questionId:id});
+        unavailableQuestions.push(known?id:"unknown");
+      } // Quarantine affected history, never rewrite or present it as fresh stock.
     }
-    return { rows, unavailable, complete: snapshot.complete };
+    return { rows, unavailable, unavailableQuestions, complete: snapshot.complete };
   }
   async function record(ownerId: string) {
     const value = await planning.load(ownerId);
     if (!value) return null;
-    const {declaredAt,...persisted}=value;
+    const {declaredAt,priorDates,selectedTopic,...persisted}=value;
     exactObject(persisted, ["schemaVersion","ownerId","revision","date","preferences","requestId","requestDigest","completedAtDeclaration","dispatches"]);
     if(declaredAt!==undefined && kst(requiredUtcInstant(declaredAt)).slice(0,10)!==value.date) fail("adapter_mismatch");
     if (value.schemaVersion !== "first_stage.owner_local_planning.v1" || value.ownerId !== ownerId ||
@@ -110,22 +127,49 @@ export function createOwnerLocalTodayService(store: PrivateFirstStageSessionStor
         if(action.kind==="retry")requiredIdentifier(action.reviewTaskId);else if(action.reviewTaskId!==null)fail("adapter_mismatch");}
     }
     validateTrialPlanningPreferences(value.preferences,value.date);
+    if(priorDates!==undefined) {
+      if(!Array.isArray(priorDates)||priorDates.length>3660||Buffer.byteLength(JSON.stringify(priorDates))>262144)fail("adapter_mismatch");
+      const dates=new Set<string>();
+      for(const prior of priorDates) {
+        exactObject(prior,["date","preferences","declaredAt","requestId","requestDigest","completedAtDeclaration"]);
+        if(!/^\d{4}-\d{2}-\d{2}$/u.test(prior.date)||prior.date>=value.date||dates.has(prior.date)||
+          !/^[a-f0-9]{64}$/u.test(prior.requestDigest)||!Array.isArray(prior.completedAtDeclaration)||
+          prior.completedAtDeclaration.length>1024||new Set(prior.completedAtDeclaration).size!==prior.completedAtDeclaration.length)fail("adapter_mismatch");
+        if(prior.declaredAt!==null&&kst(requiredUtcInstant(prior.declaredAt)).slice(0,10)!==prior.date)fail("adapter_mismatch");
+        requiredIdentifier(prior.requestId);prior.completedAtDeclaration.forEach((id:unknown)=>requiredIdentifier(id));
+        validateTrialPlanningPreferences(prior.preferences,prior.date);dates.add(prior.date);
+      }
+    }
+    if(selectedTopic!==undefined&&selectedTopic!==null) {
+      exactObject(selectedTopic,["topicId","questionId","questionVersion","mappingVersion","selectedAt","requestId","requestDigest"]);
+      for(const field of ["topicId","questionId","questionVersion","mappingVersion","requestId"] as const)requiredIdentifier(selectedTopic[field]);
+      if(kst(requiredUtcInstant(selectedTopic.selectedAt)).slice(0,10)!==value.date||
+        !/^[a-f0-9]{64}$/u.test(selectedTopic.requestDigest))fail("adapter_mismatch");
+    }
     return value;
   }
   async function view(ownerId: string) {
     const at = requiredUtcInstant(now()), local = kst(at), date = local.slice(0,10);
     const [observed, saved] = await Promise.all([history(ownerId), record(ownerId)]);
+    const curriculum=projectOwnerLocalCurriculum(catalog,observed.rows,observed.unavailableQuestions,observed.complete);
+    const selectedTopic=saved?.date===date?saved.selectedTopic??null:null;
+    const selectedBinding=selectedTopic?curriculum.topics.find(topic=>topic.topicId===selectedTopic.topicId&&
+      topic.questionId===selectedTopic.questionId&&topic.questionVersion===selectedTopic.questionVersion&&
+      topic.mappingVersion===selectedTopic.mappingVersion&&topic.supply==="usable_unreviewed_trial"):null;
     const inventory = { originalCount: catalog.initialReferences.length, humanReviewedCount: 0,
       retryReservationIsFreshStock: false, sealedUnseenClaim: false };
     const common = { schemaVersion: "first_stage.owner_local_today.v1" as const, policyVersion: OWNER_LOCAL_TODAY_POLICY,
       date, history: observed.rows, unavailableSessionCount: observed.unavailable.length,
-      historyComplete: observed.complete, inventory, preferencesRevision: saved?.revision ?? 0,
+      historyComplete: observed.complete, inventory, curriculum, selectedTopic:selectedBinding?selectedTopic:null,
+      priorDateBudgets:(saved?.priorDates??[]).map(row=>({date:row.date,declaredAt:row.declaredAt,declaredMinutes:row.preferences.remainingMinutes})),
+      preferencesRevision: saved?.revision ?? 0,
       preferences: saved?.date === date ? saved.preferences : null,
       humanReviewComplete: false, masteryClaim: false, transferEvidence: false, measurementEvidence: false,
       capacityCalibrationClaim: false, canonicalDueTimesChanged: false };
     if (!observed.complete) return { ...common, state: "history_incomplete" as const, actions: [], plan: null };
     const completed = observed.rows.flatMap(row => row.committedAttempts);
-    const newlyCompleted = completed.filter(item => !saved?.completedAtDeclaration.includes(item.attemptId));
+    const newlyCompleted = completed.filter(item => !saved?.completedAtDeclaration.includes(item.attemptId) &&
+      (!saved?.declaredAt || Date.parse(item.submittedAt!)>=Date.parse(saved.declaredAt)));
     // These are transparent per-item planning estimates, not observed study time.
     const completionDebitMinutes = newlyCompleted.length * 15;
     const remainingMinutes = Math.max(0,(saved?.preferences.remainingMinutes??0) - completionDebitMinutes);
@@ -134,7 +178,7 @@ export function createOwnerLocalTodayService(store: PrivateFirstStageSessionStor
     // Reads do not move an unchanged timetable into the future. Only an actual
     // declaration/session event or newly due review advances its server anchor.
     // Expired unstarted blocks require an explicit availability replan.
-    const anchors=[saved.declaredAt,...observed.rows.flatMap(row=>[
+    const anchors=[saved.declaredAt,...(selectedBinding&&selectedTopic?[selectedTopic.selectedAt]:[]),...observed.rows.flatMap(row=>[
       ...(row.active?[row.active.startedAt]:[]),
       ...row.committedAttempts.map(item=>item.submittedAt!).filter(Boolean),
       ...row.reviews.filter(item=>item.status==="pending"&&item.stock==="available"&&Date.parse(item.dueAt)<=Date.parse(at)).map(item=>item.dueAt)])];
@@ -157,7 +201,8 @@ export function createOwnerLocalTodayService(store: PrivateFirstStageSessionStor
     }
     // Unknown/drifted rows cannot prove absence. Preserve independently valid
     // session actions while declining all new-stock absence claims until resolved.
-    if (!observed.unavailable.length) for (const original of catalog.initialReferences) {
+    if (!observed.unavailableQuestions.includes("unknown")) for (const original of catalog.initialReferences) {
+      if(observed.unavailableQuestions.includes(original.questionId))continue;
       if (!observed.rows.some(row => row.questionId === original.questionId)) add({ kind:"new",
         questionId:original.questionId, questionNumber:original.questionNumber, sessionId:null,
         questionVersion:original.questionVersion,
@@ -165,7 +210,8 @@ export function createOwnerLocalTodayService(store: PrivateFirstStageSessionStor
     }
     const order = { resume:0, begin:0, new:2, retry:1 };
     actions.sort((a,b) => order[a.kind]-order[b.kind] || a.questionNumber-b.questionNumber || a.id.localeCompare(b.id));
-    const protectedNew = saved.preferences.phase === "coverage" ? actions.find(action => action.kind === "new") : undefined;
+    const protectedNew = saved.preferences.phase === "coverage" ?
+      actions.find(action=>action.kind==="new"&&action.questionId===selectedBinding?.questionId)??actions.find(action => action.kind === "new") : undefined;
     function priority(action: TrialPlanAction) {
       return action.kind === "resume" || action.kind === "begin" ? 9000 : action.id === protectedNew?.id ? 8000 : action.kind === "retry" ? 6000 : 2000;
     }
@@ -200,6 +246,7 @@ export function createOwnerLocalTodayService(store: PrivateFirstStageSessionStor
       unallocatedMinutes:remainingMinutes-plan.plannedActiveMinutes, overflowCount:overflow.length,
       stockExhausted:actions.length===0, newStudyOpportunity:protectedNew ?
         { waitingBound:"one opportunity per sufficient plan; N successful new-study starts cover N eligible originals",
+          reason:protectedNew.questionId===selectedBinding?.questionId?"declared_unstudied_topic":"earliest_eligible_unstudied_topic",
           selected:executable.has(protectedNew.id), exception:executable.has(protectedNew.id) ? null :
             plan.deferredTasks.find(task=>task.candidateId===protectedNew.id)?.reason ?? "ongoing_reservation_or_intake_bound" } : null };
   }
@@ -214,15 +261,43 @@ export function createOwnerLocalTodayService(store: PrivateFirstStageSessionStor
       return view(ownerId);
     }
     if((current?.revision??0)!==expectedRevision) fail("stale_state");
+    if(current&&current.date>date)fail("stale_state");
     const observed=await history(ownerId);
-    if(!observed.complete || observed.unavailable.length) fail("stale_state");
+    if(!observed.complete || observed.unavailableQuestions.includes("unknown")) fail("stale_state");
     const completedAtDeclaration=observed.rows.flatMap(item=>item.committedAttempts.map(attempt=>attempt.attemptId));
     if(completedAtDeclaration.length>1024) fail("invalid_transition");
+    const priorDates=[...(current?.priorDates??[])];
+    if(current&&current.date<date)priorDates.push({date:current.date,preferences:current.preferences,declaredAt:current.declaredAt??null,
+      requestId:current.requestId,requestDigest:current.requestDigest,completedAtDeclaration:current.completedAtDeclaration});
+    if(priorDates.length>3660||Buffer.byteLength(JSON.stringify(priorDates))>262144)fail("invalid_transition");
     const next:TrialPlanningRecord={schemaVersion:"first_stage.owner_local_planning.v1",ownerId,date,declaredAt,
-      revision:expectedRevision+1,preferences,requestId,requestDigest,completedAtDeclaration,dispatches:current?.dispatches??[]};
+      revision:expectedRevision+1,preferences,requestId,requestDigest,completedAtDeclaration,dispatches:current?.dispatches??[],
+      priorDates,selectedTopic:current?.date===date?current.selectedTopic??null:null};
     if(!await planning.save(next,expectedRevision)) {
       const winner=await record(ownerId);
       if(winner?.requestId!==requestId || winner.requestDigest!==requestDigest) fail("stale_state");
+    }
+    return view(ownerId);
+  }
+  async function selectTopic(ownerId:string,input:unknown) {
+    const row=exactObject(input,["requestId","expectedRevision","topicId","mappingVersion","questionVersion"]);
+    const requestId=requiredIdentifier(row.requestId),expectedRevision=requiredSafeInteger(row.expectedRevision,1,999_999);
+    const requestDigest=privateSessionDigest(row),current=await record(ownerId);
+    if(current?.selectedTopic?.requestId===requestId) {
+      if(current.selectedTopic.requestDigest!==requestDigest)fail("invalid_transition");
+      return view(ownerId);
+    }
+    if(!current||current.revision!==expectedRevision||current.date!==kst(now()).slice(0,10)||!current.declaredAt)fail("stale_state");
+    const observed=await view(ownerId),topic=observed.curriculum.topics.find(value=>value.topicId===row.topicId);
+    if(!topic?.selectable||topic.mappingVersion!==row.mappingVersion||topic.questionVersion!==row.questionVersion)fail("stale_state");
+    const selectedAt=requiredUtcInstant(now());
+    if(kst(selectedAt).slice(0,10)!==current.date||Date.parse(selectedAt)<Date.parse(current.declaredAt)||
+      current.selectedTopic&&Date.parse(selectedAt)<Date.parse(current.selectedTopic.selectedAt))fail("stale_state");
+    const selectedTopic={topicId:topic.topicId,questionId:topic.questionId,questionVersion:topic.questionVersion!,mappingVersion:topic.mappingVersion,
+      selectedAt,requestId,requestDigest};
+    if(!await planning.save({...current,revision:expectedRevision+1,selectedTopic},expectedRevision)) {
+      const winner=await record(ownerId);
+      if(winner?.selectedTopic?.requestId!==requestId||winner.selectedTopic.requestDigest!==requestDigest)fail("stale_state");
     }
     return view(ownerId);
   }
@@ -252,8 +327,8 @@ export function createOwnerLocalTodayService(store: PrivateFirstStageSessionStor
       }
     }
     const action=intent.action;
-    if(intent.catalogDigest!==catalog.digest || !catalog.initialReferences.some(reference=>
-      reference.questionId===action.questionId && reference.questionVersion===action.questionVersion)) fail("adapter_mismatch");
+    const reference=catalog.initialReferences.find(reference=>reference.questionId===action.questionId && reference.questionVersion===action.questionVersion);
+    if(!reference || intent.catalogDigest!==catalog.digest&&!acceptsOwnerLocalCatalogReference(catalog,intent.catalogDigest,reference))fail("adapter_mismatch");
     const createRequestId=`trial-first-${privateSessionDigest(action.questionId).slice(0,40)}`;
     let sessionId=action.kind==="new" ? privateFirstStageSessionId(ownerId,createRequestId) : action.sessionId!;
     const command={action:action.kind==="retry"?"retry":"begin",
@@ -303,5 +378,5 @@ export function createOwnerLocalTodayService(store: PrivateFirstStageSessionStor
     }
     return href();
   }
-  return { view, savePreferences, dispatch };
+  return { view, savePreferences, selectTopic, dispatch };
 }

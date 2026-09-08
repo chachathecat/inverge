@@ -8,7 +8,7 @@ import { genuineTrialSession, isOwnerLocalR3TrialAdapter, ownerLocalR3TrialReque
 // Even a structurally matching adapter is denied by the shared kernel outside
 // this authenticated local-only request. No value can be supplied through HTTP.
 const active = new AsyncLocalStorage<{ adapters: WeakSet<object>; open: boolean;
-  catalogs: WeakMap<object, { previousDigest: string; originalReferenceDigest: string }> }>();
+  catalogs: WeakMap<object, { compatible: Map<string, ReadonlySet<string>> }> }>();
 export function authorizeOwnerLocalR3TrialAdapter(adapter: {
   adapterId: string; adapterVersion: string; subjectId: string;
 }): void {
@@ -36,17 +36,44 @@ export function authorizeOwnerLocalR3TrialCatalog(catalog: PrivateFirstStageCata
       reference.questionId !== `qnet-2025-36-s1-A-${reference.questionNumber}`) throw new Error("owner_local_trial_unavailable");
     catalog.registry.require(reference.subjectId).assertQuestionReference(reference);
   }
-  scope.catalogs.set(catalog, { previousDigest, originalReferenceDigest: privateSessionDigest(original) });
+  scope.catalogs.set(catalog, { compatible: new Map([[previousDigest,new Set([privateSessionDigest(original)])]]) });
+}
+/** Only the validated loader can compose this exact additive sample. Preserve
+ * old catalog bindings and references; never rewrite their evidence or records. */
+export function authorizeOwnerLocalCurriculumCatalog(catalog: PrivateFirstStageCatalog, previous: PrivateFirstStageCatalog,
+  compatibleSampleDigests: readonly string[]): void {
+  const scope=active.getStore(), prior=scope?.open?scope.catalogs.get(previous):undefined;
+  if(!scope || !prior || !activeOwnerLocalR3TrialAdapter(catalog.registry.require("economics_principles")) ||
+    catalog.initialReferences.length<previous.initialReferences.length ||
+    catalog.initialReferences.length>previous.initialReferences.length+3 ||
+    compatibleSampleDigests.length!==8 || compatibleSampleDigests.some(value=>!/^[a-f0-9]{64}$/u.test(value)) ||
+    previous.initialReferences.some(reference=>!catalog.initialReferences.some(row=>privateSessionDigest(row)===privateSessionDigest(reference)))) throw new Error("owner_local_trial_unavailable");
+  const added=catalog.initialReferences.filter(reference=>!previous.initialReferences.some(old=>privateSessionDigest(old)===privateSessionDigest(reference)));
+  if(new Set(added.map(row=>row.questionNumber)).size!==added.length || added.some(row=>![58,62,65].includes(row.questionNumber)) ||
+    added.some(row=>row.questionVersion!=="issue883-economics-curriculum-v1" || row.questionId!==`qnet-2025-36-s1-A-${row.questionNumber}`)) throw new Error("owner_local_trial_unavailable");
+  const compatible=new Map(prior.compatible);
+  compatible.set(previous.digest,new Set(previous.initialReferences.map(privateSessionDigest)));
+  // Finite exact subsets of the server-pinned sample, not arbitrary old digests.
+  // A quarantined reference is absent and therefore cannot use compatibility.
+  for(const priorDigest of compatibleSampleDigests) compatible.set(priorDigest,new Set(catalog.initialReferences.map(privateSessionDigest)));
+  scope.catalogs.set(catalog,{compatible});
 }
 export function activeOwnerLocalR3TrialCatalog(catalog: PrivateFirstStageCatalog): boolean {
   const scope = active.getStore();
   return scope?.open === true && scope.catalogs.has(catalog);
 }
 export function acceptsOwnerLocalR3PreviousCatalog(catalog: PrivateFirstStageCatalog, value: PrivateFirstStageSession): boolean {
+  return value.schemaVersion === "first_stage.owner_local_trial_session.v1" &&
+    value.state.examCycle.questionReferences.length === 1 &&
+    acceptsOwnerLocalCatalogReference(catalog,value.catalogDigest,value.state.examCycle.questionReferences[0]);
+}
+export function acceptsOwnerLocalCatalogReference(catalog:PrivateFirstStageCatalog, previousDigest:string, reference:QuestionReference):boolean {
   const scope = active.getStore(), binding = scope?.open ? scope.catalogs.get(catalog) : undefined;
-  return Boolean(binding && value.schemaVersion === "first_stage.owner_local_trial_session.v1" &&
-    value.catalogDigest === binding.previousDigest && value.state.examCycle.questionReferences.length === 1 &&
-    privateSessionDigest(value.state.examCycle.questionReferences[0]) === binding.originalReferenceDigest);
+  return Boolean(binding?.compatible.get(previousDigest)?.has(privateSessionDigest(reference)));
+}
+export function knownOwnerLocalCatalogDigest(catalog:PrivateFirstStageCatalog, previousDigest:string):boolean {
+  const scope=active.getStore(),binding=scope?.open?scope.catalogs.get(catalog):undefined;
+  return Boolean(binding&&(catalog.digest===previousDigest||binding.compatible.has(previousDigest)));
 }
 
 /** Production composition supplies the existing real getServerSessionUser;

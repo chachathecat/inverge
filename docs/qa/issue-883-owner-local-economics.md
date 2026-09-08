@@ -6,6 +6,58 @@ content approval, installation and observed use are separate outcomes.
 
 ## Current boundary
 
+### Post-#905 curriculum and teaching sample (current unmerged candidate)
+
+The accepted economics-only Goal adds a closed 2025/36th sample: originals
+58/62/65 and their own separately answered practice variants. It preserves the
+four existing r3 pairs, all genuine records and zero human-approved items.
+`owner-local-curriculum-map.ts` accounts for each of the 40 source positions,
+exact PDF page/source attachment hashes and independent key/rights observations.
+It reuses the five existing editorial unit IDs without importing draft importance.
+Thirty positions have no prepared usable supply; 50/69 are all-choices-key
+exclusions and 52/r52 remains Owner-excluded. This is not syllabus completeness.
+
+The optional extension uses `curriculum-installation-v1.json` beside, never over,
+the original installation. `prepare-curriculum` is a guarded local-only action,
+not a deployment or human approval. Source/key/rights/full-200-key validation and
+server-pinned per-row models/choices/feedback/aid bindings run on actual loading.
+Single-pair drift quarantines that pair; unrelated exact references retain finite
+catalog compatibility. Unknown catalog/creation bindings still block absence
+claims. No public corpus bodies, test pins or HTTP review flags authorize stock.
+
+Today separates usable supply, no supply, no attempt, assisted/unreviewed practice
+and unestablished independent performance. A version-bound topic selection uses
+existing capacity, ongoing work, due practice, anti-starvation and max-three
+outcomes. Optional concept/prerequisite help uses an existing session command/CAS;
+only the selected aid is disclosed after its durable exposure. Initial responses
+contain neither aid nor solution. One wrong option leaves cognitive cause unknown.
+The original attempt stays assisted; the D+1 variant remains separate practice,
+never transfer/measurement/mastery evidence. Help does not debit another completion.
+
+Optional `prior_dates` and `selected_topic` columns extend the same local planning
+row without changing auth, RLS or grants. A new KST date asks for a fresh time
+declaration and preserves the previous dated declaration exactly once. Old
+75-minute declarations are historical, not measured capacity or new-day defaults.
+Rollback stops the consumer and retains every genuine row, date and installation.
+
+Candidate evidence: full 1,797 tests passed after the exact interface descriptor
+was re-bound; the later gate regression brings the focused curriculum suite to
+12/12. Four separate SDK/PostgreSQL/React cases passed, including selected-help
+CAS, post-commit response loss, reconnect, D+1, old r3/date preservation and prior
+Today concurrency. Synthetic auth/content/timelines remain explicitly isolated.
+All seven dedicated containers and five PC listeners passed loopback checks.
+Guarded additive preparation and optional installation preserved old records and
+installation. Genuine existing login then completed 58/62/65 through topic/help/
+save/reconnect/Today, with one aid exposure each and remaining estimates 135/120/105
+after a functional 150-minute declaration. All three old row digests/due times
+are unchanged; the prior day's 75-minute declaration remains archived. Six actual
+rows are retained, never synthetic-cleaned. This is agent-operated functional
+use, not independent Owner learning. No browser error or external request occurred.
+Final frozen-candidate native CI/independent review/integration for child #906 are
+not yet complete. S08/S12/S14 and broad
+causal/transfer claims remain deferred. Actual r46 next-day observation is reserved
+for the Owner, without clock changes or automated completion.
+
 ### Post-#903 Today/Full-Day bridge (child #904, 2026-09-08)
 
 The existing `/app/first-stage/economics-trial` now opens Today; saved-session
