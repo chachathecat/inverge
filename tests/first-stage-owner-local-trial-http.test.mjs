@@ -127,16 +127,18 @@ test("trial content cannot enter the reviewed loader or be authorized by HTTP fi
 
 test("actual trial page/RSC passes choice-mode metadata only, has no assisted content, and denied page renders no shell",async()=>{
   const component=compilePrivateSource("components/review-os/first-stage-private-practice.tsx",{react:React,"react/jsx-runtime":jsx});
+  const workbench=compilePrivateSource("components/review-os/owner-local-trial-workbench.tsx",{react:React,"react/jsx-runtime":jsx,
+    "./first-stage-private-practice":component});
   let allowed=true,shells=0;
   const page=compilePrivateSource("app/(owner-first-stage)/app/first-stage/economics-trial/page.tsx",{
     "react/jsx-runtime":jsx,"next/navigation":{notFound(){throw new Error("not_found")}},
     "@/components/review-os/app-shell":{ReviewOsAppShell:({children})=>{shells++;return children}},
-    "@/components/review-os/first-stage-private-practice":component,
+    "@/components/review-os/owner-local-trial-workbench":workbench,
     "@/lib/review-os/first-stage/runtime/owner-local-trial-server":{requireOwnerLocalTrialPage:async()=>allowed?{email:"synthetic@example.test"}:null}
   });
-  const tree=await page.default();assert.deepEqual(tree.props.children.props,{ownerLocalTrial:true});
+  const tree=await page.default();assert.deepEqual(tree.props.children.props,{});
   const html=renderToStaticMarkup(tree);
-  assert.match(html,/경제학 미검토 로컬 시험/);assert.match(html,/사람 미검토/);
+  assert.match(html,/로컬 학습 경로를 확인합니다/);
   assert.doesNotMatch(html,/SYNTHETIC_CANDIDATE|correctChoice|EXPLANATION|검토 전 제시 정답/);
   allowed=false;await assert.rejects(page.default(),/not_found/);assert.equal(shells,1);
 });

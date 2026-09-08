@@ -146,6 +146,26 @@ function fullDayCandidates() {
   ];
 }
 
+test("remaining budget only caps active scheduling while preserving the historical daily and recovery policy", () => {
+  for(const phase of ["coverage","recovery"]) {
+    const input={profile:profile({phase}),availability:availability(),candidates:fullDayCandidates()};
+    const baseline=buildStudyDayPlan(input);
+    assert.deepEqual(buildStudyDayPlan({...input,remainingActiveMinutes:undefined}),baseline);
+    for(const remainingActiveMinutes of [0,15,150,720]) {
+      const capped=buildStudyDayPlan({...input,remainingActiveMinutes});
+      const expected={...baseline.capacity,schedulableActiveMinutes:Math.min(baseline.capacity.schedulableActiveMinutes,remainingActiveMinutes),
+        derivationReasons:[...baseline.capacity.derivationReasons,"remaining-active-budget-not-daily-total"]};
+      assert.deepEqual(capped.capacity,expected);
+      assert.ok(capped.plannedActiveMinutes<=remainingActiveMinutes);
+      assert.equal(capped.masteryMutationAllowed,false);
+      if(remainingActiveMinutes===0)assert.equal(capped.executionBlocks.filter(block=>block.countsTowardActiveStudy).length,0);
+    }
+    for(const remainingActiveMinutes of [-1,721,0.5,NaN,Infinity,"15"]) {
+      assert.throws(()=>buildStudyDayPlan({...input,remainingActiveMinutes}));
+    }
+  }
+});
+
 test("capacity bands are independent from employment labels", () => {
   assert.equal(classifyCapacityBand(180), "compressed_90_180");
   assert.equal(classifyCapacityBand(600), "full_day_600_720");

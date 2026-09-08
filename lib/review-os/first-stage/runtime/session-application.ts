@@ -2,6 +2,7 @@ import { FIRST_STAGE_FEATURE_FLAG, FIRST_STAGE_OWNER_ALLOWLIST } from "../kernel
 import { createPrivateSessionHttpHandler } from "./session-http";
 import { createPrivateFirstStageSessionService,
   type PrivateFirstStageCatalog, type PrivateFirstStageSessionStore } from "./session-service";
+import type { TrialPlanningStore } from "./owner-local-today";
 
 type Environment = Readonly<Record<string, string | undefined>>;
 type Session = Readonly<{ isAuthenticated: boolean; userId?: string | null; email?: string | null }>;
@@ -12,6 +13,7 @@ export interface PrivateSessionApplicationDependencies {
   session(): Promise<Session>;
   catalog(): Promise<PrivateFirstStageCatalog | null>;
   repository(): PrivateFirstStageSessionStore;
+  planningRepository?(): TrialPlanningStore;
   /** Fixed by the server subject binding; never request/content authority. */
   unavailableBlocker?: PrivateContentBlocker;
   now?(): string;

@@ -6,6 +6,7 @@ import { getServerSessionUser } from "@/lib/auth/session";
 import { getSupabasePersistenceClient } from "@/lib/supabase/persistence";
 import { privateFirstStageOwner } from "./session-application";
 import { createPrivateSessionRepository } from "./session-repository";
+import { createOwnerLocalPlanningRepository } from "./owner-local-planning-repository";
 import { createOwnerLocalTrialApplication } from "./owner-local-trial-context";
 import { genuineTrialSession, ownerLocalR3TrialEnvironment } from "./owner-local-trial-boundary";
 import { loadOwnerLocalR3TrialContent, type TrialInstallation } from "./owner-local-trial-content";
@@ -59,5 +60,7 @@ export async function requireOwnerLocalTrialPage() {
 }
 export const handleOwnerLocalTrialSession = createOwnerLocalTrialApplication({ environment:()=>process.env,
   session: getServerSessionUser, catalog: loadInstalledTrial,
+  planningRepository:()=>{ const client=getSupabasePersistenceClient(); if(!client) throw new Error("local_trial_unavailable");
+    return createOwnerLocalPlanningRepository(client); },
   repository:()=>{ const client=getSupabasePersistenceClient(); if(!client) throw new Error("local_trial_unavailable");
     return createPrivateSessionRepository(client); } });

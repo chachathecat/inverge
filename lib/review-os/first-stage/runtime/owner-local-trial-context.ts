@@ -78,7 +78,13 @@ export function createOwnerLocalTrialApplication(dependencies: PrivateSessionApp
           return catalog;
         } });
       const scope = { adapters: new WeakSet<object>(), catalogs: new WeakMap(), open: true };
-      try { return await active.run(scope, () => handler(canonicalRequest)); }
+      try { return await active.run(scope, async () => {
+        if (canonicalUrl.searchParams.has("view")) {
+          const { handleOwnerLocalToday } = await import("./owner-local-today-http");
+          return handleOwnerLocalToday(canonicalRequest, dependencies, session.userId!);
+        }
+        return handler(canonicalRequest);
+      }); }
       finally { scope.open = false; } // Also revoke detached async work after response.
     } catch {
       return Response.json({ ok: false, error: "temporarily_unavailable" }, { status: 503, headers: safeHeaders });

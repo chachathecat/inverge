@@ -27,7 +27,7 @@ export interface PrivateSessionHttpDependencies {
   service(ownerId: string): Promise<SessionService>;
 }
 
-class RequestTooLarge extends Error {}
+export class RequestTooLarge extends Error {}
 
 function response(body: unknown, status = 200) {
   return Response.json(body, { status, headers: HEADERS });
@@ -35,7 +35,7 @@ function response(body: unknown, status = 200) {
 
 function invalid(): never { throw new FirstStageKernelError("invalid_input"); }
 
-async function readCommand(request: Request): Promise<unknown> {
+export async function readPrivateSessionCommand(request: Request): Promise<unknown> {
   const type = (request.headers.get("content-type") ?? "").split(";", 1)[0].trim().toLowerCase();
   if (type !== "application/json" || !request.body) invalid();
   const declared = Number(request.headers.get("content-length"));
@@ -94,7 +94,7 @@ export function createPrivateSessionHttpHandler(dependencies: PrivateSessionHttp
         return response({ ok: false, error: "not_found" }, 404);
       }
       if (url.search) invalid();
-      const command = await readCommand(request);
+      const command = await readPrivateSessionCommand(request);
       if (!command || typeof command !== "object" || Array.isArray(command)) invalid();
       const row = command as Record<string, unknown>;
       if (row.action === "create") {

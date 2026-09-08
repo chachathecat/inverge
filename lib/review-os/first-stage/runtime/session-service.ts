@@ -39,8 +39,16 @@ export type PrivateFirstStageSession = Readonly<{
 
 export interface PrivateFirstStageSessionStore {
   load(ownerId: string, sessionId: string): Promise<PrivateFirstStageSession | null>;
+  /** One bounded database statement, not a concatenation of mutable offset pages.
+   * Overflow is explicit and cannot authorize new-study absence claims. */
+  listOwnerSnapshot?(ownerId: string, schema: PrivateFirstStageSession["schemaVersion"]): Promise<{
+    sessions: readonly PrivateFirstStageSession[]; complete: boolean;
+  }>;
   /** Atomic insert-if-absent. Return the actually persisted winner. */
   create(value: PrivateFirstStageSession): Promise<PrivateFirstStageSession>;
+  /** Trial-planner insert under the same per-original lock as ordinary inserts.
+   * A different prior session returns null; never manufacture a second original. */
+  createOriginalIfAbsent?(value: PrivateFirstStageSession): Promise<PrivateFirstStageSession | null>;
   /** Atomic owner/session/revision compare-and-swap; no partial state writes. */
   replace(value: PrivateFirstStageSession, expectedRevision: number): Promise<boolean>;
 }
@@ -73,6 +81,11 @@ export function privateSessionDigest(value: unknown): string {
 
 function identity(kind: string, ...bindings: string[]) {
   return `${kind}-${privateSessionDigest(bindings).slice(0, 40)}`;
+}
+
+export function privateFirstStageSessionId(ownerId: string, requestId: string) {
+  requiredIdentifier(ownerId); requiredIdentifier(requestId);
+  return identity("first-session", ownerId, requestId);
 }
 
 function fail(code: FirstStageKernelError["code"] = "invalid_input"): never {
@@ -139,13 +152,13 @@ export function createPrivateFirstStageSessionService(
     return Boolean(existing);
   }
 
-  async function create(ownerId: string, input: unknown) {
+  async function create(ownerId: string, input: unknown, onlyUnattemptedOriginal = false) {
     requiredIdentifier(ownerId);
     const row = exactObject(input, ["requestId", "questionId"]);
     const requestId = requiredIdentifier(row.requestId);
     const questionId = requiredIdentifier(row.questionId);
     const requestDigest = privateSessionDigest({ action: "create", requestId, questionId });
-    const sessionId = identity("first-session", ownerId, requestId);
+    const sessionId = privateFirstStageSessionId(ownerId, requestId);
     const existing = await store.load(ownerId, sessionId);
     if (existing) {
       validate(existing, ownerId, sessionId);
@@ -162,12 +175,15 @@ export function createPrivateFirstStageSessionService(
       catalogDigest: catalog.digest, state,
       commands: [{ requestId, requestDigest, resultingRevision: state.revision }],
     };
-    const saved = validate(await store.create(value), ownerId, sessionId);
+    if(onlyUnattemptedOriginal && (!isTrial() || !store.createOriginalIfAbsent)) fail("adapter_mismatch");
+    const durable=onlyUnattemptedOriginal ? await store.createOriginalIfAbsent!(value) : await store.create(value);
+    if(!durable) fail("stale_state");
+    const saved = validate(durable, ownerId, sessionId);
     if (!assertReplay(saved, requestId, requestDigest)) fail("invalid_transition");
     return saved;
   }
 
-  async function execute(ownerId: string, sessionId: string, input: unknown) {
+  async function execute(ownerId: string, sessionId: string, input: unknown, assertTrustedStartTime?: (at: string) => void) {
     if (!input || typeof input !== "object" || Array.isArray(input)) fail();
     const action = (input as Record<string, unknown>).action;
     const fields = action === "begin" ? ["questionId"]
@@ -182,6 +198,9 @@ export function createPrivateFirstStageSessionService(
     if (current.state.revision !== expectedRevision) fail("stale_state");
     if (current.commands.length >= MAX_COMMANDS) fail("invalid_transition");
     const trustedAt = requiredUtcInstant(now());
+    // Optional server-only planner guard, after durable load and replay checks.
+    // It observes the exact timestamp the kernel seals; HTTP cannot supply it.
+    if(action!=="submit")assertTrustedStartTime?.(trustedAt);
     const binding = { trustedOwnerId: ownerId,
       trustedExamCycleDefinitionSha256: current.state.examCycle.definitionSha256,
       expectedRevision };
@@ -259,8 +278,33 @@ export function createPrivateFirstStageSessionService(
     };
   }
 
-  return Object.freeze({ create, execute, view });
+  function projectHistory(value: PrivateFirstStageSession, ownerId: string) {
+    const saved = validate(value, ownerId, value.sessionId);
+    const original = saved.state.examCycle.questionReferences[0];
+    const active = saved.state.attempts.find(item => item.state === "in_progress");
+    // Do not call view(): history/planning must never construct assistance.
+    return {
+      sessionId: saved.sessionId, revision: saved.state.revision,
+      contentMode: saved.schemaVersion, questionId: original.questionId,
+      questionNumber: original.questionNumber, questionVersion: original.questionVersion,
+      ready: saved.state.examCycle.state === "ready",
+      attempted: saved.state.attempts.length > 0,
+      active: active ? { attemptId: active.attemptId, startedAt: active.startedAt } : null,
+      committedAttempts: saved.state.attempts.filter(item => item.state === "evaluated")
+        .map(item => ({ attemptId: item.attemptId, submittedAt: item.submission?.submittedAt,
+          practiceDecision: item.evaluation?.decision })),
+      reviews: saved.state.reviewTasks.map(task => ({ reviewTaskId: task.reviewTaskId,
+        dueAt: task.dueAt, status: task.status, completedAt: task.completedAt,
+        stock: catalog.retryAvailability(task.questionReference, saved.state.independentRetries
+          .filter(retry => retry.reviewTaskId === task.reviewTaskId).map(retry => retry.questionReference.questionId)) })),
+      masteryClaim: false as const, transferEvidence: false as const, measurementEvidence: false as const,
+    };
+  }
+
+  return Object.freeze({ create, execute, view, projectHistory });
 }
+
+export type PrivateSessionHistory = ReturnType<ReturnType<typeof createPrivateFirstStageSessionService>["projectHistory"]>;
 
 export type PrivateFirstStageSessionView = Awaited<ReturnType<
   ReturnType<typeof createPrivateFirstStageSessionService>["view"]>>;

@@ -1,6 +1,153 @@
 # Inverge Owner Study OS
 
-## Active r3 multi-item Goal — 2026-09-08 KST
+## Active post-#903 Today continuation — 2026-09-08 KST
+
+Second correction: head 98972e87c2b75564c729c3fa92af5e73893b6dc4 passed all nine
+required native checks and C3R-L, but formal review 5142592920 reported one P2
+(0/0/1), so it was NOT merged. A real PostgreSQL transaction held the planner
+reservation while the actual HTTP/manual INSERT waited on its advisory lock;
+after release the old code incorrectly returned 200 and duplicated the original.
+The trial-only BEFORE INSERT trigger now rechecks after locking. Different
+requests conflict with 409; same-ID replay, historical duplicate rows and the
+general reviewed path remain intact. New coverage also checks both writer orders,
+manual/manual concurrency, cross-Owner independence and a single completion debit.
+All 42 affected tests and both final isolated PostgreSQL/browser cases passed.
+The extra reviewed-path test initially called a non-exported helper; it now
+proves replay through the actual create API. Typecheck and correction-file lint
+passed; final build passed with only the existing curriculum NFT warning.
+All 161 tracked JSON files, the 28-path manifest and diff checks passed.
+New exact-head CI/review remain pending. Read-only helper
+review found no issue in this correction; it is not the formal GitHub review.
+Guarded local SQL reapply verified sessionsUnchanged=true, installationChanged=false
+and recordsReset=false. No actual record was changed. The stale generated dev
+type cache was preserved again, not edited or used to weaken source validation.
+Final build traces: 189, private-root matches: 0. Genuine authenticated restart
+returned 200, identical three-session history/preferences and 75 minutes, with no
+Next error dialog. App 14965/browser 96728 remain running on the existing loopback.
+
+PR #905 correction in progress: first head 15e3fc0b9027856aa302268e979c2dcff62baba8
+failed Fast/Linux/Windows CI on one historical whole-planner-freeze test. It now
+reconstructs the historical planner outside the exact authorized additive cap;
+daily/cognitive/recovery behavior has new preservation tests. Initial review
+5141981351 reported scheduled-start P2, not a clean result. Reproduced early
+future dispatch, read-driven block sliding, expiry during create and a later
+slot's partial-create replay. Server declaration time plus validated session/due
+events anchors the timetable; exact intent slots and kernel-sealed-time guards
+preserve retries and reject out-of-slot starts. Nullable local declared_at is
+additive; legacy preferences/history remain, but require an explicit replan.
+No personal session or due time is rewritten. Correction local validation passed:
+1,786 full-suite tests, then 35 final affected regressions (21 Today), final
+isolated SDK/PostgreSQL/HTTP/browser acceptance, typecheck/lint/build, 161 JSON,
+28-path manifest and diff. All 189 build traces exclude private roots. Native
+CI/review on the correction commit is still pending; earlier runs are historical.
+The app restarted on the same loopback address. Existing unanchored settings
+retained 75 minutes, then an explicit same-settings UI replan saved the new
+server anchor. Reconnect returned 200 with identical history/preferences and
+all three actual sessions unchanged. Its generated malformed dev type cache is
+preserved under excluded node_modules/.cache, not source-fixed.
+
+Owner accepted https://github.com/chachathecat/inverge/pull/903#issuecomment-5584374033.
+Goal remains ACTIVE; not a new master plan. Sole writer in the same cache worktree,
+branch `codex/issue-883-owner-trial-today`, based on main `8a14ae829a5202916817aeb63764c466ea06c77d`.
+Existing post-merge checkpoint below and personal 46/49 records are preserved.
+Two read-only helpers were used; no other implementation writer.
+
+Candidate connects validated owner/trial history, bounded 256-row snapshot, native
+time planner, exact dispatch, CAS availability/intents and existing practice UI.
+Child #904 owns only integration; #883 remains open. Additive local planning SQL
+was applied after Docker and all five PC listener loopback checks. Before/after
+session digest matched. Account, installation, ports, certificate and volume remain.
+
+Reproduced/fixed: absent Today HTTP path; manual creation racing plan dispatch;
+uncommitted persisted intent starting after midnight/time exhaustion; remaining
+time returning to the original declaration when only life settings changed.
+Service tests cover 256/257 history, pre-cap new opportunity, finite original
+coverage, partial/complete retry and time reduction. Completed isolated PG/browser
+run proved actual SDK/repos/HTTP, post-commit lost intent/create/begin/submit,
+concurrent replay, reconnect, D+1 completion and manual-create race. Synthetic
+users/rows were cleaned only from its new networkless, volumeless test container.
+The temporary PG failure used the wrong synthetic retry choice; corrected to its
+own independent fixture key (4), not a source/key or kernel relaxation.
+Browser verified lost-start response, reconnect, saved result, replan and expiry.
+All this is synthetic local evidence, NOT actual next-day observation or human review.
+
+Grouped affected run: 124/124 passed after the RSC test was updated to render the
+real workbench without assistance. The registered native-runner Today suite passed
+15/15; a later streamed-byte/CSRF/no-store regression also passed (16 Today tests).
+Typecheck, changed-file lint, build, 161 tracked JSON files and diff passed; 189
+build traces had zero resolved private-root matches. Existing curriculum NFT
+warning remains. These are local candidate results, not yet native exact-head CI.
+
+Genuine preserved login opened Today with unchanged 46/49 records and approved
+stock 0. Saved 90 remaining minutes, dispatched one functional 51 attempt,
+saved/reopened its result and replanned to 75 minutes / next original 53. No
+assistance before save; one explanation afterward. This is NOT independent Owner
+performance. Original 46/49 projections matched exactly; three actual sessions
+persist. Post-build app restart returned authenticated Today 200 with identical
+history/preferences/remainder and no Next error overlay. Never clean actual records.
+Actual next-day r46 remains UNOBSERVED. App session 14965 and browser REPL 96728
+are retained. Private screenshot export was denied; no image inspection claim.
+
+Authenticated Vercel GET confirmed exact inverge project/team/repository, existing
+preview-only build command and zero Deploy Hooks. No settings changed. Input MD
+and nested validation ZIP hashes matched 1ba0e2b38985cd96f93a9a12c4520a000f3ba77778f00b8087fdcc687bd44ba4
+and 5b3b324100bccbe2903e08d86ddc59e1c5faea175ce754d19c631d0aa7b0ed36.
+Next: ordinary push, native exact-head CI, independent review, resolve actionable
+findings, recheck live base/deployment boundary and conditionally merge. Goal is
+ACTIVE; no final integration or current-head review claim is made here.
+
+## Completed r3 multi-item package handoff — 2026-09-08 KST
+
+PR #903 is actually MERGED at 2026-09-08T10:59:25Z. Reviewed head
+`562c5d3a30f956d4621c3ee8cbe395ae619140b2`; reviewed/resulting-main tree
+`ba0678e7931eb39db46c66ca7394cc7116cb2c18`; squash/resulting main
+`8a14ae829a5202916817aeb63764c466ea06c77d`. Fetch and tree comparison passed.
+All nine required exact-head checks plus C3R-L passed. Final exact-head Codex
+review comment 5584040633 is clean (actionable P0/P1/P2 0/0/0); all five
+historical review threads are resolved. Earlier failed reviews remain history.
+All five resulting-main workflows passed: Fast CI 34218314266, Learner Loop
+Health 34218314274, Security 34218314293, E2E Smoke 34218314483 and Post-Merge
+Orchestrator 34218314436. No source commit or duplicate review followed merge.
+Authenticated read-only Vercel GET confirmed actual Production deployment
+`dpl_Fa1knTqTHgabXjEwgryLZw5qL46U` CANCELED for the squash SHA. No remote DB,
+operational deployment, provider, payment or public activation occurred.
+Child #902 is CLOSED; parent #883 remains OPEN. GitHub is live delivery authority.
+
+Final source validation: 164 affected tests, affected isolated r3 PostgreSQL/
+browser acceptance, typecheck, changed-file lint, build, JSON, 16-path manifest
+and diff passed. The earlier all-eight PostgreSQL cases are initial-candidate
+evidence, not a claim of eight reruns at the final head. Final build inspected
+189 traces with zero resolved private-artifact matches; the unrelated existing
+curriculum NFT warning remains. Synthetic cleanup did not touch personal data.
+
+Local address: http://127.0.0.1:3883/app/first-stage/economics-trial
+Four originals (46/49/51/53) and their four own practice variants are available
+only as human-unreviewed Owner-PC trials. Reviewed approved stock is 0; all six
+human checks remain unapproved with reviewer unassigned. Existing nine private
+artifacts, installation, account, certificate, volume and records are preserved.
+52/r52 stays pending because the original's five textual choices/model assumptions
+are not independently bound by its calculation evidence; r52 arithmetic alone
+does not close that gap. Original 53 normalization and absent explicit A-label
+on the official key remain disclosed. This is not subject completion.
+
+Final genuine authenticated page/API readback: 46 and 49 return 200, revision 3,
+exact stored D+1 due times and pending states preserved after build/app restart.
+Final handoff recheck: authenticated saved pages 46/49 both returned 200;
+an unauthenticated request returned the intended 404. All five host listeners
+were independently rechecked as 127.0.0.1 only. PR body and parent #883 comment
+5584168139 record the actual integration without closing the parent.
+Exactly one new 49 functional save was made in this package; it is not Owner
+independent performance. All published app/service listeners remain 127.0.0.1.
+Existing owner@localhost.test login uses only the Owner's existing password if
+the preserved browser session expires; do not read credentials or create accounts.
+Real r46 observation after 2026-09-09 15:39 KST remains UNOBSERVED and separate
+from synthetic-clock D+1 tests. Do not change the real clock or original due time.
+App process session 76964 and browser REPL session 96728 are retained for handoff.
+No actual-record deletion, extra trial writes or new development follows this
+package closeout. Weekly usage was 20% used / 80% remaining, with no reset or
+credit purchase. This local post-merge checkpoint is intentionally uncommitted.
+
+## Historical r3 multi-item implementation and correction log — 2026-09-08 KST
 
 Sole writer in the existing cache worktree, branch
 `codex/issue-883-economics-r3-bundle`, base main
