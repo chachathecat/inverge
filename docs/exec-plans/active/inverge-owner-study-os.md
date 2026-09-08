@@ -44,6 +44,16 @@ Next: ordinary batched push, fresh native checks and
 one exact-head independent review; then live base/rules/deployment revalidation.
 Existing actual r46 next-day observation stays pending. Integration is unfinished.
 
+Second correction: review 5140343585 at `2dac49480dc87710fe7e542d45c85f1dec95269f`
+reported r49 price P2. Reproduced coherent price/choice rebinding, then bound
+both 49 model prices, profits and corner objective/derivative to their equations.
+No private artifact, 46/49 saved identity, due time or actual response changed.
+Its 155 affected tests, isolated r3 PostgreSQL/browser acceptance, typecheck,
+changed-file lint, build, JSON/manifest/diff pass. New exact-head native CI/review
+must finish before merge. The previous post-build development
+cache returned 404; preserving that generated cache and restarting restored
+both pages/API to 200, revision 3 and exact original due times. No record reset.
+
 ## Post-merge r3 PC-trial handoff — 2026-09-08 KST
 
 PR #901 is MERGED by expected-head-pinned squash at 2026-09-08T08:30:21Z.

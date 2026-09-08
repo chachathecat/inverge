@@ -48,6 +48,21 @@ export function supportsR3RecordedPair(questionNumber: number, original: {correc
           !compare(v.follower,calc(op("divide",op("subtract","threshold","leader"),"two"),{threshold:v.zeroFollowerThreshold,leader:v.leader,two:"2"}),"equal") ||
           !compare(v.zeroRegimeBestQuantity,v.zeroFollowerThreshold,"equal") || !compare(v.zeroRegimeDerivativeAtBest,"0","less_or_equal") ||
           !compare(v.profit,"0","greater") || !compare(v.profit,v.zeroRegimeBestProfit,"greater")) return false;
+        // The fixed r3 models have unit demand slope and separately bound
+        // follower marginal costs. Its FOC gives P = MC_f + q_f; neither a
+        // positive reported price nor a matching answer choice proves that.
+        const followerCost=index===0?"20":"10";
+        const price=calc(op("add","cost","follower"),{cost:followerCost,follower:v.follower});
+        // Reduced leader objective at the stationary quantity is q_l^2 / 2.
+        // In the zero-follower region a-c_l = q_l + threshold/2. Check its
+        // objective AND derivative, not merely their favorable signs.
+        const profit=calc(op("divide",op("multiply","leader","leader"),"two"),{leader:v.leader,two:"2"});
+        const zeroProfit=calc(op("multiply",op("subtract","leader",op("divide","threshold","two")),"threshold"),
+          {leader:v.leader,threshold:v.zeroFollowerThreshold,two:"2"});
+        const zeroDerivative=calc(op("subtract","leader",op("divide",op("multiply","threshold","three"),"two")),
+          {leader:v.leader,threshold:v.zeroFollowerThreshold,three:"3",two:"2"});
+        if (!compare(v.price,price,"equal") || !compare(v.profit,profit,"equal") ||
+          !compare(v.zeroRegimeBestProfit,zeroProfit,"equal") || !compare(v.zeroRegimeDerivativeAtBest,zeroDerivative,"equal")) return false;
         target=index===0?v.leader:v.price;
       } else if (questionNumber === 51) {
         const v=recordedValues(row,["cartelTotal","follower","deviator","profit"]);

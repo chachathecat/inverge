@@ -17,8 +17,8 @@ export function syntheticReviewInputs({ numericTrialModels = false } = {}) {
     officialKeyApplies: false, verification: "Synthetic prior independent calculation", difference: "Synthetic changed values" }));
   // Entirely synthetic model records; not copied from the private r3 corpus.
   const models = numericTrialModels ? {
-    "original-49": {leader:"8",follower:"4",price:"12",profit:"64",zeroFollowerThreshold:"16",zeroRegimeBestQuantity:"16",zeroRegimeBestProfit:"-1",zeroRegimeDerivativeAtBest:"-1"},
-    r49: {leader:"12",follower:"6",price:"18",profit:"144",zeroFollowerThreshold:"24",zeroRegimeBestQuantity:"24",zeroRegimeBestProfit:"0",zeroRegimeDerivativeAtBest:"-2"},
+    "original-49": {leader:"8",follower:"4",price:"24",profit:"32",zeroFollowerThreshold:"16",zeroRegimeBestQuantity:"16",zeroRegimeBestProfit:"0",zeroRegimeDerivativeAtBest:"-16"},
+    r49: {leader:"12",follower:"6",price:"16",profit:"72",zeroFollowerThreshold:"24",zeroRegimeBestQuantity:"24",zeroRegimeBestProfit:"0",zeroRegimeDerivativeAtBest:"-24"},
     "original-51": {cartelTotal:"12",follower:"6",deviator:"9",profit:"81"},
     r51: {cartelTotal:"16",follower:"8",deviator:"12",profit:"288"},
     "original-53": {marketQuantity:"12",socialQuantity:"8",unitTax:"12",welfareImprovement:"32"},

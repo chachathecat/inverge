@@ -152,3 +152,32 @@ test("51 profit must follow its recorded deviation objective, not just match a p
     }
   }
 });
+
+test("49 price and objective observations cannot self-authorize by rebinding their answer",async()=>{
+  for(const id of ["r49","original-49"]) {
+    for(const field of ["price","profit","zeroRegimeBestProfit","zeroRegimeDerivativeAtBest"]) {
+      const fixture=syntheticTrialInput({numericTrialModels:true});
+      const calculations=JSON.parse(fixture.artifacts.calculations);
+      const row=calculations.results.find(entry=>entry.id===id);
+      row.values[field]=String(Number(row.values[field])+1);
+      const review=JSON.parse(fixture.artifacts.review);
+      if(id==="r49"&&field==="price") {
+        const question=review.retryCandidates.find(entry=>entry.id===id);
+        question.choices[question.proposedChoice-1]=row.values.price;
+      }
+      fixture.rebind("review",review);
+      calculations.reviewPacketSha256=fixture.input.installation.fileSha256.review;
+      fixture.rebind("calculations",calculations);
+      const ai=JSON.parse(fixture.artifacts.ai);ai.packetSha256=calculations.reviewPacketSha256;fixture.rebind("ai",ai);
+      const candidate=prepareEconomicsRuntimeCandidate({reviewSource:fixture.artifacts.review.toString(),
+        calculationSource:fixture.artifacts.calculations.toString(),aiEvidenceSource:fixture.artifacts.ai.toString(),
+        sourceObservationSource:fixture.artifacts.observation.toString(),humanChecklistSource:fixture.artifacts.checklist.toString()}).candidate;
+      candidate.dataClass="synthetic_test_only";fixture.rebind("candidate",candidate);
+      const h=trialHarness({fixture}),available=await h.send();
+      assert.equal(available.status,200);
+      assert.equal(available.body.availability.questions.some(entry=>entry.questionNumber===49),false,`${id}/${field}`);
+      assert.equal((await h.send({action:"create",requestId:"bad-49-equation",questionId:"qnet-2025-36-s1-A-49"})).status,404);
+      assert.equal(h.rows.size,0);
+    }
+  }
+});

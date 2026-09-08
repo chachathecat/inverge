@@ -32,6 +32,19 @@ build, JSON/manifest/diff and the affected isolated PostgreSQL/browser loop pass
 The actual local catalog still exposes exactly 46/49/51/53, with saved 46/49
 readback successful; no actual attempt was added for this correction.
 
+Review 5140343585 at 2dac494 reported another P2: r49's positive price was
+not independently derived. The actual-loader HTTP regression reproduced a
+consistently rebound price/choice. Both fixed r3 49 models now check follower
+FOC price, stationary leader profit and zero-follower objective/derivative,
+not just signs. The input-level follower-cost anchors differ for original/retry;
+these narrow arithmetic constants do not contain private question bodies and
+are not inferred from the client's answer. Existing artifact binding is retained.
+Synthetic models and hostile profit/price/boundary observations cover both paths.
+Second-correction local evidence: 155 affected tests, the isolated r3
+PostgreSQL/browser loop, typecheck, changed-file lint, build, JSON, manifest
+and diff checks pass. Actual catalog remains four pairs and the existing 49
+saved revision/due readback passes. Fresh native checks/review are still required.
+
 52/r52 is pending, not installed: the original's existing symbolic check proves
 a cost identity but asserts the textual answer without independently binding
 all five claims and assumptions. r52 arithmetic does not repair that source gap.
