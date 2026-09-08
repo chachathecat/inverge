@@ -53,7 +53,8 @@ export async function prepareOwnerLocalApp(){
   const existing=await readFile(target,"utf8").catch(error=>{if(error.code!=="ENOENT")throw error;return null;});
   if(existing!==null&&existing!==installed)fail("existing_installation_drift_preserved");
   if(existing===null)await writeFile(target,installed,{flag:"wx",mode:0o600});
-  return {personalLocalSchema:"prepared",installationPath:target,supportedQuestions:2,humanApprovedQuestions:0,recordsReset:false};
+  return {personalLocalSchema:"prepared",installationPath:target,boundArtifacts:9,
+    supportedQuestions:"determined_by_server_pair_evidence_checks",humanApprovedQuestions:0,recordsReset:false};
 }
 export async function startOwnerLocalApp(){
   const keys=await guardedEnvironment();

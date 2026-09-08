@@ -42,6 +42,7 @@ function PrivatePracticeSession({ subject, ownerLocalTrial }: { subject: FirstSt
   const API = ownerLocalTrial ? "/api/review-os/first-stage/economics-trial/sessions" : SUBJECTS[subject].api;
   const [view, setView] = useState<PrivateFirstStageSessionView | null>(null);
   const [availability, setAvailability] = useState<Availability | null>(null);
+  const [selectedQuestionId, setSelectedQuestionId] = useState("");
   const [busy, setBusy] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [retryable, setRetryable] = useState(false);
@@ -156,6 +157,7 @@ function PrivatePracticeSession({ subject, ownerLocalTrial }: { subject: FirstSt
   }
 
   const unavailable = availability?.state === "blocked" && !view;
+  const selectedQuestion = availability?.questions.find(item => item.questionId === selectedQuestionId) ?? availability?.questions[0];
   return <main className="mx-auto w-full max-w-2xl px-5 py-10">
     <section className="rounded-3xl border border-slate-200 bg-white p-7 shadow-sm">
       <p className="text-xs font-semibold text-slate-500">Owner private · default off</p>
@@ -167,8 +169,18 @@ function PrivatePracticeSession({ subject, ownerLocalTrial }: { subject: FirstSt
         {error && <p role="alert" className="text-sm text-rose-700">{error}</p>}
         {unavailable && <p>{BLOCKER_MESSAGES[availability.blocker ?? "approved_content_required"]}</p>}
         {!busy && !error && !view && availability?.state === "available" &&
-          availability.questions.map((item) => <button key={item.questionId} type="button" className={BUTTON}
-            onClick={() => create(item.questionId)}>{ownerLocalTrial ? "사람 미검토 시험용" : "검토된"} {item.questionNumber}번 시작</button>)}
+          (ownerLocalTrial ? <div className="space-y-4">
+            <label className="block text-sm">시험 문항 선택
+              <select className="mt-2 block min-h-11 w-full rounded-xl border p-3" value={selectedQuestion?.questionId ?? ""}
+                onChange={event => setSelectedQuestionId(event.target.value)}>
+                {availability.questions.map(item=><option key={item.questionId} value={item.questionId}>경제학 {item.questionNumber}번 · 사람 미검토</option>)}
+              </select>
+            </label>
+            {selectedQuestion && <button type="button" className={BUTTON} onClick={()=>create(selectedQuestion.questionId)}>
+              사람 미검토 시험용 {selectedQuestion.questionNumber}번 시작</button>}
+            <p className="text-xs text-slate-500">각 문항의 변형은 저장 후 D+1 복습에서만 열립니다. 목록에 없는 문항은 근거 검토 대기입니다.</p>
+          </div> : availability.questions.map((item) => <button key={item.questionId} type="button" className={BUTTON}
+            onClick={() => create(item.questionId)}>검토된 {item.questionNumber}번 시작</button>))}
         {!busy && view?.nextQuestionId && <button type="button" className={BUTTON}
           onClick={() => command("begin", { questionId: view.nextQuestionId })}>문제 열고 먼저 풀기</button>}
         {view?.question && <form onSubmit={(event) => {
@@ -220,6 +232,9 @@ function PrivatePracticeSession({ subject, ownerLocalTrial }: { subject: FirstSt
           onClick={() => void send(intent.current)}>같은 요청 다시 확인</button>}
       </div>
       {!busy && <button type="button" className="mt-6 text-sm underline" onClick={() => window.location.reload()}>서버 기록 다시 불러오기</button>}
+      {ownerLocalTrial && view && !busy && !retryable && !error && <p className="mt-4 text-sm">
+        <a href="/app/first-stage/economics-trial" target="_blank" rel="noopener noreferrer" className="underline">다른 문항 선택 — 현재 기록은 이 창에 보존</a>
+      </p>}
       <p className="mt-5 text-xs leading-5 text-slate-500">이 주소를 다시 열면 서버에 저장된 기록을 조회합니다.
         문항·해설은 브라우저 저장소에 저장하지 않습니다. 반복·도움만으로 숙달이나 전이 성공을 주장하지 않습니다.</p>
     </section>

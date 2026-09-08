@@ -6,8 +6,8 @@ import { loadOwnerLocalR3TrialContent } from "../../lib/review-os/first-stage/ru
 import { createOwnerLocalTrialApplication } from "../../lib/review-os/first-stage/runtime/owner-local-trial-context.ts";
 import { harness as storeHarness } from "./first-stage-private-session-harness.mjs";
 const sha = bytes => createHash("sha256").update(bytes).digest("hex");
-export function syntheticTrialInput() {
-  const inputs = syntheticReviewInputs();
+export function syntheticTrialInput(options) {
+  const inputs = syntheticReviewInputs(options);
   inputs.sourceObservationSource = JSON.stringify({ posts: [
     { articleId: "5231525", displayedLicense: "KOGL_TYPE_1_ATTRIBUTION", downloadedAttachmentIds: ["2230215"] },
     { articleId: "5246129", displayedLicense: "KOGL_TYPE_1_ATTRIBUTION", downloadedAttachmentIds: ["2243629"] }] });

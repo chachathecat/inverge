@@ -1,6 +1,83 @@
 # Inverge Owner Study OS
 
-## Current r3 local trial candidate — 2026-09-08 KST
+## Active r3 multi-item Goal — 2026-09-08 KST
+
+Sole writer in the existing cache worktree, branch
+`codex/issue-883-economics-r3-bundle`, base main
+`46a0e3e84fe4a15791d101fc6bc897a65bd22a56`. Preserve the post-merge handoff below
+as history. Owner accepted PR #901 comment 5581993922; no new master plan.
+
+Implemented candidate: pair-specific trial loading, bounded recorded-model
+checks for 49/51/53, original-key position binding, one-selector/one-start UI,
+and request-scoped exact legacy-46 catalog compatibility. Five synthetic old
+constructor snapshots preserve ready/begun/evaluated/retry/completed states.
+Existing r3/installation bytes, authentication, TLS, containers and personal
+records are unchanged. The actual authenticated GET returned 200 after reload:
+saved revision/due/pending state preserved; inventory 46/49/51/53. Normal approved
+stock remains 0. This is human-unreviewed PC-only trial availability, not a
+claim that all pairs, economics, human review or real next-day observation passed.
+
+52/r52 remains pending: the original's existing code checks a symbolic identity
+but directly asserts the textual choice; five-choice/model-assumption mapping
+is not independently represented. r52 arithmetic alone does not cure that gap.
+53 normalization and absent explicit key A-label remain disclosed.
+
+Executed: initial missing-49 HTTP failure reproduced; 153 affected tests, all
+eight isolated PG/browser cases and an additional r3 picker/lost-create/new-tab
+case passed. Typecheck, changed-file lint, build, JSON, 16-path manifest and diff
+passed. All 187 output traces exclude actual private artifacts; the unchanged
+curriculum NFT warning remains. Actual picker has four options/one start; one
+new 49 functional save/reconnect succeeded. Both genuine saved sessions and due
+times survive the final build/app restart; all existing containers/listeners
+retain loopback isolation. Human review remains false and no real clock changed.
+Local read-only preflight review found no actionable P0/P1/P2, not formal review.
+Code integration child #902 is OPEN and parent #883 stays OPEN. Native CI/review/
+integration is unfinished. Next: ordinary commit/push of this 16-path candidate,
+create its PR, wait for exact-head native checks and one independent review,
+then revalidate live base/rules/deployment boundary for conditional pinned squash.
+Existing actual r46 next-day observation stays pending. No PR/commit pushed yet.
+
+## Post-merge r3 PC-trial handoff — 2026-09-08 KST
+
+PR #901 is MERGED by expected-head-pinned squash at 2026-09-08T08:30:21Z.
+Reviewed head `5b99c4329bcdb8ca02435b76e27befc735faa8b8`; reviewed/resulting tree
+`fba000fec84373b8c5b126d0a26c1db66bb56452`; squash/resulting main
+`46a0e3e84fe4a15791d101fc6bc897a65bd22a56`. Main and candidate have zero tree diff.
+Required exact-head native checks passed 9/9. The single final Codex request
+produced clean review comment 5581746926 (actionable P0/P1/P2 0/0/0); both review
+threads were resolved. C3R-L run 34203432332 attempt 1 failed at
+production_denied/ACCESS_GATE with finer cause unclassified; after inspecting
+the unchanged access path, one same-head replay (attempt 2) passed both cycles
+and its metadata-only artifact verification. No source or safety check was
+changed to obtain that pass. The failed attempt remains part of the history.
+
+All five resulting-main workflows passed: Fast CI 34204863495, Learner Loop
+Health 34204863128, Security 34204863179, E2E Smoke 34204863175, Post-Merge
+Orchestrator 34204863136. Authenticated Vercel GET confirmed preview-only build
+behavior, zero deploy hooks and actual Production deployment
+`dpl_HdF6NHwg1iB9Z6dJu4PHQqJzxUTq` CANCELED for this squash SHA. No operational
+deployment, remote DB, provider or payment change. Child #900 is CLOSED;
+parent #883 remains OPEN. Live GitHub remains the authority for those facts.
+
+The local app is running at `http://127.0.0.1:3883/app/first-stage/economics-trial`;
+all five published app/service listeners remain IPv4 loopback-only. Reopening
+the genuine browser after the final build preserved authentication, revision 3,
+stored response/explanation and the original pending D+1 due time. The initial
+navigation's networkidle wait expired during cold compilation; the completed
+page and actual auth/session API reads then returned 200 without an auth change.
+The generated dev cache was preserved, not deleted, before that restart.
+
+Two trial questions remain installed (46/r46); normal approved content is zero.
+Six human checks and reviewer assignment remain pending. Actual next-day r46
+is still UNOBSERVED and may begin only after 2026-09-09 15:38:41.790 KST.
+Do not move the real clock/due time or call synthetic D+1 actual observation.
+The Owner can continue in the existing dedicated Chrome session; if login is
+needed, use the existing local account and the Owner's privately chosen password.
+Preserve all real records, installation, auth profile and volumes. No synthetic
+cleanup applies. This post-merge handoff is a local checkpoint-only edit, not a
+new source candidate or a reason for another commit/CI/review cycle.
+
+## Historical r3 candidate and execution evidence — 2026-09-08 KST
 
 Continue the existing cache worktree and branch
 `codex/issue-883-economics-owner-local-trial`. Sole writer; preserve unrelated
