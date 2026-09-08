@@ -121,7 +121,7 @@ export const SUBJECT_ADAPTER_V1_INTERFACE_DESCRIPTOR = deepFreeze({
     {
       path: "lib/review-os/first-stage/kernel/domain.ts",
       normalization: "utf8_lf",
-      sha256: "93c3384605ec830d3554ca23dfeec270610598c9e15b1099da7b05fb46577faa",
+      sha256: "992332231069846209dea9d7b925900b4e941dc3bb9b6b37e33cae6730e2e097",
       covers: [
         "QuestionReference", "Attempt", "AnswerSubmission", "Confidence",
         "ElapsedTime", "WorkTrace", "WorkTraceStep", "ErrorCause", "ConceptBinding",
@@ -202,7 +202,7 @@ export const SUBJECT_ADAPTER_V1_INTERFACE_DESCRIPTOR = deepFreeze({
     Attempt: exactTypeKeys<Attempt>()([
       "schemaVersion", "attemptId", "examCycleId", "questionReference", "kind",
       "sourceAttemptId", "reviewTaskId", "exposureState", "assistanceLevel",
-      "startedAt", "state", "submission", "evaluation",
+      "startedAt", "state", "submission", "evaluation", "ownerLocalAssistance",
     ]),
     AnswerSubmission: exactTypeKeys<AnswerSubmission>()([
       "schemaVersion", "selectedChoice", "confidence", "elapsedTime", "answerChanged",
@@ -333,7 +333,7 @@ export const SUBJECT_ADAPTER_V1_INTERFACE_DESCRIPTOR = deepFreeze({
 // SHA-256 over RFC-8785-equivalent recursively-key-sorted JSON for the exact
 // descriptor above. The focused contract test recomputes and binds this value.
 export const SUBJECT_ADAPTER_V1_INTERFACE_DIGEST =
-  "d48bfa6492b3e450cb20ba1f857fc6e5a70d8ac53ffd824cdd3a56a810e778f4" as const;
+  "274661ef36eb2592b0ee744015ab19dac0b19ee68769b0cdaf32b6c1fbddf705" as const;
 
 function fail(): never {
   throw new FirstStageKernelError("adapter_mismatch");
@@ -643,7 +643,8 @@ export function validateAttemptEvaluation(
     (selectedChoice === null && row.decision !== "unanswered") ||
     (selectedChoice !== null && row.decision === "unanswered") ||
     (row.decision === "correct" && errorCause !== null) ||
-    (row.decision === "incorrect" && errorCause === null) ||
+    (row.decision === "incorrect" && errorCause === null && !(activeOwnerLocalR3TrialAdapter(adapter) &&
+      input.questionReference.questionVersion === "issue883-economics-curriculum-v1")) ||
     (row.decision === "unanswered" && errorCause !== null)
   ) fail();
   const reviewAfterMs = requiredSafeInteger(row.reviewAfterMs, 0, 2_592_000_000);

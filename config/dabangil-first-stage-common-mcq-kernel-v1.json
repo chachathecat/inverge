@@ -276,7 +276,7 @@
   "subjectAdapterFreeze": {
     "schemaVersion": "dabangil.first_stage.subject_adapter.v1",
     "interfaceDigestAlgorithm": "sha256_over_recursively_key_sorted_utf8_json",
-    "interfaceDigest": "d48bfa6492b3e450cb20ba1f857fc6e5a70d8ac53ffd824cdd3a56a810e778f4",
+    "interfaceDigest": "274661ef36eb2592b0ee744015ab19dac0b19ee68769b0cdaf32b6c1fbddf705",
     "interfaceDescriptor": {
       "schemaVersion": "dabangil.first_stage.subject_adapter.v1",
       "interfaceName": "SubjectAdapterV1",
@@ -291,7 +291,7 @@
         {
           "path": "lib/review-os/first-stage/kernel/domain.ts",
           "normalization": "utf8_lf",
-          "sha256": "93c3384605ec830d3554ca23dfeec270610598c9e15b1099da7b05fb46577faa",
+          "sha256": "992332231069846209dea9d7b925900b4e941dc3bb9b6b37e33cae6730e2e097",
           "covers": [
             "QuestionReference",
             "Attempt",
@@ -431,7 +431,8 @@
           "startedAt",
           "state",
           "submission",
-          "evaluation"
+          "evaluation",
+          "ownerLocalAssistance"
         ],
         "AnswerSubmission": [
           "schemaVersion",

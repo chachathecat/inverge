@@ -22,6 +22,7 @@ export async function handleOwnerLocalToday(request:Request, dependencies:Privat
       dependencies.now ?? (()=>new Date().toISOString()));
     if(!input) return response({ok:true,today:await service.view(ownerId)});
     if(input.action==="save_availability") return response({ok:true,today:await service.savePreferences(ownerId,input.input)});
+    if(input.action==="select_topic") return response({ok:true,today:await service.selectTopic(ownerId,input.input)});
     if(input.action==="start_planned") return response({ok:true,started:await service.dispatch(ownerId,input.input)});
     throw new FirstStageKernelError("invalid_input");
   } catch(error) {

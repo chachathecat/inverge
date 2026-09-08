@@ -29,6 +29,12 @@ create table if not exists public.first_stage_owner_local_planning (
 -- Null historical rows retain their settings/history and ask for an explicit
 -- declaration; never invent their past planning timestamp or rewrite sessions.
 alter table public.first_stage_owner_local_planning add column if not exists declared_at timestamptz;
+-- Optional bodyless extension in the same canonical planning row. Historical
+-- rows stay NULL and unchanged; archived dates are never today's capacity.
+alter table public.first_stage_owner_local_planning add column if not exists prior_dates jsonb
+  check (prior_dates is null or (jsonb_typeof(prior_dates)='array' and jsonb_array_length(prior_dates)<=3660 and octet_length(prior_dates::text)<=262144));
+alter table public.first_stage_owner_local_planning add column if not exists selected_topic jsonb
+  check (selected_topic is null or (jsonb_typeof(selected_topic)='object' and octet_length(selected_topic::text)<=4096));
 alter table public.first_stage_owner_local_planning enable row level security;
 alter table public.first_stage_owner_local_planning force row level security;
 revoke all on public.first_stage_owner_local_planning from public,anon,authenticated;

@@ -54,6 +54,7 @@ function PrivatePracticeSession({ subject, ownerLocalTrial }: { subject: FirstSt
   const [confidence, setConfidence] = useState<Confidence>("medium");
   const trace = useRef<WorkTraceStep[]>([]);
   const renderedAt = useRef(0);
+  const shownAttemptId=useRef<string|null>(null);
 
   function showBlocker(blocker: PrivateContentBlocker) {
     setView(null); intent.current = null; setRetryable(false); setError(null);
@@ -66,8 +67,11 @@ function PrivatePracticeSession({ subject, ownerLocalTrial }: { subject: FirstSt
       const url = new URL(window.location.href);
       url.search = new URLSearchParams({ sessionId: payload.view.sessionId }).toString();
       window.history.replaceState(null, "", url);
-      setSelected(null); setPrevious(null); setConfidence("medium");
-      trace.current = []; renderedAt.current = performance.now();
+      if(shownAttemptId.current!==payload.view.attempt?.attemptId) {
+        setSelected(null); setPrevious(null); setConfidence("medium");
+        trace.current = []; renderedAt.current = performance.now();
+        shownAttemptId.current=payload.view.attempt?.attemptId??null;
+      }
     }
     if (payload.availability) setAvailability(payload.availability);
   }
@@ -150,7 +154,7 @@ function PrivatePracticeSession({ subject, ownerLocalTrial }: { subject: FirstSt
     setSelected(choice);
   }
 
-  function command(action: "begin" | "submit" | "retry", fields: Record<string, unknown>) {
+  function command(action: "begin" | "submit" | "retry" | "help", fields: Record<string, unknown>) {
     if (!view) return;
     void send({ sessionId: view.sessionId, command: { action, requestId: requestId(),
       expectedRevision: view.revision, ...fields } });
@@ -183,6 +187,17 @@ function PrivatePracticeSession({ subject, ownerLocalTrial }: { subject: FirstSt
             onClick={() => create(item.questionId)}>검토된 {item.questionNumber}번 시작</button>))}
         {!busy && view?.nextQuestionId && <button type="button" className={BUTTON}
           onClick={() => command("begin", { questionId: view.nextQuestionId })}>문제 열고 먼저 풀기</button>}
+        {ownerLocalTrial && view?.question && Boolean(view.availableConceptAids?.length) && <details className="rounded-xl border p-4">
+          <summary className="cursor-pointer">막혔다면 개념·선행 도움</summary>
+          <p className="my-3 text-sm">틀린 답을 제출할 필요는 없습니다. 도움 열람을 먼저 저장하며, 이후 응답은 도움을 받은 연습입니다. 원인 진단·숙달 판정은 하지 않습니다.</p>
+          {view.availableConceptAids?.map(kind=><button key={kind} type="button" disabled={busy} className="mr-3 min-h-11 rounded-lg border px-4"
+            onClick={()=>command("help",{attemptId:view.attempt!.attemptId,kind})}>{kind==="concept"?"개념 도움 보기":"선행 계산 도움 보기"}</button>)}
+        </details>}
+        {ownerLocalTrial && view?.conceptAid && <section aria-label="저장 후 공개된 개념 도움" className="rounded-xl bg-slate-50 p-4">
+          <h2 className="font-semibold">{view.conceptAid.kind==="concept"?"개념 도움":"선행 계산 도움"} · 사람 미검토</h2>
+          <p className="mt-3 whitespace-pre-wrap">{view.conceptAid.text}</p>
+        </section>}
+        {ownerLocalTrial && view?.assistanceLevel==="hint_or_scaffold" && <p className="text-sm">도움을 받은 연습 · 독립 수행이나 전이·측정 증거가 아닙니다.</p>}
         {view?.question && <form onSubmit={(event) => {
           event.preventDefault();
           if (selected === null || !view.attempt) return;
