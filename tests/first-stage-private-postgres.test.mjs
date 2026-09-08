@@ -152,14 +152,20 @@ test(`local PostgreSQL ${label} enforces actual route/browser durable retry/CAS 
       // This setting in a synthetic test is NOT a performed personal-use approval.
       await assert.rejects(sql(`set inverge.local_first_stage_design='synthetic_only';\n${design}`, null), { code: "P0001" });
       await sql("set inverge.local_first_stage_design='';", null);
-      assert.equal(design.slice(design.indexOf("create table"), design.indexOf("comment on table")),
-        syntheticDesign.slice(syntheticDesign.indexOf("create table"), syntheticDesign.indexOf("comment on table"))
+      const tableDdl = source => source.slice(source.indexOf("create table"), source.indexOf("\n);") + 4);
+      assert.equal(tableDdl(design), tableDdl(syntheticDesign)
           .replace("payload->>'schemaVersion' = 'first_stage.private_session.v1'",
             "payload->>'schemaVersion' in ('first_stage.private_session.v1', 'first_stage.owner_local_trial_session.v1')"));
+      const securityDdl = source => source.slice(source.indexOf("alter table public.first_stage_private_sessions enable"), source.indexOf("comment on table"));
+      assert.equal(securityDdl(design), securityDdl(syntheticDesign));
     }
+    // The unchanged synthetic CREATE/constraints are byte-identical to the old
+    // personal table. Exercise an EXISTING old table with records, not just a
+    // fresh table that already accepts the new trial schema.
+    const legacyTable = syntheticDesign.slice(syntheticDesign.indexOf("create table"), syntheticDesign.indexOf("comment on table"));
     for (let replay = 0; replay < 2; replay++) {
-      await sql((contentInput ? "set inverge.local_first_stage_personal_use='owner_approved_persistent_local';\n"
-        : "set inverge.local_first_stage_design='synthetic_only';\n") + design, null);
+      await sql(contentInput ? `begin;\n${legacyTable}\ncommit;`
+        : "set inverge.local_first_stage_design='synthetic_only';\n" + design, null);
     }
     for (const role of ["anon", "authenticated"]) {
       await assert.rejects(sql(`select * from ${TABLE}`, role), { code: "42501" });
@@ -242,6 +248,19 @@ test(`local PostgreSQL ${label} enforces actual route/browser durable retry/CAS 
       // Same real SDK/repository and disposable PostgreSQL, but the actual trial
       // loader -> adapter -> HTTP scope; no reviewed catalog substitution.
       const trial=trialHarness({store:repository(sdk()),session:{userId:OWNER}});
+      const preserved=await sql(`select jsonb_agg(to_jsonb(r) order by session_id)::text from ${TABLE} r`);
+      const deniedLegacy=await trial.send({action:"create",requestId:"legacy-trial-probe",questionId:"qnet-2025-36-s1-A-46"});
+      assert.equal(deniedLegacy.status,503);assert.equal(deniedLegacy.body.view,undefined);
+      const otherConstraints=await sql(`select jsonb_agg(jsonb_build_array(conname,pg_get_constraintdef(oid)) order by conname)::text from pg_constraint where conrelid='${TABLE}'::regclass and conname <> 'first_stage_private_sessions_payload_check4'`,null);
+      for(let replay=0;replay<2;replay++) {
+        await sql("set inverge.local_first_stage_personal_use='owner_approved_persistent_local';\n"+design,null);
+        assert.equal(await sql(`select jsonb_agg(to_jsonb(r) order by session_id)::text from ${TABLE} r`),preserved);
+        assert.equal(await sql(`select jsonb_agg(jsonb_build_array(conname,pg_get_constraintdef(oid)) order by conname)::text from pg_constraint where conrelid='${TABLE}'::regclass and conname <> 'first_stage_private_sessions_payload_check4'`,null),otherConstraints);
+      }
+      assert.equal(await sql(`select relrowsecurity and relforcerowsecurity from pg_class where oid='${TABLE}'::regclass`,null),"t");
+      await Promise.all([0,1].map(()=>sql("set inverge.local_first_stage_personal_use='owner_approved_persistent_local';\n"+design,null)));
+      assert.equal(await sql(`select jsonb_agg(to_jsonb(r) order by session_id)::text from ${TABLE} r`),preserved);
+      for(const role of ["anon","authenticated"]) await assert.rejects(sql(`select * from ${TABLE}`,role),{code:"42501"});
       const ids=await startTrial(trial);trial.setClock(SUBMIT);
       const trialCommand={sessionId:ids.sessionId,command:submission(ids.attemptId,2)};
       loseNextWriteResponse=true;
@@ -268,6 +287,18 @@ test(`local PostgreSQL ${label} enforces actual route/browser durable retry/CAS 
       assert.equal(after.body.view.humanReviewComplete,false);assert.equal(after.body.view.measurementEvidence,false);
       assert.equal(after.body.view.masteryClaim,false);assert.equal(after.body.view.transferEvidence,false);
       assert.equal(await sql(`select count(*) from ${TABLE}`),"3");
+      const withTrial=await sql(`select jsonb_agg(to_jsonb(r) order by session_id)::text from ${TABLE} r`);
+      await sql("set inverge.local_first_stage_personal_use='owner_approved_persistent_local';\n"+design,null);
+      assert.equal(await sql(`select jsonb_agg(to_jsonb(r) order by session_id)::text from ${TABLE} r`),withTrial);
+      await assert.rejects(sql(`update ${TABLE} set payload=jsonb_set(payload,'{schemaVersion}','"unsupported.session.v1"')`),{code:"23514"});
+      // A custom/missing constraint must not be silently replaced by preparation.
+      await sql(`alter table ${TABLE} drop constraint first_stage_private_sessions_payload_check4; alter table ${TABLE} add constraint first_stage_private_sessions_payload_check4 check (true);`,null);
+      await assert.rejects(sql("set inverge.local_first_stage_personal_use='owner_approved_persistent_local';\n"+design,null),{code:"P0001"});
+      assert.equal(await sql(`select jsonb_agg(to_jsonb(r) order by session_id)::text from ${TABLE} r`),withTrial);
+      await sql(`alter table ${TABLE} drop constraint first_stage_private_sessions_payload_check4`,null);
+      await assert.rejects(sql("set inverge.local_first_stage_personal_use='owner_approved_persistent_local';\n"+design,null),{code:"P0001"});
+      assert.equal(await sql(`select jsonb_agg(to_jsonb(r) order by session_id)::text from ${TABLE} r`),withTrial);
+      process.stdout.write("legacy personal-table upgrade: denied before upgrade; reviewed/trial records and other constraints preserved across reapply; RLS/privileges unchanged\n");
       process.stdout.write("trial isolated PG: actual loader/HTTP/repository, lost durable response, concurrent replay, reconnect, D+1 and reviewed-mixing denial passed; synthetic only\n");
     }
     process.stdout.write(JSON.stringify({ subject, browser: "passed", screenshot: browserResult.screenshot,

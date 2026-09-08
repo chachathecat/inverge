@@ -85,6 +85,16 @@ only for the already approved dedicated personal context; it preserves existing
 installation bytes and never resets records. Rollback stops the app/containers
 and retains all named volumes, private content and browser-owned login storage.
 
+PR #901 review P2 exposed an upgrade case: CREATE TABLE IF NOT EXISTS cannot
+replace the old personal table's schema-version check. The dedicated local SQL
+now upgrades only that exact known check inside the existing bounded transaction;
+an already-current check is unchanged, unknown/missing checks deny preparation.
+Regression uses the actual loader/HTTP/repository against an old table containing
+reviewed records, then verifies trial creation, repeated/concurrent preparation,
+unchanged records/other constraints/RLS/privileges and unsupported-tag denial.
+The genuine PC preparation was replayed twice with installation/records unchanged;
+no reset, synthetic cleanup, remote operation or content approval was performed.
+
 ### Preserved reviewed-content lane
 
 The Owner's 2026-09-07 instruction conditionally permits one economics bundle

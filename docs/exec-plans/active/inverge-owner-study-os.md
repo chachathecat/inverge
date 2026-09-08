@@ -8,8 +8,11 @@ worktrees. PR #899 is already merged at `65786079127884211b2432ab7925b5712490d9e
 tree `94ca99465ff034ece1754ea48bee73501c22c365`; fetched origin/main is unchanged.
 Do not reopen it. Parent #883 remains OPEN. Small integration child #900 covers
 the explicitly separated unreviewed PC trial, not human approval or economics
-completion. Source candidate currently remains local/uncommitted; live GitHub,
-not this checkpoint, owns subsequent head/check/review/merge state.
+completion. PR #901 published initial head
+`bdb56f283a05cdae8bad7e3af57af659b5555478`, tree
+`f3c7cf84dc3d4a76692d21e730de7767a76bea07`; its native required checks 9/9 and
+C3R-L passed. Automatic review 5138542475 reported 0/0/1 (P2), not clean.
+Live GitHub, not this checkpoint, owns subsequent head/check/review/merge state.
 
 The Owner explicitly authorized the minimum r3-only kernel/adapter/session/
 loader/storage/API/UI separation, dedicated persistent local setup and genuine
@@ -91,8 +94,8 @@ Real runtime correction and local verification:
   remains and must not be concealed. Inspected 189 NFT manifests: zero private
   content/local-credential paths. No dependency, migration, general auth/RLS,
   remote DB, provider/payment, Seven Exams or separate legal repo change.
-- Earlier 310/316 runs are historical, not newer final results. No fresh native
-  CI/formal review/integration is claimed yet. Those require the new exact head.
+- Earlier 310/316 runs are historical, not newer final results. The initial
+  native results above do not validate the following correction's new head.
 
 - After the production build, the first dev restart served HTML 404 even for
   the JSON auth API. Preserved `.next/dev` as
@@ -101,8 +104,24 @@ Real runtime correction and local verification:
   session readback. No account/content/record/auth policy changed. This isolates
   the observed failure to derived development state, not persistence loss.
 
-Next: publish the validated local scope as #900's PR, then
-required exact-head native CI and one independent exact-head review (no duplicate
+- Review P2 was reproduced before the SQL correction: an old persistent table
+  containing reviewed records retained its prior schema check after preparation,
+  and the actual trial loader/HTTP/repository returned 503 on creation.
+- The local-only transaction now recognizes and upgrades only that exact legacy
+  check; the current check is a no-op, unknown/missing checks fail closed. No row
+  rewrite, other constraint change, RLS relaxation or synthetic-guard change.
+- Correction verification: 20 focused trial/helper tests and all 8 isolated
+  PostgreSQL/browser cases PASS (zero fail/skip), including preserved old reviewed
+  records, trial save/reconnect/D+1, concurrent/repeated upgrade, unknown/missing
+  constraint denial and cleanup. Changed-file lint/typecheck/diff PASS. Existing
+  runtime source is unchanged; initial build/317 tests are preserved prior-head
+  evidence, not relabeled new-head runs. Native CI must build the correction head.
+- Dedicated personal preparation was actually replayed twice after loopback
+  verification; private installation and aggregate record digest unchanged.
+  Actual authenticated readback still succeeds with the original pending due time.
+
+Next: publish the single P2 correction batch, resolve its thread and require
+exact-head native CI and one independent exact-head review (no duplicate
 manual request if automatic review starts). Correct findings in one root-cause
 batch. Conditional pinned squash requires clean 0/0/0, zero unresolved threads,
 live rules/base and authenticated deployment-boundary confirmation. #883 stays
