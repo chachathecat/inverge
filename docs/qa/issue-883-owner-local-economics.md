@@ -6,6 +6,61 @@ content approval, installation and observed use are separate outcomes.
 
 ## Current boundary
 
+### Post-#903 Today/Full-Day bridge (child #904, 2026-09-08)
+
+The existing `/app/first-stage/economics-trial` now opens Today; saved-session
+URLs and `?choose=1` reuse the same private practice component. GET on the existing
+trial sessions endpoint with `?view=today` reads independently validated owner/
+trial/cycle history only. POST saves bounded availability or executes one exact
+server-issued action. Reads construct no question, answer or explanation and
+write no attempts/exposures. Preferences are metadata, never session truth.
+
+The existing capacity planner receives actual ongoing/due/new candidates and an
+explicit remaining-active budget. It retains max-three CoreOutcomes and 0..N
+ExecutionBlocks, protected windows, recovery/cognitive limits and honest deferred/
+unallocated time. One eligible new original is protected before the 256-candidate
+cap under sufficient capacity; ongoing reservations, missing stock, recovery,
+environment/continuous-window or capacity limits are named exceptions. Repeated
+successful new starts cover the finite remaining originals; no reserved variant
+is counted as fresh stock and no sealed-unseen claim is made. Each completed
+attempt after a remaining-time declaration debits an explicit 15-minute estimate,
+not measured/calibrated time. Editing life mode starts from the current remainder.
+
+| Scoped scenario | Current implementation evidence |
+| --- | --- |
+| S01/S04 | Real loader/application/session commands → plan → dispatch → submit → replan; no assistance in planning or initial RSC |
+| S05 | 16- and 256-valid-session backlog; new opportunity before cap; 257 rows explicitly disable execution/absence claims |
+| S06/S07 | 150/600 minutes, fragmented/incompatible/protected windows, recovery, time reduction, ongoing/completed preservation |
+| S09 | Finite original coverage, no repeat-as-new, explicit exhaustion/unallocated time; no generation |
+| S10 (bounded) | Current catalog/version drift quarantines affected history and blocks new-stock absence claims; no general revocation system |
+| S11 | Actual SDK/PostgreSQL CAS, post-commit intent/create/begin/submit loss, concurrent retry, process rehydration, manual-create race |
+| S13 | Server-only local/Owner/default-off/Production gates, unknown authority inputs rejected, login-expiry UI and no-store |
+
+S02/S03/S08/S12/S14 and broader S10 remain outside this Goal, not completed.
+The attachment's stub-validator virtual runner is input evidence only; the tests
+above create valid states through actual current loaders, validators and commands.
+The added HTTP service suite is registered in native CI. PostgreSQL/browser suites
+are separate isolated local execution evidence, not a claim that native CI runs
+Docker or a browser for this suite. All fixture data/auth/clocks remain synthetic.
+
+Actual personal execution in this candidate: verified the seven existing Docker
+identities/bindings and all five PC listeners as loopback-only, then applied only
+`prepare-planning`. Session digest unchanged; no installation/account/TLS/volume
+reset. Genuine preserved login opened Today (200) with 46/49 unchanged and approved
+stock 0. One functional 51 start/save/reconnect through the UI yielded remaining
+90→75 minutes and next original 53. This is NOT Owner independent performance.
+46/49 metadata/due states matched the before snapshot exactly; three actual
+sessions now exist. No real r46 next-day attempt was made. Keep all actual records.
+
+Rollback: stop the app/planning consumer and retain the additive local table,
+sessions, intents and preferences. The isolated test cleanup uses only its new
+networkless, volumeless synthetic container; it must never target the personal DB.
+The local schema is not a remote migration. Post-build app restart/reconnect
+returned 200 with identical history/preferences and 75 remaining minutes. Local
+affected 124 tests, separate isolated PG/browser acceptance, typecheck, lint,
+build, JSON and diff passed; a later streamed-byte regression also passed.
+Final exact-head native CI/review/merge remain pending at this source checkpoint.
+
 ### r3 bundle continuation — 2026-09-08
 
 The Owner's accepted Goal extends only the existing PC-only human-unreviewed

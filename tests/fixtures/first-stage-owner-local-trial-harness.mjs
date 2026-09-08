@@ -32,16 +32,22 @@ export function trialHarness(options = {}) {
     INVERGE_OWNER_ECONOMICS_R3_TRIAL_ENABLED: "true", INVERGE_OWNER_FIRST_STAGE_KERNEL_ENABLED: "true",
     ALPHA_ADMIN_EMAILS: "synthetic@example.test", INVERGE_OWNER_FIRST_STAGE_EMAILS: "synthetic@example.test", ...options.env };
   let catalogReads = 0;
+  const planningRows=options.planningRows ?? new Map();
+  const planningStore=options.planningStore ?? {
+    async load(ownerId) {return structuredClone(planningRows.get(ownerId) ?? null);},
+    async save(value,expected) { if((planningRows.get(value.ownerId)?.revision??0)!==expected)return false;
+      planningRows.set(value.ownerId,structuredClone(value));return true; },
+  };
   const application = createOwnerLocalTrialApplication({ environment: () => env,
     session: async () => ({ isAuthenticated: true, isDemo: false, source: "supabase", userId: "synthetic-owner", email: "synthetic@example.test", ...options.session }),
     catalog: async () => { catalogReads++; return await loadOwnerLocalR3TrialContent(fixture.input); },
-    repository: () => store.store, now: store.getClock });
+    repository: () => store.store, planningRepository:()=>planningStore, now: store.getClock });
   const send = async (body, query = "") => {
     const response = await application(new NextRequest(`http://127.0.0.1:3883/api/trial${query}`, body === undefined ? {headers:{host:"127.0.0.1:3883"}} : {
       method: "POST", headers: { host:"127.0.0.1:3883", "content-type": "application/json", origin: "http://127.0.0.1:3883" }, body: JSON.stringify(body) }));
     return { status: response.status, headers: response.headers, body: await response.json() };
   };
-  return { ...store, fixture, send, application, env, catalogReads: () => catalogReads };
+  return { ...store, fixture, send, application, env, planningRows, planningStore, catalogReads: () => catalogReads };
 }
 export async function startTrial(h) {
   const created = await h.send({ action: "create", requestId: "create-1", questionId: "qnet-2025-36-s1-A-46" });

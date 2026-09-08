@@ -66,8 +66,23 @@ export async function startOwnerLocalApp(){
   for(const signal of ["SIGINT","SIGTERM"])process.on(signal,()=>child.kill(signal));
   child.on("exit",code=>{process.exitCode=code??1;});return child;
 }
+export async function prepareOwnerLocalPlanning(){
+  await guardedEnvironment();
+  const sql=await readFile(new URL("../../supabase/local-designs/first-stage-owner-local-planning.sql",import.meta.url),"utf8");
+  const execute=input=>{
+    const result=spawnSync("C:/Program Files/Docker/Docker/resources/bin/docker.exe",["exec","-i","inverge_owner_economics_db_loopback","psql","-U","postgres","-d","postgres","-X","-q","-At","-v","ON_ERROR_STOP=1"],
+      {input,encoding:"utf8",windowsHide:true,maxBuffer:65536});
+    if(result.status!==0)fail("personal_local_planning_failed");return result.stdout.trim();
+  };
+  // Bodyless digest only; no personal rows or auth data leave PostgreSQL.
+  const snapshot="select md5(coalesce(jsonb_agg(to_jsonb(r) order by owner_id,session_id),'[]')::text) from public.first_stage_private_sessions r;";
+  const before=execute(snapshot);
+  execute("set inverge.local_first_stage_personal_use='owner_approved_persistent_local';\n"+sql);
+  if(execute(snapshot)!==before)fail("personal_sessions_changed_during_preparation");
+  return {personalLocalPlanning:"prepared",sessionsUnchanged:true,installationChanged:false,recordsReset:false};
+}
 if(process.argv[1]&&import.meta.url===pathToFileURL(path.resolve(process.argv[1])).href){
   const command=process.argv[2];
-  (command==="prepare"?prepareOwnerLocalApp().then(result=>console.log(JSON.stringify(result))):command==="start"?startOwnerLocalApp():Promise.reject(new Error("invalid_local_command")))
+  (command==="prepare"?prepareOwnerLocalApp().then(result=>console.log(JSON.stringify(result))):command==="prepare-planning"?prepareOwnerLocalPlanning().then(result=>console.log(JSON.stringify(result))):command==="start"?startOwnerLocalApp():Promise.reject(new Error("invalid_local_command")))
     .catch(error=>{const message=String(error.message);console.error(/^[a-z_]+$/.test(message)?message:"local_trial_setup_failed");process.exitCode=1;});
 }

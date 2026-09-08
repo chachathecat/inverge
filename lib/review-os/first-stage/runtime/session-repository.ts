@@ -41,6 +41,18 @@ export function createPrivateSessionRepository(client: SupabaseClient): PrivateF
 
   return {
     load,
+    async listOwnerSnapshot(ownerId, schema) {
+      if (!UUID.test(ownerId) || !["first_stage.private_session.v1", "first_stage.owner_local_trial_session.v1"].includes(schema)) {
+        throw new FirstStageKernelError("invalid_input");
+      }
+      const result = await client.from(TABLE).select(COLUMNS, { count: "exact" })
+        .eq("owner_id", ownerId).eq("payload->>schemaVersion", schema)
+        .order("session_id", { ascending: true }).range(0, 256);
+      if (result.error || !Array.isArray(result.data) || !Number.isSafeInteger(result.count) ||
+        result.count! < result.data.length || result.data.length > 257) unavailable();
+      return { complete: result.count === result.data.length && result.data.length <= 256,
+        sessions: result.data.slice(0, 256).map(row => decode(row, ownerId, row.session_id)) };
+    },
     async create(value) {
       binding(value.ownerId, value.sessionId);
       if (value.state.revision !== 1) throw new FirstStageKernelError("invalid_transition");
@@ -52,6 +64,18 @@ export function createPrivateSessionRepository(client: SupabaseClient): PrivateF
       const saved = await load(value.ownerId, value.sessionId);
       if (!saved) unavailable();
       return saved;
+    },
+    async createOriginalIfAbsent(value) {
+      binding(value.ownerId,value.sessionId);
+      if(value.schemaVersion!=="first_stage.owner_local_trial_session.v1" || value.state.revision!==1) {
+        throw new FirstStageKernelError("invalid_transition");
+      }
+      const result=await client.rpc("inverge_owner_local_reserve_original",{
+        p_owner:value.ownerId,p_session:value.sessionId,p_payload:value });
+      if(result.error) unavailable();
+      if(result.data===null) return null;
+      return decode({owner_id:value.ownerId,session_id:value.sessionId,
+        revision:result.data.state?.revision,payload:result.data},value.ownerId,value.sessionId);
     },
     async replace(value, expectedRevision) {
       binding(value.ownerId, value.sessionId);

@@ -619,9 +619,9 @@ function buildPlanGap(envelope: CapacityEnvelopeV1, candidates: StudyTaskCandida
   return { forecastCapacityMinutes: envelope.schedulableActiveMinutes, requiredPlanMinutes: requiredMinutes, shortfallMinutes: shortfall, reasons: uniq(reasons.length ? reasons : ["coverage_gap"]), choices: uniq(choices), claimBoundary: "schedule_feasibility_only_not_pass_probability", metadataOnly: true };
 }
 
-export function buildStudyDayPlan(input: { profile: LearnerConstraintProfileV1; availability: DayAvailabilityV1; candidates: StudyTaskCandidateV1[]; capacityHistory?: CapacityHistoryDayV1[]; recoveryOverrideMinutes?: number }): StudyDayPlanV1 {
+export function buildStudyDayPlan(input: { profile: LearnerConstraintProfileV1; availability: DayAvailabilityV1; candidates: StudyTaskCandidateV1[]; capacityHistory?: CapacityHistoryDayV1[]; recoveryOverrideMinutes?: number; remainingActiveMinutes?: number }): StudyDayPlanV1 {
   metadataSafe(input);
-  exactKeys("study-day-plan-input", input, ["profile", "availability", "candidates", "capacityHistory", "recoveryOverrideMinutes"]);
+  exactKeys("study-day-plan-input", input, ["profile", "availability", "candidates", "capacityHistory", "recoveryOverrideMinutes", "remainingActiveMinutes"]);
   validProfile(input.profile);
   validateAvailability(input.availability);
   if (!Array.isArray(input.candidates) || input.candidates.length > MAX_CANDIDATES_PER_PLAN) throw new Error(`invalid-study-candidate-count:${String(input.candidates?.length)}`);
@@ -637,6 +637,15 @@ export function buildStudyDayPlan(input: { profile: LearnerConstraintProfileV1; 
   if (requiredPlanMinutes > MAX_SEVEN_DAY_MINUTES) throw new Error(`required-plan-minutes-exceed-seven-day-bound:${requiredPlanMinutes}`);
   const derivedEnvelope = buildCapacityEnvelope({ profile: input.profile, declaredActiveMinutes: input.availability.declaredActiveMinutes, asOfDate: input.availability.date, history: input.capacityHistory, recoveryOverrideMinutes: input.recoveryOverrideMinutes });
   const envelope = capEnvelopeToWindows(derivedEnvelope, input.availability, input.profile.phase);
+  // An explicit remaining budget is not a revised daily-capacity estimate.
+  // Keep all feasible windows available to selection; clipping them by input
+  // order can consume the budget in unusable fragments before a feasible desk.
+  // Existing callers and their cognitive/recovery policy remain unchanged.
+  if (input.remainingActiveMinutes !== undefined) {
+    integer("remaining-active-minutes",input.remainingActiveMinutes,0,720);
+    envelope.schedulableActiveMinutes=Math.min(envelope.schedulableActiveMinutes,input.remainingActiveMinutes);
+    envelope.derivationReasons.push("remaining-active-budget-not-daily-total");
+  }
   const states = input.availability.windows.filter((window) => !window.protected).map((window) => ({ w: window, cursor: window.startMinute }));
   const used: Record<CognitiveLoadV1, number> = { high: 0, medium: 0, low: 0, recovery: 0 };
   const budgets: Record<CognitiveLoadV1, number> = { high: envelope.highLoadBudgetMinutes, medium: envelope.mediumLoadBudgetMinutes, low: envelope.lowLoadBudgetMinutes, recovery: envelope.recoveryBudgetMinutes };

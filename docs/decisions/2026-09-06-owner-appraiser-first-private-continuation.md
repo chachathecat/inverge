@@ -14,6 +14,23 @@ This document is not an independent merge receipt or check ledger.
 
 ## Delegated outcome
 
+### Post-#903 Owner-PC Today continuation (2026-09-08)
+
+The Owner accepted PR #903 comment 5584374033 for the existing r3 eight-item
+human-unreviewed trial only. Bridge individually validated, owner-scoped sessions
+to the existing Today/Full-Day capacity planner and real start/resume commands;
+persist only bounded bodyless local availability/dispatch metadata, with session
+truth retaining attempts, completion and review due times. A minimal additive,
+record-preserving dedicated-local table/index/function is allowed after Docker
+and PC loopback checks and isolated verification; no general auth/RLS/grant
+policy change, remote apply, account/port/trust-root change or new ledger.
+Keep original/retry lineage, historical 46 compatibility and zero reviewed stock.
+Do not include 52/r52, another corpus/subject, provider/cost/payment or public work.
+Synthetic scenarios must execute actual validators and session commands; the
+attachment's stub-validator runner is not application evidence. Keep genuine
+local walkthrough and real next-day observation distinct. Exact-head native CI,
+independent 0/0/0 review, resolved threads and deployment-boundary gates remain.
+
 Continue private question, response, explanation, durable record, reconnect
 and review flows for civil law, economics, real-estate principles,
 appraisal-related law and accounting. Reuse existing engines, storage and

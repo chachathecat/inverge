@@ -28,6 +28,11 @@ function harness(options = {}) {
   let clock = START;
   let failWrite = false;
   const store = options.store ?? {
+    async listOwnerSnapshot(ownerId, schema) {
+      const items=[...rows.values()].filter(row=>row.ownerId===ownerId && row.schemaVersion===schema)
+        .sort((a,b)=>a.sessionId.localeCompare(b.sessionId));
+      return {sessions:structuredClone(items.slice(0,256)),complete:items.length<=256};
+    },
     async load(ownerId, sessionId) {
       const value = rows.get(`${ownerId}/${sessionId}`);
       return value ? structuredClone(value) : null;
@@ -36,6 +41,13 @@ function harness(options = {}) {
       const key = `${value.ownerId}/${value.sessionId}`;
       if (!rows.has(key)) { counts.creates++; rows.set(key, structuredClone(value)); }
       return structuredClone(rows.get(key));
+    },
+    async createOriginalIfAbsent(value) {
+      const key=`${value.ownerId}/${value.sessionId}`;
+      if(rows.has(key))return structuredClone(rows.get(key));
+      if([...rows.values()].some(row=>row.ownerId===value.ownerId && row.schemaVersion===value.schemaVersion &&
+        row.state.examCycle.questionReferences[0].questionId===value.state.examCycle.questionReferences[0].questionId))return null;
+      return this.create(value);
     },
     async replace(value, expectedRevision) {
       if (failWrite) { failWrite = false; throw new Error("synthetic-storage-failure"); }
