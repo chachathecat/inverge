@@ -1,5 +1,19 @@
 {
   "schemaVersion": "dabangil.first_stage.common_mcq_kernel.v1",
+  "ownerLocalR3TrialException": {
+    "authority": "docs/decisions/2026-09-06-owner-appraiser-first-private-continuation.md#human-unreviewed-r3-pc-only-trial-owner-2026-09-08",
+    "scope": "existing_r3_owner_pc_only_never_reviewed_approval",
+    "existingReviewPoliciesRemainUnchangedForReviewedPath": true,
+    "questionSchema": "first_stage.owner_local_trial_question_reference.v1",
+    "feedbackSchema": "first_stage.owner_local_unreviewed_feedback.v1",
+    "sessionSchema": "first_stage.owner_local_trial_session.v1",
+    "retryDecision": "unreviewed_owner_local_practice_retry",
+    "requiresAuthenticatedAllowlistedLoopbackRequestAndRegisteredAdapter": true,
+    "reviewerAndApprovalReceiptMustBeNull": true,
+    "reviewedOrVerifiedPromotionAllowed": false,
+    "masteryTransferMeasurementAllowed": false,
+    "normalFoundationFinalReleaseUnchanged": true
+  },
   "programId": "INVERGE_OWNER_STUDY_OS",
   "milestoneId": "FIRST_STAGE_COMMON_KERNEL",
   "milestoneState": "complete_candidate_default_off_no_subject_adapters",
@@ -262,7 +276,7 @@
   "subjectAdapterFreeze": {
     "schemaVersion": "dabangil.first_stage.subject_adapter.v1",
     "interfaceDigestAlgorithm": "sha256_over_recursively_key_sorted_utf8_json",
-    "interfaceDigest": "f7e134498ad65b9ae2bc10c4570949cae7ca71d2038aa493f6485247b5dfc00a",
+    "interfaceDigest": "d48bfa6492b3e450cb20ba1f857fc6e5a70d8ac53ffd824cdd3a56a810e778f4",
     "interfaceDescriptor": {
       "schemaVersion": "dabangil.first_stage.subject_adapter.v1",
       "interfaceName": "SubjectAdapterV1",
@@ -277,7 +291,7 @@
         {
           "path": "lib/review-os/first-stage/kernel/domain.ts",
           "normalization": "utf8_lf",
-          "sha256": "3df7bd48e24949d746f30a62d3031e68df4f1b6116d2731006d998599a4ff2e7",
+          "sha256": "93c3384605ec830d3554ca23dfeec270610598c9e15b1099da7b05fb46577faa",
           "covers": [
             "QuestionReference",
             "Attempt",
@@ -312,7 +326,7 @@
             "endMarker": "/* SUBJECT_ADAPTER_V1_TYPE_SOURCE_END */",
             "markersExcluded": true
           },
-          "sha256": "dcd540526ca2bf61638bfdeb1e7a5824ebdf843c7f62270b71ac34a764c83125",
+          "sha256": "d9b576ce16321e02b8dfacac9ff6f187fa5dc1003fe73b557986c5eac6c7d69f",
           "covers": [
             "SUBJECT_ADAPTER_SCHEMA_VERSION",
             "McqChoicePresentation",
@@ -569,11 +583,13 @@
         "errorCauses": ["K", "C", "A", "R", "T", "G"],
         "questionRightsStates": [
           "verified_owner_private",
-          "verified_cleared"
+          "verified_cleared",
+          "observed_owner_local_only"
         ],
         "questionCurrentnessStates": [
           "verified_exam_date",
-          "verified_current"
+          "verified_current",
+          "observed_historical_unreviewed"
         ],
         "attemptKinds": ["initial", "independent_retry"],
         "attemptEvaluationDecisions": [
@@ -592,7 +608,8 @@
         "reviewedFeedbackStates": [
           "reviewed_available",
           "withheld_rights_or_version",
-          "not_emitted_unavailable"
+          "not_emitted_unavailable",
+          "human_unreviewed_owner_local"
         ],
         "reviewerClasses": [
           "named_owner_authorized_human_reviewer",
@@ -601,7 +618,8 @@
         "attemptExposureStates": [
           "first_exposure",
           "repeated_exposure",
-          "verified_variant"
+          "verified_variant",
+          "unreviewed_local_variant"
         ],
         "assistanceLevels": [
           "none",
@@ -613,7 +631,8 @@
         "reviewTaskStatuses": ["pending", "retry_active", "completed"],
         "independentRetryOutcomes": ["active", "succeeded", "failed"],
         "independentRetryLineageDecisions": [
-          "verified_variant_for_independent_retry"
+          "verified_variant_for_independent_retry",
+          "unreviewed_owner_local_practice_retry"
         ]
       },
       "invariants": [

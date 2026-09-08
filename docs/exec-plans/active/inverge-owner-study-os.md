@@ -1,5 +1,154 @@
 # Inverge Owner Study OS
 
+## Current r3 local trial candidate — 2026-09-08 KST
+
+Continue the existing cache worktree and branch
+`codex/issue-883-economics-owner-local-trial`. Sole writer; preserve unrelated
+worktrees. PR #899 is already merged at `65786079127884211b2432ab7925b5712490d9e0`,
+tree `94ca99465ff034ece1754ea48bee73501c22c365`; fetched origin/main is unchanged.
+Do not reopen it. Parent #883 remains OPEN. Small integration child #900 covers
+the explicitly separated unreviewed PC trial, not human approval or economics
+completion. Source candidate currently remains local/uncommitted; live GitHub,
+not this checkpoint, owns subsequent head/check/review/merge state.
+
+The Owner explicitly authorized the minimum r3-only kernel/adapter/session/
+loader/storage/API/UI separation, dedicated persistent local setup and genuine
+single-Owner trial. Normal reviewed validators/approved stock remain unchanged.
+The nine normal approved/installed arrays are empty; all six human checks remain
+pending and the reviewer is unassigned. Only original 46 and its independently
+answered r46 are supported/installed (2); other eight r3 items are excluded.
+Existing private r3/AI/calculation/source bytes are reused without repackaging or
+invented recalculation/human evidence. Full 200-position original-key AI
+observation preserves multi-answer rows; key A-label uncertainty and 53 normalized
+transcription remain disclosed. All private bodies/evidence stay outside Git.
+
+TLS and local isolation ACTUALLY completed:
+- Preflight disproved the old "fresh CLI certificate" assumption: the original
+  public certificate is the CLI v2.114.0 static CA certificate. Its private key
+  was NEVER read, copied or used to sign.
+- The later explicit Owner alternative permits a fresh server-only CA=false,
+  serverAuth leaf. Generated in memory with SAN localhost/127.0.0.1, 30-day
+  validity, key match and current validity verified; no host private-key file.
+- Exact stopped source gateway:
+  `7f1ddb9f2bd2e98f2b323ae0c3278c61d6e6302dfc1e90a1d5e05883c78c13fa`,
+  `supabase_kong_owner-economics`. Do NOT start its wildcard host binding.
+  Exact destination:
+  `1923d23577149191d7036de815adf43b60d9be32e3e56f8baf0744a2768fe6cd`,
+  `inverge_owner_economics_kong_loopback`.
+- Copied ONLY source `/home/kong/custom_nginx.template` and `kong.yml`;
+  NEW `/home/kong/localhost.crt` and `localhost.key` placed in that destination.
+  Copy equality passed. Owner/group 100:65533; config/key 0600, public cert 0644.
+  No image layer/extra clone/global trust/TLS bypass or secret output.
+- Real internal Kong TLS accepted connection-scoped public cert + correct IP/name,
+  rejected wrong hostname and absent matching trust. Separate synthetic real TLS
+  handshake also rejected a different certificate. No client received a key.
+  Existing app/API HTTP loopback addresses were preserved: this is NOT browser
+  HTTPS or additional public TLS-port exposure.
+- All seven dedicated target services passed health-ordered startup; all four
+  published ports 55421-55424 bind 127.0.0.1 in Docker AND actual Windows
+  listeners. The app binds 127.0.0.1:3883. Originals/volumes remain preserved.
+
+Actual persistent trial (not synthetic auth/content injection):
+- Dedicated local-design SQL applied ONLY to the personal local DB after the
+  isolation checks. Forced RLS is on; authenticated direct table privilege is
+  false. The original synthetic-only guard/schema/cleanup was not repurposed.
+- Private installation exists at
+  `C:/Users/jmg91/AppData/Local/Inverge/owner-economics/trial-installation.json`.
+  The launcher selects only two local API credentials in memory; no app.env is
+  written and provider/proxy/deployment/global-TLS settings are not inherited.
+- Owner created the genuine local account and entered the password privately
+  through local Studio and the existing app login. No password/cookie/token was
+  inspected, printed or copied to evidence. Browser-owned profile is private.
+- Question 46 displayed five choices with NO explanation before submission.
+  Functional walkthrough response durably saved, then explanation displayed.
+  DB: ONE `first_stage.owner_local_trial_session.v1`, revision 3, ONE attempt,
+  ONE pending review, ZERO independent retries. No duplicate session/review.
+- Reload, full browser close/reopen and a fresh app process preserved authentication, saved
+  explanation and original dueAt `2026-09-09T06:38:41.790Z`
+  (2026-09-09 15:38:41.790 KST). Actual early r46 request returned 409
+  state_conflict without question/explanation; real clock/due time unchanged.
+- Actual response reports human_unreviewed_owner_local; human review, mastery,
+  transfer and measurement are false. This is execution evidence, not an unaided
+  learner-performance or efficacy claim. Actual next-day r46 remains UNOBSERVED.
+
+Real runtime correction and local verification:
+- Reproduced NextRequest's numeric-loopback -> localhost normalization denying
+  genuine GET, then POST CSRF, before correction. Exact HTTP Host/Origin, server
+  environment and genuine Owner checks remain mandatory; only accepted requests
+  get internal URL spelling canonicalized before the unchanged CSRF/bounded
+  parser. No forwarded-header authority, foreign Origin or cross-site allowance.
+- The trial test harness now uses actual NextRequest for loader/HTTP/storage.
+  Wrong Host/Origin, cross-site and oversized-body denial, concurrent save/retry
+  and reconnect are covered. Temporary diagnostics were removed.
+- Latest broad affected first-stage/APP-1/QF/source/access/Foundation: 317 PASS,
+  zero fail/skip. Latest isolated network-none/tmpfs PostgreSQL/browser: 8 PASS,
+  zero fail/skip; includes the trial real loader/NextRequest/SDK/repository,
+  response-loss/concurrency/reconnect/clock-D+1 and reviewed-mixing denial.
+  Only those disposable SYNTHETIC containers/rows/users were cleaned; all personal
+  account/record/volume state was preserved.
+- Changed-file ESLint, typecheck, changed JSON, 32-path manifest and diff checks
+  PASS. Build PASS; existing NFT warning through the review-candidate utility
+  remains and must not be concealed. Inspected 189 NFT manifests: zero private
+  content/local-credential paths. No dependency, migration, general auth/RLS,
+  remote DB, provider/payment, Seven Exams or separate legal repo change.
+- Earlier 310/316 runs are historical, not newer final results. No fresh native
+  CI/formal review/integration is claimed yet. Those require the new exact head.
+
+- After the production build, the first dev restart served HTML 404 even for
+  the JSON auth API. Preserved `.next/dev` as
+  `.next/dev-before-trial-restart-20260908-0656` (no deletion), then one fresh
+  dev-cache generation restored the same-source auth API and authenticated
+  session readback. No account/content/record/auth policy changed. This isolates
+  the observed failure to derived development state, not persistence loss.
+
+Next: publish the validated local scope as #900's PR, then
+required exact-head native CI and one independent exact-head review (no duplicate
+manual request if automatic review starts). Correct findings in one root-cause
+batch. Conditional pinned squash requires clean 0/0/0, zero unresolved threads,
+live rules/base and authenticated deployment-boundary confirmation. #883 stays
+open for genuine six-check review and actual next-day observation.
+
+Local URL: `http://127.0.0.1:3883/app/first-stage/economics-trial`.
+Login identifier: `owner@localhost.test`; password is known only to Owner.
+Use the saved session URL in the dedicated browser to resume the exact record.
+Rollback: stop/disable local app/services, preserve private installation,
+browser-owned auth state and all named volumes. Never run synthetic cleanup on
+actual records. Actual r46 can start only after its real due time; automatic-clock
+checks do not establish that next-day observation.
+
+## Local handoff after final code verification — 2026-09-08 KST
+
+This handoff update is local/uncommitted, not a new reviewed candidate. Preserve
+the reviewed PR #899 source: head `9ce2dd582a2fbf2505ab249f7a8d7e28afd5f3e9`,
+tree `94ca99465ff034ece1754ea48bee73501c22c365`, base
+`9d6162438a588793749198116ee6322eb2dbc2c0`. Required native checks 9/9 plus
+C3R-L PASS; automatic exact-head Codex review completed actionable 0/0/0,
+review threads zero, bot thumbs-up 492834874. No manual duplicate review or CI
+rerun. Local final evidence is recorded below. No merge/auto-merge/Ready change.
+
+Last successful delivery boundary read: current main Vercel reports Canceled by
+Ignored Build Step, existing repo hooks API is empty, and supplied screenshots
+show Only build pre-production/no Deploy Hooks. Existing workflow/automation
+source contains no separate merge-linked deploy/promote/hook/apply path.
+Fresh project-settings read remains unavailable: Vercel connector returns 404
+for inverge and lists only another project; browser control failed to initialize
+twice; installed CLI had no credentials and its device-login process was stopped
+immediately without authentication or settings/secret mutation. Do not repeat
+these failed reads unchanged or claim that they establish current project settings.
+
+Integration is held for restoring read-only visibility of the existing inverge
+deployment boundary. Then re-fetch latest head/base/rules/checks/review/threads
+and use the existing conditional code-only pinned squash authority if all gates
+remain satisfied. Do not create another candidate or re-review this same head
+merely for metadata/access recovery. PR #899 body and parent #883 comment
+https://github.com/chachathecat/inverge/issues/883#issuecomment-5572757206
+record this status. Parent #883 and code child #898 remain open.
+
+Genuine reviewer still explicitly unassigned; no Owner auto-registration,
+reviewer/date/approval invention. Six human checks pending, approved/installed
+content zero, no actual local endpoint/account/use or next-day observation.
+Existing private r3/candidate/mapping/AI files are unchanged and not repackaged.
+
 ## Current economics r3 final-use consumer — #883 / code child #898 / 2026-09-07
 
 - #897 code preparation is integrated: reviewed head

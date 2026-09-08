@@ -5,7 +5,7 @@ import { createPrivateFirstStageSessionService,
 
 type Environment = Readonly<Record<string, string | undefined>>;
 type Session = Readonly<{ isAuthenticated: boolean; userId?: string | null; email?: string | null }>;
-export type PrivateContentBlocker = "approved_content_required" | "subject_applicability_implementation_required";
+export type PrivateContentBlocker = "approved_content_required" | "subject_applicability_implementation_required" | "owner_local_trial_content_required";
 
 export interface PrivateSessionApplicationDependencies {
   environment(): Environment;

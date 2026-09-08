@@ -3,6 +3,7 @@ import { readFileSync } from "node:fs";
 import { runInThisContext } from "node:vm";
 import ts from "typescript";
 import * as application from "../../lib/review-os/first-stage/runtime/session-application.ts";
+import * as trialBoundary from "../../lib/review-os/first-stage/runtime/owner-local-trial-boundary.ts";
 import { loadEconomicsContent } from "../../lib/review-os/first-stage/runtime/economics-content.ts";
 import { syntheticContentInput } from "./first-stage-economics-content-harness.mjs";
 import { loadAccountingContent } from "../../lib/review-os/first-stage/runtime/accounting-content.ts";
@@ -22,9 +23,12 @@ export function compilePrivateSource(relative, dependencies, environment = {}) {
       jsx: ts.JsxEmit.ReactJSX },
   }).outputText;
   const loaded = { exports: {} };
+  // Real, browser-safe constants imported by the shared component. All other
+  // boundary substitutions still have to be explicitly declared by each test.
+  const bindings={"@/lib/review-os/first-stage/runtime/owner-local-trial-boundary":trialBoundary,...dependencies};
   runInThisContext(`(function(require,module,exports,process){${compiled}\n})`)(name => {
-    assert.ok(Object.hasOwn(dependencies, name), `undeclared test dependency: ${name}`);
-    return dependencies[name];
+    assert.ok(Object.hasOwn(bindings, name), `undeclared test dependency: ${name}`);
+    return bindings[name];
   }, loaded, loaded.exports, { env: environment, cwd: () => process.cwd() });
   return loaded.exports;
 }

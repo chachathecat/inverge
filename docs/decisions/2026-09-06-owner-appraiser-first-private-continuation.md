@@ -128,6 +128,68 @@ automatic deployment. No check/review/protection bypass is authorized.
 
 ## Separate Owner boundaries and termination
 
+### Human-unreviewed r3 PC-only trial (Owner, 2026-09-08)
+
+The Owner explicitly acknowledged mixing risk and authorized the minimum r3-only
+separation across the common kernel, adapter, session service, loader, storage,
+HTTP/UI, tests and these existing instructions. This narrowly supersedes the
+human-approval-before-any-PC-use prerequisite below, not the reviewed-content
+contract or the Foundation's ordinary final-release requirements. Existing r3
+may be tried by the Owner alone on this PC, visibly human-unreviewed and fallible.
+Six human checks and actual reviewed approvals remain pending/empty; never create
+a reviewer, date, approval receipt or verified/mastery/transfer/measurement result.
+
+Question, feedback, retry lineage and persisted-session schema identities must
+explicitly distinguish this trial. Actual server validation, genuine local auth,
+both Owner allowlists and a live local request scope must reject cross-mode use;
+no client field, type assertion or display-only relabeling grants trial authority.
+Normal reviewed evaluation/key/retry validation stays unchanged. Reuse the same
+durable CAS engine, not a new ledger or synthetic test store. Preserve personal
+records; rollback stops the app/flag and never runs synthetic cleanup.
+
+Historical M4/M5 merge receipts keep their original interface digest. This exact
+Owner exception permits domain.ts, mcq-kernel.ts and subject-adapter.ts changes;
+their new source/interface and regressions require fresh verification, not reuse
+of the old merge's checks. Every other frozen upstream remains unchanged.
+
+Preserve exact r3/candidate/AI/calculation/source bindings and a full 200-position
+official-key observation, including multi-answer rows, without fabricating a
+human-reviewed Foundation receipt. Original answers and each variant's separately
+calculated answer remain distinct. Initially only 46/r46 is implemented as one
+complete small trial unit. Unsupported/insufficient-evidence items are excluded;
+53 normalized transcription and the key's missing explicit A label stay disclosed.
+No repackaging or claim of subject completion follows from candidate installation.
+
+The dedicated local database must have explicit loopback HOST port bindings.
+Inspect both Docker bindings and PC listeners before adding a real account,
+content or learning records; stop on any IPv4/IPv6 wildcard publication.
+Internal container addresses are not host-publication evidence. Preserve existing
+containers/volumes, do not weaken global Docker/firewall settings, and do not
+activate Preview/Production, remote DB, providers, payment or other-user access.
+Genuine login/save/reconnect/retry and real next-day observation remain distinct
+from synthetic or clock-injected tests. Existing conditional exact-head CI/review/
+thread/deployment-boundary merge conditions apply; routine implementation details
+inside this explicit separation need no repeated Owner approval.
+
+The 2026-09-08 gateway follow-up additionally permits fresh trial-only server
+certificate/key generation (CA=false, serverAuth, exact local SAN), minimum
+gateway file permissions, connection-scoped public-certificate trust and genuine
+TLS positive/negative verification. The pre-existing CLI CA-associated private
+key must not be accessed, copied or used to sign. No CA system, global trust
+change, TLS verification bypass, remote credential or additional exposed port is
+authorized. Existing app/host gateway HTTP loopback addresses remain unchanged;
+the gateway's existing internal TLS listener is verified separately, not falsely
+reported as browser HTTPS. Never substitute TLS success for host-port isolation.
+Private keys/configuration stay outside Git, logs, arguments and image layers.
+
+This operational exception permits the exact dedicated persistent local SQL,
+unchanged supported r3 pair installation and genuine local account only after
+Docker AND PC listener isolation passes. Normal approved/installed catalog
+arrays remain empty. Records created by the real authenticated walkthrough are
+explicitly unreviewed trial records, not synthetic fixtures, and must survive
+restart/rollback. No test cleanup may delete them. The actual next-day r46
+observation remains separate from code integration and automated-clock evidence.
+
 ### Economics first PC-local use (Owner follow-up, 2026-09-07)
 
 Reuse the existing economics r3 and supplied AI evidence to prepare the exact

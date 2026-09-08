@@ -51,7 +51,6 @@ export type WorkTrace = Readonly<{
 }>;
 
 export type QuestionReference = Readonly<{
-  schemaVersion: "first_stage.question_reference.v1";
   questionId: string;
   questionVersion: string;
   subjectId: FirstStageSubjectId;
@@ -61,8 +60,14 @@ export type QuestionReference = Readonly<{
   questionNumber: number;
   choiceCount: 5;
   sourceVersionManifestIds: readonly string[];
+}> & Readonly<{
+  schemaVersion: "first_stage.question_reference.v1";
   rightsState: "verified_owner_private" | "verified_cleared";
   currentnessState: "verified_exam_date" | "verified_current";
+} | {
+  schemaVersion: "first_stage.owner_local_trial_question_reference.v1";
+  rightsState: "observed_owner_local_only";
+  currentnessState: "observed_historical_unreviewed";
 }>;
 
 export type AnswerSubmission = Readonly<{
@@ -117,6 +122,13 @@ export type ReviewedFeedbackEvidence = Readonly<{
     | "owner_approved_personal_feedback_reviewer"
     | null;
   modelAlone: false;
+}> | Readonly<{
+  schemaVersion: "first_stage.owner_local_unreviewed_feedback.v1";
+  state: "human_unreviewed_owner_local";
+  receiptReference: null;
+  reviewerIdentity: null;
+  reviewerClass: null;
+  modelAlone: true;
 }>;
 
 export type AttemptEvidenceEnvelope = Readonly<{
@@ -173,7 +185,7 @@ export type Attempt = Readonly<{
   kind: AttemptKind;
   sourceAttemptId: string | null;
   reviewTaskId: string | null;
-  exposureState: "first_exposure" | "repeated_exposure" | "verified_variant";
+  exposureState: "first_exposure" | "repeated_exposure" | "verified_variant" | "unreviewed_local_variant";
   assistanceLevel: "none" | "hint_or_scaffold" | "answer_revealed";
   startedAt: string;
   state: "in_progress" | "evaluated";
@@ -211,7 +223,7 @@ export type IndependentRetryLineageReceipt = Readonly<{
   variantQuestionReferenceSha256: string;
   targetConceptBindingKeys: readonly string[];
   priorRetryCount: number;
-  decision: "verified_variant_for_independent_retry";
+  decision: "verified_variant_for_independent_retry" | "unreviewed_owner_local_practice_retry";
 }>;
 
 export type IndependentRetry = Readonly<{
@@ -348,12 +360,17 @@ export function parseQuestionReference(value: unknown): QuestionReference {
     "examRound", "sessionId", "questionNumber", "choiceCount",
     "sourceVersionManifestIds", "rightsState", "currentnessState",
   ]);
-  if (row.schemaVersion !== "first_stage.question_reference.v1" || row.choiceCount !== 5) fail();
+  const trial = row.schemaVersion === "first_stage.owner_local_trial_question_reference.v1";
+  if ((!trial && row.schemaVersion !== "first_stage.question_reference.v1") || row.choiceCount !== 5) fail();
+  if (trial && (row.rightsState !== "observed_owner_local_only" || row.currentnessState !== "observed_historical_unreviewed" ||
+    row.subjectId !== "economics_principles" || row.examYear !== 2025 || row.examRound !== 36 ||
+    row.sessionId !== "qnet-2025-36-s1-A" || row.questionVersion !== "issue883-economics-r3-runtime-v1" ||
+    ![46, 49, 51, 52, 53].includes(Number(row.questionNumber)) ||
+    ![`qnet-2025-36-s1-A-${row.questionNumber}`, `issue883-r3-r${row.questionNumber}`].includes(String(row.questionId)))) fail();
   if (!Array.isArray(row.sourceVersionManifestIds) || row.sourceVersionManifestIds.length < 1 || row.sourceVersionManifestIds.length > 16) fail();
   const manifests = row.sourceVersionManifestIds.map((item) => requiredIdentifier(item));
   if (new Set(manifests).size !== manifests.length) fail();
   return Object.freeze({
-    schemaVersion: "first_stage.question_reference.v1",
     questionId: requiredIdentifier(row.questionId),
     questionVersion: requiredIdentifier(row.questionVersion),
     subjectId: requiredEnum(row.subjectId, FIRST_STAGE_SUBJECT_IDS),
@@ -363,8 +380,11 @@ export function parseQuestionReference(value: unknown): QuestionReference {
     questionNumber: requiredSafeInteger(row.questionNumber, 1, 200),
     choiceCount: 5,
     sourceVersionManifestIds: Object.freeze(manifests),
-    rightsState: requiredEnum(row.rightsState, ["verified_owner_private", "verified_cleared"] as const),
-    currentnessState: requiredEnum(row.currentnessState, ["verified_exam_date", "verified_current"] as const),
+    ...(trial ? { schemaVersion: "first_stage.owner_local_trial_question_reference.v1" as const,
+      rightsState: "observed_owner_local_only" as const, currentnessState: "observed_historical_unreviewed" as const }
+      : { schemaVersion: "first_stage.question_reference.v1" as const,
+        rightsState: requiredEnum(row.rightsState, ["verified_owner_private", "verified_cleared"] as const),
+        currentnessState: requiredEnum(row.currentnessState, ["verified_exam_date", "verified_current"] as const) }),
   });
 }
 

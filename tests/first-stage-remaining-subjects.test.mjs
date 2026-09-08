@@ -180,7 +180,8 @@ for (const spec of SUBJECT_CASES) {
     assert.doesNotMatch(html, /SYNTHETIC_|correctChoice|EXPLANATION/u);
     const current = component.FirstStagePrivatePractice({ subject: spec.id });
     const other = component.FirstStagePrivatePractice({ subject: "economics_principles" });
-    assert.equal(current.key, spec.id); assert.notEqual(current.key, other.key);
+    assert.equal(current.key, `${spec.id}:false`); assert.notEqual(current.key, other.key);
+    assert.notEqual(other.key, component.FirstStagePrivatePractice({ subject: "economics_principles", ownerLocalTrial: true }).key);
     allowed = false; await assert.rejects(page.default(), /not_found/u); assert.equal(shells, 1);
     assert.ok(remainingCatalogs[spec.id]);
   });

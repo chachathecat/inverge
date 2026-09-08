@@ -1,9 +1,9 @@
 -- PREPARATION ONLY. Not a migration; never run against remote databases.
--- Owner 2026-09-07 permits this dedicated persistent LOCAL design only AFTER
--- actual economics content approval and its exact evidence are secured.
+-- Owner 2026-09-08 also permits the explicitly distinct human-unreviewed r3
+-- personal PC trial. Reviewed stock still requires genuine content approval.
 -- Keep first-stage-private-sessions.sql's synthetic-only guard unchanged.
 -- The operator must first verify a separate loopback-only Supabase instance,
--- its dedicated persistent volume, genuine local Auth and approved stock.
+-- its dedicated persistent volume, genuine local Auth and the exact content lane.
 -- This SQL marker is an accidental-use guard, NOT proof of location or approval.
 -- No learner records may be passed to synthetic test cleanup or reset scripts.
 -- Rollback: disable the local feature/stop the app; PRESERVE database and volume.
@@ -27,7 +27,7 @@ create table if not exists public.first_stage_private_sessions (
   check ((octet_length(payload::text) <= 2097152) is true),
   check ((payload - array['schemaVersion','ownerId','sessionId','catalogDigest','state','commands'] = '{}'::jsonb) is true),
   check ((payload ?& array['schemaVersion','ownerId','sessionId','catalogDigest','state','commands']) is true),
-  check ((payload->>'schemaVersion' = 'first_stage.private_session.v1') is true),
+  check ((payload->>'schemaVersion' in ('first_stage.private_session.v1', 'first_stage.owner_local_trial_session.v1')) is true),
   check ((payload->>'ownerId' = owner_id::text) is true),
   check ((payload->>'sessionId' = session_id) is true),
   check ((payload->>'catalogDigest' ~ '^[0-9a-f]{64}$') is true),

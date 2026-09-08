@@ -16,6 +16,7 @@ import { loadEconomicsContent } from "../lib/review-os/first-stage/runtime/econo
 import { economicsReleaseInput } from "./fixtures/first-stage-economics-applicability-harness.mjs";
 import { accountingCatalog } from "./fixtures/first-stage-accounting-content-harness.mjs";
 import { remainingCatalogs, SUBJECT_CASES } from "./fixtures/first-stage-remaining-content-harness.mjs";
+import { trialHarness, startTrial } from "./fixtures/first-stage-owner-local-trial-harness.mjs";
 import { ORACLE_IMAGE, ORACLE_PLATFORM } from "../scripts/automation/wcv-c3-pre-p-postgresql-security-state-oracle.mjs";
 
 const OWNER = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
@@ -152,7 +153,9 @@ test(`local PostgreSQL ${label} enforces actual route/browser durable retry/CAS 
       await assert.rejects(sql(`set inverge.local_first_stage_design='synthetic_only';\n${design}`, null), { code: "P0001" });
       await sql("set inverge.local_first_stage_design='';", null);
       assert.equal(design.slice(design.indexOf("create table"), design.indexOf("comment on table")),
-        syntheticDesign.slice(syntheticDesign.indexOf("create table"), syntheticDesign.indexOf("comment on table")));
+        syntheticDesign.slice(syntheticDesign.indexOf("create table"), syntheticDesign.indexOf("comment on table"))
+          .replace("payload->>'schemaVersion' = 'first_stage.private_session.v1'",
+            "payload->>'schemaVersion' in ('first_stage.private_session.v1', 'first_stage.owner_local_trial_session.v1')"));
     }
     for (let replay = 0; replay < 2; replay++) {
       await sql((contentInput ? "set inverge.local_first_stage_personal_use='owner_approved_persistent_local';\n"
@@ -235,6 +238,38 @@ test(`local PostgreSQL ${label} enforces actual route/browser durable retry/CAS 
     assert.equal(browserSaved.reviewTasks[0].status, "completed");
     assert.equal(browserSaved.reviewTasks[0].dueAt, browserResult.dueAt);
     assert.equal(await sql(`select count(*) from ${TABLE}`), "2");
+    if(contentInput) {
+      // Same real SDK/repository and disposable PostgreSQL, but the actual trial
+      // loader -> adapter -> HTTP scope; no reviewed catalog substitution.
+      const trial=trialHarness({store:repository(sdk()),session:{userId:OWNER}});
+      const ids=await startTrial(trial);trial.setClock(SUBMIT);
+      const trialCommand={sessionId:ids.sessionId,command:submission(ids.attemptId,2)};
+      loseNextWriteResponse=true;
+      const lostTrial=await trial.send(trialCommand);
+      assert.equal(lostTrial.status,503);assert.equal(lostTrial.body.view,undefined);
+      const retries=await Promise.all([trial.send(trialCommand),trial.send(trialCommand)]);
+      assert.equal(retries[0].status,200);assert.deepEqual(retries[1].body,retries[0].body);
+      const trialSaved=JSON.parse(await sql(`select payload::text from ${TABLE} where session_id=${literal(ids.sessionId)}`));
+      assert.equal(trialSaved.schemaVersion,"first_stage.owner_local_trial_session.v1");
+      assert.equal(trialSaved.state.attempts[0].evaluation.evidenceEnvelope.reviewedFeedback.reviewerIdentity,null);
+      assert.equal(trialSaved.state.reviewTasks.length,1);
+      assert.equal(JSON.stringify(trialSaved).includes("SYNTHETIC_CANDIDATE_EXPLANATION"),false);
+      const reconnect=trialHarness({store:repository(sdk()),session:{userId:OWNER}});
+      const opened=await reconnect.send(undefined,`?sessionId=${ids.sessionId}`);
+      assert.deepEqual(opened.body,retries[0].body);
+      await assert.rejects(reopened.service.view(OWNER,ids.sessionId),{code:"adapter_mismatch"});
+      const task=trialSaved.state.reviewTasks[0];reconnect.setClock(task.dueAt);
+      const trialRetry=await reconnect.send({sessionId:ids.sessionId,command:{action:"retry",requestId:"pg-trial-retry",expectedRevision:3,reviewTaskId:task.reviewTaskId}});
+      assert.equal(trialRetry.status,200);assert.equal(trialRetry.body.view.explanation,null);
+      reconnect.setClock("2026-09-07T10:02:00.000Z");
+      assert.equal((await reconnect.send({sessionId:ids.sessionId,command:{...submission(trialRetry.body.view.attempt.attemptId,4),requestId:"pg-trial-retry-submit",expectedRevision:4}})).status,200);
+      const after=await trial.send(trialCommand);
+      assert.equal(after.body.view.reviewTasks[0].status,"completed");assert.equal(after.body.view.reviewTasks[0].dueAt,task.dueAt);
+      assert.equal(after.body.view.humanReviewComplete,false);assert.equal(after.body.view.measurementEvidence,false);
+      assert.equal(after.body.view.masteryClaim,false);assert.equal(after.body.view.transferEvidence,false);
+      assert.equal(await sql(`select count(*) from ${TABLE}`),"3");
+      process.stdout.write("trial isolated PG: actual loader/HTTP/repository, lost durable response, concurrent replay, reconnect, D+1 and reviewed-mixing denial passed; synthetic only\n");
+    }
     process.stdout.write(JSON.stringify({ subject, browser: "passed", screenshot: browserResult.screenshot,
       externalRequests: browserResult.externalRequests, browserErrors: browserResult.browserErrors }) + "\n");
     await sql(`delete from auth.users where id in (${literal(OWNER)},${literal(OTHER)})`, null);

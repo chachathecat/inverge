@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import type { ChoiceId, Confidence, FirstStageSubjectId, WorkTraceStep } from "@/lib/review-os/first-stage/kernel/domain";
 import type { PrivateFirstStageSessionView } from "@/lib/review-os/first-stage/runtime/session-service";
 import type { PrivateContentBlocker } from "@/lib/review-os/first-stage/runtime/session-application";
+import { OWNER_LOCAL_R3_TRIAL_NOTICE } from "@/lib/review-os/first-stage/runtime/owner-local-trial-boundary";
 
 type Availability = { state: "available" | "blocked";
   blocker: PrivateContentBlocker | null;
@@ -13,11 +14,12 @@ type Payload = { ok: boolean; error?: string; view?: PrivateFirstStageSessionVie
 const requestId = () => `request-${crypto.randomUUID()}`;
 const BUTTON = "rounded-xl bg-slate-950 px-5 py-3 text-sm font-semibold text-white disabled:opacity-50";
 const BLOCKER_MESSAGES: Record<PrivateContentBlocker, string> = {
+  owner_local_trial_content_required: "사용 불가 — PC 전용 r3 시험 문항의 설치·출처·정답·계산 근거가 충족되지 않았습니다. 사람 검토 승인과는 별개입니다.",
   approved_content_required: "사용 불가 — 권리·정답·인적 검토가 승인된 콘텐츠가 아직 없습니다. 개발 후보나 합성 자료는 학습 재고가 아닙니다.",
   subject_applicability_implementation_required: "사용 불가 — 이 과목의 적용시점·과목별 검토 증빙을 확인하는 기능이 미구현입니다. 콘텐츠 승인만으로 사용할 수 없습니다.",
 };
 function isContentBlocker(value: string | undefined): value is PrivateContentBlocker {
-  return value === "approved_content_required" || value === "subject_applicability_implementation_required";
+  return value === "approved_content_required" || value === "subject_applicability_implementation_required" || value === "owner_local_trial_content_required";
 }
 const SUBJECTS = {
   economics_principles: { label: "경제학", api: "/api/review-os/first-stage/sessions" },
@@ -28,15 +30,16 @@ const SUBJECTS = {
 } as const;
 
 /** No initial question/answer props: all private projections come from the guarded HTTP route. */
-export function FirstStagePrivatePractice({ subject = "economics_principles" }: {
+export function FirstStagePrivatePractice({ subject = "economics_principles", ownerLocalTrial = false }: {
   subject?: FirstStageSubjectId;
+  ownerLocalTrial?: boolean;
 } = {}) {
   // Changing subjects must not reuse another subject's pending intent or display.
-  return <PrivatePracticeSession key={subject} subject={subject} />;
+  return <PrivatePracticeSession key={`${subject}:${ownerLocalTrial}`} subject={subject} ownerLocalTrial={ownerLocalTrial} />;
 }
 
-function PrivatePracticeSession({ subject }: { subject: FirstStageSubjectId }) {
-  const API = SUBJECTS[subject].api;
+function PrivatePracticeSession({ subject, ownerLocalTrial }: { subject: FirstStageSubjectId; ownerLocalTrial: boolean }) {
+  const API = ownerLocalTrial ? "/api/review-os/first-stage/economics-trial/sessions" : SUBJECTS[subject].api;
   const [view, setView] = useState<PrivateFirstStageSessionView | null>(null);
   const [availability, setAvailability] = useState<Availability | null>(null);
   const [busy, setBusy] = useState(true);
@@ -156,7 +159,8 @@ function PrivatePracticeSession({ subject }: { subject: FirstStageSubjectId }) {
   return <main className="mx-auto w-full max-w-2xl px-5 py-10">
     <section className="rounded-3xl border border-slate-200 bg-white p-7 shadow-sm">
       <p className="text-xs font-semibold text-slate-500">Owner private · default off</p>
-      <h1 className="mt-3 text-2xl font-bold text-slate-950">{SUBJECTS[subject].label} 비공개 연습</h1>
+      <h1 className="mt-3 text-2xl font-bold text-slate-950">{SUBJECTS[subject].label} {ownerLocalTrial ? "미검토 로컬 시험" : "비공개 연습"}</h1>
+      {ownerLocalTrial && <p role="note" className="mt-5 rounded-xl border border-amber-300 bg-amber-50 p-4 text-sm">{OWNER_LOCAL_R3_TRIAL_NOTICE}</p>}
       <p className="mt-3 text-sm text-slate-600">먼저 응답하고, 저장된 결과의 해설과 다음 복습을 확인합니다.</p>
       <div className="mt-6 space-y-5" aria-live="polite" aria-busy={busy}>
         {busy && <p>서버 기록을 확인하고 있습니다.</p>}
@@ -164,7 +168,7 @@ function PrivatePracticeSession({ subject }: { subject: FirstStageSubjectId }) {
         {unavailable && <p>{BLOCKER_MESSAGES[availability.blocker ?? "approved_content_required"]}</p>}
         {!busy && !error && !view && availability?.state === "available" &&
           availability.questions.map((item) => <button key={item.questionId} type="button" className={BUTTON}
-            onClick={() => create(item.questionId)}>검토된 {item.questionNumber}번 시작</button>)}
+            onClick={() => create(item.questionId)}>{ownerLocalTrial ? "사람 미검토 시험용" : "검토된"} {item.questionNumber}번 시작</button>)}
         {!busy && view?.nextQuestionId && <button type="button" className={BUTTON}
           onClick={() => command("begin", { questionId: view.nextQuestionId })}>문제 열고 먼저 풀기</button>}
         {view?.question && <form onSubmit={(event) => {
@@ -195,7 +199,8 @@ function PrivatePracticeSession({ subject }: { subject: FirstStageSubjectId }) {
         </form>}
         {view?.explanation && <section aria-label="저장된 응답 해설" className="space-y-3 rounded-xl bg-slate-50 p-5">
           <h2 className="font-semibold">저장된 응답의 학습 참고 해설</h2>
-          <p>{view.attempt?.decision === "correct" ? "이번 응답: 정답" : view.attempt?.decision === "incorrect" ? "이번 응답: 오답" : "응답 상태 확인 필요"}</p>
+          <p>{ownerLocalTrial ? (view.attempt?.decision === "correct" ? "제시된 검토 전 답과 일치" : "제시된 검토 전 답과 불일치")
+            : view.attempt?.decision === "correct" ? "이번 응답: 정답" : view.attempt?.decision === "incorrect" ? "이번 응답: 오답" : "응답 상태 확인 필요"}</p>
           <p className="whitespace-pre-wrap">{view.explanation.text}</p>
           {view.explanation.attributions?.map((text, index) => <p key={index} className="whitespace-pre-wrap text-xs" data-content-attribution="feedback">{text}</p>)}
           <p className="text-xs">{view.explanation.sourceStatus} · 공식 해설이나 숙달 판정이 아닙니다.</p>
@@ -204,7 +209,7 @@ function PrivatePracticeSession({ subject }: { subject: FirstStageSubjectId }) {
           {task.status === "completed" ? <p>이 복습 처리 완료 — 학습 성공·숙달 판정과는 별개입니다.</p> :
             task.status === "retry_active" ? <p>독립 재시도 진행 중 — 위 문제를 이어서 풀어주세요.</p> : <>
               <p>복습 예정 시각: <time dateTime={task.dueAt}>{task.dueAt}</time></p>
-              {task.retryAvailability === "exhausted" ? <p>복습 필요 — 검토된 새 재시도 문항이 부족합니다. 현재 기록은 보존됩니다.</p> :
+              {task.retryAvailability === "exhausted" ? <p>복습 필요 — {ownerLocalTrial ? "시험용" : "검토된"} 새 재시도 문항이 부족합니다. 현재 기록은 보존됩니다.</p> :
               <button type="button" className={`${BUTTON} mt-3`} disabled={busy || !task.canStartRetry}
                 onClick={() => command("retry", { reviewTaskId: task.reviewTaskId })}>예정 시각 이후 새 문제로 복습</button>}
               {task.retryAvailability === "available" && !task.canStartRetry && !view.question &&
