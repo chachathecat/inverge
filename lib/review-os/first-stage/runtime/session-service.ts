@@ -1,4 +1,6 @@
 import crypto from "node:crypto";
+import { activeOwnerLocalR3TrialAdapter } from "./owner-local-trial-context";
+import { OWNER_LOCAL_R3_TRIAL_NOTICE } from "./owner-local-trial-boundary";
 
 import {
   FirstStageKernelError,
@@ -27,7 +29,7 @@ export type PrivateSessionCommand = Readonly<{
 
 /** Bodyless private learning state, never a question/reference body store. */
 export type PrivateFirstStageSession = Readonly<{
-  schemaVersion: "first_stage.private_session.v1";
+  schemaVersion: "first_stage.private_session.v1" | "first_stage.owner_local_trial_session.v1";
   sessionId: string;
   ownerId: string;
   catalogDigest: string;
@@ -85,10 +87,17 @@ export function createPrivateFirstStageSessionService(
   now: () => string = () => new Date().toISOString(),
 ) {
   if (!/^[0-9a-f]{64}$/u.test(catalog.digest)) fail("adapter_mismatch");
+  function isTrial() {
+    return catalog.initialReferences.length === 1 && activeOwnerLocalR3TrialAdapter(
+      catalog.registry.require(catalog.initialReferences[0].subjectId));
+  }
+  function sessionSchema() {
+    return isTrial() ? "first_stage.owner_local_trial_session.v1" as const : "first_stage.private_session.v1" as const;
+  }
 
   function validate(value: PrivateFirstStageSession, ownerId: string, sessionId: string) {
     exactObject(value, ["schemaVersion", "sessionId", "ownerId", "catalogDigest", "state", "commands"]);
-    if (value.schemaVersion !== "first_stage.private_session.v1" ||
+    if (value.schemaVersion !== sessionSchema() ||
       value.ownerId !== ownerId || value.sessionId !== sessionId ||
       value.catalogDigest !== catalog.digest ||
       value.state.examCycle.examCycleId !== sessionId ||
@@ -150,7 +159,7 @@ export function createPrivateFirstStageSessionService(
     const state = createExamCycleState({ examCycleId: sessionId, ownerId,
       mode: "today", questionReferences: references });
     const value: PrivateFirstStageSession = {
-      schemaVersion: "first_stage.private_session.v1", sessionId, ownerId,
+      schemaVersion: sessionSchema(), sessionId, ownerId,
       catalogDigest: catalog.digest, state,
       commands: [{ requestId, requestDigest, resultingRevision: state.revision }],
     };
@@ -220,9 +229,11 @@ export function createPrivateFirstStageSessionService(
     const active = saved.state.attempts.find((item) => item.state === "in_progress");
     const latest = saved.state.attempts.at(-1);
     const currentTime = Date.parse(requiredUtcInstant(now()));
+    const trial = isTrial();
     // Construct reference assistance only from a durably evaluated attempt.
     const explanation = !active && latest?.state === "evaluated" &&
-      latest.evaluation?.evidenceEnvelope.reviewedFeedback.state === "reviewed_available"
+      (latest.evaluation?.evidenceEnvelope.reviewedFeedback.state === "reviewed_available" ||
+        (trial && latest.evaluation?.evidenceEnvelope.reviewedFeedback.state === "human_unreviewed_owner_local"))
       ? catalog.explanation(latest.questionReference) : null;
     return {
       sessionId, revision: saved.state.revision, state: saved.state.examCycle.state,
@@ -244,6 +255,8 @@ export function createPrivateFirstStageSessionService(
             currentTime >= Date.parse(task.dueAt) };
       }),
       masteryClaim: false as const, transferEvidence: false as const,
+      ...(trial ? { contentStatus: "human_unreviewed_owner_local" as const,
+        notice: OWNER_LOCAL_R3_TRIAL_NOTICE, humanReviewComplete: false as const, measurementEvidence: false as const } : {}),
     };
   }
 

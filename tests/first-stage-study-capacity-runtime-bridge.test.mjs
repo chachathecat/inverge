@@ -173,13 +173,24 @@ function expectBridgeCode(fn, code) {
     error instanceof FirstStageCapacityBridgeError && error.code === code);
 }
 
-test("binds M5 to the validated M4 receipt and preserves every frozen upstream", () => {
+test("preserves M5's historical M4 receipt and frozen upstream outside the exact Owner r3 core exception", () => {
   const contract = JSON.parse(read("config/dabangil-first-stage-study-capacity-runtime-bridge-v1.json"));
   assert.equal(contract.milestone, "M5_STUDY_CAPACITY_RUNTIME_BRIDGE");
   assert.equal(contract.validatedKernelDependency.pullRequest, 842);
   assert.equal(contract.validatedKernelDependency.resultingMainSha, integrationBase);
   assert.equal(contract.validatedKernelDependency.resultingMainTree, "268de11f1ca7f0a7c0453020bcbf2681217821c1");
-  assert.equal(contract.validatedKernelDependency.subjectAdapterInterfaceDigest, SUBJECT_ADAPTER_V1_INTERFACE_DIGEST);
+  const historicalKernel=JSON.parse(execFileSync("git",["show",`${integrationBase}:config/dabangil-first-stage-common-mcq-kernel-v1.json`],{cwd:root,encoding:"utf8"}));
+  assert.equal(contract.validatedKernelDependency.subjectAdapterInterfaceDigest,historicalKernel.subjectAdapterFreeze.interfaceDigest);
+  // A past merge's interface/check evidence is not evidence for today's source.
+  // Owner 2026-09-08 explicitly authorized these directly coupled trial changes;
+  // current interface/source integrity and normal behavior have their own tests.
+  const currentKernel=JSON.parse(read("config/dabangil-first-stage-common-mcq-kernel-v1.json"));
+  assert.equal(currentKernel.subjectAdapterFreeze.interfaceDigest,SUBJECT_ADAPTER_V1_INTERFACE_DIGEST);
+  assert.ok(currentKernel.ownerLocalR3TrialException);
+  const authorizedCorePaths=["lib/review-os/first-stage/kernel/domain.ts","lib/review-os/first-stage/kernel/mcq-kernel.ts",
+    "lib/review-os/first-stage/subject-adapter/subject-adapter.ts"];
+  const actual=execFileSync("git",["diff","--name-only",integrationBase,"--","lib/review-os/first-stage/kernel","lib/review-os/first-stage/subject-adapter"],{cwd:root,encoding:"utf8"}).trim().split(/\r?\n/u).filter(Boolean);
+  assert.deepEqual(actual.sort(),authorizedCorePaths.sort());
   assert.equal(contract.runtimeBoundary.persistenceMutation, false);
   assert.equal(contract.runtimeBoundary.remoteSupabaseMutation, false);
   assert.equal(contract.runtimeBoundary.productionMutation, false);
@@ -208,6 +219,9 @@ test("binds M5 to the validated M4 receipt and preserves every frozen upstream",
     "diff", "--quiet", integrationBase, "--",
     "lib/review-os/first-stage/kernel",
     "lib/review-os/first-stage/subject-adapter",
+    ":(exclude)lib/review-os/first-stage/kernel/domain.ts",
+    ":(exclude)lib/review-os/first-stage/kernel/mcq-kernel.ts",
+    ":(exclude)lib/review-os/first-stage/subject-adapter/subject-adapter.ts",
     "lib/review-os/study-capacity-life-mode-orchestrator.ts",
     "config/dabangil-study-capacity-life-mode-orchestrator-v1.json",
     "docs/decisions/2026-08-24-owner-study-capacity-life-mode-orchestrator.md",

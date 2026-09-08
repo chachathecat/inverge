@@ -1,4 +1,6 @@
 import crypto from "node:crypto";
+import { activeOwnerLocalR3TrialAdapter, authorizeOwnerLocalR3TrialAdapter } from "../runtime/owner-local-trial-context";
+import { isOwnerLocalR3TrialAdapter } from "../runtime/owner-local-trial-boundary";
 
 import {
   CHOICE_IDS,
@@ -49,8 +51,8 @@ export type McqQuestionPresentation = Readonly<{
   questionReference: QuestionReference;
   stem: string;
   choices: readonly McqChoicePresentation[];
-  sourceStatusLabel: "verified_owner_private" | "verified_cleared";
-  currentnessStatusLabel: "verified_exam_date" | "verified_current";
+  sourceStatusLabel: QuestionReference["rightsState"];
+  currentnessStatusLabel: QuestionReference["currentnessState"];
   learningReferenceDisclaimer: true;
 }>;
 
@@ -119,7 +121,7 @@ export const SUBJECT_ADAPTER_V1_INTERFACE_DESCRIPTOR = deepFreeze({
     {
       path: "lib/review-os/first-stage/kernel/domain.ts",
       normalization: "utf8_lf",
-      sha256: "3df7bd48e24949d746f30a62d3031e68df4f1b6116d2731006d998599a4ff2e7",
+      sha256: "93c3384605ec830d3554ca23dfeec270610598c9e15b1099da7b05fb46577faa",
       covers: [
         "QuestionReference", "Attempt", "AnswerSubmission", "Confidence",
         "ElapsedTime", "WorkTrace", "WorkTraceStep", "ErrorCause", "ConceptBinding",
@@ -138,7 +140,7 @@ export const SUBJECT_ADAPTER_V1_INTERFACE_DESCRIPTOR = deepFreeze({
         endMarker: "/* SUBJECT_ADAPTER_V1_TYPE_SOURCE_END */",
         markersExcluded: true,
       },
-      sha256: "dcd540526ca2bf61638bfdeb1e7a5824ebdf843c7f62270b71ac34a764c83125",
+      sha256: "d9b576ce16321e02b8dfacac9ff6f187fa5dc1003fe73b557986c5eac6c7d69f",
       covers: [
         "SUBJECT_ADAPTER_SCHEMA_VERSION", "McqChoicePresentation",
         "McqQuestionPresentation", "SubjectEvaluationInput", "IndependentRetryInput",
@@ -266,10 +268,10 @@ export const SUBJECT_ADAPTER_V1_INTERFACE_DESCRIPTOR = deepFreeze({
     ]),
     errorCauses: exactValues<ErrorCause>()(ERROR_CAUSES),
     questionRightsStates: exactValues<QuestionReference["rightsState"]>()([
-      "verified_owner_private", "verified_cleared",
+      "verified_owner_private", "verified_cleared", "observed_owner_local_only",
     ]),
     questionCurrentnessStates: exactValues<QuestionReference["currentnessState"]>()([
-      "verified_exam_date", "verified_current",
+      "verified_exam_date", "verified_current", "observed_historical_unreviewed",
     ]),
     attemptKinds: exactValues<AttemptKind>()(["initial", "independent_retry"]),
     attemptEvaluationDecisions: exactValues<AttemptEvaluationDecision>()([
@@ -280,13 +282,13 @@ export const SUBJECT_ADAPTER_V1_INTERFACE_DESCRIPTOR = deepFreeze({
     ]),
     conceptBindingRoles: exactValues<ConceptBinding["role"]>()(["primary", "supporting"]),
     reviewedFeedbackStates: exactValues<ReviewedFeedbackEvidence["state"]>()([
-      "reviewed_available", "withheld_rights_or_version", "not_emitted_unavailable",
+      "reviewed_available", "withheld_rights_or_version", "not_emitted_unavailable", "human_unreviewed_owner_local",
     ]),
     reviewerClasses: exactValues<Exclude<ReviewedFeedbackEvidence["reviewerClass"], null>>()([
       "named_owner_authorized_human_reviewer", "owner_approved_personal_feedback_reviewer",
     ]),
     attemptExposureStates: exactValues<Attempt["exposureState"]>()([
-      "first_exposure", "repeated_exposure", "verified_variant",
+      "first_exposure", "repeated_exposure", "verified_variant", "unreviewed_local_variant",
     ]),
     assistanceLevels: exactValues<Attempt["assistanceLevel"]>()([
       "none", "hint_or_scaffold", "answer_revealed",
@@ -303,7 +305,7 @@ export const SUBJECT_ADAPTER_V1_INTERFACE_DESCRIPTOR = deepFreeze({
     ]),
     independentRetryLineageDecisions:
       exactValues<IndependentRetryLineageReceipt["decision"]>()([
-        "verified_variant_for_independent_retry",
+        "verified_variant_for_independent_retry", "unreviewed_owner_local_practice_retry",
       ]),
   },
   invariants: [
@@ -331,7 +333,7 @@ export const SUBJECT_ADAPTER_V1_INTERFACE_DESCRIPTOR = deepFreeze({
 // SHA-256 over RFC-8785-equivalent recursively-key-sorted JSON for the exact
 // descriptor above. The focused contract test recomputes and binds this value.
 export const SUBJECT_ADAPTER_V1_INTERFACE_DIGEST =
-  "f7e134498ad65b9ae2bc10c4570949cae7ca71d2038aa493f6485247b5dfc00a" as const;
+  "d48bfa6492b3e450cb20ba1f857fc6e5a70d8ac53ffd824cdd3a56a810e778f4" as const;
 
 function fail(): never {
   throw new FirstStageKernelError("adapter_mismatch");
@@ -356,6 +358,7 @@ function sameReference(left: QuestionReference, right: QuestionReference) {
 }
 
 export function assertAdapterIdentity(adapter: SubjectAdapterV1) {
+  if (isOwnerLocalR3TrialAdapter(adapter) && !activeOwnerLocalR3TrialAdapter(adapter)) fail();
   const exactKeys = [
     "schemaVersion", "adapterId", "adapterVersion", "subjectId",
     "assertQuestionReference", "presentQuestion", "evaluateSubmission",
@@ -376,12 +379,18 @@ export function assertAdapterIdentity(adapter: SubjectAdapterV1) {
   ) fail();
 }
 
+function assertQuestionMode(adapter: SubjectAdapterV1, reference: QuestionReference) {
+  const trial = reference.schemaVersion === "first_stage.owner_local_trial_question_reference.v1";
+  if (trial !== isOwnerLocalR3TrialAdapter(adapter) || (trial && !activeOwnerLocalR3TrialAdapter(adapter))) fail();
+}
+
 export function validatePresentation(
   adapter: SubjectAdapterV1,
   reference: QuestionReference,
   value: unknown,
 ): McqQuestionPresentation {
   assertAdapterIdentity(adapter);
+  assertQuestionMode(adapter, reference);
   if (reference.subjectId !== adapter.subjectId) fail();
   const row = exactObject(value, [
     "schemaVersion", "questionReference", "stem", "choices", "sourceStatusLabel",
@@ -482,10 +491,16 @@ function parseEvidenceEnvelope(
     "schemaVersion", "state", "receiptReference", "reviewerIdentity",
     "reviewerClass", "modelAlone",
   ]);
+  const localTrial = isOwnerLocalR3TrialAdapter(adapter);
+  if (localTrial && (!activeOwnerLocalR3TrialAdapter(adapter) ||
+    feedback.schemaVersion !== "first_stage.owner_local_unreviewed_feedback.v1" ||
+    feedback.state !== "human_unreviewed_owner_local" || feedback.modelAlone !== true ||
+    feedback.receiptReference !== null || feedback.reviewerIdentity !== null || feedback.reviewerClass !== null)) fail();
   if (
+    !localTrial && (
     feedback.schemaVersion !== "first_stage.reviewed_feedback_evidence.v1" ||
     !["reviewed_available", "withheld_rights_or_version", "not_emitted_unavailable"].includes(String(feedback.state)) ||
-    feedback.modelAlone !== false
+    feedback.modelAlone !== false)
   ) fail();
   const reviewedAvailable = feedback.state === "reviewed_available";
   const unreviewed = decision === "unavailable" || decision === "withheld";
@@ -493,7 +508,7 @@ function parseEvidenceEnvelope(
     ? "not_emitted_unavailable"
     : decision === "withheld"
       ? "withheld_rights_or_version"
-      : "reviewed_available";
+      : localTrial ? "human_unreviewed_owner_local" : "reviewed_available";
   if (
     feedback.state !== requiredFeedbackState ||
     reviewedAvailable !== (feedback.receiptReference !== null) ||
@@ -507,7 +522,10 @@ function parseEvidenceEnvelope(
       "owner_approved_personal_feedback_reviewer",
     ].includes(String(feedback.reviewerClass))
   ) fail();
-  const reviewedFeedback = Object.freeze({
+  const reviewedFeedback: ReviewedFeedbackEvidence = localTrial ? Object.freeze({
+    schemaVersion: "first_stage.owner_local_unreviewed_feedback.v1", state: "human_unreviewed_owner_local",
+    receiptReference: null, reviewerIdentity: null, reviewerClass: null, modelAlone: true,
+  }) : Object.freeze({
     schemaVersion: "first_stage.reviewed_feedback_evidence.v1" as const,
     state: feedback.state as "reviewed_available" | "withheld_rights_or_version" | "not_emitted_unavailable",
     receiptReference: reviewedAvailable ? parseEvidenceReference(feedback.receiptReference) : null,
@@ -523,7 +541,7 @@ function parseEvidenceEnvelope(
     ? null : parseEvidenceReference(row.choiceSetReference);
   if (
     (unreviewed && (reviewedAvailable || officialKeyReference !== null || choiceSetReference !== null)) ||
-    (!unreviewed && (!reviewedAvailable || !officialKeyReference || !choiceSetReference))
+    (!unreviewed && (!(reviewedAvailable || localTrial) || !officialKeyReference || !choiceSetReference))
   ) fail();
   return Object.freeze({
     schemaVersion: "first_stage.attempt_evidence_envelope.v1" as const,
@@ -562,6 +580,7 @@ export function validateAttemptEvaluation(
   value: unknown,
 ): AttemptEvaluation {
   assertAdapterIdentity(adapter);
+  assertQuestionMode(adapter, input.questionReference);
   if (
     input.schemaVersion !== "first_stage.subject_evaluation_input.v1" ||
     input.questionReference.subjectId !== adapter.subjectId ||
@@ -668,6 +687,9 @@ export class SubjectAdapterRegistry {
       evaluateSubmission: adapter.evaluateSubmission.bind(adapter),
       buildIndependentRetry: adapter.buildIndependentRetry.bind(adapter),
     });
+    // Only a previously authorized source object can authorize its frozen
+    // registry snapshot, and only while the authenticated local request is open.
+    if (activeOwnerLocalR3TrialAdapter(adapter)) authorizeOwnerLocalR3TrialAdapter(snapshot);
     this.#adapters.set(snapshot.subjectId, snapshot);
     return this;
   }

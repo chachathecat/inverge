@@ -1,4 +1,5 @@
 import crypto from "node:crypto";
+import { activeOwnerLocalR3TrialAdapter } from "../runtime/owner-local-trial-context";
 
 import {
   FIRST_STAGE_KERNEL_SCHEMA_VERSION,
@@ -156,7 +157,7 @@ function validateKernelState(
       canonicalJson(reference) !== canonicalJson(attempt.questionReference) ||
       !["initial", "independent_retry"].includes(attempt.kind) ||
       !["in_progress", "evaluated"].includes(attempt.state) ||
-      !["first_exposure", "repeated_exposure", "verified_variant"].includes(attempt.exposureState) ||
+      !["first_exposure", "repeated_exposure", "verified_variant", "unreviewed_local_variant"].includes(attempt.exposureState) ||
       !["none", "hint_or_scaffold", "answer_revealed"].includes(attempt.assistanceLevel)
     ) throw new FirstStageKernelError("invalid_input");
     if (attempt.kind === "initial") {
@@ -174,7 +175,7 @@ function validateKernelState(
     } else if (
       requiredIdentifier(attempt.sourceAttemptId) !== attempt.sourceAttemptId ||
       requiredIdentifier(attempt.reviewTaskId) !== attempt.reviewTaskId ||
-      attempt.exposureState !== "verified_variant" ||
+      attempt.exposureState !== (activeOwnerLocalR3TrialAdapter(adapter) ? "unreviewed_local_variant" : "verified_variant") ||
       attempt.assistanceLevel !== "none"
     ) throw new FirstStageKernelError("invalid_input");
     if (attempt.state === "in_progress") {
@@ -366,7 +367,7 @@ function validateKernelState(
       retry.assistanceLevel !== "none" ||
       !["active", "succeeded", "failed"].includes(retry.outcome) ||
       receipt.schemaVersion !== "first_stage.independent_retry_lineage_receipt.v1" ||
-      receipt.decision !== "verified_variant_for_independent_retry" ||
+      receipt.decision !== (activeOwnerLocalR3TrialAdapter(adapter) ? "unreviewed_owner_local_practice_retry" : "verified_variant_for_independent_retry") ||
       retry.adapterId !== receipt.adapterId ||
       retry.adapterVersion !== receipt.adapterVersion ||
       retry.adapterId !== adapter.adapterId ||
@@ -392,7 +393,7 @@ function validateKernelState(
       retryAttempt.sourceAttemptId !== sourceAttempt.attemptId ||
       retryAttempt.reviewTaskId !== task.reviewTaskId ||
       retryAttempt.examCycleId !== task.examCycleId ||
-      retryAttempt.exposureState !== "verified_variant" ||
+      retryAttempt.exposureState !== (activeOwnerLocalR3TrialAdapter(adapter) ? "unreviewed_local_variant" : "verified_variant") ||
       retryAttempt.assistanceLevel !== "none" ||
       retryAttempt.startedAt !== retry.startedAt ||
       state.attempts.indexOf(sourceAttempt) >= state.attempts.indexOf(retryAttempt) ||
@@ -1180,7 +1181,7 @@ export function beginIndependentRetry(
     !Array.isArray(lineage.targetConceptBindingKeys) ||
     JSON.stringify(lineage.targetConceptBindingKeys) !== JSON.stringify(targetConceptBindingKeys) ||
     lineage.priorRetryCount !== priorRetries.length ||
-    lineage.decision !== "verified_variant_for_independent_retry"
+    lineage.decision !== (activeOwnerLocalR3TrialAdapter(adapter) ? "unreviewed_owner_local_practice_retry" : "verified_variant_for_independent_retry")
   ) throw new FirstStageKernelError("adapter_mismatch");
   if (
     retryReference.subjectId !== adapter.subjectId ||
@@ -1219,7 +1220,7 @@ export function beginIndependentRetry(
     variantQuestionReferenceSha256: questionReferenceSha256(retryReference),
     targetConceptBindingKeys: Object.freeze(targetConceptBindingKeys),
     priorRetryCount: priorRetries.length,
-    decision: "verified_variant_for_independent_retry" as const,
+    decision: activeOwnerLocalR3TrialAdapter(adapter) ? "unreviewed_owner_local_practice_retry" as const : "verified_variant_for_independent_retry" as const,
   });
   const retryAttempt: Attempt = Object.freeze({
     schemaVersion: "first_stage.attempt.v1",
@@ -1229,7 +1230,7 @@ export function beginIndependentRetry(
     kind: "independent_retry",
     sourceAttemptId: sourceAttempt.attemptId,
     reviewTaskId: task.reviewTaskId,
-    exposureState: "verified_variant",
+    exposureState: activeOwnerLocalR3TrialAdapter(adapter) ? "unreviewed_local_variant" : "verified_variant",
     assistanceLevel: "none",
     startedAt,
     state: "in_progress",
