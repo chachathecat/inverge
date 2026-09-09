@@ -104,6 +104,7 @@ export async function verifyPrivateBrowser({ route, clock, failNextWrite, subjec
     }
     await page.getByRole("button", { name: "문제 열고 먼저 풀기" }).click();
     assert.equal(await page.getByRole("region", { name: "저장된 응답 해설" }).count(), 0);
+    assert.equal(await page.getByRole("region", { name: "서버에 저장된 내 응답" }).count(), 0);
     if (expectedAttributions) {
       await page.locator('[data-content-attribution="question"]').first().waitFor();
       assert.deepEqual(await page.locator('[data-content-attribution="question"]').allTextContents(), expectedAttributions.question);
@@ -116,31 +117,41 @@ export async function verifyPrivateBrowser({ route, clock, failNextWrite, subjec
     await page.getByRole("button", { name: "응답 저장 후 해설 확인" }).click();
     await page.getByRole("button", { name: "같은 요청 다시 확인" }).waitFor();
     assert.equal(await page.getByRole("region", { name: "저장된 응답 해설" }).count(), 0);
+    assert.equal(await page.getByRole("region", { name: "서버에 저장된 내 응답" }).count(), 0);
     await page.getByRole("button", { name: "같은 요청 다시 확인" }).click();
     await page.getByRole("region", { name: "저장된 응답 해설" }).waitFor();
+    const recap=page.getByRole("region",{name:"서버에 저장된 내 응답"});
+    assert.match(await recap.innerText(),/제출 선택: 1번/);
+    assert.match(await recap.innerText(),/이전 선택 2번에서 변경/);
+    const submittedAt=await recap.locator("time").getAttribute("datetime");
     if (expectedAttributions) assert.deepEqual(await page.locator('[data-content-attribution="feedback"]').allTextContents(), expectedAttributions.feedback);
     const reconnectUrl = page.url();
     const sessionId = new URL(reconnectUrl).searchParams.get("sessionId");
     assert.ok(sessionId);
-    const dueAt = await page.locator("time").getAttribute("datetime");
+    const dueAt = await page.locator("time[data-review-due-at]").getAttribute("datetime");
     const retryButton = page.getByRole("button", { name: "예정 시각 이후 새 문제로 복습" });
     assert.equal(await retryButton.isDisabled(), true);
     await retryButton.evaluate(button => button.click());
     assert.equal(await page.getByRole("region", { name: "저장된 응답 해설" }).count(), 1);
     await page.reload();
     await page.getByRole("region", { name: "저장된 응답 해설" }).waitFor();
-    assert.equal(await page.locator("time").getAttribute("datetime"), dueAt);
+    assert.equal(await page.locator("time[data-review-due-at]").getAttribute("datetime"), dueAt);
+    assert.match(await recap.innerText(),/제출 선택: 1번/);
+    assert.equal(await recap.locator("time").getAttribute("datetime"),submittedAt);
     clock.set(dueAt);
     await page.reload();
     await page.getByRole("region", { name: "저장된 응답 해설" }).waitFor();
     assert.equal(await retryButton.isEnabled(), true);
     await page.getByRole("button", { name: "예정 시각 이후 새 문제로 복습" }).click();
+    assert.equal(await recap.count(),0);
     await page.getByRole("radio").nth(retryChoice - 1).check();
     clock.advance(60_000);
     await page.getByRole("button", { name: "응답 저장 후 해설 확인" }).click();
     await page.getByText("이 복습 처리 완료 — 학습 성공·숙달 판정과는 별개입니다.").waitFor();
     await page.reload();
     await page.getByText("이 복습 처리 완료 — 학습 성공·숙달 판정과는 별개입니다.").waitFor();
+    assert.ok((await recap.innerText()).includes(`제출 선택: ${retryChoice}번`));
+    assert.notEqual(await recap.locator("time").getAttribute("datetime"),submittedAt);
     assert.equal(await page.getByRole("button", { name: "예정 시각 이후 새 문제로 복습" }).count(), 0);
     if (ownerLocalTrial) {
       const popupPromise=context.waitForEvent("page");

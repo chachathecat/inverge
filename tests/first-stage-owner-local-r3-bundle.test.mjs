@@ -249,7 +249,15 @@ test("fixed observation pins preserve the pre-pin 49 saved row and response iden
   assert.equal(saved.status,200);
   const expectedRow="702637933e10f64722f27ec5bc4cf2c44e96ae5bd13862acb624b9ead0961daa";
   assert.equal(digest([...h.rows.values()][0]),expectedRow);
-  assert.equal(digest(saved.body),"d89596756a2f050503d2015ab1cc758c2feee28914554496dc7e631c4cf6987b");
+  // Preserve the exact historical response surface and stored-row hash. The
+  // new private readback is additive, not a changed answer/receipt identity.
+  const {submittedResponse,...legacyView}=saved.body.view;
+  assert.equal(digest({...saved.body,view:legacyView}),"d89596756a2f050503d2015ab1cc758c2feee28914554496dc7e631c4cf6987b");
+  const attempt=[...h.rows.values()][0].state.attempts.at(-1);
+  assert.equal(submittedResponse.attemptId,attempt.attemptId);
+  assert.equal(submittedResponse.selectedChoice,attempt.submission.selectedChoice);
+  assert.equal(submittedResponse.submittedAt,attempt.submission.submittedAt);
+  assert.equal(submittedResponse.questionVersion,attempt.questionReference.questionVersion);
   assert.deepEqual((await h.send(undefined,`?sessionId=${sessionId}`)).body,saved.body);
   assert.deepEqual((await h.send({sessionId,command})).body,saved.body);
   assert.equal(digest([...h.rows.values()][0]),expectedRow);

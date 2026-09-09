@@ -13,6 +13,93 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { compilePrivateSource } from "./fixtures/first-stage-private-route-harness.mjs";
 import { createOwnerLocalTrialApplication } from "../lib/review-os/first-stage/runtime/owner-local-trial-context.ts";
 
+test("actual loader/HTTP reconnect returns the durable submitted choice, not client memory",async()=>{
+  const h=trialHarness();h.setClock("2026-09-08T00:00:00.000Z");const ids=await startTrial(h);
+  assert.equal(ids.begun.body.view.submittedResponse,null);
+  h.setClock("2026-09-08T00:01:00.000Z");
+  const request={sessionId:ids.sessionId,command:submission(ids.attemptId,1)};
+  const saved=await h.send(request);assert.equal(saved.status,200);
+  const recap=saved.body.view.submittedResponse;
+  assert.equal(recap.selectedChoice,1);assert.equal(recap.previousChoice,null);
+  assert.equal(recap.confidence,"medium");assert.equal(recap.answerChanged,false);
+  assert.equal(recap.submittedAt,h.getClock());assert.equal(recap.attemptId,ids.attemptId);
+  assert.equal(recap.assistanceLevel,"none");assert.equal(recap.contentMode,"first_stage.owner_local_trial_session.v1");
+  assert.doesNotMatch(JSON.stringify(recap),/workTrace|correctChoice|evidenceEnvelope|SYNTHETIC_SECRET/);
+  const snapshot=JSON.stringify([...h.rows.values()]);
+  const reopened=trialHarness({rows:h.rows,fixture:h.fixture});reopened.setClock(h.getClock());
+  // Simulate a lost successful response: reload and identical retry must read
+  // the same stored winner rather than echoing an optimistic request.
+  assert.deepEqual((await reopened.send(undefined,`?sessionId=${ids.sessionId}`)).body.view.submittedResponse,recap);
+  assert.deepEqual((await reopened.send(request)).body.view.submittedResponse,recap);
+  const today=(await reopened.send(undefined,"?view=today")).body;
+  assert.doesNotMatch(JSON.stringify(today),/selectedChoice|previousChoice|submittedResponse/);
+  assert.equal(JSON.stringify([...h.rows.values()]),snapshot);
+});
+
+test("failed save exposes no recap; competing submissions return only the durable winner",async()=>{
+  const h=trialHarness();h.setClock("2026-09-08T00:00:00.000Z");const ids=await startTrial(h);
+  h.setClock("2026-09-08T00:01:00.000Z");h.failNextWrite();
+  const failed=await h.send({sessionId:ids.sessionId,command:submission(ids.attemptId,1)});
+  assert.notEqual(failed.status,200);assert.equal(failed.body.view,undefined);
+  assert.equal((await h.send(undefined,`?sessionId=${ids.sessionId}`)).body.view.submittedResponse,null);
+  const requests=[1,2].map(choice=>({sessionId:ids.sessionId,command:{...submission(ids.attemptId,choice),requestId:`choice-${choice}`}}));
+  const results=await Promise.all(requests.map(request=>h.send(request)));
+  assert.deepEqual(results.map(row=>row.status).sort(),[200,409]);
+  const winner=results.find(row=>row.status===200).body.view;
+  const durable=[...h.rows.values()][0].state.attempts[0];
+  assert.equal(winner.submittedResponse.selectedChoice,durable.submission.selectedChoice);
+  assert.deepEqual((await h.send(undefined,`?sessionId=${ids.sessionId}`)).body.view.submittedResponse,winner.submittedResponse);
+  assert.equal(winner.reviewTasks.length,1);assert.equal(h.rows.size,1);
+});
+
+test("recap preserves submitted confidence/change and distinguishes an unanswered response",async()=>{
+  for(const unanswered of [false,true]) {
+    const h=trialHarness();h.setClock("2026-09-08T00:00:00.000Z");const ids=await startTrial(h);
+    h.setClock("2026-09-08T00:01:00.000Z");const command=submission(ids.attemptId,1);
+    command.submission={...command.submission,selectedChoice:unanswered?null:1,
+      confidence:unanswered?"low":"high",answerChanged:!unanswered,previousChoice:unanswered?null:2,
+      workTrace:{schemaVersion:"first_stage.work_trace.v1",steps:unanswered?[
+        {sequence:1,kind:"read_stem",atElapsedMs:1000,choiceId:null}]:[
+        {sequence:1,kind:"select_answer",atElapsedMs:1000,choiceId:2},
+        {sequence:2,kind:"change_answer",atElapsedMs:2000,choiceId:1}]}};
+    const result=await h.send({sessionId:ids.sessionId,command});assert.equal(result.status,200,JSON.stringify(result.body));
+    const recap=result.body.view.submittedResponse;
+    assert.equal(recap.selectedChoice,unanswered?null:1);assert.equal(recap.confidence,unanswered?"low":"high");
+    assert.equal(recap.answerChanged,!unanswered);assert.equal(recap.previousChoice,unanswered?null:2);
+    assert.deepEqual(Object.keys(recap).sort(),["attemptId","questionId","questionVersion","questionNumber","selectedChoice",
+      "confidence","answerChanged","previousChoice","submittedAt","assistanceLevel","contentMode"].sort());
+  }
+});
+
+test("active retry suppresses original recap; completed retry and old request replay show latest durable attempt",async()=>{
+  const h=trialHarness();h.setClock("2026-09-08T00:00:00.000Z");const ids=await startTrial(h);
+  h.setClock("2026-09-08T00:01:00.000Z");const original={sessionId:ids.sessionId,command:submission(ids.attemptId,1)};
+  const first=(await h.send(original)).body.view;h.setClock(first.reviewTasks[0].dueAt);
+  const begun=await h.send({sessionId:ids.sessionId,command:{action:"retry",requestId:"recap-retry",expectedRevision:first.revision,reviewTaskId:first.reviewTasks[0].reviewTaskId}});
+  assert.equal(begun.status,200);assert.equal(begun.body.view.submittedResponse,null);assert.equal(begun.body.view.explanation,null);
+  h.setClock(new Date(Date.parse(h.getClock())+60_000).toISOString());
+  const retried=await h.send({sessionId:ids.sessionId,command:{...submission(begun.body.view.attempt.attemptId,2),requestId:"recap-retry-submit",expectedRevision:begun.body.view.revision}});
+  assert.equal(retried.status,200);const recap=retried.body.view.submittedResponse;
+  assert.equal(recap.selectedChoice,2);assert.notEqual(recap.attemptId,ids.attemptId);
+  const latest=[...h.rows.values()][0].state.attempts.at(-1);
+  assert.equal(recap.questionId,latest.questionReference.questionId);assert.equal(recap.questionVersion,latest.questionReference.questionVersion);
+  const snapshot=JSON.stringify([...h.rows.values()]);
+  assert.deepEqual((await h.send(original)).body.view.submittedResponse,recap);
+  assert.equal(JSON.stringify([...h.rows.values()]),snapshot);
+});
+
+test("recap remains unavailable to other owners, client projections and invalid stored versions",async()=>{
+  const h=trialHarness();h.setClock("2026-09-08T00:00:00.000Z");const ids=await startTrial(h);
+  h.setClock("2026-09-08T00:01:00.000Z");
+  const request={sessionId:ids.sessionId,command:submission(ids.attemptId,1)};
+  assert.equal((await h.send({...request,command:{...request.command,submittedResponse:{selectedChoice:2}}})).status,400);
+  assert.equal((await h.send(request)).status,200);
+  const other=trialHarness({fixture:h.fixture,rows:h.rows,session:{userId:"another-owner"}});
+  const denied=await other.send(undefined,`?sessionId=${ids.sessionId}`);assert.notEqual(denied.status,200);assert.equal(denied.body.view,undefined);
+  const stored=[...h.rows.values()][0];stored.state.attempts[0].questionReference.questionVersion="invalid-version";
+  const corrupt=await h.send(undefined,`?sessionId=${ids.sessionId}`);assert.notEqual(corrupt.status,200);assert.equal(corrupt.body.view,undefined);
+});
+
 test("actual NextRequest GET/POST normalization preserves CSRF and durable trial command flow",async()=>{
   const h=trialHarness();
   const send=async(body,headers={})=>{
