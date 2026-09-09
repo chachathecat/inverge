@@ -3,6 +3,8 @@ import path from "node:path";
 import { createHash } from "node:crypto";
 import { pathToFileURL } from "node:url";
 import type { BridgeResult, BridgeState, HeldSnapshot, SnapshotAnchor } from "./owner-snapshot-bridge-contract";
+import { bridgeFailure } from "./owner-snapshot-bridge-contract";
+export { bridgeFailure } from "./owner-snapshot-bridge-contract";
 
 export type ReaderSource = Readonly<{
   revision: string; tree: string; entry: string;
@@ -19,10 +21,6 @@ export type SnapshotBridge = Readonly<{
 }>;
 const states = new Set(["OK", "NO_RESULTS", "LAW_NOT_HELD", "VERSION_NOT_HELD",
   "INVALID_INPUT", "UNSUPPORTED", "INTEGRITY_ERROR", "SEARCH_FAILED"]);
-export const bridgeFailure = (state: BridgeState): BridgeResult => ({
-  sourceKind: "PRIVATE_STATUTE_JSON_SNAPSHOT", state, anchors: [],
-  currentness: "UNVERIFIED", dateApplicability: "NOT_ASSESSED", examApplicabilityCertified: false,
-});
 function present(result: NativeResult): BridgeResult {
   const state = states.has(result.state) ? result.state as BridgeState : "SEARCH_FAILED";
   if (state !== "OK") return bridgeFailure(state);

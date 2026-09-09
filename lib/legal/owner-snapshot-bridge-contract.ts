@@ -31,6 +31,16 @@ export type BridgeSearch = Readonly<{
   articleNumber?: string; queryText?: string; section?: "MAIN" | "SUPPLEMENTARY" | "ALL";
   matchCount?: number; applicableOn?: string;
 }>;
+/** Pure deployment guard: safe at the proxy boundary, with no reader/auth import. */
+export function localBridgeEnabled(env: Readonly<Record<string, string | undefined>>) {
+  return env.INVERGE_OWNER_LEGAL_EVIDENCE_ENABLED === "true" && env.NODE_ENV === "development" &&
+    !env.VERCEL && !env.VERCEL_ENV && !env.CI && env.DEV_SMOKE_AUTH !== "true" &&
+    env.NEXT_PUBLIC_SUPABASE_URL === "http://127.0.0.1:55421";
+}
+export const bridgeFailure = (state: BridgeState): BridgeResult => ({
+  sourceKind: "PRIVATE_STATUTE_JSON_SNAPSHOT", state, anchors: [],
+  currentness: "UNVERIFIED", dateApplicability: "NOT_ASSESSED", examApplicabilityCertified: false,
+});
 export const BRIDGE_MESSAGES: Record<BridgeState, string> = {
   OK: "보유 자료에서 확인했습니다.", NO_RESULTS: "이 보유 버전에 일치하는 결과가 없습니다.",
   LAW_NOT_HELD: "보유하지 않은 법령입니다.", VERSION_NOT_HELD: "보유하지 않은 버전입니다.",

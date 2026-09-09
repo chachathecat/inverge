@@ -1,15 +1,12 @@
 import { privateFirstStageOwner } from "../review-os/first-stage/runtime/session-application";
 import { readPrivateSessionCommand, RequestTooLarge } from "../review-os/first-stage/runtime/session-http";
 import { bridgeFailure, type SnapshotBridge } from "./owner-snapshot-bridge";
+import { localBridgeEnabled } from "./owner-snapshot-bridge-contract";
+export { localBridgeEnabled } from "./owner-snapshot-bridge-contract";
 type Environment = Readonly<Record<string, string | undefined>>;
 export type BridgeSession = Readonly<{ isAuthenticated: boolean; isDemo: boolean; authEnabled: boolean;
   source: string; userId: string | null; email: string | null }>;
 export const LOCAL_BRIDGE_ORIGIN = "http://127.0.0.1:3883";
-export function localBridgeEnabled(env: Environment) {
-  return env.INVERGE_OWNER_LEGAL_EVIDENCE_ENABLED === "true" && env.NODE_ENV === "development" &&
-    !env.VERCEL && !env.VERCEL_ENV && !env.CI && env.DEV_SMOKE_AUTH !== "true" &&
-    env.NEXT_PUBLIC_SUPABASE_URL === "http://127.0.0.1:55421";
-}
 export async function bridgeOwner(env: Environment, session: () => Promise<BridgeSession>) {
   if (!localBridgeEnabled(env)) return null;
   const user = await session();

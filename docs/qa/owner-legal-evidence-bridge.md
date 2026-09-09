@@ -237,3 +237,38 @@ Final remote native CI, corrected-head deployed Preview observation, independent
 review and conditional merge remain pending until live GitHub/Vercel outcomes.
 GitHub remains the exact-head CI/review/merge authority; no future result is
 predeclared. Supplier source pins and actual source catalog remain read-only.
+
+## Review 5149413670: proxy-before-auth correction
+
+At 3d9082e7, all nine required native checks plus C3R-P/T/L passed, but independent
+review found one P1: the global proxy could create the Supabase client/getUser and
+refresh cookies before the route-only deployment denial. Earlier direct compiled
+route and deployed 404 observations did not prove the complete pre-auth boundary.
+That candidate was not marked Ready or merged.
+
+The new regression first reproduced one client creation where zero was required.
+The root proxy now denies only the two bridge path families before the unchanged
+global auth proxy. Its shared pure environment predicate and bodyless failure
+projection import neither a reader nor auth service. The page/route retain their
+independent Owner checks. Encoded/trailing paths and RSC query requests are covered.
+No matcher exclusion, general auth relaxation, remote configuration or policy change.
+
+The actual proxy -> existing Supabase proxy -> route composition uses a synthetic
+configured auth client to count creation/getUser/cookie refresh, not a fake bridge
+permission. Preview/Production, remote synthetic auth URL, spoofed local flags and
+OFF cases deny with no body consumption, cookie, client, route or reader access.
+Unrelated paths still invoke normal auth/cookie handling; enabled local bridge still
+requires a genuine non-demo Owner. No new secrets, user or remote request is used.
+New validation and exact-head review/CI must be recorded separately from 3d9082e7.
+
+Correction-local evidence: 39 affected proxy/bridge/browser/economics/private-route
+tests passed, typecheck and zero-warning changed-file lint passed, build passed.
+All 162 JSON files parsed; manifest is now 28 paths, adding only proxy.ts. The
+rebuilt 189 traces / 148,602 entries / 3,040 artifacts have no private roots.
+The actual compiled Next middleware handler independently denied eight page/API
+GET/POST calls across Preview/Production, with zero outbound fetches and cookies,
+404/empty anchors/no-store. No temporary server, remote auth or protection bypass.
+The existing corrected local Owner session still lists 15 held versions and
+source/session/planning preservation comparisons pass. The previous 1,810-test
+full suite remains 3d9082e7 evidence; native CI and independent review on the new
+commit are required before integration, not inferred from that previous head.

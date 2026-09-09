@@ -3,11 +3,58 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+import { createRequire } from "node:module";
+import * as bridgeContract from "../lib/legal/owner-snapshot-bridge-contract.ts";
 import { loadSnapshotBridge } from "../lib/legal/owner-snapshot-bridge.ts";
 import * as bridgeHttp from "../lib/legal/owner-snapshot-bridge-http.ts";
 import { compilePrivateSource } from "./fixtures/first-stage-private-route-harness.mjs";
 import { environment, ownerSession } from "./fixtures/owner-legal-evidence-bridge-harness.mjs";
 import { bridgeHarness, held, input, reference, syntheticBody, digest } from "./fixtures/owner-legal-evidence-bridge-harness.mjs";
+
+test("actual proxy-to-route composition denies deployed bridge before Supabase client, cookie refresh or route",async()=>{
+  const {NextRequest,NextResponse}=createRequire(import.meta.url)("next/server");
+  for(const deployment of [
+    {NODE_ENV:"production",VERCEL_ENV:"preview"},{NODE_ENV:"production",VERCEL_ENV:"production"},
+    {NODE_ENV:"development",VERCEL_ENV:"preview"},{NODE_ENV:"development",VERCEL_ENV:"production"},
+    {NODE_ENV:"production",VERCEL_ENV:"preview",NEXT_PUBLIC_SUPABASE_URL:"https://synthetic-auth.example.test"},
+    {NODE_ENV:"production",VERCEL_ENV:"production",NEXT_PUBLIC_SUPABASE_URL:"https://synthetic-auth.example.test"},
+    {NODE_ENV:"production"},{VERCEL:"1"},{INVERGE_OWNER_LEGAL_EVIDENCE_ENABLED:"false"}
+  ]) {
+    const env={...environment,...deployment,NEXT_PUBLIC_SUPABASE_ANON_KEY:"synthetic-not-a-credential"};
+    const counts={client:0,auth:0,cookies:0,route:0};
+    const authProxy=compilePrivateSource("lib/supabase/proxy.ts",{
+      "next/server":{NextResponse},"@/lib/supabase/server":{isSupabaseConfigured:()=>true},
+      "@supabase/ssr":{createServerClient:(_url,_key,options)=>{counts.client++;return {auth:{getUser:async()=>{
+        counts.auth++;counts.cookies++;options.cookies.setAll([{name:"synthetic-refresh",value:"synthetic",options:{}}],{});
+      }}};}},
+    },env);
+    const boundary=compilePrivateSource("proxy.ts",{
+      "next/server":{NextResponse},"@/lib/supabase/proxy":authProxy,
+      "@/lib/legal/owner-snapshot-bridge-contract":bridgeContract,
+    },env);
+    const h=bridgeHarness({env:deployment});
+    const route=compilePrivateSource("app/api/review-os/first-stage/legal-evidence/route.ts",{
+      "@/lib/legal/owner-snapshot-bridge-server":{handleOwnerLegalEvidence:h.handler},
+    },env);
+    for(const pathname of ["/app/first-stage/legal-evidence","/api/review-os/first-stage/legal-evidence",
+      "/app/first-stage/legal-evidence/","/api/review-os/first-stage/%6cegal-evidence"]) {
+      for(const method of ["GET","POST"]) {
+        let pulled=false;
+        const body=new ReadableStream({pull(){pulled=true;}},{highWaterMark:0});
+        const request=new NextRequest("http://127.0.0.1:3883"+pathname+"?_rsc=synthetic",{
+          method,headers:{host:"127.0.0.1:3883",origin:"http://127.0.0.1:3883","x-vercel-env":"development"},
+          ...(method==="POST"?{body,duplex:"half"}:{})});
+        const first=await boundary.proxy(request);
+        const result=first.headers.get("x-middleware-next")==="1"?(counts.route++,await route[method](request)):first;
+        assert.equal(counts.client,0,"global proxy must deny before creating a Supabase client");
+        assert.equal(result.status,404);assert.deepEqual((await result.json()).anchors,[]);
+        assert.match(result.headers.get("cache-control"),/no-store/);assert.equal(result.headers.has("set-cookie"),false);
+        assert.equal(request.bodyUsed,false);assert.equal(pulled,false);
+      }
+    }
+    assert.deepEqual(counts,{client:0,auth:0,cookies:0,route:0});assert.equal(h.counts().loads,0);
+  }
+});
 
 test("bridge actual HTTP composition lists, searches and reopens only exact selected native JSON reference",async()=>{
   const h=bridgeHarness(),list=await h.send();
@@ -20,6 +67,39 @@ test("bridge actual HTTP composition lists, searches and reopens only exact sele
   assert.equal(first.body.examApplicabilityCertified,false);
   assert.ok(!JSON.stringify(first.body).includes("SYNTHETIC_ORIGINAL_FRAGMENT"));
   for(const result of [list,first,second]) {assert.match(result.headers.get("cache-control"),/no-store/);assert.equal(result.headers.get("referrer-policy"),"no-referrer");}
+});
+
+test("proxy preserves normal authentication and local bridge still requires the genuine Owner",async()=>{
+  const {NextRequest,NextResponse}=createRequire(import.meta.url)("next/server");
+  for(const [pathname,env,isLocalBridge] of [
+    ["/api/review-os/first-stage/legal-evidence",environment,true],
+    ["/app/first-stage/legal-evidence",environment,true],
+    ["/app/first-stage",{...environment,NODE_ENV:"production",VERCEL_ENV:"preview"},false],
+    ["/api/review-os/first-stage/sessions",{...environment,NODE_ENV:"production"},false],
+    ["/app/first-stage/legal-evidence-other",{...environment,NODE_ENV:"production"},false],
+  ]) {
+    let clients=0,auth=0;
+    const authProxy=compilePrivateSource("lib/supabase/proxy.ts",{
+      "next/server":{NextResponse},"@/lib/supabase/server":{isSupabaseConfigured:()=>true},
+      "@supabase/ssr":{createServerClient:(_url,_key,options)=>{clients++;return {auth:{getUser:async()=>{
+        auth++;options.cookies.setAll([{name:"synthetic-refresh",value:"synthetic",options:{}}],{});
+      }}};}},
+    },env);
+    const boundary=compilePrivateSource("proxy.ts",{
+      "next/server":{NextResponse},"@/lib/supabase/proxy":authProxy,
+      "@/lib/legal/owner-snapshot-bridge-contract":bridgeContract,
+    },env);
+    const request=new NextRequest("http://127.0.0.1:3883"+pathname,{headers:{host:"127.0.0.1:3883"}});
+    const response=await boundary.proxy(request);
+    assert.equal(clients,1);assert.equal(auth,1);assert.equal(response.headers.get("x-middleware-next"),"1");
+    assert.match(response.headers.get("set-cookie"),/synthetic-refresh/);
+    if(isLocalBridge) {
+      assert.equal((await bridgeHarness().handler(request)).status,200);
+      for(const session of [{isAuthenticated:false},{email:"other@example.test"},{isDemo:true}]) {
+        const h=bridgeHarness({session});assert.equal((await h.handler(request)).status,404);assert.equal(h.counts().loads,0);
+      }
+    }
+  }
 });
 test("denied environment/session/host never loads source, catalog, body or reader",async()=>{
   for(const options of [

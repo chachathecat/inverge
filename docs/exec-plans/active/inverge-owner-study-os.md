@@ -2,6 +2,15 @@
 
 ## APPRAISER-LEGAL-EVIDENCE-BRIDGE-01 — 2026-09-09 single-writer transition
 
+Latest review correction: 3d9082e7 passed all nine required native checks and
+C3R-P/T/L, but Codex review 5149413670 found one P1 in global-proxy pre-auth
+ordering. Keep PR #909 Draft/unmerged. Reproduced with the actual proxy/Supabase
+composition, then added a bridge-only denial before unchanged global auth.
+The same writer completed 39 affected tests, typecheck/lint/build, rebuilt-bundle
+privacy and eight actual compiled-proxy deployment denials. New-head native CI
+and independent review are next; previous-head checks/review are not new-head
+results. No remote configuration, source or learner-record changes.
+
 Current recovery (2026-09-09): Owner explicitly authorized the bounded CI/security
 correction in the existing PR #909 and worktree. Next/eslint-config-next 16.3.3,
 sharp 0.35.4 and js-yaml 4.3.2 clean installation, unchanged audit/SBOM gate,
