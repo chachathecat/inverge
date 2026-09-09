@@ -10,6 +10,7 @@ import * as domain from "../lib/review-os/first-stage/kernel/domain.ts";
 import { privateRoute } from "./fixtures/first-stage-private-route-harness.mjs";
 import { verifyPrivateBrowser } from "./fixtures/first-stage-private-browser-harness.mjs";
 import { verifyPrivateSubjectNavigation } from "./fixtures/first-stage-private-navigation-browser.mjs";
+import { verifyReviewedBankPostgres } from "./fixtures/first-stage-reviewed-bank-postgres.mjs";
 import { harness as kernelHarness, SUBMIT, submission } from "./fixtures/first-stage-private-session-harness.mjs";
 import { economicsCatalog } from "./fixtures/first-stage-economics-content-harness.mjs";
 import { loadEconomicsContent } from "../lib/review-os/first-stage/runtime/economics-content.ts";
@@ -72,7 +73,7 @@ const EXPLANATION = catalog.explanation(reference()).text;
 const BODY = catalog.registry.require(subject).presentQuestion(reference()).stem;
 test(`local PostgreSQL ${label} enforces actual route/browser durable retry/CAS with synthetic auth ports`, { timeout: 240_000 }, async () => {
   const container = `inverge-first-private-${process.pid}-${Date.now()}`;
-  const docker = args => execFileSync("docker", args, { encoding: "utf8", windowsHide: true, stdio: ["ignore", "pipe", "pipe"] });
+  const docker = args => execFileSync("docker", args, { encoding: "utf8", windowsHide: true, timeout: 30_000, stdio: ["ignore", "pipe", "pipe"] });
   let started = false;
   let loseNextWriteResponse = false;
   const sql = (statement, role = "service_role") => new Promise((resolve, reject) => {
@@ -93,19 +94,36 @@ test(`local PostgreSQL ${label} enforces actual route/browser durable retry/CAS 
   const transport = async (input, init = {}) => {
     const url = new URL(String(input));
     assert.equal(url.origin, "http://127.0.0.1");
+    if (url.pathname === "/rest/v1/rpc/inverge_reviewed_bank_reserve") {
+      assert.equal(init.method,"POST");
+      const value=JSON.parse(init.body);
+      try {
+        const result=await sql(`select public.inverge_reviewed_bank_reserve(${literal(value.p_owner)}::uuid,${literal(value.p_session)},${literal(JSON.stringify(value.p_payload))}::jsonb,${literal(JSON.stringify(value.p_assignment))}::jsonb)`);
+        return Response.json(JSON.parse(result || "null"));
+      } catch(error) {
+        return Response.json({code:error.code??"unknown",message:"synthetic-db-rejection"},{status:409});
+      }
+    }
     assert.equal(url.pathname, "/rest/v1/first_stage_private_sessions");
     const method = init.method ?? "GET";
-    const filters = [...url.searchParams.entries()].filter(([key]) => key !== "select");
+    const filters = [...url.searchParams.entries()].filter(([key]) => !["select","order","offset","limit"].includes(key));
     for (const [key, value] of filters) {
-      assert.ok(["owner_id", "session_id", "revision"].includes(key));
+      assert.ok(["owner_id", "session_id", "revision","payload->>schemaVersion"].includes(key));
       assert.ok(value.startsWith("eq."));
     }
-    const where = filters.length ? " where " + filters.map(([key, value]) => `${identifier(key)}=${literal(value.slice(3))}`).join(" and ") : "";
+    const where = filters.length ? " where " + filters.map(([key, value]) => `${key==="payload->>schemaVersion"?"payload->>'schemaVersion'":identifier(key)}=${literal(value.slice(3))}`).join(" and ") : "";
     const columns = (url.searchParams.get("select") ?? "*").split(",").map(column => column === "*" ? "*" : identifier(column)).join(",");
     try {
       let result;
+      const headers = {};
       if (method === "GET") {
-        result = await sql(`select coalesce(jsonb_agg(to_jsonb(r)), '[]') from (select ${columns} from ${TABLE}${where}) r`);
+        let paging="";
+        if(url.searchParams.has("order")) {assert.equal(url.searchParams.get("order"),"session_id.asc");paging=" order by session_id";}
+        for(const key of ["limit","offset"]) if(url.searchParams.has(key)) {
+          assert.match(url.searchParams.get(key),/^\d+$/u);paging+=` ${key} ${url.searchParams.get(key)}`;
+        }
+        result = await sql(`select coalesce(jsonb_agg(to_jsonb(r)), '[]') from (select ${columns} from ${TABLE}${where}${paging}) r`);
+        if(new Headers(init.headers).get("prefer")?.includes("count=exact")) headers["content-range"]=`0-256/${await sql(`select count(*) from ${TABLE}${where}`)}`;
       } else {
         const value = JSON.parse(init.body);
         const json = `${literal(JSON.stringify(value))}::jsonb`;
@@ -120,7 +138,7 @@ test(`local PostgreSQL ${label} enforces actual route/browser durable retry/CAS 
       }
       const rows = JSON.parse(result);
       const accept = new Headers(init.headers).get("accept") ?? "";
-      return Response.json(accept.includes("vnd.pgrst.object") ? rows[0] ?? null : rows);
+      return Response.json(accept.includes("vnd.pgrst.object") ? rows[0] ?? null : rows,{headers});
     } catch (error) {
       if (error.code) return Response.json({ code: error.code, message: "synthetic-db-rejection" }, { status: 409 });
       throw error;
@@ -329,6 +347,7 @@ test(`local PostgreSQL ${label} enforces actual route/browser durable retry/CAS 
       assert.equal(await sql(`select count(*) from ${TABLE}`),"7");
       // Read/replay of the original trial survives all additions with no write.
       assert.deepEqual((await trial.send(trialCommand)).body,after.body);
+      await verifyReviewedBankPostgres({sql,sdk,repository,contentInput,catalog});
       const withTrial=await sql(`select jsonb_agg(to_jsonb(r) order by session_id)::text from ${TABLE} r`);
       await sql("set inverge.local_first_stage_personal_use='owner_approved_persistent_local';\n"+design,null);
       assert.equal(await sql(`select jsonb_agg(to_jsonb(r) order by session_id)::text from ${TABLE} r`),withTrial);

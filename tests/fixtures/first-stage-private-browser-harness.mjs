@@ -10,7 +10,7 @@ import { SUBJECT_CASES } from "./first-stage-remaining-content-harness.mjs";
 /** Real component + real compiled route entry + supplied isolated repository.
  * This is a localhost test host, NOT a Next deployment or remote auth acceptance.
  */
-export async function verifyPrivateBrowser({ route, clock, failNextWrite, subject = "economics_principles", blockCatalog, blockedMessage, expectedAttributions, questionNumber = 1, retryChoice = 2, ownerLocalTrial = false }) {
+export async function verifyPrivateBrowser({ route, clock, failNextWrite, subject = "economics_principles", blockCatalog, blockedMessage, expectedAttributions, questionNumber = 1, retryChoice = 2, ownerLocalTrial = false, bankPractice = false }) {
   assert.ok(["economics_principles", "accounting", ...SUBJECT_CASES.map(spec => spec.id)].includes(subject));
   const slug = SUBJECT_CASES.find(spec => spec.id === subject)?.slug ?? "accounting";
   const pagePath = ownerLocalTrial ? "/app/first-stage/economics-trial" : subject === "economics_principles" ? "/app/first-stage/practice" : `/app/first-stage/${slug}`;
@@ -21,7 +21,7 @@ export async function verifyPrivateBrowser({ route, clock, failNextWrite, subjec
   }, bundle: true, write: false, platform: "browser", format: "iife", jsx: "automatic",
   define: { "process.env.NODE_ENV": '"production"' }, logLevel: "silent" });
   let origin = "", browser;
-  let loseCreateResponse = ownerLocalTrial;
+  let loseCreateResponse = ownerLocalTrial || bankPractice;
   const failures = [], external = [], consoleErrors = [];
   const server = createServer(async (incoming, outgoing) => {
     try {
@@ -91,14 +91,19 @@ export async function verifyPrivateBrowser({ route, clock, failNextWrite, subjec
       assert.equal(await page.getByLabel("시험 문항 선택").locator("option").count(),4);
       assert.equal(await page.getByRole("button",{name:/사람 미검토 시험용 .*번 시작/}).count(),1);
     }
-    await page.getByRole("button", { name: `${ownerLocalTrial?"사람 미검토 시험용":"검토된"} ${questionNumber}번 시작` }).evaluate(button => {
+    await page.getByRole("button", { name: bankPractice ? "검토 재고에서 다음 연습 배정" : `${ownerLocalTrial?"사람 미검토 시험용":"검토된"} ${questionNumber}번 시작` }).evaluate(button => {
       button.click(); button.click();
     });
-    if (ownerLocalTrial) {
+    if (ownerLocalTrial || bankPractice) {
       await page.getByRole("button",{name:"같은 요청 다시 확인"}).waitFor();
       const pendingUrl=page.url();await page.reload();
       await page.getByRole("button",{name:"같은 요청 다시 확인"}).waitFor();
       assert.equal(page.url(),pendingUrl);
+      if (bankPractice) {
+        assert.ok(new URL(pendingUrl).searchParams.get("bankRequestId"));
+        assert.equal(await page.getByRole("radio").count(),0);
+        assert.equal(await page.getByRole("region",{name:"저장된 응답 해설"}).count(),0);
+      }
       assert.equal(await page.getByLabel("시험 문항 선택").count(),0);
       await page.getByRole("button",{name:"같은 요청 다시 확인"}).click();
     }

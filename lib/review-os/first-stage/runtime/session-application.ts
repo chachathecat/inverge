@@ -3,6 +3,9 @@ import { createPrivateSessionHttpHandler } from "./session-http";
 import { createPrivateFirstStageSessionService,
   type PrivateFirstStageCatalog, type PrivateFirstStageSessionStore } from "./session-service";
 import type { TrialPlanningStore } from "./owner-local-today";
+import type { ReviewedBankStore } from "./reviewed-bank-service";
+import { handleReviewedBank, reviewedBankEnabled } from "./reviewed-bank-http";
+import { reviewedEconomicsBankCandidates } from "./private-reviewed-content";
 
 type Environment = Readonly<Record<string, string | undefined>>;
 type Session = Readonly<{ isAuthenticated: boolean; userId?: string | null; email?: string | null }>;
@@ -14,6 +17,7 @@ export interface PrivateSessionApplicationDependencies {
   catalog(): Promise<PrivateFirstStageCatalog | null>;
   repository(): PrivateFirstStageSessionStore;
   planningRepository?(): TrialPlanningStore;
+  bankRepository?(): ReviewedBankStore;
   /** Fixed by the server subject binding; never request/content authority. */
   unavailableBlocker?: PrivateContentBlocker;
   now?(): string;
@@ -42,12 +46,15 @@ const response = (body: unknown, status = 200) => Response.json(body, { status, 
 export function createPrivateSessionApplication(dependencies: PrivateSessionApplicationDependencies) {
   return async function handle(request: Request): Promise<Response> {
     try {
+      const bankRequest = new URL(request.url).searchParams.get("view") === "bank";
+      if (bankRequest && !reviewedBankEnabled(dependencies.environment())) return response({ ok: false, error: "not_found" }, 404);
       const owner = await privateFirstStageOwner(dependencies.environment(), dependencies.session);
       if (!owner) return response({ ok: false, error: "not_found" }, 404);
       if (!["GET", "POST"].includes(request.method)) {
         return response({ ok: false, error: "method_not_allowed" }, 405);
       }
       const catalog = await dependencies.catalog();
+      if (bankRequest) return handleReviewedBank(request, dependencies, owner.ownerId, catalog);
       const blocker = dependencies.unavailableBlocker ?? "approved_content_required";
       if (request.method === "GET" && !new URL(request.url).search) {
         // No adapter presentation or explanation construction in availability.
@@ -60,6 +67,8 @@ export function createPrivateSessionApplication(dependencies: PrivateSessionAppl
             questionNumber: item.questionNumber,
           })),
           masteryClaim: false, transferEvidence: false,
+          ...(reviewedBankEnabled(dependencies.environment()) && catalog && reviewedEconomicsBankCandidates(catalog)
+            ? { bankPractice: true } : {}),
         } });
       }
       if (!catalog?.initialReferences.length) {

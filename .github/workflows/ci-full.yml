@@ -27,6 +27,12 @@ jobs:
         run: npm exec playwright install -- --with-deps chromium
       - name: Run full test suite
         run: npm run test -- --workers=1
+      - name: Prepare pinned PostgreSQL image for disposable first-stage verification
+        run: |
+          node --input-type=module -e 'import {execFileSync} from "node:child_process"; import {ORACLE_IMAGE,ORACLE_PLATFORM} from "./scripts/automation/wcv-c3-pre-p-postgresql-security-state-oracle.mjs"; execFileSync("docker",["pull","--platform",ORACLE_PLATFORM,ORACLE_IMAGE],{stdio:"inherit",timeout:180000});'
+      - name: Verify first-stage actual SQL and browser with synthetic-only data
+        timeout-minutes: 15
+        run: node --experimental-strip-types --loader ./tests/ts-extension-loader.mjs --test tests/first-stage-private-postgres.test.mjs
       - name: Verify learner loop
         run: npm run verify:learner-loop:ci
       - name: Build

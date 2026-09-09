@@ -59,6 +59,9 @@ export function privateRoute(harness, options = {}) {
     "./session-application": { ...application, createPrivateSessionApplication: dependencies =>
       application.createPrivateSessionApplication({ ...dependencies, now: harness.getClock }) },
     "./session-repository": { createPrivateSessionRepository: options.repository ?? (() => harness.store) },
+    "./reviewed-bank-repository": { createReviewedBankRepository: options.bankRepository ?? (() => {
+      throw new Error("reviewed bank repository was not configured for this test");
+    }) },
   }, options.environment ?? ENVIRONMENT);
   const extra = SUBJECT_CASES.find(spec => spec.id === options.subject);
   const route = compilePrivateSource(extra

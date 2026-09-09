@@ -7,6 +7,7 @@ import { loadApprovedPrivateFirstStageCatalog, loadApprovedPrivateAccountingCata
 import type { PrivateFirstStageCatalog } from "./session-service";
 import { createPrivateSessionApplication, privateFirstStageOwner, type PrivateContentBlocker } from "./session-application";
 import { createPrivateSessionRepository } from "./session-repository";
+import { createReviewedBankRepository } from "./reviewed-bank-repository";
 
 export const requirePrivateFirstStageOwner = () =>
   privateFirstStageOwner(process.env, getServerSessionUser);
@@ -22,6 +23,11 @@ function privateSubjectSession(catalog: () => Promise<PrivateFirstStageCatalog |
       const client = getSupabasePersistenceClient();
       if (!client) throw new Error("first-stage-private-store-unavailable");
       return createPrivateSessionRepository(client);
+    },
+    bankRepository: () => {
+      const client = getSupabasePersistenceClient();
+      if (!client) throw new Error("reviewed-bank-store-unavailable");
+      return createReviewedBankRepository(client);
     },
   });
 }
