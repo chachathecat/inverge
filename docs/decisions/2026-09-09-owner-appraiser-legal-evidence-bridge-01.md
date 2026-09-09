@@ -76,3 +76,34 @@ repeat the completed economics Goal or invent a successor scope.
 
 The bounded economics curriculum Goal is already complete, not the whole subject:
 human approvals remain zero and actual next-day r46 observation is still Owner-only.
+
+## PR #909 bounded CI/security recovery amendment — 2026-09-09
+
+The subsequent explicit Owner decision retains this writer, worktree and PR and
+authorizes only compatible Next/eslint-config-next, sharp/js-yaml security fixes,
+their lockfile/CI prerequisites, synthetic expiry tests and directly coupled
+regressions. It grants no unrelated upgrades, audit exceptions or policy changes.
+The selected minimum patched line is Next/eslint-config-next 16.3.3, sharp 0.35.4
+(libheif 1.23.2) and js-yaml 4.3.2. React, Supabase, other root dependencies and
+the PostCSS override remain unchanged. Phase C/D security contracts keep their
+historical version/audit evidence; fresh recovery results belong to this QA/PR.
+
+Official advisory bindings: GHSA-p293-qw3h-jr36 and GHSA-2xp9-vwfh-vxw4 (Next),
+GHSA-rgj7-g3m4-5g8c (sharp), GHSA-2883-xcg3-v3hh (js-yaml). Apply no
+npm audit fix --force or unbounded update. Existing residual Low policy is not
+extended, replaced or weakened. CI must install the registered browser test's
+Chromium dependency; never skip the test or add workflow permissions.
+
+Expiry tests use synthetic sources and a test-process-only Date mock for before,
+inclusive due-day boundary and after behavior, plus the unchanged actual registry
+after its recorded expiry. Real source/rights/review dates and the OS clock are
+not changed. Expired sources remain needs_update, never relabeled current.
+
+Keep the old app stopped until clean installation, security/build/regressions
+pass; then resume corrected code on the existing account/ports/TLS/volumes only.
+Preserve all 105 originals/catalog files and personal learning/planning rows.
+Actual Preview application denial must be observed using an existing authenticated
+path. Vercel protection responses do not substitute; no new bypass/share token,
+project linkage or protection/configuration change is authorized. Missing required
+observation blocks merge. All prior native CI, independent exact-head 0/0/0,
+resolved-thread and Production-suppression conditions still apply.

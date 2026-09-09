@@ -74,7 +74,7 @@ bridge flag alongside the existing filtered local economics environment. Ordinar
 command, reinstall content, reapply SQL or create an account for this bridge.
 Returning to ordinary `start` is the bridge rollback and preserves every record.
 
-## Current evidence
+## Historical evidence at preserved 82da64df
 
 Local code validation completed on 2026-09-09 KST:
 
@@ -142,3 +142,98 @@ from the new 15-law bridge execution.
   the exact 18-file manifest, changed-source secret-pattern and diff checks passed.
 - GitHub exact-head CI/review/merge and actual deployed Preview denial still await
   the new candidate; no prior-head result is represented as those future outcomes.
+
+## Historical remote candidate and safe stop at c188b9f9 — 2026-09-09
+
+PR #909 is Draft/Open at c188b9f94407fa73ed1313ccd21a588784f2046c (tree
+bc3d7a3735e020aecc40c8f678e46df22dba5fd3). Vercel, PR Contract, Risk and Runtime
+passed. Fast and Full Linux/Windows each passed 1,807 tests and failed only the
+bridge browser launch because CI lacked Chromium. Two minimal workflow install
+steps (three jobs) and an executable prerequisite regression are local uncommitted
+corrections; both affected browser tests pass. No test is skipped or weakened.
+The local candidate manifest now has 20 paths, adding ci-fast.yml and ci-full.yml;
+the remote 18-path manifest and its historical validation remain distinguishable.
+
+Learner Loop independently passed 707/708: the unchanged registry recheck date
+2026-09-08 expired, so needsUpdateNodes is 2, not the test's hard-coded 1. This
+was reproduced locally. No actual source date/status or verification was altered.
+Security run 34301588544 failed on unchanged Next (two critical advisories), sharp
+(high) and js-yaml (high) dependencies, reproduced by local package-lock audit.
+No dependency upgrade, audit exception or policy relaxation has been performed.
+Independent review has not been requested for this known failing candidate;
+zero unresolved threads does not constitute a clean formal review.
+
+Automatic Preview dpl_HiJYXgBbjp6psPQffUWk9afbFG22 reached READY at that exact head.
+Direct GET returns 302 to Vercel login; POST returns 401. Application denial behind
+protection remains unobserved; those responses are not claimed as bridge denial.
+The installed CLI curl implementation can PATCH/create a protection-bypass token,
+so it was not executed. Protection, Vercel configuration and secrets are unchanged.
+Production suppression is the previously authenticated Preview-only build setting.
+
+After the Windows Next RCE advisory was identified, only the task-started local
+app and its launcher were stopped; port 3883 has no listener. Dedicated loopback
+services/DB, credentials/TLS and browser profile remain preserved. A second
+read-only comparison confirms all 105 source files, personal session rows and
+planning unchanged. The genuine UI acceptance above preceded this safe stop.
+No r46 next-day action or new economics work was performed. Resume only the
+necessary authorized correction/validation; no successful merge/CI claim is made.
+
+## Authorized security/CI recovery — 2026-09-09
+
+The latest bounded Owner instruction supersedes the preceding safe-stop decision
+gate, not its historical failed CI results. Current compatible versions are
+Next/eslint-config-next 16.3.3, sharp 0.35.4 with libheif 1.23.2, and js-yaml 4.3.2.
+Only these root fields and required transitive packages changed; package inventory,
+React/Supabase and PostCSS remain unchanged. Historical Phase C/D and C3R package
+identities are preserved separately from exact current package/lock assertions.
+No audit exception, security-policy expiry, workflow permission or source registry
+was changed. Chromium is installed before all three native browser-test jobs.
+
+- Clean npm ci passed. Current production/full audits have critical/high/moderate
+  zero and one unchanged Low advisory. The existing audit/SBOM validator passed
+  with 571 components; no new waiver or extension. Low is not claimed fixed.
+- 70 affected bridge/economics/security/expiry tests passed. The first complete
+  run passed 1,807/1,810; its three failures were stale package identity assertions.
+  Those directly coupled assertions were corrected without changing historical
+  contracts; all 102 C3R-A1/P regressions subsequently passed. A direct node command
+  missing the repository TS loader was corrected, not treated as a product failure.
+- Typecheck and full lint passed (12 preexisting warnings outside changed files).
+  Changed-file lint passed with zero warnings. Quality, taxonomy and explanation
+  evaluations passed. All 162 JSON files parsed and diff checks passed.
+- Next 16.3.3 production build passed with six dynamic-filesystem tracing warnings
+  in unchanged dashboard/reference code. 189 production traces / 148,602 entries
+  and 3,040 built artifacts contain no private root paths. Compiled Preview and
+  Production GET/POST return 404 ACCESS_DENIED, zero anchors and no-store without
+  consuming the request body, including enabled flags and local Host/Origin.
+- Synthetic expiry tests cover before, inclusive due-day boundaries and after.
+  A separate unchanged-real-registry test proves expiry becomes needs_update.
+  These Date mocks are test-process only; actual source dates and OS time did not
+  change. No synthetic currentness is real-source review evidence.
+- Authenticated CLI GET revalidated Production-skip / Preview-build behavior,
+  zero Deploy Hooks and canceled latest Production deployment. Existing CLI
+  authentication also reached the c188b9f9 deployed application: GET and POST
+  returned 404 ACCESS_DENIED and empty anchors (POST private/no-store). This is
+  separate from the earlier unauthenticated protection responses. No new token,
+  project-link write, protection change or secret output occurred. The corrected
+  candidate's own Preview must still be observed after push.
+
+Final local full suite passed 1,810/1,810 with no skip; the authoritative Learner
+Loop test portion passed 710/710. Its quality/taxonomy/explanation evaluations and
+the same production build passed separately; no redundant second local build is
+claimed. The final manifest is 27 changed paths, with no private artifact or secret
+signature detected. These are candidate-worktree executions, not native CI results.
+
+Only after these gates passed, the corrected Next 16.3.3 launcher resumed on the
+existing 127.0.0.1:3883. All four service listeners and app listener are loopback
+only. Genuine existing login/session lists 15 held versions with no initial body;
+Civil-law article 1 displays, its exact reference/body reopens identically, and
+keyword search returns 10 results. Tamper gives 503 INTEGRITY_ERROR/empty anchors;
+anonymous gives 404/empty anchors; reload clears bodies. Browser errors and
+external requests remain zero. All 105 source/catalog files, six personal session
+rows, planning and installation are unchanged; no r46 action or clock change.
+The old vulnerable app was not resumed. Account/TLS/volumes/profile are reused.
+
+Final remote native CI, corrected-head deployed Preview observation, independent
+review and conditional merge remain pending until live GitHub/Vercel outcomes.
+GitHub remains the exact-head CI/review/merge authority; no future result is
+predeclared. Supplier source pins and actual source catalog remain read-only.

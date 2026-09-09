@@ -23,6 +23,8 @@ jobs:
           cache: npm
       - name: Install dependencies
         run: npm ci
+      - name: Install browser for isolated bridge UI regression
+        run: npm exec playwright install -- --with-deps chromium
       - name: Run full test suite
         run: npm run test -- --workers=1
       - name: Verify learner loop
@@ -56,6 +58,8 @@ jobs:
           }
       - name: Install dependencies
         run: npm.cmd ci
+      - name: Install browser for isolated bridge UI regression
+        run: npm.cmd exec playwright install -- chromium
       - name: Typecheck
         run: npm.cmd run typecheck
       - name: Lint

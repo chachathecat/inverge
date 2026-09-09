@@ -7,6 +7,20 @@ import { build } from "esbuild";
 import { chromium } from "playwright";
 import { bridgeHarness, syntheticBody } from "./fixtures/owner-legal-evidence-bridge-harness.mjs";
 
+test("native CI installs Chromium before the registered bridge browser regression", () => {
+  const fast = fs.readFileSync(".github/workflows/ci-fast.yml", "utf8");
+  const full = fs.readFileSync(".github/workflows/ci-full.yml", "utf8");
+  const [linux, windows] = full.split("  full-ci-windows:");
+  for (const [job, install, suite] of [
+    [fast, "npm exec playwright install -- --with-deps chromium", "npm run test -- --workers=1"],
+    [linux, "npm exec playwright install -- --with-deps chromium", "npm run test -- --workers=1"],
+    [windows, "npm.cmd exec playwright install -- chromium", "npm.cmd run test -- --workers=1"],
+  ]) {
+    assert.ok(job.indexOf(install) >= 0, "missing mandatory browser prerequisite");
+    assert.ok(job.indexOf(suite) > job.indexOf(install), "browser must be installed before tests");
+  }
+});
+
 test("isolated actual React UI: safe initial render, held selection, search, exact reopen, errors and expired access",{timeout:90_000},async()=>{
   const client='import React from "react";import {createRoot} from "react-dom/client";import {OwnerLegalEvidence} from "./components/review-os/owner-legal-evidence";createRoot(document.getElementById("root")).render(React.createElement(OwnerLegalEvidence));';
   const options={bundle:true,write:false,jsx:"automatic",logLevel:"silent"};

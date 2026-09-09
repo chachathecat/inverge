@@ -636,18 +636,21 @@ test("A1 owns exactly eleven source-authority paths and is registered once", asy
   }
 });
 
-test("package source identity remains exact while the current lock binds the APP-1 security patch", async () => {
+test("historical package identities remain exact while current packages bind the Owner-approved bridge security patch", async () => {
   const packageBytes = await readFile(path.join(repositoryRoot, "package.json"));
   const lockBytes = await readFile(path.join(repositoryRoot, "package-lock.json"));
   const lock = JSON.parse(lockBytes.toString("utf8"));
-  assert.equal(gitBlob(packageBytes), contract.packageIdentity.packageJsonGitBlob);
+  // Historical A1 authority is immutable; the 2026-09-09 Owner amendment
+  // separately authorizes the current Next/sharp/js-yaml security recovery.
+  assert.equal(contract.packageIdentity.packageJsonGitBlob, "33a8d29b52ac225c6e957c71fce1f28f2eaba16d");
+  assert.equal(gitBlob(packageBytes), "2354d061aa947e3d542f2c61b4b5c0ab10f924e5");
   assert.equal(
     contract.packageIdentity.packageLockJsonGitBlob,
     "70f85fb69c39aa73cf572082c4d38eb426c0b398",
   );
   assert.equal(
     gitBlob(lockBytes),
-    "3c3224cfdf7e87df0dd6d5b19ad86bff1f1d1894",
+    "aea917dbb485a0cfef97af9406e6941bb26091e2",
   );
   assert.equal(contract.packageIdentity.packageMutationAuthorized, false);
   const browserslistInstances = Object.entries(lock.packages)

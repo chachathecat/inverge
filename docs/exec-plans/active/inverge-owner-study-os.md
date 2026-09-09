@@ -2,6 +2,48 @@
 
 ## APPRAISER-LEGAL-EVIDENCE-BRIDGE-01 — 2026-09-09 single-writer transition
 
+Current recovery (2026-09-09): Owner explicitly authorized the bounded CI/security
+correction in the existing PR #909 and worktree. Next/eslint-config-next 16.3.3,
+sharp 0.35.4 and js-yaml 4.3.2 clean installation, unchanged audit/SBOM gate,
+typecheck/lint/build and focused regressions passed. Chromium prerequisites and
+synthetic expiry clocks replace neither native CI nor real-source currentness.
+Final full suite 1,810/1,810 and Learner Loop tests 710/710 passed. Corrected
+Next 16.3.3 resumed only after local security/build/regression gates; genuine
+Owner-session lookup/reopen and all five loopback listeners passed, with 105
+sources and personal session/planning/installation data unchanged. The 27-path
+candidate awaits ordinary push and final native checks, actual authenticated
+corrected-head Preview denial, independent exact-head
+0/0/0 and thread resolution remain merge gates. Existing CLI authentication now
+proves actual c188b9f9 Preview API denial without a new token or protection change;
+the new candidate must be observed separately. See the latest bridge QA section.
+
+Historical safe stop (2026-09-09): Draft PR #909 / Issue #908 was pushed at
+c188b9f94407fa73ed1313ccd21a588784f2046c, tree
+bc3d7a3735e020aecc40c8f678e46df22dba5fd3. No merge or review completion.
+Four required checks passed; Security, Learner Loop, Fast and both Full jobs
+failed. Security detects newly reported critical/high advisories in unchanged
+Next/sharp/js-yaml dependencies. The genuine Owner-PC lookup below succeeded
+before that finding; the app this task started is now stopped (3883 absent),
+while DB/services, profile/TLS, all 105 sources and six personal records remain
+preserved. The later bounded recovery authority is recorded above; restart still
+requires successful corrected clean-install/security/build/regression validation.
+
+The directly introduced browser failure is missing CI Chromium: minimal install
+steps for Fast/Linux/Windows and a prerequisite regression are preserved locally;
+both affected browser tests pass. They are not committed/pushed or native-CI proof.
+Learner Loop independently fails because the unchanged official-source registry
+recheck date 2026-09-08 expired; needsUpdateNodes is correctly 2, not the test's 1.
+Do not extend a real source date or mark it reviewed to satisfy that test.
+Resume after the precise baseline dependency/test-fixture decision; no new feature,
+second writer, forced integration, security exception or redundant formal review.
+
+Automatic Preview for this exact head is READY. Direct GET reaches Vercel login
+(302), POST is 401: neither proves application denial. Local production-compiled
+Preview/Production denial before body/auth/config/reader and bundle privacy passed.
+Do not use CLI curl's automatic protection-token creation or change protection.
+Independent exact-head review is not requested yet; unresolved threads are zero,
+which is not a 0/0/0 review. Production skip settings remain unchanged.
+
 Economics PR #907 is merged at f50e64bb1ed90e7e75f8c00196f46e901f059ea6,
 tree 6006f129cfe1365ec12ca8dd07f4059e7ade1bbb. All five resulting-main workflows
 were rechecked successful before transition. Its detailed uncommitted closeout,
