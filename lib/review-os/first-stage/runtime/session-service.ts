@@ -278,6 +278,18 @@ export function createPrivateFirstStageSessionService(
       ...(active && catalog.questionAttributions ? { questionAttributions: catalog.questionAttributions(active.questionReference) } : {}),
       attempt: active ? { attemptId: active.attemptId, startedAt: active.startedAt }
         : latest ? { attemptId: latest.attemptId, decision: latest.evaluation?.decision } : null,
+      // Owner-private readback, not a Today/QF metadata projection or a client
+      // echo. load() validates the persisted aggregate and exact reference first.
+      // Never return a prior response while another attempt is in progress.
+      submittedResponse: !active && latest?.state === "evaluated" && latest.submission ? {
+        attemptId: latest.attemptId, questionId: latest.questionReference.questionId,
+        questionVersion: latest.questionReference.questionVersion,
+        questionNumber: latest.questionReference.questionNumber,
+        selectedChoice: latest.submission.selectedChoice,
+        confidence: latest.submission.confidence, answerChanged: latest.submission.answerChanged,
+        previousChoice: latest.submission.previousChoice, submittedAt: latest.submission.submittedAt,
+        assistanceLevel: latest.assistanceLevel, contentMode: saved.schemaVersion,
+      } : null,
       explanation,
       ...(trial && saved.state.examCycle.questionReferences[0].questionVersion==="issue883-economics-curriculum-v1" ? {assistanceLevel:active?.assistanceLevel??latest?.assistanceLevel??"none",
         availableConceptAids:active?.kind==="initial" ? (["concept","prerequisite"] as const).filter(kind=>

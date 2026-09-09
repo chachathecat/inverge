@@ -22,6 +22,9 @@ test("durable submission survives a new service instance and preserves the exact
   const view = await reopened.service.view(OWNER, ids.sessionId);
   assert.equal(view.explanation.text, EXPLANATION);
   assert.equal(view.attempt.decision, "incorrect");
+  assert.equal(view.submittedResponse.selectedChoice,1);
+  assert.equal(view.submittedResponse.contentMode,"first_stage.private_session.v1");
+  assert.equal(view.submittedResponse.submittedAt,SUBMIT);
   assert.equal(view.reviewTasks.length, 1);
   assert.equal(view.reviewTasks[0].dueAt, "2026-09-07T10:01:00.000Z");
   assert.equal(saved.state.attempts[0].submission.submittedAt, SUBMIT);

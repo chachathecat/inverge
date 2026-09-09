@@ -2,6 +2,46 @@
 
 ## Active post-#909 Goal — received 2026-09-09T06:07:54Z
 
+### Current transition: #912 integrated -> #913 saved-response reconnect
+
+PR #912 merged reviewed head `f212d8b32584354e9bd2d329e7949102ff86732c` as
+`c706312a0e0f7f4772e322a9fc2c58cfef9aaa4a`; resulting tree
+`570515d3f3cd49ce6cec3a39e231a09124ce6c82` matches the reviewed tree. Native
+required checks 9/9, automatic exact-head Codex review clean, threads 0, and all
+five resulting-main workflows passed. Native summary:
+https://github.com/chachathecat/inverge/pull/912#issuecomment-5597840176.
+Authenticated Preview returned actual app JSON 404/no-store; Production deployment
+was CANCELED under the unchanged preview-only project setting. Owner-PC code was
+restarted from the identical reviewed tree: genuine existing account reconnect,
+six recovery cards, unchanged study/planning/installation and 105 source files,
+all five listeners loopback-only. No actual r46 next-day attempt was performed.
+The existing server now uses `post909-study-recovery`; its branch stays unchanged.
+The old bridge worktree and #907 dirty closeout remain preserved. Code child #911
+is complete. GitHub interpreted a negative closing phrase for #883 as an automatic
+link; the phrase was corrected, #883 immediately reopened, and only #911 remains
+in the PR's closing references. #883 remains incomplete/OPEN.
+
+Next complete A/C outcome is Issue #913, `codex/study-saved-response-recap` in a
+separate worktree of the same name, based on that validated main. Sole writer
+unchanged; the separate legal-repository task is neither stopped nor modified.
+Actual loader/HTTP regression reproduced the absent saved-response readback.
+The existing validated durable attempt now projects only its submitted selection,
+confidence/change/time/assistance and exact reference identity to the private
+feedback view. No raw work trace or reference answer, new store/schema/admission,
+client-state authority or Today/QF copy. Active attempts suppress old recap.
+Final affected tests: 69 pass, isolated PostgreSQL/real React browser: 8/8 pass
+across reviewed subjects and unreviewed trial, synthetic cleanup zero. Typecheck,
+changed-file lint, build, JSON/diff/private-root bundle scans pass. The earlier
+default run had 1,820 passes and one response-shape hash failure; the historic
+row/legacy-response hashes are preserved and the added readback is separately
+checked in the 69 passing affected tests. Do not report that earlier full run as
+passing. Final exact-head Linux/Windows CI and independent review remain pending.
+No source changed after the successful build/PG run; only the directly coupled
+compatibility assertion was corrected. #912 evidence does not satisfy #913 gates.
+Continue the same Goal after integration; see the bounded QA record.
+
+### Goal authority and retained denominators
+
 Authority: `docs/decisions/2026-09-09-owner-post909-study-os-continuation.md`.
 Same task `01a06790-d555-7b40-9a04-3ef95010fb49`, sole code/integration writer.
 Fresh main: #909 squash `0047f297e61a33fafe01b3458b78fa3692ac54c4`, tree

@@ -224,6 +224,15 @@ function PrivatePracticeSession({ subject, ownerLocalTrial }: { subject: FirstSt
           <p className="text-xs text-slate-500">{view.question.sourceStatusLabel} · {view.question.currentnessStatusLabel}</p>
           <button className={BUTTON} disabled={busy || selected === null} type="submit">응답 저장 후 해설 확인</button>
         </form>}
+        {view?.submittedResponse && <section aria-label="서버에 저장된 내 응답" className="space-y-3 rounded-xl border p-5">
+          <h2 className="font-semibold">서버에 저장된 내 응답</h2>
+          <p>문항 {view.submittedResponse.questionNumber}번 · 제출 선택: {view.submittedResponse.selectedChoice === null ? "미응답" : `${view.submittedResponse.selectedChoice}번`}</p>
+          <p className="text-sm">제출 당시 확신도: {{low:"낮음",medium:"보통",high:"높음"}[view.submittedResponse.confidence]}
+            {view.submittedResponse.answerChanged ? ` · 이전 선택 ${view.submittedResponse.previousChoice}번에서 변경` : " · 최종 선택 변경 없음"}</p>
+          <p className="text-sm">제출 시각: <time dateTime={view.submittedResponse.submittedAt}>{view.submittedResponse.submittedAt}</time></p>
+          <p className="text-sm">{view.submittedResponse.assistanceLevel === "none" ? "도움 기록 없음 — 이 사실만으로 독립 수행·숙달을 판정하지 않습니다." : "도움 포함 응답 — 독립 수행·숙달 증거가 아닙니다."}</p>
+          <p className="text-xs">{view.submittedResponse.contentMode === "first_stage.owner_local_trial_session.v1" ? "사람 미검토 시험 기록" : "검토된 콘텐츠의 개인 응답 기록"} · 현재 브라우저 선택이 아니라 실제 저장된 마지막 응답입니다. 정답이나 학습효과를 보증하지 않습니다.</p>
+        </section>}
         {view?.explanation && <section aria-label="저장된 응답 해설" className="space-y-3 rounded-xl bg-slate-50 p-5">
           <h2 className="font-semibold">저장된 응답의 학습 참고 해설</h2>
           <p>{ownerLocalTrial ? (view.attempt?.decision === "correct" ? "제시된 검토 전 답과 일치" : "제시된 검토 전 답과 불일치")
@@ -235,7 +244,7 @@ function PrivatePracticeSession({ subject, ownerLocalTrial }: { subject: FirstSt
         {view?.reviewTasks.map((task) => <section key={task.reviewTaskId} className="rounded-xl border p-4">
           {task.status === "completed" ? <p>이 복습 처리 완료 — 학습 성공·숙달 판정과는 별개입니다.</p> :
             task.status === "retry_active" ? <p>독립 재시도 진행 중 — 위 문제를 이어서 풀어주세요.</p> : <>
-              <p>복습 예정 시각: <time dateTime={task.dueAt}>{task.dueAt}</time></p>
+              <p>복습 예정 시각: <time data-review-due-at dateTime={task.dueAt}>{task.dueAt}</time></p>
               {task.retryAvailability === "exhausted" ? <p>복습 필요 — {ownerLocalTrial ? "시험용" : "검토된"} 새 재시도 문항이 부족합니다. 현재 기록은 보존됩니다.</p> :
               <button type="button" className={`${BUTTON} mt-3`} disabled={busy || !task.canStartRetry}
                 onClick={() => command("retry", { reviewTaskId: task.reviewTaskId })}>예정 시각 이후 새 문제로 복습</button>}
