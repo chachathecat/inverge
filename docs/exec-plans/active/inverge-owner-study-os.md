@@ -2,7 +2,58 @@
 
 ## Active post-#909 Goal — received 2026-09-09T06:07:54Z
 
-### Current transition: #914 integrated -> #915 reviewed Bank-first sessions
+### Current transition: #916 integrated -> #917 bounded private-session reads
+
+PR #916 merged reviewed head `f2e2b8d181505399d77429c9ad69bad9e8d50781`
+as `7d9bc34274a097812fed6532b29390cbaeb816ee`; reviewed/resulting tree
+`eb675d213d7bc73fa3bd30f5dede12d379580670`. Required native checks 9/9,
+Linux default 1,833/1,833, actual isolated PostgreSQL/SDK/HTTP/React 8/8,
+Linux/Windows clean installs/builds and C3R-L passed. Automatic exact-head Codex
+review completed clean, actionable 0/0/0 and zero threads. Five main workflows
+and Dependabot Updates passed. Exact-main Production deployment was CANCELED;
+authenticated Preview returned actual Bank and bridge app denials/no-store.
+Live closeout: https://github.com/chachathecat/inverge/pull/916#issuecomment-5599594670.
+Only #915 closed; #883/A/B/C remain incomplete. Approved reviewed stock stays 0,
+Bank flag OFF, no personal SQL apply or new content/provider/operational activation.
+
+The sole writer reuses the clean, NON-SERVER `study-bank-first` worktree on new
+branch `codex/study-session-read-recovery`, based on that resulting main. This
+avoids another checkout/install on low disk. The actual Owner app still uses
+`study-saved-response-recap` (#914); its branch/account/TLS/ports/volumes/profile
+are unchanged. The current real trial session GET returned 200/no-store and its
+saved response matched the prior observation. Earlier diagnostic 503/400 requests
+used the reviewed-content route/unsupported history query, not the actual trial
+session URL. Do not describe them as a personal DB outage. Docker CONTROL API
+remains unresponsive; local free space ~0.33 GB. No fresh full DB/source digest
+comparison or #916 app refresh is claimed; no personal/source deletion/restart.
+
+Issue #917 addresses one C/reconnect gap: an indefinitely pending GET hides the
+EXISTING reload action. Actual React/HTTP regression reproduced its absence after
+15 seconds of synthetic browser time. Bound that read including its response body,
+abort obsolete reads, then expose the existing reload action without POST/replay
+or a new identity. Server clocks, writes, approval/disclosure and D+1 are unchanged.
+New test stalls both initial headers and reconnect JSON body, checks no hidden
+content/new POST, identical URL and saved response/due time, then completes the
+existing failure-retry/D+1 scenario. Local synthetic browser passed after the fix;
+the initial raw Node invocation lacked the repository TS loader and was corrected
+before the actual red/green reproduction. Full affected/local/native gates and
+new exact-head independent review still pending. Heavy local install/build/SQL
+remain unavailable; existing native Full CI supplies mandatory clean execution.
+Local completion update: disk space later increased (~8 GB), but the reused
+node_modules/junction disappeared during validation; those interrupted results
+are failures, not passes. A new independent locked install succeeded (457
+packages). Final affected 194/194 plus browser navigation/all-five blockers 2/2,
+typecheck, changed lint, build, 162 JSON, four-path manifest/diff and private-root
+NFT/static-key scans pass. Audit critical/high/moderate 0, unchanged low 1. The
+build's six existing broad-tracing warnings remain. One bounded Docker ping after
+the disk change still timed out; do not claim local SQL. Candidate is ready for
+ordinary push/Draft native validation; exact-head review/integration still pending.
+Existing Owner-PC's dependency directory is now absent, though its last actual
+cached-process session read succeeded. Do not restart that old folder; a later
+authorized refresh must use the newly verified installation and preserve all data.
+See `docs/qa/study-session-read-recovery-validation.md`. No Goal completion claim.
+
+### Historical #914 -> #915 candidate record (superseded by #916 closeout above)
 
 PR #914 merged reviewed head `a7d3d6e0d7741fcdd0d35b430d3a3483757fce1f`
 as `2f01a74323d793e080315755de72118797c44fab`, tree

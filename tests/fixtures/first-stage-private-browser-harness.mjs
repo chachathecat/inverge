@@ -22,6 +22,10 @@ export async function verifyPrivateBrowser({ route, clock, failNextWrite, subjec
   define: { "process.env.NODE_ENV": '"production"' }, logLevel: "silent" });
   let origin = "", browser;
   let loseCreateResponse = ownerLocalTrial || bankPractice;
+  let stallNextRead, postCount = 0;
+  function stallRead(bodyPending = false) {
+    return new Promise(resolve => { stallNextRead = { started: resolve, bodyPending }; });
+  }
   const failures = [], external = [], consoleErrors = [];
   const server = createServer(async (incoming, outgoing) => {
     try {
@@ -37,6 +41,16 @@ export async function verifyPrivateBrowser({ route, clock, failNextWrite, subjec
       }
       if (url.pathname !== apiPath) { outgoing.writeHead(404).end(); return; }
       const method = incoming.method;
+      if (method === "POST") postCount++;
+      if (method === "GET" && stallNextRead) {
+        const stalled = stallNextRead; stallNextRead = null;
+        if (stalled.bodyPending) {
+          outgoing.writeHead(200, { "content-type": "application/json", "cache-control": "private, no-store" });
+          outgoing.write('{"ok":'); // Headers arrive but JSON never completes.
+        }
+        stalled.started(); // Synthetic transport stalls; never touches a real account.
+        return; // Client abort, not a fabricated server result, must end waiting.
+      }
       const request = new Request(url, { method, headers: incoming.headers,
         ...(method === "POST" ? { body: Readable.toWeb(incoming), duplex: "half" } : {}) });
       const response = await route[method](request);
@@ -62,9 +76,26 @@ export async function verifyPrivateBrowser({ route, clock, failNextWrite, subjec
       external.push("blocked-external-request"); return intercepted.abort();
     });
     const page = await context.newPage();
+    await page.clock.install(); // Browser timeout only; server clock is unchanged.
     page.on("pageerror", () => failures.push("browser-page-error"));
     page.on("console", message => { if (message.type() === "error") consoleErrors.push(message.text()); });
-    await page.goto(`${origin}${pagePath}`);
+    async function recoverStalledRead(navigate, bodyPending = false) {
+      const started = stallRead(bodyPending), writesBefore = postCount;
+      await navigate(); await started;
+      const exactUrl = page.url();
+      await page.clock.fastForward(15_001);
+      const reload = page.getByRole("button", { name: "서버 기록 다시 불러오기" });
+      await reload.waitFor({ timeout: 2_000 });
+      assert.equal(await page.getByRole("radio").count(), 0);
+      assert.equal(await page.getByRole("region", { name: "저장된 응답 해설" }).count(), 0);
+      assert.equal(await page.getByRole("region", { name: "서버에 저장된 내 응답" }).count(), 0);
+      assert.equal(postCount, writesBefore);
+      await reload.click();
+      await page.getByText("서버 기록을 확인하고 있습니다.", { exact: true }).waitFor({ state: "hidden" });
+      assert.equal(page.url(), exactUrl);
+      assert.equal(postCount, writesBefore);
+    }
+    await recoverStalledRead(() => page.goto(`${origin}${pagePath}`));
     if (blockCatalog) {
       // Availability can change between GET and POST. Use the actual server
       // blocker, then verify reload and existing-session GET consume it too.
@@ -138,7 +169,7 @@ export async function verifyPrivateBrowser({ route, clock, failNextWrite, subjec
     assert.equal(await retryButton.isDisabled(), true);
     await retryButton.evaluate(button => button.click());
     assert.equal(await page.getByRole("region", { name: "저장된 응답 해설" }).count(), 1);
-    await page.reload();
+    await recoverStalledRead(() => page.reload(), true);
     await page.getByRole("region", { name: "저장된 응답 해설" }).waitFor();
     assert.equal(await page.locator("time[data-review-due-at]").getAttribute("datetime"), dueAt);
     assert.match(await recap.innerText(),/제출 선택: 1번/);
