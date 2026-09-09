@@ -22,7 +22,16 @@ export async function verifyPrivateBrowser({ route, clock, failNextWrite, subjec
   define: { "process.env.NODE_ENV": '"production"' }, logLevel: "silent" });
   let origin = "", browser;
   let loseCreateResponse = ownerLocalTrial || bankPractice;
-  let stallNextRead, stallNextWrite, postCount = 0;
+  let stallNextRead, stallNextWrite, holdNextBrowserPost, postCount = 0;
+  const browserPostReleases = [];
+  function holdBrowserPost() {
+    let signalStarted, release;
+    const started = new Promise(resolve => { signalStarted = resolve; });
+    const held = new Promise(resolve => { release = resolve; });
+    holdNextBrowserPost = { started: signalStarted, held };
+    browserPostReleases.push(release);
+    return { started, release };
+  }
   function stallRead(bodyPending = false) {
     return new Promise(resolve => { stallNextRead = { started: resolve, bodyPending }; });
   }
@@ -101,8 +110,14 @@ export async function verifyPrivateBrowser({ route, clock, failNextWrite, subjec
   try {
     browser = await chromium.launch({ headless: true });
     const context = await browser.newContext();
-    await context.route("**/*", intercepted => {
-      if (new URL(intercepted.request().url()).origin === origin) return intercepted.continue();
+    await context.route("**/*", async intercepted => {
+      if (new URL(intercepted.request().url()).origin === origin) {
+        if (intercepted.request().method() === "POST" && holdNextBrowserPost) {
+          const held = holdNextBrowserPost; holdNextBrowserPost = null;
+          held.started(); await held.held;
+        }
+        return intercepted.continue();
+      }
       external.push("blocked-external-request"); return intercepted.abort();
     });
     const page = await context.newPage();
@@ -125,10 +140,13 @@ export async function verifyPrivateBrowser({ route, clock, failNextWrite, subjec
       assert.equal(page.url(), exactUrl);
       assert.equal(postCount, writesBefore);
     }
-    async function recoverStalledWrite(click, mode) {
+    async function recoverStalledWrite(button, mode) {
+      // The preceding POST can still be in transit after locator.click returns.
+      // Arm only after its durable UI transition exposes THIS command's button.
+      await button.waitFor({ state: "visible" });
       const held = stallWrite(mode), writesBefore = postCount;
       try {
-        await click(); await held.started;
+        await button.click(); await held.started;
         const exactUrl = page.url();
         await page.clock.fastForward(15_001);
         const retry = page.getByRole("button", { name: "같은 요청 다시 확인" });
@@ -180,6 +198,7 @@ export async function verifyPrivateBrowser({ route, clock, failNextWrite, subjec
     await page.getByRole("button", { name: bankPractice ? "검토 재고에서 다음 연습 배정" : `${ownerLocalTrial?"사람 미검토 시험용":"검토된"} ${questionNumber}번 시작` }).evaluate(button => {
       button.click(); button.click();
     });
+    let createReplayInTransit;
     if (ownerLocalTrial || bankPractice) {
       await page.getByRole("button",{name:"같은 요청 다시 확인"}).waitFor();
       const pendingUrl=page.url();await page.reload();
@@ -191,9 +210,15 @@ export async function verifyPrivateBrowser({ route, clock, failNextWrite, subjec
         assert.equal(await page.getByRole("region",{name:"저장된 응답 해설"}).count(),0);
       }
       assert.equal(await page.getByLabel("시험 문항 선택").count(),0);
+      // Deterministically delay this prior request's dispatch. The next write
+      // fault must not arm until its own button is visible after this succeeds.
+      createReplayInTransit = holdBrowserPost();
       await page.getByRole("button",{name:"같은 요청 다시 확인"}).click();
+      await createReplayInTransit.started;
     }
-    await recoverStalledWrite(() => page.getByRole("button", { name: "문제 열고 먼저 풀기" }).click(), "headers");
+    const beginRecovery = recoverStalledWrite(page.getByRole("button", { name: "문제 열고 먼저 풀기" }), "headers");
+    createReplayInTransit?.release();
+    await beginRecovery;
     assert.equal(await page.getByRole("region", { name: "저장된 응답 해설" }).count(), 0);
     assert.equal(await page.getByRole("region", { name: "서버에 저장된 내 응답" }).count(), 0);
     if (expectedAttributions) {
@@ -209,7 +234,7 @@ export async function verifyPrivateBrowser({ route, clock, failNextWrite, subjec
     await page.getByRole("button", { name: "같은 요청 다시 확인" }).waitFor();
     assert.equal(await page.getByRole("region", { name: "저장된 응답 해설" }).count(), 0);
     assert.equal(await page.getByRole("region", { name: "서버에 저장된 내 응답" }).count(), 0);
-    await recoverStalledWrite(() => page.getByRole("button", { name: "같은 요청 다시 확인" }).click(), "body");
+    await recoverStalledWrite(page.getByRole("button", { name: "같은 요청 다시 확인" }), "body");
     await page.getByRole("region", { name: "저장된 응답 해설" }).waitFor();
     const recap=page.getByRole("region",{name:"서버에 저장된 내 응답"});
     assert.match(await recap.innerText(),/제출 선택: 1번/);
@@ -237,7 +262,7 @@ export async function verifyPrivateBrowser({ route, clock, failNextWrite, subjec
     assert.equal(await recap.count(),0);
     await page.getByRole("radio").nth(retryChoice - 1).check();
     clock.advance(60_000);
-    await recoverStalledWrite(() => page.getByRole("button", { name: "응답 저장 후 해설 확인" }).click(), "before-handler");
+    await recoverStalledWrite(page.getByRole("button", { name: "응답 저장 후 해설 확인" }), "before-handler");
     await page.getByText("이 복습 처리 완료 — 학습 성공·숙달 판정과는 별개입니다.").waitFor();
     await page.reload();
     await page.getByText("이 복습 처리 완료 — 학습 성공·숙달 판정과는 별개입니다.").waitFor();
@@ -260,6 +285,7 @@ export async function verifyPrivateBrowser({ route, clock, failNextWrite, subjec
     assert.ok(consoleErrors.every(message => /Failed to load resource.*(?:503|404)/u.test(message)));
     return { sessionId, dueAt, screenshot, browserErrors: failures.length, externalRequests: external.length };
   } finally {
+    for (const release of browserPostReleases) release();
     if (browser) await browser.close();
     server.closeAllConnections();
     await new Promise(resolve => server.close(resolve));

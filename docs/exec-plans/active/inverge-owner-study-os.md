@@ -15,7 +15,7 @@ Live closeout: https://github.com/chachathecat/inverge/pull/918#issuecomment-560
 Only #917 closed; #883 and this Goal remain incomplete. Reviewed approvals 0.
 
 Same sole writer reuses the NON-SERVER `study-bank-first` worktree on
-`codex/study-session-write-recovery`, based on that main. The running #914 PC
+`codex/study-session-write-recovery`, based on that main. The former #914 PC
 folder/branch remains untouched. Its last real trial session GET was 200/no-store
 with unchanged submitted response; fresh read-only comparison found all 105
 original source hashes unchanged. Docker control safety preflight is unavailable;
@@ -45,6 +45,25 @@ Local PostgreSQL is not rerun against the unchanged unavailable control API;
 mandatory native Linux Full CI will supply fresh disposable SQL/browser evidence.
 No new dependency, schema, content, environment or personal/remote mutation.
 See `docs/qa/study-session-write-recovery-validation.md`.
+
+PR #920 initial head `9dc549a61de8e9e315582c1d5f966e9e14d6eab7` is NOT
+merge-ready: Fast CI had 1,832 passes/one failure and Linux actual SQL/browser
+had two passes/six failures; Windows Full CI passed. The shared fault fixture
+armed before the preceding create/replay reached the HTTP host and intercepted
+the wrong POST. A deterministic browser-dispatch hold reproduced the exact CI
+failure locally. The fixture now waits for the intended command's visible button
+before arming; the deliberate prior-request hold stays as regression coverage.
+Targeted red/green, correction affected 289/289 plus browser2/2, typecheck,
+changed lint, JSON/manifest/diff pass; new-head native CI/review pending.
+No production source change, timeout increase, skip, policy relaxation or blind
+CI rerun. Initial-head Preview returned actual trial/Bank/bridge404/no-store.
+
+New PC observation: app session exited code1 and port3883 is absent; this writer
+did not stop it and the exact exit cause is unconfirmed. All four DB gateway
+listeners remain loopback-only. One bounded control ping after the changed state
+still timed out. No guarded restart, whole-DB comparison or current availability
+claim; Owner was asked to restore Docker without deleting/resetting volumes.
+Independent code development continues; no source or personal cleanup performed.
 
 ### Historical #916 -> #917 candidate record (superseded by #918 closeout above)
 

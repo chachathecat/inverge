@@ -49,6 +49,29 @@ test synchronization issue. It does not change production URL behavior.
   is separately incomplete, not synthetic runtime evidence.
 - #918 checks/review/main are prior evidence, not this candidate's results.
 
+### Native discovery and fixture correction
+
+Initial head `9dc549a61de8e9e315582c1d5f966e9e14d6eab7` failed Fast CI
+(1,832/1,833) and mandatory Linux SQL/browser (2/8); Windows Full CI passed.
+The six SQL cases and the Bank browser all stopped waiting for the begin button.
+The fault injector armed before its intended button was ready, occasionally
+capturing the preceding create/replay POST. A browser dispatch hold deterministically
+reproduced that exact failure locally; no runner-speed guess or blind rerun.
+The helper now waits for its intended button before arming. The controlled prior
+request hold remains and passes, preserving all request/response/row assertions.
+Production TSX source is byte-identical to the initial head. Correction affected
+tests289/289 plus browser2/2, typecheck, changed lint and JSON/manifest/diff pass.
+Fresh native exact-head CI/review remain gates; the previous
+local build/NFT evidence belongs to the unchanged implementation at the initial
+head, not a newly claimed build. No timeout inflation, fixture result fabrication,
+skip, CI policy change or personal DB use.
+
+The old Owner-PC process later exited code1 and its port is absent. The cause
+was not established and it was not stopped by this writer. Four gateway ports
+remain loopback-only, but the control API still times out; runtime refresh and
+current record readback remain held rather than bypassing preflight. Prior
+successful genuine reads/source hashes are historical evidence, not availability.
+
 ## Exact changed-path manifest
 
 1. `components/review-os/first-stage-private-practice.tsx`
