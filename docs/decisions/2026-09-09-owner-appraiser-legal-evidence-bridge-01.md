@@ -34,25 +34,45 @@ their recorded hashes checked before the economics integrator took over.
 The local handoff record names the current integrator. No other writer is started.
 
 The 12 prepared bridge paths are retained, with the minimal dashboard link,
-shared test registration, this decision and existing checkpoint owned serially
+shared test registration, explicit local launcher delta and its regression,
+this decision and existing checkpoint owned serially
 by that same integrator. No common MCQ component, auth/RLS, migration, package or
 lockfile policy is changed. Preserve the original economics worktree's uncommitted
 completion checkpoint, personal records, 3883 app, browser, TLS and caches.
 Legal-authority, restored catalog/originals, backups and claims remain read-only.
 
-## Separate delivery and execution gates
+## Scoped delivery and execution amendment — 2026-09-09
 
-The economics conditional merge authority does not automatically grant bridge
-merge authority. This decision is not a merge or local activation token.
-GitHub native exact-head checks, independent clean review and resolved threads
-remain mandatory for any later authorized merge. Do not force merge or rewrite.
+The later explicit Owner instruction supersedes the original Preview prohibition
+only for this bridge's disabled-code automatic Preview build AND deployment from
+the existing Git push/PR integration. It is not merely CI permission. No manual
+deployment, Vercel setting/environment/protection/Deploy Hook change is authorized.
+Preview and Production must deny before authentication, request-body consumption,
+private configuration access or reader initialization regardless of enabled flags
+or locally spoofed request headers. No private source/catalog/backup/record/secret
+may enter Git, CI, static pages or deployment bundles.
 
-No public/Preview/Production deployment, remote operation, provider invocation,
-extra paid service, payment or shared live-environment mutation is authorized.
-Verify automatic deployment implications before any push/PR. If an execution or
-integration gate remains, preserve the completed code and evidence, stop bridge
-writing/shared execution safely, and return to the economics checkpoint without
-starting a new economics feature merely to occupy that wait.
+This exact bridge OFF-code candidate may use ordinary push, Draft PR, necessary
+corrections and exact-head squash integration only after all native required
+checks, independent actionable P0/P1/P2 0/0/0, zero unresolved threads, current
+repository rules and Production automatic-build suppression are verified.
+This authority is explicit for the bridge, not borrowed from economics. No bypass,
+force push, auto-merge or duplicate same-head review is permitted.
+
+Verified code may also be activated only in the existing Owner-PC environment
+for genuine login, held law/version selection, search/body display and same native
+reference reopen/integrity acceptance. Only required code refresh/restart and local
+bridge configuration are allowed; preserve the existing account, auth, ports, TLS,
+private DB and economics records. No new account, port, trust root or remote
+service. Request any password only through the existing local login screen.
+
+No Preview source access or activation, public use, Production activation,
+collection/OC request, remote DB/Storage write, provider call, extra paid service
+or payment is authorized. Stay within existing subscription/build quotas. Supplier
+and private source/catalog/backup/claim paths remain read-only. Preserve genuine
+Owner r46 next-day observation; never perform it or change the clock on their behalf.
+After bridge closeout, continue only existing authorized incomplete work; do not
+repeat the completed economics Goal or invent a successor scope.
 
 The bounded economics curriculum Goal is already complete, not the whole subject:
 human approvals remain zero and actual next-day r46 observation is still Owner-only.

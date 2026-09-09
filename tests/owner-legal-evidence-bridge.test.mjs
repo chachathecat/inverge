@@ -4,6 +4,9 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { loadSnapshotBridge } from "../lib/legal/owner-snapshot-bridge.ts";
+import * as bridgeHttp from "../lib/legal/owner-snapshot-bridge-http.ts";
+import { compilePrivateSource } from "./fixtures/first-stage-private-route-harness.mjs";
+import { environment, ownerSession } from "./fixtures/owner-legal-evidence-bridge-harness.mjs";
 import { bridgeHarness, held, input, reference, syntheticBody, digest } from "./fixtures/owner-legal-evidence-bridge-harness.mjs";
 
 test("bridge actual HTTP composition lists, searches and reopens only exact selected native JSON reference",async()=>{
@@ -43,6 +46,48 @@ test("scope filtering, unsupported date, no results and context/path injection f
   assert.equal((await h.send({action:"search",input:{...input,articleNumber:"999"}})).body.state,"NO_RESULTS");
   assert.equal((await h.send({action:"search",input},{query:"?root=private"})).status,400);
   assert.equal((await h.send({action:"search",input,reference})).status,400);
+});
+test("actual route/server deny Preview and Production before auth, configuration, reader initialization and body consumption",async()=>{
+  for(const deployment of [
+    {NODE_ENV:"production"},
+    {NODE_ENV:"production",VERCEL:"1",VERCEL_ENV:"preview"},
+    {NODE_ENV:"production",VERCEL:"1",VERCEL_ENV:"production"},
+    {NODE_ENV:"development",VERCEL_ENV:"preview"},
+    {NODE_ENV:"development",VERCEL_ENV:"production"},
+    {NODE_ENV:"development",VERCEL:"1"}
+  ]) {
+    const counts={auth:0,configuration:0,reader:0,pageHeaders:0};
+    const env=new Proxy({...environment,...deployment},{get(target,key){
+      if(["INVERGE_OWNER_LEGAL_READER_ROOT","INVERGE_OWNER_LEGAL_SNAPSHOT_ROOT",
+        "INVERGE_OWNER_LEGAL_CATALOG_PATH","INVERGE_OWNER_LEGAL_CATALOG_SHA256"].includes(key)) {
+        counts.configuration++;throw Error("private configuration must not be reached");
+      }
+      return target[key];
+    }});
+    const server=compilePrivateSource("lib/legal/owner-snapshot-bridge-server.ts",{
+      "server-only":{},"next/headers":{headers:async()=>{counts.pageHeaders++;return new Headers({host:"127.0.0.1:3883"});}},
+      "@/lib/auth/session":{getServerSessionUser:async()=>{counts.auth++;return ownerSession;}},
+      "@/config/legal-snapshot-reader-source-v1.json":{default:{}},
+      "./owner-snapshot-bridge":{loadSnapshotBridge:async()=>{counts.reader++;throw Error("reader must not be initialized");}},
+      "./owner-snapshot-bridge-http":bridgeHttp,
+    },env);
+    const route=compilePrivateSource("app/api/review-os/first-stage/legal-evidence/route.ts",{
+      "@/lib/legal/owner-snapshot-bridge-server":server});
+    assert.equal(await server.requireOwnerLegalEvidencePage(),null);
+    for(const method of ["GET","POST"]) {
+      let pulled=false;
+      const body=new ReadableStream({pull(){pulled=true;}},{highWaterMark:0});
+      const request=new Request("http://127.0.0.1:3883/api/review-os/first-stage/legal-evidence",{
+        method,headers:{host:"127.0.0.1:3883",origin:"http://127.0.0.1:3883",
+          "x-forwarded-host":"127.0.0.1:3883","x-vercel-env":"development","content-type":"application/json"},
+        ...(method==="POST"?{body,duplex:"half"}:{})});
+      const response=await route[method](request);
+      assert.equal(response.status,404);assert.equal(request.bodyUsed,false);assert.equal(pulled,false);
+      assert.match(response.headers.get("cache-control"),/no-store/);
+      assert.deepEqual((await response.json()).anchors,[]);
+    }
+    assert.deepEqual(counts,{auth:0,configuration:0,reader:0,pageHeaders:0});
+  }
 });
 test("failed and tampered references do not leak original body or exception/path",async()=>{
   const h=bridgeHarness();

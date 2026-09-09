@@ -56,7 +56,8 @@ inside the economics app; use it only in an isolated verification process.
 
 ## Activation and rollback
 
-Real Owner UI activation and integration remain separately gated. Before an
+The explicit 2026-09-09 Owner amendment permits conditional OFF-code integration
+and genuine acceptance only in the existing Owner-PC environment. Before that
 authorized run verify code pins, private root/catalog checksum and loopback Docker/
 PC listeners. Keep the existing account/session ownership controls. Do not collect,
 change catalog/backups/claims or reach any remote DB/Storage/provider.
@@ -64,6 +65,14 @@ change catalog/backups/claims or reach any remote DB/Storage/provider.
 Disable the independent bridge flag to hide the page/entry and deny API access
 before private reads. There is no DB migration, stored row or content installation
 to undo. Preserve all economics records and existing server/browser/cache.
+
+The existing PC launcher offers an explicit `start-legal-evidence` command. It
+first verifies the unchanged dedicated stack and actual loopback listeners, then
+passes only the four non-secret reader/root/catalog/checksum settings and the
+bridge flag alongside the existing filtered local economics environment. Ordinary
+`start` continues to exclude inherited bridge flags. Do not use any `prepare`
+command, reinstall content, reapply SQL or create an account for this bridge.
+Returning to ordinary `start` is the bridge rollback and preserves every record.
 
 ## Current evidence
 
@@ -90,11 +99,46 @@ Local code validation completed on 2026-09-09 KST:
 Authenticated read-only Vercel CLI 54.1.0 query found the exact inverge project
 and repository, Git createDeployments enabled, no Deploy Hooks and no repository
 hooks. Ignored Build Step skips non-preview builds and permits preview builds.
-Therefore the old bridge prohibition on Preview deployment is a push/Draft PR
-gate, not a writer handoff problem. The Owner was asked only about OFF-state
-automatic Preview CI; no settings were changed and no push was made.
+The original stop was therefore a deployment permission gate, not writer handoff.
+The later Owner amendment expressly permits disabled-code automatic Preview
+deployment through existing Git integration, but no Preview reader access or
+activation. No Vercel settings or deployment-protection changes are permitted.
 
-Remote native CI, independent exact-head review, Draft PR, merge and real Owner
-activation are NOT completed. This file is not a green CI/review/real-use receipt.
+At the original preserved commit, remote native CI/review/Draft/merge and real
+Owner activation were not completed. The following resumed evidence is separate.
 GitHub remains authoritative. The previous supplier 45-sample test is separate
 from the new 15-law bridge execution.
+
+## Resumed authorized candidate evidence — 2026-09-09 KST
+
+- Final source typecheck and changed-file lint passed; 44 affected tests passed,
+  including the actual route/server deployment matrix and explicit launcher tests.
+  Six deployment combinations deny page/GET/POST before auth, private configuration,
+  reader initialization or request-body consumption even with enabled local flags
+  and spoofed local request headers. This is direct code execution, not Vercel login.
+- The existing stopped Docker Desktop engine and seven existing dedicated services
+  were restarted without creating containers, accounts, schemas or installations.
+  Pre-start Docker binding validation and actual PC listener validation passed:
+  four service ports and app 3883 are 127.0.0.1 only. Original wildcard containers
+  remained stopped; existing TLS files and authentication policy were unchanged.
+- The existing genuine Owner browser profile/session opened the actual Next page,
+  which listed 15 held versions and initially no body. Civil-law article 1 displayed
+  the actual returned body; same-reference reopen returned identical reference and
+  body with originalReopened true. Keyword search returned 10 bounded results.
+- Tampered reference returned HTTP 503 INTEGRITY_ERROR with no body; anonymous
+  GET returned HTTP 404 and no anchors. Responses were no-store. Reload cleared
+  body/results. Browser errors and external browser requests were zero. Only the
+  no-body initial screen was captured privately; no source-body screenshot/log.
+- All 105 retained source/catalog files, existing installation, all six personal
+  session rows and planning rows were byte/digest-identical before/after lookup.
+  The read-only supplier checkout was clean at the pinned revision. No r46 attempt,
+  clock change, account creation, preparation SQL or learning-record mutation.
+- This is an agent-operated genuine Owner-session lookup, not a fresh password
+  entry, human legal review, exam applicability proof or learner performance.
+- Final production build passed. 191 production traces / 147,831 trace entries
+  and 3,239 built artifacts contain no private roots. The actual compiled API
+  rejected all four Preview/Production GET/POST calls before body consumption,
+  even with enabled bridge/kernel flags and local Host/Origin. 162 JSON files,
+  the exact 18-file manifest, changed-source secret-pattern and diff checks passed.
+- GitHub exact-head CI/review/merge and actual deployed Preview denial still await
+  the new candidate; no prior-head result is represented as those future outcomes.

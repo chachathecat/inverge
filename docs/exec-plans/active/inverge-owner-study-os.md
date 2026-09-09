@@ -23,12 +23,24 @@ held-file HTTP execution (synthetic auth) checked 15 searches, 15 exact reopens
 and 15 tamper denials with zero writes/body output and unchanged catalog.
 162 JSON files and 191 build traces passed privacy/shape checks.
 
-Preservable stop: no code conflict or writer handoff remains. Vercel read-only
-query confirms Git auto-deploy enabled and Preview builds permitted; existing
-bridge authority prohibits Preview deployment. OFF-state automatic Preview CI
-permission was requested; pending it, no push/Draft PR/remote CI/formal review
-is claimed. Bridge merge and actual local activation remain separately gated.
-Do not turn on flags or switch the economics runtime worktree's branch.
+The subsequent explicit Owner amendment permits bridge-OFF automatic Preview
+build/deployment through existing Git integration, conditional exact-head squash
+integration, and genuine existing Owner-PC bridge acceptance. It does not permit
+Preview source access, Vercel settings changes or Production activation. Source
+82da64df was clean on resumption and main remains the validated #907 base.
+Actual route/server deployment-denial regression is added before push. New remote
+CI, review and genuine Owner-PC results remain pending until actually observed;
+the earlier synthetic evidence is not relabeled. Keep this thread as sole writer
+and preserve the economics runtime branch, account, ports, TLS and records.
+
+Resumed candidate adds only the explicit filtered local launcher and its regression
+to the original 16-file manifest (18 files total). Typecheck/lint and 44 focused
+tests passed. Genuine existing Owner browser/session listed 15 versions, displayed
+Civil-law article 1, searched keywords and reopened an identical native reference.
+Tamper/anonymous denial and body clearing passed. All 105 source/catalog files,
+six session rows, planning and installation remained unchanged; no r46 action.
+The actual local stack and 3883 listener are loopback-only. Remote CI/review/merge
+remain pending until observed; see QA for qualified new versus historical evidence.
 
 After preserving the bridge candidate, return to the original economics
 checkpoint. Its bounded curriculum Goal is already completed by #907; no new
