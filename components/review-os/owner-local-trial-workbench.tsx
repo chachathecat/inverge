@@ -163,9 +163,19 @@ function OwnerLocalToday({initialSearch}:{initialSearch:string}) {
       {today.priorDateBudgets.length>0 && <details><summary className="cursor-pointer py-3">보존된 이전 날짜의 시간 선언</summary><ul className="text-sm">{today.priorDateBudgets.map(row=><li key={row.date}>{row.date} · 당시 남은 시간 선언 {row.declaredMinutes}분 · 현재 가용시간이나 측정된 공부시간 아님</li>)}</ul></details>}
     </section>}
     {today && <section className="rounded-2xl border bg-white p-6"><h2 className="font-semibold">저장된 미검토 시험 기록·다음 복습</h2>
+      <p className="my-3 text-sm">응답과 미검토 정답의 대응, 도움 여부를 기준으로 다음 확인을 제안합니다. 오답 원인이 지식·계산·읽기 중 무엇인지는 이 기록만으로 알 수 없습니다. 도움이 있는 정답이나 반복 정답은 독립 수행·숙달 증거가 아닙니다.</p>
+      <ul aria-label="저장 이력에 따른 교정 안내" className="space-y-3">{today.recovery.map(item=>{
+        const row=today.history.find(history=>history.sessionId===item.sessionId)!;
+        return <li key={item.sessionId} className="rounded-xl border p-3">
+        <a className="underline" href={`${ROOT}?${new URLSearchParams({sessionId:row.sessionId})}`}>경제학 {row.questionNumber}번 · {row.active?"진행 중":row.ready?"시작 대기":`응답 저장 ${row.committedAttempts.length}회`}</a>
+        <p className="font-medium">경제학 {row.questionNumber}번 · {{no_response:"응답 근거 없음",result_unavailable:"평가 확인 불가",repeated_key_mismatch:"정답 대응 불일치 반복",key_mismatch:"정답 대응 재확인",response_missing:"미응답 확인",assistance_confirmation:"도움 후 별도 확인 필요",delayed_confirmation:"나중에 다시 확인 필요"}[item.need]}</p>
+        <p className="text-sm">저장 응답 {item.observedAttemptCount}회 · 불일치 {item.mismatchCount}회 · 도움 포함 {item.assistedAttemptCount}회 · 일치 {item.matchedCount}회. 모두 사람 미검토 연습 기록입니다.</p>
+        <p className="text-sm">{{resume:"진행 중인 문제를 이어가세요. 해설은 아직 표시하지 않습니다.",begin:"시작 대기 중인 문제를 Today에서 시작하세요.",due_practice:"기한이 된 연습 후보입니다. 실제 시작은 위 시간표와 현재 가용시간을 따릅니다.",wait_until_due:"기존 복습 시각까지 기다린 뒤 별도 연습으로 확인하세요.",stock_required:"복습 필요는 남아 있지만 사용할 새 변형 재고가 없습니다. 완료나 다음 복습을 약속하지 않습니다.",practice_processed:"예약된 연습 처리는 끝났습니다. 추가 연습 재고와 독립 수행 근거는 아직 없습니다.",no_response:"아직 다음 교정을 판단할 응답이 없습니다."}[item.next]}</p>
+        {item.dueAt && <p className="text-sm">기존 복습 시각: {new Date(item.dueAt).toLocaleString("ko-KR",{timeZone:"Asia/Seoul"})} KST (변경 없음)</p>}
+        {item.feedbackAvailable && <a className="text-sm underline" href={`${ROOT}?${new URLSearchParams({sessionId:item.sessionId})}`}>저장된 미검토 해설과 응답 확인</a>}
+        <ul className="text-sm text-slate-600">{row.reviews.map(review=><li key={review.reviewTaskId}>복습 {review.status==="completed"?"처리 완료":"대기"} · {new Date(review.dueAt).toLocaleString("ko-KR",{timeZone:"Asia/Seoul"})} KST · {review.stock==="available"?"변형 재고 있음":"새 변형 재고 없음"}</li>)}</ul>
+      </li>;})}</ul>
       <p className="my-3 text-sm">사람 승인 0문항. 허용 원문 {today.inventory.originalCount}개와 각 변형 1개뿐이며, 긴 공부시간을 모두 채울 재고는 아닙니다. 문항 처리 완료는 숙달이나 전이 성공이 아닙니다.</p>
-      <ul className="space-y-4">{today.history.map(row=><li key={row.sessionId}><a className="underline" href={`${ROOT}?${new URLSearchParams({sessionId:row.sessionId})}`}>경제학 {row.questionNumber}번 · {row.active?"진행 중":row.ready?"시작 대기":`응답 저장 ${row.committedAttempts.length}회`}</a>
-        <ul className="text-sm text-slate-600">{row.reviews.map(review=><li key={review.reviewTaskId}>복습 {review.status==="completed"?"처리 완료":"대기"} · {new Date(review.dueAt).toLocaleString("ko-KR",{timeZone:"Asia/Seoul"})} KST · {review.stock==="available"?"변형 재고 있음":"새 변형 재고 없음"}</li>)}</ul></li>)}</ul>
     </section>}
     <a className="text-sm underline" href={`${ROOT}?choose=1`}>문항 직접 선택 · 기존 연습 화면</a>
   </main>;

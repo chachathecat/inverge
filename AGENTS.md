@@ -100,6 +100,13 @@ are inputs, not live operational truth.
 
 ## Scoped private first-stage continuation
 
+For post-#909 A/B/C development received on 2026-09-09, apply
+`docs/decisions/2026-09-09-owner-post909-study-os-continuation.md` prospectively.
+It extends dependency-ready development/conditional integration, not operational
+or content approval or general unfreezing. One current task remains sole writer;
+root-cause progress replaces count-only disposal in that exact scope. Native
+checks, clean independent review, resolved threads and safety gates remain.
+
 For the private appraiser first-stage learner outcomes delegated on 2026-09-06,
 apply `docs/decisions/2026-09-06-owner-appraiser-first-private-continuation.md`.
 Only that scope replaces fixed correction/review-count disposal with

@@ -139,6 +139,11 @@ test("S01/S04/S05/S07/S11 real local Today HTTP and SDK/PG persist/restart/repla
     // a wrong choice correctly preserves a pending task, not a completion.
     assert.equal((await h.send({sessionId:firstId,command:{...submission(active.attempt.attemptId,4),expectedRevision:4,requestId:"pg-finish-retry"}})).status,200);
     const done=await today(h);assert.equal(done.history.find(row=>row.sessionId===firstId).reviews[0].status,"completed");
+    const recovery=done.recovery.find(row=>row.sessionId===firstId);
+    assert.equal(recovery.next,"practice_processed");assert.equal(recovery.need,"delayed_confirmation");
+    assert.equal(recovery.observedAttemptCount,2);assert.equal(recovery.independentPerformanceEstablished,false);
+    const restarted=make();restarted.setClock(h.getClock());
+    assert.deepEqual((await today(restarted)).recovery,done.recovery);
     assert.equal(done.history.find(row=>row.sessionId===firstId).reviews[0].dueAt,firstDue);
     const completed=await pg.snapshot();assert.equal((await h.send(retryRequest,"?view=today")).status,200);assert.equal(await pg.snapshot(),completed);
     assert.equal(await pg.sql("select count(*) from public.first_stage_private_sessions"),"3");

@@ -3,11 +3,12 @@ import { buildStudyDayPlan, type DayAvailabilityV1, type LearnerConstraintProfil
 import { FirstStageKernelError, exactObject, requiredIdentifier, requiredSafeInteger, requiredUtcInstant } from "../kernel/domain";
 import { activeOwnerLocalR3TrialCatalog, acceptsOwnerLocalCatalogReference, knownOwnerLocalCatalogDigest } from "./owner-local-trial-context";
 import { projectOwnerLocalCurriculum } from "./owner-local-curriculum-map";
+import { projectOwnerLocalRecovery } from "./owner-local-recovery";
 import { createPrivateFirstStageSessionService, privateSessionDigest, privateFirstStageSessionId, type PrivateFirstStageCatalog,
   type PrivateFirstStageSessionStore, type PrivateSessionHistory } from "./session-service";
 
 const MODE = "first_stage.owner_local_trial_session.v1" as const;
-export const OWNER_LOCAL_TODAY_POLICY = "owner_local_r3_today_v1" as const;
+export const OWNER_LOCAL_TODAY_POLICY = "owner_local_r3_today_recovery_v2" as const;
 const CAPACITY_POLICY = "dabangil.study_capacity_life_mode_orchestrator.v1";
 export type TrialPlanningPreferences = {
   remainingMinutes: number; lifeMode: LearnerConstraintProfileV1["lifeMode"];
@@ -151,6 +152,8 @@ export function createOwnerLocalTodayService(store: PrivateFirstStageSessionStor
   async function view(ownerId: string) {
     const at = requiredUtcInstant(now()), local = kst(at), date = local.slice(0,10);
     const [observed, saved] = await Promise.all([history(ownerId), record(ownerId)]);
+    const recovery = observed.rows.map(row => projectOwnerLocalRecovery(row, at));
+    const recoveryBySession = new Map(recovery.map(row => [row.sessionId, row]));
     const curriculum=projectOwnerLocalCurriculum(catalog,observed.rows,observed.unavailableQuestions,observed.complete);
     const selectedTopic=saved?.date===date?saved.selectedTopic??null:null;
     const selectedBinding=selectedTopic?curriculum.topics.find(topic=>topic.topicId===selectedTopic.topicId&&
@@ -159,7 +162,7 @@ export function createOwnerLocalTodayService(store: PrivateFirstStageSessionStor
     const inventory = { originalCount: catalog.initialReferences.length, humanReviewedCount: 0,
       retryReservationIsFreshStock: false, sealedUnseenClaim: false };
     const common = { schemaVersion: "first_stage.owner_local_today.v1" as const, policyVersion: OWNER_LOCAL_TODAY_POLICY,
-      date, history: observed.rows, unavailableSessionCount: observed.unavailable.length,
+      date, history: observed.rows, recovery, unavailableSessionCount: observed.unavailable.length,
       historyComplete: observed.complete, inventory, curriculum, selectedTopic:selectedBinding?selectedTopic:null,
       priorDateBudgets:(saved?.priorDates??[]).map(row=>({date:row.date,declaredAt:row.declaredAt,declaredMinutes:row.preferences.remainingMinutes})),
       preferencesRevision: saved?.revision ?? 0,
@@ -213,7 +216,8 @@ export function createOwnerLocalTodayService(store: PrivateFirstStageSessionStor
     const protectedNew = saved.preferences.phase === "coverage" ?
       actions.find(action=>action.kind==="new"&&action.questionId===selectedBinding?.questionId)??actions.find(action => action.kind === "new") : undefined;
     function priority(action: TrialPlanAction) {
-      return action.kind === "resume" || action.kind === "begin" ? 9000 : action.id === protectedNew?.id ? 8000 : action.kind === "retry" ? 6000 : 2000;
+      return action.kind === "resume" || action.kind === "begin" ? 9000 : action.id === protectedNew?.id ? 8000 :
+        action.kind === "retry" ? 6000 + (recoveryBySession.get(action.sessionId!)?.duePriorityBonus ?? 0) : 2000;
     }
     // Protect one feasible new-study opportunity before the planner's 256 cap.
     // Ongoing reservations precede it; recovery/content/time constraints are explicit.
@@ -224,7 +228,8 @@ export function createOwnerLocalTodayService(store: PrivateFirstStageSessionStor
       subject:"economics_principles", examTrack:"first", taskKind:action.kind === "retry" ? "due_review" : "independent_problem_solving",
       cognitiveLoad:"medium", requiredness: action.kind === "new" ? "core_candidate" : "required",
       estimatedMinutes:15, minimumContinuousMinutes:15, splittable:false, requiresDesk:true,
-      prioritySignals: action.kind === "new" ? ["new_study"] : action.kind === "retry" ? ["due_review"] : ["learner_pinned"],
+      prioritySignals: action.kind === "new" ? ["new_study"] : action.kind === "retry" ?
+        recoveryBySession.get(action.sessionId!)?.need === "repeated_key_mismatch" ? ["due_review", "repeated_error"] : ["due_review"] : ["learner_pinned"],
       basePriority:priority(action), outcomeKey:`owner-trial:${action.kind === "resume" || action.kind === "begin" ? "ongoing" : action.kind}`,
       metadataOnly:true }));
     const plan = buildStudyDayPlan({ profile:profile(saved.preferences), availability:{ date,

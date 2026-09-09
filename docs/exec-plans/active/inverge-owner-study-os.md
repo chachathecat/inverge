@@ -1,5 +1,59 @@
 # Inverge Owner Study OS
 
+## Active post-#909 Goal — received 2026-09-09T06:07:54Z
+
+Authority: `docs/decisions/2026-09-09-owner-post909-study-os-continuation.md`.
+Same task `01a06790-d555-7b40-9a04-3ef95010fb49`, sole code/integration writer.
+Fresh main: #909 squash `0047f297e61a33fafe01b3458b78fa3692ac54c4`, tree
+`73ee217ec9b9bd8353dd861d3c7067c1b5046efd`. #909/#907 are merged; candidate
+notes below are historical, not current blockers. #883 stays open. Preserve the
+#907 uncommitted closeout in its original worktree and the running bridge worktree,
+account/TLS/ports/data. New isolated branch: `codex/post909-study-recovery`,
+worktree `post909-study-recovery`. Active legal-repository task is separate and
+not stopped; no other active app writer was observed.
+
+### Existing-specification checklist, not new milestones
+
+- [ ] A: five first-stage and three second-stage complete loops and supply.
+  V13 section 15 retains first-stage 2016-2026 option propositions and second-stage
+  2013-2026 Practice/Theory/Law corpus targets, not currently released years.
+  Preserve all nine Complete Coverage axes (section 10) and official/prerequisite/
+  unknown-source floors (section 11). Reviewed first-stage approvals: 0. Current
+  2025 economics denominator: 40 originals = 7 usable unreviewed + 30 unsupplied
+  + 3 excluded; seven separate retries. Other-subject synthetic mechanics are not
+  supplied content; this sample does not reduce the full corpus target.
+- [ ] B: trusted supply/assignment/exposure/report/expiry/retirement and personal
+  recovery/Today. Reuse M4/M5, M6-M8 subject code and M9 mapping. CoreOutcome <=3,
+  ExecutionBlock 0..N within availability; no generation provider activation or
+  mixing Learning Practice, Verified Transfer and Calibrated Measurement.
+- [ ] C: existing virtual learner/API/DB/UI recovery and Web/PWA quality; isolated
+  synthetic commercial/privacy/operational code including M10 restore/export/delete/
+  isolation. Native/Academy and real finance/activation stay excluded. Unspecified
+  corpus quantities and final business decisions stay unresolved, not invented.
+  Preserve S223 subject-quality and V13 proof policies.
+
+First outcome, code Issue #911: saved result/help history -> bounded recovery
+reason -> existing due-practice priority/saved-feedback link -> reconnect. The
+missing bodyless recovery projection was reproduced through actual loader/HTTP;
+the projection, native planner consumer and UI are implemented. No new store,
+content, schema or mastery. Existing review-task due times remain authoritative,
+including the later recurrence after an unsuccessful retry. Deployment admission
+is unchanged: code remains denied outside the existing Owner-PC scope.
+
+Local candidate evidence: 37 affected tests and 1,816 default tests pass; typecheck,
+changed-file lint, build, JSON and diff checks pass. Synthetic browser checks show
+no console errors/external requests and saved-feedback/reconnect behavior. NFT and
+build-output scan found no private source/install roots. Exact-head native CI,
+formal review and remote app denial still await the final commit/PR; #909 results
+are not reused as candidate checks. See the bounded QA record. Next: integrate
+this complete feature only after all gates, then continue an independent A/B/C
+gap; never repeat #907/#909 or claim this PR completes the Goal.
+
+External remainder: six genuine r3 human judgments, other content approval and
+full corpus supply, independent/delayed learning, business/operating decisions.
+Actual r46 next-day observation stays user-only/UNOBSERVED. Continue independent
+code; neither this feature nor its PR completes the Goal.
+
 ## APPRAISER-LEGAL-EVIDENCE-BRIDGE-01 — 2026-09-09 single-writer transition
 
 Latest review correction: 3d9082e7 passed all nine required native checks and

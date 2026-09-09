@@ -56,6 +56,9 @@ test('help persistence precedes disclosure, exposes only the selected projection
  h.setClock('2026-09-09T00:01:00.000Z');const saved=await h.send({sessionId:view.sessionId,command:{...submission(view.attempt.attemptId,1),expectedRevision:3,requestId:'submit-helped'}});
  assert.equal(saved.status,200,JSON.stringify(saved.body));assert.equal(saved.body.view.assistanceLevel,'hint_or_scaffold');assert.equal(saved.body.view.masteryClaim,false);
  assert.equal([...h.rows.values()][0].state.attempts[0].evaluation.errorCause,null);assert.equal(saved.body.view.reviewTasks[0].dueAt,'2026-09-10T00:01:00.000Z');
+ const recovery=(await today(h)).recovery[0];assert.equal(recovery.assistedAttemptCount,1);
+ assert.equal(recovery.need,'key_mismatch');assert.equal(recovery.cause,'not_inferred');
+ assert.equal(recovery.independentPerformanceEstablished,false);assert.equal(recovery.next,'wait_until_due');
 });
 test('original records and legacy catalog remain byte-identical after additive loading',async()=>{
  const fixture=curriculumFixture(),old=trialHarness({fixture});old.setClock('2026-09-09T00:00:00.000Z');
