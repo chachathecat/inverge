@@ -5,7 +5,7 @@ import { chromium } from "playwright";
 
 /** Real React workbench/practice + real HTTP application. Auth/catalog/clock are
  * explicitly synthetic test ports, never genuine local-login evidence. */
-export async function verifyOwnerLocalTodayBrowser(h,{curriculum=false}={}) {
+export async function verifyOwnerLocalTodayBrowser(h,{curriculum=false,screenshotPath=null}={}) {
   const root="/app/first-stage/economics-trial",api="/api/review-os/first-stage/economics-trial/sessions";
   const bundle=await build({stdin:{contents:'import React from "react";import {createRoot} from "react-dom/client";import {OwnerLocalTrialWorkbench} from "./components/review-os/owner-local-trial-workbench";createRoot(document.getElementById("root")).render(React.createElement(OwnerLocalTrialWorkbench));',resolveDir:process.cwd(),loader:"tsx"},
     bundle:true,write:false,platform:"browser",format:"iife",jsx:"automatic",define:{"process.env.NODE_ENV":'"production"'},logLevel:"silent"});
@@ -66,6 +66,9 @@ export async function verifyOwnerLocalTodayBrowser(h,{curriculum=false}={}) {
         await page.getByRole("link",{name:"Today로 돌아가 저장 결과·계획 확인"}).click();
         await page.getByText(`오늘 남은 ${150-(index+1)*15}분`,{exact:false}).waitFor();
         await page.reload();await page.getByText(`오늘 남은 ${150-(index+1)*15}분`,{exact:false}).waitFor();
+        const recovery=page.getByRole("list",{name:"저장 이력에 따른 교정 안내"});
+        await recovery.getByText(`경제학 ${number}번 · 도움 후 별도 확인 필요`,{exact:true}).waitFor();
+        assert.doesNotMatch(await page.locator("body").innerText(),/SYNTHETIC_SECRET_(SOLUTION|CONCEPT|PREREQUISITE)_/);
       }
       assert.deepEqual(failures,[]);assert.deepEqual(external,[]);assert.ok(statuses.every(status=>status===200));
       return {browserErrors:0,externalRequests:0,threeTeachingGroups:true,selectedAidOnly:true,draftAnswerPreserved:true,persistedResume:true};
@@ -83,6 +86,15 @@ export async function verifyOwnerLocalTodayBrowser(h,{curriculum=false}={}) {
     await page.getByText("오늘 남은 135분",{exact:false}).waitFor();
     await page.getByRole("button",{name:"새 문제 · 경제학 49번",exact:true}).waitFor();
     assert.equal(await page.getByRole("link",{name:/경제학 46번 · 응답 저장 1회/}).count(),1);
+    const recovery=page.getByRole("list",{name:"저장 이력에 따른 교정 안내"});
+    await recovery.getByText("경제학 46번 · 정답 대응 재확인",{exact:true}).waitFor();
+    await recovery.getByText("기존 복습 시각까지 기다린 뒤 별도 연습으로 확인하세요.",{exact:true}).waitFor();
+    if(screenshotPath)await recovery.screenshot({path:screenshotPath}); // synthetic history only, opt-in local artifact
+    assert.equal(await page.getByRole("region",{name:"저장된 응답 해설"}).count(),0);
+    await recovery.getByRole("link",{name:"저장된 미검토 해설과 응답 확인",exact:true}).click();
+    await page.getByRole("region",{name:"저장된 응답 해설"}).waitFor();
+    assert.equal(page.url(),saved);
+    await page.getByRole("link",{name:"Today로 돌아가 저장 결과·계획 확인"}).click();
     await page.reload();await page.getByText("오늘 남은 135분",{exact:false}).waitFor();
     await page.getByText("남은 시간·생활 조건 설정",{exact:true}).click();assert.equal(await page.getByLabel("남은 공부시간",{exact:true}).inputValue(),"135");
     await page.getByLabel("생활 조건",{exact:true}).selectOption("full_time_employed");

@@ -4,6 +4,7 @@ import { trialHarness, syntheticTrialInput } from "./fixtures/first-stage-owner-
 import { submission } from "./fixtures/first-stage-private-session-harness.mjs";
 import { privateSessionDigest } from "../lib/review-os/first-stage/runtime/session-service.ts";
 import { NextRequest } from "next/server.js";
+import { projectOwnerLocalRecovery } from "../lib/review-os/first-stage/runtime/owner-local-recovery.ts";
 
 const query="?view=today";
 const make=()=>{const h=trialHarness({fixture:syntheticTrialInput({numericTrialModels:true})});h.setClock("2026-09-08T00:00:00.000Z");return h;};
@@ -15,6 +16,91 @@ async function configure(h,preferences=prefs()) {
   assert.equal(result.status,200,JSON.stringify(result.body));return result.body.today;
 }
 const startPlan=(h,plan,action=plan.actions[0])=>h.send({action:"start_planned",input:{planId:plan.planId,actionId:action.id}},query);
+
+test("saved mismatch receives recovery priority over matched practice through actual HTTP",async()=>{
+  const h=make();
+  const matched=await manual(h,49,"matched",{choice:2});
+  const mismatched=await manual(h,46,"mismatched",{choice:1});
+  assert.equal(matched.view.attempt.decision,"correct");
+  assert.equal(mismatched.view.attempt.decision,"incorrect");
+  const before=privateSessionDigest([...h.rows.values()]);
+  h.setClock("2026-09-09T00:03:00.000Z");
+  const plan=await configure(h,prefs(150,"recovery"));
+  const next=plan.actions.find(action=>action.id===plan.nextActionId);
+  assert.equal(next.questionNumber,46,"validated mismatch must influence due-practice placement");
+  const recovery=plan.recovery.find(row=>row.sessionId===mismatched.sessionId);
+  assert.equal(recovery.need,"key_mismatch");
+  assert.equal(recovery.cause,"not_inferred");
+  assert.equal(recovery.next,"due_practice");
+  assert.equal(recovery.independentPerformanceEstablished,false);
+  assert.equal(privateSessionDigest([...h.rows.values()]),before);
+  assert.ok(plan.plan.coreOutcomes.length<=3);
+  assert.doesNotMatch(JSON.stringify(plan),/SYNTHETIC_SECRET|selectedChoice|workTrace|evidenceEnvelope/);
+  const reconnected=trialHarness({fixture:h.fixture,rows:h.rows,planningRows:h.planningRows});
+  reconnected.setClock(h.getClock());
+  assert.deepEqual(await current(reconnected),plan);
+  const started=await startPlan(h,plan,next);
+  assert.equal(started.status,200);
+  const active=(await h.send(undefined,`?sessionId=${mismatched.sessionId}`)).body.view;
+  assert.equal(active.explanation,null);
+  assert.equal(active.reviewTasks[0].dueAt,mismatched.view.reviewTasks[0].dueAt);
+});
+
+test("recovery before D+1 shows wait and never constructs feedback or changes due times",async()=>{
+  const h=make(),saved=await manual(h,49,"wait");
+  const before=privateSessionDigest([...h.rows.values()]);
+  const today=await current(h),recovery=today.recovery.find(row=>row.sessionId===saved.sessionId);
+  assert.equal(recovery.next,"wait_until_due");
+  assert.equal(recovery.dueAt,saved.view.reviewTasks[0].dueAt);
+  assert.equal(recovery.feedbackAvailable,true);
+  assert.equal(recovery.need,"key_mismatch");
+  assert.equal(privateSessionDigest([...h.rows.values()]),before);
+  assert.doesNotMatch(JSON.stringify(today),/EXPLANATION|SYNTHETIC_SECRET|selectedChoice|workTrace/);
+});
+
+test("wrong original and wrong practice retry preserve unresolved need without inventing stock or changing completion",async()=>{
+  const h=make(),first=await manual(h,46,"repeated");
+  const task=first.view.reviewTasks[0];h.setClock(task.dueAt);
+  const retry={sessionId:first.sessionId,command:{action:"retry",requestId:"repeat-retry",expectedRevision:3,reviewTaskId:task.reviewTaskId}};
+  const started=await h.send(retry);assert.equal(started.status,200);
+  let recovery=(await current(h)).recovery[0];
+  assert.equal(recovery.next,"resume");assert.equal(recovery.feedbackAvailable,false);
+  h.setClock(new Date(Date.parse(task.dueAt)+60_000).toISOString());
+  const command={sessionId:first.sessionId,command:{...submission(started.body.view.attempt.attemptId,1),expectedRevision:4,requestId:"repeat-wrong"}};
+  const saved=await Promise.all([h.send(command),h.send(command)]);
+  assert.deepEqual(saved.map(result=>result.status),[200,200]);
+  assert.equal(saved[0].body.view.attempt.decision,"incorrect");
+  const before=privateSessionDigest([...h.rows.values()]);
+  recovery=(await current(h)).recovery[0];
+  assert.equal(recovery.need,"repeated_key_mismatch");
+  assert.equal(recovery.mismatchCount,2);assert.equal(recovery.observedAttemptCount,2);
+  assert.equal(recovery.next,"stock_required");
+  // Existing kernel reschedules a failed retry; the new read projection must
+  // report that actual durable value, not freeze it at the initial D+1.
+  assert.equal(recovery.dueAt,saved[0].body.view.reviewTasks[0].dueAt);
+  assert.equal(recovery.cause,"not_inferred");assert.equal(recovery.masteryClaim,false);
+  assert.equal((await h.send(command)).status,200);
+  assert.equal(privateSessionDigest([...h.rows.values()]),before);
+  const restarted=trialHarness({fixture:h.fixture,rows:h.rows,planningRows:h.planningRows});restarted.setClock(h.getClock());
+  assert.deepEqual((await current(restarted)).recovery,[recovery]);
+  const plan=await configure(h,prefs(150,"recovery"));
+  assert.equal(plan.actions.some(action=>action.sessionId===first.sessionId),false);
+  assert.equal(h.rows.size,1);assert.equal([...h.rows.values()][0].state.reviewTasks.length,1);
+});
+
+test("local recovery cannot relabel reviewed history and never interprets incomplete history as new stock",async()=>{
+  const h=make(),saved=await manual(h,46,"guard");
+  const state=await current(h),row=state.history[0];
+  assert.throws(()=>projectOwnerLocalRecovery({...row,contentMode:"first_stage.private_session.v1"},h.getClock()),{code:"adapter_mismatch"});
+  assert.throws(()=>projectOwnerLocalRecovery(row,"not-a-clock"));
+  h.store.listOwnerSnapshot=async()=>({sessions:[...h.rows.values()],complete:false});
+  const incomplete=await current(h);assert.equal(incomplete.state,"history_incomplete");
+  assert.deepEqual(incomplete.actions,[]);assert.equal(incomplete.recovery[0].sessionId,saved.sessionId);
+  [...h.rows.values()][0].state.attempts[0].evaluation.decision="correct";
+  const quarantined=await current(h);assert.equal(quarantined.recovery.length,0);
+  assert.equal(quarantined.unavailableSessionCount,1);
+});
+
 test("scheduled dispatch rejects future blocks before any durable intent and starts only inside the server window",async()=>{
   const h=make(),plan=await configure(h,prefs(150,"coverage",[
     {id:"evening",startMinute:1080,endMinute:1200,environment:"desk",interruptibility:"low"}]));
@@ -33,14 +119,14 @@ test("scheduled dispatch rejects future blocks before any durable intent and sta
   assert.equal((await startPlan(h,evening)).status,200); // durable command replay, not a new start
   assert.equal(privateSessionDigest([...h.rows.values()]),digest);
 });
-async function manual(h,number,id,{finish=true}={}) {
+async function manual(h,number,id,{finish=true,choice=1}={}) {
   const questionId=`qnet-2025-36-s1-A-${number}`;
   const created=await h.send({action:"create",requestId:`create-${id}`,questionId});assert.equal(created.status,200);
   const sessionId=created.body.view.sessionId;
   const begun=await h.send({sessionId,command:{action:"begin",requestId:`begin-${id}`,expectedRevision:1,questionId}});assert.equal(begun.status,200);
   if(!finish)return {sessionId,view:begun.body.view};
   h.setClock(new Date(Date.parse(h.getClock())+60_000).toISOString());
-  const saved=await h.send({sessionId,command:{...submission(begun.body.view.attempt.attemptId,1),requestId:`submit-${id}`}});assert.equal(saved.status,200);
+  const saved=await h.send({sessionId,command:{...submission(begun.body.view.attempt.attemptId,choice),requestId:`submit-${id}`}});assert.equal(saved.status,200);
   return {sessionId,view:saved.body.view};
 }
 
