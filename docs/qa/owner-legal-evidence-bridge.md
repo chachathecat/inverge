@@ -272,3 +272,18 @@ The existing corrected local Owner session still lists 15 held versions and
 source/session/planning preservation comparisons pass. The previous 1,810-test
 full suite remains 3d9082e7 evidence; native CI and independent review on the new
 commit are required before integration, not inferred from that previous head.
+
+The pushed proxy correction ce896ebc additionally passed actual authenticated
+Preview page/API GET/POST denial: deployment dpl_27a561nX1ThRGN7GhMGEcuYXt4r7,
+four HTTP 404 ACCESS_DENIED responses with empty anchors and no-store. The
+deployment ID/head binding was checked through authenticated read-only CLI. The
+original P1 thread was resolved with the reproduction and correction evidence.
+No new token, protection change or private content was used.
+
+Its PR Contract check exposed a metadata-only mistake: the rewritten PR body
+used Summary instead of the mandatory Goal heading. Goal is restored and the
+unchanged local validator passes. The workflow consumes its captured PR event
+body, so the final evidence/checkpoint commit also supplies a fresh push event
+with the corrected contract. No workflow trigger/policy, implementation code or
+dependency changes are included in that metadata closeout; all final native
+checks and independent review still apply to its own exact head.

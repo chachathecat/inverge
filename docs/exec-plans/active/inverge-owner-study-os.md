@@ -11,6 +11,12 @@ privacy and eight actual compiled-proxy deployment denials. New-head native CI
 and independent review are next; previous-head checks/review are not new-head
 results. No remote configuration, source or learner-record changes.
 
+Proxy correction ce896ebc now has actual authenticated Preview denial for both
+page/API GET/POST (four 404/empty/no-store responses) and its P1 thread is resolved.
+PR Contract's missing Goal heading was corrected without changing the validator
+or workflow; this evidence closeout emits a fresh event with the corrected body.
+Await all exact-head checks and independent review before conditional integration.
+
 Current recovery (2026-09-09): Owner explicitly authorized the bounded CI/security
 correction in the existing PR #909 and worktree. Next/eslint-config-next 16.3.3,
 sharp 0.35.4 and js-yaml 4.3.2 clean installation, unchanged audit/SBOM gate,
